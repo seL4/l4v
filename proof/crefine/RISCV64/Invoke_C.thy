@@ -1413,12 +1413,6 @@ crunch sch_act_wf[wp]: insertNewCap "\<lambda>s. sch_act_wf (ksSchedulerAction s
 crunch ksCurThread[wp]: deleteObjects "\<lambda>s. P (ksCurThread s)"
   (wp: crunch_wps simp: unless_def)
 
-(* FIXME RAF move to Retype_C to extend original *)
-crunches insertNewCap, Arch_createNewCaps, threadSet, Arch.createObject, doMachineOp
-  for gsCNodes[wp]: "\<lambda>s. P (gsCNodes s)"
-  (wp: crunch_wps setObject_ksPSpace_only
-   simp: unless_def updateObject_default_def crunch_simps)
-
 lemma deleteObjects_gsCNodes_at_pt:
   "\<lbrace>(\<lambda>s. P (gsCNodes s ptr))
       and K (ptr \<notin> {ptr_base .. ptr_base + 2 ^ sz - 1} \<and> is_aligned ptr_base sz)\<rbrace>

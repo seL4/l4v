@@ -7,7 +7,7 @@
 chapter "Toplevel Refinement Statement"
 
 theory Refine_C
-imports Init_C Fastpath_C CToCRefine
+imports Init_C Fastpath_Equiv Fastpath_C CToCRefine
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -17,6 +17,14 @@ end
 
 context kernel_m
 begin
+
+text \<open>Assemble fastpaths\<close>
+
+lemmas fastpath_call_ccorres_callKernel
+    = monadic_rewrite_ccorres_assemble[OF fastpath_call_ccorres fastpath_callKernel_SysCall_corres]
+
+lemmas fastpath_reply_recv_ccorres_callKernel
+    = monadic_rewrite_ccorres_assemble[OF fastpath_reply_recv_ccorres fastpath_callKernel_SysReplyRecv_corres]
 
 declare liftE_handle [simp]
 

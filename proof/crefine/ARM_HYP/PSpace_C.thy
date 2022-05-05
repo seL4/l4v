@@ -10,13 +10,6 @@ begin
 
 context kernel begin
 
-lemma koTypeOf_injectKO:
-  fixes v :: "'a :: pspace_storable" shows
-  "koTypeOf (injectKO v) = koType TYPE('a)"
-  apply (cut_tac v1=v in iffD2 [OF project_inject, OF refl])
-  apply (simp add: project_koType[symmetric])
-  done
-
 lemma setObject_obj_at_pre:
   "\<lbrakk> updateObject ko = updateObject_default ko;
        (1 :: word32) < 2 ^ objBits ko \<rbrakk>

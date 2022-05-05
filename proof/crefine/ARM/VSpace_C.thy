@@ -786,18 +786,6 @@ lemma lookupPTSlot_ccorres:
                  split: ARM_H.pde.split_asm)
   done
 
-lemma cap_case_isPageDirectoryCap:
-  "(case cap of capability.ArchObjectCap (arch_capability.PageDirectoryCap pd ( Some asid))  \<Rightarrow> fn pd asid
-                | _ => g)
-    = (if ( if (isArchObjectCap cap) then if (isPageDirectoryCap (capCap cap)) then capPDMappedASID (capCap cap) \<noteq> None else False else False)
-                then fn (capPDBasePtr (capCap cap)) (the ( capPDMappedASID (capCap cap))) else g)"
-  apply (cases cap; simp add: isArchObjectCap_def)
-  apply (rename_tac arch_capability)
-  apply (case_tac arch_capability, simp_all add: isPageDirectoryCap_def)
-  apply (rename_tac option)
-  apply (case_tac option; simp)
-  done
-
 (* FIXME: MOVE to CSpaceAcc_C *)
 lemma ccorres_pre_gets_armKSASIDTable_ksArchState:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"

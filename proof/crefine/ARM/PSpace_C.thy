@@ -8,14 +8,7 @@ theory PSpace_C
 imports Ctac_lemmas_C
 begin
 
-context kernel begin
-
-lemma koTypeOf_injectKO:
-  fixes v :: "'a :: pspace_storable" shows
-  "koTypeOf (injectKO v) = koType TYPE('a)"
-  apply (cut_tac v1=v in iffD2 [OF project_inject, OF refl])
-  apply (simp add: project_koType[symmetric])
-  done
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma setObject_obj_at_pre:
   "\<lbrakk> updateObject ko = updateObject_default ko;
@@ -48,7 +41,9 @@ lemma setObject_obj_at_pre:
   apply clarsimp
   done
 
+end
 
+context kernel begin
 
 lemma setObject_ccorres_helper:
   fixes ko :: "'a :: pspace_storable"
