@@ -762,8 +762,8 @@ lemma d_not_running: "\<lbrakk>
   done
 
 (* --- notes for domainswitch step stuff ---- *)
-(*
 
+(*
 lemma dirty_step_u_1of3:
   assumes
     "i \<in> instrs_obeying_set os (all_paddrs_of u)"
@@ -789,51 +789,57 @@ case (IRead x1)
    apply (simp add: all_paddrs_of_def external_uwr_current_page_table pch_same_for_domain_and_shared_def)
   done
   oops
+*)
 
-(* one step of a dirty program holding uwr apart from time *)
-lemma dirty_step_u:
+
+
+(* one step of a dirty program holding uwr (except for time) *)
+lemma dirty_step_u_notrunning:
   assumes
-    (* "i \<in> trace_units_obeying_set os (all_paddrs_of u \<union> all_paddrs_of v \<union> kernel_shared_precise)" *)
+    "i \<in> trace_units_obeying_set {(va, pa) | va pa. pa \<in> (all_paddrs_of u \<union> all_paddrs_of u' \<union> kernel_shared_precise)}"
     "((os, s), (ot, t)) \<in> uwr u"
-    (* "(os', ot') \<in> external_uwr u" *)
-    "s' = instr_step i os s"
-    "t' = instr_step i ot t"
-    "current_domain os = u"
+    "s' = trace_step i s"
+    "t' = trace_step i t"
+    "current_domain os \<noteq> u"
   shows
     "((os, s'), (os, t'\<lparr>tm:=tm s'\<rparr>)) \<in> uwr u"
   proof (cases i)
   case (IRead a)
   then show ?thesis using assms
-   apply (clarsimp simp: uwr_def uwr_running_def)
-   apply (thin_tac "s' = _", thin_tac "t' = _")
-   apply (prop_tac "v_to_p ot = v_to_p os")
-    using external_uwr_current_page_table apply blast
-  apply (clarsimp simp: pch_same_for_domain_and_shared_def)
-  apply (intro conjI; clarsimp)
-   apply (metis (no_types, lifting) collision_sym diff_domain_no_collision pch_collision_read pch_partitioned_read)
-  apply (metis (no_types, lifting) full_collision_set_def kernel_shared_expanded_full_collision_set pch_collision_read pch_partitioned_read)
-  done
+    apply (clarsimp simp: uwr_def uwr_notrunning_def)
+    apply (thin_tac "s' = _", thin_tac "t' = _")
+    apply (clarsimp simp: pch_same_for_domain_except_shared_def)
+    apply (smt collision_in_full_collision_set diff_domain_no_collision full_collision_set_def kernel_shared_expanded_full_collision_set pch_collision_read pch_partitioned_read)
+    done
 next
   case (IWrite a)
   then show ?thesis using assms
-   apply (clarsimp simp: uwr_def uwr_running_def)
-   apply (thin_tac "s' = _", thin_tac "t' = _")
-   apply (prop_tac "v_to_p ot = v_to_p os")
-    using external_uwr_current_page_table apply blast
-  apply (clarsimp simp: pch_same_for_domain_and_shared_def)
-  apply (intro conjI; clarsimp)
-   apply (rule pch_collision_write)
-      defer
-      
+    apply (clarsimp simp: uwr_def uwr_notrunning_def)
+    apply (thin_tac "s' = _", thin_tac "t' = _")
+    apply (clarsimp simp: pch_same_for_domain_except_shared_def)
+    apply (smt collision_in_full_collision_set diff_domain_no_collision full_collision_set_def kernel_shared_expanded_full_collision_set pch_collision_write pch_partitioned_write)
+    done
 next
   case IFlushL1
-  then show ?thesis sorry
+  then show ?thesis using assms
+    by (clarsimp simp: uwr_def uwr_notrunning_def)
 next
-  case (IFlushL2 x4)
-  then show ?thesis sorry
+  case (IFlushL2 pas)
+  then show ?thesis using assms
+    apply (clarsimp simp: uwr_def uwr_notrunning_def)
+    apply (clarsimp simp: pch_same_for_domain_except_shared_def)
+    (* for now let's only consider the cases where this program might
+       flush L2 within kernel_shared_expanded. We can probably prove this without that
+       restriction, but would probably need to change some locale assumptions for that. *)
+    apply (prop_tac "pas \<subseteq> kernel_shared_expanded")
+     subgoal sorry
+    apply (smt collision_in_full_collision_set in_mono kernel_shared_expanded_full_collision_set pch_collision_flush pch_partitioned_flush)
+    done
 next
   case (IPadToTime x5)
-  then show ?thesis sorry
+  then show ?thesis using assms
+  apply (clarsimp simp: uwr_def uwr_notrunning_def)
+  done
 qed
 
 lemma dirty_step:
