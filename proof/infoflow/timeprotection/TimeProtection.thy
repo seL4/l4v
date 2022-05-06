@@ -735,42 +735,34 @@ lemma d_not_running_integrity_uwr:
 (* d not running \<rightarrow> d not running *)
 lemma d_not_running: "\<lbrakk>
    \<comment> \<open>we have two programs derived from touched_addresses - may not be the same touched_addresses\<close>
-   ps \<in> programs_obeying_ta os';
-   pt \<in> programs_obeying_ta ot';
-   \<comment> \<open>we may not have concrete touched_addresses -
-     we may overapprox this to the whole currently running domain.
-     NB: I think it's enough just to require it not contain any of d's addresses. -robs.\<close>
+   ps \<in> traces_obeying_ta os';
+   pt \<in> traces_obeying_ta ot';
    \<comment> \<open>these touched_addresses does NOT contain any addresses from d\<close>
+   current_domain os \<noteq> d;
+   current_domain os' = current_domain os;
    touched_addrs_inv os';
    touched_addrs_inv ot';
-   \<comment> \<open>initial states s and t hold uwr_notrunning\<close>
+   \<comment> \<open>initial states s and t hold uwr\<close>
    ((os, s), (ot, t)) \<in> uwr d;
-   current_domain os \<noteq> d;
-   \<comment> \<open>NB: external_uwr should give us current_domain' t \<noteq> d\<close>
+   (os', ot') \<in> external_uwr d;
    \<comment> \<open>we execute both programs\<close>
-   s' = instr_multistep ps os s;
-   t' = instr_multistep pt ot t;
-   current_domain' s' \<noteq> d;
-   current_domain os' = current_domain os;
-   current_domain ot' = current_domain ot
-   \<comment> \<open>NB: external_uwr should oblige us to prove current_domain' t' \<noteq> d\<close>
+   s' = trace_multistep ps s;
+   t' = trace_multistep pt t
    \<rbrakk> \<Longrightarrow>
    \<comment> \<open>new state s' and t' hold uwr_notrunning\<close>
    ((os', s'), (ot', t')) \<in> uwr d"
-  sorry (*
-  apply clarsimp
-  apply (subgoal_tac "current_domain' t \<noteq> d")
-   apply (drule(4) d_not_running_integrity_uwr [where s=s])
-   apply (drule(4) d_not_running_integrity_uwr [where s=t])
-  apply (rule uwr_trans, subst uwr_sym, assumption)
+  apply (drule(3) d_not_running_integrity_uwr [where s=s and os=os])
+  apply (drule(1) d_not_running_integrity_uwr [where s=t and os=ot and d=d])
+    using external_uwr_same_domain uwr_external_uwr apply fastforce
+   using external_uwr_same_domain uwr_external_uwr apply force
+  apply (prop_tac "((os, trace_multistep ps s), ot, trace_multistep pt t) \<in> uwr d")
+   apply (rule uwr_trans, rule uwr_sym', assumption)
    apply (rule uwr_trans, assumption, assumption)
-  using uwr_same_domain apply blast
-  done *)
-  
-  
+  apply (simp add:uwr_def)
+  done
 
 (* --- notes for domainswitch step stuff ---- *)
-
+(*
 
 lemma dirty_step_u_1of3:
   assumes
@@ -902,7 +894,7 @@ lemma domainswitch_uwr: "\<lbrakk>
   nitpick
 
 
-
+*)
 
 
 
@@ -1123,16 +1115,18 @@ end
    - a domain extractor
    - an unwinding relation
    - a state
-   - a set of programs
-   and i'll give you a program. i only use information inside the uwr to decide which program
-   to choose, and i will always choose from the given set of programs. *)
+   - a set of trace
+   - a default trace
+   and i'll give you a trace. i only use information inside the uwr to decide which trace
+   to choose, and i will always choose from the given set of traces. However, the default
+   trace must be in the set of traces given by get_ps *)
 axiomatization
-  SelectProgram :: "('s \<Rightarrow> 'd) \<Rightarrow>('d \<Rightarrow> ('s \<times> 's) set) \<Rightarrow> ('s \<Rightarrow> 'p set) \<Rightarrow> 's \<Rightarrow> 'p"
+  SelectTrace :: "('s \<Rightarrow> 'd) \<Rightarrow>('d \<Rightarrow> ('s \<times> 's) set) \<Rightarrow> ('s \<Rightarrow> 'p set) \<Rightarrow> 's \<Rightarrow> 'p \<Rightarrow> 'p"
 where
-  program_uwr_determined : "(s, t) \<in> uwr (cdom s) \<Longrightarrow>
-                            SelectProgram cdom uwr get_ps s = SelectProgram cdom uwr get_ps t"
+  trace_uwr_determined : "(s, t) \<in> uwr (cdom s) \<Longrightarrow>
+                            SelectTrace cdom uwr get_ps s p0 = SelectTrace cdom uwr get_ps t p0"
 and
-  program_from_set : "get_ps s \<noteq> {} \<Longrightarrow> SelectProgram cdom uwr get_ps s \<in> get_ps s"
+  trace_from_set : "p0 \<in> get_ps s \<Longrightarrow> SelectTrace cdom uwr get_ps s p0 \<in> get_ps s"
 
 
 locale time_protection_system =
@@ -1140,7 +1134,7 @@ locale time_protection_system =
   tp?: time_protection collides_in_pch fch_lookup pch_lookup
     fch_read_impact pch_read_impact fch_write_impact pch_write_impact
     read_cycles write_cycles empty_fch fch_flush_cycles do_pch_flush pch_flush_cycles
-    addr_domain addr_colour colour_userdomain current_domain external_uwr v_to_p
+    addr_domain addr_colour colour_userdomain current_domain external_uwr
     touched_addrs will_domain_switch
   for A :: "('a,'other_state,unit) data_type"
   and s0 :: "'other_state"
@@ -1165,12 +1159,19 @@ locale time_protection_system =
   and addr_colour :: "paddr \<Rightarrow> 'colour"
   and colour_userdomain :: "'colour \<Rightarrow> 'userdomain"
   and v_to_p :: "'other_state \<Rightarrow> vaddr \<Rightarrow> paddr"
-  and touched_addrs :: "'other_state \<Rightarrow> vaddr set"
+  and touched_addrs :: "'other_state \<Rightarrow> vpaddr set"
   and will_domain_switch :: "'other_state \<Rightarrow> bool" +
   fixes initial_pch :: "'pch"
   fixes choose_next_domain :: "'userdomain domain \<Rightarrow> 'userdomain domain"
   assumes reachable_touched_addrs_inv:
     "ab.reachable s \<Longrightarrow> touched_addrs_inv s"
+  \<comment> \<open> we need to know that for any non-domainswitch step, touched_addresses
+       will not be empty at the end of the step. otherwise, we can't derive
+       a trace. \<close>
+  assumes touched_addrs_not_empty:
+    "(s, s') \<in> ab.Step () \<Longrightarrow>
+     \<not>will_domain_switch s \<Longrightarrow>
+     touched_addrs s' \<noteq> {}"
   assumes simple_steps:
     "(s, s') \<in> ab.Step () \<Longrightarrow>
     (\<not>will_domain_switch s \<and> current_domain s' = current_domain s)
@@ -1179,9 +1180,15 @@ begin
 
 (* this is an axiomatised selector that gets one program from a set.
   it is not defined which program will be selected. *)
-abbreviation selectProgram :: "'other_state \<Rightarrow> program"
+abbreviation selectTrace :: "'other_state \<Rightarrow> trace"
   where
-  "selectProgram \<equiv> SelectProgram current_domain external_uwr programs_obeying_ta"
+  "selectTrace s \<equiv> SelectTrace current_domain external_uwr traces_obeying_ta s []::trace"
+
+lemma trace_from_ta:
+  "selectTrace s \<in> traces_obeying_ta s"
+  apply (rule trace_from_set)
+  apply (clarsimp simp:traces_obeying_set_def)
+  done
 
 (* this used to be called A_extened_Step *)
 definition maStep :: "unit \<Rightarrow>
@@ -1190,19 +1197,19 @@ definition maStep :: "unit \<Rightarrow>
   "maStep _ \<equiv> {((os, s), (os', s')) | os os' s s' p.
               (os, os') \<in> ab.Step () \<and>
                ((\<not>will_domain_switch os
-                 \<and> p = selectProgram os'
-                 \<and> s' = instr_multistep p os s ) \<comment> \<open>TA step\<close>
+                 \<and> p = selectTrace os'
+                 \<and> s' = trace_multistep p s ) \<comment> \<open>TA step\<close>
                \<or> (will_domain_switch os
-                 \<and> is_domainswitch_gadget p
-                 \<and> s' = instr_multistep p os s ) \<comment> \<open>gadget step\<close>
+                 \<and> True \<comment> \<open>this needs to be something like is_domainswitch_gadget p \<close>
+                 \<and> s' = trace_multistep p s ) \<comment> \<open>gadget step\<close>
               )}"
 
 definition maA :: "(('other_state\<times>('fch, 'pch)state), ('other_state\<times>('fch, 'pch)state), unit) data_type" where
-  "maA \<equiv> \<lparr> Init = \<lambda>s. {s}, Fin = id, Step = maStep\<rparr>"
+  "maA \<equiv> \<lparr> Init = \<lambda>s. {s}, Fin = id, Step = maStep \<rparr>"
 
 (* instead of A_extended_state *)
 definition mas0 :: "'other_state\<times>('fch, 'pch)state" where
-  "mas0 \<equiv> (s0, \<lparr>fch=empty_fch, pch=initial_pch, tm=0\<rparr>)"
+  "mas0 \<equiv> (s0, \<lparr> fch=empty_fch, pch=initial_pch, tm=0 \<rparr>)"
 
 interpretation ma?:Init_inv_Fin_system maA mas0
   apply unfold_locales
@@ -1250,7 +1257,7 @@ lemma ma_single_step_enabled:
    \<exists>s' os'. ((os, s), os', s') \<in> {(s, s'). s' \<in> steps maStep {s} [()]} \<and> ab.reachable os'"
   apply (clarsimp simp: steps_def maStep_def)
   apply (cases "will_domain_switch os"; clarsimp)
-  using ab.enabled_Step is_domainswitch_gadget_def ab.reachable_Step apply fastforce
+  using ab.enabled_Step ab.reachable_Step apply fastforce
   using ab.enabled_Step ab.reachable_Step apply blast
 done
 
@@ -1307,19 +1314,16 @@ lemma ma_confidentiality_u_ta:
   apply (frule simple_steps [where s=ot]; clarsimp)
 
   (* show that the programs obey the TAs *)
-  apply (prop_tac "selectProgram os' \<in> programs_obeying_ta os'
-                 \<and> selectProgram ot' \<in> programs_obeying_ta ot'")
-    apply (intro conjI; rule program_from_set)
-    (* I guess this should be a locale assumption? *)
-    subgoal sorry
-    subgoal sorry
+  apply (prop_tac "selectTrace os' \<in> traces_obeying_ta os'
+                 \<and> selectTrace ot' \<in> traces_obeying_ta ot'")
+   apply (intro conjI; rule trace_from_ta)
   apply clarsimp
 
   apply (case_tac "current_domain os = u")
    (* u is executing *)
-   apply (prop_tac "selectProgram ot' = selectProgram os'")
+   apply (prop_tac "selectTrace ot' = selectTrace os'")
     apply (subst eq_sym_conv)
-    apply (rule program_uwr_determined, simp)
+    apply (rule trace_uwr_determined, simp)
    apply (erule(2) d_running, simp+)
   (* u is not executing *)
   apply (rule d_not_running [where os=os and ot=ot], simp+)
