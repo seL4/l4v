@@ -325,6 +325,10 @@ lemma in_oreturn [simp]:
   "(oreturn x s = Some v) = (v = x)"
   by (auto simp: oreturn_def K_def)
 
+lemma oreturn_None[simp]:
+  "\<not> oreturn x s = None"
+  by (simp add: oreturn_def K_def)
+
 lemma oreturnE:
   "\<lbrakk>oreturn x s = Some v; v = x \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
   by simp
