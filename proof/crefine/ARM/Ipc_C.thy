@@ -4617,7 +4617,7 @@ lemma sendIPC_enqueue_ccorres_helper:
           apply (rule cnotification_relation_ep_queue, assumption+)
             apply (simp add: isSendEP_def isRecvEP_def)
            apply simp
-          apply (frule_tac x=p in map_to_ko_atI2, clarsimp, clarsimp)
+          apply (frule_tac x=p in map_to_ko_atI, clarsimp, clarsimp)
           apply (erule(2) map_to_ko_at_updI')
            apply (simp only:projectKOs injectKO_ep objBits_simps)
            apply clarsimp
@@ -4659,7 +4659,7 @@ lemma sendIPC_enqueue_ccorres_helper:
          apply (rule cnotification_relation_ep_queue, assumption+)
            apply (simp add: isSendEP_def isRecvEP_def)
           apply simp
-         apply (frule_tac x=p in map_to_ko_atI2, clarsimp, clarsimp)
+         apply (frule_tac x=p in map_to_ko_atI, clarsimp, clarsimp)
          apply (erule(2) map_to_ko_at_updI')
           apply (clarsimp simp: objBitsKO_def)
          apply (clarsimp simp: obj_at'_def projectKOs)
@@ -5019,7 +5019,7 @@ lemma receiveIPC_enqueue_ccorres_helper:
           apply (rule cnotification_relation_ep_queue, assumption+)
             apply (simp add: isSendEP_def isRecvEP_def)
            apply simp
-          apply (frule_tac x=p in map_to_ko_atI2, clarsimp, clarsimp)
+          apply (frule_tac x=p in map_to_ko_atI, clarsimp, clarsimp)
           apply (erule(2) map_to_ko_at_updI')
            apply (clarsimp simp: objBitsKO_def)
           apply (clarsimp simp: obj_at'_def projectKOs)
@@ -5057,7 +5057,7 @@ lemma receiveIPC_enqueue_ccorres_helper:
          apply (rule cnotification_relation_ep_queue, assumption+)
            apply (simp add: isSendEP_def isRecvEP_def)
           apply simp
-         apply (frule_tac x=p in map_to_ko_atI2, clarsimp, clarsimp)
+         apply (frule_tac x=p in map_to_ko_atI, clarsimp, clarsimp)
          apply (erule(2) map_to_ko_at_updI')
           apply (clarsimp simp: objBitsKO_def)
          apply (clarsimp simp: obj_at'_def projectKOs)
@@ -6107,7 +6107,7 @@ lemma receiveSignal_enqueue_ccorres_helper:
            apply (rule cendpoint_relation_ntfn_queue, assumption+)
              apply (simp add: isWaitingNtfn_def)
             apply simp
-           apply (frule_tac x=p in map_to_ko_atI2, clarsimp, clarsimp)
+           apply (frule_tac x=p in map_to_ko_atI, clarsimp, clarsimp)
            apply (erule(2) map_to_ko_at_updI')
             apply (clarsimp simp: objBitsKO_def)
            apply (clarsimp simp: obj_at'_def projectKOs)
@@ -6148,7 +6148,7 @@ lemma receiveSignal_enqueue_ccorres_helper:
           apply (rule cendpoint_relation_ntfn_queue, assumption+)
             apply (simp add: isWaitingNtfn_def)
            apply simp
-          apply (frule_tac x=p in map_to_ko_atI2, clarsimp, clarsimp)
+          apply (frule_tac x=p in map_to_ko_atI, clarsimp, clarsimp)
           apply (erule(2) map_to_ko_at_updI')
            apply (clarsimp simp: objBitsKO_def)
           apply (clarsimp simp: obj_at'_def projectKOs)
