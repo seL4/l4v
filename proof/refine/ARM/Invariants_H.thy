@@ -3008,13 +3008,13 @@ locale typ_at_all_props' = typ_at_props' +
 begin
 
 lemmas typ_at_sc_at'_n_lifts'[wp] = typ_at_sc_at'_n_lifts[OF typ' scs]
+lemmas typ_at_lifts_all' = typ_at_lifts' typ_at_sc_at'_n_lifts'
 
 context begin
-(* We want to enforce that typ_at_sc_at'_n_lifts' only contains lemmas that have no
+(* We want to enforce that typ_at_lifts_all' only contains lemmas that have no
    assumptions. The following thm statements should fail if this is not true. *)
 private lemmas check_valid_internal = iffD1[OF refl, where P="valid p g q" for p g q]
-thm typ_at_lifts'[atomized, THEN check_valid_internal]
-thm typ_at_sc_at'_n_lifts'[atomized, THEN check_valid_internal]
+thm typ_at_lifts_all'[atomized, THEN check_valid_internal]
 end
 
 end
