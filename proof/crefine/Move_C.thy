@@ -571,14 +571,6 @@ lemma map_to_ko_atI':
   apply (simp add: project_inject)
   done
 
-(* FIXME: move up to SR_lemmas_C *)
-lemma map_to_ko_atI2:
-  "\<lbrakk>(projectKO_opt \<circ>\<^sub>m (ksPSpace s)) x = Some v; pspace_aligned' s; pspace_distinct' s\<rbrakk> \<Longrightarrow> ko_at' v x s"
-  apply (clarsimp simp: map_comp_Some_iff)
-  apply (erule (2) aligned_distinct_obj_atI')
-  apply (simp add: project_inject)
-  done
-
 lemma map_to_ko_at_updI':
   "\<And>x x' y y' y''.
    \<lbrakk> (projectKO_opt \<circ>\<^sub>m (ksPSpace s)) x = Some y;
@@ -586,7 +578,7 @@ lemma map_to_ko_at_updI':
      objBitsKO (injectKO y') = objBitsKO y''; x \<noteq> x' \<rbrakk> \<Longrightarrow>
    ko_at' y x (s\<lparr>ksPSpace := ksPSpace s(x' \<mapsto> y'')\<rparr>)"
   by (fastforce simp: obj_at'_def projectKOs objBitsKO_def ps_clear_upd
-               dest: map_to_ko_atI2)
+               dest: map_to_ko_atI)
 
 lemma ps_clear_upd_None:
   "ksPSpace s y = None \<Longrightarrow>
