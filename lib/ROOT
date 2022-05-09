@@ -33,7 +33,6 @@ session Lib (lib) = Word_Lib +
     Value_Abbreviation
     Eisbach_Methods
     HaskellLib_H
-    Eval_Bool
     Bisim_UL
     Solves_Tac
     Crunch

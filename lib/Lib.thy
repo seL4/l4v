@@ -17,7 +17,6 @@ imports
   Try_Methods
   Extract_Conjunct
   ML_Goal
-  Eval_Bool
   NICTATools
   "Word_Lib.WordSetup"
 begin

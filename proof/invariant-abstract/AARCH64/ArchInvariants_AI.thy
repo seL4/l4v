@@ -2910,7 +2910,4 @@ end
 declare AARCH64.arch_tcb_context_absorbs[simp]
 declare AARCH64.arch_tcb_context_get_set[simp]
 
-setup \<open>Add_Locale_Code_Defs.setup "AARCH64"\<close>
-setup \<open>Add_Locale_Code_Defs.setup "AARCH64_A"\<close>
-
 end

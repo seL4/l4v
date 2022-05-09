@@ -2497,7 +2497,4 @@ end
 declare ARM.arch_tcb_context_absorbs[simp]
 declare ARM.arch_tcb_context_get_set[simp]
 
-setup \<open>Add_Locale_Code_Defs.setup "ARM"\<close>
-setup \<open>Add_Locale_Code_Defs.setup "ARM_A"\<close>
-
 end

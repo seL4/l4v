@@ -3375,7 +3375,4 @@ end
 declare X64.arch_tcb_context_absorbs[simp]
 declare X64.arch_tcb_context_get_set[simp]
 
-setup \<open>Add_Locale_Code_Defs.setup "X64"\<close>
-setup \<open>Add_Locale_Code_Defs.setup "X64_A"\<close>
-
 end

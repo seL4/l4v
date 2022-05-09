@@ -2580,7 +2580,4 @@ end
 declare ARM_HYP.arch_tcb_context_absorbs[simp]
 declare ARM_HYP.arch_tcb_context_get_set[simp]
 
-setup \<open>Add_Locale_Code_Defs.setup "ARM_HYP"\<close>
-setup \<open>Add_Locale_Code_Defs.setup "ARM_HYP_A"\<close>
-
 end

@@ -2757,7 +2757,4 @@ end
 declare RISCV64.arch_tcb_context_absorbs[simp]
 declare RISCV64.arch_tcb_context_get_set[simp]
 
-setup \<open>Add_Locale_Code_Defs.setup "RISCV64"\<close>
-setup \<open>Add_Locale_Code_Defs.setup "RISCV64_A"\<close>
-
 end
