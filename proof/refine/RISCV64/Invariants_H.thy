@@ -1807,8 +1807,9 @@ lemma valid_pspaceI' [intro]:
 
 lemma valid_pspaceE' [elim]:
   "\<lbrakk>valid_pspace' s;
-    \<lbrakk> valid_objs' s; pspace_aligned' s; pspace_distinct' s; no_0_obj' s;
-      valid_mdb' s; pspace_canonical' s; pspace_in_kernel_mappings' s\<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
+    \<lbrakk>valid_objs' s; valid_replies' s; pspace_aligned' s; pspace_distinct' s;
+     pspace_bounded' s; no_0_obj' s; valid_mdb' s; pspace_canonical' s;
+     pspace_in_kernel_mappings' s\<rbrakk> \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
   unfolding valid_pspace'_def by simp
 
 lemma idle'_only_sc_refs:
