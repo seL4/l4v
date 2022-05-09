@@ -2620,13 +2620,6 @@ lemma tcb_queue_update_other':
   unfolding tcb_queue_relation'_def
   by (simp add: tcb_queue_update_other)
 
-lemma map_to_ko_atI2:
-  "\<lbrakk>(projectKO_opt \<circ>\<^sub>m (ksPSpace s)) x = Some v; pspace_aligned' s; pspace_distinct' s\<rbrakk> \<Longrightarrow> ko_at' v x s"
-  apply (clarsimp simp: map_comp_Some_iff)
-  apply (erule (2) aligned_distinct_obj_atI')
-  apply (simp add: project_inject)
-  done
-
 lemma c_guard_tcb:
   assumes al: "is_aligned (ctcb_ptr_to_tcb_ptr p) tcbBlockSizeBits"
   and   ptr0: "ctcb_ptr_to_tcb_ptr p \<noteq> 0"
@@ -3009,7 +3002,7 @@ proof -
        \<Longrightarrow> ctcb_ptr_to_tcb_ptr p \<notin> set list"
     using symref pks pal pds
     apply -
-    apply (frule map_to_ko_atI2)
+    apply (frule map_to_ko_atI)
       apply simp
      apply simp
     apply (drule (1) sym_refs_ko_atD')
@@ -3022,7 +3015,7 @@ proof -
        \<Longrightarrow> ctcb_ptr_to_tcb_ptr p \<notin> set list"
     using symref pks pal pds
     apply -
-    apply (frule map_to_ko_atI2)
+    apply (frule map_to_ko_atI)
       apply simp
      apply simp
     apply (drule (1) sym_refs_ko_atD')
@@ -3035,7 +3028,7 @@ proof -
        \<Longrightarrow> ctcb_ptr_to_tcb_ptr p \<notin> set list"
     using symref pks pal pds
     apply -
-    apply (frule map_to_ko_atI2)
+    apply (frule map_to_ko_atI)
       apply simp
      apply simp
     apply (drule (1) sym_refs_ko_atD')

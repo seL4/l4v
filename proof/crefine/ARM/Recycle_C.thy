@@ -757,14 +757,14 @@ lemma cancelBadgedSends_ccorres:
                      apply (rule cendpoint_relation_q_cong)
                      apply (rule sym, erule restrict_map_eqI)
                      apply (clarsimp simp: image_iff)
-                     apply (drule(2) map_to_ko_atI2)
+                     apply (drule(2) map_to_ko_atI)
                      apply (drule ko_at_state_refs_ofD')
                      apply clarsimp
                      apply (drule_tac x=p in spec)
                      subgoal by fastforce
                     apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
                     apply clarsimp
-                    apply (drule(2) map_to_ko_atI2, drule ko_at_state_refs_ofD')
+                    apply (drule(2) map_to_ko_atI, drule ko_at_state_refs_ofD')
 
                     apply (rule cnotification_relation_q_cong)
                     apply (rule sym, erule restrict_map_eqI)
