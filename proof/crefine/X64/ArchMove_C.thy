@@ -371,11 +371,6 @@ lemma asUser_get_registers:
                         obj_at'_def)
   done
 
-lemma projectKO_user_data_device:
-  "(projectKO_opt ko = Some (t :: user_data_device)) = (ko = KOUserDataDevice)"
-  by (cases ko)
-     (auto simp: projectKO_opts_defs split: arch_kernel_object.splits)
-
 (* FIXME: move to where is_aligned_ptrFromPAddr is *)
 lemma is_aligned_ptrFromPAddr_pageBitsForSize:
   "is_aligned p (pageBitsForSize sz) \<Longrightarrow> is_aligned (ptrFromPAddr p) (pageBitsForSize sz)"
