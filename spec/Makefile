@@ -14,9 +14,6 @@ L4V_ARCH?=ARM
 images: ASpec CKernel
 default: images test
 all: images test
-report-regression:
-	@echo ASpec ExecSpec DSpec TakeGrant CKernel CSpec \
-	      binary-verification-input
 
 #
 # Setup heaps.

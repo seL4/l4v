@@ -77,10 +77,6 @@ GRAMMAR_PRODUCTS = StrictC.lex.sml StrictC.grm.sig StrictC.grm.sml
 .PHONY: c-parser-deps
 c-parser-deps: $(GRAMMAR_PRODUCTS)
 
-# Regression targets.
-report-regression: .FORCE
-	@echo CParser cparser_test cparser_tools
-
 .PHONY: .FORCE
 .FORCE:
 
