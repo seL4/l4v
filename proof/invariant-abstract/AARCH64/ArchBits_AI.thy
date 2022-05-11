@@ -8,7 +8,7 @@ theory ArchBits_AI
 imports Invariants_AI
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 lemma invs_unique_table_caps[elim!]:
   "invs s \<Longrightarrow> unique_table_caps s"

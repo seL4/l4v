@@ -1,4 +1,5 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -8,10 +9,11 @@ theory ArchDetSchedSchedule_AI
 imports DetSchedSchedule_AI
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 named_theorems DetSchedSchedule_AI_assms
 
+(* FIXME AARCH64 VCPU
 crunch  prepare_thread_delete_idle_thread[wp, DetSchedSchedule_AI_assms]:
   prepare_thread_delete "\<lambda>(s:: det_ext state). P (idle_thread s)"
 
@@ -26,6 +28,7 @@ crunch valid_queues [wp, DetSchedSchedule_AI_assms]:
 crunch weak_valid_sched_action [wp, DetSchedSchedule_AI_assms]:
   switch_to_idle_thread, switch_to_thread, set_vm_root, arch_get_sanitise_register_info, arch_post_modify_registers "weak_valid_sched_action"
   (simp: crunch_simps)
+*)
 
 crunch ct_not_in_q[wp]: set_vm_root "ct_not_in_q"
   (wp: crunch_wps simp: crunch_simps)
@@ -39,13 +42,15 @@ lemma switch_to_idle_thread_ct_not_in_q [wp, DetSchedSchedule_AI_assms]:
   apply wp
    apply (simp add: arch_switch_to_idle_thread_def)
    apply wp+
+  sorry (* FIXME AARCH64 VCPU
   apply (fastforce simp: valid_queues_def ct_not_in_q_def not_queued_def
                          valid_idle_def pred_tcb_at_def obj_at_def)
-  done
+  done *)
 
+(* FIXME AARCH64 VCPU
 crunch valid_sched_action'[wp]: set_vm_root "\<lambda>s. valid_sched_action_2 (scheduler_action s)
                                                  (ekheap s) (kheap s) thread (cur_domain s)"
-  (wp: crunch_wps simp: crunch_simps)
+  (wp: crunch_wps simp: crunch_simps) *)
 
 lemma switch_to_idle_thread_valid_sched_action [wp, DetSchedSchedule_AI_assms]:
   "\<lbrace>valid_sched_action and valid_idle\<rbrace>
@@ -57,7 +62,8 @@ lemma switch_to_idle_thread_valid_sched_action [wp, DetSchedSchedule_AI_assms]:
    apply wp+
   apply (clarsimp simp: valid_sched_action_def valid_idle_def is_activatable_def
                         pred_tcb_at_def obj_at_def)
-  done
+  sorry (* FIXME AARCH64 global vspace
+  done *)
 
 crunch ct_in_cur_domain'[wp]: set_vm_root "\<lambda>s. ct_in_cur_domain_2 t (idle_thread s)
                                                    (scheduler_action s) (cur_domain s) (ekheap s)"
@@ -65,14 +71,16 @@ crunch ct_in_cur_domain'[wp]: set_vm_root "\<lambda>s. ct_in_cur_domain_2 t (idl
 
 lemma switch_to_idle_thread_ct_in_cur_domain [wp, DetSchedSchedule_AI_assms]:
   "\<lbrace>\<top>\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>_. ct_in_cur_domain\<rbrace>"
+  sorry (* FIXME AARCH64 VCPU
   by (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def do_machine_op_def
                 split_def
       | wp
-      | simp add: ct_in_cur_domain_def)+
+      | simp add: ct_in_cur_domain_def)+ *)
 
 crunch ct_not_in_q [wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers ct_not_in_q
   (simp: crunch_simps wp: crunch_wps)
 
+(* FIXME AARCH64 VCPU
 crunch is_activatable [wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers "is_activatable t"
   (simp: crunch_simps)
 
@@ -81,10 +89,11 @@ crunch valid_sched_action [wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread
 
 crunch valid_sched [wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers valid_sched
   (simp: crunch_simps)
-
+*)
 crunch exst[wp]: set_vm_root "\<lambda>s. P (exst s)"
   (wp: crunch_wps hoare_whenE_wp simp: crunch_simps)
 
+(* FIXME AARCH64
 crunch ct_in_cur_domain_2 [wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread
   "\<lambda>s. ct_in_cur_domain_2 thread (idle_thread s) (scheduler_action s) (cur_domain s) (ekheap s)"
   (simp: crunch_simps wp: assert_inv)
@@ -96,20 +105,24 @@ crunch ct_in_q[wp]: set_vm_root ct_in_q
   (simp: crunch_simps)
 
 crunch etcb_at [wp, DetSchedSchedule_AI_assms]: switch_to_thread "etcb_at P t"
+*)
 
 crunch valid_idle [wp, DetSchedSchedule_AI_assms]:
   arch_switch_to_idle_thread "valid_idle"
   (wp: crunch_wps simp: crunch_simps)
 
+(* FIXME AARCH64 VCPU
 crunch etcb_at [wp, DetSchedSchedule_AI_assms]: arch_switch_to_idle_thread "etcb_at P t"
 
 crunch scheduler_action [wp, DetSchedSchedule_AI_assms]:
   arch_switch_to_idle_thread, next_domain "\<lambda>s. P (scheduler_action s)"
   (simp: Let_def)
+*)
 
 lemma set_vm_root_valid_blocked_ct_in_q [wp]:
   "\<lbrace>valid_blocked and ct_in_q\<rbrace> set_vm_root p \<lbrace>\<lambda>_. valid_blocked and ct_in_q\<rbrace>"
-  by (wp | wpc | auto)+
+  sorry (* FIXME AARCH64 vm root
+  by (wp | wpc | auto)+ *)
 
 
 lemma as_user_ct_in_q[wp]:
@@ -120,7 +133,8 @@ lemma as_user_ct_in_q[wp]:
 
 lemma arch_switch_to_thread_valid_blocked [wp, DetSchedSchedule_AI_assms]:
   "\<lbrace>valid_blocked and ct_in_q\<rbrace> arch_switch_to_thread thread \<lbrace>\<lambda>_. valid_blocked and ct_in_q\<rbrace>"
-  by (wpsimp simp: arch_switch_to_thread_def)
+  sorry (* FIXME AARCH64
+  by (wpsimp simp: arch_switch_to_thread_def) *)
 
 lemma switch_to_idle_thread_ct_not_queued [wp, DetSchedSchedule_AI_assms]:
   "\<lbrace>valid_queues and valid_etcbs and valid_idle\<rbrace>
@@ -128,31 +142,37 @@ lemma switch_to_idle_thread_ct_not_queued [wp, DetSchedSchedule_AI_assms]:
    \<lbrace>\<lambda>rv s. not_queued (cur_thread s) s\<rbrace>"
   apply (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def
                    tcb_sched_action_def | wp)+
+  sorry (* FIXME AARCH64 VCPU
   apply (fastforce simp: valid_sched_2_def valid_queues_2_def valid_idle_def
                          pred_tcb_at_def obj_at_def not_queued_def)
-  done
+  done *)
 
+(* FIXME AARCH64
 crunch valid_blocked_2[wp]: set_vm_root "\<lambda>s.
            valid_blocked_2 (ready_queues s) (kheap s)
             (scheduler_action s) thread"
-  (wp: crunch_wps simp: crunch_simps)
+  (wp: crunch_wps simp: crunch_simps) *)
 
 lemma switch_to_idle_thread_valid_blocked [wp, DetSchedSchedule_AI_assms]:
   "\<lbrace>valid_blocked and ct_in_q\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>rv. valid_blocked\<rbrace>"
   apply (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def do_machine_op_def | wp | wpc)+
+  sorry (* FIXME AARCH64 global vspace
   apply clarsimp
   apply (drule(1) ct_in_q_valid_blocked_ct_upd)
   apply simp
-  done
+  done *)
 
+(* FIXME AARCH64 VCPU
 crunch exst [wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread "\<lambda>s. P (exst s :: det_ext)"
 
 crunch cur_thread[wp]: arch_switch_to_idle_thread "\<lambda>s. P (cur_thread s)"
+*)
 
 lemma astit_st_tcb_at[wp]:
   "\<lbrace>st_tcb_at P t\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
   apply (simp add: arch_switch_to_idle_thread_def)
-  by (wpsimp)
+  sorry (* FIXME AARCH64 VCPU
+  by (wpsimp) *)
 
 lemma stit_activatable' [DetSchedSchedule_AI_assms]:
   "\<lbrace>valid_idle\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>rv . ct_in_state activatable\<rbrace>"
@@ -163,7 +183,8 @@ lemma stit_activatable' [DetSchedSchedule_AI_assms]:
 
 lemma switch_to_idle_thread_cur_thread_idle_thread [wp, DetSchedSchedule_AI_assms]:
   "\<lbrace>\<top>\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>_ s. cur_thread s = idle_thread s\<rbrace>"
-  by (wp | simp add:switch_to_idle_thread_def arch_switch_to_idle_thread_def)+
+  sorry (* FIXME AARCH64 VCPU
+  by (wp | simp add:switch_to_idle_thread_def arch_switch_to_idle_thread_def)+ *)
 
 lemma set_pt_valid_etcbs[wp]:
   "\<lbrace>valid_etcbs\<rbrace> set_pt ptr pt \<lbrace>\<lambda>rv. valid_etcbs\<rbrace>"
@@ -186,20 +207,22 @@ crunch ct_not_in_q [wp, DetSchedSchedule_AI_assms]:
   (wp: crunch_wps hoare_drop_imps hoare_unless_wp select_inv mapM_wp
        subset_refl if_fun_split simp: crunch_simps ignore: tcb_sched_action)
 
+(* FIXME AARCH64 VCPU
 crunch valid_etcbs [wp, DetSchedSchedule_AI_assms]:
   arch_finalise_cap, prepare_thread_delete valid_etcbs
   (wp: hoare_drop_imps hoare_unless_wp select_inv mapM_x_wp mapM_wp subset_refl
-       if_fun_split simp: crunch_simps ignore: set_object thread_set)
+       if_fun_split simp: crunch_simps ignore: set_object thread_set) *)
 
 crunch simple_sched_action [wp, DetSchedSchedule_AI_assms]:
   arch_finalise_cap, prepare_thread_delete simple_sched_action
   (wp: hoare_drop_imps mapM_x_wp mapM_wp select_wp subset_refl
    simp: unless_def if_fun_split)
 
+(* FIXME AARCH64 VCPU
 crunch valid_sched [wp, DetSchedSchedule_AI_assms]:
   arch_finalise_cap, prepare_thread_delete, arch_invoke_irq_handler, arch_mask_irq_signal
   "valid_sched"
-  (ignore: set_object wp: crunch_wps subset_refl simp: if_fun_split)
+  (ignore: set_object wp: crunch_wps subset_refl simp: if_fun_split) *)
 
 lemma activate_thread_valid_sched [DetSchedSchedule_AI_assms]:
   "\<lbrace>valid_sched\<rbrace> activate_thread \<lbrace>\<lambda>_. valid_sched\<rbrace>"
@@ -208,10 +231,11 @@ lemma activate_thread_valid_sched [DetSchedSchedule_AI_assms]:
   apply (force elim: st_tcb_weakenE)
   done
 
+(* FIXME AARCH64 unmap_page
 crunch valid_sched[wp]:
   perform_page_invocation, perform_page_table_invocation, perform_asid_pool_invocation
   valid_sched
-  (wp: mapM_x_wp' mapM_wp' crunch_wps)
+  (wp: mapM_x_wp' mapM_wp' crunch_wps) *)
 
 lemma arch_perform_invocation_valid_sched [wp, DetSchedSchedule_AI_assms]:
   "\<lbrace>invs and valid_sched and ct_active and valid_arch_inv a\<rbrace>
@@ -220,7 +244,8 @@ lemma arch_perform_invocation_valid_sched [wp, DetSchedSchedule_AI_assms]:
   apply (cases a, simp_all add: arch_perform_invocation_def)
      apply (wp perform_asid_control_invocation_valid_sched | wpc |
             simp add: valid_arch_inv_def invs_valid_idle)+
-  done
+  sorry (* FIXME AARCH64 perform_vspace_invocation
+  done *)
 
 crunch valid_sched [wp, DetSchedSchedule_AI_assms]:
   handle_arch_fault_reply, handle_vm_fault valid_sched
@@ -247,8 +272,9 @@ lemma handle_vm_fault_st_tcb_cur_thread [wp, DetSchedSchedule_AI_assms]:
 
 crunch valid_sched [wp, DetSchedSchedule_AI_assms]: arch_invoke_irq_control "valid_sched"
 
+(* FIXME AARCH64 VCPU
 crunch valid_list [wp, DetSchedSchedule_AI_assms]:
-  arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread "valid_list"
+  arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread "valid_list" *)
 
 crunch cur_tcb [wp, DetSchedSchedule_AI_assms]:
   handle_arch_fault_reply, handle_vm_fault, arch_get_sanitise_register_info, arch_post_modify_registers
@@ -261,7 +287,8 @@ crunch scheduler_action [wp, DetSchedSchedule_AI_assms]: arch_get_sanitise_regis
 
 lemma make_arch_fault_msg_inv:
   "make_arch_fault_msg f t \<lbrace>P\<rbrace>"
-  by (cases f) wpsimp
+  sorry (* FIXME AARCH64 VCPU
+  by (cases f) wpsimp *)
 
 declare make_arch_fault_msg_inv[DetSchedSchedule_AI_assms]
 
@@ -293,10 +320,10 @@ end
 global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI
   proof goal_cases
   interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact DetSchedSchedule_AI_assms)?)
+  case 1 show ?case sorry (*FIXME AARCH64 by (unfold_locales; (fact DetSchedSchedule_AI_assms)?) *)
   qed
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 lemma handle_hyp_fault_valid_sched[wp]:
   "\<lbrace>valid_sched and invs and st_tcb_at active t and not_queued t and scheduler_act_not t
@@ -307,7 +334,8 @@ lemma handle_hyp_fault_valid_sched[wp]:
 lemma handle_reserved_irq_valid_sched:
   "\<lbrace>valid_sched and invs and (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow>  scheduler_act_sane s \<and> ct_not_queued s)\<rbrace>
   handle_reserved_irq irq \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
-  unfolding handle_reserved_irq_def by (wpsimp simp: non_kernel_IRQs_def)
+  sorry (* FIXME AARCH64 VCPU vppi
+  unfolding handle_reserved_irq_def by (wpsimp simp: non_kernel_IRQs_def) *)
 
 end
 

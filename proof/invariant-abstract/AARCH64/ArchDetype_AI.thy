@@ -1,4 +1,5 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -8,7 +9,7 @@ theory ArchDetype_AI
 imports Detype_AI
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 named_theorems Detype_AI_asms
 
@@ -140,7 +141,8 @@ lemma hyp_refs_of: "\<And>obj p. \<lbrakk> ko_at obj p s \<rbrakk> \<Longrightar
 lemma arch_valid_obj[detype_invs_proofs]:
     "\<And>p ao. \<lbrakk>ko_at (ArchObj ao) p s; arch_valid_obj ao s\<rbrakk>
        \<Longrightarrow> arch_valid_obj ao (detype (untyped_range cap) s)"
-  by simp
+  sorry (* FIXME AARCH64
+  by simp *)
 
 lemma sym_hyp_refs_detype[detype_invs_proofs]:
   "sym_refs (state_hyp_refs_of (detype (untyped_range cap) s))"
@@ -179,7 +181,8 @@ lemma tcb_arch_detype[detype_invs_proofs]:
   "\<lbrakk>ko_at (TCB t) p s; valid_arch_tcb (tcb_arch t) s\<rbrakk>
       \<Longrightarrow> valid_arch_tcb (tcb_arch t) (detype (untyped_range cap) s)"
   apply (clarsimp simp: valid_arch_tcb_def)
-  done
+  sorry (* FIXME AARCH64
+  done *)
 
 declare arch_state_det[simp]
 
@@ -192,8 +195,9 @@ lemma pts_of_detype[simp]:
   by (simp add: in_omonad detype_def)
 
 lemma ptes_of_detype_Some[simp]:
-  "(ptes_of (detype S s) p = Some pte) = (table_base p \<notin> S \<and> ptes_of s p = Some pte)"
-  by (simp add: in_omonad ptes_of_def detype_def)
+  "(ptes_of (detype S s) pt_t p = Some pte) = (table_base pt_t p \<notin> S \<and> ptes_of s pt_t p = Some pte)"
+  sorry (* FIXME AARCH64
+  by (simp add: in_omonad ptes_of_def detype_def) *)
 
 lemma asid_pools_of_detype:
   "asid_pools_of (detype S s) = (\<lambda>p. if p\<in>S then None else asid_pools_of s p)"
@@ -210,14 +214,16 @@ lemma pool_for_asid_detype_Some[simp]:
 lemma vspace_for_pool_detype_Some[simp]:
   "(vspace_for_pool ap asid (\<lambda>p. if p \<in> S then None else pools p) = Some p) =
    (ap \<notin> S \<and> vspace_for_pool ap asid pools = Some p)"
-  by (simp add: vspace_for_pool_def obind_def split: option.splits)
+  sorry (* FIXME AARCH64
+  by (simp add: vspace_for_pool_def obind_def split: option.splits) *)
 
 lemma vspace_for_asid_detype_Some[simp]:
   "(vspace_for_asid asid (detype S s) = Some p) =
    ((\<exists>ap. pool_for_asid asid s = Some ap \<and> ap \<notin> S) \<and> vspace_for_asid asid s = Some p)"
   apply (simp add: vspace_for_asid_def obind_def asid_pools_of_detype split: option.splits)
   apply (auto simp: pool_for_asid_def)
-  done
+  sorry (* FIXME AARCH64
+  done *)
 
 lemma pt_walk_detype:
   "pt_walk level bot_level pt_ptr vref (ptes_of (detype S s)) = Some (bot_level, p) \<Longrightarrow>
@@ -229,8 +235,9 @@ lemma pt_walk_detype:
   apply (clarsimp simp: in_omonad split: if_split_asm)
   apply (erule disjE; clarsimp)
   apply (drule meta_spec, drule (1) meta_mp)
+  sorry (* FIXME AARCH64
   apply fastforce
-  done
+  done *)
 
 lemma vs_lookup_table:
   "vs_lookup_table level asid vref (detype S s) = Some (level, p) \<Longrightarrow>
@@ -248,9 +255,10 @@ lemma vs_lookup_slot:
 lemma vs_lookup_target:
   "(vs_lookup_target level asid vref (detype S s) = Some (level, p)) \<Longrightarrow>
    (vs_lookup_target level asid vref s = Some (level, p))"
+  sorry (* FIXME AARCH64
   by (fastforce simp: vs_lookup_target_def in_omonad asid_pools_of_detype
                 split: if_split_asm
-                dest!: vs_lookup_slot)
+                dest!: vs_lookup_slot) *)
 
 lemma vs_lookup_target_preserved:
   "\<lbrakk> x \<in> untyped_range cap; vs_lookup_target level asid vref s = Some (level', x);
@@ -275,6 +283,7 @@ lemma valid_asid_table:
   apply (drule no_obj_refs; simp)
   done
 
+(* FIXME AARCH64
 lemma valid_global_arch_objs:
   "valid_global_arch_objs (detype (untyped_range cap) s)"
   using valid_arch_state
@@ -286,12 +295,14 @@ lemma valid_global_tables:
   using valid_arch_state
   by (fastforce dest: pt_walk_level pt_walk_detype
                 simp: valid_global_tables_def valid_arch_state_def Let_def)
+*)
 
 lemma valid_arch_state_detype[detype_invs_proofs]:
   "valid_arch_state (detype (untyped_range cap) s)"
   using valid_vs_lookup valid_arch_state ut_mdb valid_global_refsD [OF globals cap] cap
   unfolding valid_arch_state_def pred_conj_def
-  by (simp only: valid_asid_table valid_global_arch_objs valid_global_tables) simp
+  sorry (* FIXME AARCH64
+  by (simp only: valid_asid_table valid_global_arch_objs valid_global_tables) simp *)
 
 lemma vs_lookup_asid_pool_level:
   assumes lookup: "vs_lookup_table level asid vref s = Some (level, p)" "vref \<in> user_region"
@@ -309,7 +320,8 @@ proof (rule ccontr)
     using invs by (auto simp: invs_def valid_state_def valid_arch_state_def)
   ultimately
   have "\<exists>pt. pts_of s p = Some pt \<and> valid_vspace_obj level (PageTable pt) s"
-    by (rule valid_vspace_objs_strongD)
+    sorry (* FIXME AARCH64
+    by (rule valid_vspace_objs_strongD) *)
   with ap
   show False by (clarsimp simp: in_omonad)
 qed
@@ -343,6 +355,7 @@ lemma valid_vspace_obj:
   apply (cases ao; clarsimp split del: if_split)
    apply (frule (1) vs_lookup_asid_pool_level, simp add: in_omonad)
    apply simp
+  sorry (* FIXME AARCH64
    apply (drule vs_lookup_table_ap_step, simp add: in_omonad, assumption)
    apply clarsimp
    apply (erule (2) vs_lookup_target_preserved)
@@ -362,7 +375,7 @@ lemma valid_vspace_obj:
     apply simp
    apply fastforce
   apply (fastforce elim: vs_lookup_target_preserved)
-  done
+  done *)
 
 lemma valid_vspace_obj_detype[detype_invs_proofs]: "valid_vspace_objs (detype (untyped_range cap) s)"
 proof -
@@ -442,6 +455,7 @@ qed
 lemma valid_asid_map_detype[detype_invs_proofs]: "valid_asid_map (detype (untyped_range cap) s)"
   by (simp add: valid_asid_map_def)
 
+(* FIXME AARCH64
 lemma has_kernel_mappings:
   "valid_global_arch_objs s \<Longrightarrow>
    has_kernel_mappings pt (detype (untyped_range cap) s) = has_kernel_mappings pt s"
@@ -484,6 +498,7 @@ proof -
     apply (clarsimp simp: cap_range_def opt_map_def detype_def split: option.splits)
     done
 qed
+*)
 
 lemma pspace_in_kernel_window_detype[detype_invs_proofs]:
   "pspace_in_kernel_window (detype (untyped_range cap) s)"
@@ -592,7 +607,8 @@ sublocale detype_locale < detype_locale_gen_2
  proof goal_cases
   interpret detype_locale_arch ..
   case 1 show ?case
-  by (intro_locales; (unfold_locales; fact detype_invs_proofs)?)
+  sorry (* FIXME AARCH64
+  by (intro_locales; (unfold_locales; fact detype_invs_proofs)?) *)
   qed
 
 context detype_locale begin

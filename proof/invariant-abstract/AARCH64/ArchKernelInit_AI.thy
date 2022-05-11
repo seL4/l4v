@@ -11,14 +11,14 @@ imports
   Arch_AI
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 text \<open>
   Showing that there is a state that satisfies the abstract invariants.
 \<close>
 
-lemmas ptr_defs = idle_thread_ptr_def init_irq_node_ptr_def riscv_global_pt_ptr_def
-lemmas state_defs = init_A_st_def init_kheap_def init_arch_state_def init_global_pt_def
+lemmas ptr_defs = idle_thread_ptr_def init_irq_node_ptr_def (* FIXME AARCH64 riscv_global_pt_ptr_def *)
+lemmas state_defs = init_A_st_def init_kheap_def init_arch_state_def (* FIXME AARCH64 init_global_pt_def *)
                     init_vspace_uses_def ptr_defs
 
 lemma is_tcb_TCB[simp]: "is_tcb (TCB t)" by (simp add: is_tcb_def)
@@ -55,7 +55,7 @@ lemma is_reply_cap_NullCap[simp]: "\<not>is_reply_cap NullCap"
 declare cap_range_NullCap [simp]
 
 lemma pptr_base_num:
-  "pptr_base = 0xFFFFFFC000000000"
+  "pptr_base = 0x8000000000"
   by (simp add: pptr_base_def pptrBase_def canonical_bit_def)
 
 (* IRQ nodes occupy 11 bits of address space in this RISCV example state:
@@ -66,6 +66,7 @@ lemma init_irq_ptrs_ineqs:
                 \<le> init_irq_node_ptr + mask 11"
   "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits)
                 \<le> init_irq_node_ptr + mask 11"
+sorry (* FIXME AARCH64
 proof -
   have P: "ucast irq < (2 ^ (11 - cte_level_bits) :: machine_word)"
     apply (rule order_le_less_trans[OF
@@ -95,7 +96,7 @@ proof -
      apply simp
     apply (simp add: cte_level_bits_def init_irq_node_ptr_def pptr_base_num)
     done
-qed
+qed *)
 
 lemmas init_irq_ptrs_less_ineqs
    = init_irq_ptrs_ineqs(1)[THEN order_less_le_trans[rotated]]
@@ -174,14 +175,16 @@ lemma cap_refs_respects_device_region_init[simp]:
    apply (clarsimp simp: cte_wp_at_caps_of_state cap_range_respects_device_region_def)
    done
 
+(* FIXME AARCH64
 lemma kernel_mapping_slot: "0x1FF \<in> kernel_mapping_slots"
   by (clarsimp simp: kernel_mapping_slots_def pptr_base_def pptrBase_def canonical_bit_def
-                     pt_bits_left_def bit_simps level_defs)
+                     pt_bits_left_def bit_simps level_defs) *)
 
 lemma pool_for_asid_init_A_st[simp]:
   "pool_for_asid asid init_A_st = None"
   by (simp add: pool_for_asid_def state_defs)
 
+(* FIXME AARCH64
 lemma vspace_for_asid_init_A_st[simp]:
   "vspace_for_asid asid init_A_st = None"
   by (simp add: vspace_for_asid_def obind_def)
@@ -426,6 +429,7 @@ lemma irq_node_in_kernel_window_init_arch_state[simp]:
   apply (thin_tac P for P)
   apply word_bitwise
   done
+*)
 
 lemma invs_A:
   "invs init_A_st" (is "invs ?st")
@@ -436,6 +440,8 @@ lemma invs_A:
   apply (rule conjI)
    prefer 2
    apply (simp add: cur_tcb_def state_defs obj_at_def)
+  sorry (* FIXME AARCH64 rest of proof won't make sense until example state is tweaked from RISCV64
+                         version
   apply (simp add: valid_state_def)
   apply (rule conjI)
    apply (simp add: valid_pspace_def)
@@ -518,7 +524,7 @@ lemma invs_A:
    apply (clarsimp simp: pspace_in_kernel_window_def init_A_st_def init_kheap_def)
   apply (simp add: cap_refs_in_kernel_window_def caps_of_state_init_A_st_Null
                   valid_refs_def[unfolded cte_wp_at_caps_of_state])
-  done
+  done  *)
 
 
 end

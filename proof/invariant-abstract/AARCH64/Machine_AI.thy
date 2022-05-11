@@ -362,9 +362,10 @@ lemma no_irq_setVSpaceRoot:
   "no_irq (setVSpaceRoot r a)"
   unfolding setVSpaceRoot_def by wpsimp
 
+(* FIXME AARCH64
 lemma no_irq_hwASIDFlush:
   "no_irq (hwASIDFlush r)"
-  unfolding hwASIDFlush_def by wpsimp
+  unfolding hwASIDFlush_def by wpsimp *)
 
 end
 end

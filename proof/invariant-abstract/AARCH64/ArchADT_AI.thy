@@ -1,17 +1,18 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
-chapter \<open>RISCV64-specific definitions for abstract datatype for the abstract specification\<close>
+chapter \<open>AARCH64-specific definitions for abstract datatype for the abstract specification\<close>
 
 theory ArchADT_AI
 imports
   "Lib.Simulation"
   Invariants_AI
 begin
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 subsection \<open>Constructing a virtual-memory view\<close>
 
@@ -46,6 +47,8 @@ definition
   get_vspace_of_thread :: "kheap \<Rightarrow> arch_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref"
 where
   get_vspace_of_thread_def:
+  "get_vspace_of_thread khp astate tcb_ref \<equiv> undefined"
+  (* FIXME AARCH64: needs redefinition
   "get_vspace_of_thread khp astate tcb_ref \<equiv>
    case khp tcb_ref of Some (TCB tcb) \<Rightarrow>
      (case tcb_vtable tcb of
@@ -54,7 +57,7 @@ where
              Some pt' \<Rightarrow> if pt' = pt then pt else riscv_global_pt astate
            | _ \<Rightarrow> riscv_global_pt astate)
         | _ \<Rightarrow>  riscv_global_pt astate)
-   | _ \<Rightarrow>  riscv_global_pt astate"
+   | _ \<Rightarrow>  riscv_global_pt astate" *)
 
 
 lemma the_arch_cap_simp[simp]: "the_arch_cap (ArchObjectCap x) = x"
@@ -62,11 +65,12 @@ lemma the_arch_cap_simp[simp]: "the_arch_cap (ArchObjectCap x) = x"
 
 lemma vspace_for_asid_state_from_arch[simp]:
   "vspace_for_asid a (state_from_arch (kheap s) (arch_state s)) = vspace_for_asid a s"
-  by (simp add: vspace_for_asid_def pool_for_asid_def obind_def state_from_arch_def
+  by (simp add: vspace_for_asid_def pool_for_asid_def obind_def state_from_arch_def entry_for_asid_def
          split: option.splits)
 
 (* NOTE: This statement would clearly be nicer for a partial function
          but later on, we really want the function to be total. *)
+(* FIXME AARCH64
 lemma get_vspace_of_thread_eq:
   "pt_ref \<noteq> riscv_global_pt (arch_state s) \<Longrightarrow>
    get_vspace_of_thread (kheap s) (arch_state s) tcb_ref = pt_ref \<longleftrightarrow>
@@ -74,7 +78,7 @@ lemma get_vspace_of_thread_eq:
           (\<exists>asid vref. tcb_vtable tcb = ArchObjectCap (PageTableCap pt_ref (Some (asid,vref))) \<and>
                        vspace_for_asid asid s = Some pt_ref))"
   unfolding get_vspace_of_thread_def
-  by (auto split: option.splits kernel_object.splits cap.splits arch_cap.splits)
+  by (auto split: option.splits kernel_object.splits cap.splits arch_cap.splits) *)
 
 
 text \<open>
@@ -84,7 +88,7 @@ text \<open>
 definition pte_info :: "vm_level \<Rightarrow> pte \<rightharpoonup> (machine_word \<times> nat \<times> vm_attributes \<times> vm_rights)" where
   "pte_info level pte \<equiv>
     case pte of
-      PagePTE ppn attrs rights \<Rightarrow> Some (addr_from_ppn ppn, pt_bits_left level, attrs, rights)
+      PagePTE paddr sm attrs rights \<Rightarrow> Some (paddr, pt_bits_left level, attrs, rights)
     | _ \<Rightarrow> None"
 
 text \<open>
@@ -100,12 +104,14 @@ definition
   get_page_info :: "(obj_ref \<rightharpoonup> arch_kernel_obj) \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<rightharpoonup>
                     (machine_word \<times> nat \<times> vm_attributes \<times> vm_rights)"
 where
+  "get_page_info aobjs pt_ref vptr \<equiv> undefined"
+  (* FIXME AARCH64 needs redefinition, ptes_of doesn't work, we need a pt_type
   "get_page_info aobjs pt_ref vptr \<equiv> (do {
       oassert (canonical_address vptr);
       (level, slot) \<leftarrow> pt_lookup_slot pt_ref vptr;
       pte \<leftarrow> oapply slot;
       K $ pte_info level pte
-    }) (\<lambda>p. pte_of p (aobjs |> pt_of))"
+    }) (\<lambda>p. pte_of p (aobjs |> pt_of))" *)
 
 text \<open>
   Both functions, @{text ptable_lift} and @{text vm_rights},
@@ -113,9 +119,11 @@ text \<open>
   The former returns the physical address, the latter the associated rights.
 \<close>
 definition ptable_lift :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> machine_word \<rightharpoonup> machine_word" where
+  "ptable_lift tcb s \<equiv> undefined"
+  (* FIXME AARCH64: needs redefinition
   "ptable_lift tcb s \<equiv> \<lambda>addr.
    case_option None (\<lambda>(base, bits, rights). Some (base + (addr && mask bits)))
-     (get_page_info (aobjs_of s) (get_vspace_of_thread (kheap s) (arch_state s) tcb) addr)"
+     (get_page_info (aobjs_of s) (get_vspace_of_thread (kheap s) (arch_state s) tcb) addr)" *)
 
 definition ptable_rights :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> machine_word \<Rightarrow> vm_rights" where
   "ptable_rights tcb s \<equiv> \<lambda>addr.
@@ -124,8 +132,9 @@ definition ptable_rights :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightar
 
 lemma ptable_lift_Some_canonical_addressD:
   "ptable_lift t s vptr = Some p \<Longrightarrow> canonical_address vptr"
+  sorry (* FIXME AARCH64
   by (clarsimp simp: ptable_lift_def get_page_info_def below_user_vtop_canonical
-              split: if_splits option.splits)
+              split: if_splits option.splits) *)
 
 end
 end

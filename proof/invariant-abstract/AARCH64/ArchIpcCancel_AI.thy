@@ -8,7 +8,7 @@ theory ArchIpcCancel_AI
 imports IpcCancel_AI
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 named_theorems IpcCancel_AI_asms
 

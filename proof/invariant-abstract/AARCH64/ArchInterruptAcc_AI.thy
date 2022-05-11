@@ -12,7 +12,7 @@ theory ArchInterruptAcc_AI
 imports InterruptAcc_AI
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 named_theorems InterruptAcc_AI_assms
 

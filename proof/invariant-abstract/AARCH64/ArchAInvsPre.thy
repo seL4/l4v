@@ -1,4 +1,5 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -12,8 +13,9 @@ unbundle l4v_word_context
 
 context Arch begin
 
-global_naming RISCV64
+global_naming AARCH64
 
+(* FIXME AARCH64
 lemma canonical_not_kernel_is_user:
   "\<lbrakk> v \<notin> kernel_mappings; canonical_address v \<rbrakk> \<Longrightarrow> v \<in> user_region "
   by (simp add: kernel_mappings_def not_le canonical_below_pptr_base_user)
@@ -29,16 +31,19 @@ lemma kernel_mappings_slots_eq:
   apply word_bitwise
   by (auto simp: canonical_bit_def word_bits_def pt_bits_left_def bit_simps level_defs word_size
                  rev_bl_order_simps)
+*)
 
 lemma ucast_ucast_mask_low: "(ucast (x && mask asid_low_bits) :: asid_low_index) = ucast x"
   by (rule ucast_mask_drop, simp add: asid_low_bits_def)
 
+(* FIXME AARCH64
 lemma valid_global_table_rights:
   "\<lbrakk> pt_ptr \<in> riscv_global_pts (arch_state s) level;
      valid_global_tables s; valid_global_arch_objs s \<rbrakk> \<Longrightarrow>
    \<exists>pt. pts_of s pt_ptr = Some pt \<and> (\<forall>idx. pte_rights_of (pt idx) = vm_kernel_only)"
-  by (frule (1) global_pts_ofD) (clarsimp simp: valid_global_tables_def Let_def)
+  by (frule (1) global_pts_ofD) (clarsimp simp: valid_global_tables_def Let_def) *)
 
+(* FIXME AARCH64
 lemma ptes_of_idx:
   "\<lbrakk> ptes_of s (pt_slot_offset level pt_ptr p) = Some pte;
      pts_of s pt_ptr = Some pt; pspace_aligned s \<rbrakk> \<Longrightarrow>
@@ -99,7 +104,6 @@ lemma pte_rights_of_kernel:
   apply (fastforce dest!: ptes_of_idx valid_global_table_rights)
   done
 
-
 lemma some_get_page_info_kmapsD:
   "\<lbrakk> get_page_info (aobjs_of s) pt_ref p = Some (b, a, attr, r);
      p \<in> kernel_mappings; canonical_address p; valid_global_vspace_mappings s;
@@ -151,6 +155,7 @@ lemma get_vspace_of_thread_reachable:
   by (auto simp: get_vspace_of_thread_def
           split: option.splits cap.splits kernel_object.splits arch_cap.splits if_split_asm
           intro: vspace_for_asid_vs_lookup)
+ *)
 
 lemma data_at_aligned:
   "\<lbrakk> data_at sz p s; pspace_aligned s\<rbrakk> \<Longrightarrow> is_aligned p (pageBitsForSize sz)"
@@ -163,9 +168,10 @@ lemma is_aligned_ptrFromPAddr_n_eq:
    apply (drule is_aligned_addD2)
     apply (erule is_aligned_weaken[rotated])
     apply (simp add: is_aligned_def)
+  sorry (* FIXME AARCH64
    apply assumption
   apply (erule (1) is_aligned_ptrFromPAddr_n)
-  done
+  done *)
 
 lemma some_get_page_info_umapsD:
   "\<lbrakk>get_page_info (aobjs_of s) pt_ref p = Some (b, a, attr, r);
@@ -174,6 +180,7 @@ lemma some_get_page_info_umapsD:
     valid_asid_table s; valid_objs s\<rbrakk>
    \<Longrightarrow> \<exists>sz. pageBitsForSize sz = a \<and> is_aligned b a \<and> data_at sz (ptrFromPAddr b) s"
   apply (clarsimp simp: get_page_info_def vs_lookup_table_def)
+  sorry (* FIXME AARCH64
   apply (clarsimp simp: pt_lookup_slot_def pt_lookup_slot_from_level_def)
   apply (frule pt_walk_max_level)
   apply (drule pt_walk_level)
@@ -198,7 +205,7 @@ lemma some_get_page_info_umapsD:
   apply (clarsimp simp: obj_at_def)
   apply (drule (1) data_at_aligned)
   apply (simp add: pt_bits_left_le_canonical is_aligned_ptrFromPAddr_n_eq)
-  done
+  done *)
 
 lemma user_mem_dom_cong:
   "kheap s = kheap s' \<Longrightarrow> dom (user_mem s) = dom (user_mem s')"
@@ -219,8 +226,9 @@ named_theorems AInvsPre_asms
 lemma get_vspace_of_thread_asid_or_global_pt:
   "(\<exists>asid. vspace_for_asid asid s = Some (get_vspace_of_thread (kheap s) (arch_state s) t))
     \<or> get_vspace_of_thread (kheap s) (arch_state s) t = riscv_global_pt (arch_state s)"
+  sorry (* FIXME AARCH64
   by (auto simp: get_vspace_of_thread_def
-           split: option.split kernel_object.split cap.split arch_cap.split)
+           split: option.split kernel_object.split cap.split arch_cap.split) *)
 
 lemma ptable_rights_imp_frame[AInvsPre_asms]:
   assumes "valid_state s"
@@ -231,6 +239,7 @@ lemma ptable_rights_imp_frame[AInvsPre_asms]:
   apply (clarsimp simp: ptable_lift_def ptable_rights_def in_user_frame_def in_device_frame_def
                  split: option.splits)
   apply (case_tac "x \<in> kernel_mappings")
+  sorry (* FIXME AARCH64
    apply (frule (2) some_get_page_info_kmapsD;
             fastforce simp: valid_state_def valid_arch_state_def valid_pspace_def)
   apply (frule some_get_page_info_umapsD)
@@ -257,7 +266,7 @@ lemma ptable_rights_imp_frame[AInvsPre_asms]:
    apply (rule and_mask_less')
    apply (case_tac sz; simp add: bit_simps)
   apply simp
-  done
+  done *)
 
 end
 
@@ -268,8 +277,8 @@ interpretation AInvsPre?: AInvsPre
   qed
 
 requalify_facts
-  RISCV64.user_mem_dom_cong
-  RISCV64.device_mem_dom_cong
-  RISCV64.device_frame_in_device_region
+  AARCH64.user_mem_dom_cong
+  AARCH64.device_mem_dom_cong
+  AARCH64.device_frame_in_device_region
 
 end

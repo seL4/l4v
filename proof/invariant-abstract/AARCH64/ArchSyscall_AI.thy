@@ -13,7 +13,7 @@ imports
   Syscall_AI
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 named_theorems Syscall_AI_assms
 
@@ -52,13 +52,14 @@ lemma eq_no_cap_to_obj_with_diff_ref [Syscall_AI_assms]:
 lemma hv_invs[wp, Syscall_AI_assms]: "\<lbrace>invs\<rbrace> handle_vm_fault t' flt \<lbrace>\<lambda>r. invs\<rbrace>"
   unfolding handle_vm_fault_def by (cases flt; wpsimp)
 
-crunch inv[wp]: getRegister, read_stval "P"
+crunch inv[wp]: getRegister "P"
   (ignore_del: getRegister)
 
 lemma hv_inv_ex [Syscall_AI_assms]:
   "\<lbrace>P\<rbrace> handle_vm_fault t vp \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
   unfolding handle_vm_fault_def
-  by (cases vp; wpsimp wp: dmo_inv getRestartPC_inv det_getRestartPC as_user_inv)
+  sorry (* FIXME AARCH64 addressTranslateS1
+  by (cases vp; wpsimp wp: dmo_inv getRestartPC_inv det_getRestartPC as_user_inv) *)
 
 lemma handle_vm_fault_valid_fault[wp, Syscall_AI_assms]:
   "\<lbrace>\<top>\<rbrace> handle_vm_fault thread ft -,\<lbrace>\<lambda>rv s. valid_fault rv\<rbrace>"
@@ -82,7 +83,8 @@ lemma hh_invs[wp, Syscall_AI_assms]:
   "\<lbrace>invs and ct_active and st_tcb_at active thread and ex_nonz_cap_to_thread\<rbrace>
      handle_hypervisor_fault thread fault
    \<lbrace>\<lambda>rv. invs\<rbrace>"
-  by (cases fault) wpsimp
+  sorry (* FIXME AARCH64 ARMVCPUFault
+  by (cases fault) wpsimp *)
 
 end
 
