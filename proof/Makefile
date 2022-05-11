@@ -9,10 +9,6 @@ images: BaseRefine CBaseRefine Refine CRefine
 default: images test
 test:
 all: images test
-report-regression:
-	@echo Refine Access CBaseRefine CRefine \
-	      DRefine InfoFlow InfoFlowCBase InfoFlowC DPolicy \
-		  DSpecProofs Bisim
 
 #
 # Setup heaps.

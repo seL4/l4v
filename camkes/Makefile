@@ -9,8 +9,6 @@ images: Camkes
 default: images test
 test:
 all: images test
-report-regression:
-	@echo Camkes
 
 #
 # Setup heaps.

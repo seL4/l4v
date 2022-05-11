@@ -8,9 +8,6 @@ default: AsmRefineTest
 
 all: AsmRefine AsmRefineTest
 
-report-regression:
-	@echo AsmRefine AsmRefineTest
-
 HEAPS += AsmRefine AsmRefineTest
 
 include ../../misc/isa-common.mk
