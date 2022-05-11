@@ -1,4 +1,5 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -8,12 +9,36 @@ theory ArchDetSchedDomainTime_AI
 imports DetSchedDomainTime_AI
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 named_theorems DetSchedDomainTime_AI_assms
 
+crunches
+  vcpu_update, vcpu_save_reg, vgic_update, vcpu_enable, vcpu_disable, vcpu_restore,
+  vcpu_write_reg, vcpu_read_reg, vcpu_save, vcpu_switch, set_vcpu, vgic_update_lr,
+  read_vcpu_register, write_vcpu_register
+  for domain_list_inv[wp]: "\<lambda>s. P (domain_list s)"
+  and domain_time_inv[wp]: "\<lambda>s. P (domain_time s)"
+  (wp: crunch_wps simp: crunch_simps)
+
 crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]: arch_finalise_cap "\<lambda>s. P (domain_list s)"
   (wp: hoare_drop_imps mapM_wp subset_refl simp: crunch_simps)
+
+lemma handle_hypervisor_fault_domain_time_inv[wp, DetSchedDomainTime_AI_assms]:
+  "handle_hypervisor_fault t f \<lbrace>\<lambda>s. P (domain_time s)\<rbrace>"
+  sorry (* FIXME AARCH64 some crunches are going wrong *)
+lemma handle_hypervisor_fault_domain_list_inv[wp, DetSchedDomainTime_AI_assms]:
+  "handle_hypervisor_fault t f \<lbrace>\<lambda>s. P (domain_list s)\<rbrace>"
+  sorry (* FIXME AARCH64 some crunches are going wrong *)
+lemma vppi_event_domain_time_inv[wp]:
+  "vppi_event irq \<lbrace>\<lambda>s. P (domain_time s)\<rbrace>"
+  sorry (* FIXME AARCH64 some crunches are going wrong *)
+lemma vppi_event_domain_list_inv[wp]:
+  "vppi_event irq \<lbrace>\<lambda>s. P (domain_list s)\<rbrace>"
+  sorry (* FIXME AARCH64 some crunches are going wrong *)
+lemma vgic_maintenance_domain_time_inv[wp]:
+  "vgic_maintenance \<lbrace>\<lambda>s. P (domain_time s)\<rbrace>"
+  sorry (* FIXME AARCH64 some crunches are going wrong *)
 
 crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]:
   arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread,
@@ -36,7 +61,7 @@ crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]:
   arch_post_modify_registers, arch_post_cap_deletion, make_arch_fault_msg,
   arch_invoke_irq_handler
   "\<lambda>s. P (domain_time s)"
-  (simp: crunch_simps)
+  (simp: crunch_simps ignore: handle_hypervisor_fault)
 
 crunches do_machine_op
   for exst[wp]: "\<lambda>s. P (exst s)"
@@ -51,13 +76,13 @@ global_interpretation DetSchedDomainTime_AI?: DetSchedDomainTime_AI
   case 1 show ?case by (unfold_locales; (fact DetSchedDomainTime_AI_assms)?)
   qed
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]: arch_perform_invocation "\<lambda>s. P (domain_time s)"
-  (wp: crunch_wps check_cap_inv)
+  (wp: crunch_wps check_cap_inv simp: if_apply_def2)
 
 crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]: arch_perform_invocation "\<lambda>s. P (domain_list s)"
-  (wp: crunch_wps check_cap_inv)
+  (wp: crunch_wps check_cap_inv simp: if_apply_def2)
 
 lemma timer_tick_valid_domain_time:
   "\<lbrace> \<lambda>s :: det_ext state. 0 < domain_time s \<rbrace>
@@ -82,14 +107,20 @@ lemma handle_interrupt_valid_domain_time [DetSchedDomainTime_AI_assms]:
    handle_interrupt i
    \<lbrace>\<lambda>rv s.  domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread \<rbrace>" (is "\<lbrace> ?dtnot0 \<rbrace> _ \<lbrace> _ \<rbrace>")
   unfolding handle_interrupt_def
+  supply if_split[split del]
+  supply if_apply_def2[simp]
   apply (case_tac "maxIRQ < i", solves \<open>wpsimp wp: hoare_false_imp\<close>)
   apply clarsimp
   apply (wpsimp simp: arch_mask_irq_signal_def)
         apply (rule hoare_post_imp[where Q="\<lambda>_. ?dtnot0" and a="send_signal p c" for p c], fastforce)
         apply wpsimp
        apply (rule hoare_post_imp[where Q="\<lambda>_. ?dtnot0" and a="get_cap p" for p], fastforce)
-      apply (wpsimp wp: timer_tick_valid_domain_time simp: handle_reserved_irq_def)+
-     apply (rule hoare_post_imp[where Q="\<lambda>_. ?dtnot0" and a="get_irq_state i" for i], fastforce)
+       apply (wpsimp wp: timer_tick_valid_domain_time simp: handle_reserved_irq_def)+
+     apply (rule hoare_post_imp[where Q="\<lambda>_. ?dtnot0" and a="vppi_event i" for i], fastforce)
+     apply wpsimp+
+    apply (rule hoare_post_imp[where Q="\<lambda>_. ?dtnot0" and a="vgic_maintenance"], fastforce)
+    apply wpsimp
+   apply (rule hoare_post_imp[where Q="\<lambda>_. ?dtnot0" and a="get_irq_state i" for i], fastforce)
    apply wpsimp+
   done
 

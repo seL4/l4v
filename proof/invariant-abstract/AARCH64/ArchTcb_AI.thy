@@ -1,4 +1,5 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -8,7 +9,7 @@ theory ArchTcb_AI
 imports Tcb_AI
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 named_theorems Tcb_AI_asms
 
@@ -30,12 +31,13 @@ lemma same_object_also_valid:  (* arch specific *)
      cap_asid cap = None \<or> (\<exists>asid. cap_asid cap = Some asid \<and> 0 < asid \<and> asid \<le> 2^asid_bits - 1);
      cap_vptr cap = None; cap_asid_base cap = None \<rbrakk>
      \<Longrightarrow> s \<turnstile> cap"
+  sorry (* FIXME AARCH64
   apply (cases cap,
          (clarsimp simp: same_object_as_def is_cap_simps cap_asid_def
                          wellformed_cap_def wellformed_acap_def
                          valid_cap_def bits_of_def cap_aligned_def
                    split: cap.split_asm arch_cap.split_asm option.splits)+)
-  done
+  done *)
 
 lemma same_object_obj_refs[Tcb_AI_asms]:
   "\<lbrakk> same_object_as cap cap' \<rbrakk>
@@ -53,7 +55,7 @@ where
 
 definition (* arch specific *)
   "vspace_asid cap \<equiv> case cap of
-    ArchObjectCap (PageTableCap _ (Some (asid, _))) \<Rightarrow> Some asid
+    ArchObjectCap (PageTableCap _ _ (Some (asid, _))) \<Rightarrow> Some asid
   | _ \<Rightarrow> None"
 
 lemmas vspace_asid_simps [simp] = (* arch specific *)
@@ -138,10 +140,11 @@ lemma finalise_cap_not_cte_wp_at[Tcb_AI_asms]:
             | rule impI
             | rule hoare_drop_imps)+
      apply (clarsimp simp: ball_ran_eq x)
+    sorry (* FIXME AARCH64 VCPU
     apply (wp delete_one_caps_of_state
          | rule impI
          | simp add: deleting_irq_handler_def get_irq_slot_def x ball_ran_eq)+
-    done
+    done *)
 
 
 lemma table_cap_ref_max_free_index_upd[simp,Tcb_AI_asms]:
@@ -155,7 +158,7 @@ global_interpretation Tcb_AI_1?: Tcb_AI_1
   and is_cnode_or_valid_arch = is_cnode_or_valid_arch
   proof goal_cases
     interpret Arch .
-    case 1 show ?case by (unfold_locales; (fact Tcb_AI_asms)?)
+    case 1 show ?case sorry (* FIXME AARCH64 by (unfold_locales; (fact Tcb_AI_asms)?) *)
   qed
 
 context Arch begin global_naming RISVB64
@@ -276,8 +279,9 @@ lemma tc_invs[Tcb_AI_asms]:
                         invs_valid_objs cap_asid_def vs_cap_ref_def
                         case_bool_If valid_ipc_buffer_cap_def option_case_eq_None
                        | split cap.splits arch_cap.splits if_splits)+)
+  sorry (* FIXME AARCH64
   apply (simp split: option.splits)
-  done
+  done *)
 
 lemma check_valid_ipc_buffer_inv: (* arch_specific *)
   "\<lbrace>P\<rbrace> check_valid_ipc_buffer vptr cap \<lbrace>\<lambda>rv. P\<rbrace>"
@@ -367,8 +371,9 @@ lemma update_cap_valid[Tcb_AI_asms]:
   done
 
 
+(* FIXME AARCH64 VCPU
 crunch pred_tcb_at: switch_to_thread "pred_tcb_at proj P t"
-  (wp: crunch_wps simp: crunch_simps)
+  (wp: crunch_wps simp: crunch_simps) *)
 
 crunch typ_at[wp]: invoke_tcb "\<lambda>s. P (typ_at T p s)"
   (ignore: check_cap_at setNextPC zipWithM
@@ -383,7 +388,7 @@ requalify_facts invoke_tcb_typ_at
 end
 
 global_interpretation Tcb_AI?: Tcb_AI
-  where is_cnode_or_valid_arch = RISCV64.is_cnode_or_valid_arch
+  where is_cnode_or_valid_arch = AARCH64.is_cnode_or_valid_arch
   proof goal_cases
     interpret Arch .
     case 1 show ?case by (unfold_locales; (fact Tcb_AI_asms)?)

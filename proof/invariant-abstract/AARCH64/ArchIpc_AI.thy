@@ -8,7 +8,7 @@ theory ArchIpc_AI
 imports Ipc_AI
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 named_theorems Ipc_AI_assms
 
@@ -416,7 +416,8 @@ crunch vspace_objs               [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid
 crunch global_objs               [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_global_objs"
 crunch global_vspace_mapping     [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_global_vspace_mappings"
 crunch arch_caps                 [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_arch_caps"
-crunch v_ker_map                 [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_kernel_mappings"
+(* FIXME AARCH64: addressTranslateS1
+crunch v_ker_map                 [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_kernel_mappings" *)
 crunch eq_ker_map                [wp, Ipc_AI_assms]:  make_arch_fault_msg "equal_kernel_mappings"
 crunch asid_map                  [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_asid_map"
 crunch only_idle                 [wp, Ipc_AI_assms]:  make_arch_fault_msg "only_idle"
@@ -444,10 +445,10 @@ end
 interpretation Ipc_AI?: Ipc_AI
 proof goal_cases
   interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact Ipc_AI_assms)?)
+  case 1 show ?case sorry (* FIXME AARCH64 by (unfold_locales; (fact Ipc_AI_assms)?) *)
 qed
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 named_theorems Ipc_AI_cont_assms
 

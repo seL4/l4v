@@ -8,17 +8,17 @@ theory ArchInterrupt_AI
 imports Interrupt_AI
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 primrec arch_irq_control_inv_valid_real ::
   "arch_irq_control_invocation \<Rightarrow> 'a::state_ext state \<Rightarrow> bool"
   where
-  "arch_irq_control_inv_valid_real (RISCVIRQControlInvocation irq dest_slot src_slot trigger) =
+  "arch_irq_control_inv_valid_real (ARMIRQControlInvocation irq dest_slot src_slot trigger) =
      (cte_wp_at ((=) cap.NullCap) dest_slot and
       cte_wp_at ((=) cap.IRQControlCap) src_slot and
       ex_cte_cap_wp_to is_cnode_cap dest_slot and
       real_cte_at dest_slot and
-      K (irq \<le> maxIRQ \<and> irq \<noteq> irqInvalid))"
+      K (irq \<le> maxIRQ))" (*FIXME AARCH64 check this is gone: \<and> irq \<noteq> irqInvalid))" *)
 
 defs arch_irq_control_inv_valid_def:
   "arch_irq_control_inv_valid \<equiv> arch_irq_control_inv_valid_real"
@@ -48,11 +48,12 @@ lemma decode_irq_control_valid [Interrupt_AI_asms]:
   apply (clarsimp simp: linorder_not_less word_le_nat_alt unat_ucast maxIRQ_def)
   apply (cases caps; clarsimp simp: cte_wp_at_eq_simp)
   apply (intro conjI impI; clarsimp)
+  done (* FIXME AARCH64 this felt too easy, old proof went:
   apply (drule ucast_ucast_mask_eq)
    apply (subst and_mask_eq_iff_le_mask)
    apply (simp add: mask_def word_le_nat_alt)
   apply fast
-  done
+  done *)
 
 lemma get_irq_slot_different_ARCH[Interrupt_AI_asms]:
   "\<lbrace>\<lambda>s. valid_global_refs s \<and> ex_cte_cap_wp_to is_cnode_cap ptr s\<rbrace>
@@ -102,11 +103,12 @@ lemma no_cap_to_obj_with_diff_IRQHandler_ARCH[Interrupt_AI_asms]:
 lemma (* set_irq_state_valid_cap *)[Interrupt_AI_asms]:
   "\<lbrace>valid_cap cap\<rbrace> set_irq_state IRQSignal irq \<lbrace>\<lambda>rv. valid_cap cap\<rbrace>"
   apply (clarsimp simp: set_irq_state_def)
+  sorry (* FIXME AARCH64 missing crunch
   apply (wp do_machine_op_valid_cap)
   apply (auto simp: valid_cap_def valid_untyped_def
              split: cap.splits option.splits arch_cap.splits
          split del: if_split)
-  done
+  done *)
 
 crunch valid_global_refs[Interrupt_AI_asms]: set_irq_state "valid_global_refs"
 
@@ -231,7 +233,8 @@ lemma halted_eq:
 
 lemma handle_reserved_irq_invs[wp]:
   "\<lbrace>invs\<rbrace> handle_reserved_irq irq \<lbrace>\<lambda>_. invs\<rbrace>"
-  unfolding handle_reserved_irq_def by (wpsimp simp: non_kernel_IRQs_def)
+  sorry (* FIXME AARCH64 VCPU vppi_event
+  unfolding handle_reserved_irq_def by (wpsimp simp: non_kernel_IRQs_def) *)
 
 lemma (* handle_interrupt_invs *) [Interrupt_AI_asms]:
   "\<lbrace>invs\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_. invs\<rbrace>"
@@ -266,7 +269,7 @@ end
 interpretation Interrupt_AI?: Interrupt_AI
   proof goal_cases
   interpret Arch .
-  case 1 show ?case by (intro_locales; (unfold_locales, simp_all add: Interrupt_AI_asms)?)
+  case 1 show ?case sorry (* FIXME AARCH64 by (intro_locales; (unfold_locales, simp_all add: Interrupt_AI_asms)?) *)
   qed
 
 end

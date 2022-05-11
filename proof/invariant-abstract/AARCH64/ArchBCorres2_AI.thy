@@ -9,7 +9,7 @@ imports
   BCorres2_AI
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 named_theorems BCorres2_AI_assms
 
@@ -81,7 +81,7 @@ interpretation BCorres2_AI?: BCorres2_AI
 
 lemmas schedule_bcorres[wp] = schedule_bcorres1[OF BCorres2_AI_axioms]
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 crunch (bcorres)bcorres[wp]: send_ipc,send_signal,do_reply_transfer,arch_perform_invocation truncate_state
   (simp: gets_the_def swp_def
@@ -136,7 +136,8 @@ lemma handle_event_bcorres[wp]: "bcorres (handle_event e) (handle_event e)"
   apply (simp add: handle_send_def handle_call_def handle_recv_def handle_reply_def handle_yield_def
                    handle_interrupt_def Let_def handle_reserved_irq_def arch_mask_irq_signal_def
          | intro impI conjI allI | wp | wpc)+
-  done
+  sorry (* FIXME AARCH64 VCPU vppi_event
+  done *)
 
 crunch (bcorres)bcorres[wp]: guarded_switch_to,switch_to_idle_thread truncate_state (ignore: storeWord)
 

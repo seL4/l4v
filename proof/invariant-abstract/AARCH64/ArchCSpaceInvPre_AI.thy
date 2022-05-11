@@ -1,4 +1,5 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -13,7 +14,7 @@ imports CSpaceInvPre_AI
 begin
 
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 lemma aobj_ref_acap_rights_update[simp]:
   "aobj_ref (acap_rights_update f x) = aobj_ref x"
@@ -32,7 +33,7 @@ definition cap_master_arch_cap :: "arch_cap \<Rightarrow> arch_cap" where
      (case acap of
            ASIDPoolCap pool asid \<Rightarrow> ASIDPoolCap pool 0
          | FrameCap ptr R sz dev _ \<Rightarrow> FrameCap ptr UNIV sz dev None
-         | PageTableCap ptr _ \<Rightarrow> PageTableCap ptr None
+         | PageTableCap pt_t ptr _ \<Rightarrow> PageTableCap pt_t ptr None
          | _ \<Rightarrow> acap)"
 
 lemma cap_master_arch_cap_eqDs1:
@@ -42,8 +43,8 @@ lemma cap_master_arch_cap_eqDs1:
   "cap_master_arch_cap cap = FrameCap ptr R sz dev map_data
      \<Longrightarrow> R = UNIV \<and> map_data = None
           \<and> (\<exists>R map_data. cap = FrameCap ptr R sz dev map_data)"
-  "cap_master_arch_cap cap = PageTableCap ptr data
-     \<Longrightarrow> data = None \<and> (\<exists>data. cap = PageTableCap ptr data)"
+  "cap_master_arch_cap cap = PageTableCap ptr pt_t data
+     \<Longrightarrow> data = None \<and> (\<exists>data. cap = PageTableCap ptr pt_t data)"
   by (clarsimp simp: cap_master_arch_cap_def split: arch_cap.split_asm)+
 
 lemma cap_master_arch_inv[simp]:
@@ -76,7 +77,7 @@ where
     \<comment> \<open> Don't introduce non-empty unmapped table objects. \<close>
   \<and> (is_pt_cap newcap
       \<longrightarrow> cap_asid newcap = None
-      \<longrightarrow> (\<forall>r \<in> obj_refs newcap. pts_of s r = Some empty_pt))
+      \<longrightarrow> (\<forall>r \<in> obj_refs newcap. pts_of s r = Some (empty_pt undefined)))
     \<comment> \<open> If newcap is vspace table cap such that either:
          - newcap and cap have different types or different obj_refs, or
          - newcap is unmapped while cap is mapped, \<close>
@@ -91,7 +92,7 @@ where
                      \<and> is_pt_cap cap'
                      \<and> (cap_asid newcap = None \<or> cap_asid cap' = None)) sl' s \<longrightarrow> sl' = sl))
   \<comment> \<open>Don't replace with an ASID pool. \<close>
-  \<and> \<not>is_ap_cap newcap"
+  \<and> \<not>is_ap_cap newcap" (* FIXME AARCH64: undefined in def *)
 
 definition
   replaceable_non_final_arch_cap :: "'z::state_ext state \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> cap \<Rightarrow> bool"
@@ -137,6 +138,7 @@ lemma set_cap_valid_vs_lookup:
      set_cap cap ptr
    \<lbrace>\<lambda>rv. valid_vs_lookup\<rbrace>"
   supply split_paired_All[simp del] split_paired_Ex[simp del]
+  sorry (* FIXME AARCH64
   apply (wpsimp wp: hoare_vcg_all_lift hoare_convert_imp vs_lookup_target_lift hoare_vcg_disj_lift
               simp: valid_vs_lookup_def)
   apply (drule vs_lookup_target_level)
@@ -167,8 +169,9 @@ lemma set_cap_valid_vs_lookup:
    apply (erule_tac x=level in allE)
    apply (clarsimp)
   apply fastforce
-  done
+  done *)
 
+(* FIXME AARCH64
 lemma set_cap_valid_table_caps:
   "\<lbrace>\<lambda>s. valid_table_caps s \<and>
         (is_pt_cap cap \<longrightarrow> cap_asid cap = None \<longrightarrow> (\<forall>r \<in> obj_refs cap. pts_of s r = Some empty_pt))\<rbrace>
@@ -180,7 +183,7 @@ lemma set_cap_valid_table_caps:
             hoare_vcg_disj_lift hoare_convert_imp[OF set_cap_caps_of_state]
             hoare_use_eq[OF set_cap_arch set_cap_obj_at_impossible])
   apply (fastforce simp: cap_asid_def split: if_split_asm)
-  done
+  done *)
 
 lemma cap_asid_vs_cap_ref_None:
   "is_pt_cap cap \<Longrightarrow> (cap_asid cap = None) = (vs_cap_ref cap = None)"
@@ -295,7 +298,7 @@ lemma set_cap_valid_arch_caps:
                  \<or> (\<forall>oref \<in> obj_refs cap'. \<not> reachable_target vref oref s))
       \<and> no_cap_to_obj_with_diff_ref cap {ptr} s
       \<and> (is_pt_cap cap \<longrightarrow> cap_asid cap = None
-            \<longrightarrow> (\<forall>r \<in> obj_refs cap. pts_of s r = Some empty_pt))
+            \<longrightarrow> (\<forall>r \<in> obj_refs cap. pts_of s r = Some (empty_pt FIXME)))
       \<and> (is_pt_cap cap
              \<longrightarrow> (\<forall>oldcap. caps_of_state s ptr = Some oldcap \<longrightarrow>
                   is_pt_cap oldcap
@@ -307,9 +310,11 @@ lemma set_cap_valid_arch_caps:
      set_cap cap ptr
    \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
   unfolding valid_arch_caps_def
+  sorry (*
   by (wpsimp wp: set_cap_valid_vs_lookup set_cap_valid_table_caps set_cap_unique_table_caps
-           simp: cte_wp_at_caps_of_state)
+           simp: cte_wp_at_caps_of_state) *)
 
+(* FIXME AARCH64
 lemma valid_table_capsD:
   "\<lbrakk> cte_wp_at ((=) cap) ptr s; valid_table_caps s; is_pt_cap cap; cap_asid cap = None \<rbrakk>
    \<Longrightarrow> \<forall>r \<in> obj_refs cap. pts_of s r = Some empty_pt"
@@ -317,7 +322,7 @@ lemma valid_table_capsD:
                         is_PageTableCap_def cap_asid_def
                  split: option.splits)
    apply (cases ptr, fastforce)+
-  done
+  done *)
 
 lemma pt_caps_asid_vsref:
   "is_pt_cap cap \<Longrightarrow> (cap_asid cap = None) = (vs_cap_ref cap = None)"

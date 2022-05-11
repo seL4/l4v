@@ -8,7 +8,7 @@ theory ArchDeterministic_AI
 imports Deterministic_AI
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 named_theorems Deterministic_AI_assms
 
@@ -26,7 +26,7 @@ global_interpretation Deterministic_AI_1?: Deterministic_AI_1
   case 1 show ?case by (unfold_locales; (fact Deterministic_AI_assms)?)
   qed
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 crunch valid_list[wp,Deterministic_AI_assms]: arch_invoke_irq_handler valid_list
 
@@ -48,7 +48,8 @@ lemma perform_page_invocation_valid_list[wp]:
                                 perform_pg_inv_get_addr_def split_def)
     apply (wp mapM_x_wp' mapM_wp' crunch_wps | intro impI conjI allI | wpc
            | simp add: set_message_info_def set_mrs_def split: cap.splits arch_cap.splits)+
-  done
+  sorry (* FIXME AARCH64 perform_flush
+  done *)
 
 crunch valid_list[wp]: perform_invocation valid_list
   (wp: crunch_wps simp: crunch_simps ignore: without_preemption)
@@ -68,9 +69,10 @@ lemma handle_interrupt_valid_list[wp, Deterministic_AI_assms]:
   "\<lbrace>valid_list\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_.valid_list\<rbrace>"
   unfolding handle_interrupt_def ackInterrupt_def
   apply (rule hoare_pre)
+  sorry (* FIXME AARCH64 vvpi_event
    by (wp get_cap_wp  do_machine_op_valid_list
        | wpc | simp add: get_irq_slot_def handle_reserved_irq_def arch_mask_irq_signal_def
-       | wp (once) hoare_drop_imps)+
+       | wp (once) hoare_drop_imps)+ *)
 
 crunch valid_list[wp, Deterministic_AI_assms]: handle_send,handle_reply valid_list
 

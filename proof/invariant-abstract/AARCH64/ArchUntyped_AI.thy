@@ -1,4 +1,5 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -8,7 +9,7 @@ theory ArchUntyped_AI
 imports Untyped_AI
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 named_theorems Untyped_AI_assms
 
@@ -258,13 +259,15 @@ lemma delete_objects_rewrite[Untyped_AI_assms]:
   apply simp
   done
 
-declare store_pde_pred_tcb_at [wp]
+(* FIXME AARCH64
+declare store_pde_pred_tcb_at [wp] *)
 
 (* nonempty_table *)
 definition
   nonempty_table :: "machine_word set \<Rightarrow> Structures_A.kernel_object \<Rightarrow> bool"
 where
- "nonempty_table S ko \<equiv> a_type ko = AArch APageTable \<and> ko \<noteq> ArchObj (PageTable empty_pt)"
+ (* FIXME AARCH64 check *)
+ "nonempty_table S ko \<equiv> \<forall>pt_t. a_type ko = AArch (APageTable pt_t) \<and> ko \<noteq> ArchObj (PageTable (empty_pt pt_t))"
 
 lemma reachable_target_trans[simp]:
   "reachable_target ref p (trans_state f s) = reachable_target ref p s"
@@ -301,12 +304,13 @@ lemma create_cap_valid_arch_caps[wp, Untyped_AI_assms]:
   apply (rule conjI)
    apply (auto simp: is_cap_simps valid_cap_def second_level_tables_def
                      obj_at_def nonempty_table_def a_type_simps in_omonad)[1]
+  sorry (* FIXME AARCH64
   apply (clarsimp simp del: imp_disjL)
   apply (case_tac "\<exists>x. x \<in> obj_refs cap")
    apply (clarsimp dest!: obj_ref_elemD)
    apply fastforce
   apply (auto simp: is_cap_simps)[1]
-  done
+  done *)
 
 
 lemma create_cap_cap_refs_in_kernel_window[wp, Untyped_AI_assms]:
@@ -342,7 +346,8 @@ lemma nonempty_default[simp, Untyped_AI_assms]:
   apply (case_tac tp, simp_all add: default_object_def nonempty_table_def a_type_def)
   apply (rename_tac aobject_type)
   apply (case_tac aobject_type; simp add: default_arch_object_def)
-  done
+  sorry (* FIXME AARCH64
+  done *)
 
 crunch cte_wp_at_iin[wp]: init_arch_objects "\<lambda>s. P (cte_wp_at (P' (interrupt_irq_node s)) p s)"
 
@@ -358,16 +363,18 @@ lemma obj_is_device_vui_eq[Untyped_AI_assms]:
   apply (intro impI conjI allI, simp_all add: is_frame_type_def default_object_def)
   apply (simp add: default_arch_object_def split: aobject_type.split)
   apply (auto simp: arch_is_frame_type_def)
-  done
+  sorry (* FIXME AARCH64
+  done *)
 
 end
 
 global_interpretation Untyped_AI? : Untyped_AI
-  where nonempty_table = RISCV64.nonempty_table
+  where nonempty_table = AARCH64.nonempty_table
   proof goal_cases
     interpret Arch .
     case 1 show ?case
-    by (unfold_locales; (fact Untyped_AI_assms)?)
+    sorry (* FIXME AARCH64
+    by (unfold_locales; (fact Untyped_AI_assms)?) *)
   qed
 
 end

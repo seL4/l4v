@@ -5,14 +5,14 @@
  *)
 
 (*
-RISCV64-specific CSpace invariants
+AARCH64-specific CSpace invariants
 *)
 
 theory ArchCSpacePre_AI
 imports CSpacePre_AI
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 lemmas typ_at_eq_kheap_obj = typ_at_eq_kheap_obj atyp_at_eq_kheap_obj
 
@@ -24,7 +24,7 @@ definition
          ASIDPoolCap r as \<Rightarrow> True
        | ASIDControlCap \<Rightarrow> False
        | FrameCap r rghts sz dev mapdata \<Rightarrow> False
-       | PageTableCap r mapdata \<Rightarrow> True)"
+       | PageTableCap r pt_t mapdata \<Rightarrow> True)"
 
 lemma pageBitsForSize_eq[simp]:
   "(pageBitsForSize sz = pageBitsForSize sz') = (sz = sz')"
@@ -41,10 +41,11 @@ lemma aobj_ref_cases:
     ASIDPoolCap w _ \<Rightarrow> Some w
   | ASIDControlCap \<Rightarrow> None
   | FrameCap w _ _ _ _ \<Rightarrow> Some w
-  | PageTableCap w _ \<Rightarrow> Some w)"
+  | PageTableCap w _ _ \<Rightarrow> Some w)"
   apply (subst aobj_ref_cases')
+  sorry (* FIXME AARCH64 VCPU
   apply (clarsimp cong: arch_cap.case_cong)
-  done
+  done *)
 
 definition
   "ups_of_heap h \<equiv> \<lambda>p.

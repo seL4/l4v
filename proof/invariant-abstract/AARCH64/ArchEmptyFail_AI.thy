@@ -1,4 +1,5 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -8,13 +9,20 @@ theory ArchEmptyFail_AI
 imports EmptyFail_AI
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 named_theorems EmptyFail_AI_assms
 
 crunch_ignore (empty_fail)
-  (add: setVSpaceRoot_impl sfence_impl hwASIDFlush_impl read_stval resetTimer_impl stval_val
-        pt_lookup_from_level setIRQTrigger_impl plic_complete_claim_impl)
+  (add: setVSpaceRoot_impl resetTimer_impl
+        addressTranslateS1_impl fpuThreadDeleteOp_impl dsb_impl isb_impl
+        pt_lookup_from_level setIRQTrigger_impl plic_complete_claim_impl
+        set_gic_vcpu_ctrl_hcr_impl setSCTLR_impl setHCR_impl enableFpuEL01_impl
+        writeVCPUHardwareReg_impl check_export_arch_timer_impl invalidateTranslationASID_impl
+        cleanByVA_PoU_impl invalidateTranslationSingle_impl set_gic_vcpu_ctrl_vmcr_impl
+        set_gic_vcpu_ctrl_apr_impl set_gic_vcpu_ctrl_lr_impl get_gic_vcpu_ctrl_lr_impl
+        cleanCacheRange_RAM_impl invalidateCacheRange_RAM_impl cleanCacheRange_PoU_impl
+        invalidateCacheRange_I_impl branchFlushRange_impl)
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]:
   loadWord, load_word_offs, storeWord, getRestartPC, get_mrs
@@ -27,7 +35,7 @@ global_interpretation EmptyFail_AI_load_word?: EmptyFail_AI_load_word
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_fault
   (simp: kernel_object.splits option.splits arch_cap.splits cap.splits endpoint.splits
@@ -45,10 +53,10 @@ lemma decode_tcb_invocation_empty_fail[wp]:
   by (simp add: decode_tcb_invocation_def split: gen_invocation_labels.splits invocation_label.splits
       | wp | intro conjI impI)+
 
-crunch (empty_fail) empty_fail[wp]: find_vspace_for_asid, check_vp_alignment, check_slot
+crunch (empty_fail) empty_fail[wp]: find_vspace_for_asid, check_vp_alignment (* FIXME AARCH64 , check_slot *)
 
-lemma arch_decode_RISCVASIDControlMakePool_empty_fail:
-  "invocation_type label = ArchInvocationLabel RISCVASIDControlMakePool
+lemma arch_decode_ARMASIDControlMakePool_empty_fail:
+  "invocation_type label = ArchInvocationLabel ARMASIDControlMakePool
     \<Longrightarrow> empty_fail (arch_decode_invocation label b c d e f)"
   apply (wpsimp simp: arch_decode_invocation_def decode_asid_pool_invocation_def)
     apply (simp add: decode_asid_control_invocation_def)
@@ -64,11 +72,12 @@ lemma arch_decode_RISCVASIDControlMakePool_empty_fail:
                           split: if_split_asm)
     apply wpsimp
    apply (wpsimp simp: decode_frame_invocation_def)
+  sorry (* FIXME AARCH64
   apply (wpsimp simp: decode_page_table_invocation_def)
-  done
+  done *)
 
-lemma arch_decode_RISCVASIDPoolAssign_empty_fail:
-  "invocation_type label = ArchInvocationLabel RISCVASIDPoolAssign
+lemma arch_decode_ARMASIDPoolAssign_empty_fail:
+  "invocation_type label = ArchInvocationLabel ARMASIDPoolAssign
     \<Longrightarrow> empty_fail (arch_decode_invocation label b c d e f)"
   unfolding arch_decode_invocation_def decode_page_table_invocation_def decode_frame_invocation_def
             decode_asid_control_invocation_def
@@ -87,8 +96,9 @@ lemma arch_decode_RISCVASIDPoolAssign_empty_fail:
    subgoal by (fastforce simp: empty_fail_def whenE_def throwError_def select_def bindE_def
                                bind_def return_def returnOk_def lift_def liftE_def select_ext_def
                                gets_def get_def assert_def fail_def)
+  sorry (* FIXME AARCH64
   apply wpsimp
-  done
+  done *)
 
 lemma arch_decode_invocation_empty_fail[wp]:
   "empty_fail (arch_decode_invocation label b c d e f)"
@@ -96,14 +106,15 @@ lemma arch_decode_invocation_empty_fail[wp]:
   apply (find_goal \<open>match premises in "_ = ArchInvocationLabel _" \<Rightarrow> \<open>-\<close>\<close>)
   apply (rename_tac alabel)
   apply (case_tac alabel; simp)
-  apply (find_goal \<open>succeeds \<open>erule arch_decode_RISCVASIDControlMakePool_empty_fail\<close>\<close>)
-  apply (find_goal \<open>succeeds \<open>erule arch_decode_RISCVASIDPoolAssign_empty_fail\<close>\<close>)
-  apply ((simp add: arch_decode_RISCVASIDControlMakePool_empty_fail
-                    arch_decode_RISCVASIDPoolAssign_empty_fail)+)[2]
+  apply (find_goal \<open>succeeds \<open>erule arch_decode_ARMASIDControlMakePool_empty_fail\<close>\<close>)
+  apply (find_goal \<open>succeeds \<open>erule arch_decode_ARMASIDPoolAssign_empty_fail\<close>\<close>)
+  apply ((simp add: arch_decode_ARMASIDControlMakePool_empty_fail
+                    arch_decode_ARMASIDPoolAssign_empty_fail)+)[2]
+  sorry (* FIXME AARCH64 frame caps
   by (all \<open>(wpsimp simp: arch_decode_invocation_def decode_asid_pool_invocation_def
                          decode_asid_control_invocation_def decode_frame_invocation_def
                          decode_page_table_invocation_def decode_pt_inv_map_def
-                         decode_fr_inv_map_def Let_def)\<close>) (* 15s *)
+                         decode_fr_inv_map_def Let_def)\<close>) (* 15s *) *)
 
 end
 
@@ -113,7 +124,7 @@ global_interpretation EmptyFail_AI_derive_cap?: EmptyFail_AI_derive_cap
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 lemma empty_fail_pt_lookup_from_level[wp]:
   "empty_fail (pt_lookup_from_level level pt_ptr vptr target_pt_ptr)"
@@ -140,7 +151,7 @@ global_interpretation EmptyFail_AI_rec_del?: EmptyFail_AI_rec_del
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]:
   cap_delete, choose_thread
 end
@@ -163,10 +174,7 @@ global_interpretation EmptyFail_AI_schedule?: EmptyFail_AI_schedule
   case 1 show ?case by (unfold_locales; (fact EmptyFail_AI_assms)?)
   qed
 
-context Arch begin global_naming RISCV64
-
-crunch (empty_fail) empty_fail[wp]: read_stval
-  (ignore_del: read_stval)
+context Arch begin global_naming AARCH64
 
 lemma plic_complete_claim_empty_fail[wp, EmptyFail_AI_assms]:
   "empty_fail (plic_complete_claim irq)"

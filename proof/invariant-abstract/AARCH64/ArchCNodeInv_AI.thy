@@ -1,4 +1,5 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -8,7 +9,7 @@ theory ArchCNodeInv_AI
 imports CNodeInv_AI
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 named_theorems CNodeInv_AI_assms
 
@@ -97,7 +98,8 @@ lemma same_object_as_def2:
   apply (simp add: same_object_as_def is_cap_simps split: cap.split)
   apply (auto simp: cap_master_cap_def bits_of_def is_cap_simps
              split: arch_cap.splits)
-  done
+  sorry (* FIXME AARCH64
+  done *)
 
 lemma same_object_as_cap_master [CNodeInv_AI_assms]:
   "same_object_as cap cap' \<Longrightarrow> cap_master_cap cap = cap_master_cap cap'"
@@ -342,7 +344,7 @@ lemmas cap_asid_simps[simp] =
                split_simps cap.split arch_cap.split]
 
 lemma weak_derived_Page1[simp]:
-  "weak_derived (ArchObjectCap (PageTableCap p ref)) cap = (cap = ArchObjectCap (PageTableCap p ref))"
+  "weak_derived (ArchObjectCap (PageTableCap p pt_t ref)) cap = (cap = ArchObjectCap (PageTableCap p pt_t ref))"
   by (auto simp: weak_derived_def copy_of_def is_cap_simps cap_master_cap_simps
            dest!: same_object_as_cap_master cap_master_cap_eqDs split: option.splits)
 
@@ -388,6 +390,7 @@ lemma swap_of_caps_valid_arch_caps [CNodeInv_AI_assms]:
      apply (rule conjI; clarsimp)
     apply (intro allI impI)
     apply (elim exE conjE)
+    sorry (* FIXME AARCH64
     subgoal for _ _ _ _ p
       by (case_tac "p=b"; case_tac "p=a";
             fastforce simp add: valid_table_caps_def empty_table_caps_of)
@@ -400,7 +403,7 @@ lemma swap_of_caps_valid_arch_caps [CNodeInv_AI_assms]:
   apply (erule allfEI[where f="id (a := b, b := a)"])
   apply (clarsimp split del: if_split split: if_split_asm dest!:vs_cap_ref_to_table_cap_ref
                       dest!: weak_derived_table_cap_ref)
-  done
+  done *)
 
 
 lemma cap_swap_asid_map[wp, CNodeInv_AI_assms]:
@@ -471,7 +474,8 @@ lemma zombie_is_cap_toE_pre[CNodeInv_AI_assms]:
   apply (simp add: nat_to_cref_def word_bits_conv)
   done
 
-crunch st_tcb_at_halted[wp]: prepare_thread_delete "st_tcb_at halted t"
+(* FIXME AARCH64 FPU/VCPU
+crunch st_tcb_at_halted[wp]: prepare_thread_delete "st_tcb_at halted t" *)
 
 lemma finalise_cap_makes_halted_proof[CNodeInv_AI_assms]:
   "\<lbrace>invs and valid_cap cap and (\<lambda>s. ex = is_final_cap' cap s)
@@ -486,6 +490,7 @@ lemma finalise_cap_makes_halted_proof[CNodeInv_AI_assms]:
                              split: option.split
                    | intro impI conjI
                    | rule hoare_drop_imp)+
+  sorry (* FIXME AARCH64
   apply (drule_tac final_zombie_not_live; (assumption | simp add: invs_iflive)?)
    apply (clarsimp simp: pred_tcb_at_def is_tcb obj_at_def live_def, elim disjE)
     apply (clarsimp; case_tac "tcb_state tcb"; simp)+
@@ -495,21 +500,23 @@ lemma finalise_cap_makes_halted_proof[CNodeInv_AI_assms]:
              | clarsimp simp: valid_cap_def obj_at_def is_tcb_def is_cap_table_def
                         split: option.splits bool.split
              | intro impI conjI)+
-  done
+  done *)
 
 lemmas finalise_cap_makes_halted = finalise_cap_makes_halted_proof
 
+(* FIXME AARCH64 VCPU/FPU
 crunch emptyable[wp,CNodeInv_AI_assms]: finalise_cap "\<lambda>s. emptyable sl s"
   (simp: crunch_simps rule: emptyable_lift
-     wp: crunch_wps suspend_emptyable unbind_notification_invs unbind_maybe_notification_invs)
+     wp: crunch_wps suspend_emptyable unbind_notification_invs unbind_maybe_notification_invs) *)
 
 
 lemma finalise_cap_not_reply_master_unlifted [CNodeInv_AI_assms]:
   "(rv, s') \<in> fst (finalise_cap cap sl s) \<Longrightarrow>
    \<not> is_master_reply_cap (fst rv)"
+  sorry (* FIXME AARCH64
   by (case_tac cap, auto simp: is_cap_simps in_monad liftM_def
                                arch_finalise_cap_def
-                        split: if_split_asm arch_cap.split_asm bool.split_asm option.split_asm)
+                        split: if_split_asm arch_cap.split_asm bool.split_asm option.split_asm) *)
 
 
 lemma nat_to_cref_0_replicate [CNodeInv_AI_assms]:
@@ -525,7 +532,8 @@ lemma prepare_thread_delete_thread_cap [CNodeInv_AI_assms]:
   "\<lbrace>\<lambda>s. caps_of_state s x = Some (cap.ThreadCap p)\<rbrace>
     prepare_thread_delete t
    \<lbrace>\<lambda>rv s. caps_of_state s x = Some (cap.ThreadCap p)\<rbrace>"
-  by (wpsimp simp: prepare_thread_delete_def)
+  sorry (* FIXME AARCH64 VCPU
+  by (wpsimp simp: prepare_thread_delete_def) *)
 
 end
 
@@ -533,14 +541,14 @@ end
 global_interpretation CNodeInv_AI?: CNodeInv_AI
   proof goal_cases
   interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact CNodeInv_AI_assms)?)
+  case 1 show ?case sorry (* FIXME AARCH64 by (unfold_locales; (fact CNodeInv_AI_assms)?) *)
   qed
 
 
 termination rec_del by (rule rec_del_termination)
 
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 lemma post_cap_delete_pre_is_final_cap':
   "\<And>s.
@@ -803,7 +811,7 @@ global_interpretation CNodeInv_AI_2?: CNodeInv_AI_2
   qed
 
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 lemma finalise_cap_rvk_prog [CNodeInv_AI_assms]:
    "\<lbrace>\<lambda>s. revoke_progress_ord m (\<lambda>x. map_option cap_to_rpo (caps_of_state s x))\<rbrace>
@@ -812,7 +820,8 @@ lemma finalise_cap_rvk_prog [CNodeInv_AI_assms]:
   apply (case_tac a,simp_all add:liftM_def)
     apply (wp suspend_rvk_prog deleting_irq_handler_rvk_prog
       | clarsimp simp:is_final_cap_def comp_def)+
-  done
+  sorry (* FIXME AARCH64 probably VCPU
+  done *)
 
 
 lemma rec_del_rvk_prog [CNodeInv_AI_assms]:
@@ -914,7 +923,7 @@ termination cap_revoke by (rule cap_revoke_termination)
 declare cap_revoke.simps[simp del]
 
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 crunch typ_at[wp, CNodeInv_AI_assms]: finalise_slot "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps simp: crunch_simps filterM_mapM unless_def
@@ -938,7 +947,7 @@ global_interpretation CNodeInv_AI_4?: CNodeInv_AI_4
   qed
 
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 lemma cap_move_ioports:
   "\<lbrace>valid_ioports and cte_wp_at ((=) cap.NullCap) ptr'

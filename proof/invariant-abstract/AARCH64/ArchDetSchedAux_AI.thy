@@ -8,7 +8,7 @@ theory ArchDetSchedAux_AI
 imports DetSchedAux_AI
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 named_theorems DetSchedAux_AI_assms
 
@@ -138,7 +138,7 @@ crunch valid_sched[wp]: init_arch_objects valid_sched (wp: valid_sched_lift)
 end
 
 lemmas tcb_sched_action_valid_idle_etcb
-    = RISCV64.tcb_sched_action_valid_idle_etcb
+    = AARCH64.tcb_sched_action_valid_idle_etcb
 
 global_interpretation DetSchedAux_AI_det_ext?: DetSchedAux_AI_det_ext
   proof goal_cases

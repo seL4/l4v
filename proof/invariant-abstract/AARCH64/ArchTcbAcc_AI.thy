@@ -8,7 +8,7 @@ theory ArchTcbAcc_AI
 imports TcbAcc_AI
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin global_naming AARCH64
 
 named_theorems TcbAcc_AI_assms
 
@@ -23,8 +23,8 @@ lemma cap_master_cap_arch_eqDs:
      \<Longrightarrow> cap = ArchObjectCap ASIDControlCap"
   "cap_master_cap cap = ArchObjectCap (ASIDPoolCap pool asid)
      \<Longrightarrow> asid = 0 \<and> (\<exists>asid. cap = ArchObjectCap (ASIDPoolCap pool asid))"
-  "cap_master_cap cap = ArchObjectCap (PageTableCap ptr data)
-     \<Longrightarrow> data = None \<and> (\<exists>data. cap = ArchObjectCap (PageTableCap ptr data))"
+  "cap_master_cap cap = ArchObjectCap (PageTableCap ptr pt_t data)
+     \<Longrightarrow> data = None \<and> (\<exists>data. cap = ArchObjectCap (PageTableCap ptr pt_t data))"
   by (clarsimp simp: cap_master_cap_def
               split: cap.split_asm arch_cap.split_asm)+
 
@@ -144,11 +144,11 @@ lemma as_user_hyp_refs_of[wp, TcbAcc_AI_assms]:
 
 lemmas sts_typ_ats = sts_typ_ats abs_atyp_at_lifts [OF set_thread_state_typ_at]
 
-lemma arch_tcb_context_set_eq_RISCV64[TcbAcc_AI_assms]: "arch_tcb_context_set (arch_tcb_context_get t) t = t"
+lemma arch_tcb_context_set_eq_AARCH64[TcbAcc_AI_assms]: "arch_tcb_context_set (arch_tcb_context_get t) t = t"
   unfolding arch_tcb_context_get_def arch_tcb_context_set_def
   by simp
 
-lemma arch_tcb_context_get_eq_RISCV64[TcbAcc_AI_assms]: "arch_tcb_context_get (arch_tcb_context_set uc t) = uc"
+lemma arch_tcb_context_get_eq_AARCH64[TcbAcc_AI_assms]: "arch_tcb_context_get (arch_tcb_context_set uc t) = uc"
   unfolding arch_tcb_context_get_def arch_tcb_context_set_def
   by simp
 
