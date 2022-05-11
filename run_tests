@@ -65,6 +65,8 @@ EXCLUDE["AARCH64"]=[
     # To be eliminated/refined as development progresses
     "ASepSpec",
     "CKernel",
+    "BaseRefine",
+    "Access",
 
     # Tools and unrelated content, removed for development
     "CParser",
@@ -74,6 +76,7 @@ EXCLUDE["AARCH64"]=[
     "Concurrency",
     "EVTutorial",
     "TakeGrant",
+    "Bisim",
 
     # Longer-term exclusions
     "AutoCorresSEL4",
