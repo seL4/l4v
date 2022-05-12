@@ -31,7 +31,7 @@ text \<open>
   Note that this function is total.
   If the traversal stops before a page directory can be found
   (e.g. because the VTable entry is not set or a reference has been invalid),
-  the function returns the global kernel mapping.
+  the function returns the global default page table.
 
   Looking up the address space for a thread reference involves the following
   steps:
@@ -47,16 +47,15 @@ definition
   get_vspace_of_thread :: "kheap \<Rightarrow> arch_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref"
 where
   get_vspace_of_thread_def:
-  "get_vspace_of_thread khp astate tcb_ref \<equiv> undefined"
   "get_vspace_of_thread khp astate tcb_ref \<equiv>
    case khp tcb_ref of Some (TCB tcb) \<Rightarrow>
      (case tcb_vtable tcb of
-        ArchObjectCap (PageTableCap pt (Some (asid, _))) \<Rightarrow>
+        ArchObjectCap (PageTableCap pt VSRootPT_T (Some (asid, _))) \<Rightarrow>
           (case vspace_for_asid asid (state_from_arch khp astate) of
-             Some pt' \<Rightarrow> if pt' = pt then pt else riscv_global_pt astate
-           | _ \<Rightarrow> riscv_global_pt astate)
-        | _ \<Rightarrow>  riscv_global_pt astate)
-   | _ \<Rightarrow>  riscv_global_pt astate" *)
+             Some pt' \<Rightarrow> if pt' = pt then pt else arm_us_global_vspace astate
+           | _ \<Rightarrow> arm_us_global_vspace astate)
+        | _ \<Rightarrow>  arm_us_global_vspace astate)
+   | _ \<Rightarrow>  arm_us_global_vspace astate"
 
 
 lemma the_arch_cap_simp[simp]: "the_arch_cap (ArchObjectCap x) = x"
@@ -69,15 +68,14 @@ lemma vspace_for_asid_state_from_arch[simp]:
 
 (* NOTE: This statement would clearly be nicer for a partial function
          but later on, we really want the function to be total. *)
-(* FIXME AARCH64
 lemma get_vspace_of_thread_eq:
-  "pt_ref \<noteq> riscv_global_pt (arch_state s) \<Longrightarrow>
+  "pt_ref \<noteq> arm_us_global_vspace (arch_state s) \<Longrightarrow>
    get_vspace_of_thread (kheap s) (arch_state s) tcb_ref = pt_ref \<longleftrightarrow>
    (\<exists>tcb. kheap s tcb_ref = Some (TCB tcb) \<and>
-          (\<exists>asid vref. tcb_vtable tcb = ArchObjectCap (PageTableCap pt_ref (Some (asid,vref))) \<and>
+          (\<exists>asid vref. tcb_vtable tcb = ArchObjectCap (PageTableCap pt_ref VSRootPT_T (Some (asid,vref))) \<and>
                        vspace_for_asid asid s = Some pt_ref))"
   unfolding get_vspace_of_thread_def
-  by (auto split: option.splits kernel_object.splits cap.splits arch_cap.splits) *)
+  by (auto split: option.splits kernel_object.splits cap.splits arch_cap.splits pt_type.splits)
 
 
 text \<open>
@@ -103,14 +101,12 @@ definition
   get_page_info :: "(obj_ref \<rightharpoonup> arch_kernel_obj) \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<rightharpoonup>
                     (machine_word \<times> nat \<times> vm_attributes \<times> vm_rights)"
 where
-  "get_page_info aobjs pt_ref vptr \<equiv> undefined"
-  (* FIXME AARCH64 needs redefinition, ptes_of doesn't work, we need a pt_type
   "get_page_info aobjs pt_ref vptr \<equiv> (do {
       oassert (canonical_address vptr);
       (level, slot) \<leftarrow> pt_lookup_slot pt_ref vptr;
-      pte \<leftarrow> oapply slot;
+      pte \<leftarrow> oapply2 (level_type level) slot;
       K $ pte_info level pte
-    }) (\<lambda>p. pte_of p (aobjs |> pt_of))" *)
+    }) (\<lambda>pt_t p. level_pte_of pt_t p (aobjs |> pt_of))"
 
 text \<open>
   Both functions, @{text ptable_lift} and @{text vm_rights},
@@ -118,11 +114,9 @@ text \<open>
   The former returns the physical address, the latter the associated rights.
 \<close>
 definition ptable_lift :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> machine_word \<rightharpoonup> machine_word" where
-  "ptable_lift tcb s \<equiv> undefined"
-  (* FIXME AARCH64: needs redefinition
   "ptable_lift tcb s \<equiv> \<lambda>addr.
    case_option None (\<lambda>(base, bits, rights). Some (base + (addr && mask bits)))
-     (get_page_info (aobjs_of s) (get_vspace_of_thread (kheap s) (arch_state s) tcb) addr)" *)
+     (get_page_info (aobjs_of s) (get_vspace_of_thread (kheap s) (arch_state s) tcb) addr)"
 
 definition ptable_rights :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> machine_word \<Rightarrow> vm_rights" where
   "ptable_rights tcb s \<equiv> \<lambda>addr.
@@ -131,9 +125,8 @@ definition ptable_rights :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightar
 
 lemma ptable_lift_Some_canonical_addressD:
   "ptable_lift t s vptr = Some p \<Longrightarrow> canonical_address vptr"
-  sorry (* FIXME AARCH64
-  by (clarsimp simp: ptable_lift_def get_page_info_def below_user_vtop_canonical
-              split: if_splits option.splits) *)
+  by (clarsimp simp: ptable_lift_def get_page_info_def
+              split: if_splits option.splits)
 
 end
 end
