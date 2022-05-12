@@ -1091,7 +1091,8 @@ lemma set_pt_asid_map [wp]:
 
 lemma set_pt_only_idle [wp]:
   "\<lbrace>only_idle\<rbrace> set_pt p pt \<lbrace>\<lambda>_. only_idle\<rbrace>"
-  by (wp only_idle_lift)
+  sorry (* FIXME AARCH64
+  by (wp only_idle_lift) *)
 
 lemma pts_of_upd_idem:
   "obj_ref \<noteq> pt_ptr \<Longrightarrow> pts_of (s\<lparr> kheap := (kheap s)(obj_ref := Some ko)\<rparr>) pt_ptr = pts_of s pt_ptr"
@@ -2006,8 +2007,8 @@ lemma set_asid_pool_valid_global_vspace_mappings[wp]:
    \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"
   unfolding set_asid_pool_def
   apply (wpsimp wp: set_object_wp)
-  apply (simp only: valid_global_vspace_mappings_def Let_def) (* prevent simp loop *)
   sorry (* FIXME AARCH64
+  apply (simp only: valid_global_vspace_mappings_def Let_def) (* prevent simp loop *)
   apply (clarsimp simp: translate_address_asid_pool_upd ko_atasid_pool_pts_None)
   done *)
 
@@ -2252,6 +2253,10 @@ lemma store_pte_valid_asid_table[wp]:
   done
 *)
 
+lemma store_pte_valid_irq_node[wp]:
+  "store_pte pt_t p pte \<lbrace>valid_irq_node\<rbrace>"
+  sorry
+
 crunches store_pte
   for iflive[wp]: if_live_then_nonz_cap
   and zombies_final[wp]: zombies_final
@@ -2263,7 +2268,6 @@ crunches store_pte
   and valid_reply_caps[wp]: valid_reply_caps
   and valid_reply_masters[wp]: valid_reply_masters
   and valid_global_refs[wp]: valid_global_refs
-  and valid_irq_node[wp]: valid_irq_node
   and valid_irq_handlers[wp]: valid_irq_handlers
   and valid_irq_states[wp]: valid_irq_states
   and valid_machine_state[wp]: valid_machine_state
