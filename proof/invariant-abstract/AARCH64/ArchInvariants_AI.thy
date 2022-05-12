@@ -514,13 +514,24 @@ definition hyp_live :: "kernel_object \<Rightarrow> bool" where
    | ArchObj ao \<Rightarrow> arch_live ao
    |  _ \<Rightarrow> False"
 
-definition is_vcpu :: "kernel_object \<Rightarrow> bool" where
-  "is_vcpu \<equiv> \<lambda>ko. \<exists>vcpu. ko = ArchObj (VCPU vcpu)"
+(* The TCB link pointers of VCPUs *)
+locale_abbrev vcpu_tcbs_of :: "'z::state_ext state \<Rightarrow> obj_ref \<Rightarrow> obj_ref option" where
+  "vcpu_tcbs_of \<equiv> \<lambda>s. vcpus_of s |> vcpu_tcb"
 
-definition cur_vcpu :: "'z::state_ext state \<Rightarrow> bool" where
-  "cur_vcpu \<equiv> \<lambda>s. case arm_current_vcpu (arch_state s) of
-     Some (v, _) \<Rightarrow> obj_at (is_vcpu and hyp_live) v s
-   | _ \<Rightarrow> True"
+(* If the TCB link exists, the VCPU is live *)
+locale_abbrev vcpu_hyp_live_of :: "'z::state_ext state \<Rightarrow> obj_ref \<Rightarrow> bool" where
+  "vcpu_hyp_live_of \<equiv> \<lambda>s. (\<lambda>_. True) |< vcpu_tcbs_of s"
+
+definition cur_vcpu_2 :: "(obj_ref \<times> bool) option \<Rightarrow> (obj_ref \<Rightarrow> bool) \<Rightarrow> bool" where
+  "cur_vcpu_2 \<equiv> \<lambda>cur_vcpu vcpu_hyp_live_of.
+     case cur_vcpu of
+       Some (v, _) \<Rightarrow> vcpu_hyp_live_of v
+     | None \<Rightarrow> True"
+
+locale_abbrev cur_vcpu :: "'z::state_ext state \<Rightarrow> bool" where
+  "cur_vcpu \<equiv> \<lambda>s. cur_vcpu_2 (arm_current_vcpu (arch_state s)) (vcpu_hyp_live_of s)"
+
+lemmas cur_vcpu_def = cur_vcpu_2_def
 
 definition pte_rights_of :: "pte \<Rightarrow> rights set" where
   "pte_rights_of pte \<equiv> if is_PagePTE pte then pte_rights pte else {}"
@@ -2328,30 +2339,18 @@ lemma vcpu_of_Some[simp]:
   "(vcpu_of ako = Some vcpu) = (ako = VCPU vcpu)"
   by (cases ako; simp)
 
-definition hyp_live_of :: "vcpu \<Rightarrow> bool option" where (* FIXME AARCH64: used pred_map from MCS? *)
-  "hyp_live_of vcpu \<equiv> if hyp_live (ArchObj (VCPU vcpu)) then Some True else Some False"
-
-lemma hyp_live_of_Some[simp]:
-  "(hyp_live_of vcpu = Some True) = hyp_live (ArchObj (VCPU vcpu))"
-  by (simp add: hyp_live_of_def)
-
-locale_abbrev
-  "vcpu_hyp_live_of s \<equiv> vcpus_of s |> hyp_live_of"
+definition is_vcpu :: "kernel_object \<Rightarrow> bool" where
+  "is_vcpu \<equiv> \<lambda>ko. \<exists>vcpu. ko = ArchObj (VCPU vcpu)"
 
 lemma obj_at_vcpu_hyp_live_of:
-  "obj_at (is_vcpu and hyp_live) p = (\<lambda>s. vcpu_hyp_live_of s p = Some True)"
+  "obj_at (is_vcpu and hyp_live) p = (\<lambda>s. vcpu_hyp_live_of s p)"
   by (rule ext) (auto simp: obj_at_def in_omonad is_vcpu_def hyp_live_def arch_live_def)
 
 lemma cur_vcpu_typ_lift:
-  assumes atyp[wp]: "(\<And>T p. f \<lbrace>typ_at (AArch T) p\<rbrace>)"
-  assumes vcpus: "\<And>p. f \<lbrace>obj_at (is_vcpu and hyp_live) p\<rbrace>"
-  assumes arch[wp]: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
+  assumes vcpus: "\<And>P. f \<lbrace>\<lambda>s. P (vcpu_tcbs_of s)\<rbrace>"
+  assumes arch: "\<And>P. f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>"
   shows "f \<lbrace>cur_vcpu\<rbrace>"
-  unfolding cur_vcpu_def
-  apply (rule hoare_lift_Pf[where f=arch_state, rotated], rule arch)
-  apply (clarsimp split: option.split)
-  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift vcpus[simplified pred_conj_def])
-  done
+  by (rule hoare_lift_Pf[OF vcpus arch])
 
 lemmas abs_atyp_at_lifts =
   valid_pte_lift valid_vspace_obj_typ valid_arch_cap_ref_lift in_user_frame_lift
@@ -2372,14 +2371,14 @@ lemma valid_arch_state_lift_arch:
   assumes atyp[wp]: "\<And>T p. f \<lbrace> typ_at (AArch T) p\<rbrace>"
   assumes aobjs[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (asid_pools_of s) \<rbrace>"
   assumes aps[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (pts_of s) \<rbrace>"
-  assumes vcpus: "\<And>p. f \<lbrace>\<lambda>s. vcpu_hyp_live_of s p = Some True\<rbrace>"
-  assumes arch[wp]: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
+  assumes vcpus[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (vcpu_hyp_live_of s)\<rbrace>"
+  assumes arch[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>"
   shows "f \<lbrace>valid_arch_state\<rbrace>"
   apply (simp add: pred_conj_def valid_arch_state_def valid_asid_table_def)
   apply (rule hoare_lift_Pf[where f="arch_state", rotated], rule arch)
   apply (wpsimp wp: dom_asid_pools_of_lift)
     apply blast
-   apply (wpsimp wp: vcpus cur_vcpu_typ_lift vmid_inv_ap_lift simp: obj_at_vcpu_hyp_live_of)+
+   apply (wpsimp wp: vcpus cur_vcpu_typ_lift vmid_inv_ap_lift)+
   done
 
 lemma aobjs_of_atyp_lift:
@@ -2725,9 +2724,13 @@ lemma arch_valid_obj_update:
   "\<And>ao. b = ArchObj ao \<Longrightarrow> arch_valid_obj ao (f s) = arch_valid_obj ao s"
   by (clarsimp simp: arch_valid_obj_def split: arch_kernel_obj.splits)
 
+lemma aobjs_of_update[iff]:
+  "aobjs_of (f s) = aobjs_of s"
+  by (simp add: pspace)
+
 lemma ptes_of_update[iff]:
   "ptes_of (f s) = ptes_of s"
-  by (rule ext) (simp add: ptes_of_def pspace)
+  by simp
 
 end
 
@@ -2792,7 +2795,7 @@ lemma equal_kernel_mappings_update [iff]:
 
 lemma cur_vcpu_update [iff]:
   "cur_vcpu (f s) = cur_vcpu s"
-  by (simp add: cur_vcpu_def arch split: option.splits)
+  by (simp add: arch)
 
 lemma vmid_inv_update [iff]:
   "vmid_inv (f s) = vmid_inv s"

@@ -48,7 +48,6 @@ definition
 where
   get_vspace_of_thread_def:
   "get_vspace_of_thread khp astate tcb_ref \<equiv> undefined"
-  (* FIXME AARCH64: needs redefinition
   "get_vspace_of_thread khp astate tcb_ref \<equiv>
    case khp tcb_ref of Some (TCB tcb) \<Rightarrow>
      (case tcb_vtable tcb of
