@@ -431,11 +431,23 @@ crunch cap_to                    [wp, Ipc_AI_assms]:  make_arch_fault_msg "ex_no
 crunch obj_at[wp, Ipc_AI_assms]:  make_arch_fault_msg "\<lambda>s. P (obj_at P' pd s)"
   (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def)
 
+lemma dmo_addressTranslateS1_valid_machine_state[wp]:
+  "do_machine_op (addressTranslateS1 addr) \<lbrace> valid_machine_state \<rbrace>"
+  sorry (* FIXME AARCH64 *)
+
 crunch vms[wp, Ipc_AI_assms]: make_arch_fault_msg valid_machine_state
   (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def ignore: do_machine_op)
 
+lemma dmo_addressTranslateS1_valid_irq_states[wp]:
+  "do_machine_op (addressTranslateS1 addr) \<lbrace> valid_irq_states \<rbrace>"
+  sorry (* FIXME AARCH64 *)
+
 crunch valid_irq_states[wp, Ipc_AI_assms]: make_arch_fault_msg "valid_irq_states"
   (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def ignore: do_machine_op)
+
+lemma dmo_addressTranslateS1_cap_refs_respects_device_region[wp]:
+  "do_machine_op (addressTranslateS1 addr) \<lbrace> cap_refs_respects_device_region \<rbrace>"
+  sorry (* FIXME AARCH64 *)
 
 crunch cap_refs_respects_device_region[wp, Ipc_AI_assms]: make_arch_fault_msg "cap_refs_respects_device_region"
   (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def ignore: do_machine_op)
@@ -451,6 +463,10 @@ qed
 context Arch begin global_naming AARCH64
 
 named_theorems Ipc_AI_cont_assms
+
+lemma dmo_addressTranslateS1_pspace_respects_device_region[wp]:
+  "do_machine_op (addressTranslateS1 addr) \<lbrace> pspace_respects_device_region \<rbrace>"
+  sorry (* FIXME AARCH64 *)
 
 crunch pspace_respects_device_region[wp]: make_fault_msg "pspace_respects_device_region"
   (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def ignore: do_machine_op)

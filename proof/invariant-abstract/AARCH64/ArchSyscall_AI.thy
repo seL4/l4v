@@ -49,11 +49,23 @@ lemma eq_no_cap_to_obj_with_diff_ref [Syscall_AI_assms]:
                             table_cap_ref_mask_cap Ball_def)
   done
 
+crunches getDFSR, getFAR,getIFSR
+  for inv[wp]: "P"
+
+lemma do_machine_op_getDFSR_inv[wp]:
+  "do_machine_op getDFSR \<lbrace>P\<rbrace>"
+  by (rule dmo_inv) wp
+
+lemma do_machine_op_getFAR_inv[wp]:
+  "do_machine_op getFAR \<lbrace>P\<rbrace>"
+  by (rule dmo_inv) wp
+
+lemma do_machine_op_getIFSR_inv[wp]:
+  "do_machine_op getIFSR \<lbrace>P\<rbrace>"
+  by (rule dmo_inv) wp
+
 lemma hv_invs[wp, Syscall_AI_assms]: "\<lbrace>invs\<rbrace> handle_vm_fault t' flt \<lbrace>\<lambda>r. invs\<rbrace>"
   unfolding handle_vm_fault_def by (cases flt; wpsimp)
-
-crunch inv[wp]: getRegister "P"
-  (ignore_del: getRegister)
 
 lemma hv_inv_ex [Syscall_AI_assms]:
   "\<lbrace>P\<rbrace> handle_vm_fault t vp \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"

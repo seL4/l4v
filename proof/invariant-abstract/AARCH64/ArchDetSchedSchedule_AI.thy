@@ -261,14 +261,14 @@ crunch sched_act_not [wp, DetSchedSchedule_AI_assms]:
 
 lemma hvmf_st_tcb_at [wp, DetSchedSchedule_AI_assms]:
   "\<lbrace>st_tcb_at P t' \<rbrace> handle_vm_fault t w \<lbrace>\<lambda>rv. st_tcb_at P t' \<rbrace>"
-  unfolding handle_vm_fault_def by (cases w; wpsimp)
+  unfolding handle_vm_fault_def sorry (* FIXME AARCH64 by (cases w; wpsimp) *)
 
 lemma handle_vm_fault_st_tcb_cur_thread [wp, DetSchedSchedule_AI_assms]:
   "\<lbrace> \<lambda>s. st_tcb_at P (cur_thread s) s \<rbrace> handle_vm_fault t f \<lbrace>\<lambda>_ s. st_tcb_at P (cur_thread s) s \<rbrace>"
   unfolding handle_vm_fault_def
   apply (fold ct_in_state_def)
   apply (rule ct_in_state_thread_state_lift; cases f; wpsimp)
-  done
+  sorry (* FIXME AARCH64 *)
 
 crunch valid_sched [wp, DetSchedSchedule_AI_assms]: arch_invoke_irq_control "valid_sched"
 
@@ -279,7 +279,7 @@ crunch valid_list [wp, DetSchedSchedule_AI_assms]:
 crunch cur_tcb [wp, DetSchedSchedule_AI_assms]:
   handle_arch_fault_reply, handle_vm_fault, arch_get_sanitise_register_info, arch_post_modify_registers
   cur_tcb
-  (simp: crunch_simps)
+  (simp: crunch_simps dmo_inv)
 
 crunch not_cur_thread [wp, DetSchedSchedule_AI_assms]: arch_get_sanitise_register_info, arch_post_modify_registers "not_cur_thread t'"
 crunch ready_queues   [wp, DetSchedSchedule_AI_assms]: arch_get_sanitise_register_info, arch_post_modify_registers "\<lambda>s. P (ready_queues s)"
