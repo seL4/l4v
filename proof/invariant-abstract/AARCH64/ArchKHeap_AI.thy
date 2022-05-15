@@ -9,6 +9,12 @@ theory ArchKHeap_AI
 imports KHeapPre_AI
 begin
 
+(* FIXME MOVE, might break proofs elsewhere *)
+lemma if_Some_Some[simp]:
+  "((if P then Some v else None) = Some v) = P"
+  "((if P then None else Some v) = Some v) = (\<not>P)"
+  by auto
+
 context Arch begin global_naming AARCH64
 
 definition "non_vspace_obj \<equiv> non_arch_obj"
