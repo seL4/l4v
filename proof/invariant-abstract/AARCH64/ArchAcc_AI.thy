@@ -13,11 +13,6 @@ theory ArchAcc_AI
 imports SubMonad_AI "Lib.Crunch_Instances_NonDet"
 begin
 
-(* FIXME MOVE, might break proofs elsewhere *)
-lemma if_Some_Some[simp]:
-  "((if P then Some v else None) = Some v) = P"
-  by simp
-
 context non_vspace_op
 begin
 

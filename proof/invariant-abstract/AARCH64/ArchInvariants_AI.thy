@@ -290,8 +290,8 @@ primrec valid_pte :: "vm_level \<Rightarrow> pte \<Rightarrow> 'z::state_ext sta
      (\<lambda>s. data_at (vmsize_of_level level) (ptrFromPAddr base) s
           \<and> level \<le> max_page_level
           \<and> (is_small \<longleftrightarrow> level = 0))"
-| "valid_pte level (PageTablePTE base) =
-     (\<lambda>s. normal_pt_at (ptrFromPAddr base) s \<and> 0 < level)"
+| "valid_pte level (PageTablePTE ppn) =
+     (\<lambda>s. normal_pt_at (ptrFromPAddr (paddr_from_ppn ppn)) s \<and> 0 < level)"
 
 definition pt_range :: "pt \<Rightarrow> pte set" where
   "pt_range pt \<equiv> range (pt_apply pt)"
@@ -342,9 +342,9 @@ definition equal_kernel_mappings :: "'z::state_ext state \<Rightarrow> bool" whe
 
 definition pte_ref :: "pte \<Rightarrow> obj_ref option" where
   "pte_ref pte \<equiv> case pte of
-                   PageTablePTE base \<Rightarrow> Some (ptrFromPAddr base)
-                 | PagePTE base _ _ _ \<Rightarrow> Some (ptrFromPAddr base)
-                 | _ \<Rightarrow> None"
+    InvalidPTE \<Rightarrow> None
+  | PagePTE _ _ _ _ \<Rightarrow> Some (pptr_from_pte pte)
+  | PageTablePTE _ \<Rightarrow> Some (pptr_from_pte pte)"
 
 lemmas pte_ref_simps[simp] = pte_ref_def[split_simps pte.split]
 
@@ -2192,6 +2192,10 @@ lemma pt_slot_offset_pt_range:
   for level::vm_level
   by (clarsimp simp: ptes_of_Some)
 
+lemma pte_base_addr_PageTablePTE[simp]:
+  "pte_base_addr (PageTablePTE ppn) = paddr_from_ppn ppn"
+  by (simp add: pte_base_addr_def)
+
 lemma valid_vspace_objs_strongD:
   "\<lbrakk> valid_vspace_objs s;
      vs_lookup_table bot_level asid vref s = Some (level, pt_ptr);
@@ -2224,12 +2228,35 @@ lemma valid_vspace_objs_strongD:
   apply (assumption)
   done
 
-(*
-lemma pt_walk_is_aligned: (* FIXME AARCH64: no longer true; remove when uses have been replaced *)
-  "\<lbrakk> pt_walk level bot_level p vref' ptes = Some (level', p');
-     is_aligned p (pt_bits (level = max_pt_level)) \<rbrakk>
-   \<Longrightarrow> is_aligned p' (pt_bits (level' = max_pt_level))"
-*)
+lemma level_type_minus_one:
+  "level \<le> max_pt_level \<Longrightarrow> level_type (level - 1) = NormalPT_T"
+  by (simp add: level_type_def)
+
+lemma pt_bits_NormalPT_T:
+  "pt_bits NormalPT_T = pageBits"
+  by (simp add: bit_simps)
+
+lemma pptr_from_pte_aligned:
+  "is_PageTablePTE pte \<Longrightarrow> is_aligned (pptr_from_pte pte) pageBits"
+  apply (clarsimp simp: is_PageTablePTE_def pptr_from_pte_def paddr_from_ppn_def)
+  apply (rule is_aligned_ptrFromPAddr)
+  apply (simp add: word_eqI_simps)
+  done
+
+lemma pptr_from_pte_aligned_pt_bits:
+  "\<lbrakk> level \<le> max_pt_level; is_PageTablePTE pte \<rbrakk> \<Longrightarrow>
+   is_aligned (pptr_from_pte pte) (pt_bits (level_type (level - 1)))"
+  by (drule level_type_minus_one)
+     (simp del: level_type_eq add: pt_bits_NormalPT_T pptr_from_pte_aligned)
+
+lemma pt_walk_is_aligned:
+  "\<lbrakk> pt_walk level bot_level p vref' ptes = Some (level', p'); level \<le> max_pt_level;
+     is_aligned p (pt_bits level) \<rbrakk>
+   \<Longrightarrow> is_aligned p' (pt_bits level')"
+  apply (induct level arbitrary: p, simp)
+  apply (subst (asm) (2) pt_walk.simps)
+  apply (fastforce simp: in_omonad pptr_from_pte_aligned_pt_bits split: if_splits)
+  done
 
 lemma vspace_for_pool_is_aligned:
   "\<lbrakk> vspace_for_pool pool_ptr asid (asid_pools_of s) = Some pt_ptr;
@@ -2535,8 +2562,8 @@ lemma vs_lookup_table_pt_step:
      prefer 2
      apply assumption
     apply simp
-   apply (clarsimp simp: ptes_of_Some in_omonad is_aligned_pt_slot_offset_pte
-                         table_index_pt_slot_offset)
+   apply (fastforce simp: ptes_of_Some in_omonad is_aligned_pt_slot_offset_pte
+                          table_index_pt_slot_offset split: if_split_asm)
   apply (prop_tac "level = max_pt_level \<longrightarrow> ucast idx \<notin> invalid_mapping_slots")
    apply (cases pt; clarsimp simp: valid_pt_range_def)
   apply (simp add: user_region_def vref_for_level_idx_canonical_user)

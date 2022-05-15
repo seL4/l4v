@@ -15,6 +15,10 @@ imports
   ExecSpec.Kernel_Config_Lemmas
 begin
 
+context begin interpretation Arch .
+lemmas [code] = pageBits_def ipa_size_def
+end
+
 context Arch begin global_naming AARCH64_A
 
 text \<open>
@@ -65,16 +69,44 @@ subsection \<open>Page tables\<close>
 datatype vm_attribute = Global | Execute | Device
 type_synonym vm_attributes = "vm_attribute set"
 
+text \<open>
+  The C field @{text base_addr} for next-level tables of @{text PagePTE}s is a 36 bit field-high
+  value, i.e., a 48-bit word with the bottom 12 bits always set to 0. (They must be 0 due to
+  alignment). Since Arm does not specify a name, we are re-using the RISC-V name @{text ppn}
+  (physical page number) for the concept of encoding only the significant bits of this address.
+
+  In addition to the bottom 12 bits being 0 (where 12 = @{const pageBits}), we also know that
+  the base address of the next level table is a physical address and therefore has the same width
+  as intermediate physical addresses (@{const ipa_size}). We can therefore be more precise in the
+  encoding here: the significant bits of the next-level page table address go from @{const ipa_size}
+  at the top to @{const pageBits} at the bottom. Similar to the ppn on RISC-V we store a word
+  of that size, and shift by @{const pageBits} to get the address. This encodes both a size invariant
+  and an alignment invariant in the type, which functions like @{text pt_walk} rely on.
+
+  To provide the same field name as in C, we define @{text pte_base_addr} as the main accessor
+  function.\<close>
+value_type ppn_len = "ipa_size - pageBits"
+type_synonym ppn = "ppn_len word"
+
 datatype pte =
     InvalidPTE
   | PagePTE
-      (pte_base_addr : paddr)
+      (pte_page_addr : paddr)
       (pte_is_small_page : bool)
       (pte_attr : vm_attributes)
       (pte_rights : vm_rights)
   | PageTablePTE
-      (pte_base_addr : paddr)
+      (pte_ppn : ppn)
 
+definition paddr_from_ppn :: "ppn \<Rightarrow> paddr" where
+  "paddr_from_ppn addr \<equiv> ucast addr << pageBits"
+
+definition pte_base_addr :: "pte \<Rightarrow> paddr" where
+  "pte_base_addr pte \<equiv>
+    if is_PageTablePTE pte then paddr_from_ppn (pte_ppn pte) else pte_page_addr pte"
+
+definition ppn_from_pptr :: "obj_ref \<Rightarrow> ppn" where
+  "ppn_from_pptr p = ucast (addrFromPPtr p >> pageBits)"
 
 definition vs_index_bits :: nat where
   "vs_index_bits \<equiv> if config_ARM_PA_SIZE_BITS_40 then 10 else (9::nat)"
@@ -207,6 +239,12 @@ definition table_size :: "pt_type \<Rightarrow> nat" where
 
 definition pt_bits :: "pt_type \<Rightarrow> nat" where
   "pt_bits pt_t \<equiv> table_size pt_t"
+
+(* sanity check *)
+lemma ppn_len:
+  "LENGTH(ppn_len) = ipa_size - pt_bits NormalPT_T"
+  by (simp add: pt_bits_def table_size_def ptTranslationBits_def pte_bits_def word_size_bits_def
+                ipa_size_def Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
 
 primrec arch_obj_size :: "arch_cap \<Rightarrow> nat" where
   "arch_obj_size (ASIDPoolCap _ _) = pageBits"

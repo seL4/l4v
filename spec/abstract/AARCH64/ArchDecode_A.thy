@@ -174,7 +174,7 @@ definition decode_pt_inv_map :: "'z::state_ext arch_decoder" where
            (level, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot pt vaddr \<circ> ptes_of;
            old_pte \<leftarrow> liftE $ get_pte (level_type level) slot;
            whenE (pt_bits_left level = pageBits \<or> old_pte \<noteq> InvalidPTE) $ throwError DeleteFirst;
-           pte \<leftarrow> returnOk $ PageTablePTE (addrFromPPtr p);
+           pte \<leftarrow> returnOk $ PageTablePTE (ppn_from_pptr p);
            cap' <- returnOk $ PageTableCap p t $ Some (asid, vaddr && ~~mask (pt_bits_left level));
            returnOk $ InvokePageTable $ PageTableMap cap' cte pte slot level
          odE

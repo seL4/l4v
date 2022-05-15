@@ -85,4 +85,7 @@ lemma asid_bits_len_checks:
   "asid_bits \<le> LENGTH(asid_rep_len)"
   unfolding asid_bits_defs by auto
 
+definition ipa_size :: nat where
+  "ipa_size \<equiv> if config_ARM_PA_SIZE_BITS_40 then 40 else 44"
+
 end
