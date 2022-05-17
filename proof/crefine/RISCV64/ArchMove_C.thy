@@ -93,7 +93,7 @@ lemma atg_sp':
 (* FIXME: MOVE to EmptyFail *)
 lemma empty_fail_archThreadGet [intro!, wp, simp]:
   "empty_fail (archThreadGet f p)"
-  by (simp add: archThreadGet_def getObject_def split_def)
+  by (simp add: archThreadGet_def getObject_def readObject_def gets_the_def split_def)
 
 (* FIXME: move to ainvs? *)
 lemma sign_extend_canonical_address:
@@ -109,6 +109,7 @@ lemma valid_untyped':
   notes usableUntypedRange.simps[simp del]
   assumes pspace_distinct': "pspace_distinct' s" and
            pspace_aligned': "pspace_aligned' s" and
+           pspace_bounded': "pspace_bounded' s" and
                         al: "is_aligned ptr bits"
   shows "valid_untyped' d ptr bits idx s =
          (\<forall>p ko. ksPSpace s p = Some ko \<longrightarrow>
@@ -125,6 +126,7 @@ lemma valid_untyped':
   apply (case_tac "ksPSpace s ptr' = Some ko", simp_all)
   apply (frule pspace_alignedD'[OF _ pspace_aligned'])
   apply (frule pspace_distinctD'[OF _ pspace_distinct'])
+  apply (frule pspace_boundedD'[OF _ pspace_bounded'])
   apply (simp add: ptr_range_mask_range)
   apply (frule aligned_ranges_subset_or_disjoint[OF al])
   apply (simp only: ptr_range_mask_range)
@@ -226,12 +228,6 @@ lemma unat_ucast_prio_L1_cmask_simp:
   "unat (ucast (p::priority) && 0x3F :: machine_word) = unat (p && 0x3F)"
   using unat_ucast_prio_mask_simp[where m=6]
   by (simp add: mask_def)
-
-lemma machine_word_and_3F_less_40:
-  "(w :: machine_word) && 0x3F < 0x40"
-  by (rule word_and_less', simp)
-
-lemmas setEndpoint_obj_at_tcb' = setEndpoint_obj_at'_tcb
 
 (* FIXME: Move to Schedule_R.thy. Make Arch_switchToThread_obj_at a specialisation of this *)
 lemma Arch_switchToThread_obj_at_pre:

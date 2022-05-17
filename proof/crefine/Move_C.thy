@@ -534,9 +534,9 @@ lemma ran_tcb_cte_cases:
   "ran tcb_cte_cases =
    {(Structures_H.tcbCTable, tcbCTable_update),
     (Structures_H.tcbVTable, tcbVTable_update),
-    (Structures_H.tcbReply, tcbReply_update),
-    (Structures_H.tcbCaller, tcbCaller_update),
-    (tcbIPCBufferFrame, tcbIPCBufferFrame_update)}"
+    (Structures_H.tcbIPCBufferFrame, tcbIPCBufferFrame_update),
+    (Structures_H.tcbFaultHandler, tcbFaultHandler_update),
+    (Structures_H.tcbTimeoutHandler, tcbTimeoutHandler_update)}"
   by (auto simp add: tcb_cte_cases_def cteSizeBits_def split: if_split_asm)
 
 lemma user_data_at_ko:
@@ -547,19 +547,17 @@ lemma user_data_at_ko:
 
 lemma map_to_ko_atI:
   "\<lbrakk>(projectKO_opt \<circ>\<^sub>m ksPSpace s) x = Some v;
-    pspace_aligned' s; pspace_distinct' s\<rbrakk>
+    pspace_aligned' s; pspace_distinct' s; pspace_bounded' s\<rbrakk>
    \<Longrightarrow> ko_at' v x s"
   apply (clarsimp simp: map_comp_Some_iff)
-  apply (erule (2) aligned_distinct_obj_atI')
+  apply (erule (3) aligned_distinct_obj_atI')
   apply (simp add: project_inject)
   done
 
 lemma map_to_ko_atI':
   "\<lbrakk>(projectKO_opt \<circ>\<^sub>m (ksPSpace s)) x = Some v; invs' s\<rbrakk> \<Longrightarrow> ko_at' v x s"
   apply (clarsimp simp: map_comp_Some_iff)
-  apply (erule aligned_distinct_obj_atI')
-    apply clarsimp
-   apply clarsimp
+  apply (erule aligned_distinct_obj_atI'; clarsimp?)
   apply (simp add: project_inject)
   done
 
@@ -677,7 +675,7 @@ lemma asUser_mapM_x:
   apply (rule ext)
   apply (rule bind_apply_cong [OF refl])+
   apply (clarsimp simp: in_monad dest!: fst_stateAssertD)
-  apply (drule use_valid, rule mapM_wp', rule asUser_typ_ats, assumption)
+  apply (drule use_valid, rule mapM_wp', rule asUser.typ_at_lifts_all', assumption)
   apply (simp add: stateAssert_def get_def NonDetMonad.bind_def)
   done
 
@@ -739,8 +737,8 @@ lemma threadGet_tcbFault_doMachineOp_comm:
 
 lemma getObject_tcb_det:
   "(r::tcb,s') \<in> fst (getObject p s) \<Longrightarrow> fst (getObject p s) = {(r,s)} \<and> s' = s"
-  apply (clarsimp simp add: getObject_def bind_def get_def gets_def
-                            return_def loadObject_default_def split_def)
+  apply (clarsimp simp add: getObject_def readObject_def bind_def get_def gets_def
+                            gets_the_def return_def loadObject_default_def split_def)
   apply (clarsimp split: kernel_object.split_asm if_split_asm option.split_asm
                    simp: in_monad typeError_def alignError_def magnitudeCheck_def
                          objBits_def objBitsKO_def projectKOs
@@ -753,12 +751,12 @@ lemma getObject_tcb_det:
 lemma threadGet_again:
   "\<And>rv s s' n. (rv, s') \<in> fst (threadGet ext t s) \<Longrightarrow>
    (threadGet ext t >>= n) s' = n rv s'"
-  apply (clarsimp simp add: threadGet_def liftM_def in_monad)
+  apply (clarsimp simp add: threadGet_getObject gets_the_def liftM_def in_monad)
   apply (frule use_valid [OF _ getObject_obj_at'])
      apply (simp add: objBits_simps')+
   apply (frule getObject_tcb_det)
   apply (clarsimp simp: bind_def split_def)
-  apply (insert no_fail_getObject_tcb)
+  apply (insert no_fail_getObject_misc)
   apply (clarsimp simp: no_fail_def obj_at'_def is_tcb)
   done
 
@@ -771,7 +769,7 @@ lemma setMRs_Nil:
 lemma device_data_at_ko:
   "typ_at' UserDataDeviceT p s \<Longrightarrow> ko_at' UserDataDevice p s"
   apply (clarsimp simp: typ_at'_def obj_at'_def ko_wp_at'_def
-    projectKO_user_data_device projectKO_eq projectKO_eq2)
+                        projectKO_user_data_device projectKO_eq)
   apply (case_tac ko, auto)
   done
 
@@ -864,17 +862,22 @@ lemma cancelAllSignals_sch_act_wf:
   apply fastforce?
   done
 
+lemma replyClear_weak_sch_act_wf[wp]:
+  "replyClear rptr tptr \<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
+  unfolding replyClear_def
+  apply (wpsimp wp: gts_wp' simp: pred_tcb_at'_eq_commute)
+  apply (auto simp: pred_tcb_at'_def obj_at'_def)
+  done
+
 lemma cteDeleteOne_sch_act_wf:
   "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>
   cteDeleteOne slot
   \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
   apply (simp add: cteDeleteOne_def unless_when split_def)
   apply (simp add: finaliseCapTrue_standin_def Let_def)
-  apply (rule hoare_pre)
-  apply (wp isFinalCapability_inv cancelAllSignals_sch_act_wf
-            cancelAllIPC_sch_act_wf getCTE_wp' static_imp_wp
-         | wpc
-         | simp add: Let_def split: if_split)+
+  apply (wpsimp wp: isFinalCapability_inv cancelAllSignals_sch_act_wf
+                    cancelAllIPC_sch_act_wf getCTE_wp' static_imp_wp weak_if_wp'
+              simp: Let_def)
   done
 
 lemma vp_invs_strg': "invs' s \<longrightarrow> valid_pspace' s" by auto
@@ -889,16 +892,9 @@ lemma setCTE_tcbFault:
 
 lemmas threadSet_obj_at' = threadSet_obj_at'_strongish
 
-lemmas setEndpoint_tcb = KHeap_R.setEndpoint_obj_at'_tcb
+lemmas setEndpoint_obj_at_tcb' = set_ep'.obj_at_tcb'
 
-lemma setNotification_tcb:
-  "\<lbrace>obj_at' (\<lambda>tcb::tcb. P tcb) t\<rbrace>
-  setNotification ntfn e
-  \<lbrace>\<lambda>_. obj_at' P t\<rbrace>"
-  apply (simp add: setNotification_def)
-  apply (rule obj_at_setObject2)
-  apply (clarsimp simp: updateObject_default_def in_monad)
-  done
+lemmas setNotification_tcb = set_ntfn'.obj_at_tcb'
 
 lemma state_refs_of'_upd:
   "\<lbrakk> valid_pspace' s; ko_wp_at' (\<lambda>ko. objBitsKO ko = objBitsKO ko') ptr s \<rbrakk> \<Longrightarrow>
@@ -914,13 +910,14 @@ lemma ex_st_tcb_at'_simp[simp]:
   "(\<exists>ts. st_tcb_at' ((=) ts) dest s) = tcb_at' dest s"
   by (auto simp add: pred_tcb_at'_def obj_at'_def)
 
-lemma threadGet_wp:
+\<comment> \<open>FIXME RT: this and the following lemma should be able to be removed now
+  lemma threadGet_wp:
   "\<lbrace>\<lambda>s. \<forall>tcb. ko_at' tcb thread s \<longrightarrow> P (f tcb) s\<rbrace> threadGet f thread \<lbrace>P\<rbrace>"
   apply (rule hoare_post_imp [OF _ tg_sp'])
   apply clarsimp
   apply (frule obj_at_ko_at')
   apply (clarsimp elim: obj_atE')
-  done
+  done\<close>
 
 lemma threadGet_wp'':
   "\<lbrace>\<lambda>s. \<forall>v. obj_at' (\<lambda>tcb. f tcb = v) thread s \<longrightarrow> P v s\<rbrace> threadGet f thread \<lbrace>P\<rbrace>"
@@ -977,22 +974,9 @@ lemma valid_idle'_tcb_at'_ksIdleThread:
   "valid_idle' s \<Longrightarrow> tcb_at' (ksIdleThread s) s"
   by (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def)
 
-lemma invs_no_cicd'_valid_idle':
-  "invs_no_cicd' s \<Longrightarrow> valid_idle' s"
-  by (simp add: invs_no_cicd'_def)
-
 lemma empty_fail_getIdleThread [simp,intro!]:
   "empty_fail getIdleThread"
   by (simp add: getIdleThread_def)
-
-lemma setTCB_cur:
-  "\<lbrace>cur_tcb'\<rbrace> setObject t (v::tcb) \<lbrace>\<lambda>_. cur_tcb'\<rbrace>"
-  including no_pre
-  apply (wp cur_tcb_lift)
-  apply (simp add: setObject_def split_def updateObject_default_def)
-  apply wp
-  apply simp
-  done
 
 lemma empty_fail_slotCapLongRunningDelete:
   "empty_fail (slotCapLongRunningDelete slot)"
@@ -1003,29 +987,12 @@ lemma empty_fail_slotCapLongRunningDelete:
 
 lemmas mapM_x_append = mapM_x_append2
 
-(* FIXME move to Invariants_H *)
-lemma invs_cicd_arch_state' [elim!]:
-  "all_invs_but_ct_idle_or_in_cur_domain' s \<Longrightarrow> valid_arch_state' s"
-  by (simp add: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def)
-
-(* FIXME move to Invariants_H *)
-lemma invs_cicd_no_0_obj'[elim!]:
-  "all_invs_but_ct_idle_or_in_cur_domain' s \<Longrightarrow> no_0_obj' s"
-  by (simp add: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def valid_pspace'_def)
-
 lemma getSlotCap_wp':
   "\<lbrace>\<lambda>s. \<forall>cap. cte_wp_at' (\<lambda>c. cteCap c = cap) p s \<longrightarrow> Q cap s\<rbrace> getSlotCap p \<lbrace>Q\<rbrace>"
   apply (simp add: getSlotCap_def)
   apply (wp getCTE_wp')
   apply (clarsimp simp: cte_wp_at_ctes_of)
   done
-
-lemma fromIntegral_simp_nat[simp]: "(fromIntegral :: nat \<Rightarrow> nat) = id"
-  by (simp add: fromIntegral_def fromInteger_nat toInteger_nat)
-
-lemma invs_cicd_valid_objs' [elim!]:
-  "all_invs_but_ct_idle_or_in_cur_domain' s \<Longrightarrow> valid_objs' s"
-  by (simp add: all_invs_but_ct_idle_or_in_cur_domain'_def valid_pspace'_def)
 
 lemma st_tcb_at'_opeq_simp:
   "st_tcb_at' ((=) Structures_H.thread_state.Running) (ksCurThread s) s
@@ -1038,12 +1005,7 @@ lemma invs_queues_imp:
 
 lemma invs'_pspace_domain_valid:
   "invs' s \<Longrightarrow> pspace_domain_valid s"
-  by (simp add: invs'_def valid_state'_def)
-
-lemma and_eq_0_is_nth:
-  fixes x :: "('a :: len) word"
-  shows "y = 1 << n \<Longrightarrow> ((x && y) = 0) = (\<not> (x !! n))"
-  by (metis (poly_guards_query) and_eq_0_is_nth)
+  by (simp add: invs'_def)
 
 lemma tcbSchedEnqueue_obj_at_unchangedT:
   assumes y: "\<And>f. \<forall>tcb. P (tcbQueued_update f tcb) = P tcb"
@@ -1052,22 +1014,15 @@ lemma tcbSchedEnqueue_obj_at_unchangedT:
   apply (wp | simp add: y)+
   done
 
-lemma rescheduleRequired_obj_at_unchangedT:
-  assumes y: "\<And>f. \<forall>tcb. P (tcbQueued_update f tcb) = P tcb"
-  shows  "\<lbrace>obj_at' P t\<rbrace> rescheduleRequired \<lbrace>\<lambda>rv. obj_at' P t\<rbrace>"
-  apply (simp add: rescheduleRequired_def)
-  apply (wp tcbSchedEnqueue_obj_at_unchangedT[OF y] | wpc)+
-  apply simp
-  done
-
 lemma setThreadState_obj_at_unchangedT:
   assumes x: "\<And>f. \<forall>tcb. P (tcbState_update f tcb) = P tcb"
   assumes y: "\<And>f. \<forall>tcb. P (tcbQueued_update f tcb) = P tcb"
+  assumes z: "\<And>f. \<forall>tcb. P (tcbFault_update f tcb) = P tcb"
   shows "\<lbrace>obj_at' P t\<rbrace> setThreadState t' ts \<lbrace>\<lambda>rv. obj_at' P t\<rbrace>"
   apply (simp add: setThreadState_def)
-  apply (wp rescheduleRequired_obj_at_unchangedT[OF y], simp)
-  apply (wp threadSet_obj_at'_strongish)
-  apply (clarsimp simp: obj_at'_def projectKOs x cong: if_cong)
+  apply (wpsimp wp: rescheduleRequired_obj_at'_only_st_qd_ft
+                    scheduleTCB_obj_at'_only_st_qd_ft)
+  apply (clarsimp simp: obj_at'_def x y z cong: if_cong)
   done
 
 lemma setBoundNotification_obj_at_unchangedT:
@@ -1079,7 +1034,7 @@ lemma setBoundNotification_obj_at_unchangedT:
   done
 
 lemmas setThreadState_obj_at_unchanged
-    = setThreadState_obj_at_unchangedT[OF all_tcbI all_tcbI]
+    = setThreadState_obj_at_unchangedT[OF all_tcbI all_tcbI all_tcbI]
 
 lemmas setBoundNotification_obj_at_unchanged
     = setBoundNotification_obj_at_unchangedT[OF all_tcbI]
@@ -1088,17 +1043,8 @@ lemma magnitudeCheck_assert2:
   "\<lbrakk> is_aligned x n; (1 :: machine_word) < 2 ^ n; ksPSpace s x = Some v \<rbrakk> \<Longrightarrow>
    magnitudeCheck x (snd (lookupAround2 x (ksPSpace (s :: kernel_state)))) n
      = assert (ps_clear x n s)"
-  using in_magnitude_check[where x=x and n=n and s=s and s'=s and v="()"]
+  using in_magnitude_check[where ptr=x and bits=n and s=s and s'=s and v="()"]
   by (simp add: magnitudeCheck_assert in_monad)
-
-lemma setObject_tcb_ep_obj_at'[wp]:
-  "\<lbrace>obj_at' (P :: endpoint \<Rightarrow> bool) ptr\<rbrace> setObject ptr' (tcb :: tcb) \<lbrace>\<lambda>rv. obj_at' P ptr\<rbrace>"
-  apply (rule obj_at_setObject2, simp_all)
-  apply (clarsimp simp: updateObject_default_def in_monad)
-  done
-
-crunch ep_obj_at'[wp]: setThreadState "obj_at' (P :: endpoint \<Rightarrow> bool) ptr"
-  (simp: unless_def)
 
 (* FIXME: move to AInvs *)
 context
@@ -1355,8 +1301,8 @@ lemma ctes_of_cte_at:
   by (simp add: cte_wp_at_ctes_of)
 
 lemmas tcbSlots =
-  tcbCTableSlot_def tcbVTableSlot_def
-  tcbReplySlot_def tcbCallerSlot_def tcbIPCBufferSlot_def
+  tcbCTableSlot_def tcbVTableSlot_def tcbIPCBufferSlot_def
+  tcbFaultHandlerSlot_def tcbTimeoutHandlerSlot_def
 
 lemma updateObject_cte_tcb:
   assumes tc: "tcb_cte_cases (ptr - ptr') = Some (accF, updF)"
