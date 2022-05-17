@@ -41,7 +41,8 @@ declare det_wp_unless[wp]
 
 declare word_neq_0_conv [simp del]
 
-lemma det_wp_loadObject_default [wp]:
+\<comment> \<open>FIXME MCS: I think that this can be removed
+  lemma det_wp_loadObject_default [wp]:
   "det_wp (\<lambda>s. \<exists>obj. projectKO_opt ko = Some (obj::'a) \<and>
                       is_aligned p (objBits obj) \<and> q = p
                       \<and> case_option True (\<lambda>x. 2 ^ (objBits obj) \<le> x - p) n)
@@ -53,20 +54,21 @@ lemma det_wp_loadObject_default [wp]:
    apply (wp case_option_wp)
   apply (clarsimp simp: is_aligned_mask[symmetric])
   apply simp
+  done\<close>
+
+lemma det_wp_gets_the[wp_unsafe]:
+  "no_ofail P f \<Longrightarrow> det_wp P (gets_the f)"
+  unfolding gets_the_def
+  apply (rule det_wp_pre)
+  apply wpsimp
+  apply (simp add: no_ofail_def)
   done
 
 lemma det_wp_getTCB [wp]:
   "det_wp (tcb_at' t) (getObject t :: tcb kernel)"
   supply option.case_cong[cong]
   apply (simp add: getObject_def split_def)
-  apply (rule det_wp_pre)
-   apply (wp|wpc)+
-  apply (clarsimp simp: obj_at'_def objBits_simps cong: conj_cong)
-  apply (simp add: lookupAround2_known1)
-  apply (rule ps_clear_lookupAround2, assumption+)
-    apply simp
-   apply (erule is_aligned_no_overflow)
-  apply (simp add: word_bits_def)
+  apply (wpsimp wp: det_wp_gets_the)
   done
 
 lemma det_wp_setObject_other [wp]:
@@ -75,10 +77,10 @@ lemma det_wp_setObject_other [wp]:
   shows "det_wp (obj_at' (\<lambda>k::'a. objBits k = objBits ob) ptr)
                   (setObject ptr ob)"
   apply (simp add: setObject_def x split_def updateObject_default_def
-                   magnitudeCheck_def
-                   projectKO_def2 alignCheck_def alignError_def)
+                   magnitudeCheck_def projectKO_def alignCheck_def alignError_def
+                   read_alignCheck_assert read_magnitudeCheck_assert)
   apply (rule det_wp_pre)
-   apply (wp )
+   apply (wp det_wp_gets_the)
   apply (clarsimp simp: is_aligned_mask[symmetric] obj_at'_def objBits_def[symmetric]
                         project_inject lookupAround2_known1)
   apply (erule(1) ps_clear_lookupAround2)
@@ -88,7 +90,7 @@ lemma det_wp_setObject_other [wp]:
     apply (erule is_aligned_no_wrap')
     apply simp
    apply simp
-  apply fastforce
+  apply (fastforce split: option.splits)
   done
 
 lemma det_wp_setTCB [wp]:
@@ -101,8 +103,7 @@ lemma det_wp_setTCB [wp]:
 lemma det_wp_threadGet [wp]:
   "det_wp (tcb_at' t) (threadGet f t)"
   apply (simp add: threadGet_def)
-  apply (rule det_wp_pre, wp)
-  apply simp
+  apply (wp det_wp_gets_the)
   done
 
 lemma det_wp_threadSet [wp]:
