@@ -171,10 +171,12 @@ lemma set_cap_valid_vs_lookup:
   apply fastforce
   done *)
 
-(* FIXME AARCH64
+abbreviation
+  "cap_pt_type cap \<equiv> acap_pt_type (the_arch_cap cap)"
+
 lemma set_cap_valid_table_caps:
   "\<lbrace>\<lambda>s. valid_table_caps s \<and>
-        (is_pt_cap cap \<longrightarrow> cap_asid cap = None \<longrightarrow> (\<forall>r \<in> obj_refs cap. pts_of s r = Some empty_pt))\<rbrace>
+        (is_pt_cap cap \<longrightarrow> cap_asid cap = None \<longrightarrow> (\<forall>r \<in> obj_refs cap. pts_of s r = Some (empty_pt (cap_pt_type cap))))\<rbrace>
      set_cap cap ptr
    \<lbrace>\<lambda>rv. valid_table_caps\<rbrace>"
   supply split_paired_All[simp del] split_paired_Ex[simp del]
@@ -182,6 +184,7 @@ lemma set_cap_valid_table_caps:
   apply (wp hoare_vcg_all_lift
             hoare_vcg_disj_lift hoare_convert_imp[OF set_cap_caps_of_state]
             hoare_use_eq[OF set_cap_arch set_cap_obj_at_impossible])
+  sorry (* FIXME AARCH64
   apply (fastforce simp: cap_asid_def split: if_split_asm)
   done *)
 
@@ -314,13 +317,13 @@ lemma set_cap_valid_arch_caps:
   by (wpsimp wp: set_cap_valid_vs_lookup set_cap_valid_table_caps set_cap_unique_table_caps
            simp: cte_wp_at_caps_of_state) *)
 
-(* FIXME AARCH64
 lemma valid_table_capsD:
   "\<lbrakk> cte_wp_at ((=) cap) ptr s; valid_table_caps s; is_pt_cap cap; cap_asid cap = None \<rbrakk>
-   \<Longrightarrow> \<forall>r \<in> obj_refs cap. pts_of s r = Some empty_pt"
+   \<Longrightarrow> \<forall>r \<in> obj_refs cap. pts_of s r = Some (empty_pt (cap_pt_type cap))"
   apply (clarsimp simp: cte_wp_at_caps_of_state valid_table_caps_def is_pt_cap_def
                         is_PageTableCap_def cap_asid_def
                  split: option.splits)
+  sorry (* FIXME AARCH64
    apply (cases ptr, fastforce)+
   done *)
 
