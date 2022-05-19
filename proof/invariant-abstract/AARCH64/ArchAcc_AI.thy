@@ -663,8 +663,8 @@ definition
   "invalid_pte_at pt_t p \<equiv> \<lambda>s. ptes_of s pt_t p = Some InvalidPTE"
 
 definition
-  "valid_slots \<equiv> \<lambda>(pte, p) s. wellformed_pte pte \<and>
-     (\<forall>level. \<exists>\<rhd>(level, p && ~~ mask (pt_bits level)) s \<longrightarrow> pte_at level p s \<and> valid_pte level pte s)"
+  "valid_slots \<equiv> \<lambda>(pte, p, level) s. wellformed_pte pte \<and>
+     (\<exists>\<rhd>(level, p && ~~ mask (pt_bits level)) s \<longrightarrow> pte_at level p s \<and> valid_pte level pte s)"
 
 lemma ucast_mask_asid_low_bits [simp]:
   "ucast ((asid::machine_word) && mask asid_low_bits) = (ucast asid :: asid_low_index)"
@@ -2013,7 +2013,6 @@ lemma valid_slots_typ_at:
   apply (cases m; clarsimp)
   apply (wpsimp wp: hoare_vcg_ex_lift hoare_vcg_all_lift hoare_vcg_imp_lift' assms
                     valid_pte_lift pte_at_typ_lift)
-  apply fastforce
   done
 
 lemma pool_for_asid_arch_update[simp]:
