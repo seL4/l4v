@@ -31,6 +31,13 @@ abbreviation
   ep_Ptr :: "word64 \<Rightarrow> endpoint_C ptr" where "ep_Ptr == Ptr"
 abbreviation
   ntfn_Ptr :: "word64 \<Rightarrow> notification_C ptr" where "ntfn_Ptr == Ptr"
+
+abbreviation sched_context_Ptr :: "word64 \<Rightarrow> sched_context_C ptr" where
+  "sched_context_Ptr == Ptr"
+
+abbreviation reply_Ptr :: "word64 \<Rightarrow> reply_C ptr" where
+  "reply_Ptr == Ptr"
+
 abbreviation
   ap_Ptr :: "word64 \<Rightarrow> asid_pool_C ptr" where "ap_Ptr == Ptr"
 abbreviation
@@ -90,6 +97,21 @@ definition
    Cap_thread_cap a \<Rightarrow> True
    | _ \<Rightarrow> False"
 
+definition isReplyCap_C :: "cap_CL \<Rightarrow> bool" where
+  "isReplyCap_C c \<equiv> case c of
+       Cap_reply_cap a \<Rightarrow> True
+     | _ \<Rightarrow> False"
+
+definition isSchedContextCap_C :: "cap_CL \<Rightarrow> bool" where
+  "isSchedContextCap_C c \<equiv> case c of
+       Cap_sched_context_cap a \<Rightarrow> True
+     | _ \<Rightarrow> False"
+
+definition isSchedControlCap_C :: "cap_CL \<Rightarrow> bool" where
+  "isSchedControlCap_C c \<equiv> case c of
+       Cap_sched_control_cap a \<Rightarrow> True
+     | _ \<Rightarrow> False"
+
 definition
   isIRQControlCap_C :: "cap_CL \<Rightarrow> bool" where
   "isIRQControlCap_C c \<equiv> case c of
@@ -122,6 +144,12 @@ definition
   tcb_at_C' :: "word64 \<Rightarrow> heap_raw_state \<Rightarrow> bool"
   where
   "tcb_at_C' p h \<equiv> Ptr p \<in> dom (clift h :: tcb_C typ_heap)"
+
+definition sched_context_at_C' :: "word64 \<Rightarrow> heap_raw_state \<Rightarrow> bool" where
+  "sched_context_at_C' p h \<equiv> Ptr p \<in> dom (clift h :: sched_context_C typ_heap)"
+
+definition reply_at_C' :: "word64 \<Rightarrow> heap_raw_state \<Rightarrow> bool" where
+  "reply_at_C' p h \<equiv> Ptr p \<in> dom (clift h :: reply_C typ_heap)"
 
 definition
   cte_at_C' :: "word64 \<Rightarrow> heap_raw_state \<Rightarrow> bool"
@@ -183,8 +211,9 @@ capUntypedPtr_C :: "cap_CL \<Rightarrow> word64" where
  |  Cap_endpoint_cap ep \<Rightarrow> (capEPPtr_CL ep)
  |  Cap_notification_cap ntfn \<Rightarrow> (capNtfnPtr_CL ntfn)
  |  Cap_cnode_cap ccap \<Rightarrow> (capCNodePtr_CL ccap)
- |  Cap_reply_cap rc \<Rightarrow>  (cap_reply_cap_CL.capTCBPtr_CL rc)
+ |  Cap_reply_cap rc \<Rightarrow> (capReplyPtr_CL rc)
  |  Cap_thread_cap tc \<Rightarrow>  (cap_thread_cap_CL.capTCBPtr_CL tc)
+ |  Cap_sched_context_cap sc \<Rightarrow> (capSCPtr_CL sc)
  |  Cap_frame_cap fc \<Rightarrow>  (cap_frame_cap_CL.capFBasePtr_CL fc)
  |  Cap_page_table_cap ptc \<Rightarrow>  (cap_page_table_cap_CL.capPTBasePtr_CL ptc)
  | _ \<Rightarrow> error []"
@@ -351,8 +380,9 @@ where
  | Cap_notification_cap ntfn \<Rightarrow>
     NotificationCap (capNtfnPtr_CL ntfn)(capNtfnBadge_CL ntfn)(to_bool(capNtfnCanSend_CL ntfn))
                      (to_bool(capNtfnCanReceive_CL ntfn))
- | Cap_reply_cap rc \<Rightarrow> ReplyCap (ctcb_ptr_to_tcb_ptr (Ptr (cap_reply_cap_CL.capTCBPtr_CL rc)))
-                               (to_bool (capReplyMaster_CL rc)) (to_bool (capReplyCanGrant_CL rc))
+ | Cap_reply_cap rc \<Rightarrow> ReplyCap (capReplyPtr_CL rc) (to_bool (capReplyCanGrant_CL rc))
+ | Cap_sched_context_cap sc \<Rightarrow> SchedContextCap (capSCPtr_CL sc) (unat (capSCSizeBits_CL sc))
+ | Cap_sched_control_cap sc \<Rightarrow> SchedControlCap
  | Cap_thread_cap tc \<Rightarrow>  ThreadCap(ctcb_ptr_to_tcb_ptr (Ptr (cap_thread_cap_CL.capTCBPtr_CL tc)))
  | Cap_irq_handler_cap ihc \<Rightarrow> IRQHandlerCap (ucast(capIRQ_CL ihc))
  | Cap_irq_control_cap \<Rightarrow> IRQControlCap
@@ -418,6 +448,8 @@ lemma  c_valid_cap_simps [simp]:
   "cap_get_tag c = scast cap_untyped_cap \<Longrightarrow> c_valid_cap c"
   "cap_get_tag c = scast cap_zombie_cap \<Longrightarrow> c_valid_cap c"
   "cap_get_tag c = scast cap_reply_cap \<Longrightarrow> c_valid_cap c"
+  "cap_get_tag c = scast cap_sched_context_cap \<Longrightarrow> c_valid_cap c"
+  "cap_get_tag c = scast cap_sched_control_cap \<Longrightarrow> c_valid_cap c"
   "cap_get_tag c = scast cap_null_cap \<Longrightarrow> c_valid_cap c"
   unfolding c_valid_cap_def  cap_lift_def cap_tag_defs
   by (simp add: cl_valid_cap_def)+
@@ -426,7 +458,7 @@ lemma ptr_val_tcb_ptr_mask2:
   "is_aligned thread tcbBlockSizeBits
       \<Longrightarrow> ptr_val (tcb_ptr_to_ctcb_ptr thread) && (~~ mask tcbBlockSizeBits)
                   = thread"
-  apply (clarsimp simp: tcb_ptr_to_ctcb_ptr_def projectKOs)
+  apply (clarsimp simp: tcb_ptr_to_ctcb_ptr_def)
   apply (simp add: is_aligned_add_helper ctcb_offset_defs objBits_simps')
   done
 
@@ -545,6 +577,12 @@ abbreviation(input)
   NotificationObject :: sword32
 where
   "NotificationObject == seL4_NotificationObject"
+
+abbreviation (input) SchedContextObject :: sword32 where
+  "SchedContextObject == seL4_SchedContextObject"
+
+abbreviation (input) ReplyObject :: sword32 where
+  "ReplyObject == seL4_ReplyObject"
 
 abbreviation(input)
   CapTableObject :: sword32
