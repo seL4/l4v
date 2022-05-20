@@ -553,7 +553,9 @@ definition "min_sched_context_bits = 8"
 
 (* RT : size of sched_context struct in C, excluding refills
    numbers are from MCS C: (9 * sizeof(word_t)) + (3 * sizeof(ticks_t)) for aarch32 *)
-definition "sizeof_sched_context_t = (9 * 4) + (3 * 8)"
+definition sizeof_sched_context_t :: nat where
+  "sizeof_sched_context_t = (9 * 4) + (3 * 8)"
+
 (* (2 * sizeof(ticks_t)) *)
 definition "refill_size_bytes = 16"
 
