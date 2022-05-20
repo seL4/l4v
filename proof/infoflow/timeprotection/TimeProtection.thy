@@ -125,9 +125,14 @@ locale time_protection =
   \<comment> \<open> wall-clock time and WCET stuff\<close>
   fixes next_latest_domainswitch_start :: "time \<Rightarrow> time"
 
+  (* not currently needed
   assumes next_latest_domainswitch_start_monotonic:
-    "\<And> t t'. t' > t \<Longrightarrow>
-    next_latest_domainswitch_start t' \<ge> next_latest_domainswitch_start t"
+    "\<And> t t'. t < t' \<Longrightarrow>
+    next_latest_domainswitch_start t \<le> next_latest_domainswitch_start t'"
+  *)
+
+  assumes next_latest_domainswitch_start_in_future:
+    "\<And> t. t \<le> next_latest_domainswitch_start t"
 
   assumes next_latest_domainswitch_start_flatsteps:
     "\<And> t t'. t' \<ge> t \<Longrightarrow>
@@ -137,9 +142,13 @@ locale time_protection =
   fixes domainswitch_start_delay_WCT :: "time"
   fixes dirty_step_WCET :: "time"
   fixes pch_flush_WCET :: "paddr set \<Rightarrow> time"
+  fixes fch_flush_WCET :: "time"
 
   assumes pch_flush_cycles_obeys_WCET :
     "\<forall> pch. pch_flush_cycles pch as \<le> pch_flush_WCET as"
+
+  assumes fch_flush_cycles_obeys_WCET :
+    "\<forall> fch. fch_flush_cycles fch \<le> fch_flush_WCET"
 
   \<comment> \<open>for each address, this is the security domain\<close>
   fixes addr_domain :: "paddr \<Rightarrow> 'userdomain domain"
@@ -256,6 +265,10 @@ lemma collision_in_full_collision_set:
 definition touched_addrs_inv :: "'other_state \<Rightarrow> bool" where
   "touched_addrs_inv s \<equiv>
      snd ` touched_addrs s \<subseteq> all_paddrs_of (current_domain s) \<union> kernel_shared_precise"
+
+definition touched_addrs_dirty_inv :: "'userdomain domain \<Rightarrow> 'userdomain domain \<Rightarrow> 'other_state \<Rightarrow> bool" where
+  "touched_addrs_dirty_inv u u' s \<equiv>
+     snd ` touched_addrs s \<subseteq>  (all_paddrs_of u \<union> all_paddrs_of u' \<union> kernel_shared_precise)"
 
 definition pch_same_for_domain ::
   "'userdomain domain \<Rightarrow> 'pch \<Rightarrow> 'pch \<Rightarrow> bool"
@@ -457,6 +470,10 @@ lemma hd_trace_obeying_set [dest]:
 definition
   time_bounded_traces :: "('fch,'pch) state \<Rightarrow> trace set" where
  "time_bounded_traces s \<equiv> {p. tm (trace_multistep p s) \<le> nlds (tm s)}"
+
+definition
+  WCET_bounded_traces :: "time \<Rightarrow> trace set" where
+ "WCET_bounded_traces wc \<equiv> {p. \<forall> s. tm (trace_multistep p s) \<le> tm s + wc}"
 
 lemma trace_step_time_forward:
   "tm (trace_step i s) \<ge> tm s"
@@ -793,7 +810,7 @@ lemma d_not_running: "\<lbrakk>
 
 (* --- notes for domainswitch step stuff ---- *)
 
-
+(*
 \<comment> \<open>this is (current a draft of) the mechanisms that will allow us to define a 'dirty' trace
     that accesses memory belonging to two different domains. however, we enforce that the EXACT
     trace is dependent only upon the to- and from-domain, as well as things visible to the Sched
@@ -827,6 +844,7 @@ definition get_domain_switch_trace ::
   "('other_state, 'userdomain) dirty_trace_getter \<Rightarrow> 'other_state next_time_getter \<Rightarrow> 'userdomain domain \<Rightarrow> 'userdomain domain \<Rightarrow> 'other_state \<Rightarrow> trace"
   where
   "get_domain_switch_trace dtg ntg u v os \<equiv> dtg u v os @ [IFlushL1, IFlushL2 kernel_shared_precise, IPadToTime (ntg os)]"
+*)
 
 
 (*
@@ -881,9 +899,9 @@ next
     (* for now let's only consider the cases where this program might
        flush L2 within kernel_shared_expanded. We can probably prove this without that
        restriction, but would probably need to change some locale assumptions for that. *)
-    apply (prop_tac "pas \<subseteq> kernel_shared_expanded")
+    apply (prop_tac "pas = kernel_shared_precise")
      subgoal sorry
-    apply (smt collision_in_full_collision_set in_mono kernel_shared_expanded_full_collision_set pch_collision_flush pch_partitioned_flush)
+    apply (metis pch_collision_flush pch_partitioned_flush)
     done
 next
   case (IPadToTime x5)
@@ -995,7 +1013,6 @@ lemma dirty_multistep: "\<lbrakk>
            pa \<in> (all_paddrs_of u \<union> all_paddrs_of u' \<union> kernel_shared_precise)};
    current_domain os = u;
    d = u \<or> (d = u' \<and> d \<noteq> u) \<or> (d \<noteq> u \<and> d \<noteq> u');
-   current_domain os' = current_domain os;
    \<comment> \<open>initial states s and t hold uwr (apart from time)\<close>
    ((os, s), (ot, t\<lparr>tm:=tm s\<rparr>)) \<in> uwr d;
    \<comment> \<open>we execute both programs\<close>
@@ -1025,8 +1042,23 @@ lemma dirty_multistep: "\<lbrakk>
   apply simp
   done
 
+lemma dirty_multistep_times: "\<lbrakk>
+   p \<in> WCET_bounded_traces dirty_step_WCET;
+   \<comment> \<open>initial states s and t hold uwr (apart from time)\<close>
+   ((os, s), (ot, t)) \<in> uwr d;
+   \<comment> \<open>we execute both programs\<close>
+   s' = trace_multistep p s;
+   t' = trace_multistep p t
+   \<rbrakk> \<Longrightarrow>
+   tm s' \<le> nlds (tm s) + dirty_step_WCET \<and> tm t' \<le> nlds (tm s) + dirty_step_WCET"
+  apply (prop_tac "nlds (tm t) = nlds (tm s)")
+   apply (cases "current_domain os = d"; clarsimp simp: uwr_def uwr_running_def uwr_notrunning_def)
+  apply (clarsimp simp: WCET_bounded_traces_def)
+  apply (metis (mono_tags, lifting) add_le_cancel_right next_latest_domainswitch_start_in_future order_trans)
+  done
+
 definition pad_time :: "time \<Rightarrow> time" where
-  "pad_time t \<equiv> t + dirty_step_WCET + pch_flush_WCET kernel_shared_precise"
+  "pad_time t \<equiv> t + dirty_step_WCET + fch_flush_WCET + pch_flush_WCET kernel_shared_precise"
 
 definition
   gadget_trace where
@@ -1088,16 +1120,18 @@ lemma gadget_multistep: "\<lbrakk>
    apply (clarsimp simp: uwr_running_def)
    apply (intro conjI)
     apply (erule pch_after_L2_flush_and)
-   apply (clarsimp simp:pad_time_def)
-   
-   subgoal sorry
+   apply (simp add: pad_time_def add_mono_thms_linordered_semiring(1) fch_flush_cycles_obeys_WCET
+                    max_def pch_flush_cycles_obeys_WCET)
   apply (clarsimp simp: uwr_notrunning_def)
   apply (intro conjI)
    apply (erule pch_after_L2_flush_except)
-  
-  subgoal sorry
+  apply (simp add: pad_time_def add_mono_thms_linordered_semiring(1) fch_flush_cycles_obeys_WCET
+                   max_def pch_flush_cycles_obeys_WCET)
   done
 
+
+(*
+(* old stuff below here (in derms of dirty step stuff) *)
 lemma dirty_domainswitch_semi_uwr: "\<lbrakk>
   correct_dirty_programs dtg;
   same_dirty_programs dtg;
@@ -1130,8 +1164,6 @@ lemma domainswitch_uwr: "\<lbrakk>
   \<rbrakk> \<Longrightarrow>
   ((os', s'), (ot', t')) \<in> uwr d"
   nitpick
-
-
 *)
 
 
@@ -1352,19 +1384,67 @@ end
 (* give me:
    - a domain extractor
    - an unwinding relation
-   - a state
-   - a set of trace
+   - a a set of traces
    - a default trace
-   and i'll give you a trace. i only use information inside the uwr to decide which trace
-   to choose, and i will always choose from the given set of traces. However, the default
-   trace must be in the set of traces given by get_ps *)
+   - a state
+   and i'll give you a trace. i only use information inside the uwr (of the extracted domain) to decide which trace
+   to choose, and i will always choose from the given set of traces, as long as the default state
+   is in it. *)
 axiomatization
-  SelectTrace :: "('s \<Rightarrow> 'd) \<Rightarrow>('d \<Rightarrow> ('s \<times> 's) set) \<Rightarrow> ('s \<Rightarrow> 'p set) \<Rightarrow> 's \<Rightarrow> 'p \<Rightarrow> 'p"
+  SelectTrace :: "('s \<Rightarrow> 'd) \<Rightarrow>('d \<Rightarrow> ('s \<times> 's) set) \<Rightarrow> 'p set \<Rightarrow> 'p \<Rightarrow> 's \<Rightarrow> 'p"
 where
-  trace_uwr_determined : "(s, t) \<in> uwr (cdom s) \<Longrightarrow>
-                            SelectTrace cdom uwr get_ps s p0 = SelectTrace cdom uwr get_ps t p0"
+  trace_uwr_determined_user : "\<not>will_domain_switch s \<Longrightarrow> (s, t) \<in> uwr (cdom s) \<Longrightarrow>
+                               SelectTrace cdom uwr ps p0 s = SelectTrace cdom uwr pt p0 t"
 and
-  trace_from_set : "p0 \<in> get_ps s \<Longrightarrow> SelectTrace cdom uwr get_ps s p0 \<in> get_ps s"
+  trace_from_set : "p0 \<in> ps \<Longrightarrow> SelectTrace cdom uwr ps p0 s \<in> ps"
+
+
+(* give me:
+   - the scheduler domain
+   - an unwinding relation
+   - a set of traces
+   - a default trace
+   - a state
+   and i'll give you a trace. i only use information inside the uwr (of sched) to decide which trace
+   to choose, and i will always choose from the given set of traces, as long as the default state
+   is in the extracted set of traces. *)
+axiomatization
+  SelectPublicTrace :: "'d \<Rightarrow> ('d \<Rightarrow> ('s \<times> 's) set) \<Rightarrow> 'p set \<Rightarrow> 'p \<Rightarrow> 's \<Rightarrow> 'p"
+where
+  trace_uwr_determined_public : "(s, t) \<in> uwr sched \<Longrightarrow>
+    SelectPublicTrace sched uwr ps p0 s = SelectPublicTrace cdom uwr pt p0 t"
+and
+  trace_from_set_public : "p0 \<in> get_traces s \<Longrightarrow>
+                           SelectPublicTrace cdom uwr ps p0 s \<in> ps"
+
+(*
+axiomatization
+  SelectTrace :: "('s \<Rightarrow> 'd) \<Rightarrow>('d \<Rightarrow> ('s \<times> 's) set) \<Rightarrow> 'p set \<Rightarrow> 'p \<Rightarrow> 's \<Rightarrow> 'p"
+where
+  trace_uwr_determined_user : "\<not>will_domain_switch s \<Longrightarrow> (s, t) \<in> uwr (cdom s) \<Longrightarrow>
+                               SelectTrace cdom uwr ps p0 s = SelectTrace cdom uwr pt p0 t"
+and
+  trace_from_set : "p0 \<in> ps \<Longrightarrow> SelectTrace cdom uwr ps p0 s \<in> ps"
+*)
+
+locale trace_selector =
+  fixes current_domain :: "'state \<Rightarrow> 'domain"
+  fixes uwr :: "'domain \<Rightarrow> ('state \<times> 'state) set"
+  fixes sched_domain :: "'domain"
+  fixes default_trace :: "'trace"
+  fixes trace_will_be_uwr_determined :: "'state \<Rightarrow> bool" (* but which state is given here? *)
+  fixes trace_will_be_public_determined :: "'state \<Rightarrow> bool"
+  fixes select_trace :: "('state \<Rightarrow> 'touchedaddresses \<Rightarrow> 'trace set) \<Rightarrow> 'state \<Rightarrow> 'touchedaddresses \<Rightarrow> 'trace"
+  assumes trace_from_set:
+    "default_trace \<in> tfn s ta \<Longrightarrow> select_trace tfn s ta \<in> tfn s ta"
+  assumes user_trace_uwr_determined:
+    "trace_will_be_uwr_determined s \<Longrightarrow>
+     (s, t) \<in> uwr (current_domain s) \<Longrightarrow>
+     select_trace tfn s ta = select_trace tfn t ta"
+  assumes user_trace_public_determined:
+    "trace_will_be_public_determined s \<Longrightarrow>
+     (s, t) \<in> uwr sched_domain \<Longrightarrow>
+     select_trace tfn s ta = select_trace tfn t ta"
 
 
 locale time_protection_system =
@@ -1372,8 +1452,11 @@ locale time_protection_system =
   tp?: time_protection collides_in_pch fch_lookup pch_lookup
     fch_read_impact pch_read_impact fch_write_impact pch_write_impact
     read_cycles write_cycles empty_fch fch_flush_cycles do_pch_flush pch_flush_cycles
+    next_latest_domainswitch_start domainswitch_start_delay_WCT dirty_step_WCET
+    pch_flush_WCET fch_flush_WCET
     addr_domain addr_colour colour_userdomain current_domain external_uwr
-    touched_addrs will_domain_switch
+    touched_addrs will_domain_switch +
+  ts: trace_selector "\<lambda>s. current_domain (fst s)" uwr Sched "[]"
   for A :: "('a,'other_state,unit) data_type"
   and s0 :: "'other_state"
   and current_domain :: "'other_state \<Rightarrow> 'userdomain domain"
@@ -1391,6 +1474,11 @@ locale time_protection_system =
   and write_cycles :: "'fch_cachedness \<Rightarrow> 'pch_cachedness \<Rightarrow> time"
   and empty_fch :: "'fch"
   and fch_flush_cycles :: "'fch \<Rightarrow> time"
+  and next_latest_domainswitch_start
+  and domainswitch_start_delay_WCT
+  and dirty_step_WCET
+  and pch_flush_WCET
+  and fch_flush_WCET
   and do_pch_flush :: "'pch \<Rightarrow> paddr set \<Rightarrow> 'pch"
   and pch_flush_cycles :: "'pch \<Rightarrow> paddr set \<Rightarrow> time"
   and addr_domain :: "paddr \<Rightarrow> 'userdomain domain"
@@ -1400,32 +1488,61 @@ locale time_protection_system =
   and touched_addrs :: "'other_state \<Rightarrow> vpaddr set"
   and will_domain_switch :: "'other_state \<Rightarrow> bool" +
   fixes initial_pch :: "'pch"
-  fixes choose_next_domain :: "'userdomain domain \<Rightarrow> 'userdomain domain"
+  fixes get_next_domain :: "'other_state \<Rightarrow> 'userdomain domain"
+  assumes get_next_domain_public:
+    "(s, t) \<in> external_uwr Sched \<Longrightarrow>
+     get_next_domain s = get_next_domain t"
+  fixes get_domainswitch_middle_state :: "'other_state \<Rightarrow> 'other_state"
+  \<comment> \<open>we want to know that a step is publically determined. i.e. two states (s, t) in uwr Sched will
+     produce the same trace from s to s' as from t to t'\<close>
+  fixes step_is_publically_determined :: "'other_state \<Rightarrow> 'other_state \<Rightarrow> bool"
+  \<comment> \<open>we want to know that a step is the domainswitch gadget. i.e. the trace from s to t
+     is simply the small set of instructions required to perform the domainswitch gadget\<close>
+  fixes step_is_only_timeprotection_gadget :: "'other_state \<Rightarrow> 'other_state \<Rightarrow> bool"
   assumes reachable_touched_addrs_inv:
     "ab.reachable s \<Longrightarrow> touched_addrs_inv s"
-  \<comment> \<open> we need to know that for any non-domainswitch step, touched_addresses
-       will not be empty at the end of the step. otherwise, we can't derive
-       a trace. \<close>
-  assumes touched_addrs_not_empty:
-    "(s, s') \<in> ab.Step () \<Longrightarrow>
-     \<not>will_domain_switch s \<Longrightarrow>
-     touched_addrs s' \<noteq> {}"
   assumes simple_steps:
     "(s, s') \<in> ab.Step () \<Longrightarrow>
     (\<not>will_domain_switch s \<and> current_domain s' = current_domain s)
-    \<or> (will_domain_switch s \<and> current_domain s' = choose_next_domain (current_domain s))"
+    \<or> (will_domain_switch s \<and> current_domain s' = get_next_domain s)"
+  assumes domainswitch_step_splittable:
+    "(s1, s2) \<in> ab.Step () \<Longrightarrow>
+     will_domain_switch s \<Longrightarrow>
+     touched_addrs_dirty_inv (current_domain s) (get_next_domain s) (get_middle_state s1)
+     \<and> step_is_publically_determined s1 (get_middle_state s1)
+     \<and> step_is_only_timeprotection_gadget (get_middle_state s1) s2"
 begin
 
+abbreviation time_bound_traces_obeying_ta :: "'other_state \<Rightarrow> ('fch,'pch) state \<Rightarrow> trace set" where
+  "time_bound_traces_obeying_ta os s \<equiv> traces_obeying_ta os \<inter> time_bounded_traces s"
+  
 (* this is an axiomatised selector that gets one program from a set.
   it is not defined which program will be selected. *)
-abbreviation selectTrace :: "'other_state \<Rightarrow> trace"
-  where
-  "selectTrace s \<equiv> SelectTrace current_domain external_uwr traces_obeying_ta s []::trace"
+abbreviation selectTrace :: "'other_state \<Rightarrow> ('fch,'pch) state \<Rightarrow> trace" where
+  "selectTrace os s \<equiv> SelectTrace current_domain external_uwr (time_bound_traces_obeying_ta os s) [] os"
+
+term SelectPublicTrace
+thm dirty_multistep 
+
+(* p \<in> traces_obeying_set {(va, pa) | va pa.
+           pa \<in> (all_paddrs_of u \<union> all_paddrs_of u' \<union> kernel_shared_precise)}; *)
+
+(*
+ p \<in> WCET_bounded_traces dirty_step_WCET;
+*)
+
+abbreviation time_bound_dirty_traces :: "'other_state \<Rightarrow> ('fch,'pch) state \<Rightarrow> trace set" where
+  "time_bound_dirty_traces os s \<equiv>  traces_obeying_set {(va, pa) | va pa.
+     pa \<in> (all_paddrs_of (current_domain os) \<union> all_paddrs_of (get_next_domain os) \<union> kernel_shared_precise)}"
+
+
+abbreviation selectDirtyTrace :: "'other_state \<Rightarrow> ('fch, 'pch) state \<Rightarrow> trace" where
+  "selectDirtyTrace os s \<equiv> SelectPublicTrace Sched external_uwr (time_bound_dirty_traces os s) [] os"
 
 lemma trace_from_ta:
-  "selectTrace s \<in> traces_obeying_ta s"
-  apply (rule trace_from_set)
-  apply (clarsimp simp:traces_obeying_set_def)
+  "selectTrace os s \<in> traces_obeying_ta os"
+  apply (metis Int_iff list_all_simps(2) mem_Collect_eq next_latest_domainswitch_start_in_future
+         time_bounded_traces_def trace_from_set trace_multistep.simps(1) traces_obeying_set_def)
   done
 
 (* this used to be called A_extened_Step *)
@@ -1435,9 +1552,10 @@ definition maStep :: "unit \<Rightarrow>
   "maStep _ \<equiv> {((os, s), (os', s')) | os os' s s' p.
               (os, os') \<in> ab.Step () \<and>
                ((\<not>will_domain_switch os
-                 \<and> p = selectTrace os'
+                 \<and> p = selectTrace os' s
                  \<and> s' = trace_multistep p s ) \<comment> \<open>TA step\<close>
                \<or> (will_domain_switch os
+                 
                  \<and> True \<comment> \<open>this needs to be something like is_domainswitch_gadget p \<close>
                  \<and> s' = trace_multistep p s ) \<comment> \<open>gadget step\<close>
               )}"
@@ -1495,7 +1613,7 @@ lemma ma_single_step_enabled:
    \<exists>s' os'. ((os, s), os', s') \<in> {(s, s'). s' \<in> steps maStep {s} [()]} \<and> ab.reachable os'"
   apply (clarsimp simp: steps_def maStep_def)
   apply (cases "will_domain_switch os"; clarsimp)
-  using ab.enabled_Step ab.reachable_Step apply fastforce
+   using ab.enabled_Step ab.reachable_Step apply fastforce
   using ab.enabled_Step ab.reachable_Step apply blast
 done
 
@@ -1534,6 +1652,19 @@ interpretation ma: unwinding_system maA mas0 "\<lambda>_ s. current_domain (fst 
   using ab.schedNotGlobalChannel apply blast
   done
 
+(* not currently used? *)
+lemma uwr_same_nlds:
+  "((os, s), (ot, t)) \<in> uwr d \<Longrightarrow>
+   nlds (tm t) = nlds (tm s)"
+  apply (case_tac "current_domain os = d")
+  apply (clarsimp simp:uwr_def uwr_running_def uwr_notrunning_def)+
+  done
+
+lemma selectTrace_in_time_bounded:
+  "selectTrace os s \<in> time_bounded_traces s"
+  by (metis (no_types, lifting) ab.uwr_refl mem_Collect_eq next_latest_domainswitch_start_in_future
+      time_bounded_traces_def trace_from_set trace_multistep.simps(1) trace_uwr_determined)
+
 lemma ma_confidentiality_u_ta:
   "\<lbrakk>\<not>will_domain_switch os;
   touched_addrs_inv os';
@@ -1552,19 +1683,56 @@ lemma ma_confidentiality_u_ta:
   apply (frule simple_steps [where s=ot]; clarsimp)
 
   (* show that the programs obey the TAs *)
-  apply (prop_tac "selectTrace os' \<in> traces_obeying_ta os'
-                 \<and> selectTrace ot' \<in> traces_obeying_ta ot'")
+  apply (prop_tac "selectTrace os' s \<in> traces_obeying_ta os'
+                 \<and> selectTrace ot' t \<in> traces_obeying_ta ot'")
    apply (intro conjI; rule trace_from_ta)
   apply clarsimp
 
   apply (case_tac "current_domain os = u")
    (* u is executing *)
-   apply (prop_tac "selectTrace ot' = selectTrace os'")
+   apply (prop_tac "selectTrace ot' t = selectTrace os' s")
     apply (subst eq_sym_conv)
     apply (rule trace_uwr_determined, simp)
    apply (erule(2) d_running, simp+)
   (* u is not executing *)
-  apply (rule d_not_running [where os=os and ot=ot], simp+)
+  apply (rule d_not_running [where os=os and ot=ot]; simp?)
+   apply (rule selectTrace_in_time_bounded)+
+  done
+
+thm dirty_multistep
+
+lemma ma_confidentiality_u_ds:
+  "\<lbrakk>will_domain_switch os;
+  ma.uwr2 (os, s) u (ot, t);
+  ab.uwr2 os' u ot';
+  ((os, s), os', s') \<in> maStep ();
+  ((ot, t), ot', t') \<in> maStep ()\<rbrakk>
+  \<Longrightarrow> ma.uwr2 (os', s') u (ot', t')"
+  apply (frule uwr_external_uwr)
+  apply (prop_tac "will_domain_switch ot")
+   using will_domain_switch_public apply fastforce
+
+  apply (clarsimp simp:maStep_def)
+
+  (* show that the domain hasn't changed *)
+  apply (frule simple_steps [where s=os]; clarsimp)
+  apply (frule simple_steps [where s=ot]; clarsimp)
+
+  (* show that the programs obey the TAs *)
+  apply (prop_tac "selectTrace os' s \<in> traces_obeying_ta os'
+                 \<and> selectTrace ot' t \<in> traces_obeying_ta ot'")
+   apply (intro conjI; rule trace_from_ta)
+  apply clarsimp
+
+  apply (case_tac "current_domain os = u")
+   (* u is executing *)
+   apply (prop_tac "selectTrace ot' t = selectTrace os' s")
+    apply (subst eq_sym_conv)
+    apply (rule trace_uwr_determined, simp)
+   apply (erule(2) d_running, simp+)
+  (* u is not executing *)
+  apply (rule d_not_running [where os=os and ot=ot]; simp?)
+   apply (rule selectTrace_in_time_bounded)+
   done
 
 theorem ma_confidentiality_u:
@@ -1593,9 +1761,15 @@ theorem ma_confidentiality_u:
    defer
    apply (erule ma_confidentiality_u_ta; simp)
 
-  
+
 
   apply(frule will_domain_switch_public)
+   
+
+
+
+
+
   apply(case_tac "will_domain_switch (other_state s)")
    apply(clarsimp simp:Let_def)
    apply(frule_tac s'="instr_multistep (C_step_program (other_state s) (Fin C x)) s"
