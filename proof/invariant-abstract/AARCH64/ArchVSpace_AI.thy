@@ -282,11 +282,143 @@ lemma find_vspace_for_asid_inv[wp]:
   "\<lbrace>P and Q\<rbrace> find_vspace_for_asid asid \<lbrace>\<lambda>_. P\<rbrace>, \<lbrace>\<lambda>_. Q\<rbrace>"
   unfolding find_vspace_for_asid_def by wpsimp
 
-lemma set_vm_root_typ_at[wp]:
-  "set_vm_root t \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>"
-  unfolding set_vm_root_def
-  sorry (* FIXME AARCH64
-  by (wpsimp simp: if_distribR wp: get_cap_wp) *)
+lemma set_asid_pool_vcpus[wp]:
+  "set_asid_pool p ap \<lbrace>\<lambda>s. P (vcpus_of s)\<rbrace>"
+  sorry (* FIXME AARCH64 *)
+
+crunches get_vmid, invalidate_asid_entry, invalidate_tlb_by_asid, invalidate_tlb_by_asid_va
+  for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
+  and pts[wp]: "\<lambda>s. P (pts_of s)"
+  and vcpus[wp]: "\<lambda>s. P (vcpus_of s)"
+  and caps[wp]: "\<lambda>s. P (caps_of_state s)"
+  and pred_tcb_at[wp]: "\<lambda>s. P (pred_tcb_at proj P t)"
+  and asid_table[wp]: "\<lambda>s. P (asid_table s)"
+  and aligned[wp]: pspace_aligned
+  and distinct[wp]: pspace_distinct
+  and cur[wp]: cur_tcb
+  and valid_objs[wp]: valid_objs
+
+(* FIXME AARCH64: typ_at_lifts should include arch things *)
+lemmas find_free_vmid_typ_ats[wp] = abs_typ_at_lifts [OF find_free_vmid_typ_at]
+lemmas invalidate_asid_typ_ats[wp] = abs_typ_at_lifts [OF invalidate_asid_typ_at]
+lemmas update_asid_pool_entry_typ_ats[wp] = abs_typ_at_lifts [OF update_asid_pool_entry_typ_at]
+lemmas invalidate_vmid_entry_typ_ats[wp] = abs_typ_at_lifts [OF invalidate_vmid_entry_typ_at]
+lemmas invalidate_asid_entry_typ_ats[wp] = abs_typ_at_lifts [OF invalidate_asid_entry_typ_at]
+lemmas store_vmid_typ_ats[wp] = abs_typ_at_lifts [OF store_vmid_typ_at]
+lemmas get_vmid_typ_ats[wp] = abs_typ_at_lifts [OF get_vmid_typ_at]
+lemmas invalidate_tlb_by_asid_typ_ats[wp] = abs_typ_at_lifts [OF invalidate_tlb_by_asid_typ_at]
+lemmas invalidate_tlb_by_asid_va_typ_ats[wp] = abs_typ_at_lifts [OF invalidate_tlb_by_asid_va_typ_at]
+
+lemma valid_arch_state_arm_next_vmid[simp]:
+  "valid_arch_state (s\<lparr>arch_state := arch_state s\<lparr>arm_next_vmid := next_vmid\<rparr>\<rparr>) =
+   valid_arch_state s"
+  unfolding valid_arch_state_def
+  sorry (* FIXME AARCH64 *)
+
+lemma valid_vspace_objs_next_vmid[simp]:
+  "valid_vspace_objs (s\<lparr>arch_state := arch_state s\<lparr>arm_next_vmid := next_vmid\<rparr>\<rparr>) =
+   valid_vspace_objs s"
+  sorry (* FIXME AARCH64 *)
+
+lemma valid_vspace_objs_vmid_table[simp]:
+  "valid_vspace_objs (s\<lparr>arch_state := arch_state s\<lparr>arm_vmid_table := table\<rparr>\<rparr>) =
+   valid_vspace_objs s"
+  sorry (* FIXME AARCH64 *)
+
+lemma invalidate_asid_vspace_objs[wp]:
+  "invalidate_asid asid \<lbrace>valid_vspace_objs\<rbrace>"
+  sorry (* FIXME AARCH64 *)
+
+lemma store_vmid_valid_vspace_objs[wp]:
+  "store_vmid asid vmid \<lbrace>valid_vspace_objs\<rbrace>"
+  sorry (* FIXME AARCH64 *)
+
+crunches get_vmid, invalidate_asid_entry, invalidate_tlb_by_asid, invalidate_tlb_by_asid_va
+  for valid_vspace_objs[wp]: valid_vspace_objs
+
+lemma find_free_hw_asid_pd_at_asid [wp]:
+  "find_free_vmid \<lbrace>vspace_at_asid pt asid\<rbrace>"
+  sorry (* FIXME AARCH64: crunch or lift this;
+           make some independence thing for arm_vmid_table and next_vmid updates *)
+
+lemma find_free_vmid_valid_arch [wp]:
+  "find_free_vmid \<lbrace>valid_arch_state\<rbrace>"
+  unfolding find_free_vmid_def
+  apply wpsimp
+  sorry (* FIXME AARCH64: needs unfolding because invalidate_vmid_entry and invalidate_asid are
+                 not atomic for valid_vmid, might be able to crunch the rest *)
+
+lemma load_vmid_wp:
+  "\<lbrace>\<lambda>s. P ((entry_for_asid asid |> ap_vmid) s) s\<rbrace> load_vmid asid \<lbrace>P\<rbrace>"
+  unfolding load_vmid_def
+  by (wpsimp simp: opt_map_def)
+
+lemma invalidate_asid_entry_invs[wp]:
+  "invalidate_asid_entry asid \<lbrace>invs\<rbrace>"
+  sorry (* FIXME AARCH64 *)
+
+lemma find_free_vmid_invs[wp]:
+  "find_free_vmid \<lbrace>invs\<rbrace>"
+  sorry (* FIXME AARCH64 *)
+
+locale_abbrev asid_map :: "'z::state_ext state \<Rightarrow> asid \<Rightarrow> vmid option" where
+  "asid_map \<equiv> \<lambda>s. swp entry_for_asid s |> ap_vmid"
+
+lemma store_hw_asid_valid_arch:
+  "\<lbrace>valid_arch_state and (\<lambda>s. asid_map s asid = None \<and> arm_vmid_table (arch_state s) vmid = None)\<rbrace>
+   store_vmid asid vmid
+   \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
+  unfolding store_vmid_def
+  sorry (* FIXME AARCH64 *)
+
+lemma invalidate_vmid_entry_None[wp]:
+  "\<lbrace>\<top>\<rbrace> invalidate_vmid_entry vmid \<lbrace>\<lambda>_ s. arm_vmid_table (arch_state s) vmid = None\<rbrace>"
+  unfolding invalidate_vmid_entry_def
+  by wpsimp
+
+lemma find_free_vmid_None[wp]:
+  "\<lbrace>\<top>\<rbrace> find_free_vmid \<lbrace>\<lambda>vmid s. arm_vmid_table (arch_state s) vmid = None\<rbrace>"
+  unfolding find_free_vmid_def
+  by wpsimp (clarsimp dest!: findSomeD)
+
+lemma find_free_vmid_None_asid_map[wp]:
+  "find_free_vmid \<lbrace>\<lambda>s. asid_map s asid = None\<rbrace>"
+  sorry (* FIXME AARCH64 *)
+
+lemma get_hw_asid_valid_arch[wp]:
+  "get_vmid asid \<lbrace>valid_arch_state\<rbrace>"
+  sorry (* FIXME AARCH64 *)
+
+lemma store_vmid_invs:
+  "\<lbrace>invs and (\<lambda>s. asid_map s asid = None \<and> arm_vmid_table (arch_state s) vmid = None)\<rbrace>
+   store_vmid asid vmid
+   \<lbrace>\<lambda>x. invs\<rbrace>"
+  sorry (* FIXME AARCH64 *)
+
+lemma get_hw_asid_invs[wp]:
+  "get_vmid asid \<lbrace>invs\<rbrace>"
+  unfolding get_vmid_def
+  by (wpsimp wp: store_vmid_invs load_vmid_wp simp: opt_map_def)
+
+lemma dmo_invalidateTranslationASID_invs[wp]:
+  "do_machine_op (invalidateTranslationASID asid) \<lbrace>invs\<rbrace>"
+  sorry (* FIXME AARCH64 *)
+
+lemma dmo_invalidateTranslationSingle_invs[wp]:
+  "do_machine_op (invalidateTranslationSingle asid) \<lbrace>invs\<rbrace>"
+  sorry (* FIXME AARCH64 *)
+
+crunches invalidate_tlb_by_asid, invalidate_tlb_by_asid_va
+  for invs: invs
+  (ignore: do_machine_op)
+
+lemma arm_context_switch_invs [wp]:
+  "arm_context_switch pt asid \<lbrace>invs\<rbrace>"
+  unfolding arm_context_switch_def by wpsimp
+
+crunches set_vm_root
+  for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
+  (simp: crunch_simps)
 
 lemma set_vm_root_invs[wp]:
   "set_vm_root t \<lbrace>invs\<rbrace>"
