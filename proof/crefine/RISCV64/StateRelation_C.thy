@@ -163,6 +163,16 @@ abbreviation
   where
   "map_to_ntfns hp \<equiv> projectKO_opt \<circ>\<^sub>m hp"
 
+abbreviation map_to_scs ::
+  "(obj_ref \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> obj_ref \<rightharpoonup> sched_context"
+  where
+  "map_to_scs hp \<equiv> projectKO_opt \<circ>\<^sub>m hp"
+
+abbreviation map_to_replies ::
+  "(obj_ref \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> obj_ref \<rightharpoonup> reply"
+  where
+  "map_to_replies hp \<equiv> projectKO_opt \<circ>\<^sub>m hp"
+
 abbreviation
   map_to_ptes :: "(machine_word \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> machine_word \<rightharpoonup> pte"
   where
@@ -267,12 +277,14 @@ where
      = (tsType_CL (fst ts') = scast ThreadState_Inactive)"
 | "cthread_state_relation_lifted (Structures_H.IdleThreadState) ts'
      = (tsType_CL (fst ts') = scast ThreadState_IdleThreadState)"
-| "cthread_state_relation_lifted (Structures_H.BlockedOnReply) ts'
-     = (tsType_CL (fst ts') = scast ThreadState_BlockedOnReply)"
-| "cthread_state_relation_lifted (Structures_H.BlockedOnReceive oref cg) ts'
+| "cthread_state_relation_lifted (Structures_H.BlockedOnReply replyobj) ts'
+     = (tsType_CL (fst ts') = scast ThreadState_BlockedOnReply
+        \<and> option_to_0 replyobj = replyObject_CL (fst ts'))"
+| "cthread_state_relation_lifted (Structures_H.BlockedOnReceive oref cg replyobj) ts'
      = (tsType_CL (fst ts') = scast ThreadState_BlockedOnReceive
         \<and> oref = blockingObject_CL (fst ts')
-        \<and> cg = to_bool (blockingIPCCanGrant_CL (fst ts')))"
+        \<and> cg = to_bool (blockingIPCCanGrant_CL (fst ts'))
+        \<and> option_to_0 replyobj = replyObject_CL (fst ts'))"
 | "cthread_state_relation_lifted (Structures_H.BlockedOnSend oref badge cg cgr isc) ts'
      = (tsType_CL (fst ts') = scast ThreadState_BlockedOnSend
         \<and> oref = blockingObject_CL (fst ts')
@@ -351,18 +363,78 @@ definition
   ctcb_relation :: "Structures_H.tcb \<Rightarrow> tcb_C \<Rightarrow> bool"
 where
   "ctcb_relation atcb ctcb \<equiv>
-       tcbFaultHandler atcb = tcbFaultHandler_C ctcb
-     \<and> cthread_state_relation (tcbState atcb) (tcbState_C ctcb, tcbFault_C ctcb)
+       cthread_state_relation (tcbState atcb) (tcbState_C ctcb, tcbFault_C ctcb)
      \<and> tcbIPCBuffer atcb    = tcbIPCBuffer_C ctcb
      \<and> carch_tcb_relation (tcbArch atcb) (tcbArch_C ctcb)
      \<and> tcbQueued atcb       = to_bool (tcbQueued_CL (thread_state_lift (tcbState_C ctcb)))
      \<and> ucast (tcbDomain atcb) = tcbDomain_C ctcb
      \<and> ucast (tcbPriority atcb) = tcbPriority_C ctcb
      \<and> ucast (tcbMCP atcb) = tcbMCP_C ctcb
-     \<and> tcbTimeSlice atcb    = unat (tcbTimeSlice_C ctcb)
      \<and> cfault_rel (tcbFault atcb) (seL4_Fault_lift (tcbFault_C ctcb))
                   (lookup_fault_lift (tcbLookupFailure_C ctcb))
-     \<and> option_to_ptr (tcbBoundNotification atcb) = tcbBoundNotification_C ctcb"
+     \<and> option_to_ptr (tcbBoundNotification atcb) = tcbBoundNotification_C ctcb
+     \<and> option_to_ptr (tcbSchedContext atcb) = tcbSchedContext_C ctcb
+     \<and> option_to_ptr (tcbYieldTo atcb) = tcbYieldTo_C ctcb"
+
+definition crefill_size :: "sched_context_C \<Rightarrow> nat" where
+  "crefill_size sc \<equiv> if scRefillHead_C sc \<le> scRefillTail_C sc
+                        then unat (scRefillTail_C sc - scRefillHead_C sc + 1)
+                        else unat (scRefillTail_C sc + 1 + (scRefillMax_C sc - scRefillHead_C sc))"
+
+definition csched_context_relation :: "Structures_H.sched_context \<Rightarrow> sched_context_C \<Rightarrow> bool" where
+  "csched_context_relation asc csc \<equiv>
+       scPeriod asc = scPeriod_C csc
+     \<and> scConsumed asc = scConsumed_C csc
+     \<and> option_to_ptr (scTCB asc) = scTcb_C csc
+     \<and> option_to_ptr (scReply asc) = scReply_C csc
+     \<and> option_to_ptr (scNtfn asc) = scNotification_C csc
+     \<and> scBadge asc = scBadge_C csc
+     \<and> scSporadic asc = to_bool (scSporadic_C csc)
+     \<and> option_to_ptr (scYieldFrom asc) = scYieldFrom_C csc
+     \<and> scRefillMax asc = unat (scRefillMax_C csc)
+     \<and> scRefillHead asc = unat (scRefillHead_C csc)
+     \<and> scRefillCount asc = crefill_size csc"
+
+definition crefill_relation :: "refill \<Rightarrow> refill_C \<Rightarrow> bool" where
+  "crefill_relation ar cr \<equiv> rTime ar = rTime_C cr \<and> rAmount ar = rAmount_C cr"
+
+primrec dyn_array_list_rel ::
+  "('c :: c_type) typ_heap \<Rightarrow> ('a \<Rightarrow> 'c \<Rightarrow> bool) \<Rightarrow> 'a list \<Rightarrow> 'c ptr \<Rightarrow> bool"
+  where
+  "dyn_array_list_rel h rel [] p = True"
+| "dyn_array_list_rel h rel (a # as) p
+    = (\<exists>v. h p = Some v \<and> rel a v \<and> dyn_array_list_rel h rel as (p +\<^sub>p 1))"
+
+definition sc_ptr_to_crefill_ptr :: "obj_ref \<Rightarrow> refill_C ptr" where
+  "sc_ptr_to_crefill_ptr p \<equiv> Ptr (p + of_nat sizeof_sched_context_t)"
+
+definition refill_buffer_relation ::
+  "(obj_ref \<rightharpoonup> kernel_object) \<Rightarrow> heap_raw_state \<Rightarrow> cghost_state \<Rightarrow> bool"
+  where
+  "refill_buffer_relation ah ch gs \<equiv>
+     let abs_sc_hp = map_to_scs ah;
+         crefill_hp = clift ch;
+         lens_hp = gs_refill_buffer_lengths gs
+     in
+       dom abs_sc_hp = dom lens_hp
+       \<and> dom crefill_hp
+          = (\<Union>p\<in>dom abs_sc_hp. set (map (\<lambda>i. sc_ptr_to_crefill_ptr p +\<^sub>p int i) [0..<the (lens_hp p)]))
+       \<and> (\<forall>p sc. abs_sc_hp p = Some sc \<longrightarrow>
+                   dyn_array_list_rel crefill_hp crefill_relation (scRefills sc) (sc_ptr_to_crefill_ptr p)
+                   \<and> lens_hp p = Some (length (scRefills sc)))"
+
+definition creply_relation :: "Structures_H.reply \<Rightarrow> reply_C \<Rightarrow> bool" where
+  "creply_relation areply creply \<equiv>
+       option_to_ptr (replyTCB areply) = replyTCB_C creply
+     \<and> option_to_ptr (replyPrev areply)
+        = ((Ptr \<circ> callStackPtr_CL \<circ> call_stack_lift \<circ> replyPrev_C) creply :: reply_C ptr)
+     \<and> isHead (replyNext areply) = to_bool ((isHead_CL \<circ> call_stack_lift \<circ> replyNext_C) creply)
+     \<and> (if bound (replyNext areply)
+        then if isHead (replyNext areply)
+             then theHeadScPtr (replyNext areply)
+             else theReplyNextPtr (replyNext areply)
+        else 0)
+       = (callStackPtr_CL \<circ> call_stack_lift \<circ> replyNext_C) creply"
 
 abbreviation
   "ep_queue_relation' \<equiv> tcb_queue_relation' tcbEPNext_C tcbEPPrev_C"
@@ -507,6 +579,17 @@ abbreviation
 abbreviation
   "cpspace_ntfn_relation ah ch \<equiv> cmap_relation (map_to_ntfns ah) (clift ch) Ptr (cnotification_relation (clift ch))"
 
+abbreviation cpspace_sched_context_relation ::
+  "(obj_ref \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> heap_raw_state \<Rightarrow> bool"
+  where
+  "cpspace_sched_context_relation ah ch \<equiv>
+     cmap_relation (map_to_scs ah) (clift ch) Ptr csched_context_relation"
+
+abbreviation cpspace_reply_relation ::
+  "(obj_ref \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> heap_raw_state \<Rightarrow> bool"
+  where
+  "cpspace_reply_relation ah ch \<equiv> cmap_relation (map_to_replies ah) (clift ch) Ptr creply_relation"
+
 abbreviation
   "cpspace_pte_relation ah ch \<equiv> cmap_relation (map_to_ptes ah) (clift ch) Ptr cpte_relation"
 
@@ -527,7 +610,9 @@ definition
   cpspace_relation :: "(machine_word \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> (machine_word \<Rightarrow> word8) \<Rightarrow> heap_raw_state \<Rightarrow> bool"
 where
   "cpspace_relation ah bh ch \<equiv>
-    cpspace_cte_relation ah ch \<and> cpspace_tcb_relation ah ch \<and> cpspace_ep_relation ah ch \<and> cpspace_ntfn_relation ah ch \<and>
+    cpspace_cte_relation ah ch \<and> cpspace_tcb_relation ah ch \<and> cpspace_ep_relation ah ch \<and>
+    cpspace_ntfn_relation ah ch \<and> cpspace_sched_context_relation ah ch \<and>
+    cpspace_reply_relation ah ch \<and>
     cpspace_pte_relation ah ch \<and> cpspace_asidpool_relation ah ch \<and>
     cpspace_user_data_relation ah bh ch \<and> cpspace_device_data_relation ah bh ch \<and>
     cpspace_pte_array_relation ah ch"
@@ -562,11 +647,11 @@ abbreviation
     \<equiv> cvariable_array_map_relation (gsCNodes astate) (\<lambda>n. 2 ^ n)
         cte_Ptr (hrs_htd (t_hrs_' cstate))"
 
-(* There are 5 elements in the TCB CTE *)
+(* There are 6 elements in the TCB CTE *)
 abbreviation
   "tcb_cte_array_relation astate cstate
     \<equiv> cvariable_array_map_relation (map_to_tcbs (ksPSpace astate))
-        (\<lambda>x. 5) cte_Ptr (hrs_htd (t_hrs_' cstate))"
+        (\<lambda>x. 6) cte_Ptr (hrs_htd (t_hrs_' cstate))"
 
 fun
   irqstate_to_C :: "irqstate \<Rightarrow> machine_word"
@@ -694,6 +779,7 @@ where
   "cstate_relation astate cstate \<equiv>
      let cheap = t_hrs_' cstate in
        cpspace_relation (ksPSpace astate) (underlying_memory (ksMachineState astate)) cheap \<and>
+       refill_buffer_relation (ksPSpace astate) cheap (ghost'state_' cstate) \<and>
        cready_queues_relation (clift cheap)
                              (ksReadyQueues_' cstate)
                              (ksReadyQueues astate) \<and>
@@ -876,14 +962,16 @@ definition
   syscall_from_H :: "syscall \<Rightarrow> machine_word"
 where
   "syscall_from_H c \<equiv> case c of
-    SysSend \<Rightarrow> scast Kernel_C.SysSend
+    SysCall \<Rightarrow> scast Kernel_C.SysCall
+  | SysNBSendRecv \<Rightarrow> scast Kernel_C.SysNBSendRecv
+  | SysNBSendWait \<Rightarrow> scast Kernel_C.SysNBSendWait
+  | SysSend \<Rightarrow> scast Kernel_C.SysSend
   | SysNBSend \<Rightarrow> scast Kernel_C.SysNBSend
-  | SysCall \<Rightarrow> scast Kernel_C.SysCall
   | SysRecv \<Rightarrow> scast Kernel_C.SysRecv
-  | SysReply \<Rightarrow> scast Kernel_C.SysReply
-  | SysReplyRecv \<Rightarrow> scast Kernel_C.SysReplyRecv
+  | SysYield \<Rightarrow> scast Kernel_C.SysYield
   | SysNBRecv \<Rightarrow> scast Kernel_C.SysNBRecv
-  | SysYield \<Rightarrow> scast Kernel_C.SysYield"
+  | SysWait \<Rightarrow> scast Kernel_C.SysWait
+  | SysNBWait \<Rightarrow> scast Kernel_C.SysNBWait"
 
 lemma (in kernel) cmap_relation_cs_atD:
   "\<lbrakk> cmap_relation as cs addr_fun rel; cs (addr_fun x) = Some y; inj addr_fun \<rbrakk> \<Longrightarrow>
