@@ -25,8 +25,9 @@ declare [[populate_globals=true]]
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-type_synonym cghost_state = "(machine_word \<rightharpoonup> vmpage_size) * (machine_word \<rightharpoonup> nat)
-    * ghost_assertions"
+type_synonym cghost_state =
+  "(machine_word \<rightharpoonup> vmpage_size) * (machine_word \<rightharpoonup> nat) * ghost_assertions *
+   (machine_word \<rightharpoonup> nat)"
 
 definition
   gs_clear_region :: "addr \<Rightarrow> nat \<Rightarrow> cghost_state \<Rightarrow> cghost_state" where
@@ -52,15 +53,24 @@ definition
                      then Some sz
                      else fst (snd gs) x, snd (snd gs))"
 
+abbreviation gs_refill_buffer_lengths :: "cghost_state \<Rightarrow> (machine_word \<rightharpoonup> nat)" where
+  "gs_refill_buffer_lengths \<equiv> snd \<circ> snd \<circ> snd"
+
+abbreviation (input) refills_len :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where
+  "refills_len userSize struct_size refill_size \<equiv> (2 ^ userSize - struct_size) div refill_size"
+
+definition gs_new_refill_buffer_length :: "addr \<Rightarrow> nat \<Rightarrow> cghost_state \<Rightarrow> cghost_state" where
+  "gs_new_refill_buffer_length addr len \<equiv> \<lambda>(a, b, c, d). (a, b, c, d(addr := Some len))"
+
 abbreviation
   gs_get_assn :: "int \<Rightarrow> cghost_state \<Rightarrow> machine_word"
   where
-  "gs_get_assn k \<equiv> ghost_assertion_data_get k (snd o snd)"
+  "gs_get_assn k \<equiv> ghost_assertion_data_get k (fst o snd o snd)"
 
 abbreviation
   gs_set_assn :: "int \<Rightarrow> machine_word \<Rightarrow> cghost_state \<Rightarrow> cghost_state"
   where
-  "gs_set_assn k v \<equiv> ghost_assertion_data_set k v (apsnd o apsnd)"
+  "gs_set_assn k v \<equiv> ghost_assertion_data_set k v (apsnd o apsnd o apfst)"
 
 declare [[record_codegen = false]]
 declare [[allow_underscore_idents = true]]
