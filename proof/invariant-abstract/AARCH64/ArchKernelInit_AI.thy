@@ -17,8 +17,8 @@ text \<open>
   Showing that there is a state that satisfies the abstract invariants.
 \<close>
 
-lemmas ptr_defs = idle_thread_ptr_def init_irq_node_ptr_def (* FIXME AARCH64 riscv_global_pt_ptr_def *)
-lemmas state_defs = init_A_st_def init_kheap_def init_arch_state_def (* FIXME AARCH64 init_global_pt_def *)
+lemmas ptr_defs = idle_thread_ptr_def init_irq_node_ptr_def arm_global_pt_ptr_def
+lemmas state_defs = init_A_st_def init_kheap_def init_arch_state_def
                     init_vspace_uses_def ptr_defs
 
 lemma is_tcb_TCB[simp]: "is_tcb (TCB t)" by (simp add: is_tcb_def)
@@ -156,8 +156,6 @@ lemma cte_wp_at_init_A_st_Null:
 lemmas cte_wp_at_caps_of_state_eq
     = cte_wp_at_caps_of_state[where P="(=) cap" for cap]
 
-declare ptrFormPAddr_addFromPPtr[simp]
-
 lemma pspace_respects_device_region_init[simp]:
   "pspace_respects_device_region init_A_st"
    apply (clarsimp simp: pspace_respects_device_region_def state_defs init_machine_state_def
@@ -175,151 +173,74 @@ lemma cap_refs_respects_device_region_init[simp]:
    apply (clarsimp simp: cte_wp_at_caps_of_state cap_range_respects_device_region_def)
    done
 
-(* FIXME AARCH64
-lemma kernel_mapping_slot: "0x1FF \<in> kernel_mapping_slots"
-  by (clarsimp simp: kernel_mapping_slots_def pptr_base_def pptrBase_def canonical_bit_def
-                     pt_bits_left_def bit_simps level_defs) *)
-
 lemma pool_for_asid_init_A_st[simp]:
   "pool_for_asid asid init_A_st = None"
   by (simp add: pool_for_asid_def state_defs)
 
-(* FIXME AARCH64
 lemma vspace_for_asid_init_A_st[simp]:
   "vspace_for_asid asid init_A_st = None"
-  by (simp add: vspace_for_asid_def obind_def)
+  sorry (* FIXME AARCH64
+  by (simp add: vspace_for_asid_def obind_def) *)
 
 lemma global_pt_init_A_st[simp]:
-  "global_pt init_A_st = riscv_global_pt_ptr"
-  by (simp add: state_defs riscv_global_pt_def)
+  "global_pt init_A_st = arm_global_pt_ptr"
+  by (simp add: state_defs)
 
-lemma is_aligned_riscv_global_pt_ptr[simp]:
-  "is_aligned riscv_global_pt_ptr pt_bits"
-  by (simp add: riscv_global_pt_ptr_def pptr_base_num bit_simps is_aligned_def)
+lemma is_alignedarm_global_pt_ptr[simp]:
+  "is_aligned arm_global_pt_ptr (pt_bits VSRootPT_T)"
+  by (simp add: arm_global_pt_ptr_def pptr_base_num bit_simps is_aligned_def)
 
 lemma ptes_of_init_A_st_global:
   "ptes_of init_A_st =
-   (\<lambda>p. if table_base p = riscv_global_pt_ptr \<and> is_aligned p pte_bits then
-        Some ((un_PageTable (the_arch_obj init_global_pt)) (table_index p)) else None)"
-  by (auto simp add: state_defs pte_of_def obind_def opt_map_def split: option.splits)
+   (\<lambda>pt_t p. if pt_t = VSRootPT_T \<and> table_base VSRootPT_T p = arm_global_pt_ptr \<and>
+             is_aligned p pte_bits then Some InvalidPTE else None)"
+  sorry (* FIXME AARCH64: might need adjustment
+  by (auto simp add: state_defs level_pte_of_def obind_def opt_map_def split: option.splits) *)
 
 lemma pt_walk_init_A_st[simp]:
-  "pt_walk max_pt_level level riscv_global_pt_ptr vref (ptes_of init_A_st) =
-   Some (max_pt_level, riscv_global_pt_ptr)"
+  "pt_walk max_pt_level level arm_global_pt_ptr vref (ptes_of init_A_st) =
+   Some (max_pt_level, arm_global_pt_ptr)"
   apply (subst pt_walk.simps)
-  apply (simp add: in_omonad ptes_of_init_A_st_global init_global_pt_def
+  apply (simp add: in_omonad ptes_of_init_A_st_global
                    is_aligned_pt_slot_offset_pte global_pte_def)
-  done
+  sorry (* FIXME AARCH64 *)
 
-lemma table_index_riscv_global_pt_ptr:
-  "table_index (pt_slot_offset max_pt_level riscv_global_pt_ptr vref) =
-  ucast ((vref >> ptTranslationBits * 2 + pageBits) && mask ptTranslationBits)"
-  apply (simp add: pt_slot_offset_def pt_index_def pt_bits_left_def bit_simps level_defs
-                   riscv_global_pt_ptr_def pptr_base_def pptrBase_def canonical_bit_def)
+(* FIXME AARCH64: statement -- this depends on PA_40 config; potentially not needed
+lemma table_index_arm_global_pt_ptr:
+  "table_index VSRootPT_T (pt_slot_offset max_pt_level arm_global_pt_ptr vref) =
+  (vref >> (ptTranslationBits NormalPT_T) * 2 + pageBits) && mask (ptTranslationBits NormalPT_T)"
+  apply (simp add: pt_slot_offset_def pt_index_def pt_bits_left_def  level_defs
+                   arm_global_pt_ptr_def pptr_base_def pptrBase_def canonical_bit_def)
   apply (subst word_plus_and_or_coroll)
    apply word_bitwise
    apply simp
   apply word_bitwise
   apply (clarsimp simp: word_size)
-  done
+  done *)
 
 lemma kernel_window_1G:
   "\<lbrakk> pptr_base \<le> vref; vref < pptr_base + (1 << 30) \<rbrakk> \<Longrightarrow>
-    table_index (pt_slot_offset max_pt_level riscv_global_pt_ptr vref) = 0x100"
-  apply (simp add: table_index_riscv_global_pt_ptr)
+    table_index VSRootPT_T (pt_slot_offset max_pt_level arm_global_pt_ptr vref) = 0x100"
+  sorry (* FIXME AARCH64 -- this depends on PA_40 config; potentially not needed
+  apply (simp add: table_index_arm_global_pt_ptr)
   apply (simp add: bit_simps pptr_base_def pptrBase_def neg_mask_le_high_bits word_size flip: NOT_mask)
   apply (subst (asm) mask_def)
   apply (simp add: canonical_bit_def)
   apply word_bitwise
   apply (clarsimp simp: word_size)
-  done
-
-lemma kernel_mapping_slots_0x100[simp]:
-  "0x100 \<in> kernel_mapping_slots"
-  by (simp add: kernel_mapping_slots_def pptr_base_def bit_simps pt_bits_left_def level_defs
-                pptrBase_def canonical_bit_def)
-
-lemma translate_address_kernel_window:
-  "\<lbrakk> pptr_base \<le> vref; vref < pptr_base + (1 << 30) \<rbrakk>\<Longrightarrow>
-   translate_address riscv_global_pt_ptr vref (ptes_of init_A_st) = Some (addrFromPPtr vref)"
-  apply (clarsimp simp: translate_address_def in_omonad pt_lookup_target_def
-                        pt_lookup_slot_from_level_def)
-  apply (simp add: ptes_of_init_A_st_global[THEN fun_cong] init_global_pt_def global_pte_def pte_ref_def)
-  apply (simp add: kernel_window_1G is_aligned_pt_slot_offset_pte)
-  apply (simp add: bit_simps addr_from_ppn_def shiftl_shiftl)
-  apply (simp add: ptrFromPAddr_def addrFromPPtr_def)
-  apply (simp add: pptrBaseOffset_def paddrBase_def)
-  apply (simp add: pt_bits_left_def bit_simps level_defs)
-  apply (rule conjI)
-   apply (rule is_aligned_add)
-    apply (simp add: mask_def)
-   apply (simp add: pptrBase_def canonical_bit_def is_aligned_def)
-  apply (simp add: pptr_base_def)
-  apply (simp add: pptrBase_def neg_mask_le_high_bits flip: NOT_mask)
-  apply (subst word_plus_and_or_coroll; simp add: canonical_bit_def word_size mask_def)
-  apply word_bitwise
-  apply clarsimp
-  done
-
-lemma elf_window_1M:
-  "\<lbrakk> kernel_elf_base \<le> vref; vref < kernel_elf_base + (1 << 20) \<rbrakk> \<Longrightarrow>
-    table_index (pt_slot_offset max_pt_level riscv_global_pt_ptr vref) = 0x1FE"
-  apply (simp add: table_index_riscv_global_pt_ptr)
-  apply (simp add: bit_simps kernel_elf_base_def kernelELFBase_def)
-  apply word_bitwise
-  apply (clarsimp simp: word_size)
-  done
-
-lemma kernel_mapping_slots_0x1FE[simp]:
-  "0x1FE \<in> kernel_mapping_slots"
-  by (simp add: kernel_mapping_slots_def pptr_base_def bit_simps pt_bits_left_def level_defs
-                pptrBase_def canonical_bit_def)
-
-lemma translate_address_kernel_elf_window:
-  "\<lbrakk> kernel_elf_base \<le> vref; vref < kernel_elf_base + (1 << 20) \<rbrakk> \<Longrightarrow>
-   translate_address riscv_global_pt_ptr vref (ptes_of init_A_st) = Some (addrFromKPPtr vref)"
-  apply (clarsimp simp: translate_address_def in_omonad pt_lookup_target_def
-                        pt_lookup_slot_from_level_def)
-  apply (simp add: ptes_of_init_A_st_global[THEN fun_cong] init_global_pt_def global_pte_def pte_ref_def)
-  apply (simp add: elf_window_1M is_aligned_pt_slot_offset_pte)
-  apply (simp add: bit_simps addr_from_ppn_def shiftl_shiftl)
-  apply (simp add: ptrFromPAddr_def addrFromPPtr_def)
-  apply (simp add: addrFromKPPtr_def kernelELFBaseOffset_def kernelELFPAddrBase_def kernelELFBase_def)
-  apply (simp add: pt_bits_left_def bit_simps level_defs)
-  apply (rule conjI)
-   apply (simp add: pptrBase_def pptrBaseOffset_def paddrBase_def canonical_bit_def is_aligned_def)
-  apply (simp add: kernel_elf_base_def kernelELFBase_def)
-  apply (subst word_plus_and_or_coroll)
-   apply (simp add: canonical_bit_def word_size mask_def)
-   apply word_bitwise
-  apply (simp add: canonical_bit_def word_size mask_def)
-  apply word_bitwise
-  apply clarsimp
-  done
+  done  *)
 
 lemma kernel_window_init_st:
   "kernel_window init_A_st = { pptr_base ..< pptr_base + (1 << 30) }"
   by (auto simp: state_defs kernel_window_def)
 
-lemma kernel_elf_window_init_st:
-  "kernel_elf_window init_A_st = { kernel_elf_base ..< kernel_elf_base + (1 << 20) }"
-  apply (clarsimp simp: state_defs kernel_elf_window_def kernel_elf_base_def kernelELFBase_def
-                        pptr_base_def pptrBase_def canonical_bit_def)
-  apply (rule set_eqI, clarsimp)
-  apply (rule iffI)
-   apply auto[1]
-  apply clarsimp
-  apply word_bitwise
-  apply clarsimp
-  done
-
 lemma valid_global_vspace_mappings_init_A_st[simp]:
   "valid_global_vspace_mappings init_A_st"
   unfolding valid_global_vspace_mappings_def
-  by (simp add: translate_address_kernel_window kernel_window_init_st
-                translate_address_kernel_elf_window kernel_elf_window_init_st)
+  by simp
 
 lemma valid_uses_init_A_st[simp]: "valid_uses_2 init_vspace_uses"
+sorry (* FIXME AARCH64
 proof -
   note canonical_bit_def[simp]
   have [simp]: "pptr_base < pptr_base + 0x40000000"
@@ -345,21 +266,17 @@ proof -
     using canonical_user_pptr_base pptr_base_kernel_elf_base
     unfolding valid_uses_2_def init_vspace_uses_def window_defs
     by (auto simp: canonical_user_canonical above_pptr_base_canonical)
-qed
+qed *)
 
 lemma valid_global_arch_objs_init_A_st[simp]:
   "valid_global_arch_objs init_A_st"
-  by (simp add: valid_global_arch_objs_def state_defs level_defs obj_at_def)
-
-lemma valid_global_tables_init_A_st[simp]:
-  "valid_global_tables init_A_st"
-  apply (simp add: valid_global_tables_def Let_def riscv_global_pt_def[symmetric])
-  apply (clarsimp simp: state_defs pte_rights_of_def vm_kernel_only_def global_pte_def)
-  done
+  sorry (* FIXME AARCH64
+  by (simp add: valid_global_arch_objs_def state_defs level_defs obj_at_def) *)
 
 lemma vspace_for_pool_init_A_st[simp]:
   "vspace_for_pool ap asid (asid_pools_of init_A_st) = None"
-  by (clarsimp simp: vspace_for_pool_def obind_def in_opt_map_eq state_defs split: option.splits)
+  sorry (* FIXME AARCH64
+  by (clarsimp simp: vspace_for_pool_def obind_def in_opt_map_eq state_defs split: option.splits) *)
 
 lemma user_region_vs_lookup_target_init_A_st[simp]:
   "vref \<in> user_region \<Longrightarrow> vs_lookup_target bot_level asid vref init_A_st = None"
@@ -374,16 +291,9 @@ lemma valid_vspace_objs_init_A_st[simp]:
   "valid_vspace_objs init_A_st"
   by (clarsimp simp: valid_vspace_objs_def in_omonad vs_lookup_table_def)
 
-lemma global_pt_kernel_window_init_arch_state[simp]:
-  "obj_addrs init_global_pt riscv_global_pt_ptr \<subseteq>
-     kernel_window_2 (riscv_kernel_vspace init_arch_state)"
-  apply (clarsimp simp: state_defs pptr_base_num bit_simps kernel_window_def kernel_elf_base_def)
-  apply (rule conjI; unat_arith)
-  done
-
 lemma idle_thread_in_kernel_window_init_arch_state[simp]:
   "{idle_thread_ptr..0x3FF + idle_thread_ptr} \<subseteq>
-     kernel_window_2 (riscv_kernel_vspace init_arch_state)"
+     kernel_window_2 (arm_kernel_vspace init_arch_state)"
   apply (clarsimp simp: state_defs pptr_base_num bit_simps kernel_window_def kernel_elf_base_def)
   apply (rule conjI; unat_arith)
   done
@@ -399,12 +309,13 @@ lemma irq_node_pptr_base_kernel_elf_base:
 lemma irq_node_in_kernel_window_init_arch_state':
   "\<lbrakk> init_irq_node_ptr + m \<le> x; x \<le> init_irq_node_ptr + m + mask cte_level_bits;
      m \<le> mask (size (irq::irq)) << cte_level_bits\<rbrakk>
-   \<Longrightarrow> x \<in> kernel_window_2 (riscv_kernel_vspace init_arch_state)"
+   \<Longrightarrow> x \<in> kernel_window_2 (arm_kernel_vspace init_arch_state)"
   apply (clarsimp simp: kernel_window_def init_vspace_uses_def init_arch_state_def)
   apply (rule conjI)
    apply (clarsimp simp: state_defs)
    apply (rule ccontr, simp add:not_le)
    apply (drule(1) le_less_trans)
+  sorry (* FIXME AARCH64
    apply (cut_tac is_aligned_no_wrap'[where ptr=pptr_base
                                       and off="0x3000 + m"
                                       and sz=canonical_bit, simplified])
@@ -417,19 +328,19 @@ lemma irq_node_in_kernel_window_init_arch_state':
                    mask_def init_irq_node_ptr_def pptr_base_num word_size)
   apply unat_arith
   apply clarsimp
-  done
+  done *)
 
 lemma irq_node_in_kernel_window_init_arch_state[simp]:
   "\<lbrakk> init_irq_node_ptr + (ucast (irq::irq) << cte_level_bits) \<le> x;
      x \<le> init_irq_node_ptr + (ucast irq << cte_level_bits) + 2 ^ cte_level_bits - 1 \<rbrakk>
-   \<Longrightarrow> x \<in> kernel_window_2 (riscv_kernel_vspace init_arch_state)"
+   \<Longrightarrow> x \<in> kernel_window_2 (arm_kernel_vspace init_arch_state)"
   apply (erule irq_node_in_kernel_window_init_arch_state')
    apply (simp add: mask_def add_diff_eq)
   apply (simp add: word_size mask_def cte_level_bits_def)
   apply (thin_tac P for P)
   apply word_bitwise
   done
-*)
+
 
 lemma invs_A:
   "invs init_A_st" (is "invs ?st")
@@ -440,11 +351,11 @@ lemma invs_A:
   apply (rule conjI)
    prefer 2
    apply (simp add: cur_tcb_def state_defs obj_at_def)
-  sorry (* FIXME AARCH64 rest of proof won't make sense until example state is tweaked from RISCV64
-                         version
   apply (simp add: valid_state_def)
   apply (rule conjI)
    apply (simp add: valid_pspace_def)
+  sorry (* FIXME AARCH64 rest of proof won't make sense until example state is tweaked from RISCV64
+                         version
    apply (rule conjI)
     apply (clarsimp simp: valid_objs_def state_defs wellformed_pte_def global_pte_def
                           valid_obj_def valid_vm_rights_def vm_kernel_only_def

@@ -606,8 +606,12 @@ definition vmid_for_asid :: "asid \<Rightarrow> 'z::state_ext state \<Rightarrow
 definition vmid_inv :: "'z::state_ext state \<Rightarrow> bool" where
   "vmid_inv s \<equiv> is_inv (arm_vmid_table (arch_state s)) (swp vmid_for_asid s)"
 
+definition valid_global_arch_objs where
+  "valid_global_arch_objs \<equiv> \<lambda>s. vspace_pt_at (global_pt s) s"
+
 definition valid_arch_state :: "'z::state_ext state \<Rightarrow> bool" where
-  "valid_arch_state \<equiv> valid_asid_table and valid_uses and vmid_inv and cur_vcpu"
+  "valid_arch_state \<equiv> valid_asid_table and valid_uses and vmid_inv and cur_vcpu and
+                      valid_global_arch_objs"
 
 (* ---------------------------------------------------------------------------------------------- *)
 
@@ -1658,6 +1662,11 @@ lemma pt_slot_offset_or_def:
   apply (drule shiftl_less_t2n'[where n=pte_bits], auto simp: bit_simps)
   done
 
+lemma valid_global_arch_objs_pt_at[elim!]:
+  "valid_global_arch_objs s \<Longrightarrow> vspace_pt_at (global_pt s) s"
+  unfolding valid_global_arch_objs_def
+  by simp
+
 lemma pool_for_asid_vs_lookup:
   "(vs_lookup_table asid_pool_level asid vref s = Some (level, p)) =
    (pool_for_asid asid s = Some p \<and> level = asid_pool_level)"
@@ -2394,6 +2403,13 @@ lemma vspace_for_asid_lift:
     apply (wpsimp wp: assms entry_for_asid_lift split: option.splits)+
   done
 
+lemma valid_global_arch_objs_lift:
+  assumes "\<And>P. f \<lbrace> \<lambda>s. P (global_pt s) \<rbrace>"
+  assumes "\<And>p. f \<lbrace> vspace_pt_at p \<rbrace>"
+  shows "f \<lbrace> valid_global_arch_objs \<rbrace>"
+  unfolding valid_global_arch_objs_def
+  by (rule hoare_lift_Pf; rule assms)
+
 lemma valid_arch_state_lift_arch:
   assumes atyp[wp]: "\<And>T p. f \<lbrace> typ_at (AArch T) p\<rbrace>"
   assumes aobjs[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (asid_pools_of s) \<rbrace>"
@@ -2405,7 +2421,7 @@ lemma valid_arch_state_lift_arch:
   apply (rule hoare_lift_Pf[where f="arch_state", rotated], rule arch)
   apply (wpsimp wp: dom_asid_pools_of_lift)
     apply blast
-   apply (wpsimp wp: vcpus cur_vcpu_typ_lift vmid_inv_ap_lift)+
+   apply (wpsimp wp: vcpus cur_vcpu_typ_lift vmid_inv_ap_lift valid_global_arch_objs_lift)+
   done
 
 lemma aobjs_of_atyp_lift:
@@ -2422,7 +2438,7 @@ lemma aobjs_of_vcpu_lift:
    to a dependency on arch objects *)
 lemma valid_arch_state_lift:
   assumes aobjs[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
-  assumes [wp]: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
+  assumes [wp]: "\<And>P. f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>"
   shows "f \<lbrace>valid_arch_state\<rbrace>"
   by (rule valid_arch_state_lift_arch; fastforce intro: aobjs_of_atyp_lift assms)
 
@@ -2668,6 +2684,9 @@ lemma valid_arch_state_asid_table:
   "valid_arch_state s \<Longrightarrow> valid_asid_table s"
   by (simp add: valid_arch_state_def)
 
+lemma valid_arch_state_global_arch_objs[elim!]:
+  "valid_arch_state s \<Longrightarrow> valid_global_arch_objs s"
+  by (simp add: valid_arch_state_def)
 
 (* VCPU and related symrefs *)
 
@@ -2827,6 +2846,10 @@ lemma cur_vcpu_update [iff]:
 lemma vmid_inv_update [iff]:
   "vmid_inv (f s) = vmid_inv s"
   by (simp add: vmid_inv_def arch is_inv_def swp_def)
+
+lemma valid_global_arch_objs_update [iff]:
+  "valid_global_arch_objs (f s) = valid_global_arch_objs s"
+  by (simp add: valid_global_arch_objs_def arch)
 
 end
 

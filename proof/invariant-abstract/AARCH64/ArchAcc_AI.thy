@@ -711,6 +711,10 @@ lemma set_asid_pool_valid_objs [wp]:
   including unfold_objects
   by (clarsimp simp: a_type_def valid_obj_def)
 
+lemma invs_valid_global_arch_objs:
+  "invs s \<Longrightarrow> valid_global_arch_objs s"
+  by (clarsimp simp: invs_def valid_state_def valid_arch_state_def)
+
 lemma is_aligned_pt:
   "\<lbrakk> pt_at pt_t pt s; pspace_aligned s \<rbrakk> \<Longrightarrow> is_aligned pt (pt_bits pt_t)"
   apply (clarsimp simp: obj_at_def)
@@ -1316,15 +1320,12 @@ lemma kheap_pt_upd_simp[simp]:
   unfolding aobj_of_def opt_map_def
   by (auto split: kernel_object.split)
 
-(* FIXME AARCH64: we might need valid_global_arch_objs after all if we want arm_us_global_vspace to be aligned
 lemma arm_global_vspace_aligned[simp]:
   "\<lbrakk> pspace_aligned s ; valid_global_arch_objs s \<rbrakk>
-   \<Longrightarrow> is_aligned (global_pt s) pt_bits"
+   \<Longrightarrow> is_aligned (global_pt s) (pt_bits VSRootPT_T)"
   apply (clarsimp simp add: valid_global_arch_objs_def)
   apply (rule is_aligned_pt; assumption?)
-  apply (fastforce simp: riscv_global_pt_def)
   done
-*)
 
 lemma global_pt_in_global_refs[simp]:
   "global_pt s \<in> global_refs s"
@@ -2126,32 +2127,11 @@ crunches store_pte
   (wp: set_pt_zombies set_pt_ifunsafe set_pt_reply_caps set_pt_reply_masters
        set_pt_valid_global valid_irq_node_typ valid_irq_handlers_lift set_pt_cur)
 
-(* FIXME AARCH64: probably remove
-lemma store_pte_valid_global_tables:
-  "\<lbrace> valid_global_tables and valid_global_arch_objs and valid_global_vspace_mappings
-     and (\<lambda>s. table_base p \<notin> global_refs s) \<rbrace>
-   store_pte p pte
-   \<lbrace>\<lambda>_. valid_global_tables \<rbrace>"
-  unfolding store_pte_def set_pt_def
-  supply fun_upd_apply[simp del]
-  apply (wpsimp wp: set_object_wp)
-  apply (simp (no_asm) add: valid_global_tables_def Let_def)
-  apply (rule conjI)
-   apply clarsimp
-   apply (subst (asm) pt_walk_pt_upd_idem)
-     apply (fastforce simp: global_refs_def dest: valid_global_tablesD[simplified riscv_global_pt_def])
-    apply (fastforce dest: valid_global_vspace_mappings_aligned[simplified riscv_global_pt_def])
-   apply (fastforce simp: valid_global_tables_def Let_def)
-  apply (clarsimp simp: valid_global_tables_def Let_def fun_upd_apply split: if_splits)
-  apply (fastforce dest: riscv_global_pt_in_global_refs simp: riscv_global_pt_def global_refs_def)
-  done
-
 lemma store_pte_valid_global_arch_objs[wp]:
-  "store_pte p pte \<lbrace> valid_global_arch_objs \<rbrace>"
+  "store_pte pt_t p pte \<lbrace> valid_global_arch_objs \<rbrace>"
   unfolding store_pte_def set_pt_def
   by (wpsimp wp: set_object_wp)
      (clarsimp simp: valid_global_arch_objs_def obj_at_def)
-*)
 
 lemma store_pte_unique_table_refs[wp]:
   "store_pte pt_t p pte \<lbrace> unique_table_refs \<rbrace>"

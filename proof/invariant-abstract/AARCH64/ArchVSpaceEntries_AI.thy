@@ -11,27 +11,19 @@ begin
 
 context Arch begin global_naming AARCH64
 
-(* FIXME AARCH64 this is inpired by X64 because we need some kind of definition to continue, but
-   it doesn't have much of a feel of being generic
-   Also awkward names to not shadow existing pt_range constant.
-   Also, how is this called "range" on other arches, when it returns the subset of the *domain* with
-   non-invalid entries?! *)
-primrec pt_valid_idxs :: "pte \<Rightarrow> pt_index \<Rightarrow> pt_index set" where
+(* Since we're not doing anything with the index apart from returning it, this definition works
+   for both, NormalPTs and VSRootPTs *)
+primrec pt_valid_idxs :: "pte \<Rightarrow> 'a word \<Rightarrow> ('a word) set" where
   "pt_valid_idxs (InvalidPTE) p = {}"
 | "pt_valid_idxs (PagePTE ptr sm attr rights) p = {p}"
 | "pt_valid_idxs (PageTablePTE ptr) p = {p}"
-primrec vs_valid_idxs :: "pte \<Rightarrow> vs_index \<Rightarrow> vs_index set" where
-  "vs_valid_idxs (InvalidPTE) p = {}"
-| "vs_valid_idxs (PagePTE ptr sm attr rights) p = {p}"
-| "vs_valid_idxs (PageTablePTE ptr) p = {p}"
 
-abbreviation "valid_pt_entries \<equiv> \<lambda>pt. valid_entries pt_valid_idxs pt"
-abbreviation "valid_vs_entries \<equiv> \<lambda>pt. valid_entries vs_valid_idxs pt"
+abbreviation "valid_pt_entries \<equiv> valid_entries pt_valid_idxs"
 
 definition obj_valid_vspace :: "kernel_object \<Rightarrow> bool" where
  "obj_valid_vspace obj \<equiv> case obj of
-    ArchObj (PageTable (VSRootPT pt)) \<Rightarrow> valid_entries vs_valid_idxs pt
-  | ArchObj (PageTable (NormalPT pt)) \<Rightarrow> valid_entries pt_valid_idxs pt
+    ArchObj (PageTable (VSRootPT pt)) \<Rightarrow> valid_pt_entries pt
+  | ArchObj (PageTable (NormalPT pt)) \<Rightarrow> valid_pt_entries pt
   | _ \<Rightarrow> True"
 
 lemmas obj_valid_vspace_simps[simp]
@@ -55,45 +47,20 @@ lemma set_object_valid_vspace_objs'[wp]:
 crunch valid_vspace_objs'[wp]: cap_insert, cap_swap_for_delete,empty_slot "valid_vspace_objs'"
   (wp: crunch_wps simp: crunch_simps ignore:set_object)
 
-(* FIXME AARCH64
-lemma mapM_x_store_pte_updates:
-  "\<forall>x \<in> set xs. f x && ~~ mask (pt_bits pt_t) = p \<Longrightarrow>
-   \<lbrace>\<lambda>s. (\<not> pt_at pt_t p s \<longrightarrow> Q s) \<and>
-        (\<forall>pt. ko_at (ArchObj (PageTable pt)) p s
-           \<longrightarrow> Q (s \<lparr> kheap := (kheap s) (p := Some (ArchObj (PageTable (\<lambda>y. if y \<in> (\<lambda>x.
-         ucast (f x && mask (pt_bits pt_t) >> pte_bits)) ` set xs then pte else pt y)))) \<rparr>))\<rbrace>
-     mapM_x (\<lambda>x. store_pte (f x) pte) xs
-   \<lbrace>\<lambda>_. Q\<rbrace>"
-  apply (induct xs)
-   apply (simp add: mapM_x_Nil)
-   apply wp
-   apply (clarsimp simp: obj_at_def fun_upd_idem)
-  apply (simp add: mapM_x_Cons)
-  apply (rule hoare_seq_ext, assumption)
-  apply (thin_tac "valid P f Q" for P f Q)
-  apply (simp add: store_pte_def set_pt_def set_object_def word_size_bits_def)
-  apply (wp get_pt_wp get_object_wp)
-  apply (clarsimp simp: obj_at_def a_type_simps)
-  apply (erule rsubst[where P=Q])
-  apply (rule abstract_state.fold_congs[OF refl refl])
-  apply (rule ext, clarsimp)
-  apply (rule ext, clarsimp)
-  done
-*)
 lemma valid_pt_entries_invalid[simp]:
   "valid_pt_entries (\<lambda>x. InvalidPTE)"
    by (simp add:valid_entries_def)
 
 lemma valid_vspace_objs'_ptD:
   "\<lbrakk>valid_vspace_objs' s;
-    kheap s ptr = Some (ArchObj (arch_kernel_obj.PageTable (NormalPT pt)))\<rbrakk>
+    kheap s ptr = Some (ArchObj (PageTable (NormalPT pt)))\<rbrakk>
    \<Longrightarrow> valid_pt_entries pt"
   by (fastforce simp:ran_def)
 
 lemma valid_vspace_objs'_vsD:
   "\<lbrakk>valid_vspace_objs' s;
-    kheap s ptr = Some (ArchObj (arch_kernel_obj.PageTable (VSRootPT pt)))\<rbrakk>
-   \<Longrightarrow> valid_vs_entries pt"
+    kheap s ptr = Some (ArchObj (PageTable (VSRootPT pt)))\<rbrakk>
+   \<Longrightarrow> valid_pt_entries pt"
   by (fastforce simp:ran_def)
 
 lemma store_pte_valid_vspace_objs'[wp]:
@@ -145,22 +112,6 @@ lemmas rec_del_preservation_valid_vspace_objs = rec_del_preservation[OF _ _ _ _,
 (* FIXME AARCH64
 crunch valid_vspace_objs'[wp]: cap_delete, cap_revoke "valid_vspace_objs'"
   (rule: cap_revoke_preservation_valid_vspace_objs)
-
-lemma copy_global_mappings_valid_vspace_objs'[wp]:
-  "\<lbrace>valid_vspace_objs' and valid_arch_state and pspace_aligned
-            and K (is_aligned p pt_bits)\<rbrace>
-       copy_global_mappings p \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
-  unfolding copy_global_mappings_def
-  by (wpsimp wp: mapM_x_wp')
-
-lemma in_pte_rangeD:
-  "x \<in> pte_range v y \<Longrightarrow> x = y"
-  by (case_tac v,simp_all split:if_splits)
-
-lemma non_invalid_in_pte_range:
-  "pte \<noteq> InvalidPTE
-  \<Longrightarrow> x \<in> pte_range pte x"
-  by (case_tac pte,simp_all)
 *)
 
 crunch valid_vspace_objs'[wp]: cancel_badged_sends "valid_vspace_objs'"
@@ -205,8 +156,7 @@ lemma retype_region_valid_vspace_objs'[wp]:
   apply (clarsimp simp: retype_addrs_fold foldr_upd_app_if ranI
                  elim!: ranE split: if_split_asm simp del:fun_upd_apply)
   apply (simp add: default_object_def default_arch_object_def
-            split: Structures_A.kernel_object.splits
-    Structures_A.apiobject_type.split aobject_type.split)+
+            split: kernel_object.splits apiobject_type.split aobject_type.split)+
   sorry (* FIXME AARCH64
   done *)
 
@@ -241,8 +191,7 @@ lemma invoke_untyped_valid_vspace_objs'[wp]:
       apply (wp init_arch_objects_valid_vspace | simp)+
      apply (auto simp: post_retype_invs_def split: if_split_asm)[1]
     apply (wp | simp)+
-  sorry (* FIXME AARCH64
-  done *)
+  done
 
 crunches store_asid_pool_entry
   for valid_vspace_objs'[wp]: "valid_vspace_objs'"
@@ -261,23 +210,11 @@ lemma perform_asid_pool_invocation_valid_vspace_objs'[wp]:
   apply (erule (1) is_aligned_pt)
   done *)
 
-(* FIXME AARCH64
 crunch valid_vspace_objs'[wp]: perform_asid_pool_invocation,
      perform_asid_control_invocation "valid_vspace_objs'"
   (ignore: delete_objects set_object
        wp: static_imp_wp select_wp crunch_wps
      simp: crunch_simps unless_def)
-
-lemma pte_range_interD:
- "pte_range pte p \<inter> pte_range pte' p' \<noteq> {}
-  \<Longrightarrow> pte \<noteq> InvalidPTE \<and> pte' \<noteq> InvalidPTE
-      \<and> p = p'"
-  apply (drule int_not_emptyD)
-  apply (case_tac pte,simp_all split:if_splits)
-   apply (case_tac pte',simp_all split:if_splits)
-  apply (case_tac pte',simp_all split:if_splits)
-  done
-*)
 
 lemma perform_page_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs' and valid_page_inv pinv\<rbrace>

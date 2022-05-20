@@ -543,7 +543,7 @@ lemma arch_update_cap_invs_unmap_page_table:
              and real_cte_at p
              and invs and valid_cap cap
              and (\<lambda>s. cte_wp_at (\<lambda>c. is_final_cap' c s) p s)
-             and (\<lambda>s. pts_of s (obj_ref_of cap) = Some (empty_pt FIXME_level))
+             and (\<lambda>s. pts_of s (obj_ref_of cap) = Some (empty_pt (cap_pt_type cap)))
              and (\<lambda>s. cte_wp_at (\<lambda>c. \<forall>asid vref level. vs_cap_ref c = Some (asid, vref)
                                 \<longrightarrow> vs_lookup_target level asid vref s \<noteq> Some (level, obj_ref_of cap)) p s)
              and K (is_pt_cap cap \<and> vs_cap_ref cap = None)\<rbrace>
@@ -581,9 +581,8 @@ lemma arch_update_cap_invs_unmap_page_table:
                           cte_wp_at_caps_of_state)
     apply fastforce
    apply (clarsimp simp: obj_at_def empty_table_def in_omonad)
-  sorry (* FIXME AARCH64
   apply fastforce
-  done *)
+  done
 
 lemma global_refs_arch_update_eq:
   "arm_us_global_vspace (f (arch_state s)) = arm_us_global_vspace (arch_state s) \<Longrightarrow>
@@ -1061,6 +1060,7 @@ lemma perform_pt_inv_unmap_invs[wp]:
                     mapM_x_store_pte_unreachable hoare_vcg_ball_lift
                     unmap_page_table_not_target real_cte_at_typ_valid
                 simp: cte_wp_at_caps_of_state)
+  sorry (* FIXME AARCH64
   apply (clarsimp simp: valid_pti_def cte_wp_at_caps_of_state)
   apply (clarsimp simp: is_arch_update_def is_cap_simps is_PageTableCap_def
                         update_map_data_def valid_cap_def valid_arch_cap_def cap_aligned_def)
@@ -1072,7 +1072,6 @@ lemma perform_pt_inv_unmap_invs[wp]:
   apply (clarsimp simp: wellformed_mapdata_def valid_cap_def cap_aligned_def cap_master_cap_simps)
   apply (rule conjI)
    apply clarsimp
-  sorry (* FIXME AARCH64
    apply (prop_tac "is_aligned p pt_bits", simp add: bit_simps)
    apply (subst (asm) upto_enum_step_shift_red; simp?)
      apply (simp add: bit_simps)

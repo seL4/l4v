@@ -158,10 +158,10 @@ global_interpretation Tcb_AI_1?: Tcb_AI_1
   and is_cnode_or_valid_arch = is_cnode_or_valid_arch
   proof goal_cases
     interpret Arch .
-    case 1 show ?case sorry (* FIXME AARCH64 by (unfold_locales; (fact Tcb_AI_asms)?) *)
+    case 1 show ?case by (unfold_locales; (fact Tcb_AI_asms)?)
   qed
 
-context Arch begin global_naming RISVB64
+context Arch begin global_naming AARCH64
 
 lemma use_no_cap_to_obj_asid_strg: (* arch specific *)
   "(cte_at p s \<and> no_cap_to_obj_dr_emp cap s \<and> valid_cap cap s \<and> invs s)

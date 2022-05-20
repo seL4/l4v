@@ -209,11 +209,10 @@ proof -
     done
 qed
 
-(* FIXME AARCH64
 crunch typ_at [wp]:
   perform_page_table_invocation, perform_page_invocation, perform_asid_pool_invocation
   "\<lambda>s. P (typ_at T p s)"
-  (wp: crunch_wps)
+  (wp: crunch_wps simp: crunch_simps ignore: store_pte)
 
 lemmas perform_page_table_invocation_typ_ats [wp] =
   abs_typ_at_lifts [OF perform_page_table_invocation_typ_at]
@@ -223,7 +222,7 @@ lemmas perform_page_invocation_typ_ats [wp] =
 
 lemmas perform_asid_pool_invocation_typ_ats [wp] =
   abs_typ_at_lifts [OF perform_asid_pool_invocation_typ_at]
- *)
+
 lemma perform_asid_control_invocation_tcb_at:
   "\<lbrace>invs and valid_aci aci and st_tcb_at active p and
     K (\<forall>w a b c. aci = asid_control_invocation.MakePool w a b c \<longrightarrow> w \<noteq> p)\<rbrace>
@@ -960,14 +959,12 @@ lemma sts_vspace_at_asid[wp]:
   sorry (* FIXME AARCH64
   unfolding vspace_at_asid_def by wpsimp *)
 
-(* FIXME AARCH64
 lemma sts_valid_slots_inv[wp]:
   "set_thread_state t st \<lbrace>valid_slots m\<rbrace>"
   unfolding valid_slots_def
   apply (cases m)
   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' sts_typ_ats)
-  apply fastforce
-  done *)
+  done
 
 lemma sts_same_ref[wp]:
   "set_thread_state t st \<lbrace>\<lambda>s. P (same_ref ref cap s)\<rbrace>"
@@ -978,7 +975,7 @@ lemma sts_valid_page_inv[wp]:
   unfolding valid_page_inv_def
   apply (cases page_invocation)
     apply (wpsimp wp: sts_typ_ats hoare_vcg_ex_lift hoare_vcg_disj_lift | wps)+
-  sorry (* FIXME AARCH64 something wrong, getting undefined in pre/post
+  sorry (* FIXME AARCH64 something wrong, getting undefined in pre/post; valid_page_inv is missing PageFlush
   done *)
 
 crunch global_refs_inv[wp]: set_thread_state "\<lambda>s. P (global_refs s)"
@@ -990,9 +987,8 @@ lemma sts_vs_lookup_slot[wp]:
 lemma sts_valid_vspace_table_inv[wp]:
   "set_thread_state t st \<lbrace>valid_pti i\<rbrace>"
   unfolding valid_pti_def
-  sorry (* FIXME AARCH64
   by (cases i; wpsimp wp: sts_typ_ats hoare_vcg_ex_lift hoare_vcg_all_lift
-                      simp: invalid_pte_at_def aobjs_of_ako_at_Some[symmetric]) *)
+                      simp: invalid_pte_at_def aobjs_of_ako_at_Some[symmetric])
 
 lemma sts_valid_arch_inv:
   "set_thread_state t st \<lbrace>valid_arch_inv ai\<rbrace>"
@@ -1000,7 +996,7 @@ lemma sts_valid_arch_inv:
    apply (rename_tac asid_control_invocation)
    apply (case_tac asid_control_invocation)
    apply (clarsimp simp: valid_aci_def cte_wp_at_caps_of_state)
-  sorry (* FIXME AARCH64
+  sorry (* FIXME AARCH64 VCPU: valid_arch_inv is missing cases (VCPU and InvokeVSpace)
    apply (rule hoare_pre, wp hoare_vcg_ex_lift cap_table_at_typ_at)
    apply clarsimp
   apply (clarsimp simp: valid_apinv_def split: asid_pool_invocation.splits)
@@ -1041,16 +1037,9 @@ lemma shiftr_irrelevant:
 
 declare mask_shift [simp]
 declare word_less_sub_le [simp del]
-declare ptrFormPAddr_addFromPPtr [simp]
 
-
-lemma le_user_vtop_less_pptr_base[simp]:
-  "x \<le> user_vtop \<Longrightarrow> x < pptr_base"
-  using dual_order.strict_trans2 sorry (* FIXME AARCH64 by blast *)
 
 (* FIXME AARCH64
-lemmas le_user_vtop_canonical_address = below_user_vtop_canonical[simp]
-
 lemma ptrFromPAddr_addr_from_ppn:
   "is_aligned pt_ptr table_size \<Longrightarrow>
    ptrFromPAddr (addr_from_ppn (ucast (addrFromPPtr pt_ptr >> pageBits))) = pt_ptr"
@@ -1066,8 +1055,8 @@ lemma ptrFromPAddr_addr_from_ppn':
 *)
 
 lemma is_aligned_pageBitsForSize_table_size:
-  "is_aligned p (pageBitsForSize vmpage_size) \<Longrightarrow> is_aligned p (table_size pt_t)"
-  sorry (* FIXME AARCH64 ^ no obvious mapping from pt_type to vmpage_size
+  "is_aligned p (pageBitsForSize vmpage_size) \<Longrightarrow> is_aligned p (table_size NormalPT_T)"
+  sorry (* FIXME AARCH64 ^ no obvious mapping from pt_type to vmpage_size (only true for NormalPT_T)
   apply (erule is_aligned_weaken)
   apply (simp add: pbfs_atleast_pageBits[unfolded bit_simps] bit_simps)
   done *)
@@ -1080,8 +1069,7 @@ lemma vmsz_aligned_vref_for_level:
 lemma vs_lookup_slot_pte_at:
   "\<lbrakk> vs_lookup_slot level asid vref s = Some (level, pt_slot);
      vref \<in> user_region; level \<le> max_pt_level; invs s \<rbrakk> \<Longrightarrow>
-   pte_at pt_t pt_slot s"
-  sorry (* FIXME AARCH64 check statement
+   pte_at level pt_slot s"
   apply (clarsimp simp: pte_at_eq vs_lookup_slot_table_unfold in_omonad)
   apply (drule valid_vspace_objs_strongD[rotated]; clarsimp)
   apply (clarsimp simp: ptes_of_def in_omonad)
@@ -1090,13 +1078,13 @@ lemma vs_lookup_slot_pte_at:
   apply (thin_tac "pt_slot = t" for t)
   apply (clarsimp simp: pt_slot_offset_def)
   apply (rule is_aligned_add; simp add: is_aligned_shift)
-  done *)
+  done
 
-(* FIXME AARCH64
 lemma vmpage_size_of_level_pt_bits_left:
   "\<lbrakk> pt_bits_left level = pageBitsForSize vmpage_size; level \<le> max_pt_level \<rbrakk> \<Longrightarrow>
-   vmpage_size_of_level level = vmpage_size"
-  by (cases vmpage_size; simp add: vmpage_size_of_level_def pt_bits_left_def bit_simps) auto *)
+   vmsize_of_level level = vmpage_size"
+  by (cases vmpage_size; simp add: vmsize_of_level_def pt_bits_left_def bit_simps
+                              split: if_split_asm) auto
 
 lemma is_PagePTE_make_user[simp]:
   "is_PagePTE (make_user_pte p attr R sz) \<or> make_user_pte p attr R sz = InvalidPTE"

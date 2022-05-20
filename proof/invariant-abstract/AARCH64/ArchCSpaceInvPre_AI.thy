@@ -301,7 +301,7 @@ lemma set_cap_valid_arch_caps:
                  \<or> (\<forall>oref \<in> obj_refs cap'. \<not> reachable_target vref oref s))
       \<and> no_cap_to_obj_with_diff_ref cap {ptr} s
       \<and> (is_pt_cap cap \<longrightarrow> cap_asid cap = None
-            \<longrightarrow> (\<forall>r \<in> obj_refs cap. pts_of s r = Some (empty_pt FIXME)))
+            \<longrightarrow> (\<forall>r \<in> obj_refs cap. pts_of s r = Some (empty_pt (cap_pt_type cap))))
       \<and> (is_pt_cap cap
              \<longrightarrow> (\<forall>oldcap. caps_of_state s ptr = Some oldcap \<longrightarrow>
                   is_pt_cap oldcap
@@ -313,9 +313,8 @@ lemma set_cap_valid_arch_caps:
      set_cap cap ptr
    \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
   unfolding valid_arch_caps_def
-  sorry (*
   by (wpsimp wp: set_cap_valid_vs_lookup set_cap_valid_table_caps set_cap_unique_table_caps
-           simp: cte_wp_at_caps_of_state) *)
+           simp: cte_wp_at_caps_of_state)
 
 lemma valid_table_capsD:
   "\<lbrakk> cte_wp_at ((=) cap) ptr s; valid_table_caps s; is_pt_cap cap; cap_asid cap = None \<rbrakk>
