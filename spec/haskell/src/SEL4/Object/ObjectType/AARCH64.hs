@@ -128,7 +128,7 @@ sameRegionAs (a@FrameCap {}) (b@FrameCap {}) =
         topA = botA + mask (pageBitsForSize $ capFSize a)
         topB = botB + mask (pageBitsForSize $ capFSize b)
 sameRegionAs (a@PageTableCap {}) (b@PageTableCap {}) =
-    capPTBasePtr a == capPTBasePtr b
+    capPTBasePtr a == capPTBasePtr b && capPTType a == capPTType b
 sameRegionAs ASIDControlCap ASIDControlCap = True
 sameRegionAs (a@ASIDPoolCap {}) (b@ASIDPoolCap {}) =
     capASIDPool a == capASIDPool b
