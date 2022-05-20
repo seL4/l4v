@@ -72,7 +72,7 @@ lemma arch_decode_ARMASIDControlMakePool_empty_fail:
                           split: if_split_asm)
     apply wpsimp
    apply (wpsimp simp: decode_frame_invocation_def)
-  sorry (* FIXME AARCH64
+  sorry (* FIXME AARCH64 VCPU and PageFlush invocations
   apply (wpsimp simp: decode_page_table_invocation_def)
   done *)
 

@@ -73,20 +73,18 @@ lemma valid_vspace_objs_pte:
   apply simp
   done
 
-(* FIXME AARCH64
 lemma get_pte_valid[wp]:
-  "\<lbrace>valid_vspace_objs and \<exists>\<rhd> (level, table_base p) and
-    K (level = max_pt_level \<longrightarrow> table_index p \<notin> kernel_mapping_slots)\<rbrace>
-   get_pte p
+  "\<lbrace>valid_vspace_objs and \<exists>\<rhd> (level, table_base pt_t p) and
+    K (level = max_pt_level \<longrightarrow> ucast (table_index pt_t p) \<notin> invalid_mapping_slots)\<rbrace>
+   get_pte pt_t p
    \<lbrace>valid_pte level\<rbrace>"
-  by wpsimp (fastforce dest: valid_vspace_objs_pte) *)
+  by wpsimp (fastforce dest: valid_vspace_objs_pte)
 
 lemma get_pte_wellformed[wp]:
   "\<lbrace>valid_objs\<rbrace> get_pte pt_t p \<lbrace>\<lambda>rv _. wellformed_pte rv\<rbrace>"
-  sorry (* FIXME AARCH64
   apply wpsimp
   apply (fastforce simp: valid_objs_def dom_def valid_obj_def ptes_of_def in_opt_map_eq)
-  done *)
+  done
 
 crunch valid_objs[wp]: init_arch_objects "valid_objs"
   (ignore: clearMemory wp: crunch_wps)
@@ -105,56 +103,6 @@ crunch pspace_respects_device_region[wp]: reserve_region pspace_respects_device_
 crunch cap_refs_respects_device_region[wp]: reserve_region cap_refs_respects_device_region
 
 crunch invs [wp]: reserve_region "invs"
-
-(* FIXME AARCH64 no copy_global_mappings
-crunch iflive[wp]: copy_global_mappings "if_live_then_nonz_cap"
-  (wp: crunch_wps)
-
-crunch zombies[wp]: copy_global_mappings "zombies_final"
-  (wp: crunch_wps)
-
-crunch state_refs_of[wp]: copy_global_mappings "\<lambda>s. P (state_refs_of s)"
-  (wp: crunch_wps)
-
-crunch valid_idle[wp]: copy_global_mappings "valid_idle"
-  (wp: crunch_wps)
-
-crunch only_idle[wp]: copy_global_mappings "only_idle"
-  (wp: crunch_wps)
-
-crunch ifunsafe[wp]: copy_global_mappings "if_unsafe_then_cap"
-  (wp: crunch_wps)
-
-crunch reply_caps[wp]: copy_global_mappings "valid_reply_caps"
-  (wp: crunch_wps)
-
-crunch reply_masters[wp]: copy_global_mappings "valid_reply_masters"
-  (wp: crunch_wps)
-
-crunch valid_global[wp]: copy_global_mappings "valid_global_refs"
-  (wp: crunch_wps)
-
-crunch irq_node[wp]: copy_global_mappings "\<lambda>s. P (interrupt_irq_node s)"
-  (wp: crunch_wps)
-
-crunch irq_states[wp]: copy_global_mappings "\<lambda>s. P (interrupt_states s)"
-  (wp: crunch_wps)
-
-crunch caps_of_state[wp]: copy_global_mappings "\<lambda>s. P (caps_of_state s)"
-  (wp: crunch_wps)
-
-crunch pspace_in_kernel_window[wp]: copy_global_mappings "pspace_in_kernel_window"
-  (wp: crunch_wps)
-
-crunch cap_refs_in_kernel_window[wp]: copy_global_mappings "cap_refs_in_kernel_window"
-  (wp: crunch_wps)
-
-crunch pspace_respects_device_region[wp]: copy_global_mappings "pspace_respects_device_region"
-  (wp: crunch_wps)
-
-crunch cap_refs_respects_device_region[wp]: copy_global_mappings "cap_refs_respects_device_region"
-  (wp: crunch_wps)
-*)
 
 lemma dmo_eq_kernel_restricted [wp, Retype_AI_assms]:
   "\<lbrace>\<lambda>s. equal_kernel_mappings (kheap_update (f (kheap s)) s)\<rbrace>
@@ -369,7 +317,7 @@ lemma pts_of:
 
 lemma pts_of':
   "pts_of s' p = Some pt \<Longrightarrow>
-   pts_of s p = Some pt \<or> pt = (empty_pt pt_t) \<and> p \<in> set (retype_addrs ptr ty n us)"
+   pts_of s p = Some pt \<or> pt = (empty_pt (pt_type pt_t)) \<and> p \<in> set (retype_addrs ptr ty n us)"
   sorry (* FIXME AARCH64
   apply (clarsimp simp: in_opt_map_eq s'_def ps_def split: if_split_asm)
   apply (simp add: default_object_def default_arch_object_def tyunt
@@ -380,10 +328,9 @@ lemma valid_asid_table:
   "valid_asid_table s \<Longrightarrow> valid_asid_table s'"
   unfolding valid_asid_table_def by (auto simp: asid_pools)
 
-(* FIXME AARCH64
 lemma valid_global_arch_objs:
   "valid_global_arch_objs s \<Longrightarrow> valid_global_arch_objs s'"
-  by (fastforce simp: valid_global_arch_objs_def pt_at_eq pts_of) *)
+  by (fastforce simp: valid_global_arch_objs_def pt_at_eq pts_of)
 
 lemma ptes_of:
   "ptes_of s pt_t p = Some pte \<Longrightarrow> ptes_of s' pt_t p = Some pte"
@@ -391,7 +338,7 @@ lemma ptes_of:
   by (simp add: pte_of_def obind_def pts_of split: option.splits) *)
 
 lemma default_empty:
-  "default_object ty dev us = ArchObj (PageTable pt) \<Longrightarrow> pt = (empty_pt pt_t)"
+  "default_object ty dev us = ArchObj (PageTable pt) \<Longrightarrow> pt = (empty_pt (pt_type pt))"
   sorry (* FIXME AARCH64 ^exists pt_t?
   by (simp add: default_object_def default_arch_object_def tyunt
            split: apiobject_type.splits aobject_type.splits) *)
@@ -448,32 +395,25 @@ lemma global_no_retype:
   using dev retype_addrs_subset_ptr_bits[OF cover]
   by (fastforce simp: valid_global_refs_def valid_refs_def cte_wp_at_caps_of_state)
 
-(* FIXME AARCH64
 lemma global_pts_no_retype:
-  "\<lbrakk> pt_ptr \<in> riscv_global_pts (arch_state s) level; valid_global_refs s \<rbrakk> \<Longrightarrow>
-   pt_ptr \<notin> set (retype_addrs ptr ty n us)"
-  by (drule riscv_global_pts_global_ref, erule global_no_retype)
+  "valid_global_refs s \<Longrightarrow> global_pt s \<notin> set (retype_addrs ptr ty n us)"
+  sorry (* FIXME AARCH64
+  by (drule riscv_global_pts_global_ref, erule global_no_retype) *)
 
-lemma valid_global_tables:
-  "valid_global_tables s \<Longrightarrow> valid_global_tables s'"
-  apply (clarsimp simp: valid_global_tables_def Let_def)
-  apply (fold riscv_global_pt_def)
-  apply (intro conjI; clarsimp)
-     apply (drule pt_walk_level)
-     apply fastforce
-    apply (drule pts_of', fastforce)
-   apply (drule pts_of', fastforce)
-  apply (drule pts_of', fastforce simp: vm_kernel_only_def pte_rights_of_def)
-  done
-*)
+lemma vcpu_hyp_live_of':
+  "vcpu_hyp_live_of s' = vcpu_hyp_live_of s"
+  sorry (* FIXME AARCH64 VCPU *)
+
+lemma vmid_inv':
+  "vmid_inv s \<Longrightarrow> vmid_inv s'"
+  sorry (* FIXME AARCH64 *)
 
 lemma valid_arch_state:
   "valid_arch_state s \<Longrightarrow> valid_arch_state s'"
-  sorry (* FIXME AARCH64
-  apply (simp add: valid_arch_state_def valid_asid_table valid_global_arch_objs valid_global_tables
+  apply (simp add: valid_arch_state_def valid_asid_table vcpu_hyp_live_of' vmid_inv'
               del: arch_state)
   apply simp
-  done *)
+  sorry (* FIXME AARCH64 *)
 
 lemma vspace_for_pool1:
   "(vspace_for_pool asid p (asid_pools_of s) = Some pt) \<Longrightarrow>
@@ -515,12 +455,12 @@ lemma vs_lookup_target':
   done
 
 lemma wellformed_default_obj[Retype_AI_assms]:
-   "\<lbrakk> ptra \<notin> set (retype_addrs ptr ty n us);
-        kheap s ptra = Some (ArchObj ao); arch_valid_obj ao s\<rbrakk> \<Longrightarrow>
-          arch_valid_obj ao s'"
-  sorry (* FIXME AARCH64
-  apply (clarsimp elim!:obj_at_pres
-                  split: arch_kernel_obj.splits option.splits)
+   "\<lbrakk> ptr' \<notin> set (retype_addrs ptr ty n us);
+      kheap s ptr' = Some (ArchObj ao); arch_valid_obj ao s\<rbrakk> \<Longrightarrow>
+    arch_valid_obj ao s'"
+  sorry (* FIXME AARCH64 VCPU: valid_vcpu s'
+  apply (cases ao; clarsimp elim!: obj_at_pres
+                   split: arch_kernel_obj.splits option.splits)+
   done *)
 
 end
@@ -531,7 +471,7 @@ context retype_region_proofs_arch begin
 lemma hyp_refs_eq:
   "state_hyp_refs_of s' = state_hyp_refs_of s"
   unfolding s'_def ps_def
-  sorry (* FIXME AARCH64
+  sorry (* FIXME AARCH64 VCPU
   by (rule ext) (clarsimp simp: state_hyp_refs_of_def split: option.splits) *)
 
 
@@ -542,47 +482,9 @@ lemma obj_at_valid_pte:
   apply (clarsimp | elim disjE)+
   done
 
-(* FIXME AARCH64
-lemma pt_lookup_slot_from_level:
-  "\<lbrakk> vref \<in> kernel_mappings; valid_global_tables s; valid_global_arch_objs s; pspace_aligned s;
-     valid_global_refs s \<rbrakk> \<Longrightarrow>
-   (pt_lookup_slot_from_level max_pt_level 0 (riscv_global_pt (arch_state s)) vref (ptes_of s')
-    = Some (level, p)) =
-   (pt_lookup_slot_from_level max_pt_level 0 (riscv_global_pt (arch_state s)) vref (ptes_of s)
-    = Some (level, p))"
-  apply (simp add: pt_lookup_slot_from_level_def in_omonad)
-  apply (subst pt_walk_eqI; simp)
-  apply clarsimp
-  apply (drule (1) valid_global_tablesD, simp)
-  apply (frule (1) global_pts_no_retype)
-  apply (simp add: opt_map_def s'_def ps_def split: option.splits)
-  done
-
-lemma translate_address:
-  "\<lbrakk> vref \<in> kernel_mappings; valid_global_tables s; valid_global_arch_objs s; pspace_aligned s;
-     valid_global_refs s \<rbrakk> \<Longrightarrow>
-   (translate_address (riscv_global_pt (arch_state s)) vref (ptes_of s') = Some p) =
-   (translate_address (riscv_global_pt (arch_state s)) vref (ptes_of s) = Some p)"
-  apply (simp add: translate_address_def in_omonad)
-  apply (simp add: pt_lookup_target_def in_omonad)
-  apply (auto simp: pt_lookup_slot_from_level dest: ptes_of' ptes_of)
-  done
-
 lemma valid_global_vspace_mappings:
-  "\<lbrakk> valid_global_vspace_mappings s; valid_global_tables s; valid_global_arch_objs s;
-     pspace_aligned s; valid_global_refs s; valid_uses s \<rbrakk>
-   \<Longrightarrow> valid_global_vspace_mappings s'"
-  unfolding valid_global_vspace_mappings_def Let_def
-  apply simp
-  apply (rule conjI; clarsimp)
-   apply (subst translate_address; assumption?)
-    apply (fastforce simp: kernel_regions_def translate_address intro!: kernel_regions_in_mappings)
-   apply simp
-  apply (subst translate_address; assumption?)
-   apply (fastforce simp: kernel_regions_def intro!: kernel_regions_in_mappings)
-  apply simp
-  done
-*)
+  "valid_global_vspace_mappings s'"
+  unfolding valid_global_vspace_mappings_def by simp
 
 end
 
@@ -624,11 +526,10 @@ qed
 
 
 sublocale retype_region_proofs_gen?: retype_region_proofs_gen
-  sorry (* FIXME AARCH64
   by (unfold_locales,
         auto simp: hyp_refs_eq[simplified s'_def ps_def]
                   wellformed_default_obj[simplified s'_def ps_def]
-                  valid_default_arch_tcb) *)
+                  valid_default_arch_tcb)
 
 end
 
@@ -791,32 +692,9 @@ lemma vspace_for_asid:
   sorry (* FIXME AARCH64
   by (clarsimp simp: vspace_for_asid_def in_omonad pool_for_asid_def) *)
 
-(* FIXME AARCH64
-lemma has_kernel_mappings:
-  "\<lbrakk> has_kernel_mappings pt s; valid_global_arch_objs s; valid_global_refs s \<rbrakk> \<Longrightarrow> has_kernel_mappings pt s'"
-  unfolding has_kernel_mappings_def
-  apply clarsimp
-  apply (drule pts_of')
-  apply (erule disjE; clarsimp)
-  apply (drule riscv_global_pt_in_global_refs)
-  apply (drule (1) global_no_retype)
-  apply simp
-  done
-
 lemma equal_kernel_mappings:
-  "\<lbrakk> equal_kernel_mappings s; valid_vspace_objs s; valid_asid_table s; valid_global_arch_objs s;
-     valid_global_refs s \<rbrakk> \<Longrightarrow> equal_kernel_mappings s'"
-  apply (simp add: equal_kernel_mappings_def)
-  apply clarsimp
-  apply (drule vspace_for_asid)
-  apply (rule has_kernel_mappings; assumption?)
-  apply (frule (2) vspace_for_asid_valid_pt)
-  apply clarsimp
-  apply (elim allE, erule (1) impE)+
-  apply (drule pts_of)
-  apply simp
-  done
-*)
+  "equal_kernel_mappings s'"
+  by (simp add: equal_kernel_mappings_def)
 
 lemma pspace_in_kernel_window:
   "\<lbrakk> pspace_in_kernel_window (s :: 'state_ext state);
@@ -907,7 +785,6 @@ interpretation retype_region_proofs_arch ..
 lemma post_retype_invs:
   "\<lbrakk> invs s; region_in_kernel_window {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} s \<rbrakk>
         \<Longrightarrow> post_retype_invs ty (retype_addrs ptr ty n us) s'"
-  sorry (* FIXME AARCH64
   using equal_kernel_mappings valid_global_vspace_mappings
   apply (clarsimp simp: invs_def post_retype_invs_def valid_state_def
                      unsafe_rep2 null_filter valid_idle
@@ -925,8 +802,7 @@ lemma post_retype_invs:
                      cap_refs_respects_device_region
                      cap_refs_in_kernel_window valid_irq_states
                split: if_split_asm)
-  apply (simp add: valid_arch_state_def valid_pspace_def)
-  done *)
+  done
 
 (* ML \<open>val pre_ctxt_1 = @{context}\<close> *)
 

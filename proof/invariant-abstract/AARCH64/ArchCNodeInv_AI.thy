@@ -98,8 +98,7 @@ lemma same_object_as_def2:
   apply (simp add: same_object_as_def is_cap_simps split: cap.split)
   apply (auto simp: cap_master_cap_def bits_of_def is_cap_simps
              split: arch_cap.splits)
-  sorry (* FIXME AARCH64
-  done *)
+  done
 
 lemma same_object_as_cap_master [CNodeInv_AI_assms]:
   "same_object_as cap cap' \<Longrightarrow> cap_master_cap cap = cap_master_cap cap'"

@@ -416,8 +416,6 @@ crunch vspace_objs               [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid
 crunch global_objs               [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_global_objs"
 crunch global_vspace_mapping     [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_global_vspace_mappings"
 crunch arch_caps                 [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_arch_caps"
-(* FIXME AARCH64: addressTranslateS1
-crunch v_ker_map                 [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_kernel_mappings" *)
 crunch eq_ker_map                [wp, Ipc_AI_assms]:  make_arch_fault_msg "equal_kernel_mappings"
 crunch asid_map                  [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_asid_map"
 crunch only_idle                 [wp, Ipc_AI_assms]:  make_arch_fault_msg "only_idle"
@@ -427,6 +425,9 @@ crunch valid_objs                [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid
 crunch valid_ioc                 [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_ioc"
 crunch pred_tcb                  [wp, Ipc_AI_assms]:  make_arch_fault_msg "pred_tcb_at proj P t"
 crunch cap_to                    [wp, Ipc_AI_assms]:  make_arch_fault_msg "ex_nonz_cap_to p"
+
+crunch v_ker_map                 [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid_kernel_mappings"
+ (simp: valid_kernel_mappings_def)
 
 crunch obj_at[wp, Ipc_AI_assms]:  make_arch_fault_msg "\<lambda>s. P (obj_at P' pd s)"
   (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def)
@@ -457,7 +458,7 @@ end
 interpretation Ipc_AI?: Ipc_AI
 proof goal_cases
   interpret Arch .
-  case 1 show ?case sorry (* FIXME AARCH64 by (unfold_locales; (fact Ipc_AI_assms)?) *)
+  case 1 show ?case by (unfold_locales; (fact Ipc_AI_assms)?)
 qed
 
 context Arch begin global_naming AARCH64

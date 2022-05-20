@@ -269,7 +269,7 @@ end
 interpretation Interrupt_AI?: Interrupt_AI
   proof goal_cases
   interpret Arch .
-  case 1 show ?case sorry (* FIXME AARCH64 by (intro_locales; (unfold_locales, simp_all add: Interrupt_AI_asms)?) *)
+  case 1 show ?case by (intro_locales; (unfold_locales, simp_all add: Interrupt_AI_asms)?)
   qed
 
 end

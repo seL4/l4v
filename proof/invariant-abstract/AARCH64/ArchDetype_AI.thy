@@ -141,7 +141,7 @@ lemma hyp_refs_of: "\<And>obj p. \<lbrakk> ko_at obj p s \<rbrakk> \<Longrightar
 lemma arch_valid_obj[detype_invs_proofs]:
     "\<And>p ao. \<lbrakk>ko_at (ArchObj ao) p s; arch_valid_obj ao s\<rbrakk>
        \<Longrightarrow> arch_valid_obj ao (detype (untyped_range cap) s)"
-  sorry (* FIXME AARCH64
+  sorry (* FIXME AARCH64 VCPU
   by simp *)
 
 lemma sym_hyp_refs_detype[detype_invs_proofs]:
@@ -181,7 +181,7 @@ lemma tcb_arch_detype[detype_invs_proofs]:
   "\<lbrakk>ko_at (TCB t) p s; valid_arch_tcb (tcb_arch t) s\<rbrakk>
       \<Longrightarrow> valid_arch_tcb (tcb_arch t) (detype (untyped_range cap) s)"
   apply (clarsimp simp: valid_arch_tcb_def)
-  sorry (* FIXME AARCH64
+  sorry (* FIXME AARCH64 VCPU
   done *)
 
 declare arch_state_det[simp]
@@ -255,10 +255,9 @@ lemma vs_lookup_slot:
 lemma vs_lookup_target:
   "(vs_lookup_target level asid vref (detype S s) = Some (level, p)) \<Longrightarrow>
    (vs_lookup_target level asid vref s = Some (level, p))"
-  sorry (* FIXME AARCH64
   by (fastforce simp: vs_lookup_target_def in_omonad asid_pools_of_detype
                 split: if_split_asm
-                dest!: vs_lookup_slot) *)
+                dest!: vs_lookup_slot)
 
 lemma vs_lookup_target_preserved:
   "\<lbrakk> x \<in> untyped_range cap; vs_lookup_target level asid vref s = Some (level', x);
@@ -283,26 +282,26 @@ lemma valid_asid_table:
   apply (drule no_obj_refs; simp)
   done
 
-(* FIXME AARCH64
+lemma vmid_inv_detype:
+  "vmid_inv (detype (untyped_range cap) s)"
+  sorry (* FIXME AARCH64 *)
+
+lemma cur_vcpu_detype:
+  "cur_vcpu (detype (untyped_range cap) s)"
+  sorry  (* FIXME AARCH64 VCPU *)
+
 lemma valid_global_arch_objs:
   "valid_global_arch_objs (detype (untyped_range cap) s)"
-  using valid_arch_state
-  by (fastforce dest!: riscv_global_pts_global_ref valid_global_refsD[OF globals cap]
+  using valid_arch_state global_pt_in_global_refs
+  by (fastforce dest!: valid_global_refsD[OF globals cap]
                 simp: cap_range_def valid_global_arch_objs_def valid_arch_state_def)
-
-lemma valid_global_tables:
-  "valid_global_tables (detype (untyped_range cap) s)"
-  using valid_arch_state
-  by (fastforce dest: pt_walk_level pt_walk_detype
-                simp: valid_global_tables_def valid_arch_state_def Let_def)
-*)
 
 lemma valid_arch_state_detype[detype_invs_proofs]:
   "valid_arch_state (detype (untyped_range cap) s)"
   using valid_vs_lookup valid_arch_state ut_mdb valid_global_refsD [OF globals cap] cap
+        cur_vcpu_detype vmid_inv_detype valid_global_arch_objs
   unfolding valid_arch_state_def pred_conj_def
-  sorry (* FIXME AARCH64
-  by (simp only: valid_asid_table valid_global_arch_objs valid_global_tables) simp *)
+  by (simp only: valid_asid_table) simp
 
 lemma vs_lookup_asid_pool_level:
   assumes lookup: "vs_lookup_table level asid vref s = Some (level, p)" "vref \<in> user_region"
@@ -455,50 +454,13 @@ qed
 lemma valid_asid_map_detype[detype_invs_proofs]: "valid_asid_map (detype (untyped_range cap) s)"
   by (simp add: valid_asid_map_def)
 
-(* FIXME AARCH64
-lemma has_kernel_mappings:
-  "valid_global_arch_objs s \<Longrightarrow>
-   has_kernel_mappings pt (detype (untyped_range cap) s) = has_kernel_mappings pt s"
-  by (auto dest!: riscv_global_pt_in_global_refs valid_global_refsD [OF globals cap]
-           simp: cap_range_def has_kernel_mappings_def )
-
 lemma equal_kernel_mappings_detype[detype_invs_proofs]:
   "equal_kernel_mappings (detype (untyped_range cap) s)"
-proof -
-  have "equal_kernel_mappings s"
-    using invs by (simp add: invs_def valid_state_def)
-  moreover
-  have "valid_global_arch_objs s"
-    using invs by (simp add: invs_def valid_state_def valid_arch_state_def)
-  ultimately
-  show ?thesis
-    by (clarsimp simp: equal_kernel_mappings_def has_kernel_mappings)
-qed
+  by (simp add: equal_kernel_mappings_def)
 
 lemma valid_global_mappings_detype[detype_invs_proofs]:
   "valid_global_vspace_mappings (detype (untyped_range cap) s)"
-proof -
-  have "valid_global_vspace_mappings s"
-       "valid_global_tables s"
-       "valid_global_arch_objs s"
-       "pspace_aligned s"
-       "valid_uses s"
-    using invs by (auto simp: invs_def valid_state_def valid_arch_state_def)
-  then show ?thesis
-    unfolding valid_global_vspace_mappings_def
-    apply (clarsimp simp: Let_def)
-    apply (safe; drule (1) bspec; thin_tac "Ball _ _")
-     apply (all \<open>drule kernel_regionsI, erule option_Some_value_independent\<close>)
-     apply (distinct_subgoals)
-    apply (subst pt_lookup_target_translate_address_upd_eq; assumption?)
-    apply (rule pt_lookup_target_pt_eqI; clarsimp)
-    apply (drule (1) valid_global_tablesD, simp add: kernel_regions_in_mappings)
-    apply (drule riscv_global_pts_global_ref)
-    apply (drule valid_global_refsD[OF globals cap])
-    apply (clarsimp simp: cap_range_def opt_map_def detype_def split: option.splits)
-    done
-qed
-*)
+  by (simp add: valid_global_vspace_mappings_def)
 
 lemma pspace_in_kernel_window_detype[detype_invs_proofs]:
   "pspace_in_kernel_window (detype (untyped_range cap) s)"
@@ -607,8 +569,7 @@ sublocale detype_locale < detype_locale_gen_2
  proof goal_cases
   interpret detype_locale_arch ..
   case 1 show ?case
-  sorry (* FIXME AARCH64
-  by (intro_locales; (unfold_locales; fact detype_invs_proofs)?) *)
+  by (intro_locales; (unfold_locales; fact detype_invs_proofs)?)
   qed
 
 context detype_locale begin

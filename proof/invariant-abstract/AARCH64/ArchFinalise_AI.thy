@@ -22,11 +22,10 @@ declare prepare_thread_delete_caps_of_state [Finalise_AI_asms]
 
 global_naming AARCH64
 
-(* FIXME AARCH64
 lemma valid_global_refs_asid_table_udapte [iff]:
   "valid_global_refs (s\<lparr>arch_state := arm_asid_table_update f (arch_state s)\<rparr>) =
   valid_global_refs s"
-  by (simp add: valid_global_refs_def global_refs_def) *)
+  by (simp add: valid_global_refs_def global_refs_def)
 
 lemma nat_to_cref_unat_of_bl':
   "\<lbrakk> length xs < 64; n = length xs \<rbrakk> \<Longrightarrow>
@@ -44,38 +43,27 @@ lemma nat_to_cref_unat_of_bl':
 
 lemmas nat_to_cref_unat_of_bl = nat_to_cref_unat_of_bl' [OF _ refl]
 
-(* FIXME AARCH64
-lemma riscv_global_pt_asid_table_update[simp]:
-  "riscv_global_pt (arch_state s\<lparr>arm_asid_table := atable\<rparr>) = riscv_global_pt (arch_state s)"
-  by (simp add: riscv_global_pt_def) *)
+lemma global_pt_asid_table_update[simp]:
+  "arm_us_global_vspace (arch_state s\<lparr>arm_asid_table := atable\<rparr>) = global_pt s"
+  by simp
 
 lemma equal_kernel_mappings_asid_table_unmap:
   "equal_kernel_mappings s
    \<Longrightarrow> equal_kernel_mappings (s\<lparr>arch_state := arch_state s
                                 \<lparr>arm_asid_table := (asid_table s)(i := None)\<rparr>\<rparr>)"
-  unfolding equal_kernel_mappings_def
-  apply clarsimp
-  sorry (* FIXME AARCH64
-  apply (erule_tac x=asid in allE)
-  apply (erule_tac x=pt_ptr in allE)
-  apply (clarsimp simp: fun_upd_def)
-  apply (erule impE)
-   subgoal by (clarsimp simp: vspace_for_asid_def in_omonad pool_for_asid_def split: if_splits)
-  apply (clarsimp simp: has_kernel_mappings_def)
-  done *)
+  unfolding equal_kernel_mappings_def by simp
 
 lemma invs_arm_asid_table_unmap:
   "invs s \<and> is_aligned base asid_low_bits
        \<and> tab = arm_asid_table (arch_state s)
      \<longrightarrow> invs (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := tab(asid_high_bits_of base := None)\<rparr>\<rparr>)"
   apply (clarsimp simp: invs_def valid_state_def valid_arch_caps_def)
-  sorry (* FIXME AARCH64
   apply (strengthen valid_asid_map_unmap valid_vspace_objs_unmap_strg
                     valid_vs_lookup_unmap_strg valid_arch_state_unmap_strg)
   apply (simp add: valid_irq_node_def valid_kernel_mappings_def)
   apply (simp add: valid_table_caps_def valid_machine_state_def valid_global_objs_def
                    valid_asid_pool_caps_def equal_kernel_mappings_asid_table_unmap)
-  done *)
+  done
 
 lemma delete_asid_pool_invs[wp]:
   "delete_asid_pool base pptr \<lbrace>invs\<rbrace>"
@@ -803,15 +791,14 @@ lemma delete_asid_no_vs_lookup_target:
   done *)
 
 lemma delete_asid_unreachable:
-  "\<lbrace>\<lambda>s. vspace_for_asid asid s = Some pt \<and> pt_at pt_t pt s \<and> valid_asid_table s \<rbrace>
+  "\<lbrace>\<lambda>s. vspace_for_asid asid s = Some pt \<and> pt_at VSRootPT_T pt s \<and> valid_asid_table s \<rbrace>
    delete_asid asid pt
    \<lbrace>\<lambda>_ s. \<not> reachable_target (asid, vref) pt s\<rbrace>"
   unfolding reachable_target_def
-  sorry (* FIXME AARCH64
   apply (wpsimp wp: hoare_vcg_all_lift delete_asid_no_vs_lookup_target)
   apply (drule (1) pool_for_asid_validD)
   apply (clarsimp simp: obj_at_def in_omonad)
-  done *)
+  done
 
 lemma arch_finalise_cap_replaceable:
   notes strg = tcb_cap_valid_imp_NullCap
@@ -1372,7 +1359,7 @@ lemma valid_kernel_mappings [iff]:
   "valid_kernel_mappings (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := table'\<rparr>\<rparr>) = valid_kernel_mappings s"
   by (simp add: valid_kernel_mappings_def)
 
-crunches unmap_page_table, store_pte, delete_asid_pool(* FIXME AARCH64 , copy_global_mappings *)
+crunches unmap_page_table, store_pte, delete_asid_pool
   for valid_cap[wp]: "valid_cap c"
   (wp: mapM_wp_inv mapM_x_wp' simp: crunch_simps)
 

@@ -259,15 +259,10 @@ lemma delete_objects_rewrite[Untyped_AI_assms]:
   apply simp
   done
 
-(* FIXME AARCH64
-declare store_pde_pred_tcb_at [wp] *)
+declare store_pte_pred_tcb_at [wp]
 
-(* nonempty_table *)
-definition
-  nonempty_table :: "machine_word set \<Rightarrow> Structures_A.kernel_object \<Rightarrow> bool"
-where
- (* FIXME AARCH64 check *)
- "nonempty_table S ko \<equiv> \<forall>pt_t. a_type ko = AArch (APageTable pt_t) \<and> ko \<noteq> ArchObj (PageTable (empty_pt pt_t))"
+definition nonempty_table :: "obj_ref set \<Rightarrow> kernel_object \<Rightarrow> bool" where
+ "nonempty_table S ko \<equiv> \<exists>pt_t. a_type ko = AArch (APageTable pt_t) \<and> ko \<noteq> ArchObj (PageTable (empty_pt pt_t))"
 
 lemma reachable_target_trans[simp]:
   "reachable_target ref p (trans_state f s) = reachable_target ref p s"
@@ -373,8 +368,7 @@ global_interpretation Untyped_AI? : Untyped_AI
   proof goal_cases
     interpret Arch .
     case 1 show ?case
-    sorry (* FIXME AARCH64
-    by (unfold_locales; (fact Untyped_AI_assms)?) *)
+    by (unfold_locales; (fact Untyped_AI_assms)?)
   qed
 
 end
