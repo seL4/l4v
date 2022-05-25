@@ -840,12 +840,12 @@ lemma arch_perform_invocation_reads_respects:
                                                and valid_arch_inv ai and is_subject aag \<circ> cur_thread)
                         (arch_perform_invocation ai)"
   unfolding arch_perform_invocation_def fun_app_def
-  apply (wpsimp wp: perform_page_table_invocation_reads_respects
-                    perform_page_directory_invocation_reads_respects
-                    perform_page_invocation_reads_respects
-                    perform_asid_control_invocation_reads_respects
-                    perform_asid_pool_invocation_reads_respects)
-  apply (case_tac ai)
+  apply (rule equiv_valid_guard_imp)
+   apply (wpsimp wp: perform_page_table_invocation_reads_respects
+                     perform_page_directory_invocation_reads_respects
+                     perform_page_invocation_reads_respects
+                     perform_asid_control_invocation_reads_respects
+                     perform_asid_pool_invocation_reads_respects)
   by (auto simp: authorised_arch_inv_def valid_arch_inv_def)
 
 lemma equiv_asids_arm_asid_table_delete:
