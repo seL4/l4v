@@ -1167,7 +1167,7 @@ lemma arch_perform_invocation_reads_respects_g:
                                            and pas_refined aag and is_subject aag \<circ> cur_thread)
                           (arch_perform_invocation ai)"
   unfolding arch_perform_invocation_def fun_app_def
-  apply (case_tac ai; clarsimp)
+  apply (case_tac ai; rule equiv_valid_guard_imp)
   by (wpsimp wp: doesnt_touch_globalsI
                  reads_respects_g[OF perform_page_table_invocation_reads_respects]
                  reads_respects_g[OF perform_page_invocation_reads_respects]
