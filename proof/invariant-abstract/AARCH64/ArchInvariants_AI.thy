@@ -304,8 +304,16 @@ fun valid_vspace_obj :: "vm_level \<Rightarrow> arch_kernel_obj \<Rightarrow> 'z
 | "valid_vspace_obj _ (DataPage _ _) = \<top>" (* already covered by valid_pte *)
 | "valid_vspace_obj _ (VCPU _ ) = \<top>" (* not a vspace obj *)
 
+fun
+  is_vspace_typ :: "a_type \<Rightarrow> bool"
+where
+  "is_vspace_typ (AArch AVCPU) = False"
+| "is_vspace_typ (AArch  _)    = True"
+| "is_vspace_typ  _            = False"
+
 definition valid_vso_at :: "vm_level \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
-  "valid_vso_at level p \<equiv> \<lambda>s. \<exists>ao. aobjs_of s p = Some ao \<and> valid_vspace_obj level ao s"
+  "valid_vso_at level p \<equiv> \<lambda>s. \<exists>ao. aobjs_of s p = Some ao \<and> valid_vspace_obj level ao s
+                                   \<and> is_vspace_typ (AArch (aa_type ao))"
 
 definition wellformed_pte :: "pte \<Rightarrow> bool" where
   "wellformed_pte pte \<equiv> is_PagePTE pte \<longrightarrow> pte_rights pte \<in> valid_vm_rights"
