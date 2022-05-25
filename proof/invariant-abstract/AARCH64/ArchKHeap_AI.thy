@@ -17,8 +17,38 @@ lemma if_Some_Some[simp]:
 
 context Arch begin global_naming AARCH64
 
-definition "non_vspace_obj \<equiv> non_arch_obj"
-definition "vspace_obj_pred \<equiv> arch_obj_pred"
+definition non_vspace_obj :: "kernel_object \<Rightarrow> bool" where
+  "non_vspace_obj ko \<equiv> case ko of
+     (ArchObj (VCPU _)) \<Rightarrow> True \<comment> \<open>exclude VCPU\<close>
+   | (ArchObj _) \<Rightarrow> False
+   | _ \<Rightarrow> True"
+
+lemmas non_vspace_obj_simps[simp] =
+  non_vspace_obj_def[split_simps kernel_object.split arch_kernel_obj.split]
+
+definition vspace_obj_pred :: "(kernel_object \<Rightarrow> bool) \<Rightarrow> bool" where
+  "vspace_obj_pred P \<equiv> \<forall>ko ko'. non_vspace_obj ko \<longrightarrow> non_vspace_obj ko' \<longrightarrow> P ko = P ko'"
+
+lemma vspace_obj_imp: "non_arch_obj ko \<Longrightarrow> non_vspace_obj ko"
+  by (clarsimp simp: non_vspace_obj_def non_arch_obj_def
+               split: kernel_object.split arch_kernel_obj.split)
+
+lemma vspace_obj_predE:
+  "\<lbrakk>vspace_obj_pred P; non_vspace_obj ko; non_vspace_obj ko'\<rbrakk> \<Longrightarrow> P ko = P ko'"
+  unfolding vspace_obj_pred_def
+  by blast
+
+lemma vspace_pred_imp: "vspace_obj_pred P \<Longrightarrow> arch_obj_pred P"
+  by (clarsimp simp: arch_obj_pred_def elim!: vspace_obj_predE dest!: vspace_obj_imp)+
+
+definition
+  "vspace_obj_fun_lift P F c \<equiv> case c of
+     ArchObj (VCPU vcpu) \<Rightarrow> F
+   | ArchObj ac \<Rightarrow> P ac
+   | _ \<Rightarrow> F"
+
+lemmas vspace_obj_fun_lift_simps[simp] =
+  vspace_obj_fun_lift_def[split_simps kernel_object.split arch_kernel_obj.split]
 
 end
 
@@ -27,7 +57,7 @@ locale vspace_only_obj_pred = Arch +
   assumes vspace_only: "vspace_obj_pred P"
 
 sublocale vspace_only_obj_pred < arch_only_obj_pred
-  using vspace_only[unfolded vspace_obj_pred_def] by unfold_locales
+  using vspace_pred_imp[OF vspace_only] by unfold_locales
 
 context Arch begin global_naming AARCH64
 
@@ -52,38 +82,31 @@ lemma valid_vspace_objs_lift_vs_lookup:
       apply (wpsimp wp: assms hoare_vcg_imp_lift valid_vspace_obj_lift aobjs_of_atyp_lift)+
   done
 
-lemma vspace_obj_imp:
-  "non_arch_obj ko \<Longrightarrow> non_vspace_obj ko"
-  unfolding non_vspace_obj_def by assumption
+lemma vspace_obj_pred_a_type[intro, simp]:
+  "T \<noteq> AVCPU \<Longrightarrow> vspace_obj_pred (\<lambda>ko. a_type ko = AArch T)"
+  by (auto simp add: vspace_obj_pred_def a_type_def
+           split: kernel_object.splits arch_kernel_obj.splits)
 
-lemma non_vspace_objs[intro!]:
+lemma non_vspace_objs[intro]:
   "non_vspace_obj (Endpoint ep)"
   "non_vspace_obj (CNode sz cnode_contents)"
   "non_vspace_obj (TCB tcb)"
   "non_vspace_obj (Notification notification)"
-  by (auto simp: non_vspace_obj_def)
+  "non_vspace_obj (ArchObj (VCPU vcpu))"
+  by (auto)
 
-lemma vspace_obj_predE:
-  "\<lbrakk>vspace_obj_pred P; non_vspace_obj ko; non_vspace_obj ko'\<rbrakk> \<Longrightarrow> P ko = P ko'"
-  unfolding  vspace_obj_pred_def non_vspace_obj_def by (rule arch_obj_predE)
+lemma vspace_obj_pred_fun_lift: "vspace_obj_pred (\<lambda>ko. F (vspace_obj_fun_lift P N ko))"
+  by (auto simp: vspace_obj_pred_def vspace_obj_fun_lift_def
+           split: kernel_object.splits arch_kernel_obj.splits)
 
-lemmas vspace_obj_pred_defs = non_vspace_objs vspace_obj_pred_def
+lemmas vspace_obj_pred_fun_lift_id[simp]
+  = vspace_obj_pred_fun_lift[where F=id, simplified]
 
-lemma vspace_pred_imp:
-  "vspace_obj_pred P \<Longrightarrow> arch_obj_pred P"
-  using vspace_obj_pred_def by simp
+lemmas vspace_obj_pred_fun_lift_k[intro]
+  = vspace_obj_pred_fun_lift[where F="K R" for R, simplified]
 
-lemma vspace_obj_pred_a_type[intro!, simp]:
-  "vspace_obj_pred (\<lambda>ko. a_type ko = AArch T)"
-  by (auto simp: vspace_obj_pred_def)
-
-lemma vspace_obj_pred_arch_obj_l[intro!, simp]:
-  "vspace_obj_pred (\<lambda>ko. ArchObj ako = ko)"
-  by (auto simp: vspace_obj_pred_def)
-
-lemma vspace_obj_pred_arch_obj_r[intro!, simp]:
-  "vspace_obj_pred (\<lambda>ko. ko = ArchObj ako)"
-  by (auto simp: vspace_obj_pred_def)
+lemmas vspace_obj_pred_fun_lift_el[simp]
+  = vspace_obj_pred_fun_lift[where F="\<lambda> S. x \<in> S" for x, simplified]
 
 lemma vspace_obj_pred_const_conjI[intro]:
   "\<lbrakk> vspace_obj_pred P; vspace_obj_pred P' \<rbrakk> \<Longrightarrow> vspace_obj_pred (\<lambda>ko. P ko \<and> P' ko)"
@@ -91,7 +114,10 @@ lemma vspace_obj_pred_const_conjI[intro]:
 
 lemma vspace_obj_pred_fI:
   "(\<And>x. vspace_obj_pred (P x)) \<Longrightarrow> vspace_obj_pred (\<lambda>ko. f (\<lambda>x. P x ko))"
-  by (simp only: vspace_obj_pred_def arch_obj_pred_fI)
+  unfolding vspace_obj_pred_def
+  apply (intro allI impI) \<comment> \<open>clarsimp loops\<close>
+  apply (rule arg_cong[where f=f])
+  by blast
 
 lemmas [intro!] = vspace_obj_pred_fI[where f=All] vspace_obj_pred_fI[where f=Ex]
 
@@ -124,7 +150,7 @@ lemma in_user_frame_obj_pred_lift:
   assumes "\<And>P P' p. vspace_obj_pred P' \<Longrightarrow> f \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
   shows "f \<lbrace>in_user_frame p\<rbrace> "
   unfolding in_user_frame_def
-  by (wpsimp wp: hoare_vcg_ex_lift assms simp: vspace_obj_pred_def)
+  by (wpsimp wp: hoare_vcg_ex_lift assms)
 
 lemma pool_for_asid_lift:
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_table s)\<rbrace>"
@@ -195,6 +221,18 @@ lemma aobjs_of_ako_at_None:
   apply (rename_tac ao, case_tac ao; simp)
   done
 
+(* FIXME AARCH64: most of this chain of lifts that followed had vspace_obj_pred instead of arch_obj_pred,
+   however it is not possible to demonstrate that f preserves arbitrary predicates over arch objects
+   now that VCPUs are not vspace_objects; unfortunately the predicates with arch_obj_pred are somewhat
+   less useful. Potential alternate phrasing possible:
+
+lemma vspace_obj_pred_aobjs:
+  assumes vspace: "\<And>P P' p. vspace_obj_pred P' \<Longrightarrow> f \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
+  assumes vcpus: "\<And>P. f \<lbrace>\<lambda>s. P (vcpus_of s)\<rbrace>"
+  shows "\<And>P. f \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
+
+Needs reconsideration.
+*)
 lemma vspace_obj_pred_aobjs:
   assumes "\<And>P P' p. vspace_obj_pred P' \<Longrightarrow> f \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
   shows "\<And>P. f \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
@@ -207,16 +245,17 @@ lemma vspace_obj_pred_aobjs:
      prefer 2
      apply assumption
     apply (rule assms)
-    apply (clarsimp simp: vspace_obj_pred_def arch_obj_pred_def non_arch_obj_def)
+    apply (clarsimp simp: vspace_obj_pred_def arch_obj_pred_def non_vspace_obj_def)
+    sorry (* FIXME AARCH64
    apply (simp flip: aobjs_of_ako_at_None)
-  apply (simp add: aobjs_of_ako_at_Some)
   apply (drule use_valid)
     prefer 2
     apply assumption
+  apply (simp add: aobjs_of_ako_at_Some)
    apply (rule assms)
    apply simp
   apply (simp flip: aobjs_of_ako_at_Some)
-  done
+  done *)
 
 lemma pts_of_lift:
   assumes aobj_at: "\<And>P P' p. vspace_obj_pred P' \<Longrightarrow> f \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
@@ -653,11 +692,38 @@ lemma valid_vso_at_lift:
   unfolding valid_vso_at_def
   by (wpsimp wp: hoare_vcg_ex_lift y valid_vspace_obj_typ z simp: aobjs_of_ako_at_Some)
 
+(* FIXME AARCH64: not sure this lemma and the is_vspace_typ approach are the best way to go (copied from ARM_HYP) *)
+lemma valid_vspace_is_vspace_lift:
+  assumes P: "\<And>p T. \<lbrace>(K (is_vspace_typ (AArch T))) and (typ_at (AArch T) p)\<rbrace> f \<lbrace>\<lambda>rv. typ_at (AArch T) p\<rbrace>"
+  shows      "\<lbrace>valid_vspace_obj level ob\<rbrace> f \<lbrace>\<lambda>rv. valid_vspace_obj level ob\<rbrace>"
+  apply (cases ob, simp_all add: aa_type_def; (solves \<open>wpsimp wp: hoare_vcg_const_Ball_lift P\<close>)?)
+  (* PageTable case left *)
+  apply (rule hoare_vcg_conj_lift[rotated], solves wp)
+  apply (rule hoare_vcg_ball_lift)
+  apply (rename_tac pt pte)
+  apply (case_tac pt; clarsimp)
+   apply (rename_tac "fun" x)
+   apply (case_tac "fun x"; wpsimp simp: data_at_def hoare_vcg_prop
+                                   wp: hoare_vcg_conj_lift hoare_vcg_disj_lift P)
+  apply (rename_tac "fun" x)
+  apply (case_tac "fun x"; wpsimp simp: data_at_def hoare_vcg_prop
+                                  wp: hoare_vcg_conj_lift hoare_vcg_disj_lift P)
+  done
+
 lemma valid_vso_at_lift_aobj_at:
-  assumes [wp]: "\<And>P' pd. vspace_obj_pred P' \<Longrightarrow> f \<lbrace>obj_at P' pd\<rbrace>"
+  assumes aobj_at: "\<And>P' pd. vspace_obj_pred P' \<Longrightarrow> f \<lbrace>obj_at P' pd\<rbrace>"
   shows "f \<lbrace>valid_vso_at level p\<rbrace>"
   unfolding valid_vso_at_def
-  by (wpsimp wp: hoare_vcg_ex_lift valid_vspace_obj_typ simp: aobjs_of_ako_at_Some)
+  apply (rule hoare_vcg_ex_lift)
+  apply (case_tac "\<exists>vcpu. ao = VCPU vcpu")
+   apply (clarsimp simp: is_vcpu_def)
+  apply (simp add: aobjs_of_ako_at_Some)
+  apply (rule hoare_vcg_conj_lift aobj_at)+
+   apply (case_tac ao; fastforce simp: vspace_obj_pred_def)
+  apply (wpsimp wp: valid_vspace_is_vspace_lift)
+    apply (case_tac "T = AVCPU", simp)
+    apply (wpsimp wp: aobj_at)+
+  done
 
 lemma valid_global_vspace_mappings_arch_update[simp]:
   "valid_global_vspace_mappings (f s) = valid_global_vspace_mappings s"
@@ -774,12 +840,26 @@ lemma state_hyp_refs_of_tcb_state_update:
   apply (clarsimp simp add: state_hyp_refs_of_def obj_at_def split: option.splits)
   done
 
+lemma valid_vcpu_lift:
+  assumes x: "\<And>T p. \<lbrace>typ_at (AArch T) p\<rbrace> f \<lbrace>\<lambda>rv. typ_at (AArch T) p\<rbrace>"
+  assumes t: "\<And>p. \<lbrace>typ_at ATCB p\<rbrace> f \<lbrace>\<lambda>rv. typ_at ATCB p\<rbrace>"
+  shows "\<lbrace>\<lambda>s. valid_vcpu v s\<rbrace> f \<lbrace>\<lambda>rv s. valid_vcpu v s\<rbrace>"
+  apply (cases v)
+  apply (simp add: valid_vcpu_def | wp x hoare_vcg_disj_lift)+
+  apply (case_tac vcpu_tcb; simp, wp t)
+  done
+
 lemma default_arch_object_not_live[simp]: "\<not> live (ArchObj (default_arch_object aty dev us))"
   by (clarsimp simp: default_arch_object_def live_def hyp_live_def arch_live_def default_vcpu_def
                split: aobject_type.splits)
 
 lemma default_tcb_not_live[simp]: "\<not> live (TCB default_tcb)"
   by (clarsimp simp: default_tcb_def default_arch_tcb_def live_def hyp_live_def)
+
+lemma valid_vcpu_same_type:
+  "\<lbrakk> valid_vcpu v s; kheap s p = Some ko; a_type k = a_type ko \<rbrakk>
+   \<Longrightarrow> valid_vcpu v (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)"
+  by (cases v; case_tac vcpu_tcb; clarsimp simp: valid_vcpu_def typ_at_same_type)
 
 lemma valid_arch_tcb_same_type:
   "\<lbrakk> valid_arch_tcb t s; valid_obj p k s; kheap s p = Some ko; a_type k = a_type ko \<rbrakk>
