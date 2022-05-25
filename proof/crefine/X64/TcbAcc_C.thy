@@ -309,9 +309,10 @@ lemma length_of_msgRegisters:
   by (auto simp: msgRegisters_unfold)
 
 lemma setMRs_single:
-  "setMRs thread buffer [val] = do y \<leftarrow> asUser thread (setRegister register.R10 val);
-       return 1
-    od"
+  "setMRs thread buffer [val] = do
+     _ \<leftarrow> asUser thread (setRegister register.R10 val);
+     return 1
+   od"
   apply (clarsimp simp: setMRs_def length_of_msgRegisters zipWithM_x_def zipWith_def split: option.splits)
   apply (subst zip_commute, subst zip_singleton)
    apply (simp add: length_of_msgRegisters length_0_conv[symmetric])
