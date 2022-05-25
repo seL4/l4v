@@ -196,6 +196,10 @@ lemma no_fail_maskInterrupt[wp]: "no_fail \<top> (maskInterrupt irq bool)"
   by (simp add: maskInterrupt_def)
 
 
+lemma no_irq_bind:
+  "\<lbrakk> no_irq f; \<And>rv. no_irq (g rv) \<rbrakk> \<Longrightarrow> no_irq (f >>= g)"
+  unfolding no_irq_def
+  by (wpsimp, blast+)
 
 lemma no_irq_use:
   "\<lbrakk> no_irq f; (rv,s') \<in> fst (f s) \<rbrakk> \<Longrightarrow> irq_masks s' = irq_masks s"
@@ -231,6 +235,27 @@ lemma no_irq_resetTimer: "no_irq resetTimer"
 
 lemma no_irq_debugPrint: "no_irq (debugPrint $ xs)"
   by (simp add: no_irq_def)
+
+(* hyp-related machine op no_irq/no_fail/empty_fail rules
+   FIXME: names are not in legacy no_irq_* form, so relying on adding them to relevant sets *)
+
+crunch_ignore (empty_fail)
+  (add: writeVCPUHardwareReg_impl set_gic_vcpu_ctrl_vmcr_impl set_gic_vcpu_ctrl_apr_impl
+        set_gic_vcpu_ctrl_lr_impl get_gic_vcpu_ctrl_lr_impl set_gic_vcpu_ctrl_hcr_impl
+        setSCTLR_impl addressTranslateS1_impl)
+crunch_ignore (no_fail)
+  (add: writeVCPUHardwareReg_impl set_gic_vcpu_ctrl_vmcr_impl set_gic_vcpu_ctrl_apr_impl
+        set_gic_vcpu_ctrl_lr_impl get_gic_vcpu_ctrl_lr_impl set_gic_vcpu_ctrl_hcr_impl
+        setSCTLR_impl addressTranslateS1_impl)
+
+crunches getSCTLR, setSCTLR, addressTranslateS1,
+         readVCPUHardwareReg, writeVCPUHardwareReg,
+         get_gic_vcpu_ctrl_vmcr, set_gic_vcpu_ctrl_vmcr, get_gic_vcpu_ctrl_apr, set_gic_vcpu_ctrl_apr,
+         set_gic_vcpu_ctrl_lr, get_gic_vcpu_ctrl_lr, get_gic_vcpu_ctrl_hcr, set_gic_vcpu_ctrl_hcr
+  for (no_fail) no_fail[intro!, wp, simp]
+  and (empty_fail) empty_fail[intro!, wp, simp]
+  and (no_irq) no_irq[intro!, wp, simp]
+  (wp: no_irq_bind ignore: empty_fail NonDetMonad.bind)
 
 context notes no_irq[wp] begin
 
