@@ -858,7 +858,7 @@ lemma same_refs_vs_cap_ref_eq:
 lemma performPageInvocation_corres:
   assumes "page_invocation_map pgi pgi'"
   notes mapping_map_simps = mapping_map_def page_entry_map_def attr_mask_def attr_mask'_def page_entry_ptr_map_def
-  shows "corres dc (invs and valid_etcbs and valid_page_inv pgi)
+  shows "corres (=) (invs and valid_etcbs and valid_page_inv pgi)
             (invs' and valid_page_inv' pgi')
             (perform_page_invocation pgi) (performPageInvocation pgi')"
 proof -
@@ -891,6 +891,8 @@ proof -
           apply (rule corres_guard_imp)
             apply (rule corres_split_deprecated[OF _ storePTE_corres'])
                apply (rule corres_split_deprecated[where r'="(=)"])
+                  apply (rule corres_split'[where r'=dc, OF _ corres_return_eq_same[OF refl]
+                                                            hoare_post_taut hoare_post_taut])
                   apply simp
                   apply (rule invalidatePageStructureCacheASID_corres)
                  apply (case_tac cap; clarsimp simp add: is_pg_cap_def)
@@ -907,6 +909,8 @@ proof -
            apply (rule corres_split_deprecated[OF _ storePDE_corres'])
               apply (rule corres_split_deprecated[where r'="(=)"])
                  apply simp
+                 apply (rule corres_split'[where r'=dc, OF _ corres_return_eq_same[OF refl]
+                                                           hoare_post_taut hoare_post_taut])
                  apply (rule invalidatePageStructureCacheASID_corres)
                 apply (case_tac cap; clarsimp simp add: is_pg_cap_def)
                 apply (case_tac m; clarsimp)
@@ -922,6 +926,8 @@ proof -
           apply (rule corres_split_deprecated[OF _ storePDPTE_corres'])
              apply (rule corres_split_deprecated[where r'="(=)"])
                 apply simp
+                apply (rule corres_split'[where r'=dc, OF _ corres_return_eq_same[OF refl]
+                                                          hoare_post_taut hoare_post_taut])
                 apply (rule invalidatePageStructureCacheASID_corres)
                apply (case_tac cap; clarsimp simp add: is_pg_cap_def)
                apply (case_tac m; clarsimp)
@@ -949,6 +955,8 @@ proof -
     apply (rule corres_fail, clarsimp simp: valid_cap_def)
    apply (simp add: perform_page_invocation_unmap_def performPageInvocationUnmap_def split_def)
     apply (rule corres_guard_imp)
+     apply (rule corres_split'[where r'=dc, OF _ corres_return_eq_same[OF refl]
+                                               hoare_post_taut hoare_post_taut])
      apply (rule corres_split_deprecated)
         prefer 2
         apply (rule unmapPage_corres[OF refl refl refl refl])
@@ -976,17 +984,8 @@ proof -
    apply (auto simp: cte_wp_at_ctes_of)[1]
 
     \<comment> \<open>PageGetAddr\<close>
-  apply (clarsimp simp: perform_page_invocation_def performPageInvocation_def page_invocation_map_def
-                        fromPAddr_def)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ getCurThread_corres])
-      apply simp
-      apply (rule corres_split_deprecated[OF setMessageInfo_corres setMRs_corres])
-         apply (simp add: message_info_map_def)
-        apply clarsimp
-       apply (wp)+
-   apply (clarsimp simp: tcb_at_invs)
-  apply (clarsimp simp: tcb_at_invs')
+  apply (clarsimp simp: perform_page_invocation_def performPageInvocation_def
+                        page_invocation_map_def fromPAddr_def)
   done
 qed
 
