@@ -32,10 +32,8 @@ global_naming Arch
 
 lemma arch_stt_invs [wp,Schedule_AI_asms]:
   "\<lbrace>invs\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (simp add: arch_switch_to_thread_def)
-  apply wp
-  sorry (* FIXME AARCH64 VCPU
-  done *)
+  apply (wpsimp simp: arch_switch_to_thread_def)
+  by (rule sym_refs_VCPU_hyp_live; fastforce)
 
 lemma arch_stt_tcb [wp,Schedule_AI_asms]:
   "\<lbrace>tcb_at t'\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_. tcb_at t'\<rbrace>"
@@ -55,6 +53,17 @@ lemma idle_strg:
   "thread = idle_thread s \<and> invs s \<Longrightarrow> invs (s\<lparr>cur_thread := thread\<rparr>)"
   by (clarsimp simp: invs_def valid_state_def valid_idle_def cur_tcb_def
                      pred_tcb_at_def valid_machine_state_def obj_at_def is_tcb_def)
+
+lemma set_vcpu_ct[wp]:
+  "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> set_vcpu v v' \<lbrace>\<lambda>_ s. P (cur_thread s)\<rbrace>"
+  by (wpsimp simp: set_vcpu_def wp: get_object_wp)
+
+crunches
+  vcpu_update, vgic_update, vgic_update_lr, vcpu_restore_reg_range, vcpu_save_reg_range,
+  vcpu_enable, vcpu_disable, vcpu_save, vcpu_restore, vcpu_switch, vcpu_save
+  for it[wp]: "\<lambda>s. P (idle_thread s)"
+  and ct[wp]: "\<lambda>s. P (cur_thread s)"
+  (wp: mapM_x_wp mapM_wp subset_refl)
 
 lemma arch_stit_invs[wp, Schedule_AI_asms]:
   "\<lbrace>invs\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>r. invs\<rbrace>"

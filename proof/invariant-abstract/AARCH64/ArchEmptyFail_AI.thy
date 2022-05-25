@@ -48,6 +48,9 @@ crunch (empty_fail) empty_fail[wp]:
   decode_set_tls_base
   (simp: cap.splits arch_cap.splits split_def)
 
+crunch (empty_fail) empty_fail[wp]: decode_vcpu_invocation
+  (simp: cap.splits arch_cap.splits split_def)
+
 lemma decode_tcb_invocation_empty_fail[wp]:
   "empty_fail (decode_tcb_invocation a b (ThreadCap p) d e)"
   by (simp add: decode_tcb_invocation_def split: gen_invocation_labels.splits invocation_label.splits
@@ -58,6 +61,7 @@ crunch (empty_fail) empty_fail[wp]: find_vspace_for_asid, check_vp_alignment (* 
 lemma arch_decode_ARMASIDControlMakePool_empty_fail:
   "invocation_type label = ArchInvocationLabel ARMASIDControlMakePool
     \<Longrightarrow> empty_fail (arch_decode_invocation label b c d e f)"
+  apply (simp add: arch_decode_invocation_def Let_def)
   apply (wpsimp simp: arch_decode_invocation_def decode_asid_pool_invocation_def)
     apply (simp add: decode_asid_control_invocation_def)
     apply (intro impI conjI allI)
@@ -66,13 +70,16 @@ lemma arch_decode_ARMASIDControlMakePool_empty_fail:
      apply simp
     apply (subst bindE_assoc[symmetric])
     apply (rule empty_fail_bindE)
-     subgoal by (fastforce simp: empty_fail_def whenE_def throwError_def select_ext_def bindE_def
-                                 bind_def return_def returnOk_def lift_def liftE_def fail_def
-                                 gets_def get_def assert_def select_def
-                          split: if_split_asm)
-    apply wpsimp
-   apply (wpsimp simp: decode_frame_invocation_def)
-  sorry (* FIXME AARCH64 VCPU and PageFlush invocations
+      subgoal by (fastforce simp: empty_fail_def whenE_def throwError_def select_ext_def bindE_def
+                                  bind_def return_def returnOk_def lift_def liftE_def fail_def
+                                  gets_def get_def assert_def select_def
+                           split: if_split_asm)
+     apply wpsimp
+    apply (wpsimp simp: decode_frame_invocation_def)
+    subgoal sorry (* missing wp rule *)
+   subgoal sorry (* PTs *)
+  apply wpsimp
+  done (* FIXME AARCH64 VCPU and PageFlush invocations
   apply (wpsimp simp: decode_page_table_invocation_def)
   done *)
 
@@ -134,6 +141,15 @@ lemma empty_fail_pt_lookup_from_level[wp]:
   apply wpsimp
   done
 
+crunch (empty_fail) empty_fail[wp]: vcpu_update, vcpu_save_reg_range, vgic_update_lr, save_virt_timer
+  (ignore: set_object get_object)
+
+lemma vcpu_save_empty_fail[wp,EmptyFail_AI_assms]: "empty_fail (vcpu_save a)"
+  apply (simp add:  vcpu_save_def)
+  sorry (* FIXME AARCH64 missing empty_fail_dsb
+  apply (wpsimp wp: empty_fail_dsb empty_fail_isb  simp: vgic_update_def)
+  done *)
+
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: maskInterrupt, empty_slot,
     finalise_cap, preemption_point,
     cap_swap_for_delete, decode_invocation
@@ -179,6 +195,12 @@ context Arch begin global_naming AARCH64
 lemma plic_complete_claim_empty_fail[wp, EmptyFail_AI_assms]:
   "empty_fail (plic_complete_claim irq)"
   by (clarsimp simp: plic_complete_claim_def)
+
+lemma vgic_maintenance_empty_fail[wp]: "empty_fail vgic_maintenance"
+  by (wpsimp simp: get_gic_vcpu_ctrl_eisr0_def
+                   get_gic_vcpu_ctrl_eisr1_def
+                   get_gic_vcpu_ctrl_misr_def
+                   vgic_maintenance_def)
 
 crunches possible_switch_to, handle_event, activate_thread
   for (empty_fail) empty_fail[wp, EmptyFail_AI_assms]

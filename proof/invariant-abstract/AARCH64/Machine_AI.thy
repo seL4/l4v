@@ -1,4 +1,5 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -236,17 +237,23 @@ lemma no_irq_resetTimer: "no_irq resetTimer"
 lemma no_irq_debugPrint: "no_irq (debugPrint $ xs)"
   by (simp add: no_irq_def)
 
+crunch_ignore (add: dsb_impl)
+
 (* hyp-related machine op no_irq/no_fail/empty_fail rules
    FIXME: names are not in legacy no_irq_* form, so relying on adding them to relevant sets *)
 
 crunch_ignore (empty_fail)
   (add: writeVCPUHardwareReg_impl set_gic_vcpu_ctrl_vmcr_impl set_gic_vcpu_ctrl_apr_impl
         set_gic_vcpu_ctrl_lr_impl get_gic_vcpu_ctrl_lr_impl set_gic_vcpu_ctrl_hcr_impl
-        setSCTLR_impl addressTranslateS1_impl)
+        setSCTLR_impl setHCR_impl addressTranslateS1_impl)
 crunch_ignore (no_fail)
   (add: writeVCPUHardwareReg_impl set_gic_vcpu_ctrl_vmcr_impl set_gic_vcpu_ctrl_apr_impl
         set_gic_vcpu_ctrl_lr_impl get_gic_vcpu_ctrl_lr_impl set_gic_vcpu_ctrl_hcr_impl
-        setSCTLR_impl addressTranslateS1_impl)
+        setSCTLR_impl setHCR_impl addressTranslateS1_impl)
+crunch_ignore
+  (add: writeVCPUHardwareReg_impl set_gic_vcpu_ctrl_vmcr_impl set_gic_vcpu_ctrl_apr_impl
+        set_gic_vcpu_ctrl_lr_impl get_gic_vcpu_ctrl_lr_impl set_gic_vcpu_ctrl_hcr_impl
+        setSCTLR_impl setHCR_impl addressTranslateS1_impl)
 
 crunches getSCTLR, setSCTLR, addressTranslateS1,
          readVCPUHardwareReg, writeVCPUHardwareReg,

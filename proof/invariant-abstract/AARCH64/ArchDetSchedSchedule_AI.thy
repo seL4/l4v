@@ -13,9 +13,64 @@ context Arch begin global_naming AARCH64
 
 named_theorems DetSchedSchedule_AI_assms
 
-(* FIXME AARCH64 VCPU
-crunch  prepare_thread_delete_idle_thread[wp, DetSchedSchedule_AI_assms]:
+crunch prepare_thread_delete_idle_thread[wp, DetSchedSchedule_AI_assms]:
   prepare_thread_delete "\<lambda>(s:: det_ext state). P (idle_thread s)"
+  (wp: crunch_wps)
+
+crunch exst[wp]: set_vcpu "\<lambda>s. P (exst s)" (wp: crunch_wps)
+
+crunch exst[wp]: vcpu_disable,vcpu_restore,vcpu_save "\<lambda>s. P (exst s)"
+  (wp: crunch_wps)
+
+(* FIXME AARCH64: check if crunchable, also below *)
+lemma vcpu_switch_exst[wp]:
+  "\<lbrace>\<lambda>s. P (exst s)\<rbrace> vcpu_switch param_a \<lbrace>\<lambda>_ s. P (exst s)\<rbrace>"
+  unfolding vcpu_switch_def by (rule hoare_pre) wpsimp+
+
+lemma set_vcpu_etcbs [wp]:
+  "\<lbrace>valid_etcbs\<rbrace> set_vcpu a b \<lbrace>\<lambda>_. valid_etcbs\<rbrace>"
+  by (rule valid_etcbs_lift; wp)
+
+(* FIXME AARCH64: param_a, also further below *)
+lemma vcpu_switch_valid_etcbs[wp]:
+  "\<lbrace>valid_etcbs\<rbrace> vcpu_switch param_a \<lbrace>\<lambda>_. valid_etcbs\<rbrace>"
+  by (rule valid_etcbs_lift; wp)
+
+lemma pred_tcb_atP[wp]:
+  "\<lbrace>\<lambda>s. P (pred_tcb_at proj Q t s)\<rbrace> set_vcpu prt vcpu \<lbrace>\<lambda>_ s. P (pred_tcb_at proj Q t s)\<rbrace>"
+  unfolding set_vcpu_def set_object_def
+  apply (wp get_object_wp)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def split: kernel_object.splits)
+  done
+
+crunch pred_tcb_atP[wp]: vcpu_disable, vcpu_enable, vcpu_restore, vcpu_save
+  "\<lambda>s. P (pred_tcb_at proj Q t s)"
+  (wp: crunch_wps simp: crunch_simps)
+
+lemma vcpu_switch_pred_tcb_at[wp]:
+  "\<lbrace>\<lambda>s. P (pred_tcb_at proj Q t s)\<rbrace> vcpu_switch vcpu \<lbrace>\<lambda>_ s. P (pred_tcb_at proj Q t s)\<rbrace>"
+  unfolding vcpu_switch_def by (rule hoare_pre) wpsimp+
+
+lemma set_vcpu_valid_queues [wp]:
+  "\<lbrace>valid_queues\<rbrace> set_vcpu ptr vcpu \<lbrace>\<lambda>_. valid_queues\<rbrace>"
+  by (rule valid_queues_lift; wp)
+
+lemma vcpu_switch_valid_queues[wp]:
+  "\<lbrace>valid_queues\<rbrace> vcpu_switch v \<lbrace>\<lambda>_. valid_queues\<rbrace>"
+  by (rule valid_queues_lift; wp)
+
+lemma set_vcpu_weak_valid_sched_action[wp]:
+  "\<lbrace>weak_valid_sched_action\<rbrace> set_vcpu ptr vcpu \<lbrace>\<lambda>_. weak_valid_sched_action\<rbrace>"
+  by (rule weak_valid_sched_action_lift; wp)
+
+lemma vcpu_switch_weak_valid_sched_action[wp]:
+  "\<lbrace>weak_valid_sched_action\<rbrace> vcpu_switch v \<lbrace>\<lambda>_. weak_valid_sched_action\<rbrace>"
+  by (rule weak_valid_sched_action_lift; wp)
+
+(* FIXME AARCH64 VCPU
+is this one and other pred_tcb_atP used?
+crunch pred_tcb_atP[wp]: set_vm_root "\<lambda>s. P (pred_tcb_at proj Q t s)"
+  (wp: crunch_wps simp: crunch_simps)
 
 crunch valid_etcbs [wp, DetSchedSchedule_AI_assms]:
   arch_switch_to_idle_thread, arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers valid_etcbs
@@ -35,6 +90,11 @@ crunch ct_not_in_q[wp]: set_vm_root "ct_not_in_q"
 
 crunch ct_not_in_q'[wp]: set_vm_root "\<lambda>s. ct_not_in_q_2 (ready_queues s) (scheduler_action s) t"
   (wp: crunch_wps simp: crunch_simps)
+
+lemma vcpu_switch_valid_sched_action[wp]:
+  "\<lbrace>valid_sched_action\<rbrace> vcpu_switch v \<lbrace>\<lambda>_. valid_sched_action\<rbrace>"
+  unfolding valid_sched_action_def is_activatable_def st_tcb_at_kh_simp
+  by (rule hoare_lift_Pf[where f=cur_thread]; wpsimp wp: hoare_vcg_imp_lift)
 
 lemma switch_to_idle_thread_ct_not_in_q [wp, DetSchedSchedule_AI_assms]:
   "\<lbrace>valid_queues and valid_idle\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>_. ct_not_in_q\<rbrace>"
@@ -80,7 +140,23 @@ lemma switch_to_idle_thread_ct_in_cur_domain [wp, DetSchedSchedule_AI_assms]:
 crunch ct_not_in_q [wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers ct_not_in_q
   (simp: crunch_simps wp: crunch_wps)
 
+lemma do_machine_op_activatable[wp]:
+  "\<lbrace>is_activatable t\<rbrace> do_machine_op oper \<lbrace>\<lambda>_. is_activatable t\<rbrace>"
+  unfolding do_machine_op_def by wpsimp
+
+lemma set_vcpu_is_activatable[wp]:
+  "\<lbrace>is_activatable t\<rbrace> set_vcpu ptr vcpu \<lbrace>\<lambda>_. is_activatable t\<rbrace>"
+  unfolding is_activatable_def set_vcpu_def set_object_def
+  apply (wp get_object_wp)
+  apply (clarsimp simp: st_tcb_at_kh_def obj_at_kh_def obj_at_def)
+  done
+
 (* FIXME AARCH64 VCPU
+crunches vcpu_disable, vcpu_restore, vcpu_save, vcpu_switch, set_vm_root
+  for is_activatable[wp]: "is_activatable t"
+  and valid_sched[wp, DetSchedSchedule_AI_assms]: valid_sched
+  (wp: crunch_wps valid_sched_lift simp: crunch_simps)
+
 crunch is_activatable [wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers "is_activatable t"
   (simp: crunch_simps)
 
@@ -118,6 +194,20 @@ crunch scheduler_action [wp, DetSchedSchedule_AI_assms]:
   arch_switch_to_idle_thread, next_domain "\<lambda>s. P (scheduler_action s)"
   (simp: Let_def)
 *)
+
+lemma vcpu_switch_ct_in_q[wp]:
+  "\<lbrace>ct_in_q\<rbrace> vcpu_switch vcpu \<lbrace>\<lambda>_. ct_in_q\<rbrace>"
+  unfolding ct_in_q_def
+  apply (rule hoare_lift_Pf[where f="\<lambda>s. cur_thread s", rotated], wp)
+  apply (rule hoare_lift_Pf[where f="\<lambda>s. ready_queues s", rotated], wp)
+  apply wp
+  done
+
+(* FIXME AARCH64 VCPU
+crunches do_machine_op, set_vm_root, vcpu_switch
+  for valid_blocked[wp]: valid_blocked
+  and ct_in_q[wp]: ct_in_q
+  (wp: valid_blocked_lift simp: crunch_simps) *)
 
 lemma set_vm_root_valid_blocked_ct_in_q [wp]:
   "\<lbrace>valid_blocked and ct_in_q\<rbrace> set_vm_root p \<lbrace>\<lambda>_. valid_blocked and ct_in_q\<rbrace>"
@@ -198,6 +288,10 @@ lemma set_pt_valid_sched[wp]:
   "\<lbrace>valid_sched\<rbrace> set_pt ptr pt \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   by (wp hoare_drop_imps valid_sched_lift | simp add: set_pt_def)+
 
+lemma set_vcpu_valid_sched[wp]:
+  "\<lbrace>valid_sched\<rbrace> set_vcpu t vr \<lbrace>\<lambda>_. valid_sched\<rbrace>"
+  by (rule valid_sched_lift; wp)
+
 lemma set_asid_pool_valid_sched[wp]:
   "\<lbrace>valid_sched\<rbrace> set_asid_pool ptr pool \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   by (wp hoare_drop_imps valid_sched_lift | simp add: set_asid_pool_def)+
@@ -236,6 +330,28 @@ crunch valid_sched[wp]:
   perform_page_invocation, perform_page_table_invocation, perform_asid_pool_invocation
   valid_sched
   (wp: mapM_x_wp' mapM_wp' crunch_wps) *)
+
+(* FIXME AARCH64 VCPU
+crunches
+  vcpu_read_reg,vcpu_write_reg,read_vcpu_register,write_vcpu_register,set_message_info,as_user
+  for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
+  and valid_sched[wp]: valid_sched
+  and ct_in_state[wp]: "ct_in_state st"
+  (simp: crunch_simps wp: ct_in_state_thread_state_lift ignore: get_object) *)
+
+lemma invoke_vcpu_read_register_valid_sched[wp]:
+  "\<lbrace>valid_sched and ct_active\<rbrace> invoke_vcpu_read_register v reg \<lbrace>\<lambda>_. valid_sched\<rbrace>"
+  sorry (* FIXME AARCH64: missing crunch on read_vcpu_register
+  unfolding invoke_vcpu_read_register_def by (wpsimp wp: set_thread_state_Running_valid_sched) *)
+
+lemma invoke_vcpu_write_register_valid_sched[wp]:
+  "\<lbrace>valid_sched and ct_active\<rbrace> invoke_vcpu_write_register v reg val \<lbrace>\<lambda>_. valid_sched\<rbrace>"
+  sorry (* FIXME AARCH64 VCPU
+  unfolding invoke_vcpu_write_register_def by (wpsimp wp: set_thread_state_Restart_valid_sched) *)
+
+(* FIXME AARCH64 VCPU
+crunch valid_sched[wp]: perform_vcpu_invocation valid_sched
+  (wp: crunch_wps simp: crunch_simps ignore: set_thread_state) *)
 
 lemma arch_perform_invocation_valid_sched [wp, DetSchedSchedule_AI_assms]:
   "\<lbrace>invs and valid_sched and ct_active and valid_arch_inv a\<rbrace>
@@ -325,6 +441,55 @@ global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI
 
 context Arch begin global_naming AARCH64
 
+lemma dmo_scheduler_act_sane[wp]:
+  "\<lbrace>scheduler_act_sane\<rbrace> do_machine_op f \<lbrace>\<lambda>rv. scheduler_act_sane\<rbrace>"
+  unfolding scheduler_act_sane_def
+  by (rule hoare_lift_Pf[where f=cur_thread]; wp)
+
+lemma vgic_maintenance_irq_valid_sched[wp]:
+  "\<lbrace>valid_sched and invs and scheduler_act_sane and ct_not_queued\<rbrace>
+   vgic_maintenance
+   \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
+  unfolding vgic_maintenance_def
+  supply if_split[split del] valid_fault_def[simp]
+  apply (wpsimp simp: get_gic_vcpu_ctrl_misr_def get_gic_vcpu_ctrl_eisr1_def
+                      get_gic_vcpu_ctrl_eisr0_def if_apply_def2
+                 wp: thread_get_wp'
+                     ct_in_state_thread_state_lift ct_not_queued_lift sch_act_sane_lift
+                     hoare_vcg_imp_lift' gts_wp hoare_vcg_all_lift
+                     handle_fault_valid_sched hoare_vcg_disj_lift
+         | wp (once) hoare_drop_imp[where f="do_machine_op m" for m]
+                   hoare_drop_imp[where f="return $ m" for m]
+         | wps
+         | strengthen not_pred_tcb_at_strengthen)+
+  sorry (* FIXME AARCH64 vgic_update_lr
+  apply (frule tcb_at_invs)
+  apply (clarsimp simp: runnable_eq halted_eq not_pred_tcb)
+  apply (fastforce intro!: st_tcb_ex_cap[where P=active]
+                   simp: st_tcb_at_def ct_in_state_def obj_at_def)
+  done *)
+
+lemma vppi_event_irq_valid_sched[wp]:
+  "\<lbrace>valid_sched and invs and scheduler_act_sane and ct_not_queued\<rbrace>
+   vppi_event irq
+   \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
+  unfolding vppi_event_def
+  supply if_split[split del] valid_fault_def[simp]
+  apply (wpsimp simp: if_apply_def2
+                wp: hoare_vcg_imp_lift' gts_wp hoare_vcg_all_lift maskInterrupt_invs
+                    hoare_vcg_disj_lift
+                    handle_fault_valid_sched
+                    ct_in_state_thread_state_lift ct_not_queued_lift sch_act_sane_lift
+                cong: vcpu.fold_congs
+         | wps
+         | strengthen not_pred_tcb_at_strengthen)+
+  sorry (* FIXME AARCH64 vcpu_update
+  apply (frule tcb_at_invs)
+  apply (clarsimp simp: runnable_eq halted_eq not_pred_tcb)
+  apply (fastforce intro!: st_tcb_ex_cap[where P=active]
+                   simp: not_pred_tcb st_tcb_at_def obj_at_def ct_in_state_def)
+  done *)
+
 lemma handle_hyp_fault_valid_sched[wp]:
   "\<lbrace>valid_sched and invs and st_tcb_at active t and not_queued t and scheduler_act_not t
       and (ct_active or ct_idle)\<rbrace>
@@ -334,7 +499,8 @@ lemma handle_hyp_fault_valid_sched[wp]:
 lemma handle_reserved_irq_valid_sched:
   "\<lbrace>valid_sched and invs and (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow>  scheduler_act_sane s \<and> ct_not_queued s)\<rbrace>
   handle_reserved_irq irq \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
-  sorry (* FIXME AARCH64 VCPU vppi
+  unfolding handle_reserved_irq_def irq_vppi_event_index_def when_def
+  sorry (* FIXME AARCH64 double-when causing problems
   unfolding handle_reserved_irq_def by (wpsimp simp: non_kernel_IRQs_def) *)
 
 end

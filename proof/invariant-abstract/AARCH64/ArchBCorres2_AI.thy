@@ -1,4 +1,5 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -127,17 +128,28 @@ crunch (bcorres)bcorres[wp]: receive_ipc,receive_signal,delete_caller_cap trunca
 lemma handle_vm_fault_bcorres[wp]: "bcorres (handle_vm_fault a b) (handle_vm_fault a b)"
   unfolding handle_vm_fault_def by (cases b; wpsimp)
 
-lemma handle_hypervisor_fault_bcorres[wp]: "bcorres (handle_hypervisor_fault a b) (handle_hypervisor_fault a b)"
-  by (cases b) wpsimp
+lemma vgic_maintenance_bcorres[wp]:
+  "bcorres vgic_maintenance vgic_maintenance"
+  unfolding vgic_maintenance_def
+  by (wpsimp simp: vgic_update_lr_bcorres)
 
+lemma vppi_event_bcorres[wp]:
+  "bcorres (vppi_event irq) (vppi_event irq)"
+  unfolding vppi_event_def
+  by wpsimp
+
+lemma handle_reserved_irq_bcorres[wp]: "bcorres (handle_reserved_irq a) (handle_reserved_irq a)"
+  unfolding handle_reserved_irq_def by wpsimp
+
+lemma handle_hypervisor_fault_bcorres[wp]: "bcorres (handle_hypervisor_fault a b) (handle_hypervisor_fault a b)"
+  by (cases b; wpsimp)
 
 lemma handle_event_bcorres[wp]: "bcorres (handle_event e) (handle_event e)"
   apply (cases e)
   apply (simp add: handle_send_def handle_call_def handle_recv_def handle_reply_def handle_yield_def
                    handle_interrupt_def Let_def handle_reserved_irq_def arch_mask_irq_signal_def
          | intro impI conjI allI | wp | wpc)+
-  sorry (* FIXME AARCH64 VCPU vppi_event
-  done *)
+  done
 
 crunch (bcorres)bcorres[wp]: guarded_switch_to,switch_to_idle_thread truncate_state (ignore: storeWord)
 

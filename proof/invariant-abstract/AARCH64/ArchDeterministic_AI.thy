@@ -1,16 +1,31 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
 theory ArchDeterministic_AI
-imports Deterministic_AI
+imports Deterministic_AI ArchVCPU_AI
 begin
+
+declare dxo_wp_weak[wp del]
 
 context Arch begin global_naming AARCH64
 
 named_theorems Deterministic_AI_assms
+
+crunch valid_list[wp, Deterministic_AI_assms]:
+ vcpu_save, vcpu_enable, vcpu_disable, vcpu_restore, arch_get_sanitise_register_info, arch_post_modify_registers valid_list
+  (wp: crunch_wps simp: unless_def crunch_simps)
+
+(* FIXME AARCH64: crunchable? If not, rename param_a *)
+lemma vcpu_switch_valid_list[wp, Deterministic_AI_assms]:
+  "\<lbrace>valid_list\<rbrace> vcpu_switch param_a \<lbrace>\<lambda>_. valid_list\<rbrace>"
+  apply (simp add: vcpu_switch_def)
+  apply (rule hoare_pre)
+    apply(wpsimp)+
+  done
 
 crunch valid_list[wp, Deterministic_AI_assms]:
   cap_swap_for_delete,set_cap,finalise_cap,arch_get_sanitise_register_info,
@@ -52,7 +67,7 @@ lemma perform_page_invocation_valid_list[wp]:
   done *)
 
 crunch valid_list[wp]: perform_invocation valid_list
-  (wp: crunch_wps simp: crunch_simps ignore: without_preemption)
+  (wp: crunch_wps simp: crunch_simps ignore: without_preemption as_user)
 
 crunch valid_list[wp, Deterministic_AI_assms]: handle_invocation valid_list
   (wp: crunch_wps syscall_valid simp: crunch_simps
@@ -65,14 +80,17 @@ lemma handle_vm_fault_valid_list[wp, Deterministic_AI_assms]:
   "handle_vm_fault thread fault \<lbrace>valid_list\<rbrace>"
   unfolding handle_vm_fault_def by (cases fault; wpsimp)
 
+crunches vgic_maintenance, vppi_event
+  for valid_list[wp]: valid_list
+  (wp: hoare_drop_imps)
+
 lemma handle_interrupt_valid_list[wp, Deterministic_AI_assms]:
   "\<lbrace>valid_list\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_.valid_list\<rbrace>"
   unfolding handle_interrupt_def ackInterrupt_def
   apply (rule hoare_pre)
-  sorry (* FIXME AARCH64 vvpi_event
    by (wp get_cap_wp  do_machine_op_valid_list
        | wpc | simp add: get_irq_slot_def handle_reserved_irq_def arch_mask_irq_signal_def
-       | wp (once) hoare_drop_imps)+ *)
+       | wp (once) hoare_drop_imps)+
 
 crunch valid_list[wp, Deterministic_AI_assms]: handle_send,handle_reply valid_list
 

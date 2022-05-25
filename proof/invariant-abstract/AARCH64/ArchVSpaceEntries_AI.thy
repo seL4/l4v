@@ -47,6 +47,17 @@ lemma set_object_valid_vspace_objs'[wp]:
 crunch valid_vspace_objs'[wp]: cap_insert, cap_swap_for_delete,empty_slot "valid_vspace_objs'"
   (wp: crunch_wps simp: crunch_simps ignore:set_object)
 
+crunches
+  vcpu_save, vcpu_restore, vcpu_enable, get_vcpu, set_vcpu, vcpu_disable, vcpu_read_reg,
+  read_vcpu_register,write_vcpu_register
+  for valid_vspace_objs'[wp]: "valid_vspace_objs'"
+  (wp: crunch_wps simp: crunch_simps ignore: set_object do_machine_op)
+
+lemma vcpu_switch_valid_vspace_objs'[wp]:
+  "vcpu_switch v \<lbrace> valid_vspace_objs'\<rbrace>"
+  unfolding vcpu_switch_def
+  by wpsimp
+
 lemma valid_pt_entries_invalid[simp]:
   "valid_pt_entries (\<lambda>x. InvalidPTE)"
    by (simp add:valid_entries_def)
@@ -195,6 +206,16 @@ lemma invoke_untyped_valid_vspace_objs'[wp]:
 
 crunches store_asid_pool_entry
   for valid_vspace_objs'[wp]: "valid_vspace_objs'"
+
+crunch valid_vspace_objs'[wp]: perform_vcpu_invocation "valid_vspace_objs'"
+  (ignore: delete_objects wp: hoare_drop_imps)
+
+lemma decode_vcpu_invocation_valid_vspace_objs'[wp]:
+  "\<lbrace> valid_vspace_objs' \<rbrace>
+     decode_vcpu_invocation label args vcap excaps
+   \<lbrace>\<lambda>_. valid_vspace_objs' \<rbrace>, -"
+  unfolding decode_vcpu_invocation_def
+  by (wpsimp wp: get_cap_wp)
 
 lemma perform_asid_pool_invocation_valid_vspace_objs'[wp]:
   "\<lbrace> valid_vspace_objs' and valid_arch_state and pspace_aligned and

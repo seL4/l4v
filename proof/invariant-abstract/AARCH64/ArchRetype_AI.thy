@@ -472,8 +472,15 @@ lemma hyp_refs_eq:
   "state_hyp_refs_of s' = state_hyp_refs_of s"
   unfolding s'_def ps_def
   sorry (* FIXME AARCH64 VCPU
-  by (rule ext) (clarsimp simp: state_hyp_refs_of_def split: option.splits) *)
-
+  apply (rule ext)
+  apply (clarsimp simp: state_hyp_refs_of_def orthr split: option.splits)
+  apply (cases ty; simp add: tyunt default_object_def default_tcb_def hyp_refs_of_def tcb_hyp_refs_def
+                             default_arch_tcb_def)
+  apply (rename_tac ao)
+  apply (clarsimp simp: refs_of_a_def ARM_HYP.vcpu_tcb_refs_def default_arch_object_def
+                        ARM_A.default_vcpu_def
+                  split: aobject_type.splits)
+  done *)
 
 lemma obj_at_valid_pte:
   "\<lbrakk>valid_pte level pte s; \<And>P p. obj_at P p s \<Longrightarrow> obj_at P p s'\<rbrakk>

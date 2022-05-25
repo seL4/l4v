@@ -1,4 +1,5 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -41,11 +42,11 @@ lemma aobj_ref_cases:
     ASIDPoolCap w _ \<Rightarrow> Some w
   | ASIDControlCap \<Rightarrow> None
   | FrameCap w _ _ _ _ \<Rightarrow> Some w
-  | PageTableCap w _ _ \<Rightarrow> Some w)"
+  | PageTableCap w _ _ \<Rightarrow> Some w
+  | VCPUCap v \<Rightarrow> Some v)"
   apply (subst aobj_ref_cases')
-  sorry (* FIXME AARCH64 VCPU
   apply (clarsimp cong: arch_cap.case_cong)
-  done *)
+  done
 
 definition
   "ups_of_heap h \<equiv> \<lambda>p.
@@ -149,6 +150,13 @@ lemma arch_derived_is_device:
     cap_range_def is_cap_simps cap_master_cap_def cap_master_arch_cap_def
               split: if_split_asm cap.splits arch_cap.splits)+
   done
+
+(* FIXME AARCH64: use vcpus_of instead *)
+lemma set_cap_no_vcpu[wp]:
+  "\<lbrace>obj_at (is_vcpu and P) p\<rbrace> set_cap cap cref \<lbrace>\<lambda>_. obj_at (is_vcpu and P) p\<rbrace>"
+  unfolding set_cap_def2 split_def
+  by (wpsimp wp: set_object_wp get_object_wp get_cap_wp)
+     (auto simp: obj_at_def is_vcpu_def)
 
 lemma valid_arch_mdb_simple:
   "\<lbrakk> valid_arch_mdb (is_original_cap s) (caps_of_state s);

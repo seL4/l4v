@@ -1,4 +1,5 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -134,6 +135,10 @@ crunch valid_queues[wp]: init_arch_objects valid_queues (wp: valid_queues_lift)
 crunch valid_sched_action[wp]: init_arch_objects valid_sched_action (wp: valid_sched_action_lift)
 
 crunch valid_sched[wp]: init_arch_objects valid_sched (wp: valid_sched_lift)
+
+(* FIXME AARCH64 issue with crunch ordering, ArchVCPU_AI gets there first rather than some crunch
+   that does this declaration *)
+declare invoke_untyped_cur_thread[DetSchedAux_AI_assms]
 
 end
 

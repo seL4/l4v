@@ -1,4 +1,5 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -231,10 +232,45 @@ lemma halted_eq:
   "halted st = (st = Inactive \<or> st = IdleThreadState)"
   by (cases st; simp)
 
+crunches vgic_update, vgic_update_lr, vcpu_update for ex_nonz_cap_to[wp]: "ex_nonz_cap_to p"
+  (wp: ex_nonz_cap_to_pres)
+
+lemma vgic_maintenance_invs[wp]:
+  "\<lbrace>invs\<rbrace> vgic_maintenance \<lbrace>\<lambda>_. invs\<rbrace>"
+  unfolding vgic_maintenance_def
+  supply if_split[split del] valid_fault_def[simp]
+  apply (wpsimp simp: get_gic_vcpu_ctrl_misr_def get_gic_vcpu_ctrl_eisr1_def
+                      get_gic_vcpu_ctrl_eisr0_def if_apply_def2
+                 wp: thread_get_wp' hoare_vcg_imp_lift' gts_wp hoare_vcg_all_lift
+         | wps
+         | wp (once) hoare_drop_imp[where f="do_machine_op m" for m]
+                   hoare_drop_imp[where f="return $ m" for m]
+         | strengthen not_pred_tcb_at_strengthen
+         | wp (once) hoare_vcg_imp_lift' gts_wp)+
+  apply (frule tcb_at_invs)
+  apply (clarsimp simp: runnable_eq halted_eq not_pred_tcb)
+  apply (fastforce intro!: st_tcb_ex_cap[where P=active]
+                   simp: not_pred_tcb st_tcb_at_def obj_at_def halted_eq)
+  done
+
+lemma vppi_event_invs[wp]:
+  "\<lbrace>invs\<rbrace> vppi_event irq \<lbrace>\<lambda>_. invs\<rbrace>"
+  unfolding vppi_event_def
+  supply if_split[split del] valid_fault_def[simp]
+  apply (wpsimp simp: if_apply_def2
+                wp: hoare_vcg_imp_lift' gts_wp hoare_vcg_all_lift maskInterrupt_invs
+                cong: vcpu.fold_congs
+         | wps
+         | strengthen not_pred_tcb_at_strengthen)+
+  apply (frule tcb_at_invs)
+  apply (clarsimp simp: runnable_eq halted_eq not_pred_tcb)
+  apply (fastforce intro!: st_tcb_ex_cap[where P=active]
+                   simp: not_pred_tcb st_tcb_at_def obj_at_def halted_eq)
+  done
+
 lemma handle_reserved_irq_invs[wp]:
   "\<lbrace>invs\<rbrace> handle_reserved_irq irq \<lbrace>\<lambda>_. invs\<rbrace>"
-  sorry (* FIXME AARCH64 VCPU vppi_event
-  unfolding handle_reserved_irq_def by (wpsimp simp: non_kernel_IRQs_def) *)
+  unfolding handle_reserved_irq_def by (wpsimp simp: non_kernel_IRQs_def)
 
 lemma (* handle_interrupt_invs *) [Interrupt_AI_asms]:
   "\<lbrace>invs\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_. invs\<rbrace>"
