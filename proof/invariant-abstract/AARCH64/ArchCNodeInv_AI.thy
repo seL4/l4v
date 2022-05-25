@@ -473,8 +473,8 @@ lemma zombie_is_cap_toE_pre[CNodeInv_AI_assms]:
   apply (simp add: nat_to_cref_def word_bits_conv)
   done
 
-(* FIXME AARCH64 FPU/VCPU
-crunch st_tcb_at_halted[wp]: prepare_thread_delete "st_tcb_at halted t" *)
+crunch st_tcb_at_halted[wp]: prepare_thread_delete "st_tcb_at halted t"
+  (wp: dissociate_vcpu_tcb_pred_tcb_at)
 
 lemma finalise_cap_makes_halted_proof[CNodeInv_AI_assms]:
   "\<lbrace>invs and valid_cap cap and (\<lambda>s. ex = is_final_cap' cap s)

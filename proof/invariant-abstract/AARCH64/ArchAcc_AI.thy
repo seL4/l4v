@@ -947,6 +947,12 @@ lemma set_pt_valid_global:
   \<lbrace>\<lambda>_ s. valid_global_refs s\<rbrace>"
   by (wp valid_global_refs_cte_lift)
 
+(* FIXME AARCH64: use vcpus_of instead *)
+lemma set_pt_no_vcpu[wp]:
+  "\<lbrace>obj_at (is_vcpu and P) p'\<rbrace> set_pt p pt \<lbrace>\<lambda>_. obj_at (is_vcpu and P) p'\<rbrace>"
+  unfolding set_pt_def
+  by (wpsimp wp: set_object_wp_strong simp: obj_at_def is_vcpu_def a_type_def)
+
 lemma set_pt_cur:
   "\<lbrace>\<lambda>s. cur_tcb s\<rbrace>
   set_pt p pt
