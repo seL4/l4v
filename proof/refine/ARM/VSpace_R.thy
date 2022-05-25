@@ -2110,7 +2110,7 @@ lemma same_refs_vs_cap_ref_eq:
 
 lemma performPageInvocation_corres:
   assumes "page_invocation_map pgi pgi'"
-  shows "corres dc (invs and valid_etcbs and valid_page_inv pgi)
+  shows "corres (=) (invs and valid_etcbs and valid_page_inv pgi)
             (invs' and valid_page_inv' pgi' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
             (perform_page_invocation pgi) (performPageInvocation pgi')"
 proof -
@@ -2142,8 +2142,11 @@ proof -
               apply (rule corres_split_deprecated[OF _ storePTE_corres'])
                  apply (rule corres_split_deprecated[where r' = dc, OF _ corres_store_pte_with_invalid_tail])
                     apply (rule corres_split_deprecated[where r'=dc, OF _ corres_machine_op[OF corres_Id]])
-                         apply (clarsimp simp add: when_def)
-                         apply (rule invalidate_tlb_by_asid_corres_ex)
+                         apply (rule corres_split[where r'=dc, OF _ corres_return_eq_same[OF refl]])
+                           apply (clarsimp simp add: when_def)
+                           apply (rule invalidate_tlb_by_asid_corres_ex)
+                          apply wp
+                         apply wp
                         apply (simp add: last_byte_pte_def objBits_simps archObjSize_def pteBits_def)
                        apply simp
                       apply (rule no_fail_cleanCacheRange_PoU)
@@ -2190,8 +2193,11 @@ proof -
              apply (rule corres_split_deprecated[OF _ storePDE_corres'])
                 apply (rule corres_split_deprecated[where r'=dc, OF _ corres_store_pde_with_invalid_tail])
                    apply (rule corres_split_deprecated[where r'=dc,OF _ corres_machine_op[OF corres_Id]])
-                        apply (clarsimp simp: when_def)
-                        apply (rule invalidate_tlb_by_asid_corres_ex)
+                        apply (rule corres_split[where r'=dc, OF _ corres_return_eq_same[OF refl]])
+                          apply (clarsimp simp: when_def)
+                          apply (rule invalidate_tlb_by_asid_corres_ex)
+                         apply wp
+                        apply wp
                        apply (simp add: last_byte_pde_def objBits_simps archObjSize_def pdeBits_def)
                       apply simp
                      apply (rule no_fail_cleanCacheRange_PoU)
@@ -2266,10 +2272,11 @@ proof -
           apply (rule corres_rel_imp)
            apply (rule get_cap_corres_all_rights_P[where P=is_arch_cap], rule refl)
           apply (clarsimp simp: is_cap_simps)
-         apply (rule_tac F="is_page_cap cap" in corres_gen_asm)
-         apply (rule updateCap_same_master)
-         apply (clarsimp simp: is_page_cap_def update_map_data_def)
-        apply (wp get_cap_wp getSlotCap_wp)+
+         apply (rule corres_split[where r'=dc, OF _ corres_return_eq_same[OF refl]])
+           apply (rule_tac F="is_page_cap cap" in corres_gen_asm)
+           apply (rule updateCap_same_master)
+           apply (clarsimp simp: is_page_cap_def update_map_data_def)
+          apply (wp get_cap_wp getSlotCap_wp)+
       apply (clarsimp simp: cte_wp_at_caps_of_state)
       apply (clarsimp simp: cap_rights_update_def acap_rights_update_def update_map_data_def is_cap_simps)
       apply auto[1]
@@ -2285,10 +2292,11 @@ proof -
            apply (rule corres_rel_imp)
             apply (rule get_cap_corres_all_rights_P[where P=is_arch_cap], rule refl)
            apply (clarsimp simp: is_cap_simps)
-          apply (rule_tac F="is_page_cap cap" in corres_gen_asm)
-          apply (rule updateCap_same_master)
-          apply (clarsimp simp: is_page_cap_def update_map_data_def)
-         apply (wp get_cap_wp getSlotCap_wp)+
+          apply (rule corres_split[where r'=dc, OF _ corres_return_eq_same[OF refl]])
+            apply (rule_tac F="is_page_cap cap" in corres_gen_asm)
+            apply (rule updateCap_same_master)
+            apply (clarsimp simp: is_page_cap_def update_map_data_def)
+           apply (wp get_cap_wp getSlotCap_wp)+
        apply (simp add: cte_wp_at_caps_of_state)
        apply (strengthen pull_out_P)+
        apply wp
@@ -2305,32 +2313,24 @@ proof -
    apply (clarsimp simp: performPageInvocation_def perform_page_invocation_def
                          page_invocation_map_def)
    apply (rule corres_guard_imp)
-     apply (rule corres_when, simp)
-     apply (rule corres_split_deprecated [OF _ setVMRootForFlush_corres])
-       apply (rule corres_split_deprecated [OF _ corres_machine_op])
-          prefer 2
-          apply (rule doFlush_corres)
-         apply (rule corres_when, simp)
-         apply (rule corres_split_deprecated [OF _ getCurThread_corres])
-           apply simp
-           apply (rule setVMRoot_corres)
-          apply wp+
-        apply (simp add: cur_tcb_def [symmetric] cur_tcb'_def [symmetric])
-        apply (wp hoare_drop_imps)
-       apply (simp add: cur_tcb_def [symmetric] cur_tcb'_def [symmetric])
-       apply (wp hoare_drop_imps)+
+     apply (rule corres_split[where r'=dc, OF _ corres_return_eq_same[OF refl]])
+       apply (rule corres_when, simp)
+       apply (rule corres_split_deprecated [OF _ setVMRootForFlush_corres])
+         apply (rule corres_split_deprecated [OF _ corres_machine_op])
+            prefer 2
+            apply (rule doFlush_corres)
+           apply (rule corres_when, simp)
+           apply (rule corres_split_deprecated [OF _ getCurThread_corres])
+             apply simp
+             apply (rule setVMRoot_corres)
+            apply wp+
+          apply (simp add: cur_tcb_def [symmetric] cur_tcb'_def [symmetric])
+          apply (wp hoare_drop_imps)
+         apply (simp add: cur_tcb_def [symmetric] cur_tcb'_def [symmetric])
+         apply (wp hoare_drop_imps)+
     apply (auto simp: valid_page_inv_def invs_vspace_objs[simplified])[2]
   \<comment> \<open>PageGetAddr\<close>
   apply (clarsimp simp: perform_page_invocation_def performPageInvocation_def page_invocation_map_def fromPAddr_def)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ getCurThread_corres])
-      apply simp
-      apply (rule corres_split_deprecated[OF setMessageInfo_corres setMRs_corres])
-         apply (simp add: message_info_map_def)
-        apply clarsimp
-       apply (wp)+
-   apply (clarsimp simp: tcb_at_invs)
-  apply (clarsimp simp: tcb_at_invs')
   done
 qed
 
