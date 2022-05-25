@@ -2765,32 +2765,27 @@ lemma performPageFlush_ccorres:
   apply (simp only: liftE_liftM ccorres_liftM_simp)
   apply (cinit lift: pd_' asid_' start_' end_' pstart_' invLabel___int_')
    apply (unfold when_def)
-   apply (rule ccorres_cond_seq)
-   apply (rule ccorres_cond2[where R=\<top>])
-     apply (simp split: if_split)
-    apply (rule ccorres_rhs_assoc)+
-    apply (ctac (no_vcg) add: setVMRootForFlush_ccorres)
-     apply (ctac (no_vcg) add: doFlush_ccorres)
-      apply (rule ccorres_add_return2)
-      apply (rule ccorres_split_nothrow_novcg_dc)
+   apply (rule ccorres_split_nothrow_novcg_dc)
+      apply (rule ccorres_cond2[where R=\<top>])
+        apply (simp split: if_split)
+       apply (rule ccorres_rhs_assoc)+
+       apply (ctac (no_vcg) add: setVMRootForFlush_ccorres)
+        apply (ctac (no_vcg) add: doFlush_ccorres)
          apply (rule ccorres_cond2[where R=\<top>])
            apply (simp add: from_bool_def split: if_split bool.splits)
           apply (rule ccorres_pre_getCurThread)
           apply (ctac add: setVMRoot_ccorres)
          apply (rule ccorres_return_Skip)
-        apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
-        apply (rule allI, rule conseqPre, vcg)
-        apply (clarsimp simp: return_def)
-       apply wp
-      apply (simp add: guard_is_UNIV_def)
-     apply (simp add: cur_tcb'_def[symmetric])
-     apply (rule_tac Q="\<lambda>_ s. invs' s \<and> cur_tcb' s" in hoare_post_imp)
-      apply (simp add: invs'_invs_no_cicd)
-     apply wp+
-   apply (simp)
-   apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
-   apply (rule allI, rule conseqPre, vcg)
-   apply (clarsimp simp: return_def)
+        apply (simp add: cur_tcb'_def[symmetric])
+        apply (rule_tac Q="\<lambda>_ s. invs' s \<and> cur_tcb' s" in hoare_post_imp)
+         apply (simp add: invs'_invs_no_cicd)
+        apply wp+
+      apply (rule ccorres_return_Skip)
+     apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+     apply (rule allI, rule conseqPre, vcg)
+     apply (clarsimp simp: return_def dc_def)
+    apply wpsimp
+   apply (simp add: guard_is_UNIV_def)
   apply (clarsimp simp: order_less_imp_le)
   done
 
@@ -2930,43 +2925,6 @@ lemma setMessageInfo_ccorres:
   apply (simp add: ARM_HYP_H.msgInfoRegister_def ARM_HYP.msgInfoRegister_def
                    Kernel_C.msgInfoRegister_def Kernel_C.R1_def)
   done
-
-lemma performPageGetAddress_ccorres:
-  "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-      \<top>
-      (UNIV \<inter> {s. vbase_ptr_' s = Ptr ptr}) []
-      (liftE (performPageInvocation (PageGetAddr ptr)))
-      (Call performPageGetAddress_'proc)"
-  apply (simp only: liftE_liftM ccorres_liftM_simp)
-  apply (cinit lift: vbase_ptr_')
-   apply csymbr
-   apply (rule ccorres_pre_getCurThread)
-   apply (clarsimp simp add: setMRs_def zipWithM_x_mapM_x mapM_x_Nil length_of_msgRegisters zip_singleton msgRegisters_unfold mapM_x_singleton)
-   apply (ctac add: setRegister_ccorres)
-     apply csymbr
-     apply (rule ccorres_add_return2)
-     apply (rule ccorres_rhs_assoc2)
-     apply (rule ccorres_split_nothrow_novcg[where r'=dc and xf'=xfdc])
-         apply (unfold setMessageInfo_def)
-         apply ctac
-           apply (simp only: fun_app_def)
-           apply (ctac add: setRegister_ccorres)
-          apply wp
-         apply vcg
-        apply ceqv
-       apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
-        apply (rule allI, rule conseqPre, vcg)
-        apply (clarsimp simp: return_def)
-      apply wp
-     apply (simp add: guard_is_UNIV_def)
-    apply wp
-   apply vcg
-  by (auto simp: ARM_HYP_H.fromPAddr_def message_info_to_H_def mask_def ARM_HYP_H.msgInfoRegister_def
-                    ARM_HYP.msgInfoRegister_def Kernel_C.msgInfoRegister_def Kernel_C.R1_def
-                    word_sle_def word_sless_def Kernel_C.R2_def
-                    kernel_all_global_addresses.msgRegisters_def fupdate_def Arrays.update_def
-                    fcp_beta)
-
 
 lemma performPageDirectoryInvocationFlush_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
@@ -3840,7 +3798,6 @@ lemma performPageInvocationUnmap_ccorres:
       apply (rule_tac P=" ret__unsigned_long = 0" in ccorres_gen_asm)
       apply simp
       apply (rule ccorres_symb_exec_l)
-         apply (subst bind_return [symmetric])
          apply (rule ccorres_split_nothrow_novcg)
              apply (rule ccorres_Guard)
              apply (rule updateCap_frame_mapped_addr_ccorres)
@@ -3862,7 +3819,7 @@ lemma performPageInvocationUnmap_ccorres:
      apply csymbr
      apply wpc
      apply (ctac (no_vcg) add: unmapPage_ccorres)
-      apply (rule ccorres_add_return2)
+      apply (rule ccorres_lhs_assoc)
       apply (rule ccorres_split_nothrow_novcg)
           apply (rule ccorres_move_Guard [where P="cte_at' ctSlot" and P'=\<top>])
            apply (clarsimp simp: cte_wp_at_ctes_of)
