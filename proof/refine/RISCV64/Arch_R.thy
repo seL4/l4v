@@ -959,9 +959,9 @@ lemma arch_performInvocation_corres:
       apply (fastforce simp: valid_arch_inv_def)
      apply (fastforce simp: valid_arch_inv'_def)
     apply (clarsimp simp: archinv_relation_def)
-    apply (rule corres_guard_imp, rule corres_split_nor, rule corres_trivial, simp)
-        apply (rule performPageInvocation_corres; wpsimp)
-       apply wpsimp+
+    apply (rule corres_guard_imp)
+      apply (rule performPageInvocation_corres; wpsimp)
+     apply wpsimp+
      apply (fastforce simp: valid_arch_inv_def)
     apply (fastforce simp: valid_arch_inv'_def)
    apply (clarsimp simp: archinv_relation_def)

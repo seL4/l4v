@@ -13,6 +13,22 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
+section "vm rights"
+
+lemma vmRightsToBits_bounded:
+  "vmRightsToBits rights < 4"
+  by (cases rights; clarsimp simp: vmRightsToBits_def)
+
+lemma vmRightsToBits_not_0:
+  "vmRightsToBits rights \<noteq> 0"
+  by (cases rights; clarsimp simp: vmRightsToBits_def)
+
+lemma vmRightsToBits_vmrights_to_H:
+  "\<lbrakk> rights < 4; rights \<noteq> 0 \<rbrakk> \<Longrightarrow> vmRightsToBits (vmrights_to_H rights) = rights"
+  apply (clarsimp simp add: vmrights_to_H_def vm_rights_defs vmRightsToBits_def split: if_splits)
+  apply (drule word_less_cases, erule disjE, simp, simp)+
+  done
+
 section "ctes"
 
 subsection "capabilities"

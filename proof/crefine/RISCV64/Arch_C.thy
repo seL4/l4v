@@ -1308,7 +1308,7 @@ lemma performPageInvocationMapPTE_ccorres:
    apply clarsimp
    apply wpc (* split mapping *)
    apply ctac
-     apply (rule ccorres_add_return2)
+     apply (subst bind_assoc[symmetric])
      apply (rule ccorres_split_nothrow)
          apply (rule ccorres_call[OF updatePTE_ccorres, where xf'=ret__unsigned_long_'], simp+)
         apply ceqv
@@ -1320,6 +1320,88 @@ lemma performPageInvocationMapPTE_ccorres:
     apply wpsimp
    apply (clarsimp, vcg)
   apply clarsimp
+  done
+
+lemma performPageGetAddress_ccorres:
+  notes Collect_const[simp del] dc_simp[simp del]
+  shows
+  "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+      (invs' and (\<lambda>s. ksCurThread s = thread) and ct_in_state' ((=) Restart))
+      (UNIV \<inter> \<lbrace>\<acute>vbase_ptr = Ptr ptr\<rbrace> \<inter> \<lbrace>\<acute>call = from_bool isCall\<rbrace>) []
+      (do reply \<leftarrow> performPageInvocation (PageGetAddr ptr);
+          liftE (replyOnRestart thread reply isCall) od)
+      (Call performPageGetAddress_'proc)"
+  apply (cinit' lift: vbase_ptr_' call_' simp: performPageInvocation_def)
+   apply (clarsimp simp: bind_assoc)
+   apply csymbr
+   apply csymbr
+   apply (rule ccorres_symb_exec_r)
+     apply (rule_tac xf'=thread_' in ccorres_abstract, ceqv)
+     apply (rename_tac cthread)
+     apply (rule_tac P="cthread = tcb_ptr_to_ctcb_ptr thread" in ccorres_gen_asm2)
+     apply (rule ccorres_Cond_rhs_Seq[rotated]; clarsimp)
+      apply (simp add: replyOnRestart_def liftE_def bind_assoc)
+      apply (rule getThreadState_ccorres_foo, rename_tac tstate)
+      apply (rule_tac P="tstate = Restart" in ccorres_gen_asm)
+      apply clarsimp
+      apply (rule_tac P="\<lambda>s. ksCurThread s = thread" in ccorres_cross_over_guard)
+      apply (ctac (no_vcg) add: setThreadState_ccorres)
+       apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+       apply clarsimp
+       apply (rule conseqPre, vcg)
+       apply (clarsimp simp: return_def dc_simp)
+      apply (rule hoare_post_taut[of \<top>])
+     apply (rule ccorres_rhs_assoc)+
+     apply (clarsimp simp: replyOnRestart_def liftE_def bind_assoc)
+     apply (rule_tac P="\<lambda>s. ksCurThread s = thread" in ccorres_cross_over_guard)
+     apply (rule getThreadState_ccorres_foo, rename_tac tstate)
+     apply (rule_tac P="tstate = Restart" in ccorres_gen_asm)
+     apply (clarsimp simp: bind_assoc)
+     apply (simp add: replyFromKernel_def bind_assoc)
+     apply (ctac add: lookupIPCBuffer_ccorres)
+       apply (ctac add: setRegister_ccorres)
+         apply (simp add: setMRs_single)
+         apply (ctac add: setMR_as_setRegister_ccorres[where offset=0])
+           apply clarsimp
+           apply csymbr
+           apply (simp only: setMessageInfo_def bind_assoc)
+           apply ctac
+             apply simp
+             apply (ctac add: setRegister_ccorres)
+               apply (ctac add: setThreadState_ccorres)
+                 apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
+                 apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+                 apply (rule allI, rule conseqPre, vcg)
+                 apply (clarsimp simp: return_def dc_def)
+                apply (rule hoare_post_taut[of \<top>])
+               apply (vcg exspec=setThreadState_modifies)
+              apply wpsimp
+             apply (vcg exspec=setRegister_modifies)
+            apply wpsimp
+           apply clarsimp
+           apply (vcg)
+          apply wpsimp
+         apply (clarsimp simp: msgInfoRegister_def RISCV64.msgInfoRegister_def
+                               Kernel_C.msgInfoRegister_def Kernel_C.a1_def)
+         apply (vcg exspec=setMR_modifies)
+        apply wpsimp
+       apply (clarsimp simp: dc_def)
+       apply (vcg exspec=setRegister_modifies)
+      apply wpsimp
+     apply (clarsimp simp: dc_def ThreadState_Running_def)
+     apply (vcg exspec=lookupIPCBuffer_modifies)
+    apply clarsimp
+    apply vcg
+   apply clarsimp
+   apply (rule conseqPre, vcg)
+   apply clarsimp
+  apply (clarsimp simp: invs_no_0_obj' tcb_at_invs' invs_queues invs_valid_objs' invs_sch_act_wf'
+                        rf_sr_ksCurThread msgRegisters_unfold
+                        seL4_MessageInfo_lift_def message_info_to_H_def mask_def)
+  apply (cases isCall)
+   apply (auto simp: RISCV64.badgeRegister_def RISCV64_H.badgeRegister_def Kernel_C.badgeRegister_def
+                     Kernel_C.a0_def fromPAddr_def ThreadState_Running_def
+                     pred_tcb_at'_def obj_at'_def ct_in_state'_def)
   done
 
 lemma vaddr_segment_nonsense3_folded:
@@ -1537,23 +1619,6 @@ lemma frame_at'_kernel_mappings:
                 dest!: device_data_at_ko user_data_at_ko intro!: obj_at_kernel_mappings')
   done
 
-(* FIXME move to SR_Lemmas_C *)
-lemma vmRightsToBits_bounded:
-  "vmRightsToBits rights < 4"
-  by (cases rights; clarsimp simp: vmRightsToBits_def)
-
-(* FIXME move to SR_Lemmas_C *)
-lemma vmRightsToBits_not_0:
-  "vmRightsToBits rights \<noteq> 0"
-  by (cases rights; clarsimp simp: vmRightsToBits_def)
-
-(* FIXME move to SR_Lemmas_C *)
-lemma vmRightsToBits_vmrights_to_H:
-  "\<lbrakk> rights < 4; rights \<noteq> 0 \<rbrakk> \<Longrightarrow> vmRightsToBits (vmrights_to_H rights) = rights"
-  apply (clarsimp simp add: vmrights_to_H_def vm_rights_defs vmRightsToBits_def split: if_splits)
-  apply (drule word_less_cases, erule disjE, simp, simp)+
-  done
-
 lemma decodeRISCVFrameInvocation_ccorres:
   notes if_cong[cong] tl_drop_1[simp] Collect_const[simp del]
   shows
@@ -1570,13 +1635,14 @@ lemma decodeRISCVFrameInvocation_ccorres:
              \<inter> {s. cte_' s = cte_Ptr slot}
              \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
-             \<inter> {s. buffer_' s = option_to_ptr buffer}) []
+             \<inter> {s. buffer_' s = option_to_ptr buffer}
+             \<inter> {s. call_' s = from_bool isCall}) []
        (decodeRISCVMMUInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeRISCVFrameInvocation_'proc)"
   apply (clarsimp simp only: isCap_simps)
   apply (cinit' lift: label___unsigned_long_' length___unsigned_long_' cte_'
-                      current_extra_caps_' cap_' buffer_'
+                      current_extra_caps_' cap_' buffer_' call_'
                 simp: decodeRISCVMMUInvocation_def)
    apply (simp add: Let_def isCap_simps invocation_eq_use_types split_def decodeRISCVFrameInvocation_def
                del: Collect_const
@@ -1595,30 +1661,39 @@ lemma decodeRISCVFrameInvocation_ccorres:
      apply (rule ccorres_rhs_assoc)+
      apply (ctac add: setThreadState_ccorres)
        apply csymbr
+       apply (rule ccorres_nondet_refinement)
+        apply (rule is_nondet_refinement_bindE)
+         apply (rule is_nondet_refinement_refl)
+        apply (simp split: if_split, rule conjI[rotated])
+         apply (rule impI, rule is_nondet_refinement_refl)
+        apply (rule impI, rule is_nondet_refinement_alternative1)
+       apply (clarsimp simp: liftE_bindE)
+       apply (rule ccorres_add_returnOk)
        apply (ctac(no_vcg) add: performPageGetAddress_ccorres)
-         apply (rule ccorres_alternative2)
          apply (rule ccorres_return_CE, simp+)[1]
-        apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
-       apply wp+
+        apply (rule ccorres_return_C_errorE, simp+)[1]
+       apply (wpsimp wp: sts_invs_minor' ct_in_state'_set)+
      apply (vcg exspec=setThreadState_modifies)
-    apply (rule ccorres_rhs_assoc)+
 
     \<comment> \<open>PageUnmap\<close>
     apply (simp add: returnOk_bind bindE_assoc
                      performRISCV64MMUInvocations)
+    apply (rule ccorres_rhs_assoc)+
     apply (ctac add: setThreadState_ccorres)
       apply (ctac(no_vcg) add: performPageInvocationUnmap_ccorres)
+        apply (rule ccorres_gen_asm)
+        apply (erule ssubst[OF if_P, where P="\<lambda>x. ccorres _ _ _ _ _ x _"])
         apply (rule ccorres_alternative2)
         apply (rule ccorres_return_CE, simp+)[1]
        apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
-      apply wp
+      apply (wpsimp simp: performPageInvocation_def)
      apply (wp sts_invs_minor')
     apply simp
     apply (vcg exspec=setThreadState_modifies)
 
    \<comment> \<open>PageMap\<close>
    supply Collect_const[simp del]
-   apply (rename_tac word rights pg_sz maptype mapdata buffera cap excaps cte
+   apply (rename_tac word rights pg_sz maptype mapdata call' buffer' cap excaps cte
                      length___unsigned_long invLabel)
    apply clarsimp
    apply (rule ccorres_rhs_assoc)+
@@ -1858,11 +1933,13 @@ lemma decodeRISCVFrameInvocation_ccorres:
                    apply csymbr
                    apply (ctac add: setThreadState_ccorres)
                      apply (ctac (no_vcg) add: performPageInvocationMapPTE_ccorres)
+                       apply (rule ccorres_gen_asm)
+                       apply (erule ssubst[OF if_P, where P="\<lambda>x. ccorres _ _ _ _ _ x _"])
                        apply (rule ccorres_alternative2)
                        apply (rule ccorres_return_CE, simp+)[1]
                       apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
-                     apply wpsimp
-                    apply (wpsimp wp: sts_invs_minor')
+                     apply (wpsimp simp: performPageInvocation_def)
+                    apply (wp sts_invs_minor')
                    apply clarsimp
                    apply (vcg exspec=setThreadState_modifies)
                   apply clarsimp
@@ -1955,10 +2032,12 @@ lemma decodeRISCVFrameInvocation_ccorres:
                    apply csymbr
                    apply (ctac add: setThreadState_ccorres)
                      apply (ctac (no_vcg) add: performPageInvocationMapPTE_ccorres)
+                       apply (rule ccorres_gen_asm)
+                       apply (erule ssubst[OF if_P, where P="\<lambda>x. ccorres _ _ _ _ _ x _"])
                        apply (rule ccorres_alternative2)
                        apply (rule ccorres_return_CE, simp+)[1]
                       apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
-                     apply wpsimp
+                     apply (wpsimp simp: performPageInvocation_def)
                     apply clarsimp
                     apply (wpsimp wp: sts_invs_minor')
                    apply clarsimp
@@ -2238,13 +2317,14 @@ lemma decodeRISCVMMUInvocation_ccorres:
              \<inter> {s. cte_' s = cte_Ptr slot}
              \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
-             \<inter> {s. buffer_' s = option_to_ptr buffer}) []
+             \<inter> {s. buffer_' s = option_to_ptr buffer}
+             \<inter> {s. call_' s = from_bool isCall}) []
        (decodeRISCVMMUInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeRISCVMMUInvocation_'proc)"
   supply ccorres_prog_only_cong[cong]
   apply (cinit' lift: label___unsigned_long_' length___unsigned_long_' cte_'
-                      current_extra_caps_' cap_' buffer_')
+                      current_extra_caps_' cap_' buffer_' call_')
    apply csymbr
    apply (simp add: cap_get_tag_isCap_ArchObject
                     RISCV64_H.decodeInvocation_def
@@ -2938,7 +3018,7 @@ lemma Arch_decodeInvocation_ccorres:
              \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
              \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
              \<inter> {s. buffer_' s = option_to_ptr buffer}
-             \<inter> {s. call_' s = from_bool isCall }) []
+             \<inter> {s. call_' s = from_bool isCall}) []
        (Arch.decodeInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call Arch_decodeInvocation_'proc)"
