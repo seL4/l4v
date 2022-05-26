@@ -26,13 +26,14 @@ definition
     crunch_foo1 13
   od"
 
+crunch_ignore (valid, empty_fail, no_fail) (add: bind)
+
 crunch (empty_fail) empty_fail: crunch_foo2
-  (ignore: modify bind)
 
 crunch_ignore (add: crunch_foo1)
 
 crunch gt: crunch_foo2 "\<lambda>x. x > y"
-  (ignore: modify bind ignore_del: crunch_foo1)
+  (ignore_del: crunch_foo1)
 
 crunch_ignore (del: crunch_foo1)
 
@@ -56,24 +57,22 @@ lemma crunch_foo1_no_fail:
   done
 
 crunch (no_fail) no_fail: crunch_foo2
-  (ignore: modify bind wp: crunch_foo1_at_2[simplified])
+  (wp: crunch_foo1_at_2[simplified])
 
 crunch (valid) at_2: crunch_foo2 "crunch_always_true 2"
-  (ignore: modify bind wp: crunch_foo1_at_2[simplified])
+  (wp: crunch_foo1_at_2[simplified])
 
 fun crunch_foo3 :: "nat => nat => 'a => (nat,unit) nondet_monad" where
   "crunch_foo3 0 x _ = crunch_foo1 x"
 | "crunch_foo3 (Suc n) x y = crunch_foo3 n x y"
 
 crunch gt2: crunch_foo3 "\<lambda>x. x > y"
-  (ignore: modify bind)
 
 crunch (empty_fail) empty_fail2: crunch_foo3
-  (ignore: modify bind)
 
 (* check that simp rules can be used to solve a goal without crunching *)
 crunch (empty_fail) empty_fail: crunch_foo3
-  (ignore: modify bind ignore: crunch_foo1 simp: crunch_foo3_empty_fail2)
+  (ignore: crunch_foo1 simp: crunch_foo3_empty_fail2)
 
 class foo_class =
   fixes stuff :: 'a
@@ -96,21 +95,21 @@ lemma crunch_foo4_alt:
 
 (* prove rules about crunch_foo4 with and without the alternative definition *)
 crunch gt3: crunch_foo4 "\<lambda>x. x > y"
-  (ignore: modify bind)
 
 crunch (no_fail) no_fail2: crunch_foo4
-  (rule: crunch_foo4_alt ignore: modify bind)
+  (rule: crunch_foo4_alt)
 
 crunch gt3': crunch_foo4 "\<lambda>x. x > y"
-  (rule: crunch_foo4_alt ignore: modify bind)
+  (rule: crunch_foo4_alt)
 
 crunch gt4: crunch_foo5 "\<lambda>x. x > y"
-  (ignore: modify bind)
 
 (* Test cases for crunch in locales *)
 
 definition
   "crunch_foo6 \<equiv> return () >>= (\<lambda>_. return ())"
+
+crunch_ignore (del: bind)
 
 locale test_locale =
 fixes fixed_return_unit :: "(unit, unit) nondet_monad"
@@ -192,7 +191,7 @@ crunch test: foo_const P
 
 crunches crunch_foo3, crunch_foo4, crunch_foo5
   for silly: "\<lambda>s. True \<noteq> False" and (no_fail)nf and (empty_fail)ef
-  (ignore: modify bind rule: crunch_foo4_alt wp_del: hoare_vcg_prop)
+  (rule: crunch_foo4_alt wp_del: hoare_vcg_prop)
 
 (* check that crunch can use wps to lift sub-predicates
    (and also that top-level constants can be ignored) *)
