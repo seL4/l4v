@@ -161,7 +161,7 @@ sig
          -> (string * ((Facts.ref * Token.src list), xstring) sum) list
          -> string list -> local_theory -> local_theory;
 
-    val crunch_ignore_add_del : string list -> string list -> theory -> theory
+    val crunch_ignore_add_dels : string list -> string list -> local_theory -> local_theory
 
     val mism_term_trace : (term * extra) list Unsynchronized.ref
 end
@@ -182,14 +182,32 @@ structure CrunchIgnore = Theory_Data
     val merge = Library.merge (op =);
 end);
 
-fun crunch_ignore_add thms thy =
-  CrunchIgnore.map (curry (Library.merge (op =)) thms) thy
+fun crunch_ignore_add' thm =
+  CrunchIgnore.map (curry (Library.merge (op =)) [thm])
 
-fun crunch_ignore_del thms thy =
-  CrunchIgnore.map (Library.subtract (op =) thms) thy
+fun crunch_ignore_add thm lthy =
+  if Library.member (op =) (CrunchIgnore.get (Proof_Context.theory_of lthy)) thm
+  then (Proof_Context.markup_const lthy thm ^ " is already in the crunch ignore set for "
+        ^ Instance.name |> warning; lthy)
+  else Local_Theory.raw_theory (crunch_ignore_add' thm) lthy;
 
-fun crunch_ignore_add_del adds dels =
-  crunch_ignore_add adds #> crunch_ignore_del dels
+fun crunch_ignore_adds thms =
+  fold (curry (op #>)) (map crunch_ignore_add thms) I;
+
+fun crunch_ignore_del' thm =
+  CrunchIgnore.map (Library.subtract (op =) [thm])
+
+fun crunch_ignore_del thm lthy =
+  if Library.member (op =) (CrunchIgnore.get (Proof_Context.theory_of lthy)) thm
+  then Local_Theory.raw_theory (crunch_ignore_del' thm) lthy
+  else (Proof_Context.markup_const lthy thm ^ " is not in the crunch ignore set for "
+        ^ Instance.name |> warning; lthy);
+
+fun crunch_ignore_dels thms =
+  fold (curry (op #>)) (map crunch_ignore_del thms) I;
+
+fun crunch_ignore_add_dels adds dels =
+  crunch_ignore_adds adds #> crunch_ignore_dels dels
 
 fun crunch_ignores cfg ctxt =
   subtract (op =) (#ig_dels cfg) (#igs cfg @ CrunchIgnore.get (Proof_Context.theory_of ctxt))

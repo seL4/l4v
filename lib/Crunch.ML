@@ -10,7 +10,7 @@ structure CrunchTheoryData = Theory_Data
        ((Token.src list -> string -> string
          -> (string * ((Facts.ref * Token.src list), xstring) sum) list
          -> string list -> local_theory -> local_theory)
-        * (string list -> string list -> theory -> theory)) Symtab.table
+        * (string list -> string list -> local_theory -> local_theory)) Symtab.table
      val empty = Symtab.empty
      val merge = Symtab.merge (fn _ => true);
    end);
@@ -132,10 +132,8 @@ val crunch_ignoreP =
                       | SOME x => snd x);
                    val crunch_ignore_add_dels =
                      map (fn inst => crunch_ignore_add_del inst add del) crunch_instances
-                   val crunch_ignore_add_dels' =
-                     fold (curry (op #>)) (tl crunch_ignore_add_dels) (hd crunch_ignore_add_dels)
                in
-                  Local_Theory.raw_theory crunch_ignore_add_dels' lthy
+                  fold (curry (op #>)) crunch_ignore_add_dels I lthy
                end));
 
 end;

@@ -136,16 +136,16 @@ structure CrunchPrefixClosed : CRUNCH = Crunch(CrunchPrefixClosedInstance);
 \<close>
 
 setup \<open>
-  add_crunch_instance "" (CrunchValid.crunch_x, CrunchValid.crunch_ignore_add_del)
+  add_crunch_instance "" (CrunchValid.crunch_x, CrunchValid.crunch_ignore_add_dels)
 \<close>
 setup \<open>
-  add_crunch_instance "valid" (CrunchValid.crunch_x, CrunchValid.crunch_ignore_add_del)
+  add_crunch_instance "valid" (CrunchValid.crunch_x, CrunchValid.crunch_ignore_add_dels)
 \<close>
 setup \<open>
-  add_crunch_instance "no_fail" (CrunchNoFail.crunch_x, CrunchNoFail.crunch_ignore_add_del)
+  add_crunch_instance "no_fail" (CrunchNoFail.crunch_x, CrunchNoFail.crunch_ignore_add_dels)
 \<close>
 setup \<open>
-  add_crunch_instance "pfx_closed" (CrunchPrefixClosed.crunch_x, CrunchPrefixClosed.crunch_ignore_add_del)
+  add_crunch_instance "pfx_closed" (CrunchPrefixClosed.crunch_x, CrunchPrefixClosed.crunch_ignore_add_dels)
 \<close>
 
 end
