@@ -26,6 +26,7 @@ fun get_nondet_monad_state_type
 structure CrunchValidInstance : CrunchInstance =
 struct
   val name = "valid";
+  val prefix_name_scheme = false;
   type extra = term;
   val eq_extra = ae_conv;
   fun parse_extra ctxt extra
@@ -55,6 +56,7 @@ structure CrunchValid : CRUNCH = Crunch(CrunchValidInstance);
 structure CrunchNoFailInstance : CrunchInstance =
 struct
   val name = "no_fail";
+  val prefix_name_scheme = false;
   type extra = unit;
   val eq_extra = op =;
   fun parse_extra ctxt extra
@@ -83,6 +85,7 @@ structure CrunchNoFail : CRUNCH = Crunch(CrunchNoFailInstance);
 structure CrunchEmptyFailInstance : CrunchInstance =
 struct
   val name = "empty_fail";
+  val prefix_name_scheme = false;
   type extra = unit;
   val eq_extra = op =;
   fun parse_extra ctxt extra
@@ -109,6 +112,7 @@ structure CrunchEmptyFail : CRUNCH = Crunch(CrunchEmptyFailInstance);
 structure CrunchValidEInstance : CrunchInstance =
 struct
   val name = "valid_E";
+  val prefix_name_scheme = false;
   type extra = term * term;
   fun eq_extra ((a, b), (c, d)) = (ae_conv (a, c) andalso ae_conv (b, d));
   fun parse_extra ctxt extra

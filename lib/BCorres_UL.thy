@@ -271,6 +271,7 @@ ML \<open>
 structure CrunchBCorresInstance : CrunchInstance =
 struct
   val name = "bcorres";
+  val prefix_name_scheme = false;
   type extra = term;
   val eq_extra = ae_conv;
   fun parse_extra ctxt extra
