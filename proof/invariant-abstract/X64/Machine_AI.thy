@@ -51,7 +51,7 @@ structure CrunchNoIrq : CRUNCH = Crunch(CrunchNoIrqInstance);
 \<close>
 
 setup \<open>
-  add_crunch_instance "no_irq" (CrunchNoIrq.crunch_x, CrunchNoIrq.crunch_ignore_add_del)
+  add_crunch_instance "no_irq" (CrunchNoIrq.crunch_x, CrunchNoIrq.crunch_ignore_add_dels)
 \<close>
 
 crunch_ignore (no_irq) (add:

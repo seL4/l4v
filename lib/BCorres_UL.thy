@@ -298,7 +298,7 @@ structure CrunchBCorres : CRUNCH = Crunch(CrunchBCorresInstance);
 \<close>
 
 setup \<open>
-  add_crunch_instance "bcorres" (CrunchBCorres.crunch_x, CrunchBCorres.crunch_ignore_add_del)
+  add_crunch_instance "bcorres" (CrunchBCorres.crunch_x, CrunchBCorres.crunch_ignore_add_dels)
 \<close>
 
 end
