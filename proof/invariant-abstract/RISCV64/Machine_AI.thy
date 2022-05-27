@@ -26,6 +26,7 @@ ML \<open>
 structure CrunchNoIrqInstance : CrunchInstance =
 struct
   val name = "no_irq";
+  val prefix_name_scheme = false;
   type extra = unit;
   val eq_extra = op =;
   fun parse_extra ctxt extra

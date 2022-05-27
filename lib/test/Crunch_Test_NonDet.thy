@@ -49,7 +49,7 @@ lemma crunch_foo1_at_3[wp]:
   "\<lbrace>crunch_always_true 3\<rbrace> crunch_foo1 x \<lbrace>\<lambda>rv. crunch_always_true 3\<rbrace>"
   by (simp add: crunch_always_true_def, wp)
 
-lemma crunch_foo1_no_fail:
+lemma no_fail_crunch_foo1:
   "True \<Longrightarrow> no_fail (crunch_always_true 2 and crunch_always_true 3) (crunch_foo1 x)"
   apply (simp add:crunch_always_true_def crunch_foo1_def)
   apply (rule no_fail_pre)
@@ -190,7 +190,9 @@ crunch test: foo_const P
 (* check that the grid-style crunch is working *)
 
 crunches crunch_foo3, crunch_foo4, crunch_foo5
-  for silly: "\<lambda>s. True \<noteq> False" and (no_fail)nf and (empty_fail)ef
+  for silly: "\<lambda>s. True \<noteq> False"
+  and (no_fail) nf
+  and (empty_fail) ef
   (rule: crunch_foo4_alt wp_del: hoare_vcg_prop)
 
 (* check that crunch can use wps to lift sub-predicates
@@ -225,7 +227,7 @@ lemma do_nat_op_ef:
               simp: mk_ef_def)
   done
 
-lemma do_nat_op_nf:
+lemma nf_do_nat_op:
   "no_fail P f \<Longrightarrow> empty_fail f \<Longrightarrow> no_fail (P \<circ> state') (do_nat_op f)"
   unfolding do_nat_op_def
   apply wpsimp
@@ -247,7 +249,7 @@ definition do_extended_op :: "(nat state, unit) nondet_monad \<Rightarrow> ('a s
 
 axiomatization
   where do_extended_op_ef[wp]: "empty_fail f \<Longrightarrow> empty_fail (do_extended_op f)"
-  and do_extended_op_nf[wp]: "no_fail P f \<Longrightarrow> empty_fail f \<Longrightarrow> no_fail (P \<circ> unwrap_ext) (do_extended_op f)"
+  and nf_do_extended_op[wp]: "no_fail P f \<Longrightarrow> empty_fail f \<Longrightarrow> no_fail (P \<circ> unwrap_ext) (do_extended_op f)"
 
 definition
   "crunch_foo12_ext (x :: nat) = modify (ext_update ((+) x))"
@@ -269,7 +271,7 @@ definition crunch_foo13_pre :: "('a state,unit) nondet_monad" where
   "crunch_foo13_pre \<equiv> return ()"
 
 axiomatization
-  where crunch_foo13_pre_nf[wp]: "no_fail (crunch_always_true 0) crunch_foo13_pre"
+  where nf_crunch_foo13_pre[wp]: "no_fail (crunch_always_true 0) crunch_foo13_pre"
 
 definition
   "crunch_foo13 x \<equiv>

@@ -109,6 +109,8 @@ signature CrunchInstance =
 sig
     (* The name of the property. *)
     val name : string;
+    (* Which naming scheme to use - true for prefix, false for suffix*)
+    val prefix_name_scheme : bool
     (* The type of any parameters of the property beyond a (optional) precondition
        and the function being crunched. *)
     type extra;
@@ -143,11 +145,12 @@ end
 signature CRUNCH =
 sig
     type extra;
-    (* Crunch configuration: theory, naming scheme, name space, wp rules, wps_rules,
-    constants to ignore, simp rules, constants to not ignore, unfold rules*)
-    type crunch_cfg = {ctxt: local_theory, prp_name: string, nmspce: string option,
-        wp_rules: (string * thm) list, wps_rules: thm list, igs: string list, simps: thm list,
-        ig_dels: string list, rules: thm list};
+    (* Crunch configuration: theory, property name, name space, wp rules, wps_rules,
+       constants to ignore, simp rules, constants to not ignore, unfold rules *)
+    type crunch_cfg =
+      {ctxt: local_theory, prp_name: string, nmspce: string option,
+       wp_rules: (string * thm) list, wps_rules: thm list, igs: string list,
+       simps: thm list, ig_dels: string list, rules: thm list};
 
     (* Crunch takes a configuration, a precondition, any extra information needed, a debug stack,
     a constant name, and a list of previously proven theorems, and returns a theorem for
@@ -171,9 +174,10 @@ struct
 
 type extra = Instance.extra;
 
-type crunch_cfg = {ctxt: local_theory, prp_name: string, nmspce: string option,
-    wp_rules: (string * thm) list, wps_rules: thm list, igs: string list, simps: thm list,
-    ig_dels: string list, rules: thm list};
+type crunch_cfg =
+  {ctxt: local_theory, prp_name: string, nmspce: string option,
+   wp_rules: (string * thm) list, wps_rules: thm list, igs: string list,
+   simps: thm list, ig_dels: string list, rules: thm list};
 
 structure CrunchIgnore = Theory_Data
 (struct
@@ -273,11 +277,17 @@ fun thy_maybe_thms thy name = Global_Theory.get_thms thy name handle ERROR _ => 
 fun add_thm thm atts name ctxt =
   Local_Theory.notes [((Binding.name name, atts), [([thm], [])])] ctxt |> #2
 
-fun get_thm_name (cfg : crunch_cfg) const_name
-  = if read_const (#ctxt cfg) (Long_Name.base_name const_name)
+fun get_thm_name (cfg : crunch_cfg) const_name =
+  let val const_name' =
+    if read_const (#ctxt cfg) (Long_Name.base_name const_name)
          = read_const (#ctxt cfg) const_name
-      then Long_Name.base_name const_name ^ "_" ^ (#prp_name cfg)
-      else space_implode "_" (space_explode "." const_name @ [#prp_name cfg])
+    then Long_Name.base_name const_name
+    else space_implode "_" (space_explode "." const_name)
+  in
+    if Instance.prefix_name_scheme
+    then (#prp_name cfg) ^ "_" ^ const_name'
+    else const_name' ^ "_" ^ (#prp_name cfg)
+  end;
 
 fun get_stored cfg n = get_thm (#ctxt cfg) (get_thm_name cfg n)
 
@@ -882,10 +892,12 @@ fun crunch_x atts extra prp_name wpigs consts ctxt =
 
         val ctxt'' = ctxt' delsimps simp_dels;
 
-        val (_, thms) = funkyfold (crunch {ctxt = ctxt'', prp_name = prp_name, nmspce = nmspce,
-              wp_rules = wp_rules, wps_rules = wps_rules, igs = igs, simps = simps,
-              ig_dels = ig_dels, rules = rules} pre' extra' [])
-            full_const_names [];
+        val crunch_cfg =
+          {ctxt = ctxt'', prp_name = prp_name, nmspce = nmspce, wp_rules = wp_rules,
+           wps_rules = wps_rules, igs = igs, simps = simps, ig_dels = ig_dels,
+           rules = rules}
+        val (_, thms) =
+          funkyfold (crunch crunch_cfg pre' extra' []) full_const_names [];
         val _ = if null thms then warning "crunch: no theorems proven" else ();
 
         val atts' = map (Attrib.check_src ctxt) atts;
