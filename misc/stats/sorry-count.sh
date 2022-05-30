@@ -19,6 +19,7 @@ count() {
     rm "${TMP}"
 }
 
+git rev-parse --show-toplevel 2> /dev/null || fail "Must be run inside l4v repo."
 cd "$(git rev-parse --show-toplevel)"
 
 TOP_DIRS="lib sys-init camkes"

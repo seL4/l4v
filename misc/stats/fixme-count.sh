@@ -15,6 +15,12 @@ usage()
     echo "$0 AARCH64"
 }
 
+fail()
+{
+    echo "$@"
+    exit 1
+}
+
 count() {
     D="$1"
     TAG="$2"
@@ -33,6 +39,7 @@ count() {
     rm "${TMP}"
 }
 
+git rev-parse --show-toplevel 2> /dev/null || fail "Must be run inside l4v repo."
 cd "$(git rev-parse --show-toplevel)"
 
 if [ "$#" -lt 1 ]; then
