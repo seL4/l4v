@@ -15,7 +15,7 @@ begin
 context Arch begin global_naming X64
 
 (* FIXME: should go in Machine_AI, but needs dmo_invs from KHeap_AI. *)
-lemmas machine_op_lift_irq_masks = no_irq[OF machine_op_lift_no_irq]
+lemmas machine_op_lift_irq_masks = no_irq[OF no_irq_machine_op_lift]
 
 lemma machine_op_lift_underlying_memory:
   "\<lbrace>\<lambda>m'. underlying_memory m' p = um\<rbrace> machine_op_lift m \<lbrace>\<lambda>_ m'. underlying_memory m' p = um\<rbrace>"

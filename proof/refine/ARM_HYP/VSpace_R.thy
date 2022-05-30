@@ -3842,7 +3842,7 @@ lemma saveVirtTimer_invs_no_cicd'[wp]:
 
 lemma set_cntv_off_64_invs_no_cicd'[wp]:
   "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (set_cntv_off_64 v) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (wpsimp wp: dmo_invs_no_cicd' set_cntv_off_64_no_irq no_irq)
+  apply (wpsimp wp: dmo_invs_no_cicd' no_irq)
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
   apply (wpsimp simp: machine_op_lift_def set_cntv_off_64_def
@@ -3851,7 +3851,7 @@ lemma set_cntv_off_64_invs_no_cicd'[wp]:
 
 lemma set_cntv_cval_64_invs_no_cicd'[wp]:
   "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (set_cntv_cval_64 v) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (wpsimp wp: dmo_invs_no_cicd' set_cntv_cval_64_no_irq no_irq)
+  apply (wpsimp wp: dmo_invs_no_cicd' no_irq)
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
   apply (wpsimp simp: machine_op_lift_def set_cntv_cval_64_def
