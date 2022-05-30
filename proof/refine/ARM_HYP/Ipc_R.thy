@@ -1563,8 +1563,8 @@ lemma makeArchFaultMessage_corres:
     apply (rule corres_split_eqr[OF _ asUser_getRestartPC_corres])
       apply (rule corres_split_eqr[OF _ corres_machine_op])
          apply (rule corres_trivial, simp)
-        apply (rule corres_underlying_trivial[OF addressTranslateS1CPR_no_fail])
-       apply (wp+, auto)
+        apply (rule corres_underlying_trivial)
+        apply (wp+, auto)
   done
 
 lemma makeFaultMessage_corres:

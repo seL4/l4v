@@ -56,7 +56,7 @@ structure CrunchValid : CRUNCH = Crunch(CrunchValidInstance);
 structure CrunchNoFailInstance : CrunchInstance =
 struct
   val name = "no_fail";
-  val prefix_name_scheme = false;
+  val prefix_name_scheme = true;
   type extra = unit;
   val eq_extra = op =;
   fun parse_extra ctxt extra
