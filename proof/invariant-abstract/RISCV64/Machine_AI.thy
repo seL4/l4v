@@ -210,9 +210,7 @@ lemma machine_rest_lift_no_irq:
   apply simp
   done
 
-crunch (no_irq) no_irq[wp]: machine_op_lift
-
-declare machine_op_lift_no_irq[simp] (* avoids crunch warning *)
+crunch (no_irq) no_irq[wp, simp]: machine_op_lift
 
 lemma no_irq:
   "no_irq f \<Longrightarrow> \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace> f \<lbrace>\<lambda>_ s. P (irq_masks s)\<rbrace>"
