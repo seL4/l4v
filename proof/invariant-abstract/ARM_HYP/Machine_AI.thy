@@ -26,7 +26,7 @@ ML \<open>
 structure CrunchNoIrqInstance : CrunchInstance =
 struct
   val name = "no_irq";
-  val prefix_name_scheme = false;
+  val prefix_name_scheme = true;
   type extra = unit;
   val eq_extra = op =;
   fun parse_extra ctxt extra
@@ -356,7 +356,7 @@ lemma no_irq_use:
   apply fastforce
   done
 
-lemma machine_rest_lift_no_irq:
+lemma no_irq_machine_rest_lift:
   "no_irq (machine_rest_lift f)"
   apply (clarsimp simp: no_irq_def machine_rest_lift_def split_def)
   apply wp
@@ -469,7 +469,7 @@ lemma no_irq_writeContextIDAndPD: "no_irq (writeContextIDAndPD asid w)"
 lemma no_irq_addressTranslateS1CPR: "no_irq (addressTranslateS1CPR w)"
   apply (clarsimp simp add: addressTranslateS1CPR_def no_irq_def, wp)
   apply (simp only: atomize_all)
-  apply (wp machine_op_lift_no_irq[simplified no_irq_def], simp)
+  apply (wp no_irq_machine_op_lift[simplified no_irq_def], simp)
   done
 
 lemma no_irq_setHCR: "no_irq (setHCR w)"
@@ -502,7 +502,7 @@ lemma no_irq_set_gic_vcpu_ctrl_apr: "no_irq (set_gic_vcpu_ctrl_apr w)"
 lemma no_irq_get_gic_vcpu_ctrl_lr: "no_irq (get_gic_vcpu_ctrl_lr n)"
   apply (clarsimp simp add: get_gic_vcpu_ctrl_lr_def no_irq_def, wp)
   apply (simp only: atomize_all)
-  apply (wp machine_op_lift_no_irq[simplified no_irq_def], simp)
+  apply (wp no_irq_machine_op_lift[simplified no_irq_def], simp)
   done
 
 lemma no_irq_set_gic_vcpu_ctrl_lr: "no_irq (set_gic_vcpu_ctrl_lr n w)"
