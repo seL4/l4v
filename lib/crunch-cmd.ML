@@ -271,7 +271,7 @@ fun maybe_thms thy name = get_thms thy name handle ERROR _ => []
 fun thy_maybe_thms thy name = Global_Theory.get_thms thy name handle ERROR _ => []
 
 fun add_thm thm atts name ctxt =
-  Local_Theory.notes [((Binding.name name, atts), [([thm], atts)])] ctxt |> #2
+  Local_Theory.notes [((Binding.name name, atts), [([thm], [])])] ctxt |> #2
 
 fun get_thm_name (cfg : crunch_cfg) const_name
   = if read_const (#ctxt cfg) (Long_Name.base_name const_name)
