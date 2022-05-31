@@ -19,7 +19,6 @@ definition obj_v_footprint :: "'a state \<Rightarrow> obj_ref \<Rightarrow> mach
 definition policy_owned_objs :: "'a PAS \<Rightarrow> domain \<Rightarrow> obj_ref set" where
   "policy_owned_objs aag d \<equiv> {p. pasObjectAbs aag p \<in> pasDomainAbs aag d}"
 
-(* XXX: Is this feasible? If not, is there some rephrasing of it that's feasible? *)
 definition all_labels_are_owned :: "'a PAS \<Rightarrow> bool" where
   "all_labels_are_owned aag \<equiv> \<forall>l. \<exists>d. l \<in> pasDomainAbs aag d"
 
@@ -91,11 +90,6 @@ definition ta_subset_accessible_partitions :: "'a PAS \<Rightarrow> det_state \<
      p_footprint s (touched_addresses' s) \<subseteq>
      policy_accessible_partitions aag s"
 
-(* XXX: Why should this matter?
-definition no_empty_domains :: "'a PAS \<Rightarrow> bool" where
-  "no_empty_domains aag \<equiv> \<forall>d. policy_owned_objs aag d \<noteq> {}"
-*)
-
 \<comment> \<open>That each domain's objects stay confined to that domain's partition.\<close>
 definition owned_objs_well_partitioned :: "'a PAS \<Rightarrow> det_state \<Rightarrow> bool" where
   "owned_objs_well_partitioned aag s \<equiv> \<forall> d.
@@ -110,9 +104,9 @@ definition accessible_objs_well_partitioned :: "'a PAS \<Rightarrow> det_state \
 
 \<comment> \<open>If every domain's objects is confined to its partition, then all accessible objects, due to
   belonging to accessible domains, are confined to the union of those domains' partitions. -robs\<close>
-lemma partitioning_owned_partitions_accessible:
-  "all_labels_are_owned aag \<Longrightarrow>
-   owned_objs_well_partitioned aag s \<Longrightarrow> accessible_objs_well_partitioned aag s"
+lemma owned_to_accessible_objs_well_partitioned:
+  "\<lbrakk>all_labels_are_owned aag; owned_objs_well_partitioned aag s\<rbrakk> \<Longrightarrow>
+   accessible_objs_well_partitioned aag s"
   unfolding accessible_objs_well_partitioned_def
   apply(clarsimp simp:p_footprint_def)
   apply(clarsimp simp:v_to_p_kernel_nonelf_def)
@@ -169,18 +163,17 @@ definition ta_subset_accessible_objects :: "'a PAS \<Rightarrow> det_state \<Rig
      p_footprint s (\<Union> (obj_v_footprint s ` policy_accessible_objs aag (cur_domain s)))"
 
 lemma ta_subset_accessible_partitions':
-  (* XXX: Needed? no_empty_domains aag \<Longrightarrow> pas_domains_distinct aag \<Longrightarrow> *)
-  "\<lbrakk>all_labels_are_owned aag; accessible_objs_well_partitioned aag s;
-    ta_subset_accessible_objects aag s\<rbrakk> \<Longrightarrow>
+  "\<lbrakk>accessible_objs_well_partitioned aag s; ta_subset_accessible_objects aag s\<rbrakk> \<Longrightarrow>
    ta_subset_accessible_partitions aag s"
-  sorry
+  unfolding ta_subset_accessible_partitions_def ta_subset_accessible_objects_def
+    accessible_objs_well_partitioned_def
+  by blast
 
-lemma ta_subset_accessible_partitions:
+theorem ta_subset_accessible_partitions:
   "\<lbrakk>all_labels_are_owned aag; owned_objs_well_partitioned aag s;
     ta_subset_accessible_objects aag s\<rbrakk> \<Longrightarrow>
    ta_subset_accessible_partitions aag s"
-  apply(force intro:ta_subset_accessible_partitions' partitioning_owned_partitions_accessible)
-  done
+  by (force intro:ta_subset_accessible_partitions' owned_to_accessible_objs_well_partitioned)
 
 end
 
