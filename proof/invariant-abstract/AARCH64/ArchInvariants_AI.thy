@@ -1068,6 +1068,11 @@ lemma aobj_of_Some[iff]:
   "(aobj_of a = Some ao) = (a = ArchObj ao)"
   by (simp add: aobj_of_def split: kernel_object.splits)
 
+lemma aobj_of_None[simp]:
+  "(aobj_of ko = None) = (\<not>is_ArchObj ko)"
+  "(None = aobj_of ko) = (\<not>is_ArchObj ko)"
+  by (cases ko; simp)+
+
 lemmas pt_of_simps[simp] = pt_of_def[split_simps arch_kernel_obj.split]
 
 lemma pt_of_Some[iff]:
@@ -1081,6 +1086,21 @@ lemma aobjs_of_Some:
 lemma pts_of_Some:
   "(pts_of s p = Some pt) = (aobjs_of s p = Some (PageTable pt))"
   by (simp add: in_omonad)
+
+(* Not [simp], because we don't always want to break the vspace_obj_of abstraction *)
+lemma vspace_obj_of_None:
+  "(vspace_obj_of ako = None) = is_VCPU ako"
+  "(None = vspace_obj_of ako) = is_VCPU ako"
+  by (auto simp: vspace_obj_of_def)
+
+(* Not [simp], because we don't always want to break the vspace_obj_of abstraction *)
+lemma vspace_obj_of_Some:
+  "(vspace_obj_of ako = Some ako') = (ako' = ako \<and> \<not>is_VCPU ako)"
+  by (auto simp: vspace_obj_of_def)
+
+lemma not_VCPU_eq:
+  "(\<not>is_VCPU ako) = (is_ASIDPool ako \<or> is_PageTable ako \<or> is_DataPage ako)"
+  by (cases ako) auto
 
 declare a_typeE[elim!]
 
