@@ -9,11 +9,7 @@ theory ArchKHeap_AI
 imports KHeapPre_AI
 begin
 
-(* FIXME MOVE, might break proofs elsewhere *)
-lemma if_Some_Some[simp]:
-  "((if P then Some v else None) = Some v) = P"
-  "((if P then None else Some v) = Some v) = (\<not>P)"
-  by auto
+declare if_option_Some_eq[simp]
 
 context Arch begin global_naming AARCH64
 
@@ -29,12 +25,15 @@ lemmas non_vspace_obj_simps[simp] =
 definition vspace_obj_pred :: "(kernel_object \<Rightarrow> bool) \<Rightarrow> bool" where
   "vspace_obj_pred P \<equiv> \<forall>ko ko'. non_vspace_obj ko \<longrightarrow> non_vspace_obj ko' \<longrightarrow> P ko = P ko'"
 
-(* FIXME AARCH64: prove that these two are equivalent
- "\<And>P P' p. vspace_obj_pred P' \<Longrightarrow> f \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
- "\<And>P. f \<lbrace>\<lambda>s. P (vspace_objs_of s)\<rbrace>"
-*)
+(* Not [simp], because we don't always want to break the non_vspace_obj abstraction *)
+lemma non_vspace_obj_arch:
+  "non_vspace_obj (ArchObj ako) = is_VCPU ako"
+  by (cases ako; simp)
 
-(* FIXME AARCH64: use vspace_objs_of for vs_lookup lifting rules instead of aobjs_of *)
+(* We could make this the definition of non_vspace_obj_proj, but we wouldn't get nice simp rules *)
+lemma non_vspace_obj_proj:
+  "non_vspace_obj ko = ((aobj_of |> vspace_obj_of) ko = None)"
+  by (cases ko; simp add: in_opt_map_None_eq non_vspace_obj_arch vspace_obj_of_None)
 
 lemma vspace_obj_imp: "non_arch_obj ko \<Longrightarrow> non_vspace_obj ko"
   by (clarsimp simp: non_vspace_obj_def non_arch_obj_def
@@ -57,6 +56,72 @@ definition
 lemmas vspace_obj_fun_lift_simps[simp] =
   vspace_obj_fun_lift_def[split_simps kernel_object.split arch_kernel_obj.split]
 
+lemma vspace_objs_of_Some_obj_at:
+  "(vspace_objs_of s p = Some vso) =
+   obj_at (\<lambda>ko. \<exists>ao. ko = ArchObj ao \<and> vspace_obj_of ao = Some vso) p s"
+  by (auto simp: in_opt_map_eq obj_at_def)
+
+lemma vspace_objs_of_None_obj_at:
+  "(vspace_objs_of s p = None) =
+   (\<not>obj_at (\<lambda>ko. \<exists>ao. ko = ArchObj ao \<and> \<not>is_VCPU ao) p s)"
+  by (auto simp: opt_map_def obj_at_def vspace_obj_of_None split: option.splits)
+
+lemma vspace_obj_pred_vspace_objs:
+  assumes "\<And>P P' p. vspace_obj_pred P' \<Longrightarrow> f \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
+  shows "f \<lbrace>\<lambda>s. P (vspace_objs_of s)\<rbrace>"
+  apply (clarsimp simp: valid_def)
+  apply (erule rsubst[where P=P])
+  apply (rule ext)+
+  apply (rename_tac s rv s' p)
+  apply (case_tac "vspace_objs_of s p")
+   apply (simp add: vspace_objs_of_None_obj_at)
+   apply (drule use_valid, rule assms[where P="\<lambda>x. \<not>x"]; assumption?)
+    apply (auto simp: vspace_obj_pred_def non_vspace_obj_def vspace_obj_of_def
+                split: kernel_object.splits arch_kernel_obj.splits)[1]
+   apply (simp flip: vspace_objs_of_None_obj_at)
+  apply (simp add: vspace_objs_of_Some_obj_at)
+  apply (drule use_valid, rule assms[where P="\<lambda>x. x"]; assumption?)
+  subgoal
+    by (auto simp: vspace_obj_pred_def non_vspace_obj_def vspace_obj_of_def is_VCPU_def
+             split: kernel_object.splits arch_kernel_obj.splits)[1]
+  apply (simp flip: vspace_objs_of_Some_obj_at)
+  done
+
+lemma vspace_objs_vspace_obj_pred_dom:
+  assumes vs: "\<And>P. f \<lbrace>\<lambda>s. P (vspace_objs_of s)\<rbrace>"
+  assumes dom: "\<And>P. f \<lbrace>\<lambda>s. P (dom (kheap s))\<rbrace>"
+  shows "vspace_obj_pred P' \<Longrightarrow> f \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
+  apply (clarsimp simp: valid_def)
+  apply (erule rsubst[where P=P])
+  apply (rename_tac s rv s')
+  apply (frule use_valid, rule_tac P="\<lambda>vso. vso = vspace_objs_of s" in vs, rule refl)
+  apply (drule fun_cong[where x=p])
+  apply (drule use_valid, rule_tac P="(=) (dom (kheap s))" in dom, rule refl)
+  apply (drule dom_eq_All)
+  apply (case_tac "vspace_objs_of s p"; clarsimp)
+   subgoal
+     by (auto simp: obj_at_def vspace_obj_pred_def non_vspace_obj_proj in_opt_map_None_eq in_omonad)[1]
+  apply (clarsimp simp: in_omonad obj_at_def vspace_obj_of_Some)
+  done
+
+lemma dom_typ_at_lift:
+  assumes "\<And>P T p. f \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>"
+  shows "f \<lbrace>\<lambda>s. P (dom (kheap s))\<rbrace>"
+  apply (clarsimp simp: valid_def)
+  apply (erule rsubst[where P=P])
+  apply (rename_tac s rv s')
+  apply (rule subset_antisym; clarsimp; rename_tac p ko)
+   apply (drule use_valid, rule_tac P="\<lambda>x. x" and p=p in assms; fastforce simp: obj_at_def)
+  apply (case_tac "kheap s p"; simp)
+  apply (drule use_valid, rule_tac P="\<lambda>x. \<not>x" and p=p in assms; fastforce simp: obj_at_def)
+  done
+
+lemma vspace_objs_vspace_obj_pred:
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (vspace_objs_of s)\<rbrace>"
+  assumes "\<And>P T p. f \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>"
+  shows "vspace_obj_pred P' \<Longrightarrow> f \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
+  by (rule vspace_objs_vspace_obj_pred_dom, rule assms, rule dom_typ_at_lift, rule assms)
+
 end
 
 locale vspace_only_obj_pred = Arch +
@@ -77,6 +142,8 @@ lemma aobjs_of_atyp_lift:
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
   shows "f \<lbrace>\<lambda>s. P (typ_at (AArch T) p s)\<rbrace>"
   by (wpsimp simp: typ_at_aobjs wp: assms)
+
+(* FIXME AARCH64: use vspace_objs_of for vs_lookup lifting rules instead of aobjs_of *)
 
 lemma valid_vspace_objs_lift_vs_lookup:
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (vs_lookup s)\<rbrace>"
