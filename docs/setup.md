@@ -34,8 +34,10 @@ website](https://docs.haskellstack.org/en/stable/README).
 
 ### Linux Packages - Ubuntu
 
-On **Ubuntu 18.04**, to run all proofs against the **ARMv7-A**
-architecture you will need to install the following packages:
+These instructions are intended for Ubuntu LTS versions 18.04, 20.04, and 22.04.
+
+To run all proofs against the **ARMv7-A** architecture you will need to install
+the following packages:
 
 ```bash
 sudo apt-get install \
