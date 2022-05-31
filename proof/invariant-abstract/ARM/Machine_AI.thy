@@ -26,6 +26,7 @@ ML \<open>
 structure CrunchNoIrqInstance : CrunchInstance =
 struct
   val name = "no_irq";
+  val prefix_name_scheme = true;
   type extra = unit;
   val eq_extra = op =;
   fun parse_extra ctxt extra
@@ -346,7 +347,7 @@ lemma no_irq_use:
   apply fastforce
   done
 
-lemma machine_rest_lift_no_irq:
+lemma no_irq_machine_rest_lift:
   "no_irq (machine_rest_lift f)"
   apply (clarsimp simp: no_irq_def machine_rest_lift_def split_def)
   apply wp
