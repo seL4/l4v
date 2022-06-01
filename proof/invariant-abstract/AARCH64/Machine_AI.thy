@@ -13,6 +13,7 @@ theory Machine_AI
 imports Bits_AI
 begin
 
+text \<open>Crunch setup\<close>
 
 definition
   "no_irq f \<equiv> \<forall>P. \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace> f \<lbrace>\<lambda>_ s. P (irq_masks s)\<rbrace>"
@@ -70,82 +71,56 @@ crunch_ignore (no_irq) (add:
 
 context Arch begin
 
+text \<open>Deterministic\<close>
+
 lemma det_getRegister: "det (getRegister x)"
   by (simp add: getRegister_def)
 
 lemma det_setRegister: "det (setRegister x w)"
   by (simp add: setRegister_def det_def modify_def get_def put_def bind_def)
 
-
 lemma det_getRestartPC: "det getRestartPC"
   by (simp add: getRestartPC_def det_getRegister)
-
 
 lemma det_setNextPC: "det (setNextPC p)"
   by (simp add: setNextPC_def det_setRegister)
 
+text \<open>Failure on empty result\<close>
 
-lemma ef_loadWord: "empty_fail (loadWord x)"
-  by (simp add: loadWord_def)
+crunches loadWord, storeWord, machine_op_lift, clearMemory
+  for (empty_fail) empty_fail[intro!, wp, simp]
+  (ignore: NonDetMonad.bind mapM_x simp: machine_op_lift_def)
 
+lemmas ef_machine_op_lift = machine_op_lift_empty_fail \<comment> \<open>required for generic interface\<close>
 
-lemma ef_storeWord: "empty_fail (storeWord x y)"
-  by (simp add: storeWord_def)
+text \<open>Does not affect state\<close>
 
+definition "irq_state_independent P \<equiv> \<forall>f s. P s \<longrightarrow> P (irq_state_update f s)"
 
-lemma no_fail_getRestartPC: "no_fail \<top> getRestartPC"
+lemma getActiveIRQ_inv[wp]:
+  "\<lbrakk>irq_state_independent P\<rbrakk> \<Longrightarrow> getActiveIRQ in_kernel \<lbrace>P\<rbrace>"
+  apply (simp add: getActiveIRQ_def)
+  apply (wp alternative_wp select_wp)
+  apply (simp add: irq_state_independent_def)
+  done
+
+lemma loadWord_inv[wp]: "loadWord x \<lbrace>P\<rbrace>"
+  by (wpsimp simp: loadWord_def)
+
+lemma getRestartPC_inv: "getRestartPC \<lbrace>P\<rbrace>"
   by (simp add: getRestartPC_def getRegister_def)
 
+text \<open>Does not set failure flag\<close>
 
-lemma no_fail_loadWord [wp]: "no_fail (\<lambda>_. is_aligned p 3) (loadWord p)"
-  apply (simp add: loadWord_def is_aligned_mask [symmetric])
-  apply (rule no_fail_pre)
-   apply wp
-  apply simp
-  done
-
+lemma no_fail_loadWord[wp]: "no_fail (\<lambda>_. is_aligned p 3) (loadWord p)"
+  by (wpsimp simp: loadWord_def is_aligned_mask [symmetric])
 
 lemma no_fail_storeWord: "no_fail (\<lambda>_. is_aligned p 3) (storeWord p w)"
-  apply (simp add: storeWord_def is_aligned_mask [symmetric])
-  apply (rule no_fail_pre)
-   apply (wp)
-  apply simp
-  done
-
+  by (wpsimp simp: storeWord_def is_aligned_mask [symmetric])
 
 lemma no_fail_machine_op_lift [simp]:
   "no_fail \<top> (machine_op_lift f)"
   by (simp add: machine_op_lift_def)
-
-
-lemma ef_machine_op_lift [simp]:
-  "empty_fail (machine_op_lift f)"
-  by (simp add: machine_op_lift_def)
-
-
-
-lemma no_fail_setNextPC: "no_fail \<top> (setNextPC pc)"
-  by (simp add: setNextPC_def setRegister_def)
-
-
-lemma no_fail_initL2Cache: "no_fail \<top> initL2Cache"
-  by (simp add: initL2Cache_def)
-
-lemma no_fail_resetTimer[wp]: "no_fail \<top> resetTimer"
-  by (simp add: resetTimer_def)
-
-
-lemma loadWord_inv: "\<lbrace>P\<rbrace> loadWord x \<lbrace>\<lambda>x. P\<rbrace>"
-  apply (simp add: loadWord_def)
-  apply wp
-  apply simp
-  done
-
-
-lemma getRestartPC_inv: "\<lbrace>P\<rbrace> getRestartPC \<lbrace>\<lambda>rv. P\<rbrace>"
-  by (simp add: getRestartPC_def getRegister_def)
-
-
 
 lemma no_fail_clearMemory[simp, wp]:
   "no_fail (\<lambda>_. is_aligned p 3) (clearMemory p b)"
@@ -171,7 +146,6 @@ lemma no_fail_freeMemory[simp, wp]:
   apply simp
   done
 
-
 lemma no_fail_getActiveIRQ[wp]:
   "no_fail \<top> (getActiveIRQ in_kernel)"
   apply (simp add: getActiveIRQ_def)
@@ -180,24 +154,9 @@ lemma no_fail_getActiveIRQ[wp]:
   apply simp
   done
 
-definition "irq_state_independent P \<equiv> \<forall>f s. P s \<longrightarrow> P (irq_state_update f s)"
+text \<open>Does not affect IRQ masks - low-level properties of @{term no_irq}\<close>
 
-lemma getActiveIRQ_inv [wp]:
-  "\<lbrakk>irq_state_independent P\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> getActiveIRQ in_kernel \<lbrace>\<lambda>rv. P\<rbrace>"
-  apply (simp add: getActiveIRQ_def)
-  apply (wp alternative_wp select_wp)
-  apply (simp add: irq_state_independent_def)
-  done
-
-lemma no_fail_ackInterrupt[wp]: "no_fail \<top> (ackInterrupt irq)"
-  by (simp add: ackInterrupt_def)
-
-
-lemma no_fail_maskInterrupt[wp]: "no_fail \<top> (maskInterrupt irq bool)"
-  by (simp add: maskInterrupt_def)
-
-
-lemma no_irq_bind:
+lemma no_irq_bind[wp]:
   "\<lbrakk> no_irq f; \<And>rv. no_irq (g rv) \<rbrakk> \<Longrightarrow> no_irq (f >>= g)"
   unfolding no_irq_def
   by (wpsimp, blast+)
@@ -209,127 +168,47 @@ lemma no_irq_use:
   apply fastforce
   done
 
-lemma no_irq_machine_rest_lift:
+lemma no_irq_machine_rest_lift[simp, wp]:
   "no_irq (machine_rest_lift f)"
-  apply (clarsimp simp: no_irq_def machine_rest_lift_def split_def)
-  apply wp
-  apply simp
-  done
+  by (wpsimp simp: no_irq_def machine_rest_lift_def split_def)
 
-crunch (no_irq) no_irq[wp, simp]: machine_op_lift
+crunches machine_op_lift
+  for (no_irq) no_irq[wp, simp]
 
 lemma no_irq:
   "no_irq f \<Longrightarrow> \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace> f \<lbrace>\<lambda>_ s. P (irq_masks s)\<rbrace>"
   by (simp add: no_irq_def)
 
-lemma no_irq_initL2Cache: "no_irq  initL2Cache"
-  by (simp add: initL2Cache_def)
+lemma no_irq_return[simp, wp]:
+  "no_irq (return v)"
+  unfolding no_irq_def
+  by simp
 
-lemma no_irq_gets [simp]:
+lemma no_irq_gets[simp, wp]:
   "no_irq (gets f)"
   by (simp add: no_irq_def)
 
-
-lemma no_irq_resetTimer: "no_irq resetTimer"
-  by (simp add: resetTimer_def)
-
-
-lemma no_irq_debugPrint: "no_irq (debugPrint $ xs)"
-  by (simp add: no_irq_def)
-
-crunch_ignore (add: dsb_impl)
-
-(* hyp-related machine op no_irq/no_fail/empty_fail rules
-   FIXME: names are not in legacy no_irq_* form, so relying on adding them to relevant sets *)
-
-crunch_ignore (empty_fail)
-  (add: writeVCPUHardwareReg_impl set_gic_vcpu_ctrl_vmcr_impl set_gic_vcpu_ctrl_apr_impl
-        set_gic_vcpu_ctrl_lr_impl get_gic_vcpu_ctrl_lr_impl set_gic_vcpu_ctrl_hcr_impl
-        setSCTLR_impl setHCR_impl addressTranslateS1_impl)
-crunch_ignore (no_fail)
-  (add: writeVCPUHardwareReg_impl set_gic_vcpu_ctrl_vmcr_impl set_gic_vcpu_ctrl_apr_impl
-        set_gic_vcpu_ctrl_lr_impl get_gic_vcpu_ctrl_lr_impl set_gic_vcpu_ctrl_hcr_impl
-        setSCTLR_impl setHCR_impl addressTranslateS1_impl)
-crunch_ignore
-  (add: writeVCPUHardwareReg_impl set_gic_vcpu_ctrl_vmcr_impl set_gic_vcpu_ctrl_apr_impl
-        set_gic_vcpu_ctrl_lr_impl get_gic_vcpu_ctrl_lr_impl set_gic_vcpu_ctrl_hcr_impl
-        setSCTLR_impl setHCR_impl addressTranslateS1_impl)
-
-crunches getSCTLR, setSCTLR, addressTranslateS1,
-         readVCPUHardwareReg, writeVCPUHardwareReg,
-         get_gic_vcpu_ctrl_vmcr, set_gic_vcpu_ctrl_vmcr, get_gic_vcpu_ctrl_apr, set_gic_vcpu_ctrl_apr,
-         set_gic_vcpu_ctrl_lr, get_gic_vcpu_ctrl_lr, get_gic_vcpu_ctrl_hcr, set_gic_vcpu_ctrl_hcr
-  for (no_fail) no_fail[intro!, wp, simp]
-  and (empty_fail) empty_fail[intro!, wp, simp]
-  and (no_irq) no_irq[intro!, wp, simp]
-  (wp: no_irq_bind ignore: empty_fail NonDetMonad.bind)
-
-context notes no_irq[wp] begin
-
-lemma no_irq_ackInterrupt: "no_irq (ackInterrupt irq)"
-  by (wp | clarsimp simp: no_irq_def ackInterrupt_def)+
-
-lemma no_irq_setIRQTrigger: "no_irq (setIRQTrigger irq bool)"
-  by (wp | clarsimp simp: no_irq_def setIRQTrigger_def)+
-
-lemma no_irq_loadWord: "no_irq (loadWord x)"
-  apply (clarsimp simp: no_irq_def)
-  apply (rule loadWord_inv)
-  done
-
-
-lemma no_irq_getActiveIRQ: "no_irq (getActiveIRQ in_kernel)"
-  apply (clarsimp simp: no_irq_def)
-  apply (rule getActiveIRQ_inv)
-  apply (simp add: irq_state_independent_def)
-  done
-
-
 lemma no_irq_mapM:
   "(\<And>x. x \<in> set xs \<Longrightarrow> no_irq (f x)) \<Longrightarrow> no_irq (mapM f xs)"
-  apply (subst no_irq_def)
-  apply clarify
-  apply (rule mapM_wp)
-   prefer 2
-   apply (rule order_refl)
-  apply (wp; simp)
+  apply (simp (no_asm) add: no_irq_def)
+  apply (clarsimp intro!: mapM_wp[OF _ order_refl])
+  apply (wpsimp wp: no_irq)
   done
-
 
 lemma no_irq_mapM_x:
   "(\<And>x. x \<in> set xs \<Longrightarrow> no_irq (f x)) \<Longrightarrow> no_irq (mapM_x f xs)"
-  apply (subst no_irq_def)
-  apply clarify
-  apply (rule mapM_x_wp)
-   prefer 2
-   apply (rule order_refl)
-  apply (wp; simp)
+  apply (simp (no_asm) add: no_irq_def)
+  apply (clarsimp intro!: mapM_x_wp[OF _ order_refl])
+  apply (wpsimp wp: no_irq)
   done
-
 
 lemma no_irq_swp:
   "no_irq (f y x) \<Longrightarrow> no_irq (swp f x y)"
   by (simp add: swp_def)
 
-
-lemma no_irq_seq [wp]:
-  "\<lbrakk> no_irq f; \<And>x. no_irq (g x) \<rbrakk> \<Longrightarrow> no_irq (f >>= g)"
-  apply (subst no_irq_def)
-  apply clarsimp
-  apply (rule hoare_seq_ext)
-  apply (wp|simp)+
-  done
-
-lemma no_irq_return [simp, wp]: "no_irq (return v)"
-  unfolding no_irq_def return_def
-  by (rule allI, simp add: valid_def)
-
-
 lemma no_irq_fail [simp, wp]: "no_irq fail"
   unfolding no_irq_def fail_def
   by (rule allI, simp add: valid_def)
-
-
 
 lemma no_irq_assert [simp, wp]: "no_irq (assert P)"
   unfolding assert_def by simp
@@ -341,38 +220,155 @@ lemma no_irq_modify:
   apply (clarsimp simp: in_monad)
   done
 
-lemma no_irq_storeWord: "no_irq (storeWord w p)"
-  apply (simp add: storeWord_def)
-  apply (wp no_irq_modify)
-  apply simp
-  done
-
-lemma no_irq_when:
+lemma no_irq_when[simp, wp]:
   "\<lbrakk>P \<Longrightarrow> no_irq f\<rbrakk> \<Longrightarrow> no_irq (when P f)"
   by (simp add: when_def)
 
+text \<open>Architecture-specific @{term no_irq} preservations\<close>
+
+lemma no_irq_loadWord: "no_irq (loadWord x)"
+  by (wpsimp simp: no_irq_def wp: loadWord_inv)
+
+lemma no_irq_getActiveIRQ: "no_irq (getActiveIRQ in_kernel)"
+  by (wpsimp simp: no_irq_def irq_state_independent_def wp: getActiveIRQ_inv)
+
+lemma no_irq_storeWord: "no_irq (storeWord w p)"
+  by (wpsimp simp: storeWord_def wp: no_irq_modify)
+
 lemma no_irq_clearMemory: "no_irq (clearMemory a b)"
-  apply (simp add: clearMemory_def)
-  apply (wp no_irq_mapM_x no_irq_storeWord)
-  done
+  by (wpsimp simp: clearMemory_def no_irq_mapM_x no_irq_storeWord)
+
+crunches ackInterrupt
+  for (no_irq) no_irq[intro!, wp, simp]
+
+text \<open>Wide-angle crunch proofs over architecture-specific machine operations for
+  @{term no_fail}, @{term empty_fail} and @{term no_irq}}}\<close>
+
+(* Most of the basic machine ops in MachineOps.thy use abstract _impl constants which should never
+   be expanded.
+   Note: this was generated by running the following, and should likely be updated the same way:
+   grep -o "\w\+_impl" MachineOps.thy|sort|uniq|sed "s/^/    /"
+   *)
+crunch_ignore (valid, empty_fail, no_fail)
+  (add:
+    addressTranslateS1_impl
+    branchFlushRange_impl
+    check_export_arch_timer_impl
+    cleanByVA_PoU_impl
+    cleanCacheRange_PoU_impl
+    cleanCacheRange_RAM_impl
+    cleanInvalidateCacheRange_RAM_impl
+    configureTimer_impl
+    dsb_impl
+    enableFpuEL01_impl
+    fpuThreadDeleteOp_impl
+    get_gic_vcpu_ctrl_lr_impl
+    initL2Cache_impl
+    initTimer_impl
+    invalidateCacheRange_I_impl
+    invalidateCacheRange_RAM_impl
+    invalidateTranslationASID_impl
+    invalidateTranslationSingle_impl
+    isb_impl
+    nativeThreadUsingFPU_impl
+    plic_complete_claim_impl
+    resetTimer_impl
+    set_gic_vcpu_ctrl_apr_impl
+    set_gic_vcpu_ctrl_hcr_impl
+    set_gic_vcpu_ctrl_lr_impl
+    set_gic_vcpu_ctrl_vmcr_impl
+    set_gic_vcpu_ctrl_vtr_impl
+    setHCR_impl
+    setIRQTrigger_impl
+    setSCTLR_impl
+    setVSpaceRoot_impl
+    switchFpuOwner_impl
+    writeVCPUHardwareReg_impl
+    )
+
+(* Crunches for machine ops without concrete implementations (using _impl or _val).
+   List obtained using:
+   grep -oE "(\w+_impl)|(get\w+)" MachineOps.thy|sort|uniq|sed "s/_impl//;s/$/,/;s/^/  /"
+   with the following manual interventions:
+   - remove false positives: get_def, gets_def, getFPUState, getRegister, getRestartPC
+   - add readVCPUHardwareReg (which uses non-standard "Val" instead of "_val" (FIXME AARCH64))
+   - remove final comma
+   - getActiveIRQ does not preserve no_irq *)
+crunches
+  addressTranslateS1,
+  branchFlushRange,
+  check_export_arch_timer,
+  cleanByVA_PoU,
+  cleanCacheRange_PoU,
+  cleanCacheRange_RAM,
+  cleanInvalidateCacheRange_RAM,
+  configureTimer,
+  dsb,
+  enableFpuEL01,
+  fpuThreadDeleteOp,
+  getDFSR,
+  getESR,
+  getFAR,
+  get_gic_vcpu_ctrl_apr,
+  get_gic_vcpu_ctrl_eisr0,
+  get_gic_vcpu_ctrl_eisr1,
+  get_gic_vcpu_ctrl_hcr,
+  get_gic_vcpu_ctrl_lr,
+  get_gic_vcpu_ctrl_lr,
+  get_gic_vcpu_ctrl_misr,
+  get_gic_vcpu_ctrl_vmcr,
+  get_gic_vcpu_ctrl_vtr,
+  getHSR,
+  getIFSR,
+  getMemoryRegions,
+  gets,
+  getSCTLR,
+  initL2Cache,
+  initTimer,
+  invalidateCacheRange_I,
+  invalidateCacheRange_RAM,
+  invalidateTranslationASID,
+  invalidateTranslationSingle,
+  isb,
+  nativeThreadUsingFPU,
+  plic_complete_claim,
+  resetTimer,
+  set_gic_vcpu_ctrl_apr,
+  set_gic_vcpu_ctrl_hcr,
+  set_gic_vcpu_ctrl_lr,
+  set_gic_vcpu_ctrl_vmcr,
+  set_gic_vcpu_ctrl_vtr,
+  setHCR,
+  setIRQTrigger,
+  setSCTLR,
+  setVSpaceRoot,
+  switchFpuOwner,
+  readVCPUHardwareReg,
+  writeVCPUHardwareReg
+  for (no_fail) no_fail[intro!, wp, simp]
+  and (empty_fail) empty_fail[intro!, wp, simp]
+  and (no_irq) no_irq[intro!, wp, simp]
+  (wp: no_irq_bind ignore: empty_fail NonDetMonad.bind)
+
+crunches getFPUState, getRegister, getRestartPC, setNextPC, ackInterrupt, maskInterrupt
+  for (no_fail) no_fail[intro!, wp, simp]
+  and (empty_fail) empty_fail[intro!, wp, simp]
+
+text \<open>Misc WP rules\<close>
 
 lemma getActiveIRQ_le_maxIRQ':
   "\<lbrace>\<lambda>s. \<forall>irq > maxIRQ. irq_masks s irq\<rbrace>
     getActiveIRQ in_kernel
    \<lbrace>\<lambda>rv s. \<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ\<rbrace>"
   apply (simp add: getActiveIRQ_def)
-  apply (wp alternative_wp select_wp)
-  apply clarsimp
+  apply (wpsimp wp: alternative_wp select_wp)
   apply (rule ccontr)
   apply (simp add: linorder_not_le)
   done
 
 lemma getActiveIRQ_neq_non_kernel:
   "\<lbrace>\<top>\<rbrace> getActiveIRQ True \<lbrace>\<lambda>rv s. rv \<notin> Some ` non_kernel_IRQs \<rbrace>"
-  apply (simp add: getActiveIRQ_def)
-  apply (wp alternative_wp select_wp)
-  apply auto
-  done
+  by (wpsimp simp: getActiveIRQ_def)
 
 lemma dmo_getActiveIRQ_non_kernel[wp]:
   "\<lbrace>\<top>\<rbrace> do_machine_op (getActiveIRQ True)
@@ -383,23 +379,6 @@ lemma dmo_getActiveIRQ_non_kernel[wp]:
   apply clarsimp
   done
 
-lemma empty_fail_initL2Cache: "empty_fail initL2Cache"
-  by (simp add: initL2Cache_def)
-
-lemma empty_fail_clearMemory [simp, intro!]:
-  "\<And>a b. empty_fail (clearMemory a b)"
-  by (simp add: clearMemory_def mapM_x_mapM ef_storeWord)
-
-lemma no_irq_setVSpaceRoot:
-  "no_irq (setVSpaceRoot r a)"
-  unfolding setVSpaceRoot_def by wpsimp
-
-(* FIXME AARCH64
-lemma no_irq_hwASIDFlush:
-  "no_irq (hwASIDFlush r)"
-  unfolding hwASIDFlush_def by wpsimp *)
-
-end
 end
 
 context begin interpretation Arch .
