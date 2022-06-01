@@ -5,7 +5,7 @@
  *)
 
 theory CachePartitionIntegrity
-imports InfoFlow.InfoFlow
+imports InfoFlow.ADT_IF
 begin
 
 context Arch begin global_naming RISCV64
@@ -162,6 +162,9 @@ definition ta_subset_accessible_objects :: "'a PAS \<Rightarrow> det_state \<Rig
      p_footprint s (touched_addresses' s) \<subseteq>
      p_footprint s (\<Union> (obj_v_footprint s ` policy_accessible_objs aag (cur_domain s)))"
 
+abbreviation ta_objsubset_inv :: "'a PAS \<Rightarrow> det_state \<Rightarrow> bool" where
+  "ta_objsubset_inv \<equiv> ta_subset_accessible_objects"
+
 lemma ta_subset_accessible_partitions':
   "\<lbrakk>accessible_objs_well_partitioned aag s; ta_subset_accessible_objects aag s\<rbrakk> \<Longrightarrow>
    ta_subset_accessible_partitions aag s"
@@ -174,6 +177,309 @@ theorem ta_subset_accessible_partitions:
     ta_subset_accessible_objects aag s\<rbrakk> \<Longrightarrow>
    ta_subset_accessible_partitions aag s"
   by (force intro:ta_subset_accessible_partitions' owned_to_accessible_objs_well_partitioned)
+
+lemma
+  "pas_refined aag s \<Longrightarrow> owned_objs_well_partitioned aag s"
+  oops
+
+\<comment> \<open>Proofs that objects remain well partitioned over seL4 kernel\<close>
+
+lemma owned_objs_well_partitioned_inv:
+  "call_kernel ev \<lbrace>owned_objs_well_partitioned aag\<rbrace>"
+  sorry
+
+\<comment> \<open>Proofs of accessible-object subset invariance over seL4 kernel\<close>
+
+(* For check_active_irq_if *)
+
+lemma do_machine_op_ta_objsubset_inv:
+  "do_machine_op mop \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+(* For kernel_entry_if *)
+
+lemma set_object_ta_objsubset_inv:
+  "set_object ptr obj \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma syscall_ta_objsubset_inv:
+  "syscall m_fault h_fault m_error h_error m_finalise \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma resolve_address_bits'_ta_objsubset_inv:
+  "resolve_address_bits' z capcref \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma transfer_caps_loop_ta_objsubset_inv:
+  "transfer_caps_loop ep rcv_buffer n caps slots mi \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma lookup_extra_caps_ta_objsubset_inv:
+  "lookup_extra_caps thread buffer mi \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma get_receive_slots_ta_objsubset_inv:
+  "get_receive_slots thread bufopt \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma cap_insert_ta_objsubset_inv:
+  "cap_insert new_cap src_slot dest_slot \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma set_mrs_ta_objsubset_inv:
+  "set_mrs thread buf msgs \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma send_fault_ipc_ta_objsubset_inv:
+  "send_fault_ipc tptr fault \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma decode_read_registers_ta_objsubset_inv:
+  "decode_read_registers data cap \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma lookup_slot_for_cnode_op_ta_objsubset_inv:
+  "lookup_slot_for_cnode_op is_source croot ptr depth \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma decode_copy_registers_ta_objsubset_inv:
+  "decode_copy_registers data cap extra_caps \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma decode_set_tls_base_ta_objsubset_inv:
+  "decode_set_tls_base args cap \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma decode_write_registers_ta_objsubset_inv:
+  "decode_write_registers data cap \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma arch_decode_irq_control_invocation_ta_objsubset_inv:
+  "arch_decode_irq_control_invocation label args src_slot cps \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma decode_irq_control_invocation_ta_objsubset_inv:
+  "decode_irq_control_invocation label args src_slot cps \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma decode_asid_control_invocation_ta_objsubset_inv:
+  "decode_asid_control_invocation  label args cte cap extra_caps \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma delete_objects_ta_objsubset_inv:
+  "delete_objects ptr bits \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma reset_untyped_cap_ta_objsubset_inv:
+  "reset_untyped_cap src_slot \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma retype_region_ta_objsubset_inv:
+  "retype_region ptr numObjects o_bits type dev \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma create_cap_ta_objsubset_inv:
+  "create_cap type bits untyped is_device dest_oref \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma invoke_untyped_ta_objsubset_inv:
+  "invoke_untyped ui \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma decode_invocation_ta_objsubset_inv:
+  "decode_invocation label args cap_index slot cap excaps \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma send_signal_ta_objsubset_inv:
+  "send_signal ntfnptr badge \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma suspend_ta_objsubset_inv:
+  "suspend thread \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma restart_ta_objsubset_inv:
+  "restart thread \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma send_ipc_ta_objsubset_inv:
+  "send_ipc block call badge can_grant can_grant_reply thread epptr \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma cap_swap_ta_objsubset_inv:
+  "cap_swap cap1 slot1 cap2 slot2 \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma empty_slot_ta_objsubset_inv:
+  "empty_slot slot cleanup_info \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma delete_asid_pool_ta_objsubset_inv:
+  "delete_asid_pool base ptr \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma rec_del_ta_objsubset_inv:
+  "rec_del rdc \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma check_cap_at_ta_objsubset_inv:
+  "check_cap_at cap slot m \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma invoke_domain_ta_objsubset_inv:
+  "invoke_domain thread domain \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma do_reply_transfer_ta_objsubset_inv:
+  "do_reply_transfer sender receiver slot grant  \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma cap_move_ta_objsubset_inv:
+  "cap_move new_cap src_slot dest_slot \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma cancel_badged_sends_ta_objsubset_inv:
+  "cancel_badged_sends epptr badge \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma invoke_irq_handler_ta_objsubset_inv:
+  "invoke_irq_handler irqh_invocation \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma cap_revoke_ta_objsubset_inv:
+  "cap_revoke slot \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma perform_asid_control_invocation_ta_objsubset_inv:
+  "perform_asid_control_invocation iv \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma handle_yield_ta_objsubset_inv:
+  "handle_yield \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma receive_ipc_ta_objsubset_inv:
+  "receive_ipc thread cap is_blocking \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma handle_event_ta_objsubset_inv:
+  "handle_event ev \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma invoke_tcb_ta_objsubset_inv:
+  "invoke_tcb iv \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+(* For handle_preemption_if *)
+
+lemma set_thread_state_ta_objsubset_inv:
+  "set_thread_state ref ts \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma cancel_all_ipc_ta_objsubset_inv:
+  "cancel_all_ipc epptr \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma set_cdt_ta_objsubset_inv:
+  "set_cdt t \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma set_original_ta_objsubset_inv:
+  "set_original slot v \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma set_irq_state_ta_objsubset_inv:
+  "set_irq_state state irq \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma cancel_all_signals_ta_objsubset_inv:
+  "cancel_all_signals ntftnptr \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma reply_cancel_ipc_ta_objsubset_inv:
+  "reply_cancel_ipc tptr \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma update_waiting_ntfn_ta_objsubset_inv:
+  "update_waiting_ntfn ntfnptr queue bound_tcb badge \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma handle_interrupt_ta_objsubset_inv:
+  "handle_interrupt irq \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+(* For schedule_if *)
+
+lemma switch_to_idle_thread_ta_objsubset_inv:
+  "switch_to_idle_thread \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma schedule_choose_new_thread_ta_objsubset_inv:
+  "schedule_choose_new_thread \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma switch_to_thread_ta_objsubset_inv:
+  "switch_to_thread t \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+lemma schedule_ta_objsubset_inv:
+  "schedule \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+\<comment> \<open> Instead of @{term\<open>call_kernel\<close>}, prove for monads used for each step of @{term\<open>ADT_A_if\<close>}. \<close>
+
+crunches check_active_irq_if
+  for ta_objsubset_inv: "ta_objsubset_inv aag"
+  (wp: crunch_wps)
+
+lemma do_user_op_if_ta_objsubset_inv:
+  "do_user_op_if uop tc \<lbrace>ta_objsubset_inv aag\<rbrace>"
+  sorry
+
+crunches kernel_entry_if
+  for ta_objsubset_inv: "ta_objsubset_inv aag"
+  (wp: crunch_wps simp:crunch_simps)
+
+crunches handle_preemption_if
+  for ta_objsubset_inv: "ta_objsubset_inv aag"
+  (wp: crunch_wps)
+
+crunches schedule_if
+  for ta_objsubset_inv: "ta_objsubset_inv aag"
+  (wp: crunch_wps)
+
+crunches kernel_exit_if
+  for ta_objsubset_inv: "ta_objsubset_inv aag"
+  (wp: crunch_wps)
+
+\<comment> \<open> Now that it's true for the monads of @{term\<open>ADT_A_if\<close>}, seems it's true
+     for @{term\<open>call_kernel\<close>} as well. \<close>
+
+crunches call_kernel
+  for ta_objsubset_inv: "ta_objsubset_inv aag"
+  (wp: crunch_wps)
+
+lemma ta_subset_accessible_objects_inv:
+  "call_kernel ev \<lbrace>ta_subset_accessible_objects aag\<rbrace>"
+  using call_kernel_ta_objsubset_inv
+  by blast
+
+(* XXX: Actually this isn't true because we can only prove its invariance if we know
+   the other two invariants hold, not merely if just this one holds initially. *)
+theorem ta_subset_accessible_partitions_inv:
+  "all_labels_are_owned aag \<Longrightarrow> call_kernel ev \<lbrace>ta_subset_accessible_partitions aag\<rbrace>"
+  using owned_objs_well_partitioned_inv[where aag=aag and ev=ev]
+    ta_subset_accessible_objects_inv[where aag=aag and ev=ev]
+    ta_subset_accessible_partitions[where aag=aag]
+  unfolding valid_def
+  apply clarsimp
+  apply(rename_tac s s')
+  apply(erule_tac x=s in meta_allE)
+  apply clarsimp
+  apply(erule_tac x=s in allE)
+  apply(erule_tac x=s in allE)
+  apply(clarsimp split:prod.splits)
+  oops
 
 end
 
