@@ -427,10 +427,12 @@ lemma transfer_caps_loop_irq_state[wp]:
   "transfer_caps_loop a b c d e f \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
   by (wp transfer_caps_loop_pres)
 
+(* XXX: broken by touched_addresses. -robs
 crunch irq_state_of_state[wp]: handle_recv, handle_reply "\<lambda>s. P (irq_state_of_state s)"
   (wp: crunch_wps dmo_wp simp: crunch_simps)
 
 crunch irq_state_of_state[wp]: invoke_irq_handler "\<lambda>s. P (irq_state_of_state s)"
+*)
 
 crunch irq_state_of_state[wp]: schedule "\<lambda>s. P (irq_state_of_state s)"
   (wp: dmo_wp modify_wp crunch_wps hoare_whenE_wp

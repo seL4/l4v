@@ -812,6 +812,7 @@ definition machine_state0 :: "machine_state" where
                      irq_state = 0,
                      underlying_memory = const 0,
                      device_state = Map.empty,
+                     touched_addresses = {},
                      machine_state_rest = undefined\<rparr>"
 
 definition arch_state0 :: "arch_state" where
