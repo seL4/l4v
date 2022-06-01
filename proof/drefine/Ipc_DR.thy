@@ -1089,17 +1089,16 @@ lemma evalMonad_get_extra_cptrs:
   done
 
 lemma dcorres_symb_exec_r_evalMonad:
-assumes wp:"\<And>sa. \<lbrace>(=) sa\<rbrace> f \<lbrace>\<lambda>r. (=) sa\<rbrace>"
-assumes corres:"\<And>rv. evalMonad f s = Some rv \<Longrightarrow> dcorres r P ((=) s) h (g rv)"
-shows "\<lbrakk>empty_when_fail f;weak_det_spec ((=) s) f\<rbrakk> \<Longrightarrow> dcorres r P ((=) s) h (f>>=g)"
+  assumes wp:"\<And>sa. \<lbrace>(=) sa\<rbrace> f \<lbrace>\<lambda>r. (=) sa\<rbrace>"
+  assumes corres:"\<And>rv. evalMonad f s = Some rv \<Longrightarrow> dcorres r P ((=) s) h (g rv)"
+  shows "\<lbrakk> empty_when_fail f; weak_det_spec ((=) s) f \<rbrakk> \<Longrightarrow> dcorres r P ((=) s) h (f>>=g)"
   apply (rule_tac Q'="\<lambda>r. (=) s and K_bind (evalMonad f s = Some r)" in corres_symb_exec_r)
-  apply (rule dcorres_expand_pfx)
-  using corres
-  apply (clarsimp simp:corres_underlying_def)
-    apply fastforce
-  apply (wp wp,simp,rule evalMonad_wp)
-  apply (simp add:wp)+
-done
+     apply (rule dcorres_expand_pfx)
+     using corres
+     apply (clarsimp simp:corres_underlying_def)
+    apply (wp wp, simp, rule evalMonad_wp)
+      apply (simp add:wp)+
+  done
 
 lemma dcorres_store_word_offs_spec:
   "\<lbrakk>within_page buf (base + of_nat (x * word_size)) sz\<rbrakk> \<Longrightarrow>
@@ -1477,19 +1476,19 @@ lemma get_ipc_buffer_words_receive_slots:
       in is_aligned_weaken[OF is_aligned_after_mask])
        apply (case_tac sz,simp_all add:msg_align_bits)
        apply (simp add:mask_add_aligned)
-         apply (simp add:word_mod_2p_is_mask[where n = 2,symmetric] word_of_int_hom_syms)
+         apply (simp add:word_mod_2p_is_mask[where n = 2,symmetric])
   apply (subst evalMonad_compose)
    apply (simp add:empty_when_fail_loadWord weak_det_spec_loadWord)+
    using loadWord_functional[unfolded functional_def,simplified]
      apply fastforce
   apply (simp add:evalMonad_loadWord word_size_def mask_add_aligned)
-       apply (simp add:word_mod_2p_is_mask[where n = 2,symmetric] word_of_int_hom_syms)
+       apply (simp add:word_mod_2p_is_mask[where n = 2,symmetric])
   apply (subst evalMonad_compose)
    apply (simp add:empty_when_fail_loadWord weak_det_spec_loadWord)+
    using loadWord_functional[unfolded functional_def,simplified]
      apply fastforce
   apply (simp add:evalMonad_loadWord word_size_def mask_add_aligned)
-  apply (simp add:word_mod_2p_is_mask[where n = 2,symmetric] word_of_int_hom_syms)
+  apply (simp add:word_mod_2p_is_mask[where n = 2,symmetric])
 done
 
 (* FIXME: MOVE *)
@@ -1705,54 +1704,51 @@ lemma dcorres_lookup_extra_caps:
      (Ipc_A.lookup_extra_caps thread buffer (data_to_message_info (arch_tcb_context_get (tcb_arch t) msg_info_register)))"
   apply (clarsimp simp:lookup_extra_caps_def liftE_bindE Endpoint_D.lookup_extra_caps_def)
   apply (rule corres_symb_exec_r)
-    apply (rule_tac F = "evalMonad (get_extra_cptrs buffer (data_to_message_info (arch_tcb_context_get (tcb_arch t) msg_info_register))) s = Some rv"
-      in corres_gen_asm2)
-  apply (rule corres_mapME[where S = "{(x,y). x = of_bl y \<and> length y = word_bits}"])
-    prefer 3
+     apply (rule_tac F = "evalMonad (get_extra_cptrs buffer (data_to_message_info (arch_tcb_context_get (tcb_arch t) msg_info_register))) s = Some rv"
+                     in corres_gen_asm2)
+     apply (rule corres_mapME[where S = "{(x,y). x = of_bl y \<and> length y = word_bits}"])
+           prefer 3
            apply simp
-           apply (erule conjE)
-           apply (drule_tac t="of_bl y" in sym, simp)
-    apply (rule dcorres_lookup_cap_and_slot[simplified])
-    apply (clarsimp simp:transform_cap_list_def)+
-    apply wp
-    apply simp
-    apply (case_tac buffer)
-      apply clarsimp
-      apply (simp add:transform_full_intent_def Let_def)
-      apply (rule get_ipc_buffer_words_empty)
-      apply (simp add:obj_at_def)
-      apply (erule get_tcb_SomeD)
-      apply simp
+           apply (rule dcorres_lookup_cap_and_slot[simplified])
+            apply (clarsimp simp:transform_cap_list_def)+
+       apply wp
+       apply simp
+      apply (case_tac buffer)
+       apply clarsimp
+       apply (simp add:transform_full_intent_def Let_def)
+       apply (rule get_ipc_buffer_words_empty)
+        apply (simp add:obj_at_def)
+        apply (erule get_tcb_SomeD)
+       apply simp
       apply clarify
       apply (subst evalMonad_get_extra_cptrs)
-        apply simp+
-   apply (case_tac buffer)
+         apply simp+
+     apply (case_tac buffer)
       apply clarsimp
-      apply clarify
-      apply (drule evalMonad_get_extra_cptrs)
-      apply (simp del:get_extra_cptrs.simps
-        add: zip_map_eqv[where g = "\<lambda>x. x",simplified])+
-      apply (simp add: word_bits_def del:get_extra_cptrs.simps)
-   apply (wp evalMonad_wp)
-   apply (case_tac buffer)
-     apply (simp add:get_extra_cptrs_def empty_when_fail_simps)+
-     apply (simp add:liftM_def)
-     apply (rule empty_when_fail_compose)
-     apply (simp add:empty_when_fail_simps)+
-     apply (rule empty_when_fail_mapM)
-     apply (simp add:weak_det_spec_load_word_offs empty_when_fail_load_word_offs)
-     apply (rule weak_det_spec_mapM)
-     apply (simp add:weak_det_spec_load_word_offs)
-   apply (case_tac buffer)
-     apply (simp add:get_extra_cptrs_def weak_det_spec_simps)+
+     apply clarify
+     apply (drule evalMonad_get_extra_cptrs)
+       apply (simp del:get_extra_cptrs.simps add: zip_map_eqv[where g = "\<lambda>x. x",simplified])+
+     apply (simp add: word_bits_def del:get_extra_cptrs.simps)
+    apply (wp evalMonad_wp)
+      apply (case_tac buffer)
+       apply (simp add:get_extra_cptrs_def empty_when_fail_simps)+
+      apply (simp add:liftM_def)
+      apply (rule empty_when_fail_compose)
+        apply (simp add:empty_when_fail_simps)+
+       apply (rule empty_when_fail_mapM)
+       apply (simp add:weak_det_spec_load_word_offs empty_when_fail_load_word_offs)
+      apply (rule weak_det_spec_mapM)
+      apply (simp add:weak_det_spec_load_word_offs)
+     apply (case_tac buffer)
+      apply (simp add:get_extra_cptrs_def weak_det_spec_simps)+
      apply (simp add:liftM_def)
      apply (rule weak_det_spec_compose)
-     apply (simp add:weak_det_spec_simps)
+      apply (simp add:weak_det_spec_simps)
      apply (rule weak_det_spec_mapM)
      apply (simp add:weak_det_spec_load_word_offs)
-   apply (clarsimp simp:valid_state_def valid_pspace_def cur_tcb_def)+
-  apply (wp|clarsimp)+
-done
+    apply (clarsimp simp:valid_state_def valid_pspace_def cur_tcb_def)+
+   apply (wp|clarsimp)+
+  done
 
 lemma dcorres_copy_mrs':
   notes hoare_post_taut[wp] if_cong[cong]
@@ -2680,7 +2676,7 @@ lemma send_sync_ipc_corres:
   apply (rename_tac list)
   apply (drule_tac s = "set list" in sym)
   apply (clarsimp simp: bind_assoc neq_Nil_conv split del:if_split)
-  apply (rule_tac P1="\<top>" and P'="(=) s'a" and x1 = y
+  apply (rule_tac P1="\<top>" and P'="(=) s'" and x1 = y
          in dcorres_absorb_pfx[OF select_pick_corres[OF dcorres_expand_pfx]])
       defer
       apply (simp+)[3]

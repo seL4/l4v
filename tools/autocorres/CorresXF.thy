@@ -701,26 +701,20 @@ lemma ccorresE_corresXF_merge:
      \<And>r s. rx' s = rx r (st1 s);
      \<And>s. G s \<longrightarrow> (s \<in> G1 \<and> G2 (st1 s)) \<rbrakk> \<Longrightarrow>
     ac_corres st ct \<Gamma> rx' G A B"
-  apply (unfold ac_corres_def)
+  unfolding ac_corres_def
+  apply (clarsimp simp: ccorresE_def corresXF_def)
+  apply (erule allE, erule impE, fastforce)
+  apply (erule allE, erule impE, fastforce)
   apply clarsimp
-  apply (clarsimp simp: ccorresE_def)
-  apply (clarsimp simp: corresXF_def)
-  apply (erule allE, erule impE, force)
-  apply (erule allE, erule impE, force)
-  apply clarsimp
-  apply (erule allE, erule impE, force)
-  apply (case_tac t)
-     apply clarsimp
-     apply (erule (1) my_BallE)
-     apply (clarsimp split: sum.splits)
-    apply clarsimp
-    apply (erule (1) my_BallE)
-    apply (clarsimp split: sum.splits)
-    apply (drule no_throw_Inr, assumption)
-     apply simp
-    apply (clarsimp split: sum.splits)
-   apply clarsimp
-  apply simp
+  apply (erule allE, erule impE, fastforce)
+  apply (case_tac t; clarsimp)
+   apply (erule (1) my_BallE)
+   apply (clarsimp split: sum.splits)
+  apply (erule (1) my_BallE)
+  apply (clarsimp split: sum.splits)
+  apply (drule no_throw_Inr, assumption)
+   apply simp
+  apply (clarsimp split: sum.splits)
   done
 
 (* We can also merge corresXF statements. *)

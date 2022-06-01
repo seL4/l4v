@@ -346,7 +346,8 @@ proof -
 
   ultimately show ?thesis
     unfolding tcb_ptr_to_ctcb_ptr_def
-    by (simp add: ctcb_offset_defs objBits_simps' field_simps word_plus_mono_right)
+    by (simp add: ctcb_offset_defs objBits_simps' add.commute)
+       (subst word_plus_mono_right; simp)
 qed
 
 lemma tcb_ptr_to_ctcb_ptr_in_range':
@@ -380,10 +381,10 @@ proof -
       apply simp
      apply simp
     apply (rule word_plus_mono_right)
-   apply (simp add: word_le_nat_alt unat_of_nat)
-  apply (erule is_aligned_no_wrap')
-  apply simp
-  done
+     apply (simp add: word_le_nat_alt unat_of_nat)
+    apply (erule is_aligned_no_wrap')
+    apply simp
+    done
 qed
 
 lemma valid_untyped_cap_ctcb_member:

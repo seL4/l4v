@@ -56,12 +56,15 @@ record
   machine_state =
   irq_masks :: "RISCV64.irq \<Rightarrow> bool"
   irq_state :: nat
-  underlying_memory :: "word64 \<Rightarrow> word8"
-  device_state :: "word64 \<Rightarrow> word8 option"
+  underlying_memory :: "machine_word \<Rightarrow> word8"
+  device_state :: "machine_word \<Rightarrow> word8 option"
   touched_addresses :: "machine_word set" (* a promise not to touch anything outside this set *)
   machine_state_rest :: RISCV64.machine_state_rest
 
-consts irq_oracle :: "nat \<Rightarrow> RISCV64.irq"
+axiomatization
+  irq_oracle :: "nat \<Rightarrow> RISCV64.irq"
+where
+  irq_oracle_max_irq: "\<forall>n. irq_oracle n <= RISCV64.maxIRQ"
 
 end_qualify
 
@@ -89,7 +92,7 @@ text \<open>
   The initial contents of the user-visible memory is 0.
 \<close>
 definition
-  init_underlying_memory :: "word64 \<Rightarrow> word8"
+  init_underlying_memory :: "machine_word \<Rightarrow> word8"
   where
   "init_underlying_memory \<equiv> \<lambda>_. 0"
 

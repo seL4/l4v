@@ -41,7 +41,6 @@ lemma mul_add_word_size_lt_msg_align_bits_ofnat[Arch_AC_assms]:
   apply (rule is_aligned_add_less_t2n[where n=word_size_bits])
      apply (simp_all add: msg_align_bits' word_size_word_size_bits is_aligned_mult_triv2)
    apply (simp_all add: word_size_word_size_bits word_size_bits_def)
-   apply (simp add: word_size_def)
   apply (erule word_less_power_trans_ofnat[where k=3 and m=10, simplified], simp)
   done
 
@@ -1209,19 +1208,19 @@ proof -
 qed
 
 lemma integrity_asid_table_entry_update':
-  "\<lbrakk> integrity aag X st s; atable = riscv_asid_table (arch_state s);
+  "\<lbrakk> integrity aag X st s; atable = riscv_asid_table (arch_state s); is_subject aag v;
      (\<forall>asid'. asid' \<noteq> 0 \<and> asid_high_bits_of asid' = asid_high_bits_of asid \<longrightarrow> is_subject_asid aag asid') \<rbrakk>
      \<Longrightarrow> integrity aag X st (s\<lparr>arch_state :=
                                arch_state s\<lparr>riscv_asid_table := \<lambda>a. if a = asid_high_bits_of asid
-                                                                    then v
+                                                                    then (Some v)
                                                                     else atable a\<rparr>\<rparr>)"
   by (clarsimp simp: integrity_def)
 
 lemma asid_table_entry_update_integrity:
- "\<lbrace>integrity aag X st and (\<lambda>s. atable = riscv_asid_table (arch_state s))
+ "\<lbrace>integrity aag X st and (\<lambda>s. atable = riscv_asid_table (arch_state s)) and K (is_subject aag v)
                       and K (\<forall>asid'. asid' \<noteq> 0 \<and> asid_high_bits_of asid' = asid_high_bits_of asid
                                      \<longrightarrow> is_subject_asid aag asid')\<rbrace>
-  modify (\<lambda>s. s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := atable(asid_high_bits_of asid := v)\<rparr>\<rparr>)
+  modify (\<lambda>s. s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := atable(asid_high_bits_of asid := Some v)\<rparr>\<rparr>)
   \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   by wpsimp (blast intro: integrity_asid_table_entry_update')
 
@@ -1244,7 +1243,9 @@ lemma perform_asid_control_invocation_respects:
   apply (clarsimp simp: authorised_asid_control_inv_def ptr_range_def add.commute range_cover_def
                         obj_bits_api_def default_arch_object_def pageBits_def word_bits_def)
   apply (subst is_aligned_neg_mask_eq[THEN sym], assumption)
-  apply (clarsimp simp: and_mask_eq_iff_shiftr_0 mask_zero word_size_bits_def )
+  apply (clarsimp simp: and_mask_eq_iff_shiftr_0 mask_zero word_size_bits_def)
+  apply (frule is_aligned_no_overflow_mask)
+  apply (clarsimp simp: mask_def)
   done
 
 lemma state_vrefs_asid_pool_map:
@@ -1440,15 +1441,16 @@ lemma store_pte_state_vrefs_unreachable:
   apply (wpsimp simp: store_pte_def set_pt_def wp: set_object_wp)
   apply (erule rsubst[where P=P])
   apply (rule all_ext)
+  apply (rule allI, rename_tac x)
   apply safe
    apply (subst (asm) state_vrefs_def, clarsimp)
    apply (rule state_vrefsD)
-      apply (subst vs_lookup_table_unreachable_upd_idem)
-          apply fastforce+
-    apply (drule vs_lookup_level)
-    apply (prop_tac "x \<noteq> table_base p", clarsimp)
-    apply (fastforce simp: fun_upd_def aobjs_of_Some opt_map_def)
-   apply clarsimp
+      apply (subst vs_lookup_table_unreachable_upd_idem; fastforce)
+     apply (drule vs_lookup_level)
+     apply (prop_tac "x \<noteq> table_base p", clarsimp)
+     apply (fastforce simp: fun_upd_def aobjs_of_Some opt_map_def)
+    apply clarsimp
+   apply fastforce
   apply (subst (asm) state_vrefs_def, clarsimp)
   apply (rule state_vrefsD)
      apply (subst (asm) vs_lookup_table_unreachable_upd_idem; fastforce)
@@ -1533,8 +1535,9 @@ lemma store_asid_pool_entry_state_vrefs:
      apply (rule_tac level=asid_pool_level in state_vrefsD)
         apply (simp only: fun_upd_def)
         apply (subst asid_pool_map.vs_lookup_table[simplified fun_upd_def])
-         apply (fastforce simp: asid_pool_map_def asid_pools_of_ko_at
-                                valid_apinv_def asid_low_bits_of_def aobjs_of_Some)
+          apply (fastforce simp: asid_pool_map_def asid_pools_of_ko_at
+                                 valid_apinv_def asid_low_bits_of_def aobjs_of_Some)
+         apply fastforce
         apply fastforce
        apply fastforce
       apply (fastforce simp: ako_asid_pools_of)
@@ -1544,21 +1547,24 @@ lemma store_asid_pool_entry_state_vrefs:
        apply (subst asid_pool_map.vs_lookup_table[simplified fun_upd_def])
          apply (fastforce simp: asid_pool_map_def asid_pools_of_ko_at
                                 valid_apinv_def asid_low_bits_of_def aobjs_of_Some)
-       apply clarsimp
-      apply fastforce
+        apply clarsimp
+       apply fastforce
+      apply (fastforce simp: pts_of_Some)
      apply (fastforce simp: pts_of_Some)
     apply (fastforce simp: pts_of_Some)
    apply (clarsimp simp: obj_at_def)
    apply (subst (asm) state_vrefs_def, clarsimp)
+   apply (rename_tac asida vref)
    apply (rule_tac asid=asida in state_vrefsD)
       apply (simp only: fun_upd_def)
       apply (subst asid_pool_map.vs_lookup_table[simplified fun_upd_def])
-         apply (fastforce simp: asid_pool_map_def asid_pools_of_ko_at obj_at_def
-                                valid_apinv_def asid_low_bits_of_def aobjs_of_Some)
+        apply (fastforce simp: asid_pool_map_def asid_pools_of_ko_at obj_at_def
+                               valid_apinv_def asid_low_bits_of_def aobjs_of_Some)
+       apply fastforce
+      apply (prop_tac "asid \<noteq> asida")
+       apply (fastforce simp: vs_lookup_table_def vspace_for_pool_def asid_pools_of_ko_at obj_at_def
+                       split: if_splits)
       apply fastforce
-     apply (prop_tac "asid \<noteq> asida")
-      apply (fastforce simp: vs_lookup_table_def vspace_for_pool_def asid_pools_of_ko_at obj_at_def
-                      split: if_splits)
      apply fastforce
     apply fastforce
    apply clarsimp

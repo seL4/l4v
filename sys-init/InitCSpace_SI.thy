@@ -1414,7 +1414,7 @@ lemma seL4_CNode_Mint_object_slot_initialised_sep_helper:
                 cap_badge (default_cap NotificationType {client_object_id}
                                        (object_size_bits spec_cap_obj) dev) = 0)")
     prefer 2
-    apply (blast intro: ep_related_capI ep_related_cap_badge_of_default)
+    apply (blast intro: ep_related_cap_badge_of_default)
    apply clarsimp
    apply (intro conjI,
      simp_all add:has_type_default_not_non ep_related_cap_default_cap

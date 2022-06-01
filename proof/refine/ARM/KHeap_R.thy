@@ -18,7 +18,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma obj_at_getObject:
   assumes R:
-  "\<And>a b p q n ko s obj::'a::pspace_storable.
+  "\<And>a b n ko s obj::'a::pspace_storable.
   \<lbrakk> (a, b) \<in> fst (loadObject t t n ko s); projectKO_opt ko = Some obj \<rbrakk> \<Longrightarrow> a = obj"
   shows "\<lbrace>obj_at' P t\<rbrace> getObject t \<lbrace>\<lambda>(rv::'a::pspace_storable) s. P rv\<rbrace>"
   by (auto simp: getObject_def obj_at'_def in_monad valid_def
@@ -158,8 +158,8 @@ lemma updateObject_cte_is_tcb_or_cte:
   (\<exists>cte'. ko = KOCTE cte' \<and> ko' = KOCTE cte \<and> s' = s
         \<and> p = q \<and> is_aligned p cte_level_bits \<and> ps_clear p cte_level_bits s)"
   apply (clarsimp simp: updateObject_cte typeError_def alignError_def
-               tcbVTableSlot_def tcbCTableSlot_def to_bl_0 to_bl_1 rev_take objBits_simps'
-               in_monad map_bits_to_bl cte_level_bits_def in_magnitude_check field_simps
+               tcbVTableSlot_def tcbCTableSlot_def to_bl_1 rev_take objBits_simps'
+               in_monad map_bits_to_bl cte_level_bits_def in_magnitude_check
                lookupAround2_char1
          split: kernel_object.splits)
   apply (subst(asm) in_magnitude_check3, simp+)
@@ -411,8 +411,6 @@ lemma getObject_valid_obj:
   done
 
 declare fail_inv[simp]
-
-declare return_inv[simp]
 
 lemma typeError_inv [wp]:
   "\<lbrace>P\<rbrace> typeError x y \<lbrace>\<lambda>rv. P\<rbrace>"
@@ -700,7 +698,7 @@ lemma map_to_ctes_upd_tcb:
      apply (simp only: field_simps)
      apply (erule is_aligned_no_overflow)
     apply (simp add: objBits_simps field_simps)
-   apply (clarsimp simp: tcb_cte_cases_def objBits_simps' field_simps
+   apply (clarsimp simp: tcb_cte_cases_def objBits_simps'
                   split: if_split_asm)
   apply (subst mask_in_range, assumption)
   apply (simp only: atLeastAtMost_iff order_refl simp_thms)

@@ -12,8 +12,6 @@ theory CSpace_I
 imports ArchAcc_R
 begin
 
-hide_const span
-
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma capUntypedPtr_simps [simp]:

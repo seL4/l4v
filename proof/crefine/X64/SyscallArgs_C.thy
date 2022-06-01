@@ -965,7 +965,7 @@ lemma getMRs_user_word:
    apply (drule (1) order_less_le_trans)
    apply (simp add: word_less_nat_alt word_le_nat_alt)
   apply (simp add: word_le_nat_alt add.commute add.left_commute mult.commute mult.left_commute
-                   wordSize_def')
+                   wordSize_def' take_bit_Suc)
   done
 
 declare if_split [split]

@@ -55,10 +55,11 @@ definition
    else callKernel_C e"
 
 definition
-  setArchTCB_C :: "arch_tcb_C \<Rightarrow> tcb_C ptr \<Rightarrow> (cstate,unit) nondet_monad"
+  setTCBContext_C :: "user_context_C \<Rightarrow> tcb_C ptr \<Rightarrow> (cstate,unit) nondet_monad"
 where
-  "setArchTCB_C ct thread \<equiv>
-  exec_C \<Gamma> (\<acute>t_hrs :== hrs_mem_update (heap_update (Ptr &(thread\<rightarrow>[''tcbArch_C''])) ct) \<acute>t_hrs)"
+  "setTCBContext_C ct thread \<equiv>
+  exec_C \<Gamma> (\<acute>t_hrs :== hrs_mem_update (heap_update (
+    Ptr &((Ptr &(thread\<rightarrow>[''tcbArch_C'']) :: (arch_tcb_C ptr))\<rightarrow>[''tcbContext_C''])) ct) \<acute>t_hrs)"
 
 lemma Basic_sem_eq:
   "\<Gamma>\<turnstile>\<langle>Basic f,s\<rangle> \<Rightarrow> s' = ((\<exists>t. s = Normal t \<and> s' = Normal (f t)) \<or> (\<forall>t. s \<noteq> Normal t \<and> s' = s))"
@@ -72,14 +73,14 @@ lemma Basic_sem_eq:
   apply (cases s, auto)
   done
 
-lemma setArchTCB_C_corres:
-  "\<lbrakk> ccontext_relation tc (tcbContext_C tc'); t' = tcb_ptr_to_ctcb_ptr t \<rbrakk> \<Longrightarrow>
-  corres_underlying rf_sr nf nf' dc (tcb_at' t) \<top>
-    (threadSet (\<lambda>tcb. tcb \<lparr> tcbArch := atcbContextSet tc (tcbArch tcb)\<rparr>) t) (setArchTCB_C tc' t')"
-  apply (simp add: setArchTCB_C_def exec_C_def Basic_sem_eq corres_underlying_def)
+lemma setTCBContext_C_corres:
+  "\<lbrakk> ccontext_relation tc tc'; t' = tcb_ptr_to_ctcb_ptr t \<rbrakk> \<Longrightarrow>
+  corres_underlying rf_sr nf nf' dc (pspace_domain_valid and tcb_at' t) \<top>
+    (threadSet (\<lambda>tcb. tcb \<lparr> tcbArch := atcbContextSet tc (tcbArch tcb)\<rparr>) t) (setTCBContext_C tc' t')"
+  apply (simp add: setTCBContext_C_def exec_C_def Basic_sem_eq corres_underlying_def)
   apply clarsimp
   apply (simp add: threadSet_def bind_assoc split_def exec_gets)
-  apply (drule (1) obj_at_cslift_tcb)
+  apply (frule (1) obj_at_cslift_tcb)
   apply clarsimp
   apply (frule getObject_eq [rotated -1], simp)
    apply (simp add: objBits_simps')
@@ -102,13 +103,10 @@ lemma setArchTCB_C_corres:
                         carch_state_relation_def cmachine_state_relation_def
                         typ_heap_simps' update_tcb_map_tos)
   apply (simp add: map_to_ctes_upd_tcb_no_ctes map_to_tcbs_upd tcb_cte_cases_def
-                   cvariable_relation_upd_const ko_at_projectKO_opt)
+                   cvariable_relation_upd_const ko_at_projectKO_opt cteSizeBits_def)
   apply (simp add: cep_relations_drop_fun_upd)
-  apply (rule conjI)
-   defer
-   apply (erule cready_queues_relation_not_queue_ptrs)
-    apply (rule ext, simp split: if_split)
-   apply (rule ext, simp split: if_split)
+  apply (apply_conjunct \<open>match conclusion in \<open>cready_queues_relation _ _ _\<close> \<Rightarrow>
+         \<open>erule cready_queues_relation_not_queue_ptrs; rule ext; simp split: if_split\<close>\<close>)
   apply (drule ko_at_projectKO_opt)
   apply (erule (2) cmap_relation_upd_relI)
     apply (simp add: ctcb_relation_def carch_tcb_relation_def)
@@ -129,7 +127,7 @@ context kernel_m begin
 
 lemma ccontext_rel_to_C:
   "ccontext_relation uc (to_user_context_C uc)"
-  apply (clarsimp simp: ccontext_relation_def to_user_context_C_def fcp_beta)
+  apply (clarsimp simp: ccontext_relation_def to_user_context_C_def)
   apply (rule arg_cong [where f=uc])
   apply (simp add: register_to_H_def inv_def)
   done
@@ -149,7 +147,7 @@ where
 
 lemma from_user_context_C:
   "ccontext_relation uc uc' \<Longrightarrow> from_user_context_C uc' = uc"
-  by (auto simp: ccontext_relation_def from_user_context_C_def intro: ext)
+  by (auto simp: ccontext_relation_def from_user_context_C_def)
 
 context kernel_m begin
 
@@ -159,7 +157,7 @@ definition
   where
   "kernelEntry_C fp e tc \<equiv> do
     t \<leftarrow> gets (ksCurThread_' o globals);
-    setArchTCB_C (arch_tcb_C (to_user_context_C tc)) t;
+    setTCBContext_C (to_user_context_C tc) t;
     if fp then callKernel_withFastpath_C e else callKernel_C e;
     t \<leftarrow> gets (ksCurThread_' o globals);
     gets $ getContext_C t
@@ -260,9 +258,6 @@ definition
    else if p = Ptr 1 then ChooseNewThread
    else SwitchToThread (ctcb_ptr_to_tcb_ptr p)"
 
-
-
-declare max_word_neq_0[simp]
 
 lemma csch_act_rel_to_H:
   "(\<forall>t. a = SwitchToThread t \<longrightarrow> is_aligned t tcbBlockSizeBits) \<Longrightarrow>
@@ -644,28 +639,9 @@ lemma tcb_queue_rel'_unique:
   apply (erule(2) tcb_queue_rel_unique)
   done
 
-lemma cqueues_unique:
-  "h_tcb NULL = None \<Longrightarrow>
-   cready_queues_relation h_tcb cs as \<Longrightarrow>
-   cready_queues_relation h_tcb cs as' \<Longrightarrow> as' = as"
-oops (*
- apply (clarsimp simp add: cready_queues_relation_def Let_def fun_eq_iff)
-  apply (rename_tac qdom prio)
-  apply (erule_tac x=qdom in allE)
-  apply (erule_tac x=qdom in allE)
-  apply (erule_tac x=prio in allE)+
-  apply clarsimp
-  apply (cut_tac w=qdom in word_le_p2m1)
-  apply (cut_tac w=prio in word_le_p2m1, simp add: seL4_MinPrio_def seL4_MaxPrio_def minus_one_norm)
-  apply (cut_tac w=prio in word_le_p2m1)
-  apply (simp add: seL4_MinPrio_def seL4_MaxPrio_def minDom_def maxDom_def minus_one_norm)
-  apply (clarsimp simp add: tcb_queue_relation'_def tcb_queue_rel_unique)
-  done
-*)
-
 definition
   cready_queues_to_H
-  :: "(tcb_C ptr \<rightharpoonup> tcb_C) \<Rightarrow> (tcb_queue_C[4096]) \<Rightarrow> word8 \<times> word8 \<Rightarrow> word32 list"
+  :: "(tcb_C ptr \<rightharpoonup> tcb_C) \<Rightarrow> (tcb_queue_C[num_tcb_queues]) \<Rightarrow> word8 \<times> word8 \<Rightarrow> word32 list"
   where
   "cready_queues_to_H h_tcb cs \<equiv> \<lambda>(qdom, prio). if ucast minDom \<le> qdom \<and> qdom \<le> ucast maxDom
               \<and> ucast seL4_MinPrio \<le> prio \<and> prio \<le> ucast seL4_MaxPrio
@@ -1234,9 +1210,9 @@ lemma (in kernel_m) cDomScheduleIdx_to_H_correct:
   assumes cstate_rel: "cstate_relation as cs"
   assumes ms: "cstate_to_machine_H cs = observable_memory (ksMachineState as) (user_mem' as)"
   shows "unat (ksDomScheduleIdx_' cs) = ksDomScheduleIdx as"
-using assms
-by (clarsimp simp: cstate_relation_def Let_def observable_memory_def
-  valid_state'_def newKernelState_def unat_of_nat_eq cdom_schedule_relation_def)
+  using assms
+  by (clarsimp simp: cstate_relation_def Let_def observable_memory_def valid_state'_def
+                     newKernelState_def unat_of_nat_eq cdom_schedule_relation_def)
 
 definition cDomSchedule_to_H :: "(dschedule_C['b :: finite]) \<Rightarrow> (8 word \<times> 32 word) list" where
   "cDomSchedule_to_H cs \<equiv> THE as. cdom_schedule_relation as cs"
@@ -1260,12 +1236,12 @@ lemma (in kernel_m) cDomSchedule_to_H_correct:
   done
 
 definition
-  cbitmap_L1_to_H :: "32 word[16] \<Rightarrow> (8 word \<Rightarrow> 32 word)"
+  cbitmap_L1_to_H :: "32 word[num_domains] \<Rightarrow> (domain \<Rightarrow> 32 word)"
 where
   "cbitmap_L1_to_H l1 \<equiv> \<lambda>d. if d \<le> maxDomain then l1.[unat d] else 0"
 
 definition
-  cbitmap_L2_to_H :: "32 word[8][16] \<Rightarrow> (8 word \<times> nat \<Rightarrow> 32 word)"
+  cbitmap_L2_to_H :: "32 word[8][num_domains] \<Rightarrow> (domain \<times> nat \<Rightarrow> 32 word)"
 where
   "cbitmap_L2_to_H l2 \<equiv> \<lambda>(d, i).
     if d \<le> maxDomain \<and> i < l2BitmapSize
@@ -1517,15 +1493,16 @@ definition
    else callKernel_C e"
 
 definition
-  setArchTCB_C :: "arch_tcb_C \<Rightarrow> tcb_C ptr \<Rightarrow> (cstate,unit) nondet_monad"
+  setTCBContext_C :: "user_context_C \<Rightarrow> tcb_C ptr \<Rightarrow> (cstate,unit) nondet_monad"
 where
-  "setArchTCB_C ct thread \<equiv>
-  exec_C \<Gamma> (\<acute>t_hrs :== hrs_mem_update (heap_update (Ptr &(thread\<rightarrow>[''tcbArch_C''])) ct) \<acute>t_hrs)"
+  "setTCBContext_C ct thread \<equiv>
+  exec_C \<Gamma> (\<acute>t_hrs :== hrs_mem_update (heap_update (
+    Ptr &((Ptr &(thread\<rightarrow>[''tcbArch_C'']) :: (arch_tcb_C ptr))\<rightarrow>[''tcbContext_C''])) ct) \<acute>t_hrs)"
 
 definition
   "kernelEntry_C fp e tc \<equiv> do
     t \<leftarrow> gets (ksCurThread_' o globals);
-    setArchTCB_C (arch_tcb_C (to_user_context_C tc)) t;
+    setTCBContext_C (to_user_context_C tc) t;
     if fp then callKernel_withFastpath_C e else callKernel_C e;
     t \<leftarrow> gets (ksCurThread_' o globals);
     gets $ getContext_C t

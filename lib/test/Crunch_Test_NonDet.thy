@@ -26,13 +26,14 @@ definition
     crunch_foo1 13
   od"
 
+crunch_ignore (valid, empty_fail, no_fail) (add: bind)
+
 crunch (empty_fail) empty_fail: crunch_foo2
-  (ignore: modify bind)
 
 crunch_ignore (add: crunch_foo1)
 
 crunch gt: crunch_foo2 "\<lambda>x. x > y"
-  (ignore: modify bind ignore_del: crunch_foo1)
+  (ignore_del: crunch_foo1)
 
 crunch_ignore (del: crunch_foo1)
 
@@ -48,7 +49,7 @@ lemma crunch_foo1_at_3[wp]:
   "\<lbrace>crunch_always_true 3\<rbrace> crunch_foo1 x \<lbrace>\<lambda>rv. crunch_always_true 3\<rbrace>"
   by (simp add: crunch_always_true_def, wp)
 
-lemma crunch_foo1_no_fail:
+lemma no_fail_crunch_foo1:
   "True \<Longrightarrow> no_fail (crunch_always_true 2 and crunch_always_true 3) (crunch_foo1 x)"
   apply (simp add:crunch_always_true_def crunch_foo1_def)
   apply (rule no_fail_pre)
@@ -56,24 +57,22 @@ lemma crunch_foo1_no_fail:
   done
 
 crunch (no_fail) no_fail: crunch_foo2
-  (ignore: modify bind wp: crunch_foo1_at_2[simplified])
+  (wp: crunch_foo1_at_2[simplified])
 
 crunch (valid) at_2: crunch_foo2 "crunch_always_true 2"
-  (ignore: modify bind wp: crunch_foo1_at_2[simplified])
+  (wp: crunch_foo1_at_2[simplified])
 
 fun crunch_foo3 :: "nat => nat => 'a => (nat,unit) nondet_monad" where
   "crunch_foo3 0 x _ = crunch_foo1 x"
 | "crunch_foo3 (Suc n) x y = crunch_foo3 n x y"
 
 crunch gt2: crunch_foo3 "\<lambda>x. x > y"
-  (ignore: modify bind)
 
 crunch (empty_fail) empty_fail2: crunch_foo3
-  (ignore: modify bind)
 
 (* check that simp rules can be used to solve a goal without crunching *)
 crunch (empty_fail) empty_fail: crunch_foo3
-  (ignore: modify bind ignore: crunch_foo1 simp: crunch_foo3_empty_fail2)
+  (ignore: crunch_foo1 simp: crunch_foo3_empty_fail2)
 
 class foo_class =
   fixes stuff :: 'a
@@ -96,21 +95,21 @@ lemma crunch_foo4_alt:
 
 (* prove rules about crunch_foo4 with and without the alternative definition *)
 crunch gt3: crunch_foo4 "\<lambda>x. x > y"
-  (ignore: modify bind)
 
 crunch (no_fail) no_fail2: crunch_foo4
-  (rule: crunch_foo4_alt ignore: modify bind)
+  (rule: crunch_foo4_alt)
 
 crunch gt3': crunch_foo4 "\<lambda>x. x > y"
-  (rule: crunch_foo4_alt ignore: modify bind)
+  (rule: crunch_foo4_alt)
 
 crunch gt4: crunch_foo5 "\<lambda>x. x > y"
-  (ignore: modify bind)
 
 (* Test cases for crunch in locales *)
 
 definition
   "crunch_foo6 \<equiv> return () >>= (\<lambda>_. return ())"
+
+crunch_ignore (del: bind)
 
 locale test_locale =
 fixes fixed_return_unit :: "(unit, unit) nondet_monad"
@@ -191,8 +190,10 @@ crunch test: foo_const P
 (* check that the grid-style crunch is working *)
 
 crunches crunch_foo3, crunch_foo4, crunch_foo5
-  for silly: "\<lambda>s. True \<noteq> False" and (no_fail)nf and (empty_fail)ef
-  (ignore: modify bind rule: crunch_foo4_alt wp_del: hoare_vcg_prop)
+  for silly: "\<lambda>s. True \<noteq> False"
+  and (no_fail) nf
+  and (empty_fail) ef
+  (rule: crunch_foo4_alt wp_del: hoare_vcg_prop)
 
 (* check that crunch can use wps to lift sub-predicates
    (and also that top-level constants can be ignored) *)
@@ -226,7 +227,7 @@ lemma do_nat_op_ef:
               simp: mk_ef_def)
   done
 
-lemma do_nat_op_nf:
+lemma nf_do_nat_op:
   "no_fail P f \<Longrightarrow> empty_fail f \<Longrightarrow> no_fail (P \<circ> state') (do_nat_op f)"
   unfolding do_nat_op_def
   apply wpsimp
@@ -248,7 +249,7 @@ definition do_extended_op :: "(nat state, unit) nondet_monad \<Rightarrow> ('a s
 
 axiomatization
   where do_extended_op_ef[wp]: "empty_fail f \<Longrightarrow> empty_fail (do_extended_op f)"
-  and do_extended_op_nf[wp]: "no_fail P f \<Longrightarrow> empty_fail f \<Longrightarrow> no_fail (P \<circ> unwrap_ext) (do_extended_op f)"
+  and nf_do_extended_op[wp]: "no_fail P f \<Longrightarrow> empty_fail f \<Longrightarrow> no_fail (P \<circ> unwrap_ext) (do_extended_op f)"
 
 definition
   "crunch_foo12_ext (x :: nat) = modify (ext_update ((+) x))"
@@ -270,7 +271,7 @@ definition crunch_foo13_pre :: "('a state,unit) nondet_monad" where
   "crunch_foo13_pre \<equiv> return ()"
 
 axiomatization
-  where crunch_foo13_pre_nf[wp]: "no_fail (crunch_always_true 0) crunch_foo13_pre"
+  where nf_crunch_foo13_pre[wp]: "no_fail (crunch_always_true 0) crunch_foo13_pre"
 
 definition
   "crunch_foo13 x \<equiv>

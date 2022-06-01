@@ -442,7 +442,7 @@ proof (induct tree)
                          ([((start, end), v)]
                            @ lookup_range_tree_to_list treeL
                            @ lookup_range_tree_to_list treeR) x"
-        using lookup_range_tree_to_list.simps append_assoc
+        using lookup_range_tree_to_list.simps(2) append_assoc
               lookup_map_of_append_commute[OF treeL1_disjoint]
               lookup_map_of_append_cong[OF _ refl]
         by metis
@@ -546,12 +546,10 @@ lemma combine_contiguous_ranges_rev_head_helper:
     apply (clarsimp simp del: combine_contiguous_ranges_rev.simps)
     apply (drule_tac x="(start', end') # map fst kvs" in meta_spec)
     apply (drule_tac x="start'" in meta_spec)
-    apply (drule_tac x="end'" in meta_spec)
     apply (clarsimp simp del: combine_contiguous_ranges_rev.simps)
     apply (simp only: combine_contiguous_ranges_rev.simps(1)[where xs = "_#_"])
     apply (fastforce dest: monotonic_ranges_each_valid split: list.splits if_splits)
-   apply auto
-  done
+   by auto
 
 lemma combine_contiguous_ranges_rev_correct:
   "monotonic_key_ranges xs \<Longrightarrow>

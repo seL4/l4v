@@ -51,7 +51,7 @@ lemma authority_confinement_islands:
   apply clarsimp
   apply (erule_tac x=e\<^sub>i' in allE)
   apply (erule impE)
-  apply (metis (hide_lams, no_types) tgs_connected_comm_eq tgs_connected_def rtrancl_trans)
+  apply (metis (opaque_lifting, no_types) tgs_connected_comm_eq tgs_connected_def rtrancl_trans)
   apply clarsimp
   done
 

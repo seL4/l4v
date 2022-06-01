@@ -315,7 +315,7 @@ lemma heap_update_list_value':
   apply (simp only: heap_update_list_value addr_card_def card_word)
   apply (rule if_cong; simp)
   apply (rule iffI)
-   apply (drule intvlD, clarsimp simp add: unat_of_nat)
+   apply (drule intvlD, clarsimp simp: unat_of_nat)
   apply (simp add: intvl_def unat_arith_simps(4) unat_of_nat split: if_split_asm)
    apply (rule_tac x="unat x - unat ptr" in exI, simp)
   apply (rule_tac x="unat x + 2^addr_bitsize - unat ptr" in exI)
@@ -607,7 +607,6 @@ lemma field_access_take_drop:
   apply(induct t and st and ts and x, all \<open>clarsimp simp: access_ti\<^sub>0_def\<close>)
     apply(fastforce dest: wf_fd_cons_structD
                     simp: fd_cons_struct_def fd_cons_desc_def fd_cons_length_def)
-   apply(clarsimp simp: min_def)
    apply(drule wf_fd_cons_pairD)
    apply(clarsimp simp: fd_cons_pair_def fd_cons_desc_def fd_cons_length_def)
    apply(clarsimp split: option.splits)

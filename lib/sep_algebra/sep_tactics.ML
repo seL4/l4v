@@ -105,7 +105,7 @@ let
 
 in
   Goal.prove ctxt [] [] goal (fn _ => sep_conj_ac_tac 1)
-  |> Drule.generalize ([SepConj.sep_conj_state_typn], state :: cjts)
+  |> Drule.generalize (Names.make_set [SepConj.sep_conj_state_typn], Names.make_set (state :: cjts))
 end
 
 fun conj_length ctxt ct =

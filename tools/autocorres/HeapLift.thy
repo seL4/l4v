@@ -676,20 +676,20 @@ lemma align_of_array: "align_of TYPE(('a :: array_outer_max_size)['b' :: array_m
 lemma c_guard_array:
   "\<lbrakk> 0 \<le> k; nat k < CARD('b); c_guard (p :: (('a::array_outer_max_size)['b::array_max_count]) ptr) \<rbrakk>
    \<Longrightarrow> c_guard (ptr_coerce p +\<^sub>p k :: 'a ptr)"
-  apply (clarsimp simp: ptr_add_def c_guard_def c_null_guard_def)
+  apply (clarsimp simp: CTypesDefs.ptr_add_def c_guard_def c_null_guard_def)
   apply (rule conjI[rotated])
    apply (erule contrapos_nn)
    apply (clarsimp simp: intvl_def)
    apply (rename_tac i, rule_tac x = "nat k * size_of TYPE('a) + i" in exI)
    apply clarsimp
    apply (rule conjI)
-    apply (simp add: field_simps of_nat_nat)
+    apply (simp add: field_simps)
    apply (rule_tac y = "Suc (nat k) * size_of TYPE('a)" in less_le_trans)
     apply simp
    apply (metis less_eq_Suc_le mult_le_mono2 mult.commute)
   apply (subgoal_tac "ptr_aligned (ptr_coerce p :: 'a ptr)")
    apply (frule_tac p = "ptr_coerce p" and i = "k" in ptr_aligned_plus)
-   apply (clarsimp simp: ptr_add_def)
+   apply (clarsimp simp: CTypesDefs.ptr_add_def)
   apply (clarsimp simp: ptr_aligned_def align_of_array)
   done
 
@@ -1135,42 +1135,29 @@ lemma abs_spec_modify_global[heap_abs]:
 
 (* Signed words are stored on the heap as unsigned words. *)
 
+(* FIXME: move to Word_Lib *)
 lemma uint_scast:
-    "uint (scast x :: 'a word) = uint (x :: 'a::len signed word)"
-  apply (subst down_cast_same [symmetric])
-   apply (clarsimp simp: cast_simps)
-  apply (subst uint_up_ucast)
-   apply (clarsimp simp: cast_simps)
-  apply simp
-  done
+  "uint (scast x :: 'a word) = uint (x :: 'a::len signed word)"
+  by (metis len_signed scast_nop2 uint_word_of_int_eq word_uint.Rep_inverse)
 
 lemma to_bytes_signed_word:
-    "to_bytes (x :: 'a::len8 signed word) p = to_bytes (scast x :: 'a word) p"
+  "to_bytes (x :: 'a::len8 signed word) p = to_bytes (scast x :: 'a word) p"
   by (clarsimp simp: uint_scast to_bytes_def typ_info_word word_rsplit_def)
 
 lemma from_bytes_signed_word:
-    "length p = len_of TYPE('a) div 8 \<Longrightarrow>
+  "length p = len_of TYPE('a) div 8 \<Longrightarrow>
            (from_bytes p :: 'a::len8 signed word) = ucast (from_bytes p :: 'a word)"
-  by (clarsimp simp: from_bytes_def word_rcat_def
-              scast_def cast_simps typ_info_word)
+  by (clarsimp simp: from_bytes_def word_rcat_def typ_info_word)
 
 lemma hrs_mem_update_signed_word:
     "hrs_mem_update (heap_update (ptr_coerce p :: 'a::len8 word ptr) (scast val :: 'a::len8 word))
                = hrs_mem_update (heap_update p (val :: 'a::len8 signed word))"
-  apply (rule ext)
-  apply (clarsimp simp: hrs_mem_update_def split_def)
-  apply (clarsimp simp: heap_update_def to_bytes_signed_word
-             size_of_def typ_info_word)
-  done
+  by (clarsimp simp: hrs_mem_update_def split_def  heap_update_def to_bytes_signed_word
+                     size_of_def typ_info_word)
 
 lemma h_val_signed_word:
     "(h_val a p :: 'a::len8 signed word) = ucast (h_val a (ptr_coerce p :: 'a word ptr))"
-  apply (clarsimp simp: h_val_def)
-  apply (subst from_bytes_signed_word)
-   apply (clarsimp simp: size_of_def typ_info_word)
-  apply (clarsimp simp: size_of_def typ_info_word)
-  done
-
+  by (clarsimp simp: h_val_def size_of_def typ_info_word from_bytes_signed_word)
 
 lemma align_of_signed_word:
   "align_of TYPE('a::len8 signed word) = align_of TYPE('a word)"
@@ -1184,20 +1171,16 @@ lemma c_guard_ptr_coerce:
   "\<lbrakk> align_of TYPE('a) = align_of TYPE('b);
      size_of TYPE('a) = size_of TYPE('b) \<rbrakk> \<Longrightarrow>
         c_guard (ptr_coerce p :: ('b::c_type) ptr) = c_guard (p :: ('a::c_type) ptr)"
-  apply (clarsimp simp: c_guard_def ptr_aligned_def c_null_guard_def)
-  done
+  by (clarsimp simp: c_guard_def ptr_aligned_def c_null_guard_def)
 
 lemma word_rsplit_signed:
-    "(word_rsplit (ucast v' :: ('a::len) signed word) :: 8 word list) = word_rsplit (v' :: 'a word)"
-  apply (clarsimp simp: word_rsplit_def)
-  apply (clarsimp simp: cast_simps)
-  done
+  "(word_rsplit (ucast v' :: ('a::len) signed word) :: 8 word list) = word_rsplit (v' :: 'a word)"
+  by (metis len_signed scast_ucast_id uint_scast word_rsplit_def)
 
 lemma heap_update_signed_word:
-    "heap_update (ptr_coerce p :: 'a word ptr) (scast v) = heap_update (p :: ('a::len8) signed word ptr) v"
-    "heap_update (ptr_coerce p' :: 'a signed word ptr) (ucast v') = heap_update (p' :: ('a::len8) word ptr) v'"
-  apply (auto simp: heap_update_def to_bytes_def typ_info_word word_rsplit_def cast_simps uint_scast)
-  done
+  "heap_update (ptr_coerce p :: 'a word ptr) (scast v) = heap_update (p :: ('a::len8) signed word ptr) v"
+  "heap_update (ptr_coerce p' :: 'a signed word ptr) (ucast v') = heap_update (p' :: ('a::len8) word ptr) v'"
+  by (auto simp: heap_update_def to_bytes_def typ_info_word word_rsplit_def cast_simps uint_scast)
 
 lemma valid_typ_heap_c_guard:
   "\<lbrakk> valid_typ_heap st getter setter vgetter vsetter t_hrs t_hrs_update;
@@ -1205,15 +1188,11 @@ lemma valid_typ_heap_c_guard:
   by (clarsimp simp: valid_typ_heap_def)
 
 abbreviation (input)
-  scast_f :: "(('a::len) signed word ptr \<Rightarrow> 'a signed word)
-            \<Rightarrow> ('a word ptr \<Rightarrow> 'a word)"
-where
+  scast_f :: "(('a::len) signed word ptr \<Rightarrow> 'a signed word) \<Rightarrow> ('a word ptr \<Rightarrow> 'a word)" where
   "scast_f f \<equiv> (\<lambda>p. scast (f (ptr_coerce p)))"
 
 abbreviation (input)
-  ucast_f :: "(('a::len) word ptr \<Rightarrow> 'a word)
-            \<Rightarrow> ('a signed word ptr \<Rightarrow> 'a signed word)"
-where
+  ucast_f :: "(('a::len) word ptr \<Rightarrow> 'a word) \<Rightarrow> ('a signed word ptr \<Rightarrow> 'a signed word)" where
   "ucast_f f \<equiv> (\<lambda>p. ucast (f (ptr_coerce p)))"
 
 abbreviation (input)
@@ -1271,7 +1250,7 @@ lemma valid_typ_heap_signed_word:
    apply clarsimp
    apply (drule spec, drule spec, erule (1) impE)+
    apply (subst (asm) c_guard_ptr_coerce, simp, simp)
-   apply (metis (hide_lams, mono_tags) h_val_signed_word scast_ucast_norm(2))
+   apply (metis (opaque_lifting, mono_tags) h_val_signed_word scast_ucast_norm(2))
   apply clarsimp
   apply (drule_tac x=s in spec)+
   apply (drule_tac x="ptr_coerce p" in spec)+
@@ -1326,7 +1305,7 @@ lemma valid_typ_heap_ptr_coerce:
   apply (erule_tac x="ptr_coerce x" in allE)
   apply (clarsimp simp: heap_update_def [abs_def] to_bytes_def typ_info_ptr)
   apply (clarsimp simp: if_distrib [where f=ptr_coerce])
-  apply (metis (hide_lams) ptr_coerce_idem ptr_coerce_id)
+  apply (metis (opaque_lifting) ptr_coerce_idem ptr_coerce_id)
   done
 
 (*
@@ -1369,7 +1348,7 @@ lemma signed_word_heap_opt [L2opt]:
 lemma signed_word_heap_ptr_coerce_opt [L2opt]:
   "(ptr_coerce (((\<lambda>x. ptr_coerce (a (ptr_coerce x))) (p := v :: 'a ptr)) (b :: 'a ptr ptr)))
   = ((a(ptr_coerce p := (ptr_coerce v :: 'b ptr))) ((ptr_coerce b) :: 'b ptr ptr))"
-  by (auto simp: fun_upd_def scast_id ptr_coerce_eq)
+  by (auto simp: fun_upd_def ptr_coerce_eq)
 
 declare ptr_coerce_idem [L2opt]
 declare scast_ucast_id [L2opt]
@@ -1424,7 +1403,7 @@ lemma fold_heap_update_list_nmem_same:
                  (to_bytes (val i h :: 'a) (pad i h)) h) [0..<n] h) (ptr_val p + of_nat k)"
   apply (induct n arbitrary: k)
    apply simp
-  apply (clarsimp simp: ptr_add_def simp del: mult_Suc)
+  apply (clarsimp simp: CTypesDefs.ptr_add_def simp del: mult_Suc)
   apply (subst heap_update_nmem_same)
    apply (subst len)
     apply simp
@@ -1456,9 +1435,8 @@ lemma heap_list_of_disjoint_fold_heap_update_list:
   apply (rule_tac t = "ptr_val (p +\<^sub>p int n) + of_nat i"
               and s = "ptr_val p + of_nat (n * size_of TYPE('a) + i)"
                in subst)
-   apply (clarsimp simp: ptr_add_def)
-  apply (rule fold_heap_update_list_nmem_same[symmetric])
-     apply simp_all
+   apply (clarsimp simp: CTypesDefs.ptr_add_def)
+  apply (rule fold_heap_update_list_nmem_same[symmetric]; simp)
   done
 
 (* remove false dependency *)
@@ -1560,7 +1538,7 @@ lemma array_update_split:
   apply (subst fold_heap_update_list[OF array_count_size])
   apply (rule fold_cong[OF refl refl])
 
-  apply (clarsimp simp: ptr_add_def)
+  apply (clarsimp simp: CTypesDefs.ptr_add_def)
   apply (rule_tac f = "heap_update_list (ptr_val p + of_nat x * of_nat (size_of TYPE('a)))"
                in arg_cong)
 
@@ -1681,7 +1659,7 @@ theorem heap_abs_array_update [heap_abs]:
   (* [0..<n] doesn't change *)
   apply (subst fold_update_id[where s = "st s"])
      apply assumption
-    apply (clarsimp simp: ptr_add_def)
+    apply (clarsimp simp: CTypesDefs.ptr_add_def)
     apply (subst of_nat_mult[symmetric])+
     apply (rule array_count_index)
      apply (erule less_trans, assumption)+
@@ -1690,7 +1668,7 @@ theorem heap_abs_array_update [heap_abs]:
   (* [Suc n..<CARD('b)] doesn't change *)
   apply (subst fold_update_id)
      apply assumption
-    apply (clarsimp simp: ptr_add_def)
+    apply (clarsimp simp: CTypesDefs.ptr_add_def)
     apply (subst of_nat_mult[symmetric])+
     apply (erule array_count_index)
     apply assumption
@@ -1698,7 +1676,7 @@ theorem heap_abs_array_update [heap_abs]:
    (* index n is disjoint *)
    apply (subst read_write_valid_def1[where r = getter and w = setter])
     apply assumption
-   apply (clarsimp simp: ptr_add_def)
+   apply (clarsimp simp: CTypesDefs.ptr_add_def)
    apply (subgoal_tac "of_nat (i * size_of TYPE('a)) \<noteq> of_nat (n s * size_of TYPE('a))")
     apply force
    apply (subst array_count_index[symmetric])

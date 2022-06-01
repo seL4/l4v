@@ -8,6 +8,8 @@ theory ArchAInvsPre
 imports AInvsPre
 begin
 
+unbundle l4v_word_context
+
 context Arch begin
 
 global_naming RISCV64
@@ -133,9 +135,9 @@ lemma global_pt_not_invalid_kernel:
   done
 
 lemma get_page_info_gpd_kmaps:
-  "\<lbrakk>valid_global_vspace_mappings s; valid_arch_state s; canonical_address p;
-    get_page_info (aobjs_of s) (riscv_global_pt (arch_state s)) p = Some (b, a, attr, r)\<rbrakk>
-   \<Longrightarrow> p \<in> kernel_mappings"
+  "\<lbrakk> valid_global_vspace_mappings s; valid_arch_state s;
+     get_page_info (aobjs_of s) (riscv_global_pt (arch_state s)) p = Some (b, a, attr, r) \<rbrakk>
+     \<Longrightarrow> p \<in> kernel_mappings"
   apply (clarsimp simp: get_page_info_def in_omonad pt_lookup_slot_def pt_lookup_slot_from_level_def)
   apply (subst (asm) pt_walk.simps)
   apply (fastforce dest: pte_info_not_InvalidPTE global_pt_not_invalid_kernel
@@ -232,11 +234,11 @@ lemma ptable_rights_imp_frame[AInvsPre_asms]:
    apply (frule (2) some_get_page_info_kmapsD;
             fastforce simp: valid_state_def valid_arch_state_def valid_pspace_def)
   apply (frule some_get_page_info_umapsD)
-          apply (rule get_vspace_of_thread_reachable)
-           apply clarsimp
-           apply (frule get_page_info_gpd_kmaps[rotated 2])
-              apply (simp_all add: valid_state_def valid_pspace_def valid_arch_state_def)
-     apply ((clarsimp simp: data_at_def canonical_not_kernel_is_user)+)[3]
+         apply (rule get_vspace_of_thread_reachable)
+          apply clarsimp
+          apply (frule get_page_info_gpd_kmaps[rotated 2])
+            apply (simp_all add: valid_state_def valid_pspace_def valid_arch_state_def)
+   apply (clarsimp simp: data_at_def canonical_not_kernel_is_user)
   apply clarsimp
   apply (drule_tac x=sz in spec)+
   apply (rename_tac p_addr attr rghts sz)

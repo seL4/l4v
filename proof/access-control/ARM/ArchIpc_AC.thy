@@ -15,7 +15,7 @@ named_theorems Ipc_AC_assms
 declare make_fault_message_inv[Ipc_AC_assms]
 declare handle_arch_fault_reply_typ_at[Ipc_AC_assms]
 
-crunch integrity_asids[Ipc_AC_assms, wp]: cap_insert_ext "integrity_asids aag subjects x st"
+crunch integrity_asids[Ipc_AC_assms, wp]: cap_insert_ext "integrity_asids aag subjects x a st"
 
 lemma arch_derive_cap_auth_derived[Ipc_AC_assms]:
   "\<lbrace>\<top>\<rbrace> arch_derive_cap acap \<lbrace>\<lambda>rv _. rv \<noteq> NullCap \<longrightarrow> auth_derived rv (ArchObjectCap acap)\<rbrace>, -"
@@ -211,6 +211,12 @@ lemma list_integ_lift_in_ipc[Ipc_AC_assms]:
   apply (simp add: tcb_states_of_state_def get_tcb_def)
   done
 
+lemma cap_insert_ext_integrity_asids_in_ipc[Ipc_AC_assms, wp]:
+  "cap_insert_ext src_parent src_slot dest_slot src_p dest_p
+   \<lbrace>\<lambda>s. integrity_asids aag subjects x asid st
+          (s\<lparr>kheap := \<lambda>a. if a = receiver then kheap st receiver else kheap s a\<rparr>)\<rbrace>"
+  by wpsimp
+
 end
 
 
@@ -218,7 +224,7 @@ global_interpretation Ipc_AC_2?: Ipc_AC_2
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; fact Ipc_AC_assms)
+    by (unfold_locales; (fact Ipc_AC_assms)?)
 qed
 
 end

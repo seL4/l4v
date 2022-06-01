@@ -8,7 +8,7 @@
 (* Arch generic lemmas that should be moved into theory files before CRefine *)
 
 theory Move_C
-imports CBaseRefine.Include_C
+imports Refine.Refine
 begin
 
 lemma dumb_bool_for_all: "(\<forall>x. x) = False"
@@ -184,9 +184,8 @@ lemma word_upcast_shiftr:
 
 lemma word_upcast_neg_msb:
   "LENGTH('a::len) < LENGTH('b::len) \<Longrightarrow> \<not> msb (UCAST('a \<rightarrow> 'b) w)"
-  apply (clarsimp simp: ucast_def msb_word_of_int)
-  apply (drule bin_nth_uint_imp)
-  by simp
+  unfolding ucast_def msb_word_of_int
+  by clarsimp (metis Suc_pred bit_imp_le_length lens_gt_0(2) not_less_eq)
 
 (* FIXME: move to Word_Lib *)
 lemma word_upcast_0_sle:
@@ -199,10 +198,9 @@ lemma scast_ucast_up_eq_ucast:
   shows "SCAST('b \<rightarrow> 'c) (UCAST('a \<rightarrow> 'b) w) = UCAST('a \<rightarrow> 'c::len) w"
   using assms
   apply (subst scast_eq_ucast; simp)
-  apply (clarsimp simp: ucast_def msb_word_of_int)
-  apply (drule bin_nth_uint_imp)
-  apply simp
-  by (meson Word.nth_ucast order.strict_trans test_bit_lenD word_eq_iff)
+  apply (simp only: ucast_def msb_word_of_int)
+   apply (metis bin_nth_uint_imp decr_length_less_iff numeral_nat(7) verit_comp_simplify1(3))
+  by (metis less_or_eq_imp_le ucast_nat_def unat_ucast_up_simp)
 
 lemma not_max_word_iff_less:
   "w \<noteq> max_word \<longleftrightarrow> w < max_word"
@@ -222,12 +220,12 @@ lemma ucast_increment:
   using assms
   apply (simp add: not_max_word_iff_less word_less_alt)
   apply (erule less_le_trans)
-  apply (simp add: max_word_def)
+  apply simp
   done
 
 lemma max_word_gt_0:
   "0 < max_word"
-  by (simp add: le_neq_trans[OF max_word_max] max_word_not_0)
+  by (simp add: le_neq_trans[OF max_word_max])
 
 lemma and_not_max_word:
   "m \<noteq> max_word \<Longrightarrow> w && m \<noteq> max_word"
@@ -235,24 +233,14 @@ lemma and_not_max_word:
 
 lemma mask_not_max_word:
   "m < LENGTH('a::len) \<Longrightarrow> mask m \<noteq> (max_word :: 'a word)"
-  by (metis shiftl_1_not_0 shiftl_mask_is_0 word_bool_alg.conj_one_right)
+  by (simp add: mask_eq_exp_minus_1)
 
 lemmas and_mask_not_max_word =
   and_not_max_word[OF mask_not_max_word]
 
 lemma shiftr_not_max_word:
   "0 < n \<Longrightarrow> w >> n \<noteq> max_word"
-  apply (simp add: not_max_word_iff_less)
-  apply (cases "n < size w")
-   apply (cases "w = 0")
-    apply (simp add: max_word_gt_0)
-   apply (subst shiftr_div_2n_w, assumption)
-   apply (rule less_le_trans[OF div_less_dividend_word max_word_max])
-    apply simp
-   apply (metis word_size_gt_0 less_numeral_extra(3) mask_def nth_mask power_0 shiftl_t2n)
-  apply (simp add: not_less word_size)
-  apply (subgoal_tac "w >> n = 0"; simp add: max_word_gt_0 shiftr_eq_0)
-  done
+  by (metis and_mask_eq_iff_shiftr_0 and_mask_not_max_word diff_less len_gt_0 shiftr_le_0 word_shiftr_lt)
 
 lemma word_sandwich1:
   fixes a b c :: "'a::len word"
@@ -426,15 +414,6 @@ lemma reset_name_seq_bound_helper:
   apply simp
   done
 
-schematic_goal sz8_helper:
-  "((-1) << 8 :: addr) = ?v"
-  by (simp add: shiftl_t2n)
-
-lemmas reset_name_seq_bound_helper2
-    = reset_name_seq_bound_helper[where sz=8 and v="v :: addr" for v,
-          simplified sz8_helper word_bits_def[symmetric],
-          THEN name_seq_bound_helper]
-
 (* FIXME move to lib/Eisbach_Methods *)
 (* FIXME consider printing error on solve goal apply *)
 context
@@ -477,19 +456,20 @@ lemma word_minus_1_shiftr:
   apply (rule_tac t="w - 1" and s="(w && ~~ mask n) - 1" in subst,
          fastforce simp: low_bits_zero mask_eq_x_eq_0)
   apply (clarsimp simp: mask_eq_0_eq_x neg_mask_is_div lt1_neq0[symmetric])
-  apply (subst shiftr_div_2n_w, fastforce simp: word_size)+
+  apply (subst shiftr_div_2n_w)+
   apply (rule word_uint.Rep_eqD)
   apply (simp only: uint_word_ariths uint_div uint_power_lower)
   apply (subst mod_pos_pos_trivial, fastforce, fastforce)+
   apply (subst mod_pos_pos_trivial)
-    apply (simp add: word_less_def)
+    apply (simp add: word_less_def word_le_def)
    apply (subst uint_1[symmetric])
    apply (fastforce intro: uint_sub_lt2p)
   apply (subst int_div_sub_1, fastforce)
   apply (clarsimp simp: and_mask_dvd low_bits_zero)
   apply (subst mod_pos_pos_trivial)
-    apply (metis le_step_down_int mult_zero_left shiftr_div_2n shiftr_div_2n_w uint_0_iff
-                 uint_nonnegative word_not_simps(1) wsst_TYs(3))
+    apply (simp add: word_le_def)
+    apply (metis mult_zero_left neq_zero div_positive_int linorder_not_le uint_2p_alt word_div_lt_eq_0
+                 word_less_def zless2p)
    apply (metis shiftr_div_2n uint_1 uint_sub_lt2p)
   apply fastforce
   done
@@ -497,8 +477,7 @@ lemma word_minus_1_shiftr:
 (* FIXME: move to Word *)
 lemma ucast_shiftr:
   "UCAST('a::len \<rightarrow> 'b::len) w >> n = UCAST('a \<rightarrow> 'b) ((w && mask LENGTH('b)) >> n)"
-  apply (rule word_eqI[rule_format]; rule iffI; clarsimp simp: nth_ucast nth_shiftr word_size)
-  done
+  by (word_eqI_solve dest: bit_imp_le_length)
 
 (* FIXME: move to Word *)
 lemma mask_eq_ucast_shiftr:
@@ -511,16 +490,12 @@ lemma mask_eq_ucast_shiftl:
   assumes "w && mask (LENGTH('a) - n) = w"
   shows "UCAST('a::len \<rightarrow> 'b::len) w << n = UCAST('a \<rightarrow> 'b) (w << n)"
   apply (rule subst[where P="\<lambda>c. ucast c << n = ucast (c << n)", OF assms])
-  apply (rule word_eqI[rule_format]; rule iffI;
-         clarsimp simp: nth_ucast nth_shiftl word_size;
-         drule test_bit_size; simp add: word_size)
-  done
+  by word_eqI_solve
 
 (* FIXME: replace by mask_mono *)
 lemma mask_le_mono:
-  "m \<le> n \<Longrightarrow> mask m \<le> mask n"
-  apply (subst and_mask_eq_iff_le_mask[symmetric])
-  by (auto intro: word_eqI simp: word_size)
+  "m \<le> n \<Longrightarrow> mask m \<le> (mask n::'a::len word)"
+  by (rule mask_mono)
 
 (* FIXME: move to Word *)
 lemma word_and_mask_eq_le_mono:
@@ -588,14 +563,6 @@ lemma map_to_ko_atI':
   apply (simp add: project_inject)
   done
 
-(* FIXME: move up to SR_lemmas_C *)
-lemma map_to_ko_atI2:
-  "\<lbrakk>(projectKO_opt \<circ>\<^sub>m (ksPSpace s)) x = Some v; pspace_aligned' s; pspace_distinct' s\<rbrakk> \<Longrightarrow> ko_at' v x s"
-  apply (clarsimp simp: map_comp_Some_iff)
-  apply (erule (2) aligned_distinct_obj_atI')
-  apply (simp add: project_inject)
-  done
-
 lemma map_to_ko_at_updI':
   "\<And>x x' y y' y''.
    \<lbrakk> (projectKO_opt \<circ>\<^sub>m (ksPSpace s)) x = Some y;
@@ -603,7 +570,7 @@ lemma map_to_ko_at_updI':
      objBitsKO (injectKO y') = objBitsKO y''; x \<noteq> x' \<rbrakk> \<Longrightarrow>
    ko_at' y x (s\<lparr>ksPSpace := ksPSpace s(x' \<mapsto> y'')\<rparr>)"
   by (fastforce simp: obj_at'_def projectKOs objBitsKO_def ps_clear_upd
-               dest: map_to_ko_atI2)
+               dest: map_to_ko_atI)
 
 lemma ps_clear_upd_None:
   "ksPSpace s y = None \<Longrightarrow>
@@ -961,11 +928,6 @@ lemma threadGet_wp'':
   apply (rule threadGet_wp)
   apply (clarsimp simp: obj_at'_def)
   done
-
-lemma dom_less_0x10_helper:
-  "d \<le> maxDomain \<Longrightarrow> (ucast d :: machine_word) < 0x10"
-  unfolding maxDomain_def numDomains_def
-  by (clarsimp simp add: word_less_nat_alt unat_ucast_upcast is_up word_le_nat_alt)
 
 lemma filter_empty_unfiltered_contr:
   "\<lbrakk> [x\<leftarrow>xs . x \<noteq> y] = [] ; x' \<in> set xs ; x' \<noteq> y \<rbrakk> \<Longrightarrow> False"
@@ -1358,5 +1320,161 @@ lemma word_ctz_0[simp]:
   "word_ctz (0::32 word) = 32"
   "word_ctz (0::64 word) = 64"
   by (clarsimp simp: word_ctz_def to_bl_def)+
+
+(* FIXME move to Word_Lib *)
+lemma unat_trans_ucast_helper:
+  "\<lbrakk> unat x < n ; n \<le> Suc 0 \<rbrakk> \<Longrightarrow> ucast x = 0"
+  by (simp add: le_Suc_eq unsigned_eq_0_iff)
+
+lemma numPriorities_machine_word_safe:
+  "unat (of_nat numPriorities :: machine_word) = numPriorities"
+  by (simp add: numPriorities_def)
+
+(* needed consequence of word_less_1 when word_less_1 isn't safe, e.g. when
+   using no_less_1_simps; otherwise you'll be able to prove that 0 < 300, but
+   not that 0 < 1 *)
+lemma word_zero_less_one[simp]:
+  "0 < (1::'a::len word)"
+  by simp
+
+bundle no_less_1_simps
+begin
+  declare word_less_1[simp del]
+  declare less_Suc0[iff del]
+end
+
+lemma koTypeOf_injectKO:
+  fixes v :: "'a :: pspace_storable" shows
+  "koTypeOf (injectKO v) = koType TYPE('a)"
+  apply (cut_tac v1=v in iffD2 [OF project_inject, OF refl])
+  apply (simp add: project_koType[symmetric])
+  done
+
+lemma ctes_of_cte_at:
+  "ctes_of s p = Some x \<Longrightarrow> cte_at' p s"
+  by (simp add: cte_wp_at_ctes_of)
+
+lemmas tcbSlots =
+  tcbCTableSlot_def tcbVTableSlot_def
+  tcbReplySlot_def tcbCallerSlot_def tcbIPCBufferSlot_def
+
+lemma updateObject_cte_tcb:
+  assumes tc: "tcb_cte_cases (ptr - ptr') = Some (accF, updF)"
+  shows   "updateObject ctea (KOTCB tcb) ptr ptr' next =
+   (do alignCheck ptr' (objBits tcb);
+        magnitudeCheck ptr' next (objBits tcb);
+        return (KOTCB (updF (\<lambda>_. ctea) tcb))
+    od)"
+  using tc unfolding tcb_cte_cases_def
+  apply -
+  apply (clarsimp simp add: updateObject_cte Let_def
+    tcb_cte_cases_def objBits_simps' tcbSlots shiftl_t2n
+    split: if_split_asm cong: if_cong)
+  done
+
+lemma tcb_cte_cases_in_range1:
+  assumes tc:"tcb_cte_cases (y - x) = Some v"
+  and     al: "is_aligned x tcbBlockSizeBits"
+  shows   "x \<le> y"
+proof -
+  note objBits_defs [simp]
+
+  from tc obtain q where yq: "y = x + q" and qv: "q < 2 ^ tcbBlockSizeBits"
+    unfolding tcb_cte_cases_def
+    by (simp add: diff_eq_eq split: if_split_asm)
+
+  have "x \<le> x + 2 ^ tcbBlockSizeBits - 1" using al
+    by (rule is_aligned_no_overflow)
+
+  hence "x \<le> x + q" using qv
+    apply simp
+    apply unat_arith
+    apply simp
+    done
+
+  thus ?thesis using yq by simp
+qed
+
+lemma tcb_cte_cases_in_range2:
+  assumes tc: "tcb_cte_cases (y - x) = Some v"
+  and     al: "is_aligned x tcbBlockSizeBits"
+  shows   "y \<le> x + 2 ^ tcbBlockSizeBits - 1"
+proof -
+  note objBits_defs [simp]
+
+  from tc obtain q where yq: "y = x + q" and qv: "q \<le> 2 ^ tcbBlockSizeBits - 1"
+    unfolding tcb_cte_cases_def
+    by (simp add: diff_eq_eq split: if_split_asm)
+
+  have "x + q \<le> x + (2 ^ tcbBlockSizeBits - 1)" using qv
+    apply (rule word_plus_mono_right)
+    apply (rule is_aligned_no_overflow' [OF al])
+    done
+
+  thus ?thesis using yq by (simp add: field_simps)
+qed
+
+lemma valid_cap_cte_at':
+  "\<lbrakk>isCNodeCap cap; valid_cap' cap s'\<rbrakk>
+   \<Longrightarrow> cte_at' (capCNodePtr cap + 2^cteSizeBits * (addr && mask (capCNodeBits cap))) s'"
+  apply (clarsimp simp: isCap_simps valid_cap'_def)
+  apply (rule real_cte_at')
+  apply (erule spec)
+  done
+
+lemma cd_wp[wp]:
+  "\<lbrace>\<lambda>s. P (ksCurDomain s) s\<rbrace> curDomain \<lbrace>P\<rbrace>"
+  by (unfold curDomain_def, wp)
+
+lemma empty_fail_getEndpoint:
+  "empty_fail (getEndpoint ep)"
+  unfolding getEndpoint_def
+  by (auto intro: empty_fail_getObject)
+
+lemma ko_at_valid_ep':
+  "\<lbrakk>ko_at' ep p s; valid_objs' s\<rbrakk> \<Longrightarrow> valid_ep' ep s"
+  apply (erule obj_atE')
+  apply (erule (1) valid_objsE')
+   apply (simp add: projectKOs valid_obj'_def)
+   done
+
+lemma cap_case_EndpointCap_NotificationCap:
+  "(case cap of EndpointCap v0 v1 v2 v3 v4 v5 \<Rightarrow> f v0 v1 v2 v3 v4 v5
+              | NotificationCap v0 v1 v2 v3  \<Rightarrow> g v0 v1 v2 v3
+              | _ \<Rightarrow> h)
+   = (if isEndpointCap cap
+      then f (capEPPtr cap) (capEPBadge cap) (capEPCanSend cap) (capEPCanReceive cap)
+             (capEPCanGrant cap) (capEPCanGrantReply cap)
+      else if isNotificationCap cap
+           then g (capNtfnPtr cap)  (capNtfnBadge cap) (capNtfnCanSend cap) (capNtfnCanReceive cap)
+           else h)"
+  by (simp add: isCap_simps
+         split: capability.split split del: if_split)
+
+lemma asUser_obj_at':
+  "\<lbrace> K(t\<noteq>t') and obj_at' P t' \<rbrace> asUser t f \<lbrace> \<lambda>_.  obj_at' (P::Structures_H.tcb \<Rightarrow> bool) t' \<rbrace>"
+  including no_pre
+  apply (simp add: asUser_def)
+  apply wpsimp
+  apply (case_tac "t=t'"; clarsimp)
+  apply (rule hoare_drop_imps)
+  apply wp
+  done
+
+(* FIXME: partial copy from SR_Lemmas since only map_to_ctes is defined.
+          All of the update_*_map_tos in SR_lemmas can be moved up. *)
+lemma update_ep_map_to_ctes:
+  fixes P :: "endpoint \<Rightarrow> bool"
+  assumes at: "obj_at' P p s"
+  shows     "map_to_ctes (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_ctes (ksPSpace s)"
+  using at
+  by (auto elim!: obj_atE' intro!: map_to_ctes_upd_other map_comp_eqI
+    simp: projectKOs projectKO_opts_defs split: kernel_object.splits if_split_asm)
+
+(* FIXME: move to MonadicRewrite *)
+lemma monadic_rewrite_gets_l:
+  "(\<And>x. monadic_rewrite F E (P x) (g x) m)
+    \<Longrightarrow> monadic_rewrite F E (\<lambda>s. P (f s) s) (gets f >>= (\<lambda>x. g x)) m"
+  by (auto simp add: monadic_rewrite_def exec_gets)
 
 end

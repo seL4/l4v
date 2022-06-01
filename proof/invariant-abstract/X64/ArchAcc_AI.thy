@@ -214,7 +214,7 @@ bundle pagebits =
   pml4_bits_def[simp] pml4_shift_bits_def[simp]
   table_size_def[simp] ptTranslationBits_def[simp]
   pageBits_def[simp] mask_lower_twice[simp]
-  word_bool_alg.conj_assoc[symmetric,simp] obj_at_def[simp]
+  and.assoc[where ?'a = \<open>'a::len word\<close>,symmetric,simp] obj_at_def[simp]
   pde.splits[split] pdpte.splits[split] pml4e.splits[split]
   pte.splits[split]
 
@@ -546,27 +546,19 @@ definition
 
 lemma ucast_ucast_asid_high_bits [simp]:
   "ucast (ucast (asid_high_bits_of asid)::word64) = asid_high_bits_of asid"
-  apply (rule word_eqI)
-  apply (clarsimp simp: word_size nth_ucast asid_low_bits_def)
-  done
+  by (word_eqI_solve simp: asid_low_bits_def)
 
 lemma ucast_ucast_asid_low_bits [simp]:
   "ucast (ucast (asid_low_bits_of asid)::word64) = asid_low_bits_of asid"
-  apply (rule word_eqI)
-  apply (clarsimp simp: word_size nth_ucast asid_low_bits_def)
-  done
+  by (word_eqI_solve simp: asid_low_bits_def)
 
 lemma ucast_mask_asid_low_bits [simp]:
   "ucast ((asid::word64) && mask asid_low_bits) = (ucast asid :: 9 word)"
-  apply (rule word_eqI)
-  apply (clarsimp simp: word_size nth_ucast asid_low_bits_def)
-  done
+  by (word_eqI_solve simp: asid_low_bits_def)
 
 lemma mask_asid_low_bits_ucast_ucast:
   "((asid::word64) && mask asid_low_bits) = ucast (ucast asid :: 9 word)"
-  apply (rule word_eqI)
-  apply (clarsimp simp: word_size nth_ucast asid_low_bits_def)
-  done
+  by (word_eqI_solve simp: asid_low_bits_def)
 
 
 context
@@ -2468,10 +2460,6 @@ lemma set_asid_pool_cur_tcb [wp]:
   by (rule hoare_lift_Pf [where f=cur_thread]; wp)
 
 
-crunch arch [wp]: set_asid_pool "\<lambda>s. P (arch_state s)"
-  (wp: get_object_wp)
-
-
 lemma set_asid_pool_valid_arch [wp]:
   "\<lbrace>valid_arch_state\<rbrace> set_asid_pool p a \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
   by (rule valid_arch_state_lift) (wp set_asid_pool_typ_at)+
@@ -2840,11 +2828,11 @@ lemma as_user_inv:
     done
 qed
 
-lemma user_getreg_inv[wp]:
-  "\<lbrace>P\<rbrace> as_user t (getRegister r) \<lbrace>\<lambda>x. P\<rbrace>"
-  apply (rule as_user_inv)
-  apply (simp add: getRegister_def)
-  done
+crunches getRegister
+  for inv[wp]: P
+  (simp: getRegister_def)
+
+lemmas user_getreg_inv[wp] = as_user_inv[OF getRegister_inv]
 
 end
 

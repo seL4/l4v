@@ -177,14 +177,13 @@ lemma valid_arch_mdb_simple:
 lemma valid_arch_mdb_free_index_update:
   "\<lbrakk>m src = Some capa;m' = m (src\<mapsto> capa\<lparr>free_index :=x\<rparr>) \<rbrakk> \<Longrightarrow>
    valid_arch_mdb c (m') = valid_arch_mdb c (m)"
-  by (clarsimp simp:valid_arch_mdb_def)
+  by clarsimp
 
 lemma set_cap_update_free_index_valid_arch_mdb:
   "\<lbrace>\<lambda>s. valid_arch_mdb (is_original_cap s) (caps_of_state s) \<and> is_untyped_cap src_cap\<rbrace>
          set_cap (free_index_update f src_cap) src
    \<lbrace>\<lambda>rv s. valid_arch_mdb (is_original_cap s) (caps_of_state s)\<rbrace>"
-  apply (clarsimp simp: valid_arch_mdb_def, wpsimp)
-  done
+  by wpsimp
 
 lemma set_untyped_cap_as_full_valid_arch_mdb:
   "\<lbrace>\<lambda>s. valid_arch_mdb (is_original_cap s) (caps_of_state s)\<rbrace>
@@ -232,7 +231,7 @@ lemmas valid_arch_mdb_updates = valid_arch_mdb_free_index_update valid_arch_mdb_
 
 lemma safe_parent_for_arch_not_arch':
   "\<not>is_arch_cap cap \<Longrightarrow> \<not>safe_parent_for_arch c cap"
-  by (clarsimp simp: safe_parent_for_arch_def is_cap_simps)
+  by clarsimp
 
 lemma safe_parent_arch_is_parent:
   "\<lbrakk>safe_parent_for_arch cap pcap; caps_of_state s p = Some pcap;
@@ -242,7 +241,7 @@ lemma safe_parent_arch_is_parent:
 
 lemma safe_parent_for_arch_no_obj_refs:
   "safe_parent_for_arch cap c \<Longrightarrow> obj_refs cap = {}"
-  by (clarsimp simp: safe_parent_for_arch_def)
+  by clarsimp
 
 lemma valid_arch_mdb_same_master_cap:
   "\<lbrakk>valid_arch_mdb ioc cs; cs sl = Some cap; cap_master_cap cap' = cap_master_cap cap\<rbrakk> \<Longrightarrow>

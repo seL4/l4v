@@ -8,6 +8,8 @@ theory VSpace_C
 imports TcbAcc_C CSpace_C PSpace_C TcbQueue_C
 begin
 
+unbundle l4v_word_context
+
 autocorres
   [ skip_heap_abs, skip_word_abs,
     scope = handleVMFault lookupPDPTSlot,
@@ -46,9 +48,6 @@ lemma ccorres_flip_Guard:
 end
 
 context kernel_m begin
-
-local_setup
-  \<open>AutoCorresModifiesProofs.new_modifies_rules "../c/build/$L4V_ARCH/kernel_all.c_pp"\<close>
 
 lemma pageBitsForSize_le:
   "pageBitsForSize x \<le> 30"
@@ -305,7 +304,7 @@ lemma rf_sr_asidTable_None:
    apply (simp add: word_size nth_shiftr asid_bits_def asid_low_bits_def)
    apply (case_tac "n < 3", simp) (*asid_high_bits*)
    apply (clarsimp simp: linorder_not_less)
-   apply (erule_tac x="n+9" in allE) (*asid_low_bits*)
+   apply (erule_tac x="9+n" in allE) (*asid_low_bits*)
    apply simp
   apply simp
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def)
@@ -329,7 +328,7 @@ lemma leq_asid_bits_shift:
   apply (simp add: mask_def)
   apply (simp add: upper_bits_unset_is_l2p_64 [symmetric])
   apply (simp add: asid_bits_def word_bits_def)
-  apply (erule_tac x="n+9" in allE) (*asid_low_bits*)
+  apply (erule_tac x="9+n" in allE) (*asid_low_bits*)
   apply (simp add: linorder_not_less)
   apply (drule test_bit_size)
   apply (simp add: word_size)
@@ -341,7 +340,7 @@ lemma ucast_asid_high_bits_is_shift:
   apply (simp add: asid_high_bits_of_def)
   apply (rule word_eqI[rule_format])
   apply (simp add: word_size nth_shiftr nth_ucast asid_low_bits_def asid_bits_def word_bits_def)
-  apply (erule_tac x="n+9" in allE)(*asid_low_bits*)
+  apply (erule_tac x="9+n" in allE)(*asid_low_bits*)
   apply simp
   apply (case_tac "n < 3", simp) (*asid_high_bits*)
   apply (simp add: linorder_not_less)
@@ -629,8 +628,8 @@ lemma lookupPDPTSlot_ccorres:
   apply (subst array_ptr_valid_array_assertionI, erule h_t_valid_clift, simp+)
   apply (rule conjI; clarsimp simp: cpml4e_relation_def Let_def)
   apply (frule pd_pointer_table_at_rf_sr, simp add: rf_sr_def, clarsimp)
-  apply (subst (asm) array_ptr_valid_array_assertionI, erule h_t_valid_clift, simp+)
-   apply (rule unat_le_helper, rule order_trans[OF word_and_le1], simp+)
+  apply (subst (asm) array_ptr_valid_array_assertionI, erule h_t_valid_clift; simp)
+  apply (rule unat_le_helper, rule order_trans[OF word_and_le1], simp)
   done
 
 (* For comparison, here is the ccorres proof. *)
@@ -671,7 +670,7 @@ lemma lookupPDPTSlot_ccorres':
    apply (erule cmap_relationE1[OF rf_sr_cpml4e_relation], erule ko_at_projectKO_opt)
    apply (clarsimp simp: typ_heap_simps cpml4e_relation_def Let_def isPDPointerTablePML4E_def
                   split: pml4e.split_asm)
-   apply (subst array_ptr_valid_array_assertionI, erule h_t_valid_clift, simp+)
+   apply (subst array_ptr_valid_array_assertionI, erule h_t_valid_clift; simp)
     apply (rule unat_le_helper, rule order_trans[OF word_and_le1], simp)
    apply (simp add: lookup_pdpt_slot_no_fail_def getPDPTIndex_def bit_simps shiftl_t2n mask_def)
   apply (clarsimp simp: Collect_const_mem h_t_valid_clift bit_simps)
@@ -839,17 +838,6 @@ lemma lookupPTSlot_ccorres:
   apply (clarsimp simp: cpde_relation_def isPageTablePDE_def Let_def
                         pde_lift_def pde_pde_pt_lift_def pde_tag_defs
                  split: X64_H.pde.splits if_splits)
-  done
-
-lemma cap_case_isPML4Cap:
-  "(case cap of ArchObjectCap (PML4Cap pm (Some asid)) \<Rightarrow> fn pm asid | _ => g)
-    = (if (if isArchObjectCap cap then if isPML4Cap (capCap cap) then capPML4MappedASID (capCap cap) \<noteq> None else False else False)
-          then fn (capPML4BasePtr (capCap cap)) (the (capPML4MappedASID (capCap cap))) else g)"
-  apply (cases cap; simp add: isArchObjectCap_def)
-  apply (rename_tac arch_capability)
-  apply (case_tac arch_capability, simp_all add: isPML4Cap_def)
-  apply (rename_tac option)
-  apply (case_tac option; simp)
   done
 
 abbreviation
@@ -1070,24 +1058,6 @@ lemma ccorres_abstract_known:
    apply (rule_tac P="rv' = val" in ccorres_gen_asm2)
    apply simp
   apply simp
-  done
-
-lemma setObject_modify:
-  fixes v :: "'a :: pspace_storable" shows
-  "\<lbrakk> obj_at' (P :: 'a \<Rightarrow> bool) p s; updateObject v = updateObject_default v;
-         (1 :: machine_word) < 2 ^ objBits v \<rbrakk>
-    \<Longrightarrow> setObject p v s
-      = modify (ksPSpace_update (\<lambda>ps. ps (p \<mapsto> injectKO v))) s"
-  apply (clarsimp simp: setObject_def split_def exec_gets
-                        obj_at'_def projectKOs lookupAround2_known1
-                        assert_opt_def updateObject_default_def
-                        bind_assoc)
-  apply (simp add: projectKO_def alignCheck_assert)
-  apply (simp add: project_inject objBits_def)
-  apply (clarsimp simp only: objBitsT_koTypeOf[symmetric] koTypeOf_injectKO)
-  apply (frule(2) in_magnitude_check[where s'=s])
-  apply (simp add: magnitudeCheck_assert in_monad)
-  apply (simp add: simpler_modify_def)
   done
 
 lemma ccorres_name_pre_C:

@@ -93,9 +93,9 @@ fun accumulate f acc xs = let
 (* Define a constant "name" of type "term" into the local theory "lthy". *)
 fun define_const name term lthy =
   let
-    val lthy = lthy |> Local_Theory.open_target |> snd
+    val lthy = lthy |> Local_Theory.begin_nested |> snd
     val ((_, (_, thm)), lthy) = Local_Theory.define ((Binding.name name, NoSyn), (Binding.empty_atts, term)) lthy
-    val lthy' = Local_Theory.close_target lthy
+    val lthy' = Local_Theory.end_nested lthy
     val thm' = Morphism.thm (Local_Theory.target_morphism lthy) thm
   in
     (thm', lthy')
@@ -116,13 +116,13 @@ fun define_const_args name hidden term args lthy =
     val new_term = Logic.mk_equals (head, term)
 
     (* Define the constant. *)
-   val lthy = lthy |> Local_Theory.open_target |> snd
+   val lthy = lthy |> Local_Theory.begin_nested |> snd
    val ((_, (_, thm)), lthy) =
         Specification.definition (SOME (maybe_hide (Binding.name name), NONE, NoSyn))
             [] [] (Binding.empty_atts, new_term) lthy
 
     (* Integrate into the current locale. *)
-    val lthy' = Local_Theory.close_target lthy
+    val lthy' = Local_Theory.end_nested lthy
     val thm' = Morphism.thm (Local_Theory.target_morphism lthy) thm
   in
     (Thm.prop_of thm' |> lhs_of |> Term.head_of, thm', lthy')
@@ -131,14 +131,14 @@ fun define_const_args name hidden term args lthy =
 (* Define lemmas into the local theory. *)
 fun define_lemmas name thm_list lthy =
   let
-    val lthy = lthy |> Local_Theory.open_target |> snd
+    val lthy = lthy |> Local_Theory.begin_nested |> snd
     val ((_, thms), lthy) = Local_Theory.note ((Binding.name name, []), thm_list) lthy
     (*
      * Restore the theory; not entirely sure why this is needed, but prevents
      * definitions from taking O(n^2) time (where "n" is the number of
      * definitions previously made).
      *)
-    val lthy' = Local_Theory.close_target lthy
+    val lthy' = Local_Theory.end_nested lthy
     val thms' = map (Morphism.thm (Local_Theory.target_morphism lthy)) thms
   in
     (thms', lthy')
@@ -147,9 +147,9 @@ fun define_lemmas name thm_list lthy =
 (* Define a single lemma into the local theory. *)
 fun define_lemma name thm lthy =
   let
-    val lthy = lthy |> Local_Theory.open_target |> snd
+    val lthy = lthy |> Local_Theory.begin_nested |> snd
     val (thms, lthy) = define_lemmas name [thm] lthy
-    val lthy = Local_Theory.close_target lthy
+    val lthy = Local_Theory.end_nested lthy
   in
     (hd thms, lthy)
   end
@@ -538,13 +538,13 @@ let
     val function_bodies = map (fn (a,b,c) => mk_fun_term a b c) func_defs
 
     (* Define the function. *)
-    val lthy = lthy |> Local_Theory.open_target |> snd
+    val lthy = lthy |> Local_Theory.begin_nested |> snd
     val ctxt' = Function.add_function
       function_bindings
       (map (fn x => ((Binding.empty_atts, x), [], [])) function_bodies)
       Function_Common.default_config pat_completeness_auto lthy
       |> snd
-      |> Local_Theory.close_target
+      |> Local_Theory.end_nested
       |> prove_termination
       |> snd
 
@@ -808,7 +808,7 @@ let
   val typ_vals = Vartab.dest (Envir.type_env env)
 in
   (Drule.instantiate_normalize
-      (map prep_type typ_vals, map prep_term term_vals))
+      (TVars.make (map prep_type typ_vals), Vars.make (map prep_term term_vals)))
 end
 
 (*

@@ -393,7 +393,7 @@ lemma (* finalise_cap_cases1 *)[Finalise_AI_asms]:
                       | intro impI TrueI ext conjI)+)[11]
   apply (simp add: arch_finalise_cap_def split del: if_split)
   apply (rule hoare_pre)
-   apply (wpsimp simp: cap_cleanup_opt_def arch_cap_cleanup_opt_def simp_thms)+
+   apply (wpsimp simp: cap_cleanup_opt_def arch_cap_cleanup_opt_def)+
   done
 
 crunch typ_at_arch [wp]: arch_thread_set "\<lambda>s. P (typ_at T p s)"
@@ -697,37 +697,6 @@ lemma get_vcpu_ko: "\<lbrace>Q\<rbrace> get_vcpu p \<lbrace>\<lambda>rv s. ko_at
    apply (wp get_object_sp[simplified pred_conj_def], simp)
   done
 
-lemma vgic_update_sym_refs_hyp[wp]:
-  "\<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace> vgic_update vcpuptr f \<lbrace>\<lambda>rv s. sym_refs (state_hyp_refs_of s)\<rbrace>"
-  unfolding vgic_update_def vcpu_update_def
-  by (wpsimp wp: set_vcpu_sym_refs_refs_hyp get_vcpu_wp simp: obj_at_def)
-
-lemma vcpu_save_reg_sym_refs_hyp[wp]:
-  "\<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace> vcpu_save_reg vcpuptr r \<lbrace>\<lambda>rv s. sym_refs (state_hyp_refs_of s)\<rbrace>"
-  unfolding vcpu_save_reg_def vcpu_update_def
-  by (wpsimp wp: set_vcpu_sym_refs_refs_hyp get_vcpu_wp hoare_vcg_all_lift hoare_vcg_imp_lift)
-     (simp add: obj_at_def)
-
-lemma vcpu_update_regs_sym_refs_hyp[wp]:
-  "vcpu_update vcpu_ptr (vcpu_regs_update f) \<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace>"
-  unfolding vcpu_update_def
-  by (wpsimp wp: set_vcpu_sym_refs_refs_hyp get_vcpu_wp)
-     (simp add: obj_at_def)
-
-lemma vcpu_write_reg_sym_refs_hyp[wp]:
-  "vcpu_write_reg vcpu_ptr reg val \<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace>"
-  unfolding vcpu_write_reg_def by (wpsimp cong: vcpu.fold_congs)
-
-lemma vcpu_update_vtimer_sym_refs_hyp[wp]:
-  "vcpu_update vcpu_ptr (vcpu_vtimer_update f) \<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace>"
-  unfolding vcpu_update_def
-  by (wpsimp wp: set_vcpu_sym_refs_refs_hyp get_vcpu_wp)
-     (simp add: obj_at_def)
-
-crunches save_virt_timer, vcpu_disable, vcpu_invalidate_active
-  for sym_refs_hyp[wp]: "\<lambda>s. sym_refs (state_hyp_refs_of s)"
-  (ignore: vcpu_update)
-
 lemma vcpu_invalidate_tcbs_inv[wp]:
   "\<lbrace>obj_at (\<lambda>tcb. \<exists>t'. tcb = TCB t' \<and> P t') t\<rbrace>
     vcpu_invalidate_active \<lbrace>\<lambda>rv. obj_at (\<lambda>tcb. \<exists>t'. tcb = TCB t' \<and> P t') t\<rbrace>"
@@ -918,6 +887,10 @@ lemma vcpu_invalidate_active_ivs[wp]: "\<lbrace>invs\<rbrace> vcpu_invalidate_ac
 crunch cur_tcb[wp]: dissociate_vcpu_tcb "cur_tcb"
   (wp: crunch_wps)
 
+crunches dissociate_vcpu_tcb
+  for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
+  (wp: crunch_wps)
+
 lemma same_caps_tcb_arch_update[simp]:
   "same_caps (TCB (tcb_arch_update f tcb)) = same_caps (TCB tcb)"
   by (rule ext) (clarsimp simp: tcb_cap_cases_def)
@@ -1081,8 +1054,6 @@ lemma arch_finalise_cap_invs' [wp,Finalise_AI_asms]:
   apply (clarsimp simp: valid_cap_def cap_aligned_def)
   apply (auto simp: mask_def vmsz_aligned_def)
   done
-
-crunch unlive[wp]: do_machine_op "obj_at (Not \<circ> live) r"
 
 lemma arch_thread_set_unlive_other:
   "\<lbrace>\<lambda>s. vr \<noteq> t \<and> obj_at (Not \<circ> live) vr s\<rbrace> arch_thread_set (tcb_vcpu_update Map.empty) t \<lbrace>\<lambda>_. obj_at (Not \<circ> live) vr\<rbrace>"

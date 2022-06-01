@@ -19,7 +19,7 @@ lemma make_fault_message_inv[Ipc_AC_assms, wp]:
 
 declare handle_arch_fault_reply_typ_at[Ipc_AC_assms]
 
-crunch integrity_asids[Ipc_AC_assms, wp]: cap_insert_ext "integrity_asids aag subjects x st"
+crunch integrity_asids[Ipc_AC_assms, wp]: cap_insert_ext "integrity_asids aag subjects x a st"
 
 lemma arch_derive_cap_auth_derived[Ipc_AC_assms]:
   "\<lbrace>\<top>\<rbrace> arch_derive_cap acap \<lbrace>\<lambda>rv _. rv \<noteq> NullCap \<longrightarrow> auth_derived rv (ArchObjectCap acap)\<rbrace>, -"
@@ -100,7 +100,6 @@ crunches set_extra_badge
   for respects_in_ipc[Ipc_AC_assms, wp]: "integrity_tcb_in_ipc aag X receiver epptr TRContext st"
   (wp: store_word_offs_respects_in_ipc)
 
-crunch inv[Ipc_AC_assms, wp]: arch_get_sanitise_register_info P
 crunch pas_refined[Ipc_AC_assms, wp]: handle_arch_fault_reply "pas_refined aag"
 
 lemma set_mrs_respects_in_ipc[Ipc_AC_assms]:
@@ -188,6 +187,12 @@ crunches handle_arch_fault_reply
   and valid_vspace_objs[Ipc_AC_assms, wp]: "\<lambda>s :: det_ext state. valid_vspace_objs s"
   and valid_arch_state[Ipc_AC_assms, wp]: "\<lambda>s :: det_ext state. valid_arch_state s"
 
+lemma cap_insert_ext_integrity_asids_in_ipc[Ipc_AC_assms, wp]:
+  "cap_insert_ext src_parent src_slot dest_slot src_p dest_p
+   \<lbrace>\<lambda>s. integrity_asids aag subjects x asid st
+          (s\<lparr>kheap := \<lambda>a. if a = receiver then kheap st receiver else kheap s a\<rparr>)\<rbrace>"
+  by wpsimp
+
 declare handle_arch_fault_reply_inv[Ipc_AC_assms]
 declare arch_get_sanitise_register_info_inv[Ipc_AC_assms]
 
@@ -206,7 +211,7 @@ lemma list_integ_lift_in_ipc[Ipc_AC_assms]:
   shows "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr ctxt st and Q\<rbrace>
          f
          \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr ctxt st\<rbrace>"
-  apply (unfold integrity_tcb_in_ipc_def integrity_def[abs_def])
+  apply (unfold integrity_tcb_in_ipc_def integrity_def[abs_def] pool_for_asid_def)
   apply (simp del:split_paired_All)
   apply (rule hoare_pre)
    apply (simp only: integrity_cdt_list_as_list_integ)
@@ -215,6 +220,7 @@ lemma list_integ_lift_in_ipc[Ipc_AC_assms]:
     apply (wp li[simplified tcb_states_of_state_def get_tcb_def] ekh rq)+
   apply (simp only: integrity_cdt_list_as_list_integ)
   apply (simp add: tcb_states_of_state_def get_tcb_def)
+  apply (fastforce simp: opt_map_def)
   done
 
 end
@@ -224,7 +230,7 @@ global_interpretation Ipc_AC_2?: Ipc_AC_2
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; fact Ipc_AC_assms)
+    by (unfold_locales; (fact Ipc_AC_assms)?)
 qed
 
 end

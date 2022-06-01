@@ -120,7 +120,6 @@ lemma getObject_ASIDPool_corres [corres]:
   apply (simp add: return_def)
   apply (simp add: in_magnitude_check objBits_simps
                    archObjSize_def pageBits_def)
-  apply clarsimp
   apply (clarsimp simp: state_relation_def pspace_relation_def)
   apply (drule bspec, blast)
   apply (clarsimp simp: other_obj_relation_def asid_pool_relation_def)
@@ -245,7 +244,6 @@ lemma getObject_PDE_corres [corres]:
                   split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (clarsimp simp: typ_at'_def ko_wp_at'_def)
   apply (simp add: in_magnitude_check objBits_simps archObjSize_def pageBits_def pdeBits_def)
-  apply (clarsimp simp: bind_def)
   apply (clarsimp simp: state_relation_def pspace_relation_def)
   apply (drule bspec, blast)
   apply (clarsimp simp: other_obj_relation_def pde_relation_def)
@@ -497,7 +495,6 @@ lemma getObject_PTE_corres [corres]:
                   split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (clarsimp simp: typ_at'_def ko_wp_at'_def)
   apply (simp add: in_magnitude_check objBits_simps archObjSize_def pageBits_def pteBits_def)
-  apply (clarsimp simp: bind_def)
   apply (clarsimp simp: state_relation_def pspace_relation_def)
   apply (drule bspec, blast)
   apply (clarsimp simp: other_obj_relation_def pte_relation_def)
@@ -749,7 +746,6 @@ lemma setObject_PD_corres [@lift_corres_args, corres]:
         apply (simp add: pd_bits_def pageBits_def)
        apply (simp add: pd_bits_def pageBits_def)
       apply clarsimp
-      apply (clarsimp simp: nth_ucast nth_shiftl)
       apply (drule test_bit_size)
       apply (clarsimp simp: word_size pd_bits_def pageBits_def)
       apply arith
@@ -826,7 +822,6 @@ lemma setObject_PT_corres [@lift_corres_args, corres]:
          apply (simp add: pt_bits_def pageBits_def)
         apply (simp add: pt_bits_def pageBits_def)
        apply clarsimp
-       apply (clarsimp simp: nth_ucast nth_shiftl)
        apply (drule test_bit_size)
        apply (clarsimp simp: word_size pt_bits_def pageBits_def)
        apply arith
@@ -1180,8 +1175,7 @@ lemma ensureSafeMapping_corres [corres]:
 lemma asidHighBitsOf [simp]:
   "asidHighBitsOf asid = ucast (asid_high_bits_of asid)"
   apply (simp add: asidHighBitsOf_def asid_high_bits_of_def asidHighBits_def)
-  apply (rule word_eqI)
-  apply (simp add: word_size nth_ucast)
+  apply word_eqI_solve
   done
 
 

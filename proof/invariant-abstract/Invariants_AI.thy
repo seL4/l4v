@@ -28,7 +28,6 @@ requalify_consts
   valid_arch_cap_ref
   acap_class
   valid_ipc_buffer_cap
-  wellformed_vspace_obj
   arch_valid_obj
   valid_asid_map
   valid_vspace_obj
@@ -221,6 +220,7 @@ where
 abbreviation "st_tcb_at \<equiv> pred_tcb_at itcb_state"
 abbreviation "bound_tcb_at \<equiv> pred_tcb_at itcb_bound_notification"
 abbreviation "mcpriority_tcb_at \<equiv> pred_tcb_at itcb_mcpriority"
+abbreviation "arch_tcb_at \<equiv> pred_tcb_at itcb_arch"
 
 (* sseefried: 'st_tcb_at_def' only exists to make existing proofs go through. Use 'pred_tcb_at_def' from now on. *)
 lemma st_tcb_at_def: "st_tcb_at test \<equiv> obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> test (tcb_state tcb))"
@@ -3081,8 +3081,8 @@ lemma real_cte_at_typ_valid:
    \<Longrightarrow> \<lbrace>real_cte_at p\<rbrace> f \<lbrace>\<lambda>rv. real_cte_at p\<rbrace>"
   by (simp add: cap_table_at_typ)
 
-lemma dmo_aligned:
-  "\<lbrace>pspace_aligned\<rbrace> do_machine_op f \<lbrace>\<lambda>_. pspace_aligned\<rbrace>"
+lemma dmo_aligned[wp]:
+  "do_machine_op f \<lbrace>pspace_aligned\<rbrace>"
   apply (simp add: do_machine_op_def split_def)
   apply (wp select_wp)
   apply (clarsimp simp: pspace_aligned_def)

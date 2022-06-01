@@ -76,8 +76,7 @@ lemma cdt_detype[simp]:
 lemma caps_of_state_detype[simp]:
   "caps_of_state (detype S s) =
    (\<lambda>p. if fst p \<in> S then None else caps_of_state s p)"
-  by (clarsimp simp add: caps_of_state_cte_wp_at
-                 intro!: ext)
+  by (fastforce simp add: caps_of_state_cte_wp_at)
 
 
 lemma state_refs_of_detype:
@@ -809,9 +808,7 @@ lemma valid_ioc_detype[detype_invs_lemmas]: "valid_ioc (detype (untyped_range ca
       done
   qed
 
-(* FIXME: consider to source out. *)
-lemma p2pm1_to_mask: "\<And>p n. p + 2 ^ n - 1 = p + mask n" (* SIMP *)
-  by (simp add: mask_2pm1 field_simps)
+lemmas p2pm1_to_mask = add_mask_fold
 
 lemma valid_irq_states_detype[detype_invs_lemmas]: "valid_irq_states
           (clear_um (untyped_range cap) (detype (untyped_range cap) s))"
@@ -829,9 +826,9 @@ lemma invariants:
   assumes ct_act: "ct_active s"
   shows "(invs and untyped_children_in_mdb)
          (detype (untyped_range cap) (clear_um (untyped_range cap) s))"
-using detype_invs_lemmas detype_invs_assms ct_act
-by (simp add: invs_def valid_state_def valid_pspace_def
-                 detype_clear_um_independent clear_um.state_refs_update clear_um.state_hyp_refs_update)
+  using detype_invs_lemmas detype_invs_assms ct_act
+  by (simp add: invs_def valid_state_def valid_pspace_def
+                detype_clear_um_independent clear_um.state_refs_update)
 
 end
 
@@ -929,8 +926,6 @@ lemma of_nat_le_pow:
   apply simp
   done
 
-lemma maxword_len_conv': "(x::machine_word) + max_word = x - 1" by (simp add: max_word_def)
-
 (* FIXME: copied from Retype_C and slightly adapted. *)
 lemma (in Detype_AI) mapM_x_storeWord_step:
   assumes al: "is_aligned ptr sz"
@@ -944,7 +939,7 @@ lemma (in Detype_AI) mapM_x_storeWord_step:
   apply (subst if_not_P)
    apply (subst not_less)
    apply (erule is_aligned_no_overflow)
-  apply (simp add: mapM_x_map comp_def upto_enum_word maxword_len_conv' del: upt.simps)
+  apply (simp add: mapM_x_map comp_def upto_enum_word del: upt.simps)
   apply (simp add: Suc_unat_mask_div_obfuscated[simplified mask_2pm1] min_def)
   apply (subst mapM_x_storeWord)
    apply (erule is_aligned_weaken [OF _ sz2])
@@ -1068,7 +1063,7 @@ lemma corres_submonad2:
                          assert_def return_def bind_def)
   apply (rule corres_split' [where r'="\<lambda>x y. (x, y) \<in> ssr",
                              OF _ _ gets_sp gets_sp])
-   apply (clarsimp simp: corres_gets)
+   apply clarsimp
   apply (rule corres_split' [where r'="\<lambda>(x, x') (y, y'). rvr x y \<and> (x', y') \<in> ssr",
                              OF _ _ hoare_post_taut hoare_post_taut])
    defer
@@ -1096,7 +1091,7 @@ lemma corres_submonad3:
                          assert_def return_def bind_def)
   apply (rule corres_split' [where r'="\<lambda>x y. (x, y) \<in> ssr",
                              OF _ _ gets_sp gets_sp])
-   apply (clarsimp simp: corres_gets)
+   apply clarsimp
   apply (rule corres_split' [where r'="\<lambda>(x, x') (y, y'). rvr x y \<and> (x', y') \<in> ssr",
                              OF _ _ hoare_post_taut hoare_post_taut])
    defer

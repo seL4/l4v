@@ -461,7 +461,7 @@ let
    *   ('s, 'e + 'a) nondet_monad
    *)
   val new_thms = map (fn t => #polymorphic_thm rule_set' OF [t]) new_thms
-                 |> map (fn t => Drule.generalize ([], ["rec_measure'"]) t)
+                 |> map (fn t => Drule.generalize (Names.empty, Names.make_set ["rec_measure'"]) t)
 
   (* Final mono rules for recursive functions. *)
   fun try_mono_thm (fn_name, rewrite_thm) =

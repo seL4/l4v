@@ -432,7 +432,7 @@ let
    * HACK: Exit and enter the context again, so the simpset created by the new
    * record gets imported in. No idea what the "correct" way of doing this is.
    *)
-  val lthy = Local_Theory.exit_global lthy |> Named_Target.init (the (Named_Target.locale_of lthy))
+  val lthy = Local_Theory.exit_global lthy |> Named_Target.init [] (the (Named_Target.locale_of lthy))
 
   (* Generate a function mapping old globals to the new globals. *)
   val (lift_name, lift_def, simp_thms, lthy) = gen_heap_abs_fn
@@ -452,7 +452,6 @@ end
 structure HeapInfo = Theory_Data(
   type T = HeapLiftBase.heap_lift_setup Symtab.table;
   val empty = Symtab.empty;
-  val extend = I;
   fun merge (l, r) =
     Symtab.merge (fn _ => true) (l, r);
 )

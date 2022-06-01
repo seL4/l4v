@@ -40,4 +40,8 @@ lemmas conseqPost = HoarePartialDef.conseqPost
 (* Likewise, we'd prefer to get HOL.conj_cong over StateFun.conj_cong *)
 lemmas conj_cong = HOL.conj_cong
 
+(* Removes two rules that are too eager for the bitfield proofs. *)
+declare bit_shiftr_eq[simp del]
+declare shiftl_of_Suc[simp del]
+
 end

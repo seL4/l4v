@@ -13,19 +13,14 @@ begin
 
 declare if_split [split del]
 
-lemma empty_fail_getEndpoint:
-  "empty_fail (getEndpoint ep)"
-  unfolding getEndpoint_def
-  by (auto intro: empty_fail_getObject)
-
 definition
   "option_map2 f m = option_map f \<circ> m"
 
 lemma tcbSchedEnqueue_cslift_spec:
   "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> \<lbrace>s. \<exists>d v. option_map2 tcbPriority_C (cslift s) \<acute>tcb = Some v
-                       \<and> v \<le> ucast maxPrio
+                       \<and> unat v \<le> numPriorities
                        \<and> option_map2 tcbDomain_C (cslift s) \<acute>tcb = Some d
-                       \<and> d \<le> ucast maxDom
+                       \<and> unat d < Kernel_Config.numDomains
                        \<and> (end_C (index \<acute>ksReadyQueues (unat (d*0x100 + v))) \<noteq> NULL
                            \<longrightarrow> option_map2 tcbPriority_C (cslift s)
                                    (head_C (index \<acute>ksReadyQueues (unat (d*0x100 + v))))
@@ -43,6 +38,10 @@ lemma tcbSchedEnqueue_cslift_spec:
   apply (clarsimp simp: option_map2_def fun_eq_iff h_t_valid_clift
                         h_t_valid_field[OF h_t_valid_clift])
   apply (rule conjI)
+   apply (clarsimp simp: typ_heap_simps le_maxDomain_eq_less_numDomains)
+   apply unat_arith
+  apply clarsimp
+  apply (rule conjI)
    apply (clarsimp simp: typ_heap_simps cong: if_cong)
    apply (simp split: if_split)
   apply (clarsimp simp: typ_heap_simps if_Some_helper cong: if_cong)
@@ -52,9 +51,9 @@ lemma setThreadState_cslift_spec:
   "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> \<lbrace>s. s \<Turnstile>\<^sub>c \<acute>tptr \<and> (\<forall>x. ksSchedulerAction_' (globals s) = tcb_Ptr x
                  \<and> x \<noteq> 0 \<and> x \<noteq> 1
               \<longrightarrow> (\<exists>d v. option_map2 tcbPriority_C (cslift s) (tcb_Ptr x) = Some v
-                       \<and> v \<le> ucast maxPrio
+                       \<and> unat v \<le> numPriorities
                        \<and> option_map2 tcbDomain_C (cslift s) (tcb_Ptr x) = Some d
-                       \<and> d \<le> ucast maxDom
+                       \<and> unat d < Kernel_Config.numDomains
                        \<and> (end_C (index \<acute>ksReadyQueues (unat (d*0x100 + v))) \<noteq> NULL
                            \<longrightarrow> option_map2 tcbPriority_C (cslift s)
                                    (head_C (index \<acute>ksReadyQueues (unat (d*0x100 + v))))
@@ -86,8 +85,7 @@ lemma setThreadState_cslift_spec:
        apply (vcg_step+)[1]
       apply vcg
      apply vcg_step+
-  apply (clarsimp simp: typ_heap_simps h_t_valid_clift_Some_iff
-                        fun_eq_iff option_map2_def if_1_0_0)
+  apply (clarsimp simp: typ_heap_simps h_t_valid_clift_Some_iff fun_eq_iff option_map2_def)
   by (simp split: if_split)
 
 lemma ep_queue_relation_shift:
@@ -127,32 +125,27 @@ lemma ctcb_relation_tcbPriority:
   "ctcb_relation tcb tcb' \<Longrightarrow> ucast (tcbPriority tcb) = tcbPriority_C tcb'"
   by (simp add: ctcb_relation_def)
 
-lemma ctcb_relation_tcbDomain_maxDom:
-  "\<lbrakk> ctcb_relation tcb tcb'; tcbDomain tcb \<le> maxDomain \<rbrakk> \<Longrightarrow> tcbDomain_C tcb' \<le> ucast maxDom"
+lemma ctcb_relation_tcbDomain_maxDomain_numDomains:
+  "\<lbrakk> ctcb_relation tcb tcb'; tcbDomain tcb \<le> maxDomain \<rbrakk>
+   \<Longrightarrow> unat (tcbDomain_C tcb') < Kernel_Config.numDomains"
   apply (subst ctcb_relation_tcbDomain[symmetric], simp)
-  apply (subst ucast_le_migrate)
-    apply ((simp add:maxDom_def word_size)+)[2]
-  apply (simp add: ucast_up_ucast is_up_def source_size_def word_size target_size_def)
-  apply (simp add: maxDom_to_H)
+  apply (simp add: le_maxDomain_eq_less_numDomains)
   done
 
-lemma ctcb_relation_tcbPriority_maxPrio:
+lemma ctcb_relation_tcbPriority_maxPriority_numPriorities:
   "\<lbrakk> ctcb_relation tcb tcb'; tcbPriority tcb \<le> maxPriority \<rbrakk>
-    \<Longrightarrow> tcbPriority_C tcb' \<le> ucast maxPrio"
+    \<Longrightarrow> unat (tcbPriority_C tcb') < numPriorities"
   apply (subst ctcb_relation_tcbPriority[symmetric], simp)
-  apply (subst ucast_le_migrate)
-    apply ((simp add: seL4_MaxPrio_def word_size)+)[2]
-  apply (simp add: ucast_up_ucast is_up_def source_size_def word_size target_size_def)
-  apply (simp add: maxPrio_to_H)
+  apply (simp add: maxPriority_def numPriorities_def word_le_nat_alt)
   done
 
 lemma tcbSchedEnqueue_cslift_precond_discharge:
   "\<lbrakk> (s, s') \<in> rf_sr; obj_at' (P :: tcb \<Rightarrow> bool) x s;
         valid_queues s; valid_objs' s \<rbrakk> \<Longrightarrow>
    (\<exists>d v. option_map2 tcbPriority_C (cslift s') (tcb_ptr_to_ctcb_ptr x) = Some v
-        \<and> v \<le> ucast maxPrio
+        \<and> unat v < numPriorities
         \<and> option_map2 tcbDomain_C (cslift s') (tcb_ptr_to_ctcb_ptr x) = Some d
-        \<and> d \<le> ucast maxDom
+        \<and> unat d < Kernel_Config.numDomains
         \<and> (end_C (index (ksReadyQueues_' (globals s')) (unat (d*0x100 + v))) \<noteq> NULL
                 \<longrightarrow> option_map2 tcbPriority_C (cslift s')
                      (head_C (index (ksReadyQueues_' (globals s')) (unat (d*0x100 + v))))
@@ -166,12 +159,12 @@ lemma tcbSchedEnqueue_cslift_precond_discharge:
   apply (frule_tac t=x in valid_objs'_maxDomain, fastforce simp: obj_at'_def)
   apply (drule_tac P="\<lambda>tcb. tcbPriority tcb \<le> maxPriority" in obj_at_ko_at2', simp)
   apply (drule_tac P="\<lambda>tcb. tcbDomain tcb \<le> maxDomain" in obj_at_ko_at2', simp)
-
-  apply (simp add: ctcb_relation_tcbDomain_maxDom ctcb_relation_tcbPriority_maxPrio)
+  apply (simp add: ctcb_relation_tcbDomain_maxDomain_numDomains
+                   ctcb_relation_tcbPriority_maxPriority_numPriorities)
   apply (frule_tac d="tcbDomain ko" and p="tcbPriority ko"
               in rf_sr_sched_queue_relation)
     apply (simp add: maxDom_to_H maxPrio_to_H)+
-  apply (simp add: cready_queues_index_to_C_def2 numPriorities_def)
+  apply (simp add: cready_queues_index_to_C_def2 numPriorities_def le_maxDomain_eq_less_numDomains)
   apply (clarsimp simp: ctcb_relation_def)
   apply (frule arg_cong[where f=unat], subst(asm) unat_ucast_8_32)
   apply (frule tcb_queue'_head_end_NULL)
@@ -987,7 +980,7 @@ lemma invalidateASIDEntry_ccorres:
                         split: if_split)
         apply csymbr
         apply (rule ccorres_Guard)+
-        apply (rule_tac P="rv \<noteq> None" in ccorres_gen_asm)
+        apply (rule_tac P="pde_stored_asid stored_hw_asid___struct_pde_C \<noteq> None" in ccorres_gen_asm)
         apply (ctac(no_simp) add: invalidateHWASIDEntry_ccorres)
         apply (clarsimp simp: pde_stored_asid_def unat_ucast
                        split: if_split_asm)
@@ -1100,7 +1093,7 @@ lemma deleteASIDPool_ccorres:
             apply (erule is_aligned_add_less_t2n)
               apply (subst(asm) Suc_unat_diff_1)
                apply (simp add: asid_low_bits_def)
-              apply (simp add: unat_power_lower asid_low_bits_word_bits)
+              apply (simp add: asid_low_bits_word_bits)
               apply (erule of_nat_less_pow_32 [OF _ asid_low_bits_word_bits])
              apply (simp add: asid_low_bits_def asid_bits_def)
             apply (simp add: asid_bits_def)
@@ -1262,8 +1255,7 @@ lemma deleteASID_ccorres:
                            asid_low_bits_def order_le_less_trans [OF word_and_le1])
     apply wp
    apply vcg
-  apply (clarsimp simp: Collect_const_mem if_1_0_0
-                        word_sless_def word_sle_def
+  apply (clarsimp simp: word_sless_def word_sle_def
                         Kernel_C.asidLowBits_def
                         typ_at_to_obj_at_arches)
   apply (rule conjI)
@@ -1319,24 +1311,25 @@ lemma pageTableMapped_ccorres:
           apply ceqv
          apply (rule_tac P="rv \<noteq> 0" in ccorres_gen_asm)
          apply csymbr+
-         apply (wpc, simp_all add: if_1_0_0 returnOk_bind throwError_bind
+         apply (wpc, simp_all add: returnOk_bind throwError_bind
                               del: Collect_const)
             prefer 2
             apply (rule ccorres_cond_true_seq)
             apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
             apply (rule allI, rule conseqPre, vcg)
-            apply (clarsimp simp: if_1_0_0 cpde_relation_def Let_def
-                                  return_def addrFromPPtr_def
+            apply (clarsimp simp: cpde_relation_def Let_def return_def addrFromPPtr_def
                                   pde_pde_coarse_lift_def)
-            apply (rule conjI)
-             apply (simp add: pde_lift_def Let_def split: if_split_asm)
-            apply (clarsimp simp: option_to_0_def option_to_ptr_def split: if_split)
-            apply (clarsimp simp: ARM.addrFromPPtr_def ARM.ptrFromPAddr_def)
+             apply (rule conjI)
+              apply (simp add: pde_lift_def Let_def split: if_split_asm)
+             apply (clarsimp simp: option_to_0_def option_to_ptr_def split: if_split)
+             apply (clarsimp simp: ARM.addrFromPPtr_def ARM.ptrFromPAddr_def)
+            apply (auto simp: Let_def pde_lift_def addrFromPPtr_def ptrFromPAddr_def option_to_ptr_def
+                       split: if_splits)[1]
            apply ((rule ccorres_cond_false_seq ccorres_cond_false
                           ccorres_return_C | simp)+)[3]
         apply (simp only: simp_thms)
         apply wp
-       apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem if_1_0_0)
+       apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem)
        apply (simp add: cpde_relation_def Let_def pde_lift_def
                  split: if_split_asm,
               auto simp: option_to_0_def option_to_ptr_def pde_tag_defs)[1]
@@ -1479,7 +1472,7 @@ lemma Arch_finaliseCap_ccorres:
          apply (frule small_frame_cap_is_mapped_alt)
          apply (clarsimp simp: cap_small_frame_cap_lift cap_to_H_def
                                case_option_over_if
-                         elim!: ccap_relationE simp del: Collect_const)
+                         elim!: ccap_relationE)
         apply (simp add: split_def)
         apply (rule ccorres_rhs_assoc)+
         apply csymbr
@@ -1495,7 +1488,7 @@ lemma Arch_finaliseCap_ccorres:
         apply (frule small_frame_cap_is_mapped_alt)
         apply (clarsimp simp: cap_small_frame_cap_lift cap_to_H_def
                               case_option_over_if
-                        elim!: ccap_relationE simp del: Collect_const)
+                        elim!: ccap_relationE)
        apply (simp add: split_def)
        apply return_NullCap_pair_ccorres
       apply (clarsimp simp: isCap_simps)
@@ -1513,7 +1506,7 @@ lemma Arch_finaliseCap_ccorres:
          apply (frule frame_cap_is_mapped_alt)
          apply (clarsimp simp: cap_frame_cap_lift cap_to_H_def
                                case_option_over_if
-                         elim!: ccap_relationE simp del: Collect_const)
+                         elim!: ccap_relationE)
         apply simp
         apply (rule ccorres_rhs_assoc)+
         apply csymbr
@@ -1530,7 +1523,7 @@ lemma Arch_finaliseCap_ccorres:
         apply (frule frame_cap_is_mapped_alt)
         apply (clarsimp simp: cap_frame_cap_lift cap_to_H_def
                               case_option_over_if
-                    elim!: ccap_relationE simp del: Collect_const)
+                    elim!: ccap_relationE)
        apply clarsimp
        apply return_NullCap_pair_ccorres
       apply (clarsimp simp: isCap_simps)
@@ -1552,7 +1545,7 @@ lemma Arch_finaliseCap_ccorres:
     apply (rule ccorres_rhs_assoc)+
     apply csymbr
     apply csymbr
-    apply (simp add: if_1_0_0)
+    apply simp
     apply (subgoal_tac "isPageDirectoryCap cp \<longrightarrow> \<not> isPageTableCap cp \<and> \<not> isASIDPoolCap cp \<and> \<not> isPageCap cp")
      apply clarsimp
      apply (rule ccorres_Cond_rhs_Seq)
@@ -1593,7 +1586,6 @@ lemma Arch_finaliseCap_ccorres:
      apply (rule ccorres_rhs_assoc)+
      apply csymbr
      apply csymbr
-     apply (simp add: if_1_0_0)
      apply clarsimp
      apply (rule ccorres_Cond_rhs_Seq)
       apply (subgoal_tac "capPTMappedAddress cp \<noteq> None")
@@ -1641,7 +1633,7 @@ lemma Arch_finaliseCap_ccorres:
        apply (frule small_frame_cap_is_mapped_alt)
        apply (clarsimp simp: cap_small_frame_cap_lift cap_to_H_def
                              case_option_over_if
-                       elim!: ccap_relationE simp del: Collect_const)
+                       elim!: ccap_relationE)
       apply (simp add: split_def)
       apply (rule ccorres_rhs_assoc)+
       apply csymbr
@@ -1657,7 +1649,7 @@ lemma Arch_finaliseCap_ccorres:
       apply (frule small_frame_cap_is_mapped_alt)
       apply (clarsimp simp: cap_small_frame_cap_lift cap_to_H_def
                             case_option_over_if
-                     elim!: ccap_relationE simp del: Collect_const)
+                     elim!: ccap_relationE)
      apply (simp add: split_def)
      apply return_NullCap_pair_ccorres
     apply (clarsimp simp: isCap_simps)
@@ -1675,7 +1667,7 @@ lemma Arch_finaliseCap_ccorres:
        apply (frule frame_cap_is_mapped_alt)
        apply (clarsimp simp: cap_frame_cap_lift cap_to_H_def
                              case_option_over_if
-                       elim!: ccap_relationE simp del: Collect_const)
+                       elim!: ccap_relationE)
       apply simp
       apply (rule ccorres_rhs_assoc)+
       apply csymbr
@@ -1692,7 +1684,7 @@ lemma Arch_finaliseCap_ccorres:
       apply (frule frame_cap_is_mapped_alt)
       apply (clarsimp simp: cap_frame_cap_lift cap_to_H_def
                             case_option_over_if
-                      elim!: ccap_relationE simp del: Collect_const)
+                      elim!: ccap_relationE)
      apply clarsimp
      apply return_NullCap_pair_ccorres
     apply (clarsimp simp: isCap_simps)
@@ -1728,10 +1720,10 @@ lemma Arch_finaliseCap_ccorres:
                               case_option_over_if gen_framesize_to_H_def
                               Kernel_C.ARMSmallPage_def ARM.pptrBase_def
                               if_split
-                       elim!: ccap_relationE simp del: Collect_const)
+                       elim!: ccap_relationE)
        apply (clarsimp simp: cap_small_frame_cap_lift cap_to_H_def
                              case_option_over_if
-                        elim!: ccap_relationE simp del: Collect_const)
+                        elim!: ccap_relationE)
       apply (frule cap_get_tag_isCap_unfolded_H_cap, simp, simp)
      apply (rule conjI, clarsimp)
       apply (subgoal_tac "capVPMappedAddress cp \<noteq> None")
@@ -1752,8 +1744,7 @@ lemma Arch_finaliseCap_ccorres:
       apply (frule (1) cap_get_tag_isCap_unfolded_H_cap)
       apply (frule frame_cap_is_mapped_alt)
       apply (clarsimp simp: cap_frame_cap_lift cap_to_H_def
-                            case_option_over_if
-                     elim!: ccap_relationE simp del: Collect_const)
+                     elim!: ccap_relationE)
      apply (frule (1) cap_get_tag_isCap_unfolded_H_cap, simp)
     apply (cases is_final; clarsimp)
     apply (intro conjI; clarsimp?)
@@ -1965,9 +1956,7 @@ lemma deletingIRQHandler_ccorres:
        apply (rule allI, rule conseqPre, vcg)
        apply (clarsimp simp: getIRQSlot_def liftM_def getInterruptState_def
                              locateSlot_conv)
-       apply (simp add: bind_def simpler_gets_def return_def ucast_nat_def uint_up_ucast
-                        is_up getIRQSlot_ccorres_stuff[simplified]
-                   flip: of_int_uint_ucast)
+       apply (simp add: bind_def simpler_gets_def return_def getIRQSlot_ccorres_stuff[simplified])
       apply ceqv
      apply (rule ccorres_symb_exec_l)
         apply (rule ccorres_symb_exec_l)
@@ -1985,7 +1974,7 @@ lemma deletingIRQHandler_ccorres:
   apply (clarsimp simp: cte_wp_at_ctes_of Collect_const_mem
                         irq_opt_relation_def Kernel_C.maxIRQ_def)
   apply (drule word_le_nat_alt[THEN iffD1])
-  apply (clarsimp simp: uint_0_iff unat_gt_0 uint_up_ucast is_up unat_def[symmetric])
+  apply (clarsimp simp: uint_0_iff unat_gt_0 uint_up_ucast is_up)
   done
 
 lemma Zombie_new_spec:
@@ -2019,8 +2008,8 @@ lemma irq_opt_relation_Some_ucast':
     apply simp+
   apply (rule word_eqI)
   apply (drule_tac f = "%x. test_bit x n" in arg_cong)
-  apply (clarsimp simp add:nth_ucast word_size)
-done
+  apply (auto simp: nth_ucast word_size)
+  done
 
 lemma irq_opt_relation_Some_ucast_left:
   "\<lbrakk> x && mask 10 = x; ucast x \<le> (ucast Kernel_C.maxIRQ :: 10 word) \<or> x \<le> (ucast Kernel_C.maxIRQ :: machine_word) \<rbrakk>
@@ -2030,8 +2019,8 @@ lemma irq_opt_relation_Some_ucast_left:
     apply simp+
   apply (rule word_eqI)
   apply (drule_tac f = "%x. test_bit x n" in arg_cong)
-  apply (clarsimp simp add:nth_ucast word_size)
-done
+  apply (auto simp: nth_ucast word_size)
+  done
 
 lemma ccap_relation_IRQHandler_mask:
   "\<lbrakk> ccap_relation acap ccap; isIRQHandlerCap acap \<rbrakk>
@@ -2073,8 +2062,8 @@ lemma finaliseCap_ccorres:
    apply csymbr
    apply (simp del: Collect_const)
    apply (rule ccorres_Cond_rhs_Seq)
-    apply (clarsimp simp: cap_get_tag_isCap isCap_simps from_bool_neq_0
-                    cong: if_cong simp del: Collect_const)
+    apply (clarsimp simp: cap_get_tag_isCap isCap_simps
+                    cong: if_cong)
     apply (clarsimp simp: word_sle_def)
     apply (rule ccorres_if_lhs)
      apply (rule ccorres_fail)
@@ -2163,7 +2152,7 @@ lemma finaliseCap_ccorres:
                         mask_def)
        apply (simp add: cte_level_bits_def tcbCTableSlot_def
                         Kernel_C.tcbCTable_def tcbCNodeEntries_def
-                        word_bool_alg.conj_disj_distrib2
+                        bit.conj_disj_distrib2
                         word_bw_assocs)
        apply (simp add: objBits_simps ctcb_ptr_to_tcb_ptr_def)
        apply (frule is_aligned_add_helper[where p="tcbptr - ctcb_offset" and d=ctcb_offset for tcbptr])

@@ -65,7 +65,6 @@ lemma getObject_ASIDPool_corres:
   apply (simp add: return_def)
   apply (simp add: in_magnitude_check objBits_simps
                    archObjSize_def pageBits_def)
-  apply clarsimp
   apply (clarsimp simp: state_relation_def pspace_relation_def)
   apply (drule bspec, blast)
   apply (clarsimp simp: other_obj_relation_def asid_pool_relation_def)
@@ -241,7 +240,6 @@ lemma getObject_PDE_corres:
                   split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (clarsimp simp: typ_at'_def ko_wp_at'_def)
   apply (simp add: in_magnitude_check objBits_simps archObjSize_def pageBits_def)
-  apply (clarsimp simp: bind_def)
   apply (clarsimp simp: state_relation_def pspace_relation_def)
   apply (drule bspec, blast)
   apply (clarsimp simp: other_obj_relation_def pde_relation_def)
@@ -319,7 +317,6 @@ lemma getObject_PTE_corres:
                   split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (clarsimp simp: typ_at'_def ko_wp_at'_def)
   apply (simp add: in_magnitude_check objBits_simps archObjSize_def pageBits_def)
-  apply (clarsimp simp: bind_def)
   apply (clarsimp simp: state_relation_def pspace_relation_def)
   apply (drule bspec, blast)
   apply (clarsimp simp: other_obj_relation_def pte_relation_def)
@@ -399,7 +396,6 @@ lemma getObject_PDPTE_corres:
                   split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (clarsimp simp: typ_at'_def ko_wp_at'_def)
   apply (simp add: in_magnitude_check objBits_simps archObjSize_def pageBits_def)
-  apply (clarsimp simp: bind_def)
   apply (clarsimp simp: state_relation_def pspace_relation_def)
   apply (drule bspec, blast)
   apply (clarsimp simp: other_obj_relation_def pdpte_relation_def)
@@ -481,7 +477,6 @@ lemma get_pml4e_corres [corres]:
                   split: if_split_asm Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (clarsimp simp: typ_at'_def ko_wp_at'_def)
   apply (simp add: in_magnitude_check objBits_simps archObjSize_def pageBits_def)
-  apply (clarsimp simp: bind_def)
   apply (clarsimp simp: state_relation_def pspace_relation_def)
   apply (drule bspec, blast)
   apply (clarsimp simp: other_obj_relation_def pml4e_relation_def)
@@ -589,7 +584,6 @@ lemma setObject_PD_corres:
           apply (simp add: pd_bits_def pageBits_def)
          apply (simp add: pd_bits_def pageBits_def)
         apply clarsimp
-        apply (clarsimp simp: nth_ucast nth_shiftl)
         apply (drule test_bit_size)
         apply (clarsimp simp: word_size bit_simps)
         apply arith
@@ -675,7 +669,6 @@ lemma setObject_PT_corres:
            apply (simp add: pt_bits_def pageBits_def)
           apply (simp add: pt_bits_def pageBits_def)
          apply clarsimp
-         apply (clarsimp simp: nth_ucast nth_shiftl)
          apply (drule test_bit_size)
          apply (clarsimp simp: word_size bit_simps)
          apply arith
@@ -761,7 +754,6 @@ lemma setObject_PDPT_corres:
         apply (simp add: pdpt_bits_def pageBits_def)
        apply (simp add: pdpt_bits_def pageBits_def)
       apply clarsimp
-      apply (clarsimp simp: nth_ucast nth_shiftl)
       apply (drule test_bit_size)
       apply (clarsimp simp: word_size bit_simps)
       apply arith
@@ -848,7 +840,6 @@ lemma setObject_PML4_corres:
         apply (simp add: bit_simps)
        apply (simp add: pml4_bits_def pageBits_def)
       apply clarsimp
-      apply (clarsimp simp: nth_ucast nth_shiftl)
       apply (drule test_bit_size)
       apply (clarsimp simp: word_size bit_simps)
       apply arith
@@ -870,8 +861,6 @@ lemma setObject_PML4_corres:
   apply (simp add: fun_upd_def)
   apply (simp add: caps_of_state_after_update obj_at_def swp_cte_at_caps_of)
   done
-
-declare set_arch_obj_simps[simp del]
 
 lemma store_pml4e_corres [corres]:
   assumes "p' = p" "pml4e_relation' pml4e pml4e'"
@@ -1113,7 +1102,7 @@ lemma page_directory_at_state_relation:
    apply fastforce
   apply clarsimp
   apply (frule(1) pspace_alignedD)
-   apply (simp add: pdBits_def pageBits_def bit_simps )
+   apply (simp add: pdBits_def bit_simps)
   apply clarsimp
   apply (drule_tac x = "ucast y" in spec)
   apply (drule sym[where s = "pspace_dom (kheap s)"])
@@ -1644,17 +1633,11 @@ lemma ensureSafeMapping_corres:
 
 lemma asidHighBitsOf [simp]:
   "asidHighBitsOf asid = ucast (asid_high_bits_of asid)"
-  apply (simp add: asidHighBitsOf_def asid_high_bits_of_def asidHighBits_def)
-  apply (rule word_eqI)
-  apply (simp add: word_size nth_ucast)
-  done
+  by (word_eqI_solve simp: asidHighBitsOf_def asid_high_bits_of_def asidHighBits_def)
 
 lemma asidLowBitsOf [simp]:
   "asidLowBitsOf asid = ucast (asid_low_bits_of asid)"
-  apply (simp add: asidLowBitsOf_def asid_low_bits_of_def asid_low_bits_def)
-  apply (rule word_eqI)
-  apply (simp add: word_size nth_ucast)
-  done
+  by (word_eqI_solve simp: asidLowBitsOf_def asid_low_bits_of_def asid_low_bits_def)
 
 lemma le_mask_asidBits_asid_wf:
   "asid_wf asid \<longleftrightarrow> asid \<le> mask asidBits"

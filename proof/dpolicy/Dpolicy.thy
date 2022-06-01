@@ -220,7 +220,6 @@ lemma transform_asid_rev [simp]:
   "asid \<le> 2 ^ ARM_A.asid_bits - 1 \<Longrightarrow> transform_asid_rev (transform_asid asid) = asid"
   apply (clarsimp simp:transform_asid_def transform_asid_rev_def
                        asid_high_bits_of_def ARM_A.asid_low_bits_def)
-  apply (clarsimp simp:ucast_nat_def)
   apply (subgoal_tac "asid >> 10 < 2 ^ asid_high_bits")
    apply (simp add:ARM_A.asid_high_bits_def ARM_A.asid_bits_def)
    apply (subst ucast_ucast_len)
@@ -422,7 +421,7 @@ lemma opt_cap_Some_rev:
   done
 
 lemma obj_refs_transform:
-  "\<not> (\<exists>x sz i dev. cap = cap.UntypedCap dev x sz i) \<Longrightarrow> obj_refs cap = cdl_obj_refs (transform_cap cap)"
+  "\<not> (\<exists>x sz i dev. cap = cap.UntypedCap dev x sz i) \<Longrightarrow> obj_refs_ac cap = cdl_obj_refs (transform_cap cap)"
   apply (case_tac cap; clarsimp)
   apply (rename_tac arch_cap)
   apply (case_tac arch_cap; clarsimp)
@@ -1136,8 +1135,6 @@ lemma state_asids_transform_rev:
    apply (clarsimp simp:transform_asid_high_bits_of')
    apply (simp add:asid_table_transform transform_asid_table_entry_def is_null_cap_def
                split:option.splits)
-   apply (drule_tac t=poolcap in sym)
-   apply simp
   apply simp
   done
 

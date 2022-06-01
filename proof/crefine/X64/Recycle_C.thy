@@ -50,9 +50,9 @@ lemma coerce_memset_to_heap_update_user_data:
   apply (subst access_ti_list_array)
      apply simp
     apply simp
-   apply (simp add: fcp_beta typ_info_word typ_info_ptr word_rsplit_0)
+   apply (simp add: typ_info_word typ_info_ptr word_rsplit_0)
    apply fastforce
-  apply (simp add: collapse_foldl_replicate)
+  apply (simp add: collapse_foldl_replicate word_bits_def)
   done
 
 lemma clift_foldl_hrs_mem_update:
@@ -374,34 +374,6 @@ lemma clearMemory_PageCap_ccorres:
   by (simp add:  word_bits_def capAligned_def word_of_nat_less valid_cap'_def)
 
 
-(* FIXME x64: asid_map
-lemma coerce_memset_to_heap_update_asidpool:
-  "heap_update_list x (replicateHider 4096 0)
-      = heap_update (Ptr x :: asid_pool_C ptr)
-             (asid_pool_C (FCP (\<lambda>x. Ptr 0)))"
-  apply (intro ext, simp add: heap_update_def)
-  apply (rule_tac f="\<lambda>xs. heap_update_list x xs a b" for a b in arg_cong)
-  apply (simp add: to_bytes_def size_of_def typ_info_simps asid_pool_C_tag_def)
-  apply (simp add: ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td align_of_def padup_def
-                   final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)
-  apply (simp add: typ_info_simps
-                   user_context_C_tag_def thread_state_C_tag_def seL4_Fault_C_tag_def
-                   lookup_fault_C_tag_def update_ti_t_ptr_0s
-                   ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td
-                   ti_typ_combine_empty_ti ti_typ_combine_td
-                   align_of_def padup_def
-                   final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def
-                   align_td_array' size_td_array)
-  apply (simp add: typ_info_array')
-  apply (subst access_ti_list_array)
-     apply simp
-    apply simp
-   apply (simp add: fcp_beta typ_info_word typ_info_ptr word_rsplit_0)
-   apply fastforce
-  apply (simp add: collapse_foldl_replicate)
-  done
-*)
-
 declare replicate_numeral [simp]
 
 lemma coerce_memset_to_heap_update_pte:
@@ -415,8 +387,8 @@ lemma coerce_memset_to_heap_update_pte:
                    final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)
   apply (simp add: typ_info_simps align_td_array' size_td_array)
   apply (simp add: typ_info_array' typ_info_word word_rsplit_0)
-  apply (simp add: numeral_nat word_rsplit_0)
-  apply (simp add: replicateHider_def)
+  apply (simp add: eval_nat_numeral)
+  apply (simp add: replicateHider_def word_rsplit_0 word_bits_def)
   done
 
 lemma coerce_memset_to_heap_update_pde:
@@ -460,8 +432,8 @@ lemma coerce_memset_to_heap_update_pml4e:
                    final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)
   apply (simp add: typ_info_simps align_td_array' size_td_array)
   apply (simp add: typ_info_array' typ_info_word word_rsplit_0)
-  apply (simp add: numeral_nat word_rsplit_0)
-  apply (simp add: replicateHider_def)
+  apply (simp add: eval_nat_numeral)
+  apply (simp add: replicateHider_def word_rsplit_0 word_bits_def)
   done
 
 lemma objBits_eq_by_type:
@@ -693,8 +665,8 @@ lemma clearMemory_setObject_PTE_ccorres:
     apply (erule (1) page_table_at_rf_sr_dom_s[unfolded ptBits_def bit_simps, simplified])
    apply (clarsimp simp add: bit_simps
                       cong: StateSpace.state.fold_congs globals.fold_congs)
-   apply (simp add: upto_enum_step_def objBits_simps bit_simps
-                    field_simps linorder_not_less[symmetric] archObjSize_def
+   apply (simp add: upto_enum_step_def objBits_simps bit_simps add.commute[where b=ptr]
+                    linorder_not_less[symmetric] archObjSize_def
                     upto_enum_word split_def)
   apply (erule mapM_x_store_memset_ccorres_assist
                       [unfolded split_def, OF _ _ _ _ _ _ subset_refl],
@@ -1109,7 +1081,7 @@ lemma cancelBadgedSends_ccorres:
                      apply (rule cendpoint_relation_q_cong)
                      apply (rule sym, erule restrict_map_eqI)
                      apply (clarsimp simp: image_iff)
-                     apply (drule(2) map_to_ko_atI2)
+                     apply (drule(2) map_to_ko_atI)
                      apply (drule ko_at_state_refs_ofD')
                      apply clarsimp
                      apply (drule_tac x=p in spec)
@@ -1117,7 +1089,7 @@ lemma cancelBadgedSends_ccorres:
 
                     apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
                     apply clarsimp
-                    apply (drule(2) map_to_ko_atI2, drule ko_at_state_refs_ofD')
+                    apply (drule(2) map_to_ko_atI, drule ko_at_state_refs_ofD')
 
                     apply (rule cnotification_relation_q_cong)
                     apply (rule sym, erule restrict_map_eqI)
@@ -1257,7 +1229,7 @@ lemma coerce_memset_to_heap_update:
                    align_td_array' size_td_array)
   apply (simp add: typ_info_array' access_ti_list_word8_array)
   apply (simp add: typ_info_word word_rsplit_0 upt_conv_Cons)
-  apply (simp add: typ_info_word typ_info_ptr word_rsplit_0
+  apply (simp add: typ_info_word typ_info_ptr word_rsplit_0 word_bits_def
                    replicateHider_def)
   done
 

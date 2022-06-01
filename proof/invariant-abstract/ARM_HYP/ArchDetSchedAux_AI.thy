@@ -15,7 +15,6 @@ named_theorems DetSchedAux_AI_assms
 crunches init_arch_objects
   for exst[wp]: "\<lambda>s. P (exst s)"
   and ct[wp]: "\<lambda>s. P (cur_thread s)"
-  and st_tcb_at[wp]: "st_tcb_at Q t"
   and valid_etcbs[wp, DetSchedAux_AI_assms]: valid_etcbs
   (wp: crunch_wps hoare_unless_wp)
 
@@ -53,8 +52,6 @@ lemma tcb_sched_action_valid_idle_etcb:
   apply (wp | simp)+
   done
 
-crunch ekheap[wp]: do_machine_op "\<lambda>s. P (ekheap s)"
-
 lemma delete_objects_etcb_at[wp, DetSchedAux_AI_assms]:
   "\<lbrace>\<lambda>s::det_ext state. etcb_at P t s\<rbrace> delete_objects a b \<lbrace>\<lambda>r s. etcb_at P t s\<rbrace>"
   apply (simp add: delete_objects_def)
@@ -87,32 +84,6 @@ lemma invoke_untyped_etcb_at [DetSchedAux_AI_assms]:
 
 crunch valid_blocked[wp, DetSchedAux_AI_assms]: init_arch_objects valid_blocked
   (wp: valid_blocked_lift set_cap_typ_at)
-
-crunch ct[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (cur_thread s)"
-  (wp: crunch_wps dxo_wp_weak simp: crunch_simps do_machine_op_def detype_def mapM_x_defsym
-   ignore: freeMemory ignore: retype_region_ext)
-
-crunch ready_queues[wp, DetSchedAux_AI_assms]:
-  invoke_untyped "\<lambda>s :: det_ext state. P (ready_queues s)"
-  (wp: crunch_wps
-   simp: detype_def detype_ext_def wrap_ext_det_ext_ext_def mapM_x_defsym
-   ignore: freeMemory)
-
-crunch scheduler_action[wp, DetSchedAux_AI_assms]:
-  invoke_untyped "\<lambda>s :: det_ext state. P (scheduler_action s)"
-  (wp: crunch_wps
-   simp: detype_def detype_ext_def wrap_ext_det_ext_ext_def mapM_x_defsym
-   ignore: freeMemory)
-
-crunch cur_domain[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s :: det_ext state. P (cur_domain s)"
-  (wp: crunch_wps
-   simp: detype_def detype_ext_def wrap_ext_det_ext_ext_def mapM_x_defsym
-   ignore: freeMemory)
-
-crunch idle_thread[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (idle_thread s)"
-  (wp: crunch_wps dxo_wp_weak hoare_unless_wp
-   simp: detype_def detype_ext_def wrap_ext_det_ext_ext_def mapM_x_defsym
-   ignore: freeMemory retype_region_ext)
 
 lemma perform_asid_control_etcb_at:"\<lbrace>(\<lambda>s. etcb_at P t s) and valid_etcbs\<rbrace>
           perform_asid_control_invocation aci
@@ -172,13 +143,13 @@ lemmas tcb_sched_action_valid_idle_etcb
 global_interpretation DetSchedAux_AI_det_ext?: DetSchedAux_AI_det_ext
   proof goal_cases
   interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact DetSchedAux_AI_assms)?)
+  case 1 show ?case by (unfold_locales; (fact DetSchedAux_AI_assms | wp)?)
   qed
 
 global_interpretation DetSchedAux_AI?: DetSchedAux_AI
   proof goal_cases
   interpret Arch .
-  case 1 show ?case by (unfold_locales; (fact DetSchedAux_AI_assms)?)
+  case 1 show ?case by (unfold_locales; (fact DetSchedAux_AI_assms | wp)?)
   qed
 
 end

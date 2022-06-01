@@ -69,7 +69,7 @@ proof -
   apply (cinit lift: irq_' slot_' cap_' simp: Interrupt_H.invokeIRQHandler_def)
    apply (rule ccorres_Guard_intStateIRQNode_array_Ptr)
    apply (rule ccorres_move_array_assertion_irq)
-   apply (simp add: ucast_up_ucast is_up of_int_uint_ucast[symmetric])
+   apply (simp)
    apply (ctac(no_vcg) add: getIRQSlot_ccorres[simplified])
      apply (rule ccorres_symb_exec_r)
        apply (ctac(no_vcg) add: cteDeleteOne_ccorres[where w="-1"])
@@ -93,9 +93,9 @@ proof -
   apply (clarsimp simp: invs_pspace_aligned' cte_wp_at_ctes_of badge_derived'_def
                         Collect_const_mem unat_gt_0 valid_cap_simps' ARM_HYP.maxIRQ_def)
   apply (drule word_le_nat_alt[THEN iffD1])
-  apply (clarsimp simp:uint_0_iff unat_gt_0 uint_up_ucast is_up unat_def[symmetric])
+  apply clarsimp
   apply (drule valid_globals_ex_cte_cap_irq[where irq=irq])
-  apply (auto simp add:Word.uint_up_ucast is_up unat_def[symmetric])
+  apply auto
   done
 qed
 
@@ -108,23 +108,22 @@ lemma invokeIRQHandler_ClearIRQHandler_ccorres:
   apply (cinit lift: irq_' simp: Interrupt_H.invokeIRQHandler_def)
    apply (rule ccorres_Guard_intStateIRQNode_array_Ptr)
    apply (rule ccorres_move_array_assertion_irq)
-   apply (simp add: ucast_up_ucast is_up of_int_uint_ucast[symmetric])
+   apply simp
    apply (ctac(no_vcg) add: getIRQSlot_ccorres[simplified])
      apply (rule ccorres_symb_exec_r)
        apply (ctac add: cteDeleteOne_ccorres[where w="-1",simplified dc_def])
       apply vcg
-     apply (rule conseqPre, vcg, clarsimp simp: rf_sr_def
-        gs_set_assn_Delete_cstate_relation[unfolded o_def])
+     apply (rule conseqPre, vcg,
+            clarsimp simp: rf_sr_def gs_set_assn_Delete_cstate_relation[unfolded o_def])
     apply (simp add: getIRQSlot_def getInterruptState_def locateSlot_conv)
     apply wp
    apply (simp add: guard_is_UNIV_def ghost_assertion_data_get_def
                     ghost_assertion_data_set_def)
   apply (clarsimp simp: cte_at_irq_node' ucast_nat_def)
-  apply (simp add: of_int_uint_ucast[symmetric])
   apply (drule word_le_nat_alt[THEN iffD1])
-  apply (auto simp add:Word.uint_up_ucast is_up unat_def[symmetric])
+  apply clarsimp
   apply (case_tac "of_int (uint irq) \<noteq> 0 \<longrightarrow> 0 < unat irq")
-   by (auto simp: Collect_const_mem unat_eq_0)
+  by (auto simp: Collect_const_mem unat_eq_0)
 
 lemma ntfn_case_can_send:
   "(case cap of NotificationCap x1 x2 x3 x4 \<Rightarrow> f x3
@@ -325,6 +324,7 @@ lemma invokeIRQControl_expanded_ccorres:
   apply (rule conjI)
    apply (clarsimp simp: maxIRQ_def Kernel_C.maxIRQ_def)
    apply unat_arith
+   apply simp
   apply (clarsimp simp: Collect_const_mem ccap_relation_def cap_irq_handler_cap_lift
                         cap_to_H_def c_valid_cap_def cl_valid_cap_def
                         word_bw_assocs mask_twice maxIRQ_def Kernel_C.maxIRQ_def ucast_ucast_a

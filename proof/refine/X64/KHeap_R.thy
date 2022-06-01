@@ -161,7 +161,7 @@ lemma updateObject_cte_is_tcb_or_cte:
         \<and> p = q \<and> is_aligned p cte_level_bits \<and> ps_clear p cte_level_bits s)"
   apply (clarsimp simp: updateObject_cte typeError_def alignError_def
                         tcbVTableSlot_def tcbCTableSlot_def to_bl_1 rev_take  objBits_simps'
-                        in_monad map_bits_to_bl cte_level_bits_def in_magnitude_check field_simps
+                        in_monad map_bits_to_bl cte_level_bits_def in_magnitude_check
                         lookupAround2_char1
          split: kernel_object.splits)
   apply (subst(asm) in_magnitude_check3, simp+)
@@ -663,7 +663,7 @@ proof -
   from ctes_of have "cte_wp_at' ((=) cte) p s"
     by (simp add: cte_wp_at_ctes_of)
   thus ?thesis using canonical
-    by (fastforce simp: pspace_canonical'_def tcb_cte_cases_def field_simps objBits_defs
+    by (fastforce simp: pspace_canonical'_def tcb_cte_cases_def field_simps objBits_defs take_bit_Suc
                  split: if_splits
                   elim: cte_wp_atE' canonical_address_add)
 qed
@@ -786,10 +786,7 @@ lemma tcb_cte_cases_change:
   "tcb_cte_cases x = Some (getF, setF) \<Longrightarrow>
    (\<exists>getF. (\<exists>setF. tcb_cte_cases y = Some (getF, setF)) \<and> getF (setF f tcb) \<noteq> getF tcb)
      = (x = y \<and> f (getF tcb) \<noteq> getF tcb)"
-  apply (rule iffI)
-   apply (clarsimp simp: tcb_cte_cases_def split: if_split_asm)
-  apply (clarsimp simp: tcb_cte_cases_def split: if_split_asm)
-  done
+  by (rule iffI; clarsimp simp: tcb_cte_cases_def split: if_split_asm) (* long *)
 
 lemma cte_level_bits_nonzero [simp]: "0 < cte_level_bits"
   by (simp add: cte_level_bits_def)
@@ -924,13 +921,12 @@ lemma obj_relation_cut_same_type:
          \<or> (\<exists>sz sz'. a_type ko = AArch (ADeviceData sz) \<and> a_type ko' = AArch (ADeviceData sz'))"
   apply (rule ccontr)
   apply (simp add: obj_relation_cuts_def2 a_type_def)
-  apply (auto simp: other_obj_relation_def cte_relation_def
-                    pte_relation_def pde_relation_def
-                    pdpte_relation_def pml4e_relation_def
-             split: Structures_A.kernel_object.split_asm if_split_asm
-                    Structures_H.kernel_object.split_asm
-                    X64_A.arch_kernel_obj.split_asm)
-  done
+  by (auto simp: other_obj_relation_def cte_relation_def
+                 pte_relation_def pde_relation_def
+                 pdpte_relation_def pml4e_relation_def
+           split: Structures_A.kernel_object.split_asm if_split_asm
+                  Structures_H.kernel_object.split_asm
+                  X64_A.arch_kernel_obj.split_asm)
 
 definition exst_same :: "Structures_H.tcb \<Rightarrow> Structures_H.tcb \<Rightarrow> bool"
 where
@@ -977,7 +973,7 @@ lemma setObject_other_corres:
    apply (erule_tac x=ptr in allE)+
    apply (clarsimp simp: obj_at_def a_type_def
                    split: Structures_A.kernel_object.splits if_split_asm)
-   apply (simp split: arch_kernel_obj.splits if_splits)
+   subgoal by (simp split: arch_kernel_obj.splits if_splits)
   apply (fold fun_upd_def)
   apply (simp only: pspace_relation_def pspace_dom_update dom_fun_upd2 simp_thms)
   apply (elim conjE)
@@ -996,10 +992,8 @@ lemma setObject_other_corres:
     apply (insert t,
       clarsimp simp: is_other_obj_relation_type_CapTable a_type_def)
    apply (erule disjE)
-    apply (insert t,
-       clarsimp simp: is_other_obj_relation_type_UserData a_type_def)
-   apply (insert t,
-      clarsimp simp: is_other_obj_relation_type_DeviceData a_type_def)
+    apply (insert t, clarsimp simp: is_other_obj_relation_type_UserData a_type_def)
+   apply (insert t, clarsimp simp: is_other_obj_relation_type_DeviceData a_type_def)
   apply (simp only: ekheap_relation_def)
   apply (rule ballI, drule(1) bspec)
   apply (drule domD)
@@ -1011,15 +1005,15 @@ lemma setObject_other_corres:
   apply (case_tac ob;
          simp_all add: a_type_def other_obj_relation_def etcb_relation_def
                        is_other_obj_relation_type t exst_same_def)
-    apply (clarsimp simp: is_other_obj_relation_type t exst_same_def
-                   split: Structures_A.kernel_object.splits Structures_H.kernel_object.splits
-                          X64_A.arch_kernel_obj.splits)+
-  done
+    by (clarsimp simp: is_other_obj_relation_type t exst_same_def
+                 split: Structures_A.kernel_object.splits Structures_H.kernel_object.splits
+                        X64_A.arch_kernel_obj.splits)+
 
 lemmas obj_at_simps = obj_at_def obj_at'_def projectKOs map_to_ctes_upd_other
                       is_other_obj_relation_type_def
                       a_type_def objBits_simps other_obj_relation_def
                       archObjSize_def pageBits_def
+
 lemma setEndpoint_corres:
   "ep_relation e e' \<Longrightarrow>
   corres dc (ep_at ptr) (ep_at' ptr)
@@ -1073,8 +1067,7 @@ lemma getNotification_corres:
 
 lemma setObject_ko_wp_at:
   fixes v :: "'a :: pspace_storable"
-  assumes R: "\<And>ko s x y n. (updateObject v ko p y n s)
-                   = (updateObject_default v ko p y n s)"
+  assumes R: "\<And>ko s y n. (updateObject v ko p y n s) = (updateObject_default v ko p y n s)"
   assumes n: "\<And>v' :: 'a. objBits v' = n"
   assumes m: "(1 :: machine_word) < 2 ^ n"
   shows      "\<lbrace>\<lambda>s. obj_at' (\<lambda>x :: 'a. True) p s \<longrightarrow>
@@ -2172,7 +2165,6 @@ lemma doMachineOp_invs_bits[wp]:
        | wp cur_tcb_lift sch_act_wf_lift tcb_in_cur_domain'_lift
        | fastforce elim: state_refs_of'_pspaceI)+
 
-crunch cte_wp_at'[wp]: doMachineOp "\<lambda>s. P (cte_wp_at' P' p s)"
 crunch obj_at'[wp]: doMachineOp "\<lambda>s. P (obj_at' P' p s)"
 
 crunch it[wp]: doMachineOp "\<lambda>s. P (ksIdleThread s)"

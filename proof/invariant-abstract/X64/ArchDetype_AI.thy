@@ -50,7 +50,7 @@ next
   case (Suc n')
 
   have b: "\<And>i. word_rsplit (0 :: machine_word) ! (7 - i) = (0 :: 8 word)"
-    apply (simp add: word_rsplit_0)
+    apply (simp add: word_rsplit_0 word_bits_def)
     apply (case_tac i; simp; rename_tac i)+
     done
 
@@ -521,7 +521,7 @@ lemma cap_refs_respects_device_region_detype[detype_invs_proofs]:
   have "cap_refs_respects_device_region s"
     using invs by (simp add: invs_def valid_state_def)
   thus ?thesis
-    apply (clarsimp simp: clear_um_def cap_refs_respects_device_region_def cte_wp_at_detype
+    apply (clarsimp simp: clear_um_def cap_refs_respects_device_region_def
                 simp del: split_paired_All split_paired_Ex)
     apply (drule_tac x = "(a,b)" in spec)
     apply (clarsimp simp: cte_wp_at_caps_of_state cap_range_respects_device_region_def detype_def)
@@ -566,8 +566,7 @@ lemma delete_objects_invs[wp]:
     invs and ct_active\<rbrace>
     delete_objects ptr bits \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: delete_objects_def)
-  apply (simp add: freeMemory_def word_size_def bind_assoc
-                   empty_fail_mapM_x ef_storeWord)
+  apply (simp add: freeMemory_def word_size_def bind_assoc ef_storeWord)
    apply (rule hoare_pre)
    apply (rule_tac G="is_aligned ptr bits \<and> word_size_bits \<le> bits \<and> bits \<le> word_bits"
                 in hoare_grab_asm)

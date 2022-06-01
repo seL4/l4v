@@ -8,11 +8,6 @@ theory Tcb_C
 imports Delete_C Ipc_C
 begin
 
-lemma asUser_obj_at' :
-  "\<lbrace> K(t\<noteq>t') and obj_at' P t' \<rbrace> asUser t f \<lbrace> \<lambda>_.  obj_at' (P::Structures_H.tcb \<Rightarrow> bool) t' \<rbrace>"
-  including no_pre
-  by (wpsimp wp: hoare_vcg_ball_lift threadGet_wp simp: split_def asUser_def)
-
 lemma getObject_sched:
   "(x::tcb, s') \<in> fst (getObject t s) \<Longrightarrow>
   (x,s'\<lparr>ksSchedulerAction := ChooseNewThread\<rparr>) \<in> fst (getObject t (s\<lparr>ksSchedulerAction := ChooseNewThread\<rparr>))"
@@ -2061,7 +2056,6 @@ shows
                                                      n_msgRegisters_def n_frameRegisters_def
                                                      n_gpRegisters_def msgMaxLength_def msgLengthBits_def
                                                 del: upt.simps upt_rec_numeral)
-                                    apply (simp add: min_def split: if_split_asm)
                                    apply (rule frame_gp_registers_convs)
                                    apply (simp add: frame_gp_registers_convs n_msgRegisters_def n_frameRegisters_def
                                                     n_gpRegisters_def msgMaxLength_def msgLengthBits_def
@@ -2137,7 +2131,6 @@ shows
                         apply (clarsimp simp: min_def iffD2 [OF mask_eq_iff_w2p] word_size
                                               word_less_nat_alt
                                       split: if_split_asm dest!: word_unat.Rep_inverse')
-                        apply unat_arith
                        apply simp
                        apply (wp mapM_x_wp' sch_act_wf_lift valid_queues_lift static_imp_wp
                                  tcb_in_cur_domain'_lift)
@@ -2154,7 +2147,6 @@ shows
                                           n_frameRegisters_def n_gpRegisters_def
                                           msgMaxLength_def msgLengthBits_def
                                           word_less_nat_alt unat_of_nat)
-                    apply (simp add: min_def split: if_split_asm)
                    apply (wp (once) hoare_drop_imps)
                    apply (wp asUser_obj_at'[where t'=target] static_imp_wp
                              asUser_valid_ipc_buffer_ptr')
@@ -2336,6 +2328,7 @@ lemma decodeWriteRegisters_ccorres:
      (decodeWriteRegisters args cp
             >>= invocationCatch thread isBlocking isCall InvokeTCB)
      (Call decodeWriteRegisters_'proc)"
+  supply unsigned_numeral[simp del]
   apply (cinit' lift: cap_' length___unsigned_long_' buffer_' simp: decodeWriteRegisters_def)
    apply (rename_tac length' cap')
    apply (rule ccorres_Cond_rhs_Seq)
@@ -2352,7 +2345,7 @@ lemma decodeWriteRegisters_ccorres:
    apply (simp add: word_less_nat_alt del: Collect_const)
    apply (rule_tac P="\<lambda>a. ccorres rvr xf P P' hs a c" for rvr xf P P' hs c in ssubst,
           rule bind_cong [OF _ refl], rule list_case_helper,
-          clarsimp simp: tl_drop_1)+
+          clarsimp)+
    apply (rule ccorres_add_return)
    apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=0 and buffer=buffer])
      apply (rule ccorres_add_return)
@@ -2360,7 +2353,7 @@ lemma decodeWriteRegisters_ccorres:
        apply (rule_tac P="unat (of_nat (length args) :: machine_word) = length args"
                     in ccorres_gen_asm)
        apply (simp add: unat_sub word_le_nat_alt genericLength_def
-                        word_less_nat_alt hd_drop_conv_nth2 tl_drop_1
+                        word_less_nat_alt hd_drop_conv_nth2
                    del: Collect_const)
        apply (rule ccorres_Cond_rhs_Seq)
         apply (simp add: whenE_def throwError_bind invocationCatch_def
@@ -2469,10 +2462,10 @@ lemma decodeCopyRegisters_ccorres:
                cong: StateSpace.state.fold_congs globals.fold_congs)
     apply (rule syscall_error_throwError_ccorres_n)
     apply (simp add: syscall_error_to_H_cases)
-   apply (simp add: if_1_0_0 del: Collect_const)
+   apply (simp del: Collect_const)
    apply (subst unat_eq_0[symmetric], simp add: Collect_False del: Collect_const)
    apply csymbr
-   apply (simp add: if_1_0_0 interpret_excaps_test_null decodeTransfer_def
+   apply (simp add: interpret_excaps_test_null decodeTransfer_def
                del: Collect_const)
    apply (rule ccorres_Cond_rhs_Seq)
     apply (simp add: excaps_map_def invocationCatch_def throwError_bind null_def
@@ -2487,7 +2480,7 @@ lemma decodeCopyRegisters_ccorres:
        apply (rule ccorres_move_c_guard_cte)
        apply ctac
          apply csymbr
-         apply (simp add: cap_get_tag_isCap if_1_0_0 del: Collect_const)
+         apply (simp add: cap_get_tag_isCap del: Collect_const)
          apply (rule ccorres_assert2)
          apply (rule ccorres_Cond_rhs_Seq)
           apply (rule_tac P="Q' (capTCBPtr rva) rva" for Q'
@@ -2630,6 +2623,7 @@ lemma slotCapLongRunningDelete_ccorres:
   "ccorres ((=) \<circ> from_bool) ret__unsigned_long_' invs'
            (UNIV \<inter> {s. slot_' s = cte_Ptr slot}) []
      (slotCapLongRunningDelete slot) (Call slotCapLongRunningDelete_'proc)"
+  supply subst_all [simp del]
   apply (cinit lift: slot_')
    apply (simp add: case_Null_If del: Collect_const)
    apply (rule ccorres_pre_getCTE)
@@ -2790,7 +2784,8 @@ lemma mcpriority_tcb_at'_prio_bounded':
   shows "(prio::'a::len word) \<le> ucast (max_word :: priority)"
   using assms
   by (clarsimp simp: pred_tcb_at'_def obj_at'_def priorityBits_def ucast_le_ucast
-              elim!: order.trans)
+               simp del: unsigned_uminus1
+               elim!: order.trans)
 
 lemmas mcpriority_tcb_at'_prio_bounded
   = mcpriority_tcb_at'_prio_bounded'[simplified priorityBits_def]
@@ -3316,8 +3311,7 @@ lemma decodeSetMCPriority_ccorres:
    apply (clarsimp simp: ct_in_state'_def pred_tcb_at'
                          valid_cap'_def isCap_simps)
    apply (rule conjI, clarsimp simp: sysargs_rel_n_def n_msgRegisters_def)
-   apply (clarsimp simp: maxPriority_def numPriorities_def)
-   apply (fold max_word_def[where 'a=8, simplified])
+   apply (clarsimp simp: maxPriority_def numPriorities_def FF_eq_minus_1)
    apply (rule conjI, clarsimp)
     apply (frule mcpriority_tcb_at'_prio_bounded, simp)
     apply (auto simp: valid_tcb_state'_def le_ucast_ucast_le
@@ -3451,8 +3445,7 @@ lemma decodeSetPriority_ccorres:
    apply (clarsimp simp: ct_in_state'_def pred_tcb_at'
                          valid_cap'_def isCap_simps)
    apply (rule conjI, clarsimp simp: sysargs_rel_n_def n_msgRegisters_def)
-   apply (clarsimp simp: maxPriority_def numPriorities_def)
-   apply (fold max_word_def[where 'a=8, simplified])
+   apply (clarsimp simp: maxPriority_def numPriorities_def FF_eq_minus_1)
    apply (rule conjI, clarsimp)
     apply (frule mcpriority_tcb_at'_prio_bounded, simp)
     apply (auto simp: valid_tcb_state'_def le_ucast_ucast_le
@@ -3478,8 +3471,7 @@ lemma ucast_le_8_64_equiv:
 lemma mcpriority_tcb_at'_le_ucast:
   "pred_tcb_at' itcbMCP (\<lambda>mcp. x \<le> UCAST(8 \<rightarrow> 64) mcp) v s \<Longrightarrow>
    pred_tcb_at' itcbMCP (\<lambda>mcp. UCAST(64 \<rightarrow> 8) x \<le> mcp) v s"
-  apply (clarsimp simp: ucast_le_8_64_equiv mcpriority_tcb_at'_prio_bounded)
-  done
+  by (clarsimp simp: ucast_le_8_64_equiv mcpriority_tcb_at'_prio_bounded simp del: unsigned_uminus1)
 
 lemma decodeSetSchedParams_ccorres:
   "\<lbrakk>interpret_excaps extraCaps' = excaps_map extraCaps\<rbrakk> \<Longrightarrow>
@@ -3631,8 +3623,7 @@ lemma decodeSetSchedParams_ccorres:
    apply (clarsimp simp: ct_in_state'_def pred_tcb_at'
       valid_cap'_def isCap_simps)
    apply (rule conjI; clarsimp simp: sysargs_rel_to_n n_msgRegisters_def)
-   apply (clarsimp simp: maxPriority_def numPriorities_def)
-   apply (fold max_word_def[where 'a=8, simplified])
+   apply (clarsimp simp: maxPriority_def numPriorities_def FF_eq_minus_1)
    apply (rule conjI, clarsimp)
     apply (insert mcpriority_tcb_at'_prio_bounded[where prio="args ! 0"])
     apply (insert mcpriority_tcb_at'_prio_bounded[where prio="args ! 1"])
@@ -4187,6 +4178,7 @@ lemma decodeSetSpace_ccorres:
      (decodeSetSpace args cp slot extraCaps
             >>= invocationCatch thread isBlocking isCall InvokeTCB)
      (Call decodeSetSpace_'proc)"
+  supply unsigned_numeral[simp del]
   apply (cinit' lift: cap_' length___unsigned_long_' slot_' current_extra_caps_' buffer_'
                 simp: decodeSetSpace_def)
    apply csymbr
@@ -4426,7 +4418,7 @@ lemma decodeSetSpace_ccorres:
                   cong: if_cong
                 | vcg exspec=getSyscallArg_modifies
                 | wp)+
-  apply (clarsimp simp: if_1_0_0 word_less_nat_alt)
+  apply (clarsimp simp: word_less_nat_alt)
   apply (rule conjI)
    apply (clarsimp simp: ct_in_state'_def interpret_excaps_test_null
                          excaps_map_def neq_Nil_conv)

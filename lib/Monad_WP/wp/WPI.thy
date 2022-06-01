@@ -37,6 +37,12 @@ imports
   WPEx
 begin
 
+(* used in other contexts as well *)
+lemma bool_function_four_cases:
+  "f = Not \<or> f = id \<or> f = (\<lambda>_. True) \<or> f = (\<lambda>_. False)"
+  by (auto simp add: fun_eq_iff all_bool_eq)
+
+
 text \<open>The ML version of repeat_new is slightly faster than the Eisbach one.\<close>
 
 method_setup repeat_new =
@@ -102,11 +108,6 @@ private lemma
   by (simp add: atomic_def )
 
 
-
-
-private lemma bool_function_four_cases:
-  "f = Not \<or> f = id \<or> f = (\<lambda>_. True) \<or> f = (\<lambda>_. False)"
-  by (auto simp add: fun_eq_iff all_bool_eq)
 
 private lemma
   atomic_impE_preserved:
@@ -253,7 +254,7 @@ ML \<open>
     val frees = Term.add_frees t [];
     val frees' = Term.add_frees t' [];
   in
-   exists (member (=) frees') frees
+   exists (member (op =) frees') frees
   end
 \<close>
 
@@ -510,7 +511,7 @@ end
 
 
 notepad begin
-  fix f and Q P P' :: "int \<Rightarrow> 'a \<Rightarrow> bool" and Q' :: "'a \<Rightarrow> bool" and a
+  fix f :: "'a \<Rightarrow> ('a,'b) nondet_monad" and Q P P' :: "int \<Rightarrow> 'a \<Rightarrow> bool" and Q' :: "'a \<Rightarrow> bool" and a :: 'a
 
   {
   assume P[wp]: "\<And>PP x. \<lbrace>\<lambda>s. PP (P x s)\<rbrace> f a \<lbrace>\<lambda>r s. PP (P x s)\<rbrace>"

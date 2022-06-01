@@ -11,13 +11,27 @@ imports
 begin
 
 lemmas guard_simps =
-  word_sle_def word_sless_def scast_id
+  word_sle_def word_sless_def
 
 lemmas mask_shift_simps =
   ucast_def shift_over_ao_dists word_bw_assocs
   word_size multi_shift_simps mask_def
-  word_ao_dist NOT_eq scast_id
+  word_ao_dist NOT_eq
   word_and_max_simps
+
+(* a << Suc 0 is too eagerly simplified into a * 2, so we have to deal with some patterns that
+  should otherwise not occur: *)
+lemma word_and_t2_dist[simp]:
+  "(a && b) * 2 = (a * 2) && (b * 2)" for a::"'a::len word"
+proof -
+  have "a && b << 1 = (a << 1) && (b << 1)" by (simp only: shift_over_ao_dists)
+  thus ?thesis by simp
+qed
+
+lemma word_t2_shiftr[simp]:
+  "c \<le> 1 \<Longrightarrow> (a * 2) >> c = a && mask (size a - 1) << 1 - c" for a::"'a::len word"
+  by (drule shiftl_shiftr1) simp
+
 
 lemmas sep_heap_simps =
   sep_app_def hrs_mem_update_def

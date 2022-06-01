@@ -547,7 +547,7 @@ lemma rf_sr_asidTable_None:
    apply (case_tac "n < 7", simp) (*asid_low_bits*)
    apply (clarsimp simp: linorder_not_less)
    apply (erule_tac x="n+10" in allE)
-   apply simp
+   apply (simp add: add.commute)
   apply simp
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def)
   apply (simp add: array_relation_def option_to_0_def)
@@ -852,7 +852,7 @@ lemma lookupPTSlot_ccorres:
    apply (clarsimp simp: typ_heap_simps cpde_relation_def Let_def isPageTablePDE_def
                          pde_pde_coarse_lift_def pde_pde_coarse_lift
                   split: pde.split_asm)
-   apply (subst array_ptr_valid_array_assertionI, erule h_t_valid_clift, simp+)
+   apply (subst array_ptr_valid_array_assertionI, erule h_t_valid_clift; simp)
     apply (rule unat_le_helper, rule order_trans[OF word_and_le1], simp)
    apply (simp add: word_shift_by_2 lookup_pt_slot_no_fail_def)
    apply (simp add: table_bits_defs mask_def shiftl_t2n)
@@ -863,18 +863,6 @@ lemma lookupPTSlot_ccorres:
   apply (clarsimp simp: cpde_relation_def pde_pde_coarse_lift_def
                         pde_pde_coarse_lift Let_def isPageTablePDE_def
                  split: ARM_HYP_H.pde.split_asm)
-  done
-
-lemma cap_case_isPageDirectoryCap:
-  "(case cap of capability.ArchObjectCap (arch_capability.PageDirectoryCap pd ( Some asid))  \<Rightarrow> fn pd asid
-                | _ => g)
-    = (if ( if (isArchObjectCap cap) then if (isPageDirectoryCap (capCap cap)) then capPDMappedASID (capCap cap) \<noteq> None else False else False)
-                then fn (capPDBasePtr (capCap cap)) (the ( capPDMappedASID (capCap cap))) else g)"
-  apply (cases cap; simp add: isArchObjectCap_def)
-  apply (rename_tac arch_capability)
-  apply (case_tac arch_capability, simp_all add: isPageDirectoryCap_def)
-  apply (rename_tac option)
-  apply (case_tac option; simp)
   done
 
 (* FIXME: MOVE to CSpaceAcc_C *)
@@ -1277,12 +1265,12 @@ lemma findFreeHWASID_ccorres:
                                trans[OF msb_nth nth_ucast] bang_big word_size
                                uint_up_ucast is_up_def source_size_def
                                target_size_def)
-              apply (simp add: uint_nat unat_of_nat)
-              apply (rule conjI, unat_arith, simp)
+              apply (rule conjI, rule order_trans[OF _ uint_add_ge0], simp)
               apply (simp add: rf_sr_armKSASIDTable_rel'
-                               throwError_def return_def)
+                               throwError_def return_def split: if_split)
               apply (clarsimp simp: returnOk_def return_def)
-             apply (simp add: minus_one_norm)
+              apply (uint_arith, simp add: take_bit_nat_def unsigned_of_nat)
+             apply (simp add: mask_def)
              apply unat_arith
             apply (rule conseqPre, vcg)
             apply clarsimp
@@ -1297,10 +1285,8 @@ lemma findFreeHWASID_ccorres:
        apply (simp add: minBound_word init_def maxBound_word minus_one_norm)
        apply (simp add: upto_enum_word)
        apply (rule nth_equalityI)
-        apply (simp add: min.absorb2
-                    del: upt.simps)
-       apply (simp add: min.absorb2
-                   del: upt.simps)
+        apply (simp del: upt.simps)
+       apply (simp del: upt.simps)
        apply (simp add: nth_append
                  split: if_split)
 
@@ -1341,8 +1327,7 @@ lemma findFreeHWASID_ccorres:
             apply (simp add: word_sint_msb_eq uint_up_ucast word_size
                              msb_nth nth_ucast bang_big is_up_def source_size_def
                              target_size_def)
-            apply (simp add: uint_nat)
-            apply unat_arith
+            apply uint_arith
             subgoal by simp
            apply wp
           apply vcg
@@ -3460,7 +3445,7 @@ lemma unmapPage_ccorres:
                  apply (subgoal_tac "P" for P)
                   apply (frule bspec, erule hd_in_set)
                   apply (frule bspec, erule last_in_set)
-                  subgoal by (simp add: upto_enum_step_def upto_enum_word
+                  subgoal by (simp add: upto_enum_step_def upto_enum_word take_bit_Suc
                                    hd_map last_map typ_at_to_obj_at_arches field_simps
                                    objBits_simps archObjSize_def largePagePTEOffsets_def
                                    Let_def table_bits_defs,

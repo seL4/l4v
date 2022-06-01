@@ -12,8 +12,6 @@ chapter "Types visible in the API"
 
 theory Types_H
 imports
-  State_H
-  "Lib.Lib"
   ArchTypes_H
 begin
 

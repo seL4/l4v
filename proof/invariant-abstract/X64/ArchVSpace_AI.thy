@@ -15,7 +15,7 @@ begin
 context Arch begin global_naming X64
 
 (* FIXME: should go in Machine_AI, but needs dmo_invs from KHeap_AI. *)
-lemmas machine_op_lift_irq_masks = no_irq[OF machine_op_lift_no_irq]
+lemmas machine_op_lift_irq_masks = no_irq[OF no_irq_machine_op_lift]
 
 lemma machine_op_lift_underlying_memory:
   "\<lbrace>\<lambda>m'. underlying_memory m' p = um\<rbrace> machine_op_lift m \<lbrace>\<lambda>_ m'. underlying_memory m' p = um\<rbrace>"
@@ -95,15 +95,7 @@ lemma asid_low_high_bits':
      asid_high_bits_of x = asid_high_bits_of y;
      asid_wf x; asid_wf y \<rbrakk>
   \<Longrightarrow> x = y"
-  apply (rule asid_low_high_bits)
-     apply (rule word_eqI)
-     apply (subst (asm) bang_eq)
-     apply (simp add: nth_ucast asid_low_bits_def word_size)
-    apply (rule word_eqI)
-    apply (subst (asm) bang_eq)+
-    apply (simp add: nth_ucast asid_low_bits_def)
-   apply assumption+
-  done
+  by (rule asid_low_high_bits; (assumption|word_eqI_solve simp: asid_low_bits_def)?)
 
 lemma is_aligned_asid_low_bits_of_zero:
   "is_aligned asid asid_low_bits \<longleftrightarrow> asid_low_bits_of asid = 0"
@@ -165,10 +157,6 @@ lemma dmo_vspace_at_asid [wp]:
   apply wp
   apply (simp add: vspace_at_asid_def)
   done
-
-crunch inv: find_vspace_for_asid "P"
-  (simp: assertE_def crunch_simps wp: crunch_wps)
-
 
 lemma find_vspace_for_asid_vspace_at_asid [wp]:
   "\<lbrace>\<top>\<rbrace> find_vspace_for_asid asid \<lbrace>\<lambda>pd. vspace_at_asid asid pd\<rbrace>, -"
@@ -300,7 +288,7 @@ lemma ex_asid_high_bits_plus:
    prefer 2
    apply fastforce
   apply (clarsimp simp: linorder_not_less)
-  apply (subgoal_tac "n < 12", simp)
+  apply (subgoal_tac "n < 12", fastforce)
   apply (clarsimp simp add: linorder_not_le [symmetric])
   done
 
@@ -315,7 +303,7 @@ lemma asid_high_bits_shl:
   apply (rule context_conjI)
    apply (clarsimp simp add: linorder_not_less [symmetric])
   apply simp
-  apply (subgoal_tac "n < 12", simp)
+  apply (subgoal_tac "n < 12", fastforce)
   apply (clarsimp simp add: linorder_not_le [symmetric])
   done
 
@@ -382,10 +370,6 @@ lemma valid_global_objs_arch_update:
     \<and> x64_global_pts (f (arch_state s)) = x64_global_pts (arch_state s)
      \<Longrightarrow> valid_global_objs (arch_state_update f s) = valid_global_objs s"
   by (simp add: valid_global_objs_def second_level_tables_def)
-
-
-crunch pred_tcb_at [wp]: find_vspace_for_asid "\<lambda>s. P (pred_tcb_at proj Q p s)"
-  (simp: crunch_simps)
 
 
 lemma find_vspace_for_asid_assert_wp:
@@ -2841,9 +2825,6 @@ lemma update_aobj_zombies[wp]:
 crunch is_final_cap' [wp]: store_pde "is_final_cap' cap"
   (wp: crunch_wps simp: crunch_simps set_arch_obj_simps ignore: set_object set_pd)
 
-crunch is_final_cap' [wp]: store_pte "is_final_cap' cap"
-  (wp: crunch_wps simp: crunch_simps ignore: set_object set_pt)
-
 crunch is_final_cap' [wp]: store_pdpte "is_final_cap' cap"
   (wp: crunch_wps simp: crunch_simps set_arch_obj_simps ignore: set_object set_pdpt)
 
@@ -3310,8 +3291,6 @@ lemma vs_lookup_invs_ref_is_unique: "\<lbrakk> (ref \<rhd> p) s; (ref' \<rhd> p)
   apply (erule (1) ref_is_unique)
   apply (erule reachable_pd_not_global)
   by (auto elim: invs_valid_kernel_mappings intro!: valid_objs_caps)
-
-crunch global_refs: store_pde "\<lambda>s. P (global_refs s)"
 
 crunch invs[wp]: pte_check_if_mapped, pde_check_if_mapped "invs"
 

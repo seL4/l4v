@@ -128,13 +128,13 @@ ML \<open>
 structure Partial_Prove = struct
 
 fun inst_frees_tac _ Ps ct = REPEAT_DETERM o SUBGOAL (fn (t, _) =>
-  fn thm => case Term.add_frees t [] |> filter (member (=) Ps)
+  fn thm => case Term.add_frees t [] |> filter (member (op =) Ps)
   of [] => Seq.empty
   | (f :: _) => let
     val idx = Thm.maxidx_of thm + 1
     val var = ((fst f, idx), snd f)
-  in thm |> Thm.generalize ([], [fst f]) idx
-    |> Thm.instantiate ([], [(var, ct)])
+  in thm |> Thm.generalize (Names.empty, Names.make_set [fst f]) idx
+    |> Thm.instantiate (TVars.empty, Vars.make [(var, ct)])
     |> Seq.single
   end)
 
@@ -172,7 +172,7 @@ fun partial_prove tactic ctxt i
 
 fun method (ctxtg, []) = (fn ctxt => Method.SIMPLE_METHOD (test_start_partial_prove ctxt 1),
     (ctxtg, []))
-  | method args = error "Partial_Prove: still working on that"
+  | method _ = error "Partial_Prove: still working on that"
 
 fun fin_method () = Scan.succeed (fn ctxt => Method.SIMPLE_METHOD (test_end_partial_prove ctxt))
 

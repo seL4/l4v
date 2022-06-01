@@ -40,6 +40,26 @@ lemma opt_mapE:
   "\<lbrakk> (f |> g) s = Some v; \<And>v'. \<lbrakk>f s = Some v'; g v' = Some v \<rbrakk> \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
   by (auto simp: in_opt_map_eq)
 
+lemma opt_map_red:
+  "f x = Some y \<Longrightarrow> (f |> g) x = g y"
+  by (clarsimp simp: opt_map_def)
+
+lemma opt_map_left_None:
+  "f x = None \<Longrightarrow> (f |> g) x = None"
+  by (clarsimp simp: opt_map_def)
+
+lemma opt_map_assoc:
+  "f |> (g |> h) = f |> g |> h"
+  by (fastforce simp: opt_map_def split: option.splits)
+
+lemma opt_map_if_l:
+  "(if P then f else f') |> g = (if P then f |> g else f' |> g)"
+  by (auto simp: opt_map_def)
+
+lemma opt_map_if_r:
+  "f |> (if P then g else g') = (if P then f |> g else f |> g')"
+  by (auto simp: opt_map_def)
+
 lemma opt_map_upd_None:
   "f(x := None) |> g = (f |> g)(x := None)"
   by (auto simp: opt_map_def)
@@ -48,13 +68,114 @@ lemma opt_map_upd_Some:
   "f(x \<mapsto> v) |> g = (f |> g)(x := g v)"
   by (auto simp: opt_map_def)
 
-lemmas opt_map_upd[simp] = opt_map_upd_None opt_map_upd_Some
+lemma opt_map_Some_upd_Some:
+  "f(x \<mapsto> v) ||> g = (f ||> g)(x \<mapsto> g v)"
+  by (simp add: opt_map_upd_Some)
+
+lemmas opt_map_upd[simp]
+  = opt_map_upd_None opt_map_upd_Some opt_map_Some_upd_Some
+
+lemma opt_map_upd_triv:
+  "t k = Some x \<Longrightarrow> (t |> f)(k := f x) = t |> f"
+  by (rule ext) (clarsimp simp add: opt_map_red)
+
+lemma opt_map_Some_upd_triv:
+  "t k = Some x \<Longrightarrow> (t ||> f)(k \<mapsto> f x) = t ||> f"
+  by (rule ext) (clarsimp simp add: opt_map_red)
+
+lemma opt_map_upd_triv_None:
+  "t k = None \<Longrightarrow> (t |> f)(k := None) = t |> f"
+  by (rule ext) (clarsimp simp add: opt_map_def)
+
+lemmas opt_map_upd_triv_simps = opt_map_upd_triv opt_map_Some_upd_triv opt_map_upd_triv_None
+
+lemma opt_map_foldr_upd:
+  "(foldr (\<lambda>p kh. kh(p := new)) ptrs f)|> g
+   = foldr (\<lambda>p kh. kh(p := (case new of Some x \<Rightarrow> g x | _ \<Rightarrow> None))) ptrs (f |> g)"
+  by (induct ptrs arbitrary: new; clarsimp split: option.splits)
+
+lemma opt_map_Some_foldr_upd:
+  "(foldr (\<lambda>p kh. kh(p := new)) ptrs f) ||> g
+   = foldr (\<lambda>p kh. kh(p := (case new of Some x \<Rightarrow> Some (g x) | _ \<Rightarrow>  None))) ptrs (f ||> g)"
+  by (induct ptrs arbitrary: new; clarsimp split: option.splits)
+
+lemmas opt_map_foldr_upd_simps
+  = opt_map_foldr_upd opt_map_Some_foldr_upd
+
+lemma opt_map_Some_comp[simp]:
+  "f ||> g ||> h = f ||> h o g"
+  by (fastforce simp: opt_map_def split: option.split)
+
+lemma opt_map_fold_l:
+  "(id |> g) (f x) = (f |> g) x"
+  by (clarsimp simp: opt_map_def)
+
+(* LHS is the same as (f ||> id) *)
+lemma opt_map_Some_id_r[simp]:
+  "f |> Some = f"
+  by (fastforce simp: opt_map_def split: option.split)
+
+lemma opt_map_Some_id_l[simp]:
+  "Some |> f = f"
+  by (clarsimp simp: opt_map_def split: option.split)
+
+lemma opt_map_zero_l[simp]:
+  "Map.empty |> g = Map.empty"
+  by (clarsimp simp: opt_map_def)
+
+lemma opt_map_zero_r[simp]:
+  "f |> Map.empty = Map.empty"
+  by (fastforce simp: opt_map_def split: option.split)
+
+lemma opt_map_Some_eta_fold:
+  "f |> (\<lambda>x. Some (g x)) = f ||> g"
+  by (simp add: o_def)
+
+lemma case_opt_map_distrib:
+  "((\<lambda>s. case_option None g (f s)) |> h)
+   = ((\<lambda>s. case_option None (g |> h) (f s)))"
+  by (fastforce simp: opt_map_def split: option.splits)
 
 declare None_upd_eq[simp]
 
 (* None_upd_eq[simp] so that this pattern is by simp. Hopefully not too much slowdown. *)
 lemma "\<lbrakk> (f |> g) x = None; g v = None \<rbrakk> \<Longrightarrow> f(x \<mapsto> v) |> g = f |> g"
   by simp
+
+definition map_set :: "('a \<Rightarrow> 'b set option) \<Rightarrow> 'a \<Rightarrow> 'b set" where
+  "map_set f \<equiv> case_option {} id \<circ> f"
+
+(* opt_pred *)
+
+abbreviation
+  opt_pred :: "('a \<Rightarrow> bool) \<Rightarrow> ('b \<Rightarrow> 'a option) \<Rightarrow> ('b \<Rightarrow> bool)" (infixl "|<" 55) where
+  "P |< proj \<equiv> (\<lambda>x. case_option False P (proj x))"
+
+lemma opt_pred_conj:
+  "((P1 |< hp) p \<and> (P2 |< hp) p) = (((P1 and P2) |< hp) p)"
+  by (fastforce simp: pred_conj_def split: option.splits)
+
+lemma opt_pred_disj:
+  "((P1 |< hp) p \<or> (P2 |< hp) p) = (((P1 or P2) |< hp) p)"
+  by (fastforce simp: pred_disj_def split: option.splits)
+
+lemma opt_predD:
+  "(P |< proj) x \<Longrightarrow> \<exists>y. proj x = Some y \<and> P y"
+  by (clarsimp split: option.splits)
+
+lemma opt_predE:
+  "\<lbrakk>(P |< proj) x; \<And>y. \<lbrakk>proj x = Some y; P y\<rbrakk> \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
+  by (clarsimp split: option.splits)
+
+lemma opt_pred_unfold_map:
+  "(P |< (f |> g)) = ((P |< g) |< f)"
+  by (fastforce simp: opt_map_def split: option.splits)
+
+lemma opt_pred_unfold_proj:
+  "(P |< (f ||> g))=  (P o g |< f)"
+  by (clarsimp simp: opt_map_def split: option.splits)
+
+(* obind, etc. *)
 
 definition
   obind :: "('s,'a) lookup \<Rightarrow> ('a \<Rightarrow> ('s,'b) lookup) \<Rightarrow> ('s,'b) lookup" (infixl "|>>" 53)
@@ -74,9 +195,30 @@ definition
 definition
   "oassert P \<equiv> if P then oreturn () else ofail"
 
-definition oapply :: "'a \<Rightarrow> ('a \<Rightarrow> 'b option) \<Rightarrow> 'b option"
-  where
+definition
+  "oassert_opt r \<equiv> case r of None \<Rightarrow> ofail | Some x \<Rightarrow> oreturn x"
+
+definition oapply :: "'a \<Rightarrow> ('a \<Rightarrow> 'b option) \<Rightarrow> 'b option" where
   "oapply x \<equiv> \<lambda>s. s x"
+
+definition oliftM :: "('a \<Rightarrow> 'b) \<Rightarrow> ('s,'a) lookup \<Rightarrow> ('s,'b) lookup" where
+  "oliftM f m \<equiv> do { x \<leftarrow> m; oreturn (f x) }"
+
+definition ounless :: "bool \<Rightarrow> ('s, unit) lookup \<Rightarrow> ('s, unit) lookup" where
+  "ounless P f \<equiv> if P then oreturn () else f"
+
+definition owhen :: "bool \<Rightarrow> ('s, unit) lookup \<Rightarrow> ('s, unit) lookup" where
+  "owhen P f \<equiv> if P then f else oreturn ()"
+
+(* Reader monad interface: *)
+abbreviation (input)
+  "ask \<equiv> Some"
+
+definition
+  "asks f = do { v <- ask; oreturn (f v) }"
+
+abbreviation
+  "ogets \<equiv> asks"
 
 text \<open>
   If the result can be an exception.
@@ -182,6 +324,10 @@ lemma ocondition_True:
 lemma in_oreturn [simp]:
   "(oreturn x s = Some v) = (v = x)"
   by (auto simp: oreturn_def K_def)
+
+lemma oreturn_None[simp]:
+  "\<not> oreturn x s = None"
+  by (simp add: oreturn_def K_def)
 
 lemma oreturnE:
   "\<lbrakk>oreturn x s = Some v; v = x \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"

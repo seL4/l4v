@@ -8,7 +8,7 @@ section "Print Words in Hex"
 
 theory Hex_Words
 imports
-  "HOL-Word.Word"
+  "HOL-Library.Word"
 begin
 
 text \<open>Print words in hex.\<close>

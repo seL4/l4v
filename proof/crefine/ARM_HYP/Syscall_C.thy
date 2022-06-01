@@ -362,7 +362,7 @@ lemma wordFromRights_mask_0:
 lemma wordFromRights_mask_eq:
   "wordFromRights rghts && mask 4 = wordFromRights rghts"
   apply (cut_tac x="wordFromRights rghts" and y="mask 4" and z="~~ mask 4"
-             in word_bool_alg.conj_disj_distrib)
+             in bit.conj_disj_distrib)
   apply (simp add: wordFromRights_mask_0)
   done
 
@@ -1811,12 +1811,12 @@ lemma  ccorres_vgicMaintenance:
   (is "ccorres _ _ ?PRE _ _ _ _")
 proof -
 
-  have unat_of_nat_ctz_plus_32s[simp]:
+  have unat_of_nat_ctz_plus_32s:
     "unat (of_nat (word_ctz w) + (0x20 :: int_sword)) = word_ctz w + 32" for w :: machine_word
     apply (subst unat_add_lem' ; clarsimp simp: unat_of_nat_ctz_smw)
     using word_ctz_le[where w=w, simplified] by (auto simp: unat_of_nat_eq)
 
-  have unat_of_nat_ctz_plus_32[simp]:
+  have unat_of_nat_ctz_plus_32:
     "unat (of_nat (word_ctz w) + (0x20 :: machine_word)) = word_ctz w + 32" for w :: machine_word
     apply (subst unat_add_lem' ; clarsimp simp: unat_of_nat_ctz_mw)
     using word_ctz_le[where w=w, simplified] by (auto simp: unat_of_nat_eq)
@@ -1826,17 +1826,14 @@ proof -
      \<Longrightarrow> (0 :: int_sword) <=s of_nat (eisr_calc eisr0 eisr1)
         \<and> of_nat (eisr_calc eisr0 eisr1) <s (0x40 :: int_sword)"
     for eisr0 :: machine_word and eisr1
-    supply int_unat[simp del]
-    using word_ctz_le[where w=eisr0]  word_ctz_less[where w=eisr1]
-    apply (clarsimp simp: eisr_calc_def sint_word_ariths sbintrunc_If word_sint_msb_eq
-                          word_sless_alt word_sle_def word_size uint_nat
-                    split: if_splits)
-    apply (cut_tac not_msb_from_less[where v="of_nat (word_ctz eisr0) :: int_sword"])
-     apply (clarsimp simp: word_less_alt unat_of_nat_ctz_mw unat_of_nat_ctz_smw
-                           uint_nat)
-     apply (cut_tac not_msb_from_less[where v="of_nat (word_ctz eisr1 + 32) :: int_sword"])
-     apply (clarsimp simp: word_less_alt unat_of_nat_ctz_mw unat_of_nat_ctz_smw
-                           uint_nat)+
+    using word_ctz_le[where w=eisr0] word_ctz_less[where w=eisr1]
+    apply (clarsimp simp: word_sless_alt word_sle_def)
+    apply (rule conjI) (* 0 \<le> *)
+     apply (subst sint_of_nat_ge_zero; simp)
+     apply (clarsimp simp: sint_of_nat_ge_zero eisr_calc_def split: if_splits)
+    (* \<le> 64 *)
+    apply (subst int_eq_sint)
+     apply (clarsimp simp: sint_of_nat_ge_zero eisr_calc_def split: if_splits)+
     done
 
   have eisr_calc_le:
@@ -1846,11 +1843,12 @@ proof -
     using word_ctz_le[where w=eisr0]  word_ctz_less[where w=eisr1]
     by (clarsimp simp: eisr_calc_def split: if_splits)
 
-  have of_nat_word_ctz_0x21helper[simp]:
-    "0x21 + of_nat (word_ctz w) \<noteq> (0 :: int_sword)" for w :: machine_word
+  have of_nat_word_ctz_0x21helper:
+    "0x21 + word_of_nat (word_ctz w) \<noteq> (0 :: int_sword)" for w :: machine_word
     apply (subst unat_arith_simps, simp)
-    apply (subst unat_add_lem' ; clarsimp simp: unat_of_nat_ctz_smw)
-    using word_ctz_le[where w=w, simplified] by (auto simp: unat_of_nat_eq)
+    apply (subst unat_add_lem'; clarsimp simp: unat_of_nat_ctz_smw)
+    using word_ctz_le[where w=w, simplified]
+    by simp
 
   show ?thesis
     supply if_cong[cong]
@@ -1896,7 +1894,7 @@ proof -
             apply clarsimp
             apply (rule conseqPre, vcg)
             apply clarsimp
-    subgoal for _ eisr1 using sint_ctz_32[where x=eisr1] by clarsimp
+    subgoal for _ eisr1 using sint_ctz_32[where x=eisr1] by (clarsimp simp: of_int_and_nat)
            apply ceqv
           apply clarsimp
           apply (simp add: if_to_top_of_bind)
@@ -1909,7 +1907,8 @@ proof -
     subgoal for _ eisr0 eisr1
       using word_ctz_not_minus_1[where w=eisr1] word_ctz_not_minus_1[where w=eisr0]
       by (clarsimp split: if_splits simp: eisr_calc_def word_le_nat_alt unat_of_nat_eq
-                                          unat_of_nat_ctz_mw of_nat_eq_signed_scast)
+                                          unat_of_nat_ctz_mw of_nat_eq_signed_scast
+                                          of_nat_word_ctz_0x21helper unat_of_nat_ctz_plus_32)
 
           apply (rule ccorres_Cond_rhs_Seq)
 
@@ -1981,7 +1980,7 @@ proof -
                    apply (rule ccorres_move_const_guards)+
                    apply (rule vgicUpdateLR_ccorres_armHSCurVCPU ; clarsimp simp: word_ctz_le)
                     apply (fastforce dest: word_ctz_less
-                                     simp: eisr_calc_def unat_of_nat_ctz_smw)
+                                     simp: eisr_calc_def unat_of_nat_ctz_smw unat_of_nat_ctz_plus_32s)
                    apply (erule eisr_calc_le)
                   apply ceqv
 
@@ -2010,7 +2009,7 @@ proof -
                             seL4_Fault_lift_def seL4_Fault_tag_defs is_cap_fault_def Let_def
                             eisr_calc_def mask_eq_iff
                       split: if_splits
-             ; fastforce simp: uint_nat unat_of_nat_ctz_mw
+             ; fastforce simp: uint_nat unat_of_nat_ctz_mw unat_of_nat_ctz_plus_32
                         dest: word_ctz_less[where w=eisr1] word_ctz_less[where w=eisr0])
       done
 
@@ -2376,7 +2375,6 @@ lemma handleInterrupt_ccorres:
   apply (clarsimp simp: IRQTimer_def IRQSignal_def maxIRQ_def
                         cte_wp_at_ctes_of ucast_ucast_b is_up)
   apply (intro conjI impI)
-       using Word.word_of_int and ucast_def apply metis
       apply clarsimp
       apply (erule(1) cmap_relationE1[OF cmap_relation_cte])
       apply (clarsimp simp: typ_heap_simps')

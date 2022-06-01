@@ -151,7 +151,7 @@ context kernel_m begin
 
 lemma ccontext_rel_to_C:
   "ccontext_relation uc (to_user_context_C uc)"
-  apply (clarsimp simp: ccontext_relation_def to_user_context_C_def fcp_beta)
+  apply (clarsimp simp: ccontext_relation_def to_user_context_C_def)
   apply (rule arg_cong [where f=uc])
   apply (simp add: register_to_H_def inv_def)
   done
@@ -171,7 +171,7 @@ where
 
 lemma from_user_context_C:
   "ccontext_relation uc uc' \<Longrightarrow> from_user_context_C uc' = uc"
-  by (auto simp: ccontext_relation_def from_user_context_C_def intro: ext)
+  by (auto simp: ccontext_relation_def from_user_context_C_def)
 
 context kernel_m begin
 
@@ -282,9 +282,6 @@ definition
    else if p = Ptr 1 then ChooseNewThread
    else SwitchToThread (ctcb_ptr_to_tcb_ptr p)"
 
-
-
-declare max_word_neq_0[simp]
 
 lemma csch_act_rel_to_H:
   "(\<forall>t. a = SwitchToThread t \<longrightarrow> is_aligned t tcbBlockSizeBits) \<Longrightarrow>
@@ -666,7 +663,7 @@ lemma tcb_queue_rel'_unique:
 
 definition
   cready_queues_to_H
-  :: "(tcb_C ptr \<rightharpoonup> tcb_C) \<Rightarrow> (tcb_queue_C[4096]) \<Rightarrow> word8 \<times> word8 \<Rightarrow> word32 list"
+  :: "(tcb_C ptr \<rightharpoonup> tcb_C) \<Rightarrow> (tcb_queue_C[num_tcb_queues]) \<Rightarrow> word8 \<times> word8 \<Rightarrow> word32 list"
   where
   "cready_queues_to_H h_tcb cs \<equiv> \<lambda>(qdom, prio). if ucast minDom \<le> qdom \<and> qdom \<le> ucast maxDom
               \<and> ucast seL4_MinPrio \<le> prio \<and> prio \<le> ucast seL4_MaxPrio
@@ -1389,9 +1386,9 @@ lemma (in kernel_m) cDomScheduleIdx_to_H_correct:
   assumes cstate_rel: "cstate_relation as cs"
   assumes ms: "cstate_to_machine_H cs = observable_memory (ksMachineState as) (user_mem' as)"
   shows "unat (ksDomScheduleIdx_' cs) = ksDomScheduleIdx as"
-using assms
-by (clarsimp simp: cstate_relation_def Let_def observable_memory_def
-  valid_state'_def newKernelState_def unat_of_nat_eq cdom_schedule_relation_def)
+  using assms
+  by (clarsimp simp: cstate_relation_def Let_def observable_memory_def valid_state'_def
+                     newKernelState_def unat_of_nat_eq cdom_schedule_relation_def)
 
 definition cDomSchedule_to_H :: "(dschedule_C['b :: finite]) \<Rightarrow> (8 word \<times> 32 word) list" where
   "cDomSchedule_to_H cs \<equiv> THE as. cdom_schedule_relation as cs"
@@ -1415,12 +1412,12 @@ lemma (in kernel_m) cDomSchedule_to_H_correct:
   done
 
 definition
-  cbitmap_L1_to_H :: "32 word[16] \<Rightarrow> (8 word \<Rightarrow> 32 word)"
+  cbitmap_L1_to_H :: "32 word[num_domains] \<Rightarrow> (domain \<Rightarrow> 32 word)"
 where
   "cbitmap_L1_to_H l1 \<equiv> \<lambda>d. if d \<le> maxDomain then l1.[unat d] else 0"
 
 definition
-  cbitmap_L2_to_H :: "32 word[8][16] \<Rightarrow> (8 word \<times> nat \<Rightarrow> 32 word)"
+  cbitmap_L2_to_H :: "32 word[8][num_domains] \<Rightarrow> (domain \<times> nat \<Rightarrow> 32 word)"
 where
   "cbitmap_L2_to_H l2 \<equiv> \<lambda>(d, i).
     if d \<le> maxDomain \<and> i < l2BitmapSize

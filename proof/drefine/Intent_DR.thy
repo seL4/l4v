@@ -64,10 +64,7 @@ lemma tcb_cnode_index_def2:
 lemma bl_to_bin_tcb_cnode_index:
   "n < 8 \<Longrightarrow> nat (bl_to_bin (tcb_cnode_index n)) = n"
   unfolding tcb_cnode_index_def
-  apply simp
-  apply (fold unat_def)
-  apply (simp add: unat_of_nat)
-  done
+  by (simp add: unat_of_nat)
 
 (* LIFT LEMMAS:
    Lift the property from abstract spec to capdl model

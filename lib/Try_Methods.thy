@@ -30,7 +30,6 @@ structure Methods = Theory_Data
 (
   type T = Symtab.set;
   val empty = Symtab.empty;
-  val extend = I;
   val merge = Symtab.merge (K true);
 );
 
@@ -69,7 +68,7 @@ fun independent_subgoals goal verbose = let
         t Termtab.empty
     val goals = Thm.prems_of goal
     val goal_vars = map get_vars goals
-    val count_vars = fold (fn t1 => fn t2 => Termtab.join (K (+))
+    val count_vars = fold (fn t1 => fn t2 => Termtab.join (K (op +))
         (Termtab.map (K (K 1)) t1, t2)) goal_vars Termtab.empty
     val indep_vars = Termtab.forall (fst #> Termtab.lookup count_vars
         #> (fn n => n = SOME 1))

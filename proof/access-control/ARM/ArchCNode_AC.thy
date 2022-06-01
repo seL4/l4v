@@ -141,7 +141,7 @@ qed
 context Arch begin global_naming ARM_A
 
 lemma integrity_asids_set_cap_Nullcap[CNode_AC_assms]:
-  "\<lbrace>(=) s\<rbrace> set_cap NullCap slot \<lbrace>\<lambda>_. integrity_asids aag subjects x s\<rbrace>"
+  "\<lbrace>(=) s\<rbrace> set_cap NullCap slot \<lbrace>\<lambda>_. integrity_asids aag subjects x a s\<rbrace>"
   unfolding integrity_asids_def by wpsimp
 
 crunches set_original
@@ -251,10 +251,10 @@ lemma arch_derive_cap_clas[CNode_AC_assms]:
   done
 
 lemma arch_derive_cap_obj_refs_auth[CNode_AC_assms]:
-  "\<lbrace>K (\<forall>r\<in>obj_refs (ArchObjectCap cap).
+  "\<lbrace>K (\<forall>r\<in>obj_refs_ac (ArchObjectCap cap).
        \<forall>auth\<in>cap_auth_conferred (ArchObjectCap cap). aag_has_auth_to aag auth r)\<rbrace>
    arch_derive_cap cap
-   \<lbrace>(\<lambda>x s. \<forall>r\<in>obj_refs x. \<forall>auth\<in>cap_auth_conferred x. aag_has_auth_to aag auth r)\<rbrace>, -"
+   \<lbrace>(\<lambda>x s. \<forall>r\<in>obj_refs_ac x. \<forall>auth\<in>cap_auth_conferred x. aag_has_auth_to aag auth r)\<rbrace>, -"
   unfolding arch_derive_cap_def
   apply (rule hoare_pre)
    apply (wp | wpc)+
@@ -263,7 +263,7 @@ lemma arch_derive_cap_obj_refs_auth[CNode_AC_assms]:
 
 (* FIXME: move *)
 lemma arch_derive_cap_obj_refs_subset[CNode_AC_assms]:
-  "\<lbrace>\<lambda>s. (\<forall>x \<in> aobj_ref' acap. P x s)\<rbrace> arch_derive_cap acap \<lbrace>\<lambda>rv s. \<forall>x \<in> obj_refs rv. P x s\<rbrace>, -"
+  "\<lbrace>\<lambda>s. (\<forall>x \<in> aobj_ref' acap. P x s)\<rbrace> arch_derive_cap acap \<lbrace>\<lambda>rv s. \<forall>x \<in> obj_refs_ac rv. P x s\<rbrace>, -"
   by (wpsimp simp: arch_derive_cap_def) fastforce
 
 lemma arch_derive_cap_clip[CNode_AC_assms]:
@@ -280,7 +280,7 @@ lemma arch_derive_cap_untyped_range_subset[CNode_AC_assms]:
   by (wpsimp simp: arch_derive_cap_def)
 
 lemma arch_update_cap_obj_refs_subset[CNode_AC_assms]:
-  "\<lbrakk> x \<in> obj_refs (arch_update_cap_data pres data cap) \<rbrakk> \<Longrightarrow> x \<in> aobj_ref' cap"
+  "\<lbrakk> x \<in> obj_refs_ac (arch_update_cap_data pres data cap) \<rbrakk> \<Longrightarrow> x \<in> aobj_ref' cap"
   by (simp add: arch_update_cap_data_def)
 
 lemma arch_update_cap_untyped_range_empty[CNode_AC_assms, simp]:

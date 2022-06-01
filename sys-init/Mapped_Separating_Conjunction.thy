@@ -66,7 +66,7 @@ lemma sep_map_set_inj_eqI:
    apply (drule mp)
     apply (simp add: inj_on_diff)
    apply (drule mp)
-    apply (metis (no_types, hide_lams) image_insert inj_on_insert insert_Diff_single
+    apply (metis (no_types, opaque_lifting) image_insert inj_on_insert insert_Diff_single
                                        insert_absorb insert_ident)
    apply clarsimp
    apply (subgoal_tac "finite ys")
@@ -249,7 +249,7 @@ lemma "sep_map_set_conj f S s \<Longrightarrow> finite S \<Longrightarrow> (\<fo
     apply (erule_tac x="f x" in ballE)
      apply (frule precise_non_dup)
       apply (clarsimp simp: sep_empty_def)
-  apply (metis (mono_tags, hide_lams) disjoint_zero_sym precise_def sep_add_zero
+  apply (metis (mono_tags, opaque_lifting) disjoint_zero_sym precise_def sep_add_zero
                                       sep_disj_zero sep_substate_disj_add')
      apply (fastforce)
     apply (blast)

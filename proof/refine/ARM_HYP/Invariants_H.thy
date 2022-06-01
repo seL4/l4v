@@ -31,6 +31,21 @@ end
 
 end
 
+section "Relationship of Executable Spec to Kernel Configuration"
+
+text \<open>
+  Some values are set per kernel configuration (e.g. number of domains), but other related
+  values (e.g. maximum domain) are derived from storage constraints (e.g. bytes used).
+  To relate the two, we must look at the values of kernel configuration constants.
+  To allow the proofs to work for all permitted values of these constants, their definitions
+  should only be unfolded in this section, and the derived properties kept to a minimum.\<close>
+
+lemma le_maxDomain_eq_less_numDomains:
+  shows "x \<le> unat maxDomain \<longleftrightarrow> x < Kernel_Config.numDomains"
+        "y \<le> maxDomain \<longleftrightarrow> unat y < Kernel_Config.numDomains"
+  by (auto simp: Kernel_Config.numDomains_def maxDomain_def word_le_nat_alt)
+
+
 context begin interpretation Arch . (*FIXME: arch_split*)
 \<comment> \<open>---------------------------------------------------------------------------\<close>
 section "Invariants on Executable Spec"
@@ -2656,6 +2671,10 @@ lemma typ_at_lift_asid_at':
   "(\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>_. typ_at' T p\<rbrace>) \<Longrightarrow> \<lbrace>asid_pool_at' p\<rbrace> f \<lbrace>\<lambda>_. asid_pool_at' p\<rbrace>"
   by assumption
 
+lemma typ_at_lift_vcpu_at':
+  "(\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>_. typ_at' T p\<rbrace>) \<Longrightarrow> \<lbrace>vcpu_at' p\<rbrace> f \<lbrace>\<lambda>_. vcpu_at' p\<rbrace>"
+  by assumption
+
 lemma typ_at_lift_valid_cap':
   assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_cap' cap s\<rbrace> f \<lbrace>\<lambda>rv s. valid_cap' cap s\<rbrace>"
@@ -2726,6 +2745,7 @@ lemmas typ_at_lifts = typ_at_lift_tcb' typ_at_lift_ep'
                       typ_at_lift_page_table_at'
                       typ_at_lift_page_directory_at'
                       typ_at_lift_asid_at'
+                      typ_at_lift_vcpu_at'
                       typ_at_lift_valid_untyped'
                       typ_at_lift_valid_cap'
                       valid_pde_lift'
@@ -3668,30 +3688,8 @@ lemma superSectionPDE_offsets_eq[simp]:  "superSectionPDE_offsets = superSection
 lemma mask_wordRadix_less_wordBits:
   assumes sz: "wordRadix \<le> size w"
   shows "unat ((w::'a::len word) && mask wordRadix) < wordBits"
-proof -
-  note pow_num = semiring_numeral_class.power_numeral
-
-  { assume "wordRadix = size w"
-    hence ?thesis
-      by (fastforce intro!: unat_lt2p[THEN order_less_le_trans]
-                    simp: wordRadix_def wordBits_def' word_size)
-  } moreover {
-    assume "wordRadix < size w"
-    hence ?thesis unfolding wordRadix_def wordBits_def' mask_def
-    apply simp
-    apply (subst unat_less_helper, simp_all)
-    apply (rule word_and_le1[THEN order_le_less_trans])
-    apply (simp add: word_size bintrunc_mod2p)
-    apply (subst int_mod_eq', simp_all)
-     apply (rule order_le_less_trans[where y="2^wordRadix", simplified wordRadix_def], simp)
-     apply (simp del: pow_num)
-    apply (subst int_mod_eq', simp_all)
-    apply (rule order_le_less_trans[where y="2^wordRadix", simplified wordRadix_def], simp)
-    apply (simp del: pow_num)
-    done
-  }
-  ultimately show ?thesis using sz by fastforce
-qed
+  using word_unat_mask_lt[where m=wordRadix and w=w] assms
+  by (simp add: wordRadix_def wordBits_def')
 
 lemma priority_mask_wordRadix_size:
   "unat ((w::priority) && mask wordRadix) < wordBits"

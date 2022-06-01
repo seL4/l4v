@@ -8,6 +8,8 @@ theory CSpace_RAB_C
 imports CSpaceAcc_C "CLib.MonadicRewrite_C"
 begin
 
+unbundle l4v_word_context
+
 context kernel
 begin
 
@@ -89,14 +91,6 @@ lemma ccorres_req:
   apply (erule (5) ccorresE [OF cc])
   apply (clarsimp elim!: bexI [rotated])
   done
-
-lemma valid_cap_cte_at':
-  "\<lbrakk>isCNodeCap cap; valid_cap' cap s'\<rbrakk> \<Longrightarrow> cte_at' (capCNodePtr cap + 2^cteSizeBits * (addr && mask (capCNodeBits cap))) s'"
-  apply (clarsimp simp: isCap_simps valid_cap'_def)
-  apply (rule real_cte_at')
-  apply (erule spec)
-  done
-
 
 lemma rightsFromWord_wordFromRights:
   "rightsFromWord (wordFromRights rghts) = rghts"
@@ -243,14 +237,15 @@ next
       "\<And>a b p rs s. ((a, b) \<in> fst (getSlotCap p s)) =
       (option_map cteCap (ctes_of s p) = Some a
        \<and> b = s)"
-       apply (simp add: getSlotCap_def return_def bind_def objBits_simps split_def)
-       apply rule
+      apply (simp add: getSlotCap_def return_def bind_def objBits_simps split_def)
+      apply rule
        apply (clarsimp simp: in_getCTE_cte_wp_at' cte_wp_at_ctes_of)
-       apply clarsimp
-       apply (subgoal_tac "cte_wp_at' ((=) z) p s")
+      apply clarsimp
+      apply (rename_tac s p z)
+      apply (subgoal_tac "cte_wp_at' ((=) z) p s")
        apply (clarsimp simp: getCTE_def cte_wp_at'_def)
-       apply (simp add: cte_wp_at_ctes_of)
-       done
+      apply (simp add: cte_wp_at_ctes_of)
+      done
 
     note ih = ind.hyps[simplified, simplified in_monad
         getSlotCap_in_monad locateSlot_conv stateAssert_def, simplified]
@@ -359,8 +354,8 @@ next
       unat guardBits = capCNodeGuardSize cap;
       \<not> guard < capCNodeBits cap + capCNodeGuardSize cap \<rbrakk> \<Longrightarrow>
       \<forall>s s'. (s, s') \<in> rf_sr \<and> True \<and> True \<longrightarrow>
-                (guard = capCNodeBits cap + capCNodeGuardSize cap) = (s' \<in> \<lbrace>nb \<le> radixBits + guardBits\<rbrace>)"
-      by (simp add: Collect_const_mem word_le_nat_alt unat_word_ariths)
+                (guard = capCNodeBits cap + capCNodeGuardSize cap) = (s' \<in> \<lbrace>nb = radixBits + guardBits\<rbrace>)"
+      by clarsimp unat_arith
 
     have cond4:
       "\<And>rva nodeCapb ret__unsigned_long.

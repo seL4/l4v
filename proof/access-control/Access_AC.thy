@@ -245,7 +245,7 @@ lemmas pas_refined_Control
 
 lemma caps_of_state_pasObjectAbs_eq:
   "\<lbrakk> caps_of_state s p = Some cap; Control \<in> cap_auth_conferred cap;
-     is_subject aag (fst p); pas_refined aag s; x \<in> obj_refs cap \<rbrakk>
+     is_subject aag (fst p); pas_refined aag s; x \<in> obj_refs_ac cap \<rbrakk>
      \<Longrightarrow> is_subject aag x"
   apply (frule sta_caps, simp+)
   apply (drule pas_refined_mem, simp+)
@@ -858,11 +858,14 @@ locale Access_AC_2 = Access_AC_1 +
             x \<in> auth_ipc_buffers s' p; pasObjectAbs aag p \<notin> subjects \<rbrakk>
             \<Longrightarrow> x \<in> auth_ipc_buffers s p "
   and integrity_asids_refl[simp]:
-    "\<And>x. integrity_asids aag subjects x (s :: det_ext state) s"
+    "\<And>x. integrity_asids aag subjects x a (s :: det_ext state) s"
   and trasids_trans:
-    "\<lbrakk> (\<forall>x. integrity_asids aag subjects x s (s' :: det_ext state));
-       (\<forall>x. integrity_asids aag subjects x  s' (s'' :: det_ext state))\<rbrakk>
-       \<Longrightarrow> (\<forall>x. integrity_asids aag subjects x s s'')"
+    "\<lbrakk> (\<forall>x a. integrity_asids aag subjects x a s (s' :: det_ext state));
+       (\<forall>x a. integrity_asids aag subjects x a s' (s'' :: det_ext state))\<rbrakk>
+       \<Longrightarrow> (\<forall>x a. integrity_asids aag subjects x a s s'')"
+  and integrity_asids_update_autarch:
+    "\<lbrakk> \<forall>x a. integrity_asids aag {pasSubject aag} x a s s'; is_subject aag ptr \<rbrakk>
+       \<Longrightarrow> \<forall>x a. integrity_asids aag {pasSubject aag} x a s (s'\<lparr>kheap := kheap s'(ptr \<mapsto> obj)\<rparr>)"
 begin
 
 section \<open>Generic AC stuff\<close>
@@ -977,23 +980,26 @@ lemma integrity_refl [simp]:
 
 lemma integrity_update_autarch:
   "\<lbrakk> integrity aag X st s; is_subject aag ptr \<rbrakk>
-   \<Longrightarrow> integrity aag X st (s\<lparr>kheap := kheap s(ptr \<mapsto> obj)\<rparr>)"
+     \<Longrightarrow> integrity aag X st (s\<lparr>kheap := kheap s(ptr \<mapsto> obj)\<rparr>)"
   unfolding integrity_subjects_def
   apply (intro conjI,simp_all)
+    apply clarsimp
+    apply (drule_tac x = x in spec, erule integrity_mem.cases)
+        apply ((auto intro: integrity_mem.intros)+)[4]
+    apply (erule trm_ipc, simp_all)
+    apply (clarsimp simp: restrict_map_Some_iff tcb_states_of_state_def get_tcb_def)
    apply clarsimp
-   apply (drule_tac x = x in spec, erule integrity_mem.cases)
-   apply ((auto intro: integrity_mem.intros)+)[4]
-   apply (erule trm_ipc, simp_all)
-   apply (clarsimp simp: restrict_map_Some_iff tcb_states_of_state_def get_tcb_def)
-  apply clarsimp
-  apply (drule_tac x = x in spec, erule integrity_device.cases)
-    apply (erule integrity_device.trd_lrefl)
-   apply (erule integrity_device.trd_orefl)
-  apply (erule integrity_device.trd_write)
+   apply (drule_tac x = x in spec, erule integrity_device.cases)
+     apply (erule integrity_device.trd_lrefl)
+    apply (erule integrity_device.trd_orefl)
+   apply (erule integrity_device.trd_write)
+  apply (clarsimp simp: integrity_asids_update_autarch)
   done
 
 lemma set_object_integrity_autarch:
-  "\<lbrace>integrity aag X st and K (is_subject aag ptr)\<rbrace> set_object ptr obj \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
+  "\<lbrace>integrity aag X st and K (is_subject aag ptr)\<rbrace>
+   set_object ptr obj
+   \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (wpsimp wp: set_object_wp)
   apply (rule integrity_update_autarch, simp_all)
   done
@@ -1213,7 +1219,7 @@ end
 
 lemma owns_thread_owns_cspace:
   "\<lbrakk> is_subject aag thread; pas_refined aag s; get_tcb thread s = Some tcb;
-     is_cnode_cap (tcb_ctable tcb); x \<in> obj_refs (tcb_ctable tcb) \<rbrakk>
+     is_cnode_cap (tcb_ctable tcb); x \<in> obj_refs_ac (tcb_ctable tcb) \<rbrakk>
      \<Longrightarrow> is_subject aag x"
   apply (drule get_tcb_SomeD)
   apply (drule cte_wp_at_tcbI[where t="(thread, tcb_cnode_index 0)"
@@ -1478,8 +1484,8 @@ locale Access_AC_3 = Access_AC_2 +
     "\<lbrakk> arch_integrity_obj_atomic aag S l ao ao'; S \<subseteq> T; pas_refined aag s; valid_objs s \<rbrakk>
        \<Longrightarrow> arch_integrity_obj_atomic aag T l ao ao'"
   and integrity_asids_mono:
-    "\<And>x. \<lbrakk> integrity_asids aag S x s s'; S \<subseteq> T; pas_refined aag s; valid_objs s \<rbrakk>
-            \<Longrightarrow> integrity_asids aag T x s (s' :: det_ext state)"
+    "\<And>x. \<lbrakk> integrity_asids aag S x a s s'; S \<subseteq> T; pas_refined aag s; valid_objs s \<rbrakk>
+            \<Longrightarrow> integrity_asids aag T x a s (s' :: det_ext state)"
   and auth_ipc_buffers_member:
     "\<And>x. \<lbrakk> x \<in> auth_ipc_buffers s p; valid_objs s \<rbrakk>
             \<Longrightarrow> \<exists>tcb acap. get_tcb p s = Some tcb

@@ -463,10 +463,10 @@ lemma invoke_untyped_one_has_children:
         apply wp
        apply simp
       apply (clarsimp simp:neq_Nil_conv)
-        apply auto[1]
+        apply (cases slot, fastforce)
        apply wp+
      apply (rule hoare_strengthen_post[OF generate_object_ids_rv])
-     apply (clarsimp simp:zip_is_empty)
+     apply clarsimp
     apply (wp unlessE_wp hoare_drop_imps | simp)+
   done
 
@@ -491,7 +491,7 @@ lemma invoke_untyped_exception:
     apply (simp add: whenE_def)
    apply wp+
   apply clarsimp
-  apply (cut_tac p = "(a,b)" in opt_cap_sep_imp)
+  apply (cut_tac p = "uref" in opt_cap_sep_imp)
    apply sep_solve
   apply (clarsimp dest!: reset_cap_asid_simps2)
   done
@@ -560,12 +560,6 @@ lemma update_thread_intent_has_children[wp]:
   update_thread cur_thread (cdl_tcb_intent_update f)
   \<lbrace>\<lambda>rv s. P (has_children ptr s)\<rbrace>"
   by (simp add:has_children_def is_cdt_parent_def | wp )+
-
-crunch cdt[wp]: set_cap "\<lambda>s. P (cdl_cdt s)"
-(wp:select_wp simp:crunch_simps corrupt_intents_def)
-
-crunch has_children[wp]: set_cap "has_children slot"
-(wp:select_wp simp:crunch_simps corrupt_intents_def simp:has_children_def is_cdt_parent_def)
 
 
 lemma seL4_Untyped_Retype_sep:
@@ -711,13 +705,6 @@ lemma seL4_Untyped_Retype_sep:
  * become parents, and never lose their children                      *
  **********************************************************************)
 
-
-crunch cdt_inc[wp]: set_cap "\<lambda>s. cdl_cdt s child = parent"
-(wp:select_wp simp:crunch_simps)
-
-crunch cdt_inc[wp]: has_restart_cap "\<lambda>s. cdl_cdt s child = parent"
-(wp:select_wp simp:crunch_simps)
-
 crunch cdt_inc[wp]: schedule "\<lambda>s. cdl_cdt s child = parent"
 (wp:select_wp alternative_wp crunch_wps simp:crunch_simps)
 
@@ -855,12 +842,6 @@ lemma lookup_cap_rvu':
   done
 
 crunch cdl_current_thread [wp]:  handle_pending_interrupts "\<lambda>s. P (cdl_current_thread s)"
-(wp: alternative_wp select_wp)
-
-crunch cdl_current_thread [wp]:  lookup_slot_for_cnode_op "\<lambda>s. P (cdl_current_thread s)"
-(wp: alternative_wp select_wp)
-
-crunch cdl_current_thread [wp]:  lookup_slot "\<lambda>s. P (cdl_current_thread s)"
 (wp: alternative_wp select_wp)
 
 crunch cdl_current_thread [wp]:  lookup_cap "\<lambda>s. P (cdl_current_thread s)"
@@ -1048,10 +1029,6 @@ lemma transfer_caps_loop_cdl_parent:
    done
 
 lemmas reset_untyped_cap_cdl2[wp] = reset_untyped_cap_cdl_parent[THEN valid_validE_E]
-
-crunch cdl_parent[wp]: invoke_untyped "\<lambda>s. cdl_cdt s slot = Some parent"
-   (wp: assert_inv crunch_wps select_wp mapME_x_inv_wp alternative_wp
-       simp: crunch_simps detype_def)
 
 crunch cdt_parent: inject_reply_cap "\<lambda>s. cdl_cdt s slot = Some parent"
   (simp: crunch_simps unless_def wp: crunch_wps)

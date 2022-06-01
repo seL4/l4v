@@ -12,11 +12,6 @@ context Arch begin global_naming X64
 
 named_theorems Ipc_AI_assms
 
-crunch pspace_respects_device_region[wp]: set_extra_badge "pspace_respects_device_region"
-
-crunch cap_refs_respects_device_region[wp]: set_extra_badge "cap_refs_respects_device_region"
-  (wp: crunch_wps cap_refs_respects_device_region_dmo)
-
 lemma cap_asid_PageCap_None [simp]:
   "cap_asid (ArchObjectCap (PageCap d r R typ pgsz None)) = None"
   by (simp add: cap_asid_def)
@@ -416,10 +411,10 @@ crunch typ_at[Ipc_AI_assms]: handle_arch_fault_reply, arch_get_sanitise_register
 end
 
 interpretation Ipc_AI?: Ipc_AI
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact Ipc_AI_assms)?)
-  qed
+qed
 
 context Arch begin global_naming X64
 

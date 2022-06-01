@@ -9,6 +9,8 @@ theory VSpace_C
 imports TcbAcc_C CSpace_C PSpace_C TcbQueue_C
 begin
 
+unbundle l4v_word_context
+
 autocorres
   [ skip_heap_abs, skip_word_abs,
     scope = handleVMFault,
@@ -47,9 +49,6 @@ lemma ccorres_flip_Guard:
 end
 
 context kernel_m begin
-
-local_setup
-  \<open>AutoCorresModifiesProofs.new_modifies_rules "../c/build/$L4V_ARCH/kernel_all.c_pp"\<close>
 
 lemma pageBitsForSize_le:
   "pageBitsForSize x \<le> 30"
@@ -277,7 +276,7 @@ lemma leq_asid_bits_shift:
   apply (simp add: mask_def)
   apply (simp add: upper_bits_unset_is_l2p_64 [symmetric])
   apply (simp add: asid_bits_def word_bits_def)
-  apply (erule_tac x="n+9" in allE) (*asid_low_bits*)
+  apply (erule_tac x="9+n" in allE) (*asid_low_bits*)
   apply (simp add: linorder_not_less)
   apply (drule test_bit_size)
   apply (simp add: word_size)
@@ -848,22 +847,6 @@ lemma ccorres_abstract_known:
    apply (rule_tac P="rv' = val" in ccorres_gen_asm2)
    apply simp
   apply simp
-  done
-
-lemma setObject_modify:
-  fixes v :: "'a :: pspace_storable" shows
-  "\<lbrakk> obj_at' (P :: 'a \<Rightarrow> bool) p s; updateObject v = updateObject_default v;
-         (1 :: machine_word) < 2 ^ objBits v \<rbrakk>
-    \<Longrightarrow> setObject p v s
-      = modify (ksPSpace_update (\<lambda>ps. ps (p \<mapsto> injectKO v))) s"
-  apply (clarsimp simp: setObject_def split_def exec_gets obj_at'_def lookupAround2_known1
-                        assert_opt_def updateObject_default_def bind_assoc)
-  apply (simp add: projectKO_def alignCheck_assert)
-  apply (simp add: project_inject objBits_def)
-  apply (clarsimp simp only: objBitsT_koTypeOf[symmetric] koTypeOf_injectKO)
-  apply (frule(2) in_magnitude_check[where s'=s])
-  apply (simp add: magnitudeCheck_assert in_monad)
-  apply (simp add: simpler_modify_def)
   done
 
 lemma ccorres_name_pre_C:
@@ -1699,7 +1682,6 @@ lemma page_table_at'_array_assertion_strong[unfolded ptTranslationBits_def, simp
   assumes "n < 2^(ptTranslationBits-1)"
   shows "array_assertion (pte_Ptr pt) (Suc (unat (2^(ptTranslationBits-1) + of_nat n::machine_word)))
                          (hrs_htd (t_hrs_' (globals s')))"
-  using assms
   using assms
   by (fastforce intro: page_table_at'_array_assertion
                 simp: unat_add_simple ptTranslationBits_def word_bits_def unat_of_nat)

@@ -71,7 +71,7 @@ next
                 x = ptr + of_nat n' * 4 + 2 \<or> x = ptr + of_nat n' * 4 + 3)"
       by (simp add: xin' conj_disj_distribL ex_disj_distrib field_simps)
 
-    show "?thesis m x" by (simp add: xin word_rsplit_0 cong: if_cong)
+    show "?thesis m x" by (simp add: xin word_rsplit_0 word_bits_conv cong: if_cong)
   qed
 
   from al have "is_aligned (ptr + of_nat n' * 4) 2"
@@ -524,7 +524,7 @@ lemma cap_refs_respects_device_region_detype[detype_invs_proofs]:
   have "cap_refs_respects_device_region s"
     using invs by (simp add: invs_def valid_state_def)
   thus ?thesis
-    apply (clarsimp simp: clear_um_def cap_refs_respects_device_region_def cte_wp_at_detype
+    apply (clarsimp simp: clear_um_def cap_refs_respects_device_region_def
                 simp del: split_paired_All split_paired_Ex)
     apply (drule_tac x = "(a,b)" in spec)
     apply (clarsimp simp: cte_wp_at_caps_of_state cap_range_respects_device_region_def detype_def)

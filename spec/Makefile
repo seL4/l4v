@@ -33,7 +33,7 @@ CKernel CSpec: c-kernel design-spec
 
 ExecSpec DSpec : design-spec
 
-ASPEC_VERSION_FILE=abstract/document/VERSION
+ASPEC_VERSION_FILE=abstract/document/VERSION.tex
 ASPEC_GITREV_FILE=abstract/document/gitrev.tex
 GIT_ROOT_FILE=abstract/document/git-root.tex
 
@@ -64,8 +64,13 @@ c-kernel: c-parser .FORCE
 	cd cspec/c && L4V_REPO_PATH=$(L4V_REPO_PATH) L4V_ARCH=$(L4V_ARCH) $(MAKE) cspec
 .PHONY: c-kernel
 
+# Generate C config headers
+c-config: .FORCE
+	cd cspec/c && L4V_REPO_PATH=$(L4V_REPO_PATH) L4V_ARCH=$(L4V_ARCH) $(MAKE) config
+.PHONY: c-config
+
 # Run the haskell translator
-design-spec: .FORCE
+design-spec: c-config .FORCE
 	cd design/ && L4V_REPO_PATH=$(L4V_REPO_PATH) $(MAKE) design
 .PHONY: design-spec
 

@@ -11,7 +11,7 @@
 
 theory InfoFlow_Image_Toplevel
 imports
-  Noninterference
+  ArchNoninterference
   Noninterference_Base_Refinement
   PolicyExample
   PolicySystemSAC

@@ -34,9 +34,11 @@ endif
 ifndef TOOLPREFIX
   ifndef TRY_TOOLPREFIX
     ifeq ($(findstring ARM, ${L4V_ARCH}),ARM)
-      TRY_TOOLPREFIX := arm-none-eabi-
+      TRY_TOOLPREFIX := arm-none-eabi- arm-linux-gnueabi-
     else ifeq (${L4V_ARCH},RISCV64)
       TRY_TOOLPREFIX := riscv64-unknown-linux-gnu- riscv64-linux-gnu- riscv64-unknown-elf-
+    else ifeq (${L4V_ARCH},AARCH64)
+      TRY_TOOLPREFIX := aarch64-unknown-linux-gnu- aarch64-linux-gnu-
     endif
   endif
   ifdef TRY_TOOLPREFIX
@@ -47,9 +49,8 @@ ifndef TOOLPREFIX
   endif
 endif
 
-ifndef OBJDUMP
-  OBJDUMP := ${TOOLPREFIX}objdump
-endif
+OBJDUMP := ${TOOLPREFIX}objdump
+CPP := ${TOOLPREFIX}cpp
 
 ifndef UMM_TYPES
   UMM_TYPES := ${KERNEL_BUILD_ROOT}/umm_types.txt
@@ -91,8 +92,8 @@ ${KERNEL_BUILD_ROOT}/kernel.elf.symtab: ${KERNEL_BUILD_ROOT}/kernel.elf
 	${OBJDUMP} -t $^ > $@
 
 ${KERNEL_BUILD_ROOT}/kernel.sigs: ${KERNEL_BUILD_ROOT}/kernel_all.c_pp
-	MAKEFILES= make -C ${PARSERPATH} standalone-cparser
-	${PARSERPATH}/c-parser ${L4V_ARCH} --underscore_idents --mmbytes $^ > $@.tmp
+	MAKEFILES= make -C ${PARSERPATH} ${PARSERPATH}/${L4V_ARCH}/c-parser
+	${PARSERPATH}/${L4V_ARCH}/c-parser --cpp=${CPP} --underscore_idents --mmbytes $^ > $@.tmp
 	mv $@.tmp $@
 
 # Initialize the CMake build. We purge the build directory and start again
@@ -115,3 +116,16 @@ ${KERNEL_BUILD_ROOT}/.cmake_done: ${KERNEL_DEPS} ${CONFIG_DOMAIN_SCHEDULE}
 
 ${UMM_TYPES}: ${KERNEL_BUILD_ROOT}/kernel_all.c_pp
 	${CSPEC_DIR}/mk_umm_types.py --root $(L4V_REPO_PATH) ${KERNEL_BUILD_ROOT}/kernel_all.c_pp $@
+
+# This target generates config files and headers only. It does not invoke
+# the C tool chain or preprocessor. We force CMake to skip tests for these,
+# so that ASpec and ExecSpec can be built with fewer dependencies.
+${KERNEL_CONFIG_ROOT}/.cmake_done: ${KERNEL_DEPS} gen-config-thy.py
+	rm -rf ${KERNEL_CONFIG_ROOT}
+	mkdir -p ${KERNEL_CONFIG_ROOT}
+	cd ${KERNEL_CONFIG_ROOT} && \
+	cmake -C ${CONFIG} \
+		-DCMAKE_TOOLCHAIN_FILE=${CSPEC_DIR}/c/no-compiler.cmake \
+		${KERNEL_CMAKE_EXTRA_OPTIONS} \
+		-G Ninja ${SOURCE_ROOT}
+	touch ${KERNEL_CONFIG_ROOT}/.cmake_done

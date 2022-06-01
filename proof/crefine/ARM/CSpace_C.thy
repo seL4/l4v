@@ -153,18 +153,8 @@ lemma Arch_maskCapRights_ccorres [corres]:
        by (fastforce simp add: cap_get_tag_isCap isCap_simps  simp del: not_ex simp_thms(44))+
 
 lemma to_bool_mask_to_bool_bf:
-  "to_bool (x && mask (Suc 0)) = to_bool_bf (x::word32)"
-  apply (simp add: to_bool_bf_def to_bool_def)
-  apply (rule iffI)
-   prefer 2
-   apply simp
-  apply (subgoal_tac "x && mask (Suc 0) < 2^(Suc 0)")
-   apply simp
-   apply (drule word_less_cases [where y=2])
-   apply auto[1]
-  apply (rule and_mask_less')
-  apply simp
-  done
+  "to_bool (x && 1) = to_bool_bf (x::word32)"
+  by (simp add: to_bool_bf_def to_bool_def)
 
 lemma to_bool_cap_rights_bf:
   "to_bool (capAllowRead_CL (seL4_CapRights_lift R)) =
@@ -214,8 +204,6 @@ lemma isArchCap_spec:
   "\<forall>s. \<Gamma>\<turnstile> {s} Call isArchCap_'proc \<lbrace>\<acute>ret__unsigned_long = from_bool (isArchCap_tag (cap_get_tag (cap_' s)))\<rbrace>"
   apply vcg
   apply (clarsimp simp: from_bool_def isArchCap_tag_def bool.split)
-  apply (clarsimp simp: word_mod_2p_is_mask[where n=1, simplified] mask_def)
-  apply word_bitwise
   done
 
 lemma maskCapRights_ccorres [corres]:
@@ -358,7 +346,7 @@ lemma maskCapRights_ccorres [corres]:
       apply (simp add: cap_reply_cap_lift_def)
       apply (simp add: ccap_rights_relation_def cap_rights_to_H_def
                        to_bool_reply_cap_bf
-                       to_bool_mask_to_bool_bf to_bool_cap_rights_bf)
+                       to_bool_mask_to_bool_bf[simplified] to_bool_cap_rights_bf)
      apply (simp add: Collect_const_mem from_bool_def)
      apply csymbr
      apply (simp add: cap_get_tag_isCap isCap_simps del: Collect_const)
@@ -548,7 +536,7 @@ lemma revokable_ccorres:
   apply (cinit' lift: derivedCap_' srcCap_' simp: revokable'_def)
    \<comment> \<open>Clear up Arch cap case\<close>
    apply csymbr
-   apply (clarsimp simp: cap_get_tag_isCap split del: if_splits simp del: Collect_const)
+   apply (clarsimp simp: cap_get_tag_isCap simp del: Collect_const)
    apply (rule ccorres_Cond_rhs_Seq)
     apply (rule ccorres_rhs_assoc)
     apply (clarsimp simp: isCap_simps)
@@ -857,12 +845,12 @@ lemma update_freeIndex':
         apply (case_tac cte', simp)
         apply (clarsimp simp: ccap_relation_def cap_lift_def cap_get_tag_def cap_to_H_def)
         apply (thin_tac _)+
-        apply (simp add: mask_def to_bool_and_1 nth_shiftr word_ao_dist word_bool_alg.conj.assoc)
+        apply (simp add: mask_def to_bool_and_1 nth_shiftr word_ao_dist and.assoc)
         apply (rule inj_onD[OF word_unat.Abs_inj_on[where 'a=machine_word_len]], simp)
           apply (cut_tac i'_align i'_bound_word)
           apply (simp add: is_aligned_mask)
           apply word_bitwise
-          subgoal by (simp add: word_size untypedBits_defs)
+          subgoal by (simp add: word_size untypedBits_defs mask_def)
          apply (cut_tac i'_bound_concrete)
          subgoal by (simp add: unats_def)
         subgoal by (simp add: word_unat.Rep[where 'a=machine_word_len, simplified])
@@ -997,7 +985,7 @@ lemma setUntypedCapAsFull_ccorres [corres]:
         apply (rule is_aligned_shiftl_self[unfolded shiftl_t2n,where p = 1,simplified])
        apply assumption
       apply (clarsimp simp: max_free_index_def shiftL_nat valid_cap'_def capAligned_def)
-     apply (simp add:power_minus_is_div unat_power_lower unat_sub word_le_nat_alt t2p_shiftr_32)
+     apply (simp add:power_minus_is_div unat_sub word_le_nat_alt t2p_shiftr_32)
      apply clarsimp
      apply (erule cte_wp_at_weakenE', simp)
     apply clarsimp
@@ -1496,7 +1484,7 @@ lemma cteSwap_ccorres:
              apply simp
              apply (cases "(slot'=slot)", simp+)
     \<comment> \<open>no_0 (ctes_of s)\<close>
-       apply (simp add: valid_mdb'_def) \<comment> \<open>yuck\<close>
+       apply (simp add: valid_mdb'_def)
       apply (erule valid_mdb_ctesE)
       apply assumption
 
@@ -1595,7 +1583,7 @@ lemma emptySlot_helper:
    apply clarsimp
 
    apply (frule(1) rf_sr_ctes_of_clift)
-   apply (clarsimp simp: typ_heap_simps' nextmdb_def if_1_0_0 nextcte_def)
+   apply (clarsimp simp: typ_heap_simps' nextmdb_def nextcte_def)
    apply (intro conjI impI allI)
 
      \<comment> \<open>\<dots> \<exists>x\<in>fst \<dots>\<close>
@@ -1680,24 +1668,24 @@ done
 
 lemma mdbNext_CL_mdb_node_lift_eq_mdbNext:
   "cmdbnode_relation n n' \<Longrightarrow>  (mdbNext_CL (mdb_node_lift n')) =(mdbNext n)"
-  by (erule cmdbnode_relationE, fastforce simp: mdbNext_to_H)
+  by (erule cmdbnode_relationE, fastforce)
 
 lemma mdbPrev_CL_mdb_node_lift_eq_mdbPrev:
   "cmdbnode_relation n n' \<Longrightarrow>  (mdbPrev_CL (mdb_node_lift n')) =(mdbPrev n)"
-  by (erule cmdbnode_relationE, fastforce simp: mdbNext_to_H)
+  by (erule cmdbnode_relationE, fastforce)
 
 lemma mdbNext_not_zero_eq_simpler:
   "cmdbnode_relation n n' \<Longrightarrow> (mdbNext n \<noteq> 0) = (mdbNext_CL (mdb_node_lift n') \<noteq> 0)"
   apply clarsimp
   apply (erule cmdbnode_relationE)
-  apply (fastforce simp: mdbNext_to_H)
+  apply fastforce
   done
 
 lemma mdbPrev_not_zero_eq_simpler:
   "cmdbnode_relation n n' \<Longrightarrow> (mdbPrev n \<noteq> 0) = (mdbPrev_CL (mdb_node_lift n') \<noteq> 0)"
   apply clarsimp
   apply (erule cmdbnode_relationE)
-  apply (fastforce simp: mdbPrev_to_H)
+  apply fastforce
   done
 
 (* TODO: move *)
@@ -2152,8 +2140,7 @@ lemma emptySlot_ccorres:
 
   \<comment> \<open>final precondition proof\<close>
   apply (clarsimp simp: typ_heap_simps Collect_const_mem
-                        cte_wp_at_ctes_of
-             split del: if_split)
+                        cte_wp_at_ctes_of)
 
   apply (rule conjI)
    \<comment> \<open>Haskell side\<close>
@@ -2399,7 +2386,6 @@ lemma Arch_sameRegionAs_spec:
       apply (simp add: pageBitsForSize_def)
       apply (case_tac "gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_b))", simp_all add: word_bits_def)[1]
      apply clarsimp
-     apply (thin_tac "unat x = y" for x y)
 
      apply (simp add: gen_framesize_to_H_is_framesize_to_H_if_not_ARMSmallPage)
      apply (simp add: Kernel_C.ARMSmallPage_def gen_framesize_to_H_def)
@@ -2449,7 +2435,6 @@ lemma Arch_sameRegionAs_spec:
       apply (simp add: pageBitsForSize_def)
       apply (cases "gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_a))"; simp add: word_bits_def)
      apply clarsimp
-     apply (thin_tac "unat x = y" for x y)
 
      apply (simp add: gen_framesize_to_H_is_framesize_to_H_if_not_ARMSmallPage)
      apply (simp add: Kernel_C.ARMSmallPage_def gen_framesize_to_H_def)
@@ -2474,7 +2459,7 @@ lemma Arch_sameRegionAs_spec:
     apply (intro conjI)
         apply (simp add: pageBitsForSize_def)
         apply (cases "gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_a))"; simp)
-       subgoal by (simp add:cap_frame_cap_lift_def cap_lift_def cap_tag_defs mask_def word_bw_assocs)
+       subgoal by (simp add: cap_frame_cap_lift_def cap_lift_def cap_tag_defs mask_def word_bw_assocs)
       apply (simp add: pageBitsForSize_def)
       apply (case_tac "gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_b))"; simp)
     apply (simp add: Let_def)
@@ -2789,7 +2774,7 @@ lemma cap_zombie_cap_get_capZombiePtr_spec:
                  split: if_split if_split_asm)
   apply (subgoal_tac "unat (capZombieType_CL (cap_zombie_cap_lift cap) && mask 5)
                       < unat ((2::word32) ^ 5)")
-   apply clarsimp
+   apply (clarsimp simp: shiftl_eq_mult)
   apply (rule unat_mono)
   apply (rule and_mask_less_size)
   apply (clarsimp simp: word_size)

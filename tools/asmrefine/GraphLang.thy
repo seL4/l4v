@@ -556,9 +556,9 @@ val opers = Symtab.make [
       ("Times", @{const_name "times"}),
       ("Modulus", @{const_name "modulo_class.modulo"}),
       ("DividedBy", @{const_name "divide_class.divide"}),
-      ("BWAnd", @{const_name "bitAND"}),
-      ("BWOr", @{const_name "bitOR"}),
-      ("BWXOR", @{const_name "bitXOR"}),
+      ("BWAnd", @{const_name "and"}),
+      ("BWOr", @{const_name "or"}),
+      ("BWXOR", @{const_name "xor"}),
       ("And", @{const_name "conj"}),
       ("Or", @{const_name "disj"}),
       ("Implies", @{const_name "implies"}),
@@ -568,9 +568,9 @@ val opers = Symtab.make [
       ("SignedLess", @{const_name "word_sless"}),
       ("SignedLessEquals", @{const_name "word_sle"}),
       ("Not", @{const_name "Not"}),
-      ("BWNot", @{const_name "bitNOT"}),
-      ("WordCast", @{const_name "ucast"}),
-      ("WordCastSigned", @{const_name "scast"}),
+      ("BWNot", @{const_name "not"}),
+      ("WordCast", @{const_name "unsigned"}),
+      ("WordCastSigned", @{const_name "signed"}),
       ("WordArrayAccess", @{const_name "fun_app"}),
       ("WordArrayUpdate", @{const_name "fun_upd"}),
       ("CountLeadingZeroes", @{const_name "bv_clz"}),
@@ -647,7 +647,7 @@ fun mk_var_typ T = (case T of
       | @{typ word64} => @{term VarWord64}
       | Type (@{type_name word}, [Type (@{type_name signed}, [T2])])
         => let val uT = Type (@{type_name word}, [T2])
-        in Abs ("t", T, mk_var_typ uT $ (Const (@{const_name ucast}, T --> uT) $ Bound 0)) end
+        in Abs ("t", T, mk_var_typ uT $ (Const (@{const_name unsigned}, T --> uT) $ Bound 0)) end
       | @{typ "machine_word \<Rightarrow> word8"} => @{term VarMem}
       | @{typ "ghost_assertions"} => @{term VarGhostState}
       | @{typ "machine_word set"} => @{term VarDom}
@@ -753,7 +753,7 @@ fun filename_relative thy name =
 
 fun mkdir_relative thy name =
     Path.append (Resources.master_directory thy) (Path.explode name)
-    |> Isabelle_System.mkdirs
+    |> Isabelle_System.make_directory
 
 fun openIn_relative thy = filename_relative thy #> TextIO.openIn
 

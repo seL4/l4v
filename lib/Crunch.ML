@@ -10,9 +10,8 @@ structure CrunchTheoryData = Theory_Data
        ((Token.src list -> string -> string
          -> (string * ((Facts.ref * Token.src list), xstring) sum) list
          -> string list -> local_theory -> local_theory)
-        * (string list -> string list -> theory -> theory)) Symtab.table
+        * (string list -> string list -> local_theory -> local_theory)) Symtab.table
      val empty = Symtab.empty
-     val extend = I
      val merge = Symtab.merge (fn _ => true);
    end);
 
@@ -118,21 +117,23 @@ val crunch_ignoreP =
     Outer_Syntax.local_theory
          @{command_keyword "crunch_ignore"}
         "add to and delete from list of things that crunch should ignore in finding prerequisites"
-        ((Scan.optional (P.$$$ "(" |-- P.name --| P.$$$ ")") "" -- Scan.optional
+        ((Scan.optional (P.$$$ "(" |-- P.list1 P.name --| P.$$$ ")") [""] -- Scan.optional
           (P.$$$ "(" |-- read_sections [add_sect, del_sect] --| P.$$$ ")")
-          []
-        )
-        >> (fn (crunch_instance, wpigs) => fn lthy =>
+          [])
+         >> (fn (crunch_instances, wpigs) => fn lthy =>
                let fun const_name const = dest_Const (read_const lthy const) |> #1;
                    val add = wpigs |> filter (fn (s,_) => s = #1 add_sect) |> map #2 |> constants
                                    |> map const_name;
                    val del = wpigs |> filter (fn (s,_) => s = #1 del_sect) |> map #2 |> constants
                                    |> map const_name;
-                   val crunch_ignore_add_del = (case get_crunch_instance crunch_instance (Proof_Context.theory_of lthy) of
-                     NONE => error ("Crunch has not been defined for " ^ crunch_instance)
-                   | SOME x => snd x);
+                   fun crunch_ignore_add_del inst =
+                     (case get_crunch_instance inst (Proof_Context.theory_of lthy) of
+                        NONE => error ("Crunch has not been defined for " ^ inst)
+                      | SOME x => snd x);
+                   val crunch_ignore_add_dels =
+                     map (fn inst => crunch_ignore_add_del inst add del) crunch_instances
                in
-                  Local_Theory.raw_theory (crunch_ignore_add_del add del) lthy
+                  fold (curry (op #>)) crunch_ignore_add_dels I lthy
                end));
 
 end;

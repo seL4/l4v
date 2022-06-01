@@ -204,7 +204,7 @@ lemma retype_untyped_wp:
     (si_cnode_id, unat seL4_CapInitThreadCNode) \<mapsto>c si_cnode_cap \<and>* R\<guillemotright> s \<and>
    (\<not>has_children (si_cnode_id,unat untyped_cptr) (kernel_state s) \<longrightarrow> cover_ids = available_ids) \<and>
      list_all (\<lambda>index. has_children (si_cnode_id, untyped_slots ! index) (kernel_state s)) indices)\<rbrace>"
-  (* I would like to remove this later by rewritting seL4_Untyped_Retype_sep *)
+  (* I would like to remove this later by rewriting seL4_Untyped_Retype_sep *)
   apply (subgoal_tac "si_cspace_cap=si_cnode_cap", simp)
    apply (unfold retype_untyped_def)
    apply (rule hoare_chain)
@@ -991,7 +991,7 @@ lemma retype_untyped_loop_inv_fail:
         apply (metis nth_map' of_nat_less_pow_32 si_cnode_size_less_than_word_size)
        apply clarsimp
        apply (drule list_all_nth [where xs=free_slots], simp)
-       apply (metis (hide_lams, no_types) Diff_disjoint Int_commute UN_nth_mem disjoint_subset2)
+       apply (metis (opaque_lifting, no_types) Diff_disjoint Int_commute UN_nth_mem disjoint_subset2)
       apply simp
     apply wp
    apply (clarsimp)

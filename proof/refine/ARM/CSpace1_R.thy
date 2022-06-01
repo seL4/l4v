@@ -595,7 +595,7 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
       hence [simp]: "((cbits + length guard = 0) = False) \<and>
                      ((cbits = 0 \<and> guard = []) = False) \<and>
                     (0 < cbits \<or> guard \<noteq> []) " by simp
-      note if_split [split del] drop_append[simp del]
+      note drop_append[simp del]
       from "1.prems"
       have ?thesis
         apply -
@@ -1455,7 +1455,7 @@ lemma ps_clear_16:
   "\<lbrakk> ps_clear p tcbBlockSizeBits s; is_aligned p tcbBlockSizeBits \<rbrakk> \<Longrightarrow> ksPSpace s (p + 2^cteSizeBits) = None"
   apply (simp add: ps_clear_def)
   apply (drule equals0D[where a="p + 2^cteSizeBits"])
-  apply (simp add: dom_def field_simps objBits_defs)
+  apply (simp add: dom_def add.commute objBits_defs take_bit_Suc)
   apply (drule mp)
    apply (rule word_plus_mono_right)
     apply simp
@@ -6565,13 +6565,22 @@ lemma cteSwap_corres:
         | rule refl | clarsimp simp: put_def simp del: fun_upd_apply )+
   apply (simp cong: option.case_cong)
   apply (drule updateCap_stuff, elim conjE, erule(1) impE)
-  apply (drule (2) updateMDB_the_lot', fastforce, fastforce, simp, clarsimp)
-  apply (drule (2) updateMDB_the_lot', fastforce, fastforce, simp, clarsimp)
-  apply (drule in_getCTE, clarsimp)
-  apply (drule (2) updateMDB_the_lot', fastforce, fastforce, simp, clarsimp)
-  apply (drule (2) updateMDB_the_lot', fastforce, fastforce, simp, clarsimp)
-  apply (drule (2) updateMDB_the_lot', fastforce, fastforce, simp, clarsimp)
-  apply (drule (2) updateMDB_the_lot', fastforce, fastforce, simp, clarsimp)
+  apply (drule (2) updateMDB_the_lot')
+     apply (erule (1) impE, assumption)
+    apply (fastforce simp only: no_0_modify_map)
+   apply assumption
+  apply (elim conjE TrueE, simp only:)
+  apply (drule (2) updateMDB_the_lot', fastforce, simp only: no_0_modify_map, assumption)
+  apply (drule in_getCTE, elim conjE, simp only:)
+  apply (drule (2) updateMDB_the_lot', fastforce, simp only: no_0_modify_map, assumption)
+  apply (elim conjE TrueE, simp only:)
+  apply (drule (2) updateMDB_the_lot', fastforce, simp only: no_0_modify_map, assumption)
+  apply (elim conjE TrueE, simp only:)
+  apply (drule (2) updateMDB_the_lot', fastforce, simp only: no_0_modify_map, assumption)
+  apply (elim conjE TrueE, simp only:)
+  apply (drule (2) updateMDB_the_lot', fastforce, simp only: no_0_modify_map, assumption)
+  apply (simp only: pspace_relations_def refl)
+  apply (rule conjI, rule TrueI)+
   apply (thin_tac "ksMachineState t = p" for t p)+
   apply (thin_tac "ksCurThread t = p" for t p)+
   apply (thin_tac "ksReadyQueues t = p" for t p)+
@@ -6582,7 +6591,8 @@ lemma cteSwap_corres:
   apply (thin_tac "ksDomSchedule t = p" for t p)+
   apply (thin_tac "ksCurDomain t = p" for t p)+
   apply (thin_tac "ksDomainTime t = p" for t p)+
-  apply (clarsimp simp: cte_wp_at_ctes_of in_set_cap_cte_at_swp cong: if_cong)
+  apply (simp only: simp_thms no_0_modify_map)
+  apply (clarsimp simp: cte_wp_at_ctes_of cong: if_cong)
   apply (thin_tac "ctes_of x = y" for x y)+
   apply (case_tac cte1)
   apply (rename_tac src_cap src_node)
@@ -6603,24 +6613,49 @@ lemma cteSwap_corres:
      apply (erule weak_derived_sym')
     apply (erule weak_derived_sym')
    apply assumption
-  apply (clarsimp simp: pspace_relations_def)
   apply (rule conjI)
-   apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv ARM.data_at_def)
+   subgoal by (simp only: simp_thms ghost_relation_typ_at set_cap_a_type_inv ARM.data_at_def)
+  apply (thin_tac "ksMachineState t = p" for t p)+
+  apply (thin_tac "ksCurThread t = p" for t p)+
+  apply (thin_tac "ksReadyQueues t = p" for t p)+
+  apply (thin_tac "ksSchedulerAction t = p" for t p)+
+  apply (thin_tac "ready_queues t = p" for t p)+
+  apply (thin_tac "cur_domain t = p" for t p)+
+  apply (thin_tac "ksDomScheduleIdx t = p" for t p)+
+  apply (thin_tac "ksDomSchedule t = p" for t p)+
+  apply (thin_tac "ksCurDomain t = p" for t p)+
+  apply (thin_tac "ksDomainTime t = p" for t p)+
+  apply (thin_tac "idle_thread t = p" for t p)+
+  apply (thin_tac "work_units_completed t = p" for t p)+
+  apply (thin_tac "domain_index t = p" for t p)+
+  apply (thin_tac "domain_list t = p" for t p)+
+  apply (thin_tac "domain_time t = p" for t p)+
+  apply (thin_tac "ekheap t = p" for t p)+
+  apply (thin_tac "scheduler_action t = p" for t p)+
+  apply (thin_tac "ksArchState t = p" for t p)+
+  apply (thin_tac "gsCNodes t = p" for t p)+
+  apply (thin_tac "ksWorkUnitsCompleted t = p" for t p)+
+  apply (thin_tac "ksInterruptState t = p" for t p)+
+  apply (thin_tac "ksIdleThread t = p" for t p)+
+  apply (thin_tac "gsUserPages t = p" for t p)+
+  apply (thin_tac "pspace_relation s s'" for s s')+
+  apply (thin_tac "ekheap_relation e p" for e p)+
+  apply (thin_tac "interrupt_state_relation n s s'" for n s s')+
+  apply (thin_tac "(s,s') \<in> arch_state_relation" for s s')+
   apply(subst conj_assoc[symmetric])
   apply (rule conjI)
    prefer 2
    apply (clarsimp simp add: revokable_relation_def in_set_cap_cte_at
                    simp del: split_paired_All)
    apply (drule set_cap_caps_of_state_monad)+
-   apply (thin_tac "pspace_relation s t" for s t)+
    apply (simp del: split_paired_All split: if_split)
    apply (rule conjI)
     apply (clarsimp simp: cte_wp_at_caps_of_state simp del: split_paired_All)
     apply (drule(1) mdb_swap.revokable)
     apply (erule_tac x="dest" in allE)
     apply (erule impE)
-     apply (clarsimp simp: null_filter_def weak_derived_Null split: if_splits)
-    apply simp
+     subgoal by (clarsimp simp: null_filter_def weak_derived_Null split: if_splits)
+    subgoal by simp
    apply (clarsimp simp del: split_paired_All)
    apply (rule conjI)
     apply (clarsimp simp: cte_wp_at_caps_of_state simp del: split_paired_All)
@@ -6629,19 +6664,19 @@ lemma cteSwap_corres:
      apply (simp del: split_paired_All)
      apply (erule_tac x="src" in allE)
      apply (erule impE)
-      apply (clarsimp simp: null_filter_def weak_derived_Null split: if_splits)
-      apply simp
+      subgoal by (clarsimp simp: null_filter_def weak_derived_Null split: if_splits)
+     subgoal by simp
     apply (drule caps_of_state_cte_at)+
     apply (erule (5) cte_map_inj)
    apply (clarsimp simp: cte_wp_at_caps_of_state simp del: split_paired_All)
    apply (drule (1) mdb_swap.revokable)
    apply (subgoal_tac "null_filter (caps_of_state a) (aa,bb) \<noteq> None")
     prefer 2
-    apply (clarsimp simp: null_filter_def split: if_splits)
+    subgoal by (clarsimp simp: null_filter_def split: if_splits)
    apply clarsimp
    apply (subgoal_tac "cte_map (aa,bb) \<noteq> cte_map src")
     apply (subgoal_tac "cte_map (aa,bb) \<noteq> cte_map dest")
-     apply (clarsimp simp del: split_paired_All)
+     subgoal by (clarsimp simp del: split_paired_All)
     apply (drule caps_of_state_cte_at)+
     apply (drule null_filter_caps_of_stateD)+
     apply (erule cte_map_inj, erule cte_wp_cte_at, assumption+)
@@ -6650,7 +6685,7 @@ lemma cteSwap_corres:
    apply (erule cte_map_inj, erule cte_wp_cte_at, assumption+)
   apply (subgoal_tac "no_loops (ctes_of b)")
    prefer 2
-   apply (simp add: valid_mdb_ctes_def mdb_chain_0_no_loops)
+   subgoal by (simp add: valid_mdb_ctes_def mdb_chain_0_no_loops)
   apply (subgoal_tac "mdb_swap_abs (cdt a) src dest a")
    prefer 2
    apply (erule mdb_swap_abs.intro)
@@ -6660,7 +6695,7 @@ lemma cteSwap_corres:
    apply assumption
   apply (frule mdb_swap_abs''.intro)
   apply (drule_tac t="cdt_list (a)" in mdb_swap_abs'.intro)
-   apply (simp add: mdb_swap_abs'_axioms_def)
+   subgoal by (simp add: mdb_swap_abs'_axioms_def)
   apply (thin_tac "modify_map m f p p' = t" for m f p p' t)
   apply(rule conjI)
    apply (simp add: cdt_relation_def del: split_paired_All)
@@ -6712,7 +6747,7 @@ lemma cteSwap_corres:
        apply (erule (3) inj_on_descendants_cte_map)
       apply (rule subset_refl)
      apply clarsimp
-    apply auto[1]
+    subgoal by auto
    apply clarsimp
    apply (rule conjI, clarsimp)
     apply (rule conjI, clarsimp)
@@ -6891,9 +6926,7 @@ lemma cteSwap_corres:
          apply(rule cte_at_next_slot')
            apply(simp_all)[9]
     apply(erule cte_wp_at_weakenE, simp)
-  apply(rule cte_at_next_slot)
-     apply(simp_all)
-     done
+  by (rule cte_at_next_slot; simp)
 
 
 lemma capSwapForDelete_corres:

@@ -15,3 +15,7 @@ session "AutoCorresQuickstart" = "AutoCorres" +
     "root.bib"
     "comment.sty"
     "ulem.sty"
+  document_files (in "./")
+    "minmax.c"
+    "mult_by_add.c"
+    "swap.c"

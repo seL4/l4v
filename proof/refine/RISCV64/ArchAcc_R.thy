@@ -12,6 +12,7 @@ theory ArchAcc_R
 imports SubMonad_R
 begin
 
+unbundle l4v_word_context
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
@@ -224,7 +225,6 @@ lemma getObject_ASIDPool_corres:
   apply (clarsimp simp: obj_at_def assert_opt_def fail_def return_def in_omonad
                   split: option.split)
   apply (simp add: in_magnitude_check objBits_simps pageBits_def)
-  apply clarsimp
   apply (clarsimp simp: state_relation_def pspace_relation_def)
   apply (drule bspec, blast)
   apply (clarsimp simp: other_obj_relation_def asid_pool_relation_def)
@@ -292,7 +292,7 @@ lemma setObject_ASIDPool_corres:
 
 lemma p_le_table_base:
   "is_aligned p pte_bits \<Longrightarrow> p + mask pte_bits \<le> table_base p + mask table_size"
-  apply (simp add: is_aligned_mask bit_simps word_bool_alg.conj_ac word_plus_and_or_coroll)
+  apply (simp add: is_aligned_mask bit_simps word_plus_and_or_coroll)
   apply word_bitwise
   apply (simp add: word_size)
   done
@@ -429,7 +429,6 @@ lemma setObject_PT_corres:
         apply (simp add: pt_bits_def pageBits_def)
        apply (simp add: pt_bits_def pageBits_def)
       apply clarsimp
-      apply (clarsimp simp: nth_ucast nth_shiftl)
       apply (drule test_bit_size)
       apply (clarsimp simp: word_size bit_simps)
       apply arith
@@ -909,7 +908,7 @@ lemma pte_relation'_Invalid_inv [simp]:
 
 lemma asidHighBitsOf [simp]:
   "asidHighBitsOf asid = ucast (asid_high_bits_of (ucast asid))"
-  by (word_eqI simp: asidHighBitsOf_def asid_high_bits_of_def asidHighBits_def asid_low_bits_def)
+  by (word_eqI_solve simp: asidHighBitsOf_def asid_high_bits_of_def asidHighBits_def asid_low_bits_def)
 
 lemma le_mask_asidBits_asid_wf:
   "asid_wf asid \<longleftrightarrow> asid \<le> mask asidBits"

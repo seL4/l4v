@@ -771,20 +771,19 @@ lemma lookupIPCBuffer_ccorres[corres]:
             apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
              apply vcg
             apply (rule conseqPre, vcg,
-                clarsimp simp: isCap_simps return_def
-                option_to_ptr_def option_to_0_def)
+                   clarsimp simp: isCap_simps return_def option_to_ptr_def option_to_0_def)
            apply (rule ccorres_cond_false_seq)
            apply simp
            apply csymbr
            apply (clarsimp simp: isCap_simps)
            apply (rule ccorres_guard_imp[where A=\<top> and A'=UNIV],
-               rule ccorres_cond [where R=\<top>])
+                  rule ccorres_cond [where R=\<top>])
                apply (clarsimp simp: from_bool_0 isCap_simps)
                apply (frule ccap_relation_PageCap_generics)
                apply clarsimp
                apply (clarsimp simp: vmrights_to_H_def)
                apply (simp add: Kernel_C.VMReadOnly_def Kernel_C.VMKernelOnly_def
-                           Kernel_C.VMReadWrite_def Kernel_C.VMNoAccess_def
+                                Kernel_C.VMReadWrite_def Kernel_C.VMNoAccess_def
                          split: if_split)
                apply clarsimp
                apply (drule less_4_cases)
@@ -895,7 +894,7 @@ lemma lookupIPCBuffer_ccorres[corres]:
        apply clarsimp
       apply clarsimp
       apply wp
-     apply (clarsimp simp: if_1_0_0 Collect_const_mem)
+     apply (clarsimp simp: Collect_const_mem)
      apply (rule conjI)
       apply (clarsimp simp: isCap_simps word_less_nat_alt )
       apply (frule ccap_relation_page_is_device)
@@ -903,12 +902,11 @@ lemma lookupIPCBuffer_ccorres[corres]:
       apply (frule ccap_relation_frame_tags)
       apply clarsimp
       apply (rule conjI,clarsimp)
-       apply (simp add: to_bool_neq_0 cap_get_tag_PageCap_small_frame
-                        cap_get_tag_PageCap_frame cap_frame_cap_lift
-                 split: if_splits)
+       apply (clarsimp simp: cap_get_tag_PageCap_small_frame cap_frame_cap_lift
+                       split: if_splits)
       apply (erule disjE)
        apply ((clarsimp simp: cap_small_frame_cap_lift cap_get_tag_PageCap_frame
-                              to_bool_neq_0 cap_get_tag_PageCap_small_frame
+                              cap_get_tag_PageCap_small_frame
                        split: if_splits)+)[2]
      apply (rule ccontr)
      apply clarsimp
@@ -1021,7 +1019,7 @@ lemma getMRs_user_word:
    apply (drule (1) order_less_le_trans)
    apply (simp add: word_less_nat_alt word_le_nat_alt)
   apply (simp add: word_le_nat_alt add.commute add.left_commute mult.commute mult.left_commute
-                   wordSize_def')
+                   wordSize_def' take_bit_Suc)
   done
 
 declare if_split [split]

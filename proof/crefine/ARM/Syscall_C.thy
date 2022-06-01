@@ -1131,22 +1131,6 @@ lemma deleteCallerCap_ccorres [corres]:
                         tcb_aligned')
   done
 
-
-(* FIXME: MOVE *)
-lemma cap_case_EndpointCap_NotificationCap:
-  "(case cap of EndpointCap v0 v1 v2 v3 v4 v5 \<Rightarrow> f v0 v1 v2 v3 v4 v5
-              | NotificationCap v0 v1 v2 v3  \<Rightarrow> g v0 v1 v2 v3
-              | _ \<Rightarrow> h)
-   = (if isEndpointCap cap
-      then f (capEPPtr cap) (capEPBadge cap) (capEPCanSend cap) (capEPCanReceive cap)
-             (capEPCanGrant cap) (capEPCanGrantReply cap)
-      else if isNotificationCap cap
-           then g (capNtfnPtr cap)  (capNtfnBadge cap) (capNtfnCanSend cap) (capNtfnCanReceive cap)
-           else h)"
-  by (simp add: isCap_simps
-         split: capability.split)
-
-
 lemma invs_valid_objs_strengthen:
   "invs' s \<longrightarrow> valid_objs' s" by fastforce
 
@@ -1647,7 +1631,6 @@ lemma handleInterrupt_ccorres:
   apply (clarsimp simp: IRQTimer_def IRQSignal_def maxIRQ_def
                         cte_wp_at_ctes_of ucast_ucast_b is_up)
   apply (intro conjI impI)
-       using Word.word_of_int and ucast_def apply metis
       apply clarsimp
       apply (erule(1) cmap_relationE1[OF cmap_relation_cte])
       apply (clarsimp simp: typ_heap_simps')

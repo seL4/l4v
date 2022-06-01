@@ -270,8 +270,6 @@ definition
    else SwitchToThread (ctcb_ptr_to_tcb_ptr p)"
 
 
-declare max_word_not_0[simp]
-
 lemma csch_act_rel_to_H:
   "(\<forall>t. a = SwitchToThread t \<longrightarrow> is_aligned t tcbBlockSizeBits) \<Longrightarrow>
    cscheduler_action_relation a p \<longleftrightarrow> cscheduler_action_to_H p = a"
@@ -280,7 +278,7 @@ lemma csch_act_rel_to_H:
                          cscheduler_action_to_H_def)
   apply safe
      apply (simp_all add: tcb_ptr_to_ctcb_ptr_def ctcb_ptr_to_tcb_ptr_def
-                          ctcb_offset_defs is_aligned_mask mask_def max_word_def
+                          ctcb_offset_defs is_aligned_mask mask_def
                           objBits_defs)
   subgoal by word_bitwise simp
   by word_bitwise simp
@@ -623,7 +621,7 @@ lemma tcb_queue_rel'_unique:
 
 definition
   cready_queues_to_H
-  :: "(tcb_C ptr \<rightharpoonup> tcb_C) \<Rightarrow> (tcb_queue_C[4096]) \<Rightarrow> word8 \<times> word8 \<Rightarrow> machine_word list"
+  :: "(tcb_C ptr \<rightharpoonup> tcb_C) \<Rightarrow> (tcb_queue_C[num_tcb_queues]) \<Rightarrow> word8 \<times> word8 \<Rightarrow> machine_word list"
   where
   "cready_queues_to_H h_tcb cs \<equiv> \<lambda>(qdom, prio). if ucast minDom \<le> qdom \<and> qdom \<le> ucast maxDom
               \<and> ucast seL4_MinPrio \<le> prio \<and> prio \<le> ucast seL4_MaxPrio
@@ -1362,12 +1360,12 @@ lemma cDomSchedule_to_H_correct:
   done
 
 definition
-  cbitmap_L1_to_H :: "machine_word[16] \<Rightarrow> (8 word \<Rightarrow> machine_word)"
+  cbitmap_L1_to_H :: "machine_word[num_domains] \<Rightarrow> (8 word \<Rightarrow> machine_word)"
 where
   "cbitmap_L1_to_H l1 \<equiv> \<lambda>d. if d \<le> maxDomain then l1.[unat d] else 0"
 
 definition
-  cbitmap_L2_to_H :: "machine_word[4][16] \<Rightarrow> (8 word \<times> nat \<Rightarrow> machine_word)"
+  cbitmap_L2_to_H :: "machine_word[4][num_domains] \<Rightarrow> (8 word \<times> nat \<Rightarrow> machine_word)"
 where
   "cbitmap_L2_to_H l2 \<equiv> \<lambda>(d, i).
     if d \<le> maxDomain \<and> i < l2BitmapSize

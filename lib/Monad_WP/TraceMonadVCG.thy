@@ -1223,7 +1223,7 @@ lemma no_fail_pre:
   by (simp add: no_fail_def)
 
 lemma no_fail_alt [wp]:
-  "\<lbrakk> no_fail P f; no_fail Q g \<rbrakk> \<Longrightarrow> no_fail (P and Q) (f OR g)"
+  "\<lbrakk> no_fail P f; no_fail Q g \<rbrakk> \<Longrightarrow> no_fail (P and Q) (f \<sqinter> g)"
   by (auto simp add: no_fail_def alternative_def)
 
 lemma no_fail_return [simp, wp]:
@@ -1590,7 +1590,7 @@ lemma in_mres:
 lemma alternative_valid:
   assumes x: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
   assumes y: "\<lbrace>P\<rbrace> f' \<lbrace>Q\<rbrace>"
-  shows      "\<lbrace>P\<rbrace> f OR f' \<lbrace>Q\<rbrace>"
+  shows      "\<lbrace>P\<rbrace> f \<sqinter> f' \<lbrace>Q\<rbrace>"
   apply (simp add: valid_def alternative_def mres_def)
   using post_by_hoare[OF x _ in_mres] post_by_hoare[OF y _ in_mres]
   apply auto
@@ -1599,7 +1599,7 @@ lemma alternative_valid:
 lemma alternative_wp:
   assumes x: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
   assumes y: "\<lbrace>P'\<rbrace> f' \<lbrace>Q\<rbrace>"
-  shows      "\<lbrace>P and P'\<rbrace> f OR f' \<lbrace>Q\<rbrace>"
+  shows      "\<lbrace>P and P'\<rbrace> f \<sqinter> f' \<lbrace>Q\<rbrace>"
   apply (rule alternative_valid)
    apply (rule hoare_pre_imp [OF _ x], simp)
   apply (rule hoare_pre_imp [OF _ y], simp)
@@ -1607,13 +1607,13 @@ lemma alternative_wp:
 
 lemma alternativeE_wp:
   assumes x: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>" and y: "\<lbrace>P'\<rbrace> f' \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
-  shows      "\<lbrace>P and P'\<rbrace> f OR f' \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
+  shows      "\<lbrace>P and P'\<rbrace> f \<sqinter> f' \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   apply (unfold validE_def)
   apply (wp add: x y alternative_wp | simp | fold validE_def)+
   done
 
 lemma alternativeE_R_wp:
-  "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,-; \<lbrace>P'\<rbrace> f' \<lbrace>Q\<rbrace>,- \<rbrakk> \<Longrightarrow> \<lbrace>P and P'\<rbrace> f OR f' \<lbrace>Q\<rbrace>,-"
+  "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,-; \<lbrace>P'\<rbrace> f' \<lbrace>Q\<rbrace>,- \<rbrakk> \<Longrightarrow> \<lbrace>P and P'\<rbrace> f \<sqinter> f' \<lbrace>Q\<rbrace>,-"
   apply (simp add: validE_R_def)
   apply (rule alternativeE_wp)
    apply assumption+

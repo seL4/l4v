@@ -137,8 +137,6 @@ lemma restart_invs[wp]:
   apply (auto dest!: idle_no_ex_cap simp: invs_def valid_state_def valid_pspace_def)
   done
 
-crunch typ_at[wp]: setup_reply_master "\<lambda>s. P (typ_at T p s)"
-
 lemma restart_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> Tcb_A.restart t \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
   by (wpsimp simp: Tcb_A.restart_def wp: cancel_ipc_typ_at)
@@ -403,15 +401,7 @@ lemma tcb_cap_always_valid_strg:
   by (clarsimp simp: tcb_cap_valid_def st_tcb_def2 tcb_at_def
               split: option.split_asm)
 
-lemma thread_set_emptyable[wp]:
-  assumes x: "\<And>tcb. tcb_state (fn tcb) = tcb_state tcb"
-  shows      "\<lbrace>emptyable sl\<rbrace> thread_set fn p \<lbrace>\<lambda>rv. emptyable sl\<rbrace>"
-  by (wp emptyable_lift x thread_set_no_change_tcb_state)
-
-
-crunch not_cte_wp_at[wp]: unbind_maybe_notification "\<lambda>s. \<forall>cp\<in>ran (caps_of_state s). P cp"
-  (wp: thread_set_caps_of_state_trivial simp: tcb_cap_cases_def)
-
+declare thread_set_emptyable[wp]
 
 lemma (in Tcb_AI_1) rec_del_all_caps_in_range:
   assumes x: "P cap.NullCap"
@@ -1262,7 +1252,7 @@ lemma decode_tcb_inv_wf:
                                  \<and> no_cap_to_obj_dr_emp (fst x) s)\<rbrace>
       decode_tcb_invocation label args (cap.ThreadCap t) slot extras
    \<lbrace>tcb_inv_wf\<rbrace>,-"
-  apply (simp add: decode_tcb_invocation_def Let_def del: tcb_inv_wf_def
+  apply (simp add: decode_tcb_invocation_def Let_def
               cong: if_cong split del: if_split)
   apply (rule hoare_vcg_precond_impE_R)
    apply wpc

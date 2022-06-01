@@ -9,9 +9,10 @@ chapter "Platform Definitions"
 theory Platform
 imports
   "Lib.Lib"
-  "Word_Lib.Word_Enum"
+  "Word_Lib.WordSetup"
   "Lib.Defs"
   Setup_Locale
+  Kernel_Config_Lemmas
 begin
 
 context Arch begin global_naming X64

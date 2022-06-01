@@ -12,8 +12,6 @@ theory CSpace_I
 imports ArchAcc_R
 begin
 
-hide_const span
-
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma capUntypedPtr_simps [simp]:
@@ -778,8 +776,7 @@ lemma sameObjectAs_def2:
                   split del: if_split cong: if_cong)
   apply (simp add: capRange_def isCap_simps
               split del: if_split)
-  apply fastforce
-  done
+  by fastforce
 
 lemmas sameRegionAs_def3 =
   sameRegionAs_def2 [simplified capClass_Master capRange_Master isCap_Master]

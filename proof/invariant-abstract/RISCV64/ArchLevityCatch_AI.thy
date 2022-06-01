@@ -7,8 +7,6 @@
 theory ArchLevityCatch_AI
 imports
   "ArchBCorres_AI"
-  "Lib.LemmaBucket"
-  "Lib.SplitRule"
 begin
 
 context Arch begin global_naming RISCV64

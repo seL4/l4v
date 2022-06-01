@@ -49,8 +49,7 @@ fun pretty_markup_to_string no_markup =
   #> (if no_markup then XML.content_of else YXML.string_of_body)
 
 fun term_show_types no_markup ctxt term =
-  let val keywords = Thy_Header.get_keywords' ctxt
-      val ctxt' = ctxt
+  let val ctxt' = ctxt
       |> Config.put show_markup false
       |> Config.put Printer.show_type_emphasis false
 

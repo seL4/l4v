@@ -43,16 +43,14 @@ lemma heap_update_heap_update_list:
    apply (subst if_P)
     apply (fastforce intro: intvlI)
    apply (clarsimp simp: unat_of_nat word_bits_def)
-  apply (subst (1 2)  heap_update_list_value,
-    simp add: addr_card,
-    simp add: addr_card)
+  apply (subst (1 2) heap_update_list_value, simp add: addr_card, simp add: addr_card)
   apply (case_tac "x \<in> {q..+length l}")
    apply (subst if_P, simp)
    apply (subst if_P)
     apply clarsimp
     apply (metis (full_types) intvlD intvlI less_SucI)
    apply (subst nth_append, clarsimp)
-   apply (metis (hide_lams, no_types) add_diff_cancel2 intvlD le_unat_uoi less_or_eq_imp_le not_le)
+   apply (metis (opaque_lifting, no_types) add_diff_cancel2 intvlD le_unat_uoi less_or_eq_imp_le not_le)
   apply clarsimp
   apply (metis intvlD intvlI less_antisym)
   done
@@ -90,7 +88,7 @@ proof -
           apply arith
          apply (metis diff_Suc_diff_eq2 diff_diff_left minus_nat.diff_0 replicate_Suc_append)
         apply (clarsimp simp: ptr_add_def)
-        apply (metis (hide_lams, no_types) add_less_cancel_right add.left_neutral intvl_inter_le le0 le_add_diff_inverse of_nat_diff semiring_1_class.of_nat_0)
+        apply (metis (opaque_lifting, no_types) add_less_cancel_right add.left_neutral intvl_inter_le le0 le_add_diff_inverse of_nat_diff semiring_1_class.of_nat_0)
        apply clarsimp
       apply (clarsimp simp: hrs_mem_update_def)
       done

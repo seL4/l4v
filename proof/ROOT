@@ -150,6 +150,8 @@ session Access in "access-control" = AInvs +
     "ExampleSystem"
 
 session InfoFlow in "infoflow" = Access +
+  directories
+    "$L4V_ARCH"
   theories
     "InfoFlow_Image_Toplevel"
 
@@ -164,6 +166,8 @@ session InfoFlowCBase in "infoflow/refine/base" = CRefine +
     "Include_IF_C"
 
 session InfoFlowC in "infoflow/refine" = InfoFlowCBase +
+  directories
+    "$L4V_ARCH"
   theories
     "Noninterference_Refinement"
     "Example_Valid_StateH"
@@ -215,16 +219,3 @@ session SimplExport in "asmrefine/export" = CSpec +
     "$L4V_ARCH"
   theories
     "SEL4SimplExport"
-
-(*
- * Libraries
- *)
-(* unused:
-session AutoLevity = AutoLevity_Base +
-  theories
-   "../lib/autolevity_buckets/AutoLevity_Top"
-
-session AutoLevity_Base = Word_Lib +
-  theories
-    "../lib/autolevity_buckets/AutoLevity_Base"
-*)

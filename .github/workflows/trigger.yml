@@ -4,7 +4,7 @@
 
 # Trigger docker deploy action in seL4/ci-actions on C parser changes
 
-name: Tigger
+name: Trigger
 
 on:
   push:

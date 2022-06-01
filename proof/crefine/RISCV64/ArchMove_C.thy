@@ -138,7 +138,6 @@ lemma valid_untyped':
    apply (case_tac "obj_range' ptr' ko \<inter> mask_range ptr bits \<noteq> {}", simp)
    apply (cut_tac is_aligned_no_overflow[OF al])
    apply (clarsimp simp add: obj_range'_def mask_def add_diff_eq)
-   subgoal by auto
   apply (clarsimp simp add: usableUntypedRange.simps Int_commute)
   apply (case_tac "obj_range' ptr' ko \<inter> mask_range ptr bits \<noteq> {}", simp+)
   apply (cut_tac is_aligned_no_overflow[OF al])
@@ -156,18 +155,12 @@ lemma more_pageBits_inner_beauty:
   apply clarsimp
   apply (simp add: word_shift_by_3)
   apply (subst (asm) word_plus_and_or_coroll)
-   apply (clarsimp simp: word_size word_ops_nth_size nth_ucast
-                         nth_shiftl bang_eq)
-   apply (drule test_bit_size)
-   apply (clarsimp simp: word_size pageBits_def)
-   apply arith
+   apply (word_eqI_solve dest: test_bit_size simp: pageBits_def)
   apply (insert x)
   apply (erule notE)
-  apply (rule word_eqI)
-  apply (clarsimp simp: word_size nth_ucast nth_shiftl nth_shiftr bang_eq)
-  apply (erule_tac x="n+3" in allE)
-  apply (clarsimp simp: word_ops_nth_size word_size)
-  apply (clarsimp simp: pageBits_def)
+  apply word_eqI
+  apply (erule_tac x="3+n" in allE)
+  apply (clarsimp simp: word_size pageBits_def)
   done
 
 (* FIXME x64: figure out where these are needed and adjust appropriately *)
@@ -364,6 +357,73 @@ lemma getActiveIRQ_neq_Some0x3FF:
   apply (wpsimp simp: doMachineOp_def split_def)
   apply (auto dest: use_valid intro: getActiveIRQ_neq_Some0x3FF')
   done
+
+(* We don't have access to n_msgRegisters from C here, but the number of msg registers in C should
+   be equivalent to what we have in the abstract/design specs. We want a number for this definition
+   that automatically updates if the number of registers changes, and we sanity check it later
+   in msgRegisters_size_sanity *)
+definition size_msgRegisters :: nat where
+  size_msgRegisters_pre_def: "size_msgRegisters \<equiv> size (RISCV64.msgRegisters)"
+
+schematic_goal size_msgRegisters_def:
+  "size_msgRegisters = numeral ?x"
+  unfolding size_msgRegisters_pre_def RISCV64.msgRegisters_def
+  by (simp add: upto_enum_red fromEnum_def enum_register del: Suc_eq_numeral)
+     (simp only: Suc_eq_plus1_left, simp del: One_nat_def)
+
+lemma length_msgRegisters[simplified size_msgRegisters_def]:
+  "length RISCV64_H.msgRegisters = size_msgRegisters"
+  by (simp add: size_msgRegisters_pre_def RISCV64_H.msgRegisters_def)
+
+lemma empty_fail_loadWordUser[intro!, simp]:
+  "empty_fail (loadWordUser x)"
+  by (simp add: loadWordUser_def ef_loadWord ef_dmo')
+
+lemma empty_fail_getMRs[iff]:
+  "empty_fail (getMRs t buf mi)"
+  by (auto simp add: getMRs_def split: option.split)
+
+lemma empty_fail_getReceiveSlots:
+  "empty_fail (getReceiveSlots r rbuf)"
+proof -
+  note
+    empty_fail_assertE[iff]
+    empty_fail_resolveAddressBits[iff]
+  show ?thesis
+  apply (clarsimp simp: getReceiveSlots_def loadCapTransfer_def split_def
+                 split: option.split)
+  apply (rule empty_fail_bind)
+   apply (simp add: capTransferFromWords_def)
+  apply (simp add: emptyOnFailure_def unifyFailure_def)
+  apply (intro empty_fail_catch empty_fail_bindE empty_fail_rethrowFailure,
+         simp_all add: empty_fail_whenEs)
+   apply (simp_all add: lookupCap_def split_def lookupCapAndSlot_def
+                        lookupSlotForThread_def liftME_def
+                        getThreadCSpaceRoot_def locateSlot_conv bindE_assoc
+                        lookupSlotForCNodeOp_def lookupErrorOnFailure_def
+                  cong: if_cong)
+   apply (intro empty_fail_bindE,
+          simp_all add: getSlotCap_def)
+  apply (intro empty_fail_If empty_fail_bindE empty_fail_rethrowFailure impI,
+         simp_all add: empty_fail_whenEs rangeCheck_def)
+  done
+qed
+
+lemma user_getreg_rv:
+  "\<lbrace>obj_at' (\<lambda>tcb. P ((user_regs o atcbContextGet o tcbArch) tcb r)) t\<rbrace>
+   asUser t (getRegister r)
+   \<lbrace>\<lambda>rv s. P rv\<rbrace>"
+  apply (simp add: asUser_def split_def)
+  apply (wp threadGet_wp)
+  apply (clarsimp simp: obj_at'_def getRegister_def in_monad atcbContextGet_def)
+  done
+
+crunches insertNewCap, Arch_createNewCaps, threadSet, Arch.createObject, setThreadState,
+         updateFreeIndex, preemptionPoint
+  for gsCNodes[wp]: "\<lambda>s. P (gsCNodes s)"
+  (wp: crunch_wps setObject_ksPSpace_only
+   simp: unless_def updateObject_default_def crunch_simps
+   ignore_del: preemptionPoint)
 
 end
 

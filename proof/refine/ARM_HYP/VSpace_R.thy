@@ -470,7 +470,6 @@ lemma getHWASID_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr [OF _ loadHWASID_corres[where pd=pd]])
       apply (case_tac maybe_hw_asid, simp_all)[1]
-      apply clarsimp
       apply (rule corres_split_eqr [OF _ findFreeHWASID_corres])
          apply (rule corres_split_deprecated [OF _ storeHWASID_corres[where pd=pd]])
            apply (rule corres_trivial, simp)
@@ -2558,7 +2557,7 @@ lemma corres_store_pde_with_invalid_tail:
        apply simp
       apply simp
      apply (wpsimp wp: hoare_vcg_ball_lift)+
-   apply (simp add: word_bits_def unat_of_nat)
+   apply (simp add: word_bits_def unat_of_nat_word_bits)
   apply (fastforce dest: triple_set_zip_eq)
   done
 
@@ -2582,7 +2581,7 @@ lemma corres_store_pte_with_invalid_tail:
        apply simp
       apply simp
      apply (wpsimp wp: hoare_vcg_ball_lift)+
-   apply (simp add: word_bits_def unat_of_nat)
+   apply (simp add: word_bits_def unat_of_nat_word_bits)
   apply (fastforce dest: triple_set_zip_eq)
   done
 
@@ -3843,7 +3842,7 @@ lemma saveVirtTimer_invs_no_cicd'[wp]:
 
 lemma set_cntv_off_64_invs_no_cicd'[wp]:
   "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (set_cntv_off_64 v) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (wpsimp wp: dmo_invs_no_cicd' set_cntv_off_64_no_irq no_irq)
+  apply (wpsimp wp: dmo_invs_no_cicd' no_irq)
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
   apply (wpsimp simp: machine_op_lift_def set_cntv_off_64_def
@@ -3852,7 +3851,7 @@ lemma set_cntv_off_64_invs_no_cicd'[wp]:
 
 lemma set_cntv_cval_64_invs_no_cicd'[wp]:
   "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (set_cntv_cval_64 v) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (wpsimp wp: dmo_invs_no_cicd' set_cntv_cval_64_no_irq no_irq)
+  apply (wpsimp wp: dmo_invs_no_cicd' no_irq)
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
   apply (wpsimp simp: machine_op_lift_def set_cntv_cval_64_def

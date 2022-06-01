@@ -61,11 +61,10 @@ lemma descendants_empty [simp]:
   "descendants_of x Map.empty = {}"
   by (clarsimp simp: descendants_of_def)
 
-lemma [simp]: "\<not>is_reply_cap Structures_A.NullCap"
+lemma reply_Null [simp]: "\<not>is_reply_cap NullCap"
   by (simp add: is_reply_cap_def)
 
-lemma [simp]: "cap_range Structures_A.NullCap = {}"
-  by (simp add: cap_range_def)
+declare  cap_range_NullCap[simp]
 
 lemma pde_mapping_bits_shift:
   fixes x :: "11 word"
@@ -74,7 +73,6 @@ lemma pde_mapping_bits_shift:
   apply (unfold word_less_alt)
   apply simp
   apply (unfold word_mult_def)
-  apply simp
   apply (subst int_word_uint)
   apply (subst mod_pos_pos_trivial)
     apply simp
@@ -94,7 +92,7 @@ lemma pde_mapping_bits_shift:
   done
 
 lemma mask_pde_mapping_bits:
-  "mask 21 = 2^pde_mapping_bits - 1"
+  "(mask 21 :: machine_word) = 2^pde_mapping_bits - 1"
   by (simp add: mask_def pde_mapping_bits_def)
 
 
@@ -157,10 +155,10 @@ lemma init_irq_ptrs_eq:
   apply (rule ccontr)
   apply (erule_tac bnd="ucast (max_word :: irq) + 1"
               in shift_distinct_helper[rotated 3],
-         safe intro!: plus_one_helper2,
-         simp_all add: ucast_le_ucast_10_32 up_ucast_inj_eq,
-         simp_all add: cte_level_bits_def word_bits_def up_ucast_inj_eq
-                       max_word_def)
+         safe intro!: plus_one_helper2;
+         simp add: ucast_le_ucast_10_32 up_ucast_inj_eq cte_level_bits_def minus_1_eq_mask
+                   ucast_leq_mask;
+         simp add: mask_eq_exp_minus_1)
   done
 
 lemma in_kernel_base:

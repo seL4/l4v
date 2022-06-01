@@ -23,7 +23,7 @@ declare safe_ioport_insert_def[simp]
 
 lemma safe_ioport_insert_triv:
   "\<not>is_arch_cap newcap \<Longrightarrow> safe_ioport_insert newcap oldcap s"
-  by (clarsimp simp: safe_ioport_insert_def)
+  by clarsimp
 
 lemma set_cap_ioports':
  "\<lbrace>\<lambda>s. valid_ioports s
@@ -79,7 +79,7 @@ lemma replace_cap_invs:
    apply (erule allEI, erule allEI)
    apply (drule_tac x="fst p" in spec, drule_tac x="snd p" in spec)
    apply (clarsimp simp: gen_obj_refs_subset)
-   apply (drule(1) disjoint_subset, simp)
+   apply (drule(1) disjoint_subset, erule (1) notE)
   apply (rule conjI)
    apply (erule descendants_inc_minor)
     apply simp
@@ -215,11 +215,11 @@ declare safe_parent_for_arch_def[simp]
 
 lemma safe_parent_for_arch_not_arch:
   "\<not>is_arch_cap cap \<Longrightarrow> \<not>safe_parent_for_arch cap p"
-  by (clarsimp simp: safe_parent_for_arch_def is_cap_simps)
+  by clarsimp
 
 lemma safe_parent_cap_range_arch:
-  "\<And>cap pcap. safe_parent_for_arch cap pcap \<Longrightarrow> cap_range cap \<subseteq> cap_range pcap"
-  by (clarsimp simp: safe_parent_for_arch_def cap_range_def)
+  "safe_parent_for_arch cap pcap \<Longrightarrow> cap_range cap \<subseteq> cap_range pcap"
+  by clarsimp
 
 definition
   "cap_asid_base_arch cap \<equiv> case cap of

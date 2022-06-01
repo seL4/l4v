@@ -61,7 +61,7 @@ lemma replace_cap_invs:
    apply (erule allEI, erule allEI)
    apply (drule_tac x="fst p" in spec, drule_tac x="snd p" in spec)
    apply (clarsimp simp: gen_obj_refs_subset)
-   apply (drule(1) disjoint_subset, simp)
+   apply (drule(1) disjoint_subset, erule (1) notE)
   apply (rule conjI)
    apply (erule descendants_inc_minor)
     apply simp
@@ -178,7 +178,7 @@ lemma safe_parent_for_arch_not_arch:
   by (clarsimp simp: safe_parent_for_arch_def is_cap_simps)
 
 lemma safe_parent_cap_range_arch:
-  "\<And>cap pcap. safe_parent_for_arch cap pcap \<Longrightarrow> cap_range cap \<subseteq> cap_range pcap"
+  "safe_parent_for_arch cap pcap \<Longrightarrow> cap_range cap \<subseteq> cap_range pcap"
   by (clarsimp simp: safe_parent_for_arch_def cap_range_def)
 
 definition

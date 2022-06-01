@@ -23,10 +23,10 @@ fun atomize ctxt = Conv.fconv_rule (Object_Logic.atomize ctxt);
 fun fix_schematics ctxt raw_st =
   let
     val ((schematic_types, [st']), ctxt1) = Variable.importT [raw_st] ctxt;
-    fun certify_inst ctxt inst = map (apsnd (Thm.cterm_of ctxt)) (#2 inst)
+    fun certify_inst ((_, terms), ctxt) = (Vars.map (K (Thm.cterm_of ctxt)) terms, ctxt);
     val (schematic_terms, ctxt2) =
       Variable.import_inst true [Thm.prop_of st'] ctxt1
-      |>> certify_inst ctxt1;
+      |> certify_inst;
     val schematics = (schematic_types, schematic_terms);
   in (Thm.instantiate schematics st', ctxt2) end
 
@@ -60,7 +60,7 @@ let
 in
   Thm.implies_elim  asm (Thm.trivial @{cprop "PROP A"})
   |> Drule.implies_intr_hyps
-  |> Thm.generalize ([],["A"]) 1
+  |> Thm.generalize (Names.empty, Names.make_set ["A"]) 1
   |> Drule.zero_var_indexes
  end
 
@@ -77,7 +77,7 @@ in
   |> Thm.implies_elim (asm' COMP Drule.equal_elim_rule2)
   |> Drule.implies_intr_hyps
   |> Thm.permute_prems 0 ~1
-  |> Thm.generalize ([],["A","P"]) 1
+  |> Thm.generalize (Names.empty, Names.make_set ["A","P"]) 1
   |> Drule.zero_var_indexes
  end
 

@@ -6,7 +6,7 @@
  *)
 
 theory IsolatedThreadAction
-imports "CLib.MonadicRewrite_C" Finalise_C CSpace_All SyscallArgs_C
+imports ArchMove_C
 begin
 
 context begin interpretation Arch .
@@ -128,9 +128,23 @@ lemmas setNotification_tcb = set_ntfn_tcb_obj_at'
 
 end
 
-context kernel_m begin
-
 context begin interpretation Arch . (*FIXME: arch_split*)
+
+lemma setObject_modify:
+  fixes v :: "'a :: pspace_storable" shows
+  "\<lbrakk> obj_at' (P :: 'a \<Rightarrow> bool) p s; updateObject v = updateObject_default v;
+         (1 :: machine_word) < 2 ^ objBits v \<rbrakk>
+    \<Longrightarrow> setObject p v s
+      = modify (ksPSpace_update (\<lambda>ps. ps (p \<mapsto> injectKO v))) s"
+  apply (clarsimp simp: setObject_def split_def exec_gets obj_at'_def lookupAround2_known1
+                        assert_opt_def updateObject_default_def bind_assoc)
+  apply (simp add: projectKO_def alignCheck_assert)
+  apply (simp add: project_inject objBits_def)
+  apply (clarsimp simp only: objBitsT_koTypeOf[symmetric] koTypeOf_injectKO)
+  apply (frule(2) in_magnitude_check[where s'=s])
+  apply (simp add: magnitudeCheck_assert in_monad)
+  apply (simp add: simpler_modify_def)
+  done
 
 lemma getObject_return:
   fixes v :: "'a :: pspace_storable" shows
@@ -162,6 +176,8 @@ lemma partial_overwrite_fun_upd:
   apply (intro ext, simp add: partial_overwrite_def)
   apply (clarsimp split: if_split)
   done
+
+context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma get_tcb_state_regs_ko_at':
   "ko_at' ko p s \<Longrightarrow> get_tcb_state_regs (ksPSpace s p)
@@ -266,6 +282,7 @@ lemma map_to_ctes_partial_overwrite:
   "\<forall>x. tcb_at' (idx x) s \<Longrightarrow>
    map_to_ctes (partial_overwrite idx tsrs (ksPSpace s))
      = ctes_of s"
+  supply if_split[split del]
   apply (rule ext)
   apply (frule dom_partial_overwrite[where tsrs=tsrs])
   apply (simp add: map_to_ctes_def partial_overwrite_def
@@ -615,6 +632,7 @@ lemma page_table_at_partial_overwrite:
 
 lemma findVSpaceForASID_isolatable:
   "thread_actions_isolatable idx (findVSpaceForASID asid)"
+  supply if_split[split del]
   apply (simp add: findVSpaceForASID_def liftE_bindE liftME_def bindE_assoc
                    case_option_If2 assertE_def liftE_def checkPTAt_def
                    stateAssert_def2
@@ -678,6 +696,7 @@ lemma cap_case_isPageTableCap:
 
 lemma setVMRoot_isolatable:
   "thread_actions_isolatable idx (setVMRoot t)"
+  supply if_split[split del]
   apply (simp add: setVMRoot_def getThreadVSpaceRoot_def
                    locateSlot_conv getSlotCap_def
                    if_bool_simps cap_case_isPageTableCap
@@ -702,7 +721,10 @@ lemma transferCaps_simple:
           return (mi\<lparr>msgExtraCaps := 0, msgCapsUnwrapped := 0\<rparr>)
         od"
   apply (cases mi)
-  apply (clarsimp simp: transferCaps_def getThreadCSpaceRoot_def locateSlot_conv cong: option.case_cong)
+  apply (clarsimp simp: transferCaps_def getThreadCSpaceRoot_def locateSlot_conv)
+  apply (rule ext bind_apply_cong[OF refl])+
+  apply (simp add: upto_enum_def
+            split: option.split)
   done
 
 lemma transferCaps_simple_rewrite:
@@ -731,23 +753,16 @@ lemma lookupIPC_inv: "\<lbrace>P\<rbrace> lookupIPCBuffer f t \<lbrace>\<lambda>
 
 lemmas empty_fail_user_getreg = empty_fail_asUser[OF empty_fail_getRegister]
 
-lemma user_getreg_rv:
-  "\<lbrace>obj_at' (\<lambda>tcb. P ((user_regs o atcbContextGet o tcbArch) tcb r)) t\<rbrace> asUser t (getRegister r) \<lbrace>\<lambda>rv s. P rv\<rbrace>"
-  apply (simp add: asUser_def split_def)
-  apply (wp threadGet_wp)
-  apply (clarsimp simp: obj_at'_def projectKOs getRegister_def in_monad atcbContextGet_def)
-  done
-
 lemma copyMRs_simple:
-  "msglen \<le> of_nat (length RISCV64_H.msgRegisters) \<longrightarrow>
+  "msglen \<le> of_nat (length msgRegisters) \<longrightarrow>
     copyMRs sender sbuf receiver rbuf msglen
-        = forM_x (take (unat msglen) RISCV64_H.msgRegisters)
+        = forM_x (take (unat msglen) msgRegisters)
              (\<lambda>r. do v \<leftarrow> asUser sender (getRegister r);
                     asUser receiver (setRegister r v) od)
            >>= (\<lambda>rv. return msglen)"
   apply (clarsimp simp: copyMRs_def mapM_discarded)
   apply (rule bind_cong[OF refl])
-  apply (simp add: length_msgRegisters n_msgRegisters_def min_def
+  apply (simp add: length_msgRegisters min_def
                    word_le_nat_alt
             split: option.split)
   apply (simp add: upto_enum_def mapM_Nil)
@@ -757,16 +772,16 @@ lemma doIPCTransfer_simple_rewrite:
   "monadic_rewrite True True
    ((\<lambda>_. msgExtraCaps (messageInfoFromWord msgInfo) = 0
                \<and> msgLength (messageInfoFromWord msgInfo)
-                      \<le> of_nat (length RISCV64_H.msgRegisters))
+                      \<le> of_nat (length msgRegisters))
       and obj_at' (\<lambda>tcb. tcbFault tcb = None
                \<and> (user_regs o atcbContextGet o tcbArch) tcb msgInfoRegister = msgInfo) sender)
    (doIPCTransfer sender ep badge grant rcvr)
    (do rv \<leftarrow> mapM_x (\<lambda>r. do v \<leftarrow> asUser sender (getRegister r);
                              asUser rcvr (setRegister r v)
                           od)
-               (take (unat (msgLength (messageInfoFromWord msgInfo))) RISCV64_H.msgRegisters);
+               (take (unat (msgLength (messageInfoFromWord msgInfo))) msgRegisters);
          y \<leftarrow> setMessageInfo rcvr ((messageInfoFromWord msgInfo) \<lparr>msgCapsUnwrapped := 0\<rparr>);
-         asUser rcvr (setRegister RISCV64_H.badgeRegister badge)
+         asUser rcvr (setRegister badgeRegister badge)
       od)"
   supply if_cong[cong]
   apply (rule monadic_rewrite_gen_asm)
@@ -910,14 +925,13 @@ lemma oblivious_setVMRoot_schact:
                    getSlotCap_def getCTE_def)
   by (safe intro!: oblivious_bind oblivious_bindE oblivious_catch oblivious_mapM_x
              | simp_all add: liftE_def
-                             findVSpaceForASID_def liftME_def
-                             findVSpaceForASIDAssert_def checkPTAt_def
+                             findVSpaceForASID_def liftME_def checkPTAt_def
                       split: if_split capability.split arch_capability.split option.split)+
 
 
 lemma oblivious_switchToThread_schact:
   "oblivious (ksSchedulerAction_update f) (ThreadDecls_H.switchToThread t)"
-  apply (simp add: Thread_H.switchToThread_def RISCV64_H.switchToThread_def bind_assoc
+  apply (simp add: Thread_H.switchToThread_def switchToThread_def bind_assoc
                    getCurThread_def setCurThread_def threadGet_def liftM_def
                    threadSet_def tcbSchedEnqueue_def unless_when asUser_def
                    getQueue_def setQueue_def storeWordUser_def setRegister_def
@@ -973,8 +987,6 @@ crunch obj_at_prio[wp]: cteDeleteOne "obj_at' (\<lambda>tcb. P (tcbPriority tcb)
        setThreadState_obj_at_unchanged setNotification_tcb setBoundNotification_obj_at_unchanged
         simp: crunch_simps unless_def)
 
-context kernel_m begin
-
 lemma setThreadState_no_sch_change:
   "\<lbrace>\<lambda>s. P (ksSchedulerAction s) \<and> (runnable' st \<or> t \<noteq> ksCurThread s)\<rbrace>
       setThreadState st t
@@ -1006,6 +1018,8 @@ lemma bind_assoc:
      = do x \<leftarrow> m; y \<leftarrow> f x; g y od"
   by (rule bind_assoc)
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma setObject_modify_assert:
   "\<lbrakk> updateObject v = updateObject_default v \<rbrakk>
     \<Longrightarrow> setObject p v = do f \<leftarrow> gets (obj_at' (\<lambda>v'. v = v' \<or> True) p);
@@ -1030,6 +1044,7 @@ lemma setObject_modify_assert:
 
 lemma setEndpoint_isolatable:
   "thread_actions_isolatable idx (setEndpoint p e)"
+  supply if_split[split del]
   apply (simp add: setEndpoint_def setObject_modify_assert
                    assert_def)
   apply (case_tac "p \<in> range idx")
@@ -1128,6 +1143,7 @@ lemma atcbContextSetSetGet_eq[simp]:
 
 lemma setCTE_isolatable:
   "thread_actions_isolatable idx (setCTE p v)"
+  supply if_split[split del]
   apply (simp add: setCTE_assert_modify)
   apply (clarsimp simp: thread_actions_isolatable_def
                         monadic_rewrite_def fun_eq_iff
@@ -1190,7 +1206,7 @@ lemma assert_isolatable:
 
 lemma cteInsert_isolatable:
   "thread_actions_isolatable idx (cteInsert cap src dest)"
-  supply if_cong[cong]
+  supply if_split[split del] if_cong[cong]
   apply (simp add: cteInsert_def updateCap_def updateMDB_def
                    Let_def setUntypedCapAsFull_def)
   apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
@@ -1290,7 +1306,7 @@ lemma threadGet_isolatable:
 
  lemma switchToThread_isolatable:
   "thread_actions_isolatable idx (Arch.switchToThread t)"
-  apply (simp add: RISCV64_H.switchToThread_def
+  apply (simp add: switchToThread_def
                    storeWordUser_def stateAssert_def2)
   apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
                gets_isolatable setVMRoot_isolatable
@@ -1360,7 +1376,7 @@ lemma tcb_at_KOTCB_upd:
         = tcb_at' p s"
   apply (clarsimp simp: obj_at'_def projectKOs objBits_simps
                  split: if_split)
-  apply (simp add: ps_clear_def)
+  apply (fastforce simp add: ps_clear_def)
   done
 
 definition
@@ -1408,6 +1424,7 @@ lemma copy_register_isolate:
                    asUser dest (setRegister r' (rf v)) od)
            (isolate_thread_actions idx (return ())
                  (copy_register_tsrs x y r r' rf) id)"
+  supply if_split[split del]
   apply (simp add: asUser_def split_def bind_assoc
                    getRegister_def setRegister_def
                    select_f_returns isolate_thread_actions_def
@@ -1557,7 +1574,7 @@ lemmas fastpath_isolate_rewrites
 
 lemma lookupIPCBuffer_isolatable:
   "thread_actions_isolatable idx (lookupIPCBuffer w t)"
-  supply if_cong[cong]
+  supply if_cong[cong] if_split[split del]
   apply (simp add: lookupIPCBuffer_def)
   apply (rule thread_actions_isolatable_bind)
   apply (clarsimp simp: put_tcb_state_regs_tcb_def threadGet_isolatable
@@ -1578,6 +1595,7 @@ lemma setThreadState_rewrite_simple:
      (\<lambda>s. (runnable' st \<or> ksSchedulerAction s \<noteq> ResumeCurrentThread \<or> t \<noteq> ksCurThread s) \<and> tcb_at' t s)
      (setThreadState st t)
      (threadSet (tcbState_update (\<lambda>_. st)) t)"
+  supply if_split[split del]
   apply (simp add: setThreadState_def)
   apply (rule monadic_rewrite_imp)
    apply (rule monadic_rewrite_trans)

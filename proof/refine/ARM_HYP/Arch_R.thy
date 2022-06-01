@@ -12,6 +12,8 @@ theory Arch_R
 imports Untyped_R Finalise_R
 begin
 
+unbundle l4v_word_context
+
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 declare is_aligned_shiftl [intro!]
@@ -456,8 +458,7 @@ lemma decodeVCPUInjectIRQ_inv[wp]: "\<lbrace>P\<rbrace> decodeVCPUInjectIRQ a b 
 
 crunch inv [wp]: "ARM_HYP_H.decodeInvocation" "P"
   (wp: crunch_wps mapME_x_inv_wp getASID_wp
-   simp: forME_x_def crunch_simps
-         ARMMMU_improve_cases)
+   simp: crunch_simps ARMMMU_improve_cases)
 
 lemma case_option_corresE:
   assumes nonec: "corres r Pn Qn (nc >>=E f) (nc' >>=E g)"
@@ -1306,6 +1307,20 @@ lemma archThreadSet_VCPU_Some_corres[corres]:
   apply (simp add: arch_tcb_relation_def)
   done
 
+crunches dissociateVCPUTCB
+  for no_0_obj'[wp]: no_0_obj'
+  and ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
+  (simp: crunch_simps wp: crunch_wps)
+
+lemma vcpuSwitch_corres'':
+  "vcpu' = vcpu
+   \<Longrightarrow> corres dc (\<lambda>s. (vcpu \<noteq> None \<longrightarrow> vcpu_at  (the vcpu) s) \<and> valid_arch_state s)
+             (pspace_aligned' and pspace_distinct' and no_0_obj')
+             (vcpu_switch vcpu)
+             (vcpuSwitch vcpu')"
+  apply (rule stronger_corres_guard_imp, rule vcpuSwitch_corres')
+    by (clarsimp simp: valid_arch_state_def is_vcpu_def obj_at_def)+
+
 lemma associateVCPUTCB_corres:
   "corres (=) (invs and vcpu_at v and tcb_at t)
                (invs' and vcpu_at' v and tcb_at' t)
@@ -1315,9 +1330,9 @@ lemma associateVCPUTCB_corres:
                (associateVCPUTCB v t)"
   unfolding associate_vcpu_tcb_def associateVCPUTCB_def
   apply (clarsimp simp: bind_assoc)
-  apply (corressimp search: getObject_vcpu_corres setObject_VCPU_corres
-                       wp: get_vcpu_wp getVCPU_wp
-                     simp: vcpu_relation_def)
+  apply (corressimp search: getObject_vcpu_corres setObject_VCPU_corres vcpuSwitch_corres''
+                        wp: get_vcpu_wp getVCPU_wp hoare_vcg_imp_lift'
+                      simp: vcpu_relation_def)
       apply (rule_tac Q="\<lambda>_. invs and tcb_at t" in hoare_strengthen_post)
        apply wp
       apply clarsimp
@@ -1335,7 +1350,7 @@ lemma associateVCPUTCB_corres:
       apply (frule valid_objs_valid_vcpu'[rotated], fastforce)
       apply (simp add: valid_vcpu'_def typ_at_tcb')
       apply (clarsimp simp: typ_at_to_obj_at_arches obj_at'_def)
-     apply (clarsimp simp: typ_at_to_obj_at_arches obj_at'_def)
+     apply (fastforce simp: typ_at_to_obj_at_arches obj_at'_def)
     apply (corressimp wp: arch_thread_get_wp getObject_tcb_wp
                     simp: archThreadGet_def)+
   apply (simp add: vcpu_relation_def)
@@ -1345,11 +1360,13 @@ lemma associateVCPUTCB_corres:
     apply (clarsimp simp: obj_at_def)
    apply (frule (1) sym_refs_vcpu_tcb, fastforce)
    apply (clarsimp simp: obj_at_def)
+  apply (frule invs_arch_state)
+  apply (clarsimp simp: valid_arch_state_def obj_at_def is_vcpu_def)
   apply normalise_obj_at'
   apply (drule valid_objs_valid_tcb'[rotated], fastforce)
   apply (clarsimp simp: valid_tcb'_def valid_arch_tcb'_def invs_no_0_obj')
   apply (drule valid_objs_valid_vcpu'[rotated], fastforce)
-  apply (simp add: valid_vcpu'_def typ_at_tcb')
+  apply (fastforce simp: valid_vcpu'_def typ_at_tcb')
   done
 
 lemma invokeVCPUAckVPPI_corres:
@@ -2199,7 +2216,7 @@ lemma performASIDControlInvocation_invs' [wp]:
   apply (strengthen refl ctes_of_valid_cap'[mk_strg I E])
   apply (clarsimp simp: conj_comms invs_valid_objs')
   apply (frule_tac ptr="w1" in descendants_range_caps_no_overlapI'[where sz = pageBits])
-    apply (fastforce simp:is_aligned_neg_mask_eq cte_wp_at_ctes_of)
+    apply (fastforce simp: cte_wp_at_ctes_of)
    apply (simp add:empty_descendants_range_in')
   apply (frule(1) if_unsafe_then_capD'[OF _ invs_unsafe_then_cap',rotated])
    apply (fastforce simp:cte_wp_at_ctes_of)
@@ -2213,7 +2230,7 @@ lemma performASIDControlInvocation_invs' [wp]:
     apply (rule is_aligned_shiftl_self[unfolded shiftl_t2n,where p = 1,simplified])
    apply (simp add:pageBits_def minUntypedSizeBits_def)
   apply (frule_tac cte="CTE (capability.UntypedCap False a b c) m" for a b c m in valid_global_refsD', clarsimp)
-  apply (simp add: is_aligned_neg_mask_eq Int_commute)
+  apply (simp add: Int_commute)
   by (auto simp:empty_descendants_range_in' objBits_simps max_free_index_def
                     archObjSize_def asid_low_bits_def word_bits_def pageBits_def
                     range_cover_full descendants_range'_def2 is_aligned_mask
@@ -2251,10 +2268,10 @@ lemma assoc_invs':
     ko_at' (vcpu\<lparr>vcpuTCBPtr:= None\<rparr>) v and
     obj_at' (\<lambda>tcb. atcbVCPUPtr (tcbArch tcb) = None) t and
     ex_nonz_cap_to' v and ex_nonz_cap_to' t\<rbrace>
-   do
-    archThreadSet (atcbVCPUPtr_update (\<lambda>_. Just v)) t;
-    setObject v $ vcpuTCBPtr_update (\<lambda>_. Just t) vcpu
-   od \<lbrace>\<lambda>_. invs'\<rbrace>"
+   do y \<leftarrow> archThreadSet (atcbVCPUPtr_update (\<lambda>_. Some v)) t;
+      setObject v (vcpuTCBPtr_update (\<lambda>_. Some t) vcpu)
+   od
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding invs'_def valid_state'_def valid_pspace'_def valid_mdb'_def
             valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def
   supply fun_upd_apply[simp del]
@@ -2283,19 +2300,6 @@ lemma assoc_invs':
    apply (clarsimp simp: state_hyp_refs_of'_def obj_at'_def projectKOs tcb_vcpu_refs'_def
                   split: option.splits if_split_asm)
   by (clarsimp simp: state_hyp_refs_of'_def obj_at'_def projectKOs split: option.splits if_split_asm)
-
-lemma setVCPU_archThreadSet_Some_eq:
-  "do
-    archThreadSet (atcbVCPUPtr_update (\<lambda>_. Just v)) tcb;
-    setObject v $ vcpuTCBPtr_update (\<lambda>_. Just tcb) vcpu;
-    f
-   od = do
-    do
-      archThreadSet (atcbVCPUPtr_update (\<lambda>_. Just v)) tcb;
-      setObject v $ vcpuTCBPtr_update (\<lambda>_. Just tcb) vcpu
-    od;
-    f
-  od" by (simp add: bind_assoc)
 
 lemma asUser_obj_at_vcpu[wp]:
   "\<lbrace>obj_at' (P :: vcpu \<Rightarrow> bool) t\<rbrace>
@@ -2334,23 +2338,55 @@ lemma dissociateVCPUTCB_ex_nonz_cap_to'[wp]:
   "dissociateVCPUTCB v' t \<lbrace>ex_nonz_cap_to' v\<rbrace>"
   unfolding ex_nonz_cap_to'_def cte_wp_at_ctes_of by wp
 
+lemma vcpuTCBPtr_update_Some_vcpu_live[wp]:
+  "\<lbrace>if vcpuPtr = vcpuPtr'
+    then ko_wp_at' is_vcpu' vcpuPtr
+    else ko_wp_at' (is_vcpu' and hyp_live') vcpuPtr\<rbrace>
+   setObject vcpuPtr' (vcpuTCBPtr_update (\<lambda>_. Some tcbPtr) vcpu)
+   \<lbrace>\<lambda>_. ko_wp_at' (is_vcpu' and hyp_live') vcpuPtr\<rbrace>"
+  apply (wp setObject_ko_wp_at, simp)
+    apply (simp add: objBits_simps archObjSize_def)
+   apply (clarsimp simp: vcpu_bits_def pageBits_def)
+  by (clarsimp simp: pred_conj_def is_vcpu'_def ko_wp_at'_def obj_at'_real_def hyp_live'_def
+                     arch_live'_def
+              split: if_splits)
+
+lemma vcpuTCBPtr_update_Some_valid_arch_state'[wp]:
+  "setObject vcpuPtr (vcpuTCBPtr_update (\<lambda>_. Some tptr) vcpu) \<lbrace>valid_arch_state'\<rbrace>"
+  apply (simp add: valid_arch_state'_def valid_asid_table'_def option_case_all_conv)
+    apply (wp hoare_vcg_imp_lift hoare_vcg_all_lift
+           | rule hoare_lift_Pf[where f=ksArchState])
+  by (auto simp: pred_conj_def o_def ko_wp_at'_def)
+
+definition associateVCPUTCB_helper where
+  "associateVCPUTCB_helper vcpu v t = do
+    y \<leftarrow> archThreadSet (atcbVCPUPtr_update (\<lambda>_. Some v)) t;
+    setObject v (vcpuTCBPtr_update (\<lambda>_. Some t) vcpu)
+   od"
+
 lemma associateVCPUTCB_invs'[wp]:
-  "\<lbrace>invs' and ex_nonz_cap_to' vcpu and ex_nonz_cap_to' tcb\<rbrace> associateVCPUTCB vcpu tcb \<lbrace>\<lambda>_. invs'\<rbrace>"
-  unfolding associateVCPUTCB_def setVCPU_archThreadSet_Some_eq
-  apply (wpsimp wp: assoc_invs' getVCPU_wp)
+  "\<lbrace>invs' and ex_nonz_cap_to' vcpu and ex_nonz_cap_to' tcb and vcpu_at' vcpu\<rbrace>
+   associateVCPUTCB vcpu tcb
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  apply (clarsimp simp: associateVCPUTCB_def)
+  apply (subst bind_assoc[symmetric], fold associateVCPUTCB_helper_def)
+  apply wpsimp
+       apply (rule_tac Q="\<lambda>_ s. invs' s \<and> ko_wp_at' (is_vcpu' and hyp_live') vcpu s" in hoare_post_imp)
+        apply simp
+       apply (rule hoare_vcg_conj_lift)
+        apply (wpsimp wp: assoc_invs'[folded associateVCPUTCB_helper_def])
+       apply (clarsimp simp: associateVCPUTCB_helper_def)
+       apply (wpsimp simp: vcpu_at_is_vcpu'[symmetric])+
+     apply (wpsimp wp: getVCPU_wp)
     apply (rule_tac Q="\<lambda>_. invs' and obj_at' (\<lambda>tcb. atcbVCPUPtr (tcbArch tcb) = None) tcb and
-                           ex_nonz_cap_to' vcpu and ex_nonz_cap_to' tcb"
+                           ex_nonz_cap_to' vcpu and ex_nonz_cap_to' tcb and vcpu_at' vcpu"
                     in hoare_strengthen_post)
      apply wpsimp
     apply (clarsimp simp: obj_at'_def projectKOs)
     apply (rename_tac v obj)
     apply (case_tac v, simp)
    apply (wpsimp wp: getObject_tcb_wp simp: archThreadGet_def)
-  apply clarsimp
-  apply normalise_obj_at'
   apply (clarsimp simp: obj_at'_def projectKOs)
-  apply (rename_tac v)
-  apply (case_tac v, simp)
   done
 
 lemma invokeVCPUInjectIRQ_invs'[wp]:

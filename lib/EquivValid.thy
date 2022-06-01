@@ -195,6 +195,11 @@ lemma bind_ev:
   shows "equiv_valid I A A (\<lambda>s. P' s \<and> P'' s) (f >>= g)"
   using assms by (blast intro: bind_ev_general)
 
+lemma equiv_valid_weaken_pre:
+  "\<lbrakk> equiv_valid I A' B P f; \<forall>st t. I st t \<and> A st t \<longrightarrow> A' st t \<rbrakk>
+     \<Longrightarrow> equiv_valid I A B P f"
+  by (fastforce simp: equiv_valid_def spec_equiv_valid_def equiv_valid_2_def)
+
 lemma equiv_valid_guard_imp:
   assumes reads_res: "equiv_valid I A B Q f"
   assumes guard_imp: "\<And> s. P s \<Longrightarrow> Q s"
@@ -717,17 +722,19 @@ lemma bind_spec_ev:
   shows "spec_equiv_valid_inv s' I A (\<lambda>s. P' s \<and> P'' s) (f >>= g)"
   using reads_res_1
   apply (clarsimp simp: spec_equiv_valid_def equiv_valid_2_def valid_def bind_def split_def)
+  apply (rename_tac t a b aa ba ab bb ac bc)
   apply (erule_tac x=t in allE)
   apply clarsimp
   apply (erule_tac x="(a, b)" in ballE)
-  apply (erule_tac x="(ab, bb)" in ballE)
-  apply clarsimp
-  apply (cut_tac rv="ab" and s''="b" in reads_res_2)
-   apply assumption
-  apply (clarsimp simp: spec_equiv_valid_def equiv_valid_2_def)
-  apply(erule_tac x=bb in allE)
-  using hoare
-  apply (fastforce simp: valid_def)+
+   apply (erule_tac x="(ab, bb)" in ballE)
+    apply clarsimp
+    apply (cut_tac reads_res_2)
+     prefer 2
+     apply assumption
+    apply (clarsimp simp: spec_equiv_valid_def equiv_valid_2_def)
+    apply(erule_tac x=bb in allE)
+    using hoare
+    apply (fastforce simp: valid_def)+
   done
 
 lemma bindE_spec_ev:
@@ -939,13 +946,13 @@ lemma catch_ev[wp]:
   assumes err:
     "\<And> e. equiv_valid I A A (E e) (handler e)"
   assumes hoare:
-    "\<lbrace> P \<rbrace> f -, \<lbrace> E \<rbrace>"
+    "\<lbrace> Q \<rbrace> f -, \<lbrace> E \<rbrace>"
   shows
-  "equiv_valid I A A P (f <catch> handler)"
-  apply(simp add: catch_def)
+    "equiv_valid I A A (P and Q) (f <catch> handler)"
+  apply (simp add: catch_def)
   apply (wp err ok | wpc | simp)+
-   apply(insert hoare[simplified validE_E_def validE_def])[1]
-   apply(simp split: sum.splits)
+   apply (insert hoare[simplified validE_E_def validE_def])[1]
+   apply (simp split: sum.splits)
   by simp
 
 lemma equiv_valid_rv_trivial:

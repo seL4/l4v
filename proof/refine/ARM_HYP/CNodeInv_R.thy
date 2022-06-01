@@ -13,6 +13,8 @@ theory CNodeInv_R
 imports Ipc_R Invocations_R
 begin
 
+unbundle l4v_word_context
+
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 primrec
@@ -48,9 +50,7 @@ where
 
 lemma rightsFromWord_correspondence:
   "rightsFromWord w = rights_mask_map (data_to_rights w)"
-  by (simp add: rightsFromWord_def rights_mask_map_def
-                data_to_rights_def Let_def nth_ucast)
-
+  by (simp add: rightsFromWord_def rights_mask_map_def data_to_rights_def Let_def)
 
 primrec
   cnodeinv_relation :: "Invocations_A.cnode_invocation \<Rightarrow> Invocations_H.cnode_invocation \<Rightarrow> bool"
@@ -6622,7 +6622,6 @@ lemma rvk_prog_modify_map:
    apply (simp add: modify_map_def fun_upd_idem)
    apply (simp add: revoke_progress_ord_def)
   apply simp
-  apply (erule meta_allE, drule meta_mp, rule refl)
   apply (erule disjE)
    apply (simp add: modify_map_def fun_upd_idem)
    apply (simp add: revoke_progress_ord_def)
@@ -8022,7 +8021,7 @@ lemma m_cap:
 lemma sameRegion_cap'_src [simp]:
   "sameRegionAs cap' c = sameRegionAs src_cap c"
   using parency unfolding weak_derived'_def
-  apply (case_tac "isReplyCap src_cap")
+  apply (case_tac "isReplyCap src_cap"; clarsimp)
    apply (clarsimp simp: capMasterCap_def split: capability.splits arch_capability.splits
           ; fastforce simp: sameRegionAs_def ARM_HYP_H.sameRegionAs_def isCap_simps
                       split: if_split_asm)+
@@ -8966,7 +8965,7 @@ crunches
   vcpuUpdate, vgicUpdateLR, vcpuSave
   for irq_states' [wp]: valid_irq_states'
   (wp: crunch_wps maskInterrupt_irq_states'[where b=True, simplified] no_irq no_irq_mapM_x
-   simp: crunch_simps
+   simp: crunch_simps no_irq_isb no_irq_dsb
          set_gic_vcpu_ctrl_hcr_def setSCTLR_def setHCR_def get_gic_vcpu_ctrl_hcr_def
          getSCTLR_def get_gic_vcpu_ctrl_lr_def get_gic_vcpu_ctrl_apr_def
          get_gic_vcpu_ctrl_vmcr_def

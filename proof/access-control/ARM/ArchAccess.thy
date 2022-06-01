@@ -139,29 +139,73 @@ abbreviation integrity_asids_aux ::
                                  \<longrightarrow> pasASIDAbs aag asid' \<in> subjects)"
 
 definition integrity_asids ::
-  "'a PAS \<Rightarrow> 'a set \<Rightarrow> asid \<Rightarrow> 'y::state_ext state \<Rightarrow> 'z:: state_ext state  \<Rightarrow> bool" where
-  "integrity_asids aag subjects x s s' \<equiv>
-   integrity_asids_aux aag subjects x (asid_table s  (asid_high_bits_of x))
-                                      (asid_table s' (asid_high_bits_of x))"
-
-declare integrity_asids_def[simp]
+  "'a PAS \<Rightarrow> 'a set \<Rightarrow> obj_ref \<Rightarrow> asid \<Rightarrow> 'y::state_ext state \<Rightarrow> 'z:: state_ext state  \<Rightarrow> bool" where
+  "integrity_asids aag subjects x a s s' \<equiv>
+   integrity_asids_aux aag subjects a (asid_table s  (asid_high_bits_of a))
+                                      (asid_table s' (asid_high_bits_of a))"
 
 sublocale kheap_update: Arch_arch_update_eq "kheap_update f"
   by unfold_locales simp
 
 lemma (in Arch_arch_update_eq) integrity_asids_update[simp]:
-  "integrity_asids aag subjects x (f st) s = integrity_asids aag subjects x st s"
-  "integrity_asids aag subjects x st (f s) = integrity_asids aag subjects x st s"
-  by (auto simp: arch)
+  "integrity_asids aag subjects x a (f st) s = integrity_asids aag subjects x a st s"
+  "integrity_asids aag subjects x a st (f s) = integrity_asids aag subjects x a st s"
+  by (auto simp: integrity_asids_def arch)
 
 lemmas integrity_asids_updates =
   cdt_update.integrity_asids_update
   more_update.integrity_asids_update
-  kheap_update.integrity_asids_update
   revokable_update.integrity_asids_update
   interrupt_update.integrity_asids_update
   cur_thread_update.integrity_asids_update
   machine_state_update.integrity_asids_update
+
+(* The kheap isn't used in ARM's integrity_asids definition,
+   but we need the following lemmas in some generic contexts *)
+
+lemma integrity_asids_cnode_update':
+  "\<lbrakk> kheap st p = Some (CNode sz cs); integrity_asids aag subjects x a st (s\<lparr>kheap := rest\<rparr>) \<rbrakk>
+     \<Longrightarrow> integrity_asids aag subjects x a st (s\<lparr>kheap := \<lambda>x. if x = p then v else rest x\<rparr>)"
+  by (simp add: integrity_asids_def)
+
+lemma integrity_asids_tcb_update':
+  "\<lbrakk> kheap st p = Some (TCB tcb); integrity_asids aag subjects x a st (s\<lparr>kheap := rest\<rparr>) \<rbrakk>
+     \<Longrightarrow> integrity_asids aag subjects x a st (s\<lparr>kheap := \<lambda>x. if x = p then v else rest x\<rparr>)"
+  by (simp add: integrity_asids_def)
+
+lemma integrity_asids_ep_update':
+  "\<lbrakk> kheap st p = Some (Endpoint ep); integrity_asids aag subjects x a st (s\<lparr>kheap := rest\<rparr>) \<rbrakk>
+     \<Longrightarrow> integrity_asids aag subjects x a st (s\<lparr>kheap := \<lambda>x. if x = p then v else rest x\<rparr>)"
+  by (simp add: integrity_asids_def)
+
+lemma integrity_asids_ntfn_update':
+  "\<lbrakk> kheap st p = Some (Notification ntfn); integrity_asids aag subjects x a st (s\<lparr>kheap := rest\<rparr>) \<rbrakk>
+     \<Longrightarrow> integrity_asids aag subjects x a st (s\<lparr>kheap := \<lambda>x. if x = p then v else rest x\<rparr>)"
+  by (simp add: integrity_asids_def)
+
+lemmas integrity_asids_kh_upds'' =
+  integrity_asids_cnode_update'
+  integrity_asids_tcb_update'
+  integrity_asids_ep_update'
+  integrity_asids_ntfn_update'
+
+lemmas integrity_asids_kh_upds =
+  integrity_asids_kh_upds''
+  integrity_asids_kh_upds''[where rest="kheap s" and s=s for s, folded fun_upd_def, simplified]
+
+declare integrity_asids_def[simp]
+
+lemma integrity_asids_kh_upds':
+  "integrity_asids aag subjects x a (s\<lparr>kheap := kheap s(p \<mapsto> CNode sz cs)\<rparr>) s"
+  "integrity_asids aag subjects x a (s\<lparr>kheap := kheap s(p \<mapsto> TCB tcb)\<rparr>) s"
+  "integrity_asids aag subjects x a (s\<lparr>kheap := kheap s(p \<mapsto> Endpoint ep)\<rparr>) s"
+  "integrity_asids aag subjects x a (s\<lparr>kheap := kheap s(p \<mapsto> Notification ntfn)\<rparr>) s"
+  by auto
+
+lemma integrity_asids_kh_update:
+  "integrity_asids aag subject x a (s\<lparr>kheap := kh\<rparr>) (s\<lparr>kheap := kh'\<rparr>)
+   \<Longrightarrow> integrity_asids aag subject x a (s\<lparr>kheap := kh(p := v)\<rparr>) (s\<lparr>kheap := kh'(p := v)\<rparr>)"
+  by auto
 
 
 subsection \<open>Misc definitions\<close>
@@ -227,6 +271,9 @@ requalify_consts
 requalify_facts
   integrity_asids_updates
   state_vrefs_upd
+  integrity_asids_kh_upds
+  integrity_asids_kh_upds'
+  integrity_asids_kh_update
 
 end
 

@@ -31,19 +31,14 @@ lemma ccorres_dc_comp:
 
 declare if_split [split del]
 
-lemma empty_fail_getEndpoint:
-  "empty_fail (getEndpoint ep)"
-  unfolding getEndpoint_def
-  by (auto intro: empty_fail_getObject)
-
 definition
   "option_map2 f m = option_map f \<circ> m"
 
 lemma tcbSchedEnqueue_cslift_spec:
   "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> \<lbrace>s. \<exists>d v. option_map2 tcbPriority_C (cslift s) \<acute>tcb = Some v
-                       \<and> v \<le> ucast maxPrio
+                       \<and> unat v \<le> numPriorities
                        \<and> option_map2 tcbDomain_C (cslift s) \<acute>tcb = Some d
-                       \<and> d \<le> ucast maxDom
+                       \<and> unat d < Kernel_Config.numDomains
                        \<and> (end_C (index \<acute>ksReadyQueues (unat (d*0x100 + v))) \<noteq> NULL
                            \<longrightarrow> option_map2 tcbPriority_C (cslift s)
                                    (head_C (index \<acute>ksReadyQueues (unat (d*0x100 + v))))
@@ -61,6 +56,10 @@ lemma tcbSchedEnqueue_cslift_spec:
   apply (clarsimp simp: option_map2_def fun_eq_iff h_t_valid_clift
                         h_t_valid_field[OF h_t_valid_clift])
   apply (rule conjI)
+   apply (clarsimp simp: typ_heap_simps le_maxDomain_eq_less_numDomains)
+   apply unat_arith
+  apply clarsimp
+  apply (rule conjI)
    apply (clarsimp simp: typ_heap_simps cong: if_cong)
    apply (simp split: if_split)
   apply (clarsimp simp: typ_heap_simps if_Some_helper cong: if_cong)
@@ -70,9 +69,9 @@ lemma setThreadState_cslift_spec:
   "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> \<lbrace>s. s \<Turnstile>\<^sub>c \<acute>tptr \<and> (\<forall>x. ksSchedulerAction_' (globals s) = tcb_Ptr x
                  \<and> x \<noteq> 0 \<and> x \<noteq> 1
               \<longrightarrow> (\<exists>d v. option_map2 tcbPriority_C (cslift s) (tcb_Ptr x) = Some v
-                       \<and> v \<le> ucast maxPrio
+                       \<and> unat v \<le> numPriorities
                        \<and> option_map2 tcbDomain_C (cslift s) (tcb_Ptr x) = Some d
-                       \<and> d \<le> ucast maxDom
+                       \<and> unat d < Kernel_Config.numDomains
                        \<and> (end_C (index \<acute>ksReadyQueues (unat (d*0x100 + v))) \<noteq> NULL
                            \<longrightarrow> option_map2 tcbPriority_C (cslift s)
                                    (head_C (index \<acute>ksReadyQueues (unat (d*0x100 + v))))
@@ -145,32 +144,27 @@ lemma ctcb_relation_tcbPriority:
   "ctcb_relation tcb tcb' \<Longrightarrow> ucast (tcbPriority tcb) = tcbPriority_C tcb'"
   by (simp add: ctcb_relation_def)
 
-lemma ctcb_relation_tcbDomain_maxDom:
-  "\<lbrakk> ctcb_relation tcb tcb'; tcbDomain tcb \<le> maxDomain \<rbrakk> \<Longrightarrow> tcbDomain_C tcb' \<le> ucast maxDom"
+lemma ctcb_relation_tcbDomain_maxDomain_numDomains:
+  "\<lbrakk> ctcb_relation tcb tcb'; tcbDomain tcb \<le> maxDomain \<rbrakk>
+   \<Longrightarrow> unat (tcbDomain_C tcb') < Kernel_Config.numDomains"
   apply (subst ctcb_relation_tcbDomain[symmetric], simp)
-  apply (subst ucast_le_migrate)
-    apply ((simp add:maxDom_def word_size)+)[2]
-  apply (simp add: ucast_up_ucast is_up_def source_size_def word_size target_size_def)
-  apply (simp add: maxDom_to_H)
+  apply (simp add: le_maxDomain_eq_less_numDomains)
   done
 
-lemma ctcb_relation_tcbPriority_maxPrio:
+lemma ctcb_relation_tcbPriority_maxPriority_numPriorities:
   "\<lbrakk> ctcb_relation tcb tcb'; tcbPriority tcb \<le> maxPriority \<rbrakk>
-    \<Longrightarrow> tcbPriority_C tcb' \<le> ucast maxPrio"
+    \<Longrightarrow> unat (tcbPriority_C tcb') < numPriorities"
   apply (subst ctcb_relation_tcbPriority[symmetric], simp)
-  apply (subst ucast_le_migrate)
-    apply ((simp add: seL4_MaxPrio_def word_size)+)[2]
-  apply (simp add: ucast_up_ucast is_up_def source_size_def word_size target_size_def)
-  apply (simp add: maxPrio_to_H)
+  apply (simp add: maxPriority_def numPriorities_def word_le_nat_alt)
   done
 
 lemma tcbSchedEnqueue_cslift_precond_discharge:
   "\<lbrakk> (s, s') \<in> rf_sr; obj_at' (P :: tcb \<Rightarrow> bool) x s;
         valid_queues s; valid_objs' s \<rbrakk> \<Longrightarrow>
    (\<exists>d v. option_map2 tcbPriority_C (cslift s') (tcb_ptr_to_ctcb_ptr x) = Some v
-        \<and> v \<le> ucast maxPrio
+        \<and> unat v < numPriorities
         \<and> option_map2 tcbDomain_C (cslift s') (tcb_ptr_to_ctcb_ptr x) = Some d
-        \<and> d \<le> ucast maxDom
+        \<and> unat d < Kernel_Config.numDomains
         \<and> (end_C (index (ksReadyQueues_' (globals s')) (unat (d*0x100 + v))) \<noteq> NULL
                 \<longrightarrow> option_map2 tcbPriority_C (cslift s')
                      (head_C (index (ksReadyQueues_' (globals s')) (unat (d*0x100 + v))))
@@ -184,12 +178,12 @@ lemma tcbSchedEnqueue_cslift_precond_discharge:
   apply (frule_tac t=x in valid_objs'_maxDomain, fastforce simp: obj_at'_def)
   apply (drule_tac P="\<lambda>tcb. tcbPriority tcb \<le> maxPriority" in obj_at_ko_at2', simp)
   apply (drule_tac P="\<lambda>tcb. tcbDomain tcb \<le> maxDomain" in obj_at_ko_at2', simp)
-
-  apply (simp add: ctcb_relation_tcbDomain_maxDom ctcb_relation_tcbPriority_maxPrio)
+  apply (simp add: ctcb_relation_tcbDomain_maxDomain_numDomains
+                   ctcb_relation_tcbPriority_maxPriority_numPriorities)
   apply (frule_tac d="tcbDomain ko" and p="tcbPriority ko"
               in rf_sr_sched_queue_relation)
     apply (simp add: maxDom_to_H maxPrio_to_H)+
-  apply (simp add: cready_queues_index_to_C_def2 numPriorities_def)
+  apply (simp add: cready_queues_index_to_C_def2 numPriorities_def le_maxDomain_eq_less_numDomains)
   apply (clarsimp simp: ctcb_relation_def)
   apply (frule arg_cong[where f=unat], subst(asm) unat_ucast_up_simp, simp)
   apply (frule tcb_queue'_head_end_NULL)
@@ -1303,8 +1297,8 @@ next
   have [simp]: "\<And>pte pte'. \<lbrakk> cpte_relation pte pte'; isPageTablePTE pte \<rbrakk> \<Longrightarrow>
                             ptrFromPAddr (pte_CL.ppn_CL (pte_lift pte') << pageBits) =
                             getPPtrFromHWPTE pte"
-    by (clarsimp simp: cpte_relation_def isPageTablePTE_def Let_def getPPtrFromHWPTE_def bit_simps
-                 split: pte.splits)
+    by (auto simp: cpte_relation_def isPageTablePTE_def Let_def getPPtrFromHWPTE_def bit_simps
+             split: pte.splits)
 
   have mask_simp[simp]: "(0x1FF::machine_word) = mask ptTranslationBits"
     by (simp add: bit_simps mask_def)
@@ -1620,9 +1614,7 @@ lemma deletingIRQHandler_ccorres:
        apply (rule allI, rule conseqPre, vcg)
        apply (clarsimp simp: getIRQSlot_def liftM_def getInterruptState_def
                              locateSlot_conv)
-       apply (simp add: bind_def simpler_gets_def return_def ucast_nat_def uint_up_ucast
-                        is_up getIRQSlot_ccorres_stuff[simplified]
-                   flip: of_int_uint_ucast)
+       apply (simp add: bind_def simpler_gets_def return_def getIRQSlot_ccorres_stuff[simplified])
       apply ceqv
      apply (rule ccorres_symb_exec_l)
         apply (rule ccorres_symb_exec_l)
@@ -1640,7 +1632,7 @@ lemma deletingIRQHandler_ccorres:
   apply (clarsimp simp: cte_wp_at_ctes_of Collect_const_mem
                         irq_opt_relation_def Kernel_C.maxIRQ_def)
   apply (drule word_le_nat_alt[THEN iffD1])
-  apply (clarsimp simp: uint_0_iff unat_gt_0 uint_up_ucast is_up unat_def[symmetric])
+  apply (clarsimp simp: uint_0_iff unat_gt_0 uint_up_ucast is_up)
   done
 
 (* 6 = wordRadix,
@@ -1660,7 +1652,7 @@ lemma Zombie_new_spec:
   apply (simp add: word_add_less_mono1[where k=1 and j="0x3F", simplified])
   done
 
-lemmas upcast_ucast_id = Word_Lemmas.ucast_up_inj
+lemmas upcast_ucast_id = More_Word.ucast_up_inj
 
 lemma irq_opt_relation_Some_ucast:
   "\<lbrakk> x && mask 6 = x; ucast x \<noteq> irqInvalid;
@@ -2116,7 +2108,7 @@ lemma finaliseCap_ccorres:
                         mask_def)
        apply (simp add: cte_level_bits_def tcbCTableSlot_def
                         Kernel_C.tcbCTable_def tcbCNodeEntries_def
-                        word_bool_alg.conj_disj_distrib2
+                        bit.conj_disj_distrib2
                         word_bw_assocs)
        apply (simp add: objBits_simps ctcb_ptr_to_tcb_ptr_def)
        apply (frule is_aligned_add_helper[where p="tcbptr - ctcb_offset" and d=ctcb_offset for tcbptr])

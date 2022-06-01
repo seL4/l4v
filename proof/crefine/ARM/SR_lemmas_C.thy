@@ -296,67 +296,6 @@ lemma cmdbnode_relation_mdb_node_to_H [simp]:
   unfolding cmdbnode_relation_def mdb_node_to_H_def mdb_node_lift_def cte_lift_def
   by (fastforce split: option.splits)
 
-(* MOVE --- here down doesn't really belong here, maybe in a haskell specific file?*)
-lemma tcb_cte_cases_in_range1:
-  assumes tc:"tcb_cte_cases (y - x) = Some v"
-  and     al: "is_aligned x tcbBlockSizeBits"
-  shows   "x \<le> y"
-proof -
-  note objBits_defs [simp]
-
-  from tc obtain q where yq: "y = x + q" and qv: "q < 2 ^ tcbBlockSizeBits"
-    unfolding tcb_cte_cases_def
-    by (simp add: diff_eq_eq split: if_split_asm)
-
-  have "x \<le> x + 2 ^ tcbBlockSizeBits - 1" using al
-    by (rule is_aligned_no_overflow)
-
-  hence "x \<le> x + q" using qv
-    apply simp
-    apply unat_arith
-    apply simp
-    done
-
-  thus ?thesis using yq by simp
-qed
-
-lemma tcb_cte_cases_in_range2:
-  assumes tc: "tcb_cte_cases (y - x) = Some v"
-  and     al: "is_aligned x tcbBlockSizeBits"
-  shows   "y \<le> x + 2 ^ tcbBlockSizeBits - 1"
-proof -
-  note objBits_defs [simp]
-
-  from tc obtain q where yq: "y = x + q" and qv: "q \<le> 2 ^ tcbBlockSizeBits - 1"
-    unfolding tcb_cte_cases_def
-    by (simp add: diff_eq_eq split: if_split_asm)
-
-  have "x + q \<le> x + (2 ^ tcbBlockSizeBits - 1)" using qv
-    apply (rule word_plus_mono_right)
-    apply (rule is_aligned_no_overflow' [OF al])
-    done
-
-  thus ?thesis using yq by (simp add: field_simps)
-qed
-
-lemmas tcbSlots =
-  tcbCTableSlot_def tcbVTableSlot_def
-  tcbReplySlot_def tcbCallerSlot_def tcbIPCBufferSlot_def
-
-lemma updateObject_cte_tcb:
-  assumes tc: "tcb_cte_cases (ptr - ptr') = Some (accF, updF)"
-  shows   "updateObject ctea (KOTCB tcb) ptr ptr' next =
-   (do alignCheck ptr' (objBits tcb);
-        magnitudeCheck ptr' next (objBits tcb);
-        return (KOTCB (updF (\<lambda>_. ctea) tcb))
-    od)"
-  using tc unfolding tcb_cte_cases_def
-  apply -
-  apply (clarsimp simp add: updateObject_cte Let_def
-    tcb_cte_cases_def objBits_simps' tcbSlots shiftl_t2n
-    split: if_split_asm cong: if_cong)
-  done
-
 definition
   tcb_no_ctes_proj :: "tcb \<Rightarrow> Structures_H.thread_state \<times> word32 \<times> word32 \<times> arch_tcb \<times> bool \<times> word8 \<times> word8 \<times> word8 \<times> nat \<times> fault option \<times> word32 option"
   where
@@ -472,7 +411,7 @@ declare pspace_distinctD' [intro?]
 lemma ctes_of_ksI [intro?]:
   fixes s :: "kernel_state"
   assumes ks: "ksPSpace s x = Some (KOCTE cte)"
-  and     pa: "pspace_aligned' s"  (* yuck *)
+  and     pa: "pspace_aligned' s"
   and     pd: "pspace_distinct' s"
   shows   "ctes_of s x = Some cte"
 proof (rule ctes_of_eq_cte_wp_at')
@@ -506,15 +445,21 @@ lemma fst_setCTE:
            \<forall>T p. typ_at' T p s = typ_at' T p s'\<rbrakk> \<Longrightarrow> P"
   shows   "P"
 proof -
-  (* Unpack the existential and bind x, theorems in this.  Yuck *)
-  from fst_setCTE0 [where cte = cte, OF ct] guess s' by clarsimp
+  from fst_setCTE0 [where cte = cte, OF ct]
+  obtain s' where
+    "((), s')\<in>fst (setCTE dest cte s)"
+    "s' = s\<lparr>ksPSpace := ksPSpace s'\<rparr>"
+    "dom (ksPSpace s) = dom (ksPSpace s')"
+    "(\<forall>p \<in> dom (ksPSpace s').
+       case the (ksPSpace s p) of
+         KOTCB t \<Rightarrow> \<exists>t'. ksPSpace s' p = Some (KOTCB t') \<and> tcb_no_ctes_proj t = tcb_no_ctes_proj t'
+       | KOCTE _ \<Rightarrow> \<exists>cte. ksPSpace s' p = Some (KOCTE cte)
+       | _ \<Rightarrow> ksPSpace s' p = ksPSpace s p)"
+    by clarsimp
   note thms = this
 
-  from thms have ceq: "ctes_of s' = ctes_of s(dest \<mapsto> cte)"
-    apply -
-    apply (erule use_valid [OF _ setCTE_ctes_of_wp])
-    apply simp
-    done
+  have ceq: "ctes_of s' = ctes_of s(dest \<mapsto> cte)"
+    by (rule use_valid [OF thms(1) setCTE_ctes_of_wp]) simp
 
   show ?thesis
   proof (rule rl)
@@ -658,10 +603,6 @@ proof -
     qed
   qed fact+
 qed
-
-lemma ctes_of_cte_at:
-  "ctes_of s p = Some x \<Longrightarrow> cte_at' p s"
-  by (simp add: cte_wp_at_ctes_of)
 
 lemma cor_map_relI:
   assumes dm: "dom am = dom am'"
@@ -947,6 +888,7 @@ abbreviation
 lemma valid_mdb_ctes_of_next:
   "\<lbrakk> valid_mdb' s; ctes_of s p = Some cte; mdbNext (cteMDBNode cte) \<noteq> 0 \<rbrakk> \<Longrightarrow> cte_at' (mdbNext (cteMDBNode cte)) s"
   unfolding valid_mdb'_def valid_mdb_ctes_def
+  supply word_neq_0_conv[simp del]
   apply clarsimp
   apply (erule (2) valid_dlistE)
   apply (simp add: cte_wp_at_ctes_of)
@@ -955,6 +897,7 @@ lemma valid_mdb_ctes_of_next:
 lemma valid_mdb_ctes_of_prev:
   "\<lbrakk> valid_mdb' s; ctes_of s p = Some cte; mdbPrev (cteMDBNode cte) \<noteq> 0 \<rbrakk> \<Longrightarrow> cte_at' (mdbPrev (cteMDBNode cte)) s"
   unfolding valid_mdb'_def valid_mdb_ctes_def
+  supply word_neq_0_conv[simp del]
   apply clarsimp
   apply (erule (2) valid_dlistE)
   apply (simp add: cte_wp_at_ctes_of)
@@ -1934,7 +1877,7 @@ lemma memory_cross_over:
   apply (cut_tac p=ptr in unat_mask_2_less_4)
   apply (subgoal_tac "(ptr && ~~ mask 2) + (ptr && mask 2) = ptr")
    apply (subgoal_tac "!n x. n < 4 \<longrightarrow> (unat (x::word32) = n) = (x = of_nat n)")
-    apply (auto simp add: eval_nat_numeral unat_eq_0 add.commute
+    apply (auto simp add: eval_nat_numeral unat_eq_0 add.commute take_bit_Suc
                 elim!: less_SucE)[1]
     apply (clarsimp simp add: unat32_eq_of_nat word_bits_def)
   apply (simp add: add.commute word_plus_and_or_coroll2)
@@ -1948,12 +1891,9 @@ lemma cap_get_tag_isCap_ArchObject0:
   \<and> (cap_get_tag cap' = scast cap_page_directory_cap) = isPageDirectoryCap cap
   \<and> (cap_get_tag cap' = scast cap_small_frame_cap) = (isPageCap cap \<and> capVPSize cap = ARMSmallPage)
   \<and> (cap_get_tag cap' = scast cap_frame_cap) = (isPageCap cap \<and> capVPSize cap \<noteq> ARMSmallPage)"
-  using cr
-  apply -
-  apply (erule ccap_relationE)
+  apply (rule ccap_relationE[OF cr])
   apply (simp add: cap_to_H_def cap_lift_def Let_def isArchCap_def)
-  apply (clarsimp simp: isCap_simps cap_tag_defs word_le_nat_alt pageSize_def Let_def split: if_split_asm) \<comment> \<open>takes a while\<close>
-  done
+  by (clarsimp simp: isCap_simps cap_tag_defs word_le_nat_alt pageSize_def Let_def split: if_split_asm) \<comment> \<open>takes a while\<close>
 
 lemma cap_get_tag_isCap_ArchObject:
   assumes cr: "ccap_relation (capability.ArchObjectCap cap) cap'"
@@ -2042,11 +1982,10 @@ lemma gs_set_assn_Delete_cstate_relation:
   "cstate_relation s (ghost'state_'_update (gs_set_assn cteDeleteOne_'proc v) gs)
     = cstate_relation s gs"
   apply (cases "ghost'state_' gs")
-  apply (auto simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
-                    cmachine_state_relation_def ghost_assertion_data_set_def
-                    ghost_size_rel_def ghost_assertion_data_get_def
-                    cteDeleteOne_'proc_def cap_get_capSizeBits_'proc_def)
-  done
+  by (auto simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
+                 cmachine_state_relation_def ghost_assertion_data_set_def
+                 ghost_size_rel_def ghost_assertion_data_get_def
+                 cteDeleteOne_'proc_def cap_get_capSizeBits_'proc_def)
 
 lemma ptr_val_tcb_ptr_mask:
   "obj_at' (P :: tcb \<Rightarrow> bool) thread s
@@ -2184,6 +2123,19 @@ lemma rf_sr_sched_action_relation:
    \<Longrightarrow> cscheduler_action_relation (ksSchedulerAction s) (ksSchedulerAction_' (globals s'))"
   by (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
 
-end
-end
+lemma numDomains_sge_1_simp:
+  "1 <s Kernel_C.numDomains \<longleftrightarrow> Suc 0 < Kernel_Config.numDomains"
+  apply (simp add: word_sless_alt sint_numDomains_to_H)
+  apply (subst nat_less_as_int, simp)
+  done
 
+lemma unat_scast_numDomains:
+  "unat (SCAST(32 signed \<rightarrow> machine_word_len) Kernel_C.numDomains) = unat Kernel_C.numDomains"
+  by (simp add: scast_eq sint_numDomains_to_H unat_numDomains_to_H numDomains_machine_word_safe)
+
+lemma msgRegisters_size_sanity:
+  "size_msgRegisters = unat (n_msgRegisters)"
+  by (simp add: n_msgRegisters_def size_msgRegisters_def)
+
+end
+end

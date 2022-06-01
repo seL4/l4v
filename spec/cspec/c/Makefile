@@ -4,7 +4,11 @@
 # SPDX-License-Identifier: GPL-2.0-only
 #
 
+# For kernel builds (CSpec and binary verificaiton):
 KERNEL_BUILD_ROOT := build/${L4V_ARCH}
+
+# For building configuration headers only (not used in CSpec):
+KERNEL_CONFIG_ROOT := config-build/${L4V_ARCH}
 
 # Death to recursively-expanded variables.
 KERNEL_CMAKE_EXTRA_OPTIONS := ${KERNEL_CMAKE_EXTRA_OPTIONS}
@@ -18,6 +22,16 @@ include kernel.mk
 # called by ../../Makefile
 cspec: ${UMM_TYPES} ${KERNEL_BUILD_ROOT}/kernel_all.c_pp
 	cd ${KERNEL_BUILD_ROOT} && ninja kernel_theories
+
+
+CONFIG_THY := ../../machine/${L4V_ARCH}/Kernel_Config.thy
+
+# called by ../../Makefile
+config: ${CONFIG_THY}
+
+${CONFIG_THY}: ${KERNEL_CONFIG_ROOT}/.cmake_done
+	./gen-config-thy.py
+
 
 clean:
 	rm -rf ${KERNEL_BUILD_ROOT}

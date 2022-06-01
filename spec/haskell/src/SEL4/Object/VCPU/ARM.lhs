@@ -95,6 +95,8 @@ It is not possible to dissociate a VCPU and a TCB by using SetTCB. Final outcome
 >         _ -> return ()
 >     archThreadSet (\atcb -> atcb { atcbVCPUPtr = Just vcpuPtr }) tcbPtr
 >     setObject vcpuPtr $ vcpu { vcpuTCBPtr = Just tcbPtr }
+>     ct <- getCurThread
+>     when (tcbPtr == ct) $ vcpuSwitch (Just vcpuPtr)
 >     return []
 
 \subsection{VCPU: Update functions}

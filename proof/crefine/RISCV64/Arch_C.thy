@@ -9,11 +9,12 @@ theory Arch_C
 imports Recycle_C
 begin
 
+unbundle l4v_word_context
+
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunches unmapPageTable
-  for ctes_of[wp]:  "\<lambda>s. P (ctes_of s)"
-  and gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
+  for gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
   (wp: crunch_wps simp: crunch_simps)
 
 end
@@ -27,7 +28,7 @@ lemma storePTE_def':
 
 lemma objBits_InvalidPTE:
   "objBits RISCV64_H.InvalidPTE = word_size_bits"
-  by (simp add: objBits_simps archObjSize_def word_size_bits_def bit_simps)
+  by (simp add: objBits_simps bit_simps)
 
 lemma objBits_InvalidPTE_pte_bits:
   "objBits RISCV64_H.InvalidPTE = pte_bits"
@@ -409,7 +410,7 @@ lemma ucast_x3_shiftr_asid_low_bits:
    \<Longrightarrow> UCAST(7 \<rightarrow> 64) (UCAST(16 \<rightarrow> 7) (UCAST(64 \<rightarrow> 16) base >> asid_low_bits)) = base >> asid_low_bits"
   apply (simp add: ucast_shiftr word_le_mask_eq asid_bits_def)
   apply (subst le_max_word_ucast_id)
-   apply (simp add: max_word_def)
+   apply simp
    apply (drule_tac n=asid_low_bits in le_shiftr)
    apply (simp add: asid_low_bits_def asid_bits_def mask_def )+
   done
@@ -730,8 +731,8 @@ lemma addrFromPPtr_in_user_region:
   apply (clarsimp simp: canonical_bit_def mask_def)
   apply (subst diff_minus_eq_add[symmetric])
   apply (cut_tac n=p in max_word_max)
-  apply (simp add: max_word_def)
   apply unat_arith
+  apply simp
   done
 
 lemma page_table_at'_kernel_mappings:
@@ -1228,7 +1229,7 @@ lemma ccorres_pre_getObject_pte:
   done
 
 lemma ptr_add_uint_of_nat [simp]:
-    "a  +\<^sub>p uint (of_nat b :: machine_word) = a  +\<^sub>p (int b)"
+  "a  +\<^sub>p uint (of_nat b :: machine_word) = a  +\<^sub>p (int b)"
   by (clarsimp simp: CTypesDefs.ptr_add_def)
 
 declare int_unat[simp]
@@ -2360,7 +2361,7 @@ lemma decodeRISCVMMUInvocation_ccorres:
                                         from_bool_0)
                   apply (cut_tac P="\<lambda>y. y < i_' x + 1 = rhs y" for rhs in allI,
                          rule less_x_plus_1)
-                   apply (fastforce simp: max_word_def asid_high_bits_def)
+                   apply (fastforce simp: asid_high_bits_def)
                   apply (clarsimp simp: rf_sr_riscvKSASIDTable from_bool_def
                                         asid_high_bits_word_bits
                                         option_to_ptr_def option_to_0_def
@@ -2677,7 +2678,7 @@ lemma decodeRISCVMMUInvocation_ccorres:
                apply (erule_tac P="x < y" for x y in disjE, simp_all)[1]
               apply (rule plus_one_helper2 [OF order_refl])
               apply (rule notI, drule max_word_wrap)
-              apply (fastforce simp: max_word_def asid_low_bits_def)
+              apply (fastforce simp: asid_low_bits_def)
              apply (simp add: cap_get_tag_isCap_ArchObject[symmetric])
              apply (frule cap_get_tag_isCap_unfolded_H_cap)
              apply (clarsimp simp: cap_lift_asid_pool_cap cap_to_H_def

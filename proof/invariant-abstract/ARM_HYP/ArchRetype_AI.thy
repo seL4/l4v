@@ -70,8 +70,6 @@ crunch cte_wp_at[wp]: init_arch_objects "\<lambda>s. P (cte_wp_at P' p s)"
 crunch typ_at[wp]: init_arch_objects "\<lambda>s. P (typ_at T p s)"
   (ignore: clearMemory wp: crunch_wps)
 
-crunch mdb_inv[wp]: get_pd "\<lambda>s. P (cdt s)"
-  (ignore: clearMemory wp: crunch_wps)
 crunch mdb_inv[wp]: store_pde "\<lambda>s. P (cdt s)"
   (ignore: clearMemory wp: crunch_wps)
 
@@ -651,15 +649,13 @@ lemma vs_lookup_pages':
 lemma hyp_refs_eq:
   "ARM_HYP.state_hyp_refs_of s' = ARM_HYP.state_hyp_refs_of s"
   unfolding s'_def ps_def
-  apply (clarsimp intro!: ext simp: state_hyp_refs_of_def
-                    simp: orthr
-                   split: option.splits)
-  apply (cases ty, simp_all add: tyunt default_object_def default_tcb_def
-                                 hyp_refs_of_def tcb_hyp_refs_def tcb_vcpu_refs_def
-                                 default_arch_tcb_def)
+  apply (rule ext)
+  apply (clarsimp simp: state_hyp_refs_of_def orthr split: option.splits)
+  apply (cases ty; simp add: tyunt default_object_def default_tcb_def hyp_refs_of_def tcb_hyp_refs_def
+                             default_arch_tcb_def)
   apply (rename_tac ao)
   apply (clarsimp simp: refs_of_a_def ARM_HYP.vcpu_tcb_refs_def default_arch_object_def
-                        arch_kernel_obj.case ARM_A.default_vcpu_def
+                        ARM_A.default_vcpu_def
                   split: aobject_type.splits)
   done
 
@@ -1114,7 +1110,7 @@ lemma storeWord_um_eq_0:
   "\<lbrace>\<lambda>m. underlying_memory m p = 0\<rbrace>
     storeWord x 0
    \<lbrace>\<lambda>_ m. underlying_memory m p = 0\<rbrace>"
-  by (simp add: storeWord_def word_rsplit_0 | wp)+
+  by (simp add: storeWord_def word_rsplit_0 word_bits_conv | wp)+
 
 
 lemma clearMemory_um_eq_0:
@@ -1192,7 +1188,7 @@ lemma init_arch_objects_excap:
    \<lbrace>\<lambda>rv s. ex_cte_cap_wp_to P p s\<rbrace>"
   by (wp ex_cte_cap_to_pres)
 
-crunch st_tcb_at[wp]: init_arch_objects "st_tcb_at P t"
+crunch pred_tcb_at[wp]: init_arch_objects "pred_tcb_at proj P t"
   (wp: crunch_wps)
 
 lemma valid_arch_mdb_detype:
@@ -1206,7 +1202,7 @@ lemmas init_arch_objects_wps
       init_arch_objects_valid_cap
       init_arch_objects_cap_table
       init_arch_objects_excap
-      init_arch_objects_st_tcb_at
+      init_arch_objects_pred_tcb_at
 
 end
 

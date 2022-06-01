@@ -50,9 +50,9 @@ lemma coerce_memset_to_heap_update_user_data:
   apply (subst access_ti_list_array)
      apply simp
     apply simp
-   apply (simp add: fcp_beta typ_info_word typ_info_ptr word_rsplit_0)
+   apply (simp add: typ_info_word typ_info_ptr word_rsplit_0)
    apply fastforce
-  apply (simp add: collapse_foldl_replicate)
+  apply (simp add: collapse_foldl_replicate word_bits_def)
   done
 
 lemma clift_foldl_hrs_mem_update:
@@ -328,9 +328,8 @@ lemma clearMemory_PageCap_ccorres:
        apply (rule aligned_range_offset_mem[where m=pageBits], simp_all)[1]
        apply (rule pbfs_atleast_pageBits)
       apply (erule cmap_relation_If_upd)
-        apply (clarsimp simp: cuser_user_data_relation_def fcp_beta
-                              order_less_le_trans[OF unat_lt2p])
-        apply (fold word_rsplit_0, simp add: word_rcat_rsplit)[1]
+        apply (clarsimp simp: cuser_user_data_relation_def order_less_le_trans[OF unat_lt2p])
+        apply (simp add: update_ti_t_word32_0s)
        apply (rule image_cong[OF _ refl])
        apply (rule set_eqI, rule iffI)
         apply (clarsimp simp del: atLeastAtMost_iff)
@@ -375,11 +374,11 @@ lemma clearMemory_PageCap_ccorres:
                         capAligned_def word_of_nat_less)
   apply (frule is_aligned_addrFromPPtr_n, simp add: pageBitsForSize_def split: vmpage_size.splits)
   by (clarsimp simp: is_aligned_no_overflow'[where n=12, simplified]
-                        is_aligned_no_overflow'[where n=16, simplified]
-                        is_aligned_no_overflow'[where n=20, simplified]
-                        is_aligned_no_overflow'[where n=24, simplified] pageBits_def
-                        field_simps is_aligned_mask[symmetric] mask_AND_less_0
-                        pageBitsForSize_def split: vmpage_size.splits)
+                     is_aligned_no_overflow'[where n=16, simplified]
+                     is_aligned_no_overflow'[where n=21, simplified]
+                     is_aligned_no_overflow'[where n=25, simplified] pageBits_def
+                     is_aligned_mask[symmetric] mask_AND_less_0
+                     pageBitsForSize_def split: vmpage_size.splits)
 
 lemma coerce_memset_to_heap_update_asidpool:
   "heap_update_list x (replicateHider 4096 0)
@@ -402,9 +401,9 @@ lemma coerce_memset_to_heap_update_asidpool:
   apply (subst access_ti_list_array)
      apply simp
     apply simp
-   apply (simp add: fcp_beta typ_info_word typ_info_ptr word_rsplit_0)
+   apply (simp add: typ_info_word typ_info_ptr word_rsplit_0)
    apply fastforce
-  apply (simp add: collapse_foldl_replicate)
+  apply (simp add: collapse_foldl_replicate word_bits_def)
   done
 
 declare replicate_numeral [simp]
@@ -420,8 +419,8 @@ lemma coerce_memset_to_heap_update_pte:
                    final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)
   apply (simp add: typ_info_simps align_td_array' size_td_array)
   apply (simp add: typ_info_array' typ_info_word word_rsplit_0)
-  apply (simp add: numeral_nat word_rsplit_0)
-  apply (simp add: replicateHider_def)
+  apply (simp add: eval_nat_numeral)
+  apply (simp add: replicateHider_def word_rsplit_0 word_bits_def)
   done
 
 lemma coerce_memset_to_heap_update_pde:
@@ -435,8 +434,8 @@ lemma coerce_memset_to_heap_update_pde:
                    final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)
   apply (simp add: typ_info_simps align_td_array' size_td_array)
   apply (simp add: typ_info_array' typ_info_word word_rsplit_0)
-  apply (simp add: numeral_nat word_rsplit_0)
-  apply (simp add: replicateHider_def)
+  apply (simp add: eval_nat_numeral)
+  apply (simp add: replicateHider_def word_rsplit_0 word_bits_def)
   done
 
 lemma objBits_eq_by_type:
@@ -663,8 +662,9 @@ lemma clearMemory_PT_setObject_PTE_ccorres:
          done
       apply (clarsimp simp add: table_bits_defs
                       cong: StateSpace.state.fold_congs globals.fold_congs)
+      apply (simp only: field_simps)
       apply (simp add: upto_enum_step_def objBits_simps table_bits_defs
-                       field_simps linorder_not_less[symmetric] archObjSize_def
+                       linorder_not_less[symmetric] archObjSize_def
                        upto_enum_word split_def)
       apply (erule mapM_x_store_memset_ccorres_assist
                       [unfolded split_def, OF _ _ _ _ _ _ subset_refl],
@@ -691,9 +691,9 @@ lemma clearMemory_PT_setObject_PTE_ccorres:
    apply (clarsimp simp: guard_is_UNIV_def table_bits_defs)
   apply (clarsimp simp: ptBits_def pageBits_def)
   apply (frule is_aligned_addrFromPPtr_n, simp add: table_bits_defs)
-  apply (clarsimp simp: is_aligned_no_overflow'[where n=10, simplified] table_bits_defs
-                        field_simps is_aligned_mask[symmetric] mask_AND_less_0)
-  apply (erule is_aligned_no_wrap', simp)
+  apply (clarsimp simp: is_aligned_no_overflow'[where n=12, simplified] table_bits_defs
+                        is_aligned_mask[symmetric] mask_AND_less_0
+                        add.commute[where b="addrFromPPtr ptr"])
   done
 
 lemma ccorres_make_xfdc:
@@ -1096,7 +1096,7 @@ lemma cancelBadgedSends_ccorres:
                      apply (rule cendpoint_relation_q_cong)
                      apply (rule sym, erule restrict_map_eqI)
                      apply (clarsimp simp: image_iff)
-                     apply (drule(2) map_to_ko_atI2)
+                     apply (drule(2) map_to_ko_atI)
                      apply (drule ko_at_state_refs_ofD')
                      apply clarsimp
                      apply (drule_tac x=p in spec)
@@ -1104,7 +1104,7 @@ lemma cancelBadgedSends_ccorres:
 
                     apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
                     apply clarsimp
-                    apply (drule(2) map_to_ko_atI2, drule ko_at_state_refs_ofD')
+                    apply (drule(2) map_to_ko_atI, drule ko_at_state_refs_ofD')
 
                     apply (rule cnotification_relation_q_cong)
                     apply (rule sym, erule restrict_map_eqI)
@@ -1233,7 +1233,7 @@ lemma coerce_memset_to_heap_update:
                    align_td_array' size_td_array)
   apply (simp add: typ_info_array')
   apply (simp add: typ_info_word word_rsplit_0 upt_conv_Cons)
-  apply (simp add: typ_info_word typ_info_ptr word_rsplit_0
+  apply (simp add: typ_info_word typ_info_ptr word_rsplit_0 word_bits_def
                    replicateHider_def)
   done
 

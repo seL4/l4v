@@ -154,8 +154,6 @@ lemma ucast_le_ucast_8_32:
   "(ucast x \<le> (ucast y :: word32)) = (x \<le> (y :: word8))"
   by (simp add: word_le_nat_alt is_up_8_32 unat_ucast_upcast)
 
-lemmas findVSpaceForASIDAssert_pd_at_wp2 = findVSpaceForASIDAssert_vs_at_wp
-
 lemma asid_shiftr_low_bits_less:
   "(asid :: machine_word) \<le> mask asid_bits \<Longrightarrow> asid >> asid_low_bits < 0x8"
   apply (rule_tac y="2 ^ 3" in order_less_le_trans)
@@ -193,13 +191,6 @@ lemma empty_fail_findVSpaceForASID[iff]:
   apply (simp add: assertE_def liftE_bindE checkPML4At_def split: if_split)
   done
 
-lemma empty_fail_findVSpaceForASIDAssert[iff]:
-  "empty_fail (findVSpaceForASIDAssert asid)"
-  apply (simp add: findVSpaceForASIDAssert_def catch_def
-                   checkPML4At_def)
-  apply (intro empty_fail_bind, simp_all split: sum.split)
-  done
-
 crunch inv'[wp]: archThreadGet P
 
 (* FIXME MOVE near thm tg_sp' *)
@@ -228,18 +219,12 @@ lemma more_pageBits_inner_beauty:
   apply clarsimp
   apply (simp add: word_shift_by_3)
   apply (subst (asm) word_plus_and_or_coroll)
-   apply (clarsimp simp: word_size word_ops_nth_size nth_ucast
-                         nth_shiftl bang_eq)
-   apply (drule test_bit_size)
-   apply (clarsimp simp: word_size pageBits_def)
-   apply arith
+   apply (word_eqI_solve dest: test_bit_size simp: pageBits_def)
   apply (insert x)
   apply (erule notE)
-  apply (rule word_eqI)
-  apply (clarsimp simp: word_size nth_ucast nth_shiftl nth_shiftr bang_eq)
-  apply (erule_tac x="n+3" in allE)
-  apply (clarsimp simp: word_ops_nth_size word_size)
-  apply (clarsimp simp: pageBits_def)
+  apply word_eqI
+  apply (erule_tac x="3+n" in allE)
+  apply (clarsimp simp: word_size pageBits_def)
   done
 
 (* FIXME x64: figure out where these are needed and adjust appropriately *)
@@ -386,11 +371,6 @@ lemma asUser_get_registers:
                         obj_at'_def)
   done
 
-lemma projectKO_user_data_device:
-  "(projectKO_opt ko = Some (t :: user_data_device)) = (ko = KOUserDataDevice)"
-  by (cases ko)
-     (auto simp: projectKO_opts_defs split: arch_kernel_object.splits)
-
 (* FIXME: move to where is_aligned_ptrFromPAddr is *)
 lemma is_aligned_ptrFromPAddr_pageBitsForSize:
   "is_aligned p (pageBitsForSize sz) \<Longrightarrow> is_aligned (ptrFromPAddr p) (pageBitsForSize sz)"
@@ -473,6 +453,84 @@ lemma valid_untyped':
   by (metis al intvl_range_conv' le_m1_iff_lt less_is_non_zero_p1
                nat_le_linear power_overflow sub_wrap add_0
                add_0_right word_add_increasing word_less_1 word_less_sub_1)
+
+(* We don't have access to n_msgRegisters from C here, but the number of msg registers in C should
+   be equivalent to what we have in the abstract/design specs. We want a number for this definition
+   that automatically updates if the number of registers changes, and we sanity check it later
+   in msgRegisters_size_sanity *)
+definition size_msgRegisters :: nat where
+  size_msgRegisters_pre_def: "size_msgRegisters \<equiv> size (X64.msgRegisters)"
+
+schematic_goal size_msgRegisters_def:
+  "size_msgRegisters = numeral ?x"
+  unfolding size_msgRegisters_pre_def X64.msgRegisters_def
+  by (simp add: upto_enum_red fromEnum_def enum_register del: Suc_eq_numeral)
+     (simp only: Suc_eq_plus1_left, simp del: One_nat_def)
+
+lemma length_msgRegisters[simplified size_msgRegisters_def]:
+  "length X64_H.msgRegisters = size_msgRegisters"
+  by (simp add: size_msgRegisters_pre_def X64_H.msgRegisters_def)
+
+lemma empty_fail_loadWordUser[intro!, simp]:
+  "empty_fail (loadWordUser x)"
+  by (simp add: loadWordUser_def ef_loadWord ef_dmo')
+
+lemma empty_fail_getMRs[iff]:
+  "empty_fail (getMRs t buf mi)"
+  by (auto simp add: getMRs_def split: option.split)
+
+lemma empty_fail_getReceiveSlots:
+  "empty_fail (getReceiveSlots r rbuf)"
+proof -
+  note
+    empty_fail_assertE[iff]
+    empty_fail_resolveAddressBits[iff]
+  show ?thesis
+  apply (clarsimp simp: getReceiveSlots_def loadCapTransfer_def split_def
+                 split: option.split)
+  apply (rule empty_fail_bind)
+   apply (simp add: capTransferFromWords_def)
+  apply (simp add: emptyOnFailure_def unifyFailure_def)
+  apply (intro empty_fail_catch empty_fail_bindE empty_fail_rethrowFailure,
+         simp_all add: empty_fail_whenEs)
+   apply (simp_all add: lookupCap_def split_def lookupCapAndSlot_def
+                        lookupSlotForThread_def liftME_def
+                        getThreadCSpaceRoot_def locateSlot_conv bindE_assoc
+                        lookupSlotForCNodeOp_def lookupErrorOnFailure_def
+                  cong: if_cong)
+   apply (intro empty_fail_bindE,
+          simp_all add: getSlotCap_def)
+  apply (intro empty_fail_If empty_fail_bindE empty_fail_rethrowFailure impI,
+         simp_all add: empty_fail_whenEs rangeCheck_def)
+  done
+qed
+
+lemma user_getreg_rv:
+  "\<lbrace>obj_at' (\<lambda>tcb. P ((user_regs o atcbContextGet o tcbArch) tcb r)) t\<rbrace>
+   asUser t (getRegister r)
+   \<lbrace>\<lambda>rv s. P rv\<rbrace>"
+  apply (simp add: asUser_def split_def)
+  apply (wp threadGet_wp)
+  apply (clarsimp simp: obj_at'_def getRegister_def in_monad atcbContextGet_def)
+  done
+
+crunches insertNewCap, Arch_createNewCaps, threadSet, Arch.createObject, setThreadState,
+         updateFreeIndex, preemptionPoint
+  for gsCNodes[wp]: "\<lambda>s. P (gsCNodes s)"
+  (wp: crunch_wps setObject_ksPSpace_only
+   simp: unless_def updateObject_default_def crunch_simps
+   ignore_del: preemptionPoint)
+
+lemma cap_case_isPML4Cap:
+  "(case cap of ArchObjectCap (PML4Cap pm (Some asid)) \<Rightarrow> fn pm asid | _ => g)
+    = (if (if isArchObjectCap cap then if isPML4Cap (capCap cap) then capPML4MappedASID (capCap cap) \<noteq> None else False else False)
+          then fn (capPML4BasePtr (capCap cap)) (the (capPML4MappedASID (capCap cap))) else g)"
+  apply (cases cap; simp add: isArchObjectCap_def)
+  apply (rename_tac arch_capability)
+  apply (case_tac arch_capability, simp_all add: isPML4Cap_def)
+  apply (rename_tac option)
+  apply (case_tac option; simp)
+  done
 
 end
 

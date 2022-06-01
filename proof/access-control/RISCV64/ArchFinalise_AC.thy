@@ -126,11 +126,11 @@ lemma arch_finalise_cap_auth'[Finalise_AC_assms]:
 lemma arch_finalise_cap_obj_refs[Finalise_AC_assms]:
   "\<lbrace>\<lambda>s. \<forall>x \<in> aobj_ref' acap. P x\<rbrace>
    arch_finalise_cap acap slot
-   \<lbrace>\<lambda>rv s. \<forall>x \<in> obj_refs (fst rv). P x\<rbrace>"
+   \<lbrace>\<lambda>rv s. \<forall>x \<in> obj_refs_ac (fst rv). P x\<rbrace>"
   by (wpsimp simp: arch_finalise_cap_def)
 
 lemma arch_finalise_cap_makes_halted[Finalise_AC_assms]:
-  "\<lbrace>\<top>\<rbrace> arch_finalise_cap arch_cap ex \<lbrace>\<lambda>rv s. \<forall>t\<in>Access.obj_refs (fst rv). halted_if_tcb t s\<rbrace>"
+  "\<lbrace>\<top>\<rbrace> arch_finalise_cap arch_cap ex \<lbrace>\<lambda>rv s. \<forall>t\<in>obj_refs_ac (fst rv). halted_if_tcb t s\<rbrace>"
   apply (case_tac arch_cap, simp_all add: arch_finalise_cap_def)
   by (wpsimp simp: valid_cap_def split: option.split bool.split)+
 
@@ -151,28 +151,68 @@ lemma delete_asid_pool_respects[wp]:
    delete_asid_pool x y
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   unfolding delete_asid_pool_def
-  by (wpsimp wp: mapM_wp[OF _ subset_refl]  simp: integrity_asid_table_entry_update')
+  by (wpsimp wp: mapM_wp[OF _ subset_refl]  simp: integrity_asid_table_entry_update' integrity_def)
+
+crunches set_vm_root
+  for integrity_obj[wp]: "integrity_obj_state aag activate subjects st"
+  and cdt[wp]: "\<lambda>s. P (cdt s)"
+  and is_original_cap[wp]: "\<lambda>s. P (is_original_cap s x)"
+  and interrupt_irq_node[wp]: "\<lambda>s. P (interrupt_states s x)"
+  and underlying_memory[wp]: "\<lambda>s. P (underlying_memory (machine_state s) x)"
+  and device_state[wp]: "\<lambda>s. P (device_state (machine_state s) x)"
+  and tcb_states_of_state[wp]: "\<lambda>s. P (tcb_states_of_state s)"
+  (wp: dmo_wp)
+
+crunches set_asid_pool
+  for is_original_cap[wp]: "\<lambda>s. P (is_original_cap s x)"
+  and cdt_list[wp]: "\<lambda>s. P (cdt_list s x)"
+  and ready_queues[wp]: "\<lambda>s. P (ready_queues s x y)"
+  and machine_state[wp]: "\<lambda>s. P (machine_state s)"
+
+lemma set_asid_pool_tcb_states_of_state[wp]:
+  "set_asid_pool p pool \<lbrace>\<lambda>s. P (tcb_states_of_state s)\<rbrace>"
+  apply (wpsimp wp: set_object_wp_strong simp: obj_at_def  set_asid_pool_def)
+  apply (prop_tac "\<forall>x. get_tcb x (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (ASIDPool pool))\<rparr>) = get_tcb x s")
+   apply (auto simp: tcb_states_of_state_def get_tcb_def)
+  done
+
+lemma delete_asid_integrity_asids:
+  "\<lbrace>\<lambda>s. pas_refined aag s \<and> invs s \<and> is_subject aag pt \<and>
+        (\<forall>x a. integrity_asids aag {pasSubject aag} x a st s)\<rbrace>
+   delete_asid asid pt
+   \<lbrace>\<lambda>_ s. integrity_asids aag {pasSubject aag} x a st s\<rbrace>"
+  unfolding integrity_def
+  apply (wpsimp wp: dmo_wp mol_respects set_object_wp hoare_vcg_all_lift hoare_vcg_imp_lift
+              simp: delete_asid_def hwASIDFlush_def set_asid_pool_def)
+  apply (intro conjI impI allI; clarsimp)
+   apply fastforce
+  apply (clarsimp simp: opt_map_def)
+  apply (erule_tac x=asid in allE, fastforce)
+  done
 
 lemma set_asid_pool_respects_clear:
-  "\<lbrace>integrity aag X st and (\<lambda>s. \<forall>pool'. ko_at (ArchObj (arch_kernel_obj.ASIDPool pool')) ptr s
-                                        \<longrightarrow> asid_pool_integrity {pasSubject aag} aag pool' pool)\<rbrace>
+  "\<lbrace>integrity_obj_state aag activate subjects st and
+    (\<lambda>s. \<forall>pool'. ako_at (ASIDPool pool') ptr s \<longrightarrow> asid_pool_integrity subjects aag pool' pool)\<rbrace>
    set_asid_pool ptr pool
-   \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  apply (simp add: set_asid_pool_def)
-  apply (wpsimp wp: set_object_wp_strong
-              simp: obj_at_def a_type_def
-             split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm if_splits)
-  apply (erule integrity_trans)
-  apply (clarsimp simp: integrity_def)
-  apply (rule tro_arch; fastforce simp: arch_integrity_obj_atomic.simps)
-  done
+   \<lbrace>\<lambda>_. integrity_obj_state aag activate subjects st\<rbrace>"
+  apply (wpsimp wp: set_object_wp_strong simp: obj_at_def set_asid_pool_def)
+  using arch_troa_asidpool_clear tro_arch tro_trans_spec by fastforce
 
 lemma delete_asid_respects:
   "\<lbrace>integrity aag X st and pas_refined aag and invs and K (is_subject aag pd)\<rbrace>
    delete_asid asid pd
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  by (wpsimp wp: set_asid_pool_respects_clear hoare_vcg_all_lift dmo_wp mol_respects
-           simp: obj_at_def pas_refined_refl delete_asid_def asid_pool_integrity_def hwASIDFlush_def)
+  unfolding integrity_def
+  supply integrity_asids_def[simp del]
+  apply (rule hoare_pre)
+   apply (simp only: conj_assoc[symmetric])
+   apply (rule hoare_vcg_conj_lift)
+    apply (simp add: delete_asid_def)
+    apply (wp | wpc | wps)+
+       apply (wpsimp wp: set_asid_pool_respects_clear dmo_wp
+                         delete_asid_integrity_asids hoare_vcg_all_lift)+
+  apply (clarsimp simp: pas_refined_refl obj_at_def asid_pool_integrity_def)
+  done
 
 lemma arch_finalise_cap_respects[wp]:
   "\<lbrace>integrity aag X st and invs and pas_refined aag and valid_cap (ArchObjectCap cap)

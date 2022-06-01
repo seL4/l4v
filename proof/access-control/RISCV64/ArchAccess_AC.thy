@@ -48,11 +48,6 @@ lemma arch_tro_alt_trans_spec[Access_AC_assms]:
      \<Longrightarrow> arch_integrity_obj_alt aag subjects l ko ko''"
   by (fastforce simp: arch_integrity_obj_alt.simps)
 
-lemma integrity_asids_update_autarch[Access_AC_assms]:
-  "\<lbrakk> integrity_asids aag subjects x st s; is_subject aag ptr \<rbrakk>
-     \<Longrightarrow> integrity_asids aag subjects x st (s\<lparr>kheap := kheap s(ptr \<mapsto> obj)\<rparr>)"
-  by simp
-
 end
 
 
@@ -76,17 +71,19 @@ lemma auth_ipc_buffers_tro[Access_AC_assms]:
                split: cap.split_asm arch_cap.split_asm if_split_asm bool.splits)
 
 lemma trasids_trans[Access_AC_assms]:
-  "\<lbrakk> (\<forall>x. integrity_asids aag subjects x s s');
-     (\<forall>x. integrity_asids aag subjects x  s' s'') \<rbrakk>
-     \<Longrightarrow> (\<forall>x. integrity_asids aag subjects x s s'')"
-  apply clarsimp
-  apply (drule_tac x=x in spec)+
-  apply fastforce
-  done
+  "\<lbrakk> (\<forall>x a. integrity_asids aag subjects x a s s');
+     (\<forall>x a. integrity_asids aag subjects x a  s' s'') \<rbrakk>
+     \<Longrightarrow> (\<forall>x a. integrity_asids aag subjects x a s s'')"
+  by clarsimp metis
 
 lemma integrity_asids_refl[Access_AC_assms, simp]:
-  "integrity_asids aag subjects x s s"
+  "integrity_asids aag subjects x a s s"
   by simp
+
+lemma integrity_asids_update_autarch[Access_AC_assms]:
+  "\<lbrakk> \<forall>x a. integrity_asids aag {pasSubject aag} x a st s; is_subject aag ptr \<rbrakk>
+     \<Longrightarrow> \<forall>x a. integrity_asids aag {pasSubject aag} x a st (s\<lparr>kheap := kheap s(ptr \<mapsto> obj)\<rparr>)"
+  by (auto simp: opt_map_def)
 
 end
 
@@ -95,7 +92,7 @@ global_interpretation Access_AC_2?: Access_AC_2
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; fact Access_AC_assms)
+    by (unfold_locales; (fact Access_AC_assms)?)
 qed
 
 
@@ -146,8 +143,8 @@ lemma asid_pool_integrity_mono[Access_AC_assms]:
   unfolding asid_pool_integrity_def by fastforce
 
 lemma integrity_asids_mono[Access_AC_assms]:
-    "\<lbrakk> integrity_asids aag S x s s'; S \<subseteq> T; pas_refined aag s; valid_objs s \<rbrakk>
-       \<Longrightarrow> integrity_asids aag T x s s'"
+    "\<lbrakk> integrity_asids aag S x a s s'; S \<subseteq> T; pas_refined aag s; valid_objs s \<rbrakk>
+       \<Longrightarrow> integrity_asids aag T x a s s'"
   by fastforce
 
 lemma arch_integrity_obj_atomic_mono[Access_AC_assms]:

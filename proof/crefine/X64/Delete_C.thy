@@ -155,7 +155,7 @@ lemma capRemovable_spec:
   apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap[THEN iffD2])
   apply (case_tac slot)
   apply (clarsimp simp: get_capZombiePtr_CL_def Let_def get_capZombieBits_CL_def
-                        isCap_simps unat_eq_1
+                        isCap_simps unat_eq_1 unat_eq_0
                         less_mask_eq ccap_zombie_radix_less2
              split: if_split_asm)
   done
@@ -799,7 +799,7 @@ lemma finaliseSlot_ccorres:
                    apply (auto simp: isCap_simps capCyclicZombie_def)[1]
                   apply ceqv
                  apply csymbr
-                 apply (simp add: if_1_0_0 from_bool_0)
+                 apply (simp add: from_bool_0)
                  apply (rule ccorres_split_throws)
                   apply (rule ccorres_drop_cutMon,
                          rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
@@ -835,7 +835,7 @@ lemma finaliseSlot_ccorres:
                                in ccorres_from_vcg[where P'=UNIV])
                   apply (rule allI, rule conseqPre, vcg)
                   apply (clarsimp simp: return_def)
-                  apply (simp add: if_1_0_0 from_bool_def false_def)
+                  apply (simp add: from_bool_def false_def)
                   apply fastforce
                  apply ceqv
                 apply (simp only: from_bool_0 simp_thms Collect_False

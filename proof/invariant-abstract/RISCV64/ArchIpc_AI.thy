@@ -442,10 +442,10 @@ crunch cap_refs_respects_device_region[wp, Ipc_AI_assms]: make_arch_fault_msg "c
 end
 
 interpretation Ipc_AI?: Ipc_AI
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact Ipc_AI_assms)?)
-  qed
+qed
 
 sublocale touched_addresses_inv \<subseteq> state_hyp_refs_of:touched_addresses_P_inv _ _ "\<lambda>s. P (state_hyp_refs_of s)"
   by unfold_locales (simp add:ta_agnostic_def)

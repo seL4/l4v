@@ -56,7 +56,6 @@ requalify_facts
 
 lemma Suc_unat_mask_div_obfuscated:
   "Suc (unat (mask sz div (word_size::machine_word))) = 2 ^ (min sz word_bits - word_size_bits)"
-  unfolding word_size_bits_def
   by (rule Suc_unat_mask_div)
 
 lemma word_size_size_bits_nat:

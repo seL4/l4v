@@ -16,6 +16,7 @@ imports
   "ASpec.VMRights_A"
   Intents_D
   "Lib.SplitRule"
+  "HOL-Combinatorics.Transposition" (* for Fun.swap *)
 begin
 
 (* A hardware IRQ number. *)

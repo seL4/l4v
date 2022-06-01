@@ -26,6 +26,7 @@ ML \<open>
 structure CrunchNoIrqInstance : CrunchInstance =
 struct
   val name = "no_irq";
+  val prefix_name_scheme = true;
   type extra = unit;
   val eq_extra = op =;
   fun parse_extra ctxt extra
@@ -51,7 +52,7 @@ structure CrunchNoIrq : CRUNCH = Crunch(CrunchNoIrqInstance);
 \<close>
 
 setup \<open>
-  add_crunch_instance "no_irq" (CrunchNoIrq.crunch_x, CrunchNoIrq.crunch_ignore_add_del)
+  add_crunch_instance "no_irq" (CrunchNoIrq.crunch_x, CrunchNoIrq.crunch_ignore_add_dels)
 \<close>
 
 crunch_ignore (no_irq) (add:
@@ -203,7 +204,7 @@ lemma no_irq_use:
   apply fastforce
   done
 
-lemma machine_rest_lift_no_irq:
+lemma no_irq_machine_rest_lift:
   "no_irq (machine_rest_lift f)"
   apply (clarsimp simp: no_irq_def machine_rest_lift_def split_def)
   apply wp
@@ -462,6 +463,16 @@ lemma out32_ef[simp,wp]: "empty_fail (out32 port dat)"
   by (simp add: out32_def)
 
 end
+end
+
+context begin interpretation Arch .
+
+requalify_facts
+  det_getRegister
+  det_setRegister
+  det_getRestartPC
+  det_setNextPC
+
 end
 
 end

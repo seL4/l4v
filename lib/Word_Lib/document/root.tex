@@ -5,6 +5,7 @@
 %
 
 \documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
 \usepackage{isabelle,isabellesym}
 
 % this should be the last package used
@@ -18,20 +19,20 @@
 \begin{document}
 
 \title{Finite Machine Word Library}
-\author{Joel Beeren, Matthew Fernandez, Xin Gao, Gerwin Klein, Rafal Kolanski,\\
+\author{Joel Beeren, Sascha Böhme, Matthew Fernandez, Xin Gao, Gerwin Klein, Rafal Kolanski,\\
        Japheth Lim, Corey Lewis, Daniel Matichuk, Thomas Sewell}
 \maketitle
 
 \begin{abstract}
   This entry contains an extension to the Isabelle library for fixed-width
-  machine words. In particular, the entry adds quickcheck setup for words,
+  machine words. In particular, the entry adds
   printing as hexadecimals, additional operations, reasoning about alignment,
   signed words, enumerations of words, normalisation of word numerals, and an
   extensive library of properties about generic fixed-width words, as well as
   an instantiation of many of these to the commonly used 32 and 64-bit bases.
 
   In addition to the listed authors, the entry contains contributions by
-  Nelson Billing, Andrew Boyton, Matthew Brecknell, Cornelius Diekmann,Peter
+  Nelson Billing, Andrew Boyton, Matthew Brecknell, Cornelius Diekmann, Peter
   Gammie, Gianpaolo Gioiosa, David Greenaway, Lars Noschinski, Sean Seefried,
   and Simon Winwood.
 \end{abstract}

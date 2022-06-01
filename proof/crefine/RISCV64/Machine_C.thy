@@ -225,7 +225,7 @@ lemma clz64_spec:
    apply (simp add: not_max_word_iff_less)
    apply (rule word_of_nat_less)
    apply (rule le_less_trans[OF word_clz_max])
-   apply (simp add: word_size max_word_def)
+   apply (simp add: word_size unat_max_word)
   apply clarsimp
   done
 

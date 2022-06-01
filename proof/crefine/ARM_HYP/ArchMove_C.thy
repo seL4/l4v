@@ -128,7 +128,7 @@ lemma ucast_helper_not_maxword:
   apply (rule ucast_up_mono_le)
     apply simp
    apply simp
-  by (simp add: max_word_def)
+  by (simp add: mask_def)
 
 lemmas ucast_helper_simps_32 =
   ucast_helper_not_maxword arg_cong[where f="UCAST(16 \<rightarrow> 32)", OF minus_one_norm]
@@ -230,18 +230,6 @@ lemma atg_sp':
 lemma empty_fail_archThreadGet [intro!, wp, simp]:
   "empty_fail (archThreadGet f p)"
   by (simp add: archThreadGet_def getObject_def split_def)
-
-lemma cap_case_EndpointCap_NotificationCap:
-  "(case cap of EndpointCap v0 v1 v2 v3 v4 v5 \<Rightarrow> f v0 v1 v2 v3 v4 v5
-              | NotificationCap v0 v1 v2 v3  \<Rightarrow> g v0 v1 v2 v3
-              | _ \<Rightarrow> h)
-   = (if isEndpointCap cap
-      then f (capEPPtr cap) (capEPBadge cap) (capEPCanSend cap) (capEPCanReceive cap)
-             (capEPCanGrant cap) (capEPCanGrantReply cap)
-      else if isNotificationCap cap
-           then g (capNtfnPtr cap)  (capNtfnBadge cap) (capNtfnCanSend cap) (capNtfnCanReceive cap)
-           else h)"
-  by (simp add: isCap_simps split: capability.split, blast)
 
 lemma mab_gt_2 [simp]:
   "2 \<le> msg_align_bits" by (simp add: msg_align_bits)
@@ -582,6 +570,83 @@ lemma valid_untyped':
   by (metis al intvl_range_conv' le_m1_iff_lt less_is_non_zero_p1
                nat_le_linear power_overflow sub_wrap add_0
                add_0_right word_add_increasing word_less_1 word_less_sub_1)
+
+(* We don't have access to n_msgRegisters from C here, but the number of msg registers in C should
+   be equivalent to what we have in the abstract/design specs. We want a number for this definition
+   that automatically updates if the number of registers changes, and we sanity check it later
+   in msgRegisters_size_sanity *)
+definition size_msgRegisters :: nat where
+  size_msgRegisters_pre_def: "size_msgRegisters \<equiv> size (ARM_HYP.msgRegisters)"
+
+schematic_goal size_msgRegisters_def:
+  "size_msgRegisters = numeral ?x"
+  unfolding size_msgRegisters_pre_def ARM_HYP.msgRegisters_def
+  by (simp add: upto_enum_red fromEnum_def enum_register del: Suc_eq_numeral)
+     (simp only: Suc_eq_plus1_left, simp del: One_nat_def)
+
+lemma length_msgRegisters[simplified size_msgRegisters_def]:
+  "length ARM_HYP_H.msgRegisters = size_msgRegisters"
+  by (simp add: size_msgRegisters_pre_def ARM_HYP_H.msgRegisters_def)
+
+lemma cap_case_isPageDirectoryCap:
+  "(case cap of capability.ArchObjectCap (arch_capability.PageDirectoryCap pd ( Some asid))  \<Rightarrow> fn pd asid
+                | _ => g)
+    = (if ( if (isArchObjectCap cap) then if (isPageDirectoryCap (capCap cap)) then capPDMappedASID (capCap cap) \<noteq> None else False else False)
+                then fn (capPDBasePtr (capCap cap)) (the ( capPDMappedASID (capCap cap))) else g)"
+  apply (cases cap; simp add: isArchObjectCap_def)
+  apply (rename_tac arch_capability)
+  apply (case_tac arch_capability, simp_all add: isPageDirectoryCap_def)
+  apply (rename_tac option)
+  apply (case_tac option; simp)
+  done
+
+lemma empty_fail_loadWordUser[intro!, simp]:
+  "empty_fail (loadWordUser x)"
+  by (simp add: loadWordUser_def ef_loadWord ef_dmo')
+
+lemma empty_fail_getMRs[iff]:
+  "empty_fail (getMRs t buf mi)"
+  by (auto simp add: getMRs_def split: option.split)
+
+lemma empty_fail_getReceiveSlots:
+  "empty_fail (getReceiveSlots r rbuf)"
+proof -
+  note
+    empty_fail_assertE[iff]
+    empty_fail_resolveAddressBits[iff]
+  show ?thesis
+  apply (clarsimp simp: getReceiveSlots_def loadCapTransfer_def split_def
+                 split: option.split)
+  apply (rule empty_fail_bind)
+   apply (simp add: capTransferFromWords_def)
+  apply (simp add: emptyOnFailure_def unifyFailure_def)
+  apply (intro empty_fail_catch empty_fail_bindE empty_fail_rethrowFailure,
+         simp_all add: empty_fail_whenEs)
+   apply (simp_all add: lookupCap_def split_def lookupCapAndSlot_def
+                        lookupSlotForThread_def liftME_def
+                        getThreadCSpaceRoot_def locateSlot_conv bindE_assoc
+                        lookupSlotForCNodeOp_def lookupErrorOnFailure_def
+                  cong: if_cong)
+   apply (intro empty_fail_bindE,
+          simp_all add: getSlotCap_def)
+  apply (intro empty_fail_If empty_fail_bindE empty_fail_rethrowFailure impI,
+         simp_all add: empty_fail_whenEs rangeCheck_def)
+  done
+qed
+
+lemma user_getreg_rv:
+  "\<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb r)) t\<rbrace> asUser t (getRegister r) \<lbrace>\<lambda>rv s. P rv\<rbrace>"
+  apply (simp add: asUser_def split_def)
+  apply (wp threadGet_wp)
+  apply (clarsimp simp: obj_at'_def projectKOs getRegister_def in_monad atcbContextGet_def)
+  done
+
+crunches insertNewCap, Arch_createNewCaps, threadSet, Arch.createObject, setThreadState,
+         updateFreeIndex, preemptionPoint
+  for gsCNodes[wp]: "\<lambda>s. P (gsCNodes s)"
+  (wp: crunch_wps setObject_ksPSpace_only
+   simp: unless_def updateObject_default_def crunch_simps
+   ignore_del: preemptionPoint)
 
 end
 

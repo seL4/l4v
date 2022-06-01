@@ -394,11 +394,6 @@ shows "\<lbrace>\<guillemotleft>root_tcb_id \<mapsto>f root_tcb  \<and>* (root_t
   apply (clarsimp dest!: reset_cap_asid_simps2)
 done
 
-
-lemma obj_tcb_simps [simp]:
-  "is_tcb tcb \<Longrightarrow> Tcb (obj_tcb tcb) = tcb"
-  by (clarsimp simp: is_tcb_def obj_tcb_def split: cdl_object.splits)
-
 lemma seL4_IRQHandler_SetEndpoint_wp:
   "\<lbrace>\<guillemotleft>root_tcb_id \<mapsto>f root_tcb \<and>*
     (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>*

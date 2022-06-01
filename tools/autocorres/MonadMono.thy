@@ -290,7 +290,7 @@ lemma option_monad_mono_eq:
               and s = "\<forall>r. f' x s = Some r \<longrightarrow> f' y s = Some r" in subst)
    apply (force intro: iff_allI iff_impI)
   apply (rule iffI)
-   apply (metis (hide_lams, no_types) option.exhaust)
+   apply (metis (no_types) option.exhaust)
   apply force
   done
 

@@ -380,8 +380,8 @@ lemma pd_shifting_gen:
    apply (subst word_plus_and_or_coroll)
     apply (erule aligned_mask_disjoint)
     apply (simp add: and_mask_0_iff_le_mask[symmetric])
-   apply (simp add: word_bool_alg.conj_disj_distrib2)
-  apply (simp add: shiftr_shiftl1 neg_mask_twice word_bool_alg.conj.assoc)
+   apply (simp add: bit.conj_disj_distrib2)
+  apply (simp add: shiftr_shiftl1 neg_mask_twice word_bw_assocs)
   apply (rule shiftr_not_mask_0)
   apply (fastforce simp: max_def word_size)
   done

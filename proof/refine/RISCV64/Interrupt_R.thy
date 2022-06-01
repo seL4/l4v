@@ -171,7 +171,7 @@ lemma whenE_rangeCheck_eq:
   "(rangeCheck (x :: 'a :: {linorder, integral}) y z) =
     (whenE (x < fromIntegral y \<or> fromIntegral z < x)
       (throwError (RangeError (fromIntegral y) (fromIntegral z))))"
-  by (simp add: rangeCheck_def unlessE_whenE ucast_id linorder_not_le[symmetric])
+  by (simp add: rangeCheck_def unlessE_whenE linorder_not_le[symmetric])
 
 lemmas irq_const_defs = maxIRQ_def minIRQ_def
 
@@ -262,7 +262,6 @@ lemma decodeIRQControlInvocation_corres:
                dest!: not_le_imp_less
                simp: minIRQ_def o_def length_Suc_conv whenE_rangeCheck_eq ucast_nat_def
                split: list.splits)[1]
-  apply (simp add: minIRQ_def o_def length_Suc_conv whenE_rangeCheck_eq ucast_nat_def[symmetric])
   apply (rule corres_guard_imp)
     apply (rule whenE_throwError_corres, clarsimp, clarsimp)
     apply (rule_tac F="unat y \<le> unat maxIRQ" in corres_gen_asm)
@@ -305,8 +304,11 @@ lemma arch_decode_irq_control_valid'[wp]:
           | wpc
           | wp (once) hoare_drop_imps)+
   apply (clarsimp simp: invs_valid_objs' irq_const_defs unat_word_ariths word_le_nat_alt
-                        not_less unat_le_helper unat_of_nat irqInvalid_def)
-  apply (drule of_nat_unat_le_mask_ucast; clarsimp simp: mask_def word_le_nat_alt)
+                        not_less unat_le_helper unat_of_nat irqInvalid_def unat_ucast_mask)
+  apply (rule conjI)
+   apply (meson le_trans word_and_le2 word_less_eq_iff_unsigned)
+  apply clarsimp
+  apply (drule ucast_down_0; simp)
   done
 
 lemma decode_irq_control_valid'[wp]:
@@ -323,8 +325,11 @@ lemma decode_irq_control_valid'[wp]:
                 simp: o_def
          | wp (once) hoare_drop_imps)+
   apply (clarsimp simp: invs_valid_objs' irq_const_defs unat_word_ariths word_le_nat_alt
-                        not_less unat_le_helper unat_of_nat irqInvalid_def)
-  apply (drule of_nat_unat_le_mask_ucast; clarsimp simp: mask_def word_le_nat_alt)
+                        not_less unat_le_helper unat_of_nat irqInvalid_def unat_ucast_mask)
+  apply (rule conjI)
+   apply (meson le_trans word_and_le2 word_less_eq_iff_unsigned)
+  apply clarsimp
+  apply (drule ucast_down_0; simp)
   done
 
 lemma valid_globals_ex_cte_cap_irq:
@@ -597,11 +602,6 @@ lemma getIRQState_prop:
   apply simp
   done
 
-lemma num_domains[simp]:
-  "num_domains = numDomains"
-  apply(simp add: num_domains_def numDomains_def)
-  done
-
 lemma decDomainTime_corres:
   "corres dc \<top> \<top> dec_domain_time decDomainTime"
   apply (simp add:dec_domain_time_def corres_underlying_def decDomainTime_def simpler_modify_def)
@@ -664,25 +664,21 @@ lemma timerTick_corres:
              apply wp
             apply (rule corres_if[where Q = \<top> and Q' = \<top>])
               apply (case_tac state,simp_all)[1]
-             apply (simp add: Let_def)
              apply (rule_tac r'="(=)" in corres_split_deprecated [OF _ ethreadget_corres])
                 apply (rename_tac ts ts')
                 apply (rule_tac R="1 < ts" in corres_cases)
                  apply (simp)
                  apply (unfold thread_set_time_slice_def)
-                 apply (fold dc_def)
                  apply (rule ethread_set_corres, simp+)
                  apply (clarsimp simp: etcb_relation_def)
                 apply simp
                 apply (rule corres_split_deprecated [OF _ ethread_set_corres])
                          apply (rule corres_split_deprecated [OF _ tcbSchedAppend_corres])
-                           apply (fold dc_def)
                            apply (rule rescheduleRequired_corres)
                           apply (wp)[1]
                          apply (rule hoare_strengthen_post)
                           apply (rule tcbSchedAppend_invs_but_ct_not_inQ', clarsimp simp: sch_act_wf_weak)
-                        apply (simp add: sch_act_wf_weak etcb_relation_def
-                                         time_slice_def timeSlice_def pred_conj_def)+
+                        apply (simp add: sch_act_wf_weak etcb_relation_def pred_conj_def)+
                  apply (wp threadSet_timeslice_invs threadSet_valid_queues
                            threadSet_valid_queues' threadSet_pred_tcb_at_state)+
                apply (simp add:etcb_relation_def)
@@ -793,17 +789,16 @@ crunches tcbSchedAppend
 
 lemma timerTick_invs'[wp]:
   "\<lbrace>invs'\<rbrace> timerTick \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: numDomains_def timerTick_def)
-  apply (wp threadSet_invs_trivial threadSet_pred_tcb_no_state
-            rescheduleRequired_all_invs_but_ct_not_inQ
-            tcbSchedAppend_invs_but_ct_not_inQ'
-       | simp add: tcb_cte_cases_def numDomains_def
-       | wpc)+
-      apply (simp add:decDomainTime_def)
-      apply wp
-     apply simp
+  apply (simp add: timerTick_def)
+  apply (wpsimp wp: threadSet_invs_trivial threadSet_pred_tcb_no_state
+                    rescheduleRequired_all_invs_but_ct_not_inQ
+                    tcbSchedAppend_invs_but_ct_not_inQ'
+                simp: tcb_cte_cases_def)
      apply (rule_tac Q="\<lambda>rv. invs'" in hoare_post_imp)
      apply (clarsimp simp add:invs'_def valid_state'_def)
+      apply (simp add: decDomainTime_def)
+      apply wp
+     apply simp
      apply wpc
           apply (wp add: threadGet_wp threadSet_cur threadSet_timeslice_invs
                                rescheduleRequired_all_invs_but_ct_not_inQ
@@ -815,7 +810,7 @@ lemma timerTick_invs'[wp]:
                              threadSet_valid_objs' threadSet_timeslice_invs)+
        apply (wp threadGet_wp)
       apply (wp gts_wp')+
-  apply (clarsimp simp: invs'_def st_tcb_at'_def obj_at'_def valid_state'_def numDomains_def)
+  apply (clarsimp simp: invs'_def st_tcb_at'_def obj_at'_def valid_state'_def)
   done
 
 lemma resetTimer_invs'[wp]:

@@ -23,10 +23,9 @@ translations
   "DO x <- a; e OD"        == "a |>> (\<lambda>x. e)"
 
 
-definition
- ogets :: "('a \<Rightarrow> 'b) \<Rightarrow> ('a \<Rightarrow> 'b option)"
-where
- "ogets f \<equiv> (\<lambda>s. Some (f s))"
+lemma ogets_def:
+  "ogets f = (\<lambda>s. Some (f s))"
+  by (clarsimp simp: asks_def obind_def)
 
 definition
   ocatch :: "('s,('e + 'a)) lookup \<Rightarrow> ('e \<Rightarrow> ('s,'a) lookup) \<Rightarrow> ('s, 'a) lookup"

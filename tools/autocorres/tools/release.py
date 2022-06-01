@@ -13,6 +13,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
 
@@ -67,7 +68,7 @@ def read_manifest(filename, base):
     """
     results = []
     with open(filename) as f:
-        for line in f.xreadlines():
+        for line in f.readlines():
             line = line.strip("\r\n")
             if not line.startswith(" ") and line.endswith(":"):
                 pattern = line.strip().strip(":")
@@ -109,8 +110,8 @@ parser.add_argument('version', metavar='VERSION',
                     type=str, help='Version number of the release, such as "0.95-beta1".')
 parser.add_argument('cparser_tar', metavar='CPARSER_RELEASE',
                     type=str, help='Tarball to the C parser release.')
-parser.add_argument('isabelle_tar', metavar='ISABELLE_TARBALL',
-                    type=str, help='Tarball to the official Isabelle release')
+parser.add_argument('isabelle_bin', metavar='ISABELLE_BIN',
+                    type=str, help='path to Isabelle release binary, e.g ~/Isabelle2021/bin/isabelle')
 parser.add_argument('-b', '--browse', action='store_true',
                     help='Open shell to browse output prior to tar\'ing.')
 parser.add_argument('-o', '--output', metavar='FILENAME',
@@ -143,7 +144,7 @@ if args.repository is None:
         parser.error("Could not determine repository location.")
 
 # Get absolute paths to files.
-args.repository = os.path.abspath(args.repository)
+args.repository = os.path.abspath(args.repository).decode("utf-8")
 if not args.dry_run:
     args.output = os.path.abspath(args.output)
 else:
@@ -155,10 +156,11 @@ if not os.path.exists(args.cparser_tar) or not args.cparser_tar.endswith(".tar.g
     parser.error("Expected a path to the C parser release tarball.")
 args.cparser_tar = os.path.abspath(args.cparser_tar)
 
-# Ensure Isabelle exists, and looks like a tarball.
-if not os.path.exists(args.isabelle_tar) or not args.isabelle_tar.endswith(".tar.gz"):
-    parser.error("Expected a path to the official Isabelle release.")
-args.isabelle_tar = os.path.abspath(args.isabelle_tar)
+# Ensure Isabelle release exists
+if not os.path.exists(args.isabelle_bin):
+    parser.error("Expected a path to the official Isabelle release binary.")
+args.isabelle_bin = os.path.abspath(args.isabelle_bin)
+base_isabelle_bin = args.isabelle_bin
 
 # Tools for theory dependencies.
 thydeps_tool = os.path.join(args.repository, 'misc', 'scripts', 'thydeps')
@@ -183,16 +185,17 @@ with TempDir(cleanup=(not args.no_cleanup)) as base_dir:
     # Copy theories from dependent sessions in the lib directory.
     lib_deps = ''
     for arch in args.archs:
+        print(f"Getting dependencies for {arch}")
         lib_deps += subprocess.check_output(
             [thydeps_tool, '-I', repo_isabelle_dir, '-d', '.', '-d', 'tools/autocorres/tests',
              '-b', 'lib', '-r',
              'AutoCorresTest'],
-            cwd=args.repository, env=dict(os.environ, L4V_ARCH=arch))
+            cwd=args.repository, env=dict(os.environ, L4V_ARCH=arch)).decode("utf-8")
     lib_deps = sorted(set(lib_deps.splitlines()))
 
     for f in lib_deps:
         f_src = os.path.join(args.repository, 'lib', f)
-        f_dest = os.path.join(target_dir, 'lib', os.path.relpath(f, args.repository))
+        f_dest = os.path.join(target_dir, 'lib', f)
         mkdir_p(os.path.dirname(f_dest))
         shutil.copyfile(f_src, f_dest)
 
@@ -321,7 +324,7 @@ end
             thy_deps += subprocess.check_output(
                 [thydeps_tool, '-I', repo_isabelle_dir, '-b', '.', '-r',
                  'AutoCorres', 'AutoCorresTest'],
-                cwd=target_dir, env=dict(os.environ, L4V_ARCH=arch))
+                cwd=target_dir, env=dict(os.environ, L4V_ARCH=arch)).decode("utf-8")
         thy_deps = sorted(set(thy_deps.splitlines()))
         needed_files = [os.path.join(args.repository, f)
                         for f in thy_deps
@@ -349,15 +352,6 @@ end
     for (root, dirs, files) in os.walk(base_dir, followlinks=False):
         for i in dirs + files:
             os.utime(os.path.join(root, i), (target_time, target_time))
-
-    # Extract the Isabelle release
-    print("Extracting Isabelle...")
-    base_isabelle_dir = os.path.join(base_dir, "isabelle")
-    mkdir_p(base_isabelle_dir)
-    subprocess.check_call(["tar", "-xz", "-C", base_isabelle_dir,
-                           "--strip-components=1", "-f", args.isabelle_tar])
-    base_isabelle_bin = os.path.join(base_isabelle_dir, "bin", "isabelle")
-    assert os.path.exists(base_isabelle_bin)
 
     # Build the documentation.
     def build_docs(tree, isabelle_bin):
@@ -387,7 +381,8 @@ end
     # Compress everything up.
     if args.output != None:
         print("Creating tarball...")
-        subprocess.check_call(["tar", "-cz", "--numeric-owner",
+        tar = 'gtar' if sys.platform == "darwin" else 'tar'
+        subprocess.check_call([tar, "-cz", "--numeric-owner",
                                "--owner", "nobody", "--group", "nogroup",
                                "-C", base_dir, "-f", args.output, target_dir_name])
 

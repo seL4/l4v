@@ -961,8 +961,6 @@ lemma get_irq_slot_emptyable[wp]:
 
 crunch (in Finalise_AI_2) invs[wp]: deleting_irq_handler "invs :: 'a state \<Rightarrow> bool"
 
-crunch tcb_at[wp]: unbind_notification "tcb_at t"
-
 
 locale Finalise_AI_3 = Finalise_AI_2 a b
   for a :: "('a :: state_ext) itself"
@@ -1085,8 +1083,6 @@ lemma fast_finalise_st_tcb_at:
   apply (rule hoare_gen_asm)
   apply (cases cap; wpsimp wp: cancel_all_ipc_st_tcb_at cancel_all_signals_st_tcb_at)
   done
-
-crunch st_tcb_at[wp]: empty_slot "st_tcb_at P t"
 
 lemma cap_delete_one_st_tcb_at:
   "\<lbrace>st_tcb_at P t and K (\<forall>st. active st \<longrightarrow> P st)\<rbrace>

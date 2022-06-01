@@ -3095,7 +3095,7 @@ lemma branch_map_simp2:
      apply (drule min.absorb2[where b = nata])
      apply simp
      apply (clarsimp simp: add.commute)
-     apply (simp add:unat_def)
+     apply (simp only: unat_def)
      apply (rule iffD2[OF eq_nat_nat_iff])
        apply (simp add:bl_to_bin_ge0 )+
      apply (subst bl_to_bin_rep_F[symmetric])
@@ -3177,8 +3177,9 @@ lemma resolve_address_bits_terminate_corres:
     apply clarsimp
     apply (rule_tac Q="\<lambda>x y. y = (transform s) \<and> x = (transform_object (machine_state s) oref etcb_opt (kernel_object.CNode radix_bits fun))" in corres_symb_exec_l)
        apply (rule dcorres_expand_pfx)
-       apply (simp add: unat_def split: nat.splits)
+       apply (simp split: nat.splits)
        apply (clarsimp simp: returnOk_def return_def corres_underlying_def transform_cslot_ptr_def)
+       apply (simp only: unat_def)
        apply (subst eq_nat_nat_iff)
          apply (simp add:bl_to_bin_ge0)+
        apply (subst to_bl_bin[symmetric])
@@ -3287,7 +3288,7 @@ proof (induct n arbitrary: cref cap' cap)
     apply (rule dcorres_expand_pfx)
     apply (clarsimp simp:gets_the_def gets_def valid_cap_def obj_at_def split:Structures_A.kernel_object.splits cap.splits)
     apply (clarsimp simp:dc_def[symmetric] is_cap_table_def split:Structures_A.kernel_object.splits cap.splits)
-    apply (rename_tac word list nat "fun")
+    apply (rename_tac word nat list "fun")
     apply (rule corres_guard_imp)
       apply (rule_tac radix_bits = nat and guard = list and s = s' in resolve_address_bits_error_corres[where ref="[]",simplified])
              apply ((simp add:transform_cap_def in_terminate_branch_def in_recursive_branch_def valid_cap_def obj_at_def is_cap_table_def)+)[10]
@@ -3313,7 +3314,7 @@ next
   apply (case_tac "\<not> in_recursive_branch cref cap'")
    apply (clarsimp simp:gets_the_def gets_def valid_cap_def obj_at_def split:Structures_A.kernel_object.splits cap.splits)
    apply (clarsimp simp:dc_def[symmetric] is_cap_table_def split:Structures_A.kernel_object.splits cap.splits)
-   apply (rename_tac word list nat "fun")
+   apply (rename_tac word nat list "fun")
    apply (rule corres_guard_imp)
      apply (rule_tac s=s' and radix_bits = nat and guard = list in resolve_address_bits_error_corres)
              apply (simp_all | rule conjI)+
@@ -3323,7 +3324,7 @@ next
   apply (subst KHeap_DR.resolve_address_bits.simps,subst resolve_address_bits_recursive_branch)
     apply (clarsimp simp:cap_type_simps is_cap_simps)+
    apply fastforce
-  apply (rename_tac word list nat "fun")
+  apply (rename_tac word nat list "fun")
   apply (simp add:cap_type_simps)
   apply (simp add:in_recursive_branch_def in_terminate_branch_def unlessE_def branch_map_simp1)
   apply (clarsimp simp:get_cnode_def bind_assoc liftE_bindE)

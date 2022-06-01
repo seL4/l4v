@@ -429,7 +429,7 @@ lemma irq_node_in_kernel_window_init_arch_state[simp]:
 
 lemma invs_A:
   "invs init_A_st" (is "invs ?st")
-  supply is_aligned_def[THEN meta_eq_to_obj_eq, THEN iffD2, simp]
+  supply is_aligned_def[THEN iffD2, simp]
   supply image_cong_simp [cong del]
   supply pptr_base_num[simp] kernel_elf_base_def[simp]
   apply (simp add: invs_def)

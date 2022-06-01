@@ -360,18 +360,8 @@ lemma wordFromRights_mask_0:
 lemma wordFromRights_mask_eq:
   "wordFromRights rghts && mask 4 = wordFromRights rghts"
   apply (cut_tac x="wordFromRights rghts" and y="mask 4" and z="~~ mask 4"
-             in word_bool_alg.conj_disj_distrib)
+             in bit.conj_disj_distrib)
   apply (simp add: wordFromRights_mask_0)
-  done
-
-lemma loadWordUser_user_word_at:
-  "\<lbrace>\<lambda>s. \<forall>rv. user_word_at rv x s \<longrightarrow> Q rv s\<rbrace> loadWordUser x \<lbrace>Q\<rbrace>"
-  apply (simp add: loadWordUser_def user_word_at_def
-                   doMachineOp_def split_def)
-  apply wp
-  apply (clarsimp simp: pointerInUserData_def
-                        loadWord_def in_monad upto0_7_def
-                        is_aligned_mask)
   done
 
 lemma mapM_loadWordUser_user_words_at:
@@ -1154,21 +1144,6 @@ lemma deleteCallerCap_ccorres [corres]:
                         tcb_aligned')
   done
 
-
-(* FIXME: MOVE *)
-lemma cap_case_EndpointCap_NotificationCap:
-  "(case cap of EndpointCap v0 v1 v2 v3 v4 v5 \<Rightarrow> f v0 v1 v2 v3 v4 v5
-              | NotificationCap v0 v1 v2 v3  \<Rightarrow> g v0 v1 v2 v3
-              | _ \<Rightarrow> h)
-   = (if isEndpointCap cap
-      then f (capEPPtr cap) (capEPBadge cap) (capEPCanSend cap) (capEPCanReceive cap)
-             (capEPCanGrant cap) (capEPCanGrantReply cap)
-      else if isNotificationCap cap
-           then g (capNtfnPtr cap)  (capNtfnBadge cap) (capNtfnCanSend cap) (capNtfnCanReceive cap)
-           else h)"
-  by (simp add: isCap_simps
-         split: capability.split)
-
 (* FIXME:  MOVE to Corres_C.thy *)
 lemma ccorres_trim_redundant_throw_break:
   "\<lbrakk>ccorres_underlying rf_sr \<Gamma> arrel axf arrel axf G G' (SKIP # hs) a c;
@@ -1734,8 +1709,6 @@ lemma handleInterrupt_ccorres:
   apply (clarsimp simp: Kernel_C.IRQTimer_def Kernel_C.IRQSignal_def
         cte_wp_at_ctes_of ucast_ucast_b is_up)
   apply (intro conjI impI)
-       apply (subst Word_Lemmas.of_int_uint_ucast)
-       apply (rule refl)
       apply clarsimp
       apply (erule(1) cmap_relationE1[OF cmap_relation_cte])
       apply (clarsimp simp: typ_heap_simps')
@@ -1744,10 +1717,10 @@ lemma handleInterrupt_ccorres:
       apply (frule cap_get_tag_isCap_unfolded_H_cap)
       apply (frule cap_get_tag_to_H, assumption)
       apply (clarsimp simp: to_bool_def)
-     apply (cut_tac un_ui_le[where b = 191 and a = irq,
+     apply (cut_tac un_ui_le[where b = "54::machine_word" and a = irq,
             simplified word_size])
      apply (simp add: ucast_eq_0 is_up_def source_size_def
-                      target_size_def word_size unat_gt_0
+                      target_size_def word_size unat_gt_0 not_less
            | subst array_assertion_abs_irq[rule_format, OF conjI])+
     apply (clarsimp simp:nat_le_iff)
     apply (clarsimp simp: IRQReserved_def)+

@@ -61,9 +61,13 @@ def subprocess_output(*args, **kwargs):
 # to be public.
 def fixup_github(remote):
     git_url = 'git@github.com:'
+    ssh_url = 'ssh://' + git_url[:-1] + '/'
+    https_url = 'https://github.com/'
     url, repo = remote
     if url.startswith(git_url):
-        return 'https://github.com/' + url[len(git_url):], repo
+        return https_url + url[len(git_url):], repo
+    elif url.startswith(ssh_url):
+        return https_url + url[len(ssh_url):], repo
     else:
         return remote
 

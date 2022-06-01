@@ -30,7 +30,7 @@ lemma user_op_access':
 lemma integrity_underlying_mem_update:
   "\<lbrakk> integrity aag X st s; \<forall>x\<in>xs. aag_has_auth_to aag Write x;
      \<forall>x\<in>-xs. um' x = underlying_memory (machine_state s) x \<rbrakk>
-     \<Longrightarrow> integrity aag X st (machine_state_update (\<lambda>ms. underlying_memory_update (\<lambda>_. um') ms) s)"
+     \<Longrightarrow> integrity aag X st (s\<lparr>machine_state := machine_state s\<lparr>underlying_memory := \<lambda>m. um' m\<rparr>\<rparr>)"
   apply (clarsimp simp: integrity_def)
   apply (case_tac "x \<in> xs")
    apply (erule_tac x=x in ballE)
@@ -45,10 +45,8 @@ lemma dmo_user_memory_update_respects_Write:
   unfolding user_memory_update_def
   apply (wp dmo_wp)
   apply clarsimp
-  apply (simp cong: abstract_state.fold_congs option.case_cong_weak)
-  apply (rule integrity_underlying_mem_update)
-    apply simp+
-  apply (simp add: dom_def)+
+  apply (rule integrity_underlying_mem_update; simp?)
+  apply (simp add: dom_def)
   done
 
 lemma integrity_device_state_update:
@@ -112,5 +110,14 @@ lemma do_user_op_respects:
   done
 
 end
+
+
+lemma objs_valid_tcb_vtable:
+  "\<lbrakk> valid_objs s; get_tcb t s = Some tcb \<rbrakk> \<Longrightarrow> s \<turnstile> tcb_vtable tcb"
+  apply (clarsimp simp: get_tcb_def split: option.splits Structures_A.kernel_object.splits)
+  apply (erule cte_wp_valid_cap[rotated])
+  apply (rule cte_wp_at_tcbI[where t="(a, b)" for a b, where b3="tcb_cnode_index 1"])
+    apply fastforce+
+  done
 
 end

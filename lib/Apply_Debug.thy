@@ -70,7 +70,6 @@ struct
 type break_opts = { tags : string list, trace : (string * Position.T) option, show_running : bool }
 
 fun do_markup range m = Output.report [Markup.markup (Markup.properties (Position.properties_of_range range) m) ""];
-fun do_markup_pos pos m = Output.report [Markup.markup (Markup.properties (Position.properties_of pos) m) ""];
 
 type markup_queue = { cur : Position.range option, next : Position.range option, clear_cur : bool }
 
@@ -191,9 +190,6 @@ end
 fun add_debug ctxt (Method.Source src) = (Method.Basic (traceify_method ctxt src))
   | add_debug ctxt (Method.Combinator (x,y,txts)) = (Method.Combinator (x,y, map (add_debug ctxt) txts))
   | add_debug _ x = x
-
-fun st_eq (ctxt : Proof.context,st) (ctxt',st') =
-  pointer_eq (ctxt,ctxt') andalso Thm.eq_thm (st,st')
 
 type result =
   { pre_state : thm,
@@ -339,7 +335,7 @@ fun debug_print (id : debug_state Synchronized.var) =
   (@{print} (Synchronized.value id));
 
 (* Trigger a restart if an existing nth entry differs from the given one *)
-fun maybe_restart id n st =
+fun maybe_restart id n =
 let
   val gen = guarded_read id (fn e => SOME (#trans_id e));
 
@@ -413,7 +409,6 @@ fun set_break_opts opts = Debug_Data.map (@{apply 5 (4)} (fn _ => opts))
 val get_break_opts = #4 o Debug_Data.get;
 
 fun set_last_tag tags = Debug_Data.map (@{apply 5 (5)} (fn _ => tags))
-val get_last_tag = #5 o Debug_Data.get;
 
 val is_debug_ctxt = is_some o #1 o Debug_Data.get;
 
@@ -432,7 +427,7 @@ fun set_continuation i ctxt = if get_continuation ctxt = i then ctxt else
 fun set_can_break b ctxt = if get_can_break ctxt = b then ctxt else
   Debug_Data.map (@{apply 5 (3)} (fn _ => b)) ctxt;
 
-fun has_break_tag (SOME tag) tags = member (=) tags tag
+fun has_break_tag (SOME tag) tags = member (op =) tags tag
   | has_break_tag NONE _ = true;
 
 fun break ctxt tag = (fn thm =>
@@ -460,8 +455,7 @@ structure Data = Generic_Data
 (
   type T = (morphism * Proof.context * static_info) option;
   val empty: T = NONE;
-  val extend = K NONE;
-  fun merge data : T = NONE;
+  fun merge _ : T = NONE;
 );
 
 (* Present Eisbach/Match variable binding context as normal context elements.
@@ -565,7 +559,7 @@ let
   val query = if tr = "" then NONE else SOME (tr, pos);
   val pr = Apply_Trace.pretty_deps false query ctxt st deps;
 in Pretty.writeln pr end
-  | maybe_trace NONE (ctxt, st) = ()
+  | maybe_trace NONE _ = ()
 
 val active_debug_threads = Synchronized.var "active_debug_threads" ([] : unit future list);
 
@@ -593,14 +587,14 @@ fun continue i_opt m_opt =
 
         val start_cont = get_continuation ctxt; (* how many breakpoints so far *)
 
-        val trans_id = maybe_restart id start_cont (ctxt,thm);
+        val trans_id = maybe_restart id start_cont;
           (* possibly restart if the thread has made too much progress.
              trans_id is the current number of restarts, used to avoid manipulating
              stale states *)
 
         val _ = nth_pre_result id start_cont; (* block until we've hit the start of this continuation *)
 
-        fun get_final n (st as (ctxt,_))  =
+        fun get_final n st  =
          case (i_opt,m_opt) of
           (SOME i,NONE) => if i < 1 then error "Can only continue a positive number of breakpoints" else
             if n = start_cont + i then SOME st else NONE
@@ -639,32 +633,33 @@ fun continue i_opt m_opt =
 
         fun markup_def rng =
           (Output.report
-              [Markup.markup (Markup.entity "breakpoint" ""
-               |> Markup.properties (Position.entity_properties_of true sr
-                    (Position.range_position rng))) ""]);
+              [Markup.markup (
+                  Position.make_entity_markup {def=true} sr "breakpoint"
+                                              ("", Position.range_position rng))
+                  ""]);
 
         val _ = Option.map markup_def (get_latest_range (fst st''));
         val _ = Option.map markup_def (get_breakpoint_range (fst st''));
 
         val _ =
           (Context_Position.report ctxt (Position.thread_data ())
-             (Markup.entity "breakpoint" ""
-              |> Markup.properties (Position.entity_properties_of false sr Position.none)))
+                                   (Position.make_entity_markup {def=false} sr "breakpoint"
+                                                                ("", Position.none)))
 
         val _ = maybe_trace (#trace (get_break_opts ctxt)) st'';
 
       in st'' end))
 
-fun do_apply pos rng opts m =
+fun do_apply rng opts m =
 let
-  val {tags, trace, show_running} = opts;
+  val show_running = #show_running opts;
   val batch_mode = is_some (Position.line_of (fst rng));
   val show_running = if batch_mode then false else show_running;
 
   val _ = if batch_mode then () else update_max_threads 1;
 
 in
- (fn st => map_state (fn (ctxt,thm) =>
+ (fn st => map_state (fn (ctxt,_) =>
   let
      val ident = Synchronized.var "debug_state" init_state;
      val markup_id = if show_running then SOME (Synchronized.var "markup_state" init_markup_state)
@@ -762,9 +757,8 @@ fun apply_debug opts (m', rng)  =
 
       val m'' = (fn ctxt => add_debug ctxt m')
       val m = (m'',rng)
-      val pos = Position.thread_data ();
 
-     in do_apply pos rng opts m end;
+     in do_apply rng opts m end;
 
 fun quasi_keyword x = Scan.trace (Args.$$$ x) >>
   (fn (s,[tok]) => (Position.reports [(Token.pos_of tok, Markup.quasi_keyword)]; s))

@@ -61,6 +61,8 @@ signature AUTOCORRES_TRACE = sig
         Proof.context -> (cterm -> thm) -> thm -> bool -> thm * SimpTrace option
 
   val print_ac_trace: thm RuleTrace -> string
+  val print_ac_simp_trace: SimpTrace -> string
+
   val writeFile: string -> string -> unit
 end;
 
@@ -169,7 +171,7 @@ fun my_unify_fact_tac ctxt subproof n state =
   case my_typ_match stateterm proofterm of
      NONE => Seq.empty
    | SOME typinsts =>
-     (case Thm.instantiate (map (fn (v, t) => (v, ctyp_of' t)) (Utils.nubBy fst typinsts), []) state of
+     (case Thm.instantiate (TVars.make (map (fn (v, t) => (v, ctyp_of' t)) (Utils.nubBy fst typinsts)), Vars.empty) state of
        state' =>
         let val stateterm' = nth (Thm.prems_of state') (n-1) in
         case my_match stateterm' proofterm of
@@ -179,7 +181,7 @@ fun my_unify_fact_tac ctxt subproof n state =
                                |> map (fn (var, args, t') => (var, my_lambda args t'))
                                |> map (fn (v, t) => (v, cterm_of' t))
              in
-             case Thm.instantiate ([], substs') state of state' =>
+             case Thm.instantiate (TVars.empty, Vars.make substs') state of state' =>
                (case Proof_Context.fact_tac ctxt [Variable.gen_all ctxt subproof] 1 state' |> Seq.pull of
                    NONE => Seq.empty
                  | r => Seq.make (fn () => r))
@@ -202,7 +204,7 @@ datatype 'a RuleTrace = RuleTrace of {
 fun trace_steps (RuleTrace tr) = #step tr :: List.concat (map trace_steps (#trace tr))
 
 fun dest_rule_comb (Const (@{const_name "Trueprop"}, _) $ t) = dest_rule_comb t
-  | dest_rule_comb t = dest_rule_comb (Logic.dest_all t |> snd)
+  | dest_rule_comb t = dest_rule_comb (Logic.dest_all_global t |> snd)
                        handle TERM _ => strip_comb t
 fun get_rule_abstract t = dest_rule_comb t |> snd |> (fn args => nth args (length args - 2))
 
@@ -368,8 +370,18 @@ fun print_ac_trace' indent (RuleTrace tr) =
        indent' ^ "Step: " ^ print_thm (#step tr |> fst) ^ "\n\n" ^
        String.concat (map (print_ac_trace' indent') (#trace tr) |> intercalate ["\n"]))
   end
+
 in
 val print_ac_trace = print_ac_trace' ""
+
+fun print_ac_simp_trace (SimpTrace tr) =
+  let val print_cterm = cterm_to_string true
+      val print_thm = Thm.cprop_of #> print_cterm
+  in
+    "Equation: " ^ print_thm(#equation tr) ^ "\n" ^
+    "Thms: \n" ^
+    String.concat (map (fn (name, thm) => name ^ ": " ^ print_cterm thm) (#thms tr) |> intercalate ["\n"])
+  end
 end
 
 fun writeFile filename string =

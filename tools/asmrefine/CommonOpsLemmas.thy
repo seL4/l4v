@@ -8,7 +8,6 @@ theory CommonOpsLemmas
 
 imports
   "CommonOps"
-  "Word_Lib.WordSetup"
 begin
 
 lemma fold_all_htd_updates':
@@ -26,7 +25,7 @@ lemma fold_all_htd_updates':
     ptr_arr_retyps n p = all_htd_updates TYPE('a) 4 (ptr_val p) (of_nat n)"
   "\<lbrakk> n < 2 ^ word_bits \<rbrakk> \<Longrightarrow>
     ptr_arr_retyps (2 ^ n) p = all_htd_updates TYPE('a) 5 (ptr_val p) (of_nat n)"
-  by (simp_all add: all_htd_updates_def unat_of_nat fun_eq_iff of_nat_neq_0 word_bits_conv)
+  by (simp_all add: all_htd_updates_def fun_eq_iff word_bits_conv take_bit_nat_eq_self unat_of_nat)
 
 lemma upcast_unat_less_2p_length:
     "is_up UCAST('a :: len \<rightarrow> 'b :: len) \<Longrightarrow> unat (x :: 'a word) < 2 ^ LENGTH('b)"
@@ -39,8 +38,9 @@ lemma is_up_u32_word_size: "is_up UCAST(32 \<rightarrow> machine_word_len)"
 lemma is_up_i32_word_size: "is_up UCAST(32 signed \<rightarrow> machine_word_len)"
   by (clarsimp simp add: is_up_def source_size target_size)
 
+(* This proof is a bit convoluted so that it happens to work with word_bits = 32 and 64 *)
 lemma unat_word32_less_2p_word_bits: "unat (x :: 32 word) < 2 ^ word_bits"
-  by (rule upcast_unat_less_2p_length[OF is_up_u32_word_size, simplified word_bits_def[symmetric]])
+  unfolding word_bits_def by (rule upcast_unat_less_2p_length, rule is_up_u32_word_size)
 
 lemma unat_sword32_less_2p_word_bits: "unat (x :: 32 signed word) < 2 ^ word_bits"
   by (rule upcast_unat_less_2p_length[OF is_up_i32_word_size, simplified word_bits_def[symmetric]])
@@ -89,24 +89,22 @@ proof -
     apply (cut_tac x=a in sint_range')
     apply (clarsimp simp add: abs_if word_size)
     done
+  note sint_of_int_eq[simp] signed_take_bit_int_eq_self[simp]
   show ?thesis using mag len
     apply (cases "b = 1")
      apply (case_tac "size a", simp_all)[1]
      apply (case_tac nat, simp_all add: sint_word_ariths word_size)[1]
-    apply (simp add: sdiv_int_def sdiv_word_def sint_sbintrunc'
-                     sbintrunc_eq_in_range range_sbintrunc sgn_if)
-    apply (safe, simp_all add: word_size sint_int_min)
+    apply (simp add: sdiv_int_def sdiv_word_def del: of_int_mult)
+    apply (simp add: sbintrunc_eq_in_range range_sbintrunc sgn_if)
+    apply (safe, simp_all add: word_size sint_int_min sint_int_max_plus_1;
+           simp add: sint_word_ariths)
     done
 qed
 
 lemma ptr_add_assertion_uintD:
   "ptr_add_assertion ptr (uint (x :: ('a :: len) word)) strong htd
     \<longrightarrow> (x = 0 \<or> array_assertion ptr (if strong then unat (x + 1) else unat x) htd)"
-  using unat_lt2p[where x=x]
-  by (simp add: ptr_add_assertion_def uint_0_iff Word.unat_def[symmetric]
-                unat_plus_if_size linorder_not_less word_size
-                le_Suc_eq array_assertion_shrink_right
-           del: unat_lt2p)
+  by (auto simp: unat_plus_if_size intro: array_assertion_shrink_right)
 
 lemma sint_uint_sless_0_if:
   "sint x = (if x <s 0 then - uint (- x) else uint (x :: ('a :: len) word))"
@@ -120,14 +118,10 @@ lemma ptr_add_assertion_sintD:
     \<longrightarrow> (x = 0 \<or> (x <s 0 \<and> array_assertion (ptr +\<^sub>p sint x)
             (unat (- x)) htd)
         \<or> (x \<noteq> 0 \<and> \<not> x <s 0 \<and> array_assertion ptr (if strong then unat (x + 1) else unat x) htd))"
-  using unat_lt2p[where x=x]
   apply (simp add: ptr_add_assertion_def word_sless_alt
                    sint_uint_sless_0_if[THEN arg_cong[where f="\<lambda>x. - x"]]
                    sint_uint_sless_0_if[THEN arg_cong[where f=nat]]
-                   Word.unat_def[symmetric]
-                   unat_plus_if_size le_Suc_eq linorder_not_less
-                   word_size
-           del: unat_lt2p)
+                   unat_plus_if_size)
   apply (simp add: array_assertion_shrink_right)
   apply (auto simp: linorder_not_less)
   done

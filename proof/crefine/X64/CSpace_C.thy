@@ -9,6 +9,8 @@ theory CSpace_C
 imports CSpaceAcc_C Machine_C
 begin
 
+unbundle l4v_word_context
+
 context kernel_m
 begin
 
@@ -126,18 +128,8 @@ lemma Arch_maskCapRights_ccorres [corres]:
          by (fastforce simp add: cap_get_tag_isCap isCap_simps  simp del: not_ex simp_thms(44))+
 
 lemma to_bool_mask_to_bool_bf:
-  "to_bool (x && mask (Suc 0)) = to_bool_bf (x::machine_word)"
-  apply (simp add: to_bool_bf_def to_bool_def)
-  apply (rule iffI)
-   prefer 2
-   apply simp
-  apply (subgoal_tac "x && mask (Suc 0) < 2^(Suc 0)")
-   apply simp
-   apply (drule word_less_cases [where y=2])
-   apply auto[1]
-  apply (rule and_mask_less')
-  apply simp
-  done
+  "to_bool (x && 1) = to_bool_bf (x::machine_word)"
+  by (simp add: to_bool_bf_def to_bool_def)
 
 lemma to_bool_cap_rights_bf:
   "to_bool (capAllowRead_CL (seL4_CapRights_lift R)) =
@@ -187,8 +179,6 @@ lemma isArchCap_spec:
   "\<forall>s. \<Gamma>\<turnstile> {s} Call isArchCap_'proc \<lbrace>\<acute>ret__unsigned_long = from_bool (isArchCap_tag (cap_get_tag (cap_' s)))\<rbrace>"
   apply vcg
   apply (clarsimp simp: from_bool_def isArchCap_tag_def bool.split)
-  apply (clarsimp simp: word_mod_2p_is_mask[where n=1, simplified] mask_def)
-  apply word_bitwise
   done
 
 lemma maskCapRights_ccorres [corres]:
@@ -331,7 +321,7 @@ lemma maskCapRights_ccorres [corres]:
       apply (simp add: cap_reply_cap_lift_def)
       apply (simp add: ccap_rights_relation_def cap_rights_to_H_def
                        to_bool_reply_cap_bf
-                       to_bool_mask_to_bool_bf to_bool_cap_rights_bf)
+                       to_bool_mask_to_bool_bf[simplified] to_bool_cap_rights_bf)
      apply (simp add: Collect_const_mem from_bool_def)
      apply csymbr
      apply (simp add: cap_get_tag_isCap isCap_simps del: Collect_const)
@@ -536,7 +526,7 @@ lemma revokable_ccorres:
   apply (cinit' lift: derivedCap_' srcCap_')
    \<comment> \<open>Clear up Arch cap case\<close>
    apply csymbr
-   apply (clarsimp simp: cap_get_tag_isCap split del: if_splits simp del: Collect_const)
+   apply (clarsimp simp: cap_get_tag_isCap simp del: Collect_const)
    apply (rule ccorres_Cond_rhs_Seq)
     apply (rule ccorres_rhs_assoc)
     apply (clarsimp simp: isCap_simps)
@@ -812,12 +802,12 @@ lemma update_freeIndex':
         apply (case_tac cte', simp)
         apply (clarsimp simp: ccap_relation_def cap_lift_def cap_get_tag_def cap_to_H_def)
         apply (thin_tac _)+
-        apply (simp add: mask_def to_bool_and_1 nth_shiftr word_ao_dist word_bool_alg.conj.assoc)
+        apply (simp add: mask_def to_bool_and_1 nth_shiftr word_ao_dist and.assoc)
         apply (rule inj_onD[OF word_unat.Abs_inj_on[where 'a=machine_word_len]], simp)
           apply (cut_tac i'_align i'_bound_word)
           apply (simp add: is_aligned_mask)
           apply word_bitwise
-          subgoal by (simp add: word_size untypedBits_defs)
+          subgoal by (simp add: word_size untypedBits_defs mask_def)
          apply (cut_tac i'_bound_concrete)
          subgoal by (simp add: unats_def)
         subgoal by (simp add: word_unat.Rep[where 'a=machine_word_len, simplified])
@@ -1502,7 +1492,7 @@ lemma emptySlot_helper:
    apply clarsimp
 
    apply (frule(1) rf_sr_ctes_of_clift)
-   apply (clarsimp simp: typ_heap_simps' nextmdb_def if_1_0_0 nextcte_def)
+   apply (clarsimp simp: typ_heap_simps' nextmdb_def nextcte_def)
    apply (intro conjI impI allI)
      \<comment> \<open>\<dots> \<exists>x\<in>fst \<dots>\<close>
      apply clarsimp
@@ -2290,12 +2280,9 @@ lemma fupdate_word_set_or_clear_max_word:
   by (simp add: fupdate_def word_set_or_clear_def cong: if_cong)
 
 lemma h_t_valid_Array_element':
-  "\<lbrakk> htd \<Turnstile>\<^sub>t (p :: (('a :: mem_type)['b :: finite]) ptr); 0 \<le> n; n < CARD('b) \<rbrakk>
+  "\<lbrakk> htd \<Turnstile>\<^sub>t (p :: (('a :: mem_type)['b :: finite]) ptr); 0 \<le> n; n < int CARD('b) \<rbrakk>
     \<Longrightarrow> htd \<Turnstile>\<^sub>t ((ptr_coerce p :: 'a ptr) +\<^sub>p n)"
-  apply (drule_tac n="nat n" and coerce=False in h_t_valid_Array_element')
-   apply simp
-  apply (simp add: array_ptr_index_def)
-  done
+  by (fact h_t_valid_Array_element)
 
 lemma setIOPortMask_spec:
   notes ucast_mask = ucast_and_mask[where n=6, simplified mask_def, simplified]
@@ -2349,10 +2336,11 @@ lemma setIOPortMask_spec:
                                                      (~~ mask (unat (low_' \<sigma> && mask wordRadix)))))))
                                          (globals \<sigma>)}"
            in whileAnno_subst_invariant)
+  supply Word.of_nat_unat[simp del]
   apply (rule conseqPre, vcg)
     apply (all \<open>clarsimp simp: Let_def wordRadix_def hrs_simps is_up is_down
                                unat_ucast_upcast uint_up_ucast sint_ucast_eq_uint up_ucast_inj_eq
-                               not_max_word_simps[THEN ucast_increment, simplified max_word_def]
+                               not_max_word_simps[THEN ucast_increment]
                                ucast_cmp_ucast ucast_cmp_ucast[where 'a=16 and y="0x40", simplified]
                                heap_modify_fold t_hrs_'_update_heap_modify_fold
                          cong: conj_cong\<close>)
@@ -2423,7 +2411,7 @@ lemma setIOPortMask_ccorres:
                    if_distrib[where f="\<lambda>c. test_bit c i" for i] word_ops_nth_size word_size
                    unat_shiftr_less_2p[of 6 10, simplified] unat_and_mask_less_2p[of 6, simplified]
                    less_Suc_eq_le Suc_le_eq not_less unat_arith_simps(1,2)[symmetric]
-                   if_if_same_output if_if_if_same_output)
+                   if_if_same_output if_if_if_same_output less_Suc_eq_le[where n=63, symmetric])
   apply (thin_tac "_ = _")
   apply (rule if_weak_cong)
   apply (rule ssubst[OF word_le_split_mask[where n=6], where P="\<lambda>f. e \<longleftrightarrow> f \<and> c" for e c])
@@ -2928,7 +2916,7 @@ lemma cap_zombie_cap_get_capZombiePtr_spec:
                  split: if_split if_split_asm)
   apply (subgoal_tac "unat (capZombieType_CL (cap_zombie_cap_lift cap) && mask 6)
                       < unat ((2::machine_word) ^ 6)")
-   apply clarsimp
+   apply (clarsimp simp: shiftl_eq_mult)
   apply (rule unat_mono)
   apply (rule and_mask_less_size)
   apply (clarsimp simp: word_size)

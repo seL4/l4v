@@ -19,8 +19,7 @@ imports
   ML_Goal
   Eval_Bool
   NICTATools
-  "HOL-Library.Prefix_Order"
-  "HOL-Word.Word"
+  "Word_Lib.WordSetup"
 begin
 
 (* FIXME: eliminate *)
@@ -2414,9 +2413,7 @@ lemma insert_subtract_new:
   "x \<notin> S \<Longrightarrow> (insert x S - S) = {x}"
   by auto
 
-lemma zip_is_empty:
-  "(zip xs ys = []) = (xs = [] \<or> ys = [])"
-  by (cases xs; simp) (cases ys; simp)
+lemmas zip_is_empty = zip_eq_Nil_iff
 
 lemma minus_Suc_0_lt:
   "a \<noteq> 0 \<Longrightarrow> a - Suc 0 < a"
@@ -2427,14 +2424,9 @@ lemma fst_last_zip_upt:
    fst (last (zip [0 ..< m] xs)) = (if length xs < m then length xs - 1 else m - 1)"
   apply (subst last_conv_nth, assumption)
   apply (simp only: One_nat_def)
-  apply (subst nth_zip)
-    apply (rule order_less_le_trans[OF minus_Suc_0_lt])
-     apply (simp add: zip_is_empty)
-    apply simp
-   apply (rule order_less_le_trans[OF minus_Suc_0_lt])
-    apply (simp add: zip_is_empty)
-   apply simp
-  apply (simp add: min_def zip_is_empty)
+  apply (subst nth_zip; simp)
+   apply (rule order_less_le_trans[OF minus_Suc_0_lt]; simp)
+  apply (rule order_less_le_trans[OF minus_Suc_0_lt]; simp)
   done
 
 lemma neq_into_nprefix:
@@ -2589,18 +2581,10 @@ lemma int_shiftl_less_cancel:
 lemma int_shiftl_lt_2p_bits:
   "0 \<le> (x::int) \<Longrightarrow> x < 1 << n \<Longrightarrow> \<forall>i \<ge> n. \<not> x !! i"
   apply (clarsimp simp: shiftl_int_def)
-  apply (clarsimp simp: bin_nth_eq_mod even_iff_mod_2_eq_zero)
-  apply (drule_tac z="2^i" in less_le_trans)
-   apply simp
-  apply simp
-  done
+  by (metis bit_take_bit_iff not_less take_bit_int_eq_self_iff)
 \<comment> \<open>TODO: The converse should be true as well, but seems hard to prove.\<close>
 
-lemma int_eq_test_bit:
-  "((x :: int) = y) = (\<forall>i. test_bit x i = test_bit y i)"
-  apply simp
-  apply (metis bin_eqI)
-  done
+lemmas int_eq_test_bit = bin_eq_iff
 lemmas int_eq_test_bitI = int_eq_test_bit[THEN iffD2, rule_format]
 
 lemma le_nat_shrink_left:
@@ -2615,7 +2599,7 @@ text \<open>Support for defining enumerations on datatypes derived from enumerat
 lemma distinct_map_enum:
   "\<lbrakk> (\<forall> x y. (F x = F y \<longrightarrow> x = y )) \<rbrakk>
    \<Longrightarrow> distinct (map F (enum_class.enum :: 'a :: enum list))"
-  by (simp add: distinct_map enum_distinct inj_onI)
+  by (simp add: distinct_map inj_onI)
 
 lemma if_option_None_eq:
   "((if P then None else Some x) = None) = P"

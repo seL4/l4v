@@ -25,7 +25,7 @@ lemma dmo_mapM_storeWord_0_invs[wp,Schedule_AI_asms]:
   apply (erule use_valid)
    apply (simp add: storeWord_def word_rsplit_0)
    apply wp
-  apply simp
+  apply (clarsimp simp: word_bits_conv)
   done
 
 crunch device_state_inv[wp]: clearExMonitor "\<lambda>ms. P (device_state ms)"
@@ -66,9 +66,6 @@ lemma arch_stit_tcb_at[wp]:
   apply (simp add: arch_switch_to_idle_thread_def )
   apply wp
   done
-
-crunch st_tcb_at[wp]: set_vm_root "st_tcb_at P t"
-  (wp: crunch_wps simp: crunch_simps)
 
 crunch ct[wp]: set_vm_root "\<lambda>s. P (cur_thread s)"
   (wp: crunch_wps simp: crunch_simps)

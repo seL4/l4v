@@ -662,13 +662,14 @@ next
         apply (erule disjE)
          apply (simp only: zobj_refs.simps mem_simps)
         apply clarsimp+
-       apply (drule sym, simp)
-       apply (drule sym, simp)
-       apply clarsimp
-       apply (simp add: unat_eq_0)
-       apply (drule of_bl_eq_0)
-        apply (drule zombie_cte_bits_less, simp add: word_bits_def)
-       apply (clarsimp simp: cte_wp_at_caps_of_state)
+       subgoal
+         apply (drule sym, simp)
+         apply (drule sym, simp)
+         apply clarsimp
+         apply (simp add: unat_eq_0)
+         apply (drule of_bl_eq_0)
+          apply (drule zombie_cte_bits_less, simp add: word_bits_def)
+         by (clarsimp simp: cte_wp_at_caps_of_state)
       apply (drule_tac s="appropriate_cte_cap c" for c in sym)
       apply (clarsimp simp: is_cap_simps appropriate_Zombie gen_obj_refs_eq)
      apply (simp add: is_final_cap_def)
@@ -679,8 +680,7 @@ next
     apply (frule cte_wp_at_valid_objs_valid_cap, clarsimp+)
     apply (frule invs_valid_asid_table)
     apply (frule invs_sym_refs)
-    apply (clarsimp simp add: invs_def valid_state_def
-      invs_valid_objs invs_psp_aligned)
+    apply (clarsimp simp add: invs_def valid_state_def invs_valid_objs invs_psp_aligned)
     apply (drule(1) if_unsafe_then_capD, clarsimp+)
     done
 next
@@ -814,10 +814,6 @@ global_interpretation CNodeInv_AI_2?: CNodeInv_AI_2
 
 
 context Arch begin global_naming ARM_HYP
-
-crunch rvk_prog: prepare_thread_delete "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map cap_to_rpo (caps_of_state s x))"
-  (simp: crunch_simps o_def unless_def is_final_cap_def
-     wp: crunch_wps empty_slot_rvk_prog' select_wp ignore: dissociate_vcpu_tcb)
 
 lemma finalise_cap_rvk_prog [CNodeInv_AI_assms]:
    "\<lbrace>\<lambda>s. revoke_progress_ord m (\<lambda>x. map_option cap_to_rpo (caps_of_state s x))\<rbrace>

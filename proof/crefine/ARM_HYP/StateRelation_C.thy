@@ -600,8 +600,8 @@ definition
 where
   "cready_queues_index_to_C qdom prio \<equiv> (unat qdom) * numPriorities + (unat prio)"
 
-definition
-  cready_queues_relation :: "tcb_C typ_heap \<Rightarrow> (tcb_queue_C[4096]) \<Rightarrow> (domain \<times> priority \<Rightarrow> ready_queue) \<Rightarrow> bool"
+definition cready_queues_relation ::
+  "tcb_C typ_heap \<Rightarrow> (tcb_queue_C[num_tcb_queues]) \<Rightarrow> (domain \<times> priority \<Rightarrow> ready_queue) \<Rightarrow> bool"
 where
   "cready_queues_relation h_tcb queues aqueues \<equiv>
      \<forall>qdom prio. ((qdom \<ge> ucast minDom \<and> qdom \<le> ucast maxDom \<and>

@@ -27,6 +27,7 @@ lemma activateIdleThread_corres:
 lemma activateThread_corres:
  "corres dc (invs and ct_in_state activatable) (invs' and ct_in_state' activatable')
             activate_thread activateThread"
+  supply subst_all [simp del]
   apply (simp add: activate_thread_def activateThread_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr [OF _ getCurThread_corres])
@@ -2113,8 +2114,8 @@ lemma decodeSetPriority_wf[wp]:
   apply (rule hoare_pre)
   apply (wp checkPrio_lt_ct_weak | wpc | simp | wp (once) checkPrio_inv)+
   apply (clarsimp simp: maxPriority_def numPriorities_def)
-  apply (cut_tac max_word_max[where 'a=8, unfolded max_word_def])
-  apply simp
+  using max_word_max [of \<open>UCAST(64 \<rightarrow> 8) x\<close> for x]
+  apply (simp add: max_word_mask numeral_eq_Suc mask_Suc)
   done
 
 lemma decodeSetPriority_inv[wp]:
@@ -2133,8 +2134,8 @@ lemma decodeSetMCPriority_wf[wp]:
   apply (rule hoare_pre)
   apply (wp checkPrio_lt_ct_weak | wpc | simp | wp (once) checkPrio_inv)+
   apply (clarsimp simp: maxPriority_def numPriorities_def)
-  apply (cut_tac max_word_max[where 'a=8, unfolded max_word_def])
-  apply simp
+  using max_word_max [of \<open>UCAST(64 \<rightarrow> 8) x\<close> for x]
+  apply (simp add: max_word_mask numeral_eq_Suc mask_Suc)
   done
 
 lemma decodeSetMCPriority_inv[wp]:
@@ -2153,9 +2154,8 @@ lemma decodeSetSchedParams_wf[wp]:
   unfolding decodeSetSchedParams_def
   apply (wpsimp wp: checkPrio_lt_ct_weak | wp (once) checkPrio_inv)+
   apply (clarsimp simp: maxPriority_def numPriorities_def)
-  apply (rule conjI;
-         cut_tac max_word_max[where 'a=8, unfolded max_word_def];
-         simp)
+  using max_word_max [of \<open>UCAST(64 \<rightarrow> 8) x\<close> for x]
+  apply (simp add: max_word_mask numeral_eq_Suc mask_Suc)
   done
 
 lemma decodeSetSchedParams_corres:
@@ -2607,9 +2607,8 @@ lemma decodeSetTLSBase_corres:
   "corres (ser \<oplus> tcbinv_relation) (tcb_at t) (tcb_at' t)
           (decode_set_tls_base w (cap.ThreadCap t))
           (decodeSetTLSBase w (capability.ThreadCap t))"
-  apply (clarsimp simp: decode_set_tls_base_def decodeSetTLSBase_def returnOk_def
-                 split: list.split)
-  by (rule sym, rule ucast_id)
+  by (clarsimp simp: decode_set_tls_base_def decodeSetTLSBase_def returnOk_def
+               split: list.split)
 
 lemma decodeTCBInvocation_corres:
  "\<lbrakk> c = Structures_A.ThreadCap t; cap_relation c c';

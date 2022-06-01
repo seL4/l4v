@@ -493,7 +493,7 @@ lemma field_of_t_field_lookup:
   assumes n: "n = field_offset TYPE('a) f"
   shows "field_of_t (Ptr &(ptr\<rightarrow>f) :: ('b ptr)) (ptr :: 'a ptr)"
   apply (clarsimp simp del: field_lookup_offset_eq
-      simp: field_of_t_def field_of_def)
+                 simp: field_of_t_def field_of_def)
   apply (subst td_set_field_lookup)
    apply (rule wf_desc_typ_tag)
   apply (rule exI [where x=f])
@@ -502,7 +502,7 @@ lemma field_of_t_field_lookup:
   apply (subst field_lookup_export_uinfo_Some)
    apply assumption
   apply (clarsimp simp del: field_lookup_offset_eq
-      simp: field_lvalue_def unat_of_nat_field_offset)
+                  simp: field_lvalue_def unat_of_nat_field_offset)
   done
 
 lemma simple_lift_field_update':
@@ -724,10 +724,10 @@ lemma zero_not_in_intvl_no_overflow:
   apply (drule_tac x="2 ^ len_of TYPE('a) - unat a" in spec)
   apply (clarsimp simp: not_less)
   apply (erule disjE)
-  apply (metis (erased, hide_lams) diff_add_inverse less_imp_add_positive of_nat_2p of_nat_add
-           unat_lt2p word_neq_0_conv word_unat.Rep_inverse)
+   apply (metis (erased) diff_add_inverse less_imp_add_positive of_nat_2p of_nat_add
+                unat_lt2p word_neq_0_conv word_unat.Rep_inverse)
   apply (metis le_add_diff_inverse le_antisym le_diff_conv le_refl
-           less_imp_le_nat add.commute not_add_less1 unat_lt2p)
+               less_imp_le_nat add.commute not_add_less1 unat_lt2p)
   done
 
 lemma intvl_split:

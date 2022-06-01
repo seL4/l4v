@@ -8,72 +8,65 @@
  * Lemmas about this instance should also go here. *)
 theory NatBitwise
 imports
-  "HOL-Word.Word"
   Lib
 begin
 
-instantiation nat :: bit_operations
+instantiation nat :: lsb
 begin
-
-(* NB: this is not useful, because NOT flips the sign, and hence this
- * definition always produces 0. *)
-definition
-  "bitNOT = nat o bitNOT o int"
-
-definition
-  "bitAND x y = nat (bitAND (int x) (int y))"
-
-definition
-  "bitOR x y = nat (bitOR (int x) (int y))"
-
-definition
-  "bitXOR x y = nat (bitXOR (int x) (int y))"
-
-definition
-  "shiftl x y = nat (shiftl (int x) y)"
-
-definition
-  "shiftr x y = nat (shiftr (int x) y)"
-
-definition
-  "test_bit x y = test_bit (int x) y"
 
 definition
   "lsb x = lsb (int x)"
 
-definition
-  "msb x = msb (int x)"
+instance
+  by intro_classes (meson even_of_nat lsb_nat_def lsb_odd)
+
+end
+
+instantiation nat :: msb
+begin
 
 definition
-  "set_bit x y z = nat (set_bit (int x) y z)"
+  "msb x = msb (int x)"
 
 instance ..
 
 end
 
+instantiation nat :: set_bit
+begin
+
+definition
+  "set_bit x y z = nat (set_bit (int x) y z)"
+
+instance
+  by intro_classes
+     (metis (mono_tags) set_bit_nat_def bin_nth_sc_gen bin_sc_pos
+                        bit_nat_iff exp_eq_0_imp_not_bit int_eq_iff)
+end
+
 lemma nat_2p_eq_shiftl:
   "(2::nat)^x = 1 << x"
-  by (simp add: shiftl_nat_def int_2p_eq_shiftl)
+  by simp
 
-lemma shiftl_nat_alt_def:
-  "(x::nat) << n = x * 2^n"
-  by (simp add: shiftl_nat_def shiftl_int_def nat_int_mul)
+lemmas shiftl_nat_alt_def = shiftl_nat_def
+
+lemma shiftl_nat_def:
+  "(x::nat) << y = nat (int x << y)"
+  by (simp add: nat_int_mul push_bit_eq_mult shiftl_def)
 
 lemma nat_shiftl_less_cancel:
   "n \<le> m \<Longrightarrow> ((x :: nat) << n < y << m) = (x < y << (m - n))"
-  by (simp add: nat_int_comparison(2) shiftl_nat_def int_shiftl_less_cancel)
+  apply (simp add: nat_int_comparison(2) shiftl_nat_def shiftl_def)
+  by (metis int_shiftl_less_cancel shiftl_def)
+
 
 lemma nat_shiftl_lt_2p_bits:
   "(x::nat) < 1 << n \<Longrightarrow> \<forall>i \<ge> n. \<not> x !! i"
-  apply (clarsimp simp: shiftl_nat_def test_bit_nat_def zless_nat_eq_int_zless)
-  apply (fastforce dest: int_shiftl_lt_2p_bits[rotated])
-  done
+  apply (clarsimp simp: shiftl_nat_def zless_nat_eq_int_zless
+                  dest!: le_Suc_ex)
+  by (metis bit_take_bit_iff not_add_less1 take_bit_nat_eq_self_iff)
 
-lemma nat_eq_test_bit:
-  "((x :: nat) = y) = (\<forall>i. test_bit x i = test_bit y i)"
-  apply (simp add: test_bit_nat_def)
-  apply (metis bin_eqI int_int_eq)
-  done
-lemmas nat_eq_test_bitI = nat_eq_test_bit[THEN iffD2, rule_format]
+lemmas nat_eq_test_bit = bit_eq_iff
+lemmas nat_eq_test_bitI = bit_eq_iff[THEN iffD2, rule_format]
 
 end

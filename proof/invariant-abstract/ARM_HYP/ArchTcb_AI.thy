@@ -41,8 +41,8 @@ lemma same_object_obj_refs[Tcb_AI_asms]:
   "\<lbrakk> same_object_as cap cap' \<rbrakk>
      \<Longrightarrow> obj_refs cap = obj_refs cap'"
   apply (cases cap, simp_all add: same_object_as_def)
-       apply ((clarsimp simp: is_cap_simps bits_of_def same_aobject_as_def
-                      split: cap.split_asm )+)
+       apply (clarsimp simp: is_cap_simps bits_of_def
+                      split: cap.split_asm)+
   by (cases "the_arch_cap cap"; cases "the_arch_cap cap'"; simp)
 
 
@@ -133,9 +133,6 @@ lemma checked_insert_tcb_invs[wp]: (* arch specific *)
    apply (erule(1) checked_insert_is_derived, simp+)
   apply (auto simp: is_cnode_or_valid_arch_def is_cap_simps)
   done
-
-crunch caps_of_state[wp]: prepare_thread_delete "\<lambda>s. P (caps_of_state s)"
-  (wp: mapM_x_wp' crunch_wps)
 
 crunch tcb_at[wp, Tcb_AI_asms]: arch_get_sanitise_register_info, arch_post_modify_registers "tcb_at a"
 crunch invs[wp, Tcb_AI_asms]: arch_get_sanitise_register_info, arch_post_modify_registers "invs"

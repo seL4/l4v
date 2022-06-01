@@ -15,7 +15,6 @@ session "Simpl-VCG" in Simpl = Word_Lib +
 session CParser = "Simpl-VCG" +
   sessions
     "HOL-Library"
-    "HOL-Word"
     "Lib"
   directories
     "umm_heap"

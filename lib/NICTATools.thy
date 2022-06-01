@@ -13,15 +13,14 @@ imports
   (* Solves_Tac *)
   Rule_By_Method
   Eisbach_Methods
-  TSubst
   Time_Methods_Cmd
   Try_Attribute
   Repeat_Attribute
   Trace_Schematic_Insts
   Insulin
   ShowTypes
-  AutoLevity_Hooks
   Locale_Abbrev
+  Value_Type
 begin
 
 section "Detect unused meta-forall"
@@ -77,8 +76,10 @@ in
 end
 
 (* Setup the tool, stealing the "auto_solve_direct" option. *)
-val _ = Try.tool_setup ("unused_meta_forall",
-    (1, @{system_option auto_solve_direct}, detect_unused_meta_forall))
+val _ = Try.tool_setup { name = "unused_meta_forall",
+                         weight = 1,
+                         auto_option = \<^system_option>\<open>auto_solve_direct\<close>,
+                         body = detect_unused_meta_forall }
 \<close>
 
 lemma test_unused_meta_forall: "\<And>x. y \<or> \<not> y"

@@ -14,7 +14,7 @@ named_theorems ADT_AC_assms
 
 lemma mask_ptTranslationBits_ucast_ucast:
   "(asid && mask ptTranslationBits) = ucast (ucast asid :: 9 word)"
-  by (word_eqI simp: ptTranslationBits_def)
+  by (word_eqI_solve simp: ptTranslationBits_def)
 
 lemma ptr_offset_in_ptr_range:
   "\<lbrakk> invs s; x \<notin> kernel_mappings;
@@ -60,7 +60,7 @@ lemma user_op_access[ADT_AC_assms]:
   apply (erule_tac x=s in meta_allE)
   apply (erule_tac x=tcb in meta_allE)
   apply (cases "get_vspace_of_thread (kheap s) (arch_state s) tcb = global_pt s"; clarsimp)
-   apply (frule get_page_info_gpd_kmaps[rotated 3]; fastforce simp: get_page_info_def)
+   apply (frule get_page_info_gpd_kmaps[rotated 2]; fastforce simp: get_page_info_def)
   apply (frule (3) ptr_offset_in_ptr_range)
   apply (frule get_vspace_of_thread_reachable; clarsimp)
   apply (frule vs_lookup_table_vspace)

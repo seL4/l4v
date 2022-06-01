@@ -6,7 +6,7 @@
 
 theory ExampleSystemPolicyFlows
 imports
-  Noninterference
+  ArchNoninterference
   "Access.ExampleSystem"
 begin
 
@@ -77,15 +77,13 @@ lemma Sys3UT3Reads_correct_bw : "x \<in> Sys3Reads \<Longrightarrow> x \<in> sub
   apply (erule disjE)
    apply (rule_tac auth = SyncSend in reads_ep)
     apply (simp)
-    apply (simp add:insertI1)
+   apply (simp add:insertI1)
   (* UT3 reads T3 *)
-  apply (rule_tac auth = SyncSend and ep = "OrdinaryLabel (EP3)" and a = "OrdinaryLabel (UT3)" in read_sync_ep_read_receivers)
-     apply (simp)
-     apply (simp)
-    apply (rule_tac auth = SyncSend in reads_ep)
+  apply (rule_tac ep = "OrdinaryLabel (EP3)" in read_sync_ep_read_receivers)
+   apply (rule_tac auth = SyncSend in reads_ep)
     apply (simp)
-    apply (rule insertI1)
-    apply (simp add: insertI1)
+   apply (rule insertI1)
+  apply (simp add: insertI1)
   done
 
 lemma Sys3UT3Affects_correct_bw : "x \<in> Sys3Affects \<Longrightarrow> x \<in> subjectAffects Sys3AuthGraph (OrdinaryLabel (UT3))"
@@ -109,19 +107,17 @@ lemma Sys3T3Reads_correct_bw : "x \<in> Sys3Reads \<Longrightarrow> x \<in> subj
   apply (simp add: Sys3AuthGraph_def Sys3AuthGraph_aux_def complete_AuthGraph_def Sys3Reads_def)
   apply (erule disjE)
    (* T3 reads UT3 *)
-   apply (rule_tac auth = Receive and ep = "OrdinaryLabel (EP3)" and a = "OrdinaryLabel (T3)" in read_sync_ep_read_senders)
-      apply (simp)
-     apply (simp)
+   apply (rule_tac ep = "OrdinaryLabel (EP3)" in read_sync_ep_read_senders)
     apply (rule_tac auth = Receive in reads_ep)
      apply (simp)
-     apply (simp add:insertI1)
-   apply (simp add: insertI1)
-   (* T3 reads EP3 *)
-  apply (erule disjE)
-  apply (rule_tac auth = Receive in reads_ep)
-    apply (simp)
     apply (simp add:insertI1)
-   (* T3 reads T3 *)
+   apply (simp add: insertI1)
+  (* T3 reads EP3 *)
+  apply (erule disjE)
+   apply (rule_tac auth = Receive in reads_ep)
+    apply (simp)
+   apply (simp add:insertI1)
+  (* T3 reads T3 *)
   apply simp
   done
 
@@ -152,17 +148,15 @@ lemma Sys3EP3Reads_correct_bw : "x \<in> Sys3Reads \<Longrightarrow> x \<in> sub
   apply (erule disjE)
    (* EP3 reads UT3 *)
    apply simp
-   apply (rule_tac a = "OrdinaryLabel (T3)" and auth=Receive and ep = "OrdinaryLabel (EP3)" and b = "OrdinaryLabel (UT3)" in read_sync_ep_read_senders)
-      apply (simp)
-     apply (simp add:insertI1)
-    apply simp
-   apply simp
+   apply (rule_tac ep = "OrdinaryLabel (EP3)" and b = "OrdinaryLabel (UT3)" in read_sync_ep_read_senders)
+    apply (simp)
+   apply (simp add:insertI1)
   (* EP3 reads EP3 *)
   apply (erule disjE)
    apply simp
   (* EP3 reads T3 *)
-  apply (rule_tac a = "OrdinaryLabel (UT3)" and auth = SyncSend and ep = "OrdinaryLabel (EP3)" and a = "OrdinaryLabel (T3)" in read_sync_ep_read_receivers)
-     apply simp_all
+  apply (rule_tac ep = "OrdinaryLabel (EP3)" in read_sync_ep_read_receivers)
+   apply simp_all
   done
 
 lemma Sys3EP3Affects_correct_fw : "x \<in> subjectAffects Sys3AuthGraph (OrdinaryLabel (EP3)) \<Longrightarrow> x \<in> Sys3EP3Affects"

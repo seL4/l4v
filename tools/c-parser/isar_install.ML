@@ -66,7 +66,6 @@ structure C_Includes = Theory_Data
 (struct
    type T = string list
    val empty = []
-   val extend = I
    val merge = Library.merge (op =)
 end);
 
@@ -79,7 +78,6 @@ structure C_Installs = Theory_Data
 (struct
    type T = install_data list
    val empty = []
-   val extend = I
    val merge = Library.merge (op =)
 end);
 val installed_C_files = C_Installs.get
@@ -180,10 +178,10 @@ fun define_function_names fninfo thy = let
     val b = Binding.name cname
     val ((_, (_, th)), lthy) =
         lthy
-        |> Local_Theory.open_target |> snd
+        |> Local_Theory.begin_nested |> snd
         |>Local_Theory.define ((b, NoSyn),
                               ((Thm.def_binding b, []), mk_int_numeral n))
-    val lthy' = Local_Theory.close_target lthy
+    val lthy' = Local_Theory.end_nested lthy
     val morph  = Proof_Context.export_morphism lthy lthy'
     val th'     = Morphism.thm morph th
 
@@ -213,7 +211,7 @@ end
 
 fun define_global_initializers globloc msgpfx name_munger mungedb cse globs thy = let
   open ProgramAnalysis Absyn
-  val lthy = Named_Target.init globloc thy
+  val lthy = Named_Target.init [] globloc thy
   val globinits = let
     val inittab = get_globinits cse
     fun foldthis (gnm : MString.t, gty) defs = let
@@ -364,7 +362,7 @@ in
             state {owners=owners,gstate_ty=gstate_ty,mstate_ty=mstate_ty} thy
       val loc_b = Binding.name (suffix HPInter.globalsN localename)
       val (globloc, ctxt) =
-          Expression.add_locale loc_b loc_b ([], []) globs thy
+          Expression.add_locale loc_b loc_b [] ([], []) globs thy
       val thy = Local_Theory.exit_global ctxt
       val _ = Output.state ("Created locale for globals (" ^ Binding.print loc_b ^
                        ")- with " ^ Int.toString (length globs) ^

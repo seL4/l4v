@@ -79,9 +79,9 @@ lemma ccorresE_Seq:
    apply (rotate_tac 1, erule allE, erule impE, force)
    apply (monad_eq simp: split_def Bex_def Ball_def split: sum.splits)
    apply (case_tac s', simp_all)[1]
-     apply fast
+     subgoal by fastforce
     apply (erule exec_elim_cases)
-    apply fastforce
+    subgoal by fastforce
    apply (erule exec_elim_cases)
    apply clarsimp
    apply auto[1]

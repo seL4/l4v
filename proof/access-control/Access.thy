@@ -167,19 +167,19 @@ text \<open>
 
 \<close>
 
-primrec obj_refs :: "cap \<Rightarrow> obj_ref set" where
-  "obj_refs NullCap = {}"
-| "obj_refs (ReplyCap r m cr) = {r}"
-| "obj_refs IRQControlCap = {}"
-| "obj_refs (IRQHandlerCap irq) = {}"
-| "obj_refs (UntypedCap d r s f) = {}"
-| "obj_refs (CNodeCap r bits guard) = {r}"
-| "obj_refs (EndpointCap r b cr) = {r}"
-| "obj_refs (NotificationCap r b cr) = {r}"
-| "obj_refs (ThreadCap r) = {r}"
-| "obj_refs (Zombie ptr b n) = {ptr}"
-| "obj_refs (ArchObjectCap x) = aobj_ref' x"
-| "obj_refs DomainCap = UNIV" (* hack, see above *)
+primrec obj_refs_ac :: "cap \<Rightarrow> obj_ref set" where
+  "obj_refs_ac NullCap = {}"
+| "obj_refs_ac (ReplyCap r m cr) = {r}"
+| "obj_refs_ac IRQControlCap = {}"
+| "obj_refs_ac (IRQHandlerCap irq) = {}"
+| "obj_refs_ac (UntypedCap d r s f) = {}"
+| "obj_refs_ac (CNodeCap r bits guard) = {r}"
+| "obj_refs_ac (EndpointCap r b cr) = {r}"
+| "obj_refs_ac (NotificationCap r b cr) = {r}"
+| "obj_refs_ac (ThreadCap r) = {r}"
+| "obj_refs_ac (Zombie ptr b n) = {ptr}"
+| "obj_refs_ac (ArchObjectCap x) = aobj_ref' x"
+| "obj_refs_ac DomainCap = UNIV" (* hack, see above *)
 
 fun cap_irqs_controlled :: "cap \<Rightarrow> irq set" where
   "cap_irqs_controlled IRQControlCap = UNIV"
@@ -208,7 +208,7 @@ definition thread_bound_ntfns where
 
 inductive_set state_bits_to_policy for caps thread_sts thread_bas cdt vrefs where
   sbta_caps:
-    "\<lbrakk> caps ptr = Some cap; oref \<in> obj_refs cap; auth \<in> cap_auth_conferred cap \<rbrakk>
+    "\<lbrakk> caps ptr = Some cap; oref \<in> obj_refs_ac cap; auth \<in> cap_auth_conferred cap \<rbrakk>
        \<Longrightarrow> (fst ptr, auth, oref) \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs"
 | sbta_untyped:
     "\<lbrakk> caps ptr = Some cap; oref \<in> untyped_range cap \<rbrakk>
@@ -860,7 +860,7 @@ definition integrity_subjects ::
    \<and> (\<forall>x. integrity_device aag subjects x (tcb_states_of_state s) (tcb_states_of_state s')
                            (device_state (machine_state s) x)
                            (device_state (machine_state s') x))
-   \<and> (\<forall>x. integrity_asids aag subjects x s s')"
+   \<and> (\<forall>x a. integrity_asids aag subjects x a s s')"
 
 abbreviation "integrity pas \<equiv> integrity_subjects {pasSubject pas} pas (pasMayActivate pas)"
 
@@ -889,7 +889,7 @@ abbreviation is_subject_irq :: "'a PAS \<Rightarrow> irq \<Rightarrow> bool" whe
 
 definition aag_cap_auth :: "'a PAS \<Rightarrow> 'a \<Rightarrow> cap \<Rightarrow> bool" where
   "aag_cap_auth aag l cap \<equiv>
-     (\<forall>x \<in> obj_refs cap. \<forall>auth \<in> cap_auth_conferred cap. (l, auth, pasObjectAbs aag x) \<in> pasPolicy aag)
+     (\<forall>x \<in> obj_refs_ac cap. \<forall>auth \<in> cap_auth_conferred cap. (l, auth, pasObjectAbs aag x) \<in> pasPolicy aag)
    \<and> (\<forall>x \<in> untyped_range cap. (l, Control, pasObjectAbs aag x) \<in> pasPolicy aag)
    \<and> cap_links_asid_slot aag l cap \<and> cap_links_irq aag l cap"
 

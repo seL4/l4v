@@ -31,11 +31,11 @@ locale Finalise_AC_1 =
   and arch_finalise_cap_obj_refs:
     "\<And>P. \<lbrace>\<lambda>_ :: det_ext state. \<forall>x \<in> aobj_ref' acap. P x\<rbrace>
           arch_finalise_cap acap slot
-          \<lbrace>\<lambda>rv _. \<forall>x \<in> obj_refs (fst rv). P x\<rbrace>"
+          \<lbrace>\<lambda>rv _. \<forall>x \<in> obj_refs_ac (fst rv). P x\<rbrace>"
   and prepare_thread_delete_st_tcb_at_halted[wp]:
     "prepare_thread_delete t \<lbrace>\<lambda>s :: det_ext state. st_tcb_at halted t s\<rbrace>"
   and arch_finalise_cap_makes_halted:
-    "\<lbrace>\<top>\<rbrace> arch_finalise_cap acap ex \<lbrace>\<lambda>rv s :: det_ext state. \<forall>t\<in>obj_refs (fst rv). halted_if_tcb t s\<rbrace>"
+    "\<lbrace>\<top>\<rbrace> arch_finalise_cap acap ex \<lbrace>\<lambda>rv s :: det_ext state. \<forall>t\<in>obj_refs_ac (fst rv). halted_if_tcb t s\<rbrace>"
   and arch_cap_cleanup_wf:
     "\<lbrakk> arch_cap_cleanup_opt acap \<noteq> NullCap; \<not> is_arch_cap (arch_cap_cleanup_opt acap) \<rbrakk>
        \<Longrightarrow> (\<exists>irq. arch_cap_cleanup_opt acap = IRQHandlerCap irq \<and> is_subject_irq aag irq)"
@@ -414,7 +414,7 @@ lemma sbn_unbind_respects[wp]:
   apply (simp add: set_bound_notification_def)
   apply (wpsimp wp: set_object_wp)
   apply (erule integrity_trans)
-  apply (clarsimp simp: integrity_def obj_at_def pred_tcb_at_def)
+  apply (clarsimp simp: integrity_def obj_at_def pred_tcb_at_def integrity_asids_kh_upds)
   apply (rule tro_tcb_unbind)
      apply (fastforce dest!: get_tcb_SomeD)
     apply (fastforce dest!: get_tcb_SomeD)
@@ -660,7 +660,7 @@ lemma finalise_cap_respects[wp]:
 lemma finalise_cap_auth:
   "\<lbrace>(\<lambda>s. final \<longrightarrow> is_final_cap' cap s \<and> cte_wp_at ((=) cap) slot s) and K (pas_cap_cur_auth aag cap)\<rbrace>
    finalise_cap cap final
-   \<lbrace>\<lambda>rv _. \<forall>x \<in> obj_refs (fst rv). \<forall>a \<in> cap_auth_conferred (fst rv). aag_has_auth_to aag a x\<rbrace>"
+   \<lbrace>\<lambda>rv _. \<forall>x \<in> obj_refs_ac (fst rv). \<forall>a \<in> cap_auth_conferred (fst rv). aag_has_auth_to aag a x\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (rule hoare_strengthen_post, rule finalise_cap_cases)
   apply (elim disjE, clarsimp+)
@@ -670,6 +670,13 @@ lemma finalise_cap_auth:
 
 end
 
+
+lemma aag_cap_auth_recycle_EndpointCap:
+  "\<lbrakk> pas_refined aag s; has_cancel_send_rights (EndpointCap word1 word2 f) \<rbrakk>
+     \<Longrightarrow> pas_cap_cur_auth aag (EndpointCap word1 word2 f) = is_subject aag word1"
+  unfolding aag_cap_auth_def
+  by (auto simp: cli_no_irqs clas_no_asid cap_auth_conferred_def pas_refined_all_auth_is_owns
+                 has_cancel_send_rights_def cap_rights_to_auth_def all_rights_def pas_refined_refl)
 
 lemma aag_cap_auth_Zombie:
   "pas_refined aag s \<Longrightarrow> pas_cap_cur_auth aag (Zombie word a b) = is_subject aag word"
@@ -704,9 +711,9 @@ lemma finalise_cap_auth':
   done
 
 lemma finalise_cap_obj_refs:
-  "\<lbrace>\<lambda>_ :: det_ext state. \<forall>x \<in> obj_refs cap. P x\<rbrace>
+  "\<lbrace>\<lambda>_ :: det_ext state. \<forall>x \<in> obj_refs_ac cap. P x\<rbrace>
    finalise_cap cap slot
-   \<lbrace>\<lambda>rv _. \<forall>x \<in> obj_refs (fst rv). P x\<rbrace>"
+   \<lbrace>\<lambda>rv _. \<forall>x \<in> obj_refs_ac (fst rv). P x\<rbrace>"
   by (cases cap) (wpsimp wp: arch_finalise_cap_obj_refs simp: o_def | rule conjI)+
 
 end
@@ -732,7 +739,7 @@ context Finalise_AC_1 begin
 lemma finalise_cap_makes_halted:
   "\<lbrace>invs and valid_cap cap and (\<lambda>s. ex = is_final_cap' cap s) and cte_wp_at ((=) cap) slot\<rbrace>
    finalise_cap cap ex
-   \<lbrace>\<lambda>rv s :: det_ext state. \<forall>t \<in> Access.obj_refs (fst rv). halted_if_tcb t s\<rbrace>"
+   \<lbrace>\<lambda>rv s :: det_ext state. \<forall>t \<in> obj_refs_ac (fst rv). halted_if_tcb t s\<rbrace>"
   apply (case_tac cap, simp_all)
              apply (wp unbind_notification_valid_objs
                     | clarsimp simp: o_def valid_cap_def cap_table_at_typ is_tcb
@@ -779,7 +786,7 @@ lemma rec_del_respects'_pre':
    simple_sched_action and valid_rec_del_call call and emptyable (slot_rdcall call) and
    (\<lambda>s. \<not> exposed_rdcall call \<longrightarrow> ex_cte_cap_wp_to (\<lambda>cp. cap_irqs cp = {}) (slot_rdcall call) s) and
    K (is_subject aag (fst (slot_rdcall call))) and
-   K (case call of ReduceZombieCall cap sl _ \<Rightarrow> \<forall>x \<in> obj_refs cap. is_subject aag x | _ \<Rightarrow> True)\<rbrace>
+   K (case call of ReduceZombieCall cap sl _ \<Rightarrow> \<forall>x \<in> obj_refs_ac cap. is_subject aag x | _ \<Rightarrow> True)\<rbrace>
   rec_del call
   \<lbrace>\<lambda>rv. (\<lambda>s. trp \<longrightarrow> (case call of FinaliseSlotCall sl _ \<Rightarrow> (cleanup_info_wf (snd rv) aag)
                                  | _ \<Rightarrow> True) \<and> integrity aag X st s) and pas_refined aag\<rbrace>,
@@ -834,7 +841,7 @@ next
                                  \<and> cte_wp_at ((=) rv) slot s \<and> s \<turnstile> (fst fin)
                                  \<and> ex_cte_cap_wp_to (appropriate_cte_cap rv) slot s
                                  \<and> emptyable slot s
-                                 \<and> (\<forall>t\<in>obj_refs (fst fin). halted_if_tcb t s)
+                                 \<and> (\<forall>t\<in>obj_refs_ac (fst fin). halted_if_tcb t s)
                                  \<and> pas_refined aag s \<and> (trp \<longrightarrow> integrity aag X st s)
                                  \<and> pas_cap_cur_auth aag (fst fin)"
                    in hoare_vcg_conj_lift)
@@ -901,7 +908,7 @@ lemma rec_del_respects'_pre:
    simple_sched_action and valid_rec_del_call call and emptyable (slot_rdcall call) and
    (\<lambda>s. \<not> exposed_rdcall call \<longrightarrow> ex_cte_cap_wp_to (\<lambda>cp. cap_irqs cp = {}) (slot_rdcall call) s) and
    K (is_subject aag (fst (slot_rdcall call))) and
-   K (case call of ReduceZombieCall cap sl _ \<Rightarrow> \<forall>x \<in> obj_refs cap. is_subject aag x | _ \<Rightarrow> True)\<rbrace>
+   K (case call of ReduceZombieCall cap sl _ \<Rightarrow> \<forall>x \<in> obj_refs_ac cap. is_subject aag x | _ \<Rightarrow> True)\<rbrace>
   rec_del call
   \<lbrace>\<lambda>_. (\<lambda>s. trp \<longrightarrow> integrity aag X st s) and pas_refined aag\<rbrace>,
   \<lbrace>\<lambda>_. (\<lambda>s. trp \<longrightarrow> integrity aag X st s) and pas_refined aag\<rbrace>"

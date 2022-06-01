@@ -216,7 +216,7 @@ proof -
   have aligned_4_hd:
     "\<And>r :: word32. is_aligned r 6 \<Longrightarrow> hd (map (\<lambda>x. x + r) [0 , 4 .e. 0x3C]) = r"
     apply (subgoal_tac "r \<le> r + 0x3C")
-     apply (clarsimp simp: upto_enum_step_def less_def o_def | intro conjI)+
+     apply (clarsimp simp: upto_enum_step_def o_def | intro conjI)+
      apply (subst hd_map)
       apply (clarsimp simp:upto_enum_def)
      apply (clarsimp simp:upto_enum_def hd_map)
@@ -1067,28 +1067,6 @@ lemma store_pde_set_cap_corres:
       apply (simp add: obj_at_def)+
   done
 
-lemma is_aligned_shiftr_add:
- "\<lbrakk>is_aligned (a::word32) n; is_aligned b m; b < 2 ^n; m \<le> n; n < 32\<rbrakk>
-  \<Longrightarrow> a + b >> m = (a >> m) + (b >> m)"
-  apply(simp add:shiftr_div_2n_w word_size)
-  apply (rule word_unat.Rep_eqD)
-  apply (subst unat_plus_simple[THEN iffD1])
-   apply (subst shiftr_div_2n_w[symmetric],simp add:word_size)+
-   apply (rule is_aligned_no_wrap')
-    apply (rule is_aligned_shiftr[where n = "n - m"])
-    apply simp
-   apply (rule shiftr_less_t2n)
-   apply simp
-  apply (simp add:unat_div)
-  apply (subst unat_plus_simple[THEN iffD1])
-   apply (erule is_aligned_no_wrap')
-   apply simp
-  apply (rule div_add)
-   apply (simp add:is_aligned_def[symmetric])
-   apply (erule(1) is_aligned_weaken[rotated])
-  apply (simp add:is_aligned_def)
-  done
-
 lemma pde_opt_cap_eq:
   "\<lbrakk> ko_at (ArchObj (arch_kernel_obj.PageDirectory pd)) (x && ~~ mask pd_bits) s;
          valid_idle s \<rbrakk>
@@ -1286,11 +1264,11 @@ lemma store_pte_page_inv_entries_safe:
     apply simp
    apply (subst (asm) is_aligned_shiftr_add)
         apply (erule is_aligned_after_mask)
-       apply (simp add:pt_bits_def pageBits_def)+
-      apply (simp add:is_aligned_shiftl_self)
-     apply (rule shiftl_less_t2n)
-      apply (rule word_of_nat_less,simp)
-     apply simp+
+        apply (simp add:pt_bits_def pageBits_def)+
+       apply (simp add:is_aligned_shiftl_self)
+      apply (rule shiftl_less_t2n)
+       apply (rule word_of_nat_less,simp)
+      apply simp+
    apply (subst (asm) ucast_add)
     apply simp
    apply simp
@@ -1298,7 +1276,7 @@ lemma store_pte_page_inv_entries_safe:
      apply simp
     apply (rule word_of_nat_less)
     apply simp
-   apply (simp add:ucast_of_nat_small of_nat_neq_0)
+   apply (simp add:ucast_of_nat_small of_nat_neq_0 del: word_of_nat_eq_0_iff)
   apply (clarsimp simp: hd_map_simp upto_enum_def upto_enum_step_def tl_map_simp
                         map_eq_Cons_conv upt_eq_Cons_conv upto_0_to_n image_def)
   apply (simp add:field_simps)
@@ -1316,9 +1294,8 @@ lemma store_pde_page_inv_entries_safe:
   apply (wp get_object_wp)
   apply (clarsimp simp:obj_at_def page_inv_entries_safe_def split:if_splits)
   apply (intro conjI impI)
-   apply (clarsimp simp:hd_map_simp upto_enum_def
-     upto_enum_step_def drop_map
-     tl_map_simp map_eq_Cons_conv upt_eq_Cons_conv upto_0_to_n)
+   apply (clarsimp simp: hd_map_simp upto_enum_def upto_enum_step_def drop_map
+                         tl_map_simp map_eq_Cons_conv upt_eq_Cons_conv upto_0_to_n)
    apply (clarsimp simp add:field_simps)
    apply (subst (asm) shiftl_t2n[where n = 2,simplified field_simps,simplified,symmetric])+
    apply (subst (asm) and_mask_plus[where a = "of_nat slot << 2"])
@@ -1328,11 +1305,11 @@ lemma store_pde_page_inv_entries_safe:
     apply simp
    apply (subst (asm) is_aligned_shiftr_add)
         apply (erule is_aligned_after_mask)
-       apply (simp add:pd_bits_def pageBits_def)+
-      apply (simp add:is_aligned_shiftl_self)
-     apply (rule shiftl_less_t2n)
-      apply (rule word_of_nat_less,simp)
-     apply simp+
+        apply (simp add:pd_bits_def pageBits_def)+
+       apply (simp add:is_aligned_shiftl_self)
+      apply (rule shiftl_less_t2n)
+       apply (rule word_of_nat_less,simp)
+      apply simp+
    apply (subst (asm) ucast_add)
     apply simp
    apply simp
@@ -1340,7 +1317,7 @@ lemma store_pde_page_inv_entries_safe:
      apply simp
     apply (rule word_of_nat_less)
     apply simp
-   apply (simp add:ucast_of_nat_small of_nat_neq_0)
+   apply (simp add:ucast_of_nat_small of_nat_neq_0 del: word_of_nat_eq_0_iff)
   apply (clarsimp simp: hd_map_simp upto_enum_def upto_enum_step_def tl_map_simp map_eq_Cons_conv
                         upt_eq_Cons_conv upto_0_to_n image_def)
   apply (simp add: field_simps)
@@ -1676,10 +1653,6 @@ proof -
     apply (clarsimp simp:perform_asid_control_invocation_def)
     apply (simp add:arch_invocation_relation_def translate_arch_invocation_def)
     apply (cases asid_inv, clarsimp)
-    apply hypsubst_thin
-    apply (drule sym)
-    apply (drule sym)
-    apply clarsimp
     apply (rule corres_guard_imp)
       apply (rule corres_split_deprecated [OF _ delete_objects_dcorres])
          apply (rule corres_symb_exec_r)

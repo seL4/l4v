@@ -314,7 +314,7 @@ lemma card_of_dom_bounded:
   by (simp add: assms card_mono)
 
 lemma third_in: "(a, b, c) \<in> S \<Longrightarrow> c \<in> (snd \<circ> snd) ` S"
-  by (metis (erased, hide_lams) map_set_in image_comp snd_conv)
+  by (metis (erased, opaque_lifting) map_set_in image_comp snd_conv)
 
 lemma third_in2: "(a \<in> (snd \<circ> snd) ` (set (enumerate i xs))) = (a \<in> snd ` (set xs))"
   by (metis map_map map_snd_enumerate set_map)
@@ -357,7 +357,7 @@ lemma distinct_map_via_ran: "distinct (map fst xs) \<Longrightarrow> ran (map_of
   by (simp add: ran_distinct)
 
 lemma in_ran_in_set: "x \<in> ran (map_of xs) \<Longrightarrow> x \<in> set (map snd xs)"
-  by (metis (mono_tags, hide_lams) map_set_in map_of_SomeD ranE set_map snd_conv)
+  by (metis (mono_tags) map_set_in map_of_SomeD ranE set_map snd_conv)
 
 lemma in_ran_map_app: "x \<in> ran (xs ++ ys ++ zs) \<Longrightarrow> x \<in> ran xs \<or> x \<in> ran ys \<or> x \<in> ran zs"
   proof -
@@ -496,13 +496,14 @@ lemma not_emptyI:
 lemma add_mask_lower_bits2:
   "\<lbrakk>is_aligned (x :: 'a :: len word) n; p && ~~ mask n = 0\<rbrakk> \<Longrightarrow> x + p && ~~ mask n = x"
   apply (subst word_plus_and_or_coroll)
-  apply (simp add: aligned_mask_disjoint and_mask_0_iff_le_mask)
-   apply (clarsimp simp: word_bool_alg.conj_disj_distrib2)
+   apply (simp add: aligned_mask_disjoint and_mask_0_iff_le_mask)
+  apply (clarsimp simp: bit.conj_disj_distrib2)
   done
 
 (* FIXME: move to GenericLib *)
 lemma if3_fold2:
-  "(if P then x else if Q then x else y) = (if P \<or> Q then x else y)" by simp
+  "(if P then x else if Q then x else y) = (if P \<or> Q then x else y)"
+  by (rule z3_rule)
 
 lemma inter_UNIV_minus[simp]:
   "x \<inter> (UNIV - y) = x-y" by blast

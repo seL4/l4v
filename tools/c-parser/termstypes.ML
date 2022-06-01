@@ -60,7 +60,7 @@ in
   Const("Word.unat", ty --> nat) $ t
 end
 
-fun mk_i2w_t rty = Const(@{const_name "Word.word_of_int"},
+fun mk_i2w_t rty = Const(@{const_name "of_int"},
                          int --> rty)
 
 fun mk_lshift(t1 : term, t2 : term) : term =
@@ -73,10 +73,10 @@ fun mk_rshift(t1, t2) =
 
 
 fun mk_w2ui t =
-    Const(@{const_name "Word.uint"}, type_of t --> int) $ t
+    Const(@{const_name "Word.unsigned"}, type_of t --> int) $ t
 
 fun mk_w2si t =
-    Const(@{const_name "Word.sint"}, type_of t --> int) $ t
+    Const(@{const_name "Word.signed"}, type_of t --> int) $ t
 
 
 (* ----------------------------------------------------------------------

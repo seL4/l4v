@@ -13,6 +13,8 @@ theory CNodeInv_R
 imports Ipc_R Invocations_R
 begin
 
+unbundle l4v_word_context
+
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 primrec
@@ -48,9 +50,7 @@ where
 
 lemma rightsFromWord_correspondence:
   "rightsFromWord w = rights_mask_map (data_to_rights w)"
-  by (simp add: rightsFromWord_def rights_mask_map_def
-                data_to_rights_def Let_def nth_ucast)
-
+  by (simp add: rightsFromWord_def rights_mask_map_def data_to_rights_def Let_def)
 
 primrec
   cnodeinv_relation :: "Invocations_A.cnode_invocation \<Rightarrow> Invocations_H.cnode_invocation \<Rightarrow> bool"
@@ -6703,7 +6703,6 @@ lemma rvk_prog_modify_map:
    apply (simp add: modify_map_def fun_upd_idem)
    apply (simp add: revoke_progress_ord_def)
   apply simp
-  apply (erule meta_allE, drule meta_mp, rule refl)
   apply (erule disjE)
    apply (simp add: modify_map_def fun_upd_idem)
    apply (simp add: revoke_progress_ord_def)
@@ -8101,7 +8100,7 @@ lemma m_cap:
 lemma sameRegion_cap'_src [simp]:
   "sameRegionAs cap' c = sameRegionAs src_cap c"
   using parency unfolding weak_derived'_def
-  apply (case_tac "isReplyCap src_cap")
+  apply (case_tac "isReplyCap src_cap"; clarsimp)
    apply (clarsimp simp: capMasterCap_def split: capability.splits arch_capability.splits
          ; fastforce simp: sameRegionAs_def X64_H.sameRegionAs_def isCap_simps split: if_split_asm)+
   done

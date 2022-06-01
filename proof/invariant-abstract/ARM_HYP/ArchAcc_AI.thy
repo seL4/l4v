@@ -74,7 +74,7 @@ lemma get_pde_inv [wp]: "\<lbrace>P\<rbrace> get_pde p \<lbrace>\<lambda>_. P\<r
 bundle pagebits =
   pd_bits_def[simp] pt_bits_def[simp] pde_bits_def[simp]
   pageBits_def[simp] mask_lower_twice[simp]
-  word_bool_alg.conj_assoc[symmetric,simp] obj_at_def[simp]
+  and.assoc[where ?'a = \<open>'a::len word\<close>,symmetric,simp] obj_at_def[simp]
   pde.splits[split]
   pte.splits[split]
 
@@ -327,10 +327,7 @@ lemma ucast_ucast_asid_high_bits [simp]:
 
 lemma mask_asid_low_bits_ucast_ucast:
   "((asid::word32) && mask asid_low_bits) = ucast (ucast asid :: 10 word)"
-  apply (rule word_eqI)
-  apply (simp add: word_size nth_ucast asid_low_bits_def)
-  done
-
+  by (word_eqI simp: asid_low_bits_def conj.commute)
 
 
 lemma set_asid_pool_cur [wp]:
@@ -426,17 +423,16 @@ lemma pde_shifting:  (* ARMHYP >> 20? *)
   from prems show ?thesis
     apply (subst (asm) word_plus_and_or_coroll)
      apply (rule word_eqI)
-     subgoal for n
-       apply (clarsimp simp: word_size nth_shiftr is_aligned_nth vspace_bits_defs)
-       apply (spec "n + 21")
-       apply (frule test_bit_size[where n="n + 21"])
-       apply (simp add: word_size)
-       apply (insert H)
-       apply (drule (1) order_le_less_trans)
-       apply (drule bang_is_le)
-       apply (drule_tac z="2 ^ 4" in order_le_less_trans, assumption)
-       apply (drule word_power_increasing)
-       by simp+
+    subgoal for n
+      apply (clarsimp simp: word_size nth_shiftr is_aligned_nth vspace_bits_defs)
+      apply (spec "21 + n")
+      apply (frule test_bit_size[where n="21 + n"])
+      apply (simp add: word_size)
+      apply (insert H)
+      apply (drule (1) order_le_less_trans)
+      apply (drule bang_is_le)
+      apply (drule_tac z="2 ^ 4" in order_le_less_trans, assumption)
+      by (drule word_power_increasing; simp)
     apply (clarsimp simp: word_size nth_shiftl nth_shiftr is_aligned_nth vspace_bits_defs)
     apply (erule disjE)
      apply (insert H)[1]
@@ -444,8 +440,8 @@ lemma pde_shifting:  (* ARMHYP >> 20? *)
      apply (drule bang_is_le)
      apply (drule order_le_less_trans[where z="2 ^ 4"], assumption)
      apply (drule word_power_increasing; simp)
-    apply (spec "n' + 21")
-    apply (frule test_bit_size[where n = "n' + 21"])
+    apply (spec "21 + n'")
+    apply (frule test_bit_size[where n = "21 + n'"])
     by (simp add: word_size)
   qed
 done
@@ -538,8 +534,7 @@ lemma pte_at_aligned_vptr:
   \<Longrightarrow> pte_at (x + (pt + (((vptr >> pageBits) &&  mask (pt_bits - pte_bits)) << pte_bits))) s"
   apply (erule page_table_pte_at_diffE[where x="(x >> pte_bits) + ((vptr >> 12) &&  mask (pt_bits - pte_bits))"];simp?)
    apply (simp add: word_shiftl_add_distrib upto_enum_step_def)
-   apply (clarsimp simp: word_shift_by_n[of _ 3, simplified] shiftr_shiftl1 vspace_bits_defs
-                         is_aligned_neg_mask_eq is_aligned_shift)
+   apply (clarsimp simp: word_shift_by_n[of _ 3, simplified] shiftr_shiftl1 vspace_bits_defs is_aligned_shift)
   apply (simp only: vspace_bits_defs)
   apply (subst add.commute, rule is_aligned_add_less_t2n)
      apply (rule is_aligned_andI1[where n=4], rule is_aligned_shiftr, simp add: pt_bits_def pte_bits_def)
@@ -651,11 +646,11 @@ lemma page_directory_pde_at_lookupI:
 
 (* FIXME move to Word_Lemmas? *)
 lemma word_FFF_is_mask:
-  "0xFFF = mask 12"
+  "(0xFFF::'a::len word) = mask 12"
   by (simp add: mask_def)
 
 lemma word_1FF_is_mask:
-  "0x1FF = mask 9"
+  "(0x1FF::'a::len word) = mask 9"
   by (simp add: mask_def)
 
 
@@ -1904,10 +1899,6 @@ crunch global_ref [wp]: set_asid_pool "\<lambda>s. P (global_refs s)"
   (wp: crunch_wps)
 
 
-crunch arch [wp]: set_asid_pool "\<lambda>s. P (arch_state s)"
-  (wp: crunch_wps)
-
-
 crunch idle [wp]: set_asid_pool "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps)
 
@@ -2244,7 +2235,7 @@ lemma lookup_pt_slot_looks_up [wp]: (* ARMHYP *)
   apply (simp add: word_bits_def)+
    apply word_bitwise
   apply (clarsimp simp: nth_shiftr)
-  apply (frule_tac n="n + 21" in test_bit_size)
+  apply (frule_tac n="21 + n" in test_bit_size)
   by (simp add: word_size)
 done
 
@@ -3211,11 +3202,11 @@ proof -
     done
 qed
 
-lemma user_getreg_inv[wp]:
-  "\<lbrace>P\<rbrace> as_user t (getRegister r) \<lbrace>\<lambda>x. P\<rbrace>"
-  apply (rule as_user_inv)
-  apply (simp add: getRegister_def)
-  done
+crunches getRegister
+  for inv[wp]: P
+  (simp: getRegister_def)
+
+lemmas user_getreg_inv[wp] = as_user_inv[OF getRegister_inv]
 
 end
 
