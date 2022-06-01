@@ -49,7 +49,7 @@ locale time_protection =
   fixes collides_in_pch :: "paddr \<Rightarrow> paddr \<Rightarrow> bool" (infix "coll" 50)
 
   (* collides_in_pch isn't a relation, but it is kind of an equivalence *)
-  assumes collides_with_equiv: "equiv UNIV ({(x, y). x coll y})"
+  assumes collides_with_equiv: "equiv UNIV {(x, y). x coll y}"
 
   (* instead of making fch and pch functions, we leave them unspecified but
      require lookup functions for them *)
@@ -105,6 +105,7 @@ locale time_protection =
   (* how long it takes to flush a particular fch *)
   fixes fch_flush_cycles :: "'fch \<Rightarrow> time" \<comment> \<open>could this be dependent on anything else?\<close>
 
+  (*FIXME: should do_pch_flush also affect the fch? *)
   fixes do_pch_flush :: "'pch \<Rightarrow> paddr set \<Rightarrow> 'pch"
   fixes pch_flush_cycles :: "'pch \<Rightarrow> paddr set \<Rightarrow> time" \<comment> \<open>could this be dependent on anything else?\<close>
 

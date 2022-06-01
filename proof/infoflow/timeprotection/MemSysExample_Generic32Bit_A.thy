@@ -91,17 +91,15 @@ datatype sys_mode = KEntry | KSchedule | KExit
 record orig_state_A =
   mem :: "paddr \<Rightarrow> machine_word"
   curdom :: "userdomain_A domain"
-  taddrs :: "vaddr set"
+  taddrs :: "(vaddr \<times> paddr) set"
 
 type_synonym other_state_A = "orig_state_A \<times> sys_mode"
 
-record regs_A =
-  r0 :: "machine_word"
+(* the actual measure of whether two addresses collide *)
+definition collides_in_pch_A :: "paddr \<Rightarrow> paddr \<Rightarrow> bool" where
+  "collides_in_pch_A a a' \<equiv> L2_index_of a = L2_index_of a'"
 
-definition collides_in_pch_A :: "paddr rel" where
-  "collides_in_pch_A = {(a, a'). L2_index_of a = L2_index_of a'}"
-
-lemma collides_with_equiv_A: "equiv UNIV collides_in_pch_A"
+lemma collides_with_equiv_A: "equiv UNIV {(x, y). collides_in_pch_A x y}"
   unfolding collides_in_pch_A_def equiv_def
   apply(rule conjI)
    unfolding refl_on_def apply blast
@@ -149,15 +147,15 @@ definition pch_read_impact_A :: "pch_A pch_impact" where
        else p(L2_index_of a := Some (L2_tag_of a, False))"
 
 lemma pch_partitioned_read_A:
-  "(a1, a2) \<notin> collides_in_pch_A \<Longrightarrow> pch_lookup_A p a2 = pch_lookup_A (pch_read_impact_A a1 p) a2"
+  "\<not>collides_in_pch_A a1 a2 \<Longrightarrow> pch_lookup_A p a2 = pch_lookup_A (pch_read_impact_A a1 p) a2"
   unfolding collides_in_pch_A_def pch_lookup_A_def pch_read_impact_A_def
   by auto
 
 lemma pch_collision_read_A:
   assumes
-    a2_evicts_a1: "(a1, a2) \<in> collides_in_pch_A" and
+    a2_evicts_a1: "collides_in_pch_A a1 a2" and
     set_lookup_eq:
-      "\<forall>a3. (a2, a3) \<in> collides_in_pch_A \<longrightarrow> pch_lookup_A pchs a3 = pch_lookup_A pcht a3"
+      "\<forall>a3. collides_in_pch_A a2 a3 \<longrightarrow> pch_lookup_A pchs a3 = pch_lookup_A pcht a3"
   shows
     "pch_lookup_A (pch_read_impact_A a1 pchs) a2 = pch_lookup_A (pch_read_impact_A a1 pcht) a2"
   proof -
@@ -174,15 +172,15 @@ definition pch_write_impact_A :: "pch_A pch_impact" where
   "pch_write_impact_A a p \<equiv> p(L2_index_of a := Some (L2_tag_of a, True))"
 
 lemma pch_partitioned_write_A:
-  "(a1, a2) \<notin> collides_in_pch_A \<Longrightarrow> pch_lookup_A p a2 = pch_lookup_A (pch_write_impact_A a1 p) a2"
+  "\<not>collides_in_pch_A a1 a2 \<Longrightarrow> pch_lookup_A p a2 = pch_lookup_A (pch_write_impact_A a1 p) a2"
   unfolding collides_in_pch_A_def pch_lookup_A_def pch_write_impact_A_def
   by auto
 
 lemma pch_collision_write_A:
   assumes
-    a2_evicts_a1: "(a1, a2) \<in> collides_in_pch_A" and
+    a2_evicts_a1: "collides_in_pch_A a1 a2" and
     set_lookup_eq:
-      "\<forall>a3. (a2, a3) \<in> collides_in_pch_A \<longrightarrow> pch_lookup_A pchs a3 = pch_lookup_A pcht a3"
+      "\<forall>a3. collides_in_pch_A a2 a3 \<longrightarrow> pch_lookup_A pchs a3 = pch_lookup_A pcht a3"
   shows
     "pch_lookup_A (pch_write_impact_A a1 pchs) a2 = pch_lookup_A (pch_write_impact_A a1 pcht) a2"
   proof -
@@ -201,24 +199,6 @@ definition read_cycles_A :: "fch_cachedness_A \<Rightarrow> pch_cachedness_A \<R
 
 definition write_cycles_A :: "fch_cachedness_A \<Rightarrow> pch_cachedness_A \<Rightarrow> time" where
   "write_cycles_A _ _ = Default_cycle"
-
-definition v_to_p_A :: "other_state_A \<Rightarrow> vaddr \<Rightarrow> paddr" where
-  "v_to_p_A s v \<equiv> case v of VAddr a \<Rightarrow> PAddr a" (* id just to get the types to line up first *)
-
-definition do_read_A :: "vaddr \<Rightarrow> other_state_A \<Rightarrow> regs_A \<Rightarrow> regs_A" where
-  "do_read_A a s _ = \<lparr> r0 = mem (fst s) (v_to_p_A s a) \<rparr>"
-
-definition do_write_A :: "vaddr \<Rightarrow> other_state_A \<Rightarrow> regs_A \<Rightarrow> other_state_A" where
-  "do_write_A a s rs = ((fst s)\<lparr> mem := (mem (fst s))(v_to_p_A s a := r0 rs) \<rparr>, snd s)"
-
-definition store_time_A :: "time \<Rightarrow> regs_A \<Rightarrow> regs_A" where
-  "store_time_A t r = \<lparr> r0 = of_nat t \<rparr>"
-
-(* The IPadToTime is a bit of an abstraction... Presumably in reality we would do this by invoking
-  IReadTime/IRegs repeatedly (busy wait until the time equals a value IRead earlier from memory)
-  for a sufficient number of steps. Just say there's a primitive that's no-op on regs for now. *)
-definition padding_regs_impact_A :: "time \<Rightarrow> regs_A \<Rightarrow> regs_A" where
-  "padding_regs_impact_A t r = r"
 
 definition empty_fch_A :: fch_A where
   "empty_fch_A idx = None"
@@ -241,13 +221,13 @@ definition pch_flush_cycles_A :: "pch_A \<Rightarrow> paddr set \<Rightarrow> ti
   "pch_flush_cycles_A p as = Default_cycle + length (sorted_list_of_set (L2_indices_of as))"
 
 lemma pch_partitioned_flush_A:
-  "\<forall>a'\<in>as. (a, a') \<notin> collides_in_pch_A \<Longrightarrow> pch_lookup_A (do_pch_flush_A p as) a = pch_lookup_A p a"
+  "\<forall>a'\<in>as. \<not>collides_in_pch_A a a' \<Longrightarrow> pch_lookup_A (do_pch_flush_A p as) a = pch_lookup_A p a"
   unfolding collides_in_pch_A_def pch_lookup_A_def do_pch_flush_A_def L2_indices_of_def
   by (auto split:option.splits if_splits)
 
 lemma pch_collision_flush_A:
-  "\<exists>a1\<in>as. (a, a1) \<in> collides_in_pch_A \<Longrightarrow>
-   \<forall>a1. (\<exists>a2\<in>as. (a1, a2) \<in> collides_in_pch_A) \<longrightarrow> pch_lookup_A pchs a1 = pch_lookup_A pcht a1 \<Longrightarrow>
+  "\<exists>a1\<in>as. collides_in_pch_A a a1 \<Longrightarrow>
+   \<forall>a1. (\<exists>a2\<in>as. collides_in_pch_A a1 a2) \<longrightarrow> pch_lookup_A pchs a1 = pch_lookup_A pcht a1 \<Longrightarrow>
    pch_lookup_A (do_pch_flush_A pchs as) a = pch_lookup_A (do_pch_flush_A pcht as) a"
   unfolding pch_lookup_A_def do_pch_flush_A_def
   by simp
@@ -256,7 +236,7 @@ lemma pch_flush_cycles_localised_A:
   assumes
     (* For all addresses a1 that collide with some address a2 in as,
        the lookup status of a1 is the same in s and t. *)
-    "\<forall>a1. (\<exists>a2\<in>as. (a1, a2) \<in> collides_in_pch_A) \<longrightarrow> pch_lookup_A pchs a1 = pch_lookup_A pcht a1"
+    "\<forall>a1. (\<exists>a2\<in>as. collides_in_pch_A a1 a2) \<longrightarrow> pch_lookup_A pchs a1 = pch_lookup_A pcht a1"
   shows
     (* A flush of the `as` set will take equal time in s and t *)
     "pch_flush_cycles_A pchs as = pch_flush_cycles_A pcht as"
@@ -274,7 +254,7 @@ lemma same_index_same_colour:
   by (word_bitwise, simp)
 
 lemma no_cross_colour_collisions_A:
-  "(a1, a2) \<in> collides_in_pch_A \<Longrightarrow> addr_colour_A a1 = addr_colour_A a2"
+  "collides_in_pch_A a1 a2 \<Longrightarrow> addr_colour_A a1 = addr_colour_A a2"
   unfolding collides_in_pch_A_def
   using same_index_same_colour by blast
 
@@ -309,51 +289,7 @@ lemma external_uwr_same_domain_A:
   "(s1, s2) \<in> external_uwr_A d \<Longrightarrow> current_domain_A s1 = current_domain_A s2"
   unfolding external_uwr_A_def current_domain_A_def by blast
 
-lemma page_table_not_in_mem_A:
-  "\<And>a s r. v_to_p_A (do_write_A a s r) = v_to_p_A s"
-  unfolding v_to_p_A_def do_write_A_def
-  by blast
-
-lemma external_uwr_current_page_table_A:
-  "(s1, s2) \<in> external_uwr_A d \<Longrightarrow> current_domain_A s1 = d \<Longrightarrow> v_to_p_A s1 = v_to_p_A s2"
-  unfolding external_uwr_A_def current_domain_A_def v_to_p_A_def
-  by blast
-
-lemma do_write_maintains_external_uwr_out_A:
-  "addr_domain_A (v_to_p_A s a) \<noteq> d \<and> addr_domain_A (v_to_p_A s a) \<noteq> Sched \<Longrightarrow>
-   (s, do_write_A a s r) \<in> external_uwr_A d"
-  unfolding do_write_A_def external_uwr_A_def
-  by force
-
-lemma do_write_maintains_external_uwr_in_A:
-  "addr_domain_A (v_to_p_A s a) = d \<or> addr_domain_A (v_to_p_A s a) = Sched \<Longrightarrow>
-   (s, t) \<in> external_uwr_A d \<Longrightarrow>
-   (do_write_A a s r, do_write_A a t r) \<in> external_uwr_A d"
-  unfolding do_write_A_def external_uwr_A_def v_to_p_A_def
-  by force
-
-lemma do_write_outside_kernelshared_same_domain_A:
-  assumes "addr_domain_A (v_to_p_A s a) \<noteq> Sched"
-  shows "current_domain_A (do_write_A a s r) = current_domain_A s"
-  (* Note: We didn't need the assumption *)
-  unfolding current_domain_A_def do_write_A_def
-  by force
-
-lemma do_read_from_external_uwr_domain_A:
-  "\<lbrakk>(s, t) \<in> external_uwr_A d;
-   addr_domain_A (v_to_p_A s a) = d \<rbrakk> \<Longrightarrow>
-   do_read_A a s r = do_read_A a t r"
-  unfolding external_uwr_A_def do_read_A_def v_to_p_A_def
-  by force
-
-lemma do_read_from_external_uwr_sched_A:
-  "\<lbrakk>(s, t) \<in> external_uwr_A d;
-   addr_domain_A (v_to_p_A s a) = Sched \<rbrakk> \<Longrightarrow>
-   do_read_A a s r = do_read_A a t r"
-  unfolding external_uwr_A_def do_read_A_def v_to_p_A_def
-  by force
-
-definition touched_addrs_A :: "other_state_A \<Rightarrow> vaddr set" where
+definition touched_addrs_A :: "other_state_A \<Rightarrow> (vaddr \<times> paddr) set" where
   "touched_addrs_A s = taddrs (fst s)"
 
 lemma external_uwr_same_touched_addrs_A:
@@ -361,71 +297,6 @@ lemma external_uwr_same_touched_addrs_A:
    touched_addrs_A s1 = touched_addrs_A s2"
   unfolding external_uwr_A_def current_domain_A_def touched_addrs_A_def
   by blast
-
-lemma touched_addrs_not_in_mem_A:
-  "\<And>a s r. touched_addrs_A (do_write_A a s r) = touched_addrs_A s"
-  unfolding touched_addrs_A_def do_write_A_def
-  by force
- 
-definition do_add_to_TA_A :: "other_state_A \<Rightarrow> vaddr set \<Rightarrow> other_state_A" where
-  "do_add_to_TA_A s vas \<equiv> (fst s \<lparr> taddrs := taddrs (fst s) \<union> vas \<rparr>, snd s)"
-
-lemma do_add_to_TA_correct_A:
-  "\<And>s vas. touched_addrs_A (do_add_to_TA_A s vas) = touched_addrs_A s \<union> vas"
-  "\<And>s vas. current_domain_A (do_add_to_TA_A s vas) = current_domain_A s"
-  "\<And>s vas. v_to_p_A (do_add_to_TA_A s vas) = v_to_p_A s"
-  apply -
-    unfolding touched_addrs_A_def do_add_to_TA_A_def
-    apply force
-   unfolding current_domain_A_def
-   apply force
-  unfolding v_to_p_A_def
-  by blast
-
-lemma do_add_to_TA_maintains_external_uwr_in_A:
-  "\<And>s t d vas.
-     (s, t) \<in> external_uwr_A d \<Longrightarrow>
-     current_domain_A s = d \<Longrightarrow>
-     (do_add_to_TA_A s vas, do_add_to_TA_A t vas) \<in> external_uwr_A d"
-  unfolding external_uwr_A_def current_domain_A_def do_add_to_TA_A_def
-  by force
-
-lemma do_add_to_TA_maintains_external_uwr_out_A:
-  "\<And>s vas.
-     current_domain_A s \<noteq> d \<Longrightarrow>
-     (s, do_add_to_TA_A s vas) \<in> external_uwr_A d"
-  unfolding external_uwr_A_def current_domain_A_def do_add_to_TA_A_def
-  by force
-
-definition do_empty_TA_A :: "other_state_A \<Rightarrow> other_state_A" where
-  "do_empty_TA_A s \<equiv> (fst s \<lparr> taddrs := {} \<rparr>, snd s)"
-
-lemma do_empty_TA_correct_A:
-  "\<And>s. touched_addrs_A (do_empty_TA_A s) = {}"
-  "\<And>s. current_domain_A (do_empty_TA_A s) = current_domain_A s"
-  "\<And>s. v_to_p_A (do_empty_TA_A s) = v_to_p_A s"
-    apply -
-    unfolding touched_addrs_A_def do_empty_TA_A_def
-    apply force
-   unfolding current_domain_A_def
-   apply force
-  unfolding v_to_p_A_def
-  by blast
-
-lemma do_empty_TA_maintains_external_uwr_in_A:
-  "\<And>s t d.
-     (s, t) \<in> external_uwr_A d \<Longrightarrow>
-     current_domain_A s = d \<Longrightarrow>
-     (do_empty_TA_A s, do_empty_TA_A t) \<in> external_uwr_A d"
-  unfolding external_uwr_A_def current_domain_A_def do_empty_TA_A_def
-  by force
-
-lemma do_empty_TA_maintains_external_uwr_out_A:
-  "\<And>s.
-     current_domain_A s \<noteq> d \<Longrightarrow>
-     (s, do_empty_TA_A s) \<in> external_uwr_A d"
-  unfolding external_uwr_A_def current_domain_A_def do_empty_TA_A_def
-  by force
 
 definition can_domain_switch_A :: "other_state_A \<Rightarrow> bool" where
   "can_domain_switch_A s \<equiv> snd s = KSchedule"
@@ -435,14 +306,21 @@ lemma can_domain_switch_public_A:
   unfolding external_uwr_A_def can_domain_switch_A_def
   by force
 
-interpretation time_protection_A: time_protection collides_in_pch_A
-  fch_lookup_A pch_lookup_A
-  fch_access_impact_A pch_read_impact_A
-  fch_access_impact_A pch_write_impact_A
-  read_cycles_A write_cycles_A
-  do_read_A do_write_A
-  store_time_A padding_regs_impact_A
-  empty_fch_A fch_flush_cycles_A do_pch_flush_A pch_flush_cycles_A
+(* the actual interpretation *)
+interpretation time_protection_A: time_protection
+  collides_in_pch_A
+  fch_lookup_A
+  pch_lookup_A
+  fch_access_impact_A
+  pch_read_impact_A
+  fch_access_impact_A
+  pch_write_impact_A
+  read_cycles_A
+  write_cycles_A
+  empty_fch_A
+  fch_flush_cycles_A
+  do_pch_flush_A
+  pch_flush_cycles_A
   addr_domain_A addr_colour_A colour_userdomain_A
   current_domain_A external_uwr_A v_to_p_A touched_addrs_A
   do_add_to_TA_A do_empty_TA_A
