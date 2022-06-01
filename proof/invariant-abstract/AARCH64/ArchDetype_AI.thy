@@ -83,7 +83,7 @@ next
 qed
 
 lemma empty_fail_freeMemory [Detype_AI_asms]: "empty_fail (freeMemory ptr bits)"
-  by (simp add: freeMemory_def mapM_x_mapM ef_storeWord)
+  by (simp add: freeMemory_def mapM_x_mapM)
 
 
 lemma region_in_kernel_window_detype[simp]:
@@ -591,7 +591,7 @@ lemma delete_objects_invs[wp]:
     invs and ct_active\<rbrace>
     delete_objects ptr bits \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: delete_objects_def)
-  apply (simp add: freeMemory_def word_size_def bind_assoc ef_storeWord)
+  apply (simp add: freeMemory_def word_size_def bind_assoc)
    apply (rule hoare_pre)
    apply (rule_tac G="is_aligned ptr bits \<and> word_size_bits \<le> bits \<and> bits \<le> word_bits"
                 in hoare_grab_asm)
