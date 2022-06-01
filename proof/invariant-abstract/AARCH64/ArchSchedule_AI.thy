@@ -15,7 +15,7 @@ named_theorems Schedule_AI_asms
 
 lemma dmo_mapM_storeWord_0_invs[wp,Schedule_AI_asms]:
   "do_machine_op (mapM (\<lambda>p. storeWord p 0) S) \<lbrace>invs\<rbrace>"
-  apply (simp add: dom_mapM ef_storeWord)
+  apply (simp add: dom_mapM)
   apply (rule mapM_UNIV_wp)
   apply (simp add: do_machine_op_def split_def)
   apply wp

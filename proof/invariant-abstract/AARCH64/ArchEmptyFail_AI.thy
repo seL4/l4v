@@ -14,18 +14,12 @@ context Arch begin global_naming AARCH64
 named_theorems EmptyFail_AI_assms
 
 crunch_ignore (empty_fail)
-  (add: setVSpaceRoot_impl resetTimer_impl
-        addressTranslateS1_impl fpuThreadDeleteOp_impl dsb_impl isb_impl
-        pt_lookup_from_level setIRQTrigger_impl plic_complete_claim_impl
-        set_gic_vcpu_ctrl_hcr_impl setSCTLR_impl setHCR_impl enableFpuEL01_impl
-        writeVCPUHardwareReg_impl check_export_arch_timer_impl invalidateTranslationASID_impl
-        cleanByVA_PoU_impl invalidateTranslationSingle_impl set_gic_vcpu_ctrl_vmcr_impl
-        set_gic_vcpu_ctrl_apr_impl set_gic_vcpu_ctrl_lr_impl get_gic_vcpu_ctrl_lr_impl
-        cleanCacheRange_RAM_impl invalidateCacheRange_RAM_impl cleanCacheRange_PoU_impl
-        invalidateCacheRange_I_impl branchFlushRange_impl)
+  (add: pt_lookup_from_level)
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]:
-  loadWord, load_word_offs, storeWord, getRestartPC, get_mrs
+  load_word_offs, get_mrs
+
+declare loadWord_empty_fail[EmptyFail_AI_assms]
 
 end
 
