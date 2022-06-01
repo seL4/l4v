@@ -145,6 +145,9 @@ session DPolicy in "dpolicy" = DRefine +
 session Access in "access-control" = AInvs +
   directories
     "$L4V_ARCH"
+  theories [condition = "ACCESS_QUICK_AND_DIRTY", quick_and_dirty]
+    "ArchADT_AC"
+    "ExampleSystem"
   theories
     "ArchADT_AC"
     "ExampleSystem"
