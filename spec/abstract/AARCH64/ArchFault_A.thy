@@ -15,9 +15,7 @@ context Arch begin global_naming AARCH64_A
 fun make_arch_fault_msg :: "arch_fault \<Rightarrow> obj_ref \<Rightarrow> (data \<times> data list,'z::state_ext) s_monad" where
   "make_arch_fault_msg (VMFault vptr archData) thread = do
      pc \<leftarrow> as_user thread getRestartPC;
-     upc \<leftarrow> do_machine_op (addressTranslateS1 pc);
-     ipa \<leftarrow> return $ (upc && ~~ mask pageBits) || (pc && mask pageBits);
-     return (5, ipa # vptr # archData)
+     return (5, pc # vptr # archData)
    od"
 | "make_arch_fault_msg (VCPUFault hsr) thread = return (7, [hsr])"
 | "make_arch_fault_msg (VPPIEvent irq) thread = return (8, [ucast irq])"
