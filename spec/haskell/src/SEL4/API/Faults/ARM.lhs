@@ -36,14 +36,7 @@ in handleVMFault?
 > makeArchFaultMessage :: ArchFault -> PPtr TCB -> Kernel (Word, [Word])
 > makeArchFaultMessage (VMFault vptr archData) thread = do
 >     pc <- asUser thread getRestartPC
-#ifndef CONFIG_ARM_HYPERVISOR_SUPPORT
 >     return (5, pc:fromVPtr vptr:archData)
-#else
->     upc <- doMachineOp (addressTranslateS1 $ VPtr pc)
->     let faddr = (upc .&. complement (mask pageBits)) .|.
->                 (VPtr pc .&. mask pageBits)
->     return (5, fromVPtr faddr:fromVPtr vptr:archData)
-#endif
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 > makeArchFaultMessage (VCPUFault hsr) thread = return (7, [hsr])
 > makeArchFaultMessage (VPPIEvent irq) thread = return (8, [fromIntegral $ fromEnum $ irq])

@@ -1788,6 +1788,7 @@ proof -
                  del:  Collect_const split del: if_split)
      apply (rule_tac P="ft = ArchFault aft" in ccorres_gen_asm)
      apply wpc
+     (* VMFault *)
      apply (rename_tac list)
      apply (rule_tac P="zip [Suc (Suc 0) ..< msgMaxLength] list = [(2, hd list), (3, hd (tl list))]"
                      in ccorres_gen_asm)
@@ -1797,13 +1798,9 @@ proof -
                       seL4_Fault_tag_defs
                  del: Collect_const)
        apply (rule ccorres_rhs_assoc)+
-       apply (csymbr)
-       apply csymbr
        apply (ctac(no_vcg) add: getRestartPC_ccorres)
-        apply (ctac(no_vcg) add: addressTranslateS1_ccorres)
-         apply (rule ccorres_stateAssert)
-         apply csymbr
-         apply (ctac(no_vcg) add: setMR_ccorres_dc)
+        apply (rule ccorres_stateAssert)
+        apply (ctac(no_vcg) add: setMR_ccorres_dc)
        apply (rule ccorres_move_c_guard_tcb)
        apply (rule_tac val="vmFaultAddress aft" in symb_exec_r_fault)
           apply (rule conseqPre, vcg, clarsimp)

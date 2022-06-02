@@ -1561,10 +1561,8 @@ lemma makeArchFaultMessage_corres:
   apply (cases f; clarsimp simp: makeArchFaultMessage_def ucast_nat_def split: arch_fault.split)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr[OF _ asUser_getRestartPC_corres])
-      apply (rule corres_split_eqr[OF _ corres_machine_op])
-         apply (rule corres_trivial, simp)
-        apply (rule corres_underlying_trivial)
-        apply (wp+, auto)
+      apply (rule corres_trivial, simp)
+     apply (wp+, auto)
   done
 
 lemma makeFaultMessage_corres:

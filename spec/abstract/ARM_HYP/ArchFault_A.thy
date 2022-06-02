@@ -20,8 +20,7 @@ fun make_arch_fault_msg :: "arch_fault \<Rightarrow> obj_ref \<Rightarrow> (data
 where
   "make_arch_fault_msg (VMFault vptr archData) thread = do
      pc \<leftarrow> as_user thread getRestartPC;
-     upc \<leftarrow> do_machine_op (addressTranslateS1 pc);
-     return (5, (upc && ~~ mask pageBits || pc && mask pageBits) # vptr # archData) od"
+     return (5, pc # vptr # archData) od"
 | "make_arch_fault_msg (VCPUFault hsr) thread = return (7, [hsr])"
 | "make_arch_fault_msg (VPPIEvent irq) thread = return (8, [ucast irq])"
 | "make_arch_fault_msg (VGICMaintenance archData) thread = do
