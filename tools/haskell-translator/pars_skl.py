@@ -9,10 +9,11 @@ by inserting parsed Haskell."""
 from __future__ import print_function
 from __future__ import absolute_import
 import sys
-import lhs_pars
 import os
 import os.path
-import msgs
+
+import lhs_pars
+from msgs import error, warning, status
 
 
 def create_find_source():
@@ -96,7 +97,7 @@ for line in instructions:
             try:
                 parsed = lhs_pars.parse(call)
             except:
-                print("%s -X-> %s" % (input, output))
+                warning("%s -X-> %s" % (input, output), input)
                 raise
 
             bad_type_assignment |= call.bad_type_assignment
@@ -115,7 +116,7 @@ for line in instructions:
 
     # at this point, output_tmp should exist, but output might not exist
     if not os.path.exists(output_tmp):
-        print('Error: {} did not generate correctly'.format(output_tmp))
+        error('{} did not generate correctly'.format(output_tmp))
         sys.exit(1)
 
     if os.path.exists(output):
@@ -124,15 +125,15 @@ for line in instructions:
             lines2 = [line for line in open(output)]
             changed = not (lines1 == lines2)
         except IOError as e:
-            print("IOError comparing {} and {}:\n{}".format(output_tmp, output, e))
+            error("IOError comparing {} and {}:\n{}".format(output_tmp, output, e))
             sys.exit(1)
     else:
-        #print('Warning: {} does not exist, assuming changed'.format(output))
+        #warning('{} does not exist, assuming changed'.format(output))
         changed = 1
 
     if changed:
         if not quiet:
-            msgs.status(instruct)
+            status(instruct)
         try:
             os.unlink(output)
         except:
@@ -140,12 +141,12 @@ for line in instructions:
         try:
             os.rename(output_tmp, output)
         except IOError as e:
-            print("IOError moving {} -> {}:\n{}".format(output_tmp, output, e))
+            error("IOError moving {} -> {}:\n{}".format(output_tmp, output, e))
             sys.exit(1)
     else:
         os.unlink(output_tmp)
 
-msgs.status("")
+status("")
 
 if bad_type_assignment and not quiet:
     print("Note: for type assignments with parameters, define "
