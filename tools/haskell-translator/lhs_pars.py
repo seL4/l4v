@@ -18,6 +18,7 @@ from functools import reduce
 import braces
 from msgs import error, warning
 
+
 class Call(object):
 
     def __init__(self):
@@ -429,7 +430,7 @@ def def_lines(d, call):
             if d.sig:
                 defname = '%s_def' % d.defined
                 if d.primrec:
-                    warning('body-only primrec:\n' + body[0])
+                    warning('body-only primrec:\n' + body[0], call.filename)
                     return comments + ['primrec'] + body
                 return comments + ['defs %s:' % defname] + body
             else:
@@ -698,7 +699,7 @@ def typename_transform(line, header, d):
         [oldtype] = line.split()
     except:
         if header not in known_type_assignments:
-            warning('type assignment with parameters not supported %s' % d.body)
+            warning('type assignment with parameters not supported %s' % d.body, filename)
             call.bad_type_assignment = True
         return
     if oldtype.startswith('Data.Word.Word'):
@@ -996,10 +997,10 @@ def instance_transform(d):
     classname = bits[1]
     typename = type_conv(bits[2])
     if classname == 'Show':
-        warning("discarding class instance '%s :: Show'" % typename)
+        warning("discarding class instance '%s :: Show'" % typename, filename)
         return None
     if typename == '()':
-        warning("discarding class instance 'unit :: %s'" % classname)
+        warning("discarding class instance 'unit :: %s'" % classname, filename)
         return None
     if len(bits) == 3:
         if children == []:
@@ -1475,7 +1476,7 @@ def body_transform(body, defined, sig, nopattern=False):
         (nextline, c2) = children[0]
         children[0] = ('\<equiv>'.join(nextline.split('=', 1)), c2)
     else:
-        warning('def of %s missing =\n' % defined)
+        warning('def of %s missing =\n' % defined, filename)
 
     if children and (children[-1][0].endswith('where') or
                      children[-1][0].lstrip().startswith('where')):
@@ -1996,7 +1997,7 @@ def case_clauses_transform(xxx_todo_changeme5):
             x = str(bits[0]) + ':: ' + type_transform(str(bits[1]))
 
     if children and children[-1][0].strip().startswith('where'):
-        warning(f'where clause in case: %r, removing case.' % line)
+        warning(f'where clause in case: %r, removing case.' % line, filename)
         return (beforecase + '\<comment> \<open>case removed\<close> undefined', [])
         # where_clause = where_clause_transform(children[-1])
         # children = children[:-1]
@@ -2010,7 +2011,7 @@ def case_clauses_transform(xxx_todo_changeme5):
         bits = l.split('->', 1)
         while len(bits) == 1:
             if c == []:
-                error('wtf %r\n' % l)
+                error('wtf %r\n' % l, filename)
                 sys.exit(1)
             if c[0][0].strip().startswith('|'):
                 bits = [bits[0], '']
@@ -2038,10 +2039,10 @@ def case_clauses_transform(xxx_todo_changeme5):
         print(line)
     conv = get_case_conv(cases)
     if conv == '<X>':
-        warning('blanked case in caseconvs')
+        warning('blanked case in caseconvs', filename)
         return (beforecase + '\<comment> \<open>case removed\<close> undefined', [])
     if not conv:
-        warning('no caseconv for %r\n' % (cases, ))
+        warning('no caseconv for %r\n' % (cases, ), filename)
         if cases not in cases_added:
             casestr = 'case \\x of ' + ' -> '.join(cases) + ' -> '
 
@@ -2062,7 +2063,7 @@ def case_clauses_transform(xxx_todo_changeme5):
             new_children.append((ws + header, []))
         else:
             if (len(bodies) <= endnum):
-                error('index %d out of bounds in case %r\n' % (endnum, cases))
+                error('index %d out of bounds in case %r\n' % (endnum, cases), filename)
                 sys.exit(1)
 
             (body, c) = bodies[endnum]
@@ -2090,12 +2091,12 @@ def guarded_body_transform(body, div):
                 children = c + children[1:]
                 line = line + ' ' + l.strip()
         except:
-            error('missing %r in %r\nhandling %r' % (div, line, body))
+            error('missing %r in %r\nhandling %r' % (div, line, body), filename)
             sys.exit(1)
         try:
             [ws, guts] = line.split('| ', 1)
         except:
-            error('missing "|" in %r\nhandling %r' % (line, body))
+            error('missing "|" in %r\nhandling %r' % (line, body), filename)
             sys.exit(1)
         if i == 0:
             new_body.append((ws + 'if', []))
@@ -2292,7 +2293,7 @@ def get_case_rhs(rhs):
               f'For technical reasons the first line of this case conversion must be split with \\n:\n'
               f'  {repr(rhs)}\n'
               f'(further notes: the rhs of each caseconv must have multiple lines\n'
-              f'and the first cannot contain any ->1, ->2 etc.)\n')
+              f'and the first cannot contain any ->1, ->2 etc.)\n', filename)
         sys.exit(1)
 
     # this is a tad dodgy, but means that case_clauses_transform
@@ -2338,7 +2339,7 @@ def get_case_conv_table():
                         not is_extended_pattern(cases)):
                     render_caseconv(cases, to_case, f2)
         except Exception as e:
-            error(f'error parsing {repr(line)}\n {e}')
+            error(f'error parsing {repr(line)}\n {e}', 'caseconvs')
             sys.exit(1)
 
     f.close()
@@ -2740,11 +2741,11 @@ def remove_trailing_string(s, xxx_todo_changeme9, _handled=False):
         try:
             return remove_trailing_string(s, (line, children), _handled=True)
         except:
-            error('handling %s\n' % ((line, children), ))
+            error('handling %s\n' % ((line, children), ), filename)
             raise
     if children == []:
         if not line.endswith(s):
-            error('expected %r\n to end with %r' % (line, s))
+            error('expected %r\n to end with %r' % (line, s), filename)
             assert line.endswith(s)
         n = len(s)
         return (line[:-n], [])
