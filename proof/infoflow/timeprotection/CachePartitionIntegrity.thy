@@ -30,16 +30,16 @@ definition policy_accessible_labels :: "'a PAS \<Rightarrow> domain \<Rightarrow
        ls = subjectReads (pasPolicy aag) l \<or>
        ls = subjectAffects (pasPolicy aag) l}"
 
-definition policy_accessible_objs :: "'a PAS \<Rightarrow> domain \<Rightarrow> obj_ref set" where
-  "policy_accessible_objs aag d \<equiv> {p. pasObjectAbs aag p \<in> policy_accessible_labels aag d}"
+definition policy_accessible_addrs :: "'a PAS \<Rightarrow> domain \<Rightarrow> obj_ref set" where
+  "policy_accessible_addrs aag d \<equiv> {p. pasObjectAbs aag p \<in> policy_accessible_labels aag d}"
 
 definition policy_accessible_domains :: "'a PAS \<Rightarrow> domain \<Rightarrow> domain set" where
   "policy_accessible_domains aag d \<equiv>
-     {d'. policy_owned_addrs aag d' \<inter> policy_accessible_objs aag d \<noteq> {}}"
+     {d'. policy_owned_addrs aag d' \<inter> policy_accessible_addrs aag d \<noteq> {}}"
 
 lemma owned_subset_accessible_objs:
-  "policy_owned_addrs aag d \<subseteq> policy_accessible_objs aag d"
-  unfolding policy_owned_addrs_def policy_accessible_objs_def policy_accessible_labels_def
+  "policy_owned_addrs aag d \<subseteq> policy_accessible_addrs aag d"
+  unfolding policy_owned_addrs_def policy_accessible_addrs_def policy_accessible_labels_def
   by blast
 
 lemma nonempty_domains_self_accessible:
@@ -63,9 +63,9 @@ lemma domain_L2_partitions_distinct:
   unfolding domain_L2_partition_def
   by blast
 
-definition policy_accessible_partitions :: "'a PAS \<Rightarrow> det_state \<Rightarrow> paddr set" where
-  "policy_accessible_partitions aag s \<equiv>
-     \<Union> {as. \<exists>d \<in> policy_accessible_domains aag (cur_domain s). as = domain_L2_partition d}"
+definition policy_accessible_partitions :: "'a PAS \<Rightarrow> domain \<Rightarrow> paddr set" where
+  "policy_accessible_partitions aag d \<equiv>
+     \<Union> {as. \<exists>d \<in> policy_accessible_domains aag d. as = domain_L2_partition d}"
 
 abbreviation touched_addresses' :: "det_state \<Rightarrow> machine_word set" where
   "touched_addresses' s \<equiv> touched_addresses (machine_state s)"
@@ -86,7 +86,7 @@ definition ta_subset_owned_partition :: "det_state \<Rightarrow> bool" where
 definition ta_subset_accessible_partitions :: "'a PAS \<Rightarrow> det_state \<Rightarrow> bool" where
   "ta_subset_accessible_partitions aag s \<equiv>
      p_footprint (touched_addresses' s) \<subseteq>
-     policy_accessible_partitions aag s"
+     policy_accessible_partitions aag (cur_domain s)"
 
 \<comment> \<open>That each domain's objects stay confined to that domain's partition.\<close>
 definition owned_objs_well_partitioned :: "'a PAS \<Rightarrow> det_state \<Rightarrow> bool" where
@@ -97,13 +97,18 @@ definition owned_objs_well_partitioned :: "'a PAS \<Rightarrow> det_state \<Righ
 \<comment> \<open>That accessible objects will only lie inside accessible domains' partitions.\<close>
 definition accessible_objs_well_partitioned :: "'a PAS \<Rightarrow> det_state \<Rightarrow> bool" where
   "accessible_objs_well_partitioned aag s \<equiv>
-     p_footprint (\<Union> (obj_v_footprint s ` policy_accessible_objs aag (cur_domain s))) \<subseteq>
-     policy_accessible_partitions aag s"
+     p_footprint (\<Union> (obj_v_footprint s ` policy_accessible_addrs aag (cur_domain s))) \<subseteq>
+     policy_accessible_partitions aag (cur_domain s)"
 
 \<comment> \<open>That each domain's labels' addresses are located in that domain's partition.\<close>
 definition owned_addrs_well_partitioned :: "'a PAS \<Rightarrow> bool" where
   "owned_addrs_well_partitioned aag \<equiv> \<forall> d.
      p_footprint (policy_owned_addrs aag d) \<subseteq> domain_L2_partition d"
+
+\<comment> \<open>That accessible labels' addresses are located in accessible domains' partitions.\<close>
+definition accessible_addrs_well_partitioned :: "'a PAS \<Rightarrow> bool" where
+  "accessible_addrs_well_partitioned aag \<equiv> \<forall> d.
+     p_footprint (policy_accessible_addrs aag d) \<subseteq> policy_accessible_partitions aag d"
 
 \<comment> \<open>That no object is allocated on the @{term\<open>kheap\<close>} such that it straddles the addresses
     assigned to two different labels according to @{term\<open>pasObjectAbs\<close>}}.\<close>
@@ -160,7 +165,7 @@ lemma owned_to_accessible_objs_well_partitioned:
   apply(rule conjI)
    apply(rule_tac x=yd in exI)
    apply clarsimp
-   \<comment> \<open>Note: \<open>y \<in> policy_accessible_objs aag (cur_domain s)\<close> is what tells
+   \<comment> \<open>Note: \<open>y \<in> policy_accessible_addrs aag (cur_domain s)\<close> is what tells
        the intersection of the two sets is nonempty.\<close>
    apply(erule_tac x=y in in_empty_interE)
     apply(force simp:policy_owned_addrs_def)
@@ -177,20 +182,55 @@ lemma owned_to_accessible_objs_well_partitioned:
   apply(force simp:obj_v_footprint_def policy_owned_addrs_def)
   done
 
-\<comment> \<open>Object subset property: Only the paddrs of policy-accessible objects are ever accessed.\<close>
+\<comment> \<open>Address subset property: That only the paddrs of policy-accessible labels are ever accessed.\<close>
+definition ta_subset_accessible_addrs :: "'a PAS \<Rightarrow> det_state \<Rightarrow> bool" where
+  "ta_subset_accessible_addrs aag s \<equiv>
+     p_footprint (touched_addresses' s) \<subseteq>
+     p_footprint (policy_accessible_addrs aag (cur_domain s))"
+
+\<comment> \<open>Object subset property: That only the paddrs of policy-accessible objects are ever accessed.\<close>
 definition ta_subset_accessible_objects :: "'a PAS \<Rightarrow> det_state \<Rightarrow> bool" where
   "ta_subset_accessible_objects aag s \<equiv>
      p_footprint (touched_addresses' s) \<subseteq>
-     p_footprint (\<Union> (obj_v_footprint s ` policy_accessible_objs aag (cur_domain s)))"
+     p_footprint (\<Union> (obj_v_footprint s ` policy_accessible_addrs aag (cur_domain s)))"
 
 abbreviation ta_objsubset_inv :: "'a PAS \<Rightarrow> det_state \<Rightarrow> bool" where
   "ta_objsubset_inv \<equiv> ta_subset_accessible_objects"
+
+(* XXX: Oh. This won't be true because if not every object is allocated to cover the entire
+   of `vas`, then `vas` won't be a subset of its own object footprints. *)
+lemma "no_label_straddling_objs aag s \<Longrightarrow>
+       vas \<subseteq> \<Union> (obj_v_footprint s ` vas)"
+  unfolding no_label_straddling_objs_def obj_v_footprint_def
+  apply(clarsimp split:option.splits)
+  oops
+
+(* XXX: Likewise this is not going to be true for the same reason. *)
+lemma
+  "ta_subset_accessible_addrs aag s \<Longrightarrow> no_label_straddling_objs aag s \<Longrightarrow>
+   ta_subset_accessible_objects aag s"
+  unfolding ta_subset_accessible_addrs_def ta_subset_accessible_objects_def
+    no_label_straddling_objs_def
+  apply clarsimp
+  apply(rename_tac va)
+  apply(clarsimp simp:obj_v_footprint_def image_def split:option.splits)
+  apply(erule_tac x=va in allE)
+  oops
 
 lemma ta_subset_accessible_partitions':
   "\<lbrakk>accessible_objs_well_partitioned aag s; ta_subset_accessible_objects aag s\<rbrakk> \<Longrightarrow>
    ta_subset_accessible_partitions aag s"
   unfolding ta_subset_accessible_partitions_def ta_subset_accessible_objects_def
     accessible_objs_well_partitioned_def
+  by blast
+
+(* XXX: So it turns out we don't even need accessible_objs_well_partitioned...
+   we just needed accessible_addrs_well_partitioned and ta_subset_accessible_addrs after all. *)
+lemma ta_subset_accessible_partitions'':
+  "\<lbrakk>accessible_addrs_well_partitioned aag; ta_subset_accessible_addrs aag s\<rbrakk> \<Longrightarrow>
+   ta_subset_accessible_partitions aag s"
+  unfolding ta_subset_accessible_partitions_def ta_subset_accessible_addrs_def
+    accessible_addrs_well_partitioned_def
   by blast
 
 (* We expect to add no_label_straddling_objs as a new conjunct of pas_refined *)
