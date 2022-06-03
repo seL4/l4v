@@ -6,7 +6,6 @@
 
 from __future__ import print_function
 from __future__ import absolute_import
-import braces
 import re
 import sys
 import os
@@ -16,31 +15,8 @@ from six.moves import range
 from six.moves import zip
 from functools import reduce
 
-ANSI_RESET = "\033[0m"
-ANSI_RED = "\033[31;1m"
-ANSI_YELLOW = "\033[33m"
-
-
-def running_on_github():
-    return os.environ.get("GITHUB_REPOSITORY") != None
-
-
-def output_color(color, s, github=running_on_github()):
-    """Wrap the given string in the given color."""
-    if sys.stderr.isatty() or github:
-        return color + s + ANSI_RESET
-    return s
-
-
-def warning(msg: str):
-    w = output_color(ANSI_YELLOW, 'Warning:')
-    sys.stderr.write(f'{w} {msg}\n')
-
-
-def error(msg: str):
-    e = output_color(ANSI_RED, 'Fatal error:')
-    sys.stderr.write(f'{e} {msg}\n')
-
+import braces
+from msgs import error, warning
 
 class Call(object):
 
