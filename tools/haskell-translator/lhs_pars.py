@@ -702,12 +702,28 @@ def newtype_transform(d):
         return named_newtype_transform(line, header, d)
 
 
+# parameterised types of which we know that they are already defined in Isabelle
+known_type_assignments = [
+    'domain_schedule',
+    'kernel',
+    'kernel_f',
+    'kernel_f f',  # there is a KernelF instance that gets transformed into this
+    'kernel_init',
+    'kernel_init_state',
+    'machine_data',
+    'machine_monad',
+    'ready_queue',
+    'user_monad'
+]
+
+
 def typename_transform(line, header, d):
     try:
         [oldtype] = line.split()
     except:
-        warning('type assignment with parameters not supported %s' % d.body)
-        call.bad_type_assignment = True
+        if header not in known_type_assignments:
+            warning('type assignment with parameters not supported %s' % d.body)
+            call.bad_type_assignment = True
         return
     if oldtype.startswith('Data.Word.Word'):
         # take off the prefix, leave Word32 or Word64 etc
