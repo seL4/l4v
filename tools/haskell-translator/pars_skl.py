@@ -12,6 +12,7 @@ import sys
 import lhs_pars
 import os
 import os.path
+import msgs
 
 
 def create_find_source():
@@ -131,7 +132,7 @@ for line in instructions:
 
     if changed:
         if not quiet:
-            print(instruct)
+            msgs.status(instruct)
         try:
             os.unlink(output)
         except:
@@ -143,6 +144,8 @@ for line in instructions:
             sys.exit(1)
     else:
         os.unlink(output_tmp)
+
+msgs.status("")
 
 if bad_type_assignment and not quiet:
     print("Note: for type assignments with parameters, define "
