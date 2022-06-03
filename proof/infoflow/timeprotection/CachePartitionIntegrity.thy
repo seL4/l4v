@@ -11,15 +11,15 @@ begin
 context Arch begin
 
 \<comment> \<open> Adapted from Scott's definition of @{term\<open>touch_objects\<close>}.
-  I don't believe any existing definition gets the @{term\<open>obj_range\<close>} / @{term\<open>obj_addrs\<close>}
+  I don't believe any existing definition gets the @{term\<open>obj_addrs\<close>}
   conditionally on whether the object is on the @{term\<open>kheap\<close>} like this. -robs \<close>
 definition obj_v_footprint :: "'a state \<Rightarrow> obj_ref \<Rightarrow> machine_word set" where
   "obj_v_footprint s p \<equiv> case kheap s p of
      None \<Rightarrow> {} |
-     Some obj \<Rightarrow> obj_range p obj"
+     Some ko \<Rightarrow> obj_addrs ko p"
 
-definition policy_owned_objs :: "'a PAS \<Rightarrow> domain \<Rightarrow> obj_ref set" where
-  "policy_owned_objs aag d \<equiv> {p. pasObjectAbs aag p \<in> pasDomainAbs aag d}"
+definition policy_owned_addrs :: "'a PAS \<Rightarrow> domain \<Rightarrow> obj_ref set" where
+  "policy_owned_addrs aag d \<equiv> {p. pasObjectAbs aag p \<in> pasDomainAbs aag d}"
 
 definition all_labels_are_owned :: "'a PAS \<Rightarrow> bool" where
   "all_labels_are_owned aag \<equiv> \<forall>l. \<exists>d. l \<in> pasDomainAbs aag d"
@@ -35,15 +35,15 @@ definition policy_accessible_objs :: "'a PAS \<Rightarrow> domain \<Rightarrow> 
 
 definition policy_accessible_domains :: "'a PAS \<Rightarrow> domain \<Rightarrow> domain set" where
   "policy_accessible_domains aag d \<equiv>
-     {d'. policy_owned_objs aag d' \<inter> policy_accessible_objs aag d \<noteq> {}}"
+     {d'. policy_owned_addrs aag d' \<inter> policy_accessible_objs aag d \<noteq> {}}"
 
 lemma owned_subset_accessible_objs:
-  "policy_owned_objs aag d \<subseteq> policy_accessible_objs aag d"
-  unfolding policy_owned_objs_def policy_accessible_objs_def policy_accessible_labels_def
+  "policy_owned_addrs aag d \<subseteq> policy_accessible_objs aag d"
+  unfolding policy_owned_addrs_def policy_accessible_objs_def policy_accessible_labels_def
   by blast
 
 lemma nonempty_domains_self_accessible:
-  "policy_owned_objs aag d \<noteq> {} \<Longrightarrow> d \<in> policy_accessible_domains aag d"
+  "policy_owned_addrs aag d \<noteq> {} \<Longrightarrow> d \<in> policy_accessible_domains aag d"
   unfolding policy_accessible_domains_def
   apply clarsimp
   using owned_subset_accessible_objs
@@ -91,7 +91,7 @@ definition ta_subset_accessible_partitions :: "'a PAS \<Rightarrow> det_state \<
 \<comment> \<open>That each domain's objects stay confined to that domain's partition.\<close>
 definition owned_objs_well_partitioned :: "'a PAS \<Rightarrow> det_state \<Rightarrow> bool" where
   "owned_objs_well_partitioned aag s \<equiv> \<forall> d.
-     p_footprint (\<Union> (obj_v_footprint s ` policy_owned_objs aag d)) \<subseteq>
+     p_footprint (\<Union> (obj_v_footprint s ` policy_owned_addrs aag d)) \<subseteq>
      domain_L2_partition d"
 
 \<comment> \<open>That accessible objects will only lie inside accessible domains' partitions.\<close>
@@ -99,6 +99,42 @@ definition accessible_objs_well_partitioned :: "'a PAS \<Rightarrow> det_state \
   "accessible_objs_well_partitioned aag s \<equiv>
      p_footprint (\<Union> (obj_v_footprint s ` policy_accessible_objs aag (cur_domain s))) \<subseteq>
      policy_accessible_partitions aag s"
+
+\<comment> \<open>That each domain's labels' addresses are located in that domain's partition.\<close>
+definition owned_addrs_well_partitioned :: "'a PAS \<Rightarrow> bool" where
+  "owned_addrs_well_partitioned aag \<equiv> \<forall> d.
+     p_footprint (policy_owned_addrs aag d) \<subseteq> domain_L2_partition d"
+
+\<comment> \<open>That no object is allocated on the @{term\<open>kheap\<close>} such that it straddles the addresses
+    assigned to two different labels according to @{term\<open>pasObjectAbs\<close>}}.\<close>
+definition no_label_straddling_objs :: "'a PAS \<Rightarrow> det_state \<Rightarrow> bool" where
+  "no_label_straddling_objs aag s \<equiv> \<forall>l p. pasObjectAbs aag p = l \<longrightarrow>
+     (case kheap s p of
+       Some ko \<Rightarrow> \<forall>va \<in> obj_addrs ko p. pasObjectAbs aag va = l |
+       None \<Rightarrow> True)"
+
+\<comment> \<open>That it's sufficient here to prove an invariant that's agnostic of colours, domains, etc.
+    rather than proving \<open>owned_objs_well_partitioned\<close> as an invariant directly.\<close>
+lemma owned_addrs_to_objs_well_partitioned:
+  "owned_addrs_well_partitioned aag \<Longrightarrow>
+   no_label_straddling_objs aag s \<Longrightarrow>
+   owned_objs_well_partitioned aag s"
+  unfolding owned_addrs_well_partitioned_def no_label_straddling_objs_def
+    owned_objs_well_partitioned_def
+  apply clarsimp
+  apply(rename_tac d va p)
+  apply(clarsimp simp:obj_v_footprint_def image_def split:option.splits)
+  apply(erule_tac x=d in allE)
+  apply(erule_tac x=p in allE)
+  apply clarsimp
+  apply(rename_tac d va p ko)
+  apply(erule_tac x=va in ballE)
+   apply(erule_tac c="addrFromKPPtr va" in subsetCE)
+    apply(clarsimp simp:policy_owned_addrs_def)
+    apply metis
+   apply force
+  apply force
+  done
 
 \<comment> \<open>If every domain's objects is confined to its partition, then all accessible objects, due to
   belonging to accessible domains, are confined to the union of those domains' partitions. -robs\<close>
@@ -127,18 +163,18 @@ lemma owned_to_accessible_objs_well_partitioned:
    \<comment> \<open>Note: \<open>y \<in> policy_accessible_objs aag (cur_domain s)\<close> is what tells
        the intersection of the two sets is nonempty.\<close>
    apply(erule_tac x=y in in_empty_interE)
-    apply(force simp:policy_owned_objs_def)
+    apply(force simp:policy_owned_addrs_def)
    apply force
   apply(rename_tac va y yd)
   \<comment> \<open>We now use @{term\<open>owned_objs_well_partitioned\<close>} to tell us \<open>y\<close> is in its domain's partition.\<close>
   unfolding owned_objs_well_partitioned_def
   apply(erule_tac x=yd in allE)
   apply(subgoal_tac
-    "addrFromKPPtr va \<in> p_footprint (\<Union> (obj_v_footprint s ` policy_owned_objs aag yd))")
+    "addrFromKPPtr va \<in> p_footprint (\<Union> (obj_v_footprint s ` policy_owned_addrs aag yd))")
    apply force
-  \<comment> \<open>Finally, \<open>va\<close> should be in the footprint of the @{term\<open>policy_owned_objs\<close>} of \<open>yd\<close>
+  \<comment> \<open>Finally, \<open>va\<close> should be in the footprint of the @{term\<open>policy_owned_addrs\<close>} of \<open>yd\<close>
       because that should include \<open>y\<close>.\<close>
-  apply(force simp:obj_v_footprint_def policy_owned_objs_def)
+  apply(force simp:obj_v_footprint_def policy_owned_addrs_def)
   done
 
 \<comment> \<open>Object subset property: Only the paddrs of policy-accessible objects are ever accessed.\<close>
@@ -157,20 +193,22 @@ lemma ta_subset_accessible_partitions':
     accessible_objs_well_partitioned_def
   by blast
 
-theorem ta_subset_accessible_partitions:
-  "\<lbrakk>all_labels_are_owned aag; owned_objs_well_partitioned aag s;
-    ta_subset_accessible_objects aag s\<rbrakk> \<Longrightarrow>
-   ta_subset_accessible_partitions aag s"
-  by (force intro:ta_subset_accessible_partitions' owned_to_accessible_objs_well_partitioned)
-
-lemma
-  "pas_refined aag s \<Longrightarrow> owned_objs_well_partitioned aag s"
+(* We expect to add no_label_straddling_objs as a new conjunct of pas_refined *)
+lemma pas_refined_no_label_straddling_objs:
+  "pas_refined aag s \<Longrightarrow> no_label_straddling_objs aag s"
   oops
 
-\<comment> \<open>Proofs that objects remain well partitioned over seL4 kernel\<close>
+theorem ta_subset_accessible_partitions:
+  "\<lbrakk>all_labels_are_owned aag; owned_addrs_well_partitioned aag;
+    no_label_straddling_objs aag s; ta_subset_accessible_objects aag s\<rbrakk> \<Longrightarrow>
+   ta_subset_accessible_partitions aag s"
+  by (force intro:ta_subset_accessible_partitions'
+    owned_addrs_to_objs_well_partitioned owned_to_accessible_objs_well_partitioned)
+
+\<comment> \<open>Proofs over seL4 kernel that objects never straddle the addresses of distinct labels\<close>
 
 lemma owned_objs_well_partitioned_inv:
-  "call_kernel ev \<lbrace>owned_objs_well_partitioned aag\<rbrace>"
+  "call_kernel ev \<lbrace>no_label_straddling_objs aag\<rbrace>"
   sorry
 
 \<comment> \<open>Proofs of accessible-object subset invariance over seL4 kernel\<close>
@@ -454,8 +492,6 @@ end
 locale ADT_IF_L2Partitioned = ArchL2Partitioned +
   fixes initial_aag :: "'a PAS"
   fixes s0 :: det_state
-  assumes init_well_partitioned:
-    "owned_objs_well_partitioned initial_aag s0"
   assumes init_ta_empty:
     "touched_addresses' s0 = {}"
 begin
