@@ -8,9 +8,11 @@ theory CachePartitionIntegrity
 imports InfoFlow.ADT_IF
 begin
 
-context Arch begin global_naming RISCV64
+context Arch begin
 
-\<comment> \<open> Adapted from Scott's definition of @{term\<open>touch_objects\<close>}. -robs \<close>
+\<comment> \<open> Adapted from Scott's definition of @{term\<open>touch_objects\<close>}.
+  I don't believe any existing definition gets the @{term\<open>obj_range\<close>} / @{term\<open>obj_addrs\<close>}
+  conditionally on whether the object is on the @{term\<open>kheap\<close>} like this. -robs \<close>
 definition obj_v_footprint :: "'a state \<Rightarrow> obj_ref \<Rightarrow> machine_word set" where
   "obj_v_footprint s p \<equiv> case kheap s p of
      None \<Rightarrow> {} |
@@ -35,14 +37,6 @@ definition policy_accessible_domains :: "'a PAS \<Rightarrow> domain \<Rightarro
   "policy_accessible_domains aag d \<equiv>
      {d'. policy_owned_objs aag d' \<inter> policy_accessible_objs aag d \<noteq> {}}"
 
-definition v_to_p_kernel_nonelf_opt :: "arch_state \<Rightarrow> machine_word \<Rightarrow> paddr option" where
-  "v_to_p_kernel_nonelf_opt s va \<equiv> case riscv_kernel_vspace s va of
-     RISCVVSpaceKernelWindow \<Rightarrow> Some (addrFromKPPtr va) |
-     _ \<Rightarrow> None"
-
-definition v_to_p_kernel_nonelf :: "arch_state \<Rightarrow> machine_word set \<Rightarrow> paddr set" where
-  "v_to_p_kernel_nonelf s vas \<equiv> {pa. \<exists>va \<in> vas. v_to_p_kernel_nonelf_opt s va = Some pa}"
-
 lemma owned_subset_accessible_objs:
   "policy_owned_objs aag d \<subseteq> policy_accessible_objs aag d"
   unfolding policy_owned_objs_def policy_accessible_objs_def policy_accessible_labels_def
@@ -58,10 +52,10 @@ lemma nonempty_domains_self_accessible:
 end
 
 locale ArchL2Partitioned = Arch +
-  fixes paddr_L2_domain :: "RISCV64.paddr \<Rightarrow> domain"
+  fixes paddr_L2_domain :: "paddr \<Rightarrow> domain"
 begin
 
-definition domain_L2_partition :: "domain \<Rightarrow> RISCV64.paddr set" where
+definition domain_L2_partition :: "domain \<Rightarrow> paddr set" where
   "domain_L2_partition d \<equiv> {pa. paddr_L2_domain pa = d}"
 
 lemma domain_L2_partitions_distinct:
@@ -69,37 +63,41 @@ lemma domain_L2_partitions_distinct:
   unfolding domain_L2_partition_def
   by blast
 
-definition policy_accessible_partitions :: "'a PAS \<Rightarrow> det_state \<Rightarrow> RISCV64.paddr set" where
+definition policy_accessible_partitions :: "'a PAS \<Rightarrow> det_state \<Rightarrow> paddr set" where
   "policy_accessible_partitions aag s \<equiv>
      \<Union> {as. \<exists>d \<in> policy_accessible_domains aag (cur_domain s). as = domain_L2_partition d}"
-
-definition p_footprint :: "det_state \<Rightarrow> machine_word set \<Rightarrow> RISCV64.paddr set" where
-  "p_footprint s as \<equiv> v_to_p_kernel_nonelf (arch_state s) as"
 
 abbreviation touched_addresses' :: "det_state \<Rightarrow> machine_word set" where
   "touched_addresses' s \<equiv> touched_addresses (machine_state s)"
 
+\<comment> \<open>Important: We assume that the @{term\<open>touched_addresses\<close>} set will only be used to track the
+    virtual addresses of kernel objects; therefore its physical address footprint is just the
+    image of @{term\<open>addrFromKPPtr\<close>} because @{term\<open>pspace_in_kernel_window\<close>} tells us all
+    kernel objects live in the kernel window.\<close>
+abbreviation p_footprint :: "machine_word set \<Rightarrow> paddr set" where
+  "p_footprint vas \<equiv> addrFromKPPtr ` vas"
+
 definition ta_subset_owned_partition :: "det_state \<Rightarrow> bool" where
   "ta_subset_owned_partition s \<equiv>
-     p_footprint s (touched_addresses' s) \<subseteq>
+     p_footprint (touched_addresses' s) \<subseteq>
      domain_L2_partition (cur_domain s)"
 
 \<comment> \<open>Partition subset property: That only paddrs in policy-accessible partitions are ever accessed.\<close>
 definition ta_subset_accessible_partitions :: "'a PAS \<Rightarrow> det_state \<Rightarrow> bool" where
   "ta_subset_accessible_partitions aag s \<equiv>
-     p_footprint s (touched_addresses' s) \<subseteq>
+     p_footprint (touched_addresses' s) \<subseteq>
      policy_accessible_partitions aag s"
 
 \<comment> \<open>That each domain's objects stay confined to that domain's partition.\<close>
 definition owned_objs_well_partitioned :: "'a PAS \<Rightarrow> det_state \<Rightarrow> bool" where
   "owned_objs_well_partitioned aag s \<equiv> \<forall> d.
-     p_footprint s (\<Union> (obj_v_footprint s ` policy_owned_objs aag d)) \<subseteq>
+     p_footprint (\<Union> (obj_v_footprint s ` policy_owned_objs aag d)) \<subseteq>
      domain_L2_partition d"
 
 \<comment> \<open>That accessible objects will only lie inside accessible domains' partitions.\<close>
 definition accessible_objs_well_partitioned :: "'a PAS \<Rightarrow> det_state \<Rightarrow> bool" where
   "accessible_objs_well_partitioned aag s \<equiv>
-     p_footprint s (\<Union> (obj_v_footprint s ` policy_accessible_objs aag (cur_domain s))) \<subseteq>
+     p_footprint (\<Union> (obj_v_footprint s ` policy_accessible_objs aag (cur_domain s))) \<subseteq>
      policy_accessible_partitions aag s"
 
 \<comment> \<open>If every domain's objects is confined to its partition, then all accessible objects, due to
@@ -108,17 +106,12 @@ lemma owned_to_accessible_objs_well_partitioned:
   "\<lbrakk>all_labels_are_owned aag; owned_objs_well_partitioned aag s\<rbrakk> \<Longrightarrow>
    accessible_objs_well_partitioned aag s"
   unfolding accessible_objs_well_partitioned_def
-  apply(clarsimp simp:p_footprint_def)
-  apply(clarsimp simp:v_to_p_kernel_nonelf_def)
-  apply(rename_tac pa y va)
+  apply clarsimp
+  apply(rename_tac va y)
   \<comment> \<open>We consider each accessible object, call it \<open>y\<close>.\<close>
   (* Things that matter for 'y' to be a valid object reference:
      - It is allocated, i.e. kheap s y \<noteq> None.
-       This follows from the definition of obj_v_footprint.
-     - Everything in its object footprint is in the kernel window, i.e.
-       \<forall>va \<in> obj_v_footprint s y.
-         riscv_kernel_vspace (arch_state s) va = RISCVVSpaceKernelWindow
-       This follows from the definition of v_to_p_kernel_nonelf_opt_def. *)
+       This follows from the definition of obj_v_footprint. *)
   \<comment> \<open>We know the L2 partitioning scheme assigns the physical address of \<open>y\<close> to some domain
         \<open>paddr_L2_domain (addrFromKPPtr y)\<close>
       But instead of that, we use the domain determined by the domain assignment
@@ -136,31 +129,23 @@ lemma owned_to_accessible_objs_well_partitioned:
    apply(erule_tac x=y in in_empty_interE)
     apply(force simp:policy_owned_objs_def)
    apply force
-  apply(rename_tac pa y va yd)
-  \<comment> \<open>Reminder: \<open>pa\<close> is the physical translation of some \<open>va\<close> in \<open>y\<close>'s @{term\<open>obj_v_footprint\<close>}.\<close>
-  apply(clarsimp simp:v_to_p_kernel_nonelf_def v_to_p_kernel_nonelf_opt_def
-    split:riscvvspace_region_use.splits)
+  apply(rename_tac va y yd)
   \<comment> \<open>We now use @{term\<open>owned_objs_well_partitioned\<close>} to tell us \<open>y\<close> is in its domain's partition.\<close>
   unfolding owned_objs_well_partitioned_def
   apply(erule_tac x=yd in allE)
   apply(subgoal_tac
-    "addrFromKPPtr va \<in> p_footprint s (\<Union> (obj_v_footprint s ` policy_owned_objs aag yd))")
+    "addrFromKPPtr va \<in> p_footprint (\<Union> (obj_v_footprint s ` policy_owned_objs aag yd))")
    apply force
   \<comment> \<open>Finally, \<open>va\<close> should be in the footprint of the @{term\<open>policy_owned_objs\<close>} of \<open>yd\<close>
       because that should include \<open>y\<close>.\<close>
-  apply(clarsimp simp:obj_v_footprint_def p_footprint_def v_to_p_kernel_nonelf_def policy_owned_objs_def)
-  apply(rule_tac x=y in exI)
-  apply clarsimp
-  apply(rule_tac x=va in bexI)
-   apply(force simp:v_to_p_kernel_nonelf_opt_def)
-  apply force
+  apply(force simp:obj_v_footprint_def policy_owned_objs_def)
   done
 
 \<comment> \<open>Object subset property: Only the paddrs of policy-accessible objects are ever accessed.\<close>
 definition ta_subset_accessible_objects :: "'a PAS \<Rightarrow> det_state \<Rightarrow> bool" where
   "ta_subset_accessible_objects aag s \<equiv>
-     p_footprint s (touched_addresses' s) \<subseteq>
-     p_footprint s (\<Union> (obj_v_footprint s ` policy_accessible_objs aag (cur_domain s)))"
+     p_footprint (touched_addresses' s) \<subseteq>
+     p_footprint (\<Union> (obj_v_footprint s ` policy_accessible_objs aag (cur_domain s)))"
 
 abbreviation ta_objsubset_inv :: "'a PAS \<Rightarrow> det_state \<Rightarrow> bool" where
   "ta_objsubset_inv \<equiv> ta_subset_accessible_objects"
@@ -464,23 +449,6 @@ lemma ta_subset_accessible_objects_inv:
   using call_kernel_ta_objsubset_inv
   by blast
 
-(* XXX: Actually this isn't true because we can only prove its invariance if we know
-   the other two invariants hold, not merely if just this one holds initially. *)
-theorem ta_subset_accessible_partitions_inv:
-  "all_labels_are_owned aag \<Longrightarrow> call_kernel ev \<lbrace>ta_subset_accessible_partitions aag\<rbrace>"
-  using owned_objs_well_partitioned_inv[where aag=aag and ev=ev]
-    ta_subset_accessible_objects_inv[where aag=aag and ev=ev]
-    ta_subset_accessible_partitions[where aag=aag]
-  unfolding valid_def
-  apply clarsimp
-  apply(rename_tac s s')
-  apply(erule_tac x=s in meta_allE)
-  apply clarsimp
-  apply(erule_tac x=s in allE)
-  apply(erule_tac x=s in allE)
-  apply(clarsimp split:prod.splits)
-  oops
-
 end
 
 locale ADT_IF_L2Partitioned = ArchL2Partitioned +
@@ -493,7 +461,7 @@ locale ADT_IF_L2Partitioned = ArchL2Partitioned +
 begin
 
 lemma "ta_subset_accessible_objects aag s0"
-  unfolding ta_subset_accessible_objects_def p_footprint_def v_to_p_kernel_nonelf_def
+  unfolding ta_subset_accessible_objects_def
   using init_ta_empty
   by blast
 
