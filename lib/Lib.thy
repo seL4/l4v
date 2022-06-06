@@ -2012,6 +2012,11 @@ lemma dom_eqD:
   "\<lbrakk> f x = Some v; dom f = S \<rbrakk> \<Longrightarrow> x \<in> S"
   by clarsimp
 
+lemma dom_eq_All:
+  "dom f = dom f' \<Longrightarrow>
+   (\<forall>x. f x = None \<longrightarrow> f' x = None) \<and> (\<forall>x v. f x = Some v \<longrightarrow> (\<exists>v'. f' x = Some v'))"
+  by auto
+
 lemma exception_set_finite1:
   "finite {x. P x} \<Longrightarrow> finite {x. (x = y \<longrightarrow> Q x) \<and> P x}"
   by (simp add: Collect_conj_eq)
