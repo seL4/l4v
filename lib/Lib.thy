@@ -1362,10 +1362,6 @@ lemma if_eq_elem_helperE:
   \<Longrightarrow> a = (if P then b else c)"
   by fastforce
 
-lemma if_option_Some:
-  "((if P then None else Some x) = Some y) = (\<not>P \<and> x = y)"
-  by simp
-
 lemma insert_minus_eq:
   "x \<notin> A \<Longrightarrow> A - S = (A - (S - {x}))"
   by auto
@@ -2609,9 +2605,26 @@ lemma distinct_map_enum:
    \<Longrightarrow> distinct (map F (enum_class.enum :: 'a :: enum list))"
   by (simp add: distinct_map inj_onI)
 
+lemma if_option_Some:
+  "((if P then None else Some x) = Some y) = (\<not>P \<and> x = y)"
+  by simp
+
+lemma if_option_Some2:
+  "((if P then Some x else None) = Some y) = (P \<and> x = y)"
+  by simp
+
+(* sometimes safer as [simp] than if_option_Some *)
+lemma if_option_Some_eq:
+  "((if P then None else Some x) = Some x) = (\<not>P)"
+  "((if P then Some x else None) = Some x) = P"
+  by simp+
+
 lemma if_option_None_eq:
   "((if P then None else Some x) = None) = P"
-  by (auto split: if_splits)
+  "((if P then Some x else None) = None) = (\<not>P)"
+  by simp+
+
+lemmas if_option = if_option_None_eq if_option_Some if_option_Some2
 
 lemma not_in_ran_None_upd:
   "x \<notin> ran m \<Longrightarrow> x \<notin> ran (m(y := None))"
