@@ -1317,12 +1317,6 @@ lemma threadGet_isolatable:
                thread_actions_isolatable_fail)
   done
 
-lemma monadic_rewrite_trans_dup:
-  "\<lbrakk> monadic_rewrite F E P f g; monadic_rewrite F E P g h \<rbrakk>
-      \<Longrightarrow> monadic_rewrite F E P f h"
-  by (auto simp add: monadic_rewrite_def)
-
-
 lemma setCurThread_isolatable:
   "thread_actions_isolatable idx (setCurThread t)"
   by (simp add: setCurThread_def modify_isolatable)
@@ -1449,10 +1443,6 @@ lemma copy_register_isolate:
              cong: if_cong)
   apply (auto simp: fun_eq_iff split: if_split)
   done
-
-lemmas monadic_rewrite_bind_alt
-    = monadic_rewrite_trans[OF monadic_rewrite_bind_tail monadic_rewrite_bind_head, rotated -1]
-
 
 lemma monadic_rewrite_isolate_final2:
   assumes  mr: "monadic_rewrite F E Q f g"

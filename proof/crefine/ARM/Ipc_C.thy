@@ -427,17 +427,6 @@ lemma getSanitiseRegisterInfo_moreMapM_comm:
    apply (auto split: option.splits)
   done
 
-
-lemma monadic_rewrite_symb_exec_r':
-  "\<lbrakk> \<And>s. \<lbrace>(=) s\<rbrace> m \<lbrace>\<lambda>r. (=) s\<rbrace>; no_fail P m;
-     \<And>rv. monadic_rewrite F False (Q rv) x (y rv);
-     \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace> \<rbrakk>
-      \<Longrightarrow> monadic_rewrite F False P x (m >>= y)"
-  apply (rule monadic_rewrite_imp)
-   apply (rule monadic_rewrite_symb_exec_r; assumption)
-  apply simp
-  done
-
 context begin interpretation Arch .
 
 lemma no_fail_getSanitiseRegisterInfo[wp, simp]:
@@ -447,19 +436,7 @@ lemma no_fail_getSanitiseRegisterInfo[wp, simp]:
 
 end
 
-lemma monadic_rewrite_inst: "monadic_rewrite F E P f g \<Longrightarrow> monadic_rewrite F E P f g"
-  by simp
-
 context kernel_m begin interpretation Arch .
-
-lemma monadic_rewrite_do_flip:
-  "monadic_rewrite E F P (do c \<leftarrow> j; a \<leftarrow> f; b \<leftarrow> g c; return (a, c) od)
-    (do c \<leftarrow> j; b \<leftarrow> g c; a \<leftarrow> f; return (a, c) od)
-    \<Longrightarrow> monadic_rewrite E F P (do c \<leftarrow> j; a \<leftarrow> f; b \<leftarrow> g c; h a c od)
-    (do c \<leftarrow> j; b \<leftarrow> g c; a \<leftarrow> f; h a c od)"
-  apply (drule_tac h="\<lambda>(a, b). h a b" in monadic_rewrite_bind_head)
-  apply (simp add: bind_assoc)
-  done
 
 lemma handleFaultReply':
   notes option.case_cong_weak [cong] wordSize_def'[simp] take_append[simp del]

@@ -125,10 +125,6 @@ lemma ccorres_cases:
   apply (cases P, auto simp: P notP)
   done
 
-lemma monadic_rewrite_stateAssert:
-  "monadic_rewrite F E P (stateAssert P xs) (return ())"
-  by (simp add: stateAssert_def monadic_rewrite_def exec_get)
-
 lemma ccorres_locateSlotCap_push:
   "ccorres_underlying sr \<Gamma> r xf ar axf P P' hs
     (a >>=E (\<lambda>x. locateSlotCap cp n >>= (\<lambda>p. b p x))) c
