@@ -479,16 +479,6 @@ lemma foldr_copy_register_tsrs:
 
 lemmas cteInsert_obj_at'_not_queued =  cteInsert_obj_at'_queued[of "\<lambda>a. \<not> a"]
 
-lemma monadic_rewrite_exists_v:
-  "[| !! v. monadic_rewrite E F (Q v) f g |]
-    ==> monadic_rewrite E F (%x. (EX v. P v x) & (ALL v. P v x --> Q v x)) f g"
-  apply (rule monadic_rewrite_name_pre)
-  apply clarsimp
-  apply (erule_tac x=v in meta_allE)
-  apply (erule monadic_rewrite_imp)
-  apply clarsimp
-  done
-
 lemma monadic_rewrite_threadGet:
   "monadic_rewrite E F (obj_at' (\<lambda>tcb. f tcb = v) t)
     (threadGet f t) (return v)"
@@ -883,13 +873,6 @@ lemma doReplyTransfer_simple:
          apply (rule monadic_rewrite_refl)
         apply (wp threadGet_const gts_wp' getCTE_wp')+
   apply (simp add: o_def)
-  done
-
-lemma monadic_rewrite_if_known:
-  "monadic_rewrite F E ((\<lambda>s. C = X) and \<top>) (if C then f else g) (if X then f else g)"
-  apply (rule monadic_rewrite_gen_asm)
-  apply (simp split del: if_split)
-  apply (rule monadic_rewrite_refl)
   done
 
 lemma receiveIPC_simple_rewrite:

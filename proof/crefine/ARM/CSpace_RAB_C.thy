@@ -88,10 +88,6 @@ lemma wordFromRights_inj:
   "inj wordFromRights"
   by (rule inj_on_inverseI, rule rightsFromWord_wordFromRights)
 
-lemma monadic_rewrite_stateAssert:
-  "monadic_rewrite F E P (stateAssert P xs) (return ())"
-  by (simp add: stateAssert_def monadic_rewrite_def exec_get)
-
 lemma ccorres_locateSlotCap_push:
   "ccorres_underlying sr \<Gamma> r xf ar axf P P' hs
     (a >>=E (\<lambda>x. locateSlotCap cp n >>= (\<lambda>p. b p x))) c

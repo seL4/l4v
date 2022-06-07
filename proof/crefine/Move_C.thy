@@ -1471,10 +1471,4 @@ lemma update_ep_map_to_ctes:
   by (auto elim!: obj_atE' intro!: map_to_ctes_upd_other map_comp_eqI
     simp: projectKOs projectKO_opts_defs split: kernel_object.splits if_split_asm)
 
-(* FIXME: move to MonadicRewrite *)
-lemma monadic_rewrite_gets_l:
-  "(\<And>x. monadic_rewrite F E (P x) (g x) m)
-    \<Longrightarrow> monadic_rewrite F E (\<lambda>s. P (f s) s) (gets f >>= (\<lambda>x. g x)) m"
-  by (auto simp add: monadic_rewrite_def exec_gets)
-
 end
