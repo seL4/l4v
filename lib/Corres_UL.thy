@@ -27,6 +27,22 @@ where
 
 text \<open>Base case facts about correspondence\<close>
 
+lemma corres_underlyingI:
+  assumes rv: "\<And>s t rv' t'. \<lbrakk>(s, t) \<in> R; P s; P' t; (rv', t') \<in> fst (c t)\<rbrakk>
+                            \<Longrightarrow> \<exists>(rv, s') \<in> fst (a s). (s', t') \<in> R \<and> r rv rv'"
+  and     nf: "\<And>s t. \<lbrakk>(s, t) \<in> R; P s; P' t; nf'\<rbrakk> \<Longrightarrow> \<not> snd (c t)"
+  shows  "corres_underlying R nf nf' r P P' a c"
+  unfolding corres_underlying_def using rv nf by (auto simp: split_def)
+
+lemma corres_underlyingE:
+  assumes cul: "corres_underlying R nf nf' r P P' a c"
+  and     xin: "(s, t) \<in> R" "P s" "P' t" "(rv', t') \<in> fst (c t)"
+  and      rl: "\<And>s' rv. \<lbrakk>nf' \<longrightarrow> \<not> snd (c t); (rv, s') \<in> fst (a s); (s', t') \<in> R; r rv rv'\<rbrakk> \<Longrightarrow> Q"
+  and      nf: "nf \<longrightarrow> \<not> snd (a s)"
+  shows   "Q"
+  using cul xin nf
+  unfolding corres_underlying_def by (fastforce simp: split_def intro: rl)
+
 lemma corres_underlyingD:
   "\<lbrakk> corres_underlying R nf nf' rs P P' f f'; (s,s') \<in> R; P s; P' s'; nf \<longrightarrow> \<not> snd (f s) \<rbrakk>
   \<Longrightarrow> (\<forall>(r',t')\<in>fst (f' s'). \<exists>(r,t)\<in>fst (f s). (t, t') \<in> R \<and> rs r r') \<and> (nf' \<longrightarrow> \<not> snd (f' s'))"
