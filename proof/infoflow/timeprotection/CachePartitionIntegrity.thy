@@ -32,46 +32,45 @@ definition policy_accessible_domains :: "'a PAS \<Rightarrow> domain \<Rightarro
 end
 
 locale ArchL2Partitioned = Arch +
-  fixes paddr_L2_domain :: "paddr \<Rightarrow> domain"
+   fixes paddr_L2_colour :: "paddr \<Rightarrow> 'colour"
+   fixes L2_colour_domains :: "'colour \<Rightarrow> domain set"
 begin
 
 definition domain_L2_partition :: "domain \<Rightarrow> paddr set" where
-  "domain_L2_partition d \<equiv> {pa. paddr_L2_domain pa = d}"
+  "domain_L2_partition d \<equiv> {pa. d \<in> L2_colour_domains (paddr_L2_colour pa)}"
 
 definition policy_accessible_partitions :: "'a PAS \<Rightarrow> domain \<Rightarrow> paddr set" where
   "policy_accessible_partitions aag d \<equiv>
      \<Union> {as. \<exists>d \<in> policy_accessible_domains aag d. as = domain_L2_partition d}"
 
-abbreviation touched_addresses' :: "det_state \<Rightarrow> machine_word set" where
-  "touched_addresses' s \<equiv> touched_addresses (machine_state s)"
-
 \<comment> \<open>Important: We assume that the @{term\<open>touched_addresses\<close>} set will only be used to track the
     virtual addresses of kernel objects; therefore its physical address footprint is just the
     image of @{term\<open>addrFromKPPtr\<close>} because @{term\<open>pspace_in_kernel_window\<close>} tells us all
     kernel objects live in the kernel window.\<close>
-abbreviation p_footprint :: "machine_word set \<Rightarrow> paddr set" where
-  "p_footprint vas \<equiv> addrFromKPPtr ` vas"
+abbreviation to_phys :: "machine_word set \<Rightarrow> paddr set" where
+  "to_phys vas \<equiv> addrFromKPPtr ` vas"
+
+abbreviation phys_touched :: "det_state \<Rightarrow> paddr set" where
+  "phys_touched s \<equiv> to_phys (touched_addresses (machine_state s))"
 
 definition ta_subset_owned_partition :: "det_state \<Rightarrow> bool" where
   "ta_subset_owned_partition s \<equiv>
-     p_footprint (touched_addresses' s) \<subseteq>
-     domain_L2_partition (cur_domain s)"
+     phys_touched s \<subseteq> domain_L2_partition (cur_domain s)"
 
 \<comment> \<open>Partition subset property: That only paddrs in policy-accessible partitions are ever accessed.\<close>
 definition ta_subset_accessible_partitions :: "'a PAS \<Rightarrow> det_state \<Rightarrow> bool" where
   "ta_subset_accessible_partitions aag s \<equiv>
-     p_footprint (touched_addresses' s) \<subseteq>
-     policy_accessible_partitions aag (cur_domain s)"
+     phys_touched s \<subseteq> policy_accessible_partitions aag (cur_domain s)"
 
 \<comment> \<open>That each domain's labels' addresses are located in that domain's partition.\<close>
 definition owned_addrs_well_partitioned :: "'a PAS \<Rightarrow> bool" where
   "owned_addrs_well_partitioned aag \<equiv> \<forall> d.
-     p_footprint (policy_owned_addrs aag d) \<subseteq> domain_L2_partition d"
+     to_phys (policy_owned_addrs aag d) \<subseteq> domain_L2_partition d"
 
 \<comment> \<open>That accessible labels' addresses are located in accessible domains' partitions.\<close>
 definition accessible_addrs_well_partitioned :: "'a PAS \<Rightarrow> bool" where
   "accessible_addrs_well_partitioned aag \<equiv> \<forall> d.
-     p_footprint (policy_accessible_addrs aag d) \<subseteq> policy_accessible_partitions aag d"
+     to_phys (policy_accessible_addrs aag d) \<subseteq> policy_accessible_partitions aag d"
 
 \<comment> \<open>If every domain's address is confined to its partition, then all accessible addresses, due to
   belonging to accessible domains, are confined to the union of those domains' partitions.\<close>
@@ -83,8 +82,8 @@ lemma owned_to_accessible_addrs_well_partitioned:
   apply clarsimp
   apply(rename_tac d va)
   \<comment> \<open>We consider each address \<open>va\<close> that is accessible to, though not necessarily owned by, \<open>d\<close>.
-      We know the L2 partitioning scheme assigns the physical address of \<open>va\<close> to some domain
-        \<open>paddr_L2_domain (addrFromKPPtr va)\<close>
+      We know the L2 partitioning scheme assigns the physical address of \<open>va\<close> to some colour
+        \<open>paddr_L2_colour (addrFromKPPtr va)\<close>
       But instead of that, we use the domain \<open>d'\<close> determined by the domain assignment
       (via @{term\<open>pasDomainAbs\<close>}) of \<open>va\<close>'s label (given by @{term\<open>pasObjectAbs\<close>}),
       which @{term\<open>all_labels_are_owned\<close>} tells us exists.\<close>
@@ -110,8 +109,7 @@ section \<open> Subset of accessible addresses \<close>
 \<comment> \<open>Address subset property: That only the paddrs of policy-accessible labels are ever accessed.\<close>
 definition ta_subset_accessible_addrs :: "'a PAS \<Rightarrow> det_state \<Rightarrow> bool" where
   "ta_subset_accessible_addrs aag s \<equiv>
-     p_footprint (touched_addresses' s) \<subseteq>
-     p_footprint (policy_accessible_addrs aag (cur_domain s))"
+     phys_touched s \<subseteq> to_phys (policy_accessible_addrs aag (cur_domain s))"
 
 theorem ta_subset_accessible_addrs_to_partitions:
   "ta_subset_accessible_addrs aag s \<Longrightarrow>
@@ -374,7 +372,11 @@ crunches call_kernel
 
 end
 
-locale ADT_IF_L2Partitioned = ArchL2Partitioned +
+locale ADT_IF_L2Partitioned = ArchL2Partitioned paddr_L2_colour L2_colour_domains
+  (* FIXME: Not sure how to get rid of this "RISCV64."
+     and the warning for the 'colour type var. -robs *)
+  for paddr_L2_colour :: "RISCV64.paddr \<Rightarrow> 'colour"
+  and L2_colour_domains :: "'colour \<Rightarrow> domain set" +
   fixes initial_aag :: "'a PAS"
   fixes s0 :: det_state
   assumes init_ta_empty:
