@@ -1079,6 +1079,27 @@ lemma pt_of_Some[iff]:
   "(pt_of a = Some pt) = (a = PageTable pt)"
   by (simp add: pt_of_def split: arch_kernel_obj.splits)
 
+lemma pt_of_None[simp]:
+  "(pt_of ako = None) = (\<not>is_PageTable ako)"
+  "(None = pt_of ako) = (\<not>is_PageTable ako)"
+  by (cases ako; simp)+
+
+lemmas vcpu_of_simps[simp] = vcpu_of_def[split_simps arch_kernel_obj.split]
+
+lemma vcpu_of_Some[simp]:
+  "(vcpu_of ako = Some vcpu) = (ako = VCPU vcpu)"
+  by (cases ako; simp)
+
+lemma vcpu_of_None[simp]:
+  "(vcpu_of ako = None) = (\<not>is_VCPU ako)"
+  "(None = vcpu_of ako) = (\<not>is_VCPU ako)"
+  by (cases ako; simp)+
+
+lemma asid_pool_of_None[simp]:
+  "(asid_pool_of ako = None) = (\<not>is_ASIDPool ako)"
+  "(None = asid_pool_of ako) = (\<not>is_ASIDPool ako)"
+  by (cases ako; simp)+
+
 lemma aobjs_of_Some:
   "(aobjs_of s p = Some ao) = (kheap s p = Some (ArchObj ao))"
   by (simp add: in_omonad)
@@ -2394,12 +2415,6 @@ lemma vmid_inv_ap_lift:
    apply wpsimp
   apply (wpsimp wp: vmid_for_asid_lift)
   done
-
-lemmas vcpu_of_simps[simp] = vcpu_of_def[split_simps arch_kernel_obj.split]
-
-lemma vcpu_of_Some[simp]:
-  "(vcpu_of ako = Some vcpu) = (ako = VCPU vcpu)"
-  by (cases ako; simp)
 
 definition is_vcpu :: "kernel_object \<Rightarrow> bool" where
   "is_vcpu \<equiv> \<lambda>ko. \<exists>vcpu. ko = ArchObj (VCPU vcpu)"
