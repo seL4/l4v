@@ -373,14 +373,12 @@ crunches call_kernel
 end
 
 locale ADT_IF_L2Partitioned = ArchL2Partitioned paddr_L2_colour L2_colour_domains
-  (* FIXME: Not sure how to get rid of this "RISCV64."
-     and the warning for the 'colour type var. -robs *)
+  (* FIXME: Not sure how to get rid of this "RISCV64." -robs *)
   for paddr_L2_colour :: "RISCV64.paddr \<Rightarrow> 'colour"
   and L2_colour_domains :: "'colour \<Rightarrow> domain set" +
   fixes initial_aag :: "'a PAS"
   fixes s0 :: det_state
-  assumes init_ta_empty:
-    "touched_addresses' s0 = {}"
+  assumes init_ta_empty: "touched_addresses (machine_state s0) = {}"
 begin
 
 lemma "ta_subset_accessible_addrs aag s0"
