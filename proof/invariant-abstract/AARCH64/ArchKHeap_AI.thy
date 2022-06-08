@@ -295,39 +295,76 @@ lemma aobjs_of_ako_at_None:
   apply (rename_tac ao, case_tac ao; simp)
   done
 
-(* FIXME AARCH64: make an additional lemma with vspace_objs_here *)
+lemma aobjs_of_vspace_eq:
+  "\<lbrakk> vspace_objs_of s = vspace_objs_of s'; vcpus_of s = vcpus_of s'\<rbrakk> \<Longrightarrow> aobjs_of s = aobjs_of s'"
+  apply (rule ext, rename_tac p)
+  apply (drule_tac x=p in fun_cong)+
+  apply (case_tac "aobjs_of s' p"; simp)
+   apply (auto simp: opt_map_left_None in_opt_map_None_eq vspace_obj_of_None)[1]
+  by (auto simp: opt_map_def vspace_obj_of_def is_VCPU_def split: option.splits if_split_asm)
+
+lemma aobjs_of_vspace_cases:
+  assumes vspace: "\<And>P. f \<lbrace>\<lambda>s. P (vspace_objs_of s)\<rbrace>"
+  assumes vcpus: "\<And>P. f \<lbrace>\<lambda>s. P (vcpus_of s)\<rbrace>"
+  shows "f \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
+  unfolding valid_def
+  apply clarsimp
+  apply (rename_tac s rv s')
+  apply (erule_tac P=P in rsubst)
+  apply (frule use_valid, rule_tac P="\<lambda>vso. vso = vspace_objs_of s" in vspace, rule refl)
+  apply (frule use_valid, rule_tac P="\<lambda>vcpus. vcpus = vcpus_of s" in vcpus, rule refl)
+  apply (drule aobjs_of_vspace_eq; simp)
+  done
+
+lemma vspace_objs_of_pts_eq:
+  "vspace_objs_of s = vspace_objs_of s' \<Longrightarrow> pts_of s = pts_of s'"
+  apply (rule ext, rename_tac p)
+  apply (drule_tac x=p in fun_cong)+
+  by (auto simp: opt_map_def vspace_obj_of_def is_VCPU_def split: option.splits if_split_asm)
+
+lemma vspace_objs_of_aps_eq:
+  "vspace_objs_of s = vspace_objs_of s' \<Longrightarrow> asid_pools_of s = asid_pools_of s'"
+  apply (rule ext, rename_tac p)
+  apply (drule_tac x=p in fun_cong)+
+  by (auto simp: opt_map_def vspace_obj_of_def is_VCPU_def split: option.splits if_split_asm)
+
+lemma vspace_objs_of_pts_lift:
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (vspace_objs_of s)\<rbrace>"
+  shows "f \<lbrace>\<lambda>s. P (pts_of s)\<rbrace>"
+  unfolding valid_def
+  apply clarsimp
+  apply (rename_tac s rv s')
+  apply (erule_tac P=P in rsubst)
+  apply (frule use_valid, rule_tac P="\<lambda>vso. vso = vspace_objs_of s" in assms, rule refl)
+  by (drule vspace_objs_of_pts_eq, simp)
+
+lemma vspace_objs_of_aps_lift:
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (vspace_objs_of s)\<rbrace>"
+  shows "f \<lbrace>\<lambda>s. P (asid_pools_of s)\<rbrace>"
+  unfolding valid_def
+  apply clarsimp
+  apply (rename_tac s rv s')
+  apply (erule_tac P=P in rsubst)
+  apply (frule use_valid, rule_tac P="\<lambda>vso. vso = vspace_objs_of s" in assms, rule refl)
+  by (drule vspace_objs_of_aps_eq, simp)
+
 lemma vspace_obj_pred_aobjs:
   assumes vspace: "\<And>P P' p. vspace_obj_pred P' \<Longrightarrow> f \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
   assumes vcpus: "\<And>P. f \<lbrace>\<lambda>s. P (vcpus_of s)\<rbrace>"
   shows "\<And>P. f \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
-  apply (clarsimp simp: valid_def)
-  apply (erule_tac P=P in rsubst)
-  apply (rule ext, rename_tac s' p)
-  apply (case_tac "aobjs_of s p")
-   apply (simp add: aobjs_of_ako_at_None)
-   apply (drule use_valid)
-     prefer 2
-     apply assumption
-    apply (rule assms)
-    apply (clarsimp simp: vspace_obj_pred_def arch_obj_pred_def non_vspace_obj_def)
-    sorry (* FIXME AARCH64
-   apply (simp flip: aobjs_of_ako_at_None)
-  apply (drule use_valid)
-    prefer 2
-    apply assumption
-  apply (simp add: aobjs_of_ako_at_Some)
-   apply (rule assms)
-   apply simp
-  apply (simp flip: aobjs_of_ako_at_Some)
-  done *)
+  by (rule aobjs_of_vspace_cases, rule vspace_obj_pred_vspace_objs, erule vspace, rule vcpus)
 
-(* FIXME AARCH64: make an additional lemma with vspace_objs_here *)
+lemma vs_lookup_vspace_objs_lift:
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (vspace_objs_of s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>"
+  shows "f \<lbrace>\<lambda>s. P (vs_lookup s)\<rbrace>"
+  by (intro vs_lookup_lift vspace_objs_of_pts_lift vspace_objs_of_aps_lift assms)
+
 lemma vs_lookup_vspace_obj_at_lift:
   assumes "\<And>P P' p. vspace_obj_pred P' \<Longrightarrow> f \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>"
   shows "f \<lbrace>\<lambda>s. P (vs_lookup s)\<rbrace>"
-  sorry (* FIXME AARCH64
-  by (rule vs_lookup_vspace_aobjs_lift, rule vspace_obj_pred_aobjs; rule assms) *)
+  by (intro vs_lookup_vspace_objs_lift vspace_obj_pred_vspace_objs assms)
 
 lemma vs_lookup_pages_lift:
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (ptes_of s)\<rbrace>"
@@ -345,12 +382,17 @@ lemma vs_lookup_pages_vspace_aobjs_lift:
   shows "f \<lbrace>\<lambda>s. P (vs_lookup_pages s)\<rbrace>"
   by (wpsimp wp: vs_lookup_pages_lift assms)
 
+lemma vs_lookup_pages_vspace_objs_lift:
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (vspace_objs_of s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>"
+  shows "f \<lbrace>\<lambda>s. P (vs_lookup_pages s)\<rbrace>"
+  by (intro vs_lookup_pages_lift vspace_objs_of_pts_lift vspace_objs_of_aps_lift assms)
+
 lemma vs_lookup_pages_vspace_obj_at_lift:
   assumes "\<And>P P' p. vspace_obj_pred P' \<Longrightarrow> f \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>"
   shows "f \<lbrace>\<lambda>s. P (vs_lookup_pages s)\<rbrace>"
-  sorry (* FIXME AARCH64
-  by (rule vs_lookup_pages_vspace_aobjs_lift, rule vspace_obj_pred_aobjs; rule assms) *)
+  by (intro vs_lookup_pages_vspace_objs_lift vspace_obj_pred_vspace_objs assms)
 
 lemma vs_lookup_pages_arch_obj_at_lift:
   assumes "\<And>P P' p. arch_obj_pred P' \<Longrightarrow> f \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
@@ -694,17 +736,7 @@ lemma equal_kernel_mappings_lift:
   assumes aobj_at: "\<And>P P' pd. vspace_obj_pred P' \<Longrightarrow> f \<lbrace>\<lambda>s. P (obj_at P' pd s)\<rbrace>"
   assumes [wp]: "\<And>P. f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>"
   shows "f \<lbrace>equal_kernel_mappings\<rbrace>"
-proof -
-  (* FIXME AARCH64
-  have [wp]: "\<And>P. f \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
-    by (rule vspace_obj_pred_aobjs[OF aobj_at]) *)
-  show ?thesis
-    unfolding equal_kernel_mappings_def
-    sorry (* FIXME AARCH64
-    apply (wp_pre, wps, wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' vspace_for_asid_lift)
-    apply simp
-    done *)
-qed
+  by (wpsimp simp: equal_kernel_mappings_def)
 
 lemma valid_machine_state_lift:
   assumes memory: "\<And>P. \<lbrace>\<lambda>s. P (underlying_memory (machine_state s))\<rbrace> f \<lbrace>\<lambda>_ s. P (underlying_memory (machine_state s))\<rbrace>"
