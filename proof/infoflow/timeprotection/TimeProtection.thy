@@ -488,6 +488,11 @@ locale time_protection_system =
   and policy :: "('userdomain domain \<times> 'userdomain domain) set"
   and out :: "'userdomain domain \<Rightarrow> 'other_state \<Rightarrow> 'p"
 
+  and touched_addrs :: "'other_state \<Rightarrow> vpaddr set"
+  and step_is_publicly_determined :: "'other_state \<Rightarrow> bool"
+  and step_is_uwr_determined :: "'other_state \<Rightarrow> bool"
+  and next_latest_domainswitch_start :: "time \<Rightarrow> time"
+
   and collides_in_pch :: "paddr \<Rightarrow> paddr \<Rightarrow> bool" (infix "coll" 50)
   and fch_lookup :: "'fch \<Rightarrow> 'fch_cachedness fch"
   and pch_lookup :: "'pch \<Rightarrow> 'pch_cachedness pch"
@@ -505,11 +510,7 @@ locale time_protection_system =
   and pch_flush_cycles :: "'pch \<Rightarrow> paddr set \<Rightarrow> time"
   and addr_domain :: "paddr \<Rightarrow> 'userdomain domain"
   and addr_colour :: "paddr \<Rightarrow> 'colour"
-  and colour_userdomain :: "'colour \<Rightarrow> 'userdomain"
-  and touched_addrs :: "'other_state \<Rightarrow> vpaddr set"
-  and step_is_publicly_determined :: "'other_state \<Rightarrow> bool"
-  and step_is_uwr_determined :: "'other_state \<Rightarrow> bool"
-  and next_latest_domainswitch_start :: "time \<Rightarrow> time" +
+  and colour_userdomain :: "'colour \<Rightarrow> 'userdomain" +
 
   \<comment> \<open>external uwr stuff\<close>
   
