@@ -9,6 +9,8 @@ theory ArchKHeap_AI
 imports KHeapPre_AI
 begin
 
+(* FIXME AARCH64: if_option is missing all cases for None/Some = if .. *)
+
 declare if_option_Some_eq[simp]
 
 context Arch begin global_naming AARCH64
@@ -134,27 +136,31 @@ sublocale vspace_only_obj_pred < arch_only_obj_pred
 context Arch begin global_naming AARCH64
 
 lemma valid_vspace_obj_lift:
-  assumes "\<And>T p. f \<lbrace>typ_at (AArch T) p\<rbrace>"
+  assumes "\<And>T p. T \<noteq> AVCPU \<Longrightarrow> f \<lbrace>typ_at (AArch T) p\<rbrace>"
   shows "f \<lbrace>valid_vspace_obj level obj\<rbrace>"
   by (cases obj; wpsimp wp: assms hoare_vcg_ball_lift valid_pte_lift)
 
-lemma aobjs_of_atyp_lift:
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
-  shows "f \<lbrace>\<lambda>s. P (typ_at (AArch T) p s)\<rbrace>"
-  by (wpsimp simp: typ_at_aobjs wp: assms)
+lemma vspace_obj_of_aa_type:
+  "vspace_obj_of ako = vspace_obj_of ako' \<Longrightarrow> aa_type ako = aa_type ako'"
+  by (cases ako; cases ako'; simp add: vspace_obj_of_def)
 
-(* FIXME AARCH64: use vspace_objs_of for vs_lookup lifting rules instead of aobjs_of *)
+lemma valid_vspace_objs_of_typ_at:
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (vspace_objs_of s)\<rbrace>"
+  shows "T \<noteq> AVCPU \<Longrightarrow> f \<lbrace>typ_at (AArch T) p\<rbrace>"
+  apply (clarsimp simp: valid_def)
+  apply (rename_tac s rv s')
+  apply (drule use_valid, rule_tac P="(=) (vspace_objs_of s)" in assms, rule refl)
+  apply (drule fun_cong[where x=p])
+  by (auto simp: obj_at_def opt_map_def vspace_obj_of_None is_VCPU_def
+           intro!: vspace_obj_of_aa_type split: option.splits)
 
 lemma valid_vspace_objs_lift_vs_lookup:
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (vs_lookup s)\<rbrace>"
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
-  shows   "\<lbrace>valid_vspace_objs\<rbrace> f \<lbrace>\<lambda>rv. valid_vspace_objs\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (vspace_objs_of s)\<rbrace>"
+  shows   "f \<lbrace>valid_vspace_objs\<rbrace>"
   unfolding valid_vspace_objs_def
-  apply (wp hoare_vcg_all_lift)
-   apply (rule hoare_lift_Pf[where f="aobjs_of"])
-     apply (rule_tac f="vs_lookup" in hoare_lift_Pf)
-      apply (wpsimp wp: assms hoare_vcg_imp_lift valid_vspace_obj_lift aobjs_of_atyp_lift)+
-  done
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift valid_vspace_obj_lift assms
+                 valid_vspace_objs_of_typ_at)
 
 lemma vspace_obj_pred_a_type[intro, simp]:
   "T \<noteq> AVCPU \<Longrightarrow> vspace_obj_pred (\<lambda>ko. a_type ko = AArch T)"
@@ -279,12 +285,6 @@ lemma vs_lookup_vspace_aobjs_lift:
   shows " f \<lbrace>\<lambda>s. P (vs_lookup s)\<rbrace>"
   by (rule vs_lookup_lift; rule assms)
 
-lemma valid_vspace_objs_lift:
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>"
-  shows   "f \<lbrace>valid_vspace_objs\<rbrace>"
-  by (rule valid_vspace_objs_lift_vs_lookup, rule vs_lookup_lift; rule assms)
-
 lemma aobjs_of_ako_at_Some:
   "(aobjs_of s p = Some ao) = ako_at ao p s"
   by (simp add: obj_at_def in_opt_map_eq)
@@ -400,12 +400,17 @@ lemma vs_lookup_pages_arch_obj_at_lift:
   shows "f \<lbrace>\<lambda>s. P (vs_lookup_pages s)\<rbrace>"
   by (intro vs_lookup_pages_vspace_obj_at_lift assms vspace_pred_imp)
 
+lemma valid_vspace_objs_lift:
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (vspace_objs_of s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>"
+  shows   "f \<lbrace>valid_vspace_objs\<rbrace>"
+  by (intro valid_vspace_objs_lift_vs_lookup vs_lookup_vspace_objs_lift assms)
+
 lemma valid_vspace_objs_lift_weak:
   assumes "\<And>P P' p. vspace_obj_pred P' \<Longrightarrow> f \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
-  assumes "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>r s. P (arch_state s)\<rbrace>"
-  shows "\<lbrace>valid_vspace_objs\<rbrace> f \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
-  sorry (* FIXME AARCH64
-  by (rule valid_vspace_objs_lift, rule vspace_obj_pred_aobjs; rule assms) *)
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>"
+  shows "f \<lbrace>valid_vspace_objs\<rbrace>"
+  by (intro valid_vspace_objs_lift vspace_obj_pred_vspace_objs assms)
 
 lemma set_pt_pts_of:
   "\<lbrace>\<lambda>s. pts_of s p \<noteq> None \<longrightarrow> P (pts_of s (p \<mapsto> pt)) \<rbrace> set_pt p pt \<lbrace>\<lambda>_ s. P (pts_of s)\<rbrace>"
@@ -428,9 +433,12 @@ lemma pte_ptr_eq:
   by (fastforce simp: not_le bit_simps)
 
 lemma store_pte_ptes_of_full: (* FIXME AARCH64 *)
-  "\<lbrace>\<lambda>s. ptes_of s pt_t p \<noteq> None \<longrightarrow>
+  "\<lbrace>\<lambda>s. ptes_of s pt_t' p \<noteq> None \<longrightarrow>
         P (if pt_t' = pt_t then ptes_of s pt_t (p \<mapsto> pte) else ptes_of s pt_t) \<rbrace>
    store_pte pt_t' p pte \<lbrace>\<lambda>_ s. P (ptes_of s pt_t)\<rbrace>"
+  unfolding store_pte_def
+  apply (wpsimp wp: set_pt_pts_of simp_del: fun_upd_apply)
+  apply (simp add: level_pte_of_pt pt_at_eq)
   sorry
 
 lemma store_pte_ptes_of:
@@ -441,24 +449,20 @@ lemma store_pte_ptes_of:
   sorry (* FIXME AARCH64
   by (auto simp: obind_def opt_map_def split: option.splits dest!: pte_ptr_eq elim!: rsubst[where P=P]) *)
 
-lemma vspace_for_pool_not_pte:
-  "\<lbrakk> vspace_for_pool p asid (asid_pools_of s) = Some p';
-     ptes_of s pt_t p = Some pte; pspace_aligned s \<rbrakk>
-   \<Longrightarrow> False"
-  sorry (* FIXME AARCH64
-  by (fastforce simp: in_omonad ptes_of_def bit_simps vspace_for_pool_def dest: pspace_alignedD) *)
-
 definition level_of_slot :: "asid \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> vm_level"
   where
   "level_of_slot asid vref p s \<equiv>
      GREATEST level. vs_lookup_slot level asid vref s = Some (level, p)"
 
+(* FIXME AARCH64: move *)
+lemmas vm_level_GreatestI = bit1.GreatestI
+lemmas vm_level_Greatest_le = bit1.Greatest_le
+
 lemma level_of_slotI:
   "\<lbrakk> vs_lookup_slot level' asid vref s = Some (level', p); level < level'\<rbrakk>
    \<Longrightarrow> vs_lookup_slot (level_of_slot asid vref p s) asid vref s = Some (level_of_slot asid vref p s, p)
        \<and> level < level_of_slot asid vref p s"
-  sorry (* FIXME AARCH64
-  by (auto simp: level_of_slot_def dest: bit0.GreatestI bit0.Greatest_le) *)
+  by (auto simp: level_of_slot_def dest: vm_level_GreatestI vm_level_Greatest_le)
 
 lemma pool_for_asid_no_pt:
   "\<lbrakk> pool_for_asid asid s = Some p; pts_of s p = Some pte; valid_asid_table s; pspace_aligned s \<rbrakk>
@@ -658,13 +662,18 @@ lemma valid_arch_caps_lift:
 
 context
   fixes f :: "'a::state_ext state \<Rightarrow> ('b \<times> 'a state) set \<times> bool"
-  assumes arch: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
+  assumes arch: "\<And>P. f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>"
 begin
 
 context
-  assumes aobj_at:
-    "\<And>P P' pd. vspace_obj_pred P' \<Longrightarrow> \<lbrace>\<lambda>s. P (obj_at P' pd s)\<rbrace> f \<lbrace>\<lambda>r s. P (obj_at P' pd s)\<rbrace>"
+  assumes vso_at: "\<And>P P' pd. vspace_obj_pred P' \<Longrightarrow> f \<lbrace>\<lambda>s. P (obj_at P' pd s)\<rbrace>"
 begin
+
+private lemma pred_vspace_objs_of_lift: "f \<lbrace> \<lambda>s. P (vspace_objs_of s) \<rbrace>"
+  by (intro vso_at vspace_obj_pred_vspace_objs)
+
+private lemma pred_pts_of_lift: "f \<lbrace> \<lambda>s. P (pts_of s) \<rbrace>"
+  by (intro vspace_objs_of_pts_lift pred_vspace_objs_of_lift)
 
 lemma valid_global_vspace_mappings_lift:
   "f \<lbrace>valid_global_vspace_mappings\<rbrace>"
@@ -674,11 +683,8 @@ lemma valid_global_vspace_mappings_lift:
 lemma valid_arch_caps_lift_weak:
   assumes cap: "(\<And>P. f \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>)"
   shows "f \<lbrace>valid_arch_caps\<rbrace>"
-  supply validNF_prop[wp_unsafe del]
-  sorry (* FIXME AARCH64
   by (rule valid_arch_caps_lift)
-     (wpsimp wp: vs_lookup_pages_vspace_obj_at_lift[OF aobj_at] pts_of_lift[OF aobj_at]
-                 arch cap)+ *)
+     (wpsimp wp: vs_lookup_pages_vspace_obj_at_lift[OF vso_at] pred_pts_of_lift arch cap)+
 
 lemma valid_global_objs_lift_weak:
   "\<lbrace>valid_global_objs\<rbrace> f \<lbrace>\<lambda>rv. valid_global_objs\<rbrace>"
@@ -722,12 +728,12 @@ lemma aobjs_of_lift_aobj_at:
 
 lemma valid_arch_state_lift_aobj_at:
   "f \<lbrace>valid_arch_state\<rbrace>"
-  sorry (* FIXME AARCH64
   unfolding valid_arch_state_def valid_asid_table_def valid_global_arch_objs_def pt_at_eq
   apply (wp_pre, wps arch aobjs_of_lift_aobj_at)
-   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_ball_lift)
+   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_ball_lift vmid_inv_ap_lift
+                     aobjs_of_lift_aobj_at arch)
   apply simp
-  done *)
+  done
 
 end
 end
@@ -750,41 +756,47 @@ lemma valid_machine_state_lift:
   apply (wp aobj_at; simp)
   done
 
-lemma valid_vso_at_lift:
-  assumes z: "\<And>P p T. \<lbrace>\<lambda>s. P (typ_at (AArch T) p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at (AArch T) p s)\<rbrace>"
-      and y: "\<And>ao. \<lbrace>\<lambda>s. ko_at (ArchObj ao) p s\<rbrace> f \<lbrace>\<lambda>rv s. ko_at (ArchObj ao) p s\<rbrace>"
-  shows      "\<lbrace>valid_vso_at level p\<rbrace> f \<lbrace>\<lambda>rv. valid_vso_at level p\<rbrace>"
-  unfolding valid_vso_at_def
-  sorry (* FIXME AARCH64
-  by (wpsimp wp: hoare_vcg_ex_lift y valid_vspace_obj_typ z simp: aobjs_of_ako_at_Some) *)
+lemma ako_at_vspace_objs_of:
+  assumes "\<And>ao. f \<lbrace>\<lambda>s. ako_at ao p s\<rbrace>"
+  shows "f \<lbrace>\<lambda>s. vspace_objs_of s p = Some ako \<rbrace>"
+  unfolding valid_def
+  apply (clarsimp simp: in_omonad)
+  apply (drule use_valid, rule assms, simp add: obj_at_def)
+  apply (simp add: obj_at_def)
+  done
 
-lemma valid_vso_at_lift_aobj_at:
-  assumes aobj_at: "\<And>P' pd. vspace_obj_pred P' \<Longrightarrow> f \<lbrace>obj_at P' pd\<rbrace>"
+(* interface lemma; would otherwise be nicer with projections *)
+lemma valid_vso_at_lift:
+  assumes "\<And>P p T. f \<lbrace>\<lambda>s. P (typ_at (AArch T) p s)\<rbrace>"
+  assumes "\<And>ao. f \<lbrace>\<lambda>s. ako_at ao p s\<rbrace>"
   shows "f \<lbrace>valid_vso_at level p\<rbrace>"
   unfolding valid_vso_at_def
-  apply (rule hoare_vcg_ex_lift)
-  apply (case_tac "\<exists>vcpu. ao = VCPU vcpu")
-   apply (clarsimp simp: is_vcpu_def)
-  sorry (* FIXME AARCH64: want a different proof for this one (not valid_vspace_is_vspace_lift)
-  apply (simp add: aobjs_of_ako_at_Some)
-  apply (rule hoare_vcg_conj_lift aobj_at)+
-   apply (case_tac ao; fastforce simp: vspace_obj_pred_def)
-  apply (wpsimp wp: valid_vspace_is_vspace_lift)
-    apply (case_tac "T = AVCPU", simp)
-    apply (wpsimp wp: aobj_at)+
-  done *)
+  by (wpsimp wp: hoare_vcg_ex_lift assms valid_vspace_obj_typ ako_at_vspace_objs_of)
+
+lemma valid_vso_at_lift_aobj_at:
+  assumes aobj_at: "\<And>P P' p. vspace_obj_pred P' \<Longrightarrow> f \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
+  shows "f \<lbrace>valid_vso_at level p\<rbrace>"
+  unfolding valid_vso_at_def
+  by (wpsimp wp: hoare_vcg_ex_lift assms vspace_obj_pred_vspace_objs valid_vspace_obj_lift)
 
 lemma valid_global_vspace_mappings_arch_update[simp]:
   "valid_global_vspace_mappings (f s) = valid_global_vspace_mappings s"
   unfolding valid_global_vspace_mappings_def
   by simp
 
+lemma pte_range_empty[simp]:
+  "(pte \<in> pt_range (empty_pt pt_t)) = (pte = InvalidPTE)"
+  by (simp add: empty_pt_def)
+
+lemma pt_type_empty[simp]:
+  "pt_type (empty_pt pt_t) = pt_t"
+  by (cases pt_t; simp add: empty_pt_def)
+
 lemma valid_table_caps_ptD:
   "\<lbrakk> caps_of_state s p = Some (ArchObjectCap (PageTableCap p' pt_t None));
-     valid_table_caps s \<rbrakk> \<Longrightarrow>
+     valid_table_caps s; pt_t = level_type level \<rbrakk> \<Longrightarrow>
    \<exists>pt. pts_of s p' = Some pt \<and> valid_vspace_obj level (PageTable pt) s"
-  sorry (* FIXME AARCH64
-  by (fastforce simp: valid_table_caps_def simp del: split_paired_Ex) *)
+  by (fastforce simp: valid_table_caps_def simp del: split_paired_Ex)
 
 lemma store_pte_pred_tcb_at:
   "store_pte pt_t ptr val \<lbrace>pred_tcb_at proj P t\<rbrace>"
@@ -934,7 +946,9 @@ lemma valid_arch_mdb_lift:
 lemma arch_valid_obj_same_type:
   "\<lbrakk> arch_valid_obj ao s; kheap s p = Some ko; a_type k = a_type ko \<rbrakk>
    \<Longrightarrow> arch_valid_obj ao (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)"
-  sorry (* FIXME AARCH64: now not trivial any more *)
+  apply (cases ao; simp)
+  apply (fastforce simp: valid_vcpu_def obj_at_def split: option.splits)
+  done
 
 lemma valid_vspace_obj_same_type:
   "\<lbrakk>valid_vspace_obj l ao s;  kheap s p = Some ko; a_type ko' = a_type ko\<rbrakk>

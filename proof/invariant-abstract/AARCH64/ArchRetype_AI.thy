@@ -512,15 +512,15 @@ proof
   fix level p ao asid vref
   assume p: "vs_lookup_table level asid (vref_for_level vref (level + 1)) s' = Some (level, p)"
   assume vref: "vref \<in> user_region"
-  assume "aobjs_of s' p = Some ao"
-  hence "aobjs_of s p = Some ao \<or> ArchObj ao = default_object ty dev us"
-    by (simp add: ps_def obj_at_def s'_def in_opt_map_eq split: if_split_asm)
+  assume "vspace_objs_of s' p = Some ao"
+  hence "vspace_objs_of s p = Some ao \<or> ArchObj ao = default_object ty dev us"
+    by (simp add: ps_def obj_at_def s'_def in_opt_map_eq vspace_obj_of_Some split: if_split_asm)
   moreover
   { assume "ArchObj ao = default_object ty dev us" with tyunt
     have "valid_vspace_obj level ao s'" by (rule valid_vspace_obj_default)
   }
   moreover
-  { assume "aobjs_of s p = Some ao"
+  { assume "vspace_objs_of s p = Some ao"
     with va p vref
     have "valid_vspace_obj level ao s"
       by (auto simp: vs_lookup_table' vref_for_level_user_region elim: valid_vspace_objsD)

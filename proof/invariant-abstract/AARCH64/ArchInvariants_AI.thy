@@ -359,7 +359,7 @@ definition valid_vspace_objs :: "'z::state_ext state \<Rightarrow> bool" where
      \<forall>bot_level asid vref level p ao.
        vs_lookup_table bot_level asid vref s = Some (level, p)
        \<longrightarrow> vref \<in> user_region
-       \<longrightarrow> aobjs_of s p = Some ao
+       \<longrightarrow> vspace_objs_of s p = Some ao
        \<longrightarrow> valid_vspace_obj level ao s"
 
 (* Mask out the bits that will not be used for lookups down to specified level *)
@@ -1023,7 +1023,7 @@ lemma valid_arch_cap_typ:
   by (case_tac c; wpsimp wp: P valid_arch_cap_ref_lift)
 
 lemma valid_pte_lift2:
-  assumes x: "\<And>T p. \<lbrace>Q and typ_at (AArch T) p\<rbrace> f \<lbrace>\<lambda>rv. typ_at (AArch T) p\<rbrace>"
+  assumes x: "\<And>T p. T \<noteq> AVCPU \<Longrightarrow> \<lbrace>Q and typ_at (AArch T) p\<rbrace> f \<lbrace>\<lambda>rv. typ_at (AArch T) p\<rbrace>"
   shows "\<lbrace>\<lambda>s. Q s \<and> valid_pte level pte s\<rbrace> f \<lbrace>\<lambda>rv s. valid_pte level pte s\<rbrace>"
   by (cases pte) (simp add: data_at_def | wp hoare_vcg_disj_lift x)+
 
@@ -1117,6 +1117,13 @@ lemma vspace_obj_of_None:
 (* Not [simp], because we don't always want to break the vspace_obj_of abstraction *)
 lemma vspace_obj_of_Some:
   "(vspace_obj_of ako = Some ako') = (ako' = ako \<and> \<not>is_VCPU ako)"
+  by (auto simp: vspace_obj_of_def)
+
+lemma vspace_obj_of_simps[simp]:
+  "vspace_obj_of (ASIDPool ap) = Some (ASIDPool ap)"
+  "vspace_obj_of (PageTable pt) = Some (PageTable pt)"
+  "vspace_obj_of (DataPage d sz) = Some (DataPage d sz)"
+  "vspace_obj_of (VCPU vcpu) = None"
   by (auto simp: vspace_obj_of_def)
 
 lemma not_VCPU_eq:
@@ -1828,7 +1835,7 @@ lemma valid_vspace_objsI [intro?]:
   "(\<And>p ao asid vref level.
        \<lbrakk> vs_lookup_table level asid (vref_for_level vref (level+1)) s = Some (level, p);
          vref \<in> user_region;
-         aobjs_of s p = Some ao \<rbrakk>
+         vspace_objs_of s p = Some ao \<rbrakk>
        \<Longrightarrow> valid_vspace_obj level ao s)
   \<Longrightarrow> valid_vspace_objs s"
   by (fastforce simp: valid_vspace_objs_def dest: vs_lookup_level_vref1)
@@ -2147,7 +2154,7 @@ lemmas vs_lookup_splitD = vs_lookup_split_Some[rotated, THEN iffD1, rotated -1]
 lemma valid_vspace_objsD:
   "\<lbrakk> valid_vspace_objs s;
      vs_lookup_table bot_level asid vref s = Some (level, p);
-     vref \<in> user_region; aobjs_of s p = Some ao \<rbrakk> \<Longrightarrow>
+     vref \<in> user_region; vspace_objs_of s p = Some ao \<rbrakk> \<Longrightarrow>
    valid_vspace_obj level ao s"
   by (simp add: valid_vspace_objs_def)
 

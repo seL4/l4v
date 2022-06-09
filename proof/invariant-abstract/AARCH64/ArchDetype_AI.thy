@@ -207,6 +207,10 @@ lemma asid_pools_of_detype_Some[simp]:
   "(asid_pools_of (detype S s) p = Some ap) = (p \<notin> S \<and> asid_pools_of s p = Some ap)"
   by (simp add: in_omonad detype_def)
 
+lemma vspace_objs_of_detype[simp]:
+  "(vspace_objs_of (detype S s) p = Some ako) = (p \<notin> S \<and> vspace_objs_of s p = Some ako)"
+  by (simp add: in_omonad detype_def)
+
 lemma pool_for_asid_detype_Some[simp]:
   "(pool_for_asid asid (detype S s) = Some p) = (pool_for_asid asid s = Some p)"
   by (simp add: pool_for_asid_def)
@@ -348,13 +352,13 @@ lemma data_at_detype[simp]:
   by (auto simp: data_at_def)
 
 lemma valid_vspace_obj:
-  "\<lbrakk> valid_vspace_obj level ao s; aobjs_of s p = Some ao; \<exists>\<rhd>(level,p) s \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> valid_vspace_obj level ao s; vspace_objs_of s p = Some ao; \<exists>\<rhd>(level,p) s \<rbrakk> \<Longrightarrow>
      valid_vspace_obj level ao (detype (untyped_range cap) s)"
   using invs
   apply (cases ao; clarsimp split del: if_split)
-   apply (frule (1) vs_lookup_asid_pool_level, simp add: in_omonad)
+   apply (frule (1) vs_lookup_asid_pool_level, simp add: in_omonad vspace_obj_of_Some)
    apply simp
-  sorry (* FIXME AARCH64
+   sorry (* FIXME AARCH64
    apply (drule vs_lookup_table_ap_step, simp add: in_omonad, assumption)
    apply clarsimp
    apply (erule (2) vs_lookup_target_preserved)

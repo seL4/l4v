@@ -1726,14 +1726,12 @@ lemma set_asid_pool_vspace_objs_unmap':
     apply (clarsimp split: if_splits)
      (* pt_ptr = p *)
      apply (drule vs_lookup_level, drule vs_lookup_level)
-     apply (fastforce simp: aobjs_of_ako_at_Some obj_at_def fun_upd_apply)
+     apply (fastforce simp: obj_at_def fun_upd_apply)
     (* pt_ptr \<noteq> p *)
-    apply (clarsimp simp: aobjs_of_ako_at_Some obj_at_def fun_upd_apply)
     apply (erule (1) valid_vspace_obj_same_type, simp)
    (* level \<le> max_pt_level *)
    apply clarsimp
    apply (drule vs_lookup_level, drule vs_lookup_level)
-   sorry (* FIXME AARCH64
    apply (drule (5) vs_lookup_table_pt_at)
    apply (case_tac "pt_ptr = p"; simp add: aobjs_of_ako_at_Some)
     apply (clarsimp simp: aobjs_of_ako_at_Some obj_at_def fun_upd_apply fun_upd_def)
@@ -1744,6 +1742,7 @@ lemma set_asid_pool_vspace_objs_unmap':
   apply (case_tac "bot_level = asid_pool_level")
    apply (clarsimp simp: pool_for_asid_vs_lookup pool_for_asid_def)
   apply (clarsimp simp: vs_lookup_table_def in_omonad asid_pool_level_neq[THEN iffD2] pool_for_asid_def)
+  sorry (* FIXME AARCH64
   apply (drule pt_walk_pt_None_updD)
   apply (rename_tac pool_ptr root)
   apply (clarsimp simp: vspace_for_pool_def in_omonad fun_upd_apply)
