@@ -12,35 +12,26 @@ section \<open> Kernel heap-agnostic subset property definitions \<close>
 
 context Arch begin
 
-(* XXX Consider that: policy_owned_addrs aag (pasSubject aag) = {p. is_subject aag p} *)
-definition policy_owned_addrs :: "'a PAS \<Rightarrow> 'a \<Rightarrow> obj_ref set" where
-  "policy_owned_addrs aag l \<equiv> {p. pasObjectAbs aag p = l}"
+\<comment> \<open> Note: \<open>pas_addrs_of aag (pasSubject aag) = {p. is_subject aag p}\<close>
+     but we need to use this for other labels than the subject. \<close>
+definition pas_addrs_of :: "'a PAS \<Rightarrow> 'a \<Rightarrow> obj_ref set" where
+  "pas_addrs_of aag l \<equiv> {p. pasObjectAbs aag p = l}"
 
-lemma "policy_owned_addrs aag (pasSubject aag) = {p. is_subject aag p}"
-  unfolding policy_owned_addrs_def
-  by fast
-
-\<comment> \<open> XXX: Is it worth considering rephrasing these in terms of existing abbreviations
-     @{term\<open>aag_can_read\<close>} and @{term\<open>subject_can_affect_label_directly\<close>}? \<close>
-definition policy_accessible_labels :: "'a PAS \<Rightarrow> 'a \<Rightarrow> 'a set" where
-  "policy_accessible_labels aag l \<equiv> {l} \<union>
+\<comment> \<open> Note: When \<open>l = pasSubject aag\<close> this could be rephrased in terms of
+     @{term\<open>aag_can_read\<close>} and @{term\<open>subject_can_affect_label_directly\<close>}
+     but we need to use this for other labels than the subject. \<close>
+definition pas_labels_accessible_to :: "'a PAS \<Rightarrow> 'a \<Rightarrow> 'a set" where
+  "pas_labels_accessible_to aag l \<equiv> {l} \<union>
      subjectReads (pasPolicy aag) l \<union> subjectAffects (pasPolicy aag) l"
 
-definition policy_accessible_addrs :: "'a PAS \<Rightarrow> 'a \<Rightarrow> obj_ref set" where
-  "policy_accessible_addrs aag l \<equiv> {p. pasObjectAbs aag p \<in> policy_accessible_labels aag l}"
+definition pas_addrs_accessible_to :: "'a PAS \<Rightarrow> 'a \<Rightarrow> obj_ref set" where
+  "pas_addrs_accessible_to aag l \<equiv> {p. pasObjectAbs aag p \<in> pas_labels_accessible_to aag l}"
 
-(* XXX: Maybe this is a better definition? *)
-lemma policy_accessible_addrs_def2:
-  "policy_accessible_addrs aag l = \<Union> (policy_owned_addrs aag ` policy_accessible_labels aag l)"
-  unfolding policy_accessible_addrs_def
-  apply(clarsimp simp:image_def policy_owned_addrs_def)
+lemma pas_addrs_accessible_to_def2:
+  "pas_addrs_accessible_to aag l = \<Union> (pas_addrs_of aag ` pas_labels_accessible_to aag l)"
+  unfolding pas_addrs_accessible_to_def
+  apply(clarsimp simp:image_def pas_addrs_of_def)
   by blast
-
-(* XXX: Maybe this will end up not being needed?
-definition policy_accessible_domains :: "'a PAS \<Rightarrow> 'a \<Rightarrow> domain set" where
-  "policy_accessible_domains aag l \<equiv>
-     {d'. {p. pasObjectAbs aag p \<in> pasDomainAbs aag d'} \<inter> policy_accessible_addrs aag l \<noteq> {}}"
-*)
 
 end
 
@@ -49,12 +40,17 @@ locale ArchL2Partitioned = Arch +
    fixes label_L2_colour :: "'a \<Rightarrow> 'colour"
 begin
 
-definition label_L2_partition :: "'a \<Rightarrow> paddr set" where
-  "label_L2_partition l \<equiv> {pa. paddr_L2_colour pa = label_L2_colour l}"
+definition L2_partition_of :: "'a \<Rightarrow> paddr set" where
+  "L2_partition_of l \<equiv> {pa. paddr_L2_colour pa = label_L2_colour l}"
 
-definition policy_accessible_partitions :: "'a PAS \<Rightarrow> 'a \<Rightarrow> paddr set" where
-  "policy_accessible_partitions aag l \<equiv>
-     \<Union> {as. \<exists>l' \<in> policy_accessible_labels aag l. as = label_L2_partition l'}"
+definition pas_partitions_accessible_to :: "'a PAS \<Rightarrow> 'a \<Rightarrow> paddr set" where
+  "pas_partitions_accessible_to aag l \<equiv>
+     \<Union> {as. \<exists>l' \<in> pas_labels_accessible_to aag l. as = L2_partition_of l'}"
+
+lemma pas_partitions_accessible_to_def2:
+  "pas_partitions_accessible_to aag l = \<Union> (L2_partition_of ` pas_labels_accessible_to aag l)"
+  unfolding pas_partitions_accessible_to_def
+  by blast
 
 \<comment> \<open>Important: We assume that the @{term\<open>touched_addresses\<close>} set will only be used to track the
     virtual addresses of kernel objects; therefore its physical address footprint is just the
@@ -68,54 +64,38 @@ abbreviation phys_touched :: "det_state \<Rightarrow> paddr set" where
 
 definition ta_subset_owned_partition :: "'a PAS \<Rightarrow> det_state \<Rightarrow> bool" where
   "ta_subset_owned_partition aag s \<equiv>
-     phys_touched s \<subseteq> label_L2_partition (pasSubject aag)"
+     phys_touched s \<subseteq> L2_partition_of (pasSubject aag)"
 
 \<comment> \<open>Partition subset property: That only paddrs in policy-accessible partitions are ever accessed.\<close>
 definition ta_subset_accessible_partitions :: "'a PAS \<Rightarrow> det_state \<Rightarrow> bool" where
   "ta_subset_accessible_partitions aag s \<equiv>
-     phys_touched s \<subseteq> policy_accessible_partitions aag (pasSubject aag)"
-(* XXX TODO: Come back and see if we should make `policy_accessible_partitions`
-   only ever be relative to the `pasSubject` of that aag *)
+     phys_touched s \<subseteq> pas_partitions_accessible_to aag (pasSubject aag)"
 
 \<comment> \<open>That @{term\<open>pasObjectAbs\<close>} assigns each label only addresses located in its L2 partition.\<close>
 definition owned_addrs_well_partitioned :: "'a PAS \<Rightarrow> bool" where
   "owned_addrs_well_partitioned aag \<equiv> \<forall> l.
-     to_phys (policy_owned_addrs aag l) \<subseteq> label_L2_partition l"
-(* XXX TODO: Same for this one. *)
+     to_phys (pas_addrs_of aag l) \<subseteq> L2_partition_of l"
 
 \<comment> \<open>That for every label \<open>l\<close>, every label directly accessible to it according to the
     @{term\<open>pasPolicy\<close>} is assigned by @{term\<open>pasObjectAbs\<close>} only addresses located
     in the union of the L2 partitions accessible to \<open>l\<close>.\<close>
 definition accessible_addrs_well_partitioned :: "'a PAS \<Rightarrow> bool" where
   "accessible_addrs_well_partitioned aag \<equiv> \<forall> l.
-     to_phys (policy_accessible_addrs aag l) \<subseteq> policy_accessible_partitions aag l"
-(* XXX TODO: And this one. *)
+     to_phys (pas_addrs_accessible_to aag l) \<subseteq> pas_partitions_accessible_to aag l"
 
 \<comment> \<open>If every label's addresses is confined to its partition, then all accessible addresses, due to
   belonging to accessible labels, are confined to the union of those labels' partitions.\<close>
 lemma owned_to_accessible_addrs_well_partitioned:
   "owned_addrs_well_partitioned aag \<Longrightarrow>
    accessible_addrs_well_partitioned aag"
-  unfolding accessible_addrs_well_partitioned_def
-  apply clarsimp
-  apply(rename_tac l va)
-  \<comment> \<open>We consider each address \<open>va\<close> that is accessible to, though not necessarily owned by, \<open>l\<close>.
-      We know the L2 partitioning scheme assigns the physical address of \<open>va\<close> to some colour
-        \<open>paddr_L2_colour (addrFromKPPtr va)\<close>
-      But instead of that, we use \<open>va\<close>'s label \<open>l'\<close> (given by @{term\<open>pasObjectAbs\<close>}).\<close>
-  apply(clarsimp simp:policy_accessible_partitions_def policy_accessible_labels_def
-    policy_accessible_addrs_def2)
-    apply(clarsimp simp:owned_addrs_well_partitioned_def policy_owned_addrs_def)
-  apply(rule_tac x="label_L2_partition (pasObjectAbs aag va)" in exI)
-  apply(rule context_conjI)
-   apply blast
-  apply force
-  done
+  unfolding accessible_addrs_well_partitioned_def owned_addrs_well_partitioned_def
+    pas_labels_accessible_to_def pas_addrs_accessible_to_def2 pas_partitions_accessible_to_def2
+  by blast
 
 \<comment> \<open>Address subset property: That only the paddrs of policy-accessible labels are ever accessed.\<close>
 definition ta_subset_accessible_addrs :: "'a PAS \<Rightarrow> det_state \<Rightarrow> bool" where
   "ta_subset_accessible_addrs aag s \<equiv>
-     phys_touched s \<subseteq> to_phys (policy_accessible_addrs aag (pasSubject aag))"
+     phys_touched s \<subseteq> to_phys (pas_addrs_accessible_to aag (pasSubject aag))"
 
 lemma ta_subset_accessible_addrs_to_partitions:
   "ta_subset_accessible_addrs aag s \<Longrightarrow>
@@ -123,7 +103,7 @@ lemma ta_subset_accessible_addrs_to_partitions:
    ta_subset_accessible_partitions aag s"
   unfolding ta_subset_accessible_partitions_def ta_subset_accessible_addrs_def
     accessible_addrs_well_partitioned_def
-  by blast
+  by fast
 
 (* If it's easier to prove `owned_addrs_well_partitioned` than
    `accessible_addrs_well_partitioned` then it's just as suitable. *)
@@ -169,19 +149,19 @@ context ArchL2Partitioned begin
 \<comment> \<open>That each label's objects stay confined to its partition.\<close>
 definition owned_objs_well_partitioned :: "'a PAS \<Rightarrow> det_state \<Rightarrow> bool" where
   "owned_objs_well_partitioned aag s \<equiv> \<forall> l.
-     to_phys (\<Union> (obj_kheap_addrs s ` policy_owned_addrs aag l)) \<subseteq>
-     label_L2_partition l"
+     to_phys (\<Union> (obj_kheap_addrs s ` pas_addrs_of aag l)) \<subseteq>
+     L2_partition_of l"
 
 \<comment> \<open>That accessible objects will only lie inside accessible domains' partitions.\<close>
 definition accessible_objs_well_partitioned :: "'a PAS \<Rightarrow> det_state \<Rightarrow> bool" where
   "accessible_objs_well_partitioned aag s \<equiv>
-     to_phys (\<Union> (obj_kheap_addrs s ` policy_accessible_addrs aag (pasSubject aag))) \<subseteq>
-     policy_accessible_partitions aag (pasSubject aag)"
+     to_phys (\<Union> (obj_kheap_addrs s ` pas_addrs_accessible_to aag (pasSubject aag))) \<subseteq>
+     pas_partitions_accessible_to aag (pasSubject aag)"
 
 lemma accessible_objs_subset_accessible_addrs:
   "no_label_straddling_objs aag s \<Longrightarrow>
-   to_phys (\<Union> (obj_kheap_addrs s ` policy_accessible_addrs aag l)) \<subseteq>
-   to_phys (policy_accessible_addrs aag l)"
+   to_phys (\<Union> (obj_kheap_addrs s ` pas_addrs_accessible_to aag l)) \<subseteq>
+   to_phys (pas_addrs_accessible_to aag l)"
   unfolding no_label_straddling_objs_def
   apply(clarsimp simp:obj_kheap_addrs_def image_def split:option.splits)
   apply(rename_tac vas p va)
@@ -192,8 +172,8 @@ lemma accessible_objs_subset_accessible_addrs:
    apply force
   apply clarsimp
   apply(erule_tac x=va in ballE)
-   apply(force simp:policy_accessible_addrs_def)
-  apply(force simp:policy_accessible_addrs_def)
+   apply(force simp:pas_addrs_accessible_to_def)
+  apply(force simp:pas_addrs_accessible_to_def)
   done
 
 \<comment> \<open>That it's sufficient here to prove an invariant that's agnostic of colours, domains, etc.
@@ -213,7 +193,7 @@ lemma owned_addrs_to_objs_well_partitioned:
   apply(rename_tac d va p ko)
   apply(erule_tac x=va in ballE)
    apply(erule_tac c="addrFromKPPtr va" in subsetCE)
-    apply(clarsimp simp:policy_owned_addrs_def)
+    apply(clarsimp simp:pas_addrs_of_def)
     apply metis
    apply force
   apply force
@@ -235,10 +215,10 @@ lemma owned_to_accessible_objs_well_partitioned:
       assigns the physical address of \<open>y\<close> to some colour
       which belongs to some (possibly empty) set of labels (according to @{term\<open>label_L2_colour\<close>}.
       But instead of that, we use y's label, given by @{term\<open>pasObjectAbs\<close>}.\<close>
-  apply(clarsimp simp:policy_accessible_partitions_def policy_accessible_labels_def
-    policy_accessible_addrs_def2)
-  apply(clarsimp simp:owned_objs_well_partitioned_def policy_owned_addrs_def)
-  apply(rule_tac x="label_L2_partition (pasObjectAbs aag y)" in exI)
+  apply(clarsimp simp:pas_partitions_accessible_to_def pas_labels_accessible_to_def
+    pas_addrs_accessible_to_def2)
+  apply(clarsimp simp:owned_objs_well_partitioned_def pas_addrs_of_def)
+  apply(rule_tac x="L2_partition_of (pasObjectAbs aag y)" in exI)
   apply(rule context_conjI)
    apply blast
   apply force
@@ -248,7 +228,7 @@ lemma owned_to_accessible_objs_well_partitioned:
 definition ta_subset_accessible_objects :: "'a PAS \<Rightarrow> det_state \<Rightarrow> bool" where
   "ta_subset_accessible_objects aag s \<equiv>
      phys_touched s \<subseteq>
-     to_phys (\<Union> (obj_kheap_addrs s ` policy_accessible_addrs aag (pasSubject aag)))"
+     to_phys (\<Union> (obj_kheap_addrs s ` pas_addrs_accessible_to aag (pasSubject aag)))"
 
 (* If it is easier to prove `ta_subset_accessible_objects` than
    `ta_subset_accessible_addrs` as an invariant,
@@ -276,7 +256,7 @@ lemma ta_subset_accessible_objs_to_partitions_HARD:
 (* We can avoid proving `accessible_objs_well_partitioned` (which depends on the kheap)
    if it's straightforward enough to prove `accessible_addrs_well_partitioned`,
    but in exchange we need to prove `no_label_straddling_objs`. *)
-theorem ta_subset_accessible_objs_to_partitions:
+lemma ta_subset_accessible_objs_to_partitions:
   "ta_subset_accessible_objects aag s \<Longrightarrow>
    no_label_straddling_objs aag s \<Longrightarrow>
    accessible_addrs_well_partitioned aag \<Longrightarrow>
@@ -290,7 +270,7 @@ theorem ta_subset_accessible_objs_to_partitions:
 
 (* Finally, if it's easier to prove `owned_addrs_well_partitioned` than
    `accessible_addrs_well_partitioned` then it's just as suitable. *)
-lemma ta_subset_accessible_objs_to_partitions_alternative:
+theorem ta_subset_accessible_objs_to_partitions_alternative:
   "ta_subset_accessible_objects aag s \<Longrightarrow>
    no_label_straddling_objs aag s \<Longrightarrow>
    owned_addrs_well_partitioned aag \<Longrightarrow>
