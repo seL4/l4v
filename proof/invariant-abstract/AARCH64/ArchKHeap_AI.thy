@@ -419,8 +419,8 @@ lemma set_pt_pts_of:
      (auto elim!: rsubst[where P=P] simp: opt_map_def split: option.splits)
 
 lemma pte_ptr_eq:
-  "\<lbrakk> p && mask (pt_bits pt_t) >> pte_bits = p' && mask (pt_bits pt_t) >> pte_bits;
-     p && ~~ mask (pt_bits pt_t) = p' && ~~ mask (pt_bits pt_t);
+  "\<lbrakk> table_index pt_t p = table_index pt_t p';
+     table_base pt_t p = table_base pt_t p';
      is_aligned p pte_bits; is_aligned p' pte_bits \<rbrakk>
    \<Longrightarrow> p = p'"
   apply (rule word_eqI)
@@ -432,22 +432,55 @@ lemma pte_ptr_eq:
   apply (case_tac "pt_bits pt_t \<le> n", simp)
   by (fastforce simp: not_le bit_simps)
 
-lemma store_pte_ptes_of_full: (* FIXME AARCH64 *)
+lemma pt_type_pt_upd[simp]:
+  "pt_type (pt_upd pt idx pte) = pt_type pt"
+  by (cases pt; simp add: pt_upd_def)
+
+lemma pt_apply_pt_upd_eq[simp]:
+  "pt_apply (pt_upd pt idx pte) idx = pte"
+  by (cases pt; clarsimp simp: pt_upd_def)
+
+lemma table_index_VSRoot_inj[simp]:
+  "\<lbrakk> is_aligned p pte_bits; is_aligned p' pte_bits \<rbrakk> \<Longrightarrow>
+   ((ucast (table_index VSRootPT_T p')::vs_index) = ucast (table_index VSRootPT_T p)) =
+   (table_index VSRootPT_T p' = table_index VSRootPT_T p)"
+  by (rule iffI; word_eqI_solve simp: bit_simps)
+
+lemma table_index_NormalPT_inj[simp]:
+  "\<lbrakk> is_aligned p pte_bits; is_aligned p' pte_bits \<rbrakk> \<Longrightarrow>
+   ((ucast (table_index NormalPT_T p')::pt_index) = ucast (table_index NormalPT_T p)) =
+   (table_index NormalPT_T p' = table_index NormalPT_T p)"
+  by (rule iffI; word_eqI_solve simp: bit_simps)
+
+lemma pt_apply_pt_upd_neq:
+  "\<lbrakk>p' \<noteq> p; is_aligned p pte_bits; is_aligned p' pte_bits; table_base pt_t p' = table_base pt_t p;
+    pt_t = pt_type pt\<rbrakk>
+   \<Longrightarrow> pt_apply (pt_upd pt (table_index pt_t p) pte) (table_index pt_t p') =
+       pt_apply pt (table_index pt_t p')"
+  by (cases pt; fastforce simp: pt_apply_def pt_upd_def dest!: pte_ptr_eq)
+
+lemma store_pte_ptes_of_full:
   "\<lbrace>\<lambda>s. ptes_of s pt_t' p \<noteq> None \<longrightarrow>
         P (if pt_t' = pt_t then ptes_of s pt_t (p \<mapsto> pte) else ptes_of s pt_t) \<rbrace>
    store_pte pt_t' p pte \<lbrace>\<lambda>_ s. P (ptes_of s pt_t)\<rbrace>"
   unfolding store_pte_def
   apply (wpsimp wp: set_pt_pts_of simp_del: fun_upd_apply)
   apply (simp add: level_pte_of_pt pt_at_eq)
-  sorry
+  apply (erule rsubst[where P=P])
+  apply (rule sym)
+  apply (rule ext)
+  apply clarsimp
+  apply (intro conjI impI; clarsimp simp:  level_pte_of_def)
+     apply (fastforce simp: in_omonad)
+    apply (fastforce simp: obind_def split: option.splits)
+   apply (fastforce simp: obind_def pt_apply_pt_upd_neq split: option.splits)
+  apply (fastforce simp: obind_def split: option.splits)
+  done
 
 lemma store_pte_ptes_of:
   "\<lbrace>\<lambda>s. ptes_of s pt_t p \<noteq> None \<longrightarrow> P (ptes_of s pt_t (p \<mapsto> pte)) \<rbrace>
    store_pte pt_t p pte \<lbrace>\<lambda>_ s. P (ptes_of s pt_t)\<rbrace>"
-  unfolding store_pte_def
-  apply (wpsimp wp: set_pt_pts_of simp: in_omonad)
-  sorry (* FIXME AARCH64
-  by (auto simp: obind_def opt_map_def split: option.splits dest!: pte_ptr_eq elim!: rsubst[where P=P]) *)
+  by (wpsimp wp: store_pte_ptes_of_full simp_del: fun_upd_apply)
 
 definition level_of_slot :: "asid \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> vm_level"
   where
