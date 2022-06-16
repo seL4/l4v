@@ -2635,7 +2635,7 @@ lemma store_pte_PageTablePTE_valid_vspace_objs:
 
 lemma store_pte_valid_vspace_objs:
   "\<lbrace> valid_vspace_objs
-     and pspace_aligned and valid_asid_table and unique_table_refs and valid_vs_lookup
+     and pspace_aligned and pspace_distinct and valid_asid_table and unique_table_refs and valid_vs_lookup
      and (\<lambda>s. valid_caps (caps_of_state s) s)
      and (\<lambda>s. \<forall>level. \<exists>\<rhd> (level, table_base pt_t p) s
                       \<longrightarrow> valid_pte level pte s

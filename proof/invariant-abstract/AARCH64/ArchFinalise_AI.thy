@@ -1219,22 +1219,6 @@ lemma delete_asid_pool_not_reachable[wp]:
 lemmas reachable_frame_cap_simps =
   reachable_frame_cap_def[unfolded is_frame_cap_def arch_cap_fun_lift_def, split_simps cap.split]
 
-lemma vs_lookup_slot_non_PageTablePTE:
-  "\<lbrakk> ptes_of s pt_t p \<noteq> None; ptes_of s' pt_t = (ptes_of s pt_t)(p \<mapsto> pte); \<not> is_PageTablePTE pte;
-     asid_pools_of s' = asid_pools_of s;
-     asid_table s' = asid_table s; valid_asid_table s; pspace_aligned s\<rbrakk>
-  \<Longrightarrow> vs_lookup_slot level asid vref s' =
-      (if \<exists>level'. vs_lookup_slot level' asid vref s = Some (level', p) \<and> level < level'
-       then vs_lookup_slot (level_of_slot asid vref p s) asid vref s
-       else vs_lookup_slot level asid vref s)"
-  apply clarsimp
-  sorry (* FIXME AARCH64 check statement
-  apply (rule conjI; clarsimp;
-           (simp (no_asm) add: vs_lookup_slot_def obind_def,
-            (subst vs_lookup_non_PageTablePTE; simp),
-            fastforce split: option.splits))
-  done *)
-
 lemma unmap_page_table_pool_for_asid[wp]:
   "unmap_page_table asid vref pt \<lbrace>\<lambda>s. P (pool_for_asid asid s)\<rbrace>"
   sorry (* FIXME AARCH64
