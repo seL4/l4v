@@ -199,6 +199,19 @@ abbreviation(input)
 
 lemmas option_map_def = map_option_case
 
+(* Function update for functions with two arguments. This is just nested normal function update,
+   but writing it out in goals leads to large annoying terms with if-s that get split etc, so we
+   introduce a constant for it. Syntax precedence is same as fun_upd, but we are only allowing
+   a single update, no sequences. *)
+definition fun_upd2 ::
+  "('a \<Rightarrow> 'b \<Rightarrow> 'c) \<Rightarrow> 'a \<Rightarrow> 'b \<Rightarrow> 'c \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> 'c)" ("_ '(_, _ := _')" [1000, 0, 0] 900) where
+  "f (x, y := v) \<equiv> \<lambda>x'. if x' = x then (f x) (y := v) else f x'"
+
+(* precedence same as MapUpd, only single updates as above, no general maplets. *)
+abbreviation fun_upd2_Some :: "('a \<Rightarrow> 'b \<Rightarrow> 'c option) \<Rightarrow> 'a \<Rightarrow> 'b \<Rightarrow> 'c \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> 'c option)"
+  ("_ '(_, _ \<mapsto> _')" [900, 0, 0] 900) where
+  "f (x, y \<mapsto> v) \<equiv> f (x, y := Some v)"
+
 lemma False_implies_equals [simp]:
   "((False \<Longrightarrow> P) \<Longrightarrow> PROP Q) \<equiv> PROP Q"
   apply (rule equal_intr_rule)
