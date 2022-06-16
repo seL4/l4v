@@ -7,9 +7,7 @@
 
 theory TimeProtection
 imports "Word_Lib.WordSetup"
-  InfoFlow.Noninterference_Base
   InfoFlow.Noninterference_Base_Refinement
-  Lib.Eisbach_Methods
   "Lib.Apply_Trace_Cmd"
 begin
 
@@ -37,15 +35,14 @@ type_synonym ('fch,'pch) pch_impact = "vaddr \<Rightarrow> 'fch \<Rightarrow> 'p
 
 type_synonym time = nat
 
-datatype 'userdomain domain = Sched | User 'userdomain
-
 record ('fch,'pch) state =
   fch :: "'fch" \<comment> \<open> flushable cache\<close>
   pch :: "'pch" \<comment> \<open> partitionable cache \<close>
   tm :: time
 
 locale time_protection_hardware =
-  fixes gentypes :: "('fch \<times> 'fch_cachedness \<times> 'pch \<times> 'pch_cachedness \<times> 'userdomain \<times> 'colour) itself"
+  fixes gentypes :: "('fch \<times> 'fch_cachedness \<times> 'pch \<times> 'pch_cachedness \<times> 'domain \<times> 'colour) itself"
+  fixes Sched :: "'domain"
 
   \<comment> \<open>flushable cache\<close>
   fixes fch_lookup :: "'fch \<Rightarrow> 'fch_cachedness fch"
@@ -117,21 +114,23 @@ locale time_protection_hardware =
   
   
   \<comment> \<open>domains / colours / collisions\<close>
-  fixes addr_domain :: "paddr \<Rightarrow> 'userdomain domain"
+  fixes addr_domain :: "paddr \<Rightarrow> 'domain"
   fixes addr_colour :: "paddr \<Rightarrow> 'colour"
-  fixes colour_userdomain :: "'colour \<Rightarrow> 'userdomain"
+  fixes colour_userdomain :: "'colour \<Rightarrow> 'domain"
+  assumes colour_not_Sched:
+    "colour_userdomain c \<noteq> Sched"
   assumes no_cross_colour_collisions:
     "a1 coll a2 \<Longrightarrow> addr_colour a1 = addr_colour a2"
   (* every physical address either belongs to the scheduler or is correctly coloured *)
   assumes addr_domain_valid: "addr_domain a = Sched
-                            \<or> addr_domain a = User (colour_userdomain (addr_colour a))"
+                            \<or> addr_domain a = colour_userdomain (addr_colour a)"
 begin
 
 corollary colours_not_shared:
   "colour_userdomain c1 \<noteq> colour_userdomain c2 \<Longrightarrow> c1 \<noteq> c2"
   by blast
 
-definition all_paddrs_of :: "'userdomain domain \<Rightarrow> paddr set" where
+definition all_paddrs_of :: "'domain \<Rightarrow> paddr set" where
   "all_paddrs_of d = {a. addr_domain a = d}"
 
 abbreviation collision_set :: "paddr \<Rightarrow> paddr set" where
@@ -187,18 +186,18 @@ lemma collision_in_full_collision_set:
   done
 
 definition pch_same_for_domain ::
-  "'userdomain domain \<Rightarrow> 'pch \<Rightarrow> 'pch \<Rightarrow> bool"
+  "'domain \<Rightarrow> 'pch \<Rightarrow> 'pch \<Rightarrow> bool"
   where
  "pch_same_for_domain d p1 p2 \<equiv> \<forall> a. addr_domain a = d \<longrightarrow> pch_lookup p1 a = pch_lookup p2 a"
 
 definition pch_same_for_domain_and_shared ::
-  "'userdomain domain \<Rightarrow> 'pch \<Rightarrow> 'pch \<Rightarrow> bool"
+  "'domain \<Rightarrow> 'pch \<Rightarrow> 'pch \<Rightarrow> bool"
   where
  "pch_same_for_domain_and_shared d p1 p2 \<equiv>
     \<forall> a. addr_domain a = d \<or> a \<in> kernel_shared_expanded \<longrightarrow> pch_lookup p1 a = pch_lookup p2 a"
 
 definition pch_same_for_domain_except_shared ::
-  "'userdomain domain \<Rightarrow> 'pch \<Rightarrow> 'pch \<Rightarrow> bool"
+  "'domain \<Rightarrow> 'pch \<Rightarrow> 'pch \<Rightarrow> bool"
   where
  "pch_same_for_domain_except_shared d p1 p2 \<equiv>
     \<forall> a. addr_domain a = d \<and> a \<notin> kernel_shared_expanded \<longrightarrow> pch_lookup p1 a = pch_lookup p2 a"
@@ -288,9 +287,9 @@ lemma diff_domain_no_collision:
   a coll a'\<rbrakk> \<Longrightarrow>
   False"
   apply (frule(1) collision_in_full_collision_set [OF kernel_shared_expanded_full_collision_set])
-  apply (metis (mono_tags, lifting) addr_domain_valid collision_set_contains_itself
-               kernel_shared_expanded_def kernel_shared_precise_def mem_Collect_eq
-               no_cross_colour_collisions)
+  apply (metis (mono_tags, lifting) kernel_shared_expanded_def kernel_shared_precise_def
+    mem_Collect_eq time_protection_hardware.addr_domain_valid collision_set_contains_itself
+    no_cross_colour_collisions time_protection_hardware_axioms)
   done
 
 (* general set helpers *)
@@ -366,16 +365,39 @@ end
 
 
 locale time_protection_hardware_uwr =
-  time_protection_hardware
-    "TYPE('fch \<times> 'fch_cachedness \<times> 'pch \<times> 'pch_cachedness \<times> 'userdomain \<times> 'colour)" +
-  fixes current_domain :: "'other_state \<Rightarrow> 'userdomain domain"
-  fixes external_uwr :: "'userdomain domain \<Rightarrow> ('other_state \<times> 'other_state) set"
+  time_protection_hardware gentypes Sched fch_lookup fch_read_impact fch_write_impact empty_fch
+    fch_flush_cycles fch_flush_WCET pch_lookup pch_read_impact pch_write_impact do_pch_flush
+    pch_flush_cycles pch_flush_WCET collides_in_pch read_cycles write_cycles addr_domain
+    addr_colour colour_userdomain
+  for gentypes :: "('fch \<times> 'fch_cachedness \<times> 'pch \<times> 'pch_cachedness \<times> 'domain \<times> 'colour) itself"
+  and Sched :: "'domain"
+  and fch_lookup :: "'fch \<Rightarrow> 'fch_cachedness fch"
+  and fch_read_impact :: "'fch fch_impact"
+  and fch_write_impact :: "'fch fch_impact"
+  and empty_fch :: "'fch"
+  and fch_flush_cycles :: "'fch \<Rightarrow> time"
+  and fch_flush_WCET :: "time"
+  and pch_lookup :: "'pch \<Rightarrow> 'pch_cachedness pch"
+  and pch_read_impact :: "'pch pch_impact"
+  and pch_write_impact :: "'pch pch_impact"
+  and do_pch_flush :: "'pch \<Rightarrow> paddr set \<Rightarrow> 'pch"
+  and pch_flush_cycles :: "'pch \<Rightarrow> paddr set \<Rightarrow> time"
+  and pch_flush_WCET :: "paddr set \<Rightarrow> time"
+  and collides_in_pch :: "paddr \<Rightarrow> paddr \<Rightarrow> bool" (infix "coll" 50)
+  and read_cycles  :: "'fch_cachedness \<Rightarrow> 'pch_cachedness \<Rightarrow> time"
+  and write_cycles :: "'fch_cachedness \<Rightarrow> 'pch_cachedness \<Rightarrow> time"
+  and addr_domain :: "paddr \<Rightarrow> 'domain"
+  and addr_colour :: "paddr \<Rightarrow> 'colour"
+  and colour_userdomain :: "'colour \<Rightarrow> 'domain" +
+  fixes current_domain :: "'other_state \<Rightarrow> 'domain"
+  fixes external_uwr :: "'domain \<Rightarrow> ('other_state \<times> 'other_state) set"
   fixes next_latest_domainswitch_start :: "time \<Rightarrow> time"
   fixes touched_addrs :: "'other_state \<Rightarrow> vpaddr set"
   assumes external_uwr_same_domain:
-    "(s1, s2) \<in> external_uwr d \<Longrightarrow> current_domain s2 = current_domain s1"
+    "(s1, s2) \<in> external_uwr Sched \<Longrightarrow> current_domain s2 = current_domain s1"
   assumes external_uwr_equiv_rel:
     "equiv UNIV (external_uwr d)"
+
 begin
 
 \<comment> \<open> TA inv stuff\<close>
@@ -384,7 +406,7 @@ definition touched_addrs_inv :: "'other_state \<Rightarrow> bool" where
   "touched_addrs_inv s \<equiv>
      snd ` touched_addrs s \<subseteq> all_paddrs_of (current_domain s) \<union> kernel_shared_precise"
 
-definition touched_addrs_dirty_inv :: "'userdomain domain \<Rightarrow> 'userdomain domain \<Rightarrow> 'other_state \<Rightarrow> bool" where
+definition touched_addrs_dirty_inv :: "'domain \<Rightarrow> 'domain \<Rightarrow> 'other_state \<Rightarrow> bool" where
   "touched_addrs_dirty_inv u u' s \<equiv>
      touched_addrs s \<subseteq> {(v, p) | v p. p \<in> (all_paddrs_of u \<union> all_paddrs_of u' \<union> kernel_shared_precise)}"
 
@@ -397,15 +419,16 @@ definition uwr_running where
                             \<and> tm s1 = tm s2 }"
 
 definition uwr_notrunning ::
-  "'userdomain domain \<Rightarrow> ('fch,'pch)state rel"
+  "'domain \<Rightarrow> ('fch,'pch)state rel"
   where
   "uwr_notrunning d \<equiv> {(s1, s2). pch_same_for_domain_except_shared d (pch s1) (pch s2)
                                \<and> nlds (tm s1) = nlds (tm s2) }"
 
 definition uwr ::
-  "'userdomain domain \<Rightarrow> ('other_state \<times> ('fch,'pch)state) rel"
+  "'domain \<Rightarrow> ('other_state \<times> ('fch,'pch)state) rel"
   where
   "uwr d \<equiv> {((os1, s1), (os2, s2)). (os1, os2) \<in> external_uwr d
+                    \<and> current_domain os2 = current_domain os1
                     \<and> (if (current_domain os1 = d)
                       then (s1, s2) \<in> uwr_running d
                       else (s1, s2) \<in> uwr_notrunning d ) }"
@@ -431,7 +454,6 @@ lemma uwr_refl [simp]:
 lemma uwr_sym':
   "((a, b) \<in> uwr d) \<Longrightarrow> ((b, a) \<in> uwr d)"
   apply (clarsimp simp: uwr_def)
-  apply (frule external_uwr_same_domain; clarsimp)
   apply (case_tac "current_domain os2 = d"; clarsimp)
    apply (intro conjI, meson equiv_def external_uwr_equiv_rel symE)
    apply (clarsimp simp:uwr_running_def pch_same_for_domain_and_shared_def)
@@ -444,7 +466,6 @@ lemma uwr_trans:
   (b, c) \<in> uwr d \<Longrightarrow>
   (a, c) \<in> uwr d"
   apply (clarsimp simp: uwr_def)
-  apply (frule external_uwr_same_domain; clarsimp)
   apply (case_tac "current_domain x = d"; clarsimp)
    apply (intro conjI, meson equiv_def external_uwr_equiv_rel transE)
    apply (clarsimp simp:uwr_running_def pch_same_for_domain_and_shared_def)
@@ -468,49 +489,25 @@ end
 
 locale time_protection_system =
   ab: unwinding_system A s0 "\<lambda>_. current_domain" external_uwr policy out Sched +
-  tp?: time_protection_hardware_uwr
-    fch_lookup fch_read_impact fch_write_impact empty_fch    fch_flush_cycles fch_flush_WCET
-    pch_lookup pch_read_impact pch_write_impact do_pch_flush pch_flush_cycles pch_flush_WCET
-    collides_in_pch
-    read_cycles write_cycles
-    addr_domain addr_colour colour_userdomain
-    current_domain  external_uwr next_latest_domainswitch_start touched_addrs +
+  tp?: time_protection_hardware_uwr "TYPE('fch \<times> 'fch_cachedness \<times> 'pch \<times> 'pch_cachedness \<times> 'domain \<times> 'colour)" +
   ts?: trace_selector
-    "TYPE(('other_state \<times> ('fch,'pch) state) \<times> 'userdomain domain \<times> trace \<times> vpaddr set)"
+    "TYPE(('other_state \<times> ('fch,'pch) state) \<times> 'domain \<times> trace \<times> vpaddr set)"
     "current_domain \<circ> fst"
     tp.uwr Sched "[]"
     "step_is_uwr_determined \<circ> fst"
     "step_is_publicly_determined \<circ> fst"
   for A :: "('a,'other_state,unit) data_type"
   and s0 :: "'other_state"
-  and current_domain :: "'other_state \<Rightarrow> 'userdomain domain"
-  and external_uwr :: "'userdomain domain \<Rightarrow> ('other_state \<times> 'other_state) set"
-  and policy :: "('userdomain domain \<times> 'userdomain domain) set"
-  and out :: "'userdomain domain \<Rightarrow> 'other_state \<Rightarrow> 'p"
+  
+  and policy :: "('domain \<times> 'domain) set"
+  and out :: "'domain \<Rightarrow> 'other_state \<Rightarrow> 'p"
+  
 
-  and touched_addrs :: "'other_state \<Rightarrow> vpaddr set"
+  
   and step_is_publicly_determined :: "'other_state \<Rightarrow> bool"
   and step_is_uwr_determined :: "'other_state \<Rightarrow> bool"
-  and next_latest_domainswitch_start :: "time \<Rightarrow> time"
-
-  and collides_in_pch :: "paddr \<Rightarrow> paddr \<Rightarrow> bool" (infix "coll" 50)
-  and fch_lookup :: "'fch \<Rightarrow> 'fch_cachedness fch"
-  and pch_lookup :: "'pch \<Rightarrow> 'pch_cachedness pch"
-  and fch_read_impact :: "'fch fch_impact"
-  and pch_read_impact :: "'pch pch_impact"
-  and fch_write_impact :: "'fch fch_impact"
-  and pch_write_impact :: "'pch pch_impact"
-  and read_cycles  :: "'fch_cachedness \<Rightarrow> 'pch_cachedness \<Rightarrow> time"
-  and write_cycles :: "'fch_cachedness \<Rightarrow> 'pch_cachedness \<Rightarrow> time"
-  and empty_fch :: "'fch"
-  and fch_flush_cycles :: "'fch \<Rightarrow> time"
-  and pch_flush_WCET
-  and fch_flush_WCET
-  and do_pch_flush :: "'pch \<Rightarrow> paddr set \<Rightarrow> 'pch"
-  and pch_flush_cycles :: "'pch \<Rightarrow> paddr set \<Rightarrow> time"
-  and addr_domain :: "paddr \<Rightarrow> 'userdomain domain"
-  and addr_colour :: "paddr \<Rightarrow> 'colour"
-  and colour_userdomain :: "'colour \<Rightarrow> 'userdomain" +
+  
++
 
   \<comment> \<open>external uwr stuff\<close>
   
@@ -531,7 +528,7 @@ locale time_protection_system =
   fixes dirty_step_WCET :: "time"
 
   fixes initial_pch :: "'pch"
-  fixes get_next_domain :: "'other_state \<Rightarrow> 'userdomain domain"
+  fixes get_next_domain :: "'other_state \<Rightarrow> 'domain"
   assumes get_next_domain_public:
     "(s, t) \<in> external_uwr Sched \<Longrightarrow>
      get_next_domain t = get_next_domain s"
@@ -824,6 +821,7 @@ lemma d_running: "\<lbrakk>
    \<comment> \<open>initial states s and t hold uwr\<close>
    ((os, s), (ot, t)) \<in> uwr d;
    \<comment> \<open>external states hold external uwr\<close>
+   (os', ot') \<in> external_uwr Sched;
    (os', ot') \<in> external_uwr d;
    \<comment> \<open>NB: external_uwr should give us current_domain' t = d\<close>
    current_domain os = d;
@@ -835,6 +833,7 @@ lemma d_running: "\<lbrakk>
    \<rbrakk> \<Longrightarrow>
    \<comment> \<open>new states s' and t' hold uwr\<close>
    ((os', s'), (ot', t')) \<in> uwr d"
+  apply (frule external_uwr_same_domain)
   apply(induct p arbitrary:s t os ot)
    apply (solves \<open>clarsimp simp:uwr_def\<close>)
   apply clarsimp
@@ -842,13 +841,12 @@ lemma d_running: "\<lbrakk>
   apply(erule_tac x="trace_step a t" in meta_allE)
   apply(erule_tac x="os'" in meta_allE)
   apply(erule_tac x="ot'" in meta_allE)
-  apply (prop_tac "current_domain ot' = current_domain ot")
-   apply (metis external_uwr_same_domain uwr_external_uwr)
   apply(erule meta_impE)
    apply blast
   apply(erule meta_impE)
    apply (frule hd_trace_obeying_set, clarsimp)
    apply (erule(3) d_running_step; simp)
+   apply (simp add:uwr_def)
   apply simp
   done
 
@@ -955,6 +953,7 @@ lemma d_not_running: "\<lbrakk>
    touched_addrs_inv ot';
    \<comment> \<open>initial states s and t hold uwr\<close>
    ((os, s), (ot, t)) \<in> uwr d;
+   (os', ot') \<in> external_uwr Sched;
    (os', ot') \<in> external_uwr d;
    \<comment> \<open>we execute both programs\<close>
    s' = trace_multistep ps s;
@@ -962,10 +961,11 @@ lemma d_not_running: "\<lbrakk>
    \<rbrakk> \<Longrightarrow>
    \<comment> \<open>new state s' and t' hold uwr_notrunning\<close>
    ((os', s'), (ot', t')) \<in> uwr d"
+  apply (frule external_uwr_same_domain)
   apply (drule(4) d_not_running_integrity_uwr [where s=s and os=os])
   apply (drule(2) d_not_running_integrity_uwr [where s=t and os=ot and d=d])
-    using external_uwr_same_domain uwr_external_uwr apply fastforce
-   using external_uwr_same_domain uwr_external_uwr apply force
+    using uwr_def apply fastforce
+   using uwr_def apply force
   apply (prop_tac "((os, trace_multistep ps s), ot, trace_multistep pt t) \<in> uwr d")
    apply (rule uwr_trans, rule uwr_sym', assumption)
    apply (rule uwr_trans, assumption, assumption)
@@ -1247,10 +1247,11 @@ lemma gadget_multistep: "\<lbrakk>
    s' = trace_multistep p s;
    t' = trace_multistep p t;
    \<comment> \<open>output states hold external uwr\<close>
+   (os', ot') \<in> external_uwr Sched;
    (os', ot') \<in> external_uwr d
    \<rbrakk> \<Longrightarrow>
     ((os', s'), (ot', t')) \<in> uwr d"
-  apply clarsimp
+  apply (frule external_uwr_same_domain)
   apply (clarsimp simp:gadget_trace_def)
   apply (thin_tac "t' = _", thin_tac "s' = _")
   apply (subst uwr_def, clarsimp)
@@ -1304,6 +1305,7 @@ lemma ma_confidentiality_u_ta:
   touched_addrs_inv os';
   touched_addrs_inv ot';
   ma.uwr2 (os, s) u (ot, t);
+  ab.uwr2 os' Sched ot';
   ab.uwr2 os' u ot';
   ((os, s), os', s') \<in> maStep ();
   ((ot, t), ot', t') \<in> maStep ()\<rbrakk>
@@ -1404,6 +1406,7 @@ lemma ma_confidentiality_u_ds:
   "\<lbrakk>will_domain_switch os;
   ma.uwr2 (os, s) Sched (ot, t);
   ma.uwr2 (os, s) u (ot, t);
+  ab.uwr2 os' Sched ot';
   ab.uwr2 os' u ot';
   ab.reachable os;
   step_is_publicly_determined os;
@@ -1411,6 +1414,7 @@ lemma ma_confidentiality_u_ds:
   ((ot, t), ot', t') \<in> maStep ()\<rbrakk>
   \<Longrightarrow> ma.uwr2 (os', s') u (ot', t')"
   apply (frule uwr_external_uwr)
+
   apply (prop_tac "will_domain_switch ot")
    using will_domain_switch_public apply fastforce
 
@@ -1424,7 +1428,9 @@ lemma ma_confidentiality_u_ds:
 
   (* show that the TAs are the same *)  
   apply (prop_tac "touched_addrs (get_domainswitch_middle_state ot) = touched_addrs (get_domainswitch_middle_state os)")
-   apply (rule external_uwr_public_same_touched_addrs, simp+)
+   apply (rule external_uwr_public_same_touched_addrs [where s=os and t=ot])
+      apply assumption+
+    apply (rule refl)+
 
   (* show that the traces are the same *)
   apply (prop_tac "select_public_trace (ot, t) dirty_step_WCET (touched_addrs (get_domainswitch_middle_state os)) = 
@@ -1441,12 +1447,13 @@ lemma ma_confidentiality_u_ds:
    apply assumption
 
   apply (drule gadget_multistep [where p="gadget_trace (nlds (tm s))" and os'=os' and ot'=ot'])
+          apply (rule refl)
          apply (rule refl)
-        apply (rule refl)
-       apply (metis public_trace_obeys_wcet)
-      apply (metis public_trace_obeys_wcet uwr_same_nlds)
+        apply (metis public_trace_obeys_wcet)
+       apply (metis public_trace_obeys_wcet uwr_same_nlds)
+      apply (rule refl)
      apply (rule refl)
-    apply (rule refl)
+    apply assumption
    apply assumption
   apply (clarsimp simp: trace_multistep_fold)
   apply (simp add: uwr_same_nlds)
@@ -1461,6 +1468,10 @@ theorem ma_confidentiality_u:
    apply (simp only:ab.confidentiality_u_def)
    apply (meson ma_to_ab_reachable ma_to_ab_step uwr_external_uwr)
   
+  apply (prop_tac "ab.uwr2 os' Sched ot'")
+   apply (simp only:ab.confidentiality_u_def)
+   apply (metis ma.schedNotGlobalChannel ma_to_ab_reachable ma_to_ab_step uwr_external_uwr)
+
   apply (frule_tac s="(os, s)" in ma.reachable_Step, assumption)
   apply (frule_tac s="(ot, t)" in ma.reachable_Step, assumption)
 
