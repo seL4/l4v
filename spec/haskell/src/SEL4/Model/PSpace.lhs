@@ -71,7 +71,7 @@ The "loadObject" and "updateObject" functions are used to insert or extract an o
 The default definitions are sufficient for most kernel objects. There is one exception in the platform-independent code, for "CTE" objects; it can be found in \autoref{sec:object.instances}.
 \end{impdetails}
 
->     loadObject :: (Monad m) => Word -> Word -> Maybe Word ->
+>     loadObject :: (MonadFail m) => Word -> Word -> Maybe Word ->
 >                                 KernelObject -> m a
 >     loadObject ptr ptr' next obj = do
 >         unless (ptr == ptr') $ fail $ "no object at address given in pspace,target=" ++ (show ptr) ++",lookup=" ++ (show ptr')
@@ -80,7 +80,7 @@ The default definitions are sufficient for most kernel objects. There is one exc
 >         sizeCheck ptr next (objBits val)
 >         return val
 
->     updateObject :: (Monad m) => a -> KernelObject -> Word ->
+>     updateObject :: (MonadFail m) => a -> KernelObject -> Word ->
 >                         Word -> Maybe Word -> m KernelObject
 >     updateObject val oldObj ptr ptr' next = do
 >         unless (ptr == ptr') $ fail $ "no object at address given in pspace,target=" ++ (show ptr) ++",lookup=" ++ (show ptr')
@@ -92,7 +92,7 @@ The default definitions are sufficient for most kernel objects. There is one exc
 The "injectKO" and "projectKO" functions convert to and from a "KernelObject", which is the type used to encapsulate all objects stored in the "PSpace" structure.
 
 >     injectKO :: a -> KernelObject
->     projectKO :: (Monad m) => KernelObject -> m a
+>     projectKO :: (MonadFail m) => KernelObject -> m a
 
 > objBits :: PSpaceStorable a => a -> Int
 > objBits a = objBitsKO (injectKO a)
@@ -156,7 +156,7 @@ requested type.
 >         (before, middle, after) = lookupAround ptr mp
 >         after' = maybe Nothing (Just . fst) after
 
-> maybeToMonad :: Monad m => Maybe a -> m a
+> maybeToMonad :: MonadFail m => Maybe a -> m a
 > maybeToMonad (Just x) = return x
 > maybeToMonad Nothing  = fail "maybeToMonad: got Nothing"
 
@@ -285,18 +285,18 @@ This is intended for use by alternate implementations of "placeNewObject", for o
 
 These two functions halt the kernel with an error message when a memory access is performed with incorrect type or alignment.
 
-> typeError :: Monad m => String -> KernelObject -> m a
+> typeError :: MonadFail m => String -> KernelObject -> m a
 > typeError t1 t2 = fail ("Wrong object type - expected " ++ t1 ++
 >                         ", found " ++ (kernelObjectTypeName t2))
 
-> alignError :: Monad m => Int -> m a
+> alignError :: MonadFail m => Int -> m a
 > alignError n = fail ("Unaligned access - lowest " ++
 >                       (show n) ++ " bits must be 0")
 
-> alignCheck :: Monad m => Word -> Int -> m ()
+> alignCheck :: MonadFail m => Word -> Int -> m ()
 > alignCheck x n = unless (x .&. mask n == 0) $ alignError n
 
-> sizeCheck :: Monad m => Word -> Maybe Word -> Int -> m ()
+> sizeCheck :: MonadFail m => Word -> Maybe Word -> Int -> m ()
 > sizeCheck _ Nothing _ = return ()
 > sizeCheck start (Just end) n =
 >     when (end - start < 1 `shiftL` n)
