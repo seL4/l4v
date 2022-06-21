@@ -4,7 +4,11 @@
 # SPDX-License-Identifier: GPL-2.0-only
 #
 
-resolver: lts-13.15
+# We use `stack` only to install GHC and cabal-install, not to build the project.
+# The rest of the build works via cabal
+
+# Stackage LTS Haskell 19.12 (ghc-9.0.2)
+resolver: lts-19.12
 
 packages: []
 extra-deps: []

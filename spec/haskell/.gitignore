@@ -8,6 +8,8 @@
 
 **.lhs-boot
 /dist/
+/dist-newstyle/
+/cabal.project.local*
 
 # cabal dependencies
 
