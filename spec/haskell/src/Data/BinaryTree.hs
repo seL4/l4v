@@ -35,7 +35,7 @@ findWithDefault d (True:a) (Node { btTrue = t }) = findWithDefault d a t
 findWithDefault d (False:a) (Node { btFalse = t }) = findWithDefault d a t
 findWithDefault d a _ = (a,d)
 
-lookup :: Monad m => [Bool] -> BinaryTree a -> m ([Bool],a)
+lookup :: MonadFail m => [Bool] -> BinaryTree a -> m ([Bool],a)
 lookup a (Leaf v) = return (a,v)
 lookup (True:a) (Node { btTrue = t }) = Data.BinaryTree.lookup a t
 lookup (False:a) (Node { btFalse = t }) = Data.BinaryTree.lookup a t
@@ -59,7 +59,7 @@ adjust f (True:a) n@(Node {}) = n { btTrue = adjust f a $ btTrue n }
 adjust f (False:a) n@(Node {}) = n { btFalse = adjust f a $ btFalse n }
 adjust _ _ _ = error "BinaryTree.adjust: object not found"
 
-adjustM :: Monad m => ([Bool] -> a -> m a) -> [Bool] -> BinaryTree a -> m (BinaryTree a)
+adjustM :: MonadFail m => ([Bool] -> a -> m a) -> [Bool] -> BinaryTree a -> m (BinaryTree a)
 adjustM f a (Leaf v) = f a v >>= return . Leaf
 adjustM f (True:a) n@(Node {}) = do { v <- adjustM f a $ btTrue n
                                     ; return $ n { btTrue = v }}

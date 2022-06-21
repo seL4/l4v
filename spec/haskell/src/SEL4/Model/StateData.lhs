@@ -259,7 +259,7 @@ The following function allows the machine monad to be directly accessed from ker
 
 The function "assert" is used to state that a predicate must be true at a given point. If it is not, the behaviour of the kernel is undefined. The Haskell model will not terminate in this case.
 
-> assert :: Monad m => Bool -> String -> m ()
+> assert :: MonadFail m => Bool -> String -> m ()
 > assert p e = if p then return () else fail $ "Assertion failed: " ++ e
 
 The function "stateAssert" is similar to "assert", except that it reads the current state. This is typically used for more complex assertions that cannot be easily expressed in Haskell; in this case, the asserted function is "const True" in Haskell but is replaced with something stronger in the Isabelle translation.
