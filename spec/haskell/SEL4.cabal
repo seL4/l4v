@@ -1,3 +1,5 @@
+cabal-version:          3.0
+
 --
 -- Copyright 2014, General Dynamics C4 Systems
 --
@@ -5,13 +7,18 @@
 --
 
 name:                   SEL4
-version:                1.5
-cabal-version:          1.18
+version:                13
 build-type:             Custom
-license:                GPL
+license:                GPL-2.0-only
 author:                 Philip Derrin et. al., NICTA
 synopsis:               Executable specification for the seL4 Kernel
-tested-with:            GHC == 7.8.3
+tested-with:            GHC == 9.0.2
+homepage:               http://sel4.systems/
+
+custom-setup
+  setup-depends:
+    base  == 4.15.*,
+    Cabal == 3.4.1.0
 
 Flag FFI
     description:        Include the C language bindings
@@ -40,7 +47,7 @@ Flag ArchAArch64
 Library
     exposed-modules:        SEL4
                             SEL4.Machine.Target
-    build-depends:          mtl==2.2.*, base==4.12.*, array, containers, transformers
+    build-depends:          mtl==2.2.*, base==4.15.*, array, containers, transformers
 
     if flag(FFI)
     -- FFIBindings currently relies on POSIX signal handlers.  This could
@@ -49,7 +56,6 @@ Library
         exposed-modules:    Simulation.FFIBindings
         include-dirs:       include
         install-includes:   sel4model.h gic.h
-                            dist/build/Simulation/FFIBindings_stub.h
     else
         build-depends:      unix
         include-dirs:       include
