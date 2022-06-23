@@ -361,23 +361,23 @@ New threads are placed in the current security domain, which must be the domain 
 >             curdom <- curDomain
 >             threadSet (\t -> t { tcbDomain = curdom })
 >                 (PPtr $ fromPPtr regionBase)
->             return $! ThreadCap (PPtr $ fromPPtr regionBase)
+>             return $ ThreadCap (PPtr $ fromPPtr regionBase)
 >         Just EndpointObject -> do
 >             placeNewObject regionBase (makeObject :: Endpoint) 0
->             return $! EndpointCap (PPtr $ fromPPtr regionBase) 0 True True True True
+>             return $ EndpointCap (PPtr $ fromPPtr regionBase) 0 True True True True
 >         Just NotificationObject -> do
 >             placeNewObject (PPtr $ fromPPtr regionBase) (makeObject :: Notification) 0
->             return $! NotificationCap (PPtr $ fromPPtr regionBase) 0 True True
+>             return $ NotificationCap (PPtr $ fromPPtr regionBase) 0 True True
 >         Just CapTableObject -> do
 >             placeNewObject (PPtr $ fromPPtr regionBase) (makeObject :: CTE) userSize
 >             modify (\ks -> ks { gsCNodes =
 >               funupd (gsCNodes ks) (fromPPtr regionBase) (Just userSize)})
->             return $! CNodeCap (PPtr $ fromPPtr regionBase) userSize 0 0
+>             return $ CNodeCap (PPtr $ fromPPtr regionBase) userSize 0 0
 >         Just Untyped ->
->             return $! UntypedCap isDevice (PPtr $ fromPPtr regionBase) userSize 0
+>             return $ UntypedCap isDevice (PPtr $ fromPPtr regionBase) userSize 0
 >         Nothing -> do
 >             archCap <- Arch.createObject t regionBase userSize isDevice
->             return $! ArchObjectCap archCap
+>             return $ ArchObjectCap archCap
 
 \subsection{Invoking Objects}
 
@@ -440,41 +440,41 @@ This function just dispatches invocations to the type-specific invocation functi
 >
 > performInvocation _ _ (InvokeUntyped invok) = do
 >     invokeUntyped invok
->     return $! []
+>     return $ []
 >
 > performInvocation block call (InvokeEndpoint ep badge canGrant canGrantReply) =
 >   withoutPreemption $ do
 >     thread <- getCurThread
 >     sendIPC block call badge canGrant canGrantReply thread ep
->     return $! []
+>     return $ []
 >
 > performInvocation _ _ (InvokeNotification ep badge) = do
 >     withoutPreemption $ sendSignal ep badge
->     return $! []
+>     return $ []
 >
 > performInvocation _ _ (InvokeReply thread slot canGrant) =
 >   withoutPreemption $ do
 >     sender <- getCurThread
 >     doReplyTransfer sender thread slot canGrant
->     return $! []
+>     return $ []
 >
 > performInvocation _ _ (InvokeTCB invok) = invokeTCB invok
 >
 > performInvocation _ _ (InvokeDomain thread domain) = withoutPreemption $ do
 >     setDomain thread domain
->     return $! []
+>     return $ []
 >
 > performInvocation _ _ (InvokeCNode invok) = do
 >     invokeCNode invok
->     return $! []
+>     return $ []
 >
 > performInvocation _ _ (InvokeIRQControl invok) = do
 >     performIRQControl invok
->     return $! []
+>     return $ []
 >
 > performInvocation _ _ (InvokeIRQHandler invok) = do
 >     withoutPreemption $ invokeIRQHandler invok
->     return $! []
+>     return $ []
 >
 > performInvocation _ _ (InvokeArchObject invok) = Arch.performInvocation invok
 

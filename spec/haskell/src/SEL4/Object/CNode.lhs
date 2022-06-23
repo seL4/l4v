@@ -95,13 +95,13 @@ Rights may be masked for the "Copy" and "Mint" operations. The capability data i
 >             (rights, capData) <-
 >               case (inv, args) of
 >                 (CNodeCopy, rights:_) ->
->                     return $! (rightsFromWord rights, Nothing)
+>                     return $ (rightsFromWord rights, Nothing)
 >                 (CNodeMint, rights:newData:_) ->
->                     return $! (rightsFromWord rights, Just newData)
+>                     return $ (rightsFromWord rights, Just newData)
 >                 (CNodeMove, _) ->
->                     return $! (allRights, Nothing)
+>                     return $ (allRights, Nothing)
 >                 (CNodeMutate, newData:_) ->
->                     return $! (allRights, Just newData)
+>                     return $ (allRights, Just newData)
 >                 _ -> throw TruncatedMessage
 
 The moving system calls, "Move" and "Mutate", are differentiated from the copying system calls, "Copy" and "Mint".
@@ -117,7 +117,7 @@ The rights and capability data word are applied to the source capability to crea
 >                 Nothing -> srcCap
 >             when (isNullCap newCap) $ throw IllegalOperation
 >
->             return $!
+>             return $
 >                 (if isMove then Move else Insert) newCap srcSlot destSlot
 
 The "Revoke", "Delete", "SaveCaller" and "CancelBadgedSends" operations have no additional arguments. The "SaveCaller" call requires the target slot to be empty.
@@ -178,7 +178,7 @@ The moved capabilities must not be null.
 >             when (isNullCap newSrcCap) $ throw IllegalOperation
 >             when (isNullCap newPivotCap) $ throw IllegalOperation
 
->             return $! Rotate newSrcCap newPivotCap srcSlot pivotSlot destSlot
+>             return $ Rotate newSrcCap newPivotCap srcSlot pivotSlot destSlot
 
 Otherwise, the message was too short.
 
@@ -748,7 +748,7 @@ When deleting a capability, it is necessary to determine whether it is the only 
 >         then return False
 >         else do
 >             prev <- getCTE (mdbPrev mdb)
->             return $! sameObjectAs (cteCap prev) (cteCap cte)
+>             return $ sameObjectAs (cteCap prev) (cteCap cte)
 >     if prevIsSameObject
 >         then return False
 >         else if mdbNext mdb == nullPointer

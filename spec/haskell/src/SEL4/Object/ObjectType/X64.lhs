@@ -299,39 +299,39 @@ Create an architecture-specific object.
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just X64SmallPage)})
->             return $! PageCap (pointerCast regionBase)
+>             return $ PageCap (pointerCast regionBase)
 >                   VMReadWrite VMNoMap X64SmallPage isDevice Nothing
 >         Arch.Types.LargePageObject -> do
 >             placeNewDataObject regionBase ptTranslationBits isDevice
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just X64LargePage)})
->             return $! PageCap (pointerCast regionBase)
+>             return $ PageCap (pointerCast regionBase)
 >                   VMReadWrite VMNoMap X64LargePage isDevice Nothing
 >         Arch.Types.HugePageObject -> do
 >             placeNewDataObject regionBase (ptTranslationBits + ptTranslationBits) isDevice
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just X64HugePage)})
->             return $! PageCap (pointerCast regionBase)
+>             return $ PageCap (pointerCast regionBase)
 >                   VMReadWrite VMNoMap X64HugePage isDevice Nothing
 >         Arch.Types.PageTableObject -> do
 >             let ptSize = ptBits - objBits (makeObject :: PTE)
 >             placeNewObject regionBase (makeObject :: PTE) ptSize
->             return $! PageTableCap (pointerCast regionBase) Nothing
+>             return $ PageTableCap (pointerCast regionBase) Nothing
 >         Arch.Types.PageDirectoryObject -> do
 >             let pdSize = pdBits - objBits (makeObject :: PDE)
 >             placeNewObject regionBase (makeObject :: PDE) pdSize
->             return $! PageDirectoryCap (pointerCast regionBase) Nothing
+>             return $ PageDirectoryCap (pointerCast regionBase) Nothing
 >         Arch.Types.PDPointerTableObject -> do
 >             let pdptSize = pdptBits - objBits (makeObject :: PDPTE)
 >             placeNewObject regionBase (makeObject :: PDPTE) pdptSize
->             return $! PDPointerTableCap (pointerCast regionBase) Nothing
+>             return $ PDPointerTableCap (pointerCast regionBase) Nothing
 >         Arch.Types.PML4Object -> do
 >             let pml4Size = pml4Bits - objBits (makeObject :: PML4E)
 >             placeNewObject regionBase (makeObject :: PML4E) pml4Size
 >             copyGlobalMappings (pointerCast regionBase)
->             return $! PML4Cap (pointerCast regionBase) Nothing
+>             return $ PML4Cap (pointerCast regionBase) Nothing
 
 \subsection{Capability Invocation}
 

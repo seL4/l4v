@@ -218,13 +218,13 @@ Create an architecture-specific object.
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just ARMSmallPage)})
->             return $! mkPageCap ARMSmallPage
+>             return $ mkPageCap ARMSmallPage
 >         Arch.Types.LargePageObject -> do
 >             placeNewDataObject regionBase 4 isDevice
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just ARMLargePage)})
->             return $! mkPageCap ARMLargePage
+>             return $ mkPageCap ARMLargePage
 >         Arch.Types.SectionObject -> do
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 >             placeNewDataObject regionBase 9 isDevice
@@ -234,7 +234,7 @@ Create an architecture-specific object.
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just ARMSection)})
->             return $! mkPageCap ARMSection
+>             return $ mkPageCap ARMSection
 >         Arch.Types.SuperSectionObject -> do
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 >             placeNewDataObject regionBase 13 isDevice
@@ -244,11 +244,11 @@ Create an architecture-specific object.
 >             modify (\ks -> ks { gsUserPages =
 >               funupd (gsUserPages ks)
 >                      (fromPPtr regionBase) (Just ARMSuperSection)})
->             return $! mkPageCap ARMSuperSection
+>             return $ mkPageCap ARMSuperSection
 >         Arch.Types.PageTableObject -> do
 >             let ptSize = ptBits - objBits (makeObject :: PTE)
 >             placeNewObject regionBase (makeObject :: PTE) ptSize
->             return $! PageTableCap (pointerCast regionBase) Nothing
+>             return $ PageTableCap (pointerCast regionBase) Nothing
 >         Arch.Types.PageDirectoryObject -> do
 >             let pdSize = pdBits - objBits (makeObject :: PDE)
 >             let regionSize = (1 `shiftL` pdBits)
@@ -258,11 +258,11 @@ Create an architecture-specific object.
 >                 cleanCacheRange_PoU (VPtr $ fromPPtr regionBase)
 >                       (VPtr $ fromPPtr regionBase + regionSize - 1)
 >                       (addrFromPPtr regionBase)
->             return $! PageDirectoryCap (pointerCast regionBase) Nothing
+>             return $ PageDirectoryCap (pointerCast regionBase) Nothing
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 >         Arch.Types.VCPUObject -> do
 >             placeNewObject regionBase (makeObject :: VCPU) 0
->             return $! VCPUCap (PPtr $ fromPPtr regionBase)
+>             return $ VCPUCap (PPtr $ fromPPtr regionBase)
 #endif
 #ifdef CONFIG_ARM_SMMU
 >         Arch.Types.IOPageTableObject -> do
