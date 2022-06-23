@@ -2152,7 +2152,7 @@ regexes = [
     (re.compile(r" \. "), r" \<circ> "),
     (re.compile('-1'), '- 1'),
     (re.compile('-2'), '- 2'),
-    (re.compile(r"\(!(\w+)\)"), r"(flip id \1)"),
+    (re.compile(r"\(![ ]*(\w+)\)"), r"(flip id \1)"),
     (re.compile(r"\(\+(\w+)\)"), r"(\<lambda> x. x + \1)"),
     (re.compile(r"\\([^<].*?)\s*->"), r"\<lambda> \1."),
     (re.compile('}'), r"\<rparr>"),

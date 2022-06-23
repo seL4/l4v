@@ -100,7 +100,7 @@ initialised to 0.
 
 Functions are provided to get and set a single register.
 
-> getRegister r = gets $ (!r) . fromUC
+> getRegister r = gets $ (! r) . fromUC
 
 > setRegister r v = modify (\ uc -> UC (fromUC uc //[(r, v)]) (fpuState uc))
 

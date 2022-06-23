@@ -208,7 +208,7 @@ The following functions are used within this module to access the global interru
 >     doMachineOp $ maskInterrupt (irqState==IRQInactive) irq
 
 > getIRQState :: IRQ -> Kernel IRQState
-> getIRQState irq = liftM ((!irq) . intStateIRQTable) getInterruptState
+> getIRQState irq = liftM ((! irq) . intStateIRQTable) getInterruptState
 
 > getIRQSlot :: IRQ -> Kernel (PPtr CTE)
 > getIRQSlot irq = do
