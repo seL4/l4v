@@ -697,11 +697,11 @@ ghost state. This check is skipped for the CNode within TCBs.
 >         locateSlotBasic cnode offset
 
 > locateSlotCap :: Capability -> Word -> Kernel (PPtr CTE)
-> locateSlotCap (cap @ (CNodeCap {})) offset
+> locateSlotCap cap@(CNodeCap {}) offset
 >     = locateSlotCNode (capCNodePtr cap) (capCNodeBits cap) offset
-> locateSlotCap (cap @ (ThreadCap {})) offset
+> locateSlotCap cap@(ThreadCap {}) offset
 >     = locateSlotTCB (capTCBPtr cap) offset
-> locateSlotCap (cap @ (Zombie {})) offset = case capZombieType cap of
+> locateSlotCap cap@(Zombie {}) offset = case capZombieType cap of
 >     ZombieTCB -> locateSlotTCB (PPtr $ fromPPtr $ capZombiePtr cap) offset
 >     ZombieCNode bits -> locateSlotCNode (capZombiePtr cap) bits offset
 > locateSlotCap _ _ = fail "locateSlotCap: not a cap with slots"
