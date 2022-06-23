@@ -74,8 +74,8 @@ There are eleven types of invocation for a thread control block. All require wri
 >         TCBReadRegisters -> decodeReadRegisters args cap
 >         TCBWriteRegisters -> decodeWriteRegisters args cap
 >         TCBCopyRegisters -> decodeCopyRegisters args cap $ map fst extraCaps
->         TCBSuspend -> return $! Suspend (capTCBPtr cap)
->         TCBResume -> return $! Resume (capTCBPtr cap)
+>         TCBSuspend -> return $ Suspend (capTCBPtr cap)
+>         TCBResume -> return $ Resume (capTCBPtr cap)
 >         TCBConfigure -> decodeTCBConfigure args cap slot extraCaps
 >         TCBSetPriority -> decodeSetPriority args cap extraCaps
 >         TCBSetMCPriority -> decodeSetMCPriority args cap extraCaps
@@ -208,7 +208,7 @@ Setting the thread's priority is only allowed if the new priority is lower than 
 >         ThreadCap { capTCBPtr = tcbPtr } -> return tcbPtr
 >         _ -> throw $ InvalidCapability 1
 >     checkPrio newPrio authTCB
->     return $! ThreadControl {
+>     return $ ThreadControl {
 >         tcThread = capTCBPtr cap,
 >--       tcThreadCapSlot = error "tcThreadCapSlot unused", In theory tcThreadCapSlot should never been evaluated by lazy evaluation. However, it was evaluated when running sel4 haskell kernel. So it is wired. Thus I change this to 0. I hope this can be changed back once we find out why this is evaluated. (by Xin)
 >         tcThreadCapSlot = 0,
@@ -227,7 +227,7 @@ Setting the thread's priority is only allowed if the new priority is lower than 
 >         ThreadCap { capTCBPtr = tcbPtr } -> return tcbPtr
 >         _ -> throw $ InvalidCapability 1
 >     checkPrio newMCP authTCB
->     return $! ThreadControl {
+>     return $ ThreadControl {
 >         tcThread = capTCBPtr cap,
 >         tcThreadCapSlot = 0,
 >         tcNewFaultEP = Nothing,
@@ -248,7 +248,7 @@ The "SetSchedParams" call sets both the priority and the MCP in a single call.
 >         _ -> throw $ InvalidCapability 1
 >     checkPrio newMCP authTCB
 >     checkPrio newPrio authTCB
->     return $! ThreadControl {
+>     return $ ThreadControl {
 >         tcThread = capTCBPtr cap,
 >         tcThreadCapSlot = 0,
 >         tcNewFaultEP = Nothing,

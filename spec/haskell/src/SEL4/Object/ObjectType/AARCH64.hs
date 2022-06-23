@@ -170,33 +170,33 @@ createObject t regionBase _ isDevice =
             modify (\ks -> ks { gsUserPages =
               funupd (gsUserPages ks)
                      (fromPPtr regionBase) (Just ARMSmallPage)})
-            return $! FrameCap (pointerCast regionBase)
+            return $ FrameCap (pointerCast regionBase)
                   VMReadWrite ARMSmallPage isDevice Nothing
         Arch.Types.LargePageObject -> do
             placeNewDataObject regionBase (ptTranslationBits NormalPT_T) isDevice
             modify (\ks -> ks { gsUserPages =
               funupd (gsUserPages ks)
                      (fromPPtr regionBase) (Just ARMLargePage)})
-            return $! FrameCap (pointerCast regionBase)
+            return $ FrameCap (pointerCast regionBase)
                   VMReadWrite ARMLargePage isDevice Nothing
         Arch.Types.HugePageObject -> do
             placeNewDataObject regionBase (2*ptTranslationBits NormalPT_T) isDevice
             modify (\ks -> ks { gsUserPages =
               funupd (gsUserPages ks)
                      (fromPPtr regionBase) (Just ARMHugePage)})
-            return $! FrameCap (pointerCast regionBase)
+            return $ FrameCap (pointerCast regionBase)
                   VMReadWrite ARMHugePage isDevice Nothing
         Arch.Types.PageTableObject -> do
             let ptSize = ptBits NormalPT_T - objBits (makeObject :: PTE)
             placeNewObject regionBase (makeObject :: PTE) ptSize
-            return $! PageTableCap (pointerCast regionBase) NormalPT_T Nothing
+            return $ PageTableCap (pointerCast regionBase) NormalPT_T Nothing
         Arch.Types.VSpaceObject -> do
             let ptSize = ptBits VSRootPT_T - objBits (makeObject :: PTE)
             placeNewObject regionBase (makeObject :: PTE) ptSize
-            return $! PageTableCap (pointerCast regionBase) VSRootPT_T Nothing
+            return $ PageTableCap (pointerCast regionBase) VSRootPT_T Nothing
         Arch.Types.VCPUObject -> do
             placeNewObject regionBase (makeObject :: VCPU) 0
-            return $! VCPUCap (PPtr $ fromPPtr regionBase)
+            return $ VCPUCap (PPtr $ fromPPtr regionBase)
 
 {- Capability Invocation -}
 

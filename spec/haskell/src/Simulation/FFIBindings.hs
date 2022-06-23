@@ -314,7 +314,7 @@ runStateFromC f = do
         sptr' <- newStablePtr (st', md)
         return (a, sptr')
     put sptr'
-    return $! a
+    return $ a
 
 -- Flag any SIGINT that we receive.
 handleBreak :: Ptr CInt -> IO ()

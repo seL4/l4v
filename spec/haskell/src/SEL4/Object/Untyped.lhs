@@ -152,7 +152,7 @@ Align up the free region pointer to ensure that created objects are aligned to t
 
 >     let alignedFreeRef = PPtr $ alignUp (fromPPtr freeRef) objectSize
 
->     return $! Retype {
+>     return $ Retype {
 >         retypeSource = slot,
 >         retypeResetUntyped = reset,
 >         retypeRegionBase = capPtr cap,
