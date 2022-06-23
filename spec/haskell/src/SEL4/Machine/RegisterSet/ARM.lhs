@@ -119,7 +119,7 @@ A new user-level context is a list of values for the machine's registers. Regist
 
 Functions are provided to get and set a single register.
 
-> getRegister r = gets $ (!r) . fromUC
+> getRegister r = gets $ (! r) . fromUC
 
 > setRegister r v = modify $ UC . (//[(r, v)]) . fromUC
 

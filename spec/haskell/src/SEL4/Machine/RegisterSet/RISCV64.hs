@@ -84,6 +84,6 @@ newContext = UC $ (funArray $ const 0)//initContext
 
 -- Functions are provided to get and set a single register.
 
-getRegister r = gets $ (!r) . fromUC
+getRegister r = gets $ (! r) . fromUC
 
 setRegister r v = modify $ UC . (//[(r, v)]) . fromUC
