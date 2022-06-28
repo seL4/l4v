@@ -37,6 +37,7 @@ datatype page_table_invocation =
       (pt_inv_cslot : cslot_ptr)
       (pt_map_pte : pte)
       (pt_map_slot : obj_ref)
+      (pt_map_level : vm_level)
   | PageTableUnmap
       (pt_inv_cap : arch_cap)
       (pt_inv_cslot : cslot_ptr)
@@ -51,7 +52,7 @@ datatype page_invocation =
     PageMap
       (pg_inv_cap : arch_cap)
       (pg_inv_cslot : cslot_ptr)
-      (pg_inv_entries : "pte \<times> obj_ref")
+      (pg_inv_entries : "pte \<times> obj_ref \<times> vm_level")
   | PageUnmap
       (pg_inv_cap : arch_cap)
       (pg_inv_cslot : cslot_ptr)

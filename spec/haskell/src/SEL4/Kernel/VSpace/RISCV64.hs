@@ -525,11 +525,12 @@ performPageTableInvocation (PageTableUnmap cap slot) = do
     updateCap slot (ArchObjectCap $ cap { capPTMappedAddress = Nothing })
 
 
-performPageInvocation :: PageInvocation -> Kernel ()
+performPageInvocation :: PageInvocation -> Kernel [Word]
 performPageInvocation (PageMap cap ctSlot (pte,slot)) = do
     updateCap ctSlot cap
     storePTE slot pte
     doMachineOp sfence
+    return []
 
 performPageInvocation (PageUnmap cap ctSlot) = do
     case capFMappedAddress cap of
@@ -537,6 +538,7 @@ performPageInvocation (PageUnmap cap ctSlot) = do
         _ -> return ()
     ArchObjectCap cap <- getSlotCap ctSlot
     updateCap ctSlot (ArchObjectCap $ cap { capFMappedAddress = Nothing })
+    return []
 
 performPageInvocation (PageGetAddr ptr) = do
     stateAssert cur_tcb'_asrt
@@ -581,11 +583,16 @@ performASIDPoolInvocation (Assign asid poolPtr ctSlot) = do
 performRISCVMMUInvocation :: ArchInv.Invocation -> KernelP [Word]
 performRISCVMMUInvocation i = withoutPreemption $ do
     case i of
-        InvokePageTable oper -> performPageTableInvocation oper
+        InvokePageTable oper -> do
+            performPageTableInvocation oper
+            return []
         InvokePage oper -> performPageInvocation oper
-        InvokeASIDControl oper -> performASIDControlInvocation oper
-        InvokeASIDPool oper -> performASIDPoolInvocation oper
-    return $ []
+        InvokeASIDControl oper -> do
+            performASIDControlInvocation oper
+            return []
+        InvokeASIDPool oper -> do
+            performASIDPoolInvocation oper
+            return []
 
 {- Simulator Support -}
 

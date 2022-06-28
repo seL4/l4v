@@ -153,26 +153,26 @@ createObject t regionBase _ isDevice =
             modify (\ks -> ks { gsUserPages =
               funupd (gsUserPages ks)
                      (fromPPtr regionBase) (Just RISCVSmallPage)})
-            return $! FrameCap (pointerCast regionBase)
+            return $ FrameCap (pointerCast regionBase)
                   VMReadWrite RISCVSmallPage isDevice Nothing
         Arch.Types.LargePageObject -> do
             placeNewDataObject regionBase ptTranslationBits isDevice
             modify (\ks -> ks { gsUserPages =
               funupd (gsUserPages ks)
                      (fromPPtr regionBase) (Just RISCVLargePage)})
-            return $! FrameCap (pointerCast regionBase)
+            return $ FrameCap (pointerCast regionBase)
                   VMReadWrite RISCVLargePage isDevice Nothing
         Arch.Types.HugePageObject -> do
             placeNewDataObject regionBase (ptTranslationBits+ptTranslationBits) isDevice
             modify (\ks -> ks { gsUserPages =
               funupd (gsUserPages ks)
                      (fromPPtr regionBase) (Just RISCVHugePage)})
-            return $! FrameCap (pointerCast regionBase)
+            return $ FrameCap (pointerCast regionBase)
                   VMReadWrite RISCVHugePage isDevice Nothing
         Arch.Types.PageTableObject -> do
             let ptSize = ptBits - objBits (makeObject :: PTE)
             placeNewObject regionBase (makeObject :: PTE) ptSize
-            return $! PageTableCap (pointerCast regionBase) Nothing
+            return $ PageTableCap (pointerCast regionBase) Nothing
 
 {- Capability Invocation -}
 

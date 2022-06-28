@@ -19,10 +19,7 @@ import Data.Bits
 makeArchFaultMessage :: ArchFault -> PPtr TCB -> Kernel (Word, [Word])
 makeArchFaultMessage (VMFault vptr archData) thread = do
     pc <- asUser thread getRestartPC
-    upc <- doMachineOp (addressTranslateS1 $ VPtr pc)
-    let ipa = (upc .&. complement (mask pageBits)) .|.
-              (VPtr pc .&. mask pageBits)
-    return (5, fromVPtr ipa:fromVPtr vptr:archData)
+    return (5, pc:fromVPtr vptr:archData)
 makeArchFaultMessage (VGICMaintenance archData) thread = do
     let msg = (case archData of
                    Nothing -> [-1]

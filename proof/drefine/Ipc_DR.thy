@@ -281,23 +281,6 @@ lemma cte_at_into_opt_cap:
 abbreviation
   "meqv \<equiv> monadic_rewrite False True"
 
-lemma monadic_rewrite_exists:
-  "(\<And>v. monadic_rewrite F E (Q v) m m') \<Longrightarrow> monadic_rewrite F E ((\<lambda>s. \<forall>v. P v s \<longrightarrow> Q v s) and (\<lambda>s. \<exists>v. P v s)) m m'"
-  by (auto simp: monadic_rewrite_def)
-
-lemma monadic_rewrite_gets_the_bind:
-  assumes mr: "(\<And>v. monadic_rewrite F E (Q v) (g v) m)"
-  shows   "monadic_rewrite F E (\<lambda>s. f s \<noteq> None \<and> Q (the (f s)) s) (gets_the f >>= (\<lambda>x. g x)) m"
-  apply (rule monadic_rewrite_imp)
-  apply (rule monadic_rewrite_exists [where P = "\<lambda>v s. f s = Some v"])
-   apply (subst return_bind [symmetric, where f = "\<lambda>_. m"])
-   apply (rule monadic_rewrite_bind)
-     apply (rule_tac v = v in monadic_rewrite_gets_the_known_v)
-    apply (rule mr)
-   apply wp
-  apply clarsimp
-  done
-
 lemma mr_opt_cap_into_object:
   assumes mr: "\<And>obj. monadic_rewrite F E (Q obj) m m'"
   shows   "monadic_rewrite F E ((\<lambda>s. \<forall>obj. cdl_objects s (fst p) = Some obj \<and> object_slots obj (snd p) \<noteq> None \<longrightarrow> Q obj s) and (\<lambda>s. opt_cap p s \<noteq> None)) m m'"
@@ -309,13 +292,6 @@ lemma mr_opt_cap_into_object:
   apply (simp add: opt_cap_def split_def KHeap_D.slots_of_def split: option.splits)
   done
 
-lemma monadic_rewrite_assert2:
-  "\<lbrakk> Q \<Longrightarrow> monadic_rewrite F E P (f ()) g \<rbrakk>
-      \<Longrightarrow> monadic_rewrite F E ((\<lambda>s. Q \<longrightarrow> P s) and (\<lambda>_. Q)) (assert Q >>= f) g"
-  apply (simp add: assert_def split: if_split)
-  apply (simp add: monadic_rewrite_def fail_def)
-  done
-
 lemma object_slots_has_slots [simp]:
   "object_slots obj p = Some v \<Longrightarrow> has_slots obj"
   unfolding object_slots_def has_slots_def
@@ -325,12 +301,6 @@ lemma meqv_sym:
   "meqv P a a' \<Longrightarrow> meqv P a' a"
   unfolding monadic_rewrite_def
   by fastforce
-
-lemma monadic_rewrite_modify_remove_stateful:
-  assumes "\<And>v. meqv (P v) m (modify (\<lambda>s. f v s))"
-  shows   "meqv (\<lambda>s. P (g s) s) m (modify (\<lambda>s. f (g s) s))"
-  using assms unfolding monadic_rewrite_def
-  by (clarsimp simp: modify_def put_def get_def bind_def)
 
 lemma dcorres_when_l:
   assumes tc: "R \<Longrightarrow> dcorres dc \<top> P l r"

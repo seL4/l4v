@@ -31,13 +31,13 @@ lemma no_fail_writeContextIDAndPD[wp]: "no_fail \<top> (writeContextIDAndPD a w)
 
 (* Move to Machine_AI *)
 crunches
-  get_gic_vcpu_ctrl_apr, get_gic_vcpu_ctrl_lr, addressTranslateS1CPR, getHDFAR, getHSR,
+  get_gic_vcpu_ctrl_apr, get_gic_vcpu_ctrl_lr, addressTranslateS1, getHDFAR, getHSR,
   writeVCPUHardwareReg, readVCPUHardwareReg, get_gic_vcpu_ctrl_vmcr, get_gic_vcpu_ctrl_hcr,
   set_gic_vcpu_ctrl_hcr, set_gic_vcpu_ctrl_vmcr, setHCR, setSCTLR,
   set_gic_vcpu_ctrl_lr, set_gic_vcpu_ctrl_apr
   for (no_fail) no_fail[wp, intro!, simp]
   (wp: no_fail_machine_op_lift crunch_wps
-   ignore: get_gic_vcpu_ctrl_lr_impl bind addressTranslateS1CPR_impl writeVCPUHardwareReg_impl
+   ignore: get_gic_vcpu_ctrl_lr_impl bind addressTranslateS1_impl writeVCPUHardwareReg_impl
            set_gic_vcpu_ctrl_hcr_impl set_gic_vcpu_ctrl_vmcr_impl setHCR_impl setSCTLR_impl
            set_gic_vcpu_ctrl_lr_impl set_gic_vcpu_ctrl_apr_impl)
 

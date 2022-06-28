@@ -70,10 +70,10 @@ lemma getHSR_invs[wp]:
   "valid invs (do_machine_op getHSR) (\<lambda>_. invs)"
   by (simp add: getHSR_def do_machine_op_def split_def select_f_returns | wp)+
 
-lemma addressTranslateS1CPR_invs[wp]:
-  "valid invs (do_machine_op (addressTranslateS1CPR w)) (\<lambda>_. invs)"
+lemma addressTranslateS1_invs[wp]:
+  "valid invs (do_machine_op (addressTranslateS1 w)) (\<lambda>_. invs)"
   apply (wp dmo_invs)
-  apply (clarsimp simp add: addressTranslateS1CPR_def machine_rest_lift_def in_monad
+  apply (clarsimp simp add: addressTranslateS1_def machine_rest_lift_def in_monad
                             machine_op_lift_def select_f_def)
   done
 

@@ -194,11 +194,7 @@ where
 
     | PageFlushCaches flush \<Rightarrow> return ()
 
-    | PageGetAddress \<Rightarrow>
-        do
-          ct \<leftarrow> gets_the cdl_current_thread;
-          corrupt_tcb_intent ct
-        od
+    | PageGetAddress \<Rightarrow> return ()
 
   "
 

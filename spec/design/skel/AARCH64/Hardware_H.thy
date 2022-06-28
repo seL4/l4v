@@ -14,7 +14,7 @@ begin
 context Arch begin global_naming AARCH64_H
 
 #INCLUDE_HASKELL SEL4/Machine/Hardware/AARCH64.hs Platform=Platform.AARCH64 CONTEXT AARCH64_H \
-  NOT plic_complete_claim getMemoryRegions getDeviceRegions getKernelDevices \
+  NOT PT_Type plic_complete_claim getMemoryRegions getDeviceRegions getKernelDevices \
   loadWord storeWord storeWordVM getActiveIRQ ackInterrupt maskInterrupt \
   configureTimer resetTimer debugPrint getRestartPC setNextPC clearMemory \
   clearMemoryVM initMemory freeMemory setHardwareASID wordFromPDE wordFromPTE \

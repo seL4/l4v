@@ -15,7 +15,7 @@ begin
 context Arch begin global_naming X64
 
 (* FIXME: should go in Machine_AI, but needs dmo_invs from KHeap_AI. *)
-lemmas machine_op_lift_irq_masks = no_irq[OF machine_op_lift_no_irq]
+lemmas machine_op_lift_irq_masks = no_irq[OF no_irq_machine_op_lift]
 
 lemma machine_op_lift_underlying_memory:
   "\<lbrace>\<lambda>m'. underlying_memory m' p = um\<rbrace> machine_op_lift m \<lbrace>\<lambda>_ m'. underlying_memory m' p = um\<rbrace>"
@@ -3486,9 +3486,6 @@ lemma perform_page_invs [wp]:
    apply (auto simp: valid_cap_simps cap_aligned_def mask_def vs_cap_ref_def data_at_def
               split: vmpage_size.splits option.splits if_splits)[1]
   apply (clarsimp simp: valid_page_inv_def cte_wp_at_caps_of_state valid_cap_def mask_def)
-  \<comment> \<open>PageGetAddr\<close>
-  apply wp
-  apply (simp add: valid_page_inv_def tcb_at_invs)
   done
 
 

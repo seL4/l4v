@@ -15,6 +15,10 @@ imports
   ExecSpec.Kernel_Config_Lemmas
 begin
 
+context begin interpretation Arch .
+lemmas [code] = pageBits_def ipa_size_def
+end
+
 context Arch begin global_naming AARCH64_A
 
 text \<open>
@@ -42,7 +46,7 @@ datatype arch_cap =
       (acap_map_data : "(asid \<times> vspace_ref) option")
   | PageTableCap
       (acap_obj : obj_ref)
-      (acap_is_vspace : bool)
+      (acap_pt_type : pt_type)
       (acap_map_data : "(asid \<times> vspace_ref) option")
   | VCPUCap
       (acap_obj : obj_ref)
@@ -65,36 +69,93 @@ subsection \<open>Page tables\<close>
 datatype vm_attribute = Global | Execute | Device
 type_synonym vm_attributes = "vm_attribute set"
 
+text \<open>
+  The C field @{text base_addr} for next-level tables of @{text PagePTE}s is a 36 bit field-high
+  value, i.e., a 48-bit word with the bottom 12 bits always set to 0. (They must be 0 due to
+  alignment). Since Arm does not specify a name, we are re-using the RISC-V name @{text ppn}
+  (physical page number) for the concept of encoding only the significant bits of this address.
+
+  In addition to the bottom 12 bits being 0 (where 12 = @{const pageBits}), we also know that
+  the base address of the next level table is a physical address and therefore has the same width
+  as intermediate physical addresses (@{const ipa_size}). We can therefore be more precise in the
+  encoding here: the significant bits of the next-level page table address go from @{const ipa_size}
+  at the top to @{const pageBits} at the bottom. Similar to the ppn on RISC-V we store a word
+  of that size, and shift by @{const pageBits} to get the address. This encodes both a size invariant
+  and an alignment invariant in the type, which functions like @{text pt_walk} rely on.
+
+  To provide the same field name as in C, we define @{text pte_base_addr} as the main accessor
+  function.\<close>
+value_type ppn_len = "ipa_size - pageBits"
+type_synonym ppn = "ppn_len word"
+
 datatype pte =
     InvalidPTE
   | PagePTE
-      (pte_base_addr : paddr)
+      (pte_page_addr : paddr)
       (pte_is_small_page : bool)
       (pte_attr : vm_attributes)
       (pte_rights : vm_rights)
   | PageTablePTE
-      (pte_base_addr : paddr)
+      (pte_ppn : ppn)
 
+definition paddr_from_ppn :: "ppn \<Rightarrow> paddr" where
+  "paddr_from_ppn addr \<equiv> ucast addr << pageBits"
 
-(* A dependent-ish type in Isabelle: *)
-value_type vs_index_len = "if config_ARM_PA_SIZE_BITS_40 then 10 else (9::nat)"
+definition pte_base_addr :: "pte \<Rightarrow> paddr" where
+  "pte_base_addr pte \<equiv>
+    if is_PageTablePTE pte then paddr_from_ppn (pte_ppn pte) else pte_page_addr pte"
+
+definition ppn_from_pptr :: "obj_ref \<Rightarrow> ppn" where
+  "ppn_from_pptr p = ucast (addrFromPPtr p >> pageBits)"
+
+definition vs_index_bits :: nat where
+  "vs_index_bits \<equiv> if config_ARM_PA_SIZE_BITS_40 then 10 else (9::nat)"
+
+lemma vs_index_bits_ge0[simp, intro!]: "0 < vs_index_bits"
+  by (simp add: vs_index_bits_def)
+
+(* A dependent-ish type in Isabelle. We use typedef here instead of value_type so that we can
+   retain a symbolic value (vs_index_bits) for the size of the type instead of getting a plain
+   number such as 9 or 10. *)
+typedef vs_index_len = "{n :: nat. n < vs_index_bits}" by auto
+
+end
+
+instantiation AARCH64_A.vs_index_len :: len0
+begin
+  interpretation Arch .
+  definition len_of_vs_index_len: "len_of (x::vs_index_len itself) \<equiv> CARD(vs_index_len)"
+  instance ..
+end
+
+instantiation AARCH64_A.vs_index_len :: len
+begin
+  interpretation Arch .
+  instance
+  proof
+   show "0 < LENGTH(vs_index_len)"
+     by (simp add: len_of_vs_index_len type_definition.card[OF type_definition_vs_index_len])
+  qed
+end
+
+context Arch begin global_naming AARCH64_A
+
 type_synonym vs_index = "vs_index_len word"
-
-(* Use vs_index_len instead of vs_index_len_def in generic proofs *)
-lemma vs_index_len:
-  "vs_index_len = (if config_ARM_PA_SIZE_BITS_40 then 10 else (9::nat))"
-  by (simp add: vs_index_len_def Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
 
 type_synonym pt_index_len = 9
 type_synonym pt_index = "pt_index_len word"
 
 text \<open>Sanity check:\<close>
+lemma length_vs_index_len[simp]:
+  "LENGTH(vs_index_len) = vs_index_bits"
+  by (simp add: len_of_vs_index_len type_definition.card[OF type_definition_vs_index_len])
+
 lemma vs_index_ptTranslationBits:
-  "ptTranslationBits True = LENGTH(vs_index_len)"
-  by (simp add: ptTranslationBits_def Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
+  "ptTranslationBits VSRootPT_T = LENGTH(vs_index_len)"
+  by (simp add: ptTranslationBits_def vs_index_bits_def)
 
 lemma pt_index_ptTranslationBits:
-  "ptTranslationBits False = LENGTH(pt_index_len)"
+  "ptTranslationBits NormalPT_T = LENGTH(pt_index_len)"
   by (simp add: ptTranslationBits_def)
 
 (* This could also be a record, but we expect further alternatives to be added for SMMU *)
@@ -106,6 +167,8 @@ datatype pt =
     VSRootPT (the_vs : "vs_index \<Rightarrow> pte")
   | NormalPT (the_pt : "pt_index \<Rightarrow> pte")
 
+definition pt_type :: "pt \<Rightarrow> pt_type" where
+  "pt_type pt \<equiv> case pt of VSRootPT _ \<Rightarrow> VSRootPT_T | NormalPT _ \<Rightarrow> NormalPT_T"
 
 subsection \<open>VCPU\<close>
 
@@ -171,17 +234,23 @@ definition vcpu_of :: "arch_kernel_obj \<rightharpoonup> vcpu" where
 definition pte_bits :: nat where
   "pte_bits = word_size_bits"
 
-definition table_size :: "bool \<Rightarrow> nat" where
-  "table_size is_toplevel = ptTranslationBits is_toplevel + pte_bits"
+definition table_size :: "pt_type \<Rightarrow> nat" where
+  "table_size pt_t = ptTranslationBits pt_t + pte_bits"
 
-definition pt_bits :: "bool \<Rightarrow> nat" where
-  "pt_bits is_vspace \<equiv> table_size is_vspace"
+definition pt_bits :: "pt_type \<Rightarrow> nat" where
+  "pt_bits pt_t \<equiv> table_size pt_t"
+
+(* sanity check *)
+lemma ppn_len:
+  "LENGTH(ppn_len) = ipa_size - pt_bits NormalPT_T"
+  by (simp add: pt_bits_def table_size_def ptTranslationBits_def pte_bits_def word_size_bits_def
+                ipa_size_def Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
 
 primrec arch_obj_size :: "arch_cap \<Rightarrow> nat" where
   "arch_obj_size (ASIDPoolCap _ _) = pageBits"
 | "arch_obj_size ASIDControlCap = 0"
 | "arch_obj_size (FrameCap _ _ sz _ _) = pageBitsForSize sz"
-| "arch_obj_size (PageTableCap _ is_vspace _ ) = table_size is_vspace"
+| "arch_obj_size (PageTableCap _ pt_t _ ) = table_size pt_t"
 | "arch_obj_size (VCPUCap _) = vcpuBits"
 
 fun arch_cap_is_device :: "arch_cap \<Rightarrow> bool" where
@@ -208,7 +277,7 @@ definition untyped_max_bits :: nat where
 
 primrec arch_kobj_size :: "arch_kernel_obj \<Rightarrow> nat" where
   "arch_kobj_size (ASIDPool _) = pageBits"
-| "arch_kobj_size (PageTable pt) = table_size (is_VSRootPT pt)"
+| "arch_kobj_size (PageTable pt) = table_size (pt_type pt)"
 | "arch_kobj_size (DataPage _ sz) = pageBitsForSize sz"
 | "arch_kobj_size (VCPU _) = vcpuBits"
 
@@ -242,8 +311,8 @@ definition arch_default_cap :: "aobject_type \<Rightarrow> obj_ref \<Rightarrow>
      SmallPageObj \<Rightarrow> FrameCap r vm_read_write ARMSmallPage dev None
    | LargePageObj \<Rightarrow> FrameCap r vm_read_write ARMLargePage dev None
    | HugePageObj  \<Rightarrow> FrameCap r vm_read_write ARMHugePage dev None
-   | PageTableObj \<Rightarrow> PageTableCap r False None
-   | VSpaceObj    \<Rightarrow> PageTableCap r True None
+   | PageTableObj \<Rightarrow> PageTableCap r NormalPT_T None
+   | VSpaceObj    \<Rightarrow> PageTableCap r VSRootPT_T None
    | VCPUObj      \<Rightarrow> VCPUCap r
    | ASIDPoolObj  \<Rightarrow> ASIDPoolCap r 0" (* unused, but nicer properties when defined *)
 
@@ -276,6 +345,12 @@ definition asid_pool_level :: vm_level where
 definition max_pt_level :: vm_level where
   "max_pt_level = asid_pool_level - 1"
 
+definition level_type :: "vm_level \<Rightarrow> pt_type" where
+  "level_type level \<equiv> if level = max_pt_level then VSRootPT_T else NormalPT_T"
+
+declare [[coercion_enabled]]
+declare [[coercion level_type]]
+
 end
 
 qualify AARCH64_A (in Arch)
@@ -300,14 +375,14 @@ section "Type declarations for invariant definitions"
 
 datatype aa_type =
     AASIDPool
-  | APageTable (pt_is_vspace : bool)
+  | APageTable (a_pt_t : pt_type)
   | AVCPU
   | AUserData vmpage_size
   | ADeviceData vmpage_size
 
 definition aa_type :: "arch_kernel_obj \<Rightarrow> aa_type" where
   "aa_type ao \<equiv> case ao of
-     PageTable pt    \<Rightarrow> APageTable (is_VSRootPT pt)
+     PageTable pt    \<Rightarrow> APageTable (pt_type pt)
    | DataPage dev sz \<Rightarrow> if dev then ADeviceData sz else AUserData sz
    | ASIDPool _      \<Rightarrow> AASIDPool
    | VCPU _          \<Rightarrow> AVCPU"

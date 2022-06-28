@@ -1,4 +1,5 @@
 (*
+     Copyright 2022, Proofcraft Pty Ltd
      Copyright 2021, Data61, CSIRO (ABN 41 687 119 230)
 
      SPDX-License-Identifier: CC-BY-SA-4.0
@@ -8,8 +9,8 @@ chapter \<open>An Isabelle Syntax Style Guide\<close>
 
 theory Style
   imports
-    Main
     Style_pre
+    Lib.SplitRule
 begin
 
 text \<open>
@@ -246,6 +247,38 @@ text \<open>
   There's no need to comment every single thing, though. Use your judgement. Prefer readable
   code/proofs/definitions over commented ones. Comment on why the proof is doing something,
   not what it is doing.\<close>
+
+
+section \<open>Fun, primrec, or case? case!\<close>
+
+text \<open>
+  When defining a non-recursive function that uses pattern matching, there are multiple options:
+  @{command fun}, @{command primrec}, and @{text case}. @{text case} initially seems like the least
+  powerful of these, but combined with the @{attribute split_simps} attribute, it is the option that
+  provides the highest degree of proof automation. @{command fun} and @{command primrec} provide
+  a simp rule for each of the pattern cases, but when a closed term appears in the proof, there is
+  no way to automatically perform a case distinction -- you need to do a manual @{method cases} or
+  @{method case_tac} invocation. @{text case} does provide automatic splitting via split rules, and
+  @{attribute split_simps} adds the missing simp rules.
+
+  So the recommended pattern is to use @{text case} in the definition and supply the simp rules
+  directly after it, adding them to the global simp set as @{command fun}/@{command primrec} would
+  do. The split rule you need to provide to @{attribute split_simps} is the split rule for the type
+  over which the pattern is matched. For nested patterns, multiple split rules can be provided. See
+  also the example in @{theory Lib.SplitRule}.\<close>
+
+definition some_f :: "nat \<Rightarrow> nat" where
+  "some_f x \<equiv> case x of 0 \<Rightarrow> 1 | Suc n \<Rightarrow> n+2"
+
+lemmas some_f_simps[simp] = some_f_def[split_simps nat.split]
+
+(* Pattern is simplified automatically: *)
+lemma "some_f 0 = 1"
+  by simp
+
+(* But automated case split is still available after unfolding: *)
+lemma "some_f x > 0"
+  unfolding some_f_def by (simp split: nat.split)
 
 
 section \<open>More on proofs\<close>

@@ -6,7 +6,6 @@
 
 from __future__ import print_function
 from __future__ import absolute_import
-import braces
 import re
 import sys
 import os
@@ -15,6 +14,9 @@ from six.moves import map
 from six.moves import range
 from six.moves import zip
 from functools import reduce
+
+import braces
+from msgs import error, warning
 
 
 class Call(object):
@@ -134,8 +136,7 @@ def top_transform(input, isLhs):
     comments = []
     for n, line in enumerate(input):
         if '\t' in line:
-            sys.stderr.write('WARN: tab in line %d, %s.\n' %
-                             (n, filename))
+            warning('tab in line %d, %s.\n' % (n, filename))
         if isLhs:
             if line.startswith('> '):
                 if '--' in line:
@@ -430,8 +431,7 @@ def def_lines(d, call):
             if d.sig:
                 defname = '%s_def' % d.defined
                 if d.primrec:
-                    print('warning body-only primrec:')
-                    print(body[0])
+                    warning('body-only primrec:\n' + body[0], call.filename)
                     return comments + ['primrec'] + body
                 return comments + ['defs %s:' % defname] + body
             else:
@@ -637,8 +637,8 @@ def constructor_reversing(tokens):
         # such functions must be explicitly ignored in the skeleton file
         return []
     else:
-        print("Error parsing " + filename)
-        print("Can't deal with %s" % tokens)
+        error(f"error parsing {filename}\n"
+              f"Can't deal with {tokens}")
         sys.exit(1)
 
 
@@ -686,12 +686,28 @@ def newtype_transform(d):
         return named_newtype_transform(line, header, d)
 
 
+# parameterised types of which we know that they are already defined in Isabelle
+known_type_assignments = [
+    'domain_schedule',
+    'kernel',
+    'kernel_f',
+    'kernel_f f',  # there is a KernelF instance that gets transformed into this
+    'kernel_init',
+    'kernel_init_state',
+    'machine_data',
+    'machine_monad',
+    'ready_queue',
+    'user_monad'
+]
+
+
 def typename_transform(line, header, d):
     try:
         [oldtype] = line.split()
     except:
-        sys.stderr.write('Warning: type assignment with parameters not supported %s\n' % d.body)
-        call.bad_type_assignment = True
+        if header not in known_type_assignments:
+            warning('type assignment with parameters not supported %s' % d.body, filename)
+            call.bad_type_assignment = True
         return
     if oldtype.startswith('Data.Word.Word'):
         # take off the prefix, leave Word32 or Word64 etc
@@ -910,7 +926,7 @@ def named_constructor_translation(name, map, header):
         l = l + '(' + type + ') \<Rightarrow> '
     l = l + '%s" ("%s\'_ \<lparr> %s= _' % (header, name, map[0][0])
     for n, type in map[1:]:
-        l = l + ', %s= _' % n
+        l = l + ', %s= _' % n.replace("_", "'_")
     l = l + ' \<rparr>")'
     lines.append(l)
     lines.append('where')
@@ -988,10 +1004,10 @@ def instance_transform(d):
     classname = bits[1]
     typename = type_conv(bits[2])
     if classname == 'Show':
-        print("Warning: discarding class instance '%s :: Show'" % typename)
+        warning("discarding class instance '%s :: Show'" % typename, filename)
         return None
     if typename == '()':
-        print("Warning: discarding class instance 'unit :: %s'" % classname)
+        warning("discarding class instance 'unit :: %s'" % classname, filename)
         return None
     if len(bits) == 3:
         if children == []:
@@ -1014,12 +1030,12 @@ def instance_transform(d):
     d.instance_defs = defs_dict
     d.deriving = [classname]
     if typename not in all_type_arities:
-        sys.stderr.write('FAIL: attempting %s\n' % d.defined)
-        sys.stderr.write('(typename %r)\n' % typename)
-        sys.stderr.write('when reading %s\n' % filename)
-        sys.stderr.write('but class not defined yet\n')
-        sys.stderr.write('perhaps parse in different order?\n')
-        sys.stderr.write('hint: #INCLUDE_HASKELL_PREPARSE\n')
+        error(f'attempting {d.defined}\n'
+              f'(typename {repr(typename)})\n'
+              f'when reading {filename}\n'
+              f'but class not defined yet\n'
+              f'perhaps parse in different order?\n'
+              f'hint: #INCLUDE_HASKELL_PREPARSE\n')
         sys.exit(1)
     arities = all_type_arities[typename]
     set_instance_proofs(typename, arities, d)
@@ -1418,10 +1434,10 @@ def get_type_map(string):
         return (header, [])
     actual_map = bits[1].strip()
     if not (actual_map.startswith('{') and actual_map.endswith('}')):
-        print('Error in ' + filename)
-        print('Expected "A { blah :: blah etc }"')
-        print('However { and } not found correctly')
-        print('When parsing %s' % string)
+        error(f'in {filename}\n'
+              'Expected "A { blah :: blah etc }"\n'
+              'However { and } not found correctly\n'
+              f'When parsing {string}')
         sys.exit(1)
     actual_map = actual_map[1:-1]
 
@@ -1477,7 +1493,7 @@ def body_transform(body, defined, sig, nopattern=False):
         (nextline, c2) = children[0]
         children[0] = ('\<equiv>'.join(nextline.split('=', 1)), c2)
     else:
-        sys.stderr.write('WARN: def of %s missing =\n' % defined)
+        warning('def of %s missing =\n' % defined, filename)
 
     if children and (children[-1][0].endswith('where') or
                      children[-1][0].lstrip().startswith('where')):
@@ -2055,8 +2071,7 @@ def case_clauses_transform(line_and_type):
             x = str(bits[0]) + ':: ' + type_transform(str(bits[1]))
 
     if children and children[-1][0].strip().startswith('where'):
-        sys.stderr.write('Warning: where clause in case: %r\n'
-                         % line)
+        warning(f'where clause in case: %r, removing case.' % line, filename)
         return (beforecase + '\<comment> \<open>case removed\<close> undefined', [])
         # where_clause = where_clause_transform(children[-1])
         # children = children[:-1]
@@ -2070,7 +2085,7 @@ def case_clauses_transform(line_and_type):
         bits = l.split('->', 1)
         while len(bits) == 1:
             if c == []:
-                sys.stderr.write('wtf %r\n' % l)
+                error('wtf %r\n' % l, filename)
                 sys.exit(1)
             if c[0][0].strip().startswith('|'):
                 bits = [bits[0], '']
@@ -2098,10 +2113,10 @@ def case_clauses_transform(line_and_type):
         print(line)
     conv = get_case_conv(cases)
     if conv == '<X>':
-        sys.stderr.write('Warning: blanked case in caseconvs\n')
+        warning('blanked case in caseconvs', filename)
         return (beforecase + '\<comment> \<open>case removed\<close> undefined', [])
     if not conv:
-        sys.stderr.write('Warning: case %r\n' % (cases, ))
+        warning('no caseconv for %r\n' % (cases, ), filename)
         if cases not in cases_added:
             casestr = 'case \\x of ' + ' -> '.join(cases) + ' -> '
 
@@ -2122,9 +2137,7 @@ def case_clauses_transform(line_and_type):
             new_children.append((ws + header, []))
         else:
             if (len(bodies) <= endnum):
-                sys.stderr.write('ERROR: index %d out of bounds in case %r\n' %
-                                 (endnum,
-                                  cases, ))
+                error('index %d out of bounds in case %r\n' % (endnum, cases), filename)
                 sys.exit(1)
 
             (body, c) = bodies[endnum]
@@ -2152,14 +2165,12 @@ def guarded_body_transform(body, div):
                 children = c + children[1:]
                 line = line + ' ' + l.strip()
         except:
-            sys.stderr.write('missing %r in %r\n' % (div, line))
-            sys.stderr.write('\nhandling %r\n' % body)
+            error('missing %r in %r\nhandling %r' % (div, line, body), filename)
             sys.exit(1)
         try:
             [ws, guts] = line.split('| ', 1)
         except:
-            sys.stderr.write('missing "|" in %r\n' % line)
-            sys.stderr.write('\nhandling %r\n' % body)
+            error('missing "|" in %r\nhandling %r' % (line, body), filename)
             sys.exit(1)
         if i == 0:
             new_body.append((ws + 'if', []))
@@ -2215,7 +2226,7 @@ regexes = [
     (re.compile(r" \. "), r" \<circ> "),
     (re.compile('-1'), '- 1'),
     (re.compile('-2'), '- 2'),
-    (re.compile(r"\(!(\w+)\)"), r"(flip id \1)"),
+    (re.compile(r"\(![ ]*(\w+)\)"), r"(flip id \1)"),
     (re.compile(r"\(\+(\w+)\)"), r"(\<lambda> x. x + \1)"),
     (re.compile(r"\\([^<].*?)\s*->"), r"\<lambda> \1."),
     (re.compile('}'), r"\<rparr>"),
@@ -2353,13 +2364,11 @@ def get_case_rhs(rhs):
     conv = [(s, n) for (s, n) in conv if s != '' or n is not None]
 
     if conv[0][1] is not None:
-        sys.stderr.write('%r\n' % conv[0][1])
-        sys.stderr.write(
-            'For technical reasons the first line of this case conversion must be split with \\n: \n')
-        sys.stderr.write('  %r\n' % rhs)
-        sys.stderr.write(
-            '(further notes: the rhs of each caseconv must have multiple lines\n'
-            'and the first cannot contain any ->1, ->2 etc.)\n')
+        error(f'{repr(conv[0][1])}\n'
+              f'For technical reasons the first line of this case conversion must be split with \\n:\n'
+              f'  {repr(rhs)}\n'
+              f'(further notes: the rhs of each caseconv must have multiple lines\n'
+              f'and the first cannot contain any ->1, ->2 etc.)\n', filename)
         sys.exit(1)
 
     # this is a tad dodgy, but means that case_clauses_transform
@@ -2405,8 +2414,7 @@ def get_case_conv_table():
                         not is_extended_pattern(cases)):
                     render_caseconv(cases, to_case, f2)
         except Exception as e:
-            sys.stderr.write('Error parsing %r\n' % line)
-            sys.stderr.write('%s\n ' % e)
+            error(f'error parsing {repr(line)}\n {e}', 'caseconvs')
             sys.exit(1)
 
     f.close()
@@ -2545,11 +2553,11 @@ def reduce_record_pattern(string):
                 right = '(%s)' % right
             uses[left] = right
     if cons not in all_constructor_args:
-        sys.stderr.write('FAIL: trying to build case for %s\n' % cons)
-        sys.stderr.write('when reading %s\n' % filename)
-        sys.stderr.write('but constructor not seen yet\n')
-        sys.stderr.write('perhaps parse in different order?\n')
-        sys.stderr.write('hint: #INCLUDE_HASKELL_PREPARSE\n')
+        error(f'trying to build case for {cons}\n'
+              f'when reading {filename}\n'
+              f'but constructor not seen yet\n'
+              f'perhaps parse in different order?\n'
+              f'hint: #INCLUDE_HASKELL_PREPARSE')
         sys.exit(1)
     args = all_constructor_args[cons]
     args = [uses.get(name, '_') for (name, type) in args]
@@ -2588,7 +2596,7 @@ def get_supplied_transform_table():
 
     for line in lines:
         if '\t' in line:
-            sys.stderr.write('WARN: tab character in supplied')
+            warning('tab character in supplied')
 
     tree = offside_tree(lines)
 
@@ -2596,12 +2604,11 @@ def get_supplied_transform_table():
 
     for line, n, children in tree:
         if ('conv:' not in line) or len(children) != 2:
-            sys.stderr.write('WARN: supplied line %d dropped\n'
-                             % n)
+            warning(f'supplied line {n} dropped')
             if 'conv:' not in line:
-                sys.stderr.write('\t\t(token "conv:" missing)\n')
+                warning('\t\t(token "conv:" missing)')
             if len(children) != 2:
-                sys.stderr.write('\t\t(%d children != 2)\n' % len(children))
+                warning(f'\t\t({len(children)} children != 2)')
             continue
 
         children = discard_line_numbers(children)
@@ -2629,8 +2636,7 @@ supplied_transforms_usage = dict((
 def warn_supplied_usage():
     for (key, usage) in six.iteritems(supplied_transforms_usage):
         if not usage:
-            sys.stderr.write('WARN: supplied conv unused: %s\n'
-                             % key[0])
+            warning(f'supplied conv unused: {key[0]}')
 
 
 quotes_getter = re.compile('"[^"]+"')
@@ -2810,12 +2816,11 @@ def remove_trailing_string(s, line_and_children, _handled=False):
         try:
             return remove_trailing_string(s, (line, children), _handled=True)
         except:
-            sys.stderr.write('handling %s\n' % ((line, children), ))
+            error('handling %s\n' % ((line, children), ), filename)
             raise
     if children == []:
         if not line.endswith(s):
-            sys.stderr.write('ERR: expected %r\n' % line)
-            sys.stderr.write('to end with %r\n' % s)
+            error('expected %r\n to end with %r' % (line, s), filename)
             assert line.endswith(s)
         n = len(s)
         return (line[:-n], [])

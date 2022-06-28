@@ -59,15 +59,15 @@ definition pptrBase :: machine_word where
   "pptrBase = 0x8000000000" (* 2^39 | FIXME AARCH64: likely to be moved to 0x0 *)
 
 definition pptrUserTop :: machine_word where
-  "pptrUserTop \<equiv> mask (if config_ARM_PA_SIZE_BITS_44 then 44 else 40)"
+  "pptrUserTop \<equiv> mask (if config_ARM_PA_SIZE_BITS_40 then 40 else 44)"
 
-lemma "pptrUserTop = (if config_ARM_PA_SIZE_BITS_44 then 0xFFFFFFFFFFF else 0xFFFFFFFFFF)" (* Sanity check with C *)
+lemma "pptrUserTop = (if config_ARM_PA_SIZE_BITS_40 then 0xFFFFFFFFFF else 0xFFFFFFFFFFF)" (* Sanity check with C *)
   by (simp add: pptrUserTop_def mask_def)
 
 (* FIXME AARCH64: we might want to remove this for improved genericity *)
 schematic_goal pptrUserTop_def': (* direct constant definition *)
   "AARCH64.pptrUserTop = numeral ?x"
-  by (simp add: AARCH64.pptrUserTop_def Kernel_Config.config_ARM_PA_SIZE_BITS_44_def mask_def
+  by (simp add: AARCH64.pptrUserTop_def Kernel_Config.config_ARM_PA_SIZE_BITS_40_def mask_def
            del: word_eq_numeral_iff_iszero)
 
 definition pptrTop :: machine_word where

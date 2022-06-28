@@ -9,8 +9,6 @@ images: SysInit
 default: images test
 test:
 all: images test
-report-regression:
-	@echo SysInitExamples
 
 #
 # Setup heaps.

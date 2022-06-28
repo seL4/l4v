@@ -2801,20 +2801,6 @@ lemma monadic_trancl_return:
   by (simp add: monadic_rewrite_def monadic_trancl_def
                 monadic_option_dest_def return_def)
 
-lemma monadic_rewrite_if_lhs:
-  "\<lbrakk> P \<Longrightarrow> monadic_rewrite F E Q b a;
-     \<not> P \<Longrightarrow> monadic_rewrite F E R c a\<rbrakk>
-     \<Longrightarrow> monadic_rewrite F E (\<lambda>s. (P \<longrightarrow> Q s) \<and> (\<not> P \<longrightarrow> R s))
-        (if P then b else c) a"
-  by (cases P, simp_all)
-
-lemma monadic_rewrite_case_option:
-  "\<lbrakk> \<And>y. x = Some y \<Longrightarrow> monadic_rewrite E F (P x) f (g y);
-           x = None \<Longrightarrow> monadic_rewrite E F Q f h \<rbrakk>
-     \<Longrightarrow> monadic_rewrite E F (\<lambda>s. (\<forall>y. x = Some y \<longrightarrow> P x s) \<and> (x = None \<longrightarrow> Q s))
-              f (case x of Some y \<Rightarrow> g y | None \<Rightarrow> h)"
-  by (cases x, simp_all)
-
 lemma rtrancl_idem:
   assumes S: "S `` T = T"
        shows "S\<^sup>* `` T = T"
@@ -2867,9 +2853,6 @@ lemma monadic_trancl_preemptible_f:
   apply simp
   done
 
-lemmas monadic_rewrite_bindE_head
-    = monadic_rewrite_bindE[OF _ monadic_rewrite_refl hoare_vcg_propE_R]
-
 lemma monadic_trancl_preemptible_step:
   "monadic_rewrite False False \<top>
       (monadic_trancl_preemptible f x)
@@ -2893,17 +2876,6 @@ lemma monadic_trancl_preemptible_return:
    apply (simp add: returnOk_def)
    apply (rule monadic_rewrite_refl)
   apply simp
-  done
-
-lemma monadic_rewrite_corres2:
-  "\<lbrakk> monadic_rewrite False E Q a a';
-        corres_underlying R False F r P P' a' c \<rbrakk>
-     \<Longrightarrow> corres_underlying R False F r (P and Q) P' a c"
-  apply (simp add: corres_underlying_def monadic_rewrite_def)
-  apply (erule ballEI, clarsimp)
-  apply (drule(1) bspec, clarsimp)
-  apply (drule spec, drule(1) mp)
-  apply fastforce
   done
 
 lemma dcorres_get_cap_symb_exec:
@@ -3070,16 +3042,6 @@ lemma corres_assert_rhs:
     \<Longrightarrow> corres_underlying sr False False r P (\<lambda>s. F \<longrightarrow> P' s) f (assert F >>= g)"
   by (cases F, simp_all add: corres_fail)
 
-lemma monadic_rewrite_select_x:
-  "monadic_rewrite F False
-      (\<lambda>s. x \<in> S) (select S) (return x)"
-  by (simp add: monadic_rewrite_def return_def select_def)
-
-lemmas monadic_rewrite_select_pick_x
-    = monadic_rewrite_bind_head
-         [OF monadic_rewrite_select_x[where x=x], simplified,
-          THEN monadic_rewrite_trans] for x
-
 lemma finalise_cap_zombie':
   "(case cap of ZombieCap _ \<Rightarrow> True | _ \<Rightarrow> False)
      \<Longrightarrow> CSpace_D.finalise_cap cap fin =
@@ -3241,16 +3203,6 @@ lemma rec_del_idle_thread[wp]:
   by (wp rec_del_preservation)+
 
 lemmas gets_constant = gets_to_return
-
-lemma monadic_rewrite_gets_the_gets:
-  "monadic_rewrite F E (\<lambda>s. f s \<noteq> None) (gets_the f) (gets (the o f))"
-  apply (simp add: monadic_rewrite_def gets_the_def assert_opt_def exec_gets
-            split: option.split)
-  apply (auto simp: simpler_gets_def return_def)
-  done
-
-lemmas corres_gets_the_bind
-    = monadic_rewrite_corres2[OF monadic_rewrite_bind_head [OF monadic_rewrite_gets_the_gets]]
 
 lemma finalise_slot_inner1_add_if_Null:
   "monadic_rewrite F False \<top>

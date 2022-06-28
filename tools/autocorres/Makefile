@@ -8,9 +8,6 @@ default: AutoCorresTest
 
 all: AutoCorres AutoCorresTest AutoCorresSEL4 AutoCorresDoc
 
-report-regression:
-	@echo AutoCorres AutoCorresTest AutoCorresDoc AutoCorresSEL4
-
 PARSE_TESTS_C := $(wildcard tests/parse-tests/*.c)
 PARSE_TESTS_THY := $(patsubst %.c,%.thy,$(PARSE_TESTS_C))
 

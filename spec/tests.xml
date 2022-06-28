@@ -17,7 +17,7 @@
 
     <!-- Run the haskell translator. -->
     <set>
-        <test name="haskell-translator" cwd="design" cpu-timeout="600">make design</test>
+        <test name="haskell-translator" cpu-timeout="600">make design-spec</test>
     </set>
 
     <set depends="isabelle Lib">
@@ -37,7 +37,7 @@
 
     <set>
         <!-- Build Haskell kernel code. -->
-        <test name="HaskellKernel" cwd="haskell" cpu-timeout="2700">make</test>
+        <test name="HaskellKernel" cwd="haskell" cpu-timeout="3600">make</test>
     </set>
 
 </testsuite>

@@ -81,6 +81,10 @@ function cpp_opts () {
         AARCH64)
             L4CPP="-DPLATFORM=TX2 -DPLATFORM_TX2 -DTARGET=AARCH64 -DTARGET_AARCH64"
             ;;
+        X64)
+            # this space intentionally left blank:
+            L4CPP=""
+            ;;
         *)
             echo "Warning: No CPP configuration for achitecture ${1}"
             L4CPP=""

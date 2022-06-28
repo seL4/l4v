@@ -23,7 +23,7 @@ This module defines the encoding of arch-specific faults.
 > import SEL4.Object.TCB(asUser)
 > import Data.Bits
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
-> import SEL4.Machine.Hardware.ARM(addressTranslateS1CPR)
+> import SEL4.Machine.Hardware.ARM(addressTranslateS1)
 #endif
 
 \end{impdetails}

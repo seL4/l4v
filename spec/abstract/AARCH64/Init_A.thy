@@ -28,11 +28,12 @@ definition arm_global_pt_ptr :: obj_ref where
 definition init_irq_node_ptr :: obj_ref where
   "init_irq_node_ptr = pptr_base + 0x3000"
 
-(* The highest user-level virtual address that is still canonical.
+(* The highest user-virtual address that is still canonical.
    It can be larger than user_vtop, which is the highest address we allow to be mapped.
-   We need canonical_user, because the page tables have to have valid mappings there. *)
+   For AArch64-hyp, user-virtual addresses are IPAs and since there is no sign extension,
+   the value is the top of the entire IPA address space. *)
 definition canonical_user :: "vspace_ref" where
-  "canonical_user \<equiv> mask canonical_bit"
+  "canonical_user \<equiv> mask ipa_size"
 
 (* This is not the layout the real kernel uses, but we are only trying to show that
    the invariants are consistent. These apply to the mappings of the (separate) kernel-level
@@ -40,7 +41,6 @@ definition canonical_user :: "vspace_ref" where
 definition init_vspace_uses :: "vspace_ref \<Rightarrow> arm_vspace_region_use" where
   "init_vspace_uses p \<equiv>
      if p \<in> {pptr_base ..< pptr_base + (1 << 30)} then ArmVSpaceKernelWindow
-     else if p \<in> {kernel_elf_base ..< kernel_elf_base + (1 << 20)} then ArmVSpaceKernelELFWindow
      else if p \<le> canonical_user then ArmVSpaceUserRegion
      else ArmVSpaceInvalidRegion"
 

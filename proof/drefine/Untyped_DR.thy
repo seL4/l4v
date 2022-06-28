@@ -1213,14 +1213,6 @@ lemma monadic_set_cap_id:
 lemmas monadic_set_cap_id2
     = monadic_rewrite_transverse[OF monadic_set_cap_id monadic_rewrite_refl]
 
-lemma monadic_rewrite_corres_rhs:
-  "\<lbrakk> monadic_rewrite False True Q c c';
-        corres_underlying R F F' r P P' a c' \<rbrakk>
-     \<Longrightarrow> corres_underlying R F F' r P (P' and Q) a c"
-  apply (clarsimp simp: corres_underlying_def monadic_rewrite_def)
-  apply fastforce
-  done
-
 (* FIXME: move *)
 lemma mapME_x_append:
   "mapME_x f (xs @ ys) = (doE mapME_x f xs; mapME_x f ys odE)"

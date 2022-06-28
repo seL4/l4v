@@ -19,11 +19,12 @@ CUSTOM_BOOT_FILES = src/SEL4/Object/Structures.lhs-boot
 # GHC_PACKAGE_PATH first.
 CABAL=stack exec -- ./stack-path cabal
 
-CABAL_CONFIGURE=$(CABAL) v1-configure
-CABAL_BUILD=$(CABAL) v1-build
-CABAL_SANDBOX=$(CABAL) v1-sandbox
-CABAL_UPDATE=$(CABAL) v1-update
-CABAL_INSTALL=$(CABAL) v1-install
+CABAL_CONFIGURE=$(CABAL) v2-configure
+CABAL_BUILD=$(CABAL) v2-build
+CABAL_UPDATE=$(CABAL) v2-update
+CABAL_INSTALL=$(CABAL) v2-install
+
+RM_BACKUP=rm -f cabal.project.local~*
 
 # warnings that are useless during large Haskell updates
 GHC_DEV_OPTS=--ghc-options=""
@@ -31,44 +32,47 @@ GHC_DEV_OPTS=--ghc-options=""
 all: build-arm build-riscv
 
 sandbox: .stack-work
-	$(CABAL_SANDBOX) init
-	$(CABAL_UPDATE)
-	$(CABAL_INSTALL) --dependencies-only
 
 build-arm: sandbox $(BOOT_FILES)
 	$(CABAL_CONFIGURE) --configure-option="arm-kzm" \
 	    --flags="ArchArm" \
 	    --builddir="dist/arm"
+	$(RM_BACKUP)
 	$(CABAL_BUILD) --builddir="dist/arm"
 
 build-arm-hyp: sandbox $(BOOT_FILES) $(CUSTOM_BOOT_FILES)
 	$(CABAL_CONFIGURE) --configure-option="arm-tk1" \
 	    --flags="ArchArmHyp -FFI" \
 	    --builddir="dist/arm-hyp"
+	$(RM_BACKUP)
 	$(CABAL_BUILD) --builddir="dist/arm-hyp"
 
 build-arm-hyp-nosmmu: sandbox $(BOOT_FILES) $(CUSTOM_BOOT_FILES)
 	$(CABAL_CONFIGURE) --configure-option="arm-tk1-nosmmu" \
 	    --flags="ArchArmHyp -FFI" \
 	    --builddir="dist/arm-hyp-nosmmu"
+	$(RM_BACKUP)
 	$(CABAL_BUILD) --builddir="dist/arm-hyp-nosmmu"
 
 build-x64: sandbox $(BOOT_FILES)
 	$(CABAL_CONFIGURE) --configure-option="x64-pc99" \
 	    --flags="ArchX64 -FFI" \
 	    --builddir="dist/x64"
+	$(RM_BACKUP)
 	$(CABAL_BUILD) --builddir="dist/x64"
 
 build-riscv: sandbox $(BOOT_FILES)
 	$(CABAL_CONFIGURE) --configure-option="riscv-hifive" \
 	    --flags="ArchRiscV -FFI" \
 	    --builddir="dist/riscv"
+	$(RM_BACKUP)
 	$(CABAL_BUILD) --builddir="dist/riscv"
 
 build-aarch64: sandbox $(BOOT_FILES)
 	$(CABAL_CONFIGURE) --configure-option="aarch64-tx2" \
 	    --flags="ArchAArch64 -FFI" \
 	    --builddir="dist/aarch64"
+	$(RM_BACKUP)
 	$(CABAL_BUILD) --builddir="dist/aarch64"
 
 # We assume that if the .stack-work directory exists,
@@ -82,6 +86,7 @@ build-aarch64: sandbox $(BOOT_FILES)
 .stack-work:
 	mkdir -p ~/.stack
 	stack --install-ghc build cabal-install
+	$(CABAL_UPDATE)
 
 $(CUSTOM_BOOT_FILES):
 	echo "never run mkhsboot for hand-crafted lhs-boot files"

@@ -28,7 +28,6 @@ requalify_consts
   valid_arch_cap_ref
   acap_class
   valid_ipc_buffer_cap
-  wellformed_vspace_obj
   arch_valid_obj
   valid_asid_map
   valid_vspace_obj

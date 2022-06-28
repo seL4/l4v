@@ -1438,43 +1438,6 @@ lemma setMessageInfo_ccorres:
                    Kernel_C.msgInfoRegister_def Kernel_C.RSI_def)
   done
 
-lemma performPageGetAddress_ccorres:
-  "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-      \<top>
-      (UNIV \<inter> {s. vbase_ptr_' s = Ptr ptr}) []
-      (liftE (performPageInvocation (PageGetAddr ptr)))
-      (Call performPageGetAddress_'proc)"
-  apply (simp only: liftE_liftM ccorres_liftM_simp)
-  apply (cinit lift: vbase_ptr_')
-   apply csymbr
-   apply (rule ccorres_pre_getCurThread)
-   apply (clarsimp simp: setMRs_def zipWithM_x_mapM_x mapM_x_Nil length_of_msgRegisters
-                         zip_singleton msgRegisters_unfold mapM_x_singleton)
-   apply (ctac add: setRegister_ccorres)
-     apply csymbr
-     apply (rule ccorres_add_return2)
-     apply (rule ccorres_rhs_assoc2)
-     apply (rule ccorres_split_nothrow_novcg[where r'=dc and xf'=xfdc])
-         apply (unfold setMessageInfo_def)
-         apply ctac
-           apply (simp only: fun_app_def)
-           apply (ctac add: setRegister_ccorres)
-          apply wp
-         apply vcg
-        apply ceqv
-       apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
-        apply (rule allI, rule conseqPre, vcg)
-        apply (clarsimp simp: return_def)
-      apply wp
-     apply (simp add: guard_is_UNIV_def)
-    apply wp
-   apply vcg
-  apply (auto simp: X64_H.fromPAddr_def message_info_to_H_def mask_def X64_H.msgInfoRegister_def
-                    X64.msgInfoRegister_def Kernel_C.msgInfoRegister_def Kernel_C.RSI_def
-                    word_sle_def word_sless_def Kernel_C.RDI_def
-                    kernel_all_global_addresses.msgRegisters_def fupdate_def)
-  done
-
 lemma ccorres_pre_getObject_pte:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
@@ -2095,7 +2058,6 @@ lemma performPageInvocationUnmap_ccorres:
      apply (rule ccorres_rhs_assoc)
      apply (drule_tac s=cap in sym, simp) (* schematic ugliness *)
      apply ccorres_rewrite
-     apply (rule ccorres_add_return2)
      apply (ctac add: performPageInvocationUnmap_ccorres'[simplified K_def, simplified])
        apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
        apply (rule allI, rule conseqPre, vcg)

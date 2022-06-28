@@ -62,7 +62,7 @@ definition make_user_pte :: "paddr \<Rightarrow> vm_attributes \<Rightarrow> vm_
 definition check_vspace_root :: "arch_cap \<Rightarrow> nat \<Rightarrow> (obj_ref \<times> asid, 'z) se_monad" where
   "check_vspace_root cap arg_no \<equiv>
      case cap of
-       PageTableCap pt True (Some (asid, _)) \<Rightarrow> returnOk (pt, asid)
+       PageTableCap pt VSRootPT_T (Some (asid, _)) \<Rightarrow> returnOk (pt, asid)
      | _ \<Rightarrow> throwError $ InvalidCapability arg_no"
 
 type_synonym 'z arch_decoder =
@@ -99,7 +99,8 @@ definition decode_fr_inv_map :: "'z::state_ext arch_decoder" where
            vm_rights \<leftarrow> returnOk $ mask_vm_rights R (data_to_rights rights_mask);
            attribs \<leftarrow> returnOk $ attribs_from_word attr;
            pte \<leftarrow> returnOk $ make_user_pte (addrFromPPtr p) attribs vm_rights pgsz;
-           returnOk $ InvokePage $ PageMap (FrameCap p R pgsz dev (Some (asid,vaddr))) cte (pte,slot)
+           returnOk $ InvokePage $ PageMap (FrameCap p R pgsz dev (Some (asid,vaddr))) cte
+                                           (pte,slot,level)
          odE
        else throwError TruncatedMessage
      | _ \<Rightarrow> fail"
@@ -171,11 +172,11 @@ definition decode_pt_inv_map :: "'z::state_ext arch_decoder" where
            pt' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid;
            whenE (pt' \<noteq> pt) $ throwError $ InvalidCapability 1;
            (level, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot pt vaddr \<circ> ptes_of;
-           old_pte \<leftarrow> liftE $ get_pte slot;
+           old_pte \<leftarrow> liftE $ get_pte (level_type level) slot;
            whenE (pt_bits_left level = pageBits \<or> old_pte \<noteq> InvalidPTE) $ throwError DeleteFirst;
-           pte \<leftarrow> returnOk $ PageTablePTE (addrFromPPtr p);
+           pte \<leftarrow> returnOk $ PageTablePTE (ppn_from_pptr p);
            cap' <- returnOk $ PageTableCap p t $ Some (asid, vaddr && ~~mask (pt_bits_left level));
-           returnOk $ InvokePageTable $ PageTableMap cap' cte pte slot
+           returnOk $ InvokePageTable $ PageTableMap cap' cte pte slot level
          odE
        else throwError TruncatedMessage
      | _ \<Rightarrow> fail"
@@ -205,11 +206,10 @@ definition vmsize_of_level :: "vm_level \<Rightarrow> vmpage_size" where
      else if level = 1 then ARMLargePage
      else ARMHugePage"
 
-definition lookup_frame :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref \<rightharpoonup> pte) \<Rightarrow> (vmpage_size \<times> paddr) option"
-  where
+definition lookup_frame :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> ptes_of \<Rightarrow> (vmpage_size \<times> paddr) option" where
   "lookup_frame vspace vaddr = do {
      (level, slot) \<leftarrow> pt_lookup_slot vspace vaddr;
-     pte \<leftarrow> oapply slot;
+     pte \<leftarrow> oapply2 (level_type level) slot;
      oassert (is_PagePTE pte);
      oassert (level \<le> 2);
      oreturn (vmsize_of_level level, pte_base_addr pte)
@@ -217,7 +217,7 @@ definition lookup_frame :: "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_
 
 definition decode_vs_inv_flush :: "'z::state_ext arch_decoder" where
   "decode_vs_inv_flush label args cte cap extra_caps \<equiv> case cap of
-     PageTableCap p True mapped_address \<Rightarrow>
+     PageTableCap p VSRootPT_T mapped_address \<Rightarrow>
         if length args > 1
         then let
           start = args ! 0;
@@ -310,12 +310,12 @@ definition arch_decode_invocation ::
     (arch_invocation,'z::state_ext) se_monad"
   where
   "arch_decode_invocation label args x_slot cte cap extra_caps \<equiv> case cap of
-     PageTableCap _ True _  \<Rightarrow> decode_vspace_invocation label args cte cap extra_caps
-   | PageTableCap _ False _ \<Rightarrow> decode_page_table_invocation label args cte cap extra_caps
-   | FrameCap _ _ _ _ _     \<Rightarrow> decode_frame_invocation label args cte cap extra_caps
-   | ASIDControlCap         \<Rightarrow> decode_asid_control_invocation label args cte cap extra_caps
-   | ASIDPoolCap _ _        \<Rightarrow> decode_asid_pool_invocation label args cte cap extra_caps
-   | VCPUCap _              \<Rightarrow> decode_vcpu_invocation label args cap extra_caps"
+     PageTableCap _ VSRootPT_T _ \<Rightarrow> decode_vspace_invocation label args cte cap extra_caps
+   | PageTableCap _ NormalPT_T _ \<Rightarrow> decode_page_table_invocation label args cte cap extra_caps
+   | FrameCap _ _ _ _ _        \<Rightarrow> decode_frame_invocation label args cte cap extra_caps
+   | ASIDControlCap            \<Rightarrow> decode_asid_control_invocation label args cte cap extra_caps
+   | ASIDPoolCap _ _           \<Rightarrow> decode_asid_pool_invocation label args cte cap extra_caps
+   | VCPUCap _                 \<Rightarrow> decode_vcpu_invocation label args cap extra_caps"
 
 
 section "Interface Functions used in Decode"

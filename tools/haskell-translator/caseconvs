@@ -1557,7 +1557,7 @@ case \x of cap@(IOPortCap {}) -> IOPortControlCap -> _ ->  ---> let cap = \x in
     then ->2
     else ->3
 
-case \x of (cap @ (CNodeCap {})) -> (cap @ (ThreadCap {})) -> (cap @ (Zombie {})) -> _ ->  ---> let cap = \x in
+case \x of cap@(CNodeCap {}) -> cap@(ThreadCap {}) -> cap@(Zombie {}) -> _ ->  ---> let cap = \x in
     if isCNodeCap cap
     then ->1
     else if isThreadCap cap

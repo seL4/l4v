@@ -517,8 +517,8 @@ implementation assumes the monitor is not modelled in our simulator.
 > getHDFAR :: MachineMonad VPtr
 > getHDFAR = error "FIXME ARMHYP machine callback unimplemented"
 
-> addressTranslateS1CPR :: VPtr -> MachineMonad VPtr
-> addressTranslateS1CPR = error "FIXME ARMHYP machine callback unimplemented"
+> addressTranslateS1 :: VPtr -> MachineMonad VPtr
+> addressTranslateS1 = error "FIXME ARMHYP machine callback unimplemented"
 
 > getSCTLR :: MachineMonad Word
 > getSCTLR = error "FIXME ARMHYP machine callback unimplemented"

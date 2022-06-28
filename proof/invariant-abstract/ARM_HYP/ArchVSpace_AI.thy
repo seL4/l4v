@@ -102,7 +102,7 @@ declare glob_vs_refs_arch_def[simp]
 definition
   "glob_vs_refs \<equiv> arch_obj_fun_lift glob_vs_refs_arch {}"
 
-crunch_ignore (add: writeContextIDAndPD_impl addressTranslateS1CPR_impl
+crunch_ignore (add: writeContextIDAndPD_impl addressTranslateS1_impl
            setSCTLR_impl setHCR_impl
            set_gic_vcpu_ctrl_vmcr_impl
            set_gic_vcpu_ctrl_apr_impl
@@ -2021,7 +2021,7 @@ lemma dmo_ackInterrupt[wp]: "\<lbrace>invs\<rbrace> do_machine_op (ackInterrupt 
 (* FIXME move to Machine_AI? *)
 
 crunch device_state_inv[wp]: writeContextIDAndPD "\<lambda>ms. P (device_state ms)"
-crunch device_state_inv[wp]: addressTranslateS1CPR "\<lambda>ms. P (device_state ms)"
+crunch device_state_inv[wp]: addressTranslateS1 "\<lambda>ms. P (device_state ms)"
 crunch device_state_inv[wp]: getSCTLR,get_gic_vcpu_ctrl_hcr,set_gic_vcpu_ctrl_hcr "\<lambda>ms. P (device_state ms)"
 crunch device_state_inv[wp]: writeVCPUHardwareReg, readVCPUHardwareReg "\<lambda>ms. P (device_state ms)"
 crunch device_state_inv[wp]: setSCTLR,setHCR,getSCTLR,get_gic_vcpu_ctrl_vmcr,set_gic_vcpu_ctrl_vmcr "\<lambda>ms. P (device_state ms)"
@@ -2030,7 +2030,7 @@ crunch device_state_inv[wp]:
    "\<lambda>ms. P (device_state ms)"
 
 crunch underlying_memory: setSCTLR,getSCTLR,setHCR "\<lambda>m'. underlying_memory m' p = um"
-crunch underlying_memory: dsb,isb,writeContextIDAndPD,addressTranslateS1CPR "\<lambda>m'. underlying_memory m' p = um"
+crunch underlying_memory: dsb,isb,writeContextIDAndPD,addressTranslateS1 "\<lambda>m'. underlying_memory m' p = um"
 crunch underlying_memory: get_gic_vcpu_ctrl_vmcr,set_gic_vcpu_ctrl_vmcr "\<lambda>m'. underlying_memory m' p = um"
 crunch underlying_memory: get_gic_vcpu_ctrl_apr,set_gic_vcpu_ctrl_apr "\<lambda>m'. underlying_memory m' p = um"
 crunch underlying_memory: get_gic_vcpu_ctrl_lr,set_gic_vcpu_ctrl_lr "\<lambda>m'. underlying_memory m' p = um"

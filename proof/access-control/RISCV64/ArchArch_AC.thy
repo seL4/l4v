@@ -967,9 +967,7 @@ lemma perform_pg_inv_get_addr_pas_refined [wp]:
    perform_pg_inv_get_addr ptr
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   unfolding perform_pg_inv_get_addr_def
-  apply wpsimp
-  apply fastforce
-  done
+  by wpsimp
 
 lemma unmap_page_pas_refined:
   "\<lbrace>pas_refined aag and invs and K (vptr \<in> user_region)\<rbrace>

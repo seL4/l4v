@@ -100,10 +100,10 @@ assumes writeTPIDRURO_ccorres:
            (doMachineOp (setTPIDRURO reg))
            (Call writeTPIDRURO_'proc)"
 
-assumes addressTranslateS1CPR_ccorres:
+assumes addressTranslateS1_ccorres:
   "ccorres (=) ret__unsigned_long_' \<top> (\<lbrace>\<acute>vaddr = vaddr \<rbrace>) []
-           (doMachineOp (addressTranslateS1CPR vaddr))
-           (Call addressTranslateS1CPR_'proc)"
+           (doMachineOp (addressTranslateS1 vaddr))
+           (Call addressTranslateS1_'proc)"
 
 assumes invalidateLocalTLB_ccorres:
   "ccorres dc xfdc \<top> UNIV []

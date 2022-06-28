@@ -582,16 +582,6 @@ lemma getSanitiseRegisterInfo_moreMapM_comm:
   done
 
 
-lemma monadic_rewrite_symb_exec_r':
-  "\<lbrakk> \<And>s. \<lbrace>(=) s\<rbrace> m \<lbrace>\<lambda>r. (=) s\<rbrace>; no_fail P m;
-     \<And>rv. monadic_rewrite F False (Q rv) x (y rv);
-     \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace> \<rbrakk>
-      \<Longrightarrow> monadic_rewrite F False P x (m >>= y)"
-  apply (rule monadic_rewrite_imp)
-   apply (rule monadic_rewrite_symb_exec_r; assumption)
-  apply simp
-  done
-
 lemma monadic_rewrite_threadGet_return:
   "monadic_rewrite True False (tcb_at' r) (return x) (do t \<leftarrow> threadGet f r; return x od)"
   apply (rule monadic_rewrite_symb_exec_r')
@@ -626,9 +616,6 @@ lemma monadic_rewrite_getSanitiseRegisterInfo_drop:
   apply wp
   done
 
-lemma monadic_rewrite_inst: "monadic_rewrite F E P f g \<Longrightarrow> monadic_rewrite F E P f g"
-  by simp
-
 context kernel_m begin interpretation Arch .
 
 lemma threadGet_discarded:
@@ -636,15 +623,6 @@ lemma threadGet_discarded:
   apply (simp add: threadGet_def getObject_get_assert liftM_def bind_assoc stateAssert_def)
   apply (rule ext)
   apply (simp add: bind_def simpler_gets_def get_def)
-  done
-
-lemma monadic_rewrite_do_flip:
-  "monadic_rewrite E F P (do c \<leftarrow> j; a \<leftarrow> f; b \<leftarrow> g c; return (a, c) od)
-    (do c \<leftarrow> j; b \<leftarrow> g c; a \<leftarrow> f; return (a, c) od)
-    \<Longrightarrow> monadic_rewrite E F P (do c \<leftarrow> j; a \<leftarrow> f; b \<leftarrow> g c; h a c od)
-    (do c \<leftarrow> j; b \<leftarrow> g c; a \<leftarrow> f; h a c od)"
-  apply (drule_tac h="\<lambda>(a, b). h a b" in monadic_rewrite_bind_head)
-  apply (simp add: bind_assoc)
   done
 
 lemma handleFaultReply':
@@ -1788,6 +1766,7 @@ proof -
                  del:  Collect_const split del: if_split)
      apply (rule_tac P="ft = ArchFault aft" in ccorres_gen_asm)
      apply wpc
+     (* VMFault *)
      apply (rename_tac list)
      apply (rule_tac P="zip [Suc (Suc 0) ..< msgMaxLength] list = [(2, hd list), (3, hd (tl list))]"
                      in ccorres_gen_asm)
@@ -1797,13 +1776,9 @@ proof -
                       seL4_Fault_tag_defs
                  del: Collect_const)
        apply (rule ccorres_rhs_assoc)+
-       apply (csymbr)
-       apply csymbr
        apply (ctac(no_vcg) add: getRestartPC_ccorres)
-        apply (ctac(no_vcg) add: addressTranslateS1CPR_ccorres)
-         apply (rule ccorres_stateAssert)
-         apply csymbr
-         apply (ctac(no_vcg) add: setMR_ccorres_dc)
+        apply (rule ccorres_stateAssert)
+        apply (ctac(no_vcg) add: setMR_ccorres_dc)
        apply (rule ccorres_move_c_guard_tcb)
        apply (rule_tac val="vmFaultAddress aft" in symb_exec_r_fault)
           apply (rule conseqPre, vcg, clarsimp)

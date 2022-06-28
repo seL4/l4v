@@ -176,7 +176,7 @@ handle_vm_fault :: "word32 \<Rightarrow> vmfault_type \<Rightarrow> (unit,'z::st
 where
 "handle_vm_fault thread ARMDataAbort = doE
     addr \<leftarrow> liftE $ do_machine_op getHDFAR;
-    uaddr \<leftarrow> liftE $ do_machine_op (addressTranslateS1CPR addr);
+    uaddr \<leftarrow> liftE $ do_machine_op (addressTranslateS1 addr);
     fault \<leftarrow> liftE $ do_machine_op getHSR;
     let faddr = (uaddr && complement (mask pageBits)) || (addr && mask pageBits)
     in
@@ -185,7 +185,7 @@ odE"
 |
 "handle_vm_fault thread ARMPrefetchAbort = doE
     pc \<leftarrow> liftE $ as_user thread $ getRestartPC;
-    upc \<leftarrow> liftE $ do_machine_op (addressTranslateS1CPR pc);
+    upc \<leftarrow> liftE $ do_machine_op (addressTranslateS1 pc);
     fault \<leftarrow> liftE $ do_machine_op getHSR;
     let faddr = (upc && complement (mask pageBits)) || (pc && mask pageBits)
     in

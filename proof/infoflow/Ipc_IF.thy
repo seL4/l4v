@@ -319,15 +319,6 @@ lemma no_fail_gts:
    apply wp
   by (clarsimp simp: get_tcb_def tcb_at_def)
 
-lemma monadic_rewrite_impossible:
-  "monadic_rewrite F E \<bottom> f g"
-  by (clarsimp simp: monadic_rewrite_def)
-
-lemma monadic_rewrite_add_get:
-  "monadic_rewrite F E P (do x <- get; f od) (do x <- get; g od)
-   \<Longrightarrow> monadic_rewrite F E P f g"
-  by (clarsimp simp: bind_def get_def)
-
 lemma sts_noop:
    "monadic_rewrite True True (tcb_at tcb and (\<lambda>s. tcb \<noteq> cur_thread s))
                     (set_thread_state_ext tcb) (return ())"
@@ -372,11 +363,6 @@ lemma sts_to_modify':
    apply assumption
   apply wp
   by (clarsimp simp: get_tcb_def tcb_at_def)
-
-lemma monadic_rewrite_weaken_failure:
-  "\<lbrakk> monadic_rewrite True True P f f'; no_fail P' f; no_fail Q' f' \<rbrakk>
-     \<Longrightarrow> monadic_rewrite F E (P and P' and Q') f f'"
-  by (clarsimp simp: monadic_rewrite_def no_fail_def)
 
 lemma sts_no_fail:
   "no_fail (\<lambda>s :: det_state. tcb_at tcb s) (set_thread_state tcb st)"
@@ -522,11 +508,6 @@ lemmas blocked_cancel_ipc_nosts_reads_respects_f =
 
 end
 
-
-lemma monadic_rewrite_is_valid:
-  "\<lbrakk> monadic_rewrite False False P' f f'; \<lbrace>P\<rbrace> do x <- f; g x od \<lbrace>Q\<rbrace> \<rbrakk>
-     \<Longrightarrow> \<lbrace>P and P'\<rbrace> do x <- f'; g x od \<lbrace>Q\<rbrace>"
-  by (fastforce simp: monadic_rewrite_def valid_def bind_def)
 
 lemma monadic_rewrite_reads_respects:
   "\<lbrakk> monadic_rewrite False False P f f'; reads_respects aag l P' (do x <- f; g x od) \<rbrakk>

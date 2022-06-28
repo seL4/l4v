@@ -3474,11 +3474,6 @@ lemma set_free_index_invs_UntypedCap:
   apply (case_tac cap, simp_all add: free_index_of_def)
   done
 
-lemma monadic_rewrite_state_assert_true:
-  "monadic_rewrite F E P (state_assert P) (return ())"
-  by (simp add: state_assert_def monadic_rewrite_def
-                exec_get)
-
 lemma retype_region_aligned_for_init_sz:
   "\<lbrace>\<lambda>s. range_cover ptr sz (obj_bits_api new_type obj_sz) n
       \<and> obj_bits_api new_type obj_sz = some_us_sz\<rbrace>

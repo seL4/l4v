@@ -2771,7 +2771,7 @@ lemma valid_slots_duplicated'_length_Inr:
 
 lemma performPageInvocation_corres:
   assumes "page_invocation_map pgi pgi'"
-  shows "corres dc (invs and valid_etcbs and valid_page_inv pgi)
+  shows "corres (=) (invs and valid_etcbs and valid_page_inv pgi)
             (invs' and valid_page_inv' pgi' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
             (perform_page_invocation pgi) (performPageInvocation pgi')"
 proof -
@@ -2807,8 +2807,11 @@ proof -
               apply (rule corres_split_deprecated[OF _ storePTE_corres'])
                  apply (rule corres_split_deprecated[where r' = dc, OF _ corres_store_pte_with_invalid_tail])
                      apply (rule corres_split_deprecated[where r'=dc, OF _ corres_machine_op[OF corres_Id]])
-                          apply (clarsimp simp add: when_def)
-                          apply (rule invalidate_tlb_by_asid_corres_ex)
+                          apply (rule corres_split[where r'=dc, OF _ corres_return_eq_same[OF refl]])
+                            apply (clarsimp simp add: when_def)
+                            apply (rule invalidate_tlb_by_asid_corres_ex)
+                           apply wp
+                          apply wp
                          apply (simp add: last_byte_pte_def objBits_simps archObjSize_def)
                         apply simp
                        apply (rule no_fail_cleanCacheRange_PoU)
@@ -2864,8 +2867,11 @@ proof -
              apply (rule corres_split_deprecated[OF _ storePDE_corres'])
                 apply (rule corres_split_deprecated[where r'=dc, OF _ corres_store_pde_with_invalid_tail])
                     apply (rule corres_split_deprecated[where r'=dc,OF _ corres_machine_op[OF corres_Id]])
-                         apply (clarsimp simp: when_def)
-                         apply (rule invalidate_tlb_by_asid_corres_ex)
+                         apply (rule corres_split[where r'=dc, OF _ corres_return_eq_same[OF refl]])
+                           apply (clarsimp simp: when_def)
+                           apply (rule invalidate_tlb_by_asid_corres_ex)
+                          apply wp
+                         apply wp
                         apply (simp add: last_byte_pde_def objBits_simps archObjSize_def)
                        apply simp
                       apply (rule no_fail_cleanCacheRange_PoU)
@@ -2927,7 +2933,7 @@ proof -
                             cap_master_cap_simps)
       apply (erule (3) subst[OF same_refs_vs_cap_ref_eq, rotated 2])
      apply (clarsimp simp: invs_pspace_aligned' invs_pspace_distinct' valid_page_inv'_def cte_wp_at'_def)
-     \<comment> \<open>PageUnmap\<close>
+    \<comment> \<open>PageUnmap\<close>
     apply (clarsimp simp: performPageInvocation_def perform_page_invocation_def
                           page_invocation_map_def)
     apply (rule corres_assume_pre)
@@ -2942,10 +2948,11 @@ proof -
           apply (rule corres_rel_imp)
            apply (rule get_cap_corres_all_rights_P[where P=is_arch_cap], rule refl)
           apply (clarsimp simp: is_cap_simps)
-         apply (rule_tac F="is_page_cap cap" in corres_gen_asm)
-         apply (rule updateCap_same_master)
-         apply (clarsimp simp: is_page_cap_def update_map_data_def)
-        apply (wp get_cap_wp getSlotCap_wp)+
+         apply (rule corres_split[where r'=dc, OF _ corres_return_eq_same[OF refl]])
+           apply (rule_tac F="is_page_cap cap" in corres_gen_asm)
+           apply (rule updateCap_same_master)
+           apply (clarsimp simp: is_page_cap_def update_map_data_def)
+          apply (wp get_cap_wp getSlotCap_wp)+
       apply (clarsimp simp: cte_wp_at_caps_of_state)
       apply (clarsimp simp: cap_rights_update_def acap_rights_update_def update_map_data_def is_cap_simps)
       apply auto[1]
@@ -2961,10 +2968,11 @@ proof -
            apply (rule corres_rel_imp)
             apply (rule get_cap_corres_all_rights_P[where P=is_arch_cap], rule refl)
            apply (clarsimp simp: is_cap_simps)
-          apply (rule_tac F="is_page_cap cap" in corres_gen_asm)
-          apply (rule updateCap_same_master)
-          apply (clarsimp simp: is_page_cap_def update_map_data_def)
-         apply (wp get_cap_wp getSlotCap_wp)+
+          apply (rule corres_split[where r'=dc, OF _ corres_return_eq_same[OF refl]])
+            apply (rule_tac F="is_page_cap cap" in corres_gen_asm)
+            apply (rule updateCap_same_master)
+            apply (clarsimp simp: is_page_cap_def update_map_data_def)
+           apply (wp get_cap_wp getSlotCap_wp)+
        apply (simp add: cte_wp_at_caps_of_state)
        apply (strengthen pull_out_P)+
        apply wp
@@ -2976,36 +2984,28 @@ proof -
                            update_map_data_def acap_rights_update_def valid_cap_def mask_def)
      apply auto[1]
      apply (auto simp: cte_wp_at_ctes_of)[1]
-    \<comment> \<open>PageFlush\<close>
+   \<comment> \<open>PageFlush\<close>
    apply (clarsimp simp: performPageInvocation_def perform_page_invocation_def
                          page_invocation_map_def)
    apply (rule corres_guard_imp)
-     apply (rule corres_when, simp)
-     apply (rule corres_split_deprecated [OF _ setVMRootForFlush_corres])
-       apply (rule corres_split_deprecated [OF _ corres_machine_op])
-          prefer 2
-          apply (rule doFlush_corres)
-         apply (rule corres_when, simp)
-         apply (rule corres_split_deprecated [OF _ getCurThread_corres])
-           apply simp
-           apply (rule setVMRoot_corres)
-          apply wp+
-        apply (simp add: cur_tcb_def [symmetric] cur_tcb'_def [symmetric])
-        apply (wp hoare_drop_imps)
-       apply (simp add: cur_tcb_def[symmetric] cur_tcb'_def[symmetric])
-       apply (wp hoare_drop_imps)+
-     apply (auto simp: valid_page_inv_def)[2]
+     apply (rule corres_split[where r'=dc, OF _ corres_return_eq_same[OF refl]])
+       apply (rule corres_when, simp)
+       apply (rule corres_split_deprecated [OF _ setVMRootForFlush_corres])
+         apply (rule corres_split_deprecated [OF _ corres_machine_op])
+            prefer 2
+            apply (rule doFlush_corres)
+           apply (rule corres_when, simp)
+           apply (rule corres_split_deprecated [OF _ getCurThread_corres])
+             apply simp
+             apply (rule setVMRoot_corres)
+            apply wp+
+          apply (simp add: cur_tcb_def [symmetric] cur_tcb'_def [symmetric])
+          apply (wp hoare_drop_imps)
+         apply (simp add: cur_tcb_def [symmetric] cur_tcb'_def [symmetric])
+         apply (wp hoare_drop_imps)+
+    apply (auto simp: valid_page_inv_def invs_vspace_objs[simplified])[2]
   \<comment> \<open>PageGetAddr\<close>
   apply (clarsimp simp: perform_page_invocation_def performPageInvocation_def page_invocation_map_def fromPAddr_def)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ getCurThread_corres])
-      apply simp
-      apply (rule corres_split_deprecated[OF setMessageInfo_corres setMRs_corres])
-         apply (simp add: message_info_map_def)
-        apply clarsimp
-       apply (wp)+
-   apply (clarsimp simp: tcb_at_invs)
-  apply (clarsimp simp: tcb_at_invs')
   done
 qed
 
@@ -3842,7 +3842,7 @@ lemma saveVirtTimer_invs_no_cicd'[wp]:
 
 lemma set_cntv_off_64_invs_no_cicd'[wp]:
   "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (set_cntv_off_64 v) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (wpsimp wp: dmo_invs_no_cicd' set_cntv_off_64_no_irq no_irq)
+  apply (wpsimp wp: dmo_invs_no_cicd' no_irq)
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
   apply (wpsimp simp: machine_op_lift_def set_cntv_off_64_def
@@ -3851,7 +3851,7 @@ lemma set_cntv_off_64_invs_no_cicd'[wp]:
 
 lemma set_cntv_cval_64_invs_no_cicd'[wp]:
   "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (set_cntv_cval_64 v) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (wpsimp wp: dmo_invs_no_cicd' set_cntv_cval_64_no_irq no_irq)
+  apply (wpsimp wp: dmo_invs_no_cicd' no_irq)
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
   apply (wpsimp simp: machine_op_lift_def set_cntv_cval_64_def

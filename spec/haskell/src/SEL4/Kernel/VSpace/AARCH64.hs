@@ -131,19 +131,26 @@ getPPtrFromPTE :: PTE -> PPtr PTE
 getPPtrFromPTE pte = ptrFromPAddr $ pteBaseAddress pte
 
 -- how many bits there are left to be translated at a given level (0 = bottom
--- level). This counts the bits the levels below the current one translate, so
--- no case distinction needed for the top level -- it never participates.
--- Example: if maxPTLevel = 2, and we are on level 2, that means level 0 and 1
+-- level). This counts the bits being translated by the levels below the current one, so
+-- no case distinction needed for maxPTLevel and below. We include the separate case for the
+-- ASID pool level, because this function is also used in invariants.
+-- Example for maxPTLevel: if maxPTLevel = 2, and we are on level 2, that means level 0 and 1
 -- are below us and we still need translate the bits for level 0 and 1 after
--- this lookup, but not the ones from level 2, so only level 0 and 1 need to be
+-- this lookup, but not the ones from level 2, so only level 0 and 1 (= 2 levels) need to be
 -- counted in ptBitsLeft.
 ptBitsLeft :: Int -> Int
-ptBitsLeft level = ptTranslationBits False * level + pageBits
+ptBitsLeft level =
+  (if level <= maxPTLevel
+   then ptTranslationBits NormalPT_T * level
+   else ptTranslationBits VSRootPT_T + ptTranslationBits NormalPT_T * maxPTLevel) + pageBits
+
+levelType :: Int -> PT_Type
+levelType level = if level == maxPTLevel then VSRootPT_T else NormalPT_T
 
 -- compute index into a page table from vPtr at given level
 ptIndex :: Int -> VPtr -> Word
 ptIndex level vPtr =
-    (fromVPtr vPtr `shiftR` ptBitsLeft level) .&. mask (ptTranslationBits (level == maxPTLevel))
+    (fromVPtr vPtr `shiftR` ptBitsLeft level) .&. mask (ptTranslationBits (levelType level))
 
 -- compute slot ptr inside the table ptPtr at given level for a vPtr
 ptSlotIndex :: Int -> PPtr PTE -> VPtr -> PPtr PTE
@@ -370,7 +377,7 @@ setVMRoot tcb = do
     catchFailure
         (case threadRoot of
             ArchObjectCap (PageTableCap {
-                    capPTisVSpace = True,
+                    capPTType = VSRootPT_T,
                     capPTMappedAddress = Just (asid, _),
                     capPTBasePtr = vspaceRoot }) -> do
                 vspaceRoot' <- findVSpaceForASID asid
@@ -449,7 +456,7 @@ getVMID asid = do
 {- Helper Functions -}
 
 isVTableRoot :: Capability -> Bool
-isVTableRoot (ArchObjectCap (PageTableCap { capPTisVSpace = True })) = True
+isVTableRoot (ArchObjectCap (PageTableCap { capPTType = VSRootPT_T })) = True
 isVTableRoot _ = False
 
 -- FIXME AARCH64: name indirection kept here for sync with C; both (C and
@@ -639,7 +646,7 @@ decodeARMPageTableInvocation _ _ _ _ _ = fail "Unreachable"
 
 decodeARMVSpaceInvocation :: Word -> [Word] -> ArchCapability ->
         KernelF SyscallError ArchInv.Invocation
-decodeARMVSpaceInvocation label args cap@(PageTableCap { capPTisVSpace = True }) =
+decodeARMVSpaceInvocation label args cap@(PageTableCap { capPTType = VSRootPT_T }) =
     case (isVSpaceFlushLabel (invocationType label), args) of
         (True, start:end:_) -> do
             when (end <= start) $ throw $ InvalidArgument 1
@@ -737,9 +744,9 @@ decodeARMMMUInvocation :: Word -> [Word] -> CPtr -> PPtr CTE ->
         KernelF SyscallError ArchInv.Invocation
 decodeARMMMUInvocation label args _ cte cap@(FrameCap {}) extraCaps =
     decodeARMFrameInvocation label args cte cap extraCaps
-decodeARMMMUInvocation label args _ cte cap@(PageTableCap { capPTisVSpace = False }) extraCaps =
+decodeARMMMUInvocation label args _ cte cap@(PageTableCap { capPTType = NormalPT_T }) extraCaps =
     decodeARMPageTableInvocation label args cte cap extraCaps
-decodeARMMMUInvocation label args _ cte cap@(PageTableCap { capPTisVSpace = True }) extraCaps =
+decodeARMMMUInvocation label args _ cte cap@(PageTableCap { capPTType = VSRootPT_T }) extraCaps =
     decodeARMVSpaceInvocation label args cap
 decodeARMMMUInvocation label args _ _ cap@(ASIDControlCap {}) extraCaps =
     decodeARMASIDControlInvocation label args cap extraCaps
@@ -770,8 +777,8 @@ performPageTableInvocation (PageTableUnmap cap slot) = do
         Just (asid, vaddr) -> do
             let ptr = capPTBasePtr cap
             unmapPageTable asid vaddr ptr
-            -- ptBits False, because it can't be a VSpace table
-            let slots = [ptr, ptr + bit pteBits .. ptr + bit (ptBits False) - 1]
+            -- ptBits NormalPT_T, because it can't be a VSpace table
+            let slots = [ptr, ptr + bit pteBits .. ptr + bit (ptBits NormalPT_T) - 1]
             mapM_ (flip storePTE InvalidPTE) slots
         _ -> return ()
     ArchObjectCap cap <- getSlotCap slot
