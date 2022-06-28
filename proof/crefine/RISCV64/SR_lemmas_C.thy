@@ -209,6 +209,30 @@ lemma cap_get_tag_IRQHandlerCap:
   apply (simp add: cap_get_tag_isCap isCap_simps)
   done
 
+lemma cap_get_tag_SchedControlCap:
+  assumes cr: "ccap_relation cap cap'"
+  shows "(cap_get_tag cap' = scast cap_sched_control_cap) = (cap = capability.SchedControlCap)"
+  using cr
+  apply -
+  apply (rule iffI)
+   apply (erule ccap_relationE)
+   apply (clarsimp simp add: cap_lifts cap_to_H_def Let_def)
+  apply (simp add: cap_get_tag_isCap isCap_simps Let_def)
+  done
+
+lemma cap_get_tag_SchedContextCap:
+  assumes cr: "ccap_relation cap cap'"
+  shows "(cap_get_tag cap' = scast cap_sched_context_cap) =
+   (cap = capability.SchedContextCap (ucast (capSCPtr_CL (cap_sched_context_cap_lift cap')))
+                                     (unat (capSCSizeBits_CL (cap_sched_context_cap_lift cap'))))"
+  using cr
+  apply -
+  apply (rule iffI)
+   apply (erule ccap_relationE)
+   apply (clarsimp simp add: cap_lifts cap_to_H_def Let_def)
+  apply (simp add: cap_get_tag_isCap isCap_simps Let_def)
+  done
+
 lemma cap_get_tag_IRQControlCap:
   assumes cr: "ccap_relation cap cap'"
   shows "(cap_get_tag cap' = scast cap_irq_control_cap) =
@@ -219,6 +243,20 @@ lemma cap_get_tag_IRQControlCap:
    apply (clarsimp simp add: cap_lifts cap_get_tag_isCap isCap_simps cap_to_H_def)
   apply (simp add: cap_get_tag_isCap isCap_simps)
   done
+
+lemma cap_get_tag_ReplyCap:
+   assumes cr: "ccap_relation cap cap'"
+   shows "(cap_get_tag cap' = scast cap_reply_cap) =
+   (cap =
+       ReplyCap (capReplyPtr_CL (cap_reply_cap_lift cap'))
+                (to_bool (capReplyCanGrant_CL (cap_reply_cap_lift cap'))))"
+   using cr
+   apply -
+   apply (rule iffI)
+    apply (erule ccap_relationE)
+    apply (clarsimp simp add: cap_lifts cap_to_H_def)
+   apply (simp add: cap_get_tag_isCap isCap_simps)
+   done
 
 lemma cap_get_tag_ZombieCap:
   assumes cr: "ccap_relation cap cap'"
@@ -238,23 +276,6 @@ lemma cap_get_tag_ZombieCap:
    apply (clarsimp simp add: cap_lifts cap_to_H_def)
   apply (simp add: cap_get_tag_isCap isCap_simps Let_def
             split: if_split_asm)
-  done
-
-
-
-lemma cap_get_tag_ReplyCap:
-  assumes cr: "ccap_relation cap cap'"
-  shows "(cap_get_tag cap' = scast cap_reply_cap) =
-  (cap =
-      ReplyCap (ctcb_ptr_to_tcb_ptr (Ptr (cap_reply_cap_CL.capTCBPtr_CL (cap_reply_cap_lift cap'))))
-               (to_bool (capReplyMaster_CL (cap_reply_cap_lift cap')))
-               (to_bool (capReplyCanGrant_CL (cap_reply_cap_lift cap'))))"
-  using cr
-  apply -
-  apply (rule iffI)
-   apply (erule ccap_relationE)
-   apply (clarsimp simp add: cap_lifts cap_to_H_def)
-  apply (simp add: cap_get_tag_isCap isCap_simps)
   done
 
 lemma cap_get_tag_UntypedCap:
@@ -290,6 +311,9 @@ lemmas cap_get_tag_to_H_iffs =
      cap_get_tag_CNodeCap
      cap_get_tag_IRQHandlerCap
      cap_get_tag_IRQControlCap
+     cap_get_tag_ReplyCap
+     cap_get_tag_SchedControlCap
+     cap_get_tag_SchedContextCap
      cap_get_tag_ZombieCap
      cap_get_tag_UntypedCap
      cap_get_tag_DomainCap
@@ -305,10 +329,13 @@ lemma cmdbnode_relation_mdb_node_to_H [simp]:
   by (fastforce split: option.splits)
 
 definition
-  tcb_no_ctes_proj :: "tcb \<Rightarrow> Structures_H.thread_state \<times> machine_word \<times> machine_word \<times> arch_tcb \<times> bool \<times> word8 \<times> word8 \<times> word8 \<times> nat \<times> fault option \<times> machine_word option"
+  tcb_no_ctes_proj ::
+  "tcb \<Rightarrow> Structures_H.thread_state \<times> vptr \<times> arch_tcb \<times> bool \<times> bool \<times> priority \<times> priority \<times>
+          domain \<times> fault option \<times> machine_word option \<times> machine_word option \<times> machine_word option"
   where
-  "tcb_no_ctes_proj t \<equiv> (tcbState t, tcbFaultHandler t, tcbIPCBuffer t, tcbArch t, tcbQueued t,
-                            tcbMCP t, tcbPriority t, tcbDomain t, tcbTimeSlice t, tcbFault t, tcbBoundNotification t)"
+  "tcb_no_ctes_proj t \<equiv> (tcbState t, tcbIPCBuffer t, tcbArch t, tcbQueued t, tcbInReleaseQueue t,
+                          tcbMCP t, tcbPriority t, tcbDomain t, tcbFault t, tcbBoundNotification t,
+                          tcbSchedContext t, tcbYieldTo t)"
 
 lemma tcb_cte_cases_proj_eq [simp]:
   "tcb_cte_cases p = Some (getF, setF) \<Longrightarrow>
@@ -400,33 +427,13 @@ lemma fst_setCTE0:
   apply (simp add: return_def del: fun_upd_apply cong: bex_cong option.case_cong)
   apply (subst updateObject_cte_tcb)
    apply assumption
-  apply (simp add: bind_def return_def assert_opt_def gets_def split_beta get_def when_def
-    modify_def put_def unless_def when_def in_alignCheck')
-  apply (simp add: objBits_simps)
-  apply (simp add: magnitudeCheck_def return_def split: option.splits
-    cong: bex_cong if_cong)
-   apply (simp split: kernel_object.splits)
-   apply (fastforce simp: tcb_no_ctes_proj_def)
-  apply (simp add: magnitudeCheck_def when_def return_def fail_def
-    linorder_not_less
-    split: option.splits
-    cong: bex_cong if_cong)
-  apply rule
-  apply (simp split: kernel_object.splits)
-  apply (fastforce simp: tcb_no_ctes_proj_def)
+  apply (simp add: bind_def split_beta in_alignCheck' objBits_simps magnitudeCheck_def
+            split: option.splits kernel_object.splits)
+   apply (clarsimp simp: read_magnitudeCheck_def return_def)
+  apply (fastforce simp: gets_the_def gets_def return_def get_def bind_def)
   done
-
 
 (* duplicates *)
-lemma pspace_alignedD' [intro?]:
-  assumes  lu: "ksPSpace s x = Some v"
-  and      al: "pspace_aligned' s"
-  shows   "is_aligned x (objBitsKO v)"
-  using al lu unfolding pspace_aligned'_def
-  apply -
-  apply (drule (1) bspec [OF _ domI])
-  apply simp
-  done
 
 declare pspace_distinctD' [intro?]
 
@@ -439,7 +446,7 @@ lemma ctes_of_ksI [intro?]:
 proof (rule ctes_of_eq_cte_wp_at')
   from ks show "cte_wp_at' ((=) cte) x s"
   proof (rule cte_wp_at_cteI' [OF _ _ _ refl])
-    from ks pa have "is_aligned x (objBitsKO (KOCTE cte))" ..
+    from ks pa have "is_aligned x (objBitsKO (KOCTE cte))" using pspace_alignedD' by fastforce
     thus "is_aligned x cte_level_bits"
       unfolding cte_level_bits_def by (simp add: objBits_simps')
 
@@ -651,7 +658,7 @@ proof (rule cor_map_relI [OF map_option_eq_dom_eq])
     done
 
   thus "ctcb_relation tcb' z" using rel
-    unfolding tcb_no_ctes_proj_def ctcb_relation_def cfault_rel_def
+    unfolding tcb_no_ctes_proj_def ctcb_relation_def cfault_rel_def option_to_ptr_def option_to_0_def
     by auto
 qed fact+
 
@@ -1128,20 +1135,13 @@ lemma ccap_relation_NullCap_iff:
               split: if_split)
 
 (* MOVE *)
-lemma ko_at_valid_ntfn':
-  "\<lbrakk> ko_at' ntfn p s; valid_objs' s \<rbrakk> \<Longrightarrow> valid_ntfn' ntfn s"
-  apply (erule obj_atE')
-  apply (erule (1) valid_objsE')
-   apply (simp add: projectKOs valid_obj'_def)
-   done
-
-(* MOVE *)
 lemma ntfn_blocked_in_queueD:
-  "\<lbrakk> st_tcb_at' ((=) (Structures_H.thread_state.BlockedOnNotification ntfn)) thread \<sigma>; ko_at' ntfn' ntfn \<sigma>; invs' \<sigma> \<rbrakk>
+  "\<lbrakk> st_tcb_at' ((=) (Structures_H.thread_state.BlockedOnNotification ntfn)) thread \<sigma>;
+     ko_at' ntfn' ntfn \<sigma>; invs' \<sigma> ; sym_refs (state_refs_of' \<sigma>)\<rbrakk>
    \<Longrightarrow> thread \<in> set (ntfnQueue (ntfnObj ntfn')) \<and> isWaitingNtfn (ntfnObj ntfn')"
   apply (drule sym_refs_st_tcb_atD')
    apply clarsimp
-  apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs
+  apply (clarsimp simp: obj_at'_def ko_wp_at'_def
                         refs_of_rev'[where ko = "KONotification ntfn'", simplified])
   apply (cases "ntfnObj ntfn'")
     apply (simp_all add: isWaitingNtfn_def)
@@ -1236,30 +1236,29 @@ lemma st_tcb_at_h_t_valid:
 (* MOVE *)
 lemma exs_getObject:
   assumes x: "\<And>q n ko. loadObject p q n ko =
-                (loadObject_default p q n ko :: ('a :: pspace_storable) kernel)"
-  assumes P: "\<And>(v::'a::pspace_storable). (1 :: machine_word) < 2 ^ (objBits v)"
+                (loadObject_default p q n ko :: 'a :: pspace_storable kernel_r)"
   and objat: "obj_at' (P :: ('a::pspace_storable \<Rightarrow> bool)) p s"
-  shows      "\<lbrace>(=) s\<rbrace> getObject p \<exists>\<lbrace>\<lambda>r :: ('a :: pspace_storable). (=) s\<rbrace>"
+  shows      "\<lbrace>(=) s\<rbrace> getObject p \<exists>\<lbrace>\<lambda>r :: 'a :: pspace_storable. (=) s\<rbrace>"
   using objat unfolding exs_valid_def obj_at'_def
   apply clarsimp
   apply (rule_tac x = "(the (projectKO_opt ko), s)" in bexI)
    apply (clarsimp simp: split_def)
-  apply (simp add: projectKO_def fail_def split: option.splits)
+  apply (simp split: option.splits)
   apply (clarsimp simp: loadObject_default_def getObject_def in_monad return_def lookupAround2_char1
-                        split_def x P lookupAround2_char1 projectKOs
-                        objBits_def[symmetric] in_magnitude_check project_inject)
-  done
-
+                        split_def x objBits_def[symmetric] project_inject
+                        readObject_def ogets_def oassert_opt_def
+                 split: option.splits)
+  by (fastforce simp: word_le_less_eq)
 
 lemma setObject_eq:
-  fixes ko :: "('a :: pspace_storable)"
+  fixes ko :: "'a :: pspace_storable"
   assumes x: "\<And>(val :: 'a) old ptr ptr' next. updateObject val old ptr ptr' next =
                 (updateObject_default val old ptr ptr' next :: kernel_object kernel)"
-  assumes P: "\<And>(v::'a::pspace_storable). (1 :: machine_word) < 2 ^ (objBits v)"
+  assumes P: "\<And>v::'a::pspace_storable. (1 :: machine_word) < 2 ^ (objBits v)"
   and     ob: "\<And>(v :: 'a) (v' :: 'a). objBits v = objBits v'"
   and objat: "obj_at' (P :: ('a::pspace_storable \<Rightarrow> bool)) p s"
   shows  "((), s\<lparr> ksPSpace := (ksPSpace s)(p \<mapsto> injectKO ko)\<rparr>) \<in> fst (setObject p ko s)"
-  using objat unfolding setObject_def obj_at'_def
+  using objat ob unfolding setObject_def obj_at'_def
   apply (clarsimp simp: updateObject_default_def in_monad return_def lookupAround2_char1
                         split_def x P lookupAround2_char1 projectKOs
                         objBits_def[symmetric] in_magnitude_check project_inject)
@@ -1268,22 +1267,22 @@ lemma setObject_eq:
   apply (rule conjI)
    apply (rule_tac x = obj in exI)
    apply simp
-  apply (erule ssubst [OF ob])
-  done
+  by metis
 
 lemma getObject_eq:
   fixes ko :: "'a :: pspace_storable"
   assumes x: "\<And>q n ko. loadObject p q n ko =
-                (loadObject_default p q n ko :: 'a kernel)"
+                (loadObject_default p q n ko :: 'a :: pspace_storable kernel_r)"
   assumes P: "\<And>(v::'a). (1 :: machine_word) < 2 ^ (objBits v)"
   and objat: "ko_at' ko p s"
   shows      "(ko, s) \<in> fst (getObject p s)"
   using objat unfolding exs_valid_def obj_at'_def
   apply clarsimp
   apply (clarsimp simp: loadObject_default_def getObject_def in_monad return_def lookupAround2_char1
-                        split_def x P lookupAround2_char2 projectKOs
-                        objBits_def[symmetric] in_magnitude_check project_inject)
-  done
+                        split_def x objBits_def[symmetric] project_inject
+                        readObject_def ogets_def oassert_opt_def
+                 split: option.splits)
+  by (fastforce simp: word_le_less_eq)
 
 lemma threadSet_eq:
   "ko_at' tcb thread s \<Longrightarrow>
@@ -1596,8 +1595,8 @@ where
   | "thread_state_to_tsType (Structures_H.Restart) = scast ThreadState_Restart"
   | "thread_state_to_tsType (Structures_H.Inactive) = scast ThreadState_Inactive"
   | "thread_state_to_tsType (Structures_H.IdleThreadState) = scast ThreadState_IdleThreadState"
-  | "thread_state_to_tsType (Structures_H.BlockedOnReply) = scast ThreadState_BlockedOnReply"
-  | "thread_state_to_tsType (Structures_H.BlockedOnReceive oref cg) = scast ThreadState_BlockedOnReceive"
+  | "thread_state_to_tsType (Structures_H.BlockedOnReply oref) = scast ThreadState_BlockedOnReply"
+  | "thread_state_to_tsType (Structures_H.BlockedOnReceive oref cg ro) = scast ThreadState_BlockedOnReceive"
   | "thread_state_to_tsType (Structures_H.BlockedOnSend oref badge cg cgr isc) = scast ThreadState_BlockedOnSend"
   | "thread_state_to_tsType (Structures_H.BlockedOnNotification oref) = scast ThreadState_BlockedOnNotification"
 
@@ -1790,7 +1789,7 @@ lemma cap_get_tag_isCap_unfolded_H_cap:
   and "ccap_relation (capability.IRQHandlerCap v13) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_irq_handler_cap)"
   and "ccap_relation (capability.IRQControlCap) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_irq_control_cap)"
   and "ccap_relation (capability.Zombie v14 v15 v16) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_zombie_cap)"
-  and "ccap_relation (capability.ReplyCap v17 v18 vr18b) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_reply_cap)"
+  and "ccap_relation (capability.ReplyCap v17 v18) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_reply_cap)"
   and "ccap_relation (capability.UntypedCap v100 v19 v20 v20b) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_untyped_cap)"
   and "ccap_relation (capability.CNodeCap v21 v22 v23 v24) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_cnode_cap)"
   and "ccap_relation (capability.DomainCap) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_domain_cap)"
@@ -1905,24 +1904,13 @@ lemma gs_set_assn_Delete_cstate_relation:
   by (auto simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
                  cmachine_state_relation_def ghost_assertion_data_set_def
                  ghost_size_rel_def ghost_assertion_data_get_def
-                 cteDeleteOne_'proc_def cap_get_capSizeBits_'proc_def)
-
-lemma update_typ_at:
-  assumes at: "obj_at' P p s"
-      and tp: "\<forall>obj. P obj \<longrightarrow> koTypeOf (injectKOS obj) = koTypeOf ko"
-  shows "typ_at' T p' (s \<lparr>ksPSpace := ksPSpace s(p \<mapsto> ko)\<rparr>) = typ_at' T p' s"
-  using at
-  by (auto elim!: obj_atE' simp: typ_at'_def ko_wp_at'_def
-           dest!: tp[rule_format]
-            simp: project_inject projectKO_eq split: kernel_object.splits if_split_asm,
-      simp_all add: objBits_def objBitsT_koTypeOf[symmetric] ps_clear_upd
-               del: objBitsT_koTypeOf)
+                 cteDeleteOne_'proc_def cap_get_capSizeBits_'proc_def refill_buffer_relation_def)
 
 lemma ptr_val_tcb_ptr_mask:
   "obj_at' (P :: tcb \<Rightarrow> bool) thread s
       \<Longrightarrow> ptr_val (tcb_ptr_to_ctcb_ptr thread) && (~~ mask tcbBlockSizeBits)
                   = thread"
-  apply (clarsimp simp: obj_at'_def tcb_ptr_to_ctcb_ptr_def projectKOs)
+  apply (clarsimp simp: obj_at'_def tcb_ptr_to_ctcb_ptr_def)
   apply (simp add: is_aligned_add_helper ctcb_offset_defs objBits_simps')
   done
 
@@ -2019,7 +2007,7 @@ lemma heap_list_is_zero_mono2:
 
 lemma invs_urz[elim!]:
   "invs' s \<Longrightarrow> untyped_ranges_zero' s"
-  by (clarsimp simp: invs'_def valid_state'_def)
+  by (clarsimp simp: invs'_def)
 
 lemma arch_fault_tag_not_fault_tag_simps [simp]:
   "(arch_fault_to_fault_tag arch_fault = scast seL4_Fault_CapFault) = False"
@@ -2067,13 +2055,13 @@ lemma tcb_and_not_mask_canonical:
         tcb_ptr_to_ctcb_ptr t"
   apply (frule (1) obj_at'_is_canonical)
   apply (drule canonical_address_tcb_ptr)
-   apply (clarsimp simp: obj_at'_def projectKOs objBits_simps' split: if_splits)
+   apply (clarsimp simp: obj_at'_def objBits_simps' split: if_splits)
   apply (clarsimp simp: canonical_address_sign_extended sign_extended_iff_sign_extend)
   apply (subgoal_tac "ptr_val (tcb_ptr_to_ctcb_ptr t) && ~~ mask n = ptr_val (tcb_ptr_to_ctcb_ptr t)")
    prefer 2
    apply (simp add: tcb_ptr_to_ctcb_ptr_def ctcb_offset_defs)
    apply (rule is_aligned_neg_mask_eq)
-   apply (clarsimp simp: obj_at'_def projectKOs objBits_simps')
+   apply (clarsimp simp: obj_at'_def objBits_simps')
    apply (rule is_aligned_add)
     apply (erule is_aligned_weaken, simp)
    apply (rule is_aligned_weaken[where x="tcbBlockSizeBits - 1"])

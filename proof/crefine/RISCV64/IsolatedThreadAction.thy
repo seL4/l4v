@@ -88,9 +88,8 @@ lemma put_tcb_state_regs_twice[simp]:
                    makeObject_tcb newArchTCB_def newContext_def initContext_def
             split: tcb_state_regs.split option.split
                    Structures_H.kernel_object.split)
-  apply (intro all_tcbI impI allI)
-  apply (case_tac q, simp)
-  done
+  apply (intro all_tcbI)
+  by (simp add: arch_tcb.expand)
 
 lemma partial_overwrite_twice[simp]:
   "partial_overwrite idx f (partial_overwrite idx g ps)
@@ -124,8 +123,6 @@ lemma isolate_thread_actions_bind:
   apply (simp add: exec_gets exec_modify)
   done
 
-lemmas setNotification_tcb = set_ntfn_tcb_obj_at'
-
 end
 
 context begin interpretation Arch . (*FIXME: arch_split*)
@@ -133,31 +130,32 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 lemma setObject_modify:
   fixes v :: "'a :: pspace_storable" shows
   "\<lbrakk> obj_at' (P :: 'a \<Rightarrow> bool) p s; updateObject v = updateObject_default v;
-         (1 :: machine_word) < 2 ^ objBits v \<rbrakk>
+         (1 :: machine_word) < 2 ^ objBits v; \<And>ko. P ko \<Longrightarrow> objBits ko = objBits v \<rbrakk>
     \<Longrightarrow> setObject p v s
       = modify (ksPSpace_update (\<lambda>ps. ps (p \<mapsto> injectKO v))) s"
   apply (clarsimp simp: setObject_def split_def exec_gets obj_at'_def lookupAround2_known1
                         assert_opt_def updateObject_default_def bind_assoc)
   apply (simp add: projectKO_def alignCheck_assert)
   apply (simp add: project_inject objBits_def)
-  apply (clarsimp simp only: objBitsT_koTypeOf[symmetric] koTypeOf_injectKO)
-  apply (frule(2) in_magnitude_check[where s'=s])
-  apply (simp add: magnitudeCheck_assert in_monad)
+  apply (clarsimp simp only: koTypeOf_injectKO)
+  apply (frule (1) in_magnitude_check[where s'=s])
+   apply blast
+  apply (simp add: magnitudeCheck_assert in_monad bind_def gets_def oassert_opt_def
+                   get_def return_def)
   apply (simp add: simpler_modify_def)
   done
 
 lemma getObject_return:
   fixes v :: "'a :: pspace_storable" shows
-  "\<lbrakk> \<And>a b c d. (loadObject a b c d :: 'a kernel) = loadObject_default a b c d;
-        ko_at' v p s; (1 :: machine_word) < 2 ^ objBits v \<rbrakk> \<Longrightarrow> getObject p s = return v s"
-  apply (clarsimp simp: getObject_def split_def exec_gets
-                        obj_at'_def projectKOs lookupAround2_known1
-                        assert_opt_def loadObject_default_def)
-  apply (simp add: projectKO_def alignCheck_assert)
-  apply (simp add: project_inject objBits_def)
-  apply (frule(2) in_magnitude_check[where s'=s])
-  apply (simp add: magnitudeCheck_assert in_monad)
-  done
+  "\<lbrakk> \<And>q n ko. loadObject p q n ko =
+                (loadObject_default p q n ko :: 'a :: pspace_storable kernel_r);
+     ko_at' v p s; (1 :: machine_word) < 2 ^ objBits v \<rbrakk> \<Longrightarrow>
+   getObject p s = return v s"
+  apply (clarsimp simp: getObject_def readObject_def omonad_defs split_def gets_the_def gets_def
+                        get_def bind_def return_def assert_opt_def fail_def obj_at'_def
+                        lookupAround2_known1 loadObject_default_def in_omonad
+                 split: option.splits)
+  by (fastforce simp add: project_inject objBits_def)
 
 end
 
@@ -182,13 +180,13 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 lemma get_tcb_state_regs_ko_at':
   "ko_at' ko p s \<Longrightarrow> get_tcb_state_regs (ksPSpace s p)
        = TCBStateRegs (tcbState ko) ((user_regs o atcbContextGet o tcbArch) ko)"
-  by (clarsimp simp: obj_at'_def projectKOs get_tcb_state_regs_def)
+  by (clarsimp simp: obj_at'_def get_tcb_state_regs_def)
 
 lemma put_tcb_state_regs_ko_at':
   "ko_at' ko p s \<Longrightarrow> put_tcb_state_regs tsr (ksPSpace s p)
        = Some (KOTCB (ko \<lparr> tcbState := tsrState tsr
                          , tcbArch := atcbContextSet (UserContext (tsrContext tsr)) (tcbArch ko)\<rparr>))"
-  by (clarsimp simp: obj_at'_def projectKOs put_tcb_state_regs_def
+  by (clarsimp simp: obj_at'_def put_tcb_state_regs_def
                      put_tcb_state_regs_tcb_def
               split: tcb_state_regs.split)
 
@@ -200,7 +198,7 @@ lemma partial_overwrite_get_tcb_state_regs:
                       split: if_split)
   apply clarsimp
   apply (drule_tac x=xa in spec)
-  apply (clarsimp simp: obj_at'_def projectKOs put_tcb_state_regs_def
+  apply (clarsimp simp: obj_at'_def put_tcb_state_regs_def
                         get_tcb_state_regs_def put_tcb_state_regs_tcb_def)
   apply (case_tac obj, simp)
   done
@@ -227,7 +225,7 @@ lemma isolate_thread_actions_asUser:
             id)"
   apply (simp add: asUser_def liftM_def isolate_thread_actions_def split_def
                    select_f_returns bind_assoc select_f_singleton_return
-                   threadGet_def threadSet_def)
+                   threadGet_getObject threadSet_def)
   apply (clarsimp simp: monadic_rewrite_def)
   apply (frule_tac x=t' in spec)
   apply (drule obj_at_ko_at', clarsimp)
@@ -385,21 +383,16 @@ lemma obj_at_partial_overwrite_id2:
              = obj_at' P p s"
   apply (frule dom_partial_overwrite[where tsrs=f])
   apply (simp add: obj_at'_def ps_clear_def partial_overwrite_def
-                   projectKOs split: if_split)
+            split: if_split)
   apply clarsimp
   apply (drule_tac x=x in spec)
   apply (clarsimp simp: put_tcb_state_regs_def objBits_simps
                         project_inject)
   done
 
-lemma objBits_2n:
-  "(1 :: machine_word) < 2 ^ objBits obj"
-  by (simp add: objBits_def objBitsKO_def archObjSize_def pageBits_def objBits_simps'
-         split: kernel_object.split arch_kernel_object.split)
-
 lemma getObject_get_assert:
-  assumes deflt: "\<And>a b c d. (loadObject a b c d :: ('a :: pspace_storable) kernel)
-                          = loadObject_default a b c d"
+  assumes deflt: "\<And>q n ko. loadObject p q n ko =
+                             (loadObject_default p q n ko :: 'a :: pspace_storable kernel_r)"
   shows
   "(getObject p :: ('a :: pspace_storable) kernel)
    = do v \<leftarrow> gets (obj_at' (\<lambda>x :: 'a. True) p);
@@ -407,32 +400,27 @@ lemma getObject_get_assert:
         gets (the o projectKO_opt o the o swp fun_app p o ksPSpace)
      od"
   apply (rule ext)
-  apply (simp add: exec_get getObject_def split_def exec_gets
-                   deflt loadObject_default_def projectKO_def2
-                   alignCheck_assert)
+  apply (rename_tac x)
   apply (case_tac "ksPSpace x p")
-   apply (simp add: obj_at'_def assert_opt_def assert_def
-             split: option.split if_split)
-  apply (simp add: lookupAround2_known1 assert_opt_def
-                   obj_at'_def projectKO_def2
-            split: option.split)
-  apply (clarsimp simp: fail_def fst_return conj_comms project_inject
-                        objBits_def)
-  apply (simp only: assert2[symmetric],
-         rule bind_apply_cong[OF refl])
-  apply (clarsimp simp: in_monad)
-  apply (fold objBits_def)
-  apply (simp add: magnitudeCheck_assert2[OF _ objBits_2n])
-  apply (rule bind_apply_cong[OF refl])
-  apply (clarsimp simp: in_monad return_def simpler_gets_def)
-  apply (simp add: iffD2[OF project_inject refl])
+   apply (clarsimp simp: obj_at'_def assert_opt_def assert_def split_def getObject_def2 deflt
+                         loadObject_default_def gets_the_def  gets_def get_def bind_def return_def
+                         fail_def in_omonad
+                  split: option.split if_split option.splits)
+  apply (clarsimp simp: getObject_def2 deflt loadObject_default_def projectKO_def)
+  apply (clarsimp simp: omonad_defs split_def gets_the_def gets_def
+                        get_def bind_def return_def assert_opt_def obj_at'_def
+                        lookupAround2_known1 assert_def
+                 split: option.splits)
+  apply (fastforce elim!: ps_clear_lookupAround2
+                    simp: fail_def project_inject objBits_def)
   done
 
 
 lemma getObject_isolatable:
-  "\<lbrakk> \<And>a b c d. (loadObject a b c d :: 'a kernel) = loadObject_default a b c d;
+  "\<lbrakk> \<And>q n ko. loadObject p q n ko =
+                             (loadObject_default p q n ko :: 'a :: pspace_storable kernel_r);
       \<And>tcb. projectKO_opt (KOTCB tcb) = (None :: 'a option) \<rbrakk> \<Longrightarrow>
-   thread_actions_isolatable idx (getObject p :: ('a :: pspace_storable) kernel)"
+   thread_actions_isolatable idx (getObject p :: 'a :: pspace_storable kernel)"
   apply (clarsimp simp: thread_actions_isolatable_def)
   apply (simp add: getObject_get_assert split_def
                    isolate_thread_actions_def bind_select_f_bind[symmetric]
@@ -441,8 +429,7 @@ lemma getObject_isolatable:
   apply (case_tac "p \<in> range idx")
    apply clarsimp
    apply (drule_tac x=x in spec)
-   apply (clarsimp simp: obj_at'_def projectKOs partial_overwrite_def
-                         put_tcb_state_regs_def)
+   apply (clarsimp simp: obj_at'_def partial_overwrite_def put_tcb_state_regs_def)
   apply (simp add: obj_at_partial_overwrite_id1)
   apply (simp add: partial_overwrite_def)
   apply (rule bind_apply_cong[OF refl])
@@ -661,12 +648,18 @@ lemma setObject_assert_modify:
      assert (obj_at' (\<lambda>_::'a. True) p s);
      modify (ksPSpace_update (\<lambda>ps. ps(p \<mapsto> injectKOS v)))
    od) s"
-  apply (clarsimp simp: assert_def setObject_modify split: if_split)
-  apply (clarsimp simp: setObject_def updateObject_default_def exec_gets split_def bind_assoc)
-  apply (clarsimp simp: assert_opt_def assert_def alignCheck_assert projectKO_def
-                 split: option.splits if_splits)
-  apply (clarsimp simp: magnitudeCheck_assert2 assert_def split: if_splits)
-  apply (clarsimp simp: obj_at'_def projectKOs)
+  apply (clarsimp simp: assert_def)
+  apply (intro conjI impI)
+   apply (subst setObject_modify; assumption?)
+    apply (fastforce dest: in_magnitude_check[where s'=s]
+                     simp: obj_at_simps project_inject)
+   apply (fastforce simp: obj_at_simps)
+  apply (clarsimp simp: setObject_def split_def exec_gets updateObject_default_def assert_opt_def
+                        assert_def alignCheck_assert
+                 split: option.splits)
+  apply (clarsimp simp: magnitudeCheck_assert2 assert_def gets_the_def gets_def
+                        get_def bind_def return_def assert_opt_def fail_def obj_at'_def
+                 split: option.splits)
   done
 
 lemma thread_actions_isolatable_mapM_x:
@@ -836,50 +829,16 @@ lemma empty_fail_isRunnable:
   "empty_fail (isRunnable t)"
   by (simp add: isRunnable_def isStopped_def)
 
-lemma setupCallerCap_rewrite:
-  "monadic_rewrite True True (\<lambda>s. reply_masters_rvk_fb (ctes_of s))
-   (setupCallerCap send rcv canGrant)
-   (do setThreadState BlockedOnReply send;
-       replySlot \<leftarrow> getThreadReplySlot send;
-       callerSlot \<leftarrow> getThreadCallerSlot rcv;
-       replySlotCTE \<leftarrow> getCTE replySlot;
-       assert (mdbNext (cteMDBNode replySlotCTE) = 0
-                 \<and> isReplyCap (cteCap replySlotCTE)
-                 \<and> capReplyMaster (cteCap replySlotCTE)
-                 \<and> mdbFirstBadged (cteMDBNode replySlotCTE)
-                 \<and> mdbRevocable (cteMDBNode replySlotCTE));
-       cteInsert (ReplyCap send False canGrant) replySlot callerSlot
-    od)"
-  apply (simp add: setupCallerCap_def getThreadCallerSlot_def
-                   getThreadReplySlot_def locateSlot_conv
-                   getSlotCap_def)
-  apply (rule monadic_rewrite_imp)
-   apply (rule monadic_rewrite_bind_tail)+
-     apply (rule monadic_rewrite_assert)+
-     apply (rule_tac P="mdbFirstBadged (cteMDBNode masterCTE)
-                        \<and> mdbRevocable (cteMDBNode masterCTE)"
-                 in monadic_rewrite_gen_asm)
-     apply simp
-     apply (rule monadic_rewrite_trans)
-      apply (rule monadic_rewrite_bind_tail)
-       apply (rule monadic_rewrite_symb_exec2, (wp | simp)+)+
-       apply (rule monadic_rewrite_refl)
-      apply wp+
-     apply (rule monadic_rewrite_symb_exec2, (wp empty_fail_getCTE)+)+
-     apply (rule monadic_rewrite_refl)
-    apply (wp getCTE_wp' | simp add: cte_wp_at_ctes_of)+
-  apply (clarsimp simp: reply_masters_rvk_fb_def)
-  apply fastforce
-  done
-
 lemma oblivious_getObject_ksPSpace_default:
   "\<lbrakk> \<forall>s. ksPSpace (f s) = ksPSpace s;
-      \<And>a b c ko. (loadObject a b c ko :: 'a kernel) \<equiv> loadObject_default a b c ko \<rbrakk> \<Longrightarrow>
-   oblivious f (getObject p :: ('a :: pspace_storable) kernel)"
-  apply (simp add: getObject_def split_def loadObject_default_def
-                   projectKO_def2 alignCheck_assert magnitudeCheck_assert)
-  apply (intro oblivious_bind, simp_all)
-  done
+     \<And>a b c ko. (loadObject a b c ko :: 'a kernel_r) \<equiv> loadObject_default a b c ko \<rbrakk>
+   \<Longrightarrow> oblivious f (getObject p :: 'a :: pspace_storable kernel)"
+  apply (simp add: getObject_def2 split_def loadObject_default_def
+                   projectKO_def alignCheck_assert magnitudeCheck_assert)
+  apply (intro oblivious_bind; simp)
+  by (auto simp: oblivious_def gets_the_def assert_opt_def bind_def gets_def return_def
+                 oassert_opt_def read_magnitudeCheck_def get_def fail_def
+          split: option.splits)
 
 lemmas oblivious_getObject_ksPSpace_tcb[simp]
     = oblivious_getObject_ksPSpace_default[OF _ loadObject_tcb]
@@ -889,20 +848,26 @@ lemma oblivious_setObject_ksPSpace_tcb[simp]:
      \<forall>s g. ksPSpace_update g (f s) = f (ksPSpace_update g s) \<rbrakk> \<Longrightarrow>
    oblivious f (setObject p (v :: tcb))"
   apply (simp add: setObject_def split_def updateObject_default_def
-                   projectKO_def2 alignCheck_assert magnitudeCheck_assert)
-  apply (intro oblivious_bind, simp_all)
-  done
+                   projectKO_def alignCheck_assert magnitudeCheck_assert)
+  apply (intro oblivious_bind; simp)
+  by (auto simp: oblivious_def assert_opt_def bind_def gets_def return_def
+                 oassert_opt_def get_def fail_def
+          split: option.splits)
 
 lemma oblivious_getObject_ksPSpace_cte[simp]:
   "\<lbrakk> \<forall>s. ksPSpace (f s) = ksPSpace s \<rbrakk> \<Longrightarrow>
    oblivious f (getObject p :: cte kernel)"
-  apply (simp add: getObject_def split_def loadObject_cte
-                   projectKO_def2 alignCheck_assert magnitudeCheck_assert
+  apply (simp add: getObject_def2 split_def loadObject_cte
+                   projectKO_def alignCheck_assert magnitudeCheck_assert
                    typeError_def unless_when
              cong: Structures_H.kernel_object.case_cong)
-  apply (intro oblivious_bind,
-         simp_all split: Structures_H.kernel_object.split if_split)
-  by (safe intro!: oblivious_bind, simp_all)
+  apply (intro oblivious_bind;
+         simp split: Structures_H.kernel_object.split if_split)
+  by (intro conjI impI allI;
+      auto simp: oblivious_def assert_opt_def bind_def gets_def return_def
+                 get_def fail_def gets_the_def in_omonad omonad_defs
+                 read_typeError_def read_alignCheck_def read_magnitudeCheck_def read_alignError_def
+          split: option.splits)
 
 lemma oblivious_doMachineOp[simp]:
   "\<lbrakk> \<forall>s. ksMachineState (f s) = ksMachineState s;
@@ -928,51 +893,21 @@ lemma oblivious_setVMRoot_schact:
                              findVSpaceForASID_def liftME_def checkPTAt_def
                       split: if_split capability.split arch_capability.split option.split)+
 
-
 lemma oblivious_switchToThread_schact:
   "oblivious (ksSchedulerAction_update f) (ThreadDecls_H.switchToThread t)"
   apply (simp add: Thread_H.switchToThread_def switchToThread_def bind_assoc
-                   getCurThread_def setCurThread_def threadGet_def liftM_def
+                   getCurThread_def setCurThread_def liftM_def
                    threadSet_def tcbSchedEnqueue_def unless_when asUser_def
                    getQueue_def setQueue_def storeWordUser_def setRegister_def
-                   pointerInUserData_def isRunnable_def isStopped_def
-                   getThreadState_def tcbSchedDequeue_def bitmap_fun_defs)
+                   pointerInUserData_def isRunnable_def isStopped_def threadGet_getObject
+                   getThreadState_def tcbSchedDequeue_def bitmap_fun_defs ready_qs_runnable_def)
   by (safe intro!: oblivious_bind
-              | simp_all add: oblivious_setVMRoot_schact)+
+      | simp_all add: oblivious_setVMRoot_schact)+
 
-lemma empty_fail_getCurThread[iff]:
-  "empty_fail getCurThread" by (simp add: getCurThread_def)
-lemma activateThread_simple_rewrite:
-  "monadic_rewrite True True (ct_in_state' ((=) Running))
-       (activateThread) (return ())"
-  apply (simp add: activateThread_def)
-  apply (rule monadic_rewrite_imp)
-   apply (rule monadic_rewrite_trans, rule monadic_rewrite_bind_tail)+
-       apply (rule_tac P="state = Running" in monadic_rewrite_gen_asm)
-       apply simp
-       apply (rule monadic_rewrite_refl)
-      apply wp
-     apply (rule monadic_rewrite_symb_exec2, (wp empty_fail_getThreadState)+)
-     apply (rule monadic_rewrite_refl)
-    apply wp
-   apply (rule monadic_rewrite_symb_exec2,
-          simp_all add: getCurThread_def)
-   apply (rule monadic_rewrite_refl)
-  apply (clarsimp simp: ct_in_state'_def elim!: pred_tcb'_weakenE)
-  done
+crunches getCurThread
+  for (empty_fail) empty_fail[iff]
 
 end
-
-lemma setCTE_obj_at_prio[wp]:
-  "\<lbrace>obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t\<rbrace> setCTE p v \<lbrace>\<lambda>rv. obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t\<rbrace>"
-  unfolding setCTE_def
-  by (rule setObject_cte_obj_at_tcb', simp+)
-
-crunch obj_at_prio[wp]: cteInsert "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t"
-  (wp: crunch_wps)
-
-crunch ctes_of[wp]: asUser "\<lambda>s. P (ctes_of s)"
-  (wp: crunch_wps)
 
 lemma tcbSchedEnqueue_tcbPriority[wp]:
   "\<lbrace>obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t\<rbrace>
@@ -982,24 +917,39 @@ lemma tcbSchedEnqueue_tcbPriority[wp]:
   apply (wp | simp cong: if_cong)+
   done
 
-crunch obj_at_prio[wp]: cteDeleteOne "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t"
-  (wp: crunch_wps setEndpoint_obj_at'_tcb
-       setThreadState_obj_at_unchanged setNotification_tcb setBoundNotification_obj_at_unchanged
-        simp: crunch_simps unless_def)
+(* FIXME RT: move following lemmas about tcbPriority to Refine or possibly DInvs (see VER-1299) *)
+crunches unbindMaybeNotification, blockedCancelIPC, replyRemoveTCB, cancelSignal
+  for tcbPriority_obj_at'[wp]: "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t'"
+  (wp: setBoundNotification_oa_queued setThreadState_oa_queued crunch_wps
+   simp: crunch_simps)
 
-lemma setThreadState_no_sch_change:
-  "\<lbrace>\<lambda>s. P (ksSchedulerAction s) \<and> (runnable' st \<or> t \<noteq> ksCurThread s)\<rbrace>
-      setThreadState st t
-   \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
-  (is "NonDetMonad.valid ?P ?f ?Q")
-  apply (simp add: setThreadState_def setSchedulerAction_def)
-  apply (wp hoare_pre_cont[where a=rescheduleRequired])
-  apply (rule_tac Q="\<lambda>_. ?P and st_tcb_at' ((=) st) t" in hoare_post_imp)
-   apply (clarsimp split: if_split)
-   apply (clarsimp simp: obj_at'_def st_tcb_at'_def projectKOs)
-  apply (wp threadSet_pred_tcb_at_state)
-  apply simp
-  done
+lemma cancelIPC_tcbPriority[wp]:
+  "cancelIPC tptr \<lbrace>obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t\<rbrace>"
+  apply (simp add: cancelIPC_def unless_def)
+  by (wpsimp wp: threadSet_obj_at' gts_wp' hoare_drop_imps)
+
+crunches rescheduleRequired
+  for tcbPriority_obj_at'[wp]: "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t'"
+  (wp: crunch_wps simp: crunch_simps)
+
+lemma tcbSchedContext_update_tcbPriority[wp]:
+  "threadSet (tcbSchedContext_update f) t' \<lbrace>obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t\<rbrace>"
+  by (wpsimp wp: threadSet_obj_at' gts_wp' hoare_drop_imps)
+
+lemma tcbReleaseRemove_tcbPriority[wp]:
+  "tcbReleaseRemove tcbPtr \<lbrace>obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t\<rbrace>"
+  apply (clarsimp simp: tcbReleaseRemove_def)
+  by (wpsimp wp: threadSet_obj_at' gts_wp' hoare_drop_imps)
+
+lemma schedContextDonate_tcbPriority[wp]:
+  "schedContextDonate scPtr tcbPtr \<lbrace>obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t\<rbrace>"
+  apply (simp add: schedContextDonate_def)
+  by (wpsimp wp: hoare_drop_imps)
+
+crunches cteDeleteOne
+  for tcbPriority_obj_at'[wp]: "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t'"
+  (wp: crunch_wps tcbSchedEnqueue_tcbPriority setThreadState_oa_queued
+   simp: crunch_simps)
 
 lemma asUser_obj_at_unchangedT:
   assumes x: "\<forall>tcb con con'. con' \<in> fst (m con)
@@ -1021,26 +971,27 @@ lemma bind_assoc:
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma setObject_modify_assert:
-  "\<lbrakk> updateObject v = updateObject_default v \<rbrakk>
-    \<Longrightarrow> setObject p v = do f \<leftarrow> gets (obj_at' (\<lambda>v'. v = v' \<or> True) p);
-                         assert f; modify (ksPSpace_update (\<lambda>ps. ps(p \<mapsto> injectKO v))) od"
-  using objBits_2n[where obj=v]
+  "\<lbrakk>updateObject v = updateObject_default v\<rbrakk>
+   \<Longrightarrow> setObject p v = do f \<leftarrow> gets (obj_at' (\<lambda>v'. v = v' \<or> objBits v' = objBits v) p);
+                          assert f; modify (ksPSpace_update (\<lambda>ps. ps(p \<mapsto> injectKO v)))
+                       od"
   apply (simp add: setObject_def split_def updateObject_default_def
-                   bind_assoc projectKO_def2 alignCheck_assert)
+                   bind_assoc projectKO_def alignCheck_assert)
   apply (rule ext, simp add: exec_gets)
-  apply (case_tac "obj_at' (\<lambda>v'. v = v' \<or> True) p x")
-   apply (clarsimp simp: obj_at'_def projectKOs lookupAround2_known1
+  apply (case_tac "obj_at' (\<lambda>v'. v = v' \<or> objBits v' = objBits v) p x")
+   apply (clarsimp simp: obj_at'_def lookupAround2_known1
                          assert_opt_def)
    apply (clarsimp simp: project_inject)
-   apply (simp only: objBits_def objBitsT_koTypeOf[symmetric] koTypeOf_injectKO)
+   apply (simp only: objBits_def  koTypeOf_injectKO)
    apply (simp add: magnitudeCheck_assert2 simpler_modify_def)
+   apply (clarsimp simp: assert_def magnitudeCheck_assert2)
+   apply (clarsimp simp: omonad_defs bind_def return_def)
+   apply fastforce
   apply (clarsimp simp: assert_opt_def assert_def magnitudeCheck_assert2
-                 split: option.split if_split)
-  apply (clarsimp simp: obj_at'_def projectKOs)
-  apply (clarsimp simp: project_inject)
-  apply (simp only: objBits_def objBitsT_koTypeOf[symmetric]
-                    koTypeOf_injectKO simp_thms)
-  done
+                 split: option.split)
+  by (fastforce simp: omonad_defs gets_the_def get_def bind_def return_def assert_opt_def fail_def
+                      obj_at_simps project_inject
+               split: option.splits)
 
 lemma setEndpoint_isolatable:
   "thread_actions_isolatable idx (setEndpoint p e)"
@@ -1104,8 +1055,6 @@ lemma setCTE_assert_modify:
        apply (rule word_and_le2)
       apply (simp add: objBits_simps mask_def field_simps)
      apply (simp add: simpler_modify_def cong: option.case_cong if_cong)
-     apply (rule kernel_state.fold_congs[OF refl refl])
-     apply (clarsimp simp: projectKO_opt_tcb cong: if_cong)
     apply (clarsimp simp: lookupAround2_char1 word_and_le2)
     apply (rule ccontr, clarsimp)
     apply (erule(2) ps_clearD)
@@ -1122,11 +1071,10 @@ lemma setCTE_assert_modify:
    apply (erule disjE)
     apply clarsimp
     apply (frule(1) tcb_cte_cases_aligned_helpers)
-    apply (clarsimp simp: domI[where m = cte_cte_cases] field_simps)
-    apply (clarsimp simp: lookupAround2_char1 obj_at'_def projectKOs
-                          objBits_simps)
-   apply (clarsimp simp: obj_at'_def lookupAround2_char1
-                         objBits_simps' projectKOs cte_level_bits_def)
+    apply (clarsimp simp: domI field_simps)
+    apply (clarsimp simp: lookupAround2_char1 obj_at'_def objBits_simps' scBits_simps word_bits_def)
+   apply (clarsimp simp: obj_at'_def lookupAround2_char1 objBits_simps' cte_level_bits_def
+                         word_bits_def)
   apply (erule empty_failD[OF empty_fail_updateObject_cte])
   done
 
@@ -1227,17 +1175,16 @@ lemma isolate_thread_actions_threadSet_tcbState:
                    select_f_returns getSchedulerAction_def)
   apply (clarsimp simp: monadic_rewrite_def exec_gets threadSet_def
                         getObject_get_assert bind_assoc liftM_def
-                        setObject_modify_assert)
+                        setObject_modify_assert objBits_simps')
   apply (frule_tac x=t' in spec, drule obj_at_ko_at')
   apply (clarsimp simp: exec_gets simpler_modify_def o_def
                 intro!: kernel_state.fold_congs[OF refl refl])
   apply (simp add: partial_overwrite_fun_upd
                    partial_overwrite_get_tcb_state_regs)
-  apply (clarsimp simp: put_tcb_state_regs_def put_tcb_state_regs_tcb_def
-                        projectKOs get_tcb_state_regs_def
+  apply (clarsimp simp: put_tcb_state_regs_def put_tcb_state_regs_tcb_def get_tcb_state_regs_def
                  elim!: obj_atE')
   apply (case_tac ko)
-  apply (simp add: projectKO_opt_tcb)
+  apply (simp add: objBits_simps)
   done
 
 lemma thread_actions_isolatableD:
@@ -1264,11 +1211,16 @@ lemma tcbSchedDequeue_rewrite:
 
 lemma switchToThread_rewrite:
   "monadic_rewrite True True
-       (ct_in_state' (Not \<circ> runnable') and cur_tcb' and obj_at' (Not \<circ> tcbQueued) t)
+       (ct_in_state' (Not \<circ> runnable') and cur_tcb' and obj_at' (Not \<circ> tcbQueued) t
+        and ready_qs_runnable)
        (switchToThread t)
        (do Arch.switchToThread t; setCurThread t od)"
   apply (simp add: switchToThread_def Thread_H.switchToThread_def)
   apply (rule monadic_rewrite_imp)
+   apply (rule monadic_rewrite_trans)
+    apply (rule monadic_rewrite_bind_head)
+    apply (rule monadic_rewrite_stateAssert)
+   apply (rule monadic_rewrite_drop_return)
    apply (rule monadic_rewrite_trans)
     apply (rule monadic_rewrite_bind_tail)
      apply (rule monadic_rewrite_bind)
@@ -1276,17 +1228,16 @@ lemma switchToThread_rewrite:
       apply (rule monadic_rewrite_refl)
      apply (wp Arch_switchToThread_obj_at_pre)+
    apply (rule monadic_rewrite_bind_tail)
-    apply (rule monadic_rewrite_symb_exec)
-       apply (wp+, simp)
+    apply (rule monadic_rewrite_drop_return)
     apply (rule monadic_rewrite_refl)
-   apply (wp)
+   apply wpsimp
   apply (clarsimp simp: comp_def)
   done
 
 lemma threadGet_isolatable:
   assumes v: "\<And>tsr. \<forall>tcb. f (put_tcb_state_regs_tcb tsr tcb) = f tcb"
   shows "thread_actions_isolatable idx (threadGet f t)"
-  apply (clarsimp simp: threadGet_def thread_actions_isolatable_def
+  apply (clarsimp simp: threadGet_getObject thread_actions_isolatable_def
                         isolate_thread_actions_def split_def
                         getObject_get_assert liftM_def
                         bind_select_f_bind[symmetric]
@@ -1298,8 +1249,7 @@ lemma threadGet_isolatable:
   apply (clarsimp simp: exec_gets exec_modify o_def
                         ksPSpace_update_partial_id in_monad)
   apply (erule obj_atE')
-  apply (clarsimp simp: projectKOs
-                        partial_overwrite_def put_tcb_state_regs_def
+  apply (clarsimp simp: partial_overwrite_def put_tcb_state_regs_def
                   cong: if_cong)
   apply (simp add: projectKO_opt_tcb v split: if_split)
   done
@@ -1317,9 +1267,12 @@ lemma threadGet_isolatable:
                thread_actions_isolatable_fail)
   done
 
+(* FIXME RT: Maybe no longer true, now that setCurThread contains the ready_qs_runnable assertion,
+which depends on the thread state, and could be modified by partial_overwrite *)
 lemma setCurThread_isolatable:
   "thread_actions_isolatable idx (setCurThread t)"
-  by (simp add: setCurThread_def modify_isolatable)
+  oops
+(*  by (simp add: setCurThread_def modify_isolatable) *)
 
 lemma isolate_thread_actions_tcbs_at:
   assumes f: "\<And>x. \<lbrace>tcb_at' (idx x)\<rbrace> f \<lbrace>\<lambda>rv. tcb_at' (idx x)\<rbrace>" shows
@@ -1390,9 +1343,9 @@ lemma set_register_isolate:
                    getRegister_def setRegister_def
                    select_f_returns isolate_thread_actions_def
                    getSchedulerAction_def)
-  apply (simp add: threadGet_def liftM_def getObject_get_assert
+  apply (simp add: threadGet_getObject liftM_def getObject_get_assert
                    bind_assoc threadSet_def
-                   setObject_modify_assert)
+                   setObject_modify_assert objBits_simps')
   apply (clarsimp simp: monadic_rewrite_def exec_gets
                         exec_modify tcb_at_KOTCB_upd)
   apply (clarsimp simp: simpler_modify_def
@@ -1401,13 +1354,9 @@ lemma set_register_isolate:
                         partial_overwrite_fun_upd
                         partial_overwrite_get_tcb_state_regs)
   apply (drule_tac x=y in spec)
-  apply (clarsimp simp: obj_at'_def projectKOs objBits_simps
-                  cong: if_cong)
+  apply (clarsimp simp: obj_at'_def objBits_simps)
   apply (case_tac obj)
-  apply (simp add: projectKO_opt_tcb put_tcb_state_regs_def
-                   put_tcb_state_regs_tcb_def get_tcb_state_regs_def
-                   atcbContextGet_def
-             cong: if_cong)
+  apply (clarsimp simp: put_tcb_state_regs_def put_tcb_state_regs_tcb_def get_tcb_state_regs_def)
   done
 
 lemma copy_register_isolate:
@@ -1423,9 +1372,9 @@ lemma copy_register_isolate:
                    getRegister_def setRegister_def
                    select_f_returns isolate_thread_actions_def
                    getSchedulerAction_def)
-  apply (simp add: threadGet_def liftM_def getObject_get_assert
+  apply (simp add: threadGet_getObject liftM_def getObject_get_assert
                    bind_assoc threadSet_def
-                   setObject_modify_assert)
+                   setObject_modify_assert objBits_simps)
   apply (clarsimp simp: monadic_rewrite_def exec_gets
                         exec_modify tcb_at_KOTCB_upd)
   apply (clarsimp simp: simpler_modify_def
@@ -1553,7 +1502,7 @@ lemma emptySlot_isolatable:
 lemmas fastpath_isolatables
     = setEndpoint_isolatable getCTE_isolatable
       assert_isolatable cteInsert_isolatable
-      switchToThread_isolatable setCurThread_isolatable
+      switchToThread_isolatable (* setCurThread_isolatable *)
       emptySlot_isolatable updateMDB_isolatable
       thread_actions_isolatable_returns
 
@@ -1580,13 +1529,19 @@ lemma lookupIPCBuffer_isolatable:
       apply (simp add: assert_isolatable thread_actions_isolatable_return | wp)+
   done
 
+crunches isSchedulable
+  for (empty_fail) empty_fail[wp]
+
 lemma setThreadState_rewrite_simple:
   "monadic_rewrite True True
-     (\<lambda>s. (runnable' st \<or> ksSchedulerAction s \<noteq> ResumeCurrentThread \<or> t \<noteq> ksCurThread s) \<and> tcb_at' t s)
+     (\<lambda>s. ((runnable' st \<and> pred_map (\<lambda>tcb. \<not> tcbInReleaseQueue tcb) (tcbs_of' s) (ksCurThread s)
+            \<and> pred_map (\<lambda>scPtr. isScActive scPtr s) (tcbSCs_of s) (ksCurThread s))
+           \<or> ksSchedulerAction s \<noteq> ResumeCurrentThread \<or> t \<noteq> ksCurThread s)
+          \<and> tcb_at' t s)
      (setThreadState st t)
      (threadSet (tcbState_update (\<lambda>_. st)) t)"
   supply if_split[split del]
-  apply (simp add: setThreadState_def)
+  apply (simp add: setThreadState_def scheduleTCB_def)
   apply (rule monadic_rewrite_imp)
    apply (rule monadic_rewrite_trans)
     apply (rule monadic_rewrite_bind_tail)
@@ -1597,17 +1552,19 @@ lemma setThreadState_rewrite_simple:
          apply (subst if_not_P)
           apply assumption
          apply (rule monadic_rewrite_refl)
-        apply wp+
+        apply (wpsimp wp: isSchedulable_wp)+
      apply (rule monadic_rewrite_symb_exec2,
-            (wp  empty_fail_isRunnable
-               | (simp only: getCurThread_def getSchedulerAction_def
-                      , rule empty_fail_gets))+)+
+            (wp empty_fail_isRunnable
+             | (simp only: getCurThread_def getSchedulerAction_def, rule empty_fail_gets))+)+
      apply (rule monadic_rewrite_refl)
-    apply (simp add: conj_comms, wp hoare_vcg_imp_lift threadSet_tcbState_st_tcb_at')
-     apply (clarsimp simp: obj_at'_def sch_act_simple_def st_tcb_at'_def)
+    apply (wpsimp wp: hoare_vcg_imp_lift threadSet_tcbState_st_tcb_at')+
+    apply (wpsimp wp: threadSet_wp)
+   apply (clarsimp simp: obj_at'_def sch_act_simple_def st_tcb_at'_def)
    apply (rule monadic_rewrite_refl)
-  apply clarsimp
-  done
+  apply (clarsimp simp: isSchedulable_bool_def pred_map_simps obj_at_simps vs_all_heap_simps
+                        opt_map_def isScActive_def
+                 split: option.splits if_splits)
+  by (metis kernel_object.simps gr_implies_not0 handy_if_lemma)
 
 end
 

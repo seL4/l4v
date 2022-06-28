@@ -651,7 +651,7 @@ abbreviation
 abbreviation
   "tcb_cte_array_relation astate cstate
     \<equiv> cvariable_array_map_relation (map_to_tcbs (ksPSpace astate))
-        (\<lambda>x. 6) cte_Ptr (hrs_htd (t_hrs_' cstate))"
+        (\<lambda>x. unat tcbCNodeEntries) cte_Ptr (hrs_htd (t_hrs_' cstate))"
 
 fun
   irqstate_to_C :: "irqstate \<Rightarrow> machine_word"
