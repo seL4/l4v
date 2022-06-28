@@ -47,15 +47,14 @@ lemma rf_sr_tcb_ctes_array_assertion':
   "\<lbrakk> (s, s') \<in> rf_sr; tcb_at' (ctcb_ptr_to_tcb_ptr tcb) s \<rbrakk>
     \<Longrightarrow> array_assertion (cte_Ptr (ptr_val tcb && ~~mask tcbBlockSizeBits))
         (unat tcbCNodeEntries) (hrs_htd (t_hrs_' (globals s')))"
-  apply (rule h_t_array_valid_array_assertion, simp_all add: tcbCNodeEntries_def)
+  apply (rule h_t_array_valid_array_assertion)
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                         cvariable_array_map_relation_def
                         cpspace_relation_def)
   apply (drule obj_at_ko_at', clarsimp)
   apply (drule spec, drule mp, rule exI, erule ko_at_projectKO_opt)
   apply (frule ptr_val_tcb_ptr_mask)
-  apply (simp add: mask_def)
-  done
+   by (fastforce simp add: mask_def tcbCNodeEntries_def)+
 
 lemmas rf_sr_tcb_ctes_array_assertion
   = rf_sr_tcb_ctes_array_assertion'[simplified objBits_defs mask_def, simplified]
