@@ -5,7 +5,8 @@
  *)
 
 theory CachePartitionIntegrity
-imports InfoFlow.ADT_IF
+imports InfoFlow.InfoFlow_IF
+  InfoFlow.ADT_IF (* - Comment this out when you don't need the InfoFlow ADT definitions *)
 begin
 
 section \<open> Kernel heap-agnostic subset property definitions \<close>
@@ -62,14 +63,34 @@ abbreviation to_phys :: "machine_word set \<Rightarrow> paddr set" where
 abbreviation phys_touched :: "det_state \<Rightarrow> paddr set" where
   "phys_touched s \<equiv> to_phys (touched_addresses (machine_state s))"
 
+abbreviation cur_label :: "'a PAS \<Rightarrow> det_state \<Rightarrow> 'a" where
+  "cur_label aag s \<equiv> THE l. pasDomainAbs aag (cur_domain s) = {l}"
+
+\<comment> \<open>When we have that the @{term\<open>cur_domain\<close>} matches the PAS record's @{term\<open>pasSubject\<close>} (as
+    per @{term\<open>pas_cur_domain\<close>}) we can simplify it out thanks to @{term\<open>pas_domains_distinct\<close>}.\<close>
+lemma cur_label_to_subj:
+  "pas_cur_domain aag s \<Longrightarrow>
+   pas_domains_distinct aag \<Longrightarrow>
+   cur_label aag s = pasSubject aag"
+  unfolding pas_domains_distinct_def
+  by (metis singletonD the_elem_def the_elem_eq)
+
+\<comment> \<open>However, we expect @{term\<open>cur_domain\<close>} to get out of alignment with the @{term\<open>pasSubject\<close>}
+    halfway through the domain-switch step of the Access automaton, over which we verify integrity.
+      As we will make the steps of the InfoFlow time-protection extension automaton finer grained
+    than this, so we can verify time protection, @{term\<open>pasSubject\<close>} will not accurately reflect
+    the @{term\<open>cur_domain\<close>} (i.e. @{term\<open>pas_cur_domain\<close>} will not hold) for some of its states.
+      To ensure we have no such mismatch, we will define the subset properties here directly in
+    terms of @{term\<open>cur_domain\<close>} (via @{term\<open>cur_label\<close>}) rather than the @{term\<open>pasSubject\<close>}.\<close>
+
 definition ta_subset_owned_partition :: "'a PAS \<Rightarrow> det_state \<Rightarrow> bool" where
   "ta_subset_owned_partition aag s \<equiv>
-     phys_touched s \<subseteq> L2_partition_of (pasSubject aag)"
+     phys_touched s \<subseteq> L2_partition_of (cur_label aag s)"
 
 \<comment> \<open>Partition subset property: That only paddrs in policy-accessible partitions are ever accessed.\<close>
 definition ta_subset_accessible_partitions :: "'a PAS \<Rightarrow> det_state \<Rightarrow> bool" where
   "ta_subset_accessible_partitions aag s \<equiv>
-     phys_touched s \<subseteq> pas_partitions_accessible_to aag (pasSubject aag)"
+     phys_touched s \<subseteq> pas_partitions_accessible_to aag (cur_label aag s)"
 
 \<comment> \<open>That @{term\<open>pasObjectAbs\<close>} assigns each label only addresses located in its L2 partition.\<close>
 definition owned_addrs_well_partitioned :: "'a PAS \<Rightarrow> bool" where
@@ -95,7 +116,7 @@ lemma owned_to_accessible_addrs_well_partitioned:
 \<comment> \<open>Address subset property: That only the paddrs of policy-accessible labels are ever accessed.\<close>
 definition ta_subset_accessible_addrs :: "'a PAS \<Rightarrow> det_state \<Rightarrow> bool" where
   "ta_subset_accessible_addrs aag s \<equiv>
-     phys_touched s \<subseteq> to_phys (pas_addrs_accessible_to aag (pasSubject aag))"
+     phys_touched s \<subseteq> to_phys (pas_addrs_accessible_to aag (cur_label aag s))"
 
 lemma ta_subset_accessible_addrs_to_partitions:
   "ta_subset_accessible_addrs aag s \<Longrightarrow>
@@ -155,8 +176,8 @@ definition owned_objs_well_partitioned :: "'a PAS \<Rightarrow> det_state \<Righ
 \<comment> \<open>That accessible objects will only lie inside accessible domains' partitions.\<close>
 definition accessible_objs_well_partitioned :: "'a PAS \<Rightarrow> det_state \<Rightarrow> bool" where
   "accessible_objs_well_partitioned aag s \<equiv>
-     to_phys (\<Union> (obj_kheap_addrs s ` pas_addrs_accessible_to aag (pasSubject aag))) \<subseteq>
-     pas_partitions_accessible_to aag (pasSubject aag)"
+     to_phys (\<Union> (obj_kheap_addrs s ` pas_addrs_accessible_to aag (cur_label aag s))) \<subseteq>
+     pas_partitions_accessible_to aag (cur_label aag s)"
 
 lemma accessible_objs_subset_accessible_addrs:
   "no_label_straddling_objs aag s \<Longrightarrow>
@@ -228,7 +249,7 @@ lemma owned_to_accessible_objs_well_partitioned:
 definition ta_subset_accessible_objects :: "'a PAS \<Rightarrow> det_state \<Rightarrow> bool" where
   "ta_subset_accessible_objects aag s \<equiv>
      phys_touched s \<subseteq>
-     to_phys (\<Union> (obj_kheap_addrs s ` pas_addrs_accessible_to aag (pasSubject aag)))"
+     to_phys (\<Union> (obj_kheap_addrs s ` pas_addrs_accessible_to aag (cur_label aag s)))"
 
 (* If it is easier to prove `ta_subset_accessible_objects` than
    `ta_subset_accessible_addrs` as an invariant,
@@ -486,6 +507,8 @@ lemma schedule_ta_subset_inv:
   "schedule \<lbrace>ta_subset_inv aag\<rbrace>"
   sorry
 
+(* Need to import InfoFlow.ADT_IF for the following section: *)
+
 \<comment> \<open> Instead of @{term\<open>call_kernel\<close>}, prove for monads used for each step of @{term\<open>ADT_A_if\<close>}. \<close>
 
 crunches check_active_irq_if
@@ -518,6 +541,8 @@ crunches kernel_exit_if
 crunches call_kernel
   for ta_subset_inv: "ta_subset_inv aag"
   (wp: crunch_wps)
+
+(* End of part that needs InfoFlow.ADT_IF *)
 
 end
 
