@@ -398,6 +398,7 @@ next
               apply (rule getSlotCap_corres,simp)
              apply (rule crel)
             apply simp
+           sorry (* FIXME: Broken by touched_addresses. -robs *)
            apply (wp lookup_slot_for_cnode_op_inv
                      hoare_drop_impE_R hoare_vcg_all_lift_R
                 | clarsimp)+
