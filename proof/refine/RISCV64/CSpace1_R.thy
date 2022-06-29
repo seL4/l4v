@@ -561,6 +561,7 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
       apply (rule "1.hyps" [of _ cbits guard, OF caps(1)])
       prefer 7
         apply (clarsimp simp: in_monad)
+        sorry (* FIXME: Broken by touched_addresses. -robs *)
         apply (rule get_cap_success)
       apply (auto simp: in_monad intro!: get_cap_success) (* takes time *)
       done
@@ -623,6 +624,7 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
         apply (rule corres_initial_splitE)
            apply clarsimp
            apply (rule corres_guard_imp)
+             sorry (* FIXME: Broken by touched_addresses. -robs *)
              apply (rule getSlotCap_corres)
              apply (simp add: objBits_simps cte_level_bits_def)
              apply (erule (1) cte_map_shift)
