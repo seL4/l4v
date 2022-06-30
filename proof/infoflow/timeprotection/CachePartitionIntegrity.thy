@@ -6,7 +6,7 @@
 
 theory CachePartitionIntegrity
 imports InfoFlow.InfoFlow_IF
-  InfoFlow.ADT_IF (* - Comment this out when you don't need the InfoFlow ADT definitions *)
+  (* InfoFlow.ADT_IF - Comment this out when you don't need the InfoFlow ADT definitions *)
 begin
 
 section \<open> Kernel heap-agnostic subset property definitions \<close>
@@ -301,8 +301,21 @@ theorem ta_subset_accessible_objs_to_partitions_alternative:
 
 section \<open>Proofs of TA subset invariance over seL4 kernel\<close>
 
-abbreviation ta_subset_inv :: "'a PAS \<Rightarrow> det_state \<Rightarrow> bool" where
-  "ta_subset_inv \<equiv> ta_subset_accessible_addrs" \<comment> \<open>Right now we're trying the kheap-agnostic one.\<close>
+\<comment> \<open>Right now we're trying a simplified version of the kheap-agnostic property.
+  It's possible to simplify out the @{term\<open>to_phys\<close>} because, assuming the TA set tracks only
+  kernel object addresses, it's just a simple subtraction of the @{term\<open>kernelELFBaseOffset\<close>}. \<close>
+definition ta_subset_inv :: "'a PAS \<Rightarrow> det_state \<Rightarrow> bool" where
+  "ta_subset_inv aag s \<equiv>
+     touched_addresses (machine_state s) \<subseteq> pas_addrs_accessible_to aag (cur_label aag s)"
+
+lemma ta_subset_to_phys_property:
+  "ta_subset_inv \<equiv> ta_subset_accessible_addrs"
+  unfolding ta_subset_inv_def ta_subset_accessible_addrs_def
+  apply(rule eq_reflection)
+  apply(rule ext)+
+  apply(rule iffI)
+   apply blast
+  by (force simp:image_def addrFromKPPtr_def)
 
 (* For check_active_irq_if *)
 
@@ -507,7 +520,7 @@ lemma schedule_ta_subset_inv:
   "schedule \<lbrace>ta_subset_inv aag\<rbrace>"
   sorry
 
-(* Need to import InfoFlow.ADT_IF for the following section: *)
+(* Need to import InfoFlow.ADT_IF for the following section:
 
 \<comment> \<open> Instead of @{term\<open>call_kernel\<close>}, prove for monads used for each step of @{term\<open>ADT_A_if\<close>}. \<close>
 
@@ -542,7 +555,7 @@ crunches call_kernel
   for ta_subset_inv: "ta_subset_inv aag"
   (wp: crunch_wps)
 
-(* End of part that needs InfoFlow.ADT_IF *)
+*) (* End of part that needs InfoFlow.ADT_IF *)
 
 end
 
