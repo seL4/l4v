@@ -13,6 +13,7 @@ This module contains the data structure and operations for the physical memory m
 >         getObject, readObject, setObject, deleteObjects, reserveFrame,
 >         typeError, alignError, alignCheck, sizeCheck,
 >         loadWordUser, storeWordUser, placeNewObject,
+>         maybeToMonad
 >     ) where
 
 \begin{impdetails}

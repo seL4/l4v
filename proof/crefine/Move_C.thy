@@ -557,13 +557,7 @@ lemma map_to_ko_atI:
 lemma map_to_ko_atI':
   "\<lbrakk>(projectKO_opt \<circ>\<^sub>m (ksPSpace s)) x = Some v; invs' s\<rbrakk> \<Longrightarrow> ko_at' v x s"
   apply (clarsimp simp: map_comp_Some_iff)
-<<<<<<<
-  apply (erule aligned_distinct_obj_atI')
-    apply clarsimp
-   apply clarsimp
-=======
   apply (erule aligned_distinct_obj_atI'; clarsimp?)
->>>>>>>
   apply (simp add: project_inject)
   done
 

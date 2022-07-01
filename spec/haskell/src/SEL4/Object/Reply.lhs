@@ -19,7 +19,7 @@ This module specifies the behavior of reply objects.
 > import {-# SOURCE #-} SEL4.Kernel.Thread(getThreadState, setThreadState)
 > import SEL4.Machine.RegisterSet(PPtr)
 > import SEL4.Model.StateData
-> import SEL4.Model.PSpace(getObject, setObject)
+> import SEL4.Model.PSpace(getObject, setObject, maybeToMonad)
 > import SEL4.Object.SchedContext
 > import SEL4.Object.Structures
 > import {-# SOURCE #-} SEL4.Object.TCB

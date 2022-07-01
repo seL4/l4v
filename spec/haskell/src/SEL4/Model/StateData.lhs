@@ -145,7 +145,7 @@ Read-only, potentially failing functions:
 
 To run a "ReaderM" inside a state monad stack, e.g. the "Kernel" monad, use "getsJust":
 
-> getsJust :: Monad m => ReaderM s a -> StateT s m a
+> getsJust :: MonadFail m => ReaderM s a -> StateT s m a
 > getsJust r = do
 >     x <- gets (runReaderT r)
 >     maybe (fail "must return something") return x
@@ -378,12 +378,6 @@ The functions "orM" and "andM" allow composing conditions that run in a monad. T
 > andM :: Monad m => m Bool -> m Bool -> m Bool
 > andM a b = ifM a b (return False)
 
-The function "maybeToMonad" extracts the value out of a "Maybe", failing if there's no such value.
-
-> maybeToMonad :: Monad m => Maybe a -> m a
-> maybeToMonad (Just x) = return x
-> maybeToMonad Nothing  = fail "maybeToMonad: got Nothing"
-
 \subsubsection{Assertions and Undefined Behaviour}
 
 The function "assert" is used to state that a predicate must be true at a given point. If it is not, the behaviour of the kernel is undefined. The Haskell model will not terminate in this case.
@@ -393,7 +387,7 @@ The function "assert" is used to state that a predicate must be true at a given 
 
 The function "stateAssert" is similar to "assert", except that it reads the current state. This is typically used for more complex assertions that cannot be easily expressed in Haskell; in this case, the asserted function is "const True" in Haskell but is replaced with something stronger in the Isabelle translation.
 
-> stateAssert :: MonadState s m => (s -> Bool) -> String -> m ()
+> stateAssert :: MonadFail m => MonadState s m => (s -> Bool) -> String -> m ()
 > stateAssert f e = get >>= \s -> assert (f s) e
 
 The "capHasProperty" function is used with "stateAssert". As explained above, it is "const True" here, but is strengthened to actually check the capability in the translation to Isabelle.

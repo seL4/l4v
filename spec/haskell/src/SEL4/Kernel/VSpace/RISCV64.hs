@@ -541,17 +541,7 @@ performPageInvocation (PageUnmap cap ctSlot) = do
     return []
 
 performPageInvocation (PageGetAddr ptr) = do
-    stateAssert cur_tcb'_asrt
-        "Assert that `cur_tcb' s` holds"
-    let paddr = fromPAddr $ addrFromPPtr ptr
-    ct <- getCurThread
-    msgTransferred <- setMRs ct Nothing [paddr]
-    msgInfo <- return $ MI {
-            msgLength = msgTransferred,
-            msgExtraCaps = 0,
-            msgCapsUnwrapped = 0,
-            msgLabel = 0 }
-    setMessageInfo ct msgInfo
+    return [fromPAddr $ addrFromPPtr ptr]
 
 
 performASIDControlInvocation :: ASIDControlInvocation -> Kernel ()
