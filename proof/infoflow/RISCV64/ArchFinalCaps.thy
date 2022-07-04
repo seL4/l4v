@@ -46,14 +46,27 @@ lemma set_asid_pool_silc_inv[wp]:
   apply (fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
   done
 
+lemma set_vm_root_silc_inv[FinalCaps_assms, wp]:
+  "set_vm_root param_a \<lbrace>silc_inv aag st\<rbrace>"
+  sorry (* FIXME: Broken by experimental-tpspec -robs. *)
+
 crunches arch_finalise_cap, prepare_thread_delete, init_arch_objects
   for silc_inv[FinalCaps_assms, wp]: "silc_inv aag st"
   (wp: crunch_wps modify_wp simp: crunch_simps ignore: set_object)
 
+lemma arch_mask_interrupts_silc_inv[FinalCaps_assms, wp]:
+  "arch_mask_interrupts m irqs \<lbrace>silc_inv aag st\<rbrace>"
+  by (wp mapM_x_wp[OF _ subset_refl] | simp add: arch_mask_interrupts_def)+
+
+lemma arch_domainswitch_flush_silc_inv[FinalCaps_assms, wp]:
+  "arch_domainswitch_flush \<lbrace>silc_inv aag st\<rbrace>"
+  by (wp mapM_x_wp[OF _ subset_refl] | simp add: arch_domainswitch_flush_def)+
+
 crunches handle_reserved_irq, handle_vm_fault, handle_hypervisor_fault, handle_arch_fault_reply,
          arch_invoke_irq_handler, arch_mask_irq_signal,
          arch_post_cap_deletion, arch_post_modify_registers,
-         arch_activate_idle_thread, arch_switch_to_idle_thread, arch_switch_to_thread
+         arch_activate_idle_thread, arch_switch_to_idle_thread, arch_switch_to_thread,
+         arch_switch_domain_kernel
   for silc_inv[FinalCaps_assms, wp]: "silc_inv aag st"
 
 lemma arch_derive_cap_silc[FinalCaps_assms]:

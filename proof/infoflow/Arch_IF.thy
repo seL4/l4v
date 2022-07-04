@@ -390,6 +390,12 @@ locale Arch_IF_1 =
     "arch_finalise_cap acap b \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
   and prepare_thread_delete_irq_state_of_state[wp]:
     "prepare_thread_delete t \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
+  and arch_mask_interrupts_irq_state_of_state[wp]:
+    "arch_mask_interrupts m irqs \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
+  and arch_switch_domain_kernel_irq_state_of_state[wp]:
+    "arch_switch_domain_kernel newdom \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
+  and arch_domainswitch_flush_irq_state_of_state[wp]:
+    "arch_domainswitch_flush \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
   and equiv_asid_machine_state_update[simp]:
     "\<And>f. equiv_asid asid (machine_state_update f s) s' = equiv_asid asid s s'"
     "\<And>f. equiv_asid asid s (machine_state_update f s') = equiv_asid asid s s'"

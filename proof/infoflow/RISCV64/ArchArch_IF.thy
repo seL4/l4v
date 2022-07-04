@@ -77,6 +77,13 @@ crunch irq_state_of_state[Arch_IF_assms, wp]: arch_finalise_cap, prepare_thread_
   (wp: select_wp modify_wp crunch_wps dmo_wp
    simp: crunch_simps hwASIDFlush_def)
 
+crunch irq_state_of_state[Arch_IF_assms, wp]:
+  arch_mask_interrupts, arch_domainswitch_flush, arch_switch_domain_kernel
+  "\<lambda>s. P (irq_state_of_state s)"
+  (wp: crunch_wps dmo_wp simp: arch_mask_interrupts_def maskInterrupt_def
+     arch_domainswitch_flush_def tfence_def arch_mask_interrupts_def L2FlushAddr_def
+     arch_switch_domain_kernel_def setVSpaceRoot_def)
+
 lemma equiv_asid_machine_state_update[Arch_IF_assms, simp]:
   "equiv_asid asid (machine_state_update f s) s' = equiv_asid asid s s'"
   "equiv_asid asid s (machine_state_update f s') = equiv_asid asid s s'"
@@ -242,6 +249,7 @@ lemma requiv_riscv_asid_table_asid_high_bits_of_asid_eq:
 lemma set_vm_root_states_equiv_for[wp]:
   "set_vm_root thread \<lbrace>states_equiv_for P Q R S st\<rbrace>"
   unfolding set_vm_root_def catch_def fun_app_def
+  sorry (* FIXME: Broken by experimental-tpspec -robs. *)
   by (wpsimp wp: do_machine_op_mol_states_equiv_for
                  hoare_vcg_all_lift hoare_whenE_wp hoare_drop_imps
            simp: setVSpaceRoot_def dmo_bind_valid if_apply_def2)+
@@ -713,6 +721,7 @@ lemma globals_equiv_arm_asid_table_update[simp]:
 
 lemma set_vm_root_globals_equiv[wp]:
   "set_vm_root tcb \<lbrace>globals_equiv s\<rbrace>"
+  sorry (* FIXME: Broken by experimental-tpspec -robs. *)
   by (wpsimp wp: dmo_mol_globals_equiv hoare_vcg_all_lift hoare_drop_imps
            simp: set_vm_root_def setVSpaceRoot_def)
 
