@@ -182,6 +182,14 @@ lemma monadic_rewrite_named_bindE:
   apply simp
   done
 
+lemma monadic_rewrite_drop_return:
+  "monadic_rewrite F E P f g \<Longrightarrow> monadic_rewrite F E P (do y \<leftarrow> return x; f od) g"
+  by fastforce
+
+lemma monadic_rewrite_add_return:
+  "monadic_rewrite F E P (do y \<leftarrow> return x; f od) g \<Longrightarrow> monadic_rewrite F E P f g "
+  by fastforce
+
 (* FIXME: poorly named, super-specific (could do this with maybe one bind?), used in Ipc_C *)
 lemma monadic_rewrite_do_flip:
   "monadic_rewrite E F P (do c \<leftarrow> j; a \<leftarrow> f; b \<leftarrow> g c; return (a, c) od)
