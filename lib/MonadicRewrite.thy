@@ -32,6 +32,10 @@ lemma monadic_rewrite_refl_generic:
 
 lemmas monadic_rewrite_refl = monadic_rewrite_refl_generic[where P=\<top>]
 
+lemma monadic_rewrite_sym:
+  "monadic_rewrite False True P f g \<Longrightarrow> monadic_rewrite False True P g f"
+  by (simp add: monadic_rewrite_def)
+
 lemma monadic_rewrite_impossible:
   "monadic_rewrite F E \<bottom> f g"
   by (clarsimp simp: monadic_rewrite_def)
@@ -673,9 +677,5 @@ lemma wpc_helper_monadic_rewrite:
 
 wpc_setup "\<lambda>m. monadic_rewrite F E Q' m m'" wpc_helper_monadic_rewrite
 wpc_setup "\<lambda>m. monadic_rewrite F E Q' (m >>= c) m'" wpc_helper_monadic_rewrite
-
-lemma monadic_rewrite_sym:
-  "monadic_rewrite False True P f g \<Longrightarrow> monadic_rewrite False True P g f"
-  by (simp add: monadic_rewrite_def)
 
 end
