@@ -49,6 +49,39 @@ sudo apt-get install \
     mlton-compiler haskell-stack
 ```
 
+### macOS packages
+
+These instructions use Homebrew, which can be installed from [their website][homebrewwebsite].
+The main packages that are needed are:
+
+```
+brew install git libxml2 ncurses librsvg dtc cmake ninja texlive rysnc python ccache \
+    zstd haskell-stack
+```
+
+The installation of mlton on Apple silicon is currently not well supported. One
+approach would be to compile mlton on another architecture and transfer it.
+
+To install the cross-compilers, run
+
+```
+brew install --cask gcc-arm-embedded
+
+brew install arm-none-eabi-gcc
+
+brew tap messense/macos-cross-toolchains
+brew install x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu
+
+brew tap riscv/riscv
+brew install riscv-tools
+```
+
+Note that CMake will require the x86 compiler before it can be invoked.
+
+The instructions in the sections below should apply for both Linux and macOS.
+
+[homebrewwebsite]: https://brew.sh
+
 ### Python
 
 The build system for the seL4 kernel requires several python packages:
@@ -69,24 +102,6 @@ running an up-to-date version:
 stack upgrade --binary-only
 which stack # should be $HOME/.local/bin/stack
 ```
-
-### MacOS
-
-Other than the cross-compiler `gcc` toolchain, setup on MacOS should be similar
-to that on Ubuntu. To set up a cross-compiler, try the following:
-
-* Install `XCode` from the AppStore and its command line tools. If you are
-  running MacPorts or homebrew, you have these already. Otherwise, after you have XCode
-  installed, run `gcc --version` in a terminal window. If it reports a version,
-  you're set. Otherwise it should pop up a window and prompt for installation
-  of the command line tools.
-* Install the seL4 Python dependencies, for instance using `sudo easy_install
-  sel4-deps`.  `easy_install` is part of Python's [`setuptools`][setuptools].
-* Install the [`misc/scripts/cpp`][cpp-script] wrapper for clang, by
-  putting it in `~/bin`, or somewhere else in your `PATH`.
-
-[setuptools]: https://pypi.python.org/pypi/setuptools "python package installer"
-[cpp-script]: https://github.com/seL4/l4v/blob/master/misc/scripts/cpp "cpp wrapper script"
 
 ## Isabelle Setup
 
