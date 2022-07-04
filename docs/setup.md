@@ -87,8 +87,8 @@ The instructions in the sections below should apply for both Linux and macOS.
 The build system for the seL4 kernel requires several python packages:
 
 ```bash
-sudo pip3 install --upgrade pip
-sudo pip3 install sel4-deps
+pip3 install --user --upgrade pip
+pip3 install --user sel4-deps
 ```
 
 ### Haskell Stack
