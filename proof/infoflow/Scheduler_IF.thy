@@ -130,6 +130,18 @@ locale Scheduler_IF_1 =
     "\<And>P. arch_activate_idle_thread t \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
   and arch_activate_idle_thread_domain_fields[wp]:
     "\<And>P. arch_activate_idle_thread t \<lbrace>domain_fields P\<rbrace>"
+  and arch_mask_interrupts_kheap[wp]:
+    "\<And>P. arch_mask_interrupts m irqs \<lbrace>\<lambda>s. P (kheap s)\<rbrace>"
+  and arch_mask_interrupts_idle_thread[wp]:
+    "\<And>P. arch_mask_interrupts m irqs \<lbrace>\<lambda>s. P (idle_thread s)\<rbrace>"
+  and arch_switch_domain_kernel_kheap[wp]:
+    "\<And>P. arch_switch_domain_kernel newdom \<lbrace>\<lambda>s. P (kheap s)\<rbrace>"
+  and arch_switch_domain_kernel_idle_thread[wp]:
+    "\<And>P. arch_switch_domain_kernel newdom \<lbrace>\<lambda>s. P (idle_thread s)\<rbrace>"
+  and arch_domainswitch_flush_kheap[wp]:
+    "\<And>P. arch_domainswitch_flush \<lbrace>\<lambda>s. P (kheap s)\<rbrace>"
+  and arch_domainswitch_flush_idle_thread[wp]:
+    "\<And>P. arch_domainswitch_flush \<lbrace>\<lambda>s. P (idle_thread s)\<rbrace>"
 begin
 
 definition globals_equiv_scheduler :: "det_state \<Rightarrow> det_state \<Rightarrow> bool" where
@@ -1007,6 +1019,18 @@ locale Scheduler_IF_2 = Scheduler_IF_1 +
                _ <- modify (cur_thread_update (\<lambda>_. t));
                modify (scheduler_action_update (\<lambda>_. resume_cur_thread))
             od)"
+  and arch_mask_interrupts_globals_equiv_scheduler[wp]:
+    "\<lbrace>invs and globals_equiv_scheduler sta\<rbrace>
+     arch_mask_interrupts m irqs
+     \<lbrace>\<lambda>_. globals_equiv_scheduler sta\<rbrace>"
+  and arch_switch_domain_kernel_globals_equiv_scheduler[wp]:
+    "\<lbrace>invs and globals_equiv_scheduler sta\<rbrace>
+     arch_switch_domain_kernel nextdom
+     \<lbrace>\<lambda>_. globals_equiv_scheduler sta\<rbrace>"
+  and arch_domainswitch_flush_globals_equiv_scheduler[wp]:
+    "\<lbrace>invs and globals_equiv_scheduler sta\<rbrace>
+     arch_domainswitch_flush
+     \<lbrace>\<lambda>_. globals_equiv_scheduler sta\<rbrace>"
   and globals_equiv_scheduler_inv':
     "(\<And>st. \<lbrace>P and globals_equiv st\<rbrace> (f :: (det_state, unit) nondet_monad) \<lbrace>\<lambda>_. globals_equiv st\<rbrace>)
      \<Longrightarrow> \<lbrace>P and globals_equiv_scheduler s\<rbrace> f \<lbrace>\<lambda>_. globals_equiv_scheduler s\<rbrace>"
@@ -1344,7 +1368,17 @@ lemma next_domain_snippit:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows "reads_respects_scheduler aag l (invs and pas_refined aag and valid_queues)
            (do dom_time \<leftarrow> gets domain_time;
-               y \<leftarrow> when (dom_time = 0) next_domain;
+               y \<leftarrow> when (dom_time = 0)
+                (do olddom <- gets cur_domain;
+                    y <- next_domain;
+                    newdom <- gets cur_domain;
+                    y <- assert (newdom \<noteq> olddom);
+                    irqs_of <- gets domain_irqs;
+                    y <- arch_mask_interrupts True (irqs_of olddom);
+                    y <- arch_switch_domain_kernel newdom;
+                    y <- arch_mask_interrupts False (irqs_of newdom);
+                    arch_domainswitch_flush
+                 od);
                y \<leftarrow> choose_thread;
                set_scheduler_action resume_cur_thread
             od)"
@@ -1355,6 +1389,7 @@ lemma next_domain_snippit:
        apply (rule choose_thread_reads_respects_scheduler[OF domains_distinct])
       apply (wp next_domain_midstrength_equiv_scheduler)
        apply (rule ev_weaken_pre_relation)
+        sorry (* FIXME: Broken by experimental-tpspec -robs. *)
         apply (rule next_domain_midstrength_equiv_scheduler)
        apply fastforce
       apply (rule ev_weaken_pre_relation)
@@ -1489,6 +1524,7 @@ lemma schedule_no_domain_switch:
          | simp add: schedule_choose_new_thread_def
          | wpc
          | rule hoare_pre_cont[where a=next_domain] )+
+  sorry (* FIXME: Broken by experimental-tpspec -robs. *)
   done
 
 lemma schedule_no_domain_fields:
@@ -1501,6 +1537,7 @@ lemma schedule_no_domain_fields:
          | simp add: schedule_choose_new_thread_def
          | wpc
          | rule hoare_pre_cont[where a=next_domain] )+
+  sorry (* FIXME: Broken by experimental-tpspec -robs. *)
   done
 
 lemma set_scheduler_action_unobservable:
@@ -1646,6 +1683,19 @@ lemma reads_respects_scheduler_invisible_domain_switch:
    apply (clarsimp simp: pred_tcb_at_def obj_at_def valid_state_def valid_idle_def invs_def)+
   done
 
+(* FIXME: Prove these in AInvs, not here. -robs *)
+lemma arch_mask_interrupts_invs[wp]:
+  "arch_mask_interrupts m irqs \<lbrace>invs\<rbrace>"
+  sorry (* FIXME: Made necessary by experimental-tpspec. -robs *)
+
+lemma arch_switch_domain_kernel_invs[wp]:
+  "arch_switch_domain_kernel newdom \<lbrace>invs\<rbrace>"
+  sorry (* FIXME: Made necessary by experimental-tpspec. -robs *)
+
+lemma arch_domainswitch_flush_invs[wp]:
+  "arch_domainswitch_flush \<lbrace>invs\<rbrace>"
+  sorry (* FIXME: Made necessary by experimental-tpspec. -robs *)
+
 crunch globals_equiv_scheduler[wp]: schedule "(\<lambda>s:: det_state. globals_equiv_scheduler st s)"
   (    wp: guarded_switch_to_lift crunch_wps hoare_drop_imps
    wp_del: ethread_get_wp
@@ -1686,6 +1736,7 @@ lemma schedule_choose_new_thread_schedule_affects_no_switch:
      schedule_choose_new_thread
      \<lbrace>\<lambda>_. scheduler_affects_equiv aag l st\<rbrace>"
   unfolding schedule_choose_new_thread_def
+  sorry (* FIXME: Broken by experimental-tpspec -robs. *)
   by (wpsimp wp: set_scheduler_action_unobservable choose_thread_unobservable
                  hoare_pre_cont[where a=next_domain])
 

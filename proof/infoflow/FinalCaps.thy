@@ -346,6 +346,12 @@ locale FinalCaps_1 =
     "arch_switch_to_idle_thread \<lbrace>silc_inv aag st\<rbrace>"
   and arch_switch_to_thread_silc_inv[wp]:
     "arch_switch_to_thread t \<lbrace>silc_inv aag st\<rbrace>"
+  and arch_mask_interrupts_silc_inv[wp]:
+    "arch_mask_interrupts m irqs \<lbrace>silc_inv aag st\<rbrace>"
+  and arch_switch_domain_kernel_silc_inv[wp]:
+    "arch_switch_domain_kernel newdom \<lbrace>silc_inv aag st\<rbrace>"
+  and arch_domainswitch_flush_silc_inv[wp]:
+    "arch_domainswitch_flush \<lbrace>silc_inv aag st\<rbrace>"
   and init_arch_objects_silc_inv[wp]:
     "init_arch_objects typ ptr num sz refs \<lbrace>silc_inv aag st\<rbrace>"
   and init_arch_objects_cte_wp_at[wp]:
