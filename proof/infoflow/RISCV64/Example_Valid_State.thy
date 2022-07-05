@@ -802,7 +802,12 @@ definition exst0 :: "det_ext" where
             cur_domain_internal = 0,
             domain_time_internal = 5,
             ready_queues_internal = (const (const [])),
-            cdt_list_internal = const []\<rparr>"
+            cdt_list_internal = const [],
+            \<comment> \<open>FIXME: For experimental-tpspec. Do these values need to make more sense? -robs\<close>
+            domain_kimage_vspace_internal = \<lambda>_. 0,
+            domain_kimage_asid_internal = \<lambda>_. 0,
+            domain_irqs_internal = \<lambda>_. [],
+            shared_data_flush_paddrs_internal = []\<rparr>"
 
 lemmas ekh0_obj_def =
   Low_etcb_def High_etcb_def default_etcb_def

@@ -1683,19 +1683,6 @@ lemma reads_respects_scheduler_invisible_domain_switch:
    apply (clarsimp simp: pred_tcb_at_def obj_at_def valid_state_def valid_idle_def invs_def)+
   done
 
-(* FIXME: Prove these in AInvs, not here. -robs *)
-lemma arch_mask_interrupts_invs[wp]:
-  "arch_mask_interrupts m irqs \<lbrace>invs\<rbrace>"
-  sorry (* FIXME: Made necessary by experimental-tpspec. -robs *)
-
-lemma arch_switch_domain_kernel_invs[wp]:
-  "arch_switch_domain_kernel newdom \<lbrace>invs\<rbrace>"
-  sorry (* FIXME: Made necessary by experimental-tpspec. -robs *)
-
-lemma arch_domainswitch_flush_invs[wp]:
-  "arch_domainswitch_flush \<lbrace>invs\<rbrace>"
-  sorry (* FIXME: Made necessary by experimental-tpspec. -robs *)
-
 crunch globals_equiv_scheduler[wp]: schedule "(\<lambda>s:: det_state. globals_equiv_scheduler st s)"
   (    wp: guarded_switch_to_lift crunch_wps hoare_drop_imps
    wp_del: ethread_get_wp
