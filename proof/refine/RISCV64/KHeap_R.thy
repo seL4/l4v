@@ -949,6 +949,11 @@ proof -
                   elim: cte_wp_atE' canonical_address_add)
 qed
 
+lemma obj_at'_is_canonical:
+  "\<lbrakk>pspace_canonical' s; obj_at' P t s\<rbrakk> \<Longrightarrow> canonical_address t"
+  apply (clarsimp simp: obj_at'_def pspace_canonical'_def)
+  by (drule_tac x=t in bspec) clarsimp+
+
 (* FIXME rt merge: move to Word_lib *)
 lemma max_word_minus_1[simp]: "0xFFFFFFFFFFFFFFFF + 2^x = (2^x - 1::64 word)"
   by simp
