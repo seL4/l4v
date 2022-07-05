@@ -487,8 +487,9 @@ lemma schedule_domain_fields:
       apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_strengthen_post)
        apply (simp | wp gts_wp | wp (once) hoare_drop_imps)+
   apply (clarsimp split: if_split)
-  sorry (* FIXME: Broken by experimental-tpspec -robs. *)
+  sorry (* FIXME: Broken by experimental-tpspec -robs.
   done
+*)
 
 lemma schedule_if_partitionIntegrity:
   assumes domains_distinct: "pas_domains_distinct aag"
@@ -2277,8 +2278,9 @@ lemma schedule_choose_new_thread_reads_respects_g:
             choose_thread_reads_respects_g ev_pre_cont[where f=next_domain]
             hoare_pre_cont[where a=next_domain] when_ev)
   apply (clarsimp simp: valid_sched_def word_neq_0_conv)
-  sorry (* FIXME: Broken by experimental-tpspec -robs. *)
+  sorry (* FIXME: Broken by experimental-tpspec -robs.
   done
+*)
 
 lemma schedule_reads_respects_g:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"

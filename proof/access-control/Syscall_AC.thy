@@ -927,28 +927,28 @@ lemma switch_to_idle_thread_pas_refined:
 (* FIXME: Prove these in AInvs, not here. -robs *)
 lemma arch_mask_interrupts_invs[wp]:
   "arch_mask_interrupts m irqs \<lbrace>invs\<rbrace>"
-  sorry done (* FIXME: Made necessary by experimental-tpspec. -robs *)
+  sorry (* FIXME: Made necessary by experimental-tpspec. -robs *)
 
 lemma arch_switch_domain_kernel_invs[wp]:
   "arch_switch_domain_kernel newdom \<lbrace>invs\<rbrace>"
-  sorry done (* FIXME: Made necessary by experimental-tpspec. -robs *)
+  sorry (* FIXME: Made necessary by experimental-tpspec. -robs *)
 
 lemma arch_domainswitch_flush_invs[wp]:
   "arch_domainswitch_flush \<lbrace>invs\<rbrace>"
-  sorry done (* FIXME: Made necessary by experimental-tpspec. -robs *)
+  sorry (* FIXME: Made necessary by experimental-tpspec. -robs *)
 
 (* FIXME: Prove these in AInvs (probably ArchDetSchedSchedule_AI), not here. -robs *)
 lemma arch_mask_interrupts_valid_sched[wp]:
   "arch_mask_interrupts m irqs \<lbrace>valid_sched\<rbrace>"
-  sorry done (* FIXME: Made necessary by experimental-tpspec. -robs *)
+  sorry (* FIXME: Made necessary by experimental-tpspec. -robs *)
 
 lemma arch_switch_domain_kernel_valid_sched[wp]:
   "arch_switch_domain_kernel newdom \<lbrace>valid_sched\<rbrace>"
-  sorry done (* FIXME: Made necessary by experimental-tpspec. -robs *)
+  sorry (* FIXME: Made necessary by experimental-tpspec. -robs *)
 
 lemma arch_domainswitch_flush_valid_sched[wp]:
   "arch_domainswitch_flush \<lbrace>valid_sched\<rbrace>"
-  sorry done (* FIXME: Made necessary by experimental-tpspec. -robs *)
+  sorry (* FIXME: Made necessary by experimental-tpspec. -robs *)
 
 lemma schedule_choose_new_thread_integrity:
   "\<lbrace>invs and valid_sched and valid_list and integrity aag X st and pas_refined aag
@@ -957,10 +957,11 @@ lemma schedule_choose_new_thread_integrity:
    schedule_choose_new_thread
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   unfolding schedule_choose_new_thread_def
-  sorry (* FIXME: Broken by experimental-tpspec. -robs *)
+  sorry (* FIXME: Broken by experimental-tpspec. -robs
   by (wpsimp wp: choose_thread_respects_pasMayEditReadyQueues
                  next_domain_valid_sched next_domain_valid_queues
-           simp: schedule_choose_new_thread_def valid_sched_def)+
+           simp: schedule_choose_new_thread_def valid_sched_def)
+*)
 
 lemma schedule_integrity:
   "\<lbrace>einvs and integrity aag X st and pas_refined aag and pas_cur_domain aag
@@ -968,14 +969,13 @@ lemma schedule_integrity:
    schedule
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: schedule_def)
-  sorry (* XXX: broken by touched_addresses. -robs
+  sorry (* FIXME: Broken by both touched_addresses *and* experimental-tpspec. -robs
   apply (wpsimp wp: alternative_wp switch_to_thread_respects' select_wp guarded_switch_to_lift
                     switch_to_idle_thread_respects choose_thread_respects gts_wp hoare_drop_imps
                     set_scheduler_action_cnt_valid_sched append_thread_queued enqueue_thread_queued
                     tcb_sched_action_enqueue_valid_blocked_except tcb_sched_action_append_integrity'
          | simp add: allActiveTCBs_def schedule_choose_new_thread_def
          | rule hoare_pre_cont[where a=next_domain])+
-  sorry (* FIXME: Broken by experimental-tpspec -robs. *)
   apply (auto simp: obj_at_def st_tcb_at_def not_cur_thread_2_def valid_sched_def
                     valid_sched_action_def weak_valid_sched_action_def
                     valid_sched_action_switch_subject_thread)
