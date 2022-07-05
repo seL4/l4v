@@ -60,7 +60,12 @@ brew install git libxml2 ncurses librsvg dtc cmake ninja texlive rysnc python cc
 ```
 
 The installation of mlton on Apple silicon is currently not well supported. One
-approach would be to compile mlton on another architecture and transfer it.
+approach would be to cross-compile mlton on another architecture and transfer it. On
+Intel machines, the following works:
+
+```
+brew install mlton
+```
 
 To install the cross-compilers, run
 
