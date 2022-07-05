@@ -1077,6 +1077,11 @@ locale non_aobj_non_cap_non_mem_op = non_aobj_non_mem_op f + non_aobj_non_cap_op
 
 sublocale non_aobj_non_cap_non_mem_op < non_vspace_non_cap_non_mem_op ..
 
+(* any monad that is `tainv` will of course hold the above properties too *)
+sublocale touched_addresses_inv \<subseteq> non_aobj_non_cap_non_mem_op m
+  by (unfold_locales; rule agnostic_preserved; clarsimp simp: ta_agnostic_def)
+
+
 lemma shows
   sts_caps_of_state[wp]:
     "set_thread_state t st \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>" and
@@ -1560,5 +1565,71 @@ lemma dmo_ct_in_state:
   apply (simp add: ct_in_state_def)
   apply (rule hoare_lift_Pf [where f=cur_thread])
   by wp+
+
+lemma dmo_addTouchedAddresses_wp:
+  "\<lbrace>\<lambda>s. Q () (ms_touched_addresses_update (\<lambda>ta. S \<union> ta) s)\<rbrace> do_machine_op (addTouchedAddresses S) \<lbrace>Q\<rbrace>"
+  apply (simp add: simpler_do_machine_op_addTouchedAddresses_def)
+  apply (wp select_f_wp)
+  apply (case_tac "machine_state s", simp)
+  done
+
+lemma touch_object_wp:
+  "\<lbrace>\<lambda>s. \<forall>ko. ko_at ko p s \<longrightarrow> Q () (ms_touched_addresses_update (\<lambda>ta. obj_range p ko \<union> ta) s) \<rbrace>
+   touch_object p \<lbrace>Q\<rbrace>"
+  apply (wpsimp simp:touch_object_def2 wp: dmo_addTouchedAddresses_wp)
+  apply (clarsimp simp:obj_at_def)
+  done
+
+lemma touch_object_wp':
+  "\<lbrace>\<lambda>s. Q () (ms_touched_addresses_update (\<lambda>ta. obj_range p (the (kheap s p)) \<union> ta) s) \<rbrace>
+   touch_object p \<lbrace>Q\<rbrace>"
+  apply (wp touch_object_wp)
+  apply (clarsimp simp:obj_at_def)
+  done
+
+
+subsection "TA Agnostic for invs"
+
+lemma ta_agnostic_conj:
+  "\<lbrakk>ta_agnostic P1; ta_agnostic P2\<rbrakk> \<Longrightarrow>
+  ta_agnostic (\<lambda>s. P1 s \<and> P2 s)"
+  by (clarsimp simp:ta_agnostic_def)
+
+lemma ta_agnostic_predconj:
+  "\<lbrakk>ta_agnostic P1; ta_agnostic P2\<rbrakk> \<Longrightarrow>
+  ta_agnostic (P1 and P2)"
+  by (clarsimp simp:ta_agnostic_def)
+
+lemma ta_agnostic_null[simp]:
+  "ta_agnostic (\<lambda>s. P)"
+  by (clarsimp simp:ta_agnostic_def)
+
+sublocale touched_addresses_inv \<subseteq> valid_pspace: touched_addresses_P_inv _ _ valid_pspace
+                                + valid_irq_states: touched_addresses_P_inv _ _ valid_irq_states
+                                + valid_machine_state: touched_addresses_P_inv _ _ valid_machine_state
+                                + cte_wp_at: touched_addresses_P_inv _ _ "cte_wp_at P p"
+  by unfold_locales (simp add:ta_agnostic_def valid_irq_states_def valid_machine_state_def)+
+
+sublocale touched_addresses_inv \<subseteq> valid_state: touched_addresses_P_inv _ _ valid_state
+  apply unfold_locales
+  apply (clarsimp simp: valid_state_def)
+  apply (intro ta_agnostic_predconj)
+  apply (solves \<open>clarsimp | clarsimp simp: ta_agnostic_def\<close>)+
+  done
+
+sublocale touched_addresses_inv \<subseteq> invs: touched_addresses_P_inv _ _ invs
+  apply unfold_locales
+  apply (simp only:invs_def)
+  apply (intro ta_agnostic_predconj)
+   apply simp
+  apply (clarsimp simp: cur_tcb_def tcb_at_def get_tcb_def ta_agnostic_def)
+  done
+
+(* this is a bit of a hack to make lemmas like `invs.ta_agnostic` available
+   without specifying a (meaningful) monad. so now we can use base.invs.ta_agnostic for
+   example. *)
+interpretation base:
+  touched_addresses_inv _ "return ()"
+  by unfold_locales wp
 
 end

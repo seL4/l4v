@@ -995,10 +995,16 @@ lemma sts_valid_arch_inv:
 
 crunch_ignore (add: select_ext find_vspace_for_asid)
 
+crunches decode_asid_control_invocation
+  for tainv[wp]: "ignore_ta P"
+  (wp: crunch_wps simp: crunch_simps)
 
-crunch inv [wp]: arch_decode_invocation "P"
-  (wp: crunch_wps select_wp select_ext_weak_wp simp: crunch_simps)
+crunches decode_page_table_invocation, decode_frame_invocation, decode_asid_pool_invocation
+  for inv[wp]: "P"
+  (wp: crunch_wps simp: crunch_simps)
 
+crunches arch_decode_invocation
+  for tainv [wp]: "ignore_ta P"
 
 declare lookup_slot_for_cnode_op_cap_to [wp]
 
@@ -1267,8 +1273,10 @@ lemma decode_asid_control_invocation_wf[wp]:
                                      and cte_wp_at (\<lambda>c. \<exists>idx. c = UntypedCap False frame pageBits idx) (snd (excaps!0))
                                      and (\<lambda>s. riscv_asid_table (arch_state s) free = None)"
                   in hoare_post_imp_R)
-           apply (simp add: lookup_target_slot_def)
-           apply wp
+           
+           apply (wpsimp simp: lookup_target_slot_def)
+           apply (rule lookup_slot_for_cnode_op_tainv.agnostic_preservedE_R)
+           apply (clarsimp simp:ta_agnostic_def)
           apply (clarsimp simp: cte_wp_at_def)
          apply (wpsimp wp: ensure_no_children_sp select_ext_weak_wp select_wp whenE_throwError_wp)+
   apply (rule conjI, fastforce)

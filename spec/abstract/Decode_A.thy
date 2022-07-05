@@ -162,7 +162,7 @@ where
     self \<leftarrow> liftE $ gets cur_thread;
     whenE (p = self) $ throwError IllegalOperation;
     returnOk $ ReadRegisters p (flags !! 0) n ArchDefaultExtraRegisters
-  odE
+  odE              
 | _ \<Rightarrow> throwError TruncatedMessage"
 
 definition

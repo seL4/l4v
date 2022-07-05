@@ -127,6 +127,12 @@ lemma get_cap_valid [wp]:
   apply (auto dest: cte_wp_at_valid_objs_valid_cap)
   done
 
+lemma get_cap_x_valid [wp]:
+  "\<lbrace> valid_objs \<rbrace> get_cap_x addr \<lbrace> valid_cap \<rbrace>"
+  apply (wp get_cap_x_wp)
+  apply (auto dest: cte_wp_at_valid_objs_valid_cap)
+  done
+
 lemma get_cap_wellformed:
   "\<lbrace>valid_objs\<rbrace> get_cap slot \<lbrace>\<lambda>cap s. wellformed_cap cap\<rbrace>"
   apply (rule hoare_strengthen_post, rule get_cap_valid)
@@ -178,12 +184,12 @@ proof (induct args arbitrary: s rule: resolve_address_bits'.induct)
   show ?case
     apply (subst resolve_address_bits'.simps)
     apply (cases cap, simp_all split del: if_split)
-            defer 6 (* CNode *)
-            apply (wp+)[11]
+               defer 6 (* CNode *)
+               apply (wp+)[11]
     apply (simp add: split_def cong: if_cong split del: if_split)
     apply (rule hoare_pre_spec_validE)
      apply (wp P [OF "1.hyps"], (simp add: in_monad | rule conjI refl)+)
-          apply (wp | simp | rule get_cap_wp)+
+         apply (wp | simp | rule get_cap_x_wp | rule touch_object_wp)+
     apply (fastforce simp: ex_cte_cap_wp_to_def elim!: cte_wp_at_weakenE)
     done
 qed
@@ -218,16 +224,18 @@ proof (induct args rule: resolve_address_bits'.induct)
     apply (simp only: K_bind_def in_bindE_R)
     apply (elim conjE exE)
     apply (simp only: split: if_split_asm)
-     apply (frule (8) "1.hyps")
+     apply (frule (9) "1.hyps")
      apply (clarsimp simp: in_monad validE_def validE_R_def valid_def)
-     apply (frule in_inv_by_hoareD [OF get_cap_inv])
+     apply (frule in_inv_by_hoareD [OF get_cap_x_inv])
      apply simp
-     apply (frule (1) post_by_hoare [OF get_cap_valid])
+     apply clarsimp
+     apply (frule(1) post_by_hoare [OF touch_object_tainv.valid_objs.m_inv])
+     apply (frule(1) post_by_hoare [OF get_cap_x_valid])
      apply (erule allE, erule impE, blast)
-     apply (clarsimp simp: in_monad split: cap.splits)
-     apply (drule (1) bspec, simp)+
+     apply (drule (1) bspec, simp)
     apply (clarsimp simp: in_monad)
-    apply (frule in_inv_by_hoareD [OF get_cap_inv])
+    apply (frule in_inv_by_hoareD [OF get_cap_x_inv])
+    apply (frule(1) post_by_hoare [OF touch_object_tainv.valid_cap.m_inv])
     apply (clarsimp simp add: valid_cap_def)
     done
 qed
@@ -4086,9 +4094,13 @@ lemma guarded_lookup_valid_cap:
   apply assumption
   done
 
-crunch inv[wp]: lookup_slot_for_cnode_op "P"
-  (wp:  simp: crunch_simps)
+crunches lookup_slot_for_cnode_op
+  for tainv[wp]: "ignore_ta P"
+  (simp: crunch_simps)
 
+interpretation lookup_slot_for_cnode_op_tainv:
+  touched_addresses_invE _ "lookup_slot_for_cnode_op bl cap ref depth"
+  by unfold_locales (rule lookup_slot_for_cnode_op_tainv)
 
 lemma lsfco_cte_at[wp]:
   "\<lbrace>invs and valid_cap cap\<rbrace>

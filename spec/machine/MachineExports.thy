@@ -45,6 +45,12 @@ requalify_consts
   clearMemory
   non_kernel_IRQs
   tlsBaseRegister
+  getTouchedAddresses
+  addTouchedAddresses
+
+requalify_facts
+  getTouchedAddresses_def
+  addTouchedAddresses_def
 
 (* HERE IS THE PLACE FOR GENERIC WORD LEMMAS FOR ALL ARCHITECTURES *)
 

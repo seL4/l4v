@@ -102,8 +102,35 @@ crunch inv[wp]: get_cap "P"
   (simp: crunch_simps)
 
 
-lemma rab_inv[wp]:
-  "\<lbrace>P\<rbrace> resolve_address_bits slot \<lbrace>\<lambda>rv. P\<rbrace>"
+declare resolve_address_bits'.simps [simp del]
+
+crunches getTouchedAddresses
+  for inv[wp]: "P"
+
+lemma dmo_getTouchedAddresses_inv[wp]:
+ "do_machine_op getTouchedAddresses \<lbrace>P\<rbrace>"
+  apply (wpsimp simp: simpler_do_machine_op_getTouchedAddresses_def in_gets)
+  done
+
+lemma dmo_addTouchedAddresses_tainv[wp]:
+ "do_machine_op (addTouchedAddresses S) \<lbrace>ignore_ta P\<rbrace>"
+  apply (wpsimp simp: addTouchedAddresses_def do_machine_op_def in_modify)
+  done
+
+crunches get_cap_x
+  for inv[wp]: "P"
+  (simp: crunch_simps ignore: getTouchedAddresses do_machine_op wp: crunch_wps)
+
+crunches touch_object
+  for tainv[wp]: "ignore_ta P"
+  (ignore: do_machine_op)
+
+interpretation touch_object_tainv:
+  touched_addresses_inv _ "touch_object obj"
+  by unfold_locales wp
+
+lemma rab_tainv[wp]:
+  "resolve_address_bits slot \<lbrace>ignore_ta P\<rbrace>"
 unfolding resolve_address_bits_def
 proof (induct slot rule: resolve_address_bits'.induct)
   case (1 z cap cref)
@@ -111,9 +138,9 @@ proof (induct slot rule: resolve_address_bits'.induct)
   apply (clarsimp simp add: valid_def)
   apply (subst (asm) resolve_address_bits'.simps)
   apply (cases cap)
-            apply (auto simp: in_monad)[5]
-       defer
-       apply (auto simp: in_monad)[6]
+             apply (auto simp: in_monad)[5]
+        defer
+        apply (auto simp: in_monad)[6]
   apply (rename_tac obj_ref nat list)
   apply (simp only: cap.simps)
   apply (case_tac "nat + length list = 0")
@@ -125,13 +152,17 @@ proof (induct slot rule: resolve_address_bits'.induct)
        apply (simp only: split: if_split_asm)
         apply (simp add: returnOk_def return_def)
        apply (drule in_bindE_L, elim disjE conjE exE)+
-        apply (simp only: split: if_split_asm)
-         prefer 2
+         apply (simp only: split: if_split_asm)
+          prefer 2
+          apply (clarsimp simp: in_monad)
+         apply (drule(9) 1) (* get the IH into context *)
          apply (clarsimp simp: in_monad)
-        apply (drule (8) 1)
+         apply (drule in_inv_by_hoareD [OF get_cap_x_inv])
+         thm touch_object_tainv.in_inv_by_hoare
+         apply (drule(1) touch_object_tainv.in_inv_by_hoare)
+         apply simp
+         apply (drule(2) use_valid, simp)
         apply (clarsimp simp: in_monad)
-        apply (drule in_inv_by_hoareD [OF get_cap_inv])
-        apply (auto simp: in_monad valid_def)[1]
        apply (clarsimp simp: in_monad)
       apply (clarsimp simp: in_monad)
      apply (clarsimp simp: in_monad)
@@ -146,20 +177,34 @@ proof (induct slot rule: resolve_address_bits'.induct)
   apply (simp only: split: if_split_asm)
    prefer 2
    apply (clarsimp simp: in_monad)
-   apply (drule in_inv_by_hoareD [OF get_cap_inv])
+   apply (drule in_inv_by_hoareD [OF get_cap_x_inv])
+   apply (drule(1) touch_object_tainv.in_inv_by_hoare)
    apply simp
   apply (drule (8) "1")
   apply (clarsimp simp: in_monad valid_def)
-  apply (drule in_inv_by_hoareD [OF get_cap_inv])
-  apply (auto simp: in_monad)
+  apply clarsimp
+  apply (clarsimp simp: in_monad)
+  apply (drule in_inv_by_hoareD [OF get_cap_x_inv])
+  apply (drule(1) touch_object_tainv.in_inv_by_hoare)
+  apply clarsimp
+  apply (drule(2) post_by_hoare, simp)
   done
 qed
 
-crunch inv [wp]: lookup_slot_for_thread P
+interpretation resolve_address_bits_tainv:
+  touched_addresses_invE _ "resolve_address_bits slot"
+  by (unfold_locales, rule rab_tainv)
 
+crunches lookup_cap
+  for tainv [wp]: "ignore_ta P"
 
-crunch inv [wp]: lookup_cap P
+interpretation lookup_cap_tainv:
+  touched_addresses_invE _ "lookup_cap obj cap"
+  by (unfold_locales, rule lookup_cap_tainv)
 
+interpretation lookup_slot_for_thread_tainv:
+  touched_addresses_invE _ "lookup_slot_for_thread obj cap"
+  by (unfold_locales, rule lookup_slot_for_thread_tainv)
 
 lemma cte_at_tcb_update:
   "tcb_at t s \<Longrightarrow> cte_at slot (s\<lparr>kheap := kheap s(t \<mapsto> TCB tcb)\<rparr>) = cte_at slot s"
@@ -178,6 +223,9 @@ lemma valid_cap_tcb_update [simp]:
   apply (simp add: a_type_def)
   done
 
+sublocale touched_addresses_inv \<subseteq> valid_objs: touched_addresses_P_inv _ _ valid_objs
+                                + valid_cap:touched_addresses_P_inv _ _ "valid_cap c"
+  by unfold_locales (simp add: agnostic_preserved ta_agnostic_def)+
 
 lemma obj_at_tcb_update:
   "\<lbrakk> tcb_at t s; \<And>x y. P (TCB x) = P (TCB y)\<rbrakk> \<Longrightarrow>
@@ -1347,6 +1395,58 @@ lemma get_cap_wp:
   apply (clarsimp simp: valid_def cte_wp_at_def)
   apply (frule in_inv_by_hoareD [OF get_cap_inv])
   apply (drule get_cap_det)
+  apply simp
+  done
+
+(* generalised bind lemmas to prove a subset relation between get_cap and get_cap_x.
+   these will be removed when we get rid of get_cap_x etc. *)
+lemma bind_first_equiv_succeeds_imp:
+  "\<lbrakk>(\<And> r1. (x1 s = (r1, False) \<Longrightarrow> x2 s = (r1, False)));
+   (do q <- x1; y q od) s = (r2, False) \<rbrakk> \<Longrightarrow>
+   (do q <- x2; y q od) s = (r2, False)"
+  apply (clarsimp simp:bind_def)
+  apply (cases "x1 s", clarsimp)
+  done
+
+lemma bind_first_imp:
+  "\<lbrakk>(do q <- x; y1 q od) s = (r, False);
+    (\<And> q s r1. y1 q s = (r1, False) \<Longrightarrow> y2 q s = (r1, False)) \<rbrakk> \<Longrightarrow>
+   (do q <- x; y2 q od) s = (r, False)"
+  apply (clarsimp simp:bind_def)
+  using SUP_cong apply fastforce
+  done
+
+lemma bind_assert_succeeds_imp:
+  "(do z <- assert x; y od) s = (r, False) \<Longrightarrow> 
+   y s = (r, False)"
+  by (metis assert_def not_snd_bindI1 return_bind snd_assert snd_conv)
+
+lemma get_object_x_subset_get_object:
+  "get_object_x oref s = (z, False) \<Longrightarrow> get_object oref s = (z, False)"
+  apply (clarsimp simp: get_object_x_def get_object_def)
+  apply (erule bind_first_imp)+
+  apply (clarsimp simp:simpler_do_machine_op_getTouchedAddresses_def)
+  apply (subst (asm) exec_gets)
+  apply (drule bind_assert_succeeds_imp)
+  apply simp
+  done
+
+lemma get_cap_x_subset_get_cap:
+  "get_cap_x p s = ({(a, s)}, False) \<Longrightarrow> get_cap p s = ({(a, s)}, False)"
+  apply (clarsimp simp:get_cap_x_def get_cap_def)
+  apply (cases p, rename_tac oref cref, clarsimp)
+  apply (rule bind_first_equiv_succeeds_imp, rule get_object_x_subset_get_object, assumption)
+  apply simp
+  done
+
+(* end of temporary subset machinery  *)
+
+lemma get_cap_x_wp:
+  "\<lbrace>\<lambda>s. \<forall>cap. cte_wp_at ((=) cap) p s \<longrightarrow> Q cap s\<rbrace> get_cap_x p \<lbrace>Q\<rbrace>"
+  apply (clarsimp simp: valid_def cte_wp_at_def)
+  apply (frule in_inv_by_hoareD [OF get_cap_x_inv])
+  apply (drule get_cap_x_det)
+  apply (drule get_cap_x_subset_get_cap)
   apply simp
   done
 

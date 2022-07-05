@@ -63,6 +63,7 @@ lemma data_to_obj_type_sp[Untyped_AI_assms]:
   apply (simp add: arch_data_to_obj_type_def split: if_split_asm)
   done
 
+
 lemma dui_inv_wf[wp, Untyped_AI_assms]:
   "\<lbrace>invs and cte_wp_at ((=) (cap.UntypedCap dev w sz idx)) slot
      and (\<lambda>s. \<forall>cap \<in> set cs. is_cnode_cap cap
@@ -96,8 +97,16 @@ proof -
           split del: if_split)
     apply (rule validE_R_sp[OF whenE_throwError_sp]
                 validE_R_sp[OF data_to_obj_type_sp]
-                validE_R_sp[OF dui_sp_helper] validE_R_sp[OF map_ensure_empty])+
+                validE_R_sp[OF map_ensure_empty]
+                validE_R_sp[OF dui_sp_helper])+
+      apply (intro ta_agnostic_conj; clarsimp)
+      apply (intro ta_agnostic_conj)
+         apply (rule base.invs.ta_agnostic)
+        apply (rule base.cte_wp_at.ta_agnostic)
+       apply (simp add: ta_agnostic_def)
+      apply (simp add: ta_agnostic_def)
      apply clarsimp
+    apply clarsimp
     apply (rule hoare_pre)
      apply (wp whenE_throwError_wp[THEN validE_validE_R] check_children_wp
                map_ensure_empty_wp)

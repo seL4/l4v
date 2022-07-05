@@ -166,19 +166,24 @@ lemma compute_free_index_wp:
   apply clarsimp
   done
 
+crunches lookup_target_slot
+  for tainv [wp]: "ignore_ta P"
+  (simp:crunch_simps)
 
-lemma dui_inv[wp]:
-  "\<lbrace>P\<rbrace> decode_untyped_invocation label args slot (cap.UntypedCap dev w n idx) cs \<lbrace>\<lambda>rv. P\<rbrace>"
+interpretation lookup_target_slot_tainv:
+  touched_addresses_inv _ "lookup_target_slot cap capref x"
+  by unfold_locales wp
+
+lemma dui_tainv[wp]:
+  "decode_untyped_invocation label args slot (cap.UntypedCap dev w n idx) cs \<lbrace>ignore_ta P\<rbrace>"
   apply (simp add: decode_untyped_invocation_def whenE_def
                    split_def data_to_obj_type_def unlessE_def
               split del: if_split cong: if_cong)
-  apply (rule hoare_pre)
-   apply (simp split del: if_split
-              | wp (once) mapME_x_inv_wp hoare_drop_imps const_on_failure_wp
-              | assumption
-              | simp add: lookup_target_slot_def
-              | wpcw
-              | wp)+
+  apply (wpsimp wp: const_on_failure_wp mapME_x_inv_wp)
+               apply fastforce
+              apply wpsimp+
+           apply (wp hoare_drop_imps)
+          apply wpsimp+
   done
 
 lemma map_ensure_empty_cte_wp_at:
@@ -245,9 +250,9 @@ lemma lookup_cap_gets:
   apply simp
   done
 
-
 lemma dui_sp_helper:
-  "(\<And>s. P s \<Longrightarrow> valid_objs s) \<Longrightarrow>
+  "ta_agnostic P \<Longrightarrow>
+   (\<And>s. P s \<Longrightarrow> valid_objs s) \<Longrightarrow>
    \<lbrace>P\<rbrace> if val = 0 then returnOk root_cap
        else doE node_slot \<leftarrow>
                   lookup_target_slot root_cap (to_bl (args ! 2)) (unat (args ! 3));
@@ -259,6 +264,7 @@ lemma dui_sp_helper:
   apply (wp get_cap_wp)
    apply (rule hoare_post_imp_R [where Q'="\<lambda>rv. valid_objs and P"]
           ; wpsimp simp: cte_wp_at_caps_of_state)
+   apply (erule lookup_slot_for_cnode_op_tainv.agnostic_preservedE_R)
   apply simp
   done
 

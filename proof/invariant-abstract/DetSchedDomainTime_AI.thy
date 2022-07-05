@@ -155,11 +155,21 @@ end
 
 crunch (in DetSchedDomainTime_AI_2) domain_list_inv[wp]: handle_interrupt "\<lambda>s. P (domain_list s)"
 
+sublocale touched_addresses_det_inv \<subseteq> domain_list_inv: touched_addresses_P_det_inv _ "\<lambda>s. P (domain_list s)"
+  by unfold_locales (simp add: agnostic_preserved ta_agnostic_def)+
+
 crunch domain_list_inv[wp]:
   lookup_cap_and_slot, cap_insert, set_extra_badge "\<lambda>s. P (domain_list s)"
   (wp: hoare_drop_imps)
 
 context DetSchedDomainTime_AI begin
+
+find_theorems name:lookup_slot_for_cnode_op_ta
+
+interpretation lookup_slot_for_cnode_op_tainv_det:
+  touched_addresses_det_invE "lookup_slot_for_cnode_op w x y z"
+  by unfold_locales
+
 crunch domain_list_inv[wp]: do_ipc_transfer "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps simp: zipWithM_x_mapM rule: transfer_caps_loop_pres)
 
@@ -224,7 +234,12 @@ lemma invoke_cnode_domain_list_inv[wp]:
           | wpc | simp add: invoke_cnode_def crunch_simps split del: if_split)+
   done
 
-crunch domain_list_inv[wp]: perform_invocation, handle_invocation "\<lambda>s. P (domain_list s)"
+crunches perform_invocation
+  for domain_list_inv[wp]: "\<lambda>s. P (domain_list s)"
+  (wp: crunch_wps syscall_valid simp: crunch_simps ignore: syscall)
+
+crunches handle_invocation
+  for domain_list_inv[wp]: "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps syscall_valid simp: crunch_simps ignore: syscall)
 
 crunch domain_list_inv[wp]:
@@ -260,6 +275,9 @@ section \<open>Preservation of domain time remaining\<close>
 
 crunch domain_time_inv[wp]: do_user_op "(\<lambda>s. P (domain_time s))"
   (wp: select_wp)
+
+sublocale touched_addresses_det_inv \<subseteq> domain_time_inv: touched_addresses_P_det_inv _ "\<lambda>s. P (domain_time s)"
+  by unfold_locales (simp add: agnostic_preserved ta_agnostic_def)+
 
 context DetSchedDomainTime_AI begin
 

@@ -62,6 +62,20 @@ definition getMemoryRegions :: "(paddr * paddr) list machine_monad"
   where
   "getMemoryRegions \<equiv> return memory_regions"
 
+text \<open>Accessors and modifiers for touched_addresses\<close>
+
+definition
+  getTouchedAddresses :: "(machine_word set) machine_monad"
+  where "getTouchedAddresses \<equiv> gets touched_addresses"
+
+definition
+  clearTouchedAddresses :: "unit machine_monad"
+  where "clearTouchedAddresses \<equiv> modify (\<lambda>s. s\<lparr>touched_addresses := {}\<rparr>)"
+
+definition
+  addTouchedAddresses :: "machine_word set \<Rightarrow> unit machine_monad"
+  where "addTouchedAddresses da \<equiv> modify (\<lambda>s. s\<lparr>touched_addresses := da \<union> touched_addresses s\<rparr>)"
+
 text \<open>This instruction is required in the simulator, only.\<close>
 definition storeWordVM :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"
   where

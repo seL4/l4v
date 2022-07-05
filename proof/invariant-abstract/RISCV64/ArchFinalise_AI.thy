@@ -1363,6 +1363,11 @@ lemma (* zombie_cap_two_nonidles *)[Finalise_AI_asms]:
   apply (cases ptr, auto dest: valid_idle_has_null_cap_ARCH[rotated -1])[1]
   done
 
+(*note: seems like the second crunches below will fail with valid_ioports_lift
+  unless i separately prove resolve_address_bits here *)
+crunches resolve_address_bits
+  for ioports[wp]: valid_ioports
+
 crunches empty_slot, finalise_cap, send_ipc, receive_ipc
   for ioports[wp]: valid_ioports
   (wp: crunch_wps valid_ioports_lift simp: crunch_simps ignore: set_object do_machine_op)

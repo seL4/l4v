@@ -447,6 +447,9 @@ proof goal_cases
   case 1 show ?case by (unfold_locales; (fact Ipc_AI_assms)?)
 qed
 
+sublocale touched_addresses_inv \<subseteq> state_hyp_refs_of:touched_addresses_P_inv _ _ "\<lambda>s. P (state_hyp_refs_of s)"
+  by unfold_locales (simp add:ta_agnostic_def)
+
 context Arch begin global_naming RISCV64
 
 named_theorems Ipc_AI_cont_assms
@@ -474,7 +477,7 @@ lemma set_mrs_state_hyp_refs_of[wp]:
   "\<lbrace>\<lambda> s. P (state_hyp_refs_of s)\<rbrace> set_mrs thread buf msgs \<lbrace>\<lambda>_ s. P (state_hyp_refs_of s)\<rbrace>"
   by (wp set_mrs_thread_set_dmo thread_set_hyp_refs_trivial | simp)+
 
-crunch state_hyp_refs_of[wp, Ipc_AI_cont_assms]: do_ipc_transfer "\<lambda> s. P (state_hyp_refs_of s)"
+crunch state_hyp_refs_of[wp, Ipc_AI_cont_assms]: do_ipc_transfer "\<lambda>s. P (state_hyp_refs_of s)"
   (wp: crunch_wps simp: zipWithM_x_mapM)
 
 lemma arch_derive_cap_untyped:

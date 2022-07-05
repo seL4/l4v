@@ -41,6 +41,21 @@ where
    od"
 
 definition
+  get_cap_x :: "cslot_ptr \<Rightarrow> (cap,'z::state_ext) s_monad"
+where
+  "get_cap_x \<equiv> \<lambda>(oref, cref). do
+     obj \<leftarrow> get_object_x oref;
+     caps \<leftarrow> case obj of
+             CNode sz cnode \<Rightarrow> do
+                                assert (well_formed_cnode_n sz cnode);
+                                return cnode
+                              od
+           | TCB tcb     \<Rightarrow> return (tcb_cnode_map tcb)
+           | _ \<Rightarrow> fail;
+     assert_opt (caps cref)
+   od"
+
+definition
   set_cap :: "cap \<Rightarrow> cslot_ptr \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "set_cap cap \<equiv> \<lambda>(oref, cref). do
