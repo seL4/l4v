@@ -474,9 +474,9 @@ lemma ptes_of_pts_of_upd:
   done
 
 lemma store_pte_ptes_of_full:
-  "\<lbrace>\<lambda>s. ptes_of s pt_t' p \<noteq> None \<longrightarrow>
-        P (ptes_of s (pt_t', p \<mapsto> pte)) \<rbrace>
-   store_pte pt_t' p pte \<lbrace>\<lambda>_ s. P (ptes_of s)\<rbrace>"
+  "\<lbrace>\<lambda>s. ptes_of s pt_t p \<noteq> None \<longrightarrow> P ((ptes_of s) (pt_t, p \<mapsto> pte)) \<rbrace>
+   store_pte pt_t p pte
+   \<lbrace>\<lambda>_ s. P (ptes_of s)\<rbrace>"
   unfolding store_pte_def
   apply (wpsimp wp: set_pt_pts_of simp_del: fun_upd_apply)
   apply (simp add: level_pte_of_pt pt_at_eq ptes_of_pts_of_upd)
@@ -555,6 +555,25 @@ lemma vs_lookup_slot_no_asid:
   unfolding vs_lookup_slot_def vs_lookup_table_def
   by (fastforce dest: pool_for_asid_no_pte simp: in_omonad)
 
+lemma pts_of_type_unique:
+  "\<lbrakk> pts_of s (table_base (pt_type pt) p) = Some pt;
+     pts_of s (table_base (pt_type pt') p) = Some pt';
+     pspace_distinct s \<rbrakk>
+   \<Longrightarrow> pt_type pt = pt_type pt'"
+  by (cases "table_base (pt_type pt') p = table_base (pt_type pt) p", simp)
+     (fastforce dest: pspace_distinctD
+                simp: in_omonad is_aligned_no_overflow_mask and_neg_mask_plus_mask_mono pt_bits_def
+                      word_and_le)
+
+(* If we look up a slot for some level, and we know there is a pte for type pt_t at that slot,
+   then it must agree with the level type of the lookup. *)
+lemma vs_lookup_slot_level_type:
+  "\<lbrakk> vs_lookup_slot level asid vref s = Some (level, p); ptes_of s pt_t p = Some pte;
+     vref \<in> user_region; level \<le> max_pt_level;
+     valid_asid_table s; pspace_aligned s; pspace_distinct s; valid_vspace_objs s \<rbrakk>
+   \<Longrightarrow> level_type level = pt_t"
+  by (fastforce simp: ptes_of_Some intro!: pts_of_type_unique dest: valid_vspace_objs_strong_slotD)
+
 (* FIXME AARCH64: move *)
 lemmas vm_level_from_top_full_induct = bit1.from_top_full_induct
 
@@ -564,8 +583,8 @@ lemmas vm_level_from_top_full_induct = bit1.from_top_full_induct
 lemma vs_lookup_non_PageTablePTE:
   "\<lbrakk> ptes_of s pt_t p \<noteq> None; ptes_of s' = ptes_of s (pt_t, p \<mapsto> pte);
      \<not> is_PageTablePTE pte;
-     asid_pools_of s' = asid_pools_of s;
-     asid_table s' = asid_table s;
+     asid_pools_of s' = asid_pools_of s; asid_table s' = asid_table s;
+     vref \<in> user_region;
      valid_asid_table s; pspace_aligned s; pspace_distinct s; valid_vspace_objs s \<rbrakk> \<Longrightarrow>
    vs_lookup_table level asid vref s' =
      (if \<exists>level'. vs_lookup_slot level' asid vref s = Some (level', p) \<and> level < level'
@@ -582,6 +601,10 @@ lemma vs_lookup_non_PageTablePTE:
   apply (rename_tac level old_pte)
   apply (rule conjI; clarsimp)
    apply (drule (1) level_of_slotI, clarsimp)
+   apply (prop_tac "level_type (level_of_slot asid vref p s) = pt_t")
+    apply (fastforce simp flip: asid_pool_level_neq
+                     dest!: vs_lookup_slot_no_asid
+                     intro!: vs_lookup_slot_level_type)
    apply (subst vs_lookup_split[where level'="level_of_slot asid vref p s"], simp)
     apply (rule ccontr)
     apply (fastforce dest!: vs_lookup_slot_no_asid simp: not_le)
@@ -590,8 +613,6 @@ lemma vs_lookup_non_PageTablePTE:
     apply (fastforce dest!: vs_lookup_table_no_asid)
    apply (subst pt_walk.simps)
    apply (simp add: in_obind_eq fun_upd2_def)
-   subgoal sorry (* FIXME AARCH64: level_type (level_of_slot asid vref p s) \<noteq> pt_t  should be a
-                                   contradiction; try to use valid_vspace_objs to derive it *)
   subgoal for x old_pte
     apply (subst vs_lookup_split[where level'="x+1"])
       apply (simp add: less_imp_le)
@@ -638,7 +659,7 @@ lemma store_pte_non_PageTablePTE_vs_lookup:
             then vs_lookup_table (level_of_slot asid vref p s) asid vref s
             else vs_lookup_table level asid vref s))
         \<and> pspace_aligned s \<and> pspace_distinct s \<and> valid_asid_table s \<and> valid_vspace_objs s
-        \<and> \<not> is_PageTablePTE pte \<rbrace>
+        \<and> \<not> is_PageTablePTE pte \<and> vref \<in> user_region \<rbrace>
    store_pte pt_t p pte
    \<lbrace>\<lambda>_ s. P (vs_lookup_table level asid vref s)\<rbrace>"
   unfolding store_pte_def set_pt_def
@@ -670,8 +691,8 @@ lemma store_pte_InvalidPTE_valid_vspace_objs[wp]:
    store_pte pt_t p InvalidPTE
    \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
   unfolding valid_vspace_objs_def
-  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' valid_vspace_obj_lift
-                    store_pte_non_PageTablePTE_vs_lookup)
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_const_imp_lift hoare_vcg_imp_lift'
+                    valid_vspace_obj_lift store_pte_non_PageTablePTE_vs_lookup)
   apply (prop_tac "valid_vspace_objs s", simp add: valid_vspace_objs_def)
   apply (rename_tac s bot_level asid vref)
   apply simp
