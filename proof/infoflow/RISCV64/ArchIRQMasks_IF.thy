@@ -31,7 +31,7 @@ crunch irq_masks[IRQMasks_IF_assms, wp]: invoke_untyped "\<lambda>s. P (irq_mask
 
 lemma set_vm_root_irq_masks[IRQMasks_IF_assms, wp]:
   "set_vm_root param_a \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  sorry
+  sorry done (* FIXME: Broken by experimental-tpspec. -robs *)
 
 crunch irq_masks[IRQMasks_IF_assms, wp]: finalise_cap "\<lambda>s. P (irq_masks_of_state s)"
   (  wp: select_wp crunch_wps dmo_wp no_irq
@@ -89,15 +89,15 @@ crunch irq_masks[IRQMasks_IF_assms, wp]: activate_thread "\<lambda>s. P (irq_mas
 
 lemma arch_mask_interrupts_irq_masks[IRQMasks_IF_assms, wp]:
   "arch_mask_interrupts m irqs \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  sorry (* FIXME: Made necessary by experimental-tpspec. -robs *)
+  sorry done (* FIXME: Made necessary by experimental-tpspec. -robs *)
 
 lemma arch_switch_domain_kernel_irq_masks[IRQMasks_IF_assms, wp]:
   "arch_switch_domain_kernel newdom \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  sorry (* FIXME: Made necessary by experimental-tpspec. -robs *)
+  sorry done (* FIXME: Made necessary by experimental-tpspec. -robs *)
 
 lemma arch_domainswitch_flush_irq_masks[IRQMasks_IF_assms, wp]:
   "arch_domainswitch_flush \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  sorry (* FIXME: Made necessary by experimental-tpspec. -robs *)
+  sorry done (* FIXME: Made necessary by experimental-tpspec. -robs *)
 
 crunch irq_masks[IRQMasks_IF_assms, wp]: schedule "\<lambda>s. P (irq_masks_of_state s)"
   (wp: dmo_wp alternative_wp select_wp crunch_wps simp: crunch_simps)
