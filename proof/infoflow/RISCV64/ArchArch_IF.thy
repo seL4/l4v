@@ -249,10 +249,11 @@ lemma requiv_riscv_asid_table_asid_high_bits_of_asid_eq:
 lemma set_vm_root_states_equiv_for[wp]:
   "set_vm_root thread \<lbrace>states_equiv_for P Q R S st\<rbrace>"
   unfolding set_vm_root_def catch_def fun_app_def
-  sorry (* FIXME: Broken by experimental-tpspec -robs. *)
+  sorry (* FIXME: Broken by experimental-tpspec -robs.
   by (wpsimp wp: do_machine_op_mol_states_equiv_for
                  hoare_vcg_all_lift hoare_whenE_wp hoare_drop_imps
            simp: setVSpaceRoot_def dmo_bind_valid if_apply_def2)+
+*)
 
 lemma find_vspace_for_asid_reads_respects:
    "reads_respects aag l (K (asid \<noteq> 0 \<and> aag_can_read_asid aag asid)) (find_vspace_for_asid asid)"
@@ -721,9 +722,10 @@ lemma globals_equiv_arm_asid_table_update[simp]:
 
 lemma set_vm_root_globals_equiv[wp]:
   "set_vm_root tcb \<lbrace>globals_equiv s\<rbrace>"
-  sorry (* FIXME: Broken by experimental-tpspec -robs. *)
+  sorry (* FIXME: Broken by experimental-tpspec -robs.
   by (wpsimp wp: dmo_mol_globals_equiv hoare_vcg_all_lift hoare_drop_imps
            simp: set_vm_root_def setVSpaceRoot_def)
+*)
 
 lemma delete_asid_pool_globals_equiv[wp]:
   "delete_asid_pool base ptr \<lbrace>globals_equiv s\<rbrace>"

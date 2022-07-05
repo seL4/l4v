@@ -85,27 +85,27 @@ crunches arch_mask_interrupts, arch_switch_domain_kernel, arch_domainswitch_flus
 
 lemma arch_switch_to_thread_pspace_aligned[ADT_IF_assms, wp]:
   "arch_switch_to_thread t \<lbrace>pspace_aligned\<rbrace>"
-  sorry done (* FIXME: Broken by experimental-tpspec. -robs *)
+  sorry (* FIXME: Broken by experimental-tpspec. -robs *)
 
 lemma arch_switch_to_idle_thread_pspace_aligned[ADT_IF_assms, wp]:
   "arch_switch_to_idle_thread \<lbrace>pspace_aligned\<rbrace>"
-  sorry done (* FIXME: Broken by experimental-tpspec. -robs *)
+  sorry (* FIXME: Broken by experimental-tpspec. -robs *)
 
 lemma arch_switch_to_thread_valid_vspace_objs[ADT_IF_assms, wp]:
   "arch_switch_to_thread t \<lbrace>valid_vspace_objs\<rbrace>"
-  sorry done (* FIXME: Broken by experimental-tpspec. -robs *)
+  sorry (* FIXME: Broken by experimental-tpspec. -robs *)
 
 lemma arch_switch_to_idle_thread_valid_vspace_objs[ADT_IF_assms, wp]:
   "arch_switch_to_idle_thread \<lbrace>valid_vspace_objs\<rbrace>"
-  sorry done (* FIXME: Broken by experimental-tpspec. -robs *)
+  sorry (* FIXME: Broken by experimental-tpspec. -robs *)
 
 lemma arch_switch_to_thread_valid_arch_state[ADT_IF_assms, wp]:
   "arch_switch_to_thread t \<lbrace>valid_arch_state\<rbrace>"
-  sorry done (* FIXME: Broken by experimental-tpspec. -robs *)
+  sorry (* FIXME: Broken by experimental-tpspec. -robs *)
 
 lemma arch_switch_to_idle_thread_valid_arch_state[ADT_IF_assms, wp]:
   "arch_switch_to_idle_thread \<lbrace>valid_arch_state\<rbrace>"
-  sorry done (* FIXME: Broken by experimental-tpspec. -robs
+  sorry (* FIXME: Broken by experimental-tpspec. -robs
 
 crunches arch_switch_to_idle_thread, arch_switch_to_thread
   for pspace_aligned[ADT_IF_assms, wp]: "\<lambda>s :: det_state. pspace_aligned s"

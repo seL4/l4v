@@ -1233,7 +1233,7 @@ lemma schedule_guarded_pas_domain:
          | simp add: schedule_choose_new_thread_def ethread_get_when_def split del: if_split
          | wp (once) hoare_drop_imp[where f="ethread_get t v" for t v]
          | wp (once) hoare_drop_imp[where f="schedule_switch_thread_fastfail c i cp p" for c i cp p])+
-       sorry (* FIXME: Broken by experimental-tpspec. -robs *)
+       sorry (* FIXME: Broken by experimental-tpspec. -robs
        apply (wp hoare_drop_imp)
       apply (wpsimp wp: guarded_pas_domain_lift[where f="activate_thread"]
                         guarded_pas_domain_lift[where f="set_scheduler_action f" for f]
@@ -1247,6 +1247,7 @@ lemma schedule_guarded_pas_domain:
   apply (fastforce intro: switch_to_cur_domain switch_thread_runnable
                     simp: valid_sched_def elim!: st_tcb_weakenE)+
   done
+*)
 
 lemma schedule_if_guarded_pas_domain[wp]:
   "\<lbrace>guarded_pas_domain aag and einvs and pas_refined aag\<rbrace>

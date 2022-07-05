@@ -48,7 +48,7 @@ lemma state_vrefs_clear_asid_pool:
 
 lemma set_vm_root_pas_refined[wp]:
   "\<lbrace>pas_refined aag\<rbrace> set_vm_root param_a \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
-  sorry done (* FIXME: Broken by experimental-tpspec -robs.
+  sorry (* FIXME: Broken by experimental-tpspec -robs.
 crunches set_vm_root for pas_refined[wp]: "pas_refined aag"
 *)
 
@@ -146,8 +146,9 @@ lemma arch_cap_cleanup_wf[Finalise_AC_assms]:
 lemma set_vm_root_integrity[wp]:
   "set_vm_root param_a \<lbrace>integrity aag X st\<rbrace> "
   unfolding set_vm_root_def
-  sorry (* FIXME: Broken by experimental-tpspec -robs. *)
+  sorry (* FIXME: Broken by experimental-tpspec -robs.
   by (wpsimp wp: dmo_wp mol_respects get_cap_wp simp: setVSpaceRoot_def)
+*)
 
 lemma delete_asid_pool_respects[wp]:
   "\<lbrace>integrity aag X st and
@@ -160,31 +161,31 @@ lemma delete_asid_pool_respects[wp]:
 
 lemma set_vm_root_integrity_obj[wp]:
   "set_vm_root param_a \<lbrace>integrity_obj_state aag activate subjects st\<rbrace>"
-  sorry done (* FIXME: Broken by experimental-tpspec -robs. *)
+  sorry (* FIXME: Broken by experimental-tpspec -robs. *)
 
 lemma set_vm_root_cdt[wp]:
   "set_vm_root param_a \<lbrace>\<lambda>s. P (cdt s)\<rbrace>"
-  sorry done (* FIXME: Broken by experimental-tpspec -robs. *)
+  sorry (* FIXME: Broken by experimental-tpspec -robs. *)
 
 lemma set_vm_root_is_original_cap[wp]:
   "set_vm_root param_a \<lbrace>\<lambda>s. P (is_original_cap s x)\<rbrace>"
-  sorry done (* FIXME: Broken by experimental-tpspec -robs. *)
+  sorry (* FIXME: Broken by experimental-tpspec -robs. *)
 
 lemma set_vm_root_interrupt_irq_node[wp]:
   "set_vm_root param_a \<lbrace>\<lambda>s. P (interrupt_states s x)\<rbrace>"
-  sorry done (* FIXME: Broken by experimental-tpspec -robs. *)
+  sorry (* FIXME: Broken by experimental-tpspec -robs. *)
 
 lemma set_vm_root_underlying_memory[wp]:
   "set_vm_root param_a \<lbrace>\<lambda>s. P (underlying_memory (machine_state s) x)\<rbrace>"
-  sorry done (* FIXME: Broken by experimental-tpspec -robs. *)
+  sorry (* FIXME: Broken by experimental-tpspec -robs. *)
 
 lemma set_vm_root_device_state[wp]:
   "set_vm_root param_a \<lbrace>\<lambda>s. P (device_state (machine_state s) x)\<rbrace>"
-  sorry done (* FIXME: Broken by experimental-tpspec -robs. *)
+  sorry (* FIXME: Broken by experimental-tpspec -robs. *)
 
 lemma set_vm_root_tcb_states_of_state[wp]:
   "set_vm_root param_a \<lbrace>\<lambda>s. P (tcb_states_of_state s)\<rbrace>"
-  sorry done (* FIXME: Broken by experimental-tpspec -robs.
+  sorry (* FIXME: Broken by experimental-tpspec -robs.
 
 crunches set_vm_root
   for integrity_obj[wp]: "integrity_obj_state aag activate subjects st"

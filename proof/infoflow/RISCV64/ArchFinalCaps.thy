@@ -48,7 +48,7 @@ lemma set_asid_pool_silc_inv[wp]:
 
 lemma set_vm_root_silc_inv[FinalCaps_assms, wp]:
   "set_vm_root param_a \<lbrace>silc_inv aag st\<rbrace>"
-  sorry done (* FIXME: Broken by experimental-tpspec -robs. *)
+  sorry (* FIXME: Broken by experimental-tpspec -robs. *)
 
 crunches arch_finalise_cap, prepare_thread_delete, init_arch_objects
   for silc_inv[FinalCaps_assms, wp]: "silc_inv aag st"

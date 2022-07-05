@@ -70,11 +70,11 @@ lemma arch_scheduler_affects_equiv_ready_queues_update[Scheduler_IF_assms, simp]
 
 lemma arch_switch_to_thread_kheap[Scheduler_IF_assms, wp]:
   "arch_switch_to_thread t \<lbrace>\<lambda>s :: det_state. P (kheap s)\<rbrace>"
-  sorry done (* FIXME: Broken by experimental-tpspec. -robs *)
+  sorry (* FIXME: Broken by experimental-tpspec. -robs *)
 
 lemma arch_switch_to_idle_thread_kheap[Scheduler_IF_assms, wp]:
   "arch_switch_to_idle_thread \<lbrace>\<lambda>s :: det_state. P (kheap s)\<rbrace>"
-  sorry done (* FIXME: Broken by experimental-tpspec. -robs *)
+  sorry (* FIXME: Broken by experimental-tpspec. -robs *)
 
 crunches arch_switch_to_thread, arch_switch_to_idle_thread
   for idle_thread[Scheduler_IF_assms, wp]: "\<lambda>s :: det_state. P (idle_thread s)"
@@ -82,8 +82,7 @@ crunches arch_switch_to_thread, arch_switch_to_idle_thread
   (wp: crunch_wps simp: crunch_simps)
 
 crunches arch_mask_interrupts, arch_switch_domain_kernel, arch_domainswitch_flush
-  for idle_thread[Scheduler_IF_assms, wp]: "\<lambda>s :: det_state. P (idle_thread s)"
-  and kheap[Scheduler_IF_assms, wp]: "\<lambda>s :: det_state. P (kheap s)"
+  for kheap[Scheduler_IF_assms, wp]: "\<lambda>s :: det_state. P (kheap s)"
   (wp: crunch_wps simp: crunch_simps)
 
 crunches arch_switch_to_idle_thread
@@ -204,19 +203,19 @@ lemma arch_mask_interrupts_globals_equiv_scheduler[Scheduler_IF_assms]:
   "\<lbrace>invs and globals_equiv_scheduler sta\<rbrace>
    arch_mask_interrupts m irqs
    \<lbrace>\<lambda>_. globals_equiv_scheduler sta\<rbrace>"
-  sorry done (* FIXME: For experimental-tpspec. Prove or replace with one that's true. -robs *)
+  sorry (* FIXME: For experimental-tpspec. Prove or replace with one that's true. -robs *)
 
 lemma arch_switch_domain_kernel_globals_equiv_scheduler[Scheduler_IF_assms]:
   "\<lbrace>invs and globals_equiv_scheduler sta\<rbrace>
    arch_switch_domain_kernel nextdom
    \<lbrace>\<lambda>_. globals_equiv_scheduler sta\<rbrace>"
-  sorry done (* FIXME: For experimental-tpspec. Prove or replace with one that's true. -robs *)
+  sorry (* FIXME: For experimental-tpspec. Prove or replace with one that's true. -robs *)
 
 lemma arch_domainswitch_flush_globals_equiv_scheduler[Scheduler_IF_assms]:
   "\<lbrace>invs and globals_equiv_scheduler sta\<rbrace>
    arch_domainswitch_flush
    \<lbrace>\<lambda>_. globals_equiv_scheduler sta\<rbrace>"
-  sorry done (* FIXME: For experimental-tpspec. Prove or replace with one that's true. -robs *)
+  sorry (* FIXME: For experimental-tpspec. Prove or replace with one that's true. -robs *)
 
 crunches arch_activate_idle_thread
   for silc_dom_equiv[Scheduler_IF_assms, wp]: "silc_dom_equiv aag st"
@@ -240,7 +239,7 @@ lemma set_vm_root_reads_respects_scheduler[wp]:
 
 lemma set_vm_root_kheap[wp]:
   "set_vm_root tcb \<lbrace>\<lambda>s :: det_state. P (kheap s)\<rbrace>"
-  sorry done (* FIXME: Broken by experimental-tpspec. -robs *)
+  sorry (* FIXME: Broken by experimental-tpspec. -robs *)
 
 lemma store_cur_thread_fragment_midstrength_reads_respects:
   "equiv_valid (scheduler_equiv aag) (midstrength_scheduler_affects_equiv aag l)
