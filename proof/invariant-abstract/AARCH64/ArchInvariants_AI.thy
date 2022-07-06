@@ -882,7 +882,7 @@ lemma minus_one_max_pt_level[simp]:
   "(level - 1 = max_pt_level) = (level = asid_pool_level)"
   by (simp add: max_pt_level_def)
 
-lemma plus_one_eq_asid_pool[simp]:
+lemma plus_one_eq_asid_pool:
   "(level + 1 = asid_pool_level) = (level = max_pt_level)"
   by (metis add_right_imp_eq max_pt_level_plus_one)
 
@@ -1571,7 +1571,7 @@ lemma max_pt_bits_left[simp]:
 lemma pt_bits_left_plus1:
   "level \<le> max_pt_level \<Longrightarrow>
    pt_bits_left (level + 1) = ptTranslationBits level + pt_bits_left level"
-  by (auto simp: pt_bits_left_def intro: arg_cong)
+  by (auto simp: pt_bits_left_def plus_one_eq_asid_pool intro: arg_cong)
 
 lemma vref_for_level_idem:
   "level' \<le> level \<Longrightarrow>
@@ -2531,7 +2531,7 @@ lemma pt_index_vref_for_level[simp]:
   using pt_bits_left_bound[of "level"]
   apply (simp add: pt_index_def vref_for_level_def pt_bits_left_bound_def)
   apply word_eqI
-  by (auto simp: bit_simps pt_bits_left_def size_max_pt_level split: if_split_asm)
+  by (auto simp: bit_simps pt_bits_left_def size_max_pt_level plus_one_eq_asid_pool split: if_split_asm)
 
 lemma table_index_pt_slot_offset:
   "\<lbrakk> level \<le> max_pt_level; is_aligned p (pt_bits level);
@@ -2553,7 +2553,7 @@ lemma vref_for_level_idx[simp]:
   "\<lbrakk> level \<le> max_pt_level; idx \<le> mask (ptTranslationBits level) \<rbrakk> \<Longrightarrow>
    vref_for_level (vref_for_level_idx vref idx level) (level + 1) =
    vref_for_level vref (level + 1)"
-  apply (simp add: vref_for_level_def pt_bits_left_def)
+  apply (simp add: vref_for_level_def pt_bits_left_def plus_one_eq_asid_pool)
   apply (rule conjI, clarsimp)
   apply (rule conjI; clarsimp; word_eqI_solve simp: bit_simps level_defs dest: bit_imp_possible_bit)
   done
