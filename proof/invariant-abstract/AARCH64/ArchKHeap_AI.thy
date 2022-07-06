@@ -635,7 +635,7 @@ lemma vs_lookup_non_PageTablePTE:
     apply (clarsimp simp: fun_upd2_def)
     apply (subgoal_tac "vs_lookup_slot (x+1) asid vref s = Some (x+1, p)")
      apply fastforce
-    by (clarsimp simp: vs_lookup_slot_def in_obind_eq)
+    by (clarsimp simp: vs_lookup_slot_def in_obind_eq plus_one_eq_asid_pool)
   done
 
 lemma set_pt_typ_at:
