@@ -775,7 +775,8 @@ proof -
         apply simp
        apply (fastforce simp: inj_eq split: if_split_asm)
       apply (clarsimp simp: last_conv_nth distinct_remove1_take_drop nth_eq_iff_index_eq inj_eq split: if_split_asm)
-       apply arith
+       apply (metis One_nat_def assms(1) last_tl length_tl less_nat_zero_code list.size(3)
+                    tcb_ptr_to_ctcb_ptr_eq tcb_queue_relationE')
       apply (simp add: nth_append min_def nth_eq_iff_index_eq)
       apply clarsimp
       apply arith
@@ -1090,19 +1091,20 @@ lemma cpspace_relation_ntfn_update_ntfn:
   defines "qs \<equiv> if isWaitingNtfn (ntfnObj ntfn) then set (ntfnQueue (ntfnObj ntfn)) else {}"
   assumes koat: "ko_at' ntfn ntfnptr s"
   and     invs: "invs' s"
+  and sym_refs: "sym_refs (state_refs_of' s)"
   and      cp: "cpspace_ntfn_relation (ksPSpace s) (t_hrs_' (globals t))"
   and     rel: "cnotification_relation (cslift t') ntfn' notification"
   and    mpeq: "(cslift t' |` (- (tcb_ptr_to_ctcb_ptr ` qs))) = (cslift t |` (- (tcb_ptr_to_ctcb_ptr ` qs)))"
   shows "cmap_relation (map_to_ntfns (ksPSpace s(ntfnptr \<mapsto> KONotification ntfn')))
            (cslift t(Ptr ntfnptr \<mapsto> notification)) Ptr (cnotification_relation (cslift t'))"
-  using koat invs cp rel
+  using koat invs sym_refs cp rel
   apply -
   apply (subst map_comp_update)
   apply (simp add: projectKO_opts_defs)
   apply (frule ko_at_projectKO_opt)
   apply (rule cmap_relationE1, assumption+)
   apply (erule (3) cmap_relation_upd_relI)
-   apply (erule (1) cnotification_relation_ntfn_queue [OF _ invs_sym' koat])
+   apply (erule (2) cnotification_relation_ntfn_queue)
      apply (erule (1) map_to_ko_atI')
     apply (fold qs_def, rule mpeq)
    apply assumption
@@ -1392,21 +1394,23 @@ lemma rf_sr_tcb_update_no_queue:
   apply (clarsimp simp: map_comp_update projectKO_opt_tcb cvariable_relation_upd_const
                         typ_heap_simps')
   apply (intro conjI)
-       subgoal by (clarsimp simp: cmap_relation_def map_comp_update projectKO_opts_defs inj_eq)
+        subgoal by (clarsimp simp: cmap_relation_def map_comp_update projectKO_opts_defs inj_eq)
+       apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
+       apply simp
+       apply (rule cendpoint_relation_upd_tcb_no_queues, assumption+)
+        subgoal by fastforce
+       subgoal by fastforce
       apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
       apply simp
-      apply (rule cendpoint_relation_upd_tcb_no_queues, assumption+)
+      apply (rule cnotification_relation_upd_tcb_no_queues, assumption+)
        subgoal by fastforce
       subgoal by fastforce
-     apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
-     apply simp
-     apply (rule cnotification_relation_upd_tcb_no_queues, assumption+)
+     subgoal by (clarsimp simp: map_comp_update projectKO_opt_sc typ_heap_simps'
+                                refill_buffer_relation_def)
+     apply (erule cready_queues_relation_not_queue_ptrs)
       subgoal by fastforce
      subgoal by fastforce
-    apply (erule cready_queues_relation_not_queue_ptrs)
-     subgoal by fastforce
-    subgoal by fastforce
-   subgoal by (clarsimp simp: carch_state_relation_def typ_heap_simps')
+    subgoal by (clarsimp simp: carch_state_relation_def typ_heap_simps')
   by (simp add: cmachine_state_relation_def)
 
 lemma rf_sr_tcb_update_no_queue_helper:
@@ -1423,59 +1427,6 @@ lemma tcb_queue_relation_not_in_q:
    tcb_queue_relation' nxtFn prvFn (hp(x := v)) xs start end
     = tcb_queue_relation' nxtFn prvFn hp xs start end"
   by (rule tcb_queue_relation'_cong, auto)
-
-lemma rf_sr_tcb_update_not_in_queue:
-  "\<lbrakk> (s, s') \<in> rf_sr; ko_at' tcb thread s;
-    t_hrs_' (globals t) = hrs_mem_update (heap_update
-      (tcb_ptr_to_ctcb_ptr thread) ctcb) (t_hrs_' (globals s'));
-    \<not> live' (KOTCB tcb); invs' s;
-    (\<forall>x\<in>ran tcb_cte_cases. (\<lambda>(getF, setF). getF tcb' = getF tcb) x);
-    ctcb_relation tcb' ctcb \<rbrakk>
-     \<Longrightarrow> (s\<lparr>ksPSpace := ksPSpace s(thread \<mapsto> KOTCB tcb')\<rparr>,
-           x\<lparr>globals := globals s'\<lparr>t_hrs_' := t_hrs_' (globals t)\<rparr>\<rparr>) \<in> rf_sr"
-  unfolding rf_sr_def state_relation_def cstate_relation_def cpspace_relation_def
-  apply (clarsimp simp: Let_def update_tcb_map_tos map_to_ctes_upd_tcb_no_ctes
-                        heap_to_user_data_def)
-  apply (frule (1) cmap_relation_ko_atD)
-  apply (erule obj_atE')
-  apply (clarsimp)
-  apply (clarsimp simp: map_comp_update projectKO_opt_tcb cvariable_relation_upd_const
-                        typ_heap_simps')
-  apply (subgoal_tac "\<forall>rf. \<not> ko_wp_at' (\<lambda>ko. rf \<in> refs_of' ko) thread s")
-  prefer 2
-   apply clarsimp
-   apply (auto simp: obj_at'_def ko_wp_at'_def)[1]
-  apply (intro conjI)
-      subgoal by (clarsimp simp: cmap_relation_def map_comp_update projectKO_opts_defs inj_eq)
-     apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
-     apply clarsimp
-     apply (subgoal_tac "thread \<notin> (fst ` ep_q_refs_of' a)")
-      apply (clarsimp simp: cendpoint_relation_def Let_def split: Structures_H.endpoint.split)
-      subgoal by (intro conjI impI allI, simp_all add: image_def tcb_queue_relation_not_in_q)[1]
-     apply (drule(1) map_to_ko_atI')
-     apply (drule sym_refs_ko_atD', clarsimp+)
-     subgoal by blast
-    apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
-    apply clarsimp
-    apply (subgoal_tac "thread \<notin> (fst ` ntfn_q_refs_of' (ntfnObj a))")
-     apply (clarsimp simp: cnotification_relation_def Let_def
-                    split: ntfn.splits)
-     subgoal by (simp add: image_def tcb_queue_relation_not_in_q)[1]
-    apply (drule(1) map_to_ko_atI')
-    apply (drule sym_refs_ko_atD', clarsimp+)
-    subgoal by blast
-   apply (simp add: cready_queues_relation_def, erule allEI)
-   apply (clarsimp simp: Let_def)
-    apply (subst tcb_queue_relation_not_in_q)
-   apply clarsimp
-    apply (drule valid_queues_obj_at'D, clarsimp)
-    apply (clarsimp simp: obj_at'_def projectKOs inQ_def)
-   subgoal by simp
-  apply (simp add: carch_state_relation_def)
-  by (simp add: cmachine_state_relation_def)
-
-lemmas rf_sr_tcb_update_not_in_queue2
-    = rf_sr_tcb_update_no_queue_helper [OF rf_sr_tcb_update_not_in_queue, simplified]
 
 end
 end

@@ -94,6 +94,8 @@ lemma cap_get_tag_isCap0:
   \<and> (cap_get_tag cap' = scast cap_endpoint_cap) = isEndpointCap cap
   \<and> (cap_get_tag cap' = scast cap_irq_handler_cap) = isIRQHandlerCap cap
   \<and> (cap_get_tag cap' = scast cap_irq_control_cap) = isIRQControlCap cap
+  \<and> (cap_get_tag cap' = scast cap_sched_control_cap) = isSchedControlCap cap
+  \<and> (cap_get_tag cap' = scast cap_sched_context_cap) = isSchedContextCap cap
   \<and> (cap_get_tag cap' = scast cap_zombie_cap) = isZombie cap
   \<and> (cap_get_tag cap' = scast cap_reply_cap) = isReplyCap cap
   \<and> (cap_get_tag cap' = scast cap_untyped_cap) = isUntypedCap cap
@@ -118,6 +120,8 @@ lemma cap_get_tag_isCap:
   and "(cap_get_tag cap' = scast cap_endpoint_cap) = (isEndpointCap cap)"
   and "(cap_get_tag cap' = scast cap_irq_handler_cap) = (isIRQHandlerCap cap)"
   and "(cap_get_tag cap' = scast cap_irq_control_cap) = (isIRQControlCap cap)"
+  and "(cap_get_tag cap' = scast cap_sched_control_cap) = isSchedControlCap cap"
+  and "(cap_get_tag cap' = scast cap_sched_context_cap) = isSchedContextCap cap"
   and "(cap_get_tag cap' = scast cap_zombie_cap) = (isZombie cap)"
   and "(cap_get_tag cap' = scast cap_reply_cap) = isReplyCap cap"
   and "(cap_get_tag cap' = scast cap_untyped_cap) = (isUntypedCap cap)"
@@ -464,6 +468,8 @@ lemma fst_setCTE:
            (ctes_of s' = ctes_of s(dest \<mapsto> cte));
            (map_to_eps (ksPSpace s) = map_to_eps (ksPSpace s'));
            (map_to_ntfns (ksPSpace s) = map_to_ntfns (ksPSpace s'));
+           (map_to_scs (ksPSpace s) = map_to_scs (ksPSpace s'));
+           (map_to_replies (ksPSpace s) = map_to_replies (ksPSpace s'));
            (map_to_ptes (ksPSpace s) = map_to_ptes (ksPSpace s'));
            (map_to_asidpools (ksPSpace s) = map_to_asidpools (ksPSpace s'));
            (map_to_user_data (ksPSpace s) = map_to_user_data (ksPSpace s'));
@@ -513,6 +519,32 @@ proof -
       ultimately have "(projectKO_opt ko' :: Structures_H.notification option) = projectKO_opt ko" using xin thms(4) ceq
         by - (drule (1) bspec, cases ko, auto simp: projectKO_opt_ntfn)
       thus "(projectKO_opt (the (ksPSpace s' x)) :: Structures_H.notification option) = projectKO_opt (the (ksPSpace s x))" using ko ko'
+        by simp
+    qed fact
+
+    (* clag \<dots> *)
+    show "map_to_scs (ksPSpace s) = map_to_scs (ksPSpace s')"
+    proof (rule map_comp_eqI)
+      fix x
+      assume xin: "x \<in> dom (ksPSpace s')"
+      then obtain ko where ko: "ksPSpace s x = Some ko" by (clarsimp simp: thms(3)[symmetric])
+      moreover from xin obtain ko' where ko': "ksPSpace s' x = Some ko'" by clarsimp
+      ultimately have "(projectKO_opt ko' :: Structures_H.sched_context option) = projectKO_opt ko" using xin thms(4) ceq
+        by - (drule (1) bspec, cases ko, auto simp: projectKO_opt_sc)
+      thus "(projectKO_opt (the (ksPSpace s' x)) :: Structures_H.sched_context option) = projectKO_opt (the (ksPSpace s x))" using ko ko'
+        by simp
+    qed fact
+
+    (* clag \<dots> *)
+    show "map_to_replies (ksPSpace s) = map_to_replies (ksPSpace s')"
+    proof (rule map_comp_eqI)
+      fix x
+      assume xin: "x \<in> dom (ksPSpace s')"
+      then obtain ko where ko: "ksPSpace s x = Some ko" by (clarsimp simp: thms(3)[symmetric])
+      moreover from xin obtain ko' where ko': "ksPSpace s' x = Some ko'" by clarsimp
+      ultimately have "(projectKO_opt ko' :: Structures_H.reply option) = projectKO_opt ko" using xin thms(4) ceq
+        by - (drule (1) bspec, cases ko, auto simp: projectKO_opt_reply)
+      thus "(projectKO_opt (the (ksPSpace s' x)) :: Structures_H.reply option) = projectKO_opt (the (ksPSpace s x))" using ko ko'
         by simp
     qed fact
 
@@ -939,6 +971,16 @@ lemma cmap_relation_ep [intro]:
 
 lemma cmap_relation_ntfn [intro]:
   "(s, s') \<in> rf_sr \<Longrightarrow> cpspace_ntfn_relation (ksPSpace s) (t_hrs_' (globals s'))"
+  unfolding rf_sr_def state_relation_def cstate_relation_def cpspace_relation_def
+  by (simp add: Let_def)
+
+lemma cmap_relation_sched_context [intro]:
+  "(s, s') \<in> rf_sr \<Longrightarrow> cpspace_sched_context_relation (ksPSpace s) (t_hrs_' (globals s'))"
+  unfolding rf_sr_def state_relation_def cstate_relation_def cpspace_relation_def
+  by (simp add: Let_def)
+
+lemma cmap_relation_reply [intro]:
+  "(s, s') \<in> rf_sr \<Longrightarrow> cpspace_reply_relation (ksPSpace s) (t_hrs_' (globals s'))"
   unfolding rf_sr_def state_relation_def cstate_relation_def cpspace_relation_def
   by (simp add: Let_def)
 
@@ -1441,6 +1483,8 @@ lemma update_ntfn_map_tos:
   fixes P :: "Structures_H.notification \<Rightarrow> bool"
   assumes at: "obj_at' P p s"
   shows   "map_to_eps (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_eps (ksPSpace s)"
+  and     "map_to_scs (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_scs (ksPSpace s)"
+  and     "map_to_replies (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_replies (ksPSpace s)"
   and     "map_to_tcbs (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_tcbs (ksPSpace s)"
   and     "map_to_ctes (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_ctes (ksPSpace s)"
   and     "map_to_ptes (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_ptes (ksPSpace s)"
@@ -1455,6 +1499,8 @@ lemma update_ep_map_tos:
   fixes P :: "endpoint \<Rightarrow> bool"
   assumes at: "obj_at' P p s"
   shows   "map_to_ntfns (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_ntfns (ksPSpace s)"
+  and     "map_to_scs (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_scs (ksPSpace s)"
+  and     "map_to_replies (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_replies (ksPSpace s)"
   and     "map_to_tcbs (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_tcbs (ksPSpace s)"
   and     "map_to_ctes (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_ctes (ksPSpace s)"
   and     "map_to_ptes (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_ptes (ksPSpace s)"
@@ -1470,6 +1516,8 @@ lemma update_tcb_map_tos:
   assumes at: "obj_at' P p s"
   shows   "map_to_eps (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_eps (ksPSpace s)"
   and     "map_to_ntfns (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_ntfns (ksPSpace s)"
+  and     "map_to_scs (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_scs (ksPSpace s)"
+  and     "map_to_replies (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_replies (ksPSpace s)"
   and     "map_to_ptes (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_ptes (ksPSpace s)"
   and     "map_to_asidpools (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_asidpools (ksPSpace s)"
   and     "map_to_user_data (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_user_data (ksPSpace s)"
@@ -1482,6 +1530,8 @@ lemma update_asidpool_map_tos:
   fixes P :: "asidpool \<Rightarrow> bool"
   assumes at: "obj_at' P p s"
   shows   "map_to_ntfns (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_ntfns (ksPSpace s)"
+  and     "map_to_scs (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_scs (ksPSpace s)"
+  and     "map_to_replies (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_replies (ksPSpace s)"
   and     "map_to_tcbs (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_tcbs (ksPSpace s)"
   and     "map_to_ctes (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_ctes (ksPSpace s)"
   and     "map_to_ptes (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_ptes (ksPSpace s)"
@@ -1512,6 +1562,8 @@ lemma update_pte_map_tos:
   and     "map_to_tcbs (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_tcbs (ksPSpace s)"
   and     "map_to_ctes (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_ctes (ksPSpace s)"
   and     "map_to_eps  (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_eps (ksPSpace s)"
+  and     "map_to_scs  (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_scs (ksPSpace s)"
+  and     "map_to_replies  (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_replies (ksPSpace s)"
   and     "map_to_asidpools (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_asidpools (ksPSpace s)"
   and     "map_to_user_data (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_user_data (ksPSpace s)"
   and     "map_to_user_data_device (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_user_data_device (ksPSpace s)"
@@ -1793,6 +1845,8 @@ lemma cap_get_tag_isCap_unfolded_H_cap:
   and "ccap_relation (capability.UntypedCap v100 v19 v20 v20b) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_untyped_cap)"
   and "ccap_relation (capability.CNodeCap v21 v22 v23 v24) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_cnode_cap)"
   and "ccap_relation (capability.DomainCap) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_domain_cap)"
+  and "ccap_relation (capability.SchedContextCap v25 v26) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_sched_context_cap)"
+  and "ccap_relation (capability.SchedControlCap) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_sched_control_cap)"
 
   and "ccap_relation (capability.ArchObjectCap arch_capability.ASIDControlCap) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_asid_control_cap)"
   and "ccap_relation (capability.ArchObjectCap (arch_capability.ASIDPoolCap v28 v29)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_asid_pool_cap)"
@@ -1839,11 +1893,11 @@ schematic_goal cap_frame_cap_lift_def':
   by (simp add: cap_frame_cap_lift_def cap_lift_def cap_tag_defs)
 
 lemmas ccap_rel_cap_get_tag_cases_generic =
-  cap_get_tag_isCap_unfolded_H_cap(1-11)
+  cap_get_tag_isCap_unfolded_H_cap(1-13)
     [OF back_subst[of "\<lambda>cap. ccap_relation cap cap'" for cap']]
 
 lemmas ccap_rel_cap_get_tag_cases_arch =
-  cap_get_tag_isCap_unfolded_H_cap(12-15)
+  cap_get_tag_isCap_unfolded_H_cap(14-17)
     [OF back_subst[of "\<lambda>cap. ccap_relation (ArchObjectCap cap) cap'" for cap'],
      OF back_subst[of "\<lambda>cap. ccap_relation cap cap'" for cap']]
 
@@ -1855,6 +1909,8 @@ lemmas cap_lift_defs =
        cap_endpoint_cap_lift_def
        cap_notification_cap_lift_def
        cap_reply_cap_lift_def
+       cap_sched_context_cap_lift_def
+       cap_sched_control_cap_lift_def
        cap_cnode_cap_lift_def
        cap_thread_cap_lift_def
        cap_irq_handler_cap_lift_def
@@ -1868,6 +1924,8 @@ lemma cap_lift_Some_CapD:
   "\<And>c'. cap_lift c = Some (Cap_endpoint_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_endpoint_cap"
   "\<And>c'. cap_lift c = Some (Cap_notification_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_notification_cap"
   "\<And>c'. cap_lift c = Some (Cap_reply_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_reply_cap"
+  "\<And>c'. cap_lift c = Some (Cap_sched_context_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_sched_context_cap"
+  "\<And>c'. cap_lift c = Some (Cap_sched_control_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_sched_control_cap"
   "\<And>c'. cap_lift c = Some (Cap_cnode_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_cnode_cap"
   "\<And>c'. cap_lift c = Some (Cap_thread_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_thread_cap"
   "\<And>c'. cap_lift c = Some (Cap_irq_handler_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_irq_handler_cap"
