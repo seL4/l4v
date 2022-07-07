@@ -22,16 +22,14 @@ lemma ccorres_pre_threadGet:
     apply (rule ccorres_symb_exec_l)
        defer
        apply wp[1]
-      apply (rule tg_sp')
+      apply (rule threadGet_sp)
      apply simp
     apply assumption
    defer
    apply (rule ccorres_guard_imp)
      apply (rule cc)
     apply clarsimp
-    apply (frule obj_at_ko_at')
-    apply clarsimp
-  apply assumption
+   apply assumption
   apply clarsimp
   apply (frule (1) obj_at_cslift_tcb)
   apply clarsimp
@@ -65,7 +63,7 @@ lemma ccorres_pre_archThreadGet:
 
 lemma threadGet_eq:
   "ko_at' tcb thread s \<Longrightarrow> (f tcb, s) \<in> fst (threadGet f thread s)"
-  unfolding threadGet_def
+  unfolding threadGet_getObject
   apply (simp add: liftM_def in_monad)
   apply (rule exI [where x = tcb])
   apply simp
@@ -111,7 +109,7 @@ lemma threadGet_obj_at2:
   "\<lbrace>\<top>\<rbrace> threadGet f thread \<lbrace>\<lambda>v. obj_at' (\<lambda>t. f t = v) thread\<rbrace>"
   apply (rule hoare_post_imp)
    prefer 2
-   apply (rule tg_sp')
+   apply (rule threadGet_sp')
   apply simp
   done
 
@@ -153,7 +151,6 @@ lemma getRegister_ccorres [corres]:
    apply simp
   apply simp
   apply (erule obj_atE')
-  apply (clarsimp simp: projectKOs )
   apply (subst fun_upd_idem)
    apply (case_tac ko)
    apply clarsimp
@@ -169,7 +166,7 @@ lemma getRestartPC_ccorres [corres]:
      apply (rule ccorres_return_C, simp+)[1]
     apply wp
    apply vcg
-  apply (simp add: scast_id)
+  apply simp
   done
 
 lemma threadSet_corres_lemma:
@@ -249,12 +246,6 @@ lemma sanitiseRegister_spec:
   apply vcg
   by (case_tac r; simp add: C_register_defs sanitiseRegister_def)
 
-lemma getObject_tcb_wp':
-  "\<lbrace>\<lambda>s. \<forall>t. ko_at' (t :: tcb) p s \<longrightarrow> Q t s\<rbrace> getObject p \<lbrace>Q\<rbrace>"
-  by (clarsimp simp: getObject_def valid_def in_monad
-                     split_def objBits_simps' loadObject_default_def
-                     projectKOs obj_at'_def in_magnitude_check)
-
 lemma ccorres_pre_getObject_tcb:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
@@ -270,7 +261,7 @@ lemma ccorres_pre_getObject_tcb:
        apply (rule_tac Q="ko_at' rv p s" in conjunct1)
        apply assumption
       apply assumption
-     apply (wpsimp wp: empty_fail_getObject getObject_tcb_wp')+
+     apply (wpsimp wp: empty_fail_getObject getTCB_wp)+
     apply (erule cmap_relationE1[OF cmap_relation_tcb],
            erule ko_at_projectKO_opt)
   apply simp
@@ -302,18 +293,14 @@ lemma cap_case_TCBCap2:
   by (simp add: isCap_simps
          split: capability.split arch_capability.split)
 
-lemma length_of_msgRegisters:
-  "length RISCV64_H.msgRegisters = 4"
-  by (auto simp: msgRegisters_unfold)
-
 lemma setMRs_single:
   "setMRs thread buffer [val] = do
      y \<leftarrow> asUser thread (setRegister register.A2 val);
      return 1
    od"
-  apply (clarsimp simp: setMRs_def length_of_msgRegisters zipWithM_x_def zipWith_def split: option.splits)
+  apply (clarsimp simp: setMRs_def length_msgRegisters zipWithM_x_def zipWith_def split: option.splits)
   apply (subst zip_commute, subst zip_singleton)
-   apply (simp add: length_of_msgRegisters length_0_conv[symmetric])
+   apply (simp add: length_msgRegisters length_0_conv[symmetric])
   apply (clarsimp simp: msgRegisters_unfold sequence_x_def)
   done
 

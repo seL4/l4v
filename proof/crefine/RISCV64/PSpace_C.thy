@@ -21,23 +21,19 @@ lemma setObject_obj_at_pre:
   apply (rule ext)
   apply (case_tac "typ_at' (koTypeOf (injectKO ko)) p x")
    apply (simp add: stateAssert_def bind_def get_def return_def)
-  apply (simp add: stateAssert_def bind_def get_def assert_def fail_def)
+  apply (simp add: stateAssert_def bind_def get_def assert_def)
   apply (simp add: setObject_def exec_gets split_def assert_opt_def split: option.split)
-  apply (clarsimp simp add: fail_def)
+  apply (clarsimp simp: fail_def)
   apply (simp add: bind_def simpler_modify_def split_def)
   apply (rule context_conjI)
-   apply (clarsimp simp: updateObject_default_def in_monad simp del: projectKOs)
-   apply (clarsimp simp: in_magnitude_check)
-   apply (frule iffD1[OF project_koType, OF exI])
-   apply (clarsimp simp: typ_at'_def ko_wp_at'_def)
-   apply (simp only: objBitsT_koTypeOf[symmetric] objBits_def)
-   apply (simp add: koTypeOf_injectKO)
+   apply clarsimp
+   apply (clarsimp simp: updateObject_default_def in_monad in_magnitude_check)
+   apply (frule project_koType[THEN iffD1, OF exI])
+   apply (clarsimp simp: typ_at'_def ko_wp_at'_def objBits_simps koTypeOf_injectKO)
   apply (rule empty_failD[OF empty_fail_updateObject_default])
   apply (rule ccontr, erule nonemptyE)
   apply clarsimp
   done
-
-
 
 lemma setObject_ccorres_helper:
   fixes ko :: "'a :: pspace_storable"
@@ -45,7 +41,8 @@ lemma setObject_ccorres_helper:
         \<Gamma> \<turnstile> {s. (\<sigma>, s) \<in> rf_sr \<and> P \<sigma> \<and> s \<in> P' \<and> ko_at' ko' p \<sigma>}
               c {s. (\<sigma>\<lparr>ksPSpace := ksPSpace \<sigma> (p \<mapsto> injectKO ko)\<rparr>, s) \<in> rf_sr}"
   shows "\<lbrakk> \<And>ko :: 'a. updateObject ko = updateObject_default ko;
-           \<And>ko :: 'a. (1 :: machine_word) < 2 ^ objBits ko \<rbrakk>
+           \<And>ko :: 'a. (1 :: machine_word) < 2 ^ objBits ko ;
+           \<And>(v :: 'a) (v' :: 'a). objBits v = objBits v'\<rbrakk>
     \<Longrightarrow> ccorres dc xfdc P P' hs (setObject p ko) c"
   apply (rule ccorres_guard_imp2)
    apply (subst setObject_obj_at_pre)
@@ -69,26 +66,15 @@ lemma setObject_ccorres_helper:
   apply (drule mp, simp)
   apply clarsimp
   apply (rule imageI[OF CollectI])
-  apply (rule rev_bexI)
-   apply (rule setObject_eq, simp+)
-    apply (simp add: objBits_def)
-    apply (simp only: objBitsT_koTypeOf[symmetric]
-                      koTypeOf_injectKO)
-   apply assumption
-  apply simp
-  done
-
+  by (fastforce intro!: setObject_eq rev_bexI)
 
 lemma carray_map_relation_upd_triv:
-  "f x = Some (v :: 'a :: pspace_storable)
-    \<Longrightarrow> carray_map_relation n (f (x \<mapsto> y)) hp ptrf = carray_map_relation n f hp ptrf"
-  by (simp add: carray_map_relation_def objBits_def objBitsT_koTypeOf[symmetric]
-                koTypeOf_injectKO
-           del: objBitsT_koTypeOf)
-
+  "f x = Some (v :: 'a :: pspace_storable) \<Longrightarrow>
+   carray_map_relation n (f (x \<mapsto> y)) hp ptrf = carray_map_relation n f hp ptrf"
+  by (auto simp: carray_map_relation_def objBits_def koTypeOf_injectKO)
 
 lemma storePTE_Basic_ccorres':
-  "\<lbrakk> cpte_relation pte pte' \<rbrakk> \<Longrightarrow>
+  "cpte_relation pte pte' \<Longrightarrow>
    ccorres dc xfdc \<top> {s. ptr_val (f s) = p} hs
      (storePTE p pte)
      (Guard C_Guard {s. s \<Turnstile>\<^sub>c f s}
@@ -104,21 +90,15 @@ lemma storePTE_Basic_ccorres':
   apply (rule conjI, fastforce intro: typ_heap_simps)
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
   apply (rule conjI)
-   apply (clarsimp simp: cpspace_relation_def typ_heap_simps
+   apply (clarsimp simp: cpspace_relation_def typ_heap_simps refill_buffer_relation_def
                          update_pte_map_to_ptes
                          update_pte_map_tos
                          carray_map_relation_upd_triv)
-
    apply (case_tac "f x", simp)
-
-   apply (erule cmap_relation_updI,
-          erule ko_at_projectKO_opt, simp+)
-  apply (simp add: cready_queues_relation_def
-                   carch_state_relation_def
-                   cmachine_state_relation_def
-                   Let_def typ_heap_simps
-                   cteCaps_of_def update_pte_map_tos bit_simps)
-  done
+   apply (erule cmap_relation_updI)
+      by (simp add: cready_queues_relation_def carch_state_relation_def
+                    cmachine_state_relation_def Let_def typ_heap_simps
+                    cteCaps_of_def update_pte_map_tos bit_simps refill_buffer_relation_def)+
 
 lemma storePTE_Basic_ccorres:
   "\<lbrakk> cpte_relation pte pte' \<rbrakk> \<Longrightarrow>
