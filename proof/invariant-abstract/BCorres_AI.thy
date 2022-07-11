@@ -91,8 +91,8 @@ lemma get_cap_x_det:
   apply (cases p)
   apply (clarsimp simp add: in_monad get_cap_x_def get_object_x_def simpler_do_machine_op_getTouchedAddresses_def
                      split: kernel_object.split_asm)
-   apply (clarsimp simp add: bind_def return_def assert_opt_def simpler_gets_def select_f_def simpler_modify_def)
-  apply (clarsimp simp add: bind_def select_f_def simpler_gets_def return_def simpler_modify_def)
+   apply (clarsimp simp add: bind_def obind_def return_def assert_opt_def simpler_gets_def select_f_def simpler_modify_def)
+  apply (clarsimp simp add: bind_def obind_def select_f_def simpler_gets_def return_def simpler_modify_def)
   done
 
 lemma get_object_bcorres_any[wp]:
