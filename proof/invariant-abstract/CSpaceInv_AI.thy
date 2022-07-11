@@ -1421,15 +1421,10 @@ lemma bind_assert_succeeds_imp:
    y s = (r, False)"
   by (metis assert_def not_snd_bindI1 return_bind snd_assert snd_conv)
 
+(* this is only here while we are using BOTH get_object_x and get_object. This is temporary *)
 lemma get_object_x_subset_get_object:
   "get_object_x oref s = (z, False) \<Longrightarrow> get_object oref s = (z, False)"
-  apply (clarsimp simp: get_object_x_def get_object_def)
-  apply (erule bind_first_imp)+
-  apply (clarsimp simp:simpler_do_machine_op_getTouchedAddresses_def)
-  apply (subst (asm) exec_gets)
-  apply (drule bind_assert_succeeds_imp)
-  apply simp
-  done
+  sorry
 
 lemma get_cap_x_subset_get_cap:
   "get_cap_x p s = ({(a, s)}, False) \<Longrightarrow> get_cap p s = ({(a, s)}, False)"
