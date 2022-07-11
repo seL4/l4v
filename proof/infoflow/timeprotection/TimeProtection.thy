@@ -572,7 +572,7 @@ locale time_protection_system =
       \<and> current_domain s' = current_domain s
       \<and> step_is_uwr_determined s)
     \<or> (will_domain_switch s \<and> current_domain s' = get_next_domain s)"
-  assumes domainswitch_step_splittable:
+  assumes domainswitch_step_splittable: 
     "(s1, s2) \<in> ab.Step () \<Longrightarrow>
      will_domain_switch s \<Longrightarrow>
      touched_addrs_dirty_inv (current_domain s) (get_next_domain s) (get_domainswitch_middle_state s1)
