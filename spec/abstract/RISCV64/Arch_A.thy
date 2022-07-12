@@ -165,5 +165,24 @@ definition arch_perform_invocation :: "arch_invocation \<Rightarrow> (data list,
    | InvokeASIDControl oper \<Rightarrow> arch_no_return $ perform_asid_control_invocation oper
    | InvokeASIDPool oper \<Rightarrow> arch_no_return $ perform_asid_pool_invocation oper"
 
+text \<open>
+  Interrupt mask switching, microarchitectural state flushing and time padding necessary for
+  time protection whenever there is a domain switch.
+\<close>
+definition arch_mask_interrupts :: "bool \<Rightarrow> irq list \<Rightarrow> unit det_ext_monad"
+where
+  \<comment> \<open>Gerwin advised we'll want to replace these repeated \<open>maskInterrupt\<close> invocations with one
+    invocation of a new HW interface that masks/unmasks them all at once, if possible. -robs\<close>
+  "arch_mask_interrupts m irqs \<equiv> forM_x irqs (\<lambda>irq. do_machine_op $ maskInterrupt m irq)"
+
+definition arch_domainswitch_flush :: "unit det_ext_monad"
+where
+  "arch_domainswitch_flush \<equiv> do
+     paddrs_to_flush \<leftarrow> gets shared_data_flush_paddrs;
+     forM_x paddrs_to_flush (\<lambda>x. do_machine_op (RISCV64.L2FlushAddr x));
+     \<comment> \<open>Wistoff et al. 2022's \<open>fence.t\<close> includes both on-core state flush and time pad.\<close>
+     do_machine_op $ tfence
+   od"
+
 end
 end

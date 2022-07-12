@@ -432,6 +432,9 @@ crunch (empty_fail) empty_fail[wp, intro!, simp]: ethread_get_when
 
 locale EmptyFail_AI_schedule_det = EmptyFail_AI_schedule "TYPE(det_ext)" +
   assumes choose_thread_empty_fail[wp]: "empty_fail choose_thread"
+  assumes arch_mask_interrupts_empty_fail[wp]: "empty_fail (arch_mask_interrupts m irqs)"
+  assumes arch_switch_domain_kernel_empty_fail[wp]: "empty_fail (arch_switch_domain_kernel newdom)"
+  assumes arch_domainswitch_flush_empty_fail[wp]: "empty_fail arch_domainswitch_flush"
 
 context EmptyFail_AI_schedule_det begin
 

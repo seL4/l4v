@@ -79,6 +79,21 @@ definition handle_vm_fault :: "obj_ref \<Rightarrow> vmfault_type \<Rightarrow> 
   odE"
 
 text \<open>
+  Prepare the new domain's kernel image and switch to using it.
+\<close>
+definition arch_switch_domain_kernel :: "domain \<Rightarrow> unit det_ext_monad"
+  where
+  "arch_switch_domain_kernel newdom \<equiv> do
+    ki_vspace \<leftarrow> gets domain_kimage_vspace;
+    ki_asid \<leftarrow> gets domain_kimage_asid;
+    \<comment> \<open>At this point we would copy the contents of the stack from the previous domain's kernel
+      image to the one we are about to switch to (described Sec. 6.4.6.1 of Qian's PhD thesis).
+      TODO: Determine if we expect that to be visible to the abstract specification. -robs\<close>
+    \<comment> \<open>Switch to the new domain's default kernel-image page table.\<close>
+    do_machine_op $ setVSpaceRoot (addrFromPPtr $ ki_vspace newdom) (ucast $ ki_asid newdom)
+  od"
+
+text \<open>
   Switch into the address space of a given thread or the global address space if none is correctly
   configured.
 \<close>
@@ -94,10 +109,20 @@ definition set_vm_root :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
            liftE $ do_machine_op $ setVSpaceRoot (addrFromPPtr pt) (ucast asid)
        odE
      | _ \<Rightarrow> throwError InvalidRoot) <catch>
+    \<comment> \<open>Instead of switching to the global page table, the multi-kernel-image prototype
+        here switches to the current domain's default kernel-image page table. -robs\<close>
+    (\<lambda>_. do_extended_op $ do
+       curdom \<leftarrow> gets cur_domain;
+       ki_vspace \<leftarrow> gets domain_kimage_vspace;
+       ki_asid \<leftarrow> gets domain_kimage_asid;
+       do_machine_op $ setVSpaceRoot (addrFromPPtr $ ki_vspace curdom) (ucast $ ki_asid curdom)
+    od)
+    \<comment> \<open>The error case on non-multi-kernel-image mainline switches to the global page table:
     (\<lambda>_. do
        global_pt \<leftarrow> gets global_pt;
        do_machine_op $ setVSpaceRoot (addrFromKPPtr global_pt) 0
     od)
+    \<close>
   od"
 
 

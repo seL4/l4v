@@ -462,6 +462,12 @@ locale Syscall_AC_1 =
     "gpd_wps (arch_invoke_irq_handler ihi)"
   and arch_mask_irq_signal_Syscall_AC_wps[simp]:
     "gpd_wps (arch_mask_irq_signal irq)"
+  and arch_mask_interrupts_Syscall_AC_wps[simp]:
+    "gpd_wps (arch_mask_interrupts m irqs)"
+  and arch_switch_domain_kernel_Syscall_AC_wps[simp]:
+    "gpd_wps (arch_switch_domain_kernel nextdom)"
+  and arch_domainswitch_flush_Syscall_AC_wps[simp]:
+    "gpd_wps (arch_domainswitch_flush)"
   and handle_reserved_irq_Syscall_AC_wps[simp]:
     "gpd_wps (handle_reserved_irq irq)"
   and handle_arch_fault_reply_Syscall_AC_wps[simp]:
@@ -478,6 +484,12 @@ locale Syscall_AC_1 =
     "Syscall_AC_wps (arch_activate_idle_thread t) aag"
   and arch_mask_irq_signal_integrity[simp]:
     "Syscall_AC_wps (arch_mask_irq_signal irq) aag"
+  and arch_mask_interrupts_integrity[simp]:
+    "Syscall_AC_wps (arch_mask_interrupts m irqs) aag"
+  and arch_switch_domain_kernel_integrity[simp]:
+    "Syscall_AC_wps (arch_switch_domain_kernel newdom) aag"
+  and arch_domainswitch_flush_integrity[simp]:
+    "Syscall_AC_wps arch_domainswitch_flush aag"
   and handle_reserved_irq_integrity[simp]:
     "Syscall_AC_wps (handle_reserved_irq irq) aag"
   and handle_hypervisor_fault_integrity[simp]:
@@ -488,6 +500,12 @@ locale Syscall_AC_1 =
     "arch_activate_idle_thread t \<lbrace>pas_refined aag\<rbrace>"
   and arch_mask_irq_signal_pas_refined[wp]:
     "arch_mask_irq_signal irq \<lbrace>pas_refined aag\<rbrace>"
+  and arch_mask_interrupts_pas_refined[wp]:
+    "arch_mask_interrupts m irqset \<lbrace>\<lambda>s :: det_ext state. pas_refined aag s\<rbrace>"
+  and arch_switch_domain_kernel_pas_refined[wp]:
+    "arch_switch_domain_kernel newdom \<lbrace>\<lambda>s :: det_ext state. pas_refined aag s\<rbrace>"
+  and arch_domainswitch_flush_pas_refined[wp]:
+    "arch_domainswitch_flush \<lbrace>\<lambda>s :: det_ext state. pas_refined aag s\<rbrace>"
   and handle_reserved_irq_pas_refined[wp]:
     "handle_reserved_irq irq \<lbrace>pas_refined aag\<rbrace>"
   and handle_hypervisor_fault_pas_refined[wp]:
@@ -547,6 +565,12 @@ sublocale Syscall_AC_1 \<subseteq> arch_invoke_irq_handler: gpd_wps "arch_invoke
   by simp
 sublocale Syscall_AC_1 \<subseteq> arch_mask_irq_signal: gpd_wps "arch_mask_irq_signal irq"
   by simp
+sublocale Syscall_AC_1 \<subseteq> arch_mask_interrupts: gpd_wps "arch_mask_interrupts m irqs"
+  by simp
+sublocale Syscall_AC_1 \<subseteq> arch_switch_domain_kernel: gpd_wps "arch_switch_domain_kernel nextdom"
+  by simp
+sublocale Syscall_AC_1 \<subseteq> arch_domainswitch_flush: gpd_wps "arch_domainswitch_flush"
+  by simp
 sublocale Syscall_AC_1 \<subseteq> handle_reserved_irq: gpd_wps "handle_reserved_irq irq"
   by simp
 sublocale Syscall_AC_1 \<subseteq> handle_arch_fault_reply: gpd_wps "handle_arch_fault_reply vmf thread x y"
@@ -563,6 +587,12 @@ sublocale Syscall_AC_1 \<subseteq> arch_switch_to_idle_thread: Syscall_AC_wps "a
 sublocale Syscall_AC_1 \<subseteq> arch_activate_idle_thread: Syscall_AC_wps "arch_activate_idle_thread t" aag
   by simp
 sublocale Syscall_AC_1 \<subseteq> arch_mask_irq_signal: Syscall_AC_wps "arch_mask_irq_signal irq" aag
+  by simp
+sublocale Syscall_AC_1 \<subseteq> arch_mask_interrupts: Syscall_AC_wps "arch_mask_interrupts m irqs" aag
+  by simp
+sublocale Syscall_AC_1 \<subseteq> arch_switch_domain_kernel: Syscall_AC_wps "arch_switch_domain_kernel nextdom" aag
+  by simp
+sublocale Syscall_AC_1 \<subseteq> arch_domainswitch_flush: Syscall_AC_wps "arch_domainswitch_flush" aag
   by simp
 sublocale Syscall_AC_1 \<subseteq> handle_reserved_irq: Syscall_AC_wps "handle_reserved_irq irq" aag
   by simp
@@ -894,6 +924,32 @@ lemma switch_to_idle_thread_pas_refined:
   unfolding switch_to_idle_thread_def
   by (wpsimp wp: do_machine_op_pas_refined)
 
+(* FIXME: Prove these in AInvs, not here. -robs *)
+lemma arch_mask_interrupts_invs[wp]:
+  "arch_mask_interrupts m irqs \<lbrace>invs\<rbrace>"
+  sorry (* FIXME: Made necessary by experimental-tpspec. -robs *)
+
+lemma arch_switch_domain_kernel_invs[wp]:
+  "arch_switch_domain_kernel newdom \<lbrace>invs\<rbrace>"
+  sorry (* FIXME: Made necessary by experimental-tpspec. -robs *)
+
+lemma arch_domainswitch_flush_invs[wp]:
+  "arch_domainswitch_flush \<lbrace>invs\<rbrace>"
+  sorry (* FIXME: Made necessary by experimental-tpspec. -robs *)
+
+(* FIXME: Prove these in AInvs (probably ArchDetSchedSchedule_AI), not here. -robs *)
+lemma arch_mask_interrupts_valid_sched[wp]:
+  "arch_mask_interrupts m irqs \<lbrace>valid_sched\<rbrace>"
+  sorry (* FIXME: Made necessary by experimental-tpspec. -robs *)
+
+lemma arch_switch_domain_kernel_valid_sched[wp]:
+  "arch_switch_domain_kernel newdom \<lbrace>valid_sched\<rbrace>"
+  sorry (* FIXME: Made necessary by experimental-tpspec. -robs *)
+
+lemma arch_domainswitch_flush_valid_sched[wp]:
+  "arch_domainswitch_flush \<lbrace>valid_sched\<rbrace>"
+  sorry (* FIXME: Made necessary by experimental-tpspec. -robs *)
+
 lemma schedule_choose_new_thread_integrity:
   "\<lbrace>invs and valid_sched and valid_list and integrity aag X st and pas_refined aag
          and K (pasMayEditReadyQueues aag)
@@ -901,9 +957,11 @@ lemma schedule_choose_new_thread_integrity:
    schedule_choose_new_thread
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   unfolding schedule_choose_new_thread_def
+  sorry (* FIXME: Broken by experimental-tpspec. -robs
   by (wpsimp wp: choose_thread_respects_pasMayEditReadyQueues
                  next_domain_valid_sched next_domain_valid_queues
            simp: schedule_choose_new_thread_def valid_sched_def)
+*)
 
 lemma schedule_integrity:
   "\<lbrace>einvs and integrity aag X st and pas_refined aag and pas_cur_domain aag
@@ -911,7 +969,7 @@ lemma schedule_integrity:
    schedule
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: schedule_def)
-  sorry (* XXX: broken by touched_addresses. -robs
+  sorry (* FIXME: Broken by both touched_addresses *and* experimental-tpspec. -robs
   apply (wpsimp wp: alternative_wp switch_to_thread_respects' select_wp guarded_switch_to_lift
                     switch_to_idle_thread_respects choose_thread_respects gts_wp hoare_drop_imps
                     set_scheduler_action_cnt_valid_sched append_thread_queued enqueue_thread_queued

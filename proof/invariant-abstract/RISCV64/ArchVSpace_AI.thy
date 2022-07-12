@@ -294,7 +294,7 @@ lemma set_vm_root_invs[wp]:
   by (wpsimp simp: if_distribR wp: get_cap_wp)
 
 crunch pred_tcb_at[wp]: set_vm_root "pred_tcb_at proj P t"
-  (simp: crunch_simps)
+  (simp: crunch_simps ignore:do_machine_op)
 
 lemmas set_vm_root_typ_ats [wp] = abs_typ_at_lifts [OF set_vm_root_typ_at]
 
@@ -928,7 +928,7 @@ lemma is_final_cap_caps_of_state_2D:
                         prod_eqI)
   done
 
-crunch underlying_memory[wp]: ackInterrupt, hwASIDFlush, read_stval, setVSpaceRoot, sfence
+crunch underlying_memory[wp]: ackInterrupt, hwASIDFlush, read_stval, setVSpaceRoot, sfence, tfence
   "\<lambda>m'. underlying_memory m' p = um"
   (simp: cache_machine_op_defs machine_op_lift_def machine_rest_lift_def split_def)
 

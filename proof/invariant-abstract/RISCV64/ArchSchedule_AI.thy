@@ -65,7 +65,7 @@ lemma arch_stit_tcb_at[wp]:
 crunches set_vm_root
   for ct[wp]: "\<lambda>s. P (cur_thread s)"
   and it[wp]: "\<lambda>s. P (idle_thread s)"
-  (simp: crunch_simps wp: hoare_drop_imps)
+  (simp: crunch_simps wp: hoare_drop_imps ignore:do_machine_op)
 
 lemma arch_stit_activatable[wp, Schedule_AI_asms]:
   "\<lbrace>ct_in_state activatable\<rbrace> arch_switch_to_idle_thread \<lbrace>\<lambda>rv . ct_in_state activatable\<rbrace>"

@@ -363,7 +363,11 @@ definition exst1 :: "det_ext" where
              cur_domain_internal = undefined,
              domain_time_internal = undefined,
              ready_queues_internal = undefined,
-             cdt_list_internal = undefined\<rparr>"
+             cdt_list_internal = undefined,
+             domain_kimage_vspace_internal = undefined,
+             domain_kimage_asid_internal = undefined,
+             domain_irqs_internal = undefined,
+             shared_data_flush_paddrs_internal = undefined\<rparr>"
 
 definition
   s1 :: "det_ext state"

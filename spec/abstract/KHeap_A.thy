@@ -49,6 +49,12 @@ lemma touch_object_def2:
   apply (clarsimp simp: simpler_gets_def assert_def fail_def split: if_split_asm)
   done
 
+abbreviation ta_filter :: "machine_word set \<Rightarrow> kernel_object \<Rightarrow> obj_ref \<Rightarrow> kernel_object option" where
+  "ta_filter ta obj ptr \<equiv> if obj_range ptr obj \<subseteq> ta then Some obj else None"
+
+abbreviation f_kheap :: "'z::state_ext state \<Rightarrow> obj_ref \<Rightarrow> kernel_object option" where
+  "f_kheap s \<equiv> kheap s |>> ta_filter (touched_addresses (machine_state s))"
+
 definition
   get_object :: "obj_ref \<Rightarrow> (kernel_object,'z::state_ext) s_monad"
 where
@@ -76,12 +82,9 @@ definition
   get_object_x :: "obj_ref \<Rightarrow> (kernel_object,'z::state_ext) s_monad"
 where
   "get_object_x ptr \<equiv> do
-     kh \<leftarrow> gets kheap;
+     kh \<leftarrow> gets f_kheap;
      assert (kh ptr \<noteq> None);
-     obj \<leftarrow> return $ the $ kh ptr;
-     ta \<leftarrow> do_machine_op getTouchedAddresses;
-     assert (obj_range ptr obj \<subseteq> ta);
-     return obj
+     return $ the $ kh ptr
    od"
 
 
@@ -105,10 +108,8 @@ definition
   set_object_x :: "obj_ref \<Rightarrow> kernel_object \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "set_object_x ptr obj \<equiv> do
-     kobj <- get_object ptr;
+     kobj <- get_object_x ptr;
      assert (a_type kobj = a_type obj);
-     ta \<leftarrow> do_machine_op $ getTouchedAddresses;
-     assert (obj_range ptr obj \<subseteq> ta);
      s \<leftarrow> get;
      put (s\<lparr>kheap := kheap s(ptr \<mapsto> obj)\<rparr>)
    od"

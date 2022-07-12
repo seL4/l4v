@@ -236,6 +236,11 @@ definition initL2Cache :: "unit machine_monad"
   where
   "initL2Cache \<equiv> machine_op_lift initL2Cache_impl"
 
+consts' L2FlushAddr_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
+definition L2FlushAddr :: "machine_word \<Rightarrow> unit machine_monad"
+  where
+  "L2FlushAddr paddr \<equiv> machine_op_lift (L2FlushAddr_impl paddr)"
+
 consts' hwASIDFlush_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
 definition hwASIDFlush :: "machine_word \<Rightarrow> unit machine_monad"
   where
@@ -246,7 +251,12 @@ definition sfence :: "unit machine_monad"
   where
   "sfence \<equiv> machine_op_lift sfence_impl"
 
-lemmas cache_machine_op_defs = sfence_def hwASIDFlush_def
+consts' tfence_impl :: "unit machine_rest_monad"
+definition tfence :: "unit machine_monad"
+  where
+  "tfence \<equiv> machine_op_lift tfence_impl"
+
+lemmas cache_machine_op_defs = tfence_def sfence_def hwASIDFlush_def L2FlushAddr_def
 
 
 subsection "Faults"

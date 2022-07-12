@@ -82,6 +82,11 @@ crunches arch_mask_irq_signal, handle_reserved_irq
   for integrity[Syscall_AC_assms, wp]: "integrity aag X st"
   (wp: dmo_no_mem_respects)
 
+crunches arch_mask_interrupts, arch_switch_domain_kernel, arch_domainswitch_flush
+  for pas_refined[Syscall_AC_assms, wp]: "pas_refined aag"
+  and integrity[Syscall_AC_assms, wp]: "integrity aag X st"
+  (wp: dmo_no_mem_respects mapM_x_wp[OF _ subset_refl] simp:tfence_def L2FlushAddr_def)
+
 lemma set_thread_state_restart_to_running_respects[Syscall_AC_assms]:
   "\<lbrace>integrity aag X st and st_tcb_at ((=) Restart) thread and K (pasMayActivate aag)\<rbrace>
    do pc \<leftarrow> as_user thread getRestartPC;
@@ -150,7 +155,8 @@ crunch ct_active [Syscall_AC_assms, wp]: arch_post_cap_deletion "ct_active"
 crunches
   arch_post_modify_registers, arch_invoke_irq_control,
   arch_invoke_irq_handler, arch_perform_invocation, arch_mask_irq_signal,
-  handle_reserved_irq, handle_vm_fault, handle_hypervisor_fault, handle_arch_fault_reply
+  handle_reserved_irq, handle_vm_fault, handle_hypervisor_fault, handle_arch_fault_reply,
+  arch_mask_interrupts, arch_switch_domain_kernel, arch_domainswitch_flush
   for cur_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (cur_thread s)"
   and idle_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (idle_thread s)"
   and cur_domain[Syscall_AC_assms, wp]:  "\<lambda>s. P (cur_domain s)"

@@ -40,6 +40,8 @@ Features:
 - Touched-addresses set collection mechanism (ASpec) draft by Scott.
   - Partial fixes and sorries of its breakages in AInvs session by Scott.
   - Sorries of its breakages in Access, InfoFlow session by Rob.
+- Domainswitch sequence (ASpec) draft by Rob.
+  - Partial fixes and sorries of its breakages in AInvs, Access, InfoFlow.
 
 Status: Merged up to `verification/master` commit `e1fd4229b`.
 
@@ -69,9 +71,9 @@ Status: Based on `verification/experimental-timeprot` commit `f1827a969`.
 
 Features:
 - Domainswitch sequence (ASpec) draft by Rob.
-- Partial fixes and sorries of its breakages in AInvs session.
+- Partial fixes & sorries of its breakages in AInvs, Access, InfoFlow sessions.
 
-Status: Based on `verification/master` commit `590031439`.
+Status: Merged up to `verification/experimental-timeprot` commit `f1827a969`.
 
 (See: <https://github.com/seL4/l4v/compare/experimental-timeprot...robs-cse:experimental-tpspec>)
 

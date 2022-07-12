@@ -47,6 +47,7 @@ requalify_consts
   tlsBaseRegister
   getTouchedAddresses
   addTouchedAddresses
+  touched_addresses
 
 requalify_facts
   getTouchedAddresses_def

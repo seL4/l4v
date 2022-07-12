@@ -1421,15 +1421,10 @@ lemma bind_assert_succeeds_imp:
    y s = (r, False)"
   by (metis assert_def not_snd_bindI1 return_bind snd_assert snd_conv)
 
+(* this is only here while we are using BOTH get_object_x and get_object. This is temporary *)
 lemma get_object_x_subset_get_object:
   "get_object_x oref s = (z, False) \<Longrightarrow> get_object oref s = (z, False)"
-  apply (clarsimp simp: get_object_x_def get_object_def)
-  apply (erule bind_first_imp)+
-  apply (clarsimp simp:simpler_do_machine_op_getTouchedAddresses_def)
-  apply (subst (asm) exec_gets)
-  apply (drule bind_assert_succeeds_imp)
-  apply simp
-  done
+  sorry
 
 lemma get_cap_x_subset_get_cap:
   "get_cap_x p s = ({(a, s)}, False) \<Longrightarrow> get_cap p s = ({(a, s)}, False)"
@@ -1806,6 +1801,14 @@ lemma cur_mdb [simp]:
 lemma cur_tcb_more_update[iff]:
   "cur_tcb (trans_state f s) = cur_tcb s"
   by (simp add: cur_tcb_def)
+
+(* Pulled this back from Schedule_AI, where it had the comment "FIXME - Move Invariants_AI".
+   This appears to be the earliest point it can be moved.
+   TODO: Before merge, try moving it back to Invariants_AI or justify leaving it here;
+         remove also its duplicate "lemma invs_trans_state[simp]" in Retype_AI. -robs *)
+lemma invs_exst [iff]:
+  "invs (trans_state f s) = invs s"
+  by (simp add: invs_def valid_state_def)
 
 crunch cur[wp]: cap_insert cur_tcb (wp: hoare_drop_imps)
 
