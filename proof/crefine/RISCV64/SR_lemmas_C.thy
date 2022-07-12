@@ -2176,5 +2176,10 @@ lemma unat_scast_numDomains:
   "unat (SCAST(32 signed \<rightarrow> machine_word_len) Kernel_C.numDomains) = unat Kernel_C.numDomains"
   by (simp add: scast_eq sint_numDomains_to_H unat_numDomains_to_H numDomains_machine_word_safe)
 
+(* Sanity check for hard coded sizeof_sched_context_t *)
+lemma sizeof_sched_context_t_eq:
+  "sizeof_sched_context_t = size_of TYPE(sched_context_C)"
+  by (simp add: sizeof_sched_context_t_def word_size_def)
+
 end
 end
