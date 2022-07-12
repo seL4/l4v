@@ -766,8 +766,13 @@ lemma set_asid_pool_pts_of [wp]:
   apply (clarsimp simp: opt_map_def obj_at_def split: option.splits)
   done
 
+lemma set_asid_pool_vmid: (* FIXME AARCH64: find formulation for correct vmid_table state in pre *)
+  "\<lbrace>vmid_inv\<rbrace> set_asid_pool p a \<lbrace>\<lambda>_. vmid_inv\<rbrace>"
+  oops
+
 lemma set_asid_pool_valid_arch [wp]:
   "set_asid_pool p a \<lbrace>valid_arch_state\<rbrace>"
+  unfolding valid_arch_state_def valid_asid_table_def
   sorry (* FIXME AARCH64: valid_arch_state_lift_arch should not demand asid_pool equivalence
                           -- actually we do need asid_pool equivalence for vmid_inv, because
                              asid pools store vmid info. This means this lemma needs more
@@ -2230,10 +2235,17 @@ lemma store_pte_PagePTE_valid_vspace_objs:
   apply (rule ball_pt_range_pt_updI; fastforce)
   done
 
-lemma pte_ref_apply_upd_Some_id:
+lemma pte_ref_apply_upd_Some_id[dest]:
   "pte_ref (pt_apply (pt_upd pt idx InvalidPTE) idx') = Some obj_ref
    \<Longrightarrow> pte_ref (pt_apply pt idx') = Some obj_ref"
   by (auto simp add: pt_apply_def pt_upd_def pte_ref_def split: pt.splits pte.splits if_splits)
+
+lemma isPageTablePTE_apply_upd_InvalidPTED:
+  "is_PageTablePTE (pt_apply (pt_upd pt idx' InvalidPTE) idx)
+   \<Longrightarrow> is_PageTablePTE (pt_apply pt idx) \<and>
+       (pptr_from_pte (pt_apply (pt_upd pt idx' InvalidPTE) idx) = pptr_from_pte (pt_apply pt idx)) \<and>
+       idx' \<noteq> idx"
+  by (auto simp add: pt_apply_def pt_upd_def split: pt.splits if_splits)
 
 lemma store_pte_InvalidPTE_valid_vs_lookup:
   "\<lbrace> valid_vs_lookup
@@ -2269,13 +2281,13 @@ lemma store_pte_InvalidPTE_valid_vs_lookup:
   apply (drule_tac bot_level=bot_level in vs_lookup_level)
   apply (prop_tac "level'' = level", fastforce split: if_splits)
   apply clarsimp
-  (* the interesting operations all happen when level \<le> max_pt_level; get asid_pool_level out of
-     the way first *)
   apply (prop_tac "level' \<le> max_pt_level")
    apply (rule ccontr, clarsimp simp: not_le)
    apply (frule (1) vs_lookup_asid_pool)
    apply (clarsimp simp: asid_pools_of_ko_at)
    apply (fastforce simp: obj_at_def)
+  (* the interesting operations all happen when level \<le> max_pt_level; get asid_pool_level out of
+     the way first *)
   apply (case_tac "level = asid_pool_level")
    apply clarsimp
    (* FIXME RISCV there is a property hidden in here about vs_lookup_target for asid_pool_level,
@@ -2308,7 +2320,7 @@ lemma store_pte_InvalidPTE_valid_vs_lookup:
      apply (drule no_loop_vs_lookup_table; simp?; blast)
     apply clarsimp
     apply (drule vs_lookup_target_pt_levelI; assumption?)
-     apply (fastforce simp: in_omonad ptes_of_def obj_at_def dest: pte_ref_apply_upd_Some_id)
+     apply (fastforce simp: in_omonad ptes_of_def obj_at_def)
     apply (fastforce dest!: valid_vs_lookupD)
    (* miss on table_base p *)
     apply (drule_tac level=level in vs_lookup_target_pt_levelI; assumption?)
@@ -2317,7 +2329,7 @@ lemma store_pte_InvalidPTE_valid_vs_lookup:
   (* we are updating at table_base p, which is within the original lookup path *)
   apply (clarsimp simp: not_le)
 
-  (* split both lookups down to table_base p *)
+  (* split the lookup with state update down to table_base p *)
   apply (drule_tac level=level and level'=level' in vs_lookup_splitD)
     apply simp
    apply (fastforce intro: less_imp_le)
@@ -2326,6 +2338,8 @@ lemma store_pte_InvalidPTE_valid_vs_lookup:
   (* update now occurs in pt_walk stage *)
   apply (drule (1) vs_lookup_table_fun_upd_deep_idem; assumption?; simp)
   apply clarsimp
+  apply (prop_tac "pt_type pt = level_type level'")
+   apply (fastforce simp: in_omonad obj_at_def dest!: valid_vspace_objs_strongD)
   (* handle the actual update, happening on next step of pt_walk *)
   apply (subst (asm) pt_walk.simps, clarsimp simp: in_omonad split: if_splits)
   apply (rename_tac pte')
@@ -2334,72 +2348,92 @@ lemma store_pte_InvalidPTE_valid_vs_lookup:
   apply (clarsimp simp: in_omonad)
   apply (rename_tac pt')
   apply (clarsimp simp: fun_upd_apply)
-  (* FIXME AARCH64: we haven't checked all those level_type level' *)
-  apply (case_tac "table_index (level_type level') (pt_slot_offset level' (table_base (level_type level') p) vref) = table_index (level_type level') p"; clarsimp)
-   (* staying on old path; we can't hit table_base p again *)
-   (* this transform copied from elsewhere, FIXME RISCV might be useful to extract *)
-   apply (subst (asm) pt_walk_pt_upd_idem; simp?)
-    apply clarsimp
+  apply (case_tac "table_index level' (pt_slot_offset level' (table_base level' p) vref) =
+                   table_index level' p"; clarsimp)
+  (* staying on old path; we can't hit table_base p again *)
+  (* this transform copied from elsewhere, FIXME RISCV might be useful to extract *)
+  apply (subst (asm) pt_walk_pt_upd_idem; clarsimp?)
     apply (rename_tac level'')
-    apply (prop_tac "pt_walk level' level'' (table_base (level_type level') p) vref (ptes_of s) = Some (level'', table_base (level_type level') p)")
+    apply (prop_tac "pt_walk level' level'' (table_base level' p) vref (ptes_of s) =
+                       Some (level'', table_base level' p)")
      apply (subst pt_walk.simps)
      apply clarsimp
      apply (prop_tac "level'' < level'")
       apply (drule pt_walk_max_level)
       apply (simp add: bit1.leq_minus1_less)
      apply (clarsimp simp: in_omonad obj_at_def)
-     apply (rule_tac x="(pt_apply pt (table_index (level_type level') (pt_slot_offset level' (table_base (level_type level') p) vref)))" in exI)
-     apply clarsimp
-     apply (clarsimp simp: ptes_of_def in_omonad)
+     apply (rule_tac x="pt_apply pt (table_index level' (pt_slot_offset level' (table_base level' p) vref))" in exI)
+     apply (clarsimp simp: ptes_of_def in_omonad dest!: isPageTablePTE_apply_upd_InvalidPTED)
     apply (prop_tac "level'' < level'")
      apply (drule pt_walk_max_level)
-     apply (simp add: bit1.leq_minus1_less)
-sorry (*
-    apply (prop_tac "vs_lookup_table level'' asid vref s = Some (level'', table_base (level_type level') p)")
+     apply (simp add: vm_level_leq_minus1_less)
+    apply (prop_tac "vs_lookup_table level'' asid vref s = Some (level'', table_base level' p)")
      apply (erule (2) vs_lookup_table_extend)
     apply (drule (1) no_loop_vs_lookup_table; simp?)
-   (* pt_walk is now on pts_of s, can stitch it back together into a vs_lookup_table *)
-   (* FIXME RISCV again useful transform from elsewhere *)
-   apply (prop_tac "pt_walk level' level (table_base p) vref (ptes_of s) = Some (level, table_ptr)")
-    apply (subst pt_walk.simps)
-    apply clarsimp
-    apply (clarsimp simp: in_omonad obj_at_def)
-    apply (rule_tac x="(pt (table_index (pt_slot_offset level' (table_base p) vref)))" in exI)
-    apply clarsimp
-    apply (clarsimp simp: ptes_of_def in_omonad)
-   apply (prop_tac "vs_lookup_table level asid vref s = Some (level, table_ptr)")
-    apply (erule (2) vs_lookup_table_extend)
-   (* now specifically to vs_lookup_target reconstruction, we get through pte_of ref_of stuff *)
-   apply (subst (asm) pte_of_def)
-   apply (clarsimp simp: in_omonad fun_upd_apply)
-   apply (prop_tac "is_aligned table_ptr pt_bits")
-    apply (fastforce elim!: vs_lookup_table_is_aligned)
-   apply (clarsimp split: if_splits)
-    apply (prop_tac "level' = level")
-     apply (drule no_loop_vs_lookup_table; simp?; blast)
-    apply clarsimp
-    apply (drule_tac level=level in vs_lookup_target_pt_levelI; assumption?)
-     apply (fastforce simp: in_omonad ptes_of_def obj_at_def)
-    apply (drule valid_vs_lookupD; assumption?; clarsimp)
-  done *)
+   apply (clarsimp  dest!: isPageTablePTE_apply_upd_InvalidPTED simp: pptr_from_pte_aligned_pt_bits)
+  (* pt_walk is now on pts_of s, can stitch it back together into a vs_lookup_table *)
+  (* FIXME RISCV again useful transform from elsewhere *)
+  apply (prop_tac "pt_walk level' level (table_base level' p) vref (ptes_of s) = Some (level, table_ptr)")
+   apply (subst pt_walk.simps)
+   apply (clarsimp simp: in_omonad obj_at_def)
+   apply (rule_tac x="pt_apply pt (table_index level' (pt_slot_offset level' (table_base level' p) vref))" in exI)
+   apply (clarsimp simp: ptes_of_def in_omonad dest!: isPageTablePTE_apply_upd_InvalidPTED)
+  apply (prop_tac "vs_lookup_table level asid vref s = Some (level, table_ptr)")
+   apply (erule (2) vs_lookup_table_extend)
+  (* now specifically to vs_lookup_target reconstruction, we get through pte_of ref_of stuff *)
+  apply (subst (asm) level_pte_of_def)
+  apply (clarsimp simp: in_omonad fun_upd_apply)
+  apply (prop_tac "is_aligned table_ptr (pt_bits level)")
+   apply (fastforce elim!: vs_lookup_table_is_aligned)
+  apply (clarsimp split: if_splits)
+   apply (prop_tac "level' = level")
+    apply (drule no_loop_vs_lookup_table; simp?; blast)
+   apply clarsimp
+  apply (drule_tac level=level in vs_lookup_target_pt_levelI; assumption?)
+   apply (fastforce simp: in_omonad ptes_of_def obj_at_def)
+  apply (drule valid_vs_lookupD; assumption?; clarsimp)
+  done
 
-lemma table_index_slot_offset_inj:
-  "\<lbrakk> table_index level (pt_slot_offset level (table_base level p) vref) = table_index level p;
-     level \<le> max_pt_level; is_aligned p pte_bits \<rbrakk>
+lemma pt_index_table_index_slot_offset_eq:
+  "\<lbrakk> pt_index level vref = table_index level p; is_aligned p pte_bits \<rbrakk>
    \<Longrightarrow> pt_slot_offset level (table_base level p) vref = p" for level :: vm_level
-  apply (simp add: pt_slot_offset_def is_aligned_nth)
-  sorry (* FIXME AARCH64
-  apply (prop_tac "table_base p && (pt_index level vref << pte_bits) = 0")
-   apply word_bitwise
-   apply (simp add: bit_simps pt_index_def word_size)
-  apply (simp add: word_plus_and_or_coroll)
-  apply word_bitwise
-  apply (drule max_pt_level_enum)
-  by (auto simp: pt_bits_left_def pt_index_def word_size bit_simps) *)
+  using mask_pt_bits_inner_beauty pt_slot_offset_def
+  by force
+
+(* FIXME AARCH64: move *)
+lemma mask_shiftr_mask_eq:
+  "m \<le> m' + n \<Longrightarrow> (w && mask m >> n) && mask m' = w && mask m >> n" for w :: "'a::len word"
+  by word_eqI_solve
+
+(* FIXME AARCH64: move *)
+lemma pt_index_mask_eq:
+  "pt_index level vref && mask (ptTranslationBits level) = pt_index level vref"
+  by (simp add: pt_index_def bit_simps)
+
+(* FIXME AARCH64: move *)
+lemma table_index_mask_eq:
+  "table_index pt_t p && mask (ptTranslationBits pt_t) = table_index pt_t p"
+  by (auto simp add: pt_bits_def bit_simps mask_shiftr_mask_eq)
+
+(* FIXME AARCH64: move *)
+lemma pt_apply_upd_eq:
+  "pt_type pt = level_type level \<Longrightarrow>
+   pt_apply (pt_upd pt (table_index (level_type level) p) pte) (pt_index level vref) =
+   (if table_index (level_type level) p = pt_index level vref
+    then pte
+    else pt_apply pt (pt_index level vref))"
+  unfolding pt_apply_def pt_upd_def
+  using pt_index_mask_eq[of max_pt_level] pt_index_mask_eq[where level=level and vref=vref]
+  using table_index_mask_eq[where pt_t=NormalPT_T] table_index_mask_eq[where pt_t=VSRootPT_T]
+  apply (cases pt; clarsimp simp: ucast_eq_mask vs_index_ptTranslationBits pt_index_ptTranslationBits)
+  apply (prop_tac "level_type level = NormalPT_T", simp add: level_type_def)
+  apply (simp del: level_type_eq add: ptTranslationBits_def)
+  done
 
 lemma store_pte_non_InvalidPTE_valid_vs_lookup:
   "\<lbrace> valid_vs_lookup
-     and pspace_aligned and valid_vspace_objs and valid_asid_table and unique_table_refs
+     and pspace_aligned and pspace_distinct and valid_vspace_objs
+     and valid_asid_table and unique_table_refs
      and (\<lambda>s. valid_caps (caps_of_state s) s)
      and (\<lambda>s. \<forall>level asid vref.
                  vs_lookup_table level asid vref s = Some (level, table_base pt_t p)
@@ -2438,27 +2472,28 @@ lemma store_pte_non_InvalidPTE_valid_vs_lookup:
   apply (drule_tac bot_level=bot_level in vs_lookup_level)
   apply (prop_tac "level'' = level", fastforce split: if_splits)
   apply clarsimp
-  (* the interesting operations all happen when level \<le> max_pt_level; get asid_pool_level out of
-     the way first *)
   apply (prop_tac "level' \<le> max_pt_level")
    apply (rule ccontr, clarsimp simp: not_le)
    apply (frule (1) vs_lookup_asid_pool)
    apply (clarsimp simp: asid_pools_of_ko_at)
    apply (fastforce simp: obj_at_def)
+  (* the interesting operations all happen when level \<le> max_pt_level; get asid_pool_level out of
+     the way first *)
   apply (case_tac "level = asid_pool_level")
    apply clarsimp
    (* FIXME RISCV there is a property hidden in here about vs_lookup_target for asid_pool_level,
       repeating some of the pattern seen in vs_lookup_target_unreachable_upd_idem *)
-   apply (clarsimp simp: pool_for_asid_vs_lookup vspace_for_pool_def in_omonad)
-   sorry (* FIXME AARCH64
-   apply (rename_tac pool_ptr pool)
+   apply (clarsimp simp: pool_for_asid_vs_lookup vspace_for_pool_def entry_for_pool_def in_omonad)
+   apply (rename_tac pool_ptr ap_entry pool)
    apply (clarsimp simp: fun_upd_apply split: if_splits)
    apply (prop_tac "pool_for_asid asid s = Some pool_ptr")
     apply (fastforce simp: pool_for_asid_def)
-   apply (prop_tac "vs_lookup_target asid_pool_level asid vref s = Some (asid_pool_level, obj_ref)")
+   apply (prop_tac "vs_lookup_target asid_pool_level asid vref s = Some (asid_pool_level,
+                                                                         ap_vspace ap_entry)")
     apply (clarsimp simp: vs_lookup_target_def in_omonad)
     apply (rule_tac x=pool_ptr in exI)
-    apply (fastforce simp: pool_for_asid_vs_lookup vspace_for_pool_def vs_lookup_slot_def in_omonad)
+    apply (fastforce simp: pool_for_asid_vs_lookup vspace_for_pool_def entry_for_pool_def
+                           vs_lookup_slot_def in_omonad)
    apply (fastforce dest: valid_vs_lookupD simp: valid_vs_lookup_def)
   apply clarsimp
   (* now we are looking at page tables only; we can extend or truncate our previous lookup,
@@ -2468,10 +2503,10 @@ lemma store_pte_non_InvalidPTE_valid_vs_lookup:
   (* updating deeper than where we can find table_base p has no effect *)
   apply (case_tac "level' \<le> level")
    apply (drule vs_lookup_level, drule (3) vs_lookup_table_fun_upd_deep_idem; assumption?)
-   apply (prop_tac "is_aligned table_ptr pt_bits")
+   apply (prop_tac "is_aligned table_ptr (pt_bits (level_type level))")
     apply (fastforce elim!: vs_lookup_table_is_aligned)
-   apply (clarsimp simp: in_omonad fun_upd_apply pte_of_def split: if_splits)
-     apply (drule (2) table_index_slot_offset_inj, simp)
+   apply (clarsimp simp: in_omonad fun_upd_apply level_pte_of_def pt_apply_upd_eq split: if_splits)
+     apply (drule sym, drule (1) pt_index_table_index_slot_offset_eq; simp)
     (* miss on pte *)
     apply (prop_tac "level' = level")
      apply (drule no_loop_vs_lookup_table; simp?; blast)
@@ -2486,7 +2521,7 @@ lemma store_pte_non_InvalidPTE_valid_vs_lookup:
   (* we are updating at table_base p, which is within the original lookup path *)
   apply (clarsimp simp: not_le)
 
-  (* split both lookups down to table_base p *)
+  (* split the lookup with state update down to table_base p *)
   apply (drule_tac level=level and level'=level' in vs_lookup_splitD)
     apply simp
    apply (fastforce intro: less_imp_le)
@@ -2497,70 +2532,72 @@ lemma store_pte_non_InvalidPTE_valid_vs_lookup:
   (* can now show there's a cap to the (pte_ref pte) at level' *)
   apply ((erule allE)+, erule (1) impE)
   apply clarsimp
+  apply (prop_tac "pt_type pt = level_type level'")
+   apply (fastforce simp: in_omonad obj_at_def dest!: valid_vspace_objs_strongD)
   (* handle the actual update, happening on next step of pt_walk *)
   apply (subst (asm) pt_walk.simps, clarsimp simp: in_omonad split: if_splits)
   apply (rename_tac pte')
   apply (erule disjE; clarsimp)
-  apply (subst (asm) (2) pte_of_def)
+  apply (subst (asm) (2) level_pte_of_def)
   apply (clarsimp simp: in_omonad)
   apply (rename_tac pt')
   apply (clarsimp simp: fun_upd_apply)
-  apply (case_tac "table_index (pt_slot_offset level' (table_base p) vref) = table_index p"; clarsimp)
-   prefer 2
-   (* staying on old path; we can't hit table_base p again *)
-   (* this transform copied from elsewhere, FIXME RISCV might be useful to extract *)
-   apply (subst (asm) pt_walk_pt_upd_idem; simp?)
-    apply clarsimp
+  apply (case_tac "table_index level' (pt_slot_offset level' (table_base level' p) vref) =
+                   table_index level' p"; clarsimp)
+   (* we could not have arrived at our new empty table through a non-empty table and from
+      precondition, we are not creating a loop *)
+   apply (drule_tac pt="empty_pt (level' - 1)" in pt_walk_non_empty_ptD;
+          (simp add: in_omonad fun_upd_apply pptr_from_pte_aligned_pt_bits)?)
+    apply (cases pte; clarsimp simp: pptr_from_pte_def)
+    apply (drule (1) pt_index_table_index_slot_offset_eq; simp add: level_type_minus_one)
+   apply (clarsimp simp: in_omonad level_pte_of_def)
+   apply (frule pptr_from_pte_aligned_pt_bits[rotated], simp)
+   apply (cases pte; clarsimp)
+   apply (fastforce simp: pptr_from_pte_def in_omonad fun_upd_apply
+                    intro!: pt_index_table_index_slot_offset_eq)
+  (* staying on old path; we can't hit table_base p again *)
+  (* this transform copied from elsewhere, FIXME RISCV might be useful to extract *)
+  apply (subst (asm) pt_walk_pt_upd_idem; clarsimp?)
     apply (rename_tac level'')
-    apply (prop_tac "pt_walk level' level'' (table_base p) vref (ptes_of s) = Some (level'', table_base p)")
+    apply (prop_tac "pt_walk level' level'' (table_base level' p) vref (ptes_of s) =
+                       Some (level'', table_base level' p)")
      apply (subst pt_walk.simps)
      apply clarsimp
      apply (prop_tac "level'' < level'")
       apply (drule pt_walk_max_level)
-      apply (simp add: bit0.leq_minus1_less)
-     apply (clarsimp simp: in_omonad obj_at_def)
-     apply (rule_tac x="(pt (table_index (pt_slot_offset level' (table_base p) vref)))" in exI)
-     apply clarsimp
+      apply (simp add: bit1.leq_minus1_less)
+     apply (clarsimp simp: in_omonad obj_at_def pt_apply_upd_eq)
+     apply (rule_tac x="pt_apply pt (table_index level' (pt_slot_offset level' (table_base level' p) vref))" in exI)
      apply (clarsimp simp: ptes_of_def in_omonad)
     apply (prop_tac "level'' < level'")
      apply (drule pt_walk_max_level)
-     apply (simp add: bit0.leq_minus1_less)
-    apply (prop_tac "vs_lookup_table level'' asid vref s = Some (level'', table_base p)")
+     apply (simp add: vm_level_leq_minus1_less)
+    apply (prop_tac "vs_lookup_table level'' asid vref s = Some (level'', table_base level' p)")
      apply (erule (2) vs_lookup_table_extend)
     apply (drule (1) no_loop_vs_lookup_table; simp?)
-   (* pt_walk is now on pts_of s, can stitch it back together into a vs_lookup_table *)
-   (* FIXME RISCV again useful transform from elsewhere *)
-   apply (prop_tac "pt_walk level' level (table_base p) vref (ptes_of s) = Some (level, table_ptr)")
-    apply (subst pt_walk.simps)
-    apply clarsimp
-    apply (clarsimp simp: in_omonad obj_at_def)
-    apply (rule_tac x="(pt (table_index (pt_slot_offset level' (table_base p) vref)))" in exI)
-    apply clarsimp
-    apply (clarsimp simp: ptes_of_def in_omonad)
-   apply (prop_tac "vs_lookup_table level asid vref s = Some (level, table_ptr)")
-    apply (erule (2) vs_lookup_table_extend)
-   (* now specifically to vs_lookup_target reconstruction, we get through pte_of ref_of stuff *)
-   apply (subst (asm) pte_of_def)
-   apply (clarsimp simp: in_omonad fun_upd_apply)
-   apply (prop_tac "is_aligned table_ptr pt_bits")
-    apply (fastforce elim!: vs_lookup_table_is_aligned)
-   apply (clarsimp split: if_splits)
-    apply (prop_tac "level' = level")
-     apply (drule no_loop_vs_lookup_table; simp?; blast)
-    apply clarsimp
-   apply (drule_tac level=level in vs_lookup_target_pt_levelI; assumption?)
-    apply (fastforce simp: in_omonad ptes_of_def obj_at_def)
-   apply (drule valid_vs_lookupD; assumption?; clarsimp)
-  (* we could not have arrived at our new empty table through a non-empty table and from
-     precondition, we are not creating a loop *)
-  apply (drule_tac pt=empty_pt in pt_walk_non_empty_ptD; simp add: in_omonad fun_upd_apply)
-   apply (cases pte; clarsimp simp: pptr_from_pte_def)
-   apply (drule (2) table_index_slot_offset_inj, simp)
-  apply (clarsimp simp: in_omonad pte_of_def)
-  apply (cases pte; clarsimp)
-  apply (fastforce simp: pptr_from_pte_def in_omonad fun_upd_apply
-                   intro!: table_index_slot_offset_inj)
-  done *)
+   apply (clarsimp  dest!: isPageTablePTE_apply_upd_InvalidPTED simp: pptr_from_pte_aligned_pt_bits)
+  (* pt_walk is now on pts_of s, can stitch it back together into a vs_lookup_table *)
+  (* FIXME RISCV again useful transform from elsewhere *)
+  apply (prop_tac "pt_walk level' level (table_base level' p) vref (ptes_of s) = Some (level, table_ptr)")
+   apply (subst pt_walk.simps)
+   apply (clarsimp simp: in_omonad obj_at_def)
+   apply (rule_tac x="pt_apply pt (table_index level' (pt_slot_offset level' (table_base level' p) vref))" in exI)
+   apply (clarsimp simp: ptes_of_def in_omonad pt_apply_upd_eq)
+  apply (prop_tac "vs_lookup_table level asid vref s = Some (level, table_ptr)")
+   apply (erule (2) vs_lookup_table_extend)
+  (* now specifically to vs_lookup_target reconstruction, we get through pte_of ref_of stuff *)
+  apply (subst (asm) level_pte_of_def)
+  apply (clarsimp simp: in_omonad fun_upd_apply)
+  apply (prop_tac "is_aligned table_ptr (pt_bits level)")
+   apply (fastforce elim!: vs_lookup_table_is_aligned)
+  apply (clarsimp split: if_splits)
+   apply (prop_tac "level' = level")
+    apply (drule no_loop_vs_lookup_table; simp?; blast)
+   apply clarsimp
+  apply (drule_tac level=level in vs_lookup_target_pt_levelI; assumption?)
+   apply (fastforce simp: in_omonad ptes_of_def obj_at_def)
+  apply (drule valid_vs_lookupD; assumption?; clarsimp)
+  done
 
 (* NOTE: should be able to derive the (pte_ref pte) \<noteq> table_base p) from
    the (pte_ref pte) being unreachable anywhere in the original state
