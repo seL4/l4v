@@ -5,19 +5,17 @@
  *)
 
 theory schedule_oracle
-  imports "Lib.EquivValid" "InfoFlow.Noninterference"
+  imports "Lib.EquivValid" 
 begin
 
 type_synonym time = nat
 
-type_synonym 'd schedule_list = "('d \<times> time) list"
+type_synonym 'd schedule_list = "(time \<times> 'd) list"
 
 locale schedule_oracle =
   fixes domain_type :: "'d itself"
   fixes sched_list :: "'d schedule_list"
   fixes switch_WCET :: time
-  fixes d1 :: 'd
-  fixes d2 :: 'd
   assumes schedlist_mintime : "\<forall> (t, d) \<in> set sched_list. t > switch_WCET"
   assumes schedlist_notempty : "length sched_list > 0"
 begin

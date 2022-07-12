@@ -7,7 +7,7 @@
 
 theory TimeProtectionIntegration
 imports TimeProtection
-  "InfoFlow.Noninterference"
+  "InfoFlow.Noninterference" schedule_oracle
 begin
 
 type_synonym if_other_state = "(user_context \<times> det_ext Structures_A.state) \<times> sys_mode"
@@ -19,10 +19,42 @@ locale integration_setup =
   Noninterference_valid_initial_state _ _ _ _ initial_aag
   for gentypes :: "('fch \<times> 'fch_cachedness \<times> 'pch \<times> 'pch_cachedness \<times> 'l partition \<times> 'colour) itself"
   and initial_aag :: "'l subject_label PAS"
-+ fixes nlds :: "time \<Rightarrow> time"
++ fixes time_per_tick :: time
+  fixes fixme_WCET :: time
   fixes ta :: "if_other_state \<Rightarrow> vpaddr set"
 begin
 
+(* get the list of (domain, tickcount) from the initial state *)
+(* this system assumes that domain_list_internal won't change *)
+definition dom_list_internal where
+  "dom_list_internal \<equiv> domain_list_internal $ exst $ snd $ fst s0"
+
+(* map dom_list_internal into a list of (domain, totaltime) by multiplying
+   by time_per_tick *)
+definition schedule_list where
+  "schedule_list \<equiv> map (\<lambda>(d, ticks). (data_to_nat ticks * time_per_tick, d)) dom_list_internal"
+
+interpretation sched_o:schedule_oracle _ schedule_list fixme_WCET
+  apply unfold_locales
+   (* we need to know that the domain list has some minimum time *)
+   subgoal sorry
+  (* we need to know that the domain list is never empty *)
+  subgoal sorry
+  done
+
+definition nlds where
+  "nlds \<equiv> sched_o.slice_end"
+
+lemma nlds_in_future:
+  "t \<le> nlds t"
+  apply (clarsimp simp:nlds_def)
+  apply (simp add: le_simps(1) sched_o.slice_end_gt)
+  done
+
+lemma nlds_step:
+  "\<lbrakk>t \<le> t'; t' \<le> nlds t\<rbrakk> \<Longrightarrow> nlds t' = nlds t"
+  sledgehammer
+                    
 interpretation tphuwr:time_protection_hardware_uwr gentypes PSched 
   _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ part uwr nlds ta
   apply unfold_locales
@@ -86,7 +118,7 @@ interpretation ma?:time_protection_system PSched fch_lookup fch_read_impact fch_
                using schedIncludesCurrentDom apply presburger
               apply (simp add: uwr_equiv_rel)
              subgoal sorry
-            subgoal sorry
+            apply (rule nlds_in_future)
            subgoal sorry
           subgoal sorry
          subgoal sorry
