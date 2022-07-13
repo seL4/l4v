@@ -41,7 +41,7 @@ section "Kernel Heap Accessors"
 (* declared in Arch as workaround for VER-1099 *)
 locale_abbrev aobjs_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> arch_kernel_obj"
   where
-  "aobjs_of \<equiv> \<lambda>s. kheap s |> aobj_of"
+  "aobjs_of \<equiv> \<lambda>s. f_kheap s |> aobj_of"
 
 text \<open>Manipulate ASID pools, page directories and page tables in the kernel heap.\<close>
 

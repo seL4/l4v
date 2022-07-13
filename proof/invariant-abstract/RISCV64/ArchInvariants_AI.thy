@@ -1021,7 +1021,7 @@ lemma pt_of_Some[iff]:
   by (simp add: pt_of_def split: arch_kernel_obj.splits)
 
 lemma aobjs_of_Some:
-  "(aobjs_of s p = Some ao) = (kheap s p = Some (ArchObj ao))"
+  "(aobjs_of s p = Some ao) = (f_kheap s p = Some (ArchObj ao))"
   by (simp add: in_omonad)
 
 lemma pts_of_Some:
@@ -1045,10 +1045,10 @@ lemma aa_typeE[elim!]:
   by (cases ao; clarsimp split: if_split_asm)+
 
 lemma atyp_at_eq_kheap_obj:
-  "typ_at (AArch AASIDPool) p s \<longleftrightarrow> (\<exists>f. kheap s p = Some (ArchObj (ASIDPool f)))"
-  "typ_at (AArch APageTable) p s \<longleftrightarrow> (\<exists>pt. kheap s p = Some (ArchObj (PageTable pt)))"
-  "typ_at (AArch (AUserData sz)) p s \<longleftrightarrow> (kheap s p = Some (ArchObj (DataPage False sz)))"
-  "typ_at (AArch (ADeviceData sz)) p s \<longleftrightarrow> (kheap s p = Some (ArchObj (DataPage True sz)))"
+  "typ_at (AArch AASIDPool) p s \<longleftrightarrow> (\<exists>f. f_kheap s p = Some (ArchObj (ASIDPool f)))"
+  "typ_at (AArch APageTable) p s \<longleftrightarrow> (\<exists>pt. f_kheap s p = Some (ArchObj (PageTable pt)))"
+  "typ_at (AArch (AUserData sz)) p s \<longleftrightarrow> (f_kheap s p = Some (ArchObj (DataPage False sz)))"
+  "typ_at (AArch (ADeviceData sz)) p s \<longleftrightarrow> (f_kheap s p = Some (ArchObj (DataPage True sz)))"
   by (auto simp: obj_at_def)
 
 lemma asid_pools_at_eq:
@@ -1135,7 +1135,7 @@ lemma state_hyp_refs_of_eqD:
 
 lemma obj_at_state_hyp_refs_ofD:
   "obj_at P p s \<Longrightarrow> \<exists>ko. P ko \<and> state_hyp_refs_of s p = hyp_refs_of ko"
-  by (fastforce simp: obj_at_def state_hyp_refs_of_def)
+  by (fastforce simp: obj_at_def state_hyp_refs_of_def f_kheap_def)
 
 lemma ko_at_state_hyp_refs_ofD:
   "ko_at ko p s \<Longrightarrow> state_hyp_refs_of s p = hyp_refs_of ko"
@@ -1244,7 +1244,7 @@ lemma valid_arch_mdb_eqI:
   by (clarsimp simp: valid_arch_mdb_def)
 
 lemma valid_arch_cap_ref_pspaceI[elim]:
-  "\<lbrakk> valid_arch_cap_ref acap s; kheap s = kheap s' \<rbrakk> \<Longrightarrow> valid_arch_cap_ref acap s'"
+  "\<lbrakk> valid_arch_cap_ref acap s; f_kheap s = f_kheap s' \<rbrakk> \<Longrightarrow> valid_arch_cap_ref acap s'"
   unfolding valid_arch_cap_ref_def
   by (auto intro: obj_at_pspaceI split: arch_cap.split)
 
@@ -2183,7 +2183,7 @@ lemma ptr_from_pte_aligned[simp,intro!]:
 
 lemma pspace_aligned_pts_ofD:
   "\<lbrakk> pspace_aligned s; pts_of s pt_ptr \<noteq> None \<rbrakk> \<Longrightarrow> is_aligned pt_ptr pt_bits"
-  by (fastforce dest: pspace_alignedD simp: in_omonad bit_simps)
+  by (fastforce dest: pspace_alignedD simp: in_omonad bit_simps f_kheap_def split: if_splits)
 
 lemma user_region_slots:
   "vref \<in> user_region \<Longrightarrow> ucast (pt_index max_pt_level vref) \<notin> kernel_mapping_slots"
@@ -2211,7 +2211,7 @@ lemma valid_vspace_objs_strongD:
   apply (drule_tac x=pt in meta_spec)
   apply clarsimp
   apply (subst (asm) pt_walk.simps)
-  apply (clarsimp simp: in_omonad split: if_split_asm)
+  apply (clarsimp simp: in_omonad f_kheap_def split: if_split_asm)
   apply (subst (asm) valid_vspace_obj.simps)
   apply (frule (1) pspace_alignedD)
   apply (clarsimp simp: ptes_of_def in_omonad pt_slot_offset_offset
@@ -2221,7 +2221,8 @@ lemma valid_vspace_objs_strongD:
   apply (clarsimp simp: is_PageTablePTE_def pptr_from_pte_def pt_at_eq in_omonad)
   apply (drule (2) valid_vspace_objsD)
    apply (simp add: in_omonad)
-  apply assumption
+  apply(clarsimp simp:f_kheap_def split:if_splits)
+  apply blast
   done
 
 lemma pt_walk_is_aligned:
@@ -2285,7 +2286,7 @@ lemma equal_mappings_pt_slot_offset:
   apply ((erule allE)+, erule (1) impE)
   apply (drule (2) vspace_for_asid_valid_pt)
   apply (drule (1) valid_global_vspace_mappings_pt_at)
-  apply (clarsimp simp: in_omonad pt_at_eq)
+  apply (clarsimp simp: in_omonad pt_at_eq f_kheap_def split:if_splits)
   apply (frule_tac p="(global_pt s)" in pspace_alignedD, assumption)
   apply (frule_tac p=root_pt in pspace_alignedD, assumption)
   apply (drule kernel_mapping_slots[where vref=vref])
@@ -2293,6 +2294,7 @@ lemma equal_mappings_pt_slot_offset:
   apply (simp add: ptes_of_def pt_slot_offset_offset obind_def in_opt_map_eq
                    is_aligned_pt_slot_offset_pte
             split: option.splits)
+  apply blast
   done
 
 lemma equal_mappings_translate_address:
@@ -2563,8 +2565,8 @@ lemma vs_lookup_table_eq_lift:
   by (auto simp: obind_def split: option.splits)
 
 lemma aobjs_of_non_aobj_upd:
-  "\<lbrakk> kheap s p = Some ko; \<not> is_ArchObj ko; \<not> is_ArchObj ko' \<rbrakk>
-   \<Longrightarrow> kheap s(p \<mapsto> ko') |> aobj_of = aobjs_of s"
+  "\<lbrakk> f_kheap s p = Some ko; \<not> is_ArchObj ko; \<not> is_ArchObj ko' \<rbrakk>
+   \<Longrightarrow> f_kheap s(p \<mapsto> ko') |> aobj_of = aobjs_of s"
   by (rule ext)
      (auto simp: opt_map_def is_ArchObj_def aobj_of_def split: kernel_object.splits if_split_asm)
 
@@ -2588,13 +2590,19 @@ lemma valid_vspace_objs_strong_slotD:
   apply (clarsimp simp: vs_lookup_slot_def split: if_split_asm)
   apply (rename_tac pt_ptr)
   apply (drule (5) valid_vspace_objs_strongD)
-  apply (clarsimp simp: in_omonad ptes_of_def)
+  apply (clarsimp simp: in_omonad ptes_of_def f_kheap_def split:if_splits)
+   apply (frule (1) pspace_alignedD, clarsimp)
+   apply (prop_tac "table_size = pt_bits", simp add: bit_simps)
+   apply (clarsimp simp: is_aligned_pt_slot_offset_pte)
+   apply (drule_tac x="table_index (pt_slot_offset level pt_ptr vref)" in bspec; clarsimp)
+    apply (drule (1) table_index_max_level_slots)
+    apply simp
+   apply blast
   apply (frule (1) pspace_alignedD, clarsimp)
   apply (prop_tac "table_size = pt_bits", simp add: bit_simps)
   apply (clarsimp simp: is_aligned_pt_slot_offset_pte)
-  apply (drule_tac x="table_index (pt_slot_offset level pt_ptr vref)" in bspec; clarsimp)
   apply (drule (1) table_index_max_level_slots)
-  apply simp
+  apply blast
   done
 
 lemma pt_bits_left_inj[simp]:

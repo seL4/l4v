@@ -52,14 +52,14 @@ lemma touch_object_def2:
 abbreviation ta_filter :: "machine_word set \<Rightarrow> kernel_object \<Rightarrow> obj_ref \<Rightarrow> kernel_object option" where
   "ta_filter ta obj ptr \<equiv> if obj_range ptr obj \<subseteq> ta then Some obj else None"
 
-abbreviation f_kheap :: "'z::state_ext state \<Rightarrow> obj_ref \<Rightarrow> kernel_object option" where
+definition f_kheap :: "'z::state_ext state \<Rightarrow> obj_ref \<Rightarrow> kernel_object option" where
   "f_kheap s \<equiv> kheap s |>> ta_filter (touched_addresses (machine_state s))"
 
 definition
   get_object :: "obj_ref \<Rightarrow> (kernel_object,'z::state_ext) s_monad"
 where
   "get_object ptr \<equiv> do
-     kh \<leftarrow> gets kheap;
+     kh \<leftarrow> gets f_kheap;
      assert (kh ptr \<noteq> None);
      return $ the $ kh ptr
    od"
@@ -73,20 +73,6 @@ where
      s \<leftarrow> get;
      put (s\<lparr>kheap := kheap s(ptr \<mapsto> obj)\<rparr>)
    od"
-
-text \<open>versions of @{term get_object} and @{term set_object} that obey the @{term touched_addresses}
-      pattern (for tracking cache stuff). This is temporary, for testing out
-      the effects of the new feature on a smaller scale.\<close>
-
-definition
-  get_object_x :: "obj_ref \<Rightarrow> (kernel_object,'z::state_ext) s_monad"
-where
-  "get_object_x ptr \<equiv> do
-     kh \<leftarrow> gets f_kheap;
-     assert (kh ptr \<noteq> None);
-     return $ the $ kh ptr
-   od"
-
 
 abbreviation
   ms_touched_addresses_update :: "(machine_word set \<Rightarrow> machine_word set) \<Rightarrow>
@@ -104,23 +90,13 @@ lemma simpler_do_machine_op_addTouchedAddresses_def:
   by (clarsimp simp: do_machine_op_def bind_def addTouchedAddresses_def simpler_gets_def
                         simpler_modify_def select_f_def return_def)
 
-definition
-  set_object_x :: "obj_ref \<Rightarrow> kernel_object \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
-  "set_object_x ptr obj \<equiv> do
-     kobj <- get_object_x ptr;
-     assert (a_type kobj = a_type obj);
-     s \<leftarrow> get;
-     put (s\<lparr>kheap := kheap s(ptr \<mapsto> obj)\<rparr>)
-   od"
-
 section "TCBs"
 
 definition
   get_tcb :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> tcb option"
 where
   "get_tcb tcb_ref state \<equiv>
-   case kheap state tcb_ref of
+   case f_kheap state tcb_ref of
       None      \<Rightarrow> None
     | Some kobj \<Rightarrow> (case kobj of
         TCB tcb \<Rightarrow> Some tcb

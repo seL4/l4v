@@ -174,7 +174,7 @@ where
          returnOk ((oref,offset), [])
        else doE
          liftE (touch_object oref);
-         next_cap \<leftarrow> liftE (get_cap_x (oref, offset));
+         next_cap \<leftarrow> liftE (get_cap (oref, offset));
          if is_cnode_cap next_cap then
            resolve_address_bits' z (next_cap, rest)
          else

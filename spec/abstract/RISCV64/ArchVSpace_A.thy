@@ -282,7 +282,7 @@ text \<open>A pointer is inside a user frame if its top bits point to a @{const 
 definition in_user_frame :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
   where
   "in_user_frame p s \<equiv>
-     \<exists>sz. kheap s (p && ~~ mask (pageBitsForSize sz)) = Some (ArchObj (DataPage False sz))"
+     \<exists>sz. f_kheap s (p && ~~ mask (pageBitsForSize sz)) = Some (ArchObj (DataPage False sz))"
 
 definition prepare_thread_delete :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
   where

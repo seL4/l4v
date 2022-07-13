@@ -13,8 +13,9 @@ context Arch begin global_naming RISCV64
 
 lemma vspace_for_asid_truncate[simp]:
   "vspace_for_asid asid (truncate_state s) = vspace_for_asid asid s"
-  by (simp add: vspace_for_asid_def pool_for_asid_def obind_def oassert_def oreturn_def swp_def
+  apply(simp add: vspace_for_asid_def pool_for_asid_def obind_def oassert_def oreturn_def swp_def
          split: option.splits)
+  by (force simp:f_kheap_def)
 
 lemma pool_for_asid_truncate[simp]:
   "pool_for_asid asid (truncate_state s) = pool_for_asid asid s"
@@ -22,7 +23,8 @@ lemma pool_for_asid_truncate[simp]:
 
 lemma vs_lookup_table_truncate[simp]:
   "vs_lookup_table l asid vptr (truncate_state s) = vs_lookup_table l asid vptr s"
-  by (simp add: vs_lookup_table_def obind_def oreturn_def split: option.splits)
+  apply(simp add: vs_lookup_table_def obind_def oreturn_def split:option.splits)
+  by (force simp:f_kheap_def)
 
 lemma vs_lookup_slot_truncate[simp]:
   "vs_lookup_slot l asid vptr (truncate_state s) = vs_lookup_slot l asid vptr s"
@@ -30,9 +32,10 @@ lemma vs_lookup_slot_truncate[simp]:
 
 lemma pt_lookup_from_level_bcorres[wp]:
   "bcorres (pt_lookup_from_level l r b c) (pt_lookup_from_level l r b c)"
-  by (induct l arbitrary: r b c rule: bit0.minus_induct; wpsimp simp: pt_lookup_from_level_simps)
+  apply (induct l arbitrary: r b c rule: bit0.minus_induct; wpsimp simp: pt_lookup_from_level_simps)
+  by (force simp:f_kheap_def)
 
-crunch (bcorres) bcorres[wp]: arch_finalise_cap truncate_state
+crunch (bcorres) bcorres[wp]: arch_finalise_cap truncate_state (simp: f_kheap_def)
 crunch (bcorres) bcorres[wp]: prepare_thread_delete truncate_state
 
 end
