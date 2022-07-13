@@ -130,8 +130,8 @@ definition invalidate_vmid_entry :: "vmid \<Rightarrow> (unit,'z::state_ext) s_m
 text \<open>Remove mappings in either direction involving this ASID.\<close>
 definition invalidate_asid_entry :: "asid \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "invalidate_asid_entry asid \<equiv> do
-     maybe_hw_asid \<leftarrow> load_vmid asid;
-     when (maybe_hw_asid \<noteq> None) $ invalidate_vmid_entry (the maybe_hw_asid);
+     maybe_vmid \<leftarrow> load_vmid asid;
+     when (maybe_vmid \<noteq> None) $ invalidate_vmid_entry (the maybe_vmid);
      invalidate_asid asid
   od"
 
