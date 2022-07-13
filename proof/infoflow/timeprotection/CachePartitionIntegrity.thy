@@ -339,23 +339,22 @@ lemma syscall_ta_subset_inv:
   "syscall m_fault h_fault m_error h_error m_finalise \<lbrace>ta_subset_inv aag\<rbrace>"
   sorry
 
-crunches touch_objects, touch_object
+crunches touch_objects, touch_object, get_cap_x
   for pas_cur_domain: "pas_cur_domain aag"
   and ta_subset_inv: "ta_subset_inv aag"
   (wp: crunch_wps)
 
-thm rab_tainv
-thm resolve_address_bits_authorised
+lemma ta_agnostic_pas_refined:
+  "ta_agnostic (pas_refined aag)"
+  unfolding ta_agnostic_def
+  by (meson pas_refined_def pas_refined_machine_state_update)
 
 (* Scott (@scottbuckley) recommends trying to prove this one -robs. *)
 lemma resolve_address_bits'_ta_subset_inv:
-  "\<lbrace>pas_refined aag and ta_subset_inv aag and
-    K (is_cnode_cap (fst capcref) \<longrightarrow> (\<forall>x\<in>obj_refs_ac (fst capcref). is_subject aag x))\<rbrace>
+  "\<lbrace>pas_refined aag and ta_subset_inv aag\<rbrace>
      resolve_address_bits' z capcref
    \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
-(* This postcondition typechecks but breaks the rab_tainv proof approach:
-   \<lbrace>\<lambda>rv s. is_subject aag (fst (fst rv)) \<and> ta_subset_inv aag s\<rbrace>,- *)
-(* Following the proof of rab_inv (now called rab_tainv) in CSpaceInv_AI *)
+(* Following the proof structure of rab_inv (now called rab_tainv) in CSpaceInv_AI *)
 proof (induct capcref rule: resolve_address_bits'.induct)
   case (1 z cap cref)
   show ?case
@@ -367,10 +366,12 @@ proof (induct capcref rule: resolve_address_bits'.induct)
         apply (auto simp: in_monad)[6]
   apply (rename_tac obj_ref nat list)
   apply (simp only: cap.simps)
+  apply(rename_tac s rv s' obj_ref nat list)
   apply (case_tac "nat + length list = 0")
    apply (simp add: fail_def)
   apply (simp only: if_False)
-  apply (case_tac a)
+  apply (case_tac rv)
+   (* Case Inl: lookup_failure *)
    apply (simp only: K_bind_def)
    apply (drule in_bindE_L, elim disjE conjE exE)+
        apply (simp only: split: if_split_asm)
@@ -381,39 +382,26 @@ proof (induct capcref rule: resolve_address_bits'.induct)
           apply (clarsimp simp: in_monad)
          apply (frule(9) 1) (* get the IH into context *)
          apply (clarsimp simp: in_monad)
-         apply (drule in_inv_by_hoareD [OF get_cap_x_inv])
+         apply (frule in_inv_by_hoareD [OF get_cap_x_inv])
          (* Here's where I deviate from the rab_tainv proof. -robs *)
          apply clarsimp
-         apply(rename_tac s s' obj_ref nat list aa s'' next_cap)
-         apply(prop_tac "ta_subset_inv aag s''")
-          using touch_object_ta_subset_inv[simplified valid_def, where aag=aag]
+         apply(rename_tac s s' obj_ref nat list exception s'' next_cap)
+         apply(drule (1) use_valid)
+          apply(frule_tac P="pas_refined aag" in touch_object_tainv.in_inv_by_hoare)
+           using ta_agnostic_pas_refined unfolding ta_agnostic_def
+           apply blast
+          apply(prop_tac "ta_subset_inv aag s''")
+           using touch_object_ta_subset_inv[simplified valid_def, where aag=aag]
+           apply force
           apply force
-         apply(clarsimp simp:valid_def)
-         apply(erule_tac x=s in allE)
-         apply clarsimp
-         apply(erule impE)
-          apply clarsimp
-          (* What do we know about next_cap? *)
-          (* using cte_wp_at_caps_of_state is_cap_simps cap_auth_conferred_def
-            caps_of_state_pasObjectAbs_eq *)
-          using "1.hyps"
-          using "1.prems"
-          using resolve_address_bits_authorised[simplified validE_R_def validE_def valid_def,
-            where aag=aag]
-          apply clarsimp
-          apply(erule_tac x=next_cap in meta_allE)
-          apply(erule_tac x="drop (nat + length list) cref" in meta_allE)
-          apply(erule_tac x=s in allE)
-          apply clarsimp
-          using resolve_address_bits_authorised_aux
-          defer
-         defer
+         apply force
         apply (clarsimp simp: in_monad)
        apply (clarsimp simp: in_monad)
       apply (clarsimp simp: in_monad)
      apply (clarsimp simp: in_monad)
     apply (clarsimp simp: in_monad)
    apply (clarsimp simp: in_monad)
+  (* Case Inr: (64 word \<times> bool list) \<times> bool list *)
   apply (simp only: K_bind_def in_bindE_R)
   apply (elim conjE exE)
   apply (simp only: split: if_split_asm)
@@ -422,21 +410,34 @@ proof (induct capcref rule: resolve_address_bits'.induct)
   apply (elim conjE exE)
   apply (simp only: split: if_split_asm)
    prefer 2
+   (* If it's not a cnode cap, we'll just return it, so it's enough to know that
+      touch_object preserved ta_subset_inv. -robs *)
    apply (clarsimp simp: in_monad)
    apply (drule in_inv_by_hoareD [OF get_cap_x_inv])
-   (* What would the ta_subset_inv version of this drule be? -robs *)
-   sorry
-   apply (drule(1) touch_object_tainv.in_inv_by_hoare)
-   apply simp
+   using touch_object_ta_subset_inv[simplified valid_def]
+   apply blast
+  (* If it's a cnode cap we'll need to know that its recursive call to rab
+     preserved ta_subset_inv. The inductive hypothesis gives us that. -robs *)
   apply (drule (8) "1")
-  apply (clarsimp simp: in_monad valid_def)
+   apply (clarsimp simp: in_monad valid_def)
   apply clarsimp
+  (* First move past all the stuff like get_cap_x and touch_object before it *)
   apply (clarsimp simp: in_monad)
   apply (drule in_inv_by_hoareD [OF get_cap_x_inv])
-  apply (drule(1) touch_object_tainv.in_inv_by_hoare)
   apply clarsimp
-  apply (drule(2) post_by_hoare, simp)
-  done
+  apply(rename_tac s b obj_ref nat list aa ba bb s'' next_cap)
+  apply(prop_tac "ta_subset_inv aag s''")
+   using touch_object_ta_subset_inv[simplified valid_def, where aag=aag]
+   apply force
+  apply(clarsimp simp:valid_def)
+  apply(erule_tac x=s'' in allE)
+  apply clarsimp
+  (* We need pas_refined too *)
+  apply(frule_tac P="pas_refined aag" in touch_object_tainv.in_inv_by_hoare)
+   using ta_agnostic_pas_refined unfolding ta_agnostic_def
+   apply blast
+  apply clarsimp
+  by blast
 qed
 
 (* Trying this one too... *)
