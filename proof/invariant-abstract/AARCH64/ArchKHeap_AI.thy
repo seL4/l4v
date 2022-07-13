@@ -671,7 +671,7 @@ lemma store_pte_non_PageTablePTE_vs_lookup:
         apply (fastforce simp: opt_map_def split: option.splits)+
   done
 
-lemma store_pte_not_ao[wp]:
+lemma store_pte_not_ao:
   "\<lbrace>\<lambda>s. \<forall>pt. aobjs_of s (table_base pt_t p) = Some (PageTable pt) \<longrightarrow>
              P (aobjs_of s (table_base pt_t p \<mapsto> PageTable (pt_upd pt (table_index pt_t p) pte)))\<rbrace>
    store_pte pt_t p pte
@@ -692,7 +692,8 @@ lemma store_pte_InvalidPTE_valid_vspace_objs[wp]:
    \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
   unfolding valid_vspace_objs_def
   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_const_imp_lift hoare_vcg_imp_lift'
-                    valid_vspace_obj_lift store_pte_non_PageTablePTE_vs_lookup)
+                    valid_vspace_obj_lift store_pte_non_PageTablePTE_vs_lookup
+                    store_pte_not_ao)
   apply (prop_tac "valid_vspace_objs s", simp add: valid_vspace_objs_def)
   apply (rename_tac s bot_level asid vref)
   apply simp
