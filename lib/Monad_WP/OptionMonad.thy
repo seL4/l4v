@@ -140,6 +140,10 @@ lemma case_opt_map_distrib:
    = ((\<lambda>s. case_option None (g |> h) (f s)))"
   by (fastforce simp: opt_map_def split: option.splits)
 
+lemma opt_map_apply_left_eq:
+  "f s = f s' \<Longrightarrow> (f |> g) s = (f |> g) s'"
+  by (simp add: opt_map_def)
+
 declare None_upd_eq[simp]
 
 (* None_upd_eq[simp] so that this pattern is by simp. Hopefully not too much slowdown. *)
@@ -455,6 +459,10 @@ lemma obind_comp_dist:
 lemma if_comp_dist:
   "(if P then f else g) o h = (if P then f o h else g o h)"
   by auto
+
+lemma obindK_is_opt_map:
+  "f \<bind> (\<lambda>x. K $ g x) = f |> g"
+  by (simp add: obind_def opt_map_def K_def)
 
 
 section \<open>"While" loops over option monad.\<close>
