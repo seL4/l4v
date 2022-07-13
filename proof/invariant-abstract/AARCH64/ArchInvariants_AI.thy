@@ -602,15 +602,25 @@ locale_abbrev valid_uses :: "'z::state_ext state \<Rightarrow> bool" where
 
 lemmas valid_uses_def = valid_uses_2_def
 
-definition vmid_for_asid :: "asid \<Rightarrow> 'z::state_ext state \<Rightarrow> vmid option" where
-  "vmid_for_asid asid = do {
-     entry \<leftarrow> entry_for_asid asid;
-     K $ ap_vmid entry
+definition vmid_for_asid_2 ::
+  "asid \<Rightarrow> (asid_high_index \<rightharpoonup> obj_ref) \<Rightarrow> (obj_ref \<rightharpoonup> asid_pool, vmid) lookup" where
+  "vmid_for_asid_2 asid table \<equiv> do {
+     ap_ptr \<leftarrow> K $ table (asid_high_bits_of asid);
+     entry_for_pool ap_ptr asid |> ap_vmid
    }"
+
+locale_abbrev vmid_for_asid :: "'z::state_ext state \<Rightarrow> asid \<rightharpoonup> vmid" where
+  "vmid_for_asid \<equiv> \<lambda>s asid. vmid_for_asid_2 asid (asid_table s) (asid_pools_of s)"
+
+lemmas vmid_for_asid_def = vmid_for_asid_2_def
+
+(* For name preservation with older proofs *)
+abbreviation (input) asid_map :: "'z::state_ext state \<Rightarrow> asid \<rightharpoonup> vmid" where
+  "asid_map \<equiv> vmid_for_asid"
 
 (* vmIDs stored in ASID pools form the inverse of the vmid_table *)
 definition vmid_inv :: "'z::state_ext state \<Rightarrow> bool" where
-  "vmid_inv s \<equiv> is_inv (arm_vmid_table (arch_state s)) (swp vmid_for_asid s)"
+  "vmid_inv s \<equiv> is_inv (arm_vmid_table (arch_state s)) (vmid_for_asid s)"
 
 definition valid_global_arch_objs where
   "valid_global_arch_objs \<equiv> \<lambda>s. vspace_pt_at (global_pt s) s"
@@ -2405,22 +2415,13 @@ lemma swp_entry_for_asid_lift:
     apply (wpsimp wp: assms)+
   done
 
-lemma vmid_for_asid_lift:
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_table s)\<rbrace>"
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_pools_of s)\<rbrace>"
-  shows "f \<lbrace>\<lambda>s. P (swp vmid_for_asid s)\<rbrace>"
-  unfolding vmid_for_asid_def
-  by (wpsimp wp: assms swp_entry_for_asid_lift simp: swp_def obind_def)
-
 lemma vmid_inv_ap_lift:
   assumes ap[wp]: "(\<And>P. f \<lbrace> \<lambda>s. P (asid_pools_of s) \<rbrace>)"
   assumes arch[wp]: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
   shows "f \<lbrace>vmid_inv\<rbrace>"
   unfolding vmid_inv_def
   apply (rule hoare_lift_Pf[where f=arch_state, rotated], rule arch)
-  apply (rule hoare_lift_Pf[where f="swp vmid_for_asid"])
-   apply wpsimp
-  apply (wpsimp wp: vmid_for_asid_lift)
+  apply wpsimp
   done
 
 definition is_vcpu :: "kernel_object \<Rightarrow> bool" where
@@ -2852,8 +2853,8 @@ lemma vspace_for_asid_update[iff]:
   by (simp add: vspace_for_asid_def obind_def split: option.splits)
 
 lemma vmid_for_asid_update[iff]:
-  "vmid_for_asid asid (f s) =  vmid_for_asid asid s"
-  by (simp add: vmid_for_asid_def obind_def)
+  "vmid_for_asid (f s) asid = vmid_for_asid s asid"
+  by (simp add: arch)
 
 lemma vs_lookup_update [iff]:
   "vs_lookup_table bot_level asid vptr (f s) = vs_lookup_table bot_level asid vptr s"
