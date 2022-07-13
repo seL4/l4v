@@ -1740,15 +1740,16 @@ lemma pool_for_asid_validD:
   "\<lbrakk> pool_for_asid asid s = Some p; valid_asid_table s \<rbrakk> \<Longrightarrow> asid_pools_of s p \<noteq> None"
   by (auto simp: in_opt_map_eq valid_asid_table_def pool_for_asid_def)
 
-lemma constructed_asid_low_bits_of:
-  "(asid_low_bits_of ((ucast hi_bits << asid_low_bits) || ucast lo_bits))
-   = lo_bits"
+locale_abbrev asid_of :: "asid_high_index \<Rightarrow> asid_low_index \<Rightarrow> asid" where
+  "asid_of high low \<equiv> (ucast high << asid_low_bits) || ucast low"
+
+lemma constructed_asid_low_bits_of[simp]:
+  "asid_low_bits_of (asid_of hi_bits lo_bits) = lo_bits"
   by (clarsimp simp: asid_low_bits_of_def asid_bits_defs ucast_or_distrib ucast_ucast_id
                      ucast_shiftl_eq_0)
 
-lemma constructed_asid_high_bits_of:
-  "(asid_high_bits_of ((ucast hi_bits << asid_low_bits) || ucast (lo_bits :: asid_low_index)))
-   = hi_bits"
+lemma constructed_asid_high_bits_of[simp]:
+  "asid_high_bits_of (asid_of hi_bits lo_bits) = hi_bits"
   apply (clarsimp simp: asid_high_bits_of_def shiftr_over_or_dist asid_bits_defs)
   apply (subst shiftl_shiftr_id, simp)
    apply (fastforce intro: order_less_le_trans ucast_less)
