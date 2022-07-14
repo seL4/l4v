@@ -15,8 +15,8 @@ type_synonym 'd schedule_list = "(time \<times> 'd) list"
 locale schedule_oracle =
   fixes domain_type :: "'d itself"
   fixes sched_list :: "'d schedule_list"
-  fixes switch_WCET :: time
-  assumes schedlist_mintime : "\<forall> (t, d) \<in> set sched_list. t > switch_WCET"
+  fixes slice_min :: time
+  assumes schedlist_mintime : "\<forall> (t, d) \<in> set sched_list. t > slice_min"
   assumes schedlist_notempty : "length sched_list > 0"
 begin
 
@@ -24,7 +24,7 @@ begin
 
 definition
   valid_schedlist :: "'d schedule_list \<Rightarrow> bool" where
- "valid_schedlist lst \<equiv> (\<forall> (t, d) \<in> set lst. t > switch_WCET) \<and> (length lst > 0)"
+ "valid_schedlist lst \<equiv> (\<forall> (t, d) \<in> set lst. t > slice_min) \<and> (length lst > 0)"
 
 lemma valid_schedlist_rotate:
  "valid_schedlist (lst@[e]) = valid_schedlist (e#lst)"
@@ -211,8 +211,8 @@ lemma unroll_entries_from_schedlist:
   apply (rule unroll_entries_from_schedlist_aux; simp)
   done
   
-lemma slice_length_gt_switch_WCET:
- "slice_length t > switch_WCET"
+lemma slice_length_gt_slice_min:
+ "slice_length t > slice_min"
   unfolding slice_length_def
   apply (prop_tac "(last $ unroll_sched_list_time t) \<in> set (unroll_sched_list_time t)")
    apply (simp add: unroll_never_empty)
@@ -232,10 +232,6 @@ lemma slice_end_def3:
  "slice_end t = slice_end_aux t 0 sched_list"
   apply (clarsimp simp:slice_end_def)
   done
-
-definition
-  slice_userend :: "time \<Rightarrow> time" where
- "slice_userend t \<equiv> slice_end t - switch_WCET"
 
 definition
   slice_domain :: "time \<Rightarrow> 'd" where
@@ -469,48 +465,6 @@ lemma same_slice_plus_right':
 
 
 
-lemma slice_lt_rearrange:
- "(t1 \<le> slice_userend t1) = (time_since_slice t1 \<le> (slice_length t1 - switch_WCET))"
-  unfolding time_since_slice_def slice_userend_def slice_end_start_plus_length
-  apply (subgoal_tac "slice_length t1 > switch_WCET")
-   apply linarith
-  apply (rule slice_length_gt_switch_WCET)
-  done
-
-
-lemma same_slice_plus_right_specific:
- "t1 \<le> slice_userend t1 \<Longrightarrow>
-  t2 = t1 + td \<Longrightarrow>
-  td < switch_WCET \<Longrightarrow>
-  same_slice t1 t2"
-  apply (subst (asm) slice_lt_rearrange)
-  apply (drule(1) same_slice_plus_right [where t1_max="slice_length t1 - switch_WCET"
-                                        and td=td and td_max="switch_WCET"])
-   apply (simp add: less_imp_le_nat slice_length_gt_switch_WCET)
-  apply simp
-  done
-
-lemma slice_lt_rearrange2:
- "(t1 \<le> slice_userend t1 + q) = (time_since_slice t1 \<le> (slice_length t1 - switch_WCET) + q)"
-  unfolding time_since_slice_def slice_userend_def slice_end_start_plus_length
-  apply (prop_tac "slice_length t1 > switch_WCET")
-   apply (rule slice_length_gt_switch_WCET)
-  apply linarith
-  done
-
-lemma same_slice_plus_right_specific2:
- "t1 \<le> slice_userend t1 + q \<Longrightarrow>
-  t2 = t1 + td \<Longrightarrow>
-  q + td < switch_WCET \<Longrightarrow>
-  same_slice t1 t2"
-  apply (subst (asm) slice_lt_rearrange2)
-  apply (drule same_slice_plus_right [where t1_max="_"
-                                        and td=td and td_max="switch_WCET-q"])
-    apply (simp add: less_imp_le_nat slice_length_gt_switch_WCET)
-   apply (smt ab_semigroup_add_class.add_ac(1) add.commute diff_add eq_iff
-              le_add1 less_imp_le_nat slice_length_gt_switch_WCET)
-  apply simp
-  done
   
 
 \<comment> \<open> almost the final form of this theorem - just need to turn time_since_slice into
@@ -532,31 +486,6 @@ lemma same_slice_plus_gen:
   done
 
 
-lemma same_slice_plus:
- "same_slice t1 t1' \<Longrightarrow>
-  t1 \<le> slice_userend t1+q \<Longrightarrow>
-  t1' \<le> slice_userend t1'+q \<Longrightarrow>
-  td \<le> td_max \<Longrightarrow>
-  td' \<le> td_max \<Longrightarrow>
-  q + td_max < switch_WCET \<Longrightarrow>
-  same_slice (t1 + td) (t1' + td')"
-  apply (prop_tac "same_slice t1 (t1 + td)")
-   apply (erule same_slice_plus_right_specific2, rule refl, linarith)
-  apply (prop_tac "same_slice t1' (t1' + td')")
-   apply (erule same_slice_plus_right_specific2, rule refl, linarith)
-  apply (simp add: same_slice_def2)
-  done
-
-lemma same_slice_plus_noq:
- "same_slice t1 t1' \<Longrightarrow>
-  t1 \<le> slice_userend t1 \<Longrightarrow>
-  t1' \<le> slice_userend t1' \<Longrightarrow>
-  td \<le> td_max \<Longrightarrow>
-  td' \<le> td_max \<Longrightarrow>
-  td_max < switch_WCET \<Longrightarrow>
-  same_slice (t1 + td) (t1' + td')"
-  apply (erule same_slice_plus [where q=0, simplified]; simp)
-  done
 
 lemma slice_start_reduces_aux:
  "valid_schedlist lst \<Longrightarrow>
@@ -590,17 +519,6 @@ lemma same_slice_time_since_slice_increase:
   apply (metis diff_less_mono less_add_same_cancel1 slice_start_reduces)
   done
 
-lemma step_past_userend_not_new_slice:
- "t1 \<le> slice_userend t1 \<Longrightarrow>
-  time_since_slice (t1 + td) = 0 \<Longrightarrow>
-  0 < td \<Longrightarrow>
-  td < switch_WCET \<Longrightarrow>
-  False"
-  apply (prop_tac "same_slice t1 t1", clarsimp simp:same_slice_def)
-  apply (drule same_slice_plus_right_specific [where td=td], rule refl, assumption)
-  apply (frule(1) same_slice_time_since_slice_increase)
-  apply linarith
-  done
 
 lemma slice_end_aux_lastcase:
  "valid_schedlist ((v, d) # lst) \<Longrightarrow>
@@ -653,7 +571,168 @@ lemma slice_end_gt:
   apply (metis nat_add_left_cancel_less)
   done
 
-  
+lemma slice_end_flatsteps_aux:
+  "\<lbrakk>t + delta < slice_end t\<rbrakk> \<Longrightarrow> slice_end (t+delta) = slice_end t"
+  apply (smt (verit, best) Nat.add_diff_assoc2 add_diff_cancel_left'
+    canonically_ordered_monoid_add_class.lessE minus_nat.simps(1) nat_add_left_cancel_less
+    same_slice_plus_right_aux schedule_oracle.same_slice_def2
+    schedule_oracle.slice_end_start_plus_length schedule_oracle.slice_start_def
+    schedule_oracle.slice_start_reduces schedule_oracle_axioms slice_end_def3 slice_end_gt
+    time_since_slice_def2)
+  done
+
+lemma slice_end_flatsteps:
+  "\<lbrakk>t \<le> t'; t' < slice_end t\<rbrakk> \<Longrightarrow> slice_end t' = slice_end t"
+  using slice_end_flatsteps_aux le_Suc_ex apply blast
+  done
+
+end
+
+
+
+
+(* a schedule oracle, but where a slice's start might be delayed by up to
+  `max_delay` time units. We therefore offset slices and redefine some properties
+  and synchronicities such that the first `max_delay` time units of a slice
+  are considered to be part of the previous slice. *)
+locale schedule_oracle_delayed = schedule_oracle +
+  fixes max_delay :: time
+  assumes delay_lt_slice_min: "max_delay \<le> slice_min"
+begin
+
+definition next_delayed_start where
+  "next_delayed_start t \<equiv> if (time_since_slice t < max_delay)
+                        then slice_start t + max_delay
+                        else slice_end t"
+
+lemma next_delayed_start_in_future:
+  "t < next_delayed_start t"
+  apply (metis nat_add_left_cancel_less next_delayed_start_def slice_end_gt
+    slice_start_plus_time_since_slice)
+  done
+
+lemma lt_slice_start_adjust:
+  "t + a < slice_start t + b \<Longrightarrow>
+  time_since_slice t + a < b"
+  by (metis add.commute less_diff_conv ordered_cancel_comm_monoid_diff_class.diff_diff_right
+    slice_start_reduces time_since_slice_def)
+
+lemma next_delayed_start_flatsteps_aux:
+  "\<lbrakk>t + delta < next_delayed_start t\<rbrakk> \<Longrightarrow> next_delayed_start (t+delta) = next_delayed_start t"
+  unfolding next_delayed_start_def
+  apply (smt (verit, ccfv_SIG) add_less_cancel_left delay_lt_slice_min le_add1 le_eq_less_or_eq
+    lt_slice_start_adjust order_less_trans same_slice_plus_right_aux same_slice_same_start
+    slice_start_plus_time_since_slice schedule_oracle_axioms slice_end_flatsteps_aux
+    slice_end_start_plus_length slice_length_gt_slice_min)
+  done
+
+lemma next_delayed_start_flatsteps:
+  "\<lbrakk>t \<le> t'; t' < next_delayed_start t\<rbrakk> \<Longrightarrow> next_delayed_start t' = next_delayed_start t"
+  using le_Suc_ex next_delayed_start_flatsteps_aux apply auto
+  done
+
+end
+
+
+
+
+
+
+\<comment> \<open>a variation of schedule_oracle where the start of a slice is when a user starts executing,
+    and the last section of a slice (contained within switch_WCET) is the domain-switch\<close>
+locale schedule_oracle_switch_at_end = schedule_oracle + 
+  fixes switch_WCET :: time
+  assumes switch_WCET_less_slice_min : "switch_WCET < slice_min"
+begin
+
+definition
+  slice_userend :: "time \<Rightarrow> time" where
+ "slice_userend t \<equiv> slice_end t - switch_WCET"
+
+lemma slice_length_gt_switch_WCET:
+  "slice_length t > switch_WCET"
+  using order_less_trans slice_length_gt_slice_min switch_WCET_less_slice_min by blast
+
+lemma slice_lt_rearrange:
+ "(t1 \<le> slice_userend t1) = (time_since_slice t1 \<le> (slice_length t1 - switch_WCET))"
+  unfolding time_since_slice_def slice_userend_def slice_end_start_plus_length
+  apply (subgoal_tac "slice_length t1 > switch_WCET")
+   apply linarith
+  apply (rule slice_length_gt_switch_WCET)
+  done
+
+lemma same_slice_plus_right_specific:
+ "t1 \<le> slice_userend t1 \<Longrightarrow>
+  t2 = t1 + td \<Longrightarrow>
+  td < switch_WCET \<Longrightarrow>
+  same_slice t1 t2"
+  apply (subst (asm) slice_lt_rearrange)
+  apply (drule(1) same_slice_plus_right [where t1_max="slice_length t1 - switch_WCET"
+                                        and td=td and td_max="switch_WCET"])
+   apply (simp add: less_imp_le_nat slice_length_gt_switch_WCET)
+  apply simp
+  done
+
+lemma slice_lt_rearrange2:
+ "(t1 \<le> slice_userend t1 + q) = (time_since_slice t1 \<le> (slice_length t1 - switch_WCET) + q)"
+  unfolding time_since_slice_def slice_userend_def slice_end_start_plus_length
+  apply (prop_tac "slice_length t1 > switch_WCET")
+   apply (rule slice_length_gt_switch_WCET)
+  apply linarith
+  done
+
+lemma same_slice_plus_right_specific2:
+ "t1 \<le> slice_userend t1 + q \<Longrightarrow>
+  t2 = t1 + td \<Longrightarrow>
+  q + td < switch_WCET \<Longrightarrow>
+  same_slice t1 t2"
+  apply (subst (asm) slice_lt_rearrange2)
+  apply (drule same_slice_plus_right [where t1_max="_"
+                                        and td=td and td_max="switch_WCET-q"])
+    apply (simp add: less_imp_le_nat slice_length_gt_switch_WCET)
+   apply (smt ab_semigroup_add_class.add_ac(1) add.commute diff_add eq_iff
+              le_add1 less_imp_le_nat slice_length_gt_switch_WCET)
+  apply simp
+  done
+
+lemma same_slice_plus:
+ "same_slice t1 t1' \<Longrightarrow>
+  t1 \<le> slice_userend t1+q \<Longrightarrow>
+  t1' \<le> slice_userend t1'+q \<Longrightarrow>
+  td \<le> td_max \<Longrightarrow>
+  td' \<le> td_max \<Longrightarrow>
+  q + td_max < switch_WCET \<Longrightarrow>
+  same_slice (t1 + td) (t1' + td')"
+  apply (prop_tac "same_slice t1 (t1 + td)")
+   apply (erule same_slice_plus_right_specific2, rule refl, linarith)
+  apply (prop_tac "same_slice t1' (t1' + td')")
+   apply (erule same_slice_plus_right_specific2, rule refl, linarith)
+  apply (simp add: same_slice_def2)
+  done
+
+lemma same_slice_plus_noq:
+ "same_slice t1 t1' \<Longrightarrow>
+  t1 \<le> slice_userend t1 \<Longrightarrow>
+  t1' \<le> slice_userend t1' \<Longrightarrow>
+  td \<le> td_max \<Longrightarrow>
+  td' \<le> td_max \<Longrightarrow>
+  td_max < switch_WCET \<Longrightarrow>
+  same_slice (t1 + td) (t1' + td')"
+  apply (erule same_slice_plus [where q=0, simplified]; simp)
+  done
+
+
+lemma step_past_userend_not_new_slice:
+ "t1 \<le> slice_userend t1 \<Longrightarrow>
+  time_since_slice (t1 + td) = 0 \<Longrightarrow>
+  0 < td \<Longrightarrow>
+  td < switch_WCET \<Longrightarrow>
+  False"
+  apply (prop_tac "same_slice t1 t1", clarsimp simp:same_slice_def)
+  apply (drule same_slice_plus_right_specific [where td=td], rule refl, assumption)
+  apply (frule(1) same_slice_time_since_slice_increase)
+  apply linarith
+  done
 
 end
 

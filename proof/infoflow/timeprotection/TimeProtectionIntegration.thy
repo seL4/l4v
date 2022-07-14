@@ -20,8 +20,11 @@ locale integration_setup =
   for gentypes :: "('fch \<times> 'fch_cachedness \<times> 'pch \<times> 'pch_cachedness \<times> 'l partition \<times> 'colour) itself"
   and initial_aag :: "'l subject_label PAS"
 + fixes time_per_tick :: time
-  fixes fixme_WCET :: time
+  fixes slice_length_min :: time
+  fixes timer_delay_max :: time
   fixes ta :: "if_other_state \<Rightarrow> vpaddr set"
+  assumes timer_delay_lt_slice_length:
+    "timer_delay_max < slice_length_min"
 begin
 
 (* get the list of (domain, tickcount) from the initial state *)
@@ -34,26 +37,28 @@ definition dom_list_internal where
 definition schedule_list where
   "schedule_list \<equiv> map (\<lambda>(d, ticks). (data_to_nat ticks * time_per_tick, d)) dom_list_internal"
 
-interpretation sched_o:schedule_oracle _ schedule_list fixme_WCET
+interpretation sched_o:schedule_oracle_delayed _ schedule_list slice_length_min timer_delay_max
   apply unfold_locales
    (* we need to know that the domain list has some minimum time *)
    subgoal sorry
   (* we need to know that the domain list is never empty *)
   subgoal sorry
+
+  subgoal sorry
   done
 
 definition nlds where
-  "nlds \<equiv> sched_o.slice_end"
+  "nlds \<equiv> sched_o.next_delayed_start"
 
 lemma nlds_in_future:
-  "t \<le> nlds t"
-  apply (clarsimp simp:nlds_def)
-  apply (simp add: le_simps(1) sched_o.slice_end_gt)
+  "t < nlds t"
+  apply (clarsimp simp:nlds_def sched_o.next_delayed_start_in_future)
   done
 
-lemma nlds_step:
-  "\<lbrakk>t \<le> t'; t' \<le> nlds t\<rbrakk> \<Longrightarrow> nlds t' = nlds t"
-  sledgehammer
+lemma nlds_flatsteps:
+  "\<lbrakk>t \<le> t'; t' < nlds t\<rbrakk> \<Longrightarrow> nlds t' = nlds t"
+  apply (clarsimp simp:nlds_def sched_o.next_delayed_start_flatsteps)
+  done
                     
 interpretation tphuwr:time_protection_hardware_uwr gentypes PSched 
   _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ part uwr nlds ta
@@ -107,7 +112,7 @@ pch_read_impact :: "paddr \<Rightarrow> 'pch \<Rightarrow> 'pch"
     and addr_colour :: "paddr \<Rightarrow> 'colour"
     and colour_userdomain :: "'colour \<Rightarrow> 'domain"
  *)
-
+thm in_opt_map_eq
 interpretation ma?:time_protection_system PSched fch_lookup fch_read_impact fch_write_impact
   empty_fch fch_flush_cycles fch_flush_WCET pch_lookup pch_read_impact pch_write_impact do_pch_flush
   pch_flush_cycles pch_flush_WCET collides_in_pch read_cycles write_cycles addr_domain addr_colour colour_userdomain
@@ -119,7 +124,7 @@ interpretation ma?:time_protection_system PSched fch_lookup fch_read_impact fch_
               apply (simp add: uwr_equiv_rel)
              subgoal sorry
             apply (rule nlds_in_future)
-           subgoal sorry
+           apply (rule nlds_flatsteps; simp)
           subgoal sorry
          subgoal sorry
         subgoal sorry

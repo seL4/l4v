@@ -519,10 +519,10 @@ locale time_protection_system =
   \<comment> \<open>domain scheduling stuff\<close>
   
   assumes next_latest_domainswitch_start_in_future:
-    "\<And> t. t \<le> next_latest_domainswitch_start t"
+    "\<And> t. t < next_latest_domainswitch_start t"
   assumes next_latest_domainswitch_start_flatsteps:
     "\<And> t t'. t' \<ge> t \<Longrightarrow>
-       t' \<le> next_latest_domainswitch_start t \<Longrightarrow>
+       t' < next_latest_domainswitch_start t \<Longrightarrow>
        next_latest_domainswitch_start t' = next_latest_domainswitch_start t"
   fixes domainswitch_start_delay_WCT :: "time"
   fixes dirty_step_WCET :: "time"
@@ -582,7 +582,7 @@ begin
 
 definition
   time_bounded_traces :: "('fch,'pch) state \<Rightarrow> trace set" where
- "time_bounded_traces s \<equiv> {p. tm (trace_multistep p s) \<le> nlds (tm s)}"
+ "time_bounded_traces s \<equiv> {p. tm (trace_multistep p s) < nlds (tm s)}"
 
 definition select_user_trace :: "('other_state \<times> ('fch,'pch) state) \<Rightarrow> vpaddr set \<Rightarrow> trace" where
   "select_user_trace os_s ta \<equiv>
@@ -719,12 +719,13 @@ abbreviation
 
 lemma hd_time_bounded_traces:
   "h # r \<in> time_bounded_traces s \<Longrightarrow>
-  tm (trace_step h s) \<le> nlds (tm s) \<and> r \<in> time_bounded_traces (trace_step h s)"
+  tm (trace_step h s) < nlds (tm s) \<and> r \<in> time_bounded_traces (trace_step h s)"
   apply (intro conjI)
    apply (clarsimp simp:time_bounded_traces_def)
-   using dual_order.trans trace_multistep_time_forward apply blast
-  apply (smt le_trans mem_Collect_eq time_bounded_traces_def next_latest_domainswitch_start_flatsteps
-    trace_multistep_time_forward trace_multistep.simps(2) trace_step_time_forward)
+   apply (meson order_le_less_trans trace_multistep_time_forward)
+  apply (smt (verit, ccfv_threshold) mem_Collect_eq next_latest_domainswitch_start_flatsteps
+    order_le_less_trans time_bounded_traces_def trace_multistep.simps(2) trace_multistep_time_forward
+    trace_step_time_forward)
   done
 
 lemma in_touched_addrs_expand:
@@ -1193,13 +1194,13 @@ lemma dirty_multistep_times: "\<lbrakk>
    s' = trace_multistep p s;
    t' = trace_multistep p t
    \<rbrakk> \<Longrightarrow>
-   tm s' \<le> nlds (tm s) + dirty_step_WCET \<and> tm t' \<le> nlds (tm s) + dirty_step_WCET"
+   tm s' < nlds (tm s) + dirty_step_WCET \<and> tm t' < nlds (tm s) + dirty_step_WCET"
   apply (prop_tac "nlds (tm t) = nlds (tm s)")
    apply (cases "current_domain os = d"; clarsimp simp: uwr_def uwr_running_def uwr_notrunning_def)
   apply (clarsimp simp: WCET_bounded_traces_def)
-  apply (smt add_le_imp_le_left add_mono_thms_linordered_semiring(1) le_iff_add mem_Collect_eq
-         next_latest_domainswitch_start_in_future WCET_bounded_traces_universal_def
-         trace_multistep_time_forward)
+  apply (smt (verit, ccfv_threshold) WCET_bounded_traces_universal_def add.commute
+    add_mono_thms_linordered_field(2) mem_Collect_eq next_latest_domainswitch_start_in_future
+    order_le_less_trans)
   done
 
 lemma in_precise_in_expanded:
@@ -1351,15 +1352,14 @@ lemma trace_multistep_fold:
   done
 
 lemma public_trace_obeys_wcet:
-  "tm (trace_multistep (select_public_trace (os, s) wcet ta) s)  \<le> nlds (tm s) + wcet"
+  "tm (trace_multistep (select_public_trace (os, s) wcet ta) s) < nlds (tm s) + wcet"
   apply (prop_tac "select_public_trace (os, s) wcet ta \<in> _")
    apply (clarsimp simp: select_public_trace_def)
    apply (rule ts.trace_from_set)
    apply (simp add: WCET_bounded_traces_def traces_obeying_set_def)
   apply clarsimp
-  apply (metis (no_types, lifting) WCET_bounded_traces_def add_le_imp_le_left
-         add_mono_thms_linordered_semiring(1) le_iff_add mem_Collect_eq
-         next_latest_domainswitch_start_in_future trace_multistep_time_forward)
+  apply (metis WCET_bounded_traces_def add_le_cancel_left add_mono_thms_linordered_field(3)
+    le_iff_add mem_Collect_eq next_latest_domainswitch_start_in_future trace_multistep_time_forward)
   done
 
 lemma in_sub:
@@ -1449,8 +1449,8 @@ lemma ma_confidentiality_u_ds:
   apply (drule gadget_multistep [where p="gadget_trace (nlds (tm s))" and os'=os' and ot'=ot'])
           apply (rule refl)
          apply (rule refl)
-        apply (metis public_trace_obeys_wcet)
-       apply (metis public_trace_obeys_wcet uwr_same_nlds)
+        apply (metis nat_less_le public_trace_obeys_wcet)
+       apply (metis nat_less_le public_trace_obeys_wcet uwr_same_nlds)
       apply (rule refl)
      apply (rule refl)
     apply assumption
