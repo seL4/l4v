@@ -75,7 +75,7 @@ requalify_facts
 crunch (bcorres) bcorres[wp]:
   set_original, set_object, set_cap, set_irq_state, deleted_irq_handler, get_cap,set_cdt, empty_slot
   truncate_state
-  (ignore: maskInterrupt simp: f_kheap_def)
+  (ignore: maskInterrupt)
 
 lemma get_cap_det:
   "(r,s') \<in> fst (get_cap p s) \<Longrightarrow> get_cap p s = ({(r,s)}, False)"
@@ -88,7 +88,7 @@ lemma get_cap_det:
 
 lemma get_object_bcorres_any[wp]:
   "bcorres_underlying (trans_state e) (get_object a) (get_object a)"
-  by (wpsimp simp: get_object_def f_kheap_def)
+  by (wpsimp simp: get_object_def)
 
 lemma get_cap_bcorres_any:
   "bcorres_underlying (trans_state e) (get_cap x) (get_cap x)"
@@ -117,7 +117,7 @@ lemma is_final_cap_bcorres[wp]:
   by (simp add: is_final_cap_def is_final_cap'_def gets_def get_cap_helper | wp)+
 
 lemma get_tcb_truncate[simp]: "get_tcb a (truncate_state s) = get_tcb a s"
-  by (simp add: get_tcb_def f_kheap_def)
+  by (simp add: get_tcb_def)
 
 crunch (bcorres) bcorres[wp]:
   cancel_all_ipc, cancel_all_signals, unbind_maybe_notification, unbind_notification, bind_notification

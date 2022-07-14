@@ -107,7 +107,10 @@ end
 
 locale pspace_update_eq =
   fixes f :: "'z::state_ext state \<Rightarrow> 'c::state_ext state"
-  assumes pspace: "f_kheap (f s) = f_kheap s"
+  (* TODO: Delete if not needed, confirm with Gerwin. I don't think we want this one. -robs
+  assumes pspace: "f_kheap ta_f (f s) = f_kheap ta_f s" *)
+  assumes pspace: "kheap (f s) = kheap s"
+  assumes ta: "touched_addresses (machine_state (f s)) = touched_addresses (machine_state s)"
 
 locale Arch_pspace_update_eq = pspace_update_eq + Arch
 
@@ -147,17 +150,17 @@ section "Base definitions for Invariants"
 definition
   obj_at :: "(kernel_object \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
-  "obj_at P ref s \<equiv> \<exists>ko. f_kheap s ref = Some ko \<and> P ko"
+  "obj_at P ref s \<equiv> \<exists>ko. kheap s ref = Some ko \<and> P ko"
 
 lemma obj_at_pspaceI:
-  "\<lbrakk> obj_at P ref s; f_kheap s = f_kheap s' \<rbrakk> \<Longrightarrow> obj_at P ref s'"
+  "\<lbrakk> obj_at P ref s; kheap s = kheap s' \<rbrakk> \<Longrightarrow> obj_at P ref s'"
   by (simp add: obj_at_def)
 
 abbreviation "ko_at k \<equiv> obj_at ((=) k)"
 abbreviation "ako_at ako == ko_at (ArchObj ako)"
 
 lemma obj_atE:
-  "\<lbrakk> obj_at P p s; \<And>ko. \<lbrakk> f_kheap s p = Some ko; P ko \<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
+  "\<lbrakk> obj_at P p s; \<And>ko. \<lbrakk> kheap s p = Some ko; P ko \<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
   by (auto simp: obj_at_def)
 
 lemma obj_at_weakenE:
@@ -169,8 +172,8 @@ lemma ko_at_weakenE:
   by (erule obj_at_weakenE, simp)
 
 lemma ko_atD:
-  "ko_at obj pos s \<Longrightarrow> f_kheap s pos = Some obj"
-  by (blast elim: obj_atE)
+  "ko_at obj pos s \<Longrightarrow> kheap s pos = Some obj"
+  by (force elim: obj_atE)
 
 
 text \<open>An alternative formulation that allows abstraction over type:\<close>
@@ -190,7 +193,7 @@ abbreviation
   "typ_at T \<equiv> obj_at (\<lambda>ob. a_type ob = T)"
 
 abbreviation
-  "typs_of \<equiv> \<lambda>s. f_kheap s ||> a_type"
+  "typs_of \<equiv> \<lambda>s. kheap s ||> a_type"
 
 definition
   pspace_aligned :: "'z::state_ext state \<Rightarrow> bool"

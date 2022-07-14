@@ -39,19 +39,19 @@ locale_abbrev
 section "Kernel Heap Accessors"
 
 (* declared in Arch as workaround for VER-1099 *)
-locale_abbrev aobjs_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> arch_kernel_obj"
+locale_abbrev aobjs_of :: "bool \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> arch_kernel_obj"
   where
-  "aobjs_of \<equiv> \<lambda>s. f_kheap s |> aobj_of"
+  "aobjs_of b \<equiv> \<lambda>s. f_kheap b s |> aobj_of"
 
 text \<open>Manipulate ASID pools, page directories and page tables in the kernel heap.\<close>
 
-locale_abbrev asid_pools_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> asid_pool"
+locale_abbrev asid_pools_of :: "bool \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> asid_pool"
   where
-  "asid_pools_of \<equiv> \<lambda>s. aobjs_of s |> asid_pool_of"
+  "asid_pools_of ta_f \<equiv> \<lambda>s. aobjs_of ta_f s |> asid_pool_of"
 
 locale_abbrev get_asid_pool :: "obj_ref \<Rightarrow> (asid_low_index \<rightharpoonup> obj_ref, 'z::state_ext) s_monad"
   where
-  "get_asid_pool \<equiv> gets_map asid_pools_of"
+  "get_asid_pool \<equiv> gets_map (asid_pools_of True)"
 
 definition set_asid_pool :: "obj_ref \<Rightarrow> (asid_low_index \<rightharpoonup> obj_ref) \<Rightarrow> (unit,'z::state_ext) s_monad"
   where
@@ -60,13 +60,13 @@ definition set_asid_pool :: "obj_ref \<Rightarrow> (asid_low_index \<rightharpoo
      set_object ptr (ArchObj (ASIDPool pool))
    od"
 
-locale_abbrev pts_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> pt"
+locale_abbrev pts_of :: "bool \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> pt"
   where
-  "pts_of \<equiv> \<lambda>s. aobjs_of s |> pt_of"
+  "pts_of ta_f \<equiv> \<lambda>s. aobjs_of ta_f s |> pt_of"
 
 locale_abbrev get_pt :: "obj_ref \<Rightarrow> (pt_index \<Rightarrow> pte,'z::state_ext) s_monad"
   where
-  "get_pt \<equiv> gets_map pts_of"
+  "get_pt \<equiv> gets_map (pts_of True)"
 
 definition set_pt :: "obj_ref \<Rightarrow> (pt_index \<Rightarrow> pte) \<Rightarrow> (unit,'z::state_ext) s_monad"
   where
@@ -94,14 +94,14 @@ definition pte_of :: "obj_ref \<Rightarrow> (obj_ref \<rightharpoonup> pt) \<rig
      oreturn $ pt (table_index p)
    }"
 
-locale_abbrev ptes_of :: "'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> pte"
+locale_abbrev ptes_of :: "bool \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> pte"
   where
-  "ptes_of s \<equiv> \<lambda>p. pte_of p (pts_of s)"
+  "ptes_of ta_f s \<equiv> \<lambda>p. pte_of p (pts_of ta_f s)"
 
 text \<open>The following function takes a pointer to a PTE in kernel memory and returns the PTE.\<close>
 locale_abbrev get_pte :: "obj_ref \<Rightarrow> (pte,'z::state_ext) s_monad"
   where
-  "get_pte \<equiv> gets_map ptes_of"
+  "get_pte \<equiv> gets_map (ptes_of True)"
 
 definition store_pte :: "obj_ref \<Rightarrow> pte \<Rightarrow> (unit,'z::state_ext) s_monad"
   where
@@ -211,7 +211,7 @@ fun pt_lookup_from_level ::
   "pt_lookup_from_level level pt_ptr vptr target_pt_ptr s = (doE
      unlessE (0 < level) $ throwError InvalidRoot;
      slot <- returnOk $ pt_slot_offset level pt_ptr vptr;
-     pte <- liftE $ gets_the $ oapply slot o ptes_of;
+     pte <- liftE $ gets_the $ oapply slot o ptes_of True;
      unlessE (is_PageTablePTE pte) $ throwError InvalidRoot;
      ptr <- returnOk (pptr_from_pte pte);
      if ptr = target_pt_ptr

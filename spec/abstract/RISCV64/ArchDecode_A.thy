@@ -100,7 +100,7 @@ definition decode_fr_inv_map :: "'z::state_ext arch_decoder"
            vtop \<leftarrow> returnOk $ vaddr + mask (pageBitsForSize pgsz);
            whenE (vtop \<ge> user_vtop) $ throwError $ InvalidArgument 0;
            check_vp_alignment pgsz vaddr;
-           (level, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot pt vaddr \<circ> ptes_of;
+           (level, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot pt vaddr \<circ> ptes_of True;
            unlessE (pt_bits_left level = pg_bits) $
              throwError $ FailedLookup False $ MissingCapability $ pt_bits_left level;
            case mapped_address of
@@ -146,7 +146,7 @@ definition decode_pt_inv_map :: "'z::state_ext arch_decoder"
            whenE (user_vtop \<le> vaddr) $ throwError $ InvalidArgument 0;
            pt' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid;
            whenE (pt' \<noteq> pt) $ throwError $ InvalidCapability 1;
-           (level, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot pt vaddr \<circ> ptes_of;
+           (level, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot pt vaddr \<circ> ptes_of True;
            old_pte \<leftarrow> liftE $ get_pte slot;
            whenE (pt_bits_left level = pageBits \<or> old_pte \<noteq> InvalidPTE) $ throwError DeleteFirst;
            pte \<leftarrow> returnOk $ PageTablePTE (ucast (addrFromPPtr p >> pageBits)) {};
@@ -168,7 +168,7 @@ definition decode_page_table_invocation :: "'z::state_ext arch_decoder"
        case cap of
          PageTableCap pt (Some (asid, _)) \<Rightarrow> doE
              \<comment> \<open>cannot invoke unmap on top level page table\<close>
-             pt_opt \<leftarrow> liftE $ gets $ vspace_for_asid asid;
+             pt_opt \<leftarrow> liftE $ gets $ vspace_for_asid True asid;
              whenE (pt_opt = Some pt) $ throwError RevokeFirst
            odE
        | _ \<Rightarrow> returnOk ();

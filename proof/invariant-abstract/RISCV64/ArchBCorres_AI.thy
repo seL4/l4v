@@ -12,30 +12,28 @@ begin
 context Arch begin global_naming RISCV64
 
 lemma vspace_for_asid_truncate[simp]:
-  "vspace_for_asid asid (truncate_state s) = vspace_for_asid asid s"
-  apply(simp add: vspace_for_asid_def pool_for_asid_def obind_def oassert_def oreturn_def swp_def
-         split: option.splits)
-  by (force simp:f_kheap_def)
+  "vspace_for_asid ta_f asid (truncate_state s) = vspace_for_asid ta_f asid s"
+  by (simp add: vspace_for_asid_def pool_for_asid_def obind_def oassert_def oreturn_def swp_def
+    cong:option.case_cong split:option.splits)
 
 lemma pool_for_asid_truncate[simp]:
   "pool_for_asid asid (truncate_state s) = pool_for_asid asid s"
   by (simp add: pool_for_asid_def)
 
 lemma vs_lookup_table_truncate[simp]:
-  "vs_lookup_table l asid vptr (truncate_state s) = vs_lookup_table l asid vptr s"
-  apply(simp add: vs_lookup_table_def obind_def oreturn_def split:option.splits)
-  by (force simp:f_kheap_def)
+  "vs_lookup_table ta_f l asid vptr (truncate_state s) = vs_lookup_table ta_f l asid vptr s"
+  by (simp add: vs_lookup_table_def obind_def oreturn_def opt_map_def vspace_for_pool_def
+    cong:option.case_cong split:option.splits)
 
 lemma vs_lookup_slot_truncate[simp]:
-  "vs_lookup_slot l asid vptr (truncate_state s) = vs_lookup_slot l asid vptr s"
+  "vs_lookup_slot ta_f l asid vptr (truncate_state s) = vs_lookup_slot ta_f l asid vptr s"
   by (simp add: vs_lookup_slot_def obind_def oreturn_def split: option.splits)
 
 lemma pt_lookup_from_level_bcorres[wp]:
   "bcorres (pt_lookup_from_level l r b c) (pt_lookup_from_level l r b c)"
-  apply (induct l arbitrary: r b c rule: bit0.minus_induct; wpsimp simp: pt_lookup_from_level_simps)
-  by (force simp:f_kheap_def)
+  by (induct l arbitrary: r b c rule: bit0.minus_induct; wpsimp simp: pt_lookup_from_level_simps)
 
-crunch (bcorres) bcorres[wp]: arch_finalise_cap truncate_state (simp: f_kheap_def)
+crunch (bcorres) bcorres[wp]: arch_finalise_cap truncate_state
 crunch (bcorres) bcorres[wp]: prepare_thread_delete truncate_state
 
 end

@@ -49,17 +49,31 @@ lemma touch_object_def2:
   apply (clarsimp simp: simpler_gets_def assert_def fail_def split: if_split_asm)
   done
 
-abbreviation ta_filter :: "machine_word set \<Rightarrow> kernel_object \<Rightarrow> obj_ref \<Rightarrow> kernel_object option" where
-  "ta_filter ta obj ptr \<equiv> if obj_range ptr obj \<subseteq> ta then Some obj else None"
+definition
+  ta_filter :: "bool \<Rightarrow> machine_word set \<Rightarrow> kernel_object \<Rightarrow> obj_ref \<Rightarrow> kernel_object option" where
+  "ta_filter apply ta obj ptr \<equiv> if ~apply \<or> obj_range ptr obj \<subseteq> ta then Some obj else None"
 
-definition f_kheap :: "'z::state_ext state \<Rightarrow> obj_ref \<Rightarrow> kernel_object option" where
-  "f_kheap s \<equiv> kheap s |>> ta_filter (touched_addresses (machine_state s))"
+abbreviation f_kheap :: "bool \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref \<Rightarrow> kernel_object option" where
+  "f_kheap apply s \<equiv> kheap s |>> ta_filter apply (touched_addresses (machine_state s))"
+
+lemma f_kheap_to_kheap[simp]:
+  "f_kheap False = kheap"
+  apply(rule ext)+
+  by (clarsimp simp:ta_filter_def obind_def split:option.splits)
+
+lemma f_kheap_to_unfiltered_Some:
+  "f_kheap True s ptr = Some obj \<Longrightarrow> f_kheap False s ptr = Some obj"
+  by (clarsimp simp:ta_filter_def obind_def split:if_splits option.splits)
+
+lemma f_kheap_from_unfiltered_None:
+  "f_kheap False s ptr = None \<Longrightarrow> f_kheap True s ptr = None"
+  by (clarsimp simp:ta_filter_def obind_def split:option.splits)
 
 definition
   get_object :: "obj_ref \<Rightarrow> (kernel_object,'z::state_ext) s_monad"
 where
   "get_object ptr \<equiv> do
-     kh \<leftarrow> gets f_kheap;
+     kh \<leftarrow> gets (f_kheap True);
      assert (kh ptr \<noteq> None);
      return $ the $ kh ptr
    od"
@@ -96,7 +110,7 @@ definition
   get_tcb :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> tcb option"
 where
   "get_tcb tcb_ref state \<equiv>
-   case f_kheap state tcb_ref of
+   case f_kheap True state tcb_ref of
       None      \<Rightarrow> None
     | Some kobj \<Rightarrow> (case kobj of
         TCB tcb \<Rightarrow> Some tcb

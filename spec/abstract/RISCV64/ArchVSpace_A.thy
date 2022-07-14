@@ -41,19 +41,19 @@ definition vspace_for_pool :: "obj_ref \<Rightarrow> asid \<Rightarrow> (obj_ref
      K $ pool (asid_low_bits_of asid)
    }"
 
-definition vspace_for_asid :: "asid \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref option"
+definition vspace_for_asid :: "bool \<Rightarrow> asid \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref option"
   where
-  "vspace_for_asid asid = do {
+  "vspace_for_asid ta_f asid = do {
      oassert (0 < asid);
      pool_ptr \<leftarrow> pool_for_asid asid;
-     vspace_for_pool pool_ptr asid \<circ> asid_pools_of
+     vspace_for_pool pool_ptr asid \<circ> asid_pools_of ta_f
    }"
 
 text \<open>Locate the top-level page table associated with a given virtual ASID.\<close>
 definition find_vspace_for_asid :: "asid \<Rightarrow> (obj_ref,'z::state_ext) lf_monad"
   where
   "find_vspace_for_asid asid \<equiv> doE
-    vspace_opt \<leftarrow> liftE $ gets $ vspace_for_asid asid;
+    vspace_opt \<leftarrow> liftE $ gets $ vspace_for_asid True asid;
     throw_opt InvalidRoot vspace_opt
   odE"
 
@@ -174,15 +174,15 @@ text \<open>
   The level can be higher than @{term bot_level} if the lookup terminates early because
   it hit a page or an invalid entry.
 \<close>
-definition vs_lookup_table :: "vm_level \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> (vm_level \<times> obj_ref) option"
+definition vs_lookup_table :: "bool \<Rightarrow> vm_level \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> (vm_level \<times> obj_ref) option"
   where
-  "vs_lookup_table bot_level asid vptr \<equiv> do {
+  "vs_lookup_table ta_f bot_level asid vptr \<equiv> do {
      pool_ptr \<leftarrow> pool_for_asid asid;
      if bot_level = asid_pool_level
      then oreturn (asid_pool_level, pool_ptr)
      else do {
-       top_level_pt \<leftarrow> vspace_for_pool pool_ptr asid \<circ> asid_pools_of;
-       pt_walk max_pt_level bot_level top_level_pt vptr \<circ> ptes_of
+       top_level_pt \<leftarrow> vspace_for_pool pool_ptr asid \<circ> asid_pools_of ta_f;
+       pt_walk max_pt_level bot_level top_level_pt vptr \<circ> ptes_of ta_f
      }
    }"
 
@@ -191,10 +191,10 @@ text \<open>
   For @{prop "bot_level = asid_pool_level"}, still return the pointer to the ASID pool (not a slot
   inside it, since there are no slot functions for ASID pools).
 \<close>
-definition vs_lookup_slot :: "vm_level \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> (vm_level \<times> obj_ref) option"
+definition vs_lookup_slot :: "bool \<Rightarrow> vm_level \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> (vm_level \<times> obj_ref) option"
   where
-  "vs_lookup_slot bot_level asid vref \<equiv> do {
-     (level', table) \<leftarrow> vs_lookup_table bot_level asid vref;
+  "vs_lookup_slot ta_f bot_level asid vref \<equiv> do {
+     (level', table) \<leftarrow> vs_lookup_table ta_f bot_level asid vref;
      if level' = asid_pool_level then
        oreturn (level', table)
      else
@@ -206,7 +206,7 @@ definition unmap_page :: "vmpage_size \<Rightarrow> asid \<Rightarrow> vspace_re
   where
   "unmap_page pgsz asid vptr pptr \<equiv> doE
      top_level_pt \<leftarrow> find_vspace_for_asid asid;
-     (lev, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot top_level_pt vptr \<circ> ptes_of;
+     (lev, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot top_level_pt vptr \<circ> ptes_of True;
      unlessE (pt_bits_left lev = pageBitsForSize pgsz) $ throwError InvalidRoot;
      pte \<leftarrow> liftE $ get_pte slot;
      unlessE (is_PagePTE pte \<and> pptr_from_pte pte = pptr) $ throwError InvalidRoot;
@@ -282,7 +282,7 @@ text \<open>A pointer is inside a user frame if its top bits point to a @{const 
 definition in_user_frame :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
   where
   "in_user_frame p s \<equiv>
-     \<exists>sz. f_kheap s (p && ~~ mask (pageBitsForSize sz)) = Some (ArchObj (DataPage False sz))"
+     \<exists>sz. kheap s (p && ~~ mask (pageBitsForSize sz)) = Some (ArchObj (DataPage False sz))"
 
 definition prepare_thread_delete :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
   where
