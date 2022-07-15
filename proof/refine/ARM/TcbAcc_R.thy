@@ -4561,18 +4561,6 @@ lemma tcbReleaseRemove_pred_tcb_at'[wp]:
 crunches tcbReleaseRemove
   for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
 
-lemma ksReleaseQueue_runnable_thread_state:
-  "\<lbrakk>(s,s') \<in> state_relation; valid_release_q s; pspace_aligned s; pspace_distinct s\<rbrakk>
-   \<Longrightarrow>  \<forall>p. p \<in> set (ksReleaseQueue s') \<longrightarrow> obj_at' (runnable' \<circ> tcbState) p s'"
-  apply (frule state_relation_release_queue_relation)
-  apply (clarsimp simp: valid_release_q_def obj_at'_def release_queue_relation_def)
-  apply (drule_tac x=p in bspec, blast)
-  apply (clarsimp simp: vs_all_heap_simps)
-  apply (frule_tac t=p in st_tcb_at_coerce_concrete[rotated, where P=runnable], simp, simp)
-   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-  apply (clarsimp simp: pred_tcb_at'_def obj_at'_def sts_rel_runnable)
-  done
-
 lemma sts_st_tcb':
   "\<lbrace>if t = t' then K (P st) else st_tcb_at' P t\<rbrace>
   setThreadState st t'
