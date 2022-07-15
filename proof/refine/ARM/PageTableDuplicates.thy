@@ -1323,19 +1323,16 @@ lemma valid_duplicates_deleteObjects_helper:
   done
 
 lemma deleteObjects_valid_duplicates'[wp]:
-  notes [simp del] =  atLeastAtMost_simps
+  notes [simp del] = atLeastAtMost_simps
   shows
-  "\<lbrace>(\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
-      K (is_aligned ptr sz)
-   \<rbrace> deleteObjects ptr sz
-   \<lbrace>\<lambda>r s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
+  "\<lbrace>(\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and K (is_aligned ptr sz)\<rbrace>
+   deleteObjects ptr sz
+   \<lbrace>\<lambda>_ s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (clarsimp simp: deleteObjects_def2)
-  apply (rule hoare_seq_ext_skip, wpsimp)
-  apply (rule hoare_seq_ext_skip, wpsimp)
-  apply (wp hoare_drop_imps|simp)+
-  apply clarsimp
-  apply (simp add:deletionIsSafe_def)
+  apply (intro hoare_seq_ext[OF _ stateAssert_sp])
+  apply (wpsimp wp: hoare_drop_imps)
+  apply (clarsimp simp: deletionIsSafe_def)
   apply (erule valid_duplicates_deleteObjects_helper)
    apply fastforce
   apply simp
