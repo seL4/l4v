@@ -893,6 +893,7 @@ lemma sc_const_eq:
   "schedContextStructSize = sizeof_sched_context_t"
   "minSchedContextBits = min_sched_context_bits"
   by (auto simp: refillSizeBytes_def refill_size_bytes_def minSchedContextBits_def
+                 wordSize_def wordBits_def' word_size_def
                  sizeof_sched_context_t_def min_sched_context_bits_def schedContextStructSize_def)
 
 lemma max_num_refills_eq_refillAbsoluteMax':
@@ -1040,11 +1041,13 @@ qed
 
 lemma min_sched_context_bits_cond:
   "sizeof_sched_context_t + refill_size_bytes < (2::nat) ^ (min_sched_context_bits - 1)"
-  by (clarsimp simp: sizeof_sched_context_t_def refill_size_bytes_def min_sched_context_bits_def)
+  by (clarsimp simp: sizeof_sched_context_t_def refill_size_bytes_def min_sched_context_bits_def
+                     word_size_def)
 
 lemma minSchedContextBits_cond:
   "sizeof_sched_context_t + refill_size_bytes < (2::nat) ^ (minSchedContextBits - 1)"
-  by (clarsimp simp: sizeof_sched_context_t_def refill_size_bytes_def minSchedContextBits_def)
+  by (clarsimp simp: sizeof_sched_context_t_def refill_size_bytes_def minSchedContextBits_def
+                     word_size_def)
 
 lemma scBits_inverse_us:
   notes sc_const_eq[simp]
@@ -1073,9 +1076,10 @@ lemma scBits_inverse_sc:
   apply (rule scBits_inverse_us)
   by (simp add: sc_const_eq)
 
-lemma minRefillLength_ARM: "minRefillLength = 12"
+lemma minRefillLength_ARM: "minRefillLength = 10"
   by (auto simp: minRefillLength_def minSchedContextBits_def refillAbsoluteMax'_def
-                 schedContextStructSize_def refillSizeBytes_def shiftL_nat)
+                 schedContextStructSize_def refillSizeBytes_def shiftL_nat wordSize_def
+                 wordBits_def')
 
 lemma minRefillLength_minSchedContextBits[simp]:
   "scBitsFromRefillLength' minRefillLength = minSchedContextBits"
@@ -1104,16 +1108,17 @@ lemma MIN_REFILLS_le_minRefillLength:
 
 lemmas scBits_simps = scBits_inverse_us refillAbsoluteMax_def sc_size_bounds_def sc_const_conc
 
-lemma scBits_at_least_6:
-  "6 \<le> scBitsFromRefillLength' us"
+lemma scBits_at_least_7:
+  "7 \<le> scBitsFromRefillLength' us"
 proof -
   note sc_const_eq[simp]
   have "ceil_log (sizeof_sched_context_t)
            \<le> ceil_log (us * refill_size_bytes + sizeof_sched_context_t)"
     apply (simp only: sc_const_eq(2)[symmetric, simplified schedContextStructSize_def, simplified])
     by (simp add: ceil_log_le_mono)
-  moreover have "ceil_log (sizeof_sched_context_t) = 6"
+  moreover have "ceil_log (sizeof_sched_context_t) = 7"
     apply (simp add: sc_const_eq(2)[symmetric, simplified schedContextStructSize_def, simplified] ceil_log_def)
+    apply (clarsimp simp: wordSize_def wordBits_def')
     by (fastforce intro!: discrete_log_eqI)
   ultimately show ?thesis
     by (clarsimp simp: scBitsFromRefillLength'_def max_num_refills_def)
@@ -1121,7 +1126,7 @@ qed
 
 lemma scBits_pos'[simp]:
   "0 < scBitsFromRefillLength' us"
-  using scBits_at_least_6
+  using scBits_at_least_7
   by (metis gr0I not_numeral_le_zero)
 
 lemma scBits_pos_power2:
