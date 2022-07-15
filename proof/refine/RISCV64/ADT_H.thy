@@ -69,9 +69,9 @@ definition absPageTable0 ::
        then Some (RISCV64_A.PagePTE (ucast p) {x. g \<and> x=Global \<or> u \<and> x = User \<or> e \<and> x = Execute}
                                     (vm_rights_of rights))
        else None
-   | Some (KOArch (KOPTE (PageTablePTE p g u))) \<Rightarrow>
+   | Some (KOArch (KOPTE (PageTablePTE p g))) \<Rightarrow>
        if p \<le> mask ppn_len
-       then Some (RISCV64_A.PageTablePTE (ucast p) {x. g \<and> x=Global \<or> u \<and> x = User})
+       then Some (RISCV64_A.PageTablePTE (ucast p) {x. g \<and> x=Global})
        else None
    | _ \<Rightarrow> None"
 
