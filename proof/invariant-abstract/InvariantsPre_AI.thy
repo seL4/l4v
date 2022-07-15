@@ -173,7 +173,7 @@ lemma ko_at_weakenE:
 
 lemma ko_atD:
   "ko_at obj pos s \<Longrightarrow> kheap s pos = Some obj"
-  by (force elim: obj_atE)
+  by (blast elim: obj_atE)
 
 
 text \<open>An alternative formulation that allows abstraction over type:\<close>
