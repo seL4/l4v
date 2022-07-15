@@ -551,10 +551,11 @@ lemma MIN_BUDGET_le_MAX_PERIOD':
 
 definition "min_sched_context_bits = 8"
 
-(* RT : size of sched_context struct in C, excluding refills
-   numbers are from MCS C: (9 * sizeof(word_t)) + (3 * sizeof(ticks_t)) for aarch32 *)
+(* RT : size of sched_context struct in C (excluding refills)
+   numbers are from MCS C: (9 * sizeof(word_t)) + (3 * sizeof(ticks_t))
+   See GitHub issue 501. *)
 definition sizeof_sched_context_t :: nat where
-  "sizeof_sched_context_t = (9 * 4) + (3 * 8)"
+  "sizeof_sched_context_t = (9 * word_size) + (3 * 8)"
 
 (* (2 * sizeof(ticks_t)) *)
 definition "refill_size_bytes = 16"
