@@ -29,11 +29,16 @@ type_synonym cghost_state =
   "(machine_word \<rightharpoonup> vmpage_size) * (machine_word \<rightharpoonup> nat) * ghost_assertions *
    (machine_word \<rightharpoonup> nat)"
 
+abbreviation gs_refill_buffer_lengths :: "cghost_state \<Rightarrow> (machine_word \<rightharpoonup> nat)" where
+  "gs_refill_buffer_lengths \<equiv> snd \<circ> snd \<circ> snd"
+
 definition
   gs_clear_region :: "addr \<Rightarrow> nat \<Rightarrow> cghost_state \<Rightarrow> cghost_state" where
   "gs_clear_region ptr bits gs \<equiv>
-   (%x. if x \<in> {ptr..+2 ^ bits} then None else fst gs x,
-    %x. if x \<in> {ptr..+2 ^ bits} then None else fst (snd gs) x, snd (snd gs))"
+   (\<lambda>x. if x \<in> {ptr..+2 ^ bits} then None else fst gs x,
+    \<lambda>x. if x \<in> {ptr..+2 ^ bits} then None else fst (snd gs) x,
+    fst (snd (snd gs)),
+    \<lambda>x. if x \<in> {ptr..+2 ^ bits} then None else gs_refill_buffer_lengths gs x)"
 
 definition
   gs_new_frames:: "vmpage_size \<Rightarrow> addr \<Rightarrow> nat \<Rightarrow> cghost_state \<Rightarrow> cghost_state"
@@ -52,9 +57,6 @@ definition
    else (fst gs, \<lambda>x. if \<exists>n\<le>mask (bits - sz - 4). x = ptr + n * 2 ^ (sz + 4)
                      then Some sz
                      else fst (snd gs) x, snd (snd gs))"
-
-abbreviation gs_refill_buffer_lengths :: "cghost_state \<Rightarrow> (machine_word \<rightharpoonup> nat)" where
-  "gs_refill_buffer_lengths \<equiv> snd \<circ> snd \<circ> snd"
 
 abbreviation (input) refills_len :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where
   "refills_len userSize struct_size refill_size \<equiv> (2 ^ userSize - struct_size) div refill_size"
