@@ -300,7 +300,7 @@ primrec pte_relation' :: "RISCV64_A.pte \<Rightarrow> RISCV64_H.pte \<Rightarrow
   "pte_relation' RISCV64_A.InvalidPTE x =
      (x = RISCV64_H.InvalidPTE)"
 | "pte_relation' (RISCV64_A.PageTablePTE ppn atts) x =
-     (x = RISCV64_H.PageTablePTE (ucast ppn) (Global \<in> atts) (User \<in> atts) \<and> Execute \<notin> atts)"
+     (x = RISCV64_H.PageTablePTE (ucast ppn) (Global \<in> atts) \<and> Execute \<notin> atts \<and> User \<notin> atts)"
 | "pte_relation' (RISCV64_A.PagePTE ppn atts rghts) x =
      (x = RISCV64_H.PagePTE (ucast ppn) (Global \<in> atts) (User \<in> atts) (Execute \<in> atts)
                             (vmrights_map rghts))"

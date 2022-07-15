@@ -395,8 +395,7 @@ decodeRISCVPageTableInvocationMap cte cap vptr attr vspaceCap = do
     when (bitsLeft == pageBits || oldPTE /= InvalidPTE) $ throw DeleteFirst
     let pte = PageTablePTE {
             ptePPN = addrFromPPtr (capPTBasePtr cap) `shiftR` pageBits,
-            pteGlobal = False,
-            pteUser = False }
+            pteGlobal = False }
     let vptr = vptr .&. complement (mask bitsLeft)
     return $ InvokePageTable $ PageTableMap {
         ptMapCap = ArchObjectCap $ cap { capPTMappedAddress = Just (asid, vptr) },
