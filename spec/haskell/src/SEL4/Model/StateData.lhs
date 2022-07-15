@@ -469,3 +469,9 @@ Used in callKernel.
 
 > rct_imp_activatable'_asrt :: KernelState -> Bool
 > rct_imp_activatable'_asrt _ = True
+
+For deleteObjects, we would like to be able to use the fact that threads in the
+release queue have runnable' thread state. We add an assertion that it does hold.
+
+> release_q_runnable_asrt :: KernelState -> Bool
+> release_q_runnable_asrt _ = True
