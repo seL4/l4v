@@ -347,7 +347,7 @@ lemma corres_symb_exec_unknown_r:
   done
 
 lemma isPageTablePTE_def2:
-  "isPageTablePTE pte = (\<exists>ppn global user. pte = PageTablePTE ppn global user)"
+  "isPageTablePTE pte = (\<exists>ppn global. pte = PageTablePTE ppn global)"
   by (simp add: isPageTablePTE_def split: pte.splits)
 
 lemma getPPtrFromHWPTE_spec':

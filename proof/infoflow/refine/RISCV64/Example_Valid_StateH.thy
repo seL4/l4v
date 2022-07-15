@@ -160,7 +160,7 @@ definition Low_ptH :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> kernel_object
 definition Low_pd'H :: "pt_index \<Rightarrow> pte" where
   "Low_pd'H \<equiv>
      global_pteH
-       (0 := PageTablePTE (addrFromPPtr Low_pt_ptr >> pt_bits) False False)"
+       (0 := PageTablePTE (addrFromPPtr Low_pt_ptr >> pt_bits) False)"
 
 definition Low_pdH :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> kernel_object option" where
   "Low_pdH \<equiv>
@@ -185,7 +185,7 @@ definition High_ptH :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> kernel_objec
 definition High_pd'H :: "pt_index \<Rightarrow> pte" where
   "High_pd'H \<equiv>
      global_pteH
-       (0 := PageTablePTE (addrFromPPtr High_pt_ptr >> pt_bits) False False)"
+       (0 := PageTablePTE (addrFromPPtr High_pt_ptr >> pt_bits) False)"
 
 definition High_pdH :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> kernel_object option" where
   "High_pdH \<equiv>
