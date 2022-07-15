@@ -109,6 +109,9 @@ defs cNodePartialOverlap_def:
       \<or> (\<not> mask_range p (cte_level_bits + n) \<subseteq> {p. inRange p}
         \<and> \<not> mask_range p (cte_level_bits + n) \<subseteq> {p. \<not> inRange p}))"
 
+defs release_q_runnable_asrt_def:
+  "release_q_runnable_asrt \<equiv>
+     \<lambda>s. \<forall>p. p \<in> set (ksReleaseQueue s) \<longrightarrow> obj_at' (runnable' \<circ> tcbState) p s"
 
 (* FIXME: move *)
 lemma deleteObjects_def2:
@@ -116,6 +119,7 @@ lemma deleteObjects_def2:
    deleteObjects ptr bits = do
      stateAssert sym_refs_asrt [];
      stateAssert valid_idle'_asrt [];
+     stateAssert release_q_runnable_asrt [];
      stateAssert (deletionIsSafe ptr bits) [];
      doMachineOp (freeMemory ptr bits);
      stateAssert (\<lambda>s. \<not> cNodePartialOverlap (gsCNodes s) (\<lambda>x. x \<in> mask_range ptr bits)) [];
@@ -149,6 +153,7 @@ lemma deleteObjects_def3:
    do
      stateAssert sym_refs_asrt [];
      stateAssert valid_idle'_asrt [];
+     stateAssert release_q_runnable_asrt [];
      assert (is_aligned ptr bits);
      stateAssert (deletionIsSafe ptr bits) [];
      doMachineOp (freeMemory ptr bits);
@@ -843,19 +848,16 @@ lemma deleteObjects_corres:
            \<and> s' \<turnstile>' (UntypedCap d base magnitude idx))
       (delete_objects base magnitude) (deleteObjects base magnitude)"
     (is "_ \<Longrightarrow> _ \<Longrightarrow> corres _ _ ?conc_guard _ _")
-  apply (rule corres_cross_over_guard
-                 [where Q="?conc_guard
-                           and (\<lambda>s'. \<forall>p. p \<in> set (ksReleaseQueue s')
-                                         \<longrightarrow> obj_at' (runnable' \<circ> tcbState) p s')"])
-   apply (simp add: pred_conj_def)
-   apply (erule ksReleaseQueue_runnable_thread_state; fastforce?)
   apply add_sym_refs
   apply add_valid_idle'
+  apply add_release_q_runnable
   apply (simp add: deleteObjects_def2)
   apply (rule corres_stateAssert_add_assertion[rotated])
    apply (clarsimp simp: sym_refs_asrt_def)
   apply (rule corres_stateAssert_add_assertion[rotated])
    apply (clarsimp simp: valid_idle'_asrt_def)
+  apply (rule corres_stateAssert_add_assertion[rotated])
+   apply (clarsimp simp: release_q_runnable_asrt_def)
   apply (rule corres_stateAssert_add_assertion)
    prefer 2
    apply clarsimp

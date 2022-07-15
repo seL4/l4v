@@ -5005,6 +5005,18 @@ lemma is_active_sc'2_cross:
                         active_sc_def opt_map_red StateRelation.is_active_sc'_def)
   done
 
+lemma release_q_runnable_cross:
+  "\<lbrakk>(s,s') \<in> state_relation; valid_release_q s; pspace_aligned s; pspace_distinct s\<rbrakk> \<Longrightarrow>
+   \<forall>p. p \<in> set (ksReleaseQueue s') \<longrightarrow> obj_at' (runnable' \<circ> tcbState) p s'"
+  apply (frule state_relation_release_queue_relation)
+  apply (clarsimp simp: valid_release_q_def obj_at'_def release_queue_relation_def)
+  apply (drule_tac x=p in bspec, blast)
+  apply (clarsimp simp: vs_all_heap_simps)
+  apply (frule_tac t=p in st_tcb_at_coerce_concrete[rotated, where P=runnable], simp, simp)
+   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+  apply (clarsimp simp: pred_tcb_at'_def obj_at'_def sts_rel_runnable)
+  done
+
 \<comment> \<open>Some methods to add invariants to the concrete guard of a corres proof. Often used for properties
     that are asserted to hold in the Haskell definition.\<close>
 
@@ -5036,6 +5048,13 @@ method add_ready_qs_runnable =
   (clarsimp simp: pred_conj_def)?,
   (frule valid_sched_valid_ready_qs)?, (frule invs_psp_aligned)?, (frule invs_distinct)?,
   fastforce dest: ready_qs_runnable_cross
+
+method add_release_q_runnable =
+  rule_tac Q="\<lambda>s'. \<forall>p. p \<in> set (ksReleaseQueue s') \<longrightarrow> obj_at' (runnable' \<circ> tcbState) p s'"
+        in corres_cross_add_guard,
+  (simp only: pred_conj_def)?,
+  (frule valid_sched_valid_release_q)?, (frule invs_psp_aligned)?, (frule invs_distinct)?,
+  fastforce dest: release_q_runnable_cross
 
 method add_valid_replies for rptr uses simp =
   rule_tac Q="\<lambda>s. valid_replies'_sc_asrt rptr s" in corres_cross_add_guard,
