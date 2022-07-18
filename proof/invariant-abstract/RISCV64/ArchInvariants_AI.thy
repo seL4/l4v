@@ -307,18 +307,18 @@ definition wellformed_vspace_obj :: "arch_kernel_obj \<Rightarrow> bool" where
 
 lemmas wellformed_aobj_simps[simp] = wellformed_aobj_def[split_simps arch_kernel_obj.split]
 
-definition has_kernel_mappings :: "bool \<Rightarrow> pt \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
-  "has_kernel_mappings ta_f pt \<equiv> \<lambda>s.
+definition has_kernel_mappings :: "pt \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
+  "has_kernel_mappings pt \<equiv> \<lambda>s.
      \<forall>pt'. pts_of False s (global_pt s) = Some pt' \<longrightarrow>
            (\<forall>i \<in> kernel_mapping_slots. pt i = pt' i)"
 
 (* To find the top-level page tables, we need to start with ASIDs *)
-definition equal_kernel_mappings :: "bool \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
-  "equal_kernel_mappings ta_f \<equiv> \<lambda>s.
+definition equal_kernel_mappings :: "'z::state_ext state \<Rightarrow> bool" where
+  "equal_kernel_mappings \<equiv> \<lambda>s.
      \<forall>asid pt_ptr pt.
-       vspace_for_asid ta_f asid s = Some pt_ptr
+       vspace_for_asid False asid s = Some pt_ptr
       \<longrightarrow> pts_of False s pt_ptr = Some pt
-      \<longrightarrow> has_kernel_mappings ta_f pt s"
+      \<longrightarrow> has_kernel_mappings pt s"
 
 definition pte_ref :: "pte \<Rightarrow> obj_ref option" where
   "pte_ref pte \<equiv> case pte of
@@ -2283,7 +2283,7 @@ lemma is_aligned_pt_slot_offset_pte:
    which means that the top-level root_pt actually exists *)
 lemma equal_mappings_pt_slot_offset:
   "\<lbrakk> vspace_for_asid False asid s = Some root_pt; vref \<in> kernel_mappings;
-     equal_kernel_mappings False s; valid_global_vspace_mappings s;
+     equal_kernel_mappings s; valid_global_vspace_mappings s;
      valid_vspace_objs s; valid_asid_table s; valid_uses s;
      pspace_aligned s \<rbrakk>
    \<Longrightarrow> ptes_of False s (pt_slot_offset max_pt_level root_pt vref) =
@@ -2304,7 +2304,7 @@ lemma equal_mappings_pt_slot_offset:
 
 lemma equal_mappings_translate_address:
   "\<lbrakk> vspace_for_asid False asid s = Some root_pt; vref \<in> kernel_mappings;
-     equal_kernel_mappings False s; valid_global_vspace_mappings s;
+     equal_kernel_mappings s; valid_global_vspace_mappings s;
      valid_vspace_objs s; valid_asid_table s; valid_uses s;
      pspace_aligned s \<rbrakk>
   \<Longrightarrow> translate_address root_pt vref (ptes_of False s)
@@ -2360,23 +2360,19 @@ lemma vspace_for_asid_lift:
   apply (simp add: obind_def pool_for_asid_def o_def split del: if_split)
   apply (rule hoare_lift_Pf[where f=asid_table])
    apply (rule hoare_lift_Pf[where f="asid_pools_of ta_f"])
-    apply (wpsimp wp: assms)+
-  sorry (* Broken by timeprot-use-f-kheap. -robs
+    apply (wpsimp wp: assms assms[simplified obind_def])+
   done
-*)
 
 lemma valid_arch_state_lift_arch:
   assumes atyp[wp]: "\<And>T p. f \<lbrace> typ_at (AArch T) p\<rbrace>"
-  assumes aobjs[wp]: "\<And>P. f \<lbrace>\<lambda>s. P (pts_of False s) \<rbrace>"
+  assumes aobjs[simplified, wp]: "\<And>P. f \<lbrace>\<lambda>s. P (pts_of False s) \<rbrace>"
   assumes [wp]: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
   shows "f \<lbrace>valid_arch_state\<rbrace>"
   apply (simp add: pred_conj_def valid_arch_state_def valid_asid_table_def valid_global_arch_objs_def)
   apply (rule hoare_lift_Pf[where f="arch_state"]; wp dom_asid_pools_of_lift[simplified])
     apply fastforce
    apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_ball_lift)+
-  sorry (* Broken by timeprot-use-f-kheap. -robs
   done
-*)
 
 (* the pt_of projection is not available in generic spec, so we limit what we export
    to a dependency on arch objects *)
@@ -2729,19 +2725,28 @@ lemma vspace_for_asid_update[iff]:
   by (simp add: vspace_for_asid_def obind_def oassert_def oreturn_def pspace ta
     opt_map_def vspace_for_pool_def split:option.splits)
 
+(* TODO: Move up if useful -- delete if not? -robs *)
+lemma pspace_ta:
+  "f_kheap ta_f (f s) = f_kheap ta_f s"
+  using pspace ta unfolding ta_filter_def
+  by force
+
 lemma vs_lookup_update [iff]:
   "vs_lookup_table ta_f bot_level asid vptr (f s) = vs_lookup_table ta_f bot_level asid vptr s"
   apply (clarsimp simp: vs_lookup_table_def pspace ta arch obind_def
-    opt_map_def vspace_for_pool_def ta_filter_def split: option.splits)
-. (* DOWN TO HERE
+    opt_map_def vspace_for_pool_def ta_filter_def split: option.splits if_splits
+    | rule conjI)+
+   using ta apply presburger
+  by force
 
 lemma vs_lookup_slot_update[iff]:
-  "vs_lookup_slot bot_level asid vref (f s) = vs_lookup_slot bot_level asid vref s"
+  "vs_lookup_slot ta_f bot_level asid vref (f s) = vs_lookup_slot ta_f bot_level asid vref s"
   by (auto simp: vs_lookup_slot_def obind_def split: option.splits)
 
 lemma vs_lookup_target_update[iff]:
   "vs_lookup_target bot_level asid vref (f s) = vs_lookup_target bot_level asid vref s"
-  by (simp add: vs_lookup_target_def obind_def pspace split: option.splits)
+  by (simp add: vs_lookup_target_def obind_def pspace ta
+    opt_map_def vspace_for_pool_def pte_of_def split: option.splits)
 
 lemma valid_vs_lookup_update [iff]:
   "valid_vs_lookup (f s) = valid_vs_lookup s"
@@ -2749,7 +2754,7 @@ lemma valid_vs_lookup_update [iff]:
 
 lemma valid_table_caps_update [iff]:
   "valid_table_caps (f s) = valid_table_caps s"
-  by (simp add: valid_table_caps_def arch pspace)
+  by (simp add: valid_table_caps_def arch pspace ta)
 
 lemma valid_ioports_update[iff]:
   "valid_ioports (f s) = valid_ioports s"
@@ -2757,7 +2762,7 @@ lemma valid_ioports_update[iff]:
 
 lemma valid_asid_table_update [iff]:
   "valid_asid_table (f s) = valid_asid_table s"
-  by (simp add: valid_asid_table_def arch pspace)
+  by (simp add: valid_asid_table_def arch pspace ta)
 
 lemma has_kernel_mappings_update [iff]:
   "has_kernel_mappings pt (f s) = has_kernel_mappings pt s"

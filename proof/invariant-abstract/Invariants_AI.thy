@@ -272,12 +272,10 @@ definition
            \<lambda>s. \<forall>x ko. kheap s x = Some ko \<longrightarrow>
                 {x .. x + (2 ^ obj_bits ko - 1)} \<inter> S = {}" (* FIXME obj_range *)
 
-(* FIXME: I changed this to be in terms of f_kheap, but I'm not convinced of
-   whether we want to do this, or would consider this unnecessary. -robs *)
 definition
   "valid_untyped c \<equiv> \<lambda>s.
   \<forall>p obj.
-     f_kheap s p = Some obj \<longrightarrow>
+     kheap s p = Some obj \<longrightarrow>
      obj_range p obj \<inter> untyped_range c \<noteq> {} \<longrightarrow>
      ( obj_range p obj \<subseteq> untyped_range c \<and> usable_untyped_range c \<inter> obj_range p obj = {} )"
 
@@ -664,7 +662,7 @@ where
 definition
   state_refs_of :: "'z::state_ext state \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<times> reftype) set"
 where
- "state_refs_of s \<equiv> \<lambda>x. case (f_kheap s x) of Some ko \<Rightarrow> refs_of ko | None \<Rightarrow> {}"
+ "state_refs_of s \<equiv> \<lambda>x. case (kheap s x) of Some ko \<Rightarrow> refs_of ko | None \<Rightarrow> {}"
 
 definition all_refs_of :: "kernel_object \<Rightarrow> (obj_ref \<times> reftype) set"
 where "all_refs_of x \<equiv> refs_of x \<union> hyp_refs_of x"
@@ -1131,15 +1129,28 @@ lemma is_cap_table:
 
 lemmas is_obj_defs = is_ep is_ntfn is_tcb is_cap_table
 
+(* TODO: Check this isn't already defined. (Surely it already is?)
+   If not, move this up to where obj_at is defined? -robs *)
+definition
+  obj_in_ta :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "obj_in_ta ref s \<equiv> \<exists>ko. kheap s ref = Some ko \<and>
+     (\<forall>x \<in> obj_range ref ko. x \<in> touched_addresses (machine_state s))"
+
 \<comment> \<open>sanity check\<close>
 lemma obj_at_get_object:
-  "obj_at P ref s \<Longrightarrow> fst (get_object ref s) \<noteq> {}"
-  by (auto simp: obj_at_def get_object_def gets_def get_def
-                 return_def assert_def bind_def)
+  "obj_at P ref s \<Longrightarrow> obj_in_ta ref s \<Longrightarrow>  fst (get_object ref s) \<noteq> {}"
+  apply (clarsimp simp: obj_at_def get_object_def gets_def get_def
+                 return_def assert_def bind_def
+                 obind_def ta_filter_def split:if_splits prod.splits)
+  unfolding obj_in_ta_def
+  by force
 
 lemma ko_at_tcb_at:
   "ko_at (TCB t) p s \<Longrightarrow> tcb_at p s"
   by (simp add: obj_at_def is_tcb)
+
+. (* DOWN TO HERE. -robs
 
 lemma tcb_at_def:
   "tcb_at t s = (\<exists>tcb. get_tcb t s = Some tcb)"
@@ -1470,7 +1481,7 @@ lemma hyp_refs_of_live_obj:
 
 lemma if_live_then_nonz_capD:
   assumes x: "if_live_then_nonz_cap s" "obj_at P p s"
-  assumes y: "\<And>obj. \<lbrakk> P obj; f_kheap s p = Some obj \<rbrakk> \<Longrightarrow> live obj"
+  assumes y: "\<And>obj. \<lbrakk> P obj; kheap s p = Some obj \<rbrakk> \<Longrightarrow> live obj"
   shows "ex_nonz_cap_to p s" using x
   apply (clarsimp simp: if_live_then_nonz_cap_def)
   apply (erule allE[where x=p])
@@ -1478,7 +1489,7 @@ lemma if_live_then_nonz_capD:
   done
 
 lemma if_live_then_nonz_capD2:
-  "\<lbrakk> if_live_then_nonz_cap s; f_kheap s p = Some obj;
+  "\<lbrakk> if_live_then_nonz_cap s; kheap s p = Some obj;
      live obj \<rbrakk> \<Longrightarrow> ex_nonz_cap_to p s"
   apply (subgoal_tac "ko_at obj p s")
    apply (erule(1) if_live_then_nonz_capD)
@@ -1649,14 +1660,14 @@ lemma untyped_children_in_mdbE:
   done
 
 lemma cte_wp_at_cases:
-  "cte_wp_at P t s = ((\<exists>sz fun cap. f_kheap s (fst t) = Some (CNode sz fun) \<and>
+  "cte_wp_at P t s = ((\<exists>sz fun cap. kheap s (fst t) = Some (CNode sz fun) \<and>
                                     well_formed_cnode_n sz fun \<and>
                                     fun (snd t) = Some cap \<and> P cap) \<or>
-                      (\<exists>tcb get set restr. f_kheap s (fst t) = Some (TCB tcb) \<and>
+                      (\<exists>tcb get set restr. kheap s (fst t) = Some (TCB tcb) \<and>
                              tcb_cap_cases (snd t) = Some (get, set, restr) \<and>
                              P (get tcb)))"
   apply (cases t)
-  apply (cases "f_kheap s (fst t)")
+  apply (cases "kheap s (fst t)")
    apply (simp add: cte_wp_at_def get_cap_def
                     get_object_def gets_def get_def return_def assert_def
                     fail_def bind_def)
@@ -1670,19 +1681,19 @@ lemma cte_wp_at_cases:
 
 lemma cte_wp_at_cases2:
   "cte_wp_at P t s =
-   ((\<exists>sz fun cap. f_kheap s (fst t) = Some (CNode sz fun) \<and>
+   ((\<exists>sz fun cap. kheap s (fst t) = Some (CNode sz fun) \<and>
                   well_formed_cnode_n sz fun \<and> fun (snd t) = Some cap \<and> P cap) \<or>
-    (\<exists>tcb cap. f_kheap s (fst t) = Some (TCB tcb) \<and>
+    (\<exists>tcb cap. kheap s (fst t) = Some (TCB tcb) \<and>
                (tcb_cnode_map tcb (snd t) = Some cap \<and> P cap)))"
   by (auto simp add: cte_wp_at_cases tcb_cap_cases_def tcb_cnode_map_def)
 
 lemma cte_wp_at_pspaceI:
-  "\<lbrakk> cte_wp_at P slot s; f_kheap s = f_kheap s' \<rbrakk> \<Longrightarrow> cte_wp_at P slot s'"
+  "\<lbrakk> cte_wp_at P slot s; kheap s = kheap s' \<rbrakk> \<Longrightarrow> cte_wp_at P slot s'"
   by (simp add: cte_wp_at_cases)
 
 context Arch begin
 lemma valid_arch_cap_pspaceI:
-  "\<lbrakk> valid_arch_cap acap s; f_kheap s = f_kheap s' \<rbrakk> \<Longrightarrow> valid_arch_cap acap s'"
+  "\<lbrakk> valid_arch_cap acap s; kheap s = kheap s' \<rbrakk> \<Longrightarrow> valid_arch_cap acap s'"
   unfolding valid_arch_cap_def
   by (auto intro: obj_at_pspaceI split: arch_cap.split)
 end
@@ -1693,7 +1704,7 @@ requalify_facts
 end
 
 lemma valid_cap_pspaceI:
-  "\<lbrakk> s \<turnstile> cap; f_kheap s = f_kheap s' \<rbrakk> \<Longrightarrow> s' \<turnstile> cap"
+  "\<lbrakk> s \<turnstile> cap; kheap s = kheap s' \<rbrakk> \<Longrightarrow> s' \<turnstile> cap"
   unfolding valid_cap_def
   apply (cases cap)
   by (auto intro: obj_at_pspaceI cte_wp_at_pspaceI valid_arch_cap_pspaceI
@@ -1702,7 +1713,7 @@ lemma valid_cap_pspaceI:
 
 (* FIXME-NTFN: ugly proof *)
 lemma valid_obj_pspaceI:
-  "\<lbrakk> valid_obj ptr obj s; kheap s = kheap s'; f_kheap s = f_kheap s' \<rbrakk> \<Longrightarrow> valid_obj ptr obj s'"
+  "\<lbrakk> valid_obj ptr obj s; kheap s = kheap s' \<rbrakk> \<Longrightarrow> valid_obj ptr obj s'"
   unfolding valid_obj_def
   apply (cases obj)
       apply (auto simp add: valid_ntfn_def valid_cs_def valid_tcb_def valid_ep_def
@@ -1715,12 +1726,12 @@ lemma valid_obj_pspaceI:
 done
 
 lemma valid_objs_pspaceI:
-  "\<lbrakk> valid_objs s; kheap s = kheap s'; f_kheap s = f_kheap s' \<rbrakk> \<Longrightarrow> valid_objs s'"
-  unfolding valid_objs_def 
+  "\<lbrakk> valid_objs s; kheap s = kheap s' \<rbrakk> \<Longrightarrow> valid_objs s'"
+  unfolding valid_objs_def
   by (auto intro: valid_obj_pspaceI dest!: bspec [OF _ domI])
 
 lemma state_refs_of_pspaceI:
-  "\<lbrakk> P (state_refs_of s); f_kheap s = f_kheap s' \<rbrakk> \<Longrightarrow> P (state_refs_of s')"
+  "\<lbrakk> P (state_refs_of s); kheap s = kheap s' \<rbrakk> \<Longrightarrow> P (state_refs_of s')"
   unfolding state_refs_of_def
   by simp
 
@@ -1729,34 +1740,32 @@ lemma distinct_pspaceI:
   by (simp add: pspace_distinct_def)
 
 lemma iflive_pspaceI:
-  "if_live_then_nonz_cap s \<Longrightarrow> f_kheap s = f_kheap s' \<Longrightarrow> if_live_then_nonz_cap s'"
+  "if_live_then_nonz_cap s \<Longrightarrow> kheap s = kheap s' \<Longrightarrow> if_live_then_nonz_cap s'"
   unfolding if_live_then_nonz_cap_def ex_nonz_cap_to_def
   by (fastforce simp: obj_at_def intro: cte_wp_at_pspaceI)
 
 lemma cte_wp_at_pspace:
-  "f_kheap s = f_kheap s' \<Longrightarrow> cte_wp_at P p s = cte_wp_at P p s'"
+  "kheap s = kheap s' \<Longrightarrow> cte_wp_at P p s = cte_wp_at P p s'"
   by (fastforce elim!: cte_wp_at_pspaceI)
 
 lemma caps_of_state_pspace:
-  assumes x: "f_kheap s = f_kheap s'"
+  assumes x: "kheap s = kheap s'"
   shows      "caps_of_state s = caps_of_state s'"
   by (simp add: caps_of_state_cte_wp_at cte_wp_at_pspace [OF x] cong: if_cong)
 
 lemma ifunsafe_pspaceI:
-  "if_unsafe_then_cap s \<Longrightarrow> f_kheap s = f_kheap s' \<Longrightarrow> interrupt_irq_node s = interrupt_irq_node s'
+  "if_unsafe_then_cap s \<Longrightarrow> kheap s = kheap s' \<Longrightarrow> interrupt_irq_node s = interrupt_irq_node s'
        \<Longrightarrow> if_unsafe_then_cap s'"
   unfolding if_unsafe_then_cap_def ex_cte_cap_wp_to_def
   apply (frule caps_of_state_pspace)
   by (auto simp: cte_wp_at_cases)
 
 lemma valid_idle_pspaceI:
-  "valid_idle s \<Longrightarrow> \<lbrakk>f_kheap s = f_kheap s'; idle_thread s = idle_thread s'\<rbrakk> \<Longrightarrow> valid_idle s'"
+  "valid_idle s \<Longrightarrow> \<lbrakk>kheap s = kheap s'; idle_thread s = idle_thread s'\<rbrakk> \<Longrightarrow> valid_idle s'"
   unfolding valid_idle_def pred_tcb_at_def
   by (fastforce elim!: obj_at_pspaceI cte_wp_at_pspaceI)
 
-. (* DOWN TO HERE. Should consult on whether it's appropriate to be putting *both* the
-     kheap and f_kheap equalities in the assumptions for some of the preceding lemmas,
-     or if we ought to convert all object validity definitions to be in terms of f_kheap. -robs
+. (* DOWN TO HERE. -robs
 
 lemma gen_obj_refs_Int:
   "(gen_obj_refs cap \<inter> gen_obj_refs cap' = {})
