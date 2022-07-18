@@ -114,7 +114,7 @@ lemma rf_asidTable:
   apply (clarsimp simp: mask_def split: option.split)
   apply (drule sym, simp)
   apply (simp add: option_to_ptr_def option_to_0_def)
-  apply (clarsimp simp: invs'_def valid_state'_def valid_arch_state'_def
+  apply (clarsimp simp: invs'_def valid_arch_state'_def
                         valid_asid_table'_def ran_def)
   done
 
@@ -877,7 +877,7 @@ lemma isValidVTableRoot_def2:
 
 lemma setVMRoot_ccorres:
   "ccorres dc xfdc
-      (all_invs_but_ct_idle_or_in_cur_domain' and tcb_at' thread)
+      (invs' and tcb_at' thread)
       (UNIV \<inter> {s. tcb_' s = tcb_ptr_to_ctcb_ptr thread}) hs
       (setVMRoot thread) (Call setVMRoot_'proc)"
   supply Collect_const[simp del]
@@ -956,8 +956,8 @@ lemma setVMRoot_ccorres:
    apply (clarsimp simp: cte_level_bits_def tcbVTableSlot_def)
    apply (rule_tac x="cteCap cte" in exI)
    apply (rule conjI, erule cte_wp_at_weakenE', simp)
-   apply (clarsimp simp: invs_cicd_no_0_obj' invs_cicd_arch_state' isCap_simps)
-   apply (frule cte_wp_at_valid_objs_valid_cap'; clarsimp simp: invs_cicd_valid_objs')
+   apply (clarsimp simp: invs_no_0_obj' invs_arch_state' isCap_simps)
+   apply (frule cte_wp_at_valid_objs_valid_cap'; clarsimp simp: invs_valid_objs')
    apply (clarsimp simp: valid_cap'_def wellformed_mapdata'_def isValidVTableRoot_def2)
   apply (clarsimp simp: tcb_cnode_index_defs cte_level_bits_def tcbVTableSlot_def)
   apply (clarsimp simp: isCap_simps isValidVTableRoot_def2)
@@ -1050,7 +1050,7 @@ lemma setMR_as_setRegister_ccorres:
     (Call setMR_'proc)"
   apply (rule ccorres_grab_asm)
   apply (cinit' lift:  reg___unsigned_long_' offset_' receiver_')
-   apply (clarsimp simp: n_msgRegisters_def length_of_msgRegisters)
+   apply (clarsimp simp: n_msgRegisters_def length_msgRegisters)
    apply (rule ccorres_cond_false)
    apply (rule ccorres_move_const_guards)
    apply (rule ccorres_add_return2)
@@ -1060,9 +1060,9 @@ lemma setMR_as_setRegister_ccorres:
      apply (clarsimp simp: dc_def return_def)
     apply (rule hoare_post_taut[of \<top>])
    apply (vcg exspec=setRegister_modifies)
-  apply (clarsimp simp: n_msgRegisters_def length_of_msgRegisters not_le conj_commute)
+  apply (clarsimp simp: n_msgRegisters_def length_msgRegisters not_le conj_commute)
   apply (subst msgRegisters_ccorres[symmetric])
-   apply (clarsimp simp: n_msgRegisters_def length_of_msgRegisters unat_of_nat_eq)
+   apply (clarsimp simp: n_msgRegisters_def length_msgRegisters unat_of_nat_eq)
   apply (clarsimp simp: word_less_nat_alt word_le_nat_alt unat_of_nat_eq not_le[symmetric])
   done
 
@@ -1598,18 +1598,8 @@ lemma setObjectASID_Basic_ccorres:
                    carch_state_relation_def
                    cmachine_state_relation_def
                    Let_def typ_heap_simps
-                   update_asidpool_map_tos)
+                   update_asidpool_map_tos refill_buffer_relation_def)
   done
-
-lemma getObject_ap_inv [wp]: "\<lbrace>P\<rbrace> (getObject addr :: asidpool kernel) \<lbrace>\<lambda>rv. P\<rbrace>"
-  apply (rule getObject_inv)
-  apply simp
-  apply (rule loadObject_default_inv)
-  done
-
-lemma getObject_ko_at_ap [wp]:
-  "\<lbrace>\<top>\<rbrace> getObject p \<lbrace>\<lambda>rv::asidpool. ko_at' rv p\<rbrace>"
-  by (rule getObject_ko_at | simp add: objBits_simps bit_simps)+
 
 lemma canonical_address_page_table_at':
   "\<lbrakk>page_table_at' p s; pspace_canonical' s\<rbrakk> \<Longrightarrow> canonical_address p"
@@ -1702,13 +1692,15 @@ proof -
           apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
           apply (clarsimp simp: typ_heap_simps update_pte_map_tos)
           apply (rule conjI)
-           apply (clarsimp simp: cpspace_relation_def typ_heap_simps
-                                 update_pte_map_tos update_pte_map_to_ptes
-                                 carray_map_relation_upd_triv)
-           subgoal by (erule (2) cmap_relation_updI; simp)
-          subgoal by (clarsimp simp: carch_state_relation_def cmachine_state_relation_def)
-         apply simp
-        apply (simp add: objBits_simps)
+            apply (clarsimp simp: cpspace_relation_def typ_heap_simps
+                                  update_pte_map_tos update_pte_map_to_ptes
+                                  carray_map_relation_upd_triv)
+            subgoal by (erule (2) cmap_relation_updI; simp)
+           subgoal sorry (* FIXME RT: refill_buffer_relation *)
+           (* by (clarsimp simp: carch_state_relation_def cmachine_state_relation_def) *)
+          apply simp
+         apply (simp add: objBits_simps)
+        apply (simp add: objBits_simps')
        apply clarsimp
       apply (rule conseqPre, vcg, clarsimp)
      apply wp

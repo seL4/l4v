@@ -249,7 +249,7 @@ lemma heap_to_device_data_seperate:
     apply (rule word_less_power_trans2[where k = 3,simplified])
       apply (simp add: pageBits_def)
       apply (rule less_le_trans[OF ucast_less],simp+)
-    apply (clarsimp simp: typ_at'_def ko_wp_at'_def pageBits_def objBits_simps
+    apply (clarsimp simp: typ_at'_def ko_wp_at'_def pageBits_def objBits_simps word_bits_def
                    dest!: pspace_distinctD')
     apply (rule word_and_less')
     apply (simp add:mask_def)
@@ -283,7 +283,7 @@ lemma heap_to_user_data_seperate:
     apply (rule word_less_power_trans2[where k = 3,simplified])
       apply (simp add: pageBits_def)
       apply (rule less_le_trans[OF ucast_less],simp+)
-    apply (clarsimp simp: typ_at'_def ko_wp_at'_def pageBits_def objBits_simps
+    apply (clarsimp simp: typ_at'_def ko_wp_at'_def pageBits_def objBits_simps word_bits_def
                    dest!: pspace_distinctD')
     apply (rule word_and_less')
     apply (simp add:mask_def)
@@ -292,7 +292,7 @@ lemma heap_to_user_data_seperate:
 
 lemma storeWordUser_rf_sr_upd':
   shows "\<forall>\<sigma> s.
-   (\<sigma>, s) \<in> rf_sr \<and> pspace_aligned' \<sigma> \<and> pspace_distinct' \<sigma>
+   (\<sigma>, s) \<in> rf_sr \<and> pspace_aligned' \<sigma> \<and> pspace_distinct' \<sigma> \<and> pspace_bounded' \<sigma>
                    \<and> pointerInUserData ptr \<sigma> \<and> is_aligned ptr 3 \<longrightarrow>
    (\<sigma>\<lparr>ksMachineState := underlying_memory_update (\<lambda>m.
            m(ptr := word_rsplit (w::machine_word) ! 7, ptr + 1 := word_rsplit w ! 6,
@@ -314,7 +314,7 @@ proof (intro allI impI)
 
   assume "?P \<sigma> s"
   hence rf: "(\<sigma>, s) \<in> rf_sr" and al: "is_aligned ptr 3"
-    and pal: "pspace_aligned' \<sigma>" and pdst: "pspace_distinct' \<sigma>"
+    and pal: "pspace_aligned' \<sigma>" and pdst: "pspace_distinct' \<sigma>" and pbound: "pspace_bounded' \<sigma>"
     and piud: "pointerInUserData ptr \<sigma>"
     by simp_all
 
@@ -501,11 +501,12 @@ proof (intro allI impI)
      apply simp
     apply clarsimp
     apply (drule map_to_ko_atI)
-      apply (rule pal)
-     apply (rule pdst)
+       apply (rule pal)
+      apply (rule pdst)
+     apply (rule pbound)
     apply (subgoal_tac "is_aligned x pageBits")
      prefer 2
-     apply (clarsimp simp: obj_at'_def objBits_simps simp: projectKOs)
+     apply (clarsimp simp: obj_at'_def objBits_simps)
     apply (subgoal_tac "is_aligned x 3")
      prefer 2
      apply (erule is_aligned_weaken)
@@ -605,7 +606,7 @@ proof (intro allI impI)
   thus ?thesis using rf
     apply (simp add: rf_sr_def cstate_relation_def Let_def rl' tag_disj_via_td_name)
     apply (simp add: carch_state_relation_def
-                     cmachine_state_relation_def carch_globals_def)
+                     cmachine_state_relation_def carch_globals_def refill_buffer_relation_def)
     apply (simp add: rl' tag_disj_via_td_name zr)
     done
 qed
@@ -613,7 +614,7 @@ qed
 
 lemma storeWordDevice_rf_sr_upd':
   shows "\<forall>\<sigma> s.
-   (\<sigma>, s) \<in> rf_sr \<and> pspace_aligned' \<sigma> \<and> pspace_distinct' \<sigma>
+   (\<sigma>, s) \<in> rf_sr \<and> pspace_aligned' \<sigma> \<and> pspace_distinct' \<sigma> \<and> pspace_bounded' \<sigma>
                    \<and> pointerInDeviceData ptr \<sigma> \<and> is_aligned ptr 3 \<longrightarrow>
    (\<sigma>\<lparr>ksMachineState := underlying_memory_update (\<lambda>m.
            m(ptr := word_rsplit (w::machine_word) ! 7, ptr + 1 := word_rsplit w ! 6,
@@ -635,7 +636,7 @@ proof (intro allI impI)
 
   assume "?P \<sigma> s"
   hence rf: "(\<sigma>, s) \<in> rf_sr" and al: "is_aligned ptr 3"
-    and pal: "pspace_aligned' \<sigma>" and pdst: "pspace_distinct' \<sigma>"
+    and pal: "pspace_aligned' \<sigma>" and pdst: "pspace_distinct' \<sigma>" and pbound: "pspace_bounded' \<sigma>"
     and piud: "pointerInDeviceData ptr \<sigma>"
     by simp_all
 
@@ -822,11 +823,12 @@ proof (intro allI impI)
      apply simp
     apply clarsimp
     apply (drule map_to_ko_atI)
-      apply (rule pal)
-     apply (rule pdst)
+       apply (rule pal)
+      apply (rule pdst)
+     apply (rule pbound)
     apply (subgoal_tac "is_aligned x pageBits")
      prefer 2
-     apply (clarsimp simp: obj_at'_def objBits_simps simp: projectKOs)
+     apply (clarsimp simp: obj_at'_def objBits_simps)
     apply (subgoal_tac "is_aligned x 3")
      prefer 2
      apply (erule is_aligned_weaken)
@@ -926,13 +928,13 @@ proof (intro allI impI)
   thus ?thesis using rf
     apply (simp add: rf_sr_def cstate_relation_def Let_def rl' tag_disj_via_td_name)
     apply (simp add: carch_state_relation_def
-                     cmachine_state_relation_def carch_globals_def)
+                     cmachine_state_relation_def carch_globals_def refill_buffer_relation_def)
     apply (simp add: rl' tag_disj_via_td_name zr)
     done
 qed
 
 lemma storeWord_rf_sr_upd:
-  "\<lbrakk> (\<sigma>, s) \<in> rf_sr; pspace_aligned' \<sigma>;  pspace_distinct' \<sigma>;
+  "\<lbrakk> (\<sigma>, s) \<in> rf_sr; pspace_aligned' \<sigma>; pspace_distinct' \<sigma>; pspace_bounded' \<sigma>;
      pointerInUserData ptr \<sigma> \<or> pointerInDeviceData ptr \<sigma>; is_aligned ptr 3\<rbrakk> \<Longrightarrow>
    (\<sigma>\<lparr>ksMachineState := underlying_memory_update (\<lambda>m.
            m(ptr := word_rsplit (w::machine_word) ! 7, ptr + 1 := word_rsplit w ! 6,
@@ -958,7 +960,7 @@ lemma storeWord_rf_sr_upd:
 (* The following should be also true for pointerInDeviceData,
    but the reason why it is true is different *)
 lemma storeByteUser_rf_sr_upd:
-  assumes asms: "(\<sigma>, s) \<in> rf_sr" "pspace_aligned' \<sigma>" "pspace_distinct' \<sigma>"
+  assumes asms: "(\<sigma>, s) \<in> rf_sr" "pspace_aligned' \<sigma>" "pspace_distinct' \<sigma>" "pspace_bounded' \<sigma>"
                 "pointerInUserData ptr \<sigma>"
   shows "(ksMachineState_update (underlying_memory_update (\<lambda>m. m(ptr := b))) \<sigma>,
           globals_update (t_hrs_'_update (hrs_mem_update (\<lambda>m. m(ptr := b)))) s)
@@ -1078,7 +1080,7 @@ qed
 
 lemma storeWord_ccorres':
   "ccorres dc xfdc
-     (pspace_aligned' and pspace_distinct' and
+     (pspace_aligned' and pspace_distinct' and pspace_bounded' and
                K (is_aligned ptr 3) and (\<lambda>s. pointerInUserData ptr s \<or> pointerInDeviceData ptr s))
      (UNIV \<inter> {s. ptr' s = Ptr ptr} \<inter> {s. c_guard (ptr' s)} \<inter> {s. val' s = val}) hs
      (doMachineOp $ storeWord ptr val)
