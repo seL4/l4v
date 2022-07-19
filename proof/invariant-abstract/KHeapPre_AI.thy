@@ -34,9 +34,13 @@ lemma dmo_return [simp]:
                 bind_def modify_def put_def)
 
 lemma get_object_sp:
-  "\<lbrace>P\<rbrace> get_object p \<lbrace>\<lambda>r. P and ko_at r p\<rbrace>"
+  "\<lbrace>P\<rbrace> get_object ta_f p \<lbrace>\<lambda>r. P and ko_at r p and (if ta_f then obj_in_ta p else \<top>)\<rbrace>"
   apply (simp add: get_object_def)
-  apply wp
+  apply(rule conjI)
+   apply wpsimp
+   apply (force simp: obj_at_def ta_filter_def obj_in_ta_def obind_def
+     split:if_splits option.splits)
+  apply wpsimp
   apply (auto simp add: obj_at_def)
   done
 
@@ -107,6 +111,7 @@ locale arch_only_obj_pred =
   fixes P :: "kernel_object \<Rightarrow> bool"
   assumes arch_only: "arch_obj_pred P"
 
+(* FIXME: set_object might need to take `ta_f` bool arg now too. -robs *)
 lemma set_object_typ_at [wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p' s)\<rbrace>
   set_object p ko \<lbrace>\<lambda>rv s. P (typ_at T p' s)\<rbrace>"
@@ -115,6 +120,7 @@ lemma set_object_typ_at [wp]:
   apply clarsimp
   apply (erule rsubst [where P=P])
   apply (clarsimp simp: obj_at_def)
+. (* DOWN TO HERE
   done
 
 lemma set_object_neg_ko:
