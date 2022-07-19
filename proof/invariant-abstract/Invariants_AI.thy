@@ -1129,17 +1129,25 @@ lemma is_cap_table:
 
 lemmas is_obj_defs = is_ep is_ntfn is_tcb is_cap_table
 
-(* TODO: Check this isn't already defined. (Surely it already is?)
-   If not, move this up to where obj_at is defined? -robs *)
+(* TODO: Move these up to where obj_at is defined? -robs *)
+abbreviation
+  in_ta :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> kernel_object \<Rightarrow> bool"
+where
+  "in_ta ref s ko \<equiv> obj_range ref ko \<subseteq> touched_addresses (machine_state s)"
+
 definition
   obj_in_ta :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
-  "obj_in_ta ref s \<equiv> \<exists>ko. kheap s ref = Some ko \<and>
-     (\<forall>x \<in> obj_range ref ko. x \<in> touched_addresses (machine_state s))"
+  "obj_in_ta ref s \<equiv> \<exists>ko. kheap s ref = Some ko \<and> in_ta ref s ko"
+
+lemma obj_in_ta_def2:
+  "obj_in_ta ref s = obj_at (in_ta ref s) ref s"
+  unfolding obj_in_ta_def obj_at_def
+  by blast
 
 \<comment> \<open>sanity check\<close>
 lemma obj_at_get_object:
-  "obj_at P ref s \<Longrightarrow> obj_in_ta ref s \<Longrightarrow>  fst (get_object ref s) \<noteq> {}"
+  "obj_at P ref s \<Longrightarrow> obj_in_ta ref s \<Longrightarrow> fst (get_object ref s) \<noteq> {}"
   apply (clarsimp simp: obj_at_def get_object_def gets_def get_def
                  return_def assert_def bind_def
                  obind_def ta_filter_def split:if_splits prod.splits)
@@ -1150,15 +1158,27 @@ lemma ko_at_tcb_at:
   "ko_at (TCB t) p s \<Longrightarrow> tcb_at p s"
   by (simp add: obj_at_def is_tcb)
 
-. (* DOWN TO HERE. -robs
+(* TODO: Consider whether to add boolean ta_f argument to get_tcb. -robs *)
+lemma
+  "(tcb_at t s \<and> obj_in_ta t s) = (\<exists>tcb. get_tcb t s = Some tcb)"
+  by (force simp add: obj_at_def get_tcb_def is_tcb_def
+         obj_in_ta_def bind_def obind_def ta_filter_def
+         split: option.splits kernel_object.splits if_splits prod.splits)
+
+abbreviation get_tcb_raw where
+  "get_tcb_raw t s \<equiv> (case kheap s t of
+      None      \<Rightarrow> None
+    | Some kobj \<Rightarrow> (case kobj of
+        TCB tcb \<Rightarrow> Some tcb
+      | _       \<Rightarrow> None))"
 
 lemma tcb_at_def:
-  "tcb_at t s = (\<exists>tcb. get_tcb t s = Some tcb)"
+  "tcb_at t s = (\<exists>tcb. get_tcb_raw t s = Some tcb)"
   by (simp add: obj_at_def get_tcb_def is_tcb_def
            split: option.splits kernel_object.splits)
 
 lemma pred_tcb_def2:
-  "pred_tcb_at proj test addr s = (\<exists>tcb. (get_tcb addr s) = Some tcb \<and> test (proj (tcb_to_itcb tcb)))"
+  "pred_tcb_at proj test addr s = (\<exists>tcb. (get_tcb_raw addr s) = Some tcb \<and> test (proj (tcb_to_itcb tcb)))"
   by (simp add: obj_at_def pred_tcb_at_def get_tcb_def
             split: option.splits kernel_object.splits)
 
@@ -1659,6 +1679,8 @@ lemma untyped_children_in_mdbE:
   apply (erule z)
   done
 
+(* FIXME: Okay - looks like we've got cte_wp_at using currently f_kheap hardcoded-True get_cap and
+   get_object, so we might be best off generalising these over `ta_f` bool arg after all. -robs *)
 lemma cte_wp_at_cases:
   "cte_wp_at P t s = ((\<exists>sz fun cap. kheap s (fst t) = Some (CNode sz fun) \<and>
                                     well_formed_cnode_n sz fun \<and>
@@ -1670,13 +1692,14 @@ lemma cte_wp_at_cases:
   apply (cases "kheap s (fst t)")
    apply (simp add: cte_wp_at_def get_cap_def
                     get_object_def gets_def get_def return_def assert_def
-                    fail_def bind_def)
+                    fail_def bind_def in_obind_eq)
   apply (simp add: cte_wp_at_def get_cap_def tcb_cnode_map_def bind_def
                    get_object_def assert_opt_def return_def gets_def get_def
                    assert_def fail_def dom_def
               split: if_split_asm kernel_object.splits
                      option.splits)
   apply (simp add: tcb_cap_cases_def)
+. (* DOWN TO HERE
   done
 
 lemma cte_wp_at_cases2:
