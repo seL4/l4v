@@ -3837,7 +3837,7 @@ locale CSpace_AI
     "\<And>rs cap. obj_refs (mask_cap rs cap) = obj_refs cap"
   assumes mask_cap_zobjrefs[simp]:
     "\<And>rs cap. zobj_refs (mask_cap rs cap) = zobj_refs cap"
-  assumes derive_cap_valid_cap:
+  assumes derive_cap_valid_cap[wp]:
     "\<And>cap slot.
       \<lbrace>valid_cap cap :: 'state_ext state \<Rightarrow> bool\<rbrace> derive_cap slot cap \<lbrace>valid_cap\<rbrace>,-"
   assumes valid_cap_update_rights[simp]:
