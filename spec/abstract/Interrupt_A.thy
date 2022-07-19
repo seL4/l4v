@@ -93,7 +93,7 @@ definition
    case st of
      IRQSignal \<Rightarrow> do
        slot \<leftarrow> get_irq_slot irq;
-       cap \<leftarrow> get_cap slot;
+       cap \<leftarrow> get_cap True slot;
        when (is_ntfn_cap cap \<and> AllowSend \<in> cap_rights cap)
          $ send_signal (obj_ref_of cap) (cap_ep_badge cap);
        arch_mask_irq_signal irq

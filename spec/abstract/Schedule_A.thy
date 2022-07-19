@@ -33,7 +33,7 @@ definition
   getActiveTCB :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> tcb option"
 where
   "getActiveTCB tcb_ref state \<equiv>
-   case (get_tcb tcb_ref state)
+   case (get_tcb True tcb_ref state)
      of None           \<Rightarrow> None
       | Some tcb       \<Rightarrow> if (runnable $ tcb_state tcb)
                          then Some tcb else None"
@@ -51,7 +51,7 @@ definition
   switch_to_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "switch_to_thread t \<equiv> do
      state \<leftarrow> get;
-     assert (get_tcb t state \<noteq> None);
+     assert (get_tcb True t state \<noteq> None);
      arch_switch_to_thread t;
      do_extended_op (tcb_sched_action (tcb_sched_dequeue) t);
      modify (\<lambda>s. s \<lparr> cur_thread := t \<rparr>)

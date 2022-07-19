@@ -32,7 +32,7 @@ capability can be generated immediately if they wish to issue one. This function
 sets up a new master Reply capability if one does not exist.\<close>
 definition
   "setup_reply_master thread \<equiv> do
-     old_cap <- get_cap (thread, tcb_cnode_index 2);
+     old_cap <- get_cap True (thread, tcb_cnode_index 2);
      when (old_cap = NullCap) $ do
          set_original (thread, tcb_cnode_index 2) True;
          set_cap (ReplyCap thread True {AllowGrant, AllowWrite}) (thread, tcb_cnode_index 2)
@@ -125,7 +125,7 @@ the cap to be inserted has been moved or deleted.\<close>
 definition
   check_cap_at :: "cap \<Rightarrow> cslot_ptr \<Rightarrow> (unit,'z::state_ext) s_monad \<Rightarrow> (unit,'z::state_ext) s_monad" where
  "check_cap_at cap slot m \<equiv> do
-    cap' \<leftarrow> get_cap slot;
+    cap' \<leftarrow> get_cap True slot;
     when (same_object_as cap cap') m
   od"
 

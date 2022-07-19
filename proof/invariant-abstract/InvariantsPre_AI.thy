@@ -222,8 +222,8 @@ lemma pspace_distinctD:
 definition
   caps_of_state :: "'z::state_ext state \<Rightarrow> cslot_ptr \<Rightarrow> cap option"
 where
- "caps_of_state s \<equiv> (\<lambda>p. if (\<exists>cap. fst (get_cap p s) = {(cap, s)})
-                         then Some (THE cap. fst (get_cap p s) = {(cap, s)})
+ "caps_of_state s \<equiv> (\<lambda>p. if (\<exists>cap. fst (get_cap False p s) = {(cap, s)})
+                         then Some (THE cap. fst (get_cap False p s) = {(cap, s)})
                          else None)"
 
 definition

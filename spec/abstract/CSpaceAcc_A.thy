@@ -26,10 +26,10 @@ text \<open>
 the following definitions allow the kernel model to retrieve and update
 capabilities in a uniform fashion.\<close>
 definition
-  get_cap :: "cslot_ptr \<Rightarrow> (cap,'z::state_ext) s_monad"
+  get_cap :: "bool \<Rightarrow> cslot_ptr \<Rightarrow> (cap,'z::state_ext) s_monad"
 where
-  "get_cap \<equiv> \<lambda>(oref, cref). do
-     obj \<leftarrow> get_object oref;
+  "get_cap ta_f \<equiv> \<lambda>(oref, cref). do
+     obj \<leftarrow> get_object ta_f oref;
      caps \<leftarrow> case obj of
              CNode sz cnode \<Rightarrow> do
                                 assert (well_formed_cnode_n sz cnode);
@@ -44,7 +44,7 @@ definition
   set_cap :: "cap \<Rightarrow> cslot_ptr \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "set_cap cap \<equiv> \<lambda>(oref, cref). do
-     obj \<leftarrow> get_object oref;
+     obj \<leftarrow> get_object True oref;
      obj' \<leftarrow> case obj of
                CNode sz cn \<Rightarrow> if cref \<in> dom cn \<and> well_formed_cnode_n sz cn
                                 then return $ CNode sz $ cn (cref \<mapsto> cap)
@@ -71,7 +71,7 @@ definition
   ensure_empty :: "cslot_ptr \<Rightarrow> (unit,'z::state_ext) se_monad"
 where
   "ensure_empty slot \<equiv> doE
-    cap \<leftarrow> liftE $ get_cap slot;
+    cap \<leftarrow> liftE $ get_cap True slot;
     whenE (cap \<noteq> NullCap) (throwError DeleteFirst)
   odE"
 

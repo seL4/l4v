@@ -58,7 +58,7 @@ definition perform_asid_control_invocation :: "asid_control_invocation \<Rightar
   "perform_asid_control_invocation iv \<equiv> case iv of
      MakePool frame slot parent base \<Rightarrow> do
        delete_objects frame pageBits;
-       pcap \<leftarrow> get_cap parent;
+       pcap \<leftarrow> get_cap True parent;
        set_cap (max_free_index_update pcap) parent;
        retype_region frame 1 0 (ArchObject ASIDPoolObj) False;
        cap_insert (ArchObjectCap $ ASIDPoolCap frame base) parent slot;
@@ -73,7 +73,7 @@ definition perform_asid_pool_invocation :: "asid_pool_invocation \<Rightarrow> (
   where
   "perform_asid_pool_invocation iv \<equiv> case iv of
      Assign asid pool_ptr ct_slot \<Rightarrow> do
-       pt_cap \<leftarrow> get_cap ct_slot;
+       pt_cap \<leftarrow> get_cap True ct_slot;
        assert $ is_ArchObjectCap pt_cap;
        acap \<leftarrow> return $ the_arch_cap pt_cap;
        assert $ is_PageTableCap acap;
@@ -90,7 +90,7 @@ definition perform_pg_inv_unmap :: "arch_cap \<Rightarrow> cslot_ptr \<Rightarro
      case acap_map_data cap of
        Some (asid, vaddr) \<Rightarrow> unmap_page (acap_fsize cap) asid vaddr (acap_obj cap)
      | _ \<Rightarrow> return ();
-     old_cap \<leftarrow> get_cap ct_slot;
+     old_cap \<leftarrow> get_cap True ct_slot;
      set_cap (ArchObjectCap $ update_map_data (the_arch_cap old_cap) None) ct_slot
    od"
 
@@ -141,7 +141,7 @@ definition perform_pt_inv_unmap :: "arch_cap \<Rightarrow> cslot_ptr \<Rightarro
          mapM_x (swp store_pte InvalidPTE) slots
        od
      | _ \<Rightarrow> return ();
-     old_cap \<leftarrow> liftM the_arch_cap $ get_cap ct_slot;
+     old_cap \<leftarrow> liftM the_arch_cap $ get_cap True ct_slot;
      set_cap (ArchObjectCap $ update_map_data old_cap None) ct_slot
    od"
 

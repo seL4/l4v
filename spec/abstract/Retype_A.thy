@@ -148,7 +148,7 @@ definition
   reset_untyped_cap :: "cslot_ptr \<Rightarrow> (unit,'z::state_ext) p_monad"
 where
   "reset_untyped_cap src_slot = doE
-  cap \<leftarrow> liftE $ get_cap src_slot;
+  cap \<leftarrow> liftE $ get_cap True src_slot;
   sz \<leftarrow> returnOk $ bits_of cap;
   base \<leftarrow> returnOk $ obj_ref_of cap;
   if free_index_of cap = 0
@@ -185,7 +185,7 @@ doE
   whenE reset $ reset_untyped_cap src_slot;
   liftE $ do
 
-  cap \<leftarrow> get_cap src_slot;
+  cap \<leftarrow> get_cap True src_slot;
 
   \<comment> \<open>Update the untyped cap to track the amount of space used.\<close>
   total_object_size \<leftarrow> return $ (of_nat (length slots) << (obj_bits_api new_type obj_sz));

@@ -44,7 +44,7 @@ definition
   set_mrs :: "obj_ref \<Rightarrow> obj_ref option \<Rightarrow> message list \<Rightarrow> (length_type,'z::state_ext) s_monad" where
   "set_mrs thread buf msgs \<equiv>
    do
-     tcb \<leftarrow> gets_the $ get_tcb thread;
+     tcb \<leftarrow> gets_the $ get_tcb True thread;
      context \<leftarrow> return (arch_tcb_get_registers (tcb_arch tcb));
      new_regs \<leftarrow> return (\<lambda>reg. if reg \<in> set (take (length msgs) msg_registers)
                               then msgs ! (the_index msg_registers reg)

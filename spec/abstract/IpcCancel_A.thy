@@ -245,15 +245,15 @@ text \<open>Detect whether a capability is the final capability to a given objec
 remaining in the system. Finalisation actions need to be taken when the final
 capability to the object is deleted.\<close>
 definition
-  is_final_cap' :: "cap \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
- "is_final_cap' cap s \<equiv>
-    \<exists>cref. {cref. \<exists>cap'. fst (get_cap cref s) = {(cap', s)}
+  is_final_cap' :: "bool \<Rightarrow> cap \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
+ "is_final_cap' ta_f cap s \<equiv>
+    \<exists>cref. {cref. \<exists>cap'. fst (get_cap ta_f cref s) = {(cap', s)}
                        \<and> (gen_obj_refs cap \<inter> gen_obj_refs cap' \<noteq> {})}
          = {cref}"
 
 definition
   is_final_cap :: "cap \<Rightarrow> (bool,'z::state_ext) s_monad" where
-  "is_final_cap cap \<equiv> gets (is_final_cap' cap)"
+  "is_final_cap cap \<equiv> gets (is_final_cap' True cap)"
 
 text \<open>Actions to be taken after an IRQ handler capability is deleted.\<close>
 definition
@@ -277,7 +277,7 @@ definition
   empty_slot :: "cslot_ptr \<Rightarrow> cap \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
  "empty_slot slot cleanup_info \<equiv> do
-      cap \<leftarrow> get_cap slot;
+      cap \<leftarrow> get_cap True slot;
       if cap = NullCap then
         return ()
       else do
@@ -300,7 +300,7 @@ process will be sufficient.\<close>
 definition
   cap_delete_one :: "cslot_ptr \<Rightarrow> (unit,'z::state_ext) s_monad" where
  "cap_delete_one slot \<equiv> do
-    cap \<leftarrow> get_cap slot;
+    cap \<leftarrow> get_cap True slot;
     unless (cap = NullCap) $ do
       final \<leftarrow> is_final_cap cap;
       fast_finalise cap final;
@@ -315,7 +315,7 @@ definition
 where
  "reply_cancel_ipc tptr \<equiv> do
     thread_set (\<lambda>tcb. tcb \<lparr> tcb_fault := None \<rparr>) tptr;
-    cap \<leftarrow> get_cap (tptr, tcb_cnode_index 2);
+    cap \<leftarrow> get_cap True (tptr, tcb_cnode_index 2);
     descs \<leftarrow> gets (descendants_of (tptr, tcb_cnode_index 2) o cdt);
     when (descs \<noteq> {}) $ do
       assert (\<exists>cslot_ptr. descs = {cslot_ptr});

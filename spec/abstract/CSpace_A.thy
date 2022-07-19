@@ -174,7 +174,7 @@ where
          returnOk ((oref,offset), [])
        else doE
          liftE (touch_object oref);
-         next_cap \<leftarrow> liftE (get_cap (oref, offset));
+         next_cap \<leftarrow> liftE (get_cap True (oref, offset));
          if is_cnode_cap next_cap then
            resolve_address_bits' z (next_cap, rest)
          else
@@ -212,7 +212,7 @@ definition
   lookup_slot_for_thread :: "obj_ref \<Rightarrow> cap_ref \<Rightarrow> (cslot_ptr \<times> cap_ref,'z::state_ext) lf_monad"
 where
   "lookup_slot_for_thread thread cref \<equiv> doE
-     tcb \<leftarrow> liftE $ gets_the $ get_tcb thread;
+     tcb \<leftarrow> liftE $ gets_the $ get_tcb True thread;
      resolve_address_bits (tcb_ctable tcb, cref)
   odE"
 
@@ -220,7 +220,7 @@ definition
   lookup_cap_and_slot :: "obj_ref \<Rightarrow> cap_ref \<Rightarrow> (cap \<times> cslot_ptr,'z::state_ext) lf_monad" where
   "lookup_cap_and_slot thread cptr \<equiv> doE
       (slot, cr) \<leftarrow> lookup_slot_for_thread thread cptr;
-      cap \<leftarrow> liftE $ get_cap slot;
+      cap \<leftarrow> liftE $ get_cap True slot;
       returnOk (cap, slot)
   odE"
 
@@ -228,7 +228,7 @@ definition
   lookup_cap :: "obj_ref \<Rightarrow> cap_ref \<Rightarrow> (cap,'z::state_ext) lf_monad" where
   "lookup_cap thread ref \<equiv> doE
      (ref', _) \<leftarrow> lookup_slot_for_thread thread ref;
-     liftE $ get_cap ref'
+     liftE $ get_cap True ref'
    odE"
 
 definition
@@ -304,7 +304,7 @@ where
        slot \<leftarrow> unify_failure $ lookup_target_slot cnode
                   (ct_receive_index ct) (unat (ct_receive_depth ct));
 
-       cap \<leftarrow> liftE $ get_cap slot;
+       cap \<leftarrow> liftE $ get_cap True slot;
 
        whenE (cap \<noteq> NullCap) (throwError ());
 
@@ -331,7 +331,7 @@ definition
   slot_cap_long_running_delete :: "cslot_ptr \<Rightarrow> (bool,'z::state_ext) s_monad"
 where
   "slot_cap_long_running_delete slot \<equiv> do
-     cap \<leftarrow> get_cap slot;
+     cap \<leftarrow> get_cap True slot;
      case cap of
          NullCap \<Rightarrow> return False
        | _ \<Rightarrow> do
@@ -394,8 +394,8 @@ definition
 where
   "cap_swap_for_delete slot1 slot2 \<equiv>
   when (slot1 \<noteq> slot2) $ do
-    cap1 \<leftarrow> get_cap slot1;
-    cap2 \<leftarrow> get_cap slot2;
+    cap1 \<leftarrow> get_cap True slot1;
+    cap2 \<leftarrow> get_cap True slot2;
     cap_swap cap1 slot1 cap2 slot2
   od"
 
@@ -520,7 +520,7 @@ where
 |
   "rec_del (FinaliseSlotCall slot exposed) s =
  (doE
-    cap \<leftarrow> without_preemption $ get_cap slot;
+    cap \<leftarrow> without_preemption $ get_cap True slot;
     if (cap = NullCap)
     then returnOk (True, NullCap)
     else (doE
@@ -554,7 +554,7 @@ where
  (doE
     end_slot \<leftarrow> returnOk (ptr, nat_to_cref (zombie_cte_bits bits) n);
     rec_del (CTEDeleteCall end_slot False);
-    new_cap \<leftarrow> without_preemption $ get_cap slot;
+    new_cap \<leftarrow> without_preemption $ get_cap True slot;
     if (new_cap = Zombie ptr bits (Suc n))
     then without_preemption $ set_cap (Zombie ptr bits n) slot
     else assertE (new_cap = NullCap \<or>
@@ -606,12 +606,12 @@ all.\<close>
 function cap_revoke :: "cslot_ptr \<Rightarrow> (unit,'z::state_ext) p_monad"
 where
 "cap_revoke slot s = (doE
-    cap \<leftarrow> without_preemption $ get_cap slot;
+    cap \<leftarrow> without_preemption $ get_cap True slot;
     cdt \<leftarrow> without_preemption $ gets cdt;
     descendants \<leftarrow> returnOk $ descendants_of slot cdt;
     whenE (cap \<noteq> NullCap \<and> descendants \<noteq> {}) (doE
       child \<leftarrow> without_preemption $ select_ext (next_revoke_cap slot) descendants;
-      cap \<leftarrow> without_preemption $ get_cap child;
+      cap \<leftarrow> without_preemption $ get_cap True child;
       assertE (cap \<noteq> NullCap);
       cap_delete child;
       preemption_point;
@@ -762,11 +762,11 @@ endpoint capabilities, irq handlers, and untyped caps).
 definition
   cap_insert :: "cap \<Rightarrow> cslot_ptr \<Rightarrow> cslot_ptr \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "cap_insert new_cap src_slot dest_slot \<equiv> do
-    src_cap \<leftarrow> get_cap src_slot;
+    src_cap \<leftarrow> get_cap True src_slot;
 
     dest_original \<leftarrow> return $ is_cap_revocable new_cap src_cap;
 
-    old_cap \<leftarrow> get_cap dest_slot;
+    old_cap \<leftarrow> get_cap True dest_slot;
     assert (old_cap = NullCap);
     set_untyped_cap_as_full src_cap new_cap src_slot;
     set_cap new_cap dest_slot;
@@ -831,7 +831,7 @@ definition
   | SaveCall slot \<Rightarrow> without_preemption $ do
     thread \<leftarrow> gets cur_thread;
     src_slot \<leftarrow> return (thread, tcb_cnode_index 3);
-    cap \<leftarrow> get_cap src_slot;
+    cap \<leftarrow> get_cap True src_slot;
     (case cap of
           NullCap \<Rightarrow> return ()
         | ReplyCap _ False _ \<Rightarrow> cap_move cap src_slot slot

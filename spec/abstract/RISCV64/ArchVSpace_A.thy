@@ -21,7 +21,7 @@ definition lookup_ipc_buffer :: "bool \<Rightarrow> obj_ref \<Rightarrow> (obj_r
   "lookup_ipc_buffer is_receiver thread \<equiv> do
      buffer_ptr \<leftarrow> thread_get tcb_ipc_buffer thread;
      buffer_frame_slot \<leftarrow> return (thread, tcb_cnode_index 4);
-     buffer_cap \<leftarrow> get_cap buffer_frame_slot;
+     buffer_cap \<leftarrow> get_cap True buffer_frame_slot;
      case buffer_cap of
        ArchObjectCap (FrameCap p R vms False _) \<Rightarrow>
          if vm_read_write \<subseteq> R \<or> vm_read_only \<subseteq> R \<and> \<not>is_receiver
@@ -101,7 +101,7 @@ definition set_vm_root :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
   where
   "set_vm_root tcb \<equiv> do
     thread_root_slot \<leftarrow> return (tcb, tcb_cnode_index 1);
-    thread_root \<leftarrow> get_cap thread_root_slot;
+    thread_root \<leftarrow> get_cap True thread_root_slot;
     (case thread_root of
        ArchObjectCap (PageTableCap pt (Some (asid, _))) \<Rightarrow> doE
            pt' \<leftarrow> find_vspace_for_asid asid;

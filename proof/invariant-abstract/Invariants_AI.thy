@@ -231,7 +231,7 @@ text \<open>cte with property at\<close>
 definition
   cte_wp_at :: "(cap \<Rightarrow> bool) \<Rightarrow> cslot_ptr \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
-  "cte_wp_at P p s \<equiv> \<exists>cap. fst (get_cap p s) = {(cap,s)} \<and> P cap"
+  "cte_wp_at P p s \<equiv> \<exists>cap. fst (get_cap False p s) = {(cap,s)} \<and> P cap"
 
 abbreviation
   cte_at :: "cslot_ptr \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -780,7 +780,7 @@ definition
   zombies_final :: "'z::state_ext state \<Rightarrow> bool"
 where
  "zombies_final \<equiv>
-  \<lambda>s. \<forall>p. cte_wp_at is_zombie p s \<longrightarrow> cte_wp_at (\<lambda>cap. is_final_cap' cap s) p s"
+  \<lambda>s. \<forall>p. cte_wp_at is_zombie p s \<longrightarrow> cte_wp_at (\<lambda>cap. is_final_cap' False cap s) p s"
 
 definition
   valid_pspace :: "'z::state_ext state \<Rightarrow> bool"
@@ -1146,8 +1146,13 @@ lemma obj_in_ta_def2:
   by blast
 
 \<comment> \<open>sanity check\<close>
-lemma obj_at_get_object:
-  "obj_at P ref s \<Longrightarrow> obj_in_ta ref s \<Longrightarrow> fst (get_object ref s) \<noteq> {}"
+lemma obj_at_get_object_False:
+  "obj_at P ref s \<Longrightarrow> fst (get_object False ref s) \<noteq> {}"
+  by (auto simp: obj_at_def get_object_def gets_def get_def
+                 return_def assert_def bind_def)
+
+lemma obj_at_get_object_True:
+  "obj_at P ref s \<Longrightarrow> obj_in_ta ref s \<Longrightarrow> fst (get_object True ref s) \<noteq> {}"
   apply (clarsimp simp: obj_at_def get_object_def gets_def get_def
                  return_def assert_def bind_def
                  obind_def ta_filter_def split:if_splits prod.splits)
@@ -1158,27 +1163,19 @@ lemma ko_at_tcb_at:
   "ko_at (TCB t) p s \<Longrightarrow> tcb_at p s"
   by (simp add: obj_at_def is_tcb)
 
-(* TODO: Consider whether to add boolean ta_f argument to get_tcb. -robs *)
-lemma
-  "(tcb_at t s \<and> obj_in_ta t s) = (\<exists>tcb. get_tcb t s = Some tcb)"
+lemma tcb_at_get_tcb_True:
+  "(tcb_at t s \<and> obj_in_ta t s) = (\<exists>tcb. get_tcb True t s = Some tcb)"
   by (force simp add: obj_at_def get_tcb_def is_tcb_def
          obj_in_ta_def bind_def obind_def ta_filter_def
          split: option.splits kernel_object.splits if_splits prod.splits)
 
-abbreviation get_tcb_raw where
-  "get_tcb_raw t s \<equiv> (case kheap s t of
-      None      \<Rightarrow> None
-    | Some kobj \<Rightarrow> (case kobj of
-        TCB tcb \<Rightarrow> Some tcb
-      | _       \<Rightarrow> None))"
-
 lemma tcb_at_def:
-  "tcb_at t s = (\<exists>tcb. get_tcb_raw t s = Some tcb)"
+  "tcb_at t s = (\<exists>tcb. get_tcb False t s = Some tcb)"
   by (simp add: obj_at_def get_tcb_def is_tcb_def
            split: option.splits kernel_object.splits)
 
 lemma pred_tcb_def2:
-  "pred_tcb_at proj test addr s = (\<exists>tcb. (get_tcb_raw addr s) = Some tcb \<and> test (proj (tcb_to_itcb tcb)))"
+  "pred_tcb_at proj test addr s = (\<exists>tcb. (get_tcb False addr s) = Some tcb \<and> test (proj (tcb_to_itcb tcb)))"
   by (simp add: obj_at_def pred_tcb_at_def get_tcb_def
             split: option.splits kernel_object.splits)
 
@@ -1224,7 +1221,7 @@ lemma cap_table_at_typ:
   done
 
 lemma cte_at_def:
-  "cte_at p s \<equiv> \<exists>cap. fst (get_cap p s) = {(cap,s)}"
+  "cte_at p s \<equiv> \<exists>cap. fst (get_cap False p s) = {(cap,s)}"
   by (simp add: cte_wp_at_def)
 
 lemma valid_cap_def2:
@@ -1550,7 +1547,7 @@ lemma if_unsafe_then_capD:
 
 lemma zombies_finalD:
   "\<lbrakk> cte_wp_at P p s; zombies_final s; \<And>cap. P cap \<Longrightarrow> is_zombie cap \<rbrakk>
-     \<Longrightarrow> cte_wp_at (\<lambda>cap. is_final_cap' cap s) p s"
+     \<Longrightarrow> cte_wp_at (\<lambda>cap. is_final_cap' False cap s) p s"
   unfolding zombies_final_def
   apply (drule spec, erule mp)
   apply (clarsimp simp: cte_wp_at_def)
@@ -1679,8 +1676,6 @@ lemma untyped_children_in_mdbE:
   apply (erule z)
   done
 
-(* FIXME: Okay - looks like we've got cte_wp_at using currently f_kheap hardcoded-True get_cap and
-   get_object, so we might be best off generalising these over `ta_f` bool arg after all. -robs *)
 lemma cte_wp_at_cases:
   "cte_wp_at P t s = ((\<exists>sz fun cap. kheap s (fst t) = Some (CNode sz fun) \<and>
                                     well_formed_cnode_n sz fun \<and>
@@ -1699,7 +1694,6 @@ lemma cte_wp_at_cases:
               split: if_split_asm kernel_object.splits
                      option.splits)
   apply (simp add: tcb_cap_cases_def)
-. (* DOWN TO HERE
   done
 
 lemma cte_wp_at_cases2:
@@ -1788,8 +1782,6 @@ lemma valid_idle_pspaceI:
   unfolding valid_idle_def pred_tcb_at_def
   by (fastforce elim!: obj_at_pspaceI cte_wp_at_pspaceI)
 
-. (* DOWN TO HERE. -robs
-
 lemma gen_obj_refs_Int:
   "(gen_obj_refs cap \<inter> gen_obj_refs cap' = {})
      = (obj_refs cap \<inter> obj_refs cap' = {}
@@ -1799,11 +1791,11 @@ lemma gen_obj_refs_Int:
                 image_Int[symmetric] Int_image_empty)
 
 lemma is_final_cap'_def2:
-  "is_final_cap' cap =
+  "is_final_cap' False cap =
     (\<lambda>s. \<exists>cref. \<forall>cref'. cte_wp_at (\<lambda>c. gen_obj_refs cap \<inter> gen_obj_refs c \<noteq> {}) cref' s
                   = (cref' = cref))"
   apply (rule ext)
-  apply (auto simp: is_final_cap'_def cte_wp_at_def
+  apply (clarsimp simp: is_final_cap'_def cte_wp_at_def
                     set_eq_iff)
   done
 
@@ -2694,7 +2686,9 @@ lemma valid_global_objs_update [iff]:
 
 lemma valid_global_vspace_mappings_update [iff]:
   "valid_global_vspace_mappings (f s) = valid_global_vspace_mappings s"
-  unfolding valid_global_vspace_mappings_def by (simp add: arch Let_def)
+  unfolding valid_global_vspace_mappings_def
+  apply(simp add: arch Let_def)
+  using pspace by presburger
 
 lemma pspace_in_kernel_window_update [iff]:
   "pspace_in_kernel_window (f s) = pspace_in_kernel_window s"
@@ -2769,9 +2763,11 @@ interpretation revokable_update:
 
 sublocale Arch \<subseteq> revokable_update: Arch_p_arch_idle_update_int_eq "is_original_cap_update f" ..
 
+(* FIXME: I guess the `ta` assumption just won't hold of `machine_state_update`. -robs *)
 interpretation machine_state_update:
   p_arch_idle_update_int_eq "machine_state_update f"
-  by unfold_locales auto
+  apply(unfold_locales, simp_all)
+  sorry (* FIXME: Broken by timeprot-use-f-kheap -robs. *)
 
 sublocale Arch \<subseteq> machine_state_update: Arch_p_arch_idle_update_int_eq "machine_state_update f" ..
 
@@ -3320,7 +3316,7 @@ lemma invs_zombies [elim!]:
   by (simp add: invs_def valid_state_def valid_pspace_def)
 
 lemma objs_valid_tcb_ctable:
-  "\<lbrakk>valid_objs s; get_tcb t s = Some tcb\<rbrakk> \<Longrightarrow> s \<turnstile> tcb_ctable tcb"
+  "\<lbrakk>valid_objs s; get_tcb False t s = Some tcb\<rbrakk> \<Longrightarrow> s \<turnstile> tcb_ctable tcb"
   apply (clarsimp simp: get_tcb_def split: option.splits kernel_object.splits)
   apply (erule cte_wp_valid_cap[rotated])
   apply (rule cte_wp_at_tcbI[where t="(a, b)" for a b, where b3="tcb_cnode_index 0"])
@@ -3328,7 +3324,7 @@ lemma objs_valid_tcb_ctable:
   done
 
 lemma invs_valid_tcb_ctable:
-  "\<lbrakk>invs s; get_tcb t s = Some tcb\<rbrakk> \<Longrightarrow> s \<turnstile> tcb_ctable tcb"
+  "\<lbrakk>invs s; get_tcb False t s = Some tcb\<rbrakk> \<Longrightarrow> s \<turnstile> tcb_ctable tcb"
   apply (drule invs_valid_stateI)
   apply (clarsimp simp: valid_state_def valid_pspace_def objs_valid_tcb_ctable)
   done

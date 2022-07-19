@@ -309,7 +309,7 @@ definition
   handle_reply :: "(unit,'z::state_ext) s_monad" where
  "handle_reply \<equiv> do
     thread \<leftarrow> gets cur_thread;
-    caller_cap \<leftarrow> get_cap (thread, tcb_cnode_index 3);
+    caller_cap \<leftarrow> get_cap True (thread, tcb_cnode_index 3);
     case caller_cap of
       ReplyCap caller False R \<Rightarrow>
         do_reply_transfer thread caller (thread, tcb_cnode_index 3) (AllowGrant \<in> R)

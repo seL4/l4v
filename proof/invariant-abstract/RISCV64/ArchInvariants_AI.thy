@@ -1071,7 +1071,7 @@ lemma dom_asid_pools_of_lift:
   assumes "\<And>T p. f \<lbrace>typ_at (AArch T) p\<rbrace>"
   assumes "\<And>A B. A \<subseteq> B \<Longrightarrow> P A \<Longrightarrow> P B"
   shows "f \<lbrace>\<lambda>s. P (dom (asid_pools_of False s))\<rbrace>"
-  by (wpsimp wp: hoare_vcg_set_pred_lift_mono assms simp: dom_asid_pools_of_typ)
+  by (wpsimp wp: hoare_vcg_set_pred_lift_mono assms simp: dom_asid_pools_of_typ[simplified])
 
 lemma aobj_at_default_arch_cap_valid:
   assumes "ty \<noteq> ASIDPoolObj"
@@ -1608,7 +1608,8 @@ lemma valid_global_vspace_mappings_pt_at:
   apply (clarsimp simp: translate_address_def pt_lookup_slot_from_level_def pt_lookup_target_def
                         in_omonad)
   apply (subst (asm) pt_walk.simps)
-  by (auto simp: in_omonad dest!: ptes_of_pt_slot_offset split: if_split_asm)
+  by (clarsimp simp: in_omonad dest!: ptes_of_pt_slot_offset[where ta_f=False, simplified]
+    split: if_split_asm)
 
 lemma valid_global_arch_objs_pt_at:
   "valid_global_arch_objs s \<Longrightarrow> pt_at (global_pt s) s"
@@ -1760,13 +1761,6 @@ lemma pool_for_asid_valid_vspace_objs:
   by (fastforce intro: pool_for_asid_vs_lookup[THEN iffD2]
                  dest: pool_for_asid_validD
                  simp: in_opt_map_eq)
-
-thm f_kheap_to_kheap
-(* TODO: Move this up. -robs *)
-lemma f_kheap_to_kheap'[simp]:
-  "f_kheap False s = kheap s"
-  apply(rule ext)+
-  by (clarsimp simp:ta_filter_def obind_def split:option.splits)
 
 lemma vspace_for_asid_valid_pt:
   "\<lbrakk> vspace_for_asid False asid s = Some root_pt;
@@ -2227,7 +2221,7 @@ lemma valid_vspace_objs_strongD:
    apply (clarsimp simp: user_region_slots)
   apply (clarsimp simp: is_PageTablePTE_def pptr_from_pte_def pt_at_eq in_omonad)
   apply (drule (2) valid_vspace_objsD)
-   apply (simp add: in_omonad)
+   apply (simp add: in_omonad f_kheap_to_kheap)
   apply assumption
   done
 
@@ -2682,7 +2676,7 @@ lemma valid_vso_at_update [iff]:
 
 (* FIXME: move to generic *)
 lemma get_cap_update [iff]:
-  "(fst (get_cap p (f s)) = {(cap, f s)}) = (fst (get_cap p s) = {(cap, s)})"
+  "(fst (get_cap ta_f p (f s)) = {(cap, f s)}) = (fst (get_cap ta_f p s) = {(cap, s)})"
   apply (simp add: get_cap_def get_object_def bind_assoc
                    exec_gets split_def assert_def pspace ta)
   apply (clarsimp simp: fail_def)
