@@ -1,4 +1,5 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -9,6 +10,29 @@ imports Invariants_AI
 begin
 
 context Arch begin global_naming AARCH64
+
+(* arch-specific interpretations of update locales: *)
+
+sublocale p_asid_table_kernel_vspace_update:
+  Arch_p_asid_table_update_eq "\<lambda>s. s\<lparr>arch_state := arm_kernel_vspace_update f (arch_state s)\<rparr>"
+  by (unfold_locales) auto
+
+sublocale p_asid_table_vmid_table_update:
+  Arch_p_asid_table_update_eq "\<lambda>s. s\<lparr>arch_state := arm_vmid_table_update f (arch_state s)\<rparr>"
+  by (unfold_locales) auto
+
+sublocale p_asid_table_next_vmid_update:
+  Arch_p_asid_table_update_eq "\<lambda>s. s\<lparr>arch_state := arm_next_vmid_update f (arch_state s)\<rparr>"
+  by (unfold_locales) auto
+
+sublocale p_asid_table_us_global_vspace_update:
+  Arch_p_asid_table_update_eq "\<lambda>s. s\<lparr>arch_state := arm_us_global_vspace_update f (arch_state s)\<rparr>"
+  by (unfold_locales) auto
+
+sublocale p_asid_table_current_vcpu_update:
+  Arch_p_asid_table_update_eq "\<lambda>s. s\<lparr>arch_state := arm_current_vcpu_update f (arch_state s)\<rparr>"
+  by (unfold_locales) auto
+
 
 lemma invs_unique_table_caps[elim!]:
   "invs s \<Longrightarrow> unique_table_caps s"
