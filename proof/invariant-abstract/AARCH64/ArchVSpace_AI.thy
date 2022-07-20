@@ -158,11 +158,38 @@ lemma vs_lookup_target_clear_asid_table:
   apply blast
   done
 
+(* FIXME AARCH64: move *)
+lemma asid_high_low_inj:
+  "\<lbrakk> asid_low_bits_of asid' = asid_low_bits_of asid;
+     asid_high_bits_of asid' = asid_high_bits_of asid \<rbrakk>
+   \<Longrightarrow> asid' = asid"
+(* FIXME AARCH64: examine alternative proof via word decomposition:
+  apply (subst mask_or_not_mask[of asid asid_low_bits, symmetric])
+  apply (subst mask_or_not_mask[of asid' asid_low_bits, symmetric])
+  unfolding asid_low_bits_of_def asid_high_bits_of_def asid_low_bits_def
+  apply clarsimp
+  apply (rule arg_cong2[where f="(OR)"])
+   apply word_eqI_solve
+ *)
+  unfolding asid_low_bits_of_def asid_high_bits_of_def
+  apply word_eqI
+  apply (case_tac "n < asid_low_bits", fastforce simp: asid_low_bits_def)
+  apply (simp add: not_less)
+  apply (erule_tac x="n - asid_low_bits" in allE)+
+  apply (simp add: asid_low_bits_def)
+  apply fastforce
+  done
+
+(* FIXME AARCH64: move *)
+lemma asid_of_high_low_eq[simp, intro!]:
+  "asid_of (asid_high_bits_of asid) (asid_low_bits_of asid) = asid"
+  by (rule asid_high_low_inj; simp)
+
 lemma vmid_for_asid_unmap_pool:
   "\<forall>asid_low. vmid_for_asid_2 (asid_of asid_high asid_low) table pools = None \<Longrightarrow>
    vmid_for_asid_2 asid (table(asid_high := None)) pools = vmid_for_asid_2 asid table pools"
   unfolding vmid_for_asid_2_def
-  by (simp add: obind_def entry_for_pool_def split: option.splits)
+  by (clarsimp simp: obind_def entry_for_pool_def split: option.splits)
 
 lemma valid_arch_state_unmap_strg:
   "valid_arch_state s \<and> (\<forall>asid_low. vmid_for_asid s (asid_of asid_high asid_low) = None) \<longrightarrow>
@@ -697,27 +724,6 @@ crunches get_vmid, invalidate_asid_entry, invalidate_tlb_by_asid, invalidate_tlb
 crunches do_machine_op
   for vmid_for_asid[wp]: "\<lambda>s. P (vmid_for_asid s)"
 
-lemma asid_high_low_inj:
-  "\<lbrakk> asid_low_bits_of asid' = asid_low_bits_of asid;
-     asid_high_bits_of asid' = asid_high_bits_of asid \<rbrakk>
-   \<Longrightarrow> asid' = asid"
-(* FIXME AARCH64: examine alternative proof via word decomposition:
-  apply (subst mask_or_not_mask[of asid asid_low_bits, symmetric])
-  apply (subst mask_or_not_mask[of asid' asid_low_bits, symmetric])
-  unfolding asid_low_bits_of_def asid_high_bits_of_def asid_low_bits_def
-  apply clarsimp
-  apply (rule arg_cong2[where f="(OR)"])
-   apply word_eqI_solve
- *)
-  unfolding asid_low_bits_of_def asid_high_bits_of_def
-  apply word_eqI
-  apply (case_tac "n < asid_low_bits", fastforce simp: asid_low_bits_def)
-  apply (simp add: not_less)
-  apply (erule_tac x="n - asid_low_bits" in allE)+
-  apply (simp add: asid_low_bits_def)
-  apply fastforce
-  done
-
 lemma vmid_for_asid_upd_eq:
   "\<lbrakk> pool_for_asid asid s = Some pool_ptr; asid_pools_of s pool_ptr = Some ap;
      ap (asid_low_bits_of asid) = Some entry; valid_asid_table s \<rbrakk>
@@ -757,10 +763,15 @@ lemma find_free_vmid_valid_arch [wp]:
   "find_free_vmid \<lbrace>valid_arch_state\<rbrace>"
   unfolding valid_arch_state_def by wpsimp
 
-lemma load_vmid_wp:
-  "\<lbrace>\<lambda>s. P ((entry_for_asid asid |> ap_vmid) s) s\<rbrace> load_vmid asid \<lbrace>P\<rbrace>"
+lemma entry_for_asid_Some_vmidD:
+  "entry_for_asid asid s = Some entry \<Longrightarrow> ap_vmid entry = vmid_for_asid s asid \<and> 0 < asid"
+  unfolding entry_for_asid_def vmid_for_asid_def entry_for_pool_def pool_for_asid_def
+  by (auto simp: obind_def opt_map_def split: option.splits)
+
+lemma load_vmid_wp[wp]:
+  "\<lbrace>\<lambda>s. P (asid_map s asid) s\<rbrace> load_vmid asid \<lbrace>P\<rbrace>"
   unfolding load_vmid_def
-  by (wpsimp simp: opt_map_def)
+  by wpsimp (fastforce dest: entry_for_asid_Some_vmidD)
 
 lemma invalidate_asid_entry_invs[wp]:
   "invalidate_asid_entry asid \<lbrace>invs\<rbrace>"
@@ -769,9 +780,6 @@ lemma invalidate_asid_entry_invs[wp]:
 lemma find_free_vmid_invs[wp]:
   "find_free_vmid \<lbrace>invs\<rbrace>"
   sorry (* FIXME AARCH64 *)
-
-locale_abbrev asid_map :: "'z::state_ext state \<Rightarrow> asid \<Rightarrow> vmid option" where
-  "asid_map \<equiv> \<lambda>s. swp entry_for_asid s |> ap_vmid"
 
 lemma store_hw_asid_valid_arch:
   "\<lbrace>valid_arch_state and (\<lambda>s. asid_map s asid = None \<and> arm_vmid_table (arch_state s) vmid = None)\<rbrace>
