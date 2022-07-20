@@ -1047,6 +1047,7 @@ lemma sc_const_eq:
   "schedContextStructSize = sizeof_sched_context_t"
   "minSchedContextBits = min_sched_context_bits"
   by (auto simp: refillSizeBytes_def refill_size_bytes_def minSchedContextBits_def
+                 wordSize_def wordBits_def' word_size_def
                  sizeof_sched_context_t_def min_sched_context_bits_def schedContextStructSize_def)
 
 lemma max_num_refills_eq_refillAbsoluteMax':
@@ -1194,11 +1195,13 @@ qed
 
 lemma min_sched_context_bits_cond:
   "sizeof_sched_context_t + refill_size_bytes < (2::nat) ^ (min_sched_context_bits - 1)"
-   by (clarsimp simp: sizeof_sched_context_t_def refill_size_bytes_def min_sched_context_bits_def)
+   by (clarsimp simp: sizeof_sched_context_t_def refill_size_bytes_def min_sched_context_bits_def
+                      word_size_def)
 
 lemma minSchedContextBits_cond:
   "sizeof_sched_context_t + refill_size_bytes < (2::nat) ^ (minSchedContextBits - 1)"
-   by (clarsimp simp: sizeof_sched_context_t_def refill_size_bytes_def minSchedContextBits_def)
+   by (clarsimp simp: sizeof_sched_context_t_def refill_size_bytes_def minSchedContextBits_def
+                      word_size_def)
 
 lemma scBits_inverse_us:
   notes sc_const_eq[simp]
@@ -1229,7 +1232,8 @@ lemma scBits_inverse_sc:
 
 lemma minRefillLength_ARM: "minRefillLength = 12"
   by (auto simp: minRefillLength_def minSchedContextBits_def refillAbsoluteMax'_def
-                 schedContextStructSize_def refillSizeBytes_def shiftL_nat)
+                 schedContextStructSize_def refillSizeBytes_def shiftL_nat wordSize_def
+                 wordBits_def')
 
 lemma minRefillLength_minSchedContextBits[simp]:
   "scBitsFromRefillLength' minRefillLength = minSchedContextBits"
@@ -1268,7 +1272,7 @@ proof -
     by (simp add: ceil_log_le_mono)
   moreover have "ceil_log (sizeof_sched_context_t) = 6"
     apply (simp add: sc_const_eq(2)[symmetric, simplified schedContextStructSize_def, simplified] ceil_log_def)
-    by (fastforce intro!: discrete_log_eqI)
+    by (fastforce intro!: discrete_log_eqI simp: wordSize_def wordBits_def')
   ultimately show ?thesis
     by (clarsimp simp: scBitsFromRefillLength'_def max_num_refills_def)
 qed
