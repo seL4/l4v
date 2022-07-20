@@ -2767,6 +2767,13 @@ lemma hyp_refs_of_rev:
 
 end
 
+locale Arch_asid_table_update_eq = Arch +
+  fixes f :: "'z::state_ext state \<Rightarrow> 'c::state_ext state"
+  assumes asid_table: "asid_table (f s) = asid_table s"
+
+locale Arch_p_asid_table_update_eq = Arch_pspace_update_eq + Arch_asid_table_update_eq
+
+
 context Arch_pspace_update_eq begin
 
 lemma oreturn_state_update[simp]:
@@ -2838,11 +2845,11 @@ lemma global_refs_update [iff]:
 
 end
 
-context Arch_p_arch_update_eq begin
+context Arch_p_asid_table_update_eq begin
 
 lemma pool_for_asid_update[iff]:
   "pool_for_asid asid (f s) = pool_for_asid asid s"
-  by (simp add: pool_for_asid_def arch)
+  by (simp add: pool_for_asid_def asid_table)
 
 lemma entry_for_asid_update[iff]:
   "entry_for_asid asid (f s) =  entry_for_asid asid s"
@@ -2853,13 +2860,17 @@ lemma vspace_for_asid_update[iff]:
   "vspace_for_asid asid (f s) =  vspace_for_asid asid s"
   by (simp add: vspace_for_asid_def obind_def split: option.splits)
 
+lemma vspace_at_asid_update[iff]:
+  "vspace_at_asid asid pt (f s) =  vspace_at_asid asid pt s"
+  by (simp add: vspace_at_asid_def)
+
 lemma vmid_for_asid_update[iff]:
   "vmid_for_asid (f s) asid = vmid_for_asid s asid"
-  by (simp add: arch)
+  by (simp add: asid_table)
 
 lemma vs_lookup_update [iff]:
   "vs_lookup_table bot_level asid vptr (f s) = vs_lookup_table bot_level asid vptr s"
-  by (auto simp: vs_lookup_table_def pspace arch obind_def split: option.splits)
+  by (auto simp: vs_lookup_table_def pspace asid_table obind_def split: option.splits)
 
 lemma vs_lookup_slot_update[iff]:
   "vs_lookup_slot bot_level asid vref (f s) = vs_lookup_slot bot_level asid vref s"
@@ -2871,23 +2882,38 @@ lemma vs_lookup_target_update[iff]:
 
 lemma valid_vs_lookup_update [iff]:
   "valid_vs_lookup (f s) = valid_vs_lookup s"
-  by (simp add: valid_vs_lookup_def arch)
+  by (simp add: valid_vs_lookup_def asid_table)
 
 lemma valid_table_caps_update [iff]:
   "valid_table_caps (f s) = valid_table_caps s"
-  by (simp add: valid_table_caps_def arch pspace)
-
-lemma valid_ioports_update[iff]:
-  "valid_ioports (f s) = valid_ioports s"
-  by simp
+  by (simp add: valid_table_caps_def asid_table pspace)
 
 lemma valid_asid_table_update [iff]:
   "valid_asid_table (f s) = valid_asid_table s"
-  by (simp add: valid_asid_table_def arch pspace)
+  by (simp add: valid_asid_table_def asid_table pspace)
 
 lemma equal_kernel_mappings_update [iff]:
   "equal_kernel_mappings (f s) = equal_kernel_mappings s"
   by (simp add: equal_kernel_mappings_def pspace)
+
+lemma valid_vspace_objs_update [iff]:
+  "valid_vspace_objs (f s) = valid_vspace_objs s"
+  by (simp add: valid_vspace_objs_def pspace)
+
+lemma valid_arch_caps_update [iff]:
+  "valid_arch_caps (f s) = valid_arch_caps s"
+  by (simp add: valid_arch_caps_def asid_table)
+
+end
+
+context Arch_p_arch_update_eq begin
+
+sublocale Arch_p_asid_table_update_eq
+  by unfold_locales (simp add: arch)
+
+lemma valid_ioports_update[iff]:
+  "valid_ioports (f s) = valid_ioports s"
+  by simp
 
 lemma cur_vcpu_update [iff]:
   "cur_vcpu (f s) = cur_vcpu s"
