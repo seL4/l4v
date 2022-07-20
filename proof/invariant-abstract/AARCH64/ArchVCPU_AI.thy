@@ -41,14 +41,14 @@ lemma valid_cur_vcpu_lift:
   done
 
 lemma valid_cur_vcpu_lift_weak:
-  "\<lbrakk>\<And>P. f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>; \<And>P t. f \<lbrace>\<lambda>s. arch_tcb_at P t s\<rbrace>;
-    \<And>P. f \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace>\<rbrakk> \<Longrightarrow>
-   f \<lbrace>valid_cur_vcpu\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>"
+  assumes "\<And>P t. f \<lbrace>\<lambda>s. arch_tcb_at P t s\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace>"
+  shows "f \<lbrace>valid_cur_vcpu\<rbrace>"
   apply (rule valid_cur_vcpu_lift_ct)
-   apply (rule_tac f=cur_thread in hoare_lift_Pf3)
-   apply fastforce+
-  apply (clarsimp simp: valid_cur_vcpu_def valid_def)
-  by (fastforce simp: active_cur_vcpu_of_def)
+   apply (wp_pre, wps assms, wp assms, assumption)
+  apply (wpsimp simp: active_cur_vcpu_of_def wp: assms)
+  done
 
 lemma valid_cur_vcpu_lift_cur_thread_update:
   assumes arch_tcb_at: "\<And>P. f \<lbrace>arch_tcb_at P t\<rbrace>"
@@ -218,7 +218,7 @@ lemma dissociate_vcpu_tcb_valid_cur_vcpu[wp]:
   unfolding dissociate_vcpu_tcb_def
   apply (wpsimp wp: hoare_vcg_imp_lift' arch_thread_get_wp get_vcpu_wp)
   by (fastforce simp: valid_cur_vcpu_def pred_tcb_at_def obj_at_def active_cur_vcpu_of_def
-                      sym_refs_def state_hyp_refs_of_def
+                      sym_refs_def state_hyp_refs_of_def in_omonad
                split: bool.splits option.splits)
 
 lemma associate_vcpu_tcb_valid_cur_vcpu:

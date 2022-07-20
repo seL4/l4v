@@ -54,8 +54,10 @@ lemma equal_kernel_mappings_asid_table_unmap:
   unfolding equal_kernel_mappings_def by simp
 
 lemma invs_arm_asid_table_unmap:
-  "invs s \<and> is_aligned base asid_low_bits
-       \<and> tab = arm_asid_table (arch_state s)
+  "invs s
+   \<and> is_aligned base asid_low_bits
+   \<and> (\<forall>asid_low. vmid_for_asid s (asid_of (asid_high_bits_of base) asid_low) = None)
+   \<and> tab = arm_asid_table (arch_state s)
      \<longrightarrow> invs (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := tab(asid_high_bits_of base := None)\<rparr>\<rparr>)"
   apply (clarsimp simp: invs_def valid_state_def valid_arch_caps_def)
   apply (strengthen valid_asid_map_unmap valid_vspace_objs_unmap_strg
@@ -832,7 +834,7 @@ lemma vgic_update_if_live_then_nonz_cap[wp]:
   "\<lbrace>if_live_then_nonz_cap\<rbrace> vgic_update vcpuptr f \<lbrace>\<lambda>_. if_live_then_nonz_cap\<rbrace>"
   unfolding vgic_update_def vcpu_update_def
   apply (wp set_vcpu_if_live_then_nonz_cap_same_refs get_vcpu_wp)
-  apply (clarsimp simp: obj_at_def)
+  apply (clarsimp simp: obj_at_def in_omonad)
   done
 
 lemma vcpu_save_reg_if_live_then_nonz_cap[wp]:
@@ -840,14 +842,14 @@ lemma vcpu_save_reg_if_live_then_nonz_cap[wp]:
   unfolding vcpu_save_reg_def vcpu_update_def
   apply (wpsimp wp: set_vcpu_if_live_then_nonz_cap_same_refs get_vcpu_wp
                     hoare_vcg_imp_lift hoare_vcg_all_lift)
-  apply (simp add: obj_at_def)
+  apply (simp add: obj_at_def in_omonad)
   done
 
 lemma vcpu_update_regs_if_live_then_nonz_cap[wp]:
   "vcpu_update vcpu_ptr (vcpu_regs_update f) \<lbrace>if_live_then_nonz_cap\<rbrace>"
   unfolding vcpu_update_def
   by (wpsimp wp: set_vcpu_if_live_then_nonz_cap_same_refs get_vcpu_wp)
-     (simp add: obj_at_def)
+     (simp add: obj_at_def in_omonad)
 
 lemma vcpu_write_if_live_then_nonz_cap[wp]:
   "vcpu_write_reg vcpu_ptr reg val \<lbrace>if_live_then_nonz_cap\<rbrace>"
@@ -857,7 +859,7 @@ lemma vcpu_update_vtimer_if_live_then_nonz_cap[wp]:
   "vcpu_update vcpu_ptr (vcpu_vtimer_update f) \<lbrace>if_live_then_nonz_cap\<rbrace>"
   unfolding vcpu_update_def
   by (wpsimp wp: set_vcpu_if_live_then_nonz_cap_same_refs get_vcpu_wp)
-     (simp add: obj_at_def)
+     (simp add: obj_at_def in_omonad)
 
 crunches vcpu_disable, vcpu_invalidate_active
   for if_live_then_nonz_cap[wp]: if_live_then_nonz_cap
@@ -1077,7 +1079,7 @@ lemma dissociate_vcpu_tcb_unlive_v:
 lemma vcpu_finalise_unlive:
   "\<lbrace>\<top>\<rbrace> vcpu_finalise r \<lbrace> \<lambda>_. obj_at (Not \<circ> live) r \<rbrace>"
   apply (wpsimp simp: vcpu_finalise_def wp: dissociate_vcpu_tcb_unlive_v get_vcpu_wp)
-  apply (auto simp: obj_at_def live_def hyp_live_def arch_live_def)
+  apply (auto simp: obj_at_def in_omonad live_def hyp_live_def arch_live_def)
   done
 
 lemma arch_finalise_cap_vcpu:
@@ -1697,7 +1699,7 @@ lemma set_vm_root_empty[wp]:
 
 lemma set_asid_pool_empty[wp]:
   "\<lbrace>obj_at (empty_table S) word\<rbrace> set_asid_pool x2 pool' \<lbrace>\<lambda>xb. obj_at (empty_table S) word\<rbrace>"
-  by (wpsimp wp: set_object_wp simp: set_asid_pool_def obj_at_def empty_table_def)
+  by (wpsimp wp: set_object_wp simp: set_asid_pool_def obj_at_def in_omonad empty_table_def)
 
 lemma delete_asid_empty_table_pt[wp]:
   "delete_asid a word \<lbrace>\<lambda>s. obj_at (empty_table S) word s\<rbrace>"
@@ -1709,11 +1711,7 @@ lemma delete_asid_empty_table_pt[wp]:
 lemma ucast_less_shiftl_helper3:
   "\<lbrakk> len_of TYPE('b) + 3 < len_of TYPE('a); 2 ^ (len_of TYPE('b) + 3) \<le> n\<rbrakk>
     \<Longrightarrow> (ucast (x :: 'b::len word) << 3) < (n :: 'a::len word)"
-  apply (erule order_less_le_trans[rotated])
-  using ucast_less[where x=x and 'a='a]
-  apply (simp only: shiftl_t2n field_simps)
-  apply (rule word_less_power_trans2; simp)
-  done
+  by (rule ucast_less_shiftl_helper')
 
 lemma caps_of_state_aligned_page_table:
   "\<lbrakk>caps_of_state s slot = Some (ArchObjectCap (PageTableCap word pt_t option)); invs s\<rbrakk>

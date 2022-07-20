@@ -1269,7 +1269,7 @@ lemma vgic_update_valid_pspace[wp]:
   "\<lbrace>valid_pspace\<rbrace> vgic_update vcpuptr f \<lbrace>\<lambda>_. valid_pspace\<rbrace>"
   unfolding vgic_update_def vcpu_update_def
   apply (wpsimp wp: set_vcpu_valid_pspace get_vcpu_wp simp: valid_vcpu_def)
-  apply (fastforce simp: obj_at_def dest!: valid_pspace_vo)
+  apply (fastforce simp: obj_at_def in_omonad dest!: valid_pspace_vo)
   done
 
 crunches invoke_vcpu_inject_irq, vcpu_read_reg
@@ -1694,7 +1694,7 @@ lemma arch_decode_vcpu_invocation_wf[wp]:
       apply (simp add:global_refs_def cap_range_def)
      apply (simp add: decode_vcpu_inject_irq_def)
      apply (rule hoare_pre, wpsimp simp: whenE_def wp: get_vcpu_wp)
-     apply (clarsimp simp: valid_arch_inv_def valid_vcpu_invocation_def obj_at_def)
+     apply (clarsimp simp: valid_arch_inv_def valid_vcpu_invocation_def obj_at_def in_omonad)
     apply (simp add: decode_vcpu_read_register_def)
     apply (rule hoare_pre, wpsimp)
     apply (clarsimp simp: valid_arch_inv_def valid_cap_def valid_vcpu_invocation_def)

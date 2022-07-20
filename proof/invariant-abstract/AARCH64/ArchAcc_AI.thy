@@ -27,12 +27,14 @@ locale_abbrev ex_vs_lookup_table ::
 
 bundle unfold_objects =
   obj_at_def[simp]
+  in_omonad[simp]
   kernel_object.splits[split]
   arch_kernel_obj.splits[split]
-  get_object_wp [wp]
+  get_object_wp[wp]
 
 bundle unfold_objects_asm =
   obj_at_def[simp]
+  in_omonad[simp]
   kernel_object.split_asm[split]
   arch_kernel_obj.split_asm[split]
 
@@ -44,10 +46,6 @@ lemmas pt_upd_simps[simp] = pt_upd_def[split_simps pt.split]
 
 lemma pt_range_upd:
   "pt_range (pt_upd pt i pte) \<subseteq> insert pte (pt_range pt)"
-  by (cases pt) auto
-
-lemma pt_type_pt_upd[simp]:
-  "pt_type (pt_upd pt i pte) = pt_type pt"
   by (cases pt) auto
 
 lemma ptes_of_wellformed_pte:
@@ -615,12 +613,7 @@ lemma vs_lookup_slot_unique_level:
   apply (drule pt_slot_offset_vref_for_level[where p="table_base (level_type level) p"]; clarsimp)
   done
 
-lemma get_asid_pool_wp [wp]:
-  "\<lbrace>\<lambda>s. \<forall>pool. ko_at (ArchObj (ASIDPool pool)) p s \<longrightarrow> Q pool s\<rbrace>
-  get_asid_pool p
-  \<lbrace>Q\<rbrace>"
-  by (wpsimp simp: obj_at_def in_opt_map_eq)
-
+lemmas get_asid_pool_wp = gets_map_wp'
 
 lemma set_asid_pool_typ_at [wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> set_asid_pool ptr pool \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
@@ -820,7 +813,7 @@ lemma set_asid_pool_dom[wp]:
      (auto simp: dom_def opt_map_def obj_at_def is_ArchObj_def
            split: option.splits elim!: rsubst[where P=P])
 
-lemma set_asid_pool_valid_asid_table[wp]:
+lemma set_asid_pool_None_valid_asid_table[wp]:
   "set_asid_pool p (ap (asid_low := None)) \<lbrace>valid_asid_table\<rbrace>"
   unfolding valid_asid_table_def
   using set_asid_pool_asid_pools_of[wp del]
@@ -1628,31 +1621,19 @@ lemmas invs_ran_asid_table = invs_valid_asid_table[THEN valid_asid_table_ran]
 
 
 lemma set_asid_pool_iflive [wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap s\<rbrace>
-  set_asid_pool p ap
-  \<lbrace>\<lambda>_ s. if_live_then_nonz_cap s\<rbrace>"
-  apply (simp add: set_asid_pool_def)
-  apply (wp get_object_wp set_object_iflive)
-  apply (clarsimp split: kernel_object.splits arch_kernel_obj.splits)
-  apply (clarsimp simp: obj_at_def live_def hyp_live_def arch_live_def)
-  done
-
+  "set_asid_pool p ap \<lbrace>if_live_then_nonz_cap\<rbrace>"
+  unfolding set_asid_pool_def
+  by (wp set_object_iflive)
+     (clarsimp simp: obj_at_def live_def hyp_live_def arch_live_def in_omonad)
 
 lemma set_asid_pool_zombies [wp]:
-  "\<lbrace>\<lambda>s. zombies_final s\<rbrace>
-  set_asid_pool p ap
-  \<lbrace>\<lambda>_ s. zombies_final s\<rbrace>"
-  apply (simp add: set_asid_pool_def)
-  apply (wp get_object_wp set_object_zombies)
-  apply (clarsimp split: kernel_object.splits arch_kernel_obj.splits)
-  apply (clarsimp simp: obj_at_def)
-  done
-
+  "set_asid_pool p ap \<lbrace>zombies_final\<rbrace>"
+  unfolding set_asid_pool_def
+  by (wp set_object_zombies)
+     (clarsimp simp: obj_at_def in_omonad)
 
 lemma set_asid_pool_zombies_state_refs [wp]:
-  "\<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace>
-  set_asid_pool p ap
-  \<lbrace>\<lambda>_ s. P (state_refs_of s)\<rbrace>"
+  "set_asid_pool p ap \<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace>"
   apply (clarsimp simp: set_asid_pool_def set_object_def)
   apply (wp get_object_wp)
   apply (clarsimp split: kernel_object.splits arch_kernel_obj.splits)
@@ -1662,13 +1643,11 @@ lemma set_asid_pool_zombies_state_refs [wp]:
   done
 
 lemma set_asid_pool_zombies_state_hyp_refs [wp]:
-  "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>
-  set_asid_pool p ap
-  \<lbrace>\<lambda>_ s. P (state_hyp_refs_of s)\<rbrace>"
-  apply (wpsimp simp: set_asid_pool_def wp: get_object_wp set_object_wp)
+  "set_asid_pool p ap \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
+  apply (wpsimp simp: set_asid_pool_def wp: set_object_wp)
   apply (erule rsubst [where P=P])
   apply (rule ext)
-  apply (clarsimp simp: obj_at_def state_hyp_refs_of_def split: option.splits)
+  apply (clarsimp simp: obj_at_def state_hyp_refs_of_def in_omonad)
   done
 
 lemma set_asid_pool_cdt [wp]:
@@ -1679,14 +1658,10 @@ lemma set_asid_pool_cdt [wp]:
   by wpsimp
 
 lemma set_asid_pool_caps_of_state [wp]:
-  "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_asid_pool p ap \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
-  unfolding set_asid_pool_def set_object_def including unfold_objects
-  apply wpsimp
-  apply (subst cte_wp_caps_of_lift)
-   prefer 2
-   apply assumption
-  subgoal for _ _ y by (cases y, auto simp: cte_wp_at_cases)
-  done
+  "set_asid_pool p ap \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>"
+  unfolding set_asid_pool_def
+  by (wpsimp simp: in_omonad wp: set_object_wp)
+     (subst cte_wp_caps_of_lift, auto simp: cte_wp_at_cases)
 
 lemma set_asid_pool_valid_mdb [wp]:
   "\<lbrace>\<lambda>s. valid_mdb s\<rbrace>
@@ -1705,9 +1680,7 @@ lemma set_asid_pool_valid_idle [wp]:
 
 
 lemma set_asid_pool_ifunsafe [wp]:
-  "\<lbrace>\<lambda>s. if_unsafe_then_cap s\<rbrace>
-  set_asid_pool p ap
-  \<lbrace>\<lambda>_ s. if_unsafe_then_cap s\<rbrace>"
+  "set_asid_pool p ap \<lbrace>if_unsafe_then_cap\<rbrace>"
   including unfold_objects
   by (wpsimp simp: set_asid_pool_def)
 
@@ -1830,18 +1803,19 @@ lemma set_asid_pool_vspace_objs_unmap':
     apply (clarsimp split: if_splits)
      (* pt_ptr = p *)
      apply (drule vs_lookup_level, drule vs_lookup_level)
-     apply (fastforce simp: obj_at_def fun_upd_apply)
+     apply (fastforce simp: obj_at_def fun_upd_apply in_omonad)
     (* pt_ptr \<noteq> p *)
+    apply (clarsimp simp: in_omonad)
     apply (erule (1) valid_vspace_obj_same_type, simp)
    (* level \<le> max_pt_level *)
    apply clarsimp
    apply (drule vs_lookup_level, drule vs_lookup_level)
    apply (drule (5) vs_lookup_table_pt_at)
    apply (case_tac "pt_ptr = p"; simp add: aobjs_of_ako_at_Some)
-    apply (clarsimp simp: aobjs_of_ako_at_Some obj_at_def fun_upd_apply fun_upd_def)
+    apply (clarsimp simp: aobjs_of_ako_at_Some obj_at_def fun_upd_apply fun_upd_def in_omonad)
    apply (clarsimp simp: fun_upd_apply split: if_splits)
-   apply (clarsimp simp: aobjs_of_ako_at_Some obj_at_def fun_upd_apply
-                    simp del: valid_vspace_obj.simps)
+   apply (clarsimp simp: aobjs_of_ako_at_Some obj_at_def fun_upd_apply in_omonad
+                   simp del: valid_vspace_obj.simps)
    apply (erule (1) valid_vspace_obj_same_type, simp)
   apply (case_tac "bot_level = asid_pool_level")
    apply (clarsimp simp: pool_for_asid_vs_lookup pool_for_asid_def)
@@ -2017,7 +1991,7 @@ lemma set_asid_pool_pspace_respects_device_region[wp]:
 lemma set_asid_pool_caps_kernel_window[wp]:
   "\<lbrace>cap_refs_in_kernel_window\<rbrace> set_asid_pool p ap \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
   apply (simp add: set_asid_pool_def)
-  apply (wp set_object_cap_refs_in_kernel_window get_object_wp)
+  apply (wp set_object_cap_refs_in_kernel_window)
   including unfold_objects_asm
   by clarsimp
 
