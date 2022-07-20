@@ -120,12 +120,11 @@ lemma replace_cap_invs:
    apply (simp add: is_cap_simps)
   apply (elim disjE)
    apply simp
-   sorry (* FIXME AARCH64
    apply (clarsimp simp: valid_table_capsD[OF caps_of_state_cteD]
                     valid_arch_caps_def unique_table_refs_no_cap_asidE)
   apply (rule conjI, clarsimp)
   apply (rule conjI, rule Ball_emptyI, simp add: gen_obj_refs_subset)
-  by clarsimp *)
+  by clarsimp
 
 definition
   "is_simple_cap_arch cap \<equiv> \<not>is_pt_cap cap"

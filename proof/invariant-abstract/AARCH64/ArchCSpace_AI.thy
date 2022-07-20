@@ -58,8 +58,7 @@ lemma weak_derived_valid_cap [CSpace_AI_assms]:
                     valid_cap_def cap_aligned_def bits_of_def
                     aobj_ref_cases Let_def cap_asid_def
              split: cap.splits arch_cap.splits option.splits)
-  sorry (* FIXME AARCH64
-  done *)
+  done
 
 lemma copy_obj_refs [CSpace_AI_assms]:
   "copy_of cap cap' \<Longrightarrow> obj_refs cap' = obj_refs cap"
@@ -139,12 +138,11 @@ lemma set_untyped_cap_as_full_valid_arch_caps [CSpace_AI_assms]:
    \<lbrace>\<lambda>ya. valid_arch_caps\<rbrace>"
   supply if_split[split del]
   apply (clarsimp simp: valid_arch_caps_def set_untyped_cap_as_full_def)
-  sorry (* FIXME AARCH64
   apply (wpsimp wp: set_cap_valid_vs_lookup set_cap_valid_table_caps
                 simp_del: fun_upd_apply simp: cte_wp_at_caps_of_state)
   apply (fastforce simp: unique_table_refs_upd_eqD unique_table_caps_upd_eqD
                          is_cap_simps cte_wp_at_caps_of_state)
-  done *)
+  done
 
 lemma set_untyped_cap_as_full[wp, CSpace_AI_assms]:
   "\<lbrace>\<lambda>s. no_cap_to_obj_with_diff_ref a b s \<and> cte_wp_at ((=) src_cap) src s\<rbrace>
@@ -240,10 +238,10 @@ crunches set_untyped_cap_as_full
   for aobjs_of[wp]: "\<lambda>s. P (aobjs_of s)"
 
 lemma is_derived_is_pt:
-  "is_derived m p cap cap' \<Longrightarrow> (is_pt_cap cap = is_pt_cap cap')"
+  "is_derived m p cap cap' \<Longrightarrow>
+   is_pt_cap cap = is_pt_cap cap' \<and> (is_pt_cap cap \<longrightarrow> cap_pt_type cap = cap_pt_type cap')"
   apply (clarsimp simp: is_derived_def split: if_split_asm)
-  apply (clarsimp simp: cap_master_cap_def is_pt_cap_def split: cap.splits arch_cap.splits)+
-  done
+  by (clarsimp simp: cap_master_cap_def split: cap.splits arch_cap.splits)+
 
 lemma cap_insert_valid_arch_caps [CSpace_AI_assms]:
   "\<lbrace>valid_arch_caps and (\<lambda>s. cte_wp_at (is_derived (cdt s) src cap) src s)\<rbrace>
@@ -278,7 +276,6 @@ lemma cap_insert_valid_arch_caps [CSpace_AI_assms]:
       apply (erule_tac x=a in allE, erule_tac x=b in allE)
       apply simp+
     apply (clarsimp simp: obj_at_def is_cap_simps valid_arch_caps_def)
-    sorry (* FIXME AARCH64
     apply (frule(1) valid_table_capsD)
       apply (clarsimp simp: cte_wp_at_caps_of_state)
       apply (drule is_derived_is_pt)
@@ -290,7 +287,7 @@ lemma cap_insert_valid_arch_caps [CSpace_AI_assms]:
     apply (frule is_derived_obj_refs)
     apply (drule_tac x=p in bspec)
      apply fastforce
-    apply (clarsimp simp: obj_at_def empty_table_caps_of)
+    apply (clarsimp simp: obj_at_def empty_table_caps_of dest!: is_derived_is_pt)
    apply (clarsimp simp: is_cap_simps cte_wp_at_caps_of_state)
    apply (frule is_derived_is_pt)
    apply (frule is_derived_obj_refs)
@@ -299,7 +296,7 @@ lemma cap_insert_valid_arch_caps [CSpace_AI_assms]:
    apply (drule_tac ptr=src and ptr'="(x,xa)" in unique_table_capsD)
          apply (fastforce simp: cap_asid_def is_cap_simps)+
   apply (auto simp: cte_wp_at_caps_of_state)
-  done *)
+  done
 
 end
 
@@ -493,11 +490,10 @@ lemma cap_insert_derived_ioports[CSpace_AI_assms]:
 end
 
 global_interpretation CSpace_AI?: CSpace_AI
-  proof goal_cases
+proof goal_cases
   interpret Arch .
-  case 1 show ?case sorry (* FIXME AARCH64
-by (unfold_locales; (fact CSpace_AI_assms)?) *)
-  qed
+  case 1 show ?case by (unfold_locales; (fact CSpace_AI_assms)?)
+qed
 
 
 context Arch begin global_naming AARCH64

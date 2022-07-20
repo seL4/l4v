@@ -60,6 +60,9 @@ definition
   "reachable_frame_cap cap \<equiv> \<lambda>s.
      is_frame_cap cap \<and> (\<exists>ref. vs_cap_ref cap = Some ref \<and> reachable_target ref (obj_ref_of cap) s)"
 
+abbreviation
+  "cap_pt_type cap \<equiv> acap_pt_type (the_arch_cap cap)"
+
 (* The conditions under which it is legal to immediately replace an arch_cap
    cap with newcap at slot sl, assuming cap is final. *)
 definition
@@ -77,7 +80,7 @@ where
     \<comment> \<open> Don't introduce non-empty unmapped table objects. \<close>
   \<and> (is_pt_cap newcap
       \<longrightarrow> cap_asid newcap = None
-      \<longrightarrow> (\<forall>r \<in> obj_refs newcap. pts_of s r = Some (empty_pt undefined)))
+      \<longrightarrow> (\<forall>r \<in> obj_refs newcap. pts_of s r = Some (empty_pt (cap_pt_type newcap))))
     \<comment> \<open> If newcap is vspace table cap such that either:
          - newcap and cap have different types or different obj_refs, or
          - newcap is unmapped while cap is mapped, \<close>
@@ -92,7 +95,7 @@ where
                      \<and> is_pt_cap cap'
                      \<and> (cap_asid newcap = None \<or> cap_asid cap' = None)) sl' s \<longrightarrow> sl' = sl))
   \<comment> \<open>Don't replace with an ASID pool. \<close>
-  \<and> \<not>is_ap_cap newcap" (* FIXME AARCH64: undefined in def *)
+  \<and> \<not>is_ap_cap newcap"
 
 definition
   replaceable_non_final_arch_cap :: "'z::state_ext state \<Rightarrow> cslot_ptr \<Rightarrow> cap \<Rightarrow> cap \<Rightarrow> bool"
@@ -138,7 +141,6 @@ lemma set_cap_valid_vs_lookup:
      set_cap cap ptr
    \<lbrace>\<lambda>rv. valid_vs_lookup\<rbrace>"
   supply split_paired_All[simp del] split_paired_Ex[simp del]
-  sorry (* FIXME AARCH64
   apply (wpsimp wp: hoare_vcg_all_lift hoare_convert_imp vs_lookup_target_lift hoare_vcg_disj_lift
               simp: valid_vs_lookup_def)
   apply (drule vs_lookup_target_level)
@@ -169,10 +171,7 @@ lemma set_cap_valid_vs_lookup:
    apply (erule_tac x=level in allE)
    apply (clarsimp)
   apply fastforce
-  done *)
-
-abbreviation
-  "cap_pt_type cap \<equiv> acap_pt_type (the_arch_cap cap)"
+  done
 
 lemma set_cap_valid_table_caps:
   "\<lbrace>\<lambda>s. valid_table_caps s \<and>
@@ -184,9 +183,8 @@ lemma set_cap_valid_table_caps:
   apply (wp hoare_vcg_all_lift
             hoare_vcg_disj_lift hoare_convert_imp[OF set_cap_caps_of_state]
             hoare_use_eq[OF set_cap_arch set_cap_obj_at_impossible])
-  sorry (* FIXME AARCH64
-  apply (fastforce simp: cap_asid_def split: if_split_asm)
-  done *)
+  apply (fastforce simp: cap_asid_def the_arch_cap_def split: if_split_asm) (* FIXME AARCH64: the_arch_cap has duplicate definition *)
+  done
 
 lemma cap_asid_vs_cap_ref_None:
   "is_pt_cap cap \<Longrightarrow> (cap_asid cap = None) = (vs_cap_ref cap = None)"
@@ -320,16 +318,9 @@ lemma valid_table_capsD:
   "\<lbrakk> cte_wp_at ((=) cap) ptr s; valid_table_caps s; is_pt_cap cap; cap_asid cap = None \<rbrakk>
    \<Longrightarrow> \<forall>r \<in> obj_refs cap. pts_of s r = Some (empty_pt (cap_pt_type cap))"
   apply (clarsimp simp: cte_wp_at_caps_of_state valid_table_caps_def is_pt_cap_def
-                        is_PageTableCap_def cap_asid_def
-                 split: option.splits)
-  sorry (* FIXME AARCH64
-   apply (cases ptr, fastforce)+
-  done *)
-
-lemma pt_caps_asid_vsref:
-  "is_pt_cap cap \<Longrightarrow> (cap_asid cap = None) = (vs_cap_ref cap = None)"
-  apply (cases cap; simp)
-  apply (rename_tac acap, case_tac acap; simp add: cap_asid_def split: option.splits)
+                        is_PageTableCap_def cap_asid_def the_arch_cap_def
+                 split: option.splits prod.splits)
+   apply (cases ptr, fastforce)
   done
 
 lemma unique_table_capsD:
