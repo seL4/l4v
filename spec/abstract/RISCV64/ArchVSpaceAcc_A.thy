@@ -57,7 +57,7 @@ definition set_asid_pool :: "obj_ref \<Rightarrow> (asid_low_index \<rightharpoo
   where
   "set_asid_pool ptr pool \<equiv> do
      get_asid_pool ptr;
-     set_object ptr (ArchObj (ASIDPool pool))
+     set_object True ptr (ArchObj (ASIDPool pool))
    od"
 
 locale_abbrev pts_of :: "bool \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref \<rightharpoonup> pt"
@@ -72,7 +72,7 @@ definition set_pt :: "obj_ref \<Rightarrow> (pt_index \<Rightarrow> pte) \<Right
   where
   "set_pt ptr pt \<equiv> do
      get_pt ptr;
-     set_object ptr (ArchObj (PageTable pt))
+     set_object True ptr (ArchObj (PageTable pt))
    od"
 
 (* The base address of the table a page table entry at p is in (assuming alignment) *)

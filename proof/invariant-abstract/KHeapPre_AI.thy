@@ -111,33 +111,31 @@ locale arch_only_obj_pred =
   fixes P :: "kernel_object \<Rightarrow> bool"
   assumes arch_only: "arch_obj_pred P"
 
-(* FIXME: set_object might need to take `ta_f` bool arg now too. -robs *)
 lemma set_object_typ_at [wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p' s)\<rbrace>
-  set_object p ko \<lbrace>\<lambda>rv s. P (typ_at T p' s)\<rbrace>"
+  set_object False p ko \<lbrace>\<lambda>rv s. P (typ_at T p' s)\<rbrace>"
   apply (simp add: set_object_def get_object_def)
   apply wp
   apply clarsimp
   apply (erule rsubst [where P=P])
   apply (clarsimp simp: obj_at_def)
-. (* DOWN TO HERE
   done
 
 lemma set_object_neg_ko:
   "\<lbrace>not ko_at ko' p' and K (p = p' \<longrightarrow> ko \<noteq> ko')\<rbrace>
-  set_object p ko
+  set_object ta_f p ko
   \<lbrace>\<lambda>_ s. \<not> ko_at ko' p' s\<rbrace>"
   apply (simp add: set_object_def get_object_def)
   apply wp
   apply (simp add: pred_neg_def obj_at_def)
   done
 
-lemma get_tcb_SomeD: "get_tcb t s = Some v \<Longrightarrow> kheap s t = Some (TCB v)"
+lemma get_tcb_SomeD: "get_tcb False t s = Some v \<Longrightarrow> kheap s t = Some (TCB v)"
   apply (case_tac "kheap s t", simp_all add: get_tcb_def)
   apply (case_tac a, simp_all)
   done
 
-lemma get_tcb_at: "tcb_at t s \<Longrightarrow> (\<exists>tcb. get_tcb t s = Some tcb)"
+lemma get_tcb_at: "tcb_at t s \<Longrightarrow> (\<exists>tcb. get_tcb False t s = Some tcb)"
   by (simp add: tcb_at_def)
 
 lemma typ_at_same_type:
@@ -171,14 +169,14 @@ lemma hoare_to_pure_kheap_upd:
   by (auto simp add: obj_at_def a_type_def split: kernel_object.splits if_splits)
 
 lemma set_object_wp:
-  "\<lbrace>\<lambda>s. Q (s\<lparr> kheap := kheap s (p \<mapsto> v)\<rparr>) \<rbrace> set_object p v \<lbrace>\<lambda>_. Q\<rbrace>"
+  "\<lbrace>\<lambda>s. Q (s\<lparr> kheap := kheap s (p \<mapsto> v)\<rparr>) \<rbrace> set_object ta_f p v \<lbrace>\<lambda>_. Q\<rbrace>"
   apply (simp add: set_object_def get_object_def)
   apply wp
   apply blast
   done
 
 lemma get_object_wp:
-  "\<lbrace>\<lambda>s. \<forall>ko. ko_at ko p s \<longrightarrow> Q ko s\<rbrace> get_object p \<lbrace>Q\<rbrace>"
+  "\<lbrace>\<lambda>s. \<forall>ko. ko_at ko p s \<longrightarrow> Q ko s\<rbrace> get_object False p \<lbrace>Q\<rbrace>"
   apply (clarsimp simp: get_object_def)
   apply wp
   apply (clarsimp simp: obj_at_def)
@@ -198,9 +196,9 @@ lemma hoare_strengthen_pre_via_assert_forward:
   done
 
 lemma hoare_set_object_weaken_pre:
-  assumes "\<lbrace>P\<rbrace> set_object p v \<lbrace>\<lambda>_. Q\<rbrace>"
+  assumes "\<lbrace>P\<rbrace> set_object False p v \<lbrace>\<lambda>_. Q\<rbrace>"
   shows "\<lbrace>\<lambda>s. \<forall>ko. ko_at ko p s \<longrightarrow> (a_type v = a_type ko) \<longrightarrow> P s\<rbrace>
-         set_object p v
+         set_object False p v
          \<lbrace>\<lambda>_. Q\<rbrace>"
   apply (rule hoare_strengthen_pre_via_assert_forward
                 [OF assms, where N="\<lambda>s. \<forall>ko. ko_at ko p s \<longrightarrow> a_type ko \<noteq> a_type v"])

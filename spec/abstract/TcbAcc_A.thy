@@ -49,7 +49,7 @@ definition
      new_regs \<leftarrow> return (\<lambda>reg. if reg \<in> set (take (length msgs) msg_registers)
                               then msgs ! (the_index msg_registers reg)
                               else context reg);
-     set_object thread (TCB (tcb \<lparr> tcb_arch := arch_tcb_set_registers new_regs (tcb_arch tcb) \<rparr>));
+     set_object True thread (TCB (tcb \<lparr> tcb_arch := arch_tcb_set_registers new_regs (tcb_arch tcb) \<rparr>));
      remaining_msgs \<leftarrow> return (drop (length msg_registers) msgs);
      case buf of
      None      \<Rightarrow> return $ nat_to_len (min (length msg_registers) (length msgs))

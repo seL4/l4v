@@ -83,10 +83,10 @@ where
    od"
 
 definition
-  set_object :: "obj_ref \<Rightarrow> kernel_object \<Rightarrow> (unit,'z::state_ext) s_monad"
+  set_object :: "bool \<Rightarrow> obj_ref \<Rightarrow> kernel_object \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "set_object ptr obj \<equiv> do
-     kobj <- get_object True ptr;
+  "set_object ta_f ptr obj \<equiv> do
+     kobj <- get_object ta_f ptr;
      assert (a_type kobj = a_type obj);
      s \<leftarrow> get;
      put (s\<lparr>kheap := kheap s(ptr \<mapsto> obj)\<rparr>)
@@ -133,7 +133,7 @@ definition
 where
   "thread_set f tptr \<equiv> do
      tcb \<leftarrow> gets_the $ get_tcb True tptr;
-     set_object tptr $ TCB $ f tcb
+     set_object True tptr $ TCB $ f tcb
    od"
 
 definition
@@ -149,7 +149,7 @@ definition
 where
   "arch_thread_set f tptr \<equiv> do
      tcb \<leftarrow> gets_the $ get_tcb True tptr;
-     set_object tptr $ TCB $ tcb \<lparr> tcb_arch := f (tcb_arch tcb) \<rparr>
+     set_object True tptr $ TCB $ tcb \<lparr> tcb_arch := f (tcb_arch tcb) \<rparr>
    od"
 
 definition
@@ -167,7 +167,7 @@ definition
 where
   "set_bound_notification ref ntfn \<equiv> do
      tcb \<leftarrow> gets_the $ get_tcb True ref;
-     set_object ref (TCB (tcb \<lparr> tcb_bound_notification := ntfn \<rparr>))
+     set_object True ref (TCB (tcb \<lparr> tcb_bound_notification := ntfn \<rparr>))
    od"
 
 definition set_thread_state_ext :: "obj_ref \<Rightarrow> unit det_ext_monad" where
@@ -183,7 +183,7 @@ definition
 where
   "set_thread_state ref ts \<equiv> do
      tcb \<leftarrow> gets_the $ get_tcb True ref;
-     set_object ref (TCB (tcb \<lparr> tcb_state := ts \<rparr>));
+     set_object True ref (TCB (tcb \<lparr> tcb_state := ts \<rparr>));
      do_extended_op (set_thread_state_ext ref)
    od"
 
@@ -249,7 +249,7 @@ where
      obj \<leftarrow> get_object True ptr;
      assert (is_simple_type obj);
      assert (partial_inv f obj \<noteq> None);
-     set_object ptr (f ep)
+     set_object True ptr (f ep)
    od"
 
 
@@ -318,7 +318,7 @@ where
     uc \<leftarrow> return $ arch_tcb_context_get (tcb_arch tcb);
     (a, uc') \<leftarrow> select_f $ f uc;
     new_tcb \<leftarrow> return $ tcb \<lparr> tcb_arch := arch_tcb_context_set uc' (tcb_arch tcb)\<rparr>;
-    set_object tptr (TCB new_tcb);
+    set_object True tptr (TCB new_tcb);
     return a
   od"
 

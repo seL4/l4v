@@ -1850,20 +1850,20 @@ lemma valid_mdb_eqI:
   done
 
 lemma set_object_at_obj:
-  "\<lbrace> \<lambda>s. obj_at P p s \<and> (p = r \<longrightarrow> P obj) \<rbrace> set_object r obj \<lbrace> \<lambda>rv. obj_at P p \<rbrace>"
+  "\<lbrace> \<lambda>s. obj_at P p s \<and> (p = r \<longrightarrow> P obj) \<rbrace> set_object ta_f r obj \<lbrace> \<lambda>rv. obj_at P p \<rbrace>"
   by (clarsimp simp: valid_def in_monad obj_at_def set_object_def get_object_def)
 
 lemma set_object_at_obj1:
-  "P obj \<Longrightarrow> \<lbrace> obj_at P p \<rbrace> set_object r obj \<lbrace> \<lambda>rv. obj_at P p \<rbrace>"
+  "P obj \<Longrightarrow> \<lbrace> obj_at P p \<rbrace> set_object ta_f r obj \<lbrace> \<lambda>rv. obj_at P p \<rbrace>"
   by (clarsimp simp: valid_def in_monad obj_at_def set_object_def get_object_def)
 
 lemma set_object_at_obj2:
   "(\<And>ko. Q ko \<Longrightarrow> \<not>P ko) \<Longrightarrow>
-  \<lbrace> obj_at P p and obj_at Q r \<rbrace> set_object r obj \<lbrace> \<lambda>rv. obj_at P p \<rbrace>"
+  \<lbrace> obj_at P p and obj_at Q r \<rbrace> set_object ta_f r obj \<lbrace> \<lambda>rv. obj_at P p \<rbrace>"
   by (clarsimp simp: valid_def in_monad obj_at_def set_object_def get_object_def)
 
 lemma test:
-  "\<lbrace> ep_at p and tcb_at r \<rbrace> set_object r obj \<lbrace> \<lambda>rv. ep_at p \<rbrace>"
+  "\<lbrace> ep_at p and tcb_at r \<rbrace> set_object ta_f r obj \<lbrace> \<lambda>rv. ep_at p \<rbrace>"
   apply (rule set_object_at_obj2)
   apply (clarsimp simp: is_obj_defs)
   done

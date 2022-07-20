@@ -31,18 +31,18 @@ lemma valid_vspace_obj_lift:
       safe; wpsimp wp: assms hoare_vcg_ball_lift hoare_vcg_all_lift valid_pte_lift)
 
 lemma aobjs_of_atyp_lift:
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (aobjs_of False s)\<rbrace>"
   shows "f \<lbrace>\<lambda>s. P (typ_at (AArch T) p s)\<rbrace>"
-  by (wpsimp simp: typ_at_aobjs wp: assms)
+  by (wpsimp simp: typ_at_aobjs wp: assms[simplified])
 
 lemma valid_vspace_objs_lift_vs_lookup:
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (vs_lookup s)\<rbrace>"
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (aobjs_of False s)\<rbrace>"
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (riscv_kernel_vspace (arch_state s)) \<rbrace>"
   shows   "\<lbrace>valid_vspace_objs\<rbrace> f \<lbrace>\<lambda>rv. valid_vspace_objs\<rbrace>"
   unfolding valid_vspace_objs_def
   apply (wp hoare_vcg_all_lift)
-   apply (rule hoare_lift_Pf[where f="aobjs_of"])
+   apply (rule hoare_lift_Pf[where f="aobjs_of False"])
     apply (rule hoare_lift_Pf[where f="\<lambda>s. riscv_kernel_vspace (arch_state s)"])
      apply (rule_tac f="vs_lookup" in hoare_lift_Pf)
       apply (wpsimp wp: assms hoare_vcg_imp_lift valid_vspace_obj_lift aobjs_of_atyp_lift)+
@@ -126,6 +126,8 @@ lemma pool_for_asid_lift:
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (riscv_asid_table (arch_state s))\<rbrace>"
   shows "f \<lbrace>\<lambda>s. P (pool_for_asid asid s)\<rbrace>"
   by (wpsimp simp: pool_for_asid_def wp: assms)
+
+. (* DOWN TO HERE. -robs
 
 lemma vs_lookup_table_lift:
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (ptes_of s)\<rbrace>"

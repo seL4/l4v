@@ -63,7 +63,7 @@ where
                    else
                        fail
              | _ \<Rightarrow> fail;
-     set_object oref obj'
+     set_object True oref obj'
   od"
 
 text \<open>Ensure a capability slot is empty.\<close>

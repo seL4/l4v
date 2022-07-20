@@ -28,7 +28,7 @@ context Arch begin global_naming RISCV64
 
 (* compatibility with other architectures, input only *)
 abbreviation
-  "vs_lookup s \<equiv> \<lambda>level asid vref. vs_lookup_table level asid vref s"
+  "vs_lookup s \<equiv> \<lambda>level asid vref. vs_lookup_table False level asid vref s"
 
 locale_abbrev
   "atyps_of \<equiv> \<lambda>s. aobjs_of False s ||> aa_type"
