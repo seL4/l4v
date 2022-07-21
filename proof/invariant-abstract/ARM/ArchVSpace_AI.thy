@@ -3445,15 +3445,35 @@ lemma cacheRangeOp_respects_device_region[wp]:
 crunches cleanByVA, cleanCacheRange_PoC, cleanCacheRange_RAM,
   cleanInvalByVA, invalidateByVA, invalidateL2Range,
   invalidateCacheRange_RAM, branchFlush, branchFlushRange,
-  invalidateByVA_I, cleanInvalidateL2Range, do_flush, storeWord
+  invalidateByVA_I, cleanInvalidateL2Range, do_flush,
+  invalidateLocalTLB_VAASID
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
+  and mem[wp]: "\<lambda>ms. P (underlying_memory ms)"
+  and irq_masks[wp]: "\<lambda>ms. P (irq_masks ms)"
   (wp: cacheRangeOp_respects_device_region simp: crunch_simps
-   ignore_del: cleanByVA cleanInvalByVA invalidateByVA invalidateL2Range
+   ignore_del: cleanByVA cleanInvalByVA invalidateByVA invalidateL2Range cleanCacheRange_PoU
+               cleanCacheRange_RAM cleanL2Range cleanByVA_PoU isb dsb invalidateLocalTLB_VAASID
                branchFlush invalidateByVA_I cleanInvalidateL2Range storeWord)
 
 crunch pspace_respects_device_region[wp]: perform_page_invocation "pspace_respects_device_region"
   (simp: crunch_simps wp: crunch_wps set_object_pspace_respects_device_region
          pspace_respects_device_region_dmo)
+
+crunches do_machine_op
+  for cap_refs_in_kernel_window[wp]: cap_refs_in_kernel_window
+  (simp: valid_kernel_mappings_def)
+
+lemma dmo_invs_lift:
+  assumes dev: "\<And>P. f \<lbrace>\<lambda>ms. P (device_state ms)\<rbrace>"
+  assumes mem: "\<And>P. f \<lbrace>\<lambda>ms. P (underlying_memory ms)\<rbrace>"
+  assumes irq: "\<And>P. f \<lbrace>\<lambda>ms. P (irq_masks ms)\<rbrace>"
+  shows "do_machine_op f \<lbrace>invs\<rbrace>"
+  unfolding invs_def valid_state_def valid_pspace_def valid_irq_states_def valid_machine_state_def
+  by (wpsimp wp: dev hoare_vcg_all_lift hoare_vcg_disj_lift
+                 dmo_inv_prop_lift[where g=underlying_memory, OF mem]
+                 pspace_respects_device_region_dmo
+                 cap_refs_respects_device_region_dmo
+     | wps dmo_inv_prop_lift[where g=irq_masks, OF irq])+
 
 lemma perform_page_directory_invocation_invs[wp]:
   "\<lbrace>invs and valid_pdi pdi\<rbrace>
@@ -3461,19 +3481,10 @@ lemma perform_page_directory_invocation_invs[wp]:
    \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (cases pdi)
    apply (clarsimp simp: perform_page_directory_invocation_def)
-   apply (wp dmo_invs set_vm_root_for_flush_invs
-             hoare_vcg_const_imp_lift hoare_vcg_all_lift
-          | simp)+
-    apply (rule hoare_pre_imp[of _ \<top>], assumption)
-    apply (clarsimp simp: valid_def)
-    apply (thin_tac "p \<in> fst (set_vm_root_for_flush a b s)" for p a b)
-    apply safe[1]
-     apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-            in use_valid)
-       apply ((clarsimp | wp)+)[3]
-    apply(erule use_valid, wp no_irq_do_flush no_irq, assumption)
-   apply(wp set_vm_root_for_flush_invs | simp add: valid_pdi_def)+
-  apply (clarsimp simp: perform_page_directory_invocation_def)
+   apply (wpsimp wp: dmo_invs_lift set_vm_root_for_flush_invs
+                     hoare_vcg_const_imp_lift hoare_vcg_all_lift)
+   apply (simp add: valid_pdi_def)
+  apply (clarsimp simp: perform_page_directory_invocation_def valid_pdi_def)
   done
 
 lemma perform_page_table_invocation_invs[wp]:
@@ -3526,26 +3537,13 @@ lemma perform_page_table_invocation_invs[wp]:
    apply (rule hoare_lift_Pf2[where f=caps_of_state])
     apply (wp hoare_vcg_all_lift hoare_vcg_const_imp_lift)+
         apply (rule hoare_vcg_conj_lift)
-         apply (wp dmo_invs)
-        apply (wp hoare_vcg_all_lift hoare_vcg_const_imp_lift
-                  valid_cap_typ[OF do_machine_op_obj_at]
-                  mapM_x_swp_store_pte_invs[unfolded cte_wp_at_caps_of_state]
-                  mapM_x_swp_store_empty_table
-                  valid_cap_typ[OF unmap_page_table_typ_at]
-                  unmap_page_table_unmapped3)+
-        apply (rule hoare_pre_imp[of _ \<top>], assumption)
-        apply (clarsimp simp: valid_def split_def)
-        apply safe[1]
-         apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p =
-                                    underlying_memory m p" in use_valid)
-           apply ((clarsimp | wp)+)[3]
-        apply(erule use_valid, wp no_irq_cleanCacheRange_PoU, assumption)
-       apply (wp hoare_vcg_all_lift hoare_vcg_const_imp_lift
-                 valid_cap_typ[OF do_machine_op_obj_at]
-                 mapM_x_swp_store_pte_invs[unfolded cte_wp_at_caps_of_state]
-                 mapM_x_swp_store_empty_table
-                 valid_cap_typ[OF unmap_page_table_typ_at]
-                 unmap_page_table_unmapped3 store_pte_no_lookup_pages
+         apply (wp dmo_invs_lift hoare_vcg_all_lift hoare_vcg_const_imp_lift
+                   valid_cap_typ[OF do_machine_op_obj_at]
+                   mapM_x_swp_store_pte_invs[unfolded cte_wp_at_caps_of_state]
+                   mapM_x_swp_store_empty_table
+                   valid_cap_typ[OF unmap_page_table_typ_at]
+                   unmap_page_table_unmapped3
+                   store_pte_no_lookup_pages
               | wp (once) hoare_vcg_conj_lift
               | wp (once) mapM_x_wp'
               | simp)+
@@ -3604,27 +3602,12 @@ crunch typ_at [wp]: unmap_page "\<lambda>s. P (typ_at T p s)"
 
 lemmas unmap_page_typ_ats [wp] = abs_typ_at_lifts [OF unmap_page_typ_at]
 
-lemma invalidateLocalTLB_VAASID_underlying_memory[wp]:
-  "\<lbrace>\<lambda>m'. underlying_memory m' p = um\<rbrace> invalidateLocalTLB_VAASID v \<lbrace>\<lambda>_ m'. underlying_memory m' p = um\<rbrace>"
-  by (clarsimp simp: invalidateLocalTLB_VAASID_def machine_rest_lift_def machine_op_lift_def split_def | wp)+
-
 lemma flush_page_invs:
   "\<lbrace>invs and K (asid \<le> mask asid_bits)\<rbrace>
-  flush_page sz pd asid vptr \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (simp add: flush_page_def)
-  apply (wp dmo_invs hoare_vcg_all_lift load_hw_asid_wp
-            set_vm_root_for_flush_invs hoare_drop_imps
-         | simp add: split_def)+
-     apply (rule hoare_pre_imp[of _ \<top>], assumption)
-     apply (clarsimp simp: valid_def)
-     apply (thin_tac "x : fst (set_vm_root_for_flush a b c)" for x a b c)
-     apply safe
-      apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-             in use_valid)
-        apply ((clarsimp | wp)+)[3]
-       apply(erule use_valid, wp no_irq_invalidateLocalTLB_VAASID no_irq, assumption)
-      apply (wp set_vm_root_for_flush_invs hoare_drop_imps|simp)+
-  done
+   flush_page sz pd asid vptr
+   \<lbrace>\<lambda>_. invs\<rbrace>"
+  unfolding flush_page_def
+  by (wpsimp wp: dmo_invs_lift set_vm_root_for_flush_invs)
 
 lemma find_pd_for_asid_lookup_slot [wp]:
   "\<lbrace>pspace_aligned and valid_vspace_objs\<rbrace> find_pd_for_asid asid
@@ -4555,16 +4538,8 @@ lemma perform_page_invs [wp]:
                     split: vmpage_size.splits option.splits if_splits)[1]
 
    \<comment> \<open>PageFlush\<close>
-   apply (rule hoare_pre)
-    apply (wpsimp wp: dmo_invs set_vm_root_for_flush_invs hoare_vcg_const_imp_lift hoare_vcg_all_lift)
-     apply (rule hoare_pre_imp[of _ \<top>], assumption)
-     apply (clarsimp simp: valid_def)
-     apply (thin_tac "p \<in> fst (set_vm_root_for_flush a b s)" for p a b)
-     apply (safe)
-      apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p" in use_valid)
-        apply (wpsimp+)[3]
-     apply (erule use_valid, wp no_irq_do_flush no_irq, assumption)
-    apply (wp set_vm_root_for_flush_invs | simp add: valid_page_inv_def tcb_at_invs)+
+   apply (wpsimp wp: dmo_invs_lift set_vm_root_for_flush_invs)
+   apply (simp add: valid_page_inv_def tcb_at_invs)+
   done
 
 end

@@ -3419,12 +3419,11 @@ crunches vcpu_switch
 lemma data_at_orth_vcpu:
   "data_at a p s \<Longrightarrow> \<not> ep_at p s
   \<and> \<not> ntfn_at p s \<and>\<not> cap_table_at sz p s \<and> \<not> tcb_at p s \<and> \<not> asid_pool_at p s
-  \<and> \<not> page_table_at p s \<and> \<not> page_directory_at p s \<and> \<not> asid_pool_at p s \<and> \<not> vcpu_at p s"
+  \<and> \<not> pt_at pt_t p s \<and> \<not> asid_pool_at p s \<and> \<not> vcpu_at p s"
   apply (clarsimp simp: data_at_def obj_at_def a_type_def)
   apply (case_tac "kheap s p",simp)
   subgoal for ko
-   sorry (* FIXME AARCH64 VCPU
-   by (case_tac ko,auto simp add: is_ep_def is_ntfn_def is_cap_table_def is_tcb_def) *)
+   by (case_tac ko,auto simp add: is_ep_def is_ntfn_def is_cap_table_def is_tcb_def)
   done
 
 end
