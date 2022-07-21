@@ -54,6 +54,7 @@ where
     set_cdt (cdt (dest \<mapsto> untyped));
     do_extended_op (create_cap_ext untyped dest dest_p);
     set_original dest True;
+    touch_object (fst dest);
     set_cap (default_cap type oref bits is_device) dest
    od"
 
@@ -148,6 +149,7 @@ definition
   reset_untyped_cap :: "cslot_ptr \<Rightarrow> (unit,'z::state_ext) p_monad"
 where
   "reset_untyped_cap src_slot = doE
+  liftE $ touch_object (fst src_slot);
   cap \<leftarrow> liftE $ get_cap True src_slot;
   sz \<leftarrow> returnOk $ bits_of cap;
   base \<leftarrow> returnOk $ obj_ref_of cap;
@@ -185,6 +187,7 @@ doE
   whenE reset $ reset_untyped_cap src_slot;
   liftE $ do
 
+  touch_object (fst src_slot);
   cap \<leftarrow> get_cap True src_slot;
 
   \<comment> \<open>Update the untyped cap to track the amount of space used.\<close>

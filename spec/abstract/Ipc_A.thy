@@ -555,6 +555,7 @@ definition
   handle_fault :: "obj_ref \<Rightarrow> fault \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "handle_fault thread ex \<equiv> do
+     touch_object thread;
      _ \<leftarrow> gets_the $ get_tcb True thread;
      send_fault_ipc thread ex
           <catch> handle_double_fault thread ex;

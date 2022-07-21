@@ -21,6 +21,7 @@ definition lookup_ipc_buffer :: "bool \<Rightarrow> obj_ref \<Rightarrow> (obj_r
   "lookup_ipc_buffer is_receiver thread \<equiv> do
      buffer_ptr \<leftarrow> thread_get tcb_ipc_buffer thread;
      buffer_frame_slot \<leftarrow> return (thread, tcb_cnode_index 4);
+     touch_object (fst buffer_frame_slot);
      buffer_cap \<leftarrow> get_cap True buffer_frame_slot;
      case buffer_cap of
        ArchObjectCap (FrameCap p R vms False _) \<Rightarrow>
@@ -101,6 +102,7 @@ definition set_vm_root :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
   where
   "set_vm_root tcb \<equiv> do
     thread_root_slot \<leftarrow> return (tcb, tcb_cnode_index 1);
+    touch_object (fst thread_root_slot);
     thread_root \<leftarrow> get_cap True thread_root_slot;
     (case thread_root of
        ArchObjectCap (PageTableCap pt (Some (asid, _))) \<Rightarrow> doE
@@ -132,6 +134,7 @@ definition delete_asid_pool :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'
      assert (asid_low_bits_of base = 0);
      asid_table \<leftarrow> gets (riscv_asid_table \<circ> arch_state);
      when (asid_table (asid_high_bits_of base) = Some ptr) $ do
+       touch_object ptr;
        pool \<leftarrow> get_asid_pool ptr;
        asid_table' \<leftarrow> return $ asid_table (asid_high_bits_of base:= None);
        modify (\<lambda>s. s \<lparr> arch_state := (arch_state s) \<lparr> riscv_asid_table := asid_table' \<rparr>\<rparr>);
@@ -148,6 +151,7 @@ definition delete_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::st
      case asid_table (asid_high_bits_of asid) of
        None \<Rightarrow> return ()
      | Some pool_ptr \<Rightarrow> do
+         touch_object pool_ptr;
          pool \<leftarrow> get_asid_pool pool_ptr;
          when (pool (asid_low_bits_of asid) = Some pt) $ do
            do_machine_op $ hwASIDFlush (ucast asid);
@@ -164,6 +168,7 @@ definition unmap_page_table :: "asid \<Rightarrow> vspace_ref \<Rightarrow> obj_
   "unmap_page_table asid vaddr pt \<equiv> doE
      top_level_pt \<leftarrow> find_vspace_for_asid asid;
      pt_slot \<leftarrow> pt_lookup_from_level max_pt_level top_level_pt vaddr pt;
+     liftE $ touch_object pt_slot;
      liftE $ store_pte pt_slot InvalidPTE;
      liftE $ do_machine_op sfence
    odE <catch> (K $ return ())"
@@ -208,6 +213,7 @@ definition unmap_page :: "vmpage_size \<Rightarrow> asid \<Rightarrow> vspace_re
      top_level_pt \<leftarrow> find_vspace_for_asid asid;
      (lev, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot top_level_pt vptr \<circ> ptes_of True;
      unlessE (pt_bits_left lev = pageBitsForSize pgsz) $ throwError InvalidRoot;
+     liftE $ touch_object slot;
      pte \<leftarrow> liftE $ get_pte slot;
      unlessE (is_PagePTE pte \<and> pptr_from_pte pte = pptr) $ throwError InvalidRoot;
      liftE $ store_pte slot InvalidPTE;

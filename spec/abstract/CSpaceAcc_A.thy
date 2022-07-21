@@ -71,6 +71,7 @@ definition
   ensure_empty :: "cslot_ptr \<Rightarrow> (unit,'z::state_ext) se_monad"
 where
   "ensure_empty slot \<equiv> doE
+    liftE $ touch_object (fst slot);
     cap \<leftarrow> liftE $ get_cap True slot;
     whenE (cap \<noteq> NullCap) (throwError DeleteFirst)
   odE"

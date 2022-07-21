@@ -99,7 +99,8 @@ where
   "set_untyped_cap_as_full src_cap new_cap src_slot \<equiv>
    if (is_untyped_cap src_cap \<and> is_untyped_cap new_cap
        \<and> obj_ref_of src_cap = obj_ref_of new_cap \<and> cap_bits_untyped src_cap = cap_bits_untyped new_cap)
-       then set_cap (max_free_index_update src_cap) src_slot else return ()"
+       then do touch_object (fst src_slot); set_cap (max_free_index_update src_cap) src_slot od
+       else return ()"
 
 text \<open>Derive a cap into a form in which it can be copied. For internal reasons
 not all capability types can be copied at all times and not all capability types
@@ -212,6 +213,7 @@ definition
   lookup_slot_for_thread :: "obj_ref \<Rightarrow> cap_ref \<Rightarrow> (cslot_ptr \<times> cap_ref,'z::state_ext) lf_monad"
 where
   "lookup_slot_for_thread thread cref \<equiv> doE
+     liftE $ touch_object thread;
      tcb \<leftarrow> liftE $ gets_the $ get_tcb True thread;
      resolve_address_bits (tcb_ctable tcb, cref)
   odE"
@@ -220,6 +222,7 @@ definition
   lookup_cap_and_slot :: "obj_ref \<Rightarrow> cap_ref \<Rightarrow> (cap \<times> cslot_ptr,'z::state_ext) lf_monad" where
   "lookup_cap_and_slot thread cptr \<equiv> doE
       (slot, cr) \<leftarrow> lookup_slot_for_thread thread cptr;
+      liftE $ touch_object (fst slot);
       cap \<leftarrow> liftE $ get_cap True slot;
       returnOk (cap, slot)
   odE"
@@ -228,6 +231,7 @@ definition
   lookup_cap :: "obj_ref \<Rightarrow> cap_ref \<Rightarrow> (cap,'z::state_ext) lf_monad" where
   "lookup_cap thread ref \<equiv> doE
      (ref', _) \<leftarrow> lookup_slot_for_thread thread ref;
+     liftE $ touch_object (fst ref');
      liftE $ get_cap True ref'
    odE"
 
@@ -304,6 +308,7 @@ where
        slot \<leftarrow> unify_failure $ lookup_target_slot cnode
                   (ct_receive_index ct) (unat (ct_receive_depth ct));
 
+       liftE $ touch_object (fst slot);
        cap \<leftarrow> liftE $ get_cap True slot;
 
        whenE (cap \<noteq> NullCap) (throwError ());
@@ -331,6 +336,7 @@ definition
   slot_cap_long_running_delete :: "cslot_ptr \<Rightarrow> (bool,'z::state_ext) s_monad"
 where
   "slot_cap_long_running_delete slot \<equiv> do
+     touch_object (fst slot);
      cap \<leftarrow> get_cap True slot;
      case cap of
          NullCap \<Rightarrow> return False
@@ -348,6 +354,7 @@ definition
 where
   "cap_swap cap1 slot1 cap2 slot2 \<equiv>
   do
+    touch_objects {fst slot1, fst slot2};
     set_cap cap2 slot1;
     set_cap cap1 slot2;
     slot1_p \<leftarrow> gets (\<lambda>s. cdt s slot1);
@@ -373,6 +380,7 @@ definition
   cap_move :: "cap \<Rightarrow> cslot_ptr \<Rightarrow> cslot_ptr \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "cap_move new_cap src_slot dest_slot \<equiv> do
+    touch_objects {fst dest_slot, fst src_slot};
     set_cap new_cap dest_slot;
     set_cap NullCap src_slot;
     src_p \<leftarrow> gets (\<lambda>s. cdt s src_slot);
@@ -394,6 +402,7 @@ definition
 where
   "cap_swap_for_delete slot1 slot2 \<equiv>
   when (slot1 \<noteq> slot2) $ do
+    touch_objects {fst slot1, fst slot2};
     cap1 \<leftarrow> get_cap True slot1;
     cap2 \<leftarrow> get_cap True slot2;
     cap_swap cap1 slot1 cap2 slot2
@@ -520,6 +529,7 @@ where
 |
   "rec_del (FinaliseSlotCall slot exposed) s =
  (doE
+    liftE $ touch_object (fst slot);
     cap \<leftarrow> without_preemption $ get_cap True slot;
     if (cap = NullCap)
     then returnOk (True, NullCap)
@@ -554,6 +564,7 @@ where
  (doE
     end_slot \<leftarrow> returnOk (ptr, nat_to_cref (zombie_cte_bits bits) n);
     rec_del (CTEDeleteCall end_slot False);
+    liftE $ touch_object (fst slot);
     new_cap \<leftarrow> without_preemption $ get_cap True slot;
     if (new_cap = Zombie ptr bits (Suc n))
     then without_preemption $ set_cap (Zombie ptr bits n) slot
@@ -606,11 +617,13 @@ all.\<close>
 function cap_revoke :: "cslot_ptr \<Rightarrow> (unit,'z::state_ext) p_monad"
 where
 "cap_revoke slot s = (doE
+    liftE $ touch_object (fst slot);
     cap \<leftarrow> without_preemption $ get_cap True slot;
     cdt \<leftarrow> without_preemption $ gets cdt;
     descendants \<leftarrow> returnOk $ descendants_of slot cdt;
     whenE (cap \<noteq> NullCap \<and> descendants \<noteq> {}) (doE
       child \<leftarrow> without_preemption $ select_ext (next_revoke_cap slot) descendants;
+      liftE $ touch_object (fst child);
       cap \<leftarrow> without_preemption $ get_cap True child;
       assertE (cap \<noteq> NullCap);
       cap_delete child;
@@ -762,10 +775,12 @@ endpoint capabilities, irq handlers, and untyped caps).
 definition
   cap_insert :: "cap \<Rightarrow> cslot_ptr \<Rightarrow> cslot_ptr \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "cap_insert new_cap src_slot dest_slot \<equiv> do
+    touch_object (fst src_slot);
     src_cap \<leftarrow> get_cap True src_slot;
 
     dest_original \<leftarrow> return $ is_cap_revocable new_cap src_cap;
 
+    touch_object (fst dest_slot);
     old_cap \<leftarrow> get_cap True dest_slot;
     assert (old_cap = NullCap);
     set_untyped_cap_as_full src_cap new_cap src_slot;
@@ -831,6 +846,7 @@ definition
   | SaveCall slot \<Rightarrow> without_preemption $ do
     thread \<leftarrow> gets cur_thread;
     src_slot \<leftarrow> return (thread, tcb_cnode_index 3);
+    touch_object (fst src_slot);
     cap \<leftarrow> get_cap True src_slot;
     (case cap of
           NullCap \<Rightarrow> return ()

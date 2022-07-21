@@ -124,6 +124,7 @@ definition
   thread_get :: "(tcb \<Rightarrow> 'a) \<Rightarrow> obj_ref \<Rightarrow> ('a,'z::state_ext) s_monad"
 where
   "thread_get f tptr \<equiv> do
+     touch_object tptr;
      tcb \<leftarrow> gets_the $ get_tcb True tptr;
      return $ f tcb
    od"
@@ -132,6 +133,7 @@ definition
   thread_set :: "(tcb \<Rightarrow> tcb) \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "thread_set f tptr \<equiv> do
+     touch_object tptr;
      tcb \<leftarrow> gets_the $ get_tcb True tptr;
      set_object True tptr $ TCB $ f tcb
    od"
@@ -140,6 +142,7 @@ definition
   arch_thread_get :: "(arch_tcb \<Rightarrow> 'a) \<Rightarrow> obj_ref \<Rightarrow> ('a,'z::state_ext) s_monad"
 where
   "arch_thread_get f tptr \<equiv> do
+     touch_object tptr;
      tcb \<leftarrow> gets_the $ get_tcb True tptr;
      return $ f (tcb_arch tcb)
    od"
@@ -148,6 +151,7 @@ definition
   arch_thread_set :: "(arch_tcb \<Rightarrow> arch_tcb) \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "arch_thread_set f tptr \<equiv> do
+     touch_object tptr;
      tcb \<leftarrow> gets_the $ get_tcb True tptr;
      set_object True tptr $ TCB $ tcb \<lparr> tcb_arch := f (tcb_arch tcb) \<rparr>
    od"
@@ -166,6 +170,7 @@ definition
   set_bound_notification :: "obj_ref \<Rightarrow> obj_ref option \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "set_bound_notification ref ntfn \<equiv> do
+     touch_object ref;
      tcb \<leftarrow> gets_the $ get_tcb True ref;
      set_object True ref (TCB (tcb \<lparr> tcb_bound_notification := ntfn \<rparr>))
    od"
@@ -182,6 +187,7 @@ definition
   set_thread_state :: "obj_ref \<Rightarrow> thread_state \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "set_thread_state ref ts \<equiv> do
+     touch_object ref;
      tcb \<leftarrow> gets_the $ get_tcb True ref;
      set_object True ref (TCB (tcb \<lparr> tcb_state := ts \<rparr>));
      do_extended_op (set_thread_state_ext ref)
@@ -236,6 +242,7 @@ definition
   get_simple_ko :: "('a \<Rightarrow> kernel_object) \<Rightarrow> obj_ref \<Rightarrow> ('a,'z::state_ext) s_monad"
 where
   "get_simple_ko f ptr \<equiv> do
+     touch_object ptr;
      kobj \<leftarrow> get_object True ptr;
      assert (is_simple_type kobj);
      (case partial_inv f kobj of Some e \<Rightarrow> return e | _ \<Rightarrow> fail)
@@ -246,6 +253,7 @@ definition
   set_simple_ko :: "('a \<Rightarrow> kernel_object) \<Rightarrow> obj_ref \<Rightarrow> 'a \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "set_simple_ko f ptr ep \<equiv> do
+     touch_object ptr;
      obj \<leftarrow> get_object True ptr;
      assert (is_simple_type obj);
      assert (partial_inv f obj \<noteq> None);
@@ -314,6 +322,7 @@ definition
   as_user :: "obj_ref \<Rightarrow> 'a user_monad \<Rightarrow> ('a,'z::state_ext) s_monad"
 where
   "as_user tptr f \<equiv> do
+    touch_object tptr;
     tcb \<leftarrow> gets_the $ get_tcb True tptr;
     uc \<leftarrow> return $ arch_tcb_context_get (tcb_arch tcb);
     (a, uc') \<leftarrow> select_f $ f uc;

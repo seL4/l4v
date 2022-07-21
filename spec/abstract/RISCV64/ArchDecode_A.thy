@@ -72,6 +72,7 @@ definition make_user_pte :: "vspace_ref \<Rightarrow> vm_attributes \<Rightarrow
 definition check_slot :: "obj_ref \<Rightarrow> (pte \<Rightarrow> bool) \<Rightarrow> (unit,'z::state_ext) se_monad"
   where
   "check_slot slot test = doE
+     liftE $ touch_object slot;
      pte \<leftarrow> liftE $ get_pte slot;
      unlessE (test pte) $ throwError DeleteFirst
    odE"
@@ -147,6 +148,7 @@ definition decode_pt_inv_map :: "'z::state_ext arch_decoder"
            pt' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid;
            whenE (pt' \<noteq> pt) $ throwError $ InvalidCapability 1;
            (level, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot pt vaddr \<circ> ptes_of True;
+           liftE $ touch_object slot;
            old_pte \<leftarrow> liftE $ get_pte slot;
            whenE (pt_bits_left level = pageBits \<or> old_pte \<noteq> InvalidPTE) $ throwError DeleteFirst;
            pte \<leftarrow> returnOk $ PageTablePTE (ucast (addrFromPPtr p >> pageBits)) {};
@@ -222,6 +224,7 @@ definition decode_asid_pool_invocation :: "'z::state_ext arch_decoder"
            pool_ptr \<leftarrow> returnOk (asid_table (asid_high_bits_of base));
            whenE (pool_ptr = None) $ throwError $ FailedLookup False InvalidRoot;
            whenE (p \<noteq> the pool_ptr) $ throwError $ InvalidCapability 0;
+           liftE $ touch_object p;
            pool \<leftarrow> liftE $ get_asid_pool p;
            free_set \<leftarrow> returnOk (- dom pool \<inter> {x. ucast x + base \<noteq> 0});
            whenE (free_set = {}) $ throwError DeleteFirst;

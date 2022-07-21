@@ -109,6 +109,7 @@ definition store_pte :: "obj_ref \<Rightarrow> pte \<Rightarrow> (unit,'z::state
      assert (is_aligned p pte_bits);
      base \<leftarrow> return $ table_base p;
      index \<leftarrow> return $ table_index p;
+     touch_object base;
      pt \<leftarrow> get_pt (table_base p);
      pt' \<leftarrow> return $ pt (index := pte);
      set_pt base pt'
@@ -147,6 +148,7 @@ definition copy_global_mappings :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s
     pt_size \<leftarrow> return $ 1 << ptTranslationBits;
     mapM_x (\<lambda>index. do
         offset \<leftarrow> return (index << pte_bits);
+        touch_objects {global_pt + offset, new_pm + offset};
         pme \<leftarrow> get_pte (global_pt + offset);
         store_pte (new_pm + offset) pme
     od) [base  .e.  pt_size - 1]
@@ -211,6 +213,7 @@ fun pt_lookup_from_level ::
   "pt_lookup_from_level level pt_ptr vptr target_pt_ptr s = (doE
      unlessE (0 < level) $ throwError InvalidRoot;
      slot <- returnOk $ pt_slot_offset level pt_ptr vptr;
+     liftE $ touch_object slot;
      pte <- liftE $ gets_the $ oapply slot o ptes_of True;
      unlessE (is_PageTablePTE pte) $ throwError InvalidRoot;
      ptr <- returnOk (pptr_from_pte pte);

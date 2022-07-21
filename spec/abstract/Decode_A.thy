@@ -69,6 +69,7 @@ where
     ensure_empty dest_slot;
     src_slot \<leftarrow>
          lookup_source_slot src_root_cap src_index src_depth;
+    liftE $ touch_object (fst src_slot);
     src_cap \<leftarrow> liftE $ get_cap True src_slot;
     whenE (src_cap = NullCap) $
          throwError $ FailedLookup True $ MissingCapability src_depth;
@@ -98,6 +99,7 @@ where
     returnOk $ SaveCall dest_slot
   odE
   else if gen_invocation_type label = CNodeCancelBadgedSends then doE
+    liftE $ touch_object (fst dest_slot);
     cap \<leftarrow> liftE $ get_cap True dest_slot;
     unlessE (has_cancel_send_rights cap) $ throwError IllegalOperation;
     returnOk $ CancelBadgedSendsCall cap
@@ -122,10 +124,12 @@ where
 
     unlessE (src_slot = dest_slot) $ ensure_empty dest_slot;
 
+    liftE $ touch_object (fst src_slot);
     src_cap <- liftE $ get_cap True src_slot;
     whenE (src_cap = NullCap) $
       throwError $ FailedLookup True $ MissingCapability src_depth;
 
+    liftE $ touch_object (fst pivot_slot);
     pivot_cap <- liftE $ get_cap True pivot_slot;
     whenE (pivot_cap = NullCap) $
       throwError $ FailedLookup False $ MissingCapability pivot_depth;
@@ -525,6 +529,7 @@ where
         else doE
             node_slot \<leftarrow> lookup_target_slot
                 root_cap node_index node_depth;
+            liftE $ touch_object (fst node_slot);
             liftE $ get_cap True node_slot
         odE;
 

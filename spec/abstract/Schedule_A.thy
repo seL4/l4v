@@ -33,7 +33,11 @@ definition
   getActiveTCB :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> tcb option"
 where
   "getActiveTCB tcb_ref state \<equiv>
-   case (get_tcb True tcb_ref state)
+   \<comment> \<open>For now, use the unfiltered kheap here and rely on the nondeterministic scheduler spec
+     (schedule_unit, the only caller of this function via allActiveTCBs) to add *all* active TCBs
+     to the touched_addresses set. Clearly this means schedule_unit won't satisfy time protection.
+     We need to have a conversation about this impact of this. -robs\<close>
+   case (get_tcb False tcb_ref state)
      of None           \<Rightarrow> None
       | Some tcb       \<Rightarrow> if (runnable $ tcb_state tcb)
                          then Some tcb else None"
@@ -50,6 +54,7 @@ text \<open>Switches the current thread to the specified one.\<close>
 definition
   switch_to_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "switch_to_thread t \<equiv> do
+     touch_object t;
      state \<leftarrow> get;
      assert (get_tcb True t state \<noteq> None);
      arch_switch_to_thread t;
@@ -196,6 +201,11 @@ definition schedule_unit :: "(unit,unit) s_monad" where
 "schedule_unit \<equiv> (do
    cur \<leftarrow> gets cur_thread;
    threads \<leftarrow> allActiveTCBs;
+   \<comment> \<open>Here we record a touch of every single active TCB, regardless of its domain.
+     Hence we don't expect to be able to prove that schedule_unit satisfies the touched-addresses
+     partition subset invariant -- we just need it to be in a form such that refinement to the
+     deterministic scheduler schedule_det_ext_ext is still provable. To discuss further. -robs\<close>
+   touch_objects threads;
    thread \<leftarrow> select threads;
    (if thread = cur then
      return () \<sqinter> switch_to_thread thread

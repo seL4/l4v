@@ -309,6 +309,7 @@ definition
   handle_reply :: "(unit,'z::state_ext) s_monad" where
  "handle_reply \<equiv> do
     thread \<leftarrow> gets cur_thread;
+    touch_object thread;
     caller_cap \<leftarrow> get_cap True (thread, tcb_cnode_index 3);
     case caller_cap of
       ReplyCap caller False R \<Rightarrow>

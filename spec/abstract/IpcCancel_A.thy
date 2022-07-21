@@ -277,6 +277,7 @@ definition
   empty_slot :: "cslot_ptr \<Rightarrow> cap \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
  "empty_slot slot cleanup_info \<equiv> do
+      touch_object (fst slot);
       cap \<leftarrow> get_cap True slot;
       if cap = NullCap then
         return ()
@@ -300,6 +301,7 @@ process will be sufficient.\<close>
 definition
   cap_delete_one :: "cslot_ptr \<Rightarrow> (unit,'z::state_ext) s_monad" where
  "cap_delete_one slot \<equiv> do
+    touch_object (fst slot);
     cap \<leftarrow> get_cap True slot;
     unless (cap = NullCap) $ do
       final \<leftarrow> is_final_cap cap;
