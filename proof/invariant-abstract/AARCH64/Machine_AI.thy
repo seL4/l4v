@@ -348,6 +348,8 @@ crunches
   for (no_fail) no_fail[intro!, wp, simp]
   and (empty_fail) empty_fail[intro!, wp, simp]
   and (no_irq) no_irq[intro!, wp, simp]
+  and device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
+  and irq_masks[wp]: "\<lambda>s. P (irq_masks s)"
   (wp: no_irq_bind ignore: empty_fail NonDetMonad.bind)
 
 crunches getFPUState, getRegister, getRestartPC, setNextPC, ackInterrupt, maskInterrupt

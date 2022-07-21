@@ -932,19 +932,6 @@ lemma as_user_valid_irq_node[wp]:
 crunch valid_irq_node[wp]: dissociate_vcpu_tcb "valid_irq_node"
   (wp: crunch_wps)
 
-lemma dmo_valid_irq_states:
-  "(\<And>P. \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace> f \<lbrace>\<lambda>_ s. P (irq_masks s)\<rbrace>) \<Longrightarrow>
-    \<lbrace>valid_irq_states\<rbrace> do_machine_op f \<lbrace>\<lambda>_. valid_irq_states\<rbrace>"
-  unfolding valid_irq_states_def do_machine_op_def
-  apply (rule hoare_lift_Pf [where f="\<lambda>s. irq_masks (machine_state s)"])
-   apply wpsimp+
-  apply (erule use_valid; assumption)
-  done
-
-lemma dmo_machine_state_lift:
-  "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s. P (machine_state s)\<rbrace> do_machine_op f \<lbrace>\<lambda>rv s. Q rv (machine_state s)\<rbrace>"
-  unfolding do_machine_op_def by wpsimp (erule use_valid; assumption)
-
 lemma dmo_maskInterrupt_True_valid_irq_states[wp]:
   "do_machine_op (maskInterrupt True irq) \<lbrace>valid_irq_states\<rbrace>"
   unfolding valid_irq_states_def do_machine_op_def maskInterrupt_def
