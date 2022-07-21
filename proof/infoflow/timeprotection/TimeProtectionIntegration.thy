@@ -97,27 +97,64 @@ locale integration =
     "ii.part \<circ> fst" ma_uwr PSched "[]" "step_is_uwr_determined \<circ> fst" "step_is_publicly_determined \<circ> fst" select_trace 
   for gentypes :: "('fch \<times> 'fch_cachedness \<times> 'pch \<times> 'pch_cachedness \<times> 'l partition \<times> 'colour) itself"
   and select_trace and step_is_uwr_determined and step_is_publicly_determined
+  +
+  (*FIXME: getActiveIRQ is an Arch specific machine monad. I propose that we add this to the
+  arch interface, so we can reference it here. It would be a function that will return the
+  same result as getActiveIRQ, but does not increment the state. This function existing
+  assumes that getActiveIRQ always returns a single output state/value. *)
+  fixes peekActiveIRQ :: "bool \<Rightarrow> machine_state \<Rightarrow> irq option"
 begin
 
-(*
-pch_read_impact :: "paddr \<Rightarrow> 'pch \<Rightarrow> 'pch"
-    and pch_write_impact :: "paddr \<Rightarrow> 'pch \<Rightarrow> 'pch"
-    and do_pch_flush :: "'pch \<Rightarrow> paddr set \<Rightarrow> 'pch"
-    and pch_flush_cycles :: "'pch \<Rightarrow> paddr set \<Rightarrow> nat"
-    and pch_flush_WCET :: "paddr set \<Rightarrow> nat"
-    and collides_in_pch :: "paddr \<Rightarrow> paddr \<Rightarrow> bool"  (infix \<open>coll\<close> 50)
-    and read_cycles :: "'fch_cachedness \<Rightarrow> 'pch_cachedness \<Rightarrow> nat"
-    and write_cycles :: "'fch_cachedness \<Rightarrow> 'pch_cachedness \<Rightarrow> nat"
-    and addr_domain :: "paddr \<Rightarrow> 'domain"
-    and addr_colour :: "paddr \<Rightarrow> 'colour"
-    and colour_userdomain :: "'colour \<Rightarrow> 'domain"
- *)
-thm in_opt_map_eq
+term getActiveIRQ
+
+lemma peekActiveIRQ_uwr:
+  "peekActiveIRQ False (machine_state s) = peekActiveIRQ False (machine_state t)"
+oops
+(* what do we know
+  we definitely have interrupted_modes of os.
+  but that incluedes both
+  - KernelEntry ev
+  - KernelPreempt
+
+  im not yet sure if i should be including KernelPreempt here. I don't think you can Preempt into a
+  domainswitch, but i'm not certain how preempt works.
+
+*)
+
+(* check_active_irq_A_if *)
+
+(* definition IsActiveIrq *)
+
+definition will_domain_switch :: "if_other_state \<Rightarrow> bool" where
+  "will_domain_switch os \<equiv> case snd os of
+    KernelEntry Interrupt \<Rightarrow> (
+      \<exists>irq s'. (fst os, Some irq, s') \<in> check_active_irq_A_if \<and>
+        (case interrupt_states (snd (fst os)) irq of
+         IRQTimer \<Rightarrow> domain_time_internal (exst (snd (fst os))) = 1
+       | _ \<Rightarrow> False))
+  | _ \<Rightarrow> False"
+
+lemma ex_eq:
+  "(\<exists>y. (P y = P' y)) \<Longrightarrow>(\<exists>x. P x) = (\<exists>x. P' x)"
+  oops
+
+lemma will_domain_switch_from_uwr:
+  "uwr2 os PSched ot \<Longrightarrow>
+  will_domain_switch ot = will_domain_switch os"
+  apply (clarsimp simp: will_domain_switch_def uwr_def sameFor_def sameFor_scheduler_def)
+  apply (case_tac bc; case_tac ba; clarsimp split:event.splits)
+    
+    apply (prop_tac "interrupt_states (internal_state_if ((aa, bb), KernelEntry Interrupt))
+                   = interrupt_states (internal_state_if ((a , b ), KernelEntry Interrupt))")
+     apply simp 
+     
+  
+
 interpretation ma?:time_protection_system PSched fch_lookup fch_read_impact fch_write_impact
   empty_fch fch_flush_cycles fch_flush_WCET pch_lookup pch_read_impact pch_write_impact do_pch_flush
-  pch_flush_cycles pch_flush_WCET collides_in_pch read_cycles write_cycles addr_domain addr_colour colour_userdomain
-  part uwr nlds ta select_trace
-  "big_step_ADT_A_if utf" s0 "policyFlows (pasPolicy initial_aag)" _
+  pch_flush_cycles pch_flush_WCET collides_in_pch read_cycles write_cycles addr_domain addr_colour
+  colour_userdomain part uwr nlds ta select_trace
+  "big_step_ADT_A_if utf" s0 "policyFlows (pasPolicy initial_aag)" _ _ _ will_domain_switch
   
   apply unfold_locales
                using schedIncludesCurrentDom apply presburger
