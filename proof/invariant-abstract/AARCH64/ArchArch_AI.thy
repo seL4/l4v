@@ -1192,29 +1192,6 @@ lemma associate_vcpu_tcb_valid_arch_state[wp]:
       apply (wpsimp wp: arch_thread_set_wp)+
   done *)
 
-lemma dmo_valid_machine_state[wp]:
-  "do_machine_op (set_cntv_cval_64 w) \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op read_cntpct \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op (set_cntv_off_64 w') \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op (maskInterrupt m irq) \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op (setHCR word) \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op isb \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op dsb \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op (set_gic_vcpu_ctrl_hcr f) \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op (set_gic_vcpu_ctrl_lr n w'') \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op (set_gic_vcpu_ctrl_apr w''') \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op (set_gic_vcpu_ctrl_vmcr w''') \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op (get_gic_vcpu_ctrl_lr w'''') \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op get_gic_vcpu_ctrl_apr \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op get_gic_vcpu_ctrl_vmcr \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op get_gic_vcpu_ctrl_hcr \<lbrace>valid_machine_state\<rbrace>"
-  unfolding valid_machine_state_def read_cntpct_def
-            maskInterrupt_def setHCR_def set_gic_vcpu_ctrl_hcr_def set_gic_vcpu_ctrl_lr_def
-            set_gic_vcpu_ctrl_apr_def set_gic_vcpu_ctrl_vmcr_def get_gic_vcpu_ctrl_lr_def
-            get_gic_vcpu_ctrl_apr_def get_gic_vcpu_ctrl_vmcr_def get_gic_vcpu_ctrl_hcr_def
-  sorry (* FIXME AARCH64 VCPU
-  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_disj_lift dmo_machine_state_lift)+ *)
-
 (* FIXME AARCH64 VCPU machine ops
 crunches restore_virt_timer, vcpu_restore_reg_range, vcpu_save_reg_range, vgic_update_lr
   for valid_machine_state[wp]: valid_machine_state

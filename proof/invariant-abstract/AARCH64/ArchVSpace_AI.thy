@@ -536,7 +536,7 @@ lemmas setIRQTrigger_irq_masks = no_irq[OF no_irq_setIRQTrigger]
 
 lemma dmo_setIRQTrigger_invs[wp]: "\<lbrace>invs\<rbrace> do_machine_op (setIRQTrigger irq b) \<lbrace>\<lambda>y. invs\<rbrace>"
   apply (wp dmo_invs)
-   apply (simp add: machine_op_lift_device_state setIRQTrigger_def)
+   apply (simp add: machine_op_lift_device_state)
   apply safe
    apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p" in use_valid)
      apply ((wpsimp simp: setIRQTrigger_def machine_op_lift_def machine_rest_lift_def split_def)+)[3]
@@ -773,13 +773,234 @@ lemma load_vmid_wp[wp]:
   unfolding load_vmid_def
   by wpsimp (fastforce dest: entry_for_asid_Some_vmidD)
 
+lemma valid_global_refs_vmid_table_upd[simp]:
+  "valid_global_refs (s\<lparr>arch_state := arch_state s\<lparr>arm_vmid_table := x\<rparr>\<rparr>) = valid_global_refs s"
+  unfolding valid_global_refs_def valid_refs_def global_refs_def
+  by simp
+
+lemma valid_global_refs_next_vmid_upd[simp]:
+  "valid_global_refs (s\<lparr>arch_state := arch_state s\<lparr>arm_next_vmid := x\<rparr>\<rparr>) = valid_global_refs s"
+  unfolding valid_global_refs_def valid_refs_def global_refs_def
+  by simp
+
+lemma valid_machine_state_arm_vmid_table_upd[simp]:
+  "valid_machine_state (s\<lparr>arch_state := arch_state s\<lparr>arm_vmid_table := x\<rparr>\<rparr>) = valid_machine_state s"
+  unfolding valid_machine_state_def
+  by simp
+
+lemma valid_machine_state_arm_next_vmid_upd[simp]:
+  "valid_machine_state (s\<lparr>arch_state := arch_state s\<lparr>arm_next_vmid := x\<rparr>\<rparr>) = valid_machine_state s"
+  unfolding valid_machine_state_def
+  by simp
+
+lemma dmo_machine_state_lift:
+  "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s. P (machine_state s)\<rbrace> do_machine_op f \<lbrace>\<lambda>rv s. Q rv (machine_state s)\<rbrace>"
+  unfolding do_machine_op_def by wpsimp (erule use_valid; assumption)
+
+lemma dmo_valid_irq_states:
+  "(\<And>P. f \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace>) \<Longrightarrow> do_machine_op f \<lbrace>valid_irq_states\<rbrace>"
+  unfolding valid_irq_states_def do_machine_op_def
+  by (wpsimp, erule use_valid; assumption)
+
+(* list of machine ops copied from Machine_AI *)
+(* FIXME AARCH64: remove
+crunches
+  addressTranslateS1,
+  branchFlushRange,
+  check_export_arch_timer,
+  cleanByVA_PoU,
+  cleanCacheRange_PoU,
+  cleanCacheRange_RAM,
+  cleanInvalidateCacheRange_RAM,
+  configureTimer,
+  dsb,
+  enableFpuEL01,
+  fpuThreadDeleteOp,
+  getDFSR,
+  getESR,
+  getFAR,
+  get_gic_vcpu_ctrl_apr,
+  get_gic_vcpu_ctrl_eisr0,
+  get_gic_vcpu_ctrl_eisr1,
+  get_gic_vcpu_ctrl_hcr,
+  get_gic_vcpu_ctrl_lr,
+  get_gic_vcpu_ctrl_lr,
+  get_gic_vcpu_ctrl_misr,
+  get_gic_vcpu_ctrl_vmcr,
+  get_gic_vcpu_ctrl_vtr,
+  getHSR,
+  getIFSR,
+  getMemoryRegions,
+  gets,
+  getSCTLR,
+  initL2Cache,
+  initTimer,
+  invalidateCacheRange_I,
+  invalidateCacheRange_RAM,
+  invalidateTranslationASID,
+  invalidateTranslationSingle,
+  isb,
+  nativeThreadUsingFPU,
+  plic_complete_claim,
+  resetTimer,
+  set_gic_vcpu_ctrl_apr,
+  set_gic_vcpu_ctrl_hcr,
+  set_gic_vcpu_ctrl_lr,
+  set_gic_vcpu_ctrl_vmcr,
+  set_gic_vcpu_ctrl_vtr,
+  setHCR,
+  setIRQTrigger,
+  setSCTLR,
+  setVSpaceRoot,
+  switchFpuOwner,
+  readVCPUHardwareReg,
+  writeVCPUHardwareReg,
+  ackInterrupt
+for irq_masks[wp]: "\<lambda>s. P (irq_masks s)"
+*)
+(* missing:
+  getFPUState,
+  getRegister,
+  getRestartPC,
+  setNextPC,
+  maskInterrupt
+*)
+
+(* FIXME AARCH64: move. Could this be in Machine_AI? *)
+lemma dmo_valid_machine_state[wp]:
+  (* "do_machine_op (set_cntv_cval_64 w) \<lbrace>valid_machine_state\<rbrace>" *) (* FIXME AARCH64: find correct op *)
+  "do_machine_op read_cntpct \<lbrace>valid_machine_state\<rbrace>"
+  (* "do_machine_op (set_cntv_off_64 w') \<lbrace>valid_machine_state\<rbrace>" *) (* FIXME AARCH64: find correct op *)
+  "do_machine_op (maskInterrupt m irq) \<lbrace>valid_machine_state\<rbrace>"
+  "do_machine_op (setHCR word) \<lbrace>valid_machine_state\<rbrace>"
+  "do_machine_op isb \<lbrace>valid_machine_state\<rbrace>"
+  "do_machine_op dsb \<lbrace>valid_machine_state\<rbrace>"
+  "do_machine_op (set_gic_vcpu_ctrl_hcr f) \<lbrace>valid_machine_state\<rbrace>"
+  "do_machine_op (set_gic_vcpu_ctrl_lr n w'') \<lbrace>valid_machine_state\<rbrace>"
+  "do_machine_op (set_gic_vcpu_ctrl_apr w''') \<lbrace>valid_machine_state\<rbrace>"
+  "do_machine_op (set_gic_vcpu_ctrl_vmcr w''') \<lbrace>valid_machine_state\<rbrace>"
+  "do_machine_op (get_gic_vcpu_ctrl_lr w'''') \<lbrace>valid_machine_state\<rbrace>"
+  "do_machine_op get_gic_vcpu_ctrl_apr \<lbrace>valid_machine_state\<rbrace>"
+  "do_machine_op get_gic_vcpu_ctrl_vmcr \<lbrace>valid_machine_state\<rbrace>"
+  "do_machine_op get_gic_vcpu_ctrl_hcr \<lbrace>valid_machine_state\<rbrace>"
+  "do_machine_op (invalidateTranslationASID asid) \<lbrace>valid_machine_state\<rbrace>"
+  unfolding valid_machine_state_def read_cntpct_def
+            maskInterrupt_def setHCR_def set_gic_vcpu_ctrl_hcr_def set_gic_vcpu_ctrl_lr_def
+            set_gic_vcpu_ctrl_apr_def set_gic_vcpu_ctrl_vmcr_def get_gic_vcpu_ctrl_lr_def
+            get_gic_vcpu_ctrl_apr_def get_gic_vcpu_ctrl_vmcr_def get_gic_vcpu_ctrl_hcr_def
+            isb_def dsb_def invalidateTranslationASID_def
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_disj_lift dmo_machine_state_lift)+
+
+lemma vs_lookup_target_vspace_eq:
+  "\<lbrakk> pts_of s' = pts_of s;
+     \<forall>pool_ptr. vspace_for_pool pool_ptr asid (asid_pools_of s') =
+                vspace_for_pool pool_ptr asid (asid_pools_of s);
+     pool_for_asid asid s' = pool_for_asid asid s;
+     \<forall>pt_t p. pte_refs_of pt_t p s' = pte_refs_of pt_t p s \<rbrakk>
+   \<Longrightarrow> vs_lookup_target level asid vref s' = vs_lookup_target level asid vref s"
+  for s :: "'z::state_ext state" and s' :: "'z::state_ext state"
+  unfolding vs_lookup_target_def vs_lookup_slot_def
+  by (frule (2) vs_lookup_table_vspace_eq[where level=level and vref=vref])
+     (fastforce intro!: obind_eqI simp: obind_assoc)
+
+lemma update_asid_pool_entry_valid_vs_lookup_target[wp]:
+  "update_asid_pool_entry (\<lambda>entry. Some (ASIDPoolVSpace vmid (ap_vspace entry))) asid
+   \<lbrace>\<lambda>s. P (vs_lookup_target level asid' vref s)\<rbrace>"
+  unfolding update_asid_pool_entry_def set_asid_pool_def
+  apply (wpsimp wp: set_object_wp)
+  apply (erule rsubst[where P=P])
+  apply (rule vs_lookup_target_vspace_eq; clarsimp)
+   apply (clarsimp simp: vspace_for_pool_def entry_for_pool_def obind_def opt_map_def obj_at_def
+                   split: option.splits)+
+  done
+
+lemma vs_lookup_pages_target_lift:
+  assumes "\<And>P level asid vref. f \<lbrace> \<lambda>s. P (vs_lookup_target level asid vref s) \<rbrace>"
+  shows "f \<lbrace> \<lambda>s. P (vs_lookup_pages s) \<rbrace>"
+  apply (rule_tac P=P in hoare_liftP_ext)+
+  apply simp
+  apply (rename_tac P asid)
+  apply (rule_tac P=P in hoare_liftP_ext)
+  apply (rule assms)
+  done
+
+lemma update_asid_pool_entry_vs_lookup_pages_vmid[wp]:
+  "update_asid_pool_entry (\<lambda>entry. Some (ASIDPoolVSpace vmid (ap_vspace entry))) asid
+   \<lbrace>\<lambda>s. P (vs_lookup_pages s)\<rbrace>"
+  by (wpsimp wp: vs_lookup_pages_target_lift[OF update_asid_pool_entry_valid_vs_lookup_target])
+
+crunches update_asid_pool_entry, find_free_vmid
+  for if_live[wp]: if_live_then_nonz_cap
+  and zombies_final[wp]: zombies_final
+  and state_refs[wp]: "\<lambda>s. P (state_refs_of s)"
+  and hyp_refs[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
+  and valid_mdb[wp]: valid_mdb
+  and valid_ioc[wp]: valid_ioc
+  and valid_idle[wp]: valid_idle
+  and only_idle[wp]: only_idle
+  and if_unsafe[wp]: if_unsafe_then_cap
+  and valid_reply_caps[wp]: valid_reply_caps
+  and valid_reply_masters[wp]: valid_reply_masters
+  and valid_global_refs[wp]: valid_global_refs
+  and irq_states[wp]: "\<lambda>s. P (interrupt_states s)"
+  and irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
+  and kernel_vspace[wp]: "\<lambda>s. P (arm_kernel_vspace (arch_state s))"
+  and valid_global_objs[wp]: valid_global_objs
+  and cap_refs_in_kernel_window[wp]: cap_refs_in_kernel_window
+  (simp: valid_global_objs_def)
+
+crunches invalidate_asid, find_free_vmid
+  for valid_machine_state[wp]: valid_machine_state
+  and pspace_respects_device_region[wp]: pspace_respects_device_region
+  and cap_refs_respects_device_region[wp]: cap_refs_respects_device_region
+  and valid_irq_states[wp]: valid_irq_states
+  (ignore: do_machine_op
+   wp: pspace_respects_device_region_dmo cap_refs_respects_device_region_dmo
+       dmo_valid_irq_states)
+
+crunches invalidate_asid, find_free_vmid
+  for vs_lookup_pages[wp]: "\<lambda>s. P (vs_lookup_pages s)"
+  (ignore: update_asid_pool_entry)
+
+crunches invalidate_asid
+  for machine_state[wp]: "\<lambda>s. P (machine_state s)"
+
+crunches update_asid_pool_entry
+  for arch_state[wp]: "\<lambda>s. P (arch_state s)"
+
+lemma update_asid_pool_entry_asid_pools[wp]:
+  "\<lbrace>\<lambda>s. \<forall>pool_ptr ap entry.
+          pool_for_asid asid s = Some pool_ptr \<longrightarrow> asid_pools_of s pool_ptr = Some ap \<longrightarrow>
+          ap (asid_low_bits_of asid) = Some entry \<longrightarrow>
+          P ((asid_pools_of s) (pool_ptr \<mapsto> ap(asid_low_bits_of asid := f entry))) \<rbrace>
+   update_asid_pool_entry f asid
+   \<lbrace>\<lambda>_ s. P (asid_pools_of s)\<rbrace>"
+  unfolding update_asid_pool_entry_def
+  supply fun_upd_apply[simp del]
+  by wpsimp
+
 lemma invalidate_asid_entry_invs[wp]:
   "invalidate_asid_entry asid \<lbrace>invs\<rbrace>"
-  sorry (* FIXME AARCH64 *)
+  unfolding invalidate_asid_entry_def invalidate_asid_def invalidate_vmid_entry_def invs_def
+            valid_state_def valid_pspace_def valid_arch_state_def vmid_inv_def
+  supply fun_upd_apply[simp del]
+  apply (wpsimp wp: load_vmid_wp valid_irq_handlers_lift valid_irq_node_typ valid_irq_states_triv
+                      valid_arch_caps_lift pspace_in_kernel_window_atyp_lift_strong
+                simp: valid_kernel_mappings_def equal_kernel_mappings_def valid_asid_map_def
+                      valid_global_vspace_mappings_def
+         | wps)+
+  apply (clarsimp simp: valid_irq_node_def valid_global_refs_def global_refs_def valid_arch_state_def
+                        valid_global_objs_def valid_global_arch_objs_def valid_machine_state_def
+                        valid_vspace_objs_def vmid_for_asid_upd_eq comp_upd_simp is_inv_None_upd)
+  done
 
 lemma find_free_vmid_invs[wp]:
   "find_free_vmid \<lbrace>invs\<rbrace>"
-  sorry (* FIXME AARCH64 *)
+  unfolding invs_def valid_state_def valid_pspace_def
+  by (wpsimp wp: load_vmid_wp valid_irq_handlers_lift valid_irq_node_typ
+                 valid_arch_caps_lift pspace_in_kernel_window_atyp_lift_strong
+             simp: valid_kernel_mappings_def equal_kernel_mappings_def valid_asid_map_def
+                   valid_global_vspace_mappings_def)
 
 lemma store_hw_asid_valid_arch:
   "\<lbrace>valid_arch_state and (\<lambda>s. asid_map s asid = None \<and> arm_vmid_table (arch_state s) vmid = None)\<rbrace>
