@@ -2861,18 +2861,27 @@ lemma cap_refs_respects_device_region_dmo:
   apply auto
   done
 
-lemma machine_op_lift_device_state[wp]:
-  "machine_op_lift f \<lbrace>\<lambda>ms. P (device_state ms)\<rbrace>"
-  by (clarsimp simp: machine_op_lift_def NonDetMonad.valid_def bind_def
-                     machine_rest_lift_def gets_def simpler_modify_def get_def return_def
-                     select_def ignore_failure_def select_f_def
-              split: if_splits)
+crunches do_machine_op
+  for valid_ioports[wp]: valid_ioports
+  and valid_vspace_objs[wp]: valid_vspace_objs
+  and valid_kernel_mappings[wp]: valid_kernel_mappings
+  and equal_kernel_mappings[wp]: equal_kernel_mappings
+  and valid_asid_map[wp]: valid_asid_map
+  and pspace_in_kernel_window[wp]: pspace_in_kernel_window
+  and cap_refs_in_kernel_window[wp]: cap_refs_in_kernel_window
+  and vspace_at_asid[wp]: "\<lambda>s. P (vspace_at_asid a pt s)"
+  (simp: valid_kernel_mappings_def)
 
-(* FIXME AARCH64
-crunch device_state_inv[wp]: sfence "\<lambda>ms. P (device_state ms)"
-crunch device_state_inv[wp]: hwASIDFlush "\<lambda>ms. P (device_state ms)"
-*)
-crunch device_state_inv[wp]: setVSpaceRoot "\<lambda>ms. P (device_state ms)"
+lemma dmo_invs_lift:
+  assumes dev: "\<And>P. f \<lbrace>\<lambda>ms. P (device_state ms)\<rbrace>"
+  assumes mem: "\<And>P. f \<lbrace>\<lambda>ms. P (underlying_memory ms)\<rbrace>"
+  assumes irq: "\<And>P. f \<lbrace>\<lambda>ms. P (irq_masks ms)\<rbrace>"
+  shows "do_machine_op f \<lbrace>invs\<rbrace>"
+  unfolding invs_def valid_state_def valid_pspace_def valid_irq_states_def valid_machine_state_def
+  by (wpsimp wp: dev hoare_vcg_all_lift hoare_vcg_disj_lift
+                 dmo_inv_prop_lift[where g=underlying_memory, OF mem]
+                 pspace_respects_device_region_dmo cap_refs_respects_device_region_dmo
+      | wps dmo_inv_prop_lift[where g=irq_masks, OF irq])+
 
 lemma as_user_inv:
   assumes x: "\<And>P. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>x. P\<rbrace>"
