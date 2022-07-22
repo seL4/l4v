@@ -952,8 +952,7 @@ crunches vcpu_save_reg, vgic_update, vcpu_disable
 lemma dmo_writeVCPUHardwareReg_valid_machine_state[wp]:
   "do_machine_op (writeVCPUHardwareReg r v) \<lbrace>valid_machine_state\<rbrace>"
   unfolding valid_machine_state_def
-  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_disj_lift writeVCPUHardwareReg_underlying_memory
-                 dmo_machine_state_lift)
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_disj_lift dmo_machine_state_lift)
 
 (* FIXME AARCH64
 crunches vgic_update, vcpu_update, vcpu_write_reg, vcpu_save_reg, save_virt_timer

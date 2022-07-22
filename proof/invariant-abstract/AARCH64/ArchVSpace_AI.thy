@@ -66,8 +66,6 @@ crunches
 crunches vcpu_read_reg
   for inv[wp]: P
 
-crunch pspace_in_kernel_window[wp]: do_machine_op "pspace_in_kernel_window"
-
 lemma pspace_in_kernel_window_set_vcpu[wp]:
   "\<lbrace>pspace_in_kernel_window\<rbrace> set_vcpu p vcpu \<lbrace>\<lambda>_.pspace_in_kernel_window\<rbrace>"
   by (rule pspace_in_kernel_window_atyp_lift, wp+)
@@ -107,17 +105,9 @@ lemma pt_at_asid_unique2:
   "\<lbrakk> vspace_at_asid asid pt s; vspace_at_asid asid pt' s \<rbrakk> \<Longrightarrow> pt = pt'"
   by (clarsimp simp: vspace_at_asid_def)
 
-lemma dmo_pt_at_asid[wp]:
-  "do_machine_op f \<lbrace>vspace_at_asid a pt\<rbrace>"
-  by (wpsimp simp: do_machine_op_def vspace_at_asid_def)
-
-crunch valid_vs_lookup[wp]: do_machine_op "valid_vs_lookup"
+crunch valid_vs_lookup[wp]: do_machine_op "valid_vs_lookup" (* FIXME AARCH64: move to ArchAcc crunches *)
 
 lemmas ackInterrupt_irq_masks = no_irq[OF no_irq_ackInterrupt]
-
-crunches (* FIXME AARCH64 sfence, hwASIDFlush,*) setVSpaceRoot
-  for underlying_memory_inv[wp]: "\<lambda>ms. P (underlying_memory ms)"
-
 
 lemma ucast_ucast_low_bits:
   fixes x :: machine_word
@@ -254,6 +244,7 @@ lemma set_vcpu_valid_objs[wp]:
   apply (wp set_object_valid_objs)
   done
 
+(* FIXME AARCH64: move to ArchAcc crunches *)
 lemma do_machine_op_valid_obj[wp]: "\<lbrace>valid_obj t obj\<rbrace> do_machine_op f \<lbrace>\<lambda>_. valid_obj t obj\<rbrace>"
   by (rule valid_obj_typ) wp
 
@@ -530,40 +521,18 @@ definition
       and K (0 < asid)
       and (\<lambda>s. pool_for_asid asid s = Some p)"
 
-crunch device_state_inv[wp]: ackInterrupt "\<lambda>ms. P (device_state ms)"
-
 lemmas setIRQTrigger_irq_masks = no_irq[OF no_irq_setIRQTrigger]
 
-lemma dmo_setIRQTrigger_invs[wp]: "\<lbrace>invs\<rbrace> do_machine_op (setIRQTrigger irq b) \<lbrace>\<lambda>y. invs\<rbrace>"
-  apply (wp dmo_invs)
-   apply (simp add: machine_op_lift_device_state)
-  apply safe
-   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p" in use_valid)
-     apply ((wpsimp simp: setIRQTrigger_def machine_op_lift_def machine_rest_lift_def split_def)+)[3]
-  apply (erule (1) use_valid[OF _ setIRQTrigger_irq_masks])
-  done
+lemma dmo_setIRQTrigger_invs[wp]:
+  "do_machine_op (setIRQTrigger irq b) \<lbrace>invs\<rbrace>"
+  by (wp dmo_invs_lift)
 
-lemma dmo_ackInterrupt[wp]: "\<lbrace>invs\<rbrace> do_machine_op (ackInterrupt irq) \<lbrace>\<lambda>y. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p" in use_valid)
-     apply ((clarsimp simp: ackInterrupt_def machine_op_lift_def
-                            machine_rest_lift_def split_def | wp)+)[3]
-  apply(erule (1) use_valid[OF _ ackInterrupt_irq_masks])
-  done
+lemma dmo_ackInterrupt[wp]: "do_machine_op (ackInterrupt irq) \<lbrace>invs\<rbrace>"
+  by (wp dmo_invs_lift)
 
 lemma dmo_setVMRoot[wp]:
   "do_machine_op (setVSpaceRoot pt asid) \<lbrace>invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply (auto simp: setVSpaceRoot_def machine_op_lift_def machine_rest_lift_def in_monad select_f_def)
-  done
-
-(* FIXME AARCH64: different machine ops here
-lemma dmo_sfence[wp]:
-  "do_machine_op sfence \<lbrace>invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply (auto simp: sfence_def machine_op_lift_def machine_rest_lift_def in_monad select_f_def)
-  done *)
+  by (wp dmo_invs_lift)
 
 lemma find_vspace_for_asid_inv[wp]:
   "\<lbrace>P and Q\<rbrace> find_vspace_for_asid asid \<lbrace>\<lambda>_. P\<rbrace>, \<lbrace>\<lambda>_. Q\<rbrace>"
@@ -597,18 +566,6 @@ lemma valid_arch_state_arm_next_vmid[simp]:
    valid_arch_state s"
   unfolding valid_arch_state_def
   by (clarsimp simp: valid_global_arch_objs_def vmid_inv_def)
-
-lemma valid_vspace_objs_next_vmid[simp]:
-  "valid_vspace_objs (s\<lparr>arch_state := arch_state s\<lparr>arm_next_vmid := next_vmid\<rparr>\<rparr>) =
-   valid_vspace_objs s"
-  unfolding valid_vspace_objs_def
-  by clarsimp
-
-lemma valid_vspace_objs_vmid_table[simp]:
-  "valid_vspace_objs (s\<lparr>arch_state := arch_state s\<lparr>arm_vmid_table := table\<rparr>\<rparr>) =
-   valid_vspace_objs s"
-  unfolding valid_vspace_objs_def
-  by clarsimp
 
 lemma update_asid_pool_entry_vspace_objs_of:
   "\<lbrace>\<lambda>s. \<forall>pool_ptr ap entry. pool_for_asid asid s = Some pool_ptr \<longrightarrow>
@@ -722,7 +679,7 @@ crunches get_vmid, invalidate_asid_entry, invalidate_tlb_by_asid, invalidate_tlb
   (ignore: set_asid_pool simp: valid_global_arch_objs_upd_eq_lift)
 
 crunches do_machine_op
-  for vmid_for_asid[wp]: "\<lambda>s. P (vmid_for_asid s)"
+  for vmid_for_asid[wp]: "\<lambda>s. P (vmid_for_asid s)" (* FIXME: move to ArchAcc crunches *)
 
 lemma vmid_for_asid_upd_eq:
   "\<lbrakk> pool_for_asid asid s = Some pool_ptr; asid_pools_of s pool_ptr = Some ap;
@@ -793,103 +750,10 @@ lemma valid_machine_state_arm_next_vmid_upd[simp]:
   unfolding valid_machine_state_def
   by simp
 
-lemma dmo_machine_state_lift:
-  "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s. P (machine_state s)\<rbrace> do_machine_op f \<lbrace>\<lambda>rv s. Q rv (machine_state s)\<rbrace>"
-  unfolding do_machine_op_def by wpsimp (erule use_valid; assumption)
-
-lemma dmo_valid_irq_states:
-  "(\<And>P. f \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace>) \<Longrightarrow> do_machine_op f \<lbrace>valid_irq_states\<rbrace>"
-  unfolding valid_irq_states_def do_machine_op_def
-  by (wpsimp, erule use_valid; assumption)
-
-(* list of machine ops copied from Machine_AI *)
-(* FIXME AARCH64: remove
-crunches
-  addressTranslateS1,
-  branchFlushRange,
-  check_export_arch_timer,
-  cleanByVA_PoU,
-  cleanCacheRange_PoU,
-  cleanCacheRange_RAM,
-  cleanInvalidateCacheRange_RAM,
-  configureTimer,
-  dsb,
-  enableFpuEL01,
-  fpuThreadDeleteOp,
-  getDFSR,
-  getESR,
-  getFAR,
-  get_gic_vcpu_ctrl_apr,
-  get_gic_vcpu_ctrl_eisr0,
-  get_gic_vcpu_ctrl_eisr1,
-  get_gic_vcpu_ctrl_hcr,
-  get_gic_vcpu_ctrl_lr,
-  get_gic_vcpu_ctrl_lr,
-  get_gic_vcpu_ctrl_misr,
-  get_gic_vcpu_ctrl_vmcr,
-  get_gic_vcpu_ctrl_vtr,
-  getHSR,
-  getIFSR,
-  getMemoryRegions,
-  gets,
-  getSCTLR,
-  initL2Cache,
-  initTimer,
-  invalidateCacheRange_I,
-  invalidateCacheRange_RAM,
-  invalidateTranslationASID,
-  invalidateTranslationSingle,
-  isb,
-  nativeThreadUsingFPU,
-  plic_complete_claim,
-  resetTimer,
-  set_gic_vcpu_ctrl_apr,
-  set_gic_vcpu_ctrl_hcr,
-  set_gic_vcpu_ctrl_lr,
-  set_gic_vcpu_ctrl_vmcr,
-  set_gic_vcpu_ctrl_vtr,
-  setHCR,
-  setIRQTrigger,
-  setSCTLR,
-  setVSpaceRoot,
-  switchFpuOwner,
-  readVCPUHardwareReg,
-  writeVCPUHardwareReg,
-  ackInterrupt
-for irq_masks[wp]: "\<lambda>s. P (irq_masks s)"
-*)
-(* missing:
-  getFPUState,
-  getRegister,
-  getRestartPC,
-  setNextPC,
-  maskInterrupt
-*)
-
-(* FIXME AARCH64: move. Could this be in Machine_AI? *)
-lemma dmo_valid_machine_state[wp]:
+(* FIXME AARCH64: no need to prove valid_machine_state explicitly any more, but still need to look for these ops: *)
+(* lemma dmo_valid_machine_state[wp]: *)
   (* "do_machine_op (set_cntv_cval_64 w) \<lbrace>valid_machine_state\<rbrace>" *) (* FIXME AARCH64: find correct op *)
-  "do_machine_op read_cntpct \<lbrace>valid_machine_state\<rbrace>"
   (* "do_machine_op (set_cntv_off_64 w') \<lbrace>valid_machine_state\<rbrace>" *) (* FIXME AARCH64: find correct op *)
-  "do_machine_op (maskInterrupt m irq) \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op (setHCR word) \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op isb \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op dsb \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op (set_gic_vcpu_ctrl_hcr f) \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op (set_gic_vcpu_ctrl_lr n w'') \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op (set_gic_vcpu_ctrl_apr w''') \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op (set_gic_vcpu_ctrl_vmcr w''') \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op (get_gic_vcpu_ctrl_lr w'''') \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op get_gic_vcpu_ctrl_apr \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op get_gic_vcpu_ctrl_vmcr \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op get_gic_vcpu_ctrl_hcr \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op (invalidateTranslationASID asid) \<lbrace>valid_machine_state\<rbrace>"
-  unfolding valid_machine_state_def read_cntpct_def
-            maskInterrupt_def setHCR_def set_gic_vcpu_ctrl_hcr_def set_gic_vcpu_ctrl_lr_def
-            set_gic_vcpu_ctrl_apr_def set_gic_vcpu_ctrl_vmcr_def get_gic_vcpu_ctrl_lr_def
-            get_gic_vcpu_ctrl_apr_def get_gic_vcpu_ctrl_vmcr_def get_gic_vcpu_ctrl_hcr_def
-            isb_def dsb_def invalidateTranslationASID_def
-  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_disj_lift dmo_machine_state_lift)+
 
 lemma vs_lookup_target_vspace_eq:
   "\<lbrakk> pts_of s' = pts_of s;
@@ -1040,11 +904,11 @@ lemma get_hw_asid_invs[wp]:
 
 lemma dmo_invalidateTranslationASID_invs[wp]:
   "do_machine_op (invalidateTranslationASID asid) \<lbrace>invs\<rbrace>"
-  sorry (* FIXME AARCH64 *)
+  by (wp dmo_invs_lift)
 
 lemma dmo_invalidateTranslationSingle_invs[wp]:
   "do_machine_op (invalidateTranslationSingle asid) \<lbrace>invs\<rbrace>"
-  sorry (* FIXME AARCH64 *)
+  by (wp dmo_invs_lift)
 
 crunches invalidate_tlb_by_asid, invalidate_tlb_by_asid_va
   for invs: invs
@@ -1703,19 +1567,13 @@ lemma is_final_cap_caps_of_state_2D:
                         prod_eqI)
   done
 
-crunch underlying_memory[wp]: ackInterrupt, setVSpaceRoot (*, FIXME AARCH64 hwASIDFlush, read_stval, sfence*)
-  "\<lambda>m'. underlying_memory m' p = um"
-  (simp: cache_machine_op_defs machine_op_lift_def machine_rest_lift_def split_def)
-
-crunches storeWord, ackInterrupt, setVSpaceRoot (*, hwASIDFlush, read_stval, sfence *)
+crunches do_flush
   for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
-  (simp: crunch_simps)
 
-(* FIXME AARCH64: add new machine ops to crunches above
-crunch pspace_respects_device_region[wp]: perform_page_invocation "pspace_respects_device_region"
+crunches perform_page_invocation
+  for pspace_respects_device_region[wp]: "pspace_respects_device_region"
   (simp: crunch_simps wp: crunch_wps set_object_pspace_respects_device_region
          pspace_respects_device_region_dmo)
-*)
 
 lemma mapM_x_store_pte_caps_of_state[wp]:
   "mapM_x (swp (store_pte pt_t) InvalidPTE) slots \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>"
@@ -2625,10 +2483,6 @@ lemma invs_aligned_pdD:
   sorry (* FIXME AARCH64: need to add this to invs
   by (clarsimp simp: valid_arch_state_def) *)
 
-lemma do_machine_op_valid_kernel_mappings:
-  "do_machine_op f \<lbrace>valid_kernel_mappings\<rbrace>"
-  unfolding valid_kernel_mappings_def by wp
-
 lemma valid_vspace_obj_default:
   assumes tyunt: "ty \<noteq> Structures_A.apiobject_type.Untyped"
   shows "ArchObj ao = default_object ty dev us \<Longrightarrow> valid_vspace_obj level ao s'"
@@ -2694,26 +2548,6 @@ lemma vcpu_switch_caps_of_state[wp]:
 (* lemmas for vcpu_switch invs *)
 
 (* FIXME AARCH64: move to Machine_AI? *)
-
-crunch device_state_inv[wp]: addressTranslateS1 "\<lambda>ms. P (device_state ms)"
-crunch device_state_inv[wp]: getSCTLR,get_gic_vcpu_ctrl_hcr,set_gic_vcpu_ctrl_hcr "\<lambda>ms. P (device_state ms)"
-crunch device_state_inv[wp]: writeVCPUHardwareReg, readVCPUHardwareReg "\<lambda>ms. P (device_state ms)"
-crunch device_state_inv[wp]: setSCTLR,setHCR,getSCTLR,get_gic_vcpu_ctrl_vmcr,set_gic_vcpu_ctrl_vmcr "\<lambda>ms. P (device_state ms)"
-crunch device_state_inv[wp]:
-  get_gic_vcpu_ctrl_apr,set_gic_vcpu_ctrl_apr,get_gic_vcpu_ctrl_lr,set_gic_vcpu_ctrl_lr
-   "\<lambda>ms. P (device_state ms)"
-
-crunch underlying_memory: setSCTLR,getSCTLR,setHCR "\<lambda>m'. underlying_memory m' p = um"
-crunch underlying_memory: dsb,isb,addressTranslateS1 "\<lambda>m'. underlying_memory m' p = um"
-crunch underlying_memory: get_gic_vcpu_ctrl_vmcr,set_gic_vcpu_ctrl_vmcr "\<lambda>m'. underlying_memory m' p = um"
-crunch underlying_memory: get_gic_vcpu_ctrl_apr,set_gic_vcpu_ctrl_apr "\<lambda>m'. underlying_memory m' p = um"
-crunch underlying_memory: get_gic_vcpu_ctrl_lr,set_gic_vcpu_ctrl_lr "\<lambda>m'. underlying_memory m' p = um"
-crunch underlying_memory: get_gic_vcpu_ctrl_hcr,set_gic_vcpu_ctrl_hcr "\<lambda>m'. underlying_memory m' p = um"
-crunch underlying_memory: writeVCPUHardwareReg, readVCPUHardwareReg "\<lambda>m'. underlying_memory m' p = um"
-
-crunches writeVCPUHardwareReg, readVCPUHardwareReg
-  for underlying_memory_pred: "\<lambda>m'. P (underlying_memory m')"
-
 (* FIXME AARCH64: naming issue due to using crunch, all these are now blah_no_irq
 lemmas isb_irq_masks = no_irq[OF no_irq_isb]
 lemmas dsb_irq_masks = no_irq[OF no_irq_dsb]
@@ -2731,170 +2565,22 @@ lemmas set_gic_vcpu_ctrl_hcr_irq_masks = no_irq[OF no_irq_set_gic_vcpu_ctrl_hcr]
 *)
 (* end of move to Machine_AI *)
 
-(* FIXME AARCH64: this whole next chunk of do_machine_op and invs lemmas looks like a candidate for a
-   lifting rule *)
-lemma dmo_isb_invs[wp]:
-  "\<lbrace>invs\<rbrace> do_machine_op isb \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-  sorry (* FIXME AARCH64
-   apply (drule use_valid)
-     apply (rule isb_underlying_memory)
-    apply fastforce+
-  apply(erule (1) use_valid[OF _ isb_irq_masks])
-  done *)
-
-lemma dmo_dsb_invs[wp]:
-  "\<lbrace>invs\<rbrace> do_machine_op dsb \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-  sorry (* FIXME AARCH64
-   apply (drule use_valid)
-     apply (rule dsb_underlying_memory)
-    apply fastforce+
-  apply(erule (1) use_valid[OF _ dsb_irq_masks])
-  done *)
-
-lemma dmo_setHCR_invs[wp]:
-  "\<lbrace>invs\<rbrace> do_machine_op (setHCR w) \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule use_valid)
-     apply (rule setHCR_underlying_memory)
-    apply fastforce+
-  sorry (* FIXME AARCH64
-  apply(erule (1) use_valid[OF _ setHCR_irq_masks])
-  done *)
-
-lemma dmo_setSCTLR_invs[wp]:
-  "\<lbrace>invs\<rbrace> do_machine_op (setSCTLR x) \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule use_valid)
-     apply (rule setSCTLR_underlying_memory)
-    apply fastforce+
-  sorry (* FIXME AARCH64
-  apply(erule (1) use_valid[OF _ setSCTLR_irq_masks])
-  done *)
-
-lemma dmo_getSCTLR_invs[wp]:
-  "\<lbrace>invs\<rbrace> do_machine_op (getSCTLR) \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule use_valid)
-     apply (rule getSCTLR_underlying_memory)
-    apply fastforce+
-  sorry (* FIXME AARCH64
-  apply(erule (1) use_valid[OF _ getSCTLR_irq_masks])
-  done *)
-
-lemma dmo_get_gic_vcpu_ctrl_vmcr_invs[wp]:
-  "\<lbrace>invs\<rbrace> do_machine_op (get_gic_vcpu_ctrl_vmcr) \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule use_valid)
-     apply (rule get_gic_vcpu_ctrl_vmcr_underlying_memory)
-    apply fastforce+
-  sorry (* FIXME AARCH64
-  apply(erule (1) use_valid[OF _ get_gic_vcpu_ctrl_vmcr_irq_masks])
-  done *)
-
-lemma dmo_set_gic_vcpu_ctrl_vmcr_invs[wp]:
-  "\<lbrace>invs\<rbrace> do_machine_op (set_gic_vcpu_ctrl_vmcr x) \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule use_valid)
-     apply (rule set_gic_vcpu_ctrl_vmcr_underlying_memory)
-    apply fastforce+
-  sorry (* FIXME AARCH64
-  apply(erule (1) use_valid[OF _ set_gic_vcpu_ctrl_vmcr_irq_masks])
-  done *)
-
-lemma dmo_get_gic_vcpu_ctrl_apr_invs[wp]:
-  "\<lbrace>invs\<rbrace> do_machine_op (get_gic_vcpu_ctrl_apr) \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule use_valid)
-     apply (rule get_gic_vcpu_ctrl_apr_underlying_memory)
-    apply fastforce+
-  sorry (* FIXME AARCH64
-  apply(erule (1) use_valid[OF _ get_gic_vcpu_ctrl_apr_irq_masks])
-  done *)
-
-lemma dmo_set_gic_vcpu_ctrl_apr_invs[wp]:
-  "\<lbrace>invs\<rbrace> do_machine_op (set_gic_vcpu_ctrl_apr x) \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule use_valid)
-     apply (rule set_gic_vcpu_ctrl_apr_underlying_memory)
-    apply fastforce+
-  sorry (* FIXME AARCH64
-  apply(erule (1) use_valid[OF _ set_gic_vcpu_ctrl_apr_irq_masks])
-  done *)
-
-lemma dmo_get_gic_vcpu_ctrl_lr_invs[wp]:
-  "\<lbrace>invs\<rbrace> do_machine_op (get_gic_vcpu_ctrl_lr n) \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule use_valid)
-     apply (rule get_gic_vcpu_ctrl_lr_underlying_memory)
-    apply fastforce+
-  sorry (* FIXME AARCH64
-  apply(erule (1) use_valid[OF _ get_gic_vcpu_ctrl_lr_irq_masks])
-  done *)
-
-lemma dmo_set_gic_vcpu_ctrl_lr_invs[wp]:
-  "\<lbrace>invs\<rbrace> do_machine_op (set_gic_vcpu_ctrl_lr n x) \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule use_valid)
-     apply (rule set_gic_vcpu_ctrl_lr_underlying_memory)
-    apply fastforce+
-  sorry (* FIXME AARCH64
-  apply(erule (1) use_valid[OF _ set_gic_vcpu_ctrl_lr_irq_masks])
-  done *)
-
-lemma dmo_get_gic_vcpu_ctrl_hcr_invs[wp]:
-  "\<lbrace>invs\<rbrace> do_machine_op (get_gic_vcpu_ctrl_hcr) \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule use_valid)
-     apply (rule get_gic_vcpu_ctrl_hcr_underlying_memory)
-    apply fastforce+
-  sorry (* FIXME AARCH64
-  apply(erule (1) use_valid[OF _ get_gic_vcpu_ctrl_hcr_irq_masks])
-  done *)
-
-lemma dmo_set_gic_vcpu_ctrl_hcr_invs[wp]:
-  "\<lbrace>invs\<rbrace> do_machine_op (set_gic_vcpu_ctrl_hcr x) \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule use_valid)
-     apply (rule set_gic_vcpu_ctrl_hcr_underlying_memory)
-    apply fastforce+
-  sorry (* FIXME AARCH64
-  apply(erule (1) use_valid[OF _ set_gic_vcpu_ctrl_hcr_irq_masks])
-  done *)
-
-lemma dmo_writeVCPUHardwareReg_invs[wp]:
-  "\<lbrace>invs\<rbrace> do_machine_op (writeVCPUHardwareReg r v) \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule use_valid)
-     apply (fastforce intro: writeVCPUHardwareReg_underlying_memory)+
-  sorry (* FIXME AARCH64
-  apply (erule (1) use_valid[OF _ no_irq[OF no_irq_writeVCPUHardwareReg]])
-  done *)
-
-lemma dmo_readVCPUHardwareReg_invs[wp]:
-  "\<lbrace>invs\<rbrace> do_machine_op (readVCPUHardwareReg r) \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs)
-  apply safe
-   apply (drule use_valid)
-     apply (fastforce intro: readVCPUHardwareReg_underlying_memory)+
-  sorry (* FIXME AARCH64
-  apply (erule (1) use_valid[OF _ no_irq[OF no_irq_readVCPUHardwareReg]])
-  done *)
+lemma dmo_isb_invs[wp]: "do_machine_op isb \<lbrace>invs\<rbrace>"
+  and dmo_dsb_invs[wp]: "do_machine_op dsb \<lbrace>invs\<rbrace>"
+  and dmo_setHCR_invs[wp]: "do_machine_op (setHCR w) \<lbrace>invs\<rbrace>"
+  and dmo_setSCTLR_invs[wp]: "do_machine_op (setSCTLR x) \<lbrace>invs\<rbrace>"
+  and dmo_getSCTLR_invs[wp]: "do_machine_op getSCTLR \<lbrace>invs\<rbrace>"
+  and dmo_get_gic_vcpu_ctrl_vmcr_invs[wp]: "do_machine_op get_gic_vcpu_ctrl_vmcr \<lbrace>invs\<rbrace>"
+  and dmo_set_gic_vcpu_ctrl_vmcr_invs[wp]: "\<And>x. do_machine_op (set_gic_vcpu_ctrl_vmcr x) \<lbrace>invs\<rbrace>"
+  and dmo_get_gic_vcpu_ctrl_apr_invs[wp]: "do_machine_op get_gic_vcpu_ctrl_apr \<lbrace>invs\<rbrace>"
+  and dmo_set_gic_vcpu_ctrl_apr_invs[wp]: "\<And>x. do_machine_op (set_gic_vcpu_ctrl_apr x) \<lbrace>invs\<rbrace>"
+  and dmo_get_gic_vcpu_ctrl_lr_invs[wp]: "do_machine_op (get_gic_vcpu_ctrl_lr n) \<lbrace>invs\<rbrace>"
+  and dmo_set_gic_vcpu_ctrl_lr_invs[wp]: "do_machine_op (set_gic_vcpu_ctrl_lr n x) \<lbrace>invs\<rbrace>"
+  and dmo_get_gic_vcpu_ctrl_hcr_invs[wp]: "do_machine_op (get_gic_vcpu_ctrl_hcr) \<lbrace>invs\<rbrace>"
+  and dmo_set_gic_vcpu_ctrl_hcr_invs[wp]: "\<And>x. do_machine_op (set_gic_vcpu_ctrl_hcr x) \<lbrace>invs\<rbrace>"
+  and dmo_writeVCPUHardwareReg_invs[wp]: "do_machine_op (writeVCPUHardwareReg r v) \<lbrace>invs\<rbrace>"
+  and dmo_readVCPUHardwareReg_invs[wp]: "do_machine_op (readVCPUHardwareReg r) \<lbrace>invs\<rbrace>"
+  by (all \<open>wp dmo_invs_lift\<close>)
 
 (* set_vcpu invariants *)
 lemma set_vcpu_cur_tcb[wp]: "\<lbrace>cur_tcb\<rbrace> set_vcpu p v \<lbrace>\<lambda>_. cur_tcb\<rbrace>"
@@ -3178,16 +2864,15 @@ lemmas vcpu_update_invs[wp] =
   vcpu_update_trivial_invs[where upd="\<lambda>f vcpu. vcpu\<lparr>vcpu_vgic := f (vcpu_vgic vcpu)\<rparr>"
                            , folded vgic_update_def, simplified]
 
-(* FIXME: move *)
+(* FIXME AARCH64: move to Machine_AI *)
 lemma dmo_gets_inv[wp]:
   "\<lbrace>P\<rbrace> do_machine_op (gets f) \<lbrace>\<lambda>rv. P\<rbrace>"
   unfolding do_machine_op_def by (wpsimp simp: simpler_gets_def)
 
-(* FIXME: move *)
+(* FIXME AARCH64: move to ArchAcc after crunches *)
 lemma dmo_machine_op_lift_invs[wp]:
-  "\<lbrace>invs\<rbrace> do_machine_op (machine_op_lift f) \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs)
-  by (auto simp add: machine_op_lift_def machine_rest_lift_def in_monad select_f_def)
+  "do_machine_op (machine_op_lift f) \<lbrace>invs\<rbrace>"
+  by (wp dmo_invs_lift)
 
 crunches vcpu_restore_reg_range, vcpu_save_reg_range, vgic_update_lr, vcpu_read_reg
   for invs[wp]: invs
@@ -3225,17 +2910,15 @@ lemma vcpu_enable_invs[wp]:
 "\<lbrace>\<lambda> s. invs s\<rbrace> vcpu_enable v \<lbrace> \<lambda>_ . invs \<rbrace>"
   apply (simp add: vcpu_enable_def)
   apply (wp get_vcpu_inv | wpc)
-  sorry (* FIXME AARCH64 VCPU
-  apply (subst do_machine_op_bind | rule empty_fail_bind | simp add: empty_fail_isb)+
+  apply (subst do_machine_op_bind | rule empty_fail_bind | simp)+
   apply (wp get_vcpu_inv | wpc | simp)+
-  done *)
+  done
 
 lemma vcpu_restore_invs[wp]:
   "\<lbrace>\<lambda>s. invs s\<rbrace> vcpu_restore v \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: vcpu_restore_def do_machine_op_bind dom_mapM)
   apply (wpsimp wp: mapM_wp_inv)
-  sorry (* FIXME AARCH64 VCPU
-  done *)
+  done
 
 lemma valid_obj_update:
   fixes val :: "'a::state_ext state"
@@ -3267,11 +2950,10 @@ lemma vcpu_save_invs[wp]:
 lemma vcpu_disable_invs[wp]:
   "\<lbrace>\<lambda> s. invs s\<rbrace> vcpu_disable v \<lbrace>\<lambda>_ s . invs s\<rbrace>"
   apply (simp add: vcpu_disable_def)
-  sorry (* FIXME AARCH64 VCPU
-  apply (wpsimp simp: do_machine_op_bind empty_fail_isb
-                  wp: set_vcpu_invs_eq_hyp get_vcpu_wp maskInterrupt_invs
-        | wp hoare_vcg_all_lift hoare_vcg_imp_lift')+
-  done *)
+  apply (wpsimp simp: do_machine_op_bind
+                  wp: set_vcpu_invs_eq_hyp get_vcpu_wp maskInterrupt_invs dmo_invs_lift
+                      hoare_vcg_const_imp_lift hoare_vcg_all_lift hoare_vcg_imp_lift')
+  done
 
 lemma valid_machine_state_arch_state_update [simp]:
   "valid_machine_state (arch_state_update f s) = valid_machine_state s"
@@ -3389,14 +3071,11 @@ lemma dmo_maskInterrupt_pspace_respects_device_region[wp]:
   unfolding maskInterrupt_def
   by (wpsimp wp: pspace_respects_device_region_dmo)
 
-
-(* FIXME AARCH64 missing device_state over isb
 crunches vcpu_enable, vcpu_write_reg, vcpu_update, vcpu_restore, vcpu_enable, vcpu_disable
   for pspace_respects_device_region[wp]: "pspace_respects_device_region"
   (wp: crunch_wps dmo_maskInterrupt_pspace_respects_device_region
        pspace_respects_device_region_dmo
-   simp: crunch_simps read_cntpct_def
-         ) *)
+   simp: crunch_simps read_cntpct_def)
 
 lemma set_vcpu_nonvcpu_at: (* generalise? this holds except when the ko is a vcpu *)
   "\<lbrace>\<lambda>s. P (ko_at ko x s) \<and> a_type ko \<noteq> AArch AVCPU\<rbrace>

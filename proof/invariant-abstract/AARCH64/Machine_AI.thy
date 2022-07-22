@@ -344,17 +344,47 @@ crunches
   setVSpaceRoot,
   switchFpuOwner,
   readVCPUHardwareReg,
-  writeVCPUHardwareReg
+  writeVCPUHardwareReg,
+  (* FIXME AARCH64: machine ops missed by the grep above: *)
+  read_cntpct
   for (no_fail) no_fail[intro!, wp, simp]
   and (empty_fail) empty_fail[intro!, wp, simp]
   and (no_irq) no_irq[intro!, wp, simp]
   and device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
   and irq_masks[wp]: "\<lambda>s. P (irq_masks s)"
+  and underlying_memory_inv[wp]: "\<lambda>s. P (underlying_memory s)"
   (wp: no_irq_bind ignore: empty_fail NonDetMonad.bind)
 
 crunches getFPUState, getRegister, getRestartPC, setNextPC, ackInterrupt, maskInterrupt
   for (no_fail) no_fail[intro!, wp, simp]
   and (empty_fail) empty_fail[intro!, wp, simp]
+
+crunches ackInterrupt, maskInterrupt
+  for device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
+  and underlying_memory_inv[wp]: "\<lambda>s. P (underlying_memory s)"
+
+crunches ackInterrupt
+  for irq_masks[wp]: "\<lambda>s. P (irq_masks s)"
+
+text \<open>Lifting rules\<close>
+
+lemma dmo_machine_state_lift:
+  "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s. P (machine_state s)\<rbrace> do_machine_op f \<lbrace>\<lambda>rv s. Q rv (machine_state s)\<rbrace>"
+  unfolding do_machine_op_def by wpsimp (erule use_valid; assumption)
+
+crunches do_machine_op
+  for user_frame[wp]: "\<lambda>s. P (in_user_frame p s)"
+
+lemma dmo_valid_machine_state[wp]:
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (underlying_memory s)\<rbrace>"
+  shows "do_machine_op f \<lbrace>valid_machine_state\<rbrace>"
+  unfolding valid_machine_state_def
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_disj_lift dmo_machine_state_lift assms)
+
+lemma dmo_valid_irq_states[wp]:
+  "(\<And>P. f \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace>) \<Longrightarrow> do_machine_op f \<lbrace>valid_irq_states\<rbrace>"
+  unfolding valid_irq_states_def do_machine_op_def
+  by (wpsimp, erule use_valid; assumption)
 
 text \<open>Misc WP rules\<close>
 
