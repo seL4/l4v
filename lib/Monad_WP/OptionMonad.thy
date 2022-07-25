@@ -376,6 +376,10 @@ lemma in_obind_eq:
   "((f |>> g) s = Some v) = (\<exists>v'. f s = Some v' \<and> g v' s = Some v)"
   by (simp add: obind_def split: option.splits)
 
+lemma obind_None_eq:
+  "((f |>> g) s = None) = (f s = None \<or> (\<exists>v. f s = Some v \<and> g v s = None))"
+  by (simp add: obind_def split: option.split)
+
 lemma obind_eqI:
   "\<lbrakk> f s = f s' ; \<And>x. f s = Some x \<Longrightarrow> g x s = g' x s' \<rbrakk> \<Longrightarrow> obind f g s = obind f g' s'"
   by (simp add: obind_def split: option.splits)
