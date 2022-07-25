@@ -165,13 +165,16 @@ lemma is_ko_to_discs:
   apply (all \<open>rule ext, simp add: is_ep_def is_ntfn_def is_tcb_def split: kernel_object.splits\<close>)
   done
 
-lemma cap_to_pt_is_pt_cap:
-  "\<lbrakk> obj_refs cap = {p}; caps_of_state s cptr = Some cap; pts_of s p \<noteq> None;
+locale_abbrev cap_pt_type :: "cap \<Rightarrow> pt_type" where
+  "cap_pt_type cap \<equiv> acap_pt_type (the_arch_cap cap)"
+
+lemma cap_to_pt_is_pt_cap_and_type:
+  "\<lbrakk> obj_refs cap = {p}; caps_of_state s cptr = Some cap; pts_of s p = Some pt;
      valid_caps (caps_of_state s) s \<rbrakk>
-   \<Longrightarrow> is_pt_cap cap"
+   \<Longrightarrow> is_pt_cap cap \<and> cap_pt_type cap = pt_type pt"
   by (drule (1) valid_capsD)
      (auto simp: pts_of_ko_at is_pt_cap_def arch_cap_fun_lift_def arch_cap.disc_eq_case(4)
-                 valid_cap_def obj_at_def is_ko_to_discs is_cap_table_def
+                 valid_cap_def obj_at_def is_ko_to_discs is_cap_table_def the_arch_cap_def
            split: if_splits arch_cap.split cap.splits option.splits)
 
 lemma unique_vs_lookup_table:
@@ -194,7 +197,7 @@ lemma unique_vs_lookup_table:
   apply simp
   apply (subgoal_tac "is_pt_cap cap \<and> is_pt_cap cap'")
    prefer 2
-   apply (simp add: cap_to_pt_is_pt_cap)
+   apply (simp add: cap_to_pt_is_pt_cap_and_type)
   apply (drule (2) unique_table_refsD, simp)
   apply (drule table_cap_ref_vs_cap_ref; simp)
   done
@@ -813,8 +816,8 @@ lemma set_asid_pool_dom[wp]:
      (auto simp: dom_def opt_map_def obj_at_def is_ArchObj_def
            split: option.splits elim!: rsubst[where P=P])
 
-lemma set_asid_pool_None_valid_asid_table[wp]:
-  "set_asid_pool p (ap (asid_low := None)) \<lbrace>valid_asid_table\<rbrace>"
+lemma set_asid_pool_valid_asid_table[wp]:
+  "set_asid_pool p ap \<lbrace>valid_asid_table\<rbrace>"
   unfolding valid_asid_table_def
   using set_asid_pool_asid_pools_of[wp del]
   by (wp_pre, wps, wp, clarsimp)
@@ -2870,7 +2873,9 @@ crunches do_machine_op
   and pspace_in_kernel_window[wp]: pspace_in_kernel_window
   and cap_refs_in_kernel_window[wp]: cap_refs_in_kernel_window
   and vspace_at_asid[wp]: "\<lambda>s. P (vspace_at_asid a pt s)"
-  (simp: valid_kernel_mappings_def)
+  and valid_vs_lookup[wp]: "valid_vs_lookup"
+  and valid_obj[wp]: "valid_obj t obj"
+  (simp: valid_kernel_mappings_def wp: valid_obj_typ)
 
 lemma dmo_invs_lift:
   assumes dev: "\<And>P. f \<lbrace>\<lambda>ms. P (device_state ms)\<rbrace>"

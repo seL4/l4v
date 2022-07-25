@@ -1489,7 +1489,7 @@ lemma decode_fr_inv_map_wf[wp]:
    apply (drule valid_vs_lookupD; clarsimp simp: vmsz_aligned_vref_for_level)
    apply (subgoal_tac "is_pt_cap cap")
     apply (force simp: is_cap_simps)
-   apply (fastforce dest: cap_to_pt_is_pt_cap intro: valid_objs_caps)
+   apply (fastforce dest: cap_to_pt_is_pt_cap_and_type intro: valid_objs_caps)
   apply (rule strengthen_imp_same_first_conj[OF conjI])
    apply (rule_tac x=level in exI)
    apply (rule_tac x="args!0" in exI)
@@ -1516,7 +1516,7 @@ lemma decode_fr_inv_map_wf[wp]:
   apply (drule valid_vs_lookupD; clarsimp simp: vmsz_aligned_vref_for_level)
   apply (subgoal_tac "is_pt_cap cap")
    apply (force simp: is_cap_simps)
-  apply (fastforce dest: cap_to_pt_is_pt_cap intro: valid_objs_caps)
+  apply (fastforce dest: cap_to_pt_is_pt_cap_and_type intro: valid_objs_caps)
   done *)
 
 lemma decode_frame_invocation_wf[wp]:

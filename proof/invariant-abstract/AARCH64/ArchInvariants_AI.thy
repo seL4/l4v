@@ -319,8 +319,11 @@ definition wellformed_pte :: "pte \<Rightarrow> bool" where
 definition valid_vcpu :: "vcpu \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "valid_vcpu vcpu \<equiv> case_option \<top> (typ_at ATCB) (vcpu_tcb vcpu) "
 
+(* Since the page tables may translate more bits than the IPA address space has, not all mapping
+   slots in the top level table can be used. Slots with any of the top "pt_bits_left asid_pool_level
+   - ipa_size" bits set correspond to mappings outside of the address space. *)
 definition valid_vs_slot_bits :: nat where
-  "valid_vs_slot_bits = pt_bits_left asid_pool_level - ipa_size"
+  "valid_vs_slot_bits = ptTranslationBits VSRootPT_T - (pt_bits_left asid_pool_level - ipa_size)"
 
 definition invalid_mapping_slots :: "vs_index set" where
   "invalid_mapping_slots \<equiv>

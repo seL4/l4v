@@ -60,9 +60,6 @@ definition
   "reachable_frame_cap cap \<equiv> \<lambda>s.
      is_frame_cap cap \<and> (\<exists>ref. vs_cap_ref cap = Some ref \<and> reachable_target ref (obj_ref_of cap) s)"
 
-abbreviation
-  "cap_pt_type cap \<equiv> acap_pt_type (the_arch_cap cap)"
-
 (* The conditions under which it is legal to immediately replace an arch_cap
    cap with newcap at slot sl, assuming cap is final. *)
 definition
