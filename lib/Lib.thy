@@ -1783,6 +1783,25 @@ lemma is_inv_inj2:
   "is_inv f g \<Longrightarrow> inj_on g (dom g)"
   using is_inv_com is_inv_inj by blast
 
+lemma is_inv_eq:
+  "is_inv f g = (\<forall>x y. (f x = Some y) = (g y = Some x))"
+proof
+  assume "\<forall>x y. (f x = Some y) = (g y = Some x)"
+  thus "is_inv f g" by (auto simp: is_inv_def ran_def)
+next
+  assume "is_inv f g"
+  moreover
+  from this have "is_inv g f" by (rule is_inv_com)
+  ultimately
+  show "\<forall>x y. (f x = Some y) = (g y = Some x)"
+    unfolding is_inv_def by blast
+qed
+
+lemma is_inv_Some_upd:
+  "\<lbrakk> is_inv f g; f x = None; g y = None \<rbrakk> \<Longrightarrow> is_inv (f(x \<mapsto> y)) (g(y \<mapsto> x))"
+  unfolding is_inv_def
+  by clarsimp
+
 text \<open>Map inversion (implicitly assuming injectivity).\<close>
 definition
   "the_inv_map m = (\<lambda>s. if s\<in>ran m then Some (THE x. m x = Some s) else None)"
