@@ -577,7 +577,7 @@ lemma h_val_is_the_lift_t:
 
 (* "True \<longrightarrow>" here so that we get simplification of the h_t_valid.  FIXME! *)
 lemma heaptac_h_t_valid_ptr_safe:
-   "d \<Turnstile>\<^sub>t p \<Longrightarrow> True \<longrightarrow> ptr_safe d p"
+   "d \<Turnstile>\<^sub>t p \<Longrightarrow> True \<longrightarrow> ptr_safe p d"
   by (rule impI, erule h_t_valid_ptr_safe)
 
 lemma heaptac_h_t_valid_h_t_valid:
