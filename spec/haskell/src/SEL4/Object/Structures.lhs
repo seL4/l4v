@@ -119,6 +119,10 @@ This is the type used to represent a capability.
 > isNotificationCap (NotificationCap {}) = True
 > isNotificationCap _ = False
 
+> isEndpointCap :: Capability -> Bool
+> isEndpointCap (EndpointCap {}) = True
+> isEndpointCap _ = False
+
 > isSchedContextCap :: Capability -> Bool
 > isSchedContextCap (SchedContextCap {}) = True
 > isSchedContextCap _ = False
