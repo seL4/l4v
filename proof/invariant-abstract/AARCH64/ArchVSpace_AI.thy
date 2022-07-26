@@ -146,27 +146,23 @@ lemma vs_lookup_target_clear_asid_table:
   apply blast
   done
 
+(* FIXME AARCH64: move to Word_Lib *)
+lemma word_mask_shift_eqI:
+  "\<lbrakk> x && mask n = y && mask n; x >> n = y >> n \<rbrakk> \<Longrightarrow> x = y"
+  apply (subst mask_or_not_mask[of x n, symmetric])
+  apply (subst mask_or_not_mask[of y n, symmetric])
+  apply (rule arg_cong2[where f="(OR)"]; blast intro: shiftr_eq_neg_mask_eq)
+  done
+
 (* FIXME AARCH64: move *)
 lemma asid_high_low_inj:
   "\<lbrakk> asid_low_bits_of asid' = asid_low_bits_of asid;
      asid_high_bits_of asid' = asid_high_bits_of asid \<rbrakk>
    \<Longrightarrow> asid' = asid"
-(* FIXME AARCH64: examine alternative proof via word decomposition:
-  apply (subst mask_or_not_mask[of asid asid_low_bits, symmetric])
-  apply (subst mask_or_not_mask[of asid' asid_low_bits, symmetric])
-  unfolding asid_low_bits_of_def asid_high_bits_of_def asid_low_bits_def
-  apply clarsimp
-  apply (rule arg_cong2[where f="(OR)"])
-   apply word_eqI_solve
- *)
   unfolding asid_low_bits_of_def asid_high_bits_of_def
-  apply word_eqI
-  apply (case_tac "n < asid_low_bits", fastforce simp: asid_low_bits_def)
-  apply (simp add: not_less)
-  apply (erule_tac x="n - asid_low_bits" in allE)+
-  apply (simp add: asid_low_bits_def)
-  apply fastforce
-  done
+  by (drule word_unat_eq_iff[THEN iffD1])+
+     (clarsimp elim!: word_mask_shift_eqI
+               simp:  unat_ucast_eq_unat_and_mask asid_low_bits_def shiftr_mask_eq' word_size)
 
 (* FIXME AARCH64: move *)
 lemma asid_of_high_low_eq[simp, intro!]:
