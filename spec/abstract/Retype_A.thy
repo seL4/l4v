@@ -106,6 +106,7 @@ where
     when (type \<noteq> Untyped) (do
       kh \<leftarrow> gets kheap;
       kh' \<leftarrow> return $ foldr (\<lambda>p kh. kh(p \<mapsto> default_object type dev o_bits)) ptrs kh;
+      touch_objects (set ptrs);
       do_extended_op (retype_region_ext ptrs type);
       modify $ kheap_update (K kh')
     od);
@@ -156,6 +157,7 @@ where
   if free_index_of cap = 0
     then returnOk ()
   else doE
+    liftE $ touch_object base;
     liftE $ delete_objects base sz;
   dev \<leftarrow> returnOk $ is_device_untyped_cap cap;
 

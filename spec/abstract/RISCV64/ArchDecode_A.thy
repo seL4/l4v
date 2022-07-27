@@ -101,6 +101,7 @@ definition decode_fr_inv_map :: "'z::state_ext arch_decoder"
            vtop \<leftarrow> returnOk $ vaddr + mask (pageBitsForSize pgsz);
            whenE (vtop \<ge> user_vtop) $ throwError $ InvalidArgument 0;
            check_vp_alignment pgsz vaddr;
+           \<comment> \<open> TODO: Which PTEs do we add to the TA set? -robs \<close>
            (level, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot pt vaddr \<circ> ptes_of True;
            unlessE (pt_bits_left level = pg_bits) $
              throwError $ FailedLookup False $ MissingCapability $ pt_bits_left level;
@@ -147,6 +148,7 @@ definition decode_pt_inv_map :: "'z::state_ext arch_decoder"
            whenE (user_vtop \<le> vaddr) $ throwError $ InvalidArgument 0;
            pt' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid;
            whenE (pt' \<noteq> pt) $ throwError $ InvalidCapability 1;
+           \<comment> \<open> TODO: Which PTEs do we add to the TA set? -robs \<close>
            (level, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot pt vaddr \<circ> ptes_of True;
            liftE $ touch_object slot;
            old_pte \<leftarrow> liftE $ get_pte slot;
@@ -170,7 +172,14 @@ definition decode_page_table_invocation :: "'z::state_ext arch_decoder"
        case cap of
          PageTableCap pt (Some (asid, _)) \<Rightarrow> doE
              \<comment> \<open>cannot invoke unmap on top level page table\<close>
-             pt_opt \<leftarrow> liftE $ gets $ vspace_for_asid True asid;
+             pt_opt \<leftarrow> liftE $ gets $ vspace_for_asid False asid;
+             \<comment> \<open>just account for potential touch of the vspace, if it exists.
+               Note we don't account for touch of the ASID pool here, as it's not on the kheap.\<close>
+             liftE $ case pt_opt of Some vspace \<Rightarrow> touch_object vspace | None \<Rightarrow> return ();
+             \<comment> \<open>also ensure that if a page table was found, the memory accesses necessary
+               to determine this were accounted for by the touched_addresses set\<close>
+             pt_ta_f_opt \<leftarrow> liftE $ gets $ vspace_for_asid True asid;
+             assertE (pt_opt \<noteq> None \<longrightarrow> pt_ta_f_opt \<noteq> None);
              whenE (pt_opt = Some pt) $ throwError RevokeFirst
            odE
        | _ \<Rightarrow> returnOk ();

@@ -58,6 +58,7 @@ definition perform_asid_control_invocation :: "asid_control_invocation \<Rightar
   where
   "perform_asid_control_invocation iv \<equiv> case iv of
      MakePool frame slot parent base \<Rightarrow> do
+       touch_object frame;
        delete_objects frame pageBits;
        touch_object (fst parent);
        pcap \<leftarrow> get_cap True parent;

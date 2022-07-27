@@ -18,6 +18,7 @@ context begin interpretation Arch .
 
 requalify_consts
   in_user_frame
+  user_frames_of
 
 end
 
@@ -27,6 +28,7 @@ definition
  "store_word_offs ptr offs v \<equiv>
     do s \<leftarrow> get;
        assert (in_user_frame (ptr + of_nat (offs * word_size)) s);
+       touch_objects (user_frames_of (ptr + of_nat (offs * word_size)) s);
        do_machine_op $ storeWord (ptr + of_nat (offs * word_size)) v
     od"
 

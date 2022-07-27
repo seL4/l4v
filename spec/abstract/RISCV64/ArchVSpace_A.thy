@@ -54,7 +54,15 @@ text \<open>Locate the top-level page table associated with a given virtual ASID
 definition find_vspace_for_asid :: "asid \<Rightarrow> (obj_ref,'z::state_ext) lf_monad"
   where
   "find_vspace_for_asid asid \<equiv> doE
-    vspace_opt \<leftarrow> liftE $ gets $ vspace_for_asid True asid;
+    vspace_opt \<leftarrow> liftE $ gets $ vspace_for_asid False asid;
+    \<comment> \<open>Just account for the access to the vspace root itself here.
+      Note: We can't similarly add the ASID's pool to the TA set using touch_object because it's
+      not on the kheap, but rather in riscv_asid_table. Even if we were to add it to the TA set,
+      no assertion currently below would enforce it's there; the use of `f_kheap` by this
+      `vspace_for_asid True` invocation doesn't affect its accessibility. -robs\<close>
+    liftE $ case vspace_opt of Some vspace \<Rightarrow> touch_object vspace | None \<Rightarrow> return ();
+    vspace_ta_f_opt \<leftarrow> liftE $ gets $ vspace_for_asid True asid;
+    assertE (vspace_opt \<noteq> None \<longrightarrow> vspace_ta_f_opt \<noteq> None);
     throw_opt InvalidRoot vspace_opt
   odE"
 
@@ -211,6 +219,7 @@ definition unmap_page :: "vmpage_size \<Rightarrow> asid \<Rightarrow> vspace_re
   where
   "unmap_page pgsz asid vptr pptr \<equiv> doE
      top_level_pt \<leftarrow> find_vspace_for_asid asid;
+     \<comment> \<open> TODO: Which PTEs do we add to the TA set? -robs \<close>
      (lev, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot top_level_pt vptr \<circ> ptes_of True;
      unlessE (pt_bits_left lev = pageBitsForSize pgsz) $ throwError InvalidRoot;
      liftE $ touch_object slot;
@@ -289,6 +298,16 @@ definition in_user_frame :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightar
   where
   "in_user_frame p s \<equiv>
      \<exists>sz. kheap s (p && ~~ mask (pageBitsForSize sz)) = Some (ArchObj (DataPage False sz))"
+
+definition user_frames_of :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref set"
+  where
+  "user_frames_of p s \<equiv> {p'.
+     \<exists>sz. p' = (p && ~~ mask (pageBitsForSize sz)) \<and>
+          kheap s p' = Some (ArchObj (DataPage False sz))}"
+
+lemma in_user_frame_from_user_frames_of:
+  "in_user_frame p s = (user_frames_of p s \<noteq> {})"
+  by (clarsimp simp:in_user_frame_def user_frames_of_def)
 
 definition prepare_thread_delete :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
   where

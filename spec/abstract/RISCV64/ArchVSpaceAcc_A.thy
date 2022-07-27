@@ -188,6 +188,39 @@ fun pt_walk ::
 
 declare pt_walk.simps[simp del]
 
+\<comment> \<open>The additional list return value will contain all addresses dereferenced by `pt_walk`. -robs\<close>
+fun pt_walk_ta_list ::
+  "vm_level \<Rightarrow> vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref \<rightharpoonup> pte) \<Rightarrow> ((vm_level \<times> obj_ref) \<times> (obj_ref list)) option"
+  where
+  "pt_walk_ta_list level bot_level pt_ptr vptr = do {
+     if bot_level < level
+     then do {
+       pte \<leftarrow> oapply (pt_slot_offset level pt_ptr vptr);
+       if is_PageTablePTE pte
+         then (pt_walk_ta_list (level - 1) bot_level (pptr_from_pte pte) vptr) ||>
+              (\<lambda> (r, tas). (r, pt_slot_offset level pt_ptr vptr # tas))
+         else oreturn ((level, pt_ptr), [pt_slot_offset level pt_ptr vptr])
+     }
+     else oreturn ((level, pt_ptr), [pt_slot_offset level pt_ptr vptr])
+   }"
+
+declare pt_walk_ta_list.simps[simp del]
+
+(* Copied from AARCH64's ArchBCorres_AI.
+   TODO: Full port of these and other helpers to RISCV64 as per the FIXME in that file. -robs *)
+lemmas vm_level_minus_induct = bit1.minus_induct
+lemmas vm_level_from_top_induct = bit1.from_top_induct
+
+(* TODO: Ideally we could prove something like this to convince ourselves even further that
+   pt_walk_ta_list is indeed adding to the semantics of pt_walk without modifying it. -robs *)
+lemma pt_walk_from_pt_walk_ta_list:
+  "pt_walk level bot_level pt_ptr vptr ptes =
+     (case pt_walk_ta_list level bot_level pt_ptr vptr ptes of
+       Some r \<Rightarrow> Some (fst r) |
+       None \<Rightarrow> None)"
+  (* FIXME: Not quite sure how to use vm_level_minus_induct etc yet. -robs *)
+  oops
+
 text \<open>
   Looking up a slot in a page table structure. The function returns a level and an object
   pointer. The pointer is to a slot in a table at the returned level. If the returned level is 0,

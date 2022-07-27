@@ -79,11 +79,18 @@ section "Thread Message Formats"
 definition
   load_word_offs :: "obj_ref \<Rightarrow> nat \<Rightarrow> (machine_word,'z::state_ext) s_monad" where
  "load_word_offs ptr offs \<equiv>
-    do_machine_op $ loadWord (ptr + of_nat (offs * word_size))"
+  do s \<leftarrow> get;
+    touch_objects (user_frames_of (ptr + of_nat (offs * word_size)) s);
+    do_machine_op $ loadWord (ptr + of_nat (offs * word_size))
+  od"
+
 definition
   load_word_offs_word :: "obj_ref \<Rightarrow> data \<Rightarrow> (machine_word,'z::state_ext) s_monad" where
  "load_word_offs_word ptr offs \<equiv>
-    do_machine_op $ loadWord (ptr + (offs * word_size))"
+  do s \<leftarrow> get;
+    touch_objects (user_frames_of (ptr + (offs * word_size)) s);
+    do_machine_op $ loadWord (ptr + (offs * word_size))
+  od"
 
 text \<open>Copy message registers from one thread to another.\<close>
 definition

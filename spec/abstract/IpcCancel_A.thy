@@ -252,8 +252,26 @@ definition
          = {cref}"
 
 definition
+  cslot_ptrs_of :: "bool \<Rightarrow> cap \<Rightarrow> 'z::state_ext state \<Rightarrow> cslot_ptr set" where
+  "cslot_ptrs_of ta_f cap s \<equiv>
+     {cref. \<exists>cap'. fst (get_cap ta_f cref s) = {(cap', s)}
+       \<and> (gen_obj_refs cap \<inter> gen_obj_refs cap' \<noteq> {})}"
+
+lemma is_final_cap'_def2:
+  "is_final_cap' ta_f cap s \<equiv> \<exists>cref. cslot_ptrs_of ta_f cap s = {cref}"
+  unfolding cslot_ptrs_of_def is_final_cap'_def
+  by simp
+
+definition
   is_final_cap :: "cap \<Rightarrow> (bool,'z::state_ext) s_monad" where
-  "is_final_cap cap \<equiv> gets (is_final_cap' True cap)"
+  "is_final_cap cap \<equiv> do s_init \<leftarrow> get;
+     \<comment> \<open>Overcautiously for now, account for possible accesses to *every* cap for this object.\<close>
+     touch_objects $ fst ` cslot_ptrs_of False cap s_init;
+     s \<leftarrow> get;
+     \<comment> \<open>Enforce the answer did not rely on accessing anything not accounted for by the TA set.\<close>
+     assert (is_final_cap' False cap s = is_final_cap' True cap s);
+     return $ is_final_cap' False cap s
+   od"
 
 text \<open>Actions to be taken after an IRQ handler capability is deleted.\<close>
 definition

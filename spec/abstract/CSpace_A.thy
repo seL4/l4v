@@ -34,6 +34,7 @@ requalify_consts
   cnode_padding_bits
   cnode_guard_size_bits
   arch_is_cap_revocable
+  user_frames_of
 
 end
 
@@ -280,6 +281,10 @@ definition
   captransfer_from_words :: "machine_word \<Rightarrow> (captransfer,'z::state_ext) s_monad"
 where
   "captransfer_from_words ptr \<equiv> do
+     s \<leftarrow> get;
+     touch_objects (user_frames_of ptr s);
+     touch_objects (user_frames_of (ptr + word_size) s);
+     touch_objects (user_frames_of (ptr + 2 * word_size) s);
      w0 \<leftarrow> do_machine_op $ loadWord ptr;
      w1 \<leftarrow> do_machine_op $ loadWord (ptr + word_size);
      w2 \<leftarrow> do_machine_op $ loadWord (ptr + 2 * word_size);
