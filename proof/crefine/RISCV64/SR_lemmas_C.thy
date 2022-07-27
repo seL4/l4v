@@ -1065,7 +1065,10 @@ lemma cstate_relation_only_t_hrs:
   ksReadyQueuesL2Bitmap_' s = ksReadyQueuesL2Bitmap_' t;
   ksSchedulerAction_' s = ksSchedulerAction_' t;
   ksCurThread_' s = ksCurThread_' t;
+  ksCurTime_' s = ksCurTime_' t;
+  ksCurSC_' s = ksCurSC_' t;
   ksIdleThread_' s = ksIdleThread_' t;
+  ksIdleSC_' s = ksIdleSC_' t;
   ksWorkUnitsCompleted_' s = ksWorkUnitsCompleted_' t;
   intStateIRQTable_' s = intStateIRQTable_' t;
   riscvKSASIDTable_' s = riscvKSASIDTable_' t;
@@ -1073,7 +1076,8 @@ lemma cstate_relation_only_t_hrs:
   ghost'state_' s = ghost'state_' t;
   ksDomScheduleIdx_' s = ksDomScheduleIdx_' t;
   ksCurDomain_' s = ksCurDomain_' t;
-  ksDomainTime_' s = ksDomainTime_' t
+  ksDomainTime_' s = ksDomainTime_' t;
+  ksConsumed_' s = ksConsumed_' t
   \<rbrakk>
   \<Longrightarrow> cstate_relation a s = cstate_relation a t"
   unfolding cstate_relation_def
@@ -1087,7 +1091,10 @@ lemma rf_sr_upd:
     "(ksReadyQueuesL2Bitmap_' (globals x)) = (ksReadyQueuesL2Bitmap_' (globals y))"
     "(ksSchedulerAction_' (globals x)) = (ksSchedulerAction_' (globals y))"
     "(ksCurThread_' (globals x)) = (ksCurThread_' (globals y))"
+    "(ksCurTime_' (globals x)) = (ksCurTime_' (globals y))"
+    "(ksCurSC_' (globals x)) = (ksCurSC_' (globals y))"
     "(ksIdleThread_' (globals x)) = (ksIdleThread_' (globals y))"
+    "(ksIdleSC_' (globals x)) = (ksIdleSC_' (globals y))"
     "(ksWorkUnitsCompleted_' (globals x)) = (ksWorkUnitsCompleted_' (globals y))"
     "intStateIRQTable_'(globals x) = intStateIRQTable_' (globals y)"
     "riscvKSASIDTable_' (globals x) = riscvKSASIDTable_' (globals y)"
@@ -1096,6 +1103,7 @@ lemma rf_sr_upd:
     "ksDomScheduleIdx_' (globals x) = ksDomScheduleIdx_' (globals y)"
     "ksCurDomain_' (globals x) = ksCurDomain_' (globals y)"
     "ksDomainTime_' (globals x) = ksDomainTime_' (globals y)"
+    "ksConsumed_' (globals x) = ksConsumed_' (globals y)"
   shows "((a, x) \<in> rf_sr) = ((a, y) \<in> rf_sr)"
   unfolding rf_sr_def using assms
   by simp (rule cstate_relation_only_t_hrs, auto)
@@ -1107,18 +1115,23 @@ lemma rf_sr_upd_safe[simp]:
   and     rqL2: "(ksReadyQueuesL2Bitmap_' (globals (g y))) = (ksReadyQueuesL2Bitmap_' (globals y))"
   and     sa: "(ksSchedulerAction_' (globals (g y))) = (ksSchedulerAction_' (globals y))"
   and     ct: "(ksCurThread_' (globals (g y))) = (ksCurThread_' (globals y))"
+  and  ctime: "(ksCurTime_' (globals (g y))) = (ksCurTime_' (globals y))"
+  and    csc: "(ksCurSC_' (globals (g y))) = (ksCurSC_' (globals y))"
   and     it: "(ksIdleThread_' (globals (g y))) = (ksIdleThread_' (globals y))"
+  and    isc: "(ksIdleSC_' (globals (g y))) = (ksIdleSC_' (globals y))"
   and     ist: "intStateIRQTable_'(globals (g y)) = intStateIRQTable_' (globals y)"
   and     dsi: "ksDomScheduleIdx_' (globals (g y)) = ksDomScheduleIdx_' (globals y)"
   and     cdom: "ksCurDomain_' (globals (g y)) = ksCurDomain_' (globals y)"
   and     dt: "ksDomainTime_' (globals (g y)) = ksDomainTime_' (globals y)"
+  and   cons: "ksConsumed_' (globals (g y)) = ksConsumed_' (globals y)"
   and arch:
     "riscvKSASIDTable_' (globals (g y)) = riscvKSASIDTable_' (globals y)"
     "phantom_machine_state_' (globals (g y)) = phantom_machine_state_' (globals y)"
   and    gs: "ghost'state_' (globals (g y)) = ghost'state_' (globals y)"
   and     wu:  "(ksWorkUnitsCompleted_' (globals (g y))) = (ksWorkUnitsCompleted_' (globals y))"
   shows "((a, (g y)) \<in> rf_sr) = ((a, y) \<in> rf_sr)"
-  using rl rq rqL1 rqL2 sa ct it ist arch wu gs dsi cdom dt by - (rule rf_sr_upd)
+  using rl rq rqL1 rqL2 sa ct ctime csc it isc ist arch wu gs dsi cdom dt cons
+  by - (rule rf_sr_upd)
 
 (* More of a well-formed lemma, but \<dots> *)
 lemma valid_mdb_cslift_next:
