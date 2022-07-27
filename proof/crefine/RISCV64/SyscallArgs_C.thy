@@ -23,7 +23,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 declare word_neq_0_conv[simp del]
 
 definition
-  cintr :: "irq \<Rightarrow> machine_word \<Rightarrow> errtype \<Rightarrow> bool"
+  cintr :: "unit \<Rightarrow> machine_word \<Rightarrow> errtype \<Rightarrow> bool"
 where
  "cintr a x err \<equiv> x = scast EXCEPTION_PREEMPTED"
 
@@ -44,12 +44,10 @@ crunch typ_at'[wp]: replyOnRestart "\<lambda>s. P (typ_at' T p s)"
 lemmas replyOnRestart_typ_ats[wp] = typ_at_lifts [OF replyOnRestart_typ_at']
 
 lemma replyOnRestart_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> replyOnRestart thread reply isCall \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  "replyOnRestart thread reply isCall \<lbrace>invs'\<rbrace>"
   including no_pre
   apply (simp add: replyOnRestart_def)
   apply (wp setThreadState_nonqueued_state_update rfk_invs' static_imp_wp)
-  apply (rule hoare_vcg_all_lift)
-  apply (wp setThreadState_nonqueued_state_update rfk_invs' hoare_vcg_all_lift rfk_ksQ)
    apply (rule hoare_strengthen_post, rule gts_sp')
   apply (clarsimp simp: pred_tcb_at')
   apply (auto elim!: pred_tcb'_weakenE st_tcb_ex_cap''
@@ -73,7 +71,7 @@ lemma gts_eq:
   apply clarsimp
   apply (frule in_inv_by_hoareD[OF gts_inv'])
   apply (drule use_valid [OF _ gts_sp', OF _ TrueI])
-  apply (clarsimp simp: st_tcb_at'_def obj_at'_def projectKOs objBits_simps)
+  apply (clarsimp simp: st_tcb_at'_def obj_at'_def objBits_simps)
   done
 
 lemma replyOnRestart_twice':
@@ -126,11 +124,109 @@ lemma ccorres_pre_getWorkUnits:
   apply clarsimp
   done
 
+lemma rf_sr_ksCurTime:
+  "(s, s') \<in> rf_sr \<Longrightarrow> ksCurTime_' (globals s') = ksCurTime s"
+  by (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
+
+lemma ccorres_pre_getCurTime:
+  assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
+  shows   "ccorres r xf
+                  (\<lambda>s. (\<forall>rv. ksCurTime s = rv \<longrightarrow> P rv s))
+                  {s. \<forall>rv. ksCurTime_' (globals s) = rv \<longrightarrow> s \<in> P' rv }
+                          hs (getCurTime >>= (\<lambda>rv. f rv)) c"
+  apply (rule ccorres_guard_imp)
+    apply (rule ccorres_symb_exec_l)
+       defer
+       apply wp[1]
+      apply (rule getCurTime_sp)
+     apply (clarsimp simp: empty_fail_def getCurTime_def simpler_gets_def)
+    apply assumption
+   apply clarsimp
+   defer
+   apply (rule ccorres_guard_imp)
+     apply (rule cc)
+    apply clarsimp
+   apply assumption
+  apply (clarsimp simp: rf_sr_ksCurTime)
+  done
+
+lemma rf_sr_ksConsumed:
+  "(s, s') \<in> rf_sr \<Longrightarrow> ksConsumed_' (globals s') = ksConsumedTime s"
+  by (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
+
+lemma ccorres_pre_getConsumedTime:
+  assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
+  shows   "ccorres r xf
+                  (\<lambda>s. (\<forall>rv. ksConsumedTime s = rv \<longrightarrow> P rv s))
+                  {s. \<forall>rv. ksConsumed_' (globals s) = rv \<longrightarrow> s \<in> P' rv }
+                          hs (getConsumedTime >>= (\<lambda>rv. f rv)) c"
+  apply (rule ccorres_guard_imp)
+    apply (rule ccorres_symb_exec_l)
+       defer
+       apply wp[1]
+      apply (rule getConsumedTime_sp)
+     apply (clarsimp simp: empty_fail_def getConsumedTime_def simpler_gets_def)
+    apply assumption
+   apply clarsimp
+   defer
+   apply (rule ccorres_guard_imp)
+     apply (rule cc)
+    apply clarsimp
+   apply assumption
+  apply (clarsimp simp: rf_sr_ksConsumed)
+  done
+
+lemma updateTimestamp_ccorres:
+  "ccorres dc xfdc \<top> UNIV [] updateTimeStamp (Call updateTimestamp_'proc)"
+sorry (* FIXME RT: updateTimestamp_ccorres *)
+
+lemma rf_sr_ksCurSC:
+  "(s, s') \<in> rf_sr \<Longrightarrow> ksCurSC_' (globals s') = Ptr (ksCurSc s)"
+  by (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
+
+lemma ccorres_pre_getCurSc:
+  assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
+  shows   "ccorres r xf
+                  (\<lambda>s. (\<forall>rv. ksCurSc s = rv \<longrightarrow> P rv s))
+                  {s. \<forall>rv. ksCurSC_' (globals s) = Ptr rv \<longrightarrow> s \<in> P' rv }
+                          hs (getCurSc >>= (\<lambda>rv. f rv)) c"
+  apply (rule ccorres_guard_imp)
+    apply (rule ccorres_symb_exec_l)
+       defer
+       apply wp[1]
+      apply (rule getCurSc_sp)
+     apply (clarsimp simp: empty_fail_def getCurSc_def simpler_gets_def)
+    apply assumption
+   apply clarsimp
+   defer
+   apply (rule ccorres_guard_imp)
+     apply (rule cc)
+    apply clarsimp
+   apply assumption
+  apply (clarsimp simp: rf_sr_ksCurSC)
+  done
+
+lemma sc_active_ccorres:
+  "ccorres dc xfdc
+     \<top> \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
+     (scActive scPtr) (Call sc_active_'proc)"
+sorry (* FIXME RT: sc_active_ccorres *)
+
+lemma refill_sufficient_ccorres:
+  "ccorres dc xfdc
+     \<top> (\<lbrace>\<acute>sc = Ptr scPtr\<rbrace> \<inter> \<lbrace>\<acute>usage = usage\<rbrace>) []
+     (refillSufficient scPtr usage) (Call refill_sufficient_'proc)"
+sorry (* FIXME RT: refill_sufficient_ccorres *)
+
+lemma isCurDomainExpired_ccorres:
+  "ccorres dc xfdc \<top> UNIV [] isCurDomainExpired (Call isCurDomainExpired_'proc)"
+sorry (* FIXME RT: isCurDomainExpired_ccorres *)
+
 lemma preemptionPoint_ccorres:
   "ccorres (cintr \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
       invs' UNIV []
       preemptionPoint (Call preemptionPoint_'proc)"
-  apply (cinit simp: workUnitsLimit_def whenE_def)
+  apply (cinit simp: Kernel_Config.workUnitsLimit_def whenE_def)
    apply (rule ccorres_liftE_Seq)
    apply (rule ccorres_split_nothrow
                [where P=\<top> and P'=UNIV and r'=dc and xf'=xfdc])
@@ -164,6 +260,7 @@ lemma preemptionPoint_ccorres:
                                      cmachine_state_relation_def)
         apply ceqv
        apply (rule ccorres_liftE_Seq)
+sorry (* FIXME RT: preemptionPoint_corres *) (*
        apply (ctac (no_vcg) add: isIRQPending_ccorres)
         apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
         apply (rule allI, rule conseqPre, vcg)
@@ -176,14 +273,14 @@ lemma preemptionPoint_ccorres:
     apply wp
    apply vcg
   apply simp
-  done
+  done *)
 
 definition
-  "invocationCatch thread isBlocking isCall inject
+  "invocationCatch thread isBlocking isCall canDonate inject
    \<equiv>
    sum.case_sum (throwError \<circ> Inl)
     (\<lambda>oper. doE y \<leftarrow> liftE (setThreadState Structures_H.thread_state.Restart thread);
-             reply \<leftarrow> RetypeDecls_H.performInvocation isBlocking isCall (inject oper)
+             reply \<leftarrow> RetypeDecls_H.performInvocation isBlocking isCall canDonate (inject oper)
                            >>= sum.case_sum (throwError \<circ> Inr) returnOk;
              liftE (if reply = [] then replyOnRestart thread [] isCall \<sqinter> return ()
                         else replyOnRestart thread reply isCall)
@@ -281,11 +378,11 @@ lemma o_xo_injector:
 
 lemma ccorres_invocationCatch_Inr:
   "ccorres (f \<currency> r) xf P P' hs
-   (invocationCatch thread isBlocking isCall injector (Inr v)) c
+   (invocationCatch thread isBlocking isCall canDonate injector (Inr v)) c
    =
    ccorres ((f \<circ> Inr) \<currency> r) xf P P' hs
    (do _ \<leftarrow> setThreadState Restart thread;
-       doE reply \<leftarrow> performInvocation isBlocking isCall (injector v);
+       doE reply \<leftarrow> performInvocation isBlocking isCall canDonate (injector v);
            if reply = [] then liftE (replyOnRestart thread [] isCall) \<sqinter> returnOk ()
                          else liftE (replyOnRestart thread reply isCall)
        odE od) c"
@@ -491,9 +588,9 @@ lemma ctes_of_0_contr[elim]:
   by (drule(1) ctes_of_not_0, simp)
 
 lemma invocationCatch_use_injection_handler:
-  "(v >>= invocationCatch thread isBlocking isCall injector)
+  "(v >>= invocationCatch thread isBlocking isCall canDonate injector)
      = (injection_handler Inl v >>=E
-           (invocationCatch thread isBlocking isCall injector o Inr))"
+           (invocationCatch thread isBlocking isCall canDonate injector o Inr))"
   apply (simp add: injection_handler_def handleE'_def
                    bind_bindE_assoc)
   apply (rule ext, rule bind_apply_cong [OF refl])
@@ -610,7 +707,7 @@ lemma asUser_cur_obj_at':
   apply (wp)
      apply (rule hoare_lift_Pf2 [where f=ksCurThread])
       apply (wp threadSet_obj_at'_really_strongest)+
-   apply (clarsimp simp: threadGet_def)
+   apply (clarsimp simp: threadGet_getObject)
    apply (wp getObject_tcb_wp)
   apply clarsimp
   apply (drule obj_at_ko_at')
@@ -627,7 +724,7 @@ lemma asUser_const_rv:
   shows "\<lbrace>\<lambda>s. P\<rbrace> asUser t f \<lbrace>\<lambda>rv s. Q rv\<rbrace>"
   apply (simp add: asUser_def split_def)
   apply (wp)
-  apply (clarsimp simp: threadGet_def)
+  apply (clarsimp simp: threadGet_getObject)
   apply (wp getObject_tcb_wp)
   apply clarsimp
   apply (drule obj_at_ko_at')
@@ -801,14 +898,6 @@ lemma lookupIPCBuffer_ccorres[corres]:
             apply (simp add: Kernel_C.VMReadOnly_def Kernel_C.VMKernelOnly_def
                              Kernel_C.VMReadWrite_def
                       split: if_split)
-           apply (frule cap_get_tag_isCap_unfolded_H_cap(15),simp)
-           apply (frule capFVMRights_range)
-           apply (simp add: cap_frame_cap_lift)
-           apply (clarsimp simp: cap_to_H_def vmrights_to_H_def to_bool_def
-                                 word_le_make_less
-                                 Kernel_C.VMReadWrite_def Kernel_C.VMReadOnly_def
-                                 Kernel_C.VMKernelOnly_def
-                           dest: word_less_cases)
            apply (rule ccorres_rhs_assoc)+
            apply csymbr
            apply csymbr

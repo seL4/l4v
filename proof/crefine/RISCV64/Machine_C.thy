@@ -71,6 +71,11 @@ assumes resetTimer_ccorres:
            (doMachineOp resetTimer)
            (Call resetTimer_'proc)"
 
+assumes getCurrentTime_ccorres:
+  "ccorres dc xfdc \<top> UNIV []
+           (doMachineOp getCurrentTime)
+           (Call getCurrentTime_'proc)"
+
 (* This is not very correct, however our current implementation of Hardware in haskell is stateless *)
 assumes isIRQPending_ccorres:
   "\<And>in_kernel.
