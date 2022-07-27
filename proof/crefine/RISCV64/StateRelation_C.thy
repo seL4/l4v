@@ -787,7 +787,11 @@ where
        cbitmap_L1_relation (ksReadyQueuesL1Bitmap_' cstate) (ksReadyQueuesL1Bitmap astate) \<and>
        cbitmap_L2_relation (ksReadyQueuesL2Bitmap_' cstate) (ksReadyQueuesL2Bitmap astate) \<and>
        ksCurThread_' cstate = (tcb_ptr_to_ctcb_ptr (ksCurThread astate)) \<and>
+       ksCurTime_' cstate = ksCurTime astate \<and>
+       ksCurSC_' cstate = (Ptr (ksCurSc astate)) \<and>
        ksIdleThread_' cstate = (tcb_ptr_to_ctcb_ptr (ksIdleThread astate)) \<and>
+       ksIdleSC_' cstate = (Ptr (ksIdleSC astate)) \<and>
+       ksConsumed_' cstate = ksConsumedTime astate \<and>
        cinterrupt_relation (ksInterruptState astate) intStateIRQNode_array_Ptr (intStateIRQTable_' cstate) \<and>
        cscheduler_action_relation (ksSchedulerAction astate)
                                  (ksSchedulerAction_' cstate) \<and>
