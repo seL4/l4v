@@ -620,6 +620,7 @@ fun mk_tag_disj_cache lthy = let
                              (Thm.mk_binop @{cterm "tag_disj :: typ_uinfo \<Rightarrow> typ_uinfo \<Rightarrow> bool"}
                                               (mk_typ_uinfo t1) (mk_typ_uinfo t2)))
                           (K (tac 1))
+      |> Thm.solve_constraints 
   val cache = MemoCache.create Typreltab.empty Typreltab.lookup Typreltab.update prove
 in
   fn ts => case Term_Ord.typ_ord ts of
@@ -648,7 +649,8 @@ fun mk_sub_typ_cache fg_fl_net struct_info lthy = let
             in Tactic.rule_by_tactic lthy (tac 1) q_p_thm_with_prems
             end
       in
-          q_p_thm
+	  (* Not sure why this is needed, but we get theory mismatch errors otherwise *)
+          Thm.solve_constraints q_p_thm
       end
 
   fun rec_case f (c, p) =

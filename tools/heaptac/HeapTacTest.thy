@@ -48,7 +48,7 @@ local_setup \<open>Umm_Support.local_setup\<close>
 
 ML_val \<open>
 let val ct = @{cterm "CLIFT(foo_C)
-    (hrs_mem_update (heap_update (PTR(32 signed word)
+    (hrs_mem_update (heap_update (PTR(32 word)
                                   &(PTR(baz_C) &(PTR(bar_C) &((p :: foobatbaz_C ptr)\<rightarrow>[''foo_bar_C''])\<rightarrow>[''bar_baz_C'']) \<rightarrow> [''baz_x_C'']))
                                   v) hp)"}
     val ct' = @{cterm "CLIFT(foobatbaz_C)
@@ -78,6 +78,7 @@ lemma triangle_test:
   "CLIFT(bar_C) (hrs_mem_update (heap_update (PTR(baz_C) &((p :: foobatbaz_C ptr)\<rightarrow>[''foo_baz_C''])) v) hp) = CLIFT(bar_C) hp"
   apply umm_strg
   oops
+
 (*
   ML_val
    \<open> let open Umm_Support
@@ -140,20 +141,19 @@ lemma
 
 
 lemma "CLIFT(bar_C)
-    (hrs_mem_update (heap_update (PTR(32 signed word)
+    (hrs_mem_update (heap_update (PTR(32 word)
                                   &(PTR(baz_C) &(PTR(bar_C) &((p :: foobatbaz_C ptr)\<rightarrow>[''foo_bar_C''])\<rightarrow>[''bar_baz_C'']) \<rightarrow> [''baz_x_C'']))
                                   v) hp) = X"
   apply umm_strg
-  
-  apply simp
   oops
 
+(* Not actually true *)
 lemma "\<forall>s. triple \<lbrace>s. True\<rbrace> (\<acute>ret__int :== PROC do_something(\<acute>foo, \<acute>contains_foo, \<acute>no_foo)) {t. CLIFT(foo_C) (t_hrs_' (globals t)) = CLIFT(foo_C) (t_hrs_' (globals s)) }"
   apply vcg 
   apply(intro conjI)
   prefer 8
   apply umm_strg
-  apply simp
+           apply simp
   oops
 
 lemma "\<forall>(x :: baz_C ptr). 
