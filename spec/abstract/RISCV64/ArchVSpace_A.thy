@@ -214,12 +214,26 @@ definition vs_lookup_slot :: "bool \<Rightarrow> vm_level \<Rightarrow> asid \<R
        oreturn (level', pt_slot_offset level' table vref)
    }"
 
+definition vs_all_pts_of_from_level ::
+  "bool \<Rightarrow> vm_level \<Rightarrow> vm_level \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref set"
+  where
+  "vs_all_pts_of_from_level ta_f level bot_level asid vptr s \<equiv> {ptr. (\<exists> l l'.
+     l \<le> level \<and> l \<ge> bot_level \<and>
+     vs_lookup_table ta_f l asid vptr s = Some (l', ptr))}"
+
+definition vs_all_pts_of::
+  "bool \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref set"
+  where
+  "vs_all_pts_of ta_f \<equiv> vs_all_pts_of_from_level ta_f max_pt_level 0"
+
 text \<open>Unmap a mapped page if the given mapping details are still current.\<close>
 definition unmap_page :: "vmpage_size \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
   where
   "unmap_page pgsz asid vptr pptr \<equiv> doE
      top_level_pt \<leftarrow> find_vspace_for_asid asid;
-     \<comment> \<open> TODO: Which PTEs do we add to the TA set? -robs \<close>
+     accessed_pts \<leftarrow> liftE $ gets $ vs_all_pts_of False asid vptr;
+     liftE $ assert (top_level_pt \<in> accessed_pts);
+     liftE $ touch_objects accessed_pts;
      (lev, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot top_level_pt vptr \<circ> ptes_of True;
      unlessE (pt_bits_left lev = pageBitsForSize pgsz) $ throwError InvalidRoot;
      liftE $ touch_object slot;
