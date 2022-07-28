@@ -3039,6 +3039,18 @@ lemma ep_blocked_in_queueD_send:
   apply (cases ep', simp_all add: isSendEP_def isRecvEP_def)[1]
   done
 
+lemma reply_remove_tcb_ccorres:
+  "ccorres dc xfdc (invs' and tcb_at' tptr) \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tptr\<rbrace> []
+    (replyRemoveTCB tptr) (Call reply_remove_tcb_'proc)"
+sorry (* FIXME RT: reply_remove_tcb_corres *)
+
+lemma reply_unlink_ccorres:
+  "ccorres dc xfdc
+    (invs' and tcb_at' tcbPtr and reply_at' replyPtr)
+    (\<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace> \<inter> \<lbrace>\<acute>reply = Ptr replyPtr\<rbrace>) []
+    (replyUnlink tcbPtr replyPtr) (Call reply_unlink_'proc)"
+sorry (* FIXME RT: reply_unlink_ccorres *)
+
 lemma cancelIPC_ccorres1:
   assumes cteDeleteOne_ccorres:
   "\<And>w slot. ccorres dc xfdc
@@ -3052,8 +3064,7 @@ lemma cancelIPC_ccorres1:
                    (UNIV \<inter> {s. tptr_' s = tcb_ptr_to_ctcb_ptr thread}) []
           (cancelIPC thread) (Call cancelIPC_'proc)"
   apply (cinit lift: tptr_' simp: Let_def cong: call_ignore_cong)
-sorry (* FIXME RT: cancelIPC_ccorres1, requiring new ccorres rules
-                   for replyUnlink and replyRemoveTCB *) (*
+sorry (* FIXME RT: cancelIPC_ccorres1 *) (*
    apply (rule ccorres_move_c_guard_tcb)
    apply csymbr
    apply (rule getThreadState_ccorres_foo)
