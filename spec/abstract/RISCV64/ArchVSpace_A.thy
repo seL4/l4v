@@ -45,6 +45,8 @@ definition vspace_for_pool :: "obj_ref \<Rightarrow> asid \<Rightarrow> (obj_ref
 definition vspace_for_asid :: "bool \<Rightarrow> asid \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref option"
   where
   "vspace_for_asid ta_f asid = do {
+     \<comment> \<open>TODO: Increase this 0 to the maximum per-domain ASID once we reserve these
+         for each of the per-domain top-level kernel page tables. -robs\<close>
      oassert (0 < asid);
      pool_ptr \<leftarrow> pool_for_asid asid;
      vspace_for_pool pool_ptr asid \<circ> asid_pools_of ta_f
@@ -54,12 +56,14 @@ text \<open>Locate the top-level page table associated with a given virtual ASID
 definition find_vspace_for_asid :: "asid \<Rightarrow> (obj_ref,'z::state_ext) lf_monad"
   where
   "find_vspace_for_asid asid \<equiv> doE
+    \<comment> \<open>Account for vspace_for_asid's access to any ASID pool it uses or vspace root it returns.
+      Note: We can't similarly add the top-level ASID table (riscv_asid_table) to the TA set using
+      touch_object because it's not on the kheap and doesn't have an address in the ASpec.
+      Even if we added it to the TA set, no assertion currently below would enforce it's there;
+      `vspace_for_asid True` invocation's use of `f_kheap` doesn't affect its accessibility. -robs\<close>
+    pool_ptr_opt \<leftarrow> liftE $ gets $ pool_for_asid asid;
     vspace_opt \<leftarrow> liftE $ gets $ vspace_for_asid False asid;
-    \<comment> \<open>Just account for the access to the vspace root itself here.
-      Note: We can't similarly add the ASID's pool to the TA set using touch_object because it's
-      not on the kheap, but rather in riscv_asid_table. Even if we were to add it to the TA set,
-      no assertion currently below would enforce it's there; the use of `f_kheap` by this
-      `vspace_for_asid True` invocation doesn't affect its accessibility. -robs\<close>
+    liftE $ case pool_ptr_opt of Some pool_ptr \<Rightarrow> touch_object pool_ptr | None \<Rightarrow> return ();
     liftE $ case vspace_opt of Some vspace \<Rightarrow> touch_object vspace | None \<Rightarrow> return ();
     vspace_ta_f_opt \<leftarrow> liftE $ gets $ vspace_for_asid True asid;
     assertE (vspace_opt \<noteq> None \<longrightarrow> vspace_ta_f_opt \<noteq> None);
@@ -232,7 +236,6 @@ definition unmap_page :: "vmpage_size \<Rightarrow> asid \<Rightarrow> vspace_re
   "unmap_page pgsz asid vptr pptr \<equiv> doE
      top_level_pt \<leftarrow> find_vspace_for_asid asid;
      accessed_pts \<leftarrow> liftE $ gets $ vs_all_pts_of False asid vptr;
-     liftE $ assert (top_level_pt \<in> accessed_pts);
      liftE $ touch_objects accessed_pts;
      (lev, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot top_level_pt vptr \<circ> ptes_of True;
      unlessE (pt_bits_left lev = pageBitsForSize pgsz) $ throwError InvalidRoot;
