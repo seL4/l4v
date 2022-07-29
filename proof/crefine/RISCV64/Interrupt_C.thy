@@ -51,7 +51,7 @@ lemma ptr_add_assertion_irq_guard:
 lemma cte_at_irq_node':
   "invs' s \<Longrightarrow>
     cte_at' (irq_node' s + 2 ^ cte_level_bits * ucast (irq :: 6 word)) s"
-  by (clarsimp simp: invs'_def valid_state'_def valid_irq_node'_def
+  by (clarsimp simp: invs'_def valid_irq_node'_def
                      cte_level_bits_def real_cte_at' cteSizeBits_def shiftl_t2n)
 
 lemma invokeIRQHandler_SetIRQHandler_ccorres:
@@ -147,13 +147,14 @@ lemma decodeIRQHandlerInvocation_ccorres:
               and (excaps_in_mem extraCaps o ctes_of)
               and (\<lambda>s. \<exists>slot. cte_wp_at' (\<lambda>cte. cteCap cte = IRQHandlerCap irq) slot s)
               and (\<lambda>s. \<forall>v \<in> set extraCaps.
-                             ex_cte_cap_wp_to' isCNodeCap (snd v) s))
+                             ex_cte_cap_wp_to' isCNodeCap (snd v) s)
+              and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s))
        (UNIV
             \<inter> {s. invLabel_' s = label}
             \<inter> {s. irq_' s = ucast irq}
             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}) []
      (decodeIRQHandlerInvocation label irq extraCaps
-            >>= invocationCatch thread isBlocking isCall InvokeIRQHandler)
+            >>= invocationCatch thread isBlocking isCall canDonate InvokeIRQHandler)
      (Call decodeIRQHandlerInvocation_'proc)"
   apply (cinit' lift: invLabel_' irq_' current_extra_caps_'
            simp: decodeIRQHandlerInvocation_def invocation_eq_use_types)
@@ -255,7 +256,7 @@ lemma decodeIRQHandlerInvocation_ccorres:
     apply (rule syscall_error_throwError_ccorres_n)
     apply (simp add: syscall_error_to_H_cases)
    apply simp
-  apply (clarsimp simp: Collect_const_mem tcb_at_invs')
+  apply (clarsimp simp: Collect_const_mem)
   apply (clarsimp simp: invs_queues invs_valid_objs'
                         ct_in_state'_def
                         ccap_rights_relation_def
@@ -406,8 +407,8 @@ lemma ucast_ucast_mask_le_64_32:
 lemmas c_irq_const_defs = irq_const_defs
 
 lemma liftME_invocationCatch:
-  "liftME f m >>= invocationCatch thread isBlocking isCall f'
-     = m >>= invocationCatch thread isBlocking isCall (f' \<circ> f)"
+  "liftME f m >>= invocationCatch thread isBlocking isCall canDonate f'
+     = m >>= invocationCatch thread isBlocking isCall canDonate (f' \<circ> f)"
   apply (simp add: liftME_def bindE_def bind_assoc)
   apply (rule bind_cong [OF refl])
   apply (simp add: lift_def throwError_bind invocationCatch_def
@@ -486,7 +487,8 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
             and (\<lambda>s. \<forall>v \<in> set extraCaps.
                            ex_cte_cap_wp_to' isCNodeCap (snd v) s)
             and cte_wp_at' (\<lambda>cte. cteCap cte = IRQControlCap) srcSlot
-            and sysargs_rel args buffer)
+            and sysargs_rel args buffer
+            and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s))
      (UNIV \<inter> {s. invLabel_' s = label}
            \<inter> {s. unat (length___unsigned_long_' s) = length args}
            \<inter> {s. srcSlot_' s = cte_Ptr srcSlot}
@@ -494,10 +496,10 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
            \<inter> {s. buffer_' s = option_to_ptr buffer})
      []
      (Arch.decodeIRQControlInvocation label args srcSlot (map fst extraCaps)
-        >>= invocationCatch thread isBlocking isCall (InvokeIRQControl o ArchIRQControl))
+        >>= invocationCatch thread isBlocking isCall canDonate (InvokeIRQControl o ArchIRQControl))
      (Call Arch_decodeIRQControlInvocation_'proc)"
   supply maxIRQ_casts[simp]
-  supply gen_invocation_type_eq[simp] if_cong[cong] Collect_const[simp del]
+  supply gen_invocation_type_eq[simp] if_cong[cong] Collect_const[simp del] tl_drop_1[simp]
   apply (cinit' lift: invLabel_' length___unsigned_long_' srcSlot_' current_extra_caps_' buffer_'
                 simp: ArchInterrupt_H.RISCV64_H.decodeIRQControlInvocation_def)
    apply (simp add: invocation_eq_use_types
@@ -659,16 +661,17 @@ lemma decodeIRQControlInvocation_ccorres:
               and (\<lambda>s. \<forall>v \<in> set extraCaps.
                              ex_cte_cap_wp_to' isCNodeCap (snd v) s)
               and cte_wp_at' (\<lambda>cte. cteCap cte = IRQControlCap) slot
-              and sysargs_rel args buffer)
+              and sysargs_rel args buffer
+              and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s))
        (UNIV
             \<inter> {s. invLabel_' s = label} \<inter> {s. srcSlot_' s = cte_Ptr slot}
             \<inter> {s. unat (length___unsigned_long_' s) = length args}
             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
             \<inter> {s. buffer_' s = option_to_ptr buffer}) []
      (decodeIRQControlInvocation label args slot (map fst extraCaps)
-            >>= invocationCatch thread isBlocking isCall InvokeIRQControl)
+            >>= invocationCatch thread isBlocking isCall canDonate InvokeIRQControl)
      (Call decodeIRQControlInvocation_'proc)"
-  supply gen_invocation_type_eq[simp] if_cong[cong] Collect_const[simp del]
+  supply gen_invocation_type_eq[simp] if_cong[cong] Collect_const[simp del] tl_drop_1[simp]
   supply maxIRQ_ucast_toEnum_eq[simp] maxIRQ_ucast_toEnum_irq_t[simp] maxIRQ_irqInvalid[simp]
   supply maxIRQ_ucast_toEnum_irq_t2[simp]
   apply (cinit' lift: invLabel_' srcSlot_' length___unsigned_long_' current_extra_caps_' buffer_')
