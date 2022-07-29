@@ -112,7 +112,7 @@ lemma get_cap_helper:
 
 lemma is_final_cap_bcorres[wp]:
   "bcorres (is_final_cap a) (is_final_cap a)"
-  by (simp add: is_final_cap_def is_final_cap'_def gets_def get_cap_helper | wp)+
+  by (simp add: is_final_cap_def is_final_cap'_def gets_def get_cap_helper cslot_ptrs_of_def | wp)+
 
 lemma get_tcb_truncate[simp]: "get_tcb ta_f a (truncate_state s) = get_tcb ta_f a s"
   by (simp add: get_tcb_def)

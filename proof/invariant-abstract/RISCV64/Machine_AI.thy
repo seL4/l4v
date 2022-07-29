@@ -96,7 +96,7 @@ lemma no_fail_getRestartPC: "no_fail \<top> getRestartPC"
   by (simp add: getRestartPC_def getRegister_def)
 
 
-lemma no_fail_loadWord [wp]: "no_fail (\<lambda>_. is_aligned p 3) (loadWord p)"
+lemma no_fail_loadWord [wp]: "no_fail (\<lambda>s. is_aligned p 3 \<and> p \<in> touched_addresses s) (loadWord p)"
   apply (simp add: loadWord_def is_aligned_mask [symmetric])
   apply (rule no_fail_pre)
    apply wp
@@ -104,7 +104,7 @@ lemma no_fail_loadWord [wp]: "no_fail (\<lambda>_. is_aligned p 3) (loadWord p)"
   done
 
 
-lemma no_fail_storeWord: "no_fail (\<lambda>_. is_aligned p 3) (storeWord p w)"
+lemma no_fail_storeWord: "no_fail (\<lambda>s. is_aligned p 3 \<and> p \<in> touched_addresses s) (storeWord p w)"
   apply (simp add: storeWord_def is_aligned_mask [symmetric])
   apply (rule no_fail_pre)
    apply (wp)
@@ -147,10 +147,19 @@ lemma getRestartPC_inv: "\<lbrace>P\<rbrace> getRestartPC \<lbrace>\<lambda>rv. 
 
 
 lemma no_fail_clearMemory[simp, wp]:
-  "no_fail (\<lambda>_. is_aligned p 3) (clearMemory p b)"
+  "no_fail (\<lambda>_. is_aligned p 3 \<and> p \<in> touched_addresses s) (clearMemory p b)"
+(* Given `is_aligned p 3` was enough, would this be enough? -robs
+  "no_fail (\<lambda>s. is_aligned p 3 \<and>
+      set [p, p + word_size .e. p + (of_nat bytelength) - 1] \<subseteq> touched_addresses s)
+      (clearMemory p b)"
+*)
   apply (simp add: clearMemory_def mapM_x_mapM)
   apply (rule no_fail_pre)
    apply (wp no_fail_mapM' no_fail_storeWord )
+. (* DOWN TO HERE. -robs
+   Note, no_fail_mapM' doesn't seem to be good enough because it can't take into account
+   the state. We might need a version that does, but only for a function `f` that doesn't
+   have any impact on the truthfulness of P. -robs
   apply (clarsimp simp: upto_enum_step_def)
   apply (erule aligned_add_aligned)
    apply (simp add: word_size_def)
