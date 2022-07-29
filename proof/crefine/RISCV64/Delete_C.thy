@@ -146,7 +146,7 @@ lemma capRemovable_spec:
       {s'. ret__unsigned_long_' s' = from_bool (capRemovable cap (ptr_val (slot_' s)))}"
   supply if_cong[cong]
   apply vcg
-  apply (clarsimp simp: cap_get_tag_isCap(1-8)[THEN trans[OF eq_commute]])
+  apply (clarsimp simp: cap_get_tag_isCap(1-12)[THEN trans[OF eq_commute]])
   apply (simp add: capRemovable_def from_bool_def[where b=True] true_def)
   apply (clarsimp simp: ccap_zombie_radix_less4)
   apply (subst eq_commute, subst from_bool_eq_if)
@@ -867,9 +867,9 @@ lemma finaliseSlot_ccorres:
                     apply (rule allI, rule conseqPre, vcg)
                     apply (clarsimp simp: throwError_def return_def cintr_def)
                    apply vcg
-                  apply (wp preemptionPoint_invR)
-                 apply simp
-                 apply simp
+                  apply (wp preemptionPoint_invR;
+                         clarsimp simp: updateTimeStamp_independent_def sch_act_simple_def
+                                        ex_cte_cap_wp_to'_def)
                  apply (rule ccorres_split_throws)
                   apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
                   apply (rule allI, rule conseqPre, vcg)
@@ -901,9 +901,7 @@ lemma finaliseSlot_ccorres:
                        simp: valid_cap'_def Kernel_C.maxIRQ_def RISCV64.maxIRQ_def
                              unat_ucast word_le_nat_alt cleanup_info_wf'_def arch_cleanup_info_wf'_def)[1]
          subgoal by (auto dest!: valid_capAligned ctes_of_valid'
-                          simp: isCap_simps final_matters'_def o_def)
-        apply clarsimp
-        apply (frule valid_globals_cte_wpD'[rotated], clarsimp)
+                          simp: isCap_simps final_matters'_def o_def obj_at_simps pred_tcb_at'_def)
         apply (clarsimp simp: cte_wp_at_ctes_of false_def from_bool_def)
         apply (erule(1) cmap_relationE1 [OF cmap_relation_cte])
         apply (frule valid_global_refsD_with_objSize, clarsimp)
@@ -1018,9 +1016,8 @@ lemma cteRevoke_ccorres1:
             apply (simp, rule ccorres_split_throws)
              apply (rule ccorres_return_C_errorE, simp+)[1]
             apply vcg
-           apply (wp preemptionPoint_invR)
-            apply simp
-           apply simp
+           apply (wp preemptionPoint_invR;
+                  clarsimp simp: updateTimeStamp_independent_def sch_act_simple_def)+
           apply (simp, rule ccorres_split_throws)
            apply (rule ccorres_return_C_errorE, simp+)[1]
           apply vcg

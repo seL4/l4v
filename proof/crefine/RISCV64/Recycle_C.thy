@@ -332,10 +332,12 @@ lemma clearMemory_PageCap_ccorres:
                          power_user_page_foldl_zero_ranges[simplified pageBits_def]
                          dom_heap_to_device_data)
    apply (rule conjI[rotated])
+    apply (rule conjI)
     apply (simp add:pageBitsForSize_mess_multi)
     apply (rule cmap_relationI)
      apply (clarsimp simp: dom_heap_to_device_data cmap_relation_def)
     apply (simp add:cuser_user_data_device_relation_def)
+    subgoal sorry (* FIXME RT: refill_buffer_relation *)
    apply (subst help_force_intvl_range_conv, assumption)
      subgoal by (simp add: pageBitsForSize_def bit_simps split: vmpage_size.split)
     apply simp
@@ -401,14 +403,6 @@ lemma coerce_memset_to_heap_update_pte:
   apply (simp add: replicateHider_def word_rsplit_0 word_bits_def)
   done
 
-lemma objBits_eq_by_type:
-  fixes x :: "'a :: pspace_storable" and y :: 'a
-  shows "objBits x = objBits y"
-  apply (simp add: objBits_def)
-  apply (rule objBits_type)
-  apply (simp add: koTypeOf_injectKO)
-  done
-
 lemma mapM_x_store_memset_ccorres_assist:
   fixes val :: "'a :: pspace_storable"
   assumes nofail: "\<not> snd (mapM_x (\<lambda>slot. setObject slot val) slots \<sigma>)"
@@ -417,6 +411,7 @@ lemma mapM_x_store_memset_ccorres_assist:
   assumes ptr: "ptr = hd slots"
   assumes ko: "\<And>ko :: 'a. updateObject ko = updateObject_default ko"
               "\<And>ko :: 'a. (1 :: machine_word) < 2 ^ objBits ko"
+  assumes constsize: "\<And>v :: 'a. objBits v = objBitsT (koType TYPE('a))"
   assumes restr: "set slots \<subseteq> S"
   assumes worker: "\<And>ptr s s' (ko :: 'a). \<lbrakk> (s, s') \<in> rf_sr; ko_at' ko ptr s; ptr \<in> S \<rbrakk>
                                 \<Longrightarrow> (s \<lparr> ksPSpace := ksPSpace s (ptr \<mapsto> injectKO val)\<rparr>,
@@ -450,7 +445,7 @@ next
     apply (simp add: koTypeOf_injectKO typ_at_to_obj_at')
     done
 
-  note in_setObject = setObject_eq[OF _ _ objBits_eq_by_type obj_at,
+  note in_setObject = setObject_eq[OF _ _ _ obj_at,
                                    where ko=val, simplified ko, simplified]
 
   note nofail_mapM = not_snd_bindI2[OF nofail_bind, OF in_setObject]
@@ -463,14 +458,16 @@ next
     using obj_at_ko_at'[OF obj_at] Cons.prems(4)
     apply (clarsimp simp add: mapM_x_Cons bind_def split_def)
     apply (rule rev_bexI, rule in_setObject)
+     apply (metis constsize)
     apply (cut_tac Cons.hyps[OF _ _ nofail_mapM])
-       defer
-       apply (rule worker, rule Cons.prems, assumption+)
-      apply clarsimp
-      apply (case_tac "xs = []", simp_all)[1]
-      apply (insert Cons.prems, simp)[1]
-      apply (frule_tac x="Suc n" in spec)
-      apply (simp add: hd_xs shiftl_t2n field_simps)
+        defer
+        apply (rule worker, rule Cons.prems, assumption+)
+       apply clarsimp
+       apply (case_tac "xs = []", simp_all)[1]
+       apply (insert Cons.prems, simp)[1]
+       apply (frule_tac x="Suc n" in spec)
+       apply (simp add: hd_xs shiftl_t2n field_simps)
+      apply (metis constsize)
      apply assumption
     apply clarsimp
     apply (rule rev_bexI, assumption)
@@ -505,7 +502,8 @@ lemma heap_to_user_data_in_user_mem'[simp]:
    apply (frule(1) pspace_alignedD')
    apply (frule(1) pspace_distinctD')
    apply (subgoal_tac "x + ucast off * 8 + xa  && ~~ mask pageBits = x" )
-    apply (clarsimp simp: pointerInUserData_def typ_at'_def ko_wp_at'_def)
+    apply (clarsimp simp: pointerInUserData_def typ_at'_def ko_wp_at'_def word_bits_def
+                          objBits_simps' RISCV64.pageBits_def)
    apply (simp add: RISCV64.pageBits_def)
    apply (subst mask_lower_twice2[where n = 3 and m = 12,simplified,symmetric])
    apply (subst is_aligned_add_helper[THEN conjunct2,where n1 = 3])
@@ -577,9 +575,10 @@ lemma clearMemory_setObject_PTE_ccorres:
    apply (simp add: upto_enum_step_def objBits_simps bit_simps add.commute[where b=ptr]
                     linorder_not_less[symmetric] archObjSize_def
                     upto_enum_word split_def)
-  apply (erule mapM_x_store_memset_ccorres_assist
-                      [unfolded split_def, OF _ _ _ _ _ _ subset_refl],
-         simp_all add: shiftl_t2n hd_map objBits_simps archObjSize_def bit_simps)[1]
+   apply (erule mapM_x_store_memset_ccorres_assist
+                      [unfolded split_def, OF _ _ _ _ _ _ _ subset_refl],
+          simp_all add: shiftl_t2n hd_map objBits_simps archObjSize_def bit_simps)[1]
+    apply (clarsimp simp: objBits_simps' objBitsT_def makeObjectT_def bit_simps)
    apply (rule cmap_relationE1, erule rf_sr_cpte_relation, erule ko_at_projectKO_opt)
    apply (subst coerce_memset_to_heap_update_pte)
    apply (clarsimp simp: rf_sr_def Let_def cstate_relation_def typ_heap_simps)
@@ -589,7 +588,7 @@ lemma clearMemory_setObject_PTE_ccorres:
     apply (rule cmap_relation_updI, simp_all)[1]
     apply (simp add: cpte_relation_def Let_def pte_lift_def)
    apply (simp add: carch_state_relation_def cmachine_state_relation_def
-                    update_pte_map_tos)
+                    update_pte_map_tos refill_buffer_relation_def typ_heap_simps)
   apply simp
   done
 
@@ -666,11 +665,10 @@ lemma double_setEndpoint:
   apply (simp add: updateObject_default_def bind_assoc objBits_simps)
   apply (rule ext)
   apply (rule bind_apply_cong, rule refl)+
-  apply (clarsimp simp add: in_monad projectKOs magnitudeCheck_assert
-                            snd_lookupAround2_update)
+  apply (clarsimp simp add: in_monad magnitudeCheck_assert snd_lookupAround2_update)
   apply (simp add: lookupAround2_known1 assert_opt_def projectKO_def projectKO_opt_ep
-                    alignCheck_assert)
-  apply (simp add: bind_def simpler_modify_def)
+                   alignCheck_assert)
+  apply (simp add: bind_def simpler_modify_def gets_the_def omonad_defs return_def)
   done
 
 lemma filterM_setEndpoint_adjustment:
@@ -800,12 +798,13 @@ lemma ntfn_q_refs'_no_NTFNBound[simp]:
 
 lemma cancelBadgedSends_ccorres:
   "ccorres dc xfdc (invs' and ep_at' ptr)
-              (UNIV \<inter> {s. epptr_' s = Ptr ptr} \<inter> {s. badge_' s = bdg}) []
+              (UNIV \<inter> {s. epptr_' s = Ptr ptr} \<inter> {s. badge___unsigned_long_' s = bdg}) []
        (cancelBadgedSends ptr bdg) (Call cancelBadgedSends_'proc)"
-  apply (cinit lift: epptr_' badge_' simp: whileAnno_def)
+  apply (cinit lift: epptr_' badge___unsigned_long_' simp: whileAnno_def)
    apply (simp add: list_case_return2
               cong: list.case_cong Structures_H.endpoint.case_cong call_ignore_cong
                del: Collect_const)
+sorry (* FIXME RT: cancelBadgedSends_ccorres *) (*
    apply (rule ccorres_pre_getEndpoint)
    apply (rule_tac R="ko_at' rv ptr" and xf'="ret__unsigned_longlong_'"
                and val="case rv of RecvEP q \<Rightarrow> scast EPState_Recv | IdleEP \<Rightarrow> scast EPState_Idle
@@ -1085,7 +1084,7 @@ lemma cancelBadgedSends_ccorres:
    apply (drule sym_refsD, clarsimp)
    apply (drule(1) bspec)+
    by (auto simp: obj_at'_def projectKOs state_refs_of'_def pred_tcb_at'_def tcb_bound_refs'_def
-              dest!: symreftype_inverse')
+              dest!: symreftype_inverse') *)
 
 
 lemma tcb_ptr_to_ctcb_ptr_force_fold:
@@ -1113,7 +1112,7 @@ lemma coerce_memset_to_heap_update:
                           (NULL)
                           (seL4_Fault_C (FCP (\<lambda>x. 0)))
                           (lookup_fault_C (FCP (\<lambda>x. 0)))
-                            0 0 0 0 0 0 NULL NULL NULL NULL)"
+                            0 0 0 NULL NULL 0 NULL NULL NULL NULL NULL)"
   apply (intro ext, simp add: heap_update_def)
   apply (rule_tac f="\<lambda>xs. heap_update_list x xs a b" for a b in arg_cong)
   apply (simp add: to_bytes_def size_of_def typ_info_simps tcb_C_tag_def)
@@ -1206,7 +1205,8 @@ lemma updateFreeIndex_ccorres:
    apply (rule conjI)
     apply (rule setCTE_tcb_case, assumption+)
    apply (case_tac s', clarsimp)
-   subgoal by (simp add: carch_state_relation_def cmachine_state_relation_def)
+   subgoal by (simp add: carch_state_relation_def cmachine_state_relation_def
+                         refill_buffer_relation_def typ_heap_simps)
 
   apply (clarsimp simp: isCap_simps)
   apply (drule(1) cte_lift_ccte_relation,
