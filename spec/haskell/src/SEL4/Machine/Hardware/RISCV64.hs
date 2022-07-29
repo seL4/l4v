@@ -276,8 +276,7 @@ data PTE
         pteRights :: VMRights }
     | PageTablePTE {
         ptePPN :: PAddr,
-        pteGlobal :: Bool,
-        pteUser :: Bool }
+        pteGlobal :: Bool }
     deriving (Show, Eq)
 
 {- Simulator callbacks -}

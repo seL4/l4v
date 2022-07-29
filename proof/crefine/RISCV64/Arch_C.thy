@@ -1514,7 +1514,7 @@ lemma list_3_collapse:
   done
 
 lemma pde_case_isPageTablePDE:
-  "(case pte of PageTablePTE _ _ _ \<Rightarrow> P | _ \<Rightarrow> Q)
+  "(case pte of PageTablePTE _ _ \<Rightarrow> P | _ \<Rightarrow> Q)
        = (if isPageTablePTE pte then P else Q)"
   by (clarsimp simp: isPageTablePTE_def split: pte.splits)
 
