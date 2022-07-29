@@ -323,6 +323,61 @@ lemma my_hoare_triple_lemma:
   apply (clarsimp simp: my_function_def)
   oops
 
+subsection \<open>ccorres statements\<close>
+
+text \<open>
+  We prefer the following formatting for ccorres statements. Recall that a ccorres statement has
+  the form\<close>
+
+lemma ccorres_example:
+  "ccorres rrel xf P Q hs a c"
+  oops
+
+text \<open>
+  where rrel is the return relation, xf is the extraction function, P is the abstract guard,
+  Q is the concrete guard, hs is the handler stack, a is the abstract function, and c is the
+  concrete function.
+
+  If the statement can fit on a single line within the character limit, then this is best.
+  If not, wherever possible
+    - rrel and xf should occur on the same line,
+    - P, Q, and hs should occur on the same line, and
+    - a and c should occur on the same line
+
+  Often the guards will require more than one line, and in this case, hs should occur on the same
+  line as the concrete guard wherever possible.
+
+  If the statement must use more than one line, all lines after the first should be indented by
+  2 spaces from @{term ccorres}.
+
+  Here are some examples.\<close>
+
+lemma short_ccorres_example:
+  "ccorres rrel xf short_abs_guard short_conc_guard hs short_abs_fn short_conc_fn"
+  oops
+
+lemma long_ccorres_example:
+  "ccorres rrel xf
+     long_abs_guard long_conc_guard hs
+     long_abs_fn long_conc_fn"
+  oops
+
+lemma longer_ccorres_example:
+  "ccorres
+     long_rrel
+     long_xf
+     long_abs_guard
+     long_conc_guard hs
+     long_abs_fn
+     long_conc_fn"
+  oops
+
+text \<open>
+  The concrete guard will often be simply @{term UNIV}, or an intersection of terms of the form
+  @{term "\<lbrace>\<acute>pointer = cond\<rbrace>"}, which supersedes the set-builder notation wherever applicable.
+  Note that the semantically redundant form @{term "UNIV \<inter> \<lbrace>\<acute>pointer = cond\<rbrace>"} should no longer
+  be necessary, and should be avoided wherever possible.\<close>
+
 section \<open>Referenecs\<close>
 
 text \<open>
