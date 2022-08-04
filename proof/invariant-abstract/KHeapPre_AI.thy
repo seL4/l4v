@@ -111,9 +111,11 @@ locale arch_only_obj_pred =
   fixes P :: "kernel_object \<Rightarrow> bool"
   assumes arch_only: "arch_obj_pred P"
 
+. (* DOWN TO HERE: Look for or add a [wp] rule to use instead of unfolding down to
+     `simpler_do_machine_op_addTouchedAddresses_def`, as Gerwin (@lsf37) suggests. -robs
 lemma set_object_typ_at [wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p' s)\<rbrace>
-  set_object False p ko \<lbrace>\<lambda>rv s. P (typ_at T p' s)\<rbrace>"
+  set_object ta_f p ko \<lbrace>\<lambda>rv s. P (typ_at T p' s)\<rbrace>"
   apply (simp add: set_object_def get_object_def)
   apply wp
   apply clarsimp
