@@ -21,12 +21,12 @@ lemma pool_for_asid_truncate[simp]:
   by (simp add: pool_for_asid_def)
 
 lemma vs_lookup_table_truncate[simp]:
-  "vs_lookup_table ta_f l asid vptr (truncate_state s) = vs_lookup_table ta_f l asid vptr s"
+  "vs_lookup_table l asid vptr (truncate_state s) = vs_lookup_table l asid vptr s"
   by (simp add: vs_lookup_table_def obind_def oreturn_def opt_map_def vspace_for_pool_def
     cong:option.case_cong split:option.splits)
 
 lemma vs_lookup_slot_truncate[simp]:
-  "vs_lookup_slot ta_f l asid vptr (truncate_state s) = vs_lookup_slot ta_f l asid vptr s"
+  "vs_lookup_slot l asid vptr (truncate_state s) = vs_lookup_slot l asid vptr s"
   by (simp add: vs_lookup_slot_def obind_def oreturn_def split: option.splits)
 
 lemma pt_lookup_from_level_bcorres[wp]:

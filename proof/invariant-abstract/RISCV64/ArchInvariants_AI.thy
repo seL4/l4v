@@ -28,7 +28,7 @@ context Arch begin global_naming RISCV64
 
 (* compatibility with other architectures, input only *)
 abbreviation
-  "vs_lookup s \<equiv> \<lambda>level asid vref. vs_lookup_table False level asid vref s"
+  "vs_lookup s \<equiv> \<lambda>level asid vref. vs_lookup_table level asid vref s"
 
 locale_abbrev
   "atyps_of \<equiv> \<lambda>s. aobjs_of False s ||> aa_type"
@@ -331,7 +331,7 @@ lemmas pte_ref_simps[simp] = pte_ref_def[split_simps pte.split]
 definition valid_vspace_objs :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_vspace_objs \<equiv> \<lambda>s.
      \<forall>bot_level asid vref level p ao.
-       vs_lookup_table False bot_level asid vref s = Some (level, p)
+       vs_lookup_table bot_level asid vref s = Some (level, p)
        \<longrightarrow> vref \<in> user_region
        \<longrightarrow> aobjs_of False s p = Some ao
        \<longrightarrow> valid_vspace_obj level ao s"
@@ -354,7 +354,7 @@ definition vs_lookup_target ::
   "vm_level \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> (vm_level \<times> obj_ref) option"
   where
   "vs_lookup_target bot_level asid vref \<equiv> do {
-     (level, slot) \<leftarrow> vs_lookup_slot False bot_level asid vref;
+     (level, slot) \<leftarrow> vs_lookup_slot bot_level asid vref;
      ptr \<leftarrow> if level = asid_pool_level
             then vspace_for_pool slot asid \<circ> asid_pools_of False
             else swp pte_refs_of slot;
@@ -1420,7 +1420,7 @@ lemma translate_address_equal_top_slot:
 lemmas min_max_pt_level[simp] = min_absorb2[where x=max_pt_level]
 
 lemma vs_lookup_min_level:
-  "vs_lookup_table ta_f bot_level asid vref s = Some (level, p) \<Longrightarrow> bot_level \<le> level"
+  "vs_lookup_table bot_level asid vref s = Some (level, p) \<Longrightarrow> bot_level \<le> level"
   by (auto simp: vs_lookup_table_def in_omonad not_le split: if_split_asm dest!: pt_walk_min_level)
 
 lemma pt_bits_left_0[simp]:
@@ -1511,12 +1511,12 @@ lemma pt_walk_vref_for_level1:
 
 lemma vs_lookup_vref_for_level1:
   "level \<le> bot_level \<Longrightarrow>
-   vs_lookup_table ta_f bot_level asid (vref_for_level vref (level+1)) = vs_lookup_table ta_f bot_level asid vref"
+   vs_lookup_table bot_level asid (vref_for_level vref (level+1)) = vs_lookup_table bot_level asid vref"
   by (force simp: vs_lookup_table_def pt_walk_vref_for_level1 obind_def split: option.splits)
 
 lemma vs_lookup_vref_for_level:
   "level \<le> bot_level \<Longrightarrow>
-   vs_lookup_table ta_f bot_level asid (vref_for_level vref level) = vs_lookup_table ta_f bot_level asid vref"
+   vs_lookup_table bot_level asid (vref_for_level vref level) = vs_lookup_table bot_level asid vref"
   by (force simp: vs_lookup_table_def pt_walk_vref_for_level obind_def split: option.splits)
 
 lemma riscv_global_pts_global_ref:
@@ -1617,7 +1617,7 @@ lemma valid_global_arch_objs_pt_at:
   by fastforce
 
 lemma pool_for_asid_vs_lookup:
-  "(vs_lookup_table ta_f asid_pool_level asid vref s = Some (level, p)) =
+  "(vs_lookup_table asid_pool_level asid vref s = Some (level, p)) =
    (pool_for_asid asid s = Some p \<and> level = asid_pool_level)"
   by (auto simp: vs_lookup_table_def in_omonad)
 
@@ -1656,8 +1656,8 @@ lemma pt_walk_level:
   by (fastforce simp: bit0.leq_minus1_less dest: pt_walk_max_level)
 
 lemma vs_lookup_level:
-  "vs_lookup_table ta_f bot_level asid vref s = Some (level, p) \<Longrightarrow>
-   vs_lookup_table ta_f level asid vref s = Some (level, p)"
+  "vs_lookup_table bot_level asid vref s = Some (level, p) \<Longrightarrow>
+   vs_lookup_table level asid vref s = Some (level, p)"
   apply (clarsimp simp: vs_lookup_table_def in_omonad split: if_split_asm)
   apply (erule disjE; clarsimp)
   apply (frule pt_walk_max_level, simp)
@@ -1665,13 +1665,13 @@ lemma vs_lookup_level:
   done
 
 lemma vs_lookup_level_vref1:
-  "vs_lookup_table ta_f bot_level asid vref s = Some (level, p)
-   \<Longrightarrow> vs_lookup_table ta_f level asid (vref_for_level vref (level+1)) s = Some (level, p)"
+  "vs_lookup_table bot_level asid vref s = Some (level, p)
+   \<Longrightarrow> vs_lookup_table level asid (vref_for_level vref (level+1)) s = Some (level, p)"
   by (simp add: vs_lookup_level vs_lookup_vref_for_level1)
 
 lemma vs_lookup_level_vref:
-  "vs_lookup_table ta_f bot_level asid vref s = Some (level, p)
-   \<Longrightarrow> vs_lookup_table ta_f level asid (vref_for_level vref level) s = Some (level, p)"
+  "vs_lookup_table bot_level asid vref s = Some (level, p)
+   \<Longrightarrow> vs_lookup_table level asid (vref_for_level vref level) s = Some (level, p)"
   by (simp add: vs_lookup_level vs_lookup_vref_for_level)
 
 lemma pt_walk_same[simp]:
@@ -1679,16 +1679,16 @@ lemma pt_walk_same[simp]:
   by (auto simp: pt_walk.simps)
 
 lemma vs_lookup_asid_pool:
-  "\<lbrakk> vs_lookup_table False bot_level asid vref s = Some (asid_pool_level, p); valid_asid_table s \<rbrakk>
+  "\<lbrakk> vs_lookup_table bot_level asid vref s = Some (asid_pool_level, p); valid_asid_table s \<rbrakk>
   \<Longrightarrow> asid_pools_of False s p \<noteq> None"
   by (drule vs_lookup_level)
      (auto dest!: pool_for_asid_validD simp: pool_for_asid_vs_lookup)
 
 lemma pt_lookup_vs_lookup_eq:
   "\<lbrakk> bot_level \<le> max_pt_level; 0 < asid \<rbrakk> \<Longrightarrow>
-   vs_lookup_table ta_f bot_level asid vref = do {
-      pt \<leftarrow> vspace_for_asid ta_f asid;
-      pt_walk max_pt_level bot_level pt vref \<circ> ptes_of ta_f
+   vs_lookup_table bot_level asid vref = do {
+      pt \<leftarrow> vspace_for_asid False asid;
+      pt_walk max_pt_level bot_level pt vref \<circ> ptes_of False
   }"
   by (auto simp: vs_lookup_table_def vspace_for_asid_def obind_assoc intro!: opt_bind_cong)
 
@@ -1697,26 +1697,26 @@ lemma vspace_for_asid_0:
   by (simp add: vspace_for_asid_def in_omonad split: if_split_asm)
 
 lemma pt_lookup_vs_lookupI:
-  "\<lbrakk> vspace_for_asid ta_f asid s = Some pt;
-     pt_walk max_pt_level bot_level pt vref (ptes_of ta_f s) = Some (level, p);
+  "\<lbrakk> vspace_for_asid False asid s = Some pt;
+     pt_walk max_pt_level bot_level pt vref (ptes_of False s) = Some (level, p);
      bot_level \<le> max_pt_level \<rbrakk> \<Longrightarrow>
-   vs_lookup_table ta_f bot_level asid vref s = Some (level, p)"
+   vs_lookup_table bot_level asid vref s = Some (level, p)"
   by (frule vspace_for_asid_0) (auto simp: pt_lookup_vs_lookup_eq obind_def)
 
 lemma pt_lookup_slot_vs_lookup_slotI:
-  "\<lbrakk> vspace_for_asid ta_f asid s = Some pt_ptr;
-     pt_lookup_slot pt_ptr vref (ptes_of ta_f s) = Some (level, slot) \<rbrakk>
-   \<Longrightarrow> vs_lookup_slot ta_f level asid vref s = Some (level, slot) \<and> level \<le> max_pt_level"
+  "\<lbrakk> vspace_for_asid False asid s = Some pt_ptr;
+     pt_lookup_slot pt_ptr vref (ptes_of False s) = Some (level, slot) \<rbrakk>
+   \<Longrightarrow> vs_lookup_slot level asid vref s = Some (level, slot) \<and> level \<le> max_pt_level"
   unfolding pt_lookup_slot_def pt_lookup_slot_from_level_def vs_lookup_slot_def
   apply (clarsimp simp: in_omonad)
-  apply (drule (1) pt_lookup_vs_lookupI, simp)
+  apply (drule (1) pt_lookup_vs_lookupI[simplified], simp)
   apply (drule vs_lookup_level)
   apply (fastforce dest: pt_walk_max_level)
   done
 
 lemma vspace_for_asid_vs_lookup:
-  "vspace_for_asid ta_f asid s = Some pt \<Longrightarrow>
-   vs_lookup_table ta_f max_pt_level asid 0 s = Some (max_pt_level, pt)"
+  "vspace_for_asid False asid s = Some pt \<Longrightarrow>
+   vs_lookup_table max_pt_level asid 0 s = Some (max_pt_level, pt)"
   by (clarsimp simp: vspace_for_asid_def vs_lookup_table_def in_omonad pt_walk.simps)
 
 lemma ptes_of_ptsD:
@@ -1734,7 +1734,7 @@ lemma pte_at_eq:
 
 lemma valid_vspace_objsI [intro?]:
   "(\<And>p ao asid vref level.
-       \<lbrakk> vs_lookup_table False level asid (vref_for_level vref (level+1)) s = Some (level, p);
+       \<lbrakk> vs_lookup_table level asid (vref_for_level vref (level+1)) s = Some (level, p);
          vref \<in> user_region;
          aobjs_of False s p = Some ao \<rbrakk>
        \<Longrightarrow> valid_vspace_obj level ao s)
@@ -1791,24 +1791,24 @@ lemma vspace_for_pool_None_upd_idem:
   by (clarsimp simp: vspace_for_pool_def obind_def split: option.splits if_splits)
 
 lemma vs_lookup_max_pt_levelD:
-  "vs_lookup_table ta_f max_pt_level asid vref s = Some (max_pt_level, root_pt)
+  "vs_lookup_table max_pt_level asid vref s = Some (max_pt_level, root_pt)
    \<Longrightarrow> \<exists>pool_ptr. pool_for_asid asid s = Some pool_ptr \<and>
-                  vspace_for_pool pool_ptr asid (asid_pools_of ta_f s) = Some root_pt"
+                  vspace_for_pool pool_ptr asid (asid_pools_of False s) = Some root_pt"
   by (clarsimp simp: vs_lookup_table_def)
 
 lemma vs_lookup_max_pt_levelI:
   "\<lbrakk> pool_for_asid asid s = Some pool_ptr;
-     vspace_for_pool pool_ptr asid (asid_pools_of ta_f s) = Some root_pt \<rbrakk>
-   \<Longrightarrow> vs_lookup_table ta_f max_pt_level asid vref s = Some (max_pt_level, root_pt)"
+     vspace_for_pool pool_ptr asid (asid_pools_of False s) = Some root_pt \<rbrakk>
+   \<Longrightarrow> vs_lookup_table max_pt_level asid vref s = Some (max_pt_level, root_pt)"
   by (clarsimp simp: vs_lookup_table_def in_omonad)
 
 lemma vs_lookup_table_max_pt_level_SomeD:
-  "\<lbrakk> vs_lookup_table ta_f max_pt_level asid vref s = Some (level, p) \<rbrakk>
-   \<Longrightarrow> \<exists>pool. pool_for_asid asid s = Some pool \<and> vspace_for_pool pool asid (asid_pools_of ta_f s) = Some p"
+  "\<lbrakk> vs_lookup_table max_pt_level asid vref s = Some (level, p) \<rbrakk>
+   \<Longrightarrow> \<exists>pool. pool_for_asid asid s = Some pool \<and> vspace_for_pool pool asid (asid_pools_of False s) = Some p"
   by (clarsimp simp: vs_lookup_table_def in_omonad)
 
 lemma vs_lookup_max_pt_valid:
-  "\<lbrakk> vs_lookup_table False max_pt_level asid vref s = Some (max_pt_level, root_pt);
+  "\<lbrakk> vs_lookup_table max_pt_level asid vref s = Some (max_pt_level, root_pt);
      vref \<in> user_region;
      valid_vspace_objs s; valid_asid_table s \<rbrakk>
    \<Longrightarrow> \<exists>pt. pts_of False s root_pt = Some pt \<and> valid_vspace_obj max_pt_level (PageTable pt) s"
@@ -1873,8 +1873,8 @@ lemma table_index_offset_pt_bits_left:
                 ptTranslationBits_def ucast_ucast_mask[where 'a=9, simplified, symmetric])
 
 lemma vs_lookup_slot_level:
-  "vs_lookup_slot ta_f bot_level asid vref s = Some (level, p) \<Longrightarrow>
-   vs_lookup_slot ta_f level asid vref s = Some (level, p)"
+  "vs_lookup_slot bot_level asid vref s = Some (level, p) \<Longrightarrow>
+   vs_lookup_slot level asid vref s = Some (level, p)"
   apply (clarsimp simp: vs_lookup_slot_def in_omonad)
   apply (drule vs_lookup_level)
   apply (force split: if_splits)
@@ -1890,7 +1890,7 @@ lemma vs_lookup_target_level:
 
 lemma vs_lookup_slot_vref_for_level:
   "level \<le> bot_level \<Longrightarrow>
-   vs_lookup_slot ta_f bot_level asid (vref_for_level vref level) = vs_lookup_slot ta_f bot_level asid vref"
+   vs_lookup_slot bot_level asid (vref_for_level vref level) = vs_lookup_slot bot_level asid vref"
   apply (simp add: vs_lookup_slot_def vs_lookup_vref_for_level)
   apply (rule ext, rule obind_eqI, rule refl)
   apply (clarsimp dest!: vs_lookup_min_level)
@@ -1923,12 +1923,12 @@ lemma geq_max_pt_level:
 
 lemma vs_lookup_asid_pool_level_eq:
   "asid_table s' = asid_table s \<Longrightarrow>
-   vs_lookup_table ta_f asid_pool_level asid vref s' = vs_lookup_table ta_f asid_pool_level asid vref s"
+   vs_lookup_table asid_pool_level asid vref s' = vs_lookup_table asid_pool_level asid vref s"
   by (simp add: vs_lookup_table_def obind_def pool_for_asid_def split: option.splits)
 
 lemma vs_lookup_max_pt_level_eq:
-  "\<lbrakk> asid_table s' = asid_table s; asid_pools_of ta_f s' = asid_pools_of ta_f s \<rbrakk> \<Longrightarrow>
-   vs_lookup_table ta_f max_pt_level asid vref s' = vs_lookup_table ta_f max_pt_level asid vref s"
+  "\<lbrakk> asid_table s' = asid_table s; asid_pools_of False s' = asid_pools_of False s \<rbrakk> \<Longrightarrow>
+   vs_lookup_table max_pt_level asid vref s' = vs_lookup_table max_pt_level asid vref s"
   by (clarsimp simp: vs_lookup_table_def obind_def pool_for_asid_def vspace_for_pool_def pt_walk.simps
               split: option.splits)
 
@@ -1989,21 +1989,21 @@ lemma pt_walk_split_Some:
 
 lemma vs_lookup_split_max_pt_level:
   "level \<le> max_pt_level \<Longrightarrow>
-   vs_lookup_table ta_f level asid vref = do {
-     (level',pt) \<leftarrow> vs_lookup_table ta_f  max_pt_level asid vref;
+   vs_lookup_table level asid vref = do {
+     (level',pt) \<leftarrow> vs_lookup_table  max_pt_level asid vref;
      if level' = max_pt_level
-     then pt_walk max_pt_level level pt vref \<circ> ptes_of ta_f
+     then pt_walk max_pt_level level pt vref \<circ> ptes_of False
      else oreturn (level', pt)
    }"
   by (auto simp: vs_lookup_table_def obind_assoc intro!: opt_bind_cong opt_bind_cong_apply)
 
 lemma vs_lookup_split:
   "\<lbrakk> level \<le> level'; level' \<le> max_pt_level \<rbrakk> \<Longrightarrow>
-   vs_lookup_table ta_f level asid vref =
+   vs_lookup_table level asid vref =
    do {
-      (level'', pt) \<leftarrow> vs_lookup_table ta_f level' asid vref;
+      (level'', pt) \<leftarrow> vs_lookup_table level' asid vref;
       if level'' = level'
-      then pt_walk level' level pt vref \<circ> ptes_of ta_f
+      then pt_walk level' level pt vref \<circ> ptes_of False
       else oreturn (level'', pt)
     }"
   apply (cases "level' < max_pt_level")
@@ -2023,9 +2023,9 @@ lemma vs_lookup_split:
   done
 
 lemma vs_lookup_table_split_last_Some:
-  "\<lbrakk> vs_lookup_table ta_f level asid vref s = Some (level, p); level < max_pt_level \<rbrakk>
-   \<Longrightarrow> \<exists>p' pte. vs_lookup_table ta_f (level+1) asid vref s = Some (level+1, p')
-            \<and> ptes_of ta_f s (pt_slot_offset (level + 1) p' vref) = Some pte \<and> p = pptr_from_pte pte
+  "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p); level < max_pt_level \<rbrakk>
+   \<Longrightarrow> \<exists>p' pte. vs_lookup_table (level+1) asid vref s = Some (level+1, p')
+            \<and> ptes_of False s (pt_slot_offset (level + 1) p' vref) = Some pte \<and> p = pptr_from_pte pte
             \<and> is_PageTablePTE pte"
   apply (clarsimp simp: vs_lookup_table_def in_omonad asid_pool_level_eq
                          vm_level_less_max_pt_level)
@@ -2037,16 +2037,16 @@ lemma vs_lookup_table_split_last_Some:
 
 lemma vs_lookup_split_max_pt_level_Some:
   "level \<le> max_pt_level \<Longrightarrow>
-   (vs_lookup_table ta_f level asid vref s = Some (level, p)) =
-   (\<exists>pt. vs_lookup_table ta_f max_pt_level asid vref s = Some (max_pt_level, pt)
-         \<and> pt_walk max_pt_level level pt vref (ptes_of ta_f s) = Some (level, p))"
+   (vs_lookup_table level asid vref s = Some (level, p)) =
+   (\<exists>pt. vs_lookup_table max_pt_level asid vref s = Some (max_pt_level, pt)
+         \<and> pt_walk max_pt_level level pt vref (ptes_of False s) = Some (level, p))"
   by (auto simp: vs_lookup_table_def in_omonad not_le split: if_split_asm)
 
 lemma vs_lookup_split_Some:
   "\<lbrakk> level \<le> level'; level' \<le> max_pt_level \<rbrakk> \<Longrightarrow>
-   (vs_lookup_table ta_f level asid vref s = Some (level, p)) =
-   (\<exists>pt. vs_lookup_table ta_f level' asid vref s = Some (level', pt)
-         \<and> pt_walk level' level pt vref (ptes_of ta_f s) = Some (level, p))"
+   (vs_lookup_table level asid vref s = Some (level, p)) =
+   (\<exists>pt. vs_lookup_table level' asid vref s = Some (level', pt)
+         \<and> pt_walk level' level pt vref (ptes_of False s) = Some (level, p))"
   apply (cases "level' < max_pt_level")
    apply (subst vs_lookup_split_max_pt_level_Some, simp)
    apply (subst (2) vs_lookup_split_max_pt_level_Some, simp)
@@ -2060,7 +2060,7 @@ lemmas vs_lookup_splitD = vs_lookup_split_Some[rotated, THEN iffD1, rotated -1]
 
 lemma valid_vspace_objsD:
   "\<lbrakk> valid_vspace_objs s;
-     vs_lookup_table False bot_level asid vref s = Some (level, p);
+     vs_lookup_table bot_level asid vref s = Some (level, p);
      vref \<in> user_region; aobjs_of False s p = Some ao \<rbrakk> \<Longrightarrow>
    valid_vspace_obj level ao s"
   by (simp add: valid_vspace_objs_def)
@@ -2195,7 +2195,7 @@ lemma user_region_slots:
 
 lemma valid_vspace_objs_strongD:
   "\<lbrakk> valid_vspace_objs s;
-     vs_lookup_table False bot_level asid vref s = Some (level, pt_ptr);
+     vs_lookup_table bot_level asid vref s = Some (level, pt_ptr);
      vref \<in> user_region;
      level \<le> max_pt_level;
      valid_asid_table s; pspace_aligned s \<rbrakk> \<Longrightarrow>
@@ -2243,7 +2243,7 @@ lemma vspace_for_pool_is_aligned:
       ; fastforce simp: vs_lookup_table_def in_omonad elim: pspace_aligned_pts_ofD)
 
 lemma vs_lookup_table_is_aligned:
-  "\<lbrakk> vs_lookup_table False bot_level asid vref s = Some (level', pt_ptr);
+  "\<lbrakk> vs_lookup_table bot_level asid vref s = Some (level', pt_ptr);
     level' \<le> max_pt_level; vref \<in> user_region; pspace_aligned s; valid_asid_table s;
     valid_vspace_objs s \<rbrakk>
    \<Longrightarrow> is_aligned pt_ptr pt_bits"
@@ -2397,7 +2397,7 @@ lemma pool_for_asid_and_mask[simp]:
   by (simp add: pool_for_asid_def)
 
 lemma vs_lookup_table_ap_step:
-  "\<lbrakk> vs_lookup_table ta_f asid_pool_level asid vref s = Some (asid_pool_level, p);
+  "\<lbrakk> vs_lookup_table asid_pool_level asid vref s = Some (asid_pool_level, p);
      asid_pools_of ta_f s p = Some ap; pt \<in> ran ap \<rbrakk> \<Longrightarrow>
    \<exists>asid'. vs_lookup_target asid_pool_level asid' vref s = Some (asid_pool_level, pt)"
   apply (clarsimp simp: vs_lookup_target_def vs_lookup_slot_def in_omonad ran_def)
@@ -2429,7 +2429,7 @@ lemma table_index_pt_slot_offset:
 
 lemma vs_lookup_vref_for_level_eq1:
   "vref_for_level vref' (bot_level+1) = vref_for_level vref (bot_level+1) \<Longrightarrow>
-   vs_lookup_table ta_f bot_level asid vref' = vs_lookup_table ta_f bot_level asid vref"
+   vs_lookup_table bot_level asid vref' = vs_lookup_table bot_level asid vref"
   apply (rule ext)
   apply (clarsimp simp: vs_lookup_table_def obind_def split: option.splits)
   apply (rule conjI; clarsimp)+
@@ -2489,7 +2489,7 @@ lemma vref_for_level_idx_canonical_user:
   done
 
 lemma vs_lookup_table_pt_step:
-  "\<lbrakk> vs_lookup_table False level asid vref s = Some (level, p); vref \<in> user_region;
+  "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p); vref \<in> user_region;
      pts_of False s p = Some pt; is_aligned p pt_bits; level \<le> max_pt_level; pte_ref (pt idx) = Some p';
      level = max_pt_level \<longrightarrow> idx \<notin> kernel_mapping_slots \<rbrakk> \<Longrightarrow>
    \<exists>vref'. vs_lookup_target level asid vref' s = Some (level, p') \<and>
@@ -2532,8 +2532,8 @@ lemma global_pts_ofD:
 
 lemma vs_lookup_slot_table:
   "level \<le> max_pt_level \<Longrightarrow>
-   vs_lookup_slot ta_f level asid vref s = Some (level, pt_slot) =
-   (\<exists>pt_ptr. vs_lookup_table ta_f level asid vref s = Some (level, pt_ptr) \<and>
+   vs_lookup_slot level asid vref s = Some (level, pt_slot) =
+   (\<exists>pt_ptr. vs_lookup_table level asid vref s = Some (level, pt_ptr) \<and>
              pt_slot = pt_slot_offset level pt_ptr vref)"
   by (clarsimp simp: vs_lookup_slot_def in_omonad) fastforce
 
@@ -2545,21 +2545,21 @@ lemma pool_for_asid_asid_for_level[simp]:
   by (clarsimp simp: pool_for_asid_def asid_for_level_def asid_high_bits_of_def mask_shift)
 
 lemma vs_lookup_asid_for_level[simp]:
-  "vs_lookup_table ta_f level (asid_for_level asid level) vref = vs_lookup_table ta_f level asid vref"
+  "vs_lookup_table level (asid_for_level asid level) vref = vs_lookup_table level asid vref"
   apply (simp add: vs_lookup_table_def)
   apply (rule ext, rule obind_eqI, rule refl)
   apply (clarsimp simp: asid_for_level_def)
   done
 
 lemma vs_lookup_slot_asid_for_level[simp]:
-  "vs_lookup_slot ta_f level (asid_for_level asid level) vref = vs_lookup_slot ta_f level asid vref"
+  "vs_lookup_slot level (asid_for_level asid level) vref = vs_lookup_slot level asid vref"
   by (simp add: vs_lookup_slot_def)
 
 lemma vs_lookup_table_eq_lift:
-  "\<lbrakk> pts_of ta_f s' = pts_of ta_f s;
-     asid_pools_of ta_f s' = asid_pools_of ta_f s;
+  "\<lbrakk> pts_of False s' = pts_of False s;
+     asid_pools_of False s' = asid_pools_of False s;
      pool_for_asid asid s' = pool_for_asid asid s \<rbrakk>
-   \<Longrightarrow> vs_lookup_table ta_f level asid vref s' = vs_lookup_table ta_f level asid vref s"
+   \<Longrightarrow> vs_lookup_table level asid vref s' = vs_lookup_table level asid vref s"
   unfolding vs_lookup_table_def
   by (auto simp: obind_def split: option.splits)
 
@@ -2583,7 +2583,7 @@ lemma table_index_max_level_slots:
   done
 
 lemma valid_vspace_objs_strong_slotD:
-  "\<lbrakk> vs_lookup_slot False level asid vref s = Some (level, slot); vref \<in> user_region;
+  "\<lbrakk> vs_lookup_slot level asid vref s = Some (level, slot); vref \<in> user_region;
      level \<le> max_pt_level; valid_vspace_objs s; valid_asid_table s; pspace_aligned s\<rbrakk>
    \<Longrightarrow> \<exists>pte. ptes_of False s slot = Some pte \<and> valid_pte level pte s"
   apply (clarsimp simp: vs_lookup_slot_def split: if_split_asm)
@@ -2612,13 +2612,13 @@ lemma pt_walk_stopped:
   done
 
 lemma vs_lookup_table_stopped:
-  "\<lbrakk> vs_lookup_table ta_f level asid vref s = Some (level', pt_ptr); level' \<noteq> level;
+  "\<lbrakk> vs_lookup_table level asid vref s = Some (level', pt_ptr); level' \<noteq> level;
     level \<le> max_pt_level \<rbrakk> \<Longrightarrow>
-  \<exists>pte. ptes_of ta_f s (pt_slot_offset level' pt_ptr vref) = Some pte \<and> \<not>is_PageTablePTE pte"
+  \<exists>pte. ptes_of False s (pt_slot_offset level' pt_ptr vref) = Some pte \<and> \<not>is_PageTablePTE pte"
   apply (clarsimp simp: vs_lookup_table_def split: if_split_asm)
   apply (frule pt_walk_min_level)
   apply (clarsimp simp: min_def split: if_split_asm)
-  apply (fastforce dest: pt_walk_stopped)
+  apply (fastforce dest: pt_walk_stopped[where ta_f=False, simplified])
   done
 
 lemma valid_arch_state_asid_table:
@@ -2739,13 +2739,13 @@ lemma vspace_for_asid_update[iff]:
     opt_map_def vspace_for_pool_def ta_filter_def split:option.splits)
 
 lemma vs_lookup_update [iff]:
-  "vs_lookup_table False bot_level asid vptr (f s) = vs_lookup_table False bot_level asid vptr s"
+  "vs_lookup_table bot_level asid vptr (f s) = vs_lookup_table bot_level asid vptr s"
   apply(clarsimp simp:vs_lookup_table_def obind_def)
   apply(clarsimp split:option.splits)
   by (auto simp:pspace obind_def split:option.splits)
 
 lemma vs_lookup_slot_update[iff]:
-  "vs_lookup_slot False bot_level asid vref (f s) = vs_lookup_slot False bot_level asid vref s"
+  "vs_lookup_slot bot_level asid vref (f s) = vs_lookup_slot bot_level asid vref s"
   by (auto simp: vs_lookup_slot_def obind_def split: option.splits)
 
 lemma vs_lookup_target_update[iff]:
@@ -2787,18 +2787,6 @@ lemma vspace_for_asid_ta_eq_update[iff]:
   "vspace_for_asid ta_f asid (f s) = vspace_for_asid ta_f asid s"
   by (simp add: vspace_for_asid_def obind_def oassert_def oreturn_def pspace ta
     opt_map_def vspace_for_pool_def split:option.splits)
-
-lemma vs_lookup_ta_eq_update [iff]:
-  "vs_lookup_table ta_f bot_level asid vptr (f s) = vs_lookup_table ta_f bot_level asid vptr s"
-  apply (clarsimp simp: vs_lookup_table_def pspace ta arch obind_def
-    opt_map_def vspace_for_pool_def ta_filter_def split: option.splits if_splits
-    | rule conjI)+
-   using ta apply presburger
-  by force
-
-lemma vs_lookup_slot_ta_eq_update[iff]:
-  "vs_lookup_slot ta_f bot_level asid vref (f s) = vs_lookup_slot ta_f bot_level asid vref s"
-  by (auto simp: vs_lookup_slot_def obind_def split: option.splits)
 
 end
 

@@ -101,7 +101,7 @@ definition decode_fr_inv_map :: "'z::state_ext arch_decoder"
            vtop \<leftarrow> returnOk $ vaddr + mask (pageBitsForSize pgsz);
            whenE (vtop \<ge> user_vtop) $ throwError $ InvalidArgument 0;
            check_vp_alignment pgsz vaddr;
-           accessed_pts \<leftarrow> liftE $ gets $ vs_all_pts_of False asid vaddr;
+           accessed_pts \<leftarrow> liftE $ gets $ vs_all_pts_of asid vaddr;
            liftE $ touch_objects accessed_pts;
            (level, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot pt vaddr \<circ> ptes_of True;
            unlessE (pt_bits_left level = pg_bits) $
@@ -149,7 +149,7 @@ definition decode_pt_inv_map :: "'z::state_ext arch_decoder"
            whenE (user_vtop \<le> vaddr) $ throwError $ InvalidArgument 0;
            pt' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid;
            whenE (pt' \<noteq> pt) $ throwError $ InvalidCapability 1;
-           accessed_pts \<leftarrow> liftE $ gets $ vs_all_pts_of False asid vaddr;
+           accessed_pts \<leftarrow> liftE $ gets $ vs_all_pts_of asid vaddr;
            liftE $ touch_objects accessed_pts;
            (level, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot pt vaddr \<circ> ptes_of True;
            liftE $ touch_object slot;

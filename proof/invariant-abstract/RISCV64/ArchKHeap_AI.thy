@@ -127,21 +127,21 @@ lemma pool_for_asid_lift:
   shows "f \<lbrace>\<lambda>s. P (pool_for_asid asid s)\<rbrace>"
   by (wpsimp simp: pool_for_asid_def wp: assms)
 
-. (* DOWN TO HERE. -robs
-
 lemma vs_lookup_table_lift:
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (ptes_of s)\<rbrace>"
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_pools_of s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (ptes_of False s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_pools_of False s)\<rbrace>"
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (riscv_asid_table (arch_state s))\<rbrace>"
   shows "f \<lbrace>\<lambda>s. P (vs_lookup_table level asid vref s)\<rbrace>"
-  apply (simp add: vs_lookup_table_def obind_def split: option.splits)
-  apply (wpsimp wp: assms hoare_vcg_all_lift hoare_vcg_ex_lift hoare_vcg_imp_lift' pool_for_asid_lift
-                simp: not_le)
+  apply (simp add: vs_lookup_table_def obind_def)
+  apply (clarsimp split:option.splits)
+  apply (wpsimp wp: assms[simplified] hoare_vcg_all_lift hoare_vcg_ex_lift hoare_vcg_imp_lift' pool_for_asid_lift
+                simp: not_le obind_def split:option.splits)
+  apply (metis Some_helper asid_pool_level_eq)
   done
 
 lemma vs_lookup_slot_lift:
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (ptes_of s)\<rbrace>"
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_pools_of s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (ptes_of False s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_pools_of False s)\<rbrace>"
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (riscv_asid_table (arch_state s))\<rbrace>"
   shows "f \<lbrace>\<lambda>s. P (vs_lookup_slot level asid vref s)\<rbrace>"
   apply (simp add: vs_lookup_slot_def obind_def split: option.splits)
@@ -151,19 +151,20 @@ lemma vs_lookup_slot_lift:
   done
 
 lemma vs_lookup_target_lift:
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (ptes_of s)\<rbrace>"
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_pools_of s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (ptes_of False s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_pools_of False s)\<rbrace>"
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (riscv_asid_table (arch_state s))\<rbrace>"
   shows "f \<lbrace>\<lambda>s. P (vs_lookup_target level asid vref s)\<rbrace>"
-  apply (simp add: vs_lookup_target_def obind_def split: option.splits)
-  apply (wpsimp wp: assms hoare_vcg_all_lift hoare_vcg_ex_lift hoare_vcg_imp_lift' pool_for_asid_lift
+  apply (simp add: vs_lookup_target_def obind_def)
+  apply (clarsimp split:option.splits)
+  apply (wpsimp wp: assms[simplified] hoare_vcg_all_lift hoare_vcg_ex_lift hoare_vcg_imp_lift' pool_for_asid_lift
                     vs_lookup_slot_lift
                 simp: not_le)
   done
 
 lemma vs_lookup_lift:
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (ptes_of s)\<rbrace>"
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_pools_of s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (ptes_of False s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_pools_of False s)\<rbrace>"
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (riscv_asid_table (arch_state s))\<rbrace>"
   shows "f \<lbrace>\<lambda>s. P (vs_lookup s)\<rbrace>"
   apply (rule_tac P=P in hoare_liftP_ext)+
@@ -172,23 +173,23 @@ lemma vs_lookup_lift:
   by (rule vs_lookup_table_lift; rule assms)
 
 lemma vs_lookup_vspace_aobjs_lift:
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (aobjs_of False s)\<rbrace>"
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>"
   shows " f \<lbrace>\<lambda>s. P (vs_lookup s)\<rbrace>"
   by (rule vs_lookup_lift; rule assms)
 
 lemma valid_vspace_objs_lift:
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (aobjs_of False s)\<rbrace>"
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>"
   shows   "f \<lbrace>valid_vspace_objs\<rbrace>"
   by (rule valid_vspace_objs_lift_vs_lookup, rule vs_lookup_lift; rule assms)
 
 lemma aobjs_of_ako_at_Some:
-  "(aobjs_of s p = Some ao) = ako_at ao p s"
+  "(aobjs_of False s p = Some ao) = ako_at ao p s"
   by (simp add: obj_at_def in_opt_map_eq)
 
 lemma aobjs_of_ako_at_None:
-  "(aobjs_of s p = None) = (\<not> obj_at (\<lambda>obj. \<exists>ao. obj = ArchObj ao) p s)"
+  "(aobjs_of False s p = None) = (\<not> obj_at (\<lambda>obj. \<exists>ao. obj = ArchObj ao) p s)"
   apply (clarsimp simp: obj_at_def opt_map_def split: option.splits)
   apply (rename_tac ao, case_tac ao; simp)
   done
@@ -196,19 +197,19 @@ lemma aobjs_of_ako_at_None:
 (* The only arch objects on RISC-V are vspace_objs *)
 lemma vspace_obj_pred_aobjs:
   assumes "\<And>P P' p. vspace_obj_pred P' \<Longrightarrow> f \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
-  shows "\<And>P. f \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
+  shows "\<And>P. f \<lbrace>\<lambda>s. P (aobjs_of False s)\<rbrace>"
   apply (clarsimp simp: valid_def)
   apply (erule_tac P=P in rsubst)
   apply (rule ext, rename_tac s' p)
-  apply (case_tac "aobjs_of s p")
-   apply (simp add: aobjs_of_ako_at_None)
+  apply (case_tac "aobjs_of False s p")
+   apply (simp add: aobjs_of_ako_at_None[simplified])
    apply (drule use_valid)
      prefer 2
      apply assumption
     apply (rule assms)
     apply (clarsimp simp: vspace_obj_pred_def arch_obj_pred_def non_arch_obj_def)
    apply (simp flip: aobjs_of_ako_at_None)
-  apply (simp add: aobjs_of_ako_at_Some)
+  apply (simp add: aobjs_of_ako_at_Some[simplified])
   apply (drule use_valid)
     prefer 2
     apply assumption
@@ -219,18 +220,18 @@ lemma vspace_obj_pred_aobjs:
 
 lemma pts_of_lift:
   assumes aobj_at: "\<And>P P' p. vspace_obj_pred P' \<Longrightarrow> f \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
-  shows "f \<lbrace>\<lambda>s. P (pts_of s)\<rbrace>"
-  by (rule hoare_lift_Pf2[where f=aobjs_of], (wp vspace_obj_pred_aobjs aobj_at)+)
+  shows "f \<lbrace>\<lambda>s. P (pts_of False s)\<rbrace>"
+  by (rule hoare_lift_Pf2[where f="aobjs_of False"], (wp vspace_obj_pred_aobjs aobj_at)+)
 
 lemma ptes_of_lift:
   assumes aobj_at: "\<And>P P' p. vspace_obj_pred P' \<Longrightarrow> f \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
-  shows "f \<lbrace>\<lambda>s. P (ptes_of s)\<rbrace>"
-  by (rule hoare_lift_Pf2[where f=aobjs_of], (wp vspace_obj_pred_aobjs aobj_at)+)
+  shows "f \<lbrace>\<lambda>s. P (ptes_of False s)\<rbrace>"
+  by (rule hoare_lift_Pf2[where f="aobjs_of False"], (wp vspace_obj_pred_aobjs aobj_at)+)
 
 lemma asid_pools_of_lift:
   assumes aobj_at: "\<And>P P' p. vspace_obj_pred P' \<Longrightarrow> f \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
-  shows "f \<lbrace>\<lambda>s. P (asid_pools_of s)\<rbrace>"
-  by (rule hoare_lift_Pf2[where f=aobjs_of], (wp vspace_obj_pred_aobjs aobj_at)+)
+  shows "f \<lbrace>\<lambda>s. P (asid_pools_of False s)\<rbrace>"
+  by (rule hoare_lift_Pf2[where f="aobjs_of False"], (wp vspace_obj_pred_aobjs aobj_at)+)
 
 lemma vs_lookup_vspace_obj_at_lift:
   assumes "\<And>P P' p. vspace_obj_pred P' \<Longrightarrow> f \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
@@ -245,8 +246,8 @@ lemma vs_lookup_arch_obj_at_lift:
   by (intro vs_lookup_vspace_obj_at_lift assms vspace_pred_imp)
 
 lemma vs_lookup_pages_lift:
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (ptes_of s)\<rbrace>"
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_pools_of s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (ptes_of False s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_pools_of False s)\<rbrace>"
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (riscv_asid_table (arch_state s))\<rbrace>"
   shows "f \<lbrace>\<lambda>s. P (vs_lookup_pages s)\<rbrace>"
   apply (rule_tac P=P in hoare_liftP_ext)+
@@ -255,7 +256,7 @@ lemma vs_lookup_pages_lift:
   by (rule vs_lookup_target_lift; fact)
 
 lemma vs_lookup_pages_vspace_aobjs_lift:
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (aobjs_of False s)\<rbrace>"
   assumes "\<And>P. f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>"
   shows "f \<lbrace>\<lambda>s. P (vs_lookup_pages s)\<rbrace>"
   by (wpsimp wp: vs_lookup_pages_lift assms)
@@ -280,20 +281,32 @@ lemma valid_vspace_objs_lift_weak:
 
 lemma translate_address_lift_weak:
   assumes aobj_at: "\<And>P P' p. vspace_obj_pred P' \<Longrightarrow> f \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
-  shows "f \<lbrace>\<lambda>s. P (translate_address pt_root vref (ptes_of s)) \<rbrace>"
+  shows "f \<lbrace>\<lambda>s. P (translate_address pt_root vref (ptes_of False s)) \<rbrace>"
   unfolding translate_address_def pt_lookup_target_def
+  apply (clarsimp split: option.splits)
   apply (clarsimp simp: comp_def obind_def)
-  apply (rule hoare_lift_Pf2[where f=ptes_of, OF _ ptes_of_lift[OF aobj_at]]; simp)
-   apply (clarsimp split: option.splits)
-   apply (rule hoare_lift_Pf2[where f=pte_refs_of])
-   apply (rule hoare_lift_Pf2[where f=aobjs_of], (wp vspace_obj_pred_aobjs aobj_at)+)
+  apply (rule hoare_lift_Pf2[where f="ptes_of False", OF _ ptes_of_lift[OF aobj_at]]; simp)
+  apply (clarsimp split: option.splits)
+  apply (rule hoare_lift_Pf2[where f=pte_refs_of])
+   apply (rule hoare_lift_Pf2[where f="aobjs_of False"])
+    apply (wpsimp wp: vspace_obj_pred_aobjs[simplified] aobj_at)+
   done
 
 lemma set_pt_pts_of:
-  "\<lbrace>\<lambda>s. pts_of s p \<noteq> None \<longrightarrow> P (pts_of s (p \<mapsto> pt)) \<rbrace> set_pt p pt \<lbrace>\<lambda>_ s. P (pts_of s)\<rbrace>"
+  "\<lbrace>\<lambda>s. pts_of True s p \<noteq> None \<longrightarrow> P (pts_of True s (p \<mapsto> pt)) \<rbrace> set_pt p pt \<lbrace>\<lambda>_ s. P (pts_of True s)\<rbrace>"
   unfolding set_pt_def
-  by (wpsimp wp: set_object_wp)
-     (auto elim!: rsubst[where P=P] simp: opt_map_def split: option.splits)
+  apply (wpsimp wp: set_object_wp)
+  apply (clarsimp elim!: rsubst[where P=P] simp: opt_map_def obind_def ta_filter_def
+    split: option.splits if_splits)
+  apply (rule ext)
+  apply (clarsimp elim!: rsubst[where P=P] simp: opt_map_def obind_def ta_filter_def
+    split: option.splits if_splits)
+  (* This is an interesting one: I think we need to say the obj_range of the new object `pt`
+     cannot be larger than that of the obj_range of the old object that was at `p`.
+     Possibly this is a case for making set_object (and other functions like it)
+     touch the `kheap` object after modifying it. -robs
+     FIXME: Broken by timeprot-use-f-kheap/timeprot-touch-objs. *)
+  sorry
 
 lemma pte_ptr_eq:
   "\<lbrakk> (ucast (p && mask pt_bits >> pte_bits) :: pt_index) =
@@ -311,6 +324,7 @@ lemma pte_ptr_eq:
   apply (case_tac "pt_bits \<le> n", simp)
   by (fastforce simp: not_le bit_simps)
 
+. (* DOWN TO HERE. I expect similar issues for all setters like set_object, set_pt, etc. -robs
 lemma store_pte_ptes_of:
   "\<lbrace>\<lambda>s. ptes_of s p \<noteq> None \<longrightarrow> P (ptes_of s (p \<mapsto> pte)) \<rbrace> store_pte p pte \<lbrace>\<lambda>_ s. P (ptes_of s)\<rbrace>"
   unfolding store_pte_def pte_of_def

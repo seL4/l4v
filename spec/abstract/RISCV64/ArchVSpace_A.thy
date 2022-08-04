@@ -191,15 +191,15 @@ text \<open>
   The level can be higher than @{term bot_level} if the lookup terminates early because
   it hit a page or an invalid entry.
 \<close>
-definition vs_lookup_table :: "bool \<Rightarrow> vm_level \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> (vm_level \<times> obj_ref) option"
+definition vs_lookup_table :: "vm_level \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> (vm_level \<times> obj_ref) option"
   where
-  "vs_lookup_table ta_f bot_level asid vptr \<equiv> do {
+  "vs_lookup_table bot_level asid vptr \<equiv> do {
      pool_ptr \<leftarrow> pool_for_asid asid;
      if bot_level = asid_pool_level
      then oreturn (asid_pool_level, pool_ptr)
      else do {
-       top_level_pt \<leftarrow> vspace_for_pool pool_ptr asid \<circ> asid_pools_of ta_f;
-       pt_walk max_pt_level bot_level top_level_pt vptr \<circ> ptes_of ta_f
+       top_level_pt \<leftarrow> vspace_for_pool pool_ptr asid \<circ> asid_pools_of False;
+       pt_walk max_pt_level bot_level top_level_pt vptr \<circ> ptes_of False
      }
    }"
 
@@ -208,10 +208,10 @@ text \<open>
   For @{prop "bot_level = asid_pool_level"}, still return the pointer to the ASID pool (not a slot
   inside it, since there are no slot functions for ASID pools).
 \<close>
-definition vs_lookup_slot :: "bool \<Rightarrow> vm_level \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> (vm_level \<times> obj_ref) option"
+definition vs_lookup_slot :: "vm_level \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> (vm_level \<times> obj_ref) option"
   where
-  "vs_lookup_slot ta_f bot_level asid vref \<equiv> do {
-     (level', table) \<leftarrow> vs_lookup_table ta_f bot_level asid vref;
+  "vs_lookup_slot bot_level asid vref \<equiv> do {
+     (level', table) \<leftarrow> vs_lookup_table bot_level asid vref;
      if level' = asid_pool_level then
        oreturn (level', table)
      else
@@ -219,23 +219,23 @@ definition vs_lookup_slot :: "bool \<Rightarrow> vm_level \<Rightarrow> asid \<R
    }"
 
 definition vs_all_pts_of_from_level ::
-  "bool \<Rightarrow> vm_level \<Rightarrow> vm_level \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref set"
+  "vm_level \<Rightarrow> vm_level \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref set"
   where
-  "vs_all_pts_of_from_level ta_f level bot_level asid vptr s \<equiv> {ptr. (\<exists> l l'.
+  "vs_all_pts_of_from_level level bot_level asid vptr s \<equiv> {ptr. (\<exists> l l'.
      l \<le> level \<and> l \<ge> bot_level \<and>
-     vs_lookup_table ta_f l asid vptr s = Some (l', ptr))}"
+     vs_lookup_table l asid vptr s = Some (l', ptr))}"
 
 definition vs_all_pts_of::
-  "bool \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref set"
+  "asid \<Rightarrow> vspace_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref set"
   where
-  "vs_all_pts_of ta_f \<equiv> vs_all_pts_of_from_level ta_f max_pt_level 0"
+  "vs_all_pts_of \<equiv> vs_all_pts_of_from_level max_pt_level 0"
 
 text \<open>Unmap a mapped page if the given mapping details are still current.\<close>
 definition unmap_page :: "vmpage_size \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
   where
   "unmap_page pgsz asid vptr pptr \<equiv> doE
      top_level_pt \<leftarrow> find_vspace_for_asid asid;
-     accessed_pts \<leftarrow> liftE $ gets $ vs_all_pts_of False asid vptr;
+     accessed_pts \<leftarrow> liftE $ gets $ vs_all_pts_of asid vptr;
      liftE $ touch_objects accessed_pts;
      (lev, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot top_level_pt vptr \<circ> ptes_of True;
      unlessE (pt_bits_left lev = pageBitsForSize pgsz) $ throwError InvalidRoot;
