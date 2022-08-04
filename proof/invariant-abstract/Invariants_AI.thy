@@ -2748,7 +2748,7 @@ lemma (in irq_states_update_eq) irq_issued_update [iff]:
   "irq_issued irq (f s) = irq_issued irq s"
   by (simp add: irq_issued_def int)
 
-lemma (in pspace_int_update_eq) valid_irq_handlers_update [iff]:
+lemma (in pspace_ta_int_update_eq) valid_irq_handlers_update [iff]:
   "valid_irq_handlers (f s) = valid_irq_handlers s"
   by (simp add: valid_irq_handlers_def)
 
@@ -2763,11 +2763,9 @@ interpretation revokable_update:
 
 sublocale Arch \<subseteq> revokable_update: Arch_p_arch_idle_update_int_eq "is_original_cap_update f" ..
 
-(* FIXME: I guess the `ta` assumption just won't hold of `machine_state_update`. -robs *)
 interpretation machine_state_update:
   p_arch_idle_update_int_eq "machine_state_update f"
-  apply(unfold_locales, simp_all)
-  sorry (* FIXME: Broken by timeprot-use-f-kheap -robs. *)
+  by unfold_locales auto
 
 sublocale Arch \<subseteq> machine_state_update: Arch_p_arch_idle_update_int_eq "machine_state_update f" ..
 

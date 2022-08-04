@@ -107,12 +107,15 @@ end
 
 locale pspace_update_eq =
   fixes f :: "'z::state_ext state \<Rightarrow> 'c::state_ext state"
-  (* TODO: Delete if not needed, confirm with Gerwin. I don't think we want this one. -robs
-  assumes pspace: "f_kheap ta_f (f s) = f_kheap ta_f s" *)
   assumes pspace: "kheap (f s) = kheap s"
-  assumes ta: "touched_addresses (machine_state (f s)) = touched_addresses (machine_state s)"
 
 locale Arch_pspace_update_eq = pspace_update_eq + Arch
+
+locale pspace_ta_update_eq = pspace_update_eq f
+  for f :: "'z::state_ext state \<Rightarrow> 'c::state_ext state" +
+  assumes ta: "touched_addresses (machine_state (f s)) = touched_addresses (machine_state s)"
+
+locale Arch_pspace_ta_update_eq = pspace_ta_update_eq + Arch
 
 locale arch_update_eq =
   fixes f :: "'z::state_ext state \<Rightarrow> 'c::state_ext state"
@@ -131,6 +134,9 @@ locale Arch_arch_idle_update_eq = Arch_arch_update_eq + arch_idle_update_eq_more
 locale p_arch_update_eq = pspace_update_eq + arch_update_eq
 locale Arch_p_arch_update_eq = Arch_pspace_update_eq + Arch_arch_update_eq
 
+locale p_arch_ta_update_eq = pspace_ta_update_eq + arch_update_eq
+locale Arch_p_arch_ta_update_eq = Arch_pspace_ta_update_eq + Arch_p_arch_update_eq
+
 locale p_arch_idle_update_eq = p_arch_update_eq + arch_idle_update_eq
 locale Arch_p_arch_idle_update_eq = Arch_p_arch_update_eq + Arch_arch_idle_update_eq
 
@@ -144,6 +150,11 @@ locale Arch_pspace_int_update_eq = Arch_pspace_update_eq + irq_states_update_eq
 locale p_arch_idle_update_int_eq = p_arch_idle_update_eq + pspace_int_update_eq
 locale Arch_p_arch_idle_update_int_eq = Arch_p_arch_idle_update_eq + Arch_pspace_int_update_eq
 
+locale pspace_ta_int_update_eq = pspace_ta_update_eq + irq_states_update_eq
+locale Arch_pspace_ta_int_update_eq = Arch_pspace_ta_update_eq + Arch_pspace_int_update_eq
+
+locale p_arch_idle_update_ta_int_eq = p_arch_idle_update_int_eq + pspace_ta_int_update_eq
+locale Arch_p_arch_idle_update_ta_int_eq = Arch_p_arch_idle_update_int_eq + Arch_pspace_ta_int_update_eq
 
 section "Base definitions for Invariants"
 

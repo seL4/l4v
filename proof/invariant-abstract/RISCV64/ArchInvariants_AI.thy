@@ -2221,7 +2221,7 @@ lemma valid_vspace_objs_strongD:
    apply (clarsimp simp: user_region_slots)
   apply (clarsimp simp: is_PageTablePTE_def pptr_from_pte_def pt_at_eq in_omonad)
   apply (drule (2) valid_vspace_objsD)
-   apply (simp add: in_omonad f_kheap_to_kheap)
+   apply (simp add: in_omonad)
   apply assumption
   done
 
@@ -2676,9 +2676,9 @@ lemma valid_vso_at_update [iff]:
 
 (* FIXME: move to generic *)
 lemma get_cap_update [iff]:
-  "(fst (get_cap ta_f p (f s)) = {(cap, f s)}) = (fst (get_cap ta_f p s) = {(cap, s)})"
+  "(fst (get_cap False p (f s)) = {(cap, f s)}) = (fst (get_cap False p s) = {(cap, s)})"
   apply (simp add: get_cap_def get_object_def bind_assoc
-                   exec_gets split_def assert_def pspace ta)
+                   exec_gets split_def assert_def pspace)
   apply (clarsimp simp: fail_def)
   apply (case_tac y, simp_all add: assert_opt_def split: option.splits)
       apply (simp_all add: return_def fail_def assert_def bind_def obind_def ta_filter_def
@@ -2695,6 +2695,25 @@ lemma arch_valid_obj_update:
   by clarsimp
 
 lemma ptes_of_update[iff]:
+  "ptes_of False (f s) = ptes_of False s"
+  by (rule ext) (simp add: ptes_of_def pspace
+    obind_def opt_map_def ta_filter_def split:option.splits)
+
+end
+
+context Arch_pspace_ta_update_eq begin
+
+lemma get_cap_ta_eq_update [iff]:
+  "(fst (get_cap ta_f p (f s)) = {(cap, f s)}) = (fst (get_cap ta_f p s) = {(cap, s)})"
+  apply (simp add: get_cap_def get_object_def bind_assoc
+                   exec_gets split_def assert_def pspace ta)
+  apply (clarsimp simp: fail_def)
+  apply (case_tac y, simp_all add: assert_opt_def split: option.splits)
+      apply (simp_all add: return_def fail_def assert_def bind_def obind_def ta_filter_def
+        split:if_splits option.splits)
+  done
+
+lemma ptes_of_ta_eq_update[iff]:
   "ptes_of ta_f (f s) = ptes_of ta_f s"
   by (rule ext) (simp add: ptes_of_def pspace ta)
 
@@ -2715,32 +2734,24 @@ lemma pool_for_asid_update[iff]:
   by (simp add: pool_for_asid_def arch)
 
 lemma vspace_for_asid_update[iff]:
-  "vspace_for_asid ta_f asid (f s) =  vspace_for_asid ta_f asid s"
-  by (simp add: vspace_for_asid_def obind_def oassert_def oreturn_def pspace ta
-    opt_map_def vspace_for_pool_def split:option.splits)
-
-(* TODO: Move up if useful -- delete if not? -robs *)
-lemma pspace_ta:
-  "f_kheap ta_f (f s) = f_kheap ta_f s"
-  using pspace ta unfolding ta_filter_def
-  by force
+  "vspace_for_asid False asid (f s) = vspace_for_asid False asid s"
+  by (simp add: vspace_for_asid_def obind_def oassert_def oreturn_def pspace
+    opt_map_def vspace_for_pool_def ta_filter_def split:option.splits)
 
 lemma vs_lookup_update [iff]:
-  "vs_lookup_table ta_f bot_level asid vptr (f s) = vs_lookup_table ta_f bot_level asid vptr s"
-  apply (clarsimp simp: vs_lookup_table_def pspace ta arch obind_def
-    opt_map_def vspace_for_pool_def ta_filter_def split: option.splits if_splits
-    | rule conjI)+
-   using ta apply presburger
-  by force
+  "vs_lookup_table False bot_level asid vptr (f s) = vs_lookup_table False bot_level asid vptr s"
+  apply(clarsimp simp:vs_lookup_table_def obind_def)
+  apply(clarsimp split:option.splits)
+  by (auto simp:pspace obind_def split:option.splits)
 
 lemma vs_lookup_slot_update[iff]:
-  "vs_lookup_slot ta_f bot_level asid vref (f s) = vs_lookup_slot ta_f bot_level asid vref s"
+  "vs_lookup_slot False bot_level asid vref (f s) = vs_lookup_slot False bot_level asid vref s"
   by (auto simp: vs_lookup_slot_def obind_def split: option.splits)
 
 lemma vs_lookup_target_update[iff]:
   "vs_lookup_target bot_level asid vref (f s) = vs_lookup_target bot_level asid vref s"
-  by (simp add: vs_lookup_target_def obind_def pspace ta
-    opt_map_def vspace_for_pool_def pte_of_def split: option.splits)
+  apply(clarsimp simp:vs_lookup_target_def obind_def)
+  by (clarsimp simp:pspace split:option.splits)
 
 lemma valid_vs_lookup_update [iff]:
   "valid_vs_lookup (f s) = valid_vs_lookup s"
@@ -2748,7 +2759,8 @@ lemma valid_vs_lookup_update [iff]:
 
 lemma valid_table_caps_update [iff]:
   "valid_table_caps (f s) = valid_table_caps s"
-  by (simp add: valid_table_caps_def arch pspace ta)
+  apply(clarsimp simp:valid_table_caps_def)
+  by (simp add: pspace)
 
 lemma valid_ioports_update[iff]:
   "valid_ioports (f s) = valid_ioports s"
@@ -2756,7 +2768,8 @@ lemma valid_ioports_update[iff]:
 
 lemma valid_asid_table_update [iff]:
   "valid_asid_table (f s) = valid_asid_table s"
-  by (simp add: valid_asid_table_def arch pspace ta)
+  apply(clarsimp simp:valid_asid_table_def)
+  by (simp add: arch pspace)
 
 lemma has_kernel_mappings_update [iff]:
   "has_kernel_mappings pt (f s) = has_kernel_mappings pt s"
@@ -2765,6 +2778,27 @@ lemma has_kernel_mappings_update [iff]:
 lemma equal_kernel_mappings_update [iff]:
   "equal_kernel_mappings (f s) = equal_kernel_mappings s"
   by (simp add: equal_kernel_mappings_def pspace)
+
+end
+
+context Arch_p_arch_ta_update_eq begin
+
+lemma vspace_for_asid_ta_eq_update[iff]:
+  "vspace_for_asid ta_f asid (f s) = vspace_for_asid ta_f asid s"
+  by (simp add: vspace_for_asid_def obind_def oassert_def oreturn_def pspace ta
+    opt_map_def vspace_for_pool_def split:option.splits)
+
+lemma vs_lookup_ta_eq_update [iff]:
+  "vs_lookup_table ta_f bot_level asid vptr (f s) = vs_lookup_table ta_f bot_level asid vptr s"
+  apply (clarsimp simp: vs_lookup_table_def pspace ta arch obind_def
+    opt_map_def vspace_for_pool_def ta_filter_def split: option.splits if_splits
+    | rule conjI)+
+   using ta apply presburger
+  by force
+
+lemma vs_lookup_slot_ta_eq_update[iff]:
+  "vs_lookup_slot ta_f bot_level asid vref (f s) = vs_lookup_slot ta_f bot_level asid vref s"
+  by (auto simp: vs_lookup_slot_def obind_def split: option.splits)
 
 end
 
