@@ -489,7 +489,8 @@ end
 
 locale time_protection_system =
   ab: unwinding_system A s0 "\<lambda>_. current_domain" external_uwr policy out Sched +
-  tp?: time_protection_hardware_uwr "TYPE('fch \<times> 'fch_cachedness \<times> 'pch \<times> 'pch_cachedness \<times> 'domain \<times> 'colour)" +
+  tp?: time_protection_hardware_uwr
+    "TYPE('fch \<times> 'fch_cachedness \<times> 'pch \<times> 'pch_cachedness \<times> 'domain \<times> 'colour)" +
   ts?: trace_selector
     "TYPE(('other_state \<times> ('fch,'pch) state) \<times> 'domain \<times> trace \<times> vpaddr set)"
     "current_domain \<circ> fst"
@@ -532,24 +533,34 @@ locale time_protection_system =
   assumes get_next_domain_public:
     "(s, t) \<in> external_uwr Sched \<Longrightarrow>
      get_next_domain t = get_next_domain s"
-  fixes get_domainswitch_middle_state :: "'other_state \<Rightarrow> 'other_state"
+
+
+
+  
+
+
+  fixes get_domainswitch_middle_state :: "'other_state \<Rightarrow> 'other_state set"
   \<comment> \<open>we want to know that a step is the domainswitch gadget. i.e. the trace from s to t
      is simply the small set of instructions required to perform the domainswitch gadget\<close>
-  fixes get_domainswitch_final_state :: "'other_state \<Rightarrow> 'other_state"
+  fixes get_domainswitch_final_state :: "'other_state \<Rightarrow> 'other_state set"
   fixes step_is_only_timeprotection_gadget :: "'other_state \<Rightarrow> 'other_state \<Rightarrow> bool"
+  assumes get_domainswitch_middle_state_nonempty:
+    "will_domain_switch s \<Longrightarrow> \<exists>s'. s' \<in> get_domainswitch_middle_state s"
   assumes final_domainswitch_step_is_gatchet:
     "will_domain_switch s \<Longrightarrow>
-    s' = get_domainswitch_middle_state s \<Longrightarrow>
-    step_is_only_timeprotection_gadget s' (get_domainswitch_final_state s')"
+    s' \<in> get_domainswitch_middle_state s \<Longrightarrow>
+    t \<in> get_domainswitch_final_state s' \<Longrightarrow>
+    step_is_only_timeprotection_gadget s' t"
   assumes middle_step_holds_dirty_ta:
     "ab.reachable s \<Longrightarrow>
     will_domain_switch s \<Longrightarrow>
-    s' = get_domainswitch_middle_state s \<Longrightarrow>
-    touched_addrs_dirty_inv (current_domain s) (get_next_domain s) (get_domainswitch_middle_state s)"
+    s' \<in> get_domainswitch_middle_state s \<Longrightarrow>
+    touched_addrs_dirty_inv (current_domain s) (get_next_domain s) s'"
   assumes domainswitch_step_via_middle_state:
-    "(s, s') \<in> ab.Step () \<Longrightarrow>
+    "(s, t) \<in> ab.Step () \<Longrightarrow>
      will_domain_switch s \<Longrightarrow>
-     s' = get_domainswitch_final_state (get_domainswitch_middle_state s)"
+     s' \<in> get_domainswitch_middle_state s \<Longrightarrow>
+     t \<in> get_domainswitch_final_state s'"
   assumes external_uwr_same_touched_addrs:
     "(s, t) \<in> external_uwr d \<Longrightarrow>
     current_domain s = d \<Longrightarrow>
@@ -561,8 +572,8 @@ locale time_protection_system =
   assumes external_uwr_public_same_touched_addrs:
     "(s, t) \<in> external_uwr Sched \<Longrightarrow>
     step_is_publicly_determined s \<Longrightarrow>
-    s' = get_domainswitch_middle_state s \<Longrightarrow>
-    t' = get_domainswitch_middle_state t \<Longrightarrow>
+    s' \<in> get_domainswitch_middle_state s \<Longrightarrow>
+    t' \<in> get_domainswitch_middle_state t \<Longrightarrow>
     touched_addrs t' = touched_addrs s'"
   assumes reachable_touched_addrs_inv:
     "ab.reachable s \<Longrightarrow> touched_addrs_inv s"
@@ -573,11 +584,13 @@ locale time_protection_system =
       \<and> step_is_uwr_determined s)
     \<or> (will_domain_switch s \<and> current_domain s' = get_next_domain s)"
   assumes domainswitch_step_splittable: 
-    "(s1, s2) \<in> ab.Step () \<Longrightarrow>
+    "(s, t) \<in> ab.Step () \<Longrightarrow>
      will_domain_switch s \<Longrightarrow>
-     touched_addrs_dirty_inv (current_domain s) (get_next_domain s) (get_domainswitch_middle_state s1)
-     \<and> step_is_publicly_determined s1
-     \<and> step_is_only_timeprotection_gadget (get_domainswitch_middle_state s1) (get_domainswitch_final_state (get_domainswitch_middle_state s1))"
+     s' \<in> get_domainswitch_middle_step s \<Longrightarrow>
+     touched_addrs_dirty_inv (current_domain s) (get_next_domain s) s'
+     \<and> t \<in> get_domainswitch_final_state s'
+     \<and> step_is_publicly_determined s'
+     \<and> step_is_only_timeprotection_gadget s' t"
 begin
 
 definition
@@ -609,7 +622,7 @@ definition maStep :: "unit \<Rightarrow>
                  \<and> p = select_user_trace (os, s) (touched_addrs os')
                  \<and> s' = trace_multistep p s ) \<comment> \<open>non-domainswitch step\<close>
                \<or> (will_domain_switch os
-                 \<and> osm = get_domainswitch_middle_state os
+                 \<and> osm \<in> get_domainswitch_middle_state os
                  \<and> p = select_public_trace (os, s) dirty_step_WCET (touched_addrs osm)
                  \<and> pg = gadget_trace (nlds (tm s))
                  \<and> s' = trace_multistep (p@pg) s ) \<comment> \<open>domainswitch step\<close>
@@ -668,7 +681,7 @@ lemma ma_single_step_enabled:
    \<exists>s' os'. ((os, s), os', s') \<in> {(s, s'). s' \<in> steps maStep {s} [()]} \<and> ab.reachable os'"
   apply (clarsimp simp: steps_def maStep_def)
   apply (cases "will_domain_switch os"; clarsimp)
-   using ab.enabled_Step ab.reachable_Step apply fastforce
+   using ab.enabled_Step ab.reachable_Step get_domainswitch_middle_state_nonempty apply blast
   using ab.enabled_Step ab.reachable_Step apply blast
 done
 
@@ -1427,19 +1440,18 @@ lemma ma_confidentiality_u_ds:
   apply (frule get_next_domain_public; clarsimp)
 
   (* show that the TAs are the same *)  
-  apply (prop_tac "touched_addrs (get_domainswitch_middle_state ot) = touched_addrs (get_domainswitch_middle_state os)")
+  apply (prop_tac "touched_addrs osma = touched_addrs osm")
    apply (rule external_uwr_public_same_touched_addrs [where s=os and t=ot])
       apply assumption+
-    apply (rule refl)+
 
   (* show that the traces are the same *)
-  apply (prop_tac "select_public_trace (ot, t) dirty_step_WCET (touched_addrs (get_domainswitch_middle_state os)) = 
-                   select_public_trace (os, s) dirty_step_WCET (touched_addrs (get_domainswitch_middle_state os))")
+  apply (prop_tac "select_public_trace (ot, t) dirty_step_WCET (touched_addrs osm) = 
+                   select_public_trace (os, s) dirty_step_WCET (touched_addrs osm)")
    apply (clarsimp simp:select_public_trace_def)
    apply (rule ts.select_trace_public_determined, simp+)
   apply (prop_tac " ((os, _), (ot, _\<lparr>tm:=tm _\<rparr>)) \<in> uwr u")
    apply (rule dirty_multistep [where p="(select_public_trace (ot, t) dirty_step_WCET
-           (touched_addrs (get_domainswitch_middle_state os)))"
+           (touched_addrs _))"
           and u="current_domain os" and u'="get_next_domain os"]; (rule refl)?)
      apply (drule middle_step_holds_dirty_ta; simp)
      apply (rule ta_dirty_inv_applied, simp)
@@ -1492,8 +1504,8 @@ theorem ma_confidentiality_u:
 
   apply (rule ma_confidentiality_u_ds; simp?)
    apply (rule ma_to_ab_reachable, assumption)
-  apply (meson ab.enabled_Step ma_to_ab_reachable domainswitch_step_splittable
-    time_protection_system_axioms)
+  apply (metis ab.enabled_Step domainswitch_step_splittable fst_conv insert_iff
+    ma_to_ab_reachable')
   done
 
 theorem extended_Nonleakage:
