@@ -313,8 +313,6 @@ lemma threadSet_tcbState_valid_objs:
   apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def)
   done
 
-lemmas monadic_rewrite_symb_exec_l' = monadic_rewrite_symb_exec_l'_preserve_names
-
 lemma possibleSwitchTo_rewrite:
   "monadic_rewrite True True
           (\<lambda>s. obj_at' (\<lambda>tcb. tcbPriority tcb = destPrio \<and> tcbDomain tcb = destDom) t s
@@ -325,7 +323,7 @@ lemma possibleSwitchTo_rewrite:
     (possibleSwitchTo t) (setSchedulerAction (SwitchToThread t))"
   supply if_split[split del]
   apply (simp add: possibleSwitchTo_def)
-  apply (rule monadic_rewrite_imp)
+  apply (rule monadic_rewrite_guard_imp)
    apply (rule monadic_rewrite_trans)
     apply (rule monadic_rewrite_bind_tail)
      apply (rule monadic_rewrite_symb_exec_l'[OF threadGet_inv empty_fail_threadGet,
@@ -417,7 +415,7 @@ lemma schedule_rewrite_ct_not_runnable':
             (do setSchedulerAction ResumeCurrentThread; switchToThread t od)"
   supply subst_all [simp del]
   apply (simp add: schedule_def)
-  apply (rule monadic_rewrite_imp)
+  apply (rule monadic_rewrite_guard_imp)
    apply (rule monadic_rewrite_trans)
     apply (rule monadic_rewrite_bind_tail)
      apply (rule monadic_rewrite_bind_tail)
@@ -483,7 +481,7 @@ lemma monadic_rewrite_threadGet:
   "monadic_rewrite E F (obj_at' (\<lambda>tcb. f tcb = v) t)
     (threadGet f t) (return v)"
   unfolding getThreadState_def
-  apply (rule monadic_rewrite_imp)
+  apply (rule monadic_rewrite_guard_imp)
    apply (rule monadic_rewrite_trans[rotated])
     apply (rule monadic_rewrite_gets_known)
    apply (unfold threadGet_def liftM_def fun_app_def)
@@ -544,7 +542,7 @@ lemma fastpath_callKernel_SysCall_corres:
   supply if_split[split del] if_cong[cong]
   apply (rule monadic_rewrite_introduce_alternative)
    apply (simp add: callKernel_def)
-  apply (rule monadic_rewrite_imp)
+  apply (rule monadic_rewrite_guard_imp)
    apply (simp add: handleEvent_def handleCall_def
                     handleInvocation_def liftE_bindE_handle
                     bind_assoc getMessageInfo_def)
@@ -633,7 +631,7 @@ lemma fastpath_callKernel_SysCall_corres:
                   apply (rule monadic_rewrite_symb_exec_l[OF get_mrs_inv' empty_fail_getMRs])
                    (* now committed to fastpath *)
                    apply (rule monadic_rewrite_trans)
-                    apply (rule_tac F=True and E=True in monadic_rewrite_weaken)
+                    apply (rule_tac F=True and E=True in monadic_rewrite_weaken_flags)
                     apply simp
                     apply (rule monadic_rewrite_bind_tail)
                      apply (rule_tac x=thread in monadic_rewrite_symb_exec,
@@ -742,7 +740,7 @@ lemma fastpath_callKernel_SysCall_corres:
                   apply (rule_tac P="inj (case_bool thread (hd (epQueue send_ep)))"
                                  in monadic_rewrite_gen_asm)
                   apply (rule monadic_rewrite_trans[OF _ monadic_rewrite_transverse])
-                    apply (rule monadic_rewrite_weaken[where F=False and E=True], simp)
+                    apply (rule monadic_rewrite_weaken_flags[where F=False and E=True], simp)
                     apply (rule isolate_thread_actions_rewrite_bind
                                   fastpath_isolate_rewrites fastpath_isolatables
                                   bool.simps setRegister_simple
@@ -756,7 +754,7 @@ lemma fastpath_callKernel_SysCall_corres:
                               | wp assert_inv)+
                   apply (rule_tac P="\<lambda>s. ksSchedulerAction s = ResumeCurrentThread
                                       \<and> tcb_at' thread s"
-                             and F=True and E=False in monadic_rewrite_weaken)
+                             and F=True and E=False in monadic_rewrite_weaken_flags)
                   apply simp
                   apply (rule monadic_rewrite_isolate_final)
                     apply (simp add: isRight_case_sum cong: list.case_cong)
@@ -886,7 +884,7 @@ lemma receiveIPC_simple_rewrite:
       od)"
   apply (rule monadic_rewrite_gen_asm)
   apply (simp add: receiveIPC_def)
-  apply (rule monadic_rewrite_imp)
+  apply (rule monadic_rewrite_guard_imp)
    apply (rule_tac rv=ep in monadic_rewrite_symb_exec_l_known,
           (wp empty_fail_getEndpoint)+)
     apply (rule monadic_rewrite_symb_exec_l, (wp | simp add: getBoundNotification_def)+)
@@ -910,7 +908,7 @@ lemma cteDeleteOne_replycap_rewrite:
      (cteDeleteOne slot)
      (emptySlot slot NullCap)"
   apply (simp add: cteDeleteOne_def)
-  apply (rule monadic_rewrite_imp)
+  apply (rule monadic_rewrite_guard_imp)
    apply (rule monadic_rewrite_symb_exec_l, (wp empty_fail_getCTE)+)
     apply (rule_tac P="cteCap rv \<noteq> NullCap \<and> isReplyCap (cteCap rv)
                           \<and> \<not> isEndpointCap (cteCap rv)
@@ -931,7 +929,7 @@ lemma cteDeleteOne_nullcap_rewrite:
      (cteDeleteOne slot)
      (return ())"
   apply (simp add: cteDeleteOne_def)
-  apply (rule monadic_rewrite_imp)
+  apply (rule monadic_rewrite_guard_imp)
    apply (rule monadic_rewrite_symb_exec_l, (wp empty_fail_getCTE)+)
     apply (rule_tac P="cteCap rv = NullCap" in monadic_rewrite_gen_asm)
     apply simp
@@ -947,7 +945,7 @@ lemma deleteCallerCap_nullcap_rewrite:
      (return ())"
   apply (simp add: deleteCallerCap_def getThreadCallerSlot_def locateSlot_conv
                    getSlotCap_def)
-  apply (rule monadic_rewrite_imp)
+  apply (rule monadic_rewrite_guard_imp)
   apply (rule monadic_rewrite_symb_exec_l, (wp empty_fail_getCTE)+)
     apply (rule monadic_rewrite_assert)
     apply (rule cteDeleteOne_nullcap_rewrite)
@@ -1010,7 +1008,7 @@ crunch only_cnode_caps[wp]: doFaultTransfer "\<lambda>s. P (only_cnode_caps (cte
 
 lemma tcbSchedDequeue_rewrite_not_queued: "monadic_rewrite True False (tcb_at' t and obj_at' (Not \<circ> tcbQueued) t) (tcbSchedDequeue t) (return ())"
   apply (simp add: tcbSchedDequeue_def)
-  apply (rule monadic_rewrite_imp)
+  apply (rule monadic_rewrite_guard_imp)
    apply (rule monadic_rewrite_trans)
     apply (rule monadic_rewrite_bind_tail)
      apply (rule_tac P="\<not> queued" in monadic_rewrite_gen_asm)
@@ -1041,7 +1039,7 @@ lemma schedule_known_rewrite:
   supply subst_all[simp del] if_split[split del]
   apply (simp add: schedule_def)
   apply (simp only: Thread_H.switchToThread_def)
-  apply (rule monadic_rewrite_imp)
+  apply (rule monadic_rewrite_guard_imp)
    apply (rule monadic_rewrite_trans)
     apply (rule monadic_rewrite_bind_tail)
      apply (rule monadic_rewrite_bind_tail)
@@ -1134,7 +1132,7 @@ lemma setEndpoint_setCTE_pivot[unfolded K_bind_def]:
   supply if_split[split del]
   apply (rule monadic_rewrite_to_eq)
   apply simp
-  apply (rule monadic_rewrite_imp)
+  apply (rule monadic_rewrite_guard_imp)
    apply (rule monadic_rewrite_trans,
           rule_tac f="ep_at' p" in monadic_rewrite_add_gets)
    apply (rule monadic_rewrite_transverse, rule monadic_rewrite_add_gets,
@@ -1230,7 +1228,7 @@ lemma set_getCTE[unfolded K_bind_def]:
       = do setCTE p cte; f cte od"
   apply simp
   apply (rule monadic_rewrite_to_eq)
-  apply (rule monadic_rewrite_imp)
+  apply (rule monadic_rewrite_guard_imp)
    apply (rule monadic_rewrite_bind_tail)
     apply (simp add: getCTE_assert_opt bind_assoc)
     apply (rule monadic_rewrite_trans,
@@ -1246,7 +1244,7 @@ lemma set_setCTE[unfolded K_bind_def]:
   supply if_split[split del]
   apply simp
   apply (rule monadic_rewrite_to_eq)
-  apply (rule monadic_rewrite_imp)
+  apply (rule monadic_rewrite_guard_imp)
    apply (rule monadic_rewrite_trans,
           rule_tac f="real_cte_at' p" in monadic_rewrite_add_gets)
    apply (rule monadic_rewrite_transverse, rule monadic_rewrite_add_gets,
@@ -1304,7 +1302,7 @@ lemma clearUntypedFreeIndex_simple_rewrite:
   apply (simp add: clearUntypedFreeIndex_def getSlotCap_def)
   apply (rule monadic_rewrite_name_pre)
   apply (clarsimp simp: cte_wp_at_ctes_of)
-  apply (rule monadic_rewrite_imp)
+  apply (rule monadic_rewrite_guard_imp)
    apply (rule_tac rv=cte in monadic_rewrite_symb_exec_l_known, wp+)
     apply (simp split: capability.split,
       strengthen monadic_rewrite_refl, simp)
@@ -1331,7 +1329,7 @@ lemma emptySlot_replymaster_rewrite[OF refl]:
       od)"
   supply if_split[split del] word_neq_0_conv[simp del]
   apply (rule monadic_rewrite_gen_asm)+
-  apply (rule monadic_rewrite_imp)
+  apply (rule monadic_rewrite_guard_imp)
    apply (rule_tac P="slot \<noteq> 0" in monadic_rewrite_gen_asm)
    apply (clarsimp simp: emptySlot_def setCTE_updateCapMDB)
    apply (rule monadic_rewrite_trans)
@@ -1403,7 +1401,7 @@ lemma resolveAddressBitsFn_eq_name_slot:
         \<and> valid_objs' s \<and> cnode_caps_gsCNodes' s)
     (resolveAddressBits cap capptr bits)
     (gets (resolveAddressBitsFn cap capptr bits o only_cnode_caps o ctes_of))"
-  apply (rule monadic_rewrite_imp, rule resolveAddressBitsFn_eq)
+  apply (rule monadic_rewrite_guard_imp, rule resolveAddressBitsFn_eq)
   apply auto
   done
 
@@ -1464,7 +1462,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
   supply if_split[split del]
   apply (rule monadic_rewrite_introduce_alternative)
    apply (simp add: callKernel_def)
-  apply (rule monadic_rewrite_imp)
+  apply (rule monadic_rewrite_guard_imp)
    apply (simp add: handleEvent_def handleReply_def
                     handleRecv_def liftE_bindE_handle liftE_handle
                     bind_assoc getMessageInfo_def liftE_bind)
@@ -1590,7 +1588,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                      apply (rule monadic_rewrite_trans)
                       apply (rule doReplyTransfer_simple)
                      apply simp
-                     apply (((rule monadic_rewrite_weaken2,
+                     apply (((rule monadic_rewrite_weaken_flags',
                              (rule_tac msgInfo=msgInfo in doIPCTransfer_simple_rewrite
                            | rule_tac destPrio=callerPrio
                                             and curDom=curDom and destDom=callerDom
@@ -1641,7 +1639,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                             apply (wp, simp)
                            apply (rule monadic_rewrite_bind_head)
 
-                           apply (rule monadic_rewrite_weaken[where E=True and F=True], simp)
+                           apply (rule monadic_rewrite_weaken_flags[where E=True and F=True], simp)
                            apply (rule setThreadState_rewrite_simple)
                           apply clarsimp
                           apply (wp getCTE_known_cap)+
@@ -1649,7 +1647,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                           apply (rule_tac t="capTCBPtr (cteCap replyCTE)"
                                       and t'=thread
                                        in schedule_known_rewrite)
-                         apply (rule monadic_rewrite_weaken[where E=True and F=True], simp)
+                         apply (rule monadic_rewrite_weaken_flags[where E=True and F=True], simp)
                          apply (rule monadic_rewrite_bind)
                            apply (rule activateThread_simple_rewrite)
                           apply (rule monadic_rewrite_refl)
@@ -1736,7 +1734,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                     apply (rule_tac P="inj (case_bool thread (capTCBPtr (cteCap replyCTE)))"
                                     in monadic_rewrite_gen_asm)
                     apply (rule monadic_rewrite_trans[OF _ monadic_rewrite_transverse])
-                      apply (rule monadic_rewrite_weaken[where F=False and E=True], simp)
+                      apply (rule monadic_rewrite_weaken_flags[where F=False and E=True], simp)
                       apply (rule isolate_thread_actions_rewrite_bind
                                   fastpath_isolate_rewrites fastpath_isolatables
                                   bool.simps setRegister_simple
@@ -1757,7 +1755,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                                                 (thread + 2 ^ cte_level_bits * tcbCallerSlot)
                                        and (\<lambda>s. \<forall>x. tcb_at' (case_bool thread (capTCBPtr (cteCap replyCTE)) x) s)
                                        and valid_mdb')"
-                                and F=True and E=False in monadic_rewrite_weaken)
+                                and F=True and E=False in monadic_rewrite_weaken_flags)
                     apply (rule monadic_rewrite_isolate_final2)
                        apply simp
                        apply (rule monadic_rewrite_symb_exec_l, (wp empty_fail_getCTE)+)

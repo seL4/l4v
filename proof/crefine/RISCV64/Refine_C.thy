@@ -1102,7 +1102,7 @@ lemma kernel_all_subset_kernel:
                     check_active_irq_H_def checkActiveIRQ_def)
        apply clarsimp
        apply (erule in_monad_imp_rewriteE[where F=True])
-        apply (rule monadic_rewrite_imp)
+        apply (rule monadic_rewrite_guard_imp)
          apply (rule monadic_rewrite_bind_tail)+
            apply (rule monadic_rewrite_bind_head[where P=\<top>])
            apply (simp add: callKernel_C_def callKernel_withFastpath_C_def

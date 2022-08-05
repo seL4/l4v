@@ -322,7 +322,7 @@ lemma no_fail_gts:
 lemma sts_noop:
    "monadic_rewrite True True (tcb_at tcb and (\<lambda>s. tcb \<noteq> cur_thread s))
                     (set_thread_state_ext tcb) (return ())"
-  apply (rule monadic_rewrite_imp)
+  apply (rule monadic_rewrite_guard_imp)
    apply (rule monadic_rewrite_add_get)
    apply (rule monadic_rewrite_bind_tail)
     apply (clarsimp simp: set_thread_state_ext_def)
@@ -349,7 +349,7 @@ lemma sts_to_modify':
   apply (clarsimp simp: set_thread_state_def set_object_def)
   apply (rule monadic_rewrite_add_get)
   apply (rule monadic_rewrite_bind_tail)
-   apply (rule monadic_rewrite_imp)
+   apply (rule monadic_rewrite_guard_imp)
     apply (rule monadic_rewrite_trans)
      apply (simp only: bind_assoc[symmetric])
      apply (rule monadic_rewrite_bind_tail)

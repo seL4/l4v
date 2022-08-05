@@ -92,23 +92,23 @@ proof (induct cap capptr bits rule: resolveAddressBits.induct)
     apply (subst resolveAddressBits.simps, subst resolveAddressBitsFn.simps)
     apply (simp only: Let_def haskell_assertE_def K_bind_def)
     apply (rule monadic_rewrite_name_pre)
-    apply (rule monadic_rewrite_imp)
+    apply (rule monadic_rewrite_guard_imp)
      apply (rule_tac P="(=) s" in monadic_rewrite_trans)
       (* step 1, apply the induction hypothesis on the lhs *)
       apply (rule monadic_rewrite_named_if monadic_rewrite_named_bindE
-                  monadic_rewrite_refl[THEN monadic_rewrite_imp, where f="returnOk y" for y]
-                  monadic_rewrite_refl[THEN monadic_rewrite_imp, where f="x $ y" for x y]
-                  monadic_rewrite_refl[THEN monadic_rewrite_imp, where f="assertE P" for P s]
+                  monadic_rewrite_refl[THEN monadic_rewrite_guard_imp, where f="returnOk y" for y]
+                  monadic_rewrite_refl[THEN monadic_rewrite_guard_imp, where f="x $ y" for x y]
+                  monadic_rewrite_refl[THEN monadic_rewrite_guard_imp, where f="assertE P" for P s]
                   TrueI)+
        apply (rule_tac g="case nextCap of CNodeCap a b c d
             \<Rightarrow> ?g nextCap cref bitsLeft
-            | _ \<Rightarrow> returnOk (slot, bitsLeft)" in monadic_rewrite_imp)
+            | _ \<Rightarrow> returnOk (slot, bitsLeft)" in monadic_rewrite_guard_imp)
         apply (wpc | rule monadic_rewrite_refl "1.hyps"
            | simp only: capability.case haskell_assertE_def simp_thms)+
        apply (clarsimp simp: in_monad locateSlot_conv getSlotCap_def
                       dest!: in_getCTE fst_stateAssertD)
        apply (fastforce elim: cte_wp_at_weakenE')
-      apply (rule monadic_rewrite_refl[THEN monadic_rewrite_imp], simp)
+      apply (rule monadic_rewrite_refl[THEN monadic_rewrite_guard_imp], simp)
      (* step 2, split and match based on the lhs structure *)
      apply (simp add: locateSlot_conv liftE_bindE unlessE_def whenE_def
                       if_to_top_of_bindE assertE_def stateAssert_def bind_assoc
