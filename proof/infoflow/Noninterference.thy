@@ -3830,7 +3830,7 @@ lemma schedule_step:
             sys_mode_of s' = KernelExit; r = user_context_of s; r = user_context_of s' \<rbrakk>
             \<Longrightarrow> P"
   shows
-    "\<lbrakk> (sys_mode_of s) = KernelSchedule True; (s,s') \<in> data_type.Step (ADT_A_if utf) () \<rbrakk>
+    "\<lbrakk> (sys_mode_of s) = KernelSchedule b; (s,s') \<in> data_type.Step (ADT_A_if utf) () \<rbrakk>
        \<Longrightarrow> P"
   apply (insert schedule)
   apply atomize
