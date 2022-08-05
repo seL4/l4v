@@ -1851,8 +1851,6 @@ lemma valid_mdb_eqI:
 
 lemma set_object_at_obj:
   "\<lbrace> \<lambda>s. obj_at P p s \<and> (p = r \<longrightarrow> P obj) \<rbrace> set_object ta_f r obj \<lbrace> \<lambda>rv. obj_at P p \<rbrace>"
-     \<comment> \<open> \<and> TODO: Will this be helpful for set_pt_pts_of? Add if so, or remove. -robs
-     (p = r \<longrightarrow> obj_range p obj \<subseteq> touched_addresses (machine_state s))\<close>
   by (clarsimp simp: valid_def in_monad obj_at_def set_object_def get_object_def
     ta_filter_def touch_object_def touch_objects_def simpler_do_machine_op_addTouchedAddresses_def)
 

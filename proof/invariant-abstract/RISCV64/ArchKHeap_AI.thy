@@ -293,20 +293,26 @@ lemma translate_address_lift_weak:
   done
 
 lemma set_pt_pts_of:
-  "\<lbrace>\<lambda>s. pts_of True s p \<noteq> None \<longrightarrow> P (pts_of True s (p \<mapsto> pt)) \<rbrace> set_pt p pt \<lbrace>\<lambda>_ s. P (pts_of True s)\<rbrace>"
+  "\<lbrace>\<lambda>s. pts_of ta_f s p \<noteq> None \<longrightarrow> P (pts_of ta_f' s (p \<mapsto> pt)) \<rbrace>
+     set_pt p pt
+   \<lbrace>\<lambda>_ s. P (pts_of ta_f' s)\<rbrace>"
   unfolding set_pt_def
   apply (wpsimp wp: set_object_wp)
   apply (clarsimp elim!: rsubst[where P=P] simp: opt_map_def obind_def ta_filter_def
     split: option.splits if_splits)
   apply (rule ext)
-  apply (clarsimp elim!: rsubst[where P=P] simp: opt_map_def obind_def ta_filter_def
-    split: option.splits if_splits)
-  (* This is an interesting one: I think we need to say the obj_range of the new object `pt`
-     cannot be larger than that of the obj_range of the old object that was at `p`.
-     Possibly this is a case for making set_object (and other functions like it)
-     touch the `kheap` object after modifying it. -robs
-     FIXME: Broken by timeprot-use-f-kheap/timeprot-touch-objs. *)
-  sorry
+  by (auto simp:ta_filter_def obj_range_def split:option.splits)
+
+(* Note: Turns out using this for store_pte_ptes_of results in different
+   intermediate proof state but ultimately makes no difference.
+   FIXME: Come back and delete if this doesn't turn out useful. -robs *)
+lemma set_pt_wp:
+  "\<lbrace>\<lambda>s. Q (s\<lparr> kheap := kheap s (p \<mapsto> (ArchObj (PageTable pt))),
+      machine_state := machine_state.touched_addresses_update
+        ((\<union>) (obj_range p (ArchObj (PageTable pt)))) (machine_state s)\<rparr>) \<rbrace>
+     set_pt p pt \<lbrace>\<lambda>_. Q\<rbrace>"
+  unfolding set_pt_def
+  by (wpsimp wp: set_object_wp)
 
 lemma pte_ptr_eq:
   "\<lbrakk> (ucast (p && mask pt_bits >> pte_bits) :: pt_index) =
@@ -324,12 +330,34 @@ lemma pte_ptr_eq:
   apply (case_tac "pt_bits \<le> n", simp)
   by (fastforce simp: not_le bit_simps)
 
-. (* DOWN TO HERE. I expect similar issues for all setters like set_object, set_pt, etc. -robs
+
 lemma store_pte_ptes_of:
+(* Old:
   "\<lbrace>\<lambda>s. ptes_of s p \<noteq> None \<longrightarrow> P (ptes_of s (p \<mapsto> pte)) \<rbrace> store_pte p pte \<lbrace>\<lambda>_ s. P (ptes_of s)\<rbrace>"
+   Notes:
+   - it doesn't make sense to assert `pts_of True s (table_base p)` is non-None,
+     because store_pte doesn't require that the pt is even touched before calling it.
+   - it doesn't make sense to assert `pts_of False s (table_base p)` is non-None,
+     because `ptes_of ta_f s p` (for any ta_f) cannot be non-None without it.
+   - if we make it conditional on `ptes_of False s p` being non-None,
+     then we're asserting that the PTE p's entire PT is on the kheap at (table_base p)
+     and that its entry at (table_index p) exists.
+     ^^^ This is all we seem to be able to assert; furthermore, we only seem to be able
+         to prove this lemma for propositions on the raw `ptes_of False` version.
+         Perhaps this is all we need?
+   - if we make it conditional on `ptes_of True s p` being non-None,
+     then we're *also* asserting the PTE's entire PT is in the TA set --
+     but we can't reasonably assert this because we don't `touch_object` it until halfway
+     through `store_pte`. -robs *)
+  "\<lbrace>\<lambda>s. ptes_of False s p \<noteq> None \<longrightarrow> P (ptes_of False s (p \<mapsto> pte)) \<rbrace>
+     store_pte p pte
+   \<lbrace>\<lambda>_ s. P (ptes_of False s)\<rbrace>"
   unfolding store_pte_def pte_of_def
   apply (wpsimp wp: set_pt_pts_of simp: in_omonad)
-  by (auto simp: obind_def opt_map_def split: option.splits dest!: pte_ptr_eq elim!: rsubst[where P=P])
+  by (auto simp: obind_def opt_map_def ta_filter_def obj_range_def fun_upd_def split: option.splits if_splits
+    dest!: pte_ptr_eq elim!: rsubst[where P=P])
+
+. (* DOWN TO HERE
 
 lemma vspace_for_pool_not_pte:
   "\<lbrakk> vspace_for_pool p asid (asid_pools_of s) = Some p';

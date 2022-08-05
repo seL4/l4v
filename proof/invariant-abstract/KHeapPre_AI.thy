@@ -111,8 +111,27 @@ locale arch_only_obj_pred =
   fixes P :: "kernel_object \<Rightarrow> bool"
   assumes arch_only: "arch_obj_pred P"
 
-. (* DOWN TO HERE: Look for or add a [wp] rule to use instead of unfolding down to
-     `simpler_do_machine_op_addTouchedAddresses_def`, as Gerwin (@lsf37) suggests. -robs
+lemma dmo_addTouchedAddresses_wp[wp]:
+  "\<lbrace>\<lambda>s. Q () (ms_touched_addresses_update ((\<union>) S) s)\<rbrace> do_machine_op (addTouchedAddresses S) \<lbrace>Q\<rbrace>"
+  apply (simp add: simpler_do_machine_op_addTouchedAddresses_def)
+  apply (wp select_f_wp)
+  apply (case_tac "machine_state s", simp)
+  done
+
+lemma touch_object_wp[wp]:
+  "\<lbrace>\<lambda>s. \<forall>ko. ko_at ko p s \<longrightarrow> Q () (ms_touched_addresses_update ((\<union>) (obj_range p ko)) s) \<rbrace>
+   touch_object p \<lbrace>Q\<rbrace>"
+  apply (wpsimp simp:touch_object_def2 wp: dmo_addTouchedAddresses_wp)
+  apply (clarsimp simp:obj_at_def)
+  done
+
+lemma touch_object_wp'[wp]:
+  "\<lbrace>\<lambda>s. Q () (ms_touched_addresses_update ((\<union>) (obj_range p (the (kheap s p)))) s) \<rbrace>
+   touch_object p \<lbrace>Q\<rbrace>"
+  apply (wp touch_object_wp)
+  apply (clarsimp simp:obj_at_def)
+  done
+
 lemma set_object_typ_at [wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p' s)\<rbrace>
   set_object ta_f p ko \<lbrace>\<lambda>rv s. P (typ_at T p' s)\<rbrace>"
@@ -120,7 +139,7 @@ lemma set_object_typ_at [wp]:
   apply wp
   apply clarsimp
   apply (erule rsubst [where P=P])
-  apply (clarsimp simp: obj_at_def)
+  apply (clarsimp simp: obj_at_def obind_def ta_filter_def split:if_splits)
   done
 
 lemma set_object_neg_ko:
@@ -171,12 +190,16 @@ lemma hoare_to_pure_kheap_upd:
   by (auto simp add: obj_at_def a_type_def split: kernel_object.splits if_splits)
 
 lemma set_object_wp:
-  "\<lbrace>\<lambda>s. Q (s\<lparr> kheap := kheap s (p \<mapsto> v)\<rparr>) \<rbrace> set_object ta_f p v \<lbrace>\<lambda>_. Q\<rbrace>"
+  "\<lbrace>\<lambda>s. Q (s\<lparr> kheap := kheap s (p \<mapsto> v),
+      machine_state :=
+      machine_state.touched_addresses_update ((\<union>) (obj_range p v)) (machine_state s)\<rparr>) \<rbrace>
+     set_object ta_f p v \<lbrace>\<lambda>_. Q\<rbrace>"
   apply (simp add: set_object_def get_object_def)
   apply wp
-  apply blast
+  apply (clarsimp simp:fun_upd_def)
   done
 
+(* FIXME: Change False here to ta_f? -robs *)
 lemma get_object_wp:
   "\<lbrace>\<lambda>s. \<forall>ko. ko_at ko p s \<longrightarrow> Q ko s\<rbrace> get_object False p \<lbrace>Q\<rbrace>"
   apply (clarsimp simp: get_object_def)
@@ -197,10 +220,12 @@ lemma hoare_strengthen_pre_via_assert_forward:
   apply (erule rel)
   done
 
+(* FIXME: Consider removing the ta_f argument to set_object and have it hardcode True
+   if we are never using it with False. -robs *)
 lemma hoare_set_object_weaken_pre:
-  assumes "\<lbrace>P\<rbrace> set_object False p v \<lbrace>\<lambda>_. Q\<rbrace>"
+  assumes "\<lbrace>P\<rbrace> set_object ta_f p v \<lbrace>\<lambda>_. Q\<rbrace>"
   shows "\<lbrace>\<lambda>s. \<forall>ko. ko_at ko p s \<longrightarrow> (a_type v = a_type ko) \<longrightarrow> P s\<rbrace>
-         set_object False p v
+         set_object ta_f p v
          \<lbrace>\<lambda>_. Q\<rbrace>"
   apply (rule hoare_strengthen_pre_via_assert_forward
                 [OF assms, where N="\<lambda>s. \<forall>ko. ko_at ko p s \<longrightarrow> a_type ko \<noteq> a_type v"])

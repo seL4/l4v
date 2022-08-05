@@ -1566,28 +1566,6 @@ lemma dmo_ct_in_state:
   apply (rule hoare_lift_Pf [where f=cur_thread])
   by wp+
 
-lemma dmo_addTouchedAddresses_wp:
-  "\<lbrace>\<lambda>s. Q () (ms_touched_addresses_update (\<lambda>ta. S \<union> ta) s)\<rbrace> do_machine_op (addTouchedAddresses S) \<lbrace>Q\<rbrace>"
-  apply (simp add: simpler_do_machine_op_addTouchedAddresses_def)
-  apply (wp select_f_wp)
-  apply (case_tac "machine_state s", simp)
-  done
-
-lemma touch_object_wp:
-  "\<lbrace>\<lambda>s. \<forall>ko. ko_at ko p s \<longrightarrow> Q () (ms_touched_addresses_update (\<lambda>ta. obj_range p ko \<union> ta) s) \<rbrace>
-   touch_object p \<lbrace>Q\<rbrace>"
-  apply (wpsimp simp:touch_object_def2 wp: dmo_addTouchedAddresses_wp)
-  apply (clarsimp simp:obj_at_def)
-  done
-
-lemma touch_object_wp':
-  "\<lbrace>\<lambda>s. Q () (ms_touched_addresses_update (\<lambda>ta. obj_range p (the (kheap s p)) \<union> ta) s) \<rbrace>
-   touch_object p \<lbrace>Q\<rbrace>"
-  apply (wp touch_object_wp)
-  apply (clarsimp simp:obj_at_def)
-  done
-
-
 subsection "TA Agnostic for invs"
 
 lemma ta_agnostic_conj:
