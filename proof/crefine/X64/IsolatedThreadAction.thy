@@ -10,25 +10,8 @@ begin
 
 context begin interpretation Arch .
 
-datatype tcb_state_regs = TCBStateRegs "thread_state" "MachineTypes.register \<Rightarrow> machine_word"
-
-definition
- "tsrContext tsr \<equiv> case tsr of TCBStateRegs ts regs \<Rightarrow> regs"
-
-definition
- "tsrState tsr \<equiv> case tsr of TCBStateRegs ts regs \<Rightarrow> ts"
-
-lemma accessors_TCBStateRegs[simp]:
-  "TCBStateRegs (tsrState v) (tsrContext v) = v"
-  by (cases v, simp add: tsrState_def tsrContext_def)
-
-lemma tsrContext_simp[simp]:
-  "tsrContext (TCBStateRegs st con) = con"
-  by (simp add: tsrContext_def)
-
-lemma tsrState_simp[simp]:
-  "tsrState (TCBStateRegs st con) = st"
-  by (simp add: tsrState_def)
+datatype tcb_state_regs =
+  TCBStateRegs (tsrState : thread_state) (tsrContext : "MachineTypes.register \<Rightarrow> machine_word")
 
 definition
   get_tcb_state_regs :: "kernel_object option \<Rightarrow> tcb_state_regs"
