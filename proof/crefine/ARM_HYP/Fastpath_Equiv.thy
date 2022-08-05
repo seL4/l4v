@@ -121,10 +121,6 @@ lemmas valid_cnode_cap_cte_at''
 
 declare of_int_sint_scast[simp]
 
-lemma isCNodeCap_capUntypedPtr_capCNodePtr:
-  "isCNodeCap c \<Longrightarrow> capUntypedPtr c = capCNodePtr c"
-  by (clarsimp simp: isCap_simps)
-
 lemma of_bl_from_bool:
   "of_bl [x] = from_bool x"
   by (cases x, simp_all add: from_bool_def)
@@ -137,8 +133,7 @@ lemma dmo_clearExMonitor_setCurThread_swap:
             doMachineOp ARM_HYP.clearExMonitor od)"
   apply (simp add: setCurThread_def doMachineOp_def split_def)
   apply (rule oblivious_modify_swap[symmetric])
-  apply (intro oblivious_bind,
-         simp_all add: select_f_oblivious)
+  apply (intro oblivious_bind, simp_all)
   done
 
 lemma pd_at_asid_inj':
@@ -447,15 +442,11 @@ lemma schedule_rewrite_ct_not_runnable':
            apply wp+
   apply (clarsimp simp: ct_in_state'_def)
   apply (strengthen not_pred_tcb_at'_strengthen, simp)
-  supply word_neq_0_conv[simp del]
   apply normalise_obj_at'
   apply (simp add: fastpathBestSwitchCandidate_def)
   apply (erule_tac x="tcbPriority ko" in allE)
   apply (erule impE, normalise_obj_at'+)
   done
-
-crunch tcb2[wp]: "Arch.switchToThread" "tcb_at' t"
-  (ignore: ARM_HYP.clearExMonitor)
 
 lemma resolveAddressBits_points_somewhere:
   "\<lbrace>\<lambda>s. \<forall>slot. Q slot s\<rbrace> resolveAddressBits cp cptr bits \<lbrace>Q\<rbrace>,-"
@@ -513,9 +504,6 @@ crunches cteInsert, asUser
   (wp: setCTE_obj_at'_queued crunch_wps threadSet_obj_at'_really_strongest)
 end
 
-crunch ksReadyQueues_inv[wp]: cteInsert "\<lambda>s. P (ksReadyQueues s)"
-  (wp: hoare_drop_imps)
-
 crunches cteInsert, threadSet, asUser, emptySlot
   for ksReadyQueuesL1Bitmap_inv[wp]: "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
   and ksReadyQueuesL2Bitmap_inv[wp]: "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
@@ -570,7 +558,7 @@ lemma fastpath_callKernel_SysCall_corres:
                         capFaultOnFailure_def)
        apply (simp only: bindE_bind_linearise[where f="rethrowFailure fn f'" for fn f']
                          bind_case_sum_rethrow)
-       apply (simp add: lookupCapAndSlot_def lookupSlotForThread_def
+       apply (simp add: lookupCapAndSlot_def
                         lookupSlotForThread_def bindE_assoc
                         liftE_bind_return_bindE_returnOk split_def
                         getThreadCSpaceRoot_def locateSlot_conv
@@ -965,7 +953,7 @@ lemma emptySlot_cnode_caps:
                    o_assoc[symmetric] cteCaps_of_def[symmetric])
   apply (wp emptySlot_cteCaps_of)
   apply (clarsimp simp: cteCaps_of_def cte_wp_at_ctes_of
-                 elim!: rsubst[where P=P] intro!: ext
+                 elim!: rsubst[where P=P] del: ext intro!: ext
                  split: if_split)
   done
 
@@ -995,14 +983,9 @@ lemma setCTE_obj_at_ntfn[wp]:
 
 crunch obj_at_ep[wp]: emptySlot "obj_at' (P :: endpoint \<Rightarrow> bool) p"
 
-crunch nosch[wp]: emptySlot "\<lambda>s. P (ksSchedulerAction s)"
-
 crunches emptySlot, asUser
   for gsCNodes[wp]: "\<lambda>s. P (gsCNodes s)"
   (wp: crunch_wps)
-
-crunch cte_wp_at'[wp]: possibleSwitchTo "cte_wp_at' P p"
-  (wp: hoare_drop_imps)
 
 crunch tcbContext[wp]: possibleSwitchTo "obj_at' (\<lambda>tcb. P ( (atcbContextGet o tcbArch) tcb)) t"
   (wp: crunch_wps simp_del: comp_apply)
@@ -1121,7 +1104,6 @@ lemma emptySlot_cte_wp_at_cteCap:
 lemma setEndpoint_getCTE_pivot[unfolded K_bind_def]:
   "do setEndpoint p val; v <- getCTE slot; f v od
      = do v <- getCTE slot; setEndpoint p val; f v od"
-  supply word_neq_0_conv[simp del]
   apply (simp add: getCTE_assert_opt setEndpoint_def
                    setObject_modify_assert
                    fun_eq_iff bind_assoc)
@@ -1166,6 +1148,7 @@ lemma setEndpoint_setCTE_pivot[unfolded K_bind_def]:
                        exec_gets assert_def exec_modify
                 split: if_split)
       apply (auto split: if_split simp: obj_at'_def projectKOs objBits_defs
+                    del: ext
                  intro!: arg_cong[where f=f] ext kernel_state.fold_congs)[1]
      apply wp+
   apply (simp add: objBits_defs)
@@ -1277,6 +1260,7 @@ lemma set_setCTE[unfolded K_bind_def]:
        apply (rule monadic_rewrite_refl2)
        apply (simp add: exec_modify split: if_split)
        apply (auto simp: simpler_modify_def projectKO_opt_tcb objBits_defs
+                    del: ext
                  intro!: kernel_state.fold_congs ext
                   split: if_split)[1]
       apply wp+
@@ -1287,7 +1271,7 @@ lemma set_setCTE[unfolded K_bind_def]:
 lemma setCTE_updateCapMDB:
   "p \<noteq> 0 \<Longrightarrow>
    setCTE p cte = do updateCap p (cteCap cte); updateMDB p (const (cteMDBNode cte)) od"
-  supply if_split[split del] word_neq_0_conv[simp del]
+  supply if_split[split del]
   apply (simp add: updateCap_def updateMDB_def bind_assoc set_getCTE
                    cte_overwrite set_setCTE)
   apply (simp add: getCTE_assert_opt setCTE_assert_modify bind_assoc)
@@ -1331,7 +1315,7 @@ lemma emptySlot_replymaster_rewrite[OF refl]:
                                               o mdbRevocable_update (K True));
          setCTE slot makeObject
       od)"
-  supply if_split[split del] word_neq_0_conv[simp del]
+  supply if_split[split del]
   apply (rule monadic_rewrite_gen_asm)+
   apply (rule monadic_rewrite_guard_imp)
    apply (rule_tac P="slot \<noteq> 0" in monadic_rewrite_gen_asm)
@@ -1461,7 +1445,6 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
      (callKernel (SyscallEvent SysReplyRecv)) (fastpaths SysReplyRecv)"
   including no_pre
   supply if_cong[cong] option.case_cong[cong]
-  supply word_neq_0_conv[simp del]
   supply if_split[split del]
   apply (rule monadic_rewrite_introduce_alternative)
    apply ( simp add: callKernel_def)
@@ -1481,7 +1464,6 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
     apply (rule monadic_rewrite_symb_exec_r, wp+)
      apply (rename_tac thread msgInfo)
      apply (rule monadic_rewrite_symb_exec_r, wp+)
-      apply (rename_tac cptr)
       apply (rule monadic_rewrite_symb_exec_r[OF threadGet_inv no_fail_threadGet])
        apply (rename_tac tcbFault)
        apply (rule monadic_rewrite_alternative_rhs[rotated])
