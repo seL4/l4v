@@ -653,7 +653,7 @@ lemma armv_contextSwitch_HWASID_fp_rewrite:
                         checkPDAt_def checkPDUniqueToASID_def
                         checkPDASIDMapMembership_def
                         stateAssert_def2[folded assert_def])
-  apply (rule monadic_rewrite_imp)
+  apply (rule monadic_rewrite_guard_imp)
    apply (rule monadic_rewrite_gets_l)
    apply (rule monadic_rewrite_symb_exec_l)
       apply (wpsimp)+

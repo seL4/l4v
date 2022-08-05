@@ -5260,7 +5260,7 @@ lemma monadic_rewrite_placeNewObject_vcpu_decompose:
            (do placeNewObject v vcpupre 0;
                setObject v vcpu
             od)"
-  apply (rule monadic_rewrite_imp)
+  apply (rule monadic_rewrite_guard_imp)
    apply (rule monadic_rewrite_trans[rotated])
     apply (rule monadic_rewrite_bind_tail)
      apply clarsimp
@@ -5286,7 +5286,7 @@ lemma monadic_rewrite_setObject_vcpu_twice:
                setObject v vcpu
             od)"
   supply fun_upd_apply[simp del]
-  apply (rule monadic_rewrite_imp)
+  apply (rule monadic_rewrite_guard_imp)
    apply (rule monadic_rewrite_trans[rotated])
     apply (rule monadic_rewrite_bind_head)
     apply (rule monadic_rewrite_modify_setObject_vcpu)
@@ -5400,7 +5400,7 @@ lemma monadic_rewrite_setObject_vcpu_as_init:
   supply fun_upd_apply[simp del]
   apply (simp add: K_def)
   apply (rule monadic_rewrite_gen_asm)
-  apply (rule monadic_rewrite_imp)
+  apply (rule monadic_rewrite_guard_imp)
    apply (simp add: vcpuWriteReg_def vgicUpdate_def bind_assoc)
    apply (rule monadic_rewrite_trans[rotated])
     apply (clarsimp simp: vcpuUpdate_def bind_assoc)

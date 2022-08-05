@@ -596,13 +596,13 @@ lemma handleFaultReply':
                      empty_fail_loadWordUser)+
     (* UnknownSyscallException *)
     apply (simp add: zip_append2 mapM_x_append asUser_bind_distrib split_def bind_assoc)
-    apply (rule monadic_rewrite_imp)
+    apply (rule monadic_rewrite_guard_imp)
      apply (rule monadic_rewrite_trans[rotated])
       apply (rule monadic_rewrite_do_flip)
       apply (rule monadic_rewrite_bind_tail)
        apply (rule_tac P="inj (case_bool s r)" in monadic_rewrite_gen_asm)
        apply (rule monadic_rewrite_trans[OF _ monadic_rewrite_transverse])
-         apply (rule monadic_rewrite_weaken[where F=False and E=True], simp)
+         apply (rule monadic_rewrite_weaken_flags[where F=False and E=True], simp)
          apply (rule isolate_thread_actions_rewrite_bind
                      bool.simps setRegister_simple
                      zipWithM_setRegister_simple
@@ -705,7 +705,7 @@ lemma handleFaultReply':
      apply wp+
     (* ArchFault *)
     apply (simp add: neq inj_case_bool split: bool.split)
-   apply (rule monadic_rewrite_imp)
+   apply (rule monadic_rewrite_guard_imp)
     apply (rule monadic_rewrite_is_refl)
     apply (rule ext)
     apply (unfold handleArchFaultReply'[symmetric] getMRs_def msgMaxLength_def
