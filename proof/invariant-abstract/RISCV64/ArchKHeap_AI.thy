@@ -331,37 +331,22 @@ lemma pte_ptr_eq:
   by (fastforce simp: not_le bit_simps)
 
 
+(* Note: We don't seem to be able to generalise this to ta_f without making it much harder
+   to prove. I think the strategy from here should be to repair lemmas like these for
+   ta_f=False *only*, to get through the repairs as quickly as possible, until we hit users
+   of these lemmas that actually require their more generalised versions. -robs *)
 lemma store_pte_ptes_of:
-(* Old:
-  "\<lbrace>\<lambda>s. ptes_of s p \<noteq> None \<longrightarrow> P (ptes_of s (p \<mapsto> pte)) \<rbrace> store_pte p pte \<lbrace>\<lambda>_ s. P (ptes_of s)\<rbrace>"
-   Notes:
-   - it doesn't make sense to assert `pts_of True s (table_base p)` is non-None,
-     because store_pte doesn't require that the pt is even touched before calling it.
-   - it doesn't make sense to assert `pts_of False s (table_base p)` is non-None,
-     because `ptes_of ta_f s p` (for any ta_f) cannot be non-None without it.
-   - if we make it conditional on `ptes_of False s p` being non-None,
-     then we're asserting that the PTE p's entire PT is on the kheap at (table_base p)
-     and that its entry at (table_index p) exists.
-     ^^^ This is all we seem to be able to assert; furthermore, we only seem to be able
-         to prove this lemma for propositions on the raw `ptes_of False` version.
-         Perhaps this is all we need?
-   - if we make it conditional on `ptes_of True s p` being non-None,
-     then we're *also* asserting the PTE's entire PT is in the TA set --
-     but we can't reasonably assert this because we don't `touch_object` it until halfway
-     through `store_pte`. -robs *)
   "\<lbrace>\<lambda>s. ptes_of False s p \<noteq> None \<longrightarrow> P (ptes_of False s (p \<mapsto> pte)) \<rbrace>
      store_pte p pte
    \<lbrace>\<lambda>_ s. P (ptes_of False s)\<rbrace>"
   unfolding store_pte_def pte_of_def
   apply (wpsimp wp: set_pt_pts_of simp: in_omonad)
-  by (auto simp: obind_def opt_map_def ta_filter_def obj_range_def fun_upd_def split: option.splits if_splits
+  by (auto simp: obind_def opt_map_def ta_filter_def split: option.splits
     dest!: pte_ptr_eq elim!: rsubst[where P=P])
 
-. (* DOWN TO HERE
-
 lemma vspace_for_pool_not_pte:
-  "\<lbrakk> vspace_for_pool p asid (asid_pools_of s) = Some p';
-     ptes_of s p = Some pte; pspace_aligned s \<rbrakk>
+  "\<lbrakk> vspace_for_pool p asid (asid_pools_of False s) = Some p';
+     ptes_of False s p = Some pte; pspace_aligned s \<rbrakk>
    \<Longrightarrow> False"
   by (fastforce simp: in_omonad ptes_of_def bit_simps vspace_for_pool_def dest: pspace_alignedD)
 
@@ -377,18 +362,19 @@ lemma level_of_slotI:
   by (auto simp: level_of_slot_def dest: bit0.GreatestI bit0.Greatest_le)
 
 lemma pool_for_asid_no_pt:
-  "\<lbrakk> pool_for_asid asid s = Some p; pts_of s p = Some pte; valid_asid_table s; pspace_aligned s \<rbrakk>
+  "\<lbrakk> pool_for_asid asid s = Some p; pts_of False s p = Some pte; valid_asid_table s; pspace_aligned s \<rbrakk>
    \<Longrightarrow> False"
   unfolding pool_for_asid_def
   by (fastforce dest: pspace_alignedD dest!: valid_asid_tableD
                 simp: bit_simps obj_at_def ptes_of_Some in_omonad)
 
 lemma pool_for_asid_no_pte:
-  "\<lbrakk> pool_for_asid asid s = Some p; ptes_of s p = Some pte; valid_asid_table s; pspace_aligned s \<rbrakk>
+  "\<lbrakk> pool_for_asid asid s = Some p; ptes_of False s p = Some pte; valid_asid_table s; pspace_aligned s \<rbrakk>
    \<Longrightarrow> False"
   unfolding pool_for_asid_def
-  by (fastforce dest: pspace_alignedD dest!: valid_asid_tableD
+  apply (clarsimp dest: pspace_alignedD dest!: valid_asid_tableD
                 simp: bit_simps obj_at_def ptes_of_Some in_omonad)
+. (* DOWN TO HERE. -robs
 
 lemma vs_lookup_table_no_asid:
   "\<lbrakk> vs_lookup_table asid_pool_level asid vref s = Some (asid_pool_level, p);
