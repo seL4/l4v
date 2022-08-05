@@ -1207,15 +1207,6 @@ lemma mapME_x_upt_length_ys:
   by (metis mapME_x_map_simp[where f="\<lambda>_. ()" and m="\<lambda>_. m" for m,
             unfolded o_def] map_replicate_const length_upt minus_nat.diff_0)
 
-lemma monadic_set_cap_id:
-  "monadic_rewrite False True
-    (cte_wp_at ((=) cap) p)
-    (set_cap cap p) (return ())"
-  by (clarsimp simp: monadic_rewrite_def set_cap_id return_def)
-
-lemmas monadic_set_cap_id2
-    = monadic_rewrite_transverse[OF monadic_set_cap_id monadic_rewrite_refl]
-
 (* FIXME: move *)
 lemma mapME_x_append:
   "mapME_x f (xs @ ys) = (doE mapME_x f xs; mapME_x f ys odE)"
