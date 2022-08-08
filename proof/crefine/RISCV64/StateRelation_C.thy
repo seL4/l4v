@@ -345,6 +345,8 @@ where
            = Some (UnknownSyscallException (syscallNumber_CL us))"
   | "fault_to_H (SeL4_Fault_UserException ue) lf
           = Some (UserException (number_CL ue) (code_CL ue))"
+  | "fault_to_H (SeL4_Fault_Timeout tf) lf
+          = Some (Timeout (badge_CL tf))"
 
 definition
   cfault_rel :: "Fault_H.fault option \<Rightarrow> seL4_Fault_CL option \<Rightarrow> lookup_fault_CL option \<Rightarrow> bool"
@@ -841,10 +843,12 @@ where
   | "fault_to_fault_tag (ArchFault f)    = arch_fault_to_fault_tag f"
   | "fault_to_fault_tag (UnknownSyscallException a) = scast seL4_Fault_UnknownSyscall"
   | "fault_to_fault_tag (UserException a b) = scast seL4_Fault_UserException"
+  | "fault_to_fault_tag (Timeout a) = scast seL4_Fault_Timeout"
 
 lemmas seL4_Faults = seL4_Fault_UserException_def
                      seL4_Fault_UnknownSyscall_def
                      seL4_Fault_CapFault_def
+                     seL4_Fault_Timeout_def
 
 lemmas seL4_Arch_Faults = seL4_Fault_VMFault_def
 
