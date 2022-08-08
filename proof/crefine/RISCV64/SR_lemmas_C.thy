@@ -2084,6 +2084,7 @@ lemma arch_fault_tag_not_fault_tag_simps [simp]:
   "(arch_fault_to_fault_tag arch_fault = scast seL4_Fault_CapFault) = False"
   "(arch_fault_to_fault_tag arch_fault = scast seL4_Fault_UserException) = False"
   "(arch_fault_to_fault_tag arch_fault = scast seL4_Fault_UnknownSyscall) = False"
+  "(arch_fault_to_fault_tag arch_fault = scast seL4_Fault_Timeout) = False"
   by (cases arch_fault ; simp add: seL4_Faults seL4_Arch_Faults)+
 
 lemma capTCBPtr_eq:
