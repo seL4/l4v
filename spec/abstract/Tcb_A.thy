@@ -144,6 +144,7 @@ definition
   bind_notification :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "bind_notification tcbptr ntfnptr \<equiv> do
+     touch_object ntfnptr;
      ntfn \<leftarrow> get_notification ntfnptr;
      ntfn' \<leftarrow> return $ ntfn_set_bound_tcb ntfn (Some tcbptr);
      set_notification ntfnptr ntfn';

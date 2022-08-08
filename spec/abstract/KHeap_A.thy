@@ -236,7 +236,6 @@ definition
   get_simple_ko :: "('a \<Rightarrow> kernel_object) \<Rightarrow> obj_ref \<Rightarrow> ('a,'z::state_ext) s_monad"
 where
   "get_simple_ko f ptr \<equiv> do
-     touch_object ptr;
      kobj \<leftarrow> get_object True ptr;
      assert (is_simple_type kobj);
      (case partial_inv f kobj of Some e \<Rightarrow> return e | _ \<Rightarrow> fail)

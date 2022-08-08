@@ -79,8 +79,7 @@ method get_simple_ko_method =
   (wpsimp simp: get_simple_ko_def partial_inv_def the_equality split: kernel_object.splits)
 
 lemma get_simple_ko_wp:
-  "\<lbrace>\<lambda>s. \<forall>ntfn. ko_at (f ntfn) ntfnptr s \<longrightarrow> P ntfn
-      (ms_touched_addresses_update ((\<union>) (obj_range ntfnptr (the (kheap s ntfnptr)))) s)\<rbrace>
+  "\<lbrace>\<lambda>s. \<forall>ntfn. ko_at (f ntfn) ntfnptr s \<longrightarrow> P ntfn s\<rbrace>
    get_simple_ko f ntfnptr \<lbrace>P\<rbrace>"
   by get_simple_ko_method
 
@@ -292,21 +291,7 @@ lemma set_object_ko_at:
   by (wpsimp wp: set_object_wp simp: obj_at_def)
 
 lemma get_simple_ko_sp:
-(* Old:
   "\<lbrace>P\<rbrace> get_simple_ko f p \<lbrace>\<lambda>ep. ko_at (f ep) p and P\<rbrace>"
-*)
-  "\<lbrace>P and (=) s_pre\<rbrace> get_simple_ko f p \<lbrace>\<lambda>ep s. ko_at (f ep) p s \<and>
-     obj_range p (the (kheap s p)) \<subseteq> touched_addresses (machine_state s) \<and>
-     P (if (obj_in_ta p s_pre) then s else \<comment> \<open>XXX: Hmm not quite, apparently. -robs\<close>
-        (ms_touched_addresses_update ((-) (obj_range p (the (kheap s p)))) s))\<rbrace>"
-  apply (wpsimp simp: get_simple_ko_def partial_inv_def the_equality split: kernel_object.splits)
-  apply(rule conjI)
-   apply(clarsimp simp:obj_in_ta_def obj_at_def comp_def)
-   apply(rule conjI)
-    apply clarsimp
-    apply(erule rsubst[where P=P])
-. (* DOWN TO HERE. Perhaps evidence for a need to move the `touch_object` out of `get_simple_ko`
-     to just before it is called by each of its callers, instead. -robs
   by get_simple_ko_method
 
 lemma get_simple_ko_inv[wp]: "\<lbrace>P\<rbrace> get_simple_ko f ep \<lbrace>\<lambda>rv. P\<rbrace>"
@@ -316,6 +301,7 @@ lemma get_simple_ko_actual_ko[wp]:
   "\<lbrace> obj_at (\<lambda>ko. bound (partial_inv f ko)) ep \<rbrace>
    get_simple_ko f ep
    \<lbrace> \<lambda>rv. obj_at (\<lambda>k. k = f rv) ep \<rbrace>"
+. (* DOWN TO HERE. -robs
    by (fastforce simp: get_simple_ko_def get_object_def bind_def partial_inv_def
                              valid_def gets_def get_def return_def in_fail
                              assert_def obj_at_def split_def the_equality

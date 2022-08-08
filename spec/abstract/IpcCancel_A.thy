@@ -51,6 +51,7 @@ definition
   cancel_all_ipc :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "cancel_all_ipc epptr \<equiv> do
+     touch_object epptr;
      ep \<leftarrow> get_endpoint epptr;
      case ep of IdleEP \<Rightarrow> return ()
                | _ \<Rightarrow> do
@@ -74,6 +75,7 @@ definition
   cancel_badged_sends :: "obj_ref \<Rightarrow> badge \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "cancel_badged_sends epptr badge \<equiv> do
+    touch_object epptr;
     ep \<leftarrow> get_endpoint epptr;
     case ep of
           IdleEP \<Rightarrow> return ()
@@ -115,6 +117,7 @@ where
      ntfnptr \<leftarrow> get_bound_notification tcb;
      case ntfnptr of
          Some ntfnptr' \<Rightarrow> do
+             touch_object ntfnptr';
              ntfn \<leftarrow> get_notification ntfnptr';
              do_unbind_notification ntfnptr' ntfn tcb
           od
@@ -125,6 +128,7 @@ definition
   unbind_maybe_notification :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "unbind_maybe_notification ntfnptr \<equiv> do
+     touch_object ntfnptr;
      ntfn \<leftarrow> get_notification ntfnptr;
      (case ntfn_bound_tcb ntfn of
        Some t \<Rightarrow> do_unbind_notification ntfnptr ntfn t
@@ -135,6 +139,7 @@ definition
   cancel_all_signals :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "cancel_all_signals ntfnptr \<equiv> do
+     touch_object ntfnptr;
      ntfn \<leftarrow> get_notification ntfnptr;
      case ntfn_obj ntfn of WaitingNtfn queue \<Rightarrow> do
                       _ \<leftarrow> set_notification ntfnptr $ ntfn_set_obj ntfn IdleNtfn;
@@ -162,6 +167,7 @@ definition
 where
   "blocked_cancel_ipc state tptr \<equiv> do
      epptr \<leftarrow> get_blocking_object state;
+     touch_object epptr;
      ep \<leftarrow> get_endpoint epptr;
      queue \<leftarrow> get_ep_queue ep;
      queue' \<leftarrow> return $ remove1 tptr queue;
@@ -350,6 +356,7 @@ definition
   cancel_signal :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "cancel_signal threadptr ntfnptr \<equiv> do
+     touch_object ntfnptr;
      ntfn \<leftarrow> get_notification ntfnptr;
      queue \<leftarrow> (case ntfn_obj ntfn of WaitingNtfn queue \<Rightarrow> return queue
                         | _ \<Rightarrow> fail);

@@ -302,6 +302,7 @@ definition
                 \<Rightarrow> obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "send_ipc block call badge can_grant can_grant_reply thread epptr \<equiv> do
+     touch_object epptr;
      ep \<leftarrow> get_endpoint epptr;
      case (ep, block) of
          (IdleEP, True) \<Rightarrow> do
@@ -360,6 +361,7 @@ definition
   complete_signal :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "complete_signal ntfnptr tcb \<equiv> do
+     touch_object ntfnptr;
      ntfn \<leftarrow> get_notification ntfnptr;
      case ntfn_obj ntfn of
        ActiveNtfn badge \<Rightarrow> do
@@ -381,9 +383,11 @@ where
      (epptr,rights) \<leftarrow> (case cap
                        of EndpointCap ref badge rights \<Rightarrow> return (ref,rights)
                         | _ \<Rightarrow> fail);
+     touch_object epptr;
      ep \<leftarrow> get_endpoint epptr;
      ntfnptr \<leftarrow> get_bound_notification thread;
-     ntfn \<leftarrow> case_option (return default_notification) get_notification ntfnptr;
+     ntfn \<leftarrow> case_option (return default_notification)
+       (\<lambda>p. do touch_object p; get_notification p od) ntfnptr;
      if (ntfnptr \<noteq> None \<and> isActive ntfn)
      then
        complete_signal (the ntfnptr) thread
@@ -464,6 +468,7 @@ definition
   send_signal :: "obj_ref \<Rightarrow> badge \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "send_signal ntfnptr badge \<equiv> do
+    touch_object ntfnptr;
     ntfn \<leftarrow> get_notification ntfnptr;
     case (ntfn_obj ntfn, ntfn_bound_tcb ntfn) of
           (IdleNtfn, Some tcb) \<Rightarrow> do
@@ -496,6 +501,7 @@ where
       case cap
         of NotificationCap ntfnptr badge rights \<Rightarrow> return ntfnptr
          | _ \<Rightarrow> fail;
+    touch_object ntfnptr;
     ntfn \<leftarrow> get_notification ntfnptr;
     case ntfn_obj ntfn
       of IdleNtfn \<Rightarrow>

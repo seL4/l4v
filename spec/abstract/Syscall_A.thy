@@ -293,6 +293,7 @@ definition
            | NotificationCap ref badge rights \<Rightarrow>
              (if AllowRecv \<in> rights
               then doE
+                liftE $ touch_object ref;
                 ntfn \<leftarrow> liftE $ get_notification ref;
                 boundTCB \<leftarrow> returnOk $ ntfn_bound_tcb ntfn;
                 if boundTCB = Some thread \<or> boundTCB = None

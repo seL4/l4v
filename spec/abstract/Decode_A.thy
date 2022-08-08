@@ -358,6 +358,7 @@ where
          NotificationCap ptr _ r \<Rightarrow> returnOk (ptr, r)
        | _ \<Rightarrow> throwError IllegalOperation;
      whenE (AllowRecv \<notin> rights) $ throwError IllegalOperation;
+     liftE $ touch_object ntfnptr;
      ntfn \<leftarrow> liftE  $ get_notification ntfnptr;
      case (ntfn_obj ntfn, ntfn_bound_tcb ntfn) of
          (IdleNtfn, None) \<Rightarrow> returnOk ()
