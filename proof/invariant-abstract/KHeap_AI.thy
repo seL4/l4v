@@ -79,19 +79,21 @@ method get_simple_ko_method =
   (wpsimp simp: get_simple_ko_def partial_inv_def the_equality split: kernel_object.splits)
 
 lemma get_simple_ko_wp:
-  "\<lbrace>\<lambda>s. \<forall>ntfn. ko_at (f ntfn) ntfnptr s \<longrightarrow> P ntfn s\<rbrace> get_simple_ko f ntfnptr \<lbrace>P\<rbrace>"
+  "\<lbrace>\<lambda>s. \<forall>ntfn. ko_at (f ntfn) ntfnptr s \<longrightarrow> P ntfn
+      (ms_touched_addresses_update ((\<union>) (obj_range ntfnptr (the (kheap s ntfnptr)))) s)\<rbrace>
+   get_simple_ko f ntfnptr \<lbrace>P\<rbrace>"
   by get_simple_ko_method
 
-lemma get_object_inv [wp]: "\<lbrace>P\<rbrace> get_object t \<lbrace>\<lambda>rv. P\<rbrace>"
+lemma get_object_inv [wp]: "\<lbrace>P\<rbrace> get_object ta_f t \<lbrace>\<lambda>rv. P\<rbrace>"
   by wpsimp
 
 
 lemma get_tcb_rev:
-  "kheap s p = Some (TCB t)\<Longrightarrow> get_tcb p s = Some t"
+  "f_kheap ta_f s p = Some (TCB t)\<Longrightarrow> get_tcb ta_f p s = Some t"
   by (clarsimp simp:get_tcb_def)
 
 lemma get_tcb_obj_atE[elim!]:
-  "\<lbrakk> get_tcb t s = Some tcb; get_tcb t s = Some tcb \<Longrightarrow> P (TCB tcb) \<rbrakk> \<Longrightarrow> obj_at P t s"
+  "\<lbrakk> get_tcb False t s = Some tcb; get_tcb False t s = Some tcb \<Longrightarrow> P (TCB tcb) \<rbrakk> \<Longrightarrow> obj_at P t s"
   by (clarsimp dest!: get_tcb_SomeD simp: obj_at_def)
 
 
@@ -165,7 +167,7 @@ lemma valid_obj_same_type:
 
 lemma set_object_valid_objs[wp]:
   "\<lbrace>valid_objs and valid_obj p k\<rbrace>
-  set_object p k
+  set_object ta_f p k
   \<lbrace>\<lambda>r. valid_objs\<rbrace>"
   apply (wpsimp wp: set_object_wp_strong simp: obj_at_def)
   apply (clarsimp simp: valid_objs_def dom_def)
@@ -173,14 +175,14 @@ lemma set_object_valid_objs[wp]:
   done
 
 lemma set_object_aligned[wp]:
-  "set_object p k \<lbrace>pspace_aligned\<rbrace>"
+  "set_object ta_f p k \<lbrace>pspace_aligned\<rbrace>"
   apply (wpsimp wp: set_object_wp_strong)
   apply (clarsimp elim!: pspace_aligned_obj_update)
   done
 
 
 lemma assert_get_tcb:
-  "\<lbrace> P \<rbrace> gets_the (get_tcb t) \<lbrace> \<lambda>r. P and tcb_at t \<rbrace>"
+  "\<lbrace> P \<rbrace> gets_the (get_tcb False t) \<lbrace> \<lambda>r. P and tcb_at t \<rbrace>"
   by (clarsimp simp: valid_def in_monad gets_the_def tcb_at_def)
 
 (* This rule is not always safe. However, we make it [wp] while we're only doing proofs that don't
@@ -253,16 +255,16 @@ lemmas valid_cap_cdt = cdt_update.valid_cap_update
 
 
 lemma set_object_at_obj3:
-  "\<lbrace>K (P obj)\<rbrace> set_object p obj \<lbrace>\<lambda>rv. obj_at P p\<rbrace>"
-  by (clarsimp simp: set_object_def obj_at_def valid_def in_monad)
+  "\<lbrace>K (P obj)\<rbrace> set_object ta_f p obj \<lbrace>\<lambda>rv. obj_at P p\<rbrace>"
+  by (wpsimp wp:set_object_wp simp: set_object_def obj_at_def valid_def in_monad)
 
 
 lemma set_object_valid_cap:
-  "set_object p ko \<lbrace>valid_cap c\<rbrace>"
+  "set_object ta_f p ko \<lbrace>valid_cap c\<rbrace>"
   by (wpsimp wp: set_object_wp_strong simp: obj_at_def valid_cap_same_type)
 
 lemma set_object_cte_at:
-  "set_object p ko \<lbrace>cte_at c\<rbrace>"
+  "set_object ta_f p ko \<lbrace>cte_at c\<rbrace>"
   by (wpsimp wp: set_object_wp_strong simp: obj_at_def cte_at_same_type)
 
 
@@ -271,8 +273,8 @@ lemma obj_at_ko_atD:
   by (clarsimp simp: obj_at_def)
 
 lemma set_object_ko:
-  "\<lbrace>ko_at obj ptr and K (x \<noteq> ptr)\<rbrace> set_object x ko \<lbrace>\<lambda>rv. ko_at obj ptr\<rbrace>"
-  by (clarsimp simp add: valid_def set_object_def get_object_def in_monad obj_at_def)
+  "\<lbrace>ko_at obj ptr and K (x \<noteq> ptr)\<rbrace> set_object ta_f x ko \<lbrace>\<lambda>rv. ko_at obj ptr\<rbrace>"
+  by (wpsimp wp:set_object_wp simp: valid_def set_object_def get_object_def in_monad obj_at_def)
 
 
 lemma tcb_aligned: "\<lbrakk> invs s; tcb_at t s \<rbrakk> \<Longrightarrow> is_aligned t tcb_bits"
@@ -286,11 +288,25 @@ lemma tcb_aligned: "\<lbrakk> invs s; tcb_at t s \<rbrakk> \<Longrightarrow> is_
 
 
 lemma set_object_ko_at:
-  "\<lbrace>\<top>\<rbrace> set_object p ko \<lbrace>\<lambda>_. ko_at ko p\<rbrace>"
+  "\<lbrace>\<top>\<rbrace> set_object ta_f p ko \<lbrace>\<lambda>_. ko_at ko p\<rbrace>"
   by (wpsimp wp: set_object_wp simp: obj_at_def)
 
 lemma get_simple_ko_sp:
+(* Old:
   "\<lbrace>P\<rbrace> get_simple_ko f p \<lbrace>\<lambda>ep. ko_at (f ep) p and P\<rbrace>"
+*)
+  "\<lbrace>P and (=) s_pre\<rbrace> get_simple_ko f p \<lbrace>\<lambda>ep s. ko_at (f ep) p s \<and>
+     obj_range p (the (kheap s p)) \<subseteq> touched_addresses (machine_state s) \<and>
+     P (if (obj_in_ta p s_pre) then s else \<comment> \<open>XXX: Hmm not quite, apparently. -robs\<close>
+        (ms_touched_addresses_update ((-) (obj_range p (the (kheap s p)))) s))\<rbrace>"
+  apply (wpsimp simp: get_simple_ko_def partial_inv_def the_equality split: kernel_object.splits)
+  apply(rule conjI)
+   apply(clarsimp simp:obj_in_ta_def obj_at_def comp_def)
+   apply(rule conjI)
+    apply clarsimp
+    apply(erule rsubst[where P=P])
+. (* DOWN TO HERE. Perhaps evidence for a need to move the `touch_object` out of `get_simple_ko`
+     to just before it is called by each of its callers, instead. -robs
   by get_simple_ko_method
 
 lemma get_simple_ko_inv[wp]: "\<lbrace>P\<rbrace> get_simple_ko f ep \<lbrace>\<lambda>rv. P\<rbrace>"

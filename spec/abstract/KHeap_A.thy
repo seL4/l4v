@@ -56,22 +56,15 @@ definition
 abbreviation f_kheap :: "bool \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref \<Rightarrow> kernel_object option" where
   "f_kheap apply s \<equiv> kheap s |>> ta_filter apply (touched_addresses (machine_state s))"
 
-lemma f_kheap_to_kheap'[simp]:
-  "f_kheap False = kheap"
-  apply(rule ext)+
-  by (clarsimp simp:ta_filter_def obind_def split:option.splits)
-
 lemma f_kheap_to_kheap[simp]:
-  "f_kheap False s = kheap s"
-  by (metis (no_types, lifting) f_kheap_to_kheap')
-
-lemma f_kheap_to_unfiltered_Some:
-  "f_kheap True s ptr = Some obj \<Longrightarrow> f_kheap False s ptr = Some obj"
-  by (clarsimp simp:ta_filter_def obind_def split:if_splits option.splits)
-
-lemma f_kheap_from_unfiltered_None:
-  "f_kheap False s ptr = None \<Longrightarrow> f_kheap True s ptr = None"
+  "obind (kheap s) (ta_filter False (touched_addresses (machine_state s))) = kheap s"
+  apply(rule ext)
   by (clarsimp simp:ta_filter_def obind_def split:option.splits)
+
+lemma f_kheap_to_kheap'[simp]:
+  "(case kheap s a of None \<Rightarrow> None
+    | Some kobj \<Rightarrow> ta_filter False (touched_addresses (machine_state s)) kobj a) = kheap s a"
+  by (clarsimp simp:ta_filter_def split:option.splits)
 
 definition
   get_object :: "bool \<Rightarrow> obj_ref \<Rightarrow> (kernel_object,'z::state_ext) s_monad"

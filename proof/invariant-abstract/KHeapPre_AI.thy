@@ -199,12 +199,11 @@ lemma set_object_wp:
   apply (clarsimp simp:fun_upd_def)
   done
 
-(* FIXME: Change False here to ta_f? -robs *)
 lemma get_object_wp:
-  "\<lbrace>\<lambda>s. \<forall>ko. ko_at ko p s \<longrightarrow> Q ko s\<rbrace> get_object False p \<lbrace>Q\<rbrace>"
+  "\<lbrace>\<lambda>s. \<forall>ko. ko_at ko p s \<longrightarrow> Q ko s\<rbrace> get_object ta_f p \<lbrace>Q\<rbrace>"
   apply (clarsimp simp: get_object_def)
   apply wp
-  apply (clarsimp simp: obj_at_def)
+  apply (clarsimp simp: obj_at_def ta_filter_def obind_def split:option.splits)
   done
 
 (* FIXME: move *)

@@ -372,27 +372,26 @@ lemma pool_for_asid_no_pte:
   "\<lbrakk> pool_for_asid asid s = Some p; ptes_of False s p = Some pte; valid_asid_table s; pspace_aligned s \<rbrakk>
    \<Longrightarrow> False"
   unfolding pool_for_asid_def
-  apply (clarsimp dest: pspace_alignedD dest!: valid_asid_tableD
-                simp: bit_simps obj_at_def ptes_of_Some in_omonad)
-. (* DOWN TO HERE. -robs
+  by (fastforce dest: pspace_alignedD dest!: valid_asid_tableD
+                simp: bit_simps obj_at_def ptes_of_Some[where ta_f=False,simplified] in_omonad)
 
 lemma vs_lookup_table_no_asid:
   "\<lbrakk> vs_lookup_table asid_pool_level asid vref s = Some (asid_pool_level, p);
-     ptes_of s p = Some pte; valid_asid_table s; pspace_aligned s \<rbrakk>
+     ptes_of False s p = Some pte; valid_asid_table s; pspace_aligned s \<rbrakk>
   \<Longrightarrow> False"
   unfolding vs_lookup_table_def
   by (fastforce dest: pool_for_asid_no_pte simp: in_omonad)
 
 lemma vs_lookup_table_no_asid_pt:
   "\<lbrakk> vs_lookup_table asid_pool_level asid vref s = Some (asid_pool_level, p);
-     pts_of s p = Some pte; valid_asid_table s; pspace_aligned s \<rbrakk>
+     pts_of False s p = Some pte; valid_asid_table s; pspace_aligned s \<rbrakk>
   \<Longrightarrow> False"
   unfolding vs_lookup_table_def
   by (fastforce dest: pool_for_asid_no_pt simp: in_omonad)
 
 lemma vs_lookup_slot_no_asid:
   "\<lbrakk> vs_lookup_slot asid_pool_level asid vref s = Some (asid_pool_level, p);
-     ptes_of s p = Some pte; valid_asid_table s; pspace_aligned s \<rbrakk>
+     ptes_of False s p = Some pte; valid_asid_table s; pspace_aligned s \<rbrakk>
   \<Longrightarrow> False"
   unfolding vs_lookup_slot_def vs_lookup_table_def
   by (fastforce dest: pool_for_asid_no_pte simp: in_omonad)
@@ -401,9 +400,9 @@ lemma vs_lookup_slot_no_asid:
    If performing a shallower lookup than the one requested results in p, then any deeper lookup
    in the updated state will return a higher level result along the original path. *)
 lemma vs_lookup_non_PageTablePTE:
-  "\<lbrakk> ptes_of s p \<noteq> None; ptes_of s' = ptes_of s (p \<mapsto> pte);
+  "\<lbrakk> ptes_of False s p \<noteq> None; ptes_of False s' = ptes_of False s (p \<mapsto> pte);
      \<not> is_PageTablePTE pte;
-     asid_pools_of s' = asid_pools_of s;
+     asid_pools_of False s' = asid_pools_of False s;
      asid_table s' = asid_table s;
      valid_asid_table s; pspace_aligned s \<rbrakk> \<Longrightarrow>
    vs_lookup_table level asid vref s' =
@@ -444,8 +443,8 @@ lemma vs_lookup_non_PageTablePTE:
   apply (subst pt_walk.simps)
   apply (subst (2) pt_walk.simps)
   apply (simp add: less_imp_le cong: if_cong)
-  apply (subgoal_tac "(ptes_of s(p \<mapsto> pte)) (pt_slot_offset (x + 1) b vref)
-                      = ptes_of s (pt_slot_offset (x + 1) b vref)")
+  apply (subgoal_tac "(ptes_of False s(p \<mapsto> pte)) (pt_slot_offset (x + 1) b vref)
+                      = ptes_of False s (pt_slot_offset (x + 1) b vref)")
    apply (simp add: obind_def split: option.splits)
   apply clarsimp
   apply (subgoal_tac "vs_lookup_slot (x+1) asid vref s = Some (x+1, p)")
@@ -457,7 +456,7 @@ lemma vs_lookup_non_PageTablePTE:
 lemma set_pt_typ_at[wp]:
   "set_pt p pt \<lbrace>\<lambda>s. P (typ_at T p' s)\<rbrace>"
   unfolding set_pt_def
-  by (wpsimp wp: set_object_wp simp: in_opt_map_eq obj_at_def)
+  by (wpsimp wp: set_object_wp[where ta_f=False, simplified] simp: in_opt_map_eq obj_at_def)
 
 crunches store_pte
   for kernel_vspace[wp]: "\<lambda>s. P (riscv_kernel_vspace (arch_state s))"
@@ -465,7 +464,7 @@ crunches store_pte
   (wp: hoare_drop_imps)
 
 lemma store_pte_non_PageTablePTE_vs_lookup:
-  "\<lbrace>\<lambda>s. (ptes_of s p \<noteq> None \<longrightarrow>
+  "\<lbrace>\<lambda>s. (ptes_of False s p \<noteq> None \<longrightarrow>
          P (if \<exists>level'. vs_lookup_slot level' asid vref s = Some (level', p) \<and> level < level'
             then vs_lookup_table (level_of_slot asid vref p s) asid vref s
             else vs_lookup_table level asid vref s)) \<and> pspace_aligned s \<and> valid_asid_table s
@@ -473,23 +472,25 @@ lemma store_pte_non_PageTablePTE_vs_lookup:
    store_pte p pte
    \<lbrace>\<lambda>_ s. P (vs_lookup_table level asid vref s)\<rbrace>"
   unfolding store_pte_def set_pt_def
-  apply (wpsimp wp: set_object_wp simp: in_opt_map_eq ptes_of_Some)
+  apply (wpsimp wp: set_object_wp simp: in_opt_map_eq ptes_of_Some[where ta_f=False,simplified])
+  apply (clarsimp simp:ta_filter_def)
   apply (erule rsubst[where P=P])
-  apply (subst (3) vs_lookup_non_PageTablePTE)
+  apply (subst (3) vs_lookup_non_PageTablePTE[simplified])
       apply (fastforce simp: in_omonad pte_of_def)
      apply (fastforce simp: pte_of_def obind_def opt_map_def split: option.splits dest!: pte_ptr_eq)
     apply (fastforce simp: opt_map_def)+
   done
 
 lemma store_pte_not_ao[wp]:
-  "\<lbrace>\<lambda>s. \<forall>pt. aobjs_of s (p && ~~mask pt_bits) = Some (PageTable pt) \<longrightarrow>
-             P (aobjs_of s (p && ~~mask pt_bits \<mapsto>
+  "\<lbrace>\<lambda>s. \<forall>pt. aobjs_of False s (p && ~~mask pt_bits) = Some (PageTable pt) \<longrightarrow>
+             P (aobjs_of False s (p && ~~mask pt_bits \<mapsto>
                               PageTable (pt (ucast (p && mask pt_bits >> pte_bits) := pte))))\<rbrace>
    store_pte p pte
-   \<lbrace>\<lambda>_ s. P (aobjs_of s)\<rbrace>"
+   \<lbrace>\<lambda>_ s. P (aobjs_of False s)\<rbrace>"
   unfolding store_pte_def set_pt_def
   apply (wpsimp wp: set_object_wp simp: in_opt_map_eq)
-  apply (fastforce simp: opt_map_def elim!: rsubst[where P=P])
+  apply (fastforce simp: opt_map_def ta_filter_def obind_def fun_upd_def elim!: rsubst[where P=P]
+    split:option.splits)
   done
 
 lemma valid_vspace_obj_PT_invalidate:
@@ -516,7 +517,7 @@ lemma store_pte_InvalidPTE_valid_vspace_objs[wp]:
   done
 
 lemma set_object_valid_kernel_mappings:
-  "set_object ptr ko \<lbrace>valid_kernel_mappings\<rbrace>"
+  "set_object ta_f ptr ko \<lbrace>valid_kernel_mappings\<rbrace>"
   unfolding set_object_def
   by (wpsimp simp: valid_kernel_mappings_def split: if_split_asm)
 
@@ -539,7 +540,7 @@ lemma valid_vs_lookup_lift:
 lemma valid_arch_caps_lift:
   assumes lookup: "\<And>P. \<lbrace>\<lambda>s. P (vs_lookup_pages s)\<rbrace> f \<lbrace>\<lambda>_ s. P (vs_lookup_pages s)\<rbrace>"
   assumes cap: "\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
-  assumes pts: "\<And>P. f \<lbrace>\<lambda>s. P (pts_of s)\<rbrace>"
+  assumes pts[simplified]: "\<And>P. f \<lbrace>\<lambda>s. P (pts_of False s)\<rbrace>"
   assumes archvspace: "\<And>P. f \<lbrace>\<lambda>s. P (riscv_kernel_vspace (arch_state s))\<rbrace>"
   assumes asidtable: "\<And>P. f \<lbrace>\<lambda>s. P (riscv_asid_table (arch_state s))\<rbrace>"
   shows "\<lbrace>valid_arch_caps\<rbrace> f \<lbrace>\<lambda>_. valid_arch_caps\<rbrace>"
@@ -562,9 +563,10 @@ begin
 lemma valid_global_vspace_mappings_lift:
   "f \<lbrace>valid_global_vspace_mappings\<rbrace>"
   unfolding valid_global_vspace_mappings_def
+  apply simp
   supply validNF_prop[wp_unsafe del]
   by (rule hoare_lift_Pf2[where f=arch_state, OF _ arch])
-     (wpsimp simp: Let_def wp: hoare_vcg_ball_lift translate_address_lift_weak aobj_at)
+     (wpsimp simp: Let_def wp: hoare_vcg_ball_lift translate_address_lift_weak[simplified] aobj_at)
 
 lemma valid_arch_caps_lift_weak:
   assumes cap: "(\<And>P. f \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>)"
@@ -593,19 +595,19 @@ context
 begin
 
 lemma aobjs_of_lift_aobj_at:
-  "f \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
+  "f \<lbrace>\<lambda>s. P (aobjs_of False s)\<rbrace>"
   apply (clarsimp simp: valid_def)
   apply (erule_tac P=P in rsubst)
   apply (rule ext, rename_tac s' p)
-  apply (case_tac "aobjs_of s p")
-   apply (simp add: aobjs_of_ako_at_None)
+  apply (case_tac "aobjs_of False s p")
+   apply (simp add: aobjs_of_ako_at_None[simplified])
    apply (drule use_valid)
      prefer 2
      apply assumption
     apply (rule aobj_at)
     apply (clarsimp simp: arch_obj_pred_def non_arch_obj_def)
    apply (simp flip: aobjs_of_ako_at_None)
-  apply (simp add: aobjs_of_ako_at_Some)
+  apply (simp add: aobjs_of_ako_at_Some[simplified])
   apply (drule use_valid)
     prefer 2
     apply assumption
@@ -630,7 +632,7 @@ lemma equal_kernel_mappings_lift:
   assumes [wp]: "\<And>P. f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>"
   shows "f \<lbrace>equal_kernel_mappings\<rbrace>"
 proof -
-  have [wp]: "\<And>P. f \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
+  have [wp]: "\<And>P. f \<lbrace>\<lambda>s. P (aobjs_of False s)\<rbrace>"
     by (rule vspace_obj_pred_aobjs[OF aobj_at])
   show ?thesis
     unfolding equal_kernel_mappings_def has_kernel_mappings_def
@@ -656,18 +658,18 @@ lemma valid_vso_at_lift:
       and y: "\<And>ao. \<lbrace>\<lambda>s. ko_at (ArchObj ao) p s\<rbrace> f \<lbrace>\<lambda>rv s. ko_at (ArchObj ao) p s\<rbrace>"
   shows      "\<lbrace>valid_vso_at level p\<rbrace> f \<lbrace>\<lambda>rv. valid_vso_at level p\<rbrace>"
   unfolding valid_vso_at_def
-  by (wpsimp wp: hoare_vcg_ex_lift y valid_vspace_obj_typ z simp: aobjs_of_ako_at_Some)
+  by (wpsimp wp: hoare_vcg_ex_lift y valid_vspace_obj_typ z simp: aobjs_of_ako_at_Some[simplified])
 
 lemma valid_vso_at_lift_aobj_at:
   assumes [wp]: "\<And>P' pd. vspace_obj_pred P' \<Longrightarrow> f \<lbrace>obj_at P' pd\<rbrace>"
   shows "f \<lbrace>valid_vso_at level p\<rbrace>"
   unfolding valid_vso_at_def
-  by (wpsimp wp: hoare_vcg_ex_lift valid_vspace_obj_typ simp: aobjs_of_ako_at_Some)
+  by (wpsimp wp: hoare_vcg_ex_lift valid_vspace_obj_typ simp: aobjs_of_ako_at_Some[simplified])
 
 lemma valid_global_vspace_mappings_arch_update[simp]:
   "\<lbrakk> riscv_global_pt (arch_state (f s)) = riscv_global_pt (arch_state s);
      riscv_kernel_vspace (arch_state (f s)) = riscv_kernel_vspace (arch_state s);
-     ptes_of (f s) = ptes_of s \<rbrakk>
+     ptes_of False (f s) = ptes_of False s \<rbrakk>
      \<Longrightarrow> valid_global_vspace_mappings (f s) = valid_global_vspace_mappings s"
   unfolding valid_global_vspace_mappings_def
   by simp
@@ -675,13 +677,13 @@ lemma valid_global_vspace_mappings_arch_update[simp]:
 lemma valid_table_caps_ptD:
   "\<lbrakk> caps_of_state s p = Some (ArchObjectCap (PageTableCap p' None));
      valid_table_caps s \<rbrakk> \<Longrightarrow>
-   \<exists>pt. pts_of s p' = Some pt \<and> valid_vspace_obj level (PageTable pt) s"
+   \<exists>pt. pts_of False s p' = Some pt \<and> valid_vspace_obj level (PageTable pt) s"
   by (fastforce simp: valid_table_caps_def simp del: split_paired_Ex)
 
 lemma store_pde_pred_tcb_at:
   "\<lbrace>pred_tcb_at proj P t\<rbrace> store_pte ptr val \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
   apply (wpsimp simp: store_pte_def set_pt_def wp: set_object_wp)
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def in_opt_map_eq)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def in_opt_map_eq ta_filter_def)
   done
 
 lemma in_user_frame_obj_upd:
