@@ -443,6 +443,7 @@ where
   "update_waiting_ntfn ntfnptr queue bound_tcb badge \<equiv> do
      assert (queue \<noteq> []);
      (dest,rest) \<leftarrow> return $ (hd queue, tl queue);
+     touch_object ntfnptr;
      set_notification ntfnptr $ \<lparr>
          ntfn_obj = (case rest of [] \<Rightarrow> IdleNtfn | _ \<Rightarrow> WaitingNtfn rest),
          ntfn_bound_tcb = bound_tcb \<rparr>;

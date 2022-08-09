@@ -106,6 +106,7 @@ abbreviation
 where
   "do_unbind_notification ntfnptr ntfn tcbptr \<equiv> do
       ntfn' \<leftarrow> return $ ntfn_set_bound_tcb ntfn None;
+      touch_object ntfnptr;
       set_notification ntfnptr ntfn';
       set_bound_notification tcbptr None
     od"

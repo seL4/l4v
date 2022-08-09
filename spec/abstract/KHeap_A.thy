@@ -246,7 +246,6 @@ definition
   set_simple_ko :: "('a \<Rightarrow> kernel_object) \<Rightarrow> obj_ref \<Rightarrow> 'a \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "set_simple_ko f ptr ep \<equiv> do
-     touch_object ptr;
      obj \<leftarrow> get_object True ptr;
      assert (is_simple_type obj);
      assert (partial_inv f obj \<noteq> None);

@@ -151,8 +151,8 @@ lemma set_object_neg_ko:
   apply (simp add: pred_neg_def obj_at_def)
   done
 
-lemma get_tcb_SomeD: "get_tcb False t s = Some v \<Longrightarrow> kheap s t = Some (TCB v)"
-  apply (case_tac "kheap s t", simp_all add: get_tcb_def)
+lemma get_tcb_SomeD: "get_tcb ta_f t s = Some v \<Longrightarrow> f_kheap ta_f s t = Some (TCB v)"
+  apply (case_tac "f_kheap ta_f s t", simp_all add: get_tcb_def)
   apply (case_tac a, simp_all)
   done
 

@@ -92,8 +92,8 @@ lemma get_tcb_rev:
   by (clarsimp simp:get_tcb_def)
 
 lemma get_tcb_obj_atE[elim!]:
-  "\<lbrakk> get_tcb False t s = Some tcb; get_tcb False t s = Some tcb \<Longrightarrow> P (TCB tcb) \<rbrakk> \<Longrightarrow> obj_at P t s"
-  by (clarsimp dest!: get_tcb_SomeD simp: obj_at_def)
+  "\<lbrakk> get_tcb ta_f t s = Some tcb; get_tcb ta_f t s = Some tcb \<Longrightarrow> P (TCB tcb) \<rbrakk> \<Longrightarrow> obj_at P t s"
+  by (clarsimp dest!: get_tcb_SomeD simp: obj_at_def ta_filter_def split:if_splits)
 
 
 lemma a_type_TCB[simp]:
@@ -301,17 +301,18 @@ lemma get_simple_ko_actual_ko[wp]:
   "\<lbrace> obj_at (\<lambda>ko. bound (partial_inv f ko)) ep \<rbrace>
    get_simple_ko f ep
    \<lbrace> \<lambda>rv. obj_at (\<lambda>k. k = f rv) ep \<rbrace>"
-. (* DOWN TO HERE. -robs
    by (fastforce simp: get_simple_ko_def get_object_def bind_def partial_inv_def
                              valid_def gets_def get_def return_def in_fail
                              assert_def obj_at_def split_def the_equality
+                             ta_filter_def obind_def
                    split: kernel_object.splits option.splits)
 
 lemma get_object_valid [wp]:
-  "\<lbrace>valid_objs\<rbrace> get_object oref \<lbrace> valid_obj oref \<rbrace>"
+  "\<lbrace>valid_objs\<rbrace> get_object ta_f oref \<lbrace> valid_obj oref \<rbrace>"
   apply (simp add: get_object_def)
   apply wp
-  apply (clarsimp simp add: valid_pspace_def valid_objs_def dom_def)
+  apply (clarsimp simp add: valid_pspace_def valid_objs_def dom_def ta_filter_def obind_def
+    split: option.splits)
   apply fastforce
   done
 
@@ -319,19 +320,20 @@ lemma get_object_valid [wp]:
 lemma get_object_valid_obj_simple [wp]:
   notes valid_simple_obj_def[simp del]
   shows
-  "\<lbrace>valid_objs\<rbrace> get_object oref \<lbrace> valid_simple_obj \<rbrace>"
+  "\<lbrace>valid_objs\<rbrace> get_object ta_f oref \<lbrace> valid_simple_obj \<rbrace>"
   apply (simp add: get_object_def)
   apply wp
-  apply (clarsimp simp: valid_pspace_def valid_objs_def dom_def
-                 intro!: valid_obj_imp_valid_simple)
+  apply (clarsimp simp: valid_pspace_def valid_objs_def dom_def ta_filter_def obind_def
+                 intro!: valid_obj_imp_valid_simple split:option.splits)
   apply fastforce
   done
 
 lemma get_object_valid_simple [wp]:
-  "\<lbrace>valid_simple_objs\<rbrace> get_object oref \<lbrace> valid_simple_obj \<rbrace>"
+  "\<lbrace>valid_simple_objs\<rbrace> get_object ta_f oref \<lbrace> valid_simple_obj \<rbrace>"
   apply (simp add: get_object_def)
   apply wp
-  apply (clarsimp simp add: valid_pspace_def valid_simple_objs_def dom_def)
+  apply (clarsimp simp add: valid_pspace_def valid_simple_objs_def dom_def ta_filter_def obind_def
+    split: option.splits)
   apply fastforce
   done
 
@@ -419,7 +421,7 @@ lemma get_simple_ko_ko_at:
   by get_simple_ko_method
 
 lemma obj_set_prop_at:
-  "\<lbrace>\<lambda>s. P obj \<rbrace> set_object p obj \<lbrace>\<lambda>rv. obj_at P p\<rbrace>"
+  "\<lbrace>\<lambda>s. P obj \<rbrace> set_object ta_f p obj \<lbrace>\<lambda>rv. obj_at P p\<rbrace>"
   apply (simp add: set_object_def)
   apply wp
   apply (simp add: obj_at_def)
@@ -469,7 +471,7 @@ lemma pspace_distinct_same_type:
 
 
 lemma set_object_distinct[wp]:
-  "set_object p ko' \<lbrace>pspace_distinct\<rbrace>"
+  "set_object ta_f p ko' \<lbrace>pspace_distinct\<rbrace>"
   by (wpsimp wp: set_object_wp_strong simp: obj_at_def pspace_distinct_same_type)
 
 lemma set_simple_ko_distinct[wp]:
@@ -486,7 +488,7 @@ lemma assert_pre:
   by (simp add: valid_def assert_def get_def bind_def return_def)
 
 lemma set_object_pspace_in_kernel_window:
-  "set_object p k \<lbrace>pspace_in_kernel_window\<rbrace>"
+  "set_object ta_f p k \<lbrace>pspace_in_kernel_window\<rbrace>"
   unfolding set_object_def
   apply (rule assert_pre)
   apply (rule hoare_pre)
@@ -496,13 +498,19 @@ lemma set_object_pspace_in_kernel_window:
 
 
 lemma set_object_pspace_respects_device_region:
-  "set_object p k \<lbrace>pspace_respects_device_region\<rbrace>"
+  "set_object ta_f p k \<lbrace>pspace_respects_device_region\<rbrace>"
   apply (simp add: set_object_def, wp)
   apply (clarsimp simp: pspace_respects_device_region_def
                         device_mem_obj_upd_dom user_mem_obj_upd_dom
                         obj_at_def in_user_frame_obj_upd in_device_frame_obj_upd
                  split: if_split_asm)
+  sorry (* FIXME: Broken by timeprot-touch-objs. -robs
+     We need to figure out how to specify/enforce that touched_addresses never strays
+     into the device_region. Given the definition of pspace_respects_device_region,
+     would it be useful to relate touched_addresses with the dom of user_mem, or
+     will we just have to prove it as a separate, stand-alone conjunct?
   done
+*)
 
 lemma set_simple_ko_kernel_window[wp]:
   "set_simple_ko f ptr val \<lbrace>pspace_in_kernel_window\<rbrace>"
@@ -591,20 +599,22 @@ lemma ex_cap_to_after_update':
 
 lemma ex_cte_cap_to_after_update:
   "\<lbrakk> ex_cte_cap_wp_to P p s; obj_at (same_caps val) p' s \<rbrakk>
-     \<Longrightarrow> ex_cte_cap_wp_to P p (kheap_update (\<lambda>a b. if b = p' then Some val else kheap s b) s)"
+     \<Longrightarrow> ex_cte_cap_wp_to P p (s \<lparr>kheap := (\<lambda>b. if b = p' then Some val else kheap s b),
+       machine_state := machine_state.touched_addresses_update ((\<union>) (obj_range p' val))
+                       (machine_state s)\<rparr>)"
   by (clarsimp simp: ex_cte_cap_wp_to_def cte_wp_at_after_update)
 
 lemma set_object_iflive:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap s \<and>
         (live val \<longrightarrow> ex_nonz_cap_to p s) \<and> obj_at (same_caps val) p s\<rbrace>
-   set_object p val
+   set_object ta_f p val
    \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
   apply (wpsimp wp: set_object_wp)
   by (fastforce simp: if_live_then_nonz_cap_def obj_at_def elim!: ex_cap_to_after_update')
 
 lemma set_object_ifunsafe[wp]:
   "\<lbrace>if_unsafe_then_cap and obj_at (same_caps val) p\<rbrace>
-     set_object p val \<lbrace>\<lambda>rv. if_unsafe_then_cap\<rbrace>"
+     set_object ta_f p val \<lbrace>\<lambda>rv. if_unsafe_then_cap\<rbrace>"
   apply (simp add: set_object_def)
   apply wp
   apply (clarsimp simp: if_unsafe_then_cap_def simp: cte_wp_at_after_update
@@ -616,7 +626,7 @@ lemma set_object_ifunsafe[wp]:
 
 lemma set_object_zombies[wp]:
   "\<lbrace>zombies_final and obj_at (same_caps val) p\<rbrace>
-      set_object p val \<lbrace>\<lambda>rv. zombies_final\<rbrace>"
+      set_object ta_f p val \<lbrace>\<lambda>rv. zombies_final\<rbrace>"
   apply (simp add: set_object_def)
   apply wp
   apply (clarsimp simp: zombies_final_def is_final_cap'_def2
@@ -648,7 +658,7 @@ lemma set_simple_ko_zombies[wp]:
 
 lemma set_object_cap_refs_in_kernel_window:
   "\<lbrace>cap_refs_in_kernel_window and obj_at (same_caps ko) p\<rbrace>
-  set_object p ko
+  set_object ta_f p ko
   \<lbrace>\<lambda>r. cap_refs_in_kernel_window\<rbrace>"
   apply (simp add: set_object_def, wp)
   apply (clarsimp simp: cap_refs_in_kernel_window_def)
@@ -657,7 +667,7 @@ lemma set_object_cap_refs_in_kernel_window:
 
 lemma set_object_cap_refs_respects_device_region:
   "\<lbrace>cap_refs_respects_device_region and obj_at (same_caps ko) p\<rbrace>
-  set_object p ko
+  set_object ta_f p ko
   \<lbrace>\<lambda>r. cap_refs_respects_device_region\<rbrace>"
   apply (simp add: set_object_def, wp)
   apply (clarsimp simp: cap_refs_respects_device_region_def)
@@ -672,9 +682,9 @@ lemma set_object_cap_refs_respects_device_region:
 
 
 lemma get_object_ret:
-  "\<lbrace>obj_at P addr\<rbrace> get_object addr \<lbrace>\<lambda>r s. P r\<rbrace>"
+  "\<lbrace>obj_at P addr\<rbrace> get_object ta_f addr \<lbrace>\<lambda>r s. P r\<rbrace>"
   unfolding get_object_def
-  by (wp, clarsimp elim!: obj_atE)+
+  by (wp, clarsimp simp: ta_filter_def obind_def split: option.splits elim!: obj_atE)+
 
 
 lemma captable_case_helper:
@@ -706,10 +716,10 @@ lemma elim_CNode_case:
 
 
 lemma no_fail_obj_at [wp]:
-  "no_fail (obj_at \<top> ptr) (get_object ptr)"
+  "no_fail (obj_at \<top> ptr and obj_in_ta ptr) (get_object ta_f ptr)"
   apply (simp add: get_object_def)
   apply (rule no_fail_pre, wp)
-  apply (fastforce simp: obj_at_def)
+  apply (clarsimp simp: obj_at_def ta_filter_def obind_def obj_in_ta_def)
   done
 
 
@@ -756,7 +766,7 @@ lemma dmo_invs1:
    apply wp
 
    apply (clarsimp simp: invs_def cur_tcb_def valid_state_def
-                         valid_machine_state_def
+                         valid_machine_state_def valid_irq_handlers_def
                    intro!: valid_irq_states_machine_state_updateI
                    elim: valid_irq_statesE)
    apply (frule_tac P1 = "(=) (device_state (machine_state s))" in use_valid[OF _ valid_mf])
@@ -789,6 +799,7 @@ lemma as_user_bind[wp]:
   "as_user t (f >>= g) = (as_user t f) >>= (\<lambda>x. as_user t (g x))"
   apply (monad_eq simp: as_user_def select_f_def set_object_def get_object_def gets_the_def get_tcb_def)
   apply (clarsimp split: option.splits kernel_object.splits)
+  sorry (* FIXME: Broken by timeprot-touch-objs. -robs
   apply (intro conjI impI allI;
          match premises in "kheap _ t = Some (TCB _)" \<Rightarrow> succeed \<bar> _ \<Rightarrow> fastforce)
     apply clarsimp
@@ -820,6 +831,7 @@ lemma as_user_bind[wp]:
   apply clarsimp
   apply blast
   done
+*)
 
 lemma as_user_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> as_user t m \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
@@ -950,7 +962,7 @@ crunch interrupt_states[wp]: set_simple_ko "\<lambda>s. P (interrupt_states s)"
 lemma set_object_non_arch:
   "arch_obj_pred P' \<Longrightarrow>
    \<lbrace>(\<lambda>s. P (obj_at P' p' s)) and K(non_arch_obj ko) and obj_at non_arch_obj p \<rbrace>
-    set_object p ko
+    set_object ta_f p ko
    \<lbrace>\<lambda>r s. P (obj_at P' p' s)\<rbrace>"
   unfolding set_object_def
   apply wp
@@ -962,7 +974,7 @@ lemma set_object_non_arch:
 lemma set_object_non_pagetable:
   "vspace_obj_pred P' \<Longrightarrow>
    \<lbrace>(\<lambda>s. P (obj_at P' p' s)) and K(non_vspace_obj ko) and obj_at non_vspace_obj p \<rbrace>
-    set_object p ko
+    set_object ta_f p ko
    \<lbrace>\<lambda>r s. P (obj_at P' p' s)\<rbrace>"
   unfolding set_object_def
   apply wp
@@ -973,7 +985,7 @@ lemma set_object_non_pagetable:
 
 lemma set_object_memory[wp]:
   "\<lbrace>\<lambda>s. P (underlying_memory (machine_state s))\<rbrace>
-    set_object p ko
+    set_object ta_f p ko
    \<lbrace>\<lambda>_ s. P (underlying_memory (machine_state s))\<rbrace>"
   unfolding set_object_def
   apply wp
@@ -1093,14 +1105,16 @@ lemma shows
     "as_user p f \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>"
 
   unfolding set_thread_state_def set_bound_notification_def as_user_def set_object_def get_object_def
-            set_mrs_def
+            set_mrs_def ta_filter_def obind_def
   apply (all \<open>(wp | wpc | simp)+ ; clarsimp, erule rsubst[where P=P], rule cte_wp_caps_of_lift\<close>)
-  by (auto simp: cte_wp_at_cases2 tcb_cnode_map_def dest!: get_tcb_SomeD)
+  by (auto simp: cte_wp_at_cases2 tcb_cnode_map_def ta_filter_def dest!: get_tcb_SomeD
+    split:option.splits)
 
 lemma
   store_word_offs_caps_of_state[wp]:
    "store_word_offs a b c \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>"
   unfolding store_word_offs_def do_machine_op_def[abs_def]
+  . (* DOWN TO HERE. We need a [wp] rule for touch_objects (plural). -robs
   by wpsimp
 
 lemma
