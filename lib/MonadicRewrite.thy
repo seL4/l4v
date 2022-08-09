@@ -225,7 +225,7 @@ lemma monadic_rewrite_modify_noop:
 text \<open>Symbolic execution\<close>
 
 lemma monadic_rewrite_symb_exec_pre:
-  assumes inv: "\<And>s. g \<lbrace> (=) s\<rbrace>"
+  assumes inv: "\<And>P. g \<lbrace>P\<rbrace>"
        and ef: "empty_fail g"
        and rv: "\<lbrace>P\<rbrace> g \<lbrace>\<lambda>y s. y \<in> S\<rbrace>"
        and h': "\<And>rv. rv \<in> S \<longrightarrow> h rv = h'"
@@ -261,7 +261,7 @@ lemmas monadic_rewrite_symb_exec2
                                   simplified, THEN monadic_rewrite_trans]
 
 lemma monadic_rewrite_symb_exec_r:
-  "\<lbrakk> \<And>s. m \<lbrace>(=) s\<rbrace>; no_fail P' m;
+  "\<lbrakk> \<And>P. m \<lbrace>P\<rbrace>; no_fail P' m;
      \<And>rv. monadic_rewrite F False (Q rv) x (y rv);
      \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace> \<rbrakk>
    \<Longrightarrow> monadic_rewrite F False (P and P') x (m >>= (\<lambda>rv. y rv))"
@@ -276,7 +276,7 @@ lemma monadic_rewrite_symb_exec_r:
   done
 
 lemma monadic_rewrite_symb_exec_r':
-  "\<lbrakk> \<And>s. m \<lbrace>(=) s\<rbrace>; no_fail P m;
+  "\<lbrakk> \<And>P. m \<lbrace>P\<rbrace>; no_fail P m;
      \<And>rv. monadic_rewrite F False (Q rv) x (y rv);
      \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace> \<rbrakk>
    \<Longrightarrow> monadic_rewrite F False P x (m >>= (\<lambda>rv. y rv))"
@@ -286,7 +286,7 @@ lemma monadic_rewrite_symb_exec_r':
   done
 
 lemma monadic_rewrite_symb_exec_l'':
-  "\<lbrakk> \<And>s. m \<lbrace>(=) s\<rbrace>; empty_fail m;
+  "\<lbrakk> \<And>P. m \<lbrace>P\<rbrace>; empty_fail m;
      \<not> F \<longrightarrow> no_fail P' m;
      \<And>rv. monadic_rewrite F False (Q rv) (x rv) y;
      \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace> \<rbrakk>
@@ -338,7 +338,7 @@ lemmas monadic_rewrite_symb_exec_l
     monadic_rewrite_symb_exec_l''[where F=False, simplified simp_thms]
 
 lemma monadic_rewrite_symb_exec_l_known:
-  "\<lbrakk> \<And>s. m \<lbrace>(=) s\<rbrace>; empty_fail m;
+  "\<lbrakk> \<And>P. m \<lbrace>P\<rbrace>; empty_fail m;
      monadic_rewrite True False Q (x rv) y;
      \<lbrace>P\<rbrace> m \<lbrace>\<lambda>rv' s. rv' = rv \<and> Q s\<rbrace> \<rbrakk>
    \<Longrightarrow> monadic_rewrite True False P (m >>= x) y"
@@ -435,7 +435,7 @@ lemma monadic_rewrite_alternatives:
   by (auto simp: monadic_rewrite_def alternative_def)
 
 lemma monadic_rewrite_rdonly_bind:
-  "\<lbrakk> \<And>s. f \<lbrace>(=) s\<rbrace> \<rbrakk>
+  "\<lbrakk> \<And>P. f \<lbrace>P\<rbrace> \<rbrakk>
    \<Longrightarrow> monadic_rewrite F False \<top> (alternative (f >>= (\<lambda>x. g x)) h)
                                 (f >>= (\<lambda>x. alternative (g x) h))"
   apply (clarsimp simp: monadic_rewrite_def bind_def
@@ -444,6 +444,7 @@ lemma monadic_rewrite_rdonly_bind:
    apply (simp add: image_image split_def cong: image_cong)
    apply fastforce
   apply clarsimp
+  apply (drule hoare_eq_P)
   apply (frule use_valid, (assumption | rule refl | simp)+)
   done
 
