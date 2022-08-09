@@ -190,9 +190,7 @@ lemma hoare_to_pure_kheap_upd:
   by (auto simp add: obj_at_def a_type_def split: kernel_object.splits if_splits)
 
 lemma set_object_wp:
-  "\<lbrace>\<lambda>s. Q (s\<lparr> kheap := kheap s (p \<mapsto> v),
-      machine_state :=
-      machine_state.touched_addresses_update ((\<union>) (obj_range p v)) (machine_state s)\<rparr>) \<rbrace>
+  "\<lbrace>\<lambda>s. Q (s\<lparr> kheap := kheap s (p \<mapsto> v), machine_state := ta_obj_upd p v (machine_state s)\<rparr>) \<rbrace>
      set_object ta_f p v \<lbrace>\<lambda>_. Q\<rbrace>"
   apply (simp add: set_object_def get_object_def)
   apply wp

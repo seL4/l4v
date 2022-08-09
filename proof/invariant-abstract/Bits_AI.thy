@@ -15,8 +15,7 @@ lemmas crunch_simps = split_def whenE_def unlessE_def Let_def if_fun_split
 
 lemma in_set_object:
   "(rv, s') \<in> fst (set_object ta_f ptr obj s) \<Longrightarrow> s' = s \<lparr> kheap := kheap s (ptr \<mapsto> obj),
-     machine_state :=
-     machine_state.touched_addresses_update ((\<union>) (obj_range ptr obj)) (machine_state s) \<rparr>"
+     machine_state := ta_obj_upd ptr obj (machine_state s) \<rparr>"
   by (clarsimp simp: set_object_def get_object_def in_monad
     touch_object_def touch_objects_def simpler_do_machine_op_addTouchedAddresses_def)
 

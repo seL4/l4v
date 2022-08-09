@@ -303,13 +303,11 @@ lemma set_pt_pts_of:
   apply (rule ext)
   by (auto simp:ta_filter_def obj_range_def split:option.splits)
 
-(* Note: Turns out using this for store_pte_ptes_of results in different
-   intermediate proof state but ultimately makes no difference.
-   FIXME: Come back and delete if this doesn't turn out useful. -robs *)
+(* Note: Proved this to use in store_pte_ptes_of but, although it resulted in different
+   intermediate proof state, it ultimately made no difference for that proof. -robs *)
 lemma set_pt_wp:
   "\<lbrace>\<lambda>s. Q (s\<lparr> kheap := kheap s (p \<mapsto> (ArchObj (PageTable pt))),
-      machine_state := machine_state.touched_addresses_update
-        ((\<union>) (obj_range p (ArchObj (PageTable pt)))) (machine_state s)\<rparr>) \<rbrace>
+      machine_state := ta_obj_upd p (ArchObj (PageTable pt)) (machine_state s)\<rparr>) \<rbrace>
      set_pt p pt \<lbrace>\<lambda>_. Q\<rbrace>"
   unfolding set_pt_def
   by (wpsimp wp: set_object_wp)
@@ -329,7 +327,6 @@ lemma pte_ptr_eq:
   apply (simp add: word_size neg_mask_test_bit nth_shiftr not_less)
   apply (case_tac "pt_bits \<le> n", simp)
   by (fastforce simp: not_le bit_simps)
-
 
 (* Note: We don't seem to be able to generalise this to ta_f without making it much harder
    to prove. I think the strategy from here should be to repair lemmas like these for

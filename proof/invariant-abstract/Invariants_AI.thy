@@ -1129,7 +1129,6 @@ lemma is_cap_table:
 
 lemmas is_obj_defs = is_ep is_ntfn is_tcb is_cap_table
 
-(* TODO: Move these up to where obj_at is defined? -robs *)
 abbreviation
   in_ta :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> kernel_object \<Rightarrow> bool"
 where
@@ -1158,6 +1157,14 @@ lemma obj_at_get_object_True:
                  obind_def ta_filter_def split:if_splits prod.splits)
   unfolding obj_in_ta_def
   by force
+
+abbreviation ta_obj_upd :: "machine_word \<Rightarrow> kernel_object \<Rightarrow> machine_state \<Rightarrow> machine_state"
+  where
+  "ta_obj_upd p ko ms \<equiv> machine_state.touched_addresses_update ((\<union>) (obj_range p ko)) ms"
+
+abbreviation ms_ta_obj_upd :: "machine_word \<Rightarrow> kernel_object \<Rightarrow> 'a state \<Rightarrow> 'a state"
+  where
+  "ms_ta_obj_upd p ko s \<equiv> s \<lparr> machine_state := ta_obj_upd p ko (machine_state s) \<rparr>"
 
 lemma ko_at_tcb_at:
   "ko_at (TCB t) p s \<Longrightarrow> tcb_at p s"
