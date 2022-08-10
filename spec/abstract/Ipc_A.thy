@@ -246,6 +246,7 @@ definition
   do_reply_transfer :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> cslot_ptr \<Rightarrow> bool \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
  "do_reply_transfer sender receiver slot grant \<equiv> do
+    touch_object receiver;
     state \<leftarrow> get_thread_state receiver;
     assert (state = BlockedOnReply);
     fault \<leftarrow> thread_get tcb_fault receiver;
@@ -326,6 +327,7 @@ where
        | (RecvEP (dest # queue), _) \<Rightarrow> do
                 set_endpoint epptr $ (case queue of [] \<Rightarrow> IdleEP
                                                      | _ \<Rightarrow> RecvEP queue);
+                touch_object dest;
                 recv_state \<leftarrow> get_thread_state dest;
                 reply_can_grant \<leftarrow> case recv_state
                   of (BlockedOnReceive x data) \<Rightarrow> do
@@ -385,6 +387,7 @@ where
                         | _ \<Rightarrow> fail);
      touch_object epptr;
      ep \<leftarrow> get_endpoint epptr;
+     touch_object thread;
      ntfnptr \<leftarrow> get_bound_notification thread;
      ntfn \<leftarrow> case_option (return default_notification)
        (\<lambda>p. do touch_object p; get_notification p od) ntfnptr;
@@ -413,6 +416,7 @@ where
               sender \<leftarrow> return $ hd q;
               set_endpoint epptr $
                 (case queue of [] \<Rightarrow> IdleEP | _ \<Rightarrow> SendEP queue);
+              touch_object sender;
               sender_state \<leftarrow> get_thread_state sender;
               data \<leftarrow> (case sender_state
                        of BlockedOnSend ref data \<Rightarrow> return data
@@ -473,6 +477,7 @@ where
     ntfn \<leftarrow> get_notification ntfnptr;
     case (ntfn_obj ntfn, ntfn_bound_tcb ntfn) of
           (IdleNtfn, Some tcb) \<Rightarrow> do
+                  touch_object tcb;
                   st \<leftarrow> get_thread_state tcb;
                   if (receive_blocked st)
                   then do

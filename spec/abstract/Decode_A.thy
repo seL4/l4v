@@ -350,6 +350,7 @@ where
   "decode_bind_notification cap extra_caps \<equiv> case cap of
     ThreadCap tcb \<Rightarrow> doE
      whenE (length extra_caps = 0) $ throwError TruncatedMessage;
+     liftE $ touch_object tcb;
      nTFN \<leftarrow> liftE $ get_bound_notification tcb;
      case nTFN of
          Some _ \<Rightarrow> throwError IllegalOperation
@@ -374,6 +375,7 @@ definition
 where
   "decode_unbind_notification cap \<equiv> case cap of
      ThreadCap tcb \<Rightarrow> doE
+       liftE $ touch_object tcb;
        nTFN \<leftarrow> liftE $ get_bound_notification tcb;
        case nTFN of
            None \<Rightarrow> throwError IllegalOperation

@@ -44,6 +44,7 @@ text \<open>Reactivate a thread if it is not already running.\<close>
 definition
   restart :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
  "restart thread \<equiv> do
+    touch_object thread;
     state \<leftarrow> get_thread_state thread;
     when (\<not> runnable state \<and> \<not> idle state) $ do
       cancel_ipc thread;
@@ -62,6 +63,7 @@ definition
   activate_thread :: "(unit,'z::state_ext) s_monad" where
   "activate_thread \<equiv> do
      thread \<leftarrow> gets cur_thread;
+     touch_object thread;
      state \<leftarrow> get_thread_state thread;
      (case state
        of Running \<Rightarrow> return ()
@@ -271,6 +273,7 @@ definition
      cur \<leftarrow> gets cur_thread;
      tcb_sched_action tcb_sched_dequeue tptr;
      thread_set_domain tptr new_dom;
+     touch_object tptr;
      ts \<leftarrow> get_thread_state tptr;
      when (runnable ts) (tcb_sched_action tcb_sched_enqueue tptr);
      when (tptr = cur) reschedule_required

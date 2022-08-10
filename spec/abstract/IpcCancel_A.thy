@@ -83,6 +83,7 @@ where
         | SendEP queue \<Rightarrow>  do
             set_endpoint epptr IdleEP;
             queue' \<leftarrow> (swp filterM queue) (\<lambda> t. do
+                touch_object t;
                 st \<leftarrow> get_thread_state t;
                 if blocking_ipc_badge st = badge then do
                   set_thread_state t Restart;
@@ -115,6 +116,7 @@ definition
   unbind_notification :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "unbind_notification tcb \<equiv> do
+     touch_object tcb;
      ntfnptr \<leftarrow> get_bound_notification tcb;
      case ntfnptr of
          Some ntfnptr' \<Rightarrow> do
@@ -373,6 +375,7 @@ definition
   cancel_ipc :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "cancel_ipc tptr \<equiv> do
+     touch_object tptr;
      state \<leftarrow> get_thread_state tptr;
      case state
        of

@@ -118,7 +118,6 @@ definition
   thread_get :: "(tcb \<Rightarrow> 'a) \<Rightarrow> obj_ref \<Rightarrow> ('a,'z::state_ext) s_monad"
 where
   "thread_get f tptr \<equiv> do
-     touch_object tptr;
      tcb \<leftarrow> gets_the $ get_tcb True tptr;
      return $ f tcb
    od"
@@ -171,6 +170,7 @@ where
 
 definition set_thread_state_ext :: "obj_ref \<Rightarrow> unit det_ext_monad" where
   "set_thread_state_ext t \<equiv> do
+     touch_object t;
      ts \<leftarrow> get_thread_state t;
      cur \<leftarrow> gets cur_thread;
      action \<leftarrow> gets scheduler_action;
@@ -192,6 +192,7 @@ definition
   "set_priority tptr prio \<equiv> do
      tcb_sched_action tcb_sched_dequeue tptr;
      thread_set_priority tptr prio;
+     touch_object tptr;
      ts \<leftarrow> get_thread_state tptr;
      when (runnable ts) $ do
        cur \<leftarrow> gets cur_thread;

@@ -63,6 +63,7 @@ delivered.\<close>
 definition timer_tick :: "unit det_ext_monad" where
   "timer_tick \<equiv> do
      cur \<leftarrow> gets cur_thread;
+     touch_object cur;
      state \<leftarrow> get_thread_state cur;
      case state of Running \<Rightarrow> do
        ts \<leftarrow> ethread_get tcb_time_slice cur;

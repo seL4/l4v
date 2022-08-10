@@ -103,16 +103,17 @@ lemma set_untyped_cap_as_full_cte_wp_at_neg:
         cte_wp_at ((=) src_cap) src s\<rbrace>
    set_untyped_cap_as_full src_cap cap src
    \<lbrace>\<lambda>ya s. \<not> cte_wp_at P dest s\<rbrace>"
-  apply (clarsimp simp:set_untyped_cap_as_full_def | rule conjI |wp set_cap_cte_wp_at_neg)+
+  apply (clarsimp simp:set_untyped_cap_as_full_def | rule conjI |
+    wp set_cap_cte_wp_at_neg touch_object_wp)+
     apply (clarsimp simp:cte_wp_at_caps_of_state masked_as_full_def)+
   apply wp
   apply clarsimp
 done
 
 lemma set_untyped_cap_as_full_is_final_cap'_neg:
-  "\<lbrace>\<lambda>s. \<not> is_final_cap' cap' s \<and> cte_wp_at ((=) src_cap) src s\<rbrace>
+  "\<lbrace>\<lambda>s. \<not> is_final_cap' False cap' s \<and> cte_wp_at ((=) src_cap) src s\<rbrace>
    set_untyped_cap_as_full src_cap cap src
-   \<lbrace>\<lambda>rv s. \<not> is_final_cap' cap' s\<rbrace>"
+   \<lbrace>\<lambda>rv s. \<not> is_final_cap' False cap' s\<rbrace>"
   apply (rule hoare_pre)
   apply (simp add:is_final_cap'_def2)
      apply (wp hoare_vcg_all_lift hoare_vcg_ex_lift)
@@ -127,14 +128,14 @@ lemma set_untyped_cap_as_full_is_final_cap'_neg:
 
 lemma set_cap_def2:
   "set_cap cap = (\<lambda>(oref, cref). do
-     obj \<leftarrow> get_object oref;
+     obj \<leftarrow> get_object True oref;
      obj' \<leftarrow> (case (obj, tcb_cap_cases cref) of
      (CNode sz cs, _) \<Rightarrow> if cref \<in> dom cs \<and> well_formed_cnode_n sz cs
          then return $ CNode sz $ cs(cref \<mapsto> cap)
          else fail
    | (TCB tcb, Some (getF, setF, restr)) \<Rightarrow> return $ TCB (setF (\<lambda>x. cap) tcb)
    | _ \<Rightarrow> fail);
-     set_object oref obj'
+     set_object True oref obj'
    od)"
   apply (rule ext, simp add: set_cap_def split_def)
   apply (intro bind_cong bind_apply_cong refl)

@@ -64,7 +64,8 @@ definition
 
 text \<open>Asserts that a thread is runnable before switching to it.\<close>
 definition guarded_switch_to :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
-"guarded_switch_to thread \<equiv> do ts \<leftarrow> get_thread_state thread;
+"guarded_switch_to thread \<equiv> do touch_object thread;
+                    ts \<leftarrow> get_thread_state thread;
                     assert (runnable ts);
                     switch_to_thread thread
                  od"
@@ -130,6 +131,7 @@ definition
 definition
   "schedule_det_ext_ext \<equiv> do
      ct \<leftarrow> gets cur_thread;
+     touch_object ct;
      ct_st \<leftarrow> get_thread_state ct;
      ct_runnable \<leftarrow> return $ runnable ct_st;
      action \<leftarrow> gets scheduler_action;

@@ -76,7 +76,7 @@ where
     \<comment> \<open> Don't introduce non-empty unmapped table objects. \<close>
   \<and> (is_pt_cap newcap
       \<longrightarrow> cap_asid newcap = None
-      \<longrightarrow> (\<forall>r \<in> obj_refs newcap. pts_of s r = Some empty_pt))
+      \<longrightarrow> (\<forall>r \<in> obj_refs newcap. pts_of False s r = Some empty_pt))
     \<comment> \<open> If newcap is vspace table cap such that either:
          - newcap and cap have different types or different obj_refs, or
          - newcap is unmapped while cap is mapped, \<close>
@@ -115,9 +115,10 @@ lemma table_cap_ref_vs_cap_ref_Some:
                simp del: arch_cap_fun_lift_Some
                split: cap.splits arch_cap.splits)
 
-lemma set_cap_aobjs_of[wp]:
-  "set_cap cap ptr \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
+lemma set_cap_aobjs_of[simplified f_kheap_to_kheap, wp]:
+  "set_cap cap ptr \<lbrace>\<lambda>s. P (aobjs_of False s)\<rbrace>"
   unfolding set_cap_def
+  apply (simp only: f_kheap_to_kheap)
   apply (wpsimp wp: set_object_wp get_object_wp)
   apply (auto simp: opt_map_def obj_at_def split: option.splits elim!: rsubst[where P=P])
   done
@@ -131,7 +132,7 @@ lemma set_cap_valid_vs_lookup:
       \<and> (\<forall>vref cap'. caps_of_state s ptr = Some cap'
                 \<longrightarrow> vs_cap_ref cap' = Some vref
                 \<longrightarrow> (vs_cap_ref cap = Some vref \<and> obj_refs cap = obj_refs cap')
-                 \<or> (\<not> is_final_cap' cap' s \<and> \<not> reachable_frame_cap cap' s)
+                 \<or> (\<not> is_final_cap' False cap' s \<and> \<not> reachable_frame_cap cap' s)
                  \<or> (\<forall>oref. oref \<in> obj_refs cap' \<longrightarrow> \<not> reachable_target vref oref s))
       \<and> unique_table_refs s\<rbrace>
      set_cap cap ptr
@@ -171,7 +172,7 @@ lemma set_cap_valid_vs_lookup:
 
 lemma set_cap_valid_table_caps:
   "\<lbrace>\<lambda>s. valid_table_caps s \<and>
-        (is_pt_cap cap \<longrightarrow> cap_asid cap = None \<longrightarrow> (\<forall>r \<in> obj_refs cap. pts_of s r = Some empty_pt))\<rbrace>
+        (is_pt_cap cap \<longrightarrow> cap_asid cap = None \<longrightarrow> (\<forall>r \<in> obj_refs cap. pts_of False s r = Some empty_pt))\<rbrace>
      set_cap cap ptr
    \<lbrace>\<lambda>rv. valid_table_caps\<rbrace>"
   supply split_paired_All[simp del] split_paired_Ex[simp del]
@@ -256,7 +257,7 @@ lemma set_cap_valid_asid_pool_caps[wp]:
       \<and> (\<forall>vref cap'. caps_of_state s ptr = Some cap'
                 \<longrightarrow> vs_cap_ref cap' = Some vref
                 \<longrightarrow> (vs_cap_ref cap = Some vref \<and> obj_refs cap = obj_refs cap')
-                 \<or> (\<not> is_final_cap' cap' s \<and> \<not> reachable_frame_cap cap' s)
+                 \<or> (\<not> is_final_cap' False cap' s \<and> \<not> reachable_frame_cap cap' s)
                  \<or> (\<forall>oref. oref \<in> obj_refs cap' \<longrightarrow> \<not> reachable_target vref oref s))
       \<and> unique_table_refs s\<rbrace>
    set_cap cap ptr
@@ -291,11 +292,11 @@ lemma set_cap_valid_arch_caps:
       \<and> (\<forall>vref cap'. cte_wp_at ((=) cap') ptr s
                 \<longrightarrow> vs_cap_ref cap' = Some vref
                 \<longrightarrow> (vs_cap_ref cap = Some vref \<and> obj_refs cap = obj_refs cap')
-                 \<or> (\<not> is_final_cap' cap' s \<and> \<not> reachable_frame_cap cap' s)
+                 \<or> (\<not> is_final_cap' False cap' s \<and> \<not> reachable_frame_cap cap' s)
                  \<or> (\<forall>oref \<in> obj_refs cap'. \<not> reachable_target vref oref s))
       \<and> no_cap_to_obj_with_diff_ref cap {ptr} s
       \<and> (is_pt_cap cap \<longrightarrow> cap_asid cap = None
-            \<longrightarrow> (\<forall>r \<in> obj_refs cap. pts_of s r = Some empty_pt))
+            \<longrightarrow> (\<forall>r \<in> obj_refs cap. pts_of False s r = Some empty_pt))
       \<and> (is_pt_cap cap
              \<longrightarrow> (\<forall>oldcap. caps_of_state s ptr = Some oldcap \<longrightarrow>
                   is_pt_cap oldcap
@@ -312,7 +313,7 @@ lemma set_cap_valid_arch_caps:
 
 lemma valid_table_capsD:
   "\<lbrakk> cte_wp_at ((=) cap) ptr s; valid_table_caps s; is_pt_cap cap; cap_asid cap = None \<rbrakk>
-   \<Longrightarrow> \<forall>r \<in> obj_refs cap. pts_of s r = Some empty_pt"
+   \<Longrightarrow> \<forall>r \<in> obj_refs cap. pts_of False s r = Some empty_pt"
   apply (clarsimp simp: cte_wp_at_caps_of_state valid_table_caps_def is_pt_cap_def
                         is_PageTableCap_def cap_asid_def
                  split: option.splits)

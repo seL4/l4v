@@ -235,6 +235,7 @@ where
             without_preemption $ set_thread_state thread Restart;
             reply \<leftarrow> perform_invocation blocking calling oper;
             without_preemption $ do
+                touch_object thread;
                 state \<leftarrow> get_thread_state thread;
                 case state of
                       Restart \<Rightarrow> do

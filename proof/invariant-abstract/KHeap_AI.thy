@@ -1483,12 +1483,11 @@ lemma add_mask_eq:
 
 
 lemma thread_get_wp':
-  "\<lbrace>\<lambda>s. \<forall>tcb. ko_at (TCB tcb) ptr s \<longrightarrow> P (f tcb) (ms_ta_obj_upd ptr (TCB tcb) s)\<rbrace>
-     thread_get f ptr \<lbrace>P\<rbrace>"
+  "\<lbrace>\<lambda>s. \<forall>tcb. ko_at (TCB tcb) ptr s \<longrightarrow> P (f tcb) s\<rbrace> thread_get f ptr \<lbrace>P\<rbrace>"
   apply (simp add: thread_get_def)
   apply wp
   apply clarsimp
-  apply (clarsimp simp: obj_at_def ta_filter_def dest!: get_tcb_SomeD)
+  apply (clarsimp simp: obj_at_def ta_filter_def dest!: get_tcb_SomeD split:if_splits)
   done
 
 
