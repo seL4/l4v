@@ -156,6 +156,10 @@ lemma get_tcb_SomeD: "get_tcb ta_f t s = Some v \<Longrightarrow> f_kheap ta_f s
   apply (case_tac a, simp_all)
   done
 
+lemma get_tcb_to_unfiltered_Some:
+  "get_tcb True t s = Some tcb \<Longrightarrow> get_tcb False t s = Some tcb"
+  by (metis f_kheap_to_unfiltered_Some get_tcb_SomeD get_tcb_def)
+
 lemma get_tcb_at: "tcb_at t s \<Longrightarrow> (\<exists>tcb. get_tcb False t s = Some tcb)"
   by (simp add: tcb_at_def)
 

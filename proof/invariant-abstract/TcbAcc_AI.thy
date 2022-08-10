@@ -68,6 +68,10 @@ locale TcbAcc_AI_arch_tcb_context_set_eq =
 lemma (in TcbAcc_AI_arch_tcb_context_set_eq) thread_get_as_user:
   "thread_get (arch_tcb_context_get o tcb_arch) t = as_user t get"
   apply (simp add: thread_get_def as_user_def)
+. (* DOWN TO HERE. This is *definitely* not true. This suggests I need to kick
+     touch_object out of *both* thread_get *and* as_user to their callers,
+     but not one without the other; then, what about as_user's TCB update? -robs.
+
   apply (rule bind_cong [OF refl])
   apply (clarsimp simp: gets_the_member set_object_def get_object_def in_monad bind_assoc
                         gets_def put_def bind_def get_def return_def select_f_def

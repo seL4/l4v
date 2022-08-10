@@ -311,7 +311,7 @@ lemma set_cap_valid_arch_caps:
   by (wpsimp wp: set_cap_valid_vs_lookup set_cap_valid_table_caps set_cap_unique_table_caps
            simp: cte_wp_at_caps_of_state)
 
-lemma valid_table_capsD:
+lemma valid_table_capsD[simplified f_kheap_to_kheap]:
   "\<lbrakk> cte_wp_at ((=) cap) ptr s; valid_table_caps s; is_pt_cap cap; cap_asid cap = None \<rbrakk>
    \<Longrightarrow> \<forall>r \<in> obj_refs cap. pts_of False s r = Some empty_pt"
   apply (clarsimp simp: cte_wp_at_caps_of_state valid_table_caps_def is_pt_cap_def
