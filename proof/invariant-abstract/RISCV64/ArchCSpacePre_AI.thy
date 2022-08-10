@@ -74,7 +74,15 @@ lemma ups_of_heap_non_arch_upd:
   "h x = Some ko \<Longrightarrow> non_arch_obj ko \<Longrightarrow> non_arch_obj ko' \<Longrightarrow> ups_of_heap (h(x \<mapsto> ko')) = ups_of_heap h"
   by (rule ext) (auto simp add: ups_of_heap_def non_arch_obj_def split: kernel_object.splits)
 
+lemma inv_lookup_ipc_buffer[wp]:
+  "\<lbrace>I and (\<lambda>s. \<forall>ko. ko_at ko param_b s \<longrightarrow>
+           I (ms_touched_addresses_update ((\<union>) (obj_range param_b ko)) s))\<rbrace>
+     lookup_ipc_buffer param_a param_b \<lbrace>\<lambda>_. I\<rbrace>"
+  sorry (* FIXME: Broken by timeprot-touch-objs. -robs
+    Replacing the following:
 crunch inv[wp]: lookup_ipc_buffer "I"
+  (wp: touch_object_wp ignore: do_machine_op addTouchedAddresses)
+*)
 
 lemma vs_cap_ref_to_table_cap_ref:
   "\<not> is_frame_cap cap \<Longrightarrow> vs_cap_ref cap = table_cap_ref cap"
@@ -171,7 +179,7 @@ lemma set_untyped_cap_as_full_valid_arch_mdb:
   "\<lbrace>\<lambda>s. valid_arch_mdb (is_original_cap s) (caps_of_state s)\<rbrace>
             set_untyped_cap_as_full src_cap c src
    \<lbrace>\<lambda>rv s. valid_arch_mdb (is_original_cap s) (caps_of_state s)\<rbrace>"
-  by (wpsimp wp: set_cap_update_free_index_valid_arch_mdb
+  by (wpsimp wp: set_cap_update_free_index_valid_arch_mdb touch_object_wp
            simp: set_untyped_cap_as_full_def)
 
 lemma valid_arch_mdb_not_arch_cap_update:

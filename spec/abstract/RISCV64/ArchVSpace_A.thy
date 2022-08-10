@@ -19,6 +19,7 @@ text \<open>
 definition lookup_ipc_buffer :: "bool \<Rightarrow> obj_ref \<Rightarrow> (obj_ref option,'z::state_ext) s_monad"
   where
   "lookup_ipc_buffer is_receiver thread \<equiv> do
+     touch_object thread;
      buffer_ptr \<leftarrow> thread_get tcb_ipc_buffer thread;
      buffer_frame_slot \<leftarrow> return (thread, tcb_cnode_index 4);
      touch_object (fst buffer_frame_slot);

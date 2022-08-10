@@ -189,6 +189,7 @@ definition
                              \<Rightarrow> obj_ref option \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
  "do_fault_transfer badge sender receiver buf \<equiv> do
+    touch_object sender;
     fault \<leftarrow> thread_get tcb_fault sender;
     f \<leftarrow> (case fault of
          Some f \<Rightarrow> return f
@@ -230,6 +231,7 @@ where
      receiver \<equiv> do
 
      recv_buffer \<leftarrow> lookup_ipc_buffer True receiver;
+     touch_object sender;
      fault \<leftarrow> thread_get tcb_fault sender;
 
      case fault
@@ -249,6 +251,7 @@ where
     touch_object receiver;
     state \<leftarrow> get_thread_state receiver;
     assert (state = BlockedOnReply);
+    touch_object receiver;
     fault \<leftarrow> thread_get tcb_fault receiver;
     case fault of
       None \<Rightarrow> do
@@ -538,6 +541,7 @@ definition
   send_fault_ipc :: "obj_ref \<Rightarrow> fault \<Rightarrow> (unit,'z::state_ext) f_monad"
 where
   "send_fault_ipc tptr fault \<equiv> doE
+     liftE $ touch_object tptr;
      handler_cptr \<leftarrow> liftE $ thread_get tcb_fault_handler tptr;
      handler_cap \<leftarrow> cap_fault_on_failure (of_bl handler_cptr) False $
          lookup_cap tptr handler_cptr;

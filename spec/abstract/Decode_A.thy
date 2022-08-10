@@ -211,6 +211,7 @@ definition
 where
   "check_prio new_prio auth_tcb \<equiv>
     doE
+      liftE $ touch_object auth_tcb;
       mcp \<leftarrow> liftE $ thread_get tcb_mcpriority auth_tcb;
       whenE (new_prio > ucast mcp) $ throwError (RangeError 0 (ucast mcp))
     odE"

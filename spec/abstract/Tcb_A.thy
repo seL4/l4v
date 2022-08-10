@@ -290,6 +290,7 @@ definition
   get_mrs :: "obj_ref \<Rightarrow> obj_ref option \<Rightarrow> message_info \<Rightarrow>
               (message list,'z::state_ext) s_monad" where
   "get_mrs thread buf info \<equiv> do
+     touch_object thread;
      context \<leftarrow> thread_get (arch_tcb_get_registers o tcb_arch) thread;
      cpu_mrs \<leftarrow> return (map context msg_registers);
      buf_mrs \<leftarrow> case buf
