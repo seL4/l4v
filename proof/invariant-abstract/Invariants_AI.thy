@@ -2696,9 +2696,7 @@ lemma valid_global_objs_update [iff]:
 
 lemma valid_global_vspace_mappings_update [iff]:
   "valid_global_vspace_mappings (f s) = valid_global_vspace_mappings s"
-  unfolding valid_global_vspace_mappings_def
-  apply(simp add: arch Let_def)
-  using pspace by presburger
+  unfolding valid_global_vspace_mappings_def by (simp add: arch Let_def)
 
 lemma pspace_in_kernel_window_update [iff]:
   "pspace_in_kernel_window (f s) = pspace_in_kernel_window s"

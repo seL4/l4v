@@ -43,7 +43,7 @@ lemma invs_valid_asid_table [elim!]:
   "invs s \<Longrightarrow> valid_asid_table s"
   by (simp add: invs_def valid_state_def valid_arch_state_def)
 
-lemma ptes_of_wellformed_pte:
+lemma ptes_of_wellformed_pte[simplified f_kheap_to_kheap]:
   "\<lbrakk> ptes_of False s p = Some pte; valid_objs s \<rbrakk> \<Longrightarrow> wellformed_pte pte"
   apply (clarsimp simp: ptes_of_def in_omonad)
   apply (erule (1) valid_objsE)
@@ -125,7 +125,7 @@ lemma vs_lookup_table_asid_not_0:
    \<Longrightarrow> asid \<noteq> 0"
   by (fastforce dest!: vs_lookup_table_targetD valid_vs_lookupD)
 
-lemma vspace_for_asid_from_lookup_target:
+lemma vspace_for_asid_from_lookup_target[simplified f_kheap_to_kheap]:
   "\<lbrakk> vs_lookup_target asid_pool_level asid vref s = Some (asid_pool_level, pt_ptr);
      vref \<in> user_region; valid_vs_lookup s \<rbrakk>
    \<Longrightarrow> vspace_for_asid False asid s = Some pt_ptr"
@@ -157,7 +157,7 @@ lemma is_ko_to_discs:
   apply (all \<open>rule ext, simp add: is_ep_def is_ntfn_def is_tcb_def split: kernel_object.splits\<close>)
   done
 
-lemma cap_to_pt_is_pt_cap:
+lemma cap_to_pt_is_pt_cap[simplified f_kheap_to_kheap]:
   "\<lbrakk> obj_refs cap = {p}; caps_of_state s cptr = Some cap; pts_of False s p \<noteq> None;
      valid_caps (caps_of_state s) s \<rbrakk>
    \<Longrightarrow> is_pt_cap cap"
@@ -167,7 +167,7 @@ lemma cap_to_pt_is_pt_cap:
                  ta_filter_def opt_map_def
            split: if_splits arch_cap.split cap.splits option.splits)
 
-lemma unique_vs_lookup_table:
+lemma unique_vs_lookup_table[simplified f_kheap_to_kheap]:
   "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p);
      vs_lookup_table level' asid' vref' s = Some (level', p');
      p' = p; level \<le> max_pt_level; level' \<le> max_pt_level;
@@ -178,8 +178,9 @@ lemma unique_vs_lookup_table:
    \<Longrightarrow> asid' = asid \<and>
        vref_for_level vref' (level'+1) = vref_for_level vref (level+1)"
   supply valid_vspace_obj.simps[simp del]
+  apply (simp only:f_kheap_to_kheap)
   apply (frule (5) valid_vspace_objs_strongD)
-  apply (frule (5) valid_vspace_objs_strongD[where pt_ptr=p'])
+  apply (frule (5) valid_vspace_objs_strongD[where pt_ptr=p])
   apply (drule (1) vs_lookup_table_target)+
   apply (drule valid_vs_lookupD, erule vref_for_level_user_region, assumption)+
   apply (elim conjE exE)
@@ -356,7 +357,7 @@ lemma pt_walk_same_for_different_levels:
   apply fastforce
   done
 
-lemma vs_lookup_table_same_for_different_levels:
+lemma vs_lookup_table_same_for_different_levels[simplified f_kheap_to_kheap]:
   "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p);
      vs_lookup_table level' asid vref' s = Some (level', p);
      vref_for_level vref (level+1) = vref_for_level vref' (level+1);
@@ -374,10 +375,10 @@ lemma vs_lookup_table_same_for_different_levels:
   apply (simp add: in_omonad pt_walk_vref_for_level1)
   apply (simp add: vs_lookup_slot_def in_omonad vs_lookup_table_def cong: conj_cong)
   apply (drule pt_walk_same_for_different_levels; simp?)
-  apply (erule vspace_for_pool_is_aligned[simplified]; simp)
+  apply (erule vspace_for_pool_is_aligned; simp)
   by (metis pt_walk_max_level)
 
-lemma no_loop_vs_lookup_table_helper:
+lemma no_loop_vs_lookup_table_helper[simplified f_kheap_to_kheap]:
   "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p);
      vs_lookup_table level' asid vref' s = Some (level', p);
      vref_for_level vref' (max (level+1) (level'+1)) = vref_for_level vref (max (level+1) (level'+1));
@@ -410,7 +411,7 @@ lemma no_loop_vs_lookup_table_helper:
    apply (fastforce simp: pte_of_def in_omonad is_aligned_pt_slot_offset_pte)
   done
 
-lemma no_loop_vs_lookup_table:
+lemma no_loop_vs_lookup_table[simplified f_kheap_to_kheap]:
   "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p);
      vs_lookup_table level' asid vref' s = Some (level', p);
      vref_for_level vref' (max (level+1) (level'+1)) = vref_for_level vref (max (level+1) (level'+1));
@@ -421,15 +422,15 @@ lemma no_loop_vs_lookup_table:
     \<Longrightarrow> level' = level"
   apply (case_tac "level = asid_pool_level"; simp)
    apply (case_tac "level' = asid_pool_level"; simp)
-   apply (frule (5) valid_vspace_objs_strongD[where bot_level=level' and level=level', simplified])
+   apply (frule (5) valid_vspace_objs_strongD[where bot_level=level' and level=level'])
    apply (fastforce dest!: vs_lookup_table_no_asid_pt)
   apply (case_tac "level' = asid_pool_level"; simp)
-   apply (frule (5) valid_vspace_objs_strongD[where bot_level=level and level=level, simplified])
+   apply (frule (5) valid_vspace_objs_strongD[where bot_level=level and level=level])
    apply (fastforce dest!: vs_lookup_table_no_asid_pt)
   apply (case_tac "level' = level"; clarsimp)
   (* reduce to two cases with identical proofs, either level' < level or vice-versa *)
   apply (case_tac "level' < level"; (clarsimp dest!: leI dual_order.not_eq_order_implies_strict)?)
-   apply (drule no_loop_vs_lookup_table_helper[where level'=level' and level=level, simplified])
+   apply (drule no_loop_vs_lookup_table_helper[where level'=level' and level=level])
                  apply assumption+
    apply simp
   apply (drule no_loop_vs_lookup_table_helper[where level'=level and level=level']; assumption?)
@@ -439,7 +440,7 @@ lemma no_loop_vs_lookup_table:
 (* We can never find the same table/pool object at different levels.
    When combined with unique_vs_lookup_table, shows there exists
    only one path from the ASID table to any asid_pool / page table in the system *)
-lemma ex_vs_lookup_level:
+lemma ex_vs_lookup_level[simplified f_kheap_to_kheap]:
   "\<lbrakk> \<exists>\<rhd> (level, p) s;  \<exists>\<rhd> (level', p) s;
      unique_table_refs s; valid_vs_lookup s;
      valid_vspace_objs s; valid_asid_table s; pspace_aligned s;
@@ -451,10 +452,10 @@ lemma ex_vs_lookup_level:
   apply (rename_tac asid' vref vref')
   apply (case_tac "level = asid_pool_level"; simp)
    apply (case_tac "level' = asid_pool_level"; simp)
-   apply (frule (5) valid_vspace_objs_strongD[where bot_level=level' and level=level', simplified])
+   apply (frule (5) valid_vspace_objs_strongD[where bot_level=level' and level=level'])
    apply (fastforce dest!: vs_lookup_table_no_asid_pt)
   apply (case_tac "level' = asid_pool_level"; simp)
-   apply (frule (5) valid_vspace_objs_strongD[where bot_level=level and level=level, simplified])
+   apply (frule (5) valid_vspace_objs_strongD[where bot_level=level and level=level])
    apply (fastforce dest!: vs_lookup_table_no_asid_pt)
   apply (frule_tac asid=asid and asid'=asid' in unique_vs_lookup_table, assumption; simp)
   apply (drule_tac level=level and level'=level' and vref'=vref' in no_loop_vs_lookup_table
@@ -483,12 +484,7 @@ lemma vs_lookup_table_unique_level:
   apply (drule arg_cong[where f="\<lambda>vref. vref_for_level vref (level + 1)"])
   apply (drule arg_cong[where f="\<lambda>vref. vref_for_level vref (level' + 1)"])
   apply (auto simp: max_def split: if_split_asm)
-  sorry (* FIXME: Broken by timeprot-touch-objs. -robs
-    Not sure why this subgoal is suddenly failing -- I can't see how the change of
-    `valid_asid_table` to use `asid_pools_of False` would affect this proof, given
-    the simplifier seems to simplify it back all down to `kheap` just fine.
   done
-*)
 
 (* invs could be relaxed; lemma so far only needed when invs is present *)
 lemma vs_lookup_slot_table_base:
@@ -497,10 +493,7 @@ lemma vs_lookup_slot_table_base:
    vs_lookup_table level asid vref s = Some (level, table_base slot)"
   apply (clarsimp simp: vs_lookup_slot_def split: if_split_asm)
   apply (drule vs_lookup_table_is_aligned; clarsimp)
-  sorry (* FIXME: Broken by timeprot-touch-objs. -robs
-    Same problem as above.
   done
-*)
 
 (* invs could be relaxed; lemma so far only needed when invs is present *)
 lemma vs_lookup_slot_table_unfold:
@@ -686,7 +679,7 @@ lemma set_asid_pool_cur_tcb [wp]:
 crunch arch [wp]: set_asid_pool "\<lambda>s. P (arch_state s)"
   (wp: get_object_wp)
 
-lemma set_asid_pool_pts_of [wp]:
+lemma set_asid_pool_pts_of [simplified f_kheap_to_kheap, wp]:
   "set_asid_pool p a \<lbrace>\<lambda>s. P (pts_of False s)\<rbrace>"
   unfolding set_asid_pool_def
   apply (wpsimp wp: set_object_wp)
@@ -749,33 +742,34 @@ lemma page_table_pte_at_diffE:
   apply (erule(2) page_table_pte_atI)
   done
 
-lemma vs_lookup_table_extend:
+lemma vs_lookup_table_extend[simplified f_kheap_to_kheap]:
   "\<lbrakk> vs_lookup_table level asid vref s = Some (level, pt);
     pt_walk level bot_level pt vref (ptes_of False s) = Some (bot_level, p);
     level \<le> max_pt_level\<rbrakk>
    \<Longrightarrow> vs_lookup_table bot_level asid vref s = Some (bot_level, p)"
   by (rule vs_lookup_split_Some[THEN iffD2] ; fastforce intro!: pt_walk_max_level)
 
-lemma pt_walk_pt_at:
+lemma pt_walk_pt_at[simplified f_kheap_to_kheap]:
   "\<lbrakk> pt_walk level bot_level pt_ptr vptr (ptes_of False s) = Some (level', p);
      vs_lookup_table level asid vptr s = Some (level, pt_ptr); level \<le> max_pt_level;
      vptr \<in> user_region; valid_vspace_objs s; valid_asid_table s; pspace_aligned s \<rbrakk>
    \<Longrightarrow> pt_at p s"
+  apply (simp only:f_kheap_to_kheap)
   apply (drule pt_walk_level)
   apply (frule pt_walk_max_level)
   apply (drule vs_lookup_table_extend ; assumption?)
   apply (fastforce dest!: valid_vspace_objs_strongD simp: pt_at_eq)
   done
 
-lemma vs_lookup_table_pt_at:
+lemma vs_lookup_table_pt_at[simplified f_kheap_to_kheap]:
   "\<lbrakk> vs_lookup_table level asid vptr s = Some (level, pt_ptr); level \<le> max_pt_level;
      vptr \<in> user_region; valid_vspace_objs s; valid_asid_table s; pspace_aligned s \<rbrakk>
    \<Longrightarrow> pt_at pt_ptr s"
   apply (subst (asm) vs_lookup_split_max_pt_level_Some, clarsimp+)
-  apply (drule (1) pt_walk_pt_at[simplified]; simp)
+  apply (drule (1) pt_walk_pt_at; simp)
   done
 
-lemma pt_lookup_slot_from_level_pte_at:
+lemma pt_lookup_slot_from_level_pte_at[simplified f_kheap_to_kheap]:
   "\<lbrakk> pt_lookup_slot_from_level level bot_level pt_ptr vptr (ptes_of False s) = Some (level', p);
      vs_lookup_table level asid vptr s = Some (level, pt_ptr); level \<le> max_pt_level;
      vptr \<in> user_region; valid_vspace_objs s; valid_asid_table s; pspace_aligned s \<rbrakk>
@@ -783,7 +777,7 @@ lemma pt_lookup_slot_from_level_pte_at:
   unfolding pt_lookup_slot_from_level_def
   apply (clarsimp simp add: oreturn_def obind_def split: option.splits)
   apply (rename_tac pt_ptr')
-  apply (frule pt_walk_pt_at[simplified]; assumption?)
+  apply (frule pt_walk_pt_at; assumption?)
   apply (fastforce simp: pte_at_def is_aligned_pt_slot_offset_pte is_aligned_pt)
   done
 
@@ -799,7 +793,7 @@ crunches store_pte
   for arch[wp]: "\<lambda>s. P (arch_state s)"
   and "distinct"[wp]: pspace_distinct
 
-lemma store_pt_asid_pools_of[wp]:
+lemma store_pt_asid_pools_of[simplified f_kheap_to_kheap, wp]:
   "set_pt p pt \<lbrace>\<lambda>s. P (asid_pools_of False s)\<rbrace>"
   unfolding set_pt_def
   apply (wpsimp wp: set_object_wp)
@@ -807,16 +801,13 @@ lemma store_pt_asid_pools_of[wp]:
     split:option.splits)
   done
 
-lemma store_pte_asid_pools_of[wp]:
+lemma store_pte_asid_pools_of[simplified f_kheap_to_kheap, wp]:
   "store_pte p pte \<lbrace>\<lambda>s. P (asid_pools_of False s)\<rbrace>"
-  unfolding store_pte_def apply wpsimp
-  apply (auto simp:opt_map_def obind_def ta_filter_def elim!: rsubst[where P=P]
-    split:option.splits)
-  done
+  unfolding store_pte_def by wpsimp
 
 lemma store_pte_vspace_at_asid:
   "store_pte p pte \<lbrace>vspace_at_asid asid pt\<rbrace>"
-  unfolding vspace_at_asid_def by (wp vspace_for_asid_lift)
+  unfolding vspace_at_asid_def by (wp vspace_for_asid_lift[where ta_f=False, simplified])
 
 lemma store_pte_valid_objs [wp]:
   "\<lbrace>(\<lambda>s. wellformed_pte pte) and valid_objs\<rbrace> store_pte p pte \<lbrace>\<lambda>_. valid_objs\<rbrace>"
@@ -1026,7 +1017,7 @@ lemma set_object_caps_of_state:
   apply (auto simp: cte_wp_at_cases)
   done
 
-lemma set_pt_aobjs_of:
+lemma set_pt_aobjs_of[simplified f_kheap_to_kheap]:
   "\<lbrace>\<lambda>s. aobjs_of False s p \<noteq> None \<longrightarrow> P (aobjs_of False s(p \<mapsto> PageTable pt)) \<rbrace>
      set_pt p pt \<lbrace>\<lambda>_ s. P (aobjs_of False s)\<rbrace>"
   unfolding set_pt_def
@@ -1182,7 +1173,7 @@ lemma ptes_of_pt_None_updD:
    \<Longrightarrow> ptes_of ta_f s p' = Some pte"
   by (clarsimp simp: opt_map_def pte_of_def in_omonad split: option.splits if_splits)
 
-lemma vs_lookup_table_eqI:
+lemma vs_lookup_table_eqI[simplified f_kheap_to_kheap]:
   fixes s :: "'z::state_ext state"
   fixes s' :: "'z::state_ext state"
   shows
@@ -1231,10 +1222,8 @@ lemma vs_lookup_table_Some_upd_idem:
      unique_table_refs s; valid_vs_lookup s; valid_caps (caps_of_state s) s \<rbrakk>
    \<Longrightarrow> vs_lookup_table level asid vref (s\<lparr>kheap := kheap s(obj_ref \<mapsto> ko)\<rparr>)
       = vs_lookup_table level asid vref s"
-  sorry (* FIXME: Broken by timeprot-touch-objs. -robs
   by (subst vs_lookup_table_upd_idem; simp?)
      (fastforce dest: no_loop_vs_lookup_table)
-*)
 
 lemma ex_vs_lookup_upd_idem:
   "\<lbrakk> \<exists>\<rhd> (level, p) s;
@@ -1322,7 +1311,7 @@ lemma kheap_pt_upd_simp[simp]:
   unfolding aobj_of_def opt_map_def
   by (auto split: kernel_object.split)
 
-lemma valid_global_tablesD:
+lemma valid_global_tablesD[simplified f_kheap_to_kheap]:
   "\<lbrakk> valid_global_tables s;
      pt_walk max_pt_level bot_level (riscv_global_pt (arch_state s)) vref (ptes_of False s)
      = Some (level, pt_ptr) \<rbrakk>
@@ -1383,14 +1372,15 @@ lemma kernel_regions_in_mappings:
             kernel_mappings_def kernel_window_def
   by (erule_tac x=p in allE) (auto simp: not_le canonical_below_pptr_base_canonical_user)
 
-lemma set_pt_valid_global_vspace_mappings:
+lemma set_pt_valid_global_vspace_mappings[simplified f_kheap_to_kheap]:
   "\<lbrace>\<lambda>s. valid_global_vspace_mappings s \<and> valid_global_tables s \<and> p \<notin> global_refs s
         \<and> pspace_aligned s \<and> valid_global_arch_objs s \<and> valid_uses s \<rbrace>
    set_pt p pt
    \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"
   apply (simp add: set_pt_def)
   apply (wpsimp wp: set_object_wp)
-  unfolding valid_global_vspace_mappings_def[simplified] Let_def
+  unfolding valid_global_vspace_mappings_def Let_def
+  apply (simp only: f_kheap_to_kheap)
   apply (safe; clarsimp; drule (1) bspec; thin_tac "Ball _ _")
    (* we don't care about whether we're in kernel window or kernel_elf_window *)
    apply (all \<open>drule kernel_regionsI, erule option_Some_value_independent\<close>)
@@ -1400,7 +1390,7 @@ lemma set_pt_valid_global_vspace_mappings:
   apply (rename_tac level p')
   apply (subst pt_lookup_target_pt_upd_eq)
      apply clarsimp
-     apply (frule valid_global_tablesD[simplified])
+     apply (frule valid_global_tablesD)
       apply assumption
      apply (clarsimp simp: kernel_regions_in_mappings)
      apply (clarsimp simp: global_refs_def)
@@ -1415,7 +1405,7 @@ lemma store_pte_valid_global_vspace_mappings:
    store_pte p pte
    \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"
   unfolding store_pte_def
-  by (wpsimp wp: set_pt_valid_global_vspace_mappings[simplified])
+  by (wpsimp wp: set_pt_valid_global_vspace_mappings)
 
 lemma set_pt_kernel_window[wp]:
   "\<lbrace>pspace_in_kernel_window\<rbrace> set_pt p pt \<lbrace>\<lambda>rv. pspace_in_kernel_window\<rbrace>"
@@ -1732,14 +1722,14 @@ lemma vs_lookup_target_unreachable_upd_idem:
    apply (clarsimp simp: fun_upd_def opt_map_def split: option.splits)
   done
 
-lemma vs_lookup_target_unreachable_upd_idem':
+lemma vs_lookup_target_unreachable_upd_idem'[simplified f_kheap_to_kheap]:
   "\<lbrakk> \<not>(\<exists>level. \<exists>\<rhd> (level, obj_ref) s);
      vref \<in> user_region; pspace_aligned s; valid_vspace_objs s; valid_asid_table s \<rbrakk>
    \<Longrightarrow> vs_lookup_target level asid vref (s\<lparr>kheap := kheap s(obj_ref \<mapsto> ko)\<rparr>)
       = vs_lookup_target level asid vref s"
    by (rule vs_lookup_target_unreachable_upd_idem; fastforce)
 
-lemma vs_lookup_table_fun_upd_deep_idem:
+lemma vs_lookup_table_fun_upd_deep_idem[simplified f_kheap_to_kheap]:
   "\<lbrakk> vs_lookup_table level asid vref (s\<lparr>kheap := kheap s(p \<mapsto> ko)\<rparr>) = Some (level, p');
      vs_lookup_table level' asid vref s = Some (level', p);
      level' \<le> level; vref \<in> user_region; unique_table_refs s; valid_vs_lookup s;
@@ -1753,14 +1743,15 @@ lemma vs_lookup_table_fun_upd_deep_idem:
   apply (drule (1) no_loop_vs_lookup_table; simp?)
   done
 
-lemma set_asid_pool_vspace_objs_unmap':
+lemma set_asid_pool_vspace_objs_unmap'[simplified f_kheap_to_kheap]:
   "\<lbrace>valid_vspace_objs and
     (\<lambda>s. (\<exists>\<rhd> (asid_pool_level, p) s \<longrightarrow> valid_vspace_obj asid_pool_level (ASIDPool ap) s)) and
     obj_at (\<lambda>ko. \<exists>ap'. ko = ArchObj (ASIDPool ap') \<and> graph_of ap \<subseteq> graph_of ap') p and
     valid_asid_table and pspace_aligned \<rbrace>
   set_asid_pool p ap \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
-  unfolding valid_vspace_objs_def[simplified] set_asid_pool_def
+  unfolding valid_vspace_objs_def set_asid_pool_def
   supply fun_upd_apply[simp del]
+  apply (simp only:f_kheap_to_kheap)
   apply (wp set_object_wp)
   apply (clarsimp simp: obj_at_def)
   apply (rename_tac pt_ptr ao)
@@ -1777,12 +1768,12 @@ lemma set_asid_pool_vspace_objs_unmap':
      apply (drule vs_lookup_level, drule vs_lookup_level)
      apply (fastforce simp: aobjs_of_ako_at_Some obj_at_def fun_upd_apply)
     (* pt_ptr \<noteq> p *)
-    apply (clarsimp simp: aobjs_of_ako_at_Some obj_at_def fun_upd_apply opt_map_def)
+    apply (clarsimp simp: aobjs_of_ako_at_Some obj_at_def fun_upd_apply opt_map_def split:option.splits)
     apply (erule (1) valid_vspace_obj_same_type, simp)
    (* level \<le> max_pt_level *)
    apply clarsimp
    apply (drule vs_lookup_level, drule vs_lookup_level)
-   apply (drule (5) vs_lookup_table_pt_at[simplified])
+   apply (drule (5) vs_lookup_table_pt_at)
    apply (case_tac "pt_ptr = p"; simp add: aobjs_of_ako_at_Some)
     apply (clarsimp simp: aobjs_of_ako_at_Some obj_at_def fun_upd_apply fun_upd_def)
    apply (clarsimp simp: fun_upd_apply split: if_splits)
@@ -1795,11 +1786,11 @@ lemma set_asid_pool_vspace_objs_unmap':
   apply (drule pt_walk_pt_None_updD[where ta_f=False,simplified])
   apply (rename_tac pool_ptr root)
   apply (clarsimp simp: vspace_for_pool_def in_omonad fun_upd_apply)
-  apply (case_tac "pool_ptr = p"; clarsimp simp: asid_pools_of_ko_at[simplified] obj_at_def)
+  apply (case_tac "pool_ptr = p"; clarsimp simp: asid_pools_of_ko_at obj_at_def)
    apply (fastforce elim: graph_of_SomeD)
   done
 
-lemma set_asid_pool_vspace_objs_unmap:
+lemma set_asid_pool_vspace_objs_unmap[simplified f_kheap_to_kheap]:
   "\<lbrace>valid_vspace_objs and ko_at (ArchObj (ASIDPool ap)) p and
     valid_asid_table and pspace_aligned\<rbrace>
   set_asid_pool p (ap |` S)  \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
@@ -1808,12 +1799,10 @@ lemma set_asid_pool_vspace_objs_unmap:
   apply (drule valid_vspace_objsD, assumption, assumption, simp add: obj_at_def in_opt_map_eq)
   by (auto simp: obj_at_def dest!: ran_restrictD)
 
-lemma set_asid_pool_table_caps[wp]:
+lemma set_asid_pool_table_caps[simplified f_kheap_to_kheap, wp]:
   "\<lbrace>valid_table_caps\<rbrace> set_asid_pool p ap \<lbrace>\<lambda>_. valid_table_caps\<rbrace>"
   apply (simp add: valid_table_caps_def)
   apply (rule hoare_lift_Pf2 [where f=caps_of_state];wp?)
-  . (* DOWN TO HERE.
-    I wonder if preconditions to other [wp] lemmas for set_asid_pool need to be tweaked. -robs
   done
 
 lemma vs_lookup_target_asid_pool_levelI:
@@ -1826,16 +1815,16 @@ lemma vs_lookup_target_asid_pool_levelI:
   apply (fastforce simp: obj_at_def)
   done
 
-lemma vs_lookup_target_pt_levelI:
+lemma vs_lookup_target_pt_levelI[simplified f_kheap_to_kheap]:
   "\<lbrakk> vs_lookup_table level asid vref s = Some (level, pt_ptr);
      pte_refs_of s (pt_slot_offset level pt_ptr vref) = Some target;
      level \<le> max_pt_level \<rbrakk>
    \<Longrightarrow> vs_lookup_target level asid vref s = Some (level, target)"
   by (clarsimp simp: vs_lookup_target_def in_omonad vs_lookup_slot_def asid_pool_level_neq[THEN iffD2])
 
-lemma vs_lookup_target_asid_pool_level_upd_helper:
+lemma vs_lookup_target_asid_pool_level_upd_helper[simplified f_kheap_to_kheap]:
   "\<lbrakk> graph_of ap \<subseteq> graph_of ap'; kheap s p = Some (ArchObj (ASIDPool ap')); vref \<in> user_region;
-     vspace_for_pool pool_ptr asid (asid_pools_of s(p \<mapsto> ap)) = Some pt_ptr;
+     vspace_for_pool pool_ptr asid (asid_pools_of ta_f s(p \<mapsto> ap)) = Some pt_ptr;
      pool_for_asid asid (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (ASIDPool ap))\<rparr>) = Some pool_ptr\<rbrakk>
    \<Longrightarrow> vs_lookup_target asid_pool_level asid vref s = Some (asid_pool_level, pt_ptr)"
   apply (clarsimp simp: pool_for_asid_vs_lookup vspace_for_pool_def in_omonad)
@@ -1843,13 +1832,14 @@ lemma vs_lookup_target_asid_pool_level_upd_helper:
    apply (rule vs_lookup_target_asid_pool_levelI)
    apply (fastforce simp: pool_for_asid_def obj_at_def dest: graph_of_SomeD)+
   apply (rule vs_lookup_target_asid_pool_levelI
-         ; fastforce simp: pool_for_asid_def obj_at_def vs_lookup_target_def in_omonad)
+         ; fastforce simp: pool_for_asid_def obj_at_def vs_lookup_target_def in_omonad
+           ta_filter_def split:if_splits)
   done
 
-lemma vs_lookup_target_None_upd_helper:
+lemma vs_lookup_target_None_upd_helper[simplified f_kheap_to_kheap]:
   "\<lbrakk> vs_lookup_table level asid vref (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (ASIDPool ap))\<rparr>) =
         Some (level, table_ptr);
-     ((\<lambda>pa. pte_of pa ((pts_of s)(p := None))) |> pte_ref) (pt_slot_offset level table_ptr vref)
+     ((\<lambda>pa. pte_of pa ((pts_of False s)(p := None))) |> pte_ref) (pt_slot_offset level table_ptr vref)
        = Some target;
      kheap s p = Some (ArchObj (ASIDPool ap')); graph_of ap \<subseteq> graph_of ap';
      level \<le> max_pt_level \<rbrakk>
@@ -1859,7 +1849,7 @@ lemma vs_lookup_target_None_upd_helper:
   apply (clarsimp simp: vs_lookup_target_def in_omonad vs_lookup_slot_def)
   apply (clarsimp simp: asid_pool_level_neq[THEN iffD2])
   apply (rule_tac x="pt_slot_offset level table_ptr vref" in exI)
-  apply (rule conjI[rotated], fastforce dest: ptes_of_pt_None_updD)
+  apply (rule conjI[rotated], fastforce dest: ptes_of_pt_None_updD[where ta_f=False, simplified])
   apply (rule_tac x=level in exI)
   apply (clarsimp simp: asid_pool_level_neq[THEN iffD2])
   apply (subst vs_lookup_split_max_pt_level_Some, assumption)
@@ -1870,6 +1860,7 @@ lemma vs_lookup_target_None_upd_helper:
    apply (rule_tac pool_ptr=pool_ptr in vs_lookup_max_pt_levelI)
     apply (fastforce simp: pool_for_asid_def)
    apply (fastforce simp: asid_pools_of_ko_at obj_at_def  vspace_for_pool_def in_omonad
+                          ta_filter_def obind_def opt_map_def
                     dest!: graph_of_SomeD pt_walk_pt_None_updD
                     split: if_splits)+
   done
@@ -1901,7 +1892,7 @@ lemma set_asid_pool_vs_lookup_unmap':
    apply (rename_tac root pool_ptr)
    apply (subgoal_tac "vs_lookup_target asid_pool_level asid vref s = Some (asid_pool_level, root)"
           , fastforce)
-   apply (erule vs_lookup_target_asid_pool_level_upd_helper; simp)
+   apply (erule vs_lookup_target_asid_pool_level_upd_helper[where ta_f=False]; simp)
   apply clarsimp
   apply (subgoal_tac "vs_lookup_target level asid vref s = Some (level, target)", fastforce)
   apply (erule vs_lookup_target_None_upd_helper; simp)
@@ -1937,15 +1928,15 @@ lemma set_asid_pool_only_idle [wp]:
   "\<lbrace>only_idle\<rbrace> set_asid_pool p ap \<lbrace>\<lambda>_. only_idle\<rbrace>"
   by (wp only_idle_lift set_asid_pool_typ_at)
 
-lemma set_asid_pool_equal_mappings[wp]:
+lemma set_asid_pool_equal_mappings[simplified f_kheap_to_kheap, wp]:
   "\<lbrace>equal_kernel_mappings and
-    (\<lambda>s. \<forall>p pt. p \<in> ran ap \<longrightarrow> pts_of s p = Some pt \<longrightarrow> has_kernel_mappings pt s)\<rbrace>
+    (\<lambda>s. \<forall>p pt. p \<in> ran ap \<longrightarrow> pts_of False s p = Some pt \<longrightarrow> has_kernel_mappings pt s)\<rbrace>
     set_asid_pool p ap
    \<lbrace>\<lambda>rv. equal_kernel_mappings\<rbrace>"
   unfolding set_asid_pool_def
   apply (wpsimp wp: set_object_wp)
   apply (clarsimp simp: equal_kernel_mappings_def)
-  apply (drule vspace_for_asid_SomeD)
+  apply (drule vspace_for_asid_SomeD[where ta_f=False,simplified])
   apply clarsimp
   apply (case_tac "p = pool_ptr")
   apply (clarsimp simp: equal_kernel_mappings_def has_kernel_mappings_def obj_at_def  opt_map_def
@@ -1955,20 +1946,20 @@ lemma set_asid_pool_equal_mappings[wp]:
   (* p \<noteq> pool_ptr *)
   apply (clarsimp simp: equal_kernel_mappings_def has_kernel_mappings_def obj_at_def  opt_map_def
                   split: option.splits if_splits)
-  apply (subgoal_tac "vspace_for_asid asid s = Some pt_ptr")
+  apply (subgoal_tac "vspace_for_asid False asid s = Some pt_ptr")
    apply (fastforce elim: vspace_for_asid_SomeI simp: opt_map_def)+
   done
 
-lemma translate_address_asid_pool_upd:
-  "pts_of s p = None
+lemma translate_address_asid_pool_upd[simplified f_kheap_to_kheap]:
+  "pts_of False s p = None
    \<Longrightarrow> translate_address pt_ptr vref
         (\<lambda>pa. pte_of pa (kheap s(p \<mapsto> ArchObj (ASIDPool ap)) |> aobj_of |> pt_of))
-      = translate_address pt_ptr vref (ptes_of s)"
+      = translate_address pt_ptr vref (ptes_of False s)"
   by simp
 
-lemma ko_atasid_pool_pts_None:
-  "ako_at (ASIDPool pool) p s \<Longrightarrow> pts_of s p = None"
-  by (clarsimp simp: opt_map_def obj_at_def split: option.splits)
+lemma ko_atasid_pool_pts_None[simplified f_kheap_to_kheap]:
+  "ako_at (ASIDPool pool) p s \<Longrightarrow> pts_of False s p = None"
+  by (clarsimp simp: opt_map_def obj_at_def ta_filter_def split: option.splits if_splits)
 
 lemma set_asid_pool_valid_global_vspace_mappings[wp]:
   "\<lbrace>valid_global_vspace_mappings\<rbrace>
@@ -1976,7 +1967,7 @@ lemma set_asid_pool_valid_global_vspace_mappings[wp]:
    \<lbrace>\<lambda>rv. valid_global_vspace_mappings\<rbrace>"
   unfolding set_asid_pool_def
   apply (wpsimp wp: set_object_wp)
-  apply (simp only: valid_global_vspace_mappings_def Let_def) (* prevent simp loop *)
+  apply (simp only: valid_global_vspace_mappings_def[simplified] Let_def) (* prevent simp loop *)
   apply (clarsimp simp: translate_address_asid_pool_upd ko_atasid_pool_pts_None)
   done
 
@@ -2021,7 +2012,8 @@ lemma set_asid_pool_valid_ioc[wp]:
 
 
 lemma set_asid_pool_vms[wp]:
-  "\<lbrace>valid_machine_state\<rbrace> set_asid_pool p S \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
+  "\<lbrace>\<lambda>s. valid_machine_state (ms_ta_obj_upd p (ArchObj (ASIDPool S)) s)\<rbrace>
+     set_asid_pool p S \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
   apply (simp add: set_asid_pool_def set_object_def)
   apply (wp get_object_wp)
   apply clarify
@@ -2047,6 +2039,7 @@ lemma set_asid_pool_invs_restrict:
             set_asid_pool_vspace_objs_unmap  valid_irq_handlers_lift
             set_asid_pool_vs_lookup_unmap)
   apply (clarsimp simp: equal_kernel_mappings_def)
+  sorry (* FIXME: Broken by timeprot-touch-objs. -robs
   apply (rename_tac s pt_ptr hi_bits pt)
   apply (clarsimp dest!: ran_restrictD)
   apply (rename_tac lo_bits)
@@ -2061,6 +2054,7 @@ lemma set_asid_pool_invs_restrict:
                          constructed_asid_high_bits_of constructed_asid_low_bits_of)
   apply (drule vspace_for_asid_from_lookup_target; simp)
   done
+*)
 
 lemmas set_asid_pool_cte_wp_at1[wp]
     = hoare_cte_wp_caps_of_state_lift [OF set_asid_pool_caps_of_state]
@@ -2149,17 +2143,18 @@ lemma set_pt_has_kernel_mappings:
   unfolding has_kernel_mappings_def
   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift)
     apply (rule hoare_lift_Pf2[where f="\<lambda>s. riscv_global_pt (arch_state s)"])
-     apply (wpsimp wp: set_pt_pts_of)+
+     apply (wpsimp wp: set_pt_pts_of[where ta_f'=False,simplified])+
   done
 
-lemma set_pt_equal_kernel_mappings:
+lemma set_pt_equal_kernel_mappings[simplified f_kheap_to_kheap]:
   "\<lbrace>\<lambda>s. equal_kernel_mappings s
-        \<and> ((\<exists>asid. vspace_for_asid asid s = Some p) \<longrightarrow> has_kernel_mappings pt s)
+        \<and> ((\<exists>asid. vspace_for_asid False asid s = Some p) \<longrightarrow> has_kernel_mappings pt s)
         \<and> p \<noteq> riscv_global_pt (arch_state s) \<rbrace>
    set_pt p pt
    \<lbrace>\<lambda>rv. equal_kernel_mappings\<rbrace>"
   unfolding equal_kernel_mappings_def
-  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' vspace_for_asid_lift set_pt_pts_of
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' vspace_for_asid_lift
+                 set_pt_pts_of[where ta_f=False and ta_f'=False,simplified]
                  set_pt_has_kernel_mappings)
 
 lemma has_kernel_mappings_index_upd_idem:
@@ -2171,9 +2166,9 @@ lemma has_kernel_mappings_index_upd_idem:
 (* We only affect kernel mapping slots of not-yet-mapped page tables, in particular when copying
    global mappings for a root page table. For preserving validity of mapped tables, we use this
    form. *)
-lemma store_pte_equal_kernel_mappings_no_kernel_slots:
+lemma store_pte_equal_kernel_mappings_no_kernel_slots[simplified f_kheap_to_kheap]:
   "\<lbrace>\<lambda>s. equal_kernel_mappings s
-        \<and> ((\<exists>asid. vspace_for_asid asid s = Some (table_base p))
+        \<and> ((\<exists>asid. vspace_for_asid False asid s = Some (table_base p))
                    \<longrightarrow> table_index p \<notin> kernel_mapping_slots)
         \<and> table_base p \<noteq> riscv_global_pt (arch_state s) \<rbrace>
    store_pte p pte
@@ -2181,7 +2176,7 @@ lemma store_pte_equal_kernel_mappings_no_kernel_slots:
   unfolding store_pte_def
   supply fun_upd_apply[simp del]
   apply (wpsimp wp: set_pt_equal_kernel_mappings)
-  apply (fastforce simp: obj_at_def equal_kernel_mappings_def pts_of_ko_at
+  apply (fastforce simp: obj_at_def equal_kernel_mappings_def pts_of_ko_at opt_map_def
                    intro: has_kernel_mappings_index_upd_idem)
   done
 
@@ -2201,12 +2196,12 @@ lemma store_pte_state_hyp_refs_of[wp]:
   apply (rule ext, clarsimp simp: state_hyp_refs_of_def obj_at_def)
   done
 
-lemma asid_pools_of_pt_None_upd_idem:
-  "pt_at p s \<Longrightarrow> (asid_pools_of s)(p := None) = (asid_pools_of s)"
+lemma asid_pools_of_pt_None_upd_idem[simplified f_kheap_to_kheap]:
+  "pt_at p s \<Longrightarrow> (asid_pools_of False s)(p := None) = (asid_pools_of False s)"
   by (rule ext)
      (clarsimp simp: opt_map_def obj_at_def )
 
-lemma store_pte_valid_asid_table[wp]:
+lemma store_pte_valid_asid_table[simplified f_kheap_to_kheap, wp]:
   "\<lbrace> valid_asid_table \<rbrace>
    store_pte p pte
    \<lbrace>\<lambda>_. valid_asid_table \<rbrace>"
@@ -2215,6 +2210,26 @@ lemma store_pte_valid_asid_table[wp]:
   apply (wpsimp wp: set_object_wp hoare_vcg_imp_lift' hoare_vcg_all_lift)
   apply (subst asid_pools_of_pt_None_upd_idem, auto simp: obj_at_def)
   done
+
+(* FIXME: Broken by timeprot-touch-objs. -robs
+   The preconditions of all these might need to be tweaked, unless we can prove
+   the property in question has nothing to do with touched_addresses. *)
+
+lemma zombies_final_store_pte[wp]:
+  "\<lbrace>zombies_final\<rbrace> store_pte param_a param_b \<lbrace>\<lambda>_. zombies_final\<rbrace>"
+  sorry
+
+lemma valid_irq_states_store_pte[wp]:
+  "\<lbrace>valid_irq_states\<rbrace> store_pte param_a param_b \<lbrace>\<lambda>_. valid_irq_states\<rbrace>"
+  sorry
+
+lemma valid_machine_state_store_pte[wp]:
+  "\<lbrace>valid_machine_state\<rbrace> store_pte param_a param_b \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
+  sorry
+
+lemma cur_tcb_store_pte[wp]:
+  "\<lbrace>cur_tcb\<rbrace> store_pte param_a param_b \<lbrace>\<lambda>_. cur_tcb\<rbrace>"
+  sorry
 
 crunches store_pte
   for iflive[wp]: if_live_then_nonz_cap
@@ -2242,12 +2257,13 @@ crunches store_pte
   (wp: set_pt_zombies set_pt_ifunsafe set_pt_reply_caps set_pt_reply_masters
        set_pt_valid_global valid_irq_node_typ valid_irq_handlers_lift set_pt_cur)
 
-lemma store_pte_valid_global_tables:
+lemma store_pte_valid_global_tables[simplified f_kheap_to_kheap]:
   "\<lbrace> valid_global_tables and valid_global_arch_objs and valid_global_vspace_mappings
      and (\<lambda>s. table_base p \<notin> global_refs s) \<rbrace>
    store_pte p pte
    \<lbrace>\<lambda>_. valid_global_tables \<rbrace>"
   unfolding store_pte_def set_pt_def
+  apply simp
   supply fun_upd_apply[simp del]
   apply (wpsimp wp: set_object_wp)
   apply (simp (no_asm) add: valid_global_tables_def Let_def)
@@ -2424,7 +2440,7 @@ lemma store_pte_InvalidPTE_valid_vs_lookup:
    apply (subst (asm) pt_walk_pt_upd_idem; simp?)
     apply clarsimp
     apply (rename_tac level'')
-    apply (prop_tac "pt_walk level' level'' (table_base p) vref (ptes_of s) = Some (level'', table_base p)")
+    apply (prop_tac "pt_walk level' level'' (table_base p) vref (ptes_of False s) = Some (level'', table_base p)")
      apply (subst pt_walk.simps)
      apply clarsimp
      apply (prop_tac "level'' < level'")
@@ -2434,6 +2450,7 @@ lemma store_pte_InvalidPTE_valid_vs_lookup:
      apply (rule_tac x="(pt (table_index (pt_slot_offset level' (table_base p) vref)))" in exI)
      apply clarsimp
      apply (clarsimp simp: ptes_of_def in_omonad)
+    apply (simp only:f_kheap_to_kheap)
     apply (prop_tac "level'' < level'")
      apply (drule pt_walk_max_level)
      apply (simp add: bit0.leq_minus1_less)
@@ -2442,13 +2459,14 @@ lemma store_pte_InvalidPTE_valid_vs_lookup:
     apply (drule (1) no_loop_vs_lookup_table; simp?)
    (* pt_walk is now on pts_of s, can stitch it back together into a vs_lookup_table *)
    (* FIXME RISCV again useful transform from elsewhere *)
-   apply (prop_tac "pt_walk level' level (table_base p) vref (ptes_of s) = Some (level, table_ptr)")
+   apply (prop_tac "pt_walk level' level (table_base p) vref (ptes_of False s) = Some (level, table_ptr)")
     apply (subst pt_walk.simps)
     apply clarsimp
     apply (clarsimp simp: in_omonad obj_at_def)
     apply (rule_tac x="(pt (table_index (pt_slot_offset level' (table_base p) vref)))" in exI)
     apply clarsimp
     apply (clarsimp simp: ptes_of_def in_omonad)
+   apply (simp only:f_kheap_to_kheap)
    apply (prop_tac "vs_lookup_table level asid vref s = Some (level, table_ptr)")
     apply (erule (2) vs_lookup_table_extend)
    (* now specifically to vs_lookup_target reconstruction, we get through pte_of ref_of stuff *)
@@ -2486,7 +2504,7 @@ lemma store_pte_non_InvalidPTE_valid_vs_lookup:
                  vs_lookup_table level asid vref s = Some (level, table_base p)
                       \<longrightarrow> vref \<in> user_region
                       \<longrightarrow> pt_slot_offset level (table_base p) vref = p
-                      \<longrightarrow> (is_PageTablePTE pte \<longrightarrow> pts_of s (the (pte_ref pte)) = Some empty_pt)
+                      \<longrightarrow> (is_PageTablePTE pte \<longrightarrow> pts_of False s (the (pte_ref pte)) = Some empty_pt)
                          \<and> the (pte_ref pte) \<noteq> table_base p
                          \<and> (\<exists>p' cap. caps_of_state s p' = Some cap \<and>
                                      obj_refs cap = {the (pte_ref pte)} \<and>
@@ -2592,7 +2610,7 @@ lemma store_pte_non_InvalidPTE_valid_vs_lookup:
    apply (subst (asm) pt_walk_pt_upd_idem; simp?)
     apply clarsimp
     apply (rename_tac level'')
-    apply (prop_tac "pt_walk level' level'' (table_base p) vref (ptes_of s) = Some (level'', table_base p)")
+    apply (prop_tac "pt_walk level' level'' (table_base p) vref (ptes_of False s) = Some (level'', table_base p)")
      apply (subst pt_walk.simps)
      apply clarsimp
      apply (prop_tac "level'' < level'")
@@ -2602,6 +2620,7 @@ lemma store_pte_non_InvalidPTE_valid_vs_lookup:
      apply (rule_tac x="(pt (table_index (pt_slot_offset level' (table_base p) vref)))" in exI)
      apply clarsimp
      apply (clarsimp simp: ptes_of_def in_omonad)
+    apply (simp only:f_kheap_to_kheap)
     apply (prop_tac "level'' < level'")
      apply (drule pt_walk_max_level)
      apply (simp add: bit0.leq_minus1_less)
@@ -2610,13 +2629,14 @@ lemma store_pte_non_InvalidPTE_valid_vs_lookup:
     apply (drule (1) no_loop_vs_lookup_table; simp?)
    (* pt_walk is now on pts_of s, can stitch it back together into a vs_lookup_table *)
    (* FIXME RISCV again useful transform from elsewhere *)
-   apply (prop_tac "pt_walk level' level (table_base p) vref (ptes_of s) = Some (level, table_ptr)")
+   apply (prop_tac "pt_walk level' level (table_base p) vref (ptes_of False s) = Some (level, table_ptr)")
     apply (subst pt_walk.simps)
     apply clarsimp
     apply (clarsimp simp: in_omonad obj_at_def)
     apply (rule_tac x="(pt (table_index (pt_slot_offset level' (table_base p) vref)))" in exI)
     apply clarsimp
     apply (clarsimp simp: ptes_of_def in_omonad)
+   apply (simp only:f_kheap_to_kheap)
    apply (prop_tac "vs_lookup_table level asid vref s = Some (level, table_ptr)")
     apply (erule (2) vs_lookup_table_extend)
    (* now specifically to vs_lookup_target reconstruction, we get through pte_of ref_of stuff *)
@@ -2651,13 +2671,14 @@ lemma store_pte_PageTablePTE_valid_vspace_objs:
      and (\<lambda>s. valid_caps (caps_of_state s) s)
      and K (is_PageTablePTE pte)
      and (\<lambda>s. \<forall>level. \<exists>\<rhd> (level, table_base p) s
-                      \<longrightarrow> valid_pte level pte s \<and> pts_of s (the (pte_ref pte)) = Some empty_pt
+                      \<longrightarrow> valid_pte level pte s \<and> pts_of False s (the (pte_ref pte)) = Some empty_pt
                          \<and> the (pte_ref pte) \<noteq> table_base p) \<rbrace>
    store_pte p pte
    \<lbrace>\<lambda>s. valid_vspace_objs \<rbrace>"
   supply fun_upd_apply[simp del]
   apply (wpsimp simp: store_pte_def set_pt_def wp: set_object_wp)
   apply (subst valid_vspace_objs_def)
+  apply (simp only:f_kheap_to_kheap)
   apply (clarsimp split del: if_split)
   apply (rename_tac p' ao)
   (* focus on valid_vspace_obj level ao s  *)
@@ -2699,8 +2720,9 @@ lemma store_pte_PageTablePTE_valid_vspace_objs:
   apply (rename_tac pt_ptr)
   (* update now occurs in pt_walk stage *)
   apply (drule (1) vs_lookup_table_fun_upd_deep_idem; assumption?; simp)
-  apply (prop_tac "valid_pte level' pte s \<and> pts_of s (the (pte_ref pte)) = Some empty_pt
+  apply (prop_tac "valid_pte level' pte s \<and> pts_of False s (the (pte_ref pte)) = Some empty_pt
                    \<and> the (pte_ref pte) \<noteq> table_base p", fastforce)
+   apply (simp only:f_kheap_to_kheap)
   (* handle the actual update, happening on next step of pt_walk *)
   apply (subst (asm) pt_walk.simps, clarsimp simp: in_omonad split: if_splits)
   apply (rename_tac pte')
@@ -2717,7 +2739,7 @@ lemma store_pte_PageTablePTE_valid_vspace_objs:
    apply (subst (asm) pt_walk_pt_upd_idem; simp?)
     apply clarsimp
     apply (rename_tac level'')
-    apply (prop_tac "pt_walk level' level'' (table_base p) vref (ptes_of s) = Some (level'', table_base p)")
+    apply (prop_tac "pt_walk level' level'' (table_base p) vref (ptes_of False s) = Some (level'', table_base p)")
      apply (subst pt_walk.simps)
      apply clarsimp
      apply (prop_tac "level'' < level'")
@@ -2727,6 +2749,7 @@ lemma store_pte_PageTablePTE_valid_vspace_objs:
      apply (rule_tac x="(pt (table_index (pt_slot_offset level' (table_base p) vref)))" in exI)
      apply clarsimp
      apply (clarsimp simp: ptes_of_def in_omonad)
+    apply (simp only:f_kheap_to_kheap)
     apply (prop_tac "level'' < level'")
      apply (drule pt_walk_max_level)
      apply (simp add: bit0.leq_minus1_less)
@@ -2735,13 +2758,14 @@ lemma store_pte_PageTablePTE_valid_vspace_objs:
     apply (drule (1) no_loop_vs_lookup_table; simp?)
    (* pt_walk is now on pts_of s, can stitch it back together into a vs_lookup_table *)
    (* FIXME RISCV again useful transform from elsewhere *)
-   apply (prop_tac "pt_walk level' level (table_base p) vref (ptes_of s) = Some (level, p')")
+   apply (prop_tac "pt_walk level' level (table_base p) vref (ptes_of False s) = Some (level, p')")
     apply (subst pt_walk.simps)
     apply clarsimp
     apply (clarsimp simp: in_omonad obj_at_def)
     apply (rule_tac x="(pt (table_index (pt_slot_offset level' (table_base p) vref)))" in exI)
     apply clarsimp
     apply (clarsimp simp: ptes_of_def in_omonad)
+   apply (simp only:f_kheap_to_kheap)
    apply (prop_tac "vs_lookup_table level asid vref s = Some (level, p')")
     apply (erule (2) vs_lookup_table_extend)
    (* p' can't equal table_base p since we see it earlier in the lookup *)
@@ -2758,13 +2782,13 @@ lemma store_pte_PageTablePTE_valid_vspace_objs:
   apply (cases pte; clarsimp simp: pptr_from_pte_def in_omonad valid_vspace_obj.simps)
   done
 
-lemma store_pte_valid_vspace_objs:
+lemma store_pte_valid_vspace_objs[simplified f_kheap_to_kheap]:
   "\<lbrace> valid_vspace_objs
      and pspace_aligned and valid_asid_table and unique_table_refs and valid_vs_lookup
      and (\<lambda>s. valid_caps (caps_of_state s) s)
      and (\<lambda>s. \<forall>level. \<exists>\<rhd> (level, table_base p) s
                       \<longrightarrow> valid_pte level pte s
-                         \<and> (is_PageTablePTE pte \<longrightarrow> pts_of s (the (pte_ref pte)) = Some empty_pt
+                         \<and> (is_PageTablePTE pte \<longrightarrow> pts_of False s (the (pte_ref pte)) = Some empty_pt
                                                    \<and> the (pte_ref pte) \<noteq> table_base p)) \<rbrace>
    store_pte p pte
    \<lbrace>\<lambda>_. valid_vspace_objs \<rbrace>"
@@ -2779,7 +2803,7 @@ lemma store_pte_valid_vspace_objs:
   done
 
 
-lemma store_pte_valid_vs_lookup:
+lemma store_pte_valid_vs_lookup[simplified f_kheap_to_kheap]:
   "\<lbrace> valid_vs_lookup
      and pspace_aligned and valid_vspace_objs and valid_asid_table and unique_table_refs
      and (\<lambda>s. valid_caps (caps_of_state s) s)
@@ -2788,7 +2812,7 @@ lemma store_pte_valid_vs_lookup:
                      vs_lookup_table level asid vref s = Some (level, table_base p)
                      \<longrightarrow> vref \<in> user_region
                      \<longrightarrow> pt_slot_offset level (table_base p) vref = p
-                     \<longrightarrow> (is_PageTablePTE pte \<longrightarrow> pts_of s (the (pte_ref pte)) = Some empty_pt)
+                     \<longrightarrow> (is_PageTablePTE pte \<longrightarrow> pts_of False s (the (pte_ref pte)) = Some empty_pt)
                          \<and> the (pte_ref pte) \<noteq> table_base p
                          \<and> (\<exists>p' cap. caps_of_state s p' = Some cap \<and>
                                      obj_refs cap = {the (pte_ref pte)} \<and>
@@ -2800,7 +2824,7 @@ lemma store_pte_valid_vs_lookup:
    apply (wpsimp wp: store_pte_non_InvalidPTE_valid_vs_lookup)+
   done
 
-lemma store_pte_valid_arch_caps:
+lemma store_pte_valid_arch_caps[simplified f_kheap_to_kheap]:
   "\<lbrace> valid_arch_caps
      and pspace_aligned and valid_vspace_objs and valid_asid_table
      and (\<lambda>s. valid_caps (caps_of_state s) s)
@@ -2811,7 +2835,7 @@ lemma store_pte_valid_arch_caps:
                      vs_lookup_table level asid vref s = Some (level, table_base p)
                      \<longrightarrow> vref \<in> user_region
                      \<longrightarrow> pt_slot_offset level (table_base p) vref = p
-                     \<longrightarrow> (is_PageTablePTE pte \<longrightarrow> pts_of s (the (pte_ref pte)) = Some empty_pt)
+                     \<longrightarrow> (is_PageTablePTE pte \<longrightarrow> pts_of False s (the (pte_ref pte)) = Some empty_pt)
                          \<and> the (pte_ref pte) \<noteq> table_base p
                          \<and> (\<exists>p' cap. caps_of_state s p' = Some cap \<and>
                                      obj_refs cap = {the (pte_ref pte)} \<and>
@@ -2821,30 +2845,31 @@ lemma store_pte_valid_arch_caps:
   unfolding valid_arch_caps_def
   by (wpsimp wp: store_pte_valid_vs_lookup store_pte_valid_table_caps)
 
-lemma store_pte_invs:
+lemma store_pte_invs[simplified f_kheap_to_kheap]:
   "\<lbrace> invs
      and (\<lambda>s. table_base p \<notin> global_refs s)
      and K (wellformed_pte pte)
      and (\<lambda>s. \<forall>level. \<exists>\<rhd> (level, table_base p) s
                       \<longrightarrow> valid_pte level pte s
-                         \<and> (is_PageTablePTE pte \<longrightarrow> pts_of s (the (pte_ref pte)) = Some empty_pt
+                         \<and> (is_PageTablePTE pte \<longrightarrow> pts_of False s (the (pte_ref pte)) = Some empty_pt
                                                    \<and> the (pte_ref pte) \<noteq> table_base p))
      and (\<lambda>s. (\<forall>slot asidopt. caps_of_state s slot = Some (ArchObjectCap (PageTableCap (table_base p) asidopt))
                               \<longrightarrow> asidopt = None \<longrightarrow> pte = InvalidPTE))
-     and (\<lambda>s. ((\<exists>asid. vspace_for_asid asid s = Some (table_base p))
+     and (\<lambda>s. ((\<exists>asid. vspace_for_asid False asid s = Some (table_base p))
                        \<longrightarrow> table_index p \<notin> kernel_mapping_slots))
      and (\<lambda>s. pte \<noteq> InvalidPTE
               \<longrightarrow> (\<forall>level asid vref.
                      vs_lookup_table level asid vref s = Some (level, table_base p)
                      \<longrightarrow> vref \<in> user_region
                      \<longrightarrow> pt_slot_offset level (table_base p) vref = p
-                     \<longrightarrow> (is_PageTablePTE pte \<longrightarrow> pts_of s (the (pte_ref pte)) = Some empty_pt)
+                     \<longrightarrow> (is_PageTablePTE pte \<longrightarrow> pts_of False s (the (pte_ref pte)) = Some empty_pt)
                          \<and> the (pte_ref pte) \<noteq> table_base p
                          \<and> (\<exists>p' cap. caps_of_state s p' = Some cap \<and>
                                      obj_refs cap = {the (pte_ref pte)} \<and>
                                      vs_cap_ref cap = Some (asid, vref_for_level vref level)))) \<rbrace>
    store_pte p pte
    \<lbrace>\<lambda>_. invs \<rbrace>"
+  apply (simp only: f_kheap_to_kheap)
   apply (simp add: invs_def valid_state_def valid_pspace_def valid_arch_state_def)
   apply (wpsimp wp: store_pte_valid_global_vspace_mappings store_pte_valid_global_tables
                     store_pte_valid_vspace_objs store_pte_valid_arch_caps
@@ -2855,7 +2880,7 @@ lemma store_pte_invs:
 lemma store_pte_invs_unmap:
   "\<lbrace>invs and
     (\<lambda>s. \<exists>slot ref. caps_of_state s slot = Some (ArchObjectCap (PageTableCap (table_base p) ref))) and
-    (\<lambda>s. (\<exists>asid. vspace_for_asid asid s = Some (table_base p)) \<longrightarrow> table_index p \<notin> kernel_mapping_slots) and
+    (\<lambda>s. (\<exists>asid. vspace_for_asid False asid s = Some (table_base p)) \<longrightarrow> table_index p \<notin> kernel_mapping_slots) and
     (\<lambda>s. table_base p \<notin> global_refs s) and K (pte = InvalidPTE)\<rbrace>
   store_pte p pte \<lbrace>\<lambda>_. invs\<rbrace>"
   by (wpsimp wp: store_pte_invs simp: wellformed_pte_def)
@@ -2863,7 +2888,7 @@ lemma store_pte_invs_unmap:
 
 lemma vs_lookup_table_vspace:
   "\<lbrakk> vs_lookup_table level asid vptr s = Some (level, pt_ptr);
-     vspace_for_asid asid' s = Some pt_ptr; vptr \<in> user_region; invs s \<rbrakk>
+     vspace_for_asid False asid' s = Some pt_ptr; vptr \<in> user_region; invs s \<rbrakk>
    \<Longrightarrow> asid' = asid \<and> level = max_pt_level"
   apply (cases "level = asid_pool_level"; clarsimp)
    apply (clarsimp simp: vs_lookup_table_def)
@@ -2921,6 +2946,9 @@ proof -
     apply (clarsimp dest!: P)
     apply (subst Q)
      prefer 2
+     sorry (* FIXME: Broken by timeprot-touch-objs. -robs
+       It's not straightforward to say what the effect on TA will be so that we can tweak the
+       precondition, as it seems to depend on this `f`. This will need some proper thought.
      apply assumption
     apply (rule ext)
     apply (simp add: get_tcb_def)
@@ -2928,6 +2956,7 @@ proof -
     apply (case_tac a; simp)
     apply (clarsimp simp: arch_tcb_context_set_def arch_tcb_context_get_def)
     done
+*)
 qed
 
 crunches getRegister
