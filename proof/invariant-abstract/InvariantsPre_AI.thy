@@ -30,12 +30,14 @@ abbreviation ignore_ta :: "('s state \<Rightarrow> bool) \<Rightarrow> ('s state
   "ignore_ta P \<equiv> \<lambda>s. \<forall>ta. P (s\<lparr>ms_touched_addresses := ta\<rparr>)"
 
 
+\<comment> \<open>A locale for monads m that only change the TA set\<close>
 locale touched_addresses_inv =
   fixes state_ext_t :: "'state_ext::state_ext itself"
   fixes m :: "('state_ext::state_ext state, 'r) nondet_monad"
   assumes tainv: "\<And>P. m \<lbrace>ignore_ta P\<rbrace>"
 begin
 
+\<comment> \<open>If P doesn't care about the TA set, m preserves P even though it changes the TA set\<close>
 lemma agnostic_preserved:
   "ta_agnostic P \<Longrightarrow> m \<lbrace>P\<rbrace>"
   unfolding ta_agnostic_def
@@ -94,6 +96,9 @@ sublocale touched_addresses_invE \<subseteq> touched_addresses_inv
 term "state_ext"
 term "state_ext state"
 
+\<comment> \<open>A locale for propositions P that don't care about the TA set (ta_agnostic P),
+   relative to a monad m that only changes TA (via locale touched_addresses_inv).
+   Instantiate this locale to add a rule to the [wp] set that says m preserves P. \<close>
 locale touched_addresses_P_inv = touched_addresses_inv state_ext_t m
   for state_ext_t :: "'state_ext::state_ext itself"
   and m::"('state_ext::state_ext state, 'r) nondet_monad" +
