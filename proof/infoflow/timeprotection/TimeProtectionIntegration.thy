@@ -116,18 +116,31 @@ begin
 
 *)
 
+find_theorems do_machine_op machine_state
+
 definition is_timer_irq :: "det_ext Structures_A.state \<Rightarrow> bool" where
   "is_timer_irq s \<equiv> let irq = irq_oracle (Suc (irq_state_of_state s)) in
                      \<exists>s'. (Some irq, s') \<in> fst (do_machine_op (getActiveIRQ False) s)
                            \<and> interrupt_states s irq = IRQTimer"
 
-definition domain_time_zero :: "if_other_state \<Rightarrow> bool" where
-  "domain_time_zero os \<equiv> domain_time_internal (exst (snd (fst os))) = 1"
+lemma is_timer_irq_def2:
+  "is_timer_irq s = (\<lambda>ms is. let irq = irq_oracle (Suc (irq_state ms)) in
+                            \<exists>s'. (Some irq, s') \<in> fst (getActiveIRQ False ms)
+                                 \<and> is irq = IRQTimer) (machine_state s) (interrupt_states s)"
+  apply (clarsimp simp: is_timer_irq_def Let_def do_machine_op_def exec_modify bind_def
+    select_f_def simpler_modify_def split:prod.splits)
+  apply (rule conj_left_cong)
+  apply (clarsimp simp: simpler_gets_def return_def)
+  apply fastforce
+  done
+
+definition domain_time_zero :: "det_ext Structures_A.state \<Rightarrow> bool" where
+  "domain_time_zero os \<equiv> domain_time_internal (exst os) = 1"
 
 definition will_domain_switch :: "if_other_state \<Rightarrow> bool" where
   "will_domain_switch os \<equiv> interrupted_modes (snd os)
-                         \<and> is_timer_irq (snd (fst os))
-                         \<and> domain_time_zero os"
+                         \<and> is_timer_irq (internal_state_if os)
+                         \<and> domain_time_zero (internal_state_if os)"
 
 lemma ex_eq:
   "(\<exists>y. (P y = P' y)) \<Longrightarrow>(\<exists>x. P x) = (\<exists>x. P' x)"
@@ -325,7 +338,7 @@ definition
    do
      modify (\<lambda>s. s\<lparr>machine_state :=
        machine_state s \<lparr>irq_state := irq_state_of_state s + 1\<rparr>\<rparr>);
-     do_extended_op timer_tick;
+     timer_tick;
      do_machine_op resetTimer
    od"
 
@@ -348,7 +361,7 @@ definition Psame :: "'a \<Rightarrow> 'b \<Rightarrow> 'a \<Rightarrow> 'b \<Rig
 lemma dmo_getActiveIRQ_timer:
   "\<lbrace>\<lambda>s. is_timer_irq s \<and> P (Some (irq_oracle (irq_state (machine_state s)+1)))
   (s\<lparr>machine_state := (machine_state s\<lparr>irq_state := irq_state (machine_state s) + 1\<rparr>)\<rparr>)\<rbrace>
-     do_machine_op (getActiveIRQ True)
+     do_machine_op (getActiveIRQ b)
    \<lbrace>\<lambda>r s. P r s \<and> interrupt_states s (the r) = IRQTimer\<rbrace>"
   apply (clarsimp simp: getActiveIRQ_no_non_kernel_IRQs)
   apply (rule hoare_weaken_pre)
@@ -363,11 +376,20 @@ lemma dmo_getActiveIRQ_timer:
    apply (simp add: in_monad(12))
   (* apply (clarsimp simp:return_def) *)
   done
+
+lemma dmo_getActiveIRQ_timer_interrupt_states:
+  "\<lbrace>\<lambda>s. is_timer_irq s\<rbrace>
+     do_machine_op (getActiveIRQ True)
+   \<lbrace>\<lambda>r s. interrupt_states s (the r) = IRQTimer\<rbrace>"
+  apply (rule hoare_weaken_pre, rule hoare_strengthen_post)
+    apply (rule dmo_getActiveIRQ_timer [where P="\<top>\<top>"])
+   apply clarsimp+
+  done
   
 lemma dmo_getActiveIRQ_timer_withoutextras:
   "\<lbrace>\<lambda>s. is_timer_irq s \<and> P (Some (irq_oracle (irq_state (machine_state s)+1)))
   (s\<lparr>machine_state := (machine_state s\<lparr>irq_state := irq_state (machine_state s) + 1\<rparr>)\<rparr>)\<rbrace>
-     do_machine_op (getActiveIRQ True)
+     do_machine_op (getActiveIRQ b)
    \<lbrace>P\<rbrace>"
   apply (rule hoare_strengthen_post)
   apply (rule dmo_getActiveIRQ_timer)
@@ -377,10 +399,9 @@ lemma dmo_getActiveIRQ_timer_withoutextras:
 
 lemma dmo_getActiveIRQ_timer2:
   "\<lbrace>\<lambda>s. is_timer_irq s\<rbrace>
-     do_machine_op (getActiveIRQ True)
+     do_machine_op (getActiveIRQ b)
    \<lbrace>\<lambda>r s. r = Some (irq_oracle (irq_state (machine_state s)))
       \<and> interrupt_states s (the r) = IRQTimer\<rbrace>"
-  apply (clarsimp simp: getActiveIRQ_no_non_kernel_IRQs)
   apply (rule hoare_weaken_pre)
   apply (rule dmo_getActiveIRQ_wp)
   apply (clarsimp simp: is_timer_irq_def check_active_irq_A_if_def check_active_irq_if_def)
@@ -588,14 +609,14 @@ lemma do_machine_op_no_fail [wp_unsafe]:
   done
 
 lemma dmo_getActiveIRQ_no_fail:
-  "no_fail \<top> (do_machine_op (getActiveIRQ True))"
+  "no_fail \<top> (do_machine_op (getActiveIRQ b))"
   apply (wpsimp wp:do_machine_op_no_fail)
   done
 
 lemma monadic_rewrite_dmo_getActiveIRQ:
   "monadic_rewrite E F
     is_timer_irq
-    (do_machine_op (getActiveIRQ True))
+    (do_machine_op (getActiveIRQ b))
     (do s \<leftarrow> get;
        modify (\<lambda>s. s\<lparr>machine_state := machine_state s\<lparr>irq_state := irq_state_of_state s + 1\<rparr>\<rparr>);
        return (Some (irq_oracle (irq_state_of_state s + 1))) od)"
@@ -618,194 +639,189 @@ lemma monadic_rewrite_dmo_getActiveIRQ_bind:
   using dmo_getActiveIRQ_timer_withoutextras apply clarsimp
   done
 
-lemma pred_conj_refl:
+(* FIXME: move this somewhere? PR this? *)
+lemma pred_conj_refl [simp]:
   "(P and P) = P"
   by (simp add: pred_conj_def)
-
 
 lemma bind_assoc_sym:
   "do a \<leftarrow> f; b \<leftarrow> g a; h b od = 
   (do a \<leftarrow> f; g a od) >>= h"
   by (simp add: bind_subst_lift)
 
-lemma get_modify_use_reorder:
-  "(\<forall>s. Pr' (Ps s) = Pr s) \<Longrightarrow>
-  (do z <- get;
-     y \<leftarrow> modify Ps;
-     handle_interrupt (Pr z)
-   od) = 
-  (do y \<leftarrow> modify Ps;
-     z <- get;
-     handle_interrupt (Pr' z)
-   od)"
-  apply (rule ext)
-  apply (clarsimp simp: exec_get exec_modify)
-  done
+lemma bind_assoc_sym_simple:
+  "do f; g; h od = 
+  (do f; g od) >>= (\<lambda>_. h)"
+  by (simp add: bind_subst_lift)
 
-lemma monadic_rewrite_remove_get:
-  "monadic_rewrite E F
-    P
-    (do s \<leftarrow> get; f od)
-    f"
+lemma monadic_rewrite_if_lhs_true:
+  "\<lbrakk> P \<Longrightarrow> monadic_rewrite F E Q b a \<rbrakk>
+      \<Longrightarrow> monadic_rewrite F E ((\<lambda>_. P) and Q)
+             (If P b c) a"
+  by (clarsimp, rule monadic_rewrite_impossible)
+
+lemma monadic_rewrite_if_lhs_false:
+  "\<lbrakk> \<not>P \<Longrightarrow> monadic_rewrite F E R c a \<rbrakk>
+      \<Longrightarrow> monadic_rewrite F E ((\<lambda>_. \<not>P) and R)
+             (If P b c) a"
+  by (clarsimp, rule monadic_rewrite_impossible)
+
+(* the above are almost entirely generated by the following expressions  *)
+thm monadic_rewrite_if_lhs [OF monadic_rewrite_impossible, simplified]
+thm monadic_rewrite_if_lhs [rotated, OF monadic_rewrite_impossible, simplified]
+
+lemma monadic_rewrite_unused_get:
+  "monadic_rewrite F E \<top> (do x \<leftarrow> get; g od) g"
   by (simp add: exec_get monadic_rewrite_refl3)
 
-lemma monadic_rewrite_remove_used_get:
-  "(\<forall>s. Ps \<longrightarrow> Q (e s)) \<Longrightarrow>
-  Q r \<Longrightarrow>
-  monadic_rewrite E F
-    P
-    f
-    (g r) \<Longrightarrow>
-  monadic_rewrite E F
-    P
-    f
-    (do s \<leftarrow> get; g (e s) od)"
-  oops
-
-lemma sdsdfsdfdd:
-  "(do s \<leftarrow> get; f s od) =
-    (\<lambda>s. f s s)"
-  by (simp add: exec_get monadic_rewrite_refl3 monadic_rewrite_to_eq)
-
-lemma monadic_rewrite_double_get:
-  "monadic_rewrite E F P (do s \<leftarrow> get; s' \<leftarrow> get; m s s' od) (do s \<leftarrow> get; m s s od)"
-  by (simp add: exec_get monadic_rewrite_refl3)
-
-lemma monadic_rewrite_trans_simple:
-  "\<lbrakk> monadic_rewrite F E P f g; monadic_rewrite F E P g h \<rbrakk>
-      \<Longrightarrow> monadic_rewrite F E P f h"
-  by (auto simp add: monadic_rewrite_def)
-
-thm monadic_rewrite_bind_tail
-lemma monadic_rewrite_bind_tail_result:
-  "\<lbrakk>(\<And>x. Q x \<longrightarrow> monadic_rewrite F E P (h x) (j x)); \<lbrace>R\<rbrace> f \<lbrace>\<lambda>r s. Q r \<and> P s\<rbrace>\<rbrakk> \<Longrightarrow>
-  monadic_rewrite F E R (f >>= h) (f >>= j)"
-  by (smt (z3) monadic_rewrite_bind_tail monadic_rewrite_imp monadic_rewrite_refl3)
-
-lemma monadic_rewrite_bind_get:
-  "\<lbrakk>(\<And>x. P x \<longrightarrow> monadic_rewrite F E P (h x) (j x))\<rbrakk> \<Longrightarrow>
-  monadic_rewrite F E P (get >>= h) (get >>= j)"
-  apply (erule monadic_rewrite_bind_tail_result)
-  apply (clarsimp simp:valid_def get_def)
+lemma when_Some_case:
+  "(case x of None \<Rightarrow> return ()
+  | Some x \<Rightarrow> f x) = when (\<exists>y. x = Some y) (f (the x))"
+  apply (cases x; simp)
   done
 
-thm monadic_rewrite_name_pre
+lemma dmo_getActiveIRQ_handle_interrupt_IRQTimer:
+  "monadic_rewrite F E
+    is_timer_irq
+    (do irq \<leftarrow> do_machine_op (getActiveIRQ b);
+        when (irq \<noteq> None) $ handle_interrupt (the irq) od)
+    handle_interrupt_IRQTimer"
+  apply (rule monadic_rewrite_imp)
+   apply (rule monadic_rewrite_trans)
+     apply (rule monadic_rewrite_bind_tail)
+     unfolding when_def fun_app_def
+     apply (rule monadic_rewrite_if_lhs_true)
+     unfolding handle_interrupt_def
+     apply (rule monadic_rewrite_if_lhs_false)
+     apply (rule monadic_rewrite_bind_tail)
+      apply (rule monadic_rewrite_bind)
+        apply (rule_tac P="st=IRQTimer" in monadic_rewrite_gen_asm)
+        apply simp
+        apply (rule monadic_rewrite_refl)
+       apply (clarsimp simp:ackInterrupt_def)
+       apply (rule monadic_rewrite_refl)
+      apply wp
+     unfolding get_irq_state_def
+     apply wp
+    apply (rule dmo_getActiveIRQ_timer_withoutextras)
+   apply clarsimp
+   apply (rule monadic_rewrite_trans)
+    apply (rule monadic_rewrite_bind)
+      apply (rule monadic_rewrite_dmo_getActiveIRQ)
+     apply (rule monadic_rewrite_gets_known [where rv=IRQTimer])
+    apply wp
+   apply (clarsimp simp: bind_assoc handle_interrupt_IRQTimer_def)
+   apply (rule monadic_rewrite_unused_get)
+  apply (clarsimp simp:is_timer_irq_def Let_def)
+  using irq_oracle_max_irq word_not_le apply blast
+  done
 
-thm monadic_rewrite_refl
-lemma monadic_rewrite_refl2:
-  "monadic_rewrite F E P f f"
-  by (simp add: monadic_rewrite_def)
-
-lemma sdsdf:
-  "monadic_rewrite E F
+lemma handle_preemption_if_timer_irq:
+  "monadic_rewrite F E
     is_timer_irq
     (handle_preemption_if tc)
     (do handle_interrupt_IRQTimer; return tc od)"
-  apply (clarsimp simp: handle_preemption_if_def)
-  (* get rid of the "return tc" at the end *)
-  apply (subst bind_assoc_sym)
-  apply (rule monadic_rewrite_bind_head)
-
-  apply (rule monadic_rewrite_trans_simple)
-   apply (rule monadic_rewrite_dmo_getActiveIRQ_bind)
-  apply clarsimp
-
-  apply (subst get_modify_use_reorder [where Pr'="\<lambda>s. irq_oracle (irq_state_of_state s)"])
-   apply clarsimp
-
-  apply (clarsimp simp: handle_interrupt_IRQTimer_def)
-  
-  apply (rule monadic_rewrite_bind_tail [
-    where Q="\<lambda>r s. interrupt_states s (irq_oracle (irq_state_of_state s)) = IRQTimer"])
-   defer
-   apply (clarsimp simp: valid_def is_timer_irq_def Let_def)
-   apply (clarsimp simp: simpler_modify_def)  
-  apply clarsimp
-  
-  (*
+  unfolding handle_preemption_if_def
   apply (rule monadic_rewrite_imp)
-  apply (rule monadic_rewrite_trans)
-  apply (rule monadic_rewrite_remove_used_get [where g=handle_interrupt])
-  *)
-
-
-  find_theorems monadic_rewrite If
-
-  apply (clarsimp simp: handle_interrupt_def)
-  apply (prop_tac "\<forall>z. maxIRQ < irq_oracle (irq_state_of_state z) = False")
-   using irq_oracle_max_irq word_not_le apply blast
-  apply clarsimp
-  apply (thin_tac _)
-
-
-  apply (clarsimp simp: get_irq_state_def gets_def)
-
-  (* turn the two "get"s into one *)
-  apply (rule monadic_rewrite_trans_simple)
-  apply (rule monadic_rewrite_double_get)
-
-  apply (rule monadic_rewrite_trans_simple)
-   apply (rule monadic_rewrite_bind_get)
-   apply clarsimp
-   apply (rule monadic_rewrite_refl2)
-  apply (clarsimp simp:ackInterrupt_def)
-
-  find_theorems monadic_rewrite name:gen_asm
-
-  apply (rule monadic_rewrite_trans_simple)
-   apply (rule monadic_rewrite_remove_get)
-  apply (rule monadic_rewrite_refl2)
-  done
-  
-  
-  
-  
-
-
-
-lemma handle_interrupt_for_IRQTimer_aux:
-  "is_timer_irq (tc, s) \<Longrightarrow>
-  handle_preemption_if tc s = (do handle_interrupt_IRQTimer; return tc od) s"
-  apply (clarsimp simp: handle_preemption_if_def)
-  apply (clarsimp simp: getActiveIRQ_def do_machine_op_def)
-  oops
-
-lemma handle_interrupt_for_IRQTimer:
-  "\<lbrace>\<lambda>s. is_timer_irq (tc, s)\<rbrace> do handle_interrupt_IRQTimer; return tc od \<lbrace>Q\<rbrace> \<Longrightarrow>
-  \<lbrace>\<lambda>s. is_timer_irq (tc, s)\<rbrace> handle_preemption_if tc \<lbrace>Q\<rbrace>"
-  apply (wpsimp simp: handle_preemption_if_def)
-    prefer 2
-    apply (rule hoare_strengthen_post, rule dmo_getActiveIRQ_timer)
-    apply clarsimp
-
-  apply (clarsimp simp:valid_def)
-  apply (drule_tac x=s in spec)
-  using handle_interrupt_for_IRQTimer_aux apply fastforce
+   apply (rule monadic_rewrite_trans)
+    apply (subst sym [OF bind_assoc])
+    apply (rule monadic_rewrite_bind_head)
+    apply (rule dmo_getActiveIRQ_handle_interrupt_IRQTimer)
+   apply (rule monadic_rewrite_refl)
+  apply simp
   done
 
+
+
+
+definition kernel_entry_IRQTimer where
+  "kernel_entry_IRQTimer tc \<equiv> do t \<leftarrow> gets cur_thread; return (Inr (), tc) od"
+
+lemma set_object_machine_state_interrupt_states [wp]:
+  "set_object a b \<lbrace>\<lambda>s. P (machine_state s) (interrupt_states s)\<rbrace>"
+  apply (rule hoare_weaken_pre)
+  apply (wps | wpsimp)+
+  done
+
+crunches thread_set
+  for is_timer_irq: is_timer_irq
+  (simp: is_timer_irq_def2 wp:crunch_wps)
+
+lemma kernel_entry_is_timer_irq:
+  "monadic_rewrite F E
+    is_timer_irq
+    (kernel_entry_if Interrupt tc)
+    (do t \<leftarrow> gets cur_thread;
+       thread_set (\<lambda>tcb. tcb \<lparr>tcb_arch := arch_tcb_context_set tc (tcb_arch tcb)\<rparr>) t;
+       handle_interrupt_IRQTimer;
+       return (Inr (), tc)
+    od)"
+  apply (simp add: kernel_entry_if_def liftE_def bind_assoc)
+  apply (subst when_Some_case)
+  apply (rule monadic_rewrite_imp)
+   apply (rule monadic_rewrite_trans)
+    apply (rule monadic_rewrite_bind_tail)
+     apply (rule monadic_rewrite_bind_tail)
+      apply (subst sym [OF bind_assoc])
+      apply (rule monadic_rewrite_bind_head)      
+      apply (rule dmo_getActiveIRQ_handle_interrupt_IRQTimer [simplified])
+     apply (wp thread_set_is_timer_irq)
+    apply wp
+   apply (rule monadic_rewrite_refl)
+  apply simp
+  done
+
+\<comment> \<open>This is an important property, as we need to know that we will have
+  scheduler_action s = choose_new_thread before we start to execute the
+  `schedule` monad - this is what will get us into our domainswitch.
+  (note: we may need a little more to know if we are changing domains, not just
+  threads, but i'm pretty sure domain_time_zero should be enough for that.\<close>
 lemma
-  "\<lbrace>\<lambda>s. is_timer_irq (tc, s)\<rbrace>
-    handle_preemption_if tc
-  \<lbrace>\<lambda>r s. scheduler_action s = choose_new_thread\<rbrace>"
-  apply (rule handle_interrupt_for_IRQTimer)
-  apply (wpsimp simp: handle_interrupt_IRQTimer_def)
-  (* more work to do here *)
+  "numDomains > 1 \<Longrightarrow>
+  \<lbrace>domain_time_zero\<rbrace> timer_tick \<lbrace>\<lambda>_ s. scheduler_action s = choose_new_thread\<rbrace>"
+  apply (wpsimp simp:timer_tick_def domain_time_zero_def dec_domain_time_def)
+  apply (intro conjI; clarsimp)
+              apply (wpsimp simp: thread_set_time_slice_def ethread_set_def set_eobject_def)
+             apply (wpsimp simp: reschedule_required_def)
+            apply wpsimp+
+    apply (wpsimp simp: get_thread_state_def thread_get_def)
+   apply wp
+  apply clarsimp
+  apply (clarsimp simp:domain_time_zero_def)
+  done
+                
   
   
 
-lemma first_bit_whatever_meow:
-  "(fst s1, (), s2) \<in> kernel_handle_preemption_if
- \<or> (fst s1, False, s2) \<in> kernel_call_A_if Interrupt \<Longrightarrow>
-  scheduler_action (snd s2) = choose_new_thread"
-  apply (elim disjE)
-  apply (clarsimp simp: kernel_handle_preemption_if_handle_preemption_if)
-  apply (cases s1; clarsimp)
+lemma kernel_entry_is_timer_irq:
+  "monadic_rewrite F E
+    domain_time_zero
+    timer_tick
+    reschedule_required"
+  unfolding timer_tick_def
 
-lemma more_splits_test:
-  "(s1, (), s3) \<in> kernel_schedule_if \<Longrightarrow>
-   s1 = s3"
-  apply (cases s1)
-  pply (clarsimp simp: kernel_schedule_if_def schedule_if_def)
+term ct_in_state
+term st_tcb_at
+find_theorems name:running name:thread
+
+thm schedule_det_ext_ext_def
+lemma kernel_entry_is_timer_irq:
+  "monadic_rewrite F E
+    domain_time_zero
+    (schedule_if tc)
+    (do schedule_choose_new_thread; return tc od)"
+  unfolding schedule_if_def
+  apply (subst bind_assoc_sym_simple, simp)
+  apply (rule monadic_rewrite_bind_head)
+  apply (rule monadic_rewrite_imp)
+   apply (rule monadic_rewrite_trans)
+    apply (rule monadic_rewrite_bind_head)
+    unfolding schedule_def
+    apply (rule monadic_rewrite_bind_tail)
+     apply (rule monadic_rewrite_bind_tail)
+      apply (rule monadic_rewrite_bind_tail)
+
+
 
 
 lemma domainswitch_splits_four_ways:
