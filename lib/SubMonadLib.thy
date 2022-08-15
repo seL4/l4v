@@ -341,17 +341,17 @@ lemma corres_submonad:
    \<Longrightarrow> corres_underlying sr False nf' rvr g g' (fn x) (fn' x')"
   apply (subst submonad.fn_is_sm, assumption)+
   apply (clarsimp simp: submonad_fn_def)
-  apply (rule corres_split' [OF _ _ stateAssert_sp stateAssert_sp])
+  apply (rule corres_underlying_split [OF _ _ stateAssert_sp stateAssert_sp])
    apply (fastforce simp: corres_underlying_def stateAssert_def get_def
                          assert_def return_def bind_def)
-  apply (rule corres_split' [where r'="\<lambda>x y. (x, y) \<in> ssr",
+  apply (rule corres_underlying_split [where r'="\<lambda>x y. (x, y) \<in> ssr",
                              OF _ _ hoare_post_taut hoare_post_taut])
    apply clarsimp
-  apply (rule corres_split' [where r'="\<lambda>(x, x') (y, y'). rvr x y \<and> (x', y') \<in> ssr",
+  apply (rule corres_underlying_split [where r'="\<lambda>(x, x') (y, y'). rvr x y \<and> (x', y') \<in> ssr",
                              OF _ _ hoare_post_taut hoare_post_taut])
    defer
    apply clarsimp
-   apply (rule corres_split' [where r'=dc, OF _ _ hoare_post_taut hoare_post_taut])
+   apply (rule corres_underlying_split [where r'=dc, OF _ _ hoare_post_taut hoare_post_taut])
     apply (simp add: corres_modify')
    apply clarsimp
   apply (rule corres_select_f_stronger)
