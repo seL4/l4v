@@ -258,20 +258,6 @@ definition has_handler_rights :: "cap \<Rightarrow> bool" where
 definition valid_fault_handler :: "cap \<Rightarrow> bool" where
   "valid_fault_handler \<equiv> is_ep_cap and has_handler_rights or (=) NullCap"
 
-definition check_handler_ep ::
-  "nat \<Rightarrow> (cap \<times> cslot_ptr) \<Rightarrow> ((cap \<times> cslot_ptr),'z::state_ext) se_monad"
-  where
-  "check_handler_ep pos h_cap_h_slot \<equiv> doE
-    unlessE (valid_fault_handler $ fst h_cap_h_slot) $ throwError $ InvalidCapability pos;
-    returnOk h_cap_h_slot
-   odE"
-
-definition update_handler_ep :: "data \<Rightarrow> data \<Rightarrow> cap \<Rightarrow> cap" where
-  "update_handler_ep data rights cap \<equiv>
-     if data \<noteq> 0 \<or> rights \<noteq> 0
-     then mask_cap (data_to_rights rights) (update_cap_data False data cap)
-     else cap"
-
 definition update_and_check_handler_ep ::
   "data list \<Rightarrow> nat \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> ((cap \<times> cslot_ptr),'z::state_ext) se_monad"
   where
@@ -281,8 +267,21 @@ definition update_and_check_handler_ep ::
     fh_arg  \<leftarrow> returnOk $ excaps ! 0;
     fh_cap  \<leftarrow> returnOk $ fst fh_arg;
     fh_slot \<leftarrow> returnOk $ snd fh_arg;
-    fh_cap \<leftarrow> derive_cap fh_slot (update_handler_ep fh_data fh_rights fh_cap);
-    check_handler_ep pos (fh_cap, fh_slot)
+    unlessE (is_ep_cap fh_cap \<or> fh_cap = NullCap) $ throwError $ InvalidCapability pos;
+    fh_cap \<leftarrow>
+      if fh_data \<noteq> 0
+      then doE
+        whenE (update_cap_data False fh_data fh_cap = NullCap) $ throwError IllegalOperation;
+        returnOk $ update_cap_data False fh_data fh_cap
+      odE
+      else returnOk fh_cap;
+    fh_cap \<leftarrow>
+      if fh_rights \<noteq> 0
+      then returnOk $ mask_cap (data_to_rights fh_rights) fh_cap
+      else returnOk fh_cap;
+    fh_cap \<leftarrow> derive_cap fh_slot fh_cap;
+    unlessE (valid_fault_handler fh_cap) $ throwError $ InvalidCapability pos;
+    returnOk (fh_cap, fh_slot)
   odE"
 
 definition
@@ -383,7 +382,7 @@ where
   "decode_set_timeout_ep args cap slot extra_caps \<equiv> doE
      whenE (length args < 2) $ throwError TruncatedMessage;
      whenE (length extra_caps < 1) $ throwError TruncatedMessage;
-     handler \<leftarrow> update_and_check_handler_ep args 1 extra_caps;
+     handler \<leftarrow> update_and_check_handler_ep (take 2 args) 1 (take 1 extra_caps);
      returnOk $ ThreadControlCaps (obj_ref_of cap) slot
                               None (Some handler) None None None
    odE"
@@ -450,7 +449,7 @@ where
      check_prio (args ! 0) auth_tcb;
      check_prio (args ! 1) auth_tcb;
      sc \<leftarrow> decode_update_sc cap slot sc_cap;
-     fh \<leftarrow> update_and_check_handler_ep (take 2 (drop 2 args)) 3 (drop 2 extra_caps);
+     fh \<leftarrow> update_and_check_handler_ep (take 2 (drop 2 args)) 3 (take 1 (drop 2 extra_caps));
      returnOk $ ThreadControlSched (obj_ref_of cap) slot (Some fh)
                               (Some (new_mcp, auth_tcb)) (Some (new_prio, auth_tcb))
                               (Some sc)
