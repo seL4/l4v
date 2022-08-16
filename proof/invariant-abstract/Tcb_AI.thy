@@ -1284,16 +1284,6 @@ lemma (in Tcb_AI) decode_set_mcpriority_wf[wp]:
         decode_set_mcpriority args (ThreadCap t) slot excs \<lbrace>tcb_inv_wf\<rbrace>, -"
   by (wpsimp simp: decode_set_mcpriority_def wp: check_prio_wp_weak whenE_throwError_wp)
 
-lemma check_handler_ep_inv[wp]:
-  "check_handler_ep n cap_slot \<lbrace>P\<rbrace>"
-  unfolding check_handler_ep_def unlessE_def by wpsimp
-
-lemma check_handler_ep_wpE[wp]:
-  "\<lbrace>\<lambda>s. valid_fault_handler (fst cap_slot) \<longrightarrow> P cap_slot s\<rbrace>
-   check_handler_ep n cap_slot
-   \<lbrace>P\<rbrace>, -"
-  unfolding check_handler_ep_def unlessE_def by wpsimp
-
 lemma update_and_check_handler_ep_inv[wp]:
   "update_and_check_handler_ep args pos excaps \<lbrace>P\<rbrace>"
   unfolding update_and_check_handler_ep_def
@@ -1304,7 +1294,7 @@ lemma update_and_check_handler_ep_snd[wp]:
    update_and_check_handler_ep args pos excaps
    \<lbrace>\<lambda>rv. P (snd rv)\<rbrace>,-"
   unfolding update_and_check_handler_ep_def
-  by (wpsimp wp: hoare_drop_imps)
+  by (wpsimp wp: hoare_drop_imps split_del: if_split)
 
 lemma update_and_check_handler_ep_valid_cap[wp]:
   "\<lbrace>\<lambda>s. (\<forall>x \<in> set fh_caps. s \<turnstile> fst x)
@@ -1312,15 +1302,15 @@ lemma update_and_check_handler_ep_valid_cap[wp]:
    update_and_check_handler_ep args pos fh_caps
    \<lbrace>\<lambda>rv. valid_cap (fst rv)\<rbrace>,-"
   unfolding update_and_check_handler_ep_def
-  apply (wpsimp wp: hoare_drop_imps)
-  by (auto simp: update_handler_ep_def update_cap_data_validI)
+  apply (wpsimp wp: hoare_drop_imps split_del: if_split)
+  by (auto simp: update_cap_data_validI)
 
 lemma update_and_check_handler_ep_valid_fault_handler[wp]:
   "\<lbrace>\<top>\<rbrace>
    update_and_check_handler_ep args pos fh_caps
    \<lbrace>\<lambda>rv s. valid_fault_handler (fst rv)\<rbrace>,-"
   unfolding update_and_check_handler_ep_def
-  by (wpsimp wp: derive_cap_is_derived_foo)
+  by (wpsimp split_del: if_split)
 
 lemma update_and_check_handler_ep_is_derived[wp]:
   "\<lbrace>\<lambda>s. valid_objs s \<and>
@@ -1330,11 +1320,11 @@ lemma update_and_check_handler_ep_is_derived[wp]:
    \<lbrace>\<lambda>rv s. fst rv \<noteq> NullCap \<longrightarrow>
              cte_wp_at (is_derived (cdt s) (snd rv) (fst rv)) (snd rv) s\<rbrace>,-"
   unfolding update_and_check_handler_ep_def
-  apply wpsimp
+  apply (wpsimp split_del: if_split)
         apply (rule hoare_drop_imps)
         apply (wpsimp wp: derive_cap_is_derived)+
   apply (drule_tac x="fh_caps ! 0" in bspec, clarsimp)
-  apply (clarsimp simp: cte_wp_at_caps_of_state update_handler_ep_def
+  apply (clarsimp simp: cte_wp_at_caps_of_state
                         cap_master_update_cap_data cap_asid_update_cap_data
                         cap_badge_update_cap_data)
   done
@@ -1352,10 +1342,10 @@ lemma update_and_check_handler_ep_no_cap_to_obj_with_diff_ref[wp]:
    update_and_check_handler_ep args pos fh_caps
    \<lbrace>\<lambda>rv. no_cap_to_obj_with_diff_ref (fst rv) S\<rbrace>,-"
   unfolding update_and_check_handler_ep_def
-  apply (wpsimp wp: hoare_drop_imps)
-  by (clarsimp simp: update_handler_ep_def
-                     no_cap_to_obj_with_diff_ref_update_cap_data
-                     no_cap_to_obj_with_diff_ref_mask_cap)
+  apply (wpsimp wp: hoare_drop_imps split_del: if_split)
+  by (auto simp: all_set_conv_all_nth
+                 no_cap_to_obj_with_diff_ref_update_cap_data
+                 no_cap_to_obj_with_diff_ref_mask_cap)
 
 lemma decode_set_sched_params_wf[wp]:
   "\<lbrace>(invs::'state_ext state\<Rightarrow>bool) and tcb_at t and ex_nonz_cap_to t and
@@ -1371,18 +1361,14 @@ lemma decode_set_sched_params_wf[wp]:
   apply (wpsimp simp: get_tcb_obj_ref_def split_def
                 wp: check_prio_wp_weak whenE_throwError_wp thread_get_wp gts_wp
                 split_del: if_split)
-  apply (clarsimp simp: split_paired_Ball)
+  apply (clarsimp simp: all_set_conv_all_nth)
   apply (rule conjI; clarsimp)
    apply (fastforce dest: in_set_dropD)
   apply (clarsimp simp: obj_at_def is_tcb pred_tcb_at_def is_cap_simps sc_tcb_sc_at_def
                         sc_at_ppred_def)
   apply (rule conjI, fastforce dest: in_set_dropD)
-  apply (subgoal_tac "excaps ! Suc 0 \<in> set excaps")
-   prefer 2
-   apply fastforce
-  apply (cases "excaps ! Suc 0")
-  apply (fastforce dest: in_set_dropD)
-  done
+  apply (subgoal_tac "Suc 0 < length excaps")
+   by fastforce+
 
 end
 
