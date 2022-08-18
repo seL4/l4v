@@ -356,7 +356,7 @@ lemma corrupt_tcb_intent_as_user_corres:
   apply (rule corres_symb_exec_r)
     apply clarsimp
     apply (rule corres_dummy_return_l)
-    apply (rule corres_underlying_split)
+    apply (rule corres_split_forwards')
         apply (drule(1) valid_etcbs_tcb_etcb)
    apply (rule corres_guard_imp,erule set_cxt_none_det_intent_corres)
      apply simp+
@@ -416,13 +416,13 @@ lemma set_registers_corres:
   apply (subst duplicate_corrupt_tcb_intent[symmetric])
   apply (clarsimp simp:sequence_def)
   apply (rule_tac P'="%r. tcb_at y and valid_idle and not_idle_thread y and valid_etcbs"
-                  in corres_underlying_split [where P="%r. \<top>"])
+                  in corres_split_forwards' [where P="%r. \<top>"])
      apply (rule corres_symb_exec_r)
         apply (rule set_register_corres)
        apply (wp|simp)+
   apply (simp add:bind_assoc dc_def[symmetric])
   apply (rule corres_dummy_return_l)
-  apply (rule corres_underlying_split [where r'="dc" and P="%x. \<top>" and P'="%x. \<top>"])
+  apply (rule corres_split_forwards' [where r'="dc" and P="%x. \<top>" and P'="%x. \<top>"])
      apply (rule corres_guard_imp)
        apply simp+
   done
@@ -433,7 +433,7 @@ lemma set_mrs_corres_no_recv_buffer:
   apply (rule dcorres_absorb_gets_the, clarsimp)
   apply (drule(1) valid_etcbs_get_tcb_get_etcb)
   apply (rule corres_dummy_return_l)
-  apply (rule corres_underlying_split [where P'="%x. \<top>" and P="%x. \<top>"])
+  apply (rule corres_split_forwards' [where P'="%x. \<top>" and P="%x. \<top>"])
      apply (rule set_cxt_none_det_intent_corres)
         apply (simp add:get_tcb_def get_etcb_def
                   split:option.splits Structures_A.kernel_object.splits

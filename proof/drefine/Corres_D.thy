@@ -212,7 +212,7 @@ lemma dcorres_get:
           \<Longrightarrow> dcorres r ((=) s) ((=) s') (f s) (f' s')"
   shows "dcorres r P P' (do s\<leftarrow>get;f s od) (do s'\<leftarrow> get; f' s' od)"
   apply (rule dcorres_expand_pfx)
-  apply (rule_tac r'="\<lambda>r r'. s=r \<and> s'=r'" and P="%x. (=) s" and P'="%x. (=) s'" in corres_underlying_split)
+  apply (rule_tac r'="\<lambda>r r'. s=r \<and> s'=r'" and P="%x. (=) s" and P'="%x. (=) s'" in corres_split_forwards')
     apply (clarsimp simp: corres_underlying_def get_def)
     apply wp+
   apply (drule A)
@@ -619,7 +619,7 @@ lemma dcorres_rhs_noop_below:
      \<lbrace> P \<rbrace> f \<lbrace> \<lambda>_. Q \<rbrace>; \<lbrace> P' \<rbrace> g \<lbrace> \<lambda>_. Q' \<rbrace> \<rbrakk>
    \<Longrightarrow> dcorres anyrel P P' (f :: unit k_monad) (g >>= (\<lambda>_. m))"
   apply (rule corres_add_noop_lhs2)
-  apply (rule corres_underlying_split)
+  apply (rule corres_split_forwards')
   apply (assumption | clarsimp)+
   done
 
@@ -627,7 +627,7 @@ lemma dcorres_rhs_noop_above: "\<lbrakk> dcorres anyrel P P' (return ()) m; dcor
               \<lbrace> P \<rbrace> return () \<lbrace> \<lambda>_. Q \<rbrace>; \<lbrace> P' \<rbrace> m \<lbrace> \<lambda>_. Q' \<rbrace> \<rbrakk>
             \<Longrightarrow> dcorres anyrel' P P' f (m >>= (\<lambda>_. g))"
   apply (rule corres_add_noop_lhs)
-  apply (rule corres_underlying_split)
+  apply (rule corres_split_forwards')
   apply (assumption | clarsimp)+
   done
 
@@ -642,7 +642,7 @@ lemma dcorres_dc_rhs_noop_below_gen:
      \<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>; \<lbrace> P' \<rbrace> g \<lbrace> Q' \<rbrace> \<rbrakk>
    \<Longrightarrow> dcorres dc P P' f (g >>= m)"
   apply (rule corres_add_noop_lhs2)
-  apply (rule corres_underlying_split)
+  apply (rule corres_split_forwards')
   apply (assumption | clarsimp)+
   done
 

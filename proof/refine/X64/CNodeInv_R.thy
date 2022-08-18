@@ -8837,7 +8837,7 @@ lemma corres_null_cap_update:
     apply (clarsimp simp: state_relation_def ghost_relation_of_heap)
    apply (clarsimp simp: state_relation_def ghost_relation_of_heap)
   apply (subst return_bind[where x="()", symmetric], subst updateCap_def,
-         rule corres_underlying_split)
+         rule corres_split_forwards')
      apply (rule corres_guard_imp, rule getCTE_symb_exec_r, simp+)
     prefer 3
     apply clarsimp

@@ -1355,7 +1355,7 @@ lemma empty_slot_corres:
         apply (rule_tac P="%a. dcorres dc P P' h a" for P P' h in subst[OF bind_assoc[where m="gets cdt"]])
         apply (rule corres_split_deprecated [where r'="dc"])
            apply (rule corres_add_noop_lhs)
-           apply (rule_tac P'="\<lambda>_. valid_etcbs and valid_idle and (\<lambda>s. fst slot \<noteq> idle_thread s)" in corres_underlying_split)
+           apply (rule_tac P'="\<lambda>_. valid_etcbs and valid_idle and (\<lambda>s. fst slot \<noteq> idle_thread s)" in corres_split_forwards')
               apply (rule empty_slot_ext_dcorres)
              apply (wp empty_slot_ext_valid_etcbs | simp)+
            apply (rule corres_guard_imp)
@@ -2173,7 +2173,7 @@ lemma fast_finalise_recv_ep:
   apply (rule corres_dummy_return_pl)
   apply (rule_tac P="\<lambda>r. \<top>" and P'="\<lambda>r s.
          (s = update_kheap ((kheap s')(epptr\<mapsto> (Endpoint Structures_A.endpoint.IdleEP))) s')"
-       in corres_underlying_split [where r'="dc"])
+       in corres_split_forwards' [where r'="dc"])
      apply (rule corres_dummy_set_sync_ep[THEN corres_guard_imp],(simp|wp)+)
    apply (rule hoare_post_imp)
     prefer 2
@@ -2251,7 +2251,7 @@ lemma fast_finalise_send_ep:
   apply (rule corres_dummy_return_pl)
   apply (rule_tac P="\<lambda>r. \<top>" and P'="\<lambda>r s.
          (s = update_kheap ((kheap s')(epptr\<mapsto> (Endpoint Structures_A.endpoint.IdleEP))) s')"
-       in corres_underlying_split [where r'="dc"])
+       in corres_split_forwards' [where r'="dc"])
      apply (rule corres_dummy_set_sync_ep[THEN corres_guard_imp],simp+)
    apply (rule hoare_post_imp)
     prefer 2
@@ -2324,7 +2324,7 @@ lemma fast_finalise_wait_ntfn:
   apply (rule dcorres_absorb_get_l)
   apply clarsimp
   apply (rule corres_dummy_return_pl)
-  apply (rule corres_underlying_split[where r'=dc and P="\<lambda>_. \<top>", OF _ _ set_ntfn_exec_wp])
+  apply (rule corres_split_forwards'[where r'=dc and P="\<lambda>_. \<top>", OF _ _ set_ntfn_exec_wp])
     apply (rule corres_dummy_set_notification[THEN corres_guard_imp],simp+)
   apply (rule_tac Q'=
     "\<lambda>s. (\<forall>x\<in> (set list). tcb_at x s \<and> is_etcb_at x s \<and> not_idle_thread x s \<and> valid_idle s \<and> idle_thread s = idle_thread s')"
@@ -2508,7 +2508,7 @@ lemma dcorres_unbind_notification:
    apply (clarsimp simp: assert_def corres_free_fail partial_inv_def a_type_def
                   split: Structures_A.kernel_object.splits, safe)
    apply (rule corres_dummy_return_pl[where b="()"])
-   apply (rule corres_underlying_split[where r'=dc and P="\<lambda>_. \<top>", OF _ _ set_ntfn_exec_wp])
+   apply (rule corres_split_forwards'[where r'=dc and P="\<lambda>_. \<top>", OF _ _ set_ntfn_exec_wp])
      apply (rule corres_dummy_set_notification[THEN corres_guard_imp],simp+)
    apply (rule corres_guard_imp)
      apply (rule set_bound_notification_corres[where ntfn_opt=None, unfolded infer_tcb_bound_notification_def
@@ -3333,7 +3333,7 @@ next
   apply (rule_tac Q="\<lambda>x y. y = (transform s'a) \<and> x = (transform_object (machine_state s'a) word etcb_opt (kernel_object.CNode nat fun))" in corres_symb_exec_l)
      apply (rule dcorres_expand_pfx)
      apply (clarsimp simp: nat_case_split)
-     apply (rule corres_underlying_split [where
+     apply (rule corres_split_forwards' [where
                  P = "\<lambda>rv s. True" and
                  P' = "\<lambda>next_cap. valid_objs and (\<lambda>a. a \<turnstile> next_cap) and valid_global_refs and
                                   valid_idle and valid_etcbs"])
@@ -3369,7 +3369,7 @@ lemma dcorres_injection_handler_rhs:
   apply (clarsimp simp:handleE'_def)
   apply (rule corres_dummy_return_l)
   apply (rule corres_guard_imp)
-    apply (rule corres_underlying_split[where P'="\<lambda>a. \<top>" and P = "\<lambda>a. \<top>"])
+    apply (rule corres_split_forwards'[where P'="\<lambda>a. \<top>" and P = "\<lambda>a. \<top>"])
        apply assumption
       apply wp+
     apply (clarsimp simp:return_def)
