@@ -718,7 +718,7 @@ lemma dcorres_delete_asid_pool:
    apply (rule dcorres_symb_exec_r[where Q'="\<lambda>rv. \<top>", simplified])
     apply (rule dcorres_symb_exec_r[where Q'="\<lambda>rv. \<top>", simplified])
      apply (rule corres_dummy_return_l)
-     apply (rule corres_underlying_split[where r'=dc and P="\<lambda>rv. \<top>" and P'="\<lambda>rv. \<top>", simplified])
+     apply (rule corres_split_forwards'[where r'=dc and P="\<lambda>rv. \<top>" and P'="\<lambda>rv. \<top>", simplified])
       prefer 2
       apply clarsimp
       apply (rule dcorres_absorb_get_r)

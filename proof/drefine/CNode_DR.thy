@@ -748,7 +748,7 @@ lemma cap_revoke_corres_helper:
              apply (drule sym, force simp: swp_def)
             apply (rule cte_wp_at_weakenE, simp+)
            apply (clarsimp simp:bind_assoc)
-           apply (rule corres_underlying_split[where r'="\<lambda>slot slot'. slot = transform_cslot_ptr slot'"
+           apply (rule corres_split_forwards'[where r'="\<lambda>slot slot'. slot = transform_cslot_ptr slot'"
              and P =" \<lambda>r. \<top>" and P'="\<lambda>r s. s = sfix \<and> r \<in> (CSpaceAcc_A.descendants_of slot' (cdt sfix)) \<and> (r, s) \<in> fst ((select_ext (next_revoke_cap slot') (CSpaceAcc_A.descendants_of slot' (cdt sfix))) sfix)"])
               apply (rule corres_guard_imp[OF dcorres_select_select_ext])
                 apply (subst descendants_of_eqv)
@@ -760,7 +760,7 @@ lemma cap_revoke_corres_helper:
             apply (wp select_wp,(clarsimp simp: select_ext_def in_monad)+)
            apply (rule dcorres_expand_pfx)
            apply (rule_tac r'="\<lambda>cap cap'. cap = transform_cap cap'"
-             and P ="\<lambda>r. \<top>" and P'="\<lambda>r s. cte_wp_at (\<lambda>x. x = r) (aa,ba) s \<and> s = sfix" in corres_underlying_split)
+             and P ="\<lambda>r. \<top>" and P'="\<lambda>r s. cte_wp_at (\<lambda>x. x = r) (aa,ba) s \<and> s = sfix" in corres_split_forwards')
               apply (rule corres_guard_imp[OF get_cap_corres],simp+)
               apply (case_tac "next_revoke_cap slot' sfix")
               apply clarsimp
@@ -773,7 +773,7 @@ lemma cap_revoke_corres_helper:
            apply (simp add:bindE_def)
            apply (rule dcorres_expand_pfx)
            apply (rule_tac r'= "dc\<oplus>dc" and P =" \<lambda>r. \<top>"
-             and P'="\<lambda>r s. (r,s)\<in> fst (cap_delete (aa,ba) sfix)" in corres_underlying_split)
+             and P'="\<lambda>r s. (r,s)\<in> fst (cap_delete (aa,ba) sfix)" in corres_split_forwards')
               apply (case_tac "next_revoke_cap slot' sfix")
               apply clarsimp
               apply (rule corres_guard_imp[OF delete_cap_corres'])
@@ -790,7 +790,7 @@ lemma cap_revoke_corres_helper:
            apply (rule dcorres_expand_pfx)
            apply (rule_tac r'= "dc \<oplus> dc" and P =" \<lambda>r s. case r of Inr a \<Rightarrow> a = False | _  \<Rightarrow> True"
              and P' = "\<lambda>r s. (case r of Inr rva \<Rightarrow> (r , s) \<in> fst (Exceptions_A.preemption_point s') | _ \<Rightarrow> True)"
-             in corres_underlying_split)
+             in corres_split_forwards')
               apply (rule corres_guard_imp[OF corres_trivial[OF preemption_corres]])
                apply simp+
              apply (rule alternative_valid)
@@ -933,7 +933,7 @@ lemma dcorres_ep_cancel_badge_sends:
         apply (clarsimp simp: filterM_mapM cancel_badged_sends_def')
         apply (rule dcorres_absorb_get_l)
         apply (rule corres_dummy_return_l)
-        apply (rule corres_underlying_split[where r'=dc])
+        apply (rule corres_split_forwards'[where r'=dc])
            apply (rule corres_mapM_to_mapM_x)
            apply (rule corres_guard_imp)
              apply (rule_tac lift_func = id in set_list_modify_corres_helper)
@@ -1443,7 +1443,7 @@ ucast (y && mask pd_bits >> 2) \<notin> kernel_mapping_slots
                    split: if_splits ARM_A.pte.split_asm)
   apply (clarsimp simp:)+
   apply (rule corres_dummy_return_pr)
-  apply (rule_tac P'="\<lambda>r. (=) s'" in  corres_underlying_split[where r'=dc])
+  apply (rule_tac P'="\<lambda>r. (=) s'" in  corres_split_forwards'[where r'=dc])
      apply (rule corres_guard_imp[OF dummy_remove_cdt_pd_slot])
       apply simp+
      apply (clarsimp simp:transform_objects_def restrict_map_def)
@@ -1493,7 +1493,7 @@ lemma dcorres_empty_pte_slot:
                    split: if_splits ARM_A.pte.split_asm)
   apply (clarsimp simp: )+
   apply (rule corres_dummy_return_pr)
-  apply (rule_tac P'="\<lambda>r. (=) s'" in  corres_underlying_split[where r'=dc])
+  apply (rule_tac P'="\<lambda>r. (=) s'" in  corres_split_forwards'[where r'=dc])
      apply (rule corres_guard_imp[OF dummy_remove_cdt_pt_slot])
       apply simp+
      apply (clarsimp simp:transform_objects_def restrict_map_def)

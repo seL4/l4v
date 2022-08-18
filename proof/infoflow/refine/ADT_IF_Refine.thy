@@ -364,7 +364,7 @@ lemma doUserOp_if_ex_abs[wp]:
 lemma check_active_irq_if_corres:
   "corres (=) \<top> \<top> (check_active_irq_if tc) (checkActiveIRQ_if tc)"
   apply (simp add: checkActiveIRQ_if_def check_active_irq_if_def)
-  apply (rule corres_underlying_split[where r'="(=)"])
+  apply (rule corres_split_forwards'[where r'="(=)"])
      apply (rule dmo_getActiveIRQ_corres)
     apply wp+
   apply clarsimp
