@@ -1301,6 +1301,7 @@ lemma sts_valid_slots_inv[wp]:
   unfolding valid_slots_def
   apply (cases m)
   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' sts_typ_ats)
+  apply fastforce
   done
 
 lemma sts_same_ref[wp]:
@@ -1608,7 +1609,7 @@ lemma decode_asid_pool_invocation_wf[wp]:
   apply (rule ccontr, erule notE[where P="valid_arch_inv i s" for i s])
   apply (clarsimp simp: valid_arch_inv_def valid_apinv_def pool_for_asid_def word_neq_0_conv
                         cte_wp_at_caps_of_state neq_Nil_conv obj_at_def in_omonad valid_cap_def
-                        asid_low_hi_cast asid_high_bits_of_add_ucast)
+                        asid_low_hi_cast asid_high_bits_of_add_ucast is_vsroot_cap_def)
   done
 
 lemma decode_asid_control_invocation_wf[wp]:

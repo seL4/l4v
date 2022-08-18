@@ -517,7 +517,11 @@ proof
     by (simp add: ps_def obj_at_def s'_def in_opt_map_eq vspace_obj_of_Some split: if_split_asm)
   moreover
   { assume "ArchObj ao = default_object ty dev us" with tyunt
-    have "valid_vspace_obj level ao s'" by (rule valid_vspace_obj_default)
+    have "valid_vspace_obj level ao s'"
+      apply -
+      apply (rule valid_vspace_obj_default; assumption?)
+      sorry (* FIXME AARCH64: this argument is no longer valid; we have to show that p cannot
+                              be on a  lookup path in retype *)
   }
   moreover
   { assume "vspace_objs_of s p = Some ao"
