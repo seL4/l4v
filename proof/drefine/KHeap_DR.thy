@@ -575,7 +575,7 @@ lemma get_object_corres:
       \<top> (not_idle_thread ptr' and obj_at (Not o is_tcb) ptr')
       (KHeap_D.get_object ptr) (KHeap_A.get_object ptr')"
   apply (clarsimp simp: KHeap_A.get_object_def gets_the_def)
-  apply (rule corres_split'[OF _ _ gets_sp gets_sp, where r'=dc])
+  apply (rule corres_underlying_split[OF _ _ gets_sp gets_sp, where r'=dc])
    apply simp
   apply (clarsimp simp: assert_def corres_free_fail split: if_split)
   apply (rule_tac F="rv = Some (transform_object undefined 0 etcb' y)" in corres_req)
@@ -1313,7 +1313,7 @@ lemma set_irq_state_dcorres:
   "dcorres dc \<top> \<top> (return ()) (set_irq_state irq st)"
   apply (simp add: set_irq_state_def)
   apply (rule corres_dummy_return_pl [where b="()"])
-  apply (rule corres_split' [where r'=dc])
+  apply (rule corres_underlying_split [where r'=dc])
      apply (clarsimp simp: corres_underlying_def in_monad return_def)
      apply (clarsimp simp: transform_def transform_current_thread_def
                            transform_objects_def transform_cdt_def

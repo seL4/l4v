@@ -191,7 +191,7 @@ proof -
               catchFailure_def withoutFailure_def throw_def
               make_cr3_def makeCR3_def
     apply (rule corres_guard_imp)
-      apply (rule corres_split' [where r'="(=) \<circ> cte_map"])
+      apply (rule corres_underlying_split [where r'="(=) \<circ> cte_map"])
          apply (simp add: tcbVTableSlot_def cte_map_def objBits_def cte_level_bits_def
                           objBitsKO_def tcb_cnode_index_def to_bl_1 assms)
         apply (rule_tac R="\<lambda>thread_root. valid_arch_state and
@@ -213,7 +213,7 @@ proof -
              apply (rule corres_split_eqrE [OF _ findVSpaceForASID_corres[OF refl]])
                apply (rule whenE_throwError_corres; simp add: lookup_failure_map_def)
                apply (simp only: liftE_bindE)
-               apply (rule corres_split'[OF get_current_cr3_corres])
+               apply (rule corres_underlying_split[OF get_current_cr3_corres])
                  apply (rule corres_whenE[OF _ _ dc_simp])
                   apply (case_tac cur_cr3; case_tac curCR3; clarsimp simp: cr3_relation_def cr3_addr_mask_def)
                  apply (rule iffD2[OF corres_liftE_rel_sum, OF set_current_cr3_corres])
@@ -891,7 +891,7 @@ proof -
           apply (rule corres_guard_imp)
             apply (rule corres_split_deprecated[OF _ storePTE_corres'])
                apply (rule corres_split_deprecated[where r'="(=)"])
-                  apply (rule corres_split'[where r'=dc, OF _ corres_return_eq_same[OF refl]
+                  apply (rule corres_underlying_split[where r'=dc, OF _ corres_return_eq_same[OF refl]
                                                             hoare_post_taut hoare_post_taut])
                   apply simp
                   apply (rule invalidatePageStructureCacheASID_corres)
@@ -909,7 +909,7 @@ proof -
            apply (rule corres_split_deprecated[OF _ storePDE_corres'])
               apply (rule corres_split_deprecated[where r'="(=)"])
                  apply simp
-                 apply (rule corres_split'[where r'=dc, OF _ corres_return_eq_same[OF refl]
+                 apply (rule corres_underlying_split[where r'=dc, OF _ corres_return_eq_same[OF refl]
                                                            hoare_post_taut hoare_post_taut])
                  apply (rule invalidatePageStructureCacheASID_corres)
                 apply (case_tac cap; clarsimp simp add: is_pg_cap_def)
@@ -926,7 +926,7 @@ proof -
           apply (rule corres_split_deprecated[OF _ storePDPTE_corres'])
              apply (rule corres_split_deprecated[where r'="(=)"])
                 apply simp
-                apply (rule corres_split'[where r'=dc, OF _ corres_return_eq_same[OF refl]
+                apply (rule corres_underlying_split[where r'=dc, OF _ corres_return_eq_same[OF refl]
                                                           hoare_post_taut hoare_post_taut])
                 apply (rule invalidatePageStructureCacheASID_corres)
                apply (case_tac cap; clarsimp simp add: is_pg_cap_def)
@@ -955,7 +955,7 @@ proof -
     apply (rule corres_fail, clarsimp simp: valid_cap_def)
    apply (simp add: perform_page_invocation_unmap_def performPageInvocationUnmap_def split_def)
     apply (rule corres_guard_imp)
-     apply (rule corres_split'[where r'=dc, OF _ corres_return_eq_same[OF refl]
+     apply (rule corres_underlying_split[where r'=dc, OF _ corres_return_eq_same[OF refl]
                                                hoare_post_taut hoare_post_taut])
      apply (rule corres_split_deprecated)
         prefer 2

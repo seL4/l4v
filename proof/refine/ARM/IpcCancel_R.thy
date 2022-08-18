@@ -545,7 +545,7 @@ lemma (in delete_one) cancelIPC_ReplyCap_corres:
               del: split_paired_Ex)
   apply (rule_tac Q="\<lambda>_. invs and valid_list and valid_sched and st_tcb_at awaiting_reply t"
               and Q'="\<lambda>_. invs' and st_tcb_at' awaiting_reply' t"
-               in corres_split')
+               in corres_underlying_split)
      apply (rule corres_guard_imp)
        apply (rule threadset_corresT)
           apply (simp add: tcb_relation_def fault_rel_optionation_def)
@@ -559,7 +559,7 @@ lemma (in delete_one) cancelIPC_ReplyCap_corres:
               threadSet_invs_trivial threadSet_pred_tcb_no_state thread_set_not_state_valid_sched
          | fastforce simp: tcb_cap_cases_def inQ_def
          | wp (once) sch_act_simple_lift)+
-  apply (rule corres_split')
+  apply (rule corres_underlying_split)
      apply (rule corres_guard_imp)
        apply (rule get_cap_corres [where cslot_ptr="(t, tcb_cnode_index 2)",
                                           simplified cte_map_tcb_2 cte_index_repair_sym])
@@ -1947,7 +1947,7 @@ proof -
                      od) list;
                    rescheduleRequired
                 od)"
-    apply (rule corres_split')
+    apply (rule corres_underlying_split)
        apply (rule corres_guard_imp [OF setEndpoint_corres])
          apply (simp add: ep_relation_def)+
       apply (rule corres_split_deprecated [OF rescheduleRequired_corres])
@@ -1970,7 +1970,7 @@ proof -
 
   show ?thesis
     apply (simp add: cancel_all_ipc_def cancelAllIPC_def)
-    apply (rule corres_split' [OF _ _ get_simple_ko_sp get_ep_sp'])
+    apply (rule corres_underlying_split [OF _ _ get_simple_ko_sp get_ep_sp'])
      apply (rule corres_guard_imp [OF getEndpoint_corres], simp+)
     apply (case_tac epa, simp_all add: ep_relation_def
                                        get_ep_queue_def)
@@ -1997,7 +1997,7 @@ lemma cancelAllSignals_corres:
   "corres dc (invs and valid_sched and ntfn_at ntfn) (invs' and ntfn_at' ntfn)
              (cancel_all_signals ntfn) (cancelAllSignals ntfn)"
   apply (simp add: cancel_all_signals_def cancelAllSignals_def)
-  apply (rule corres_split' [OF _ _ get_simple_ko_sp get_ntfn_sp'])
+  apply (rule corres_underlying_split [OF _ _ get_simple_ko_sp get_ntfn_sp'])
    apply (rule corres_guard_imp [OF getNotification_corres])
     apply simp+
   apply (case_tac "ntfn_obj ntfna", simp_all add: ntfn_relation_def)

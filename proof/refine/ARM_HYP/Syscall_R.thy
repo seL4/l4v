@@ -2036,7 +2036,7 @@ proof -
                              corres_guard_imp[OF handleYield_corres]
                              active_from_running active_from_running'
                       simp: simple_sane_strg)[8]
-         apply (rule corres_split')
+         apply (rule corres_underlying_split)
             apply (rule corres_guard_imp[OF getCurThread_corres], simp+)
            apply (rule handleFault_corres)
            apply simp
@@ -2050,7 +2050,7 @@ proof -
          apply (auto simp: ct_in_state'_def sch_act_simple_def
                            sch_act_sane_def
                      elim: pred_tcb'_weakenE st_tcb_ex_cap'')[1]
-        apply (rule corres_split')
+        apply (rule corres_underlying_split)
            apply (rule corres_guard_imp, rule getCurThread_corres, simp+)
           apply (rule handleFault_corres)
           apply (simp add: valid_fault_def)
@@ -2082,7 +2082,7 @@ proof -
        apply (erule allE)+
        apply (erule conjE, drule (1) bspec)
        apply (clarsimp simp: obj_at'_def inQ_def)
-      apply (rule_tac corres_split')
+      apply (rule_tac corres_underlying_split)
          apply (rule corres_guard_imp, rule getCurThread_corres, simp+)
         apply (rule corres_split_catch)
            apply (erule handleFault_corres)
@@ -2097,7 +2097,7 @@ proof -
       apply (frule(1) ct_not_ksQ)
       apply (fastforce simp: simple_sane_strg sch_act_simple_def ct_in_state'_def
                   elim: st_tcb_ex_cap'' pred_tcb'_weakenE)
-         apply (rule corres_split')
+         apply (rule corres_underlying_split)
             apply (rule corres_guard_imp[OF getCurThread_corres], simp+)
            apply (rule handleHypervisorFault_corres)
           apply wp

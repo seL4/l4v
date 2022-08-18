@@ -1368,7 +1368,7 @@ lemma lookupExtraCaps_corres:
                    wordSize_def wordBits_def
               del: upt.simps)
   apply (rule corres_guard_imp)
-    apply (rule corres_split')
+    apply (rule corres_underlying_split)
 
        apply (rule_tac S = "\<lambda>x y. x = y \<and> x < unat w2"
                in corres_mapM_list_all2
@@ -1605,7 +1605,7 @@ lemma doFaultTransfer_corres:
                              case_option \<top> in_user_frame recv_buf and
                              pspace_aligned and pspace_distinct"
               and Q'="\<lambda>fault'. case_option \<top> valid_ipc_buffer_ptr' recv_buf"
-               in corres_split')
+               in corres_underlying_split)
      apply (rule corres_guard_imp)
        apply (rule threadget_fault_corres)
       apply (clarsimp simp: obj_at_def is_tcb)+
@@ -1703,11 +1703,11 @@ lemma doIPCTransfer_corres:
                        case_option (\<lambda>_. True) in_user_frame receiveBuffer sa \<and>
                        obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb
                                     \<comment> \<open>\<exists>ft. tcb_fault tcb = Some ft\<close>) s sa"
-               in corres_split')
+               in corres_underlying_split)
      apply (rule corres_guard_imp)
        apply (rule lookupIPCBuffer_corres')
       apply auto[2]
-    apply (rule corres_split' [OF _ _ thread_get_sp threadGet_inv])
+    apply (rule corres_underlying_split [OF _ _ thread_get_sp threadGet_inv])
      apply (rule corres_guard_imp)
        apply (rule threadget_fault_corres)
       apply simp
@@ -2115,7 +2115,7 @@ lemma doReplyTransfer_corres:
      (do_reply_transfer sender receiver slot grant)
      (doReplyTransfer sender receiver (cte_map slot) grant)"
   apply (simp add: do_reply_transfer_def doReplyTransfer_def cong: option.case_cong)
-  apply (rule corres_split' [OF _ _ gts_sp gts_sp'])
+  apply (rule corres_underlying_split [OF _ _ gts_sp gts_sp'])
    apply (rule corres_guard_imp)
      apply (rule getThreadState_corres, (clarsimp simp add: st_tcb_at_tcb_at invs_distinct invs_psp_aligned)+)
   apply (rule_tac F = "awaiting_reply state" in corres_req)

@@ -274,7 +274,7 @@ lemma loadHWASID_corres:
           (pspace_aligned' and pspace_distinct' and no_0_obj')
           (load_hw_asid a) (loadHWASID a)"
   apply (simp add: load_hw_asid_def loadHWASID_def)
-  apply (rule_tac r'="(=)" in corres_split' [OF _ _ gets_sp gets_sp])
+  apply (rule_tac r'="(=)" in corres_underlying_split [OF _ _ gets_sp gets_sp])
    apply (clarsimp simp: state_relation_def arch_state_relation_def)
   apply (case_tac "rv' a")
    apply simp
@@ -342,7 +342,7 @@ lemma invalidateASID_corres:
   apply (rule corres_guard_imp)
     apply (rule_tac pd=pd in findPDForASIDAssert_known_corres)
     apply (rule_tac P="?P" and P'="?P'" in corres_inst)
-    apply (rule_tac r'="(=)" in corres_split' [OF _ _ gets_sp gets_sp])
+    apply (rule_tac r'="(=)" in corres_underlying_split [OF _ _ gets_sp gets_sp])
      apply (clarsimp simp: state_relation_def arch_state_relation_def)
     apply (rule corres_modify)
     apply (simp add: state_relation_def arch_state_relation_def
@@ -399,7 +399,7 @@ lemma findFreeHWASID_corres:
            apply (erule corres_disj_division)
             apply (clarsimp split del: if_split)
             apply (rule corres_split_deprecated [OF _ invalidate_asid_ext_corres])
-              apply (rule corres_split' [where r'=dc])
+              apply (rule corres_underlying_split [where r'=dc])
                  apply (rule corres_trivial, rule corres_machine_op)
                  apply (rule corres_no_failI)
                   apply (rule no_fail_invalidateLocalTLB_ASID)
@@ -695,7 +695,7 @@ proof -
     unfolding set_vm_root_def setVMRoot_def locateSlot_conv
                      getThreadVSpaceRoot_def setCurrentPD_to_abs[symmetric]
     apply (rule corres_guard_imp)
-      apply (rule corres_split' [where r'="(=) \<circ> cte_map"])
+      apply (rule corres_underlying_split [where r'="(=) \<circ> cte_map"])
          apply (simp add: tcbVTableSlot_def cte_map_def objBits_def cte_level_bits_def
                           objBitsKO_def tcb_cnode_index_def to_bl_1)
         apply (rule_tac R="\<lambda>thread_root. valid_arch_state and valid_asid_map and

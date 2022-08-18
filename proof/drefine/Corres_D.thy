@@ -145,7 +145,7 @@ lemma  corres_split_keep_pfx:
   assumes y: "\<And>rv rv'. r' rv rv' \<Longrightarrow> corres_underlying sr nf nf' r (P and (Q rv)) (P' and (Q' rv')) (b rv) (d rv')"
   assumes    "\<lbrace>P\<rbrace> a \<lbrace>\<lambda>x. P and (Q x)\<rbrace>" "\<lbrace>P'\<rbrace> c \<lbrace>\<lambda>x. P' and (Q' x)\<rbrace>"
   shows      "corres_underlying sr nf nf' r P P' (a >>= (\<lambda>rv. b rv)) (c >>= (\<lambda>rv'. d rv'))"
-  using assms by (rule corres_split')
+  using assms by (rule corres_underlying_split)
 
 (* Following 2 lemmas allows you to get rid of the get function and move the prefix outside *)
 

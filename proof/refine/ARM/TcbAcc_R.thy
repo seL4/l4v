@@ -380,7 +380,7 @@ proof -
       apply (subst corres_cong [OF refl refl S refl refl])
        defer
        apply (subst bind_return [symmetric],
-              rule corres_split' [OF threadset_corresT])
+              rule corres_underlying_split [OF threadset_corresT])
              apply (simp add: x)
             apply simp
            apply (rule y)
@@ -3269,7 +3269,7 @@ lemma zipWithM_x_corres:
       and b: "length (zip xs ys) = length (zip xs' ys')"
   shows      "corres dc P P' (zipWithM_x f xs ys) (zipWithM_x f' xs' ys')"
   apply (simp add: zipWithM_x_mapM)
-  apply (rule corres_split')
+  apply (rule corres_underlying_split)
      apply (rule corres_mapM)
            apply (rule dc_simp)+
          apply clarsimp

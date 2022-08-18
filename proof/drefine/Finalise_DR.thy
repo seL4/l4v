@@ -2593,7 +2593,7 @@ lemma dcorres_finalise_cap:
            apply (rule corres_split_deprecated)
               unfolding K_bind_def
               apply (rule dcorres_rhs_noop_above_True[OF tcb_sched_action_dcorres[where P=\<top> and P'=\<top>]])
-              apply (rule corres_split'[OF prepare_thread_delete_dcorres])
+              apply (rule corres_underlying_split[OF prepare_thread_delete_dcorres])
                 apply (rule iffD2[OF corres_return[where P=\<top> and P'=\<top>]])
                 apply (clarsimp simp:transform_cap_def)
                apply wp+

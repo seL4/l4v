@@ -973,7 +973,7 @@ lemma findVSpaceForASID_corres:
          rule find_vspace_for_asid_rewite; simp)
   apply (simp add: liftE_bindE asidRange_def flip: mask_2pm1)
   apply (rule_tac r'="\<lambda>x y. x = y o ucast"
-             in corres_split' [OF _ _ gets_sp gets_sp])
+             in corres_underlying_split [OF _ _ gets_sp gets_sp])
    apply (clarsimp simp: state_relation_def arch_state_relation_def)
   apply (case_tac "rv (asid_high_bits_of asid)")
    apply (simp add: liftME_def lookup_failure_map_def)
