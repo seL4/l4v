@@ -469,6 +469,10 @@ lemmas valid_table_caps_def = valid_table_caps_2_def
 definition is_pt_cap :: "cap \<Rightarrow> bool" where
   "is_pt_cap cap \<equiv> arch_cap_fun_lift is_PageTableCap False cap"
 
+definition is_vsroot_cap :: "cap \<Rightarrow> bool" where
+  "is_vsroot_cap cap \<equiv>
+    arch_cap_fun_lift (\<lambda>acap. is_PageTableCap acap \<and> acap_pt_type acap = VSRootPT_T) False cap"
+
 (* No two PT caps with vs_cap_ref = None may point to the same object, i.e.
    copies of unmapped caps cannot exist. *)
 definition unique_table_caps_2 :: "(cslot_ptr \<rightharpoonup> cap) \<Rightarrow> bool" where

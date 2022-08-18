@@ -86,7 +86,7 @@ lemma arch_decode_ARMASIDPoolAssign_empty_fail:
   apply (simp add: decode_asid_pool_invocation_def)
   apply (intro impI allI conjI)
   apply (simp add: arch_decode_invocation_def split_def Let_def
-            split: arch_cap.splits cap.splits option.splits | intro impI allI)+
+            split: arch_cap.splits cap.splits option.splits pt_type.splits | intro impI conjI allI)+
   apply clarsimp
   apply (rule empty_fail_bindE, simp)
   apply (rule empty_fail_bindE, wpsimp)

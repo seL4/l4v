@@ -719,7 +719,7 @@ definition
 
 definition
   "valid_slots \<equiv> \<lambda>(pte, p, level) s. wellformed_pte pte \<and>
-     (\<exists>\<rhd>(level, p && ~~ mask (pt_bits level)) s \<longrightarrow> pte_at level p s \<and> valid_pte level pte s)"
+     (\<forall>level. \<exists>\<rhd>(level, table_base level p) s \<longrightarrow> pte_at level p s \<and> valid_pte level pte s)"
 
 lemma ucast_mask_asid_low_bits [simp]:
   "ucast ((asid::machine_word) && mask asid_low_bits) = (ucast asid :: asid_low_index)"
@@ -2070,6 +2070,7 @@ lemma valid_slots_typ_at:
   apply (cases m; clarsimp)
   apply (wpsimp wp: hoare_vcg_ex_lift hoare_vcg_all_lift hoare_vcg_imp_lift' assms
                     valid_pte_lift pte_at_typ_lift)
+  apply fastforce
   done
 
 lemma pool_for_asid_arch_update[simp]:
@@ -2216,10 +2217,16 @@ lemma store_pte_valid_asid_pool_caps[wp]:
   apply assumption
   done
 
+lemma ptes_of_pts_of_pt_type:
+  "\<lbrakk> ptes_of s pt_t p = Some pte'; pts_of s (table_base pt_t p) = Some pt \<rbrakk> \<Longrightarrow>
+   pt_type pt = pt_t"
+  by (simp add: level_pte_of_def in_omonad)
+
 lemma store_pte_PagePTE_valid_vspace_objs:
   "\<lbrace> valid_vspace_objs and pspace_aligned and pspace_distinct and valid_asid_table
      and K (pte = PagePTE base_ptr is_small attr rights)
-     and (\<lambda>s. \<forall>level. \<exists>\<rhd> (level, table_base pt_t p) s \<longrightarrow> valid_pte level pte s)\<rbrace>
+     and (\<lambda>s. \<forall>level. \<exists>\<rhd> (level, table_base pt_t p) s \<longrightarrow> level_type level = pt_t \<longrightarrow>
+                      valid_pte level pte s) \<rbrace>
    store_pte pt_t p pte
    \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
   unfolding valid_vspace_objs_def
@@ -2236,7 +2243,9 @@ lemma store_pte_PagePTE_valid_vspace_objs:
    apply (prop_tac "valid_vspace_obj level' (PageTable pt) s")
     apply fastforce
    apply simp
-   apply (rule ball_pt_range_pt_updI; fastforce)
+   apply (rule ball_pt_range_pt_updI, fastforce)
+   apply (drule ptes_of_pts_of_pt_type, simp add: in_omonad)
+   apply fastforce
   apply (rename_tac level' slot pte' ao pt)
   apply (clarsimp simp: vs_lookup_slot_def)
   apply (case_tac "slot = table_base pt_t p"; clarsimp simp: in_omonad simp del: valid_vspace_obj.simps)
@@ -2245,7 +2254,9 @@ lemma store_pte_PagePTE_valid_vspace_objs:
   apply (prop_tac "valid_vspace_obj level' (PageTable pt) s")
    apply fastforce
   apply simp
-  apply (rule ball_pt_range_pt_updI; fastforce)
+  apply (rule ball_pt_range_pt_updI, fastforce)
+  apply (drule ptes_of_pts_of_pt_type, simp add: in_omonad)
+  apply fastforce
   done
 
 lemma pte_ref_apply_upd_Some_id[dest]:
@@ -2492,6 +2503,7 @@ lemma store_pte_non_InvalidPTE_valid_vs_lookup:
      and (\<lambda>s. \<forall>level asid vref.
                  vs_lookup_table level asid vref s = Some (level, table_base pt_t p)
                       \<longrightarrow> vref \<in> user_region
+                      \<longrightarrow> level_type level = pt_t
                       \<longrightarrow> pt_slot_offset level (table_base pt_t p) vref = p
                       \<longrightarrow> (is_PageTablePTE pte \<longrightarrow> pts_of s (the (pte_ref pte)) = Some (empty_pt NormalPT_T))
                          \<and> the (pte_ref pte) \<noteq> table_base pt_t p
@@ -2643,6 +2655,7 @@ lemma store_pte_PageTablePTE_valid_vspace_objs:
      and (\<lambda>s. valid_caps (caps_of_state s) s)
      and K (is_PageTablePTE pte)
      and (\<lambda>s. \<forall>level. \<exists>\<rhd> (level, table_base pt_t p) s
+                      \<longrightarrow> level_type level = pt_t
                       \<longrightarrow> valid_pte level pte s \<and> pts_of s (the (pte_ref pte)) = Some (empty_pt NormalPT_T)
                          \<and> the (pte_ref pte) \<noteq> table_base pt_t p) \<rbrace>
    store_pte pt_t p pte
@@ -2666,6 +2679,15 @@ lemma store_pte_PageTablePTE_valid_vspace_objs:
   supply valid_vspace_obj.simps[simp del]
   apply clarsimp
   apply (rename_tac level')
+  apply (prop_tac "level' \<le> max_pt_level")
+   (* rephrase as \<noteq> asid_pool_level *)
+   apply (case_tac "level' = asid_pool_level"; simp)
+   apply (clarsimp simp: pool_for_asid_vs_lookup)
+   apply (drule (1) pool_for_asid_validD)
+   apply (clarsimp simp: asid_pools_of_ko_at obj_at_def)
+  apply (prop_tac "pt_type pt = level_type level'")
+   apply (drule (5) valid_vspace_objs_strongD)
+   apply (clarsimp simp: in_omonad obj_at_def)
   apply (prop_tac "valid_pte level' pte s", fastforce)
   (* updating deeper than where we can find table_base p has no effect *)
   apply (case_tac "level' \<le> level")
@@ -2677,12 +2699,6 @@ lemma store_pte_PageTablePTE_valid_vspace_objs:
    apply (clarsimp simp: valid_vspace_objs_def vspace_objs_of_ako_at_Some)
   (* we are updating at table_base p, which is within the original lookup path *)
   apply (clarsimp simp: not_le)
-  (* to use vs_lookup_splitD, need asid_pool_level taken care of *)
-  apply (case_tac "level' = asid_pool_level")
-   apply (clarsimp simp: pool_for_asid_vs_lookup)
-   apply (drule (1) pool_for_asid_validD)
-   apply (clarsimp simp: asid_pools_of_ko_at obj_at_def)
-  apply clarsimp
   (* split both lookups down to table_base p *)
   apply (drule vs_lookup_level)
   apply (drule_tac level=level in vs_lookup_splitD; simp?)
@@ -2691,10 +2707,10 @@ lemma store_pte_PageTablePTE_valid_vspace_objs:
   apply (rename_tac pt_ptr)
   (* update now occurs in pt_walk stage *)
   apply (drule (1) vs_lookup_table_fun_upd_deep_idem; assumption?; simp)
-  apply (prop_tac "valid_pte level' pte s \<and> pts_of s (the (pte_ref pte)) = Some (empty_pt NormalPT_T)
-                   \<and> the (pte_ref pte) \<noteq> table_base pt_t p", fastforce)
   apply (prop_tac "pt_type pt = level_type level'")
    apply (fastforce simp: in_omonad obj_at_def dest!: valid_vspace_objs_strongD)
+  apply (prop_tac "valid_pte level' pte s \<and> pts_of s (the (pte_ref pte)) = Some (empty_pt NormalPT_T)
+                   \<and> the (pte_ref pte) \<noteq> table_base pt_t p", fastforce)
   (* handle the actual update, happening on next step of pt_walk *)
   apply (subst (asm) pt_walk.simps, clarsimp simp: in_omonad split: if_splits)
   apply (rename_tac pte')
@@ -2731,6 +2747,7 @@ lemma store_pte_valid_vspace_objs:
      and pspace_aligned and pspace_distinct and valid_asid_table and unique_table_refs and valid_vs_lookup
      and (\<lambda>s. valid_caps (caps_of_state s) s)
      and (\<lambda>s. \<forall>level. \<exists>\<rhd> (level, table_base pt_t p) s
+                      \<longrightarrow> level_type level = pt_t
                       \<longrightarrow> valid_pte level pte s
                          \<and> (is_PageTablePTE pte \<longrightarrow> pts_of s (the (pte_ref pte)) = Some (empty_pt NormalPT_T)
                                                    \<and> the (pte_ref pte) \<noteq> table_base pt_t p)) \<rbrace>
@@ -2755,6 +2772,7 @@ lemma store_pte_valid_vs_lookup:
               \<longrightarrow> (\<forall>level asid vref.
                      vs_lookup_table level asid vref s = Some (level, table_base pt_t p)
                      \<longrightarrow> vref \<in> user_region
+                     \<longrightarrow> level_type level = pt_t
                      \<longrightarrow> pt_slot_offset level (table_base pt_t p) vref = p
                      \<longrightarrow> (is_PageTablePTE pte \<longrightarrow> pts_of s (the (pte_ref pte)) = Some (empty_pt NormalPT_T))
                          \<and> the (pte_ref pte) \<noteq> table_base pt_t p
@@ -2778,6 +2796,7 @@ lemma store_pte_valid_arch_caps:
               \<longrightarrow> (\<forall>level asid vref.
                      vs_lookup_table level asid vref s = Some (level, table_base pt_t p)
                      \<longrightarrow> vref \<in> user_region
+                     \<longrightarrow> level_type level = pt_t
                      \<longrightarrow> pt_slot_offset level (table_base pt_t p) vref = p
                      \<longrightarrow> (is_PageTablePTE pte \<longrightarrow> pts_of s (the (pte_ref pte)) = Some (empty_pt NormalPT_T))
                          \<and> the (pte_ref pte) \<noteq> table_base pt_t p
@@ -2794,17 +2813,17 @@ lemma store_pte_invs:
      and (\<lambda>s. table_base pt_t p \<notin> global_refs s)
      and K (wellformed_pte pte \<and> valid_mapping_insert pt_t p pte)
      and (\<lambda>s. \<forall>level. \<exists>\<rhd> (level, table_base pt_t p) s
+                      \<longrightarrow> level_type level = pt_t
                       \<longrightarrow> valid_pte level pte s
                          \<and> (is_PageTablePTE pte \<longrightarrow> pts_of s (the (pte_ref pte)) = Some (empty_pt NormalPT_T)
                                                    \<and> the (pte_ref pte) \<noteq> table_base pt_t p))
      and (\<lambda>s. (\<forall>slot asidopt. caps_of_state s slot = Some (ArchObjectCap (PageTableCap (table_base pt_t p) pt_t asidopt))
                               \<longrightarrow> asidopt = None \<longrightarrow> pte = InvalidPTE))
-     and (\<lambda>s. ((\<exists>asid. vspace_for_asid asid s = Some (table_base pt_t p))
-                       \<longrightarrow> ucast (table_index pt_t p) \<notin> invalid_mapping_slots))
      and (\<lambda>s. pte \<noteq> InvalidPTE
               \<longrightarrow> (\<forall>level asid vref.
                      vs_lookup_table level asid vref s = Some (level, table_base pt_t p)
                      \<longrightarrow> vref \<in> user_region
+                     \<longrightarrow> level_type level = pt_t
                      \<longrightarrow> pt_slot_offset level (table_base pt_t p) vref = p
                      \<longrightarrow> (is_PageTablePTE pte \<longrightarrow> pts_of s (the (pte_ref pte)) = Some (empty_pt NormalPT_T))
                          \<and> the (pte_ref pte) \<noteq> table_base pt_t p

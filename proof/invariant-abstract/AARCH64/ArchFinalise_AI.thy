@@ -1227,7 +1227,8 @@ lemma unmap_page_table_unreachable:
   done *)
 
 lemma unmap_page_unreachable:
-  "\<lbrace> data_at pgsz pptr and valid_asid_table and valid_vspace_objs and pspace_aligned
+  "\<lbrace> data_at pgsz pptr and valid_asid_table and valid_vspace_objs
+     and pspace_aligned and pspace_distinct
      and unique_table_refs and valid_vs_lookup and (\<lambda>s. valid_caps (caps_of_state s) s)
      and K (0 < asid \<and> vref \<in> user_region) \<rbrace>
    unmap_page pgsz asid vref pptr
