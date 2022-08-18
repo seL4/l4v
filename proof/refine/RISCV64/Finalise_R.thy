@@ -1584,7 +1584,7 @@ lemma emptySlot_corres:
   apply (rule conjI, clarsimp)
   apply clarsimp
   apply (simp only: bind_assoc[symmetric])
-  apply (rule corres_split'[where r'=dc, OF _ postCapDeletion_corres])
+  apply (rule corres_underlying_split[where r'=dc, OF _ postCapDeletion_corres])
     defer
     apply wpsimp+
   apply (rule corres_no_failI)

@@ -1158,14 +1158,14 @@ lemma arch_performInvocation_corres:
                         performARMMMUInvocation_def)
   apply (cases ai)
       apply (clarsimp simp: archinv_relation_def)
-      apply (rule corres_split'[OF _ corres_return_eq_same[OF refl]])
+      apply (rule corres_underlying_split[OF _ corres_return_eq_same[OF refl]])
         apply (erule corres_guard_imp [OF performPageTableInvocation_corres])
          apply (fastforce simp: valid_arch_inv_def)
         apply (fastforce simp: valid_arch_inv'_def)
        apply wp
       apply wp
      apply (clarsimp simp: archinv_relation_def)
-     apply (rule corres_split'[OF _ corres_return_eq_same[OF refl]])
+     apply (rule corres_underlying_split[OF _ corres_return_eq_same[OF refl]])
        apply (erule corres_guard_imp [OF performPageDirectoryInvocation_corres])
         apply (fastforce simp: valid_arch_inv_def)
        apply (fastforce simp: valid_arch_inv'_def)
@@ -1176,14 +1176,14 @@ lemma arch_performInvocation_corres:
      apply (fastforce simp: valid_arch_inv_def)
     apply (fastforce simp: valid_arch_inv'_def)
    apply (clarsimp simp: archinv_relation_def)
-   apply (rule corres_split'[OF _ corres_return_eq_same[OF refl]])
+   apply (rule corres_underlying_split[OF _ corres_return_eq_same[OF refl]])
      apply (rule corres_guard_imp [OF performASIDControlInvocation_corres], rule refl)
       apply (fastforce simp: valid_arch_inv_def)
      apply (fastforce simp: valid_arch_inv'_def)
     apply wp
    apply wp
   apply (clarsimp simp: archinv_relation_def)
-  apply (rule corres_split'[OF _ corres_return_eq_same[OF refl]])
+  apply (rule corres_underlying_split[OF _ corres_return_eq_same[OF refl]])
     apply (rule corres_guard_imp [OF performASIDPoolInvocation_corres], rule refl)
      apply (fastforce simp: valid_arch_inv_def)
     apply (fastforce simp: valid_arch_inv'_def)

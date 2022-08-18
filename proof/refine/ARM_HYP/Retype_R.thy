@@ -5497,7 +5497,7 @@ lemma corres_retype_region_createNewCaps:
            apply (rule no_fail_pre)
             apply (wp no_fail_mapM|clarsimp)+
           apply (simp add: mapM_x_mapM)
-          apply (rule corres_split'[where r' = dc])
+          apply (rule corres_underlying_split[where r' = dc])
              apply (rule_tac Q="\<lambda>xs s. (\<forall>x \<in> set xs. page_directory_at x s)
                                     \<and> valid_arch_state s \<and> pspace_aligned s \<and> valid_etcbs s"
                           and Q'="\<lambda>xs s. (\<forall>x \<in> set xs. page_directory_at' x s) \<and> valid_arch_state' s"

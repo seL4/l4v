@@ -675,12 +675,12 @@ lemma do_user_op_corres:
                 apply (rule_tac F = "dom (rvc \<circ> addrFromPPtr)  \<subseteq> dom rvd" in corres_gen_asm)
                 apply simp
                 apply (rule_tac r'="(=)" in corres_split_deprecated[OF _ corres_select])
-                   apply (rule corres_split'[OF corres_machine_op])
+                   apply (rule corres_underlying_split[OF corres_machine_op])
                       apply simp
                       apply (rule corres_underlying_trivial)
                       apply (simp add: user_memory_update_def)
                       apply (wp | simp)+
-                     apply (rule corres_split'[OF corres_machine_op,where Q = dc and Q'=dc])
+                     apply (rule corres_underlying_split[OF corres_machine_op,where Q = dc and Q'=dc])
                         apply (rule corres_underlying_trivial)
                        apply (wp | simp add: dc_def device_memory_update_def)+
    apply (clarsimp simp: invs_def valid_state_def pspace_respects_device_region_def)

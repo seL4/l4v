@@ -651,7 +651,7 @@ lemma deleteObjects_corres:
            untyped_children_in_mdb s \<and> if_unsafe_then_cap s \<and>
            valid_global_refs s" and
          Q'="\<lambda>_ s. s \<turnstile>' capability.UntypedCap d base magnitude idx \<and>
-                        valid_pspace' s" in corres_split')
+                        valid_pspace' s" in corres_underlying_split)
      apply (rule corres_bind_return)
      apply (rule corres_guard_imp[where r=dc])
        apply (rule corres_split_deprecated[OF cNodeNoPartialOverlap])

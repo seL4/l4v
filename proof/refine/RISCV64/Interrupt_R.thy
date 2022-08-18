@@ -731,7 +731,7 @@ apply (rule corres_split_deprecated)
        apply (rule corres_split_deprecated [OF _ get_cap_corres,
                                  where R="\<lambda>rv. einvs and valid_cap rv"
                                   and R'="\<lambda>rv. invs' and valid_cap' (cteCap rv)"])
-         apply (rule corres_split'[where r'=dc])
+         apply (rule corres_underlying_split[where r'=dc])
             apply (case_tac xb, simp_all add: doMachineOp_return)[1]
              apply (clarsimp simp add: when_def doMachineOp_return)
              apply (rule corres_guard_imp, rule sendSignal_corres)

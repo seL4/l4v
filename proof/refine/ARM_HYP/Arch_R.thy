@@ -1405,7 +1405,7 @@ proof -
   unfolding arch_perform_invocation_def ARM_HYP_H.performInvocation_def performARMMMUInvocation_def
   apply clarsimp
   apply (cases ai; clarsimp simp add: archinv_relation_def liftE_bind_return_bindE_returnOk[symmetric])
-       by (rule corres_split'[where r'=dc, OF _ corres_trivial]
+       by (rule corres_underlying_split[where r'=dc, OF _ corres_trivial]
              | rule invocation_corres[THEN corres_guard_imp]
              | (fastforce simp: valid_arch_inv_def valid_arch_inv'_def)+
              | wpsimp+)+

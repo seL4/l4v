@@ -76,7 +76,7 @@ lemma arch_switchToThread_corres:
              (arch_switch_to_thread t) (Arch.switchToThread t)"
   apply (simp add: arch_switch_to_thread_def ARM_H.switchToThread_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split' [OF setVMRoot_corres])
+    apply (rule corres_underlying_split [OF setVMRoot_corres])
       apply (rule corres_machine_op[OF corres_rel_imp])
       apply (rule corres_underlying_trivial)
        apply (simp add: ARM.clearExMonitor_def | wp)+

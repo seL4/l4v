@@ -525,7 +525,7 @@ lemma performPageInvocation_corres:
   unfolding perform_page_invocation_def performPageInvocation_def page_invocation_map_def
   apply (cases pgi; clarsimp simp: valid_page_inv_def mapping_map_def)
     apply (simp add: bind_assoc[symmetric])
-    apply (rule corres_split'[where r'=dc, OF _ corres_return_eq_same[OF refl]
+    apply (rule corres_underlying_split[where r'=dc, OF _ corres_return_eq_same[OF refl]
                                              hoare_post_taut hoare_post_taut])
     apply (simp add: bind_assoc)
     apply (rule corres_guard_imp)
@@ -541,7 +541,7 @@ lemma performPageInvocation_corres:
      apply (erule (3) vs_lookup_slot_pte_at)
     apply (clarsimp simp: valid_page_inv'_def cte_wp_at_ctes_of)
    apply (simp add: bind_assoc[symmetric])
-   apply (rule corres_split'[where r'=dc, OF _ corres_return_eq_same[OF refl]
+   apply (rule corres_underlying_split[where r'=dc, OF _ corres_return_eq_same[OF refl]
                                                hoare_post_taut hoare_post_taut])
    apply (simp add: bind_assoc)
    apply (clarsimp simp: perform_pg_inv_unmap_def liftM_def)
