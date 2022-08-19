@@ -290,7 +290,7 @@ definition decode_asid_pool_invocation :: "'z::state_ext arch_decoder" where
          p = acap_obj cap;
          base = acap_asid_base cap
        in case pt_cap of
-         ArchObjectCap (PageTableCap _ _ None) \<Rightarrow> doE
+         ArchObjectCap (PageTableCap _ VSRootPT_T None) \<Rightarrow> doE
            asid_table \<leftarrow> liftE $ gets asid_table;
            pool_ptr \<leftarrow> returnOk (asid_table (asid_high_bits_of base));
            whenE (pool_ptr = None) $ throwError $ FailedLookup False InvalidRoot;
