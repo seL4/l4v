@@ -336,8 +336,9 @@ lemma delete_objects_dcorres:
    apply (simp add: valid_cap_def cap_aligned_def untyped_min_bits_def)
   apply (rule corres_name_pre, clarify)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF detype_dcorres])
-       apply (rule freeMemory_dcorres, simp+)
+    apply (rule corres_split)
+       apply (rule detype_dcorres; simp)
+      apply (rule freeMemory_dcorres, simp+)
     apply wp
    apply clarsimp
    apply (rule TrueI)?
@@ -599,25 +600,25 @@ lemma retype_region_dcorres:
    apply (rule dcorres_expand_pfx)
    apply clarsimp
    apply (rule corres_guard_imp)
-     apply (rule corres_split_deprecated)
+     apply (rule corres_split)
+        apply (rule_tac r = dc and Q = \<top> and Q' = "(=) s'" in corres_guard_imp)
+          apply (clarsimp simp: transform_def bind_def simpler_modify_def corres_underlying_def
+           transform_current_thread_def transform_cdt_def transform_asid_table_def)
+          apply (rule ext)
+          apply (clarsimp simp:foldr_upd_app_if foldr_fun_upd_value restrict_map_def map_add_def
+                              transform_objects_def retype_transform_obj_ref_def image_def)
+          apply (subgoal_tac "idle_thread s' \<notin> set (retype_addrs ptr type n us)")
+           apply (subgoal_tac "type = Structures_A.CapTableObject \<longrightarrow> us \<noteq> 0")
+            apply (clarsimp simp:transform_default_object translate_object_type_not_untyped)
+           defer
+           apply clarsimp
+           apply (frule invs_valid_idle,clarsimp simp:valid_idle_def pred_tcb_at_def obj_at_def)
+           apply (erule(3) pspace_no_overlapC)
+           apply clarsimp
+          apply simp
+         apply assumption
         apply (rule corres_trivial)
         apply simp
-       apply (rule_tac r = dc and Q = \<top> and Q' = "(=) s'" in corres_guard_imp)
-         apply (clarsimp simp: transform_def bind_def simpler_modify_def corres_underlying_def
-          transform_current_thread_def transform_cdt_def transform_asid_table_def)
-         apply (rule ext)
-         apply (clarsimp simp:foldr_upd_app_if foldr_fun_upd_value restrict_map_def map_add_def
-                             transform_objects_def retype_transform_obj_ref_def image_def)
-         apply (subgoal_tac "idle_thread s' \<notin> set (retype_addrs ptr type n us)")
-          apply (subgoal_tac "type = Structures_A.CapTableObject \<longrightarrow> us \<noteq> 0")
-           apply (clarsimp simp:transform_default_object translate_object_type_not_untyped)
-          defer
-          apply clarsimp
-          apply (frule invs_valid_idle,clarsimp simp:valid_idle_def pred_tcb_at_def obj_at_def)
-          apply (erule(3) pspace_no_overlapC)
-          apply clarsimp
-         apply simp
-        apply assumption
        apply wp+
      apply fastforce
     apply simp
@@ -656,40 +657,40 @@ lemma clearMemory_unused_corres_noop:
    apply (clarsimp simp: cacheRangeOp_def cleanByVA_def split_def)
   apply (simp add: dom_mapM ef_storeWord)
   apply (rule corres_guard_imp, rule corres_split_noop_rhs)
-      apply (rule dcorres_machine_op_noop, wp)
-     apply (rule corres_mapM_to_mapM_x)
-     apply (rule_tac P=\<top> and P'="?P"
-                  and S="Id \<inter> ({p .. p + 2 ^ (obj_bits_api ty us) - 1} \<times> UNIV)"
-                in corres_mapM_x[where f="\<lambda>_. return ()", OF _ _ _ refl,
-                                  simplified mapM_x_return])
-        apply clarsimp
-        apply (rule stronger_corres_guard_imp,
-               rule_tac sz=pgsz in dcorres_store_word_safe[where dev = dev])
-          apply (simp add: within_page_def)
-         apply simp
-        apply (clarsimp simp: obj_at_def)
-        apply (subgoal_tac "x && ~~ mask (obj_bits_api ty us) = p")
-         apply (clarsimp simp: ipc_frame_wp_at_def obj_at_def ran_null_filter
-                        split: cap.split_asm arch_cap.split_asm)
-         apply (cut_tac t="(t, tcb_cnode_index 4)" and P="(=) cap" for t cap
-                    in cte_wp_at_tcbI, simp, fastforce, simp)
-         apply (clarsimp simp: cte_wp_at_caps_of_state)
-         apply (drule(1) bspec)
+      apply (rule corres_mapM_to_mapM_x)
+      apply (rule_tac P=\<top> and P'="?P"
+                   and S="Id \<inter> ({p .. p + 2 ^ (obj_bits_api ty us) - 1} \<times> UNIV)"
+                 in corres_mapM_x[where f="\<lambda>_. return ()", OF _ _ _ refl,
+                                   simplified mapM_x_return])
          apply clarsimp
-         apply (drule(1) bspec[OF _ ranI])
-         apply simp
-        apply (drule(2) retype_addrs_aligned
-          [OF _ range_cover.aligned range_cover_sz'
-            [where 'a=32, folded word_bits_def] le_refl])
-        apply (simp add:mask_in_range)
-       apply wp
-      apply (simp | wp hoare_vcg_ball_lift)+
-     apply (simp add:zip_same_conv_map)
-     apply (rule conjI)
-      apply clarsimp
-     apply (clarsimp simp: word_size_def)
-     apply (drule subsetD[OF upto_enum_step_subset])
-     apply simp
+         apply (rule stronger_corres_guard_imp,
+                rule_tac sz=pgsz in dcorres_store_word_safe[where dev = dev])
+           apply (simp add: within_page_def)
+          apply simp
+         apply (clarsimp simp: obj_at_def)
+         apply (subgoal_tac "x && ~~ mask (obj_bits_api ty us) = p")
+          apply (clarsimp simp: ipc_frame_wp_at_def obj_at_def ran_null_filter
+                         split: cap.split_asm arch_cap.split_asm)
+          apply (cut_tac t="(t, tcb_cnode_index 4)" and P="(=) cap" for t cap
+                     in cte_wp_at_tcbI, simp, fastforce, simp)
+          apply (clarsimp simp: cte_wp_at_caps_of_state)
+          apply (drule(1) bspec)
+          apply clarsimp
+          apply (drule(1) bspec[OF _ ranI])
+          apply simp
+         apply (drule(2) retype_addrs_aligned
+           [OF _ range_cover.aligned range_cover_sz'
+             [where 'a=32, folded word_bits_def] le_refl])
+         apply (simp add:mask_in_range)
+        apply wp
+       apply (simp | wp hoare_vcg_ball_lift)+
+      apply (simp add:zip_same_conv_map)
+      apply (rule conjI)
+       apply clarsimp
+      apply (clarsimp simp: word_size_def)
+      apply (drule subsetD[OF upto_enum_step_subset])
+      apply simp
+     apply (rule dcorres_machine_op_noop, wp)
     apply (wp | simp)+
   done
 
@@ -716,17 +717,17 @@ lemma init_arch_objects_corres_noop:
   apply (rule corres_guard_imp)
     apply (rule corres_split_noop_rhs)
       apply (rule corres_noop[where P=\<top> and P'=valid_idle])
+       apply simp
+       apply (rule hoare_strengthen_post, rule mapM_wp')
+        apply (subst eq_commute, wp copy_global_mappings_dwp)
+          apply (simp add: obj_bits_api_def arch_kobj_size_def
+                           default_arch_object_def pd_bits_def pageBits_def)
+         apply (wp mapM_wp' dmo_dwp | simp)+
+     apply (rule corres_noop[where P=\<top> and P'=valid_idle])
       apply (simp add: clearMemory_def do_machine_op_bind
                    cleanCacheRange_PoU_def ef_storeWord
                    mapM_x_mapM dom_mapM)
       apply (wp mapM_wp' dmo_dwp | simp)+
-     apply (rule corres_noop[where P=\<top> and P'=valid_idle])
-      apply simp
-      apply (rule hoare_strengthen_post, rule mapM_wp')
-       apply (subst eq_commute, wp copy_global_mappings_dwp)
-         apply (simp add: obj_bits_api_def arch_kobj_size_def
-                          default_arch_object_def pd_bits_def pageBits_def)
-        apply (wp mapM_wp' dmo_dwp | simp)+
   done
 
 lemma monad_commute_set_cap_cdt:
@@ -822,22 +823,22 @@ lemma create_cap_dcorres:
     apply (rule corres_assert_lhs)
     apply (simp add: set_cap_set_parent_swap bind_assoc[symmetric])
     apply (rule corres_split_nor)
-       apply (fold dc_def)
-       apply (rule set_cap_corres, simp_all add: transform_default_cap)[1]
-      apply (simp add: bind_assoc set_original_def create_cap_ext_def
-                       set_cdt_modify gets_fold_into_modify update_cdt_list_def
-                       modify_modify set_cdt_list_modify)
-      apply (rule dcorres_set_parent_helper)
-      apply (rule_tac P'="\<lambda>s. mdb_cte_at (swp cte_at s) (cdt s)
-                               \<and> cte_at parent s \<and> cte_at slot s"
-                     in corres_modify[where P=\<top>])
-      apply (clarsimp simp: transform_def transform_current_thread_def
-                            transform_asid_table_def transform_objects_def)
-      apply (simp add: transform_cdt_def fun_upd_def[symmetric])
-      apply (subst map_lift_over_upd)
-       apply (rule_tac P=\<top> and s=s' in transform_cdt_slot_inj_on_cte_at)
-       apply (auto dest: mdb_cte_atD[rotated] elim!: ranE)[1]
-      apply simp
+       apply (simp add: bind_assoc set_original_def create_cap_ext_def
+                        set_cdt_modify gets_fold_into_modify update_cdt_list_def
+                        modify_modify set_cdt_list_modify)
+       apply (rule dcorres_set_parent_helper)
+       apply (rule_tac P'="\<lambda>s. mdb_cte_at (swp cte_at s) (cdt s)
+                                \<and> cte_at parent s \<and> cte_at slot s"
+                      in corres_modify[where P=\<top>])
+       apply (clarsimp simp: transform_def transform_current_thread_def
+                             transform_asid_table_def transform_objects_def)
+       apply (simp add: transform_cdt_def fun_upd_def[symmetric])
+       apply (subst map_lift_over_upd)
+        apply (rule_tac P=\<top> and s=s' in transform_cdt_slot_inj_on_cte_at)
+        apply (auto dest: mdb_cte_atD[rotated] elim!: ranE)[1]
+       apply simp
+      apply (fold dc_def)
+      apply (rule set_cap_corres, simp_all add: transform_default_cap)[1]
      apply (wp|simp)+
    apply (clarsimp simp: cte_wp_at_caps_of_state caps_of_state_transform_opt_cap not_idle_thread_def)
   apply (clarsimp simp: swp_def not_idle_thread_def cte_wp_at_caps_of_state)
@@ -1030,8 +1031,9 @@ lemma create_caps_loop_dcorres:
    apply (simp add: mapM_x_Nil)
   apply (clarsimp simp: mapM_x_Cons)
   apply (rule corres_guard_imp)
-    apply (erule corres_split_nor)
-      apply (rule create_cap_dcorres)
+    apply (rule corres_split_nor)
+       apply (rule create_cap_dcorres)
+      apply assumption
      apply (wp create_cap_invs hoare_vcg_const_Ball_lift create_cap_mdb_cte_at[unfolded swp_def])+
    apply simp
   apply (clarsimp simp: not_idle_thread_def swp_def)
@@ -1192,9 +1194,10 @@ lemma clearMemory_corres_noop:
                    do_machine_op_bind empty_fail_freeMemory)
   apply (rule corres_guard_imp)
     apply (rule corres_add_noop_lhs)
-    apply (rule corres_split_nor[OF freeMemory_dcorres])
-         apply (rule dcorres_machine_op_noop)
-         apply (wp | simp)+
+    apply (rule corres_split_nor)
+       apply (rule freeMemory_dcorres; simp)
+      apply (rule dcorres_machine_op_noop)
+      apply (wp | simp)+
   apply (clarsimp simp: field_simps)
   done
 
@@ -1269,112 +1272,114 @@ lemma reset_untyped_cap_corres:
   apply (simp add: Untyped_D.reset_untyped_cap_def reset_untyped_cap_def
                    liftE_bindE)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF get_cap_corres])
-       apply (rule_tac F="is_untyped_cap capa \<and> cap_aligned capa
-                 \<and> bits_of capa > 2 \<and> free_index_of capa \<le> 2 ^ bits_of capa"
-             in corres_gen_asm2)
-       apply (simp add: whenE_def if_flip split del: if_split)
-       apply (rule corres_if)
-         apply (clarsimp simp: is_cap_simps free_range_of_untyped_def
-                               cap_aligned_def free_index_of_def
-                         simp del: word_of_nat_eq_0_iff)
-         apply (simp add: word_unat.Rep_inject[symmetric])
-         apply (subst unat_of_nat_eq, erule order_le_less_trans,
-           rule power_strict_increasing, simp_all add: word_bits_def bits_of_def)[1]
-        apply (rule corres_trivial, rule corres_returnOk, simp)
-       apply (rule_tac F="free_index_of capa \<noteq> 0" in corres_gen_asm2)
-       apply (rule corres_split_nor)
-          apply (rule delete_objects_dcorres)
-          apply (clarsimp simp: is_cap_simps bits_of_def)
-         apply (rule corres_if_rhs)
-          apply (rule_tac x="[cap_objects (transform_cap capa)]" in select_pick_corres_asm)
-           apply (clarsimp simp: is_cap_simps cap_aligned_def free_index_of_def)
-           apply (rule order_less_le_trans, rule free_range_of_untyped_subset'[where a=0],
-             simp_all)[1]
-            apply (simp add: word_size word_bits_def)
-           apply (simp add: free_range_of_untyped_def)
+    apply (rule corres_split)
+       apply (rule get_cap_corres; simp)
+      apply (rule_tac F="is_untyped_cap capa \<and> cap_aligned capa
+                \<and> bits_of capa > 2 \<and> free_index_of capa \<le> 2 ^ bits_of capa"
+            in corres_gen_asm2)
+      apply (simp add: whenE_def if_flip split del: if_split)
+      apply (rule corres_if)
+        apply (clarsimp simp: is_cap_simps free_range_of_untyped_def
+                              cap_aligned_def free_index_of_def
+                        simp del: word_of_nat_eq_0_iff)
+        apply (simp add: word_unat.Rep_inject[symmetric])
+        apply (subst unat_of_nat_eq, erule order_le_less_trans,
+          rule power_strict_increasing, simp_all add: word_bits_def bits_of_def)[1]
+       apply (rule corres_trivial, rule corres_returnOk, simp)
+      apply (rule_tac F="free_index_of capa \<noteq> 0" in corres_gen_asm2)
+      apply (rule corres_split_nor)
+         apply (rule delete_objects_dcorres)
+         apply (clarsimp simp: is_cap_simps bits_of_def)
+        apply (rule corres_if_rhs)
+         apply (rule_tac x="[cap_objects (transform_cap capa)]" in select_pick_corres_asm)
+          apply (clarsimp simp: is_cap_simps cap_aligned_def free_index_of_def)
+          apply (rule order_less_le_trans, rule free_range_of_untyped_subset'[where a=0],
+            simp_all)[1]
+           apply (simp add: word_size word_bits_def)
+          apply (simp add: free_range_of_untyped_def)
 
-          apply (simp add: mapME_x_Nil mapME_x_Cons liftE_def bind_assoc)
-          apply (rule corres_add_noop_lhs)
-          apply (rule corres_split_nor)
-             apply (rule dcorres_unless_r)
-              apply (rule clearMemory_corres_noop[OF refl])
-                apply (clarsimp simp: is_cap_simps cap_aligned_def bits_of_def)
-               apply (clarsimp simp: is_cap_simps bits_of_def free_range_of_untyped_def)
-              apply (clarsimp simp: is_cap_simps cap_aligned_def bits_of_def)
-             apply (rule corres_trivial, simp)
-            apply (rule corres_split_nor)
-               apply (rule corres_alternate1)
-               apply (rule corres_trivial, simp add: returnOk_def)
+         apply (simp add: mapME_x_Nil mapME_x_Cons liftE_def bind_assoc)
+         apply (rule corres_add_noop_lhs)
+         apply (rule corres_split_nor)
+            apply (rule dcorres_unless_r)
+             apply (rule clearMemory_corres_noop[OF refl])
+               apply (clarsimp simp: is_cap_simps cap_aligned_def bits_of_def)
+              apply (clarsimp simp: is_cap_simps bits_of_def free_range_of_untyped_def)
+             apply (clarsimp simp: is_cap_simps cap_aligned_def bits_of_def)
+            apply (rule corres_trivial, simp)
+           apply (rule corres_split_nor)
               apply (rule set_cap_corres)
                apply (clarsimp simp: is_cap_simps bits_of_def free_range_of_untyped_def)
               apply simp
-             apply (wp | simp add: unless_def)+
-         apply (rule_tac F="\<not> (is_device_untyped_cap capa \<or> bits_of capa < resetChunkBits)
-                   \<and> (\<exists>s. s \<turnstile> capa)"
-               in corres_gen_asm2)
-         apply (rule_tac x="map (\<lambda>i. free_range_of_untyped (i * 2 ^ resetChunkBits)
-                   (bits_of capa) (obj_ref_of capa)) xs" for xs
-           in select_pick_corres_asm)
-          prefer 2
-          apply (simp add: mapME_x_map_simp o_def)
-          apply (rule_tac P="\<top>\<top>" and P'="\<lambda>_. valid_objs
-                  and valid_etcbs and pspace_no_overlap (untyped_range capa)
-                  and valid_idle and (\<lambda>s. idle_thread s \<noteq> fst cref)
-                  and cte_wp_at (\<lambda>cp. \<exists>idx. cp = free_index_update (\<lambda>_. idx) capa) cref"
-                  in mapME_x_corres_same_xs[OF _ _ _ refl])
-            apply (rule corres_guard_imp)
-              apply (rule corres_add_noop_lhs)
-              apply (rule corres_split_nor[OF clearMemory_corres_noop[OF refl]])
-                   apply (rule corres_split[OF set_cap_corres])
-                       apply (subst alternative_com)
-                       apply (rule throw_or_return_preemption_corres[where P=\<top> and P'=\<top>])
-                      apply (clarsimp simp: is_cap_simps bits_of_def)
-                     apply simp
-                    apply wp+
+             apply (rule corres_alternate1)
+             apply (rule corres_trivial, simp add: returnOk_def)
+            apply (wp | simp add: unless_def)+
+        apply (rule_tac F="\<not> (is_device_untyped_cap capa \<or> bits_of capa < resetChunkBits)
+                  \<and> (\<exists>s. s \<turnstile> capa)"
+              in corres_gen_asm2)
+        apply (rule_tac x="map (\<lambda>i. free_range_of_untyped (i * 2 ^ resetChunkBits)
+                  (bits_of capa) (obj_ref_of capa)) xs" for xs
+          in select_pick_corres_asm)
+         prefer 2
+         apply (simp add: mapME_x_map_simp o_def)
+         apply (rule_tac P="\<top>\<top>" and P'="\<lambda>_. valid_objs
+                 and valid_etcbs and pspace_no_overlap (untyped_range capa)
+                 and valid_idle and (\<lambda>s. idle_thread s \<noteq> fst cref)
+                 and cte_wp_at (\<lambda>cp. \<exists>idx. cp = free_index_update (\<lambda>_. idx) capa) cref"
+                 in mapME_x_corres_same_xs[OF _ _ _ refl])
+           apply (rule corres_guard_imp)
+             apply (rule corres_add_noop_lhs)
+             apply (rule corres_split_nor)
+                apply (rule clearMemory_corres_noop[OF refl])
                   apply (clarsimp simp add: is_cap_simps cap_aligned_def bits_of_def
                                             aligned_add_aligned is_aligned_shiftl)
                  apply (simp add: Kernel_Config.resetChunkBits_def)
                 apply (simp add: Kernel_Config.resetChunkBits_def word_bits_def)
-               apply (wp hoare_vcg_all_lift hoare_vcg_const_imp_lift
-                         preemption_point_inv' set_cap_no_overlap
-                         update_untyped_cap_valid_objs set_cap_idle
-                          | simp)+
-            apply (clarsimp simp: is_cap_simps bits_of_def cap_aligned_def)
-            apply (erule pspace_no_overlap_subset)
-            apply (rule aligned_range_offset_subset, simp_all add: is_aligned_shiftl)[1]
-            apply (rule shiftl_less_t2n[OF word_of_nat_less])
-             apply simp
-            apply (simp add: word_bits_def)
-           apply wpsimp
-          apply (wp hoare_vcg_all_lift hoare_vcg_const_imp_lift
-                    update_untyped_cap_valid_objs set_cap_no_overlap
-                    set_cap_idle preemption_point_inv'
-                    set_cap_cte_wp_at
-                 | simp)+
-          apply (clarsimp simp: cte_wp_at_caps_of_state exI
-                                is_cap_simps bits_of_def)
-          apply (frule(1) cte_wp_at_valid_objs_valid_cap[OF caps_of_state_cteD])
-          apply (clarsimp simp: valid_cap_simps cap_aligned_def
-                                valid_untyped_pspace_no_overlap
-                                free_index_of_def)
+               apply (rule corres_split)
+                  apply (rule set_cap_corres; simp)
+                  apply (clarsimp simp: is_cap_simps bits_of_def)
+                 apply (subst alternative_com)
+                 apply (rule throw_or_return_preemption_corres[where P=\<top> and P'=\<top>])
+                apply wp+
+            apply (wp hoare_vcg_all_lift hoare_vcg_const_imp_lift
+                      preemption_point_inv' set_cap_no_overlap
+                      update_untyped_cap_valid_objs set_cap_idle
+                       | simp)+
+           apply (clarsimp simp: is_cap_simps bits_of_def cap_aligned_def)
+           apply (erule pspace_no_overlap_subset)
+           apply (rule aligned_range_offset_subset, simp_all add: is_aligned_shiftl)[1]
+           apply (rule shiftl_less_t2n[OF word_of_nat_less])
+            apply simp
+           apply (simp add: word_bits_def)
+          apply wpsimp
+         apply (wp hoare_vcg_all_lift hoare_vcg_const_imp_lift
+                   update_untyped_cap_valid_objs set_cap_no_overlap
+                   set_cap_idle preemption_point_inv'
+                   set_cap_cte_wp_at
+                | simp)+
+         apply (clarsimp simp: cte_wp_at_caps_of_state exI
+                               is_cap_simps bits_of_def)
+         apply (frule(1) cte_wp_at_valid_objs_valid_cap[OF caps_of_state_cteD])
+         apply (clarsimp simp: valid_cap_simps cap_aligned_def
+                               valid_untyped_pspace_no_overlap
+                               free_index_of_def)
 
-         apply (clarsimp simp: is_cap_simps bits_of_def)
-         apply (strengthen order_trans[OF free_range_of_untyped_subseteq'[where a=0]]
-                           free_range_of_untyped_subset')
-         apply (clarsimp simp: conj_comms)
-         apply (clarsimp simp: filter_empty_conv bexI[where x=0]
-                               last_rev hd_map hd_filter_eq
-                               is_cap_simps bits_of_def cap_aligned_def
-                               word_bits_def word_size exI
-                               rev_map[symmetric])
-         apply (clarsimp simp: free_index_of_def free_range_of_untyped_def)
-        apply (simp del: hoare_TrueI)
-        apply wp
-       apply (wp add: hoare_vcg_const_imp_lift get_cap_wp delete_objects_invs2
-          | simp
-          | strengthen invs_valid_objs invs_valid_idle
-          | rule impI)+
+        apply (clarsimp simp: is_cap_simps bits_of_def)
+        apply (strengthen order_trans[OF free_range_of_untyped_subseteq'[where a=0]]
+                          free_range_of_untyped_subset')
+        apply (clarsimp simp: conj_comms)
+        apply (clarsimp simp: filter_empty_conv bexI[where x=0]
+                              last_rev hd_map hd_filter_eq
+                              is_cap_simps bits_of_def cap_aligned_def
+                              word_bits_def word_size exI
+                              rev_map[symmetric])
+        apply (clarsimp simp: free_index_of_def free_range_of_untyped_def)
+       apply (simp del: hoare_TrueI)
+       apply wp
+      apply (wp add: hoare_vcg_const_imp_lift get_cap_wp delete_objects_invs2
+         | simp
+         | strengthen invs_valid_objs invs_valid_idle
+         | rule impI)+
   apply (clarsimp simp: cte_wp_at_caps_of_state
                         descendants_range_def2)
   apply (strengthen empty_descendants_range_in
@@ -1470,84 +1475,85 @@ lemma invoke_untyped_corres:
           apply (rule reset_untyped_cap_corres[where idx=idx])
          apply simp
         apply simp
-        apply (rule corres_split[OF get_cap_corres])
-           apply simp
-           apply (rule generate_object_ids_exec[where ptr = ptr and us = us and sz = sz])
-           apply simp
-           apply (rule corres_split[OF update_available_range_dcorres])
-             apply simp
-             apply (rule corres_split[OF retype_region_dcorres[where sz = sz]])
-               apply (rule corres_split_noop_rhs[OF init_arch_objects_corres_noop[where sz =sz]])
-                   apply (simp add: liftM_def[symmetric] mapM_x_def[symmetric]
-                                    zip_map1 zip_map2 o_def split_beta dc_def[symmetric])
-                   apply (rule_tac F = " (untyped_is_device (transform_cap cap)) = dev" in corres_gen_asm2)
-                   apply clarify
-                   apply (rule create_caps_loop_dcorres)
+        apply (rule corres_split)
+           apply (rule get_cap_corres; simp)
+          apply simp
+          apply (rule generate_object_ids_exec[where ptr = ptr and us = us and sz = sz])
+          apply simp
+          apply (rule corres_split[OF update_available_range_dcorres])
+            apply simp
+            apply (rule corres_split[OF retype_region_dcorres[where sz = sz]])
+              apply (rule corres_split_noop_rhs)
+                apply (rule init_arch_objects_corres_noop[where sz =sz])
                   apply clarsimp
                   apply (erule retype_addrs_aligned[OF _ range_cover.aligned _ le_refl])
                    apply (rule cover)
                   apply (rule range_cover_sz'[where 'a=32, folded word_bits_def, OF cover])
                  apply (rule cover)
                 apply (simp add: vslot)
-               apply ((wp | simp add: mdb_cte_at_def | rule hoare_vcg_conj_lift, wps)+)[2]
-             supply send_signal_interrupt_states[wp_unsafe del] validNF_prop[wp_unsafe del]
-             apply (wp retype_region_aligned_for_init[where sz = sz]
-                     retype_region_obj_at[THEN hoare_vcg_const_imp_lift]
-                     retype_region_caps_of[where sza = "\<lambda>_. sz"]
-                  | simp add: misc)+
-             apply (rule_tac Q="\<lambda>rv s. cte_wp_at ((\<noteq>) cap.NullCap) cref s
-                                       \<and> post_retype_invs tp rv s
-                                       \<and> idle_thread s \<notin> fst ` set slots
-                                       \<and> untyped_is_device (transform_cap cap) = dev
-                                       \<and> (\<forall>slot\<in>set slots. cte_wp_at ((=) cap.NullCap) slot s)
-                                       \<and> valid_etcbs s"
-                             in hoare_post_imp)
-              apply (simp add:post_retype_invs_def split:if_split_asm)
-               apply ((clarsimp dest!: set_zip_leftD
-                                 simp: vslot image_def invs_def valid_state_def valid_mdb_def
-                                       cte_wp_at_caps_of_state
-                      | intro conjI | drule (1) bspec | drule(1) mdb_cte_atD[rotated])+)[2]
-             apply (wp retype_region_cte_at_other'[where sz= sz]
-                       retype_region_post_retype_invs[where sz = sz]
-                       hoare_vcg_const_Ball_lift retype_region_aligned_for_init)+
-           apply (clarsimp simp:conj_comms misc cover)
-           apply (rule_tac Q="\<lambda>r s.
-                cte_wp_at (\<lambda>cp. \<exists>idx. cp = (cap.UntypedCap dev ptr' sz idx)) cref s \<and>
-                invs s \<and> pspace_no_overlap_range_cover ptr sz s \<and> caps_no_overlap ptr sz s \<and>
-                region_in_kernel_window {ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1} s \<and>
-                caps_overlap_reserved {ptr..ptr + of_nat (length slots) * 2 ^ obj_bits_api tp us - 1} s \<and>
-                idle_thread s \<notin> fst ` set slots
-                \<and> untyped_is_device (transform_cap cap) = dev
-                \<and> (\<forall>x\<in>set slots. cte_wp_at ((=) cap.NullCap) x s) \<and> valid_etcbs s"
-                in hoare_strengthen_post[rotated])
-            apply (clarsimp simp: invs_mdb invs_valid_pspace cte_wp_at_caps_of_state misc split_paired_Ex)
-            apply (rule conjI,clarsimp)
-             apply (erule ranE)
-             apply (clarsimp simp:null_filter_def split:if_splits)
-             apply (frule_tac cap = capa in caps_of_state_ko[OF caps_of_state_valid])
-              apply assumption
-             apply (elim disjE)
-               apply (clarsimp simp:cap_range_def is_cap_simps)+
-             apply (rule disjointI)
-             apply clarsimp
-             apply (drule bspec,fastforce,clarsimp)
-             apply (drule(1) pspace_no_overlap_obj_range)
-             apply (drule p_in_obj_range)
-               apply clarsimp+
-             apply (auto simp: field_simps)[1]
-            apply (cases cref, simp, intro exI, rule conjI, assumption,
-                   simp add: atLeastatMost_subset_iff word_and_le2 ptrs field_simps)
-           apply (rule_tac P="bits_of cap = sz" in hoare_gen_asm)
-           apply (simp add:bits_of_def)
-           apply (strengthen caps_region_kernel_window_imp[where p=cref] invs_cap_refs_in_kernel_window)+
-           apply (wp set_cap_no_overlap hoare_vcg_ball_lift
-                     set_free_index_invs[where 'a=det_ext and
-                                                cap = "cap.UntypedCap dev (ptr && ~~ mask sz) sz
-                                                                      (if reset then 0 else idx)",
-                                                simplified]
-                     set_cap_cte_wp_at set_cap_descendants_range_in set_cap_caps_no_overlap
-                     set_untyped_cap_caps_overlap_reserved set_cap_cte_cap_wp_to hoare_vcg_ex_lift)
-          apply simp
+               apply (simp add: liftM_def[symmetric] mapM_x_def[symmetric]
+                                zip_map1 zip_map2 o_def split_beta dc_def[symmetric])
+               apply (rule_tac F = " (untyped_is_device (transform_cap cap)) = dev" in corres_gen_asm2)
+               apply clarify
+               apply (rule create_caps_loop_dcorres)
+              apply ((wp | simp add: mdb_cte_at_def | rule hoare_vcg_conj_lift, wps)+)[2]
+            supply send_signal_interrupt_states[wp_unsafe del] validNF_prop[wp_unsafe del]
+            apply (wp retype_region_aligned_for_init[where sz = sz]
+                    retype_region_obj_at[THEN hoare_vcg_const_imp_lift]
+                    retype_region_caps_of[where sza = "\<lambda>_. sz"]
+                 | simp add: misc)+
+            apply (rule_tac Q="\<lambda>rv s. cte_wp_at ((\<noteq>) cap.NullCap) cref s
+                                      \<and> post_retype_invs tp rv s
+                                      \<and> idle_thread s \<notin> fst ` set slots
+                                      \<and> untyped_is_device (transform_cap cap) = dev
+                                      \<and> (\<forall>slot\<in>set slots. cte_wp_at ((=) cap.NullCap) slot s)
+                                      \<and> valid_etcbs s"
+                            in hoare_post_imp)
+             apply (simp add:post_retype_invs_def split:if_split_asm)
+              apply ((clarsimp dest!: set_zip_leftD
+                                simp: vslot image_def invs_def valid_state_def valid_mdb_def
+                                      cte_wp_at_caps_of_state
+                     | intro conjI | drule (1) bspec | drule(1) mdb_cte_atD[rotated])+)[2]
+            apply (wp retype_region_cte_at_other'[where sz= sz]
+                      retype_region_post_retype_invs[where sz = sz]
+                      hoare_vcg_const_Ball_lift retype_region_aligned_for_init)+
+          apply (clarsimp simp:conj_comms misc cover)
+          apply (rule_tac Q="\<lambda>r s.
+               cte_wp_at (\<lambda>cp. \<exists>idx. cp = (cap.UntypedCap dev ptr' sz idx)) cref s \<and>
+               invs s \<and> pspace_no_overlap_range_cover ptr sz s \<and> caps_no_overlap ptr sz s \<and>
+               region_in_kernel_window {ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1} s \<and>
+               caps_overlap_reserved {ptr..ptr + of_nat (length slots) * 2 ^ obj_bits_api tp us - 1} s \<and>
+               idle_thread s \<notin> fst ` set slots
+               \<and> untyped_is_device (transform_cap cap) = dev
+               \<and> (\<forall>x\<in>set slots. cte_wp_at ((=) cap.NullCap) x s) \<and> valid_etcbs s"
+               in hoare_strengthen_post[rotated])
+           apply (clarsimp simp: invs_mdb invs_valid_pspace cte_wp_at_caps_of_state misc split_paired_Ex)
+           apply (rule conjI,clarsimp)
+            apply (erule ranE)
+            apply (clarsimp simp:null_filter_def split:if_splits)
+            apply (frule_tac cap = capa in caps_of_state_ko[OF caps_of_state_valid])
+             apply assumption
+            apply (elim disjE)
+              apply (clarsimp simp:cap_range_def is_cap_simps)+
+            apply (rule disjointI)
+            apply clarsimp
+            apply (drule bspec,fastforce,clarsimp)
+            apply (drule(1) pspace_no_overlap_obj_range)
+            apply (drule p_in_obj_range)
+              apply clarsimp+
+            apply (auto simp: field_simps)[1]
+           apply (cases cref, simp, intro exI, rule conjI, assumption,
+                  simp add: atLeastatMost_subset_iff word_and_le2 ptrs field_simps)
+          apply (rule_tac P="bits_of cap = sz" in hoare_gen_asm)
+          apply (simp add:bits_of_def)
+          apply (strengthen caps_region_kernel_window_imp[where p=cref] invs_cap_refs_in_kernel_window)+
+          apply (wp set_cap_no_overlap hoare_vcg_ball_lift
+                    set_free_index_invs[where 'a=det_ext and
+                                               cap = "cap.UntypedCap dev (ptr && ~~ mask sz) sz
+                                                                     (if reset then 0 else idx)",
+                                               simplified]
+                    set_cap_cte_wp_at set_cap_descendants_range_in set_cap_caps_no_overlap
+                    set_untyped_cap_caps_overlap_reserved set_cap_cte_cap_wp_to hoare_vcg_ex_lift)
          apply wp
         apply (simp split del: if_split)
         apply (wp get_cap_wp)+
@@ -1774,10 +1780,11 @@ lemma decode_untyped_corres:
          apply (rule corres_if)
            apply (simp add: unat_eq_0)
           apply (rule corres_trivial, simp add: returnOk_def)
-         apply (rule corres_splitEE[OF lookup_slot_for_cnode_op_corres])
-               apply clarsimp
-               apply (rule get_cap_corres)
-               apply simp+
+         apply (rule corres_splitEE)
+            apply (rule lookup_slot_for_cnode_op_corres; simp)
+           apply clarsimp
+           apply (rule get_cap_corres)
+           apply simp
           apply (wp lsfco_not_idle | simp)+
        apply (clarsimp simp: cte_wp_at_caps_of_state)
        apply auto[1]
