@@ -301,11 +301,13 @@ lemma handle_interrupt_corres_branch:
               od)"
    apply (rule corres_dummy_return_pl)
    apply (rule corres_guard_imp)
-     apply (rule corres_split[OF dcorres_machine_op_noop])
-       apply (clarsimp simp:dc_def[symmetric])
+     apply (rule corres_split)
        apply (rule dcorres_machine_op_noop)
-   apply (wp|clarsimp)+
-done
+       apply wp
+      apply (clarsimp simp:dc_def[symmetric])
+      apply (rule dcorres_machine_op_noop)
+      apply (wp|clarsimp)+
+  done
 
 lemma irq_state_IRQSignal_NullCap:
   "\<lbrakk> caps_of_state s (interrupt_irq_node s irq, []) \<noteq> None;
@@ -357,20 +359,21 @@ lemma handle_interrupt_corres:
    apply (subst Retype_AI.do_machine_op_bind)
      apply (rule maskInterrupt_empty_fail)
     apply (rule ackInterrupt_empty_fail)
-   using corres_guard2_imp handle_interrupt_corres_branch apply blast
+  using corres_guard2_imp handle_interrupt_corres_branch apply blast
   apply (rule dcorres_absorb_get_r)+
   apply (clarsimp split:irq_state.splits simp:corres_free_fail | rule conjI)+
    apply (simp add:Interrupt_D.handle_interrupt_def bind_assoc)
    apply (rule corres_guard_imp)
      apply (rule_tac Q'="(=) s'" in corres_split[OF dcorres_get_irq_slot])
        apply (rule_tac R'="\<lambda>rv.  (\<lambda>s. (is_ntfn_cap rv \<longrightarrow> ntfn_at (obj_ref_of rv) s)) and invs and valid_etcbs"
-          in corres_split[OF option_get_cap_corres])
-          apply (case_tac rv'a)
-                     prefer 4
-                     apply (simp_all add:when_def)
+               in corres_split)
+          apply (rule option_get_cap_corres; simp)
+         apply (case_tac rv'a)
+                    prefer 4
+                    apply (simp_all add:when_def)
                   apply (clarsimp simp:transform_cap_def when_def is_ntfn_cap_def | rule conjI)+
                    apply (rule corres_dummy_return_l)
-                   apply (rule corres_split_forwards' [where P'="\<lambda>rv. \<top>" and P = "\<lambda>rv. \<top>"])
+                   apply (rule corres_split_forwards' [where Q'="\<lambda>rv. \<top>" and Q = "\<lambda>rv. \<top>"])
                       apply (rule corres_guard_imp[OF send_signal_corres])
                         apply (simp+)
                    apply (clarsimp simp:handle_interrupt_corres_branch dc_def[symmetric])+
@@ -399,9 +402,9 @@ lemma handle_interrupt_corres:
      apply (rule corres_guard_imp,rule corres_dummy_return_pl)
        apply (simp add: bind_assoc)
        apply (rule dcorres_rhs_noop_above[OF timer_tick_dcorres])
-       apply (rule dcorres_symb_exec_r[OF dcorres_machine_op_noop])
-       apply (wp dmo_dwp hoare_TrueI| simp)+
-   apply (clarsimp simp:transform_def invs_def valid_state_def dest!: valid_irq_node_cte_at_irq_slot)+
+         apply (rule dcorres_symb_exec_r[OF dcorres_machine_op_noop])
+           apply (wp dmo_dwp hoare_TrueI| simp)+
+    apply (clarsimp simp:transform_def invs_def valid_state_def dest!: valid_irq_node_cte_at_irq_slot)+
    apply (simp add:cte_wp_at_caps_of_state)
   apply (rule dcorres_absorb_get_l)+
   apply (clarsimp simp:CSpace_D.get_irq_slot_def handle_reserved_irq_def)
@@ -419,7 +422,7 @@ lemma handle_interrupt_corres:
     apply (rule corres_guard_imp)
       apply (rule dcorres_machine_op_noop)
       apply wp
-   apply (clarsimp simp:transform_def invs_def valid_state_def dest!: valid_irq_node_cte_at_irq_slot)+
+     apply (clarsimp simp:transform_def invs_def valid_state_def dest!: valid_irq_node_cte_at_irq_slot)+
   apply (simp add:cte_wp_at_caps_of_state)
   done
 
@@ -459,12 +462,13 @@ lemma dcorres_invoke_irq_control_body:
   apply (rule dcorres_symb_exec_r_strong)
     apply (rule corres_dummy_return_l)
     apply (rule corres_guard_imp)
-      apply (rule corres_split_deprecated[OF corres_trivial])
-         apply (rule corres_free_return)
-        apply (subgoal_tac "IrqHandlerCap word = transform_cap (cap.IRQHandlerCap word)")
-         apply (simp only:)
-         apply (rule insert_cap_child_corres)
-        apply (simp add:transform_cap_def)
+      apply (rule corres_split)
+         apply (subgoal_tac "IrqHandlerCap word = transform_cap (cap.IRQHandlerCap word)")
+          apply (simp only:)
+          apply (rule insert_cap_child_corres)
+         apply (simp add:transform_cap_def)
+        apply (rule corres_trivial)
+        apply (rule corres_free_return)
        apply (wp|clarsimp)+
     apply simp
    apply (simp add:valid_cap_def cap_aligned_def word_bits_def)

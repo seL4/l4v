@@ -35,13 +35,13 @@ lemma dcorres_call_kernel:
   apply (simp_all add: Syscall_D.call_kernel_def Syscall_A.call_kernel_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split)
-       apply (rule corres_split_handle[OF handle_event_corres])
+       apply (rule corres_split_handle [OF handle_event_corres])
          prefer 4
          apply (subst bind_return[symmetric])
-         apply (rule corres_split_deprecated)
-            apply (rule activate_thread_corres[unfolded fun_app_def])
-           apply simp
-           apply (rule schedule_dcorres)
+         apply (rule corres_split)
+            apply simp
+            apply (rule schedule_dcorres)
+           apply (rule activate_thread_corres[unfolded fun_app_def])
           apply (wp schedule_valid_sched | strengthen valid_etcbs_sched)+
         apply (simp add: handle_pending_interrupts_def)
         apply (rule corres_split[OF get_active_irq_corres])
@@ -50,8 +50,8 @@ lemma dcorres_call_kernel:
          apply ((wp | simp)+)[3]
       apply (rule hoare_post_imp_dc2E, rule handle_event_invs_and_valid_sched)
       apply (clarsimp simp: invs_def valid_state_def)
-     apply (simp add: conj_comms if_apply_def2 non_kernel_IRQs_def
-            | wp | strengthen valid_etcbs_sched valid_idle_invs_strg)+
+      apply (simp add: conj_comms if_apply_def2 non_kernel_IRQs_def
+             | wp | strengthen valid_etcbs_sched valid_idle_invs_strg)+
     apply (rule valid_validE2)
       apply (rule hoare_vcg_conj_lift)
        apply (rule he_invs)

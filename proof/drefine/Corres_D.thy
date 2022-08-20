@@ -212,7 +212,7 @@ lemma dcorres_get:
           \<Longrightarrow> dcorres r ((=) s) ((=) s') (f s) (f' s')"
   shows "dcorres r P P' (do s\<leftarrow>get;f s od) (do s'\<leftarrow> get; f' s' od)"
   apply (rule dcorres_expand_pfx)
-  apply (rule_tac r'="\<lambda>r r'. s=r \<and> s'=r'" and P="%x. (=) s" and P'="%x. (=) s'" in corres_split_forwards')
+  apply (rule_tac r'="\<lambda>r r'. s=r \<and> s'=r'" and Q="%x. (=) s" and Q'="%x. (=) s'" in corres_split_forwards')
     apply (clarsimp simp: corres_underlying_def get_def)
     apply wp+
   apply (drule A)
@@ -408,7 +408,7 @@ lemma dcorres_symb_exec_r_catch:
       apply (case_tac x)
         apply (simp add:throwError_def)+
         apply (simp add:catch_def)+
-done
+  done
 
 lemma dcorres_symb_exec_r:
   "\<lbrakk>\<And>rv. dcorres r P (Q' rv) h (g rv); \<lbrace>P'\<rbrace> f \<lbrace>\<lambda>r. Q' r\<rbrace>;
@@ -416,12 +416,11 @@ lemma dcorres_symb_exec_r:
   \<Longrightarrow> dcorres r P P' h (f>>=g)"
   apply (rule corres_dummy_return_pl)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[where R="\<lambda>rv. P" and R'="\<lambda>rv. Q' rv" and r' = dc])
-       apply simp
-       defer
-      apply wp
-     apply simp+
-  apply (clarsimp simp:valid_def corres_underlying_def return_def)
+    apply (rule corres_split[where R="\<lambda>rv. P" and R'="\<lambda>rv. Q' rv" and r' = dc])
+       apply (clarsimp simp:valid_def corres_underlying_def return_def)
+      apply simp
+     apply wp
+    apply simp+
   done
 
 lemma dcorres_symb_exec_r_strong:
@@ -429,14 +428,14 @@ lemma dcorres_symb_exec_r_strong:
     \<And>cs. \<lbrace>\<lambda>ps. P' ps \<and> transform ps = cs\<rbrace> f \<lbrace>\<lambda>r s. transform s = cs\<rbrace>\<rbrakk>
   \<Longrightarrow> dcorres r P P' h (f>>=g)"
   apply (rule corres_dummy_return_pl)
-    apply (rule corres_guard_imp)
-       apply (rule corres_split_deprecated[where R="\<lambda>rv. P" and P'=P' and R'="\<lambda>rv. Q' rv" and r' = dc])
+  apply (rule corres_guard_imp)
+    apply (rule corres_split[where R="\<lambda>rv. P" and P'=P' and R'="\<lambda>rv. Q' rv" and r' = dc])
+       defer
        apply (unfold K_bind_def)
       apply (assumption)
-     defer
      apply wp
     apply simp+
-  apply (clarsimp simp:valid_def corres_underlying_def return_def)
+   apply (clarsimp simp:valid_def corres_underlying_def return_def)
   done
 
 lemma dcorres_symb_exec_r_catch':
@@ -456,7 +455,7 @@ lemma dcorres_symb_exec_r_catch':
         apply (simp add:throwError_def)+
         apply (simp add:catch_def)
       apply simp+
-done
+  done
 
 lemma dcorres_to_wp:
   "dcorres dc \<top> Q (return x) g \<Longrightarrow> \<lbrace>\<lambda>s. Q s \<and> transform s = cs\<rbrace>g\<lbrace>\<lambda>r s. transform s = cs\<rbrace>"
