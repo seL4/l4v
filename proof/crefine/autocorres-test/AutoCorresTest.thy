@@ -103,8 +103,8 @@ lemma (* handleYield_ccorres: *)
     using tcbSchedDequeue'_modifies apply (fastforce simp: NonDetMonad.valid_def)
    apply (subst double_gets_drop_regets)
    apply (rule corres_pre_getCurThread_wrapper)
-   apply (rule corres_split_deprecated[OF _ tcbSchedDequeue_ccorres[ac]])
-      apply (rule corres_split_deprecated[OF _ tcbSchedAppend_ccorres[ac]])
+   apply (rule corres_split[OF tcbSchedDequeue_ccorres[ac]])
+      apply (rule corres_split[OF tcbSchedAppend_ccorres[ac]])
          apply (rule rescheduleRequired_ccorres[ac])
           apply (solves \<open>wp tcbSchedAppend_valid_objs' weak_sch_act_wf_lift
                             tcbSchedDequeue_valid_queues
@@ -204,7 +204,7 @@ lemma (* handleDoubleFault_ccorres: *)
     prefer 3 apply simp
    apply (unfold handleDoubleFault_def handleDoubleFault'_def K_bind_def)
    apply (rule corres_add_noop_rhs2) \<comment> \<open>split out extra haskell code\<close>
-   apply (rule corres_split_deprecated[OF _ setThreadState_ccorres[ac]])
+   apply (rule corres_split[OF setThreadState_ccorres[ac]])
        apply (rule corres_symb_exec_l_no_exs)
           apply simp
          apply (rule conjI)

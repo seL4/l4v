@@ -228,28 +228,25 @@ lemma do_user_op_if_C_corres[ADT_IF_Refine_assms]:
                           Let_def cmachine_state_relation_def)
    apply simp
   apply (rule corres_guard_imp)
-    apply (rule_tac P=\<top> and P'=\<top> and r'="(=)" in corres_split_deprecated)
-       prefer 2
+    apply (rule_tac P=\<top> and P'=\<top> and r'="(=)" in corres_split)
        apply (clarsimp simp add: corres_underlying_def fail_def
                                  assert_def return_def
                           split: if_splits)
       apply simp
-      apply (rule_tac P=\<top> and P'=\<top> and r'="(=)" in corres_split_deprecated)
-         prefer 2
+      apply (rule_tac P=\<top> and P'=\<top> and r'="(=)" in corres_split)
          apply (clarsimp simp add: corres_underlying_def fail_def
                                    assert_def return_def
                             split: if_splits)
         apply simp
-        apply (rule corres_split_deprecated[OF _ corres_dmo_getExMonitor_C])
+        apply (rule corres_split[OF corres_dmo_getExMonitor_C])
           apply clarsimp
-          apply (rule_tac r'="(=)" in corres_split_deprecated[OF _ corres_select])
-             prefer 2
+          apply (rule_tac r'="(=)" in corres_split[OF corres_select])
              apply clarsimp
             apply simp
             apply (rule corres_underlying_split5)
-            apply (rule corres_split_deprecated[OF _ user_memory_update_corres_C])
-              apply (rule corres_split_deprecated[OF _ device_update_corres_C])
-                apply (rule corres_split_deprecated[OF _ corres_dmo_setExMonitor_C,
+            apply (rule corres_split[OF user_memory_update_corres_C])
+              apply (rule corres_split[OF device_update_corres_C])
+                apply (rule corres_split[OF corres_dmo_setExMonitor_C,
                               where R="\<top>\<top>" and R'="\<top>\<top>"])
                   apply (wp select_wp | simp)+
    apply (clarsimp simp:  ex_abs_def restrict_map_def invs_pspace_aligned'

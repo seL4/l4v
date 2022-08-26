@@ -301,16 +301,15 @@ lemma kernel_entry_if_corres:
      (kernel_entry_if event tc) (kernelEntry_if event tc)"
   apply (simp add: kernel_entry_if_def kernelEntry_if_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ getCurThread_corres])
-      apply (rule corres_split_deprecated)
-         prefer 2
+    apply (rule corres_split[OF getCurThread_corres])
+      apply (rule corres_split)
          apply simp
          apply (rule threadset_corresT)
             apply (erule arch_tcb_context_set_tcb_relation)
            apply (clarsimp simp: tcb_cap_cases_def)
           apply (rule allI[OF ball_tcb_cte_casesI]; clarsimp)
          apply (simp add: exst_same_def)
-        apply (rule corres_split_deprecated [OF _ handleEvent_corres_arch_extras])
+        apply (rule corres_split[OF handleEvent_corres_arch_extras])
           apply (rule corres_stateAssert_assume_stronger[where Q=\<top> and
                         P="\<lambda>s. valid_domain_list s \<and>
                                (event \<noteq> Interrupt \<longrightarrow> 0 < domain_time s) \<and>

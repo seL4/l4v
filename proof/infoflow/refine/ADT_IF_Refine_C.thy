@@ -391,16 +391,14 @@ lemma kernelEntry_corres_C:
   apply (simp only: bind_assoc)
   apply (simp add: getCurThread_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[where P=\<top> and P'=\<top> and r'="\<lambda>t t'. t' = tcb_ptr_to_ctcb_ptr t"])
-       prefer 2
+    apply (rule corres_split[where P=\<top> and P'=\<top> and r'="\<lambda>t t'. t' = tcb_ptr_to_ctcb_ptr t"])
        apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
-      apply (rule corres_split_deprecated)
-         prefer 2
+      apply (rule corres_split)
          apply (subst archTcbUpdate_aux2[symmetric])
          apply (rule setTCBContext_C_corres)
           apply (simp add: ccontext_rel_to_C)
          apply simp
-        apply (rule corres_split_deprecated[OF _ ccorres_corres_u_xf, simplified bind_assoc])
+        apply (rule corres_split[OF ccorres_corres_u_xf, simplified bind_assoc])
             prefer 3
             apply (rule corres_nofail)
              apply (rule handleEvent_corres)

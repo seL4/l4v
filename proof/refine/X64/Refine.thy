@@ -527,12 +527,10 @@ lemma kernel_corres':
               od)"
   apply (simp add: call_kernel_def callKernel_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated)
-       prefer 2
+    apply (rule corres_split)
        apply (rule corres_split_handle [OF _ handleEvent_corres])
          apply simp
-         apply (rule corres_split_deprecated [OF _ corres_machine_op])
-            prefer 2
+         apply (rule corres_split[OF corres_machine_op])
             apply (rule corres_underlying_trivial)
             apply (rule no_fail_getActiveIRQ)
            apply clarsimp
@@ -555,7 +553,7 @@ lemma kernel_corres':
        apply (rule_tac Q="\<lambda>_. \<top>" and E="\<lambda>_. invs'" in hoare_post_impErr)
          apply wpsimp+
        apply (simp add: invs'_def valid_state'_def)
-      apply (rule corres_split_deprecated [OF _ schedule_corres])
+      apply (rule corres_split[OF schedule_corres])
         apply (rule activateThread_corres)
        apply (wp schedule_invs' hoare_vcg_if_lift2 hoare_drop_imps
                  handle_interrupt_valid_sched[unfolded non_kernel_IRQs_def, simplified] |simp)+
@@ -615,9 +613,8 @@ lemma entry_corres:
           (kernel_entry event tc) (kernelEntry event tc)"
   apply (simp add: kernel_entry_def kernelEntry_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ getCurThread_corres])
-      apply (rule corres_split_deprecated)
-         prefer 2
+    apply (rule corres_split[OF getCurThread_corres])
+      apply (rule corres_split)
          apply simp
          apply (rule threadset_corresT)
             apply (simp add: tcb_relation_def arch_tcb_relation_def
@@ -625,7 +622,7 @@ lemma entry_corres:
            apply (clarsimp simp: tcb_cap_cases_def)
           apply (clarsimp simp: tcb_cte_cases_def)
          apply (simp add: exst_same_def)
-        apply (rule corres_split_deprecated [OF _ kernel_corres])
+        apply (rule corres_split[OF kernel_corres])
           apply (rule corres_split_eqr [OF _ getCurThread_corres])
             apply (rule threadGet_corres)
             apply (simp add: tcb_relation_def arch_tcb_relation_def
@@ -655,26 +652,21 @@ lemma do_user_op_corres:
           (do_user_op f tc) (doUserOp f tc)"
   apply (simp add: do_user_op_def doUserOp_def split_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ getCurThread_corres])
-      apply (rule_tac r'="(=)" and P=einvs and P'=invs' in corres_split_deprecated)
-         prefer 2
+    apply (rule corres_split[OF getCurThread_corres])
+      apply (rule_tac r'="(=)" and P=einvs and P'=invs' in corres_split)
          apply (fastforce dest: absKState_correct [rotated])
-        apply (rule_tac r'="(=)" and P=einvs and P'=invs' in corres_split_deprecated)
-           prefer 2
+        apply (rule_tac r'="(=)" and P=einvs and P'=invs' in corres_split)
            apply (fastforce dest: absKState_correct [rotated])
-          apply (rule_tac r'="(=)" and P=invs and P'=invs' in corres_split_deprecated)
-             prefer 2
+          apply (rule_tac r'="(=)" and P=invs and P'=invs' in corres_split)
              apply (rule user_mem_corres)
-            apply (rule_tac r'="(=)" and P=invs and P'=invs' in corres_split_deprecated)
-               prefer 2
+            apply (rule_tac r'="(=)" and P=invs and P'=invs' in corres_split)
                apply (rule device_mem_corres)
-              apply (rule_tac r'="(=)" in corres_split_deprecated)
-                 prefer 2
+              apply (rule_tac r'="(=)" in corres_split)
                  apply (rule corres_gets_machine_state)
                 apply (rule_tac F = "dom (rvb \<circ> addrFromPPtr)  \<subseteq> - dom rvd" in corres_gen_asm)
                 apply (rule_tac F = "dom (rvc \<circ> addrFromPPtr)  \<subseteq> dom rvd" in corres_gen_asm)
                 apply simp
-                apply (rule_tac r'="(=)" in corres_split_deprecated[OF _ corres_select])
+                apply (rule_tac r'="(=)" in corres_split[OF corres_select])
                    apply (rule corres_underlying_split[OF corres_machine_op])
                       apply simp
                       apply (rule corres_underlying_trivial)
@@ -722,7 +714,7 @@ lemma check_active_irq_corres':
   "corres (=) \<top> \<top> (check_active_irq) (checkActiveIRQ)"
   apply (simp add: check_active_irq_def checkActiveIRQ_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ corres_machine_op[OF corres_underlying_trivial], where R="\<lambda>_. \<top>" and R'="\<lambda>_. \<top>"])
+    apply (rule corres_split[OF corres_machine_op[OF corres_underlying_trivial], where R="\<lambda>_. \<top>" and R'="\<lambda>_. \<top>"])
        apply simp
       apply (rule no_fail_getActiveIRQ)
      apply (wp | simp )+

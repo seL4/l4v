@@ -114,8 +114,7 @@ lemma corres_split_liftM2:
   and h1: "\<lbrace>Q\<rbrace> a \<lbrace>R\<rbrace>" and h2: "\<lbrace>Q'\<rbrace> c \<lbrace>\<lambda>x. R' (f x)\<rbrace>"
   shows "corres r (P and Q) (P' and Q') (a >>= b) (liftM f c >>= d)"
   apply (rule corres_guard_imp)
-  apply (rule corres_split_deprecated [OF _ _ h1])
-       prefer 2
+  apply (rule corres_split[OF _ _ h1])
        apply (simp add: o_def)
        apply (rule corr)
       apply (erule r1)
@@ -178,8 +177,7 @@ lemma decodeCNodeInvocation_corres:
               apply (rule corres_splitEE [OF _ ensureEmptySlot_corres])
                  apply (rule corres_splitEE [OF _ lookupSlotForCNodeOp_corres])
                      apply (simp(no_asm) add: liftE_bindE del: de_Morgan_conj split del: if_split)
-                     apply (rule corres_split_deprecated [OF _ get_cap_corres'])
-                        prefer 2
+                     apply (rule corres_split[OF get_cap_corres'])
                         apply (simp add: split_def)
                        apply (rule whenE_throwError_corres)
                          apply (simp add: lookup_failure_map_def)
@@ -262,7 +260,7 @@ lemma decodeCNodeInvocation_corres:
     apply (rule corres_guard_imp)
       apply (rule corres_splitEE [OF _ lookupSlotForCNodeOp_corres])
           apply (simp(no_asm) add: split_beta liftE_bindE)
-          apply (rule corres_split_deprecated [OF _ get_cap_corres'])
+          apply (rule corres_split[OF get_cap_corres'])
              apply (rule corres_split_norE)
                 apply (rule corres_trivial)
                 apply (clarsimp simp add: returnOk_def)
@@ -7342,7 +7340,7 @@ next
          apply (simp add: in_monad)
         apply (rule drop_spec_corres)
         apply (simp add: liftE_bindE del: rec_del.simps)
-        apply (rule corres_split_deprecated [OF _ get_cap_corres])
+        apply (rule corres_split[OF get_cap_corres])
           apply (rule_tac F="cteCap ourCTE = Zombie ptr (zbits_map bits) (Suc n)
                                \<or> cteCap ourCTE = NullCap
                                \<or> (\<exists>zb n cp. cteCap ourCTE = Zombie (cte_map slot) zb n
@@ -8924,11 +8922,11 @@ lemma invokeCNode_corres:
    apply (rename_tac prod)
    apply (simp add: getThreadCallerSlot_def locateSlot_conv objBits_simps)
    apply (rule corres_guard_imp)
-     apply (rule corres_split_deprecated [OF _ getCurThread_corres])
+     apply (rule corres_split[OF getCurThread_corres])
         apply (subgoal_tac "thread + 2^cte_level_bits * tcbCallerSlot = cte_map (thread, tcb_cnode_index 3)")
          prefer 2
          apply (simp add: cte_map_def tcb_cnode_index_def tcbCallerSlot_def)
-        apply (rule corres_split_deprecated [OF _ getSlotCap_corres])
+        apply (rule corres_split[OF getSlotCap_corres])
             apply (rule_tac P="\<lambda>s. (is_reply_cap cap \<or> cap = cap.NullCap) \<and>
           (is_reply_cap cap \<longrightarrow>
            (einvs and cte_at (threada, tcb_cnode_index 3) and

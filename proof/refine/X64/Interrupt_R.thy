@@ -251,7 +251,7 @@ lemma arch_decodeIRQControlInvocation_corres:
      apply (rule whenE_throwError_corres, simp, simp)
      apply (rule corres_splitEE[OF _ lookupSlotForCNodeOp_corres])
          apply (rule corres_splitEE[OF _ ensureEmptySlot_corres])
-            apply (rule corres_split_deprecated[OF _ corres_gets_num_ioapics])
+            apply (rule corres_split[OF corres_gets_num_ioapics])
             apply (rule whenE_throwError_corres, ((simp add: ucast_id ioapicIRQLines_def)+)[2])+
               apply (rule corres_returnOkTT)
               apply (clarsimp simp: arch_irq_control_inv_relation_def )
@@ -372,7 +372,7 @@ lemma invokeIRQHandler_corres:
    apply (rename_tac word cap prod)
    apply clarsimp
    apply (rule corres_guard_imp)
-     apply (rule corres_split_deprecated [OF _ getIRQSlot_corres])
+     apply (rule corres_split[OF getIRQSlot_corres])
        apply simp
        apply (rule corres_split_nor [OF _ cap_delete_one_corres])
          apply (rule cteInsert_corres, simp+)
@@ -390,7 +390,7 @@ lemma invokeIRQHandler_corres:
     apply (erule cte_wp_at_weakenE, simp add: is_derived_use_interrupt)
    apply fastforce
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ getIRQSlot_corres])
+    apply (rule corres_split[OF getIRQSlot_corres])
       apply simp
       apply (rule cap_delete_one_corres)
      apply wp+
@@ -469,7 +469,7 @@ lemma updateIRQState_corres[wp]:
        (X64_H.updateIRQState irq state')"
   apply (clarsimp simp: X64_A.updateIRQState_def X64_H.updateIRQState_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ corres_gets_x64_irq_state])
+    apply (rule corres_split[OF corres_gets_x64_irq_state])
       apply (rule corres_modify[where P=\<top> and P'=\<top>])
       apply (auto simp: state_relation_def arch_state_relation_def x64_irq_relation_def)
   done
@@ -695,15 +695,15 @@ lemma timerTick_corres:
   apply (simp add:thread_state_case_if threadState_case_if)
   apply (rule_tac Q="\<top> and (cur_tcb and valid_sched)" and Q'="\<top> and invs'" in corres_guard_imp)
   apply (rule corres_guard_imp)
-  apply (rule corres_split_deprecated [OF _ getCurThread_corres])
+  apply (rule corres_split[OF getCurThread_corres])
       apply simp
-      apply (rule corres_split_deprecated [OF _ getThreadState_corres])
+      apply (rule corres_split[OF getThreadState_corres])
         apply (rename_tac state state')
         apply (rule corres_split_deprecated[where r' = dc ])
            apply simp
            apply (rule corres_when,simp)
-           apply (rule corres_split_deprecated[OF _ decDomainTime_corres])
-             apply (rule corres_split_deprecated[OF _ getDomainTime_corres])
+           apply (rule corres_split[OF decDomainTime_corres])
+             apply (rule corres_split[OF getDomainTime_corres])
                apply (rule corres_when,simp)
                apply (rule rescheduleRequired_corres)
               apply (wp hoare_drop_imp)+
@@ -714,7 +714,7 @@ lemma timerTick_corres:
           apply (rule corres_if[where Q = \<top> and Q' = \<top>])
             apply (case_tac state,simp_all)[1]
           apply (simp add: Let_def)
-          apply (rule_tac r'="(=)" in corres_split_deprecated [OF _ ethreadget_corres])
+          apply (rule_tac r'="(=)" in corres_split[OF ethreadget_corres])
              apply (rename_tac ts ts')
              apply (rule_tac R="1 < ts" in corres_cases)
               apply (simp)
@@ -722,8 +722,8 @@ lemma timerTick_corres:
               apply (rule ethread_set_corres, simp+)
               apply (clarsimp simp: etcb_relation_def)
              apply simp
-             apply (rule corres_split_deprecated [OF _ ethread_set_corres])
-                      apply (rule corres_split_deprecated [OF _ tcbSchedAppend_corres])
+             apply (rule corres_split[OF ethread_set_corres])
+                      apply (rule corres_split[OF tcbSchedAppend_corres])
                         apply (rule rescheduleRequired_corres)
                        apply (wp)[1]
                       apply (rule hoare_strengthen_post)
@@ -774,7 +774,7 @@ lemma handleInterrupt_corres:
   apply (rule conjI[rotated]; rule impI)
 
    apply (rule corres_guard_imp)
-     apply (rule corres_split_deprecated [OF _ getIRQState_corres,
+     apply (rule corres_split[OF getIRQState_corres,
                                where R="\<lambda>rv. einvs"
                                  and R'="\<lambda>rv. invs' and (\<lambda>s. rv \<noteq> IRQInactive)"])
        defer
@@ -787,9 +787,9 @@ lemma handleInterrupt_corres:
   apply (case_tac st, simp_all add: irq_state_relation_def split: irqstate.split_asm)
    apply (simp add: getSlotCap_def bind_assoc)
    apply (rule corres_guard_imp)
-     apply (rule corres_split_deprecated [OF _ getIRQSlot_corres])
+     apply (rule corres_split[OF getIRQSlot_corres])
        apply simp
-       apply (rule corres_split_deprecated [OF _ get_cap_corres,
+       apply (rule corres_split[OF get_cap_corres,
                                  where R="\<lambda>rv. einvs and valid_cap rv"
                                   and R'="\<lambda>rv. invs' and valid_cap' (cteCap rv)"])
          apply (rule corres_underlying_split[where r'=dc])
@@ -806,7 +806,7 @@ lemma handleInterrupt_corres:
    apply (rule corres_guard_imp)
    apply (rule corres_split_deprecated)
    apply simp
-     apply (rule corres_split_deprecated [OF corres_machine_op timerTick_corres])
+     apply (rule corres_split[OF timerTick_corres corres_machine_op])
        apply (rule corres_eq_trivial, simp+)
        apply (rule corres_machine_op)
        apply (rule corres_eq_trivial, (simp add: no_fail_ackInterrupt)+)

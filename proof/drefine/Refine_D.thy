@@ -34,8 +34,7 @@ lemma dcorres_call_kernel:
           (Syscall_D.call_kernel e) (Syscall_A.call_kernel e)"
   apply (simp_all add: Syscall_D.call_kernel_def Syscall_A.call_kernel_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated)
-       prefer 2
+    apply (rule corres_split)
        apply (rule corres_split_handle [OF _ handle_event_corres])
          prefer 4
          apply (subst bind_return[symmetric])
@@ -45,7 +44,7 @@ lemma dcorres_call_kernel:
            apply (rule schedule_dcorres)
           apply (wp schedule_valid_sched | strengthen valid_etcbs_sched)+
         apply (simp add: handle_pending_interrupts_def)
-        apply (rule corres_split_deprecated [OF _ get_active_irq_corres])
+        apply (rule corres_split[OF get_active_irq_corres])
           apply (clarsimp simp: when_def split: option.splits)
           apply (rule handle_interrupt_corres[simplified dc_def])
          apply ((wp | simp)+)[3]

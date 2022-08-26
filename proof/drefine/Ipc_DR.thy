@@ -489,7 +489,7 @@ lemma corres_update_waiting_ntfn_do_notification_transfer:
      apply (simp add:generates_pending_def)
     apply (rule corres_guard_imp)
       apply (rule dcorres_dc_rhs_noop_below_2_True[OF allI[OF possible_switch_to_dcorres]])
-      apply (rule corres_split_deprecated[OF _ set_thread_state_corres])
+      apply (rule corres_split[OF set_thread_state_corres])
         apply (rule set_register_corres)
        apply (wp)+
      apply simp
@@ -565,7 +565,7 @@ lemma recv_signal_corres:
         apply (rule corres_guard_imp)
           apply (rule corres_alternate1)
           apply (rule corres_dummy_return_l)
-          apply (rule corres_split_deprecated[OF _ set_thread_state_block_on_notification_corres])
+          apply (rule corres_split[OF set_thread_state_block_on_notification_corres])
             apply  (rule corres_dummy_set_notification,simp)
           apply (wp|simp)+
         apply (clarsimp simp:st_tcb_at_def tcb_at_def obj_at_def get_tcb_rev)
@@ -582,7 +582,7 @@ lemma recv_signal_corres:
        apply (rule corres_guard_imp)
          apply (rule corres_alternate1)
          apply (rule corres_dummy_return_l)
-         apply (rule corres_split_deprecated[OF _ set_thread_state_block_on_notification_corres])
+         apply (rule corres_split[OF set_thread_state_block_on_notification_corres])
            apply  (rule corres_dummy_set_notification,simp)
          apply (wp|simp)+
        apply (clarsimp simp:st_tcb_at_def tcb_at_def obj_at_def get_tcb_rev)
@@ -598,7 +598,7 @@ lemma recv_signal_corres:
      apply (rule corres_alternate2)
      apply (rule corres_guard_imp )
        apply (rule corres_dummy_return_l)
-       apply (rule corres_split_deprecated[OF corres_dummy_set_notification set_register_corres])
+       apply (rule corres_split[OF set_register_corres corres_dummy_set_notification])
         apply (wp |clarsimp)+
      apply (rule_tac Q="\<lambda>r. ko_at (kernel_object.Notification r) word1 and valid_state" in hoare_strengthen_post)
       apply (wp get_simple_ko_ko_at | clarsimp)+
@@ -671,7 +671,7 @@ lemma dcorres_dat:
   apply clarsimp
   apply (rule corres_guard_imp)
     apply (rule dcorres_dc_rhs_noop_below_2_True[OF allI[OF possible_switch_to_dcorres]])
-    apply (rule corres_split_deprecated[OF _ set_thread_state_corres])
+    apply (rule corres_split[OF set_thread_state_corres])
       apply (rule set_register_corres)
      apply (wp)+
    apply simp
@@ -887,9 +887,9 @@ lemma send_signal_corres:
           apply (rule corres_symb_exec_r)
              apply (rule corres_symb_exec_r)
                 apply (rule corres_dummy_return_pl)
-                apply (rule corres_split_deprecated[ OF _ corres_dummy_set_sync_ep])
+                apply (rule corres_split[OF corres_dummy_set_sync_ep])
                   apply (simp add: when_def dc_def[symmetric])
-                  apply (rule corres_split_deprecated[OF dcorres_dat set_thread_state_corres])
+                  apply (rule corres_split[OF set_thread_state_corres dcorres_dat])
                    apply (wp cancel_ipc_valid_idle
                         | simp add: not_idle_thread_def invs_def valid_state_def get_blocking_object_def)+
      apply (clarsimp dest!:get_tcb_rev simp:invs_def ep_at_def2[symmetric, simplified])
@@ -971,7 +971,7 @@ lemma corres_setup_caller_cap:
   apply (rule dcorres_expand_pfx)
   apply (rule corres_guard_imp)
     apply (simp add: inject_reply_cap_def setup_caller_cap_def split del: if_split)
-    apply (rule corres_split_deprecated[OF _ set_thread_state_corres])
+    apply (rule corres_split[OF set_thread_state_corres])
       apply (rule reply_cap_insert_corres)
       apply (simp add: not_idle_thread_def)+
     apply (wp set_thread_state_it|simp )+
@@ -1341,8 +1341,7 @@ next
             apply (rule dcorres_throw)
            apply (rule TrueI)
           apply (simp add: liftE_bindE)
-          apply (rule corres_split_deprecated)
-             prefer 2
+          apply (rule corres_split)
              apply (rule dcorres_insert_cap_combine [folded alternative_com])
              apply simp
             apply simp
@@ -1541,7 +1540,7 @@ lemma get_receive_slot_dcorres:
         apply (rule corres_splitEE[where r'="\<lambda>cnode cnode'. cnode = transform_cap cnode'"])
            apply (rule corres_splitEE[where r'="\<lambda>p p'. p = transform_cslot_ptr p'"])
               apply (simp add:liftE_bindE)
-              apply (rule corres_split_deprecated[OF _ get_cap_corres])
+              apply (rule corres_split[OF get_cap_corres])
                  apply (rule corres_splitEE[OF _ corres_whenE,where r' = dc])
                       apply (rule dcorres_returnOk)
                       apply clarsimp+
@@ -1639,8 +1638,7 @@ lemma transfer_caps_dcorres:
    apply simp
    apply (rule corres_dummy_return_r)
    apply (rule corres_guard_imp)
-     apply (rule corres_split_deprecated [where r'="\<lambda>r r'. r = None" and P=\<top> and P'=\<top>])
-        prefer 2
+     apply (rule corres_split[where r'="\<lambda>r r'. r = None" and P=\<top> and P'=\<top>])
         apply (rule corres_alternate2)
         apply simp
        apply simp
@@ -1650,8 +1648,7 @@ lemma transfer_caps_dcorres:
    apply simp
   apply (simp del: get_receive_slots.simps)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated)
-       prefer 2
+    apply (rule corres_split)
        apply (rule corres_alternate1)
        apply (rule get_receive_slot_dcorres)
       apply (unfold dc_def)[1]
@@ -1736,7 +1733,7 @@ lemma dcorres_copy_mrs':
         apply (rule_tac F = " rvb = None " in corres_gen_asm)
         apply (clarsimp simp:copy_mrs_def)
         apply (rule corres_dummy_return_l)
-        apply (rule corres_split_deprecated[OF _ set_registers_corres])
+        apply (rule corres_split[OF set_registers_corres])
           apply (rule corres_symb_exec_r)+
              apply (rule corres_trivial[OF corres_free_return])
             apply (wp | clarsimp split:option.splits)+
@@ -1933,17 +1930,17 @@ lemma corres_complete_ipc_transfer:
         apply (simp add:alternative_bind bind_assoc split del:if_split)
         apply (rule corres_alternate1)
         apply (rule corres_guard_imp)
-          apply (rule corres_split_deprecated[OF _ corres_if[OF _ corres_split_catch]])
+          apply (rule corres_split[OF corres_if[OF _ corres_split_catch]])
                   prefer 4
                   apply clarsimp
                   apply (rule corres_guard_imp[OF dcorres_lookup_extra_caps])
                       apply (clarsimp simp:not_idle_thread_def)+
                   apply assumption
-                 apply (rule corres_split_deprecated[OF _ dcorres_copy_mrs'])
+                 apply (rule corres_split[OF dcorres_copy_mrs'])
                    apply (simp add:get_message_info_def select_f_get_register bind_assoc transform_cap_list_def)
-                   apply (rule corres_split_deprecated[OF _ transfer_caps_dcorres])
+                   apply (rule corres_split[OF transfer_caps_dcorres])
                      apply (rule corres_corrupt_tcb_intent_dupl)
-                     apply (rule corres_split_deprecated[OF _ set_message_info_corres])
+                     apply (rule corres_split[OF set_message_info_corres])
                       unfolding K_bind_def
                       apply (rule corrupt_tcb_intent_as_user_corres)
                       apply (wp evalMonad_lookup_ipc_buffer_wp' hoare_vcg_ball_lift copy_mrs_valid_irq_node
@@ -1997,9 +1994,9 @@ lemma corres_complete_ipc_transfer:
           apply (rule corres_symb_exec_r)
              apply (rule corres_symb_exec_r)
                 apply (clarsimp)
-                apply (rule corres_split_deprecated[OF _ dcorres_set_mrs'])
+                apply (rule corres_split[OF dcorres_set_mrs'])
                   apply (rule corres_corrupt_tcb_intent_dupl)
-                  apply (rule corres_split_deprecated[OF _ set_message_info_corres])
+                  apply (rule corres_split[OF set_message_info_corres])
                     unfolding K_bind_def
                     apply (rule corrupt_tcb_intent_as_user_corres)
                    apply (wp|clarsimp simp:not_idle_thread_def)+
@@ -2224,8 +2221,8 @@ lemma do_reply_transfer_corres:
    apply (clarsimp simp:not_idle_thread_def
      opt_object_tcb transform_tcb_def | intro conjI impI)+
    apply (rule corres_guard_imp)
-     apply (rule corres_split_deprecated [OF _ corres_complete_ipc_transfer])
-        apply (rule corres_split_deprecated[OF _ delete_cap_simple_corres])
+     apply (rule corres_split[OF corres_complete_ipc_transfer])
+        apply (rule corres_split[OF delete_cap_simple_corres])
           apply (rule corres_split_noop_rhs2[OF possible_switch_to_dcorres[THEN corres_trivial]
                                                 set_thread_state_corres])
            apply (wp | clarsimp simp:not_idle_thread_def)+
@@ -2235,12 +2232,12 @@ lemma do_reply_transfer_corres:
        apply simp+
   apply (clarsimp simp:bind_assoc)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ delete_cap_simple_corres])
+    apply (rule corres_split[OF delete_cap_simple_corres])
       apply (rule corres_symb_exec_r)
          apply (rule corres_symb_exec_r)
             apply (rule corres_symb_exec_r)
-               apply (rule corres_split_deprecated[OF _ dcorres_handle_fault_reply])
-                 apply (rule corres_split_deprecated[OF _ thread_set_fault_corres])
+               apply (rule corres_split[OF dcorres_handle_fault_reply])
+                 apply (rule corres_split[OF thread_set_fault_corres])
                     apply (simp add: when_return split del: if_split)
                     apply (simp add: dc_def[symmetric] if_distrib[where f = "set_thread_state recver"]
                           split del: if_split)
@@ -2366,7 +2363,7 @@ lemma dcorres_receive_sync:
        apply (rule corres_alternate1)
        apply (rule corres_dummy_return_l)
        apply (rule corres_guard_imp)
-         apply (rule corres_split_deprecated[OF corres_dummy_set_sync_ep set_thread_state_block_on_receive_corres])
+         apply (rule corres_split[OF set_thread_state_block_on_receive_corres corres_dummy_set_sync_ep])
           apply (wp|simp)+
     apply (rule corres_alternate2)
     apply (simp add: do_nbrecv_failed_transfer_def)
@@ -2407,8 +2404,7 @@ lemma dcorres_receive_sync:
         apply (clarsimp dest!: get_tcb_SomeD simp: dc_def[symmetric]
                     split del: if_split split: if_split_asm)
         apply (rule corres_guard_imp)
-          apply (rule corres_split_deprecated[OF _ corres_complete_ipc_transfer])
-             prefer 2
+          apply (rule corres_split[OF corres_complete_ipc_transfer])
              apply simp
             apply (rule dcorres_if_rhs)
              apply (rule dcorres_if_rhs)
@@ -2455,7 +2451,7 @@ lemma dcorres_receive_sync:
      apply (rule corres_alternate1)
      apply (rule corres_dummy_return_l)
      apply (rule corres_guard_imp)
-       apply (rule corres_split_deprecated[OF corres_dummy_set_sync_ep set_thread_state_block_on_receive_corres])
+       apply (rule corres_split[OF set_thread_state_block_on_receive_corres corres_dummy_set_sync_ep])
         apply (wp|simp)+
   apply (simp add: do_nbrecv_failed_transfer_def)
   apply (rule corres_alternate2)
@@ -2473,7 +2469,7 @@ lemma dcorres_complete_signal:
           split: Structures_A.kernel_object.splits Structures_A.ntfn.splits)
   apply (rule corres_guard_imp)
     apply (rule corres_dummy_return_l)
-    apply (rule corres_split_deprecated[OF corres_dummy_set_notification set_register_corres])
+    apply (rule corres_split[OF set_register_corres corres_dummy_set_notification])
      apply (wp | clarsimp)+
   done
 
@@ -2622,7 +2618,7 @@ lemma send_sync_ipc_corres:
     apply (clarsimp simp:valid_ep_abstract_def none_is_receiving_ep_def option_select_def)
     apply (rule corres_dummy_return_l)
     apply (rule corres_guard_imp)
-      apply (rule corres_split_deprecated[OF corres_dummy_set_sync_ep set_thread_state_block_on_send_corres])
+      apply (rule corres_split[OF set_thread_state_block_on_send_corres corres_dummy_set_sync_ep])
        apply wp
      apply simp
     apply (wp TrueI |clarsimp simp: split del:if_split)+
@@ -2633,7 +2629,7 @@ lemma send_sync_ipc_corres:
     apply (clarsimp simp:valid_ep_abstract_def none_is_receiving_ep_def option_select_def)
     apply (rule corres_dummy_return_l)
     apply (rule corres_guard_imp)
-      apply (rule corres_split_deprecated[OF corres_dummy_set_sync_ep set_thread_state_block_on_send_corres])
+      apply (rule corres_split[OF set_thread_state_block_on_send_corres corres_dummy_set_sync_ep])
        apply wp
      apply simp
     apply (wp TrueI|clarsimp simp: split del:if_split)+
@@ -2657,11 +2653,11 @@ lemma send_sync_ipc_corres:
   apply (rule corres_guard_imp)
     apply (rule dcorres_symb_exec_r)
       apply (simp only: liftM_def)
-      apply (rule corres_split_deprecated[OF _ dcorres_get_thread_state])
+      apply (rule corres_split[OF dcorres_get_thread_state])
         apply (clarsimp, rename_tac recv_state')
         apply (case_tac recv_state'; simp add: corres_free_fail split del: if_split)
-        apply (rule corres_split_deprecated[OF _ corres_complete_ipc_transfer])
-            apply (rule corres_split_deprecated[OF _ set_thread_state_corres])
+        apply (rule corres_split[OF corres_complete_ipc_transfer])
+            apply (rule corres_split[OF set_thread_state_corres])
               apply (rule dcorres_rhs_noop_above[OF possible_switch_to_dcorres])
                 apply (rule dcorres_if_rhs)
                  apply (rule dcorres_if_rhs)

@@ -35,7 +35,7 @@ lemma activateThread_corres:
                                 \<and> invs s \<and> st_tcb_at ((=) ts) thread s"
                   and R'="\<lambda>ts s. valid_tcb_state' ts s \<and> (idle' ts \<or> runnable' ts)
                                 \<and> invs' s \<and> st_tcb_at' (\<lambda>ts'. ts' = ts) thread s"
-                  in  corres_split_deprecated [OF _ getThreadState_corres])
+                  in  corres_split[OF getThreadState_corres])
         apply (rule_tac F="idle rv \<or> runnable rv" in corres_req, simp)
         apply (rule_tac F="idle' rv' \<or> runnable' rv'" in corres_req, simp)
         apply (case_tac rv, simp_all add:
@@ -66,8 +66,8 @@ lemma bindNotification_corres:
          (bind_notification t a) (bindNotification t a)"
   apply (simp add: bind_notification_def bindNotification_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ getNotification_corres])
-      apply (rule corres_split_deprecated[OF _ setNotification_corres])
+    apply (rule corres_split[OF getNotification_corres])
+      apply (rule corres_split[OF setNotification_corres])
          apply (rule setBoundNotification_corres)
         apply (clarsimp simp: ntfn_relation_def split: Structures_A.ntfn.splits)
        apply (wp)+
@@ -208,12 +208,12 @@ lemma restart_corres:
   apply (simp add: Tcb_A.restart_def Thread_H.restart_def)
   apply (simp add: isStopped_def2 liftM_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ getThreadState_corres])
+    apply (rule corres_split[OF getThreadState_corres])
       apply (clarsimp simp add: runnable_tsr idle_tsr when_def)
       apply (rule corres_split_nor [OF _ cancel_ipc_corres])
         apply (rule corres_split_nor [OF _ setupReplyMaster_corres])
           apply (rule corres_split_nor [OF _ setThreadState_corres])
-             apply (rule corres_split_deprecated [OF possibleSwitchTo_corres tcbSchedEnqueue_corres])
+             apply (rule corres_split[OF tcbSchedEnqueue_corres possibleSwitchTo_corres])
               apply (wp set_thread_state_runnable_weak_valid_sched_action sts_st_tcb_at' sts_valid_queues sts_st_tcb'  | clarsimp simp: valid_tcb_state'_def)+
        apply (rule_tac Q="\<lambda>rv. valid_sched and cur_tcb" in hoare_strengthen_post)
         apply wp
@@ -282,7 +282,7 @@ lemma invokeTCB_ReadRegisters_corres:
                    frameRegisters_def gpRegisters_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_nor)
-       apply (rule corres_split_deprecated [OF _ getCurThread_corres])
+       apply (rule corres_split[OF getCurThread_corres])
          apply (simp add: liftM_def[symmetric])
          apply (rule asUser_corres)
          apply (rule corres_Id)
@@ -331,8 +331,8 @@ lemma invokeTCB_WriteRegisters_corres:
                    frameRegisters_def gpRegisters_def
                    sanitiseRegister_def sanitise_register_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ getCurThread_corres])
-      apply (rule corres_split_deprecated [OF _ arch_getSanitiseRegisterInfo_corres])
+    apply (rule corres_split[OF getCurThread_corres])
+      apply (rule corres_split[OF arch_getSanitiseRegisterInfo_corres])
          apply (rule corres_split_nor)
             prefer 2
              apply (rule asUser_corres)
@@ -438,13 +438,13 @@ proof -
   show ?thesis
     apply (simp add: invokeTCB_def performTransfer_def)
     apply (rule corres_guard_imp)
-      apply (rule corres_split_deprecated [OF _ corres_when [OF refl suspend_corres]], simp)
-        apply (rule corres_split_deprecated [OF _ corres_when [OF refl restart_corres]], simp)
+      apply (rule corres_split[OF corres_when [OF refl suspend_corres]], simp)
+        apply (rule corres_split[OF corres_when [OF refl restart_corres]], simp)
              apply (rule corres_split_nor)
              apply (rule corres_split_nor)
                 apply (rule corres_split_eqr [OF _ getCurThread_corres])
                   apply (rule corres_split_nor[OF _ asUser_postModifyRegisters_corres[simplified]])
-                    apply (rule corres_split_deprecated [OF _ corres_when[OF refl rescheduleRequired_corres]])
+                    apply (rule corres_split[OF corres_when[OF refl rescheduleRequired_corres]])
                       apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
                       apply simp
                      apply (wp static_imp_wp)+
@@ -548,7 +548,7 @@ lemma isRunnable_corres:
   apply (simp add: isRunnable_def)
   apply (subst bind_return[symmetric])
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ getThreadState_corres])
+    apply (rule corres_split[OF getThreadState_corres])
       apply (case_tac rv, clarsimp+)
      apply (wp hoare_TrueI)+
    apply auto
@@ -625,11 +625,11 @@ lemma sp_corres2:
                   (set_priority t x) (setPriority t x)"
   apply (simp add: setPriority_def set_priority_def thread_set_priority_def)
   apply (rule stronger_corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ tcbSchedDequeue_corres])
-      apply (rule corres_split_deprecated [OF _ ethread_set_corres], simp_all)[1]
-         apply (rule corres_split_deprecated [OF _ isRunnable_corres])
+    apply (rule corres_split[OF tcbSchedDequeue_corres])
+      apply (rule corres_split[OF ethread_set_corres], simp_all)[1]
+         apply (rule corres_split[OF isRunnable_corres])
            apply (erule corres_when)
-           apply(rule corres_split_deprecated [OF _ getCurThread_corres])
+           apply(rule corres_split[OF getCurThread_corres])
              apply (wp corres_if; clarsimp)
               apply (rule rescheduleRequired_corres)
              apply (rule possibleSwitchTo_corres)
@@ -888,7 +888,7 @@ lemma checkCapAt_corres:
              (checkCapAt cap' (cte_map slot) f')" using r c
   apply (simp add: check_cap_at_def checkCapAt_def liftM_def when_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ get_cap_corres])
+    apply (rule corres_split[OF get_cap_corres])
       apply (rule corres_if [unfolded if_apply_def2])
         apply (erule(1) sameObject_corres2)
        apply assumption
@@ -1431,7 +1431,7 @@ proof -
          apply (rule corres_split_norE)
             apply (rule_tac F="is_aligned aa msg_align_bits" in corres_gen_asm2)
             apply (rule corres_split_nor)
-               apply (rule corres_split_deprecated [OF _ getCurThread_corres], clarsimp)
+               apply (rule corres_split[OF getCurThread_corres], clarsimp)
                  apply (rule corres_when[OF refl rescheduleRequired_corres])
                 apply (wpsimp wp: gct_wp)+
               apply (rule threadset_corres,
@@ -1452,7 +1452,7 @@ proof -
           apply (rule_tac F="isArchObjectCap ac" in corres_gen_asm2)
           apply (rule corres_split_nor)
              apply (rule corres_split_nor)
-                apply (rule corres_split_deprecated [OF _ getCurThread_corres], clarsimp)
+                apply (rule corres_split[OF getCurThread_corres], clarsimp)
                   apply (rule corres_when[OF refl rescheduleRequired_corres])
                  apply (wp gct_wp)+
                apply (erule checkCapAt_cteInsert_corres)
@@ -1825,14 +1825,14 @@ lemma invokeTCB_corres:
    apply (case_tac option)
     apply simp
     apply (rule corres_guard_imp)
-      apply (rule corres_split_deprecated[OF _ unbindNotification_corres])
+      apply (rule corres_split[OF unbindNotification_corres])
         apply (rule corres_trivial, simp)
        apply wp+
      apply clarsimp
     apply clarsimp
    apply simp
    apply (rule corres_guard_imp)
-     apply (rule corres_split_deprecated[OF _ bindNotification_corres])
+     apply (rule corres_split[OF bindNotification_corres])
        apply (rule corres_trivial, simp)
       apply wp+
     apply clarsimp
@@ -1840,9 +1840,9 @@ lemma invokeTCB_corres:
    apply (clarsimp simp: obj_at'_def projectKOs)
   apply (simp add: invokeTCB_def tlsBaseRegister_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ TcbAcc_R.asUser_setRegister_corres])
-      apply (rule corres_split_deprecated[OF _ Bits_R.getCurThread_corres])
-        apply (rule corres_split_deprecated[OF _ Corres_UL.corres_when])
+    apply (rule corres_split[OF TcbAcc_R.asUser_setRegister_corres])
+      apply (rule corres_split[OF Bits_R.getCurThread_corres])
+        apply (rule corres_split[OF Corres_UL.corres_when])
             apply (rule corres_trivial, simp)
            apply simp
           apply (rule TcbAcc_R.rescheduleRequired_corres)
@@ -1956,7 +1956,7 @@ lemma decodeReadRegisters_corres:
        apply (rule corres_trivial)
        apply (fastforce simp: returnOk_def)
       apply (simp add: liftE_bindE)
-      apply (rule corres_split_deprecated[OF _ getCurThread_corres])
+      apply (rule corres_split[OF getCurThread_corres])
         apply (rule corres_trivial)
         apply (clarsimp simp: whenE_def)
        apply (wp|simp)+
@@ -1979,7 +1979,7 @@ lemma decodeWriteRegisters_corres:
   apply clarsimp
   apply (rule corres_guard_imp)
     apply (simp add: liftE_bindE)
-    apply (rule corres_split_deprecated[OF _ getCurThread_corres])
+    apply (rule corres_split[OF getCurThread_corres])
       apply (rule corres_split_norE)
          apply (rule corres_trivial, simp)
         apply (rule corres_trivial, simp)
@@ -2052,7 +2052,7 @@ lemma checkPrio_corres:
   apply (simp add: check_prio_def checkPrio_def)
   apply (rule corres_guard_imp)
     apply (simp add: liftE_bindE)
-    apply (rule corres_split_deprecated[OF _ threadGet_corres])
+    apply (rule corres_split[OF threadGet_corres])
        apply (rule_tac rvr = dc and
                          R = \<top> and
                         R' = \<top> in
@@ -2333,7 +2333,7 @@ lemma slotCapLongRunningDelete_corres:
   apply (clarsimp simp: slot_cap_long_running_delete_def
                         slotCapLongRunningDelete_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ get_cap_corres])
+    apply (rule corres_split[OF get_cap_corres])
       apply (auto split: cap_relation_split_asm arch_cap.split_asm
                  intro!: corres_rel_imp [OF isFinalCapability_corres[where ptr=ptr]]
                    simp: liftM_def[symmetric] final_matters'_def
@@ -2378,8 +2378,8 @@ lemma decodeSetSpace_corres:
                     getThreadCSpaceRoot getThreadVSpaceRoot
                  split del: if_split)
    apply (rule corres_guard_imp)
-     apply (rule corres_split_deprecated [OF _ slotCapLongRunningDelete_corres])
-        apply (rule corres_split_deprecated [OF _ slotCapLongRunningDelete_corres])
+     apply (rule corres_split[OF slotCapLongRunningDelete_corres])
+        apply (rule corres_split[OF slotCapLongRunningDelete_corres])
            apply (rule corres_split_norE)
               apply (simp(no_asm) add: split_def unlessE_throwError_returnOk
                                        bindE_assoc cap_CNode_case_throw

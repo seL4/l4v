@@ -323,7 +323,7 @@ lemma getSlotCap_corres:
   apply (simp add: getSlotCap_def)
   apply (subst bind_return [symmetric])
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ get_cap_corres])
+    apply (rule corres_split[OF get_cap_corres])
       apply (rule corres_trivial, simp)
      apply (wp | simp)+
   done
@@ -5140,8 +5140,8 @@ lemma cteInsert_corres:
   unfolding cap_insert_def cteInsert_def
   apply simp
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ get_cap_corres])
-      apply (rule corres_split_deprecated [OF _ get_cap_corres])
+    apply (rule corres_split[OF get_cap_corres])
+      apply (rule corres_split[OF get_cap_corres])
         apply (rule_tac F="cteCap rv' = NullCap" in corres_gen_asm2)
         apply simp
         apply (rule_tac P="?P and cte_at dest and
@@ -7077,8 +7077,8 @@ lemma capSwapForDelete_corres:
        apply (simp add: caps_of_state_cte_at)+
   apply (simp add: when_def liftM_def)
   apply (rule corres_guard_imp)
-    apply (rule_tac P1=wellformed_cap in corres_split_deprecated [OF _ get_cap_corres_P])
-      apply (rule_tac P1=wellformed_cap in corres_split_deprecated [OF _ get_cap_corres_P])
+    apply (rule_tac P1=wellformed_cap in corres_split[OF get_cap_corres_P])
+      apply (rule_tac P1=wellformed_cap in corres_split[OF get_cap_corres_P])
         apply (rule cteSwap_corres, rule refl, rule refl, clarsimp+)
        apply (wp get_cap_wp getCTE_wp')+
    apply (clarsimp simp: cte_wp_at_caps_of_state)
