@@ -435,8 +435,8 @@ lemma performInvocation_corres:
          apply (simp+)[2]
        apply simp
        apply (rule corres_guard_imp)
-         apply (rule corres_split_eqr [OF _ getCurThread_corres])
-           apply (rule corres_split_nor [OF _ doReplyTransfer_corres'])
+         apply (rule corres_split_eqr[OF getCurThread_corres])
+           apply (rule corres_split_nor[OF doReplyTransfer_corres'])
              apply (rule corres_trivial, simp)
             apply wp+
         apply (clarsimp simp: tcb_at_invs)
@@ -1190,11 +1190,11 @@ lemma handleInvocation_corres:
           (handleInvocation c b)"
   apply (simp add: handle_invocation_def handleInvocation_def liftE_bindE)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr [OF _ getCurThread_corres])
+    apply (rule corres_split_eqr[OF getCurThread_corres])
       apply (rule corres_split[OF getMessageInfo_corres])
         apply clarsimp
         apply (simp add: liftM_def cap_register_def capRegister_def)
-        apply (rule corres_split_eqr [OF _ asUser_getRegister_corres])
+        apply (rule corres_split_eqr[OF asUser_getRegister_corres])
           apply (rule syscall_corres)
                   apply (rule hinv_corres_assist, simp)
                  apply (clarsimp simp add: when_def)
@@ -1478,8 +1478,8 @@ lemma handleRecv_isBlocking_corres':
                    cap_register_def capRegister_def
              cong: if_cong cap.case_cong capability.case_cong bool.case_cong)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr [OF _ getCurThread_corres])
-      apply (rule corres_split_eqr [OF _ asUser_getRegister_corres])
+    apply (rule corres_split_eqr[OF getCurThread_corres])
+      apply (rule corres_split_eqr[OF asUser_getRegister_corres])
         apply (rule corres_split_catch)
            apply (erule handleFault_corres)
           apply (rule corres_cap_fault)
@@ -1493,7 +1493,7 @@ lemma handleRecv_isBlocking_corres':
              apply (rule corres_guard_imp)
                apply (rename_tac rights)
                 apply (case_tac "AllowRead \<in> rights"; simp)
-                 apply (rule corres_split_nor[OF _ deleteCallerCap_corres])
+                 apply (rule corres_split_nor[OF deleteCallerCap_corres])
                    apply (rule receiveIPC_corres)
                     apply (clarsimp)+
                   apply (wp delete_caller_cap_nonz_cap delete_caller_cap_valid_ep_cap)+
@@ -1678,7 +1678,7 @@ lemma handleReply_corres:
                    getThreadCallerSlot_map
                    getSlotCap_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr [OF _ getCurThread_corres])
+    apply (rule corres_split_eqr[OF getCurThread_corres])
       apply (rule corres_split[OF get_cap_corres])
         apply (rule_tac P="einvs and cte_wp_at ((=) caller_cap) (thread, tcb_cnode_index 3)
                                 and K (is_reply_cap caller_cap \<or> caller_cap = cap.NullCap)
@@ -1922,7 +1922,7 @@ lemma handleReply_handleRecv_corres:
          (do x \<leftarrow> handle_reply; handle_recv True od)
          (do x \<leftarrow> handleReply; handleRecv True od)"
   apply (rule corres_guard_imp)
-    apply (rule corres_split_nor [OF _ handleReply_corres])
+    apply (rule corres_split_nor[OF handleReply_corres])
       apply (rule handleRecv_isBlocking_corres')
      apply (wp handle_reply_nonz_cap_to_ct handleReply_sane
                handleReply_nonz_cap_to_ct handleReply_ct_not_ksQ handle_reply_valid_sched)+

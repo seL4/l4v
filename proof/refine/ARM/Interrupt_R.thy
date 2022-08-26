@@ -219,7 +219,7 @@ lemma arch_decodeIRQControlInvocation_corres:
      apply (rule corres_splitEE[OF checkIRQ_corres])
        apply (rule_tac F="unat y \<le> unat maxIRQ" in corres_gen_asm)
        apply (clarsimp simp add: minIRQ_def maxIRQ_def ucast_nat_def)
-       apply (rule corres_split_eqr[OF _ is_irq_active_corres])
+       apply (rule corres_split_eqr[OF is_irq_active_corres])
          apply (rule whenE_throwError_corres, clarsimp, clarsimp)
          apply (rule corres_splitEE[OF lookupSlotForCNodeOp_corres])
              apply (rule corres_splitEE[OF ensureEmptySlot_corres])
@@ -271,7 +271,7 @@ lemma decodeIRQControlInvocation_corres:
     apply (rule whenE_throwError_corres, clarsimp, clarsimp)
     apply (rule_tac F="unat y \<le> unat maxIRQ" in corres_gen_asm)
     apply (clarsimp simp add: minIRQ_def maxIRQ_def ucast_nat_def)
-    apply (rule corres_split_eqr[OF _ is_irq_active_corres])
+    apply (rule corres_split_eqr[OF is_irq_active_corres])
       apply (rule whenE_throwError_corres, clarsimp, clarsimp)
       apply (rule corres_splitEE[OF lookupSlotForCNodeOp_corres])
           apply (rule corres_splitEE[OF ensureEmptySlot_corres])
@@ -384,7 +384,7 @@ lemma invokeIRQHandler_corres:
    apply (rule corres_guard_imp)
      apply (rule corres_split[OF getIRQSlot_corres])
        apply simp
-       apply (rule corres_split_nor [OF _ cap_delete_one_corres])
+       apply (rule corres_split_nor[OF cap_delete_one_corres])
          apply (rule cteInsert_corres, simp+)
         apply (rule_tac Q="\<lambda>rv s. einvs s \<and> cte_wp_at (\<lambda>c. c = cap.NullCap) irq_slot s
                                   \<and> (a, b) \<noteq> irq_slot
@@ -518,7 +518,7 @@ lemma performIRQControl_corres:
      (performIRQControl i')"
   apply (cases i, simp_all add: performIRQControl_def)
    apply (rule corres_guard_imp)
-     apply (rule corres_split_nor [OF _ setIRQState_corres])
+     apply (rule corres_split_nor[OF setIRQState_corres])
         apply (rule cteInsert_simple_corres)
           apply (wp | simp add: irq_state_relation_def
                                 IRQHandler_valid IRQHandler_valid')+

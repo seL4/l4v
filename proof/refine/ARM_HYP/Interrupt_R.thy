@@ -218,7 +218,7 @@ lemma arch_decodeIRQControlInvocation_corres:
      apply (rule corres_splitEE[OF checkIRQ_corres])
        apply (rule_tac F="unat y \<le> unat maxIRQ" in corres_gen_asm)
        apply (clarsimp simp add: minIRQ_def maxIRQ_def ucast_nat_def)
-       apply (rule corres_split_eqr[OF _ is_irq_active_corres])
+       apply (rule corres_split_eqr[OF is_irq_active_corres])
          apply (rule whenE_throwError_corres, clarsimp, clarsimp)
          apply (rule corres_splitEE[OF lookupSlotForCNodeOp_corres])
              apply (rule corres_splitEE[OF ensureEmptySlot_corres])
@@ -270,7 +270,7 @@ lemma decodeIRQControlInvocation_corres:
     apply (rule whenE_throwError_corres, clarsimp, clarsimp)
     apply (rule_tac F="unat y \<le> unat maxIRQ" in corres_gen_asm)
     apply (clarsimp simp add: minIRQ_def maxIRQ_def ucast_nat_def)
-    apply (rule corres_split_eqr[OF _ is_irq_active_corres])
+    apply (rule corres_split_eqr[OF is_irq_active_corres])
       apply (rule whenE_throwError_corres, clarsimp, clarsimp)
       apply (rule corres_splitEE[OF lookupSlotForCNodeOp_corres])
           apply (rule corres_splitEE[OF ensureEmptySlot_corres])
@@ -375,7 +375,7 @@ lemma invokeIRQHandler_corres:
    apply (rule corres_guard_imp)
      apply (rule corres_split[OF getIRQSlot_corres])
        apply simp
-       apply (rule corres_split_nor [OF _ cap_delete_one_corres])
+       apply (rule corres_split_nor[OF cap_delete_one_corres])
          apply (rule cteInsert_corres, simp+)
         apply (rule_tac Q="\<lambda>rv s. einvs s \<and> cte_wp_at (\<lambda>c. c = cap.NullCap) irq_slot s
                                   \<and> (a, b) \<noteq> irq_slot
@@ -505,7 +505,7 @@ lemma performIRQControl_corres:
      (performIRQControl i')"
   apply (cases i, simp_all add: performIRQControl_def)
    apply (rule corres_guard_imp)
-     apply (rule corres_split_nor [OF _ setIRQState_corres])
+     apply (rule corres_split_nor[OF setIRQState_corres])
         apply (rule cteInsert_simple_corres)
           apply (wp | simp add: irq_state_relation_def
                                 IRQHandler_valid IRQHandler_valid')+
@@ -823,11 +823,11 @@ proof -
          apply (rule corres_trivial, simp)
         apply clarsimp
 
-        apply (rule corres_split_eqr[OF _ corres_machine_op])+
+        apply (rule corres_split_eqr[OF corres_machine_op])+
                  apply (rename_tac eisr0 eisr1 flags)
                  apply (rule corres_split[OF corres_gets_numlistregs])
                    apply (rule corres_split_deprecated[where r'="\<lambda>rv rv'. rv' = arch_fault_map rv"])
-                      apply (rule corres_split_eqr[OF _ getCurThread_corres])
+                      apply (rule corres_split_eqr[OF getCurThread_corres])
                         apply (rule corres_split[OF getThreadState_corres])
                           apply (fold dc_def)
                           apply (rule corres_when)
@@ -870,10 +870,10 @@ proof -
                       apply (rule corres_trivial, simp)
                      supply if_split[split del]
                      apply (clarsimp simp: bind_assoc cong: if_cong)
-                     apply (rule corres_split_eqr[OF _ corres_machine_op])
-                        apply (rule corres_split_dc[OF _ corres_machine_op])
+                     apply (rule corres_split_eqr[OF corres_machine_op])
+                        apply (rule corres_split_dc[OF corres_machine_op])
                            apply clarsimp
-                           apply (rule corres_split_dc[OF _ vgicUpdateLR_corres])
+                           apply (rule corres_split_dc[OF vgicUpdateLR_corres])
                              apply (rule corres_trivial, simp)
                             supply corres_return[simp del]
                             apply (wpsimp wp: corres_Id wplr wplr' hoare_vcg_all_lift
@@ -910,9 +910,9 @@ lemma vppiEvent_corres:
        apply (rule corres_trivial, simp)
       apply clarsimp
 
-      apply (rule corres_split_dc[OF _ corres_machine_op])
-         apply (rule corres_split_dc[OF _ vcpuUpdate_corres])
-            apply (rule corres_split_eqr[OF _ getCurThread_corres])
+      apply (rule corres_split_dc[OF corres_machine_op])
+         apply (rule corres_split_dc[OF vcpuUpdate_corres])
+            apply (rule corres_split_eqr[OF getCurThread_corres])
               apply (rule corres_split[OF getThreadState_corres], rename_tac gts gts')
                 apply (fold dc_def)
                 apply (rule corres_when)

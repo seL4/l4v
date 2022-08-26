@@ -528,7 +528,7 @@ lemma kernel_corres':
   apply (simp add: call_kernel_def callKernel_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split)
-       apply (rule corres_split_handle [OF _ handleEvent_corres])
+       apply (rule corres_split_handle[OF handleEvent_corres])
          apply simp
          apply (rule corres_split[OF corres_machine_op])
             apply (rule corres_underlying_trivial)
@@ -623,7 +623,7 @@ lemma entry_corres:
           apply (clarsimp simp: tcb_cte_cases_def)
          apply (simp add: exst_same_def)
         apply (rule corres_split[OF kernel_corres])
-          apply (rule corres_split_eqr [OF _ getCurThread_corres])
+          apply (rule corres_split_eqr[OF getCurThread_corres])
             apply (rule threadGet_corres)
             apply (simp add: tcb_relation_def arch_tcb_relation_def
                              arch_tcb_context_get_def atcbContextGet_def)

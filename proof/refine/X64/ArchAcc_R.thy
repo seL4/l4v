@@ -1293,7 +1293,7 @@ lemma lookupPDSlot_corres:
           (lookup_pd_slot pml4 vptr) (lookupPDSlot pml4 vptr)"
   apply (simp add: lookup_pd_slot_def lookupPDSlot_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqrE[OF _ lookupPDPTSlot_corres])
+    apply (rule corres_split_eqrE[OF lookupPDPTSlot_corres])
       apply (rule corres_splitEE
       [where R'="\<lambda>_. pspace_distinct'" and R="\<lambda>r. valid_pdpte r and pspace_aligned"])
          prefer 2
@@ -1339,7 +1339,7 @@ lemma lookupPTSlot_corres:
           (lookup_pt_slot pml4 vptr) (lookupPTSlot pml4 vptr)"
     apply (simp add: lookup_pt_slot_def lookupPTSlot_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqrE[OF _ lookupPDSlot_corres])
+    apply (rule corres_split_eqrE[OF lookupPDSlot_corres])
       apply (rule corres_splitEE
       [where R'="\<lambda>_. pspace_distinct'" and R="\<lambda>r. valid_pde r and pspace_aligned"])
          prefer 2

@@ -210,7 +210,7 @@ proof -
            apply (clarsimp simp: cap_asid_def)
            apply (rule corres_guard_imp)
              apply (rule corres_split_catch [where f=lfr, OF P _ wp_post_tautE wp_post_tautE])
-             apply (rule corres_split_eqrE [OF _ findVSpaceForASID_corres[OF refl]])
+             apply (rule corres_split_eqrE[OF findVSpaceForASID_corres[OF refl]])
                apply (rule whenE_throwError_corres; simp add: lookup_failure_map_def)
                apply (simp only: liftE_bindE)
                apply (rule corres_underlying_split[OF get_current_cr3_corres])
@@ -573,8 +573,8 @@ lemma unmapPageTable_corres:
   apply (clarsimp simp: assms unmap_page_table_def unmapPageTable_def ignoreFailure_def const_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_catch[where E="\<top>\<top>" and E'="\<top>\<top>"], simp)
-      apply (rule corres_split_eqrE[OF _ findVSpaceForASID_corres[OF refl]])
-        apply (rule corres_split_eqrE[OF _ lookupPDSlot_corres])
+      apply (rule corres_split_eqrE[OF findVSpaceForASID_corres[OF refl]])
+        apply (rule corres_split_eqrE[OF lookupPDSlot_corres])
           apply (rule corres_splitEE[OF liftE_get_pde_corres])
             apply (rule corres_splitEE[where r'=dc])
                apply (case_tac "\<exists>addr x xa. pde = X64_A.PageTablePDE addr x xa";
@@ -679,7 +679,7 @@ lemma unmapPage_corres:
                  apply simp
                  apply (rule corres_splitEE[OF liftE_get_pte_corres])
                    apply simp
-                   apply (rule corres_split_norE[OF _ checkMappingPPtr_corres, where r=dc, simplified])
+                   apply (rule corres_split_norE[OF checkMappingPPtr_corres, where r=dc, simplified])
                    apply simp
                    apply (rule storePTE_corres')
                    apply (((wpsimp  wp: hoare_vcg_all_lift_R get_pte_wp getPTE_wp lookup_pt_slot_wp
@@ -691,7 +691,7 @@ lemma unmapPage_corres:
            apply (rule corres_split_strengthen_ftE[OF lookupPDSlot_corres])
              apply (simp del: dc_simp)
              apply (rule corres_splitEE[OF liftE_get_pde_corres])
-               apply (rule corres_split_norE[OF _ checkMappingPPtr_corres, where r=dc, simplified])
+               apply (rule corres_split_norE[OF checkMappingPPtr_corres, where r=dc, simplified])
                   apply simp
                   apply (rule storePDE_corres')
                   apply (((wpsimp  wp: hoare_vcg_all_lift_R get_pde_wp getPDE_wp lookup_pd_slot_wp
@@ -703,7 +703,7 @@ lemma unmapPage_corres:
           apply (rule corres_split_strengthen_ftE[OF lookupPDPTSlot_corres])
             apply (simp del: dc_simp)
             apply (rule corres_splitEE[OF liftE_get_pdpte_corres])
-              apply (rule corres_split_norE[OF _ checkMappingPPtr_corres, where r=dc, simplified])
+              apply (rule corres_split_norE[OF checkMappingPPtr_corres, where r=dc, simplified])
                  apply simp
                  apply (rule storePDPTE_corres')
                  apply (((wpsimp  wp: hoare_vcg_all_lift_R get_pdpte_wp getPDPTE_wp
@@ -1206,8 +1206,8 @@ lemma unmapPageDirectory_corres:
                         ignoreFailure_def const_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_catch[where E="\<top>\<top>" and E'="\<top>\<top>"], simp)
-      apply (rule corres_split_eqrE[OF _ findVSpaceForASID_corres[OF refl]])
-        apply (rule corres_split_eqrE[OF _ lookupPDPTSlot_corres])
+      apply (rule corres_split_eqrE[OF findVSpaceForASID_corres[OF refl]])
+        apply (rule corres_split_eqrE[OF lookupPDPTSlot_corres])
           apply (rule corres_splitEE[OF liftE_get_pdpte_corres])
             apply (rule corres_splitEE[where r'=dc])
                apply (case_tac "\<exists>addr x xa. pdpte = X64_A.PageDirectoryPDPTE addr x xa";
@@ -1215,7 +1215,7 @@ lemma unmapPageDirectory_corres:
                                 simp: lookup_failure_map_def pdpte_relation_def
                                 split: X64_A.pdpte.splits)
               apply simp
-              apply (rule corres_split_nor[OF _ flush_all_corres[OF refl refl]])
+              apply (rule corres_split_nor[OF flush_all_corres[OF refl refl]])
                 apply (rule corres_split_deprecated[OF invalidatePageStructureCacheASID_corres
                                             storePDPTE_corres'])
                   apply ((wpsimp wp: get_pdpte_wp simp: pdpte_at_def)+)[8]
@@ -1327,7 +1327,7 @@ lemma unmapPDPT_corres:
                         ignoreFailure_def const_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_catch[where E="\<top>\<top>" and E'="\<top>\<top>"], simp)
-      apply (rule corres_split_eqrE[OF _ findVSpaceForASID_corres[OF refl]])
+      apply (rule corres_split_eqrE[OF findVSpaceForASID_corres[OF refl]])
         apply (rule corres_splitEE[OF liftE_get_pml4e_corres])
           apply (rule corres_splitEE[where r'=dc])
              apply (case_tac "\<exists>addr a b. rv = X64_A.PDPointerTablePML4E addr a b";
@@ -1335,7 +1335,7 @@ lemma unmapPDPT_corres:
                               simp: lookup_failure_map_def pml4e_relation_def
                               split: X64_A.pml4e.splits)
             apply simp
-            apply (rule corres_split_nor[OF _ flush_all_corres[OF refl refl]])
+            apply (rule corres_split_nor[OF flush_all_corres[OF refl refl]])
               apply (rule store_pml4e_corres'[OF refl], simp)
              apply ((wpsimp wp: get_pml4e_wp simp: pml4e_at_def)+)[5]
         apply (wpsimp wp: hoare_drop_imps)

@@ -1628,7 +1628,7 @@ lemma set_ioport_mask_corres[corres]:
      (setIOPortMask f l b)"
   apply (clarsimp simp: set_ioport_mask_def setIOPortMask_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr[OF _ corres_gets_allocated_io_ports])
+    apply (rule corres_split_eqr[OF corres_gets_allocated_io_ports])
       apply (rule corres_modify)
       apply (clarsimp simp: state_relation_def arch_state_relation_def foldl_map
                             foldl_fun_upd)
@@ -1686,7 +1686,7 @@ lemma emptySlot_corres:
   unfolding emptySlot_def empty_slot_def
   apply (simp add: case_Null_If)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_noop_rhs[OF _ clearUntypedFreeIndex_noop_corres])
+    apply (rule corres_split_noop_rhs[OF clearUntypedFreeIndex_noop_corres])
      apply (rule_tac R="\<lambda>cap. einvs and cte_wp_at ((=) cap) slot" and
                      R'="\<lambda>cte. valid_pspace' and cte_wp_at' ((=) cte) (cte_map slot)" in
                      corres_split[OF get_cap_corres])

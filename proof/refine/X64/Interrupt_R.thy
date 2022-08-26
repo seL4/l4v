@@ -228,7 +228,7 @@ lemma arch_decodeIRQControlInvocation_corres:
    apply (simp add: linorder_not_less )
    apply (simp add: irq_const_defs word_le_nat_alt ucast_id)
    apply (simp add: ucast_nat_def Groups.ab_semigroup_add_class.add.commute toEnum_unat_ucast_helper_64_8)
-   apply (rule corres_split_eqr[OF _ is_irq_active_corres])
+   apply (rule corres_split_eqr[OF is_irq_active_corres])
      apply (rule whenE_throwError_corres, simp, simp)
      apply (rule corres_splitEE[OF lookupSlotForCNodeOp_corres])
          apply (rule corres_splitEE[OF ensureEmptySlot_corres])
@@ -247,7 +247,7 @@ lemma arch_decodeIRQControlInvocation_corres:
    apply (simp add: linorder_not_less )
    apply (simp add: irq_const_defs word_le_nat_alt ucast_id)
    apply (simp add: ucast_nat_def add.commute toEnum_unat_ucast_helper_64_8)
-   apply (rule corres_split_eqr[OF _ is_irq_active_corres])
+   apply (rule corres_split_eqr[OF is_irq_active_corres])
      apply (rule whenE_throwError_corres, simp, simp)
      apply (rule corres_splitEE[OF lookupSlotForCNodeOp_corres])
          apply (rule corres_splitEE[OF ensureEmptySlot_corres])
@@ -374,7 +374,7 @@ lemma invokeIRQHandler_corres:
    apply (rule corres_guard_imp)
      apply (rule corres_split[OF getIRQSlot_corres])
        apply simp
-       apply (rule corres_split_nor [OF _ cap_delete_one_corres])
+       apply (rule corres_split_nor[OF cap_delete_one_corres])
          apply (rule cteInsert_corres, simp+)
         apply (rule_tac Q="\<lambda>rv s. einvs s \<and> cte_wp_at (\<lambda>c. c = cap.NullCap) irq_slot s
                                   \<and> (a, b) \<noteq> irq_slot
@@ -498,7 +498,7 @@ lemma arch_performIRQControl_corres:
    apply (rule corres_guard_imp)
      apply (rule corres_split_nor)
         apply (rule corres_split_nor)
-           apply (rule corres_split_nor [OF _ setIRQState_corres])
+           apply (rule corres_split_nor[OF setIRQState_corres])
               apply (rule cteInsert_simple_corres)
                 apply (wp | simp add: irq_state_relation_def
                                       IRQHandler_valid IRQHandler_valid')+
@@ -514,7 +514,7 @@ lemma arch_performIRQControl_corres:
    apply (auto dest: valid_irq_handlers_ctes_ofD)[1]
   apply (rule corres_guard_imp)
      apply (rule corres_split_nor)
-       apply (rule corres_split_nor [OF _ setIRQState_corres])
+       apply (rule corres_split_nor[OF setIRQState_corres])
         apply (rule cteInsert_simple_corres)
             apply (wp | simp add: irq_state_relation_def
                                 IRQHandler_valid IRQHandler_valid')+
@@ -538,7 +538,7 @@ lemma performIRQControl_corres:
      (performIRQControl i')"
   apply (cases i, simp_all add: performIRQControl_def)
    apply (rule corres_guard_imp)
-     apply (rule corres_split_nor [OF _ setIRQState_corres])
+     apply (rule corres_split_nor[OF setIRQState_corres])
         apply (rule cteInsert_simple_corres)
           apply (wp | simp add: irq_state_relation_def
                                 IRQHandler_valid IRQHandler_valid')+

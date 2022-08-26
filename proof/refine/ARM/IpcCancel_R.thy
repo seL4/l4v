@@ -1246,8 +1246,8 @@ lemma tcbSchedDequeue_corres':
   apply (rule corres_guard_imp)
     apply (rule corres_split_deprecated[where r'="(=)", OF _ ethreadget_corres])
        apply (simp split del: if_split)
-       apply (rule corres_split_eqr[OF _ ethreadget_corres])
-          apply (rule corres_split_eqr[OF _ getQueue_corres])
+       apply (rule corres_split_eqr[OF ethreadget_corres])
+          apply (rule corres_split_eqr[OF getQueue_corres])
             apply (simp split del: if_split)
             apply (subst bind_return_unit, rule corres_split_deprecated[where r'=dc])
                apply (rule corres_split_noop_rhs)
@@ -1409,10 +1409,10 @@ lemma (in delete_one) suspend_corres:
         (IpcCancel_A.suspend t) (ThreadDecls_H.suspend t)"
   apply (simp add: IpcCancel_A.suspend_def Thread_H.suspend_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_nor [OF _ cancel_ipc_corres])
+    apply (rule corres_split_nor[OF cancel_ipc_corres])
       apply (rule corres_split[OF getThreadState_corres])
         apply (rule corres_split_nor)
-           apply (rule corres_split_nor [OF _ setThreadState_corres])
+           apply (rule corres_split_nor[OF setThreadState_corres])
               apply (rule tcbSchedDequeue_corres')
              apply wpsimp
             apply wp
@@ -2606,7 +2606,7 @@ lemma cancelBadgedSends_corres:
   apply (case_tac ep, simp_all add: ep_relation_def)
   apply (simp add: filterM_mapM list_case_return cong: list.case_cong)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_nor [OF _ setEndpoint_corres])
+    apply (rule corres_split_nor[OF setEndpoint_corres])
        apply (rule corres_split_eqr[OF _ _ _ hoare_post_add[where R="\<lambda>_. valid_objs'"]])
           apply (rule corres_split_deprecated [OF rescheduleRequired_corres])
             apply (rule setEndpoint_corres)

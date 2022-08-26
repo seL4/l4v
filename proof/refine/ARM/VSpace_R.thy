@@ -235,7 +235,7 @@ lemma findPDForASIDAssert_corres:
        apply (erule(3) pspace_relation_pd)
        apply (simp add: pde_at_def pd_bits_def pdBits_def
                         is_aligned_neg_mask_eq pdeBits_def pageBits_def)
-      apply (rule corres_split_catch [OF _ find_pd_for_asid_corres'[where pd=pd]])
+      apply (rule corres_split_catch[OF find_pd_for_asid_corres'[where pd=pd]])
         apply (rule_tac P="\<bottom>" and P'="\<top>" in corres_inst)
         apply (simp add: corres_fail)
        apply (wp find_pd_for_asid_valids[where pd=pd])+
@@ -387,8 +387,8 @@ lemma findFreeHWASID_corres:
           find_free_hw_asid findFreeHWASID"
   apply (simp add: find_free_hw_asid_def findFreeHWASID_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr [OF _ corres_trivial])
-       apply (rule corres_split_eqr [OF _ corres_trivial])
+    apply (rule corres_split_eqr[OF corres_trivial])
+       apply (rule corres_split_eqr[OF corres_trivial])
           apply (subgoal_tac "take (length [minBound .e. maxBound :: hardware_asid])
                                 ([next_asid .e. maxBound] @ [minBound .e. next_asid])
                                 = [next_asid .e. maxBound] @ init [minBound .e. next_asid]")
@@ -455,9 +455,9 @@ lemma getHWASID_corres:
           (get_hw_asid a) (getHWASID a)"
   apply (simp add: get_hw_asid_def getHWASID_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr [OF _ loadHWASID_corres[where pd=pd]])
+    apply (rule corres_split_eqr[OF loadHWASID_corres[where pd=pd]])
       apply (case_tac maybe_hw_asid, simp_all)[1]
-      apply (rule corres_split_eqr [OF _ findFreeHWASID_corres])
+      apply (rule corres_split_eqr[OF findFreeHWASID_corres])
          apply (rule corres_split[OF storeHWASID_corres[where pd=pd]])
            apply (rule corres_trivial, simp )
           apply (wpsimp wp: load_hw_asid_wp)+
@@ -482,7 +482,7 @@ lemma armv_contextSwitch_corres:
           (arm_context_switch pd a) (armv_contextSwitch pd a)"
   apply (simp add: arm_context_switch_def armv_contextSwitch_def armv_contextSwitch_HWASID_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr [OF _ getHWASID_corres[where pd=pd]])
+    apply (rule corres_split_eqr[OF getHWASID_corres[where pd=pd]])
       apply (rule corres_machine_op)
       apply (simp add: setCurrentPD_to_abs)
       apply (rule corres_rel_imp)
@@ -724,7 +724,7 @@ proof -
                 apply (clarsimp simp: pd_at_uniq_def restrict_map_def)
                 apply (erule notE, rule_tac a=x in ranI)
                 apply simp
-               apply (rule corres_split_eqrE [OF _ find_pd_for_asid_corres])
+               apply (rule corres_split_eqrE[OF find_pd_for_asid_corres])
                  apply (rule whenE_throwError_corres)
                    apply (simp add: lookup_failure_map_def)
                   apply simp
@@ -1362,7 +1362,7 @@ lemma pageTableMapped_corres:
   apply (rule corres_guard_imp)
    apply (rule corres_split_catch)
       apply (rule corres_trivial, simp)
-     apply (rule corres_split_eqrE [OF _ find_pd_for_asid_corres])
+     apply (rule corres_split_eqrE[OF find_pd_for_asid_corres])
        apply (simp add: liftE_bindE)
        apply (rule corres_split[OF getObject_PDE_corres'])
          apply (rule corres_trivial)
@@ -1392,7 +1392,7 @@ lemma unmapPageTable_corres:
           (unmapPageTable asid vptr pt)"
   apply (clarsimp simp: unmapPageTable_def unmap_page_table_def ignoreFailure_def const_def cong: option.case_cong)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr [OF _ pageTableMapped_corres])
+    apply (rule corres_split_eqr[OF pageTableMapped_corres])
       apply (simp add: case_option_If2 split del: if_split)
       apply (rule corres_if2[OF refl])
        apply (rule corres_split[OF storePDE_corres'])
