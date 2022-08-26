@@ -516,7 +516,7 @@ lemma delete_cap_corres:
   apply (subst rec_del_simps_ext)
   apply (simp add:bindE_assoc)
   apply (rule corres_guard_imp)
-    apply (rule corres_splitEE[OF _ dcorres_finalise_slot])
+    apply (rule corres_splitEE[OF dcorres_finalise_slot])
       apply (clarsimp simp:bindE_assoc when_def)
       apply (rule empty_slot_corres)
      apply wp+
@@ -545,7 +545,7 @@ lemma delete_cap_corres':
   apply (subst rec_del_simps_ext)
   apply (simp add:bindE_assoc)
   apply (rule corres_guard_imp)
-    apply (rule corres_splitEE[OF _ dcorres_finalise_slot])
+    apply (rule corres_splitEE[OF dcorres_finalise_slot])
       apply (clarsimp simp:bindE_assoc when_def)
       apply (rule empty_slot_corres)
      apply wp+
@@ -2421,18 +2421,15 @@ lemma decode_cnode_corres:
         apply (clarsimp simp: defns split: splits)
            apply (rule corres_guard_imp)
              apply (rule corres_splitEE)
-                prefer 2
                 apply (rule lookup_slot_for_cnode_op_corres)
                    apply simp
                   apply simp
                  apply simp
                 apply (rule refl)
                apply (rule corres_splitEE)
-                  prefer 2
                   apply simp
                   apply (rule dcorres_ensure_empty)
                  apply (rule corres_splitEE)
-                    prefer 2
                     apply (rule lookup_slot_for_cnode_op_corres, simp_all)[1]
                    apply (simp add:liftE_bindE)
                    apply (rule corres_split)
@@ -2441,11 +2438,9 @@ lemma decode_cnode_corres:
                       apply (simp add: update_cap_rights_def)
                      apply simp
                      apply (rule corres_splitEE)
-                        prefer 2
                         apply (rule derive_cap_dcorres)
                         apply (simp add: mask_cap_def)
-                       apply (rule corres_splitEE [where r'=dc])
-                          prefer 2
+                       apply (rule corres_splitEE[where r'=dc])
                           apply (rule corres_whenE, simp)
                            apply (rule dcorres_throw)
                           apply simp
@@ -2458,10 +2453,10 @@ lemma decode_cnode_corres:
            apply (fastforce simp: valid_mdb_def mdb_cte_at_def)
           \<comment> \<open>Mint\<close>
           apply (rule corres_guard_imp)
-            apply (rule corres_splitEE[OF _ lookup_slot_for_cnode_op_corres])
+            apply (rule corres_splitEE[OF lookup_slot_for_cnode_op_corres])
                   apply simp
-                  apply (rule corres_splitEE[OF _ dcorres_ensure_empty])
-                    apply (rule corres_splitEE[OF _ lookup_slot_for_cnode_op_corres])
+                  apply (rule corres_splitEE[OF dcorres_ensure_empty])
+                    apply (rule corres_splitEE[OF lookup_slot_for_cnode_op_corres])
                           apply (simp add:liftE_bindE)
                           apply (rule corres_split[OF get_cap_corres])
                              apply (rule_tac R="src_capa = cap.NullCap" in corres_cases [where P=\<top> and P'=\<top>])
@@ -2470,7 +2465,7 @@ lemma decode_cnode_corres:
                              apply simp
                              apply (rule dcorres_update_cap_data_bind[where P = \<top>])
                              apply (simp add:mask_cap_def)
-                             apply (rule corres_splitEE[OF _  derive_cap_dcorres,
+                             apply (rule corres_splitEE[OF derive_cap_dcorres,
                                where Q = \<top> and R = "\<lambda>r. \<top>" ,simplified])
                              apply (rule corres_splitEE[OF dcorres_returnOk
                                corres_whenE[where P = \<top>,simplified],
@@ -2493,18 +2488,15 @@ lemma decode_cnode_corres:
          \<comment> \<open>Move\<close>
          apply (rule corres_guard_imp)
            apply (rule corres_splitEE)
-              prefer 2
               apply (rule lookup_slot_for_cnode_op_corres)
                  apply simp
                 apply simp
                apply simp
               apply (rule refl)
              apply (rule corres_splitEE)
-                prefer 2
                 apply simp
                 apply (rule dcorres_ensure_empty)
                apply (rule corres_splitEE)
-                  prefer 2
                   apply (rule lookup_slot_for_cnode_op_corres, simp_all)[1]
                  apply (simp add:liftE_bindE)
                  apply (rule corres_split)
@@ -2518,10 +2510,10 @@ lemma decode_cnode_corres:
          apply fastforce
         \<comment> \<open>Mutate\<close>
         apply (rule corres_guard_imp)
-          apply (rule corres_splitEE[OF _ lookup_slot_for_cnode_op_corres])
+          apply (rule corres_splitEE[OF lookup_slot_for_cnode_op_corres])
                 apply simp
-                apply (rule corres_splitEE[OF _ dcorres_ensure_empty])
-                  apply (rule corres_splitEE[OF _ lookup_slot_for_cnode_op_corres])
+                apply (rule corres_splitEE[OF dcorres_ensure_empty])
+                  apply (rule corres_splitEE[OF lookup_slot_for_cnode_op_corres])
                         apply (simp add:liftE_bindE)
                         apply (rule corres_split[OF get_cap_corres])
                            apply (rule_tac R="src_capa = cap.NullCap" in corres_cases [where P=\<top> and P'=\<top>])
@@ -2547,7 +2539,6 @@ lemma decode_cnode_corres:
       apply (clarsimp simp: defns split: splits)
        apply (rule corres_guard_imp)
          apply (rule corres_splitEE)
-            prefer 2
             apply (rule lookup_slot_for_cnode_op_corres, simp_all)[1]
            apply (rule dcorres_returnOk)
            apply (simp add: translate_cnode_invocation_def)
@@ -2558,7 +2549,6 @@ lemma decode_cnode_corres:
       apply (clarsimp simp: defns split: splits)
       apply (rule corres_guard_imp)
         apply (rule corres_splitEE)
-           prefer 2
            apply (rule lookup_slot_for_cnode_op_corres, simp_all)[1]
           apply (rule dcorres_returnOk)
           apply (simp add: translate_cnode_invocation_def)
@@ -2568,10 +2558,8 @@ lemma decode_cnode_corres:
      apply (clarsimp simp: defns split: splits)
      apply (rule corres_guard_imp)
        apply (rule corres_splitEE)
-          prefer 2
           apply (rule lookup_slot_for_cnode_op_corres, simp_all)[1]
          apply (rule corres_splitEE)
-            prefer 2
             apply simp
             apply (rule dcorres_ensure_empty)
            apply (rule dcorres_returnOk)
@@ -2582,13 +2570,11 @@ lemma decode_cnode_corres:
     apply (clarsimp simp: defns split: splits)
     apply (rule corres_guard_imp)
       apply (rule corres_splitEE)
-         prefer 2
          apply (rule lookup_slot_for_cnode_op_corres, simp_all)[1]
         apply (simp add: liftE_bindE)
         apply (rule corres_split)
            apply (rule get_cap_corres, rule refl)
           apply (rule corres_splitEE)
-             prefer 2
              apply (rule corres_whenE [where r=dc])
               apply simp
              apply (rule dcorres_throw)
@@ -2601,17 +2587,13 @@ lemma decode_cnode_corres:
 
    apply (rule corres_guard_imp)
      apply (rule corres_splitEE)
-        prefer 2
         apply (rule lookup_slot_for_cnode_op_corres, simp_all)[1]
        apply (rule corres_splitEE)
-          prefer 2
           apply (rule lookup_slot_for_cnode_op_corres, simp_all)[1]
          apply (rule corres_splitEE)
-            prefer 2
             apply (rule lookup_slot_for_cnode_op_corres, simp_all)[1]
            apply (rule_tac P=\<top> and P'="real_cte_at pivot_slota and real_cte_at src_slota
                                        and real_cte_at dest_slota" in corres_splitEE)
-              prefer 2
               apply (rule corres_assume_pre)
               apply (rule corres_guard_imp)
                 apply (rule corres_whenE [where r=dc])
@@ -2624,7 +2606,6 @@ lemma decode_cnode_corres:
                              P'="real_cte_at src_slota and real_cte_at dest_slota
                                  and valid_idle and not_idle_thread (fst dest_slota) and valid_etcbs"
                              in corres_splitEE)
-                prefer 2
                 apply (rule corres_assume_pre)
                 apply (rule corres_guard_imp)
                   apply (rule corres_whenE)
@@ -2638,14 +2619,12 @@ lemma decode_cnode_corres:
                apply (rule corres_split)
                   apply (rule get_cap_corres, rule refl)
                  apply (rule corres_splitEE)
-                    prefer 2
                     apply (rule corres_whenE [where r=dc], simp)
                      apply (rule dcorres_throw)
                     apply simp
                    apply (rule corres_split)
                       apply (rule get_cap_corres, rule refl)
                      apply (rule corres_splitEE)
-                        prefer 2
                         apply (rule corres_whenE [where r=dc], simp)
                          apply (rule dcorres_throw)
                         apply simp

@@ -720,10 +720,10 @@ next
          apply (rule unat_le_helper)
          apply simp
         apply (simp add:bindE_assoc)
-        apply (rule corres_splitEE [OF _ dcorres_ensure_no_children[where P="(\<noteq>) cap.NullCap"]])
-          apply (rule corres_splitEE [OF _ lookup_slot_for_cnode_op_corres])
+        apply (rule corres_splitEE[OF dcorres_ensure_no_children[where P="(\<noteq>) cap.NullCap"]])
+          apply (rule corres_splitEE[OF lookup_slot_for_cnode_op_corres])
                 apply (simp, elim conjE)
-                apply (rule corres_splitEE [OF _ dcorres_ensure_empty])
+                apply (rule corres_splitEE[OF dcorres_ensure_empty])
                   apply (rule corres_returnOk[where P=\<top> and P'=\<top>])
                   apply (simp add:transform_def arch_invocation_relation_def
                                   translate_arch_invocation_def)

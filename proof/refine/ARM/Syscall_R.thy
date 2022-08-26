@@ -262,12 +262,11 @@ lemma hinv_corres_assist:
             odE)"
   apply (clarsimp simp add: split_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_splitEE [OF _ corres_cap_fault])
-       prefer 2
+    apply (rule corres_splitEE[OF corres_cap_fault])
        \<comment> \<open>switched over to argument of corres_cap_fault\<close>
        apply (rule lookupCapAndSlot_corres, simp)
       apply (rule corres_split[OF lookupIPCBuffer_corres])
-        apply (rule corres_splitEE [OF _ lookupExtraCaps_corres])
+        apply (rule corres_splitEE[OF lookupExtraCaps_corres])
             apply (rule corres_returnOkTT)
             apply simp+
          apply (wp | simp)+
@@ -449,7 +448,7 @@ lemma performInvocation_corres:
      \<comment> \<open>CNodes\<close>
      apply clarsimp
      apply (rule corres_guard_imp)
-       apply (rule corres_splitEE [OF _ invokeCNode_corres])
+       apply (rule corres_splitEE[OF invokeCNode_corres])
           apply (rule corres_trivial, simp add: returnOk_def)
          apply assumption
         apply wp+
@@ -1232,7 +1231,7 @@ lemma handleInvocation_corres:
                apply (clarsimp simp: when_def)
                apply (rule replyFromKernel_corres)
               apply (rule corres_split[OF setThreadState_corres])
-                 apply (rule corres_splitEE [OF _ performInvocation_corres])
+                 apply (rule corres_splitEE[OF performInvocation_corres])
                      apply simp
                      apply (rule corres_split[OF getThreadState_corres])
                        apply (rename_tac state state')
@@ -1506,7 +1505,7 @@ lemma handleRecv_isBlocking_corres':
         apply (rule corres_split_catch)
            apply (erule handleFault_corres)
           apply (rule corres_cap_fault)
-          apply (rule corres_splitEE [OF _ lookupCap_corres])
+          apply (rule corres_splitEE[OF lookupCap_corres])
             apply (rule_tac P="?pre1 and tcb_at thread
                                and (\<lambda>s. (cur_thread s) = thread  )
                                and valid_cap rv"

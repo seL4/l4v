@@ -1330,13 +1330,11 @@ next
     apply (rule corres_split_catch [where f=dc and E="\<top>\<top>" and E'="\<top>\<top>"])
        apply simp
       apply (rule corres_splitEE)
-         prefer 2
          apply (subst alternative_bindE_distrib)
           apply simp
           apply (rule corres_alternate2)
           apply (rule derive_cap_dcorres [where P="\<top>"], simp)
         apply (rule corres_splitEE)
-           prefer 2
            apply (rule corres_whenE, simp)
             apply (rule dcorres_throw)
            apply (rule TrueI)
@@ -1541,7 +1539,7 @@ lemma get_receive_slot_dcorres:
            apply (rule corres_splitEE[where r'="\<lambda>p p'. p = transform_cslot_ptr p'"])
               apply (simp add:liftE_bindE)
               apply (rule corres_split[OF get_cap_corres])
-                 apply (rule corres_splitEE[OF _ corres_whenE,where r' = dc])
+                 apply (rule corres_splitEE[OF corres_whenE,where r' = dc])
                       apply (rule dcorres_returnOk)
                       apply clarsimp+
                   apply (wp|clarsimp)+

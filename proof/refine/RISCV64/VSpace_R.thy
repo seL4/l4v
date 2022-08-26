@@ -403,18 +403,16 @@ lemma unmapPage_corres:
       apply (rule corres_split_strengthen_ftE[where ftr'=dc])
          apply (rule findVSpaceForASID_corres[OF refl])
         apply (rule corres_splitEE)
-           prefer 2
            apply simp
            apply (rule lookupPTSlot_corres)
           apply (clarsimp simp: unlessE_whenE)
           apply datatype_schem
           apply (rule whenE_throwError_corres_initial, simp, simp)
           apply (rule corres_splitEE)
-             prefer 2
              apply (rule corres_rel_imp)
               apply (rule liftE_get_pte_corres[@lift_corres_args], simp)
              apply fastforce
-            apply (rule corres_splitEE[OF _ checkMappingPPtr_corres]; assumption?)
+            apply (rule corres_splitEE[OF checkMappingPPtr_corres]; assumption?)
               apply (simp add: liftE_bindE)
               apply (rule corres_split[OF storePTE_corres])
                  apply simp

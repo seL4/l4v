@@ -1285,7 +1285,7 @@ lemma handle_invocation_corres:
           apply (rule dcorres_symb_exec_r_evalMonad)
              apply wp
             apply (rule corres_guard_imp)
-              apply (rule corres_splitEE[OF _ dcorres_lookup_extra_caps])
+              apply (rule corres_splitEE[OF dcorres_lookup_extra_caps])
                       apply (rule dcorres_returnOk)
                       apply simp
                       apply (wp|clarsimp simp:not_idle_thread_def)+

@@ -215,13 +215,13 @@ lemma arch_decodeIRQControlInvocation_corres:
   \<comment> \<open> ARM_HYPIRQIssueIRQHandler \<close>
   apply (rule conjI, clarsimp)
    apply (rule corres_guard_imp)
-     apply (rule corres_splitEE[OF _ checkIRQ_corres])
+     apply (rule corres_splitEE[OF checkIRQ_corres])
        apply (rule_tac F="unat y \<le> unat maxIRQ" in corres_gen_asm)
        apply (clarsimp simp add: minIRQ_def maxIRQ_def ucast_nat_def)
        apply (rule corres_split_eqr[OF _ is_irq_active_corres])
          apply (rule whenE_throwError_corres, clarsimp, clarsimp)
-         apply (rule corres_splitEE[OF _ lookupSlotForCNodeOp_corres])
-             apply (rule corres_splitEE[OF _ ensureEmptySlot_corres])
+         apply (rule corres_splitEE[OF lookupSlotForCNodeOp_corres])
+             apply (rule corres_splitEE[OF ensureEmptySlot_corres])
                 apply (rule corres_returnOkTT)
                 apply (clarsimp simp: arch_irq_control_inv_relation_def )
                apply ((wpsimp wp: isIRQActive_inv arch_check_irq_maxIRQ_valid' checkIRQ_inv
@@ -272,8 +272,8 @@ lemma decodeIRQControlInvocation_corres:
     apply (clarsimp simp add: minIRQ_def maxIRQ_def ucast_nat_def)
     apply (rule corres_split_eqr[OF _ is_irq_active_corres])
       apply (rule whenE_throwError_corres, clarsimp, clarsimp)
-      apply (rule corres_splitEE[OF _ lookupSlotForCNodeOp_corres])
-          apply (rule corres_splitEE[OF _ ensureEmptySlot_corres])
+      apply (rule corres_splitEE[OF lookupSlotForCNodeOp_corres])
+          apply (rule corres_splitEE[OF ensureEmptySlot_corres])
              apply (rule corres_returnOkTT)
              apply (clarsimp simp: arch_irq_control_inv_relation_def )
             apply (wpsimp wp: isIRQActive_inv arch_check_irq_maxIRQ_valid' checkIRQ_inv

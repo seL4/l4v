@@ -142,13 +142,11 @@ lemma getReceiveSlots_corres:
     apply (rule corres_split[OF loadCapTransfer_corres])
       apply (rule corres_empty_on_failure)
       apply (rule corres_splitEE)
-         prefer 2
          apply (rule corres_unify_failure)
           apply (rule lookup_cap_corres)
           apply (simp add: ct_relation_def)
          apply simp
         apply (rule corres_splitEE)
-           prefer 2
            apply (rule corres_unify_failure)
             apply (simp add: ct_relation_def)
             apply (erule lookupSlotForCNodeOp_corres [OF _ refl])
@@ -456,7 +454,6 @@ next
        apply (case_tac mi, simp)
       apply (simp add: list_case_If2 split del: if_split)
       apply (rule corres_splitEE)
-         prefer 2
          apply (rule unifyFailure_discard2)
           apply (case_tac mi, clarsimp)
          apply (rule deriveCap_corres)
@@ -3423,7 +3420,6 @@ lemma sendFaultIPC_corres:
     apply (rule corres_split_deprecated [where r'="\<lambda>fh fh'. fh = to_bl fh'"])
        apply simp
        apply (rule corres_splitEE)
-          prefer 2
           apply (rule corres_cap_fault)
           apply (rule lookup_cap_corres, rule refl)
          apply (rule_tac P="einvs and st_tcb_at active thread

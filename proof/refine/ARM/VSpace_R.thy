@@ -500,13 +500,11 @@ lemma handleVMFault_corres:
    apply simp
    apply (rule corres_guard_imp)
      apply (rule corres_splitEE)
-        prefer 2
         apply simp
         apply (rule corres_machine_op [where r="(=)"])
         apply (rule corres_Id, rule refl, simp)
         apply (rule no_fail_getFAR)
        apply (rule corres_splitEE)
-          prefer 2
           apply simp
           apply (rule corres_machine_op [where r="(=)"])
           apply (rule corres_Id, rule refl, simp)
@@ -516,14 +514,12 @@ lemma handleVMFault_corres:
     apply simp+
   apply (rule corres_guard_imp)
     apply (rule corres_splitEE)
-       prefer 2
        apply simp
        apply (rule asUser_corres')
        apply (rule corres_no_failI [where R="(=)"])
         apply (rule no_fail_getRestartPC)
        apply fastforce
       apply (rule corres_splitEE)
-         prefer 2
          apply simp
          apply (rule corres_machine_op [where r="(=)"])
          apply (rule corres_Id, rule refl, simp)
@@ -1526,7 +1522,7 @@ lemma unmapPage_corres:
                apply (rule_tac F = "vptr < kernel_base" in corres_gen_asm)
                apply (rule corres_split_strengthen_ftE[OF lookupPTSlot_corres[OF refl refl]])
                  apply simp
-                 apply (rule corres_splitEE[OF _ checkMappingPPtr_corres])
+                 apply (rule corres_splitEE[OF checkMappingPPtr_corres])
                    apply simp
                    apply (rule corres_split[OF storePTE_corres'])
                       apply (rule corres_machine_op)

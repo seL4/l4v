@@ -575,9 +575,8 @@ lemma unmapPageTable_corres:
     apply (rule corres_split_catch[where E="\<top>\<top>" and E'="\<top>\<top>"], simp)
       apply (rule corres_split_eqrE[OF _ findVSpaceForASID_corres[OF refl]])
         apply (rule corres_split_eqrE[OF _ lookupPDSlot_corres])
-          apply (rule corres_splitEE[OF _ liftE_get_pde_corres])
+          apply (rule corres_splitEE[OF liftE_get_pde_corres])
             apply (rule corres_splitEE[where r'=dc])
-               prefer 2
                apply (case_tac "\<exists>addr x xa. pde = X64_A.PageTablePDE addr x xa";
                       fastforce intro!: corres_returnOkTT
                                 simp: lookup_failure_map_def pde_relation_def
@@ -678,7 +677,7 @@ lemma unmapPage_corres:
                apply (rule_tac F = "vptr < pptr_base" in corres_gen_asm)
                apply (rule corres_split_strengthen_ftE[OF lookupPTSlot_corres])
                  apply simp
-                 apply (rule corres_splitEE[OF _ liftE_get_pte_corres])
+                 apply (rule corres_splitEE[OF liftE_get_pte_corres])
                    apply simp
                    apply (rule corres_split_norE[OF _ checkMappingPPtr_corres, where r=dc, simplified])
                    apply simp
@@ -691,7 +690,7 @@ lemma unmapPage_corres:
          apply (rule corres_guard_imp)
            apply (rule corres_split_strengthen_ftE[OF lookupPDSlot_corres])
              apply (simp del: dc_simp)
-             apply (rule corres_splitEE[OF _ liftE_get_pde_corres])
+             apply (rule corres_splitEE[OF liftE_get_pde_corres])
                apply (rule corres_split_norE[OF _ checkMappingPPtr_corres, where r=dc, simplified])
                   apply simp
                   apply (rule storePDE_corres')
@@ -703,7 +702,7 @@ lemma unmapPage_corres:
         apply (rule corres_guard_imp)
           apply (rule corres_split_strengthen_ftE[OF lookupPDPTSlot_corres])
             apply (simp del: dc_simp)
-            apply (rule corres_splitEE[OF _ liftE_get_pdpte_corres])
+            apply (rule corres_splitEE[OF liftE_get_pdpte_corres])
               apply (rule corres_split_norE[OF _ checkMappingPPtr_corres, where r=dc, simplified])
                  apply simp
                  apply (rule storePDPTE_corres')
@@ -1209,9 +1208,8 @@ lemma unmapPageDirectory_corres:
     apply (rule corres_split_catch[where E="\<top>\<top>" and E'="\<top>\<top>"], simp)
       apply (rule corres_split_eqrE[OF _ findVSpaceForASID_corres[OF refl]])
         apply (rule corres_split_eqrE[OF _ lookupPDPTSlot_corres])
-          apply (rule corres_splitEE[OF _ liftE_get_pdpte_corres])
+          apply (rule corres_splitEE[OF liftE_get_pdpte_corres])
             apply (rule corres_splitEE[where r'=dc])
-               prefer 2
                apply (case_tac "\<exists>addr x xa. pdpte = X64_A.PageDirectoryPDPTE addr x xa";
                       fastforce intro!: corres_returnOkTT
                                 simp: lookup_failure_map_def pdpte_relation_def
@@ -1330,9 +1328,8 @@ lemma unmapPDPT_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split_catch[where E="\<top>\<top>" and E'="\<top>\<top>"], simp)
       apply (rule corres_split_eqrE[OF _ findVSpaceForASID_corres[OF refl]])
-        apply (rule corres_splitEE[OF _ liftE_get_pml4e_corres])
+        apply (rule corres_splitEE[OF liftE_get_pml4e_corres])
           apply (rule corres_splitEE[where r'=dc])
-             prefer 2
              apply (case_tac "\<exists>addr a b. rv = X64_A.PDPointerTablePML4E addr a b";
                     fastforce intro!: corres_returnOkTT
                               simp: lookup_failure_map_def pml4e_relation_def
