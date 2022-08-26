@@ -409,7 +409,7 @@ lemma threadSet_corres_noop_splitT:
                            m (threadSet fn t >>= (\<lambda>rv. m'))"
   apply (rule corres_guard_imp)
     apply (subst return_bind[symmetric])
-    apply (rule corres_split_nor [OF _ threadSet_corres_noopT])
+    apply (rule corres_split_nor[OF threadSet_corres_noopT])
          apply (rule z)
         apply (simp add: x)
        apply (rule y)
@@ -3326,7 +3326,7 @@ proof -
      apply (clarsimp simp: msgRegisters_unfold setRegister_def2 zipWithM_x_Nil zipWithM_x_modify
                            take_min_len zip_take_triv2 min.commute)
      apply (rule corres_guard_imp)
-       apply (rule corres_split_nor [OF _ asUser_corres'], rule corres_trivial, simp)
+       apply (rule corres_split_nor[OF asUser_corres'], rule corres_trivial, simp)
          apply (rule corres_modify')
           apply (fastforce simp: fold_fun_upd[symmetric] msgRegisters_unfold
                            cong: if_cong simp del: the_index.simps)
@@ -3338,7 +3338,7 @@ proof -
                           msgMaxLength_def msgLengthBits_def)
     apply (simp add: msg_max_length_def)
     apply (rule corres_guard_imp)
-      apply (rule corres_split_nor [OF _ asUser_corres'])
+      apply (rule corres_split_nor[OF asUser_corres'])
          apply (rule corres_split_nor, rule corres_trivial, clarsimp simp: min.commute)
           apply (rule_tac S="{((x, y), (x', y')). y = y' \<and> x' = (a + (of_nat x * 4)) \<and> x < unat max_ipc_words}"
                         in zipWithM_x_corres)
@@ -3386,7 +3386,7 @@ proof -
              (take (unat n) msgRegisters))"
     apply (rule corres_guard_imp)
     apply (rule_tac S=Id in corres_mapM, simp+)
-        apply (rule corres_split_eqr [OF asUser_setRegister_corres asUser_getRegister_corres])
+        apply (rule corres_split_eqr[OF asUser_getRegister_corres asUser_setRegister_corres])
         apply (wp | clarsimp simp: msg_registers_def msgRegisters_def)+
         done
 
@@ -3401,7 +3401,7 @@ proof -
     apply (cases sb)
      apply (simp add: R)
      apply (rule corres_guard_imp)
-       apply (rule corres_split_nor [OF _ as_user_bit])
+       apply (rule corres_split_nor[OF as_user_bit])
          apply (rule corres_trivial, simp)
         apply wp+
       apply simp
@@ -3409,7 +3409,7 @@ proof -
     apply (cases rb)
      apply (simp add: R)
      apply (rule corres_guard_imp)
-       apply (rule corres_split_nor [OF _ as_user_bit])
+       apply (rule corres_split_nor[OF as_user_bit])
          apply (rule corres_trivial, simp)
         apply wp+
       apply simp
@@ -3417,7 +3417,7 @@ proof -
     apply (simp add: R del: upt.simps)
     apply (rule corres_guard_imp)
       apply (rename_tac sb_ptr rb_ptr)
-      apply (rule corres_split_nor [OF _ as_user_bit])
+      apply (rule corres_split_nor[OF as_user_bit])
         apply (rule corres_split_eqr)
            apply (rule corres_trivial, simp)
           apply (rule_tac S="{(x, y). y = of_nat x \<and> x < unat max_ipc_words}" in corres_mapM, simp+)
@@ -3521,7 +3521,7 @@ lemma lookupIPCBuffer_corres':
                (lookup_ipc_buffer w t) (lookupIPCBuffer w t)"
   apply (simp add: lookup_ipc_buffer_def ARM_H.lookupIPCBuffer_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr [OF _ threadGet_corres])
+    apply (rule corres_split_eqr[OF threadGet_corres])
        apply (simp add: getThreadBufferSlot_def locateSlot_conv)
        apply (rule corres_split[OF getSlotCap_corres])
           apply (rule_tac F="valid_ipc_buffer_cap rv buffer_ptr"

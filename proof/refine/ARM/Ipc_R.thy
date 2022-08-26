@@ -20,7 +20,7 @@ lemma getMessageInfo_corres: "corres ((=) \<circ> message_info_map)
     apply (unfold get_message_info_def getMessageInfo_def fun_app_def)
     apply (simp add: ARM_H.msgInfoRegister_def
              ARM.msgInfoRegister_def ARM_A.msg_info_register_def)
-    apply (rule corres_split_eqr [OF _ asUser_getRegister_corres])
+    apply (rule corres_split_eqr[OF asUser_getRegister_corres])
        apply (rule corres_trivial, simp add: message_info_from_data_eqv)
       apply (wp | simp)+
   done
@@ -448,7 +448,6 @@ next
         apply (rule corres_split_norE)
            apply (simp add: liftE_bindE)
            apply (rule corres_split_nor)
-              prefer 2
               apply (rule cteInsert_corres, simp_all add: hd_map)[1]
              apply (simp add: tl_map)
              apply (rule corres_rel_imp, rule Cons.hyps, simp_all)[1]
@@ -1380,7 +1379,7 @@ lemma doNormalTransfer_corres:
   apply (simp add: do_normal_transfer_def doNormalTransfer_def)
   apply (rule corres_guard_imp)
 
-    apply (rule corres_split_mapr [OF _ getMessageInfo_corres])
+    apply (rule corres_split_mapr[OF getMessageInfo_corres])
       apply (rule_tac F="valid_message_info mi" in corres_gen_asm)
       apply (rule_tac r'="list_all2 (\<lambda>x y. cap_relation (fst x) (fst y) \<and> snd y = cte_map (snd x))"
                   in corres_split)
@@ -1391,12 +1390,12 @@ lemma doNormalTransfer_corres:
            apply wp+
          apply (rule corres_trivial, simp)
         apply simp
-        apply (rule corres_split_eqr [OF _ copyMRs_corres])
+        apply (rule corres_split_eqr[OF copyMRs_corres])
           apply (rule corres_split[OF transferCaps_corres])
               apply (rename_tac mi' mi'')
               apply (rule_tac F="mi_label mi' = mi_label mi"
                         in corres_gen_asm)
-              apply (rule corres_split_nor [OF _ setMessageInfo_corres])
+              apply (rule corres_split_nor[OF setMessageInfo_corres])
                  apply (simp add: badge_register_def badgeRegister_def)
                  apply (fold dc_def)
                  apply (rule asUser_setRegister_corres)
@@ -1419,7 +1418,7 @@ lemma corres_liftE_lift:
   by simp
 
 lemmas corres_ipc_thread_helper =
-  corres_split_eqrE [OF _  corres_liftE_lift [OF getCurThread_corres]]
+  corres_split_eqrE[OF corres_liftE_lift [OF getCurThread_corres]]
 
 lemmas corres_ipc_info_helper =
   corres_split_maprE [where f = message_info_map, OF _
@@ -1492,7 +1491,7 @@ lemma makeArchFaultMessage_corres:
   (makeArchFaultMessage (arch_fault_map f) t)"
   apply (cases f, clarsimp simp: makeArchFaultMessage_def split: arch_fault.split)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr[OF _ asUser_getRestartPC_corres])
+    apply (rule corres_split_eqr[OF asUser_getRestartPC_corres])
       apply (rule corres_trivial, simp add: arch_fault_map_def)
      apply (wp+, auto)
   done
@@ -1503,17 +1502,17 @@ lemma makeFaultMessage_corres:
      (makeFaultMessage (fault_map ft) t)"
   apply (cases ft, simp_all add: makeFaultMessage_def split del: if_split)
      apply (rule corres_guard_imp)
-       apply (rule corres_split_eqr [OF _ asUser_getRestartPC_corres])
+       apply (rule corres_split_eqr[OF asUser_getRestartPC_corres])
          apply (rule corres_trivial, simp add: fromEnum_def enum_bool)
         apply (wp | simp)+
     apply (simp add: ARM_H.syscallMessage_def)
     apply (rule corres_guard_imp)
-      apply (rule corres_split_eqr [OF _ asUser_mapM_getRegister_corres])
+      apply (rule corres_split_eqr[OF asUser_mapM_getRegister_corres])
         apply (rule corres_trivial, simp)
        apply (wp | simp)+
    apply (simp add: ARM_H.exceptionMessage_def)
    apply (rule corres_guard_imp)
-     apply (rule corres_split_eqr [OF _ asUser_mapM_getRegister_corres])
+     apply (rule corres_split_eqr[OF asUser_mapM_getRegister_corres])
        apply (rule corres_trivial, simp)
       apply (wp | simp)+
   apply (rule makeArchFaultMessage_corres)
@@ -1565,16 +1564,16 @@ lemma doFaultTransfer_corres:
     apply (clarsimp simp: obj_at_def is_tcb)
    apply wp
    apply (rule corres_guard_imp)
-      apply (rule corres_split_eqr [OF _ makeFaultMessage_corres])
-        apply (rule corres_split_eqr [OF _ setMRs_corres [OF refl]])
-          apply (rule corres_split_nor [OF _ setMessageInfo_corres])
+      apply (rule corres_split_eqr[OF makeFaultMessage_corres])
+        apply (rule corres_split_eqr[OF setMRs_corres [OF refl]])
+          apply (rule corres_split_nor[OF setMessageInfo_corres])
              apply (rule asUser_setRegister_corres)
             apply simp
            apply (wp | simp)+
    apply (rule corres_guard_imp)
-      apply (rule corres_split_eqr [OF _ makeFaultMessage_corres])
-        apply (rule corres_split_eqr [OF _ setMRs_corres [OF refl]])
-          apply (rule corres_split_nor [OF _ setMessageInfo_corres])
+      apply (rule corres_split_eqr[OF makeFaultMessage_corres])
+        apply (rule corres_split_eqr[OF setMRs_corres [OF refl]])
+          apply (rule corres_split_nor[OF setMessageInfo_corres])
              apply (rule asUser_setRegister_corres)
             apply simp
            apply (wp | simp)+
@@ -1658,7 +1657,7 @@ lemma doIPCTransfer_corres:
        apply (subst case_option_If)+
        apply (rule corres_if2)
          apply (simp add: fault_rel_optionation_def)
-        apply (rule corres_split_eqr [OF _ lookupIPCBuffer_corres'])
+        apply (rule corres_split_eqr[OF lookupIPCBuffer_corres'])
           apply (simp add: dc_def[symmetric])
           apply (rule doNormalTransfer_corres)
          apply (wp | simp add: valid_pspace'_def)+
@@ -2111,11 +2110,11 @@ lemma doReplyTransfer_corres:
 
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF cap_delete_one_corres])
-      apply (rule corres_split_mapr [OF _ getMessageInfo_corres])
-        apply (rule corres_split_eqr [OF _ lookupIPCBuffer_corres'])
-          apply (rule corres_split_eqr [OF _ getMRs_corres])
+      apply (rule corres_split_mapr[OF getMessageInfo_corres])
+        apply (rule corres_split_eqr[OF lookupIPCBuffer_corres'])
+          apply (rule corres_split_eqr[OF getMRs_corres])
             apply (simp(no_asm) del: dc_simp)
-            apply (rule corres_split_eqr [OF _ handleFaultReply_corres])
+            apply (rule corres_split_eqr[OF handleFaultReply_corres])
                apply (rule corres_split[OF threadset_corresT])
                      apply (rule_tac Q="valid_sched and cur_tcb and tcb_at receiver"
                                  and Q'="tcb_at' receiver and cur_tcb'
@@ -3038,9 +3037,9 @@ lemma replyFromKernel_corres:
   apply (clarsimp simp: replyFromKernel_def reply_from_kernel_def
                         badge_register_def badgeRegister_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr [OF _ lookupIPCBuffer_corres])
+    apply (rule corres_split_eqr[OF lookupIPCBuffer_corres])
       apply (rule corres_split[OF asUser_setRegister_corres])
-        apply (rule corres_split_eqr [OF _ setMRs_corres])
+        apply (rule corres_split_eqr[OF setMRs_corres])
            apply (rule setMessageInfo_corres)
            apply (wp hoare_case_option_wp hoare_valid_ipc_buffer_ptr_typ_at'
                   | clarsimp)+

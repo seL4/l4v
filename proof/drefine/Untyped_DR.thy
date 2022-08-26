@@ -1192,7 +1192,7 @@ lemma clearMemory_corres_noop:
                    do_machine_op_bind empty_fail_freeMemory)
   apply (rule corres_guard_imp)
     apply (rule corres_add_noop_lhs)
-    apply (rule corres_split_nor[OF _ freeMemory_dcorres])
+    apply (rule corres_split_nor[OF freeMemory_dcorres])
          apply (rule dcorres_machine_op_noop)
          apply (wp | simp)+
   apply (clarsimp simp: field_simps)
@@ -1284,7 +1284,6 @@ lemma reset_untyped_cap_corres:
         apply (rule corres_trivial, rule corres_returnOk, simp)
        apply (rule_tac F="free_index_of capa \<noteq> 0" in corres_gen_asm2)
        apply (rule corres_split_nor)
-          prefer 2
           apply (rule delete_objects_dcorres)
           apply (clarsimp simp: is_cap_simps bits_of_def)
          apply (rule corres_if_rhs)
@@ -1298,7 +1297,6 @@ lemma reset_untyped_cap_corres:
           apply (simp add: mapME_x_Nil mapME_x_Cons liftE_def bind_assoc)
           apply (rule corres_add_noop_lhs)
           apply (rule corres_split_nor)
-             prefer 2
              apply (rule dcorres_unless_r)
               apply (rule clearMemory_corres_noop[OF refl])
                 apply (clarsimp simp: is_cap_simps cap_aligned_def bits_of_def)
@@ -1327,7 +1325,7 @@ lemma reset_untyped_cap_corres:
                   in mapME_x_corres_same_xs[OF _ _ _ refl])
             apply (rule corres_guard_imp)
               apply (rule corres_add_noop_lhs)
-              apply (rule corres_split_nor[OF _ clearMemory_corres_noop[OF refl]])
+              apply (rule corres_split_nor[OF clearMemory_corres_noop[OF refl]])
                    apply (rule corres_split[OF set_cap_corres])
                        apply (subst alternative_com)
                        apply (rule throw_or_return_preemption_corres[where P=\<top> and P'=\<top>])
@@ -1468,7 +1466,6 @@ lemma invoke_untyped_corres:
                           ui ptrs invoke_untyped_def unlessE_whenE)
     apply (rule corres_guard_imp)
       apply (rule corres_split_norE)
-         prefer 2
          apply (rule corres_whenE, simp)
           apply (rule reset_untyped_cap_corres[where idx=idx])
          apply simp
@@ -1480,7 +1477,7 @@ lemma invoke_untyped_corres:
            apply (rule corres_split[OF update_available_range_dcorres])
              apply simp
              apply (rule corres_split[OF retype_region_dcorres[where sz = sz]])
-               apply (rule corres_split_noop_rhs[OF _ init_arch_objects_corres_noop[where sz =sz]])
+               apply (rule corres_split_noop_rhs[OF init_arch_objects_corres_noop[where sz =sz]])
                    apply (simp add: liftM_def[symmetric] mapM_x_def[symmetric]
                                     zip_map1 zip_map2 o_def split_beta dc_def[symmetric])
                    apply (rule_tac F = " (untyped_is_device (transform_cap cap)) = dev" in corres_gen_asm2)

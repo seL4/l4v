@@ -1030,7 +1030,7 @@ lemma dcorres_ep_cancel_badge_sends:
           apply wp+
         apply (clarsimp)
         apply (rule corres_guard_imp)
-          apply (rule corres_split_noop_rhs[OF _ corres_dummy_set_sync_ep])
+          apply (rule corres_split_noop_rhs[OF corres_dummy_set_sync_ep])
            apply (rule reschedule_required_dcorres[THEN corres_trivial])
           apply (wp set_ep_exec_wp|clarsimp)+
       apply (rule dcorres_to_wp[where Q=\<top>,simplified])

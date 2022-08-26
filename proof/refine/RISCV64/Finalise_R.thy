@@ -1567,7 +1567,7 @@ lemma emptySlot_corres:
   unfolding emptySlot_def empty_slot_def
   apply (simp add: case_Null_If)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_noop_rhs[OF _ clearUntypedFreeIndex_noop_corres])
+    apply (rule corres_split_noop_rhs[OF clearUntypedFreeIndex_noop_corres])
      apply (rule_tac R="\<lambda>cap. einvs and cte_wp_at ((=) cap) slot" and
                      R'="\<lambda>cte. valid_pspace' and cte_wp_at' ((=) cte) (cte_map slot)" in
                      corres_split[OF get_cap_corres])

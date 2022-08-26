@@ -248,7 +248,7 @@ lemma findPDForASIDAssert_corres:
        apply (erule(3) pspace_relation_pd)
        apply (simp add: pde_at_def pd_bits_def pdBits_def
                         is_aligned_neg_mask_eq)
-      apply (rule corres_split_catch [OF _ find_pd_for_asid_corres'[where pd=pd]])
+      apply (rule corres_split_catch[OF find_pd_for_asid_corres'[where pd=pd]])
         apply (rule_tac P="\<bottom>" and P'="\<top>" in corres_inst)
         apply (simp add: corres_fail)
        apply (wp find_pd_for_asid_valids[where pd=pd])+
@@ -400,8 +400,8 @@ lemma findFreeHWASID_corres:
           find_free_hw_asid findFreeHWASID"
   apply (simp add: find_free_hw_asid_def findFreeHWASID_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr [OF _ corres_trivial])
-       apply (rule corres_split_eqr [OF _ corres_trivial])
+    apply (rule corres_split_eqr[OF corres_trivial])
+       apply (rule corres_split_eqr[OF corres_trivial])
           apply (subgoal_tac "take (length [minBound .e. maxBound :: hardware_asid])
                                 ([next_asid .e. maxBound] @ [minBound .e. next_asid])
                                 = [next_asid .e. maxBound] @ init [minBound .e. next_asid]")
@@ -466,9 +466,9 @@ lemma getHWASID_corres:
           (get_hw_asid a) (getHWASID a)"
   apply (simp add: get_hw_asid_def getHWASID_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr [OF _ loadHWASID_corres[where pd=pd]])
+    apply (rule corres_split_eqr[OF loadHWASID_corres[where pd=pd]])
       apply (case_tac maybe_hw_asid, simp_all)[1]
-      apply (rule corres_split_eqr [OF _ findFreeHWASID_corres])
+      apply (rule corres_split_eqr[OF findFreeHWASID_corres])
          apply (rule corres_split[OF storeHWASID_corres[where pd=pd]])
            apply (rule corres_trivial, simp)
           apply (wp load_hw_asid_wp | simp)+
@@ -488,7 +488,7 @@ lemma armv_contextSwitch_corres:
           (arm_context_switch pd a) (armv_contextSwitch pd a)"
   apply (simp add: arm_context_switch_def armv_contextSwitch_def armv_contextSwitch_HWASID_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr [OF _ getHWASID_corres[where pd=pd]])
+    apply (rule corres_split_eqr[OF getHWASID_corres[where pd=pd]])
       apply (rule corres_machine_op)
       apply (rule corres_rel_imp)
        apply (rule corres_underlying_trivial)
@@ -881,11 +881,11 @@ lemma saveVirtTimer_corres[corres]:
              (save_virt_timer vcpu_ptr) (saveVirtTimer vcpu_ptr)"
   unfolding save_virt_timer_def saveVirtTimer_def
   apply (rule corres_guard_imp)
-    apply (rule corres_split_dc[OF _ vcpuSaveReg_corres], simp)
-      apply (rule corres_split_dc[OF _ corres_machine_op])
-         apply (rule corres_split_eqr[OF _ corres_machine_op])+
-               apply (rule corres_split_dc[OF _ vcpuWriteReg_corres], simp)+
-                       apply (rule corres_split_eqr[OF _ corres_machine_op])
+    apply (rule corres_split_dc[OF vcpuSaveReg_corres], simp)
+      apply (rule corres_split_dc[OF corres_machine_op])
+         apply (rule corres_split_eqr[OF corres_machine_op])+
+               apply (rule corres_split_dc[OF vcpuWriteReg_corres], simp)+
+                       apply (rule corres_split_eqr[OF corres_machine_op])
                           apply (fold dc_def)
                           apply (rule vcpuUpdate_corres)
                           apply (simp add: vcpu_relation_def)
@@ -907,17 +907,17 @@ lemma restoreVirtTimer_corres[corres]:
              (restore_virt_timer vcpu_ptr) (restoreVirtTimer vcpu_ptr)"
   unfolding restore_virt_timer_def restoreVirtTimer_def IRQ_def
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr[OF _ vcpuReadReg_corres], simp)
-      apply (rule corres_split_eqr[OF _ vcpuReadReg_corres])
-        apply (rule corres_split_eqr[OF _ corres_machine_op], simp)+
+    apply (rule corres_split_eqr[OF vcpuReadReg_corres], simp)
+      apply (rule corres_split_eqr[OF vcpuReadReg_corres])
+        apply (rule corres_split_eqr[OF corres_machine_op], simp)+
               apply (rule corres_split[OF getObject_vcpu_corres])
-                apply (rule corres_split_eqr[OF _ vcpuReadReg_corres])
-                  apply (rule corres_split_eqr[OF _ vcpuReadReg_corres])
+                apply (rule corres_split_eqr[OF vcpuReadReg_corres])
+                  apply (rule corres_split_eqr[OF vcpuReadReg_corres])
                     apply (clarsimp simp: vcpu_relation_def)
-                    apply (rule corres_split_dc[OF _ vcpuWriteReg_corres])+
-                        apply (rule corres_split_dc[OF _ corres_machine_op], simp)
-                           apply (rule corres_split_eqr[OF _ isIRQActive_corres])
-                             apply (rule corres_split_dc[OF _ corres_when], simp)
+                    apply (rule corres_split_dc[OF vcpuWriteReg_corres])+
+                        apply (rule corres_split_dc[OF corres_machine_op], simp)
+                           apply (rule corres_split_eqr[OF isIRQActive_corres])
+                             apply (rule corres_split_dc[OF corres_when], simp)
                                  apply (fold dc_def)
                                  apply (rule vcpuRestoreReg_corres, simp)
                                apply (simp add: irq_vppi_event_index_def irqVPPIEventIndex_def IRQ_def)
@@ -933,11 +933,11 @@ lemma vcpuSave_corres:
   apply (clarsimp simp add: vcpu_save_def vcpuSave_def armvVCPUSave_def)
   apply (cases cvcpu, clarsimp, rename_tac v active)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_dc[OF _ corres_machine_op])
+    apply (rule corres_split_dc[OF corres_machine_op])
        apply (rule corres_split_deprecated[where r'=dc])
-          apply (rule corres_split_eqr[OF _ corres_machine_op], simp)
+          apply (rule corres_split_eqr[OF corres_machine_op], simp)
              apply (rule corres_split[OF vgicUpdate_corres])
-                apply (rule corres_split_eqr[OF _ corres_machine_op], simp)
+                apply (rule corres_split_eqr[OF corres_machine_op], simp)
                    apply (rule corres_split[OF vgicUpdate_corres])
                       apply (rule corres_split_eqr, simp)
                          apply (simp add: mapM_discarded)
@@ -945,7 +945,7 @@ lemma vcpuSave_corres:
                                apply (rule corres_split[OF vcpuSaveRegRange_corres])
                                  apply (rule corres_machine_op)
                                  apply (wpsimp wp: corres_Id simp: vcpu_relation_def vgic_map_def)+
-                              apply (rule corres_split_eqr[OF _ corres_machine_op]
+                              apply (rule corres_split_eqr[OF corres_machine_op]
                                      , simp, fold dc_def)
                                  apply (rule vgicUpdateLR_corres)
                                 apply (wpsimp wp: corres_Id simp: vcpu_relation_def vgic_map_def)+
@@ -954,7 +954,7 @@ lemma vcpuSave_corres:
                        apply (wpsimp wp: corres_Id no_fail_isb simp: vcpu_relation_def vgic_map_def)+
          apply (rule corres_when, simp)
          apply (rule corres_split[OF vcpuSaveReg_corres])
-           apply (rule corres_split_eqr[OF _ corres_machine_op], simp, fold dc_def)
+           apply (rule corres_split_eqr[OF corres_machine_op], simp, fold dc_def)
               apply (rule corres_split[OF vgicUpdate_corres])
                  apply (rule saveVirtTimer_corres)
                 apply (wpsimp wp: corres_Id no_fail_isb  hoare_vcg_imp_lift' no_fail_dsb
@@ -973,7 +973,7 @@ lemma vcpuDisable_corres:
    subgoal
      apply (clarsimp simp: doMachineOp_bind do_machine_op_bind)
      apply (rule corres_guard_imp)
-       apply (rule corres_split_dc[OF _ corres_machine_op]
+       apply (rule corres_split_dc[OF corres_machine_op]
          | rule corres_machine_op corres_Id
          | wpsimp)+
      done
@@ -981,12 +981,12 @@ lemma vcpuDisable_corres:
    apply (rename_tac vcpu)
    apply (clarsimp simp: doMachineOp_bind do_machine_op_bind bind_assoc IRQ_def)
    apply (rule corres_guard_imp)
-     apply (rule corres_split_dc[OF _ corres_machine_op])
-       apply (rule corres_split_eqr[OF _ corres_machine_op])
-          apply (rule corres_split_dc[OF _ vgicUpdate_corres])
-             apply (rule corres_split_dc[OF _ vcpuSaveReg_corres])
-               apply (rule corres_split_dc[OF _ corres_machine_op]
-                           corres_split_dc[OF _ saveVirtTimer_corres]
+     apply (rule corres_split_dc[OF corres_machine_op])
+       apply (rule corres_split_eqr[OF corres_machine_op])
+          apply (rule corres_split_dc[OF vgicUpdate_corres])
+             apply (rule corres_split_dc[OF vcpuSaveReg_corres])
+               apply (rule corres_split_dc[OF corres_machine_op]
+                           corres_split_dc[OF saveVirtTimer_corres]
                       | rule corres_machine_op corres_Id
                       | wpsimp simp: vgic_map_def)+
    done
@@ -998,10 +998,10 @@ lemma vcpuEnable_corres:
   supply no_fail_isb[wp] no_fail_dsb[wp] empty_fail_isb[wp,simp] empty_fail_dsb[wp,simp]
   apply (simp add: vcpu_enable_def vcpuEnable_def doMachineOp_bind do_machine_op_bind bind_assoc)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_dc[OF _ vcpuRestoreReg_corres])+
+    apply (rule corres_split_dc[OF vcpuRestoreReg_corres])+
       apply (rule corres_split[OF getObject_vcpu_corres], rename_tac vcpu')
         apply (case_tac vcpu')
-        apply (rule corres_split_dc[OF _ corres_machine_op]
+        apply (rule corres_split_dc[OF corres_machine_op]
                | rule corres_machine_op corres_Id restoreVirtTimer_corres
                | wpsimp simp: vcpu_relation_def vgic_map_def)+
   done
@@ -1015,7 +1015,7 @@ lemma vcpuRestore_corres:
   supply no_fail_isb[wp] no_fail_dsb[wp] empty_fail_isb[wp,simp] empty_fail_dsb[wp,simp]
   apply (simp add: vcpu_restore_def vcpuRestore_def gicVCPUMaxNumLR_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_dc[OF _ corres_machine_op]
+    apply (rule corres_split_dc[OF corres_machine_op]
            | rule corres_machine_op corres_Id)+
           apply (rule corres_split[OF getObject_vcpu_corres], rename_tac vcpu')
             apply (rule corres_split[OF corres_gets_gicvcpu_numlistregs])
@@ -1023,10 +1023,10 @@ lemma vcpuRestore_corres:
                      , clarsimp simp: comp_def vcpu_relation_def vgic_map_def mapM_x_mapM
                                       uncurry_def split_def mapM_map_simp)
               apply (simp add: doMachineOp_bind do_machine_op_bind bind_assoc)
-              apply (rule corres_split_dc[OF _ corres_machine_op])
-                 apply (rule corres_split_dc[OF _ corres_machine_op])
+              apply (rule corres_split_dc[OF corres_machine_op])
+                 apply (rule corres_split_dc[OF corres_machine_op])
                     apply (rule corres_split_deprecated)
-                       apply (rule corres_split_dc[OF _ vcpuRestoreRegRange_corres])
+                       apply (rule corres_split_dc[OF vcpuRestoreRegRange_corres])
                          apply (wpsimp wp: vcpuEnable_corres corres_machine_op corres_Id no_fail_mapM)+
   done
 
@@ -1227,7 +1227,7 @@ proof -
                 apply (clarsimp simp: pd_at_uniq_def restrict_map_def)
                 apply (erule notE, rule_tac a=x in ranI)
                 apply simp
-               apply (rule corres_split_eqrE [OF _ find_pd_for_asid_corres])
+               apply (rule corres_split_eqrE[OF find_pd_for_asid_corres])
                   apply (rule whenE_throwError_corres)
                     apply (simp add: lookup_failure_map_def)
                    apply simp
@@ -1908,7 +1908,7 @@ lemma pageTableMapped_corres:
   apply (rule corres_guard_imp)
    apply (rule corres_split_catch)
       apply (rule corres_trivial, simp)
-     apply (rule corres_split_eqrE [OF _ find_pd_for_asid_corres])
+     apply (rule corres_split_eqrE[OF find_pd_for_asid_corres])
        apply (simp add: liftE_bindE)
        apply (rule corres_split[OF getObject_PDE_corres'])
          apply (rule corres_trivial)
@@ -1971,7 +1971,7 @@ lemma unmapPageTable_corres:
           (unmapPageTable asid vptr pt)"
   apply (clarsimp simp: unmapPageTable_def unmap_page_table_def ignoreFailure_def const_def cong: option.case_cong)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr [OF _ pageTableMapped_corres])
+    apply (rule corres_split_eqr[OF pageTableMapped_corres])
       apply (simp add: case_option_If2 split del: if_split)
       apply (rule corres_if2[OF refl])
        apply (rule corres_split[OF storePDE_corres'])

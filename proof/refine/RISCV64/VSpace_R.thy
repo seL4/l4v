@@ -135,7 +135,7 @@ proof -
          apply (rule corres_guard_imp)
            apply (rule corres_split_catch [where f=lfr and E'="\<lambda>_. \<top>"])
               apply (rule global, assumption)
-             apply (rule corres_split_eqrE [OF _ findVSpaceForASID_corres[OF refl]])
+             apply (rule corres_split_eqrE[OF findVSpaceForASID_corres[OF refl]])
                apply (rule whenE_throwError_corres; simp add: lookup_failure_map_def)
                apply (rule corres_machine_op)
                apply corressimp
@@ -348,8 +348,8 @@ lemma unmapPageTable_corres:
   apply (clarsimp simp: assms unmap_page_table_def unmapPageTable_def ignoreFailure_def const_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_catch[where E="\<top>\<top>" and E'="\<top>\<top>"], simp)
-      apply (rule corres_split_eqrE[OF _ findVSpaceForASID_corres[OF refl]])
-        apply (rule corres_split_eqrE[OF _ lookupPTFromLevel_corres[OF _ refl]])
+      apply (rule corres_split_eqrE[OF findVSpaceForASID_corres[OF refl]])
+        apply (rule corres_split_eqrE[OF lookupPTFromLevel_corres[OF _ refl]])
            apply (simp add: liftE_bindE)
            apply (rule corres_split[OF storePTE_corres])
               apply simp

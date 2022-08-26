@@ -2918,8 +2918,8 @@ proof -
     supply if_cong[cong]
     apply (simp add: swap_cap_def cap_swap_def)
     apply (rule corres_guard_imp)
-      apply (rule corres_split_nor [OF _ set_cap_corres[OF refl refl]])
-        apply (rule corres_split_nor [OF _ set_cap_corres[OF refl refl]])
+      apply (rule corres_split_nor[OF set_cap_corres[OF refl refl]])
+        apply (rule corres_split_nor[OF set_cap_corres[OF refl refl]])
           apply (simp add: swap_parents_def[unfolded Fun.swap_def] set_original_def
                            set_cdt_modify gets_fold_into_modify bind_assoc
                            cap_swap_ext_def update_cdt_list_def set_cdt_list_modify)

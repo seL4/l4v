@@ -1024,7 +1024,7 @@ lemma isIOPortRangeFree_corres:
      (isIOPortRangeFree f l)"
   apply (clarsimp simp: is_ioport_range_free_def isIOPortRangeFree_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr[OF _ corres_gets_allocated_io_ports])
+    apply (rule corres_split_eqr[OF corres_gets_allocated_io_ports])
    apply (rule corres_return_eq_same)
       apply (auto simp: free_range_corres)
   done
@@ -1063,7 +1063,7 @@ lemma decodeX64PortInvocation_corres:
      apply (rule whenE_throwError_corres)
        apply clarsimp
       apply clarsimp
-     apply (rule corres_split_eqr[OF _ isIOPortRangeFree_corres])
+     apply (rule corres_split_eqr[OF isIOPortRangeFree_corres])
         apply (clarsimp simp: unlessE_whenE)
         apply (rule whenE_throwError_corres)
           apply clarsimp
@@ -1358,8 +1358,8 @@ lemma performX64PortInvocation_corres:
                         archinv_relation_def ioport_control_inv_relation_def)
   apply (case_tac x; clarsimp simp: bind_assoc simp del: split_paired_All)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_nor[OF _ set_ioport_mask_corres])
-      apply (rule corres_split_nor[OF _ cteInsert_simple_corres])
+    apply (rule corres_split_nor[OF set_ioport_mask_corres])
+      apply (rule corres_split_nor[OF cteInsert_simple_corres])
            apply (rule corres_return_eq_same, simp)
           apply (clarsimp simp: cap_relation_def)
          apply simp

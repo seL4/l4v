@@ -35,7 +35,7 @@ lemma dcorres_call_kernel:
   apply (simp_all add: Syscall_D.call_kernel_def Syscall_A.call_kernel_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split)
-       apply (rule corres_split_handle [OF _ handle_event_corres])
+       apply (rule corres_split_handle[OF handle_event_corres])
          prefer 4
          apply (subst bind_return[symmetric])
          apply (rule corres_split_deprecated)

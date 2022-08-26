@@ -298,7 +298,6 @@ next
          apply (clarsimp simp: fromAPIType_def ARM_HYP_H.fromAPIType_def)
         apply (rule_tac r' = "\<lambda>cap cap'. cap_relation cap cap'" in corres_splitEE[OF corres_if])
              apply (rule_tac corres_split_norE)
-                prefer 2
                 apply (rule corres_if)
                   apply simp
                  apply (rule corres_returnOk,clarsimp)
@@ -343,7 +342,7 @@ next
                 apply (simp add:liftE_bindE[symmetric] free_index_of_def)
                 apply (rule corres_split_norE)
                    apply (subst liftE_bindE)+
-                   apply (rule corres_split_eqr[OF _ corres_check_no_children])
+                   apply (rule corres_split_eqr[OF corres_check_no_children])
                      apply (simp only: free_index_of_def cap.simps if_res_def[symmetric])
                      apply (rule_tac F="if_res reset \<le> 2 ^ n" in corres_gen_asm)
                      apply (rule whenE_throwError_corres)
@@ -1540,7 +1539,7 @@ shows
                 apply (simp add: dc_def[symmetric])
                 apply (rule updateMDB_symb_exec_r)
                apply (simp add: dc_def[symmetric])
-               apply (rule corres_split_noop_rhs[OF _ updateMDB_symb_exec_r])
+               apply (rule corres_split_noop_rhs[OF updateMDB_symb_exec_r])
                 apply (rule updateNewFreeIndex_noop_psp_corres)
                apply (wp getCTE_wp set_cdt_valid_objs set_cdt_cte_at
                          hoare_weak_lift_imp | simp add: o_def)+
@@ -4270,7 +4269,7 @@ lemma resetUntypedCap_corres:
                  in mapME_x_corres_same_xs)
               apply (rule corres_guard_imp)
                 apply (rule corres_split_nor)
-                   apply (rule corres_split_nor[OF _ updateFreeIndex_corres])
+                   apply (rule corres_split_nor[OF updateFreeIndex_corres])
                        apply (rule preemptionPoint_corres)
                       apply simp
                      apply (simp add: getFreeRef_def getFreeIndex_def free_index_of_def)
@@ -4883,7 +4882,6 @@ lemma inv_untyped_corres':
       apply (insert cover)
       apply (rule corres_guard_imp)
         apply (rule corres_split_norE)
-           prefer 2
            apply (rule corres_whenE, simp)
             apply (rule resetUntypedCap_corres[where ui=ui and ui'=ui'])
             apply (simp add: ui ui')
@@ -4893,7 +4891,7 @@ lemma inv_untyped_corres':
           apply (rule_tac F = "cap = cap.UntypedCap dev (ptr && ~~ mask sz)
                 sz (if reset then 0 else idx)" in corres_gen_asm)
           apply (rule corres_add_noop_lhs)
-          apply (rule corres_split_nor[OF _ cNodeNoOverlap return_wp stateAssert_wp])
+          apply (rule corres_split_nor[OF cNodeNoOverlap _ return_wp stateAssert_wp])
           apply (rule corres_split[OF updateFreeIndex_corres,rotated])
               apply (simp add:isCap_simps)+
              apply (clarsimp simp:getFreeIndex_def bits_of_def shiftL_nat shiftl_t2n
