@@ -356,7 +356,7 @@ lemma threadset_corresT:
                     (thread_set f t) (threadSet f' t)"
   apply (simp add: thread_set_def threadSet_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ getObject_TCB_corres])
+    apply (rule corres_split[OF getObject_TCB_corres])
       apply (rule setObject_update_TCB_corres')
           apply (erule x)
          apply (rule y)
@@ -1371,7 +1371,7 @@ lemma asUser_corres':
   apply (simp add: as_user_def asUser_def)
   apply (rule corres_guard_imp)
     apply (rule_tac r'="\<lambda>tcb con. (arch_tcb_context_get o tcb_arch) tcb = con" in corres_split_deprecated)
-       apply (rule corres_split_deprecated [OF _ L4])
+       apply (rule corres_split[OF L4])
           apply clarsimp
           apply (rule corres_split_nor)
              apply (rule corres_trivial, simp)
@@ -1872,7 +1872,7 @@ lemma rescheduleRequired_corres:
      (reschedule_required) rescheduleRequired"
   apply (simp add: rescheduleRequired_def reschedule_required_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ getSchedulerAction_corres])
+    apply (rule corres_split[OF getSchedulerAction_corres])
       apply (rule_tac P="case action of switch_thread t \<Rightarrow> P t | _ \<Rightarrow> \<top>"
               and P'="case actiona of SwitchToThread t \<Rightarrow> P' t | _ \<Rightarrow> \<top>" for P P' in corres_split_deprecated[where r'=dc])
          apply (rule setSchedulerAction_corres)
@@ -2068,9 +2068,9 @@ lemma setThreadState_corres:
     apply (rule corres_split_deprecated[where r'=dc])
        apply simp
        apply (subst thread_get_test[where test="runnable"])
-       apply (rule corres_split_deprecated[OF _ thread_get_isRunnable_corres])
-         apply (rule corres_split_deprecated[OF _ getCurThread_corres])
-           apply (rule corres_split_deprecated[OF _ getSchedulerAction_corres])
+       apply (rule corres_split[OF thread_get_isRunnable_corres])
+         apply (rule corres_split[OF getCurThread_corres])
+           apply (rule corres_split[OF getSchedulerAction_corres])
              apply (simp only: when_def)
              apply (rule corres_if[where Q=\<top> and Q'=\<top>])
                apply (rule iffI)
@@ -3279,7 +3279,7 @@ lemma getMRs_corres:
     apply simp
    apply simp
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ T])
+    apply (rule corres_split[OF T])
       apply (simp only: option.simps return_bind fun_app_def
                         load_word_offs_def doMachineOp_mapM ef_loadWord)
       apply (rule corres_split_eqr)
@@ -3588,7 +3588,7 @@ lemma lookupIPCBuffer_corres':
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr [OF _ threadGet_corres])
        apply (simp add: getThreadBufferSlot_def locateSlot_conv)
-       apply (rule corres_split_deprecated [OF _ getSlotCap_corres])
+       apply (rule corres_split[OF getSlotCap_corres])
           apply (rule_tac F="valid_ipc_buffer_cap rv buffer_ptr"
                       in corres_gen_asm)
           apply (rule_tac P="valid_cap rv" and Q="no_0_obj'"
@@ -4505,7 +4505,7 @@ lemma get_cap_corres_all_rights_P:
   apply (simp add: getSlotCap_def mask_cap_def)
   apply (subst bind_return [symmetric])
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ get_cap_corres_P [where P=P]])
+    apply (rule corres_split[OF get_cap_corres_P [where P=P]])
       defer
       apply (wp getCTE_wp')+
     apply simp
@@ -4630,7 +4630,7 @@ lemma ethread_set_corresT:
                     (ethread_set f t) (threadSet f' t)"
   apply (simp add: ethread_set_def threadSet_def bind_assoc)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF set_eobject_corres corres_get_etcb])
+    apply (rule corres_split[OF corres_get_etcb set_eobject_corres])
          apply (rule x)
         apply (erule e)
        apply (simp add: z)+

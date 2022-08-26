@@ -266,7 +266,7 @@ lemma hinv_corres_assist:
        prefer 2
        \<comment> \<open>switched over to argument of corres_cap_fault\<close>
        apply (rule lookupCapAndSlot_corres, simp)
-      apply (rule corres_split_deprecated [OF _ lookupIPCBuffer_corres])
+      apply (rule corres_split[OF lookupIPCBuffer_corres])
         apply (rule corres_splitEE [OF _ lookupExtraCaps_corres])
             apply (rule corres_returnOkTT)
             apply simp+
@@ -349,10 +349,10 @@ lemma setDomain_corres:
   apply (rule corres_gen_asm2)
   apply (simp add: set_domain_def setDomain_def thread_set_domain_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ getCurThread_corres])
-      apply (rule corres_split_deprecated[OF _ tcbSchedDequeue_corres])
-        apply (rule corres_split_deprecated[OF _ ethread_set_corres])
-                 apply (rule corres_split_deprecated[OF _ isRunnable_corres])
+    apply (rule corres_split[OF getCurThread_corres])
+      apply (rule corres_split[OF tcbSchedDequeue_corres])
+        apply (rule corres_split[OF ethread_set_corres])
+                 apply (rule corres_split[OF isRunnable_corres])
                    apply simp
                    apply (rule corres_split_deprecated[OF corres_when[OF refl]])
                       apply (rule rescheduleRequired_corres)
@@ -406,9 +406,9 @@ lemma performInvocation_corres:
               apply wp+
             apply simp+
           apply (rule corres_guard_imp)
-           apply (rule corres_split_deprecated [OF _ getCurThread_corres])
+           apply (rule corres_split[OF getCurThread_corres])
              apply simp
-             apply (rule corres_split_deprecated [OF _ sendIPC_corres])
+             apply (rule corres_split[OF sendIPC_corres])
                 apply (rule corres_trivial)
                 apply simp
                apply simp
@@ -419,7 +419,7 @@ lemma performInvocation_corres:
                                sch_act_simple_def)
         apply (rule corres_guard_imp)
           apply (simp add: liftE_bindE)
-          apply (rule corres_split_deprecated [OF _ sendSignal_corres])
+          apply (rule corres_split[OF sendSignal_corres])
             apply (rule corres_trivial)
             apply (simp add: returnOk_def)
            apply wp+
@@ -442,7 +442,7 @@ lemma performInvocation_corres:
       \<comment> \<open>domain cap\<close>
       apply (clarsimp simp: invoke_domain_def)
       apply (rule corres_guard_imp)
-      apply (rule corres_split_deprecated [OF _ setDomain_corres])
+      apply (rule corres_split[OF setDomain_corres])
         apply (rule corres_trivial, simp)
        apply (wp)+
        apply (clarsimp+)[2]
@@ -1211,7 +1211,7 @@ lemma handleInvocation_corres:
   apply (simp add: handle_invocation_def handleInvocation_def liftE_bindE)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr [OF _ getCurThread_corres])
-      apply (rule corres_split_deprecated [OF _ getMessageInfo_corres])
+      apply (rule corres_split[OF getMessageInfo_corres])
         apply clarsimp
         apply (simp add: liftM_def cap_register_def capRegister_def)
         apply (rule corres_split_eqr [OF _ asUser_getRegister_corres])
@@ -1221,7 +1221,7 @@ lemma handleInvocation_corres:
                  apply (rule handleFault_corres)
                  apply simp
                 apply (simp add: split_def)
-                apply (rule corres_split_deprecated [OF _ getMRs_corres])
+                apply (rule corres_split[OF getMRs_corres])
                   apply (rule decodeInvocation_corres, simp_all)[1]
                    apply (fastforce simp: list_all2_map2 list_all2_map1 elim:  list_all2_mono)
                   apply (fastforce simp: list_all2_map2 list_all2_map1 elim:  list_all2_mono)
@@ -1231,10 +1231,10 @@ lemma handleInvocation_corres:
                 apply wp[1]
                apply (clarsimp simp: when_def)
                apply (rule replyFromKernel_corres)
-              apply (rule corres_split_deprecated [OF _ setThreadState_corres])
+              apply (rule corres_split[OF setThreadState_corres])
                  apply (rule corres_splitEE [OF _ performInvocation_corres])
                      apply simp
-                     apply (rule corres_split_deprecated [OF _ getThreadState_corres])
+                     apply (rule corres_split[OF getThreadState_corres])
                        apply (rename_tac state state')
                        apply (case_tac state, simp_all)[1]
                        apply (fold dc_def)[1]
@@ -1631,10 +1631,10 @@ lemma handleYield_corres:
   "corres dc einvs (invs' and ct_active' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)) handle_yield handleYield"
   apply (clarsimp simp: handle_yield_def handleYield_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ getCurThread_corres])
+    apply (rule corres_split[OF getCurThread_corres])
       apply simp
-      apply (rule corres_split_deprecated[OF _ tcbSchedDequeue_corres])
-        apply (rule corres_split_deprecated[OF _ tcbSchedAppend_corres])
+      apply (rule corres_split[OF tcbSchedDequeue_corres])
+        apply (rule corres_split[OF tcbSchedAppend_corres])
           apply (rule rescheduleRequired_corres)
          apply (wp weak_sch_act_wf_lift_linear tcbSchedDequeue_valid_queues | simp add: )+
    apply (simp add: invs_def valid_sched_def valid_sched_action_def
@@ -1710,7 +1710,7 @@ lemma handleReply_corres:
                    getSlotCap_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr [OF _ getCurThread_corres])
-      apply (rule corres_split_deprecated [OF _ get_cap_corres])
+      apply (rule corres_split[OF get_cap_corres])
         apply (rule_tac P="einvs and cte_wp_at ((=) caller_cap) (thread, tcb_cnode_index 3)
                                 and K (is_reply_cap caller_cap \<or> caller_cap = cap.NullCap)
                                 and tcb_at thread and st_tcb_at active thread

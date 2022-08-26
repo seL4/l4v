@@ -102,7 +102,7 @@ lemma arch_switch_to_thread_dcorres:
   apply (clarsimp simp: arch_switch_to_thread_def)
   apply (rule corres_dummy_return_pl)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ dcorres_set_vm_root])
+    apply (rule corres_split[OF dcorres_set_vm_root])
       apply simp
       apply (rule dcorres_machine_op_noop)
       apply (simp add: ARM.clearExMonitor_def, wp)[1]
@@ -123,7 +123,7 @@ lemma switch_to_thread_corres:
   apply (rule corres_symb_exec_r)
      apply (rule corres_symb_exec_r)
         apply (rule corres_guard_imp)
-          apply (rule corres_split_deprecated [OF _ arch_switch_to_thread_dcorres])
+          apply (rule corres_split[OF arch_switch_to_thread_dcorres])
             apply simp
             apply (rule dcorres_rhs_noop_above[OF tcb_sched_action_dcorres])
               apply (rule corres_modify [where P=\<top> and P'="\<lambda>s. idle_thread s \<noteq> x"])
@@ -170,7 +170,7 @@ lemma switch_to_thread_same_corres:
   apply (rule corres_symb_exec_r)
      apply (rule corres_symb_exec_r)
         apply (rule corres_guard_imp)
-          apply (rule corres_split_deprecated [OF _ arch_switch_to_thread_dcorres])
+          apply (rule corres_split[OF arch_switch_to_thread_dcorres])
             apply simp
             apply (rule dcorres_rhs_noop_above[OF tcb_sched_action_dcorres])
               apply (rule corres_modify [where P'="\<lambda>s. idle_thread s \<noteq> x"])

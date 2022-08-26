@@ -1521,7 +1521,7 @@ lemma emptySlot_corres:
     apply (rule corres_split_noop_rhs[OF _ clearUntypedFreeIndex_noop_corres])
      apply (rule_tac R="\<lambda>cap. einvs and cte_wp_at ((=) cap) slot" and
                      R'="\<lambda>cte. valid_pspace' and cte_wp_at' ((=) cte) (cte_map slot)" in
-                     corres_split_deprecated [OF _ get_cap_corres])
+                     corres_split[OF get_cap_corres])
        defer
        apply (wp get_cap_wp getCTE_wp')+
      apply (simp add: cte_wp_at_ctes_of)
@@ -3804,7 +3804,7 @@ lemma (in delete_one) deletingIRQHandler_corres:
           (deleting_irq_handler irq) (deletingIRQHandler irq)"
   apply (simp add: deleting_irq_handler_def deletingIRQHandler_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ getIRQSlot_corres])
+    apply (rule corres_split[OF getIRQSlot_corres])
       apply simp
       apply (rule_tac P'="cte_at' (cte_map slot)" in corres_symb_exec_r_conj)
          apply (rule_tac F="isNotificationCap rv \<or> rv = capability.NullCap"
@@ -3900,13 +3900,13 @@ lemma unbindNotification_corres:
   supply option.case_cong_weak[cong]
   apply (simp add: unbind_notification_def unbindNotification_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ getBoundNotification_corres])
+    apply (rule corres_split[OF getBoundNotification_corres])
       apply (rule corres_option_split)
         apply simp
        apply (rule corres_return_trivial)
-      apply (rule corres_split_deprecated[OF _ getNotification_corres])
+      apply (rule corres_split[OF getNotification_corres])
         apply clarsimp
-        apply (rule corres_split_deprecated[OF _ setNotification_corres])
+        apply (rule corres_split[OF setNotification_corres])
            apply (rule setBoundNotification_corres)
           apply (clarsimp simp: ntfn_relation_def split:Structures_A.ntfn.splits)
          apply (wp gbn_wp' gbn_wp)+
@@ -3928,11 +3928,11 @@ lemma unbindMaybeNotification_corres:
       (unbindMaybeNotification ntfnptr)"
   apply (simp add: unbind_maybe_notification_def unbindMaybeNotification_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ getNotification_corres])
+    apply (rule corres_split[OF getNotification_corres])
       apply (rule corres_option_split)
         apply (clarsimp simp: ntfn_relation_def split: Structures_A.ntfn.splits)
        apply (rule corres_return_trivial)
-      apply (rule corres_split_deprecated[OF _ setNotification_corres])
+      apply (rule corres_split[OF setNotification_corres])
          apply (rule setBoundNotification_corres)
         apply (clarsimp simp: ntfn_relation_def split: Structures_A.ntfn.splits)
        apply (wp get_simple_ko_wp getNotification_wp)+
@@ -3973,7 +3973,7 @@ lemma fast_finaliseCap_corres:
    apply (simp add: valid_cap'_def)
   apply (clarsimp simp: final_matters'_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ unbindMaybeNotification_corres])
+    apply (rule corres_split[OF unbindMaybeNotification_corres])
          apply (rule cancelAllSignals_corres)
        apply (wp abs_typ_at_lifts unbind_maybe_notification_invs typ_at_lifts hoare_drop_imps getNotification_wp
             | wpc)+
@@ -3989,13 +3989,13 @@ lemma cap_delete_one_corres:
   apply (simp add: cap_delete_one_def cteDeleteOne_def'
                    unless_def when_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ get_cap_corres])
+    apply (rule corres_split[OF get_cap_corres])
       apply (rule_tac F="can_fast_finalise cap" in corres_gen_asm)
       apply (rule corres_if)
         apply fastforce
-       apply (rule corres_split_deprecated [OF _ isFinalCapability_corres[where ptr=ptr]])
+       apply (rule corres_split[OF isFinalCapability_corres[where ptr=ptr]])
          apply (simp add: split_def bind_assoc [THEN sym])
-         apply (rule corres_split_deprecated [OF _ fast_finaliseCap_corres[where sl=ptr]])
+         apply (rule corres_split[OF fast_finaliseCap_corres[where sl=ptr]])
               apply (rule emptySlot_corres)
              apply simp+
           apply (wp hoare_drop_imps)+
@@ -4062,7 +4062,7 @@ lemma finaliseCap_corres:
         apply (simp add: valid_cap'_def)
        apply (clarsimp simp add: final_matters'_def)
        apply (rule corres_guard_imp)
-         apply (rule corres_split_deprecated[OF _ unbindMaybeNotification_corres])
+         apply (rule corres_split[OF unbindMaybeNotification_corres])
            apply (rule cancelAllSignals_corres)
           apply (wp abs_typ_at_lifts unbind_maybe_notification_invs typ_at_lifts hoare_drop_imps hoare_vcg_all_lift | wpc)+
         apply (clarsimp simp: valid_cap_def)
@@ -4078,8 +4078,8 @@ lemma finaliseCap_corres:
        apply (clarsimp dest!: no_idle_thread_cap)
       apply (clarsimp simp: state_relation_def)
      apply (rule corres_guard_imp)
-       apply (rule corres_split_deprecated[OF _ unbindNotification_corres])
-         apply (rule corres_split_deprecated[OF _ suspend_corres])
+       apply (rule corres_split[OF unbindNotification_corres])
+         apply (rule corres_split[OF suspend_corres])
             apply (clarsimp simp: liftM_def[symmetric] o_def dc_def[symmetric] zbits_map_def)
           apply (rule prepareThreadDelete_corres)
         apply (wp unbind_notification_invs unbind_notification_simple_sched_action
@@ -4364,7 +4364,7 @@ lemma thread_set_all_corresT:
                     (thread_set_all f g t) (threadSet f' t)"
   apply (simp add: thread_set_all_def threadSet_def bind_assoc)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ thread_gets_the_all_corres])
+    apply (rule corres_split[OF thread_gets_the_all_corres])
       apply (simp add: split_def)
       apply (rule tcb_update_all_corres')
           apply (erule x)

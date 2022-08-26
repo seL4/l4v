@@ -1664,7 +1664,7 @@ lemma findVSpaceForASID_corres:
   apply (simp add: liftME_def bindE_assoc)
   apply (simp add: liftE_bindE)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ getObject_ASIDPool_corres'[OF refl]])
+    apply (rule corres_split[OF getObject_ASIDPool_corres'[OF refl]])
       apply (rule_tac P="case_option \<top> page_map_l4_at (pool (ucast asid)) and pspace_aligned"
                  and P'="no_0_obj' and pspace_distinct'" in corres_inst)
       apply (rule_tac F="pool (ucast asid) \<noteq> Some 0" in corres_req)

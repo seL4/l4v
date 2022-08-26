@@ -155,15 +155,13 @@ lemma performASIDControlInvocation_corres:
   apply (frule valid_capAligned)
   apply (clarsimp simp: capAligned_def page_bits_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated)
-       prefer 2
+    apply (rule corres_split)
        apply (erule deleteObjects_corres)
        apply (simp add:pageBits_def)
-      apply (rule corres_split_deprecated[OF _ getSlotCap_corres])
+      apply (rule corres_split[OF getSlotCap_corres])
          apply (rule_tac F = " pcap = (cap.UntypedCap False word1 pageBits idxa)" in corres_gen_asm)
-         apply (rule corres_split_deprecated[OF _ updateFreeIndex_corres])
-             apply (rule corres_split_deprecated)
-                prefer 2
+         apply (rule corres_split[OF updateFreeIndex_corres])
+             apply (rule corres_split)
                 apply (simp add: retype_region2_ext_retype_region_ArchObject )
                 apply (rule corres_retype [where ty="Inl (KOArch (KOASIDPool F))" for F,
                                            unfolded APIType_map2_def makeObjectKO_def,
@@ -178,13 +176,11 @@ lemma performASIDControlInvocation_corres:
                   apply (simp add: makeObject_asidpool const_def inv_def)
                  apply (rule range_cover_full)
                   apply (simp add:obj_bits_api_def arch_kobj_size_def default_arch_object_def)+
-               apply (rule corres_split_deprecated)
-                  prefer 2
+               apply (rule corres_split)
                   apply (rule cteInsert_simple_corres, simp, rule refl, rule refl)
                  apply (rule_tac F="asid_low_bits_of word2 = 0" in corres_gen_asm)
                  apply (simp add: is_aligned_mask dc_def[symmetric])
-                 apply (rule corres_split_deprecated [where P=\<top> and P'=\<top> and r'="\<lambda>t t'. t = t' o ucast"])
-                    prefer 2
+                 apply (rule corres_split[where P=\<top> and P'=\<top> and r'="\<lambda>t t'. t = t' o ucast"])
                     apply (clarsimp simp: state_relation_def arch_state_relation_def)
                    apply (rule corres_trivial)
                    apply (rule corres_modify)
@@ -459,7 +455,7 @@ lemma checkSlot_corres:
           (checkSlot p test')"
   apply (simp add: check_slot_def checkSlot_def unlessE_whenE liftE_bindE)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ getObject_PTE_corres])
+    apply (rule corres_split[OF getObject_PTE_corres])
       apply (rule corres_whenE, simp)
        apply (rule corres_trivial, simp)
       apply simp
@@ -720,7 +716,7 @@ lemma decodeX64PageTableInvocation_corres:
      apply (rule corres_symb_exec_r_conj)
         apply (rule_tac F="isArchCap isPageTableCap (cteCap cteVal)"
                                  in corres_gen_asm2)
-        apply (rule corres_split_deprecated[OF _ isFinalCapability_corres[where ptr=slot]])
+        apply (rule corres_split[OF isFinalCapability_corres[where ptr=slot]])
           apply (drule mp)
            apply (clarsimp simp: isCap_simps final_matters'_def)
           apply (rule whenE_throwError_corres; simp)
@@ -730,8 +726,7 @@ lemma decodeX64PageTableInvocation_corres:
                                                   page_table_invocation_map_def)
            apply (cases opt, clarsimp simp: mdata_map_def)
            apply (clarsimp simp: bind_bindE_assoc)
-           apply (rule corres_split_deprecated)
-              prefer 2
+           apply (rule corres_split)
               apply datatype_schem
               apply (rule maybeVSpaceForASID_corres, simp)
              apply (rule whenE_throwError_corres; simp)

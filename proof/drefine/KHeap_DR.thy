@@ -1360,7 +1360,7 @@ lemma empty_slot_corres:
              apply (wp empty_slot_ext_valid_etcbs | simp)+
            apply (rule corres_guard_imp)
              apply (rule corres_dummy_return_pl)
-             apply (rule corres_split_deprecated [OF _ set_original_dummy_corres])
+             apply (rule corres_split[OF set_original_dummy_corres])
               apply (rule corres_dummy_return_l)
               apply (rule corres_split_deprecated[where r'=dc])
                  apply (case_tac "\<exists>irq. v = cap.IRQHandlerCap irq"; clarsimp)
@@ -2555,7 +2555,7 @@ lemma dcorres_do_unbind_notification:
   apply (clarsimp)
   apply (rule corres_guard_imp)
     apply (rule corres_dummy_return_pl[where b="()"])
-    apply (rule corres_split_deprecated[OF _ corres_dummy_set_notification])
+    apply (rule corres_split[OF corres_dummy_set_notification])
       apply (clarsimp simp: tcb_slots)
       apply (rule set_bound_notification_corres[where ntfn_opt=None, unfolded infer_tcb_bound_notification_def
                                        not_idle_thread_def tcb_slots, simplified])
@@ -2570,7 +2570,7 @@ lemma dcorres_unbind_maybe_notification:
    (unbind_maybe_notification ntfn)"
   apply (simp add: PageTableUnmap_D.unbind_maybe_notification_def IpcCancel_A.unbind_maybe_notification_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ dcorres_ntfn_bound_tcb, unfolded  fun_app_def, simplified])
+    apply (rule corres_split[OF dcorres_ntfn_bound_tcb, unfolded  fun_app_def, simplified])
       apply (simp add: option_set_option_select)
       apply (rule_tac P'="case (ntfn_bound_tcb ntfna) of None \<Rightarrow> R' | Some x \<Rightarrow> R''" for R' R'' in corres_inst)
       apply (rule_tac P="case (set_to_option (set_option (ntfn_bound_tcb ntfna))) of None \<Rightarrow> R | Some x \<Rightarrow> R'''" for R R''' in corres_inst)

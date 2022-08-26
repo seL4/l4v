@@ -188,15 +188,15 @@ lemma do_user_op_if_corres[ADT_IF_Refine_assms]:
   apply (rule corres_assert_imp_r)
    apply fastforce
   apply (rule corres_guard_imp)
-       apply (rule corres_split_deprecated[OF _ corres_machine_op,where r'="(=)"])
+       apply (rule corres_split[OF corres_machine_op,where r'="(=)"])
          apply clarsimp
          apply (rule corres_split_deprecated[where r'="(=)"])
             apply clarsimp
-            apply (rule corres_split_deprecated[OF _ corres_machine_op,where r'="(=)"])
+            apply (rule corres_split[OF corres_machine_op,where r'="(=)"])
                apply clarsimp
-               apply (rule corres_split_deprecated[OF _ corres_machine_op,where r'="(=)"])
+               apply (rule corres_split[OF corres_machine_op,where r'="(=)"])
                   apply clarsimp
-                  apply (rule corres_split_deprecated[OF _ corres_machine_op, where r'="(=)"])
+                  apply (rule corres_split[OF corres_machine_op, where r'="(=)"])
                      apply (rule corres_return_same_trivial)
                     apply (wp hoare_TrueI[where P = \<top>] | simp | rule corres_underlying_trivial)+
             apply (clarsimp simp: user_memory_update_def)
@@ -326,17 +326,17 @@ lemma do_user_op_if_corres'[ADT_IF_Refine_assms]:
   apply (rule corres_assert_imp_r)
    apply fastforce
   apply (rule corres_guard_imp)
-       apply (rule corres_split_deprecated[OF _ corres_machine_op',where r'="(=)"])
+       apply (rule corres_split[OF corres_machine_op',where r'="(=)"])
          apply simp
          apply (rule corres_split_deprecated[where r'="dc"])
             apply simp
             apply (rule corres_split_deprecated[where r'="(=)"])
                apply clarsimp
-               apply (rule corres_split_deprecated[OF _ corres_machine_op',where r'="(=)"])
+               apply (rule corres_split[OF corres_machine_op',where r'="(=)"])
                   apply simp
-                  apply (rule corres_split_deprecated[OF _ corres_machine_op', where r'="(=)"])
+                  apply (rule corres_split[OF corres_machine_op', where r'="(=)"])
                      apply simp
-                     apply (rule corres_split_deprecated[OF _ corres_machine_op', where r'="(=)"])
+                     apply (rule corres_split[OF corres_machine_op', where r'="(=)"])
                      apply (rule corres_return_same_trivial)
                     apply (wp hoare_TrueI[where P = \<top>] | simp | rule corres_underlying_trivial)+
            apply (clarsimp simp: select_def corres_underlying_def)
