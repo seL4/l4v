@@ -596,7 +596,6 @@ lemma decodeARMPageFlush_corres:
   apply (clarsimp simp: Let_def)
   apply (rule corres_guard_imp)
     apply (rule corres_splitEE)
-       prefer 2
        apply (rule corres_lookup_error)
        apply (rule find_pd_for_asid_corres[OF refl])
       apply (rule whenE_throwError_corres, simp)
@@ -926,7 +925,6 @@ shows
        apply (case_tac option, simp_all)[1]
        apply (rule corres_guard_imp)
          apply (rule corres_splitEE)
-            prefer 2
             apply (rule corres_trivial [where r="ser \<oplus> (\<lambda>p p'. p = p' o ucast)"])
             apply (clarsimp simp: state_relation_def arch_state_relation_def)
            apply (rule whenE_throwError_corres, simp)
@@ -939,12 +937,10 @@ shows
             apply auto[1]
            apply (rule corres_guard_imp)
              apply (rule corres_splitEE)
-                prefer 2
                 apply simp
                 apply (rule get_asid_pool_corres_inv')
                apply (simp add: bindE_assoc)
                apply (rule corres_splitEE)
-                  prefer 2
                   apply (rule corres_whenE)
                     apply (subst conj_assoc [symmetric])
                     apply (subst assocs_empty_dom_comp [symmetric])
@@ -992,12 +988,10 @@ shows
       apply (clarsimp split del: if_split)
       apply (rule corres_guard_imp)
         apply (rule corres_splitEE[where r'="\<lambda>p p'. p = p' o ucast"])
-           prefer 2
            apply (rule corres_trivial)
            apply (clarsimp simp: state_relation_def arch_state_relation_def)
           apply (simp only: bindE_assoc)
           apply (rule corres_splitEE)
-             prefer 2
              apply (rule corres_whenE)
                apply (subst assocs_empty_dom_comp [symmetric])
                apply (simp add: o_def)
@@ -1025,14 +1019,11 @@ shows
             apply (clarsimp simp: isCap_simps cap_relation_Untyped_eq lookupTargetSlot_def
                                   objBits_simps archObjSize_def bindE_assoc split_def)
             apply (rule corres_splitEE)
-               prefer 2
                apply (fold ser_def)
                apply (rule ensureNoChildren_corres, rule refl)
               apply (rule corres_splitEE)
-                 prefer 2
                  apply (erule lookupSlotForCNodeOp_corres, rule refl)
                 apply (rule corres_splitEE)
-                   prefer 2
                    apply (rule ensureEmptySlot_corres)
                    apply clarsimp
                   apply (rule corres_returnOk[where P="\<top>"])
@@ -1143,17 +1134,14 @@ shows
       apply (simp add: kernel_base_def ARM_HYP.pptrBase_def pptrBase_def)
      apply (rule corres_guard_imp)
        apply (rule corres_splitEE)
-          prefer 2
           apply (rule corres_lookup_error)
           apply (rule find_pd_for_asid_corres [OF refl])
          apply (rule whenE_throwError_corres, simp, simp)
          apply (rule corres_splitEE)
-            prefer 2
             apply simp
             apply (rule get_master_pde_corres')
            apply (simp add: unlessE_whenE)
            apply (rule corres_splitEE)
-              prefer 2
 
               apply (rule corres_whenE)
                 apply clarsimp
@@ -1213,7 +1201,6 @@ shows
        apply clarsimp
       apply clarsimp
       apply (rule corres_splitEE)
-         prefer 2
          apply (rule corres_lookup_error)
          apply (rule find_pd_for_asid_corres[OF refl])
         apply (rule whenE_throwError_corres, simp)

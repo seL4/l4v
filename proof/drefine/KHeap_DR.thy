@@ -3452,11 +3452,10 @@ lemma dcorres_lookup_slot:
   apply (simp add: CSpace_D.lookup_slot_def lookup_slot_for_thread_def)
   apply (rule corres_guard_imp)
     apply (rule corres_splitEE)
-       prefer 2
        apply simp
        apply (rule get_cap_get_tcb_dcorres)
       apply (rule corres_dummy_returnOk_r)
-      apply (rule corres_splitEE [OF _ resolve_address_bits_corres])
+      apply (rule corres_splitEE[OF resolve_address_bits_corres])
            apply clarsimp
            apply (rule corres_returnOk [where P=\<top> and P'=\<top>])
            apply clarsimp
@@ -3476,9 +3475,8 @@ lemma dcorres_lookup_cap_and_slot:
                    CSpace_A.lookup_cap_and_slot_def split_def)
   apply (rule dcorres_injection_handler_rhs)
   apply (rule corres_guard_imp)
-    apply (rule corres_splitEE [OF _ dcorres_lookup_slot])
+    apply (rule corres_splitEE[OF dcorres_lookup_slot])
         apply (rule corres_splitEE)
-           prefer 2
            apply simp
            apply (rule get_cap_corres, rule refl)
           apply (rule dcorres_returnOk, simp)

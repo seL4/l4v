@@ -2078,7 +2078,7 @@ lemma decodeSetPriority_corres:
          clarsimp simp: decode_set_priority_def decodeSetPriority_def)
   apply (rename_tac auth_cap auth_slot auth_path rest auth_cap' rest')
   apply (rule corres_split_eqrE)
-     apply (rule corres_splitEE[OF _ checkPrio_corres])
+     apply (rule corres_splitEE[OF checkPrio_corres])
        apply (rule corres_returnOkTT)
        apply (clarsimp simp: newroot_rel_def elim!: is_thread_cap.elims(2))
       apply wpsimp+
@@ -2097,7 +2097,7 @@ lemma decodeSetMCPriority_corres:
          clarsimp simp: decode_set_mcpriority_def decodeSetMCPriority_def)
   apply (rename_tac auth_cap auth_slot auth_path rest auth_cap' rest')
   apply (rule corres_split_eqrE)
-     apply (rule corres_splitEE[OF _ checkPrio_corres])
+     apply (rule corres_splitEE[OF checkPrio_corres])
        apply (rule corres_returnOkTT)
        apply (clarsimp simp: newroot_rel_def elim!: is_thread_cap.elims(2))
       apply wpsimp+
@@ -2215,7 +2215,7 @@ lemma decodeSetSchedParams_corres:
   apply (clarsimp simp: list_all2_Cons1 neq_Nil_conv val_le_length_Cons linorder_not_less)
   apply (rule corres_split_eqrE)
      apply (rule corres_split_norE[OF _ checkPrio_corres])
-       apply (rule corres_splitEE[OF _ checkPrio_corres])
+       apply (rule corres_splitEE[OF checkPrio_corres])
          apply (rule corres_returnOkTT)
          apply (clarsimp simp: newroot_rel_def elim!: is_thread_cap.elims(2))
         apply (wpsimp wp: check_prio_inv checkPrio_inv)+
@@ -2275,7 +2275,7 @@ lemma decodeSetIPCBuffer_corres:
              split del: if_split)
   apply (clarsimp simp add: returnOk_def newroot_rel_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_splitEE [OF _ deriveCap_corres])
+    apply (rule corres_splitEE[OF deriveCap_corres])
         apply (simp add: o_def newroot_rel_def split_def dc_def[symmetric])
         apply (erule checkValidIPCBuffer_corres)
        apply (wp hoareE_TrueI | simp)+
@@ -2384,9 +2384,9 @@ lemma decodeSetSpace_corres:
               apply (simp(no_asm) add: split_def unlessE_throwError_returnOk
                                        bindE_assoc cap_CNode_case_throw
                             split del: if_split)
-              apply (rule corres_splitEE [OF _ deriveCap_corres])
+              apply (rule corres_splitEE[OF deriveCap_corres])
                   apply (rule corres_split_norE)
-                     apply (rule corres_splitEE [OF _ deriveCap_corres])
+                     apply (rule corres_splitEE[OF deriveCap_corres])
                          apply (rule corres_split_norE)
                             apply (rule corres_trivial)
                             apply (clarsimp simp: returnOk_def newroot_rel_def is_cap_simps
@@ -2513,8 +2513,8 @@ lemma decodeTCBConfigure_corres:
   apply (clarsimp simp: linorder_not_less val_le_length_Cons list_all2_Cons1
       priorityBits_def)
   apply (rule corres_guard_imp)
-  apply (rule corres_splitEE [OF _ decodeSetIPCBuffer_corres])
-         apply (rule corres_splitEE [OF _ decodeSetSpace_corres])
+  apply (rule corres_splitEE[OF decodeSetIPCBuffer_corres])
+         apply (rule corres_splitEE[OF decodeSetSpace_corres])
               apply (rule_tac F="is_thread_control set_params" in corres_gen_asm)
               apply (rule_tac F="is_thread_control set_space" in corres_gen_asm)
   apply (rule_tac F="tcThreadCapSlot setSpace = cte_map slot" in corres_gen_asm2)

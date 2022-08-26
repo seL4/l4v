@@ -2140,7 +2140,7 @@ lemma unmapPage_corres:
                apply (rule_tac F = "vptr < kernel_base" in corres_gen_asm)
                apply (rule corres_split_strengthen_ftE[OF lookupPTSlot_corres])
                  apply simp
-                 apply (rule corres_splitEE[OF _ checkMappingPPtr_corres])
+                 apply (rule corres_splitEE[OF checkMappingPPtr_corres])
                    apply simp
                    apply (rule corres_split[OF storePTE_corres'])
                       apply (rule corres_machine_op)

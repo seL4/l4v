@@ -285,7 +285,7 @@ next
           split del: if_split
                cong: if_cong list.case_cong)
     apply (rule corres_guard_imp)
-      apply (rule corres_splitEE [OF _ Q])
+      apply (rule corres_splitEE[OF Q])
         apply (rule corres_whenE_throw_merge)
         apply (rule whenE_throwError_corres)
           apply (simp add: word_bits_def word_size)
@@ -296,7 +296,7 @@ next
          apply (clarsimp simp: fromAPIType_def ARM_HYP_H.fromAPIType_def)
         apply (rule whenE_throwError_corres, simp)
          apply (clarsimp simp: fromAPIType_def ARM_HYP_H.fromAPIType_def)
-        apply (rule_tac r' = "\<lambda>cap cap'. cap_relation cap cap'" in corres_splitEE[OF _ corres_if])
+        apply (rule_tac r' = "\<lambda>cap cap'. cap_relation cap cap'" in corres_splitEE[OF corres_if])
              apply (rule_tac corres_split_norE)
                 prefer 2
                 apply (rule corres_if)
@@ -392,7 +392,7 @@ next
            apply (rule corres_returnOkTT)
            apply (rule crel)
           apply simp
-          apply (rule corres_splitEE[OF _ lookupSlotForCNodeOp_corres])
+          apply (rule corres_splitEE[OF lookupSlotForCNodeOp_corres])
               apply simp
               apply (rule getSlotCap_corres,simp)
              apply (rule crel)

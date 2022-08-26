@@ -777,7 +777,7 @@ lemma lookupCap_corres:
   apply (simp add: lookup_cap_def lookupCap_def bindE_assoc
                    lookupCapAndSlot_def liftME_def split_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_splitEE[OF _ lookupSlotForThread_corres])
+    apply (rule corres_splitEE[OF lookupSlotForThread_corres])
       apply (simp add: split_def getSlotCap_def liftM_def[symmetric] o_def)
       apply (rule get_cap_corres)
      apply (rule hoare_pre, wp lookup_slot_cte_at_wp|simp)+

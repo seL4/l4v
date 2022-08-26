@@ -3398,11 +3398,10 @@ lemma lookup_cap_corres:
      (lookupCap thread epcptr')"
   apply (simp add: lookup_cap_def lookupCap_def lookupCapAndSlot_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_splitEE [OF _ lookupSlotForThread_corres])
+    apply (rule corres_splitEE[OF lookupSlotForThread_corres])
       apply (simp add: split_def)
       apply (subst bindE_returnOk[symmetric])
       apply (rule corres_splitEE)
-         prefer 2
          apply simp
          apply (rule getSlotCap_corres, rule refl)
         apply (rule corres_returnOk [of _ \<top> \<top>])
@@ -3442,7 +3441,7 @@ lemma lookupSlotForCNodeOp_corres:
                         word_bits_def toInteger_nat fromIntegral_def fromInteger_nat)
   apply (rule corres_lookup_error)
   apply (rule corres_guard_imp)
-    apply (rule corres_splitEE [OF _ rab_corres'])
+    apply (rule corres_splitEE[OF rab_corres'])
          apply (rule corres_trivial)
          apply (clarsimp simp: returnOk_def lookup_failure_map_def
                          split: list.split)

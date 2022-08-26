@@ -2141,7 +2141,7 @@ lemma dcorres_page_table_mapped:
   apply (rule corres_guard_imp[OF corres_split_catch
       [where f = dc and E = dc and E' =dc]])
        apply simp
-      apply (rule corres_splitEE[OF _ dcorres_find_pd_for_asid])
+      apply (rule corres_splitEE[OF dcorres_find_pd_for_asid])
         apply (rule_tac F =" is_aligned pda 14" in corres_gen_asm2)
         apply (clarsimp simp:liftE_bindE dcorres_lookup_pd_slot)
         apply (rule corres_split[OF dcorres_get_pde])
@@ -2335,14 +2335,13 @@ lemma dcorres_unmap_page:
                        in corres_split_catch [where f = dc and E = dc and E' =dc])
           apply simp
          apply (rule corres_guard_imp)
-           apply (rule_tac corres_splitEE[OF _ dcorres_find_pd_for_asid,simplified])
+           apply (rule_tac corres_splitEE[OF dcorres_find_pd_for_asid,simplified])
              apply (simp_all add: cdl_page_mapping_entries_def liftE_distrib
                                   pageBitsForSize_def bindE_assoc mapM_x_singleton)
-          apply (rule corres_splitEE[OF _ dcorres_lookup_pt_slot])
-            apply (rule corres_splitEE[OF _ dcorres_might_throw])
+          apply (rule corres_splitEE[OF dcorres_lookup_pt_slot])
+            apply (rule corres_splitEE[OF dcorres_might_throw])
                apply (rule corres_dummy_returnOk_l)
                apply (rule corres_splitEE)
-                  prefer 2
                   apply (simp add:transform_pt_slot_ref_def)
                   apply (rule dcorres_store_invalid_pte[where pg_id = pg])
                  apply (simp add:liftE_distrib[symmetric] returnOk_liftE)
@@ -2365,15 +2364,14 @@ lemma dcorres_unmap_page:
                       in corres_split_catch [where f = dc and E = dc and E' =dc])
          apply simp
         apply (rule corres_guard_imp)
-          apply (rule_tac corres_splitEE[OF _ dcorres_find_pd_for_asid,simplified])
+          apply (rule_tac corres_splitEE[OF dcorres_find_pd_for_asid,simplified])
             apply (simp_all add: cdl_page_mapping_entries_def liftE_distrib
                                  pageBitsForSize_def bindE_assoc mapM_x_singleton)
-         apply (rule corres_splitEE[OF _ dcorres_lookup_pt_slot])
-           apply (rule corres_splitEE[OF _ dcorres_might_throw])
+         apply (rule corres_splitEE[OF dcorres_lookup_pt_slot])
+           apply (rule corres_splitEE[OF dcorres_might_throw])
               apply (rule dcorres_symb_exec_rE)
                 apply (rule corres_dummy_returnOk_l)
                 apply (rule corres_splitEE)
-                   prefer 2
                    apply simp
                    apply (rule_tac F = "is_aligned xa 6" in corres_gen_asm2)
                    apply (erule dcorres_unmap_large_page[where pg_id = pg])
@@ -2401,13 +2399,12 @@ lemma dcorres_unmap_page:
                      in corres_split_catch [where f = dc and E = dc and E' =dc])
         apply simp
        apply (rule corres_guard_imp)
-         apply (rule_tac corres_splitEE[OF _ dcorres_find_pd_for_asid,simplified])
+         apply (rule_tac corres_splitEE[OF dcorres_find_pd_for_asid,simplified])
            apply (simp_all add: cdl_page_mapping_entries_def liftE_distrib
                                 pageBitsForSize_def bindE_assoc mapM_x_singleton)
-        apply (rule corres_splitEE[OF _ dcorres_might_throw])
+        apply (rule corres_splitEE[OF dcorres_might_throw])
            apply (rule corres_dummy_returnOk_l)
            apply (rule corres_splitEE)
-              prefer 2
               apply simp
               apply (rule dcorres_delete_cap_simple_section[where oid = pg])
              apply (simp add:liftE_distrib[symmetric] returnOk_liftE)
@@ -2429,14 +2426,13 @@ lemma dcorres_unmap_page:
                     in corres_split_catch [where f = dc and E = dc and E' =dc])
        apply simp
       apply (rule corres_guard_imp)
-        apply (rule_tac corres_splitEE[OF _ dcorres_find_pd_for_asid,simplified])
+        apply (rule_tac corres_splitEE[OF dcorres_find_pd_for_asid,simplified])
           apply (simp_all add: cdl_page_mapping_entries_def liftE_distrib
                                pageBitsForSize_def bindE_assoc mapM_x_singleton)
-       apply (rule corres_splitEE[OF _ dcorres_might_throw])
+       apply (rule corres_splitEE[OF dcorres_might_throw])
           apply (rule dcorres_symb_exec_rE)
             apply (rule corres_dummy_returnOk_l)
             apply (rule corres_splitEE)
-               prefer 2
                apply simp
                apply (rule_tac F = "is_aligned pd 14" in corres_gen_asm2)
                apply (erule(2) dcorres_unmap_large_section[where pg_id = pg])
@@ -3417,7 +3413,6 @@ proof (induct arbitrary: S rule: rec_del.induct,
        apply (rule monadic_trancl_preemptible_steps)
       apply (simp add: cutMon_walk_bindE)
       apply (rule corres_splitEE)
-         prefer 2
          apply (rule "1.hyps"[simplified, folded dc_def], assumption+)
         apply (rule corres_drop_cutMon)
         apply (simp add: liftME_def[symmetric])
@@ -3606,14 +3601,13 @@ next
                      apply (rule corres_cutMon)
                      apply (simp add: cutMon_walk_bindE bindE_assoc)
                      apply (rule corres_splitEE)
-                        prefer 2
                         apply (rule "2.hyps"[simplified, folded dc_def],
                                    (assumption | simp | rule conjI refl)+)
                         apply (clarsimp split: cap.split nat.split)
                        apply (rule corres_cutMon)
                        apply (simp add: cutMon_walk_bindE dc_def[symmetric])
                        apply (rule corres_drop_cutMon_bindE)
-                       apply (rule corres_splitEE[OF _ finalise_preemption_corres])
+                       apply (rule corres_splitEE[OF finalise_preemption_corres])
                          apply (rule corres_cutMon)
                          apply (rule corres_rel_imp, rule "2.hyps"[simplified, folded dc_def],
                                   (assumption | simp | rule conjI refl)+)
@@ -3705,7 +3699,7 @@ next
       apply (simp add: cutMon_walk_bindE)
       apply (rule monadic_rewrite_corres2)
        apply (rule monadic_trancl_preemptible_steps)
-      apply (rule corres_splitEE[OF _ "4.hyps"[simplified, folded dc_def]])
+      apply (rule corres_splitEE[OF "4.hyps"[simplified, folded dc_def]])
           apply (rule corres_drop_cutMon)
           apply (simp add: liftE_bindE)
           apply (rule corres_symb_exec_r)

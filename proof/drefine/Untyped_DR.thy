@@ -1777,7 +1777,7 @@ lemma decode_untyped_corres:
          apply (rule corres_if)
            apply (simp add: unat_eq_0)
           apply (rule corres_trivial, simp add: returnOk_def)
-         apply (rule corres_splitEE[OF _ lookup_slot_for_cnode_op_corres])
+         apply (rule corres_splitEE[OF lookup_slot_for_cnode_op_corres])
                apply clarsimp
                apply (rule get_cap_corres)
                apply simp+

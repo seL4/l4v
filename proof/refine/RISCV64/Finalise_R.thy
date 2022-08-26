@@ -3446,7 +3446,6 @@ lemma arch_finaliseCap_corres:
     apply (rule corres_split_catch[where f=dc])
        apply (rule unmapPageTable_corres; simp)
       apply (rule corres_splitEE)
-         prefer 2
          apply (rule corres_rel_imp[where r="dc \<oplus> (=)"], rule findVSpaceForASID_corres; simp)
          apply (case_tac x; simp)
         apply (simp only: whenE_def)
