@@ -207,6 +207,10 @@ lemma pred_conj_assoc:
   "(P and Q and R) = (P and (Q and R))"
   unfolding pred_conj_def by simp
 
+lemma pred_conj_comm:
+  "(P and Q) = (Q and P)"
+  by (auto simp: pred_conj_def)
+
 subsection "Hoare Logic Rules"
 
 lemma validE_def2:
