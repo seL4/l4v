@@ -358,7 +358,7 @@ lemma sts_to_modify':
     apply (rule_tac x="the (get_tcb tcb x)" in monadic_rewrite_symb_exec, (wp | simp)+)
     apply (rule_tac x="x" in  monadic_rewrite_symb_exec, (wp | simp)+)
         apply (wpsimp wp: get_object_wp simp: a_type_def)+
-    apply (rule_tac P="(=) x" in monadic_rewrite_refl3)
+    apply (rule_tac P="(=) x" in monadic_rewrite_pre_imp_refl)
     apply (clarsimp simp add: put_def modify_def get_def bind_def)
    apply assumption
   apply wp
@@ -417,7 +417,7 @@ lemma cancel_ipc_to_blocked_nosts:
         apply (rule hoare_modifyE_var[where P="tcb_at tcb and (\<lambda>s. tcb \<noteq> cur_thread s)"])
         apply (clarsimp simp: tcb_at_def get_tcb_def)
        apply (simp add: modify_modify)
-       apply (rule monadic_rewrite_refl2)
+       apply (rule monadic_rewrite_is_refl)
        apply (fastforce simp add: simpler_modify_def o_def get_tcb_def)
       apply (wp gts_wp)+
   apply (simp add: set_thread_state_def bind_assoc gets_the_def)

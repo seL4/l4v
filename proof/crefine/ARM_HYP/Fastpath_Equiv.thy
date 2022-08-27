@@ -479,7 +479,7 @@ lemma monadic_rewrite_threadGet:
    apply (rule monadic_rewrite_symb_exec_l' | wp | rule empty_fail_getObject getObject_inv)+
      apply (clarsimp; rule no_fail_getObject_tcb)
     apply (simp only: exec_gets)
-    apply (rule_tac P = "(\<lambda>s. (f x)=v) and tcb_at' t" in monadic_rewrite_refl3)
+    apply (rule_tac P = "(\<lambda>s. (f x)=v) and tcb_at' t" in monadic_rewrite_pre_imp_refl)
     apply (simp add:)
    apply (wp OMG_getObject_tcb | wpc)+
   apply (auto intro: obj_tcb_at')
@@ -634,7 +634,7 @@ lemma fastpath_callKernel_SysCall_corres:
                       apply (rule monadic_rewrite_bind_tail, rename_tac dest_st)
                        apply (rule_tac P="\<exists>gr. dest_st = BlockedOnReceive (capEPPtr (fst (theRight rv))) gr"
                                 in monadic_rewrite_gen_asm)
-                       apply (rule monadic_rewrite_symb_exec2, (wp | simp)+)
+                       apply (rule monadic_rewrite_symb_exec_drop, (wp | simp)+)
                        apply (rule monadic_rewrite_bind)
                          apply clarsimp
                          apply (rule_tac msgInfo=msgInfo in doIPCTransfer_simple_rewrite)
@@ -884,7 +884,7 @@ lemma receiveIPC_simple_rewrite:
         apply (rule hoare_pre, wpc, wp+, simp)
        apply (simp split: option.split)
       apply (rule monadic_rewrite_trans, rule monadic_rewrite_if_known[where X=False], simp)
-      apply (rule monadic_rewrite_refl3[where P=\<top>])
+      apply (rule monadic_rewrite_pre_imp_refl[where P=\<top>])
       apply (cases ep, simp_all add: isSendEP_def)[1]
      apply (wp getNotification_wp gbn_wp' getEndpoint_wp | wpc)+
   apply (clarsimp simp: obj_at'_def projectKOs pred_tcb_at'_def)
@@ -1143,7 +1143,7 @@ lemma setEndpoint_setCTE_pivot[unfolded K_bind_def]:
                      | simp)+
       apply (rule_tac P="\<lambda>s. epat = ep_at' p s \<and> cteat = real_cte_at' slot s
                            \<and> tcbat = (tcb_at' (slot && ~~ mask 9) and (%y. slot && mask 9 : dom tcb_cte_cases)) s"
-                   in monadic_rewrite_refl3)
+                   in monadic_rewrite_pre_imp_refl)
       apply (simp add: setEndpoint_def setObject_modify_assert bind_assoc
                        exec_gets assert_def exec_modify
                 split: if_split)
@@ -1257,7 +1257,7 @@ lemma set_setCTE[unfolded K_bind_def]:
                                  (\<exists> getF setF. tcb_cte_cases (p && mask 9) = Some (getF, setF)
                                         \<and> (\<forall> f g tcb. setF f (setF g tcb) = setF (f o g) tcb)))"
                    in monadic_rewrite_gen_asm)
-       apply (rule monadic_rewrite_refl2)
+       apply (rule monadic_rewrite_is_refl[OF ext])
        apply (simp add: exec_modify split: if_split)
        apply (auto simp: simpler_modify_def projectKO_opt_tcb objBits_defs
                     del: ext
@@ -1330,7 +1330,7 @@ lemma emptySlot_replymaster_rewrite[OF refl]:
      apply (rule monadic_rewrite_bind)
        apply (rule_tac P="mdbFirstBadged (cteMDBNode ctea) \<and> mdbRevocable (cteMDBNode ctea)"
                    in monadic_rewrite_gen_asm)
-       apply (rule monadic_rewrite_refl2)
+       apply (rule monadic_rewrite_is_refl)
        apply (case_tac ctea, rename_tac mdbnode, case_tac mdbnode)
        apply simp
       apply (simp add: Retype_H.postCapDeletion_def)
@@ -1753,7 +1753,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                          apply (rule monadic_rewrite_assert)
                          apply (simp add: emptySlot_setEndpoint_pivot)
                          apply (rule monadic_rewrite_bind)
-                           apply (rule monadic_rewrite_refl2)
+                           apply (rule monadic_rewrite_is_refl)
                            apply (clarsimp simp: isSendEP_def split: Structures_H.endpoint.split)
                           apply (rule_tac Q="\<lambda>rv. (\<lambda>_. rv = callerCTE) and Q'" for Q'
                                               in monadic_rewrite_symb_exec_r, wp+)
