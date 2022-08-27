@@ -76,11 +76,10 @@ lemma monadic_rewrite_is_refl:
   "x = y \<Longrightarrow> monadic_rewrite F E \<top> x y"
   by (simp add: monadic_rewrite_refl)
 
-lemma monadic_rewrite_refl3:
+(* precondition implies reflexivity *)
+lemma monadic_rewrite_pre_imp_refl:
   "\<lbrakk> \<And>s. P s \<Longrightarrow> f s = g s \<rbrakk> \<Longrightarrow> monadic_rewrite F E P f g"
   by (simp add: monadic_rewrite_def)
-
-lemmas monadic_rewrite_refl2 = monadic_rewrite_refl3[where P=\<top>]
 
 lemma monadic_rewrite_exists:
   "(\<And>v. monadic_rewrite F E (Q v) m m')
@@ -151,23 +150,20 @@ lemmas monadic_rewrite_bind_tail
   = monadic_rewrite_bind[OF monadic_rewrite_refl, simplified pred_and_true_var]
 
 lemmas monadic_rewrite_bind_head
-  = monadic_rewrite_bind [OF _ monadic_rewrite_refl hoare_vcg_prop, simplified pred_and_true]
+  = monadic_rewrite_bind[OF _ monadic_rewrite_refl hoare_vcg_prop, simplified pred_and_true]
 
-lemmas monadic_rewrite_bind_alt
-  = monadic_rewrite_trans[OF monadic_rewrite_bind_tail monadic_rewrite_bind_head, rotated -1]
+lemmas monadic_rewrite_bindE_tail
+  = monadic_rewrite_bindE[OF monadic_rewrite_refl, simplified pred_and_true_var]
 
 lemmas monadic_rewrite_bindE_head
     = monadic_rewrite_bindE[OF _ monadic_rewrite_refl hoare_vcg_propE_R]
 
-lemma monadic_rewrite_bind2:
+(* Same as monadic_rewrite_bind, but prove hoare triple over head of LHS instead of RHS. *)
+lemma monadic_rewrite_bind_l:
   "\<lbrakk> monadic_rewrite F E P f g; \<And>x. monadic_rewrite F E (Q x) (h x) (j x); \<lbrace>R\<rbrace> f \<lbrace>Q\<rbrace> \<rbrakk>
    \<Longrightarrow> monadic_rewrite F E (P and R) (f >>= (\<lambda>x. h x)) (g >>= (\<lambda>x. j x))"
-  apply (rule monadic_rewrite_guard_imp)
-   apply (rule monadic_rewrite_trans)
-    apply (erule(1) monadic_rewrite_bind_tail)
-   apply (erule monadic_rewrite_bind_head)
-  apply simp
-  done
+  using monadic_rewrite_trans[OF monadic_rewrite_bind_tail monadic_rewrite_bind_head]
+  by (metis pred_conj_comm)
 
 lemma monadic_rewrite_named_bindE:
   "\<lbrakk> monadic_rewrite F E ((=) s) f f';
@@ -176,10 +172,8 @@ lemma monadic_rewrite_named_bindE:
   apply (rule monadic_rewrite_guard_imp)
    apply (erule_tac R="(=) s" and Q="\<lambda>rv s'. (Inr rv, s') \<in> fst (f' s)" in monadic_rewrite_bindE)
     apply (rule monadic_rewrite_name_pre)
-    apply clarsimp
-   apply (clarsimp simp add: validE_R_def validE_def valid_def
-                      split: sum.split)
-  apply simp
+    apply (clarsimp simp add: validE_R_def validE_def valid_def
+                       split: sum.split)+
   done
 
 lemma monadic_rewrite_drop_return:
@@ -256,9 +250,10 @@ lemmas monadic_rewrite_symb_exec
 lemma eq_UNIV_imp_helper:
   "v \<in> UNIV \<longrightarrow> x = x" by simp
 
-lemmas monadic_rewrite_symb_exec2
+(* perform symbolic execution on LHS, dropping state-idempotent operation whose results are unused *)
+lemmas monadic_rewrite_symb_exec_drop
   = monadic_rewrite_symb_exec_pre[OF _ _ _ eq_UNIV_imp_helper, where P=\<top>,
-                                  simplified, THEN monadic_rewrite_trans]
+                                  simplified, THEN monadic_rewrite_trans, OF _ _ wp_post_taut]
 
 lemma monadic_rewrite_symb_exec_r:
   "\<lbrakk> \<And>P. m \<lbrace>P\<rbrace>; no_fail P' m;
@@ -280,10 +275,7 @@ lemma monadic_rewrite_symb_exec_r':
      \<And>rv. monadic_rewrite F False (Q rv) x (y rv);
      \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace> \<rbrakk>
    \<Longrightarrow> monadic_rewrite F False P x (m >>= (\<lambda>rv. y rv))"
-  apply (rule monadic_rewrite_guard_imp)
-   apply (rule monadic_rewrite_symb_exec_r; assumption)
-  apply simp
-  done
+  by (rule monadic_rewrite_guard_imp[OF monadic_rewrite_symb_exec_r]; assumption?; simp)
 
 lemma monadic_rewrite_symb_exec_l'':
   "\<lbrakk> \<And>P. m \<lbrace>P\<rbrace>; empty_fail m;
