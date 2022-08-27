@@ -519,13 +519,13 @@ lemma thread_actions_isolatable_bind:
   apply (clarsimp simp: thread_actions_isolatable_def)
   apply (rule monadic_rewrite_guard_imp)
    apply (rule monadic_rewrite_trans)
-    apply (erule monadic_rewrite_bind2, assumption)
+    apply (erule monadic_rewrite_bind_l, assumption)
     apply (rule hoare_vcg_all_lift, assumption)
    apply (subst isolate_thread_actions_wrap_bind, simp)
    apply simp
    apply (rule monadic_rewrite_in_isolate_thread_actions, assumption)
    apply (rule monadic_rewrite_transverse)
-    apply (erule monadic_rewrite_bind2, assumption)
+    apply (erule monadic_rewrite_bind_l, assumption)
     apply (rule hoare_vcg_all_lift, assumption)
    apply (simp add: bind_assoc id_def)
    apply (rule monadic_rewrite_refl)
@@ -726,7 +726,7 @@ lemma transferCaps_simple_rewrite:
   apply (rule monadic_rewrite_guard_imp)
    apply (rule monadic_rewrite_trans)
     apply (simp add: transferCaps_simple, rule monadic_rewrite_refl)
-   apply (rule monadic_rewrite_symb_exec2, (wp empty_fail_getReceiveSlots)+)
+   apply (rule monadic_rewrite_symb_exec_drop, (wp empty_fail_getReceiveSlots)+)
    apply (rule monadic_rewrite_refl)
   apply simp
   done
@@ -792,9 +792,9 @@ lemma doIPCTransfer_simple_rewrite:
         apply (rule transferCaps_simple_rewrite)
        apply (wp threadGet_const)+
    apply (simp add: bind_assoc)
-   apply (rule monadic_rewrite_symb_exec2[OF lookupIPC_inv empty_fail_lookupIPCBuffer]
-               monadic_rewrite_symb_exec2[OF threadGet_inv empty_fail_threadGet]
-               monadic_rewrite_symb_exec2[OF user_getreg_inv' empty_fail_user_getreg]
+   apply (rule monadic_rewrite_symb_exec_drop[OF lookupIPC_inv empty_fail_lookupIPCBuffer]
+               monadic_rewrite_symb_exec_drop[OF threadGet_inv empty_fail_threadGet]
+               monadic_rewrite_symb_exec_drop[OF user_getreg_inv' empty_fail_user_getreg]
                monadic_rewrite_bind_head monadic_rewrite_bind_tail
                   | wp)+
     apply (case_tac "messageInfoFromWord msgInfo")
@@ -852,10 +852,10 @@ lemma setupCallerCap_rewrite:
      apply simp
      apply (rule monadic_rewrite_trans)
       apply (rule monadic_rewrite_bind_tail)
-       apply (rule monadic_rewrite_symb_exec2, (wp | simp)+)+
+       apply (rule monadic_rewrite_symb_exec_drop, (wp | simp)+)+
        apply (rule monadic_rewrite_refl)
       apply wp+
-     apply (rule monadic_rewrite_symb_exec2, (wp empty_fail_getCTE)+)+
+     apply (rule monadic_rewrite_symb_exec_drop, (wp empty_fail_getCTE)+)+
      apply (rule monadic_rewrite_refl)
     apply (wp getCTE_wp' | simp add: cte_wp_at_ctes_of)+
   apply (clarsimp simp: reply_masters_rvk_fb_def)
@@ -944,10 +944,10 @@ lemma activateThread_simple_rewrite:
        apply simp
        apply (rule monadic_rewrite_refl)
       apply wp
-     apply (rule monadic_rewrite_symb_exec2, (wp empty_fail_getThreadState)+)
+     apply (rule monadic_rewrite_symb_exec_drop, (wp empty_fail_getThreadState)+)
      apply (rule monadic_rewrite_refl)
     apply wp
-   apply (rule monadic_rewrite_symb_exec2,
+   apply (rule monadic_rewrite_symb_exec_drop,
           simp_all add: getCurThread_def)
    apply (rule monadic_rewrite_refl)
   apply (clarsimp simp: ct_in_state'_def elim!: pred_tcb'_weakenE)
@@ -1250,7 +1250,7 @@ lemma tcbSchedDequeue_rewrite:
      apply (simp add: when_def)
      apply (rule monadic_rewrite_refl)
     apply (wp threadGet_const)
-   apply (rule monadic_rewrite_symb_exec2)
+   apply (rule monadic_rewrite_symb_exec_drop)
       apply wp+
    apply (rule monadic_rewrite_refl)
   apply (clarsimp)
@@ -1344,7 +1344,7 @@ lemma isolate_thread_actions_rewrite_bind:
    apply (subst isolate_thread_actions_wrap_bind, assumption)
    apply (rule monadic_rewrite_in_isolate_thread_actions, assumption)
    apply (rule monadic_rewrite_transverse)
-    apply (rule monadic_rewrite_bind2)
+    apply (rule monadic_rewrite_bind_l)
       apply (erule(1) thread_actions_isolatableD)
      apply (rule thread_actions_isolatableD, assumption+)
     apply (rule hoare_vcg_all_lift, assumption)
@@ -1459,14 +1459,14 @@ lemma monadic_rewrite_isolate_final2:
         apply auto[1]
        apply (rule_tac P="P and (\<lambda>s. tcbs = get_tcb_state_regs o ksPSpace s o idx
                                              \<and> sa = ksSchedulerAction s)"
-                    in monadic_rewrite_refl3)
+                    in monadic_rewrite_pre_imp_refl)
        apply (clarsimp simp: exec_modify eqs return_def)
       apply wp+
   apply (clarsimp simp: o_def eqs)
   done
 
 lemmas monadic_rewrite_isolate_final
-    = monadic_rewrite_isolate_final2[where R=\<top>, OF monadic_rewrite_refl2, simplified]
+    = monadic_rewrite_isolate_final2[where R=\<top>, OF monadic_rewrite_is_refl, simplified]
 
 lemma copy_registers_isolate_general:
   "\<lbrakk> inj idx; idx x = t; idx y = t' \<rbrakk> \<Longrightarrow>
@@ -1592,7 +1592,7 @@ lemma setThreadState_rewrite_simple:
           apply assumption
          apply (rule monadic_rewrite_refl)
         apply wp+
-     apply (rule monadic_rewrite_symb_exec2,
+     apply (rule monadic_rewrite_symb_exec_drop,
             (wp  empty_fail_isRunnable
                | (simp only: getCurThread_def getSchedulerAction_def
                       , rule empty_fail_gets))+)+
