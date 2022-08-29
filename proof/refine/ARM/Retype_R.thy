@@ -1422,16 +1422,20 @@ lemma objBitsKO_gt_0: "0 < objBitsKO ko"
     apply (simp_all add:archObjSize_def pageBits_def pteBits_def pdeBits_def)
   done
 
-lemma kheap_ekheap_double_gets: "(\<And>rv erv rv'. pspace_relation rv rv' \<Longrightarrow> ekheap_relation erv rv' \<Longrightarrow> corres r (R rv erv) (R' rv') (b rv erv) (d rv')) \<Longrightarrow>
-corres r (\<lambda>s. R (kheap s) (ekheap s) s) (\<lambda>s. R' (ksPSpace s) s) (do x \<leftarrow> gets kheap; xa \<leftarrow> gets ekheap; b x xa od) (gets ksPSpace >>= d)"
+lemma kheap_ekheap_double_gets:
+  "(\<And>rv erv rv'. \<lbrakk>pspace_relation rv rv'; ekheap_relation erv rv'\<rbrakk>
+                 \<Longrightarrow> corres r (R rv erv) (R' rv') (b rv erv) (d rv')) \<Longrightarrow>
+   corres r (\<lambda>s. R (kheap s) (ekheap s) s) (\<lambda>s. R' (ksPSpace s) s)
+          (do x \<leftarrow> gets kheap; xa \<leftarrow> gets ekheap; b x xa od) (gets ksPSpace >>= d)"
   apply (rule corres_symb_exec_l)
      apply (rule corres_guard_imp)
-       apply (rule_tac r'= "\<lambda>erv rv'. ekheap_relation erv rv' \<and> pspace_relation x rv'" in corres_split_deprecated)
+       apply (rule_tac r'= "\<lambda>erv rv'. ekheap_relation erv rv' \<and> pspace_relation x rv'"
+               in corres_split)
+          apply (subst corres_gets[where P="\<lambda>s. x = kheap s" and P'=\<top>])
           apply clarsimp
-          apply assumption
-         apply (subst corres_gets[where P="\<lambda>s. x = kheap s" and P'=\<top>])
+          apply (simp add: state_relation_def)
          apply clarsimp
-         apply (simp add: state_relation_def)
+         apply assumption
         apply (wp gets_exs_valid | simp)+
   done
 
@@ -1787,19 +1791,19 @@ proof -
        apply (simp add: not_less modify_modify bind_assoc[symmetric]
                           obj_bits_api[symmetric] shiftl_t2n upto_enum_red'
                            range_cover.unat_of_nat_n[OF cover])
-       apply (rule corres_split_nor[OF corres_trivial])
-          apply (clarsimp simp: retype_addrs_fold[symmetric] ptr_add_def upto_enum_red' not_zero'
-                                range_cover.unat_of_nat_n[OF cover] word_le_sub1
-                          simp del: word_of_nat_eq_0_iff)
-          apply (rule_tac f=g in arg_cong)
-          apply clarsimp
-         apply (rename_tac x eps ps)
-         apply (rule_tac P="\<lambda>s. x = kheap s \<and> eps = ekheap (s) \<and> ?P s" and
-                         P'="\<lambda>s. ps = ksPSpace s \<and> ?P' s" in corres_modify)
-         apply (simp add: set_retype_addrs_fold new_caps_adds_fold)
-         apply (erule retype_state_relation[OF _ _ _ _ _ _ _ _ _ cover _ _ orr],
-                simp_all add: ko not_zero obj_bits_api
-                              bound[simplified obj_bits_api ko])[1]
+       apply (rule corres_split_nor[OF _ corres_trivial])
+          apply (rename_tac x eps ps)
+          apply (rule_tac P="\<lambda>s. x = kheap s \<and> eps = ekheap (s) \<and> ?P s" and
+                          P'="\<lambda>s. ps = ksPSpace s \<and> ?P' s" in corres_modify)
+          apply (simp add: set_retype_addrs_fold new_caps_adds_fold)
+          apply (erule retype_state_relation[OF _ _ _ _ _ _ _ _ _ cover _ _ orr],
+                 simp_all add: ko not_zero obj_bits_api
+                               bound[simplified obj_bits_api ko])[1]
+         apply (clarsimp simp: retype_addrs_fold[symmetric] ptr_add_def upto_enum_red' not_zero'
+                               range_cover.unat_of_nat_n[OF cover] word_le_sub1
+                         simp del: word_of_nat_eq_0_iff)
+         apply (rule_tac f=g in arg_cong)
+         apply clarsimp
         apply wp+
       apply (clarsimp split: option.splits)
       apply (intro conjI impI)
@@ -2533,25 +2537,24 @@ lemma copyGlobalMappings_corres:
                    pd_bits_def pdBits_def mapM_x_mapM)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr)
-       apply (rule_tac F ="is_aligned pd 6 \<and> is_aligned global_pd 6" in corres_gen_asm)
-       apply (simp add: liftM_def[symmetric])
-       apply (rule_tac S="(=)" and r'=dc
-                   and Q="\<lambda>xs s. \<forall>x \<in> set xs. pde_at (global_pd + (x << 2)) s
-                                              \<and> pde_at (pd + (x << 2)) s \<and> pspace_aligned s \<and>
-                                              valid_etcbs s"
-                   and Q'="\<lambda>xs s. \<forall>x \<in> set xs. pde_at' (global_pd + (x << 2)) s
-                                              \<and> pde_at' (pd + (x << 2)) s"
-                          in corres_mapM_list_all2, (simp add: pdeBits_def)+)
-          apply (rule corres_guard_imp, rule corres_split_deprecated)
-               apply (erule storePDE_corres[OF _ refl])
-              apply (rule corres_rel_imp)
-               apply (rule_tac getObject_PDE_corres[OF refl])
-              apply clarsimp
-              apply (drule(1) pde_relation_aligned_eq)
-              apply fastforce
-             apply (wp hoare_vcg_const_Ball_lift | simp)+
-       apply (simp add: kernel_base_def ARM.pptrBase_def pptrBase_def list_all2_refl pageBits_def)
-      apply (rule corres_trivial, clarsimp simp: state_relation_def arch_state_relation_def)
+       apply (rule corres_trivial, clarsimp simp: state_relation_def arch_state_relation_def)
+      apply (rule_tac F ="is_aligned pd 6 \<and> is_aligned global_pd 6" in corres_gen_asm)
+      apply (simp add: liftM_def[symmetric])
+      apply (rule_tac S="(=)" and r'=dc
+                  and Q="\<lambda>xs s. \<forall>x \<in> set xs. pde_at (global_pd + (x << 2)) s
+                                             \<and> pde_at (pd + (x << 2)) s \<and> pspace_aligned s \<and>
+                                             valid_etcbs s"
+                  and Q'="\<lambda>xs s. \<forall>x \<in> set xs. pde_at' (global_pd + (x << 2)) s
+                                             \<and> pde_at' (pd + (x << 2)) s"
+                         in corres_mapM_list_all2, (simp add: pdeBits_def)+)
+         apply (rule corres_guard_imp, rule corres_split)
+              apply (rule_tac getObject_PDE_corres[OF refl])
+             apply (rule storePDE_corres[OF _ refl])
+             apply clarsimp
+             apply (drule(1) pde_relation_aligned_eq)
+             apply fastforce
+            apply (wp hoare_vcg_const_Ball_lift | simp)+
+      apply (simp add: kernel_base_def ARM.pptrBase_def pptrBase_def list_all2_refl pageBits_def)
      apply wp+
    apply (clarsimp simp: valid_arch_state_def)
    apply (auto elim: page_directory_pde_atI is_aligned_weaken[OF pd_aligned])[1]
@@ -5280,19 +5283,19 @@ lemma corres_retype_region_createNewCaps:
                      split del: if_split)[9] (* not PageDirectoryObject *)
            apply (rule corres_guard_imp)
              apply (rule corres_split_eqr)
-                apply (rule corres_split_nor)
-                   apply (rule corres_trivial, simp)
-                   apply (clarsimp simp: list_all2_same list_all2_map1 list_all2_map2
-                  objBits_simps APIType_map2_def)
+                apply (rule corres_retype[where 'a = tcb],
+                       simp_all add: obj_bits_api_def objBits_simps' pageBits_def
+                                    APIType_map2_def makeObjectKO_def
+                                    other_objs_default_relation)[1]
+                apply (fastforce simp: range_cover_def)
+               apply (rule corres_split_nor)
                   apply (simp add: APIType_map2_def)
                   apply (rule retype_region2_extra_ext_mapM_x_corres)
-                 apply wp
+                 apply (rule corres_trivial, simp)
+                 apply (clarsimp simp: list_all2_same list_all2_map1 list_all2_map2
+                objBits_simps APIType_map2_def)
                 apply wp
-               apply (rule corres_retype[where 'a = tcb],
-                      simp_all add: obj_bits_api_def objBits_simps' pageBits_def
-                                   APIType_map2_def makeObjectKO_def
-                                   other_objs_default_relation)[1]
-               apply (fastforce simp: range_cover_def)
+               apply wp
               apply ((wp retype_region2_obj_at | simp add: APIType_map2_def)+)[1]
              apply ((wp createObjects_tcb_at'[where sz=sz] | simp add: APIType_map2_def objBits_simps' obj_bits_api_def)+)[1]
             apply simp
@@ -5430,36 +5433,6 @@ lemma corres_retype_region_createNewCaps:
   \<comment> \<open>PageDirectory\<close>
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr)
-       apply (simp add: init_arch_objects_def APIType_map2_def
-                        bind_assoc)
-       apply (rule corres_split_nor)
-          apply (simp add: liftM_def[symmetric] o_def list_all2_map1
-                           list_all2_map2 list_all2_same
-                           arch_default_cap_def mapM_x_mapM)
-          apply (simp add: dc_def[symmetric])
-          apply (rule corres_machine_op)
-          apply (rule corres_Id)
-            apply (simp add: shiftl_t2n shiftL_nat
-                             pdBits_def ptBits_def pageBits_def pt_bits_def)
-            defer
-            apply simp
-           apply (simp add: mapM_discarded[where g = "return ()",simplified,symmetric])
-           apply (rule no_fail_pre)
-            apply (wp no_fail_mapM|clarsimp)+
-          apply (simp add: mapM_x_mapM)
-          apply (rule corres_underlying_split[where r' = dc])
-             apply (rule_tac Q="\<lambda>xs s. (\<forall>x \<in> set xs. page_directory_at x s)
-                                    \<and> valid_arch_state s \<and> pspace_aligned s \<and> valid_etcbs s"
-                          and Q'="\<lambda>xs s. (\<forall>x \<in> set xs. page_directory_at' x s) \<and> valid_arch_state' s"
-                          in corres_mapM_list_all2[where r'=dc and S="(=)"])
-                  apply simp+
-                apply (rule corres_guard_imp, rule copyGlobalMappings_corres)
-                 apply simp+
-               apply (wp hoare_vcg_const_Ball_lift | simp)+
-             apply (simp add: list_all2_same)
-            apply (rule corres_return[where P =\<top> and P'=\<top>,THEN iffD2])
-            apply simp
-           apply wp+
        apply (rule corres_retype[where ty = "Inr PageDirectoryObject" and 'a = pde
                     , simplified, folded retype_region2_ext_retype_region_ArchObject_PageDirectoryObj],
               simp_all add: APIType_map2_def obj_bits_api_def
@@ -5469,7 +5442,36 @@ lemma corres_retype_region_createNewCaps:
                             makeObjectKO_def)[1]
         apply (simp add: range_cover_def)+
        apply (rule pagedirectory_relation_retype)
-      apply (wp | simp)+
+      apply (simp add: init_arch_objects_def APIType_map2_def
+                       bind_assoc)
+      apply (rule corres_split_nor)
+         apply (simp add: mapM_x_mapM)
+         apply (rule corres_underlying_split[where r' = dc])
+            apply (rule_tac Q="\<lambda>xs s. (\<forall>x \<in> set xs. page_directory_at x s)
+                                   \<and> valid_arch_state s \<and> pspace_aligned s \<and> valid_etcbs s"
+                         and Q'="\<lambda>xs s. (\<forall>x \<in> set xs. page_directory_at' x s) \<and> valid_arch_state' s"
+                         in corres_mapM_list_all2[where r'=dc and S="(=)"])
+                 apply simp+
+               apply (rule corres_guard_imp, rule copyGlobalMappings_corres)
+                apply simp+
+              apply (wp hoare_vcg_const_Ball_lift | simp)+
+            apply (simp add: list_all2_same)
+           apply (rule corres_return[where P =\<top> and P'=\<top>,THEN iffD2])
+           apply simp
+          apply wp+
+        apply (simp add: liftM_def[symmetric] o_def list_all2_map1
+                         list_all2_map2 list_all2_same
+                         arch_default_cap_def mapM_x_mapM)
+        apply (simp add: dc_def[symmetric])
+        apply (rule corres_machine_op)
+        apply (rule corres_Id)
+          apply (simp add: shiftl_t2n shiftL_nat
+                           pdBits_def ptBits_def pageBits_def pt_bits_def)
+          defer
+          apply simp
+         apply (simp add: mapM_discarded[where g = "return ()",simplified,symmetric])
+         apply (rule no_fail_pre)
+          apply (wp no_fail_mapM|clarsimp)+
       apply (rule hoare_vcg_conj_lift)
        apply (rule hoare_post_imp)
         prefer 2
@@ -5521,7 +5523,7 @@ lemma corres_retype_region_createNewCaps:
                       APIType_map2_def default_arch_object_def default_object_def archObjSize_def
                       pteBits_def pdeBits_def
                       pd_bits_def fromIntegral_def toInteger_nat fromInteger_nat)
- done
+  done
 
 end
 end
