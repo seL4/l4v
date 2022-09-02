@@ -40,7 +40,7 @@ lemma monadic_rewrite_impossible:
   "monadic_rewrite F E \<bottom> f g"
   by (clarsimp simp: monadic_rewrite_def)
 
-lemma monadic_rewrite_guard_imp:
+lemma monadic_rewrite_guard_imp[wp_pre]:
   "\<lbrakk> monadic_rewrite F E Q f g; \<And>s. P s \<Longrightarrow> Q s \<rbrakk> \<Longrightarrow> monadic_rewrite F E P f g"
   by (auto simp add: monadic_rewrite_def)
 
@@ -361,6 +361,16 @@ lemma monadic_rewrite_if_lhs:
    \<Longrightarrow> monadic_rewrite F E (\<lambda>s. (P \<longrightarrow> Q s) \<and> (\<not> P \<longrightarrow> R s)) (If P b c) a"
   by (cases P, simp_all)
 
+lemma monadic_rewrite_if_lhs_True:
+  "\<lbrakk> P \<Longrightarrow> monadic_rewrite F E Q b a \<rbrakk>
+   \<Longrightarrow> monadic_rewrite F E ((\<lambda>_. P) and Q) (If P b c) a"
+  by (rule monadic_rewrite_gen_asm, cases P, simp_all)
+
+lemma monadic_rewrite_if_lhs_False:
+  "\<lbrakk> \<not> P \<Longrightarrow> monadic_rewrite F E R c a \<rbrakk>
+   \<Longrightarrow> monadic_rewrite F E ((\<lambda>_. \<not> P) and R) (If P b c) a"
+  by (rule monadic_rewrite_gen_asm, cases P, simp_all)
+
 lemma monadic_rewrite_if_known:
   "monadic_rewrite F E ((\<lambda>s. C = X) and \<top>) (if C then f else g) (if X then f else g)"
   by (rule monadic_rewrite_gen_asm)
@@ -667,5 +677,46 @@ lemma wpc_helper_monadic_rewrite:
 
 wpc_setup "\<lambda>m. monadic_rewrite F E Q' m m'" wpc_helper_monadic_rewrite
 wpc_setup "\<lambda>m. monadic_rewrite F E Q' (m >>= c) m'" wpc_helper_monadic_rewrite
+
+text \<open>Tactics\<close>
+
+method monadic_rewrite_step =
+  determ \<open>rule monadic_rewrite_bind_tail monadic_rewrite_bindE_tail\<close>
+
+method monadic_rewrite_solve_head methods m =
+  (rule monadic_rewrite_bind_head monadic_rewrite_bindE_head)?,
+  solves \<open>m, (rule monadic_rewrite_refl)?\<close>
+
+(* The most common way of performing monadic rewrite is by doing a pass over the LHS via some kind
+of setup step, such as monadic_rewrite_trans (or transverse).
+We traverse the LHS with some kind of step method (e.g. monadic_rewrite_step) until we can perform
+some desired action.
+This action should clear up the current monadic_rewrite goal and leave us with mostly WP goals to
+resolve, e.g. by using monadic_rewrite_solve_head or via [OF ... monadic_rewrite_refl] style rules.
+These goals (along with the WP goals generated at each step taken) are left to the finalise
+method, which is likely to be some invocation of wp/wpsimp.
+
+Further notes:
+* no backtracking to previous steps
+* if there is no place where action can apply, step until the end and be left with a monadic_rewrite
+  goal that finalise will most likely fail on
+* if action does not resolve the monadic_rewrite goal, step will still try to advance, potentially
+  leading to goals that are hard to make sense of *)
+method monadic_rewrite_single_pass methods start step action finalise =
+  determ start, (((action | determ step)+), finalise+)[1]
+
+(* Step over LHS until action applies, then finalise. *)
+method monadic_rewrite_rule methods action finalise =
+  monadic_rewrite_single_pass \<open>wp_pre, rule monadic_rewrite_trans\<close>
+                              monadic_rewrite_step
+                              action
+                              finalise
+
+(* Rewrite LHS using a single method that works on the head of a bind, and cleanup with finalise.
+   E.g. using \<open>rule monadic_rewrite_if_lhs_True\<close> \<open>wpsimp\<close> *)
+method monadic_rewrite_simple methods action finalise =
+  monadic_rewrite_rule \<open>monadic_rewrite_solve_head action\<close> finalise
+
+(* FIXME: consider tactic for deployment on corres goals; think about transverse options *)
 
 end
