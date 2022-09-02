@@ -916,10 +916,9 @@ lemma transferCaps_simple_rewrite:
    (return (mi \<lparr> msgExtraCaps := 0, msgCapsUnwrapped := 0 \<rparr>))"
   including no_pre
   apply (rule monadic_rewrite_gen_asm)
+  apply (simp add: transferCaps_simple)
   apply (rule monadic_rewrite_guard_imp)
-   apply (rule monadic_rewrite_trans)
-    apply (simp add: transferCaps_simple, rule monadic_rewrite_refl)
-   apply (rule monadic_rewrite_symb_exec_drop, (wp empty_fail_getReceiveSlots)+)
+   apply (rule monadic_rewrite_symb_exec_drop[OF _ empty_fail_getReceiveSlots], wp+)
    apply (rule monadic_rewrite_refl)
   apply simp
   done
@@ -1486,17 +1485,12 @@ lemma switchToThread_rewrite:
        (do Arch.switchToThread t; setCurThread t od)"
   apply (simp add: switchToThread_def Thread_H.switchToThread_def)
   apply (rule monadic_rewrite_guard_imp)
-   apply (rule monadic_rewrite_trans)
-    apply (rule monadic_rewrite_bind_tail)
-     apply (rule monadic_rewrite_bind)
-     apply (rule tcbSchedDequeue_rewrite)
-      apply (rule monadic_rewrite_refl)
-     apply (wp Arch_switchToThread_obj_at_pre)+
    apply (rule monadic_rewrite_bind_tail)
-    apply (rule monadic_rewrite_symb_exec)
-       apply (wp+, simp)
+    apply (rule monadic_rewrite_trans)
+     apply (rule monadic_rewrite_bind_head[OF tcbSchedDequeue_rewrite])
+    apply (rule monadic_rewrite_symb_exec_drop, wp+)
     apply (rule monadic_rewrite_refl)
-   apply (wp)
+   apply (wp Arch_switchToThread_obj_at_pre)+
   apply (clarsimp simp: comp_def)
   done
 
