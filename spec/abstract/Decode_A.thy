@@ -258,29 +258,35 @@ definition has_handler_rights :: "cap \<Rightarrow> bool" where
 definition valid_fault_handler :: "cap \<Rightarrow> bool" where
   "valid_fault_handler \<equiv> is_ep_cap and has_handler_rights or (=) NullCap"
 
-definition update_and_check_handler_ep ::
+definition decode_handler_ep ::
   "data list \<Rightarrow> nat \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> ((cap \<times> cslot_ptr),'z::state_ext) se_monad"
   where
-  "update_and_check_handler_ep args pos excaps \<equiv> doE
-    fh_data  \<leftarrow> returnOk $ args ! 0;
-    fh_rights  \<leftarrow> returnOk $ args ! 1;
+  "decode_handler_ep args cap_pos excaps \<equiv> doE
     fh_arg  \<leftarrow> returnOk $ excaps ! 0;
     fh_cap  \<leftarrow> returnOk $ fst fh_arg;
     fh_slot \<leftarrow> returnOk $ snd fh_arg;
-    unlessE (is_ep_cap fh_cap \<or> fh_cap = NullCap) $ throwError $ InvalidCapability pos;
+    unlessE (is_ep_cap fh_cap \<or> fh_cap = NullCap) $ throwError $ InvalidCapability cap_pos;
     fh_cap \<leftarrow>
-      if fh_data \<noteq> 0
+      if length args \<ge> 1
+      then
+        let fh_data = args ! 0
+        in if fh_cap \<noteq> NullCap \<and> fh_data \<noteq> 0
+        then doE
+          fh_cap \<leftarrow> returnOk $ update_cap_data False fh_data fh_cap;
+          whenE (fh_cap = NullCap) $ throwError IllegalOperation;
+          returnOk fh_cap
+        odE
+        else returnOk fh_cap
+      else returnOk fh_cap;
+    fh_cap \<leftarrow>
+      if length args \<ge> 2
       then doE
-        whenE (update_cap_data False fh_data fh_cap = NullCap) $ throwError IllegalOperation;
-        returnOk $ update_cap_data False fh_data fh_cap
+        fh_rights \<leftarrow> returnOk $ args ! 1;
+        returnOk $ mask_cap (data_to_rights fh_rights) fh_cap
       odE
       else returnOk fh_cap;
-    fh_cap \<leftarrow>
-      if fh_rights \<noteq> 0
-      then returnOk $ mask_cap (data_to_rights fh_rights) fh_cap
-      else returnOk fh_cap;
     fh_cap \<leftarrow> derive_cap fh_slot fh_cap;
-    unlessE (valid_fault_handler fh_cap) $ throwError $ InvalidCapability pos;
+    unlessE (valid_fault_handler fh_cap) $ throwError $ InvalidCapability cap_pos;
     returnOk (fh_cap, fh_slot)
   odE"
 
@@ -326,9 +332,9 @@ definition
   :: "data list \<Rightarrow> cap \<Rightarrow> cslot_ptr \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> (tcb_invocation,'z::state_ext) se_monad"
 where
   "decode_set_space args cap slot excaps \<equiv> doE
-    whenE (length args < 4 \<or> length excaps < 3) $ throwError TruncatedMessage;
-    space \<leftarrow> decode_cv_space (take 2 (drop 2 args)) cap slot (take 2 (drop 1 excaps));
-    fault_handler \<leftarrow> update_and_check_handler_ep (take 2 args) 1 (take 1 excaps);
+    whenE (length args < 2 \<or> length excaps < 3) $ throwError TruncatedMessage;
+    space \<leftarrow> decode_cv_space (take 2 args) cap slot (take 2 (drop 1 excaps));
+    fault_handler \<leftarrow> decode_handler_ep (drop 2 args) 1 (take 1 excaps);
     returnOk $ ThreadControlCaps (obj_ref_of cap) slot (Some fault_handler) None
                             (tc_new_croot space) (tc_new_vroot space) None
  odE"
@@ -380,9 +386,8 @@ definition
   "data list \<Rightarrow> cap \<Rightarrow> cslot_ptr \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> (tcb_invocation,'z::state_ext) se_monad"
 where
   "decode_set_timeout_ep args cap slot extra_caps \<equiv> doE
-     whenE (length args < 2) $ throwError TruncatedMessage;
      whenE (length extra_caps < 1) $ throwError TruncatedMessage;
-     handler \<leftarrow> update_and_check_handler_ep (take 2 args) 1 (take 1 extra_caps);
+     handler \<leftarrow> decode_handler_ep args 1 (take 1 extra_caps);
      returnOk $ ThreadControlCaps (obj_ref_of cap) slot
                               None (Some handler) None None None
    odE"
@@ -437,7 +442,7 @@ definition
   decode_set_sched_params :: "data list \<Rightarrow> cap \<Rightarrow> cslot_ptr \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> (tcb_invocation,'z::state_ext) se_monad"
 where
   "decode_set_sched_params args cap slot extra_caps \<equiv> doE
-     whenE (length args < 4) $ throwError TruncatedMessage;
+     whenE (length args < 2) $ throwError TruncatedMessage;
      whenE (length extra_caps < 3) $ throwError TruncatedMessage;
      new_mcp \<leftarrow> returnOk $ ucast $ args ! 0;
      new_prio \<leftarrow> returnOk $ ucast $ args ! 1;
@@ -449,7 +454,7 @@ where
      check_prio (args ! 0) auth_tcb;
      check_prio (args ! 1) auth_tcb;
      sc \<leftarrow> decode_update_sc cap slot sc_cap;
-     fh \<leftarrow> update_and_check_handler_ep (take 2 (drop 2 args)) 3 (take 1 (drop 2 extra_caps));
+     fh \<leftarrow> decode_handler_ep (drop 2 args) 3 (take 1 (drop 2 extra_caps));
      returnOk $ ThreadControlSched (obj_ref_of cap) slot (Some fh)
                               (Some (new_mcp, auth_tcb)) (Some (new_prio, auth_tcb))
                               (Some sc)
