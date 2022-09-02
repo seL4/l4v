@@ -256,7 +256,7 @@ The "SetSchedParams" call sets both the priority and the MCP in a single call.
 
 > decodeSetSchedParams :: [Word] -> Capability -> PPtr CTE -> [(Capability, PPtr CTE)] ->
 >         KernelF SyscallError TCBInvocation
-> decodeSetSchedParams (newMCP:newPrio:fhData:fhRights:_) cap slot ((authCap, _):(scCap, _):fhArg:_) = do
+> decodeSetSchedParams (newMCP:newPrio:args) cap slot ((authCap, _):(scCap, _):fhArg:_) = do
 >     authTCB <- case authCap of
 >         ThreadCap { capTCBPtr = tcbPtr } -> return tcbPtr
 >         _ -> throw $ InvalidCapability 1
@@ -280,7 +280,7 @@ The "SetSchedParams" call sets both the priority and the MCP in a single call.
 >             when (tcbPtr == curTcbPtr) $ throw IllegalOperation
 >             return Nothing
 >         _ -> throw $ InvalidCapability 2
->     faultHandler <- updateAndCheckHandlerEP [fhData,fhRights] 3 [fhArg]
+>     faultHandler <- decodeHandlerEP args 3 [fhArg]
 >     return $ ThreadControlSched {
 >         tcSchedTarget = tcbPtr,
 >         tcSchedSlot = slot,
@@ -352,29 +352,35 @@ This is to ensure that the source capability is not made invalid by the deletion
 >         tcCapsBuffer = Nothing }
 > decodeCVSpace _ _ _ _ = throw TruncatedMessage
 
-> updateAndCheckHandlerEP :: [Word] -> Int -> [(Capability, PPtr CTE)] ->
+> decodeHandlerEP :: [Word] -> Int -> [(Capability, PPtr CTE)] ->
 >         KernelF SyscallError (Capability, PPtr CTE)
-> updateAndCheckHandlerEP (fhData:fhRights:_) pos ((fhCap, fhSlot):_) = do
+> decodeHandlerEP args pos ((fhCap, fhSlot):_) = do
 >     unless (isEndpointCap fhCap || isNullCap fhCap) $ throw $ InvalidCapability pos
->     fhCap' <- if fhData /= 0
->         then do
->             let fhDataCap = updateCapData False fhData fhCap
->             when (isNullCap fhDataCap) $ throw IllegalOperation
->             return fhDataCap
+>     fhCap' <- if length args >= 1
+>         then
+>             let fhData = args !! 0
+>             in if not (isNullCap fhCap) && fhData /= 0
+>             then do
+>                 let fhDataCap = updateCapData False fhData fhCap
+>                 when (isNullCap fhDataCap) $ throw IllegalOperation
+>                 return fhDataCap
+>             else return fhCap
 >         else return fhCap
->     fhCap'' <- if fhRights /= 0
->         then return $ maskCapRights (rightsFromWord fhRights) fhCap'
+>     fhCap'' <- if length args >= 2
+>         then do
+>             let fhRights = args !! 1
+>             return $ maskCapRights (rightsFromWord fhRights) fhCap'
 >         else return fhCap'
 >     fhCap''' <- deriveCap fhSlot fhCap''
 >     unless (isValidFaultHandler fhCap''') $ throw $ InvalidCapability pos
 >     return (fhCap''', fhSlot)
-> updateAndCheckHandlerEP _ _ _ = throw TruncatedMessage
+> decodeHandlerEP _ _ _ = throw TruncatedMessage
 
 > decodeSetSpace :: [Word] -> Capability -> PPtr CTE ->
 >         [(Capability, PPtr CTE)] -> KernelF SyscallError TCBInvocation
-> decodeSetSpace (fhData:fhRights:cRootData:vRootData:_) cap slot (fhArg:cRootArg:vRootArg:_) = do
+> decodeSetSpace (cRootData:vRootData:args) cap slot (fhArg:cRootArg:vRootArg:_) = do
 >     space <- decodeCVSpace [cRootData,vRootData] cap slot [cRootArg,vRootArg]
->     faultHandler <- updateAndCheckHandlerEP [fhData,fhRights] 1 [fhArg]
+>     faultHandler <- decodeHandlerEP args 1 [fhArg]
 >     return $ ThreadControlCaps {
 >         tcCapsTarget = capTCBPtr cap,
 >         tcCapsSlot = slot,
@@ -387,8 +393,8 @@ This is to ensure that the source capability is not made invalid by the deletion
 
 > decodeSetTimeoutEndpoint :: [Word] -> Capability -> PPtr CTE ->
 >         [(Capability, PPtr CTE)] -> KernelF SyscallError TCBInvocation
-> decodeSetTimeoutEndpoint (thData:thRights:_) cap slot (thArg:_) = do
->     timeoutHandler <- updateAndCheckHandlerEP [thData,thRights] 1 [thArg]
+> decodeSetTimeoutEndpoint args cap slot (thArg:_) = do
+>     timeoutHandler <- decodeHandlerEP args 1 [thArg]
 >     return $ (emptyTCCaps $ capTCBPtr cap) {
 >         tcCapsSlot = slot,
 >         tcCapsTimeoutHandler = Just timeoutHandler }
