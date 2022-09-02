@@ -7722,7 +7722,7 @@ method invoke_tcb_install_tcb_cap_helper uses wp =
    ((wpsimp wp: hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R hoare_vcg_all_lift
                 install_tcb_cap_invs static_imp_wp static_imp_conj_wp wp
      | strengthen tcb_cap_always_valid_strg
-     | wp install_tcb_cap_cte_wp_at_ep)+)[1])
+     | wp install_tcb_cap_cte_wp_at_ep install_tcb_cap_is_derived_ep)+)[1])
 
 crunches restart_thread_if_no_fault
   for budget_sufficient[wp]: "budget_sufficient tp"
@@ -7871,9 +7871,9 @@ lemma tcc_valid_sched:
   apply (intro conjI impI;
          clarsimp simp: is_cnode_or_valid_arch_is_cap_simps tcb_ep_slot_cte_wp_ats real_cte_at_cte
                  dest!: is_valid_vtable_root_is_arch_cap)
-     apply (all \<open>clarsimp simp: is_cap_simps cte_wp_at_caps_of_state valid_fault_handler_def\<close>)
+    apply (all \<open>clarsimp simp: is_cap_simps cte_wp_at_caps_of_state valid_fault_handler_def\<close>)
     apply (all \<open>clarsimp simp: obj_at_def is_tcb typ_at_eq_kheap_obj cap_table_at_typ\<close>)
-    by auto
+  by (auto simp: is_cap_simps dest: is_derived_ep_cap)
 
 lemma restart_thread_if_no_fault_ct_in_state_neq:
   "\<lbrace>ct_in_state P and (\<lambda>s. t \<noteq> cur_thread s \<or> (P Inactive \<and> P Restart))\<rbrace>
@@ -17205,9 +17205,9 @@ lemma tcc_cur_sc_chargeable:
   apply (intro conjI impI;
          clarsimp simp: is_cnode_or_valid_arch_is_cap_simps tcb_ep_slot_cte_wp_ats real_cte_at_cte
                  dest!: is_valid_vtable_root_is_arch_cap)
-      apply (all \<open>clarsimp simp: is_cap_simps cte_wp_at_caps_of_state valid_fault_handler_def\<close>)
-     apply (all \<open>clarsimp simp: obj_at_def is_tcb typ_at_eq_kheap_obj cap_table_at_typ\<close>)
-  by auto
+    apply (all \<open>clarsimp simp: is_cap_simps cte_wp_at_caps_of_state valid_fault_handler_def\<close>)
+    apply (all \<open>clarsimp simp: obj_at_def is_tcb typ_at_eq_kheap_obj cap_table_at_typ\<close>)
+  by (auto simp: is_cap_simps dest: is_derived_ep_cap)
 
 crunches maybe_sched_context_unbind_tcb, maybe_sched_context_bind_tcb, set_priority
          , bind_notification
@@ -20616,9 +20616,9 @@ lemma tcc_ct_not_queued:
   apply (intro conjI impI;
          clarsimp simp: is_cnode_or_valid_arch_is_cap_simps tcb_ep_slot_cte_wp_ats real_cte_at_cte
                  dest!: is_valid_vtable_root_is_arch_cap)
-     apply (all \<open>clarsimp simp: is_cap_simps cte_wp_at_caps_of_state valid_fault_handler_def\<close>)
+    apply (all \<open>clarsimp simp: is_cap_simps cte_wp_at_caps_of_state valid_fault_handler_def\<close>)
     apply (all \<open>clarsimp simp: obj_at_def is_tcb typ_at_eq_kheap_obj cap_table_at_typ\<close>)
-  by auto
+  by (auto simp: is_cap_simps dest: is_derived_ep_cap)
 
 lemma invoke_tcb_ct_not_queuedE_E[wp]:
   "\<lbrace>ct_not_queued and invs and scheduler_act_sane and ct_not_blocked and tcb_inv_wf iv\<rbrace>
@@ -25471,16 +25471,16 @@ lemma invoke_tcb_ct_ready_if_schedulable[wp]:
          apply wpsimp
         apply wpsimp
            apply invoke_tcb_install_tcb_cap_helper+
-        apply simp
-        apply (strengthen tcb_cap_valid_ep_strgs)
-        apply (clarsimp cong: conj_cong)
-        apply (intro conjI impI;
-               clarsimp simp: is_cnode_or_valid_arch_is_cap_simps tcb_ep_slot_cte_wp_ats
-                              real_cte_at_cte ct_in_state_def
-                       dest!: is_valid_vtable_root_is_arch_cap)
-           apply (all \<open>clarsimp simp: is_cap_simps cte_wp_at_caps_of_state valid_fault_handler_def\<close>)
-          apply (all \<open>clarsimp simp: obj_at_def is_tcb typ_at_eq_kheap_obj cap_table_at_typ\<close>)
-          by auto
+       apply simp
+       apply (strengthen tcb_cap_valid_ep_strgs)
+       apply (clarsimp cong: conj_cong)
+       apply (intro conjI impI;
+              clarsimp simp: is_cnode_or_valid_arch_is_cap_simps tcb_ep_slot_cte_wp_ats
+                             real_cte_at_cte ct_in_state_def
+                      dest!: is_valid_vtable_root_is_arch_cap)
+         apply (all \<open>clarsimp simp: is_cap_simps cte_wp_at_caps_of_state valid_fault_handler_def\<close>)
+         apply (all \<open>clarsimp simp: obj_at_def is_tcb typ_at_eq_kheap_obj cap_table_at_typ\<close>)
+       by (auto simp: is_cap_simps dest: is_derived_ep_cap)
       subgoal for target slot fault_handler mcp priority sc
       apply (rule_tac Q="\<lambda>_ s. released_if_bound_sc_tcb_at (cur_thread s) s" in hoare_strengthen_post[rotated])
        apply (clarsimp simp: ct_ready_if_schedulable_def vs_all_heap_simps)

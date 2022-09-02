@@ -15,25 +15,28 @@ named_theorems Ipc_AI_assms
 lemma update_cap_data_closedform:
   "update_cap_data pres w cap =
    (case cap of
-     cap.EndpointCap r badge rights \<Rightarrow>
-       if badge = 0 \<and> \<not> pres then (cap.EndpointCap r (w && mask 28) rights) else cap.NullCap
-   | cap.NotificationCap r badge rights \<Rightarrow>
-       if badge = 0 \<and> \<not> pres then (cap.NotificationCap r (w && mask 28) rights) else cap.NullCap
-   | cap.CNodeCap r bits guard \<Rightarrow>
-       if word_bits < unat ((w >> 3) && mask 5) + bits
-       then cap.NullCap
-       else cap.CNodeCap r bits ((\<lambda>g''. drop (size g'' - unat ((w >> 3) && mask 5)) (to_bl g'')) ((w >> 8) && mask 18))
-   | cap.ThreadCap r \<Rightarrow> cap.ThreadCap r
-   | cap.DomainCap \<Rightarrow> cap.DomainCap
-   | cap.UntypedCap d p n idx \<Rightarrow> cap.UntypedCap d p n idx
-   | cap.NullCap \<Rightarrow> cap.NullCap
-   | cap.ReplyCap t rights \<Rightarrow> cap.ReplyCap t rights
-   | cap.SchedContextCap s n \<Rightarrow> cap.SchedContextCap s n
-   | cap.SchedControlCap \<Rightarrow> cap.SchedControlCap
-   | cap.IRQControlCap \<Rightarrow> cap.IRQControlCap
-   | cap.IRQHandlerCap irq \<Rightarrow> cap.IRQHandlerCap irq
-   | cap.Zombie r b n \<Rightarrow> cap.Zombie r b n
-   | cap.ArchObjectCap cap \<Rightarrow> cap.ArchObjectCap cap)"
+     EndpointCap r badge rights \<Rightarrow>
+       if badge = 0 \<and> \<not> pres then (EndpointCap r (w && mask badge_bits) rights) else NullCap
+   | NotificationCap r badge rights \<Rightarrow>
+       if badge = 0 \<and> \<not> pres then (NotificationCap r (w && mask badge_bits) rights) else NullCap
+   | CNodeCap r bits guard \<Rightarrow>
+       if word_bits < unat ((w >> cnode_padding_bits) && mask cnode_guard_size_bits) + bits
+       then NullCap
+       else CNodeCap r bits
+                     ((\<lambda>g''. drop (size g'' - unat ((w >> cnode_padding_bits) &&
+                                                    mask cnode_guard_size_bits)) (to_bl g''))
+                     ((w >> cnode_padding_bits + cnode_guard_size_bits) && mask 18))
+   | ThreadCap r \<Rightarrow> ThreadCap r
+   | DomainCap \<Rightarrow> DomainCap
+   | UntypedCap dev p n idx \<Rightarrow> UntypedCap dev p n idx
+   | NullCap \<Rightarrow> NullCap
+   | ReplyCap t rights \<Rightarrow> ReplyCap t rights
+   | SchedContextCap s n \<Rightarrow> SchedContextCap s n
+   | SchedControlCap \<Rightarrow> SchedControlCap
+   | IRQControlCap \<Rightarrow> IRQControlCap
+   | IRQHandlerCap irq \<Rightarrow> IRQHandlerCap irq
+   | Zombie r b n \<Rightarrow> Zombie r b n
+   | ArchObjectCap cap \<Rightarrow> ArchObjectCap cap)"
   apply (cases cap,
          simp_all only: cap.simps update_cap_data_def is_ep_cap.simps if_False if_True
                         is_ntfn_cap.simps is_cnode_cap.simps is_arch_cap_def word_size

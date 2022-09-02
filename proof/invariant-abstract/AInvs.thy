@@ -411,9 +411,9 @@ lemma invoke_tcb_schact_is_rct_imp_cur_sc_active:
       apply (intro conjI impI;
              clarsimp simp: is_cnode_or_valid_arch_is_cap_simps tcb_ep_slot_cte_wp_ats real_cte_at_cte
                      dest!: is_valid_vtable_root_is_arch_cap)
-         apply (all \<open>clarsimp simp: is_cap_simps cte_wp_at_caps_of_state valid_fault_handler_def\<close>)
+        apply (all \<open>clarsimp simp: is_cap_simps cte_wp_at_caps_of_state valid_fault_handler_def\<close>)
         apply (all \<open>clarsimp simp: obj_at_def is_tcb typ_at_eq_kheap_obj cap_table_at_typ\<close>)
-        by auto
+      by (auto simp: is_cap_simps dest: is_derived_ep_cap)
    apply (rename_tac target cnode_index cslot_ptr fault_handler mcp priority sc)
    apply (rule validE_valid)
    apply (rule_tac B= "\<lambda>_ s. (schact_is_rct s \<longrightarrow> cur_sc_active s) \<and> tcb_at target s"
@@ -1712,12 +1712,9 @@ lemma invoke_tcb_schact_is_rct_imp_ct_activatable:
                                ct_in_state_def pred_tcb_at_def obj_at_def
                         split: thread_state.splits)
              apply (case_tac "tcb_state tcb"; clarsimp)
-            apply (all \<open>clarsimp simp: is_cap_simps cte_wp_at_caps_of_state valid_fault_handler_def\<close>)
+           apply (all \<open>clarsimp simp: is_cap_simps cte_wp_at_caps_of_state valid_fault_handler_def\<close>)
            apply (all \<open>clarsimp simp: obj_at_def is_tcb typ_at_eq_kheap_obj cap_table_at_typ\<close>)
-           apply (metis (no_types, lifting) cap.simps(38) fst_conv is_obj_defs(3) o_apply obj_atI
-                                            option.simps(5) real_cte_at_not_tcb_at snd_conv)
-          apply auto
-         done
+           by (auto simp: is_cap_simps is_obj_defs dest: is_derived_ep_cap)
       apply (rule validE_valid)
       apply (rule_tac B="\<lambda>_ . ?Q" in hoare_vcg_seqE[rotated])
        apply (wpsimp wp: install_tcb_cap_schact_is_rct_imp_ct_activatable)

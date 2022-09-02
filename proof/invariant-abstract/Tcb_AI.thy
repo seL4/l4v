@@ -12,7 +12,7 @@ context begin interpretation Arch .
 
 requalify_facts
   arch_derive_is_arch rec_del_invs''
-  as_user_valid_tcbs
+  as_user_valid_tcbs is_derived_arch_non_arch
 
 end
 
@@ -558,12 +558,16 @@ where
                         and case_option \<top> ((real_cte_at And ex_cte_cap_to) \<circ> snd) vroot
                         and case_option \<top> (valid_cap \<circ> fst) fh
                         and K (case_option True (valid_fault_handler o fst) fh)
-                        and case_option \<top> (\<lambda>(cap, slot). cte_wp_at ((=) cap) slot) fh
+                        and (case_option \<top> (\<lambda>(cap, slot) s.
+                               cap \<noteq> NullCap \<longrightarrow>
+                                 cte_wp_at (is_derived (cdt s) slot cap) slot s) fh)
                         and case_option \<top> (no_cap_to_obj_dr_emp \<circ> fst) fh
                         and case_option \<top> ((real_cte_at And ex_cte_cap_to) \<circ> snd) fh
                         and case_option \<top> (valid_cap \<circ> fst) th
                         and K (case_option True (valid_fault_handler o fst) th)
-                        and case_option \<top> (\<lambda>(cap, slot). cte_wp_at ((=) cap) slot) th
+                        and (case_option \<top> (\<lambda>(cap, slot) s.
+                               cap \<noteq> NullCap \<longrightarrow>
+                                 cte_wp_at (is_derived (cdt s) slot cap) slot s) th)
                         and case_option \<top> (no_cap_to_obj_dr_emp \<circ> fst) th
                         and case_option \<top> ((real_cte_at And ex_cte_cap_to) \<circ> snd) th
                         and (case_option \<top> (case_option \<top> (valid_cap o fst) o snd) buf)
@@ -582,7 +586,9 @@ where
              = (tcb_at t
                         and case_option \<top> (valid_cap \<circ> fst) fh
                         and K (case_option True (valid_fault_handler o fst) fh)
-                        and case_option \<top> (\<lambda>(cap, slot). cte_wp_at ((=) cap) slot) fh
+                        and (case_option \<top> (\<lambda>(cap, slot) s.
+                               cap \<noteq> NullCap \<longrightarrow>
+                                 cte_wp_at (is_derived (cdt s) slot cap) slot s) fh)
                         and case_option \<top> (no_cap_to_obj_dr_emp \<circ> fst) fh
                         and case_option \<top> ((real_cte_at And ex_cte_cap_to) \<circ> snd) fh
                         and case_option \<top>
@@ -687,6 +693,9 @@ locale Tcb_AI = Tcb_AI_1 state_ext_t is_cnode_or_valid_arch
   assumes no_cap_to_obj_with_diff_ref_update_cap_data:
   "\<And>c S s P x. no_cap_to_obj_with_diff_ref c S (s::'state_ext state) \<longrightarrow>
     no_cap_to_obj_with_diff_ref (update_cap_data P x c) S s"
+  assumes no_cap_to_obj_with_diff_ref_mask_cap:
+  "\<And>c S R s. no_cap_to_obj_with_diff_ref c S (s::'state_ext state) \<longrightarrow>
+    no_cap_to_obj_with_diff_ref (mask_cap R c) S s"
 
 
 lemma out_no_cap_to_trivial:
@@ -893,6 +902,58 @@ lemma cap_delete_ep:
   apply (simp add: cte_wp_at_caps_of_state valid_fault_handler_def)
   done
 
+lemma is_derived_ep_cap:
+  "is_derived m p (EndpointCap r badge rights) cap \<Longrightarrow> is_ep_cap cap"
+  unfolding is_derived_def
+  by (auto simp: is_cap_simps cap_master_cap_def split: cap.splits if_splits)
+
+lemma is_derived_ep_cap_rewrite:
+  "is_ep_cap cap' \<Longrightarrow>
+   is_derived m p cap' cap =
+     (cap_master_cap cap = cap_master_cap cap' \<and>
+      (cap_badge cap, cap_badge cap') \<in> capBadge_ordering False)"
+  unfolding is_derived_def
+  by (cases cap; cases cap';
+      clarsimp simp: is_zombie_def cap_master_cap_def is_derived_arch_non_arch is_cap_simps)
+
+crunches cancel_all_ipc
+  for cdt[wp]: "\<lambda>s. P (cdt s)"
+  (wp: crunch_wps)
+
+lemma finalise_cap_is_derived_ep:
+  "\<lbrace>(\<lambda>s. cte_wp_at (is_derived (cdt s) p new_cap) p s) and
+    K (is_ep_cap cap)\<rbrace>
+   finalise_cap cap is_final
+   \<lbrace>\<lambda>rv s. cte_wp_at (is_derived (cdt s) p new_cap) p s \<and> fst rv = NullCap\<rbrace>"
+  apply (rule hoare_gen_asm, clarsimp simp: is_cap_simps)
+  by (wpsimp simp: comp_def | wps)+
+
+lemma cap_delete_is_derived_ep:
+  "\<lbrace>(\<lambda>s. cte_wp_at (is_derived (cdt s) p new_cap) p s) and
+    cte_wp_at valid_fault_handler slot and
+    cte_wp_at is_ep_cap p and
+    K (slot \<noteq> p \<and> is_ep_cap new_cap)\<rbrace>
+   cap_delete slot
+   \<lbrace>\<lambda>_ s. cte_wp_at (is_derived (cdt s) p new_cap) p s\<rbrace>, -"
+  apply (rule hoare_gen_asmE; clarsimp)
+  apply (rule hoare_post_imp_R[rotated])
+   apply (rule cte_wp_at_weakenE[rotated])
+    apply (subst is_derived_ep_cap_rewrite; clarsimp)
+    apply simp
+   apply simp
+  apply (simp add: cap_delete_def rec_del_CTEDeleteCall)
+  apply (subst rec_del_FinaliseSlot)
+  apply (simp cong: if_cong)
+  apply (wp empty_slot_cte_wp_elsewhere|wpc)+
+       apply (rule hoare_FalseE_R) (* `else` case will not be taken *)
+      apply wpsimp+
+     apply (rule hoare_strengthen_post, rule finalise_cap_is_derived_ep[where p=p and new_cap=new_cap])
+     apply (clarsimp simp: cte_wp_at_def is_derived_ep_cap_rewrite)
+    apply (wpsimp wp: get_cap_wp)+
+  apply (clarsimp simp: cte_wp_at_caps_of_state valid_fault_handler_def
+                        is_derived_ep_cap_rewrite)
+  done
+
 lemma cap_delete_deletes_fh:
   "\<lbrace>\<lambda>s. p \<noteq> ptr \<longrightarrow> cte_wp_at valid_fault_handler ptr s \<and>
                      cte_wp_at (\<lambda>c. P c \<or> c = cap.NullCap) p s\<rbrace>
@@ -927,6 +988,24 @@ lemma install_tcb_cap_cte_wp_at_ep:
    \<lbrace>\<lambda>rv. cte_wp_at P p\<rbrace>, -"
   apply (simp add: install_tcb_cap_def)
   by (wpsimp wp: checked_insert_cte_wp_at_weak cap_delete_ep hoare_vcg_const_imp_lift_R)
+
+lemma install_tcb_cap_is_derived_ep:
+  "\<lbrace>(\<lambda>s. cte_wp_at (is_derived (cdt s) p new_cap) p s) and
+    cte_wp_at valid_fault_handler (target, tcb_cnode_index n) and
+    cte_wp_at is_ep_cap p and
+    K ((target, tcb_cnode_index n) \<noteq> p \<and> is_ep_cap new_cap)\<rbrace>
+   install_tcb_cap target slot n slot_opt
+   \<lbrace>\<lambda>_ s. cte_wp_at (is_derived (cdt s) p new_cap) p s\<rbrace>, -"
+  apply (rule hoare_gen_asmE; clarsimp)
+  apply (rule hoare_post_imp_R[rotated])
+   apply (rule cte_wp_at_weakenE[rotated])
+    apply (subst is_derived_ep_cap_rewrite; clarsimp)
+    apply simp
+   apply simp
+  apply (wpsimp wp: install_tcb_cap_cte_wp_at_ep)
+  apply (clarsimp simp: cte_wp_at_caps_of_state is_derived_ep_cap_rewrite
+                        is_cap_simps cap_master_cap_def)
+  done
 
 lemma tcb_ep_slot_cte_wp_at:
   "\<lbrakk> invs s; tcb_at t s; slot = 3 \<or> slot = 4 \<rbrakk> \<Longrightarrow>
@@ -1205,13 +1284,48 @@ lemma (in Tcb_AI) decode_set_mcpriority_wf[wp]:
         decode_set_mcpriority args (ThreadCap t) slot excs \<lbrace>tcb_inv_wf\<rbrace>, -"
   by (wpsimp simp: decode_set_mcpriority_def wp: check_prio_wp_weak whenE_throwError_wp)
 
-lemma check_handler_ep_inv[wp]:
-  "\<lbrace>P\<rbrace> check_handler_ep n cap_slot \<lbrace>\<lambda>_. P\<rbrace>"
-  unfolding check_handler_ep_def unlessE_def by wpsimp
+lemma decode_handler_ep_inv[wp]:
+  "decode_handler_ep args pos excaps \<lbrace>P\<rbrace>"
+  unfolding decode_handler_ep_def Let_def
+  by (wpsimp wp: hoare_drop_imps)
 
-lemma check_handler_ep_wpE[wp]:
-  "\<lbrace>\<lambda>s. valid_fault_handler (fst cap_slot) \<longrightarrow> P cap_slot s\<rbrace> check_handler_ep n cap_slot \<lbrace>P\<rbrace>, -"
-  unfolding check_handler_ep_def unlessE_def by wpsimp
+lemma decode_handler_ep_snd[wp]:
+  "\<lbrace>P (snd (excaps ! 0))\<rbrace>
+   decode_handler_ep args pos excaps
+   \<lbrace>\<lambda>rv. P (snd rv)\<rbrace>,-"
+  unfolding decode_handler_ep_def Let_def
+  by (wpsimp wp: hoare_drop_imps split_del: if_split)
+
+lemma decode_handler_ep_valid_cap[wp]:
+  "\<lbrace>\<lambda>s. (\<forall>x \<in> set fh_caps. s \<turnstile> fst x) \<and> 0 < length fh_caps\<rbrace>
+   decode_handler_ep args pos fh_caps
+   \<lbrace>\<lambda>rv. valid_cap (fst rv)\<rbrace>,-"
+  unfolding decode_handler_ep_def Let_def
+  apply (wpsimp wp: hoare_drop_imps split_del: if_split)
+  by (auto simp: update_cap_data_validI)
+
+lemma decode_handler_ep_valid_fault_handler[wp]:
+  "\<lbrace>\<top>\<rbrace>
+   decode_handler_ep args pos fh_caps
+   \<lbrace>\<lambda>rv s. valid_fault_handler (fst rv)\<rbrace>,-"
+  unfolding decode_handler_ep_def
+  by (wpsimp split_del: if_split)
+
+lemma decode_handler_ep_is_derived[wp]:
+  "\<lbrace>\<lambda>s. valid_objs s \<and>
+        (\<forall>x \<in> set fh_caps. cte_wp_at ((=) (fst x)) (snd x) s) \<and> 0 < length fh_caps\<rbrace>
+   decode_handler_ep args pos fh_caps
+   \<lbrace>\<lambda>rv s. fst rv \<noteq> NullCap \<longrightarrow>
+             cte_wp_at (is_derived (cdt s) (snd rv) (fst rv)) (snd rv) s\<rbrace>,-"
+  unfolding decode_handler_ep_def Let_def
+  apply (wpsimp split_del: if_split)
+        apply (rule hoare_drop_imps)
+        apply (wpsimp wp: derive_cap_is_derived)+
+  apply (drule_tac x="fh_caps ! 0" in bspec, clarsimp)
+  apply (clarsimp simp: cte_wp_at_caps_of_state
+                        cap_master_update_cap_data cap_asid_update_cap_data
+                        cap_badge_update_cap_data)
+  done
 
 lemma decode_update_sc_inv[wp]:
   "\<lbrace>P\<rbrace> decode_update_sc cap slot sc_cap \<lbrace>\<lambda>_. P\<rbrace>"
@@ -1220,8 +1334,19 @@ lemma decode_update_sc_inv[wp]:
 context Tcb_AI
 begin
 
+lemma decode_handler_ep_no_cap_to_obj_with_diff_ref[wp]:
+  "\<lbrace>\<lambda>s::'state_ext state. (\<forall>x \<in> set fh_caps. no_cap_to_obj_with_diff_ref (fst x) S s)
+        \<and> 0 < length fh_caps\<rbrace>
+   decode_handler_ep args pos fh_caps
+   \<lbrace>\<lambda>rv. no_cap_to_obj_with_diff_ref (fst rv) S\<rbrace>,-"
+  unfolding decode_handler_ep_def Let_def
+  apply (wpsimp wp: hoare_drop_imps split_del: if_split)
+  by (auto simp: all_set_conv_all_nth
+                 no_cap_to_obj_with_diff_ref_update_cap_data
+                 no_cap_to_obj_with_diff_ref_mask_cap)
+
 lemma decode_set_sched_params_wf[wp]:
-  "\<lbrace>invs and tcb_at t and ex_nonz_cap_to t and
+  "\<lbrace>(invs::'state_ext state\<Rightarrow>bool) and tcb_at t and ex_nonz_cap_to t and
     cte_at slot and ex_cte_cap_to slot and
     (\<lambda>s. \<forall>x \<in> set excaps. s \<turnstile> fst x \<and> real_cte_at (snd x) s
                           \<and> cte_wp_at ((=) (fst x)) (snd x) s
@@ -1231,20 +1356,15 @@ lemma decode_set_sched_params_wf[wp]:
    decode_set_sched_params args (ThreadCap t) slot excaps
    \<lbrace>tcb_inv_wf\<rbrace>, -"
   unfolding decode_set_sched_params_def decode_update_sc_def is_blocked_def
-  apply (wpsimp simp: get_tcb_obj_ref_def
+  apply (wpsimp simp: get_tcb_obj_ref_def split_def
                 wp: check_prio_wp_weak whenE_throwError_wp thread_get_wp gts_wp
                 split_del: if_split)
-  apply (clarsimp simp: split_paired_Ball)
-  apply (rule conjI; clarsimp)
+  apply (clarsimp simp: all_set_conv_all_nth)
   apply (clarsimp simp: obj_at_def is_tcb pred_tcb_at_def is_cap_simps sc_tcb_sc_at_def
                         sc_at_ppred_def)
-  apply (rule conjI, fastforce)
-  apply (subgoal_tac "excaps ! Suc 0 \<in> set excaps")
-   prefer 2
-   apply fastforce
-  apply (cases "excaps ! Suc 0")
-  apply (clarsimp)
-  done
+  apply (rule conjI, fastforce dest: in_set_dropD)
+  apply (subgoal_tac "Suc 0 < length excaps")
+  by fastforce+
 
 end
 
@@ -1395,16 +1515,16 @@ lemma decode_set_space_wf[wp]:
      decode_set_space args (ThreadCap t) slot extras
    \<lbrace>tcb_inv_wf\<rbrace>,-"
   unfolding decode_set_space_def
-  apply (wpsimp wp: hoare_vcg_const_imp_lift_R simp_del: tcb_inv_wf.simps
+  apply (wpsimp wp: hoare_vcg_const_imp_lift_R
+              simp: split_def simp_del: tcb_inv_wf.simps
          | strengthen tcb_inv_set_space_strg
-         | rule hoare_drop_imps)+
-  apply (clarsimp simp: valid_fault_handler_def real_cte_at_cte)
+         | rule hoare_drop_imps
+         | simp only: tcb_inv_wf.simps)+
   apply (prop_tac "set (take 2 (drop (Suc 0) extras)) \<subseteq> set extras")
    apply (meson basic_trans_rules(23) set_drop_subset set_take_subset)
-  apply (intro conjI)
-        apply blast
-       apply fastforce
-      apply (metis gr0I nth_mem zero_less_numeral crunch_simps(1) gr0I nth_mem rel_simps(51))+
+  apply (intro conjI; clarsimp?)
+        apply (fastforce dest: in_set_takeD)+
+   apply (metis gt_or_eq_0 nth_mem zero_less_numeral)+
   done
 
 end
@@ -1558,9 +1678,10 @@ lemma decode_set_timeout_ep_tc_inv[wp]:
                           \<and> cte_wp_at ((=) (fst x)) (snd x) s
                           \<and> ex_cte_cap_to (snd x) s
                           \<and> no_cap_to_obj_dr_emp (fst x) s)\<rbrace>
-  decode_set_timeout_ep (ThreadCap t) slot extras \<lbrace>tcb_inv_wf\<rbrace>, -"
+  decode_set_timeout_ep args (ThreadCap t) slot extras
+  \<lbrace>tcb_inv_wf\<rbrace>, -"
   unfolding decode_set_timeout_ep_def
-  by (wpsimp simp: neq_Nil_conv)
+  by (wpsimp simp: neq_Nil_conv split_def)
 
 lemma decode_tcb_inv_wf:
   "\<lbrace>invs and tcb_at t and ex_nonz_cap_to t

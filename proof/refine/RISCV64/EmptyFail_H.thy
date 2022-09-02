@@ -300,7 +300,7 @@ lemma tcbEPFindIndex_empty_fail[intro!, wp, simp]:
   by (induct ci; subst tcbEPFindIndex.simps; simp)
 
 crunch (empty_fail) empty_fail: callKernel
-  (wp: empty_fail_catch)
+  (wp: empty_fail_catch simp: crunch_simps)
 
 theorem call_kernel_serial:
   "\<lbrakk> (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and (ct_running or ct_idle) and

@@ -47,7 +47,7 @@ crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_fault
 crunch (empty_fail) empty_fail[wp]: decode_tcb_configure, decode_bind_notification, decode_unbind_notification,
   decode_set_priority, decode_set_mcpriority, decode_set_sched_params, decode_set_timeout_ep,
   decode_set_tls_base, decode_set_space
-  (simp: cap.splits arch_cap.splits split_def)
+  (simp: cap.splits arch_cap.splits split_def Let_def)
 
 lemma decode_tcb_invocation_empty_fail[wp]:
   "empty_fail (decode_tcb_invocation a b (ThreadCap p) d e)"

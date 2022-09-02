@@ -87,7 +87,7 @@ There are eleven types of invocation for a thread control block. All require wri
 >         TCBSetMCPriority -> decodeSetMCPriority args cap extraCaps
 >         TCBSetSchedParams -> decodeSetSchedParams args cap slot extraCaps
 >         TCBSetIPCBuffer -> decodeSetIPCBuffer args cap slot extraCaps
->         TCBSetTimeoutEndpoint -> decodeSetTimeoutEndpoint cap slot extraCaps
+>         TCBSetTimeoutEndpoint -> decodeSetTimeoutEndpoint args cap slot extraCaps
 >         TCBSetSpace -> decodeSetSpace args cap slot extraCaps
 >         TCBBindNotification -> decodeBindNotification cap extraCaps
 >         TCBUnbindNotification -> decodeUnbindNotification cap
@@ -256,7 +256,7 @@ The "SetSchedParams" call sets both the priority and the MCP in a single call.
 
 > decodeSetSchedParams :: [Word] -> Capability -> PPtr CTE -> [(Capability, PPtr CTE)] ->
 >         KernelF SyscallError TCBInvocation
-> decodeSetSchedParams (newMCP : newPrio : _) cap slot ((authCap, _) : (scCap, _) : (fhCap, fhSlot) : _) = do
+> decodeSetSchedParams (newMCP:newPrio:args) cap slot ((authCap, _):(scCap, _):fhArg:_) = do
 >     authTCB <- case authCap of
 >         ThreadCap { capTCBPtr = tcbPtr } -> return tcbPtr
 >         _ -> throw $ InvalidCapability 1
@@ -280,11 +280,11 @@ The "SetSchedParams" call sets both the priority and the MCP in a single call.
 >             when (tcbPtr == curTcbPtr) $ throw IllegalOperation
 >             return Nothing
 >         _ -> throw $ InvalidCapability 2
->     when (not $ isValidFaultHandler fhCap) $ throw $ InvalidCapability 3
+>     faultHandler <- decodeHandlerEP args 3 [fhArg]
 >     return $ ThreadControlSched {
 >         tcSchedTarget = tcbPtr,
 >         tcSchedSlot = slot,
->         tcSchedFaultHandler = Just (fhCap, fhSlot),
+>         tcSchedFaultHandler = Just faultHandler,
 >         tcSchedMCPriority = Just (fromIntegral newMCP, authTCB),
 >         tcSchedPriority = Just (fromIntegral newPrio, authTCB),
 >         tcSchedSchedContext = Just scPtr }
@@ -352,14 +352,35 @@ This is to ensure that the source capability is not made invalid by the deletion
 >         tcCapsBuffer = Nothing }
 > decodeCVSpace _ _ _ _ = throw TruncatedMessage
 
+> decodeHandlerEP :: [Word] -> Int -> [(Capability, PPtr CTE)] ->
+>         KernelF SyscallError (Capability, PPtr CTE)
+> decodeHandlerEP args pos ((fhCap, fhSlot):_) = do
+>     unless (isEndpointCap fhCap || isNullCap fhCap) $ throw $ InvalidCapability pos
+>     fhCap' <- if length args >= 1
+>         then
+>             let fhData = args !! 0
+>             in if not (isNullCap fhCap) && fhData /= 0
+>             then do
+>                 let fhDataCap = updateCapData False fhData fhCap
+>                 when (isNullCap fhDataCap) $ throw IllegalOperation
+>                 return fhDataCap
+>             else return fhCap
+>         else return fhCap
+>     fhCap'' <- if length args >= 2
+>         then do
+>             let fhRights = args !! 1
+>             return $ maskCapRights (rightsFromWord fhRights) fhCap'
+>         else return fhCap'
+>     fhCap''' <- deriveCap fhSlot fhCap''
+>     unless (isValidFaultHandler fhCap''') $ throw $ InvalidCapability pos
+>     return (fhCap''', fhSlot)
+> decodeHandlerEP _ _ _ = throw TruncatedMessage
+
 > decodeSetSpace :: [Word] -> Capability -> PPtr CTE ->
 >         [(Capability, PPtr CTE)] -> KernelF SyscallError TCBInvocation
-> decodeSetSpace (cRootData:vRootData:_) cap slot (fhArg:cRootArg:vRootArg:_) = do
+> decodeSetSpace (cRootData:vRootData:args) cap slot (fhArg:cRootArg:vRootArg:_) = do
 >     space <- decodeCVSpace [cRootData,vRootData] cap slot [cRootArg,vRootArg]
->     let (fhCap, fhSlot) = fhArg
->     faultHandler <- if isValidFaultHandler fhCap
->         then return (fhCap, fhSlot)
->         else throw $ InvalidCapability 1
+>     faultHandler <- decodeHandlerEP args 1 [fhArg]
 >     return $ ThreadControlCaps {
 >         tcCapsTarget = capTCBPtr cap,
 >         tcCapsSlot = slot,
@@ -370,18 +391,14 @@ This is to ensure that the source capability is not made invalid by the deletion
 >         tcCapsBuffer = Nothing }
 > decodeSetSpace _ _ _ _ = throw TruncatedMessage
 
-> decodeSetTimeoutEndpoint :: Capability -> PPtr CTE ->
+> decodeSetTimeoutEndpoint :: [Word] -> Capability -> PPtr CTE ->
 >         [(Capability, PPtr CTE)] -> KernelF SyscallError TCBInvocation
-> decodeSetTimeoutEndpoint cap slot (thArg:_)
->         = do
->     let (thCap, thSlot) = thArg
->     timeoutHandler <- if isValidFaultHandler thCap
->         then return (thCap, thSlot)
->         else throw $ InvalidCapability 1
+> decodeSetTimeoutEndpoint args cap slot (thArg:_) = do
+>     timeoutHandler <- decodeHandlerEP args 1 [thArg]
 >     return $ (emptyTCCaps $ capTCBPtr cap) {
 >         tcCapsSlot = slot,
 >         tcCapsTimeoutHandler = Just timeoutHandler }
-> decodeSetTimeoutEndpoint _ _ _ = throw TruncatedMessage
+> decodeSetTimeoutEndpoint _ _ _ _ = throw TruncatedMessage
 
 \subsubsection{Decode Bound Notification Invocations}
 

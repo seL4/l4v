@@ -258,12 +258,36 @@ definition has_handler_rights :: "cap \<Rightarrow> bool" where
 definition valid_fault_handler :: "cap \<Rightarrow> bool" where
   "valid_fault_handler \<equiv> is_ep_cap and has_handler_rights or (=) NullCap"
 
-definition
-  check_handler_ep :: "nat \<Rightarrow> (cap \<times> cslot_ptr) \<Rightarrow> ((cap \<times> cslot_ptr),'z::state_ext) se_monad"
-where
-  "check_handler_ep pos h_cap_h_slot \<equiv> doE
-    unlessE (valid_fault_handler $ fst h_cap_h_slot) $ throwError $ InvalidCapability pos;
-    returnOk h_cap_h_slot
+definition decode_handler_ep ::
+  "data list \<Rightarrow> nat \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> ((cap \<times> cslot_ptr),'z::state_ext) se_monad"
+  where
+  "decode_handler_ep args cap_pos excaps \<equiv> doE
+    fh_arg  \<leftarrow> returnOk $ excaps ! 0;
+    fh_cap  \<leftarrow> returnOk $ fst fh_arg;
+    fh_slot \<leftarrow> returnOk $ snd fh_arg;
+    unlessE (is_ep_cap fh_cap \<or> fh_cap = NullCap) $ throwError $ InvalidCapability cap_pos;
+    fh_cap \<leftarrow>
+      if length args \<ge> 1
+      then
+        let fh_data = args ! 0
+        in if fh_cap \<noteq> NullCap \<and> fh_data \<noteq> 0
+        then doE
+          fh_cap \<leftarrow> returnOk $ update_cap_data False fh_data fh_cap;
+          whenE (fh_cap = NullCap) $ throwError IllegalOperation;
+          returnOk fh_cap
+        odE
+        else returnOk fh_cap
+      else returnOk fh_cap;
+    fh_cap \<leftarrow>
+      if length args \<ge> 2
+      then doE
+        fh_rights \<leftarrow> returnOk $ args ! 1;
+        returnOk $ mask_cap (data_to_rights fh_rights) fh_cap
+      odE
+      else returnOk fh_cap;
+    fh_cap \<leftarrow> derive_cap fh_slot fh_cap;
+    unlessE (valid_fault_handler fh_cap) $ throwError $ InvalidCapability cap_pos;
+    returnOk (fh_cap, fh_slot)
   odE"
 
 definition
@@ -310,8 +334,7 @@ where
   "decode_set_space args cap slot excaps \<equiv> doE
     whenE (length args < 2 \<or> length excaps < 3) $ throwError TruncatedMessage;
     space \<leftarrow> decode_cv_space (take 2 args) cap slot (take 2 (drop 1 excaps));
-    fh_arg  \<leftarrow> returnOk $ excaps ! 0;
-    fault_handler \<leftarrow> check_handler_ep 1 fh_arg;
+    fault_handler \<leftarrow> decode_handler_ep (drop 2 args) 1 (take 1 excaps);
     returnOk $ ThreadControlCaps (obj_ref_of cap) slot (Some fault_handler) None
                             (tc_new_croot space) (tc_new_vroot space) None
  odE"
@@ -360,12 +383,11 @@ where
 
 definition
   decode_set_timeout_ep ::
-  "cap \<Rightarrow> cslot_ptr \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> (tcb_invocation,'z::state_ext) se_monad"
+  "data list \<Rightarrow> cap \<Rightarrow> cslot_ptr \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> (tcb_invocation,'z::state_ext) se_monad"
 where
-  "decode_set_timeout_ep cap slot extra_caps \<equiv> doE
+  "decode_set_timeout_ep args cap slot extra_caps \<equiv> doE
      whenE (length extra_caps < 1) $ throwError TruncatedMessage;
-     th_arg \<leftarrow> returnOk $ extra_caps ! 0;
-     handler \<leftarrow> check_handler_ep 1 th_arg;
+     handler \<leftarrow> decode_handler_ep args 1 (take 1 extra_caps);
      returnOk $ ThreadControlCaps (obj_ref_of cap) slot
                               None (Some handler) None None None
    odE"
@@ -426,14 +448,13 @@ where
      new_prio \<leftarrow> returnOk $ ucast $ args ! 1;
      auth_cap \<leftarrow> returnOk $ fst $ extra_caps ! 0;
      sc_cap \<leftarrow> returnOk $ fst $ extra_caps ! 1;
-     fh_arg \<leftarrow> returnOk $ extra_caps ! 2;
      auth_tcb \<leftarrow> case auth_cap of
          ThreadCap tcb_ptr \<Rightarrow> returnOk tcb_ptr
        | _ \<Rightarrow> throwError (InvalidCapability 1);
      check_prio (args ! 0) auth_tcb;
      check_prio (args ! 1) auth_tcb;
      sc \<leftarrow> decode_update_sc cap slot sc_cap;
-     fh \<leftarrow> check_handler_ep 3 fh_arg;
+     fh \<leftarrow> decode_handler_ep (drop 2 args) 3 (take 1 (drop 2 extra_caps));
      returnOk $ ThreadControlSched (obj_ref_of cap) slot (Some fh)
                               (Some (new_mcp, auth_tcb)) (Some (new_prio, auth_tcb))
                               (Some sc)
@@ -455,7 +476,7 @@ where
     | TCBSetPriority \<Rightarrow> decode_set_priority args cap slot excs
     | TCBSetMCPriority \<Rightarrow> decode_set_mcpriority args cap slot excs
     | TCBSetSchedParams \<Rightarrow> decode_set_sched_params args cap slot excs
-    | TCBSetTimeoutEndpoint \<Rightarrow> decode_set_timeout_ep cap slot excs
+    | TCBSetTimeoutEndpoint \<Rightarrow> decode_set_timeout_ep args cap slot excs
     | TCBSetIPCBuffer \<Rightarrow> decode_set_ipc_buffer args cap slot excs
     | TCBSetSpace \<Rightarrow> decode_set_space args cap slot excs
     | TCBBindNotification \<Rightarrow> decode_bind_notification cap excs
