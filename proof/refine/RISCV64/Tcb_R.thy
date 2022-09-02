@@ -2873,26 +2873,26 @@ lemma decodeSetMCPriority_inv[wp]:
              | wpcw)+
   done
 
-crunches updateAndCheckHandlerEP
+crunches decodeHandlerEP
   for inv[wp]: P
-  (wp: crunch_wps)
+  (simp: crunch_simps)
 
-global_interpretation updateAndCheckHandlerEP: typ_at_all_props' "updateAndCheckHandlerEP args pos fh_caps"
+global_interpretation decodeHandlerEP: typ_at_all_props' "decodeHandlerEP args pos fh_caps"
   by typ_at_props'
 
-lemma updateAndCheckHandlerEP_valid_cap[wp]:
+lemma decodeHandlerEP_valid_cap[wp]:
   "\<lbrace>\<lambda>s. \<forall>x \<in> set fh_caps. s \<turnstile>' fst x\<rbrace>
-   updateAndCheckHandlerEP args pos fh_caps
+   decodeHandlerEP args pos fh_caps
    \<lbrace>\<lambda>rv. valid_cap' (fst rv)\<rbrace>,-"
-  unfolding updateAndCheckHandlerEP_def
+  unfolding decodeHandlerEP_def Let_def
   apply (wpsimp wp: hoare_drop_imps split_del: if_split)
   by (auto simp: valid_updateCapDataI)
 
-lemma updateAndCheckHandlerEP_isValidFaultHandler[wp]:
+lemma decodeHandlerEP_isValidFaultHandler[wp]:
   "\<lbrace>\<top>\<rbrace>
-   updateAndCheckHandlerEP args pos fh_caps
+   decodeHandlerEP args pos fh_caps
    \<lbrace>\<lambda>rv s. isValidFaultHandler (fst rv)\<rbrace>,-"
-  unfolding updateAndCheckHandlerEP_def
+  unfolding decodeHandlerEP_def
   by (wpsimp split_del: if_split)
 
 lemma decodeSetSchedParams_wf:
@@ -2941,16 +2941,16 @@ lemma corres_case_cap_null_sc:
   apply (case_tac cp; clarsimp)
   done
 
-lemma updateAndCheckHandlerEP_corres:
-  "\<lbrakk> length args = 2; length extras = 1;
-     list_all2 (\<lambda>(c, sl) (c', sl'). cap_relation c c' \<and> sl' = cte_map sl) extras extras' \<rbrakk> \<Longrightarrow>
+lemma decodeHandlerEP_corres:
+  "\<lbrakk> list_all2 (\<lambda>(c, sl) (c', sl'). cap_relation c c' \<and> sl' = cte_map sl) extras extras';
+     length extras = 1 \<rbrakk> \<Longrightarrow>
    corres (ser \<oplus> (\<lambda>a b. cap_relation (fst a) (fst b) \<and> snd b = cte_map (snd a)))
        (\<lambda>s. \<forall>x \<in> set extras. cte_at (snd x) s)
        (pspace_aligned' and pspace_distinct' and valid_mdb' and
         (\<lambda>s. \<forall>x \<in> set extras'. cte_at' (snd x) s))
-       (update_and_check_handler_ep args pos extras)
-       (updateAndCheckHandlerEP args pos extras')"
-  unfolding update_and_check_handler_ep_def updateAndCheckHandlerEP_def unlessE_whenE
+       (decode_handler_ep args pos extras)
+       (decodeHandlerEP args pos extras')"
+  unfolding decode_handler_ep_def decodeHandlerEP_def unlessE_whenE Let_def
   apply (clarsimp simp: list_length_2 list_length_1 list_all2_Cons1 split del: if_split)
   apply (rule corres_guard_imp)
     apply (rule whenE_throwError_corres)
@@ -2960,10 +2960,13 @@ lemma updateAndCheckHandlerEP_corres:
     apply (rule_tac r'=cap_relation in corres_splitEE)
        prefer 2
        apply (rule corres_if, simp)
-        apply (rule whenE_throwError_corres)
-          apply simp
-         apply (clarsimp simp: cap_relation_NullCap)
-        apply (rule corres_returnOkTT, simp add: cap_map_update_data)
+        apply (rule corres_if)
+          apply (fastforce split: cap.splits)
+         apply (rule whenE_throwError_corres)
+           apply simp
+          apply (clarsimp simp: cap_relation_NullCap)
+         apply (rule corres_returnOkTT, simp add: cap_map_update_data)
+        apply (rule corres_returnOkTT, simp)
        apply (rule corres_returnOkTT, simp)
       apply (rule_tac r'=cap_relation in corres_splitEE)
          prefer 2
@@ -2991,7 +2994,7 @@ lemma decodeSetSchedParams_corres:
   apply (clarsimp simp: is_cap_simps)
   apply (simp add: decode_set_sched_params_def decodeSetSchedParams_def
                    decode_update_sc_def unlessE_whenE)
-  apply (cases "length args < 4")
+  apply (cases "length args < 2")
    apply (clarsimp split: list.split)
   apply (cases "length extras < 3")
    apply (clarsimp split: list.split simp: list_all2_Cons2)
@@ -3001,10 +3004,10 @@ lemma decodeSetSchedParams_corres:
        apply (rule corres_split_norE[OF _ checkPrio_corres])
          apply (rule corres_split_norE[OF _ checkPrio_corres])
            apply (rule corres_split_eqrE)
-              apply (rule corres_splitEE[OF _ updateAndCheckHandlerEP_corres])
-                   apply (rule corres_returnOkTT)
-                   apply (clarsimp simp: newroot_rel_def)
-                  apply clarsimp+
+              apply (rule corres_splitEE[OF _ decodeHandlerEP_corres])
+                  apply (rule corres_returnOkTT)
+                  apply (clarsimp simp: newroot_rel_def)
+                 apply clarsimp+
                apply wpsimp
               apply wpsimp
              apply (rule corres_case_cap_null_sc[where Pother=\<top> and Pother'=\<top>]
@@ -3259,7 +3262,7 @@ lemma decodeSetSpace_corres:
       (decode_set_space args cap slot extras)
       (decodeSetSpace args cap' (cte_map slot) extras')"
   apply (simp add: decode_set_space_def decodeSetSpace_def unlessE_whenE)
-  apply (cases "\<not> (4 \<le> length args \<and> 3 \<le> length extras')")
+  apply (cases "\<not> (2 \<le> length args \<and> 3 \<le> length extras')")
    apply (clarsimp dest!: list_all2_lengthD split: list.split)
   apply (clarsimp simp: val_le_length_Cons list_all2_Cons2
              split del: if_split)
@@ -3267,14 +3270,14 @@ lemma decodeSetSpace_corres:
     apply (rule corres_splitEE[OF _ decodeCVSpace_corres])
          apply (rename_tac abs_space conc_space)
          apply (rule_tac F="tcb_invocation.is_ThreadControlCaps abs_space" in corres_gen_asm)
-         apply (rule corres_splitEE[OF _ updateAndCheckHandlerEP_corres])
-              apply (prop_tac "newroot_rel (tc_new_croot abs_space) (tcCapsCRoot conc_space)")
-               apply (case_tac abs_space; clarsimp)
-              apply (prop_tac "newroot_rel (tc_new_vroot abs_space) (tcCapsVRoot conc_space)")
-               apply (case_tac abs_space; clarsimp)
-              apply (rule corres_returnOkTT)
-              apply (clarsimp simp: returnOk_def newroot_rel_def is_cap_simps list_all2_conv_all_nth)
-             apply clarsimp+
+         apply (rule corres_splitEE[OF _ decodeHandlerEP_corres])
+             apply (prop_tac "newroot_rel (tc_new_croot abs_space) (tcCapsCRoot conc_space)")
+              apply (case_tac abs_space; clarsimp)
+             apply (prop_tac "newroot_rel (tc_new_vroot abs_space) (tcCapsVRoot conc_space)")
+              apply (case_tac abs_space; clarsimp)
+             apply (rule corres_returnOkTT)
+             apply (clarsimp simp: returnOk_def newroot_rel_def is_cap_simps list_all2_conv_all_nth)
+            apply clarsimp+
           apply wpsimp+
   apply fastforce
   done
@@ -3311,7 +3314,7 @@ lemma decodeSetSpace_wf[wp]:
                          cap_CNode_case_throw
               split del: if_split cong: if_cong list.case_cong)
   apply (rule hoare_pre)
-   apply (wp hoare_case_option_wpR
+   apply (wp
           | simp add: o_def split_def split del: if_split
           | wpc
           | rule hoare_drop_imps)+
@@ -3565,16 +3568,14 @@ lemma decodeSetTimeoutEndpoint_corres:
           (decode_set_timeout_ep args (cap.ThreadCap t) slot extras)
           (decodeSetTimeoutEndpoint args (capability.ThreadCap t) (cte_map slot) extras')"
   apply (clarsimp simp: decode_set_timeout_ep_def decodeSetTimeoutEndpoint_def)
-  apply (cases "length args < 2")
-   apply (clarsimp split: list.split)
   apply (cases "length extras < 1")
    apply (clarsimp split: list.split simp: list_all2_Cons2)
   apply (clarsimp simp: list_all2_Cons1 neq_Nil_conv val_le_length_Cons linorder_not_less)
   apply (rule corres_guard_imp)
-    apply (rule corres_splitEE[OF _ updateAndCheckHandlerEP_corres])
-         apply (rule corres_returnOkTT)
-         apply (clarsimp simp: newroot_rel_def emptyTCCaps_def)
-        apply clarsimp+
+    apply (rule corres_splitEE[OF _ decodeHandlerEP_corres])
+        apply (rule corres_returnOkTT)
+        apply (clarsimp simp: newroot_rel_def emptyTCCaps_def)
+       apply clarsimp+
      apply wpsimp+
   done
 
