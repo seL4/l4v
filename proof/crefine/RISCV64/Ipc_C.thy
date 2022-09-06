@@ -504,10 +504,9 @@ lemma getSanitiseRegisterInfo_moreMapM_comm:
 
 lemma monadic_rewrite_threadGet_return:
   "monadic_rewrite True False (tcb_at' r) (return x) (do t \<leftarrow> threadGet f r; return x od)"
-  apply (rule monadic_rewrite_symb_exec_r')
-     apply wp+
-   apply (rule monadic_rewrite_refl)
-  apply wp
+  apply (rule monadic_rewrite_guard_imp)
+   apply (rule monadic_rewrite_symb_exec_r_drop_nE[OF monadic_rewrite_refl])
+    apply wpsimp+
   done
 
 context begin interpretation Arch .
@@ -522,18 +521,16 @@ end
 
 lemma monadic_rewrite_getSanitiseRegisterInfo_return:
   "monadic_rewrite True False (tcb_at' r) (return x) (do t \<leftarrow> getSanitiseRegisterInfo r; return x od)"
-  apply (rule monadic_rewrite_symb_exec_r')
-     apply wp+
-   apply (rule monadic_rewrite_refl)
-  apply wp
+  apply (rule monadic_rewrite_guard_imp)
+   apply (rule monadic_rewrite_symb_exec_r_drop_nE[OF monadic_rewrite_refl])
+    apply wpsimp+
   done
 
 lemma monadic_rewrite_getSanitiseRegisterInfo_drop:
   "monadic_rewrite True False (tcb_at' r) (d) (do t \<leftarrow> getSanitiseRegisterInfo r; d od)"
-  apply (rule monadic_rewrite_symb_exec_r')
-     apply wp+
-   apply (rule monadic_rewrite_refl)
-  apply wp
+  apply (rule monadic_rewrite_guard_imp)
+   apply (rule monadic_rewrite_symb_exec_r_drop_nE[OF monadic_rewrite_refl])
+    apply wpsimp+
   done
 
 context kernel_m begin interpretation Arch .
@@ -568,32 +565,32 @@ lemma handleFaultReply':
                             zip_Cons RISCV64_H.exceptionMessage_def
                             RISCV64.exceptionMessage_def
                             mapM_x_Cons mapM_x_Nil)
-      apply (rule monadic_rewrite_symb_exec_l, wp+)
-       apply (rule_tac P="tcb_at' s and tcb_at' r" in monadic_rewrite_inst)
-       apply (case_tac rv; (case_tac "msgLength tag < scast n_msgRegisters",
-               (erule disjE[OF word_less_cases],
-                 ( clarsimp simp: n_msgRegisters_def asUser_bind_distrib
-                                  mapM_x_Cons mapM_x_Nil bind_assoc
-                                  asUser_mapMloadWordUser_getSanitiseRegisterInfo_comm
-                                  asUser_getRegister_getSanitiseRegisterInfo_comm
-                                  asUser_getRegister_discarded asUser_mapMloadWordUser_threadGet_comm
-                                  asUser_comm[OF neq] asUser_getRegister_threadGet_comm
-                                  bind_comm_mapM_comm [OF asUser_loadWordUser_comm, symmetric]
-                                  word_le_nat_alt[of 4, simplified linorder_not_less[symmetric, of 4]]
-                                  asUser_return submonad_asUser.fn_stateAssert
-                 | rule monadic_rewrite_bind_tail monadic_rewrite_refl
-                        monadic_rewrite_symb_exec_l[OF stateAssert_inv]
-                        monadic_rewrite_symb_exec_l[OF mapM_x_mapM_valid[OF mapM_x_wp']]
-                 | wp asUser_typ_ats lookupIPCBuffer_inv )+)+))
-      apply wp
+      apply (rule monadic_rewrite_symb_exec_l)
+         apply (rule_tac P="tcb_at' s and tcb_at' r" in monadic_rewrite_inst)
+         apply (case_tac sb; (case_tac "msgLength tag < scast n_msgRegisters",
+                 (erule disjE[OF word_less_cases],
+                   ( clarsimp simp: n_msgRegisters_def asUser_bind_distrib
+                                    mapM_x_Cons mapM_x_Nil bind_assoc
+                                    asUser_mapMloadWordUser_getSanitiseRegisterInfo_comm
+                                    asUser_getRegister_getSanitiseRegisterInfo_comm
+                                    asUser_getRegister_discarded asUser_mapMloadWordUser_threadGet_comm
+                                    asUser_comm[OF neq] asUser_getRegister_threadGet_comm
+                                    bind_comm_mapM_comm [OF asUser_loadWordUser_comm, symmetric]
+                                    word_le_nat_alt[of 4, simplified linorder_not_less[symmetric, of 4]]
+                                    asUser_return submonad_asUser.fn_stateAssert
+                   | rule monadic_rewrite_bind_tail monadic_rewrite_refl
+                          monadic_rewrite_symb_exec_l[OF _ stateAssert_inv]
+                          monadic_rewrite_symb_exec_l[OF _ mapM_x_mapM_valid[OF mapM_x_wp']]
+                   | wp)+)+))
+        apply wp+
      (* capFault *)
-     apply (rule monadic_rewrite_symb_exec_l, (wp empty_fail_asUser empty_fail_getRegister)+)+
-          apply(case_tac rv)
-          apply (clarsimp
-                | rule monadic_rewrite_bind_tail monadic_rewrite_refl
-                       monadic_rewrite_symb_exec_l[OF mapM_x_mapM_valid[OF mapM_x_wp']]
-                | wp mapM_x_mapM_valid[OF mapM_x_wp'[OF loadWordUser_inv]]
-                     empty_fail_loadWordUser)+
+     apply (repeat 5 \<open>rule monadic_rewrite_symb_exec_l\<close>) (* until case sb *)
+                    apply (case_tac sb)
+                     apply (clarsimp
+                           | rule monadic_rewrite_bind_tail monadic_rewrite_refl
+                                  monadic_rewrite_symb_exec_l[OF _ mapM_x_mapM_valid[OF mapM_x_wp']]
+                           | wp mapM_x_mapM_valid[OF mapM_x_wp'[OF loadWordUser_inv]]
+                                empty_fail_loadWordUser)+
     (* UnknownSyscallException *)
     apply (simp add: zip_append2 mapM_x_append asUser_bind_distrib split_def bind_assoc)
     apply (rule monadic_rewrite_guard_imp)
@@ -622,87 +619,87 @@ lemma handleFaultReply':
                             upto_enum_word mapM_x_Cons mapM_x_Nil)
      apply (simp add: getSanitiseRegisterInfo_moreMapM_comm asUser_getRegister_getSanitiseRegisterInfo_comm getSanitiseRegisterInfo_lookupIPCBuffer_comm)
      apply (rule monadic_rewrite_bind_tail)
-     apply (rule monadic_rewrite_bind_tail [where Q="\<lambda>_. tcb_at' r"])
-      apply (case_tac sb)
+      apply (rule monadic_rewrite_bind_tail [where Q="\<lambda>_. tcb_at' r"])
+       apply (case_tac sb)
+        apply (case_tac "msgLength tag < scast n_msgRegisters")
+         apply (erule disjE[OF word_less_cases],
+                  ( clarsimp simp: n_msgRegisters_def asUser_bind_distrib
+                                   mapM_x_Cons mapM_x_Nil bind_assoc
+                                   asUser_getRegister_discarded
+                                   asUser_comm[OF neq] take_zip
+                                   word_le_nat_alt[of 4, simplified linorder_not_less[symmetric, of 4]]
+                                   asUser_return submonad_asUser.fn_stateAssert
+                  | rule monadic_rewrite_bind_tail monadic_rewrite_refl
+                         monadic_rewrite_symb_exec_l[OF _ stateAssert_inv]
+                  | wp asUser_typ_ats)+)+
        apply (case_tac "msgLength tag < scast n_msgRegisters")
         apply (erule disjE[OF word_less_cases],
-                 ( clarsimp simp: n_msgRegisters_def asUser_bind_distrib
-                                  mapM_x_Cons mapM_x_Nil bind_assoc
-                                  asUser_getRegister_discarded
-                                  asUser_comm[OF neq] take_zip
-                                  word_le_nat_alt[of 4, simplified linorder_not_less[symmetric, of 4]]
-                                  asUser_return submonad_asUser.fn_stateAssert
-                 | rule monadic_rewrite_bind_tail monadic_rewrite_refl
-                        monadic_rewrite_symb_exec_l[OF stateAssert_inv]
-                 | wp asUser_typ_ats)+)+
-      apply (case_tac "msgLength tag < scast n_msgRegisters")
-       apply (erule disjE[OF word_less_cases],
-                 ( clarsimp simp: n_msgRegisters_def asUser_bind_distrib
-                                  mapM_x_Cons mapM_x_Nil bind_assoc
-                                  zipWithM_x_Nil
-                                  asUser_getRegister_discarded
-                                  asUser_comm[OF neq] take_zip
-                                  bind_comm_mapM_comm [OF asUser_loadWordUser_comm, symmetric]
-                                  asUser_return submonad_asUser.fn_stateAssert
-                 | rule monadic_rewrite_bind_tail monadic_rewrite_refl
-                        monadic_rewrite_symb_exec_l[OF mapM_x_mapM_valid[OF mapM_x_wp']]
-                        monadic_rewrite_symb_exec_l[OF stateAssert_inv]
-                        monadic_rewrite_threadGet_return
-                        monadic_rewrite_getSanitiseRegisterInfo_return
-                 | wp asUser_typ_ats mapM_wp')+)+
-      apply (simp add: n_msgRegisters_def word_le_nat_alt n_syscallMessage_def
-                       linorder_not_less syscallMessage_unfold)
-      apply (clarsimp | frule neq0_conv[THEN iffD2, THEN not0_implies_Suc,
-                                        OF order_less_le_trans, rotated])+
-      apply (subgoal_tac "\<forall>n :: machine_word. n \<le> scast n_syscallMessage \<longrightarrow> [n .e. msgMaxLength]
-                                = [n .e. scast n_syscallMessage]
-                                    @ [scast n_syscallMessage + 1 .e. msgMaxLength]")
-       apply (simp only: upto_enum_word[where y="scast n_syscallMessage :: machine_word"]
-                         upto_enum_word[where y="scast n_syscallMessage + 1 :: machine_word"])
-       apply (clarsimp simp: bind_assoc asUser_bind_distrib asUser_getRegister_threadGet_comm
-                             mapM_x_Cons mapM_x_Nil threadGet_discarded
-                             asUser_comm [OF neq] asUser_getRegister_discarded
-                             submonad_asUser.fn_stateAssert take_zip
-                             bind_subst_lift [OF submonad_asUser.stateAssert_fn]
-                             word_less_nat_alt RISCV64_H.sanitiseRegister_def
-                             split_def n_msgRegisters_def msgMaxLength_def
-                             bind_comm_mapM_comm [OF asUser_loadWordUser_comm, symmetric]
-                             word_size msgLengthBits_def n_syscallMessage_def Let_def
-                  split del: if_split
-                       cong: if_weak_cong register.case_cong)
+                  ( clarsimp simp: n_msgRegisters_def asUser_bind_distrib
+                                   mapM_x_Cons mapM_x_Nil bind_assoc
+                                   zipWithM_x_Nil
+                                   asUser_getRegister_discarded
+                                   asUser_comm[OF neq] take_zip
+                                   bind_comm_mapM_comm [OF asUser_loadWordUser_comm, symmetric]
+                                   asUser_return submonad_asUser.fn_stateAssert
+                  | rule monadic_rewrite_bind_tail monadic_rewrite_refl
+                         monadic_rewrite_symb_exec_l[OF _ mapM_x_mapM_valid[OF mapM_x_wp']]
+                         monadic_rewrite_symb_exec_l[OF _ stateAssert_inv]
+                         monadic_rewrite_threadGet_return
+                         monadic_rewrite_getSanitiseRegisterInfo_return
+                  | wp asUser_typ_ats mapM_wp')+)+
+       apply (simp add: n_msgRegisters_def word_le_nat_alt n_syscallMessage_def
+                        linorder_not_less syscallMessage_unfold)
+       apply (clarsimp | frule neq0_conv[THEN iffD2, THEN not0_implies_Suc,
+                                         OF order_less_le_trans, rotated])+
+       apply (subgoal_tac "\<forall>n :: machine_word. n \<le> scast n_syscallMessage \<longrightarrow> [n .e. msgMaxLength]
+                                 = [n .e. scast n_syscallMessage]
+                                     @ [scast n_syscallMessage + 1 .e. msgMaxLength]")
+        apply (simp only: upto_enum_word[where y="scast n_syscallMessage :: machine_word"]
+                          upto_enum_word[where y="scast n_syscallMessage + 1 :: machine_word"])
+        apply (clarsimp simp: bind_assoc asUser_bind_distrib asUser_getRegister_threadGet_comm
+                              mapM_x_Cons mapM_x_Nil threadGet_discarded
+                              asUser_comm [OF neq] asUser_getRegister_discarded
+                              submonad_asUser.fn_stateAssert take_zip
+                              bind_subst_lift [OF submonad_asUser.stateAssert_fn]
+                              word_less_nat_alt RISCV64_H.sanitiseRegister_def
+                              split_def n_msgRegisters_def msgMaxLength_def
+                              bind_comm_mapM_comm [OF asUser_loadWordUser_comm, symmetric]
+                              word_size msgLengthBits_def n_syscallMessage_def Let_def
+                   split del: if_split
+                        cong: if_weak_cong register.case_cong)
 
 
-       apply (rule monadic_rewrite_bind_tail)+
-               apply (subst (2) upto_enum_word)
-               apply (case_tac "ma < unat n_syscallMessage - 4")
+        apply (rule monadic_rewrite_bind_tail)+
+                apply (subst (2) upto_enum_word)
+                apply (case_tac "ma < unat n_syscallMessage - 4")
 
-                apply (erule disjE[OF nat_less_cases'],
-                       ( clarsimp simp: n_syscallMessage_def bind_assoc asUser_bind_distrib
-                                        mapM_x_Cons mapM_x_Nil zipWithM_x_mapM_x mapM_Cons
-                                        bind_comm_mapM_comm [OF asUser_loadWordUser_comm, symmetric]
-                                        asUser_loadWordUser_comm loadWordUser_discarded asUser_return
-                                        zip_take_triv2 msgMaxLength_def
-                                        no_fail_stateAssert
-                                  cong: if_weak_cong
-                       | simp
-                       | rule monadic_rewrite_bind_tail
-                              monadic_rewrite_refl
-                              monadic_rewrite_symb_exec_l[OF stateAssert_inv]
-                              monadic_rewrite_symb_exec_l[OF mapM_x_mapM_valid[OF mapM_x_wp']]
-                              monadic_rewrite_threadGet_return
-                              monadic_rewrite_getSanitiseRegisterInfo_return
-                              monadic_rewrite_getSanitiseRegisterInfo_drop
-                       | wp asUser_typ_ats empty_fail_loadWordUser)+)+
-      apply (clarsimp simp: upto_enum_word word_le_nat_alt simp del: upt.simps cong: if_weak_cong)
-      apply (cut_tac i="unat n" and j="Suc (unat (scast n_syscallMessage :: machine_word))"
-                                and k="Suc msgMaxLength" in upt_add_eq_append')
-        apply (simp add: n_syscallMessage_def)
-       apply (simp add: n_syscallMessage_def msgMaxLength_unfold)
-      apply (simp add: n_syscallMessage_def msgMaxLength_def
-                       msgLengthBits_def shiftL_nat
-                  del: upt.simps upt_rec_numeral)
-      apply (simp add: upto_enum_word cong: if_weak_cong)
-     apply wp+
+                 apply (erule disjE[OF nat_less_cases'],
+                        ( clarsimp simp: n_syscallMessage_def bind_assoc asUser_bind_distrib
+                                         mapM_x_Cons mapM_x_Nil zipWithM_x_mapM_x mapM_Cons
+                                         bind_comm_mapM_comm [OF asUser_loadWordUser_comm, symmetric]
+                                         asUser_loadWordUser_comm loadWordUser_discarded asUser_return
+                                         zip_take_triv2 msgMaxLength_def
+                                         no_fail_stateAssert
+                                   cong: if_weak_cong
+                        | simp
+                        | rule monadic_rewrite_bind_tail
+                               monadic_rewrite_refl
+                               monadic_rewrite_symb_exec_l[OF _ stateAssert_inv]
+                               monadic_rewrite_symb_exec_l[OF _ mapM_x_mapM_valid[OF mapM_x_wp']]
+                               monadic_rewrite_threadGet_return
+                               monadic_rewrite_getSanitiseRegisterInfo_return
+                               monadic_rewrite_getSanitiseRegisterInfo_drop
+                        | wp asUser_typ_ats empty_fail_loadWordUser)+)+
+       apply (clarsimp simp: upto_enum_word word_le_nat_alt simp del: upt.simps cong: if_weak_cong)
+       apply (cut_tac i="unat n" and j="Suc (unat (scast n_syscallMessage :: machine_word))"
+                                 and k="Suc msgMaxLength" in upt_add_eq_append')
+         apply (simp add: n_syscallMessage_def)
+        apply (simp add: n_syscallMessage_def msgMaxLength_unfold)
+       apply (simp add: n_syscallMessage_def msgMaxLength_def
+                        msgLengthBits_def shiftL_nat
+                   del: upt.simps upt_rec_numeral)
+       apply (simp add: upto_enum_word cong: if_weak_cong)
+      apply wp+
     (* ArchFault *)
     apply (simp add: neq inj_case_bool split: bool.split)
    apply (rule monadic_rewrite_guard_imp)

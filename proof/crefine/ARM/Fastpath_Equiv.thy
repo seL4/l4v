@@ -479,7 +479,7 @@ lemma monadic_rewrite_threadGet:
    apply (rule monadic_rewrite_symb_exec_l' | wp | rule empty_fail_getObject getObject_inv)+
      apply (clarsimp; rule no_fail_getObject_tcb)
     apply (simp only: exec_gets)
-    apply (rule_tac P = "(\<lambda>s. (f x)=v) and tcb_at' t" in monadic_rewrite_pre_imp_refl)
+    apply (rule_tac P = "(\<lambda>s. (f x)=v) and tcb_at' t" in monadic_rewrite_pre_imp_eq)
     apply (simp add:)
    apply (wp OMG_getObject_tcb | wpc)+
   apply (auto intro: obj_tcb_at')
@@ -880,7 +880,7 @@ lemma receiveIPC_simple_rewrite:
         apply (rule hoare_pre, wpc, wp+, simp)
        apply (simp split: option.split)
       apply (rule monadic_rewrite_trans, rule monadic_rewrite_if_known[where X=False], simp)
-      apply (rule monadic_rewrite_pre_imp_refl[where P=\<top>])
+      apply (rule monadic_rewrite_pre_imp_eq[where P=\<top>])
       apply (cases ep, simp_all add: isSendEP_def)[1]
      apply (wp getNotification_wp gbn_wp' getEndpoint_wp | wpc)+
   apply (clarsimp simp: obj_at'_def projectKOs pred_tcb_at'_def)
@@ -1139,7 +1139,7 @@ lemma setEndpoint_setCTE_pivot[unfolded K_bind_def]:
                      | simp)+
       apply (rule_tac P="\<lambda>s. epat = ep_at' p s \<and> cteat = real_cte_at' slot s
                            \<and> tcbat = (tcb_at' (slot && ~~ mask 9) and (%y. slot && mask 9 : dom tcb_cte_cases)) s"
-                   in monadic_rewrite_pre_imp_refl)
+                   in monadic_rewrite_pre_imp_eq)
       apply (simp add: setEndpoint_def setObject_modify_assert bind_assoc
                        exec_gets assert_def exec_modify
                 split: if_split)
