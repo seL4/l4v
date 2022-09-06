@@ -77,7 +77,7 @@ lemma monadic_rewrite_is_refl:
   by (simp add: monadic_rewrite_refl)
 
 (* precondition implies reflexivity *)
-lemma monadic_rewrite_pre_imp_refl:
+lemma monadic_rewrite_pre_imp_eq:
   "\<lbrakk> \<And>s. P s \<Longrightarrow> f s = g s \<rbrakk> \<Longrightarrow> monadic_rewrite F E P f g"
   by (simp add: monadic_rewrite_def)
 
@@ -221,9 +221,9 @@ text \<open>Symbolic execution\<close>
 (* When `F=True`, we assume LHS does not fail and show the RHS does not fail. When adding `m` to the
    LHS this assumption extends to `m`, meaning we can assume `m` does not fail. *)
 lemma monadic_rewrite_symb_exec_l':
-  "\<lbrakk> \<And>P. m \<lbrace>P\<rbrace>; empty_fail m;
+  "\<lbrakk> \<And>rv. monadic_rewrite F E (Q rv) (x rv) y;
+     \<And>P. m \<lbrace>P\<rbrace>; empty_fail m;
      \<not> F \<longrightarrow> no_fail P' m;
-     \<And>rv. monadic_rewrite F E (Q rv) (x rv) y;
      \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace> \<rbrakk>
    \<Longrightarrow> monadic_rewrite F E (P and P') (m >>= (\<lambda>rv. x rv)) y"
   apply (cases E)
@@ -262,8 +262,8 @@ lemma monadic_rewrite_symb_exec_l':
 
 (* as a lemma to preserve lambda binding erased by simplified *)
 lemma monadic_rewrite_symb_exec_l_F:
-  "\<lbrakk> \<And>P. m \<lbrace>P\<rbrace>; empty_fail m;
-     \<And>rv. monadic_rewrite True E (Q rv) (x rv) y;
+  "\<lbrakk> \<And>rv. monadic_rewrite True E (Q rv) (x rv) y;
+     \<And>P. m \<lbrace>P\<rbrace>; empty_fail m;
      \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace> \<rbrakk>
    \<Longrightarrow> monadic_rewrite True E P (m >>= (\<lambda>rv. x rv)) y"
   by (rule monadic_rewrite_symb_exec_l'[where P'=\<top> and F=True, simplified])
@@ -279,8 +279,8 @@ lemmas monadic_rewrite_symb_exec_l
 (* When `E=False`, adding an `m` to the RHS that returns no results still fulfills the result subset
    requirement (the empty set is a trivial subset of any LHS results). *)
 lemma monadic_rewrite_symb_exec_r':
-  "\<lbrakk> \<And>P. m \<lbrace>P\<rbrace>; no_fail P' m; E \<longrightarrow> empty_fail m;
-     \<And>rv. monadic_rewrite F E (Q rv) x (y rv);
+  "\<lbrakk> \<And>rv. monadic_rewrite F E (Q rv) x (y rv);
+     \<And>P. m \<lbrace>P\<rbrace>; no_fail P' m; E \<longrightarrow> empty_fail m;
      \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace> \<rbrakk>
    \<Longrightarrow> monadic_rewrite F E (P and P') x (m >>= (\<lambda>rv. y rv))"
   apply (cases E)
@@ -310,8 +310,8 @@ lemma monadic_rewrite_symb_exec_r':
 
 (* as a lemma to preserve lambda binding erased by simplified *)
 lemma monadic_rewrite_symb_exec_r_nE:
-  "\<lbrakk> \<And>P. m \<lbrace>P\<rbrace>; no_fail P' m;
-     \<And>rv. monadic_rewrite F False (Q rv) x (y rv);
+  "\<lbrakk> \<And>rv. monadic_rewrite F False (Q rv) x (y rv);
+     \<And>P. m \<lbrace>P\<rbrace>; no_fail P' m;
      \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace> \<rbrakk>
    \<Longrightarrow> monadic_rewrite F False (P and P') x (m >>= (\<lambda>rv. y rv))"
   by (rule monadic_rewrite_symb_exec_r'[where E=False, simplified])
@@ -325,26 +325,20 @@ lemmas monadic_rewrite_symb_exec_r
     monadic_rewrite_symb_exec_r_E
 
 lemma monadic_rewrite_symb_exec_l_known_F:
-  "\<lbrakk> \<And>P. m \<lbrace>P\<rbrace>; empty_fail m;
-     monadic_rewrite True E Q (x rv) y;
-     \<lbrace>P\<rbrace> m \<lbrace>\<lambda>rv' s. rv' = rv \<and> Q s\<rbrace> \<rbrakk>
-   \<Longrightarrow> monadic_rewrite True E P (m >>= x) y"
-  apply (erule (1) monadic_rewrite_symb_exec_l)
-   apply (rule_tac P="rva = rv" in monadic_rewrite_gen_asm)
-   apply simp
-  apply wpsimp
-  done
+  "\<lbrakk> monadic_rewrite True E Q (x rv) y;
+     \<And>P. m \<lbrace>P\<rbrace>; empty_fail m;
+     \<lbrace>P\<rbrace> m \<lbrace>\<lambda>rv' _. rv' = rv \<rbrace> \<rbrakk>
+   \<Longrightarrow> monadic_rewrite True E (P and Q) (m >>= x) y"
+  by (erule monadic_rewrite_trans[rotated])
+     (rule monadic_rewrite_symb_exec_l_F[OF monadic_rewrite_pre_imp_eq]; simp)
 
 lemma monadic_rewrite_symb_exec_l_known_nF:
-  "\<lbrakk> \<And>P. m \<lbrace>P\<rbrace>; empty_fail m; no_fail P' m;
-     monadic_rewrite False E Q (x rv) y;
-     \<lbrace>P\<rbrace> m \<lbrace>\<lambda>rv' s. rv' = rv \<and> Q s\<rbrace> \<rbrakk>
-   \<Longrightarrow> monadic_rewrite False E (P and P') (m >>= x) y"
-  apply (erule (2) monadic_rewrite_symb_exec_l)
-   apply (rule_tac P="rva = rv" in monadic_rewrite_gen_asm)
-   apply simp
-  apply wpsimp
-  done
+  "\<lbrakk> monadic_rewrite False E Q (x rv) y;
+     \<And>P. m \<lbrace>P\<rbrace>; empty_fail m; no_fail P' m;
+     \<lbrace>P\<rbrace> m \<lbrace>\<lambda>rv' s. rv' = rv \<rbrace> \<rbrakk>
+   \<Longrightarrow> monadic_rewrite False E (P and P' and Q) (m >>= x) y"
+  by (erule monadic_rewrite_trans[rotated])
+     (rule monadic_rewrite_symb_exec_l_nF[OF monadic_rewrite_pre_imp_eq]; simp)
 
 (* perform symbolic execution on LHS, proving a specific value is returned *)
 lemmas monadic_rewrite_symb_exec_l_known
@@ -352,25 +346,23 @@ lemmas monadic_rewrite_symb_exec_l_known
     monadic_rewrite_symb_exec_l_known_nF
 
 lemma monadic_rewrite_symb_exec_r_known_E:
-  "\<lbrakk> \<And>P. m \<lbrace>P\<rbrace>; empty_fail m; no_fail P' m;
-     monadic_rewrite F True Q x (y rv);
-     \<lbrace>P\<rbrace> m \<lbrace>\<lambda>rv' s. rv' = rv \<and> Q s\<rbrace> \<rbrakk>
-   \<Longrightarrow> monadic_rewrite F True (P and P') x (m >>= y)"
-  apply (erule (2) monadic_rewrite_symb_exec_r)
-   apply (rule_tac P="rva = rv" in monadic_rewrite_gen_asm)
-   apply simp
-  apply wpsimp
+  "\<lbrakk> monadic_rewrite F True Q x (y rv);
+     \<And>P. m \<lbrace>P\<rbrace>; empty_fail m; no_fail P' m;
+     \<lbrace>P\<rbrace> m \<lbrace>\<lambda>rv' s. rv' = rv \<rbrace> \<rbrakk>
+   \<Longrightarrow> monadic_rewrite F True (P and P' and Q) x (m >>= y)"
+  apply (rule monadic_rewrite_guard_imp)
+   apply (erule monadic_rewrite_trans)
+   apply (rule monadic_rewrite_symb_exec_r_E[OF monadic_rewrite_pre_imp_eq, rotated -1], simp+)
   done
 
 lemma monadic_rewrite_symb_exec_r_known_nE:
-  "\<lbrakk> \<And>P. m \<lbrace>P\<rbrace>; no_fail P' m;
-     monadic_rewrite F False Q x (y rv);
-     \<lbrace>P\<rbrace> m \<lbrace>\<lambda>rv' s. rv' = rv \<and> Q s\<rbrace> \<rbrakk>
-   \<Longrightarrow> monadic_rewrite F False (P and P') x (m >>= y)"
-  apply (erule (1) monadic_rewrite_symb_exec_r)
-   apply (rule_tac P="rva = rv" in monadic_rewrite_gen_asm)
-   apply simp
-  apply wpsimp
+  "\<lbrakk> monadic_rewrite F False Q x (y rv);
+     \<And>P. m \<lbrace>P\<rbrace>; no_fail P' m;
+     \<lbrace>P\<rbrace> m \<lbrace>\<lambda>rv' s. rv' = rv \<rbrace> \<rbrakk>
+   \<Longrightarrow> monadic_rewrite F False (P and P' and Q) x (m >>= y)"
+  apply (rule monadic_rewrite_guard_imp)
+   apply (erule monadic_rewrite_trans)
+   apply (rule monadic_rewrite_symb_exec_r_nE[OF monadic_rewrite_pre_imp_eq, rotated -1], simp+)
   done
 
 (* perform symbolic execution on RHS, proving a specific value is returned *)
@@ -379,12 +371,12 @@ lemmas monadic_rewrite_symb_exec_r_known
     monadic_rewrite_symb_exec_r_known_nE
 
 lemma monadic_rewrite_symb_exec_l_drop_F:
-  "\<lbrakk>\<And>P. \<lbrace>P\<rbrace> m \<lbrace>\<lambda>_. P\<rbrace>; empty_fail m; monadic_rewrite True E P g h\<rbrakk>
+  "\<lbrakk> monadic_rewrite True E P g h; \<And>P. m \<lbrace>P\<rbrace>; empty_fail m \<rbrakk>
    \<Longrightarrow> monadic_rewrite True E P (m >>= (\<lambda>_. g)) h"
   by (rule monadic_rewrite_symb_exec_l, auto)
 
 lemma monadic_rewrite_symb_exec_l_drop_nF:
-  "\<lbrakk>\<And>P. \<lbrace>P\<rbrace> m \<lbrace>\<lambda>_. P\<rbrace>; empty_fail m; no_fail P' m; monadic_rewrite False E P g h\<rbrakk>
+  "\<lbrakk> monadic_rewrite False E P g h; \<And>P. m \<lbrace>P\<rbrace>; empty_fail m; no_fail P' m \<rbrakk>
    \<Longrightarrow> monadic_rewrite False E (P and P') (m >>= (\<lambda>_. g)) h"
   by (rule monadic_rewrite_symb_exec_l, auto)
 
@@ -394,12 +386,12 @@ lemmas monadic_rewrite_symb_exec_l_drop
     monadic_rewrite_symb_exec_l_drop_nF
 
 lemma monadic_rewrite_symb_exec_r_drop_E:
-  "\<lbrakk>\<And>P. \<lbrace>P\<rbrace> m \<lbrace>\<lambda>_. P\<rbrace>; empty_fail m; no_fail P' m; monadic_rewrite F True P g h\<rbrakk>
+  "\<lbrakk> monadic_rewrite F True P g h; \<And>P. m \<lbrace>P\<rbrace>; empty_fail m; no_fail P' m \<rbrakk>
    \<Longrightarrow> monadic_rewrite F True (P and P') g (m >>= (\<lambda>_. h))"
   by (rule monadic_rewrite_symb_exec_r, auto)
 
 lemma monadic_rewrite_symb_exec_r_drop_nE:
-  "\<lbrakk>\<And>P. \<lbrace>P\<rbrace> m \<lbrace>\<lambda>_. P\<rbrace>; no_fail P' m; monadic_rewrite F False P g h\<rbrakk>
+  "\<lbrakk> monadic_rewrite F False P g h; \<And>P. m \<lbrace>P\<rbrace>; no_fail P' m \<rbrakk>
    \<Longrightarrow> monadic_rewrite F False (P and P') g (m >>= (\<lambda>_. h))"
   by (rule monadic_rewrite_symb_exec_r, auto)
 
@@ -415,25 +407,35 @@ lemma monadic_rewrite_if:
                           (If P a b) (If P c d)"
   by (cases P, simp_all)
 
-lemma monadic_rewrite_if_rhs:
+lemma monadic_rewrite_if_r:
   "\<lbrakk> P \<Longrightarrow> monadic_rewrite F E Q a b; \<not> P \<Longrightarrow> monadic_rewrite F E R a c \<rbrakk>
    \<Longrightarrow> monadic_rewrite F E (\<lambda>s. (P \<longrightarrow> Q s) \<and> (\<not> P \<longrightarrow> R s)) a (If P b c)"
   by (cases P, simp_all)
 
+lemma monadic_rewrite_if_r_True:
+  "\<lbrakk> P \<Longrightarrow> monadic_rewrite F E Q a b \<rbrakk>
+   \<Longrightarrow> monadic_rewrite F E ((\<lambda>_. P) and Q) a (If P b c)"
+  by (rule monadic_rewrite_gen_asm, cases P, simp_all)
+
+lemma monadic_rewrite_if_r_False:
+  "\<lbrakk> \<not> P \<Longrightarrow> monadic_rewrite F E R a c \<rbrakk>
+   \<Longrightarrow> monadic_rewrite F E ((\<lambda>_. \<not> P) and R) a (If P b c)"
+  by (rule monadic_rewrite_gen_asm, cases P, simp_all)
+
 lemmas monadic_rewrite_named_if
   = monadic_rewrite_if[where Q="(=) s" and R="(=) s", simplified] for s
 
-lemma monadic_rewrite_if_lhs:
+lemma monadic_rewrite_if_l:
   "\<lbrakk> P \<Longrightarrow> monadic_rewrite F E Q b a; \<not> P \<Longrightarrow> monadic_rewrite F E R c a \<rbrakk>
    \<Longrightarrow> monadic_rewrite F E (\<lambda>s. (P \<longrightarrow> Q s) \<and> (\<not> P \<longrightarrow> R s)) (If P b c) a"
   by (cases P, simp_all)
 
-lemma monadic_rewrite_if_lhs_True:
+lemma monadic_rewrite_if_l_True:
   "\<lbrakk> P \<Longrightarrow> monadic_rewrite F E Q b a \<rbrakk>
    \<Longrightarrow> monadic_rewrite F E ((\<lambda>_. P) and Q) (If P b c) a"
   by (rule monadic_rewrite_gen_asm, cases P, simp_all)
 
-lemma monadic_rewrite_if_lhs_False:
+lemma monadic_rewrite_if_l_False:
   "\<lbrakk> \<not> P \<Longrightarrow> monadic_rewrite F E R c a \<rbrakk>
    \<Longrightarrow> monadic_rewrite F E ((\<lambda>_. \<not> P) and R) (If P b c) a"
   by (rule monadic_rewrite_gen_asm, cases P, simp_all)
@@ -493,7 +495,7 @@ lemma monadic_rewrite_stateAssert:
 
 text \<open>Non-determinism: alternative and select\<close>
 
-lemma monadic_rewrite_alternative_rhs:
+lemma monadic_rewrite_alternative_r:
   "\<lbrakk> monadic_rewrite F E P a b; monadic_rewrite F E Q a c \<rbrakk>
    \<Longrightarrow> monadic_rewrite F E (P and Q) a (b \<sqinter> c)"
   by (auto simp: monadic_rewrite_def alternative_def)
@@ -574,22 +576,21 @@ lemma monadic_rewrite_gets_the_walk:
    apply (rule monadic_rewrite_trans)
     apply (erule(1) monadic_rewrite_bind_tail)
    apply (simp add: gets_the_def bind_assoc)
-   apply (rule monadic_rewrite_symb_exec_r, wp+)
-    apply (rule monadic_rewrite_trans)
-     apply (rule monadic_rewrite_bind_tail)
-      apply (rule_tac rv=x in monadic_rewrite_symb_exec_l_known_F,
-             (wp empty_fail_gets)+)
-       apply (rule monadic_rewrite_refl)
-      apply wp
-     apply assumption
-    apply (rule_tac P="x = None" in monadic_rewrite_cases[where Q=\<top>])
-     apply (simp add: assert_opt_def)
-     apply (clarsimp simp: monadic_rewrite_def fail_def snd_bind)
-     apply (rule ccontr, drule(1) empty_failD2)
-     apply clarsimp
-    apply (simp add: assert_opt_def case_option_If2)
-    apply (rule monadic_rewrite_refl)
-   apply wp
+   apply (rule monadic_rewrite_symb_exec_r)
+      apply (rule monadic_rewrite_trans)
+       apply (rule monadic_rewrite_bind_tail)
+        apply (rule_tac rv=x in monadic_rewrite_symb_exec_l_known_F)
+           apply (rule monadic_rewrite_refl)
+          apply (wp empty_fail_gets)+
+       apply assumption
+      apply (rule_tac P="x = None" in monadic_rewrite_cases[where Q=\<top>])
+       apply (simp add: assert_opt_def)
+       apply (clarsimp simp: monadic_rewrite_def fail_def snd_bind)
+       apply (rule ccontr, drule(1) empty_failD2)
+       apply clarsimp
+      apply (simp add: assert_opt_def case_option_If2)
+      apply (rule monadic_rewrite_refl)
+     apply wp+
   apply simp
   done
 
@@ -672,21 +673,39 @@ lemma monadic_rewrite_weaken_failure:
 
 text \<open>corres / refinement\<close>
 
-(* FIXME: investigate flags here and next lemma, are these over-specified? *)
-lemma monadic_rewrite_corres:
-  "\<lbrakk> monadic_rewrite False E Q a a';
-     corres_underlying R False nf' r P P' a' c \<rbrakk>
-   \<Longrightarrow> corres_underlying R False nf' r (P and Q) P' a c"
+lemma monadic_rewrite_corres_l_generic:
+  "\<lbrakk> monadic_rewrite F E Q a a';
+     corres_underlying R nf nf' r P P' a' c;
+     F \<longrightarrow> nf \<rbrakk>
+   \<Longrightarrow> corres_underlying R nf nf' r (P and Q) P' a c"
   by (fastforce simp add: corres_underlying_def monadic_rewrite_def)
 
-lemma monadic_rewrite_corres_rhs:
-  "\<lbrakk> monadic_rewrite False True Q c c';
-     corres_underlying R nf nf' r P P' a c' \<rbrakk>
+lemma monadic_rewrite_corres_l:
+  "\<lbrakk> monadic_rewrite False E Q a a';
+     corres_underlying R nf nf' r P P' a' c \<rbrakk>
+   \<Longrightarrow> corres_underlying R nf nf' r (P and Q) P' a c"
+  by (rule monadic_rewrite_corres_l_generic, simp+)
+
+(* The reasoning behind the failure flag logic is as follows:
+   * if we want to assume non-failure in monadic_rewrite (F), then we have to prove non-failure
+     in corres_underlying (nf'')
+   * if the goal requires us to prove non-failure of RHS, then the corres assumption also needs
+     to prove non-failure *)
+lemma monadic_rewrite_corres_r_generic:
+  "\<lbrakk> monadic_rewrite F E Q c' c;
+     corres_underlying R nf nf'' r P P' a c';
+     F \<longrightarrow> nf''; nf' \<longrightarrow> nf'' \<rbrakk>
    \<Longrightarrow> corres_underlying R nf nf' r P (P' and Q) a c"
   by (fastforce simp: corres_underlying_def monadic_rewrite_def)
 
+lemma monadic_rewrite_corres_r:
+  "\<lbrakk> monadic_rewrite False True Q c c';
+     corres_underlying R nf nf' r P P' a c' \<rbrakk>
+   \<Longrightarrow> corres_underlying R nf nf' r P (P' and Q) a c"
+  by (erule (1) monadic_rewrite_corres_r_generic[OF monadic_rewrite_sym], simp+)
+
 lemmas corres_gets_the_bind
-  = monadic_rewrite_corres[OF monadic_rewrite_bind_head[OF monadic_rewrite_gets_the_gets]]
+  = monadic_rewrite_corres_l[OF monadic_rewrite_bind_head[OF monadic_rewrite_gets_the_gets]]
 
 text \<open>Tool integration\<close>
 
@@ -726,17 +745,31 @@ method monadic_rewrite_single_pass methods start step action finalise =
   determ start, (((action | determ step)+), finalise+)[1]
 
 (* Step over LHS until action applies, then finalise. *)
-method monadic_rewrite_rule methods action finalise =
+method monadic_rewrite_l_method methods action finalise =
   monadic_rewrite_single_pass \<open>wp_pre, rule monadic_rewrite_trans\<close>
                               monadic_rewrite_step
                               action
                               finalise
 
-(* Rewrite LHS using a single method that works on the head of a bind, and cleanup with finalise.
-   E.g. using \<open>rule monadic_rewrite_if_lhs_True\<close> \<open>wpsimp\<close> *)
-method monadic_rewrite_simple methods action finalise =
-  monadic_rewrite_rule \<open>monadic_rewrite_solve_head action\<close> finalise
+(* Step over RHS until action applies, then finalise. *)
+method monadic_rewrite_r_method methods action finalise =
+  monadic_rewrite_single_pass \<open>wp_pre, rule monadic_rewrite_trans[rotated]\<close>
+                              monadic_rewrite_step
+                              action
+                              finalise
 
-(* FIXME: consider tactic for deployment on corres goals; consider transverse options *)
+(* Rewrite LHS using a single rule application that works on the head of a bind,
+   then cleanup with finalise.
+   E.g. using \<open>wpsimp\<close> r: monadic_rewrite_if_l_True *)
+method monadic_rewrite_l methods finalise uses r =
+  monadic_rewrite_l_method \<open>monadic_rewrite_solve_head \<open>rule r\<close>\<close> finalise
+
+(* as above, but for RHS *)
+method monadic_rewrite_r methods finalise uses r =
+  monadic_rewrite_r_method \<open>monadic_rewrite_solve_head \<open>rule r\<close>\<close> finalise
+
+(* FIXME: consider tactic for deployment on corres goals;
+   FIXME: add corresponding monadic_rewrite_transverse? who knows how useful it'll be
+*)
 
 end
