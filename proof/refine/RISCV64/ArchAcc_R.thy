@@ -969,7 +969,7 @@ lemma findVSpaceForASID_corres:
   using assms
   apply (simp add: findVSpaceForASID_def)
   apply (rule corres_gen_asm, simp add: ucast_down_ucast_id is_down_def target_size source_size)
-  apply (rule corres_guard_imp[where Q'="?Q"], rule monadic_rewrite_corres[where P="?P", rotated],
+  apply (rule corres_guard_imp[where Q'="?Q"], rule monadic_rewrite_corres_l[where P="?P"],
          rule find_vspace_for_asid_rewite; simp)
   apply (simp add: liftE_bindE asidRange_def flip: mask_2pm1)
   apply (rule_tac r'="\<lambda>x y. x = y o ucast"

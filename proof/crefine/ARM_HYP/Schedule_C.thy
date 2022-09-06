@@ -298,8 +298,6 @@ proof -
             apply (rule conseqPre, vcg)
             apply clarsimp
            apply (wp isRunnable_wp)+
-         apply (simp add: isRunnable_def)
-        apply wp
        apply (clarsimp simp: Let_def guard_is_UNIV_def)
        apply (drule invs_no_cicd'_queues)
        apply (case_tac queue, simp)

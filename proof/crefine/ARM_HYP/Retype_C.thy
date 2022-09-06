@@ -5405,31 +5405,31 @@ lemma monadic_rewrite_setObject_vcpu_as_init:
    apply (rule monadic_rewrite_trans[rotated])
     apply (clarsimp simp: vcpuUpdate_def bind_assoc)
     (* explicitly state the vcpu we are setting for each setObject *)
-    apply (rule monadic_rewrite_symb_exec_r, wp+)
-     apply (rename_tac vcpu)
-     apply (rule_tac P="vcpu = vcpu0" in monadic_rewrite_gen_asm, simp)
-     apply (rule monadic_rewrite_bind_tail)
-      apply (rule monadic_rewrite_symb_exec_r, wp+)
-       apply (rename_tac vcpu')
-       apply (rule_tac P="vcpu' = vcpu1" in monadic_rewrite_gen_asm, simp)
+    apply (rule monadic_rewrite_symb_exec_r)
+       apply (rename_tac vcpu)
+       apply (rule_tac P="vcpu = vcpu0" in monadic_rewrite_gen_asm, simp)
        apply (rule monadic_rewrite_bind_tail)
-        apply (rule monadic_rewrite_symb_exec_r, wp+)
-         apply (rename_tac vcpu'')
-         apply (rule_tac P="vcpu'' = vcpu2" in monadic_rewrite_gen_asm, simp)
-       apply (rule monadic_rewrite_bind_tail)
-      apply (rule monadic_rewrite_symb_exec_r, wp+)
-         apply (rename_tac vcpu''')
-         apply (rule_tac P="vcpu''' = vcpu3" in monadic_rewrite_gen_asm, simp)
-         apply (rule monadic_rewrite_refl)
-        apply (wpsimp wp: getObject_vcpu_prop simp: vcpu1_def vcpu2_def vcpu3_def vcpu0_def)+
+        apply (rule monadic_rewrite_symb_exec_r)
+           apply (rename_tac vcpu')
+           apply (rule_tac P="vcpu' = vcpu1" in monadic_rewrite_gen_asm, simp)
+           apply (rule monadic_rewrite_bind_tail)
+            apply (rule monadic_rewrite_symb_exec_r)
+               apply (rename_tac vcpu'')
+               apply (rule_tac P="vcpu'' = vcpu2" in monadic_rewrite_gen_asm, simp)
+               apply (rule monadic_rewrite_bind_tail)
+                apply (rule monadic_rewrite_symb_exec_r)
+                   apply (rename_tac vcpu''')
+                   apply (rule_tac P="vcpu''' = vcpu3" in monadic_rewrite_gen_asm, simp)
+                   apply (rule monadic_rewrite_refl)
+                  apply (wpsimp wp: getObject_vcpu_prop simp: vcpu1_def vcpu2_def vcpu3_def vcpu0_def)+
+               apply (wp setObject_sets_object_vcpu)
+              apply (wpsimp wp: getObject_vcpu_prop)+
+           apply (wpsimp wp: getObject_vcpu_prop simp: vcpu1_def vcpu2_def vcpu0_def)+
+           apply (wp setObject_sets_object_vcpu)
+          apply (wpsimp wp: getObject_vcpu_prop)+
+       apply (wpsimp wp: getObject_vcpu_prop simp: vcpu1_def vcpu2_def vcpu0_def)+
        apply (wp setObject_sets_object_vcpu)
       apply (wpsimp wp: getObject_vcpu_prop)+
-     apply (wpsimp wp: getObject_vcpu_prop simp: vcpu1_def vcpu2_def vcpu0_def)+
-     apply (wp setObject_sets_object_vcpu)
-    apply (wpsimp wp: getObject_vcpu_prop)+
-     apply (wpsimp wp: getObject_vcpu_prop simp: vcpu1_def vcpu2_def vcpu0_def)+
-     apply (wp setObject_sets_object_vcpu)
-    apply (wpsimp wp: getObject_vcpu_prop)+
    (* now we have four setObjects in a row, fold them up using setObject-combining *)
    apply (rule monadic_rewrite_trans[rotated])
     apply (rule monadic_rewrite_bind_tail)
