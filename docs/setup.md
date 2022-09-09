@@ -30,7 +30,7 @@ need to install it from the [MLton website](http://www.mlton.org).
 
 The Haskell Stack package is unavailable on Bullseye and out-of-date on Buster,
 so you will need to install it from the [Haskell Stack
-website](https://docs.haskellstack.org/en/stable/README).
+website](https://docs.haskellstack.org/en/stable/).
 
 ### Linux Packages - Ubuntu
 
@@ -99,7 +99,7 @@ pip3 install --user sel4-deps
 ### Haskell Stack
 
 After installing
-[haskell-stack](https://docs.haskellstack.org/en/stable/README), make sure
+[haskell-stack](https://docs.haskellstack.org/en/stable/), make sure
 you've adjusted your `PATH` to include `$HOME/.local/bin`, and that you're
 running an up-to-date version:
 
