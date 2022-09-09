@@ -13,6 +13,7 @@ imports
   Corres_UL
   EmptyFailLib
   LemmaBucket
+  Rules_Tac
 begin
 
 definition monadic_rewrite ::
@@ -758,15 +759,129 @@ method monadic_rewrite_r_method methods action finalise =
                               action
                               finalise
 
-(* Rewrite LHS using a single rule application that works on the head of a bind,
-   then cleanup with finalise.
-   E.g. using \<open>wpsimp\<close> r: monadic_rewrite_if_l_True *)
-method monadic_rewrite_l methods finalise uses r =
-  monadic_rewrite_l_method \<open>monadic_rewrite_solve_head \<open>rule r\<close>\<close> finalise
+(* monadic_rewrite_symb_exec_[r,l]['][_known,_drop][_[n][F,E]] can yield these side-conditions
+   upon the statement being symbolically executed
+   m is likely to be some variant of wpsimp in nearly all cases *)
+method monadic_rewrite_symb_exec_resolutions methods m =
+  if_then_else \<open>has_concl "empty_fail ?f"\<close> m
+  \<open>if_then_else \<open>has_concl "no_fail ?P ?f"\<close> m
+  \<open>if_then_else \<open>has_concl "?Q \<longrightarrow> empty_fail ?f"\<close> m
+  \<open>if_then_else \<open>has_concl "?Q \<longrightarrow> no_fail ?P ?f"\<close> m
+  \<open>if_then_else \<open>has_concl "?f \<lbrace>?P\<rbrace>"\<close> m
+   fail\<close>\<close>\<close>\<close>
 
-(* as above, but for RHS *)
-method monadic_rewrite_r methods finalise uses r =
-  monadic_rewrite_r_method \<open>monadic_rewrite_solve_head \<open>rule r\<close>\<close> finalise
+(* Symbolically execute non-state-modifying statement on LHS/RHS. In nearly all cases, the side
+   conditions should be solvable by wpsimp, but the _m versions allow specifying a method or
+   wpsimp options. *)
+method monadic_rewrite_symb_exec methods r m =
+  (no_name_eta, r; (monadic_rewrite_symb_exec_resolutions m)?)
+
+ML \<open>
+structure Monadic_Rewrite = struct
+
+val solves_wpsimp =
+  let
+    fun wpsimp st = Method_Closure.apply_method st @{method wpsimp} [] [] [] st
+    fun solves_wpsimp_tac st = Method_Closure.apply_method st @{method solves} [] [] [wpsimp] st
+  in solves_wpsimp_tac end
+
+(* monadic_rewrite_l/r_method \<open>monadic_rewrite_solve_head \<open>rule r\<close>\<close> [finalise] *)
+fun rewrite_rl monadic_rewrite_rl_method_name =
+  Attrib.thm -- (Scan.option Method.text_closure)
+  >> (fn (thm, finalise_method_opt) => fn ctxt => fn facts =>
+  let
+    (* rule r *)
+    fun rtac st = METHOD (HEADGOAL o Method.rule_tac st [thm]);
+    (* monadic_rewrite_solve_head \<open>rule r\<close> *)
+    fun mr_sh_tac st = Method_Closure.apply_method st @{method monadic_rewrite_solve_head}
+                                                   [] [] [rtac] st;
+    (* finalise *)
+    fun finalise_tac st =
+      case finalise_method_opt
+        of SOME m => METHOD (method_evaluate m st)
+         | NONE => solves_wpsimp st
+    (* assemble *)
+    fun tac st = Method_Closure.apply_method st monadic_rewrite_rl_method_name
+                                             [] [] [mr_sh_tac, finalise_tac] st;
+  in
+    tac ctxt facts
+  end)
+
+(* monadic_rewrite_symb_exec \<open>rule rule_thms\<close> [finalise] *)
+fun symb_exec rule_thms =
+  Scan.option Method.text_closure >> (fn finalise_method_opt => fn ctxt => fn facts =>
+  let
+    (* rule rule_thms *)
+    fun rtac st = METHOD (HEADGOAL o Method.rule_tac st rule_thms)
+    (* finalise *)
+    fun finalise_tac st =
+      case finalise_method_opt
+        of SOME m => METHOD (method_evaluate m st)
+         | NONE => solves_wpsimp st
+    (* assemble *)
+    fun tac st = Method_Closure.apply_method st @{method monadic_rewrite_symb_exec}
+                                             [] [] [rtac, finalise_tac] st
+  in
+    tac ctxt facts
+  end)
+
+(* apply (monadic_rewrite_symb_exec \<open>rules_tac rv=value in thms\<close> [finalise]) *)
+fun symb_exec_known thms =
+  (Scan.lift Parse.embedded_inner_syntax -- Scan.lift Parse.for_fixes
+  -- (Scan.option Method.text_closure))
+  >> (fn ((syn, fixes), finalise_method_opt) => fn ctxt => fn facts =>
+  let
+    (* rules_tac rv=syn in thms *)
+    val rtac = METHOD
+               o Multi_Rule_Insts.single_instantiate_tac Rule_Insts.res_inst_tac "rv" syn fixes thms;
+    (* finalise *)
+    fun finalise_tac st =
+      case finalise_method_opt
+        of SOME m => METHOD (method_evaluate m st)
+         | NONE => solves_wpsimp st
+    (* assemble *)
+    fun tac st = Method_Closure.apply_method st @{method monadic_rewrite_symb_exec}
+                                             [] [] [rtac, finalise_tac] st
+  in
+    tac ctxt facts
+  end)
+
+end\<close>
+
+method_setup monadic_rewrite_l = \<open>Monadic_Rewrite.rewrite_rl @{method monadic_rewrite_l_method}\<close>
+  \<open>apply rule in monadic_rewrite LHS with customisable side-condition method\<close>
+
+method_setup monadic_rewrite_r = \<open>Monadic_Rewrite.rewrite_rl @{method monadic_rewrite_r_method}\<close>
+  \<open>apply rule in monadic_rewrite RHS with customisable side-condition method\<close>
+
+(* Symbolic execution on LHS/RHS, trying specific-flag rules first,
+   falling back on generic symbolic execution rule.
+   Side-conditions can be discharged with a method if specified, otherwise \<open>solves wpsimp\<close> *)
+method_setup monadic_rewrite_symb_exec_l =
+  \<open>Monadic_Rewrite.symb_exec @{thms monadic_rewrite_symb_exec_l monadic_rewrite_symb_exec_l'}\<close>
+  \<open>symbolic execution on monadic_rewrite LHS with customisable side-condition method\<close>
+method_setup monadic_rewrite_symb_exec_r =
+  \<open>Monadic_Rewrite.symb_exec @{thms monadic_rewrite_symb_exec_r monadic_rewrite_symb_exec_r'}\<close>
+  \<open>symbolic execution on monadic_rewrite RHS with customisable side-condition method\<close>
+
+(* Drop statement on LHS/RHS using symbolic execution. In nearly all cases, the side conditions
+   should be solvable by wpsimp, but one can optionally specify a method or wpsimp options. *)
+method_setup monadic_rewrite_symb_exec_l_drop =
+  \<open>Monadic_Rewrite.symb_exec @{thms monadic_rewrite_symb_exec_l_drop}\<close>
+  \<open>drop monadic_rewrite LHS statement via symbolic execution with customisable side-condition method\<close>
+method_setup monadic_rewrite_symb_exec_r_drop =
+  \<open>Monadic_Rewrite.symb_exec @{thms monadic_rewrite_symb_exec_r_drop}\<close>
+  \<open>drop monadic_rewrite RHS statement via symbolic execution with customisable side-condition method\<close>
+
+(* Symbolic execution on RHS/LHS statement, but fixing the return value.
+   In nearly all cases, the side conditions should be solvable by wpsimp, but one can optionally
+   specify a method or wpsimp options. *)
+method_setup monadic_rewrite_symb_exec_l_known =
+  \<open>Monadic_Rewrite.symb_exec_known @{thms monadic_rewrite_symb_exec_l_known}\<close>
+  \<open>symbolic execution on monadic_rewrite LHS with known value and customisable side-condition method\<close>
+method_setup monadic_rewrite_symb_exec_r_known =
+  \<open>Monadic_Rewrite.symb_exec_known @{thms monadic_rewrite_symb_exec_r_known}\<close>
+  \<open>symbolic execution on monadic_rewrite RHS with known value and customisable side-condition method\<close>
 
 (* FIXME: consider tactic for deployment on corres goals;
    FIXME: add corresponding monadic_rewrite_transverse? who knows how useful it'll be
