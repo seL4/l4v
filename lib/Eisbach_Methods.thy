@@ -1,4 +1,5 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: BSD-2-Clause
@@ -573,5 +574,165 @@ method if_concl for pattern::bool methods m =
    Where strict alternatives are desired, use if_then_else with has_concl instead. *)
 method case_concl for pattern::bool methods m =
   has_concl pattern, m
+
+text \<open>@{text "all"} and @{text ";"} are dangerous for weakest-precondition reasoning, as the wp
+      goals usually need to be solved in the order they were generated. The @{text fwd_all}
+      and @{text fwd_all_new} methods apply on goals in order, taking into account goals solved
+      and added.\<close>
+
+ML \<open>
+local
+
+fun restrict_goal i n tac =
+  (PRIMITIVE (Goal.restrict i n)) THEN
+  tac THEN
+  (PRIMITIVE (Goal.unrestrict i));
+
+(* apply tac to all goals from i going forwards, taking into account any goals solved or generated *)
+fun tac_in_order (tac : int -> tactic) i thm =
+  if i > Thm.nprems_of thm orelse i < 1
+  then Seq.single thm
+  else
+    let
+      val st = restrict_goal i 1 (tac 1) thm (* only allow tac1 run on goal i *)
+    in
+      (* if the goal was solved, we want to stay on the same goal,
+         if the goal was transformed, we want to move to the next one, skipping any new
+         goals that were generated *)
+      Seq.maps (fn thm' => tac_in_order tac (i + 1 + Thm.nprems_of thm' - Thm.nprems_of thm) thm')
+               st
+    end
+
+in
+
+fun ALLGOALS_FWD tac = tac_in_order tac 1;
+
+infix 1 FWD_ALL_NEW;
+
+(* this is like THEN_ALL_NEW but expressed with goal restriction and ALLGOALS_FWD *)
+fun ((tac1 : int -> tactic) FWD_ALL_NEW (tac2 : int -> tactic)) (i : int) thm =
+  Seq.maps (fn thm' =>
+              if Thm.nprems_of thm' < Thm.nprems_of thm
+              then Seq.single thm'
+              else restrict_goal i (i + Thm.nprems_of thm' - Thm.nprems_of thm) (ALLGOALS_FWD tac2) thm'
+           ) (tac1 1 thm)
+
+end
+\<close>
+
+method_setup fwd_all =
+  \<open>Method.text_closure >> (fn m => fn ctxt => fn facts =>
+   let
+     fun tac i st' =
+       Goal.restrict i 1 st'
+       |> method_evaluate m ctxt facts
+       |> Seq.map (Goal.unrestrict i)
+   in SIMPLE_METHOD (ALLGOALS_FWD tac) facts end)\<close>
+  \<open>Apply a method to all goals in forwards order (reverse of "all" method) taking into account
+   goals solved and added\<close>
+
+method_setup fwd_all_new = \<open>
+  Method.text_closure -- Method.text_closure >> (fn (m1,m2) => fn ctxt => fn facts =>
+  let
+    fun restrict_goal i n tac =
+      (PRIMITIVE (Goal.restrict i n)) THEN
+      tac THEN
+      (PRIMITIVE (Goal.unrestrict i));
+    val tac1 = method_evaluate m1 ctxt facts
+    val tac2 = method_evaluate m2 ctxt facts
+    (* Restricting tac1 is here for consistency with ";".
+       (all \<open>simp?\<close>; tac2) does not do what one might expect *)
+    val tac = ((K (restrict_goal 1 1 tac1)) FWD_ALL_NEW (fn i => restrict_goal i 1 tac2))
+  in
+    SIMPLE_METHOD (tac 1) facts
+  end)\<close>
+  \<open>forwards version of ";" - second method is applied to all goals produced by the first\<close>
+
+notepad begin
+  fix P Q :: "nat \<Rightarrow> bool"
+  assume a: "\<And>x. P x"
+  assume b: "\<And>x. Q x"
+  assume c: "\<And>x. P x \<Longrightarrow> P x"
+  assume goal_multiplicity2: "\<And>n. \<lbrakk> P (n+10);P (n+20) \<rbrakk> \<Longrightarrow> P n"
+  assume goal_multiplicity5: "\<And>n. \<lbrakk> P (n+1);P (n+2);P (n+3);P (n+4);P (n+5) \<rbrakk> \<Longrightarrow> P n"
+  assume goal_multiplicity2x: "\<And>n. \<lbrakk> P n;Q n \<rbrakk> \<Longrightarrow> P n"
+
+  (* tests for generating a three-deep stack of rule production *)
+
+  (* generating using semicolon *)
+  have "P 0"
+  apply (rule goal_multiplicity2; (rule goal_multiplicity5
+         (* invoked only on P goals, results in 20 subgoals *)
+         ; rule goal_multiplicity2x
+         (* does not change number of goals *)
+         ; (rule c)?))
+    by (repeat 20 \<open>rule a b\<close>)
+
+  have "P 0"
+    apply (rule goal_multiplicity2; rule c)
+    apply (rule goal_multiplicity5; rule c)
+    apply (fails \<open>rule goal_multiplicity2x; rule c\<close>)
+    apply (succeeds \<open>rule goal_multiplicity2x; (rule c)?\<close>)
+    by (repeat 6 \<open>rule a b\<close>)
+
+  (* generating using fwd_all_new - using ALLGOALS_FWD and goal restriction *)
+  have "P 0"
+    apply (
+      fwd_all_new \<open>rule goal_multiplicity2\<close>
+        \<open>fwd_all_new \<open>rule goal_multiplicity5\<close>
+                     \<open>fwd_all_new \<open>rule goal_multiplicity2x\<close> \<open>(rule c)?\<close>\<close>\<close>)
+    by (repeat 20 \<open>rule a b\<close>)
+
+  have "P 0"
+    apply (fwd_all_new \<open>rule goal_multiplicity2\<close> \<open>rule c\<close>)
+    apply (fwd_all_new \<open>rule goal_multiplicity5\<close> \<open>rule c\<close>)
+    apply (fails \<open>fwd_all_new \<open>rule goal_multiplicity2x\<close> \<open>rule c\<close>\<close>)
+    apply (succeeds \<open>fwd_all_new \<open>rule goal_multiplicity2x\<close> \<open>(rule c)?\<close>\<close>)
+    by (repeat 6 \<open>rule a b\<close>)
+
+  (* check also that we can solve everything it spits out *)
+  have "P 0"
+    by (
+      fwd_all_new
+        \<open>fwd_all_new \<open>rule goal_multiplicity2\<close>
+          \<open>fwd_all_new \<open>rule goal_multiplicity5\<close>
+          \<open>rule goal_multiplicity2x\<close>\<close>\<close>
+        \<open>rule a b\<close>)
+
+  (* generating using fwd_all - using ALLGOALS_FWD and "," *)
+  have "P 0"
+    apply (rule goal_multiplicity2, fwd_all \<open>rule goal_multiplicity5\<close>,
+           fwd_all \<open>rule goal_multiplicity2x\<close>, all \<open>(rule c)?\<close>)
+    by (repeat 20 \<open>rule a b\<close>)
+
+  (* checking consistency with ; *)
+
+  fix x :: 'a
+
+  have "x = x"
+    apply (simp; fail)
+    done
+
+  have "x = x"
+    apply (fwd_all_new simp fail)
+    done
+
+  have "True"
+    apply (succeeds \<open>succeed; succeed\<close>)
+    apply (fails \<open>succeed; fail\<close>)
+    apply (fails \<open>fail; succeed\<close>)
+    apply (fails \<open>fail; fail\<close>)
+    apply (rule TrueI)
+    done
+
+  have "True"
+    apply (succeeds \<open>fwd_all_new succeed succeed\<close>)
+    apply (fails \<open>fwd_all_new succeed fail\<close>)
+    apply (fails \<open>fwd_all_new fail succeed\<close>)
+    apply (fails \<open>fwd_all_new fail fail\<close>)
+    apply (rule TrueI)
+    done
+
+end (* fwd_all_new and fwd_all notepad *)
 
 end
