@@ -553,4 +553,25 @@ end
 method repeat_unless methods stop cont
   = (stop | (cont, repeat_unless stop cont))
 
+(* Use a method to determine which of two other methods to perform.
+   We must do the test twice, since "true" failing does not mean we are in the else case.
+   When "true" is guaranteed to succeed (e.g. via solves), the "fails test" is redundant *)
+method if_then_else methods test true false =
+  (test, true) | (fails test, false)
+
+method has_concl for pattern::bool = match conclusion in pattern \<Rightarrow> succeed
+
+(* if_concl can apply a method as part of a chain (similarly to ()?), but restricted to goals
+   whose conclusions match the pattern. *)
+method if_concl for pattern::bool methods m =
+  if_then_else \<open>has_concl pattern\<close> m succeed
+
+(* in situations when pattern overlap is useful, patterns are guaranteed to be disjoint, or methods
+   are wrapped in solves\<open>\<close>:
+   (case_concl pat1 m1 | case_concl pat2 m2)
+   will perform the pat2 check if m1 fails, ignoring pat1's relationship to the goal's conclusion.
+   Where strict alternatives are desired, use if_then_else with has_concl instead. *)
+method case_concl for pattern::bool methods m =
+  has_concl pattern, m
+
 end
