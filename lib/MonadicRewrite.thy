@@ -727,9 +727,10 @@ method monadic_rewrite_solve_head methods m =
   (rule monadic_rewrite_bind_head monadic_rewrite_bindE_head)?,
   solves \<open>m, (rule monadic_rewrite_refl)?\<close>
 
-(* The most common way of performing monadic rewrite is by doing a pass over the LHS via some kind
-of setup step, such as monadic_rewrite_trans (or transverse).
-We traverse the LHS with some kind of step method (e.g. monadic_rewrite_step) until we can perform
+(*
+The most common way of performing monadic rewrite is by doing a pass over the LHS/RHS via
+a setup step, such as monadic_rewrite_gen_asm + monadic_rewrite_trans (or transverse).
+We traverse the LHS/RHS with a step method (e.g. monadic_rewrite_step) until we can perform
 some desired action.
 This action should clear up the current monadic_rewrite goal and leave us with mostly WP goals to
 resolve, e.g. by using monadic_rewrite_solve_head or via [OF ... monadic_rewrite_refl] style rules.
@@ -740,10 +741,19 @@ Further notes:
 * no backtracking to previous steps
 * if there is no place where action can apply, step until the end and be left with a monadic_rewrite
   goal that finalise will most likely fail on
-* if action does not resolve the monadic_rewrite goal, step will still try to advance, potentially
-  leading to goals that are hard to make sense of *)
+* if action does not resolve the monadic_rewrite goal, traversal stops, potentially leading to goals
+  that are hard to make sense of
+* we avoid applying finalise to monadic_rewrite goals emerging from action, and finalise all other
+  goals in the order they were generated
+*)
+
+(* we don't want the finalise tactic being applied to the monadic_rewrite goal we just generated
+   unless it's exactly what is needed to solve it (e.g. monadic_rewrite_refl) *)
 method monadic_rewrite_single_pass methods start step action finalise =
-  determ start, (((action | determ step)+), finalise+)[1]
+  determ start,
+  fwd_all_new
+    \<open>(repeat_unless action \<open>determ step\<close>)\<close>
+    \<open>if_then_else \<open>has_concl "monadic_rewrite ?F ?E ?P ?r ?l"\<close> succeed finalise\<close>
 
 (* Step over LHS until action applies, then finalise. *)
 method monadic_rewrite_l_method methods action finalise =
@@ -774,7 +784,7 @@ method monadic_rewrite_symb_exec_resolutions methods m =
    conditions should be solvable by wpsimp, but the _m versions allow specifying a method or
    wpsimp options. *)
 method monadic_rewrite_symb_exec methods r m =
-  (no_name_eta, r; (monadic_rewrite_symb_exec_resolutions m)?)
+  (wp_pre, no_name_eta, r; (monadic_rewrite_symb_exec_resolutions m)?)
 
 ML \<open>
 structure Monadic_Rewrite = struct
