@@ -1,4 +1,5 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: BSD-2-Clause
@@ -145,6 +146,41 @@ method_setup succeeds =
 
    in SIMPLE_METHOD can_tac facts end)
 \<close>
+
+text \<open>@{text THEN_ALL_NEW} and @{text ";"} are dangerous for weakest-precondition reasoning, as the wp
+      goals usually need to be solved in the order they were generated. The @{text REV_ALL_NEW}
+      tactic combinator and @{text rev_all_new} method achieve this.\<close>
+
+ML \<open>
+infix 1 REV_ALL_NEW;
+
+(* Apply second tactic to all subgoals emerging from the first --
+   starting from the first subgoal (the reverse of THEN_ALL_NEW).*)
+fun (tac1 REV_ALL_NEW tac2) i st =
+  let
+    fun rev_INTERVAL f (i:int) j x =
+     if i > j then Seq.single x
+     else op THEN (f i, rev_INTERVAL f (i+1) j) x;
+  in
+    st |> (tac1 i THEN (fn st' =>
+      st' |> rev_INTERVAL tac2 i (i + Thm.nprems_of st' - Thm.nprems_of st)))
+  end
+\<close>
+
+method_setup rev_all_new = \<open>
+  Method.text_closure -- Method.text_closure >> (fn (m1,m2) => fn ctxt => fn facts =>
+    SIMPLE_METHOD' ((K (method_evaluate m1 ctxt facts))
+                    REV_ALL_NEW (K (method_evaluate m2 ctxt facts))) facts)\<close>
+  \<open>"m1; m2" but with m2 applied in reverse, i.e. from first to last subgoal\<close>
+
+text \<open>The @{text THEN_ALL_NEW} functionality is already available via @{text ";"}, but when
+      developing tactics it is convenient to be able to switch between @{text then_all_new}
+      and @{text rev_all_new}.\<close>
+method_setup then_all_new = \<open>
+  Method.text_closure -- Method.text_closure >> (fn (m1,m2) => fn ctxt => fn facts =>
+    SIMPLE_METHOD' ((K (method_evaluate m1 ctxt facts))
+                    THEN_ALL_NEW (K (method_evaluate m2 ctxt facts))) facts)\<close>
+  \<open>"m1; m2", i.e. THEN_ALL_NEW\<close>
 
 text \<open>This method wraps up the "focus" mechanic of match without actually doing any matching.
       We need to consider whether or not there are any assumptions in the goal,
