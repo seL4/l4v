@@ -225,7 +225,6 @@ This module uses the C preprocessor to select a target architecture.
 > refillNew scPtr maxRefills budget period = do
 >     curTime <- getCurTime
 >     updateSchedContext scPtr (\sc -> sc { scPeriod = period })
->     updateSchedContext scPtr (\sc -> sc { scBudget = budget })
 >     updateSchedContext scPtr (\sc -> sc { scRefillMax = maxRefills })
 >     updateSchedContext scPtr (\sc -> sc { scRefillHead = 0, scRefillCount = 1 })
 >     setRefillHd scPtr (Refill { rTime = curTime, rAmount = budget })
@@ -247,7 +246,6 @@ This module uses the C preprocessor to select a target architecture.
 >     updateSchedContext scPtr (\sc -> sc { scRefillCount = 1 })
 >     updateSchedContext scPtr (\sc -> sc { scRefillMax = newMaxRefills })
 >     updateSchedContext scPtr (\sc -> sc { scPeriod = newPeriod })
->     updateSchedContext scPtr (\sc -> sc { scBudget = newBudget })
 >     whenM (refillReady scPtr) $ do
 >         curTime <- getCurTime
 >         updateRefillHd scPtr $ \r -> r { rTime = curTime }
