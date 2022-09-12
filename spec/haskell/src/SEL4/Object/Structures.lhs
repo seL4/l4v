@@ -204,7 +204,6 @@ list of pointers to waiting threads;
 
 > data SchedContext = SchedContext {
 >     scPeriod :: Ticks,
->     scBudget :: Ticks,
 >     scConsumed :: Ticks,
 >     scTCB :: Maybe (PPtr TCB),
 >     scReply :: Maybe (PPtr Reply),
