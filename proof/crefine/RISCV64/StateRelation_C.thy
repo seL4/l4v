@@ -372,6 +372,7 @@ where
      \<and> tcbIPCBuffer atcb    = tcbIPCBuffer_C ctcb
      \<and> carch_tcb_relation (tcbArch atcb) (tcbArch_C ctcb)
      \<and> tcbQueued atcb       = to_bool (tcbQueued_CL (thread_state_lift (tcbState_C ctcb)))
+     \<and> tcbInReleaseQueue atcb = to_bool (tcbInReleaseQueue_CL (thread_state_lift (tcbState_C ctcb)))
      \<and> ucast (tcbDomain atcb) = tcbDomain_C ctcb
      \<and> ucast (tcbPriority atcb) = tcbPriority_C ctcb
      \<and> ucast (tcbMCP atcb) = tcbMCP_C ctcb
@@ -410,6 +411,18 @@ primrec dyn_array_list_rel ::
 | "dyn_array_list_rel h rel (a # as) p
     = (\<exists>v. h p = Some v \<and> rel a v \<and> dyn_array_list_rel h rel as (p +\<^sub>p 1))"
 
+lemma dyn_array_list_rel_pointwise:
+  "\<lbrakk>dyn_array_list_rel h rel ls p; n < length ls\<rbrakk> \<Longrightarrow> \<exists>v. h (p  +\<^sub>p int n) = Some v \<and> rel (ls ! n) v"
+  apply (induct arbitrary: n p rule: length_induct)
+  apply (rename_tac xs n p)
+  apply (case_tac xs)
+   apply fastforce
+  apply (rename_tac a list)
+  apply (drule_tac x=list in spec)
+  apply (case_tac n)
+   apply fastforce
+  by (fastforce simp: ptr_add_def Rings.ring_distribs(2) nat_arith.add1)
+
 definition sc_ptr_to_crefill_ptr :: "obj_ref \<Rightarrow> refill_C ptr" where
   "sc_ptr_to_crefill_ptr p \<equiv> Ptr (p + of_nat sizeof_sched_context_t)"
 
@@ -427,6 +440,32 @@ definition refill_buffer_relation ::
        \<and> (\<forall>p sc. abs_sc_hp p = Some sc \<longrightarrow>
                    dyn_array_list_rel crefill_hp crefill_relation (scRefills sc) (sc_ptr_to_crefill_ptr p)
                    \<and> lens_hp p = Some (length (scRefills sc)))"
+
+lemma refill_buffer_relation_gs_dom:
+  "refill_buffer_relation ah ch gs \<Longrightarrow>
+   let abs_sc_hp = map_to_scs ah;
+       lens_hp = gs_refill_buffer_lengths gs
+   in dom abs_sc_hp = dom lens_hp"
+  by (simp add: refill_buffer_relation_def Let_def)
+
+lemma refill_buffer_relation_crefill_hp_dom:
+  "refill_buffer_relation ah ch gs \<Longrightarrow>
+   let abs_sc_hp = map_to_scs ah;
+       crefill_hp = clift ch;
+       lens_hp = gs_refill_buffer_lengths gs
+   in dom crefill_hp
+      = (\<Union>p\<in>dom abs_sc_hp. set (map (\<lambda>i. sc_ptr_to_crefill_ptr p +\<^sub>p int i) [0..<the (lens_hp p)]))"
+  by (simp add: refill_buffer_relation_def Let_def)
+
+lemma refill_buffer_relation_crefill_relation:
+  "refill_buffer_relation ah ch gs \<Longrightarrow>
+   let abs_sc_hp = map_to_scs ah;
+       crefill_hp = clift ch;
+       lens_hp = gs_refill_buffer_lengths gs
+   in (\<forall>p sc. abs_sc_hp p = Some sc \<longrightarrow>
+               dyn_array_list_rel crefill_hp crefill_relation (scRefills sc) (sc_ptr_to_crefill_ptr p)
+              \<and> lens_hp p = Some (length (scRefills sc)))"
+  by (simp add: refill_buffer_relation_def Let_def)
 
 definition creply_relation :: "Structures_H.reply \<Rightarrow> reply_C \<Rightarrow> bool" where
   "creply_relation areply creply \<equiv>
@@ -465,7 +504,8 @@ where
          cstate = notification_CL.state_CL cntfn';
          chead  = (Ptr o ntfnQueue_head_CL) cntfn';
          cend   = (Ptr o ntfnQueue_tail_CL) cntfn';
-         cbound = ((Ptr o ntfnBoundTCB_CL) cntfn' :: tcb_C ptr)
+         cboundtcb = ((Ptr o ntfnBoundTCB_CL) cntfn' :: tcb_C ptr);
+         cboundsc = ((Ptr o ntfnSchedContext_CL) cntfn' :: sched_context_C ptr)
      in
        (case ntfnObj antfn of
          IdleNtfn \<Rightarrow> cstate = scast NtfnState_Idle \<and> ep_queue_relation' h [] chead cend
@@ -473,7 +513,8 @@ where
        | ActiveNtfn msgid \<Rightarrow> cstate = scast NtfnState_Active \<and>
                            msgid = ntfnMsgIdentifier_CL cntfn' \<and>
                            ep_queue_relation' h [] chead cend)
-       \<and> option_to_ctcb_ptr (ntfnBoundTCB antfn) = cbound"
+       \<and> option_to_ctcb_ptr (ntfnBoundTCB antfn) = cboundtcb
+       \<and> option_to_ptr (ntfnSc antfn) = cboundsc"
 
 definition
   "user_from_vm_rights R \<equiv> case R of

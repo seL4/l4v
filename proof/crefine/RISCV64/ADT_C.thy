@@ -754,25 +754,30 @@ lemma cfault_rel_imp_eq:
   by (clarsimp simp: cfault_rel_def is_cap_fault_def
               split: if_split_asm seL4_Fault_CL.splits)
 
-lemma cthread_state_rel_imp_eq:
-  "cthread_state_relation x z \<Longrightarrow> cthread_state_relation y z \<Longrightarrow> x=y"
-  apply (simp add: cthread_state_relation_def split_def)
-sorry (* FIXME RT: cthread_state_rel_imp_eq. Might need a valid_objs' and no_0_obj' argument
-  apply (cases x)
-  apply (cases y, simp_all add: ThreadState_BlockedOnReceive_def
-    ThreadState_BlockedOnReply_def ThreadState_BlockedOnNotification_def
-    ThreadState_Running_def ThreadState_Inactive_def
-    ThreadState_IdleThreadState_def ThreadState_BlockedOnSend_def
-    ThreadState_Restart_def)+
-  done *)
+lemma ksPSpace_valid_objs_tcbStateRefs_nonzero:
+  "\<lbrakk>\<exists>s. ksPSpace s = ah \<and> no_0_obj' s \<and> valid_objs' s; map_to_tcbs ah p = Some tcb\<rbrakk> \<Longrightarrow>
+   \<forall>ref \<in> fst ` tcb_st_refs_of' (tcbState tcb). 0 < ref"
+  apply (clarsimp simp: map_comp_def tcb_st_refs_of'_def valid_objs'_def valid_obj'_def
+                 split: option.splits thread_state.splits)
+  apply (drule_tac x="KOTCB tcb" in bspec)
+   apply blast
+  by (fastforce intro: word_coorder.not_eq_extremum[THEN iffD1]
+                 simp: valid_tcb'_def valid_tcb_state'_def)
 
-lemma ksPSpace_valid_objs_tcbBoundNotification_nonzero:
-  "\<exists>s. ksPSpace s = ah \<and> no_0_obj' s \<and> valid_objs' s
-     \<Longrightarrow> map_to_tcbs ah p = Some tcb \<Longrightarrow> tcbBoundNotification tcb \<noteq> Some 0"
+lemma cthread_state_rel_imp_eq:
+  "\<lbrakk>\<forall>ref \<in> fst ` tcb_st_refs_of' x. 0 < ref; \<forall>ref \<in> fst ` tcb_st_refs_of' y. 0 < ref;
+    cthread_state_relation x z; cthread_state_relation y z\<rbrakk> \<Longrightarrow>
+   x = y"
+  apply (simp add: cthread_state_relation_def split_def)
+  by (cases x; cases y;
+      fastforce simp: StrictC'_thread_state_defs tcb_st_refs_of'_def option_to_0_def
+               split: option.splits)
+
+lemma ksPSpace_valid_objs_tcbBound_nonzero:
+  "\<lbrakk>\<exists>s. ksPSpace s = ah \<and> no_0_obj' s \<and> valid_objs' s; map_to_tcbs ah p = Some tcb\<rbrakk> \<Longrightarrow>
+   tcbBoundNotification tcb \<noteq> Some 0 \<and> tcbSchedContext tcb \<noteq> Some 0 \<and> tcbYieldTo tcb \<noteq> Some 0"
   apply (clarsimp simp: map_comp_def split: option.splits)
-  apply (erule(1) valid_objsE')
-  apply (clarsimp simp: valid_obj'_def valid_tcb'_def)
-  done
+  by (fastforce simp: valid_obj'_def valid_tcb'_def)
 
 lemma atcbContextGet_inj[simp]:
   "(atcbContextGet t = atcbContextGet t') = (t = t')"
@@ -802,16 +807,16 @@ lemma cpspace_tcb_relation_unique:
    apply (rename_tac p x y)
    apply (cut_tac ctes)
    apply (drule_tac x=x in spec, drule_tac x=y in spec, erule impE, fastforce)
-   apply (frule ksPSpace_valid_objs_tcbBoundNotification_nonzero[OF vs])
-   apply (frule ksPSpace_valid_objs_tcbBoundNotification_nonzero[OF vs'])
+   apply (frule ksPSpace_valid_objs_tcbBound_nonzero[OF vs])
+   apply (frule ksPSpace_valid_objs_tcbBound_nonzero[OF vs'])
+   apply (frule ksPSpace_valid_objs_tcbStateRefs_nonzero[OF vs])
+   apply (frule ksPSpace_valid_objs_tcbStateRefs_nonzero[OF vs'])
    apply (thin_tac "map_to_tcbs x y = Some z" for x y z)+
    apply (case_tac x, case_tac y, case_tac "the (clift ch (tcb_Ptr (p+0x200)))")
    apply (clarsimp simp: ctcb_relation_def ran_tcb_cte_cases)
    apply (clarsimp simp: option_to_ptr_def option_to_0_def split: option.splits)
-sorry (* FIXME RT: cpspace_tcb_relation_unique
-   apply (auto simp: cfault_rel_imp_eq cthread_state_rel_imp_eq carch_tcb_relation_def
-                     ccontext_relation_imp_eq2 up_ucast_inj_eq ctcb_size_bits_def)
-  done *)
+   by (auto simp: cfault_rel_imp_eq cthread_state_rel_imp_eq carch_tcb_relation_def
+                  ccontext_relation_imp_eq2 up_ucast_inj_eq ctcb_size_bits_def)
 
 lemma tcb_queue_rel_clift_unique:
   "tcb_queue_relation gn gp' (clift s) as pp cp \<Longrightarrow>
@@ -833,13 +838,11 @@ lemma cpspace_ep_relation_unique:
            split: endpoint.splits)
   done
 
-lemma ksPSpace_valid_pspace_ntfnBoundTCB_nonzero:
-  "\<exists>s. ksPSpace s = ah \<and> valid_pspace' s
-     \<Longrightarrow> map_to_ntfns ah p = Some ntfn \<Longrightarrow> ntfnBoundTCB ntfn \<noteq> Some 0"
+lemma ksPSpace_valid_pspace_ntfnRefs_nonzero:
+  "\<lbrakk>\<exists>s. ksPSpace s = ah \<and> valid_pspace' s; map_to_ntfns ah p = Some ntfn\<rbrakk> \<Longrightarrow>
+   ntfnBoundTCB ntfn \<noteq> Some 0 \<and> ntfnSc ntfn \<noteq> Some 0"
   apply (clarsimp simp: map_comp_def valid_pspace'_def split: option.splits)
-  apply (erule(1) valid_objsE')
-  apply (clarsimp simp: projectKOs valid_obj'_def valid_ntfn'_def)
-  done
+  by (fastforce simp: valid_obj'_def valid_ntfn'_def)
 
 lemma tcb_ptr_to_ctcb_ptr_inj:
   "tcb_ptr_to_ctcb_ptr x = tcb_ptr_to_ctcb_ptr y \<Longrightarrow> x = y"
@@ -859,23 +862,20 @@ lemma cpspace_ntfn_relation_unique:
    apply (drule bspec, assumption)+
    apply (simp add: dom_def Collect_eq, drule_tac x=x in spec)
    apply (clarsimp)
-   apply (frule ksPSpace_valid_pspace_ntfnBoundTCB_nonzero[OF vs])
-   apply (frule ksPSpace_valid_pspace_ntfnBoundTCB_nonzero[OF vs'])
+   apply (frule ksPSpace_valid_pspace_ntfnRefs_nonzero[OF vs])
+   apply (frule ksPSpace_valid_pspace_ntfnRefs_nonzero[OF vs'])
    apply (cut_tac vs vs')
    apply (clarsimp simp: valid_pspace'_def)
-   apply (frule (2) map_to_ko_atI)
+   apply (frule (3) map_to_ko_atI)
    apply (frule_tac v=ya in map_to_ko_atI, simp+)
    apply (clarsimp dest!: obj_at_valid_objs' split: option.splits)
    apply (thin_tac "map_to_ntfns x y = Some z" for x y z)+
    apply (case_tac y, case_tac ya, case_tac "the (clift ch (ntfn_Ptr x))")
-sorry (* FIXME RT: cpspace_ntfn_relation_unique
    by (auto simp: NtfnState_Active_def NtfnState_Idle_def NtfnState_Waiting_def typ_heap_simps
-                     cnotification_relation_def Let_def tcb_queue_rel'_clift_unique
-                     option_to_ctcb_ptr_def valid_obj'_def valid_ntfn'_def valid_bound_tcb'_def
-                     kernel.tcb_at_not_NULL tcb_ptr_to_ctcb_ptr_inj
-              split: ntfn.splits option.splits) (* long *) *)
-
-declare of_bool_eq_iff[simp]
+                  cnotification_relation_def Let_def tcb_queue_rel'_clift_unique
+                  option_to_ctcb_ptr_def valid_obj'_def valid_ntfn'_def valid_bound_tcb'_def
+                  kernel.tcb_at_not_NULL tcb_ptr_to_ctcb_ptr_inj option_to_ptr_def option_to_0_def
+           split: ntfn.splits option.splits) (* ~ 30 seconds *)
 
 lemma cpspace_pte_relation_unique:
   assumes "cpspace_pte_relation ah ch" "cpspace_pte_relation ah' ch"
@@ -974,6 +974,7 @@ lemma cpspace_device_data_relation_unique:
   done
 
 lemmas projectKO_opts = projectKO_opt_ep projectKO_opt_ntfn projectKO_opt_tcb
+                        projectKO_opt_reply projectKO_opt_sc
                         projectKO_opt_pte
                         projectKO_opt_asidpool projectKO_opt_cte
                         projectKO_opt_user_data projectKO_opt_user_data_device
@@ -1065,10 +1066,110 @@ lemma map_to_cnes_eq:
   apply (clarsimp simp: projectKO_opt_cte split: kernel_object.splits)
   done
 
-lemma cpspace_relation_unique:
+lemma ksPSpace_valid_pspace_scRefs_nonzero:
+  "\<lbrakk>\<exists>s. ksPSpace s = ah \<and> valid_pspace' s; map_to_scs ah p = Some sc\<rbrakk> \<Longrightarrow>
+   scTCB sc \<noteq> Some 0 \<and> scReply sc \<noteq> Some 0 \<and> scNtfn sc \<noteq> Some 0 \<and> scYieldFrom sc \<noteq> Some 0"
+  apply (clarsimp simp: map_comp_def valid_pspace'_def split: option.splits)
+  by (fastforce simp: valid_obj'_def valid_sched_context'_def)
+
+lemma scRefills_unique:
+  assumes rels: "refill_buffer_relation ah ch gs" "refill_buffer_relation ah' ch gs"
+      and   vs: "ksPSpace s = ah \<and> ksPSpace s p = Some (KOSchedContext sc)"
+      and  vs': "ksPSpace s' = ah' \<and> ksPSpace s' p = Some (KOSchedContext sc')"
+  shows   "scRefills sc = scRefills sc'"
+  apply (insert assms)
+  apply (prop_tac "length (scRefills sc) = length (scRefills sc')")
+   apply (drule refill_buffer_relation_crefill_relation)+
+   apply (simp add: Let_def)
+   apply (drule_tac x=p in spec)+
+   apply (drule_tac x=sc in spec)
+   apply (drule_tac x=sc' in spec)
+   apply fastforce
+  apply (drule refill_buffer_relation_crefill_relation)+
+  apply (clarsimp simp: Let_def)
+  apply (rule list_eq_iff_nth_eq[THEN iffD2])
+  apply (drule_tac x=p in spec)+
+  by (fastforce dest: dyn_array_list_rel_pointwise
+                simp: crefill_relation_def refill.expand)
+
+lemma cpspace_sched_context_relation_unique:
+  assumes rels: "cpspace_sched_context_relation ah ch" "cpspace_sched_context_relation ah' ch"
+                "refill_buffer_relation ah ch gs" "refill_buffer_relation ah' ch gs"
+      and   vs: "\<exists>s. ksPSpace s = ah \<and> valid_pspace' s"
+      and  vs': "\<exists>s. ksPSpace s = ah' \<and> valid_pspace' s"
+  shows   "map_to_scs ah' = map_to_scs ah"
+  using rels
+  apply (clarsimp simp: cmap_relation_def)
+  apply (drule inj_image_inv[OF inj_Ptr])+
+  apply simp
+  apply (rule ext)
+  apply (case_tac "x:dom (map_to_scs ah)")
+   prefer 2
+   apply (fastforce simp: dom_def)
+  apply (drule bspec, assumption)+
+  apply (simp add: dom_def Collect_eq, drule_tac x=x in spec)
+  apply (clarsimp)
+  apply (frule ksPSpace_valid_pspace_scRefs_nonzero[OF vs])
+  apply (frule ksPSpace_valid_pspace_scRefs_nonzero[OF vs'])
+  apply (cut_tac vs vs')
+  apply (clarsimp simp: valid_pspace'_def)
+  apply (frule (3) map_to_ko_atI)
+  apply (frule_tac v=y in map_to_ko_atI, simp+)
+  apply (clarsimp dest!: obj_at_valid_objs' split: option.splits)
+  apply (prop_tac "ksPSpace s x = Some (KOSchedContext y)")
+   apply (clarsimp simp: map_comp_def split: option.splits)
+  apply (prop_tac "ksPSpace sa x = Some (KOSchedContext ya)")
+   apply (clarsimp simp: map_comp_def split: option.splits)
+  apply (thin_tac "map_to_scs x y = Some z" for x y z)+
+  apply (case_tac y, case_tac ya, case_tac "the (clift ch (sched_context_Ptr x))")
+  apply clarsimp
+  apply (intro conjI)
+             prefer 12
+             apply (fastforce dest: scRefills_unique)
+            by (auto simp: csched_context_relation_def option_to_ptr_def option_to_0_def
+                           crefill_size_def
+                    split: if_splits option.splits) \<comment> \<open>takes ~ a minute\<close>
+
+lemma ksPSpace_valid_pspace_replyRefs_nonzero:
+  "\<lbrakk>\<exists>s. ksPSpace s = ah \<and> valid_pspace' s; map_to_replies ah p = Some reply\<rbrakk> \<Longrightarrow>
+   replyTCB reply \<noteq> Some 0 \<and> replyPrev reply \<noteq> Some 0 \<and> replyNext_of reply \<noteq> Some 0"
+  apply (clarsimp simp: map_comp_def valid_pspace'_def split: option.splits)
+  by (fastforce simp: valid_obj'_def valid_reply'_def)
+
+lemma cpspace_reply_relation_unique:
+  assumes rels: "cpspace_reply_relation ah ch" "cpspace_reply_relation ah' ch"
+      and   vs: "\<exists>s. ksPSpace s = ah \<and> valid_pspace' s"
+      and  vs': "\<exists>s. ksPSpace s = ah' \<and> valid_pspace' s"
+  shows   "map_to_replies ah' = map_to_replies ah"
+  using rels
+  apply (clarsimp simp: cmap_relation_def)
+  apply (drule inj_image_inv[OF inj_Ptr])+
+  apply simp
+  apply (rule ext)
+  apply (case_tac "x:dom (map_to_replies ah)")
+   prefer 2
+   apply (fastforce simp: dom_def)
+  apply (drule bspec, assumption)+
+  apply (simp add: dom_def Collect_eq, drule_tac x=x in spec)
+  apply (clarsimp)
+  apply (frule ksPSpace_valid_pspace_replyRefs_nonzero[OF vs])
+  apply (frule ksPSpace_valid_pspace_replyRefs_nonzero[OF vs'])
+  apply (cut_tac vs vs')
+  apply (clarsimp simp: valid_pspace'_def)
+  apply (frule (3) map_to_ko_atI)
+  apply (frule_tac v=y in map_to_ko_atI, simp+)
+  apply (clarsimp dest!: obj_at_valid_objs' split: option.splits)
+  apply (thin_tac "map_to_replies x y = Some z" for x y z)+
+  apply (case_tac y, case_tac ya, case_tac "the (clift ch (reply_Ptr x))")
+  by (clarsimp simp: creply_relation_def option_to_ptr_def option_to_0_def isHead_def
+              split: if_splits option.splits reply_next.splits)
+
+lemma cpspace_refill_relation_unique:
   assumes valid_pspaces: "valid_pspace' s" "valid_pspace' s'"
   shows "cpspace_relation (ksPSpace s) bh ch \<Longrightarrow>
          cpspace_relation (ksPSpace s') bh ch \<Longrightarrow>
+         refill_buffer_relation (ksPSpace s) ch gh \<Longrightarrow>
+         refill_buffer_relation (ksPSpace s') ch gh \<Longrightarrow>
          (ksPSpace s') = (ksPSpace (s::kernel_state))" (is "PROP ?goal")
 proof -
   from valid_pspaces
@@ -1080,6 +1181,7 @@ proof -
   have valid_objs: "valid_objs' s"    and valid_objs': "valid_objs' s'"
    and aligned: "pspace_aligned' s"   and aligned': "pspace_aligned' s'"
    and distinct: "pspace_distinct' s" and distinct': "pspace_distinct' s'"
+   and bounded: "pspace_bounded' s"   and bounded': "pspace_bounded' s'"
    and no_0_objs: "no_0_obj' s"       and no_0_objs': "no_0_obj' s'"
     by auto
 
@@ -1097,12 +1199,15 @@ proof -
       apply (fastforce intro: no_0_objs no_0_objs' valid_objs valid_objs')
      apply (intro allI impI,elim exE conjE)
      apply (rule_tac p=p in map_to_ctes_tcb_ctes, assumption)
-sorry (* FIXME RT: cpspace_relation_unique
-      apply (frule (1) map_to_ko_atI[OF _ aligned distinct])
-     apply (frule (1) map_to_ko_atI[OF _ aligned' distinct'])
+      apply (frule (1) map_to_ko_atI[OF _ aligned distinct bounded])
+     apply (frule (1) map_to_ko_atI[OF _ aligned' distinct' bounded'])
     apply (drule (1) map_to_cnes_eq[OF aligned aligned' distinct distinct'])
     apply (drule (1) cpspace_user_data_relation_unique)
-    apply (drule (1)  cpspace_device_data_relation_unique)
+    apply (drule (1) cpspace_device_data_relation_unique)
+    apply (drule (3) cpspace_sched_context_relation_unique)
+      apply (fastforce intro: valid_pspaces)+
+    apply (drule (1) cpspace_reply_relation_unique)
+      apply (fastforce intro: valid_pspaces)+
     apply (thin_tac "cmap_relation a c f r" for a c f r)+
     apply (cut_tac no_kdatas)
     apply (clarsimp simp add: ran_def fun_eq_iff)
@@ -1113,7 +1218,7 @@ sorry (* FIXME RT: cpspace_relation_unique
                                split: arch_kernel_object.splits)
     by (clarsimp simp: projectKO_opts map_comp_def
                 split: kernel_object.splits arch_kernel_object.splits
-                       option.splits) *)
+                       option.splits)
 qed
 (*<<< end showing that cpspace_relation is actually unique *)
 
@@ -1181,18 +1286,20 @@ where
   "cstate_to_pspace_H c \<equiv>
    THE h. valid_pspace' (undefined\<lparr>ksPSpace := h\<rparr>) \<and>
           cpspace_relation h (underlying_memory (cstate_to_machine_H c))
-                             (t_hrs_' c)"
+                             (t_hrs_' c) \<and>
+          refill_buffer_relation h (t_hrs_' c) (ghost'state_' c)"
 
 lemma cstate_to_pspace_H_correct:
   "valid_pspace' a \<Longrightarrow>
    cpspace_relation (ksPSpace a)
      (underlying_memory (cstate_to_machine_H c)) (t_hrs_' c) \<Longrightarrow>
+   refill_buffer_relation (ksPSpace a) (t_hrs_' c) (ghost'state_' c) \<Longrightarrow>
    cstate_to_pspace_H c = ksPSpace a"
   apply (simp add: cstate_to_pspace_H_def)
   apply (rule the_equality, simp)
    apply (rule_tac s1=a in ksPSpace_eq_imp_valid_pspace'_eq[THEN iffD1],
           clarsimp+)
-  apply (drule (2) cpspace_relation_unique, simp+)
+  apply (drule (2) cpspace_refill_relation_unique, simp+)
   done
 
 end
@@ -1288,7 +1395,8 @@ lemma mk_gsUntypedZeroRanges_correct:
   apply (subst cstate_to_pspace_H_correct[where c=cs], simp_all)
   apply (clarsimp simp: cstate_relation_def Let_def)
   apply (subst cstate_to_machine_H_correct, assumption, simp_all)
-    by (auto simp: cpspace_relation_def observable_memory_def valid_pspace'_def)
+    by (auto simp: cpspace_relation_def observable_memory_def valid_pspace'_def cstate_relation_def
+                   Let_def)
 
 definition
   cstate_to_H :: "globals \<Rightarrow> kernel_state"
@@ -1334,39 +1442,43 @@ lemma cstate_to_H_correct:
   shows "cstate_to_H cs = as \<lparr>ksMachineState:=  observable_memory (ksMachineState as) (user_mem' as)\<rparr>"
   apply (subgoal_tac "cstate_to_machine_H cs = observable_memory (ksMachineState as) (user_mem' as)")
    apply (rule kernel_state.equality, simp_all add: cstate_to_H_def)
-                      apply (rule cstate_to_pspace_H_correct)
-                     using valid
-                     apply (simp add: invs'_def)
-                    using cstate_rel valid
-                    apply (clarsimp simp: cstate_relation_def cpspace_relation_def Let_def
-                      observable_memory_def invs'_def
-                      valid_pspace'_def)
-                   using cstate_rel
-                   apply (clarsimp simp: cstate_relation_def cpspace_relation_def Let_def prod_eq_iff)
+                          apply (rule cstate_to_pspace_H_correct)
+                            using valid
+                            apply (simp add: invs'_def)
+                           using cstate_rel valid
+                           apply (clarsimp simp: cstate_relation_def cpspace_relation_def Let_def
+                                                 observable_memory_def invs'_def valid_pspace'_def)
+                          using cstate_rel
+                          apply (clarsimp simp: cstate_relation_def cpspace_relation_def Let_def
+                                                prod_eq_iff)
+                         using cstate_rel
+                         apply (clarsimp simp: cstate_relation_def cpspace_relation_def Let_def
+                                               prod_eq_iff)
+                        using cstate_rel
+                        apply (clarsimp simp: cstate_relation_def cpspace_relation_def  Let_def
+                                              prod_eq_iff)
+                       using valid cstate_rel
+                       apply (rule mk_gsUntypedZeroRanges_correct)
+                      subgoal
+                        using cstate_rel
+                        by (fastforce simp: cstate_relation_def cpspace_relation_def
+                                            Let_def ghost_size_rel_def unat_eq_0
+                                     split: if_split)
+                     using valid cstate_rel
+                     apply (rule cDomScheduleIdx_to_H_correct)
+                    using cstate_rel
+                    apply (clarsimp simp: cstate_relation_def Let_def)
+                   using valid cstate_rel
+                   apply (rule cDomSchedule_to_H_correct)
                   using cstate_rel
-                  apply (clarsimp simp: cstate_relation_def cpspace_relation_def  Let_def prod_eq_iff)
-                 using valid cstate_rel
-                 apply (rule mk_gsUntypedZeroRanges_correct)
-                subgoal
+                  apply (clarsimp simp: cstate_relation_def Let_def)
+                 using cstate_rel
+                 apply (clarsimp simp: cstate_relation_def Let_def ucast_up_ucast_id is_up_8_32)
                 using cstate_rel
-                by (fastforce simp: cstate_relation_def cpspace_relation_def
-                                    Let_def ghost_size_rel_def unat_eq_0
-                            split: if_split)
-               using valid cstate_rel
-               apply (rule cDomScheduleIdx_to_H_correct)
+                apply (clarsimp simp: cstate_relation_def Let_def)
+               apply (rule cready_queues_to_H_correct)
                using cstate_rel
                apply (clarsimp simp: cstate_relation_def Let_def)
-              using valid cstate_rel
-              apply (rule cDomSchedule_to_H_correct)
-              using cstate_rel
-              apply (clarsimp simp: cstate_relation_def Let_def)
-             using cstate_rel
-             apply (clarsimp simp: cstate_relation_def Let_def ucast_up_ucast_id is_up_8_32)
-            using cstate_rel
-            apply (clarsimp simp: cstate_relation_def Let_def)
-           apply (rule cready_queues_to_H_correct)
-           using cstate_rel
-           apply (clarsimp simp: cstate_relation_def Let_def)
 sorry (* FIXME RT: cstate_to_H_correct
           using cstate_rel
           apply (clarsimp simp: cstate_relation_def Let_def)
