@@ -4666,7 +4666,7 @@ lemma refillBudgetCheck_corres:
                              sp_valid_refills_def is_active_sc_rewrite[symmetric])
     apply (find_goal \<open>match conclusion in "\<lbrace>P\<rbrace> handle_overrun_loop _ \<lbrace>Q\<rbrace>" for P Q \<Rightarrow> -\<close>)
     apply (clarsimp simp: pred_conj_def)
-    apply (intro hoare_vcg_conj_lift_pre_fix; (solves \<open>wpsimp | handle_overrun_loop_simple\<close>)?)
+    apply (intro hoare_vcg_conj_lift_pre_fix; (solves handle_overrun_loop_simple)?)
       apply wps_conj_solves
      apply (wpsimp wp: handle_overrun_loop_refills_unat_sum_equals_budget)
      apply (fastforce intro: valid_refills_refills_unat_sum_equals_budget
