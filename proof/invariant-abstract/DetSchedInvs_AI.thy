@@ -2337,26 +2337,32 @@ lemmas bounded_release_time_def = bounded_release_time_2_def
 
 \<comment> \<open>active_sc_valid_refills\<close>
 
-definition active_sc_valid_refills_2 :: "time \<Rightarrow> (obj_ref \<rightharpoonup> sc_refill_cfg) \<Rightarrow> bool" where
-  "active_sc_valid_refills_2 curtime sc_refill_cfgs \<equiv>
-   \<forall>scp. pred_map active_scrc sc_refill_cfgs scp
-         \<longrightarrow> pred_map cfg_valid_refills sc_refill_cfgs scp
-             \<and> pred_map cfg_bounded_release_time sc_refill_cfgs scp"
+definition active_sc_valid_refills_2 :: "(obj_ref \<rightharpoonup> sc_refill_cfg) \<Rightarrow> bool" where
+  "active_sc_valid_refills_2 sc_refill_cfgs \<equiv>
+   (\<forall>scp. pred_map active_scrc sc_refill_cfgs scp
+          \<longrightarrow> pred_map cfg_valid_refills sc_refill_cfgs scp
+              \<and> pred_map cfg_bounded_release_time sc_refill_cfgs scp)
+   \<and> (\<forall>scp. pred_map (\<lambda>cfg. \<not> active_scrc cfg) sc_refill_cfgs scp
+            \<longrightarrow> pred_map (\<lambda>cfg. scrc_budget cfg = 0) sc_refill_cfgs scp)"
 
 abbreviation active_sc_valid_refills :: "'z state \<Rightarrow> bool" where
-  "active_sc_valid_refills s \<equiv> active_sc_valid_refills_2 (cur_time s) (sc_refill_cfgs_of s)"
+  "active_sc_valid_refills s \<equiv> active_sc_valid_refills_2 (sc_refill_cfgs_of s)"
 
 lemmas active_sc_valid_refills_def = active_sc_valid_refills_2_def
 
 lemma active_sc_valid_refills_lift_pre_conj:
   assumes a: "\<And>scp. \<lbrace>\<lambda>s. \<not> pred_map active_scrc (sc_refill_cfgs_of s) scp \<and> R s\<rbrace>
-                  f
-                  \<lbrace>\<lambda>rv s. \<not> pred_map active_scrc (sc_refill_cfgs_of s) scp\<rbrace>"
+                     f \<lbrace>\<lambda>rv s. \<not> pred_map active_scrc (sc_refill_cfgs_of s) scp\<rbrace>"
   assumes b: "\<And>scp. \<lbrace>\<lambda>s. valid_refills scp s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. valid_refills scp s\<rbrace>"
   assumes c: "\<And>scp. \<lbrace>\<lambda>s. bounded_release_time scp s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. bounded_release_time scp s\<rbrace>"
+  assumes d: "\<And>scp. \<lbrace>\<lambda>s. \<not> pred_map (\<lambda>cfg. \<not> active_scrc cfg) (sc_refill_cfgs_of s) scp \<and> R s\<rbrace>
+                     f \<lbrace>\<lambda>rv s. \<not> pred_map (\<lambda>cfg. \<not> active_scrc cfg) (sc_refill_cfgs_of s) scp\<rbrace>"
+  assumes e: "\<And>scp. \<lbrace>\<lambda>s. pred_map (\<lambda>cfg. scrc_budget cfg = 0) (sc_refill_cfgs_of s) scp \<and> R s\<rbrace>
+                     f \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. scrc_budget cfg = 0) (sc_refill_cfgs_of s) scp\<rbrace>"
     shows "\<lbrace>\<lambda>s. active_sc_valid_refills s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. active_sc_valid_refills\<rbrace>"
   apply (simp add: active_sc_valid_refills_def)
-  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' a b c)
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' a b c d e)
+  done
 
 \<comment> \<open>Adapter for valid_sched_pred\<close>
 abbreviation (input) valid_sched_valid_ready_qs :: valid_sched_t where
@@ -3034,7 +3040,7 @@ definition valid_sched_2 where
     \<and> valid_idle_etcb_2 etcbs
     \<and> (riq \<longrightarrow> released_ipc_queues_2 ctime tcb_sts tcb_scps tcb_faults sc_refill_cfgs)
     \<and> active_reply_scs_2 sc_reps sc_refill_cfgs
-    \<and> active_sc_valid_refills_2 ctime sc_refill_cfgs"
+    \<and> active_sc_valid_refills_2 sc_refill_cfgs"
 
 abbreviation valid_sched :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_sched \<equiv> valid_sched_pred (valid_sched_2 True True True)"
@@ -3548,6 +3554,10 @@ lemma valid_sched_lift_pre_conj:
   assumes "\<And>P t. \<lbrace>\<lambda>s. P (active_sc_tcb_at t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (active_sc_tcb_at t s)\<rbrace>"
   assumes "\<And>t. \<lbrace>\<lambda>s. \<not> pred_map active_scrc (sc_refill_cfgs_of s) t \<and> R s\<rbrace>
                f \<lbrace>\<lambda>rv s. \<not> pred_map active_scrc (sc_refill_cfgs_of s) t\<rbrace>"
+  assumes "\<And>scp. \<lbrace>\<lambda>s. \<not> pred_map (\<lambda>cfg. \<not> active_scrc cfg) (sc_refill_cfgs_of s) scp \<and> R s\<rbrace>
+                  f \<lbrace>\<lambda>_ s. \<not> pred_map (\<lambda>cfg. \<not> active_scrc cfg) (sc_refill_cfgs_of s) scp\<rbrace>"
+  assumes "\<And>scp. \<lbrace>\<lambda>s. pred_map (\<lambda>cfg. scrc_budget cfg = 0) (sc_refill_cfgs_of s) scp \<and> R s\<rbrace>
+                  f \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. scrc_budget cfg = 0) (sc_refill_cfgs_of s) scp\<rbrace>"
   assumes "\<And>t. \<lbrace>\<lambda>s. valid_refills t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. valid_refills t s\<rbrace>"
   assumes "\<And>scp. \<lbrace>\<lambda>s. bounded_release_time scp s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. bounded_release_time scp s\<rbrace>"
   assumes "\<And>t. \<lbrace>\<lambda>s. budget_ready t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. budget_ready t s\<rbrace>"
