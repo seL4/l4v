@@ -1904,7 +1904,7 @@ locale retype_region_proofs_invs
   fixes region_in_kernel_window :: "machine_word set \<Rightarrow> 'state_ext state \<Rightarrow> bool"
   assumes valid_global_refs: "valid_global_refs s \<Longrightarrow> valid_global_refs s'"
   assumes valid_arch_state: "valid_arch_state s \<Longrightarrow> valid_arch_state s'"
-  assumes valid_vspace_objs': "valid_vspace_objs s \<Longrightarrow> valid_vspace_objs s'"
+  assumes valid_vspace_objs': "\<lbrakk> invs s; valid_vspace_objs s \<rbrakk> \<Longrightarrow> valid_vspace_objs s'"
   assumes valid_cap:
     "(s::'state_ext state) \<turnstile> cap \<and>
         untyped_range cap \<inter> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} = {}
