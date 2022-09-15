@@ -127,4 +127,8 @@ lemma mask_alignment_ugliness:
    apply (meson linorder_not_le)
   by (auto simp: le_def)
 
+lemma ranD:
+  "v \<in> ran f \<Longrightarrow> \<exists>x. f x = Some v"
+  by (auto simp: ran_def)
+
 end
