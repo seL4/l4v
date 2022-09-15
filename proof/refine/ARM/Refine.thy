@@ -406,7 +406,7 @@ lemma valid_sched_init[simp]:
                         active_sc_def MIN_REFILLS_def)
   by (auto simp: vs_all_heap_simps active_sc_valid_refills_def cfg_valid_refills_def
                  rr_valid_refills_def MIN_REFILLS_def bounded_release_time_def
-                 default_sched_context_def MAX_PERIOD_def
+                 default_sched_context_def MAX_PERIOD_def active_sc_def
           intro: order_trans[OF mult_left_mono, OF us_to_ticks_helper])
 
 lemma valid_domain_list_init[simp]:

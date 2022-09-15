@@ -248,7 +248,6 @@ definition sc_relation ::
   "Structures_A.sched_context \<Rightarrow> nat \<Rightarrow> Structures_H.sched_context \<Rightarrow> bool" where
   "sc_relation \<equiv> \<lambda>sc n sc'.
      sc_period sc = scPeriod sc' \<and>
-     sc_budget sc = scBudget sc' \<and>
      sc_consumed sc = scConsumed sc' \<and>
      sc_tcb sc = scTCB sc' \<and>
      sc_ntfn sc = scNtfn sc' \<and>
