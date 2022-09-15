@@ -460,7 +460,10 @@ definition absCNode :: "nat \<Rightarrow> (obj_ref \<rightharpoonup> kernel_obje
 definition scMap :: "(obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> sched_context \<Rightarrow> Structures_A.sched_context" where
   "scMap replyPrevs sc = \<lparr>
      sc_period     = scPeriod sc,
-     sc_budget     = scBudget sc,
+     sc_budget     = if scRefillMax sc > 0
+                     then refills_sum (refills_map (scRefillHead sc) (scRefillCount sc)
+                                                   (scRefillMax sc) (scRefills sc))
+                     else 0,
      sc_consumed   = scConsumed sc,
      sc_tcb        = scTCB sc,
      sc_ntfn       = scNtfn sc,
@@ -612,6 +615,7 @@ lemma absHeap_correct:
   assumes pspace_aligned:  "pspace_aligned s"
   assumes pspace_distinct: "pspace_distinct s"
   assumes valid_objs:      "valid_objs s"
+  assumes valid_refills:   "active_sc_valid_refills s"
   assumes pspace_relation: "pspace_relation (kheap s) (ksPSpace s')"
   assumes ghost_relation:  "ghost_relation (kheap s) (gsUserPages s') (gsCNodes s')"
   assumes replies:         "sc_replies_relation s s'"
@@ -881,6 +885,16 @@ proof -
      apply (rule relatedE, assumption, ko, ako)
      apply (frule scBits_inverse_sc_relation)
      apply (clarsimp simp: sc_relation_def scMap_def mapScSize_def sc_replies_prevs_walk[OF replies])
+     apply (intro conjI impI)
+       apply (prop_tac "valid_refills y s")
+        apply (fastforce intro: valid_refills active_sc_valid_refillsE
+                          simp: vs_all_heap_simps active_sc_def)
+       apply (clarsimp simp: valid_refills_def vs_all_heap_simps rr_valid_refills_def
+                      split: if_splits)
+      apply (insert valid_refills)
+      apply (force simp: active_sc_valid_refills_def valid_refills_def vs_all_heap_simps
+                         active_sc_def
+                  split: if_splits)
 
     apply (erule relatedE, ko, ako)
     apply (clarsimp simp: reply_relation_def replyMap_def)
