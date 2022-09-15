@@ -1849,6 +1849,12 @@ lemma pte_at_eq:
   "pte_at pt_t p s = (ptes_of s pt_t p \<noteq> None)"
   by (auto simp: obj_at_def pte_at_def in_omonad)
 
+lemma vspace_objs_of_Some_projections[simp]:
+  "vspace_objs_of s p = Some (ASIDPool pool) \<Longrightarrow> asid_pools_of s p = Some pool"
+  "vspace_objs_of s p = Some (PageTable pt) \<Longrightarrow> pts_of s p = Some pt"
+  (* no projections for data pages *)
+  by (auto simp: in_omonad vspace_obj_of_def split: if_splits)
+
 lemma valid_vspace_objsI [intro?]:
   "(\<And>p ao asid vref level.
        \<lbrakk> vs_lookup_table level asid (vref_for_level vref (level+1)) s = Some (level, p);
@@ -2521,7 +2527,7 @@ lemma pool_for_asid_and_mask[simp]:
 
 lemma vs_lookup_table_ap_step:
   "\<lbrakk> vs_lookup_table asid_pool_level asid vref s = Some (asid_pool_level, p);
-     asid_pools_of s p = Some ap; ap ap_idx = Some entry \<rbrakk> \<Longrightarrow>
+     asid_pools_of s p = Some ap; \<exists>ap_idx. ap ap_idx = Some entry \<rbrakk> \<Longrightarrow>
    \<exists>asid'. vs_lookup_target asid_pool_level asid' vref s = Some (asid_pool_level, ap_vspace entry)"
   apply (clarsimp simp: vs_lookup_target_def vs_lookup_slot_def in_omonad ran_def)
   apply (rule_tac x="asid && ~~mask asid_low_bits || ucast ap_idx" in exI)

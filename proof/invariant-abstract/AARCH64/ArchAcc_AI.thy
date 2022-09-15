@@ -42,6 +42,10 @@ lemma invs_valid_asid_table [elim!]:
   "invs s \<Longrightarrow> valid_asid_table s"
   by (simp add: invs_def valid_state_def valid_arch_state_def)
 
+lemma vspace_objs_of_arch_valid_obj:
+  "\<lbrakk> vspace_objs_of s p = Some ao; valid_objs s \<rbrakk> \<Longrightarrow> arch_valid_obj ao s"
+  by (fastforce simp: valid_obj_arch_valid_obj in_omonad vspace_obj_of_Some)
+
 lemmas pt_upd_simps[simp] = pt_upd_def[split_simps pt.split]
 
 lemma pt_range_upd:
