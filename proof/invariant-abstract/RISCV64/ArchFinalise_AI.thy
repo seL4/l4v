@@ -1090,16 +1090,6 @@ lemma set_vm_root_empty[wp]:
   apply (wpsimp wp: get_cap_wp)
   done
 
-lemma set_asid_pool_empty[wp]:
-  "\<lbrace>obj_at (empty_table S) word\<rbrace> set_asid_pool x2 pool' \<lbrace>\<lambda>xb. obj_at (empty_table S) word\<rbrace>"
-  by (wpsimp wp: set_object_wp simp: set_asid_pool_def obj_at_def empty_table_def)
-
-lemma delete_asid_empty_table_pt[wp]:
-  "delete_asid a word \<lbrace>\<lambda>s. obj_at (empty_table S) word s\<rbrace>"
-   apply (simp add: delete_asid_def)
-   apply wpsimp
-   done
-
 lemma ucast_less_shiftl_helper3:
   "\<lbrakk> len_of TYPE('b) + 3 < len_of TYPE('a); 2 ^ (len_of TYPE('b) + 3) \<le> n\<rbrakk>
     \<Longrightarrow> (ucast (x :: 'b::len word) << 3) < (n :: 'a::len word)"
