@@ -143,7 +143,7 @@ lemma invoke_irq_handler_invs'[Interrupt_AI_asms]:
    done
   show ?thesis
   apply (cases i, simp_all)
-    apply (wp dmo_plic_complete_claim)
+    apply (wp dmo_plic_complete_claim maskInterrupt_invs)
     apply simp+
    apply (rename_tac irq cap prod)
    apply (rule hoare_pre)

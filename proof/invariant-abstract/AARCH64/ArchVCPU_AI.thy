@@ -441,6 +441,7 @@ lemma unmap_page_state_hyp_refs_of[wp]:
 
 crunches delete_asid, vcpu_finalise, unmap_page_table, finalise_cap
   for state_hyp_refs_of[wp]: "\<lambda>s. sym_refs (state_hyp_refs_of s)"
+  (wp: crunch_wps)
 
 lemma preemption_point_state_hyp_refs_of[wp]:
   "preemption_point \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"

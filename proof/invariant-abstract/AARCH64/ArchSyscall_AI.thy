@@ -65,7 +65,7 @@ lemma do_machine_op_getIFSR_inv[wp]:
   by (rule dmo_inv) wp
 
 lemma hv_invs[wp, Syscall_AI_assms]: "\<lbrace>invs\<rbrace> handle_vm_fault t' flt \<lbrace>\<lambda>r. invs\<rbrace>"
-  unfolding handle_vm_fault_def by (cases flt; wpsimp)
+  unfolding handle_vm_fault_def by (cases flt; wpsimp wp: dmo_invs_lift)
 
 lemma hv_inv_ex [Syscall_AI_assms]:
   "\<lbrace>P\<rbrace> handle_vm_fault t vp \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
