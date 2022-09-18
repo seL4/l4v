@@ -918,11 +918,14 @@ lemma invalidate_vmid_entry_vmid_for_asid_None[wp]:
   by wpsimp
 
 lemma invalidate_asid_vmid_for_asid_None[wp]:
-  "invalidate_asid asid' \<lbrace>\<lambda>s. vmid_for_asid s asid = None\<rbrace>"
+  "\<lbrace>\<lambda>s. asid' \<noteq> asid \<longrightarrow> vmid_for_asid s asid = None \<rbrace>
+   invalidate_asid asid'
+   \<lbrace>\<lambda>_ s. vmid_for_asid s asid = None\<rbrace>"
   unfolding invalidate_asid_def update_asid_pool_entry_def
   supply fun_upd_apply[simp del]
   apply (wpsimp|wps)+
-  apply (auto simp: vmid_for_asid_def entry_for_pool_def fun_upd_apply obind_def in_opt_map_None_eq
+  apply (auto simp: pool_for_asid_def vmid_for_asid_def entry_for_pool_def fun_upd_apply obind_def
+                    in_opt_map_None_eq
               split: option.split)
   done
 
