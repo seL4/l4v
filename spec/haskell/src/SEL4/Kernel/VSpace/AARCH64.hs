@@ -299,6 +299,8 @@ deleteASID asid pt = do
             when (maybeRoot == Just pt) $ do
                 invalidateTLBByASID asid
                 invalidateASIDEntry asid
+                -- re-read pool, because invalidateASIDEntry changes it
+                ASIDPool pool <- getObject poolPtr
                 let pool' = pool//[(asid .&. mask asidLowBits, Nothing)]
                 setObject poolPtr $ ASIDPool pool'
                 tcb <- getCurThread

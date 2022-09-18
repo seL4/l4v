@@ -263,6 +263,8 @@ definition delete_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::st
          when (\<exists>vmid. pool (asid_low_bits_of asid) = Some (ASIDPoolVSpace vmid pt)) $ do
            invalidate_tlb_by_asid asid;
            invalidate_asid_entry asid;
+           \<comment> \<open>re-read here, because @{text invalidate_asid_entry} changes the ASID pool:\<close>
+           pool \<leftarrow> get_asid_pool pool_ptr;
            pool' \<leftarrow> return $ pool (asid_low_bits_of asid := None);
            set_asid_pool pool_ptr pool';
            tcb \<leftarrow> gets cur_thread;
