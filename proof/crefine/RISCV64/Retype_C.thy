@@ -5220,7 +5220,11 @@ lemma threadSet_domain_ccorres [corres]:
      subgoal by (simp add: ctcb_relation_def)
     apply assumption
    apply simp
-  apply (erule cready_queues_relation_not_queue_ptrs)
+  apply (rule conjI)
+   apply (erule cready_queues_relation_not_queue_ptrs)
+    apply (rule ext, simp split: if_split)
+   apply (rule ext, simp split: if_split)
+  apply (erule iffD2[OF tcb_queue_relation_only_next_prev, rotated -1])
    apply (rule ext, simp split: if_split)
   apply (rule ext, simp split: if_split)
   done

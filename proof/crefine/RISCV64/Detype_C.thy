@@ -859,15 +859,14 @@ proof -
   qed
 qed
 
-
-lemma tcb_queue_relation_live_restrict:
+lemma tcb_queue_relation_live_restrict':
   assumes vuc: "s \<turnstile>' capability.UntypedCap d ptr bits idx"
   and     rel: "\<forall>t \<in> set q. tcb_at' t s"
   and    live: "\<forall>t \<in> set q. ko_wp_at' live' t s"
   and      rl: "\<forall>(p :: machine_word) P. ko_wp_at' P p s \<and> (\<forall>ko. P ko \<longrightarrow> live' ko) \<longrightarrow> p \<notin> {ptr..ptr + 2 ^ bits - 1}"
-  shows "tcb_queue_relation' getNext getPrev (cm |` (- Ptr ` {ptr..+2 ^ bits})) q cend chead =
-  tcb_queue_relation' getNext getPrev cm q cend chead"
-proof (rule tcb_queue_relation'_cong [OF refl refl refl])
+  shows "tcb_queue_relation getNext getPrev (cm |` (- Ptr ` {ptr..+2 ^ bits})) q prev chead =
+         tcb_queue_relation getNext getPrev cm q prev chead"
+proof (rule tcb_queue_relation_cong [OF refl refl refl])
   fix p
   assume "p \<in> tcb_ptr_to_ctcb_ptr ` set q"
 
@@ -895,6 +894,16 @@ proof (rule tcb_queue_relation'_cong [OF refl refl refl])
 
   thus "(cm |` (- Ptr ` {ptr..+2 ^ bits})) p = cm p" by simp
 qed
+
+lemma tcb_queue_relation_live_restrict:
+  assumes vuc: "s \<turnstile>' capability.UntypedCap d ptr bits idx"
+  and     rel: "\<forall>t \<in> set q. tcb_at' t s"
+  and    live: "\<forall>t \<in> set q. ko_wp_at' live' t s"
+  and      rl: "\<forall>(p :: machine_word) P. ko_wp_at' P p s \<and> (\<forall>ko. P ko \<longrightarrow> live' ko) \<longrightarrow> p \<notin> {ptr..ptr + 2 ^ bits - 1}"
+  shows "tcb_queue_relation' getNext getPrev (cm |` (- Ptr ` {ptr..+2 ^ bits})) q cend chead =
+         tcb_queue_relation' getNext getPrev cm q cend chead"
+  using assms
+  by (fastforce simp: tcb_queue_relation'_def tcb_queue_relation_live_restrict')
 
 fun
   epQ :: "endpoint \<Rightarrow> machine_word list"
@@ -1691,6 +1700,29 @@ proof -
       \<comment> \<open>waiting ...\<close>
     apply (simp add: tcb_queue_relation_live_restrict
                      [OF D.valid_untyped tat tlive rl])
+    done
+
+  moreover
+  from rlqrun have "\<forall>t \<in> set (ksReleaseQueue s). tcb_at' t s \<and> ko_wp_at' live' t s"
+    apply clarsimp
+    apply (rule context_conjI)
+     apply fastforce
+    apply (drule_tac x=t in spec)
+    apply (clarsimp simp: ko_wp_at'_def obj_at_simps split: kernel_object.splits)
+    apply (rule_tac x="KOTCB obj" in exI)
+    apply (case_tac "tcbState obj"; clarsimp split: thread_state.splits)
+    done
+  hence tat: "\<forall>t \<in> set (ksReleaseQueue s). tcb_at' t s"
+    and tlive: "\<forall>t \<in> set (ksReleaseQueue s). ko_wp_at' live' t s"
+    by auto
+  from sr have
+    "sched_queue_relation (clift ?th_s) (ksReleaseQueue s) NULL (ksReleaseHead_' (globals s'))"
+    unfolding rf_sr_def cstate_relation_def cpspace_relation_def
+    apply (simp add: tcb_queue_relation_live_restrict')
+    apply (clarsimp simp: Let_def all_conj_distrib)
+    apply ((subst lift_t_typ_region_bytes, rule cm_disj_tcb, assumption+, simp_all)[1])+
+    apply (insert rlqrun tat tlive rl)
+    apply (rule tcb_queue_relation_live_restrict'[THEN iffD2], (fastforce intro!: D.valid_untyped)+)
     done
 
   moreover
