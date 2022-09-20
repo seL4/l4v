@@ -77,8 +77,13 @@ lemma ready_qs_runnable_ksMachineState[simp]:
   "ready_qs_runnable (ksMachineState_update f s) = ready_qs_runnable s"
   by (clarsimp simp: ready_qs_runnable_def)
 
+lemma ready_or_release'_ksMachineState[simp]:
+  "ready_or_release' (ksMachineState_update f s) = ready_or_release' s"
+  by (clarsimp simp: ready_or_release'_def)
+
 crunches setVMRoot
   for ready_qs_runnable'[wp]: ready_qs_runnable
+  and ready_or_release'[wp]: ready_or_release'
   (wp: crunch_wps)
 
 lemma switchToThread_ready_qs_runnable[wp]:
@@ -86,10 +91,15 @@ lemma switchToThread_ready_qs_runnable[wp]:
   unfolding RISCV64_H.switchToThread_def
   by wpsimp
 
+lemma switchToThread_ready_or_release'[wp]:
+  "RISCV64_H.switchToThread t \<lbrace>ready_or_release'\<rbrace>"
+  unfolding RISCV64_H.switchToThread_def
+  by wpsimp
+
 (* FIXME: move *)
 lemma switchToThread_ccorres:
   "ccorres dc xfdc
-           (invs' and tcb_at' t and (\<lambda>s. \<forall>d p. distinct (ksReadyQueues s (d, p))))
+           (invs' and tcb_at' t and (\<lambda>s. \<forall>d p. distinct (ksReadyQueues s (d, p))) and ready_or_release')
            (UNIV \<inter> \<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr t\<rbrace>)
            hs
            (switchToThread t)
@@ -211,7 +221,7 @@ lemmas ccorres_remove_tail_Guard_Skip
 
 lemma switchToThread_ccorres':
   "ccorres dc xfdc
-           (invs' and tcb_at' t and (\<lambda>s. \<forall>d p. distinct (ksReadyQueues s (d, p))))
+           (invs' and tcb_at' t and (\<lambda>s. \<forall>d p. distinct (ksReadyQueues s (d, p))) and ready_or_release')
            (UNIV \<inter> \<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr t\<rbrace>)
            hs
            (switchToThread t)
@@ -225,7 +235,8 @@ lemmas word_log2_max_word_word_size = word_log2_max[where 'a=machine_word_len, s
 
 lemma chooseThread_ccorres:
   "ccorres dc xfdc
-     (invs' and valid_idle' and (\<lambda>s.  \<forall>d p. distinct (ksReadyQueues s (d, p)))) UNIV []
+     (invs' and valid_idle' and (\<lambda>s.  \<forall>d p. distinct (ksReadyQueues s (d, p))) and ready_or_release')
+     UNIV []
      chooseThread (Call chooseThread_'proc)"
 proof -
 
@@ -381,12 +392,13 @@ sorry (* FIXME RT: nextDomain_ccorres. Involves usToTicks
 crunches nextDomain
   for valid_idle'[wp]: valid_idle'
   and distinct_queues[wp]: "\<lambda>s. distinct (ksReadyQueues s (d, p))"
-  (simp: crunch_simps)
+  and ready_or_release'[wp]: ready_or_release'
+  (simp: crunch_simps ready_or_release'_def)
 
 lemma scheduleChooseNewThread_ccorres:
   "ccorres dc xfdc
      (\<lambda>s. invs' s \<and> valid_idle' s \<and> (\<forall>d p. distinct (ksReadyQueues s (d, p)))
-          \<and> ksSchedulerAction s = ChooseNewThread) UNIV hs
+          \<and> ksSchedulerAction s = ChooseNewThread \<and> ready_or_release' s) UNIV hs
      (do domainTime \<leftarrow> getDomainTime;
          y \<leftarrow> when (domainTime = 0) nextDomain;
          chooseThread

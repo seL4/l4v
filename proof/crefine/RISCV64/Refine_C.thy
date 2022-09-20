@@ -892,17 +892,20 @@ lemma dmo_domain_user_mem'[wp]:
   done
 
 lemma do_user_op_corres_C:
-  "corres_underlying rf_sr False False (=) (invs' and ex_abs einvs) \<top>
-                     (doUserOp f tc) (doUserOp_C f tc)"
+  "corres_underlying rf_sr False False (=)
+     (invs' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and ex_abs einvs) \<top>
+     (doUserOp f tc) (doUserOp_C f tc)"
   apply (simp only: doUserOp_C_def doUserOp_def split_def)
   apply (rule corres_guard_imp)
     apply (rule_tac P=\<top> and P'=\<top> and r'="(=)" in corres_split)
        apply (clarsimp simp: simpler_gets_def getCurThread_def
                 corres_underlying_def rf_sr_def cstate_relation_def Let_def)
-      apply (rule_tac P=invs' and P'=\<top> and r'="(=)" in corres_split)
+      apply (rule_tac P="invs' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)"
+                  and P'=\<top> and r'="(=)" in corres_split)
          apply (clarsimp simp: cstate_to_A_def absKState_def
                                rf_sr_def cstate_to_H_correct ptable_lift_def)
-        apply (rule_tac P=invs' and P'=\<top> and r'="(=)" in corres_split)
+        apply (rule_tac P="invs' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)"
+                    and P'=\<top> and r'="(=)" in corres_split)
            apply (clarsimp simp: cstate_to_A_def absKState_def
                                  rf_sr_def cstate_to_H_correct ptable_rights_def)
           apply (rule_tac P=pspace_distinct' and P'=\<top> and r'="(=)"
@@ -998,7 +1001,12 @@ lemma refinement2_both:
    apply (drule lift_state_relationD)
    apply (clarsimp simp: cstate_to_A_def)
     apply (subst cstate_to_H_correct)
-     apply (fastforce simp: full_invs'_def invs'_def)
+      apply (fastforce simp: full_invs'_def invs'_def)
+     apply (clarsimp simp: lift_state_relation_def full_invs_def)
+     apply (rule sch_act_wf_cross)
+         apply force
+        subgoal by (clarsimp simp: valid_sched_def)
+       apply fastforce+
     apply (clarsimp simp: rf_sr_def)
    apply (simp add:absKState_def observable_memory_def absExst_def)
    apply (rule MachineTypes.machine_state.equality,simp_all)[1]

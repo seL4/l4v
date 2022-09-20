@@ -444,7 +444,7 @@ definition refill_buffer_relation ::
 lemma refill_buffer_relation_gs_dom:
   "refill_buffer_relation ah ch gs \<Longrightarrow>
    let abs_sc_hp = map_to_scs ah;
-       lens_hp = gs_refill_buffer_lengths gs
+       lens_hp = gs_sc_size gs
    in dom abs_sc_hp = dom lens_hp"
   by (simp add: refill_buffer_relation_def Let_def)
 
@@ -452,7 +452,7 @@ lemma refill_buffer_relation_crefill_hp_dom:
   "refill_buffer_relation ah ch gs \<Longrightarrow>
    let abs_sc_hp = map_to_scs ah;
        crefill_hp = clift ch;
-       lens_hp = gs_refill_buffer_lengths gs
+       lens_hp = gs_sc_size gs
    in dom crefill_hp
       = (\<Union>p\<in>dom abs_sc_hp. set (map (\<lambda>i. sc_ptr_to_crefill_ptr p +\<^sub>p int i) [0..<the (lens_hp p)]))"
   by (simp add: refill_buffer_relation_def Let_def)
@@ -461,7 +461,7 @@ lemma refill_buffer_relation_crefill_relation:
   "refill_buffer_relation ah ch gs \<Longrightarrow>
    let abs_sc_hp = map_to_scs ah;
        crefill_hp = clift ch;
-       lens_hp = gs_refill_buffer_lengths gs
+       lens_hp = gs_sc_size gs
    in (\<forall>p sc. abs_sc_hp p = Some sc \<longrightarrow>
                dyn_array_list_rel crefill_hp crefill_relation (scRefills sc) (sc_ptr_to_crefill_ptr p)
               \<and> lens_hp p = Some (length (scRefills sc)))"
@@ -829,6 +829,7 @@ where
        cready_queues_relation (clift cheap)
                              (ksReadyQueues_' cstate)
                              (ksReadyQueues astate) \<and>
+       sched_queue_relation (clift cheap) (ksReleaseQueue astate) NULL (ksReleaseHead_' cstate) \<and>
        zero_ranges_are_zero (gsUntypedZeroRanges astate) cheap \<and>
        cbitmap_L1_relation (ksReadyQueuesL1Bitmap_' cstate) (ksReadyQueuesL1Bitmap astate) \<and>
        cbitmap_L2_relation (ksReadyQueuesL2Bitmap_' cstate) (ksReadyQueuesL2Bitmap astate) \<and>
@@ -859,7 +860,8 @@ where
                               Kernel_C.kernel_all_global_addresses.ksDomSchedule \<and>
        ksDomScheduleIdx_' cstate = of_nat (ksDomScheduleIdx astate) \<and>
        ksCurDomain_' cstate = ucast (ksCurDomain astate) \<and>
-       ksDomainTime_' cstate = ksDomainTime astate"
+       ksDomainTime_' cstate = ksDomainTime astate \<and>
+       to_bool (ksReprogram_' cstate) = ksReprogramTimer astate"
 
 end
 

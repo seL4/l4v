@@ -1395,23 +1395,24 @@ lemma rf_sr_tcb_update_no_queue:
   apply (clarsimp simp: map_comp_update projectKO_opt_tcb cvariable_relation_upd_const
                         typ_heap_simps')
   apply (intro conjI)
-        subgoal by (clarsimp simp: cmap_relation_def map_comp_update projectKO_opts_defs inj_eq)
+         subgoal by (clarsimp simp: cmap_relation_def map_comp_update projectKO_opts_defs inj_eq)
+        apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
+        apply simp
+        apply (rule cendpoint_relation_upd_tcb_no_queues, assumption+)
+         subgoal by fastforce
+        subgoal by fastforce
        apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
        apply simp
-       apply (rule cendpoint_relation_upd_tcb_no_queues, assumption+)
+       apply (rule cnotification_relation_upd_tcb_no_queues, assumption+)
         subgoal by fastforce
        subgoal by fastforce
-      apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
-      apply simp
-      apply (rule cnotification_relation_upd_tcb_no_queues, assumption+)
-       subgoal by fastforce
-      subgoal by fastforce
-     subgoal by (clarsimp simp: map_comp_update projectKO_opt_sc typ_heap_simps'
-                                refill_buffer_relation_def)
+      subgoal by (clarsimp simp: map_comp_update projectKO_opt_sc typ_heap_simps'
+                                 refill_buffer_relation_def)
      apply (erule cready_queues_relation_not_queue_ptrs)
       subgoal by fastforce
      subgoal by fastforce
-    subgoal by (clarsimp simp: carch_state_relation_def typ_heap_simps')
+    subgoal by (fastforce elim!: iffD2[OF tcb_queue_relation_only_next_prev, rotated -1])
+   subgoal by (clarsimp simp: carch_state_relation_def typ_heap_simps')
   by (simp add: cmachine_state_relation_def)
 
 lemma rf_sr_tcb_update_no_queue_helper:

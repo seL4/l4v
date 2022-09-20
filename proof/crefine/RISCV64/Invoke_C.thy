@@ -40,10 +40,42 @@ lemma cap_case_ThreadCap2:
   by (simp add: isCap_simps
          split: capability.split)
 
+lemma threadSet_isSchedulable_bool:
+  "\<lbrakk>\<forall>tcb. tcbState tcb = tcbState (f tcb); \<forall>tcb. tcbInReleaseQueue tcb = tcbInReleaseQueue (f tcb);
+    \<forall>tcb. tcbSchedContext tcb = tcbSchedContext (f tcb)\<rbrakk>
+   \<Longrightarrow> threadSet f t \<lbrace>\<lambda>s. P (isSchedulable_bool t s)\<rbrace>"
+  apply (wpsimp wp: threadSet_wp)
+  apply (erule_tac P=P in back_subst)
+  apply (fastforce simp: pred_map_simps isSchedulable_bool_def isScActive_def opt_map_def obj_at_simps
+                  split: if_splits option.splits)
+  done
+
+lemma tcbSchedDequeue_isSchedulable_bool[wp]:
+  "tcbSchedDequeue t \<lbrace>\<lambda>s. P (isSchedulable_bool t s)\<rbrace>"
+  unfolding tcbSchedDequeue_def setQueue_def
+  apply (wpsimp wp: threadSet_isSchedulable_bool threadGet_wp simp: bitmap_fun_defs)
+  apply (fastforce simp: isSchedulable_bool_def isScActive_def obj_at_simps
+                  split: if_splits)
+  done
+
+lemma threadSet_ready_or_release'[wp]:
+  "threadSet f tptr \<lbrace>ready_or_release'\<rbrace>"
+  unfolding threadSet_def
+  apply (wpsimp wp: setObject_tcb_wp getTCB_wp')
+  apply (clarsimp simp: ready_or_release'_def)
+  done
+
+lemma tcbSchedDequeue_ready_or_release'_inv:
+  "tcbSchedDequeue tptr \<lbrace>ready_or_release'\<rbrace>"
+  unfolding tcbSchedDequeue_def setQueue_def
+  apply (wpsimp wp: threadGet_wp simp: bitmap_fun_defs)
+  apply (fastforce simp: ready_or_release'_def obj_at_simps split: if_splits)
+  done
+
 lemma setDomain_ccorres:
   "ccorres dc xfdc
       (invs' and tcb_at' t and sch_act_simple and (\<lambda>s. \<forall>d p. distinct (ksReadyQueues s (d, p)))
-       and (\<lambda>s. d \<le> maxDomain))
+       and ready_or_release' and (\<lambda>s. d \<le> maxDomain))
       (UNIV \<inter> {s. tptr_' s = tcb_ptr_to_ctcb_ptr t} \<inter> {s. dom_' s = ucast d})
       [] (setDomain t d) (Call setDomain_'proc)"
   apply (rule ccorres_gen_asm)
@@ -76,22 +108,29 @@ lemma setDomain_ccorres:
        apply (simp add: guard_is_UNIV_def)
       apply simp
       apply wp
-     apply (rule_tac Q="\<lambda>_. invs' and tcb_at' t and sch_act_simple
-                        and (\<lambda>s. curThread = ksCurThread s)
-                        and (\<lambda>s. \<forall>d p. distinct (ksReadyQueues s (d, p)))"
+     apply (rule_tac Q="\<lambda>rv'. invs' and tcb_at' t and sch_act_simple
+                              and (\<lambda>s. curThread = ksCurThread s)
+                              and (\<lambda>s. \<forall>d p. distinct (ksReadyQueues s (d, p)))
+                              and (\<lambda>s. rv' \<longrightarrow> \<not> t \<in> set (ksReleaseQueue s))
+                              and ready_or_release'"
                   in hoare_strengthen_post)
-       apply wp
+       apply (wpsimp wp: isSchedulable_wp)
       apply (fastforce simp: valid_pspace_valid_objs' weak_sch_act_wf_def
                       split: if_splits)
      apply (rule_tac Q="\<lambda>_. invs' and tcb_at' t and sch_act_simple
                             and (\<lambda>s. curThread = ksCurThread s \<and> (\<forall>p. t \<notin> set (ksReadyQueues s p)))
-                            and (\<lambda>s. \<forall>d p. distinct (ksReadyQueues s (d, p)))"
+                            and (\<lambda>s. \<forall>d p. distinct (ksReadyQueues s (d, p)))
+                            and (\<lambda>s. isSchedulable_bool t s \<longrightarrow> \<not> t \<in> set (ksReleaseQueue s))
+                            and ready_or_release'"
                   in hoare_strengthen_post)
-      apply (wpsimp wp: threadSet_tcbDomain_update_invs')
-     apply fastforce
+      apply (wpsimp wp: threadSet_tcbDomain_update_invs' hoare_vcg_imp_lift'
+                        threadSet_isSchedulable_bool)+
     apply (simp add: guard_is_UNIV_def)
-   apply (wp tcbSchedDequeue_not_in_queue hoare_vcg_all_lift)
-  apply fastforce
+   apply (wpsimp wp: tcbSchedDequeue_not_in_queue hoare_vcg_all_lift hoare_vcg_imp_lift'
+                     tcbSchedDequeue_ready_or_release'_inv)
+  apply (fastforce dest: invs_valid_release_queue
+                   simp: isSchedulable_bool_def pred_map_simps opt_map_def obj_at_simps
+                         valid_release_queue_def)
   done
 
 lemma active_runnable':
@@ -114,6 +153,37 @@ lemma setThreadState_ksReadyQueues_distinct:
   apply (wpsimp wp: tcbSchedEnqueue_ksReadyQueues_distinct isSchedulable_wp threadSet_wp)
   by (fastforce split: if_splits)
 
+lemma tcbSchedEnqueue_ready_or_release'[wp]:
+  "\<lbrace>\<lambda>s. ready_or_release' s \<and> tcbPtr \<notin> set (ksReleaseQueue s)\<rbrace>
+   tcbSchedEnqueue tcbPtr
+   \<lbrace>\<lambda>_. ready_or_release'\<rbrace>"
+  unfolding tcbSchedEnqueue_def setQueue_def
+  apply (wpsimp wp: threadGet_wp simp: bitmap_fun_defs)
+  apply (fastforce simp: ready_or_release'_def obj_at_simps split: if_splits)
+  done
+
+lemma ready_or_release'_ksSchedulerAction_update[simp]:
+  "ready_or_release' (ksSchedulerAction_update f s) = ready_or_release' s"
+  by (fastforce simp: ready_or_release'_def)
+
+lemma rescheduleRequired_ready_or_release'[wp]:
+  "\<lbrace>valid_release_queue and ready_or_release'\<rbrace>
+   rescheduleRequired
+   \<lbrace>\<lambda>_. ready_or_release'\<rbrace>"
+  unfolding rescheduleRequired_def
+  apply (wpsimp wp: isSchedulable_wp)
+  apply (fastforce simp: isSchedulable_bool_def opt_map_def pred_map_simps valid_release_queue_def
+                         obj_at_simps
+                  split: if_splits)
+  done
+
+lemma setThreadState_ready_or_release'[wp]:
+  "\<lbrace>ready_or_release' and valid_release_queue\<rbrace>
+   setThreadState f tptr
+   \<lbrace>\<lambda>_. ready_or_release'\<rbrace>"
+  unfolding setThreadState_def scheduleTCB_def
+  by (wpsimp wp: hoare_vcg_if_lift2 hoare_drop_imps threadSet_vrq_inv)
+
 lemma decodeDomainInvocation_ccorres:
   notes Collect_const[simp del]
   shows
@@ -128,7 +198,8 @@ lemma decodeDomainInvocation_ccorres:
                              s \<turnstile>' fst v)
               and sysargs_rel args buffer
               and (\<lambda>s. \<forall>d p. distinct (ksReadyQueues s (d, p)) \<and> thread \<notin> set (ksReadyQueues s (d,p)))
-              and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s))
+              and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)
+              and ready_or_release')
        (UNIV
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
@@ -227,6 +298,8 @@ lemma decodeDomainInvocation_ccorres:
    apply (clarsimp simp: valid_cap_simps' pred_tcb'_weakenE active_runnable')
    apply (rule conjI)
     apply (fastforce simp: tcb_st_refs_of'_def elim:pred_tcb'_weakenE)
+   apply (rule conjI)
+    apply fastforce
    apply (simp add: word_le_nat_alt unat_ucast unat_numDomains_to_H le_maxDomain_eq_less_numDomains)
   apply (clarsimp simp: ccap_relation_def cap_to_H_simps cap_thread_cap_lift)
   subgoal (* args ! 0 can be contained in a domain-sized word *)

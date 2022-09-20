@@ -773,16 +773,6 @@ lemma cnotification_relation_q_cong:
   apply (auto intro: iffD1[OF tcb_queue_relation'_cong[OF refl refl refl]])
   done
 
-lemma tcbSchedEnqueue_ep_at:
-  "\<lbrace>obj_at' (P :: endpoint \<Rightarrow> bool) ep\<rbrace>
-      tcbSchedEnqueue t
-   \<lbrace>\<lambda>rv. obj_at' P ep\<rbrace>"
-  including no_pre
-  apply (simp add: tcbSchedEnqueue_def unless_def null_def)
-  apply (wp threadGet_wp, clarsimp, wp+)
-  apply (clarsimp split: if_split, wp)
-  done
-
 lemma ccorres_duplicate_guard:
   "ccorres r xf (P and P) Q hs f f' \<Longrightarrow> ccorres r xf P Q hs f f'"
   by (erule ccorres_guard_imp, auto)

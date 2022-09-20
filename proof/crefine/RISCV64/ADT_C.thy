@@ -113,12 +113,14 @@ lemma setTCBContext_C_corres:
   apply (apply_conjunct \<open>match conclusion in \<open>cready_queues_relation _ _ _\<close> \<Rightarrow>
          \<open>erule cready_queues_relation_not_queue_ptrs; rule ext; simp split: if_split\<close>\<close>)
   apply (drule ko_at_projectKO_opt)
-  apply (erule (2) cmap_relation_upd_relI)
-    apply (simp add: ctcb_relation_def carch_tcb_relation_def)
-   apply assumption
-  apply simp
+  apply (rule conjI)
+   apply (erule (2) cmap_relation_upd_relI)
+     apply (simp add: ctcb_relation_def carch_tcb_relation_def)
+    apply assumption
+   apply simp
+  apply (erule iffD2[OF tcb_queue_relation_only_next_prev, rotated -1])
+   apply (rule ext, simp split: if_splits)+
   done
-
 end
 
 definition
@@ -613,6 +615,18 @@ lemma cready_queues_to_H_correct:
    apply simp
   apply (clarsimp simp: Let_def)
   apply (rule_tac hp="clift s" in tcb_queue_rel'_unique, simp_all add: lift_t_NULL)
+  done
+
+definition crelease_queue_to_H :: "(tcb_C ptr \<rightharpoonup> tcb_C) \<Rightarrow> tcb_C ptr \<Rightarrow> machine_word list" where
+  "crelease_queue_to_H h_tcb qhead \<equiv> THE aq. sched_queue_relation h_tcb aq NULL qhead"
+
+lemma crelease_queue_to_H_correct:
+  "sched_queue_relation (clift s) ls NULL release_hd \<Longrightarrow>
+   crelease_queue_to_H (clift s) release_hd = ls"
+  apply (clarsimp simp: crelease_queue_to_H_def fun_eq_iff)
+  apply (rule the_equality)
+   apply simp
+  apply (rule_tac hp="clift s" in tcb_queue_rel_unique, simp_all add: lift_t_NULL)
   done
 
 (* showing that cpspace_relation is actually unique >>>*)
@@ -1256,17 +1270,32 @@ lemma ksPSpace_eq_imp_valid_tcb'_eq:
                  valid_tcb'_def valid_tcb_state'_def valid_bound_ntfn'_def
           split: thread_state.splits option.splits)
 
+lemma ksPSpace_eq_imp_valid_sc'_eq:
+  assumes ksPSpace: "ksPSpace s' = ksPSpace s"
+  shows "valid_sched_context' sc s' = valid_sched_context' sc s"
+  by (auto simp: ksPSpace_eq_imp_obj_at'_eq[OF ksPSpace]
+                 valid_sched_context'_def valid_bound_ntfn'_def
+          split: option.splits)
+
+lemma ksPSpace_eq_imp_valid_reply'_eq:
+  assumes ksPSpace: "ksPSpace s' = ksPSpace s"
+  shows "valid_reply' reply s' = valid_reply' reply s"
+  by (auto simp: ksPSpace_eq_imp_obj_at'_eq[OF ksPSpace]
+                 valid_reply'_def valid_bound_ntfn'_def
+          split: option.splits)
+
 lemma ksPSpace_eq_imp_valid_objs'_eq:
   assumes ksPSpace: "ksPSpace s' = ksPSpace s"
   shows "valid_objs' s' = valid_objs' s"
   using assms
-  apply (clarsimp simp: valid_objs'_def valid_obj'_def valid_ep'_def
+  by (clarsimp simp: valid_objs'_def valid_obj'_def valid_ep'_def
                      ksPSpace_eq_imp_obj_at'_eq[OF ksPSpace]
                      ksPSpace_eq_imp_valid_tcb'_eq[OF ksPSpace]
                      ksPSpace_eq_imp_valid_cap'_eq[OF ksPSpace]
+                     ksPSpace_eq_imp_valid_sc'_eq[OF ksPSpace]
+                     ksPSpace_eq_imp_valid_reply'_eq[OF ksPSpace]
                      valid_ntfn'_def valid_cte'_def valid_bound_tcb'_def
               split: kernel_object.splits endpoint.splits ntfn.splits option.splits)
-sorry (* FIXME RT: ksPSpace_eq_imp_valid_objs'_eq *)
 
 lemma ksPSpace_eq_imp_valid_pspace'_eq:
   assumes ksPSpace: "ksPSpace s' = ksPSpace s"
@@ -1309,12 +1338,10 @@ context state_rel begin
 lemma cDomScheduleIdx_to_H_correct:
   assumes valid: "invs' as"
   assumes cstate_rel: "cstate_relation as cs"
-  assumes ms: "cstate_to_machine_H cs = observable_memory (ksMachineState as) (user_mem' as)"
   shows "unat (ksDomScheduleIdx_' cs) = ksDomScheduleIdx as"
   using assms
-  apply (clarsimp simp: cstate_relation_def Let_def observable_memory_def invs'_def
-                     newKernelState_def unat_of_nat_eq cdom_schedule_relation_def)
-sorry (* FIXME RT: cDomScheduleIdx_to_H_correct *)
+  by (clarsimp simp: cstate_relation_def Let_def invs'_def valid_dom_schedule'_def
+                     unat_of_nat_eq  cdom_schedule_relation_def)
 
 definition
   cDomSchedule_to_H :: "(dschedule_C['b :: finite]) \<Rightarrow> (8 word \<times> machine_word) list"
@@ -1412,12 +1439,12 @@ where
     ksCurDomain = ucast (ksCurDomain_' s),
     ksDomainTime = ksDomainTime_' s,
     ksReadyQueues = cready_queues_to_H (clift (t_hrs_' s)) (ksReadyQueues_' s),
-    ksReleaseQueue = undefined, \<comment> \<open>FIXME RT: write crelease_queue_to_H\<close>
+    ksReleaseQueue = crelease_queue_to_H (clift (t_hrs_' s)) (ksReleaseHead_' s),
     ksReadyQueuesL1Bitmap = cbitmap_L1_to_H (ksReadyQueuesL1Bitmap_' s),
     ksReadyQueuesL2Bitmap = cbitmap_L2_to_H (ksReadyQueuesL2Bitmap_' s),
     ksCurThread = ctcb_ptr_to_tcb_ptr (ksCurThread_' s),
     ksIdleThread = ctcb_ptr_to_tcb_ptr (ksIdleThread_' s),
-    ksIdleSC = undefined, \<comment> \<open>FIXME RT: the idle sc in the C is the sc of ksIdleThread\<close>
+    ksIdleSC = ptr_val (ksIdleSC_' s),
     ksConsumedTime = ksConsumed_' s,
     ksCurTime = ksCurTime_' s,
     ksCurSc = ptr_val (ksCurSC_' s),
@@ -1437,15 +1464,16 @@ lemma trivial_eq_conj: "B = C \<Longrightarrow> (A \<and> B) = (A \<and> C)"
   by simp
 
 lemma cstate_to_H_correct:
-  assumes valid: "invs' as"
+  assumes invs': "invs' as"
+  and schact: "sch_act_wf (ksSchedulerAction as) as"
   assumes cstate_rel: "cstate_relation as cs"
   shows "cstate_to_H cs = as \<lparr>ksMachineState:=  observable_memory (ksMachineState as) (user_mem' as)\<rparr>"
   apply (subgoal_tac "cstate_to_machine_H cs = observable_memory (ksMachineState as) (user_mem' as)")
    apply (rule kernel_state.equality, simp_all add: cstate_to_H_def)
                           apply (rule cstate_to_pspace_H_correct)
-                            using valid
+                            using invs'
                             apply (simp add: invs'_def)
-                           using cstate_rel valid
+                           using cstate_rel invs'
                            apply (clarsimp simp: cstate_relation_def cpspace_relation_def Let_def
                                                  observable_memory_def invs'_def valid_pspace'_def)
                           using cstate_rel
@@ -1457,38 +1485,50 @@ lemma cstate_to_H_correct:
                         using cstate_rel
                         apply (clarsimp simp: cstate_relation_def cpspace_relation_def  Let_def
                                               prod_eq_iff)
-                       using valid cstate_rel
+                       using invs' cstate_rel
                        apply (rule mk_gsUntypedZeroRanges_correct)
                       subgoal
                         using cstate_rel
                         by (fastforce simp: cstate_relation_def cpspace_relation_def
                                             Let_def ghost_size_rel_def unat_eq_0
                                      split: if_split)
-                     using valid cstate_rel
+                     using invs' cstate_rel
                      apply (rule cDomScheduleIdx_to_H_correct)
                     using cstate_rel
                     apply (clarsimp simp: cstate_relation_def Let_def)
-                   using valid cstate_rel
-                   apply (rule cDomSchedule_to_H_correct)
+                    using invs' cstate_rel
+                    apply (rule cDomSchedule_to_H_correct)
+                    using cstate_rel
+                    apply (clarsimp simp: cstate_relation_def Let_def)
+                   using cstate_rel
+                   apply (clarsimp simp: cstate_relation_def Let_def ucast_up_ucast_id is_up_8_32)
                   using cstate_rel
                   apply (clarsimp simp: cstate_relation_def Let_def)
+                 apply (rule cready_queues_to_H_correct)
                  using cstate_rel
-                 apply (clarsimp simp: cstate_relation_def Let_def ucast_up_ucast_id is_up_8_32)
+                 apply (clarsimp simp: cstate_relation_def Let_def)
+                apply (rule crelease_queue_to_H_correct)
                 using cstate_rel
                 apply (clarsimp simp: cstate_relation_def Let_def)
-               apply (rule cready_queues_to_H_correct)
                using cstate_rel
                apply (clarsimp simp: cstate_relation_def Let_def)
-sorry (* FIXME RT: cstate_to_H_correct
+               using cstate_rel
+               apply (clarsimp simp: cstate_relation_def Let_def)
+               apply (rule cbitmap_L1_to_H_correct)
+               apply (clarsimp simp: cstate_relation_def Let_def)
+              using cstate_rel
+              apply (clarsimp simp: cstate_relation_def Let_def)
+              apply (rule cbitmap_L2_to_H_correct)
+              apply (clarsimp simp: cstate_relation_def Let_def)
+             using cstate_rel
+             apply (clarsimp simp: cstate_relation_def Let_def)
+            using cstate_rel
+            apply (clarsimp simp: cstate_relation_def Let_def)
+           using cstate_rel
+           apply (clarsimp simp: cstate_relation_def Let_def)
           using cstate_rel
-          apply (clarsimp simp: cstate_relation_def Let_def)
-          using cstate_rel
-          apply (clarsimp simp: cstate_relation_def Let_def)
-          apply (rule cbitmap_L1_to_H_correct)
           apply (clarsimp simp: cstate_relation_def Let_def)
          using cstate_rel
-         apply (clarsimp simp: cstate_relation_def Let_def)
-         apply (rule cbitmap_L2_to_H_correct)
          apply (clarsimp simp: cstate_relation_def Let_def)
         using cstate_rel
         apply (clarsimp simp: cstate_relation_def Let_def)
@@ -1498,23 +1538,23 @@ sorry (* FIXME RT: cstate_to_H_correct
       apply (clarsimp simp: cstate_relation_def Let_def)
       apply (rule csch_act_rel_to_H[THEN iffD1])
        apply (case_tac "ksSchedulerAction as", simp+)
-       using valid
+       using schact
        subgoal
-       by (clarsimp simp: valid_state'_def st_tcb_at'_def
-                          obj_at'_real_def ko_wp_at'_def objBitsKO_def projectKO_opt_tcb
-                       split: kernel_object.splits)
+       by (clarsimp simp: st_tcb_at'_def obj_at'_real_def ko_wp_at'_def objBitsKO_def
+                          projectKO_opt_tcb
+                   split: kernel_object.splits)
       using cstate_rel
       apply (clarsimp simp: cstate_relation_def Let_def)
      apply (rule cint_rel_to_H)
-      using valid
-      apply (simp add: valid_state'_def)
+      using invs'
+      apply (simp add: invs'_def)
      using cstate_rel
      apply (clarsimp simp: cstate_relation_def Let_def)
     using cstate_rel
     apply (clarsimp simp: cstate_relation_def Let_def)
    apply (rule carch_state_to_H_correct)
-     using valid
-     apply (simp add: valid_state'_def)
+     using invs'
+     apply (simp add: invs'_def)
     using cstate_rel
     apply (clarsimp simp: cstate_relation_def Let_def)
    using cstate_rel
@@ -1522,17 +1562,17 @@ sorry (* FIXME RT: cstate_to_H_correct
   using cstate_rel
   apply (clarsimp simp: cstate_relation_def Let_def carch_state_relation_def carch_globals_def)
   apply (rule cstate_to_machine_H_correct[simplified])
-      using valid
-      apply (simp add: valid_state'_def)
+      using invs'
+      apply (simp add: invs'_def)
      using cstate_rel
      apply (simp add: cstate_relation_def Let_def)
     using cstate_rel
     apply (simp add: cstate_relation_def Let_def cpspace_relation_def)
    using cstate_rel
    apply (simp add: cstate_relation_def Let_def cpspace_relation_def)
-  using valid
-  apply (clarsimp simp add: valid_state'_def)
-  done *)
+  using invs'
+  apply (clarsimp simp add: invs'_def)
+  done
 
 end
 

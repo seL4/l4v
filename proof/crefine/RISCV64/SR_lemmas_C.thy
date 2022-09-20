@@ -1077,7 +1077,9 @@ lemma cstate_relation_only_t_hrs:
   ksDomScheduleIdx_' s = ksDomScheduleIdx_' t;
   ksCurDomain_' s = ksCurDomain_' t;
   ksDomainTime_' s = ksDomainTime_' t;
-  ksConsumed_' s = ksConsumed_' t
+  ksConsumed_' s = ksConsumed_' t;
+  ksReleaseHead_' s = ksReleaseHead_' t;
+  ksReprogram_' s = ksReprogram_' t
   \<rbrakk>
   \<Longrightarrow> cstate_relation a s = cstate_relation a t"
   unfolding cstate_relation_def
@@ -1104,6 +1106,8 @@ lemma rf_sr_upd:
     "ksCurDomain_' (globals x) = ksCurDomain_' (globals y)"
     "ksDomainTime_' (globals x) = ksDomainTime_' (globals y)"
     "ksConsumed_' (globals x) = ksConsumed_' (globals y)"
+    "ksReleaseHead_' (globals x) = ksReleaseHead_' (globals y)"
+    "ksReprogram_' (globals x) = ksReprogram_' (globals y)"
   shows "((a, x) \<in> rf_sr) = ((a, y) \<in> rf_sr)"
   unfolding rf_sr_def using assms
   by simp (rule cstate_relation_only_t_hrs, auto)
@@ -1129,8 +1133,10 @@ lemma rf_sr_upd_safe[simp]:
     "phantom_machine_state_' (globals (g y)) = phantom_machine_state_' (globals y)"
   and    gs: "ghost'state_' (globals (g y)) = ghost'state_' (globals y)"
   and     wu:  "(ksWorkUnitsCompleted_' (globals (g y))) = (ksWorkUnitsCompleted_' (globals y))"
+  and rlshd: "(ksReleaseHead_' (globals (g y))) = (ksReleaseHead_' (globals y))"
+  and reprog: "(ksReprogram_' (globals (g y))) = (ksReprogram_' (globals y))"
   shows "((a, (g y)) \<in> rf_sr) = ((a, y) \<in> rf_sr)"
-  using rl rq rqL1 rqL2 sa ct ctime csc it isc ist arch wu gs dsi cdom dt cons
+  using rl rq rqL1 rqL2 sa ct ctime csc it isc ist arch wu gs dsi cdom dt cons rlshd reprog
   by - (rule rf_sr_upd)
 
 (* More of a well-formed lemma, but \<dots> *)
