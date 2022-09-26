@@ -523,6 +523,102 @@ lemma cap_table_at_gsCNodes:
   apply blast
   done
 
+thm touch_object_def
+thm resolveAddressBits.simps
+
+(* From CSpace_H. -robs *)
+function
+  resolveAddressBits_copy ::
+  "capability \<Rightarrow> cptr \<Rightarrow> nat \<Rightarrow>
+   (lookup_failure, (machine_word * nat)) kernel_f"
+where
+ "resolveAddressBits_copy a b c =
+(\<lambda>x0 capptr bits.  (let nodeCap = x0 in
+  if isCNodeCap nodeCap
+  then   (doE
+        radixBits \<leftarrow> returnOk ( capCNodeBits nodeCap);
+        guardBits \<leftarrow> returnOk ( capCNodeGuardSize nodeCap);
+        levelBits \<leftarrow> returnOk ( radixBits + guardBits);
+        haskell_assertE (levelBits \<noteq> 0) [];
+        offset \<leftarrow> returnOk ( (fromCPtr capptr `~shiftR~` (bits-levelBits)) &&
+                   (mask radixBits));
+        slot \<leftarrow> withoutFailure $ locateSlotCap nodeCap offset;
+        guard \<leftarrow> returnOk ( (fromCPtr capptr `~shiftR~` (bits-guardBits)) &&
+                   (mask guardBits));
+        unlessE (guardBits \<le> bits \<and> guard = capCNodeGuard nodeCap)
+            $ throw $ GuardMismatch_ \<lparr>
+                guardMismatchBitsLeft= bits,
+                guardMismatchGuardFound= capCNodeGuard nodeCap,
+                guardMismatchGuardSize= guardBits \<rparr>;
+        whenE (levelBits > bits) $ throw $ DepthMismatch_ \<lparr>
+            depthMismatchBitsLeft= bits,
+            depthMismatchBitsFound= levelBits \<rparr>;
+        bitsLeft \<leftarrow> returnOk ( bits - levelBits);
+        if (bitsLeft = 0)
+          then returnOk (slot, 0)
+          else (doE
+            \<comment> \<open> Implementing `liftE (touch_object oref)`:
+            withoutFailure $ touch_object oref; \<close>
+            nextCap \<leftarrow> withoutFailure $ getSlotCap slot;
+            (case nextCap of
+                  CNodeCap _ _ _ _ \<Rightarrow>   (
+                    resolveAddressBits_copy nextCap capptr bitsLeft
+                  )
+                | _ \<Rightarrow>   returnOk (slot, bitsLeft)
+                )
+          odE)
+  odE)
+  else   throw InvalidRoot
+  ))
+
+a b c"
+  by auto
+
+termination
+  apply (relation "measure (snd o snd)")
+  apply (auto simp add: in_monad split: if_split_asm)
+  done
+
+(* From Invariants_AI of main experimental-timeprot branch. -robs *)
+abbreviation ta_obj_upd :: "machine_word \<Rightarrow> Structures_A.kernel_object \<Rightarrow> machine_state \<Rightarrow> machine_state"
+  where
+  "ta_obj_upd p ko ms \<equiv> machine_state.touched_addresses_update ((\<union>) (obj_range p ko)) ms"
+
+abbreviation ms_ta_obj_upd :: "machine_word \<Rightarrow> Structures_A.kernel_object \<Rightarrow> 'a state \<Rightarrow> 'a state"
+  where
+  "ms_ta_obj_upd p ko s \<equiv> s \<lparr> machine_state := ta_obj_upd p ko (machine_state s) \<rparr>"
+
+(* New lemmas. -robs *)
+lemma get_cap_x_success:
+  fixes s cap ptr offset
+  defines "s' \<equiv> s\<lparr>kheap := [ptr \<mapsto> CNode (length offset) (\<lambda>x. if length x = length offset then Some cap else None)],
+    machine_state := ta_obj_upd ptr (CNode (length offset)
+      (\<lambda>x. if length x = length offset then Some cap else None)) (machine_state s) \<rparr>"
+  shows "(cap, s') \<in> fst (get_cap_x (ptr, offset) s')"
+  by (simp add: get_cap_x_def get_object_x_def obind_def
+                in_monad s'_def well_formed_cnode_n_def length_set_helper dom_def
+           split: Structures_A.kernel_object.splits)
+
+lemma touch_cap_success:
+  fixes s cap ptr cbits
+  defines "s' \<equiv> s\<lparr>kheap := [ptr \<mapsto> CNode cbits (\<lambda>x. if length x = cbits then Some cap else None)]\<rparr>"
+  defines "s'' \<equiv> s'\<lparr>machine_state := ta_obj_upd ptr (CNode (cbits)
+      (\<lambda>x. if length x = cbits then Some cap else None)) (machine_state s') \<rparr>"
+  shows "((), s'') \<in> fst (touch_object ptr s')"
+  using assms unfolding touch_object_def2
+  by (simp add:exec_gets simpler_do_machine_op_addTouchedAddresses_def simpler_modify_def)
+
+(* Easier-to-use version? -robs *)
+lemma touch_cap_success':
+  "\<lbrakk>s' = s\<lparr>kheap := [ptr \<mapsto> CNode cbits (\<lambda>x. if length x = cbits then Some cap else None)]\<rparr>;
+    s'' = s'\<lparr>machine_state := ta_obj_upd ptr (CNode (cbits)
+      (\<lambda>x. if length x = cbits then Some cap else None)) (machine_state s') \<rparr>\<rbrakk>
+   \<Longrightarrow> ((), s'') \<in> fst (touch_object ptr s')"
+  unfolding touch_object_def2
+  by (simp add:exec_gets simpler_do_machine_op_addTouchedAddresses_def simpler_modify_def)
+
+thm touch_cap_success[simplified]
+
 lemma rab_corres':
   "\<lbrakk> cap_relation (fst a) c'; drop (64-bits) (to_bl cref') = snd a;
      bits = length (snd a) \<rbrakk> \<Longrightarrow>
@@ -531,7 +627,7 @@ lemma rab_corres':
           (valid_objs and pspace_aligned and valid_cap (fst a))
           (valid_objs' and pspace_distinct' and pspace_aligned' and valid_cap' c')
           (resolve_address_bits a)
-          (resolveAddressBits c' cref' bits)"
+          (resolveAddressBits_copy c' cref' bits)"
 unfolding resolve_address_bits_def
 proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
   case (1 z cap cref)
@@ -556,20 +652,25 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
     (valid_objs and pspace_aligned and (\<lambda>s. s \<turnstile> fst (vd,vc)))
     (valid_objs' and pspace_distinct' and pspace_aligned' and (\<lambda>s. s \<turnstile>' c'))
     (resolve_address_bits' z (vd, vc))
-    (CSpace_H.resolveAddressBits c' cref' bits)"
+    (resolveAddressBits_copy c' cref' bits)"
       apply -
       apply (rule "1.hyps" [of _ cbits guard, OF caps(1)])
-      prefer 7
-        apply (clarsimp simp: in_monad)
-        sorry (* FIXME: Broken by touched_addresses. -robs *)
-        apply (rule get_cap_success)
-      apply (auto simp: in_monad intro!: get_cap_success) (* takes time *)
+      prefer 8
+         apply clarsimp
+         apply (rule get_cap_x_success)
+        apply (auto simp: in_monad intro!: get_cap_x_success)[6] (* takes time *)
+       apply clarsimp
+       apply(rule_tac cbits=cbits in touch_cap_success')
+        apply(rule refl)
+       apply clarsimp
+       apply fast
+      apply (auto simp: in_monad intro!: get_cap_x_success)
       done
     note if_split [split del]
     { assume "cbits + length guard = 0 \<or> cbits = 0 \<and> guard = []"
       hence ?thesis
         apply (simp add: caps isCap_defs
-                         resolveAddressBits.simps resolve_address_bits'.simps)
+                         resolveAddressBits_copy.simps resolve_address_bits'.simps)
         apply (rule corres_fail)
         apply (clarsimp simp: valid_cap_def)
         done
@@ -592,7 +693,7 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
          apply (fastforce simp: word_bits_def cte_level_bits_def)
         apply (thin_tac "t \<in> state_relation" for t)
         apply (erule conjE)
-        apply (subst resolveAddressBits.simps)
+        apply (subst resolveAddressBits_copy.simps)
         apply (subst resolve_address_bits'.simps)
         apply (simp add: caps isCap_defs Let_def)
         apply (simp add: linorder_not_less drop_postfix_eq)
@@ -623,7 +724,10 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
         apply (subgoal_tac "cbits + length guard < length cref"; simp)
         apply (rule corres_initial_splitE)
            apply clarsimp
+           (* FIXME: Mismatch in this part of the monads because we need to add a version of
+              touch_object to the design spec. -robs *)
            apply (rule corres_guard_imp)
+. (* DOWN TO HERE
              sorry (* FIXME: Broken by touched_addresses. -robs *)
              apply (rule getSlotCap_corres)
              apply (simp add: objBits_simps cte_level_bits_def)
