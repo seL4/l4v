@@ -254,11 +254,12 @@ lemma pspace_relation_ctes_ofI:
   apply (simp add: cte_wp_at_ctes_of)
   done
 
+(* FIXME: We need to modify `getCTE` to correspond with the new `get_cap`. -robs *)
 lemma get_cap_corres_P:
   "corres (\<lambda>x y. cap_relation x (cteCap y) \<and> P x)
           (cte_wp_at P cslot_ptr)
           (pspace_aligned' and pspace_distinct')
-          (get_cap cslot_ptr) (getCTE (cte_map cslot_ptr))"
+          (get_cap_x cslot_ptr) (getCTE (cte_map cslot_ptr))"
   apply (rule corres_stronger_no_failI)
    apply (rule no_fail_pre, wp)
    apply clarsimp
@@ -276,7 +277,7 @@ lemma get_cap_corres_P:
      apply (simp add: cte_wp_at_def)
     apply assumption+
   apply (clarsimp simp: cte_wp_at_ctes_of)
-  done
+  sorry (* FIXME: Broken by touched_addresses. -robs *)
 
 lemmas get_cap_corres = get_cap_corres_P[where P="\<top>", simplified]
 
@@ -318,7 +319,7 @@ lemma getSlotCap_corres:
    corres cap_relation
      (cte_at cte_ptr)
      (pspace_distinct' and pspace_aligned')
-     (get_cap cte_ptr)
+     (get_cap_x cte_ptr)
      (getSlotCap cte_ptr')"
   apply (simp add: getSlotCap_def)
   apply (subst bind_return [symmetric])
@@ -523,10 +524,35 @@ lemma cap_table_at_gsCNodes:
   apply blast
   done
 
-thm touch_object_def
-thm resolveAddressBits.simps
+(* FIXME: Need to discuss this and make it consistent with existing calculations for object sizes
+   appearing in, e.g. `placeNewObject'_def` of PSpaceFuns_H.  -robs *)
+definition
+  "objRange p obj \<equiv> {p .. p + 2^objBitsKO obj - 1}"
 
-(* From CSpace_H. -robs *)
+(* New and experimental: To correspond with touch_object. -robs *)
+thm touch_object_def2
+definition touchObj :: "machine_word \<Rightarrow> unit kernel" where
+  "touchObj ptr \<equiv> do
+     kh <- gets ksPSpace;
+     assert (kh ptr \<noteq> None);
+     obj <- return $ the $ kh ptr;
+     doMachineOp $ addTouchedAddresses (objRange ptr obj)
+   od"
+
+(* FIXME: Generalise for any kernel object, not just ones that are of a valid CNodeCap. -robs *)
+lemma touchObj_corres:
+  "corres (=)
+     (valid_objs and pspace_aligned and valid_cap (cap.CNodeCap ptr cbits guard))
+     (valid_objs' and pspace_distinct' and pspace_aligned' and
+      valid_cap' (capability.CNodeCap ptr cbits (of_bl guard) (length guard)))
+     (touch_object ptr)
+     (touchObj ptr)"
+  apply (simp add: touchObj_def touch_object_def2)
+  sorry (* FIXME: Prove. -robs *)
+
+(* Copied from CSpace_H for use as a sandbox. To correspond with resolve_address_bits'. -robs *)
+thm resolve_address_bits'.simps
+thm resolveAddressBits.simps
 function
   resolveAddressBits_copy ::
   "capability \<Rightarrow> cptr \<Rightarrow> nat \<Rightarrow>
@@ -557,8 +583,8 @@ where
         if (bitsLeft = 0)
           then returnOk (slot, 0)
           else (doE
-            \<comment> \<open> Implementing `liftE (touch_object oref)`:
-            withoutFailure $ touch_object oref; \<close>
+            \<comment> \<open> Implementing `liftE (touch_object oref)` \<close>
+            withoutFailure $ touchObj (capCNodePtr nodeCap);
             nextCap \<leftarrow> withoutFailure $ getSlotCap slot;
             (case nextCap of
                   CNodeCap _ _ _ _ \<Rightarrow>   (
@@ -570,10 +596,8 @@ where
   odE)
   else   throw InvalidRoot
   ))
-
 a b c"
   by auto
-
 termination
   apply (relation "measure (snd o snd)")
   apply (auto simp add: in_monad split: if_split_asm)
@@ -616,8 +640,6 @@ lemma touch_cap_success':
    \<Longrightarrow> ((), s'') \<in> fst (touch_object ptr s')"
   unfolding touch_object_def2
   by (simp add:exec_gets simpler_do_machine_op_addTouchedAddresses_def simpler_modify_def)
-
-thm touch_cap_success[simplified]
 
 lemma rab_corres':
   "\<lbrakk> cap_relation (fst a) c'; drop (64-bits) (to_bl cref') = snd a;
@@ -724,11 +746,19 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
         apply (subgoal_tac "cbits + length guard < length cref"; simp)
         apply (rule corres_initial_splitE)
            apply clarsimp
-           (* FIXME: Mismatch in this part of the monads because we need to add a version of
-              touch_object to the design spec. -robs *)
            apply (rule corres_guard_imp)
-. (* DOWN TO HERE
-             sorry (* FIXME: Broken by touched_addresses. -robs *)
+             apply(rule touchObj_corres)
+            apply assumption
+           apply assumption
+          (* FIXME: Get the guards needed for the getSlotCap to propagate across
+             this part of the proof that deals with touchObj. -robs *)
+          prefer 2
+          apply (wp get_cap_wp)
+         prefer 2
+         apply wp
+        apply (rule corres_initial_splitE)
+           apply clarsimp
+           apply (rule corres_guard_imp)
              apply (rule getSlotCap_corres)
              apply (simp add: objBits_simps cte_level_bits_def)
              apply (erule (1) cte_map_shift)
@@ -737,7 +767,10 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
              apply (simp add: cte_level_bits_def)
             apply clarsimp
             apply (clarsimp simp: valid_cap_def)
+            thm cap_table_at_cte_at
+            (* FIXME: Looks like we lost what the original proof needed here. -robs *)
             apply (erule cap_table_at_cte_at)
+. (* DOWN TO HERE
             apply simp
            apply clarsimp
           apply (case_tac "is_cnode_cap rv")
