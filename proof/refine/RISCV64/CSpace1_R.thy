@@ -254,7 +254,20 @@ lemma pspace_relation_ctes_ofI:
   apply (simp add: cte_wp_at_ctes_of)
   done
 
-(* FIXME: We need to modify `getCTE` to correspond with the new `get_cap`. -robs *)
+(* From Invariants_AI, modified for the new version of get_cap. -robs *)
+definition
+  cte_wp_at_x :: "(cap \<Rightarrow> bool) \<Rightarrow> cslot_ptr \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "cte_wp_at_x P p s \<equiv> \<exists>cap. fst (get_cap_x p s) = {(cap,s)} \<and> P cap"
+
+(* XXX: This won't be true because the cap could be there but not in the TA set.
+  We need to add the "is in TA set" predicate to the premises of both this lemma
+  and get_cap_corres_P. -robs *)
+lemma thing:
+  "cte_wp_at P p s \<Longrightarrow> cte_wp_at_x P p s"
+  sorry
+
+(* FIXME: Prove. Do we need to modify `getCTE` to correspond with the new `get_cap`? -robs *)
 lemma get_cap_corres_P:
   "corres (\<lambda>x y. cap_relation x (cteCap y) \<and> P x)
           (cte_wp_at P cslot_ptr)
@@ -269,7 +282,9 @@ lemma get_cap_corres_P:
    apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (cases cslot_ptr)
   apply (rename_tac oref cref)
-  apply (clarsimp simp: cte_wp_at_def)
+  apply clarsimp
+  apply(frule thing) (* XXX: rename *)
+  apply (clarsimp simp: cte_wp_at_def cte_wp_at_x_def)
   apply (frule in_inv_by_hoareD[OF getCTE_inv])
   apply (drule use_valid [where P="\<top>", OF _ getCTE_sp TrueI])
   apply (clarsimp simp: state_relation_def)
@@ -277,7 +292,9 @@ lemma get_cap_corres_P:
      apply (simp add: cte_wp_at_def)
     apply assumption+
   apply (clarsimp simp: cte_wp_at_ctes_of)
-  sorry (* FIXME: Broken by touched_addresses. -robs *)
+  (* FIXME: smt, uh but actually this lemma is currently bogus anyway - see above. -robs *)
+  by (smt (verit) cte_wp_at_def cte_wp_at_eqD2 cte_wp_at_x_def thing)
+. (* DOWN TO HERE
 
 lemmas get_cap_corres = get_cap_corres_P[where P="\<top>", simplified]
 
