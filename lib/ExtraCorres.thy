@@ -166,6 +166,7 @@ proof -
   done
 qed
 
+text \<open>Some results concerning the interaction of abstract and concrete states\<close>
 
 lemma corres_u_nofail:
   "corres_underlying S nf True r P P' f g \<Longrightarrow> (nf \<Longrightarrow> no_fail P f) \<Longrightarrow>
@@ -198,5 +199,43 @@ lemma wp_from_corres_unit:
   \<lbrace>\<lambda>s'. \<exists>s. (s,s') \<in> state_relation \<and> P s \<and> G s \<and> P' s' \<and> G' s'\<rbrace>
   f' \<lbrace>\<lambda>_ s'. \<exists>s. (s,s') \<in> state_relation \<and> Q s \<and> Q' s'\<rbrace>"
   by (auto intro!: wp_from_corres_u_unit)
+
+definition ex_abs_underlying :: "('a \<times> 'b) set \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> 'b \<Rightarrow> bool" where
+  "ex_abs_underlying sr P s' \<equiv> \<exists>s. (s,s') \<in> sr \<and> P s"
+
+lemma ex_absI[intro!]:
+  "(s, s') \<in> sr \<Longrightarrow> P s \<Longrightarrow> ex_abs_underlying sr P s'"
+  by (auto simp add: ex_abs_underlying_def)
+
+lemma corres_underlying_split_ex_abs:
+  assumes ac: "corres_underlying srel nf nf' r' G G' a c"
+  assumes bd: "\<forall>rv rv'. r' rv rv' \<longrightarrow>
+                        corres_underlying srel nf nf' r (P rv) (P' rv') (b rv) (d rv')"
+  assumes valid: "\<lbrace>G\<rbrace> a \<lbrace>P\<rbrace>" "\<lbrace>G' and ex_abs_underlying srel G\<rbrace> c \<lbrace>P'\<rbrace>"
+  shows "corres_underlying srel nf nf' r G G' (a >>= (\<lambda>rv. b rv)) (c >>= (\<lambda>rv'. d rv'))"
+  using assms
+  apply (clarsimp simp: corres_underlying_def bind_def)
+  apply (clarsimp simp: Bex_def Ball_def valid_def ex_abs_underlying_def)
+  by meson
+
+lemma hoare_from_abs:
+  assumes corres: "corres_underlying srel nf nf' rrel G G' f f'"
+  assumes cross2: "\<And>s s' r r'. \<lbrakk>(s, s') \<in> srel; rrel r r'; Q r s; S s\<rbrakk> \<Longrightarrow> Q' r' s'"
+  assumes abs_valid: "\<lbrace>P and R\<rbrace> f \<lbrace>\<lambda>rv. Q rv and S\<rbrace>"
+  assumes cross1: "\<And>s s'. \<lbrakk>(s, s') \<in> srel; P' s'; R' s'\<rbrakk> \<Longrightarrow> P s"
+  assumes nf: "nf \<Longrightarrow> no_fail (P and R and G) f"
+  shows "\<lbrace>P' and G' and R' and ex_abs_underlying srel (G and R)\<rbrace> f' \<lbrace>Q'\<rbrace>"
+  using assms
+  apply (clarsimp simp: valid_def ex_abs_underlying_def corres_underlying_def no_fail_def)
+  by fast
+
+lemma hoare_from_abs_inv:
+  assumes abs_valid: "f \<lbrace>P\<rbrace>"
+  assumes cross: "\<And>s s'. (s, s') \<in> srel \<Longrightarrow> P s = P' s'"
+  assumes corres: "corres_underlying srel nf nf' rrel G G' f f'"
+  assumes nf: "nf \<Longrightarrow> no_fail (P and G) f"
+  shows "\<lbrace>P' and G' and ex_abs_underlying srel G\<rbrace> f' \<lbrace>\<lambda>_. P'\<rbrace>"
+  using assms
+  by (fastforce intro: hoare_from_abs[where R=\<top> and S=\<top> and R'=\<top> and Q="\<lambda>_. P" , simplified])
 
 end
