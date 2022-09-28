@@ -1071,13 +1071,6 @@ method corresK_convert = (((drule uncurry)+)?, drule corresK_convert corresK_dro
 
 section \<open>Lifting corres results into wp proofs\<close>
 
-definition
-  "ex_abs_underlying sr P s' \<equiv> \<exists>s. (s,s') \<in> sr \<and> P s"
-
-lemma ex_absI[intro!]:
-  "(s, s') \<in> sr \<Longrightarrow> P s \<Longrightarrow> ex_abs_underlying sr P s'"
-  by (auto simp add: ex_abs_underlying_def)
-
 lemma use_corresK':
   "corres_underlyingK sr False nf' F r PP PP' f f' \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow>
     \<lbrace>K F and PP' and ex_abs_underlying sr (PP and P)\<rbrace> f' \<lbrace>\<lambda>rv' s'. \<exists>rv. r rv rv' \<and> ex_abs_underlying sr (Q rv) s'\<rbrace>"
