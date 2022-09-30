@@ -275,6 +275,11 @@ definition
 where
   "obj_in_ta2 ref s \<equiv> \<exists>ko. f_kheap s ref = Some ko"
 
+definition
+  obj_in_ta2' :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool"
+where
+  "obj_in_ta2' ref s \<equiv> \<exists>ko. ksPSpace s ref = Some ko"
+
 lemma
   "obj_in_ta ref s \<Longrightarrow> obj_in_ta2 ref s"
   unfolding obj_in_ta_def2 obj_in_ta2_def obj_at_def
@@ -287,6 +292,15 @@ abbreviation ta_obj_upd :: "machine_word \<Rightarrow> Structures_A.kernel_objec
 abbreviation ms_ta_obj_upd :: "machine_word \<Rightarrow> Structures_A.kernel_object \<Rightarrow> 'a state \<Rightarrow> 'a state"
   where
   "ms_ta_obj_upd p ko s \<equiv> s \<lparr> machine_state := ta_obj_upd p ko (machine_state s) \<rparr>"
+
+(* New for ExecSpec level. -robs *)
+abbreviation ta_obj_upd' :: "machine_word \<Rightarrow> Structures_H.kernel_object \<Rightarrow> machine_state \<Rightarrow> machine_state"
+  where
+  "ta_obj_upd' p ko ms \<equiv> machine_state.touched_addresses_update ((\<union>) (obj_range' p ko)) ms"
+
+abbreviation ms_ta_obj_upd' :: "machine_word \<Rightarrow> Structures_H.kernel_object \<Rightarrow> kernel_state \<Rightarrow> kernel_state"
+  where
+  "ms_ta_obj_upd' p ko s \<equiv> s \<lparr> ksMachineState := ta_obj_upd' p ko (ksMachineState s) \<rparr>"
 
 (* From Invariants_AI, modified for the new version of get_cap. -robs *)
 definition
@@ -385,7 +399,7 @@ lemma getSlotCap_corres:
   "cte_ptr' = cte_map cte_ptr \<Longrightarrow>
    corres cap_relation
      (cte_at cte_ptr and obj_in_ta2 (fst cte_ptr))
-     (pspace_distinct' and pspace_aligned')
+     (pspace_distinct' and pspace_aligned' and obj_in_ta2' (fst cte_ptr))
      (get_cap_x cte_ptr)
      (getSlotCap cte_ptr')"
   apply (simp add: getSlotCap_def)
@@ -591,11 +605,6 @@ lemma cap_table_at_gsCNodes:
   apply blast
   done
 
-(* FIXME: Need to discuss this and make it consistent with existing calculations for object sizes
-   appearing in, e.g. `placeNewObject'_def` of PSpaceFuns_H.  -robs *)
-definition
-  "objRange p obj \<equiv> {p .. p + 2^objBitsKO obj - 1}"
-
 (* New and experimental: To correspond with touch_object. -robs *)
 thm touch_object_def2
 definition touchObj :: "machine_word \<Rightarrow> unit kernel" where
@@ -603,16 +612,66 @@ definition touchObj :: "machine_word \<Rightarrow> unit kernel" where
      kh <- gets ksPSpace;
      assert (kh ptr \<noteq> None);
      obj <- return $ the $ kh ptr;
-     doMachineOp $ addTouchedAddresses (objRange ptr obj)
+     doMachineOp $ addTouchedAddresses (obj_range' ptr obj)
    od"
 
+(* New for ExecSpec level, adapted from KHeap_A. -robs *)
+term "ms_touched_addresses_update"
+abbreviation
+  ms_touched_addresses'_update :: "(machine_word set \<Rightarrow> machine_word set) \<Rightarrow>
+    kernel_state \<Rightarrow> kernel_state" where
+ "ms_touched_addresses'_update f s \<equiv> s\<lparr>ksMachineState :=
+    machine_state.touched_addresses_update f (ksMachineState s)\<rparr>"
+
+lemma simpler_doMachineOp_getTouchedAddresses_def:
+  "doMachineOp getTouchedAddresses \<equiv> gets (\<lambda>s. machine_state.touched_addresses $ ksMachineState s)"
+  by (clarsimp simp: bind_def doMachineOp_def getTouchedAddresses_def simpler_gets_def
+                        simpler_modify_def select_f_def return_def)
+
+lemma simpler_doMachineOp_addTouchedAddresses_def:
+  "doMachineOp (addTouchedAddresses S) \<equiv> modify (\<lambda>s. s\<lparr>ms_touched_addresses' := S \<union> machine_state.touched_addresses (ksMachineState s)\<rparr>)"
+  by (clarsimp simp: doMachineOp_def bind_def addTouchedAddresses_def simpler_gets_def
+                        simpler_modify_def select_f_def return_def)
+
+lemma dmo_addTouchedAddresses_wp':
+  "\<lbrace>\<lambda>s. Q () (ms_touched_addresses'_update (\<lambda>ta. S \<union> ta) s)\<rbrace> doMachineOp (addTouchedAddresses S) \<lbrace>Q\<rbrace>"
+  apply (simp add: simpler_doMachineOp_addTouchedAddresses_def)
+  apply (wp select_f_wp)
+  apply (case_tac "ksMachineState s", simp)
+  done
+
+(* XXX: Not sure how to deal with the uncertainty of the type of `ko` here.
+   Declaring its type as below doesn't seem to work... -robs
+term ko_at
+term ko_at'
+lemma touchObj_wp:
+  "\<lbrace>\<lambda>s. \<forall>ko. (ko_at'::(Structures_H.kernel_object \<Rightarrow> obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool))
+      (ko::Structures_H.kernel_object) p s \<longrightarrow> Q () (ms_ta_obj_upd' p ko s) \<rbrace>
+   touchObj p \<lbrace>Q\<rbrace>"
+  apply (wpsimp simp:touch_object_def2 wp: dmo_addTouchedAddresses_wp)
+  apply (clarsimp simp:obj_at_def)
+  done
+*)
+
+lemma touchObj_wp':
+  "\<lbrace>\<lambda>s. Q () (ms_ta_obj_upd' p (the (ksPSpace s p)) s) \<rbrace>
+   touchObj p \<lbrace>Q\<rbrace>"
+  apply(wpsimp simp:touchObj_def wp:dmo_addTouchedAddresses_wp')
+  done
+
+thm touch_object_wp touch_object_wp'
 thm get_cap_corres
+term ko_at
+term "ko_at'"
 (* FIXME: Generalise for any kernel object, not just ones that are of a valid CNodeCap. -robs *)
 lemma touchObj_corres:
   "corres (=)
      (valid_objs and pspace_aligned and valid_cap (cap.CNodeCap ptr cbits guard))
+      \<comment> \<open> Hang on. Shouldn't this be trivial when the object *is* on the kheap? -robs
+      (\<lambda>s. (obj_in_ta2 ptr) (ms_ta_obj_upd ptr (the (kheap s ptr)) s))) \<close>
      (valid_objs' and pspace_distinct' and pspace_aligned' and
       valid_cap' (capability.CNodeCap ptr cbits (of_bl guard) (length guard)))
+      \<comment> \<open> (\<lambda>s. (obj_in_ta2' ptr) (ms_ta_obj_upd' ptr (the (ksPSpace s ptr)) s))) \<close>
      (touch_object ptr)
      (touchObj ptr)"
   apply (simp add: touchObj_def touch_object_def2)
@@ -798,69 +857,75 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
         apply (rule corres_initial_splitE)
            apply clarsimp
            apply (rule corres_guard_imp)
-             (* FIXME: Propagate the guards we'll need for getSlotCap across
-                this part of the proof that deals with touchObj. -robs *)
              apply(rule touchObj_corres)
             apply assumption
            apply assumption
-        (* FIXME: Re-indent after figuring this out. -robs *)
-        apply (rule corres_initial_splitE)
-           apply clarsimp
-           (* FIXME: New goal: We should be getting this somehow from touch_object. *)
-           apply(subgoal_tac "obj_in_ta2 ptr s")
-            prefer 2 defer
-           apply (rule corres_guard_imp)
-             apply (rule getSlotCap_corres)
-             apply (simp add: objBits_simps cte_level_bits_def)
-             apply (erule (1) cte_map_shift)
+          apply (rule corres_initial_splitE)
+             apply clarsimp
+             apply (rule corres_guard_imp)
+               apply (rule getSlotCap_corres)
+               apply (simp add: objBits_simps cte_level_bits_def)
+               apply (erule (1) cte_map_shift)
+                 apply simp
+                apply assumption
+               apply (simp add: cte_level_bits_def)
+              apply clarsimp
+              apply (clarsimp simp: valid_cap_def)
+              apply(rule conj_forward)
+                apply simp
+               apply (erule cap_table_at_cte_at)
                apply simp
-              apply assumption
-             apply (simp add: cte_level_bits_def)
-            apply clarsimp
-            apply (clarsimp simp: valid_cap_def)
-            (* FIXME: New goal: We should know that get_cap preserves this. *)
-            apply(subgoal_tac "obj_in_ta2 ptr sa")
-             prefer 2 defer
-            apply clarsimp
-            apply (erule cap_table_at_cte_at)
-            apply simp
-           apply clarsimp
-           apply simp (* XXX: Probably not the unification we want, still missing stuff. -robs *)
-          apply clarsimp
-          apply(rename_tac rv rv')
-          apply (case_tac "is_cnode_cap rv")
-           prefer 2
-           apply (simp add: cnode_cap_case_if)
-           apply (rule corres_noopE)
-            prefer 2
-            apply (rule no_fail_pre, rule no_fail_returnOK)
-            apply (rule TrueI)
-           prefer 2
-           apply (simp add: unlessE_whenE cnode_cap_case_if)
-           apply (rule IH, (simp_all)[9])
-            apply clarsimp
-           apply (drule postfix_dropD)
-           apply clarsimp
-           apply (subgoal_tac "64 + (cbits + length guard) - length cref = (cbits + length guard) + (64 - length cref)")
-            prefer 2
-            apply (drule len_drop_lemma)
+              apply simp
+             apply clarsimp
              apply simp
-            apply arith
-           apply simp
-           apply (subst drop_drop [symmetric])
-           apply simp
-          apply wp
-          apply (clarsimp simp: objBits_simps cte_level_bits_def)
-          apply (erule (1) cte_map_shift)
-            apply simp
-           apply assumption
-          apply (simp add: cte_level_bits_def)
-         apply (wp get_cap_x_wp)
-         apply clarsimp
-         . (* DOWN TO HERE
-         apply (erule (1) cte_wp_valid_cap)
-        apply wpsimp
-        done
+            apply clarsimp
+            apply(rename_tac rv rv')
+            apply (case_tac "is_cnode_cap rv")
+             prefer 2
+             apply (simp add: cnode_cap_case_if)
+             apply (rule corres_noopE)
+              prefer 2
+              apply (rule no_fail_pre, rule no_fail_returnOK)
+              apply (rule TrueI)
+             prefer 2
+             apply (simp add: unlessE_whenE cnode_cap_case_if)
+             apply (rule IH, (simp_all)[9])
+              apply clarsimp
+             apply (drule postfix_dropD)
+             apply clarsimp
+             apply (subgoal_tac "64 + (cbits + length guard) - length cref = (cbits + length guard) + (64 - length cref)")
+              prefer 2
+              apply (drule len_drop_lemma)
+               apply simp
+              apply arith
+             apply simp
+             apply (subst drop_drop [symmetric])
+             apply simp
+            apply wp
+            apply (clarsimp simp: objBits_simps cte_level_bits_def)
+            apply (erule (1) cte_map_shift)
+              apply simp
+             apply assumption
+            apply (simp add: cte_level_bits_def)
+           apply (wp get_cap_x_wp)
+           apply clarsimp
+           defer (* FIXME: Why do we have these for s' but not for sa?
+           apply (erule (1) cte_wp_valid_cap)
+           *)
+          apply wpsimp
+          defer (* FIXME: Same here *)
+         apply (wpsimp wp:touch_object_wp)
+         apply(rule conjI)
+          apply(meson RISCV64.valid_cap_simps)
+         (* This hypothetical "the object would be in the TA if we were to add it" is immediate
+            when the object is on the kheap at that address. *)
+         apply(clarsimp simp:obj_in_ta2_def obind_def obj_at_def split:option.splits)
+        apply (wpsimp wp:touchObj_wp')
+        (* Again, this is immediate. *)
+        apply(clarsimp simp:obj_in_ta2'_def valid_cap'_def obj_at'_def)
+        apply(erule_tac x=0 in allE)
+        apply clarsimp
+. (* DOWN TO HERE
     }
     ultimately
     show ?thesis by fast
