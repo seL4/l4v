@@ -121,7 +121,7 @@ lemma set_cap_obj_at_impossible:
      set_cap cap ptr
    \<lbrace>\<lambda>rv s. P (obj_at P' p s)\<rbrace>"
   apply (simp add: set_cap_def split_def set_object_def)
-  apply (wp get_object_wp | wpc)+
+  apply (wp get_object_wp touch_object_wp | wpc)+
   apply (clarsimp simp: obj_at_def)
   apply (subgoal_tac "\<forall>sz cs. well_formed_cnode_n sz cs \<longrightarrow> \<not> P' (CNode sz cs)")
    apply (subgoal_tac "\<forall>tcb. \<not> P' (TCB tcb)")

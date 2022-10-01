@@ -65,12 +65,17 @@ locale TcbAcc_AI_arch_tcb_context_set_eq =
   assumes arch_tcb_context_set_eq[simp]:
     "\<And> t. arch_tcb_context_set (arch_tcb_context_get t) t = t"
 
+ (*FIXME: This is *definitely* not true. This suggests I need to kick
+     touch_object out of *both* thread_get *and* as_user to their callers,
+     but not one without the other; then, what about as_user's TCB update? -robs.
+
+  update: i don't see this being used anywhere. i assume it is used somehow, but
+  for now i'll leave it commented and see what breaks.
+
 lemma (in TcbAcc_AI_arch_tcb_context_set_eq) thread_get_as_user:
   "thread_get (arch_tcb_context_get o tcb_arch) t = as_user t get"
   apply (simp add: thread_get_def as_user_def)
-. (* DOWN TO HERE. This is *definitely* not true. This suggests I need to kick
-     touch_object out of *both* thread_get *and* as_user to their callers,
-     but not one without the other; then, what about as_user's TCB update? -robs.
+
 
   apply (rule bind_cong [OF refl])
   apply (clarsimp simp: gets_the_member set_object_def get_object_def in_monad bind_assoc
@@ -78,7 +83,7 @@ lemma (in TcbAcc_AI_arch_tcb_context_set_eq) thread_get_as_user:
                  dest!: get_tcb_SomeD)
   apply (subgoal_tac "kheap s(t \<mapsto> TCB v) = kheap s", simp)
   apply fastforce
-  done
+  done *)
 
 lemma thread_set_as_user:
   "thread_set (\<lambda>tcb. tcb \<lparr> tcb_arch := arch_tcb_context_set (f $ arch_tcb_context_get (tcb_arch tcb)) (tcb_arch tcb) \<rparr>) t
@@ -111,10 +116,10 @@ lemma ball_tcb_cap_casesI:
 lemma thread_set_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> thread_set f p' \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
   apply (simp add: thread_set_def set_object_def get_object_def)
-  apply wp
+  apply (wp touch_object_wp')
   apply clarsimp
   apply (drule get_tcb_SomeD)
-  apply (clarsimp simp: obj_at_def a_type_def)
+  apply (clarsimp simp: obj_at_def a_type_def ta_filter_def)
   done
 
 
@@ -126,12 +131,12 @@ lemma thread_set_no_change_tcb_pred:
   assumes x: "\<And>tcb. proj (tcb_to_itcb (f tcb))    = proj (tcb_to_itcb tcb)"
   shows      "\<lbrace>pred_tcb_at proj P t\<rbrace> thread_set f t' \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
   apply (simp add: thread_set_def pred_tcb_at_def)
-  apply wp
+  apply (wp touch_object_wp)
    apply (rule set_object_at_obj)
-  apply wp
+  apply (wpsimp wp: touch_object_wp')+
   apply (clarsimp simp: obj_at_def)
   apply (drule get_tcb_SomeD)
-  apply (clarsimp simp: x)
+  apply (clarsimp simp: x ta_filter_def)
   done
 
 lemmas thread_set_no_change_tcb_state=thread_set_no_change_tcb_pred[where proj="itcb_state",simplified]
@@ -141,9 +146,10 @@ lemmas thread_set_no_change_tcb_bound_notification = thread_set_no_change_tcb_pr
 lemma thread_set_no_change_tcb_pred_converse:
   assumes x: "\<And>tcb. proj (tcb_to_itcb (f tcb)) = proj (tcb_to_itcb tcb)"
   shows      "\<lbrace>\<lambda>s. \<not> pred_tcb_at proj P t s\<rbrace> thread_set f t' \<lbrace>\<lambda>rv s. \<not> pred_tcb_at proj P t s\<rbrace>"
-  apply (wpsimp wp: set_object_wp
+  apply (wpsimp wp: set_object_wp touch_object_wp'
               simp: thread_set_def pred_tcb_at_def obj_at_def)
-  by (simp add: get_tcb_SomeD x)
+  using ko_atD x apply fastforce
+  done
 
 
 lemmas thread_set_no_change_tcb_state_converse=
@@ -200,13 +206,15 @@ lemma thread_set_valid_objs_triv:
   shows "\<lbrace>valid_objs\<rbrace> thread_set f t \<lbrace>\<lambda>rv. valid_objs :: 'z::state_ext state \<Rightarrow> bool\<rbrace>"
   using bspec [OF x, OF tcb_ipcframe_in_cases]
   apply (simp add: thread_set_def)
-  apply wp
+  apply (wp touch_object_wp')
   apply clarsimp
   apply (drule get_tcb_SomeD)
+  apply clarsimp
   apply (erule (1) pspace_valid_objsE)
   apply (clarsimp simp add: valid_obj_def valid_tcb_def valid_bound_ntfn_def z
                             split_paired_Ball obj_at_def c
                             a_type_def bspec_split[OF x])
+  
   apply (rule conjI)
    apply (elim allEI)
    apply auto[1]

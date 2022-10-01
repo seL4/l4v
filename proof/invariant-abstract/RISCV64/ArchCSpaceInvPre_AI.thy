@@ -385,7 +385,7 @@ lemma set_cap_hyp_refs_of [wp]:
   set_cap cp p
   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
   apply (simp add: set_cap_def set_object_def split_def)
-  apply (wp get_object_wp | wpc)+
+  apply (wp get_object_wp touch_object_wp | wpc)+
   by (force elim!: rsubst[where P=P]
             simp: state_hyp_refs_of_def obj_at_def
             split: if_split_asm)

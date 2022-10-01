@@ -90,21 +90,24 @@ where
      touch_object ptr
    od"
 
-abbreviation
-  ms_touched_addresses_update :: "(machine_word set \<Rightarrow> machine_word set) \<Rightarrow>
+abbreviation (input)
+  ms_ta_update  :: "(machine_word set \<Rightarrow> machine_word set) \<Rightarrow>
     'a abstract_state_scheme \<Rightarrow> 'a abstract_state_scheme" where
- "ms_touched_addresses_update f s \<equiv> s\<lparr>machine_state :=
-    machine_state.touched_addresses_update f (machine_state s)\<rparr>"
+ "ms_ta_update f \<equiv> \<lambda>s. machine_state_update (machine_state.touched_addresses_update f) s"
 
 lemma simpler_do_machine_op_getTouchedAddresses_def:
   "do_machine_op getTouchedAddresses \<equiv> gets (\<lambda>s. machine_state.touched_addresses $ machine_state s)"
   by (clarsimp simp: bind_def do_machine_op_def getTouchedAddresses_def simpler_gets_def
                         simpler_modify_def select_f_def return_def)
 
+lemma machine_state_update_normalise [simp]:
+  "s\<lparr>machine_state := f (machine_state s)\<rparr> = machine_state_update f s"
+  by simp
+
 lemma simpler_do_machine_op_addTouchedAddresses_def:
-  "do_machine_op (addTouchedAddresses S) \<equiv> modify (\<lambda>s. s\<lparr>ms_touched_addresses := S \<union> machine_state.touched_addresses (machine_state s)\<rparr>)"
+  "do_machine_op (addTouchedAddresses S) \<equiv> modify (ms_ta_update ((\<union>) S))"
   by (clarsimp simp: do_machine_op_def bind_def addTouchedAddresses_def simpler_gets_def
-                        simpler_modify_def select_f_def return_def)
+                       simpler_modify_def select_f_def return_def)
 
 section "TCBs"
 

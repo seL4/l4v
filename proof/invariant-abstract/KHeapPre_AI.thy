@@ -111,34 +111,45 @@ locale arch_only_obj_pred =
   fixes P :: "kernel_object \<Rightarrow> bool"
   assumes arch_only: "arch_obj_pred P"
 
-lemma dmo_addTouchedAddresses_wp[wp]:
-  "\<lbrace>\<lambda>s. Q () (ms_touched_addresses_update ((\<union>) S) s)\<rbrace> do_machine_op (addTouchedAddresses S) \<lbrace>Q\<rbrace>"
-  apply (simp add: simpler_do_machine_op_addTouchedAddresses_def)
-  apply (wp select_f_wp)
-  apply (case_tac "machine_state s", simp)
+lemma dmo_addTouchedAddresses_wp:
+  "\<lbrace>\<lambda>s. Q () (ms_ta_update ((\<union>) S) s)\<rbrace> do_machine_op (addTouchedAddresses S) \<lbrace>Q\<rbrace>"
+  apply (wpsimp simp: simpler_do_machine_op_addTouchedAddresses_def)
   done
 
-lemma touch_object_wp[wp]:
-  "\<lbrace>\<lambda>s. \<forall>ko. ko_at ko p s \<longrightarrow> Q () (ms_touched_addresses_update ((\<union>) (obj_range p ko)) s) \<rbrace>
+lemma touch_object_wp:
+  "\<lbrace>\<lambda>s. \<forall>ko. ko_at ko p s \<longrightarrow> Q () (ms_ta_update ((\<union>) (obj_range p ko)) s) \<rbrace>
    touch_object p \<lbrace>Q\<rbrace>"
   apply (wpsimp simp:touch_object_def2 wp: dmo_addTouchedAddresses_wp)
   apply (clarsimp simp:obj_at_def)
   done
 
-lemma touch_object_wp'[wp]:
-  "\<lbrace>\<lambda>s. Q () (ms_touched_addresses_update ((\<union>) (obj_range p (the (kheap s p)))) s) \<rbrace>
+lemma touch_object_wp':
+  "\<lbrace>\<lambda>s. Q () (ms_ta_update ((\<union>) (obj_range p (the (kheap s p)))) s) \<rbrace>
    touch_object p \<lbrace>Q\<rbrace>"
   apply (wp touch_object_wp)
   apply (clarsimp simp:obj_at_def)
   done
 
+lemma touch_objects_wp:
+  "\<lbrace>\<lambda>s. Q () (ms_ta_update ((\<union>) (\<Union>(p, ko)\<in>{(p, ko). p\<in>P \<and> ko_at ko p s}. obj_range p ko)) s) \<rbrace>
+   touch_objects P \<lbrace>Q\<rbrace>"
+  apply (wpsimp simp:touch_objects_def wp: dmo_addTouchedAddresses_wp)
+  apply (clarsimp simp:obj_at_def)
+  done
+
+lemma touch_objects_wp':
+  "\<lbrace>\<lambda>s. Q () (ms_ta_update ((\<union>) (\<Union>p\<in>P. obj_range p (the (kheap s p)))) s) \<rbrace>
+   touch_objects P \<lbrace>Q\<rbrace>"
+  apply (wp touch_objects_wp)
+  apply (clarsimp simp:obj_at_def)
+  oops
+
 lemma set_object_typ_at [wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p' s)\<rbrace>
   set_object ta_f p ko \<lbrace>\<lambda>rv s. P (typ_at T p' s)\<rbrace>"
   apply (simp add: set_object_def get_object_def)
-  apply wp
+  apply (wp touch_object_wp)
   apply clarsimp
-  apply (erule rsubst [where P=P])
   apply (clarsimp simp: obj_at_def obind_def ta_filter_def split:if_splits)
   done
 
@@ -147,7 +158,7 @@ lemma set_object_neg_ko:
   set_object ta_f p ko
   \<lbrace>\<lambda>_ s. \<not> ko_at ko' p' s\<rbrace>"
   apply (simp add: set_object_def get_object_def)
-  apply wp
+  apply (wp touch_object_wp)
   apply (simp add: pred_neg_def obj_at_def)
   done
 
@@ -194,10 +205,10 @@ lemma hoare_to_pure_kheap_upd:
   by (auto simp add: obj_at_def a_type_def split: kernel_object.splits if_splits)
 
 lemma set_object_wp:
-  "\<lbrace>\<lambda>s. Q (s\<lparr> kheap := kheap s (p \<mapsto> v), machine_state := ta_obj_upd p v (machine_state s)\<rparr>) \<rbrace>
+  "\<lbrace>\<lambda>s. Q (ms_ta_obj_update p v (s\<lparr> kheap := kheap s (p \<mapsto> v)\<rparr>)) \<rbrace>
      set_object ta_f p v \<lbrace>\<lambda>_. Q\<rbrace>"
   apply (simp add: set_object_def get_object_def)
-  apply wp
+  apply (wpsimp wp: touch_object_wp')
   apply (clarsimp simp:fun_upd_def)
   done
 

@@ -24,10 +24,10 @@ declare ranI [intro]
 section "Locale Setup"
 
 definition ta_agnostic :: "('s state \<Rightarrow> bool) \<Rightarrow> bool" where
- "ta_agnostic P \<equiv> \<forall>s ta. P (s\<lparr>ms_touched_addresses := ta\<rparr>) = P s"
+ "ta_agnostic P \<equiv> \<forall>s taf. P (ms_ta_update taf s) = P s"
 
 abbreviation ignore_ta :: "('s state \<Rightarrow> bool) \<Rightarrow> ('s state \<Rightarrow> bool)" where
-  "ignore_ta P \<equiv> \<lambda>s. \<forall>ta. P (s\<lparr>ms_touched_addresses := ta\<rparr>)"
+  "ignore_ta P \<equiv> \<lambda>s. \<forall>taf. P (ms_ta_update taf s)"
 
 
 \<comment> \<open>A locale for monads m that only change the TA set\<close>
@@ -72,7 +72,7 @@ lemma validE_tainv[wp]:
 
 lemma validE_R_tainv[wp]:
   "\<lbrace>ignore_ta P\<rbrace> m \<lbrace>\<lambda>_. ignore_ta P\<rbrace>, -"
-  by (clarsimp simp: agnostic_preserved ta_agnostic_def valid_validE_R)
+  by (simp add: tainv valid_validE_R)
 
 lemma agnostic_preservedE_R:
   "ta_agnostic P \<Longrightarrow> \<lbrace>P\<rbrace> m \<lbrace>\<lambda>_. P\<rbrace>, -"
@@ -96,6 +96,22 @@ sublocale touched_addresses_invE \<subseteq> touched_addresses_inv
 term "state_ext"
 term "state_ext state"
 
+(* these have been removed, as we are trying to avoid certain notations that do not
+   simplify nicely.
+abbreviation ta_obj_upd :: "machine_word \<Rightarrow> kernel_object \<Rightarrow> machine_state \<Rightarrow> machine_state"
+  where
+  "ta_obj_upd p ko ms \<equiv> machine_state.touched_addresses_update ((\<union>) (obj_range p ko)) ms"
+
+abbreviation ms_ta_obj_upd :: "machine_word \<Rightarrow> kernel_object \<Rightarrow> 'a state \<Rightarrow> 'a state"
+  where
+  "ms_ta_obj_upd p ko s \<equiv> s \<lparr> machine_state := ta_obj_upd p ko (machine_state s) \<rparr>"
+*)
+
+abbreviation ms_ta_obj_update :: "machine_word \<Rightarrow> kernel_object \<Rightarrow> 'a state \<Rightarrow> 'a state"
+  where
+  "ms_ta_obj_update p ko s \<equiv> ms_ta_update ((\<union>) (obj_range p ko)) s"
+
+
 \<comment> \<open>A locale for propositions P that don't care about the TA set (ta_agnostic P),
    relative to a monad m that only changes TA (via locale touched_addresses_inv).
    Instantiate this locale to add a rule to the [wp] set that says m preserves P. \<close>
@@ -108,6 +124,11 @@ begin
 lemma m_inv [wp]:
   "m \<lbrace>P\<rbrace>"
   by (rule agnostic_preserved [OF ta_agnostic])
+
+lemma use_ta_agnostic [simp]:
+  "P (ms_ta_update taf s) = P s"
+  by (meson ta_agnostic ta_agnostic_def)
+
 end
 
 locale pspace_update_eq =

@@ -103,34 +103,6 @@ crunch inv[wp]: get_cap "P"
 
 declare resolve_address_bits'.simps [simp del]
 
-crunches getTouchedAddresses
-  for inv[wp]: "P"
-
-lemma dmo_getTouchedAddresses_inv[wp]:
- "do_machine_op getTouchedAddresses \<lbrace>P\<rbrace>"
-  apply (wpsimp simp: simpler_do_machine_op_getTouchedAddresses_def in_gets)
-  done
-
-lemma dmo_addTouchedAddresses_tainv[wp]:
- "do_machine_op (addTouchedAddresses S) \<lbrace>ignore_ta P\<rbrace>"
-  apply (wpsimp simp: addTouchedAddresses_def do_machine_op_def in_modify)
-  done
-
-(* FIXME: For timeprot-touch-objs. Is it better to have the wp rule with the modified
-   precondition, or revert to using the tainv version?
-   For now I'm removing these from the [wp] set, so subsequent proofs using
-   @scottbuckley's framework are preserved. -robs *)
-declare touch_object_wp' [wp del]
-declare touch_object_wp [wp del]
-
-crunches touch_object
-  for tainv[wp]: "ignore_ta P"
-  (ignore: do_machine_op)
-
-interpretation touch_object_tainv:
-  touched_addresses_inv _ "touch_object obj"
-  by unfold_locales wpsimp
-
 lemma rab_tainv[wp]:
   "resolve_address_bits slot \<lbrace>ignore_ta P\<rbrace>"
 unfolding resolve_address_bits_def
@@ -293,9 +265,7 @@ lemma ifunsafe_tcb_update:
                    simp: cte_wp_at_after_update fun_upd_def)
   apply (clarsimp simp: cte_wp_at_caps_of_state
                         ex_cte_cap_to_after_update)
-  sorry (* FIXME: Broken by timeprot-touch-objs. -robs
   done
-*)
 
 
 lemma zombies_tcb_update:
@@ -793,27 +763,31 @@ lemma set_cap_globals [wp]:
 
 
 lemma set_cap_pspace:
-  assumes x: "\<And>s f'. f (kheap_update f' s) = f s"
+  assumes x: "\<And>s f' f''. f (ms_ta_update f'' (kheap_update f' s)) = f s"
 (* FIXME: For timeprot-touch-objs. -robs
    This makes the old proof work with the new set_object_wp, but is this what we want?
    It breaks the proofs of a number of the `set_cap_rvk_cdt_ct_ms` lemmas below.
   assumes x: "\<And>s v. f (s \<lparr> kheap := kheap s (fst cap \<mapsto> v),
     machine_state := ta_obj_upd (fst cap) v (machine_state s) \<rparr>) = f s"
+
+  UPDATE: don't need to add an extra assumption, but added an ms_ta_update to the existing
+  assumption. This works (and is true) now. The order of the ms_ta_update and the kheap_update
+  might need to be changed, we'll see. -scottb
 *)
   shows      "\<lbrace>\<lambda>s. P (f s)\<rbrace> set_cap p cap \<lbrace>\<lambda>rv s. P (f s)\<rbrace>"
   apply (simp add: set_cap_def split_def)
   apply (rule hoare_seq_ext [OF _ get_object_sp])
   apply (case_tac obj, simp_all split del: if_split cong: if_cong)
    apply (wpsimp wp: set_object_wp simp: x)+
-  sorry (* FIXME: Broken by timeprot-touch-objs. -robs
   done
-*)
 
-
+(*FIXME: The lemma
+    "\<lbrace>\<lambda>s. R (machine_state s)\<rbrace> set_cap p cap \<lbrace>\<lambda>rv s. R (machine_state s)\<rbrace>"
+  is no longer true, as set_cap will update touched_addresses, which is part of machine_state.
+  we might need to add versions of this for more specific parts of the machine_state. -scottb. *)
 lemma set_cap_rvk_cdt_ct_ms[wp]:
   "\<lbrace>\<lambda>s. P (is_original_cap s)\<rbrace> set_cap p cap \<lbrace>\<lambda>rv s. P (is_original_cap s)\<rbrace>"
   "\<lbrace>\<lambda>s. Q (cur_thread s)\<rbrace> set_cap p cap \<lbrace>\<lambda>rv s. Q (cur_thread s)\<rbrace>"
-  "\<lbrace>\<lambda>s. R (machine_state s)\<rbrace> set_cap p cap \<lbrace>\<lambda>rv s. R (machine_state s)\<rbrace>"
   "\<lbrace>\<lambda>s. S (cdt s)\<rbrace> set_cap p cap \<lbrace>\<lambda>rv s. S (cdt s)\<rbrace>"
   "\<lbrace>\<lambda>s. T (idle_thread s)\<rbrace> set_cap p cap \<lbrace>\<lambda>rv s. T (idle_thread s)\<rbrace>"
   "\<lbrace>\<lambda>s. U (arch_state s)\<rbrace> set_cap p cap \<lbrace>\<lambda>rv s. U (arch_state s)\<rbrace>"
@@ -1406,13 +1380,17 @@ lemma arch_obj_caps_of:
 
 lemma get_cap_wp:
   "\<lbrace>\<lambda>s. \<forall>cap. cte_wp_at ((=) cap) p s \<longrightarrow> Q cap s\<rbrace> get_cap ta_f p \<lbrace>Q\<rbrace>"
-  apply (case_tac ta_f)
+  apply (case_tac ta_f; clarsimp)
    defer
   apply (clarsimp simp: valid_def cte_wp_at_def)
   apply (frule in_inv_by_hoareD [OF get_cap_inv])
   apply (drule get_cap_det)
   apply simp
-  sorry (* FIXME: Broken by timeprot-touch-objs. -robs
+  apply (clarsimp simp: valid_def cte_wp_at_def)
+  apply (frule in_inv_by_hoareD [OF get_cap_inv])
+  apply (drule get_cap_det)
+  apply simp
+  sorry (* FIXME: Broken by timeprot-touch-objs. -robs checked -scottb
     Pretty sure we'll need this for the ta_f=True case, but so far we've been proving
     many of the lemmas we'd need here only for the ta_f=False case.
   done
@@ -1452,7 +1430,7 @@ lemma cap_insert_irq_handlers[wp]:
   apply (simp add: cap_insert_def set_untyped_cap_as_full_def
                    update_cdt_def set_cdt_def set_original_def)
   apply (wp | simp split del: if_split)+
-      sorry (* FIXME: Broken by timeprot-touch-objs. -robs
+      sorry (* FIXME: Broken by timeprot-touch-objs. -robs checked -scottb
       apply (wp set_cap_irq_handlers get_cap_wp)+
       apply (clarsimp simp: is_cap_simps)
       apply (wp set_cap_cte_wp_at get_cap_wp)+
@@ -1554,7 +1532,7 @@ lemma thread_set_mdb:
   apply (rule valid_mdb_lift)
     apply wp
     apply clarsimp
-    sorry (* FIXME: Broken by timeprot-touch-objs. -robs
+    sorry (* FIXME: Broken by timeprot-touch-objs. -robs checked -scottb
     apply (subst caps_of_state_after_update)
      apply (clarsimp simp: c)
     apply simp
@@ -1606,11 +1584,12 @@ lemma set_cap_pspace_respects_device[wp]:
 
 lemma set_cap_cap_refs_respects_device_region:
   "\<lbrace>cap_refs_respects_device_region
-     and (\<lambda>s. \<exists>ptr. cte_wp_at (\<lambda>c. cap_range cap \<subseteq> cap_range c \<and>((cap_range cap \<noteq> {}) \<longrightarrow> cap_is_device cap = cap_is_device c)) ptr s)\<rbrace>
+     and (\<lambda>s. \<exists>ptr. cte_wp_at (\<lambda>c. cap_range cap \<subseteq> cap_range c \<and>((cap_range cap \<noteq> {}) \<longrightarrow>
+                      cap_is_device cap = cap_is_device c)) ptr s)\<rbrace>
      set_cap cap p
    \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
   apply (simp add: cap_refs_respects_device_region_def cap_range_respects_device_region_def)
-  apply (rule hoare_pre)
+  sorry (* FIXME: Broken by timeprot-touch-objs. -scottb
   apply wps
   apply (simp add: cte_wp_at_caps_of_state)
   apply (wp hoare_vcg_all_lift)
@@ -1622,7 +1601,7 @@ lemma set_cap_cap_refs_respects_device_region:
    apply (clarsimp simp: cte_wp_at_caps_of_state)
    apply fastforce
   apply (clarsimp simp: cte_wp_at_caps_of_state)
-  done
+  done *)
 
 lemma set_cap_cap_refs_respects_device_region_spec:
   "\<lbrace>cap_refs_respects_device_region
@@ -1639,6 +1618,7 @@ lemma set_cap_cap_refs_respects_device_region_NullCap:
    \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
   apply (simp add: cap_refs_respects_device_region_def cap_range_respects_device_region_def)
   apply (rule hoare_pre)
+  sorry (*FIXME: broken by touched-addrs -scottb
   apply wps
   apply (simp add: cte_wp_at_caps_of_state )
   apply (wp hoare_vcg_all_lift)
@@ -1646,7 +1626,7 @@ lemma set_cap_cap_refs_respects_device_region_NullCap:
   apply (drule_tac x = x in spec)
   apply (drule_tac x = xa in spec)
   apply (clarsimp simp: cte_wp_at_caps_of_state)
-  done
+  done *)
 
 lemma replaceable_cap_range:
  "replaceable s p cap c \<Longrightarrow> cap_range cap \<subseteq> cap_range c"
@@ -1869,7 +1849,7 @@ lemma cap_insert_zombies:
        apply (clarsimp simp: is_cap_simps)
        apply (wp set_cap_zombies get_cap_wp set_cap_cte_wp_at hoare_allI)+
   apply (clarsimp simp: is_cap_simps free_index_update_def cte_wp_at_caps_of_state | rule conjI)+
-  sorry (* FIXME: Broken by timeprot-touch-objs. -robs
+  sorry (* FIXME: Broken by timeprot-touch-objs. -robs checked -scottb
   done
 *)
 
@@ -1911,20 +1891,21 @@ lemma ex_nonz_cap_to_more_update[iff]:
   "ex_nonz_cap_to w (trans_state f s) = ex_nonz_cap_to w s"
    by (simp add: ex_nonz_cap_to_def)
 
+sublocale touched_addresses_inv \<subseteq> ex_cap:touched_addresses_P_inv _ _ "ex_nonz_cap_to a"
+  by unfold_locales (clarsimp simp: ta_agnostic_def ex_nonz_cap_to_def)
+
 lemma cap_insert_ex_cap:
   "\<lbrace>ex_nonz_cap_to p\<rbrace>
      cap_insert cap src dest
    \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
   apply (simp add: cap_insert_def)
-  apply (wp|simp split del: if_split)+
+  apply (wp touch_object_wp|simp split del: if_split)+
         apply (wp set_cap_cap_to get_cap_wp set_cap_cte_wp_at set_untyped_cap_as_full_cte_wp_at)+
      apply (clarsimp simp: set_untyped_cap_as_full_def split del: if_split)
-     apply (wp set_cap_cap_to get_cap_wp)+
+     apply (wp set_cap_cap_to get_cap_wp touch_object_wp)+
   apply (clarsimp elim!: cte_wp_at_weakenE simp: is_cap_simps cte_wp_at_caps_of_state)
-  sorry (* FIXME: Broken by timeprot-touch-objs. -robs
   apply (simp add: masked_as_full_def)
   done
-*)
 
 
 lemma cap_insert_iflive:
@@ -1958,6 +1939,8 @@ lemma if_unsafe_then_cap_more_update[iff]:
   "if_unsafe_then_cap (trans_state f s) = if_unsafe_then_cap s"
   by (simp add: if_unsafe_then_cap_def)
 
+sublocale touched_addresses_inv \<subseteq> ex_cte_cap_wp_to:touched_addresses_P_inv _ _ "ex_cte_cap_wp_to a b"
+  by unfold_locales (clarsimp simp: ta_agnostic_def ex_cte_cap_wp_to_def)
 
 lemma cap_insert_ifunsafe:
   "\<lbrace>if_unsafe_then_cap and
@@ -1965,17 +1948,15 @@ lemma cap_insert_ifunsafe:
      cap_insert cap src dest
    \<lbrace>\<lambda>rv. if_unsafe_then_cap\<rbrace>"
   apply (simp add: cap_insert_def)
-  apply (wp get_cap_wp | simp split del: if_split)+
+  apply (wp get_cap_wp touch_object_wp | simp split del: if_split)+
       apply (rule new_cap_ifunsafe)
      apply (simp add: set_untyped_cap_as_full_def split del: if_split)
-     apply (wp set_cap_cte_wp_at set_cap_ifunsafe set_cap_cte_cap_wp_to get_cap_wp)+
+     apply (wp set_cap_cte_wp_at set_cap_ifunsafe set_cap_cte_cap_wp_to get_cap_wp touch_object_wp)+
   apply (clarsimp simp: is_cap_simps cte_wp_at_caps_of_state)
-  sorry (* FIXME: Broken by timeprot-touch-objs. -robs
+  apply (rule conjI; clarsimp)
   apply (rule untyped_cap_update_ex_cte_cap_wp_to)
      apply (simp add: free_index_update_def)+
   done
-*)
-
 
 lemma cap_insert_tcb:
  "\<lbrace>tcb_at t\<rbrace>
@@ -2121,22 +2102,23 @@ lemma set_untyped_cap_as_full_tcb_cap_valid:
   "\<lbrace>tcb_cap_valid cap dest\<rbrace>
    set_untyped_cap_as_full src_cap cap src
    \<lbrace>\<lambda>rv s. tcb_cap_valid cap dest s\<rbrace>"
-  apply (clarsimp simp: set_untyped_cap_as_full_def valid_def tcb_cap_valid_def)
+  apply (clarsimp simp: set_untyped_cap_as_full_def valid_def tcb_cap_valid_def touch_object_def2
+                        simpler_do_machine_op_addTouchedAddresses_def simpler_gets_def
+                        simpler_modify_def bind_def assert_def return_def)
   apply (intro conjI impI allI ballI)
-    apply (case_tac "tcb_at (fst dest) s")
-      apply clarsimp
-      apply (intro conjI impI allI)
-      sorry (* FIXME: Broken by timeprot-touch-objs. -robs
-      apply (drule use_valid[OF _ set_cap_pred_tcb],simp+)
-        apply (clarsimp simp: valid_ipc_buffer_cap_def is_cap_simps)
-        apply (fastforce simp: tcb_at_def obj_at_def is_tcb)
-    apply (clarsimp simp: tcb_at_typ)
-    apply (drule use_valid[OF _ set_cap_typ_at])
-      apply (assumption)
-      apply simp
-  apply (clarsimp simp: return_def)
+   prefer 2
+   apply (simp add: in_fail)
+  apply (clarsimp split:prod.splits)
+  apply (case_tac "tcb_at (fst dest) s"; clarsimp)
+   apply (intro conjI impI allI)
+    apply (drule use_valid[OF _ set_cap_pred_tcb],simp+)
+   apply (clarsimp simp: valid_ipc_buffer_cap_def is_cap_simps)
+   apply (fastforce simp: tcb_at_def obj_at_def is_tcb)
+  apply (clarsimp simp: tcb_at_typ)
+  apply (drule use_valid[OF _ set_cap_typ_at [where P=Not]])
+   apply simp
+  apply simp
   done
-*)
 
 
 lemma cap_insert_objs [wp]:
@@ -2146,10 +2128,10 @@ lemma cap_insert_objs [wp]:
   apply (simp add: cap_insert_def set_cdt_def update_cdt_def)
   apply (wp set_cap_valid_objs set_cap_valid_cap set_untyped_cap_as_full_valid_cap
     set_untyped_cap_full_valid_objs get_cap_wp set_untyped_cap_as_full_tcb_cap_valid
+    touch_object_wp
     | simp split del: if_split)+
-  sorry (* FIXME: Broken by timeprot-touch-objs. -robs
+  apply (simp add: tcb_cap_valid_def)
   done
-*)
 
 crunch pred_tcb_at[wp]: cap_insert, set_cdt "pred_tcb_at proj P t"
   (wp: hoare_drop_imps)

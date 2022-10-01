@@ -12,10 +12,8 @@ lemmas crunch_wps = hoare_drop_imps mapM_wp' mapM_x_wp'
 
 lemmas crunch_simps = split_def whenE_def unlessE_def Let_def if_fun_split
                       assertE_def zipWithM_mapM zipWithM_x_mapM
-
 lemma in_set_object:
-  "(rv, s') \<in> fst (set_object ta_f ptr obj s) \<Longrightarrow> s' = s \<lparr> kheap := kheap s (ptr \<mapsto> obj),
-     machine_state := ta_obj_upd ptr obj (machine_state s) \<rparr>"
+  "(rv, s') \<in> fst (set_object ta_f ptr obj s) \<Longrightarrow> s' = ms_ta_obj_update ptr obj (s\<lparr> kheap := kheap s (ptr \<mapsto> obj)\<rparr>)"
   by (clarsimp simp: set_object_def get_object_def in_monad
     touch_object_def touch_objects_def simpler_do_machine_op_addTouchedAddresses_def)
 

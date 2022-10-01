@@ -305,8 +305,7 @@ lemma set_pt_pts_of:
 (* Note: Proved this to use in store_pte_ptes_of but, although it resulted in different
    intermediate proof state, it ultimately made no difference for that proof. -robs *)
 lemma set_pt_wp:
-  "\<lbrace>\<lambda>s. Q (s\<lparr> kheap := kheap s (p \<mapsto> (ArchObj (PageTable pt))),
-      machine_state := ta_obj_upd p (ArchObj (PageTable pt)) (machine_state s)\<rparr>) \<rbrace>
+  "\<lbrace>\<lambda>s. Q (ms_ta_obj_update p (ArchObj (PageTable pt)) (s\<lparr> kheap := kheap s (p \<mapsto> (ArchObj (PageTable pt)))\<rparr>)) \<rbrace>
      set_pt p pt \<lbrace>\<lambda>_. Q\<rbrace>"
   unfolding set_pt_def
   by (wpsimp wp: set_object_wp)
@@ -336,9 +335,10 @@ lemma store_pte_ptes_of[simplified f_kheap_to_kheap]:
      store_pte p pte
    \<lbrace>\<lambda>_ s. P (ptes_of False s)\<rbrace>"
   unfolding store_pte_def pte_of_def
-  apply (wpsimp wp: set_pt_pts_of simp: in_omonad)
-  by (auto simp: obind_def opt_map_def ta_filter_def split: option.splits
+  apply (wpsimp wp: set_pt_pts_of touch_object_wp' simp: in_omonad)
+  apply (auto simp: obind_def opt_map_def ta_filter_def split: option.splits
     dest!: pte_ptr_eq elim!: rsubst[where P=P])
+  done
 
 lemma vspace_for_pool_not_pte[simplified f_kheap_to_kheap]:
   "\<lbrakk> vspace_for_pool p asid (asid_pools_of False s) = Some p';
@@ -468,7 +468,7 @@ lemma store_pte_non_PageTablePTE_vs_lookup[simplified f_kheap_to_kheap]:
    store_pte p pte
    \<lbrace>\<lambda>_ s. P (vs_lookup_table level asid vref s)\<rbrace>"
   unfolding store_pte_def set_pt_def
-  apply (wpsimp wp: set_object_wp simp: in_opt_map_eq ptes_of_Some[where ta_f=False,simplified])
+  apply (wpsimp wp: set_object_wp touch_object_wp' simp: in_opt_map_eq ptes_of_Some[where ta_f=False,simplified])
   apply (clarsimp simp:ta_filter_def)
   apply (erule rsubst[where P=P])
   apply (subst (3) vs_lookup_non_PageTablePTE)
@@ -484,7 +484,7 @@ lemma store_pte_not_ao[simplified f_kheap_to_kheap, wp]:
    store_pte p pte
    \<lbrace>\<lambda>_ s. P (aobjs_of False s)\<rbrace>"
   unfolding store_pte_def set_pt_def
-  apply (wpsimp wp: set_object_wp simp: in_opt_map_eq)
+  apply (wpsimp wp: set_object_wp touch_object_wp' simp: in_opt_map_eq)
   apply (fastforce simp: opt_map_def ta_filter_def obind_def fun_upd_def elim!: rsubst[where P=P]
     split:option.splits)
   done
@@ -679,7 +679,7 @@ lemma valid_table_caps_ptD:
 
 lemma store_pde_pred_tcb_at:
   "\<lbrace>pred_tcb_at proj P t\<rbrace> store_pte ptr val \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
-  apply (wpsimp simp: store_pte_def set_pt_def wp: set_object_wp)
+  apply (wpsimp simp: store_pte_def set_pt_def wp: set_object_wp touch_object_wp')
   apply (clarsimp simp: pred_tcb_at_def obj_at_def in_opt_map_eq ta_filter_def)
   done
 
@@ -824,5 +824,19 @@ lemma invs_valid_uses[elim!]:
   "invs s \<Longrightarrow> valid_uses s"
   by (simp add: invs_def valid_state_def valid_arch_state_def)
 
+(* moved forward from ArchAInvsPre.thy - Scott B 2022 *)
+lemma user_mem_dom_cong:
+  "kheap s = kheap s' \<Longrightarrow> dom (user_mem s) = dom (user_mem s')"
+  by (simp add: user_mem_def in_user_frame_def dom_def obj_at_def)
+
+lemma device_mem_dom_cong:
+  "kheap s = kheap s' \<Longrightarrow> dom (device_mem s) = dom (device_mem s')"
+  by (simp add: device_mem_def in_device_frame_def dom_def obj_at_def)
+
 end
+
+requalify_facts
+  RISCV64.user_mem_dom_cong
+  RISCV64.device_mem_dom_cong
+
 end

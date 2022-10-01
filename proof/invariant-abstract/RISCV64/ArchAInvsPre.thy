@@ -200,14 +200,6 @@ lemma some_get_page_info_umapsD:
   apply (simp add: pt_bits_left_le_canonical is_aligned_ptrFromPAddr_n_eq)
   done
 
-lemma user_mem_dom_cong:
-  "kheap s = kheap s' \<Longrightarrow> dom (user_mem s) = dom (user_mem s')"
-  by (simp add: user_mem_def in_user_frame_def dom_def obj_at_def)
-
-lemma device_mem_dom_cong:
-  "kheap s = kheap s' \<Longrightarrow> dom (device_mem s) = dom (device_mem s')"
-  by (simp add: device_mem_def in_device_frame_def dom_def obj_at_def)
-
 lemma device_frame_in_device_region:
   "\<lbrakk>in_device_frame p s; pspace_respects_device_region s\<rbrakk>
   \<Longrightarrow> device_state (machine_state s) p \<noteq> None"
@@ -268,8 +260,6 @@ interpretation AInvsPre?: AInvsPre
   qed
 
 requalify_facts
-  RISCV64.user_mem_dom_cong
-  RISCV64.device_mem_dom_cong
   RISCV64.device_frame_in_device_region
 
 end

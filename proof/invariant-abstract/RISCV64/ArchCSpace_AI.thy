@@ -140,7 +140,7 @@ lemma set_untyped_cap_as_full_valid_arch_caps [CSpace_AI_assms]:
   apply (clarsimp simp: valid_arch_caps_def set_untyped_cap_as_full_def)
   apply (wpsimp wp: set_cap_valid_vs_lookup set_cap_valid_table_caps
                 simp_del: fun_upd_apply simp: cte_wp_at_caps_of_state)
-  sorry (* FIXME: Broken by timeprot-touch-objs. -robs
+  sorry (* FIXME: Broken by timeprot-touch-objs. -robs checked -scottb
   apply (fastforce simp: unique_table_refs_upd_eqD unique_table_caps_upd_eqD
                          is_cap_simps cte_wp_at_caps_of_state)
   done
@@ -179,7 +179,7 @@ lemma vs_lookup_pages_non_aobj_upd:
   "\<lbrakk> kheap s p = Some ko; \<not> is_ArchObj ko; \<not> is_ArchObj ko' \<rbrakk>
    \<Longrightarrow> vs_lookup_pages (s\<lparr>kheap := kheap s(p \<mapsto> ko')\<rparr>) = vs_lookup_pages s"
   unfolding vs_lookup_target_def vs_lookup_slot_def
-  sorry (* FIXME: Broken by timeprot-touch-objs. -robs
+  sorry (* FIXME: Broken by timeprot-touch-objs. -robs mostly checked -scottb
   apply (frule aobjs_of_non_aobj_upd[where ko'=ko'], simp+)
   apply (rule ext)+
   apply (simp add: obind_assoc)
