@@ -185,6 +185,17 @@ locale TcbAcc_AI_valid_ipc_buffer_cap_0 =
         (\<And>tcb. tcb_arch_ref (f tcb) = tcb_arch_ref tcb) \<Longrightarrow>
          \<lbrace>\<lambda>(s::'state_ext state). P (state_hyp_refs_of s)\<rbrace> thread_set f t \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
 
+(* i usually do a quick theorem search to see if there is a common abbreviation for
+   the property. often there is. i didnt find one for these though. *)
+find_theorems name:valid_tcb_state
+
+(*
+sublocale touched_addresses_inv \<subseteq> valid_tcb_state:touched_addresses_P_inv _ _ "valid_tcb_state a"
+  by unfold_locales (clarsimp simp: ta_agnostic_def valid_tcb_state_def split:thread_state.split)
+  
+sublocale touched_addresses_inv \<subseteq> valid_arch_tcb:touched_addresses_P_inv _ _ "valid_arch_tcb a"
+  by unfold_locales (clarsimp simp: ta_agnostic_def RISCV64.valid_arch_tcb_def)
+*)
 
 context TcbAcc_AI_valid_ipc_buffer_cap_0 begin
 
@@ -213,8 +224,18 @@ lemma thread_set_valid_objs_triv:
   apply (erule (1) pspace_valid_objsE)
   apply (clarsimp simp add: valid_obj_def valid_tcb_def valid_bound_ntfn_def z
                             split_paired_Ball obj_at_def c
-                            a_type_def bspec_split[OF x])
-  
+                            a_type_def bspec_split[OF x] ta_filter_def)
+  (* note-to-rob: at this point i observe some properties in the proof state about states that
+     are modified with machine_state_update (etc) (which i wish was ms_ta_update but the abbrev
+     isn't behaving.
+    
+     At this point I know it will probably help to add some that property to the touched_addrs_P_inv
+     sublocale thing, which will mean the ms_ta_update equivalent simplifies away here.
+
+     uncomment the sublocale lemmas above and observe the simplification here. I still had to make
+     some changes to the rest of the proof script, but they were simple enough changes, and it should
+     go through now.
+*)
   apply (rule conjI)
    apply (elim allEI)
    apply auto[1]
@@ -224,7 +245,9 @@ lemma thread_set_valid_objs_triv:
   apply (cut_tac tcb=y in y)
   apply (cut_tac tcb=y in a)
   apply (cut_tac tcb=y in b)
-  by auto[1]
+  apply (clarsimp split:option.split)
+  apply (metis option.simps(3) option.simps(5))
+  done
 
 end
 
