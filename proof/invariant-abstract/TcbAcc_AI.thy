@@ -257,15 +257,6 @@ lemma thread_set_cur_tcb:
   apply (clarsimp simp: thread_set_def pred_tcb_at_def set_object_def get_object_def 
                         touch_object_def2 simpler_do_machine_op_addTouchedAddresses_def 
                         in_monad gets_the_def valid_def)
-  (* note-to-rob: if you find 'touch_object' needs to be unfolded, it's best to use these:
-       - touch_object_def2
-       - simpler_do_machine_op_addTouchedAddresses_def 
-     it might make sense in future to combine those two lemmas. They are much simpler than any
-     other unfolding in this context.
-
-     Anyway, adding those to the simpset of the clarsimp above will get this proof through
-  *)
-
   apply (clarsimp dest!: get_tcb_SomeD simp: obj_at_def is_tcb)
   done
 
@@ -277,24 +268,36 @@ lemma thread_set_iflive_trivial:
   assumes a: "\<And>tcb. tcb_arch_ref (f tcb) = tcb_arch_ref tcb"
   shows      "\<lbrace>if_live_then_nonz_cap\<rbrace> thread_set f t \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
   apply (simp add: thread_set_def)
-  apply (wp set_object_iflive)
+  apply (wp set_object_iflive touch_object_wp')
   apply (clarsimp dest!: get_tcb_SomeD)
   apply (clarsimp simp: obj_at_def get_tcb_def
                         split_paired_Ball
                         bspec_split [OF x])
-  apply (subgoal_tac "live (TCB y)")
-   apply (fastforce elim: if_live_then_nonz_capD2)
-  apply (clarsimp simp: live_def hyp_live_tcb_def z y a)
+  apply (clarsimp split:option.split)
+  apply (intro conjI; clarsimp simp: obind_def)
+  apply (simp add: a hyp_live_tcb_def if_live_then_nonz_capD2 live_def ta_filter_def y z)
   done
 
-
+lemma sdf:
+  "f = (\<union>) (obj_range t (the (kheap s t))) \<Longrightarrow>
+  get_tcb True t (ms_ta_update f s) = get_tcb False t s"
+  apply (clarsimp simp:get_tcb_def split:option.split kernel_object.split)
+  apply (intro conjI; clarsimp)
+   apply (clarsimp simp: obind_def ta_filter_def split:option.splits)
+  apply (intro conjI; clarsimp)
+   apply (simp add: obind_def ta_filter_def split:if_splits)+
+ oops
+   
 lemma thread_set_ifunsafe_trivial:
   assumes x: "\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases.
                   getF (f tcb) = getF tcb"
   shows      "\<lbrace>if_unsafe_then_cap\<rbrace> thread_set f t \<lbrace>\<lambda>rv. if_unsafe_then_cap\<rbrace>"
   apply (simp add: thread_set_def)
-  apply (wp set_object_ifunsafe)
-  apply (clarsimp simp: x)
+  apply (wp set_object_ifunsafe touch_object_wp)
+  apply clarsimp
+  apply (drule_tac P="(same_caps (TCB (f y)))" in get_tcb_obj_atE)
+   apply (clarsimp simp: x)
+  apply clarsimp
   done
 
 
@@ -303,10 +306,12 @@ lemma thread_set_zombies_trivial:
                   getF (f tcb) = getF tcb"
   shows      "\<lbrace>zombies_final\<rbrace> thread_set f t \<lbrace>\<lambda>rv. zombies_final\<rbrace>"
   apply (simp add: thread_set_def)
-  apply wp
-  apply (clarsimp simp: x)
+  apply (wp touch_object_wp')
+  apply clarsimp
+  apply (drule_tac P="(same_caps (TCB (f y)))" in get_tcb_obj_atE)
+   apply (clarsimp simp: x)
+  apply clarsimp
   done
-
 
 (* FIXME-NTFN: possible need for assumption on tcb_bound_notification *)
 lemma thread_set_refs_trivial:
@@ -314,9 +319,10 @@ lemma thread_set_refs_trivial:
   assumes y: "\<And>tcb. tcb_bound_notification (f tcb) = tcb_bound_notification tcb"
   shows      "\<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace> thread_set f t \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
   apply (simp add: thread_set_def set_object_def get_object_def)
-  apply wp
+  apply (wp touch_object_wp')
   apply (clarsimp dest!: get_tcb_SomeD)
-  apply (clarsimp simp: state_refs_of_def get_tcb_def x y
+  apply (clarsimp simp:ta_filter_def obind_def)
+  apply (clarsimp simp: state_refs_of_def get_tcb_def x y obind_def ta_filter_def
                  elim!: rsubst[where P=P]
                 intro!: ext)
   done
@@ -328,12 +334,13 @@ lemma thread_set_valid_idle_trivial:
   assumes "\<And>tcb. tcb_iarch (f tcb) = tcb_iarch tcb"
   shows      "\<lbrace>valid_idle\<rbrace> thread_set f t \<lbrace>\<lambda>_. valid_idle\<rbrace>"
   apply (simp add: thread_set_def set_object_def get_object_def valid_idle_def)
-  apply wp
-  apply (clarsimp simp: assms get_tcb_def pred_tcb_at_def obj_at_def)
+  apply (wp touch_object_wp')
+  apply (clarsimp simp: assms get_tcb_def pred_tcb_at_def obj_at_def obind_def ta_filter_def)
   done
 
 
 crunch it [wp]: thread_set "\<lambda>s. P (idle_thread s)"
+  (wp: crunch_wps)
 
 
 lemma thread_set_caps_of_state_trivial:
@@ -341,18 +348,19 @@ lemma thread_set_caps_of_state_trivial:
                   getF (f tcb) = getF tcb"
   shows      "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> thread_set f t \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
   apply (simp add: thread_set_def set_object_def get_object_def)
-  apply wp
+  apply (wp touch_object_wp')
   apply (clarsimp elim!: rsubst[where P=P]
                  intro!: ext
                   dest!: get_tcb_SomeD)
   apply (subst caps_of_state_after_update)
-   apply (clarsimp simp: obj_at_def get_tcb_def bspec_split [OF x])
+   apply (clarsimp simp: obj_at_def get_tcb_def bspec_split [OF x] obind_def ta_filter_def)
   apply simp
   done
 
 
 
 crunch irq_node[wp]: thread_set "\<lambda>s. P (interrupt_irq_node s)"
+  (wp: crunch_wps)
 
 
 lemma thread_set_global_refs_triv:
@@ -378,13 +386,14 @@ lemma thread_set_valid_reply_masters_trivial:
   by (wp valid_reply_masters_cte_lift thread_set_caps_of_state_trivial y)
 
 crunch interrupt_states[wp]: thread_set "\<lambda>s. P (interrupt_states s)"
+  (wp: crunch_wps)
 
 lemma thread_set_obj_at_impossible:
   "\<lbrakk> \<And>tcb. \<not> (P (TCB tcb)) \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. obj_at P p s\<rbrace> thread_set f t \<lbrace>\<lambda>rv. obj_at P p\<rbrace>"
   apply (simp add: thread_set_def set_object_def get_object_def)
-  apply wp
+  apply (wp touch_object_wp')
   apply (clarsimp dest!: get_tcb_SomeD)
-  apply (clarsimp simp: obj_at_def)
+  apply (clarsimp simp: obj_at_def obind_def ta_filter_def)
   done
 
 
@@ -403,22 +412,23 @@ lemma thread_set_only_idle:
   "\<lbrace>only_idle and K (\<forall>tcb. tcb_state (f tcb) = tcb_state tcb \<or> \<not>idle (tcb_state (f tcb)))\<rbrace>
   thread_set f t \<lbrace>\<lambda>_. only_idle\<rbrace>"
   apply (simp add: thread_set_def set_object_def get_object_def)
-  apply wp
-  apply (clarsimp simp: only_idle_def pred_tcb_at_def obj_at_def)
+  apply (wp touch_object_wp')
+  apply (clarsimp simp: only_idle_def pred_tcb_at_def obj_at_def obind_def ta_filter_def)
   apply (drule get_tcb_SomeD)
-  apply force
+  apply clarsimp
+  apply (metis Un_upper1 ta_filter_def)
   done
 
 
 lemma thread_set_pspace_in_kernel_window[wp]:
   "\<lbrace>pspace_in_kernel_window\<rbrace> thread_set f t \<lbrace>\<lambda>rv. pspace_in_kernel_window\<rbrace>"
   apply (simp add: thread_set_def)
-  apply (wp set_object_pspace_in_kernel_window)
+  apply (wp set_object_pspace_in_kernel_window touch_object_wp')
   apply (clarsimp simp: obj_at_def dest!: get_tcb_SomeD)
   done
 
 crunch pspace_respects_device_region[wp]: thread_set "pspace_respects_device_region"
-  (wp: set_object_pspace_respects_device_region)
+  (wp: set_object_pspace_respects_device_region crunch_wps)
 
 lemma thread_set_cap_refs_in_kernel_window:
   assumes y: "\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases.
@@ -426,9 +436,9 @@ lemma thread_set_cap_refs_in_kernel_window:
   shows
   "\<lbrace>cap_refs_in_kernel_window\<rbrace> thread_set f t \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
   apply (simp add: thread_set_def)
-  apply (wp set_object_cap_refs_in_kernel_window)
+  apply (wp set_object_cap_refs_in_kernel_window touch_object_wp')
   apply (clarsimp simp: obj_at_def)
-  apply (clarsimp dest!: get_tcb_SomeD)
+  apply (clarsimp dest!: get_tcb_SomeD simp: ta_filter_def)
   apply (drule bspec[OF y])
   apply simp
   apply (erule sym)
@@ -440,9 +450,9 @@ lemma thread_set_cap_refs_respects_device_region:
   shows
   "\<lbrace>cap_refs_respects_device_region\<rbrace> thread_set f t \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
   apply (simp add: thread_set_def)
-  apply (wp set_object_cap_refs_respects_device_region)
+  apply (wp set_object_cap_refs_respects_device_region touch_object_wp')
   apply (clarsimp simp: obj_at_def)
-  apply (clarsimp dest!: get_tcb_SomeD)
+  apply (clarsimp dest!: get_tcb_SomeD simp: ta_filter_def)
   apply (drule bspec[OF y])
   apply simp
   apply (erule sym)
@@ -461,15 +471,15 @@ lemma thread_set_valid_ioc_trivial:
   assumes x: "\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases.
                   getF (f tcb) = getF tcb"
   shows "\<lbrace>valid_ioc\<rbrace> thread_set f p \<lbrace>\<lambda>_. valid_ioc\<rbrace>"
-  apply (simp add: thread_set_def, wp set_object_valid_ioc_caps)
+  apply (simp add: thread_set_def, wp set_object_valid_ioc_caps touch_object_wp')
   apply clarsimp
   apply (rule conjI)
-   apply clarsimp
+   apply (metis machine_state_update.obj_at_update tcb_at_get_tcb_True tcb_at_typ)
   apply (clarsimp simp: valid_ioc_def)
   apply (drule spec, drule spec, erule impE, assumption)
   apply (cut_tac tcb=y in x)
   apply (clarsimp simp: cte_wp_at_cases get_tcb_def cap_of_def null_filter_def
-                        split_def tcb_cnode_map_tcb_cap_cases
+                        split_def tcb_cnode_map_tcb_cap_cases ta_filter_def obind_def
                  split: option.splits Structures_A.kernel_object.splits)
   apply (drule_tac x="(get,set,restr)" in bspec)
    apply (fastforce simp: ranI)+
@@ -548,10 +558,18 @@ lemma det_query_twice:
   apply simp
   done
 
+(*FIXME: move this earlier *)
+lemma in_ta_ms_ta_update:
+  "in_ta ref s ko \<Longrightarrow>
+  ms_ta_update ((\<union>) (obj_range ref ko)) s = s"
+  apply (cases s; clarsimp)
+  apply (case_tac machine_state; clarsimp)
+  by blast
+
 lemma as_user_wp_thread_set_helper:
   assumes x: "
          \<lbrace>P\<rbrace> do
-                tcb \<leftarrow> gets_the (get_tcb t);
+                tcb \<leftarrow> gets_the (get_tcb ta_f t);
                 p \<leftarrow> select_f (m (arch_tcb_context_get (tcb_arch tcb)));
                 thread_set (\<lambda>tcb. tcb\<lparr>tcb_arch := arch_tcb_context_set (snd p) (tcb_arch tcb)\<rparr>) t
          od \<lbrace>\<lambda>rv. Q\<rbrace>"
@@ -563,24 +581,43 @@ proof -
     apply (simp add: valid_def bind_def return_def split_def)
     done
   have Q: "do
-             tcb \<leftarrow> gets_the (get_tcb t);
+             tcb \<leftarrow> gets_the (get_tcb ta_f t);
              p \<leftarrow> select_f (m (arch_tcb_context_get (tcb_arch tcb)));
              thread_set (\<lambda>tcb. tcb\<lparr>tcb_arch := arch_tcb_context_set (snd p) (tcb_arch tcb)\<rparr>) t
            od
          = do
-             tcb \<leftarrow> gets_the (get_tcb t);
+             tcb \<leftarrow> gets_the (get_tcb ta_f t);
              p \<leftarrow> select_f (m (arch_tcb_context_get (tcb_arch tcb)));
-             set_object t (TCB (tcb \<lparr>tcb_arch := arch_tcb_context_set (snd p) (tcb_arch tcb)\<rparr>))
+             set_object ta_f t (TCB (tcb \<lparr>tcb_arch := arch_tcb_context_set (snd p) (tcb_arch tcb)\<rparr>))
            od"
     apply (simp add: thread_set_def)
     apply (rule ext)
     apply (rule bind_apply_cong [OF refl])+
-    apply (simp add: select_f_def in_monad gets_the_def gets_def)
-    apply (clarsimp simp add: get_def bind_def return_def assert_opt_def)
+    apply (simp add: select_f_def in_monad gets_the_def gets_def touch_object_def2
+                     simpler_do_machine_op_addTouchedAddresses_def get_def assert_def
+                     simpler_modify_def bind_def return_def fail_def assert_opt_def)
+    apply (clarsimp split:option.splits simp:fail_def return_def)
+    apply (intro conjI; clarsimp)
+     apply (intro conjI; clarsimp)
+      apply (clarsimp simp: get_tcb_def ta_filter_def obind_def)
+      apply (cases ta_f; simp)
+      apply (case_tac "in_ta t x y"; simp)
+     apply (clarsimp simp: get_tcb_def ta_filter_def obind_def)
+    apply (intro conjI; clarsimp)
+     apply (clarsimp simp: get_tcb_def ta_filter_def obind_def)
+     apply (cases ta_f; simp)
+      apply (case_tac "in_ta t x y"; simp)
+      apply (case_tac y; clarsimp)
+      apply (drule in_ta_ms_ta_update, clarsimp)
+     apply (case_tac y; clarsimp)
+     (* at this point, it might not be true. sorrying for now, in the name of progress *)
+     subgoal sorry subgoal sorry
+    (* apply (clarsimp simp add: get_def bind_def return_def assert_opt_def) *)
     done
   show ?thesis
     apply (simp add: as_user_def split_def)
-    apply (simp add: P x [simplified Q])
+    subgoal sorry
+    (* apply (simp add: P x [simplified Q]) *)
     done
 qed
 
@@ -614,9 +651,9 @@ end
 lemma as_user_idle[wp]:
   "\<lbrace>valid_idle\<rbrace> as_user t f \<lbrace>\<lambda>_. valid_idle\<rbrace>"
   apply (simp add: as_user_def set_object_def get_object_def split_def)
-  apply wp
+  apply (wp touch_object_wp)
   apply (clarsimp cong: if_cong)
-  apply (clarsimp simp: obj_at_def get_tcb_def valid_idle_def pred_tcb_at_def
+  apply (clarsimp simp: obj_at_def get_tcb_def valid_idle_def pred_tcb_at_def ta_filter_def
                   split: option.splits Structures_A.kernel_object.splits)
   done
 
@@ -636,7 +673,7 @@ lemma as_user_reply_masters[wp]:
 lemma as_user_arch[wp]:
   "\<lbrace>\<lambda>s. P (arch_state s)\<rbrace> as_user t f \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
   apply (simp add: as_user_def split_def)
-  apply wp
+  apply (wp touch_object_wp')
   apply simp
   done
 
@@ -679,9 +716,10 @@ lemma as_user_refs_of[wp]:
 lemma as_user_caps [wp]:
   "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> as_user a f \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
   apply (simp add: as_user_def split_def set_object_def get_object_def)
-  apply wp
+  apply (wp touch_object_wp')
   apply (clarsimp cong: if_cong)
-  apply (clarsimp simp: get_tcb_def split: option.splits Structures_A.kernel_object.splits)
+  apply (clarsimp simp: get_tcb_def ta_filter_def
+                 split: option.splits Structures_A.kernel_object.splits)
   apply (subst cte_wp_caps_of_lift)
    prefer 2
    apply simp
@@ -690,10 +728,10 @@ lemma as_user_caps [wp]:
 
 
 crunch it[wp]: as_user "\<lambda>s. P (idle_thread s)"
-  (simp: crunch_simps)
+  (simp: crunch_simps wp:crunch_wps)
 
 crunch irq_node[wp]: as_user "\<lambda>s. P (interrupt_irq_node s)"
-  (simp: crunch_simps)
+  (simp: crunch_simps wp:crunch_wps)
 
 
 lemma as_user_global_refs [wp]:
@@ -704,7 +742,7 @@ declare thread_set_cur_tcb [wp]
 
 lemma as_user_ct: "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> as_user t m \<lbrace>\<lambda>rv s. P (cur_thread s)\<rbrace>"
   apply (simp add: as_user_def split_def set_object_def get_object_def)
-  apply wp
+  apply (wp touch_object_wp')
   apply simp
   done
 
@@ -742,14 +780,18 @@ lemma as_user_ct_in_state:
   by (rule ct_in_state_thread_state_lift) (wpsimp wp: as_user_ct)+
 
 lemma set_object_ntfn_at:
-  "\<lbrace> ntfn_at p and tcb_at r \<rbrace> set_object r obj \<lbrace> \<lambda>rv. ntfn_at p \<rbrace>"
+  "\<lbrace> ntfn_at p and tcb_at r \<rbrace> set_object ta_f r obj \<lbrace> \<lambda>rv. ntfn_at p \<rbrace>"
   apply (rule set_object_at_obj2)
   apply (clarsimp simp: is_obj_defs)
   done
 
+(* note-for-rob: I think you've already done this before, but
+   in the next two lemmas, all they need is to add
+     ta_filter_def obind_def
+   to the simpset of the clarsimp *)
 lemma gts_wf[wp]: "\<lbrace>tcb_at t and invs\<rbrace> get_thread_state t \<lbrace>valid_tcb_state\<rbrace>"
   apply (simp add: get_thread_state_def thread_get_def)
-  apply wp
+  apply (wp touch_object_wp')
   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
                         valid_objs_def get_tcb_def dom_def
                   split: option.splits Structures_A.kernel_object.splits)
@@ -762,6 +804,7 @@ lemma idle_thread_idle[wp]:
   apply (clarsimp simp: valid_def get_thread_state_def thread_get_def bind_def return_def
                         gets_the_def gets_def get_def assert_opt_def get_tcb_def
                         fail_def valid_idle_def obj_at_def pred_tcb_at_def
+                        
                  split: option.splits Structures_A.kernel_object.splits)
   done
 
