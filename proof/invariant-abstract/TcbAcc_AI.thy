@@ -191,6 +191,9 @@ sublocale touched_addresses_inv \<subseteq> valid_tcb_state:touched_addresses_P_
 sublocale touched_addresses_inv \<subseteq> valid_arch_tcb:touched_addresses_P_inv _ _ "valid_arch_tcb a"
   by unfold_locales (clarsimp simp: ta_agnostic_def RISCV64.valid_arch_tcb_def)
 
+sublocale touched_addresses_inv \<subseteq> valid_bound_ntfn:touched_addresses_P_inv _ _ "valid_bound_ntfn a"
+  by unfold_locales (clarsimp simp: ta_agnostic_def valid_bound_ntfn_def split:option.split)
+
 context TcbAcc_AI_valid_ipc_buffer_cap_0 begin
 
 lemma thread_set_valid_objs_triv:
@@ -785,15 +788,11 @@ lemma set_object_ntfn_at:
   apply (clarsimp simp: is_obj_defs)
   done
 
-(* note-for-rob: I think you've already done this before, but
-   in the next two lemmas, all they need is to add
-     ta_filter_def obind_def
-   to the simpset of the clarsimp *)
 lemma gts_wf[wp]: "\<lbrace>tcb_at t and invs\<rbrace> get_thread_state t \<lbrace>valid_tcb_state\<rbrace>"
   apply (simp add: get_thread_state_def thread_get_def)
   apply (wp touch_object_wp')
   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
-                        valid_objs_def get_tcb_def dom_def
+                        valid_objs_def get_tcb_def dom_def ta_filter_def obind_def
                   split: option.splits Structures_A.kernel_object.splits)
   apply (erule allE, erule impE, blast)
   apply (clarsimp simp: valid_obj_def valid_tcb_def)
@@ -804,7 +803,7 @@ lemma idle_thread_idle[wp]:
   apply (clarsimp simp: valid_def get_thread_state_def thread_get_def bind_def return_def
                         gets_the_def gets_def get_def assert_opt_def get_tcb_def
                         fail_def valid_idle_def obj_at_def pred_tcb_at_def
-                        
+                        ta_filter_def obind_def
                  split: option.splits Structures_A.kernel_object.splits)
   done
 
@@ -818,24 +817,32 @@ lemma set_thread_state_valid_objs[wp]:
   set_thread_state thread st
   \<lbrace>\<lambda>r. valid_objs\<rbrace>"
   apply (simp add: set_thread_state_def)
-  apply (wp, simp, (wp set_object_valid_objs)+)
+  apply (wp touch_object_wp', simp, (wp set_object_valid_objs touch_object_wp')+)
   apply (clarsimp simp: obj_at_def get_tcb_def is_tcb
                   split: Structures_A.kernel_object.splits option.splits)
   apply (simp add: valid_objs_def dom_def)
   apply (erule allE, erule impE, blast)
   apply (clarsimp simp: valid_obj_def valid_tcb_def
-                        a_type_def tcb_cap_cases_def)
-  (* very slow *)
-  by (erule cte_wp_atE disjE
+                        a_type_def tcb_cap_cases_def ta_filter_def obind_def)
+
+  (* very slow. this was the old script that worked.
+  apply (erule cte_wp_atE disjE
        | clarsimp simp: st_tcb_def2 tcb_cap_cases_def
                  dest!: get_tcb_SomeD
-                 split: Structures_A.thread_state.splits)+
+                 split: Structures_A.thread_state.splits)+ *)
+  (*FIXME: prove this without smt *)
+  apply (clarsimp split:thread_state.splits)
+      apply (all \<open>(clarsimp simp: get_tcb_rev st_tcb_def2)?\<close>)
+     apply (smt (z3) cte_wp_at_neg2 cte_wp_at_tcbI is_master_reply_cap_NullCap prod.sel(1)
+                     prod.sel(2) tcb_cap_cases_simps(3) tcb_cap_cases_simps(4))+
+  done
+  
 
 lemma set_bound_notification_valid_objs[wp]:
   "\<lbrace>valid_objs and valid_bound_ntfn ntfn\<rbrace> set_bound_notification t ntfn \<lbrace>\<lambda>_. valid_objs\<rbrace>"
   apply (simp add: set_bound_notification_def)
-  apply (wp set_object_valid_objs, simp)
-  apply (clarsimp simp: obj_at_def get_tcb_def is_tcb
+  apply (wp set_object_valid_objs touch_object_wp', simp)
+  apply (clarsimp simp: obj_at_def get_tcb_def is_tcb ta_filter_def
                   split: option.splits kernel_object.splits)
   apply (erule (1) valid_objsE)
   apply (auto simp: valid_obj_def valid_tcb_def tcb_cap_cases_def)
@@ -846,7 +853,7 @@ lemma set_thread_state_aligned[wp]:
   set_thread_state thread st
   \<lbrace>\<lambda>r. pspace_aligned\<rbrace>"
   apply (simp add: set_thread_state_def)
-  apply (wp set_object_aligned|clarsimp)+
+  apply (wp set_object_aligned touch_object_wp | clarsimp)+
   done
 
 lemma set_bound_notification_aligned[wp]:
@@ -854,18 +861,21 @@ lemma set_bound_notification_aligned[wp]:
   set_bound_notification thread ntfn
   \<lbrace>\<lambda>r. pspace_aligned\<rbrace>"
   apply (simp add: set_bound_notification_def)
-  apply (wp set_object_aligned)
+  apply (wp set_object_aligned touch_object_wp')
   apply clarsimp
   done
 
 lemma set_thread_state_typ_at [wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> set_thread_state st p' \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
   apply (simp add: set_thread_state_def set_object_def get_object_def)
-  apply (wp|clarsimp)+
+  apply (wp touch_object_wp'|clarsimp simp: ta_filter_def obind_def)+
   apply (clarsimp simp: obj_at_def a_type_def dest!: get_tcb_SomeD)
   done
 
+(* note-to-rob: there are lots of crunches that are fixed by adding crunch_wps, as commented out
+ below. sometimes you also need to add "simp: crunch_simps" *)
 crunch typ_at[wp]: set_bound_notification "\<lambda>s. P (typ_at T p s)"
+  (* (wp: crunch_wps) *)
 
 
 lemma set_thread_state_tcb[wp]:
