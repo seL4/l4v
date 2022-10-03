@@ -678,7 +678,75 @@ lemma touchObj_corres:
       \<comment> \<open> (\<lambda>s. (obj_in_ta2' ptr) (ms_ta_obj_upd' ptr (the (ksPSpace s ptr)) s))) \<close>
      (touch_object ptr)
      (touchObj ptr)"
-  apply (simp add: touchObj_def touch_object_def2)
+  apply(simp add: touchObj_def touch_object_def2)
+  apply(rule corres_split')
+     apply(rule corres_stronger_no_failI)
+      apply(rule no_fail_pre, wp)
+      apply(rule TrueI)
+     apply(clarsimp simp:simpler_gets_def)
+     apply(rename_tac s s')
+     apply(rule_tac x="(kheap s, s)" in bexI)
+      apply simp (* XXX: Dummy out r as \<top>\<top> *)
+      (* XXX: This version fills in r as pspace_relation, but we don't seem to need it this early.
+      apply(clarsimp simp:state_relation_def split:prod.splits)
+      apply assumption *)
+     apply(force simp:simpler_gets_def)
+    apply clarsimp
+    apply(rule corres_split')
+       apply(rule corres_underlyingI)
+        apply(clarsimp simp:in_assert)
+        apply(rename_tac kh kh' s s' ko)
+        apply(rule_tac x="((), s)" in bexI)
+         apply(clarsimp split:prod.splits)
+         apply simp (* XXX: Dummy out r as \<top>\<top> *)
+        (* XXX: Is there a better way to pass these through than forcing ?Q and ?Q'? *)
+        apply(subgoal_tac "obj_at (\<lambda>_. True) ptr s \<and> kh = kheap s")
+         prefer 2
+         apply assumption
+        apply(subgoal_tac "obj_at' (\<lambda>_. True) ptr s' \<and> kh' = ksPSpace s'")
+         prefer 2
+         apply assumption
+        apply(clarsimp simp:in_assert return_def obj_at_def)
+       apply(clarsimp simp:in_assert return_def obj_at'_def)
+      prefer 4
+      apply(wpsimp simp:obj_at_def return_def)
+     prefer 4
+     apply(wpsimp simp:obj_at'_def return_def)
+     apply blast
+    apply clarsimp
+    (* XXX: Ah wait. Do we need something relating the range of the two objects? *)
+    apply(rule corres_underlyingI)
+     apply clarsimp
+     apply(clarsimp simp:simpler_doMachineOp_addTouchedAddresses_def simpler_modify_def
+       simpler_do_machine_op_addTouchedAddresses_def)
+     apply(clarsimp simp:state_relation_def pspace_relation_def)
+     apply(rule conjI)
+      apply(clarsimp simp:cdt_relation_def)
+     apply(clarsimp simp:obj_range_def obj_range'_def)
+     apply(rename_tac kh kh' s s')
+     apply(subgoal_tac "obj_addrs (the (kh ptr)) ptr \<union> touched_addresses (ksMachineState s') =
+       mask_range ptr (objBitsKO (the (kh' ptr))) \<union> touched_addresses (ksMachineState s')")
+      apply force
+     (* XXX: Again, is there a better way to pass these through than forcing ?Q and ?Q'? *)
+     apply(subgoal_tac "obj_at (\<lambda>_. True) ptr s \<and> kh = kheap s")
+      prefer 2
+      apply assumption
+     apply(subgoal_tac "obj_at' (\<lambda>_. True) ptr s' \<and> kh' = ksPSpace s'")
+      prefer 2
+      apply assumption
+     prefer 3
+     apply wpsimp
+    prefer 3
+    apply wpsimp
+    apply blast
+   prefer 2
+   apply(clarsimp simp:simpler_doMachineOp_addTouchedAddresses_def simpler_modify_def)
+  (* FIXME: We need something in pspace_relation that relates the address footprint of the
+     kheap object `ko` with that of the ksPSpace object `kh' ptr`. *)
+  (* FIXME: Also, this demand that the kheap and ksPSpace object at `ptr` occupy exactly the same
+     addresses is probably too strong. Hadn't we reasoned that refinement could make the TA set
+     smaller, due to choosing to touch only a subset of the TA overapproximated by the ASpec? *)
+  apply(clarsimp simp:objBitsKO_def)
   sorry (* FIXME: Prove. -robs *)
 
 (* Copied from CSpace_H for use as a sandbox. To correspond with resolve_address_bits'. -robs *)
