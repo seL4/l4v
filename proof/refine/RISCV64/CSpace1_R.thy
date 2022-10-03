@@ -663,14 +663,18 @@ thm touch_object_wp touch_object_wp'
 thm get_cap_corres
 term ko_at
 term "ko_at'"
+term \<top>
+thm obj_at_def
 (* FIXME: Generalise for any kernel object, not just ones that are of a valid CNodeCap. -robs *)
 lemma touchObj_corres:
   "corres (=)
-     (valid_objs and pspace_aligned and valid_cap (cap.CNodeCap ptr cbits guard))
+     (obj_at \<top> ptr)
+     \<comment> \<open>(valid_objs and pspace_aligned and valid_cap (cap.CNodeCap ptr cbits guard) and obj_at \<top> ptr)\<close>
       \<comment> \<open> Hang on. Shouldn't this be trivial when the object *is* on the kheap? -robs
       (\<lambda>s. (obj_in_ta2 ptr) (ms_ta_obj_upd ptr (the (kheap s ptr)) s))) \<close>
-     (valid_objs' and pspace_distinct' and pspace_aligned' and
-      valid_cap' (capability.CNodeCap ptr cbits (of_bl guard) (length guard)))
+     (obj_at' \<top> ptr)
+     \<comment> \<open>(valid_objs' and pspace_distinct' and pspace_aligned' and
+      valid_cap' (capability.CNodeCap ptr cbits (of_bl guard) (length guard)) and obj_at' \<top> ptr)\<close>
       \<comment> \<open> (\<lambda>s. (obj_in_ta2' ptr) (ms_ta_obj_upd' ptr (the (ksPSpace s ptr)) s))) \<close>
      (touch_object ptr)
      (touchObj ptr)"
@@ -858,8 +862,12 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
            apply clarsimp
            apply (rule corres_guard_imp)
              apply(rule touchObj_corres)
-            apply assumption
-           apply assumption
+            apply(force simp:valid_cap_def obj_at_def)
+           apply(clarsimp simp:valid_cap'_def obj_at'_def)
+           apply(erule_tac x=0 in allE)
+           apply clarsimp
+           apply(rule_tac x=obj in exI)
+           apply force
           apply (rule corres_initial_splitE)
              apply clarsimp
              apply (rule corres_guard_imp)
