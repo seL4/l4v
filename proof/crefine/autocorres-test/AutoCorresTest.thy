@@ -159,13 +159,13 @@ lemma corres_symb_exec_l_no_exs:
   assumes nf: "nf' \<Longrightarrow> no_fail P m"
   shows      "corres_underlying sr True nf' r P P' (m >>= (\<lambda>rv. x rv)) y"
   apply (rule corres_guard_imp)
-    apply (subst gets_bind_ign[symmetric], rule corres_split_deprecated)
-       apply (rule z)
-      apply (rule corres_noop2_no_exs)
-         apply (erule x)
-        apply (rule gets_wp)
-       apply (erule nf)
-      apply (rule non_fail_gets)
+    apply (subst gets_bind_ign[symmetric], rule corres_split)
+       apply (rule corres_noop2_no_exs)
+          apply (erule x)
+         apply (rule gets_wp)
+        apply (erule nf)
+       apply (rule non_fail_gets)
+      apply (rule z)
      apply (rule y)
     apply (rule gets_wp)
    apply simp+

@@ -279,13 +279,19 @@ lemma handleVMFault_ccorres:
     prefer 3 apply simp
    apply (simp add: handleVMFault_def handleVMFault'_def liftE_bindE condition_const
                     ucast_ucast_mask bind_assoc)
-   apply (rule corres_split[OF getFaultAddr_ccorres[ac]], drule sym, clarsimp)
-      apply (rule corres_split[OF getRegister_ccorres[ac]], drule sym, clarsimp)
-           apply (wpc; simp add: vm_fault_type_from_H_def X86InstructionFault_def X86DataFault_def
-                                 true_def false_def bind_assoc)
-            apply (rule returnVMFault_corres;
-                   clarsimp simp: exception_defs mask_twice lift_rv_def)+
-           apply (wpsimp simp: mask_def | terminates_trivial)+
+   apply (rule corres_split[OF getFaultAddr_ccorres[ac]])
+      apply (terminates_trivial, terminates_trivial)
+     apply (drule sym, clarsimp)
+     apply (rule corres_split[OF getRegister_ccorres[ac]])
+          apply simp
+         apply simp
+        apply terminates_trivial
+       apply (drule sym, clarsimp)
+       apply (wpc; simp add: vm_fault_type_from_H_def X86InstructionFault_def X86DataFault_def
+                             true_def false_def bind_assoc)
+        apply (rule returnVMFault_corres;
+               clarsimp simp: exception_defs mask_twice lift_rv_def)+
+      apply wpsimp+
   done
 
 lemma unat_asidLowBits [simp]:

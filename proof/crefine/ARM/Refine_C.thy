@@ -957,22 +957,21 @@ lemma check_active_irq_corres_C:
   apply (simp add: checkActiveIRQ_C_def checkActiveIRQ_def getActiveIRQ_C_def)
   apply (rule corres_guard_imp)
     apply (subst bind_assoc[symmetric])
-    apply (rule corres_split_deprecated)
-       apply simp
-      apply (rule ccorres_corres_u_xf)
-       apply (rule ccorres_rel_imp, rule ccorres_guard_imp)
-          apply (ctac add:getActiveIRQ_ccorres)
-         apply (rule TrueI)
-        apply simp
-       apply (clarsimp simp: ucast_helper_simps_32 irqInvalid_def ucast_up_ucast_id
-                             is_up_def source_size_def target_size_def word_size mask_def
-                       split: option.splits)
-      apply (rule no_fail_dmo')
-      apply (rule no_fail_getActiveIRQ)
+    apply (rule corres_split)
+       apply (rule ccorres_corres_u_xf)
+        apply (rule ccorres_rel_imp, rule ccorres_guard_imp)
+           apply (ctac add:getActiveIRQ_ccorres)
+          apply (rule TrueI)
+         apply simp
+        apply assumption
+       apply (rule no_fail_dmo')
+       apply (rule no_fail_getActiveIRQ)
+      apply (clarsimp simp: ucast_helper_simps_32 irqInvalid_def ucast_up_ucast_id
+                            is_up_def source_size_def target_size_def word_size mask_def
+                      split: option.splits)
      apply (rule hoare_TrueI)+
-     apply (wp|simp)+
+   apply (wp|simp)+
   done
-
 
 lemma refinement2_both:
   "\<lparr> Init = Init_C, Fin = Fin_C,
