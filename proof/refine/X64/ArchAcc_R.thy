@@ -1296,7 +1296,6 @@ lemma lookupPDSlot_corres:
     apply (rule corres_split_eqrE[OF lookupPDPTSlot_corres])
       apply (rule corres_splitEE
       [where R'="\<lambda>_. pspace_distinct'" and R="\<lambda>r. valid_pdpte r and pspace_aligned"])
-         prefer 2
          apply (simp, rule getObject_PDPTE_corres')
         apply (case_tac pdpte; simp add: lookup_failure_map_def bit_simps lookupPDSlotFromPD_def
                                   split: pdpte.splits)
@@ -1342,7 +1341,6 @@ lemma lookupPTSlot_corres:
     apply (rule corres_split_eqrE[OF lookupPDSlot_corres])
       apply (rule corres_splitEE
       [where R'="\<lambda>_. pspace_distinct'" and R="\<lambda>r. valid_pde r and pspace_aligned"])
-         prefer 2
          apply (simp, rule getObject_PDE_corres')
         apply (case_tac pde; simp add: lookup_failure_map_def bit_simps lookupPTSlotFromPT_def
                                   split: pde.splits)
@@ -1513,28 +1511,28 @@ lemma createMappingEntries_corres:
   apply (cases pgsz, simp_all add: createMappingEntries_def mapping_map_def)
     apply (rule corres_guard_imp)
       apply (rule corres_split_eqrE)
-         apply (rule corres_returnOkTT)
-         apply (clarsimp simp: vmattributes_map_def mapping_map_simps)
-        apply (rule corres_lookup_error)
-        apply (rule lookupPTSlot_corres)
+         apply (rule corres_lookup_error)
+         apply (rule lookupPTSlot_corres)
+        apply (rule corres_returnOkTT)
+        apply (clarsimp simp: vmattributes_map_def mapping_map_simps)
        apply wp+
      apply clarsimp
     apply simp+
    apply (rule corres_guard_imp)
      apply (rule corres_split_eqrE)
-        apply (rule corres_returnOkTT)
-        apply (clarsimp simp: vmattributes_map_def mapping_map_simps)
-       apply (rule corres_lookup_error)
-       apply (rule lookupPDSlot_corres)
+        apply (rule corres_lookup_error)
+        apply (rule lookupPDSlot_corres)
+       apply (rule corres_returnOkTT)
+       apply (clarsimp simp: vmattributes_map_def mapping_map_simps)
       apply wp+
     apply clarsimp
    apply simp+
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqrE)
-       apply (rule corres_returnOkTT)
-       apply (clarsimp simp: vmattributes_map_def mapping_map_simps)
-      apply (rule corres_lookup_error)
-      apply (rule lookupPDPTSlot_corres)
+       apply (rule corres_lookup_error)
+       apply (rule lookupPDPTSlot_corres)
+      apply (rule corres_returnOkTT)
+      apply (clarsimp simp: vmattributes_map_def mapping_map_simps)
      apply wp+
    apply clarsimp
   apply simp
