@@ -156,91 +156,92 @@ lemma performASIDControlInvocation_corres:
        apply (erule deleteObjects_corres)
        apply (simp add:pageBits_def)
       apply (rule corres_split[OF getSlotCap_corres])
-         apply (rule_tac F = " pcap = (cap.UntypedCap False word1 pageBits idxa)" in corres_gen_asm)
-         apply (rule corres_split[OF updateFreeIndex_corres])
-             apply (rule corres_split)
-                apply (simp add: retype_region2_ext_retype_region_ArchObject )
-                apply (rule corres_retype [where ty="Inl (KOArch (KOASIDPool F))" for F,
-                                           unfolded APIType_map2_def makeObjectKO_def,
-                                           THEN createObjects_corres',simplified,
-                                           where val = "makeObject::asidpool"])
-                      apply simp
-                     apply (simp add: objBits_simps obj_bits_api_def arch_kobj_size_def
-                                      default_arch_object_def archObjSize_def)+
-                  apply (simp add: obj_relation_retype_def default_object_def
-                                   default_arch_object_def objBits_simps archObjSize_def)
-                  apply (simp add: other_obj_relation_def asid_pool_relation_def)
-                  apply (simp add: makeObject_asidpool const_def inv_def)
-                 apply (rule range_cover_full)
-                  apply (simp add:obj_bits_api_def arch_kobj_size_def default_arch_object_def)+
-               apply (rule corres_split)
-                  apply (rule cteInsert_simple_corres, simp, rule refl, rule refl)
-                 apply (rule_tac F="asid_low_bits_of word2 = 0" in corres_gen_asm)
-                 apply (simp add: is_aligned_mask dc_def[symmetric])
-                 apply (rule corres_split[where P=\<top> and P'=\<top> and r'="\<lambda>t t'. t = t' o ucast"])
-                    apply (clarsimp simp: state_relation_def arch_state_relation_def)
-                   apply (rule corres_trivial)
-                   apply (rule corres_modify)
-                   apply (thin_tac "x \<in> state_relation" for x)
-                   apply (clarsimp simp: state_relation_def arch_state_relation_def o_def)
-                   apply (rule ext)
-                   apply clarsimp
-                   apply (erule_tac P = "x = asid_high_bits_of word2" in notE)
-                   apply (rule word_eqI[rule_format])
-                   apply (drule_tac x1="ucast x" in bang_eq [THEN iffD1])
-                   apply (erule_tac x=n in allE)
-                   apply (simp add: word_size nth_ucast)
-                  apply wp+
-              apply (strengthen safe_parent_strg[where idx = "2^pageBits"])
-              apply (strengthen invs_valid_objs invs_distinct
-                                invs_psp_aligned invs_mdb
-                     | simp cong:conj_cong)+
-              apply (wp retype_region_plain_invs[where sz = pageBits]
-                        retype_cte_wp_at[where sz = pageBits])+
-             apply (strengthen vp_strgs'
-                    safe_parent_strg'[where idx = "2^pageBits"])
-             apply (simp cong: conj_cong)
-             apply (wp createObjects_valid_pspace'
-                       [where sz = pageBits and ty="Inl (KOArch (KOASIDPool undefined))"])
-                   apply (simp add: makeObjectKO_def)+
-                 apply (simp add:objBits_simps archObjSize_def range_cover_full valid_cap'_def)+
-               apply (fastforce elim!: canonical_address_neq_mask)
-              apply (rule in_kernel_mappings_neq_mask, (simp add: valid_cap'_def bit_simps)+)[1]
-             apply (clarsimp simp:valid_cap'_def)
-             apply (wp createObject_typ_at'
-                       createObjects_orig_cte_wp_at'[where sz = pageBits])
-             apply (rule descendants_of'_helper)
-             apply (wp createObjects_null_filter'
-                       [where sz = pageBits and ty="Inl (KOArch (KOASIDPool undefined))"])
+         apply simp
+        apply (rule_tac F = " pcap = (cap.UntypedCap False word1 pageBits idxa)"
+                in corres_gen_asm)
+        apply (rule corres_split[OF updateFreeIndex_corres])
             apply (clarsimp simp:is_cap_simps)
            apply (simp add: free_index_of_def)
-
-          apply (clarsimp simp: conj_comms obj_bits_api_def arch_kobj_size_def
-                 objBits_simps archObjSize_def default_arch_object_def
-                 pred_conj_def)
-          apply (clarsimp simp: conj_comms
-                | strengthen invs_mdb invs_valid_pspace)+
-          apply (simp add:region_in_kernel_window_def)
-          apply (wp set_untyped_cap_invs_simple[where sz = pageBits]
-                    set_cap_cte_wp_at
-                    set_cap_caps_no_overlap[where sz = pageBits]
-                    set_cap_no_overlap
-                    set_cap_device_and_range_aligned[where dev = False,simplified]
-                    set_untyped_cap_caps_overlap_reserved[where sz = pageBits])+
+          apply (rule corres_split)
+             apply (simp add: retype_region2_ext_retype_region_ArchObject )
+             apply (rule corres_retype [where ty="Inl (KOArch (KOASIDPool F))" for F,
+                                        unfolded APIType_map2_def makeObjectKO_def,
+                                        THEN createObjects_corres',simplified,
+                                        where val = "makeObject::asidpool"])
+                   apply simp
+                  apply (simp add: objBits_simps obj_bits_api_def arch_kobj_size_def
+                                   default_arch_object_def archObjSize_def)+
+               apply (simp add: obj_relation_retype_def default_object_def
+                                default_arch_object_def objBits_simps archObjSize_def)
+               apply (simp add: other_obj_relation_def asid_pool_relation_def)
+               apply (simp add: makeObject_asidpool const_def inv_def)
+              apply (rule range_cover_full)
+               apply (simp add:obj_bits_api_def arch_kobj_size_def default_arch_object_def)+
+            apply (rule corres_split)
+               apply (rule cteInsert_simple_corres, simp, rule refl, rule refl)
+              apply (rule_tac F="asid_low_bits_of word2 = 0" in corres_gen_asm)
+              apply (simp add: is_aligned_mask dc_def[symmetric])
+              apply (rule corres_split[where P=\<top> and P'=\<top> and r'="\<lambda>t t'. t = t' o ucast"])
+                 apply (clarsimp simp: state_relation_def arch_state_relation_def)
+                apply (rule corres_trivial)
+                apply (rule corres_modify)
+                apply (thin_tac "x \<in> state_relation" for x)
+                apply (clarsimp simp: state_relation_def arch_state_relation_def o_def)
+                apply (rule ext)
+                apply clarsimp
+                apply (erule_tac P = "x = asid_high_bits_of word2" in notE)
+                apply (rule word_eqI[rule_format])
+                apply (drule_tac x1="ucast x" in bang_eq [THEN iffD1])
+                apply (erule_tac x=n in allE)
+                apply (simp add: word_size nth_ucast)
+               apply wp+
+           apply (strengthen safe_parent_strg[where idx = "2^pageBits"])
+           apply (strengthen invs_valid_objs invs_distinct
+                             invs_psp_aligned invs_mdb
+                  | simp cong:conj_cong)+
+           apply (wp retype_region_plain_invs[where sz = pageBits]
+                     retype_cte_wp_at[where sz = pageBits])+
+          apply (strengthen vp_strgs'
+                 safe_parent_strg'[where idx = "2^pageBits"])
+          apply (simp cong: conj_cong)
+          apply (wp createObjects_valid_pspace'
+                    [where sz = pageBits and ty="Inl (KOArch (KOASIDPool undefined))"])
+                apply (simp add: makeObjectKO_def)+
+              apply (simp add:objBits_simps archObjSize_def range_cover_full valid_cap'_def)+
+            apply (fastforce elim!: canonical_address_neq_mask)
+           apply (rule in_kernel_mappings_neq_mask, (simp add: valid_cap'_def bit_simps)+)[1]
+          apply (clarsimp simp:valid_cap'_def)
+          apply (wp createObject_typ_at'
+                    createObjects_orig_cte_wp_at'[where sz = pageBits])
+          apply (rule descendants_of'_helper)
+          apply (wp createObjects_null_filter'
+                    [where sz = pageBits and ty="Inl (KOArch (KOASIDPool undefined))"])
          apply (clarsimp simp: conj_comms obj_bits_api_def arch_kobj_size_def
-                               objBits_simps archObjSize_def default_arch_object_def
-                               makeObjectKO_def range_cover_full
-                         simp del: capFreeIndex_update.simps
-                | strengthen invs_valid_pspace' invs_pspace_aligned'
-                             invs_pspace_distinct'
-                             exI[where x="makeObject :: asidpool"])+
-         apply (wp updateFreeIndex_forward_invs'
-           updateFreeIndex_pspace_no_overlap'
-           updateFreeIndex_caps_no_overlap''
-           updateFreeIndex_descendants_of2
-           updateFreeIndex_cte_wp_at
-           updateFreeIndex_caps_overlap_reserved
-             | simp add: descendants_of_null_filter' split del: if_split)+
+                objBits_simps archObjSize_def default_arch_object_def
+                pred_conj_def)
+         apply (clarsimp simp: conj_comms
+               | strengthen invs_mdb invs_valid_pspace)+
+         apply (simp add:region_in_kernel_window_def)
+         apply (wp set_untyped_cap_invs_simple[where sz = pageBits]
+                   set_cap_cte_wp_at
+                   set_cap_caps_no_overlap[where sz = pageBits]
+                   set_cap_no_overlap
+                   set_cap_device_and_range_aligned[where dev = False,simplified]
+                   set_untyped_cap_caps_overlap_reserved[where sz = pageBits])+
+        apply (clarsimp simp: conj_comms obj_bits_api_def arch_kobj_size_def
+                              objBits_simps archObjSize_def default_arch_object_def
+                              makeObjectKO_def range_cover_full
+                        simp del: capFreeIndex_update.simps
+               | strengthen invs_valid_pspace' invs_pspace_aligned'
+                            invs_pspace_distinct'
+                            exI[where x="makeObject :: asidpool"])+
+        apply (wp updateFreeIndex_forward_invs'
+          updateFreeIndex_pspace_no_overlap'
+          updateFreeIndex_caps_no_overlap''
+          updateFreeIndex_descendants_of2
+          updateFreeIndex_cte_wp_at
+          updateFreeIndex_caps_overlap_reserved
+            | simp add: descendants_of_null_filter' split del: if_split)+
        apply (wp get_cap_wp)+
      apply (subgoal_tac "word1 && ~~ mask pageBits = word1 \<and> pageBits \<le> word_bits \<and> word_size_bits \<le> pageBits")
       prefer 2
@@ -924,15 +925,14 @@ lemma ensurePortOperationAllowed_corres:
   apply (rule corres_gen_asm)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqrE)
-       apply (rule corres_split_eqrE)
-       apply (rule corres_whenE, simp)
+       apply (rule corres_assertE_assume; (rule impI, assumption))
+      apply (rule corres_split_eqrE)
+         apply (rule corres_assertE_assume)
+          apply (rule impI, assumption)+
+        apply (rule corres_whenE, simp)
+         apply clarsimp
         apply clarsimp
-       apply clarsimp
-      apply (rule corres_assertE_assume)
-       apply (rule impI, assumption)+
-        apply wp+
-      apply (rule corres_assertE_assume; (rule impI, assumption))
-     apply wp+
+       apply wp+
    apply (clarsimp simp: valid_cap_def; elim disjE; clarsimp)
     apply (subst add.commute, subst no_olen_add, simp add: word_le_def)+
   apply (clarsimp simp: valid_cap'_def; elim disjE; clarsimp)
@@ -957,9 +957,9 @@ lemma decode_port_inv_corres:
    apply (clarsimp simp: neq_Nil_conv)
    apply (rule corres_guard_imp)
      apply (rule corres_split_norE)
-        apply (rule corres_returnOkTT)
-        apply (clarsimp simp: archinv_relation_def ioport_invocation_map_def ioport_data_relation_def)
-       apply (rule ensurePortOperationAllowed_corres, simp, simp)
+        apply (rule ensurePortOperationAllowed_corres, simp, simp)
+       apply (rule corres_returnOkTT)
+       apply (clarsimp simp: archinv_relation_def ioport_invocation_map_def ioport_data_relation_def)
       apply wpsimp+
   apply (cases "invocation_type label = ArchInvocationLabel X64IOPortIn16")
    apply (simp add: Let_def isCap_simps whenE_def)
@@ -967,9 +967,9 @@ lemma decode_port_inv_corres:
    apply (clarsimp simp: neq_Nil_conv)
    apply (rule corres_guard_imp)
      apply (rule corres_split_norE)
-        apply (rule corres_returnOkTT)
-        apply (clarsimp simp: archinv_relation_def ioport_invocation_map_def ioport_data_relation_def)
-       apply (rule ensurePortOperationAllowed_corres, simp, simp)
+        apply (rule ensurePortOperationAllowed_corres, simp, simp)
+       apply (rule corres_returnOkTT)
+       apply (clarsimp simp: archinv_relation_def ioport_invocation_map_def ioport_data_relation_def)
       apply wpsimp+
   apply (cases "invocation_type label = ArchInvocationLabel X64IOPortIn32")
    apply (simp add: Let_def isCap_simps whenE_def)
@@ -977,36 +977,36 @@ lemma decode_port_inv_corres:
    apply (clarsimp simp: neq_Nil_conv)
    apply (rule corres_guard_imp)
      apply (rule corres_split_norE)
-        apply (rule corres_returnOkTT)
-        apply (clarsimp simp: archinv_relation_def ioport_invocation_map_def ioport_data_relation_def)
-       apply (rule ensurePortOperationAllowed_corres, simp, simp)
+        apply (rule ensurePortOperationAllowed_corres, simp, simp)
+       apply (rule corres_returnOkTT)
+       apply (clarsimp simp: archinv_relation_def ioport_invocation_map_def ioport_data_relation_def)
       apply wpsimp+
   apply (cases "invocation_type label = ArchInvocationLabel X64IOPortOut8")
    apply (simp add: Let_def isCap_simps whenE_def)
    apply (clarsimp simp: neq_Nil_conv split: list.splits)+
    apply (rule corres_guard_imp)
      apply (rule corres_split_norE)
-        apply (rule corres_returnOkTT)
-        apply (clarsimp simp: archinv_relation_def ioport_invocation_map_def ioport_data_relation_def)
-       apply (rule ensurePortOperationAllowed_corres, simp, simp)
+        apply (rule ensurePortOperationAllowed_corres, simp, simp)
+       apply (rule corres_returnOkTT)
+       apply (clarsimp simp: archinv_relation_def ioport_invocation_map_def ioport_data_relation_def)
       apply wpsimp+
   apply (cases "invocation_type label = ArchInvocationLabel X64IOPortOut16")
    apply (simp add: Let_def isCap_simps whenE_def)
    apply (clarsimp simp: neq_Nil_conv split: list.splits)+
    apply (rule corres_guard_imp)
      apply (rule corres_split_norE)
-        apply (rule corres_returnOkTT)
-        apply (clarsimp simp: archinv_relation_def ioport_invocation_map_def ioport_data_relation_def)
-       apply (rule ensurePortOperationAllowed_corres, simp, simp)
+        apply (rule ensurePortOperationAllowed_corres, simp, simp)
+       apply (rule corres_returnOkTT)
+       apply (clarsimp simp: archinv_relation_def ioport_invocation_map_def ioport_data_relation_def)
       apply wpsimp+
   apply (cases "invocation_type label = ArchInvocationLabel X64IOPortOut32")
    apply (simp add: Let_def isCap_simps whenE_def)
    apply (clarsimp simp: neq_Nil_conv split: list.splits)+
    apply (rule corres_guard_imp)
      apply (rule corres_split_norE)
-        apply (rule corres_returnOkTT)
-        apply (clarsimp simp: archinv_relation_def ioport_invocation_map_def ioport_data_relation_def)
-       apply (rule ensurePortOperationAllowed_corres, simp, simp)
+        apply (rule ensurePortOperationAllowed_corres, simp, simp)
+       apply (rule corres_returnOkTT)
+       apply (clarsimp simp: archinv_relation_def ioport_invocation_map_def ioport_data_relation_def)
       apply wpsimp+
   apply (clarsimp simp: isCap_simps Let_def split: arch_invocation_label.splits invocation_label.splits)
   done
@@ -1064,23 +1064,23 @@ lemma decodeX64PortInvocation_corres:
        apply clarsimp
       apply clarsimp
      apply (rule corres_split_eqr[OF isIOPortRangeFree_corres])
-        apply (clarsimp simp: unlessE_whenE)
-        apply (rule whenE_throwError_corres)
-          apply clarsimp
+        apply (clarsimp simp: word_le_not_less)
+       apply (clarsimp simp: unlessE_whenE)
+       apply (rule whenE_throwError_corres)
          apply clarsimp
-        apply (clarsimp simp: lookupTargetSlot_def)
-        apply (rule corres_splitEE[OF lookupSlotForCNodeOp_corres])
-            apply (rule corres_splitEE[OF ensureEmptySlot_corres])
-               apply (rule corres_returnOkTT)
-               apply (clarsimp simp: archinv_relation_def ioport_control_inv_relation_def)
-              apply clarsimp
-             apply wp
-            apply wp
+        apply clarsimp
+       apply (clarsimp simp: lookupTargetSlot_def)
+       apply (rule corres_splitEE[OF lookupSlotForCNodeOp_corres])
            apply (clarsimp simp: cap_relation_def)
           apply clarsimp
-         apply wpsimp
+         apply (rule corres_splitEE[OF ensureEmptySlot_corres])
+            apply clarsimp
+           apply (rule corres_returnOkTT)
+           apply (clarsimp simp: archinv_relation_def ioport_control_inv_relation_def)
+          apply wp
+         apply wp
         apply wpsimp
-       apply (clarsimp simp: word_le_not_less)
+       apply wpsimp
       apply clarsimp
       apply (wpsimp wp: is_ioport_range_free_wp)
      apply clarsimp
@@ -1299,8 +1299,7 @@ lemma port_in_corres[corres]:
   apply (clarsimp simp: port_in_def portIn_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr)
-       apply wpsimp
-      apply (rule corres_machine_op[OF corres_Id], simp+)
+       apply (rule corres_machine_op[OF corres_Id], simp+)
   by wpsimp+
 
 lemma port_out_corres[@lift_corres_args, corres]:
@@ -1308,8 +1307,7 @@ lemma port_out_corres[@lift_corres_args, corres]:
   apply (clarsimp simp: port_out_def portOut_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr)
-       apply wpsimp
-      apply (rule corres_machine_op[OF corres_Id], simp+)
+       apply (rule corres_machine_op[OF corres_Id], simp+)
      apply wpsimp+
   done
 
@@ -1360,10 +1358,10 @@ lemma performX64PortInvocation_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split_nor[OF set_ioport_mask_corres])
       apply (rule corres_split_nor[OF cteInsert_simple_corres])
-           apply (rule corres_return_eq_same, simp)
-          apply (clarsimp simp: cap_relation_def)
+           apply (clarsimp simp: cap_relation_def)
+          apply simp
          apply simp
-        apply simp
+        apply (rule corres_return_eq_same, simp)
        apply wpsimp
       apply wpsimp
      apply (clarsimp simp: is_simple_cap_def is_cap_simps)
@@ -1421,20 +1419,23 @@ lemma arch_performInvocation_corres:
   apply (clarsimp simp: performX64MMUInvocation_def)
   apply (cases ai)
          apply (clarsimp simp: archinv_relation_def performX64MMUInvocation_def)
-         apply (rule corres_guard_imp, rule corres_split_nor, rule corres_trivial, simp)
-             apply (rule performPageTableInvocation_corres; wpsimp)
+         apply (rule corres_guard_imp, rule corres_split_nor)
+              apply (rule performPageTableInvocation_corres; wpsimp)
+             apply (rule corres_trivial, simp)
             apply wpsimp+
           apply (fastforce simp: valid_arch_inv_def)
          apply (fastforce simp: valid_arch_inv'_def)
         apply (clarsimp simp: archinv_relation_def)
-        apply (rule corres_guard_imp, rule corres_split_nor, rule corres_trivial, simp)
-            apply (rule performPageDirectoryInvocation_corres; wpsimp)
+        apply (rule corres_guard_imp, rule corres_split_nor)
+             apply (rule performPageDirectoryInvocation_corres; wpsimp)
+            apply (rule corres_trivial, simp)
            apply wpsimp+
          apply (fastforce simp: valid_arch_inv_def)
         apply (fastforce simp: valid_arch_inv'_def)
        apply (clarsimp simp: archinv_relation_def)
-       apply (rule corres_guard_imp, rule corres_split_nor, rule corres_trivial, simp)
-           apply (rule performPDPTInvocation_corres; wpsimp)
+       apply (rule corres_guard_imp, rule corres_split_nor)
+            apply (rule performPDPTInvocation_corres; wpsimp)
+           apply (rule corres_trivial, simp)
           apply wpsimp+
         apply (fastforce simp: valid_arch_inv_def)
        apply (fastforce simp: valid_arch_inv'_def)
@@ -1445,14 +1446,16 @@ lemma arch_performInvocation_corres:
        apply (fastforce simp: valid_arch_inv_def)
       apply (fastforce simp: valid_arch_inv'_def)
      apply (clarsimp simp: archinv_relation_def)
-     apply (rule corres_guard_imp, rule corres_split_nor, rule corres_trivial, simp)
-         apply (rule performASIDControlInvocation_corres; wpsimp)
+     apply (rule corres_guard_imp, rule corres_split_nor)
+          apply (rule performASIDControlInvocation_corres; wpsimp)
+         apply (rule corres_trivial, simp)
         apply wpsimp+
       apply (fastforce simp: valid_arch_inv_def)
      apply (fastforce simp: valid_arch_inv'_def)
     apply (clarsimp simp: archinv_relation_def)
-    apply (rule corres_guard_imp, rule corres_split_nor, rule corres_trivial, simp)
-        apply (rule performASIDPoolInvocation_corres; wpsimp)
+    apply (rule corres_guard_imp, rule corres_split_nor)
+         apply (rule performASIDPoolInvocation_corres; wpsimp)
+        apply (rule corres_trivial, simp)
        apply wpsimp+
      apply (fastforce simp: valid_arch_inv_def)
     apply (fastforce simp: valid_arch_inv'_def)

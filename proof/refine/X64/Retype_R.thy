@@ -1429,16 +1429,20 @@ lemma objBitsKO_gt_0: "0 < objBitsKO ko"
     apply (simp_all add:archObjSize_def pageBits_def)
   done
 
-lemma kheap_ekheap_double_gets: "(\<And>rv erv rv'. pspace_relation rv rv' \<Longrightarrow> ekheap_relation erv rv' \<Longrightarrow> corres r (R rv erv) (R' rv') (b rv erv) (d rv')) \<Longrightarrow>
-corres r (\<lambda>s. R (kheap s) (ekheap s) s) (\<lambda>s. R' (ksPSpace s) s) (do x \<leftarrow> gets kheap; xa \<leftarrow> gets ekheap; b x xa od) (gets ksPSpace >>= d)"
+lemma kheap_ekheap_double_gets:
+  "(\<And>rv erv rv'. \<lbrakk>pspace_relation rv rv'; ekheap_relation erv rv'\<rbrakk>
+                 \<Longrightarrow> corres r (R rv erv) (R' rv') (b rv erv) (d rv')) \<Longrightarrow>
+   corres r (\<lambda>s. R (kheap s) (ekheap s) s) (\<lambda>s. R' (ksPSpace s) s)
+          (do x \<leftarrow> gets kheap; xa \<leftarrow> gets ekheap; b x xa od) (gets ksPSpace >>= d)"
   apply (rule corres_symb_exec_l)
      apply (rule corres_guard_imp)
-       apply (rule_tac r'= "\<lambda>erv rv'. ekheap_relation erv rv' \<and> pspace_relation x rv'" in corres_split_deprecated)
+       apply (rule_tac r'= "\<lambda>erv rv'. ekheap_relation erv rv' \<and> pspace_relation x rv'"
+               in corres_split)
+          apply (subst corres_gets[where P="\<lambda>s. x = kheap s" and P'=\<top>])
           apply clarsimp
-          apply assumption
-         apply (subst corres_gets[where P="\<lambda>s. x = kheap s" and P'=\<top>])
+          apply (simp add: state_relation_def)
          apply clarsimp
-         apply (simp add: state_relation_def)
+         apply assumption
         apply (wp gets_exs_valid | simp)+
   done
 
@@ -1792,19 +1796,19 @@ proof -
        apply (simp add: not_less modify_modify bind_assoc[symmetric]
                           obj_bits_api[symmetric] shiftl_t2n upto_enum_red'
                            range_cover.unat_of_nat_n[OF cover])
-       apply (rule corres_split_nor[OF corres_trivial])
-          apply (clarsimp simp: retype_addrs_fold[symmetric] ptr_add_def upto_enum_red' not_zero'
-                                range_cover.unat_of_nat_n[OF cover] word_le_sub1
-                          simp del: word_of_nat_eq_0_iff)
-          apply (rule_tac f=g in arg_cong)
-          apply clarsimp
-         apply (rename_tac x eps ps)
-         apply (rule_tac P="\<lambda>s. x = kheap s \<and> eps = ekheap (s) \<and> ?P s" and
-                         P'="\<lambda>s. ps = ksPSpace s \<and> ?P' s" in corres_modify)
-         apply (simp add: set_retype_addrs_fold new_caps_adds_fold)
-         apply (erule retype_state_relation[OF _ _ _ _ _ _ _ _ _ cover _ _ orr],
-                simp_all add: ko not_zero obj_bits_api
-                              bound[simplified obj_bits_api ko])[1]
+       apply (rule corres_split_nor[OF _ corres_trivial])
+          apply (rename_tac x eps ps)
+          apply (rule_tac P="\<lambda>s. x = kheap s \<and> eps = ekheap (s) \<and> ?P s" and
+                          P'="\<lambda>s. ps = ksPSpace s \<and> ?P' s" in corres_modify)
+          apply (simp add: set_retype_addrs_fold new_caps_adds_fold)
+          apply (erule retype_state_relation[OF _ _ _ _ _ _ _ _ _ cover _ _ orr],
+                 simp_all add: ko not_zero obj_bits_api
+                               bound[simplified obj_bits_api ko])[1]
+         apply (clarsimp simp: retype_addrs_fold[symmetric] ptr_add_def upto_enum_red' not_zero'
+                               range_cover.unat_of_nat_n[OF cover] word_le_sub1
+                         simp del: word_of_nat_eq_0_iff)
+         apply (rule_tac f=g in arg_cong)
+         apply clarsimp
         apply wp+
       apply (clarsimp split: option.splits)
       apply (intro conjI impI)
@@ -5387,19 +5391,19 @@ lemma corres_retype_region_createNewCaps:
                             split del: if_split)[10] (* not PML4Object *)
             apply (rule corres_guard_imp)
               apply (rule corres_split_eqr)
-                 apply (rule corres_split_nor)
-                    apply (rule corres_trivial, simp)
-                    apply (clarsimp simp: list_all2_same list_all2_map1 list_all2_map2
-                                          objBits_simps APIType_map2_def)
+                 apply (rule corres_retype[where 'a = tcb],
+                        simp_all add: obj_bits_api_def objBits_simps' pageBits_def
+                                      APIType_map2_def makeObjectKO_def
+                                      other_objs_default_relation)[1]
+                 apply (fastforce simp: range_cover_def)
+                apply (rule corres_split_nor)
                    apply (simp add: APIType_map2_def)
                    apply (rule retype_region2_extra_ext_mapM_x_corres)
-                  apply wp
+                  apply (rule corres_trivial, simp)
+                  apply (clarsimp simp: list_all2_same list_all2_map1 list_all2_map2
+                                        objBits_simps APIType_map2_def)
                  apply wp
-                apply (rule corres_retype[where 'a = tcb],
-                       simp_all add: obj_bits_api_def objBits_simps' pageBits_def
-                                     APIType_map2_def makeObjectKO_def
-                                     other_objs_default_relation)[1]
-                apply (fastforce simp: range_cover_def)
+                apply wp
                apply ((wp retype_region2_obj_at | simp add: APIType_map2_def)+)[1]
               apply ((wp createObjects_tcb_at'[where sz=sz]
                       | simp add: APIType_map2_def objBits_simps' obj_bits_api_def)+)[1]
