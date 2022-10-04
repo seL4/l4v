@@ -327,6 +327,15 @@ definition arch_state_relation :: "(arch_state \<times> RISCV64_H.kernel_state) 
          \<and> riscv_global_pts s = (\<lambda>l. set (riscvKSGlobalPTs s' (size l)))
          \<and> riscv_kernel_vspace s = riscvKSKernelVSpace s'}"
 
+definition machine_state_relation :: "(machine_state \<times> machine_state) set" where
+  "machine_state_relation \<equiv> {(s, s').
+     irq_masks s = irq_masks s' \<and>
+     irq_state s = irq_state s' \<and>
+     underlying_memory s = underlying_memory s' \<and>
+     device_state s = device_state s' \<and>
+     touched_addresses s' \<subseteq> touched_addresses s \<and>
+     machine_state_rest s = machine_state_rest s'}"
+
 definition rights_mask_map :: "rights set \<Rightarrow> Types_H.cap_rights" where
   "rights_mask_map \<equiv>
      \<lambda>rs. CapRights (AllowWrite \<in> rs) (AllowRead \<in> rs) (AllowGrant \<in> rs) (AllowGrantReply \<in> rs)"
@@ -423,7 +432,7 @@ definition state_relation :: "(det_state \<times> kernel_state) set" where
        \<and> interrupt_state_relation (interrupt_irq_node s) (interrupt_states s) (ksInterruptState s')
        \<and> (cur_thread s = ksCurThread s')
        \<and> (idle_thread s = ksIdleThread s')
-       \<and> (machine_state s = ksMachineState s')
+       \<and> (machine_state s, ksMachineState s') \<in> machine_state_relation
        \<and> (work_units_completed s = ksWorkUnitsCompleted s')
        \<and> (domain_index s = ksDomScheduleIdx s')
        \<and> (domain_list s = ksDomSchedule s')
@@ -458,7 +467,7 @@ lemma state_relationD:
    interrupt_state_relation (interrupt_irq_node s) (interrupt_states s) (ksInterruptState s') \<and>
    cur_thread s = ksCurThread s' \<and>
    idle_thread s = ksIdleThread s' \<and>
-   machine_state s = ksMachineState s' \<and>
+   (machine_state s, ksMachineState s') \<in> machine_state_relation \<and>
    work_units_completed s = ksWorkUnitsCompleted s' \<and>
    domain_index s = ksDomScheduleIdx s' \<and>
    domain_list s = ksDomSchedule s' \<and>
@@ -480,7 +489,7 @@ lemma state_relationE [elim?]:
              interrupt_state_relation (interrupt_irq_node s) (interrupt_states s) (ksInterruptState s');
              cur_thread s = ksCurThread s';
              idle_thread s = ksIdleThread s';
-             machine_state s = ksMachineState s';
+             (machine_state s, ksMachineState s') \<in> machine_state_relation;
              work_units_completed s = ksWorkUnitsCompleted s';
              domain_index s = ksDomScheduleIdx s';
              domain_list s = ksDomSchedule s';

@@ -724,9 +724,12 @@ lemma touchObj_corres:
       apply(clarsimp simp:cdt_relation_def)
      apply(clarsimp simp:obj_range_def obj_range'_def)
      apply(rename_tac kh kh' s s')
-     apply(subgoal_tac "obj_addrs (the (kh ptr)) ptr \<union> touched_addresses (ksMachineState s') =
-       mask_range ptr (objBitsKO (the (kh' ptr))) \<union> touched_addresses (ksMachineState s')")
-      apply force
+(*
+     apply(subgoal_tac "touched_addresses (ksMachineState s') \<subseteq> touched_addresses (machine_state s)")
+      prefer 2
+      apply(clarsimp simp:machine_state_relation_def)
+*)
+     apply(clarsimp simp:machine_state_relation_def)
      (* XXX: Again, is there a better way to pass these through than forcing ?Q and ?Q'? *)
      apply(subgoal_tac "obj_at (\<lambda>_. True) ptr s \<and> kh = kheap s")
       prefer 2
@@ -746,8 +749,75 @@ lemma touchObj_corres:
   (* FIXME: Also, this demand that the kheap and ksPSpace object at `ptr` occupy exactly the same
      addresses is probably too strong. Hadn't we reasoned that refinement could make the TA set
      smaller, due to choosing to touch only a subset of the TA overapproximated by the ASpec? *)
-  apply(clarsimp simp:objBitsKO_def)
+  apply(rule conjI)
+   prefer 2
+   apply(force simp:machine_state_relation_def)
+  apply(subgoal_tac "mask_range ptr (objBitsKO (the (kh' ptr))) \<subseteq> obj_addrs (the (kh ptr)) ptr")
+   apply blast
+  (* Should the `pspace_relation` relate the two objects at `ptr`? *)
+  apply(erule_tac x=ptr in ballE)
+   prefer 2
+   apply(force simp:obj_at_def)
+  apply clarsimp
+  apply(clarsimp simp:other_obj_relation_def objBitsKO_def mask_def)
+  apply(case_tac "the (kheap s ptr)")
+      defer
+      (* Case: TCB *)
+      apply(clarsimp simp:other_obj_relation_def objBitsKO_def tcbBlockSizeBits_def mask_def split:kernel_object.splits)
+      apply(force intro:eq_refl)
+     (* Case: Endpoint *)
+     apply(clarsimp simp:other_obj_relation_def objBitsKO_def epSizeBits_def mask_def split:kernel_object.splits)
+     apply(force intro:eq_refl)
+    (* Case: Notification *)
+    apply(clarsimp simp:other_obj_relation_def objBitsKO_def ntfnSizeBits_def mask_def split:kernel_object.splits)
+    apply(force intro:eq_refl)
+   (* Case: ArchObj *)
+   apply(clarsimp simp:other_obj_relation_def objBitsKO_def)
+   apply(rename_tac s s' aobj)
+   apply(case_tac aobj)
+     (* Case: ASIDPool *)
+     apply(clarsimp simp:other_obj_relation_def objBitsKO_def)
+     apply(clarsimp split:kernel_object.splits arch_kernel_object.splits)
+     apply(clarsimp simp:pageBits_def archObjSize_def mask_def)
+     apply(force intro:eq_refl)
+    (* Case: PageTable *)
+    apply(clarsimp simp:other_obj_relation_def objBitsKO_def)
+    apply(clarsimp simp:pte_relation_def)
+    apply(erule_tac x="0" in allE)
+    apply clarsimp
+    (* XXX: Not sure if this would be a good use of the relaxation of pspace_relation
+       to allow TA to shrink... even if I could prove it. *)
+    apply(clarsimp simp:archObjSize_def pte_bits_def table_size_def ptTranslationBits_def word_size_bits_def)
+    apply(rule word_leI)
+    defer
+   (* Case: DataPage *)
+   apply(clarsimp simp:other_obj_relation_def objBitsKO_def)
+(*
+   apply(clarsimp simp:pspace_dom_def obj_relation_cuts_def2)
+*)
+   apply(rename_tac dev sz)
+   apply(erule_tac x="ptr + (1 << pageBits)" in allE)
+   apply(erule_tac x="(\<lambda>_ obj. obj = (if dev then KOUserDataDevice else KOUserData))" in allE)
+   apply clarsimp
+   apply(erule impE)
+    apply(clarsimp simp:pageBits_def)
+    (* XXX: No dice here either.
+    apply(clarsimp simp:pageBitsForSize_def split:vmpage_size.splits)
+    apply(rule conjI)
+     apply clarsimp
+     apply(clarsimp simp:pageBits_def pageBitsForSize_def) *)
+    apply(rule_tac x="1" in exI)
+    apply(rule conjI)
+     apply(clarsimp simp:pageBits_def pageBitsForSize_def)
+    apply(clarsimp simp:pageBitsForSize_def split:vmpage_size.splits)
+    apply(clarsimp simp:pageBits_def ptTranslationBits_def)
+    (* XXX: Nope. *)
+    defer
+   defer
+  (* Case: CNode *)
   sorry (* FIXME: Prove. -robs *)
+thm obj_relation_cuts_def
+thm obj_relation_cuts_def2
 
 (* Copied from CSpace_H for use as a sandbox. To correspond with resolve_address_bits'. -robs *)
 thm resolve_address_bits'.simps
