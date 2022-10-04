@@ -668,11 +668,13 @@ thm obj_at_def
 (* FIXME: Generalise for any kernel object, not just ones that are of a valid CNodeCap. -robs *)
 lemma touchObj_corres:
   "corres (=)
-     (obj_at \<top> ptr)
+     (obj_at ((=) ko) ptr)
      \<comment> \<open>(valid_objs and pspace_aligned and valid_cap (cap.CNodeCap ptr cbits guard) and obj_at \<top> ptr)\<close>
       \<comment> \<open> Hang on. Shouldn't this be trivial when the object *is* on the kheap? -robs
       (\<lambda>s. (obj_in_ta2 ptr) (ms_ta_obj_upd ptr (the (kheap s ptr)) s))) \<close>
-     (obj_at' \<top> ptr)
+     (obj_at'
+       (\<lambda>ko'. (\<exists>cut \<in> obj_relation_cuts ko ptr. fst cut = ptr \<and> (snd cut) ko (injectKO ko')))
+       ptr)
      \<comment> \<open>(valid_objs' and pspace_distinct' and pspace_aligned' and
       valid_cap' (capability.CNodeCap ptr cbits (of_bl guard) (length guard)) and obj_at' \<top> ptr)\<close>
       \<comment> \<open> (\<lambda>s. (obj_in_ta2' ptr) (ms_ta_obj_upd' ptr (the (ksPSpace s ptr)) s))) \<close>
@@ -752,6 +754,7 @@ lemma touchObj_corres:
   apply(rule conjI)
    prefer 2
    apply(force simp:machine_state_relation_def)
+  (* Trying this first. *)
   apply(subgoal_tac "mask_range ptr (objBitsKO (the (kh' ptr))) \<subseteq> obj_addrs (the (kh ptr)) ptr")
    apply blast
   (* Should the `pspace_relation` relate the two objects at `ptr`? *)
@@ -815,6 +818,8 @@ lemma touchObj_corres:
     defer
    defer
   (* Case: CNode *)
+  apply(clarsimp simp:obj_relation_cuts_def2)
+  apply(clarsimp split:kernel_object.splits arch_kernel_object.splits if_splits)
   sorry (* FIXME: Prove. -robs *)
 thm obj_relation_cuts_def
 thm obj_relation_cuts_def2
@@ -965,7 +970,9 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
            apply fastforce
           apply fastforce
          apply (fastforce simp: word_bits_def cte_level_bits_def)
+        (* XXX: Revert if we don't end up needing the state_relation.
         apply (thin_tac "t \<in> state_relation" for t)
+        *)
         apply (erule conjE)
         apply (subst resolveAddressBits_copy.simps)
         apply (subst resolve_address_bits'.simps)
@@ -997,14 +1004,32 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
         apply simp
         apply (subgoal_tac "cbits + length guard < length cref"; simp)
         apply (rule corres_initial_splitE)
-           apply clarsimp
+           apply(clarsimp simp:valid_cap_def obj_at_def)
            apply (rule corres_guard_imp)
-             apply(rule touchObj_corres)
-            apply(force simp:valid_cap_def obj_at_def)
+             apply(rule_tac ko="ko" in touchObj_corres)
+            (* FIXME: More of this business of not having the facts of the next state "sa" *)
+            apply(clarsimp simp:obj_at_def valid_cap_def)
+            defer
            apply(clarsimp simp:valid_cap'_def obj_at'_def)
+           (* XXX: Is fixing addr to 0 really appropriate here? *)
+           apply(erule_tac x=0 in allE)
+           (* I guess we want the one for "sa"... FIXME: clarify what's going on here *)
            apply(erule_tac x=0 in allE)
            apply clarsimp
-           apply(rule_tac x=obj in exI)
+           apply(rename_tac s s' zs ko sa obj obja)
+           apply(rule_tac x="obja" in exI)
+           apply clarsimp
+           apply(clarsimp simp:state_relation_def pspace_relation_def)
+           apply(erule_tac x=ptr in ballE)
+            apply clarsimp
+            (* XXX: The state_relation tells us something for all applicable
+               obj_relation_cuts, but this wouldn't tell us that one exists! *)
+            apply(case_tac ko; clarsimp simp add:other_obj_relation_def)
+             apply(clarsimp split:if_splits)
+             defer
+            (* XXX: For similar reasons, don't know how to rule out the mismatch with ArchObj *)
+            apply(clarsimp split:prod.splits)
+            defer
            apply force
           apply (rule corres_initial_splitE)
              apply clarsimp
