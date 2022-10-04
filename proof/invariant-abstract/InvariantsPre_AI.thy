@@ -70,6 +70,13 @@ lemma validE_tainv[wp]:
   "\<lbrace>ignore_ta P\<rbrace> m \<lbrace>\<lambda>_. ignore_ta P\<rbrace>, \<lbrace>\<lambda>_. ignore_ta P\<rbrace>"
   by (simp add: hoare_valid_validE tainv)
 
+lemma validE2_tainv[wp]:
+  "\<lbrace>ignore_ta P and ignore_ta Q\<rbrace> m \<lbrace>\<lambda>_. ignore_ta P\<rbrace>, \<lbrace>\<lambda>_. ignore_ta Q\<rbrace>"
+  apply (rule valid_validE2, rule hoare_weaken_pre)
+  apply (rule tainv [where P="P and Q"])
+    apply simp+
+  done
+
 lemma validE_R_tainv[wp]:
   "\<lbrace>ignore_ta P\<rbrace> m \<lbrace>\<lambda>_. ignore_ta P\<rbrace>, -"
   by (simp add: tainv valid_validE_R)
@@ -84,6 +91,14 @@ lemma agnostic_preservedE:
   unfolding ta_agnostic_def
   by (simp add: agnostic_preserved ta_agnostic_def valid_validE)
 
+lemma agnostic_preservedE2:
+  "ta_agnostic P \<Longrightarrow> ta_agnostic Q \<Longrightarrow> \<lbrace>P and Q\<rbrace> m \<lbrace>\<lambda>_. P\<rbrace>, \<lbrace>\<lambda>_. Q\<rbrace>"
+  apply (rule valid_validE2 [where Q'="P and Q"])
+    apply (rule agnostic_preserved)
+    apply (simp add: ta_agnostic_def)
+  apply simp+
+  done
+  
 end
 
 (*FIXME: does this actually do anything? *)
