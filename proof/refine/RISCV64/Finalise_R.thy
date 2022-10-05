@@ -3444,16 +3444,17 @@ lemma arch_finaliseCap_corres:
                 elim: is_aligned_weaken)[2]
   apply (rule corres_guard_imp)
     apply (rule corres_split_catch[where f=dc])
-       apply (rule unmapPageTable_corres; simp)
-      apply (rule corres_splitEE)
-         apply (rule corres_rel_imp[where r="dc \<oplus> (=)"], rule findVSpaceForASID_corres; simp)
-         apply (case_tac x; simp)
-        apply (simp only: whenE_def)
-        apply (rule corres_if[where Q=\<top> and Q'=\<top>], simp)
+       apply (rule corres_splitEE)
+          apply (rule corres_rel_imp[where r="dc \<oplus> (=)"], rule findVSpaceForASID_corres; simp)
+          apply (case_tac x; simp)
+         apply (simp only: whenE_def)
+         apply (rule corres_if[where Q=\<top> and Q'=\<top>], simp)
+          apply simp
+          apply (rule deleteASID_corres; rule refl)
          apply simp
-         apply (rule deleteASID_corres; rule refl)
-        apply simp
-       apply (wpsimp wp: hoare_vcg_if_lift_ER hoare_drop_imps)+
+        apply (wpsimp wp: hoare_vcg_if_lift_ER hoare_drop_imps)+
+      apply (rule unmapPageTable_corres; simp)
+     apply (wpsimp wp: hoare_drop_imps)+
    apply (clarsimp simp: invs_psp_aligned invs_distinct invs_vspace_objs invs_valid_asid_table)
    apply (clarsimp simp: cte_wp_at_caps_of_state)
    apply (drule (1) caps_of_state_valid)
@@ -3477,8 +3478,8 @@ lemma unbindNotification_corres:
       apply (rule corres_split[OF getNotification_corres])
         apply clarsimp
         apply (rule corres_split[OF setNotification_corres])
-           apply (rule setBoundNotification_corres)
-          apply (clarsimp simp: ntfn_relation_def split:Structures_A.ntfn.splits)
+           apply (clarsimp simp: ntfn_relation_def split:Structures_A.ntfn.splits)
+          apply (rule setBoundNotification_corres)
          apply (wp gbn_wp' gbn_wp)+
    apply (clarsimp elim!: obj_at_valid_objsE
                    dest!: bound_tcb_at_state_refs_ofD invs_valid_objs
@@ -3503,8 +3504,8 @@ lemma unbindMaybeNotification_corres:
        apply (rule corres_return_trivial)
       apply simp
       apply (rule corres_split[OF setNotification_corres])
-         apply (rule setBoundNotification_corres)
-        apply (clarsimp simp: ntfn_relation_def split: Structures_A.ntfn.splits)
+         apply (clarsimp simp: ntfn_relation_def split: Structures_A.ntfn.splits)
+        apply (rule setBoundNotification_corres)
        apply (wp get_simple_ko_wp getNotification_wp)+
    apply (clarsimp elim!: obj_at_valid_objsE
                    dest!: bound_tcb_at_state_refs_ofD invs_valid_objs
@@ -3566,10 +3567,10 @@ lemma cap_delete_one_corres:
        apply (rule corres_split[OF isFinalCapability_corres[where ptr=ptr]])
          apply (simp add: split_def bind_assoc [THEN sym])
          apply (rule corres_split[OF fast_finaliseCap_corres[where sl=ptr]])
-              apply (rule emptySlot_corres)
-             apply simp+
+              apply simp+
+           apply (rule emptySlot_corres, simp)
           apply (wp hoare_drop_imps)+
-        apply (wp isFinalCapability_inv | wp (once) isFinal[where x="cte_map ptr"])+
+       apply (wp isFinalCapability_inv | wp (once) isFinal[where x="cte_map ptr"])+
       apply (rule corres_trivial, simp)
      apply (wp get_cap_wp getCTE_wp)+
    apply (clarsimp simp: cte_wp_at_caps_of_state can_fast_finalise_Null
