@@ -3480,16 +3480,14 @@ shows
     apply (rule_tac isBlocking=isBlocking and isCall=isCall and buffer=buffer
                 in decodeUntypedInvocation_ccorres_helper[unfolded K_def])
     apply assumption
-   apply (rule monadic_rewrite_transverse)
+   apply (rule monadic_rewrite_trans[rotated])
     apply (rule monadic_rewrite_bind_head)
-    apply (rule monadic_rewrite_bindE[OF monadic_rewrite_refl])
-     apply (simp add: liftE_bindE stateAssert_def2 bind_assoc)
-     apply (rule monadic_rewrite_bind_tail)
-      apply (rule_tac P=x in monadic_rewrite_gen_asm)
-      apply simp
+    apply (simp add: liftE_bindE stateAssert_def2 bind_assoc)
+    apply (monadic_rewrite_r monadic_rewrite_if_r_True)
+    apply (monadic_rewrite_r_method monadic_rewrite_symb_exec_r_drop wpsimp)
       apply (rule monadic_rewrite_refl)
-     apply (wp | simp)+
-   apply (simp add: gets_bind_ign)
+     apply wpsimp
+    apply (rule monadic_rewrite_refl)
    apply (rule monadic_rewrite_refl)
   apply (clarsimp simp: ex_cte_cap_wp_to'_def excaps_in_mem_def)
   apply (drule(1) bspec)+
