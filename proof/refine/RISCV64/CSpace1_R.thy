@@ -665,24 +665,11 @@ term ko_at
 term "ko_at'"
 term \<top>
 thm obj_at_def
-(* FIXME: Generalise for any kernel object, not just ones that are of a valid CNodeCap. -robs *)
-lemma touchObj_corres:
-  "corres (=)
-     \<comment> \<open> XXX: Can't refer to some fixed ko here because corres_guard_imp will require
-          the relaxation to work for all states, not just the one that produced that ko.
-          I guess it's not the role of these predicates to assert a relationship between
-          the ASpec and ExecSpec states, but rather the role of the state_relation.
-     (obj_at ((=) ko) ptr) \<close>
-     (obj_at \<top> ptr)
-     \<comment> \<open> XXX: Again, can't refer to fixed ko here, and besides, the existential doesn't turn out
-          very useful because (1) state_relation gives us a forall and (2) we should get
-          everything we need from state_relation which is baked into corres_underlying anyway.
-     (obj_at'
-       (\<lambda>ko'. (\<exists>cut \<in> obj_relation_cuts ko ptr. fst cut = ptr \<and> (snd cut) ko (injectKO ko')))
-       ptr) \<close>
-     (obj_at' \<top> ptr)
-     (touch_object ptr)
-     (touchObj ptr)"
+
+lemma touchObj_corres_others:
+  "corres (=) (obj_at (\<lambda>ko. (\<not> is_CNode ko) \<and>
+       (case ko of ArchObj ao \<Rightarrow> \<not> is_PageTable ao \<and> \<not> is_DataPage ao | _ \<Rightarrow> True)) ptr)
+     (obj_at' \<top> ptr) (touch_object ptr) (touchObj ptr)"
   apply(simp add: touchObj_def touch_object_def2)
   apply(rule corres_split')
      apply(rule corres_stronger_no_failI)
@@ -705,7 +692,9 @@ lemma touchObj_corres:
          apply(clarsimp split:prod.splits)
          apply simp (* XXX: Dummy out r as \<top>\<top> *)
         (* XXX: Is there a better way to pass these through than forcing ?Q and ?Q'? *)
-        apply(subgoal_tac "obj_at (\<lambda>_. True) ptr s \<and> kh = kheap s")
+        apply(subgoal_tac "obj_at (\<lambda>ko. (\<not> is_CNode ko) \<and>
+          (case ko of ArchObj ao \<Rightarrow> \<not> is_PageTable ao \<and> \<not> is_DataPage ao | _ \<Rightarrow> True)) ptr s \<and>
+          kh = kheap s")
          prefer 2
          apply assumption
         apply(subgoal_tac "obj_at' (\<lambda>_. True) ptr s' \<and> kh' = ksPSpace s'")
@@ -736,7 +725,9 @@ lemma touchObj_corres:
 *)
      apply(clarsimp simp:machine_state_relation_def)
      (* XXX: Again, is there a better way to pass these through than forcing ?Q and ?Q'? *)
-     apply(subgoal_tac "obj_at (\<lambda>_. True) ptr s \<and> kh = kheap s")
+     apply(subgoal_tac "obj_at (\<lambda>ko. (\<not> is_CNode ko) \<and>
+       (case ko of ArchObj ao \<Rightarrow> \<not> is_PageTable ao \<and> \<not> is_DataPage ao | _ \<Rightarrow> True)) ptr s \<and>
+       kh = kheap s")
       prefer 2
       apply assumption
      apply(subgoal_tac "obj_at' (\<lambda>_. True) ptr s' \<and> kh' = ksPSpace s'")
@@ -787,6 +778,7 @@ lemma touchObj_corres:
      apply(clarsimp simp:pageBits_def archObjSize_def mask_def)
      apply(force intro:eq_refl)
     (* Case: PageTable *)
+    apply(force simp:obj_at_def) (* XXX: Excluding PageTable for now
     apply(clarsimp simp:other_obj_relation_def objBitsKO_def)
     apply(clarsimp simp:pte_relation_def)
     apply(erule_tac x="0" in allE)
@@ -796,7 +788,9 @@ lemma touchObj_corres:
     apply(clarsimp simp:archObjSize_def pte_bits_def table_size_def ptTranslationBits_def word_size_bits_def)
     apply(rule word_leI)
     defer
+    *)
    (* Case: DataPage *)
+   apply(force simp:obj_at_def) (* XXX: Excluding DataPage for now
    apply(clarsimp simp:other_obj_relation_def objBitsKO_def)
 (*
    apply(clarsimp simp:pspace_dom_def obj_relation_cuts_def2)
@@ -820,12 +814,40 @@ lemma touchObj_corres:
     (* XXX: Nope. *)
     defer
    defer
+   *)
   (* Case: CNode *)
+  apply(force simp:obj_at_def)
+  (* XXX: Excluding CNode for now. FIXME: Prove.
   apply(clarsimp simp:obj_relation_cuts_def2)
-  apply(clarsimp split:kernel_object.splits arch_kernel_object.splits if_splits)
-  sorry (* FIXME: Prove. -robs *)
+  apply(clarsimp simp:cte_map_def cap_relation_def well_formed_cnode_n_def cte_relation_def split:kernel_object.splits arch_kernel_object.splits if_splits)
+  *)
+  done
 thm obj_relation_cuts_def
 thm obj_relation_cuts_def2
+
+lemma touchObj_corres_CNode:
+  "corres (=) (obj_at is_CNode ptr) (obj_at' \<top> ptr) (touch_object ptr) (touchObj ptr)"
+  sorry (* FIXME: Prove. *)
+
+lemma touchObj_corres_PageTable:
+  "corres (=) (obj_at (\<lambda>ko. case ko of ArchObj ao \<Rightarrow> is_PageTable ao | _ \<Rightarrow> False) ptr)
+    (obj_at' \<top> ptr) (touch_object ptr) (touchObj ptr)"
+  sorry (* FIXME: Prove. *)
+
+lemma touchObj_corres_DataPage:
+  "corres (=) (obj_at (\<lambda>ko. case ko of ArchObj ao \<Rightarrow> is_DataPage ao | _ \<Rightarrow> False) ptr)
+    (obj_at' \<top> ptr) (touch_object ptr) (touchObj ptr)"
+  sorry (* FIXME: Prove. *)
+
+(* XXX: It's yet not clear to me that the four cases will have similar enough preconditions
+  to make this provable, but anyway let's pose it for now. -robs *)
+lemma touchObj_corres:
+  "corres (=) (obj_at \<top> ptr) (obj_at' \<top> ptr) (touch_object ptr) (touchObj ptr)"
+  using touchObj_corres_others
+    touchObj_corres_CNode touchObj_corres_PageTable touchObj_corres_DataPage
+  apply(simp add: touchObj_def touch_object_def2 obj_at_def)
+  (* XXX: Uh this is probably not how we want to divide the problem -robs *)
+  oops
 
 (* Copied from CSpace_H for use as a sandbox. To correspond with resolve_address_bits'. -robs *)
 thm resolve_address_bits'.simps
@@ -1007,8 +1029,9 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
         apply (rule corres_initial_splitE)
            apply clarsimp
            apply(rule corres_guard_imp)
-             apply(rule touchObj_corres)
-            apply(force simp:valid_cap_def obj_at_def)
+             apply(rule touchObj_corres_CNode)
+            apply(force simp:valid_cap_def obj_at_def is_cap_table_def
+              split:Structures_A.kernel_object.splits)
            apply(clarsimp simp:valid_cap'_def obj_at'_def)
            apply(erule_tac x=0 in allE)
            apply clarsimp
