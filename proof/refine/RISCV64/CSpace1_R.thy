@@ -822,11 +822,150 @@ lemma touchObj_corres_others:
   apply(clarsimp simp:cte_map_def cap_relation_def well_formed_cnode_n_def cte_relation_def split:kernel_object.splits arch_kernel_object.splits if_splits)
   *)
   done
+
 thm obj_relation_cuts_def
 thm obj_relation_cuts_def2
-
-lemma touchObj_corres_CNode:
-  "corres (=) (obj_at is_CNode ptr) (obj_at' \<top> ptr) (touch_object ptr) (touchObj ptr)"
+lemma touchObj_corres_CTE:
+  (* XXX: Don't forget to check if the latest version of ASpec's resolve_address_bits
+     is even touching the CNode as opposed to the individual CTE!
+     Or if it is touching the CNode, should it be? Maybe it *should* be touching the CTE. *)
+  "corres (=) (obj_at is_CNode ptr)
+     (obj_at' (\<lambda>ko'. koTypeOf (injectKO ko') = CTET) (cte_map (ptr, offset)))
+     (touch_object ptr) (touchObj (cte_map (ptr, offset)))"
+  apply(simp add: touchObj_def touch_object_def2)
+  apply(rule corres_split')
+     apply(rule corres_stronger_no_failI)
+      apply(rule no_fail_pre, wp)
+      apply(rule TrueI)
+     apply(clarsimp simp:simpler_gets_def)
+     apply(rename_tac s s')
+     apply(rule_tac x="(kheap s, s)" in bexI)
+      apply simp (* XXX: Dummy out r as \<top>\<top> *)
+     apply(force simp:simpler_gets_def)
+    apply clarsimp
+    apply(rule corres_split')
+       apply(rule corres_underlyingI)
+        apply(clarsimp simp:in_assert)
+        apply(rename_tac kh kh' s s' ko)
+        apply(rule_tac x="((), s)" in bexI)
+         apply(clarsimp split:prod.splits)
+         apply simp (* XXX: Dummy out r as \<top>\<top> *)
+        (* XXX: Is there a better way to pass these through than forcing ?Q and ?Q'? *)
+        apply(subgoal_tac "obj_at is_CNode ptr s \<and> kh = kheap s")
+         prefer 2
+         apply assumption
+        apply(subgoal_tac "obj_at' (\<lambda>ko'. koTypeOf (injectKO ko') = CTET) (cte_map (ptr, offset)) s' \<and> kh' = ksPSpace s'")
+         prefer 2
+         apply assumption
+        apply(clarsimp simp:in_assert return_def obj_at_def)
+       apply(clarsimp simp:in_assert return_def obj_at'_def)
+      prefer 4
+      apply(wpsimp simp:obj_at_def return_def)
+     prefer 4
+     apply(wpsimp simp:obj_at'_def return_def)
+     apply blast
+    apply clarsimp
+    apply(rule corres_underlyingI)
+     apply clarsimp
+     apply(clarsimp simp:simpler_doMachineOp_addTouchedAddresses_def simpler_modify_def
+       simpler_do_machine_op_addTouchedAddresses_def)
+     apply(clarsimp simp:state_relation_def pspace_relation_def)
+     apply(rule conjI)
+      apply(clarsimp simp:cdt_relation_def)
+     apply(clarsimp simp:obj_range_def obj_range'_def)
+     apply(rename_tac kh kh' s s')
+     apply(clarsimp simp:machine_state_relation_def)
+     (* XXX: Again, is there a better way to pass these through than forcing ?Q and ?Q'? *)
+     apply(subgoal_tac "obj_at is_CNode ptr s \<and> kh = kheap s")
+      prefer 2
+      apply assumption
+     apply(subgoal_tac "obj_at' (\<lambda>ko'. koTypeOf (injectKO ko') = CTET) (cte_map (ptr, offset)) s' \<and> kh' = ksPSpace s'")
+      prefer 2
+      apply assumption
+     prefer 3
+     apply wpsimp
+    prefer 3
+    apply wpsimp
+    apply blast
+   prefer 2
+   apply(clarsimp simp:simpler_doMachineOp_addTouchedAddresses_def simpler_modify_def)
+  apply(rule conjI)
+   prefer 2
+   apply(force simp:machine_state_relation_def)
+  (* Should the `pspace_relation` relate the two objects at `ptr`? *)
+  apply(erule_tac x=ptr in ballE)
+   prefer 2
+   apply(force simp:obj_at_def)
+  apply clarsimp
+  apply(case_tac "the (kheap s ptr)"; simp add: obj_at_def is_CNode_def)
+      defer
+      apply (metis Some_to_the Structures_A.kernel_object.distinct(1))
+     apply (metis Some_to_the Structures_A.kernel_object.distinct(4))
+    apply (metis Some_to_the Structures_A.kernel_object.distinct(5))
+   apply (metis Some_to_the Structures_A.kernel_object.distinct(8))
+  (* Experiments without pspace_dom, since it doesn't look like we ought to need it.
+     The guards that are currently here already contain case-distinguished
+     content obtained from obj_relation_cuts! *)
+  apply(rename_tac s s' x sz cs)
+  apply(clarsimp split:if_splits)
+  apply(erule_tac x="cte_map (ptr, offset)" in allE)
+  apply(clarsimp simp:obj_at'_def)
+  apply(clarsimp simp:project_inject)
+  apply(simp only:objBits_def[symmetric])
+  apply(erule_tac x="cte_relation offset" in allE)
+  apply(erule impE)
+   apply(rule_tac x=offset in exI)
+   apply clarsimp
+   apply(clarsimp simp:well_formed_cnode_n_def)
+   (* FIXME: Perhaps at this point I need some extra fact that's specific to caps,
+      like the sort rab_corres has at this point but that I threw away in an attempt
+      to make a version of touchObj_corres that was agnostic of the kobj type... -robs *)
+  (* XXX: Not clear any more that there's any point to unfolding this, at least not this early.
+  apply(clarsimp simp:mask_def other_obj_relation_def objBitsKO_def)
+  *)
+  (* Experiments to unlock the information we need from pspace_dom.
+     The conclusion from all this was the information gained from unfolding pspace_dom just
+     confuses things and seems redundant with what we already have from pspace_relation.
+  apply(clarsimp simp:pspace_dom_def)
+  apply(clarsimp simp:UNION_eq)
+  apply(clarsimp simp:image_def)
+  apply(clarsimp simp:dom_def)
+  (* Shouldn't this be ptr, not the offset within it?
+  apply(erule_tac c="cte_map (ptr, offset)" in equalityCE)
+   prefer 2
+   apply(clarsimp simp:obj_at'_def)
+  *)
+  (* XXX: Maybe equalityCE is not the way to go here. And if we can't use that,
+     it's not clear how helpful the pspace_dom conjunct even is at all. *)
+  thm equalityCE
+  apply(erule_tac c=ptr in equalityCE)
+   prefer 2
+   apply(clarsimp simp:obj_at'_def)
+   defer
+  apply clarsimp
+  apply(rename_tac s s' x sz cs ptr' ko' cut ko)
+  apply(clarsimp simp:obj_at'_def)
+  apply(clarsimp split:if_splits)
+(*  apply(clarsimp simp:cte_map_def) *)
+  apply(erule_tac x="cte_map (ptr, offset)" in allE)
+  apply(erule_tac x=cut in allE)
+  apply(erule impE)
+   apply(rule_tac x=offset in exI)
+   (* Where did ptr' come from, then? If we unfolded obj_relation_cuts
+      would it tell us that ptr' has to be ptr?
+   apply(subgoal_tac "ptr' = ptr")
+    prefer 2
+    apply(clarsimp simp:obj_relation_cuts_def2 cte_map_def split:Structures_A.kernel_object.splits if_splits)
+    (* Huh. I guess not. *)
+   *)
+   apply clarsimp
+   apply(clarsimp simp:obj_relation_cuts_def2)
+   apply(erule Set.set_insert)
+   apply(clarsimp simp:project_inject) (* Ah great. This got rid of one fixed ko'. *)
+   (* XXX: Why is this all in terms of ptr'? *)
+   apply(clarsimp split:Structures_A.kernel_object.splits kernel_object.splits)
+       defer
+*)
   sorry (* FIXME: Prove. *)
 
 lemma touchObj_corres_PageTable:
@@ -840,11 +979,11 @@ lemma touchObj_corres_DataPage:
   sorry (* FIXME: Prove. *)
 
 (* XXX: It's yet not clear to me that the four cases will have similar enough preconditions
-  to make this provable, but anyway let's pose it for now. -robs *)
+  to make this provable. -robs *)
 lemma touchObj_corres:
   "corres (=) (obj_at \<top> ptr) (obj_at' \<top> ptr) (touch_object ptr) (touchObj ptr)"
   using touchObj_corres_others
-    touchObj_corres_CNode touchObj_corres_PageTable touchObj_corres_DataPage
+    touchObj_corres_CTE touchObj_corres_PageTable touchObj_corres_DataPage
   apply(simp add: touchObj_def touch_object_def2 obj_at_def)
   (* XXX: Uh this is probably not how we want to divide the problem -robs *)
   oops
@@ -1029,7 +1168,10 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
         apply (rule corres_initial_splitE)
            apply clarsimp
            apply(rule corres_guard_imp)
-             apply(rule touchObj_corres_CNode)
+             using touchObj_corres_CTE
+. (* FIXME: Figure out what exactly resolve_address_bits ought to be touching
+     before continuing here and with the touchObj_corres proof! -robs
+             apply(rule touchObj_corres_CTE)
             apply(force simp:valid_cap_def obj_at_def is_cap_table_def
               split:Structures_A.kernel_object.splits)
            apply(clarsimp simp:valid_cap'_def obj_at'_def)
