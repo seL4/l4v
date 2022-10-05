@@ -423,10 +423,10 @@ lemma threadSet_corres_noop_splitT:
   apply (rule corres_guard_imp)
     apply (subst return_bind[symmetric])
     apply (rule corres_split_nor[OF threadSet_corres_noopT])
-         apply (rule z)
-        apply (simp add: x)
-       apply (rule y)
-      apply (rule e)
+         apply (simp add: x)
+        apply (rule y)
+       apply (rule e)
+      apply (rule z)
      apply (wp w)+
    apply simp
   apply simp
@@ -1381,22 +1381,22 @@ lemma asUser_corres':
   show ?thesis
   apply (simp add: as_user_def asUser_def)
   apply (rule corres_guard_imp)
-    apply (rule_tac r'="\<lambda>tcb con. (arch_tcb_context_get o tcb_arch) tcb = con" in corres_split_deprecated)
-       apply (rule corres_split[OF L4])
-          apply clarsimp
-          apply (rule corres_split_nor)
-             apply (rule corres_trivial, simp)
-            apply (simp add: threadSet_def)
-            apply (rule corres_symb_exec_r)
-               prefer 4
-               apply (rule no_fail_pre_and, wp)
-              apply (rule L3[simplified])
-                apply simp
-               apply simp
-              apply (wp select_f_inv | simp)+
-      apply (rule L1[simplified])
-     apply wp+
-   apply auto
+    apply (rule_tac r'="\<lambda>tcb con. (arch_tcb_context_get o tcb_arch) tcb = con"
+           in corres_split)
+       apply simp
+       apply (rule L1[simplified])
+      apply (rule corres_split)
+         apply (rule L4; simp)
+        apply clarsimp
+        apply (rule corres_split_nor)
+           apply (simp add: threadSet_def)
+           apply (rule corres_symb_exec_r)
+              prefer 4
+              apply (rule no_fail_pre_and, wp)
+             apply (rule L3[simplified])
+              apply simp
+             apply simp
+            apply (wp select_f_inv | simp)+
   done
 qed
 
@@ -1874,21 +1874,27 @@ proof -
      apply (rule ready_queues_helper; auto)
     apply (clarsimp simp: when_def)
     apply (rule stronger_corres_guard_imp)
-      apply (rule corres_split_deprecated[where r'="(=)", OF _ ethreadget_corres])
-         apply (rule corres_split_deprecated[where r'="(=)", OF _ ethreadget_corres])
-            apply (rule corres_split_deprecated[where r'="(=)"])
-               apply (rule corres_split_noop_rhs2)
-                   apply (rule corres_split_noop_rhs2)
-                     apply (fastforce intro: threadSet_corres_noop simp: tcb_relation_def exst_same_def)
-                    apply (fastforce intro: addToBitmap_noop_corres)
-                   apply wp+
-                 apply (simp add: tcb_sched_enqueue_def split del: if_split)
-                 apply (rule_tac P=\<top> and Q="K (t \<notin> set queuea)" in corres_assume_pre)
-                 apply (wp setQueue_corres[unfolded dc_def] | simp)+
-              apply (wp getQueue_corres getObject_tcb_wp  | simp add: etcb_relation_def threadGet_def)+
-      apply (fastforce simp: valid_queues_def valid_queues_no_bitmap_def obj_at'_def inQ_def
-                             projectKO_eq project_inject)
-     done
+      apply (rule corres_split[where r'="(=)"])
+         apply (rule ethreadget_corres)
+         apply (simp add: etcb_relation_def)
+        apply (rule corres_split[where r'="(=)"])
+           apply (rule ethreadget_corres)
+           apply (simp add: etcb_relation_def)
+          apply (rule corres_split[where r'="(=)"])
+             apply simp
+             apply (rule getQueue_corres)
+            apply (rule corres_split_noop_rhs2)
+               apply (simp add: tcb_sched_enqueue_def split del: if_split)
+               apply (rule_tac P=\<top> and Q="K (t \<notin> set queuea)" in corres_assume_pre)
+               apply simp
+               apply (rule setQueue_corres[unfolded dc_def])
+              apply (rule corres_split_noop_rhs2)
+                 apply (fastforce intro: addToBitmap_noop_corres)
+                apply (fastforce intro: threadSet_corres_noop simp: tcb_relation_def exst_same_def)
+               apply (wp getObject_tcb_wp  | simp add: threadGet_def)+
+    apply (fastforce simp: valid_queues_def valid_queues_no_bitmap_def obj_at'_def inQ_def
+                           projectKO_eq project_inject)
+    done
 qed
 
 definition
@@ -1922,13 +1928,14 @@ lemma rescheduleRequired_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF getSchedulerAction_corres])
       apply (rule_tac P="case action of switch_thread t \<Rightarrow> P t | _ \<Rightarrow> \<top>"
-              and P'="case actiona of SwitchToThread t \<Rightarrow> P' t | _ \<Rightarrow> \<top>" for P P' in corres_split_deprecated[where r'=dc])
-         apply (rule setSchedulerAction_corres)
-         apply simp
-        apply (case_tac action)
+                  and P'="case actiona of SwitchToThread t \<Rightarrow> P' t | _ \<Rightarrow> \<top>" for P P'
+              in corres_split[where r'=dc])
+         apply (case_tac action)
+           apply simp
           apply simp
+          apply (rule tcbSchedEnqueue_corres)
          apply simp
-         apply (rule tcbSchedEnqueue_corres)
+        apply (rule setSchedulerAction_corres)
         apply simp
        apply (wp | wpc | simp)+
    apply (force dest: st_tcb_weakenE simp: in_monad weak_valid_sched_action_def valid_etcbs_def
@@ -2075,15 +2082,19 @@ lemma tcbSchedDequeue_corres:
    apply (simp add: exec_gets simpler_modify_def get_etcb_def ready_queues_relation_def cong: if_cong get_tcb_queue_def)
   apply (simp add: when_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[where r'="(=)", OF _ ethreadget_corres])
-       apply (rule corres_split_deprecated[where r'="(=)", OF _ ethreadget_corres])
-          apply (rule corres_split_deprecated[where r'="(=)"])
-             apply (rule corres_split_noop_rhs2)
-                apply (rule corres_split_noop_rhs)
-                  apply (rule threadSet_corres_noop; simp_all add: tcb_relation_def exst_same_def)
-                 apply (clarsimp, rule removeFromBitmap_corres_noop)
-                apply (rule setQueue_corres | rule getQueue_corres |
-                        wp | simp add: tcb_sched_dequeue_def etcb_relation_def)+
+    apply (rule corres_split[where r'="(=)"])
+       apply (rule ethreadget_corres, simp add: etcb_relation_def)
+      apply (rule corres_split[where r'="(=)"])
+         apply (rule ethreadget_corres, simp add: etcb_relation_def)
+        apply (rule corres_split[where r'="(=)"])
+           apply (simp, rule getQueue_corres)
+          apply (rule corres_split_noop_rhs2)
+             apply (simp add: tcb_sched_dequeue_def)
+             apply (rule setQueue_corres)
+            apply (rule corres_split_noop_rhs)
+              apply (clarsimp, rule removeFromBitmap_corres_noop)
+             apply (rule threadSet_corres_noop; simp_all add: tcb_relation_def exst_same_def)
+            apply (wp | simp)+
   done
 
 lemma thread_get_test: "do cur_ts \<leftarrow> get_thread_state cur; g (test cur_ts) od =
@@ -2113,21 +2124,20 @@ lemma setThreadState_corres:
   apply (simp add: set_thread_state_ext_def[abs_def])
   apply (subst bind_assoc[symmetric], subst thread_set_def[simplified, symmetric])
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[where r'=dc])
-       apply simp
-       apply (subst thread_get_test[where test="runnable"])
-       apply (rule corres_split[OF thread_get_isRunnable_corres])
-         apply (rule corres_split[OF getCurThread_corres])
-           apply (rule corres_split[OF getSchedulerAction_corres])
-             apply (simp only: when_def)
-             apply (rule corres_if[where Q=\<top> and Q'=\<top>])
-               apply (rule iffI)
-                apply clarsimp+
-               apply (case_tac rva,simp_all)[1]
-              apply (wp rescheduleRequired_corres_simple corres_return_trivial | simp)+
-      apply (rule threadset_corres, (simp add: tcb_relation_def exst_same_def)+)
-     apply (wp hoare_vcg_conj_lift[where Q'="\<top>\<top>"] | simp add: sch_act_simple_def)+
-   done
+    apply (rule corres_split[where r'=dc])
+       apply (rule threadset_corres, (simp add: tcb_relation_def exst_same_def)+)
+      apply (subst thread_get_test[where test="runnable"])
+      apply (rule corres_split[OF thread_get_isRunnable_corres])
+        apply (rule corres_split[OF getCurThread_corres])
+          apply (rule corres_split[OF getSchedulerAction_corres])
+            apply (simp only: when_def)
+            apply (rule corres_if[where Q=\<top> and Q'=\<top>])
+              apply (rule iffI)
+               apply clarsimp+
+              apply (case_tac rva,simp_all)[1]
+             apply (wp rescheduleRequired_corres_simple corres_return_trivial | simp)+
+    apply (wp hoare_vcg_conj_lift[where Q'="\<top>\<top>"] | simp add: sch_act_simple_def)+
+  done
 
 lemma setBoundNotification_corres:
   "corres dc
@@ -3241,21 +3251,22 @@ lemma storeWordUser_corres:
   apply (rule corres_guard2_imp)
    apply (rule_tac F = "is_aligned a msg_align_bits" in corres_gen_asm2)
    apply (rule corres_guard1_imp)
-    apply (rule_tac r'=dc in corres_split_deprecated)
-       apply (rule corres_machine_op)
-       apply (rule corres_Id [OF refl])
-        apply simp
-       apply (rule no_fail_pre)
-        apply (wp no_fail_storeWord)
-       apply (erule_tac n=msg_align_bits in aligned_add_aligned)
-        apply (rule is_aligned_mult_triv2 [where n = 2, simplified])
-       apply (simp add: word_bits_conv msg_align_bits)+
-      apply (simp add: stateAssert_def)
-      apply (rule_tac r'=dc in corres_split_deprecated)
+    apply (rule_tac r'=dc in corres_split)
+       apply (simp add: stateAssert_def)
+       apply (rule_tac r'=dc in corres_split)
+          apply (rule corres_trivial)
+          apply simp
          apply (rule corres_assert)
-        apply (rule corres_trivial)
-        apply simp
-       apply wp+
+        apply wp+
+      apply (rule corres_machine_op)
+      apply (rule corres_Id [OF refl])
+       apply simp
+      apply (rule no_fail_pre)
+       apply (wp no_fail_storeWord)
+      apply (erule_tac n=msg_align_bits in aligned_add_aligned)
+       apply (rule is_aligned_mult_triv2 [where n = 2, simplified])
+      apply (simp add: word_bits_conv msg_align_bits)+
+     apply wp+
    apply (simp add: in_user_frame_eq[OF y])
   apply simp
   apply (rule conjI)
@@ -3310,7 +3321,7 @@ lemma getMRs_corres:
   apply (case_tac mi, simp add: get_mrs_def getMRs_def split del: if_split)
   apply (case_tac buf)
    apply (rule corres_guard_imp)
-     apply (rule corres_split_deprecated [where R = "\<lambda>_. \<top>" and R' =  "\<lambda>_. \<top>", OF _ T])
+     apply (rule corres_split [where R = "\<lambda>_. \<top>" and R' =  "\<lambda>_. \<top>", OF T])
        apply simp
       apply wp+
     apply simp
@@ -3320,21 +3331,21 @@ lemma getMRs_corres:
       apply (simp only: option.simps return_bind fun_app_def
                         load_word_offs_def doMachineOp_mapM ef_loadWord)
       apply (rule corres_split_eqr)
-         apply (rule corres_trivial, simp)
-        apply (simp only: mapM_map_simp msgMaxLength_def msgLengthBits_def
-                          msg_max_length_def o_def upto_enum_word)
-        apply (rule corres_mapM [where r'="(=)" and S="{a. fst a = snd a \<and> fst a < unat max_ipc_words}"])
+         apply (simp only: mapM_map_simp msgMaxLength_def msgLengthBits_def
+                           msg_max_length_def o_def upto_enum_word)
+         apply (rule corres_mapM [where r'="(=)" and S="{a. fst a = snd a \<and> fst a < unat max_ipc_words}"])
+               apply simp
               apply simp
+             apply (simp add: word_size wordSize_def wordBits_def)
+             apply (rule loadWordUser_corres)
              apply simp
-            apply (simp add: word_size wordSize_def wordBits_def)
-            apply (rule loadWordUser_corres)
-            apply simp
-           apply wp+
-         apply simp
-         apply (unfold msgRegisters_unfold)[1]
-         apply simp
-        apply (clarsimp simp: set_zip)
-        apply (simp add: msgRegisters_unfold max_ipc_words nth_append)
+            apply wp+
+          apply simp
+          apply (unfold msgRegisters_unfold)[1]
+          apply simp
+         apply (clarsimp simp: set_zip)
+         apply (simp add: msgRegisters_unfold max_ipc_words nth_append)
+        apply (rule corres_trivial, simp)
        apply (wp hoare_vcg_all_lift | simp add: valid_ipc_buffer_ptr'_def)+
   done
 qed
@@ -3410,11 +3421,11 @@ proof -
      apply (clarsimp simp: msgRegisters_unfold setRegister_def2 zipWithM_x_Nil zipWithM_x_modify
                            take_min_len zip_take_triv2 min.commute)
      apply (rule corres_guard_imp)
-       apply (rule corres_split_nor[OF asUser_corres'], rule corres_trivial, simp)
-         apply (rule corres_modify')
-          apply (fastforce simp: fold_fun_upd[symmetric] msgRegisters_unfold
-                           cong: if_cong simp del: the_index.simps)
-         apply ((wp |simp)+)[5]
+       apply (rule corres_split_nor[OF asUser_corres'])
+          apply (rule corres_modify')
+           apply (fastforce simp: fold_fun_upd[symmetric] msgRegisters_unfold
+                            cong: if_cong simp del: the_index.simps)
+          apply ((wp |simp)+)[6]
     \<comment> \<open>buf = Some a\<close>
     using if_split[split del]
     apply (clarsimp simp: msgRegisters_unfold setRegister_def2 zipWithM_x_Nil zipWithM_x_modify
@@ -3423,21 +3434,23 @@ proof -
     apply (simp add: msg_max_length_def)
     apply (rule corres_guard_imp)
       apply (rule corres_split_nor[OF asUser_corres'])
-         apply (rule corres_split_nor, rule corres_trivial, clarsimp simp: min.commute)
-          apply (rule_tac S="{((x, y), (x', y')). y = y' \<and> x' = (a + (of_nat x * 4)) \<and> x < unat max_ipc_words}"
-                        in zipWithM_x_corres)
-              apply (fastforce intro: storeWordUser_corres)
-             apply wp+
-            apply (clarsimp simp add: S msgMaxLength_def msg_max_length_def set_zip)
-            apply (simp add: wordSize_def wordBits_def word_size max_ipc_words
-                              upt_Suc_append[symmetric] upto_enum_word)
-           apply simp
-          apply wp+
          apply (rule corres_modify')
           apply (simp only: msgRegisters_unfold cong: if_cong)
           apply (fastforce simp: fold_fun_upd[symmetric])
-          apply (wp | clarsimp simp: valid_ipc_buffer_ptr'_def)+
-     done
+         apply clarsimp
+         apply (rule corres_split_nor)
+           apply (rule_tac S="{((x, y), (x', y')). y = y' \<and> x' = (a + (of_nat x * 4)) \<and> x < unat max_ipc_words}"
+                        in zipWithM_x_corres)
+               apply (fastforce intro: storeWordUser_corres)
+              apply wp+
+            apply (clarsimp simp add: S msgMaxLength_def msg_max_length_def set_zip)
+            apply (simp add: wordSize_def wordBits_def word_size max_ipc_words
+                             upt_Suc_append[symmetric] upto_enum_word)
+           apply simp
+          apply (rule corres_trivial, clarsimp simp: min.commute)
+         apply wp+
+      apply (wp | clarsimp simp: valid_ipc_buffer_ptr'_def)+
+    done
 qed
 
 lemma copyMRs_corres:
@@ -3503,23 +3516,24 @@ proof -
       apply (rename_tac sb_ptr rb_ptr)
       apply (rule corres_split_nor[OF as_user_bit])
         apply (rule corres_split_eqr)
-           apply (rule corres_trivial, simp)
-          apply (rule_tac S="{(x, y). y = of_nat x \<and> x < unat max_ipc_words}" in corres_mapM, simp+)
-              apply (rule corres_split_eqr)
-               apply (rule storeWordUser_corres)
-               apply simp
-               apply (rule loadWordUser_corres)
-               apply simp
-              apply (wp hoare_vcg_all_lift | simp)+
-           apply (clarsimp simp: upto_enum_def)
-           apply arith
-          apply (subst set_zip)
-          apply (simp add: upto_enum_def U del: upt.simps)
-          apply (clarsimp simp del: upt.simps)
-          apply (clarsimp simp: msg_max_length_def word_le_nat_alt nth_append
-                                max_ipc_words)
-          apply (erule order_less_trans)
-          apply simp
+           apply (rule_tac S="{(x, y). y = of_nat x \<and> x < unat max_ipc_words}"
+                   in corres_mapM, simp+)
+               apply (rule corres_split_eqr)
+                  apply (rule loadWordUser_corres)
+                  apply simp
+                 apply (rule storeWordUser_corres)
+                 apply simp
+                apply (wp hoare_vcg_all_lift | simp)+
+            apply (clarsimp simp: upto_enum_def)
+            apply arith
+           apply (subst set_zip)
+           apply (simp add: upto_enum_def U del: upt.simps)
+           apply (clarsimp simp del: upt.simps)
+           apply (clarsimp simp: msg_max_length_def word_le_nat_alt nth_append
+                                 max_ipc_words)
+           apply (erule order_less_trans)
+           apply simp
+          apply (rule corres_trivial, simp)
          apply (wp hoare_vcg_all_lift mapM_wp'
                 | simp add: valid_ipc_buffer_ptr'_def)+
     done
@@ -3606,39 +3620,39 @@ lemma lookupIPCBuffer_corres':
   apply (simp add: lookup_ipc_buffer_def ARM_HYP_H.lookupIPCBuffer_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr[OF threadGet_corres])
-       apply (simp add: getThreadBufferSlot_def locateSlot_conv)
-       apply (rule corres_split[OF getSlotCap_corres])
-          apply (rule_tac F="valid_ipc_buffer_cap rv buffer_ptr"
-                       in corres_gen_asm)
-          apply (rule_tac P="valid_cap rv" and Q="no_0_obj'"
-                    in corres_assume_pre)
-          apply (simp add: Let_def split: cap.split arch_cap.split
-                         split del: if_split cong: if_cong)
-          apply (safe, simp_all add: isCap_simps valid_ipc_buffer_cap_simps split:bool.split_asm)[1]
-          apply (rename_tac word rights vmpage_size option)
-          apply (subgoal_tac "word + (buffer_ptr &&
-                                      mask (pageBitsForSize vmpage_size)) \<noteq> 0")
-           apply (simp add: cap_aligned_def
-                            valid_ipc_buffer_cap_def
-                            vmrights_map_def vm_read_only_def vm_read_write_def)
-           apply auto[1]
-          apply (subgoal_tac "word \<noteq> 0")
-           apply (subgoal_tac "word \<le> word + (buffer_ptr &&
-                                 mask (pageBitsForSize vmpage_size))")
-            apply fastforce
-           apply (rule_tac b="2 ^ (pageBitsForSize vmpage_size) - 1"
-                        in word_plus_mono_right2)
-            apply (clarsimp simp: valid_cap_def cap_aligned_def
-                          intro!: is_aligned_no_overflow')
-           apply (clarsimp simp: word_bits_def
-                         intro!: word_less_sub_1 and_mask_less')
-           apply (case_tac vmpage_size, simp_all)[1]
-           apply (drule state_relation_pspace_relation)
-           apply (clarsimp simp: valid_cap_def obj_at_def no_0_obj_kheap
-                                obj_relation_cuts_def3 no_0_obj'_def split:if_split_asm)
+       apply (simp add: tcb_relation_def)
+      apply (simp add: getThreadBufferSlot_def locateSlot_conv)
+      apply (rule corres_split[OF getSlotCap_corres])
          apply (simp add: cte_map_def tcb_cnode_index_def cte_level_bits_def tcbIPCBufferSlot_def)
-        apply (wp get_cap_valid_ipc get_cap_aligned)+
-      apply (simp add: tcb_relation_def)
+        apply (rule_tac F="valid_ipc_buffer_cap rv buffer_ptr"
+                     in corres_gen_asm)
+        apply (rule_tac P="valid_cap rv" and Q="no_0_obj'"
+                  in corres_assume_pre)
+        apply (simp add: Let_def split: cap.split arch_cap.split
+                       split del: if_split cong: if_cong)
+        apply (safe, simp_all add: isCap_simps valid_ipc_buffer_cap_simps split:bool.split_asm)[1]
+        apply (rename_tac word rights vmpage_size option)
+        apply (subgoal_tac "word + (buffer_ptr &&
+                                    mask (pageBitsForSize vmpage_size)) \<noteq> 0")
+         apply (simp add: cap_aligned_def
+                          valid_ipc_buffer_cap_def
+                          vmrights_map_def vm_read_only_def vm_read_write_def)
+        apply auto[1]
+        apply (subgoal_tac "word \<noteq> 0")
+         apply (subgoal_tac "word \<le> word + (buffer_ptr &&
+                               mask (pageBitsForSize vmpage_size))")
+          apply fastforce
+         apply (rule_tac b="2 ^ (pageBitsForSize vmpage_size) - 1"
+                      in word_plus_mono_right2)
+          apply (clarsimp simp: valid_cap_def cap_aligned_def
+                        intro!: is_aligned_no_overflow')
+         apply (clarsimp simp: word_bits_def
+                       intro!: word_less_sub_1 and_mask_less')
+         apply (case_tac vmpage_size, simp_all)[1]
+        apply (drule state_relation_pspace_relation)
+        apply (clarsimp simp: valid_cap_def obj_at_def no_0_obj_kheap
+                             obj_relation_cuts_def3 no_0_obj'_def split:if_split_asm)
+       apply (wp get_cap_valid_ipc get_cap_aligned)+
      apply (wp thread_get_obj_at_eq)+
    apply (clarsimp elim!: tcb_at_cte_at)
   apply clarsimp
@@ -4536,11 +4550,10 @@ lemma get_cap_corres_all_rights_P:
   apply (subst bind_return [symmetric])
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF get_cap_corres_P [where P=P]])
-      defer
-      apply (wp getCTE_wp')+
-    apply simp
-   apply fastforce
-  apply (insert cap_relation_masks, simp)
+      apply (insert cap_relation_masks, simp)
+     apply (wp getCTE_wp')+
+   apply simp
+  apply fastforce
   done
 
 lemma asUser_irq_handlers':

@@ -31,15 +31,15 @@ lemma setIRQState_corres:
   apply (subgoal_tac "(state = irq_state.IRQInactive) = (state' = irqstate.IRQInactive)")
    apply (rule corres_guard_imp)
      apply (rule corres_split_nor)
-        apply (rule corres_machine_op)
-        apply (rule corres_Id | simp)+
-        apply (rule no_fail_maskInterrupt)
-       apply (simp add: getInterruptState_def setInterruptState_def
-                        simpler_gets_def simpler_modify_def bind_def)
-       apply (simp add: simpler_modify_def[symmetric])
-       apply (rule corres_trivial, rule corres_modify)
-       apply (simp add: state_relation_def swp_def)
-       apply (clarsimp simp: interrupt_state_relation_def)
+        apply (simp add: getInterruptState_def setInterruptState_def
+                         simpler_gets_def simpler_modify_def bind_def)
+        apply (simp add: simpler_modify_def[symmetric])
+        apply (rule corres_trivial, rule corres_modify)
+        apply (simp add: state_relation_def swp_def)
+        apply (clarsimp simp: interrupt_state_relation_def)
+       apply (rule corres_machine_op)
+       apply (rule corres_Id | simp)+
+       apply (rule no_fail_maskInterrupt)
       apply (wp | simp)+
   apply (clarsimp simp: irq_state_relation_def
                  split: irq_state.split_asm irqstate.split_asm)
