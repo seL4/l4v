@@ -577,14 +577,14 @@ lemma kernel_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_add_noop_lhs2)
     apply (simp only: bind_assoc[symmetric])
-    apply (rule corres_split_deprecated[where r'=dc and
+    apply (rule corres_split[where r'=dc and
                                    R="\<lambda>_ s. 0 < domain_time s \<and> valid_domain_list s" and
                                    R'="\<lambda>_. \<top>"])
-       apply (rule corres_bind_return2, rule corres_stateAssert_assume_stronger)
-        apply simp
-       apply (simp add: kernelExitAssertions_def state_relation_def)
-      apply (simp only: bind_assoc)
-      apply (rule kernel_corres')
+       apply (simp only: bind_assoc)
+       apply (rule kernel_corres')
+      apply (rule corres_bind_return2, rule corres_stateAssert_assume_stronger)
+       apply simp
+      apply (simp add: kernelExitAssertions_def state_relation_def)
      apply (wp call_kernel_domain_time_inv_det_ext call_kernel_domain_list_inv_det_ext)
     apply wp
    apply clarsimp
@@ -668,13 +668,14 @@ lemma do_user_op_corres:
                 apply (rule_tac F = "dom (rvc \<circ> addrFromPPtr)  \<subseteq> dom rvd" in corres_gen_asm)
                 apply simp
                 apply (rule_tac r'="(=)" in corres_split[OF corres_select])
-                   apply (rule corres_underlying_split[OF corres_machine_op])
-                      apply simp
-                      apply (rule corres_underlying_trivial)
-                      apply (simp add: user_memory_update_def)
-                      apply (wp | simp)+
-                     apply (rule corres_underlying_split[OF corres_machine_op,where Q = dc and Q'=dc])
-                        apply (rule corres_underlying_trivial)
+                   apply simp
+                  apply (rule corres_underlying_split[OF corres_machine_op])
+                     apply simp
+                     apply (rule corres_underlying_trivial)
+                     apply (simp add: user_memory_update_def)
+                     apply (wp | simp)+
+                    apply (rule corres_underlying_split[OF corres_machine_op,where Q = dc and Q'=dc])
+                       apply (rule corres_underlying_trivial)
                        apply (wp | simp add: dc_def device_memory_update_def)+
    apply (clarsimp simp: invs_def valid_state_def pspace_respects_device_region_def)
   apply fastforce
