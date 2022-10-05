@@ -504,9 +504,8 @@ lemma getSanitiseRegisterInfo_moreMapM_comm:
 
 lemma monadic_rewrite_threadGet_return:
   "monadic_rewrite True False (tcb_at' r) (return x) (do t \<leftarrow> threadGet f r; return x od)"
-  apply (rule monadic_rewrite_guard_imp)
-   apply (rule monadic_rewrite_symb_exec_r_drop_nE[OF monadic_rewrite_refl])
-    apply wpsimp+
+  apply (wp_pre, monadic_rewrite_symb_exec_r_drop)
+   apply (auto intro: monadic_rewrite_refl)
   done
 
 context begin interpretation Arch .
@@ -521,16 +520,14 @@ end
 
 lemma monadic_rewrite_getSanitiseRegisterInfo_return:
   "monadic_rewrite True False (tcb_at' r) (return x) (do t \<leftarrow> getSanitiseRegisterInfo r; return x od)"
-  apply (rule monadic_rewrite_guard_imp)
-   apply (rule monadic_rewrite_symb_exec_r_drop_nE[OF monadic_rewrite_refl])
-    apply wpsimp+
+  apply (wp_pre, monadic_rewrite_symb_exec_r_drop)
+   apply (auto intro: monadic_rewrite_refl)
   done
 
 lemma monadic_rewrite_getSanitiseRegisterInfo_drop:
   "monadic_rewrite True False (tcb_at' r) (d) (do t \<leftarrow> getSanitiseRegisterInfo r; d od)"
-  apply (rule monadic_rewrite_guard_imp)
-   apply (rule monadic_rewrite_symb_exec_r_drop_nE[OF monadic_rewrite_refl])
-    apply wpsimp+
+  apply (wp_pre, monadic_rewrite_symb_exec_r_drop)
+   apply (auto intro: monadic_rewrite_refl)
   done
 
 context kernel_m begin interpretation Arch .

@@ -2779,11 +2779,9 @@ lemma monadic_trancl_f:
 lemma monadic_trancl_step:
   "monadic_rewrite False False \<top>
        (monadic_trancl f x) (do y \<leftarrow> f x; monadic_trancl f y od)"
-  apply (rule monadic_rewrite_guard_imp)
-   apply (rule monadic_rewrite_trans)
-    apply (rule monadic_trancl_steps)
-   apply (rule monadic_rewrite_bind_head)
-   apply (rule monadic_trancl_f)
+  apply (monadic_rewrite_l monadic_trancl_steps)
+  apply (monadic_rewrite_l monadic_trancl_f)
+  apply (rule monadic_rewrite_refl)
   apply simp
   done
 
@@ -2819,30 +2817,20 @@ lemma monadic_trancl_preemptible_steps:
       (monadic_trancl_preemptible f x)
       (doE y \<leftarrow> monadic_trancl_preemptible f x;
               monadic_trancl_preemptible f y odE)"
-  apply (simp add: monadic_trancl_preemptible_def)
-  apply (rule monadic_rewrite_guard_imp)
-   apply (rule monadic_rewrite_trans)
-    apply (rule monadic_trancl_steps)
-   apply (simp add: bindE_def)
-   apply (rule_tac Q="\<top>\<top>" in monadic_rewrite_bind_tail)
-    apply (case_tac x)
-     apply (simp add: lift_def monadic_trancl_lift_Inl)
-     apply (rule monadic_rewrite_refl)
-    apply (simp add: lift_def)
-    apply (rule monadic_rewrite_refl)
-   apply (wp | simp)+
+  unfolding monadic_trancl_preemptible_def bindE_def
+  apply (monadic_rewrite_l monadic_trancl_steps)
+  apply (rule monadic_rewrite_bind_tail)
+    apply (case_tac y; simp add: lift_def monadic_trancl_lift_Inl)
+     apply (rule monadic_rewrite_refl)+
+   apply wpsimp+
   done
 
 lemma monadic_trancl_preemptible_f:
   "monadic_rewrite False False (\<lambda>_. True)
      (monadic_trancl_preemptible f x) (f x)"
-  apply (simp add: monadic_trancl_preemptible_def)
-  apply (rule monadic_rewrite_guard_imp)
-   apply (rule monadic_rewrite_trans)
-    apply (rule monadic_trancl_f)
-   apply (simp add: lift_def)
-   apply (rule monadic_rewrite_refl)
-  apply simp
+  unfolding monadic_trancl_preemptible_def
+  apply (monadic_rewrite_l monadic_trancl_f)
+   apply (fastforce simp: lift_def intro!: monadic_rewrite_refl)+
   done
 
 lemma monadic_trancl_preemptible_step:
@@ -2850,24 +2838,17 @@ lemma monadic_trancl_preemptible_step:
       (monadic_trancl_preemptible f x)
       (doE y \<leftarrow> f x;
             monadic_trancl_preemptible f y odE)"
-  apply (rule monadic_rewrite_guard_imp)
-   apply (rule monadic_rewrite_trans)
-    apply (rule monadic_trancl_preemptible_steps)
-   apply (rule monadic_rewrite_bindE_head)
-   apply (rule monadic_trancl_preemptible_f)
-  apply simp
+  apply (monadic_rewrite_l monadic_trancl_preemptible_steps)
+   apply (monadic_rewrite_l monadic_trancl_preemptible_f)
+   apply (fastforce intro!: monadic_rewrite_refl)+
   done
 
 lemma monadic_trancl_preemptible_return:
   "monadic_rewrite False False (\<lambda>_. True)
      (monadic_trancl_preemptible f x) (returnOk x)"
-  apply (simp add: monadic_trancl_preemptible_def)
-  apply (rule monadic_rewrite_guard_imp)
-   apply (rule monadic_rewrite_trans)
-    apply (rule monadic_trancl_return)
-   apply (simp add: returnOk_def)
-   apply (rule monadic_rewrite_refl)
-  apply simp
+  unfolding monadic_trancl_preemptible_def
+  apply (monadic_rewrite_l monadic_trancl_return)
+   apply (fastforce simp: returnOk_def intro!: monadic_rewrite_refl)+
   done
 
 lemma dcorres_get_cap_symb_exec:
@@ -3211,24 +3192,18 @@ lemma finalise_slot_inner1_add_if_Null:
        od
      od)"
   supply if_cong[cong]
-  apply (simp add: finalise_slot_inner1_def)
-  apply (rule monadic_rewrite_guard_imp)
-   apply (rule monadic_rewrite_bind_tail)
-    apply (rule monadic_rewrite_if_r)
-     apply (simp add: PageTableUnmap_D.is_final_cap_def)
-     apply (rule monadic_rewrite_trans)
-      apply (rule monadic_rewrite_bind_tail[where j="\<lambda>_. j" for j, OF _ gets_wp])+
-      apply (rename_tac remove, rule_tac P=remove in monadic_rewrite_gen_asm)
-      apply simp
-      apply (rule monadic_rewrite_refl)
-     apply (simp add: gets_bind_ign when_def)
-     apply (rule monadic_rewrite_trans)
-      apply (rule monadic_rewrite_bind_head)
-      apply (rule monadic_rewrite_pick_alternative_1)
-     apply simp
-     apply (rule monadic_rewrite_refl)
-    apply (rule monadic_rewrite_refl)
-   apply wp
+  apply (rule monadic_rewrite_weaken_flags[where F=False and E=False, simplified])
+  apply (simp add: finalise_slot_inner1_def when_def PageTableUnmap_D.is_final_cap_def)
+  apply (rule monadic_rewrite_bind_tail)
+   apply (rule monadic_rewrite_if_r, clarsimp)
+    apply (monadic_rewrite_l monadic_rewrite_pick_alternative_1)
+    apply (monadic_rewrite_l monadic_rewrite_if_l_False)
+    apply monadic_rewrite_symb_exec_l_drop
+     apply (monadic_rewrite_symb_exec_l_known True)
+      apply monadic_rewrite_symb_exec_l
+       apply (rule monadic_rewrite_refl)
+      apply wpsimp+
+   apply (rule monadic_rewrite_refl)
   apply (clarsimp simp: CSpace_D.cap_removeable_def)
   done
 
@@ -3552,12 +3527,9 @@ next
              apply (rule_tac F=remove in corres_note_assumption, simp)
              apply (simp add: when_def)
              apply (rule monadic_rewrite_corres_l)
-              apply (rule monadic_rewrite_bind)
-                apply (rule monadic_rewrite_pick_alternative_1)
-               apply (rule monadic_rewrite_bind_tail)
-                apply (rule monadic_rewrite_bindE_head)
-                apply (rule monadic_trancl_preemptible_return)
-               apply wp+
+              apply (monadic_rewrite_l monadic_rewrite_pick_alternative_1, simp)
+              apply (monadic_rewrite_l monadic_trancl_preemptible_return)
+              apply (rule monadic_rewrite_refl)
              apply simp
              apply (rule corres_underlying_gets_pre_lhs)
              apply (rule corres_drop_cutMon)

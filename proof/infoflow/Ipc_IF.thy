@@ -322,21 +322,10 @@ lemma no_fail_gts:
 lemma sts_noop:
    "monadic_rewrite True True (tcb_at tcb and (\<lambda>s. tcb \<noteq> cur_thread s))
                     (set_thread_state_ext tcb) (return ())"
-  apply (rule monadic_rewrite_guard_imp)
-  apply (rule monadic_rewrite_add_get)
-  apply (rule monadic_rewrite_bind_tail)
-  apply (clarsimp simp: set_thread_state_ext_def)
-  apply (rule_tac rv="tcb_state (the (get_tcb tcb x))" in monadic_rewrite_symb_exec_l_known_F)
-       apply (rule monadic_rewrite_symb_exec_l_known_F)
-          apply (rule monadic_rewrite_symb_exec_l_known_F)
-             apply (simp only: when_def)
-             apply (rule monadic_rewrite_trans)
-              apply (rule monadic_rewrite_if)
-               apply (rule monadic_rewrite_impossible[where g="return ()"])
-              apply (rule monadic_rewrite_refl)
-             apply simp
-             apply (rule monadic_rewrite_refl)
-            apply (wpsimp wp: gts_wp)+
+  unfolding set_thread_state_ext_def when_def
+  apply (monadic_rewrite_l monadic_rewrite_if_l_False \<open>wpsimp wp: gts_wp\<close>)
+   apply (monadic_rewrite_symb_exec_l_drop)+
+   apply (rule monadic_rewrite_refl)
   by (auto simp: pred_tcb_at_def obj_at_def is_tcb_def get_tcb_def)
 
 lemma sts_to_modify':
@@ -344,21 +333,12 @@ lemma sts_to_modify':
      (set_thread_state tcb st)
      (modify (\<lambda>s. s\<lparr>kheap := kheap s(tcb \<mapsto> TCB (the (get_tcb tcb s)\<lparr>tcb_state := st\<rparr>))\<rparr>))"
   apply (clarsimp simp: set_thread_state_def set_object_def)
-  apply (rule monadic_rewrite_add_get)
-  apply (rule monadic_rewrite_bind_tail)
-   apply (rule monadic_rewrite_guard_imp)
-    apply (rule monadic_rewrite_trans)
-     apply (simp only: bind_assoc[symmetric])
-     apply (rule monadic_rewrite_bind_tail)
-      apply (rule sts_noop)
-     apply (wpsimp wp: get_object_wp, simp)
-    apply (rule_tac rv="the (get_tcb tcb x)" in monadic_rewrite_symb_exec_l_known_F)
-       apply (rule_tac rv="x" in  monadic_rewrite_symb_exec_l_known_F)
-          apply (rule_tac P="(=) x" in monadic_rewrite_pre_imp_eq)
-          apply (clarsimp simp add: put_def modify_def get_def bind_def)
-         apply (wpsimp wp: get_object_wp simp: a_type_def)+
-   apply assumption
-  apply wp
+  apply (monadic_rewrite_l sts_noop \<open>wpsimp wp: get_object_wp\<close>)
+   apply (simp add: bind_assoc)
+   apply monadic_rewrite_symb_exec_l+
+       apply (rule_tac P="\<lambda>s'. s' = s \<and> x = the (get_tcb tcb s)" in monadic_rewrite_pre_imp_eq)
+       apply (clarsimp simp: put_def modify_def get_def bind_def)
+      apply (wpsimp wp: get_object_wp)+
   by (clarsimp simp: get_tcb_def tcb_at_def)
 
 lemma sts_no_fail:

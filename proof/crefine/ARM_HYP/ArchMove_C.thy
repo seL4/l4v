@@ -530,6 +530,12 @@ lemma placeNewObject_creates_object_vcpu:
   apply (fastforce intro: ps_clear_entire_slotI simp add: field_simps)
   done
 
+(* FIXME would be interesting to generalise these kinds of lemmas to other KOs *)
+lemma placeNewObject_object_at_vcpu:
+  "\<lbrace> \<top> \<rbrace> placeNewObject v (vcpu::vcpu) 0 \<lbrace> \<lambda>_. vcpu_at' v \<rbrace>"
+  by (rule hoare_post_imp[OF _ placeNewObject_creates_object_vcpu])
+     (fastforce simp: ko_at_vcpu_at'D)
+
 lemma valid_untyped':
   notes usableUntypedRange.simps[simp del]
   assumes pspace_distinct': "pspace_distinct' s" and

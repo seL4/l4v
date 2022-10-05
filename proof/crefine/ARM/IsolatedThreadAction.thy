@@ -673,11 +673,11 @@ lemma transferCaps_simple_rewrite:
    (transferCaps mi caps ep r rBuf)
    (return (mi \<lparr> msgExtraCaps := 0, msgCapsUnwrapped := 0 \<rparr>))"
   including no_pre
+  supply empty_fail_getReceiveSlots[wp] (* FIXME *)
   apply (rule monadic_rewrite_gen_asm)
   apply (simp add: transferCaps_simple)
-  apply (rule monadic_rewrite_guard_imp)
-   apply (rule monadic_rewrite_symb_exec_l_drop[OF monadic_rewrite_refl _ empty_fail_getReceiveSlots])
-   apply wpsimp+
+  apply (monadic_rewrite_symb_exec_l_drop, rule monadic_rewrite_refl)
+  apply simp
   done
 
 lemma lookupExtraCaps_simple_rewrite:
@@ -730,10 +730,10 @@ lemma doIPCTransfer_simple_rewrite:
              cong: option.case_cong)
   apply (rule monadic_rewrite_guard_imp)
    apply (rule monadic_rewrite_trans)
-    apply (rule monadic_rewrite_bind_tail)+
-      apply (rule_tac P="fault = None" in monadic_rewrite_gen_asm, simp)
+    apply (rule monadic_rewrite_bind_tail)
+      apply (monadic_rewrite_symb_exec_l_known None, simp)
       apply (rule monadic_rewrite_bind_tail)
-       apply (rule_tac rv=msgInfo in monadic_rewrite_symb_exec_l_known_F)
+       apply (monadic_rewrite_symb_exec_l_known msgInfo)
           apply (simp add: lookupExtraCaps_simple_rewrite returnOk_catch_bind)
           apply (rule monadic_rewrite_bind)
             apply (rule monadic_rewrite_from_simple, rule copyMRs_simple)
@@ -775,23 +775,19 @@ lemma setupCallerCap_rewrite:
   apply (simp add: setupCallerCap_def getThreadCallerSlot_def
                    getThreadReplySlot_def locateSlot_conv
                    getSlotCap_def)
-  apply (rule monadic_rewrite_guard_imp)
-   apply (rule monadic_rewrite_bind_tail)+
-     apply (rule monadic_rewrite_assert)+
-     apply (rule_tac P="mdbFirstBadged (cteMDBNode masterCTE)
-                        \<and> mdbRevocable (cteMDBNode masterCTE)"
-                 in monadic_rewrite_gen_asm)
-     apply simp
-     apply (rule monadic_rewrite_trans)
-      apply (rule monadic_rewrite_bind_tail)
-       apply (rule monadic_rewrite_symb_exec_l_drop)+
-         apply (rule monadic_rewrite_refl)
-        apply wpsimp+
-     apply (rule monadic_rewrite_symb_exec_l_drop)+
-       apply (rule monadic_rewrite_refl)
-      apply (wp getCTE_wp' | simp add: cte_wp_at_ctes_of)+
-  apply (clarsimp simp: reply_masters_rvk_fb_def)
-  apply fastforce
+  apply (rule monadic_rewrite_bind_tail)+
+    apply (rule monadic_rewrite_assert)+
+    apply (rule_tac P="mdbFirstBadged (cteMDBNode masterCTE)
+                       \<and> mdbRevocable (cteMDBNode masterCTE)"
+                in monadic_rewrite_gen_asm)
+    apply (rule monadic_rewrite_trans)
+     apply monadic_rewrite_symb_exec_l
+      apply monadic_rewrite_symb_exec_l_drop
+      apply (rule monadic_rewrite_refl)
+     apply wpsimp+
+    apply (rule monadic_rewrite_refl)
+   apply (wpsimp wp: getCTE_wp' simp: cte_wp_at_ctes_of)+
+  apply (fastforce simp: reply_masters_rvk_fb_def)
   done
 
 lemma oblivious_getObject_ksPSpace_default:
@@ -871,18 +867,11 @@ lemma activateThread_simple_rewrite:
   "monadic_rewrite True True (ct_in_state' ((=) Running))
        (activateThread) (return ())"
   apply (simp add: activateThread_def)
-  apply (rule monadic_rewrite_guard_imp)
-   apply (rule monadic_rewrite_trans, rule monadic_rewrite_bind_tail)+
-       apply (rule_tac P="state = Running" in monadic_rewrite_gen_asm)
-       apply simp
+  apply wp_pre
+  apply (monadic_rewrite_symb_exec_l)
+  apply (monadic_rewrite_symb_exec_l_known Running, simp)
        apply (rule monadic_rewrite_refl)
-      apply wp
-     apply (rule monadic_rewrite_symb_exec_l_drop)
-       apply (rule monadic_rewrite_refl)
-      apply (wp empty_fail_getThreadState)+
-   apply (rule monadic_rewrite_symb_exec_l_drop,
-          simp_all add: getCurThread_def)
-   apply (rule monadic_rewrite_refl)
+     apply wpsimp+
   apply (clarsimp simp: ct_in_state'_def elim!: pred_tcb'_weakenE)
   done
 
@@ -1175,17 +1164,9 @@ lemma thread_actions_isolatableD:
 lemma tcbSchedDequeue_rewrite:
   "monadic_rewrite True True (obj_at' (Not \<circ> tcbQueued) t) (tcbSchedDequeue t) (return ())"
   apply (simp add: tcbSchedDequeue_def)
-  apply (rule monadic_rewrite_guard_imp)
-   apply (rule monadic_rewrite_trans)
-    apply (rule monadic_rewrite_bind_tail)
-     apply (rule_tac P="\<not> queued" in monadic_rewrite_gen_asm)
-     apply (simp add: when_def)
-     apply (rule monadic_rewrite_refl)
-    apply (wp threadGet_const)
-   apply (rule monadic_rewrite_symb_exec_l_drop)
-     apply (rule monadic_rewrite_refl)
-    apply wp+
-  apply (clarsimp)
+   apply (wp_pre, monadic_rewrite_symb_exec_l_known False, simp)
+    apply (rule monadic_rewrite_refl)
+   apply (wpsimp wp: threadGet_const)+
   done
 
 lemma switchToThread_rewrite:
@@ -1194,13 +1175,8 @@ lemma switchToThread_rewrite:
        (switchToThread t)
        (do Arch.switchToThread t; setCurThread t od)"
   apply (simp add: switchToThread_def Thread_H.switchToThread_def)
-  apply (rule monadic_rewrite_guard_imp)
-   apply (rule monadic_rewrite_bind_tail)
-    apply (rule monadic_rewrite_trans)
-     apply (rule monadic_rewrite_bind_head[OF tcbSchedDequeue_rewrite])
-    apply (rule monadic_rewrite_symb_exec_l_drop)
-      apply (rule monadic_rewrite_refl)
-     apply (wp Arch_switchToThread_obj_at_pre)+
+  apply (monadic_rewrite_l tcbSchedDequeue_rewrite, simp)
+   apply (rule monadic_rewrite_refl)
   apply (clarsimp simp: comp_def)
   done
 
@@ -1481,9 +1457,8 @@ lemma setThreadState_rewrite_simple:
      (threadSet (tcbState_update (\<lambda>_. st)) t)"
   supply if_split[split del]
   apply (simp add: setThreadState_def when_def)
-  apply (monadic_rewrite_l
-           \<open>wpsimp wp: hoare_vcg_disj_lift hoare_vcg_imp_lift' threadSet_tcbState_st_tcb_at'\<close>
-           r: monadic_rewrite_if_l_False)
+  apply (monadic_rewrite_l monadic_rewrite_if_l_False
+           \<open>wpsimp wp: hoare_vcg_disj_lift hoare_vcg_imp_lift' threadSet_tcbState_st_tcb_at'\<close>)
    (* take the threadSet, drop everything until return () *)
    apply (rule monadic_rewrite_trans[OF monadic_rewrite_bind_tail])
      apply (rule monadic_rewrite_symb_exec_l_drop)+

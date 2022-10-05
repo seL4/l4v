@@ -652,10 +652,7 @@ lemma armv_contextSwitch_HWASID_fp_rewrite:
                         checkPDAt_def checkPDUniqueToASID_def
                         checkPDASIDMapMembership_def
                         stateAssert_def2[folded assert_def])
-  apply (rule monadic_rewrite_guard_imp)
-   apply (rule monadic_rewrite_gets_l)
-   apply (rule monadic_rewrite_symb_exec_l)
-      apply (rule monadic_rewrite_assert monadic_rewrite_gets_l)+
+  apply (wp_pre, repeat 9 monadic_rewrite_symb_exec_l) (* until hwasid <- *)
       apply (rule_tac P="asidMap asid \<noteq> None \<and> fst (the (asidMap asid)) = the (pde_stored_asid v)"
                in monadic_rewrite_gen_asm)
       apply (simp add: case_option_If2 split_def)
