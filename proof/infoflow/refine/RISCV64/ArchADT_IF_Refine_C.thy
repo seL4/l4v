@@ -187,19 +187,19 @@ lemma check_active_irq_corres_C[ADT_IF_Refine_assms]:
   apply (simp add: getActiveIRQ_C_def)
   apply (subst bind_assoc[symmetric])
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[where r'="\<lambda>a c. case a of None \<Rightarrow> c = ucast irqInvalid
+    apply (rule corres_split[where r'="\<lambda>a c. case a of None \<Rightarrow> c = ucast irqInvalid
                                                                 | Some x \<Rightarrow> c = ucast x \<and> c \<noteq> ucast irqInvalid",
-                                        OF _ ccorres_corres_u_xf])
-        apply (clarsimp split: if_split option.splits)
-       apply (rule ccorres_guard_imp)
-         apply (rule ccorres_rel_imp, rule ccorres_guard_imp)
-            apply (rule getActiveIRQ_ccorres)
-           apply simp+
-      apply (rule no_fail_dmo')
-      apply (rule getActiveIRQ_nf)
-     apply (rule hoare_post_taut[where P=\<top>])+
+                                        OF ccorres_corres_u_xf])
+        apply (rule ccorres_guard_imp)
+          apply (rule ccorres_rel_imp, rule ccorres_guard_imp)
+             apply (rule getActiveIRQ_ccorres)
+            apply simp+
+       apply (rule no_fail_dmo')
+       apply (rule no_fail_getActiveIRQ)
+      apply (rule corres_trivial, clarsimp split: if_split option.splits)
+     apply wp+
    apply simp+
-   apply fastforce
+  apply fastforce
   done
 
 lemma obs_cpspace_user_data_relation[ADT_IF_Refine_assms]:
