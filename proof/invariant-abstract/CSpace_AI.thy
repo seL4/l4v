@@ -472,15 +472,13 @@ lemma set_cap_cte_eq:
   cte_at p' s \<and> cte_wp_at P p t = (if p = p' then P c else cte_wp_at P p s)"
   apply (cases p)
   apply (cases p')
-  sorry (* FIXME: Broken by timeprot-touch-objs. -robs. checked -scottb
-  apply (auto simp: set_cap_def2 split_def in_monad cte_wp_at_cases
-                    get_object_def set_object_def wf_cs_upd
-             split: Structures_A.kernel_object.splits if_split_asm
-                    option.splits,
-         auto simp: tcb_cap_cases_def split: if_split_asm)
+  apply (clarsimp simp: set_cap_def2 split_def in_monad cte_wp_at_cases get_object_def
+                        set_object_def wf_cs_upd touch_object_def2
+                        simpler_do_machine_op_addTouchedAddresses_def
+                        obind_def ta_filter_def
+                 split: option.splits if_splits kernel_object.splits)
+  apply (clarsimp simp: tcb_cap_cases_def split:if_split_asm)
   done
-*)
-
 
 
 lemma descendants_of_cte_at:

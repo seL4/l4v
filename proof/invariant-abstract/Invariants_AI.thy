@@ -2748,7 +2748,7 @@ lemma (in irq_states_update_eq) irq_issued_update [iff]:
   "irq_issued irq (f s) = irq_issued irq s"
   by (simp add: irq_issued_def int)
 
-lemma (in pspace_ta_int_update_eq) valid_irq_handlers_update [iff]:
+lemma (in pspace_int_update_eq) valid_irq_handlers_update [iff]:
   "valid_irq_handlers (f s) = valid_irq_handlers s"
   by (simp add: valid_irq_handlers_def)
 

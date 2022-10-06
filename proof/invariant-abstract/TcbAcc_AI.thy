@@ -1152,6 +1152,9 @@ lemma sbn_cur_tcb [wp]:
   apply (clarsimp simp: cur_tcb_def obj_at_def is_tcb_def)
   done
 
+lemma kheap_False_simplify:
+  "f_kheap False s t = kheap s t"
+  by simp
 
 lemma sts_iflive[wp]:
   "\<lbrace>\<lambda>s. (\<not> halted st \<longrightarrow> ex_nonz_cap_to t s)
@@ -1159,12 +1162,15 @@ lemma sts_iflive[wp]:
      set_thread_state t st
    \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
   apply (simp add: set_thread_state_def)
-  apply (wpsimp wp: set_object_iflive touch_object_wp)
-  sorry (* broken by touched-addrs -scott
-  apply (clarsimp dest: get_tcb_SomeD if_live_then_nonz_capD2
-                simp: tcb_cap_cases_def live_def
-                split: Structures_A.thread_state.splits)
-  done *)
+  apply (wpsimp wp: set_object_iflive touch_object_wp')
+  apply (drule get_tcb_SomeD')
+  apply (intro conjI)
+   apply clarsimp
+   apply (drule(1) if_live_then_nonz_capD2)
+    apply (clarsimp simp:live_def split:thread_state.splits)
+   apply blast  
+  apply (clarsimp simp: obj_at_def tcb_cap_cases_def)
+  done
 
 lemma sbn_iflive[wp]:
   "\<lbrace>\<lambda>s. (bound ntfn \<longrightarrow> ex_nonz_cap_to t s)
@@ -1173,43 +1179,48 @@ lemma sbn_iflive[wp]:
    \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
   apply (simp add: set_bound_notification_def)
   apply (wpsimp wp: set_object_iflive touch_object_wp')
-  sorry (* broken by touched-addrs -scott
-  apply (fastforce dest: get_tcb_SomeD if_live_then_nonz_capD2
-                   simp: tcb_cap_cases_def live_def
-                   split: Structures_A.thread_state.splits)
-  done *)
+  apply (drule get_tcb_SomeD')
+  apply (intro conjI)
+   apply clarsimp
+   apply (drule(1) if_live_then_nonz_capD2; clarsimp simp: live_def)
+  apply (clarsimp simp: obj_at_def tcb_cap_cases_def)
+  done
 
 lemma sts_ifunsafe[wp]:
   "\<lbrace>if_unsafe_then_cap\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. if_unsafe_then_cap\<rbrace>"
   apply (simp add: set_thread_state_def)
   apply (wp touch_object_wp'|simp)+
-  sorry (* broken by touched-addrs -scott
-  apply (fastforce simp: tcb_cap_cases_def)
-  done *)
+  apply clarsimp
+  apply (drule get_tcb_SomeD')
+  apply (clarsimp simp: obj_at_def tcb_cap_cases_def)
+  done 
 
 lemma sbn_ifunsafe[wp]:
   "\<lbrace>if_unsafe_then_cap\<rbrace> set_bound_notification t ntfn \<lbrace>\<lambda>rv. if_unsafe_then_cap\<rbrace>"
   apply (simp add: set_bound_notification_def)
   apply (wp touch_object_wp', simp)
-  sorry (* broken by touched-addrs -scott
-  apply (fastforce simp: tcb_cap_cases_def)
-  done *)
+  apply clarsimp
+  apply (drule get_tcb_SomeD')
+  apply (fastforce simp: obj_at_def tcb_cap_cases_def)
+  done
 
 lemma sts_zombies[wp]:
   "\<lbrace>zombies_final\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. zombies_final\<rbrace>"
   apply (simp add: set_thread_state_def)
   apply (wp touch_object_wp'|simp)+
-  sorry (* broken by touched-addrs -scott
-  apply (fastforce simp: tcb_cap_cases_def)
-  done *)
+  apply clarsimp
+  apply (drule get_tcb_SomeD')
+  apply (fastforce simp: obj_at_def tcb_cap_cases_def)
+  done
 
 lemma sbn_zombies[wp]:
   "\<lbrace>zombies_final\<rbrace> set_bound_notification t ntfn \<lbrace>\<lambda>rv. zombies_final\<rbrace>"
   apply (simp add: set_bound_notification_def)
   apply (wp touch_object_wp', simp)
-  sorry (* broken by touched-addrs -scott
-  apply (fastforce simp: tcb_cap_cases_def)
-  done *)
+  apply clarsimp
+  apply (drule get_tcb_SomeD')
+  apply (fastforce simp: obj_at_def tcb_cap_cases_def)
+  done 
 
 lemma sts_refs_of_helper: "
           {r. (r \<in> tcb_st_refs_of ts \<or>
@@ -1585,28 +1596,32 @@ lemma set_thread_state_valid_ioc[wp]:
   apply (simp add: set_thread_state_def)
   apply (wp touch_object_wp', simp, (wp set_object_valid_ioc_caps touch_object_wp')+)
   apply (intro impI conjI, clarsimp+)
+   apply (clarsimp simp: valid_ioc_def)
+   apply (drule get_tcb_SomeD')
+   apply (clarsimp simp: typ_at_eq_kheap_obj)
   apply (clarsimp simp: valid_ioc_def)
-  sorry (* broken by touched-addrs -scottb
+  apply (drule get_tcb_SomeD')
   apply (drule spec, drule spec, erule impE, assumption)
   apply (clarsimp simp: get_tcb_def cap_of_def tcb_cnode_map_tcb_cap_cases
                         null_filter_def cte_wp_at_cases tcb_cap_cases_def
                  split: option.splits Structures_A.kernel_object.splits
                         if_split_asm)
-  done *)
+  done
 
 lemma set_bound_notification_valid_ioc[wp]:
   "\<lbrace>valid_ioc\<rbrace> set_bound_notification t ntfn \<lbrace>\<lambda>_. valid_ioc\<rbrace>"
   apply (simp add: set_bound_notification_def)
   apply (wp set_object_valid_ioc_caps touch_object_wp', simp)
-  apply (intro impI conjI, clarsimp+)
+  apply clarsimp
+  apply (drule get_tcb_SomeD')
+  apply (intro impI conjI; clarsimp simp: typ_at_eq_kheap_obj)
   apply (clarsimp simp: valid_ioc_def)
-  sorry (* broken by touched-addrs -scottb
   apply (drule spec, drule spec, erule impE, assumption)
   apply (clarsimp simp: get_tcb_def cap_of_def tcb_cnode_map_tcb_cap_cases
                         null_filter_def cte_wp_at_cases tcb_cap_cases_def
                  split: option.splits Structures_A.kernel_object.splits
                         if_split_asm)
-  done *)
+  done
 
 crunches set_thread_state, set_bound_notification
   for valid_ioports[wp]: valid_ioports
@@ -1874,9 +1889,16 @@ lemma sts_tcb_cap_valid_cases:
   apply (clarsimp simp: tcb_at_typ tcb_cap_valid_def split: option.split)
   done
 
+lemma bind_assoc3:
+  shows "do x \<leftarrow> m; y \<leftarrow> f x; g y od >>= h = do x \<leftarrow> m; y \<leftarrow> f x; q \<leftarrow> g y; h q od"
+  apply (unfold bind_def Let_def split_def)
+  apply (rule ext)
+  apply clarsimp
+  apply blast
+  done
 
 lemmas set_mrs_redux =
-   set_mrs_def bind_assoc[symmetric]
+   set_mrs_def bind_assoc3[symmetric]
    thread_set_def[simplified, symmetric]
 
 locale TcbAcc_AI_arch_tcb_context_get_eq =
@@ -1901,37 +1923,50 @@ lemma as_user_invs[wp]: "\<lbrace>invs:: 'state_ext state \<Rightarrow> bool\<rb
   apply (wp thread_set_invs_trivial ball_tcb_cap_casesI | simp)+
   done
 
+lemma the_Some':
+  "x = Some y \<Longrightarrow> the x = y"
+  by simp
+
+lemma get_tcb_True_False:
+  "ko_at ko t s \<Longrightarrow>
+  get_tcb True t (ms_ta_update ((\<union>) (obj_range t ko)) s) = get_tcb False t s"
+  apply (clarsimp simp: get_tcb_def obind_def ta_filter_def split:option.splits kernel_object.splits)
+  apply (simp add: ko_atD)
+  done
+
+
 lemma set_mrs_invs[wp]:
   "\<And>receiver recv_buf mrs.
     \<lbrace> invs and tcb_at receiver :: 'state_ext state \<Rightarrow> bool \<rbrace>
       set_mrs receiver recv_buf mrs
     \<lbrace>\<lambda>rv. invs \<rbrace>"
-  sorry (* broken by touched-addrs -scottb
-  by (wpsimp wp: mapM_wp' storeWord_invs thread_set_invs_trivial hoare_vcg_imp_lift
-           simp: set_mrs_redux zipWithM_x_mapM store_word_offs_def ran_tcb_cap_cases
-      split_del: if_split) *)
-
+  apply (wpsimp wp: mapM_wp' touch_objects_wp storeWord_invs thread_set_invs_trivial hoare_vcg_imp_lift
+              simp: set_mrs_redux zipWithM_x_mapM store_word_offs_def ran_tcb_cap_cases
+         split_del: if_split)
+  done
+   
+   
 end
 
 
 lemma set_mrs_thread_set_dmo:
+  assumes ta: "ta_agnostic Q"
   assumes ts: "\<And>c. \<lbrace>P\<rbrace> thread_set (\<lambda>tcb. tcb\<lparr>tcb_arch := arch_tcb_set_registers (c tcb) (tcb_arch tcb)\<rparr>) r \<lbrace>\<lambda>rv. Q\<rbrace>"
   assumes dmo: "\<And>x y. \<lbrace>Q\<rbrace> do_machine_op (storeWord x y) \<lbrace>\<lambda>rv. Q\<rbrace>"
   shows "\<lbrace>P\<rbrace> set_mrs r t mrs \<lbrace>\<lambda>rv. Q\<rbrace>"
   apply (simp add: set_mrs_redux)
-  sorry (* broken by touched-addrs -scottb
-  note: this looks like it could still be true.
   apply (case_tac t)
    apply simp
    apply (wp ts touch_objects_wp set_object_wp)
   apply (simp add: zipWithM_x_mapM store_word_offs_def split_def
               split del: if_split)
-  apply (wpsimp wp: ts mapM_wp' dmo)
-  done *)
+  using ta apply (wpsimp wp: touch_objects_wp ts mapM_wp' dmo simp:ta_agnostic_def)+
+  done
 
 lemma set_mrs_pred_tcb_at [wp]:
   "\<lbrace>pred_tcb_at proj P t\<rbrace> set_mrs r t' mrs \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
   apply (rule set_mrs_thread_set_dmo)
+    apply (clarsimp simp: ta_agnostic_def)
    apply (rule thread_set_no_change_tcb_pred)
    apply (simp add: tcb_to_itcb_def)
   apply wp

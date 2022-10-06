@@ -72,12 +72,12 @@ proof -
   show ?thesis
     apply (wp dmo_invs)
     apply (clarsimp simp: storeWord_def invs_def valid_state_def upto0_7_def)
-    sorry (*broken by touched-addrs -scottb
-    apply (fastforce simp: valid_machine_state_def in_user_frame_def
+    apply (clarsimp simp: valid_machine_state_def in_user_frame_def simpler_gets_def
                assert_def simpler_modify_def fail_def bind_def return_def
                pageBits_def aligned_offset_ignore
              split: if_split_asm)
-    done *)
+    apply fastforce
+    done
 qed
 
 lemma valid_ipc_buffer_cap_0[simp, TcbAcc_AI_assms]:

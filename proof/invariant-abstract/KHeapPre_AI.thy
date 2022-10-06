@@ -167,6 +167,23 @@ lemma get_tcb_SomeD: "get_tcb ta_f t s = Some v \<Longrightarrow> f_kheap ta_f s
   apply (case_tac a, simp_all)
   done
 
+lemma get_tcb_Some_True_False:
+  "get_tcb True p (ms_ta_update f s) = Some y \<Longrightarrow>
+  get_tcb False p s = Some y"
+  by (clarsimp simp: get_tcb_def obind_def ta_filter_def
+              split: option.splits kernel_object.splits if_splits)
+
+(* note-to-rob: this lemma should help in maaaaaaany places, when used instead
+   of get_tch_SomeD *)
+lemma get_tcb_SomeD': "get_tcb ta_f t (ms_ta_update f s) = Some y \<Longrightarrow> kheap s t = Some (TCB y)"
+  apply (cases ta_f; clarsimp)
+   apply (drule get_tcb_Some_True_False)
+   apply (drule get_tcb_SomeD)
+   apply (subst (asm) f_kheap_to_kheap, simp)
+  apply (drule get_tcb_SomeD)
+  apply (clarsimp simp: ta_filter_def obind_def split:option.splits)
+  done
+
 lemma get_tcb_to_unfiltered_Some:
   "get_tcb True t s = Some tcb \<Longrightarrow> get_tcb False t s = Some tcb"
   by (metis f_kheap_to_unfiltered_Some get_tcb_SomeD get_tcb_def)

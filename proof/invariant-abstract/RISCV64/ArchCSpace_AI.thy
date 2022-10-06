@@ -176,16 +176,20 @@ lemma is_derived_is_cap:
               split: cap.splits arch_cap.splits)+
 
 lemma vs_lookup_pages_non_aobj_upd:
-  "\<lbrakk> kheap s p = Some ko; \<not> is_ArchObj ko; \<not> is_ArchObj ko' \<rbrakk>
+  "\<lbrakk> f_kheap ta_f s p = Some ko; \<not> is_ArchObj ko; \<not> is_ArchObj ko' \<rbrakk>
    \<Longrightarrow> vs_lookup_pages (s\<lparr>kheap := kheap s(p \<mapsto> ko')\<rparr>) = vs_lookup_pages s"
   unfolding vs_lookup_target_def vs_lookup_slot_def
-  sorry (* FIXME: Broken by timeprot-touch-objs. -robs mostly checked -scottb
   apply (frule aobjs_of_non_aobj_upd[where ko'=ko'], simp+)
   apply (rule ext)+
   apply (simp add: obind_assoc)
   apply (rule obind_eqI)
    apply (rule vs_lookup_table_eq_lift; simp)
   apply (clarsimp split del: if_split)
+  sorry (* broken by touched-addrs -scottb
+  note: there are a series of lemmas following this one (see below). not entirely sure
+  if we should be using "f_kheap ta_f" or True or False, or if we should also be adding
+  some updated TA state to the assumptions too? This is a complex thing, to figure out
+  later on.
   apply (rule obind_eqI, clarsimp)
   apply (clarsimp split del: if_split)
   apply (rule obind_eqI; clarsimp)
@@ -193,7 +197,7 @@ lemma vs_lookup_pages_non_aobj_upd:
 *)
 
 lemma vs_lookup_target_non_aobj_upd:
-  "\<lbrakk> kheap s p = Some ko; \<not> is_ArchObj ko; \<not> is_ArchObj ko' \<rbrakk>
+  "\<lbrakk> f_kheap ta_f s p = Some ko; \<not> is_ArchObj ko; \<not> is_ArchObj ko' \<rbrakk>
    \<Longrightarrow> vs_lookup_target level asid vref (s\<lparr>kheap := kheap s(p \<mapsto> ko')\<rparr>)
       = vs_lookup_target level asid vref s"
   by (drule vs_lookup_pages_non_aobj_upd[where ko'=ko'], auto dest: fun_cong)
@@ -204,10 +208,11 @@ lemma set_untyped_cap_as_full_not_reachable_pg_cap[wp]:
    \<lbrace>\<lambda>rv s. \<not> reachable_frame_cap cap' s\<rbrace>"
   apply (clarsimp simp: set_untyped_cap_as_full_def set_cap_def split_def
                         set_object_def)
-  apply (wpsimp wp: get_object_wp touch_object_wp simp_del: fun_upd_apply)
+  apply (wpsimp wp: get_object_wp touch_object_wp' simp_del: fun_upd_apply)
+  sorry (* broken by touched-addrs -scottb
   apply (auto simp: obj_at_def reachable_frame_cap_def is_cap_simps
                     reachable_target_def vs_lookup_target_non_aobj_upd)
-  done
+  done *)
 
 lemma table_cap_ref_eq_rewrite:
   "\<lbrakk>cap_master_cap cap = cap_master_cap capa; (is_frame_cap cap \<or> vs_cap_ref cap = vs_cap_ref capa)\<rbrakk>
@@ -234,20 +239,15 @@ lemma set_untyped_cap_as_full_reachable_target[wp]:
   unfolding reachable_target_def
   apply (cases avref, clarsimp)
   apply (rule hoare_lift_Pf[where f="pool_for_asid asid" for asid])
-  apply (clarsimp simp: set_untyped_cap_as_full_def, wp touch_object_wp)+
-  sorry (* FIXME: Broken by timeprot-touch-objs. -robs
+  apply (clarsimp simp: set_untyped_cap_as_full_def, wp touch_object_wp')+
+   apply simp
+  apply (clarsimp simp: set_untyped_cap_as_full_def, wp touch_object_wp')+
+   apply simp
   done
-*)
 
-lemma set_untyped_cap_as_full_aobjs_of[simplified f_kheap_to_kheap, wp]:
-  "set_untyped_cap_as_full src_cap new_cap src_slot \<lbrace>\<lambda>s. P (aobjs_of False s)\<rbrace>"
-  sorry (* FIXME: Broken by timeprot-touch-objs. -robs
-
-(* FIXME this is generic *)
 crunches set_untyped_cap_as_full
-  for aobjs_of[wp]: "\<lambda>s. P (aobjs_of False s)"
-  (wp:touch_object_wp ignore:do_machine_op)
-*)
+  for aobjs_of[wp]: "\<lambda>s. P (kheap s |> aobj_of)"
+  (wp: crunch_wps touch_object_wp ignore:do_machine_op)
 
 lemma is_derived_is_pt:
   "is_derived m p cap cap' \<Longrightarrow> (is_pt_cap cap = is_pt_cap cap')"
@@ -315,6 +315,9 @@ end
 
 global_interpretation cap_insert_crunches?: cap_insert_crunches .
 
+sublocale touched_addresses_inv \<subseteq> no_cap_to_obj_with_diff_ref:touched_addresses_P_inv _ _
+                                    "no_cap_to_obj_with_diff_ref a b"
+  by unfold_locales (clarsimp simp: ta_agnostic_def no_cap_to_obj_with_diff_ref_def)
 
 context Arch begin global_naming RISCV64
 
@@ -455,10 +458,8 @@ lemma setup_reply_master_cap_refs_in_kernel_window[wp, CSpace_AI_assms]:
 lemma same_region_as_Untyped2 [CSpace_AI_assms]:
   "\<lbrakk> is_untyped_cap pcap; same_region_as pcap cap \<rbrakk> \<Longrightarrow>
   (is_physical cap \<and> cap_range cap \<noteq> {} \<and> cap_range cap \<subseteq> cap_range pcap)"
-  sorry (* FIXME: Broken by timeprot-touch-objs. -robs
   by (fastforce simp: is_cap_simps cap_range_def is_physical_def arch_is_physical_def
                split: cap.splits arch_cap.splits)
-*)
 
 
 lemma same_region_as_cap_class [CSpace_AI_assms]:
@@ -489,9 +490,8 @@ lemma cap_insert_simple_arch_caps_no_ap:
       apply (wp get_cap_wp touch_object_wp)+
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (intro conjI impI allI)
-  sorry (* FIXME: Broken by timeprot-touch-objs. -robs
-  by (auto simp:is_simple_cap_def[simplified is_simple_cap_arch_def] is_cap_simps)
-*)
+  apply (auto simp:is_simple_cap_def[simplified is_simple_cap_arch_def] is_cap_simps)
+  done
 
 lemma setup_reply_master_ioports[wp, CSpace_AI_assms]:
   "\<lbrace>valid_ioports\<rbrace> setup_reply_master c \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"

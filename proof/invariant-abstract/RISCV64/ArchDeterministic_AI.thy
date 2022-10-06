@@ -72,6 +72,12 @@ begin
 lemma m_inv [wp]:
   "m \<lbrace>P\<rbrace>"
   by (rule agnostic_preserved [OF ta_agnostic])
+
+(*FIXME: maybe this should be in a different locale, as this will be duplicated (and
+  added to the simp set) for every monad that instantiates touched_addresses_inv *)
+lemma use_ta_agnostic [simp]:
+  "P (ms_ta_update taf s) = P s"
+  by (meson ta_agnostic ta_agnostic_def)
 end
 
 sublocale touched_addresses_det_inv \<subseteq> valid_list: touched_addresses_P_det_inv _ valid_list

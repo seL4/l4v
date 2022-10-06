@@ -837,9 +837,10 @@ lemma dmo_invs:
 
 lemma as_user_bind[wp]:
   "as_user t (f >>= g) = (as_user t f) >>= (\<lambda>x. as_user t (g x))"
-  apply (monad_eq simp: as_user_def select_f_def set_object_def get_object_def gets_the_def get_tcb_def)
-  apply (clarsimp split: option.splits kernel_object.splits)
-  sorry (* FIXME: Broken by timeprot-touch-objs. -robs
+  apply (monad_eq simp: as_user_def select_f_def set_object_def get_object_def gets_the_def get_tcb_def touch_object_def2 simpler_do_machine_op_addTouchedAddresses_def)
+  
+  apply (clarsimp simp:ta_filter_def obind_def split: option.splits kernel_object.splits)
+  sorry (* FIXME: Broken by timeprot-touch-objs. -robs checked -scottb
     Changing the pattern match to be against f_kheap here doesn't seem straightforward.
   apply (intro conjI impI allI;
          match premises in "kheap _ t = Some (TCB _)" \<Rightarrow> succeed \<bar> _ \<Rightarrow> fastforce)

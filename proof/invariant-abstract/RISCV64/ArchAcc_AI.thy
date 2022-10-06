@@ -2038,7 +2038,6 @@ lemma set_asid_pool_invs_restrict:
             set_asid_pool_vspace_objs_unmap  valid_irq_handlers_lift
             set_asid_pool_vs_lookup_unmap)
   apply (clarsimp simp: equal_kernel_mappings_def)
-  sorry (* FIXME: Broken by timeprot-touch-objs. -robs
   apply (rename_tac s pt_ptr hi_bits pt)
   apply (clarsimp dest!: ran_restrictD)
   apply (rename_tac lo_bits)
@@ -2053,7 +2052,6 @@ lemma set_asid_pool_invs_restrict:
                          constructed_asid_high_bits_of constructed_asid_low_bits_of)
   apply (drule vspace_for_asid_from_lookup_target; simp)
   done
-*)
 
 lemmas set_asid_pool_cte_wp_at1[wp]
     = hoare_cte_wp_caps_of_state_lift [OF set_asid_pool_caps_of_state]
@@ -2217,11 +2215,15 @@ lemma store_pte_valid_asid_table[simplified f_kheap_to_kheap, wp]:
 
 
 
-lemma cur_tcb_store_pte[wp]:
-  "\<lbrace>cur_tcb\<rbrace> store_pte param_a param_b \<lbrace>\<lambda>_. cur_tcb\<rbrace>"
-  sorry
+
+
+  
 
 end
+
+
+sublocale touched_addresses_inv \<subseteq> cur_tcb: touched_addresses_P_inv _ _ cur_tcb
+  by unfold_locales (clarsimp simp: ta_agnostic_def cur_tcb_def)
 
 sublocale touched_addresses_inv \<subseteq> zombies_final: touched_addresses_P_inv _ _ zombies_final
   apply unfold_locales
@@ -2230,11 +2232,6 @@ sublocale touched_addresses_inv \<subseteq> zombies_final: touched_addresses_P_i
   apply (smt (z3) Collect_cong cte_wp_at_weakenE is_final_cap'_def machine_state_update.get_cap_update)
   (*FIXME: Do this without smt *)
   done
-
-
-(* interpretation get_receive_slots_tainv: *)
-  (* touched_addresses_inv _ "get_receive_slots oref orefo" *)
-  (* by unfold_locales wp *)
 
 context Arch begin global_naming RISCV64
 
