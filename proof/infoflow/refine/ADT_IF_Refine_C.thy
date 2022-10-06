@@ -399,11 +399,10 @@ lemma kernelEntry_corres_C:
           apply (simp add: ccontext_rel_to_C)
          apply simp
         apply (rule corres_split[OF ccorres_corres_u_xf, simplified bind_assoc])
-            prefer 3
+            prefer 2
             apply (rule corres_nofail)
              apply (rule handleEvent_corres)
             apply simp
-           prefer 2
            apply (rule_tac Q'="UNIV" in ccorres_guard_imp)
              apply (rule handleEvent_ccorres)
             apply (clarsimp simp: all_invs'_def)
@@ -431,23 +430,23 @@ lemma handle_preemption_corres_C:
      (handlePreemption_if tc) (handlePreemption_C_if tc)"
   apply (simp add: handlePreemption_if_def2 handlePreemption_C_if_def)
   apply (rule corres_stateAssert_no_fail)
-   using corres_nofail[OF handle_preemption_if_corres[of tc], simplified]
+  using corres_nofail[OF handle_preemption_if_corres[of tc], simplified]
    apply (simp add: handlePreemption_if_def2)
    apply (erule no_fail_pre)
    apply (clarsimp simp: ex_abs_underlying_def ex_abs_def)
    apply (rule exI, rule conjI, assumption)
    apply (clarsimp simp: domain_time_rel_eq domain_list_rel_eq)
   apply (rule corres_guard_imp)
-    apply (rule_tac r'="dc" in corres_split_deprecated)
+    apply (rule_tac r'="dc" in corres_split)
+       apply (rule ccorres_corres_u)
+        apply (rule ccorres_guard_imp)
+          apply (rule ccorres_rel_imp)
+           apply (rule handleInterrupt_if_ccorres)
+          apply simp
+         prefer 3
+         apply (rule handleEvent_Interrupt_no_fail)
+        apply clarsimp
        apply simp
-      apply (rule ccorres_corres_u)
-       apply (rule ccorres_guard_imp)
-         apply (rule ccorres_rel_imp)
-          apply (rule handleInterrupt_if_ccorres)
-         apply simp
-        prefer 3
-        apply (rule handleEvent_Interrupt_no_fail)
-       apply clarsimp
       apply simp
      apply (rule hoare_post_taut[where P=\<top>])+
    apply (fastforce simp: ex_abs_def schedaction_related)+
@@ -487,7 +486,7 @@ lemma schedule_if_corres_C:
      (schedule'_if tc) (schedule_C_if' tc)"
   apply (simp add: schedule'_if_def schedule_C_if'_def)
   apply (subst bind_assoc[symmetric], rule corres_stateAssert_no_fail)
-   using corres_nofail[OF schedule_if_corres[of tc], simplified]
+  using corres_nofail[OF schedule_if_corres[of tc], simplified]
    apply (simp add: schedule'_if_def bind_assoc)
    apply (erule no_fail_pre)
    apply (clarsimp simp: ex_abs_def)
@@ -496,10 +495,16 @@ lemma schedule_if_corres_C:
    apply (clarsimp simp: state_relation_def)
   apply (simp only: bind_assoc)
   apply (rule corres_guard_imp)
-    apply (rule_tac r'="dc" in corres_split_deprecated)
+    apply (rule_tac r'="dc" in corres_split)
+       apply (rule ccorres_corres_u')
+          apply (rule schedule_ccorres)
+         apply (rule corres_nofail)
+          apply (rule schedule_corres)
+         apply (erule FalseE)
+        apply simp
        apply simp
-       apply (rule_tac r'="dc" in corres_split_deprecated)
-          apply simp
+      apply simp
+      apply (rule_tac r'="dc" in corres_split)
          apply (rule ccorres_corres_u')
             apply (rule activateThread_ccorres)
            apply (rule corres_nofail)
@@ -507,14 +512,8 @@ lemma schedule_if_corres_C:
            apply (erule FalseE)
           apply simp
          apply simp
-        apply (rule hoare_post_taut[where P=\<top>])+
-      apply (rule ccorres_corres_u')
-         apply (rule schedule_ccorres)
-        apply (rule corres_nofail)
-         apply (rule schedule_corres)
-        apply (erule FalseE)
-       apply simp
-      apply simp
+        apply simp
+       apply (rule hoare_post_taut[where P=\<top>])+
      apply (rule_tac Q="\<lambda>r. ct_in_state' activatable' and invs' and
                             ex_abs (invs and ct_in_state activatable)" in hoare_strengthen_post)
       apply (wp schedule_invs' corres_ex_abs_lift)
@@ -568,12 +567,12 @@ lemma kernel_exit_corres_C:
   apply (rule corres_underlying_nf_imp2)
   apply (simp add: kernelExit_if_def kernelExit_C_if_def)
   apply (rule corres_guard_imp)
-    apply (rule_tac r'="\<lambda>rv rv'. rv' = tcb_ptr_to_ctcb_ptr rv" in corres_split_deprecated)
-       apply simp
-       apply (rule getContext_corres)
-       apply simp
-      apply (rule_tac P="\<top>" and P'="\<top>" in corres_inst)
-      apply (clarsimp simp: getCurThread_def rf_sr_def cstate_relation_def Let_def)
+    apply (rule_tac r'="\<lambda>rv rv'. rv' = tcb_ptr_to_ctcb_ptr rv" in corres_split)
+       apply (rule_tac P="\<top>" and P'="\<top>" in corres_inst)
+       apply (clarsimp simp: getCurThread_def rf_sr_def cstate_relation_def Let_def)
+      apply simp
+      apply (rule getContext_corres)
+      apply simp
      apply wp+
    apply clarsimp+
   done
