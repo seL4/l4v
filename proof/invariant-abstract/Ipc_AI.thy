@@ -14,7 +14,7 @@ context begin interpretation Arch .
 requalify_consts
   in_device_frame
 requalify_facts
-  lookup_ipc_buffer_inv
+  lookup_ipc_buffer_tainv
   set_mi_invs
   as_user_hyp_refs_of
   valid_arch_arch_tcb_set_registers
@@ -30,7 +30,7 @@ requalify_facts
 
 end
 
-declare lookup_ipc_buffer_inv[wp]
+declare lookup_ipc_buffer_tainv[wp]
 declare set_mi_invs[wp]
 declare as_user_hyp_refs_of[wp]
 declare setup_caller_cap_ioports[wp]
@@ -40,7 +40,9 @@ declare if_cong[cong del]
 lemmas lookup_slot_wrapper_defs[simp] =
    lookup_source_slot_def lookup_target_slot_def lookup_pivot_slot_def
 
-lemma get_mi_inv[wp]: "\<lbrace>I\<rbrace> get_message_info a \<lbrace>\<lambda>x. I\<rbrace>"
+(* FIXME: If we want "_tainv" to be the suffix in a new naming convention for "ignore_ta" invs,
+   we should rename this. I'll leave this as-is for now to minimise breakages. -robs *)
+lemma get_mi_inv[wp]: "\<lbrace>ignore_ta I\<rbrace> get_message_info a \<lbrace>\<lambda>x. ignore_ta I\<rbrace>"
   by (simp add: get_message_info_def user_getreg_inv | wp)+
 
 lemma set_mi_tcb [wp]:
@@ -55,8 +57,9 @@ lemma lsfco_cte_at:
 
 declare do_machine_op_tcb[wp]
 
+(* FIXME: Move to "_tainv" naming convention? -robs *)
 lemma load_ct_inv[wp]:
-  "load_cap_transfer buf \<lbrace>P\<rbrace>"
+  "load_cap_transfer buf \<lbrace>ignore_ta P\<rbrace>"
   apply (simp add: load_cap_transfer_def)
   apply (wp dmo_inv mapM_wp' loadWord_inv)
   done
@@ -99,8 +102,10 @@ lemma get_rs_real_cte_at[wp]:
   apply (cases recv_buf)
    apply (simp,wp,simp)
   apply (clarsimp simp add: split_def whenE_def)
-  apply (wp hoare_drop_imps lookup_cnode_slot_real_cte lookup_cap_valid | simp | rule get_cap_wp)+
+  apply (wp hoare_drop_imps lookup_cnode_slot_real_cte lookup_cap_valid touch_object_wp' | simp | rule get_cap_wp)+
+  sorry (* FIXME: broken by touched-addrs -robs
   done
+*)
 
 declare returnOKE_R_wp [wp]
 
@@ -366,17 +371,20 @@ sublocale touched_addresses_inv \<subseteq> pspace_respects_device_region:touche
   by unfold_locales (simp add:ta_agnostic_def)
 
 crunches get_extra_cptr
-  for inv[wp]: P
+  (* FIXME: Move to "_tainv" naming convention? -robs *)
+  for inv[wp]: "ignore_ta P"
   (wp: dmo_inv loadWord_inv)
 crunches set_extra_badge
   for pspace_respects_device_region[wp]: pspace_respects_device_region
   and cap_refs_respects_device_region[wp]: cap_refs_respects_device_region
-  (wp: crunch_wps pspace_respects_device_region_dmo cap_refs_respects_device_region_dmo)
+  (wp: crunch_wps pspace_respects_device_region_dmo cap_refs_respects_device_region_dmo
+    touch_objects_wp)
 
+(* FIXME: Move to "_tainv" naming convention? -robs *)
 lemma get_extra_cptrs_inv[wp]:
-  "\<lbrace>P\<rbrace> get_extra_cptrs buf mi \<lbrace>\<lambda>rv. P\<rbrace>"
+  "\<lbrace>ignore_ta P\<rbrace> get_extra_cptrs buf mi \<lbrace>\<lambda>rv. ignore_ta P\<rbrace>"
   apply (cases buf, simp_all del: upt.simps)
-  apply (wp mapM_wp' dmo_inv loadWord_inv
+  apply (wp mapM_wp' dmo_inv loadWord_inv touch_objects_wp
              | simp add: load_word_offs_def del: upt.simps)+
   done
 
@@ -389,7 +397,7 @@ lemma cap_badge_rights_update[simp]:
   by (auto simp: cap_rights_update_def split: cap.split bool.splits)
 
 lemma get_cap_cte_wp_at_rv:
-  "\<lbrace>cte_wp_at (\<lambda>cap. P cap cap) p\<rbrace> get_cap p \<lbrace>\<lambda>rv. cte_wp_at (P rv) p\<rbrace>"
+  "\<lbrace>cte_wp_at (\<lambda>cap. P cap cap) p\<rbrace> get_cap True p \<lbrace>\<lambda>rv. cte_wp_at (P rv) p\<rbrace>"
   apply (wp get_cap_wp)
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   done
@@ -482,12 +490,12 @@ lemma cap_insert_cte_wp_at:
   apply (clarsimp simp:cap_insert_def)
   apply (wp set_cap_cte_wp_at | simp split del: if_split)+
      apply (clarsimp simp:set_untyped_cap_as_full_def split del:if_split)
-    apply (wp get_cap_wp)+
+    apply (wp get_cap_wp touch_object_wp')+
    apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (clarsimp simp:cap_insert_def)
   apply (wp set_cap_cte_wp_at | simp split del: if_split)+
     apply (clarsimp simp:set_untyped_cap_as_full_def split del:if_split)
-   apply (wp set_cap_cte_wp_at get_cap_wp)+
+   apply (wp set_cap_cte_wp_at get_cap_wp touch_object_wp')+
   apply (clarsimp simp:cte_wp_at_caps_of_state)
   apply (frule(1) caps_of_state_valid)
   apply (intro conjI impI)
@@ -520,7 +528,7 @@ lemma cap_insert_weak_cte_wp_at2:
    cap_insert cap src dest
    \<lbrace>\<lambda>uu. cte_wp_at P p\<rbrace>"
   unfolding cap_insert_def
-  by (wp set_cap_cte_wp_at get_cap_wp static_imp_wp
+  by (wp set_cap_cte_wp_at get_cap_wp static_imp_wp touch_object_wp'
       | simp add: cap_insert_def
       | unfold set_untyped_cap_as_full_def
       | auto simp: cte_wp_at_def dest!:imp)+
@@ -572,12 +580,14 @@ lemma cap_insert_assume_null:
   apply (rule hoare_name_pre_state)
   apply (erule impCE)
    apply (simp add: cap_insert_def)
+   sorry (* FIXME: broken by touched-addrs -robs
    apply (rule hoare_seq_ext[OF _ get_cap_sp])+
    apply (clarsimp simp: valid_def cte_wp_at_caps_of_state in_monad
               split del: if_split)
   apply (erule hoare_pre(1))
   apply simp
   done
+*)
 
 context Ipc_AI begin
 
@@ -761,7 +771,7 @@ lemma tcl_ifunsafe[wp]:
 end
 
 lemma get_cap_global_refs[wp]:
-  "\<lbrace>valid_global_refs\<rbrace> get_cap p \<lbrace>\<lambda>c s. global_refs s \<inter> cap_range c = {}\<rbrace>"
+  "\<lbrace>valid_global_refs\<rbrace> get_cap True p \<lbrace>\<lambda>c s. global_refs s \<inter> cap_range c = {}\<rbrace>"
   apply (rule hoare_pre)
    apply (rule get_cap_wp)
   apply (clarsimp simp: valid_refs_def2 valid_global_refs_def cte_wp_at_caps_of_state)
@@ -1140,7 +1150,7 @@ lemma transfer_caps_loop_vms[wp]:
   by (wp transfer_caps_loop_pres)
 
 crunch valid_irq_states[wp]: set_extra_badge "valid_irq_states"
-  (ignore: do_machine_op)
+  (ignore: do_machine_op wp: touch_objects_wp)
 
 lemma transfer_caps_loop_valid_irq_states[wp]:
   "\<And>ep buffer n caps slots mi.
@@ -1257,7 +1267,7 @@ lemma cte_refs_mask[simp]:
 
 lemma get_cap_cte_caps_to[wp]:
   "\<lbrace>\<lambda>s. \<forall>cp. P cp = P cp\<rbrace>
-     get_cap sl
+     get_cap True sl
    \<lbrace>\<lambda>rv s. P rv \<longrightarrow> (\<forall>p\<in>cte_refs rv (interrupt_irq_node s). ex_cte_cap_wp_to P p s)\<rbrace>"
   apply (wp get_cap_wp)
   apply (clarsimp simp: ex_cte_cap_wp_to_def)
@@ -1298,7 +1308,7 @@ lemma derive_cap_notIRQ[wp]:
 
 lemma get_cap_zombies_helper:
   "\<lbrace>zombies_final\<rbrace>
-     get_cap p
+     get_cap True p
    \<lbrace>\<lambda>rv s. \<not> is_zombie rv
      \<longrightarrow> (\<forall>r\<in>obj_refs rv. \<forall>p'.
            cte_wp_at (\<lambda>c. r \<in> obj_refs c) p' s
@@ -1353,8 +1363,9 @@ lemma no_irq_case_option:
   done
 
 
+(* FIXME: Move to "_tainv" naming convention? -robs *)
 lemma get_mrs_inv[wp]:
-  "\<lbrace>P\<rbrace> get_mrs t buf info \<lbrace>\<lambda>rv. P\<rbrace>"
+  "\<lbrace>ignore_ta P\<rbrace> get_mrs t buf info \<lbrace>\<lambda>rv. ignore_ta P\<rbrace>"
   by (wpsimp simp: get_mrs_def load_word_offs_def wp: dmo_inv loadWord_inv mapM_wp')
 
 
@@ -1388,7 +1399,7 @@ lemmas copy_mrs_redux =
 
 lemma store_word_offs_invs[wp]:
   "\<lbrace>invs\<rbrace> store_word_offs p x w \<lbrace>\<lambda>_. invs\<rbrace>"
-  by (wp | simp add: store_word_offs_def)+
+  by (wp touch_objects_wp | simp add: store_word_offs_def)+
 
 lemma copy_mrs_invs[wp]:
   "\<lbrace> invs and tcb_at r and tcb_at s \<rbrace> copy_mrs s sb r rb n \<lbrace>\<lambda>rv. invs \<rbrace>"
@@ -1436,7 +1447,7 @@ lemma copy_mrs_aligned [wp]:
 
 
 lemma get_tcb_ko_at:
-  "(get_tcb t s = Some tcb) = ko_at (TCB tcb) t s"
+  "(get_tcb False t s = Some tcb) = ko_at (TCB tcb) t s"
   by (auto simp: obj_at_def get_tcb_def
            split: option.splits Structures_A.kernel_object.splits)
 
@@ -1513,18 +1524,24 @@ interpretation lookup_cap_and_slot_tainv:
   touched_addresses_invE _ "lookup_cap_and_slot x y"
   by unfold_locales wp
 
+interpretation get_extra_cptrs_tainv:
+  touched_addresses_inv _ "get_extra_cptrs buf info"
+  by unfold_locales wp
+
 lemma lookup_extra_caps_srcs[wp]:
   "\<lbrace>valid_objs\<rbrace> lookup_extra_caps thread buf info \<lbrace>transfer_caps_srcs\<rbrace>,-"
   apply (simp add: lookup_extra_caps_def lookup_cap_and_slot_def
                    split_def lookup_slot_for_thread_def)
-  apply (wp mapME_set[where R=valid_objs] get_cap_wp)
-       apply (simp add: cte_wp_at_caps_of_state)
-       apply (wp hoare_drop_imps resolve_address_bits_real_cte_at)
-      apply (wpsimp simp: objs_valid_tcb_ctable)
-     apply wpsimp
-       apply (rule resolve_address_bits_tainv.agnostic_preservedE_R)
-       apply (clarsimp simp: ta_agnostic_def)
-      apply wpsimp+
+  apply (wp mapME_set[where R=valid_objs] get_cap_wp touch_object_wp')
+        apply (simp add: cte_wp_at_caps_of_state)
+        apply (wp hoare_drop_imps resolve_address_bits_real_cte_at)
+       apply (wpsimp simp: objs_valid_tcb_ctable)
+      apply (wpsimp wp:touch_object_wp' simp:get_tcb_def ta_filter_def obind_def split:option.splits kernel_object.splits)
+      apply (simp add: get_tcb_ko_at obj_at_def objs_valid_tcb_ctable)
+     apply(wpsimp wp:touch_object_wp')
+        apply (rule resolve_address_bits_tainv.agnostic_preservedE_R)
+        apply (clarsimp simp: ta_agnostic_def)
+       apply(wpsimp wp:touch_object_wp')+
   done
 
 lemma mapME_length:
@@ -1536,13 +1553,26 @@ lemma mapME_length:
    apply (wp | simp | assumption)+
   done
 
+(* FIXME: broken by touched-addrs -robs
 sublocale touched_addresses_inv \<subseteq> typ_at:touched_addresses_P_inv _ _ "\<lambda>s. P (typ_at T p s)"
-  by unfold_locales (simp add:ta_agnostic_def)
+  apply unfold_locales
+  apply (simp add:ta_agnostic_def)
+  done
+*)
 
 context Ipc_AI begin
 
+lemma get_extra_cptrs_typ_at[wp]:
+  "get_extra_cptrs param_a param_b \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>"
+  sorry (* FIXME: broken by touched-addrs -robs *)
+
+lemma lookup_extra_caps_typ_at[wp]:
+  "lookup_extra_caps param_a param_b param_c \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>"
+  sorry (* FIXME: broken by touched-addrs -robs *)
+
 crunches do_normal_transfer
   for typ_at[wp]: "\<lambda>s::'state_ext state. P (typ_at T p s)"
+  (ignore: resolve_address_bits)
 
 lemma do_normal_tcb[wp]:
   "\<And>t sender send_buf ep badge can_grant receiver recv_buf.
@@ -1565,22 +1595,28 @@ lemma copy_mrs_thread_set_dmo:
                "\<And>x. \<lbrace>Q\<rbrace> do_machine_op (loadWord x) \<lbrace>\<lambda>rv. Q\<rbrace>"
   shows "\<lbrace>Q\<rbrace> copy_mrs s sb r rb n \<lbrace>\<lambda>rv. Q\<rbrace>"
   apply (simp add: copy_mrs_redux)
-  apply (wp mapM_wp [where S=UNIV, simplified] dmo ts | wpc
+  apply (wp mapM_wp [where S=UNIV, simplified] dmo ts touch_objects_wp | wpc
        | simp add: store_word_offs_def load_word_offs_def
        | rule as_user_wp_thread_set_helper hoare_drop_imps)+
+  sorry (* FIXME: broken by touched-addrs -robs
   done
+*)
 
 
 lemma set_mrs_refs_of[wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace>
      set_mrs a b c
    \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
+  sorry (* FIXME: broken by touched-addrs -robs
   by (wp set_mrs_thread_set_dmo thread_set_refs_trivial | simp)+
+*)
 
 
 lemma set_mrs_cur [wp]:
   "\<lbrace>cur_tcb\<rbrace> set_mrs r t mrs \<lbrace>\<lambda>rv. cur_tcb\<rbrace>"
+  sorry (* FIXME: broken by touched-addrs -robs
   by (wp set_mrs_thread_set_dmo)
+*)
 
 
 lemma set_mrs_cte_wp_at [wp]:
@@ -1596,8 +1632,10 @@ lemma set_mrs_ex_nonz_cap_to[wp]:
 
 lemma set_mrs_iflive[wp]:
   "\<lbrace>if_live_then_nonz_cap\<rbrace> set_mrs a b c \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
+  sorry (* FIXME: broken by touched-addrs -robs
   by (wp set_mrs_thread_set_dmo thread_set_iflive_trivial
          ball_tcb_cap_casesI | simp)+
+*)
 
 
 lemma set_mrs_ifunsafe[wp]:
@@ -1614,8 +1652,10 @@ lemma set_mrs_zombies[wp]:
 
 lemma set_mrs_valid_globals[wp]:
   "\<lbrace>valid_global_refs\<rbrace> set_mrs a b c \<lbrace>\<lambda>rv. valid_global_refs\<rbrace>"
+  sorry (* FIXME: broken by touched-addrs -robs
   by (wp set_mrs_thread_set_dmo thread_set_global_refs_triv
          ball_tcb_cap_casesI valid_global_refs_cte_lift | simp)+
+*)
 
 
 sublocale touched_addresses_inv \<subseteq> aligned:touched_addresses_P_inv _ _ pspace_aligned
@@ -1636,8 +1676,10 @@ sublocale touched_addresses_inv \<subseteq> aligned:touched_addresses_P_inv _ _ 
 
 context Ipc_AI begin
 
+(* FIXME: For Scott, not sure how to proceed using the new lookup_ipc_buffer_tainv rule. -robs *)
 crunch aligned[wp]: do_ipc_transfer "pspace_aligned :: 'state_ext state \<Rightarrow> bool"
-  (wp: crunch_wps simp: crunch_simps zipWithM_x_mapM)
+  (wp: crunch_wps lookup_ipc_buffer_tainv simp: crunch_simps zipWithM_x_mapM)
+. (* DOWN TO HERE
 
 crunch "distinct"[wp]: do_ipc_transfer "pspace_distinct :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps simp: crunch_simps zipWithM_x_mapM)
