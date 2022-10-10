@@ -40,9 +40,7 @@ declare if_cong[cong del]
 lemmas lookup_slot_wrapper_defs[simp] =
    lookup_source_slot_def lookup_target_slot_def lookup_pivot_slot_def
 
-(* FIXME: If we want "_tainv" to be the suffix in a new naming convention for "ignore_ta" invs,
-   we should rename this. I'll leave this as-is for now to minimise breakages. -robs *)
-lemma get_mi_inv[wp]: "\<lbrace>ignore_ta I\<rbrace> get_message_info a \<lbrace>\<lambda>x. ignore_ta I\<rbrace>"
+lemma get_mi_tainv[wp]: "\<lbrace>ignore_ta I\<rbrace> get_message_info a \<lbrace>\<lambda>x. ignore_ta I\<rbrace>"
   by (simp add: get_message_info_def user_getreg_inv | wp)+
 
 lemma set_mi_tcb [wp]:
@@ -57,8 +55,7 @@ lemma lsfco_cte_at:
 
 declare do_machine_op_tcb[wp]
 
-(* FIXME: Move to "_tainv" naming convention? -robs *)
-lemma load_ct_inv[wp]:
+lemma load_ct_tainv[wp]:
   "load_cap_transfer buf \<lbrace>ignore_ta P\<rbrace>"
   apply (simp add: load_cap_transfer_def)
   apply (wp dmo_inv mapM_wp' loadWord_inv)
@@ -371,8 +368,7 @@ sublocale touched_addresses_inv \<subseteq> pspace_respects_device_region:touche
   by unfold_locales (simp add:ta_agnostic_def)
 
 crunches get_extra_cptr
-  (* FIXME: Move to "_tainv" naming convention? -robs *)
-  for inv[wp]: "ignore_ta P"
+  for tainv[wp]: "ignore_ta P"
   (wp: dmo_inv loadWord_inv)
 crunches set_extra_badge
   for pspace_respects_device_region[wp]: pspace_respects_device_region
@@ -380,8 +376,7 @@ crunches set_extra_badge
   (wp: crunch_wps pspace_respects_device_region_dmo cap_refs_respects_device_region_dmo
     touch_objects_wp)
 
-(* FIXME: Move to "_tainv" naming convention? -robs *)
-lemma get_extra_cptrs_inv[wp]:
+lemma get_extra_cptrs_tainv[wp]:
   "\<lbrace>ignore_ta P\<rbrace> get_extra_cptrs buf mi \<lbrace>\<lambda>rv. ignore_ta P\<rbrace>"
   apply (cases buf, simp_all del: upt.simps)
   apply (wp mapM_wp' dmo_inv loadWord_inv touch_objects_wp
@@ -1363,8 +1358,7 @@ lemma no_irq_case_option:
   done
 
 
-(* FIXME: Move to "_tainv" naming convention? -robs *)
-lemma get_mrs_inv[wp]:
+lemma get_mrs_tainv[wp]:
   "\<lbrace>ignore_ta P\<rbrace> get_mrs t buf info \<lbrace>\<lambda>rv. ignore_ta P\<rbrace>"
   by (wpsimp simp: get_mrs_def load_word_offs_def wp: dmo_inv loadWord_inv mapM_wp')
 

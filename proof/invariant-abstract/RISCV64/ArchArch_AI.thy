@@ -299,17 +299,17 @@ end
 
 locale asid_update = Arch +
   fixes ap asid_hi s s'
-  assumes ko: "asid_pools_of s ap = Some Map.empty"
+  assumes ko[simplified f_kheap_to_kheap]: "asid_pools_of False s ap = Some Map.empty"
   assumes empty: "asid_table s asid_hi = None"
   defines "s' \<equiv> s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := (asid_table s)(asid_hi \<mapsto> ap)\<rparr>\<rparr>"
 begin
 
-lemma aobjs_of[simp]:
-  "aobjs_of s' = aobjs_of s"
+lemma aobjs_of[simplified f_kheap_to_kheap, simp]:
+  "aobjs_of False s' = aobjs_of False s"
   unfolding s'_def by simp
 
-lemma vspace_for_pool_ap[simp]:
-  "vspace_for_pool ap asid (asid_pools_of s) = None"
+lemma vspace_for_pool_ap[simplified f_kheap_to_kheap, simp]:
+  "vspace_for_pool ap asid (asid_pools_of False s) = None"
   using ko by (simp add: vspace_for_pool_def obind_def)
 
 lemma asid_hi_pool_for_asid:
@@ -396,7 +396,7 @@ lemma valid_vs_lookup[simp]:
   "valid_vs_lookup s' = valid_vs_lookup s"
   by (clarsimp simp: valid_vs_lookup_def caps_of_state_s')
 
-lemma valid_table_caps':
+lemma valid_table_caps'[simplified f_kheap_to_kheap]:
   "valid_table_caps s \<Longrightarrow> valid_table_caps s'"
   by (simp add: valid_table_caps_def caps_of_state_s' s'_def)
 
@@ -420,8 +420,8 @@ lemma valid_asid_map':
   "valid_asid_map s \<Longrightarrow> valid_asid_map s'"
   by (clarsimp simp: valid_asid_map_def)
 
-lemma vspace_for_asid[simp]:
-  "vspace_for_asid asid s' = vspace_for_asid asid s"
+lemma vspace_for_asid[simplified f_kheap_to_kheap, simp]:
+  "vspace_for_asid False asid s' = vspace_for_asid False asid s"
   using ko empty
   by (clarsimp simp: vspace_for_asid_def obind_def pool_for_asid_def s'_def vspace_for_pool_def
                split: option.splits)
@@ -448,34 +448,34 @@ lemma valid_arch_state_strg:
   done
 
 
-lemma valid_vs_lookup_at_upd_strg:
+lemma valid_vs_lookup_at_upd_strg[simplified f_kheap_to_kheap]:
   "valid_vs_lookup s \<and>
-   asid_pools_of s ap = Some Map.empty \<and>
+   asid_pools_of False s ap = Some Map.empty \<and>
    asid_table s asid = None
    \<longrightarrow>
    valid_vs_lookup (s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := (asid_table s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
   apply clarsimp
-  apply (prop_tac "asid_update ap asid s", (unfold_locales; assumption))
+  apply (prop_tac "asid_update ap asid s", (unfold_locales; simp))
   apply (simp add: asid_update.valid_vs_lookup)
   done
 
-lemma valid_asid_pool_caps_upd_strg:
+lemma valid_asid_pool_caps_upd_strg[simplified f_kheap_to_kheap]:
   "valid_asid_pool_caps s \<and>
-   asid_pools_of s ap = Some Map.empty \<and>
+   asid_pools_of False s ap = Some Map.empty \<and>
    asid_table s asid = None \<and>
    (\<exists>ptr cap. caps_of_state s ptr = Some cap
      \<and> obj_refs cap = {ap} \<and> vs_cap_ref cap = Some (ucast asid << asid_low_bits, 0))
    \<longrightarrow>
    valid_asid_pool_caps_2 (caps_of_state s) (asid_table s(asid \<mapsto> ap))"
   apply clarsimp
-  apply (prop_tac "asid_update ap asid s", (unfold_locales; assumption))
+  apply (prop_tac "asid_update ap asid s", (unfold_locales; simp))
   apply (fastforce dest: asid_update.valid_asid_pool_caps')
   done
 
-lemma retype_region_ap[wp]:
+lemma retype_region_ap[simplified f_kheap_to_kheap, wp]:
   "\<lbrace>\<top>\<rbrace>
   retype_region ap (Suc 0) 0 (ArchObject ASIDPoolObj) dev
-  \<lbrace>\<lambda>_ s. asid_pools_of s ap = Some Map.empty\<rbrace>"
+  \<lbrace>\<lambda>_ s. asid_pools_of False s ap = Some Map.empty\<rbrace>"
   apply (rule hoare_post_imp)
    prefer 2
    apply (rule retype_region_obj_at)
@@ -532,7 +532,7 @@ lemma retype_region_no_cap_to_obj:
   done
 
 
-lemma valid_table_caps_asid_upd [iff]:
+lemma valid_table_caps_asid_upd [simplified f_kheap_to_kheap, iff]:
   "valid_table_caps (s\<lparr>arch_state := (riscv_asid_table_update f (arch_state s))\<rparr>) =
    valid_table_caps s"
   by (simp add: valid_table_caps_def second_level_tables_def)
@@ -552,10 +552,10 @@ lemma set_cap_reachable_target[wp]:
   apply simp
   done
 
-lemma cap_insert_simple_arch_caps_ap:
+lemma cap_insert_simple_arch_caps_ap[simplified f_kheap_to_kheap]:
   "\<lbrace>valid_arch_caps and (\<lambda>s. cte_wp_at (safe_parent_for (cdt s) src cap) src s)
      and no_cap_to_obj_with_diff_ref cap {dest}
-     and (\<lambda>s. asid_table s (asid_high_bits_of asid) = None \<and> asid_pools_of s ap = Some Map.empty)
+     and (\<lambda>s. asid_table s (asid_high_bits_of asid) = None \<and> asid_pools_of False s ap = Some Map.empty)
      and K (cap = ArchObjectCap (ASIDPoolCap ap asid) \<and> is_aligned asid asid_low_bits) \<rbrace>
      cap_insert cap src dest
    \<lbrace>\<lambda>rv s. valid_arch_caps (s\<lparr>arch_state := arch_state s
@@ -564,14 +564,17 @@ lemma cap_insert_simple_arch_caps_ap:
                    set_untyped_cap_as_full_def bind_assoc)
   apply (strengthen valid_vs_lookup_at_upd_strg valid_asid_pool_caps_upd_strg)
   apply (wp get_cap_wp set_cap_valid_vs_lookup set_cap_arch_obj
-            set_cap_valid_table_caps hoare_vcg_all_lift
+            (* FIXME: Declare set_cap_valid_table_caps to be [simplified f_kheap_to_kheap]
+               when it is proved back in ArchCSpaceInvPre_AI? -robs *)
+            set_cap_valid_table_caps[simplified f_kheap_to_kheap] hoare_vcg_all_lift
           | simp split del: if_split)+
        apply (simp add: F)
        apply (rule_tac P = "cte_wp_at ((=) src_cap) src" in set_cap_orth)
        apply (wp hoare_vcg_imp_lift hoare_vcg_ball_lift set_free_index_final_cap hoare_vcg_all_lift
                  hoare_vcg_disj_lift set_cap_reachable_pg_cap set_cap.vs_lookup_pages
               | clarsimp)+
-      apply (wp set_cap_arch_obj set_cap_valid_table_caps hoare_vcg_ball_lift
+      apply (wp set_cap_arch_obj set_cap_valid_table_caps[simplified f_kheap_to_kheap]
+                touch_object_wp' hoare_vcg_ball_lift
                 get_cap_wp static_imp_wp)+
   apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps)
   apply (rule conjI)
@@ -589,37 +592,37 @@ lemma cap_insert_simple_arch_caps_ap:
   apply (erule (3) unique_table_refsD)
   done
 
-lemma valid_asid_map_asid_upd_strg:
+lemma valid_asid_map_asid_upd_strg[simplified f_kheap_to_kheap]:
   "valid_asid_map s \<and>
-   asid_pools_of s ap = Some Map.empty \<and>
+   asid_pools_of False s ap = Some Map.empty \<and>
    asid_table s asid = None \<longrightarrow>
    valid_asid_map (asid_table_update asid ap s)"
   by (simp add: valid_asid_map_def)
 
-lemma valid_vspace_objs_asid_upd_strg:
+lemma valid_vspace_objs_asid_upd_strg[simplified f_kheap_to_kheap]:
   "valid_vspace_objs s \<and>
-   asid_pools_of s ap = Some Map.empty \<and>
+   asid_pools_of False s ap = Some Map.empty \<and>
    asid_table s asid = None \<longrightarrow>
    valid_vspace_objs (asid_table_update asid ap s)"
   apply clarsimp
-  apply (prop_tac "asid_update ap asid s", (unfold_locales; assumption))
+  apply (prop_tac "asid_update ap asid s", (unfold_locales; simp))
   apply (erule (1) asid_update.vspace_objs')
   done
 
-lemma valid_global_objs_asid_upd_strg:
+lemma valid_global_objs_asid_upd_strg[simplified f_kheap_to_kheap]:
   "valid_global_objs s \<and>
-   asid_pools_of s ap = Some Map.empty \<and>
+   asid_pools_of False s ap = Some Map.empty \<and>
    asid_table s asid = None \<longrightarrow>
    valid_global_objs (asid_table_update asid ap s)"
   by (clarsimp simp: valid_global_objs_def)
 
-lemma equal_kernel_mappings_asid_upd_strg:
+lemma equal_kernel_mappings_asid_upd_strg[simplified f_kheap_to_kheap]:
   "equal_kernel_mappings s \<and>
-   asid_pools_of s ap = Some Map.empty \<and>
+   asid_pools_of False s ap = Some Map.empty \<and>
    asid_table s asid = None \<longrightarrow>
    equal_kernel_mappings (asid_table_update asid ap s)"
   apply clarsimp
-  apply (prop_tac "asid_update ap asid s", (unfold_locales; assumption))
+  apply (prop_tac "asid_update ap asid s", (unfold_locales; simp))
   apply (simp add: asid_update.equal_kernel_mappings)
   done
 
@@ -635,7 +638,7 @@ lemma cap_insert_ioports_ap:
   by wpsimp
 
 crunches cap_insert
-  for aobjs_of[wp]: "\<lambda>s. P (aobjs_of s)"
+  for aobjs_of[wp]: "\<lambda>s. P (kheap s |> aobj_of)"
   (wp: crunch_wps)
 
 lemma cap_insert_ap_invs:
@@ -712,7 +715,7 @@ lemma perform_asid_control_invocation_pred_tcb_at:
   apply (wp hoare_vcg_const_imp_lift retype_region_st_tcb_at[where sz=page_bits] set_cap_no_overlap|simp)+
      apply (strengthen invs_valid_objs invs_psp_aligned)
      apply (clarsimp simp:conj_comms)
-     apply (wp max_index_upd_invs_simple get_cap_wp)+
+     apply (wp max_index_upd_invs_simple get_cap_wp touch_object_wp)+
   apply (clarsimp simp: valid_aci_def)
   apply (frule intvl_range_conv)
    apply (simp add:word_bits_def page_bits_def pageBits_def)
@@ -748,9 +751,11 @@ lemma perform_asid_control_invocation_pred_tcb_at:
   apply (intro conjI)
     apply (clarsimp simp:valid_cap_def cap_aligned_def range_cover_full
      invs_psp_aligned invs_valid_objs page_bits_def)
+    sorry (* FIXME: broken by touched-addrs -robs
    apply (erule pspace_no_overlap_detype)
   apply (auto simp:page_bits_def detype_clear_um_independent)
   done
+*)
 
 lemma perform_asid_control_invocation_st_tcb_at:
   "\<lbrace>st_tcb_at (P and (Not \<circ> inactive) and (Not \<circ> idle)) t
@@ -848,13 +853,15 @@ proof -
        apply (wp set_cap_caps_no_overlap set_cap_no_overlap get_cap_wp
                  max_index_upd_caps_overlap_reserved max_index_upd_invs_simple
                  set_cap_cte_cap_wp_to set_cap_cte_wp_at max_index_upd_no_cap_to
+                 touch_object_wp'
               | simp split del: if_split | wp (once) hoare_vcg_ex_lift)+
-     apply (rule_tac P = "is_aligned word1 page_bits" in hoare_gen_asm)
-     apply (subst delete_objects_rewrite)
-        apply (simp add:page_bits_def pageBits_def word_size_bits_def)
-       apply (simp add:page_bits_def pageBits_def word_bits_def)
-      apply (simp add: page_bits_def)
-     apply wp
+      apply (rule_tac P = "is_aligned word1 page_bits" in hoare_gen_asm)
+      apply (subst delete_objects_rewrite)
+         apply (simp add:page_bits_def pageBits_def word_size_bits_def)
+        apply (simp add:page_bits_def pageBits_def word_bits_def)
+       apply (simp add: page_bits_def)
+      apply (wp touch_object_wp')
+     apply (wp touch_object_wp')
     apply (clarsimp simp: cte_wp_at_caps_of_state if_option_Some
                split del: if_split)
     apply (frule_tac cap = "(cap.UntypedCap False word1 pageBits idx)"
@@ -873,6 +880,7 @@ proof -
                           default_arch_object_def conj_comms)
     apply (rule conjI)
      apply (clarsimp simp:valid_cap_simps cap_aligned_def page_bits_def not_le)
+    sorry (* FIXME: broken by touched-addrs -robs
     apply (simp add:empty_descendants_range_in)
     apply (frule valid_cap_aligned)
     apply (clarsimp simp: cap_aligned_def)
@@ -910,6 +918,7 @@ proof -
      apply simp
     apply clarsimp
   done
+*)
 
 qed
 
@@ -926,19 +935,19 @@ lemma invoke_arch_invs[wp]:
   done
 
 lemma sts_aobjs_of[wp]:
-  "set_thread_state t st \<lbrace>\<lambda>s. P (aobjs_of s)\<rbrace>"
+  "set_thread_state t st \<lbrace>\<lambda>s. P (kheap s |> aobj_of)\<rbrace>"
   unfolding set_thread_state_def
-  apply (wpsimp wp: set_object_wp)
+  apply (wpsimp wp: set_object_wp touch_object_wp')
   apply (erule rsubst[where P=P])
-  apply (auto dest!: get_tcb_SomeD simp: opt_map_def split: option.splits)
+  apply (auto dest!: get_tcb_SomeD simp: opt_map_def ta_filter_def split: option.splits)
   done
 
 crunches set_thread_state
   for pool_for_asid[wp]: "\<lambda>s. P (pool_for_asid asid s)"
-  (wp: assert_inv)
+  (wp: assert_inv crunch_wps)
 
 lemma sts_vspace_for_asid[wp]:
-  "set_thread_state t st \<lbrace>\<lambda>s. P (vspace_for_asid asid s)\<rbrace>"
+  "set_thread_state t st \<lbrace>\<lambda>s. P (vspace_for_asid False asid s)\<rbrace>"
   apply (simp add: vspace_for_asid_def obind_def split: option.splits)
   apply (rule conjI; wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift)
   done
@@ -967,6 +976,7 @@ lemma sts_valid_page_inv[wp]:
   done
 
 crunch global_refs_inv[wp]: set_thread_state "\<lambda>s. P (global_refs s)"
+  (wp: touch_object_wp')
 
 lemma sts_vs_lookup_slot[wp]:
   "set_thread_state t st \<lbrace>\<lambda>s. P (vs_lookup_slot level asid vref s)\<rbrace>"
@@ -977,6 +987,9 @@ lemma sts_valid_vspace_table_inv[wp]:
   unfolding valid_pti_def
   by (cases i; wpsimp wp: sts_typ_ats hoare_vcg_ex_lift hoare_vcg_all_lift
                       simp: invalid_pte_at_def aobjs_of_ako_at_Some[symmetric])
+(* FIXME: DOWN TO HERE. I believe we want valid_pti (of ArchVSpace_AI) to be defined
+   using the False versions of pts_of and is_final_cap'. -robs*)
+thm valid_pti_def
 
 lemma sts_valid_arch_inv:
   "set_thread_state t st \<lbrace>valid_arch_inv ai\<rbrace>"
