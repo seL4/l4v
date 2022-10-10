@@ -987,9 +987,6 @@ lemma sts_valid_vspace_table_inv[wp]:
   unfolding valid_pti_def
   by (cases i; wpsimp wp: sts_typ_ats hoare_vcg_ex_lift hoare_vcg_all_lift
                       simp: invalid_pte_at_def aobjs_of_ako_at_Some[symmetric])
-(* FIXME: DOWN TO HERE. I believe we want valid_pti (of ArchVSpace_AI) to be defined
-   using the False versions of pts_of and is_final_cap'. -robs*)
-thm valid_pti_def
 
 lemma sts_valid_arch_inv:
   "set_thread_state t st \<lbrace>valid_arch_inv ai\<rbrace>"
@@ -1012,6 +1009,7 @@ crunches decode_asid_control_invocation
   for tainv[wp]: "ignore_ta P"
   (wp: crunch_wps simp: crunch_simps)
 
+. (* DOWN TO HERE. -robs
 crunches decode_page_table_invocation, decode_frame_invocation, decode_asid_pool_invocation
   for inv[wp]: "P"
   (wp: crunch_wps simp: crunch_simps)
