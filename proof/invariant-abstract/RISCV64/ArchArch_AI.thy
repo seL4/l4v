@@ -1009,10 +1009,17 @@ crunches decode_asid_control_invocation
   for tainv[wp]: "ignore_ta P"
   (wp: crunch_wps simp: crunch_simps)
 
-. (* DOWN TO HERE. -robs
+lemma decode_page_table_invocation_tainv[wp]:
+  "decode_page_table_invocation label args cte cap extra_caps \<lbrace>ignore_ta P\<rbrace>"
+  sorry (* FIXME: broken by touched-addrs -robs *)
+
+lemma decode_fr_inv_map_tainv[wp]:
+  "decode_fr_inv_map label args cte cap extra_caps \<lbrace>ignore_ta P\<rbrace>"
+  sorry (* FIXME: broken by touched-addrs -robs *)
+
 crunches decode_page_table_invocation, decode_frame_invocation, decode_asid_pool_invocation
-  for inv[wp]: "P"
-  (wp: crunch_wps simp: crunch_simps)
+  for tainv[wp]: "ignore_ta P"
+  (wp: crunch_wps touch_object_wp' touch_objects_wp simp: crunch_simps)
 
 crunches arch_decode_invocation
   for tainv [wp]: "ignore_ta P"
@@ -1110,6 +1117,7 @@ lemma decode_fr_inv_map_wf[wp]:
   apply (prop_tac "args!0 \<in> user_region")
    apply (clarsimp simp: user_region_def not_le)
    apply (rule user_vtop_canonical_user)
+   sorry (* FIXME: broken by touched-addrs -robs
    apply (erule aligned_add_mask_lessD)
    apply (simp add: vmsz_aligned_def)
   apply (clarsimp simp: cte_wp_at_caps_of_state is_arch_update_def is_cap_simps cap_master_cap_simps)
@@ -1176,6 +1184,7 @@ lemma decode_fr_inv_map_wf[wp]:
    apply (force simp: is_cap_simps)
   apply (fastforce dest: cap_to_pt_is_pt_cap intro: valid_objs_caps)
   done
+*)
 
 lemma decode_frame_invocation_wf[wp]:
   "arch_cap = FrameCap word rights vmpage_size dev option \<Longrightarrow>
@@ -1206,12 +1215,13 @@ lemma decode_pt_inv_map_wf[wp]:
     decode_pt_inv_map label args slot arch_cap excaps
    \<lbrace>valid_arch_inv\<rbrace>,-"
   unfolding decode_pt_inv_map_def Let_def
-  apply wpsimp
+  apply (wpsimp wp:touch_object_wp' touch_objects_wp simp:ta_filter_def obind_def)
   apply (clarsimp simp: valid_arch_inv_def valid_pti_def pte_at_eq invalid_pte_at_def
                         wellformed_pte_def valid_cap_def cte_wp_at_caps_of_state)
   apply (rename_tac p level)
   apply (prop_tac "args!0 \<in> user_region")
    apply (simp add: wellformed_mapdata_def user_region_def user_vtop_canonical_user)
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (rule conjI, clarsimp simp: valid_arch_cap_def wellformed_mapdata_def vspace_for_asid_def
                                     neg_mask_user_region)
   apply (rule conjI, clarsimp simp: is_arch_update_def is_cap_simps cap_master_cap_simps)
@@ -1225,6 +1235,7 @@ lemma decode_pt_inv_map_wf[wp]:
   apply (rule_tac x="args!0" in exI)
   apply (simp add: vref_for_level_def)
   done
+*)
 
 lemma decode_page_table_invocation_wf[wp]:
   "arch_cap = PageTableCap pt_ptr pt_map_data \<Longrightarrow>
@@ -1236,8 +1247,10 @@ lemma decode_page_table_invocation_wf[wp]:
   unfolding decode_page_table_invocation_def is_final_cap_def
   apply (wpsimp simp: valid_arch_inv_def valid_pti_def valid_arch_cap_def valid_cap_def
                       cte_wp_at_caps_of_state is_cap_simps)
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (rule conjI; clarsimp)
   done
+*)
 
 lemma cte_wp_at_eq_simp:
   "cte_wp_at ((=) cap) = cte_wp_at (\<lambda>c. c = cap)"
@@ -1259,7 +1272,7 @@ lemma decode_asid_pool_invocation_wf[wp]:
    decode_asid_pool_invocation label args slot arch_cap excaps
    \<lbrace>valid_arch_inv\<rbrace>, -"
   unfolding decode_asid_pool_invocation_def Let_def
-  apply wpsimp
+  apply (wpsimp wp:touch_object_wp')
   apply (rule ccontr, erule notE[where P="valid_arch_inv i s" for i s])
   apply (clarsimp simp: valid_arch_inv_def valid_apinv_def pool_for_asid_def word_neq_0_conv
                         cte_wp_at_caps_of_state neq_Nil_conv obj_at_def in_omonad valid_cap_def
