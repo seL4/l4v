@@ -564,17 +564,15 @@ lemma cap_insert_simple_arch_caps_ap[simplified f_kheap_to_kheap]:
                    set_untyped_cap_as_full_def bind_assoc)
   apply (strengthen valid_vs_lookup_at_upd_strg valid_asid_pool_caps_upd_strg)
   apply (wp get_cap_wp set_cap_valid_vs_lookup set_cap_arch_obj
-            (* FIXME: Declare set_cap_valid_table_caps to be [simplified f_kheap_to_kheap]
-               when it is proved back in ArchCSpaceInvPre_AI? -robs *)
-            set_cap_valid_table_caps[simplified f_kheap_to_kheap] hoare_vcg_all_lift
+            set_cap_valid_table_caps hoare_vcg_all_lift
           | simp split del: if_split)+
        apply (simp add: F)
        apply (rule_tac P = "cte_wp_at ((=) src_cap) src" in set_cap_orth)
        apply (wp hoare_vcg_imp_lift hoare_vcg_ball_lift set_free_index_final_cap hoare_vcg_all_lift
                  hoare_vcg_disj_lift set_cap_reachable_pg_cap set_cap.vs_lookup_pages
               | clarsimp)+
-      apply (wp set_cap_arch_obj set_cap_valid_table_caps[simplified f_kheap_to_kheap]
-                touch_object_wp' hoare_vcg_ball_lift
+      apply (wp set_cap_arch_obj set_cap_valid_table_caps hoare_vcg_ball_lift
+                touch_object_wp'
                 get_cap_wp static_imp_wp)+
   apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps)
   apply (rule conjI)
