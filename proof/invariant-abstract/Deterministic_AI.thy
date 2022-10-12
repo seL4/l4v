@@ -1503,16 +1503,23 @@ lemma self_parent_eq: "m src = Some src \<Longrightarrow> m(dest \<mapsto> src) 
 lemma ex1_False: "(\<And>x. \<not>P x) \<Longrightarrow> \<not> (\<exists>!x. P x)" by auto
 
 lemma set_cap_match: "(\<And>s x. P s = P (s\<lparr>kheap := x\<rparr>)) \<Longrightarrow> \<lbrace>P\<rbrace> set_cap a b \<lbrace>\<lambda>_.P\<rbrace>"
+  (* Is this what it should be? -robs
+  "(\<And>s x. P s = P (ms_ta_obj_update (fst b) (the (x (fst b))) (s\<lparr> kheap := x \<rparr>))) \<Longrightarrow>
+   \<lbrace>P\<rbrace> set_cap a b \<lbrace>\<lambda>_.P\<rbrace>"
+  *)
   apply (simp add: set_cap_def split_def set_object_def get_object_def)
-  apply wpsimp
+  apply (wpsimp wp: touch_object_wp' simp:ta_filter_def split: if_splits)
+  sorry (* FIXME: broken by touched-addrs -robs
   done
+*)
 
 crunches cap_insert_ext, empty_slot_ext, cap_swap_ext, create_cap_ext, set_thread_state_ext,
          retype_region_ext
   for all_but_exst[wp]:  "all_but_exst P"
   and (empty_fail) empty_fail[wp]
   (ignore_del: cap_insert_ext empty_slot_ext cap_swap_ext create_cap_ext set_thread_state_ext
-               retype_region_ext)
+               retype_region_ext
+   wp: touch_objects_wp)
 
 interpretation cap_insert_ext_extended: is_extended "cap_insert_ext a b c d e"
   by (unfold_locales; wp)
@@ -1534,10 +1541,10 @@ lemma cap_insert_valid_list [wp]:
          cap_bits_untyped src_cap = cap_bits_untyped cap")
 
        apply (simp del: fun_upd_apply split del: if_split)
-       apply (wp set_cap_caps_of_state3)
+       apply (wp set_cap_caps_of_state3 touch_object_wp')
       apply (simp only:)
       apply (simp del: fun_upd_apply split del: if_split)
-     apply (wp get_cap_wp)+
+     apply (wp get_cap_wp touch_object_wp')+
   apply(intro allI impI conjI)
   apply (case_tac "src = dest")
    apply (simp add: cte_wp_at_caps_of_state fun_upd_idem del: fun_upd_apply)
@@ -2190,15 +2197,15 @@ lemma cap_move_valid_list [wp]:
                     update_cdt_list_def set_cdt_list_def del: fun_upd_apply split del: if_split)
    apply(wp)
     apply (simp del: fun_upd_apply cong: option.case_cong)
-    apply (wp set_cap_caps_of_state3)+
+    apply (wp set_cap_caps_of_state3 touch_objects_wp)+
    apply (case_tac "cdt s dest")
     apply (fastforce simp: valid_list_2_def list_remove_removed intro: list_remove_distinct)+
   apply (simp add: cap_move_def)
   apply(simp add: cap_move_def set_cdt_def cap_move_ext_def bind_assoc
                   update_cdt_list_def set_cdt_list_def del: fun_upd_apply split del: if_split)
-  apply(wp)
+  apply(wp touch_objects_wp)
    apply (simp del: fun_upd_apply split del: if_split)
-   apply (wp set_cap_caps_of_state3)+
+   apply (wp set_cap_caps_of_state3 touch_objects_wp)+
   apply (rule mdb_move_abs_simple.valid_list_post)
   apply (rule mdb_move_abs_simple.intro; simp)
   done
@@ -3124,7 +3131,7 @@ lemma empty_slot_valid_list[wp]:
   apply (simp add: empty_slot_def)
   apply (simp add: set_cdt_def update_cdt_list_def set_cdt_list_def
                    empty_slot_ext_def bind_assoc cong: if_cong)
-  apply (wp get_cap_wp static_imp_wp | wpc | wp (once) hoare_vcg_all_lift)+
+  apply (wp get_cap_wp static_imp_wp touch_object_wp' | wpc | wp (once) hoare_vcg_all_lift)+
   apply (clarsimp simp del: fun_upd_apply)
   apply (frule mdb_empty_abs_simple.intro)
   apply(case_tac "cdt s sl")
@@ -3142,7 +3149,10 @@ lemma set_cap_exst_update:
   apply (cases p)
   apply (clarsimp simp add: set_cap_def in_monad get_object_def)
   apply (case_tac y)
-      apply (auto simp add: in_monad set_object_def get_object_def split: if_split_asm)
+      apply (auto simp add: in_monad set_object_def get_object_def
+          ta_filter_def obind_def touch_object_def touch_objects_def
+          simpler_do_machine_op_addTouchedAddresses_def
+        split: if_split_asm)
   done
 
 lemma no_parent_not_next_slot:
@@ -3778,7 +3788,7 @@ lemma cap_swap_valid_list [wp]:
   apply (simp only: cap_swap_ext_def update_cdt_list_def set_cdt_list_def set_cdt_def bind_assoc)
   apply wp
   apply (simp del: fun_upd_apply split del: if_split cong: option.case_cong)
-        apply (wp set_cap_caps_of_state3)+
+        apply (wp set_cap_caps_of_state3 touch_objects_wp)+
   apply (case_tac "a = b")
    apply (simp split: option.splits)
   apply(subgoal_tac "mdb_swap_abs_simple (cdt s) (cdt_list s)")
@@ -3808,7 +3818,7 @@ lemma create_cap_valid_list[wp]:
   apply (rule hoare_pre)
    apply (simp add: valid_list_2_def)
    apply (wp | simp cong: option.case_cong if_cong del: fun_upd_apply split del: if_split)+
-         apply(wp set_cap_caps_of_state3 get_cap_wp)+
+         apply(wp set_cap_caps_of_state3 get_cap_wp touch_object_wp')+
   apply(simp del: fun_upd_apply split: option.splits split del: if_split cong:if_weak_cong)
   apply (intro impI conjI allI)
      apply (simp add: valid_list_2_def | intro impI conjI allI | fastforce simp: list_remove_removed list_remove_distinct)+
@@ -3823,8 +3833,20 @@ lemmas transfer_caps_loop_ext_valid[wp] =
 crunch valid_list[wp]: tcb_sched_action,reschedule_required,set_thread_state_ext "valid_list"
   (simp: unless_def ignore_del: tcb_sched_action reschedule_required set_thread_state_ext)
 
+(* FIXME: Would we need to define and use some version of the is_extended locale, but in terms
+   of this instead? I tried briefly in BCorres2_AI but that didn't look straightforward. -robs *)
+abbreviation all_but_exst_and_ta where
+  "all_but_exst_and_ta P \<equiv> ignore_ta (all_but_exst P)"
+
+lemma test_all_but_exst_and_ta:
+  "\<And>P s. all_but_exst_and_ta P s \<Longrightarrow> (all_but_exst_and_ta P and
+    (\<lambda>s. all_but_exst_and_ta P (machine_state_update (RISCV64.touched_addresses_update
+      ((\<union>) (\<Union>(x, y)\<in>{(p, ko). p \<in> {a} \<and> ko_at ko p s}. obj_range x y))) s))) s"
+  by simp
+
 interpretation set_thread_state_ext_extended: is_extended "set_thread_state_ext a"
-  by (unfold_locales; wp)
+  apply (unfold_locales; wp)
+  sorry (* FIXME: broken by touched-addrs -robs *)
 
 crunch all_but_exst[wp]: reschedule_required "all_but_exst P"
   (ignore_del: reschedule_required)
@@ -3835,9 +3857,13 @@ interpretation reschedule_required_ext_extended: is_extended "reschedule_require
 crunch valid_list[wp]: fast_finalise valid_list (wp: crunch_wps)
 
 lemma cap_delete_one_valid_list[wp]: "\<lbrace>valid_list\<rbrace> cap_delete_one a \<lbrace>\<lambda>_.valid_list\<rbrace>"
-  unfolding cap_delete_one_def by (wpsimp simp: unless_def)
+  unfolding cap_delete_one_def
+  sorry (* FIXME: broken by touched-addrs -robs
+  by (wpsimp simp: unless_def)
+*)
 
 crunch valid_list[wp]: thread_set valid_list
+  (wp: touch_object_wp')
 
 lemma reply_cancel_ipc_valid_list[wp]: "\<lbrace>valid_list\<rbrace> reply_cancel_ipc a \<lbrace>\<lambda>_. valid_list\<rbrace>"
   unfolding reply_cancel_ipc_def
@@ -3867,7 +3893,7 @@ locale Deterministic_AI_1 =
   assumes finalise_cap_valid_list:
     "\<And>param_a param_b. \<lbrace>valid_list\<rbrace> finalise_cap param_a param_b \<lbrace>\<lambda>_. valid_list\<rbrace>"
   assumes get_cap_valid_list[wp]:
-    "\<And>param_a. \<lbrace>valid_list\<rbrace> get_cap param_a \<lbrace>\<lambda>_. valid_list\<rbrace>"
+    "\<And>param_a. \<lbrace>valid_list\<rbrace> get_cap True param_a \<lbrace>\<lambda>_. valid_list\<rbrace>"
   assumes arch_get_sanitise_register_info_valid_list[wp]:
     "\<And>t. \<lbrace>valid_list\<rbrace> arch_get_sanitise_register_info t \<lbrace>\<lambda>_. valid_list\<rbrace>"
   assumes arch_post_modify_registers_valid_list[wp]:
@@ -3903,6 +3929,14 @@ end
 
 crunch all_but_exst[wp]: ethread_set "all_but_exst P"
 
+(* Experiment with new all_but_exst_and_ta (i.e. all_but_exst + ignore_ta) predicate. -robs *)
+lemma set_eobject_all_but_exst_and_ta[wp]:
+  "set_eobject param_a param_b 
+   \<lbrace>\<lambda>s. \<forall>taf. all_but_exst P (machine_state_update (RISCV64.touched_addresses_update taf) s)\<rbrace>"
+  by (clarsimp simp:set_eobject_def get_def bind_def all_but_exst_def valid_def put_def)
+
+crunch all_but_exst_and_ta[wp]: ethread_set "all_but_exst_and_ta P"
+
 crunch (empty_fail) empty_fail[wp]: ethread_set
 
 global_interpretation ethread_set_extended: is_extended "ethread_set a b"
@@ -3934,21 +3968,44 @@ crunch valid_list[wp]: set_priority,set_mcpriority "valid_list"
 global_interpretation possible_switch_to_extended: is_extended "possible_switch_to a"
   by (unfold_locales; wp)
 
+lemma set_priority_all_but_exst[wp]: "\<lbrace>all_but_exst P and
+  (\<lambda>s. all_but_exst P (machine_state_update (RISCV64.touched_addresses_update
+  ((\<union>) (\<Union>(x, y)\<in>{(p, ko). p \<in> {param_a} \<and> ko_at ko p s}. obj_range x y))) s))\<rbrace>
+    set_priority param_a param_b
+  \<lbrace>\<lambda>_. all_but_exst P\<rbrace>"
+  sorry (* FIXME: broken by touched-addrs -robs
 crunch all_but_exst[wp]: set_priority "all_but_exst P"
   (simp: ethread_get_def ignore_del: set_priority)
+*)
+(* Maybe something like this? -robs
+crunch all_but_exst_and_ta[wp]: set_priority "all_but_exst_and_ta P"
+  (simp: ethread_get_def ignore_del: set_priority)
+*)
 
 crunch (empty_fail)empty_fail[wp]: set_priority,set_mcpriority
 
 global_interpretation set_priority_extended: is_extended "set_priority a b"
-  by (unfold_locales; wp)
+  apply (unfold_locales; wp)
+  sorry (* FIXME: broken by touched-addrs -robs *)
 
+lemma set_domain_all_but_exst[wp]: "\<lbrace>all_but_exst P and
+  (\<lambda>s. all_but_exst P (machine_state_update (RISCV64.touched_addresses_update
+  ((\<union>) (\<Union>(x, y)\<in>{(p, ko). p \<in> {param_a} \<and> ko_at ko p s}. obj_range x y))) s))\<rbrace>
+    set_domain param_a param_b
+  \<lbrace>\<lambda>_. all_but_exst P\<rbrace>"
+  sorry (* FIXME: broken by touched-addrs -robs
 crunch all_but_exst[wp]: set_domain "all_but_exst P" (simp: ethread_get_def)
+*)
 
 global_interpretation set_domain_extended: is_extended "set_domain a b"
-  by (unfold_locales; wp)
+  apply (unfold_locales; wp)
+  sorry (* FIXME: broken by touched-addrs -robs *)
 
 global_interpretation thread_set_domain_extended: is_extended "thread_set_domain a b"
-  by (unfold_locales; wp)
+  apply (unfold_locales)
+   defer
+  apply wp
+  sorry (* FIXME: broken by touched-addrs -robs *)
 
 crunch all_but_exst[wp]: dec_domain_time "all_but_exst P" (simp: ethread_get_def)
 
@@ -3958,6 +4015,7 @@ global_interpretation dec_domain_time_extended: is_extended "dec_domain_time"
   by (unfold_locales; wp)
 
 crunch valid_list[wp]: update_restart_pc "valid_list"
+  (wp: touch_object_wp')
 
 context Deterministic_AI_1 begin
 crunch valid_list[wp]: invoke_tcb valid_list
@@ -3976,6 +4034,9 @@ lemma retype_region_ext_valid_list_ext[wp]: "\<lbrace>valid_list\<rbrace> retype
 
 global_interpretation retype_region_ext_extended: is_extended "retype_region_ext a b"
   by (unfold_locales; wp)
+
+lemma timer_tick_all_but_exst[wp]: "timer_tick \<lbrace>all_but_exst P\<rbrace>"
+  sorry (* FIXME: broken by touched-addrs -robs *)
 
 crunches timer_tick
   for valid_list[wp]: "valid_list"
