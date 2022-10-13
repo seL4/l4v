@@ -702,7 +702,7 @@ lemma not_idle_after_restart [wp]:
   apply wp
    apply (simp add:cancel_ipc_def)
    apply (wp not_idle_after_blocked_cancel_ipc not_idle_after_reply_cancel_ipc
-   not_idle_thread_cancel_signal | wpc)+
+             not_idle_thread_cancel_signal | wpc)+
    apply (rule hoare_strengthen_post[where Q="\<lambda>r. st_tcb_at ((=) r) obj_id'
                                                   and not_idle_thread obj_id' and invs"])
     apply (wp gts_sp)

@@ -290,13 +290,13 @@ lemma send_fault_ipc_bisim:
        apply (rule hoare_post_imp_R [OF lc_sep])
        apply (clarsimp simp: separate_cap_def)
       apply (wp | simp add: Let_def)+
-       apply (rule_tac P = "separate_cap handler_cap" in hoare_gen_asmE')
-       apply (erule separate_capE, simp_all)[1]
+        apply (rule_tac P = "separate_cap handler_cap" in hoare_gen_asmE')
+        apply (erule separate_capE, simp_all)[1]
          apply (wp | simp)+
-    apply (wp not_empty_lc)
+       apply (wp not_empty_lc)
       apply (rule_tac P = "separate_cap xa" in not_empty_gen_asm)
       apply (erule separate_capE, simp_all)[1]
-        apply wpsimp+
+       apply wpsimp+
   done
 
 lemma handle_fault_bisim:

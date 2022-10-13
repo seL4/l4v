@@ -276,10 +276,10 @@ lemma corres_corrupt_tcb_intent_return:
   supply option.case_cong[cong]
   apply (clarsimp simp: corres_underlying_def return_def corrupt_tcb_intent_def update_thread_def
                         select_def gets_the_def fail_def gets_def get_def assert_opt_def bind_def
-         put_def modify_def KHeap_D.set_object_def)
+                        put_def modify_def KHeap_D.set_object_def)
   apply (clarsimp split: option.splits
                   simp: transform_def tcb_at_def transform_objects_def not_idle_thread_def
-    dest!: get_tcb_SomeD)
+                  dest!: get_tcb_SomeD)
    apply (drule(1) valid_etcbs_tcb_etcb)
    apply (clarsimp)
   apply (force simp: transform_def transform_tcb_def transform_objects_def not_idle_thread_def

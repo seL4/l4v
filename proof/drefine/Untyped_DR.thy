@@ -1811,7 +1811,7 @@ lemma decode_untyped_corres:
                 descendants_of_empty_lift word_neq_0_conv)
               apply (clarsimp simp: not_less is_cap_simps bits_of_def)
               apply (clarsimp simp: is_cap_simps transform_cslot_ptr_def bits_of_def
-                cap_aligned_def nat_bl_to_bin_nat_to_cref)
+                                    cap_aligned_def nat_bl_to_bin_nat_to_cref)
              apply (wp check_children_wp)
             apply simp
            apply (simp add:const_on_failure_def)

@@ -1275,7 +1275,7 @@ lemma dcorres_set_asid_pool_empty:
       apply clarsimp
      apply (clarsimp simp del:set_map simp: suffix_def)
     apply (wp | clarsimp simp:swp_def)+
-   apply (clarsimp simp:list_all2_iff transform_asid_def asid_low_bits_def set_zip)
+  apply (clarsimp simp:list_all2_iff transform_asid_def asid_low_bits_def set_zip)
   apply (clarsimp simp: upto_enum_def ucast_of_nat_small unat_of_nat)
   done
 
@@ -1324,7 +1324,7 @@ lemma dcorres_clear_object_caps_asid_pool:
   apply (clarsimp simp:invs_def valid_state_def valid_cap_def obj_at_def a_type_def
                        valid_pspace_def dest!: cte_wp_valid_cap)
   by (clarsimp split: Structures_A.kernel_object.split_asm
-                        arch_kernel_obj.split_asm if_splits)
+                      arch_kernel_obj.split_asm if_splits)
 
 lemmas valid_idle_invs_strg = invs_valid_idle_strg
 
@@ -1566,26 +1566,26 @@ lemma copy_global_mappings_dwp:
   "is_aligned word pd_bits\<Longrightarrow> \<lbrace>\<lambda>ps. valid_idle (ps :: det_state) \<and> transform ps = cs\<rbrace> copy_global_mappings word \<lbrace>\<lambda>r s. transform s = cs\<rbrace>"
   apply (simp add:copy_global_mappings_def)
   apply wp
-   apply (rule_tac Q = "\<lambda>r s. valid_idle s \<and> transform s = cs" in hoare_strengthen_post)
-    apply (rule mapM_x_wp')
-    apply wp
-     apply (rule_tac Q="\<lambda>s. valid_idle s \<and> transform s = cs" in hoare_vcg_precond_imp)
-      apply (rule dcorres_to_wp)
-      apply (rule corres_guard_imp[OF store_pde_set_cap_corres])
-        apply (clarsimp simp:kernel_mapping_slots_def)
+    apply (rule_tac Q = "\<lambda>r s. valid_idle s \<and> transform s = cs" in hoare_strengthen_post)
+     apply (rule mapM_x_wp')
+     apply wp
+       apply (rule_tac Q="\<lambda>s. valid_idle s \<and> transform s = cs" in hoare_vcg_precond_imp)
+        apply (rule dcorres_to_wp)
+        apply (rule corres_guard_imp[OF store_pde_set_cap_corres])
+          apply (clarsimp simp:kernel_mapping_slots_def)
           apply (simp add: kernel_base_def pd_bits_def pageBits_def)
           apply (simp add: mask_add_aligned)
-        apply (subst less_mask_eq,simp)
-         apply (simp add:shiftl_t2n)
-         apply (subst mult.commute)
-         apply (rule div_lt_mult,simp+,unat_arith,simp+)
-        apply (simp add:shiftl_shiftr1 word_size)
-        apply (subst less_mask_eq,simp)
-         apply unat_arith
-        apply (subst ucast_le_migrate[symmetric])
-          apply (simp add:word_size,unat_arith)
-         apply (simp add:word_size)+
-    apply (wp|clarsimp)+
+          apply (subst less_mask_eq,simp)
+           apply (simp add:shiftl_t2n)
+           apply (subst mult.commute)
+           apply (rule div_lt_mult,simp+,unat_arith,simp+)
+          apply (simp add:shiftl_shiftr1 word_size)
+          apply (subst less_mask_eq,simp)
+           apply unat_arith
+          apply (subst ucast_le_migrate[symmetric])
+            apply (simp add:word_size,unat_arith)
+           apply (simp add:word_size)+
+      apply (wp|clarsimp)+
   done
 
 lemma opt_cap_pd_not_None:
