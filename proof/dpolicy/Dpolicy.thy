@@ -758,7 +758,7 @@ lemma state_vrefs_transform_rev:
   apply (simp add:kernel_pde_mask_def not_less[symmetric])
   apply (rule exI)
   apply (drule pde_ref_transform_rev, clarsimp)
-   apply fastforce
+  apply fastforce
   done
 
 lemma cdl_cdt_transform_rev:
@@ -1123,7 +1123,7 @@ lemma state_asids_transform_rev:
     apply (simp only: cap_asid'_member)
     apply (erule exE)
     apply (rule sata_asid; fastforce)
-     apply simp
+   apply simp
    apply (rule_tac poolptr="cap_object poolcap" in sata_asid_lookup)
     apply (clarsimp simp:transform_asid_high_bits_of')
     apply (simp add:asid_table_transform transform_asid_table_entry_def is_null_cap_def

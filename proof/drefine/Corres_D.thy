@@ -229,17 +229,17 @@ lemma dcorres_gets_the:
   apply (subst bind_assoc)+
   apply (rule corres_split_keep_pfx[where r'="\<lambda>s s'. s = transform s'\<and> P s \<and> P' s'"
                                       and Q="\<lambda>x s. x = s" and Q'="\<lambda>x s. x = s "])
-    apply (clarsimp simp: corres_underlying_def get_def)
+     apply (clarsimp simp: corres_underlying_def get_def)
     apply (simp add: assert_opt_def)
     apply (rename_tac x)
     apply (case_tac "g' x = None")
-    apply (clarsimp split:option.splits simp:corres_free_fail)
+     apply (clarsimp split:option.splits simp:corres_free_fail)
     apply (subgoal_tac "\<exists>obj. g (transform x) \<noteq> None")
-      apply (clarsimp split:option.splits)
+     apply (clarsimp split:option.splits)
      apply (rule_tac Q="(=) (transform x)" and Q'="(=) x" in corres_guard_imp)
-    apply (simp add: A)+
-  using B
-  apply (wp|clarsimp)+
+       apply (simp add: A)+
+    using B
+    apply (wp|clarsimp)+
   done
 
 lemma wpc_helper_dcorres:

@@ -473,7 +473,7 @@ lemma final_cap_set_map:
         apply simp+
    apply (thin_tac "opt_cap x y = Q" for x y Q)
    by (auto simp: transform_cap_def cap_has_object_def cap_counts_def cdl_cap_irq_def
-              split: cap.splits arch_cap.splits if_split_asm)
+            split: cap.splits arch_cap.splits if_split_asm)
 
 lemma opt_cap_wp_at_ex_opt_cap:
   "opt_cap_wp_at P p s = (\<exists>cap'. opt_cap p s = Some cap' \<and> P cap')"

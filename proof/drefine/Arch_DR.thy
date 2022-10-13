@@ -1264,11 +1264,11 @@ lemma store_pte_page_inv_entries_safe:
     apply simp
    apply (subst (asm) is_aligned_shiftr_add)
         apply (erule is_aligned_after_mask)
-       apply (simp add:pt_bits_def pageBits_def)+
-      apply (simp add:is_aligned_shiftl_self)
-     apply (rule shiftl_less_t2n)
-      apply (rule word_of_nat_less,simp)
-     apply simp+
+        apply (simp add:pt_bits_def pageBits_def)+
+       apply (simp add:is_aligned_shiftl_self)
+      apply (rule shiftl_less_t2n)
+       apply (rule word_of_nat_less,simp)
+      apply simp+
    apply (subst (asm) ucast_add)
     apply simp
    apply simp
@@ -1295,7 +1295,7 @@ lemma store_pde_page_inv_entries_safe:
   apply (clarsimp simp:obj_at_def page_inv_entries_safe_def split:if_splits)
   apply (intro conjI impI)
    apply (clarsimp simp: hd_map_simp upto_enum_def upto_enum_step_def drop_map
-     tl_map_simp map_eq_Cons_conv upt_eq_Cons_conv upto_0_to_n)
+                         tl_map_simp map_eq_Cons_conv upt_eq_Cons_conv upto_0_to_n)
    apply (clarsimp simp add:field_simps)
    apply (subst (asm) shiftl_t2n[where n = 2,simplified field_simps,simplified,symmetric])+
    apply (subst (asm) and_mask_plus[where a = "of_nat slot << 2"])
@@ -1305,11 +1305,11 @@ lemma store_pde_page_inv_entries_safe:
     apply simp
    apply (subst (asm) is_aligned_shiftr_add)
         apply (erule is_aligned_after_mask)
-       apply (simp add:pd_bits_def pageBits_def)+
-      apply (simp add:is_aligned_shiftl_self)
-     apply (rule shiftl_less_t2n)
-      apply (rule word_of_nat_less,simp)
-     apply simp+
+        apply (simp add:pd_bits_def pageBits_def)+
+       apply (simp add:is_aligned_shiftl_self)
+      apply (rule shiftl_less_t2n)
+       apply (rule word_of_nat_less,simp)
+      apply simp+
    apply (subst (asm) ucast_add)
     apply simp
    apply simp

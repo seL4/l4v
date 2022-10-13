@@ -73,17 +73,17 @@ begin
 lemma tcb_sched_action_dequeue_integrity':
   "\<lbrace>integrity aag X st and pas_refined aag and
     (\<lambda>s. pasSubject aag \<in> pasDomainAbs aag (tcb_domain (the (ekheap s thread))))\<rbrace>
-    tcb_sched_action tcb_sched_dequeue thread
+   tcb_sched_action tcb_sched_dequeue thread
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (wpsimp simp: tcb_sched_action_def)
   apply (clarsimp simp: integrity_def integrity_ready_queues_def pas_refined_def
                         tcb_domain_map_wellformed_aux_def etcb_at_def get_etcb_def
-                  split: option.splits)
+                 split: option.splits)
   done
 
 lemma tcb_sched_action_dequeue_integrity[wp]:
   "\<lbrace>integrity aag X st and pas_refined aag and K (is_subject aag thread)\<rbrace>
-    tcb_sched_action tcb_sched_dequeue thread
+   tcb_sched_action tcb_sched_dequeue thread
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: tcb_sched_action_def)
   apply wp
@@ -109,7 +109,7 @@ text \<open>See comment for @{thm tcb_sched_action_dequeue_integrity'}\<close>
 lemma tcb_sched_action_append_integrity':
   "\<lbrace>integrity aag X st and
     (\<lambda>s. pasSubject aag \<in> pasDomainAbs aag (tcb_domain (the (ekheap s thread))))\<rbrace>
-    tcb_sched_action tcb_sched_append thread
+   tcb_sched_action tcb_sched_append thread
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: tcb_sched_action_def)
   apply wp
@@ -119,7 +119,7 @@ lemma tcb_sched_action_append_integrity':
 
 lemma tcb_sched_action_append_integrity[wp]:
   "\<lbrace>integrity aag X st and pas_refined aag and K (is_subject aag thread)\<rbrace>
-    tcb_sched_action tcb_sched_append thread
+   tcb_sched_action tcb_sched_append thread
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: tcb_sched_action_def)
   apply wp
@@ -132,7 +132,7 @@ lemma tcb_sched_action_append_integrity[wp]:
 
 lemma tcb_sched_action_append_integrity_pasMayEditReadyQueues:
   "\<lbrace>integrity aag X st and pas_refined aag and K (pasMayEditReadyQueues aag)\<rbrace>
-    tcb_sched_action tcb_sched_append thread
+   tcb_sched_action tcb_sched_append thread
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: tcb_sched_action_def)
   apply wp
@@ -149,8 +149,8 @@ lemma reschedule_required_integrity[wp]:
 lemma cancel_badged_sends_respects[wp]:
   "\<lbrace>integrity aag X st and einvs and valid_objs
                        and (sym_refs \<circ> state_refs_of)
-           and K (aag_has_auth_to aag Reset epptr)\<rbrace>
-    cancel_badged_sends epptr badge
+                       and K (aag_has_auth_to aag Reset epptr)\<rbrace>
+   cancel_badged_sends epptr badge
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (simp add: cancel_badged_sends_def filterM_mapM
@@ -180,8 +180,8 @@ lemma cancel_badged_sends_respects[wp]:
 
 lemma cancel_all_ipc_respects [wp]:
   "\<lbrace>integrity aag X st and valid_objs and (sym_refs \<circ> state_refs_of)
-           and K (\<exists>auth. aag_has_auth_to aag Reset epptr)\<rbrace>
-    cancel_all_ipc epptr
+                       and K (\<exists>auth. aag_has_auth_to aag Reset epptr)\<rbrace>
+   cancel_all_ipc epptr
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (clarsimp simp: cancel_all_ipc_def get_ep_queue_def cong: endpoint.case_cong)
@@ -249,7 +249,7 @@ lemma sbn_pas_refined[wp]:
   "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state and
     K (case ntfn of None \<Rightarrow> True
                   | Some ntfn' \<Rightarrow> \<forall>auth \<in> {Receive, Reset}. abs_has_auth_to aag auth t ntfn')\<rbrace>
-      set_bound_notification t ntfn
+   set_bound_notification t ntfn
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: pas_refined_def state_objs_to_policy_def)
   apply (rule hoare_pre)
@@ -257,7 +257,7 @@ lemma sbn_pas_refined[wp]:
   apply (clarsimp dest!: auth_graph_map_memD)
   apply (erule state_bits_to_policy.cases)
   by (auto intro: state_bits_to_policy.intros auth_graph_map_memI
-              split: if_split_asm)
+           split: if_split_asm)
 
 lemma unbind_notification_pas_refined[wp]:
   "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state\<rbrace>
@@ -343,7 +343,7 @@ context Finalise_AC_1 begin
 
 lemma reply_cancel_ipc_pas_refined[wp]:
   "\<lbrace>pas_refined aag and invs and tcb_at t and K (is_subject aag t)\<rbrace>
-     reply_cancel_ipc t
+   reply_cancel_ipc t
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (simp add: reply_cancel_ipc_def)
@@ -357,7 +357,7 @@ lemma reply_cancel_ipc_pas_refined[wp]:
 
 lemma deleting_irq_handler_pas_refined[wp]:
   "\<lbrace>pas_refined aag and invs and K (is_subject_irq aag irq)\<rbrace>
-      deleting_irq_handler irq
+   deleting_irq_handler irq
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: deleting_irq_handler_def get_irq_slot_def)
   apply wp
@@ -374,7 +374,7 @@ crunch pas_refined[wp]: suspend "pas_refined aag"
 
 lemma finalise_cap_pas_refined[wp]:
   "\<lbrace>pas_refined aag and invs and valid_cap cap and K (pas_cap_cur_auth aag cap)\<rbrace>
-     finalise_cap cap fin
+   finalise_cap cap fin
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (cases cap; simp only: finalise_cap.simps)
@@ -386,8 +386,8 @@ lemma finalise_cap_pas_refined[wp]:
 
 lemma cancel_all_signals_respects[wp]:
   "\<lbrace>integrity aag X st and valid_objs and (sym_refs \<circ> state_refs_of)
-           and K (aag_has_auth_to aag Reset epptr)\<rbrace>
-    cancel_all_signals epptr
+                       and K (aag_has_auth_to aag Reset epptr)\<rbrace>
+   cancel_all_signals epptr
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (clarsimp simp add: cancel_all_signals_def)
@@ -409,7 +409,7 @@ end
 lemma sbn_unbind_respects[wp]:
   "\<lbrace>integrity aag X st and
     (\<lambda>s. (\<exists>ntfn. bound_tcb_at (\<lambda>a. a = Some ntfn) t s \<and> aag_has_auth_to aag Reset ntfn))\<rbrace>
-     set_bound_notification t None
+   set_bound_notification t None
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: set_bound_notification_def)
   apply (wpsimp wp: set_object_wp)
@@ -452,7 +452,7 @@ lemma unbind_notification_respects:
 
 lemma unbind_maybe_notification_respects:
   "\<lbrace>integrity aag X st and invs and pas_refined aag and
-      obj_at (\<lambda>ko. \<exists>ntfn. ko = (Notification ntfn) \<and>
+    obj_at (\<lambda>ko. \<exists>ntfn. ko = (Notification ntfn) \<and>
                         (case (ntfn_bound_tcb ntfn) of None \<Rightarrow> True
                                                      | Some t \<Rightarrow> aag_has_auth_to aag Reset a)) a\<rbrace>
    unbind_maybe_notification a
@@ -472,21 +472,21 @@ context Finalise_AC_1 begin
 lemma fast_finalise_respects[wp]:
   "\<lbrace>integrity aag X st and invs and pas_refined aag and valid_cap cap
                                 and K (pas_cap_cur_auth aag cap)\<rbrace>
-      fast_finalise cap fin
+   fast_finalise cap fin
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (cases cap; simp)
      apply (wpsimp wp: unbind_maybe_notification_valid_objs get_simple_ko_wp
-               unbind_maybe_notification_respects
+                       unbind_maybe_notification_respects
                  simp: cap_auth_conferred_def cap_rights_to_auth_def aag_cap_auth_def when_def
-           | fastforce)+
+            | fastforce)+
    apply (clarsimp simp: obj_at_def valid_cap_def is_ntfn invs_def valid_state_def valid_pspace_def
-                     split: option.splits)+
+                  split: option.splits)+
   apply (wp, simp)
   done
 
 lemma cap_delete_one_respects[wp,wp_not_transferable]:
   "\<lbrace>integrity aag X st and pas_refined aag and einvs and K (is_subject aag (fst slot))\<rbrace>
-     cap_delete_one slot
+   cap_delete_one slot
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: cap_delete_one_def unless_def bind_assoc)
   apply (wpsimp wp: hoare_drop_imps get_cap_auth_wp [where aag = aag])
@@ -498,7 +498,7 @@ end
 
 lemma fast_finalise_is_transferable[wp_transferable]:
   "\<lbrace>P and K (is_transferable (Some cap))\<rbrace>
-     fast_finalise cap final
+   fast_finalise cap final
    \<lbrace>\<lambda>_. P\<rbrace>"
   by (rule hoare_gen_asm) (erule is_transferable.cases; simp)
 
@@ -506,7 +506,7 @@ lemma cap_delete_one_respects_transferable[wp_transferable]:
   "\<lbrace>integrity aag X st and pas_refined aag and einvs
                        and cte_wp_at (\<lambda>c. is_transferable (Some c)) slot
                        and cdt_change_allowed' aag slot\<rbrace>
-      cap_delete_one slot
+   cap_delete_one slot
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: cap_delete_one_def unless_def bind_assoc)
   apply (wp add: hoare_drop_imps get_cap_wp wp_transferable del: wp_not_transferable | simp)+
@@ -524,7 +524,7 @@ lemma thread_set_tcb_state_trivial:
 
 lemma reply_cancel_ipc_respects[wp]:
   "\<lbrace>integrity aag X st and einvs and tcb_at t and K (is_subject aag t) and pas_refined aag\<rbrace>
-     reply_cancel_ipc t
+   reply_cancel_ipc t
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: reply_cancel_ipc_def)
   apply (rule hoare_pre)
@@ -541,12 +541,12 @@ lemma reply_cancel_ipc_respects[wp]:
    apply (fastforce simp: cte_wp_at_caps_of_state intro:is_transferable.intros
                    dest!: reply_cap_descends_from_master0)
   apply (rule cdt_change_allowed_all_children[where aag=aag, THEN all_children_descendants_of])
-   by fastforce+
+  by fastforce+
 
 lemma cancel_signal_respects[wp]:
   "\<lbrace>\<lambda>s. integrity aag X st s \<and> is_subject aag t \<and>
         (\<exists>auth. aag_has_auth_to aag auth ntfnptr \<and> (auth = Receive \<or> auth = Notify))\<rbrace>
-     cancel_signal t ntfnptr
+   cancel_signal t ntfnptr
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: cancel_signal_def)
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
@@ -556,13 +556,13 @@ lemma cancel_signal_respects[wp]:
 
 lemma cancel_ipc_respects[wp]:
   "\<lbrace>integrity aag X st and einvs and tcb_at t and K (is_subject aag t) and pas_refined aag\<rbrace>
-     cancel_ipc t
+   cancel_ipc t
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: cancel_ipc_def)
   apply (rule hoare_seq_ext[OF _ gts_sp])
   apply (rule hoare_pre)
    apply (wp set_thread_state_integrity_autarch set_endpoint_respects get_simple_ko_wp
-         | wpc
+          | wpc
           | simp (no_asm) add: blocked_cancel_ipc_def get_ep_queue_def get_blocking_object_def)+
   apply clarsimp
   apply (frule st_tcb_at_to_thread_st_auth, clarsimp+)
@@ -572,7 +572,7 @@ lemma cancel_ipc_respects[wp]:
 lemma update_restart_pc_integrity_autarch[wp]:
   "\<lbrace>integrity aag X st and K (is_subject aag t)\<rbrace>
    update_restart_pc t
-                                      \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+   \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: get_thread_state_def thread_get_def update_restart_pc_def)
   apply (wpsimp wp: as_user_integrity_autarch)
   done
@@ -602,7 +602,7 @@ lemma finalise_is_fast_finalise:
 
 lemma get_irq_slot_owns[wp]:
   "\<lbrace>pas_refined aag and K (is_subject_irq aag irq)\<rbrace>
-      get_irq_slot irq
+   get_irq_slot irq
    \<lbrace>\<lambda>rv _. is_subject aag (fst rv)\<rbrace>"
   unfolding get_irq_slot_def
   apply wp
@@ -623,32 +623,32 @@ context Finalise_AC_1 begin
 
 lemma finalise_cap_respects[wp]:
   "\<lbrace>integrity aag X st and pas_refined aag and einvs and valid_cap cap
-    and K (pas_cap_cur_auth aag cap)\<rbrace>
+                                           and K (pas_cap_cur_auth aag cap)\<rbrace>
    finalise_cap cap final
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (cases cap; simp; safe?;
-     (solves \<open>(wp | simp add: if_apply_def2 split del: if_split
-                  | clarsimp simp: cap_auth_conferred_def cap_rights_to_auth_def is_cap_simps
-                                   pas_refined_all_auth_is_owns aag_cap_auth_def
-                                   deleting_irq_handler_def cap_links_irq_def invs_valid_objs
-                        split del: if_split
+         (solves \<open>(wp | simp add: if_apply_def2 split del: if_split
+                      | clarsimp simp: cap_auth_conferred_def cap_rights_to_auth_def is_cap_simps
+                                       pas_refined_all_auth_is_owns aag_cap_auth_def
+                                       deleting_irq_handler_def cap_links_irq_def invs_valid_objs
+                            split del: if_split
                                 elim!: pas_refined_Control [symmetric])+\<close>)?)
    (*NTFN Cap*)
    apply ((wp unbind_maybe_notification_valid_objs get_simple_ko_wp
               unbind_maybe_notification_respects
-          | wpc
-          | simp add: cap_auth_conferred_def cap_rights_to_auth_def aag_cap_auth_def
-               split: if_split_asm
-          | fastforce)+;
+           | wpc
+           | simp add: cap_auth_conferred_def cap_rights_to_auth_def aag_cap_auth_def
+                split: if_split_asm
+           | fastforce)+;
           clarsimp simp: obj_at_def valid_cap_def is_ntfn invs_def
                          valid_state_def valid_pspace_def
                   split: option.splits)
   (* tcb cap *)
   apply (wp unbind_notification_respects unbind_notification_invs
-          | clarsimp simp: cap_auth_conferred_def cap_rights_to_auth_def aag_cap_auth_def
-                           unbind_maybe_notification_def
-                    elim!: pas_refined_Control[symmetric]
-          | simp add: if_apply_def2 split del: if_split )+
+         | clarsimp simp: cap_auth_conferred_def cap_rights_to_auth_def aag_cap_auth_def
+                          unbind_maybe_notification_def
+                   elim!: pas_refined_Control[symmetric]
+         | simp add: if_apply_def2 split del: if_split )+
   apply (clarsimp simp: valid_cap_def pred_tcb_at_def obj_at_def is_tcb
                  dest!: tcb_at_ko_at)
   apply (clarsimp split: option.splits elim!: pas_refined_Control[symmetric])
@@ -698,15 +698,15 @@ context Finalise_AC_1 begin
 
 lemma finalise_cap_auth':
   "\<lbrace>pas_refined aag and K (pas_cap_cur_auth aag cap)\<rbrace>
-      finalise_cap cap final
+   finalise_cap cap final
    \<lbrace>\<lambda>rv _. pas_cap_cur_auth aag (fst rv)\<rbrace>"
   including no_pre
   apply (rule hoare_gen_asm)
   apply (cases cap, simp_all split del: if_split)
              apply (wp | simp add: comp_def hoare_post_taut[where P = \<top>] split del: if_split
                        | fastforce simp: aag_cap_auth_Zombie aag_cap_auth_CNode aag_cap_auth_Thread)+
-  apply (rule hoare_pre)
-  apply (wp | simp)+
+    apply (rule hoare_pre)
+     apply (wp | simp)+
   apply (wp arch_finalise_cap_auth')
   done
 
@@ -744,11 +744,11 @@ lemma finalise_cap_makes_halted:
              apply (wp
                     | clarsimp simp: o_def valid_cap_def cap_table_at_typ is_tcb
                                      obj_at_def halted_if_tcb_def
-                           split: option.split
-                 | intro impI conjI
-                 | rule hoare_drop_imp)+
+                              split: option.split
+                    | intro impI conjI
+                    | rule hoare_drop_imp)+
    apply (fastforce simp: st_tcb_at_def obj_at_def is_tcb live_def
-                  dest!: final_zombie_not_live)
+                   dest!: final_zombie_not_live)
   apply (wp arch_finalise_cap_makes_halted)
   done
 
@@ -757,7 +757,7 @@ end
 
 lemma aag_Control_into_owns_irq:
   "\<lbrakk> (pasSubject aag, Control, pasIRQAbs aag irq) \<in> pasPolicy aag; pas_refined aag s \<rbrakk>
-    \<Longrightarrow> is_subject_irq aag irq"
+     \<Longrightarrow> is_subject_irq aag irq"
   apply (drule (1) pas_refined_Control)
   apply simp
   done
@@ -765,7 +765,7 @@ lemma aag_Control_into_owns_irq:
 lemma owns_slot_owns_irq:
   "\<lbrakk> is_subject aag (fst slot); pas_refined aag s;
      caps_of_state s slot = Some rv; cap_irq_opt rv = Some irq \<rbrakk>
-    \<Longrightarrow> is_subject_irq aag irq"
+     \<Longrightarrow> is_subject_irq aag irq"
   apply (rule aag_Control_into_owns_irq[rotated], assumption)
   apply (drule (1) cli_caps_of_state)
   apply (clarsimp simp: cap_links_irq_def cap_irq_opt_def split: cap.splits)
@@ -790,7 +790,7 @@ lemma rec_del_respects'_pre':
   rec_del call
   \<lbrace>\<lambda>rv. (\<lambda>s. trp \<longrightarrow> (case call of FinaliseSlotCall sl _ \<Rightarrow> (cleanup_info_wf (snd rv) aag)
                                  | _ \<Rightarrow> True) \<and> integrity aag X st s) and pas_refined aag\<rbrace>,
-   \<lbrace>\<lambda>_. (\<lambda>s. trp \<longrightarrow> integrity aag X st s) and pas_refined aag\<rbrace>"
+  \<lbrace>\<lambda>_. (\<lambda>s. trp \<longrightarrow> integrity aag X st s) and pas_refined aag\<rbrace>"
 proof (induct arbitrary: st rule: rec_del.induct, simp_all only: rec_del_fails)
   case (1 slot exposed s)
   show ?case
@@ -808,7 +808,7 @@ proof (induct arbitrary: st rule: rec_del.induct, simp_all only: rec_del_fails)
        apply (rule valid_validE_R, rule rec_del_invs)
       apply (rule "1.hyps"[simplified rec_del_call.simps slot_rdcall.simps])
      apply auto
-  done
+    done
 next
   case (2 slot exposed s)
   show ?case
@@ -911,14 +911,14 @@ lemma rec_del_respects'_pre:
    K (case call of ReduceZombieCall cap sl _ \<Rightarrow> \<forall>x \<in> obj_refs_ac cap. is_subject aag x | _ \<Rightarrow> True)\<rbrace>
   rec_del call
   \<lbrace>\<lambda>_. (\<lambda>s. trp \<longrightarrow> integrity aag X st s) and pas_refined aag\<rbrace>,
-   \<lbrace>\<lambda>_. (\<lambda>s. trp \<longrightarrow> integrity aag X st s) and pas_refined aag\<rbrace>"
+  \<lbrace>\<lambda>_. (\<lambda>s. trp \<longrightarrow> integrity aag X st s) and pas_refined aag\<rbrace>"
   apply (rule spec_strengthen_postE[OF rec_del_respects'_pre'])
   by simp
 
 lemmas rec_del_respects'' = rec_del_respects'_pre[THEN use_spec(2), THEN validE_valid]
 lemmas rec_del_respects =
   rec_del_respects''[of True, THEN hoare_conjD1, simplified]
-      rec_del_respects''[of False, THEN hoare_conjD2, simplified]
+  rec_del_respects''[of False, THEN hoare_conjD2, simplified]
 
 end
 
@@ -931,7 +931,7 @@ lemma finalise_cap_transferable:
 
 lemma rec_del_Finalise_transferable:
   "\<lbrace>(\<lambda>s. is_transferable (caps_of_state s slot)) and P\<rbrace>
-     rec_del (FinaliseSlotCall slot exposed)
+   rec_del (FinaliseSlotCall slot exposed)
    \<lbrace>\<lambda>rv. K (rv = (True,NullCap)) and P\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
   apply (subst rec_del.simps[abs_def])
   apply (wp hoare_K_bind | wpc )+
@@ -951,7 +951,7 @@ lemma rec_del_respects_CTEDelete_transferable':
   "\<lbrace>(\<lambda>s. trp \<longrightarrow> integrity aag X st s) and pas_refined aag and einvs and
     simple_sched_action and emptyable slot and  cdt_change_allowed' aag slot and
     (\<lambda>s. \<not> exposed \<longrightarrow> ex_cte_cap_wp_to (\<lambda>cp. cap_irqs cp = {}) slot s)\<rbrace>
-     rec_del (CTEDeleteCall slot exposed)
+   rec_del (CTEDeleteCall slot exposed)
    \<lbrace>\<lambda>_. (\<lambda>s. trp \<longrightarrow> integrity aag X st s) and pas_refined aag\<rbrace>,
    \<lbrace>\<lambda>_. (\<lambda>s. trp \<longrightarrow> integrity aag X st s) and pas_refined aag\<rbrace>"
   apply (cases "is_subject aag (fst slot)")
@@ -961,13 +961,13 @@ lemma rec_del_respects_CTEDelete_transferable':
   apply (wp add: hoare_K_bind without_preemption_wp static_imp_wp wp_transferable
                  rec_del_Finalise_transferable
             del: wp_not_transferable
-        | wpc)+
+         | wpc)+
     apply (rule hoare_post_impErr,rule rec_del_Finalise_transferable)
      apply simp apply (elim conjE) apply simp apply simp
    apply (wp add: hoare_K_bind without_preemption_wp static_imp_wp wp_transferable
                   rec_del_Finalise_transferable
              del: wp_not_transferable
-         | wpc)+
+          | wpc)+
    apply (rule hoare_post_impErr,rule rec_del_Finalise_transferable)
     apply simp apply (elim conjE) apply simp apply simp
   apply (clarsimp)
@@ -991,7 +991,7 @@ context Finalise_AC_1 begin
 
 lemma set_eobject_integrity_autarch:
   "\<lbrace>integrity aag X st and K (is_subject aag ptr)\<rbrace>
-     set_eobject ptr obj
+   set_eobject ptr obj
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: set_eobject_def)
   apply wp
@@ -1014,12 +1014,12 @@ lemma rsubst':
 
 lemma thread_set_pas_refined_triv_idleT:
   assumes cps: "\<And>tcb. \<forall>(getF, v)\<in>ran tcb_cap_cases. getF (f tcb) = getF tcb"
-       and st: "\<And>tcb. P (tcb_state tcb) \<longrightarrow> tcb_state (f tcb) = tcb_state tcb"
+  and st: "\<And>tcb. P (tcb_state tcb) \<longrightarrow> tcb_state (f tcb) = tcb_state tcb"
   and ba: "\<And>tcb. Q (tcb_bound_notification tcb)
                   \<longrightarrow> tcb_bound_notification (f tcb) = tcb_bound_notification tcb"
   shows "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state
                           and idle_tcb_at (\<lambda>(st, ntfn, arch). P st \<and> Q ntfn \<and> R arch) t\<rbrace>
-        thread_set f t
+         thread_set f t
          \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: pas_refined_def state_objs_to_policy_def)
   apply (rule hoare_pre)
@@ -1033,12 +1033,12 @@ lemma thread_set_pas_refined_triv_idleT:
   apply (subst state_vrefs_tcb_upd, fastforce+)
    apply (clarsimp simp: tcb_at_def)
   apply (rule conjI)
-  apply (erule_tac P="\<lambda> ts ba. auth_graph_map a (state_bits_to_policy cps ts ba cd vr) \<subseteq> ag"
-               for a cps cd vr ag in rsubst')
-   apply (drule get_tcb_SomeD)
+   apply (erule_tac P="\<lambda> ts ba. auth_graph_map a (state_bits_to_policy cps ts ba cd vr) \<subseteq> ag"
+                for a cps cd vr ag in rsubst')
+    apply (drule get_tcb_SomeD)
     apply (rule ext, clarsimp simp add: thread_st_auth_def get_tcb_def st tcb_states_of_state_def)
-  apply (drule get_tcb_SomeD)
-  apply (rule ext, clarsimp simp: thread_bound_ntfns_def get_tcb_def ba)
+   apply (drule get_tcb_SomeD)
+   apply (rule ext, clarsimp simp: thread_bound_ntfns_def get_tcb_def ba)
   apply (clarsimp)
   done
 
@@ -1047,29 +1047,29 @@ context Finalise_AC_1 begin
 
 lemma cap_delete_respects:
   "\<lbrace>integrity aag X st and cdt_change_allowed' aag slot and pas_refined aag
-            and einvs and simple_sched_action and emptyable slot\<rbrace>
-       cap_delete slot
+                       and einvs and simple_sched_action and emptyable slot\<rbrace>
+   cap_delete slot
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   by (simp add: cap_delete_def) (wpsimp wp: rec_del_respects_CTEDelete_transferable)
 
 lemma cap_delete_respects':
   "\<lbrace>integrity aag X st and K (is_subject aag (fst slot)) and pas_refined aag
-            and einvs and simple_sched_action and emptyable slot\<rbrace>
-       cap_delete slot
+                       and einvs and simple_sched_action and emptyable slot\<rbrace>
+   cap_delete slot
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   by (wp cap_delete_respects) fastforce
 
 lemma cap_delete_pas_refined:
   "\<lbrace>cdt_change_allowed' aag slot and pas_refined aag and einvs
                                  and simple_sched_action and emptyable slot\<rbrace>
-       cap_delete slot
+   cap_delete slot
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   by (simp add: cap_delete_def) (wpsimp wp: rec_del_respects_CTEDelete_transferable)
 
 lemma cap_delete_pas_refined':
   "\<lbrace>pas_refined aag and einvs and simple_sched_action
                     and emptyable slot and K(is_subject aag (fst slot))\<rbrace>
-       cap_delete slot
+   cap_delete slot
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   by (wp cap_delete_pas_refined) fastforce
 
@@ -1079,7 +1079,7 @@ end
 (* MOVE *)
 lemma empty_slot_cte_wp_at:
   "\<lbrace>\<lambda>s. (p = slot \<longrightarrow> P NullCap) \<and> (p \<noteq> slot \<longrightarrow> cte_wp_at P p s)\<rbrace>
-      empty_slot slot free_irq
+   empty_slot slot free_irq
    \<lbrace>\<lambda>_. cte_wp_at P p\<rbrace>"
   unfolding cte_wp_at_caps_of_state
   by (wpsimp wp: empty_slot_caps_of_state)
@@ -1105,8 +1105,8 @@ locale Finalise_AC_2 = Finalise_AC_1 +
        \<lbrace>\<lambda>_. (\<lambda>s. trp \<longrightarrow> integrity aag X st s) and pas_refined aag\<rbrace>"
   and finalise_cap_caps_of_state_nullinv:
     "\<And>P. \<lbrace>\<lambda>s :: det_ext state. P (caps_of_state s) \<and> (\<forall>p. P (caps_of_state s(p \<mapsto> NullCap)))\<rbrace>
-     finalise_cap cap final
-   \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
+          finalise_cap cap final
+          \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
   and finalise_cap_fst_ret:
     "\<And>P. \<lbrace>\<lambda>_ :: det_ext state. P NullCap \<and> (\<forall>a b c. P (Zombie a b c)) \<rbrace>
           finalise_cap cap is_final
@@ -1121,7 +1121,7 @@ lemmas cap_revoke_pas_refined[wp] =
 
 lemma finalise_cap_cte_wp_at_nullinv:
   "\<lbrace>\<lambda>s :: det_ext state. P NullCap \<and> cte_wp_at P p s\<rbrace>
-     finalise_cap cap final
+   finalise_cap cap final
    \<lbrace>\<lambda>_ s. cte_wp_at P p s\<rbrace>"
   apply (simp add: cte_wp_at_caps_of_state)
   apply (wp finalise_cap_caps_of_state_nullinv)
@@ -1135,7 +1135,7 @@ lemma rec_del_preserves_cte_zombie_null:
     "s \<turnstile> \<lbrace>\<lambda>s. ((slot_rdcall call \<noteq> p \<or> exposed_rdcall call) \<longrightarrow> cte_wp_at P p s) \<and>
               (case call of ReduceZombieCall remove slot _ \<Rightarrow> cte_wp_at ((=) remove) slot s
                                                        | _ \<Rightarrow> True)\<rbrace>
-              rec_del call
+         rec_del call
          \<lbrace>\<lambda>_ s :: det_ext state. (slot_rdcall call \<noteq> p \<or> exposed_rdcall call) \<longrightarrow> cte_wp_at P p s\<rbrace>,
          \<lbrace>\<lambda>_. \<top>\<rbrace>"
 proof (induct rule: rec_del.induct, simp_all only: rec_del_fails)
@@ -1174,7 +1174,7 @@ next
        apply (clarsimp simp: cte_wp_at_caps_of_state)
       apply (wp static_imp_wp set_cap_cte_wp_at' finalise_cap_cte_wp_at_nullinv
                 finalise_cap_fst_ret get_cap_wp
-         | simp add: is_final_cap_def)+
+             | simp add: is_final_cap_def)+
     apply (clarsimp simp add: P_Zombie is_cap_simps cte_wp_at_caps_of_state)+
     done
 next
@@ -1215,9 +1215,9 @@ lemma rec_del_preserves_cte_zombie_null_insts:
          \<lbrace>\<lambda>_. cte_wp_at P p\<rbrace>,-"
   and "\<lbrace>\<lambda>s :: det_ext state. cte_wp_at P p s\<rbrace> cap_delete slot \<lbrace>\<lambda>_. cte_wp_at P p\<rbrace>,-"
   by (simp add: validE_R_def P_Null P_Zombie cap_delete_def
-        | rule use_spec spec_strengthen_postE[OF hoare_pre_spec_validE
+      | rule use_spec spec_strengthen_postE[OF hoare_pre_spec_validE
                             [OF rec_del_preserves_cte_zombie_null[where P=P]]]
-        | wp)+
+      | wp)+
 
 lemma cap_revoke_preserves_cte_zombie_null:
   fixes p
@@ -1245,13 +1245,13 @@ lemma invoke_cnode_respects:
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: invoke_cnode_def authorised_cnode_inv_def split: cnode_invocation.split, safe)
   apply (wpsimp wp: get_cap_wp cap_insert_integrity_autarch
-            cap_revoke_respects cap_delete_respects
+                    cap_revoke_respects cap_delete_respects
               simp: real_cte_emptyable_strg is_transferable_weak_derived
-            | clarsimp simp: cte_wp_at_caps_of_state invs_valid_objs invs_sym_refs
-                             cnode_inv_auth_derivations_def
-            | drule(2) auth_derived_caps_of_state_impls
+         | clarsimp simp: cte_wp_at_caps_of_state invs_valid_objs invs_sym_refs
+                          cnode_inv_auth_derivations_def
+         | drule(2) auth_derived_caps_of_state_impls
          | strengthen invs_psp_aligned invs_vspace_objs invs_arch_state
-            | rule hoare_pre | rule cca_direct)+
+         | rule hoare_pre | rule cca_direct)+
   apply (auto simp: cap_auth_conferred_def cap_rights_to_auth_def aag_cap_auth_def)
   done
 
@@ -1259,14 +1259,14 @@ end
 
 lemma set_cap_cte_wp_at_separation:
   "\<lbrace>cte_wp_at P slot and K (slot \<noteq> slot')\<rbrace>
-     set_cap cap slot'
+   set_cap cap slot'
    \<lbrace>\<lambda>_. cte_wp_at P slot \<rbrace>"
   by (wpsimp simp: cte_wp_at_caps_of_state[abs_def])
 
 (* FIXME MOVE*)
 lemma cap_move_cte_wp_at_separation:
   "\<lbrace>cte_wp_at P slot and K(slot \<noteq> src \<and> slot \<noteq> dest)\<rbrace>
-     cap_move cap src dest
+   cap_move cap src dest
    \<lbrace>\<lambda>_. cte_wp_at P slot\<rbrace>"
   by (wpsimp wp: dxo_wp_weak set_cdt_cte_wp_at set_cap_cte_wp_at_separation
            simp: cap_move_def cte_wp_at_caps_of_state)
@@ -1274,7 +1274,7 @@ lemma cap_move_cte_wp_at_separation:
 (* FIXME MOVE *)
 lemma cap_move_empty_src_slot:
   "\<lbrace>K (src \<noteq> dest)\<rbrace>
-     cap_move cap src dest
+   cap_move cap src dest
    \<lbrace>\<lambda>_. cte_wp_at ((=) NullCap) src \<rbrace>"
   unfolding cap_move_def
   by (wpsimp wp: dxo_wp_weak set_cdt_cte_wp_at set_cap_sets_wp)
@@ -1292,9 +1292,9 @@ context Finalise_AC_2 begin
 
 lemma invoke_cnode_pas_refined:
   "\<lbrace>pas_refined aag and pas_cur_domain aag and einvs and simple_sched_action
-          and valid_cnode_inv ci and (\<lambda>s. is_subject aag (cur_thread s))
-          and cnode_inv_auth_derivations ci and authorised_cnode_inv aag ci\<rbrace>
-     invoke_cnode ci
+                    and valid_cnode_inv ci and (\<lambda>s. is_subject aag (cur_thread s))
+                    and cnode_inv_auth_derivations ci and authorised_cnode_inv aag ci\<rbrace>
+   invoke_cnode ci
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: invoke_cnode_def)
   apply (rule hoare_pre)
@@ -1308,8 +1308,8 @@ lemma invoke_cnode_pas_refined:
                 cnode_inv_auth_derivations_def integrity_def;
       (clarsimp simp: cte_wp_at_caps_of_state pas_refined_refl cap_links_irq_def
                       real_cte_emptyable_strg
-      | drule auth_derived_caps_of_state_impls
-      | fastforce intro: cap_cur_auth_caps_of_state dest: is_derived_is_transferable)+)
+       | drule auth_derived_caps_of_state_impls
+       | fastforce intro: cap_cur_auth_caps_of_state dest: is_derived_is_transferable)+)
 
 end
 

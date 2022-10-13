@@ -123,7 +123,7 @@ lemma set_original_integrity_autarch:
 
 lemma set_original_integrity:
   "\<lbrace>integrity aag X st and cdt_change_allowed' aag slot\<rbrace>
-      set_original slot orig
+   set_original slot orig
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply integrity_trans_start
   apply (wpsimp simp: set_original_def integrity_def)
@@ -163,15 +163,15 @@ rewriting (the equivalent equalities) in the wp proofs.
 
 definition authorised_cnode_inv ::
   "'a PAS \<Rightarrow> Invocations_A.cnode_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
- "authorised_cnode_inv aag ci \<equiv> K (case ci of
-    InsertCall cap ptr ptr' \<Rightarrow> pasObjectAbs aag ` {fst ptr, fst ptr'} \<subseteq> {pasSubject aag}
-  | MoveCall cap ptr ptr' \<Rightarrow> pasObjectAbs aag ` {fst ptr, fst ptr'} \<subseteq> {pasSubject aag}
-  | RotateCall s_cap p_cap src pivot dest \<Rightarrow>
-                           pasObjectAbs aag ` {fst src, fst pivot, fst dest} \<subseteq> {pasSubject aag}
-  | SaveCall ptr \<Rightarrow> is_subject aag (fst ptr)
-  | DeleteCall ptr \<Rightarrow> is_subject aag (fst ptr)
-  | CancelBadgedSendsCall cap \<Rightarrow> pas_cap_cur_auth aag cap
-  | RevokeCall ptr \<Rightarrow> is_subject aag (fst ptr))"
+  "authorised_cnode_inv aag ci \<equiv> K (case ci of
+     InsertCall cap ptr ptr' \<Rightarrow> pasObjectAbs aag ` {fst ptr, fst ptr'} \<subseteq> {pasSubject aag}
+   | MoveCall cap ptr ptr' \<Rightarrow> pasObjectAbs aag ` {fst ptr, fst ptr'} \<subseteq> {pasSubject aag}
+   | RotateCall s_cap p_cap src pivot dest \<Rightarrow>
+       pasObjectAbs aag ` {fst src, fst pivot, fst dest} \<subseteq> {pasSubject aag}
+   | SaveCall ptr \<Rightarrow> is_subject aag (fst ptr)
+   | DeleteCall ptr \<Rightarrow> is_subject aag (fst ptr)
+   | CancelBadgedSendsCall cap \<Rightarrow> pas_cap_cur_auth aag cap
+   | RevokeCall ptr \<Rightarrow> is_subject aag (fst ptr))"
 
 lemma resolve_address_bits_authorised_aux:
   "s \<turnstile> \<lbrace>pas_refined aag and K (is_cnode_cap (fst (cap, cref))
@@ -188,7 +188,7 @@ proof (induct arbitrary: s rule: resolve_address_bits'.induct)
     apply (cases cap', simp_all add: P split del: if_split)
     apply (rule hoare_pre_spec_validE)
      apply (wp "1.hyps", (assumption | simp add: in_monad | rule conjI)+)
-          apply (wp get_cap_wp)+
+        apply (wp get_cap_wp)+
     apply (auto simp: cte_wp_at_caps_of_state is_cap_simps cap_auth_conferred_def
                 dest: caps_of_state_pasObjectAbs_eq)
     done
@@ -200,7 +200,7 @@ lemma resolve_address_bits_authorised[wp]:
    \<lbrace>\<lambda>rv s. is_subject aag (fst (fst rv))\<rbrace>, -"
   apply (unfold validE_R_def)
   apply (rule hoare_pre)
-  apply (rule use_spec(2)[OF resolve_address_bits_authorised_aux])
+   apply (rule use_spec(2)[OF resolve_address_bits_authorised_aux])
   apply simp
   done
 
@@ -234,14 +234,14 @@ lemma get_cap_cur_auth:
   "\<lbrace>pas_refined aag and cte_wp_at (\<lambda>_. True) slot and K (is_subject aag (fst slot))\<rbrace>
    get_cap slot
    \<lbrace>\<lambda>rv s. pas_cap_cur_auth aag rv\<rbrace>"
-   apply (wp get_cap_wp)
+  apply (wp get_cap_wp)
   apply (clarsimp simp: cte_wp_at_caps_of_state cap_cur_auth_caps_of_state)
   done
 
 lemma decode_cnode_inv_authorised:
   "\<lbrace>pas_refined aag and invs and valid_cap cap
                     and K (\<forall>c \<in> {cap} \<union> set excaps. pas_cap_cur_auth aag c)\<rbrace>
-     decode_cnode_invocation label args cap excaps
+   decode_cnode_invocation label args cap excaps
    \<lbrace>\<lambda>rv s. authorised_cnode_inv aag rv s\<rbrace>,-"
   apply (simp add: authorised_cnode_inv_def decode_cnode_invocation_def
                    split_def whenE_def unlessE_def set_eq_iff
@@ -285,7 +285,7 @@ lemma sita_caps_update:
 
 lemma sita_caps_update2:
   "\<lbrakk> pas_wellformed aag; state_irqs_to_policy_aux aag caps \<subseteq> pasPolicy aag;
-    cap_links_irq aag (pasObjectAbs aag (fst ptr')) cap';
+     cap_links_irq aag (pasObjectAbs aag (fst ptr')) cap';
      cap_links_irq aag (pasObjectAbs aag (fst ptr)) cap \<rbrakk>
      \<Longrightarrow> state_irqs_to_policy_aux aag (caps(ptr \<mapsto> cap, ptr' \<mapsto> cap')) \<subseteq> pasPolicy aag"
   by (fastforce intro: state_irqs_to_policy_aux.intros
@@ -301,27 +301,27 @@ lemma set_cap_pas_refined:
           \<longrightarrow> is_transferable_cap cap \<or>
               abs_has_auth_to aag Control (fst $ the $ cdt s ptr) (fst ptr)) and
     K (aag_cap_auth aag (pasObjectAbs aag (fst ptr)) cap)\<rbrace>
-      set_cap cap ptr
+   set_cap cap ptr
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: pas_refined_def state_objs_to_policy_def aag_cap_auth_def)
   apply (rule hoare_pre)
    apply (wp set_cap_caps_of_state set_cap_state_vrefs  | wps)+
   apply clarsimp
   apply (intro conjI)  \<comment> \<open>auth_graph_map\<close>
-   apply (clarsimp dest!: auth_graph_map_memD)
-   apply (erule state_bits_to_policy.cases;
-          solves\<open>auto simp: cap_links_asid_slot_def label_owns_asid_slot_def
-                     intro: auth_graph_map_memI state_bits_to_policy.intros
-                     split: if_split_asm\<close>)
-  apply (erule (2) sata_update[unfolded fun_upd_def])
+    apply (clarsimp dest!: auth_graph_map_memD)
+    apply (erule state_bits_to_policy.cases;
+           solves\<open>auto simp: cap_links_asid_slot_def label_owns_asid_slot_def
+                      intro: auth_graph_map_memI state_bits_to_policy.intros
+                      split: if_split_asm\<close>)
+   apply (erule (2) sata_update[unfolded fun_upd_def])
   apply (erule (2) sita_caps_update[unfolded fun_upd_def])
   done
 
 lemma set_cap_pas_refined_not_transferable:
   "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state
                     and cte_wp_at (\<lambda>c. \<not>is_transferable (Some c)) ptr
-       and K (aag_cap_auth aag (pasObjectAbs aag (fst ptr)) cap)\<rbrace>
-      set_cap cap ptr
+                    and K (aag_cap_auth aag (pasObjectAbs aag (fst ptr)) cap)\<rbrace>
+   set_cap cap ptr
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   by (wpsimp wp: set_cap_pas_refined simp: cte_wp_at_caps_of_state)
 
@@ -372,8 +372,8 @@ lemma cap_swap_respects[wp]:
 
 lemma cap_swap_for_delete_respects[wp]:
   "\<lbrace>integrity aag X st and pas_refined aag
-            and K (is_subject aag (fst slot) \<and> is_subject aag (fst slot'))\<rbrace>
-      cap_swap_for_delete slot slot'
+                       and K (is_subject aag (fst slot) \<and> is_subject aag (fst slot'))\<rbrace>
+   cap_swap_for_delete slot slot'
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   by (wpsimp simp: cap_swap_for_delete_def)
 
@@ -383,7 +383,7 @@ lemma dmo_no_mem_respects:
   shows "do_machine_op mop \<lbrace>integrity aag X st\<rbrace>"
   unfolding do_machine_op_def
   apply (rule hoare_pre)
-  apply (simp add: split_def)
+   apply (simp add: split_def)
    apply wp
   apply (clarsimp simp: integrity_def)
   apply (rule conjI)
@@ -416,7 +416,7 @@ lemmas cases_simp_options = cases_simp_option cases_simp_option[where 'a="'b \<t
 
 (* FIXME MOVE *)
 lemma cdt_change_allowed_all_children:
- "all_children (cdt_change_allowed aag subject (cdt s) (tcb_states_of_state s)) (cdt s)"
+  "all_children (cdt_change_allowed aag subject (cdt s) (tcb_states_of_state s)) (cdt s)"
   by (rule all_childrenI) (erule cdt_change_allowed_to_child)
 
 abbreviation cleanup_info_wf :: "cap \<Rightarrow> 'a PAS \<Rightarrow> bool" where
@@ -443,9 +443,9 @@ lemma empty_slot_integrity_spec:
   shows
   "s \<turnstile> \<lbrace>valid_list and valid_mdb and valid_objs and pas_refined aag
                    and K (is_subject aag (fst slot) \<and> cleanup_info_wf cleanup_info aag)\<rbrace>
-          empty_slot slot cleanup_info
+       empty_slot slot cleanup_info
        \<lbrace>\<lambda>_. integrity aag X s\<rbrace>"
-   apply (simp add: spec_valid_def)
+  apply (simp add: spec_valid_def)
   apply (simp add: empty_slot_def)
   apply (wp add: get_cap_wp set_cap_integrity_autarch set_original_integrity_autarch
                  empty_slot_extended_list_integ_lift empty_slot_list_integrity[where m="cdt s"]
@@ -462,7 +462,7 @@ lemma empty_slot_integrity[wp,wp_not_transferable]:
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (integrity_trans_start)
   apply (rule hoare_pre)
-  apply (wp empty_slot_integrity_spec[simplified spec_valid_def])
+   apply (wp empty_slot_integrity_spec[simplified spec_valid_def])
   by force
 
 end
@@ -474,7 +474,7 @@ lemma reply_masters_mdbD1:
 
 lemma reply_cap_no_grand_parent:
   "\<lbrakk> m \<Turnstile> pptr \<rightarrow>* slot ; reply_mdb m cs ; cs slot = Some (ReplyCap t False R) \<rbrakk>
-    \<Longrightarrow> pptr = slot \<or> (m \<Turnstile> pptr \<leadsto> slot \<and> (\<exists> R'. cs pptr = Some (ReplyCap t True R')))"
+     \<Longrightarrow> pptr = slot \<or> (m \<Turnstile> pptr \<leadsto> slot \<and> (\<exists> R'. cs pptr = Some (ReplyCap t True R')))"
   apply (clarsimp simp: reply_mdb_def del: disjCI)
   apply (erule(1) reply_caps_mdbE)
   apply (drule(1) reply_masters_mdbD1)
@@ -527,7 +527,7 @@ crunches set_original
 lemma set_cap_integrity_deletion_aux:
   "\<lbrace>integrity aag X st and valid_mdb and valid_objs and pas_refined aag and is_transferable_in slot
                        and cdt_change_allowed' aag slot and K(\<not> is_subject aag (fst slot))\<rbrace>
-      set_cap NullCap slot
+   set_cap NullCap slot
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (integrity_trans_start)
   apply (rule hoare_pre)
@@ -538,7 +538,7 @@ lemma set_cap_integrity_deletion_aux:
     apply (wp set_object_wp)
      apply wpc
          apply wp+
-   apply (wp get_object_wp)
+    apply (wp get_object_wp)
    apply wps
    apply (wp integrity_asids_set_cap_Nullcap hoare_vcg_all_lift)
   apply (safe ; clarsimp simp add: cte_wp_at_caps_of_state dest!: ko_atD)
@@ -561,7 +561,7 @@ lemma set_cap_integrity_deletion_aux:
          apply (fastforce dest: tcb_states_of_state_kheapD descendant_of_caller_slot[OF _ _ tcb_atI]
                                 parent_of_rtrancl_no_descendant)
          done
-           (* tcb_ctable *)
+       (* tcb_ctable *)
        subgoal for s obj tcb
          apply (rule_tac tro_tcb_empty_ctable, simp, simp, simp)
          apply (frule_tac addr="tcb_cnode_index 0" in caps_of_state_tcb)
@@ -604,7 +604,7 @@ lemma set_cap_integrity_deletion_aux:
                       dest: tcb_caller_slot_empty_on_recieve parent_of_rtrancl_no_descendant
                             descendant_of_caller_slot[OF _ _ tcb_atI] tcb_states_of_state_kheapD)
      done
-    (* tcb_ipcframe*)
+  (* tcb_ipcframe*)
   apply (rename_tac s obj tcb)
   apply (rule tro_orefl)
   apply (fastforce simp: is_nondevice_page_cap_simps caps_of_state_tcb
@@ -615,7 +615,7 @@ lemma set_cap_integrity_deletion_aux:
 lemma set_cap_integrity_deletion[wp_transferable]:
   "\<lbrace>integrity aag X st and valid_mdb and valid_objs
                        and pas_refined aag and cdt_change_allowed' aag slot\<rbrace>
-      set_cap NullCap slot
+   set_cap NullCap slot
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (cases "is_subject aag (fst slot)")
    apply (wpsimp wp: set_cap_integrity_autarch)
@@ -851,10 +851,10 @@ lemma empty_slot_shuffle:
        set_cdt c;
        post_cap_deletion NullCap od :: (det_ext state \<Rightarrow> _))"
   by (simp only: set_cdt_empty_slot_ext_comm[THEN K_bind_eqI', simplified K_bind_assoc]
-            set_cdt_set_original_comm[THEN K_bind_eqI', simplified K_bind_assoc]
+                 set_cdt_set_original_comm[THEN K_bind_eqI', simplified K_bind_assoc]
                  set_cdt_set_cap_comm[THEN K_bind_eqI', simplified K_bind_assoc]
-            set_original_set_cap_comm[THEN K_bind_eqI', simplified K_bind_assoc]
-            set_cap_empty_slot_ext_comm[THEN K_bind_eqI', simplified K_bind_assoc])
+                 set_original_set_cap_comm[THEN K_bind_eqI', simplified K_bind_assoc]
+                 set_cap_empty_slot_ext_comm[THEN K_bind_eqI', simplified K_bind_assoc])
 
 lemma empty_slot_integrity_transferable[wp_transferable]:
   "\<lbrace>integrity aag X st and valid_list and valid_objs and valid_mdb and pas_refined aag
@@ -927,10 +927,10 @@ lemmas set_untyped_cap_as_full_pas_refined'[wp] = set_untyped_cap_as_full_pas_re
 
 lemma update_cdt_pas_refined:
   "\<lbrace>pas_refined aag and (\<lambda>s. \<forall>x y. c (cdt s) x = Some y \<and> cdt s x \<noteq> Some y
-           \<longrightarrow> (is_transferable (caps_of_state s x) \<or>
+                                   \<longrightarrow> (is_transferable (caps_of_state s x) \<or>
                                         abs_has_auth_to aag Control (fst y) (fst x))
                                      \<and> abs_has_auth_to aag DeleteDerived (fst y) (fst x))\<rbrace>
-     update_cdt c
+   update_cdt c
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: update_cdt_def)
   apply (wp set_cdt_pas_refined)
@@ -974,7 +974,7 @@ lemma set_untyped_cap_as_full_is_transferable[wp]:
 lemma set_untyped_cap_as_full_is_transferable':
   "\<lbrace>\<lambda>s. is_transferable ((caps_of_state s(slot2 \<mapsto> new_cap)) slot3) \<and>
         Some src_cap = (caps_of_state s slot)\<rbrace>
-     set_untyped_cap_as_full src_cap new_cap slot
+   set_untyped_cap_as_full src_cap new_cap slot
    \<lbrace>\<lambda>_ s. is_transferable ((caps_of_state s(slot2 \<mapsto> new_cap)) slot3)\<rbrace>"
   apply (clarsimp simp: set_untyped_cap_as_full_def)
   apply safe
@@ -1019,8 +1019,8 @@ lemma cap_insert_pas_refined:
     (\<lambda>s. (is_transferable_in src_slot s \<and> (\<not> Option.is_none (cdt s src_slot)))
          \<longrightarrow> is_transferable_cap new_cap) and
     K (is_subject aag (fst dest_slot) \<and> is_subject aag (fst src_slot)
-                                 \<and> pas_cap_cur_auth aag new_cap) \<rbrace>
-     cap_insert new_cap src_slot dest_slot
+                                      \<and> pas_cap_cur_auth aag new_cap) \<rbrace>
+   cap_insert new_cap src_slot dest_slot
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (simp add: cap_insert_def)
@@ -1030,20 +1030,20 @@ lemma cap_insert_pas_refined:
             set_untyped_cap_as_full_cdt_is_original_cap get_cap_wp
             tcb_domain_map_wellformed_lift hoare_vcg_disj_lift
             set_untyped_cap_as_full_is_transferable'
-       | simp split del: if_split del: split_paired_All fun_upd_apply
-       | strengthen update_one_strg)+
+         | simp split del: if_split del: split_paired_All fun_upd_apply
+         | strengthen update_one_strg)+
   by (fastforce split: if_split_asm
                  simp: cte_wp_at_caps_of_state pas_refined_refl F[symmetric]
                        valid_mdb_def2 mdb_cte_at_def Option.is_none_def
              simp del: split_paired_All
-                dest: aag_cdt_link_Control aag_cdt_link_DeleteDerived cap_auth_caps_of_state)
+                 dest: aag_cdt_link_Control aag_cdt_link_DeleteDerived cap_auth_caps_of_state)
 
 lemma cap_insert_pas_refined':
   "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state and valid_mdb and
     (\<lambda>s. cte_wp_at is_transferable_cap src_slot s \<longrightarrow> is_transferable_cap new_cap) and
     K (is_subject aag (fst dest_slot) \<and> is_subject aag (fst src_slot)
-                                 \<and> pas_cap_cur_auth aag new_cap) \<rbrace>
-     cap_insert new_cap src_slot dest_slot
+                                      \<and> pas_cap_cur_auth aag new_cap) \<rbrace>
+   cap_insert new_cap src_slot dest_slot
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   by (wp cap_insert_pas_refined)
      (fastforce dest: valid_mdb_mdb_cte_at[THEN mdb_cte_atD[rotated]]
@@ -1053,8 +1053,8 @@ lemma cap_insert_pas_refined_not_transferable:
   "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state and valid_mdb
                     and not cte_wp_at is_transferable_cap src_slot
                     and K (is_subject aag (fst dest_slot) \<and> is_subject aag (fst src_slot)
-                                 \<and> pas_cap_cur_auth aag new_cap) \<rbrace>
-     cap_insert new_cap src_slot dest_slot
+                                                          \<and> pas_cap_cur_auth aag new_cap) \<rbrace>
+   cap_insert new_cap src_slot dest_slot
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
    by (wpsimp wp: cap_insert_pas_refined')
 
@@ -1063,7 +1063,7 @@ lemma cap_insert_pas_refined_same_object_as:
                     and cte_wp_at (same_object_as new_cap) src_slot
                     and K (is_subject aag (fst dest_slot) \<and> is_subject aag (fst src_slot) \<and>
                            (\<not> is_master_reply_cap new_cap) \<and> pas_cap_cur_auth aag new_cap)\<rbrace>
-     cap_insert new_cap src_slot dest_slot
+   cap_insert new_cap src_slot dest_slot
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (wp cap_insert_pas_refined)
   apply (clarsimp simp: Option.is_none_def cte_wp_at_caps_of_state)
@@ -1075,8 +1075,8 @@ lemma cap_move_pas_refined[wp]:
                     and valid_mdb and cte_wp_at (weak_derived new_cap) src_slot
                     and cte_wp_at ((=) NullCap) dest_slot
                     and K (is_subject aag (fst dest_slot) \<and> is_subject aag (fst src_slot)
-                       \<and> pas_cap_cur_auth aag new_cap)\<rbrace>
-     cap_move new_cap src_slot dest_slot
+                                                          \<and> pas_cap_cur_auth aag new_cap)\<rbrace>
+   cap_move new_cap src_slot dest_slot
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: cap_move_def)
   apply (rule hoare_pre)
@@ -1097,7 +1097,7 @@ crunches set_original, set_cdt
 lemma empty_slot_pas_refined[wp, wp_not_transferable]:
   "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state
                     and valid_mdb and K (is_subject aag (fst slot))\<rbrace>
-      empty_slot slot irqopt
+   empty_slot slot irqopt
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: empty_slot_def post_cap_deletion_def)
   apply (wpsimp wp: set_cap_pas_refined get_cap_wp set_cdt_pas_refined
@@ -1111,7 +1111,7 @@ lemma empty_slot_pas_refined[wp, wp_not_transferable]:
 lemma empty_slot_pas_refined_transferable[wp_transferable]:
   "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state
                     and valid_mdb and (\<lambda>s. is_transferable (caps_of_state s slot))\<rbrace>
-     empty_slot slot irqopt
+   empty_slot slot irqopt
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: empty_slot_def post_cap_deletion_def)
   apply (wpsimp wp: set_cap_pas_refined get_cap_wp set_cdt_pas_refined
@@ -1131,7 +1131,7 @@ lemma cap_swap_pas_refined[wp]:
                     and cte_wp_at (weak_derived cap') slot'
                     and K (is_subject aag (fst slot) \<and> is_subject aag (fst slot') \<and>
                            pas_cap_cur_auth aag cap \<and> pas_cap_cur_auth aag cap')\<rbrace>
-      cap_swap cap slot cap' slot'
+   cap_swap cap slot cap' slot'
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: cap_swap_def)
   apply (rule hoare_pre)
@@ -1172,7 +1172,7 @@ lemma cap_swap_pas_refined[wp]:
 
 lemma cap_swap_for_delete_pas_refined[wp]:
   "\<lbrace>pas_refined aag and invs and K (is_subject aag (fst slot) \<and> is_subject aag (fst slot'))\<rbrace>
-      cap_swap_for_delete slot slot'
+   cap_swap_for_delete slot slot'
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: cap_swap_for_delete_def)
   apply (wp get_cap_wp | simp)+
@@ -1198,7 +1198,7 @@ lemma sts_respects_restart_ep:
 lemma set_endpoint_respects:
   "\<lbrace>integrity aag X st and ep_at epptr and
     K (\<exists>auth. aag_has_auth_to aag auth epptr \<and> auth \<in> {Receive, SyncSend, Reset})\<rbrace>
-     set_endpoint epptr ep'
+   set_endpoint epptr ep'
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: set_simple_ko_def set_object_def)
   apply (wp get_object_wp)
@@ -1236,7 +1236,7 @@ lemma sts_thread_st_auth[wp]:
 
 lemma sbn_thread_bound_ntfns[wp]:
   "\<lbrace>\<lambda>s. P ((thread_bound_ntfns s)(t := ntfn))\<rbrace>
-     set_bound_notification t ntfn
+   set_bound_notification t ntfn
    \<lbrace>\<lambda>_ s. P (thread_bound_ntfns s)\<rbrace>"
   apply (simp add: set_bound_notification_def)
   apply (wpsimp wp: set_object_wp dxo_wp_weak)
@@ -1381,7 +1381,7 @@ lemma thread_set_pas_refined_triv:
             thread_set f t \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   by (wpsimp wp: tcb_domain_map_wellformed_lift thread_set_state_vrefs
            simp: pas_refined_def state_objs_to_policy_def
-        | wps thread_set_caps_of_state_trivial[OF cps]
+      | wps thread_set_caps_of_state_trivial[OF cps]
             thread_set_thread_st_auth_trivT[OF st]
             thread_set_thread_bound_ntfns_trivT[OF ntfn])+
 
@@ -1399,7 +1399,7 @@ lemma aag_owned_cdt_link:
 (* FIXME: MOVE *)
 lemma descendants_of_owned_or_transferable:
   "\<lbrakk> valid_mdb s; pas_refined aag s; p \<in> descendants_of q (cdt s); is_subject aag (fst q) \<rbrakk>
-       \<Longrightarrow> is_subject aag (fst p) \<or> is_transferable (caps_of_state s p)"
+     \<Longrightarrow> is_subject aag (fst p) \<or> is_transferable (caps_of_state s p)"
    using all_children_descendants_of pas_refined_all_children by blast
 
 
@@ -1408,7 +1408,7 @@ context CNode_AC_3 begin
 lemma set_ntfn_respects:
   "\<lbrace>integrity aag X st and
     K (\<exists>auth. aag_has_auth_to aag auth epptr \<and> auth \<in> {Receive, Notify, Reset})\<rbrace>
-     set_notification epptr ep'
+   set_notification epptr ep'
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: set_simple_ko_def set_object_def)
   apply (wp get_object_wp)
@@ -1453,7 +1453,7 @@ lemma cap_auth_conferred_cnode_cap:
 
 lemma get_cap_ret_is_subject:
   "\<lbrace>pas_refined aag and K (is_subject aag (fst slot))\<rbrace>
-     get_cap slot
+   get_cap slot
    \<lbrace>\<lambda>rv s. is_cnode_cap rv \<longrightarrow> is_subject aag (obj_ref_of rv)\<rbrace>"
   apply (clarsimp simp: valid_def)
   apply (frule get_cap_det)
@@ -1478,12 +1478,12 @@ definition auth_derived :: "cap \<Rightarrow> cap \<Rightarrow> bool" where
 
 definition cnode_inv_auth_derivations ::
   "Invocations_A.cnode_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
- "cnode_inv_auth_derivations ci \<equiv> case ci of
-    InsertCall cap ptr ptr' \<Rightarrow> cte_wp_at (auth_derived cap) ptr
-  | MoveCall cap ptr ptr' \<Rightarrow> cte_wp_at (auth_derived cap) ptr
+  "cnode_inv_auth_derivations ci \<equiv> case ci of
+     InsertCall cap ptr ptr' \<Rightarrow> cte_wp_at (auth_derived cap) ptr
+   | MoveCall cap ptr ptr' \<Rightarrow> cte_wp_at (auth_derived cap) ptr
    | RotateCall s_cap p_cap src pivot dest \<Rightarrow>
        cte_wp_at (auth_derived s_cap) src and cte_wp_at (auth_derived p_cap) pivot
-  | _ \<Rightarrow> \<top>"
+   | _ \<Rightarrow> \<top>"
 
 lemma UNIV_eq_single_card:
   "(UNIV = {x :: 'a}) \<Longrightarrow> (card (UNIV :: 'a set) = 1)"
@@ -1597,7 +1597,7 @@ begin
 
 lemma derive_cap_auth_derived:
   "\<lbrace>\<lambda>s :: det_ext state. cap \<noteq> NullCap \<longrightarrow> cte_wp_at (auth_derived cap) src_slot s\<rbrace>
-      derive_cap src_slot cap
+   derive_cap src_slot cap
    \<lbrace>\<lambda>rv s. rv \<noteq> NullCap \<longrightarrow> cte_wp_at (auth_derived rv) src_slot s\<rbrace>, -"
   apply (wpsimp wp: arch_derive_cap_auth_derived simp: derive_cap_def | wp hoare_drop_imps)+
   apply (auto simp: cte_wp_at_caps_of_state)
@@ -1617,7 +1617,7 @@ lemma auth_derived_mask_cap:
 
 lemma auth_derived_update_cap_data:
   "\<lbrakk> auth_derived cap cap'; update_cap_data pres w cap \<noteq> NullCap \<rbrakk>
-           \<Longrightarrow> auth_derived (update_cap_data pres w cap) cap'"
+     \<Longrightarrow> auth_derived (update_cap_data pres w cap) cap'"
   apply (clarsimp simp: update_cap_data_def badge_update_def Let_def split_def
                         is_cap_simps auth_derived_arch_update_cap_data
                  split: if_split_asm)
@@ -1626,12 +1626,12 @@ lemma auth_derived_update_cap_data:
 
 lemma cte_wp_at_auth_derived_mask_cap_strg:
   "cte_wp_at (auth_derived cap) p s
-      \<longrightarrow> cte_wp_at (auth_derived (mask_cap R cap)) p s"
+   \<longrightarrow> cte_wp_at (auth_derived (mask_cap R cap)) p s"
   by (clarsimp simp: cte_wp_at_caps_of_state auth_derived_mask_cap)
 
 lemma cte_wp_at_auth_derived_update_cap_data_strg:
   "cte_wp_at (auth_derived cap) p s \<and> update_cap_data pres w cap \<noteq> NullCap
-      \<longrightarrow> cte_wp_at (auth_derived (update_cap_data pres w cap)) p s"
+   \<longrightarrow> cte_wp_at (auth_derived (update_cap_data pres w cap)) p s"
   by (clarsimp simp: cte_wp_at_caps_of_state auth_derived_update_cap_data)
 
 lemma get_cap_auth_derived:
@@ -1649,12 +1649,12 @@ lemma decode_cnode_invocation_auth_derived:
               simp: cnode_inv_auth_derivations_If_Insert_Move[unfolded cnode_inv_auth_derivations_def]
                     cnode_inv_auth_derivations_def split_def whenE_def split_del: if_split
          | strengthen cte_wp_at_auth_derived_mask_cap_strg cte_wp_at_auth_derived_update_cap_data_strg
-            | wp (once) hoare_drop_imps)+
+         | wp (once) hoare_drop_imps)+
   done
 
 lemma derive_cap_clas:
   "\<lbrace>\<lambda>s :: det_ext state. cap_links_asid_slot aag p b \<rbrace>
-     derive_cap a b
+   derive_cap a b
    \<lbrace>\<lambda>rv s. cap_links_asid_slot aag p rv\<rbrace>, -"
   apply (simp add: derive_cap_def  cong: cap.case_cong)
   apply (rule hoare_pre)
@@ -1670,7 +1670,7 @@ lemma derive_cap_obj_refs_auth:
 
 lemma derive_cap_cli:
   "\<lbrace>K (cap_links_irq aag l cap)\<rbrace>
-  derive_cap slot cap
+   derive_cap slot cap
    \<lbrace>\<lambda>x s :: det_ext state. cap_links_irq aag l x\<rbrace>, -"
   unfolding derive_cap_def
   apply (rule hoare_pre)
@@ -1697,7 +1697,7 @@ lemma derive_cap_untyped_range_subset:
    \<lbrace>\<lambda>rv s. \<forall>x \<in> untyped_range rv. P x s\<rbrace>, -"
   unfolding derive_cap_def
   apply (rule hoare_pre)
-  apply (simp cong: cap.case_cong)
+   apply (simp cong: cap.case_cong)
    apply (wp arch_derive_cap_untyped_range_subset | wpc)+
   apply fastforce
   done
