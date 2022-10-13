@@ -207,19 +207,19 @@ lemmas state_objs_to_policy_cases
     = state_bits_to_policy.cases[OF state_objs_to_policy_mem[THEN iffD1]]
 
 lemma tcb_states_of_state_preserved:
-  "\<lbrakk> get_tcb thread s = Some tcb; tcb_state tcb' = tcb_state tcb \<rbrakk>
+  "\<lbrakk> get_tcb False thread s = Some tcb; tcb_state tcb' = tcb_state tcb \<rbrakk>
      \<Longrightarrow> tcb_states_of_state (s\<lparr>kheap := kheap s(thread \<mapsto> TCB tcb')\<rparr>) = tcb_states_of_state s"
-  by (auto split: option.splits simp: tcb_states_of_state_def get_tcb_def)
+  by (auto split: option.splits simp: tcb_states_of_state_def get_tcb_def obind_def ta_filter_def)
 
 lemma thread_st_auth_preserved:
-  "\<lbrakk> get_tcb thread s = Some tcb; tcb_state tcb' = tcb_state tcb \<rbrakk>
+  "\<lbrakk> get_tcb False thread s = Some tcb; tcb_state tcb' = tcb_state tcb \<rbrakk>
      \<Longrightarrow> thread_st_auth (s\<lparr>kheap := kheap s(thread \<mapsto> TCB tcb')\<rparr>) = thread_st_auth s"
   by (simp add: tcb_states_of_state_preserved thread_st_auth_def)
 
 lemma thread_bound_ntfns_preserved:
-  "\<lbrakk> get_tcb thread s = Some tcb; tcb_bound_notification tcb' = tcb_bound_notification tcb \<rbrakk>
+  "\<lbrakk> get_tcb False thread s = Some tcb; tcb_bound_notification tcb' = tcb_bound_notification tcb \<rbrakk>
      \<Longrightarrow> thread_bound_ntfns (s\<lparr>kheap := kheap s(thread \<mapsto> TCB tcb')\<rparr>) = thread_bound_ntfns s"
-  by (auto simp: thread_bound_ntfns_def get_tcb_def split: option.splits)
+  by (auto simp: thread_bound_ntfns_def get_tcb_def obind_def ta_filter_def split: option.splits)
 
 lemma is_transferable_null_filter[simp]:
   "is_transferable (null_filter caps ptr) = is_transferable (caps ptr)"
@@ -437,7 +437,7 @@ lemma integrity_ready_queues_refl[simp]: "integrity_ready_queues aag subjects pt
 
 (* FIXME MOVE *)
 lemma caps_of_state_tcb':
-  "\<lbrakk> get_tcb p s = Some tcb; option_map fst (tcb_cap_cases idx) = Some getF \<rbrakk>
+  "\<lbrakk> get_tcb False p s = Some tcb; option_map fst (tcb_cap_cases idx) = Some getF \<rbrakk>
      \<Longrightarrow> caps_of_state s (p, idx) = Some (getF tcb)"
   apply (drule get_tcb_SomeD)
   apply clarsimp
@@ -448,7 +448,7 @@ lemma caps_of_state_tcb':
 
 (* FIXME MOVE *)
 lemma caps_of_state_tcb_cap_cases:
-  "\<lbrakk> get_tcb p s = Some tcb; idx \<in> dom tcb_cap_cases \<rbrakk>
+  "\<lbrakk> get_tcb False p s = Some tcb; idx \<in> dom tcb_cap_cases \<rbrakk>
      \<Longrightarrow> caps_of_state s (p, idx) = Some ((the (option_map fst (tcb_cap_cases idx))) tcb)"
   apply (clarsimp simp: dom_def)
   apply (erule caps_of_state_tcb')
@@ -987,7 +987,27 @@ lemma integrity_update_autarch:
     apply (drule_tac x = x in spec, erule integrity_mem.cases)
         apply ((auto intro: integrity_mem.intros)+)[4]
     apply (erule trm_ipc, simp_all)
-    apply (clarsimp simp: restrict_map_Some_iff tcb_states_of_state_def get_tcb_def)
+    apply (clarsimp simp: restrict_map_Some_iff tcb_states_of_state_def get_tcb_def
+      obind_def ta_filter_def)
+   apply clarsimp
+   apply (drule_tac x = x in spec, erule integrity_device.cases)
+     apply (erule integrity_device.trd_lrefl)
+    apply (erule integrity_device.trd_orefl)
+   apply (erule integrity_device.trd_write)
+  apply (clarsimp simp: integrity_asids_update_autarch)
+  done
+
+lemma integrity_update_ta_autarch:
+  "\<lbrakk> integrity aag X st s; is_subject aag ptr \<rbrakk>
+     \<Longrightarrow> integrity aag X st (ms_ta_obj_update ptr obj (s\<lparr>kheap := kheap s(ptr \<mapsto> obj)\<rparr>))"
+  unfolding integrity_subjects_def
+  apply (intro conjI,simp_all)
+    apply clarsimp
+    apply (drule_tac x = x in spec, erule integrity_mem.cases)
+        apply ((auto intro: integrity_mem.intros)+)[4]
+    apply (erule trm_ipc, simp_all)
+    apply (clarsimp simp: restrict_map_Some_iff tcb_states_of_state_def get_tcb_def
+      obind_def ta_filter_def)
    apply clarsimp
    apply (drule_tac x = x in spec, erule integrity_device.cases)
      apply (erule integrity_device.trd_lrefl)
@@ -998,10 +1018,10 @@ lemma integrity_update_autarch:
 
 lemma set_object_integrity_autarch:
   "\<lbrace>integrity aag X st and K (is_subject aag ptr)\<rbrace>
-   set_object ptr obj
+   set_object True ptr obj
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (wpsimp wp: set_object_wp)
-  apply (rule integrity_update_autarch, simp_all)
+  apply (rule integrity_update_ta_autarch, simp_all)
   done
 
 end
@@ -1009,14 +1029,16 @@ end
 context pspace_update_eq begin
 
 lemma thread_st_auth[iff]: "thread_st_auth (f s) = thread_st_auth s"
-  by (simp add: thread_st_auth_def pspace get_tcb_def swp_def tcb_states_of_state_def)
+  by (simp add: thread_st_auth_def pspace get_tcb_def swp_def tcb_states_of_state_def
+    obind_def ta_filter_def)
 
 lemma thread_bound_ntfns[iff]: "thread_bound_ntfns (f s) = thread_bound_ntfns s"
-  by (simp add: thread_bound_ntfns_def pspace get_tcb_def swp_def split: option.splits)
+  by (simp add: thread_bound_ntfns_def pspace get_tcb_def swp_def obind_def ta_filter_def
+    split: option.splits)
 
 lemma integrity_update_eq[iff]:
   "tcb_states_of_state (f s) = tcb_states_of_state s"
-  by (simp add: pspace tcb_states_of_state_def get_tcb_def)
+  by (simp add: pspace tcb_states_of_state_def get_tcb_def obind_def ta_filter_def)
 
 end
 
@@ -1032,7 +1054,23 @@ lemma trans_state_back[simp]:
 
 declare wrap_ext_op_det_ext_ext_def[simp]
 
+lemma integrity_ta_agnostic: "ta_agnostic (integrity aag X st)"
+  by (clarsimp simp:ta_agnostic_def integrity_subjects_def integrity_obj_def integrity_mem.simps)
+
+lemma integrity_ignore_ta: "integrity aag X st (ms_ta_update taf s) = integrity aag X st s"
+  using integrity_ta_agnostic
+  by (simp add: ta_agnostic_def)
+
 crunch integrity[wp]: set_thread_state_ext "integrity aag X st"
+  (wp: touch_objects_wp simp: integrity_ignore_ta)
+
+(* FIXME: Crunch does not discover the right precondition (presumably it used to); Ryan B (@ryybrr)
+   noticed the same for `set_cap_integrity_autarch` (CNode_AC) when he did the arch-split. -robs *)
+lemma set_thread_state_integrity_autarch:
+  "\<lbrace>integrity aag X st and K (is_subject aag ptr)\<rbrace>
+   set_thread_state ptr ts
+   \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  by (wpsimp simp:set_thread_state_def integrity_ignore_ta wp:set_object_integrity_autarch touch_object_wp')
 
 crunch integrity_autarch: set_thread_state "integrity aag X st"
 
@@ -1218,10 +1256,11 @@ end
 
 
 lemma owns_thread_owns_cspace:
-  "\<lbrakk> is_subject aag thread; pas_refined aag s; get_tcb thread s = Some tcb;
+  "\<lbrakk> is_subject aag thread; pas_refined aag s; get_tcb False thread s = Some tcb;
      is_cnode_cap (tcb_ctable tcb); x \<in> obj_refs_ac (tcb_ctable tcb) \<rbrakk>
      \<Longrightarrow> is_subject aag x"
   apply (drule get_tcb_SomeD)
+  apply (clarsimp simp:ta_filter_def)
   apply (drule cte_wp_at_tcbI[where t="(thread, tcb_cnode_index 0)"
                                 and P="\<lambda>cap. cap = tcb_ctable tcb", simplified])
   apply (auto simp: cte_wp_at_caps_of_state is_cap_simps cap_auth_conferred_def
@@ -1249,8 +1288,8 @@ lemma cli_no_irqs:
 lemma as_user_tcb_states[wp]:
   "as_user t f \<lbrace>\<lambda>s. P (tcb_states_of_state s)\<rbrace>"
   apply (simp add: as_user_def)
-  apply (wpsimp wp: set_object_wp)
-  apply (clarsimp simp: thread_st_auth_def get_tcb_def tcb_states_of_state_def
+  apply (wpsimp wp: set_object_wp touch_object_wp')
+  apply (clarsimp simp: thread_st_auth_def get_tcb_def tcb_states_of_state_def obind_def ta_filter_def
                  elim!: rsubst[where P=P, OF _ ext] split: option.split)
   done
 
@@ -1263,8 +1302,8 @@ lemma as_user_thread_state[wp]:
 lemma as_user_thread_bound_ntfn[wp]:
   "as_user t f \<lbrace>\<lambda>s. P (thread_bound_ntfns s)\<rbrace>"
   apply (simp add: as_user_def set_object_def split_def thread_bound_ntfns_def)
-  apply (wp get_object_wp)
-  apply (clarsimp simp: thread_st_auth_def get_tcb_def
+  apply (wp get_object_wp touch_object_wp')
+  apply (clarsimp simp: thread_st_auth_def get_tcb_def ta_filter_def obind_def
                  elim!: rsubst[where P=P, OF _ ext] split: option.split)
   done
 
@@ -1488,7 +1527,7 @@ locale Access_AC_3 = Access_AC_2 +
             \<Longrightarrow> integrity_asids aag T x a s (s' :: det_ext state)"
   and auth_ipc_buffers_member:
     "\<And>x. \<lbrakk> x \<in> auth_ipc_buffers s p; valid_objs s \<rbrakk>
-            \<Longrightarrow> \<exists>tcb acap. get_tcb p s = Some tcb
+            \<Longrightarrow> \<exists>tcb acap. get_tcb False p s = Some tcb
                          \<and> tcb_ipcframe tcb = (ArchObjectCap acap)
                          \<and> caps_of_state s (p, tcb_cnode_index 4) = Some (ArchObjectCap acap)
                          \<and> Write \<in> arch_cap_auth_conferred acap
