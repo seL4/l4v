@@ -168,9 +168,7 @@ context Arch begin global_naming RISCV64
 lemma pas_refined_irq_state_independent[intro!, simp]:
   "pas_refined x (s\<lparr>machine_state := machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>) =
    pas_refined x s"
-  sorry (* FIXME: broken by touched-addrs -robs
-  by (simp add: pas_refined_def)
-*)
+  by (simp add: pas_refined_def auth_graph_map_def state_objs_to_policy_def)
 
 end
 

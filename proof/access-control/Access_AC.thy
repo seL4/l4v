@@ -1044,6 +1044,25 @@ end
 
 context Access_AC_2 begin
 
+(* TA-agnosticism of integrity and pas_refined.
+   This appears to be the earliest place we can prove these. -robs *)
+lemma integrity_ta_agnostic: "ta_agnostic (integrity aag X st)"
+  by (clarsimp simp:ta_agnostic_def integrity_subjects_def integrity_obj_def integrity_mem.simps)
+
+(* Following the conventions of `pas_refined_irq_state_independent` (ArchAccess_AC). -robs *)
+lemma integrity_ms_ta_independent[intro!, simp]:
+  "integrity aag X st (ms_ta_update taf s) = integrity aag X st s"
+  using integrity_ta_agnostic
+  by (simp add: ta_agnostic_def)
+
+lemma pas_refined_ta_agnostic: "ta_agnostic (pas_refined aag)"
+  by (clarsimp simp:ta_agnostic_def pas_refined_def auth_graph_map_def state_objs_to_policy_def)
+
+lemma pas_refined_ms_ta_independent[intro!, simp]:
+  "pas_refined aag (ms_ta_update taf s) = pas_refined aag s"
+  using pas_refined_ta_agnostic
+  by (simp add: ta_agnostic_def)
+
 lemma eintegrity_sa_update[simp]:
   "integrity aag X st (scheduler_action_update f s) = integrity aag X st s"
   by (simp add: integrity_subjects_def)
@@ -1054,15 +1073,8 @@ lemma trans_state_back[simp]:
 
 declare wrap_ext_op_det_ext_ext_def[simp]
 
-lemma integrity_ta_agnostic: "ta_agnostic (integrity aag X st)"
-  by (clarsimp simp:ta_agnostic_def integrity_subjects_def integrity_obj_def integrity_mem.simps)
-
-lemma integrity_ignore_ta: "integrity aag X st (ms_ta_update taf s) = integrity aag X st s"
-  using integrity_ta_agnostic
-  by (simp add: ta_agnostic_def)
-
 crunch integrity[wp]: set_thread_state_ext "integrity aag X st"
-  (wp: touch_objects_wp simp: integrity_ignore_ta)
+  (wp: touch_objects_wp)
 
 (* FIXME: Crunch does not discover the right precondition (presumably it used to); Ryan B (@ryybrr)
    noticed the same for `set_cap_integrity_autarch` (CNode_AC) when he did the arch-split. -robs *)
@@ -1070,7 +1082,7 @@ lemma set_thread_state_integrity_autarch:
   "\<lbrace>integrity aag X st and K (is_subject aag ptr)\<rbrace>
    set_thread_state ptr ts
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  by (wpsimp simp:set_thread_state_def integrity_ignore_ta wp:set_object_integrity_autarch touch_object_wp')
+  by (wpsimp simp:set_thread_state_def wp:set_object_integrity_autarch touch_object_wp')
 
 crunch integrity_autarch: set_thread_state "integrity aag X st"
 
