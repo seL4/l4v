@@ -23,16 +23,16 @@ lemma set_mrs_state_vrefs[Arch_AC_assms, wp]:
    set_mrs thread buf msgs
    \<lbrace>\<lambda>_ s. P (state_vrefs s)\<rbrace>"
   apply (simp add: set_mrs_def split_def set_object_def get_object_def split del: if_split)
-  apply (wpsimp wp: gets_the_wp get_wp put_wp mapM_x_wp'
+  apply (wpsimp wp: gets_the_wp get_wp put_wp mapM_x_wp' touch_objects_wp touch_object_wp'
               simp: zipWithM_x_mapM_x split_def store_word_offs_def
          split_del: if_split)
   apply (subst state_vrefs_eqI)
         prefer 7
         apply assumption
-       apply (clarsimp simp: opt_map_def)
-      apply (fastforce simp: opt_map_def aobj_of_def)
+       apply (fastforce dest: get_tcb_SomeD' simp: opt_map_def)
+      apply (fastforce dest: get_tcb_SomeD' simp: opt_map_def aobj_of_def)
      apply clarsimp
-    apply (auto simp: valid_arch_state_def)
+    apply (auto dest: get_tcb_SomeD' simp: valid_arch_state_def)
   done
 
 lemma mul_add_word_size_lt_msg_align_bits_ofnat[Arch_AC_assms]:
@@ -66,9 +66,9 @@ definition level_of_table :: "obj_ref \<Rightarrow> 'z :: state_ext state \<Righ
   "level_of_table p s \<equiv>
      GREATEST lvl. \<exists>asid vref. vref \<in> user_region \<and> vs_lookup_table lvl asid vref s = Some (lvl, p)"
 
-lemma level_of_table_vs_lookup_table:
+lemma level_of_table_vs_lookup_table[simplified f_kheap_to_kheap]:
   "\<lbrakk> vs_lookup_table level asid vref s = Some (level, p);
-     ptes_of s p = Some pte; level \<le> max_pt_level; vref \<in> user_region; invs s \<rbrakk>
+     ptes_of False s p = Some pte; level \<le> max_pt_level; vref \<in> user_region; invs s \<rbrakk>
      \<Longrightarrow> level_of_table p s = level"
   apply (subst level_of_table_def)
   apply (rule Greatest_equality, fastforce)
@@ -77,9 +77,9 @@ lemma level_of_table_vs_lookup_table:
   apply (fastforce dest: vs_lookup_table_unique_level)
   done
 
-lemma vs_lookup_slot_level_of_slot:
+lemma vs_lookup_slot_level_of_slot[simplified f_kheap_to_kheap]:
   "\<lbrakk> vs_lookup_slot level asid vref s = Some (level, p);
-     ptes_of s p = Some pte; level \<le> max_pt_level; vref \<in> user_region; invs s \<rbrakk>
+     ptes_of False s p = Some pte; level \<le> max_pt_level; vref \<in> user_region; invs s \<rbrakk>
      \<Longrightarrow> level_of_slot asid vref p s = level"
   apply (subst level_of_slot_def)
   apply (rule Greatest_equality)
@@ -99,7 +99,7 @@ lemma vs_lookup_table_vref_independent:
      \<Longrightarrow> vs_lookup_table level asid vref' s = opt"
   by (cases "level = asid_pool_level"; clarsimp simp: vs_lookup_table_def)
 
-lemma state_vrefs_store_NonPageTablePTE:
+lemma state_vrefs_store_NonPageTablePTE[simplified f_kheap_to_kheap]:
   "\<lbrakk> invs s; is_aligned p pte_bits; vs_lookup_slot level asid vref s = Some (level, p);
      vref \<in> user_region; \<not> is_PageTablePTE pte;
      kheap s (table_base p) = Some (ArchObj (PageTable pt)) \<rbrakk>
@@ -110,7 +110,7 @@ lemma state_vrefs_store_NonPageTablePTE:
                                      else kheap s a\<rparr>) =
          (\<lambda>x. if \<exists>level' vref'. vref_for_level vref' (level + 1) = vref_for_level vref (level + 1) \<and>
                                 vref' \<in> user_region \<and> p = pt_slot_offset level (table_base p) vref' \<and>
-                                pt_walk level level' (table_base p) vref' (ptes_of s) = Some (level',x)
+                                pt_walk level level' (table_base p) vref' (ptes_of False s) = Some (level',x)
               then (if x = table_base p
                     then vs_refs_aux level (PageTable (\<lambda>a. if a = table_index p then pte else pt a))
                     else {})
@@ -118,15 +118,17 @@ lemma state_vrefs_store_NonPageTablePTE:
   apply (rule all_ext)
   apply (case_tac "level = asid_pool_level")
    apply (fastforce simp: vs_lookup_slot_def vs_lookup_table_def
-                          ptes_of_Some pts_of_Some aobjs_of_Some
+                          ptes_of_Some[where ta_f=False,simplified]
+                          pts_of_Some[where ta_f=False,simplified]
+                          aobjs_of_Some[where ta_f=False,simplified]
                     dest: pool_for_asid_no_pte)
-  apply (prop_tac "ptes_of s p \<noteq> None")
+  apply (prop_tac "ptes_of False s p \<noteq> None")
    apply (drule valid_vspace_objs_strong_slotD; clarsimp split del: if_split)
   apply (frule vs_lookup_slot_table_base; clarsimp split del: if_split)
   apply (subst (asm) vs_lookup_slot_table_unfold; clarsimp split del: if_split)
   apply safe
    apply (subst (asm) state_vrefs_def opt_map_def)+
-   apply (clarsimp split: option.splits split del: if_split)
+   apply (clarsimp simp: ta_filter_def split: option.splits split del: if_split)
    apply (subst (asm) vs_lookup_non_PageTablePTE[where s=s and s'="kheap_update _ s" and p=p])
           apply (fastforce simp: ptes_of_Some pts_of_Some aobjs_of_Some
                                  opt_map_def pte_of_def obind_def
@@ -134,14 +136,20 @@ lemma state_vrefs_store_NonPageTablePTE:
    apply (case_tac "x = table_base p"; clarsimp)
     apply (case_tac "lvl = asid_pool_level")
      apply (fastforce dest: vs_lookup_table_no_asid[OF vs_lookup_level]
-                      simp: ptes_of_Some pts_of_Some aobjs_of_Some split: if_splits)
+                      simp: ptes_of_Some[where ta_f=False,simplified]
+                            pts_of_Some[where ta_f=False,simplified]
+                            aobjs_of_Some[where ta_f=False,simplified]
+                      split: if_splits)
     apply (fastforce dest: vs_lookup_table_unique_level[OF vs_lookup_level]
                      elim: allE[where x=level] split: if_splits)
    apply (clarsimp split: if_splits)
     apply (case_tac "level' = asid_pool_level")
-     apply (fastforce dest: vs_lookup_slot_no_asid simp: ptes_of_Some pts_of_Some aobjs_of_Some)
+     apply (fastforce dest: vs_lookup_slot_no_asid simp: ptes_of_Some[where ta_f=False,simplified]
+       pts_of_Some[where ta_f=False,simplified] aobjs_of_Some[where ta_f=False,simplified])
     apply (frule vs_lookup_slot_level_of_slot)
-        apply (fastforce simp: ptes_of_Some pts_of_Some aobjs_of_Some split: option.splits)
+        apply (fastforce simp: ptes_of_Some[where ta_f=False,simplified]
+          pts_of_Some[where ta_f=False,simplified] aobjs_of_Some[where ta_f=False,simplified]
+          split: option.splits)
        apply fastforce+
     apply (subst (asm) vs_lookup_slot_table_unfold; fastforce)
    apply (rule conjI; clarsimp)
@@ -167,16 +175,20 @@ lemma state_vrefs_store_NonPageTablePTE:
    apply (rule state_vrefsD)
       apply (subst vs_lookup_non_PageTablePTE[where s=s and p=p and pte=pte])
              apply (fastforce dest: pte_ptr_eq
-                              simp: ptes_of_Some pts_of_Some aobjs_of_Some
-                                    opt_map_def pte_of_def obind_def)+
+                              simp: ptes_of_Some[where ta_f=False,simplified]
+                                    pts_of_Some[where ta_f=False,simplified]
+                                    aobjs_of_Some[where ta_f=False,simplified]
+                                    opt_map_def pte_of_def obind_def ta_filter_def)+
   apply (case_tac "x = table_base p")
    apply (fastforce elim: allE[where x=level])
   apply (subst (asm) state_vrefs_def, clarsimp)
-  apply (rule_tac level=lvl and asid=asida and vref=vrefa in state_vrefsD)
+  apply (rule_tac level=lvl and asid=asida and vref=vrefa in state_vrefsD[simplified f_kheap_to_kheap])
      apply (subst vs_lookup_non_PageTablePTE[where s=s and p=p and pte=pte])
             apply (fastforce dest: pte_ptr_eq
-                             simp: ptes_of_Some pts_of_Some aobjs_of_Some
-                                   opt_map_def pte_of_def obind_def)+
+                             simp: ptes_of_Some[where ta_f=False,simplified]
+                                   pts_of_Some[where ta_f=False,simplified]
+                                   aobjs_of_Some[where ta_f=False,simplified]
+                                   opt_map_def pte_of_def obind_def ta_filter_def)+
      apply (clarsimp split: if_splits)
      apply (intro conjI; clarsimp)
       apply (case_tac "level' = asid_pool_level")
@@ -189,7 +201,7 @@ lemma state_vrefs_store_NonPageTablePTE:
        apply (drule (1) vs_lookup_table_unique_level; fastforce)
       apply (metis vs_lookup_slot_table vs_lookup_slot_unique_level)
      apply (fastforce dest: vs_lookup_level)
-    apply (fastforce simp: aobjs_of_Some opt_map_def)
+    apply (fastforce simp: aobjs_of_Some[where ta_f=False,simplified] opt_map_def)
    apply clarsimp
   apply clarsimp
   done
@@ -221,9 +233,12 @@ lemma state_vrefs_store_NonPageTablePTE':
     apply (drule vs_lookup_level)
     apply (rule conjI; clarsimp)
     apply (case_tac "level = asid_pool_level")
-     apply (fastforce dest: vs_lookup_table_no_asid simp: ptes_of_Some pts_of_Some aobjs_of_Some)
+     apply (fastforce dest: vs_lookup_table_no_asid simp: ptes_of_Some[where ta_f=False,simplified]
+       pts_of_Some[where ta_f=False,simplified] aobjs_of_Some[where ta_f=False,simplified])
     apply (case_tac "lvl = asid_pool_level")
-     apply (fastforce dest: vs_lookup_table_no_asid simp: ptes_of_Some pts_of_Some aobjs_of_Some)
+     apply (fastforce dest: vs_lookup_table_no_asid simp: ptes_of_Some[where ta_f=False,simplified]
+       pts_of_Some[where ta_f=False,simplified] aobjs_of_Some[where ta_f=False,simplified])
+. (* XXX: DOWN TO HERE. -robs
     apply (subst level_of_table_vs_lookup_table; fastforce simp: ptes_of_Some pts_of_Some aobjs_of_Some)
    apply (subst (asm) vs_lookup_non_PageTablePTE[where s=s and p=p and pte=pte])
           apply (fastforce dest: pte_ptr_eq

@@ -529,7 +529,9 @@ lemma tcb_states_of_state_1:
   "tcb_states_of_state s1 = [0xC08 \<mapsto> thread_state.BlockedOnReceive 9 \<lparr> receiver_can_grant = False \<rparr>,  0xC07 \<mapsto> thread_state.Running ]"
   unfolding s1_def tcb_states_of_state_def
   apply (rule ext)
-  apply (simp add: get_tcb_def)
+  apply (clarsimp simp add: get_tcb_def obind_def ta_filter_def)
+  unfolding kh1_def kh1_obj_def
+. (* XXX: DOWN TO HERE. -robs
   apply (simp add: kh1_def kh1_obj_def )
   done
 
