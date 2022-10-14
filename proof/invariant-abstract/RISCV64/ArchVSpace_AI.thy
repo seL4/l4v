@@ -209,17 +209,17 @@ definition
                 \<and> valid_pte level pte s
                 \<and> pte_ref pte = Some p' \<and> obj_refs (ArchObjectCap acap) = {p'}
                 \<and> (\<exists>ao. ko_at (ArchObj ao) p' s \<and> valid_vspace_obj (level-1) ao s)
-                \<and> pts_of True s p' = Some empty_pt
+                \<and> pts_of False s p' = Some empty_pt
                 \<and> vref \<in> user_region) and
        K (is_PageTableCap acap \<and> cap_asid_arch acap \<noteq> None)
    | PageTableUnmap acap cslot \<Rightarrow>
        cte_wp_at ((=) (ArchObjectCap acap)) cslot
        and real_cte_at cslot
        and valid_arch_cap acap
-       and is_final_cap' True (ArchObjectCap acap)
+       and is_final_cap' False (ArchObjectCap acap)
        and K (is_PageTableCap acap)
        and (\<lambda>s. \<forall>asid vref. vs_cap_ref_arch acap = Some (asid, vref) \<longrightarrow>
-                            vspace_for_asid True asid s \<noteq> aobj_ref acap)"
+                            vspace_for_asid False asid s \<noteq> aobj_ref acap)"
 
 crunches unmap_page
   for aligned [wp]: pspace_aligned
@@ -265,7 +265,7 @@ crunches unmap_page_table
 definition
   "valid_apinv ap \<equiv> case ap of
     Assign asid p slot \<Rightarrow>
-      (\<lambda>s. \<exists>pool. asid_pools_of True s p = Some pool \<and> pool (ucast asid) = None)
+      (\<lambda>s. \<exists>pool. asid_pools_of False s p = Some pool \<and> pool (ucast asid) = None)
       and cte_wp_at (\<lambda>cap. is_pt_cap cap \<and> cap_asid cap = None) slot
       and K (0 < asid)
       and (\<lambda>s. pool_for_asid asid s = Some p)"
@@ -571,12 +571,12 @@ lemma arch_update_cap_pspace':
   apply (erule real_cte_tcb_valid[rule_format])
   done
 
-lemma arch_update_cap_invs_unmap_page_table:
+lemma arch_update_cap_invs_unmap_page_table [simplified f_kheap_to_kheap]:
   "\<lbrace>cte_wp_at (is_arch_update cap) p
              and real_cte_at p
              and invs and valid_cap cap
              and (\<lambda>s. cte_wp_at (\<lambda>c. is_final_cap' False c s) p s)
-             and (\<lambda>s. pts_of True s (obj_ref_of cap) = Some empty_pt)
+             and (\<lambda>s. pts_of False s (obj_ref_of cap) = Some empty_pt)
              and (\<lambda>s. cte_wp_at (\<lambda>c. \<forall>asid vref level. vs_cap_ref c = Some (asid, vref)
                                 \<longrightarrow> vs_lookup_target level asid vref s \<noteq> Some (level, obj_ref_of cap)) p s)
              and K (is_pt_cap cap \<and> vs_cap_ref cap = None)\<rbrace>
@@ -613,8 +613,7 @@ lemma arch_update_cap_invs_unmap_page_table:
     apply (clarsimp simp: no_cap_to_obj_with_diff_ref_def
                           cte_wp_at_caps_of_state)
     apply fastforce
-   apply (clarsimp simp: obj_at_def empty_table_def in_omonad ta_filter_def obind_def
-                  split: option.splits if_splits)
+   apply (clarsimp simp: obj_at_def empty_table_def in_omonad)
   apply fastforce
   done
 

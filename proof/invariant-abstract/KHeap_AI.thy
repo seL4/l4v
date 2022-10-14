@@ -93,6 +93,14 @@ interpretation touch_object_tainv:
   touched_addresses_inv _ "touch_object obj"
   by unfold_locales wpsimp
 
+crunches touch_objects
+  for tainv[wp]: "ignore_ta P"
+  (ignore: do_machine_op)
+
+interpretation touch_objects_tainv:
+  touched_addresses_inv _ "touch_objects obj"
+  by unfold_locales wpsimp
+
 crunches get_object
   for tainv[wp]: "ignore_ta P"
   (ignore: do_machine_op)

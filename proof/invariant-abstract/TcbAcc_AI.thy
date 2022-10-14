@@ -1152,10 +1152,6 @@ lemma sbn_cur_tcb [wp]:
   apply (clarsimp simp: cur_tcb_def obj_at_def is_tcb_def)
   done
 
-lemma kheap_False_simplify:
-  "f_kheap False s t = kheap s t"
-  by simp
-
 lemma sts_iflive[wp]:
   "\<lbrace>\<lambda>s. (\<not> halted st \<longrightarrow> ex_nonz_cap_to t s)
          \<and> if_live_then_nonz_cap s\<rbrace>

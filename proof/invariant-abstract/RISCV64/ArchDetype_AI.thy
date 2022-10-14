@@ -33,18 +33,35 @@ lemma caps_of_state_ko[Detype_AI_asms]:
                     split: option.splits if_splits)+
   done
 
+lemma insert_collect:
+  "insert (P y) {P x | x. Q x} = {P x | x. Q x \<or> x=y}"
+  by fastforce
+
+lemma Collect_less_Suc_extract:
+  "{P x |x. x < Suc n} = {P x |x. x < n} \<union> {P n}"
+  apply simp
+  apply (subst insert_collect)
+  apply fastforce
+  done
+
 lemma mapM_x_storeWord[Detype_AI_asms]:
 (* FIXME: taken from Retype_C.thy and adapted wrt. the missing intvl syntax. *)
+(* note: the original versionof this is no longer true - storeWord may now fail,
+  if touched_addresses stuff isn't met *)
   assumes al: "is_aligned ptr word_size_bits"
   shows "mapM_x (\<lambda>x. storeWord (ptr + of_nat x * word_size) 0) [0..<n]
-  = modify (underlying_memory_update
-             (\<lambda>m x. if \<exists>k. x = ptr + of_nat k \<and> k < n * word_size then 0 else m x))"
+  = do ta \<leftarrow> gets touched_addresses;
+       assert ({ptr + of_nat x * word_size| x. x<n} \<subseteq> ta);
+       modify (underlying_memory_update
+             (\<lambda>m x. if \<exists>k. x = ptr + of_nat k \<and> k < n * word_size then 0 else m x))
+    od"
 proof (induct n)
   case 0
   thus ?case
     apply (rule ext)
     apply (simp add: mapM_x_mapM mapM_def sequence_def
-                     modify_def get_def put_def bind_def return_def)
+                     modify_def get_def put_def bind_def return_def
+                     simpler_gets_def)
     done
 next
   case (Suc n')
@@ -72,12 +89,19 @@ next
 
   thus ?case
     apply (simp add: mapM_x_append bind_assoc Suc.hyps mapM_x_singleton)
+    apply (rule ext)
     apply (simp add: storeWord_def b assert_def is_aligned_mask modify_modify
-                     comp_def word_size_bits_def)
-    apply (rule arg_cong[where f=modify])
-    apply (rule arg_cong[where f=underlying_memory_update])
-    apply (rule ext, rule ext, rule sym)
-    apply (simp add: x upto0_7_def)
+                     comp_def word_size_bits_def simpler_gets_def 
+                     return_def bind_def simpler_modify_def fail_def)
+    apply (intro conjI; clarsimp)+
+       apply (rule arg_cong2 [where f=underlying_memory_update])
+        apply (rule ext, rule ext, rule sym)
+        apply (simp add: x upto0_7_def)
+       apply (rule refl)
+      apply (case_tac "xb = n'"; fastforce)
+     apply (subst (asm) Collect_less_Suc_extract)
+     apply fastforce
+    apply fastforce
     done
 qed
 

@@ -534,7 +534,7 @@ definition valid_asid_table_2 :: "(asid_high_index \<rightharpoonup> obj_ref) \<
 locale_abbrev valid_asid_table :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_asid_table \<equiv> \<lambda>s. valid_asid_table_2 (asid_table s) (kheap s |> aobj_of |> asid_pool_of)"
 (* Sanity check *)
-lemma valid_asid_table_def2:
+lemma valid_asid_table_def2 [simplified f_kheap_to_kheap]:
   "valid_asid_table \<equiv> \<lambda>s. valid_asid_table_2 (asid_table s) (asid_pools_of False s)"
   by simp
 
@@ -1919,7 +1919,7 @@ lemma a_type_ArchObj[simp]:
   "a_type (ArchObj ao) = AArch (aa_type ao)"
   by (simp add: a_type_aa_type)
 
-lemma typ_at_aobjs:
+lemma typ_at_aobjs [simplified f_kheap_to_kheap]:
   "typ_at (AArch T) p s = (atyps_of s p = Some T)"
   by (auto simp: obj_at_def in_opt_map_eq obind_def ta_filter_def split:option.splits)
 
@@ -2766,7 +2766,7 @@ lemma valid_vs_lookup_update [iff]:
   "valid_vs_lookup (f s) = valid_vs_lookup s"
   by (simp add: valid_vs_lookup_def arch)
 
-lemma valid_table_caps_update [iff]:
+lemma valid_table_caps_update [iff, simplified f_kheap_to_kheap]:
   "valid_table_caps (f s) = valid_table_caps s"
   apply(clarsimp simp:valid_table_caps_def)
   by (simp add: pspace)

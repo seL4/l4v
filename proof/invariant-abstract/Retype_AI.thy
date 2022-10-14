@@ -2201,15 +2201,17 @@ lemma cte_wp_at_irq_state_independent[intro!, simp]:
    = is_final_cap' False x s"
   by (simp add: is_final_cap'_def)
 
-lemma zombies_final_irq_state_independent[intro!, simp]:
+(*note: the next two are [simplified], as they no longer applied
+  automatically without such simplification, I think due to the :=
+  notation being partially unwrapped into _update applications? -scottb *)
+lemma zombies_final_irq_state_independent[intro!, simplified, simp]:
   "zombies_final (s\<lparr>machine_state := machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>)
    = zombies_final s"
   apply (simp add: zombies_final_def)
   (*FIXME: solve without smt *)
   by (smt (z3) Collect_cong cte_wp_at_def is_final_cap'_def machine_state_update.get_cap_update)
 
-
-lemma ex_cte_cap_wp_to_irq_state_independent[intro!, simp]:
+lemma ex_cte_cap_wp_to_irq_state_independent[intro!, simplified, simp]:
   "ex_cte_cap_wp_to x y (s\<lparr>machine_state := machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>)
    = ex_cte_cap_wp_to x y s"
   by (simp add: ex_cte_cap_wp_to_def)
