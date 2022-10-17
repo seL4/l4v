@@ -47,7 +47,7 @@ definition state_vrefs where
      \<Union>{vs_refs_aux lvl ao | lvl ao bot asid vref. vs_lookup_table bot asid vref s = Some (lvl, p)
                                                    \<and> aobjs_of False s p = Some ao \<and> vref \<in> user_region}"
 
-lemma state_vrefsD:
+lemma state_vrefsD[simplified f_kheap_to_kheap]:
   "\<lbrakk> vs_lookup_table level asid vref s = Some (lvl, p);
      aobjs_of False s p = Some ao; vref \<in> user_region; x \<in> vs_refs_aux lvl ao \<rbrakk>
      \<Longrightarrow> x \<in> state_vrefs s p"
