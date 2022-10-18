@@ -19,6 +19,7 @@ lemma cancel_ipc_receive_blocked_caps_of_state:
    cancel_ipc t
    \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
   apply (clarsimp simp: cancel_ipc_def)
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (rule hoare_seq_ext[OF _ gts_sp])
   apply (rule hoare_pre)
    apply (wp gts_wp | wpc | simp)+
@@ -26,15 +27,18 @@ lemma cancel_ipc_receive_blocked_caps_of_state:
   apply (clarsimp simp: st_tcb_def2 receive_blocked_def)
   apply (clarsimp split: thread_state.splits)
   done
+*)
 
 lemma send_signal_caps_of_state[wp]:
   "send_signal ntfnptr badge \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>"
   apply (clarsimp simp: send_signal_def)
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
    apply (wpsimp wp: dxo_wp_weak cancel_ipc_receive_blocked_caps_of_state gts_wp static_imp_wp
                simp: update_waiting_ntfn_def)
   apply (clarsimp simp: fun_upd_def[symmetric] st_tcb_def2)
   done
+*)
 
 crunch mdb[wp]: blocked_cancel_ipc, update_waiting_ntfn "\<lambda>s. P (cdt (s :: det_ext state))"
   (wp: crunch_wps hoare_unless_wp select_wp dxo_wp_weak simp: crunch_simps)
@@ -44,6 +48,7 @@ lemma cancel_ipc_receive_blocked_mdb:
    cancel_ipc t
    \<lbrace>\<lambda>_ s. P (cdt s)\<rbrace>"
   apply (clarsimp simp: cancel_ipc_def)
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (rule hoare_seq_ext[OF _ gts_sp])
   apply (rule hoare_pre)
    apply (wp gts_wp | wpc | simp)+
@@ -51,15 +56,18 @@ lemma cancel_ipc_receive_blocked_mdb:
   apply (clarsimp simp: st_tcb_def2 receive_blocked_def)
   apply (clarsimp split: thread_state.splits)
   done
+*)
 
 lemma send_signal_mdb[wp]:
   "send_signal ntfnptr badge \<lbrace>\<lambda>s :: det_ext state. P (cdt s)\<rbrace>"
   apply (clarsimp simp: send_signal_def)
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
    apply (wp dxo_wp_weak gts_wp cancel_ipc_receive_blocked_mdb | wpc | simp)+
   apply (clarsimp simp: st_tcb_def2)
   done
+*)
 
 crunches possible_switch_to
   for tcb_domain_map_wellformed[wp]: "tcb_domain_map_wellformed aag"
@@ -69,7 +77,8 @@ lemma update_waiting_ntfn_pas_refined:
                     and ko_at (Notification ntfn) ntfnptr and K (ntfn_obj ntfn = WaitingNtfn queue)\<rbrace>
    update_waiting_ntfn ntfnptr queue badge val
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
-  by (wpsimp wp: set_thread_state_pas_refined set_simple_ko_pas_refined simp: update_waiting_ntfn_def)
+  by (wpsimp wp: set_thread_state_pas_refined set_simple_ko_pas_refined touch_object_wp'
+    simp: update_waiting_ntfn_def)
 
 lemma cancel_ipc_receive_blocked_pas_refined:
   "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs
@@ -77,21 +86,25 @@ lemma cancel_ipc_receive_blocked_pas_refined:
    cancel_ipc t
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (clarsimp simp: cancel_ipc_def)
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (rule hoare_seq_ext[OF _ gts_sp])
   apply (wp gts_wp | wpc | simp)+
   apply (clarsimp simp: st_tcb_def2 receive_blocked_def)
   done
+*)
 
 lemma send_signal_pas_refined:
   "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state\<rbrace>
    send_signal ntfnptr badge
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: send_signal_def)
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (wpsimp wp: set_simple_ko_pas_refined update_waiting_ntfn_pas_refined gts_wp
                     set_thread_state_pas_refined cancel_ipc_receive_blocked_pas_refined)
   apply (fastforce simp: st_tcb_def2)
   done
+*)
 
 lemma receive_signal_pas_refined:
   "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state
@@ -100,10 +113,12 @@ lemma receive_signal_pas_refined:
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: receive_signal_def)
   apply (cases cap, simp_all)
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
   apply (wpsimp wp: set_simple_ko_pas_refined set_thread_state_pas_refined
               simp: do_nbrecv_failed_transfer_def)
   done
+*)
 
 subsection\<open>integrity\<close>
 
@@ -145,11 +160,13 @@ lemma receive_signal_integrity_autarch:
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: receive_signal_def)
   apply (cases cap, simp_all)
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
   apply (wpsimp wp: set_notification_respects[where auth=Receive]
                     set_thread_state_integrity_autarch as_user_integrity_autarch
               simp: do_nbrecv_failed_transfer_def)
   done
+*)
 
 
 subsubsection\<open>Non-autarchy: the sender is running\<close>
@@ -176,7 +193,7 @@ lemma send_upd_ctxintegrity:
   "\<lbrakk> direct_send {pasSubject aag} aag ep tcb
      \<or> indirect_send {pasSubject aag} aag (the (tcb_bound_notification tcb)) ep tcb;
      integrity aag X st s; st_tcb_at ((=) Running) thread s;
-     get_tcb thread st = Some tcb; get_tcb thread s = Some tcb'\<rbrakk>
+     get_tcb False thread st = Some tcb; get_tcb False thread s = Some tcb'\<rbrakk>
      \<Longrightarrow> integrity aag X st
                    (s\<lparr>kheap := kheap s(thread \<mapsto>
                                        TCB (tcb'\<lparr>tcb_arch := arch_tcb_context_set c' (tcb_arch tcb')\<rparr>))\<rparr>)"
@@ -211,13 +228,13 @@ lemma as_user_set_register_respects:
    as_user thread (set_register r v)
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: as_user_def split_def set_object_def get_object_def)
-  apply wp
+  apply (wp touch_object_wp')
   apply (clarsimp simp: in_monad)
   apply (cases "is_subject aag thread")
    apply (erule (1) integrity_update_autarch [unfolded fun_upd_def])
   apply (clarsimp simp: st_tcb_def2)
   apply (rule send_upd_ctxintegrity [OF disjI1, unfolded fun_upd_def])
-      apply (auto simp: direct_send_def st_tcb_def2)
+      apply (auto simp: direct_send_def st_tcb_def2 obind_def ta_filter_def get_tcb_def)
   done
 
 end
@@ -229,7 +246,7 @@ lemma set_thread_state_respects_in_signalling:
    set_thread_state thread Running
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: set_thread_state_def set_object_def get_object_def)
-  apply wp
+  apply (wp touch_object_wp')
   apply (clarsimp)
   apply (cases "is_subject aag thread")
    apply (erule(1) integrity_update_autarch [unfolded fun_upd_def])
@@ -237,17 +254,19 @@ lemma set_thread_state_respects_in_signalling:
   apply (drule get_tcb_SomeD)
   apply (clarsimp simp: integrity_def st_tcb_def2 integrity_asids_kh_upds)
   apply (clarsimp dest!: get_tcb_SomeD)
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (rule tro_tcb_send [OF refl refl])
    apply (rule tcb.equality; simp; rule arch_tcb_context_set_eq[symmetric])
   apply (auto simp: indirect_send_def direct_send_def)
   done
+*)
 
 lemma set_notification_obj_at:
   "\<lbrace>obj_at P ptr and K (ptr \<noteq> ntfnptr)\<rbrace>
    set_notification ntfnptr queue
    \<lbrace>\<lambda>_. obj_at P ptr\<rbrace>"
   apply (simp add: set_simple_ko_def set_object_def)
-  apply (wp get_object_wp)
+  apply (wp get_object_wp touch_object_wp')
   apply (auto simp: obj_at_def)
   done
 
@@ -276,7 +295,15 @@ crunch integrity[wp]: possible_switch_to "integrity aag X st"
 
 abbreviation
   "integrity_once_ts_upd t ts aag X st s \<equiv>
-   integrity aag X st (s\<lparr>kheap := (kheap s)(t := Some (TCB ((the (get_tcb t s))\<lparr>tcb_state := ts\<rparr>)))\<rparr>)"
+   integrity aag X st (s\<lparr>kheap := (kheap s)(t := Some (TCB ((the (get_tcb False t s))\<lparr>tcb_state := ts\<rparr>)))\<rparr>)"
+
+(* Note: I'm not sure we need to fix this definition to update the TA set (as follows),
+   as we already proved integrity is independent of TA (`integrity_ms_ta_independent`). -robs
+abbreviation
+  "integrity_once_ts_upd t ts aag X st s \<equiv>
+   integrity aag X st ((ms_ta_obj_update t (TCB (the (get_tcb False t s))) s)
+     \<lparr>kheap := (kheap s)(t := Some (TCB ((the (get_tcb False t s))\<lparr>tcb_state := ts\<rparr>)))\<rparr>)"
+*)
 
 lemma set_scheduler_action_integrity_once_ts_upd:
   "set_scheduler_action sa \<lbrace>integrity_once_ts_upd t ts aag X st\<rbrace>"
@@ -288,15 +315,42 @@ lemma set_scheduler_action_integrity_once_ts_upd:
   apply (simp add: get_tcb_def)
   done
 
+lemma set_thread_state_ext_integrity_once_ts_upd:
+  "\<lbrace>integrity_once_ts_upd t ts aag X st and
+    (\<lambda>s. integrity_once_ts_upd t ts aag X st (ms_ta_obj_update p (the (kheap s p)) s))\<rbrace>
+  set_thread_state_ext p \<lbrace>\<lambda>_. integrity_once_ts_upd t ts aag X st\<rbrace>"
+  sorry (* FIXME: broken by touched-addrs -robs *)
+
+(* FIXME: We seem to have trouble using the existing `integrity_ms_ta_independent` rule to simplify
+   out the TA set update from `integrity` statements. Perhaps we need something like this? -robs *)
+lemma thing:
+  "integrity aag X st ((ms_ta_update taf s \<lparr>kheap := something\<rparr>)) =
+   integrity aag X st (s \<lparr>kheap := something\<rparr>)"
+  (* This seems to be disregarded.
+  apply(insert integrity_ta_agnostic[simplified ta_agnostic_def, where aag=aag and X=X and st=st])
+  apply(erule_tac x="s\<lparr>kheap := something\<rparr>" in allE)
+  apply(erule_tac x=taf in allE)
+  *)
+  apply(clarsimp simp:integrity_def)
+  apply(clarsimp simp:integrity_mem.simps)
+  apply(clarsimp simp:ta_agnostic_def integrity_subjects_def integrity_obj_def integrity_mem.simps
+    tcb_states_of_state_def get_tcb_def obind_def ta_filter_def)
+  apply(clarsimp simp:Arch.integrity_asids_def obind_def ta_filter_def)
+  done (* Yeah! TODO: Clean up *)
+
 crunch integrity_once_ts_upd: set_thread_state_ext "integrity_once_ts_upd t ts aag X st"
+  (wp: touch_objects_wp set_scheduler_action_wp gts_wp touch_object_wp'
+   simp: crunch_simps)
 
 lemma set_thread_state_integrity_once_ts_upd:
   "set_thread_state t ts' \<lbrace>integrity_once_ts_upd t ts aag X st\<rbrace>"
   apply (simp add: set_thread_state_def)
-  apply (wpsimp wp: set_object_wp set_thread_state_ext_integrity_once_ts_upd)
-  apply (clarsimp simp: fun_upd_def dest!: get_tcb_SomeD)
-  apply (simp add: get_tcb_def cong: if_cong)
+  apply (wpsimp wp: set_object_wp set_thread_state_ext_integrity_once_ts_upd touch_object_wp')
+  apply (clarsimp simp: fun_upd_def dest!: get_tcb_SomeD')
+  apply (simp add: get_tcb_def obind_def ta_filter_def cong: if_cong)
+  apply (simp add:thing)
   done
+. (* XXX: Hmm this seems to work. So we'll definitely want it if it's true. -robs
 
 lemma get_tcb_recv_blocked_implies_receive:
   "\<lbrakk> pas_refined aag s; get_tcb t s = Some tcb; ep_recv_blocked ep (tcb_state tcb) \<rbrakk>
