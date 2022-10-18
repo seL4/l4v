@@ -1055,6 +1055,13 @@ lemma integrity_ms_ta_independent[intro!, simp]:
   using integrity_ta_agnostic
   by (simp add: ta_agnostic_def)
 
+(* Alternative version that deals with kheap updates. -robs *)
+lemma integrity_ms_ta_independent'[intro!, simp]:
+  "integrity aag X st ((ms_ta_update taf s \<lparr>kheap := something\<rparr>)) =
+   integrity aag X st (s \<lparr>kheap := something\<rparr>)"
+  by (clarsimp simp:ta_agnostic_def integrity_subjects_def integrity_obj_def integrity_mem.simps
+    Arch.integrity_asids_def tcb_states_of_state_def get_tcb_def obind_def ta_filter_def)
+
 lemma pas_refined_ta_agnostic: "ta_agnostic (pas_refined aag)"
   by (clarsimp simp:ta_agnostic_def pas_refined_def auth_graph_map_def state_objs_to_policy_def)
 
