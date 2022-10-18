@@ -412,19 +412,27 @@ primrec dyn_array_list_rel ::
     = (\<exists>v. h p = Some v \<and> rel a v \<and> dyn_array_list_rel h rel as (p +\<^sub>p 1))"
 
 lemma dyn_array_list_rel_pointwise:
-  "\<lbrakk>dyn_array_list_rel h rel ls p; n < length ls\<rbrakk> \<Longrightarrow> \<exists>v. h (p  +\<^sub>p int n) = Some v \<and> rel (ls ! n) v"
-  apply (induct arbitrary: n p rule: length_induct)
-  apply (rename_tac xs n p)
+  "dyn_array_list_rel h rel ls p = (\<forall>n < length ls. \<exists>v. h (p  +\<^sub>p int n) = Some v \<and> rel (ls ! n) v)"
+  apply (induct arbitrary: p rule: length_induct)
+  apply (rename_tac xs p)
   apply (case_tac xs)
    apply fastforce
+  apply clarsimp
   apply (rename_tac a list)
   apply (drule_tac x=list in spec)
-  apply (case_tac n)
-   apply fastforce
-  by (fastforce simp: ptr_add_def Rings.ring_distribs(2) nat_arith.add1)
+  apply (intro iffI)
+   apply clarsimp
+   apply (case_tac n)
+    apply fastforce
+   apply (fastforce simp: ptr_add_def Rings.ring_distribs(2) nat_arith.add1)
+  apply (frule_tac x=0 in spec)
+  apply clarsimp
+  apply (drule_tac x="n + 1" in spec)
+  apply (fastforce simp: ptr_add_def Rings.ring_distribs(2) nat_arith.add1)
+  done
 
 definition sc_ptr_to_crefill_ptr :: "obj_ref \<Rightarrow> refill_C ptr" where
-  "sc_ptr_to_crefill_ptr p \<equiv> Ptr (p + of_nat sizeof_sched_context_t)"
+  "sc_ptr_to_crefill_ptr p \<equiv> Ptr (p + of_nat (size_of TYPE(sched_context_C)))"
 
 definition refill_buffer_relation ::
   "(obj_ref \<rightharpoonup> kernel_object) \<Rightarrow> heap_raw_state \<Rightarrow> cghost_state \<Rightarrow> bool"
@@ -432,39 +440,46 @@ definition refill_buffer_relation ::
   "refill_buffer_relation ah ch gs \<equiv>
      let abs_sc_hp = map_to_scs ah;
          crefill_hp = clift ch;
-         lens_hp = gs_sc_size gs
+         size_hp = gs_sc_size gs
      in
-       dom abs_sc_hp = dom lens_hp
-       \<and> dom crefill_hp
-          = (\<Union>p\<in>dom abs_sc_hp. set (map (\<lambda>i. sc_ptr_to_crefill_ptr p +\<^sub>p int i) [0..<the (lens_hp p)]))
+       dom crefill_hp =
+       (\<Union>p\<in>dom abs_sc_hp. set (map (\<lambda>i. sc_ptr_to_crefill_ptr p +\<^sub>p int i)
+                                    [0..<length (scRefills (the (abs_sc_hp p)))]))
        \<and> (\<forall>p sc. abs_sc_hp p = Some sc \<longrightarrow>
-                   dyn_array_list_rel crefill_hp crefill_relation (scRefills sc) (sc_ptr_to_crefill_ptr p)
-                   \<and> lens_hp p = Some (length (scRefills sc)))"
+                   dyn_array_list_rel crefill_hp crefill_relation (scRefills sc) (sc_ptr_to_crefill_ptr p))
+       \<and> dom abs_sc_hp = dom size_hp
+       \<and> (\<forall>p sc. abs_sc_hp p = Some sc \<longrightarrow> minSchedContextBits + scSize sc = the (size_hp p))"
 
 lemma refill_buffer_relation_gs_dom:
   "refill_buffer_relation ah ch gs \<Longrightarrow>
    let abs_sc_hp = map_to_scs ah;
-       lens_hp = gs_sc_size gs
-   in dom abs_sc_hp = dom lens_hp"
+       size_hp = gs_sc_size gs
+   in dom abs_sc_hp = dom size_hp"
+  by (simp add: refill_buffer_relation_def Let_def)
+
+lemma refill_buffer_relation_size_eq:
+  "refill_buffer_relation ah ch gs \<Longrightarrow>
+   let abs_sc_hp = map_to_scs ah;
+       size_hp = gs_sc_size gs
+   in \<forall>p sc. abs_sc_hp p = Some sc \<longrightarrow> minSchedContextBits + scSize sc = the (size_hp p)"
   by (simp add: refill_buffer_relation_def Let_def)
 
 lemma refill_buffer_relation_crefill_hp_dom:
   "refill_buffer_relation ah ch gs \<Longrightarrow>
    let abs_sc_hp = map_to_scs ah;
        crefill_hp = clift ch;
-       lens_hp = gs_sc_size gs
+       size_hp = gs_sc_size gs
    in dom crefill_hp
-      = (\<Union>p\<in>dom abs_sc_hp. set (map (\<lambda>i. sc_ptr_to_crefill_ptr p +\<^sub>p int i) [0..<the (lens_hp p)]))"
+      = (\<Union>p\<in>dom abs_sc_hp. set (map (\<lambda>i. sc_ptr_to_crefill_ptr p +\<^sub>p int i)
+                                     [0..<length (scRefills (the (abs_sc_hp p)))]))"
   by (simp add: refill_buffer_relation_def Let_def)
 
 lemma refill_buffer_relation_crefill_relation:
   "refill_buffer_relation ah ch gs \<Longrightarrow>
    let abs_sc_hp = map_to_scs ah;
-       crefill_hp = clift ch;
-       lens_hp = gs_sc_size gs
+       crefill_hp = clift ch
    in (\<forall>p sc. abs_sc_hp p = Some sc \<longrightarrow>
-               dyn_array_list_rel crefill_hp crefill_relation (scRefills sc) (sc_ptr_to_crefill_ptr p)
-              \<and> lens_hp p = Some (length (scRefills sc)))"
+               dyn_array_list_rel crefill_hp crefill_relation (scRefills sc) (sc_ptr_to_crefill_ptr p))"
   by (simp add: refill_buffer_relation_def Let_def)
 
 definition creply_relation :: "Structures_H.reply \<Rightarrow> reply_C \<Rightarrow> bool" where
