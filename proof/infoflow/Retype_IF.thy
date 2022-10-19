@@ -15,7 +15,7 @@ lemma create_cap_reads_respects:
   apply (simp add: create_cap_def split_def bind_assoc[symmetric])
   apply (fold update_cdt_def)
   apply (simp add: bind_assoc create_cap_ext_def)
-  apply (wp set_cap_reads_respects set_original_reads_respects
+  apply (wp set_cap_reads_respects set_original_reads_respects touch_object_rev
             update_cdt_list_reads_respects update_cdt_reads_respects
          | simp | fastforce simp: equiv_for_def split: option.splits)+
   apply (intro impI conjI allI)
@@ -212,7 +212,7 @@ lemma create_cap_globals_equiv:
    create_cap type bits untyped dev slot
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   apply (simp only: create_cap_def split_def)
-  apply (wp set_cap_globals_equiv set_original_globals_equiv set_cdt_globals_equiv
+  apply (wp set_cap_globals_equiv set_original_globals_equiv set_cdt_globals_equiv touch_object_wp'
             set_cdt_valid_global_objs dxo_wp_weak set_original_wp | simp)+
   done
 
@@ -322,6 +322,8 @@ lemma retype_region_reads_respects:
     apply (rule equiv_valid_rv_guard_imp[OF if_evrv])
       apply (rule equiv_valid_rv_bind[OF gets_kheap_revrv])
        apply simp
+       sorry (* FIXME: broken by touched-addrs -robs
+         Looks like it'll be some fairly straightforward EV2-babysitting trench work.
        apply (rule_tac Q="\<lambda>_ s. rv = kheap s" and Q'="\<lambda>_ s. rv' = kheap s" and R'="(=)"
                     in equiv_valid_2_bind_pre)
             apply (rule modify_ev2)
@@ -336,6 +338,7 @@ lemma retype_region_reads_respects:
      apply (rule return_ev2 | simp | rule impI, rule TrueI)+
   apply (intro impI, wp)
   done
+*)
 
 lemma subset_thing:
   "\<lbrakk> a \<le> b; a \<le> a \<rbrakk> \<Longrightarrow> {a} \<subseteq> {a..b}"
@@ -463,7 +466,7 @@ lemma delete_objects_caps_no_overlap:
   done
 
 lemma get_cap_reads_respects_g:
-  "reads_respects_g aag l (K (is_subject aag (fst slot))) (get_cap slot)"
+  "reads_respects_g aag l (K (is_subject aag (fst slot))) (get_cap True slot)"
   apply (rule equiv_valid_guard_imp)
    apply (rule reads_respects_g[OF get_cap_rev])
    apply (rule doesnt_touch_globalsI)

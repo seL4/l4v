@@ -429,6 +429,11 @@ begin
 crunch globals_equiv[wp]: set_untyped_cap_as_full "globals_equiv st"
   (wp: touch_object_wp')
 
+(* FIXME: Move back as far as possible; arch-split out the RISCV64-specific references. -robs *)
+lemma globals_equiv_ms_ta_independent[intro!, simp]:
+  "globals_equiv s (ms_ta_update taf sa) = globals_equiv s sa"
+  by (clarsimp simp:globals_equiv_def RISCV64.arch_globals_equiv_def idle_equiv_def)
+
 lemma cap_insert_globals_equiv:
   "\<lbrace>globals_equiv s and valid_global_objs and valid_arch_state\<rbrace>
    cap_insert new_cap src_slot dest_slot
@@ -437,21 +442,21 @@ lemma cap_insert_globals_equiv:
   by (wpsimp wp: update_cdt_globals_equiv set_original_globals_equiv touch_object_wp'
                  set_cap_globals_equiv hoare_drop_imps dxo_wp_weak)
 
-. (* XXX: DOWN TO HERE
-
 lemma cap_move_globals_equiv:
   "\<lbrace>globals_equiv s and valid_global_objs and valid_arch_state\<rbrace>
    cap_move new_cap src_slot dest_slot
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding cap_move_def fun_app_def
-  by (wpsimp wp: set_original_globals_equiv set_cdt_globals_equiv set_cap_globals_equiv dxo_wp_weak)
+  by (wpsimp wp: set_original_globals_equiv set_cdt_globals_equiv set_cap_globals_equiv dxo_wp_weak
+    touch_objects_wp)
 
 lemma cap_swap_globals_equiv:
   "\<lbrace>globals_equiv s and valid_global_objs and valid_arch_state\<rbrace>
    cap_swap cap1 slot1 cap2 slot2
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding cap_swap_def
-  by (wpsimp wp: set_original_globals_equiv set_cdt_globals_equiv set_cap_globals_equiv dxo_wp_weak)
+  by (wpsimp wp: set_original_globals_equiv set_cdt_globals_equiv set_cap_globals_equiv dxo_wp_weak
+    touch_objects_wp)
 
 definition is_irq_at :: "('z::state_ext) state \<Rightarrow> irq \<Rightarrow> nat \<Rightarrow> bool" where
   "is_irq_at s \<equiv> \<lambda>irq pos. irq_at pos (irq_masks (machine_state s)) = Some irq"
