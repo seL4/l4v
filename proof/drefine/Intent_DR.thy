@@ -344,27 +344,24 @@ lemma set_message_info_corres:
   apply (erule set_cxt_none_det_intent_corres)
    apply (clarsimp simp: valid_def get_tcb_def lift_simp not_idle_thread_def transform_tcb_def
                    split: option.splits Structures_A.kernel_object.splits)+
-done
+  done
 
 lemma corrupt_tcb_intent_as_user_corres:
-  "dcorres dc \<top> (valid_idle and not_idle_thread y and valid_etcbs) (corrupt_tcb_intent y)
-      (as_user y t)"
+  "dcorres dc \<top> (valid_idle and not_idle_thread y and valid_etcbs)
+     (corrupt_tcb_intent y) (as_user y t)"
   apply (clarsimp simp:as_user_def)
   apply (rule dcorres_absorb_gets_the)
   apply (clarsimp simp:get_tcb_def arch_tcb_update_aux3
                   split:option.splits Structures_A.kernel_object.splits)
   apply (rule corres_symb_exec_r)
-    apply clarsimp
-    apply (rule corres_dummy_return_l)
-    apply (rule corres_underlying_split)
+     apply clarsimp
+     apply (rule corres_dummy_return_l)
+     apply (rule corres_underlying_split)
         apply (drule(1) valid_etcbs_tcb_etcb)
-   apply (rule corres_guard_imp,erule set_cxt_none_det_intent_corres)
-     apply simp+
-   prefer 3
-   apply clarify
-   apply (rule corres_free_return[where P=\<top> and P'=\<top>])
-   apply (wp | simp)+
-done
+        apply (rule set_cxt_none_det_intent_corres; simp)
+       apply (rule corres_return_trivial)
+      apply wpsimp+
+  done
 
 lemmas set_register_corres = corrupt_tcb_intent_as_user_corres
 
@@ -415,14 +412,14 @@ lemma set_registers_corres:
   apply (clarsimp simp:mapM_def)
   apply (subst duplicate_corrupt_tcb_intent[symmetric])
   apply (clarsimp simp:sequence_def)
-  apply (rule_tac P'="%r. tcb_at y and valid_idle and not_idle_thread y and valid_etcbs"
-                  in corres_underlying_split [where P="%r. \<top>"])
+  apply (rule_tac Q'="%r. tcb_at y and valid_idle and not_idle_thread y and valid_etcbs"
+                  in corres_split_forwards' [where Q="%r. \<top>"])
      apply (rule corres_symb_exec_r)
         apply (rule set_register_corres)
        apply (wp|simp)+
   apply (simp add:bind_assoc dc_def[symmetric])
   apply (rule corres_dummy_return_l)
-  apply (rule corres_underlying_split [where r'="dc" and P="%x. \<top>" and P'="%x. \<top>"])
+  apply (rule corres_split_forwards' [where r'="dc" and Q="%x. \<top>" and Q'="%x. \<top>"])
      apply (rule corres_guard_imp)
        apply simp+
   done
@@ -433,7 +430,7 @@ lemma set_mrs_corres_no_recv_buffer:
   apply (rule dcorres_absorb_gets_the, clarsimp)
   apply (drule(1) valid_etcbs_get_tcb_get_etcb)
   apply (rule corres_dummy_return_l)
-  apply (rule corres_underlying_split [where P'="%x. \<top>" and P="%x. \<top>"])
+  apply (rule corres_split_forwards' [where Q'="%x. \<top>" and Q="%x. \<top>"])
      apply (rule set_cxt_none_det_intent_corres)
         apply (simp add:get_tcb_def get_etcb_def
                   split:option.splits Structures_A.kernel_object.splits
@@ -1804,31 +1801,31 @@ lemma zip_cpy_word_corres:
      apply (subst corrupt_frame_duplicate[symmetric])
      apply (rule corres_guard_imp)
        apply (clarsimp simp:mapM_Cons)
-       apply (rule corres_split_deprecated)
-          apply (rule corres_dummy_return_l)
-          apply (rule corres_split_deprecated)
-             apply (rule corres_free_return[where P = \<top> and P'=\<top> ])
+       apply (rule corres_split)
+          apply (rule corres_symb_exec_r)
+             apply (simp add: store_word_offs_def bind_assoc[symmetric]
+                              state_assert_def[symmetric])
+             apply (rule corres_state_assert)
+              apply (rule_tac s_id = s_id and sz = sz in store_word_corres)
+              using Cons.prems
+              apply simp
+             using Cons.prems
+             apply (clarsimp simp: within_page_def in_user_frame_def)
+             apply (thin_tac "Ball S P" for S P)
+             apply (rule_tac x=sz in exI)
+             apply (frule (2) ipc_frame_ptr_at_frame_at)
+             apply (simp add: obj_at_def a_type_simps)
+            apply wp+
+          apply clarsimp+
+         apply (rule corres_dummy_return_l)
+         apply (rule corres_split)
             apply (rule Cons.hyps)
             using Cons
             apply clarsimp
-           apply wp+
-         apply (rule corres_symb_exec_r)
-            apply (simp add: store_word_offs_def bind_assoc[symmetric]
-                             state_assert_def[symmetric])
-            apply (rule corres_state_assert)
-             apply (rule_tac s_id = s_id and sz = sz in store_word_corres)
-             using Cons.prems
-             apply simp
-            using Cons.prems
-            apply (clarsimp simp: within_page_def in_user_frame_def)
-            apply (thin_tac "Ball S P" for S P)
-            apply (rule_tac x=sz in exI)
-            apply (frule (2) ipc_frame_ptr_at_frame_at)
-            apply (simp add: obj_at_def a_type_simps)
-           apply wp+
-         apply clarsimp+
-       apply (wp store_word_offs_ipc_frame_wp)
-      by (fastforce simp:ipc_frame_wp_at_def)+
+           apply (rule corres_free_return[where P = \<top> and P'=\<top> ])
+          apply wp+
+        apply (wp store_word_offs_ipc_frame_wp)+
+     by (fastforce simp:ipc_frame_wp_at_def)+
  qed
 
 lemma zip_store_word_corres:
@@ -1852,20 +1849,20 @@ lemma zip_store_word_corres:
   apply clarify
   apply (subst corrupt_frame_duplicate[symmetric])
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [where P="\<top>" and r'="dc"])
-       apply clarsimp
-       apply (drule allI)
-       apply (drule_tac x = list in spec)
-       apply simp
-      apply (clarsimp simp:store_word_offs_def)
-      apply (simp add: store_word_offs_def bind_assoc[symmetric] state_assert_def[symmetric])
-      apply (rule corres_state_assert)
-       apply (rule_tac s_id = s_id and sz = sz in store_word_corres)
-       apply simp
-      apply (clarsimp simp: within_page_def in_user_frame_def)
-      apply (rule_tac x=sz in exI)
-      apply (frule (2) ipc_frame_ptr_at_frame_at)
-      apply (simp add: obj_at_def a_type_simps)
+    apply (rule corres_split[where P="\<top>" and r'="dc"])
+       apply (clarsimp simp:store_word_offs_def)
+       apply (simp add: store_word_offs_def bind_assoc[symmetric] state_assert_def[symmetric])
+       apply (rule corres_state_assert)
+        apply (rule_tac s_id = s_id and sz = sz in store_word_corres)
+        apply simp
+       apply (clarsimp simp: within_page_def in_user_frame_def)
+       apply (rule_tac x=sz in exI)
+       apply (frule (2) ipc_frame_ptr_at_frame_at)
+       apply (simp add: obj_at_def a_type_simps)
+      apply clarsimp
+      apply (drule allI)
+      apply (drule_tac x = list in spec)
+      apply simp
      apply (wp store_word_offs_ipc_frame_wp)+
    apply clarsimp+
   done
@@ -1958,22 +1955,23 @@ lemma set_mrs_corres:
    (valid_idle and valid_objs and pspace_aligned and pspace_distinct and not_idle_thread y
      and ipc_frame_ptr_at buf y and ipc_frame_sz_at sz y and ipc_buffer_wp_at bptr y and valid_etcbs)
    (do corrupt_tcb_intent y;corrupt_frame buf od)
-             (set_mrs y (Some (buf + (bptr && mask (pageBitsForSize sz)))) b)"
+   (set_mrs y (Some (buf + (bptr && mask (pageBitsForSize sz)))) b)"
   apply (simp add:set_mrs_def arch_tcb_update_aux3 arch_tcb_set_registers_def del:upt.simps)
   apply (rule dcorres_absorb_gets_the)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [where r'=dc])
-       apply (rule corres_dummy_return_l)
-       apply (rule corres_split_deprecated [where r'=dc and R'="%x. \<top>" and R="%x. \<top>"])
-          apply (rule corres_free_return)
+    apply (rule corres_split [where r'=dc])
+       apply (clarsimp, drule(1) valid_etcbs_get_tcb_get_etcb)
+       apply (rule_tac s'=s' in set_cxt_none_det_intent_corres; clarsimp)
+        apply (clarsimp dest!: get_tcb_SomeD)
+       apply (clarsimp dest!: get_etcb_SomeD)
+      apply (rule corres_dummy_return_l)
+      apply (rule corres_split[where r'=dc and R'="%x. \<top>" and R="%x. \<top>"])
          apply (rule_tac s_id = y and sz = sz in zip_store_word_corres)
          apply (clarsimp simp del:upt.simps)
          apply (rule within_page_ipc_buf)
                apply ((simp add:msg_align_bits msg_max_length_def)+)[7]
-        apply wp+
-      apply (clarsimp, drule(1) valid_etcbs_get_tcb_get_etcb)
-      apply (rule_tac s'=s' in set_cxt_none_det_intent_corres)
-         apply (clarsimp dest!:get_tcb_SomeD get_etcb_SomeD)+
+        apply (rule corres_free_return)
+       apply wp+
     apply (wp set_object_valid_etcbs)
    apply (simp del:upt.simps)
   apply (auto dest!:get_tcb_SomeD simp:obj_at_def ipc_frame_wp_at_def)
@@ -2021,17 +2019,17 @@ lemma copy_mrs_corres:
   apply (simp add:copy_mrs_def del:upt.simps)
   apply (rule dcorres_expand_pfx)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [where r'="dc"])
-       apply (wpc)
-        apply (rule corres_dummy_return_l)
-        apply (rule corres_split_deprecated [where r'="dc"])
-           apply (rule corres_free_return[where P="\<top>" and P'="\<top>"])
-          apply (rule dcorres_dummy_corrupt_frame)
-         apply wp
-        apply (clarify,simp del:upt.simps )
+    apply (rule corres_split[where r'="dc"])
+       apply (rule set_registers_corres)
+      apply (wpc)
        apply (rule corres_dummy_return_l)
-       apply (rule corres_split_deprecated[where r'="dc"])
-          apply (rule corres_free_return[where P="\<top>" and P'="\<top>"])
+       apply (rule corres_split[where r'="dc"])
+          apply (rule dcorres_dummy_corrupt_frame)
+         apply (rule corres_free_return[where P="\<top>" and P'="\<top>"])
+        apply wp
+       apply (clarify,simp del:upt.simps )
+      apply (rule corres_dummy_return_l)
+      apply (rule corres_split[where r'="dc"])
          apply (rule_tac s_id = y and sz = sz in zip_cpy_word_corres)
          apply (clarsimp simp del:upt.simps)
          apply (rule within_page_ipc_buf)
@@ -2042,8 +2040,8 @@ lemma copy_mrs_corres:
           apply (rule iffD2[OF Suc_le_mono])
           apply (erule iffD1[OF word_le_nat_alt])
          apply simp
-        apply wp+
-      apply (rule set_registers_corres)
+        apply (rule corres_free_return[where P="\<top>" and P'="\<top>"])
+       apply wp+
      apply ((clarsimp|wp)+)[1]
     apply (rule mapM_wp_inv)
     apply (case_tac rv)
@@ -2177,10 +2175,10 @@ lemma dcorres_store_word_conservative:
    apply (rule corres_dummy_return_pl[where b="()"])
    apply (rule corres_dummy_return_r)
    apply (rule corres_guard_imp)
-     apply (rule corres_split_deprecated[where r'=dc])
-        apply simp
-        apply (rule dcorres_dummy_corrupt_frame)
-       apply (erule dcorres_store_word_safe)
+     apply (rule corres_split[where r'=dc])
+        apply (erule dcorres_store_word_safe)
+       apply simp
+       apply (rule dcorres_dummy_corrupt_frame)
       apply wp+
     apply simp
    apply simp

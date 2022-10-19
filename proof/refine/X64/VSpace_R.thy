@@ -116,20 +116,18 @@ lemma handleVMFault_corres:
   apply (simp add: X64_H.handleVMFault_def handle_vm_fault_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqrE)
-       apply (rule corres_split_eqrE)
-          apply (cases fault; simp)
+       apply simp
+       apply (rule corres_machine_op [where r="(=)"])
+       apply (rule corres_Id, rule refl, simp)
+       apply (rule no_fail_getFaultAddress)
+      apply (rule corres_split_eqrE)
          apply simp
          apply (rule asUser_getRegister_corres)
-        apply (simp, wp as_user_typ_at)
-       apply (simp, wp asUser_typ_ats)
-      apply simp
-      apply (rule corres_machine_op [where r="(=)"])
-      apply (rule corres_Id, rule refl, simp)
-      apply (rule no_fail_getFaultAddress)
+        apply (cases fault; simp)
+       apply (simp, wp as_user_typ_at)
+      apply (simp, wp asUser_typ_ats)
      apply wpsimp+
   done
-
-crunch valid_global_objs[wp]: do_machine_op "valid_global_objs"
 
 lemma set_current_cr3_corres [corres]:
   "cr3_relation c c' \<Longrightarrow> corres dc \<top> \<top> (set_current_cr3 c) (setCurrentUserCR3 c')"
@@ -165,10 +163,10 @@ proof -
                      make_cr3_def makeCR3_def)
     apply (rule corres_guard_imp)
       apply (rule corres_split_eqr)
-         apply (rule set_current_cr3_corres,
-                simp add: cr3_relation_def cr3_addr_mask_def addrFromKPPtr_def bit_simps)
-        apply (subst corres_gets)
-        apply (clarsimp simp: state_relation_def arch_state_relation_def)
+         apply (subst corres_gets)
+         apply (clarsimp simp: state_relation_def arch_state_relation_def)
+        apply (rule set_current_cr3_corres,
+               simp add: cr3_relation_def cr3_addr_mask_def addrFromKPPtr_def bit_simps)
        apply (wp | simp)+
     done
   have Q: "\<And>P P'. corres dc P P'
@@ -182,8 +180,8 @@ proof -
                od))"
     apply (rule corres_guard_imp)
       apply (rule corres_split_catch [where f=lfr])
-         apply (simp, rule P)
-        apply (subst corres_throwError, simp add: lookup_failure_map_def)
+         apply (subst corres_throwError, simp add: lookup_failure_map_def)
+        apply (simp, rule P)
        apply (wp | simp)+
     done
   show ?thesis
@@ -191,7 +189,7 @@ proof -
               catchFailure_def withoutFailure_def throw_def
               make_cr3_def makeCR3_def
     apply (rule corres_guard_imp)
-      apply (rule corres_split' [where r'="(=) \<circ> cte_map"])
+      apply (rule corres_underlying_split [where r'="(=) \<circ> cte_map"])
          apply (simp add: tcbVTableSlot_def cte_map_def objBits_def cte_level_bits_def
                           objBitsKO_def tcb_cnode_index_def to_bl_1 assms)
         apply (rule_tac R="\<lambda>thread_root. valid_arch_state and
@@ -201,35 +199,35 @@ proof -
                                          pspace_aligned and pspace_distinct and
                                          cte_wp_at ((=) thread_root) thread_root_slot"
                     and R'="\<lambda>thread_root. pspace_aligned' and pspace_distinct' and no_0_obj'"
-                 in corres_split_deprecated [OF _ getSlotCap_corres])
-           apply (case_tac rv; simp add: isCap_simps Q[simplified])
-           apply (rename_tac arch_cap)
-           apply (case_tac arch_cap; simp add: isCap_simps Q[simplified])
-           apply (rename_tac pm_ptr pm_mapped)
-           apply (case_tac pm_mapped; simp add: Q[simplified])
-           apply (clarsimp simp: cap_asid_def)
-           apply (rule corres_guard_imp)
-             apply (rule corres_split_catch [where f=lfr, OF P _ wp_post_tautE wp_post_tautE])
-             apply (rule corres_split_eqrE [OF _ findVSpaceForASID_corres[OF refl]])
-               apply (rule whenE_throwError_corres; simp add: lookup_failure_map_def)
-               apply (simp only: liftE_bindE)
-               apply (rule corres_split'[OF get_current_cr3_corres])
-                 apply (rule corres_whenE[OF _ _ dc_simp])
-                  apply (case_tac cur_cr3; case_tac curCR3; clarsimp simp: cr3_relation_def cr3_addr_mask_def)
-                 apply (rule iffD2[OF corres_liftE_rel_sum, OF set_current_cr3_corres])
-                 apply (simp add: cr3_relation_def cr3_addr_mask_def)
-                apply wp
-               apply wpsimp
-              apply simp
-              apply wp
+                 in corres_split[OF getSlotCap_corres])
+           apply simp
+          apply (case_tac rv; simp add: isCap_simps Q[simplified])
+          apply (rename_tac arch_cap)
+          apply (case_tac arch_cap; simp add: isCap_simps Q[simplified])
+          apply (rename_tac pm_ptr pm_mapped)
+          apply (case_tac pm_mapped; simp add: Q[simplified])
+          apply (clarsimp simp: cap_asid_def)
+          apply (rule corres_guard_imp)
+            apply (rule corres_split_catch [where f=lfr, OF _ P wp_post_tautE wp_post_tautE])
+            apply (rule corres_split_eqrE[OF findVSpaceForASID_corres[OF refl]])
+              apply (rule whenE_throwError_corres; simp add: lookup_failure_map_def)
+              apply (simp only: liftE_bindE)
+              apply (rule corres_underlying_split[OF get_current_cr3_corres])
+                apply (rule corres_whenE[OF _ _ dc_simp])
+                 apply (case_tac cur_cr3; case_tac curCR3; clarsimp simp: cr3_relation_def cr3_addr_mask_def)
+                apply (rule iffD2[OF corres_liftE_rel_sum, OF set_current_cr3_corres])
+                apply (simp add: cr3_relation_def cr3_addr_mask_def)
+               apply wp
+              apply wpsimp
              apply simp
              apply wp
-            apply clarsimp
-            apply (frule (1) cte_wp_at_valid_objs_valid_cap)
-            apply (clarsimp simp: valid_cap_def mask_def word_neq_0_conv asid_wf_def asid_bits_def)
-            apply (fastforce simp: valid_cap_def mask_def word_neq_0_conv)
-           apply simp
-          apply wpsimp
+            apply simp
+            apply wp
+           apply clarsimp
+           apply (frule (1) cte_wp_at_valid_objs_valid_cap)
+           apply (clarsimp simp: valid_cap_def mask_def word_neq_0_conv asid_wf_def asid_bits_def)
+          apply (fastforce simp: valid_cap_def mask_def word_neq_0_conv)
+         apply wpsimp
          apply (wpsimp wp: get_cap_wp)
         apply wp
        apply wp
@@ -300,7 +298,7 @@ lemma deleteASID_corres [corres]:
   using assms
   apply (simp add: delete_asid_def deleteASID_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ corres_gets_asid])
+    apply (rule corres_split[OF corres_gets_asid])
       apply (case_tac "asid_table (asid_high_bits_of asid)", simp)
       apply clarsimp
       apply (rule_tac P="\<lambda>s. asid_high_bits_of asid \<in> dom (asidTable o ucast) \<longrightarrow>
@@ -308,33 +306,32 @@ lemma deleteASID_corres [corres]:
                       P'="pspace_aligned' and pspace_distinct'" and
                       Q="invs and valid_etcbs and K (asid_wf asid \<and> asid \<noteq> 0) and
                          (\<lambda>s. x64_asid_table (arch_state s) = asidTable \<circ> ucast)" in
-                      corres_split_deprecated)
-         prefer 2
+                      corres_split)
          apply (simp add: dom_def)
          apply (rule get_asid_pool_corres_inv'[OF refl])
         apply (rule corres_when, simp add: mask_asid_low_bits_ucast_ucast asid_low_bits_of_def)
-        apply (rule corres_split_deprecated [OF _ hwASIDInvalidate_corres[where pm=pm]])
-            apply (rule_tac P="asid_pool_at (the (asidTable (ucast (asid_high_bits_of asid))))
-                               and valid_etcbs"
-                        and P'="pspace_aligned' and pspace_distinct'"
-                         in corres_split_deprecated)
-               prefer 2
-               apply (simp del: fun_upd_apply)
-               apply (rule setObject_ASIDPool_corres')
-               apply (simp add: inv_def mask_asid_low_bits_ucast_ucast)
-               apply (rule ext)
-               apply (clarsimp simp: o_def)
-              apply (rule corres_split_deprecated [OF _ getCurThread_corres])
-                apply simp
-                apply (rule setVMRoot_corres[OF refl])
-               apply wp+
-             apply (thin_tac "x = f o g" for x f g)
+        apply (rule corres_split)
+           apply (rule hwASIDInvalidate_corres[where pm=pm]; simp)
+          apply (rule_tac P="asid_pool_at (the (asidTable (ucast (asid_high_bits_of asid))))
+                             and valid_etcbs"
+                      and P'="pspace_aligned' and pspace_distinct'"
+                       in corres_split)
              apply (simp del: fun_upd_apply)
-             apply (fold cur_tcb_def)
+             apply (rule setObject_ASIDPool_corres')
+             apply (simp add: inv_def mask_asid_low_bits_ucast_ucast)
+             apply (rule ext)
+             apply (clarsimp simp: o_def)
+            apply (rule corres_split[OF getCurThread_corres])
+              apply simp
+              apply (rule setVMRoot_corres[OF refl])
+             apply wp+
+           apply (thin_tac "x = f o g" for x f g)
+           apply (simp del: fun_upd_apply)
+           apply (fold cur_tcb_def)
            apply (wp set_asid_pool_vs_lookup_unmap'
                      set_asid_pool_vspace_objs_unmap_single)+
           apply simp
-            apply (fold cur_tcb'_def)
+          apply (fold cur_tcb'_def)
           apply (wp | clarsimp simp: o_def)+
        apply (subgoal_tac "vspace_at_asid asid pm s")
         apply (auto simp: obj_at_def a_type_def graph_of_def
@@ -387,13 +384,12 @@ lemma deleteASIDPool_corres:
   apply (rule corres_assume_pre, simp add: is_aligned_asid_low_bits_of_zero cong: corres_weak_cong)
   apply (thin_tac P for P)+
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ corres_gets_asid])
+    apply (rule corres_split[OF corres_gets_asid])
       apply (rule corres_when)
        apply simp
       apply (simp add: liftM_def)
-      apply (rule corres_split_deprecated [OF _ getObject_ASIDPool_corres'[OF refl]])
-        apply (rule corres_split_deprecated)
-           prefer 2
+      apply (rule corres_split[OF getObject_ASIDPool_corres'[OF refl]])
+        apply (rule corres_split)
            apply (rule corres_mapM [where r=dc and r'=dc], simp, simp)
                prefer 5
                apply (rule order_refl)
@@ -411,8 +407,7 @@ lemma deleteASIDPool_corres:
               apply simp
              apply clarsimp
              apply ((wp|clarsimp simp: o_def)+)[3]
-          apply (rule corres_split_deprecated)
-             prefer 2
+          apply (rule corres_split)
              apply (rule corres_modify [where P=\<top> and P'=\<top>])
              apply (simp add: state_relation_def arch_state_relation_def)
              apply (rule ext)
@@ -422,8 +417,7 @@ lemma deleteASIDPool_corres:
              apply (drule_tac x1="ucast xa" in bang_eq [THEN iffD1])
              apply (erule_tac x=n in allE)
              apply (simp add: word_size nth_ucast)
-            apply (rule corres_split_deprecated)
-               prefer 2
+            apply (rule corres_split)
                apply (rule getCurThread_corres)
               apply (simp only:)
               apply (rule setVMRoot_corres[OF refl])
@@ -504,13 +498,13 @@ lemma flushTable_corres:
          apply (frule zip_map_rel[where f=ucast and g=id, simplified])
           apply (simp add: upto_enum_def bit_simps take_bit_nat_eq_self unsigned_of_nat)
          apply (rule corres_guard_imp)
-           apply (rule corres_split_deprecated[OF _ getObject_PTE_corres''])
-              apply (case_tac rv; case_tac rv'; simp)
-              apply (rule corres_machine_op)
-              apply (subgoal_tac "ucast x = y"; simp)
-              apply (rule corres_rel_imp[OF corres_underlying_trivial]; simp)
-              apply (wpsimp simp: invalidateTranslationSingleASID_def)
-             apply (simp add: bit_simps objBits_simps archObjSize_def)
+           apply (rule corres_split[OF getObject_PTE_corres''])
+              apply (simp add: bit_simps objBits_simps archObjSize_def)
+             apply (case_tac rv; case_tac rv'; simp)
+             apply (rule corres_machine_op)
+             apply (subgoal_tac "ucast x = y"; simp)
+             apply (rule corres_rel_imp[OF corres_underlying_trivial]; simp)
+             apply (wpsimp simp: invalidateTranslationSingleASID_def)
             apply (wpsimp)+
           apply (rule page_table_pte_atI; simp add: bit_simps ucast_less[where 'b=9, simplified])
          apply simp
@@ -577,21 +571,20 @@ lemma unmapPageTable_corres:
           (unmapPageTable asid' vptr' pt')"
   apply (clarsimp simp: assms unmap_page_table_def unmapPageTable_def ignoreFailure_def const_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_catch[where E="\<top>\<top>" and E'="\<top>\<top>"], simp)
-      apply (rule corres_split_eqrE[OF _ findVSpaceForASID_corres[OF refl]])
-        apply (rule corres_split_eqrE[OF _ lookupPDSlot_corres])
-          apply (rule corres_splitEE[OF _ liftE_get_pde_corres])
+    apply (rule corres_split_catch[where E="\<top>\<top>" and E'="\<top>\<top>", OF _ corres_return_trivial])
+      apply (rule corres_split_eqrE[OF findVSpaceForASID_corres[OF refl]])
+        apply (rule corres_split_eqrE[OF lookupPDSlot_corres])
+          apply (rule corres_splitEE[OF liftE_get_pde_corres])
             apply (rule corres_splitEE[where r'=dc])
-               prefer 2
                apply (case_tac "\<exists>addr x xa. pde = X64_A.PageTablePDE addr x xa";
                       fastforce intro!: corres_returnOkTT
                                 simp: lookup_failure_map_def pde_relation_def
                                 split: X64_A.pde.splits)
               apply simp
-              apply (rule corres_split_deprecated[OF _ flushTable_corres[OF refl refl refl refl]])
-                apply (rule corres_split_deprecated[OF _ storePDE_corres'])
-                   apply (rule invalidatePageStructureCacheASID_corres)
-                  apply simp
+              apply (rule corres_split[OF flushTable_corres[OF refl refl refl refl]])
+                apply (rule corres_split[OF storePDE_corres'])
+                   apply simp
+                  apply (rule invalidatePageStructureCacheASID_corres)
                  apply ((wpsimp wp: hoare_if get_pde_wp getPDE_wp)+)[8]
          apply ((wpsimp wp: lookup_pd_slot_wp hoare_vcg_all_lift_R | wp (once) hoare_drop_imps)+)[2]
        apply ((wp find_vspace_for_asid_wp)+)[4]
@@ -613,9 +606,9 @@ lemma corres_split_strengthen_ftE:
       \<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>,-; \<lbrace>Q'\<rbrace> j \<lbrace>R'\<rbrace>,- \<rbrakk>
     \<Longrightarrow> corres (dc \<oplus> r) (P and Q) (P' and Q') (f >>=E (\<lambda>rv. g rv)) (j >>=E (\<lambda>rv'. k rv'))"
   apply (rule_tac r'=r' in corres_splitEE)
-     apply (rule corres_rel_imp, assumption)
+     apply (erule corres_rel_imp)
      apply (case_tac x, auto)[1]
-    apply (erule corres_rel_imp)
+    apply (rule corres_rel_imp, assumption)
     apply (case_tac x, auto)[1]
    apply (simp add: validE_R_def)+
   done
@@ -661,63 +654,66 @@ lemma unmapPage_corres:
                    (unmapPage sz' asid' vptr' pptr')"
   apply (clarsimp simp: assms unmap_page_def unmapPage_def ignoreFailure_def const_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_catch[where E="\<top>\<top>" and E'="\<top>\<top>"], simp)
+    apply (rule corres_split_catch[where E="\<top>\<top>" and E'="\<top>\<top>", OF _ corres_return_trivial])
       apply (rule corres_split_strengthen_ftE[where ftr'=dc])
          apply (rule findVSpaceForASID_corres[OF refl])
         apply (rule corres_splitEE)
-           apply (clarsimp simp: ucast_id)
-           apply (rule corres_machine_op, rule corres_Id, rule refl, simp)
-           apply (rule no_fail_invalidateTranslationSingleASID)
-          apply (rule_tac F = "vptr < pptr_base" in corres_gen_asm)
-          apply (rule_tac P="\<exists>\<rhd> vspace and page_map_l4_at vspace and vspace_at_asid asid vspace
-                             and (\<exists>\<rhd> vspace)
-                             and valid_arch_state and valid_vspace_objs
-                             and equal_kernel_mappings
-                             and pspace_aligned and valid_global_objs and valid_etcbs and
-                             K (valid_unmap sz (asid,vptr) \<and> canonical_address vptr )" and
-                          P'="pspace_aligned' and pspace_distinct'" in corres_inst)
-          apply clarsimp
-          apply (rename_tac vspace)
-          apply (cases sz, simp_all)[1]
+           apply (rule_tac F = "vptr < pptr_base" in corres_gen_asm)
+           apply (rule_tac P="\<exists>\<rhd> vspace and page_map_l4_at vspace and vspace_at_asid asid vspace
+                              and (\<exists>\<rhd> vspace)
+                              and valid_arch_state and valid_vspace_objs
+                              and equal_kernel_mappings
+                              and pspace_aligned and valid_global_objs and valid_etcbs and
+                              K (valid_unmap sz (asid,vptr) \<and> canonical_address vptr )" and
+                           P'="pspace_aligned' and pspace_distinct'" in corres_inst)
+           apply clarsimp
+           apply (rename_tac vspace)
+           apply (cases sz, simp_all)[1]
              apply (rule corres_guard_imp)
                apply (rule_tac F = "vptr < pptr_base" in corres_gen_asm)
                apply (rule corres_split_strengthen_ftE[OF lookupPTSlot_corres])
                  apply simp
-                 apply (rule corres_splitEE[OF _ liftE_get_pte_corres])
+                 apply (rule corres_splitEE[OF liftE_get_pte_corres])
                    apply simp
-                   apply (rule corres_split_norE[OF _ checkMappingPPtr_corres, where r=dc, simplified])
+                   apply (rule corres_split_norE[OF checkMappingPPtr_corres, where r=dc, simplified])
+                      apply (simp add: page_entry_map_def)
+                     apply simp
+                     apply (rule storePTE_corres')
+                     apply (((wpsimp  wp: hoare_vcg_all_lift_R get_pte_wp getPTE_wp lookup_pt_slot_wp
+                                    simp: unlessE_def is_aligned_pml4 if_apply_def2
+                               split_del: if_split
+                                simp_del: dc_simp)+
+                             | wp (once) hoare_drop_imps)+)[9]
+            apply (rule corres_guard_imp)
+              apply (rule corres_split_strengthen_ftE[OF lookupPDSlot_corres])
+                apply (simp del: dc_simp)
+                apply (rule corres_splitEE[OF liftE_get_pde_corres])
+                  apply (rule corres_split_norE[OF checkMappingPPtr_corres, where r=dc, simplified])
+                     apply (simp add: page_entry_map_def)
+                    apply simp
+                    apply (rule storePDE_corres')
+                    apply (((wpsimp  wp: hoare_vcg_all_lift_R get_pde_wp getPDE_wp lookup_pd_slot_wp
+                                   simp: unlessE_def is_aligned_pml4 if_apply_def2
+                              split_del: if_split
+                               simp_del: dc_simp)+
+                           | wp (once) hoare_drop_imps)+)[9]
+           apply (rule corres_guard_imp)
+             apply (rule corres_split_strengthen_ftE[OF lookupPDPTSlot_corres])
+               apply (simp del: dc_simp)
+               apply (rule corres_splitEE[OF liftE_get_pdpte_corres])
+                 apply (rule corres_split_norE[OF checkMappingPPtr_corres, where r=dc, simplified])
+                    apply (simp add: page_entry_map_def)
                    apply simp
-                   apply (rule storePTE_corres')
-                   apply (((wpsimp  wp: hoare_vcg_all_lift_R get_pte_wp getPTE_wp lookup_pt_slot_wp
-                                  simp: page_entry_map_def unlessE_def is_aligned_pml4 if_apply_def2
+                   apply (rule storePDPTE_corres')
+                   apply (((wpsimp  wp: hoare_vcg_all_lift_R get_pdpte_wp getPDPTE_wp
+                                        lookup_pdpt_slot_wp
+                                  simp: unlessE_def is_aligned_pml4 if_apply_def2
                              split_del: if_split
                               simp_del: dc_simp)+
-                           | wp (once) hoare_drop_imps)+)[10]
-         apply (rule corres_guard_imp)
-           apply (rule corres_split_strengthen_ftE[OF lookupPDSlot_corres])
-             apply (simp del: dc_simp)
-             apply (rule corres_splitEE[OF _ liftE_get_pde_corres])
-               apply (rule corres_split_norE[OF _ checkMappingPPtr_corres, where r=dc, simplified])
-                  apply simp
-                  apply (rule storePDE_corres')
-                  apply (((wpsimp  wp: hoare_vcg_all_lift_R get_pde_wp getPDE_wp lookup_pd_slot_wp
-                                 simp: page_entry_map_def unlessE_def is_aligned_pml4 if_apply_def2
-                            split_del: if_split
-                             simp_del: dc_simp)+
-                         | wp (once) hoare_drop_imps)+)[10]
-        apply (rule corres_guard_imp)
-          apply (rule corres_split_strengthen_ftE[OF lookupPDPTSlot_corres])
-            apply (simp del: dc_simp)
-            apply (rule corres_splitEE[OF _ liftE_get_pdpte_corres])
-              apply (rule corres_split_norE[OF _ checkMappingPPtr_corres, where r=dc, simplified])
-                 apply simp
-                 apply (rule storePDPTE_corres')
-                 apply (((wpsimp  wp: hoare_vcg_all_lift_R get_pdpte_wp getPDPTE_wp
-                                      lookup_pdpt_slot_wp
-                                simp: page_entry_map_def unlessE_def is_aligned_pml4 if_apply_def2
-                           split_del: if_split
-                            simp_del: dc_simp)+
-                         | wp (once) hoare_drop_imps)+)
+                           | wp (once) hoare_drop_imps)+)
+          apply (rule corres_machine_op, rule corres_Id, rule refl, simp)
+          apply (rule no_fail_invalidateTranslationSingleASID)
+         apply wpsimp+
    apply (rule conjI[OF disjI1], clarsimp)
    apply (clarsimp simp: invs_vspace_objs invs_psp_aligned valid_unmap_def invs_arch_state
                          invs_equal_kernel_mappings)
@@ -877,8 +873,7 @@ proof -
       apply (rule_tac R="\<lambda>_. invs and (valid_page_map_inv cap (a,b) (aa,ba) vspace) and valid_etcbs
                          and (\<lambda>s. caps_of_state s (a,b) = Some cap)"
                and R'="\<lambda>_. invs' and valid_slots' (ab,bb) and pspace_aligned'
-                       and pspace_distinct' and K (page_entry_map_corres (ab,bb))" in corres_split_deprecated)
-         prefer 2
+                       and pspace_distinct' and K (page_entry_map_corres (ab,bb))" in corres_split)
          apply (erule updateCap_same_master)
         apply (simp, rule corres_gen_asm2)
         apply (case_tac aa)
@@ -889,51 +884,54 @@ proof -
           apply (rule corres_name_pre)
           apply (clarsimp simp: mapM_Cons bind_assoc split del: if_split)
           apply (rule corres_guard_imp)
-            apply (rule corres_split_deprecated[OF _ storePTE_corres'])
-               apply (rule corres_split_deprecated[where r'="(=)"])
-                  apply (rule corres_split'[where r'=dc, OF _ corres_return_eq_same[OF refl]
-                                                            hoare_post_taut hoare_post_taut])
-                  apply simp
-                  apply (rule invalidatePageStructureCacheASID_corres)
+            apply (rule corres_split[OF storePTE_corres'])
+               apply simp
+              apply (rule corres_split[where r'="(=)"])
                  apply (case_tac cap; clarsimp simp add: is_pg_cap_def)
                  apply (case_tac m; clarsimp)
                  apply (rule corres_fail[where P=\<top> and P'=\<top>])
                  apply (simp add: same_refs_def)
-                apply (wpsimp simp: invs_psp_aligned)+
+                apply (rule corres_underlying_split[where r'=dc, OF _ corres_return_eq_same[OF refl]
+                                                          hoare_post_taut hoare_post_taut])
+                apply simp
+                apply (rule invalidatePageStructureCacheASID_corres)
+               apply (wpsimp simp: invs_psp_aligned)+
          apply (frule (1) mapping_map_pde, clarsimp)
          apply (clarsimp simp: mapping_map_simps valid_slots'_def valid_slots_def valid_page_inv_def
                                neq_Nil_conv valid_page_map_inv_def)
          apply (rule corres_name_pre)
          apply (clarsimp simp: mapM_Cons bind_assoc split del: if_split)
          apply (rule corres_guard_imp)
-           apply (rule corres_split_deprecated[OF _ storePDE_corres'])
-              apply (rule corres_split_deprecated[where r'="(=)"])
-                 apply simp
-                 apply (rule corres_split'[where r'=dc, OF _ corres_return_eq_same[OF refl]
-                                                           hoare_post_taut hoare_post_taut])
-                 apply (rule invalidatePageStructureCacheASID_corres)
+           apply (rule corres_split[OF storePDE_corres'])
+              apply simp
+             apply (rule corres_split[where r'="(=)"])
                 apply (case_tac cap; clarsimp simp add: is_pg_cap_def)
                 apply (case_tac m; clarsimp)
                 apply (rule corres_fail[where P=\<top> and P'=\<top>])
                 apply (simp add: same_refs_def)
-               apply (wpsimp simp: invs_psp_aligned)+
+               apply simp
+               apply (rule corres_underlying_split[where r'=dc, OF _ corres_return_eq_same[OF refl]
+                                                         hoare_post_taut hoare_post_taut])
+               apply (rule invalidatePageStructureCacheASID_corres)
+              apply (wpsimp simp: invs_psp_aligned)+
         apply (frule (1) mapping_map_pdpte, clarsimp)
         apply (clarsimp simp: mapping_map_simps valid_slots'_def valid_slots_def valid_page_inv_def
                               neq_Nil_conv valid_page_map_inv_def)
         apply (rule corres_name_pre)
         apply (clarsimp simp: mapM_Cons bind_assoc split del: if_split)
         apply (rule corres_guard_imp)
-          apply (rule corres_split_deprecated[OF _ storePDPTE_corres'])
-             apply (rule corres_split_deprecated[where r'="(=)"])
-                apply simp
-                apply (rule corres_split'[where r'=dc, OF _ corres_return_eq_same[OF refl]
-                                                          hoare_post_taut hoare_post_taut])
-                apply (rule invalidatePageStructureCacheASID_corres)
+          apply (rule corres_split[OF storePDPTE_corres'])
+             apply simp
+            apply (rule corres_split[where r'="(=)"])
                apply (case_tac cap; clarsimp simp add: is_pg_cap_def)
                apply (case_tac m; clarsimp)
                apply (rule corres_fail[where P=\<top> and P'=\<top>])
                apply (simp add: same_refs_def)
-              apply (wpsimp simp: invs_psp_aligned)+
+              apply simp
+              apply (rule corres_underlying_split[where r'=dc, OF _ corres_return_eq_same[OF refl]
+                                                        hoare_post_taut hoare_post_taut])
+              apply (rule invalidatePageStructureCacheASID_corres)
+             apply (wpsimp simp: invs_psp_aligned)+
        apply (wp arch_update_cap_invs_map set_cap_valid_page_map_inv)
       apply (wp arch_update_updateCap_invs)
      apply (clarsimp simp: invs_valid_objs invs_psp_aligned invs_distinct valid_page_inv_def
@@ -955,13 +953,11 @@ proof -
     apply (rule corres_fail, clarsimp simp: valid_cap_def)
    apply (simp add: perform_page_invocation_unmap_def performPageInvocationUnmap_def split_def)
     apply (rule corres_guard_imp)
-     apply (rule corres_split'[where r'=dc, OF _ corres_return_eq_same[OF refl]
+     apply (rule corres_underlying_split[where r'=dc, OF _ corres_return_eq_same[OF refl]
                                                hoare_post_taut hoare_post_taut])
-     apply (rule corres_split_deprecated)
-        prefer 2
+     apply (rule corres_split)
         apply (rule unmapPage_corres[OF refl refl refl refl])
-       apply (rule corres_split_deprecated [where r'=acap_relation])
-          prefer 2
+       apply (rule corres_split[where r'=acap_relation])
           apply simp
           apply (rule corres_rel_imp)
            apply (rule get_cap_corres_all_rights_P[where P=is_arch_cap], rule refl)
@@ -1128,16 +1124,16 @@ lemma performPageTableInvocation_corres:
    apply (rule corres_name_pre)
    apply (clarsimp simp: valid_pti_def valid_pti'_def split: capability.split_asm arch_capability.split_asm)
    apply (rule corres_guard_imp)
-     apply (rule corres_split_deprecated [OF _ updateCap_same_master])
-        prefer 2
+     apply (rule corres_split[OF updateCap_same_master])
         apply assumption
-       apply (rule corres_split_deprecated [OF _ storePDE_corres'])
-          apply (rule corres_split_deprecated[where r'="(=)" and P="\<top>" and P'="\<top>"])
-             apply simp
-             apply (rule invalidatePageStructureCacheASID_corres)
+       apply (rule corres_split[OF storePDE_corres'])
+          apply simp
+         apply (rule corres_split[where r'="(=)" and P="\<top>" and P'="\<top>"])
             apply (case_tac cap; clarsimp simp add: is_pt_cap_def)
             apply (solves \<open>clarsimp split: option.splits\<close>)
-           apply (wpsimp wp: set_cap_typ_at)+
+           apply simp
+           apply (rule invalidatePageStructureCacheASID_corres)
+          apply (wpsimp wp: set_cap_typ_at)+
     apply (clarsimp simp: invs_valid_objs invs_psp_aligned invs_distinct is_arch_update_def
                           cte_wp_at_caps_of_state )
     apply (clarsimp simp: is_cap_simps cap_master_cap_simps
@@ -1155,17 +1151,18 @@ lemma performPageTableInvocation_corres:
   apply (simp add: case_option_If2 getSlotCap_def split del: if_split)
   apply (rule corres_guard_imp)
     apply (rule corres_split_nor)
-       apply (simp add: liftM_def)
-       apply (rule corres_split_deprecated [OF _ get_cap_corres])
-         apply (rule_tac F="is_pt_cap x" in corres_gen_asm)
-         apply (rule updateCap_same_master)
-         apply (clarsimp simp: is_pt_cap_def update_map_data_def)
-        apply (wp get_cap_wp)+
-      apply (rule corres_if[OF refl])
-       apply (rule corres_split_deprecated [OF _ unmapPageTable_corres[OF refl refl refl]])
-         apply (rule clear_page_table_corres[simplified bit_simps bitSimps, simplified])
-        apply wp+
-      apply (rule corres_trivial, simp)
+       apply (rule corres_if[OF refl])
+        apply (rule corres_split[OF unmapPageTable_corres[OF refl refl refl]])
+          apply (rule clear_page_table_corres[simplified bit_simps bitSimps, simplified])
+         apply wp+
+       apply (rule corres_trivial, simp)
+      apply (simp add: liftM_def)
+      apply (rule corres_split[OF get_cap_corres])
+        apply (rule_tac F="is_pt_cap x" in corres_gen_asm)
+        apply (rule updateCap_same_master)
+        apply (clarsimp simp: is_pt_cap_def update_map_data_def)
+       apply (wp get_cap_wp)
+      apply wp
      apply (simp add: cte_wp_at_caps_of_state pred_conj_def
            split del: if_split)
      apply (rule hoare_lift_Pf2[where f=caps_of_state])
@@ -1180,7 +1177,7 @@ lemma performPageTableInvocation_corres:
                      cap_rights_update_def acap_rights_update_def
                      wellformed_mapdata_def
               split: option.split_asm)[1]
-   apply (auto simp: valid_pti'_def cte_wp_at_ctes_of bit_simps)
+  apply (auto simp: valid_pti'_def cte_wp_at_ctes_of bit_simps)
   done
 
 definition
@@ -1215,20 +1212,19 @@ lemma unmapPageDirectory_corres:
   apply (clarsimp simp: assms unmap_pd_def unmapPageDirectory_def flushPD_def
                         ignoreFailure_def const_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_catch[where E="\<top>\<top>" and E'="\<top>\<top>"], simp)
-      apply (rule corres_split_eqrE[OF _ findVSpaceForASID_corres[OF refl]])
-        apply (rule corres_split_eqrE[OF _ lookupPDPTSlot_corres])
-          apply (rule corres_splitEE[OF _ liftE_get_pdpte_corres])
+    apply (rule corres_split_catch[where E="\<top>\<top>" and E'="\<top>\<top>", OF _ corres_return_trivial])
+      apply (rule corres_split_eqrE[OF findVSpaceForASID_corres[OF refl]])
+        apply (rule corres_split_eqrE[OF lookupPDPTSlot_corres])
+          apply (rule corres_splitEE[OF liftE_get_pdpte_corres])
             apply (rule corres_splitEE[where r'=dc])
-               prefer 2
                apply (case_tac "\<exists>addr x xa. pdpte = X64_A.PageDirectoryPDPTE addr x xa";
                       fastforce intro!: corres_returnOkTT
                                 simp: lookup_failure_map_def pdpte_relation_def
                                 split: X64_A.pdpte.splits)
               apply simp
-              apply (rule corres_split_nor[OF _ flush_all_corres[OF refl refl]])
-                apply (rule corres_split_deprecated[OF invalidatePageStructureCacheASID_corres
-                                            storePDPTE_corres'])
+              apply (rule corres_split_nor[OF flush_all_corres[OF refl refl]])
+                apply (rule corres_split[OF storePDPTE_corres'
+                                            invalidatePageStructureCacheASID_corres])
                   apply ((wpsimp wp: get_pdpte_wp simp: pdpte_at_def)+)[8]
           apply (wpsimp wp: hoare_drop_imps)
          apply ((wp lookup_pdpt_slot_wp find_vspace_for_asid_wp)+)[6]
@@ -1259,16 +1255,16 @@ lemma performPageDirectoryInvocation_corres:
    apply (rule corres_name_pre)
    apply (clarsimp simp: valid_pdi_def valid_pdi'_def split: capability.split_asm arch_capability.split_asm)
    apply (rule corres_guard_imp)
-     apply (rule corres_split_deprecated [OF _ updateCap_same_master])
-        prefer 2
+     apply (rule corres_split[OF updateCap_same_master])
         apply assumption
-       apply (rule corres_split_deprecated [OF _ storePDPTE_corres'])
-          apply (rule corres_split_deprecated[where r'="(=)" and P="\<top>" and P'="\<top>"])
-             apply simp
-             apply (rule invalidatePageStructureCacheASID_corres)
+       apply (rule corres_split[OF storePDPTE_corres'])
+          apply simp
+         apply (rule corres_split[where r'="(=)" and P="\<top>" and P'="\<top>"])
             apply (case_tac cap; clarsimp simp add: is_pd_cap_def)
             apply (solves \<open>clarsimp split: option.splits\<close>)
-           apply (wpsimp wp: set_cap_typ_at)+
+           apply simp
+           apply (rule invalidatePageStructureCacheASID_corres)
+          apply (wpsimp wp: set_cap_typ_at)+
     apply (clarsimp simp: invs_valid_objs invs_psp_aligned invs_distinct is_arch_update_def
                           cte_wp_at_caps_of_state )
     apply (clarsimp simp: is_cap_simps cap_master_cap_simps
@@ -1286,17 +1282,18 @@ lemma performPageDirectoryInvocation_corres:
   apply (simp add: case_option_If2 getSlotCap_def split del: if_split)
   apply (rule corres_guard_imp)
     apply (rule corres_split_nor)
-       apply (simp add: liftM_def)
-       apply (rule corres_split_deprecated [OF _ get_cap_corres])
-         apply (rule_tac F="is_pd_cap x" in corres_gen_asm)
-         apply (rule updateCap_same_master)
-         apply (clarsimp simp: is_pd_cap_def update_map_data_def)
-        apply (wp get_cap_wp)+
-      apply (rule corres_if[OF refl])
-       apply (rule corres_split_deprecated [OF _ unmapPageDirectory_corres[OF refl refl refl]])
-         apply (rule clear_page_directory_corres[simplified bit_simps bitSimps, simplified])
-        apply wp+
-      apply (rule corres_trivial, simp)
+       apply (rule corres_if[OF refl])
+        apply (rule corres_split[OF unmapPageDirectory_corres[OF refl refl refl]])
+          apply (rule clear_page_directory_corres[simplified bit_simps bitSimps, simplified])
+         apply wp+
+       apply (rule corres_trivial, simp)
+      apply (simp add: liftM_def)
+      apply (rule corres_split[OF get_cap_corres])
+        apply (rule_tac F="is_pd_cap x" in corres_gen_asm)
+        apply (rule updateCap_same_master)
+        apply (clarsimp simp: is_pd_cap_def update_map_data_def)
+       apply (wp get_cap_wp)
+      apply wp
      apply (simp add: cte_wp_at_caps_of_state pred_conj_def
            split del: if_split)
      apply (rule hoare_lift_Pf2[where f=caps_of_state])
@@ -1338,17 +1335,16 @@ lemma unmapPDPT_corres:
                         invalidatePageStructureCacheASID_def
                         ignoreFailure_def const_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_catch[where E="\<top>\<top>" and E'="\<top>\<top>"], simp)
-      apply (rule corres_split_eqrE[OF _ findVSpaceForASID_corres[OF refl]])
-        apply (rule corres_splitEE[OF _ liftE_get_pml4e_corres])
+    apply (rule corres_split_catch[where E="\<top>\<top>" and E'="\<top>\<top>", OF _ corres_return_trivial])
+      apply (rule corres_split_eqrE[OF findVSpaceForASID_corres[OF refl]])
+        apply (rule corres_splitEE[OF liftE_get_pml4e_corres])
           apply (rule corres_splitEE[where r'=dc])
-             prefer 2
              apply (case_tac "\<exists>addr a b. rv = X64_A.PDPointerTablePML4E addr a b";
                     fastforce intro!: corres_returnOkTT
                               simp: lookup_failure_map_def pml4e_relation_def
                               split: X64_A.pml4e.splits)
             apply simp
-            apply (rule corres_split_nor[OF _ flush_all_corres[OF refl refl]])
+            apply (rule corres_split_nor[OF flush_all_corres[OF refl refl]])
               apply (rule store_pml4e_corres'[OF refl], simp)
              apply ((wpsimp wp: get_pml4e_wp simp: pml4e_at_def)+)[5]
         apply (wpsimp wp: hoare_drop_imps)
@@ -1386,16 +1382,16 @@ lemma performPDPTInvocation_corres:
    apply (rule corres_name_pre)
    apply (clarsimp simp: valid_pdpti_def valid_pdpti'_def split: capability.split_asm arch_capability.split_asm)
    apply (rule corres_guard_imp)
-     apply (rule corres_split_deprecated [OF _ updateCap_same_master])
-        prefer 2
+     apply (rule corres_split[OF updateCap_same_master])
         apply assumption
-       apply (rule corres_split_deprecated [OF _ store_pml4e_corres'])
-          apply (rule corres_split_deprecated[where r'="(=)" and P="\<top>" and P'="\<top>"])
-             apply simp
-             apply (rule invalidatePageStructureCacheASID_corres)
+       apply (rule corres_split)
+          apply (rule store_pml4e_corres'; simp)
+         apply (rule corres_split[where r'="(=)" and P="\<top>" and P'="\<top>"])
             apply (case_tac cap; clarsimp simp add: is_pdpt_cap_def)
             apply (solves \<open>clarsimp split: option.splits\<close>)
-           apply (wpsimp wp: set_cap_typ_at)+
+           apply simp
+           apply (rule invalidatePageStructureCacheASID_corres)
+          apply (wpsimp wp: set_cap_typ_at)+
     apply (clarsimp simp: invs_valid_objs invs_psp_aligned invs_distinct is_arch_update_def
                           cte_wp_at_caps_of_state )
     apply (clarsimp simp: is_cap_simps cap_master_cap_simps
@@ -1413,17 +1409,18 @@ lemma performPDPTInvocation_corres:
   apply (simp add: case_option_If2 getSlotCap_def split del: if_split)
   apply (rule corres_guard_imp)
     apply (rule corres_split_nor)
-       apply (simp add: liftM_def)
-       apply (rule corres_split_deprecated [OF _ get_cap_corres])
-         apply (rule_tac F="is_pdpt_cap x" in corres_gen_asm)
-         apply (rule updateCap_same_master)
-         apply (clarsimp simp: is_pdpt_cap_def update_map_data_def)
-        apply (wp get_cap_wp)+
-      apply (rule corres_if[OF refl])
-       apply (rule corres_split_deprecated [OF _ unmapPDPT_corres[OF refl refl refl]])
-         apply (rule clear_pdpt_corres[simplified bit_simps bitSimps, simplified])
-        apply wp+
-      apply (rule corres_trivial, simp)
+       apply (rule corres_if[OF refl])
+        apply (rule corres_split[OF unmapPDPT_corres[OF refl refl refl]])
+          apply (rule clear_pdpt_corres[simplified bit_simps bitSimps, simplified])
+         apply wp+
+       apply (rule corres_trivial, simp)
+      apply (simp add: liftM_def)
+      apply (rule corres_split[OF get_cap_corres])
+        apply (rule_tac F="is_pdpt_cap x" in corres_gen_asm)
+        apply (rule updateCap_same_master)
+        apply (clarsimp simp: is_pdpt_cap_def update_map_data_def)
+       apply (wp get_cap_wp)
+      apply wp
      apply (simp add: cte_wp_at_caps_of_state pred_conj_def
            split del: if_split)
      apply (rule hoare_lift_Pf2[where f=caps_of_state])
@@ -1438,7 +1435,7 @@ lemma performPDPTInvocation_corres:
                      cap_rights_update_def acap_rights_update_def
                      wellformed_mapdata_def vmsz_aligned_def
               split: option.split_asm)[1]
-   apply (auto simp: valid_pdpti'_def cte_wp_at_ctes_of bit_simps)
+  apply (auto simp: valid_pdpti'_def cte_wp_at_ctes_of bit_simps)
   done
 
 definition
@@ -1473,24 +1470,23 @@ lemma performASIDPoolInvocation_corres:
       apply (cases ap, simp add: asid_pool_invocation_map_def)
       apply (rename_tac word1 word2 prod)
       apply (rule corres_guard_imp)
-        apply (rule corres_split_deprecated[OF _ getSlotCap_corres[OF refl] get_cap_wp getSlotCap_wp])
+        apply (rule corres_split[OF getSlotCap_corres[OF refl] _ get_cap_wp getSlotCap_wp])
         apply (rule_tac F="\<exists>p asid. rv = Structures_A.ArchObjectCap (X64_A.PML4Cap p asid)"
                  in corres_gen_asm; elim exE)
         apply (simp cong: corres_weak_cong)
         apply (rule subst[OF helper], assumption)
-        apply (rule corres_split_deprecated[OF _ updateCap_same_master])
-           unfolding store_asid_pool_entry_def
-           apply (rule corres_split_deprecated[where r'="\<lambda>pool pool'. pool = pool' \<circ> ucast"])
-              prefer 2
-              apply (simp cong: corres_weak_cong)
-              apply (rule corres_rel_imp)
-               apply (rule getObject_ASIDPool_corres'[OF refl])
-              apply simp
-             apply (simp only: return_bind cong: corres_weak_cong)
-             apply (rule setObject_ASIDPool_corres')
-             apply (rule ext; clarsimp simp: inv_def mask_asid_low_bits_ucast_ucast)
-            apply (wp getASID_wp)+
-          apply simp
+        apply (rule corres_split[OF updateCap_same_master])
+           apply simp
+          unfolding store_asid_pool_entry_def
+          apply (rule corres_split[where r'="\<lambda>pool pool'. pool = pool' \<circ> ucast"])
+             apply (simp cong: corres_weak_cong)
+             apply (rule corres_rel_imp)
+              apply (rule getObject_ASIDPool_corres'[OF refl])
+             apply simp
+            apply (simp only: return_bind cong: corres_weak_cong)
+            apply (rule setObject_ASIDPool_corres')
+            apply (rule ext; clarsimp simp: inv_def mask_asid_low_bits_ucast_ucast)
+           apply (wp getASID_wp)+
          apply (wpsimp wp: set_cap_typ_at hoare_drop_imps)
         apply (wpsimp wp: hoare_drop_imps)
        by (auto simp: valid_apinv_def cte_wp_at_def is_pml4_cap_def

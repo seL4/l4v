@@ -164,24 +164,18 @@ lemma do_user_op_if_corres[ADT_IF_Refine_assms]:
   apply (rule corres_assert_imp_r)
    apply fastforce
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[where r'="(=)"])
-       apply clarsimp
-       apply (rule corres_split_deprecated[OF _ corres_machine_op,where r'="(=)"])
-          apply clarsimp
-          apply (rule corres_split_deprecated[OF _ corres_machine_op,where r'="(=)"])
-             apply clarsimp
-            apply (wp hoare_TrueI[where P = \<top>] | simp | rule corres_underlying_trivial)+
+    apply (rule corres_split[where r'="(=)"])
+       apply (clarsimp simp: select_def corres_underlying_def)
+      apply clarsimp
+      apply (rule corres_split[OF corres_machine_op,where r'="(=)"])
+         apply (rule corres_underlying_trivial)
          apply (clarsimp simp: user_memory_update_def)
          apply (rule non_fail_modify)
-        apply clarsimp
-        apply (wp hoare_TrueI)
-       apply clarsimp
-       apply (wp hoare_TrueI)
-      apply (clarsimp simp: select_def corres_underlying_def)
-     apply (simp only: comp_def | wp hoare_TrueI)+
-   apply clarsimp
-   apply force
-  apply force
+        apply (rule corres_split[OF corres_machine_op,where r'="(=)"])
+           apply (rule corres_underlying_trivial)
+           apply wp
+          apply (rule corres_trivial, clarsimp)
+          apply (wp hoare_TrueI[where P = \<top>] | simp)+
   done
 
 lemma doUserOp_if_invs'[ADT_IF_Refine_assms, wp]:
@@ -264,20 +258,18 @@ lemma do_user_op_if_corres'[ADT_IF_Refine_assms]:
   apply (rule corres_assert_imp_r)
    apply fastforce
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[where r'="dc"])
-       apply simp
-       apply (rule corres_split_deprecated[where r'="(=)"])
-          apply clarsimp
-          apply (rule corres_split_deprecated[OF _ corres_machine_op',where r'="(=)"])
-             apply simp
-             apply (rule corres_split_deprecated[OF _ corres_machine_op', where r'="(=)"])
-                apply simp
-               apply (wp hoare_TrueI[where P = \<top>] | simp | rule corres_underlying_trivial)+
+    apply (rule corres_split[where r'="dc"])
+       apply (rule corres_assert')
+      apply simp
+      apply (rule corres_split[where r'="(=)"])
          apply (clarsimp simp: select_def corres_underlying_def)
-        apply (simp only: comp_def | wp hoare_TrueI)+
-      apply (rule corres_assert')
-     apply (wp hoare_TrueI[where P = \<top>] | simp | rule corres_underlying_trivial)+
-   apply clarsimp
+        apply clarsimp
+        apply (rule corres_split[OF corres_machine_op',where r'="(=)"])
+           apply (rule corres_underlying_trivial, clarsimp)
+          apply (rule corres_split[OF corres_machine_op', where r'="(=)"])
+             apply (rule corres_underlying_trivial, clarsimp)
+            apply (rule corres_trivial, clarsimp)
+           apply (wp hoare_TrueI[where P = \<top>] | simp)+
    apply force
   apply force
   done
@@ -333,19 +325,19 @@ lemma handle_preemption_if_corres[ADT_IF_Refine_assms]:
               (invs') (handle_preemption_if tc) (handlePreemption_if tc)"
   apply (simp add: handlePreemption_if_def handle_preemption_if_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[where r'="(=)"])
-       apply (rule corres_split_deprecated[where r'="dc"])
-          apply (rule corres_stateAssert_assume_stronger[where Q=\<top> and
-                        P="\<lambda>s. valid_domain_list s \<and>
-                               (domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread)"])
-           apply simp
-          apply (clarsimp simp: state_relation_def)
+    apply (rule corres_split[where r'="(=)"])
+       apply (rule dmo_getActiveIRQ_corres)
+      apply (rule corres_split[where r'="dc"])
          apply (rule corres_when)
           apply simp
          apply simp
          apply (rule handleInterrupt_corres)
-        apply (wp handle_interrupt_valid_domain_time)+
-      apply (rule dmo_getActiveIRQ_corres)
+        apply (rule corres_stateAssert_assume_stronger[where Q=\<top> and
+                      P="\<lambda>s. valid_domain_list s \<and>
+                             (domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread)"])
+         apply simp
+        apply (clarsimp simp: state_relation_def)
+       apply (wp handle_interrupt_valid_domain_time)+
      apply (rule dmo_getActiveIRQ_wp)
     apply (rule dmo'_getActiveIRQ_wp)
    apply clarsimp+

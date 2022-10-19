@@ -154,7 +154,7 @@ proof -
         apply assumption
        apply (rule Q)
       apply (rule hoare_post_imp [OF _ z])
-      apply simp+
+       apply simp+
     done
 qed
 
@@ -812,8 +812,8 @@ lemma switchToIdleThread_corres:
   apply (rule corres_stateAssert_add_assertion[rotated])
    apply (clarsimp simp: valid_idle'_asrt_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ getIdleThread_corres])
-      apply (rule corres_split_deprecated [OF _ arch_switchToIdleThread_corres])
+    apply (rule corres_split[OF getIdleThread_corres])
+      apply (rule corres_split[OF arch_switchToIdleThread_corres])
         apply (unfold setCurThread_def)
         apply (rule corres_stateAssert_add_assertion)
          apply clarsimp
@@ -1662,7 +1662,7 @@ lemma chooseThread_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF curDomain_corres'])
       apply clarsimp
-      apply (rule corres_split_deprecated[OF _ corres_gets_queues_getReadyQueuesL1Bitmap])
+      apply (rule corres_split[OF corres_gets_queues_getReadyQueuesL1Bitmap])
         apply (erule corres_if2[OF sym])
          apply (rule switchToIdleThread_corres)
         apply (rule corres_symb_exec_r)
@@ -1808,7 +1808,7 @@ lemma isHighestPrio_corres:
   apply (clarsimp simp: gets_is_highest_prio_expand isHighestPrio_def)
   apply (subst getHighestPrio_def')
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ corres_gets_queues_getReadyQueuesL1Bitmap])
+    apply (rule corres_split[OF corres_gets_queues_getReadyQueuesL1Bitmap])
       apply (rule corres_if_r'[where P'="\<lambda>_. True",rotated])
        apply (rule_tac corres_symb_exec_r)
               apply (rule_tac
@@ -1846,8 +1846,8 @@ lemma scheduleChooseNewThread_corres:
            schedule_choose_new_thread scheduleChooseNewThread"
   unfolding schedule_choose_new_thread_def scheduleChooseNewThread_def
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ getDomainTime_corres], clarsimp)
-      apply (rule corres_split_deprecated[OF _ scheduleChooseNewThread_fragment_corres, simplified bind_assoc])
+    apply (rule corres_split[OF getDomainTime_corres], clarsimp)
+      apply (rule corres_split[OF scheduleChooseNewThread_fragment_corres, simplified bind_assoc])
         apply (rule setSchedulerAction_corres)
         apply (wp | simp)+
     apply (wp | simp add: getDomainTime_def)+

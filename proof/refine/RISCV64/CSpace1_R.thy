@@ -310,7 +310,7 @@ lemma getSlotCap_corres:
   apply (simp add: getSlotCap_def)
   apply (subst bind_return [symmetric])
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ get_cap_corres])
+    apply (rule corres_split[OF get_cap_corres])
       apply (rule corres_trivial, simp)
      apply (wp | simp)+
   done
@@ -757,7 +757,7 @@ lemma lookupCap_corres:
   apply (simp add: lookup_cap_def lookupCap_def bindE_assoc
                    lookupCapAndSlot_def liftME_def split_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_splitEE[OF _ lookupSlotForThread_corres])
+    apply (rule corres_splitEE[OF lookupSlotForThread_corres])
       apply (simp add: split_def getSlotCap_def liftM_def[symmetric] o_def)
       apply (rule get_cap_corres)
      apply (rule hoare_pre, wp lookup_slot_cte_at_wp|simp)+
@@ -3896,10 +3896,7 @@ lemma getCTE_get:
   done
 
 lemma setUntypedCapAsFull_corres:
-  "\<lbrakk>cap_relation c c'; src' = cte_map src; dest' = cte_map dest;
-    cap_relation src_cap (cteCap srcCTE); rv = cap.NullCap;
-    cteCap rv' = capability.NullCap; mdbPrev (cteMDBNode rv') = nullPointer \<and>
-    mdbNext (cteMDBNode rv') = nullPointer\<rbrakk>
+  "\<lbrakk>cap_relation c c'; cap_relation src_cap (cteCap srcCTE)\<rbrakk>
    \<Longrightarrow> corres dc (cte_wp_at ((=) src_cap) src and valid_objs and
                   pspace_aligned and pspace_distinct)
                  (cte_wp_at' ((=) srcCTE) (cte_map src) and
@@ -5094,8 +5091,8 @@ lemma cteInsert_corres:
   unfolding cap_insert_def cteInsert_def
   apply simp
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ get_cap_corres])
-      apply (rule corres_split_deprecated [OF _ get_cap_corres])
+    apply (rule corres_split[OF get_cap_corres])
+      apply (rule corres_split[OF get_cap_corres])
         apply (rule_tac F="cteCap rv' = NullCap" in corres_gen_asm2)
         apply simp
         apply (rule_tac P="?P and cte_at dest and
@@ -5136,9 +5133,9 @@ lemma cteInsert_corres:
              apply (prop_tac "mdb_insert_abs (cdt a) src dest")
               apply (erule mdb_insert_abs.intro)
               apply (rule mdb_Null_None)
-              apply (simp add: op_equal)
+               apply (simp add: op_equal)
               apply simp
-              apply (rule mdb_Null_descendants)
+             apply (rule mdb_Null_descendants)
               apply (simp add: op_equal)
               apply simp
              apply (prop_tac "no_mloop (cdt a)")
@@ -5196,95 +5193,52 @@ lemma cteInsert_corres:
                  apply (rule mdb_ptr.intro)
                   apply (rule vmdb.intro, simp add: valid_mdb_ctes_def)
                  apply (erule mdb_ptr_axioms.intro)
-                apply (rule mdb_insert_axioms.intro)
-                     apply (rule refl)
-                    apply assumption
+                apply (rule mdb_ptr.intro)
+                 apply (rule vmdb.intro, simp add: valid_mdb_ctes_def)
+                apply (erule mdb_ptr_axioms.intro)
+               apply (rule mdb_insert_axioms.intro)
+                    apply (rule refl)
                    apply assumption
                   apply assumption
                  apply assumption
-                apply (erule (5) cte_map_inj)
-               apply (frule mdb_insert_der.intro)
-                apply (rule mdb_insert_der_axioms.intro)
-                apply (simp add: is_derived_eq)
-               apply (simp (no_asm_simp) add: cdt_relation_def split: if_split)
-               apply (subgoal_tac "descendants_of dest (cdt a) = {}")
-                prefer 2
-                apply (drule mdb_insert.dest_no_descendants)
-                apply (fastforce simp add: cdt_relation_def)
-               apply (subgoal_tac "mdb_insert_abs (cdt a) src dest")
-                prefer 2
-                apply (erule mdb_insert_abs.intro)
-                 apply (rule mdb_None)
-                   apply (erule(1) mdb_insert.descendants_not_dest)
-                  apply assumption
+                apply assumption
+               apply (erule (5) cte_map_inj)
+              apply (frule mdb_insert_der.intro)
+               apply (rule mdb_insert_der_axioms.intro)
+               apply (simp add: is_derived_eq)
+              apply (simp (no_asm_simp) add: cdt_relation_def split: if_split)
+              apply (subgoal_tac "descendants_of dest (cdt a) = {}")
+               prefer 2
+               apply (drule mdb_insert.dest_no_descendants)
+               apply (fastforce simp add: cdt_relation_def)
+              apply (subgoal_tac "mdb_insert_abs (cdt a) src dest")
+               prefer 2
+               apply (erule mdb_insert_abs.intro)
+                apply (rule mdb_None)
+                  apply (erule(1) mdb_insert.descendants_not_dest)
                  apply assumption
                 apply assumption
-               apply(simp add: cdt_list_relation_def)
-               apply(subgoal_tac "no_mloop (cdt a) \<and> finite_depth (cdt a)")
+               apply assumption
+              apply(simp add: cdt_list_relation_def)
+              apply(subgoal_tac "no_mloop (cdt a) \<and> finite_depth (cdt a)")
+               prefer 2
+               apply(simp add: finite_depth valid_mdb_def)
+              apply(intro conjI impI allI)
+               apply(simp cong: option.case_cong)
+               apply(simp split: option.split)
+               apply(subgoal_tac "\<forall>aa. cdt a src = Some aa \<longrightarrow> src \<noteq> aa")
                 prefer 2
-                apply(simp add: finite_depth valid_mdb_def)
-               apply(intro conjI impI allI)
-                apply(simp cong: option.case_cong)
-                apply(simp split: option.split)
-                apply(subgoal_tac "\<forall>aa. cdt a src = Some aa \<longrightarrow> src \<noteq> aa")
-                 prefer 2
-                 apply(fastforce simp: no_mloop_weaken)
-                apply(simp add: fun_upd_twist)
-                apply(rule allI)
-                apply(case_tac "next_child src (cdt_list (a))")
-                 apply(frule next_child_NoneD)
-                 apply(subst mdb_insert_abs.next_slot)
-                     apply(simp_all)[5]
-                 apply(case_tac "ca=src")
-                  apply(simp)
-                  apply(clarsimp simp: modify_map_def)
-                  apply(fastforce split: if_split_asm)
-                 apply(case_tac "ca = dest")
-                  apply(simp)
-                  apply(rule impI)
-                  apply(clarsimp simp: modify_map_def const_def)
-                  apply(simp split: if_split_asm)
-                    apply(drule_tac p="cte_map src" in valid_mdbD1')
-                      subgoal by(simp)
-                     subgoal by(simp add: valid_mdb'_def valid_mdb_ctes_def)
-                    subgoal by(clarsimp)
-                   apply(drule cte_map_inj_eq')
-                        apply(simp_all)[2]
-                  apply(erule_tac x=src in allE)+
-                  subgoal by(fastforce)
-                 apply(simp)
-                 apply(rule impI)
-                 apply(subgoal_tac "cte_at ca a")
-                  prefer 2
-                  apply(rule cte_at_next_slot)
-                     apply(simp_all)[4]
-                 apply(clarsimp simp: modify_map_def const_def)
-                 apply(simp split: if_split_asm)
-                       apply(drule cte_map_inj_eq')
-                            apply(simp_all)[2]
-                      apply(drule_tac p="cte_map src" in valid_mdbD1')
-                        subgoal by(simp)
-                       subgoal by(simp add: valid_mdb'_def valid_mdb_ctes_def)
-                      subgoal by(clarsimp)
-                     apply(clarsimp)
-                     apply(case_tac z)
-                     apply(erule_tac x="(aa, bb)" in allE)+
-                     subgoal by(fastforce)
-                    apply(drule cte_map_inj_eq')
-                         apply(simp_all)[2]
-                   apply(drule cte_map_inj_eq')
-                        apply(simp_all)[2]
-                  apply(drule cte_map_inj_eq')
-                       apply(simp_all)[2]
-                 apply(erule_tac x="(aa, bb)" in allE)+
-                 subgoal by(fastforce)
-
-                apply(frule(1) next_childD)
-                apply(simp add: mdb_insert_abs.next_slot)
+                apply(fastforce simp: no_mloop_weaken)
+               apply(simp add: fun_upd_twist)
+               apply(rule allI)
+               apply(case_tac "next_child src (cdt_list (a))")
+                apply(frule next_child_NoneD)
+                apply(subst mdb_insert_abs.next_slot)
+                    apply(simp_all)[5]
                 apply(case_tac "ca=src")
                  apply(simp)
                  apply(clarsimp simp: modify_map_def)
-                 subgoal by(fastforce split: if_split_asm)
+                 apply(fastforce split: if_split_asm)
                 apply(case_tac "ca = dest")
                  apply(simp)
                  apply(rule impI)
@@ -5292,10 +5246,10 @@ lemma cteInsert_corres:
                  apply(simp split: if_split_asm)
                    apply(drule_tac p="cte_map src" in valid_mdbD1')
                      subgoal by(simp)
-                    apply(simp add: valid_mdb'_def valid_mdb_ctes_def)
+                    subgoal by(simp add: valid_mdb'_def valid_mdb_ctes_def)
                    subgoal by(clarsimp)
                   apply(drule cte_map_inj_eq')
-                       apply(simp_all)[2]
+                   apply(simp_all)[2]
                  apply(erule_tac x=src in allE)+
                  subgoal by(fastforce)
                 apply(simp)
@@ -5324,104 +5278,15 @@ lemma cteInsert_corres:
                 apply(erule_tac x="(aa, bb)" in allE)+
                 subgoal by(fastforce)
 
-               apply(subgoal_tac "mdb_insert_sib (ctes_of b) (cte_map src) (maskedAsFull src_cap' c')
-         src_node (cte_map dest) capability.NullCap dest_node c'")
-                prefer 2
-                apply(simp add: mdb_insert_sib_def)
-                apply(rule mdb_insert_sib_axioms.intro)
-                apply (subst can_be_is [symmetric])
-                    apply simp
-                    apply (rule cap_relation_masked_as_full)
-                     apply (simp+)[3]
-                  apply simp
-                 apply simp
-                apply simp
-                apply (subst (asm) is_cap_revocable_eq, assumption, assumption)
-                  apply (rule derived_sameRegionAs)
-                   apply (subst is_derived_eq[symmetric], assumption,
-                  assumption, assumption, assumption, assumption)
-                  apply assumption
-                 subgoal by (clarsimp simp: cte_wp_at_def is_derived_def is_cap_simps cap_master_cap_simps
-                                     dest!:cap_master_cap_eqDs)
-                apply (subgoal_tac "is_original_cap a src = mdbRevocable src_node")
-                 apply (frule(4) iffD1[OF is_derived_eq])
-                 apply (drule_tac src_cap' = src_cap' in
-                   maskedAsFull_revokable[where a = c',symmetric])
-                 subgoal by(simp)
-                apply (simp add: revokable_relation_def)
-                apply (erule_tac x=src in allE)+
-                apply simp
-                apply (erule impE)
-                 apply (clarsimp simp: null_filter_def cte_wp_at_caps_of_state split: if_splits)
-                 subgoal by (clarsimp simp: masked_as_full_def is_cap_simps free_index_update_def split: if_splits)
-                apply(simp)
-
-               apply(subgoal_tac "cdt_list (a) src = []")
-                prefer 2
-                apply(rule ccontr)
-                apply(simp add: empty_list_empty_desc)
-                apply(simp add: no_children_empty_desc[symmetric])
-                apply(erule exE)
-                apply(drule_tac p="cte_map caa" in mdb_insert_sib.src_no_parent)
-                apply(subgoal_tac "cte_map caa\<in>descendants_of' (cte_map src) (ctes_of b)")
-                 subgoal by(simp add: descendants_of'_def)
-                apply(simp add: cdt_relation_def)
-                apply(erule_tac x=src in allE)
-                apply(drule child_descendant)+
-                apply(drule_tac x=caa and f=cte_map in imageI)
-                subgoal by(simp)
-
-               apply(case_tac "cdt a src")
-                apply(simp)
-                apply(subst mdb_insert_abs_sib.next_slot_no_parent')
-                     apply(simp add: mdb_insert_abs_sib_def)
-                    apply(simp_all add: fun_upd_idem)[5]
-
-                apply(case_tac "ca=src")
-                 subgoal by(simp add: next_slot_def no_parent_next_not_child_None)
-                apply(case_tac "ca = dest")
-                 subgoal by(simp add: next_slot_def no_parent_next_not_child_None
-                                      mdb_insert_abs.dest empty_list_empty_desc)
-                apply(case_tac "next_slot ca (cdt_list (a)) (cdt a)")
-                 subgoal by(simp)
-                apply(simp)
-                apply(subgoal_tac "cte_at ca a")
-                 prefer 2
-                 apply(rule cte_at_next_slot)
-                    apply(simp_all)[4]
-                apply(clarsimp simp: modify_map_def const_def)
-                apply(simp split: if_split_asm)
-                      apply(drule cte_map_inj_eq')
-                           apply(simp_all)[2]
-                     apply(drule_tac p="cte_map src" in valid_mdbD1')
-                        apply(simp)
-                      subgoal by(simp add: valid_mdb'_def valid_mdb_ctes_def)
-                     subgoal by(clarsimp)
-                    apply(clarsimp)
-                    apply(case_tac z)
-                    apply(erule_tac x="(aa, bb)" in allE)+
-                    subgoal by(fastforce)
-                   apply(drule cte_map_inj_eq')
-                        apply(simp_all)[2]
-                  apply(drule cte_map_inj_eq')
-                       apply(simp_all)[2]
-                 apply(drule cte_map_inj_eq')
-                      apply(simp_all)[2]
-                apply(erule_tac x="(aa, bb)" in allE)+
-                subgoal by(fastforce)
-
-               apply(simp add: fun_upd_idem)
-               apply(subst mdb_insert_abs_sib.next_slot')
-                     subgoal by(simp add: mdb_insert_abs_sib_def)
-                    apply(simp_all)[5]
+               apply(frule(1) next_childD)
+               apply(simp add: mdb_insert_abs.next_slot)
                apply(case_tac "ca=src")
+                apply(simp)
                 apply(clarsimp simp: modify_map_def)
                 subgoal by(fastforce split: if_split_asm)
                apply(case_tac "ca = dest")
                 apply(simp)
-                apply(case_tac "next_slot src (cdt_list (a)) (cdt a)")
-                 subgoal by(simp)
-                apply(simp)
+                apply(rule impI)
                 apply(clarsimp simp: modify_map_def const_def)
                 apply(simp split: if_split_asm)
                   apply(drule_tac p="cte_map src" in valid_mdbD1')
@@ -5429,10 +5294,93 @@ lemma cteInsert_corres:
                    apply(simp add: valid_mdb'_def valid_mdb_ctes_def)
                   subgoal by(clarsimp)
                  apply(drule cte_map_inj_eq')
-                      apply(simp_all)[2]
+                  apply(simp_all)[2]
                 apply(erule_tac x=src in allE)+
                 subgoal by(fastforce)
                apply(simp)
+               apply(rule impI)
+               apply(subgoal_tac "cte_at ca a")
+                prefer 2
+                apply(rule cte_at_next_slot)
+                   apply(simp_all)[4]
+               apply(clarsimp simp: modify_map_def const_def)
+               apply(simp split: if_split_asm)
+                     apply(drule cte_map_inj_eq')
+                      apply(simp_all)[2]
+                    apply(drule_tac p="cte_map src" in valid_mdbD1')
+                      subgoal by(simp)
+                     subgoal by(simp add: valid_mdb'_def valid_mdb_ctes_def)
+                    subgoal by(clarsimp)
+                   apply(clarsimp)
+                   apply(case_tac z)
+                   apply(erule_tac x="(aa, bb)" in allE)+
+                   subgoal by(fastforce)
+                  apply(drule cte_map_inj_eq')
+                   apply(simp_all)[2]
+                 apply(drule cte_map_inj_eq')
+                  apply(simp_all)[2]
+                apply(drule cte_map_inj_eq')
+                 apply(simp_all)[2]
+               apply(erule_tac x="(aa, bb)" in allE)+
+               subgoal by(fastforce)
+
+              apply(subgoal_tac "mdb_insert_sib (ctes_of b) (cte_map src) (maskedAsFull src_cap' c')
+                                   src_node (cte_map dest) capability.NullCap dest_node c'")
+               prefer 2
+               apply(simp add: mdb_insert_sib_def)
+               apply(rule mdb_insert_sib_axioms.intro)
+               apply (subst can_be_is [symmetric])
+                   apply simp
+                   apply (rule cap_relation_masked_as_full)
+                    apply (simp+)[3]
+                 apply simp
+                apply simp
+               apply simp
+                apply (subst (asm) is_cap_revocable_eq, assumption, assumption)
+                 apply (rule derived_sameRegionAs)
+                  apply (subst is_derived_eq[symmetric]; assumption)
+                 apply assumption
+                subgoal by (clarsimp simp: cte_wp_at_def is_derived_def is_cap_simps cap_master_cap_simps
+                                    dest!:cap_master_cap_eqDs)
+               apply (subgoal_tac "is_original_cap a src = mdbRevocable src_node")
+                apply (frule(4) iffD1[OF is_derived_eq])
+                apply (drule_tac src_cap' = src_cap' in
+                  maskedAsFull_revokable[where a = c',symmetric])
+                subgoal by(simp)
+               apply (simp add: revokable_relation_def)
+               apply (erule_tac x=src in allE)+
+               apply simp
+               apply (erule impE)
+                apply (clarsimp simp: null_filter_def cte_wp_at_caps_of_state split: if_splits)
+                subgoal by (clarsimp simp: masked_as_full_def is_cap_simps free_index_update_def split: if_splits)
+               apply(simp)
+
+              apply(subgoal_tac "cdt_list (a) src = []")
+               prefer 2
+               apply(rule ccontr)
+               apply(simp add: empty_list_empty_desc)
+               apply(simp add: no_children_empty_desc[symmetric])
+               apply(erule exE)
+               apply(drule_tac p="cte_map caa" in mdb_insert_sib.src_no_parent)
+               apply(subgoal_tac "cte_map caa\<in>descendants_of' (cte_map src) (ctes_of b)")
+                subgoal by(simp add: descendants_of'_def)
+               apply(simp add: cdt_relation_def)
+               apply(erule_tac x=src in allE)
+               apply(drule child_descendant)+
+               apply(drule_tac x=caa and f=cte_map in imageI)
+               subgoal by(simp)
+
+              apply(case_tac "cdt a src")
+               apply(simp)
+               apply(subst mdb_insert_abs_sib.next_slot_no_parent')
+                    apply(simp add: mdb_insert_abs_sib_def)
+                   apply(simp_all add: fun_upd_idem)[5]
+
+               apply(case_tac "ca=src")
+                subgoal by(simp add: next_slot_def no_parent_next_not_child_None)
+               apply(case_tac "ca = dest")
+                subgoal by(simp add: next_slot_def no_parent_next_not_child_None
+                                     mdb_insert_abs.dest empty_list_empty_desc)
                apply(case_tac "next_slot ca (cdt_list (a)) (cdt a)")
                 subgoal by(simp)
                apply(simp)
@@ -5445,7 +5393,7 @@ lemma cteInsert_corres:
                      apply(drule cte_map_inj_eq')
                           apply(simp_all)[2]
                     apply(drule_tac p="cte_map src" in valid_mdbD1')
-                       subgoal by(simp)
+                      subgoal by(simp)
                      subgoal by(simp add: valid_mdb'_def valid_mdb_ctes_def)
                     subgoal by(clarsimp)
                    apply(clarsimp)
@@ -5457,21 +5405,71 @@ lemma cteInsert_corres:
                 apply(drule cte_map_inj_eq'; simp)
                apply(erule_tac x="(aa, bb)" in allE)+
                subgoal by(fastforce)
-              apply (thin_tac "ctes_of t = t'" for t t')+
-              apply (clarsimp simp: modify_map_apply)
-              apply (clarsimp simp: revokable_relation_def  split: if_split)
-              apply (rule conjI)
-              apply clarsimp
-               apply (subgoal_tac "mdbRevocable node = isCapRevocable c' (cteCap srcCTE)")
-                prefer 2
-                apply (case_tac rv')
-                subgoal by (clarsimp simp add: const_def modify_map_def split: if_split_asm)
-               apply simp
-               apply (rule is_cap_revocable_eq, assumption, assumption)
-                apply (rule derived_sameRegionAs)
-                 apply (drule(3) is_derived_eq[THEN iffD1,rotated -1])
-                  subgoal by (simp add: cte_wp_at_def)
-                 apply assumption
+
+              apply(simp add: fun_upd_idem)
+              apply(subst mdb_insert_abs_sib.next_slot')
+                    subgoal by(simp add: mdb_insert_abs_sib_def)
+                   apply(simp_all)[5]
+              apply(case_tac "ca=src")
+               apply(clarsimp simp: modify_map_def)
+               subgoal by(fastforce split: if_split_asm)
+              apply(case_tac "ca = dest")
+               apply(simp)
+               apply(case_tac "next_slot src (cdt_list (a)) (cdt a)")
+                subgoal by(simp)
+               apply(simp)
+               apply(clarsimp simp: modify_map_def const_def)
+               apply(simp split: if_split_asm)
+                 apply(drule_tac p="cte_map src" in valid_mdbD1')
+                   subgoal by(simp)
+                  apply(simp add: valid_mdb'_def valid_mdb_ctes_def)
+                 subgoal by(clarsimp)
+                apply(drule cte_map_inj_eq')
+                     apply(simp_all)[2]
+               apply(erule_tac x=src in allE)+
+               subgoal by(fastforce)
+              apply(simp)
+              apply(case_tac "next_slot ca (cdt_list (a)) (cdt a)")
+               subgoal by(simp)
+              apply(simp)
+              apply(subgoal_tac "cte_at ca a")
+               prefer 2
+               apply(rule cte_at_next_slot)
+                  apply(simp_all)[4]
+              apply(clarsimp simp: modify_map_def const_def)
+              apply(simp split: if_split_asm)
+                    apply(drule cte_map_inj_eq')
+                         apply(simp_all)[2]
+                   apply(drule_tac p="cte_map src" in valid_mdbD1')
+                     subgoal by(simp)
+                    subgoal by(simp add: valid_mdb'_def valid_mdb_ctes_def)
+                   subgoal by(clarsimp)
+                  apply(clarsimp)
+                  apply(case_tac z)
+                  apply(erule_tac x="(aa, bb)" in allE)+
+                  subgoal by(fastforce)
+                 apply(drule cte_map_inj_eq')
+                      apply(simp_all)[2]
+                apply(drule cte_map_inj_eq')
+                     apply(simp_all)[2]
+               apply(drule cte_map_inj_eq')
+                    apply(simp_all)[2]
+              apply(erule_tac x="(aa, bb)" in allE)+
+              subgoal by(fastforce)
+             apply (thin_tac "ctes_of t = t'" for t t')+
+             apply (clarsimp simp: modify_map_apply)
+             apply (clarsimp simp: revokable_relation_def  split: if_split)
+             apply (rule conjI)
+             apply clarsimp
+              apply (subgoal_tac "mdbRevocable node = isCapRevocable c' (cteCap srcCTE)")
+               prefer 2
+               apply (case_tac rv')
+               subgoal by (clarsimp simp add: const_def modify_map_def split: if_split_asm)
+              apply simp
+              apply (rule is_cap_revocable_eq, assumption, assumption)
+               apply (rule derived_sameRegionAs)
+                apply (drule(3) is_derived_eq[THEN iffD1,rotated -1])
+                 subgoal by (simp add: cte_wp_at_def)
                 apply assumption
                subgoal by (clarsimp simp: cap_master_cap_simps cte_wp_at_def is_derived_def is_cap_simps
                                    split:if_splits dest!:cap_master_cap_eqDs)
@@ -5499,8 +5497,6 @@ lemma cteInsert_corres:
                subgoal by (clarsimp simp: modify_map_def split: if_split_asm)
               apply (erule (5) cte_map_inj)
 
-             apply (rule setUntypedCapAsFull_corres)
-                   apply simp+
             apply (wp set_untyped_cap_full_valid_objs set_untyped_cap_as_full_valid_mdb
                set_untyped_cap_as_full_cte_wp_at setUntypedCapAsFull_valid_cap
                setUntypedCapAsFull_cte_wp_at | clarsimp simp: cte_wp_at_caps_of_state| wps)+
@@ -5559,12 +5555,12 @@ lemma cteInsert_corres:
    apply simp
    apply (subst mdb_insert_child.descendants)
     apply (rule mdb_insert_child.intro)
-    apply simp
+     apply simp
     apply (rule mdb_insert_child_axioms.intro)
     apply (subst can_be_is [symmetric])
         apply simp
-       apply (rule cap_relation_masked_as_full)
-       apply (simp+)[3]
+        apply (rule cap_relation_masked_as_full)
+         apply (simp+)[3]
       apply simp
      apply simp
     apply (subst (asm) is_cap_revocable_eq, assumption, assumption)
@@ -6988,8 +6984,8 @@ lemma capSwapForDelete_corres:
        apply (simp add: caps_of_state_cte_at)+
   apply (simp add: when_def liftM_def)
   apply (rule corres_guard_imp)
-    apply (rule_tac P1=wellformed_cap in corres_split_deprecated [OF _ get_cap_corres_P])
-      apply (rule_tac P1=wellformed_cap in corres_split_deprecated [OF _ get_cap_corres_P])
+    apply (rule_tac P1=wellformed_cap in corres_split[OF get_cap_corres_P])
+      apply (rule_tac P1=wellformed_cap in corres_split[OF get_cap_corres_P])
         apply (rule cteSwap_corres, rule refl, rule refl, clarsimp+)
        apply (wp get_cap_wp getCTE_wp')+
    apply (clarsimp simp: cte_wp_at_caps_of_state)

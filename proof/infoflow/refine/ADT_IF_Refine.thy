@@ -159,12 +159,12 @@ lemma corres_gets_same:
   and corres: "\<And>r.  corres_underlying sr b c rr (P and (R r) and (\<lambda>s. r = f s)) Q (n r) (m r)"
   shows "corres_underlying sr b c rr P Q (do r \<leftarrow> gets f; n r od) (do r \<leftarrow> gets g; m r od)"
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[where r' = "(=)"])
-       apply simp
-       apply (rule corres)
-      apply clarsimp
-      apply (rule equiv)
-        apply (wp|simp)+
+    apply (rule corres_split[where r' = "(=)"])
+       apply clarsimp
+       apply (rule equiv)
+         apply simp+
+      apply (rule corres)
+     apply wp+
    apply (simp add: rimp)
   apply simp
   done
@@ -301,16 +301,15 @@ lemma kernel_entry_if_corres:
      (kernel_entry_if event tc) (kernelEntry_if event tc)"
   apply (simp add: kernel_entry_if_def kernelEntry_if_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ getCurThread_corres])
-      apply (rule corres_split_deprecated)
-         prefer 2
+    apply (rule corres_split[OF getCurThread_corres])
+      apply (rule corres_split)
          apply simp
          apply (rule threadset_corresT)
             apply (erule arch_tcb_context_set_tcb_relation)
            apply (clarsimp simp: tcb_cap_cases_def)
           apply (rule allI[OF ball_tcb_cte_casesI]; clarsimp)
          apply (simp add: exst_same_def)
-        apply (rule corres_split_deprecated [OF _ handleEvent_corres_arch_extras])
+        apply (rule corres_split[OF handleEvent_corres_arch_extras])
           apply (rule corres_stateAssert_assume_stronger[where Q=\<top> and
                         P="\<lambda>s. valid_domain_list s \<and>
                                (event \<noteq> Interrupt \<longrightarrow> 0 < domain_time s) \<and>
@@ -364,7 +363,7 @@ lemma doUserOp_if_ex_abs[wp]:
 lemma check_active_irq_if_corres:
   "corres (=) \<top> \<top> (check_active_irq_if tc) (checkActiveIRQ_if tc)"
   apply (simp add: checkActiveIRQ_if_def check_active_irq_if_def)
-  apply (rule corres_underlying_split[where r'="(=)"])
+  apply (rule corres_split_forwards'[where r'="(=)"])
      apply (rule dmo_getActiveIRQ_corres)
     apply wp+
   apply clarsimp
@@ -434,15 +433,15 @@ lemma schedule_if_corres:
              (invs') (schedule_if tc) (schedule'_if tc)"
   apply (simp add: schedule_if_def schedule'_if_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[where r'="dc"])
-       apply (rule corres_split_deprecated[where r'="dc"])
-          apply (rule corres_stateAssert_assume_stronger
-                        [where Q=\<top> and P="\<lambda>s. valid_domain_list s \<and> 0 < domain_time s"])
-           apply simp
-          apply (clarsimp simp: state_relation_def)
+    apply (rule corres_split[where r'="dc"])
+       apply (rule schedule_corres)
+      apply (rule corres_split[where r'="dc"])
          apply (rule activateThread_corres)
-        apply wp+
-      apply (rule schedule_corres)
+        apply (rule corres_stateAssert_assume_stronger
+                      [where Q=\<top> and P="\<lambda>s. valid_domain_list s \<and> 0 < domain_time s"])
+         apply simp
+        apply (clarsimp simp: state_relation_def)
+       apply wp+
      apply (wp schedule_invs' schedule_domain_time_left)+
    apply clarsimp+
   done
@@ -1210,11 +1209,11 @@ lemma kernel_exit_if_corres:
   "corres (=) (invs) (invs') (kernel_exit_if tc) (kernelExit_if tc)"
   apply (simp add: kernel_exit_if_def kernelExit_if_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[where r'="(=)"])
-       apply simp
-       apply (rule threadGet_corres)
-       apply (erule arch_tcb_context_get_atcbContextGet)
-      apply (rule getCurThread_corres)
+    apply (rule corres_split[where r'="(=)"])
+       apply (rule getCurThread_corres)
+      apply simp
+      apply (rule threadGet_corres)
+      apply (erule arch_tcb_context_get_atcbContextGet)
      apply wp+
    apply fastforce+
   done

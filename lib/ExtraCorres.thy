@@ -29,8 +29,8 @@ next
   show ?case
     apply (simp add: mapM_Cons)
     apply (rule corres_guard_imp)
-      apply (rule corres_split_deprecated[OF _ z [OF P] w [OF P]])
-      apply (rule corres_split' [OF Q])
+      apply (rule corres_split[OF z[OF P] _ w[OF P]])
+      apply (rule corres_underlying_split[OF Q])
         apply (rule corres_trivial, simp add: y)
        apply (wp | simp)+
     done
@@ -62,8 +62,8 @@ next
 
   show ?case
     apply (simp add: mapM_Cons)
-    apply (rule corres_split' [OF corr' _ ha [OF Cons(2)] hc [OF Cons(2)]])
-    apply (rule corres_split' [OF Cons(3) _ hoare_post_taut hoare_post_taut])
+    apply (rule corres_underlying_split [OF corr' _ ha [OF Cons(2)] hc [OF Cons(2)]])
+    apply (rule corres_underlying_split [OF Cons(3) _ hoare_post_taut hoare_post_taut])
     apply (simp add: rc)
     apply (rule Cons.hyps)+
     done
@@ -79,9 +79,8 @@ lemma corres_mapM_x:
   apply (simp add: mapM_x_mapM)
   apply (rule corres_guard_imp)
     apply (rule corres_split_nor)
-       apply (rule corres_trivial, simp)
-      apply (rule corres_mapM [OF _ _ x y z w])
-          apply (simp | wp)+
+       apply (rule corres_mapM [OF _ _ x y z w])
+           apply (simp | wp)+
   done
 
 lemma corres_mapM_scheme:
@@ -154,14 +153,11 @@ next
     apply (simp add: mapME_Cons)
     apply (rule corres_guard_imp)
     apply (unfold bindE_def validE_def)
-      apply (rule corres_underlying_split [OF z [OF P]])
-        prefer 3
-        apply clarify
-       apply (simp add: lift_def)
-      apply (case_tac rv)
-       apply (clarsimp simp: throwError_def)
-       apply clarsimp
-        apply (rule corres_split_deprecated[OF _ Q])
+      apply (rule corres_underlying_split[OF z[OF P]])
+        apply (case_tac rv)
+         apply (clarsimp simp: throwError_def)
+        apply clarsimp
+        apply (rule corres_split[OF Q])
           apply (rule corres_trivial)
           apply (case_tac rv)
            apply (clarsimp simp add: lift_def throwError_def)
@@ -220,7 +216,7 @@ proof -
   show ?thesis
     apply (rule corres_guard_imp)
       apply (unfold gets_the_def)
-      apply (subst bind_return[symmetric], rule corres_split_deprecated [OF _ z])
+      apply (subst bind_return[symmetric], rule corres_split [OF z])
         apply (rule corres_trivial, clarsimp simp: assert_opt_def)
        apply (wp | simp)+
   done

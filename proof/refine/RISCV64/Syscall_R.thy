@@ -143,24 +143,25 @@ lemma decodeDomainInvocation_corres:
     apply (simp+)[2]
   apply (case_tac "args", simp_all)
   apply (rule corres_guard_imp)
-    apply (rule_tac r'="\<lambda>domain domain'. domain = domain'" and R="\<lambda>_. \<top>" and R'="\<lambda>_. \<top>" in corres_splitEE)
-       apply (rule whenE_throwError_corres_initial)
-         apply simp
-         apply (case_tac "cs")
-       apply ((case_tac "cs'", ((simp add: null_def)+)[2])+)[2]
-        apply (subgoal_tac "cap_relation (fst (hd cs)) (fst (hd cs'))")
-        apply (case_tac "fst (hd cs)")
-          apply (case_tac "fst (hd cs')", simp+, rule corres_returnOkTT)
-          apply (simp add: inv_relation_def o_def uncurry_def)
-          apply (case_tac "fst (hd cs')", fastforce+)
-          apply (case_tac "cs")
-            apply (case_tac "cs'", ((simp add: list_all2_map2 list_all2_map1)+)[2])
-            apply (case_tac "cs'", ((simp add: list_all2_map2 list_all2_map1)+)[2])
-     apply (rule whenE_throwError_corres)
-     apply (simp+)[2]
-     apply (rule corres_returnOkTT)
+    apply (rule_tac r'="\<lambda>domain domain'. domain = domain'" and R="\<lambda>_. \<top>" and R'="\<lambda>_. \<top>"
+            in corres_splitEE)     apply (rule whenE_throwError_corres)
+         apply (simp+)[2]
+       apply (rule corres_returnOkTT)
+       apply simp
+      apply (rule whenE_throwError_corres_initial)
+        apply simp
+       apply (case_tac "cs")
+        apply ((case_tac "cs'", ((simp add: null_def)+)[2])+)[2]
+      apply (subgoal_tac "cap_relation (fst (hd cs)) (fst (hd cs'))")
+       apply (case_tac "fst (hd cs)")
+                  apply (case_tac "fst (hd cs')", simp+, rule corres_returnOkTT)
+            apply (simp add: inv_relation_def o_def uncurry_def)
+           apply (case_tac "fst (hd cs')", fastforce+)
+      apply (case_tac "cs")
+       apply (case_tac "cs'", ((simp add: list_all2_map2 list_all2_map1)+)[2])
+      apply (case_tac "cs'", ((simp add: list_all2_map2 list_all2_map1)+)[2])
      apply (wp | simp)+
-done
+  done
 
 lemma decodeInvocation_corres:
   "\<lbrakk>cptr = to_bl cptr'; mi' = message_info_map mi;
@@ -271,15 +272,14 @@ lemma hinv_corres_assist:
             odE)"
   apply (clarsimp simp add: split_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_splitEE [OF _ corres_cap_fault])
-       prefer 2
+    apply (rule corres_splitEE[OF corres_cap_fault])
        \<comment> \<open>switched over to argument of corres_cap_fault\<close>
        apply (rule lookupCapAndSlot_corres, simp)
-      apply (rule corres_split_deprecated [OF _ lookupIPCBuffer_corres])
-        apply (rule corres_splitEE [OF _ lookupExtraCaps_corres])
-            apply (rule corres_returnOkTT)
-            apply simp+
-         apply (wp | simp)+
+      apply (rule corres_split[OF lookupIPCBuffer_corres])
+        apply (rule corres_splitEE)
+           apply (rule lookupExtraCaps_corres; simp)
+          apply (rule corres_returnOkTT)
+          apply (wp | simp)+
    apply auto
   done
 
@@ -476,9 +476,9 @@ lemma performInvocation_corres:
      apply clarsimp
      apply (rule corres_stateAssertE_add_assertion)
      apply (rule corres_guard_imp)
-       apply (rule corres_splitEE [OF _ invokeCNode_corres])
-          apply (rule corres_trivial, simp add: returnOk_def)
-         apply assumption
+       apply (rule corres_splitEE[OF invokeCNode_corres])
+          apply assumption
+         apply (rule corres_trivial, simp add: returnOk_def)
         apply wp+
       apply (clarsimp+)[2]
      apply (clarsimp simp: sym_refs_asrt_def)
@@ -1565,8 +1565,8 @@ lemma handleRecv_isBlocking_corres':
   apply (simp add: cap_register_def capRegister_def liftM_bind
              cong: if_cong cap.case_cong capability.case_cong split del: if_split)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr [OF _ getCurThread_corres])
-      apply (rule corres_split_eqr [OF _ asUser_getRegister_corres])
+    apply (rule corres_split_eqr[OF getCurThread_corres])
+      apply (rule corres_split_eqr[OF asUser_getRegister_corres])
         apply (rule corres_split_catch)
            apply (erule handleFault_corres)
           apply (rule corres_splitEE [OF _ corres_cap_fault[OF lookupCap_corres]])

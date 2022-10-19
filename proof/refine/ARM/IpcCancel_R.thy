@@ -254,7 +254,7 @@ lemma blocked_cancelIPC_corres:
    apply (case_tac st; clarsimp simp: getBlockingObject_def epBlocked_def)
   apply (simp add: blocked_cancel_ipc_def blockedCancelIPC_def gbep_ret)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ getEndpoint_corres])
+    apply (rule corres_split[OF getEndpoint_corres])
       apply (rule_tac F="ep \<noteq> IdleEP" in corres_gen_asm2)
       apply (rule corres_assert_assume[rotated])
        apply (clarsimp split: endpoint.splits)
@@ -406,7 +406,7 @@ lemma cancelSignal_corres:
   apply (rule corres_stateAssert_add_assertion[rotated])
    apply clarsimp
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ getNotification_corres])
+    apply (rule corres_split[OF getNotification_corres])
       apply (rule_tac F="isWaitingNtfn (ntfnObj ntfnaa)" in corres_gen_asm2)
       apply (case_tac "ntfn_obj ntfna"; simp add: ntfn_relation_def isWaitingNtfn_def)
       apply (case_tac "ntfna", case_tac "ntfnaa")

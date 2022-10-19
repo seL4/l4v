@@ -1429,16 +1429,20 @@ lemma objBitsKO_gt_0: "0 < objBitsKO ko"
     apply (simp_all add:archObjSize_def pageBits_def)
   done
 
-lemma kheap_ekheap_double_gets: "(\<And>rv erv rv'. pspace_relation rv rv' \<Longrightarrow> ekheap_relation erv rv' \<Longrightarrow> corres r (R rv erv) (R' rv') (b rv erv) (d rv')) \<Longrightarrow>
-corres r (\<lambda>s. R (kheap s) (ekheap s) s) (\<lambda>s. R' (ksPSpace s) s) (do x \<leftarrow> gets kheap; xa \<leftarrow> gets ekheap; b x xa od) (gets ksPSpace >>= d)"
+lemma kheap_ekheap_double_gets:
+  "(\<And>rv erv rv'. \<lbrakk>pspace_relation rv rv'; ekheap_relation erv rv'\<rbrakk>
+                 \<Longrightarrow> corres r (R rv erv) (R' rv') (b rv erv) (d rv')) \<Longrightarrow>
+   corres r (\<lambda>s. R (kheap s) (ekheap s) s) (\<lambda>s. R' (ksPSpace s) s)
+          (do x \<leftarrow> gets kheap; xa \<leftarrow> gets ekheap; b x xa od) (gets ksPSpace >>= d)"
   apply (rule corres_symb_exec_l)
      apply (rule corres_guard_imp)
-       apply (rule_tac r'= "\<lambda>erv rv'. ekheap_relation erv rv' \<and> pspace_relation x rv'" in corres_split_deprecated)
+       apply (rule_tac r'= "\<lambda>erv rv'. ekheap_relation erv rv' \<and> pspace_relation x rv'"
+               in corres_split)
+          apply (subst corres_gets[where P="\<lambda>s. x = kheap s" and P'=\<top>])
           apply clarsimp
-          apply assumption
-         apply (subst corres_gets[where P="\<lambda>s. x = kheap s" and P'=\<top>])
+          apply (simp add: state_relation_def)
          apply clarsimp
-         apply (simp add: state_relation_def)
+         apply assumption
         apply (wp gets_exs_valid | simp)+
   done
 
@@ -5234,7 +5238,7 @@ lemma retype_region2_extra_ext_mapM_x_corres:
              addrs)"
   apply (rule corres_guard_imp)
     apply (simp add: retype_region2_extra_ext_def curDomain_mapM_x_futz[symmetric] when_def)
-    apply (rule corres_split_eqr[OF _ gcd_corres])
+    apply (rule corres_split_eqr[OF gcd_corres])
       apply (rule_tac S="Id \<inter> {(x, y). x \<in> set addrs}"
                   and P="\<lambda>s. (\<forall>t \<in> set addrs. tcb_at t s) \<and> valid_etcbs s"
                   and P'="\<lambda>s. \<forall>t \<in> set addrs. tcb_at' t s"
@@ -5387,19 +5391,19 @@ lemma corres_retype_region_createNewCaps:
                             split del: if_split)[10] (* not PML4Object *)
             apply (rule corres_guard_imp)
               apply (rule corres_split_eqr)
-                 apply (rule corres_split_nor)
-                    apply (rule corres_trivial, simp)
-                    apply (clarsimp simp: list_all2_same list_all2_map1 list_all2_map2
-                                          objBits_simps APIType_map2_def)
+                 apply (rule corres_retype[where 'a = tcb],
+                        simp_all add: obj_bits_api_def objBits_simps' pageBits_def
+                                      APIType_map2_def makeObjectKO_def
+                                      other_objs_default_relation)[1]
+                 apply (fastforce simp: range_cover_def)
+                apply (rule corres_split_nor)
                    apply (simp add: APIType_map2_def)
                    apply (rule retype_region2_extra_ext_mapM_x_corres)
-                  apply wp
+                  apply (rule corres_trivial, simp)
+                  apply (clarsimp simp: list_all2_same list_all2_map1 list_all2_map2
+                                        objBits_simps APIType_map2_def)
                  apply wp
-                apply (rule corres_retype[where 'a = tcb],
-                       simp_all add: obj_bits_api_def objBits_simps' pageBits_def
-                                     APIType_map2_def makeObjectKO_def
-                                     other_objs_default_relation)[1]
-                apply (fastforce simp: range_cover_def)
+                apply wp
                apply ((wp retype_region2_obj_at | simp add: APIType_map2_def)+)[1]
               apply ((wp createObjects_tcb_at'[where sz=sz]
                       | simp add: APIType_map2_def objBits_simps' obj_bits_api_def)+)[1]

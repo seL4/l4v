@@ -5677,7 +5677,36 @@ lemma corres_retype_region_createNewCaps:
                             makeObjectKO_def)[1]
         apply (simp add: range_cover_def)+
        apply (rule pagedirectory_relation_retype)
-      apply (wp | simp)+
+      apply (simp add: init_arch_objects_def APIType_map2_def
+                       bind_assoc)
+      apply (rule corres_split_nor)
+         apply (simp add: mapM_x_mapM)
+         apply (rule corres_underlying_split[where r' = dc])
+            apply (rule_tac Q="\<lambda>xs s. (\<forall>x \<in> set xs. page_directory_at x s)
+                                   \<and> valid_arch_state s \<and> pspace_aligned s \<and> valid_etcbs s"
+                         and Q'="\<lambda>xs s. (\<forall>x \<in> set xs. page_directory_at' x s) \<and> valid_arch_state' s"
+                         in corres_mapM_list_all2[where r'=dc and S="(=)"])
+                 apply simp+
+               apply (rule corres_guard_imp, rule copyGlobalMappings_corres)
+                apply simp+
+              apply (wp hoare_vcg_const_Ball_lift | simp)+
+            apply (simp add: list_all2_same)
+           apply (rule corres_return[where P =\<top> and P'=\<top>,THEN iffD2])
+           apply simp
+          apply wp+
+        apply (simp add: liftM_def[symmetric] o_def list_all2_map1
+                         list_all2_map2 list_all2_same
+                         arch_default_cap_def mapM_x_mapM)
+        apply (simp add: dc_def[symmetric])
+        apply (rule corres_machine_op)
+        apply (rule corres_Id)
+          apply (simp add: shiftl_t2n shiftL_nat
+                           pdBits_def ptBits_def pageBits_def pt_bits_def)
+          defer
+          apply simp
+         apply (simp add: mapM_discarded[where g = "return ()",simplified,symmetric])
+         apply (rule no_fail_pre)
+          apply (wp no_fail_mapM|clarsimp)+
       apply (rule hoare_vcg_conj_lift)
        apply (rule hoare_post_imp)
         prefer 2
@@ -5729,7 +5758,7 @@ lemma corres_retype_region_createNewCaps:
                       APIType_map2_def default_arch_object_def default_object_def archObjSize_def
                       pteBits_def pdeBits_def
                       pd_bits_def fromIntegral_def toInteger_nat fromInteger_nat)
- done
+  done
 
 end
 end

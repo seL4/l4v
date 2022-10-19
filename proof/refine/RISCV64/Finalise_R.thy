@@ -1565,10 +1565,10 @@ lemma emptySlot_corres:
   unfolding emptySlot_def empty_slot_def
   apply (simp add: case_Null_If)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_noop_rhs[OF _ clearUntypedFreeIndex_noop_corres])
+    apply (rule corres_split_noop_rhs[OF clearUntypedFreeIndex_noop_corres])
      apply (rule_tac R="\<lambda>cap. einvs and cte_wp_at ((=) cap) slot" and
                      R'="\<lambda>cte. valid_pspace' and cte_wp_at' ((=) cte) (cte_map slot)" in
-                     corres_split_deprecated [OF _ get_cap_corres])
+                     corres_split[OF get_cap_corres])
        defer
        apply (wp get_cap_wp getCTE_wp')+
      apply (simp add: cte_wp_at_ctes_of)
@@ -1582,7 +1582,7 @@ lemma emptySlot_corres:
   apply (rule conjI, clarsimp)
   apply clarsimp
   apply (simp only: bind_assoc[symmetric])
-  apply (rule corres_split'[where r'=dc, OF _ postCapDeletion_corres])
+  apply (rule corres_underlying_split[where r'=dc, OF _ postCapDeletion_corres])
     defer
     apply wpsimp+
   apply (rule corres_no_failI)
@@ -4220,7 +4220,7 @@ lemma (in delete_one) deletingIRQHandler_corres:
           (deleting_irq_handler irq) (deletingIRQHandler irq)"
   apply (simp add: deleting_irq_handler_def deletingIRQHandler_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ getIRQSlot_corres])
+    apply (rule corres_split[OF getIRQSlot_corres])
       apply simp
       apply (rule_tac P'="cte_at' (cte_map slot)" in corres_symb_exec_r_conj)
          apply (rule_tac F="isNotificationCap rv \<or> rv = capability.NullCap"
@@ -4274,17 +4274,17 @@ lemma arch_finaliseCap_corres:
                 elim: is_aligned_weaken)[2]
   apply (rule corres_guard_imp)
     apply (rule corres_split_catch[where f=dc])
-       apply (rule unmapPageTable_corres; simp)
-      apply (rule corres_splitEE)
-         prefer 2
-         apply (rule corres_rel_imp[where r="dc \<oplus> (=)"], rule findVSpaceForASID_corres; simp)
-         apply (case_tac x; simp)
-        apply (simp only: whenE_def)
-        apply (rule corres_if[where Q=\<top> and Q'=\<top>], simp)
+       apply (rule corres_splitEE)
+          apply (rule corres_rel_imp[where r="dc \<oplus> (=)"], rule findVSpaceForASID_corres; simp)
+          apply (case_tac x; simp)
+         apply (simp only: whenE_def)
+         apply (rule corres_if[where Q=\<top> and Q'=\<top>], simp)
+          apply simp
+          apply (rule deleteASID_corres; rule refl)
          apply simp
-         apply (rule deleteASID_corres; rule refl)
-        apply simp
-       apply (wpsimp wp: hoare_vcg_if_lift_ER hoare_drop_imps)+
+        apply (wpsimp wp: hoare_vcg_if_lift_ER hoare_drop_imps)+
+      apply (rule unmapPageTable_corres; simp)
+     apply (wpsimp wp: hoare_drop_imps)+
    apply (clarsimp simp: invs_psp_aligned invs_distinct invs_vspace_objs invs_valid_asid_table)
    apply (clarsimp simp: cte_wp_at_caps_of_state)
    apply (drule (1) caps_of_state_valid)
@@ -4552,7 +4552,7 @@ lemma cap_delete_one_corres:
                    unless_def when_def)
   apply (rule corres_cross[OF sch_act_simple_cross_rel], clarsimp)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ get_cap_corres])
+    apply (rule corres_split[OF get_cap_corres])
       apply (rule_tac F="can_fast_finalise cap" in corres_gen_asm)
       apply (rule corres_if)
         apply fastforce

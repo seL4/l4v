@@ -134,8 +134,7 @@ lemma performASIDControlInvocation_corres:
   apply (frule valid_capAligned)
   apply (clarsimp simp: capAligned_def page_bits_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated)
-       prefer 2
+    apply (rule corres_split)
        apply (erule deleteObjects_corres)
        apply (simp add:pageBits_def)
       apply (rule corres_split_deprecated[OF _ getSlotCap_corres])
@@ -198,19 +197,58 @@ lemma performASIDControlInvocation_corres:
                        [where sz = pageBits and ty="Inl (KOArch (KOASIDPool undefined))"])
             apply (clarsimp simp:is_cap_simps)
            apply (simp add: free_index_of_def)
-
-          apply (clarsimp simp: conj_comms obj_bits_api_def arch_kobj_size_def
-                 objBits_simps archObjSize_def default_arch_object_def
-                 pred_conj_def)
-          apply (clarsimp simp: conj_comms
-                | strengthen invs_mdb invs_valid_pspace)+
-          apply (simp add:region_in_kernel_window_def)
-          apply (wp set_untyped_cap_invs_simple[where sz = pageBits]
-                    set_cap_cte_wp_at
-                    set_cap_caps_no_overlap[where sz = pageBits]
-                    set_cap_no_overlap
-                    set_cap_device_and_range_aligned[where dev = False,simplified]
-                    set_untyped_cap_caps_overlap_reserved[where sz = pageBits])+
+          apply (rule corres_split)
+             apply (simp add: retype_region2_ext_retype_region_ArchObject )
+             apply (rule corres_retype [where ty="Inl (KOArch (KOASIDPool F))",
+                                        unfolded APIType_map2_def makeObjectKO_def,
+                                        THEN createObjects_corres',simplified,
+                                        where val = "makeObject::asidpool"])
+                   apply simp
+                  apply (simp add: objBits_simps obj_bits_api_def arch_kobj_size_def
+                                   default_arch_object_def archObjSize_def)+
+               apply (simp add: obj_relation_retype_def default_object_def
+                                default_arch_object_def objBits_simps archObjSize_def)
+               apply (simp add: other_obj_relation_def asid_pool_relation_def)
+               apply (simp add: makeObject_asidpool const_def inv_def)
+              apply (rule range_cover_full)
+               apply (simp add:obj_bits_api_def arch_kobj_size_def default_arch_object_def)+
+            apply (rule corres_split)
+               apply (rule cteInsert_simple_corres, simp, rule refl, rule refl)
+              apply (rule_tac F="is_aligned word2 asid_low_bits" in corres_gen_asm)
+              apply (simp add: is_aligned_mask dc_def[symmetric])
+              apply (rule corres_split[where P=\<top> and P'=\<top> and r'="\<lambda>t t'. t = t' o ucast"])
+                 apply (clarsimp simp: state_relation_def arch_state_relation_def)
+                apply (rule corres_trivial)
+                apply (rule corres_modify)
+                apply (thin_tac "x \<in> state_relation" for x)
+                apply (clarsimp simp: state_relation_def arch_state_relation_def o_def)
+                apply (rule ext)
+                apply clarsimp
+                apply (erule_tac P = "x = asid_high_bits_of word2" in notE)
+                apply (rule word_eqI[rule_format])
+                apply (drule_tac x1="ucast x" in bang_eq [THEN iffD1])
+                apply (erule_tac x=n in allE)
+                apply (simp add: word_size nth_ucast)
+               apply wp+
+           apply (strengthen safe_parent_strg[where idx = "2^pageBits"])
+           apply (strengthen invs_valid_objs invs_distinct
+                             invs_psp_aligned invs_mdb
+                  | simp cong:conj_cong)+
+           apply (wp retype_region_plain_invs[where sz = pageBits]
+                     retype_cte_wp_at[where sz = pageBits])+
+          apply (strengthen vp_strgs'
+                 safe_parent_strg'[where idx = "2^pageBits"])
+          apply (simp cong: conj_cong)
+          apply (wp createObjects_valid_pspace'
+                    [where sz = pageBits and ty="Inl (KOArch (KOASIDPool undefined))"])
+             apply (simp add: makeObjectKO_def)+
+           apply (simp add:objBits_simps archObjSize_def range_cover_full)+
+          apply (clarsimp simp:valid_cap'_def)
+          apply (wp createObject_typ_at'
+                    createObjects_orig_cte_wp_at'[where sz = pageBits])
+          apply (rule descendants_of'_helper)
+          apply (wp createObjects_null_filter'
+                    [where sz = pageBits and ty="Inl (KOArch (KOASIDPool undefined))"])
          apply (clarsimp simp: conj_comms obj_bits_api_def arch_kobj_size_def
                                objBits_simps archObjSize_def default_arch_object_def
                                makeObjectKO_def range_cover_full
@@ -492,11 +530,12 @@ lemma resolveVAddr_corres:
     apply (rule_tac R="\<lambda>rv s. valid_pde rv s \<and> pspace_aligned s"
                and R'="\<lambda>_ s. pspace_distinct' s \<and> pspace_aligned' s
                            \<and> vs_valid_duplicates' (ksPSpace s)"
-                in corres_split_deprecated[OF _ get_master_pde_corres])
+                in corres_split[OF get_master_pde_corres])
+       apply simp
       apply (case_tac rv, simp_all add: pde_relation'_def)[1]
       apply (rule corres_stateAssert_assume_stronger)
        apply (rule stronger_corres_guard_imp)
-         apply (rule corres_split_deprecated[OF _ get_master_pte_corres[OF refl]])
+         apply (rule corres_split[OF get_master_pte_corres[OF refl]])
            apply (rule corres_trivial)
            apply (case_tac rva, simp_all add: pte_relation'_def)[1]
           apply (wp get_master_pte_inv)+
@@ -556,7 +595,6 @@ lemma decodeARMPageFlush_corres:
   apply clarsimp
   apply (rule corres_guard_imp)
     apply (rule corres_splitEE)
-       prefer 2
        apply (rule corres_lookup_error)
        apply (rule find_pd_for_asid_corres[OF refl])
       apply (rule whenE_throwError_corres, simp)
@@ -754,14 +792,6 @@ lemma resolve_vaddr_valid_mapping_size:
                  split: if_split_asm)
   done
 
-lemma corres_splitEE':
-  assumes "corres_underlying sr nf nf' (f \<oplus> r') P P' a c"
-  assumes "\<And>rv rv'. r' rv rv'
-           \<Longrightarrow> corres_underlying sr nf nf' (f \<oplus> r) (R rv) (R' rv') (b rv) (d rv')"
-  assumes "\<lbrace>Q\<rbrace> a \<lbrace>R\<rbrace>,\<lbrace>\<top>\<top>\<rbrace>" "\<lbrace>Q'\<rbrace> c \<lbrace>R'\<rbrace>,\<lbrace>\<top>\<top>\<rbrace>"
-  shows   "corres_underlying sr nf nf' (f \<oplus> r) (P and Q) (P' and Q') (a >>=E (\<lambda>rv. b rv)) (c >>=E (\<lambda>rv'. d rv'))"
-  by (rule corres_splitEE; rule assms)
-
 lemmas whenE_throwError_corres_terminal =
   whenE_throwError_corres[where m="returnOk ()" and m'="returnOk ()", OF _ _ corres_returnOkTT, simplified]
 
@@ -802,7 +832,6 @@ shows
       apply (case_tac option, simp_all)[1]
       apply (rule corres_guard_imp)
         apply (rule corres_splitEE)
-           prefer 2
            apply (rule corres_trivial [where r="ser \<oplus> (\<lambda>p p'. p = p' o ucast)"])
            apply (clarsimp simp: state_relation_def arch_state_relation_def)
           apply (rule whenE_throwError_corres, simp)
@@ -815,12 +844,10 @@ shows
            apply auto[1]
           apply (rule corres_guard_imp)
             apply (rule corres_splitEE)
-               prefer 2
                apply simp
                apply (rule get_asid_pool_corres_inv')
               apply (simp add: bindE_assoc)
               apply (rule corres_splitEE)
-                 prefer 2
                  apply (rule corres_whenE)
                    apply (subst conj_assoc [symmetric])
                    apply (subst assocs_empty_dom_comp [symmetric])
@@ -867,13 +894,11 @@ shows
      apply (rename_tac c0' exs' c1'  exss')
      apply (clarsimp split del: if_split)
      apply (rule corres_guard_imp)
-       apply (rule corres_splitEE [where r'="\<lambda>p p'. p = p' o ucast"])
-          prefer 2
+       apply (rule corres_splitEE[where r'="\<lambda>p p'. p = p' o ucast"])
           apply (rule corres_trivial)
           apply (clarsimp simp: state_relation_def arch_state_relation_def)
          apply (simp only: bindE_assoc)
          apply (rule corres_splitEE)
-            prefer 2
             apply (rule corres_whenE)
               apply (subst assocs_empty_dom_comp [symmetric])
               apply (simp add: o_def)
@@ -901,14 +926,11 @@ shows
            apply (clarsimp simp: isCap_simps cap_relation_Untyped_eq lookupTargetSlot_def
                                  objBits_simps archObjSize_def bindE_assoc split_def)
            apply (rule corres_splitEE)
-              prefer 2
               apply (fold ser_def)
               apply (rule ensureNoChildren_corres, rule refl)
              apply (rule corres_splitEE)
-                prefer 2
                 apply (erule lookupSlotForCNodeOp_corres, rule refl)
                apply (rule corres_splitEE)
-                  prefer 2
                   apply (rule ensureEmptySlot_corres)
                   apply clarsimp
                  apply (rule corres_returnOk[where P="\<top>"])
@@ -942,7 +964,7 @@ shows
        apply (rule_tac P="\<nexists>pd asid. pd_cap = cap.ArchObjectCap (arch_cap.PageDirectoryCap pd (Some asid))"
                 in corres_symmetric_bool_cases[where Q=\<top> and Q'=\<top>, OF refl])
         apply (case_tac pd_cap; clarsimp; rename_tac pd_acap pd_acap'; case_tac pd_acap; clarsimp)
-       apply (rule corres_splitEE'[where r'="(=)" and P=\<top> and P'=\<top>])
+       apply (rule corres_splitEE[where r'="(=)" and P=\<top> and P'=\<top>])
           apply (clarsimp simp: corres_returnOkTT)
          apply (rule_tac F="pd_cap = cap.ArchObjectCap (arch_cap.PageDirectoryCap (fst rv) (Some (snd rv)))"
                   in corres_gen_asm)
@@ -955,18 +977,18 @@ shows
           apply (erule disjE; clarsimp simp: whenE_def kernel_base_def pptrBase_def
                                       split: option.splits)
          apply clarsimp
-         apply (rule corres_splitEE'[where r'=dc and P=\<top> and P'=\<top>])
+         apply (rule corres_splitEE[where r'=dc and P=\<top> and P'=\<top>])
             apply (case_tac map_data
                    ; clarsimp simp: whenE_def kernel_base_def pptrBase_def
                                     corres_returnOkTT)
            \<comment> \<open>pd=undefined as vspace_at_asid not used in find_pd_for_asid_corres and avoid unresolved schematics\<close>
-           apply (rule corres_splitEE'[
+           apply (rule corres_splitEE[
                          OF corres_lookup_error[OF find_pd_for_asid_corres[where pd=undefined, OF refl]]])
              apply (rule whenE_throwError_corres; simp)
-             apply (rule corres_splitEE'[where r'=dc, OF checkVPAlignment_corres])
-               apply (rule corres_splitEE'[OF createMappingEntries_corres]
+             apply (rule corres_splitEE[where r'=dc, OF checkVPAlignment_corres])
+               apply (rule corres_splitEE[OF createMappingEntries_corres]
                       ; simp add: mask_vmrights_corres vm_attributes_corres)
-                 apply (rule corres_splitEE'[OF ensureSafeMapping_corres], assumption)
+                 apply (rule corres_splitEE[OF ensureSafeMapping_corres], assumption)
                    apply (rule corres_returnOkTT)
                    \<comment> \<open>program split done, now prove resulting preconditions and Hoare triples\<close>
                    apply (simp add: archinv_relation_def page_invocation_map_def)
@@ -1016,17 +1038,14 @@ shows
      apply (simp add: kernel_base_def pptrBase_def)
     apply (rule corres_guard_imp)
       apply (rule corres_splitEE)
-         prefer 2
          apply (rule corres_lookup_error)
          apply (rule find_pd_for_asid_corres[OF refl])
         apply (rule whenE_throwError_corres, simp, simp)
         apply (rule corres_splitEE)
-           prefer 2
            apply (simp add: pageBits_def ptBits_def pdeBits_def)
            apply (rule get_master_pde_corres')
           apply (simp add: unlessE_whenE)
           apply (rule corres_splitEE)
-             prefer 2
              apply (rule corres_whenE)
                apply clarsimp
                apply (case_tac oldpde, simp_all)[1]
@@ -1049,7 +1068,7 @@ shows
      apply (rule corres_symb_exec_r_conj)
         apply (rule_tac F="isArchCap isPageTableCap (cteCap cteVal)"
                in corres_gen_asm2)
-        apply (rule corres_split_deprecated[OF _ isFinalCapability_corres[where ptr=slot]])
+        apply (rule corres_split[OF isFinalCapability_corres[where ptr=slot]])
           apply (drule mp)
            apply (clarsimp simp: isCap_simps final_matters'_def)
           apply (rule whenE_throwError_corres)
@@ -1088,14 +1107,12 @@ shows
       apply clarsimp
      apply clarsimp
      apply (rule corres_splitEE)
-        prefer 2
         apply (rule corres_lookup_error)
         apply (rule find_pd_for_asid_corres[OF refl])
        apply (rule whenE_throwError_corres, simp)
         apply clarsimp
        apply (simp add: liftE_bindE)
-       apply (rule corres_split_deprecated[OF _ _ resolve_vaddr_valid_mapping_size])
-         prefer 2
+       apply (rule corres_split[OF _ _ resolve_vaddr_valid_mapping_size])
          apply clarsimp
          apply (rule resolveVAddr_corres[THEN corres_gen_asm])
           apply simp
@@ -1141,14 +1158,14 @@ lemma arch_performInvocation_corres:
                         performARMMMUInvocation_def)
   apply (cases ai)
       apply (clarsimp simp: archinv_relation_def)
-      apply (rule corres_split'[OF _ corres_return_eq_same[OF refl]])
+      apply (rule corres_underlying_split[OF _ corres_return_eq_same[OF refl]])
         apply (erule corres_guard_imp [OF performPageTableInvocation_corres])
          apply (fastforce simp: valid_arch_inv_def)
         apply (fastforce simp: valid_arch_inv'_def)
        apply wp
       apply wp
      apply (clarsimp simp: archinv_relation_def)
-     apply (rule corres_split'[OF _ corres_return_eq_same[OF refl]])
+     apply (rule corres_underlying_split[OF _ corres_return_eq_same[OF refl]])
        apply (erule corres_guard_imp [OF performPageDirectoryInvocation_corres])
         apply (fastforce simp: valid_arch_inv_def)
        apply (fastforce simp: valid_arch_inv'_def)
@@ -1159,14 +1176,14 @@ lemma arch_performInvocation_corres:
      apply (fastforce simp: valid_arch_inv_def)
     apply (fastforce simp: valid_arch_inv'_def)
    apply (clarsimp simp: archinv_relation_def)
-   apply (rule corres_split'[OF _ corres_return_eq_same[OF refl]])
+   apply (rule corres_underlying_split[OF _ corres_return_eq_same[OF refl]])
      apply (rule corres_guard_imp [OF performASIDControlInvocation_corres], rule refl)
       apply (fastforce simp: valid_arch_inv_def)
      apply (fastforce simp: valid_arch_inv'_def)
     apply wp
    apply wp
   apply (clarsimp simp: archinv_relation_def)
-  apply (rule corres_split'[OF _ corres_return_eq_same[OF refl]])
+  apply (rule corres_underlying_split[OF _ corres_return_eq_same[OF refl]])
     apply (rule corres_guard_imp [OF performASIDPoolInvocation_corres], rule refl)
      apply (fastforce simp: valid_arch_inv_def)
     apply (fastforce simp: valid_arch_inv'_def)

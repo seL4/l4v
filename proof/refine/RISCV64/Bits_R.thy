@@ -286,14 +286,13 @@ lemma corres_injection:
      \<Longrightarrow> corres (f \<oplus> r) P P' (t m) (t' m')"
   apply (simp add: injection_handler_def handleE'_def x y)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated)
-       defer
+    apply (rule corres_split)
        apply assumption
-      apply (rule wp_post_taut)
+      apply (case_tac v, (clarsimp simp: z)+)
      apply (rule wp_post_taut)
-    apply simp
+    apply (rule wp_post_taut)
    apply simp
-  apply (case_tac v, (clarsimp simp: z)+)
+  apply simp
   done
 
 lemma rethrowFailure_injection:
@@ -473,9 +472,8 @@ lemma corres_empty_on_failure:
   apply (simp add: empty_on_failure_def emptyOnFailure_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_catch)
-       apply (rule corres_trivial, simp)
-      apply (erule corres_rel_imp)
-      apply (case_tac x; simp)
+       apply assumption
+      apply (rule corres_trivial, simp)
      apply wp+
    apply simp+
   done
@@ -513,11 +511,9 @@ lemma corres_const_on_failure:
   apply (simp add: const_on_failure_def constOnFailure_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_catch)
-       apply (rule corres_trivial, simp)
-      apply (erule corres_rel_imp)
-      apply (case_tac xa)
-       apply (clarsimp simp: const_def)
-      apply simp
+       apply assumption
+      apply (rule corres_trivial, simp)
+      apply (clarsimp simp: const_def)
      apply wp+
    apply simp+
   done

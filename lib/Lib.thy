@@ -85,10 +85,18 @@ definition
 where
   "pred_conj P Q \<equiv> \<lambda>x. P x \<and> Q x"
 
+lemma pred_conj_absorb[simp]:
+  "(P and P) = P"
+  by (simp add: pred_conj_def)
+
 definition
   pred_disj :: "('a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> bool)" (infixl "or" 30)
 where
   "pred_disj P Q \<equiv> \<lambda>x. P x \<or> Q x"
+
+lemma pred_disj_absorb[simp]:
+  "(P or P) = P"
+  by (simp add: pred_disj_def)
 
 definition
   pred_neg :: "('a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> bool)" ("not _" [40] 40)

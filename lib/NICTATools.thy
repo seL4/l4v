@@ -21,6 +21,7 @@ imports
   ShowTypes
   Locale_Abbrev
   Value_Type
+  Named_Eta
 begin
 
 section "Detect unused meta-forall"

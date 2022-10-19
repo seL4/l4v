@@ -113,28 +113,27 @@ lemma corres_dmo_getExMonitor_C:
                                  machine_state_rest ms = machine_state_rest ms' \<and>
                                  irq_masks ms = irq_masks ms' \<and> equiv_irq_state ms ms' \<and>
                                  device_state ms = device_state ms'"
-                and P="\<top>" and P'="\<top>" in corres_split_deprecated)
-       apply (rule_tac r'="\<lambda>(r, ms) (r', ms'). r = r' \<and> ms = rv \<and> ms' = rv'" in corres_split_deprecated)
-          apply (clarsimp simp: split_def)
-          apply (rule_tac r'=dc and P="\<lambda>s. underlying_memory (snd ((aa, b), ba)) =
-                                           underlying_memory (ksMachineState s)"
-                                and P'="\<lambda>s. underlying_memory (snd ((aa, b), bc)) =
-                                            underlying_memory (phantom_machine_state_' (globals s))"
-                                 in corres_split_deprecated)
-             apply clarsimp
-            apply (rule corres_modify)
-            apply (clarsimp simp: rf_sr_def cstate_relation_def carch_state_relation_def
-                                  cmachine_state_relation_def Let_def)
-           apply (wp hoare_TrueI)+
-         apply (rule corres_select_f')
+                and P="\<top>" and P'="\<top>" in corres_split)
+       apply (clarsimp simp: rf_sr_def cstate_relation_def cmachine_state_relation_def Let_def)
+      apply (rule_tac r'="\<lambda>(r, ms) (r', ms'). r = r' \<and> ms = rv \<and> ms' = rv'"
+              in corres_split)
+         apply (rule corres_trivial, rule corres_select_f')
           apply (clarsimp simp: getExMonitor_def machine_rest_lift_def NonDetMonad.bind_def gets_def
                                 get_def return_def modify_def put_def select_f_def)
          apply (clarsimp simp: getExMonitor_no_fail[simplified no_fail_def])
-        apply (wp hoare_TrueI)+
-      apply (clarsimp simp: rf_sr_def cstate_relation_def cmachine_state_relation_def Let_def)
-     apply (wp hoare_TrueI)+
-  apply (rule TrueI conjI | clarsimp simp: getExMonitor_def machine_rest_lift_def NonDetMonad.bind_def
-                                           gets_def get_def return_def modify_def put_def select_f_def)+
+        apply (clarsimp simp: split_def)
+        apply (rule_tac r'=dc and P="\<lambda>s. underlying_memory (snd ((aa, b), ba)) =
+                                         underlying_memory (ksMachineState s)"
+                              and P'="\<lambda>s. underlying_memory (snd ((aa, b), bc)) =
+                                          underlying_memory (phantom_machine_state_' (globals s))"
+                in corres_split)
+           apply (rule corres_modify)
+           apply (clarsimp simp: rf_sr_def cstate_relation_def carch_state_relation_def
+                                 cmachine_state_relation_def Let_def)
+          apply (rule corres_trivial, clarsimp)
+         apply (wp hoare_TrueI)+
+   apply (rule TrueI conjI | clarsimp simp: getExMonitor_def machine_rest_lift_def NonDetMonad.bind_def
+                                            gets_def get_def return_def modify_def put_def select_f_def)+
   done
 
 lemma corres_dmo_setExMonitor_C:
@@ -145,26 +144,26 @@ lemma corres_dmo_setExMonitor_C:
                                  machine_state_rest ms = machine_state_rest ms' \<and>
                                  irq_masks ms = irq_masks ms' \<and> equiv_irq_state ms ms' \<and>
                                  device_state ms = device_state ms'"
-                and P="\<top>" and P'="\<top>" in corres_split_deprecated)
-       apply (rule_tac r'="\<lambda>(r, ms) (r', ms'). ms = rv\<lparr>exclusive_state := es\<rparr> \<and>
-                                               ms' = rv'\<lparr>exclusive_state := es\<rparr>" in corres_split_deprecated)
-          apply (simp add: split_def)
-          apply (rule_tac P="\<lambda>s. underlying_memory (snd rva) =
-                                 underlying_memory (ksMachineState s)"
-                      and P'="\<lambda>s. underlying_memory (snd rv'a) =
-                                  underlying_memory (phantom_machine_state_' (globals s))"
-                       in corres_modify)
-          apply (clarsimp simp: rf_sr_def cstate_relation_def carch_state_relation_def
-                                cmachine_state_relation_def Let_def)
-         apply (rule corres_select_f')
+                and P="\<top>" and P'="\<top>" in corres_split)
+       apply (clarsimp simp: rf_sr_def cstate_relation_def cmachine_state_relation_def Let_def)
+      apply (rule_tac r'="\<lambda>(r, ms) (r', ms'). ms = rv\<lparr>exclusive_state := es\<rparr> \<and>
+                                              ms' = rv'\<lparr>exclusive_state := es\<rparr>"
+              in corres_split)
+         apply (rule corres_trivial, rule corres_select_f')
           apply (clarsimp simp: setExMonitor_def machine_rest_lift_def NonDetMonad.bind_def gets_def
                                 get_def return_def modify_def put_def select_f_def)
          apply (clarsimp simp: setExMonitor_no_fail[simplified no_fail_def])
-        apply (wp hoare_TrueI)+
-      apply (clarsimp simp: rf_sr_def cstate_relation_def cmachine_state_relation_def Let_def)
-     apply (wp hoare_TrueI)+
-  apply (rule TrueI conjI | clarsimp simp: setExMonitor_def machine_rest_lift_def NonDetMonad.bind_def
-                                           gets_def get_def return_def modify_def put_def select_f_def)+
+        apply (simp add: split_def)
+        apply (rule_tac P="\<lambda>s. underlying_memory (snd rva) =
+                               underlying_memory (ksMachineState s)"
+                    and P'="\<lambda>s. underlying_memory (snd rv'a) =
+                                underlying_memory (phantom_machine_state_' (globals s))"
+                     in corres_modify)
+        apply (clarsimp simp: rf_sr_def cstate_relation_def carch_state_relation_def
+                              cmachine_state_relation_def Let_def)
+       apply (wp hoare_TrueI)+
+   apply (rule TrueI conjI | clarsimp simp: setExMonitor_def machine_rest_lift_def NonDetMonad.bind_def
+                                            gets_def get_def return_def modify_def put_def select_f_def)+
   done
 
 lemma dmo_getExMonitor_C_wp[wp]:
@@ -228,28 +227,25 @@ lemma do_user_op_if_C_corres[ADT_IF_Refine_assms]:
                           Let_def cmachine_state_relation_def)
    apply simp
   apply (rule corres_guard_imp)
-    apply (rule_tac P=\<top> and P'=\<top> and r'="(=)" in corres_split_deprecated)
-       prefer 2
+    apply (rule_tac P=\<top> and P'=\<top> and r'="(=)" in corres_split)
        apply (clarsimp simp add: corres_underlying_def fail_def
                                  assert_def return_def
                           split: if_splits)
       apply simp
-      apply (rule_tac P=\<top> and P'=\<top> and r'="(=)" in corres_split_deprecated)
-         prefer 2
+      apply (rule_tac P=\<top> and P'=\<top> and r'="(=)" in corres_split)
          apply (clarsimp simp add: corres_underlying_def fail_def
                                    assert_def return_def
                             split: if_splits)
         apply simp
-        apply (rule corres_split_deprecated[OF _ corres_dmo_getExMonitor_C])
+        apply (rule corres_split[OF corres_dmo_getExMonitor_C])
           apply clarsimp
-          apply (rule_tac r'="(=)" in corres_split_deprecated[OF _ corres_select])
-             prefer 2
+          apply (rule_tac r'="(=)" in corres_split[OF corres_select])
              apply clarsimp
             apply simp
             apply (rule corres_underlying_split5)
-            apply (rule corres_split_deprecated[OF _ user_memory_update_corres_C])
-              apply (rule corres_split_deprecated[OF _ device_update_corres_C])
-                apply (rule corres_split_deprecated[OF _ corres_dmo_setExMonitor_C,
+            apply (rule corres_split[OF user_memory_update_corres_C])
+              apply (rule corres_split[OF device_update_corres_C])
+                apply (rule corres_split[OF corres_dmo_setExMonitor_C,
                               where R="\<top>\<top>" and R'="\<top>\<top>"])
                   apply (wp select_wp | simp)+
    apply (clarsimp simp:  ex_abs_def restrict_map_def invs_pspace_aligned'
@@ -268,19 +264,19 @@ lemma check_active_irq_corres_C[ADT_IF_Refine_assms]:
   apply (simp add: getActiveIRQ_C_def)
   apply (subst bind_assoc[symmetric])
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[where r'="\<lambda>a c. case a of None \<Rightarrow> c = ucast irqInvalid
+    apply (rule corres_split[where r'="\<lambda>a c. case a of None \<Rightarrow> c = ucast irqInvalid
                                                                 | Some x \<Rightarrow> c = ucast x \<and> c \<noteq> ucast irqInvalid",
-                                        OF _ ccorres_corres_u_xf])
-        apply (clarsimp split: if_split option.splits)
-       apply (rule ccorres_guard_imp)
-         apply (rule ccorres_rel_imp, rule ccorres_guard_imp)
-            apply (rule getActiveIRQ_ccorres)
-           apply simp+
-         apply (case_tac x; simp add: ucast_helper_simps_32 irqInvalid_def2)
-        apply simp+
-      apply (rule no_fail_dmo')
-      apply (rule getActiveIRQ_nf)
-     apply (rule hoare_post_taut[where P=\<top>])+
+                                        OF ccorres_corres_u_xf])
+        apply (rule ccorres_guard_imp)
+          apply (rule ccorres_rel_imp, rule ccorres_guard_imp)
+             apply (rule getActiveIRQ_ccorres)
+            apply simp+
+          apply (case_tac x; simp add: ucast_helper_simps_32 irqInvalid_def2)
+         apply simp+
+       apply (rule no_fail_dmo')
+       apply (rule no_fail_getActiveIRQ)
+      apply (rule corres_trivial, clarsimp split: if_split option.splits)
+     apply wp+
    apply simp+
   apply fastforce
   done

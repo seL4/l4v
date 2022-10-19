@@ -1487,10 +1487,10 @@ lemma emptySlot_corres:
   unfolding emptySlot_def empty_slot_def
   apply (simp add: case_Null_If)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_noop_rhs[OF _ clearUntypedFreeIndex_noop_corres])
+    apply (rule corres_split_noop_rhs[OF clearUntypedFreeIndex_noop_corres])
      apply (rule_tac R="\<lambda>cap. einvs and cte_wp_at ((=) cap) slot" and
                      R'="\<lambda>cte. valid_pspace' and cte_wp_at' ((=) cte) (cte_map slot)" in
-                     corres_split_deprecated [OF _ get_cap_corres])
+                     corres_split[OF get_cap_corres])
        defer
        apply (wp get_cap_wp getCTE_wp')+
      apply (simp add: cte_wp_at_ctes_of)
@@ -1504,7 +1504,7 @@ lemma emptySlot_corres:
   apply (rule conjI, clarsimp)
   apply clarsimp
   apply (simp only: bind_assoc[symmetric])
-  apply (rule corres_split'[where r'=dc, OF _ postCapDeletion_corres])
+  apply (rule corres_underlying_split[where r'=dc, OF _ postCapDeletion_corres])
     defer
     apply wpsimp+
   apply (rule corres_no_failI)
@@ -4320,7 +4320,7 @@ lemma (in delete_one) deletingIRQHandler_corres:
           (deleting_irq_handler irq) (deletingIRQHandler irq)"
   apply (simp add: deleting_irq_handler_def deletingIRQHandler_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ getIRQSlot_corres])
+    apply (rule corres_split[OF getIRQSlot_corres])
       apply simp
       apply (rule_tac P'="cte_at' (cte_map slot)" in corres_symb_exec_r_conj)
          apply (rule_tac F="isNotificationCap rv \<or> rv = capability.NullCap"
@@ -4640,7 +4640,7 @@ lemma cap_delete_one_corres:
                    unless_def when_def)
   apply (rule corres_cross[OF sch_act_simple_cross_rel], clarsimp)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ get_cap_corres])
+    apply (rule corres_split[OF get_cap_corres])
       apply (rule_tac F="can_fast_finalise cap" in corres_gen_asm)
       apply (rule corres_if)
         apply fastforce

@@ -3409,11 +3409,10 @@ lemma lookup_cap_corres:
      (lookupCap thread epcptr')"
   apply (simp add: lookup_cap_def lookupCap_def lookupCapAndSlot_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_splitEE [OF _ lookupSlotForThread_corres])
+    apply (rule corres_splitEE[OF lookupSlotForThread_corres])
       apply (simp add: split_def)
       apply (subst bindE_returnOk[symmetric])
       apply (rule corres_splitEE)
-         prefer 2
          apply simp
          apply (rule getSlotCap_corres, rule refl)
         apply (rule corres_returnOk [of _ \<top> \<top>])
@@ -3428,7 +3427,7 @@ lemma ensureEmptySlot_corres:
                      (ensure_empty p) (ensureEmptySlot q)"
   apply (clarsimp simp add: ensure_empty_def ensureEmptySlot_def unlessE_whenE liftE_bindE)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ get_cap_corres])
+    apply (rule corres_split[OF get_cap_corres])
       apply (rule corres_trivial)
       apply (case_tac cap, auto simp add: whenE_def returnOk_def)[1]
      apply wp+
@@ -3453,11 +3452,11 @@ lemma lookupSlotForCNodeOp_corres:
                         word_bits_def toInteger_nat fromIntegral_def fromInteger_nat)
   apply (rule corres_lookup_error)
   apply (rule corres_guard_imp)
-    apply (rule corres_splitEE [OF _ rab_corres'])
-         apply (rule corres_trivial)
-         apply (clarsimp simp: returnOk_def lookup_failure_map_def
-                         split: list.split)
-        apply simp+
+    apply (rule corres_splitEE)
+       apply (rule rab_corres'; simp)
+      apply (rule corres_trivial)
+      apply (clarsimp simp: returnOk_def lookup_failure_map_def
+                      split: list.split)
      apply wp+
    apply clarsimp
   apply clarsimp
@@ -4362,8 +4361,8 @@ lemma cteInsert_simple_corres:
   supply subst_all [simp del]
   apply simp
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ get_cap_corres])
-      apply (rule corres_split_deprecated [OF _ get_cap_corres])
+    apply (rule corres_split[OF get_cap_corres])
+      apply (rule corres_split[OF get_cap_corres])
         apply (rule_tac F="cteCap rv' = NullCap" in corres_gen_asm2)
         apply simp
         apply (rule_tac P="?P and cte_at dest and
@@ -4531,7 +4530,6 @@ lemma cteInsert_simple_corres:
    prefer 2
    subgoal by (fastforce simp: cte_wp_at_def)
   apply (erule conjE)
-
   apply (subgoal_tac "mdb_insert (ctes_of b) (cte_map src) (maskedAsFull src_cap' c') src_node
                                   (cte_map dest) NullCap dest_node")
    prefer 2
@@ -4627,9 +4625,9 @@ lemma cteInsert_simple_corres:
      apply(drule cte_map_inj_eq)
           apply(simp_all)[6]
     apply(drule cte_map_inj_eq)
-        apply(simp_all)[6]
+         apply(simp_all)[6]
    apply(drule cte_map_inj_eq)
-       apply(simp_all)[6]
+        apply(simp_all)[6]
   by(fastforce)
 
 declare if_split [split]
