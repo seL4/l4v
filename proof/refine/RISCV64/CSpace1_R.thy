@@ -273,7 +273,7 @@ lemma obj_in_ta_def2:
 definition
   obj_in_ta2 :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
-  "obj_in_ta2 ref s \<equiv> \<exists>ko. f_kheap s ref = Some ko"
+  "obj_in_ta2 ref s \<equiv> \<exists>ko. f_kheap True s ref = Some ko"
 
 definition
   obj_in_ta2' :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -283,7 +283,7 @@ where
 lemma
   "obj_in_ta ref s \<Longrightarrow> obj_in_ta2 ref s"
   unfolding obj_in_ta_def2 obj_in_ta2_def obj_at_def
-  by (clarsimp simp:obind_def)
+  by (clarsimp simp:obind_def ta_filter_def)
 
 abbreviation ta_obj_upd :: "machine_word \<Rightarrow> Structures_A.kernel_object \<Rightarrow> machine_state \<Rightarrow> machine_state"
   where
@@ -302,41 +302,22 @@ abbreviation ms_ta_obj_upd' :: "machine_word \<Rightarrow> Structures_H.kernel_o
   where
   "ms_ta_obj_upd' p ko s \<equiv> s \<lparr> ksMachineState := ta_obj_upd' p ko (ksMachineState s) \<rparr>"
 
-(* From Invariants_AI, modified for the new version of get_cap. -robs *)
-definition
-  cte_wp_at_x :: "(cap \<Rightarrow> bool) \<Rightarrow> cslot_ptr \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
-  "cte_wp_at_x P p s \<equiv> \<exists>cap. fst (get_cap_x p s) = {(cap,s)} \<and> P cap"
-
 (* New lemmas. -robs *)
-lemma get_cap_x_success:
+lemma get_cap_success:
   fixes s cap ptr offset
   defines "s' \<equiv> s\<lparr>kheap := [ptr \<mapsto> CNode (length offset) (\<lambda>x. if length x = length offset then Some cap else None)],
     machine_state := ta_obj_upd ptr (CNode (length offset)
       (\<lambda>x. if length x = length offset then Some cap else None)) (machine_state s) \<rparr>"
-  shows "(cap, s') \<in> fst (get_cap_x (ptr, offset) s')"
-  by (simp add: get_cap_x_def get_object_x_def obind_def
+  shows "(cap, s') \<in> fst (get_cap True (ptr, offset) s')"
+  by (simp add: get_cap_def get_object_def obind_def ta_filter_def
                 in_monad s'_def well_formed_cnode_n_def length_set_helper dom_def
            split: Structures_A.kernel_object.splits)
-
-lemma to_get_cap_x:
-  "obj_in_ta2 oref s \<Longrightarrow> p = (oref, cref) \<Longrightarrow>
-   get_cap p s = get_cap_x p s"
-  apply(clarsimp simp:obj_in_ta2_def get_cap_x_def get_object_x_def get_cap_def get_object_def)
-  apply(clarsimp simp:bind_def simpler_gets_def return_def obind_def split: if_splits)
-  done
-
-lemma to_cte_wp_at_x:
-  "obj_in_ta2 oref s \<Longrightarrow> p = (oref, cref) \<Longrightarrow>
-   cte_wp_at P p s \<Longrightarrow> cte_wp_at_x P p s"
-  unfolding cte_wp_at_def cte_wp_at_x_def
-  by (force dest: to_get_cap_x)
 
 lemma get_cap_corres_P:
   "corres (\<lambda>x y. cap_relation x (cteCap y) \<and> P x)
           (cte_wp_at P cslot_ptr and obj_in_ta2 (fst cslot_ptr))
           (pspace_aligned' and pspace_distinct')
-          (get_cap_x cslot_ptr) (getCTE (cte_map cslot_ptr))"
+          (get_cap True cslot_ptr) (getCTE (cte_map cslot_ptr))"
   apply (rule corres_stronger_no_failI)
    apply (rule no_fail_pre, wp)
    apply clarsimp
@@ -347,18 +328,20 @@ lemma get_cap_corres_P:
   apply (cases cslot_ptr)
   apply (rename_tac oref cref)
   apply clarsimp
-  apply(frule to_cte_wp_at_x)
-    apply force
-   apply force
-  apply (clarsimp simp: cte_wp_at_def cte_wp_at_x_def)
+  apply (clarsimp simp: cte_wp_at_def)
   apply (frule in_inv_by_hoareD[OF getCTE_inv])
   apply (drule use_valid [where P="\<top>", OF _ getCTE_sp TrueI])
   apply (clarsimp simp: state_relation_def)
-  apply (drule pspace_relation_ctes_ofI)
+  apply (frule pspace_relation_ctes_ofI)
      apply (simp add: cte_wp_at_def)
     apply assumption+
   apply (clarsimp simp: cte_wp_at_ctes_of)
-  using to_get_cap_x by fastforce
+  apply(clarsimp simp: obj_in_ta2_def)
+  apply(rename_tac oref cref a b aa cap ko v')
+  apply(rule_tac x="(cap, a)" in bexI)
+   apply clarsimp
+  sorry (* FIXME: broken by touched-addrs -robs
+    A lemma relating get_cap True with get_cap False would be really handy here. *)
 
 lemmas get_cap_corres = get_cap_corres_P[where P="\<top>", simplified]
 
@@ -400,7 +383,7 @@ lemma getSlotCap_corres:
    corres cap_relation
      (cte_at cte_ptr and obj_in_ta2 (fst cte_ptr))
      (pspace_distinct' and pspace_aligned' and obj_in_ta2' (fst cte_ptr))
-     (get_cap_x cte_ptr)
+     (get_cap True cte_ptr)
      (getSlotCap cte_ptr')"
   apply (simp add: getSlotCap_def)
   apply (subst bind_return [symmetric])
@@ -616,7 +599,6 @@ definition touchObj :: "machine_word \<Rightarrow> unit kernel" where
    od"
 
 (* New for ExecSpec level, adapted from KHeap_A. -robs *)
-term "ms_touched_addresses_update"
 abbreviation
   ms_touched_addresses'_update :: "(machine_word set \<Rightarrow> machine_word set) \<Rightarrow>
     kernel_state \<Rightarrow> kernel_state" where
@@ -630,8 +612,10 @@ lemma simpler_doMachineOp_getTouchedAddresses_def:
 
 lemma simpler_doMachineOp_addTouchedAddresses_def:
   "doMachineOp (addTouchedAddresses S) \<equiv> modify (\<lambda>s. s\<lparr>ms_touched_addresses' := S \<union> machine_state.touched_addresses (ksMachineState s)\<rparr>)"
-  by (clarsimp simp: doMachineOp_def bind_def addTouchedAddresses_def simpler_gets_def
+  apply (clarsimp simp: doMachineOp_def bind_def addTouchedAddresses_def simpler_gets_def
                         simpler_modify_def select_f_def return_def)
+  apply (rule eq_reflection)
+  by force
 
 lemma dmo_addTouchedAddresses_wp':
   "\<lbrace>\<lambda>s. Q () (ms_touched_addresses'_update (\<lambda>ta. S \<union> ta) s)\<rbrace> doMachineOp (addTouchedAddresses S) \<lbrace>Q\<rbrace>"
@@ -1100,14 +1084,14 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
       apply (rule "1.hyps" [of _ cbits guard, OF caps(1)])
       prefer 8
          apply clarsimp
-         apply (rule get_cap_x_success)
-        apply (auto simp: in_monad intro!: get_cap_x_success)[6] (* takes time *)
+         apply (rule get_cap_success)
+        apply (auto simp: in_monad intro!: get_cap_success)[6] (* takes time *)
        apply clarsimp
        apply(rule_tac cbits=cbits in touch_cap_success')
         apply(rule refl)
        apply clarsimp
        apply fast
-      apply (auto simp: in_monad intro!: get_cap_x_success)
+      apply (auto simp: in_monad intro!: get_cap_success)
       done
     note if_split [split del]
     { assume "cbits + length guard = 0 \<or> cbits = 0 \<and> guard = []"
@@ -1224,7 +1208,7 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
               apply simp
              apply assumption
             apply (simp add: cte_level_bits_def)
-           apply (wp get_cap_x_wp)
+           apply (wp get_cap_wp)
            apply clarsimp
            apply (erule (1) cte_wp_valid_cap)
           apply wpsimp

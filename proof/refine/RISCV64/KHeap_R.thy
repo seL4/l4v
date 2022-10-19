@@ -98,7 +98,9 @@ lemmas page_table_at_obj_at'
 
 
 lemma corres_get_tcb:
-  "corres (tcb_relation \<circ> the) (tcb_at t) (tcb_at' t) (gets (get_tcb t)) (getObject t)"
+  (* FIXME: But surely we will need a correspondence with get_Tcb True quite soon;
+     therefore we'll need to adapt getObject accordingly. -robs *)
+  "corres (tcb_relation \<circ> the) (tcb_at t) (tcb_at' t) (gets (get_tcb False t)) (getObject t)"
   apply (rule corres_no_failI)
    apply wp
   apply (clarsimp simp add: gets_def get_def return_def bind_def get_tcb_def)
@@ -824,8 +826,12 @@ lemma getEndpoint_corres:
   apply (clarsimp simp add: state_relation_def pspace_relation_def)
   apply (drule bspec)
    apply blast
-  apply (simp add: other_obj_relation_def)
+  apply (simp add: other_obj_relation_def obind_def ta_filter_def)
+  apply clarsimp
+  sorry (* FIXME: broken by touched-addrs -robs
+    Well, we won't know it's in touched_addresses if the ExecSpec didn't add it.
   done
+*)
 
 declare magnitudeCheck_inv [wp]
 
@@ -925,7 +931,8 @@ lemma setObject_other_corres:
   shows      "other_obj_relation ob (injectKO (ob' :: 'a :: pspace_storable)) \<Longrightarrow>
   corres dc (obj_at (\<lambda>ko. a_type ko = a_type ob) ptr and obj_at (same_caps ob) ptr)
             (obj_at' (P :: 'a \<Rightarrow> bool) ptr)
-            (set_object ptr ob) (setObject ptr ob')"
+            (set_object True ptr ob) (setObject ptr ob')"
+  (* FIXME: Again, set_object True needs to correspond with a modified setObject *)
   supply image_cong_simp [cong del] projectKOs[simp del]
   apply (rule corres_no_failI)
    apply (rule no_fail_pre)
@@ -942,6 +949,7 @@ lemma setObject_other_corres:
   apply (clarsimp simp add: caps_of_state_after_update cte_wp_at_after_update
                             swp_def fun_upd_def obj_at_def)
   apply (subst conj_assoc[symmetric])
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (rule conjI[rotated])
    apply (clarsimp simp add: ghost_relation_def)
    apply (erule_tac x=ptr in allE)+
@@ -985,6 +993,7 @@ lemma setObject_other_corres:
                    split: Structures_A.kernel_object.splits Structures_H.kernel_object.splits
                           arch_kernel_obj.splits)+
   done
+*)
 
 lemmas obj_at_simps = obj_at_def obj_at'_def map_to_ctes_upd_other
                       is_other_obj_relation_type_def
@@ -995,18 +1004,22 @@ lemma setEndpoint_corres:
   corres dc (ep_at ptr) (ep_at' ptr)
             (set_endpoint ptr e) (setEndpoint ptr e')"
   apply (simp add: set_simple_ko_def setEndpoint_def is_ep_def[symmetric])
+  sorry (* FIXME: broken by touched-addrs -robs
     apply (corres_search search: setObject_other_corres[where P="\<lambda>_. True"])
   apply (corressimp wp: get_object_ret get_object_wp)+
   by (fastforce simp: is_ep obj_at_simps objBits_defs partial_inv_def)
+*)
 
 lemma setNotification_corres:
   "ntfn_relation ae ae' \<Longrightarrow>
   corres dc (ntfn_at ptr) (ntfn_at' ptr)
             (set_notification ptr ae) (setNotification ptr ae')"
   apply (simp add: set_simple_ko_def setNotification_def is_ntfn_def[symmetric])
+  sorry (* FIXME: broken by touched-addrs -robs
        apply (corres_search search: setObject_other_corres[where P="\<lambda>_. True"])
   apply (corressimp wp: get_object_ret get_object_wp)+
   by (fastforce simp: is_ntfn obj_at_simps objBits_defs partial_inv_def)
+*)
 
 lemma no_fail_getNotification [wp]:
   "no_fail (ntfn_at' ptr) (getNotification ptr)"
@@ -1035,8 +1048,11 @@ lemma getNotification_corres:
   apply (clarsimp simp add: state_relation_def pspace_relation_def)
   apply (drule bspec)
    apply blast
-  apply (simp add: other_obj_relation_def)
+  apply (simp add: other_obj_relation_def ta_filter_def obind_def)
+  apply clarsimp
+  sorry (* FIXME: broken by touched-addrs -robs
   done
+*)
 
 lemma setObject_ko_wp_at:
   fixes v :: "'a :: pspace_storable"
