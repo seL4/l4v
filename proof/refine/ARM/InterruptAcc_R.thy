@@ -116,9 +116,9 @@ lemma updateTimeStamp_corres[corres]:
   apply (clarsimp simp: update_time_stamp_def updateTimeStamp_def setConsumedTime_def)
   apply (prop_tac "minBudget = MIN_BUDGET")
    apply (clarsimp simp: minBudget_def MIN_BUDGET_def kernelWCETTicks_def)
-  apply (rule corres_split'[rotated 2, OF gets_sp getCurTime_sp])
+  apply (rule corres_underlying_split[rotated 2, OF gets_sp getCurTime_sp])
    apply corressimp
-  apply (rule corres_split'[where r'="(=)"])
+  apply (rule corres_underlying_split[where r'="(=)"])
      apply (rule corres_guard_imp)
        apply (rule corres_machine_op)
        apply corressimp
@@ -301,12 +301,12 @@ lemma preemptionPoint_corres:
         apply (wpsimp simp: cur_sc_tcb_def)
        apply wpsimp
       apply (corressimp corres: corres_machine_op)
-     apply (rule corres_split'[rotated 2, OF gets_sp getCurSc_sp])
+     apply (rule corres_underlying_split[rotated 2, OF gets_sp getCurSc_sp])
       apply (corressimp corres: getCurSc_corres)
-     apply (rule corres_split'[rotated 2, OF gets_sp getConsumedTime_sp])
+     apply (rule corres_underlying_split[rotated 2, OF gets_sp getConsumedTime_sp])
       apply (corressimp corres: getConsumedTime_corres)
      apply (clarsimp simp: andM_def ifM_def bind_assoc)
-     apply (rule corres_split'[rotated 2, OF get_sc_active_sp scActive_sp])
+     apply (rule corres_underlying_split[rotated 2, OF get_sc_active_sp scActive_sp])
       apply (corressimp corres: scActive_corres)
       apply (fastforce dest: valid_objs_valid_sched_context_size
                        simp: cur_sc_tcb_def obj_at_def is_sc_obj_def sc_at_pred_n_def)

@@ -884,12 +884,13 @@ lemma deleteObjects_corres:
                            valid_global_refs s \<and> valid_replies s \<and> fault_tcbs_valid_states s" and
                   Q'="\<lambda>_ s. s \<turnstile>' UntypedCap d base magnitude idx \<and>
                             valid_pspace' s \<and> deletionIsSafe base magnitude s"
-               in corres_split')
+               in corres_underlying_split)
      apply (rule corres_bind_return)
      apply (rule corres_guard_imp[where r=dc])
-       apply (rule corres_split_deprecated[OF cNodeNoPartialOverlap])
-         apply (rule corres_machine_op[OF corres_Id], simp+)
-         apply (rule no_fail_freeMemory, simp+)
+       apply (rule corres_split)
+          apply (rule corres_machine_op[OF corres_Id], simp+)
+          apply (rule no_fail_freeMemory, simp+)
+         apply (rule cNodeNoPartialOverlap)
         apply (wp hoare_vcg_ex_lift)+
       apply auto[1]
      apply (auto elim: is_aligned_weaken)

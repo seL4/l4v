@@ -3466,7 +3466,7 @@ proof -
              (take (unat n) msgRegisters))"
     apply (rule corres_guard_imp)
     apply (rule_tac S=Id in corres_mapM, simp+)
-        apply (rule corres_split_eqr[OF asUser_getRegister_corres asUser_setRegister_corres])
+        apply (rule corres_split_eqr[OF asUser_setRegister_corres asUser_getRegister_corres])
         apply (wp | clarsimp simp: msg_registers_def msgRegisters_def)+
         done
 

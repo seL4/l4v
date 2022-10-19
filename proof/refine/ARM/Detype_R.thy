@@ -933,7 +933,7 @@ lemma deleteObjects_corres:
                            valid_global_refs s \<and> valid_replies s \<and> fault_tcbs_valid_states s" and
                   Q'="\<lambda>_ s. s \<turnstile>' UntypedCap d base magnitude idx \<and>
                             valid_pspace' s \<and> deletionIsSafe base magnitude s"
-               in corres_split')
+               in corres_underlying_split)
      apply (rule corres_bind_return)
      apply (rule corres_guard_imp[where r=dc])
        apply (rule corres_split[OF _ cNodeNoPartialOverlap])

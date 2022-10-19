@@ -661,7 +661,7 @@ lemma updateReply_replyPrev_same_corres:
      (updateReply rp f)"
   apply (simp add: update_sk_obj_ref_def updateReply_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ get_reply_corres])
+    apply (rule corres_split[OF get_reply_corres])
       apply (rule set_reply_corres)
       apply (simp add: rr)
      apply wpsimp+
@@ -673,7 +673,7 @@ lemma updateReply_replyPrev_corres:
      (updateReply rp (replyPrev_update (\<lambda>_. new)))"
   apply (simp add: update_sk_obj_ref_def updateReply_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ get_reply_corres])
+    apply (rule corres_split[OF get_reply_corres])
       apply (rule setReply_not_queued_corres)
       apply (simp add: reply_relation_def)
   by wpsimp+
@@ -690,7 +690,7 @@ lemma updateReply_replyNext_not_head_corres:
     unfolding update_sk_obj_ref_def updateReply_def
   apply clarsimp
   apply (rule corres_guard_imp)
-  apply (rule corres_split_deprecated [OF set_reply_corres get_reply_corres])
+  apply (rule corres_split[OF get_reply_corres set_reply_corres])
   apply (clarsimp simp: reply_relation_def isHead_def
                  split: option.splits reply_next.splits)
   apply wpsimp+
@@ -738,7 +738,7 @@ lemma bindScReply_corres:
   apply add_sym_refs
   apply (rule corres_stateAssert_implied[where P'=\<top>, simplified])
    apply (rule corres_guard_imp)
-     apply (rule corres_split_deprecated [OF _ get_sc_corres, where R'="\<lambda>sc. reply_at' rptr and ko_at' sc scptr"])
+     apply (rule corres_split[OF get_sc_corres, where R'="\<lambda>sc. reply_at' rptr and ko_at' sc scptr"])
     (* This command is the lynch-pin. This does all useful state-relation lifting
          and prepares the rest of the argument*)
        apply (rule_tac Q'="reply_at' rptr and ko_at' sc scptr
@@ -753,38 +753,36 @@ lemma bindScReply_corres:
                 and (\<lambda>s. \<exists>n. ko_at (Structures_A.SchedContext x n) scptr s)"
               in stronger_corres_guard_imp)
          apply (rule corres_guard_imp)
-           apply (rule corres_split_deprecated [where r'=dc])
-              apply (rule corres_add_noop_lhs)
-              apply (rule monadic_rewrite_corres
-                           [OF _ monadic_rewrite_bind_head,
-                            OF _ set_reply_obj_ref_noop[where rptr=rptr and x=None]])
-              apply (simp add: bind_assoc)
-              apply (rule corres_split_deprecated[OF _ updateReply_replyPrev_corres])
-                apply (rule corres_split_deprecated[OF _ update_sc_reply_stack_update_ko_at'_corres])
-                  apply (rule updateReply_replyPrev_same_corres)
-                  apply (clarsimp simp: reply_relation_def)
-                 apply (wpsimp wp: updateReply_reply_projs)+
-             apply (rule_tac F="(sc_replies x \<noteq> []) = (\<exists>y. scReply sc = Some y)" in corres_gen_asm2)
-             apply (erule corres_when2)
-             apply (rule_tac F="scReply sc = Some (hd (sc_replies x))" in corres_gen_asm2)
-             apply simp
-             apply (rule_tac P'="\<lambda>s. valid_replies s \<and> sym_refs (state_refs_of s)
-                                     \<and> pspace_aligned s \<and> pspace_distinct s"
-                    in corres_stateAssert_implied)
-              apply (rule updateReply_replyNext_not_head_corres)
-              apply (simp add: isHead_def)
-             apply (erule valid_replies_sc_cross; clarsimp)
-            apply (wpsimp wp: hoare_vcg_all_lift)
-           apply wpsimp
-            apply (rule_tac Q="\<lambda>_. reply_at' rptr and ko_at' sc scptr
-                     and (\<lambda>s. heap_ls (replyPrevs_of s) (Some y) (sc_replies x))
-                     and K (rptr \<notin> set (sc_replies x))"
-                   in hoare_strengthen_post[rotated])
-             apply clarsimp
-             apply (erule (1) heap_path_heap_upd_not_in[simplified fun_upd_def])
-            apply wpsimp
-            apply (frule Some_to_the, simp)
-           apply (wpsimp wp: updateReply_reply_projs)+
+           apply (rule corres_split[where r'=dc])
+              apply (rule_tac F="(sc_replies x \<noteq> []) = (\<exists>y. scReply sc = Some y)" in corres_gen_asm2)
+              apply (erule corres_when2)
+              apply (rule_tac F="scReply sc = Some (hd (sc_replies x))" in corres_gen_asm2)
+              apply simp
+              apply (rule_tac P'="\<lambda>s. valid_replies s \<and> sym_refs (state_refs_of s)
+                                      \<and> pspace_aligned s \<and> pspace_distinct s"
+                     in corres_stateAssert_implied)
+               apply (rule updateReply_replyNext_not_head_corres)
+               apply (simp add: isHead_def)
+              apply (erule valid_replies_sc_cross; clarsimp)
+             apply (rule corres_add_noop_lhs)
+             apply (rule monadic_rewrite_corres
+                          [OF _ monadic_rewrite_bind_head,
+                           OF _ set_reply_obj_ref_noop[where rptr=rptr and x=None]])
+             apply (simp add: bind_assoc)
+             apply (rule corres_split[OF updateReply_replyPrev_corres])
+               apply (rule corres_split[OF update_sc_reply_stack_update_ko_at'_corres])
+                 apply (rule updateReply_replyPrev_same_corres)
+                 apply (clarsimp simp: reply_relation_def)
+                apply (wpsimp wp: updateReply_reply_projs hoare_vcg_all_lift )+
+             apply (rule_tac Q="\<lambda>_. reply_at' rptr and ko_at' sc scptr
+                      and (\<lambda>s. heap_ls (replyPrevs_of s) (Some y) (sc_replies x))
+                      and K (rptr \<notin> set (sc_replies x))"
+                    in hoare_strengthen_post[rotated])
+              apply clarsimp
+              apply (erule (1) heap_path_heap_upd_not_in[simplified fun_upd_def])
+             apply wpsimp
+             apply (frule Some_to_the, simp)
+            apply (wpsimp wp: updateReply_reply_projs)+
           apply (clarsimp simp: obj_at_def)
           apply (frule (1) valid_sched_context_objsI)
           apply (clarsimp simp: valid_sched_context_def list_all_def obj_at_def)

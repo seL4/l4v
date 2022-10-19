@@ -781,7 +781,7 @@ lemma handleInterrupt_corres:
   apply (rule conjI[rotated]; rule impI)
 
   apply (rule corres_guard_imp)
-     apply (rule corres_split_deprecated [OF _ getIRQState_corres,
+     apply (rule corres_split[OF getIRQState_corres,
                               where R="\<lambda>rv. einvs"
                                 and R'="\<lambda>rv. invs' and (\<lambda>s. rv \<noteq> IRQInactive)"])
       defer

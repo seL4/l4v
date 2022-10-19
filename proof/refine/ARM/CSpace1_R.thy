@@ -4987,80 +4987,78 @@ lemma cteInsert_corres:
                         R'="\<lambda>r. ?P' and cte_wp_at' ((=) rv') (cte_map dest) and
                            cte_wp_at' ((=) (CTE (maskedAsFull (cteCap srcCTE) c') (cteMDBNode srcCTE)))
                            (cte_map src)"
-                        in corres_split_deprecated[where r'=dc])
-             apply (rule corres_stronger_no_failI)
-              apply (rule no_fail_pre)
-               apply (wp hoare_weak_lift_imp)
-              apply (clarsimp simp: cte_wp_at_ctes_of valid_mdb'_def valid_mdb_ctes_def)
-              apply (erule_tac valid_dlistEn[where p = "cte_map src"])
-                apply (simp+)[3]
-             apply (clarsimp simp: corres_underlying_def state_relation_def
-                                   in_monad valid_mdb'_def valid_mdb_ctes_def)
-             apply (drule (22) set_cap_not_quite_corres)
-               apply fastforce
-              apply (rule refl)
-             apply (elim conjE exE)
-             apply (rule bind_execI, assumption)
-             apply (prop_tac "mdb_insert_abs (cdt a) src dest")
-              apply (erule mdb_insert_abs.intro)
+                        in corres_split[where r'=dc])
+             apply (rule setUntypedCapAsFull_corres; simp)
+            apply (rule corres_stronger_no_failI)
+             apply (rule no_fail_pre)
+              apply (wp hoare_weak_lift_imp)
+             apply (clarsimp simp: cte_wp_at_ctes_of valid_mdb'_def valid_mdb_ctes_def)
+             apply (erule_tac valid_dlistEn[where p = "cte_map src"])
+               apply (simp+)[3]
+            apply (clarsimp simp: corres_underlying_def state_relation_def
+                                  in_monad valid_mdb'_def valid_mdb_ctes_def)
+            apply (drule (22) set_cap_not_quite_corres)
+              apply fastforce
+             apply (rule refl)
+            apply (elim conjE exE)
+            apply (rule bind_execI, assumption)
+            apply (prop_tac "mdb_insert_abs (cdt a) src dest")
+             apply (erule mdb_insert_abs.intro)
               apply (rule mdb_Null_None)
                apply (simp add: op_equal)
               apply simp
              apply (rule mdb_Null_descendants)
               apply (simp add: op_equal)
-              apply simp
-             apply (prop_tac "no_mloop (cdt a)")
-              apply (simp add: valid_mdb_def)
-             apply (clarsimp simp: exec_gets update_cdt_def bind_assoc
-                                   set_cdt_def exec_get exec_put set_original_def modify_def
-                         simp del: fun_upd_apply
+             apply simp
+            apply (prop_tac "no_mloop (cdt a)")
+             apply (simp add: valid_mdb_def)
+            apply (clarsimp simp: exec_gets update_cdt_def bind_assoc
+                                  set_cdt_def exec_get exec_put set_original_def modify_def
+                        simp del: fun_upd_apply
                    | (rule bind_execI[where f="cap_insert_ext x y z i p" for x y z i p],
                       clarsimp simp: exec_gets exec_get put_def
                                      mdb_insert_abs.cap_insert_ext_det_def2 update_cdt_list_def
                                      set_cdt_list_def,
                       rule refl))+
-             apply (clarsimp simp: put_def state_relation_def)
-             apply (drule updateCap_stuff)
-             apply clarsimp
-             apply (drule (3) updateMDB_the_lot', simp, simp, elim conjE)
-             apply (drule (3) updateMDB_the_lot', simp, simp, elim conjE)
-             apply (drule (3) updateMDB_the_lot', simp, simp, elim conjE)
-             apply (clarsimp simp: cte_wp_at_ctes_of nullPointer_def
-                              prev_update_modify_mdb_relation)
-             apply (prop_tac "cte_map dest \<noteq> 0")
-              apply (clarsimp simp: valid_mdb'_def
-                               valid_mdb_ctes_def no_0_def)
-             apply (prop_tac "cte_map src \<noteq> 0")
-              apply (clarsimp simp: valid_mdb'_def
-                               valid_mdb_ctes_def no_0_def)
-             apply (thin_tac "ksMachineState t = p" for p t)+
-             apply (thin_tac "ksCurThread t = p" for p t)+
-             apply (thin_tac "ksIdleThread t = p" for p t)+
-             apply (thin_tac "ksReadyQueues t = p" for p t)+
-             apply (thin_tac "ksSchedulerAction t = p" for p t)+
+            apply (clarsimp simp: put_def state_relation_def)
+            apply (drule updateCap_stuff)
+            apply clarsimp
+            apply (drule (3) updateMDB_the_lot', simp, simp, elim conjE)
+            apply (drule (3) updateMDB_the_lot', simp, simp, elim conjE)
+            apply (drule (3) updateMDB_the_lot', simp, simp, elim conjE)
+            apply (clarsimp simp: cte_wp_at_ctes_of nullPointer_def
+                             prev_update_modify_mdb_relation)
+            apply (prop_tac "cte_map dest \<noteq> 0")
+             apply (clarsimp simp: valid_mdb'_def
+                              valid_mdb_ctes_def no_0_def)
+            apply (prop_tac "cte_map src \<noteq> 0")
+             apply (clarsimp simp: valid_mdb'_def
+                              valid_mdb_ctes_def no_0_def)
+            apply (thin_tac "ksMachineState t = p" for p t)+
+            apply (thin_tac "ksCurThread t = p" for p t)+
+            apply (thin_tac "ksIdleThread t = p" for p t)+
+            apply (thin_tac "ksReadyQueues t = p" for p t)+
+            apply (thin_tac "ksSchedulerAction t = p" for p t)+
 
-             apply (rule conjI)
-              apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv data_at_def)
-             apply (rule conjI)
-              defer
-              apply(rule conjI)
-               apply (thin_tac "ctes_of s = t" for s t)+
-               apply (thin_tac "pspace_relation s t" for s t)+
-               apply (thin_tac "machine_state t = s" for s t)+
-               apply (case_tac "srcCTE")
-               apply (rename_tac src_cap' src_node)
-               apply (case_tac "rv'")
-               apply (rename_tac dest_node)
-               apply (clarsimp simp: in_set_cap_cte_at_swp)
-               apply (prop_tac "cte_at src a \<and> is_derived (cdt a) src c src_cap")
-                apply (fastforce simp: cte_wp_at_def)
-               apply (erule conjE)
-               apply (prop_tac "mdb_insert (ctes_of b) (cte_map src) (maskedAsFull src_cap' c') src_node
-                                  (cte_map dest) NullCap dest_node")
-                apply (rule mdb_insert.intro)
-                  apply (rule mdb_ptr.intro)
-                   apply (rule vmdb.intro, simp add: valid_mdb_ctes_def)
-                  apply (erule mdb_ptr_axioms.intro)
+            apply (rule conjI)
+             apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv data_at_def)
+            apply (rule conjI)
+             defer
+             apply(rule conjI)
+              apply (thin_tac "ctes_of s = t" for s t)+
+              apply (thin_tac "pspace_relation s t" for s t)+
+              apply (thin_tac "machine_state t = s" for s t)+
+              apply (case_tac "srcCTE")
+              apply (rename_tac src_cap' src_node)
+              apply (case_tac "rv'")
+              apply (rename_tac dest_node)
+              apply (clarsimp simp: in_set_cap_cte_at_swp)
+              apply (prop_tac "cte_at src a \<and> is_derived (cdt a) src c src_cap")
+               apply (fastforce simp: cte_wp_at_def)
+              apply (erule conjE)
+              apply (prop_tac "mdb_insert (ctes_of b) (cte_map src) (maskedAsFull src_cap' c') src_node
+                                 (cte_map dest) NullCap dest_node")
+               apply (rule mdb_insert.intro)
                  apply (rule mdb_ptr.intro)
                   apply (rule vmdb.intro, simp add: valid_mdb_ctes_def)
                  apply (erule mdb_ptr_axioms.intro)
@@ -5211,7 +5209,7 @@ lemma cteInsert_corres:
                   apply (subst is_derived_eq[symmetric]; assumption)
                  apply assumption
                 subgoal by (clarsimp simp: cte_wp_at_def is_derived_def is_cap_simps cap_master_cap_simps
-                                    dest!:cap_master_cap_eqDs)
+                                    dest!: cap_master_cap_eqDs)
                apply (subgoal_tac "is_original_cap a src = mdbRevocable src_node")
                 apply (frule(4) iffD1[OF is_derived_eq])
                 apply (drule_tac src_cap' = src_cap' in
@@ -5222,7 +5220,8 @@ lemma cteInsert_corres:
                apply simp
                apply (erule impE)
                 apply (clarsimp simp: null_filter_def cte_wp_at_caps_of_state split: if_splits)
-                subgoal by (clarsimp simp: masked_as_full_def is_cap_simps free_index_update_def split: if_splits)
+                subgoal by (clarsimp simp: masked_as_full_def is_cap_simps free_index_update_def
+                                    split: if_splits)
                apply(simp)
 
               apply(subgoal_tac "cdt_list (a) src = []")
@@ -5331,44 +5330,43 @@ lemma cteInsert_corres:
              apply (clarsimp simp: revokable_relation_def  split: if_split)
              apply (rule conjI)
               apply clarsimp
-               apply (prop_tac "mdbRevocable node = revokable' (cteCap srcCTE) c'")
-                apply (case_tac rv')
-                subgoal by (clarsimp simp add: const_def modify_map_def split: if_split_asm)
-               apply simp
-               apply (rule revokable_eq, assumption, assumption)
-                apply (rule derived_sameRegionAs)
-                 apply (drule(3) is_derived_eq[THEN iffD1,rotated -1])
-                  subgoal by (simp add: cte_wp_at_def)
-                 apply assumption
+              apply (prop_tac "mdbRevocable node = revokable' (cteCap srcCTE) c'")
+               apply (case_tac rv')
+               subgoal by (clarsimp simp add: const_def modify_map_def split: if_split_asm)
+              apply simp
+              apply (rule revokable_eq, assumption, assumption)
+               apply (rule derived_sameRegionAs)
+                apply (drule(3) is_derived_eq[THEN iffD1,rotated -1])
+                 subgoal by (simp add: cte_wp_at_def)
                 apply assumption
-               subgoal by (clarsimp simp: cap_master_cap_simps cte_wp_at_def is_derived_def is_cap_simps
-                                   split:if_splits dest!:cap_master_cap_eqDs)
-              apply clarsimp
-              apply (case_tac srcCTE)
-              apply (case_tac rv')
-              apply clarsimp
-              apply (prop_tac "\<exists>cap' node'. ctes_of b (cte_map (aa,bb)) = Some (CTE cap' node')")
-               apply (clarsimp simp: modify_map_def split: if_split_asm)
-               apply (case_tac z)
-               subgoal by clarsimp
-              apply clarsimp
-              apply (drule set_cap_caps_of_state_monad)+
-              apply (subgoal_tac "null_filter (caps_of_state a) (aa,bb) \<noteq> None")
-               prefer 2
-               subgoal by (clarsimp simp: cte_wp_at_caps_of_state null_filter_def split: if_splits)
+               apply assumption
+              subgoal by (clarsimp simp: cap_master_cap_simps cte_wp_at_def is_derived_def is_cap_simps
+                                  split: if_splits dest!:cap_master_cap_eqDs)
+             apply clarsimp
+             apply (case_tac srcCTE)
+             apply (case_tac rv')
+             apply clarsimp
+             apply (prop_tac "\<exists>cap' node'. ctes_of b (cte_map (aa,bb)) = Some (CTE cap' node')")
+              apply (clarsimp simp: modify_map_def split: if_split_asm)
+              apply (case_tac z)
+              subgoal by clarsimp
+             apply clarsimp
+             apply (drule set_cap_caps_of_state_monad)+
+             apply (subgoal_tac "null_filter (caps_of_state a) (aa,bb) \<noteq> None")
+              prefer 2
+              subgoal by (clarsimp simp: cte_wp_at_caps_of_state null_filter_def
+                                  split: if_splits)
 
-              apply clarsimp
-              apply (prop_tac "cte_at (aa,bb) a")
-               apply (drule null_filter_caps_of_stateD)
-               apply (erule cte_wp_at_weakenE, rule TrueI)
-              apply (subgoal_tac "mdbRevocable node = mdbRevocable node'")
-               subgoal by clarsimp
-              apply (subgoal_tac "cte_map (aa,bb) \<noteq> cte_map dest")
-               subgoal by (clarsimp simp: modify_map_def split: if_split_asm)
-              apply (erule (5) cte_map_inj)
+             apply clarsimp
+             apply (prop_tac "cte_at (aa,bb) a")
+              apply (drule null_filter_caps_of_stateD)
+              apply (erule cte_wp_at_weakenE, rule TrueI)
+             apply (subgoal_tac "mdbRevocable node = mdbRevocable node'")
+              subgoal by clarsimp
+             apply (subgoal_tac "cte_map (aa,bb) \<noteq> cte_map dest")
+              subgoal by (clarsimp simp: modify_map_def split: if_split_asm)
+             apply (erule (5) cte_map_inj)
 
-             apply (rule setUntypedCapAsFull_corres)
-                   apply simp+
             apply (wp set_untyped_cap_full_valid_objs set_untyped_cap_as_full_valid_mdb
                set_untyped_cap_as_full_cte_wp_at setUntypedCapAsFull_valid_cap
                setUntypedCapAsFull_cte_wp_at | clarsimp simp: cte_wp_at_caps_of_state| wps)+
@@ -5410,7 +5408,7 @@ lemma cteInsert_corres:
   apply (simp (no_asm_simp) add: cdt_relation_def split: if_split)
   apply (prop_tac "descendants_of dest (cdt a) = {}")
    apply (drule mdb_insert.dest_no_descendants)
-   subgoal by (fastforce simp add: cdt_relation_def simp del: split_paired_All)
+   subgoal by (fastforce simp add: cdt_relation_def)
   apply (prop_tac "mdb_insert_abs (cdt a) src dest")
    apply (erule mdb_insert_abs.intro)
     apply (rule mdb_None)
@@ -5444,11 +5442,11 @@ lemma cteInsert_corres:
                           dest!:cap_master_cap_eqDs)
     apply (subgoal_tac "is_original_cap a src = mdbRevocable src_node")
      prefer 2
-     apply (simp add: revokable_relation_def del: split_paired_All)
+     apply (simp add: revokable_relation_def)
      apply (erule_tac x=src in allE)
      apply (erule impE)
       apply (clarsimp simp: null_filter_def cte_wp_at_caps_of_state cap_master_cap_simps
-       split: if_splits dest!:cap_master_cap_eqDs)
+                     split: if_splits dest!:cap_master_cap_eqDs)
       subgoal by (clarsimp simp: masked_as_full_def is_cap_simps free_index_update_def split: if_splits)
      subgoal by simp
     subgoal by clarsimp
@@ -5458,7 +5456,7 @@ lemma cteInsert_corres:
           prefer 2
           apply assumption
          apply (simp_all)[6]
-   apply (simp add: cdt_relation_def split: if_split del: split_paired_All)
+   apply (simp add: cdt_relation_def split: if_split)
    apply clarsimp
    apply (drule (5) cte_map_inj)+
    apply simp
@@ -5486,7 +5484,7 @@ lemma cteInsert_corres:
                         dest!:cap_master_cap_eqDs)
    apply (subgoal_tac "is_original_cap a src = mdbRevocable src_node")
     subgoal by simp
-   apply (simp add: revokable_relation_def del: split_paired_All)
+   apply (simp add: revokable_relation_def)
    apply (erule_tac x=src in allE)
    apply (erule impE)
     apply (clarsimp simp: null_filter_def cte_wp_at_caps_of_state split: if_splits)
@@ -5496,9 +5494,9 @@ lemma cteInsert_corres:
   apply (frule_tac p="(aa, bb)" in in_set_cap_cte_at)
   apply (rule conjI)
    apply (clarsimp simp: descendants_of_eq')
-   subgoal by (simp add: cdt_relation_def del: split_paired_All)
+   subgoal by (simp add: cdt_relation_def)
   apply (clarsimp simp: descendants_of_eq')
-  subgoal by (simp add: cdt_relation_def del: split_paired_All)
+  subgoal by (simp add: cdt_relation_def)
   done
 
 (* FIXME RT: This is the sort of crap we should get rid of when possible, or

@@ -171,12 +171,12 @@ lemma schedContextUpdateConsumed_corres:
             (schedContextUpdateConsumed scp)"
   apply (clarsimp simp: sched_context_update_consumed_def schedContextUpdateConsumed_def)
   apply (simp add: maxTicksToUs_def ticksToUs_def)
-  apply (rule corres_split'[rotated 2, OF get_sched_context_sp get_sc_sp'])
+  apply (rule corres_underlying_split[rotated 2, OF get_sched_context_sp get_sc_sp'])
    apply (corressimp corres: get_sc_corres)
   apply (rename_tac abs_sc conc_sc)
   apply (rule corres_if_split)
     apply (clarsimp simp: sc_relation_def)
-   apply (rule corres_split')
+   apply (rule corres_underlying_split)
       apply (rule corres_guard_imp)
         apply clarsimp
         apply (rule_tac f="\<lambda>sc. sc\<lparr>sc_consumed := sc_consumed abs_sc - max_ticks_to_us\<rparr>"
@@ -191,7 +191,7 @@ lemma schedContextUpdateConsumed_corres:
      apply (clarsimp simp: maxTicksToUs_def ticksToUs_def)
     apply wpsimp
    apply wpsimp
-  apply (rule corres_split')
+  apply (rule corres_underlying_split)
      apply (rule corres_guard_imp)
        apply clarsimp
        apply (rule_tac f="\<lambda>sc. sc\<lparr>sc_consumed := 0\<rparr>"
@@ -484,9 +484,9 @@ lemma setConsumed_corres:
   apply (rule corres_stateAssert_add_assertion[rotated])
    apply (clarsimp simp: cur_tcb'_asrt_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ schedContextUpdateConsumed_corres])
-      apply (rule corres_split_deprecated [OF _ getCurThread_corres], simp)
-        apply (rule corres_split_deprecated [OF setMessageInfo_corres setMRs_corres])
+    apply (rule corres_split[OF schedContextUpdateConsumed_corres])
+      apply (rule corres_split[OF getCurThread_corres], simp)
+        apply (rule corres_split[OF setMRs_corres setMessageInfo_corres])
   by (wpsimp wp: hoare_case_option_wp simp: setTimeArg_def cur_tcb_def cur_tcb'_def | wps)+
 
 lemma get_tcb_yield_to_corres:
@@ -525,7 +525,7 @@ lemma schedContextCancelYieldTo_corres:
    apply (fastforce dest!: state_relationD elim!: tcb_at_cross)
   apply (clarsimp simp: sched_context_cancel_yield_to_def schedContextCancelYieldTo_def maybeM_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ get_tcb_yield_to_corres gyt_sp threadGet_sp
+    apply (rule corres_split[OF get_tcb_yield_to_corres _ gyt_sp threadGet_sp
                              , where Q="?abs_guard"])
     defer
     apply (simp add: obj_at_def is_tcb_def)
@@ -533,12 +533,12 @@ lemma schedContextCancelYieldTo_corres:
   apply (case_tac scPtrOpt; clarsimp?)
   apply (rule corres_guard_imp)
     apply (subst bind_assoc[symmetric])
-    apply (rule corres_split_deprecated[OF _ update_sc_no_reply_stack_update_corres])
-         apply (rule tcb_yield_to_update_corres)
-         apply (simp add: sc_relation_tcb_yield_to_update)
-        apply simp
-       apply (clarsimp simp: objBits_simps')
-      apply simp
+    apply (rule corres_split[OF update_sc_no_reply_stack_update_corres])
+          apply (simp add: sc_relation_tcb_yield_to_update)
+         apply simp
+        apply (clarsimp simp: objBits_simps')
+       apply simp
+      apply (rule tcb_yield_to_update_corres)
      apply wpsimp
     apply wpsimp
    apply (clarsimp simp: valid_objs_def obj_at_def is_tcb_def)
@@ -555,11 +555,11 @@ lemma schedContextCompleteYieldTo_corres:
   apply (simp add: complete_yield_to_def schedContextCompleteYieldTo_def)
   apply (subst maybeM_when)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ get_tcb_yield_to_corres], simp)
+    apply (rule corres_split[OF get_tcb_yield_to_corres], simp)
       apply (rule corres_when2[OF refl])
       apply (clarsimp, wpfix)
-      apply (rule corres_split_deprecated[OF _ lookupIPCBuffer_corres], simp)
-        apply (rule corres_split_deprecated[OF _ setConsumed_corres])
+      apply (rule corres_split[OF lookupIPCBuffer_corres], simp)
+        apply (rule corres_split[OF setConsumed_corres])
           apply (rule schedContextCancelYieldTo_corres[simplified dc_def])
          apply wpsimp
         apply wpsimp
@@ -841,7 +841,7 @@ lemma get_sc_released_corres:
   "corres (=) (active_sc_valid_refills and sc_at sc_ptr) (valid_objs' and sc_at' sc_ptr)
           (get_sc_released sc_ptr) (scReleased sc_ptr)"
   apply (simp add: get_sc_released_def scReleased_def scActive_def refillReady_def)
-  apply (rule corres_split'[rotated 2, OF get_sched_context_sp get_sc_sp'])
+  apply (rule corres_underlying_split[rotated 2, OF get_sched_context_sp get_sc_sp'])
    apply (corressimp corres: get_sc_corres)
   apply (rename_tac sc')
   apply (rule corres_symb_exec_l[rotated 2, OF gets_sp]; (solves wpsimp)?)

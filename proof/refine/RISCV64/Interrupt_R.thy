@@ -653,14 +653,14 @@ lemma handleInterrupt_corres:
   apply (rule conjI[rotated]; rule impI)
 
    apply (rule corres_guard_imp)
-     apply (rule corres_split_deprecated [OF _ getIRQState_corres,
+     apply (rule corres_split[OF getIRQState_corres,
                                where R="\<lambda>rv. ?Q"
                                  and R'="\<lambda>rv. invs' and (\<lambda>s. rv \<noteq> IRQInactive)"])
        defer
        apply (wp getIRQState_prop getIRQState_inv do_machine_op_bind doMachineOp_bind
               | simp add: do_machine_op_bind doMachineOp_bind )+
    apply (rule corres_guard_imp)
-     apply (rule corres_split_deprecated)
+     apply (rule corres_split)
         apply (rule corres_machine_op, rule corres_eq_trivial;
                (simp add: dc_def no_fail_maskInterrupt no_fail_bind no_fail_ackInterrupt)+)+
       apply ((wp | simp)+)[4]
@@ -670,7 +670,7 @@ lemma handleInterrupt_corres:
    apply (rule corres_guard_imp)
      apply (rule corres_split[OF getIRQSlot_corres])
        apply simp
-       apply (rule corres_split_deprecated [OF _ get_cap_corres,
+       apply (rule corres_split[OF get_cap_corres,
                                  where R="\<lambda>rv. ?Q and valid_cap rv"
                                   and R'="\<lambda>rv. invs' and valid_cap' (cteCap rv)"])
          apply (rule corres_underlying_split[where r'=dc])

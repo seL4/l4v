@@ -173,7 +173,7 @@ lemma decodeSchedcontext_Bind_corres:
   apply (cases excaps; clarsimp)
   apply (rename_tac cap list)
   apply (cases excaps'; clarsimp)
-  apply (rule corres_splitEE'')
+  apply (rule corres_splitEE_forwards')
      apply (corressimp corres: get_sc_corres)
      apply (fastforce intro: sc_at'_cross_rel[unfolded cross_rel_def, rule_format])
     apply (rule liftE_validE[THEN iffD2, OF get_sched_context_sp])
@@ -182,7 +182,7 @@ lemma decodeSchedcontext_Bind_corres:
    apply (clarsimp simp: bindE_assoc)
    apply (rule corres_splitEE_skip; (solves wpsimp)?)
     apply (corressimp simp: sc_relation_def)
-   apply (rule corres_splitEE''[where r'="(=)"]; (solves wpsimp)?)
+   apply (rule corres_splitEE_forwards'[where r'="(=)"]; (solves wpsimp)?)
     apply (corressimp corres: getNotification_corres
                         simp: get_sk_obj_ref_def ntfn_relation_def valid_cap_def valid_cap'_def
                           wp: hoare_vcg_all_lift)
@@ -193,7 +193,7 @@ lemma decodeSchedcontext_Bind_corres:
   apply (clarsimp simp: bindE_assoc get_tcb_obj_ref_def)
   apply (rule corres_splitEE_skip; (solves wpsimp)?)
    apply (corressimp simp: sc_relation_def)
-  apply (rule corres_splitEE''[where r'="(=)"])
+  apply (rule corres_splitEE_forwards'[where r'="(=)"])
      apply (subst corres_liftE_rel_sum)
      apply (rule corres_guard_imp)
        apply (rule threadGet_corres)
@@ -207,18 +207,16 @@ lemma decodeSchedcontext_Bind_corres:
                        simp: get_sk_obj_ref_def sc_relation_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqrE)
-       apply (rule corres_splitEE)
-          apply (rule whenE_throwError_corres)
-            apply simp
-           apply simp
-          apply (clarsimp simp: returnOk_def)
+       apply (rule corres_liftE_rel_sum[THEN iffD2, OF get_sc_released_corres])
+      apply (rule corres_splitEE)
          apply (subst corres_liftE_rel_sum)
-         apply (rule corres_rel_imp)
-          apply (rule isBlocked_corres)
+         apply (rule isBlocked_corres)
+        apply (rule whenE_throwError_corres)
+          apply simp
          apply simp
-        apply wpsimp
+        apply (rule corres_trivial, clarsimp simp: returnOk_def)
        apply wpsimp
-      apply (rule corres_liftE_rel_sum[THEN iffD2, OF get_sc_released_corres])
+      apply wpsimp
      apply wpsimp
     apply (wpsimp simp: scReleased_def scActive_def)
    apply (fastforce simp: obj_at_def is_tcb_def)
@@ -238,22 +236,22 @@ lemma decodeSchedContext_UnbindObject_corres:
   apply (cases excaps'; clarsimp)
   apply (case_tac cap; clarsimp)
    apply (clarsimp simp: bindE_assoc get_sc_obj_ref_def liftE_bind_return_bindE_returnOk)
-   apply (rule corres_splitEE'')
+   apply (rule corres_splitEE_forwards')
       apply (corressimp corres: get_sc_corres)
       apply (fastforce intro: sc_at'_cross_rel[unfolded cross_rel_def, rule_format])
      apply (rule liftE_validE[THEN iffD2, OF get_sched_context_sp])
     apply (rule liftE_validE[THEN iffD2, OF get_sc_sp'])
    apply (corressimp simp: sc_relation_def)
-   apply (clarsimp simp: bindE_assoc get_sc_obj_ref_def liftE_bind_return_bindE_returnOk)
-  apply (rule corres_splitEE'')
+  apply (clarsimp simp: bindE_assoc get_sc_obj_ref_def liftE_bind_return_bindE_returnOk)
+  apply (rule corres_splitEE_forwards')
      apply (corressimp corres: get_sc_corres)
      apply (fastforce intro: sc_at'_cross_rel[unfolded cross_rel_def, rule_format])
     apply (rule liftE_validE[THEN iffD2, OF get_sched_context_sp])
    apply (rule liftE_validE[THEN iffD2, OF get_sc_sp'])
-  apply (rule corres_splitEE'')
+  apply (rule corres_splitEE_forwards')
      apply (corressimp simp: sc_relation_def)
     apply (rule whenE_throwError_sp[simplified validE_R_def])+
-  apply (rule corres_splitEE'')
+  apply (rule corres_splitEE_forwards')
      apply (corressimp corres: getCurThread_corres)
     apply (rule liftE_validE[THEN iffD2, OF gets_sp])
    apply (rule liftE_validE[THEN iffD2, OF getCurThread_sp])
@@ -269,22 +267,22 @@ lemma decodeSchedContext_YieldTo_corres:
   apply add_cur_tcb'
   apply (clarsimp simp: decode_sched_context_yield_to_def decodeSchedContext_YieldTo_def)
   apply (clarsimp simp: bindE_assoc get_sc_obj_ref_def liftE_bind_return_bindE_returnOk)
-  apply (rule corres_splitEE'')
+  apply (rule corres_splitEE_forwards')
      apply (corressimp corres: get_sc_corres)
      apply (fastforce intro: sc_at'_cross_rel[unfolded cross_rel_def, rule_format])
     apply (rule liftE_validE[THEN iffD2, OF get_sched_context_sp])
    apply (rule liftE_validE[THEN iffD2, OF get_sc_sp'])
-  apply (rule corres_splitEE'')
+  apply (rule corres_splitEE_forwards')
      apply (corressimp simp: sc_relation_def)
     apply (rule whenE_throwError_sp[simplified validE_R_def])+
-  apply (rule corres_splitEE'')
+  apply (rule corres_splitEE_forwards')
      apply (corressimp corres: getCurThread_corres)
     apply (rule liftE_validE[THEN iffD2, OF gets_sp])
    apply (rule liftE_validE[THEN iffD2, OF getCurThread_sp])
   apply (rule corres_splitEE_skip; (solves wpsimp)?)
    apply (corressimp simp: sc_relation_def)
   apply (clarsimp simp: sc_relation_def)
-  apply (rule corres_splitEE''[where r'="(=)"])
+  apply (rule corres_splitEE_forwards'[where r'="(=)"])
      apply (subst corres_liftE_rel_sum)
      apply (rule corres_guard_imp)
        apply (rule threadGet_corres)
@@ -295,7 +293,7 @@ lemma decodeSchedContext_YieldTo_corres:
                       simp: valid_sched_context'_def)
     apply (rule liftE_validE[THEN iffD2, OF thread_get_sp])
    apply (rule liftE_validE[THEN iffD2, OF threadGet_sp])
-  apply (rule corres_splitEE''[where r'="(=)"])
+  apply (rule corres_splitEE_forwards'[where r'="(=)"])
      apply (subst corres_liftE_rel_sum)
      apply (rule corres_guard_imp)
        apply (rule threadGet_corres)
@@ -305,7 +303,7 @@ lemma decodeSchedContext_YieldTo_corres:
     apply (rule liftE_validE[THEN iffD2, OF thread_get_sp])
    apply (rule liftE_validE[THEN iffD2, OF threadGet_sp])
   apply (rule corres_splitEE_skip; corressimp)
-  apply (rule corres_splitEE''[where r'="(=)"])
+  apply (rule corres_splitEE_forwards'[where r'="(=)"])
      apply (subst corres_liftE_rel_sum)
      apply (rule corres_guard_imp)
        apply (rule threadGet_corres)
@@ -337,12 +335,12 @@ lemma decode_sc_inv_corres:
     defer
     apply (corressimp corres: decodeSchedContext_UnbindObject_corres)
    apply (corressimp corres: decodeSchedContext_YieldTo_corres)
-  apply (rule corres_splitEE'')
+  apply (rule corres_splitEE_forwards')
      apply (corressimp corres: get_sc_corres)
      apply (fastforce intro: sc_at'_cross_rel[unfolded cross_rel_def, rule_format])
     apply (rule liftE_validE[THEN iffD2, OF get_sched_context_sp])
    apply (rule liftE_validE[THEN iffD2, OF get_sc_sp'])
-  apply (rule corres_splitEE'')
+  apply (rule corres_splitEE_forwards')
      apply (corressimp corres: getCurThread_corres)
     apply (rule liftE_validE[THEN iffD2, OF gets_sp])
    apply (rule liftE_validE[THEN iffD2, OF getCurThread_sp])
@@ -363,8 +361,8 @@ lemma decode_sc_ctrl_inv_corres:
   apply (cases excaps'; clarsimp)
   apply (rule corres_splitEE_skip; (solves wpsimp)?)
    apply corressimp
-  apply (rule corres_splitEE'')
-      apply corressimp
+  apply (rule corres_splitEE_forwards')
+     apply corressimp
      apply (case_tac cap; clarsimp simp: isSchedContextCap_def)
     apply (rule whenE_throwError_sp[simplified validE_R_def])+
   apply corressimp
@@ -468,7 +466,7 @@ lemma schedContextYieldTo_corres:
              in corres_inst)
       apply simp
       apply (erule exE)
-      apply (rule corres_split'[where r'=dc])
+      apply (rule corres_underlying_split[where r'=dc])
          apply (simp only: when_def fromJust_def)
          apply (rule corres_guard_imp)
            apply (rule corres_if2)
@@ -536,67 +534,66 @@ lemma schedContextYieldTo_corres:
             apply (rename_tac tp)
             apply (simp only: option.sel pred_conj_def simp_thms(21))
             apply (rule corres_guard_imp)
-              apply (rule corres_split_eqr[OF _ isSchedulable_corres])
+              apply (rule corres_split_eqr[OF isSchedulable_corres])
                 apply (rename_tac sched)
                 apply (rule corres_split_eqr)
-                   apply (rule corres_when, simp)
-                   apply (rule setConsumed_corres)
-                  apply (rule_tac P="?abs_buf and sc_yf_sc_at ((=) None) scp and ?ct and ?scp
-                                     and (\<lambda>s. sched = schedulable tp s) and tcb_at tp
-                                     and sc_tcb_sc_at ((=) (Some tp)) scp"
-                             and P'="?con_buf and cur_tcb' and tcb_at' tp and ko_at' sc0' scp
-                                     and (\<lambda>s. scTCBs_of s scp = Some tp)"
-                         in corres_inst)
-                  apply (rule corres_guard_imp)
-                    apply (rule corres_if2, simp)
-                     apply (rule corres_split_eqr[OF _ getCurThread_corres])
-                       apply (rename_tac ct_ptr)
-                       apply (rule corres_split_eqr[OF _ threadGet_corres])
-                          apply (rule corres_split_eqr[OF _ threadGet_corres])
-                             apply (rule corres_if2)
-                               apply simp
+                   apply (rule_tac P="?abs_buf and sc_yf_sc_at ((=) None) scp and ?ct and ?scp
+                                      and (\<lambda>s. sched = schedulable tp s) and tcb_at tp
+                                      and sc_tcb_sc_at ((=) (Some tp)) scp"
+                              and P'="?con_buf and cur_tcb' and tcb_at' tp and ko_at' sc0' scp
+                                      and (\<lambda>s. scTCBs_of s scp = Some tp)"
+                          in corres_inst)
+                   apply (rule corres_guard_imp)
+                     apply (rule corres_if2, simp)
+                      apply (rule corres_split_eqr[OF getCurThread_corres])
+                        apply (rename_tac ct_ptr)
+                        apply (rule corres_split_eqr[OF threadGet_corres])
+                           apply (clarsimp simp: tcb_relation_def)
+                          apply (rule corres_split_eqr[OF threadGet_corres])
+                             apply (clarsimp simp: tcb_relation_def)
+                            apply (rule corres_if2)
                               apply simp
-                              apply (rule corres_split[OF tcbSchedDequeue_corres])
-                                apply (rule corres_split[OF tcbSchedEnqueue_corres])
-                                  apply simp
-                                 apply (wpsimp wp: tcbSchedDequeue_valid_queues)+
-                             apply (rule corres_split[OF tcb_yield_to_update_corres])
-                               apply (rule_tac sc'1=sc0' in corres_split[OF update_sc_no_reply_stack_update_ko_at'_corres])
-                                     apply ((clarsimp simp: sc_relation_def objBits_simps')+)[4]
-                                 apply (rule_tac P="valid_objs and pspace_aligned and pspace_distinct
-                                                    and weak_valid_sched_action and active_sc_valid_refills
-                                                    and sc_yf_sc_at ((=) (Some ct_ptr)) scp and ?scp
-                                                    and bound_yt_tcb_at ((=) (Some scp)) ct_ptr
-                                                    and tcb_at ct_ptr and tcb_at tp
-                                                    and sc_tcb_sc_at ((=) (Some tp)) scp"
-                                            and P'="valid_objs' and valid_queues and valid_queues' and cur_tcb'
-                                                    and valid_release_queue_iff and tcb_at' tp and sc_at' scp
-                                                    and obj_at' (\<lambda>sc. scYieldFrom sc = Some ct_ptr) scp
-                                                    and (\<lambda>s. scTCBs_of s scp = Some tp)"
-                                        in corres_inst)
-                                 apply (rule corres_guard_imp)
-                                   apply (rule corres_split[OF tcbSchedDequeue_corres])
-                                     apply (rule corres_split[OF tcbSchedEnqueue_corres])
-                                       apply (rule corres_split[OF tcbSchedEnqueue_corres])
-                                         apply (rule corres_split[OF rescheduleRequired_corres])
-                                           apply simp
-                                          apply (wpsimp wp: tcbSchedDequeue_valid_queues)+
-                                 apply (clarsimp simp: obj_at'_def projectKOs valid_objs'_valid_tcbs')
-                                 apply (prop_tac "\<exists>tcb. ko_at' tcb tp s")
-                                  apply (fastforce simp: valid_obj'_def valid_sched_context'_def obj_at'_def)
-                                 apply clarsimp
-                                 apply (drule (1) tcb_ko_at_valid_objs_valid_tcb'[rotated])
-                                 apply (clarsimp simp: valid_tcb'_def obj_at'_def projectKOs inQ_def tcb_cte_cases_def)
-                                apply (wpsimp wp: hoare_case_option_wp set_yf_sc_yf_sc_at[simplified op_equal])
-                               apply (wpsimp wp:hoare_case_option_wp)
-                               apply (wpsimp wp: set_sc'.obj_at' set_sc'.set_wp)
-                              apply (wpsimp wp: syt_bound_tcb_at')
-                             apply (clarsimp cong: conj_cong)
-                             apply (wpsimp wp: threadSet_valid_queues threadSet_valid_queues'
-                                               threadSet_vrq'_inv threadSet_vrq_inv threadSet_cur
-                                               threadSet_valid_objs' hoare_drop_imp
-                                         simp: fun_upd_def[symmetric])
-                            apply (clarsimp simp: tcb_relation_def)
+                             apply simp
+                             apply (rule corres_split[OF tcbSchedDequeue_corres])
+                               apply (rule corres_split[OF tcbSchedEnqueue_corres])
+                                 apply simp
+                                apply (wpsimp wp: tcbSchedDequeue_valid_queues)+
+                            apply (rule corres_split[OF tcb_yield_to_update_corres])
+                              apply (rule_tac sc'1=sc0' in corres_split[OF update_sc_no_reply_stack_update_ko_at'_corres])
+                                    apply ((clarsimp simp: sc_relation_def objBits_simps')+)[4]
+                                apply (rule_tac P="valid_objs and pspace_aligned and pspace_distinct
+                                                   and weak_valid_sched_action and active_sc_valid_refills
+                                                   and sc_yf_sc_at ((=) (Some ct_ptr)) scp and ?scp
+                                                   and bound_yt_tcb_at ((=) (Some scp)) ct_ptr
+                                                   and tcb_at ct_ptr and tcb_at tp
+                                                   and sc_tcb_sc_at ((=) (Some tp)) scp"
+                                           and P'="valid_objs' and valid_queues and valid_queues' and cur_tcb'
+                                                   and valid_release_queue_iff and tcb_at' tp and sc_at' scp
+                                                   and obj_at' (\<lambda>sc. scYieldFrom sc = Some ct_ptr) scp
+                                                   and (\<lambda>s. scTCBs_of s scp = Some tp)"
+                                       in corres_inst)
+                                apply (rule corres_guard_imp)
+                                  apply (rule corres_split[OF tcbSchedDequeue_corres])
+                                    apply (rule corres_split[OF tcbSchedEnqueue_corres])
+                                      apply (rule corres_split[OF tcbSchedEnqueue_corres])
+                                        apply (rule corres_split[OF rescheduleRequired_corres])
+                                          apply simp
+                                         apply (wpsimp wp: tcbSchedDequeue_valid_queues)+
+                                apply (clarsimp simp: obj_at'_def projectKOs valid_objs'_valid_tcbs')
+                                apply (prop_tac "\<exists>tcb. ko_at' tcb tp s")
+                                 apply (fastforce simp: valid_obj'_def valid_sched_context'_def obj_at'_def)
+                                apply clarsimp
+                                apply (drule (1) tcb_ko_at_valid_objs_valid_tcb'[rotated])
+                                apply (clarsimp simp: valid_tcb'_def obj_at'_def projectKOs inQ_def tcb_cte_cases_def)
+                               apply (wpsimp wp: hoare_case_option_wp set_yf_sc_yf_sc_at[simplified op_equal])
+                              apply (wpsimp wp:hoare_case_option_wp)
+                              apply (wpsimp wp: set_sc'.obj_at' set_sc'.set_wp)
+                             apply (wpsimp wp: syt_bound_tcb_at')
+                            apply (clarsimp cong: conj_cong)
+                            apply (wpsimp wp: threadSet_valid_queues threadSet_valid_queues'
+                                              threadSet_vrq'_inv threadSet_vrq_inv threadSet_cur
+                                              threadSet_valid_objs' hoare_drop_imp
+                                        simp: fun_upd_def[symmetric])
                            apply (rule_tac
                                     Q="\<lambda>_. sc_at scp and
                                            valid_objs and
@@ -624,22 +621,23 @@ lemma schedContextYieldTo_corres:
                           apply (erule_tac x=tp in valid_objsE', simp)
                           apply (fastforce simp: valid_obj'_def valid_tcb'_def obj_at'_def projectKOs
                                                  inQ_def tcb_cte_cases_def objBits_simps' scBits_simps)
-                         apply (clarsimp simp: tcb_relation_def)
+                         apply (wpsimp wp: hoare_vcg_if_lift2 hoare_drop_imp)
                         apply (wpsimp wp: hoare_vcg_if_lift2 hoare_drop_imp)
-                       apply (wpsimp wp: hoare_vcg_if_lift2 hoare_drop_imp)
+                       apply wpsimp
                       apply wpsimp
-                     apply wpsimp
-                    apply (rule_tac P="?abs_buf and sc_yf_sc_at ((=) None) scp and ?scp
-                                       and (\<lambda>s. sched = schedulable tp s)"
-                                and P'="?con_buf and cur_tcb' and ko_at' sc0' scp"
-                           in corres_inst)
-                    apply simp
-                   apply (intro conjI impI; clarsimp cong: conj_cong)
-                   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_sched_def
-                                         valid_sched_action_weak_valid_sched_action pred_tcb_at_def
-                                         sc_tcb_sc_at_def obj_at_def is_tcb is_sc_obj)
-                   apply (fastforce simp: obj_at_def elim!: valid_sched_context_size_objsI)
-                  apply (clarsimp cong: conj_cong simp: invs'_def valid_pspace'_def cur_tcb'_def)
+                     apply (rule_tac P="?abs_buf and sc_yf_sc_at ((=) None) scp and ?scp
+                                        and (\<lambda>s. sched = schedulable tp s)"
+                                 and P'="?con_buf and cur_tcb' and ko_at' sc0' scp"
+                            in corres_inst)
+                     apply simp
+                    apply (intro conjI impI; clarsimp cong: conj_cong)
+                    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_sched_def
+                                          valid_sched_action_weak_valid_sched_action pred_tcb_at_def
+                                          sc_tcb_sc_at_def obj_at_def is_tcb is_sc_obj)
+                    apply (fastforce simp: obj_at_def elim!: valid_sched_context_size_objsI)
+                   apply (clarsimp cong: conj_cong simp: invs'_def valid_pspace'_def cur_tcb'_def)
+                  apply (rule corres_when, simp)
+                  apply (rule setConsumed_corres)
                  apply (clarsimp simp:obj_at'_def projectKOs)
                  apply (wpsimp wp: thread_get_wp hoare_case_option_wp)+
                    apply (wpsimp wp: threadGet_wp)+
@@ -853,7 +851,7 @@ lemma refillNew_corres:
                      simp: obj_at'_def projectKOs opt_map_red)
   apply (unfold refillNew_def refill_new_def setRefillHd_def updateRefillHd_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqr[OF _ getCurTime_corres])
+    apply (rule corres_split_eqr[OF getCurTime_corres])
       (* period *)
       apply (rule corres_split[OF updateSchedContext_corres]; clarsimp simp: objBits_simps)
      apply (fastforce simp: obj_at_simps is_sc_obj sc_relation_def opt_map_red
@@ -1280,7 +1278,7 @@ lemma invokeSchedControlConfigureFlags_corres:
   apply (rule_tac Q="\<lambda>_ s. ?abs s \<and> sc_at sc_ptr s \<and> sc_at (cur_sc s) s"
               and Q'="\<lambda>_  s'. ?conc s' \<and> ex_nonz_cap_to' sc_ptr s' \<and> sc_at' sc_ptr s'
                               \<and> active_sc_at' (ksCurSc s') s'"
-               in corres_split')
+               in corres_underlying_split)
 
      apply (find_goal \<open>match conclusion in "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>" for P f Q  \<Rightarrow> -\<close>)
      apply wps_conj_solves
@@ -1312,7 +1310,7 @@ lemma invokeSchedControlConfigureFlags_corres:
   apply (rule_tac Q="\<lambda>_ s. sc_at sc_ptr s \<and> ?abs s \<and> sc_at (cur_sc s) s"
               and Q'="\<lambda>_  s'. ?conc s' \<and> sc_at' sc_ptr s' \<and> active_sc_at' (ksCurSc s') s'
                               \<and> ex_nonz_cap_to' sc_ptr s'"
-               in corres_split')
+               in corres_underlying_split)
 
      apply (find_goal \<open>match conclusion in "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>" for P f Q  \<Rightarrow> -\<close>)
      apply wps_conj_solves
@@ -1348,7 +1346,7 @@ lemma invokeSchedControlConfigureFlags_corres:
   apply (clarsimp simp: sc_at_sc_obj_at)
   apply (rule abs_ex_lift_corres)
   apply (rename_tac n)
-  apply (rule corres_split'[rotated 2, OF get_sched_context_sp get_sc_sp'])
+  apply (rule corres_underlying_split[rotated 2, OF get_sched_context_sp get_sc_sp'])
    apply (rule corres_guard_imp)
      apply (rule_tac n=n in get_sc_corres_size)
     apply fast
@@ -1377,7 +1375,7 @@ lemma invokeSchedControlConfigureFlags_corres:
                              \<and> (\<exists>n. sc_at'_n n sc_ptr s' \<and> valid_refills_number' mrefills n)
                              \<and> ex_nonz_cap_to' sc_ptr s'"
               and r'=dc
-               in corres_split')
+               in corres_underlying_split)
 
      apply (clarsimp simp: when_def split del: if_split)
      apply (rule corres_if_split; (solves \<open>corressimp simp: sc_relation_def\<close>)?)
@@ -1482,7 +1480,7 @@ lemma invokeSchedControlConfigureFlags_corres:
                            \<and> (\<forall>tcb_ptr. sc_tcb_sc_at ((=) (Some tcb_ptr)) sc_ptr s \<longrightarrow> tcb_at tcb_ptr s)"
               and Q'="\<lambda>_ s'. invs' s' \<and>  sc_at' (ksCurSc s') s'"
               and r'=dc
-               in corres_split')
+               in corres_underlying_split)
 
      apply (rule corres_if_split; (solves simp)?)
 
@@ -1498,7 +1496,7 @@ lemma invokeSchedControlConfigureFlags_corres:
        apply (clarsimp simp: sc_relation_def)
 
       apply (rule corres_symb_exec_l[rotated 2, OF assert_opt_sp]; (solves wpsimp)?)
-       apply (rule corres_split'[rotated 2, OF gts_sp isRunnable_sp])
+       apply (rule corres_underlying_split[rotated 2, OF gts_sp isRunnable_sp])
         apply (corressimp corres: isRunnable_corres')
         apply (fastforce simp: sc_relation_def sc_at_pred_n_def obj_at_def
                        intro!: tcb_at_cross Some_to_the)
@@ -1599,7 +1597,7 @@ lemma invokeSchedControlConfigureFlags_corres:
    apply fastforce
 
   apply (clarsimp simp: sc_relation_def)
-  apply (rule corres_split'[rotated 2, OF gts_sp isRunnable_sp])
+  apply (rule corres_underlying_split[rotated 2, OF gts_sp isRunnable_sp])
    apply (corressimp corres: isRunnable_corres')
    apply (fastforce simp: sc_relation_def sc_at_pred_n_def obj_at_def
                   intro!: tcb_at_cross Some_to_the)

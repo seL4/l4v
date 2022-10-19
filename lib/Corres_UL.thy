@@ -377,7 +377,7 @@ lemmas corres_split_forwards' =
   corres_split_forwards[where P=P and Q=P and P'=P' and Q'=P' and R=Q and R'=Q' for P P' Q Q', simplified]
 
 lemmas corres_split_skip
-  = corres_split'[rotated 2, where Q="\<lambda>_. P" and P=P and Q'="\<lambda>_. P'" and P'=P' for P P']
+  = corres_underlying_split[rotated 2, where Q="\<lambda>_. P" and P=P and Q'="\<lambda>_. P'" and P'=P' for P P']
 
 primrec
   rel_sum_comb :: "('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('c \<Rightarrow> 'd \<Rightarrow> bool)
@@ -413,11 +413,28 @@ lemma corres_splitEE:
 
 lemmas corres_splitEE''
   = corres_splitEE[where P=P and Q=P and P'=P' and Q'=P' for P P'
-                   , simplified pred_conj_def, simplified, rotated]
+                   , simplified pred_conj_def, simplified]
 
 lemmas corres_splitEE_skip
   = corres_splitEE[where P=P and Q=P and P'=P' and Q'=P' and R="\<lambda>_. P" and R'="\<lambda>_. P'" for P P'
-                   , simplified pred_conj_def, simplified, rotated]
+                   , simplified pred_conj_def, simplified]
+
+lemma corres_splitEE_forwards:
+  assumes    "corres_underlying sr nf nf' (f \<oplus> r') P P' a c"
+  assumes x: "\<lbrace>Q\<rbrace> a \<lbrace>R\<rbrace>,\<lbrace>\<top>\<top>\<rbrace>" "\<lbrace>Q'\<rbrace> c \<lbrace>R'\<rbrace>,\<lbrace>\<top>\<top>\<rbrace>"
+  assumes y: "\<And>rv rv'. r' rv rv'
+              \<Longrightarrow> corres_underlying sr nf nf' (f \<oplus> r) (R rv) (R' rv') (b rv) (d rv')"
+  shows      "corres_underlying sr nf nf' (f \<oplus> r) (P and Q) (P' and Q') (a >>=E (\<lambda>rv. b rv)) (c >>=E (\<lambda>rv'. d rv'))"
+  using assms
+  apply (unfold bindE_def validE_def)
+  apply (erule corres_split_forwards)
+    apply assumption+
+  apply (case_tac rv)
+   apply (clarsimp simp: lift_def y)+
+  done
+
+lemmas corres_splitEE_forwards' =
+  corres_splitEE_forwards[where P=P and Q=P and P'=P' and Q'=P' and R=Q and R'=Q' for P P' Q Q', simplified]
 
 lemma corres_split_handle:
   assumes    "corres_underlying sr nf nf' (f' \<oplus> r) P P' a c"

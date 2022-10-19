@@ -400,7 +400,7 @@ proof -
       apply (subst corres_cong [OF refl refl S refl refl])
        defer
        apply (subst bind_return [symmetric],
-              rule corres_split' [OF threadset_corresT])
+              rule corres_underlying_split [OF threadset_corresT])
             apply (simp add: x)
            apply simp
           apply (rule y)
@@ -428,10 +428,10 @@ lemma threadSet_corres_noop_splitT:
                            m (threadSet fn t >>= (\<lambda>rv. m'))"
   apply (rule corres_guard_imp)
     apply (subst return_bind[symmetric])
-    apply (rule corres_split_nor [OF _ threadSet_corres_noopT])
-        apply (rule z)
-       apply (simp add: x)
-      apply (rule y)
+    apply (rule corres_split_nor[OF threadSet_corres_noopT])
+        apply (simp add: x)
+       apply (rule y)
+      apply (rule z)
      apply (wp w)+
    apply simp
   apply simp
@@ -1447,7 +1447,7 @@ lemma asUser_corres':
     apply (rule corres_guard_imp)
       apply (simp add: threadGet_getObject)
       apply (rule corres_bind_return)
-      apply (rule corres_split_deprecated[OF _ getObject_TCB_corres])
+      apply (rule corres_split[OF getObject_TCB_corres])
         apply (simp add: tcb_relation_def arch_tcb_relation_def)
        apply wpsimp+
     done
@@ -1727,12 +1727,11 @@ lemma is_blocked_corres:
   unfolding is_blocked_def isBlocked_def
   apply clarsimp
   apply (rule corres_guard_imp)
-    apply (rule corres_underlying_split[where b=return and P="\<top>\<top>" and P'="\<top>\<top>", simplified,
+    apply (rule corres_underlying_split[where b=return and Q="\<top>\<top>" and Q'="\<top>\<top>", simplified,
                                         OF getThreadState_corres ])
-    apply wpsimp+
-    apply (rename_tac st st' s s')
-    apply (case_tac st; clarsimp)
-   apply simp+
+      apply (rename_tac st st')
+      apply (case_tac st; clarsimp)
+     apply wpsimp+
   done
 
 lemma gts_wf'[wp]:
@@ -1960,25 +1959,26 @@ proof -
                            state_relation_def tcb_sched_enqueue_def thread_get_def get_tcb_def
                            gets_def get_def return_def fail_def bind_def tcb_at_def cdt_relation_def
                     split: option.splits Structures_A.kernel_object.splits)
-      using ready_queues_helper apply blast
+    using ready_queues_helper apply blast
 
     apply (clarsimp simp: when_def)
     apply (rule stronger_corres_guard_imp)
-      apply (rule corres_split_deprecated[where r'="(=)", OF _ threadGet_corres])
-         apply (rule corres_split_deprecated[where r'="(=)", OF _ threadGet_corres])
-            apply (rule corres_split_deprecated[where r'="(=)"])
-               apply (rule corres_split_noop_rhs2)
-                   apply (rule corres_split_noop_rhs2)
-                     apply (fastforce intro: threadSet_corres_noop simp: tcb_relation_def)
-                    apply (fastforce intro: addToBitmap_noop_corres)
-                   apply wp+
-                 apply (simp add: tcb_sched_enqueue_def split del: if_split)
-                 apply (rule_tac P=\<top> and Q="K (t \<notin> set queuea)" in corres_assume_pre)
-                 apply (wp setQueue_corres[unfolded dc_def] | simp)+
-              apply (wp getQueue_corres getObject_tcb_wp  | simp add: tcb_relation_def threadGet_def)+
-      apply (fastforce simp: valid_queues_def valid_queues_no_bitmap_def obj_at'_def inQ_def
-                             projectKO_eq project_inject)
-  done
+      apply (rule corres_split[where r'="(=)", OF threadGet_corres], simp add: tcb_relation_def)
+        apply (rule corres_split[where r'="(=)", OF threadGet_corres], simp add: tcb_relation_def)
+          apply (rule corres_split[where r'="(=)"])
+             apply (simp, rule getQueue_corres)
+            apply (rule corres_split_noop_rhs2)
+               apply (simp add: tcb_sched_enqueue_def split del: if_split)
+               apply (rule_tac P=\<top> and Q="K (t \<notin> set queuea)" in corres_assume_pre)
+               apply (simp, rule setQueue_corres[unfolded dc_def])
+              apply (rule corres_split_noop_rhs2)
+                 apply (fastforce intro: addToBitmap_noop_corres)
+                apply (fastforce intro: threadSet_corres_noop simp: tcb_relation_def)
+               apply wp+
+        apply (wp | simp add: threadGet_def)+
+    apply (fastforce simp: valid_queues_def valid_queues_no_bitmap_def obj_at'_def inQ_def
+                           projectKO_eq project_inject)
+    done
 qed
 
 definition
@@ -2101,25 +2101,20 @@ lemma isSchedulable_corres:
    apply (fastforce intro: tcb_at_cross)
   unfolding is_schedulable_def isSchedulable_def fun_app_def
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ getObject_TCB_corres])
+    apply (rule corres_split[OF getObject_TCB_corres])
       apply (rename_tac tcb_abs tcb_conc)
       apply (rule corres_if[OF _ corres_return_eq_same])
         apply (clarsimp simp: tcb_relation_def Option.is_none_def)
        apply simp
-      apply (rule corres_split_deprecated[OF _ get_sc_corres[THEN equify]])
-         apply (rename_tac sc_abs sc_conc)
-         apply (rule corres_split_deprecated[OF _ isRunnable_corres])
-            apply (rule corres_split_deprecated[OF _ inReleaseQueue_corres])
-              apply (clarsimp simp: sc_relation_def active_sc_def)
-             apply blast
-            apply wp
+      apply (rule corres_split[OF get_sc_corres[THEN equify]])
+         apply (clarsimp simp: tcb_relation_def)
+        apply (rename_tac sc_abs sc_conc)
+        apply (rule corres_split[OF isRunnable_corres])
            apply assumption
-          apply wp
-         apply wp
-        apply (clarsimp simp: tcb_relation_def)
-       apply wp
-      apply wp
-     apply wp
+          apply (rule corres_split[OF inReleaseQueue_corres])
+            apply (rule corres_trivial)
+            apply (clarsimp simp: sc_relation_def active_sc_def)
+           apply wp+
     apply (wpsimp simp: pred_conj_def
                     wp: hoare_vcg_if_lift2 getObject_tcb_wp)
    apply (clarsimp simp: pred_conj_def)
@@ -2127,7 +2122,6 @@ lemma isSchedulable_corres:
    apply (fastforce simp: valid_tcb_def valid_bound_obj_def obj_at_def split: option.splits)
   apply (fastforce simp: valid_tcbs'_def valid_tcb'_def obj_at'_def projectKOs)
   done
-
 
 lemma get_simple_ko_exs_valid:
   "\<lbrakk>inj C; \<exists>ko. ko_at (C ko) p s \<and> is_simple_type (C ko)\<rbrakk> \<Longrightarrow> \<lbrace>(=) s\<rbrace> get_simple_ko C p \<exists>\<lbrace>\<lambda>_. (=) s\<rbrace>"
@@ -2244,15 +2238,15 @@ lemma rescheduleRequired_corres_weak:
              (valid_tcbs' and Invariants_H.valid_queues and valid_queues' and valid_release_queue_iff)
              reschedule_required rescheduleRequired"
   apply (simp add: rescheduleRequired_def reschedule_required_def)
-  apply (rule corres_split'[OF _ _ gets_sp, rotated 2])
+  apply (rule corres_underlying_split[OF _ _ gets_sp, rotated 2])
     apply (clarsimp simp: getSchedulerAction_def)
     apply (rule gets_sp)
    apply (corressimp corres: getSchedulerAction_corres)
-  apply (rule corres_split'[where r'=dc, rotated]; (solves \<open>wpsimp\<close>)?)
+  apply (rule corres_underlying_split[where r'=dc, rotated]; (solves \<open>wpsimp\<close>)?)
    apply (corressimp corres: setSchedulerAction_corres)
   apply (case_tac action; clarsimp?)
   apply (rename_tac tp)
-  apply (rule corres_split'[OF _ _ is_schedulable_sp isSchedulable_inv, rotated 2])
+  apply (rule corres_underlying_split[OF _ _ is_schedulable_sp isSchedulable_inv, rotated 2])
    apply (corressimp corres: isSchedulable_corres)
    apply (clarsimp simp: weaker_valid_sched_action_def obj_at_def vs_all_heap_simps is_tcb_def)
   apply (clarsimp simp: when_def)
@@ -2443,16 +2437,18 @@ lemma tcbSchedDequeue_corres:
               cong: if_cong get_tcb_queue_def)
   apply (simp add: when_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[where r'="(=)", OF _ threadGet_corres])
-       apply (rule corres_split_deprecated[where r'="(=)", OF _ threadGet_corres])
-          apply (rule corres_split_deprecated[where r'="(=)"])
-             apply (rule corres_split_noop_rhs2)
-                apply (rule corres_split_noop_rhs)
-                  apply (rule threadSet_corres_noop; simp_all add: tcb_relation_def)
-                 apply (clarsimp, rule removeFromBitmap_corres_noop)
-                apply (rule setQueue_corres | rule getQueue_corres |
-                        wp | simp add: tcb_sched_dequeue_def tcb_relation_def
-                                       [[@\<open>prove_prop \<open>(\<lambda>x. x \<noteq> t) = (\<noteq>) t\<close>\<close>]])+
+    apply (rule corres_split[where r'="(=)", OF threadGet_corres], simp add: tcb_relation_def)
+      apply (rule corres_split[where r'="(=)", OF threadGet_corres], simp add: tcb_relation_def)
+        apply (rule corres_split[where r'="(=)"])
+           apply (simp, rule getQueue_corres)
+          apply (rule corres_split_noop_rhs2)
+             apply (simp add: tcb_sched_dequeue_def
+                              [[@\<open>prove_prop \<open>(\<lambda>x. x \<noteq> t) = (\<noteq>) t\<close>\<close>]])
+             apply (rule setQueue_corres)
+            apply (rule corres_split_noop_rhs)
+              apply (clarsimp, rule removeFromBitmap_corres_noop)
+             apply (rule threadSet_corres_noop; simp_all add: tcb_relation_def)
+            apply (wp | simp)+
   done
 
 lemma thread_get_test: "do cur_ts \<leftarrow> get_thread_state cur; g (test cur_ts) od =
@@ -2535,35 +2531,35 @@ lemma setThreadState_corres:
   apply (simp add: set_thread_state_def setThreadState_def threadSet_def)
   apply (rule corres_guard_imp)
     apply (subst bind_assoc)
-    apply (rule corres_split_deprecated[OF _ getObject_TCB_corres])
-      apply (rule corres_split_deprecated[OF _ setObject_tcbState_update_corres])
-          apply (simp add: set_thread_state_act_def scheduleTCB_def)
-          apply (rule corres_split_deprecated[OF _ getCurThread_corres])
-            apply (rule corres_split_deprecated[OF _ getSchedulerAction_corres])
-              apply (rule corres_split_deprecated[OF _ isSchedulable_corres])
-                apply (rule corres_split_deprecated corres_when)+
-                 apply (rename_tac sched_act sched_act' dont_care dont_care')
-                 apply (case_tac sched_act; clarsimp)
-                apply (rule rescheduleRequired_corres_simple)
-               apply wpsimp
-              apply (wpsimp simp: isSchedulable_def inReleaseQueue_def
-                              wp: threadGet_obj_at'_field getObject_tcb_wp)
-             apply wp
-            apply wp
+    apply (rule corres_split[OF getObject_TCB_corres])
+      apply (rule corres_split[OF setObject_tcbState_update_corres])
+          apply assumption
+         apply assumption
+        apply (simp add: set_thread_state_act_def scheduleTCB_def)
+        apply (rule corres_split[OF getCurThread_corres])
+          apply (rule corres_split[OF getSchedulerAction_corres])
+            apply (rule corres_split[OF isSchedulable_corres])
+              apply (rule corres_split corres_when)+
+               apply (rename_tac sched_act sched_act' dont_care dont_care')
+               apply (case_tac sched_act; clarsimp)
+              apply (rule rescheduleRequired_corres_simple)
+             apply wpsimp
+            apply (wpsimp simp: isSchedulable_def inReleaseQueue_def
+                            wp: threadGet_obj_at'_field getObject_tcb_wp)
            apply wp
           apply wp
-         apply assumption
-        apply assumption
+         apply wp
+        apply wp
        apply wpsimp
       apply (wpsimp simp: pred_conj_def sch_act_simple_def obj_at_ko_at'_eq
                       wp: setObject_tcb_valid_tcbs' setObject_tcb_obj_at'_strongest
                           setObject_valid_release_queue setObject_valid_release_queue')
      apply wp
     apply (wpsimp wp: getObject_tcb_wp)
-    apply (fastforce intro: valid_tcb_state_update valid_tcbs_valid_tcb
-                      simp: obj_at_def is_tcb_def)
-   apply (fastforce intro: valid_tcb'_tcbState_update
-                     simp: projectKOs valid_tcbs'_def obj_at'_def)+
+   apply (fastforce intro: valid_tcb_state_update valid_tcbs_valid_tcb
+                     simp: obj_at_def is_tcb_def)
+  apply (fastforce intro: valid_tcb'_tcbState_update
+                    simp: projectKOs valid_tcbs'_def obj_at'_def)+
   done
 
 lemma set_tcb_obj_ref_corresT:
@@ -4243,10 +4239,10 @@ proof -
                    od)
              (take (unat n) msgRegisters))"
     apply (rule corres_guard_imp)
-    apply (rule_tac S=Id in corres_mapM, simp+)
-        apply (rule corres_split_eqr[OF asUser_getRegister_corres asUser_setRegister_corres])
-        apply (wp | clarsimp simp: msg_registers_def msgRegisters_def)+
-        done
+      apply (rule_tac S=Id in corres_mapM, simp+)
+          apply (rule corres_split_eqr[OF asUser_getRegister_corres asUser_setRegister_corres])
+           apply (wp | clarsimp simp: msg_registers_def msgRegisters_def)+
+    done
 
   have wordSize[simp]: "of_nat wordSize = 4"
     by (simp add: wordSize_def wordBits_def word_size)

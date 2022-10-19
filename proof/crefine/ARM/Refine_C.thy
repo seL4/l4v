@@ -712,8 +712,7 @@ lemma entry_corres_C:
       apply (rule corres_split)
          apply (rule setTCBContext_C_corres, rule ccontext_rel_to_C, simp)
          apply simp
-        apply (rule corres_split_deprecated)
-           prefer 2
+        apply (rule corres_split)
            apply (rule corres_cases[where R=fp], simp_all add: dc_def[symmetric])[1]
             apply (rule callKernel_withFastpath_corres_C, simp)
            apply (rule callKernel_corres_C[unfolded dc_def], simp)

@@ -126,7 +126,7 @@ lemma corres_mapM_x_scheme:
                            (mapM_x f xs) (mapM_x f' ys)"
   apply (subst mapM_x_mapM)+
     apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ corres_mapM_scheme[OF _ x, where S=S]])
+    apply (rule corres_split[OF corres_mapM_scheme[OF _ x, where S=S]])
                  apply (rule corres_return_trivial)
                 apply (wpsimp wp: y y' simp: z w v)+
   done

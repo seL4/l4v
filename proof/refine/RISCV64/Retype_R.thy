@@ -1740,7 +1740,7 @@ proof -
     apply (clarsimp simp: makeObjectKO_def)
    apply (simp add: bind_assoc)
    apply (rule corres_guard_imp)
-     apply (rule_tac r'=pspace_relation in corres_split')
+     apply (rule_tac r'=pspace_relation in corres_underlying_split)
         apply (clarsimp dest!: state_relation_pspace_relation)
        apply (simp add: gets_def)
        apply (rule corres_symb_exec_l[rotated])
@@ -1752,24 +1752,23 @@ proof -
                            obj_bits_api[symmetric] shiftl_t2n upto_enum_red'
                            range_cover.unat_of_nat_n[OF cover])
           apply (rule corres_guard_imp)
-            apply (rule corres_split_nor[OF corres_trivial])
-          apply (clarsimp simp: retype_addrs_fold[symmetric] ptr_add_def upto_enum_red' not_zero'
-                                range_cover.unat_of_nat_n[OF cover] word_le_sub1
-                          simp del: word_of_nat_eq_0_iff)
-               apply (rule_tac f=g in arg_cong)
-               apply clarsimp
-              apply (rename_tac ps ps' sa)
-              apply (rule_tac P="\<lambda>s. ps = kheap s \<and> sa = s \<and> ?P s" and
-                              P'="\<lambda>s. ps' = ksPSpace s \<and> ?P' s" in corres_modify)
-              apply(frule curdomain_relation[THEN sym])
-              apply (simp add: set_retype_addrs_fold new_caps_adds_fold)
-              apply (drule retype_state_relation[OF _ _ _ _ _ _ _ _ _ tysc cover _ _ orr],
-                     simp_all add: ko not_zero obj_bits_api
-                                   bound[simplified obj_bits_api ko])[1]
+            apply (rule corres_split_nor[OF _ corres_trivial])
+               apply (rename_tac ps ps' sa)
+               apply (rule_tac P="\<lambda>s. ps = kheap s \<and> sa = s \<and> ?P s" and
+                               P'="\<lambda>s. ps' = ksPSpace s \<and> ?P' s" in corres_modify)
+               apply(frule curdomain_relation[THEN sym])
+               apply (simp add: set_retype_addrs_fold new_caps_adds_fold)
+               apply (drule retype_state_relation[OF _ _ _ _ _ _ _ _ _ tysc cover _ _ orr],
+                      simp_all add: ko not_zero obj_bits_api
+                                    bound[simplified obj_bits_api ko])[1]
                 apply (erule pspace_relation_pspace_bounded')
                apply (cases ty; simp; rename_tac tp; case_tac tp;
                       clarsimp simp: default_object_def APIType_map2_def
                               split: arch_kernel_object.splits apiobject_type.splits)
+              apply (clarsimp simp: retype_addrs_fold[symmetric] ptr_add_def upto_enum_red' not_zero'
+                                    range_cover.unat_of_nat_n[OF cover] word_le_sub1)
+              apply (rule_tac f=g in arg_cong)
+              apply clarsimp
              apply wpsimp+
            apply simp+
          apply (clarsimp split: option.splits)
@@ -5368,14 +5367,14 @@ lemma corres_retype_region_createNewCaps:
              apply (rule corres_guard_imp)
                apply (rule corres_bind_return)
                apply (rule corres_split_eqr)
-                  apply (rule corres_returnTT, simp)
-                  apply (clarsimp simp: list_all2_same list_all2_map1 list_all2_map2
-                                        objBits_simps APIType_map2_def)
-                 apply (rule corres_retype[where 'a = tcb],
-                        simp_all add: obj_bits_api_def objBits_simps' pageBits_def
-                                      APIType_map2_def makeObjectKO_def)[1]
-                  apply (fastforce simp: range_cover_def)
-                 apply (simp add: other_objs_default_relation)
+                  apply (rule corres_retype[where 'a = tcb],
+                         simp_all add: obj_bits_api_def objBits_simps' pageBits_def
+                                       APIType_map2_def makeObjectKO_def)[1]
+                   apply (fastforce simp: range_cover_def)
+                  apply (simp add: other_objs_default_relation)
+                 apply (rule corres_returnTT, simp)
+                 apply (clarsimp simp: list_all2_same list_all2_map1 list_all2_map2
+                                       objBits_simps APIType_map2_def)
                 apply ((wp | simp add: APIType_map2_def)+)[1]
                apply ((wp createObjects_tcb_at'[where sz=sz] | simp add: APIType_map2_def objBits_simps' obj_bits_api_def)+)[1]
               apply simp

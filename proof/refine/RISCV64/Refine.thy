@@ -660,8 +660,8 @@ lemma kernel_preemption_corres:
        apply (rule corres_underlying_trivial)
        apply (rule no_fail_getActiveIRQ)
       apply (clarsimp simp: dc_def[symmetric])
-      apply (rule corres_split_eqr[OF _ getCurThread_corres])
-        apply (rule corres_split_eqr[OF _ isSchedulable_corres])
+      apply (rule corres_split_eqr[OF getCurThread_corres])
+        apply (rule corres_split_eqr[OF isSchedulable_corres])
           apply (rename_tac irq ct sched)
           apply (rule corres_split[OF corres_if2])
                apply simp
@@ -672,7 +672,7 @@ lemma kernel_preemption_corres:
                      in corres_inst)
               apply (rule corres_gen_asm')
               apply(rule corres_guard_imp)
-                apply (rule corres_split_eqr[OF _ checkBudget_corres])
+                apply (rule corres_split_eqr[OF checkBudget_corres])
                   apply (simp only: K_bind_def)
                   apply (rule corres_return_trivial)
                  apply wpsimp
@@ -687,7 +687,7 @@ lemma kernel_preemption_corres:
                apply clarsimp
               apply simp
              apply (simp add: get_sc_active_def active_sc_def dc_def[symmetric])
-             apply (rule corres_split_eqr[OF _ getCurSc_corres])
+             apply (rule corres_split_eqr[OF getCurSc_corres])
                apply (rule corres_split[OF get_sc_corres])
                  apply (rename_tac csc sc sc')
                  apply (rule corres_if2)
@@ -699,7 +699,7 @@ lemma kernel_preemption_corres:
                                      and (\<lambda>s. sched = isSchedulable_bool ct s)"
                          in corres_inst)
                   apply(rule corres_guard_imp)
-                    apply (rule corres_split_eqr[OF _ getConsumedTime_corres])
+                    apply (rule corres_split_eqr[OF getConsumedTime_corres])
                       apply (rule chargeBudget_corres)
                      apply wpsimp
                     apply wpsimp
@@ -828,7 +828,7 @@ lemma kernel_corres':
   apply simp
   apply (rule corres_guard_imp)
     apply (rule corres_split)
-       apply (rule corres_split_handle [OF _ handleEvent_corres])
+       apply (rule corres_split_handle[OF handleEvent_corres])
          (* handle *)
          apply (rule kernel_preemption_corres)
         apply (rule_tac E="\<lambda>_ s. einvs s \<and> scheduler_act_sane s \<and> cur_sc_chargeable s \<and>
@@ -858,7 +858,7 @@ lemma kernel_corres':
       apply (rule corres_stateAssert_add_assertion)
        apply (simp add: rct_imp_activatable'_asrt_def)
        apply (rule corres_guard_imp)
-         apply (rule corres_split_deprecated [OF _ schedule_corres])
+         apply (rule corres_split[OF schedule_corres])
            apply (rule_tac P="invs and valid_sched and current_time_bounded
                               and cur_sc_active and schact_is_rct
                               and ct_in_state activatable
@@ -947,7 +947,7 @@ lemma kernel_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_add_noop_lhs2)
     apply (simp only: bind_assoc[symmetric])
-    apply (rule corres_split_deprecated[where r'=dc and
+    apply (rule corres_split[where r'=dc and
                                    R="\<lambda>_ s. valid_domain_list s" and
                                    R'="\<lambda>_. \<top>"])
        apply (simp only: bind_assoc)
@@ -983,7 +983,7 @@ lemma entry_corres:
   apply (simp add: kernel_entry_def kernelEntry_def)
   apply add_cur_tcb'
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ getCurThread_corres])
+    apply (rule corres_split[OF getCurThread_corres])
       apply (rule corres_split)
          apply simp
          apply (rule threadset_corresT)
@@ -995,7 +995,7 @@ lemma entry_corres:
           apply (rule_tac P=invs and P'=\<top> in corres_inst)
           apply add_cur_tcb'
           apply (rule corres_guard_imp)
-            apply (rule corres_split_eqr [OF _ getCurThread_corres])
+            apply (rule corres_split_eqr[OF getCurThread_corres])
               apply (rule threadGet_corres)
               apply (simp add: tcb_relation_def arch_tcb_relation_def
                                arch_tcb_context_get_def atcbContextGet_def)

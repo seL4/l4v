@@ -715,7 +715,7 @@ next
     apply (rule corres_initial_splitE[where r'=dc])
        apply (corressimp simp: lookup_failure_map_def)
       apply (rule corres_splitEE[where r'=pte_relation'])
-         apply (simp, rule getObject_PTE_corres)
+         apply (simp, rule getObject_PTE_corres, simp)
         apply (rule whenE_throwError_corres)
           apply (simp add: lookup_failure_map_def)
          apply (rename_tac pte pte', case_tac pte; simp add: isPageTablePTE_def)

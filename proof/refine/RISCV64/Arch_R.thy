@@ -137,64 +137,12 @@ lemma performASIDControlInvocation_corres:
     apply (rule corres_split)
        apply (erule deleteObjects_corres)
        apply (simp add:pageBits_def)
-      apply (rule corres_split_deprecated[OF _ getSlotCap_corres])
-         apply (rule_tac F = " pcap = (cap.UntypedCap False word1 pageBits idxa)" in corres_gen_asm)
-         apply (rule corres_split_deprecated[OF _ updateFreeIndex_corres])
-             apply (rule corres_split_deprecated)
-                prefer 2
-                apply (rule corres_retype [where ty="Inl (KOArch (KOASIDPool F))" for F,
-                                           unfolded APIType_map2_def makeObjectKO_def,
-                                           THEN createObjects_corres',simplified,
-                                           where val = "makeObject::asidpool"])
-                      apply simp
-                     apply (simp add: objBits_simps obj_bits_api_def arch_kobj_size_def
-                                      default_arch_object_def)+
-                  apply (simp add: obj_relation_retype_def default_object_def
-                                   default_arch_object_def objBits_simps)
-                  apply (simp add: other_obj_relation_def asid_pool_relation_def)
-                  apply (simp add: makeObject_asidpool const_def inv_def)
-                 apply (rule range_cover_full)
-                  apply (simp add:obj_bits_api_def arch_kobj_size_def default_arch_object_def)+
-               apply (rule corres_split_deprecated)
-                  prefer 2
-                  apply (rule cteInsert_simple_corres, simp, rule refl, rule refl)
-                 apply (rule_tac F="asid_low_bits_of word2 = 0" in corres_gen_asm)
-                 apply (simp add: is_aligned_mask dc_def[symmetric])
-                 apply (rule corres_split_deprecated [where P=\<top> and P'=\<top> and r'="\<lambda>t t'. t = t' o ucast"])
-                    prefer 2
-                    apply (clarsimp simp: state_relation_def arch_state_relation_def)
-                   apply (rule corres_trivial)
-                   apply (rule corres_modify)
-                   apply (thin_tac "x \<in> state_relation" for x)
-                   apply (clarsimp simp: state_relation_def arch_state_relation_def o_def)
-                   apply (rule ext)
-                   apply (clarsimp simp: up_ucast_inj_eq)
-                  apply wp+
-              apply (strengthen safe_parent_strg[where idx = "2^pageBits"])
-              apply (strengthen invs_valid_objs invs_distinct
-                                invs_psp_aligned invs_mdb
-                     | simp cong:conj_cong)+
-              apply (wp retype_region_plain_invs[where sz = pageBits]
-                        retype_cte_wp_at[where sz = pageBits])+
-             apply (strengthen vp_strgs'
-                    safe_parent_strg'[where idx = "2^pageBits"])
-             apply (simp cong: conj_cong)
-             apply (wp createObjects_valid_pspace'
-                       [where sz = pageBits and ty="Inl (KOArch (KOASIDPool undefined))"])
-                   apply (simp add: makeObjectKO_def)+
-                 apply (simp add:objBits_simps range_cover_full valid_cap'_def)+
-               apply (fastforce intro!: canonical_address_neq_mask simp: kernel_mappings_canonical)
-              apply (rule in_kernel_mappings_neq_mask, (simp add: valid_cap'_def bit_simps)+)[1]
-             apply (clarsimp simp:valid_cap'_def)
-             apply (wp createObject_typ_at'
-                       createObjects_orig_cte_wp_at'[where sz = pageBits])
-             apply (rule descendants_of'_helper)
-             apply (wp createObjects_null_filter'
-                       [where sz = pageBits and ty="Inl (KOArch (KOASIDPool undefined))"])
+      apply (rule corres_split[OF getSlotCap_corres], simp)
+        apply (rule_tac F = " pcap = (cap.UntypedCap False word1 pageBits idxa)" in corres_gen_asm)
+        apply (rule corres_split[OF updateFreeIndex_corres])
             apply (clarsimp simp:is_cap_simps)
            apply (simp add: free_index_of_def)
           apply (rule corres_split)
-             apply (simp add: retype_region2_ext_retype_region_ArchObject )
              apply (rule corres_retype [where ty="Inl (KOArch (KOASIDPool F))" for F,
                                         unfolded APIType_map2_def makeObjectKO_def,
                                         THEN createObjects_corres',simplified,
@@ -232,7 +180,7 @@ lemma performASIDControlInvocation_corres:
           apply (simp cong: conj_cong)
           apply (wp createObjects_valid_pspace'
                     [where sz = pageBits and ty="Inl (KOArch (KOASIDPool undefined))"])
-                apply (simp add: makeObjectKO_def)+
+                  apply (simp add: makeObjectKO_def)+
               apply (simp add:objBits_simps range_cover_full valid_cap'_def)+
             apply (fastforce intro!: canonical_address_neq_mask simp: kernel_mappings_canonical)
            apply (rule in_kernel_mappings_neq_mask, (simp add: valid_cap'_def bit_simps)+)[1]
@@ -243,19 +191,30 @@ lemma performASIDControlInvocation_corres:
           apply (wp createObjects_null_filter'
                     [where sz = pageBits and ty="Inl (KOArch (KOASIDPool undefined))"])
          apply (clarsimp simp: conj_comms obj_bits_api_def arch_kobj_size_def
-                               objBits_simps default_arch_object_def
-                               makeObjectKO_def range_cover_full
-                         simp del: capFreeIndex_update.simps
-                | strengthen invs_valid_pspace' invs_pspace_aligned'
-                             invs_pspace_distinct' invs_pspace_bounded'
-                             exI[where x="makeObject :: asidpool"])+
-         apply (wp updateFreeIndex_forward_invs'
-                   updateFreeIndex_pspace_no_overlap'
-                   updateFreeIndex_caps_no_overlap''
-                   updateFreeIndex_descendants_of2
-                   updateFreeIndex_cte_wp_at
-                  updateFreeIndex_caps_overlap_reserved
-             | simp add: descendants_of_null_filter' split del: if_split)+
+                               objBits_simps default_arch_object_def pred_conj_def)
+         apply (clarsimp simp: conj_comms
+               | strengthen invs_mdb invs_valid_pspace)+
+         apply (simp add:region_in_kernel_window_def)
+         apply (wp set_untyped_cap_invs_simple[where sz = pageBits]
+                   set_cap_cte_wp_at
+                   set_cap_caps_no_overlap[where sz = pageBits]
+                   set_cap_no_overlap
+                   set_cap_device_and_range_aligned[where dev = False,simplified]
+                   set_untyped_cap_caps_overlap_reserved[where sz = pageBits])+
+        apply (clarsimp simp: conj_comms obj_bits_api_def arch_kobj_size_def
+                              objBits_simps default_arch_object_def
+                              makeObjectKO_def range_cover_full
+                        simp del: capFreeIndex_update.simps
+               | strengthen invs_valid_pspace' invs_pspace_aligned'
+                            invs_pspace_distinct' invs_pspace_bounded'
+                            exI[where x="makeObject :: asidpool"])+
+        apply (wp updateFreeIndex_forward_invs'
+                  updateFreeIndex_pspace_no_overlap'
+                  updateFreeIndex_caps_no_overlap''
+                  updateFreeIndex_descendants_of2
+                  updateFreeIndex_cte_wp_at
+                 updateFreeIndex_caps_overlap_reserved
+            | simp add: descendants_of_null_filter' split del: if_split)+
        apply (wp get_cap_wp)+
      apply (subgoal_tac "word1 && ~~ mask pageBits = word1 \<and> pageBits \<le> word_bits \<and> word_size_bits \<le> pageBits")
       prefer 2
@@ -333,7 +292,7 @@ lemma performASIDControlInvocation_corres:
    apply (rule conjI, rule pspace_no_overlap_subset,
          rule pspace_no_overlap_detype[OF caps_of_state_valid])
         apply (simp add:invs_psp_aligned invs_valid_objs is_aligned_neg_mask_eq)+
-  apply (simp add: detype_def clear_um_def)
+   apply (simp add: detype_def clear_um_def)
   apply (drule_tac x = "cte_map (aa,ba)" in pspace_relation_cte_wp_atI[OF state_relation_pspace_relation])
     apply (simp add:invs_valid_objs)+
   apply clarsimp
@@ -472,7 +431,7 @@ lemma checkSlot_corres:
           (checkSlot p test')"
   apply (simp add: check_slot_def checkSlot_def unlessE_whenE liftE_bindE)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF getObject_PTE_corres])
+    apply (rule corres_split[OF getObject_PTE_corres], simp)
       apply (rule corres_whenE, simp)
        apply (rule corres_trivial, simp)
       apply simp
