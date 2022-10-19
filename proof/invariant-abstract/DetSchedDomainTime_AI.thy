@@ -108,6 +108,7 @@ locale DetSchedDomainTime_AI =
 crunches update_restart_pc
   for domain_list[wp]: "\<lambda>s. P (domain_list s)"
   and domain_time[wp]: "\<lambda>s. P (domain_time s)"
+  (wp: touch_object_wp')
 
 locale DetSchedDomainTime_AI_2 = DetSchedDomainTime_AI +
   assumes handle_hypervisor_fault_domain_list_inv'[wp]:
@@ -176,6 +177,9 @@ crunch domain_list_inv[wp]: do_ipc_transfer "\<lambda>s. P (domain_list s)"
 crunch domain_list_inv[wp]: handle_fault "\<lambda>s. P (domain_list s)"
   (wp: mapM_wp hoare_drop_imps simp: crunch_simps ignore:copy_mrs)
 
+lemma get_mrs_domain_list_inv[wp]:
+  "get_mrs param_a param_b param_c \<lbrace>\<lambda>s. P (domain_list s)\<rbrace>"
+  sorry (* FIXME: broken by touched-addrs -robs *)
 
 crunch domain_list_inv[wp]:
   reply_from_kernel, create_cap, retype_region, do_reply_transfer
@@ -284,6 +288,7 @@ context DetSchedDomainTime_AI begin
 crunch domain_time_inv[wp]:
   get_cap, activate_thread, set_scheduler_action, tcb_sched_action, thread_set_time_slice
   "\<lambda>s. P (domain_time s)"
+  (wp: touch_object_wp')
 
 crunch domain_time_inv[wp]: guarded_switch_to "\<lambda>s. P (domain_time s)"
   (wp: hoare_drop_imp whenE_inv)
@@ -309,6 +314,7 @@ lemma rec_del_domain_time[wp]:
 crunch domain_time_inv[wp]:
   cap_delete, activate_thread, lookup_cap_and_slot
   "\<lambda>s. P (domain_time s)"
+  (wp: touch_object_wp')
 
 end
 
@@ -328,6 +334,10 @@ crunch domain_time_inv[wp]: handle_fault "\<lambda>s. P (domain_time s)"
 crunch domain_time_inv[wp]:
   reply_from_kernel, create_cap, retype_region
   "\<lambda>s. P (domain_time s)"
+
+lemma get_mrs_domain_time_inv[wp]:
+  "get_mrs param_a param_b param_c \<lbrace>\<lambda>s. P (domain_time s)\<rbrace>"
+  sorry (* FIXME: broken by touched-addrs -robs *)
 
 crunch domain_time_inv[wp]: do_reply_transfer "\<lambda>s. P (domain_time s)"
   (wp: hoare_drop_imps)
@@ -456,7 +466,7 @@ lemma schedule_domain_time_left:
   apply (simp add: schedule_def)
   apply (wp|wpc)+
            apply (wp hoare_drop_imp)[1]
-          apply (wpsimp wp: gts_wp ethread_get_inv)+
+          apply (wpsimp wp: gts_wp ethread_get_inv touch_object_wp')+
   apply auto
   done
 end

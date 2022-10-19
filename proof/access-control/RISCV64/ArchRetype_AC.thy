@@ -88,25 +88,25 @@ named_theorems Retype_AC_assms
 
 declare retype_region_proofs'.pas_refined[Retype_AC_assms]
 
-lemma aobjs_of_detype[simp]:
-  "(aobjs_of (detype S s) p = Some aobj) = (p \<notin> S \<and> aobjs_of s p = Some aobj)"
-  by (simp add: in_omonad detype_def)
+lemma aobjs_of_detype[simplified f_kheap_to_kheap,simp]:
+  "(aobjs_of False (detype S s) p = Some aobj) = (p \<notin> S \<and> aobjs_of False s p = Some aobj)"
+  by (simp add: in_omonad detype_def ta_filter_def)
 
-lemma pts_of_detype[simp]:
-  "(pts_of (detype S s) p = Some pt) = (p \<notin> S \<and> pts_of s p = Some pt)"
-  by (simp add: in_omonad detype_def)
+lemma pts_of_detype[simplified f_kheap_to_kheap,simp]:
+  "(pts_of False (detype S s) p = Some pt) = (p \<notin> S \<and> pts_of False s p = Some pt)"
+  by (simp add: in_omonad detype_def ta_filter_def)
 
-lemma ptes_of_detype_Some[simp]:
-  "(ptes_of (detype S s) p = Some pte) = (table_base p \<notin> S \<and> ptes_of s p = Some pte)"
-  by (simp add: in_omonad ptes_of_def detype_def)
+lemma ptes_of_detype_Some[simplified f_kheap_to_kheap,simp]:
+  "(ptes_of False (detype S s) p = Some pte) = (table_base p \<notin> S \<and> ptes_of False s p = Some pte)"
+  by (simp add: in_omonad ptes_of_def detype_def ta_filter_def)
 
-lemma asid_pools_of_detype:
-  "asid_pools_of (detype S s) = (\<lambda>p. if p\<in>S then None else asid_pools_of s p)"
-  by (rule ext) (simp add: detype_def opt_map_def)
+lemma asid_pools_of_detype[simplified f_kheap_to_kheap]:
+  "asid_pools_of False (detype S s) = (\<lambda>p. if p\<in>S then None else asid_pools_of False s p)"
+  by (rule ext) (simp add: detype_def opt_map_def obind_def ta_filter_def)
 
-lemma asid_pools_of_detype_Some[simp]:
-  "(asid_pools_of (detype S s) p = Some ap) = (p \<notin> S \<and> asid_pools_of s p = Some ap)"
-  by (simp add: in_omonad detype_def)
+lemma asid_pools_of_detype_Some[simplified f_kheap_to_kheap,simp]:
+  "(asid_pools_of False (detype S s) p = Some ap) = (p \<notin> S \<and> asid_pools_of False s p = Some ap)"
+  by (simp add: in_omonad detype_def ta_filter_def)
 
 lemma pool_for_asid_detype_Some[simp]:
   "(pool_for_asid asid (detype S s) = Some p) = (pool_for_asid asid s = Some p)"
@@ -118,15 +118,15 @@ lemma vspace_for_pool_detype_Some[simp]:
   by (simp add: vspace_for_pool_def obind_def split: option.splits)
 
 lemma vspace_for_asid_detype_Some[simp]:
-  "(vspace_for_asid asid (detype S s) = Some p) =
-   ((\<exists>ap. pool_for_asid asid s = Some ap \<and> ap \<notin> S) \<and> vspace_for_asid asid s = Some p)"
+  "(vspace_for_asid False asid (detype S s) = Some p) =
+   ((\<exists>ap. pool_for_asid asid s = Some ap \<and> ap \<notin> S) \<and> vspace_for_asid False asid s = Some p)"
   apply (simp add: vspace_for_asid_def obind_def asid_pools_of_detype split: option.splits)
   apply (auto simp: pool_for_asid_def)
   done
 
-lemma pt_walk_detype:
-  "pt_walk level bot_level pt_ptr vref (ptes_of (detype S s)) = Some (bot_level, p) \<Longrightarrow>
-   pt_walk level bot_level pt_ptr vref (ptes_of s) = Some (bot_level, p)"
+lemma pt_walk_detype[simplified f_kheap_to_kheap]:
+  "pt_walk level bot_level pt_ptr vref (ptes_of False (detype S s)) = Some (bot_level, p) \<Longrightarrow>
+   pt_walk level bot_level pt_ptr vref (ptes_of False s) = Some (bot_level, p)"
   apply (induct level arbitrary: pt_ptr)
    apply (subst pt_walk.simps, simp)
   apply (subst pt_walk.simps)
@@ -351,7 +351,7 @@ lemma integrity_asids_detype[Retype_AC_assms]:
      integrity_asids aag subjects x a s s'"
     "integrity_asids aag subjects x a s (detype refs s') =
      integrity_asids aag subjects x a s s'"
-  by (auto simp: detype_def refs opt_map_def)
+  by (auto simp: detype_def refs opt_map_def ta_filter_def obind_def)
 
 lemma retype_region_integrity_asids[Retype_AC_assms]:
   "\<lbrakk> range_cover ptr sz (obj_bits_api typ o_bits) n; typ \<noteq> Untyped;
@@ -360,7 +360,7 @@ lemma retype_region_integrity_asids[Retype_AC_assms]:
            (st\<lparr>kheap := \<lambda>a. if a \<in> (\<lambda>x. ptr_add ptr (x * 2 ^ obj_bits_api typ o_bits)) ` {0 ..< n}
                             then Some (default_object typ dev o_bits)
                             else kheap s a\<rparr>)"
-  apply (clarsimp simp: opt_map_def)
+  apply (clarsimp simp: opt_map_def ta_filter_def obind_def)
   apply (case_tac "x \<in> up_aligned_area ptr sz"; clarsimp)
   apply (fastforce intro: tro_lrefl tre_lrefl
                     dest: retype_addrs_subset_ptr_bits[simplified retype_addrs_def]

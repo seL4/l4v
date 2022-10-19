@@ -99,7 +99,7 @@ lemma cte_wp_at_wellformed_strengthen:
 
 (* FIXME: move *)
 lemma get_cap_cte_wp_at_P:
-  "\<lbrace>cte_wp_at P p\<rbrace> get_cap p \<lbrace>\<lambda>rv s. cte_wp_at (%c. c = rv) p s \<and> P rv\<rbrace>"
+  "\<lbrace>cte_wp_at P p\<rbrace> get_cap False p \<lbrace>\<lambda>rv s. cte_wp_at (%c. c = rv) p s \<and> P rv\<rbrace>"
   apply (rule hoare_weaken_pre)
   apply (rule get_cap_wp)
   apply (clarsimp simp: cte_wp_at_caps_of_state)
@@ -112,6 +112,7 @@ lemma lookup_cap_ex:
                                   cte_wp_at (\<lambda>c. c = c') (p1, p2) s)\<rbrace>,-"
   apply (simp add: lookup_cap_def split_def)
   apply wp
+    sorry (* FIXME: broken by touched-addrs -robs
     apply (rule_tac P1=wellformed_cap in hoare_strengthen_post[OF get_cap_cte_wp_at_P])
     apply clarsimp
     apply (rule exI)+
@@ -119,6 +120,7 @@ lemma lookup_cap_ex:
     apply fastforce
    apply (wpsimp|strengthen cte_wp_at_wellformed_strengthen)+
   done
+*)
 
 
 lemma is_cnode_mask:
@@ -179,12 +181,14 @@ lemma dui_tainv[wp]:
   apply (simp add: decode_untyped_invocation_def whenE_def
                    split_def data_to_obj_type_def unlessE_def
               split del: if_split cong: if_cong)
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (wpsimp wp: const_on_failure_wp mapME_x_inv_wp)
                apply fastforce
               apply wpsimp+
            apply (wp hoare_drop_imps)
           apply wpsimp+
   done
+*)
 
 lemma map_ensure_empty_cte_wp_at:
   "\<lbrace>cte_wp_at P p\<rbrace> mapME_x ensure_empty xs \<lbrace>\<lambda>rv. cte_wp_at P p\<rbrace>,-"
@@ -206,7 +210,9 @@ lemma map_ensure_empty:
   apply (simp add: ensure_empty_def whenE_def)
   apply (rule hoare_pre, wp get_cap_wp)
   apply clarsimp
+  sorry (* FIXME: broken by touched-addrs -robs
   done
+*)
 
 
 lemma ensure_no_children_sp:
@@ -231,7 +237,7 @@ lemma data_to_obj_type_inv2 [wp]:
 
 lemma get_cap_gets:
   "\<lbrace>valid_objs\<rbrace>
-    get_cap ptr
+    get_cap False ptr
    \<lbrace>\<lambda>rv s. \<exists>cref msk. cte_wp_at (\<lambda>cap. rv = mask_cap msk cap) cref s\<rbrace>"
   apply (wp get_cap_wp)
   apply (intro allI impI)
@@ -248,7 +254,9 @@ lemma lookup_cap_gets:
   unfolding lookup_cap_def fun_app_def split_def
   apply (rule hoare_pre, wp get_cap_gets)
   apply simp
+  sorry (* FIXME: broken by touched-addrs -robs
   done
+*)
 
 lemma dui_sp_helper:
   "ta_agnostic P \<Longrightarrow>
@@ -256,7 +264,7 @@ lemma dui_sp_helper:
    \<lbrace>P\<rbrace> if val = 0 then returnOk root_cap
        else doE node_slot \<leftarrow>
                   lookup_target_slot root_cap (to_bl (args ! 2)) (unat (args ! 3));
-                  liftE $ get_cap node_slot
+                  liftE $ get_cap True node_slot
             odE \<lbrace>\<lambda>rv s. (rv = root_cap \<or> (\<exists>slot. cte_wp_at ((=) rv) slot s)) \<and> P s\<rbrace>, -"
   apply (simp add: split_def lookup_target_slot_def)
   apply (intro impI conjI)
@@ -1134,7 +1142,7 @@ lemma create_cap_mdb[wp]:
       and K (cap_aligned (default_cap tp oref sz dev))\<rbrace>
       create_cap tp sz p dev (cref, oref) \<lbrace>\<lambda>rv. valid_mdb\<rbrace>"
   apply (simp add: valid_mdb_def2 create_cap_def set_cdt_def)
-  apply (wp set_cap_caps_of_state2 | simp)+
+  apply (wp set_cap_caps_of_state2 touch_object_wp' | simp)+
   apply clarsimp
   apply (subgoal_tac "mdb_insert_abs (cdt s) p cref")
    prefer 2
@@ -1223,7 +1231,7 @@ lemma create_cap_descendants_range[wp]:
   create_cap tp sz p dev (cref,oref)
   \<lbrace>\<lambda>rv. descendants_range c p\<rbrace>"
   apply (simp add: create_cap_def descendants_range_def cte_wp_at_caps_of_state set_cdt_def)
-  apply (wp set_cap_caps_of_state2 | simp del: fun_upd_apply)+
+  apply (wp set_cap_caps_of_state2 touch_object_wp' | simp del: fun_upd_apply)+
   apply (clarsimp simp: cte_wp_at_caps_of_state swp_def valid_mdb_def simp del: fun_upd_apply)
   apply (subst (asm) mdb_insert_abs.descendants_child)
    apply (rule mdb_insert_abs.intro)
@@ -1361,8 +1369,10 @@ lemma retype_ret_valid_caps:
   apply (simp add: retype_region_def split del: if_split cong: if_cong)
   apply wp
   apply (simp only: trans_state_update[symmetric] more_update.valid_cap_update)
+  apply (wp touch_objects_wp)
   apply wp
   apply (case_tac tp,simp_all)
+   sorry (* FIXME: broken by touched-addrs -robs
    defer
       apply ((clarsimp simp:valid_cap_def default_object_def cap_aligned_def
         is_obj_defs well_formed_cnode_n_def empty_cnode_def
@@ -1390,6 +1400,7 @@ lemma retype_ret_valid_caps:
    apply blast
   apply (erule(2) range_cover_no_0)
  done
+*)
 end
 
 (* FIXME: move to Lib *)
@@ -2740,6 +2751,7 @@ lemma reset_untyped_cap_invs_etc:
     ?f \<lbrace>\<lambda>_. invs and ?vu2 and ct_active and ?psp\<rbrace>, \<lbrace>\<lambda>_. invs\<rbrace>")
   apply (simp add: reset_untyped_cap_def)
   apply (rule hoare_vcg_seqE[rotated])
+   sorry (* FIXME: broken by touched-addrs -robs
    apply ((wp (once) get_cap_sp)+)[1]
   apply (rule hoare_name_pre_stateE)
   apply (clarsimp simp: cte_wp_at_caps_of_state bits_of_def split del: if_split)
@@ -2822,9 +2834,10 @@ lemma reset_untyped_cap_invs_etc:
    apply simp
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   done
+*)
 
 lemma get_cap_prop_known:
-  "\<lbrace>cte_wp_at (\<lambda>cp. f cp = v) slot and Q v\<rbrace> get_cap slot \<lbrace>\<lambda>rv. Q (f rv)\<rbrace>"
+  "\<lbrace>cte_wp_at (\<lambda>cp. f cp = v) slot and Q v\<rbrace> get_cap True slot \<lbrace>\<lambda>rv. Q (f rv)\<rbrace>"
   apply (wp get_cap_wp)
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   done
@@ -2837,7 +2850,7 @@ lemma reset_untyped_cap_pred_tcb_at:
   apply (rule hoare_pre)
    apply (wp mapME_x_inv_wp preemption_point_inv | simp add: unless_def)+
     apply (simp add: delete_objects_def)
-    apply (wp get_cap_wp hoare_vcg_const_imp_lift | simp)+
+    apply (wp get_cap_wp hoare_vcg_const_imp_lift touch_object_wp' | simp)+
   apply (auto simp: cte_wp_at_caps_of_state cap_range_def
                         bits_of_def is_cap_simps)
   done
@@ -2848,7 +2861,7 @@ lemma create_cap_iflive[wp]:
      create_cap tp sz p dev (cref, oref)
    \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
   apply (simp add: create_cap_def)
-  apply (wp new_cap_iflive set_cdt_cte_wp_at | simp)+
+  apply (wp new_cap_iflive set_cdt_cte_wp_at touch_object_wp' | simp)+
   done
 
 crunch cap_to_again[wp]: set_cdt "ex_cte_cap_wp_to P p"
@@ -2906,7 +2919,7 @@ lemma create_cap_zombies[wp]:
      and (\<lambda>s. \<forall>r\<in>obj_refs (default_cap tp oref sz dev). \<forall>p'. \<not> cte_wp_at (\<lambda>cap. r \<in> obj_refs cap) p' s)\<rbrace>
      create_cap tp sz p dev (cref, oref)
    \<lbrace>\<lambda>rv. zombies_final\<rbrace>"
-  unfolding create_cap_def set_cdt_def by (wpsimp wp: new_cap_zombies)
+  unfolding create_cap_def set_cdt_def by (wpsimp wp: new_cap_zombies touch_object_wp')
 
 lemma create_cap_cur_tcb[wp]:
   "\<lbrace>cur_tcb\<rbrace> create_cap tp sz p dev tup \<lbrace>\<lambda>rv. cur_tcb\<rbrace>"
@@ -2976,7 +2989,7 @@ lemma create_cap_aobj_at:
   "arch_obj_pred P' \<Longrightarrow>
   \<lbrace>\<lambda>s. P (obj_at P' pd s)\<rbrace> create_cap type bits ut is_dev cref \<lbrace>\<lambda>r s. P (obj_at P' pd s)\<rbrace>"
   unfolding create_cap_def split_def set_cdt_def
-  by (wpsimp wp: set_cap.aobj_at)
+  by (wpsimp wp: set_cap.aobj_at touch_object_wp')
 
 lemma create_cap_valid_arch_state[wp]:
   "\<lbrace>valid_arch_state\<rbrace> create_cap type bits ut is_dev cref \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
@@ -3057,16 +3070,19 @@ crunch pspace_in_kernel_window[wp]: create_cap "pspace_in_kernel_window"
 lemma set_original_valid_ioc[wp]:
   "\<lbrace>valid_ioc\<rbrace> create_cap tp sz p dev slot \<lbrace>\<lambda>_. valid_ioc\<rbrace>"
   apply (cases slot)
-  apply (wpsimp wp: set_cdt_cos_ioc set_cap_caps_of_state
+  apply (wpsimp wp: set_cdt_cos_ioc set_cap_caps_of_state touch_object_wp'
               simp: create_cap_def set_original_set_cap_comm cte_wp_at_caps_of_state)
+      apply (metis trans_state_update(3) valid_ioc_more_update)
+     sorry (* FIXME: broken by touched-addrs -robs
   apply (cases tp; simp)
   done
+*)
 
 interpretation create_cap: non_vspace_non_mem_op "create_cap tp sz p slot dev"
   apply (cases slot)
   apply (simp add: create_cap_def set_cdt_def)
   apply unfold_locales
-  apply (rule hoare_pre, (wp set_cap.vsobj_at | wpc |simp add: create_cap_def set_cdt_def bind_assoc)+)+
+  apply (rule hoare_pre, (wp set_cap.vsobj_at touch_object_wp' | wpc |simp add: create_cap_def set_cdt_def bind_assoc)+)+
   done
 
 (*  by (wp set_cap.vsobj_at | simp)+ *) (* ARMHYP might need this *)
@@ -3085,7 +3101,7 @@ lemma create_cap_refs_respects_device:
   apply (simp add: create_cap_def)
   apply (rule hoare_pre)
    apply (wp set_cap_cap_refs_respects_device_region hoare_vcg_ex_lift
-     set_cdt_cte_wp_at | simp del: split_paired_Ex)+
+     set_cdt_cte_wp_at touch_object_wp' | simp del: split_paired_Ex)+
   apply (rule_tac x = p in exI)
   apply clarsimp
   apply (erule cte_wp_at_weakenE)
@@ -3147,7 +3163,7 @@ lemma (in Untyped_AI_nonempty_table) create_cap_nonempty_tables[wp]:
   apply (rule hoare_pre)
    apply (rule hoare_use_eq [where f=arch_state, OF create_cap_arch_state])
    apply (simp add: create_cap_def set_cdt_def)
-   apply (wp set_cap_obj_at_impossible|simp)+
+   apply (wp set_cap_obj_at_impossible touch_object_wp'|simp)+
   apply (clarsimp simp: nonempty_table_caps_of)
   done
 
@@ -3421,7 +3437,7 @@ lemma (in Untyped_AI_nonempty_table) retype_nonempty_table[wp]:
    \<lbrace>\<lambda>rv s. \<not> (obj_at (nonempty_table (set (second_level_tables (arch_state s)))) r s)\<rbrace>"
   apply (simp add: retype_region_def split del: if_split)
   apply (rule hoare_pre)
-   apply (wp|simp del: fun_upd_apply)+
+   apply (wp touch_objects_wp|simp del: fun_upd_apply)+
   apply (clarsimp simp del: fun_upd_apply)
   apply (simp add: foldr_upd_app_if)
   apply (clarsimp simp: obj_at_def split: if_split_asm)
@@ -3777,7 +3793,9 @@ lemma invoke_untyp_invs':
                  set_cap_cte_cap_wp_to
                  hoare_vcg_ex_lift
                | wp (once) hoare_drop_imps)+
-       apply (wp set_cap_cte_wp_at_neg hoare_vcg_all_lift get_cap_wp)+
+       apply (wp set_cap_cte_wp_at_neg hoare_vcg_all_lift get_cap_wp touch_object_wp')+
+       (* FIXME: The new precondition from touch_object_wp' causes trouble.
+          See the sorry further below. -robs *)
 
       apply (clarsimp simp: slot_not_in field_simps ui free_index_of_def
                    split del: if_split)
@@ -3812,6 +3830,7 @@ lemma invoke_untyp_invs':
 
             (* slots not in retype_addrs *)
             apply (clarsimp dest!:retype_addrs_subset_ptr_bits)
+            sorry (* FIXME: broken by touched-addrs -robs
             apply (drule(1) invoke_untyped_proofs.slots_invD)
             apply (drule(1) subsetD)
             apply (simp add:p_assoc_help)
@@ -3843,6 +3862,7 @@ lemma invoke_untyp_invs':
         erule invoke_untyped_proofs.descendants_range, simp_all+)[1]
       apply (simp add: untyped_range_def atLeastatMost_subset_iff word_and_le2)
       done
+    *)
 qed
 
 lemmas invoke_untyp_invs[wp] =
@@ -3893,7 +3913,7 @@ end
 
 lemma sts_mdb[wp]:
   "\<lbrace>\<lambda>s. P (cdt s)\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv s. P (cdt s)\<rbrace>"
-  by (simp add: set_thread_state_def | wp)+
+  by (simp add: set_thread_state_def | wp touch_object_wp')+
 
 lemma sts_ex_cap[wp]:
   "\<lbrace>ex_cte_cap_wp_to P p\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. ex_cte_cap_wp_to P p\<rbrace>"

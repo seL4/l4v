@@ -19,7 +19,7 @@ lemma mask_ptTranslationBits_ucast_ucast:
 lemma ptr_offset_in_ptr_range:
   "\<lbrakk> invs s; x \<notin> kernel_mappings;
      get_vspace_of_thread (kheap s) (arch_state s) tcb \<noteq> global_pt s;
-     get_page_info (aobjs_of s)
+     get_page_info (aobjs_of False s)
                    (get_vspace_of_thread (kheap s) (arch_state s) tcb) x = Some (base, sz, attr, r) \<rbrakk>
      \<Longrightarrow> ptrFromPAddr base + (x && mask sz) \<in> ptr_range (ptrFromPAddr base) sz"
   apply (simp add: ptr_range_def mask_def)
@@ -61,7 +61,7 @@ lemma user_op_access[ADT_AC_assms]:
   apply (erule_tac x=tcb in meta_allE)
   apply (cases "get_vspace_of_thread (kheap s) (arch_state s) tcb = global_pt s"; clarsimp)
    apply (frule get_page_info_gpd_kmaps[rotated 2]; fastforce simp: get_page_info_def)
-  apply (frule (3) ptr_offset_in_ptr_range)
+  apply (frule (3) ptr_offset_in_ptr_range[simplified])
   apply (frule get_vspace_of_thread_reachable; clarsimp)
   apply (frule vs_lookup_table_vspace)
      apply fastforce+
@@ -91,12 +91,12 @@ lemma user_op_access[ADT_AC_assms]:
   apply (erule subsetD)
   apply (clarsimp simp: auth_graph_map_def state_objs_to_policy_def)
   apply (intro exI conjI sbta_vref | erule sym | rule refl)+
-  apply (clarsimp simp: state_vrefs_def ptes_of_Some pts_of_Some)
+  apply (clarsimp simp: state_vrefs_def kobjs_of_False_Some)
   apply (intro exI conjI)
       apply (simp add: canonical_not_kernel_is_user)+
   apply (clarsimp simp: vs_refs_aux_def)
   apply (rule conjI; clarsimp)
-   apply (clarsimp simp: graph_of_def pte_ref2_def Bex_def ptes_of_Some pts_of_Some aobjs_of_Some)
+   apply (clarsimp simp: graph_of_def pte_ref2_def Bex_def kobjs_of_False_Some)
    apply (rule_tac x="table_index (pt_slot_offset max_pt_level vref x)" in exI)
    apply (fastforce simp: table_index_max_level_slots canonical_not_kernel_is_user
                           image_iff ptrFromPAddr_def mult_is_add.mult_ac)

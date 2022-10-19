@@ -78,11 +78,11 @@ lemma gen_obj_refs_eq:
   by auto
 
 lemma not_final_another':
-  "\<lbrakk> \<not> is_final_cap' cap s; fst (get_cap p s) = {(cap, s)};
+  "\<lbrakk> \<not> is_final_cap' False cap s; fst (get_cap False p s) = {(cap, s)};
        gen_obj_refs cap \<noteq> {} \<rbrakk>
-      \<Longrightarrow> \<exists>p' cap'. p' \<noteq> p \<and> fst (get_cap p' s) = {(cap', s)}
+      \<Longrightarrow> \<exists>p' cap'. p' \<noteq> p \<and> fst (get_cap False p' s) = {(cap', s)}
                          \<and> gen_obj_refs cap' = gen_obj_refs cap
-                         \<and> \<not> is_final_cap' cap' s"
+                         \<and> \<not> is_final_cap' False cap' s"
   apply (simp add: is_final_cap'_def gen_obj_refs_Int_not cong: conj_cong
               del: split_paired_Ex split_paired_All)
   apply (erule not_singleton_oneE[where p=p])
@@ -94,11 +94,11 @@ lemma not_final_another':
   done
 
 lemma not_final_another_caps:
-  "\<lbrakk> \<not> is_final_cap' cap s; caps_of_state s p = Some cap;
+  "\<lbrakk> \<not> is_final_cap' False cap s; caps_of_state s p = Some cap;
        r \<in> gen_obj_refs cap \<rbrakk>
       \<Longrightarrow> \<exists>p' cap'. p' \<noteq> p \<and> caps_of_state s p' = Some cap'
                          \<and> gen_obj_refs cap' = gen_obj_refs cap
-                         \<and> \<not> is_final_cap' cap' s"
+                         \<and> \<not> is_final_cap' False cap' s"
   apply (clarsimp dest!: caps_of_state_cteD
                    simp: cte_wp_at_def)
   apply (drule(1) not_final_another')
@@ -121,7 +121,7 @@ lemma set_cap_obj_at_impossible:
      set_cap cap ptr
    \<lbrace>\<lambda>rv s. P (obj_at P' p s)\<rbrace>"
   apply (simp add: set_cap_def split_def set_object_def)
-  apply (wp get_object_wp | wpc)+
+  apply (wp get_object_wp touch_object_wp | wpc)+
   apply (clarsimp simp: obj_at_def)
   apply (subgoal_tac "\<forall>sz cs. well_formed_cnode_n sz cs \<longrightarrow> \<not> P' (CNode sz cs)")
    apply (subgoal_tac "\<forall>tcb. \<not> P' (TCB tcb)")

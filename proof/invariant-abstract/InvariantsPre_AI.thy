@@ -24,18 +24,20 @@ declare ranI [intro]
 section "Locale Setup"
 
 definition ta_agnostic :: "('s state \<Rightarrow> bool) \<Rightarrow> bool" where
- "ta_agnostic P \<equiv> \<forall>s ta. P (s\<lparr>ms_touched_addresses := ta\<rparr>) = P s"
+ "ta_agnostic P \<equiv> \<forall>s taf. P (ms_ta_update taf s) = P s"
 
 abbreviation ignore_ta :: "('s state \<Rightarrow> bool) \<Rightarrow> ('s state \<Rightarrow> bool)" where
-  "ignore_ta P \<equiv> \<lambda>s. \<forall>ta. P (s\<lparr>ms_touched_addresses := ta\<rparr>)"
+  "ignore_ta P \<equiv> \<lambda>s. \<forall>taf. P (ms_ta_update taf s)"
 
 
+\<comment> \<open>A locale for monads m that only change the TA set\<close>
 locale touched_addresses_inv =
   fixes state_ext_t :: "'state_ext::state_ext itself"
   fixes m :: "('state_ext::state_ext state, 'r) nondet_monad"
   assumes tainv: "\<And>P. m \<lbrace>ignore_ta P\<rbrace>"
 begin
 
+\<comment> \<open>If P doesn't care about the TA set, m preserves P even though it changes the TA set\<close>
 lemma agnostic_preserved:
   "ta_agnostic P \<Longrightarrow> m \<lbrace>P\<rbrace>"
   unfolding ta_agnostic_def
@@ -68,9 +70,16 @@ lemma validE_tainv[wp]:
   "\<lbrace>ignore_ta P\<rbrace> m \<lbrace>\<lambda>_. ignore_ta P\<rbrace>, \<lbrace>\<lambda>_. ignore_ta P\<rbrace>"
   by (simp add: hoare_valid_validE tainv)
 
+lemma validE2_tainv[wp]:
+  "\<lbrace>ignore_ta P and ignore_ta Q\<rbrace> m \<lbrace>\<lambda>_. ignore_ta P\<rbrace>, \<lbrace>\<lambda>_. ignore_ta Q\<rbrace>"
+  apply (rule valid_validE2, rule hoare_weaken_pre)
+  apply (rule tainv [where P="P and Q"])
+    apply simp+
+  done
+
 lemma validE_R_tainv[wp]:
   "\<lbrace>ignore_ta P\<rbrace> m \<lbrace>\<lambda>_. ignore_ta P\<rbrace>, -"
-  by (clarsimp simp: agnostic_preserved ta_agnostic_def valid_validE_R)
+  by (simp add: tainv valid_validE_R)
 
 lemma agnostic_preservedE_R:
   "ta_agnostic P \<Longrightarrow> \<lbrace>P\<rbrace> m \<lbrace>\<lambda>_. P\<rbrace>, -"
@@ -82,6 +91,14 @@ lemma agnostic_preservedE:
   unfolding ta_agnostic_def
   by (simp add: agnostic_preserved ta_agnostic_def valid_validE)
 
+lemma agnostic_preservedE2:
+  "ta_agnostic P \<Longrightarrow> ta_agnostic Q \<Longrightarrow> \<lbrace>P and Q\<rbrace> m \<lbrace>\<lambda>_. P\<rbrace>, \<lbrace>\<lambda>_. Q\<rbrace>"
+  apply (rule valid_validE2 [where Q'="P and Q"])
+    apply (rule agnostic_preserved)
+    apply (simp add: ta_agnostic_def)
+  apply simp+
+  done
+  
 end
 
 (*FIXME: does this actually do anything? *)
@@ -94,6 +111,25 @@ sublocale touched_addresses_invE \<subseteq> touched_addresses_inv
 term "state_ext"
 term "state_ext state"
 
+(* these have been removed, as we are trying to avoid certain notations that do not
+   simplify nicely.
+abbreviation ta_obj_upd :: "machine_word \<Rightarrow> kernel_object \<Rightarrow> machine_state \<Rightarrow> machine_state"
+  where
+  "ta_obj_upd p ko ms \<equiv> machine_state.touched_addresses_update ((\<union>) (obj_range p ko)) ms"
+
+abbreviation ms_ta_obj_upd :: "machine_word \<Rightarrow> kernel_object \<Rightarrow> 'a state \<Rightarrow> 'a state"
+  where
+  "ms_ta_obj_upd p ko s \<equiv> s \<lparr> machine_state := ta_obj_upd p ko (machine_state s) \<rparr>"
+*)
+
+abbreviation ms_ta_obj_update :: "machine_word \<Rightarrow> kernel_object \<Rightarrow> 'a state \<Rightarrow> 'a state"
+  where
+  "ms_ta_obj_update p ko s \<equiv> ms_ta_update ((\<union>) (obj_range p ko)) s"
+
+
+\<comment> \<open>A locale for propositions P that don't care about the TA set (ta_agnostic P),
+   relative to a monad m that only changes TA (via locale touched_addresses_inv).
+   Instantiate this locale to add a rule to the [wp] set that says m preserves P. \<close>
 locale touched_addresses_P_inv = touched_addresses_inv state_ext_t m
   for state_ext_t :: "'state_ext::state_ext itself"
   and m::"('state_ext::state_ext state, 'r) nondet_monad" +
@@ -103,6 +139,13 @@ begin
 lemma m_inv [wp]:
   "m \<lbrace>P\<rbrace>"
   by (rule agnostic_preserved [OF ta_agnostic])
+
+(*FIXME: maybe this should be in a different locale, as this will be duplicated (and
+  added to the simp set) for every monad that instantiates touched_addresses_inv *)
+lemma use_ta_agnostic [simp]:
+  "P (ms_ta_update taf s) = P s"
+  by (meson ta_agnostic ta_agnostic_def)
+
 end
 
 locale pspace_update_eq =
@@ -110,6 +153,12 @@ locale pspace_update_eq =
   assumes pspace: "kheap (f s) = kheap s"
 
 locale Arch_pspace_update_eq = pspace_update_eq + Arch
+
+locale pspace_ta_update_eq = pspace_update_eq f
+  for f :: "'z::state_ext state \<Rightarrow> 'c::state_ext state" +
+  assumes ta: "touched_addresses (machine_state (f s)) = touched_addresses (machine_state s)"
+
+locale Arch_pspace_ta_update_eq = pspace_ta_update_eq + Arch
 
 locale arch_update_eq =
   fixes f :: "'z::state_ext state \<Rightarrow> 'c::state_ext state"
@@ -128,6 +177,9 @@ locale Arch_arch_idle_update_eq = Arch_arch_update_eq + arch_idle_update_eq_more
 locale p_arch_update_eq = pspace_update_eq + arch_update_eq
 locale Arch_p_arch_update_eq = Arch_pspace_update_eq + Arch_arch_update_eq
 
+locale p_arch_ta_update_eq = pspace_ta_update_eq + arch_update_eq
+locale Arch_p_arch_ta_update_eq = Arch_pspace_ta_update_eq + Arch_p_arch_update_eq
+
 locale p_arch_idle_update_eq = p_arch_update_eq + arch_idle_update_eq
 locale Arch_p_arch_idle_update_eq = Arch_p_arch_update_eq + Arch_arch_idle_update_eq
 
@@ -141,6 +193,11 @@ locale Arch_pspace_int_update_eq = Arch_pspace_update_eq + irq_states_update_eq
 locale p_arch_idle_update_int_eq = p_arch_idle_update_eq + pspace_int_update_eq
 locale Arch_p_arch_idle_update_int_eq = Arch_p_arch_idle_update_eq + Arch_pspace_int_update_eq
 
+locale pspace_ta_int_update_eq = pspace_ta_update_eq + irq_states_update_eq
+locale Arch_pspace_ta_int_update_eq = Arch_pspace_ta_update_eq + Arch_pspace_int_update_eq
+
+locale p_arch_idle_update_ta_int_eq = p_arch_idle_update_int_eq + pspace_ta_int_update_eq
+locale Arch_p_arch_idle_update_ta_int_eq = Arch_p_arch_idle_update_int_eq + Arch_pspace_ta_int_update_eq
 
 section "Base definitions for Invariants"
 
@@ -219,8 +276,8 @@ lemma pspace_distinctD:
 definition
   caps_of_state :: "'z::state_ext state \<Rightarrow> cslot_ptr \<Rightarrow> cap option"
 where
- "caps_of_state s \<equiv> (\<lambda>p. if (\<exists>cap. fst (get_cap p s) = {(cap, s)})
-                         then Some (THE cap. fst (get_cap p s) = {(cap, s)})
+ "caps_of_state s \<equiv> (\<lambda>p. if (\<exists>cap. fst (get_cap False p s) = {(cap, s)})
+                         then Some (THE cap. fst (get_cap False p s) = {(cap, s)})
                          else None)"
 
 definition

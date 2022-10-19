@@ -38,6 +38,8 @@ definition loadWord :: "machine_word \<Rightarrow> machine_word machine_monad"
   "loadWord p \<equiv> do
      m \<leftarrow> gets underlying_memory;
      assert (p && mask 3 = 0);
+     ta \<leftarrow> gets touched_addresses;
+     assert (p \<in> ta);
      return (word_rcat (map (\<lambda>i. m (p + (7 - of_int i))) [0 .. 7]))
    od"
 
@@ -45,6 +47,8 @@ definition storeWord :: "machine_word \<Rightarrow> machine_word \<Rightarrow> u
   where
   "storeWord p w \<equiv> do
      assert (p && mask 3 = 0);
+     ta \<leftarrow> gets touched_addresses;
+     assert (p \<in> ta);
      modify (underlying_memory_update
               (fold (\<lambda>i m. m((p + (of_int i)) := word_rsplit w ! (7 - nat i))) [0 .. 7]))
    od"
@@ -53,7 +57,8 @@ lemma upto0_7_def:
   "[0..7] = [0,1,2,3,4,5,6,7]" by eval
 
 lemma loadWord_storeWord_is_return:
-  "p && mask 3 = 0 \<Longrightarrow> (do w \<leftarrow> loadWord p; storeWord p w od) = return ()"
+  "p && mask 3 = 0 \<Longrightarrow> p \<in> touched_addresses s \<Longrightarrow>
+   (do w \<leftarrow> loadWord p; storeWord p w od) s = return () s"
   by (auto simp: loadWord_def storeWord_def bind_def assert_def return_def word_rsplit_rcat_size
                  modify_def gets_def get_def eval_nat_numeral put_def upto0_7_def word_size)
 
@@ -70,11 +75,11 @@ definition
 
 definition
   clearTouchedAddresses :: "unit machine_monad"
-  where "clearTouchedAddresses \<equiv> modify (\<lambda>s. s\<lparr>touched_addresses := {}\<rparr>)"
+  where "clearTouchedAddresses \<equiv> modify (touched_addresses_update (\<lambda>_. {}))"
 
 definition
   addTouchedAddresses :: "machine_word set \<Rightarrow> unit machine_monad"
-  where "addTouchedAddresses da \<equiv> modify (\<lambda>s. s\<lparr>touched_addresses := da \<union> touched_addresses s\<rparr>)"
+  where "addTouchedAddresses da \<equiv> modify (touched_addresses_update ((\<union>) da))"
 
 text \<open>This instruction is required in the simulator, only.\<close>
 definition storeWordVM :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad"

@@ -63,6 +63,7 @@ delivered.\<close>
 definition timer_tick :: "unit det_ext_monad" where
   "timer_tick \<equiv> do
      cur \<leftarrow> gets cur_thread;
+     touch_object cur;
      state \<leftarrow> get_thread_state cur;
      case state of Running \<Rightarrow> do
        ts \<leftarrow> ethread_get tcb_time_slice cur;
@@ -93,7 +94,8 @@ definition
    case st of
      IRQSignal \<Rightarrow> do
        slot \<leftarrow> get_irq_slot irq;
-       cap \<leftarrow> get_cap slot;
+       touch_object (fst slot);
+       cap \<leftarrow> get_cap True slot;
        when (is_ntfn_cap cap \<and> AllowSend \<in> cap_rights cap)
          $ send_signal (obj_ref_of cap) (cap_ep_badge cap);
        arch_mask_irq_signal irq

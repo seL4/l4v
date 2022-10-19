@@ -33,7 +33,11 @@ definition
   getActiveTCB :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> tcb option"
 where
   "getActiveTCB tcb_ref state \<equiv>
-   case (get_tcb tcb_ref state)
+   \<comment> \<open>For now, use the unfiltered kheap here and rely on the nondeterministic scheduler spec
+     (schedule_unit, the only caller of this function via allActiveTCBs) to add *all* active TCBs
+     to the touched_addresses set. Clearly this means schedule_unit won't satisfy time protection.
+     We need to have a conversation about this impact of this. -robs\<close>
+   case (get_tcb False tcb_ref state)
      of None           \<Rightarrow> None
       | Some tcb       \<Rightarrow> if (runnable $ tcb_state tcb)
                          then Some tcb else None"
@@ -50,8 +54,9 @@ text \<open>Switches the current thread to the specified one.\<close>
 definition
   switch_to_thread :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "switch_to_thread t \<equiv> do
+     touch_object t;
      state \<leftarrow> get;
-     assert (get_tcb t state \<noteq> None);
+     assert (get_tcb True t state \<noteq> None);
      arch_switch_to_thread t;
      do_extended_op (tcb_sched_action (tcb_sched_dequeue) t);
      modify (\<lambda>s. s \<lparr> cur_thread := t \<rparr>)
@@ -59,7 +64,8 @@ definition
 
 text \<open>Asserts that a thread is runnable before switching to it.\<close>
 definition guarded_switch_to :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
-"guarded_switch_to thread \<equiv> do ts \<leftarrow> get_thread_state thread;
+"guarded_switch_to thread \<equiv> do touch_object thread;
+                    ts \<leftarrow> get_thread_state thread;
                     assert (runnable ts);
                     switch_to_thread thread
                  od"
@@ -125,6 +131,7 @@ definition
 definition
   "schedule_det_ext_ext \<equiv> do
      ct \<leftarrow> gets cur_thread;
+     touch_object ct;
      ct_st \<leftarrow> get_thread_state ct;
      ct_runnable \<leftarrow> return $ runnable ct_st;
      action \<leftarrow> gets scheduler_action;
@@ -196,6 +203,11 @@ definition schedule_unit :: "(unit,unit) s_monad" where
 "schedule_unit \<equiv> (do
    cur \<leftarrow> gets cur_thread;
    threads \<leftarrow> allActiveTCBs;
+   \<comment> \<open>Here we record a touch of every single active TCB, regardless of its domain.
+     Hence we don't expect to be able to prove that schedule_unit satisfies the touched-addresses
+     partition subset invariant -- we just need it to be in a form such that refinement to the
+     deterministic scheduler schedule_det_ext_ext is still provable. To discuss further. -robs\<close>
+   touch_objects threads;
    thread \<leftarrow> select threads;
    (if thread = cur then
      return () \<sqinter> switch_to_thread thread

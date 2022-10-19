@@ -50,7 +50,7 @@ where
    case khp tcb_ref of Some (TCB tcb) \<Rightarrow>
      (case tcb_vtable tcb of
         ArchObjectCap (PageTableCap pt (Some (asid, _))) \<Rightarrow>
-          (case vspace_for_asid asid (state_from_arch khp astate) of
+          (case vspace_for_asid False asid (state_from_arch khp astate) of
              Some pt' \<Rightarrow> if pt' = pt then pt else riscv_global_pt astate
            | _ \<Rightarrow> riscv_global_pt astate)
         | _ \<Rightarrow>  riscv_global_pt astate)
@@ -61,9 +61,13 @@ lemma the_arch_cap_simp[simp]: "the_arch_cap (ArchObjectCap x) = x"
   by (simp add: the_arch_cap_def)
 
 lemma vspace_for_asid_state_from_arch[simp]:
-  "vspace_for_asid a (state_from_arch (kheap s) (arch_state s)) = vspace_for_asid a s"
+  "vspace_for_asid False a (state_from_arch (f_kheap False s) (arch_state s)) =
+   vspace_for_asid False a s"
   by (simp add: vspace_for_asid_def pool_for_asid_def obind_def state_from_arch_def
+         opt_map_def ta_filter_def vspace_for_pool_def
          split: option.splits)
+
+declare vspace_for_asid_state_from_arch[simplified, simp]
 
 (* NOTE: This statement would clearly be nicer for a partial function
          but later on, we really want the function to be total. *)
@@ -72,7 +76,7 @@ lemma get_vspace_of_thread_eq:
    get_vspace_of_thread (kheap s) (arch_state s) tcb_ref = pt_ref \<longleftrightarrow>
    (\<exists>tcb. kheap s tcb_ref = Some (TCB tcb) \<and>
           (\<exists>asid vref. tcb_vtable tcb = ArchObjectCap (PageTableCap pt_ref (Some (asid,vref))) \<and>
-                       vspace_for_asid asid s = Some pt_ref))"
+                       vspace_for_asid False asid s = Some pt_ref))"
   unfolding get_vspace_of_thread_def
   by (auto split: option.splits kernel_object.splits cap.splits arch_cap.splits)
 
@@ -115,12 +119,12 @@ text \<open>
 definition ptable_lift :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> machine_word \<rightharpoonup> machine_word" where
   "ptable_lift tcb s \<equiv> \<lambda>addr.
    case_option None (\<lambda>(base, bits, rights). Some (base + (addr && mask bits)))
-     (get_page_info (aobjs_of s) (get_vspace_of_thread (kheap s) (arch_state s) tcb) addr)"
+     (get_page_info (aobjs_of False s) (get_vspace_of_thread (kheap s) (arch_state s) tcb) addr)"
 
 definition ptable_rights :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> machine_word \<Rightarrow> vm_rights" where
   "ptable_rights tcb s \<equiv> \<lambda>addr.
    case_option {} (snd o snd o snd)
-      (get_page_info (aobjs_of s) (get_vspace_of_thread (kheap s) (arch_state s) tcb) addr)"
+      (get_page_info (aobjs_of False s) (get_vspace_of_thread (kheap s) (arch_state s) tcb) addr)"
 
 lemma ptable_lift_Some_canonical_addressD:
   "ptable_lift t s vptr = Some p \<Longrightarrow> canonical_address vptr"

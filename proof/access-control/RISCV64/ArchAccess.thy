@@ -45,11 +45,11 @@ definition vs_refs_aux :: "vm_level \<Rightarrow> arch_kernel_obj \<Rightarrow> 
 definition state_vrefs where
   "state_vrefs s \<equiv> \<lambda>p.
      \<Union>{vs_refs_aux lvl ao | lvl ao bot asid vref. vs_lookup_table bot asid vref s = Some (lvl, p)
-                                                   \<and> aobjs_of s p = Some ao \<and> vref \<in> user_region}"
+                                                   \<and> aobjs_of False s p = Some ao \<and> vref \<in> user_region}"
 
-lemma state_vrefsD:
+lemma state_vrefsD[simplified f_kheap_to_kheap]:
   "\<lbrakk> vs_lookup_table level asid vref s = Some (lvl, p);
-     aobjs_of s p = Some ao; vref \<in> user_region; x \<in> vs_refs_aux lvl ao \<rbrakk>
+     aobjs_of False s p = Some ao; vref \<in> user_region; x \<in> vs_refs_aux lvl ao \<rbrakk>
      \<Longrightarrow> x \<in> state_vrefs s p"
   unfolding state_vrefs_def by fastforce
 
@@ -60,7 +60,7 @@ context Arch_p_arch_update_eq begin global_naming RISCV64
 interpretation Arch .
 
 lemma state_vrefs[iff]: "state_vrefs (f s) = state_vrefs s"
-  by (simp add: state_vrefs_def pspace)
+  by (simp add: state_vrefs_def pspace ta_filter_def obind_def)
 
 end
 
@@ -135,7 +135,7 @@ definition integrity_asids ::
   "'a PAS \<Rightarrow> 'a set \<Rightarrow> obj_ref \<Rightarrow> asid \<Rightarrow> 'y::state_ext state \<Rightarrow> 'z::state_ext state  \<Rightarrow> bool" where
   "integrity_asids aag subjects x asid s s' \<equiv>
    integrity_asids_aux aag subjects x asid (asid_table s) (asid_table s')
-                                           (asid_pools_of s) (asid_pools_of s')"
+                                           (asid_pools_of False s) (asid_pools_of False s')"
 
 sublocale kheap_update: Arch_arch_update_eq "kheap_update f"
   by unfold_locales simp
@@ -143,7 +143,7 @@ sublocale kheap_update: Arch_arch_update_eq "kheap_update f"
 lemma (in Arch_p_arch_update_eq) integrity_asids_update[simp]:
   "integrity_asids aag subjects x a (f st) s = integrity_asids aag subjects x a st s"
   "integrity_asids aag subjects x a st (f s) = integrity_asids aag subjects x a st s"
-  by (auto simp: integrity_asids_def arch pspace)
+  by (auto simp: integrity_asids_def arch pspace ta_filter_def obind_def)
 
 lemmas integrity_asids_updates =
   cdt_update.integrity_asids_update
@@ -156,22 +156,22 @@ lemmas integrity_asids_updates =
 lemma integrity_asids_cnode_update':
   "\<lbrakk> kheap st p = Some (CNode sz cs); integrity_asids aag subjects x a st (s\<lparr>kheap := rest\<rparr>) \<rbrakk>
      \<Longrightarrow> integrity_asids aag subjects x a st (s\<lparr>kheap := \<lambda>x. if x = p then v else rest x\<rparr>)"
-  by (auto simp: integrity_asids_def opt_map_def split: option.splits)
+  by (auto simp: integrity_asids_def opt_map_def obind_def split: option.splits)
 
 lemma integrity_asids_tcb_update':
   "\<lbrakk> kheap st p = Some (TCB tcb); integrity_asids aag subjects x a st (s\<lparr>kheap := rest\<rparr>) \<rbrakk>
      \<Longrightarrow> integrity_asids aag subjects x a st (s\<lparr>kheap := \<lambda>x. if x = p then v else rest x\<rparr>)"
-  by (auto simp: integrity_asids_def opt_map_def split: option.splits)
+  by (auto simp: integrity_asids_def opt_map_def obind_def split: option.splits)
 
 lemma integrity_asids_ep_update':
   "\<lbrakk> kheap st p = Some (Endpoint ep); integrity_asids aag subjects x a st (s\<lparr>kheap := rest\<rparr>) \<rbrakk>
      \<Longrightarrow> integrity_asids aag subjects x a st (s\<lparr>kheap := \<lambda>x. if x = p then v else rest x\<rparr>)"
-  by (auto simp: integrity_asids_def opt_map_def split: option.splits)
+  by (auto simp: integrity_asids_def opt_map_def obind_def split: option.splits)
 
 lemma integrity_asids_ntfn_update':
   "\<lbrakk> kheap st p = Some (Notification ntfn); integrity_asids aag subjects x a st (s\<lparr>kheap := rest\<rparr>) \<rbrakk>
      \<Longrightarrow> integrity_asids aag subjects x a st (s\<lparr>kheap := \<lambda>x. if x = p then v else rest x\<rparr>)"
-  by (auto simp: integrity_asids_def opt_map_def split: option.splits)
+  by (auto simp: integrity_asids_def opt_map_def obind_def split: option.splits)
 
 lemmas integrity_asids_kh_upds'' =
   integrity_asids_cnode_update'
@@ -190,12 +190,12 @@ lemma integrity_asids_kh_upds':
   "integrity_asids aag subjects x a (s\<lparr>kheap := kheap s(p \<mapsto> TCB tcb)\<rparr>) s"
   "integrity_asids aag subjects x a (s\<lparr>kheap := kheap s(p \<mapsto> Endpoint ep)\<rparr>) s"
   "integrity_asids aag subjects x a (s\<lparr>kheap := kheap s(p \<mapsto> Notification ntfn)\<rparr>) s"
-  by (auto simp: opt_map_def split: option.splits)
+  by (auto simp: opt_map_def ta_filter_def split: option.splits if_splits)
 
 lemma integrity_asids_kh_update:
   "integrity_asids aag subject x a (s\<lparr>kheap := kh\<rparr>) (s\<lparr>kheap := kh'\<rparr>)
    \<Longrightarrow> integrity_asids aag subject x a (s\<lparr>kheap := kh(p := v)\<rparr>) (s\<lparr>kheap := kh'(p := v)\<rparr>)"
-  by (clarsimp simp: opt_map_def)
+  by (clarsimp simp: opt_map_def obind_def)
 
 
 subsection \<open>Misc definitions\<close>
@@ -234,7 +234,7 @@ inductive arch_integrity_obj_alt ::
        \<Longrightarrow> arch_integrity_obj_alt aag subjects l' ao ao'"
 
 definition auth_ipc_buffers :: "'z::state_ext state \<Rightarrow> obj_ref \<Rightarrow> obj_ref set" where
-  "auth_ipc_buffers s \<equiv> \<lambda>p. case (get_tcb p s) of
+  "auth_ipc_buffers s \<equiv> \<lambda>p. case (get_tcb False p s) of
      None \<Rightarrow> {}
    | Some tcb \<Rightarrow>
      (case tcb_ipcframe tcb of

@@ -332,14 +332,14 @@ lemma do_machine_op_ta_subset_inv:
 (* For kernel_entry_if *)
 
 lemma set_object_ta_subset_inv:
-  "set_object ptr obj \<lbrace>ta_subset_inv aag\<rbrace>"
+  "set_object True ptr obj \<lbrace>ta_subset_inv aag\<rbrace>"
   sorry
 
 lemma syscall_ta_subset_inv:
   "syscall m_fault h_fault m_error h_error m_finalise \<lbrace>ta_subset_inv aag\<rbrace>"
   sorry
 
-crunches touch_objects, touch_object, get_cap_x
+crunches touch_objects, touch_object, get_cap
   for pas_cur_domain: "pas_cur_domain aag"
   and ta_subset_inv: "ta_subset_inv aag"
   (wp: crunch_wps)
@@ -382,7 +382,7 @@ proof (induct capcref rule: resolve_address_bits'.induct)
           apply (clarsimp simp: in_monad)
          apply (frule(9) 1) (* get the IH into context *)
          apply (clarsimp simp: in_monad)
-         apply (frule in_inv_by_hoareD [OF get_cap_x_inv])
+         apply (frule in_inv_by_hoareD [OF get_cap_inv])
          (* Here's where I deviate from the rab_tainv proof. -robs *)
          apply clarsimp
          apply(rename_tac s s' obj_ref nat list exception s'' next_cap)
@@ -413,7 +413,7 @@ proof (induct capcref rule: resolve_address_bits'.induct)
    (* If it's not a cnode cap, we'll just return it, so it's enough to know that
       touch_object preserved ta_subset_inv. -robs *)
    apply (clarsimp simp: in_monad)
-   apply (drule in_inv_by_hoareD [OF get_cap_x_inv])
+   apply (drule in_inv_by_hoareD [OF get_cap_inv])
    using touch_object_ta_subset_inv[simplified valid_def]
    apply blast
   (* If it's a cnode cap we'll need to know that its recursive call to rab
@@ -423,7 +423,7 @@ proof (induct capcref rule: resolve_address_bits'.induct)
   apply clarsimp
   (* First move past all the stuff like get_cap_x and touch_object before it *)
   apply (clarsimp simp: in_monad)
-  apply (drule in_inv_by_hoareD [OF get_cap_x_inv])
+  apply (drule in_inv_by_hoareD [OF get_cap_inv])
   apply clarsimp
   apply(rename_tac s b obj_ref nat list aa ba bb s'' next_cap)
   apply(prop_tac "ta_subset_inv aag s''")
@@ -469,7 +469,7 @@ proof (induct capcref rule: resolve_address_bits'.induct)
           apply (clarsimp simp: in_monad)
          apply (drule(9) 1) (* get the IH into context *)
          apply (clarsimp simp: in_monad)
-         apply (drule in_inv_by_hoareD [OF get_cap_x_inv])
+         apply (drule in_inv_by_hoareD [OF get_cap_inv])
          sorry
          thm touch_object_tainv.in_inv_by_hoare
          apply (drule(1) touch_object_tainv.in_inv_by_hoare)

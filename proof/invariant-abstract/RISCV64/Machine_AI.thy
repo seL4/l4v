@@ -96,7 +96,7 @@ lemma no_fail_getRestartPC: "no_fail \<top> getRestartPC"
   by (simp add: getRestartPC_def getRegister_def)
 
 
-lemma no_fail_loadWord [wp]: "no_fail (\<lambda>_. is_aligned p 3) (loadWord p)"
+lemma no_fail_loadWord [wp]: "no_fail (\<lambda>s. is_aligned p 3 \<and> p \<in> touched_addresses s) (loadWord p)"
   apply (simp add: loadWord_def is_aligned_mask [symmetric])
   apply (rule no_fail_pre)
    apply wp
@@ -104,7 +104,7 @@ lemma no_fail_loadWord [wp]: "no_fail (\<lambda>_. is_aligned p 3) (loadWord p)"
   done
 
 
-lemma no_fail_storeWord: "no_fail (\<lambda>_. is_aligned p 3) (storeWord p w)"
+lemma no_fail_storeWord: "no_fail (\<lambda>s. is_aligned p 3 \<and> p \<in> touched_addresses s) (storeWord p w)"
   apply (simp add: storeWord_def is_aligned_mask [symmetric])
   apply (rule no_fail_pre)
    apply (wp)
@@ -146,11 +146,18 @@ lemma getRestartPC_inv: "\<lbrace>P\<rbrace> getRestartPC \<lbrace>\<lambda>rv. 
 
 
 
+lemma storeWord_in_ta:
+  "\<lbrace>\<lambda>s. x \<in> touched_addresses s\<rbrace> storeWord p w \<lbrace>\<lambda>rv s. x \<in> touched_addresses s\<rbrace>"
+  by (force simp:valid_def storeWord_def bind_def simpler_modify_def simpler_gets_def
+    return_def in_assert)
+
 lemma no_fail_clearMemory[simp, wp]:
-  "no_fail (\<lambda>_. is_aligned p 3) (clearMemory p b)"
+  "no_fail (\<lambda>s. is_aligned p 3 \<and>
+     (\<forall>x \<in> set [p, p + word_size .e. p + (of_nat b) - 1]. x \<in> touched_addresses s))
+     (clearMemory p b)"
   apply (simp add: clearMemory_def mapM_x_mapM)
   apply (rule no_fail_pre)
-   apply (wp no_fail_mapM' no_fail_storeWord )
+   apply (wpsimp wp:no_fail_mapM_wp no_fail_storeWord simp:storeWord_in_ta)
   apply (clarsimp simp: upto_enum_step_def)
   apply (erule aligned_add_aligned)
    apply (simp add: word_size_def)
@@ -159,10 +166,12 @@ lemma no_fail_clearMemory[simp, wp]:
   done
 
 lemma no_fail_freeMemory[simp, wp]:
-  "no_fail (\<lambda>_. is_aligned p 3) (freeMemory p b)"
+  "no_fail (\<lambda>s. is_aligned p 3 \<and>
+     (\<forall>x \<in> set [p, p + word_size .e. p + 2 ^ b - 1]. x \<in> touched_addresses s))
+     (freeMemory p b)"
   apply (simp add: freeMemory_def mapM_x_mapM)
   apply (rule no_fail_pre)
-  apply (wp no_fail_mapM' no_fail_storeWord)
+   apply (wpsimp wp:no_fail_mapM_wp no_fail_storeWord simp:storeWord_in_ta)
   apply (clarsimp simp: upto_enum_step_def)
   apply (erule aligned_add_aligned)
    apply (simp add: word_size_def)
@@ -312,7 +321,8 @@ lemma no_irq_modify:
 lemma no_irq_storeWord: "no_irq (storeWord w p)"
   apply (simp add: storeWord_def)
   apply (wp no_irq_modify)
-  apply simp
+   apply(clarsimp simp:no_irq_def)
+  apply(force simp:valid_def no_irq_def bind_def in_assert simpler_modify_def)
   done
 
 lemma no_irq_when:

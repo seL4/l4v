@@ -189,6 +189,7 @@ definition
                              \<Rightarrow> obj_ref option \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
  "do_fault_transfer badge sender receiver buf \<equiv> do
+    touch_object sender;
     fault \<leftarrow> thread_get tcb_fault sender;
     f \<leftarrow> (case fault of
          Some f \<Rightarrow> return f
@@ -230,6 +231,7 @@ where
      receiver \<equiv> do
 
      recv_buffer \<leftarrow> lookup_ipc_buffer True receiver;
+     touch_object sender;
      fault \<leftarrow> thread_get tcb_fault sender;
 
      case fault
@@ -246,8 +248,10 @@ definition
   do_reply_transfer :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> cslot_ptr \<Rightarrow> bool \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
  "do_reply_transfer sender receiver slot grant \<equiv> do
+    touch_object receiver;
     state \<leftarrow> get_thread_state receiver;
     assert (state = BlockedOnReply);
+    touch_object receiver;
     fault \<leftarrow> thread_get tcb_fault receiver;
     case fault of
       None \<Rightarrow> do
@@ -302,6 +306,7 @@ definition
                 \<Rightarrow> obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "send_ipc block call badge can_grant can_grant_reply thread epptr \<equiv> do
+     touch_object epptr;
      ep \<leftarrow> get_endpoint epptr;
      case (ep, block) of
          (IdleEP, True) \<Rightarrow> do
@@ -325,6 +330,7 @@ where
        | (RecvEP (dest # queue), _) \<Rightarrow> do
                 set_endpoint epptr $ (case queue of [] \<Rightarrow> IdleEP
                                                      | _ \<Rightarrow> RecvEP queue);
+                touch_object dest;
                 recv_state \<leftarrow> get_thread_state dest;
                 reply_can_grant \<leftarrow> case recv_state
                   of (BlockedOnReceive x data) \<Rightarrow> do
@@ -360,6 +366,7 @@ definition
   complete_signal :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "complete_signal ntfnptr tcb \<equiv> do
+     touch_object ntfnptr;
      ntfn \<leftarrow> get_notification ntfnptr;
      case ntfn_obj ntfn of
        ActiveNtfn badge \<Rightarrow> do
@@ -381,9 +388,12 @@ where
      (epptr,rights) \<leftarrow> (case cap
                        of EndpointCap ref badge rights \<Rightarrow> return (ref,rights)
                         | _ \<Rightarrow> fail);
+     touch_object epptr;
      ep \<leftarrow> get_endpoint epptr;
+     touch_object thread;
      ntfnptr \<leftarrow> get_bound_notification thread;
-     ntfn \<leftarrow> case_option (return default_notification) get_notification ntfnptr;
+     ntfn \<leftarrow> case_option (return default_notification)
+       (\<lambda>p. do touch_object p; get_notification p od) ntfnptr;
      if (ntfnptr \<noteq> None \<and> isActive ntfn)
      then
        complete_signal (the ntfnptr) thread
@@ -409,6 +419,7 @@ where
               sender \<leftarrow> return $ hd q;
               set_endpoint epptr $
                 (case queue of [] \<Rightarrow> IdleEP | _ \<Rightarrow> SendEP queue);
+              touch_object sender;
               sender_state \<leftarrow> get_thread_state sender;
               data \<leftarrow> (case sender_state
                        of BlockedOnSend ref data \<Rightarrow> return data
@@ -439,6 +450,7 @@ where
   "update_waiting_ntfn ntfnptr queue bound_tcb badge \<equiv> do
      assert (queue \<noteq> []);
      (dest,rest) \<leftarrow> return $ (hd queue, tl queue);
+     touch_object ntfnptr;
      set_notification ntfnptr $ \<lparr>
          ntfn_obj = (case rest of [] \<Rightarrow> IdleNtfn | _ \<Rightarrow> WaitingNtfn rest),
          ntfn_bound_tcb = bound_tcb \<rparr>;
@@ -464,9 +476,11 @@ definition
   send_signal :: "obj_ref \<Rightarrow> badge \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "send_signal ntfnptr badge \<equiv> do
+    touch_object ntfnptr;
     ntfn \<leftarrow> get_notification ntfnptr;
     case (ntfn_obj ntfn, ntfn_bound_tcb ntfn) of
           (IdleNtfn, Some tcb) \<Rightarrow> do
+                  touch_object tcb;
                   st \<leftarrow> get_thread_state tcb;
                   if (receive_blocked st)
                   then do
@@ -496,6 +510,7 @@ where
       case cap
         of NotificationCap ntfnptr badge rights \<Rightarrow> return ntfnptr
          | _ \<Rightarrow> fail;
+    touch_object ntfnptr;
     ntfn \<leftarrow> get_notification ntfnptr;
     case ntfn_obj ntfn
       of IdleNtfn \<Rightarrow>
@@ -526,6 +541,7 @@ definition
   send_fault_ipc :: "obj_ref \<Rightarrow> fault \<Rightarrow> (unit,'z::state_ext) f_monad"
 where
   "send_fault_ipc tptr fault \<equiv> doE
+     liftE $ touch_object tptr;
      handler_cptr \<leftarrow> liftE $ thread_get tcb_fault_handler tptr;
      handler_cap \<leftarrow> cap_fault_on_failure (of_bl handler_cptr) False $
          lookup_cap tptr handler_cptr;
@@ -555,7 +571,8 @@ definition
   handle_fault :: "obj_ref \<Rightarrow> fault \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "handle_fault thread ex \<equiv> do
-     _ \<leftarrow> gets_the $ get_tcb thread;
+     touch_object thread;
+     _ \<leftarrow> gets_the $ get_tcb True thread;
      send_fault_ipc thread ex
           <catch> handle_double_fault thread ex;
      return ()

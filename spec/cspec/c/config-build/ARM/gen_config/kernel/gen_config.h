@@ -22,6 +22,7 @@
 #define CONFIG_ARCH_ARM  1  /* KernelArchARM=ON */
 #define CONFIG_WORD_SIZE  32
 /* disabled: CONFIG_PLAT_IMX7 */
+#define CONFIG_USER_TOP  0xa0000000
 /* disabled: CONFIG_PLAT_ALLWINNERA20 */
 /* disabled: CONFIG_PLAT_AM335X */
 /* disabled: CONFIG_PLAT_APQ8064 */
@@ -30,7 +31,6 @@
 /* disabled: CONFIG_PLAT_EXYNOS4 */
 /* disabled: CONFIG_PLAT_EXYNOS5 */
 /* disabled: CONFIG_PLAT_HIKEY */
-/* disabled: CONFIG_PLAT_KZM */
 #define CONFIG_PLAT_IMX6  1  /* KernelPlatImx6=ON */
 /* disabled: CONFIG_PLAT_IMX7_SABRE */
 /* disabled: CONFIG_PLAT_IMX8MQ_EVK */
@@ -51,8 +51,6 @@
 /* disabled: CONFIG_ARM_CORTEX_A55 */
 /* disabled: CONFIG_ARM_CORTEX_A57 */
 /* disabled: CONFIG_ARM_CORTEX_A72 */
-/* disabled: CONFIG_ARM1136JF_S */
-/* disabled: CONFIG_ARCH_ARM_V6 */
 #define CONFIG_ARCH_ARM_V7A  1  /* KernelArchArmV7a=ON */
 /* disabled: CONFIG_ARCH_ARM_V7VE */
 /* disabled: CONFIG_ARCH_ARM_V8A */
@@ -63,7 +61,6 @@
 /* disabled: CONFIG_ARM_PA_SIZE_BITS_40 */
 /* disabled: CONFIG_ARM_PA_SIZE_BITS_44 */
 #define CONFIG_ARM_ICACHE_VIPT    /* empty */
-/* disabled: CONFIG_DANGEROUS_CODE_INJECTION_ON_UNDEF_INSTR */
 /* disabled: CONFIG_DEBUG_DISABLE_L2_CACHE */
 /* disabled: CONFIG_DEBUG_DISABLE_L1_ICACHE */
 /* disabled: CONFIG_DEBUG_DISABLE_L1_DCACHE */
@@ -83,7 +80,6 @@
 /* disabled: CONFIG_AARCH32_FPU_ENABLE_CONTEXT_SWITCH */
 /* disabled: CONFIG_AARCH64_SERROR_IGNORE */
 #define CONFIG_L1_CACHE_LINE_SIZE_BITS  5
-/* disabled: CONFIG_KERNEL_GLOBALS_FRAME */
 /* disabled: CONFIG_EXPORT_PCNT_USER */
 /* disabled: CONFIG_EXPORT_VCNT_USER */
 /* disabled: CONFIG_EXPORT_PTMR_USER */

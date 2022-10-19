@@ -359,15 +359,13 @@ lemma resolve_address_bits'_sbcorres:
   shows
   "s_bcorres (resolve_address_bits' TYPE('a::state_ext) a)
             (resolve_address_bits' TYPE(unit) a) s"
-  sorry
-  (*
 proof (induct a arbitrary: s rule: resolve_address_bits'.induct[where ?a0.0="TYPE('a::state_ext)"])
   case (1 z cap cref s')
   show ?case
     apply (simp add: resolve_address_bits'.simps)
     apply (wp | wpc | intro impI conjI allI | simp split: cap.splits | (rule "1", (simp add: in_monad | force)+) | wp (once) drop_sbcorres_underlying)+
   done
-qed *)
+qed
 
 lemma resolve_address_bits_bcorres[wp]: "bcorres (resolve_address_bits a) (resolve_address_bits a)"
     apply (simp add: resolve_address_bits_def)
@@ -402,7 +400,10 @@ lemma const_on_failure_bcorres[wp]: "bcorres f f' \<Longrightarrow> bcorres (con
   apply wpsimp
   done
 
-crunch (bcorres)bcorres[wp]: lookup_target_slot,lookup_cap,load_cap_transfer truncate_state (simp: gets_the_def ignore: loadWord)
+crunch (bcorres)bcorres[wp]: lookup_target_slot,lookup_cap,load_cap_transfer truncate_state
+  (* FIXME: Prove without referring to RISCV64-specific definition here?
+     Was broken by touched-addrs -robs *)
+  (simp: gets_the_def RISCV64_A.user_frames_of_def ignore: loadWord)
 
 lemma get_receive_slots_bcorres[wp]: "bcorres (get_receive_slots a b) (get_receive_slots a b)"
   by (cases b; wpsimp)
@@ -457,12 +458,31 @@ lemma trans_state_twice[simp]: "trans_state (\<lambda>_. e) (trans_state f s) = 
 
 lemma guarded_sub_switch: "((),x) \<in> fst (guarded_switch_to word s) \<Longrightarrow>
        ((),x) \<in> fst (switch_to_thread word s)
-       \<and> (\<exists>y. get_tcb word s = Some y \<and> runnable (tcb_state y))"
+       \<and> (\<exists>y. get_tcb False word s = Some y \<and> runnable (tcb_state y))"
   apply (clarsimp simp add: guarded_switch_to_def bind_def
                             get_thread_state_def
                             thread_get_def
                             in_monad)
-  done
+  (* FIXME: broken by touched-addrs. some experimentation below -robs *)
+  apply(clarsimp simp:touch_object_def touch_objects_def bind_def
+    simpler_do_machine_op_addTouchedAddresses_def simpler_modify_def
+    in_assert in_gets in_return split:option.splits if_splits)
+  apply(insert get_tcb_True_False)
+  apply(rename_tac tcb ko)
+  apply(erule_tac x=ko in meta_allE)
+  apply(erule_tac x=word in meta_allE)
+  apply(erule_tac x=s in meta_allE)
+  apply clarsimp
+  apply(subgoal_tac "ko_at ko word s")
+   prefer 2
+   apply(clarsimp simp:get_tcb_def ta_filter_def obind_def obj_at_def)
+  apply clarsimp
+  apply(rule conjI)
+   prefer 2
+   apply force
+  (* FIXME: Need some lemma saying switch_to_thread isn't impacted by adding word to the TA
+     because the very first thing it does is add it to the TA anyway? -robs *)
+  sorry
 
 lemma truncate_state_updates[simp]:
   "truncate_state (scheduler_action_update f s) = truncate_state s"
@@ -504,11 +524,13 @@ lemma guarded_switch_bcorres: "s_bcorres (guarded_switch_to t :: 'a state \<Righ
                         in_monad in_select
             split del: if_split)
   apply (drule guarded_sub_switch)
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (rule_tac x=t in exI, clarsimp split del: if_split)
   apply (drule_tac s=s in drop_sbcorres_underlying)
   apply (clarsimp simp: s_bcorres_underlying_def)
   apply (auto intro!: alternative_second)
   done
+*)
 
 end
 
@@ -571,6 +593,7 @@ lemma schedule_bcorres1:
   supply if_split[split del]
   apply (clarsimp simp: bcorres_underlying_def fail_def)
   apply (simp add: bdefs)
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (simp add: assert_opt_def)
   apply (simp split: option.split, intro conjI impI)
    apply (simp add: s_bcorres_underlying_def fail_def)
@@ -611,5 +634,6 @@ lemma schedule_bcorres1:
          | rule bsplits
          | erule drop_sbcorres_underlying[OF schedule_choose_new_thread_bcorres1])+
   done
+*)
 
 end

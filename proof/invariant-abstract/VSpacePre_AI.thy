@@ -189,8 +189,8 @@ lemma set_mrs_typ_at[wp]:
               split del: if_split)
   apply (wp hoare_vcg_split_case_option)
     apply (rule mapM_wp [where S=UNIV, simplified])
-    apply (wp | simp)+
-  apply (clarsimp simp: obj_at_def a_type_def
+    apply (wp touch_object_wp' | simp)+
+  apply (clarsimp simp: obj_at_def a_type_def ta_filter_def
                   dest!: get_tcb_SomeD)
   done
 
