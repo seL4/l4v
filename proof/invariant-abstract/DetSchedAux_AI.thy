@@ -74,7 +74,7 @@ lemma retype_etcb_at_helper: "\<lbrakk>etcb_at' P t ekh; valid_etcbs_2 ekh kh; d
 lemma retype_region_etcb_at:"\<lbrace>(\<lambda>s. etcb_at P t s) and valid_etcbs\<rbrace> retype_region a b c d dev \<lbrace>\<lambda>r s. st_tcb_at (Not o inactive) t s \<longrightarrow> etcb_at P t s\<rbrace> "
   apply (simp add: retype_region_def)
   apply (simp add: retype_region_ext_def bind_assoc)
-  apply wp
+  apply (wp touch_objects_wp)
   apply (clarsimp simp add: pred_tcb_at_def obj_at_def simp del: fun_upd_apply)
   apply (blast intro: retype_etcb_at_helper)
   done
@@ -82,7 +82,7 @@ lemma retype_region_etcb_at:"\<lbrace>(\<lambda>s. etcb_at P t s) and valid_etcb
 lemma retype_region_valid_etcbs[wp]:"\<lbrace>valid_etcbs\<rbrace> retype_region a b c d dev \<lbrace>\<lambda>_. valid_etcbs\<rbrace>"
   apply (simp add: retype_region_def)
   apply (simp add: retype_region_ext_def bind_assoc)
-  apply wp
+  apply (wp touch_objects_wp)
   apply (clarsimp simp del: fun_upd_apply)
   apply (blast intro: valid_etcb_fold_update)
   done
@@ -190,7 +190,7 @@ lemma retype_region_valid_blocked[wp]:
   "\<lbrace>valid_blocked\<rbrace> retype_region a b c d dev \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
   apply (simp add: retype_region_def)
   apply (simp add: retype_region_ext_def bind_assoc)
-  apply wp
+  apply (wp touch_objects_wp)
   apply (clarsimp simp del: fun_upd_apply)
   apply (blast intro: valid_blocked_fold_update)
   done

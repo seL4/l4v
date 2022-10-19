@@ -72,6 +72,7 @@ definition make_user_pte :: "vspace_ref \<Rightarrow> vm_attributes \<Rightarrow
 definition check_slot :: "obj_ref \<Rightarrow> (pte \<Rightarrow> bool) \<Rightarrow> (unit,'z::state_ext) se_monad"
   where
   "check_slot slot test = doE
+     liftE $ touch_object slot;
      pte \<leftarrow> liftE $ get_pte slot;
      unlessE (test pte) $ throwError DeleteFirst
    odE"
@@ -100,7 +101,9 @@ definition decode_fr_inv_map :: "'z::state_ext arch_decoder"
            vtop \<leftarrow> returnOk $ vaddr + mask (pageBitsForSize pgsz);
            whenE (vtop \<ge> user_vtop) $ throwError $ InvalidArgument 0;
            check_vp_alignment pgsz vaddr;
-           (level, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot pt vaddr \<circ> ptes_of;
+           accessed_pts \<leftarrow> liftE $ gets $ vs_all_pts_of asid vaddr;
+           liftE $ touch_objects accessed_pts;
+           (level, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot pt vaddr \<circ> ptes_of True;
            unlessE (pt_bits_left level = pg_bits) $
              throwError $ FailedLookup False $ MissingCapability $ pt_bits_left level;
            case mapped_address of
@@ -146,7 +149,10 @@ definition decode_pt_inv_map :: "'z::state_ext arch_decoder"
            whenE (user_vtop \<le> vaddr) $ throwError $ InvalidArgument 0;
            pt' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid;
            whenE (pt' \<noteq> pt) $ throwError $ InvalidCapability 1;
-           (level, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot pt vaddr \<circ> ptes_of;
+           accessed_pts \<leftarrow> liftE $ gets $ vs_all_pts_of asid vaddr;
+           liftE $ touch_objects accessed_pts;
+           (level, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot pt vaddr \<circ> ptes_of True;
+           liftE $ touch_object slot;
            old_pte \<leftarrow> liftE $ get_pte slot;
            whenE (pt_bits_left level = pageBits \<or> old_pte \<noteq> InvalidPTE) $ throwError DeleteFirst;
            pte \<leftarrow> returnOk $ PageTablePTE (ucast (addrFromPPtr p >> pageBits)) {};
@@ -168,7 +174,17 @@ definition decode_page_table_invocation :: "'z::state_ext arch_decoder"
        case cap of
          PageTableCap pt (Some (asid, _)) \<Rightarrow> doE
              \<comment> \<open>cannot invoke unmap on top level page table\<close>
-             pt_opt \<leftarrow> liftE $ gets $ vspace_for_asid asid;
+             pt_opt \<leftarrow> liftE $ gets $ vspace_for_asid False asid;
+             \<comment> \<open>account for touch of vspace page table and ASID pool consulted, if they exist.
+               Note we don't account for touch of the ASID table here, as it's not on the kheap
+               and doesn't have an address in the ASpec.\<close>
+             pool_ptr_opt \<leftarrow> liftE $ gets $ pool_for_asid asid;
+             liftE $ case pt_opt of Some vspace \<Rightarrow> touch_object vspace | None \<Rightarrow> return ();
+             liftE $ case pool_ptr_opt of Some pool \<Rightarrow> touch_object pool | None \<Rightarrow> return ();
+             \<comment> \<open>also ensure that if a page table was found, the memory accesses necessary
+               to determine this were accounted for by the touched_addresses set\<close>
+             pt_ta_f_opt \<leftarrow> liftE $ gets $ vspace_for_asid True asid;
+             assertE (pt_opt \<noteq> None \<longrightarrow> pt_ta_f_opt \<noteq> None);
              whenE (pt_opt = Some pt) $ throwError RevokeFirst
            odE
        | _ \<Rightarrow> returnOk ();
@@ -222,6 +238,7 @@ definition decode_asid_pool_invocation :: "'z::state_ext arch_decoder"
            pool_ptr \<leftarrow> returnOk (asid_table (asid_high_bits_of base));
            whenE (pool_ptr = None) $ throwError $ FailedLookup False InvalidRoot;
            whenE (p \<noteq> the pool_ptr) $ throwError $ InvalidCapability 0;
+           liftE $ touch_object p;
            pool \<leftarrow> liftE $ get_asid_pool p;
            free_set \<leftarrow> returnOk (- dom pool \<inter> {x. ucast x + base \<noteq> 0});
            whenE (free_set = {}) $ throwError DeleteFirst;

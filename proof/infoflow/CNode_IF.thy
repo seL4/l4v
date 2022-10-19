@@ -36,17 +36,60 @@ lemma gets_apply:
   by (simp add: gets_apply_def gets_def)
 
 lemma get_object_rev:
-  "reads_equiv_valid_inv A aag (\<lambda>s. aag_can_read aag oref) (get_object oref)"
+  "reads_equiv_valid_inv A aag (\<lambda>s. aag_can_read aag oref) (get_object True oref)"
   apply (unfold get_object_def fun_app_def)
   apply (subst gets_apply)
   apply (wp gets_apply_ev | wp (once) hoare_drop_imps)+
+  sorry (* FIXME: broken by touched-addrs -robs
+    It seems the True version of these is definitely what's needed. So the sorry belongs here.
   apply (fastforce elim: reads_equivE equiv_forE)
   done
+*)
 
 lemma get_cap_rev:
-  "reads_equiv_valid_inv A aag (K (aag_can_read aag (fst slot))) (get_cap slot)"
+  "reads_equiv_valid_inv A aag (K (aag_can_read aag (fst slot))) (get_cap True slot)"
   unfolding get_cap_def
   by (wp get_object_rev | wpc | simp add: split_def)+
+
+(* FIXME: Looks like we need something like this too.
+   If we follow the assumptions of get_object_rev, this says recording the touch of the object
+   with touch_object preserves the unwinding relation of the currently running thread.
+   I'm pretty sure this is true if the unwinding relation doesn't have anything to do with the
+   new TA set, but we might need to put some work into some EV rules to help this along. -robs *)
+lemma touch_objects_rev:
+  "reads_equiv_valid_inv A aag (\<lambda>s. \<forall>oref\<in>orefs. aag_can_read aag oref) (touch_objects orefs)"
+  unfolding touch_objects_def fun_app_def
+  apply wp
+           (* FIXME: Perhaps we just need to move *this* goal to the arch-split interface
+              and prove it in Arch like is currently done for dmo_loadWord_ev. -robs *)
+           apply(clarsimp simp:equiv_valid_def2 equiv_valid_2_def)
+           apply(clarsimp simp:simpler_do_machine_op_addTouchedAddresses_def simpler_modify_def
+             reads_equiv_def states_equiv_for_def equiv_for_def equiv_asids_def)
+           apply(rule conjI)
+            apply clarsimp
+            (* FIXME: Move this to an arch-specific section of the proofs and demand it
+               via some appropriate arch-split interface. -robs *)
+            apply(clarsimp simp:RISCV64.equiv_asid_def obind_def ta_filter_def)
+           (* FIXME: Might need to assert the invariant equivalence A doesn't demand something silly of the
+              TA set, e.g. requiring it *not* to be equal, but not sure how best to express this. -robs *)
+           defer
+          apply(wp return_ev)
+         apply(wp return_ev)
+        apply(wp return_ev)
+       apply(wp return_ev)
+      apply(wp assert_ev)
+     apply(wp assert_ev)
+    apply(wp gets_ev)
+   apply(wp gets_ev)
+  apply clarsimp
+  (* FIXME: oh, this goal is too strong. probably a knock-on effect of earlier
+     goals not being properly proved yet. -robs *)
+  sorry
+
+lemma touch_object_rev:
+  "reads_equiv_valid_inv A aag (\<lambda>s. aag_can_read aag oref) (touch_object oref)"
+  unfolding touch_object_def using touch_objects_rev[where orefs="{oref}"]
+  by force
 
 declare if_weak_cong[cong]
 
@@ -63,12 +106,10 @@ proof(unfold resolve_address_bits_def, induct ref arbitrary: s rule: resolve_add
                          split del: if_split)
     apply (wp "1.hyps")
                    apply (assumption | simp add: in_monad | rule conjI)+
-           apply (wp get_cap_rev get_cap_wp whenE_throwError_wp)+
-    sorry (* XXX: broken by touched_addresses. -robs
+           apply (wp get_cap_rev get_cap_wp whenE_throwError_wp touch_object_rev touch_object_wp')+
     apply (auto simp: cte_wp_at_caps_of_state is_cap_simps cap_auth_conferred_def
                 dest: caps_of_state_pasObjectAbs_eq)
     done
-    *)
 qed
 
 lemma resolve_address_bits_rev:
@@ -77,25 +118,58 @@ lemma resolve_address_bits_rev:
      (resolve_address_bits ref)"
   by (rule use_spec_ev[OF resolve_address_bits_spec_rev])
 
+(* FIXME: Propagate the ta_f=True generalisation to Access_AC? -robs *)
+thm owns_thread_owns_cspace
+lemma owns_thread_owns_cspace_True:
+  "\<lbrakk> is_subject aag thread; pas_refined aag s; get_tcb True thread s = Some tcb;
+     is_cnode_cap (tcb_ctable tcb); x \<in> obj_refs_ac (tcb_ctable tcb) \<rbrakk>
+     \<Longrightarrow> is_subject aag x"
+  apply (drule get_tcb_SomeD)
+  apply (clarsimp simp:ta_filter_def split:if_splits)
+  apply (drule cte_wp_at_tcbI[where t="(thread, tcb_cnode_index 0)"
+                                and P="\<lambda>cap. cap = tcb_ctable tcb", simplified])
+  apply (auto simp: cte_wp_at_caps_of_state is_cap_simps cap_auth_conferred_def
+              elim: caps_of_state_pasObjectAbs_eq[where p = "(thread, tcb_cnode_index 0)"])
+  done
+
+(* FIXME: The next lemma wants this to be true for `get_tcb True`, but (IIUC) it's not yet true
+   because we haven't changed reads_equiv to equate the TA set; therefore the access attempt
+   might succeed for s and fail for t, and vice versa.
+   Is it possible for us to get around this by saying the only difference in behaviour is
+   failure-related, but by this point we can assume it never fails? -robs *)
+thm requiv_get_tcb_eq
+lemma requiv_get_tcb_True_eq[intro]:
+  "\<lbrakk> reads_equiv aag s t; is_subject aag thread \<rbrakk>
+     \<Longrightarrow> get_tcb True thread s = get_tcb True thread t"
+  apply (clarsimp simp: reads_equiv_def2 get_tcb_def obind_def ta_filter_def
+    elim: states_equiv_forE_kheap split: option.splits kernel_object.splits)
+  sorry (* FIXME: broken by touched-addrs -robs *)
+
 lemma lookup_slot_for_thread_rev:
   "reads_equiv_valid_inv A aag (pas_refined aag and K (is_subject aag thread))
                          (lookup_slot_for_thread thread cptr)"
   unfolding lookup_slot_for_thread_def fun_app_def
   apply (rule gen_asm_ev)
-  apply (wp resolve_address_bits_rev gets_the_ev | simp)+
+  apply (wp resolve_address_bits_rev gets_the_ev touch_object_rev touch_object_wp' | simp)+
   apply (rule conjI)
    apply blast
   apply (clarsimp simp: tcb.splits)
-  apply (erule (2) owns_thread_owns_cspace)
+  apply (erule owns_thread_owns_cspace_True (1))
+     apply force
+    (* FIXME: looks like generalising owns_thread_owns_cspace to ta_f=True isn't enough,
+       we also need to allow for state updates. -robs *)
+    defer
    defer
    apply (case_tac tcb_ctablea, simp_all)
+  sorry (* FIXME: broken by touched-addrs -robs
   done
+*)
 
 lemma lookup_cap_and_slot_rev[wp]:
   "reads_equiv_valid_inv A aag (pas_refined aag and K (is_subject aag thread))
                          (lookup_cap_and_slot thread cptr)"
   unfolding lookup_cap_and_slot_def
-  by (wp lookup_slot_for_thread_rev lookup_slot_for_thread_authorised get_cap_rev
+  by (wp lookup_slot_for_thread_rev lookup_slot_for_thread_authorised get_cap_rev touch_object_rev
       | simp add: split_def
       | strengthen aag_can_read_self)+
 
@@ -154,13 +228,20 @@ lemma set_cdt_list_ev2:
   apply (fastforce simp: equiv_for_or or_comp_dist reads_equiv_cdt_list_update affects_equiv_cdt_list_update)
   done
 
-lemma kheap_get_tcb_eq: "kheap s ref = kheap t ref \<Longrightarrow> get_tcb ref s = get_tcb ref t"
+lemma kheap_get_tcb_eq: "kheap s ref = kheap t ref \<Longrightarrow> get_tcb False ref s = get_tcb False ref t"
+  by (simp add: get_tcb_def)
+
+(* FIXME: If reads_equiv equated TA, we might be able to use something like this. -robs *)
+lemma f_kheap_get_tcb_eq:
+  "f_kheap ta_f s ref = f_kheap ta_f t ref \<Longrightarrow> get_tcb ta_f ref s = get_tcb ta_f ref t"
   by (simp add: get_tcb_def)
 
 lemma thread_get_rev:
   "reads_equiv_valid_inv A aag (K (aag_can_read aag thread)) (thread_get f thread)"
   unfolding thread_get_def fun_app_def
+  sorry (* FIXME: broken by touched-addrs -robs
   by (wp gets_the_ev) (fastforce intro: kheap_get_tcb_eq elim: reads_equivE equiv_forD)
+*)
 
 lemma update_cdt_reads_respects:
   "reads_respects aag l (K (\<forall>rv rv'.
@@ -205,7 +286,7 @@ lemma set_untyped_cap_as_full_reads_respects:
   "reads_respects aag l (K (aag_can_read aag (fst src_slot)))
      (set_untyped_cap_as_full src_cap new_cap src_slot)"
   unfolding set_untyped_cap_as_full_def
-  apply (wp set_cap_reads_respects)
+  apply (wp set_cap_reads_respects touch_object_rev touch_object_wp')
   apply auto
   done
 
@@ -225,7 +306,7 @@ lemma cap_insert_reads_respects:
   apply (simp only: cap_insert_ext_def)
   apply (wp set_original_reads_respects update_cdt_reads_respects set_cap_reads_respects
             gets_apply_ev update_cdt_list_reads_respects set_untyped_cap_as_full_reads_respects
-            get_cap_wp get_cap_rev
+            get_cap_wp get_cap_rev touch_object_rev touch_object_wp'
          | simp split del: if_split
          | clarsimp simp: equiv_for_def split: option.splits)+
   by (fastforce simp: reads_equiv_def2 equiv_for_def
@@ -246,7 +327,7 @@ lemma cap_move_reads_respects:
   apply (rule gen_asm_ev)
   apply (elim conjE)
   apply (wp set_original_reads_respects gets_apply_ev update_cdt_reads_respects
-            set_cap_reads_respects update_cdt_list_reads_respects
+            set_cap_reads_respects update_cdt_list_reads_respects touch_objects_rev
          | simp split del: if_split | fastforce simp: equiv_for_def split: option.splits)+
   apply (intro impI conjI allI)
   apply (fastforce simp: reads_equiv_def2 equiv_for_def
@@ -276,7 +357,7 @@ lemma cap_swap_reads_respects:
   apply (simp add: bind_assoc cap_swap_ext_def)
   apply (rule gen_asm_ev)
   apply (wp set_original_reads_respects update_cdt_reads_respects gets_apply_ev
-            set_cap_reads_respects update_cdt_list_reads_respects
+            set_cap_reads_respects update_cdt_list_reads_respects touch_objects_rev
          | simp split del: if_split | fastforce simp: equiv_for_def split: option.splits)+
   apply (intro impI conjI allI)
       apply ((fastforce simp: reads_equiv_def2 equiv_for_def
@@ -346,13 +427,19 @@ locale CNode_IF_1 =
 begin
 
 crunch globals_equiv[wp]: set_untyped_cap_as_full "globals_equiv st"
+  (wp: touch_object_wp')
+
+(* FIXME: Move back as far as possible; arch-split out the RISCV64-specific references. -robs *)
+lemma globals_equiv_ms_ta_independent[intro!, simp]:
+  "globals_equiv s (ms_ta_update taf sa) = globals_equiv s sa"
+  by (clarsimp simp:globals_equiv_def RISCV64.arch_globals_equiv_def idle_equiv_def)
 
 lemma cap_insert_globals_equiv:
   "\<lbrace>globals_equiv s and valid_global_objs and valid_arch_state\<rbrace>
    cap_insert new_cap src_slot dest_slot
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding cap_insert_def fun_app_def
-  by (wpsimp wp: update_cdt_globals_equiv set_original_globals_equiv
+  by (wpsimp wp: update_cdt_globals_equiv set_original_globals_equiv touch_object_wp'
                  set_cap_globals_equiv hoare_drop_imps dxo_wp_weak)
 
 lemma cap_move_globals_equiv:
@@ -360,14 +447,16 @@ lemma cap_move_globals_equiv:
    cap_move new_cap src_slot dest_slot
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding cap_move_def fun_app_def
-  by (wpsimp wp: set_original_globals_equiv set_cdt_globals_equiv set_cap_globals_equiv dxo_wp_weak)
+  by (wpsimp wp: set_original_globals_equiv set_cdt_globals_equiv set_cap_globals_equiv dxo_wp_weak
+    touch_objects_wp)
 
 lemma cap_swap_globals_equiv:
   "\<lbrace>globals_equiv s and valid_global_objs and valid_arch_state\<rbrace>
    cap_swap cap1 slot1 cap2 slot2
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding cap_swap_def
-  by (wpsimp wp: set_original_globals_equiv set_cdt_globals_equiv set_cap_globals_equiv dxo_wp_weak)
+  by (wpsimp wp: set_original_globals_equiv set_cdt_globals_equiv set_cap_globals_equiv dxo_wp_weak
+    touch_objects_wp)
 
 definition is_irq_at :: "('z::state_ext) state \<Rightarrow> irq \<Rightarrow> nat \<Rightarrow> bool" where
   "is_irq_at s \<equiv> \<lambda>irq pos. irq_at pos (irq_masks (machine_state s)) = Some irq"

@@ -83,7 +83,7 @@ lemma integrity_asids_refl[Access_AC_assms, simp]:
 lemma integrity_asids_update_autarch[Access_AC_assms]:
   "\<lbrakk> \<forall>x a. integrity_asids aag {pasSubject aag} x a st s; is_subject aag ptr \<rbrakk>
      \<Longrightarrow> \<forall>x a. integrity_asids aag {pasSubject aag} x a st (s\<lparr>kheap := kheap s(ptr \<mapsto> obj)\<rparr>)"
-  by (auto simp: opt_map_def)
+  by (auto simp: opt_map_def obind_def)
 
 end
 
@@ -99,7 +99,7 @@ qed
 context Arch begin global_naming RISCV64
 
 lemma ipcframe_subset_page:
-  "\<lbrakk> valid_objs s; get_tcb p s = Some tcb;
+  "\<lbrakk> valid_objs s; get_tcb False p s = Some tcb;
      tcb_ipcframe tcb = ArchObjectCap (FrameCap p' R vms d xx);
      x \<in> ptr_range (p' + (tcb_ipc_buffer tcb && mask (pageBitsForSize vms))) msg_align_bits \<rbrakk>
      \<Longrightarrow> x \<in> ptr_range p' (pageBitsForSize vms)"
@@ -117,7 +117,7 @@ lemma ipcframe_subset_page:
 
 lemma auth_ipc_buffers_member_def:
   "x \<in> auth_ipc_buffers s p =
-   (\<exists>tcb p' R vms xx. get_tcb p s = Some tcb
+   (\<exists>tcb p' R vms xx. get_tcb False p s = Some tcb
                    \<and> tcb_ipcframe tcb = (ArchObjectCap (FrameCap p' R vms False xx))
                    \<and> caps_of_state s (p, tcb_cnode_index 4) =
                       Some (ArchObjectCap (FrameCap p' R vms False xx))
@@ -129,7 +129,7 @@ lemma auth_ipc_buffers_member_def:
 
 lemma auth_ipc_buffers_member[Access_AC_assms]:
   "\<lbrakk> x \<in> auth_ipc_buffers s p; valid_objs s \<rbrakk>
-     \<Longrightarrow> \<exists>tcb acap. get_tcb p s = Some tcb
+     \<Longrightarrow> \<exists>tcb acap. get_tcb False p s = Some tcb
                   \<and> tcb_ipcframe tcb = (ArchObjectCap acap)
                   \<and> caps_of_state s (p, tcb_cnode_index 4) = Some (ArchObjectCap acap)
                   \<and> Write \<in> arch_cap_auth_conferred acap
@@ -168,7 +168,7 @@ context Arch begin global_naming RISCV64
 lemma pas_refined_irq_state_independent[intro!, simp]:
   "pas_refined x (s\<lparr>machine_state := machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>) =
    pas_refined x s"
-  by (simp add: pas_refined_def)
+  by (simp add: pas_refined_def auth_graph_map_def state_objs_to_policy_def)
 
 end
 

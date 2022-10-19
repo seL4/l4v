@@ -12,9 +12,9 @@ begin
 context Arch begin global_naming RISCV64
 
 lemma vspace_for_asid_truncate[simp]:
-  "vspace_for_asid asid (truncate_state s) = vspace_for_asid asid s"
+  "vspace_for_asid ta_f asid (truncate_state s) = vspace_for_asid ta_f asid s"
   by (simp add: vspace_for_asid_def pool_for_asid_def obind_def oassert_def oreturn_def swp_def
-         split: option.splits)
+    cong:option.case_cong split:option.splits)
 
 lemma pool_for_asid_truncate[simp]:
   "pool_for_asid asid (truncate_state s) = pool_for_asid asid s"
@@ -22,7 +22,8 @@ lemma pool_for_asid_truncate[simp]:
 
 lemma vs_lookup_table_truncate[simp]:
   "vs_lookup_table l asid vptr (truncate_state s) = vs_lookup_table l asid vptr s"
-  by (simp add: vs_lookup_table_def obind_def oreturn_def split: option.splits)
+  by (simp add: vs_lookup_table_def obind_def oreturn_def opt_map_def vspace_for_pool_def
+    cong:option.case_cong split:option.splits)
 
 lemma vs_lookup_slot_truncate[simp]:
   "vs_lookup_slot l asid vptr (truncate_state s) = vs_lookup_slot l asid vptr s"
@@ -33,6 +34,7 @@ lemma pt_lookup_from_level_bcorres[wp]:
   by (induct l arbitrary: r b c rule: bit0.minus_induct; wpsimp simp: pt_lookup_from_level_simps)
 
 crunch (bcorres) bcorres[wp]: arch_finalise_cap truncate_state
+  (simp: vs_all_pts_of_def vs_all_pts_of_from_level_def)
 crunch (bcorres) bcorres[wp]: prepare_thread_delete truncate_state
 
 end

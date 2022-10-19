@@ -51,6 +51,7 @@ definition
   cancel_all_ipc :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "cancel_all_ipc epptr \<equiv> do
+     touch_object epptr;
      ep \<leftarrow> get_endpoint epptr;
      case ep of IdleEP \<Rightarrow> return ()
                | _ \<Rightarrow> do
@@ -74,6 +75,7 @@ definition
   cancel_badged_sends :: "obj_ref \<Rightarrow> badge \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "cancel_badged_sends epptr badge \<equiv> do
+    touch_object epptr;
     ep \<leftarrow> get_endpoint epptr;
     case ep of
           IdleEP \<Rightarrow> return ()
@@ -81,6 +83,7 @@ where
         | SendEP queue \<Rightarrow>  do
             set_endpoint epptr IdleEP;
             queue' \<leftarrow> (swp filterM queue) (\<lambda> t. do
+                touch_object t;
                 st \<leftarrow> get_thread_state t;
                 if blocking_ipc_badge st = badge then do
                   set_thread_state t Restart;
@@ -104,6 +107,7 @@ abbreviation
 where
   "do_unbind_notification ntfnptr ntfn tcbptr \<equiv> do
       ntfn' \<leftarrow> return $ ntfn_set_bound_tcb ntfn None;
+      touch_object ntfnptr;
       set_notification ntfnptr ntfn';
       set_bound_notification tcbptr None
     od"
@@ -112,9 +116,11 @@ definition
   unbind_notification :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "unbind_notification tcb \<equiv> do
+     touch_object tcb;
      ntfnptr \<leftarrow> get_bound_notification tcb;
      case ntfnptr of
          Some ntfnptr' \<Rightarrow> do
+             touch_object ntfnptr';
              ntfn \<leftarrow> get_notification ntfnptr';
              do_unbind_notification ntfnptr' ntfn tcb
           od
@@ -125,6 +131,7 @@ definition
   unbind_maybe_notification :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
   "unbind_maybe_notification ntfnptr \<equiv> do
+     touch_object ntfnptr;
      ntfn \<leftarrow> get_notification ntfnptr;
      (case ntfn_bound_tcb ntfn of
        Some t \<Rightarrow> do_unbind_notification ntfnptr ntfn t
@@ -135,6 +142,7 @@ definition
   cancel_all_signals :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "cancel_all_signals ntfnptr \<equiv> do
+     touch_object ntfnptr;
      ntfn \<leftarrow> get_notification ntfnptr;
      case ntfn_obj ntfn of WaitingNtfn queue \<Rightarrow> do
                       _ \<leftarrow> set_notification ntfnptr $ ntfn_set_obj ntfn IdleNtfn;
@@ -162,6 +170,7 @@ definition
 where
   "blocked_cancel_ipc state tptr \<equiv> do
      epptr \<leftarrow> get_blocking_object state;
+     touch_object epptr;
      ep \<leftarrow> get_endpoint epptr;
      queue \<leftarrow> get_ep_queue ep;
      queue' \<leftarrow> return $ remove1 tptr queue;
@@ -245,15 +254,33 @@ text \<open>Detect whether a capability is the final capability to a given objec
 remaining in the system. Finalisation actions need to be taken when the final
 capability to the object is deleted.\<close>
 definition
-  is_final_cap' :: "cap \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
- "is_final_cap' cap s \<equiv>
-    \<exists>cref. {cref. \<exists>cap'. fst (get_cap cref s) = {(cap', s)}
+  is_final_cap' :: "bool \<Rightarrow> cap \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
+ "is_final_cap' ta_f cap s \<equiv>
+    \<exists>cref. {cref. \<exists>cap'. fst (get_cap ta_f cref s) = {(cap', s)}
                        \<and> (gen_obj_refs cap \<inter> gen_obj_refs cap' \<noteq> {})}
          = {cref}"
 
 definition
+  cslot_ptrs_of :: "bool \<Rightarrow> cap \<Rightarrow> 'z::state_ext state \<Rightarrow> cslot_ptr set" where
+  "cslot_ptrs_of ta_f cap s \<equiv>
+     {cref. \<exists>cap'. fst (get_cap ta_f cref s) = {(cap', s)}
+       \<and> (gen_obj_refs cap \<inter> gen_obj_refs cap' \<noteq> {})}"
+
+lemma is_final_cap'_def2:
+  "is_final_cap' ta_f cap s \<equiv> \<exists>cref. cslot_ptrs_of ta_f cap s = {cref}"
+  unfolding cslot_ptrs_of_def is_final_cap'_def
+  by simp
+
+definition
   is_final_cap :: "cap \<Rightarrow> (bool,'z::state_ext) s_monad" where
-  "is_final_cap cap \<equiv> gets (is_final_cap' cap)"
+  "is_final_cap cap \<equiv> do s_init \<leftarrow> get;
+     \<comment> \<open>Overcautiously for now, account for possible accesses to *every* cap for this object.\<close>
+     touch_objects $ fst ` cslot_ptrs_of False cap s_init;
+     s \<leftarrow> get;
+     \<comment> \<open>Enforce the answer did not rely on accessing anything not accounted for by the TA set.\<close>
+     assert (is_final_cap' False cap s = is_final_cap' True cap s);
+     return $ is_final_cap' False cap s
+   od"
 
 text \<open>Actions to be taken after an IRQ handler capability is deleted.\<close>
 definition
@@ -277,7 +304,8 @@ definition
   empty_slot :: "cslot_ptr \<Rightarrow> cap \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
  "empty_slot slot cleanup_info \<equiv> do
-      cap \<leftarrow> get_cap slot;
+      touch_object (fst slot);
+      cap \<leftarrow> get_cap True slot;
       if cap = NullCap then
         return ()
       else do
@@ -300,7 +328,8 @@ process will be sufficient.\<close>
 definition
   cap_delete_one :: "cslot_ptr \<Rightarrow> (unit,'z::state_ext) s_monad" where
  "cap_delete_one slot \<equiv> do
-    cap \<leftarrow> get_cap slot;
+    touch_object (fst slot);
+    cap \<leftarrow> get_cap True slot;
     unless (cap = NullCap) $ do
       final \<leftarrow> is_final_cap cap;
       fast_finalise cap final;
@@ -315,7 +344,7 @@ definition
 where
  "reply_cancel_ipc tptr \<equiv> do
     thread_set (\<lambda>tcb. tcb \<lparr> tcb_fault := None \<rparr>) tptr;
-    cap \<leftarrow> get_cap (tptr, tcb_cnode_index 2);
+    cap \<leftarrow> get_cap True (tptr, tcb_cnode_index 2);
     descs \<leftarrow> gets (descendants_of (tptr, tcb_cnode_index 2) o cdt);
     when (descs \<noteq> {}) $ do
       assert (\<exists>cslot_ptr. descs = {cslot_ptr});
@@ -330,6 +359,7 @@ definition
   cancel_signal :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "cancel_signal threadptr ntfnptr \<equiv> do
+     touch_object ntfnptr;
      ntfn \<leftarrow> get_notification ntfnptr;
      queue \<leftarrow> (case ntfn_obj ntfn of WaitingNtfn queue \<Rightarrow> return queue
                         | _ \<Rightarrow> fail);
@@ -345,6 +375,7 @@ definition
   cancel_ipc :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "cancel_ipc tptr \<equiv> do
+     touch_object tptr;
      state \<leftarrow> get_thread_state tptr;
      case state
        of

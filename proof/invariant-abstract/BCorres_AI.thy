@@ -78,62 +78,43 @@ crunch (bcorres) bcorres[wp]:
   (ignore: maskInterrupt)
 
 lemma get_cap_det:
-  "(r,s') \<in> fst (get_cap p s) \<Longrightarrow> get_cap p s = ({(r,s)}, False)"
+  "(r,s') \<in> fst (get_cap ta_f p s) \<Longrightarrow> get_cap ta_f p s = ({(r,s)}, False)"
   apply (cases p)
-  apply (clarsimp simp add: in_monad get_cap_def get_object_def
-                     split: kernel_object.split_asm)
-   apply (clarsimp simp add: bind_def return_def assert_opt_def simpler_gets_def)
-  apply (simp add: bind_def simpler_gets_def return_def assert_opt_def)
-  done
-
-lemma get_cap_x_det:
-  "(r,s') \<in> fst (get_cap_x p s) \<Longrightarrow> get_cap_x p s = ({(r,s)}, False)"
-  apply (cases p)
-  apply (clarsimp simp add: in_monad get_cap_x_def get_object_x_def simpler_do_machine_op_getTouchedAddresses_def
+  apply (clarsimp simp add: in_monad get_cap_def get_object_def simpler_do_machine_op_getTouchedAddresses_def
                      split: kernel_object.split_asm)
    apply (clarsimp simp add: bind_def obind_def return_def assert_opt_def simpler_gets_def select_f_def simpler_modify_def)
   apply (clarsimp simp add: bind_def obind_def select_f_def simpler_gets_def return_def simpler_modify_def)
   done
 
 lemma get_object_bcorres_any[wp]:
-  "bcorres_underlying (trans_state e) (get_object a) (get_object a)"
+  "bcorres_underlying (trans_state e) (get_object ta_f a) (get_object ta_f a)"
   by (wpsimp simp: get_object_def)
 
-lemma get_object_x_bcorres_any[wp]:
-  "bcorres_underlying (trans_state e) (get_object_x a) (get_object_x a)"
-  by (wpsimp simp: get_object_x_def simpler_do_machine_op_getTouchedAddresses_def)
-
 lemma get_cap_bcorres_any:
-  "bcorres_underlying (trans_state e) (get_cap x) (get_cap x)"
+  "bcorres_underlying (trans_state e) (get_cap ta_f x) (get_cap ta_f x)"
   by (wpsimp simp: get_cap_def)
 
-lemma get_cap_x_bcorres_any:
-  "bcorres_underlying (trans_state e) (get_cap_x x) (get_cap_x x)"
-  by (wpsimp simp: get_cap_x_def)
-
 lemma get_cap_helper:
-  "(fst (get_cap cref (trans_state e x)) =
-    {(cap', trans_state e x)}) = (fst (get_cap cref x) = {(cap', x)})"
+  "(fst (get_cap ta_f cref (trans_state e x)) =
+    {(cap', trans_state e x)}) = (fst (get_cap ta_f cref x) = {(cap', x)})"
   apply (rule iffI)
    apply (cut_tac x=cref and e="\<lambda>_. exst x" in get_cap_bcorres_any)
    apply (simp add: bcorres_underlying_def)
    apply (drule_tac x="trans_state e x" in spec)
    apply (simp add: s_bcorres_underlying_def)
-   apply (drule get_cap_det)
-   apply (simp add: trans_state_update')
+   apply (force dest:get_cap_det simp:trans_state_update')
   apply (cut_tac x=cref and e="e" in get_cap_bcorres_any)
   apply (simp add: bcorres_underlying_def)
   apply (drule_tac x="x" in spec)
   apply (simp add: s_bcorres_underlying_def)
-  apply (drule get_cap_det)
-  apply simp
+  apply (force dest:get_cap_det)
   done
 
 lemma is_final_cap_bcorres[wp]:
   "bcorres (is_final_cap a) (is_final_cap a)"
-  by (simp add: is_final_cap_def is_final_cap'_def gets_def get_cap_helper | wp)+
+  by (simp add: is_final_cap_def is_final_cap'_def gets_def get_cap_helper cslot_ptrs_of_def | wp)+
 
-lemma get_tcb_truncate[simp]: "get_tcb a (truncate_state s) = get_tcb a s"
+lemma get_tcb_truncate[simp]: "get_tcb ta_f a (truncate_state s) = get_tcb ta_f a s"
   by (simp add: get_tcb_def)
 
 crunch (bcorres) bcorres[wp]:
@@ -160,7 +141,7 @@ lemma preemption_point_bcorres[wp]:
 crunch (bcorres) bcorres[wp]: cap_swap_for_delete truncate_state
 
 lemma gets_the_get_tcb_bcorres[wp]:
-  "bcorres (gets_the (get_tcb a)) (gets_the (get_tcb a)) "
+  "bcorres (gets_the (get_tcb ta_f a)) (gets_the (get_tcb ta_f a)) "
   by (wpsimp simp: gets_the_def bcorres_underlying_def assert_opt_def split: option.splits|rule conjI)+
 
 end

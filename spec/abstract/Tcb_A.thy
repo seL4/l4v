@@ -32,7 +32,8 @@ capability can be generated immediately if they wish to issue one. This function
 sets up a new master Reply capability if one does not exist.\<close>
 definition
   "setup_reply_master thread \<equiv> do
-     old_cap <- get_cap (thread, tcb_cnode_index 2);
+     touch_object thread;
+     old_cap <- get_cap True (thread, tcb_cnode_index 2);
      when (old_cap = NullCap) $ do
          set_original (thread, tcb_cnode_index 2) True;
          set_cap (ReplyCap thread True {AllowGrant, AllowWrite}) (thread, tcb_cnode_index 2)
@@ -43,6 +44,7 @@ text \<open>Reactivate a thread if it is not already running.\<close>
 definition
   restart :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
  "restart thread \<equiv> do
+    touch_object thread;
     state \<leftarrow> get_thread_state thread;
     when (\<not> runnable state \<and> \<not> idle state) $ do
       cancel_ipc thread;
@@ -61,6 +63,7 @@ definition
   activate_thread :: "(unit,'z::state_ext) s_monad" where
   "activate_thread \<equiv> do
      thread \<leftarrow> gets cur_thread;
+     touch_object thread;
      state \<leftarrow> get_thread_state thread;
      (case state
        of Running \<Rightarrow> return ()
@@ -78,11 +81,18 @@ section "Thread Message Formats"
 definition
   load_word_offs :: "obj_ref \<Rightarrow> nat \<Rightarrow> (machine_word,'z::state_ext) s_monad" where
  "load_word_offs ptr offs \<equiv>
-    do_machine_op $ loadWord (ptr + of_nat (offs * word_size))"
+  do s \<leftarrow> get;
+    touch_objects (user_frames_of (ptr + of_nat (offs * word_size)) s);
+    do_machine_op $ loadWord (ptr + of_nat (offs * word_size))
+  od"
+
 definition
   load_word_offs_word :: "obj_ref \<Rightarrow> data \<Rightarrow> (machine_word,'z::state_ext) s_monad" where
  "load_word_offs_word ptr offs \<equiv>
-    do_machine_op $ loadWord (ptr + (offs * word_size))"
+  do s \<leftarrow> get;
+    touch_objects (user_frames_of (ptr + (offs * word_size)) s);
+    do_machine_op $ loadWord (ptr + (offs * word_size))
+  od"
 
 text \<open>Copy message registers from one thread to another.\<close>
 definition
@@ -125,7 +135,8 @@ the cap to be inserted has been moved or deleted.\<close>
 definition
   check_cap_at :: "cap \<Rightarrow> cslot_ptr \<Rightarrow> (unit,'z::state_ext) s_monad \<Rightarrow> (unit,'z::state_ext) s_monad" where
  "check_cap_at cap slot m \<equiv> do
-    cap' \<leftarrow> get_cap slot;
+    touch_object (fst slot);
+    cap' \<leftarrow> get_cap True slot;
     when (same_object_as cap cap') m
   od"
 
@@ -135,6 +146,7 @@ definition
   bind_notification :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "bind_notification tcbptr ntfnptr \<equiv> do
+     touch_object ntfnptr;
      ntfn \<leftarrow> get_notification ntfnptr;
      ntfn' \<leftarrow> return $ ntfn_set_bound_tcb ntfn (Some tcbptr);
      set_notification ntfnptr ntfn';
@@ -261,6 +273,7 @@ definition
      cur \<leftarrow> gets cur_thread;
      tcb_sched_action tcb_sched_dequeue tptr;
      thread_set_domain tptr new_dom;
+     touch_object tptr;
      ts \<leftarrow> get_thread_state tptr;
      when (runnable ts) (tcb_sched_action tcb_sched_enqueue tptr);
      when (tptr = cur) reschedule_required
@@ -277,6 +290,7 @@ definition
   get_mrs :: "obj_ref \<Rightarrow> obj_ref option \<Rightarrow> message_info \<Rightarrow>
               (message list,'z::state_ext) s_monad" where
   "get_mrs thread buf info \<equiv> do
+     touch_object thread;
      context \<leftarrow> thread_get (arch_tcb_get_registers o tcb_arch) thread;
      cpu_mrs \<leftarrow> return (map context msg_registers);
      buf_mrs \<leftarrow> case buf

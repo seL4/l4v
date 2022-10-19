@@ -3,7 +3,7 @@ devices:
   start: 0x0
 - end: 0x10000000
   start: 0xa03000
-- end: 0xfffff000
+- end: 0xfffffff0
   start: 0x2ff00000
 memory:
 - end: 0x2ff00000

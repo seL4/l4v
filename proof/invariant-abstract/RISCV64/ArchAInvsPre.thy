@@ -33,15 +33,15 @@ lemma kernel_mappings_slots_eq:
 lemma ucast_ucast_mask_low: "(ucast (x && mask asid_low_bits) :: asid_low_index) = ucast x"
   by (rule ucast_mask_drop, simp add: asid_low_bits_def)
 
-lemma valid_global_table_rights:
+lemma valid_global_table_rights[simplified f_kheap_to_kheap]:
   "\<lbrakk> pt_ptr \<in> riscv_global_pts (arch_state s) level;
      valid_global_tables s; valid_global_arch_objs s \<rbrakk> \<Longrightarrow>
-   \<exists>pt. pts_of s pt_ptr = Some pt \<and> (\<forall>idx. pte_rights_of (pt idx) = vm_kernel_only)"
+   \<exists>pt. pts_of False s pt_ptr = Some pt \<and> (\<forall>idx. pte_rights_of (pt idx) = vm_kernel_only)"
   by (frule (1) global_pts_ofD) (clarsimp simp: valid_global_tables_def Let_def)
 
-lemma ptes_of_idx:
-  "\<lbrakk> ptes_of s (pt_slot_offset level pt_ptr p) = Some pte;
-     pts_of s pt_ptr = Some pt; pspace_aligned s \<rbrakk> \<Longrightarrow>
+lemma ptes_of_idx[simplified f_kheap_to_kheap]:
+  "\<lbrakk> ptes_of False s (pt_slot_offset level pt_ptr p) = Some pte;
+     pts_of False s pt_ptr = Some pt; pspace_aligned s \<rbrakk> \<Longrightarrow>
    \<exists>idx. pt idx = pte"
   apply (drule_tac pt_ptr=pt_ptr in pspace_aligned_pts_ofD, simp)
   apply (fastforce simp: pte_of_def)
@@ -52,24 +52,24 @@ lemma valid_global_arch_objs_global_ptD:
    riscv_global_pt (arch_state s) \<in> riscv_global_pts (arch_state s) max_pt_level"
   by (auto simp: valid_global_arch_objs_def Let_def riscv_global_pt_def)
 
-lemma equal_kernel_mappingsD:
-  "\<lbrakk> vspace_for_asid asid s = Some pt_ptr; pts_of s pt_ptr = Some pt;
+lemma equal_kernel_mappingsD[simplified f_kheap_to_kheap]:
+  "\<lbrakk> vspace_for_asid False asid s = Some pt_ptr; pts_of False s pt_ptr = Some pt;
      equal_kernel_mappings s \<rbrakk> \<Longrightarrow> has_kernel_mappings pt s"
   by (simp add: equal_kernel_mappings_def)
 
-lemma has_kernel_mappingsD:
+lemma has_kernel_mappingsD[simplified f_kheap_to_kheap]:
   "\<lbrakk> has_kernel_mappings pt s; valid_global_arch_objs s; idx \<in> kernel_mapping_slots;
      pte = pt idx \<rbrakk> \<Longrightarrow>
-   \<exists>pt'. pts_of s (riscv_global_pt (arch_state s)) = Some pt' \<and> pte = pt' idx"
+   \<exists>pt'. pts_of False s (riscv_global_pt (arch_state s)) = Some pt' \<and> pte = pt' idx"
   unfolding has_kernel_mappings_def
   by (fastforce simp: pt_at_eq dest: valid_global_arch_objs_pt_at)
 
-lemma pte_rights_of_kernel:
+lemma pte_rights_of_kernel[simplified f_kheap_to_kheap]:
   "\<lbrakk> p \<in> kernel_mappings; canonical_address p; valid_global_vspace_mappings s;
      equal_kernel_mappings s; valid_global_tables s; valid_global_arch_objs s; valid_vspace_objs s;
      valid_asid_table s; valid_uses s; pspace_aligned s;
-     (\<exists>asid. vspace_for_asid asid s = Some pt_ref) \<or> pt_ref = riscv_global_pt (arch_state s);
-     pt_lookup_slot pt_ref p (ptes_of s) = Some (level, slot); ptes_of s slot = Some pte \<rbrakk>
+     (\<exists>asid. vspace_for_asid False asid s = Some pt_ref) \<or> pt_ref = riscv_global_pt (arch_state s);
+     pt_lookup_slot pt_ref p (ptes_of False s) = Some (level, slot); ptes_of False s slot = Some pte \<rbrakk>
    \<Longrightarrow> pte_rights_of pte = vm_kernel_only"
   apply (clarsimp simp: pt_lookup_slot_def pt_lookup_slot_from_level_def)
   apply (rename_tac pt_ptr)
@@ -100,12 +100,12 @@ lemma pte_rights_of_kernel:
   done
 
 
-lemma some_get_page_info_kmapsD:
-  "\<lbrakk> get_page_info (aobjs_of s) pt_ref p = Some (b, a, attr, r);
+lemma some_get_page_info_kmapsD[simplified f_kheap_to_kheap]:
+  "\<lbrakk> get_page_info (aobjs_of False s) pt_ref p = Some (b, a, attr, r);
      p \<in> kernel_mappings; canonical_address p; valid_global_vspace_mappings s;
      equal_kernel_mappings s; valid_global_tables s; valid_global_arch_objs s;
      valid_vspace_objs s; valid_asid_table s; valid_uses s; pspace_aligned s;
-     (\<exists>asid. vspace_for_asid asid s = Some pt_ref) \<or> pt_ref = riscv_global_pt (arch_state s) \<rbrakk>
+     (\<exists>asid. vspace_for_asid False asid s = Some pt_ref) \<or> pt_ref = riscv_global_pt (arch_state s) \<rbrakk>
    \<Longrightarrow> (\<exists>sz. pageBitsForSize sz = a) \<and> r = {}"
   apply (clarsimp simp: get_page_info_def in_omonad)
   apply (rename_tac level slot pte)
@@ -120,13 +120,13 @@ lemma pte_info_not_InvalidPTE:
   "pte_info level pte = Some (b, a, attr, r) \<Longrightarrow> pte \<noteq> InvalidPTE"
   by (simp add: pte_info_def split: pte.splits)
 
-lemma valid_global_tables_toplevel_pt:
-  "\<lbrakk> pts_of s (riscv_global_pt (arch_state s)) = Some pt; valid_global_tables s \<rbrakk> \<Longrightarrow>
+lemma valid_global_tables_toplevel_pt[simplified f_kheap_to_kheap]:
+  "\<lbrakk> pts_of False s (riscv_global_pt (arch_state s)) = Some pt; valid_global_tables s \<rbrakk> \<Longrightarrow>
    \<forall>idx\<in>- kernel_mapping_slots. pt idx = InvalidPTE"
   by (simp add: valid_global_tables_def Let_def riscv_global_pt_def)
 
-lemma global_pt_not_invalid_kernel:
-  "\<lbrakk> ptes_of s (pt_slot_offset max_pt_level (riscv_global_pt (arch_state s)) p) = Some pte;
+lemma global_pt_not_invalid_kernel[simplified f_kheap_to_kheap]:
+  "\<lbrakk> ptes_of False s (pt_slot_offset max_pt_level (riscv_global_pt (arch_state s)) p) = Some pte;
      pte \<noteq> InvalidPTE; canonical_address p; valid_global_tables s;
      is_aligned (riscv_global_pt (arch_state s)) pt_bits\<rbrakk>
    \<Longrightarrow> p \<in> kernel_mappings"
@@ -134,9 +134,9 @@ lemma global_pt_not_invalid_kernel:
   apply (fastforce simp flip: kernel_mappings_slots_eq dest: valid_global_tables_toplevel_pt)
   done
 
-lemma get_page_info_gpd_kmaps:
+lemma get_page_info_gpd_kmaps[simplified f_kheap_to_kheap]:
   "\<lbrakk> valid_global_vspace_mappings s; valid_arch_state s;
-     get_page_info (aobjs_of s) (riscv_global_pt (arch_state s)) p = Some (b, a, attr, r) \<rbrakk>
+     get_page_info (aobjs_of False s) (riscv_global_pt (arch_state s)) p = Some (b, a, attr, r) \<rbrakk>
      \<Longrightarrow> p \<in> kernel_mappings"
   apply (clarsimp simp: get_page_info_def in_omonad pt_lookup_slot_def pt_lookup_slot_from_level_def)
   apply (subst (asm) pt_walk.simps)
@@ -167,8 +167,8 @@ lemma is_aligned_ptrFromPAddr_n_eq:
   apply (erule (1) is_aligned_ptrFromPAddr_n)
   done
 
-lemma some_get_page_info_umapsD:
-  "\<lbrakk>get_page_info (aobjs_of s) pt_ref p = Some (b, a, attr, r);
+lemma some_get_page_info_umapsD[simplified f_kheap_to_kheap]:
+  "\<lbrakk>get_page_info (aobjs_of False s) pt_ref p = Some (b, a, attr, r);
     \<exists>\<rhd> (max_pt_level, pt_ref) s; p \<in> user_region; valid_vspace_objs s; pspace_aligned s;
     canonical_address p;
     valid_asid_table s; valid_objs s\<rbrakk>
@@ -200,14 +200,6 @@ lemma some_get_page_info_umapsD:
   apply (simp add: pt_bits_left_le_canonical is_aligned_ptrFromPAddr_n_eq)
   done
 
-lemma user_mem_dom_cong:
-  "kheap s = kheap s' \<Longrightarrow> dom (user_mem s) = dom (user_mem s')"
-  by (simp add: user_mem_def in_user_frame_def dom_def obj_at_def)
-
-lemma device_mem_dom_cong:
-  "kheap s = kheap s' \<Longrightarrow> dom (device_mem s) = dom (device_mem s')"
-  by (simp add: device_mem_def in_device_frame_def dom_def obj_at_def)
-
 lemma device_frame_in_device_region:
   "\<lbrakk>in_device_frame p s; pspace_respects_device_region s\<rbrakk>
   \<Longrightarrow> device_state (machine_state s) p \<noteq> None"
@@ -217,7 +209,7 @@ global_naming Arch
 named_theorems AInvsPre_asms
 
 lemma get_vspace_of_thread_asid_or_global_pt:
-  "(\<exists>asid. vspace_for_asid asid s = Some (get_vspace_of_thread (kheap s) (arch_state s) t))
+  "(\<exists>asid. vspace_for_asid False asid s = Some (get_vspace_of_thread (kheap s) (arch_state s) t))
     \<or> get_vspace_of_thread (kheap s) (arch_state s) t = riscv_global_pt (arch_state s)"
   by (auto simp: get_vspace_of_thread_def
            split: option.split kernel_object.split cap.split arch_cap.split)
@@ -268,8 +260,6 @@ interpretation AInvsPre?: AInvsPre
   qed
 
 requalify_facts
-  RISCV64.user_mem_dom_cong
-  RISCV64.device_mem_dom_cong
   RISCV64.device_frame_in_device_region
 
 end
