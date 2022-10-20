@@ -104,12 +104,11 @@ lemma no_cap_to_obj_with_diff_IRQHandler_ARCH[Interrupt_AI_asms]:
 lemma (* set_irq_state_valid_cap *)[Interrupt_AI_asms]:
   "\<lbrace>valid_cap cap\<rbrace> set_irq_state IRQSignal irq \<lbrace>\<lambda>rv. valid_cap cap\<rbrace>"
   apply (clarsimp simp: set_irq_state_def)
-  sorry (* FIXME AARCH64 missing crunch
   apply (wp do_machine_op_valid_cap)
   apply (auto simp: valid_cap_def valid_untyped_def
              split: cap.splits option.splits arch_cap.splits
          split del: if_split)
-  done *)
+  done
 
 crunch valid_global_refs[Interrupt_AI_asms]: set_irq_state "valid_global_refs"
 
