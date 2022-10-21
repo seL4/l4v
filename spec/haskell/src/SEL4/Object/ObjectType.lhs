@@ -23,6 +23,7 @@ We use the C preprocessor to select a target architecture.
 
 > import Prelude hiding (Word)
 > import SEL4.API.Types
+> import SEL4.API.Types.Universal
 > import SEL4.API.Failures
 > import SEL4.API.Invocation
 > import SEL4.Machine
@@ -404,7 +405,7 @@ New threads are placed in the current security domain, which must be the domain 
 >         Just SchedContextObject -> do
 >             let scp = PPtr $ fromPPtr regionBase
 >             let newCap = SchedContextCap scp userSize
->             placeNewObject regionBase ((makeObject :: SchedContext){scRefills = replicate (refillAbsoluteMax newCap) emptyRefill}) 0
+>             placeNewObject regionBase ((makeObject :: SchedContext){scRefills = replicate (refillAbsoluteMax newCap) emptyRefill, scSize = userSize - minSchedContextBits}) 0
 >             return $ newCap
 >         Just ReplyObject -> do
 >             placeNewObject regionBase (makeObject :: Reply) 0

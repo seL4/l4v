@@ -41,16 +41,8 @@ requalify_consts
 
 end
 
-#INCLUDE_HASKELL SEL4/Object/Structures.lhs decls_only NOT isNullCap isUntypedCap isIRQControlCap isReplyCap isDomainCap isNotificationCap isThreadCap isSchedContextCap scBitsFromRefillLength scBitsFromRefillLength' objBitsKO
-#INCLUDE_HASKELL SEL4/Object/Structures.lhs bodies_only NOT kernelObjectTypeName isNullCap isUntypedCap isIRQControlCap isReplyCap isDomainCap isNotificationCap isThreadCap isSchedContextCap scBitsFromRefillLength' scBitsFromRefillLength objBitsKO
-
-definition scBitsFromRefillLength' :: "nat => nat"
-where
-  "scBitsFromRefillLength' us \<equiv>
-       ceil_log (us * refillSizeBytes + schedContextStructSize)"
-
-abbreviation scBitsFromRefillLength where
-"scBitsFromRefillLength sc\<equiv> scBitsFromRefillLength' (length $ scRefills sc)"
+#INCLUDE_HASKELL SEL4/Object/Structures.lhs decls_only NOT isNullCap isUntypedCap isIRQControlCap isReplyCap isDomainCap isNotificationCap isThreadCap isSchedContextCap objBitsKO
+#INCLUDE_HASKELL SEL4/Object/Structures.lhs bodies_only NOT kernelObjectTypeName isNullCap isUntypedCap isIRQControlCap isReplyCap isDomainCap isNotificationCap isThreadCap isSchedContextCap objBitsKO
 
 #INCLUDE_HASKELL SEL4/Object/Structures.lhs decls_only ONLY objBitsKO
 #INCLUDE_HASKELL SEL4/Object/Structures.lhs bodies_only ONLY objBitsKO

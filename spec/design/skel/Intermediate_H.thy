@@ -69,7 +69,7 @@ defs createNewCaps_def:
             scp \<leftarrow> return (PPtr $ fromPPtr regionBase);
             newCap \<leftarrow> return (SchedContextCap scp userSize);
             addrs \<leftarrow> createObjects regionBase numObjects
-              (injectKO ((makeObject ::sched_context)\<lparr>scRefills := replicate (refillAbsoluteMax newCap) emptyRefill\<rparr>)) 0;
+              (injectKO ((makeObject ::sched_context)\<lparr>scRefills := replicate (refillAbsoluteMax newCap) emptyRefill, scSize := userSize - minSchedContextBits\<rparr>)) 0;
             return $ map (\<lambda> addr. SchedContextCap addr userSize) addrs
           od)
         | Some ReplyObject \<Rightarrow> (do

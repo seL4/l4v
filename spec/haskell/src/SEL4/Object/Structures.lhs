@@ -163,7 +163,7 @@ When stored in the physical memory model (described in \autoref{sec:model.pspace
 > objBitsKO (KOUserDataDevice) = pageBits
 > objBitsKO (KOKernelData) = pageBits
 > objBitsKO (KOArch a) = archObjSize a
-> objBitsKO (KOSchedContext sc) = scBitsFromRefillLength sc
+> objBitsKO (KOSchedContext sc) = minSchedContextBits + scSize sc
 > objBitsKO (KOReply _) = replySizeBits
 
 \subsubsection{Synchronous Endpoint}
@@ -214,7 +214,8 @@ list of pointers to waiting threads;
 >     scRefillMax :: Int,
 >     scRefillHead :: Int,
 >     scRefillCount :: Int,
->     scRefills :: [Refill]}
+>     scRefills :: [Refill],
+>     scSize :: Int}
 
 > -- numbers from MCS C: (9 * sizeof(word_t)) + (3 * sizeof(ticks_t))
 > schedContextStructSize :: Int
@@ -223,12 +224,6 @@ list of pointers to waiting threads;
 > -- similarly, (2 * sizeof(ticks_t))
 > refillSizeBytes :: Int
 > refillSizeBytes = 16
-
-> scBitsFromRefillLength' :: Int -> Int
-> scBitsFromRefillLength' us = ceiling $ logBase 2 ((fromIntegral :: Int -> Float) (us * refillSizeBytes + schedContextStructSize))
-
-> scBitsFromRefillLength :: SchedContext -> Int
-> scBitsFromRefillLength sc = scBitsFromRefillLength' (length $ scRefills sc)
 
 > refillAbsoluteMax' :: Int -> Int
 > refillAbsoluteMax' bits = (1 `shiftL` bits - schedContextStructSize) `div` refillSizeBytes
