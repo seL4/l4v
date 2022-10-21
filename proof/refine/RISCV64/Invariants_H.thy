@@ -75,8 +75,8 @@ definition ko_wp_at' :: "(kernel_object \<Rightarrow> bool) \<Rightarrow> obj_re
 lemma valid_sz_simps:
   "objBitsKO ko < word_bits =
     (case ko of
-      (KOSchedContext sc) \<Rightarrow> scBitsFromRefillLength sc < word_bits
-      | _ \<Rightarrow>    True)"
+      KOSchedContext sc \<Rightarrow> minSchedContextBits + scSize sc < word_bits
+    | _ \<Rightarrow>    True)"
   by (cases ko;
       clarsimp simp: objBits_def objBitsKO_def word_size_def archObjSize_def pageBits_def word_bits_def
                      tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def cteSizeBits_def word_size
@@ -643,11 +643,11 @@ definition valid_sched_context' :: "sched_context \<Rightarrow> kernel_state \<R
      \<and> valid_bound_tcb' (scYieldFrom sc) s
      \<and> valid_bound_reply' (scReply sc) s
      \<and> MIN_REFILLS \<le> length (scRefills sc)
+     \<and> length (scRefills sc) = refillAbsoluteMax' (minSchedContextBits + scSize sc)
      \<and> scRefillMax sc \<le> length (scRefills sc)
      \<and> (0 < scRefillMax sc \<longrightarrow> scRefillHead sc < scRefillMax sc
                                \<and> scRefillCount sc \<le> scRefillMax sc
-                               \<and> 0 < scRefillCount sc)
-     \<and> length (scRefills sc) = refillAbsoluteMax' (scBitsFromRefillLength' (length (scRefills sc)))"
+                               \<and> 0 < scRefillCount sc)"
 
 definition valid_reply' :: "reply \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "valid_reply' reply s \<equiv>
@@ -3493,14 +3493,6 @@ lemma objBitsT_simps:
   "objBitsT (ArchT ASIDPoolT) = pageBits"
   unfolding objBitsT_def makeObjectT_def
   by (simp add: makeObject_simps objBits_simps bit_simps')+
-
-lemma objBits_sc_only_depends_on_scRefills:
-  fixes sc :: sched_context
-    and upd :: "sched_context \<Rightarrow> sched_context"
-  assumes [simp]: "scRefills (upd sc) = scRefills sc"
-  shows "objBits (upd sc) = objBits sc"
-  apply (clarsimp simp: objBits_def objBitsKO_def)
-  done
 
 lemma valid_queues_obj_at'D:
    "\<lbrakk> t \<in> set (ksReadyQueues s (d, p)); valid_queues s \<rbrakk>

@@ -692,7 +692,7 @@ lemma update_sc_reply_stack_update_ko_at'_corres:
   apply (rule corres_guard_imp)
     apply (rule_tac P="sc_obj_at (objBits sc' - minSchedContextBits) ptr"
                and n1="objBits sc' - minSchedContextBits"
-                         in monadic_rewrite_corres_l[OF update_sched_context_rewrite])
+                in monadic_rewrite_corres_l[OF update_sched_context_rewrite])
     apply (rule corres_symb_exec_l)
        apply (rule corres_guard_imp)
          apply (rule setSchedContext_update_corres
@@ -705,7 +705,7 @@ lemma update_sc_reply_stack_update_ko_at'_corres:
        apply (rename_tac ko; case_tac ko; simp)
       apply simp
      apply (wpsimp simp: obj_at_def is_sc_obj_def
-            | clarsimp split: Structures_A.kernel_object.splits)+
+            | fastforce split: Structures_A.kernel_object.splits)+
   done
 
 lemma bindScReply_corres:
