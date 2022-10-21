@@ -29,8 +29,8 @@ type_synonym cghost_state =
   "(machine_word \<rightharpoonup> vmpage_size) * (machine_word \<rightharpoonup> nat) * ghost_assertions *
    (machine_word \<rightharpoonup> nat)"
 
-abbreviation gs_refill_buffer_lengths :: "cghost_state \<Rightarrow> (machine_word \<rightharpoonup> nat)" where
-  "gs_refill_buffer_lengths \<equiv> snd \<circ> snd \<circ> snd"
+abbreviation gs_sc_size :: "cghost_state \<Rightarrow> (machine_word \<rightharpoonup> nat)" where
+  "gs_sc_size \<equiv> snd \<circ> snd \<circ> snd"
 
 definition
   gs_clear_region :: "addr \<Rightarrow> nat \<Rightarrow> cghost_state \<Rightarrow> cghost_state" where
@@ -38,7 +38,7 @@ definition
    (\<lambda>x. if x \<in> {ptr..+2 ^ bits} then None else fst gs x,
     \<lambda>x. if x \<in> {ptr..+2 ^ bits} then None else fst (snd gs) x,
     fst (snd (snd gs)),
-    \<lambda>x. if x \<in> {ptr..+2 ^ bits} then None else gs_refill_buffer_lengths gs x)"
+    \<lambda>x. if x \<in> {ptr..+2 ^ bits} then None else gs_sc_size gs x)"
 
 definition
   gs_new_frames:: "vmpage_size \<Rightarrow> addr \<Rightarrow> nat \<Rightarrow> cghost_state \<Rightarrow> cghost_state"
@@ -61,8 +61,8 @@ definition
 abbreviation (input) refills_len :: "nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat" where
   "refills_len userSize struct_size refill_size \<equiv> (2 ^ userSize - struct_size) div refill_size"
 
-definition gs_new_refill_buffer_length :: "addr \<Rightarrow> nat \<Rightarrow> cghost_state \<Rightarrow> cghost_state" where
-  "gs_new_refill_buffer_length addr len \<equiv> \<lambda>(a, b, c, d). (a, b, c, d(addr := Some len))"
+definition gs_new_sc_size :: "addr \<Rightarrow> nat \<Rightarrow> cghost_state \<Rightarrow> cghost_state" where
+  "gs_new_sc_size addr sz \<equiv> \<lambda>(a, b, c, d). (a, b, c, d(addr := Some sz))"
 
 abbreviation
   gs_get_assn :: "int \<Rightarrow> cghost_state \<Rightarrow> machine_word"
