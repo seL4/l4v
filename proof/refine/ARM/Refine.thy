@@ -538,12 +538,10 @@ lemma kernel_corres':
   unfolding call_kernel_def callKernel_def
   apply (simp add: call_kernel_def callKernel_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated)
-       prefer 2
-       apply (rule corres_split_handle [OF _ handleEvent_corres])
+    apply (rule corres_split)
+       apply (rule corres_split_handle[OF handleEvent_corres])
          apply simp
-         apply (rule corres_split_deprecated [OF _ corres_machine_op])
-            prefer 2
+         apply (rule corres_split[OF corres_machine_op])
             apply (rule corres_underlying_trivial)
             apply (rule no_fail_getActiveIRQ)
            apply clarsimp
@@ -566,7 +564,7 @@ lemma kernel_corres':
        apply (rule_tac Q="\<lambda>_. \<top>" and E="\<lambda>_. invs'" in hoare_post_impErr)
          apply wpsimp+
        apply (simp add: invs'_def valid_state'_def)
-      apply (rule corres_split_deprecated [OF _ schedule_corres])
+      apply (rule corres_split[OF schedule_corres])
         apply (rule activateThread_corres)
        apply (wp handle_interrupt_valid_sched[unfolded non_kernel_IRQs_def, simplified]
                  schedule_invs' hoare_vcg_if_lift2 hoare_drop_imps |simp)+
@@ -590,14 +588,14 @@ lemma kernel_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_add_noop_lhs2)
     apply (simp only: bind_assoc[symmetric])
-    apply (rule corres_split_deprecated[where r'=dc and
+    apply (rule corres_split[where r'=dc and
                                    R="\<lambda>_ s. 0 < domain_time s \<and> valid_domain_list s" and
                                    R'="\<lambda>_. \<top>"])
-       apply (rule corres_bind_return2, rule corres_stateAssert_assume_stronger)
-        apply simp
-       apply (simp add: kernelExitAssertions_def state_relation_def)
-      apply (simp only: bind_assoc)
-      apply (rule kernel_corres')
+       apply (simp only: bind_assoc)
+       apply (rule kernel_corres')
+      apply (rule corres_bind_return2, rule corres_stateAssert_assume_stronger)
+       apply simp
+      apply (simp add: kernelExitAssertions_def state_relation_def)
      apply (wp call_kernel_domain_time_inv_det_ext call_kernel_domain_list_inv_det_ext)
     apply wp
    apply clarsimp
@@ -627,9 +625,8 @@ lemma entry_corres:
           (kernel_entry event tc) (kernelEntry event tc)"
   apply (simp add: kernel_entry_def kernelEntry_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ getCurThread_corres])
-      apply (rule corres_split_deprecated)
-         prefer 2
+    apply (rule corres_split[OF getCurThread_corres])
+      apply (rule corres_split)
          apply simp
          apply (rule threadset_corresT)
             apply (simp add: tcb_relation_def arch_tcb_relation_def
@@ -637,8 +634,8 @@ lemma entry_corres:
            apply (clarsimp simp: tcb_cap_cases_def)
           apply (clarsimp simp: tcb_cte_cases_def)
          apply (simp add: exst_same_def)
-        apply (rule corres_split_deprecated [OF _ kernel_corres])
-          apply (rule corres_split_eqr [OF _ getCurThread_corres])
+        apply (rule corres_split[OF kernel_corres])
+          apply (rule corres_split_eqr[OF getCurThread_corres])
             apply (rule threadGet_corres)
             apply (simp add: tcb_relation_def arch_tcb_relation_def
                              arch_tcb_context_get_def atcbContextGet_def)
@@ -667,33 +664,29 @@ lemma do_user_op_corres:
           (do_user_op f tc) (doUserOp f tc)"
   apply (simp add: do_user_op_def doUserOp_def split_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ getCurThread_corres])
-      apply (rule_tac r'="(=)" and P=einvs and P'=invs' in corres_split_deprecated)
-         prefer 2
+    apply (rule corres_split[OF getCurThread_corres])
+      apply (rule_tac r'="(=)" and P=einvs and P'=invs' in corres_split)
          apply (fastforce dest: absKState_correct [rotated])
-        apply (rule_tac r'="(=)" and P=einvs and P'=invs' in corres_split_deprecated)
-           prefer 2
+        apply (rule_tac r'="(=)" and P=einvs and P'=invs' in corres_split)
            apply (fastforce dest: absKState_correct [rotated])
-          apply (rule_tac r'="(=)" and P=invs and P'=invs' in corres_split_deprecated)
-             prefer 2
+          apply (rule_tac r'="(=)" and P=invs and P'=invs' in corres_split)
              apply (rule user_mem_corres)
-            apply (rule_tac r'="(=)" and P=invs and P'=invs' in corres_split_deprecated)
-               prefer 2
+            apply (rule_tac r'="(=)" and P=invs and P'=invs' in corres_split)
                apply (rule device_mem_corres)
-              apply (rule_tac r'="(=)" in corres_split_deprecated)
-                 prefer 2
+              apply (rule_tac r'="(=)" in corres_split)
                  apply (rule corres_gets_machine_state)
                 apply (rule_tac F = "dom (rvb \<circ> addrFromPPtr)  \<subseteq> - dom rvd" in corres_gen_asm)
                 apply (rule_tac F = "dom (rvc \<circ> addrFromPPtr)  \<subseteq> dom rvd" in corres_gen_asm)
                 apply simp
-                apply (rule_tac r'="(=)" in corres_split_deprecated[OF _ corres_select])
-                   apply (rule corres_split'[OF corres_machine_op])
-                      apply simp
-                      apply (rule corres_underlying_trivial)
-                      apply (simp add: user_memory_update_def)
-                      apply (wp | simp)+
-                     apply (rule corres_split'[OF corres_machine_op,where Q = dc and Q'=dc])
-                        apply (rule corres_underlying_trivial)
+                apply (rule_tac r'="(=)" in corres_split[OF corres_select])
+                   apply simp
+                  apply (rule corres_underlying_split[OF corres_machine_op])
+                     apply simp
+                     apply (rule corres_underlying_trivial)
+                     apply (simp add: user_memory_update_def)
+                     apply (wp | simp)+
+                    apply (rule corres_underlying_split[OF corres_machine_op,where Q = dc and Q'=dc])
+                       apply (rule corres_underlying_trivial)
                        apply (wp | simp add: dc_def device_memory_update_def)+
    apply (clarsimp simp: invs_def valid_state_def pspace_respects_device_region_def)
   apply fastforce
@@ -742,7 +735,7 @@ lemma check_active_irq_corres':
   "corres (=) \<top> \<top> (check_active_irq) (checkActiveIRQ)"
   apply (simp add: check_active_irq_def checkActiveIRQ_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ corres_machine_op[OF corres_underlying_trivial], where R="\<lambda>_. \<top>" and R'="\<lambda>_. \<top>"])
+    apply (rule corres_split[OF corres_machine_op[OF corres_underlying_trivial], where R="\<lambda>_. \<top>" and R'="\<lambda>_. \<top>"])
        apply simp
       apply (rule no_fail_getActiveIRQ)
      apply (wp | simp )+

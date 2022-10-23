@@ -230,7 +230,7 @@ assumes getActiveIRQ_ccorres:
    ccorres (\<lambda>(a::10 word option) c::machine_word.
      case a of None \<Rightarrow> c = 0x0000FFFF
      | Some (x::10 word) \<Rightarrow> c = ucast x \<and> c \<noteq> 0x0000FFFF)
-     (\<lambda>t. irq_' (s\<lparr>globals := globals t, irq_' := ret__unsigned_long_' t\<rparr> ))
+     ret__unsigned_long_'
      \<top> UNIV hs
  (doMachineOp (getActiveIRQ in_kernel)) (Call getActiveIRQ_'proc)"
 

@@ -48,16 +48,16 @@ proof -
     apply (simp only: findM.simps)
     apply (subst P)
     apply (rule corres_guard_imp)
-      apply (rule corres_split_deprecated [OF _ x])
-         apply (rule corres_if2)
-           apply (case_tac ra, clarsimp+)[1]
-          apply (rule corres_trivial, clarsimp)
-          apply (case_tac ra, simp_all)[1]
-         apply (erule(1) meta_mp [OF _ suffix_ConsD])
-        apply assumption
+      apply (rule corres_split[OF x])
+         apply assumption
+        apply (rule corres_if2)
+          apply (case_tac ra, clarsimp+)[1]
+         apply (rule corres_trivial, clarsimp)
+         apply (case_tac ra, simp_all)[1]
+        apply (erule(1) meta_mp [OF _ suffix_ConsD])
        apply (rule Q)
       apply (rule hoare_post_imp [OF _ z])
-      apply simp+
+       apply simp+
     done
 qed
 
@@ -76,7 +76,7 @@ lemma arch_switchToThread_corres:
              (arch_switch_to_thread t) (Arch.switchToThread t)"
   apply (simp add: arch_switch_to_thread_def ARM_H.switchToThread_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split' [OF setVMRoot_corres])
+    apply (rule corres_underlying_split [OF setVMRoot_corres])
       apply (rule corres_machine_op[OF corres_rel_imp])
       apply (rule corres_underlying_trivial)
        apply (simp add: ARM.clearExMonitor_def | wp)+
@@ -118,21 +118,30 @@ lemma tcbSchedAppend_corres:
    apply clarsimp
   apply (clarsimp simp: unless_def when_def cong: if_cong)
   apply (rule stronger_corres_guard_imp)
-    apply (rule corres_split_deprecated[where r'="(=)", OF _ ethreadget_corres])
-       apply (rule corres_split_deprecated[where r'="(=)", OF _ ethreadget_corres])
-          apply (rule corres_split_deprecated[where r'="(=)"])
-             apply (rule corres_split_noop_rhs2)
-                apply (rule corres_split_noop_rhs2)
-                   apply (rule threadSet_corres_noop, simp_all add: tcb_relation_def exst_same_def)[1]
-                  apply (rule addToBitmap_if_null_noop_corres)
-                 apply wp+
-               apply (simp add: tcb_sched_append_def)
-               apply (intro conjI impI)
-                apply (rule corres_guard_imp)
-                  apply (rule setQueue_corres)
-                 prefer 3
-                 apply (rule_tac P=\<top> and Q="K (t \<notin> set queuea)" in corres_assume_pre)
-                 apply (wp getQueue_corres getObject_tcb_wp  | simp add: etcb_relation_def threadGet_def)+
+    apply (rule corres_split[where r'="(=)"])
+       apply (rule ethreadget_corres)
+       apply (simp add: etcb_relation_def)
+      apply (rule corres_split[where r'="(=)"])
+         apply (rule ethreadget_corres)
+         apply (simp add: etcb_relation_def)
+        apply (rule corres_split[where r'="(=)"])
+           apply simp
+           apply (rule getQueue_corres)
+          apply (rule corres_split_noop_rhs2)
+             apply (simp add: tcb_sched_append_def)
+             apply (intro conjI impI)
+              apply (rule corres_guard_imp)
+                apply (rule setQueue_corres)
+               prefer 3
+               apply (rule_tac P=\<top> and Q="K (t \<notin> set queuea)" in corres_assume_pre)
+               apply simp
+              apply simp
+             apply simp
+            apply (rule corres_split_noop_rhs2)
+               apply (rule addToBitmap_if_null_noop_corres)
+              apply (rule threadSet_corres_noop, simp_all add: tcb_relation_def exst_same_def)[1]
+             apply wp+
+          apply (wp getObject_tcb_wp | simp add: threadGet_def)+
   apply (fastforce simp: valid_queues_def valid_queues_no_bitmap_def obj_at'_def inQ_def
                          projectKO_eq project_inject)
   done
@@ -732,8 +741,8 @@ proof -
          setCurThread t
       od)"
     apply (rule corres_guard_imp)
-      apply (rule corres_split_deprecated [OF _ arch_switchToThread_corres])
-        apply (rule corres_split_deprecated[OF setCurThread_corres tcbSchedDequeue_corres])
+      apply (rule corres_split[OF arch_switchToThread_corres])
+        apply (rule corres_split[OF tcbSchedDequeue_corres setCurThread_corres])
          apply (wp|clarsimp simp: tcb_at_is_etcb_at st_tcb_at_tcb_at)+
     done
 
@@ -765,8 +774,8 @@ lemma switchToIdleThread_corres:
   "corres dc invs invs_no_cicd' switch_to_idle_thread switchToIdleThread"
   apply (simp add: switch_to_idle_thread_def Thread_H.switchToIdleThread_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ getIdleThread_corres])
-      apply (rule corres_split_deprecated [OF _ arch_switchToIdleThread_corres])
+    apply (rule corres_split[OF getIdleThread_corres])
+      apply (rule corres_split[OF arch_switchToIdleThread_corres])
         apply (unfold setCurThread_def)
         apply (rule corres_trivial, rule corres_modify)
         apply (simp add: state_relation_def cdt_relation_def)
@@ -1534,7 +1543,7 @@ lemma guarded_switch_to_chooseThread_fragment_corres:
   unfolding guarded_switch_to_def isRunnable_def
   apply simp
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ getThreadState_corres])
+    apply (rule corres_split[OF getThreadState_corres])
       apply (rule corres_assert_assume_l)
       apply (rule corres_assert_assume_r)
       apply (rule switchToThread_corres)
@@ -1596,7 +1605,7 @@ proof -
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF curDomain_corres'])
       apply clarsimp
-      apply (rule corres_split_deprecated[OF _ corres_gets_queues_getReadyQueuesL1Bitmap])
+      apply (rule corres_split[OF corres_gets_queues_getReadyQueuesL1Bitmap])
         apply (erule corres_if2[OF sym])
          apply (rule switchToIdleThread_corres)
         apply (rule corres_symb_exec_r)
@@ -1698,11 +1707,11 @@ lemma scheduleChooseNewThread_fragment_corres:
   apply (subst bind_dummy_ret_val)
   apply (subst bind_dummy_ret_val)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ corres_when])
-        apply simp
-        apply (rule chooseThread_corres)
-       apply simp
-      apply (rule nextDomain_corres)
+    apply (rule corres_split)
+       apply (rule corres_when, simp)
+       apply (rule nextDomain_corres)
+      apply simp
+      apply (rule chooseThread_corres)
      apply (wp nextDomain_invs_no_cicd')+
    apply (clarsimp simp: valid_sched_def invs'_def valid_state'_def all_invs_but_ct_idle_or_in_cur_domain'_def)+
   done
@@ -1732,7 +1741,7 @@ lemma isHighestPrio_corres:
   apply (clarsimp simp: gets_is_highest_prio_expand isHighestPrio_def)
   apply (subst getHighestPrio_def')
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ corres_gets_queues_getReadyQueuesL1Bitmap])
+    apply (rule corres_split[OF corres_gets_queues_getReadyQueuesL1Bitmap])
       apply (rule corres_if_r'[where P'="\<lambda>_. True",rotated])
        apply (rule_tac corres_symb_exec_r)
               apply (rule_tac
@@ -1770,8 +1779,8 @@ lemma scheduleChooseNewThread_corres:
            schedule_choose_new_thread scheduleChooseNewThread"
   unfolding schedule_choose_new_thread_def scheduleChooseNewThread_def
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ getDomainTime_corres], clarsimp)
-      apply (rule corres_split_deprecated[OF _ scheduleChooseNewThread_fragment_corres, simplified bind_assoc])
+    apply (rule corres_split[OF getDomainTime_corres], clarsimp)
+      apply (rule corres_split[OF scheduleChooseNewThread_fragment_corres, simplified bind_assoc])
         apply (rule setSchedulerAction_corres)
         apply (wp | simp)+
     apply (wp | simp add: getDomainTime_def)+
@@ -1805,81 +1814,84 @@ lemma schedule_corres:
   apply (subst thread_get_comm)
   apply (subst schact_bind_inside)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ getCurThread_corres[THEN corres_rel_imp[where r="\<lambda>x y. y = x"],simplified]])
-        apply (rule corres_split_deprecated[OF _ getSchedulerAction_corres])
-          apply (rule corres_split_sched_act,assumption)
-            apply (rule_tac P="tcb_at ct" in corres_symb_exec_l')
-              apply (rule_tac corres_symb_exec_l)
-                apply simp
-                apply (rule corres_assert_ret)
-               apply ((wpsimp wp: thread_get_wp' gets_exs_valid)+)
+    apply (rule corres_split[OF getCurThread_corres[THEN corres_rel_imp[where r="\<lambda>x y. y = x"],simplified]])
+      apply (rule corres_split[OF getSchedulerAction_corres])
+        apply (rule corres_split_sched_act,assumption)
+          apply (rule_tac P="tcb_at ct" in corres_symb_exec_l')
+            apply (rule_tac corres_symb_exec_l)
+               apply simp
+               apply (rule corres_assert_ret)
+              apply ((wpsimp wp: thread_get_wp' gets_exs_valid)+)
          prefer 2
          (* choose thread *)
          apply clarsimp
-          apply (rule corres_split_deprecated[OF _ thread_get_isRunnable_corres])
-            apply (rule corres_split_deprecated[OF _ corres_when])
+         apply (rule corres_split[OF thread_get_isRunnable_corres])
+           apply (rule corres_split)
+              apply (rule corres_when, simp)
+              apply (rule tcbSchedEnqueue_corres)
              apply (rule scheduleChooseNewThread_corres, simp)
-              apply (rule tcbSchedEnqueue_corres, simp)
-           apply (wp thread_get_wp' tcbSchedEnqueue_invs' hoare_vcg_conj_lift hoare_drop_imps
-                  | clarsimp)+
+            apply (wp thread_get_wp' tcbSchedEnqueue_invs' hoare_vcg_conj_lift hoare_drop_imps
+                   | clarsimp)+
         (* switch to thread *)
-        apply (rule corres_split_deprecated[OF _ thread_get_isRunnable_corres],
+        apply (rule corres_split[OF thread_get_isRunnable_corres],
                 rename_tac was_running wasRunning)
-          apply (rule corres_split_deprecated[OF _ corres_when])
-              apply (rule corres_split_deprecated[OF _ getIdleThread_corres], rename_tac it it')
-                apply (rule_tac F="was_running \<longrightarrow> ct \<noteq> it" in corres_gen_asm)
-                apply (rule corres_split_deprecated[OF _ ethreadget_corres[where r="(=)"]],
-                       rename_tac tp tp')
-                   apply (rule corres_split_deprecated[OF _ ethread_get_when_corres[where r="(=)"]],
-                           rename_tac cp cp')
-                      apply (rule corres_split_deprecated[OF _ scheduleSwitchThreadFastfail_corres])
-                           apply (rule corres_split_deprecated[OF _ curDomain_corres])
-                             apply (rule corres_split_deprecated[OF _ isHighestPrio_corres]; simp only:)
-                               apply (rule corres_if, simp)
-                                apply (rule corres_split_deprecated[OF _ tcbSchedEnqueue_corres])
-                                  apply (simp, fold dc_def)
-                                  apply (rule corres_split_deprecated[OF _ setSchedulerAction_corres])
-                                     apply (rule scheduleChooseNewThread_corres, simp)
+          apply (rule corres_split)
+             apply (rule corres_when, simp)
+             apply (rule tcbSchedEnqueue_corres)
+            apply (rule corres_split[OF getIdleThread_corres], rename_tac it it')
+              apply (rule_tac F="was_running \<longrightarrow> ct \<noteq> it" in corres_gen_asm)
+              apply (rule corres_split)
+                 apply (rule ethreadget_corres[where r="(=)"])
+                 apply (clarsimp simp: etcb_relation_def)
+                apply (rename_tac tp tp')
+                apply (rule corres_split)
+                   apply (rule ethread_get_when_corres[where r="(=)"])
+                   apply (clarsimp simp: etcb_relation_def)
+                  apply (rename_tac cp cp')
+                  apply (rule corres_split)
+                     apply (rule scheduleSwitchThreadFastfail_corres; simp)
+                    apply (rule corres_split[OF curDomain_corres])
+                      apply (rule corres_split[OF isHighestPrio_corres]; simp only:)
+                        apply (rule corres_if, simp)
+                         apply (rule corres_split[OF tcbSchedEnqueue_corres])
+                           apply (simp, fold dc_def)
+                           apply (rule corres_split)
+                              apply (rule setSchedulerAction_corres; simp)
+                             apply (rule scheduleChooseNewThread_corres)
+                            apply (wp | simp)+
+                            apply (simp add: valid_sched_def)
+                            apply wp
+                            apply (rule hoare_vcg_conj_lift)
+                             apply (rule_tac t=t in set_scheduler_action_cnt_valid_blocked')
+                            apply (wpsimp wp: setSchedulerAction_invs')+
+                          apply (wp tcb_sched_action_enqueue_valid_blocked hoare_vcg_all_lift enqueue_thread_queued)
+                         apply (wp tcbSchedEnqueue_invs'_not_ResumeCurrentThread)
+                        apply (rule corres_if, fastforce)
+                         apply (rule corres_split[OF tcbSchedAppend_corres])
+                           apply (simp, fold dc_def)
+                           apply (rule corres_split)
+                              apply (rule setSchedulerAction_corres; simp)
+                             apply (rule scheduleChooseNewThread_corres)
+                            apply (wp | simp)+
+                            apply (simp add: valid_sched_def)
+                            apply wp
+                            apply (rule hoare_vcg_conj_lift)
+                             apply (rule_tac t=t in set_scheduler_action_cnt_valid_blocked')
+                            apply (wpsimp wp: setSchedulerAction_invs')+
+                          apply (wp tcb_sched_action_append_valid_blocked hoare_vcg_all_lift append_thread_queued)
+                         apply (wp tcbSchedAppend_invs'_not_ResumeCurrentThread)
 
-                                   apply (wp | simp)+
-                                   apply (simp add: valid_sched_def)
-                                   apply wp
-                                   apply (rule hoare_vcg_conj_lift)
-                                    apply (rule_tac t=t in set_scheduler_action_cnt_valid_blocked')
-                                   apply (wpsimp wp: setSchedulerAction_invs')+
-                                 apply (wp tcb_sched_action_enqueue_valid_blocked hoare_vcg_all_lift enqueue_thread_queued)
-                                apply (wp tcbSchedEnqueue_invs'_not_ResumeCurrentThread)
+                        apply (rule corres_split[OF guarded_switch_to_corres], simp)
+                          apply (rule setSchedulerAction_corres[simplified dc_def])
+                          apply (wp | simp)+
 
-                               apply (rule corres_if, fastforce)
+                      (* isHighestPrio *)
+                      apply (clarsimp simp: if_apply_def2)
+                      apply ((wp (once) hoare_drop_imp)+)[1]
 
-                                apply (rule corres_split_deprecated[OF _ tcbSchedAppend_corres])
-                                  apply (simp, fold dc_def)
-                                  apply (rule corres_split_deprecated[OF _ setSchedulerAction_corres])
-                                     apply (rule scheduleChooseNewThread_corres, simp)
-
-                                   apply (wp | simp)+
-                                   apply (simp add: valid_sched_def)
-                                   apply wp
-                                   apply (rule hoare_vcg_conj_lift)
-                                    apply (rule_tac t=t in set_scheduler_action_cnt_valid_blocked')
-                                   apply (wpsimp wp: setSchedulerAction_invs')+
-                                 apply (wp tcb_sched_action_append_valid_blocked hoare_vcg_all_lift append_thread_queued)
-                                apply (wp tcbSchedAppend_invs'_not_ResumeCurrentThread)
-
-                               apply (rule corres_split_deprecated[OF _ guarded_switch_to_corres], simp)
-                                 apply (rule setSchedulerAction_corres[simplified dc_def])
-                                 apply (wp | simp)+
-
-                             (* isHighestPrio *)
-                             apply (clarsimp simp: if_apply_def2)
-                             apply ((wp (once) hoare_drop_imp)+)[1]
-
-                            apply (simp add: if_apply_def2)
-                             apply ((wp (once) hoare_drop_imp)+)[1]
-                           apply wpsimp+
-                     apply (wpsimp simp: etcb_relation_def)+
-            apply (rule tcbSchedEnqueue_corres)
-           apply wpsimp+
+                     apply (simp add: if_apply_def2)
+                     apply ((wp (once) hoare_drop_imp)+)[1]
+                    apply wpsimp+
 
            apply (clarsimp simp: conj_ac cong: conj_cong)
            apply wp
@@ -2268,19 +2280,21 @@ lemma possibleSwitchTo_corres:
   supply ethread_get_wp[wp del]
   apply (simp add: possible_switch_to_def possibleSwitchTo_def cong: if_cong)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ curDomain_corres], simp)
-      apply (rule corres_split_deprecated[OF _ ethreadget_corres[where r="(=)"]])
-         apply (rule corres_split_deprecated[OF _ getSchedulerAction_corres])
-           apply (rule corres_if, simp)
-            apply (rule tcbSchedEnqueue_corres)
-           apply (rule corres_if, simp)
-             apply (case_tac action; simp)
-            apply (rule corres_split_deprecated[OF _ rescheduleRequired_corres])
-              apply (rule tcbSchedEnqueue_corres)
-             apply (wp rescheduleRequired_valid_queues'_weak)+
-           apply (rule setSchedulerAction_corres, simp)
-          apply (wpsimp simp: etcb_relation_def if_apply_def2
-                        wp: hoare_drop_imp[where f="ethread_get a b" for a b])+
+    apply (rule corres_split[OF curDomain_corres], simp)
+      apply (rule corres_split)
+         apply (rule ethreadget_corres[where r="(=)"])
+         apply (clarsimp simp: etcb_relation_def)
+        apply (rule corres_split[OF getSchedulerAction_corres])
+          apply (rule corres_if, simp)
+           apply (rule tcbSchedEnqueue_corres)
+          apply (rule corres_if, simp)
+            apply (case_tac action; simp)
+           apply (rule corres_split[OF rescheduleRequired_corres])
+             apply (rule tcbSchedEnqueue_corres)
+            apply (wp rescheduleRequired_valid_queues'_weak)+
+          apply (rule setSchedulerAction_corres, simp)
+         apply (wpsimp simp: if_apply_def2
+                       wp: hoare_drop_imp[where f="ethread_get a b" for a b])+
       apply (wp hoare_drop_imps)[1]
      apply wp+
    apply (fastforce simp: valid_sched_def invs_def valid_state_def cur_tcb_def

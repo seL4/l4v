@@ -628,25 +628,25 @@ next
     apply (subst pt_lookup_slot_from_level_rec)
     apply (simp add: lookupPTSlotFromLevel.simps Let_def obind_comp_dist if_comp_dist
                      gets_the_if_distrib checkPTAt_def)
-    apply (rule corres_guard_imp, rule corres_split_deprecated[where r'=pte_relation'])
-         apply (rule corres_if3)
-           apply (rename_tac pte pte', case_tac pte; (simp add: isPageTablePTE_def))
-          apply (rule corres_stateAssert_implied)
-           apply (rule minus(1))
-            apply (simp add: nlevel)
-           apply (clarsimp simp: RISCV64_A.is_PageTablePTE_def pptr_from_pte_def getPPtrFromHWPTE_def
-                                 addr_from_ppn_def)
-          apply clarsimp
-          apply (rule page_table_at_cross; assumption?)
-           apply (drule (2) valid_vspace_objs_strongD; assumption?)
-            apply simp
-           apply (clarsimp simp: pt_at_eq in_omonad RISCV64_A.is_PageTablePTE_def pptr_from_pte_def
-                                 getPPtrFromHWPTE_def addr_from_ppn_def)
-          apply (simp add: state_relation_def)
-         apply (rule corres_inst[where P=\<top> and P'=\<top>])
-         apply (clarsimp simp: ptSlotIndex_def pt_slot_offset_def pt_index_def pt_bits_left_def
-                               ptIndex_def ptBitsLeft_def)
-        apply (rule pteAtIndex_corres, simp)
+    apply (rule corres_guard_imp, rule corres_split[where r'=pte_relation'])
+         apply (rule pteAtIndex_corres, simp)
+        apply (rule corres_if3)
+          apply (rename_tac pte pte', case_tac pte; (simp add: isPageTablePTE_def))
+         apply (rule corres_stateAssert_implied)
+          apply (rule minus(1))
+           apply (simp add: nlevel)
+          apply (clarsimp simp: RISCV64_A.is_PageTablePTE_def pptr_from_pte_def getPPtrFromHWPTE_def
+                                addr_from_ppn_def)
+         apply clarsimp
+         apply (rule page_table_at_cross; assumption?)
+          apply (drule (2) valid_vspace_objs_strongD; assumption?)
+           apply simp
+          apply (clarsimp simp: pt_at_eq in_omonad RISCV64_A.is_PageTablePTE_def pptr_from_pte_def
+                                getPPtrFromHWPTE_def addr_from_ppn_def)
+         apply (simp add: state_relation_def)
+        apply (rule corres_inst[where P=\<top> and P'=\<top>])
+        apply (clarsimp simp: ptSlotIndex_def pt_slot_offset_def pt_index_def pt_bits_left_def
+                              ptIndex_def ptBitsLeft_def)
        apply wpsimp+
      apply (frule (5) vs_lookup_table_is_aligned)
      apply (rule conjI)
@@ -757,26 +757,26 @@ next
     apply (rule corres_initial_splitE[where r'=dc])
        apply (corressimp simp: lookup_failure_map_def)
       apply (rule corres_splitEE[where r'=pte_relation'])
-         apply (rule whenE_throwError_corres)
-           apply (simp add: lookup_failure_map_def)
-          apply (rename_tac pte pte', case_tac pte; simp add: isPageTablePTE_def)
-         apply (rule corres_if)
-           apply (clarsimp simp: RISCV64_A.is_PageTablePTE_def pptr_from_pte_def getPPtrFromHWPTE_def
-                                 addr_from_ppn_def)
-          apply (rule corres_returnOk[where P=\<top> and P'=\<top>], rule refl)
-         apply (clarsimp simp: checkPTAt_def)
-         apply (subst liftE_bindE, rule corres_stateAssert_implied)
-          apply (rule minus.hyps)
-           apply (simp add: minus.hyps(2))
+         apply (simp, rule getObject_PTE_corres)
+        apply (rule whenE_throwError_corres)
+          apply (simp add: lookup_failure_map_def)
+         apply (rename_tac pte pte', case_tac pte; simp add: isPageTablePTE_def)
+        apply (rule corres_if)
           apply (clarsimp simp: RISCV64_A.is_PageTablePTE_def pptr_from_pte_def getPPtrFromHWPTE_def
                                 addr_from_ppn_def)
-         apply clarsimp
-         apply (rule page_table_at_cross; assumption?)
-          apply (drule vs_lookup_table_pt_at; simp?)
-          apply (clarsimp simp: RISCV64_A.is_PageTablePTE_def pptr_from_pte_def getPPtrFromHWPTE_def
-                                addr_from_ppn_def)
-         apply (simp add: state_relation_def)
-        apply (simp, rule getObject_PTE_corres)
+         apply (rule corres_returnOk[where P=\<top> and P'=\<top>], rule refl)
+        apply (clarsimp simp: checkPTAt_def)
+        apply (subst liftE_bindE, rule corres_stateAssert_implied)
+         apply (rule minus.hyps)
+          apply (simp add: minus.hyps(2))
+         apply (clarsimp simp: RISCV64_A.is_PageTablePTE_def pptr_from_pte_def getPPtrFromHWPTE_def
+                               addr_from_ppn_def)
+        apply clarsimp
+        apply (rule page_table_at_cross; assumption?)
+         apply (drule vs_lookup_table_pt_at; simp?)
+         apply (clarsimp simp: RISCV64_A.is_PageTablePTE_def pptr_from_pte_def getPPtrFromHWPTE_def
+                               addr_from_ppn_def)
+        apply (simp add: state_relation_def)
        apply wpsimp+
      apply (simp add: bit0.neq_0_conv)
      apply (frule (5) vs_lookup_table_is_aligned)
@@ -973,14 +973,14 @@ lemma findVSpaceForASID_corres:
          rule find_vspace_for_asid_rewite; simp)
   apply (simp add: liftE_bindE asidRange_def flip: mask_2pm1)
   apply (rule_tac r'="\<lambda>x y. x = y o ucast"
-             in corres_split' [OF _ _ gets_sp gets_sp])
+             in corres_underlying_split [OF _ _ gets_sp gets_sp])
    apply (clarsimp simp: state_relation_def arch_state_relation_def)
   apply (case_tac "rv (asid_high_bits_of asid)")
    apply (simp add: liftME_def lookup_failure_map_def)
   apply (simp add: liftME_def bindE_assoc)
   apply (simp add: liftE_bindE)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ getObject_ASIDPool_corres[OF refl]])
+    apply (rule corres_split[OF getObject_ASIDPool_corres[OF refl]])
       apply (rule_tac P="case_option \<top> pt_at (pool (ucast asid)) and pspace_aligned and pspace_distinct"
                  and P'="no_0_obj'" in corres_inst)
       apply (rule_tac F="pool (ucast asid) \<noteq> Some 0" in corres_req)

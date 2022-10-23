@@ -1293,10 +1293,9 @@ lemma lookupPDSlot_corres:
           (lookup_pd_slot pml4 vptr) (lookupPDSlot pml4 vptr)"
   apply (simp add: lookup_pd_slot_def lookupPDSlot_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqrE[OF _ lookupPDPTSlot_corres])
+    apply (rule corres_split_eqrE[OF lookupPDPTSlot_corres])
       apply (rule corres_splitEE
       [where R'="\<lambda>_. pspace_distinct'" and R="\<lambda>r. valid_pdpte r and pspace_aligned"])
-         prefer 2
          apply (simp, rule getObject_PDPTE_corres')
         apply (case_tac pdpte; simp add: lookup_failure_map_def bit_simps lookupPDSlotFromPD_def
                                   split: pdpte.splits)
@@ -1339,10 +1338,9 @@ lemma lookupPTSlot_corres:
           (lookup_pt_slot pml4 vptr) (lookupPTSlot pml4 vptr)"
     apply (simp add: lookup_pt_slot_def lookupPTSlot_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_eqrE[OF _ lookupPDSlot_corres])
+    apply (rule corres_split_eqrE[OF lookupPDSlot_corres])
       apply (rule corres_splitEE
       [where R'="\<lambda>_. pspace_distinct'" and R="\<lambda>r. valid_pde r and pspace_aligned"])
-         prefer 2
          apply (simp, rule getObject_PDE_corres')
         apply (case_tac pde; simp add: lookup_failure_map_def bit_simps lookupPTSlotFromPT_def
                                   split: pde.splits)
@@ -1513,28 +1511,28 @@ lemma createMappingEntries_corres:
   apply (cases pgsz, simp_all add: createMappingEntries_def mapping_map_def)
     apply (rule corres_guard_imp)
       apply (rule corres_split_eqrE)
-         apply (rule corres_returnOkTT)
-         apply (clarsimp simp: vmattributes_map_def mapping_map_simps)
-        apply (rule corres_lookup_error)
-        apply (rule lookupPTSlot_corres)
+         apply (rule corres_lookup_error)
+         apply (rule lookupPTSlot_corres)
+        apply (rule corres_returnOkTT)
+        apply (clarsimp simp: vmattributes_map_def mapping_map_simps)
        apply wp+
      apply clarsimp
     apply simp+
    apply (rule corres_guard_imp)
      apply (rule corres_split_eqrE)
-        apply (rule corres_returnOkTT)
-        apply (clarsimp simp: vmattributes_map_def mapping_map_simps)
-       apply (rule corres_lookup_error)
-       apply (rule lookupPDSlot_corres)
+        apply (rule corres_lookup_error)
+        apply (rule lookupPDSlot_corres)
+       apply (rule corres_returnOkTT)
+       apply (clarsimp simp: vmattributes_map_def mapping_map_simps)
       apply wp+
     apply clarsimp
    apply simp+
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqrE)
-       apply (rule corres_returnOkTT)
-       apply (clarsimp simp: vmattributes_map_def mapping_map_simps)
-      apply (rule corres_lookup_error)
-      apply (rule lookupPDPTSlot_corres)
+       apply (rule corres_lookup_error)
+       apply (rule lookupPDPTSlot_corres)
+      apply (rule corres_returnOkTT)
+      apply (clarsimp simp: vmattributes_map_def mapping_map_simps)
      apply wp+
    apply clarsimp
   apply simp
@@ -1657,14 +1655,14 @@ lemma findVSpaceForASID_corres:
   apply (simp add: liftE_bindE asidRange_def le_mask_asidBits_asid_wf
                    mask_2pm1[symmetric])
   apply (rule_tac r'="\<lambda>x y. x = y o ucast"
-             in corres_split' [OF _ _ gets_sp gets_sp])
+             in corres_underlying_split [OF _ _ gets_sp gets_sp])
    apply (clarsimp simp: state_relation_def arch_state_relation_def)
   apply (case_tac "rv (asid_high_bits_of asid)")
    apply (simp add: liftME_def lookup_failure_map_def)
   apply (simp add: liftME_def bindE_assoc)
   apply (simp add: liftE_bindE)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ getObject_ASIDPool_corres'[OF refl]])
+    apply (rule corres_split[OF getObject_ASIDPool_corres'[OF refl]])
       apply (rule_tac P="case_option \<top> page_map_l4_at (pool (ucast asid)) and pspace_aligned"
                  and P'="no_0_obj' and pspace_distinct'" in corres_inst)
       apply (rule_tac F="pool (ucast asid) \<noteq> Some 0" in corres_req)

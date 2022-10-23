@@ -153,25 +153,22 @@ lemma do_user_op_if_C_corres[ADT_IF_Refine_assms]:
                           Let_def cmachine_state_relation_def)
    apply simp
   apply (rule corres_guard_imp)
-    apply (rule_tac P=\<top> and P'=\<top> and r'="(=)" in corres_split_deprecated)
-       prefer 2
+    apply (rule_tac P=\<top> and P'=\<top> and r'="(=)" in corres_split)
        apply (clarsimp simp add: corres_underlying_def fail_def
                                  assert_def return_def
                           split: if_splits)
       apply simp
-      apply (rule_tac P=\<top> and P'=\<top> and r'="(=)" in corres_split_deprecated)
-         prefer 2
+      apply (rule_tac P=\<top> and P'=\<top> and r'="(=)" in corres_split)
          apply (clarsimp simp add: corres_underlying_def fail_def
                                    assert_def return_def
                             split: if_splits)
         apply simp
-        apply (rule_tac r'="(=)" in corres_split_deprecated[OF _ corres_select])
-           prefer 2
+        apply (rule_tac r'="(=)" in corres_split[OF corres_select])
            apply clarsimp
           apply simp
           apply (rule corres_underlying_split4)
-          apply (rule corres_split_deprecated[OF _ user_memory_update_corres_C])
-            apply (rule corres_split_deprecated[OF _ device_update_corres_C])
+          apply (rule corres_split[OF user_memory_update_corres_C])
+            apply (rule corres_split[OF device_update_corres_C])
               apply (wp select_wp | simp)+
    apply (clarsimp simp:  ex_abs_def restrict_map_def invs_pspace_aligned'
                           invs_pspace_distinct' ptable_lift_s'_def ptable_rights_s'_def
@@ -190,19 +187,19 @@ lemma check_active_irq_corres_C[ADT_IF_Refine_assms]:
   apply (simp add: getActiveIRQ_C_def)
   apply (subst bind_assoc[symmetric])
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[where r'="\<lambda>a c. case a of None \<Rightarrow> c = ucast irqInvalid
+    apply (rule corres_split[where r'="\<lambda>a c. case a of None \<Rightarrow> c = ucast irqInvalid
                                                                 | Some x \<Rightarrow> c = ucast x \<and> c \<noteq> ucast irqInvalid",
-                                        OF _ ccorres_corres_u_xf])
-        apply (clarsimp split: if_split option.splits)
-       apply (rule ccorres_guard_imp)
-         apply (rule ccorres_rel_imp, rule ccorres_guard_imp)
-            apply (rule getActiveIRQ_ccorres)
-           apply simp+
-      apply (rule no_fail_dmo')
-      apply (rule getActiveIRQ_nf)
-     apply (rule hoare_post_taut[where P=\<top>])+
+                                        OF ccorres_corres_u_xf])
+        apply (rule ccorres_guard_imp)
+          apply (rule ccorres_rel_imp, rule ccorres_guard_imp)
+             apply (rule getActiveIRQ_ccorres)
+            apply simp+
+       apply (rule no_fail_dmo')
+       apply (rule no_fail_getActiveIRQ)
+      apply (rule corres_trivial, clarsimp split: if_split option.splits)
+     apply wp+
    apply simp+
-   apply fastforce
+  apply fastforce
   done
 
 lemma obs_cpspace_user_data_relation[ADT_IF_Refine_assms]:

@@ -441,10 +441,6 @@ lemma sum_map_simps[simp]:
   "sum_map f g (Inr w) = Inr (g w)"
   by (simp add: sum_map_def)+
 
-lemma if_Some_None_eq_None:
-  "((if P then Some v else None) = None) = (\<not> P)"
-  by simp
-
 lemma CollectPairFalse [iff]:
   "{(a,b). False} = {}"
   by (simp add: split_def)

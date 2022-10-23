@@ -66,14 +66,13 @@ lemma switch_to_idle_thread_dcorres:
    apply (clarsimp simp: Schedule_D.switch_to_thread_def switch_to_idle_thread_def)
    apply (rule dcorres_symb_exec_r)
    apply (rule corres_guard_imp)
-   apply (rule corres_split_noop_rhs)
-         apply (clarsimp simp: corres_underlying_def gets_def modify_def get_def put_def do_machine_op_def select_f_def split_def bind_def in_return)
-         apply (clarsimp simp: transform_def transform_current_thread_def transform_asid_table_def)
-         apply assumption
+      apply (rule corres_split_noop_rhs)
         apply (rule dcorres_arch_switch_to_idle_thread_return)
+       apply (clarsimp simp: corres_underlying_def gets_def modify_def get_def put_def do_machine_op_def select_f_def split_def bind_def in_return)
+       apply (clarsimp simp: transform_def transform_current_thread_def transform_asid_table_def)
+       apply assumption
       apply (wp | simp)+
   done
-
 
 (* Switching to the idle thread and switching to "None" are equivalent. *)
 lemma change_current_domain_and_switch_to_idle_thread_dcorres:
@@ -85,14 +84,14 @@ lemma change_current_domain_and_switch_to_idle_thread_dcorres:
   including no_pre
   apply (clarsimp simp: Schedule_D.switch_to_thread_def switch_to_idle_thread_def)
   apply (rule dcorres_symb_exec_r)
-  apply (rule corres_guard_imp)
-  apply (rule corres_symb_exec_l)
-  apply (rule_tac R=\<top> in corres_split_noop_rhs)
-        apply (clarsimp simp: corres_underlying_def gets_def modify_def get_def put_def do_machine_op_def select_f_def split_def bind_def in_return)
-        apply (clarsimp simp: transform_def transform_current_thread_def transform_asid_table_def)
-        apply assumption
-       apply (rule dcorres_arch_switch_to_idle_thread_return)
-      apply (wp change_current_domain_same | simp)+
+    apply (rule corres_guard_imp)
+      apply (rule corres_symb_exec_l)
+         apply (rule_tac R=\<top> in corres_split_noop_rhs)
+           apply (rule dcorres_arch_switch_to_idle_thread_return)
+          apply (clarsimp simp: corres_underlying_def gets_def modify_def get_def put_def do_machine_op_def select_f_def split_def bind_def in_return)
+          apply (clarsimp simp: transform_def transform_current_thread_def transform_asid_table_def)
+          apply assumption
+         apply (wp change_current_domain_same | simp)+
   done
 
 lemma arch_switch_to_thread_dcorres:
@@ -102,7 +101,7 @@ lemma arch_switch_to_thread_dcorres:
   apply (clarsimp simp: arch_switch_to_thread_def)
   apply (rule corres_dummy_return_pl)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [OF _ dcorres_set_vm_root])
+    apply (rule corres_split[OF dcorres_set_vm_root])
       apply simp
       apply (rule dcorres_machine_op_noop)
       apply (simp add: ARM.clearExMonitor_def, wp)[1]
@@ -123,7 +122,7 @@ lemma switch_to_thread_corres:
   apply (rule corres_symb_exec_r)
      apply (rule corres_symb_exec_r)
         apply (rule corres_guard_imp)
-          apply (rule corres_split_deprecated [OF _ arch_switch_to_thread_dcorres])
+          apply (rule corres_split[OF arch_switch_to_thread_dcorres])
             apply simp
             apply (rule dcorres_rhs_noop_above[OF tcb_sched_action_dcorres])
               apply (rule corres_modify [where P=\<top> and P'="\<lambda>s. idle_thread s \<noteq> x"])
@@ -170,7 +169,7 @@ lemma switch_to_thread_same_corres:
   apply (rule corres_symb_exec_r)
      apply (rule corres_symb_exec_r)
         apply (rule corres_guard_imp)
-          apply (rule corres_split_deprecated [OF _ arch_switch_to_thread_dcorres])
+          apply (rule corres_split[OF arch_switch_to_thread_dcorres])
             apply simp
             apply (rule dcorres_rhs_noop_above[OF tcb_sched_action_dcorres])
               apply (rule corres_modify [where P'="\<lambda>s. idle_thread s \<noteq> x"])
@@ -361,9 +360,9 @@ lemma schedule_choose_new_thread_dcorres:
         (\<lambda>s. valid_etcbs s \<and> valid_sched_except_blocked s \<and> invs s \<and> scheduler_action s = choose_new_thread)
         Schedule_D.schedule
         schedule_choose_new_thread"
-  unfolding schedule_choose_new_thread_def
+  unfolding schedule_choose_new_thread_def guarded_switch_to_def bind_assoc
+            choose_thread_def max_non_empty_queue_def
   supply if_cong[cong]
-  apply (clarsimp simp: guarded_switch_to_def bind_assoc choose_thread_def)
   apply (rule dcorres_symb_exec_r, rename_tac dom_t)
     apply (case_tac "dom_t \<noteq> 0")
      apply (clarsimp)
@@ -378,7 +377,6 @@ lemma schedule_choose_new_thread_dcorres:
             apply (rule change_current_domain_and_switch_to_idle_thread_dcorres)
            (* Threads in ready_queues *)
            apply (simp only: Schedule_D.schedule_def)
-           unfolding max_non_empty_queue_def
            apply (rule corres_alternate1)
            apply (rule dcorres_symb_exec_r)
              apply (rule dcorres_symb_exec_r)
@@ -407,44 +405,44 @@ lemma schedule_choose_new_thread_dcorres:
     (* dom_t = 0 *)
     apply (simp only: schedule_def_2)
     apply (rule corres_guard_imp)
-      apply (rule_tac r'="\<lambda>_ _. True" and  P=\<top> and P'=\<top> and R="\<lambda>_. \<top>" and R'="\<lambda>_ s. valid_etcbs s \<and> valid_sched_except_blocked s \<and> invs s \<and> scheduler_action s = choose_new_thread" in corres_split_deprecated)
-         apply (clarsimp)
-         apply (rule dcorres_symb_exec_r)
-           apply (rule dcorres_symb_exec_r, rename_tac rq)
-             apply (fold dc_def, rule dcorres_rhs_noop_below_True[OF set_scheduler_action_dcorres])
-             apply (rule corres_guard_imp)
-
-               apply (rule corres_if_rhs)
-                (* No threads in ready queues *)
-                apply (rule corres_alternate2)
-                apply (rule switch_to_idle_thread_dcorres)
-               (* threads in ready queues *)
-               apply (rule corres_alternate1)
-               apply (rule dcorres_symb_exec_r)
-                 apply (rule dcorres_symb_exec_r)
-                   apply (rule_tac P'="\<lambda>s. ready_queues s (cur_domain s) = rq \<and> valid_etcbs s \<and> valid_sched_except_blocked s \<and> invs s \<and> scheduler_action s = choose_new_thread"
-                          in stronger_corres_guard_imp)
-                     apply (rule corres_symb_exec_l_Ex)
-                     apply (rule corres_symb_exec_l_Ex)
-                     apply (rule corres_symb_exec_l_Ex)
-                     apply (rule switch_to_thread_same_corres)
-                    apply clarsimp
-                    apply (frule_tac prio="(Max {prio. ready_queues s' (cur_domain s') prio \<noteq> []})" in schedule_choose_new_thread_helper,simp,simp,simp,simp,simp)
-                    apply (clarsimp simp: invs_def valid_state_def valid_sched_def)
-                    apply (auto simp: select_def gets_def get_def bind_def return_def active_tcbs_in_domain_def
-                        invs_def valid_state_def valid_objs_def change_current_domain_def
-                        Schedule_D.switch_to_thread_def modify_def put_def
-                        option_map_def restrict_map_def map_add_def get_tcb_def
-                        transform_def transform_current_thread_def cur_tcb_def tcb_at_def)[1]
-                   apply (clarsimp simp: invs_def valid_state_def valid_sched_def max_non_empty_queue_def)
-                   apply (frule_tac p="Max {prio. ready_queues s' (cur_domain s') prio \<noteq> []}" in idle_thread_not_in_queue,simp,simp)
-                   apply (clarsimp)
-                  apply (wp hoare_drop_imp | clarsimp)+
-              apply (frule max_set_not_empty, fastforce)
-             apply (wp hoare_drop_imp | clarsimp)+
-             apply simp
-            apply (wp | clarsimp)+
-        apply (rule change_current_domain_dcorres)
+      apply (rule_tac P=\<top> and P'=\<top> and R="\<lambda>_. \<top>" and R'="\<lambda>_ s. valid_etcbs s \<and> valid_sched_except_blocked s \<and> invs s \<and> scheduler_action s = choose_new_thread"
+              in corres_split)
+         apply (rule change_current_domain_dcorres)
+        apply (clarsimp)
+        apply (rule dcorres_symb_exec_r)
+          apply (rule dcorres_symb_exec_r, rename_tac rq)
+            apply (fold dc_def, rule dcorres_rhs_noop_below_True[OF set_scheduler_action_dcorres])
+            apply (rule corres_guard_imp)
+              apply (rule corres_if_rhs)
+               (* No threads in ready queues *)
+               apply (rule corres_alternate2)
+               apply (rule switch_to_idle_thread_dcorres)
+              (* threads in ready queues *)
+              apply (rule corres_alternate1)
+              apply (rule dcorres_symb_exec_r)
+                apply (rule dcorres_symb_exec_r)
+                  apply (rule_tac P'="\<lambda>s. ready_queues s (cur_domain s) = rq \<and> valid_etcbs s \<and> valid_sched_except_blocked s \<and> invs s \<and> scheduler_action s = choose_new_thread"
+                         in stronger_corres_guard_imp)
+                    apply (rule corres_symb_exec_l_Ex)
+                    apply (rule corres_symb_exec_l_Ex)
+                    apply (rule corres_symb_exec_l_Ex)
+                    apply (rule switch_to_thread_same_corres)
+                   apply clarsimp
+                   apply (frule_tac prio="(Max {prio. ready_queues s' (cur_domain s') prio \<noteq> []})" in schedule_choose_new_thread_helper,simp,simp,simp,simp,simp)
+                   apply (clarsimp simp: invs_def valid_state_def valid_sched_def)
+                   apply (auto simp: select_def gets_def get_def bind_def return_def active_tcbs_in_domain_def
+                       invs_def valid_state_def valid_objs_def change_current_domain_def
+                       Schedule_D.switch_to_thread_def modify_def put_def
+                       option_map_def restrict_map_def map_add_def get_tcb_def
+                       transform_def transform_current_thread_def cur_tcb_def tcb_at_def)[1]
+                  apply (clarsimp simp: invs_def valid_state_def valid_sched_def max_non_empty_queue_def)
+                  apply (frule_tac p="Max {prio. ready_queues s' (cur_domain s') prio \<noteq> []}" in idle_thread_not_in_queue,simp,simp)
+                  apply (clarsimp)
+                 apply (wp hoare_drop_imp | clarsimp)+
+             apply (frule max_set_not_empty, fastforce)
+            apply (wp hoare_drop_imp | clarsimp)+
+            apply simp
+           apply (wp | clarsimp)+
        unfolding dc_def
        apply (wp next_domain_valid_etcbs | simp)+
     apply (wp tcb_sched_action_transform | clarsimp simp: valid_sched_def)+

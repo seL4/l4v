@@ -36,6 +36,10 @@ lemma in_opt_map_eq:
   "((f |> g) s = Some v) = (\<exists>v'. f s = Some v' \<and> g v' = Some v)"
   by (simp add: opt_map_def split: option.splits)
 
+lemma in_opt_map_None_eq:
+  "((f |> g) s = None) = (f s = None \<or> (\<exists>v. f s = Some v \<and> g v = None))"
+  by (simp add: opt_map_def split: option.splits)
+
 lemma opt_mapE:
   "\<lbrakk> (f |> g) s = Some v; \<And>v'. \<lbrakk>f s = Some v'; g v' = Some v \<rbrakk> \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
   by (auto simp: in_opt_map_eq)
@@ -135,6 +139,10 @@ lemma case_opt_map_distrib:
   "((\<lambda>s. case_option None g (f s)) |> h)
    = ((\<lambda>s. case_option None (g |> h) (f s)))"
   by (fastforce simp: opt_map_def split: option.splits)
+
+lemma opt_map_apply_left_eq:
+  "f s = f s' \<Longrightarrow> (f |> g) s = (f |> g) s'"
+  by (simp add: opt_map_def)
 
 declare None_upd_eq[simp]
 
@@ -368,6 +376,10 @@ lemma in_obind_eq:
   "((f |>> g) s = Some v) = (\<exists>v'. f s = Some v' \<and> g v' s = Some v)"
   by (simp add: obind_def split: option.splits)
 
+lemma obind_None_eq:
+  "((f |>> g) s = None) = (f s = None \<or> (\<exists>v. f s = Some v \<and> g v s = None))"
+  by (simp add: obind_def split: option.split)
+
 lemma obind_eqI:
   "\<lbrakk> f s = f s' ; \<And>x. f s = Some x \<Longrightarrow> g x s = g' x s' \<rbrakk> \<Longrightarrow> obind f g s = obind f g' s'"
   by (simp add: obind_def split: option.splits)
@@ -408,7 +420,7 @@ lemma in_opt_map_Some_eq:
   "((f ||> g) x = Some y) = (\<exists>v. f x = Some v \<and> g v = y)"
   by (simp add: in_opt_map_eq)
 
-lemma in_opt_map_None_eq[simp]:
+lemma in_opt_map_Some_None_eq[simp]:
   "((f ||> g) x = None) = (f x = None)"
   by (simp add: opt_map_def split: option.splits)
 
@@ -451,6 +463,10 @@ lemma obind_comp_dist:
 lemma if_comp_dist:
   "(if P then f else g) o h = (if P then f o h else g o h)"
   by auto
+
+lemma obindK_is_opt_map:
+  "f \<bind> (\<lambda>x. K $ g x) = f |> g"
+  by (simp add: obind_def opt_map_def K_def)
 
 
 section \<open>"While" loops over option monad.\<close>

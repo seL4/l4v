@@ -161,8 +161,7 @@ definition perform_pt_inv_unmap :: "arch_cap \<Rightarrow> cslot_ptr \<Rightarro
        Some (asid, vaddr) \<Rightarrow> do
          p \<leftarrow> return $ acap_obj cap;
          unmap_page_table asid vaddr p;
-         \<comment> \<open>Can only be a normal table, not vspace table, so @{term \<open>pt_bits NormalPT_T\<close>}\<close>
-         slots \<leftarrow> return [p, p + (1 << pte_bits) .e. p + mask (pt_bits NormalPT_T)];
+         slots \<leftarrow> return [p, p + (1 << pte_bits) .e. p + mask (pt_bits (acap_pt_type cap))];
          mapM_x (swp (store_pte (acap_pt_type cap)) InvalidPTE) slots
        od
      | _ \<Rightarrow> return ();

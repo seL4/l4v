@@ -436,7 +436,7 @@ lemma suspend_corres:
      (Tcb_D.suspend obj_id) (IpcCancel_A.suspend obj_id)"
   apply (rule corres_guard_imp)
     apply (clarsimp simp: IpcCancel_A.suspend_def Tcb_D.suspend_def)
-    apply (rule corres_split_deprecated[OF _ finalise_cancel_ipc])
+    apply (rule corres_split[OF finalise_cancel_ipc])
       apply (rule dcorres_symb_exec_r[OF _ gts_inv gts_inv])
       apply (rule dcorres_rhs_noop_above)
          apply (case_tac "rv = Running"; simp)
@@ -557,8 +557,8 @@ lemma restart_corres:
     tcb_cspace_slot_def tcb_replycap_slot_def)
   apply (intro conjI impI)
        apply (rule corres_guard_imp)
-         apply (rule corres_split_deprecated[OF _ finalise_cancel_ipc])
-           apply (rule corres_split_deprecated[OF _ dcorres_setup_reply_master[unfolded tcb_replycap_slot_def] ])
+         apply (rule corres_split[OF finalise_cancel_ipc])
+           apply (rule corres_split[OF dcorres_setup_reply_master[unfolded tcb_replycap_slot_def] ])
             apply (rule dcorres_rhs_noop_below_True[OF dcorres_rhs_noop_below_True])
              apply (rule possible_switch_to_dcorres)
              apply (rule tcb_sched_action_dcorres)
@@ -603,23 +603,18 @@ lemma invoke_tcb_corres_read_regs:
    apply clarsimp
    apply (subst bind_return [symmetric])
    apply (rule corres_guard_imp)
-     apply (rule corres_split_deprecated [where r'=dc])
-        apply (rule corres_symb_exec_r)
-           apply (rule dcorres_idempotent_as_user)
-           apply (rule hoare_mapM_idempotent)
-           apply wpsimp+
-       apply (rule suspend_corres, simp)
-      apply wp
-    apply simp
-   apply simp
-  apply clarsimp
+     apply (rule corres_split[where r'=dc])
+        apply (rule suspend_corres, simp)
+       apply (rule corres_symb_exec_r)
+          apply (rule dcorres_idempotent_as_user)
+          apply (rule hoare_mapM_idempotent)
+          apply wpsimp+
   apply (rule corres_alternate2)
   apply (rule corres_symb_exec_r)
      apply (rule dcorres_idempotent_as_user)
      apply (rule hoare_mapM_idempotent)
      apply (wp | simp)+
   done
-
 
 (* Write the registers of another thread. *)
 lemma invoke_tcb_corres_write_regs:
@@ -630,20 +625,20 @@ lemma invoke_tcb_corres_write_regs:
                         arch_post_modify_registers_def)
   apply (rule corres_symb_exec_r)
      apply (rule corres_guard_imp)
-       apply (rule corres_split_deprecated [where r'=dc])
-          apply (rule corres_dummy_return_l)
-          apply (rule corres_split_deprecated [where r'=dc])
-             apply (rule corres_split_noop_rhs[OF corres_trivial])
-               apply simp
-              apply (clarsimp simp: when_def)
-              apply (rule reschedule_required_dcorres[THEN corres_trivial])
-             apply wp
+       apply (rule corres_split[where r'=dc])
+          apply (rule corrupt_tcb_intent_as_user_corres)
+         apply (rule corres_dummy_return_l)
+         apply (rule corres_split[where r'=dc])
             apply (clarsimp simp: when_def)
             apply (clarsimp simp: dc_def, rule restart_corres [unfolded dc_def])
-           apply (clarsimp simp: when_def)
+           apply (rule corres_split_noop_rhs[OF corres_trivial])
+             apply (clarsimp simp: when_def)
+             apply (rule reschedule_required_dcorres[THEN corres_trivial])
+            apply simp
+           apply wp
+          apply (clarsimp simp: when_def)
           apply (wpsimp wp: hoare_when_wp)+
-         apply (rule corrupt_tcb_intent_as_user_corres)
-        apply (wp wp_post_taut | simp add:invs_def valid_state_def | fastforce)+
+     apply (wp wp_post_taut | simp add:invs_def valid_state_def | fastforce)+
   done
 
 lemma corres_mapM_x_rhs_induct:
@@ -658,8 +653,8 @@ lemma corres_mapM_x_rhs_induct:
   apply (clarsimp simp: mapM_x_def sequence_x_def dc_def)
   apply (erule ssubst)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated)
-       apply (assumption)
+    apply (rule corres_split)
+       apply assumption
       apply assumption
      apply assumption
     apply assumption
@@ -685,7 +680,7 @@ lemma invoke_tcb_corres_copy_regs_loop:
    apply (clarsimp simp: mapM_x_mapM)
    apply (rule corres_guard_imp)
    apply (rule corres_dummy_return_l)
-     apply (rule corres_split_deprecated[OF corres_free_return[where P=\<top> and P'= \<top>] Intent_DR.set_registers_corres])
+     apply (rule corres_split[OF Intent_DR.set_registers_corres corres_free_return[where P=\<top> and P'= \<top>]])
      apply (wp|simp)+
   done
 
@@ -731,63 +726,55 @@ lemma invoke_tcb_corres_copy_regs:
      (Tcb_D.invoke_tcb t) (Tcb_A.invoke_tcb t')"
   apply (clarsimp simp: Tcb_D.invoke_tcb_def translate_tcb_invocation_def arch_post_modify_registers_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [where r'=dc])
-       apply (rule corres_split_deprecated [where r'=dc])
-          apply (rule corres_corrupt_tcb_intent_dupl)
-          apply (rule corres_split_deprecated [where r'=dc])
-             apply (rule corres_dummy_return_l)
-                apply (rule corres_split_deprecated [where r'=dc])
-                   apply (rule corres_symb_exec_r)
-                     apply (rule corres_split_noop_rhs[OF corres_trivial])
-                    apply simp
-                    apply (clarsimp simp: when_def)
-                   apply (rule reschedule_required_dcorres[THEN corres_trivial])
-              apply wpsimp+
-               apply (rule corres_cases [where R="d"])
-               apply (clarsimp simp: when_def)
-              apply (rule invoke_tcb_corres_copy_regs_loop[unfolded dc_def])
-              apply (clarsimp simp: when_def)
-             apply (rule dummy_corrupt_tcb_intent_corres[unfolded dc_def])
-           apply wp+
-           apply (rule corres_cases [where R="c"])
-            apply (clarsimp simp: when_def)
-            apply (rule corres_bind_ignore_ret_rhs)
-            apply (rule corres_corrupt_tcb_intent_dupl)
-            apply (rule corres_split_deprecated [where r'=dc])
-               apply (unfold K_bind_def)
-               apply (rule corres_symb_exec_r)
-                  apply (simp add:setNextPC_def)
-                  apply (rule Intent_DR.set_register_corres[unfolded dc_def], simp)
-                 apply (wp | clarsimp simp:getRestartPC_def)+
-              apply (rule invoke_tcb_corres_copy_regs_loop, simp)
-            apply (wp mapM_x_wp [where S=UNIV])
-            apply simp
-           apply simp
-           apply (rule dummy_corrupt_tcb_intent_corres)
-          apply simp
-         apply wpsimp+
-         apply (wp mapM_x_wp [where S=UNIV])[1]
-         apply simp
+    apply (rule corres_split[where r'=dc])
+       apply (rule corres_cases [where R="a"])
+        apply (clarsimp simp: when_def)
+        apply (rule corres_alternate1)
+        apply (rule suspend_corres)
+       apply (clarsimp simp: when_def dc_def[symmetric])+
+       apply (rule corres_alternate2)
+       apply (rule corres_free_return [where P="\<top>" and P'="\<top>"])
+      apply (rule corres_split[where r'=dc])
          apply (rule corres_cases [where R="b"])
           apply (clarsimp simp: when_def)
           apply (rule corres_alternate1)
           apply (rule restart_corres, simp)
          apply (rule corres_alternate2)
          apply (rule corres_free_return [where P="\<top>" and P'="\<top>"])
-        apply (wp wp_post_taut)
-       apply (clarsimp simp:conj_comms pred_conj_def cong: if_cong)
-       apply (wpsimp simp: not_idle_thread_def | rule conjI | strengthen invs_cur)+
-      apply (rule corres_cases [where R="a"])
-       apply (clarsimp simp: when_def)
-       apply (rule corres_alternate1)
-       apply (rule suspend_corres)
-      apply (clarsimp simp: when_def dc_def[symmetric])+
-      apply (rule corres_alternate2)
-      apply (rule corres_free_return [where P="\<top>" and P'="\<top>"])
-     apply clarsimp
-    apply (clarsimp simp:conj_comms pred_conj_def cong: if_cong)
-    apply (clarsimp simp:not_idle_thread_def invs_valid_objs dest!: idle_no_ex_cap
-           | wp suspend_nonz_cap_to_tcb | rule conjI |strengthen invs_cur)+
+        apply (rule corres_corrupt_tcb_intent_dupl)
+        apply (rule corres_split[where r'=dc])
+           apply (rule corres_cases [where R="c"])
+            apply (clarsimp simp: when_def)
+            apply (rule corres_bind_ignore_ret_rhs)
+            apply (rule corres_corrupt_tcb_intent_dupl)
+            apply (rule corres_split[where r'=dc])
+               apply (rule invoke_tcb_corres_copy_regs_loop, simp)
+              apply (rule corres_symb_exec_r)
+                 apply (simp add:setNextPC_def)
+                 apply (rule Intent_DR.set_register_corres[unfolded dc_def], simp)
+                apply (wp | clarsimp simp:getRestartPC_def)+
+            apply (wp mapM_x_wp [where S=UNIV])
+            apply simp
+           apply simp
+           apply (rule dummy_corrupt_tcb_intent_corres)
+          apply (rule corres_dummy_return_l)
+          apply (rule corres_split[where r'=dc])
+             apply (rule corres_cases [where R="d"])
+              apply (clarsimp simp: when_def)
+              apply (rule invoke_tcb_corres_copy_regs_loop)
+             apply (clarsimp simp: when_def)
+             apply (rule dummy_corrupt_tcb_intent_corres)
+            apply (rule corres_symb_exec_r)
+               apply (rule corres_split_noop_rhs[OF corres_trivial])
+                 apply simp
+                 apply (clarsimp simp: when_def)
+                 apply (rule reschedule_required_dcorres[THEN corres_trivial])
+                apply wpsimp+
+        apply (wp mapM_x_wp [where S=UNIV])[1]
+        apply simp
+       apply (wp wp_post_taut)
+      apply (clarsimp simp:conj_comms pred_conj_def cong: if_cong)
+      apply (wpsimp simp: not_idle_thread_def | rule conjI | strengthen invs_cur)+
   done
 
 lemma cnode_cap_unique_bits:
@@ -1043,20 +1030,22 @@ lemma dcorres_tcb_update_ipc_buffer:
    apply (clarsimp)
    apply (rule corres_alternate2)
    apply (rule corres_guard_imp)
-     apply (rule corres_splitEE[OF _  dcorres_tcb_empty_slot])
-        apply (clarsimp simp:liftE_bindE)
-        apply (simp add:liftE_def)
-        apply (rule corres_split_deprecated[OF _ dcorres_corrupt_tcb_intent_ipcbuffer_upd])
-          apply (rule corres_dummy_return_pl)
-          apply (clarsimp simp:returnOk_def)
-          apply (rule corres_symb_exec_r)
-             apply (rule corres_guard_imp)
-               apply (rule corres_split_noop_rhs[OF corres_trivial])
-                 apply simp
+     apply (rule corres_splitEE)
+        apply (rule dcorres_tcb_empty_slot)
+        apply (simp add:transform_tcb_slot_4)
+       apply (clarsimp simp:liftE_bindE)
+       apply (simp add:liftE_def)
+       apply (rule corres_split[OF dcorres_corrupt_tcb_intent_ipcbuffer_upd])
+         apply (rule corres_dummy_return_pl)
+         apply (clarsimp simp:returnOk_def)
+         apply (rule corres_symb_exec_r)
+            apply (rule corres_guard_imp)
+              apply (rule corres_split_noop_rhs)
                 apply (clarsimp simp: when_def)
                 apply (rule reschedule_required_dcorres[THEN corres_trivial])
-               apply wpsimp+
-       apply (wp|simp add:transform_tcb_slot_4)+
+               apply (rule corres_trivial)
+               apply simp
+              apply wpsimp+
      apply (rule validE_validE_R)
      apply (rule_tac Q = "\<lambda>r s. invs s \<and> valid_etcbs s \<and> not_idle_thread obj_id' s  \<and> tcb_at obj_id' s"
         in hoare_post_impErr[where E="\<lambda>x. \<top>"])
@@ -1073,61 +1062,72 @@ lemma dcorres_tcb_update_ipc_buffer:
   apply (rule dcorres_expand_pfx)
   apply (subst alternative_com)
   apply (rule corres_guard_imp)
-    apply (rule corres_splitEE[OF _ dcorres_tcb_empty_slot])
-       apply (clarsimp simp:tcb_update_thread_slot_def whenE_liftE)
-       apply (clarsimp simp:liftE_bindE)
-       apply (rule corres_split_deprecated[OF _ dcorres_corrupt_tcb_intent_ipcbuffer_upd])
-         apply (clarsimp simp:bind_assoc)
-         apply (rule corres_dummy_return_pl)
-         apply simp
-         apply (rule corres_split_deprecated[OF _ get_cap_corres])
-            apply (clarsimp simp:liftE_def returnOk_def)
-            apply (rule corres_split_deprecated[OF _ corres_when])
-                apply (rule corres_trivial,clarsimp simp:returnOk_def)
-                apply (rule corres_symb_exec_r)
-                   apply (rule corres_guard_imp)
-                     apply (rule corres_split_noop_rhs[OF corres_trivial])
-                       apply simp
-                      apply (clarsimp simp: when_def)
-                      apply (rule reschedule_required_dcorres[THEN corres_trivial])
-                     apply wpsimp+
-               apply (rule arch_same_obj_as_lift)
-                  apply (simp add:valid_ipc_buffer_cap_def is_arch_cap_def split:cap.splits)
-                 apply (clarsimp simp: valid_cap_def is_arch_cap_def valid_ipc_buffer_cap_def
-                             split: cap.split_asm arch_cap.split_asm)+
-              apply (rule corres_split_deprecated[OF _ get_cap_corres])
-                 apply (rule corres_when)
-                  apply (rule sym)
-                  apply (case_tac cap')
-                             apply (clarsimp simp:same_object_as_def)+
-                  apply (simp add:transform_cap_def split:arch_cap.splits)
-                 apply (rule dcorres_insert_cap_combine)
-                 apply (clarsimp+)[2]
-               apply (rule hoare_strengthen_post[OF hoare_TrueI[where P = \<top>]],simp)
-              apply (rule_tac Q = "\<lambda>r s. cte_wp_at ((=) cap.NullCap) (obj_id', tcb_cnode_index 4) s
-                                         \<and> cte_wp_at (\<lambda>_. True) (ab, ba) s
-                                         \<and> valid_global_refs s \<and> valid_idle s \<and> valid_irq_node s
-                                         \<and> valid_mdb s \<and> valid_objs s\<and> not_idle_thread ab s \<and> valid_etcbs s
-                                         \<and> ((is_thread_cap r \<and> obj_ref_of r = obj_id') \<longrightarrow>
-                                             ex_cte_cap_wp_to (\<lambda>_. True) (obj_id', tcb_cnode_index 4) s)"
-                     in hoare_strengthen_post)
-               apply (wp get_cap_ex_cte_cap_wp_to,clarsimp)
-              apply (clarsimp simp:same_object_as_def)
-              apply (drule ex_cte_cap_to_not_idle, auto simp: not_idle_thread_def)[1]
-             apply (wp hoare_when_wp)+
-            apply (rule hoare_strengthen_post[OF hoare_TrueI[where P = \<top>]],clarsimp+)
-         apply (wp wp_post_taut hoare_drop_imp get_cap_weak_wp)+
-       apply (clarsimp simp:conj_comms)
-       apply (wp thread_set_global_refs_triv thread_set_valid_idle)
-        apply (clarsimp simp:tcb_cap_cases_def)
-       apply (wp thread_set_valid_idle thread_set_valid_irq_node)
-        apply (fastforce simp:tcb_cap_cases_def)
-       apply (wp thread_set_mdb)
-        apply (fastforce simp:tcb_cap_cases_def)
-       apply (simp add:not_idle_thread_def)
-       apply (wp thread_set_cte_at update_ipc_buffer_valid_objs thread_set_valid_cap thread_set_cte_wp_at_trivial)
+    apply (rule corres_splitEE)
+       apply (rule dcorres_tcb_empty_slot)
+       apply (simp add:transform_tcb_slot_4)
+      apply (clarsimp simp:tcb_update_thread_slot_def whenE_liftE)
+      apply (clarsimp simp:liftE_bindE)
+      apply (rule corres_split[OF dcorres_corrupt_tcb_intent_ipcbuffer_upd])
+        apply (clarsimp simp:bind_assoc)
+        apply (rule corres_dummy_return_pl)
+        apply simp
+        apply (rule corres_split)
+           apply (rule get_cap_corres; simp)
+          apply (clarsimp simp:liftE_def returnOk_def)
+          apply (rule corres_split)
+             apply (rule corres_when)
+              apply (rule arch_same_obj_as_lift)
+                 apply (simp add:valid_ipc_buffer_cap_def is_arch_cap_def split:cap.splits)
+                apply (clarsimp simp: valid_cap_def is_arch_cap_def valid_ipc_buffer_cap_def
+                            split: cap.split_asm arch_cap.split_asm)+
+             apply (rule corres_split)
+                apply (rule get_cap_corres; simp)
+               apply (rule corres_when)
+                apply (rule sym)
+                apply (case_tac cap')
+                           apply (clarsimp simp:same_object_as_def)+
+                apply (simp add:transform_cap_def split:arch_cap.splits)
+               apply (rule dcorres_insert_cap_combine)
+               apply clarsimp
+              apply wp
+             apply (rule_tac Q = "\<lambda>r s. cte_wp_at ((=) cap.NullCap) (obj_id', tcb_cnode_index 4) s
+                                        \<and> cte_wp_at (\<lambda>_. True) (ab, ba) s
+                                        \<and> valid_global_refs s \<and> valid_idle s \<and> valid_irq_node s
+                                        \<and> valid_mdb s \<and> valid_objs s\<and> not_idle_thread ab s \<and> valid_etcbs s
+                                        \<and> ((is_thread_cap r \<and> obj_ref_of r = obj_id') \<longrightarrow>
+                                            ex_cte_cap_wp_to (\<lambda>_. True) (obj_id', tcb_cnode_index 4) s)"
+                    in hoare_strengthen_post)
+              apply (wp get_cap_ex_cte_cap_wp_to,clarsimp)
+             apply (clarsimp simp:same_object_as_def)
+             apply (drule ex_cte_cap_to_not_idle, auto simp: not_idle_thread_def)[1]
+            apply (rule corres_trivial,clarsimp simp:returnOk_def)
+            apply (rule corres_symb_exec_r)
+               apply (rule corres_guard_imp)
+                 apply (rule corres_split_noop_rhs)
+                   apply (clarsimp simp: when_def)
+                   apply (rule reschedule_required_dcorres[THEN corres_trivial])
+                  apply (rule corres_trivial)
+                  apply simp
+                 apply wp
+                apply simp
+               apply simp
+              apply wp
+             apply wp
+            apply wpsimp
+           apply (wp hoare_when_wp)+
+          apply (rule hoare_strengthen_post[OF hoare_TrueI[where P = \<top>]],clarsimp+)
+        apply (wp wp_post_taut hoare_drop_imp get_cap_weak_wp)+
+      apply (clarsimp simp:conj_comms)
+      apply (wp thread_set_global_refs_triv thread_set_valid_idle)
+       apply (clarsimp simp:tcb_cap_cases_def)
+      apply (wp thread_set_valid_idle thread_set_valid_irq_node)
        apply (fastforce simp:tcb_cap_cases_def)
-      apply (simp add: transform_tcb_slot_4)
+      apply (wp thread_set_mdb)
+       apply (fastforce simp:tcb_cap_cases_def)
+      apply (simp add:not_idle_thread_def)
+      apply (wp thread_set_cte_at update_ipc_buffer_valid_objs thread_set_valid_cap thread_set_cte_wp_at_trivial)
+      apply (fastforce simp:tcb_cap_cases_def)
+     apply (simp add: transform_tcb_slot_4)
      apply (rule hoare_post_impErr[OF validE_R_validE[OF hoare_True_E_R]])
       apply simp+
     apply (rule_tac Q = "\<lambda>r s. invs s \<and> valid_etcbs s \<and> not_idle_thread (fst a') s \<and> tcb_at obj_id' s
@@ -1173,42 +1173,47 @@ lemma dcorres_tcb_update_vspace_root:
   apply (clarsimp simp:tcb_update_thread_slot_def)
   apply (rule dcorres_expand_pfx)
   apply (rule corres_guard_imp)
-    apply (rule corres_splitEE[OF _ dcorres_tcb_empty_slot])
-       apply (clarsimp simp: check_cap_at_def liftE_bindE)
-       apply (clarsimp simp: whenE_liftE bind_assoc)
-       apply (clarsimp simp: liftE_def bind_assoc)
-       apply (clarsimp simp: is_valid_vtable_root_def )
-       apply (rule corres_split_deprecated[OF _ get_cap_corres])
-          apply (rule corres_split_deprecated[OF _ corres_when])
-              apply (rule corres_trivial)
-              apply clarsimp
-              apply (rule arch_same_obj_as_lift)
-              apply (clarsimp simp: valid_cap_def is_arch_cap_def)+
-            apply (rule corres_split_deprecated[OF _ get_cap_corres])
-               apply (rule corres_when)
-                apply (rule sym)
-                apply (case_tac cap')
-                 apply (clarsimp simp: same_object_as_def)+
-                apply (simp add: transform_cap_def split: arch_cap.splits)
-               apply (simp add: transform_tcb_slot_1[symmetric])
-               apply (rule dcorres_insert_cap_combine[folded alternative_com])
-               apply (simp add: transform_cap_def,simp)
-             apply wp
-            apply (simp add: same_object_as_def)
-            apply (rule_tac Q = "\<lambda>r s. cte_wp_at ((=) cap.NullCap) (obj_id', tcb_cnode_index (Suc 0)) s \<and> cte_wp_at (\<lambda>_. True) (ba, c) s
-              \<and>  valid_global_refs s \<and> valid_idle s \<and> valid_irq_node s \<and> valid_mdb s \<and> not_idle_thread ba s \<and> valid_objs s \<and> valid_etcbs s
-              \<and> ((is_thread_cap r \<and> obj_ref_of r = obj_id') \<longrightarrow> ex_cte_cap_wp_to (\<lambda>_. True) (obj_id', tcb_cnode_index (Suc 0)) s)"
-              in hoare_strengthen_post)
-             apply (wp get_cap_ex_cte_cap_wp_to,clarsimp)
-            apply clarsimp
-            apply (drule (3) ex_cte_cap_to_not_idle, simp add: not_idle_thread_def)
-           apply (wp hoare_when_wp)
-          apply (rule hoare_strengthen_post[OF hoare_TrueI[where P =\<top> ]])
-          apply (clarsimp+)[2]
+    apply (rule corres_splitEE)
+       apply (rule dcorres_tcb_empty_slot)
+       apply (simp add: transform_tcb_slot_1[symmetric])
+      apply (clarsimp simp: check_cap_at_def liftE_bindE)
+      apply (clarsimp simp: whenE_liftE bind_assoc)
+      apply (clarsimp simp: liftE_def bind_assoc)
+      apply (clarsimp simp: is_valid_vtable_root_def )
+      apply (rule corres_split)
+         apply (rule get_cap_corres; simp)
+          apply (rule corres_split)
+           apply (rule corres_when)
+            apply (rule arch_same_obj_as_lift)
+               apply (clarsimp simp: valid_cap_def is_arch_cap_def)+
+           apply (rule corres_split)
+              apply (rule get_cap_corres; simp)
+             apply (rule corres_when)
+              apply (rule sym)
+              apply (case_tac cap')
+                         apply (clarsimp simp: same_object_as_def)+
+              apply (simp add: transform_cap_def split: arch_cap.splits)
+             apply (simp add: transform_tcb_slot_1[symmetric])
+             apply (rule dcorres_insert_cap_combine[folded alternative_com])
+             apply (simp add: transform_cap_def)
+            apply wp
+           apply (simp add: same_object_as_def)
+           apply (rule_tac Q = "\<lambda>r s. cte_wp_at ((=) cap.NullCap) (obj_id', tcb_cnode_index (Suc 0)) s \<and> cte_wp_at (\<lambda>_. True) (ba, c) s
+             \<and>  valid_global_refs s \<and> valid_idle s \<and> valid_irq_node s \<and> valid_mdb s \<and> not_idle_thread ba s \<and> valid_objs s \<and> valid_etcbs s
+             \<and> ((is_thread_cap r \<and> obj_ref_of r = obj_id') \<longrightarrow> ex_cte_cap_wp_to (\<lambda>_. True) (obj_id', tcb_cnode_index (Suc 0)) s)"
+             in hoare_strengthen_post)
+            apply (wp get_cap_ex_cte_cap_wp_to,clarsimp)
+           apply clarsimp
+           apply (drule (3) ex_cte_cap_to_not_idle, simp add: not_idle_thread_def)
+          apply (rule corres_trivial)
+          apply clarsimp
+         apply (wp hoare_when_wp)
         apply (rule hoare_strengthen_post[OF hoare_TrueI[where P =\<top> ]])
-        apply clarsimp+
-       apply (rule hoare_drop_imp)
-       apply (wp | simp add: transform_tcb_slot_1[symmetric])+
+        apply clarsimp
+       apply (rule hoare_strengthen_post[OF hoare_TrueI[where P =\<top> ]])
+       apply clarsimp+
+      apply (rule hoare_drop_imp)
+      apply (wp | simp)+
     apply (rule validE_validE_R)
     apply (rule_tac Q = "\<lambda>r s. invs s \<and> valid_etcbs s \<and> not_idle_thread ba s \<and>
                  not_idle_thread (fst a') s \<and> cte_wp_at (\<lambda>_. True) (ba, c) s \<and>
@@ -1250,66 +1255,72 @@ lemma dcorres_tcb_update_cspace_root:
   apply (simp add:transform_tcb_slot_simp[symmetric])
   apply (rule dcorres_expand_pfx)
     apply (rule corres_guard_imp)
-    apply (rule corres_splitEE[OF _  dcorres_tcb_empty_slot])
-    apply (simp add:check_cap_at_def liftE_bindE)
-    apply (clarsimp simp:no_cap_to_obj_with_diff_ref_def)
-    apply (clarsimp simp:whenE_liftE bind_assoc same_object_as_def)
-    apply (clarsimp simp:liftE_def bind_assoc)
-    apply (rule corres_split_deprecated[OF _ get_cap_corres])
-      apply (rule_tac F = "(is_cnode_cap x \<and> obj_refs x = obj_refs aaa) \<longrightarrow> (bits_of x = bits_of aaa)" in corres_gen_asm2)
-          apply (rule corres_split_deprecated[OF _ corres_when])
+    apply (rule corres_splitEE)
+       apply (rule dcorres_tcb_empty_slot)
+       apply (simp add:transform_tcb_slot_0)
+      apply (simp add:check_cap_at_def liftE_bindE)
+      apply (clarsimp simp:no_cap_to_obj_with_diff_ref_def)
+      apply (clarsimp simp:whenE_liftE bind_assoc same_object_as_def)
+      apply (clarsimp simp:liftE_def bind_assoc)
+      apply (rule corres_split)
+         apply (rule get_cap_corres; simp)
+        apply (rule_tac F = "(is_cnode_cap x \<and> obj_refs x = obj_refs aaa) \<longrightarrow> (bits_of x = bits_of aaa)"
+                in corres_gen_asm2)
+        apply (rule corres_split)
+           apply (rule corres_when)
+            apply (rule iffI)
+             apply (clarsimp simp:is_cap_simps bits_of_def cap_type_def transform_cap_def
+               split:cap.split_asm arch_cap.split_asm if_split_asm)
+            apply (clarsimp simp:cap_has_object_def is_cap_simps cap_type_def)
+           apply (rule corres_split)
+              apply (rule get_cap_corres; simp)
+             apply (rule corres_when)
+              apply (rule sym)
+              apply (simp add:table_cap_ref_def)
+              apply (case_tac rv')
+    (* Following line is incredibly brittle. You may need to change the number if the proof breaks *)
+                         apply ((clarsimp simp:transform_cap_def split: arch_cap.splits)+)[12]
+             apply (simp)
+             apply (rule dcorres_insert_cap_combine[folded alternative_com])
+             apply (clarsimp simp:is_cap_simps)
+            apply wp
+           apply (rule_tac Q = "\<lambda>r s. cte_wp_at ((=) cap.NullCap) (obj_id', tcb_cnode_index 0) s \<and> cte_wp_at (\<lambda>_. True) (ba, c) s
+             \<and>  valid_global_refs s \<and> valid_idle s \<and> valid_irq_node s \<and> valid_mdb s \<and> not_idle_thread ba s \<and> valid_objs s \<and> valid_etcbs s
+             \<and> ((is_thread_cap r \<and> obj_ref_of r = obj_id') \<longrightarrow> ex_cte_cap_wp_to (\<lambda>_. True) (obj_id', tcb_cnode_index 0) s)"
+             in hoare_strengthen_post)
+            apply (wp get_cap_ex_cte_cap_wp_to)
+            apply (clarsimp+)[2]
+           apply (drule (3) ex_cte_cap_to_not_idle, simp add: not_idle_thread_def)
+           apply (erule valid_cap_aligned)
           apply (rule corres_trivial)
-            apply (clarsimp)
-          apply (rule iffI)
-            apply (clarsimp simp:is_cap_simps bits_of_def cap_type_def transform_cap_def
-              split:cap.split_asm arch_cap.split_asm if_split_asm)
-          apply (clarsimp simp:cap_has_object_def is_cap_simps cap_type_def)
-          apply (rule corres_split_deprecated[OF _ get_cap_corres])
-            apply (rule corres_when)
-          apply (rule sym)
-            apply (simp add:table_cap_ref_def)
-            apply (case_tac rv')
-            (* Following line is incredibly brittle. You may need to change the number if the proof breaks *)
-            apply ((clarsimp simp:transform_cap_def split: arch_cap.splits)+)[12]
-          apply (simp)
-        apply (rule dcorres_insert_cap_combine[folded alternative_com])
-        apply ((clarsimp simp:is_cap_simps)+)[2]
-        apply wp
-      apply (rule_tac Q = "\<lambda>r s. cte_wp_at ((=) cap.NullCap) (obj_id', tcb_cnode_index 0) s \<and> cte_wp_at (\<lambda>_. True) (ba, c) s
-        \<and>  valid_global_refs s \<and> valid_idle s \<and> valid_irq_node s \<and> valid_mdb s \<and> not_idle_thread ba s \<and> valid_objs s \<and> valid_etcbs s
-        \<and> ((is_thread_cap r \<and> obj_ref_of r = obj_id') \<longrightarrow> ex_cte_cap_wp_to (\<lambda>_. True) (obj_id', tcb_cnode_index 0) s)"
-        in hoare_strengthen_post)
-      apply (wp get_cap_ex_cte_cap_wp_to)
-      apply (clarsimp+)[2]
-      apply (drule (3) ex_cte_cap_to_not_idle, simp add: not_idle_thread_def)
-      apply (erule valid_cap_aligned)
-    apply (wp hoare_when_wp)
-    apply (rule hoare_strengthen_post[OF hoare_TrueI[where P =\<top> ]])
-    apply clarsimp+
-    apply wp
-    apply (rule hoare_vcg_conj_lift)
-      apply (rule hoare_drop_imp)
-      apply wp
-    apply (rule_tac cnode_cap_unique_bits)
+          apply (clarsimp)
+         apply (wp hoare_when_wp)
+        apply (rule hoare_strengthen_post[OF hoare_TrueI[where P =\<top> ]])
+        apply clarsimp
+       apply wp+
+      apply (rule hoare_vcg_conj_lift)
+       apply (rule hoare_drop_imp)
+       apply wp
       apply simp
-    apply (simp add:transform_tcb_slot_0)
-    apply (simp add:validE_def,rule hoare_strengthen_post[OF hoare_TrueI[where P = \<top> ]])
-      apply fastforce
+      apply (rule_tac cnode_cap_unique_bits)
+      apply simp
+     apply clarsimp
+     apply wp
     apply (clarsimp simp:conj_comms)
     apply (rule_tac Q = "\<lambda>r s. invs s \<and> valid_etcbs s \<and> not_idle_thread ba s \<and> valid_cap aaa s \<and>
                  not_idle_thread (fst a') s \<and> cte_wp_at (\<lambda>_. True) (ba, c) s \<and>
                  cte_wp_at (\<lambda>c. c = cap.NullCap) (obj_id', tcb_cnode_index 0) s \<and>
                  no_cap_to_obj_dr_emp aaa s"
-      in hoare_post_impErr[where E = "\<lambda>r. \<top>"])
+            in hoare_post_impErr[where E = "\<lambda>r. \<top>"])
       apply (simp add:not_idle_thread_def)
       apply (wp cap_delete_cte_at cap_delete_deletes cap_delete_valid_cap)
      apply (simp add:invs_valid_objs)
-     apply (clarsimp simp:invs_def valid_state_def no_cap_to_obj_with_diff_ref_def
-       cte_wp_at_def valid_pspace_vo)
-  apply (clarsimp simp:empty_set_eq not_idle_thread_def emptyable_def)+
+     apply (clarsimp simp: invs_def valid_state_def no_cap_to_obj_with_diff_ref_def
+                           cte_wp_at_def valid_pspace_vo)
+    apply (clarsimp simp:empty_set_eq not_idle_thread_def emptyable_def)+
   apply (erule tcb_at_cte_at)
   apply (simp add:tcb_cap_cases_def)
-done
+  done
 
 lemma tcb_fault_fault_handler_upd:
   "tcb_fault (obj'\<lparr>tcb_fault_handler := a\<rparr>) = tcb_fault obj'"
@@ -1537,25 +1548,21 @@ lemma dcorres_thread_control:
   (is "\<lbrakk> ?eq; ?eq' \<rbrakk> \<Longrightarrow> dcorres (dc \<oplus> dc) \<top> ?P ?f ?g")
   apply (clarsimp simp: Tcb_D.invoke_tcb_def translate_tcb_invocation_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_splitEE[OF _ option_update_thread_corres])
+    apply (rule corres_splitEE[OF option_update_thread_corres])
       apply (rule corres_dummy_returnOk_pl)
-      apply (rule corres_splitEE[OF _ option_set_mcpriority_corres])
-        apply (rule corres_splitEE[OF _ dcorres_tcb_update_cspace_root])
-          apply (rule corres_splitEE[OF _ dcorres_tcb_update_vspace_root])
+      apply (rule corres_splitEE[OF option_set_mcpriority_corres])
+        apply (rule corres_splitEE[OF dcorres_tcb_update_cspace_root])
+          apply (rule corres_splitEE[OF dcorres_tcb_update_vspace_root])
             apply (rule dcorres_dummy_returnOk_pl')
             apply (rule corres_splitEE[where r'="dc" and P="\<top>"])
-               apply (rule dcorres_dummy_returnOk_pl')
-               apply (rule corres_splitEE[where r'="dc" and P="\<top>"])
-                  apply (rule dcorres_returnOk')
-                  apply (simp add: dc_def)
+               apply (rule corres_underlying_returnOk_ignored[THEN iffD1])
+               apply (rule dcorres_tcb_update_ipc_buffer)
+              apply (rule dcorres_dummy_returnOk_pl')
+              apply (rule corres_splitEE[where r'="dc" and P="\<top>"])
                  apply (rule option_set_priority_dcorres_strong)
-                apply wp
-               apply wpsimp[1]
-              apply (rule corres_underlying_returnOk_ignored[THEN iffD1])
-              apply (rule dcorres_tcb_update_ipc_buffer)
-             apply (wp)+
-          apply (wp|wpc)+
-           apply (wp checked_insert_tcb_invs | clarsimp)+
+                apply (rule dcorres_returnOk')
+                apply (simp add: dc_def)
+               apply wpsimp+
            apply (rule check_cap_at_stable, (clarsimp simp: not_idle_thread_def | wp+)+)+
             apply (wp case_option_wp | simp add: o_def not_idle_thread_def)+
             apply (simp add: option.split[where P="\<lambda>x. x"] not_idle_thread_def)
@@ -1686,7 +1693,7 @@ lemma dcorres_bind_notification:
                  split: Structures_A.kernel_object.splits)
   apply (rule corres_dummy_return_pl)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated[OF _ corres_dummy_set_notification], simp)
+    apply (rule corres_split[OF corres_dummy_set_notification], simp)
       apply (rule set_bound_notification_corres)
      apply (wp |simp add: not_idle_thread_def infer_tcb_bound_notification_def)+
   done
@@ -1699,7 +1706,7 @@ lemma invoke_tcb_corres_bind:
   apply (clarsimp simp: Tcb_D.invoke_tcb_def translate_tcb_invocation_def)
   apply (rule corres_dummy_return_l)
   apply (rule corres_guard_imp)
-  apply (rule corres_split_deprecated[OF corres_return_trivial dcorres_bind_notification])
+  apply (rule corres_split[OF dcorres_bind_notification corres_return_trivial])
   apply (wp | simp)+
   done
 
@@ -1711,7 +1718,7 @@ lemma invoke_tcb_corres_unbind:
   apply (clarsimp simp: Tcb_D.invoke_tcb_def translate_tcb_invocation_def)
   apply (rule corres_dummy_return_l)
   apply (rule corres_guard_imp)
-  apply (rule corres_split_deprecated[OF corres_return_trivial dcorres_unbind_notification])
+  apply (rule corres_split[OF dcorres_unbind_notification corres_return_trivial])
   apply (wp | simp)+
   done
 
@@ -1723,15 +1730,14 @@ lemma invoke_tcb_corres_setTLSBase:
   apply (clarsimp simp: Tcb_D.invoke_tcb_def translate_tcb_invocation_def)
   apply (rule corres_dummy_return_l)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_deprecated [where r'=dc])
-       apply (rule corres_symb_exec_r)
-          apply (rule corres_split_noop_rhs[OF corres_trivial])
-            apply simp
+    apply (rule corres_split[where r'=dc])
+       apply (rule corrupt_tcb_intent_as_user_corres)
+      apply (rule corres_symb_exec_r)
+         apply (rule corres_split_noop_rhs[OF corres_trivial])
+           apply simp
            apply (clarsimp simp: when_def)
            apply (rule reschedule_required_dcorres[THEN corres_trivial])
           apply wpsimp+
-      apply (rule corrupt_tcb_intent_as_user_corres)
-     apply wpsimp+
   done
 
 lemma ex_nonz_cap_to_idle_from_invs:

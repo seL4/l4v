@@ -28,4 +28,13 @@ definition
 consts my_function :: 'a
 axiomatization where my_function_def: "my_function \<equiv> undefined"
 
+definition ccorres :: "'a \<Rightarrow> 'b \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> 'e \<Rightarrow> 'f \<Rightarrow> 'g \<Rightarrow> bool" where
+  "ccorres rrel xf P Q hs a c \<equiv> undefined"
+
+definition c_guard :: "'h \<Rightarrow> 'i \<Rightarrow> 'd" ("\<lbrace> _ = _ \<rbrace>") where
+  "\<lbrace> ptr = cond \<rbrace> \<equiv> undefined"
+
+definition ptr_select :: "'h \<Rightarrow> 'h" ("\<acute>") where
+  "ptr_select \<equiv> undefined"
+
 end
