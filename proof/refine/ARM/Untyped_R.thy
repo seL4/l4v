@@ -490,8 +490,7 @@ lemma ctes_of_ko:
          apply (case_tac ko, simp+)[1]
            apply (rename_tac arch_kernel_object)
            apply (case_tac arch_kernel_object
-                  ; simp add: archObjSize_def asid_low_bits_def pageBits_def
-                              scBitsFromRefillLength'_def)
+                  ; simp add: archObjSize_def asid_low_bits_def pageBits_def)
           apply simp
          apply simp
         apply simp

@@ -475,9 +475,6 @@ definition scMap :: "(obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> sched_con
      sc_sporadic   = scSporadic sc
    \<rparr>"
 
-definition
-  "mapScSize sc \<equiv> scBitsFromRefillLength' (length (scRefills sc)) - minSchedContextBits"
-
 definition replyMap :: "reply \<Rightarrow>  Structures_A.reply" where
   "replyMap r = \<lparr> reply_tcb = replyTCB r, reply_sc = replySC r \<rparr>"
 
@@ -496,7 +493,7 @@ definition
      | Some (KOCTE cte) \<Rightarrow> map_option (%sz. absCNode sz h x) (cns x)
      | Some (KOReply reply) \<Rightarrow> Some (Structures_A.Reply (replyMap reply))
      | Some (KOSchedContext sc) \<Rightarrow> Some (Structures_A.SchedContext
-                                           (scMap (h |> reply_of' |> replyPrev) sc) (mapScSize sc))
+                                           (scMap (h |> reply_of' |> replyPrev) sc) (scSize sc))
      | Some (KOArch ako) \<Rightarrow> map_option ArchObj (absHeapArch h x ako)
      | None \<Rightarrow> None"
 
@@ -883,8 +880,7 @@ proof -
       apply (clarsimp simp add: pde_relation_def split: if_split_asm)
 
      apply (rule relatedE, assumption, ko, ako)
-     apply (frule scBits_inverse_sc_relation)
-     apply (clarsimp simp: sc_relation_def scMap_def mapScSize_def sc_replies_prevs_walk[OF replies])
+     apply (clarsimp simp: sc_relation_def scMap_def sc_replies_prevs_walk[OF replies])
      apply (intro conjI impI)
        apply (prop_tac "valid_refills y s")
         apply (fastforce intro: valid_refills active_scs_validE

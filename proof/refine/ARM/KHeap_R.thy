@@ -191,7 +191,7 @@ lemmas page_table_at_obj_at'
 
 method readObject_obj_at'_method
   =  clarsimp simp: readObject_def obind_def omonad_defs split_def loadObject_default_def
-                    obj_at'_def projectKOs objBits_simps' scBits_pos_power2
+                    obj_at'_def objBits_simps' scBits_pos_power2 projectKOs
              split: option.splits if_split_asm
 
 lemma readObject_misc_ko_at'[simp]:
@@ -1546,21 +1546,22 @@ lemma sc_at'_cross:
 
 lemma sc_obj_at'_cross:
   assumes p: "pspace_relation (kheap s) (ksPSpace s')"
-  assumes t: "obj_at' (\<lambda>k::sched_context. objBits k = minSchedContextBits + n) ptr s'"
+  assumes t: "obj_at' (\<lambda>sc::sched_context. scSize sc = n) ptr s'"
   shows "sc_obj_at n ptr s" using assms
-  apply (clarsimp simp: obj_at'_def projectKOs)
+  apply (clarsimp simp: obj_at'_def)
   apply (erule (1) pspace_dom_relatedE)
   by (clarsimp simp: obj_relation_cuts_def2 obj_at_def is_sc_obj cte_relation_def
-                     objBits_simps scBits_simps
+                     objBits_simps scBits_simps projectKOs
                      other_obj_relation_def pte_relation_def pde_relation_def sc_relation_def
               split: Structures_A.kernel_object.split_asm if_split_asm
                      ARM_A.arch_kernel_obj.split_asm)
 
 lemma setSchedContext_corres:
   assumes R': "sc_relation sc n sc'"
-  assumes s: " n + minSchedContextBits = objBits sc'"
+  assumes s: "n = scSize sc'"
   shows "corres dc \<top>
-         (obj_at' (\<lambda>k::sched_context. objBits k = objBits sc') ptr and (\<lambda>s'. heap_ls (replyPrevs_of s') (scReply sc') (sc_replies sc)))
+         (obj_at' (\<lambda>k::sched_context. objBits k = objBits sc') ptr
+          and (\<lambda>s'. heap_ls (replyPrevs_of s') (scReply sc') (sc_replies sc)))
             (set_object ptr (kernel_object.SchedContext sc n))
             (setSchedContext ptr sc')"
   proof -
@@ -1577,7 +1578,8 @@ lemma setSchedContext_corres:
      apply clarsimp
     apply clarsimp
     apply (rename_tac s s' rv; prop_tac "sc_obj_at n ptr s")
-     apply (fastforce intro!: sc_obj_at'_cross dest: state_relation_pspace_relation simp: obj_at'_def)
+     apply (fastforce intro!: sc_obj_at'_cross dest: state_relation_pspace_relation
+                        simp: obj_at'_def objBits_simps)
     apply (clarsimp simp: obj_at_def is_sc_obj_def obj_at'_def projectKO_eq projectKO_opts_defs)
     apply (unfold update_sched_context_def set_object_def setObject_def)
     apply (clarsimp simp: in_monad split_def bind_def gets_def get_def Bex_def
@@ -1638,7 +1640,11 @@ lemma setSchedContext_update_corres:
    apply (clarsimp simp: obj_at'_def projectKOs split: if_split_asm)
   apply (rule corres_guard_imp)
     apply (rule setSchedContext_corres)
-  by (clarsimp simp: obj_at'_def sc_relation_def objBits_simps scBits_simps)+
+     apply fastforce
+    apply (clarsimp simp: obj_at'_def sc_relation_def objBits_simps)
+   apply fastforce
+  apply (clarsimp simp: obj_at'_def sc_relation_def)
+  done
 
 lemma setSchedContext_no_stack_update_corres:
   "\<lbrakk>sc_relation sc n sc' \<longrightarrow> sc_relation (f sc) n (f' sc');
@@ -1738,14 +1744,14 @@ lemma get_sc_corres:
                  dest!: readObject_misc_ko_at')
   apply (clarsimp simp: assert_def fail_def obj_at_def return_def is_sc_obj_def
                  split: Structures_A.kernel_object.splits)
-  apply (clarsimp simp add: state_relation_def pspace_relation_def obj_at'_def projectKOs)
+  apply (clarsimp simp add: state_relation_def pspace_relation_def obj_at'_def)
   apply (drule bspec)
    apply blast
-  apply (fastforce simp add: other_obj_relation_def)
+  apply (fastforce simp add: other_obj_relation_def projectKOs)
   done
 
 lemma get_sc_corres_size:
-  "corres (\<lambda>sc sc'. sc_relation sc n sc' \<and> n + minSchedContextBits = objBits sc')
+  "corres (\<lambda>sc sc'. sc_relation sc n sc')
      (sc_obj_at n ptr) (sc_at' ptr)
      (get_sched_context ptr) (getSchedContext ptr)"
   apply (rule corres_no_failI)
@@ -1756,10 +1762,10 @@ lemma get_sc_corres_size:
   apply (clarsimp simp: assert_def fail_def obj_at_def return_def is_sc_obj
                  split: Structures_A.kernel_object.splits
                  dest!: readObject_misc_ko_at')
-  apply (clarsimp simp: state_relation_def pspace_relation_def obj_at'_def projectKOs)
+  apply (clarsimp simp: state_relation_def pspace_relation_def obj_at'_def)
   apply (drule bspec)
    apply blast
-  apply (clarsimp simp: other_obj_relation_def scBits_simps sc_relation_def objBits_simps)
+  apply (clarsimp simp: other_obj_relation_def scBits_simps sc_relation_def objBits_simps projectKOs)
   done
 
 lemma setObject_ko_wp_at:
@@ -3199,8 +3205,7 @@ lemma obj_relation_cuts_obj_bits:
   apply (erule (1) obj_relation_cutsE;
           clarsimp simp: objBits_simps objBits_defs cte_level_bits_def sc_const_eq[symmetric]
                          pbfs_atleast_pageBits[simplified bit_simps] archObjSize_def pteBits_def
-                         pdeBits_def)
-  apply (clarsimp simp: scBits_inverse_sc_relation[simplified])
+                         pdeBits_def sc_relation_def)
   apply (cases ko; simp add: other_obj_relation_def objBits_defs
                       split: kernel_object.splits)
   apply (rename_tac ako, case_tac ako; clarsimp)
@@ -3502,7 +3507,7 @@ lemma pspace_aligned_cross:
 
   \<comment>\<open>SchedContext, Reply\<close>
      apply ((clarsimp simp: minSchedContextBits_def min_sched_context_bits_def replySizeBits_def
-                            scBits_inverse_sc_relation[simplified]
+                            sc_relation_def
                      elim!: is_aligned_weaken)+)[2]
 
   \<comment>\<open>PageTable\<close>
@@ -3546,8 +3551,7 @@ lemma pspace_relation_pspace_bounded':
 
   \<comment>\<open>SchedContext\<close>
      apply (clarsimp simp: minSchedContextBits_def min_sched_context_bits_def replySizeBits_def
-                            scBits_inverse_sc_relation[simplified] valid_sched_context_size_def
-                            untyped_max_bits_def
+                           valid_sched_context_size_def sc_relation_def untyped_max_bits_def
                      elim!: is_aligned_weaken)
 
   \<comment>\<open>other_obj_relation\<close>
@@ -3570,7 +3574,9 @@ lemma pspace_distinct_cross:
   apply (frule pspace_relation_pspace_bounded')
     apply (frule (1) pspace_boundedD')
   apply (rule ps_clearI, assumption)
-   apply (case_tac ko'; simp add: objBits_simps objBits_defs bit_simps' scBits_pos_power2)
+   apply (case_tac ko';
+          simp add: scBits_pos_power2 objBits_simps objBits_defs bit_simps'
+               del: minSchedContextBits_def)
    apply (clarsimp split: arch_kernel_object.splits simp: bit_simps' archObjSize_def)
   apply (rule ccontr, clarsimp)
   apply (rename_tac x' ko_x')
@@ -4493,22 +4499,22 @@ lemma getSchedContext_setSchedContext_decompose:
     apply (frule no_ofailD[OF no_ofail_sc_at'_readObject])
     apply (clarsimp del: readObject_misc_ko_at' simp del: readObject_misc_obj_at')
     apply (clarsimp simp: setSchedContext_def setObject_def obj_at'_def projectKOs objBits_simps'
-                          in_monad ARM_H.fromPPtr_def scBits_pos_power2 updateObject_default_def
+                          in_monad scBits_pos_power2 updateObject_default_def
                           in_magnitude_check ps_clear_upd magnitudeCheck_assert split_def
                      del: readObject_misc_ko_at'
                    split: option.split_asm)
      apply (rename_tac sc sc')
      apply (rule_tac x="f sc" in exI)
      apply (rule conjI;
-            fastforce simp: readObject_def obind_def omonad_defs split_def ARM_H.fromPPtr_def
+            fastforce simp: readObject_def obind_def omonad_defs split_def
                             ps_clear_upd loadObject_default_def lookupAround2_known1 projectKOs
                             objBits_simps' scBits_pos_power2 lookupAround2_None2 lookupAround2_char2
                      split: option.splits if_split_asm dest!: readObject_misc_ko_at')
     apply (rename_tac sc p sc')
     apply (rule_tac x="f sc" in exI)
     apply (rule conjI)
-     apply (thin_tac "scBitsFromRefillLength' _=_")
-     apply (clarsimp simp: readObject_def obind_def omonad_defs fun_upd_def split_def ARM_H.fromPPtr_def
+     apply (thin_tac "scSize _ = _")
+     apply (clarsimp simp: readObject_def obind_def omonad_defs fun_upd_def split_def
                            ps_clear_upd loadObject_default_def lookupAround2_known1 projectKOs
                            objBits_simps' scBits_pos_power2 lookupAround2_None2 lookupAround2_char2
                     split: option.splits if_split_asm)
@@ -4520,7 +4526,7 @@ lemma getSchedContext_setSchedContext_decompose:
    apply (frule no_ofailD[OF no_ofail_sc_at'_readObject])
    apply (clarsimp del: readObject_misc_ko_at' simp del: readObject_misc_obj_at')
    apply (clarsimp simp: setSchedContext_def setObject_def projectKOs in_monad ps_clear_upd obj_at'_def
-                         split_def updateObject_default_def magnitudeCheck_assert ARM_H.fromPPtr_def
+                         split_def updateObject_default_def magnitudeCheck_assert
                   dest!: readObject_misc_ko_at')
 
    apply (frule no_failD[OF no_fail_getMiscObject(4)])
@@ -4530,9 +4536,9 @@ lemma getSchedContext_setSchedContext_decompose:
    apply (rule_tac x="(sc, s)" in bexI[rotated], simp)
    apply (rule disjI2)
    apply (drule use_valid[OF _ get_sc_ko'], simp)
-   apply (clarsimp simp: obj_at'_def projectKOs)
+   apply (clarsimp simp: obj_at'_def)
    apply (prop_tac "obj_at' (\<lambda>k. objBits k = objBits (g (f sc))) scPtr s")
-    apply (clarsimp simp: obj_at'_def projectKOs projectKO_opt_sc)
+    apply (clarsimp simp: obj_at'_def)
     apply (rule_tac x=sc in exI, clarsimp simp: projectKO_opt_sc)
    apply (drule_tac ob1="g (f sc)" in no_failD[OF no_fail_setObject_other, rotated])
     apply simp
@@ -4554,7 +4560,7 @@ lemma getSchedContext_setSchedContext_decompose:
     apply simp+
 
    apply (prop_tac "sc_at' scPtr (s\<lparr>ksPSpace := (ksPSpace s)(scPtr \<mapsto> KOSchedContext (f sc))\<rparr>)")
-    apply (clarsimp simp: obj_at'_def projectKOs objBits_simps' ps_clear_upd)
+    apply (clarsimp simp: obj_at'_def objBits_simps' ps_clear_upd projectKOs)
    apply (frule_tac s="s\<lparr>ksPSpace := (ksPSpace s)(scPtr \<mapsto> KOSchedContext (f sc))\<rparr>"
                  in no_failD[OF no_fail_getMiscObject(4)])
    apply clarsimp
@@ -4569,8 +4575,8 @@ lemma getSchedContext_setSchedContext_decompose:
   apply (clarsimp simp: obj_at'_def projectKOs)
   apply (prop_tac "obj_at' (\<lambda>k. objBits k = objBits (g (f sc))) scPtr
                            (s\<lparr>ksPSpace := (ksPSpace s)(scPtr \<mapsto> KOSchedContext (f sc))\<rparr>)")
-   apply (clarsimp simp: obj_at'_def projectKOs projectKO_opt_sc)
-   apply (rule_tac x="f sc" in exI, clarsimp simp: projectKO_opt_sc)
+   apply (clarsimp simp: obj_at'_def projectKOs)
+   apply (rule_tac x="f sc" in exI, clarsimp)
   apply (drule_tac ob1="g (f sc)" in no_failD[OF no_fail_setObject_other, rotated])
    apply simp+
   done

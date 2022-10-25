@@ -86,8 +86,9 @@ where
     | Inr (APIObjectType ArchTypes_H.CapTableObject) \<Rightarrow> Some (KOCTE makeObject)
     | Inr (APIObjectType ArchTypes_H.ReplyObject) \<Rightarrow> Some (KOReply makeObject)
     | Inr (APIObjectType ArchTypes_H.SchedContextObject) \<Rightarrow>
-                Some (KOSchedContext (scRefills_update
-                   (\<lambda>_. replicate (refillAbsoluteMax' us) emptyRefill) makeObject))
+            Some (KOSchedContext ((makeObject :: sched_context)
+                                     \<lparr>scRefills := replicate (refillAbsoluteMax' us) emptyRefill,
+                                      scSize := us - minSchedContextBits\<rparr>))
     | Inr PageTableObject \<Rightarrow> Some (KOArch (KOPTE makeObject))
     | Inr PageDirectoryObject \<Rightarrow> Some (KOArch (KOPDE makeObject))
     | Inr SmallPageObject \<Rightarrow> Some (if dev then KOUserDataDevice else KOUserData)
@@ -135,7 +136,8 @@ lemma valid_obj_makeObject_reply [simp]:
 lemma valid_sc_size'_makeObject_sc':
   "sc_size_bounds us \<Longrightarrow>
      valid_sched_context_size'
-       (scRefills_update (\<lambda>_. replicate (refillAbsoluteMax' us) emptyRefill) makeObject)"
+       ((makeObject :: sched_context)\<lparr>scRefills := replicate (refillAbsoluteMax' us) emptyRefill,
+                                      scSize := us - minSchedContextBits\<rparr>)"
   by (clarsimp simp: makeObject_sc valid_sched_context_size'_def scBits_simps
                      objBits_def objBitsKO_def)
 
@@ -145,12 +147,13 @@ lemma MIN_REFILLS_refillAbsoluteMax'[simp]:
 
 lemma valid_obj_makeObject_sched_context [simp]:
   "sc_size_bounds us \<Longrightarrow>
-     valid_obj' (KOSchedContext (scRefills_update
-                   (\<lambda>_. replicate (refillAbsoluteMax' us) emptyRefill) makeObject)) s"
+     valid_obj' (KOSchedContext ((makeObject :: sched_context)
+                                    \<lparr>scRefills := replicate (refillAbsoluteMax' us) emptyRefill,
+                                     scSize := us - minSchedContextBits\<rparr>)) s"
   unfolding valid_obj'_def valid_sched_context'_def
   using refillAbsoluteMax'_lb sc_size_bounds_def minRefillLength_ARM
   by (clarsimp simp: valid_sc_size'_makeObject_sc')
-     (clarsimp simp: makeObject_sc scBits_inverse_us)
+     (clarsimp simp: makeObject_sc)
 
 lemma valid_obj_makeObject_user_data [simp]:
   "valid_obj' (KOUserData) s"
@@ -1582,7 +1585,7 @@ lemma new_cap_addrs_fold':
   by (clarsimp simp: new_cap_addrs_def ptr_add_def upto_enum_red' shiftl_t2n power_add field_simps)
 
 lemma objBitsKO_gt_0: "0 < (objBitsKO ko)"
-  apply (case_tac ko; simp add: objBits_simps' pageBits_def scBits_pos')
+  apply (case_tac ko; simp add: objBits_simps' pageBits_def bit_simps')
   apply (rename_tac arch_kernel_object)
   by (case_tac arch_kernel_object; simp add: archObjSize_def pageBits_def pteBits_def pdeBits_def)
 
@@ -2481,8 +2484,9 @@ lemma refillAbsoluteMax'_gt1:
 lemma sc_relation_retype:
   "\<lbrakk>sc_size_bounds n\<rbrakk> \<Longrightarrow>
    obj_relation_retype (default_object Structures_A.SchedContextObject dev n d)
-                         (KOSchedContext (scRefills_update
-                            (\<lambda>_. replicate (refillAbsoluteMax' n) emptyRefill) makeObject))"
+                       (KOSchedContext ((makeObject :: sched_context)
+                                           \<lparr>scRefills := replicate (refillAbsoluteMax' n) emptyRefill,
+                                            scSize := n - minSchedContextBits\<rparr>))"
   by (clarsimp simp: default_object_def sc_relation_def default_sched_context_def
                      makeObject_sc obj_relation_retype_def valid_sched_context_size_def
                      objBits_simps word_bits_def scBits_simps refills_map_def refill_map_def
@@ -4617,11 +4621,13 @@ lemma createNewCaps_valid_pspace:
              apply (rule hoare_assume_pre)
   by (wpsimp wp: createObjects_valid_pspace_untyped'[of dev us _ "Inr ty", where ptr=ptr]
                  mapM_x_wp'
-          split_del: if_split
-          simp: createObjects_def makeObjectKO_def objBits_def objBitsKO_def scBits_simps
-                power_add not_0 APIType_capBits_def field_simps pageBits_def
-                archObjSize_def ptBits_def pdBits_def pteBits_def pdeBits_def
-    | simp)+
+      split_del: if_split
+           simp: createObjects_def makeObjectKO_def objBits_def objBitsKO_def scBits_simps
+                 not_0 APIType_capBits_def field_simps pageBits_def
+                 archObjSize_def ptBits_def pteBits_def scBits_simps
+                 pt_bits_def word_size_bits_def  archObjSize_def ptBits_def pdBits_def
+                 pteBits_def pdeBits_def
+      | simp add: power_add)+
 
 lemma copyGlobalMappings_inv[wp]:
   "\<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace>

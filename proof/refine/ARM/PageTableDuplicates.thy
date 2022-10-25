@@ -609,10 +609,9 @@ lemma copyGlobalMappings_ksPSpace_stable:
       apply clarsimp
       apply (drule(1) pspace_alignedD')
       apply (drule is_aligned_weaken[where y = 2]; simp?)
-      apply (clarsimp simp: archObjSize_def pageBits_def pteBits_def pdeBits_def objBits_simps'
-                     split: arch_kernel_object.split kernel_object.splits)
-      using scBits_at_least_6
-      by (metis add_num_simps(2) arith_simps(45) le_add2 le_trans numeral.simps(2))
+      by (clarsimp simp: archObjSize_def pageBits_def pteBits_def pdeBits_def objBits_simps'
+                         minSchedContextBits_def
+                  split: arch_kernel_object.split kernel_object.splits)
     have ptr_eqD:
       "\<And>p a b. \<lbrakk>p + a = ptr + b;is_aligned p pdBits;
             a < 2^ pdBits; b < 2^pdBits \<rbrakk>
