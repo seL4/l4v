@@ -296,7 +296,7 @@ next
         apply (rule whenE_throwError_corres, simp)
          apply (clarsimp simp: fromAPIType_def)
         apply (rule whenE_throwError_corres, simp)
-         apply (clarsimp simp: fromAPIType_def minSchedContextBits_def)
+         apply (clarsimp simp: fromAPIType_def min_sched_context_bits_def minSchedContextBits_def)
         apply (rule_tac r' = "\<lambda>cap cap'. cap_relation cap cap'"
                 in corres_splitEE[OF corres_if])
              apply simp
