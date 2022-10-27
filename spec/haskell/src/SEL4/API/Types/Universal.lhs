@@ -39,7 +39,7 @@ The following is the definition of the seven object types that are always availa
 > replySizeBits = wordSizeCase 4 5
 
 > minSchedContextBits :: Int
-> minSchedContextBits = 8
+> minSchedContextBits = 7
 
 > schedContextSporadicFlag :: Int
 > schedContextSporadicFlag = 1
