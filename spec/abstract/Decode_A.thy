@@ -699,7 +699,7 @@ where (* for SchedContext objects, user_obj_size arg represents the whole size *
     $ throwError (InvalidArgument 1);
   whenE (new_type = Untyped \<and> user_obj_size < untyped_min_bits)
     $ throwError (InvalidArgument 1);
-  whenE (new_type = SchedContextObject \<and> user_obj_size < 8) \<comment> \<open>@{text seL4_MfsinSchedContextBits}\<close>
+  whenE (new_type = SchedContextObject \<and> user_obj_size < min_sched_context_bits)
     $ throwError (InvalidArgument 1);
   node_index \<leftarrow> returnOk $ data_to_cptr (args!2);
   node_depth \<leftarrow> returnOk $ data_to_nat (args!3);
