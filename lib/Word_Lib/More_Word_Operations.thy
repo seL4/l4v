@@ -722,7 +722,7 @@ definition
 
 lemma to_bool_and_1:
   "to_bool (x AND 1) \<longleftrightarrow> bit x 0"
-  by (simp add: to_bool_def and_one_eq mod_2_eq_odd)
+  by (simp add: to_bool_def word_and_1)
 
 lemma to_bool_from_bool [simp]:
   "to_bool (from_bool r) = r"
@@ -785,7 +785,7 @@ lemma from_bool_eqI:
 
 lemma from_bool_odd_eq_and:
   "from_bool (odd w) = w AND 1"
-  unfolding from_bool_def by (simp add: word_and_1)
+  unfolding from_bool_def by (simp add: word_and_1 bit_0)
 
 lemma neg_mask_in_mask_range:
   "is_aligned ptr bits \<Longrightarrow> (ptr' AND NOT(mask bits) = ptr) = (ptr' \<in> mask_range ptr bits)"

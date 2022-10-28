@@ -11,6 +11,7 @@ imports
   "HOL-Library.Word"
   Aligned
   Bit_Comprehension
+  Bit_Comprehension_Int
   Bit_Shifts_Infix_Syntax
   Bits_Int
   Bitwise_Signed
