@@ -1152,52 +1152,8 @@ lemma obj_at_not_live_valid_arch_cap_strg' [Finalise_AI_asms]:
                      hyp_live_def arch_live_def
               split: arch_cap.split_asm if_splits)
 
-lemma arch_finalise_cap_replaceable1:
-  notes strg = tcb_cap_valid_imp_NullCap
-               obj_at_not_live_valid_arch_cap_strg[where cap=cap]
-  notes simps = replaceable_def and_not_not_or_imp
-                (* FIXME AARCH64 vs_lookup_pages_eq_at[THEN fun_cong, symmetric] *)
-                (* FIXME AARCH64 vs_lookup_pages_eq_ap[THEN fun_cong, symmetric] *)
-                is_cap_simps vs_cap_ref_def
-                no_cap_to_obj_with_diff_ref_Null o_def
-  notes wps = hoare_drop_imp[where R="%_. is_final_cap' cap" for cap]
-              (* FIXME AARCH64 unmap_page_table_unmapped3 *) valid_cap_typ
-  assumes X: "\<forall>r. cap \<noteq> VCPUCap r"
-  shows
-    "\<lbrace>\<lambda>s. s \<turnstile> cap.ArchObjectCap cap \<and>
-          x = is_final_cap' (cap.ArchObjectCap cap) s \<and>
-          pspace_aligned s \<and> valid_vspace_objs s \<and> valid_objs s \<and>
-          valid_asid_table s\<rbrace>
-     arch_finalise_cap cap x
-   \<lbrace>\<lambda>rv s. replaceable s sl (fst rv) (cap.ArchObjectCap cap)\<rbrace>"
-  sorry (* FIXME AARCH64
-  apply (simp add: arch_finalise_cap_def)
-  apply (rule hoare_pre)
-   apply (simp add: simps split: option.splits vmpage_size.splits)
-   apply (wp wps
-          | strengthen strg
-          | simp add: simps reachable_pg_cap_def live_def
-          | wpc)+
-     (* unmap_page case is a bit unpleasant *)
-     apply (strengthen cases_conj_strg[where P="\<not> is_final_cap' cap s" for cap s, simplified])
-     apply (rule hoare_post_imp, clarsimp split: vmpage_size.split, assumption)
-     apply (simp add: vspace_bits_defs)
-     apply (wp hoare_vcg_disj_lift hoare_vcg_all_lift hoare_vcg_const_imp_lift
-               unmap_page_tcb_cap_valid unmap_page_page_unmapped
-                   unmap_page_section_unmapped)[1]
-    apply (wp wps
-           | strengthen strg imp_and_strg tcb_cap_valid_imp_NullCap
-           | simp add: simps is_master_reply_cap_def reachable_pg_cap_def
-           | wpc)+
-  apply (intro conjI; clarsimp split: cap.splits arch_cap.splits vmpage_size.splits)
-  by (auto simp: valid_cap_def obj_at_def simps is_master_reply_cap_def
-                    a_type_def data_at_def vspace_bits_defs X
-             elim!: tcb_cap_valid_imp_NullCap[rule_format, rotated]
-             split: cap.splits arch_cap.splits vmpage_size.splits) *)
-
 crunches set_vm_root
   for ptes_of[wp]: "\<lambda>s. P (ptes_of s)"
-  (* FIXME AARCH64 and asid_pools_of[wp]: "\<lambda>s. P (asid_pools_of s)" *)
   and asid_table[wp]: "\<lambda>s. P (asid_table s)"
   (simp: crunch_simps)
 
@@ -1264,15 +1220,15 @@ lemma vs_lookup_target_no_asid_pool:
    apply (frule (1) pool_for_asid_validD, clarsimp)
    apply (subst (asm) pool_for_asid_vs_lookup[symmetric, where vref=0 and level=asid_pool_level, simplified])
    apply (drule (1) valid_vspace_objsD; simp add: in_omonad)
-  sorry (* FIXME AARCH64
-   apply (fastforce simp: vspace_for_pool_def in_omonad obj_at_def ran_def)
+   apply (fastforce simp: vspace_for_pool_def in_omonad obj_at_def ran_def entry_for_pool_def)
   apply (rename_tac pt_ptr)
   apply (clarsimp simp: vs_lookup_slot_def obj_at_def split: if_split_asm)
   apply (clarsimp simp: in_omonad)
   apply (frule (1) vs_lookup_table_is_aligned; clarsimp?)
   apply (clarsimp simp: ptes_of_def)
   apply (drule (1) valid_vspace_objsD; simp add: in_omonad)
-  apply (simp add: is_aligned_mask)
+  apply (simp add: is_aligned_mask pt_range_def)
+  sorry (* FIXME AARCH64
   apply (drule_tac x=0 in bspec)
    apply (clarsimp simp: kernel_mapping_slots_def pptr_base_def pptrBase_def pt_bits_left_def
                          bit_simps level_defs canonical_bit_def)
@@ -1305,22 +1261,22 @@ lemmas reachable_frame_cap_simps =
 
 lemma unmap_page_table_pool_for_asid[wp]:
   "unmap_page_table asid vref pt \<lbrace>\<lambda>s. P (pool_for_asid asid s)\<rbrace>"
-  sorry (* FIXME AARCH64
-  unfolding unmap_page_table_def by (wpsimp simp: pool_for_asid_def) *)
+  unfolding unmap_page_table_def by (wpsimp simp: pool_for_asid_def)
 
 lemma unmap_page_table_unreachable:
-  "\<lbrace> pt_at pt_t pt and valid_asid_table and valid_vspace_objs and pspace_aligned
+  "\<lbrace> (\<lambda>s. \<exists>pt_t. pt_at pt_t pt s)
+     and valid_asid_table and valid_vspace_objs and pspace_aligned and pspace_distinct
      and unique_table_refs and valid_vs_lookup and (\<lambda>s. valid_caps (caps_of_state s) s)
      and K (0 < asid \<and> vref \<in> user_region)
      and (\<lambda>s. vspace_for_asid asid s \<noteq> Some pt) \<rbrace>
    unmap_page_table asid vref pt
    \<lbrace>\<lambda>_ s. \<not> reachable_target (asid, vref) pt s\<rbrace>"
+  (* FIXME AARCH64: eliminate "vspace_for_asid asid s \<noteq> Some pt" *)
   unfolding reachable_target_def
   apply (wpsimp wp: hoare_vcg_all_lift unmap_page_table_not_target)
-  sorry (* FIXME AARCH64
   apply (drule (1) pool_for_asid_validD)
   apply (clarsimp simp: obj_at_def in_omonad)
-  done *)
+  done
 
 lemma unmap_page_unreachable:
   "\<lbrace> data_at pgsz pptr and valid_asid_table and valid_vspace_objs
@@ -1347,6 +1303,7 @@ lemma delete_asid_no_vs_lookup_target:
   "\<lbrace>\<lambda>s. vspace_for_asid asid s = Some pt\<rbrace>
    delete_asid asid pt
    \<lbrace>\<lambda>rv s. vs_lookup_target level asid vref s \<noteq> Some (level, pt)\<rbrace>"
+  (* FIXME AARCH64: eliminate vspace_for_asid precondition *)
   apply (rule hoare_assume_pre)
   apply (prop_tac "0 < asid")
    apply (clarsimp simp: vspace_for_asid_def)
@@ -1376,83 +1333,38 @@ lemma arch_finalise_cap_replaceable:
                 is_cap_simps vs_cap_ref_def
                 no_cap_to_obj_with_diff_ref_Null o_def
                 reachable_frame_cap_simps
-  (* FIXME AARCH64
   notes wps = hoare_drop_imp[where R="%_. is_final_cap' cap" for cap]
               valid_cap_typ
               unmap_page_unreachable unmap_page_table_unreachable
-              delete_asid_unreachable *)
+              delete_asid_unreachable vcpu_finalise_unlive[simplified o_def]
   shows
     "\<lbrace>\<lambda>s. s \<turnstile> ArchObjectCap cap \<and>
           x = is_final_cap' (ArchObjectCap cap) s \<and>
-          pspace_aligned s \<and> valid_vspace_objs s \<and> valid_objs s \<and> valid_asid_table s \<and>
-          valid_arch_caps s\<rbrace>
+          pspace_aligned s \<and> pspace_distinct s \<and>
+          valid_vspace_objs s \<and> valid_objs s \<and> valid_asid_table s \<and> valid_arch_caps s\<rbrace>
      arch_finalise_cap cap x
      \<lbrace>\<lambda>rv s. replaceable s sl (fst rv) (ArchObjectCap cap)\<rbrace>"
-  sorry (* FIXME AARCH64
   apply (simp add: arch_finalise_cap_def valid_arch_caps_def)
   apply (wpsimp simp: simps valid_objs_caps wp: wps | strengthen strg)+
   apply (rule conjI, clarsimp)
-   apply (clarsimp simp: valid_cap_def)
+   apply (in_case "ASIDPoolCap ?p ?asid")
+   apply (clarsimp simp: valid_cap_def obj_at_def)
+  apply (rule conjI, clarsimp)
+   apply (in_case "FrameCap ?p ?R ?sz ?dev ?m")
+   apply (fastforce simp: valid_cap_def wellformed_mapdata_def data_at_def obj_at_def
+                    split: if_split_asm)
+  apply clarsimp
+  apply (in_case "PageTableCap ?p ?T ?m")
+  sorry (* FIXME AARCH64
   apply (rule conjI; clarsimp)
-   apply (rule conjI; clarsimp simp: valid_cap_def wellformed_mapdata_def data_at_def split: if_split_asm)
+   apply (in_case "PageTableCap ?p VSRootPT_T ?m")
+   apply (rule conjI; clarsimp simp: valid_cap_def wellformed_mapdata_def data_at_def obj_at_def
+                               split: if_split_asm) (* vspace_for_asid *)
+  apply (in_case "PageTableCap ?p NormalPT_T ?m")
   apply (rule conjI; clarsimp)
-  apply (clarsimp simp: valid_cap_def wellformed_mapdata_def cap_aligned_def)
+   apply (clarsimp simp: valid_cap_def obj_at_def)
+  apply (clarsimp simp: valid_cap_def wellformed_mapdata_def cap_aligned_def obj_at_def) (* vspace_for_asid *)
   done *)
-
-(* FIXME AARCH64 this is the ARM_HYP formulation of arch_finalise_cap_replaceable
-lemma arch_finalise_cap_replaceable1:
-  notes strg = tcb_cap_valid_imp_NullCap
-               obj_at_not_live_valid_arch_cap_strg[where cap=cap]
-  notes simps = replaceable_def and_not_not_or_imp
-                vs_lookup_pages_eq_at[THEN fun_cong, symmetric]
-                vs_lookup_pages_eq_ap[THEN fun_cong, symmetric]
-                is_cap_simps vs_cap_ref_def
-                no_cap_to_obj_with_diff_ref_Null o_def
-  notes wps = hoare_drop_imp[where R="%_. is_final_cap' cap" for cap]
-              unmap_page_table_unmapped3 valid_cap_typ
-  assumes X: "\<forall>r. cap \<noteq> VCPUCap r"
-  shows
-    "\<lbrace>\<lambda>s. s \<turnstile> cap.ArchObjectCap cap \<and>
-          x = is_final_cap' (cap.ArchObjectCap cap) s \<and>
-          pspace_aligned s \<and> valid_vspace_objs s \<and> valid_objs s \<and>
-          valid_asid_table (arm_asid_table (arch_state s)) s\<rbrace>
-     arch_finalise_cap cap x
-   \<lbrace>\<lambda>rv s. replaceable s sl (fst rv) (cap.ArchObjectCap cap)\<rbrace>"
-  apply (simp add: arch_finalise_cap_def)
-  apply (rule hoare_pre)
-   apply (simp add: simps split: option.splits vmpage_size.splits)
-   apply (wp wps
-          | strengthen strg
-          | simp add: simps reachable_pg_cap_def live_def
-          | wpc)+
-     (* unmap_page case is a bit unpleasant *)
-     apply (strengthen cases_conj_strg[where P="\<not> is_final_cap' cap s" for cap s, simplified])
-     apply (rule hoare_post_imp, clarsimp split: vmpage_size.split, assumption)
-     apply (simp add: vspace_bits_defs)
-     apply (wp hoare_vcg_disj_lift hoare_vcg_all_lift hoare_vcg_const_imp_lift
-               unmap_page_tcb_cap_valid unmap_page_page_unmapped
-                   unmap_page_section_unmapped)[1]
-    apply (wp wps
-           | strengthen strg imp_and_strg tcb_cap_valid_imp_NullCap
-           | simp add: simps is_master_reply_cap_def reachable_pg_cap_def
-           | wpc)+
-  apply (intro conjI; clarsimp split: cap.splits arch_cap.splits vmpage_size.splits)
-  by (auto simp: valid_cap_def obj_at_def simps is_master_reply_cap_def
-                    a_type_def data_at_def vspace_bits_defs X
-             elim!: tcb_cap_valid_imp_NullCap[rule_format, rotated]
-             split: cap.splits arch_cap.splits vmpage_size.splits)
-
-lemma arch_finalise_cap_replaceable:
-  shows
-    "\<lbrace>\<lambda>s. s \<turnstile> cap.ArchObjectCap cap \<and>
-          x = is_final_cap' (cap.ArchObjectCap cap) s \<and>
-          pspace_aligned s \<and> valid_vspace_objs s \<and> valid_objs s \<and>
-          valid_asid_table (arm_asid_table (arch_state s)) s\<rbrace>
-     arch_finalise_cap cap x
-   \<lbrace>\<lambda>rv s. replaceable s sl (fst rv) (cap.ArchObjectCap cap)\<rbrace>"
-  by (cases cap; simp add: arch_finalise_cap_vcpu arch_finalise_cap_replaceable1)
-*)
-
 
 global_naming Arch
 lemma (* deleting_irq_handler_slot_not_irq_node *)[Finalise_AI_asms]:
@@ -1547,6 +1459,7 @@ lemma finalise_cap_replaceable [Finalise_AI_asms]:
         \<and> cte_wp_at ((=) cap) sl s \<and> valid_objs s \<and> sym_refs (state_refs_of s)
         \<and> (cap_irqs cap \<noteq> {} \<longrightarrow> if_unsafe_then_cap s \<and> valid_global_refs s)
         \<and> (is_arch_cap cap \<longrightarrow> pspace_aligned s \<and>
+                               pspace_distinct s \<and>
                                valid_vspace_objs s \<and>
                                valid_arch_state s \<and>
                                valid_arch_caps s)\<rbrace>
@@ -1762,20 +1675,25 @@ lemma is_arch_update_reset_page:
   apply (simp add: is_arch_update_def is_arch_cap_def cap_master_cap_def)
   done
 
-crunch caps_of_state [wp]: vcpu_finalise "\<lambda>s. P (caps_of_state s)"
-   (wp: crunch_wps)
+crunches vcpu_finalise, arch_finalise_cap
+  for caps_of_state [wp]: "\<lambda>s. P (caps_of_state s)"
+  (wp: crunch_wps simp: crunch_simps)
 
-crunch caps_of_state [wp]: arch_finalise_cap "\<lambda>s. P (caps_of_state s)"
-   (wp: crunch_wps simp: crunch_simps)
+lemma set_asid_pool_empty[wp]:
+  "set_asid_pool p ap \<lbrace>\<lambda>s. P (obj_at (empty_table S) p' s)\<rbrace>"
+  unfolding set_asid_pool_def
+  apply (wpsimp wp: set_object_wp)
+  apply (erule rsubst[where P=P])
+  apply (clarsimp simp: obj_at_def in_omonad empty_table_def)
+  done
+
+crunches set_global_user_vspace, arm_context_switch
+  for empty[wp]: "\<lambda>s. P (obj_at (empty_table S) p s)"
 
 lemma set_vm_root_empty[wp]:
-  "\<lbrace>\<lambda>s. P (obj_at (empty_table S) p s)\<rbrace> set_vm_root v \<lbrace>\<lambda>_ s. P (obj_at (empty_table S) p s) \<rbrace>"
-  apply (simp add: set_vm_root_def)
-  sorry (* FIXME AARCH64
-  apply wpsimp+
-     apply (clarsimp simp: if_apply_def2)
-     apply (wpsimp+ | rule hoare_conjI[rotated] hoare_drop_imp hoare_allI)+
-  done *)
+  "set_vm_root v \<lbrace>\<lambda>s. P (obj_at (empty_table S) p s) \<rbrace>"
+  unfolding set_vm_root_def
+  by (wpsimp wp: get_cap_wp)
 
 lemma ucast_less_shiftl_helper3:
   "\<lbrakk> len_of TYPE('b) + 3 < len_of TYPE('a); 2 ^ (len_of TYPE('b) + 3) \<le> n\<rbrakk>
