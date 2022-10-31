@@ -18,7 +18,7 @@ begin
       value_type num_something = "10 * num_domains"
 *)
 
-text \<open>See theory @{file "test/Value_Type_Test.thy"} for further example/demo.\<close>
+text \<open>See theory @{text "test/Value_Type_Test.thy"} for further example/demo.\<close>
 
 ML \<open>
 
