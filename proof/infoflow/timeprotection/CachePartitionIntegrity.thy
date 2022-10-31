@@ -323,31 +323,54 @@ lemma ta_subset_to_phys_property:
    apply blast
   by (force simp:image_def addrFromKPPtr_def)
 
-(* For check_active_irq_if *)
+(* XXX: no theorems proven for any of these
+crunches touch_objects, touch_object, get_cap, get_object
+  for pas_cur_domain: "pas_cur_domain aag"
+  and ta_subset_inv: "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp')
+*)
 
-lemma do_machine_op_ta_subset_inv:
-  "do_machine_op mop \<lbrace>ta_subset_inv aag\<rbrace>"
-  sorry
-
-(* For kernel_entry_if *)
-
+(* If objects in TA are a subset of the policy-allowed ones before modifying the object,
+   that will remain the case after modifying the object using `set_object`. *)
 lemma set_object_ta_subset_inv:
-  "set_object True ptr obj \<lbrace>ta_subset_inv aag\<rbrace>"
-  sorry
+  "\<lbrace>\<lambda>s. ta_subset_inv aag (ms_ta_update ((\<union>) (obj_range p (the (kheap s p)))) s) \<rbrace>
+   set_object ta_f p obj \<lbrace>\<lambda>_ s. ta_subset_inv aag s\<rbrace>"
+  apply(wpsimp wp:touch_object_wp' get_object_wp simp:crunch_simps ta_subset_inv_def set_object_def)
+  apply(subgoal_tac "x \<in> obj_range p (the (kheap s p))")
+   apply force
+  (* By cases, for all kinds of kernel objects: The change cannot have affected its size. *)
+  by (clarsimp simp:obj_at_def a_type_def obj_range_def
+    split:kernel_object.splits if_splits arch_kernel_obj.splits)
 
 lemma syscall_ta_subset_inv:
   "syscall m_fault h_fault m_error h_error m_finalise \<lbrace>ta_subset_inv aag\<rbrace>"
   sorry
 
-crunches touch_objects, touch_object, get_cap
-  for pas_cur_domain: "pas_cur_domain aag"
-  and ta_subset_inv: "ta_subset_inv aag"
-  (wp: crunch_wps)
+(* Note: The fact that `pas_refined` is `ta_agnostic` is now proved earlier, in Access_AC. *)
+thm pas_refined_ta_agnostic
 
-lemma ta_agnostic_pas_refined:
-  "ta_agnostic (pas_refined aag)"
-  unfolding ta_agnostic_def
-  by (meson pas_refined_def pas_refined_machine_state_update)
+(* Note: If we need it, `no_label_straddling_objs` is an invariant we've discussed
+   adding as a new conjunct of `pas_refined`. Looks like we might need it. -robs *)
+lemma pas_refined_no_label_straddling_objs[intro]:
+  "pas_refined aag s \<Longrightarrow> no_label_straddling_objs aag s"
+  sorry
+
+(* If there are no label-straddling objects on the kheap, then adding a policy-accessible
+   kheap object to the TA set cannot falsify the ta_subset_inv. *)
+lemma my_test:
+  "no_label_straddling_objs aag s \<Longrightarrow>
+   pasObjectAbs aag p \<in> pas_labels_accessible_to aag (cur_label aag s) \<Longrightarrow>
+   ko_at ko p s \<Longrightarrow>
+   ta_subset_inv aag s \<Longrightarrow>
+   ta_subset_inv aag (ms_ta_update ((\<union>) (obj_range p ko)) s)"
+  apply(clarsimp simp:ta_subset_inv_def)
+  apply(clarsimp simp:no_label_straddling_objs_def)
+  apply(erule_tac x=p in allE)
+  apply(clarsimp split:option.splits)
+   apply(clarsimp simp:obj_at_def)
+  apply(clarsimp simp:obj_at_def)
+  apply(clarsimp simp:pas_addrs_accessible_to_def obj_range_def)
+  done
 
 (* Scott (@scottbuckley) recommends trying to prove this one -robs. *)
 lemma resolve_address_bits'_ta_subset_inv:
@@ -367,6 +390,11 @@ proof (induct capcref rule: resolve_address_bits'.induct)
   apply (rename_tac obj_ref nat list)
   apply (simp only: cap.simps)
   apply(rename_tac s rv s' obj_ref nat list)
+  (* We'll use this in a number of places. -robs *)
+  apply(insert touch_object_wp[where Q="\<lambda>_. ta_subset_inv aag",simplified valid_def])
+  (* XXX: But how do we know that obj_ref is policy-accessible to the current domain? *)
+  apply(subgoal_tac "pasObjectAbs aag obj_ref \<in> pas_labels_accessible_to aag (cur_label aag s)")
+   prefer 2 defer
   apply (case_tac "nat + length list = 0")
    apply (simp add: fail_def)
   apply (simp only: if_False)
@@ -383,15 +411,20 @@ proof (induct capcref rule: resolve_address_bits'.induct)
          apply (frule(9) 1) (* get the IH into context *)
          apply (clarsimp simp: in_monad)
          apply (frule in_inv_by_hoareD [OF get_cap_inv])
-         (* Here's where I deviate from the rab_tainv proof. -robs *)
+         (* (Other than the `insert` and `subgoal_tac` earlier)
+            Here's where I deviate from the rab_tainv proof. -robs *)
          apply clarsimp
          apply(rename_tac s s' obj_ref nat list exception s'' next_cap)
          apply(drule (1) use_valid)
           apply(frule_tac P="pas_refined aag" in touch_object_tainv.in_inv_by_hoare)
-           using ta_agnostic_pas_refined unfolding ta_agnostic_def
+           using pas_refined_ta_agnostic unfolding ta_agnostic_def
            apply blast
           apply(prop_tac "ta_subset_inv aag s''")
-           using touch_object_ta_subset_inv[simplified valid_def, where aag=aag]
+           apply(erule_tac x=obj_ref in meta_allE)
+           apply clarsimp
+           apply(erule_tac x=s in allE)
+           apply(erule impE)
+            using my_test apply blast
            apply force
           apply force
          apply force
@@ -414,7 +447,10 @@ proof (induct capcref rule: resolve_address_bits'.induct)
       touch_object preserved ta_subset_inv. -robs *)
    apply (clarsimp simp: in_monad)
    apply (drule in_inv_by_hoareD [OF get_cap_inv])
-   using touch_object_ta_subset_inv[simplified valid_def]
+   apply(erule_tac x=obj_ref in meta_allE)
+   apply(erule_tac x=s in allE)
+   apply(erule impE)
+    using my_test apply blast
    apply blast
   (* If it's a cnode cap we'll need to know that its recursive call to rab
      preserved ta_subset_inv. The inductive hypothesis gives us that. -robs *)
@@ -427,17 +463,25 @@ proof (induct capcref rule: resolve_address_bits'.induct)
   apply clarsimp
   apply(rename_tac s b obj_ref nat list aa ba bb s'' next_cap)
   apply(prop_tac "ta_subset_inv aag s''")
-   using touch_object_ta_subset_inv[simplified valid_def, where aag=aag]
+   apply(erule_tac x=obj_ref in meta_allE)
+   apply(erule_tac x=s in allE)
+   apply(erule impE)
+    using my_test apply blast
    apply force
   apply(clarsimp simp:valid_def)
   apply(erule_tac x=s'' in allE)
   apply clarsimp
   (* We need pas_refined too *)
   apply(frule_tac P="pas_refined aag" in touch_object_tainv.in_inv_by_hoare)
-   using ta_agnostic_pas_refined unfolding ta_agnostic_def
+   using pas_refined_ta_agnostic unfolding ta_agnostic_def
    apply blast
   apply clarsimp
-  by blast
+  apply(erule_tac x=obj_ref in meta_allE)
+  apply(erule_tac x=s in allE)
+  apply(erule impE)
+   using my_test apply blast
+  apply blast
+  sorry
 qed
 
 (* Trying this one too... *)
@@ -470,7 +514,7 @@ proof (induct capcref rule: resolve_address_bits'.induct)
          apply (drule(9) 1) (* get the IH into context *)
          apply (clarsimp simp: in_monad)
          apply (drule in_inv_by_hoareD [OF get_cap_inv])
-         sorry
+         oops (*
          thm touch_object_tainv.in_inv_by_hoare
          apply (drule(1) touch_object_tainv.in_inv_by_hoare)
          apply simp
@@ -503,6 +547,7 @@ proof (induct capcref rule: resolve_address_bits'.induct)
   apply (drule(2) post_by_hoare, simp)
   done
 qed
+*)
 
 lemma lookup_extra_caps_ta_subset_inv:
   "lookup_extra_caps thread buffer mi \<lbrace>ta_subset_inv aag\<rbrace>"
