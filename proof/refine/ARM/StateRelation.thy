@@ -1041,6 +1041,8 @@ lemma sym_replies_next_then_prev_id_p:
   apply (clarsimp simp: replyPrevs_of_refs replyNexts_of_refs)
   by (drule (1) sym_refsD[rotated], simp)
 
+(* Some results related to the size of scheduling contexts *)
+
 lemma sc_const_eq:
   "refillSizeBytes = (refill_size_bytes::nat)"
   "schedContextStructSize = sizeof_sched_context_t"
@@ -1060,11 +1062,6 @@ lemma maxUntyped_eq:
 
 lemmas sc_const_conc = sc_const_eq[symmetric] max_num_refills_eq_refillAbsoluteMax' maxUntyped_eq
 
-lemma minRefillLength_ARM: "minRefillLength = 12"
-  by (auto simp: minRefillLength_def minSchedContextBits_def refillAbsoluteMax'_def
-                 schedContextStructSize_def refillSizeBytes_def shiftL_nat wordSize_def
-                 wordBits_def')
-
 lemma refillAbsoluteMax'_mono:
   fixes x y
   assumes "minSchedContextBits \<le> x"
@@ -1077,16 +1074,71 @@ proof -
     by (simp add: diff_le_mono div_le_mono shiftL_nat)
 qed
 
-lemma refillAbsoluteMax'_lb:
-  "minSchedContextBits \<le> us \<Longrightarrow> minRefillLength \<le> refillAbsoluteMax' us"
-  apply (simp add: minRefillLength_def)
-  using refillAbsoluteMax'_mono by blast
-
-lemma MIN_REFILLS_le_minRefillLength:
-  "MIN_REFILLS \<le> minRefillLength"
-  by (clarsimp simp: MIN_REFILLS_def minRefillLength_ARM)
-
 lemmas scBits_simps = refillAbsoluteMax_def sc_size_bounds_def sc_const_conc
+
+lemma minSchedContextBits_check:
+  "minSchedContextBits = (LEAST n. schedContextStructSize + MIN_REFILLS * refillSizeBytes \<le> 2 ^ n)"
+proof -
+  note simps = minSchedContextBits_def sc_const_eq(2) sizeof_sched_context_t_def word_size_def
+               MIN_REFILLS_def refillSizeBytes_def
+  show ?thesis
+    apply (rule sym)
+    apply (rule Least_equality)
+     apply (clarsimp simp: simps)
+    apply (rename_tac n)
+    apply (rule ccontr)
+    apply (simp add: not_le)
+    apply (prop_tac "2 ^ n \<le> 2 ^ (minSchedContextBits - 1)")
+     apply (fastforce intro: power_increasing_iff[THEN iffD2])
+    using less_le_trans
+    by (fastforce simp: simps)
+qed
+
+lemma minSchedContextBits_rel:
+  "schedContextStructSize + MIN_REFILLS * refillSizeBytes \<le> 2 ^ minSchedContextBits"
+  apply (simp add: minSchedContextBits_check)
+  by (meson self_le_ge2_pow order_refl wellorder_Least_lemma(1))
+
+lemma refillAbsoluteMax'_greatest:
+  assumes "schedContextStructSize \<le> 2 ^ n"
+  shows "refillAbsoluteMax' n = (GREATEST r. schedContextStructSize + r * refillSizeBytes \<le> 2 ^ n)"
+  apply (simp flip: max_num_refills_eq_refillAbsoluteMax'
+               add: max_num_refills_def scBits_simps(4) scBits_simps(3))
+  apply (rule sym)
+  apply (rule Greatest_equality)
+   apply (metis assms le_diff_conv2 le_imp_diff_is_add div_mult_le le_add1 diff_add_inverse)
+  apply (rename_tac r)
+  apply (prop_tac "r * refillSizeBytes \<le> 2 ^ n - schedContextStructSize")
+   apply linarith
+  apply (drule_tac k=refillSizeBytes in div_le_mono)
+  by (simp add: refillSizeBytes_def)
+
+lemma refillAbsoluteMax'_leq:
+  "schedContextStructSize \<le> 2 ^ n \<Longrightarrow>
+   schedContextStructSize + refillAbsoluteMax' n * refillSizeBytes \<le> 2 ^ n"
+  apply (frule refillAbsoluteMax'_greatest)
+   apply (simp add: refillSizeBytes_def)
+  apply (rule_tac b="2 ^ n" in GreatestI_ex_nat)
+   apply presburger
+  by fastforce
+
+lemma schedContextStructSize_minSchedContextBits:
+  "schedContextStructSize \<le> 2 ^ minSchedContextBits"
+  apply (insert minSchedContextBits_check)
+  by (metis LeastI_ex add_leD1 le_refl self_le_ge2_pow)
+
+lemma MIN_REFILLS_refillAbsoluteMax'[simp]:
+  "minSchedContextBits \<le> us \<Longrightarrow> MIN_REFILLS \<le> refillAbsoluteMax' us"
+  apply (insert minSchedContextBits_rel)
+  apply (frule_tac b1=2 in power_increasing_iff[THEN iffD2, rotated])
+   apply fastforce
+  apply (subst refillAbsoluteMax'_greatest)
+   apply (insert schedContextStructSize_minSchedContextBits)
+   apply (fastforce elim!: order_trans)
+  apply (rule_tac b="2 ^ us" in Greatest_le_nat)
+   apply (fastforce intro: order_trans)
+  apply (clarsimp simp: refillSizeBytes_def)
+  done
 
 lemma scBits_pos_power2:
   assumes "minSchedContextBits + scSize sc < word_bits"
