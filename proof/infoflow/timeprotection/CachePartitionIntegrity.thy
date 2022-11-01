@@ -393,7 +393,7 @@ lemma pas_cur_domain_ta_agnostic: "ta_agnostic (pas_cur_domain aag)"
 thm CNode_AC.resolve_address_bits_authorised_aux
 (* Scott (@scottbuckley) recommends trying to prove this one -robs. *)
 lemma resolve_address_bits'_ta_subset_inv:
-  assumes pas_domains_distinct: "pas_domains_distinct aag"
+  assumes domains_distinct: "pas_domains_distinct aag"
   shows
   "\<lbrace>pas_refined aag and ta_subset_inv aag and
     \<comment> \<open>Assume that the cur_domain is still consistent with the PAS record when we're
@@ -424,7 +424,7 @@ proof (induct capcref rule: resolve_address_bits'.induct)
   apply(subgoal_tac "pasObjectAbs aag obj_ref \<in> pas_labels_accessible_to aag (cur_label aag s)")
    prefer 2
    apply(clarsimp simp:pas_labels_accessible_to_def)
-   using pas_domains_distinct cur_label_to_subj
+   using domains_distinct cur_label_to_subj
    apply force
   apply (case_tac "nat + length list = 0")
    apply (simp add: fail_def)
@@ -540,7 +540,7 @@ proof (induct capcref rule: resolve_address_bits'.induct)
   done
 qed
 
-(* Trying this one too... *)
+(* XXX: Maybe not worth trying this if ta_subset_inv is fine
 lemma resolve_address_bits'_ta_subset_accessible_partitions:
   "resolve_address_bits' z capcref \<lbrace>ta_subset_accessible_partitions aag\<rbrace>"
 (* Following the proof of rab_inv in CSpaceInv_AI *)
@@ -603,19 +603,86 @@ proof (induct capcref rule: resolve_address_bits'.induct)
   apply (drule(2) post_by_hoare, simp)
   done
 qed
-*)
+*) *)
 
+(* FIXME: Needs `pas_domains_distinct` to give to resolve_address_bits'_ta_subset_inv.
+  ADT_IF seems to have that from context valid_initial_state, a locale that it defines. *)
+crunch ta_subset_inv: resolve_address_bits "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp')
+
+(* FIXME: I think this needs a manual proof like for resolve_address_bits. -robs *)
+crunch ta_subset_inv: load_word_offs "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp simp: crunch_simps ignore: do_machine_op)
+
+(* FIXME: Needs manual proof? liftM/mapM wp rules don't seem to help. -robs *)
+crunch ta_subset_inv: get_extra_cptrs "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' liftM_wp liftME_wp mapM_wp mapM_wp'
+   simp: crunch_simps return_def)
+
+(* Note: Needed manual proof with customised precondition, just like rab. -robs *)
+thm lookup_slot_for_thread_authorised
+lemma lookup_slot_for_thread_ta_subset_inv:
+  (* Follow convention used in Noninterference.thy for handling pas_domains_distinct assumption. *)
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
+  "\<lbrace>pas_refined aag and ta_subset_inv aag and pas_cur_domain aag and K (is_subject aag thread)\<rbrace>
+     lookup_slot_for_thread thread cref
+   \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  apply(wpsimp wp: resolve_address_bits'_ta_subset_inv touch_object_wp
+    simp: lookup_slot_for_thread_def resolve_address_bits_def)
+  apply(rule conjI)
+   apply(rule safe_addition_to_ta)
+      apply force
+     apply(clarsimp simp:pas_labels_accessible_to_def)
+     using domains_distinct cur_label_to_subj
+     apply force
+    apply force
+    (* XXX: Need this if you use touch_object_wp' above.
+    apply(force simp:get_tcb_def obj_at_def split:option.splits) *)
+   apply force
+  apply clarsimp
+  apply(drule get_tcb_Some_True_False)
+  using owns_thread_owns_cspace by blast
+
+thm lookup_cap_and_slot_authorised
+lemma lookup_cap_and_slot_ta_subset_inv:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
+  "\<lbrace>pas_refined aag and ta_subset_inv aag and pas_cur_domain aag and K (is_subject aag thread)\<rbrace>
+     lookup_cap_and_slot thread cptr
+   \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  apply(wpsimp wp: crunch_wps lookup_slot_for_thread_ta_subset_inv touch_object_wp'
+    simp: lookup_cap_and_slot_def resolve_address_bits_def)
+   (* FIXME: Doesn't seem to be able to use lookup_slot_for_thread_ta_subset_inv *)
+  sorry
+
+thm lookup_extra_caps_authorised
 lemma lookup_extra_caps_ta_subset_inv:
-  "lookup_extra_caps thread buffer mi \<lbrace>ta_subset_inv aag\<rbrace>"
+  (* Follow convention used in Noninterference.thy for handling pas_domains_distinct assumption. *)
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
+  "\<lbrace>pas_refined aag and ta_subset_inv aag and pas_cur_domain aag and K (is_subject aag thread)\<rbrace>
+     lookup_extra_caps thread buffer mi
+   \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  apply(wpsimp wp: crunch_wps lookup_cap_and_slot_ta_subset_inv mapME_wp'
+    simp: lookup_extra_caps_def resolve_address_bits_def)
+    (* FIXME: I guess mapME_wp' will demand that all iterations will preserve every one of
+       the preconditions, does this mean we have to copy them all to the postcondition too? *)
   sorry
 
-lemma set_thread_state_ta_subset_inv:
-  "set_thread_state ref ts \<lbrace>ta_subset_inv aag\<rbrace>"
-  sorry
+thm set_thread_state_cur_domain
+(* FIXME: I think this needs a manual proof like for resolve_address_bits. -robs *)
+crunch ta_subset_inv: set_thread_state "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp')
 
-lemma get_receive_slots_ta_subset_inv:
-  "get_receive_slots thread bufopt \<lbrace>ta_subset_inv aag\<rbrace>"
-  sorry
+(* FIXME: Another that needs to be customised to assume pas_domains_distinct *)
+crunch ta_subset_inv: lookup_cap "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp')
+
+. (* DOWN TO HERE
+crunch ta_subset_inv: get_receive_slots "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp'
+   ignore: do_machine_op)
 
 lemma set_cdt_ta_subset_inv:
   "set_cdt t \<lbrace>ta_subset_inv aag\<rbrace>"
