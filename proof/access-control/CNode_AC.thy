@@ -188,12 +188,10 @@ proof (induct arbitrary: s rule: resolve_address_bits'.induct)
     apply (cases cap', simp_all add: P split del: if_split)
     apply (rule hoare_pre_spec_validE)
      apply (wp "1.hyps", (assumption | simp add: in_monad | rule conjI)+)
-        apply (wp get_cap_wp)+
+        apply (wp get_cap_wp touch_object_wp')+
     apply (auto simp: cte_wp_at_caps_of_state is_cap_simps cap_auth_conferred_def
                 dest: caps_of_state_pasObjectAbs_eq)
-    sorry (* XXX: broken by touched_addresses. -robs
     done
-    *)
 qed
 
 lemma resolve_address_bits_authorised[wp]:

@@ -68,7 +68,7 @@ abbreviation cur_label :: "'a PAS \<Rightarrow> det_state \<Rightarrow> 'a" wher
 
 \<comment> \<open>When we have that the @{term\<open>cur_domain\<close>} matches the PAS record's @{term\<open>pasSubject\<close>} (as
     per @{term\<open>pas_cur_domain\<close>}) we can simplify it out thanks to @{term\<open>pas_domains_distinct\<close>}.\<close>
-lemma cur_label_to_subj:
+lemma cur_label_to_subj[intro]:
   "pas_domains_distinct aag \<Longrightarrow>
    pas_cur_domain aag s \<Longrightarrow>
    cur_label aag s = pasSubject aag"
@@ -342,9 +342,12 @@ lemma set_object_ta_subset_inv:
   by (clarsimp simp:obj_at_def a_type_def obj_range_def
     split:kernel_object.splits if_splits arch_kernel_obj.splits)
 
+(* XXX: Shouldn't this be later than the rab proof? Just comment out to make sure it isn't
+   used by anything later.
 lemma syscall_ta_subset_inv:
   "syscall m_fault h_fault m_error h_error m_finalise \<lbrace>ta_subset_inv aag\<rbrace>"
   sorry
+*)
 
 (* Note: The fact that `pas_refined` is `ta_agnostic` is now proved earlier, in Access_AC. *)
 thm pas_refined_ta_agnostic
@@ -357,7 +360,7 @@ lemma pas_refined_no_label_straddling_objs[intro]:
 
 (* If there are no label-straddling objects on the kheap, then adding a policy-accessible
    kheap object to the TA set cannot falsify the ta_subset_inv. *)
-lemma my_test:
+lemma safe_addition_to_ta:
   "no_label_straddling_objs aag s \<Longrightarrow>
    pasObjectAbs aag p \<in> pas_labels_accessible_to aag (cur_label aag s) \<Longrightarrow>
    ko_at ko p s \<Longrightarrow>
@@ -372,9 +375,34 @@ lemma my_test:
   apply(clarsimp simp:pas_addrs_accessible_to_def obj_range_def)
   done
 
+(* Need something like this *)
+thm get_tcb_Some_True_False get_cap_det
+(* FIXME: Move back far enough to be useful everywhere else this was needed. -robs *)
+lemma get_cap_True_False[dest]:
+  "get_cap True cap s = ({(r, s)}, False) \<Longrightarrow> get_cap False cap s = ({(r, s)}, False)"
+  (* Kitchen sink was good enough for this. *)
+  apply(clarsimp simp:get_cap_def bind_def get_object_def simpler_gets_def obind_def ta_filter_def
+    assert_def return_def assert_opt_def
+    split:prod.splits kernel_object.splits option.splits if_splits)
+   apply auto
+  done
+
+lemma pas_cur_domain_ta_agnostic: "ta_agnostic (pas_cur_domain aag)"
+  by (clarsimp simp:ta_agnostic_def)
+
+thm CNode_AC.resolve_address_bits_authorised_aux
 (* Scott (@scottbuckley) recommends trying to prove this one -robs. *)
 lemma resolve_address_bits'_ta_subset_inv:
-  "\<lbrace>pas_refined aag and ta_subset_inv aag\<rbrace>
+  assumes pas_domains_distinct: "pas_domains_distinct aag"
+  shows
+  "\<lbrace>pas_refined aag and ta_subset_inv aag and
+    \<comment> \<open>Assume that the cur_domain is still consistent with the PAS record when we're
+      at resolve_address_bits. I think this is reasonable if we don't expect it to get
+      out of alignment until the domainswitch sequence anyway. -robs\<close>
+    pas_cur_domain aag and
+    \<comment> \<open>Additional precondition from \<open>resolve_address_bits_authorised_aux\<close>. We use this
+      to obtain that the obj_ref is policy-accessible to the current domain. -robs\<close>
+    K (is_cnode_cap (fst capcref) \<longrightarrow> (\<forall>x \<in> obj_refs_ac (fst capcref). is_subject aag x))\<rbrace>
      resolve_address_bits' z capcref
    \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
 (* Following the proof structure of rab_inv (now called rab_tainv) in CSpaceInv_AI *)
@@ -390,11 +418,14 @@ proof (induct capcref rule: resolve_address_bits'.induct)
   apply (rename_tac obj_ref nat list)
   apply (simp only: cap.simps)
   apply(rename_tac s rv s' obj_ref nat list)
-  (* We'll use this in a number of places. -robs *)
+  (* We'll use this in a number of places, so insert it back here. -robs *)
   apply(insert touch_object_wp[where Q="\<lambda>_. ta_subset_inv aag",simplified valid_def])
-  (* XXX: But how do we know that obj_ref is policy-accessible to the current domain? *)
+  (* Obtain that obj_ref is policy-accessible to the current domain. *)
   apply(subgoal_tac "pasObjectAbs aag obj_ref \<in> pas_labels_accessible_to aag (cur_label aag s)")
-   prefer 2 defer
+   prefer 2
+   apply(clarsimp simp:pas_labels_accessible_to_def)
+   using pas_domains_distinct cur_label_to_subj
+   apply force
   apply (case_tac "nat + length list = 0")
    apply (simp add: fail_def)
   apply (simp only: if_False)
@@ -419,14 +450,27 @@ proof (induct capcref rule: resolve_address_bits'.induct)
           apply(frule_tac P="pas_refined aag" in touch_object_tainv.in_inv_by_hoare)
            using pas_refined_ta_agnostic unfolding ta_agnostic_def
            apply blast
+          apply(frule_tac P="pas_cur_domain aag" in touch_object_tainv.in_inv_by_hoare)
+           using pas_cur_domain_ta_agnostic unfolding ta_agnostic_def
+           apply blast
           apply(prop_tac "ta_subset_inv aag s''")
            apply(erule_tac x=obj_ref in meta_allE)
            apply clarsimp
            apply(erule_tac x=s in allE)
            apply(erule impE)
-            using my_test apply blast
+            using safe_addition_to_ta apply fastforce
            apply force
-          apply force
+          apply(rule conjI)
+           apply force
+          apply(rule conjI)
+           apply force
+          apply clarsimp
+          (* Adapted from resolve_address_bits_authorised_aux proof *)
+          apply(subgoal_tac "cte_wp_at ((=) next_cap) (obj_ref, take nat (drop (length list) cref)) s''")
+           prefer 2
+           apply(force dest:get_cap_det simp:cte_wp_at_def)
+          apply(auto simp:cte_wp_at_caps_of_state is_cap_simps cap_auth_conferred_def
+            dest:caps_of_state_pasObjectAbs_eq)[1]
          apply force
         apply (clarsimp simp: in_monad)
        apply (clarsimp simp: in_monad)
@@ -450,38 +494,50 @@ proof (induct capcref rule: resolve_address_bits'.induct)
    apply(erule_tac x=obj_ref in meta_allE)
    apply(erule_tac x=s in allE)
    apply(erule impE)
-    using my_test apply blast
+    using safe_addition_to_ta apply fastforce
    apply blast
   (* If it's a cnode cap we'll need to know that its recursive call to rab
      preserved ta_subset_inv. The inductive hypothesis gives us that. -robs *)
   apply (drule (8) "1")
    apply (clarsimp simp: in_monad valid_def)
   apply clarsimp
-  (* First move past all the stuff like get_cap_x and touch_object before it *)
+  (* First move past all the stuff like get_cap and touch_object before it *)
   apply (clarsimp simp: in_monad)
-  apply (drule in_inv_by_hoareD [OF get_cap_inv])
+  (* Use frule instead of drule because we'll need the get_cap assumption for later *)
+  apply (frule in_inv_by_hoareD [OF get_cap_inv])
   apply clarsimp
   apply(rename_tac s b obj_ref nat list aa ba bb s'' next_cap)
   apply(prop_tac "ta_subset_inv aag s''")
    apply(erule_tac x=obj_ref in meta_allE)
    apply(erule_tac x=s in allE)
    apply(erule impE)
-    using my_test apply blast
+    using safe_addition_to_ta apply fastforce
    apply force
   apply(clarsimp simp:valid_def)
   apply(erule_tac x=s'' in allE)
   apply clarsimp
-  (* We need pas_refined too *)
+  (* We need pas_refined and pas_cur_domain too *)
   apply(frule_tac P="pas_refined aag" in touch_object_tainv.in_inv_by_hoare)
    using pas_refined_ta_agnostic unfolding ta_agnostic_def
+   apply blast
+  apply(frule_tac P="pas_cur_domain aag" in touch_object_tainv.in_inv_by_hoare)
+   using pas_cur_domain_ta_agnostic unfolding ta_agnostic_def
    apply blast
   apply clarsimp
   apply(erule_tac x=obj_ref in meta_allE)
   apply(erule_tac x=s in allE)
+  apply(rotate_tac -1)
   apply(erule impE)
-   using my_test apply blast
-  apply blast
-  sorry
+   using safe_addition_to_ta apply fastforce
+  apply(erule impE)
+   (* Adapted from resolve_address_bits_authorised_aux proof *)
+   apply(subgoal_tac "cte_wp_at ((=) next_cap) (obj_ref, take nat (drop (length list) cref)) s''")
+    prefer 2
+    apply(force dest:get_cap_det simp:cte_wp_at_def)
+   apply(auto simp:cte_wp_at_caps_of_state is_cap_simps cap_auth_conferred_def
+     dest:caps_of_state_pasObjectAbs_eq)[1]
+  apply force
+  done
 qed
 
 (* Trying this one too... *)
