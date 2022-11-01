@@ -936,16 +936,6 @@ proof -
   qed
 qed
 
-lemma minSchedContextBits_check:
-  "minSchedContextBits =
-   (LEAST n. size_of TYPE(sched_context_C) + MIN_REFILLS * size_of TYPE(refill_C) \<le> 2 ^ n)"
-sorry
-
-lemma schedContextStructSize_minSchedContextBits:
-  "size_of TYPE(sched_context_C) \<le> 2 ^ minSchedContextBits"
-  apply (insert minSchedContextBits_check)
-  by (metis LeastI_ex add_leD1 le_refl self_le_ge2_pow)
-
 lemma schedContextStructSize_sizeof:
   "schedContextStructSize = size_of TYPE(sched_context_C)"
   by (simp add: sc_const_eq sizeof_sched_context_t_def word_size_def)
@@ -954,19 +944,9 @@ lemma refillSizeBytes_sizeof:
   "refillSizeBytes = size_of TYPE(refill_C)"
   by (simp add: refillSizeBytes_def)
 
-lemma refillAbsoluteMax'_leq:
-  "size_of TYPE(sched_context_C) \<le> 2 ^ n \<Longrightarrow>
-   size_of TYPE(sched_context_C) + (refillAbsoluteMax' n) * size_of TYPE(refill_C) \<le> 2 ^ n"
-  supply refill_C_size[simp del] sched_context_C_size[simp del]
-  apply (simp add: max_num_refills_eq_refillAbsoluteMax'[symmetric] max_num_refills_def
-                   scBits_simps(4) scBits_simps(3)
-                   schedContextStructSize_sizeof refillSizeBytes_sizeof)
-  by (metis Nat.le_diff_conv2 Nat.le_imp_diff_is_add div_times_less_eq_dividend nat_iffs(1)
-            nat_simps(2))
-
 lemma scRefills_sc_size_rel:
   "valid_sched_context' sc s \<Longrightarrow>
-   size_of TYPE(sched_context_C) +  length (scRefills sc) * size_of TYPE(refill_C)
+   schedContextStructSize + length (scRefills sc) * refillSizeBytes
    \<le> 2 ^ objBitsKO (KOSchedContext sc)"
   supply refill_C_size[simp del] sched_context_C_size[simp del]
   apply (clarsimp simp: objBits_simps valid_sched_context'_def add_ac)
@@ -974,10 +954,6 @@ lemma scRefills_sc_size_rel:
   apply (rule_tac y="2 ^ minSchedContextBits" in order_trans)
    apply (rule schedContextStructSize_minSchedContextBits)
   by fastforce
-
-lemma refillSizeBytes_nonzero:
-  "0 < refillSizeBytes"
-  by (simp add: refillSizeBytes_def)
 
 lemma refill_intvl_self:
   "ptr_val (PTR(refill_C) x) \<in> {x..+size_of TYPE(refill_C)}"
@@ -1855,8 +1831,7 @@ proof -
            rule cm_disj cm_disj_tcb cm_disj_cte cm_disj_user cm_disj_device, assumption+,
            simp_all add: objBits_simps' bit_simps
                          heap_to_user_data_restrict heap_to_device_data_restrict
-                         schedContextStructSize_sizeof[unfolded size_of_def, symmetric]
-                         schedContextStructSize_sizeof)[1],
+                         schedContextStructSize_sizeof[unfolded size_of_def, symmetric])[1],
            (rule_tac y="2 ^ minSchedContextBits" in order_trans,
             rule schedContextStructSize_minSchedContextBits, fastforce)?)+
     apply (simp add: map_to_ctes_delete' cmap_relation_restrict_both_proj
