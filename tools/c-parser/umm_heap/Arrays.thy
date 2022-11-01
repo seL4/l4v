@@ -255,7 +255,7 @@ lemma fcp_cong [cong]:
 bnf "('a,'n::finite) array"
   map: map_array
   sets: set_array
-  bd: "BNF_Cardinal_Arithmetic.csum natLeq (card_of (UNIV :: 'n set))"
+  bd: "BNF_Cardinal_Arithmetic.csum natLeq (card_suc (card_of (UNIV :: 'n set)))"
   rel: rel_array
 proof -
   show "map_array id = id" by simp
@@ -273,11 +273,14 @@ next
   show "set_array \<circ> map_array f = (`) f \<circ> set_array"
     by (rule map_array_set_img)
 next
-  show "card_order (BNF_Cardinal_Arithmetic.csum natLeq (card_of UNIV))"
-    by (simp add: card_of_card_order_on card_order_csum natLeq_card_order)
+  show "card_order (BNF_Cardinal_Arithmetic.csum natLeq (card_suc (card_of UNIV)))"
+    by (simp add: card_order_bd_fun)
 next
-  show " BNF_Cardinal_Arithmetic.cinfinite (BNF_Cardinal_Arithmetic.csum natLeq (card_of UNIV))"
+  show "BNF_Cardinal_Arithmetic.cinfinite (BNF_Cardinal_Arithmetic.csum natLeq (card_suc (card_of UNIV)))"
     by (simp add: cinfinite_csum natLeq_cinfinite)
+next
+  show "regularCard (BNF_Cardinal_Arithmetic.csum natLeq (card_suc (card_of UNIV)))"
+    by (simp add: regularCard_bd_fun)
 next
   fix R :: "'a \<Rightarrow> 'b \<Rightarrow> bool" and S :: "'b \<Rightarrow> 'c \<Rightarrow> bool"
   show "rel_array R OO rel_array S \<le> rel_array (R OO S)"
@@ -297,12 +300,13 @@ next
 next
   fix x :: "'a['n::finite]"
   let ?U = "UNIV :: 'n set"
-  have "ordLeq3 (card_of (set_array x)) (card_of ?U)" by transfer (rule card_of_image)
+  have "ordLeq3 (card_of (set_array x)) (card_of ?U)"
+    by transfer (rule card_of_image)
   also
-  have "ordLeq3 (card_of ?U) (BNF_Cardinal_Arithmetic.csum natLeq (card_of ?U))"
-   by (rule ordLeq_csum2) (rule card_of_Card_order)
+  have "ordLess2 (card_of ?U) (BNF_Cardinal_Arithmetic.csum natLeq (card_suc (card_of ?U)))"
+    by (simp add: ordLess_bd_fun)
   finally
-  show "ordLeq3 (card_of (set_array x)) (BNF_Cardinal_Arithmetic.csum natLeq (card_of ?U))" .
+  show "ordLess2 (card_of (set_array x)) (BNF_Cardinal_Arithmetic.csum natLeq (card_suc (card_of ?U)))" .
 qed
 
 end

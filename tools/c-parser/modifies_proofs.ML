@@ -444,6 +444,6 @@ val _ =
   Outer_Syntax.command
     @{command_keyword "cond_sorry_modifies_proofs"}
     "set sorry_modifies_proof option, conditional on env variable"
-    (Parse.text >> (Toplevel.generic_theory o cond_sorry_modifies_proofs))
+    (Parse.embedded >> (Toplevel.generic_theory o cond_sorry_modifies_proofs))
 
 end (* struct *)
