@@ -171,7 +171,7 @@ let
   let
     val ((_,prem'),ctxt') = Variable.focus NONE prem ctxt;
     val rule_prop = Thm.prop_of rule;
-  in Unify.matches_list (Context.Proof ctxt') [rule_prop] [prem'] end;
+  in is_none (Unify.matcher (Context.Proof ctxt') [rule_prop] [prem']) end;
 
 in filter_prems_tac' ctxt (not o member matches rules) end;
 
