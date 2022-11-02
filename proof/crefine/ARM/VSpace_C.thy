@@ -770,7 +770,7 @@ lemma lookupPTSlot_ccorres:
    apply (erule cmap_relationE1[OF rf_sr_cpde_relation], erule ko_at_projectKO_opt)
    apply (clarsimp simp: typ_heap_simps cpde_relation_def Let_def isPageTablePDE_def
                          pde_pde_coarse_lift_def pde_pde_coarse_lift
-                  split: pde.split_asm)
+                  split: pde.split_asm split_of_bool_asm)
     apply (subst array_ptr_valid_array_assertionI, erule h_t_valid_clift; simp)
      apply (rule unat_le_helper, rule order_trans[OF word_and_le1], simp)
     apply (simp add: word_shift_by_2 lookup_pt_slot_no_fail_def)

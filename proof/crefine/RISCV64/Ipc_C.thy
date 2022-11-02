@@ -2545,7 +2545,7 @@ lemma transferCapsLoop_ccorres:
                  \<inter> \<lbrace>\<acute>destSlot = (if slots = [] then NULL else cte_Ptr (hd slots))
                                 \<and> length slots \<le> 1 \<and> slots \<noteq> [0]\<rbrace>)"
   defines "is_the_ep \<equiv> \<lambda>cap. isEndpointCap cap \<and> ep \<noteq> None \<and> capEPPtr cap = the ep"
-  defines "stable \<equiv> \<lambda>scap excap. excap \<noteq> scap \<longrightarrow> excap = maskedAsFull scap scap"
+  defines "stable_masked \<equiv> \<lambda>scap excap. excap \<noteq> scap \<longrightarrow> excap = maskedAsFull scap scap"
   defines "relative_at  \<equiv> \<lambda>scap slot s. cte_wp_at'
                                  (\<lambda>cte. badge_derived' scap (cteCap cte) \<and>
                                         capASID scap = capASID (cteCap cte) \<and>
@@ -2560,7 +2560,7 @@ lemma transferCapsLoop_ccorres:
            (\<lambda>s.  (\<forall>x \<in> set caps. s \<turnstile>' fst x
              \<and> cte_wp_at' (\<lambda>cte. slots \<noteq> [] \<or> is_the_ep (cteCap cte)
                \<longrightarrow> (fst x) =  (cteCap cte)) (snd x) s
-             \<and> cte_wp_at' (\<lambda>cte. fst x \<noteq> NullCap  \<longrightarrow> stable (fst x) (cteCap cte)) (snd x) s)) and
+             \<and> cte_wp_at' (\<lambda>cte. fst x \<noteq> NullCap  \<longrightarrow> stable_masked (fst x) (cteCap cte)) (snd x) s)) and
            (\<lambda>s. \<forall> sl \<in> (set slots). cte_wp_at' (isNullCap o cteCap) sl s) and
            (\<lambda>_. n + length caps \<le> 3 \<and> distinct slots ))
            (precond n mi slots)
@@ -2626,22 +2626,22 @@ next
     by (simp add:relative_at_def)
 
   have stableD:
-    "\<And>scap excap. stable scap excap
+    "\<And>scap excap. stable_masked scap excap
     \<Longrightarrow> (badge_derived' scap excap \<and>
                  capASID scap = capASID excap \<and>
                  cap_asid_base' scap = cap_asid_base' excap \<and> cap_vptr' scap = cap_vptr' excap)"
-    apply (clarsimp simp:stable_def)
+    apply (clarsimp simp:stable_masked_def)
     apply (case_tac "excap = scap",simp+)
     apply (simp add:maskedAsFull_misc)
     done
 
   have stable_eq:
-    "\<And>scap excap. \<lbrakk>stable scap excap; isEndpointCap excap\<rbrakk> \<Longrightarrow> scap = excap"
-     by (simp add:isCap_simps stable_def maskedAsFull_def split:if_splits)
+    "\<And>scap excap. \<lbrakk>stable_masked scap excap; isEndpointCap excap\<rbrakk> \<Longrightarrow> scap = excap"
+     by (simp add:isCap_simps stable_masked_def maskedAsFull_def split:if_splits)
 
   have is_the_ep_stable:
-    "\<And>a b. \<lbrakk>a \<noteq> NullCap \<longrightarrow> stable a b; \<not> is_the_ep b \<rbrakk> \<Longrightarrow> \<not> is_the_ep a"
-    apply (clarsimp simp:stable_def maskedAsFull_def is_the_ep_def isCap_simps split:if_splits)
+    "\<And>a b. \<lbrakk>a \<noteq> NullCap \<longrightarrow> stable_masked a b; \<not> is_the_ep b \<rbrakk> \<Longrightarrow> \<not> is_the_ep a"
+    apply (clarsimp simp:stable_masked_def maskedAsFull_def is_the_ep_def isCap_simps split:if_splits)
     apply auto
     done
 
@@ -2800,7 +2800,7 @@ next
                  \<and> (\<forall>x\<in>set slots. cte_wp_at' (isNullCap \<circ> cteCap) x s)
                  \<and> (\<forall>x\<in>set xs'. s \<turnstile>' fst x
                     \<and> cte_wp_at' (\<lambda>c. is_the_ep (cteCap c) \<longrightarrow> fst x = cteCap c) (snd x) s
-                    \<and> cte_wp_at' (\<lambda>c. fst x \<noteq> NullCap \<longrightarrow> stable (fst x) (cteCap c)) (snd x) s)"
+                    \<and> cte_wp_at' (\<lambda>c. fst x \<noteq> NullCap \<longrightarrow> stable_masked (fst x) (cteCap c)) (snd x) s)"
                  in hoare_post_imp_R)
                 prefer 2
                  apply (clarsimp simp:cte_wp_at_ctes_of valid_pspace_mdb' valid_pspace'_splits
@@ -2811,10 +2811,10 @@ next
                  apply (rule conjI)
                   apply (drule(1) bspec)+
                   apply (rule conjI | clarsimp)+
-                   apply (clarsimp simp:is_the_ep_def isCap_simps stable_def)
+                   apply (clarsimp simp:is_the_ep_def isCap_simps stable_masked_def)
                   apply (drule(1) bspec)+
                   apply (rule conjI | clarsimp)+
-                   apply (clarsimp simp:is_the_ep_def stable_def split:if_splits)+
+                   apply (clarsimp simp:is_the_ep_def stable_masked_def split:if_splits)+
                  apply (case_tac "a = cteCap cteb",clarsimp)
                   apply (simp add:maskedAsFull_def split:if_splits)
                  apply (simp add:maskedAsFull_again)
@@ -2917,14 +2917,14 @@ next
         apply (subgoal_tac "fst x = cteCap cte",simp)
         apply clarsimp
         apply (elim disjE)
-         apply (clarsimp simp:ep_cap_not_null stable_def)
+         apply (clarsimp simp:ep_cap_not_null stable_masked_def)
         apply (clarsimp dest!:ccap_relation_lift stable_eq simp: cap_get_tag_isCap)
        apply (clarsimp simp:valid_cap_simps' isCap_simps)
        apply (subgoal_tac "slots \<noteq> []")
         apply simp
        apply clarsimp
        apply (elim disjE)
-        apply (clarsimp simp:ep_cap_not_null stable_def)
+        apply (clarsimp simp:ep_cap_not_null stable_masked_def)
         apply (clarsimp dest!:ccap_relation_lift stable_eq simp: cap_get_tag_isCap)
        apply (clarsimp dest!:ccap_relation_lift simp:cap_get_tag_isCap is_the_ep_def)
       apply (clarsimp simp:valid_cap_simps' isCap_simps)
