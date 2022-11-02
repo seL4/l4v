@@ -114,7 +114,7 @@ fun named_option parser name elem_desc=
   expect "\"=\"" elem_desc parser)
 
 (* Generic parser for "NAME = STRING ..." *)
-val named_opt = named_option (Scan.repeat Parse.text)
+val named_opt = named_option (Scan.repeat Parse.embedded)
 
 (* Generic parser for "NAME = <nat>" *)
 val nat_opt = named_option Parse.nat
@@ -145,7 +145,7 @@ val scope_depth_parser =
   (fn value => none_to_some (#scope_depth) value "autocorres: scope option specified multiple times")
 
 val c_locale_parser =
-  named_option Parse.text "c_locale" "locale name" >>
+  named_option Parse.embedded "c_locale" "locale name" >>
   (fn funcs => none_to_some (#c_locale) funcs
                  "autocorres: c_locale option specified multiple times")
 
@@ -156,8 +156,8 @@ val no_c_termination_parser =
 val ts_force_parser =
   ((Parse.reserved "ts_force" |--
       expect "\"ts_force\"" "rule name"
-      (Parse.text :-- (fn name => expect name "\"=\"" (Parse.$$$ "="))) --
-    Scan.repeat Parse.text)) >>
+      (Parse.embedded :-- (fn name => expect name "\"=\"" (Parse.$$$ "="))) --
+    Scan.repeat Parse.embedded)) >>
   (fn ((rule, _), funcs) => fn opt =>
     let
       val _ =
@@ -213,22 +213,22 @@ val keep_going_parser =
   (fn _ => none_to_some (#keep_going) true "autocorres: keep_going option specified multiple times")
 
 val lifted_globals_field_prefix_parser =
-  named_option Parse.text "lifted_globals_field_prefix" "string" >>
+  named_option Parse.embedded "lifted_globals_field_prefix" "string" >>
   (fn funcs => none_to_some (#lifted_globals_field_prefix) funcs
                  "autocorres: lifted_globals_field_prefix option specified multiple times")
 
 val lifted_globals_field_suffix_parser =
-  named_option Parse.text "lifted_globals_field_suffix" "string" >>
+  named_option Parse.embedded "lifted_globals_field_suffix" "string" >>
   (fn funcs => none_to_some (#lifted_globals_field_suffix) funcs
                  "autocorres: lifted_globals_field_suffix option specified multiple times")
 
 val function_name_prefix_parser =
-  named_option Parse.text "function_name_prefix" "string" >>
+  named_option Parse.embedded "function_name_prefix" "string" >>
   (fn funcs => none_to_some (#function_name_prefix) funcs
                  "autocorres: function_name_prefix option specified multiple times")
 
 val function_name_suffix_parser =
-  named_option Parse.text "function_name_suffix" "string" >>
+  named_option Parse.embedded "function_name_suffix" "string" >>
   (fn funcs => none_to_some (#function_name_suffix) funcs
                  "autocorres: function_name_suffix option specified multiple times")
 
@@ -291,7 +291,7 @@ let
      lifted_globals_field_suffix_parser ||
      function_name_prefix_parser ||
      function_name_suffix_parser)
-    |> !! (fn xs => K ("autocorres: unknown option " ^ quote (Parse.text (fst xs) |> #1)))
+    |> !! (fn xs => K ("autocorres: unknown option " ^ quote (Parse.embedded (fst xs) |> #1)))
 
   val options_parser = Parse.list option_parser >> (fn opt_fns => fold I opt_fns)
 in
@@ -299,7 +299,7 @@ in
   (Scan.optional (Parse.$$$ "[" |-- options_parser --| Parse.$$$ "]") I
       >> (fn f => f (default_opts ()))) --
   (* Filename *)
-  Parse.text
+  Parse.embedded
 end
 
 
