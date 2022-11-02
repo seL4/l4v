@@ -375,6 +375,15 @@ lemma safe_addition_to_ta:
   apply(clarsimp simp:pas_addrs_accessible_to_def obj_range_def)
   done
 
+(* XXX: Thinking about how to tackle lookup_cap_and_slot_ta_subset_inv but not sure this helps. *)
+lemma safe_addition_to_ta_validI:
+  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. ta_subset_inv aag and no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag p \<in> pas_labels_accessible_to aag (cur_label aag s)) and ko_at ko p\<rbrace> \<Longrightarrow>
+   \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_ s. ta_subset_inv aag (ms_ta_update ((\<union>) (obj_range p ko)) s)\<rbrace>"
+  using safe_addition_to_ta
+  unfolding valid_def
+  by blast
+
 (* Need something like this *)
 thm get_tcb_Some_True_False get_cap_det
 (* FIXME: Move back far enough to be useful everywhere else this was needed. -robs *)
@@ -395,7 +404,7 @@ thm CNode_AC.resolve_address_bits_authorised_aux
 lemma resolve_address_bits'_ta_subset_inv:
   assumes domains_distinct: "pas_domains_distinct aag"
   shows
-  "\<lbrace>pas_refined aag and ta_subset_inv aag and
+  "\<lbrace>ta_subset_inv aag and pas_refined aag and
     \<comment> \<open>Assume that the cur_domain is still consistent with the PAS record when we're
       at resolve_address_bits. I think this is reasonable if we don't expect it to get
       out of alignment until the domainswitch sequence anyway. -robs\<close>
@@ -540,10 +549,24 @@ proof (induct capcref rule: resolve_address_bits'.induct)
   done
 qed
 
-(* XXX: Maybe not worth trying this if ta_subset_inv is fine
-lemma resolve_address_bits'_ta_subset_accessible_partitions:
-  "resolve_address_bits' z capcref \<lbrace>ta_subset_accessible_partitions aag\<rbrace>"
-(* Following the proof of rab_inv in CSpaceInv_AI *)
+(* Note: Needs `pas_domains_distinct` to give to resolve_address_bits'_ta_subset_inv.
+  ADT_IF seems to have that from context valid_initial_state, a locale that it defines. *)
+lemma resolve_address_bits_ta_subset_inv:
+  (* Follow convention used in Noninterference.thy for handling pas_domains_distinct assumption. *)
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
+  "\<lbrace>ta_subset_inv aag and pas_refined aag and pas_cur_domain aag and
+    K (is_cnode_cap (fst capcref) \<longrightarrow> (\<forall>x \<in> obj_refs_ac (fst capcref). is_subject aag x))\<rbrace>
+     resolve_address_bits capcref
+   \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  unfolding resolve_address_bits_def
+  by (wpsimp wp: resolve_address_bits'_ta_subset_inv)
+
+lemma resolve_address_bits'_pas_cur_domain:
+  "\<lbrace>pas_cur_domain aag\<rbrace>
+     resolve_address_bits' z capcref
+   \<lbrace>\<lambda>_. pas_cur_domain aag\<rbrace>"
+(* Following the proof structure of rab_inv (now called rab_tainv) in CSpaceInv_AI *)
 proof (induct capcref rule: resolve_address_bits'.induct)
   case (1 z cap cref)
   show ?case
@@ -555,10 +578,14 @@ proof (induct capcref rule: resolve_address_bits'.induct)
         apply (auto simp: in_monad)[6]
   apply (rename_tac obj_ref nat list)
   apply (simp only: cap.simps)
+  apply(rename_tac s rv s' obj_ref nat list)
+  (* We'll use this in a number of places, so insert it back here. -robs *)
+  apply(insert touch_object_wp[where Q="\<lambda>_. pas_cur_domain aag",simplified valid_def])
   apply (case_tac "nat + length list = 0")
    apply (simp add: fail_def)
   apply (simp only: if_False)
-  apply (case_tac a)
+  apply (case_tac rv)
+   (* Case Inl: lookup_failure *)
    apply (simp only: K_bind_def)
    apply (drule in_bindE_L, elim disjE conjE exE)+
        apply (simp only: split: if_split_asm)
@@ -567,20 +594,24 @@ proof (induct capcref rule: resolve_address_bits'.induct)
          apply (simp only: split: if_split_asm)
           prefer 2
           apply (clarsimp simp: in_monad)
-         apply (drule(9) 1) (* get the IH into context *)
+         apply (frule(9) 1) (* get the IH into context *)
          apply (clarsimp simp: in_monad)
-         apply (drule in_inv_by_hoareD [OF get_cap_inv])
-         oops (*
-         thm touch_object_tainv.in_inv_by_hoare
-         apply (drule(1) touch_object_tainv.in_inv_by_hoare)
-         apply simp
-         apply (drule(2) use_valid, simp)
+         apply (frule in_inv_by_hoareD [OF get_cap_inv])
+         apply clarsimp
+         apply(rename_tac s s' obj_ref nat list exception s'' next_cap)
+         apply(drule (1) use_valid)
+          apply(frule_tac P="pas_cur_domain aag" in touch_object_tainv.in_inv_by_hoare)
+           using pas_cur_domain_ta_agnostic unfolding ta_agnostic_def
+           apply blast
+          apply clarsimp
+         apply force
         apply (clarsimp simp: in_monad)
        apply (clarsimp simp: in_monad)
       apply (clarsimp simp: in_monad)
      apply (clarsimp simp: in_monad)
     apply (clarsimp simp: in_monad)
    apply (clarsimp simp: in_monad)
+  (* Case Inr: (64 word \<times> bool list) \<times> bool list *)
   apply (simp only: K_bind_def in_bindE_R)
   apply (elim conjE exE)
   apply (simp only: split: if_split_asm)
@@ -590,28 +621,35 @@ proof (induct capcref rule: resolve_address_bits'.induct)
   apply (simp only: split: if_split_asm)
    prefer 2
    apply (clarsimp simp: in_monad)
-   apply (drule in_inv_by_hoareD [OF get_cap_x_inv])
-   apply (drule(1) touch_object_tainv.in_inv_by_hoare)
-   apply simp
+   apply (drule in_inv_by_hoareD [OF get_cap_inv])
+   apply(erule_tac x=obj_ref in meta_allE)
+   apply(erule_tac x=s in allE)
+   apply blast
   apply (drule (8) "1")
-  apply (clarsimp simp: in_monad valid_def)
+   apply (clarsimp simp: in_monad valid_def)
   apply clarsimp
+  (* First move past all the stuff like get_cap and touch_object before it *)
   apply (clarsimp simp: in_monad)
-  apply (drule in_inv_by_hoareD [OF get_cap_x_inv])
-  apply (drule(1) touch_object_tainv.in_inv_by_hoare)
+  (* Use frule instead of drule because we'll need the get_cap assumption for later *)
+  apply (frule in_inv_by_hoareD [OF get_cap_inv])
   apply clarsimp
-  apply (drule(2) post_by_hoare, simp)
+  apply(rename_tac s b obj_ref nat list aa ba bb s'' next_cap)
+  apply(prop_tac "pas_cur_domain aag s''")
+   apply(erule_tac x=obj_ref in meta_allE)
+   apply(erule_tac x=s in allE)
+   apply force
+  apply(clarsimp simp:valid_def)
+  apply(erule_tac x=s'' in allE)
+  apply force
   done
 qed
-*) *)
-
-(* FIXME: Needs `pas_domains_distinct` to give to resolve_address_bits'_ta_subset_inv.
-  ADT_IF seems to have that from context valid_initial_state, a locale that it defines. *)
-crunch ta_subset_inv: resolve_address_bits "ta_subset_inv aag"
-  (wp: crunch_wps touch_objects_wp touch_object_wp')
 
 (* FIXME: I think this needs a manual proof like for resolve_address_bits. -robs *)
 crunch ta_subset_inv: load_word_offs "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp simp: crunch_simps ignore: do_machine_op)
+
+(* FIXME: This will probably be along the same vein as load_word_offs *)
+crunch ta_subset_inv: store_word_offs "ta_subset_inv aag"
   (wp: crunch_wps touch_objects_wp simp: crunch_simps ignore: do_machine_op)
 
 (* FIXME: Needs manual proof? liftM/mapM wp rules don't seem to help. -robs *)
@@ -622,10 +660,9 @@ crunch ta_subset_inv: get_extra_cptrs "ta_subset_inv aag"
 (* Note: Needed manual proof with customised precondition, just like rab. -robs *)
 thm lookup_slot_for_thread_authorised
 lemma lookup_slot_for_thread_ta_subset_inv:
-  (* Follow convention used in Noninterference.thy for handling pas_domains_distinct assumption. *)
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
-  "\<lbrace>pas_refined aag and ta_subset_inv aag and pas_cur_domain aag and K (is_subject aag thread)\<rbrace>
+  "\<lbrace>ta_subset_inv aag and pas_refined aag and pas_cur_domain aag and K (is_subject aag thread)\<rbrace>
      lookup_slot_for_thread thread cref
    \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   apply(wpsimp wp: resolve_address_bits'_ta_subset_inv touch_object_wp
@@ -637,8 +674,6 @@ lemma lookup_slot_for_thread_ta_subset_inv:
      using domains_distinct cur_label_to_subj
      apply force
     apply force
-    (* XXX: Need this if you use touch_object_wp' above.
-    apply(force simp:get_tcb_def obj_at_def split:option.splits) *)
    apply force
   apply clarsimp
   apply(drule get_tcb_Some_True_False)
@@ -648,23 +683,26 @@ thm lookup_cap_and_slot_authorised
 lemma lookup_cap_and_slot_ta_subset_inv:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
-  "\<lbrace>pas_refined aag and ta_subset_inv aag and pas_cur_domain aag and K (is_subject aag thread)\<rbrace>
+  "\<lbrace>ta_subset_inv aag and pas_refined aag and pas_cur_domain aag and K (is_subject aag thread)\<rbrace>
      lookup_cap_and_slot thread cptr
    \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   apply(wpsimp wp: crunch_wps lookup_slot_for_thread_ta_subset_inv touch_object_wp'
     simp: lookup_cap_and_slot_def resolve_address_bits_def)
+  apply(subst safe_addition_to_ta)
    (* FIXME: Doesn't seem to be able to use lookup_slot_for_thread_ta_subset_inv *)
   sorry
 
-thm lookup_extra_caps_authorised
+thm lookup_extra_caps_authorised lookup_cap_and_slot_authorised
 lemma lookup_extra_caps_ta_subset_inv:
   (* Follow convention used in Noninterference.thy for handling pas_domains_distinct assumption. *)
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
-  "\<lbrace>pas_refined aag and ta_subset_inv aag and pas_cur_domain aag and K (is_subject aag thread)\<rbrace>
+  "\<lbrace>ta_subset_inv aag and pas_refined aag and pas_cur_domain aag and K (is_subject aag thread)\<rbrace>
      lookup_extra_caps thread buffer mi
-   \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+   \<lbrace>\<lambda>_. ta_subset_inv aag
+     \<comment> \<open>and pas_refined aag and pas_cur_domain aag and K (is_subject aag thread)\<close>\<rbrace>"
   apply(wpsimp wp: crunch_wps lookup_cap_and_slot_ta_subset_inv mapME_wp'
+      (* lookup_extra_caps_authorised lookup_cap_and_slot_authorised *)
     simp: lookup_extra_caps_def resolve_address_bits_def)
     (* FIXME: I guess mapME_wp' will demand that all iterations will preserve every one of
        the preconditions, does this mean we have to copy them all to the postcondition too? *)
@@ -675,39 +713,147 @@ thm set_thread_state_cur_domain
 crunch ta_subset_inv: set_thread_state "ta_subset_inv aag"
   (wp: crunch_wps touch_objects_wp touch_object_wp')
 
-(* FIXME: Another that needs to be customised to assume pas_domains_distinct *)
-crunch ta_subset_inv: lookup_cap "ta_subset_inv aag"
+lemma lookup_cap_ta_subset_inv:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
+  "\<lbrace>ta_subset_inv aag and (pas_refined aag and pas_cur_domain aag and K (is_subject aag thread))\<rbrace>
+     lookup_cap thread ref
+   \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  unfolding lookup_cap_def
+  apply (wpsimp wp: crunch_wps touch_objects_wp touch_object_wp'
+    lookup_slot_for_thread_ta_subset_inv)
+   (* FIXME: Again unable to use lookup_slot_for_thread_ta_subset_inv *)
+   sorry
+
+thm lookup_slot_for_cnode_op_authorised (* preconds taken from here *)
+lemma lookup_slot_for_cnode_op_ta_subset_inv:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
+  "\<lbrace>ta_subset_inv aag and (pas_refined aag and pas_cur_domain aag and
+      K (is_cnode_cap croot \<longrightarrow> (\<forall>x\<in>obj_refs_ac croot. is_subject aag x)))\<rbrace>
+     lookup_slot_for_cnode_op is_source croot ptr depth
+   \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  unfolding lookup_slot_for_cnode_op_def
+  apply(wpsimp wp: crunch_wps touch_objects_wp touch_object_wp'
+    resolve_address_bits_ta_subset_inv)
+  (* FIXME: resolve_address_bits_ta_subset_inv doesn't seem to be applicable here *)
+  sorry
+
+crunch pas_cur_domain: lookup_slot_for_cnode_op "pas_cur_domain aag"
+  (wp: crunch_wps touch_objects_wp resolve_address_bits'_pas_cur_domain)
+
+lemma captransfer_from_words_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag\<rbrace> captransfer_from_words ptr \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  (* FIXME *)
+  sorry
+
+thm get_receive_slots_authorised (* preconds taken from here *)
+lemma get_receive_slots_ta_subset_inv:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
+  "\<lbrace>ta_subset_inv aag and (pas_refined aag and pas_cur_domain aag and
+      K (\<forall>rbuf. recv_buf = Some rbuf \<longrightarrow> is_subject aag receiver))\<rbrace>
+     get_receive_slots receiver receive_buf
+   \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  apply(cases receive_buf)
+   apply(wpsimp wp: crunch_wps touch_objects_wp touch_object_wp')
+  apply(wpsimp wp: crunch_wps touch_objects_wp touch_object_wp'
+    (* XXX: Not helpful... *)
+    lookup_slot_for_cnode_op_ta_subset_inv)
+  (* FIXME *)
+  sorry
+
+crunches set_cdt, set_original
+  for ta_subset_inv: "ta_subset_inv aag"
+  (simp: ta_subset_inv_def)
+
+find_theorems set_cap name:auth (* Couldn't find one to give a clue as to the precondition. *)
+lemma set_cap_ta_subset_inv:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
+  "\<lbrace>ta_subset_inv aag and (pas_refined aag and pas_cur_domain aag
+     \<comment> \<open>Note: This might be too strong. What's an appropriate condition for set_cap otherwise?\<close>
+     and K (is_subject aag (fst capcref)))\<rbrace>
+     set_cap cap capcref
+   \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  unfolding set_cap_def
+  apply (wpsimp wp: touch_objects_wp set_object_ta_subset_inv get_object_wp)
+  using domains_distinct cur_label_to_subj
+  by (fastforce intro:safe_addition_to_ta simp:pas_labels_accessible_to_def obj_at_def)
+
+lemma set_untyped_cap_as_full_ta_subset_inv:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
+  (* The preconditions suggested to us by crunch. These may need some re-examining. *)
+  "\<lbrace>ta_subset_inv aag and (\<lambda>s. ta_subset_inv aag
+    (ms_ta_update ((\<union>) (obj_range (fst src_slot) (the (kheap s (fst src_slot))))) s)) and
+    (pas_refined aag and pas_cur_domain aag and K (is_subject aag (fst src_slot)))\<rbrace>
+     set_untyped_cap_as_full src_cap new_cap src_slot
+   \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  unfolding set_untyped_cap_as_full_def
+  by (wpsimp wp: crunch_wps touch_objects_wp touch_object_wp' set_cap_ta_subset_inv)
+
+(* FIXME: Not sure how to deal with the "ext" version. *)
+crunch ta_subset_inv: cap_insert "ta_subset_inv aag"
   (wp: crunch_wps touch_objects_wp touch_object_wp')
 
-. (* DOWN TO HERE
-crunch ta_subset_inv: get_receive_slots "ta_subset_inv aag"
-  (wp: crunch_wps touch_objects_wp touch_object_wp'
-   ignore: do_machine_op)
-
-lemma set_cdt_ta_subset_inv:
-  "set_cdt t \<lbrace>ta_subset_inv aag\<rbrace>"
-  sorry
-
-lemma set_original_ta_subset_inv:
-  "set_original slot v \<lbrace>ta_subset_inv aag\<rbrace>"
-  sorry
-
-lemma cap_insert_ta_subset_inv:
-  "cap_insert new_cap src_slot dest_slot \<lbrace>ta_subset_inv aag\<rbrace>"
-  sorry
-
+(* FIXME *)
+crunch ta_subset_inv: transfer_caps_loop "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp')
+(* Using crunch rather than sorried lemmas so it attempts to figure out necessary side conditions. 
 lemma transfer_caps_loop_ta_subset_inv:
   "transfer_caps_loop ep rcv_buffer n caps slots mi \<lbrace>ta_subset_inv aag\<rbrace>"
   sorry
+*)
 
+crunch ta_subset_inv: as_user "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp')
+
+crunch pas_cur_domain: get_receive_slots "pas_cur_domain aag"
+  (wp: crunch_wps touch_objects_wp resolve_address_bits'_pas_cur_domain
+     lookup_slot_for_cnode_op_pas_cur_domain)
+
+lemma transfer_caps_ta_subset_inv:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
+  "\<lbrace>ta_subset_inv aag and (pas_refined aag and pas_cur_domain aag)\<rbrace>
+     transfer_caps info caps endpoint receiver recv_buffer 
+   \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  unfolding transfer_caps_def
+  apply (wpsimp wp: crunch_wps touch_objects_wp touch_object_wp'
+    transfer_caps_loop_ta_subset_inv get_receive_slots_ta_subset_inv get_receive_slots_authorised
+    get_receive_slots_pas_cur_domain)
+  (* FIXME: We have get_receive_slots_pas_cur_domain, but where's the lemma for
+     get_receive_slots_pas_refined? *)
+  sorry
+(*
+crunch ta_subset_inv: transfer_caps "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp')
+*)
+
+crunch ta_subset_inv: set_mrs "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp')
+
+crunch ta_subset_inv: do_normal_transfer "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp')
+
+crunch ta_subset_inv: send_ipc "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp')
+(* FIXME
 lemma send_ipc_ta_subset_inv:
   "send_ipc block call badge can_grant can_grant_reply thread epptr \<lbrace>ta_subset_inv aag\<rbrace>"
   sorry
+*)
 
+crunch ta_subset_inv: decode_read_registers "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp')
+(* FIXME: Oh, that Hoare triple targetting undefined as a goal looks worrying.
 lemma decode_read_registers_ta_subset_inv:
   "decode_read_registers data cap \<lbrace>ta_subset_inv aag\<rbrace>"
   sorry
+*)
 
+. (* DOWN TO HERE
 lemma decode_write_registers_ta_subset_inv:
   "decode_write_registers data cap \<lbrace>ta_subset_inv aag\<rbrace>"
   sorry
