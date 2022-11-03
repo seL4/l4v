@@ -2405,15 +2405,16 @@ lemma pool_for_asid_and_mask[simp]:
    pool_for_asid asid s"
   by (simp add: pool_for_asid_def)
 
-lemma vs_lookup_table_ap_step:
+lemma vs_lookup_table_ap_step [simplified f_kheap_to_kheap]:
   "\<lbrakk> vs_lookup_table asid_pool_level asid vref s = Some (asid_pool_level, p);
-     asid_pools_of ta_f s p = Some ap; pt \<in> ran ap \<rbrakk> \<Longrightarrow>
+     asid_pools_of False s p = Some ap; pt \<in> ran ap \<rbrakk> \<Longrightarrow>
    \<exists>asid'. vs_lookup_target asid_pool_level asid' vref s = Some (asid_pool_level, pt)"
   apply (clarsimp simp: vs_lookup_target_def vs_lookup_slot_def in_omonad ran_def)
   apply (rename_tac asid_low)
   apply (rule_tac x="asid && ~~mask asid_low_bits || ucast asid_low" in exI)
   apply (clarsimp simp: vs_lookup_table_def vspace_for_pool_def in_omonad)
-  by (metis Some_helper asid_pool_level_eq ta_filter_def)
+  using asid_pool_level_neq apply blast
+  done
 
 locale_abbrev vref_for_index :: "pt_index \<Rightarrow> vm_level \<Rightarrow> vspace_ref" where
   "vref_for_index idx level \<equiv> ucast (idx::pt_index) << pt_bits_left level"
