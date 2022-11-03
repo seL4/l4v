@@ -95,10 +95,10 @@ lemma arch_decode_RISCVASIDPoolAssign_empty_fail:
   apply (rule empty_fail_bindE, wpsimp)
   apply (subst bindE_assoc[symmetric])
   apply (rule empty_fail_bindE)
-   subgoal by (fastforce simp: empty_fail_def whenE_def throwError_def select_def bindE_def
+   apply (clarsimp simp: ta_filter_def)
+  subgoal by (fastforce simp: empty_fail_def whenE_def throwError_def select_def bindE_def
                                bind_def return_def returnOk_def lift_def liftE_def select_ext_def
-                               gets_def get_def assert_def fail_def)
-  apply wpsimp
+                               gets_def get_def assert_def fail_def ta_filter_def)
   done
 
 lemma arch_decode_invocation_empty_fail[wp]:

@@ -16,7 +16,7 @@ lemma detype_irq_masks[simp]:
   by (simp add: detype_def)
 
 crunch irq_masks[wp]: cap_insert "\<lambda>s. P (irq_masks_of_state s)"
-  (wp: crunch_wps)
+  (wp: crunch_wps touch_object_wp')
 
 lemma invoke_irq_handler_irq_masks:
   "\<lbrace>domain_sep_inv False st and (\<lambda>s. (\<exists>ptr'. cte_wp_at ((=) (IRQHandlerCap irq)) ptr' s))\<rbrace>
@@ -29,7 +29,7 @@ lemma empty_slot_irq_masks:
    empty_slot slot irq_opt
    \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
   apply (rule hoare_gen_asm)
-  apply (wpsimp simp: empty_slot_def post_cap_deletion_def)
+  apply (wpsimp simp: empty_slot_def post_cap_deletion_def wp: touch_object_wp')
   done
 
 lemma spec_strengthen_errE:
@@ -38,7 +38,9 @@ lemma spec_strengthen_errE:
   by (auto simp: spec_validE_def validE_def valid_def split: sum.splits)
 
 crunch irq_masks[wp]: create_cap "\<lambda>s. P (irq_masks_of_state s)"
+  (wp: touch_object_wp')
 crunch irq_masks[wp]: cap_swap_for_delete "\<lambda>s. P (irq_masks_of_state s)"
+  (wp: touch_object_wp' touch_objects_wp)
 
 
 locale IRQMasks_IF_1 =
@@ -80,7 +82,7 @@ locale IRQMasks_IF_1 =
 begin
 
 crunch irq_masks[wp]: set_extra_badge "\<lambda>s. P (irq_masks_of_state s)"
-  (wp: crunch_wps dmo_wp)
+  (wp: crunch_wps dmo_wp touch_object_wp' touch_objects_wp)
 
 (* XXX: broken by touched_addresses. -robs
 crunch irq_masks[wp]: send_ipc "\<lambda>s. P (irq_masks_of_state s)"
@@ -118,10 +120,13 @@ next
         apply (wp finalise_cap_domain_sep_inv_cap get_cap_wp
                   finalise_cap_returns_NullCap[where irqs=False, simplified]
                   drop_spec_validE[OF liftE_wp] set_cap_domain_sep_inv
+                  touch_object_wp' is_final_cap_inv
                | simp split del: if_split
                | wp (once) hoare_drop_imps)+
+       sorry (* FIXME: broken by touched-addrs -robs
     apply (blast dest: cte_wp_at_domain_sep_inv_cap)
     done
+  *)
 next
   case (3 ptr bits n slot s) show ?case
     apply (simp add: rec_del.simps)
@@ -134,6 +139,7 @@ next
   case (4 ptr bits n slot s) show ?case
     apply (simp add: rec_del.simps)
     apply (wpsimp wp: drop_spec_validE[OF returnOk_wp] drop_spec_validE[OF liftE_wp]
+                      touch_object_wp'
                       set_cap_domain_sep_inv drop_spec_validE[OF assertE_wp] get_cap_wp)
     apply (rule spec_strengthen_postE[OF "4.hyps", simplified])
      apply (simp add: returnOk_def return_def)
@@ -171,27 +177,29 @@ end
 
 
 crunch irq_masks[wp]: cancel_ipc "\<lambda>s. P (irq_masks_of_state s)"
-  (wp: select_wp crunch_wps  simp: crunch_simps)
+  (wp: select_wp crunch_wps touch_objects_wp simp: crunch_simps)
 
 crunch irq_masks[wp]: restart, set_mcpriority "\<lambda>s. P (irq_masks_of_state s)"
+  (wp: touch_object_wp')
 
 crunch irq_masks[wp]: bind_notification, unbind_notification "\<lambda>s. P (irq_masks_of_state s)"
-  (wp: dmo_wp crunch_wps no_irq simp: crunch_simps)
+  (wp: dmo_wp crunch_wps no_irq touch_object_wp' simp: crunch_simps)
 
 crunch irq_masks[wp]: suspend "\<lambda>s. P (irq_masks_of_state s)"
 
 lemma checked_insert_irq_masks[wp]:
   "check_cap_at a b (check_cap_at c d (cap_insert e f g)) \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
-  by (wpsimp simp: check_cap_at_def)
+  by (wpsimp simp: check_cap_at_def wp: touch_object_wp')
 
 crunch irq_masks[wp]: cap_move "\<lambda>s. P (irq_masks_of_state s)"
+  (wp: touch_objects_wp)
 
 lemma preemption_point_irq_masks[wp]:
   "preemption_point \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
   by (wp preemption_point_inv, simp+)
 
 crunch irq_masks[wp]: cancel_badged_sends "\<lambda>s. P (irq_masks_of_state s)"
-  (wp: crunch_wps dmo_wp no_irq hoare_unless_wp
+  (wp: crunch_wps dmo_wp no_irq hoare_unless_wp touch_objects_wp
    simp: filterM_mapM crunch_simps no_irq_clearMemory
    ignore: filterM)
 

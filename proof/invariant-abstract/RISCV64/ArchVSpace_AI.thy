@@ -1795,7 +1795,6 @@ lemma toplevel_pt_has_kernel_mappings:
   assumes km: "equal_kernel_mappings s"
   assumes vsl: "valid_vs_lookup s"
   shows "has_kernel_mappings pt s"
-sorry (* scottb
 proof -
   from ap
   have "vs_lookup_table asid_pool_level asid 0 s = Some (asid_pool_level, ap)"
@@ -1803,16 +1802,16 @@ proof -
   with pool p
   obtain asid' where
     vs_target: "vs_lookup_target asid_pool_level asid' 0 s = Some (asid_pool_level, p)"
-    by (auto dest: vs_lookup_table_ap_step)
+    using vs_lookup_table_ap_step f_kheap_to_kheap by metis
   with vsl
   have "asid' \<noteq> 0" by (fastforce simp add: valid_vs_lookup_def)
   with vs_target
-  have "vspace_for_asid asid' s = Some p"
+  have "vspace_for_asid False asid' s = Some p"
     by (clarsimp simp: vspace_for_pool_def in_omonad vs_lookup_target_def vs_lookup_slot_def
                        vs_lookup_table_def vspace_for_asid_def word_neq_0_conv)
   with km pt
   show ?thesis by (simp add: equal_kernel_mappings_def)
-qed *)
+qed
 
 lemma set_asid_pool_invs_map:
   "\<lbrace>invs and

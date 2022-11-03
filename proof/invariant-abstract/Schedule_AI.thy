@@ -178,12 +178,13 @@ lemma (in Schedule_AI_U) schedule_invs[wp]:
   apply (simp add: Schedule_A.schedule_def allActiveTCBs_def)
   apply (wp OR_choice_weak_wp alternative_wp dmo_invs thread_get_inv
             do_machine_op_tcb select_ext_weak_wp select_wp when_def
+            touch_objects_wp
           | clarsimp simp: getActiveTCB_def get_tcb_def)+
   done
 
 (* FIXME - move *)
 lemma get_tcb_exst_update:
-  "get_tcb p (trans_state f s) = get_tcb p s"
+  "get_tcb False p (trans_state f s) = get_tcb False p s"
   by (simp add: get_tcb_def)
 
 lemma ct_in_state_trans_update[simp]: "ct_in_state st (trans_state f s) = ct_in_state st s"
@@ -203,14 +204,15 @@ lemma (in Schedule_AI_U) schedule_ct_activateable[wp]:
     apply (simp add: Schedule_A.schedule_def allActiveTCBs_def)
     apply (wp alternative_wp
               select_ext_weak_wp select_wp stt_activatable stit_activatable
+              touch_objects_wp
                | simp add: P Q)+
     apply (clarsimp simp: getActiveTCB_def ct_in_state_def)
     apply (rule conjI)
      apply clarsimp
-     apply (case_tac "get_tcb (cur_thread s) s", simp_all add: ct_in_state_def)
+     apply (case_tac "get_tcb False (cur_thread s) s", simp_all add: ct_in_state_def)
      apply (drule get_tcb_SomeD)
      apply (clarsimp simp: pred_tcb_at_def obj_at_def split: if_split_asm)
-    apply (case_tac "get_tcb x s", simp_all)
+    apply (case_tac "get_tcb False x s", simp_all)
     apply (drule get_tcb_SomeD)
     apply (clarsimp simp: pred_tcb_at_def obj_at_def split: if_split_asm)
     done

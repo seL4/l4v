@@ -1934,6 +1934,7 @@ lemma use_retype_region_proofs':
   apply (clarsimp simp: retype_addrs_fold
                         foldr_upd_app_if fun_upd_def[symmetric])
   apply safe
+  
   sorry (* scottb
   apply (rule x)
    apply (rule retype_region_proofs.intro, simp_all)[1]

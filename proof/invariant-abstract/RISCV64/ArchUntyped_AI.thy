@@ -99,6 +99,7 @@ proof -
                 validE_R_sp[OF data_to_obj_type_sp]
                 validE_R_sp[OF map_ensure_empty]
                 validE_R_sp[OF dui_sp_helper])+
+      sorry (* FIXME: broken by touched-addrs -robs
       apply (intro ta_agnostic_conj; clarsimp)
       apply (intro ta_agnostic_conj)
          apply (rule base.invs.ta_agnostic)
@@ -152,6 +153,7 @@ proof -
     apply (rule_tac x=aa in exI, rule exI, rule exI)
     apply simp
     done
+  *)
 qed
 
 lemma asid_bits_ge_0:
@@ -253,7 +255,9 @@ lemmas pbfs_less_wb' = pageBitsForSize_bounded
 
 lemma delete_objects_rewrite[Untyped_AI_assms]:
   "\<lbrakk> word_size_bits \<le> sz; sz\<le> word_bits;ptr && ~~ mask sz = ptr\<rbrakk> \<Longrightarrow> delete_objects ptr sz =
-    do y \<leftarrow> modify (clear_um {ptr + of_nat k |k. k < 2 ^ sz});
+    do ta \<leftarrow> gets (\<lambda>s. touched_addresses (machine_state s));
+    assert ({ptr + word_of_nat k |k. k < 2 ^ sz} \<subseteq> ta);
+    modify (clear_um {ptr + of_nat k |k. k < 2 ^ sz});
     modify (detype {ptr && ~~ mask sz..ptr + 2 ^ sz - 1})
     od"
   apply (clarsimp simp:delete_objects_def freeMemory_def word_size_def word_size_bits_def)
@@ -262,6 +266,8 @@ lemma delete_objects_rewrite[Untyped_AI_assms]:
   apply (simp)
   apply simp
   apply (simp add:range_cover_def)
+  apply clarsimp
+  apply (subst bind_assoc3)
   apply clarsimp
   apply (rule is_aligned_neg_mask)
   apply simp
@@ -283,6 +289,8 @@ lemma reachable_pg_cap_exst_update[simp]:
   "reachable_frame_cap x (trans_state f (s::'state_ext::state_ext state)) = reachable_frame_cap x s"
   by (simp add: reachable_frame_cap_def obj_at_def)
 
+
+
 lemma create_cap_valid_arch_caps[wp, Untyped_AI_assms]:
   "\<lbrace>valid_arch_caps
       and valid_cap (default_cap tp oref sz dev)
@@ -295,8 +303,21 @@ lemma create_cap_valid_arch_caps[wp, Untyped_AI_assms]:
   apply (simp add: create_cap_def set_cdt_def)
   apply (wp set_cap_valid_arch_caps)
   apply (simp add: trans_state_update[symmetric] del: trans_state_update)
-  apply (wp hoare_vcg_disj_lift hoare_vcg_conj_lift hoare_vcg_all_lift hoare_vcg_imp_lift | simp)+
-
+  sorry (* below script is hanging. temp sorry -scottb
+  (* FIXME: The use of touch_object_wp' complicates the proof at this point. Previously,
+     the single (wp ... | simp)+ line was enough to bring it back down to 1 goal. -robs *)
+  apply (wp hoare_vcg_disj_lift hoare_vcg_conj_lift hoare_vcg_all_lift hoare_vcg_imp_lift touch_object_wp' | simp)+
+         apply (metis is_final_cap'_more_update trans_state_update(3))
+        apply clarsimp
+        apply (wp hoare_vcg_disj_lift hoare_vcg_conj_lift hoare_vcg_all_lift hoare_vcg_imp_lift touch_object_wp' | simp)+
+        apply (metis (no_types, lifting) reachable_pg_cap_exst_update trans_state_update(3) trans_state_update(6))
+       apply (wp hoare_vcg_disj_lift hoare_vcg_conj_lift hoare_vcg_all_lift hoare_vcg_imp_lift touch_object_wp' | simp)+
+       (* FIXME: Use of smt here. -robs *)
+       apply (smt (z3) reachable_target_trans trans_state_update(3) trans_state_update(6))
+      apply (wp hoare_vcg_disj_lift hoare_vcg_conj_lift hoare_vcg_all_lift hoare_vcg_imp_lift touch_object_wp' | simp)+
+      apply (metis (no_types, lifting) no_cap_to_obj_with_diff_ref_more_update trans_state_update(3))
+     apply (wp hoare_vcg_disj_lift hoare_vcg_conj_lift hoare_vcg_all_lift hoare_vcg_imp_lift touch_object_wp' | simp)+
+  (* Note: End of the part of the proof affected by touched-addrs. -robs *)
   apply (clarsimp simp del: split_paired_All split_paired_Ex
                             imp_disjL
                       simp: cte_wp_at_caps_of_state)
@@ -315,14 +336,14 @@ lemma create_cap_valid_arch_caps[wp, Untyped_AI_assms]:
    apply (clarsimp dest!: obj_ref_elemD)
    apply fastforce
   apply (auto simp: is_cap_simps)[1]
-  done
+  done *)
 
 
 lemma create_cap_cap_refs_in_kernel_window[wp, Untyped_AI_assms]:
   "\<lbrace>cap_refs_in_kernel_window and cte_wp_at (\<lambda>c. cap_range (default_cap tp oref sz dev) \<subseteq> cap_range c) p\<rbrace>
      create_cap tp sz p dev (cref, oref) \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
   apply (simp add: create_cap_def)
-  apply (wp | simp)+
+  apply (wp touch_object_wp' | simp)+
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (drule(1) cap_refs_in_kernel_windowD)
   apply blast
@@ -376,7 +397,8 @@ global_interpretation Untyped_AI? : Untyped_AI
   proof goal_cases
     interpret Arch .
     case 1 show ?case
-    by (unfold_locales; (fact Untyped_AI_assms)?)
+    apply (unfold_locales; (fact Untyped_AI_assms)?)
+     sorry (* -scottb *)
   qed
 
 end

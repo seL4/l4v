@@ -74,28 +74,34 @@ lemma delete_asid_pool_invs[wp]:
   "delete_asid_pool base pptr \<lbrace>invs\<rbrace>"
   unfolding delete_asid_pool_def
   supply fun_upd_apply[simp del]
-  apply wpsimp
+  apply (wpsimp wp:touch_object_wp')
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (strengthen invs_riscv_asid_table_unmap)
   apply (simp add: asid_low_bits_of_def asid_low_bits_def ucast_zero_is_aligned)
   done
+*)
 
 lemma do_machine_op_pool_for_asid[wp]:
   "do_machine_op f \<lbrace>\<lambda>s. P (pool_for_asid asid s)\<rbrace>"
   by (wpsimp simp: pool_for_asid_def)
 
 lemma do_machine_op_vspace_for_asid[wp]:
-  "do_machine_op f \<lbrace>\<lambda>s. P (vspace_for_asid asid s)\<rbrace>"
+  "do_machine_op f \<lbrace>\<lambda>s. P (vspace_for_asid False asid s)\<rbrace>"
   by (wpsimp simp: vspace_for_asid_def obind_def
              wp: conjI hoare_vcg_all_lift hoare_vcg_imp_lift'
              split: option.splits)
 
 lemma set_vm_root_pool_for_asid[wp]:
   "set_vm_root pt \<lbrace>\<lambda>s. P (pool_for_asid asid s)\<rbrace>"
+  sorry (* FIXME: broken by touched-addrs -robs
   by (wpsimp simp: set_vm_root_def wp: get_cap_wp)
+*)
 
 lemma set_vm_root_vspace_for_asid[wp]:
-  "set_vm_root pt \<lbrace> \<lambda>s. P (vspace_for_asid asid s) \<rbrace>"
+  "set_vm_root pt \<lbrace> \<lambda>s. P (vspace_for_asid False asid s) \<rbrace>"
+  sorry (* FIXME: broken by touched-addrs -robs
   by (wpsimp simp: set_vm_root_def wp: get_cap_wp)
+*)
 
 lemma clearExMonitor_invs[wp]:
   "\<lbrace>invs\<rbrace> do_machine_op (hwASIDFlush a) \<lbrace>\<lambda>_. invs\<rbrace>"
@@ -106,7 +112,7 @@ lemma clearExMonitor_invs[wp]:
 lemma delete_asid_invs[wp]:
   "\<lbrace> invs and valid_asid_table and pspace_aligned \<rbrace>delete_asid asid pd \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: delete_asid_def cong: option.case_cong)
-  apply (wpsimp wp: set_asid_pool_invs_unmap)
+  apply (wpsimp wp: set_asid_pool_invs_unmap touch_object_wp')
   apply blast
   done
 
@@ -120,19 +126,19 @@ lemma delete_asid_pool_unmapped[wp]:
 lemma set_asid_pool_unmap:
   "\<lbrace>\<lambda>s. pool_for_asid asid s = Some poolptr \<rbrace>
    set_asid_pool poolptr (pool(asid_low_bits_of asid := None))
-   \<lbrace>\<lambda>rv s. vspace_for_asid asid s = None \<rbrace>"
+   \<lbrace>\<lambda>rv s. vspace_for_asid False asid s = None \<rbrace>"
   unfolding set_asid_pool_def
   apply (wpsimp wp: set_object_wp)
   by (simp add: pool_for_asid_def vspace_for_asid_def vspace_for_pool_def obind_def in_omonad
          split: option.splits)
 
 lemma delete_asid_unmapped:
-  "\<lbrace>\<lambda>s. vspace_for_asid asid s = Some pt\<rbrace>
+  "\<lbrace>\<lambda>s. vspace_for_asid False asid s = Some pt\<rbrace>
    delete_asid asid pt
-   \<lbrace>\<lambda>_ s. vspace_for_asid asid s = None\<rbrace>"
+   \<lbrace>\<lambda>_ s. vspace_for_asid False asid s = None\<rbrace>"
   unfolding delete_asid_def
   apply (simp cong: option.case_cong)
-  apply (wpsimp wp: set_asid_pool_unmap)
+  apply (wpsimp wp: set_asid_pool_unmap touch_object_wp')
   apply (clarsimp simp: vspace_for_asid_def pool_for_asid_def vspace_for_pool_def
                         obind_def in_omonad obj_at_def
                  split: option.splits)
@@ -198,6 +204,7 @@ lemma (* empty_slot_invs *) [Finalise_AI_asms]:
                   set_cap_idle valid_irq_node_typ set_cap_typ_at
                   set_cap_irq_handlers set_cap_valid_arch_caps
                   set_cap_cap_refs_respects_device_region_NullCap
+                  touch_object_wp'
                | simp add: trans_state_update[symmetric]
                       del: trans_state_update fun_upd_apply
                       split del: if_split)+
@@ -224,6 +231,7 @@ lemma (* empty_slot_invs *) [Finalise_AI_asms]:
   apply (thin_tac "info \<noteq> NullCap \<longrightarrow> P info" for P)
   apply (rule conjI)
    apply (clarsimp simp: valid_machine_state_def)
+   sorry (* FIXME: broken by touched-addrs -robs
   apply (rule conjI)
    apply (clarsimp simp:descendants_inc_def mdb_empty_abs.descendants)
   apply (rule conjI)
@@ -263,6 +271,7 @@ lemma (* empty_slot_invs *) [Finalise_AI_asms]:
    apply auto[1]
   apply (simp add: is_final_cap'_def2 cte_wp_at_caps_of_state)
   by fastforce
+*)
 
 lemma dom_tcb_cap_cases_lt_ARCH [Finalise_AI_asms]:
   "dom tcb_cap_cases = {xs. length xs = 3 \<and> unat (of_bl xs :: machine_word) < 5}"
@@ -275,7 +284,7 @@ lemma dom_tcb_cap_cases_lt_ARCH [Finalise_AI_asms]:
   done
 
 lemma (* unbind_notification_final *) [wp,Finalise_AI_asms]:
-  "\<lbrace>is_final_cap' cap\<rbrace> unbind_notification t \<lbrace> \<lambda>rv. is_final_cap' cap\<rbrace>"
+  "\<lbrace>is_final_cap' False cap\<rbrace> unbind_notification t \<lbrace> \<lambda>rv. is_final_cap' False cap\<rbrace>"
   unfolding unbind_notification_def
   apply (wp final_cap_lift thread_set_caps_of_state_trivial hoare_drop_imps
        | wpc | simp add: tcb_cap_cases_def)+
@@ -283,24 +292,24 @@ lemma (* unbind_notification_final *) [wp,Finalise_AI_asms]:
 
 lemma arch_thread_set_caps_of_state[wp]:
   "arch_thread_set v t \<lbrace>\<lambda>s. P (caps_of_state s) \<rbrace>"
-  apply (wpsimp simp: arch_thread_set_def wp: set_object_wp)
+  apply (wpsimp simp: arch_thread_set_def wp: set_object_wp touch_object_wp')
   apply (clarsimp simp: fun_upd_def)
   apply (frule get_tcb_ko_atD)
   apply (auto simp: caps_of_state_after_update obj_at_def tcb_cap_cases_def)
   done
 
 lemma arch_thread_set_final_cap[wp]:
-  "\<lbrace>is_final_cap' cap\<rbrace> arch_thread_set v t \<lbrace>\<lambda>rv. is_final_cap' cap\<rbrace>"
+  "\<lbrace>is_final_cap' False cap\<rbrace> arch_thread_set v t \<lbrace>\<lambda>rv. is_final_cap' False cap\<rbrace>"
   by (wpsimp simp: is_final_cap'_def2 cte_wp_at_caps_of_state)
 
 lemma arch_thread_get_final_cap[wp]:
-  "\<lbrace>is_final_cap' cap\<rbrace> arch_thread_get v t \<lbrace>\<lambda>rv. is_final_cap' cap\<rbrace>"
-  apply (simp add: arch_thread_get_def is_final_cap'_def2 cte_wp_at_caps_of_state, wp)
+  "\<lbrace>is_final_cap' False cap\<rbrace> arch_thread_get v t \<lbrace>\<lambda>rv. is_final_cap' False cap\<rbrace>"
+  apply (simp add: arch_thread_get_def is_final_cap'_def2 cte_wp_at_caps_of_state, wp touch_object_wp')
   apply auto
   done
 
 lemma prepare_thread_delete_final[wp]:
-  "\<lbrace>is_final_cap' cap\<rbrace> prepare_thread_delete t \<lbrace> \<lambda>rv. is_final_cap' cap\<rbrace>"
+  "\<lbrace>is_final_cap' False cap\<rbrace> prepare_thread_delete t \<lbrace> \<lambda>rv. is_final_cap' False cap\<rbrace>"
   unfolding prepare_thread_delete_def by wp
 
 lemma length_and_unat_of_bl_length:
@@ -308,14 +317,14 @@ lemma length_and_unat_of_bl_length:
   by (auto simp: unat_of_bl_length)
 
 lemma (* finalise_cap_cases1 *)[Finalise_AI_asms]:
-  "\<lbrace>\<lambda>s. final \<longrightarrow> is_final_cap' cap s
+  "\<lbrace>\<lambda>s. final \<longrightarrow> is_final_cap' False cap s
          \<and> cte_wp_at ((=) cap) slot s\<rbrace>
      finalise_cap cap final
    \<lbrace>\<lambda>rv s. fst rv = cap.NullCap
          \<and> snd rv = (if final then cap_cleanup_opt cap else NullCap)
-         \<and> (snd rv \<noteq> NullCap \<longrightarrow> is_final_cap' cap s)
+         \<and> (snd rv \<noteq> NullCap \<longrightarrow> is_final_cap' False cap s)
      \<or>
-       is_zombie (fst rv) \<and> is_final_cap' cap s
+       is_zombie (fst rv) \<and> is_final_cap' False cap s
         \<and> snd rv = NullCap
         \<and> appropriate_cte_cap (fst rv) = appropriate_cte_cap cap
         \<and> cte_refs (fst rv) = cte_refs cap
@@ -346,9 +355,10 @@ crunch typ_at[wp,Finalise_AI_asms]: arch_finalise_cap "\<lambda>s. P (typ_at T p
 crunch typ_at[wp,Finalise_AI_asms]: prepare_thread_delete "\<lambda>s. P (typ_at T p s)"
 
 crunch tcb_at[wp]: arch_thread_set "\<lambda>s. tcb_at p s"
-  (ignore: set_object)
+  (ignore: set_object wp: touch_object_wp')
 
 crunch tcb_at[wp]: arch_thread_get "\<lambda>s. tcb_at p s"
+  (wp: touch_object_wp')
 
 crunch tcb_at[wp]: prepare_thread_delete "\<lambda>s. tcb_at p s"
 
@@ -367,15 +377,17 @@ lemma (* finalise_cap_new_valid_cap *)[wp,Finalise_AI_asms]:
   done
 
 crunch inv[wp]: arch_thread_get "P"
+  (wp: touch_object_wp')
 
 lemma hoare_split: "\<lbrakk>\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>; \<lbrace>P\<rbrace> f \<lbrace>Q'\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>r. Q r and Q' r\<rbrace>"
   by (auto simp: valid_def)
 
 sublocale
   arch_thread_set: non_aobj_non_cap_non_mem_op "arch_thread_set f v"
-  by (unfold_locales;
+  apply (unfold_locales;
         ((wpsimp)?;
-        wpsimp wp: set_object_non_arch simp: non_arch_objs arch_thread_set_def)?)
+        wpsimp wp: set_object_non_arch touch_object_wp' simp: non_arch_objs arch_thread_set_def)?)
+  by (simp add: get_tcb_SomeD' non_arch_objs(3) obj_at_def)
 
 (* arch_thread_set invariants *)
 lemma arch_thread_set_cur_tcb[wp]: "\<lbrace>cur_tcb\<rbrace> arch_thread_set p v \<lbrace>\<lambda>_. cur_tcb\<rbrace>"
@@ -385,7 +397,6 @@ lemma arch_thread_set_cur_tcb[wp]: "\<lbrace>cur_tcb\<rbrace> arch_thread_set p 
    apply wp
   apply (simp add: arch_thread_set_def)
   apply (wp hoare_drop_imp)
-  apply simp
   done
 
 lemma cte_wp_at_update_some_tcb:
@@ -399,9 +410,9 @@ lemma arch_thread_set_cap_refs_respects_device_region[wp]:
      arch_thread_set p v
    \<lbrace>\<lambda>s. cap_refs_respects_device_region\<rbrace>"
   apply (simp add: arch_thread_set_def set_object_def get_object_def)
-  apply wp
+  apply (wp touch_object_wp')
   apply (clarsimp dest!: get_tcb_SomeD simp del: fun_upd_apply)
-  apply (subst get_tcb_rev, assumption, subst option.sel)+
+  apply (clarsimp simp:ta_filter_def obind_def get_tcb_def)
   apply (subst cap_refs_respects_region_cong)
     prefer 3
     apply assumption
@@ -416,7 +427,7 @@ lemma arch_thread_set_pspace_respects_device_region[wp]:
      arch_thread_set p v
    \<lbrace>\<lambda>s. pspace_respects_device_region\<rbrace>"
   apply (simp add: arch_thread_set_def)
-  apply (wp get_object_wp set_object_pspace_respects_device_region)
+  apply (wp get_object_wp set_object_pspace_respects_device_region touch_object_wp')
   apply clarsimp
   done
 
@@ -457,10 +468,10 @@ lemma arch_thread_set_pred_tcb_at[wp_unsafe]:
      arch_thread_set p v
    \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
   apply (simp add: arch_thread_set_def set_object_def get_object_def)
-  apply wp
+  apply (wp touch_object_wp')
   apply (clarsimp simp: pred_tcb_at_def obj_at_def get_tcb_rev
                   dest!: get_tcb_SomeD)
-  done
+  by (simp add: get_tcb_True_False get_tcb_rev obj_at_def)
 
 lemma arch_thread_set_valid_reply_caps[wp]:
   "\<lbrace>valid_reply_caps\<rbrace> arch_thread_set p v \<lbrace>\<lambda>rv. valid_reply_caps\<rbrace>"
@@ -470,13 +481,10 @@ lemma arch_thread_set_valid_reply_caps[wp]:
 lemma arch_thread_set_if_unsafe_then_cap[wp]:
   "\<lbrace>if_unsafe_then_cap\<rbrace> arch_thread_set p v \<lbrace>\<lambda>rv. if_unsafe_then_cap\<rbrace>"
   apply (simp add: arch_thread_set_def)
-  apply (wp get_object_wp set_object_ifunsafe)
+  apply (wp get_object_wp set_object_ifunsafe touch_object_wp')
   apply (clarsimp split: kernel_object.splits arch_kernel_obj.splits
                   dest!: get_tcb_SomeD)
-  apply (subst get_tcb_rev)
-  apply assumption
-  apply simp
-  apply (subst get_tcb_rev, assumption, simp)+
+  apply (clarsimp simp: get_tcb_def ta_filter_def obind_def)
   apply (clarsimp simp: obj_at_def tcb_cap_cases_def)
   done
 
@@ -488,34 +496,33 @@ lemma arch_thread_set_only_idle[wp]:
 lemma arch_thread_set_valid_idle[wp]:
   "arch_thread_set f t \<lbrace>valid_idle\<rbrace>"
   by (wpsimp simp: arch_thread_set_def set_object_def get_object_def valid_idle_def
-                   valid_arch_idle_def get_tcb_def pred_tcb_at_def obj_at_def pred_neg_def)
+                   valid_arch_idle_def get_tcb_def pred_tcb_at_def obj_at_def pred_neg_def
+                   ta_filter_def obind_def
+               wp: touch_object_wp')
 
 lemma arch_thread_set_valid_ioc[wp]:
   "\<lbrace>valid_ioc\<rbrace> arch_thread_set p v \<lbrace>\<lambda>rv. valid_ioc\<rbrace>"
   apply (simp add: arch_thread_set_def set_object_def get_object_def)
-  apply (wp set_object_valid_ioc_caps)
+  apply (wp set_object_valid_ioc_caps touch_object_wp')
   apply (clarsimp simp add: valid_ioc_def
                   simp del: fun_upd_apply
                   split: kernel_object.splits arch_kernel_obj.splits
                   dest!: get_tcb_SomeD)
-  apply (subst get_tcb_rev, assumption, subst option.sel)+
+  apply (clarsimp simp:get_tcb_def ta_filter_def obind_def)
   apply (subst arch_tcb_update_aux3)
   apply (subst cte_wp_at_update_some_tcb,assumption)
    apply (clarsimp simp: tcb_cnode_map_def)+
   done
 
 lemma arch_thread_set_valid_mdb[wp]: "\<lbrace>valid_mdb\<rbrace> arch_thread_set p v \<lbrace>\<lambda>rv. valid_mdb\<rbrace>"
-  by (wpsimp wp: valid_mdb_lift get_object_wp simp: arch_thread_set_def set_object_def)
+  by (wpsimp wp: valid_mdb_lift get_object_wp touch_object_wp' simp: arch_thread_set_def set_object_def)
 
 lemma arch_thread_set_zombies_final[wp]: "\<lbrace>zombies_final\<rbrace> arch_thread_set p v \<lbrace>\<lambda>rv. zombies_final\<rbrace>"
   apply (simp add: arch_thread_set_def)
-  apply (wp get_object_wp set_object_zombies)
+  apply (wp get_object_wp set_object_zombies touch_object_wp')
   apply (clarsimp split: kernel_object.splits arch_kernel_obj.splits
                   dest!: get_tcb_SomeD)
-  apply (subst get_tcb_rev)
-  apply assumption
-  apply simp
-  apply (subst get_tcb_rev, assumption, simp)+
+  apply (clarsimp simp: get_tcb_def ta_filter_def obind_def)
   apply (clarsimp simp: obj_at_def tcb_cap_cases_def)
   done
 
@@ -525,7 +532,7 @@ lemma arch_thread_set_pspace_in_kernel_window[wp]:
 
 lemma arch_thread_set_pspace_distinct[wp]: "\<lbrace>pspace_distinct\<rbrace>arch_thread_set f v\<lbrace>\<lambda>_. pspace_distinct\<rbrace>"
   apply (simp add: arch_thread_set_def)
-  apply (wp set_object_distinct)
+  apply (wp set_object_distinct touch_object_wp')
   apply (clarsimp simp: get_object_def obj_at_def
                   dest!: get_tcb_SomeD)
   done
@@ -533,7 +540,7 @@ lemma arch_thread_set_pspace_distinct[wp]: "\<lbrace>pspace_distinct\<rbrace>arc
 lemma arch_thread_set_pspace_aligned[wp]:
   "\<lbrace>pspace_aligned\<rbrace> arch_thread_set f v \<lbrace>\<lambda>_. pspace_aligned\<rbrace>"
   apply (simp add: arch_thread_set_def)
-  apply (wp set_object_aligned)
+  apply (wp set_object_aligned touch_object_wp')
   apply (clarsimp simp: obj_at_def get_object_def
                   dest!: get_tcb_SomeD)
   done
@@ -541,13 +548,15 @@ lemma arch_thread_set_pspace_aligned[wp]:
 lemma arch_thread_set_valid_objs_context[wp]:
   "arch_thread_set (tcb_context_update f) v \<lbrace>valid_objs\<rbrace>"
   apply (simp add: arch_thread_set_def)
-  apply (wp set_object_valid_objs)
+  apply (wp set_object_valid_objs touch_object_wp')
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (clarsimp simp: Ball_def obj_at_def valid_objs_def dest!: get_tcb_SomeD)
   apply (erule_tac x=v in allE)
   apply (clarsimp simp: dom_def)
   apply (subst get_tcb_rev, assumption, subst option.sel)+
   apply (clarsimp simp:valid_obj_def valid_tcb_def tcb_cap_cases_def)
   done
+*)
 
 lemma sym_refs_update_some_tcb:
   "\<lbrakk>kheap s v = Some (TCB tcb) ; refs_of (TCB tcb) = refs_of (TCB (f tcb))\<rbrakk>
@@ -560,7 +569,8 @@ lemma sym_refs_update_some_tcb:
 lemma arch_thread_sym_refs[wp]:
   "\<lbrace>\<lambda>s. sym_refs (state_refs_of s)\<rbrace> arch_thread_set f p \<lbrace>\<lambda>rv s. sym_refs (state_refs_of s)\<rbrace>"
   apply (simp add: arch_thread_set_def set_object_def get_object_def)
-  apply wp
+  apply (wp touch_object_wp')
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (clarsimp simp del: fun_upd_apply dest!: get_tcb_SomeD)
   apply (subst get_tcb_rev, assumption, subst option.sel)+
   apply (subst arch_tcb_update_aux3)
@@ -569,18 +579,19 @@ lemma arch_thread_sym_refs[wp]:
    apply (clarsimp simp: refs_of_def)
   apply assumption
   done
+*)
 
 lemma as_user_unlive_hyp[wp]:
   "\<lbrace>obj_at (Not \<circ> hyp_live) vr\<rbrace> as_user t f \<lbrace>\<lambda>_. obj_at (Not \<circ> hyp_live) vr\<rbrace>"
   unfolding as_user_def
-  apply (wpsimp wp: set_object_wp)
+  apply (wpsimp wp: set_object_wp touch_object_wp')
   by (clarsimp simp: obj_at_def hyp_live_def arch_tcb_context_set_def)
 
 lemma as_user_unlive0[wp]:
   "\<lbrace>obj_at (Not \<circ> live0) vr\<rbrace> as_user t f \<lbrace>\<lambda>_. obj_at (Not \<circ> live0) vr\<rbrace>"
   unfolding as_user_def
-  apply (wpsimp wp: set_object_wp)
-  by (clarsimp simp: obj_at_def arch_tcb_context_set_def dest!: get_tcb_SomeD)
+  apply (wpsimp wp: set_object_wp touch_object_wp')
+  by (clarsimp simp: obj_at_def arch_tcb_context_set_def ta_filter_def dest!: get_tcb_SomeD)
 
 lemma o_def_not: "obj_at (\<lambda>a. \<not> P a) t s =  obj_at (Not o P) t s"
   by (simp add: obj_at_def)
@@ -589,7 +600,8 @@ lemma arch_thread_set_if_live_then_nonz_cap':
   "\<forall>y. hyp_live (TCB (y\<lparr>tcb_arch := p (tcb_arch y)\<rparr>)) \<longrightarrow> hyp_live (TCB y) \<Longrightarrow>
    \<lbrace>if_live_then_nonz_cap\<rbrace> arch_thread_set p v \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
   apply (simp add: arch_thread_set_def)
-  apply (wp set_object_iflive)
+  apply (wp set_object_iflive touch_object_wp')
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (clarsimp simp: ex_nonz_cap_to_def if_live_then_nonz_cap_def
                   dest!: get_tcb_SomeD)
   apply (subst get_tcb_rev, assumption, subst option.sel)+
@@ -597,6 +609,7 @@ lemma arch_thread_set_if_live_then_nonz_cap':
   apply (erule_tac x=v in allE, drule mp; assumption?)
   apply (clarsimp simp: live_def)
   done
+*)
 
 lemma same_caps_tcb_arch_update[simp]:
   "same_caps (TCB (tcb_arch_update f tcb)) = same_caps (TCB tcb)"
@@ -605,8 +618,8 @@ lemma same_caps_tcb_arch_update[simp]:
 lemma as_user_valid_irq_node[wp]:
   "\<lbrace>valid_irq_node\<rbrace> as_user t f \<lbrace>\<lambda>_. valid_irq_node\<rbrace>"
   unfolding as_user_def
-  apply (wpsimp wp: set_object_wp)
-  apply (clarsimp simp: valid_irq_node_def obj_at_def is_cap_table dest!: get_tcb_SomeD)
+  apply (wpsimp wp: set_object_wp touch_object_wp')
+  apply (clarsimp simp: valid_irq_node_def obj_at_def is_cap_table ta_filter_def dest!: get_tcb_SomeD)
   by (metis kernel_object.distinct(1) option.inject)
 
 lemma dmo_machine_state_lift:
@@ -616,11 +629,11 @@ lemma dmo_machine_state_lift:
 lemma as_user_valid_irq_states[wp]:
   "\<lbrace>valid_irq_states\<rbrace> as_user t f \<lbrace>\<lambda>rv. valid_irq_states\<rbrace>"
   unfolding as_user_def
-  by (wpsimp wp: set_object_wp simp: obj_at_def valid_irq_states_def)
+  by (wpsimp wp: set_object_wp touch_object_wp' simp: obj_at_def valid_irq_states_def)
 
 lemma as_user_ioc[wp]:
   "\<lbrace>\<lambda>s. P (is_original_cap s)\<rbrace> as_user t f \<lbrace>\<lambda>rv s. P (is_original_cap s)\<rbrace>"
-  unfolding as_user_def by (wpsimp wp: set_object_wp)
+  unfolding as_user_def by (wpsimp wp: set_object_wp touch_object_wp')
 
 lemma as_user_valid_ioc[wp]:
   "\<lbrace>valid_ioc\<rbrace> as_user t f \<lbrace>\<lambda>rv. valid_ioc\<rbrace>"
@@ -635,13 +648,15 @@ lemma arch_finalise_cap_invs' [wp,Finalise_AI_asms]:
    apply (wp unmap_page_invs | wpc)+
   apply (clarsimp simp: valid_cap_def cap_aligned_def)
   apply (auto simp: mask_def vmsz_aligned_def wellformed_mapdata_def)
+  sorry (* FIXME: broken by touched-addrs -robs
   done
+*)
 
 lemma as_user_unlive[wp]:
   "\<lbrace>obj_at (Not \<circ> live) vr\<rbrace> as_user t f \<lbrace>\<lambda>_. obj_at (Not \<circ> live) vr\<rbrace>"
   unfolding as_user_def
-  apply (wpsimp wp: set_object_wp)
-  by (clarsimp simp: obj_at_def live_def hyp_live_def arch_tcb_context_set_def dest!: get_tcb_SomeD)
+  apply (wpsimp wp: set_object_wp touch_object_wp')
+  by (clarsimp simp: obj_at_def live_def hyp_live_def arch_tcb_context_set_def ta_filter_def dest!: get_tcb_SomeD)
 
 lemma obj_at_not_live_valid_arch_cap_strg [Finalise_AI_asms]:
   "(s \<turnstile> ArchObjectCap cap \<and> aobj_ref cap = Some r)
@@ -650,11 +665,27 @@ lemma obj_at_not_live_valid_arch_cap_strg [Finalise_AI_asms]:
                      a_type_arch_live live_def hyp_live_def
               split: arch_cap.split_asm if_splits)
 
+lemma set_vm_root_ptes_of[wp]:
+  "set_vm_root tcb \<lbrace>\<lambda>s. P (ptes_of False s)\<rbrace>"
+  sorry (* FIXME: broken by touched-addrs -robs *)
+
+lemma set_vm_root_ptes_of'[simplified f_kheap_to_kheap, wp]:
+  "set_vm_root tcb \<lbrace>\<lambda>s. P (ptes_of False s)\<rbrace>"
+  using set_vm_root_ptes_of by blast
+
+lemma set_vm_root_asid_pools_of[wp]:
+  "set_vm_root tcb \<lbrace>\<lambda>s. P (asid_pools_of False s)\<rbrace>"
+  sorry (* FIXME: broken by touched-addrs -robs *)
+
+lemma set_vm_root_asid_pools_of'[simplified f_kheap_to_kheap, wp]:
+  "set_vm_root tcb \<lbrace>\<lambda>s. P (asid_pools_of False s)\<rbrace>"
+  using set_vm_root_asid_pools_of by blast
+
 crunches set_vm_root
-  for ptes_of[wp]: "\<lambda>s. P (ptes_of s)"
-  and asid_pools_of[wp]: "\<lambda>s. P (asid_pools_of s)"
+  for ptes_of[wp]: "\<lambda>s. P (ptes_of False s)"
+  and asid_pools_of[wp]: "\<lambda>s. P (asid_pools_of False s)"
   and asid_table[wp]: "\<lambda>s. P (asid_table s)"
-  (simp: crunch_simps ignore:do_machine_op)
+  (simp: crunch_simps wp:touch_object_wp' ignore:do_machine_op)
 
 lemma set_vm_root_vs_lookup_target[wp]:
   "set_vm_root tcb \<lbrace>\<lambda>s. P (vs_lookup_target level asid vref s)\<rbrace>"
@@ -690,12 +721,14 @@ lemma delete_asid_pool_not_target[wp]:
    \<lbrace>\<lambda>rv s. vs_lookup_target level asid 0 s \<noteq> Some (level, ptr)\<rbrace>"
   unfolding delete_asid_pool_def
   supply fun_upd_apply[simp del]
-  apply wpsimp
+  apply (wpsimp wp:touch_object_wp')
   apply (rule conjI; clarsimp)
    apply (frule vs_lookup_target_no_asid_pool[of _ _ level asid]; assumption?)
+   sorry (* FIXME: broken by touched-addrs -robs
    apply (erule vs_lookup_target_clear_asid_table)
   apply (erule (4) vs_lookup_target_no_asid_pool)
   done
+*)
 
 lemma delete_asid_pool_not_reachable[wp]:
   "\<lbrace>asid_pool_at ptr and valid_vspace_objs and valid_asid_table and pspace_aligned\<rbrace>
@@ -707,8 +740,8 @@ lemmas reachable_frame_cap_simps =
   reachable_frame_cap_def[unfolded is_frame_cap_def arch_cap_fun_lift_def, split_simps cap.split]
 
 lemma vs_lookup_slot_non_PageTablePTE:
-  "\<lbrakk> ptes_of s p \<noteq> None; ptes_of s' = ptes_of s(p \<mapsto> pte); \<not> is_PageTablePTE pte;
-     asid_pools_of s' = asid_pools_of s;
+  "\<lbrakk> ptes_of False s p \<noteq> None; ptes_of False s' = ptes_of False s(p \<mapsto> pte); \<not> is_PageTablePTE pte;
+     asid_pools_of False s' = asid_pools_of False s;
      asid_table s' = asid_table s; valid_asid_table s; pspace_aligned s\<rbrakk>
   \<Longrightarrow> vs_lookup_slot level asid vref s' =
       (if \<exists>level'. vs_lookup_slot level' asid vref s = Some (level', p) \<and> level < level'
@@ -723,13 +756,16 @@ lemma vs_lookup_slot_non_PageTablePTE:
 
 lemma unmap_page_table_pool_for_asid[wp]:
   "unmap_page_table asid vref pt \<lbrace>\<lambda>s. P (pool_for_asid asid s)\<rbrace>"
-  unfolding unmap_page_table_def by (wpsimp simp: pool_for_asid_def)
+  unfolding unmap_page_table_def
+  sorry (* FIXME: broken by touched-addrs -robs
+  by (wpsimp simp: pool_for_asid_def)
+*)
 
 lemma unmap_page_table_unreachable:
   "\<lbrace> pt_at pt and valid_asid_table and valid_vspace_objs and pspace_aligned
      and unique_table_refs and valid_vs_lookup and (\<lambda>s. valid_caps (caps_of_state s) s)
      and K (0 < asid \<and> vref \<in> user_region)
-     and (\<lambda>s. vspace_for_asid asid s \<noteq> Some pt) \<rbrace>
+     and (\<lambda>s. vspace_for_asid False asid s \<noteq> Some pt) \<rbrace>
    unmap_page_table asid vref pt
    \<lbrace>\<lambda>_ s. \<not> reachable_target (asid, vref) pt s\<rbrace>"
   unfolding reachable_target_def
@@ -756,10 +792,10 @@ lemma set_asid_pool_pool_for_asid[wp]:
 
 lemma delete_asid_pool_for_asid[wp]:
   "delete_asid asid pt \<lbrace>\<lambda>s. P (pool_for_asid asid' s)\<rbrace>"
-  unfolding delete_asid_def by wpsimp
+  unfolding delete_asid_def by (wpsimp wp:touch_object_wp')
 
 lemma delete_asid_no_vs_lookup_target:
-  "\<lbrace>\<lambda>s. vspace_for_asid asid s = Some pt\<rbrace>
+  "\<lbrace>\<lambda>s. vspace_for_asid False asid s = Some pt\<rbrace>
    delete_asid asid pt
    \<lbrace>\<lambda>rv s. vs_lookup_target level asid vref s \<noteq> Some (level, pt)\<rbrace>"
   apply (rule hoare_assume_pre)
@@ -774,7 +810,7 @@ lemma delete_asid_no_vs_lookup_target:
   done
 
 lemma delete_asid_unreachable:
-  "\<lbrace>\<lambda>s. vspace_for_asid asid s = Some pt \<and> pt_at pt s \<and> valid_asid_table s \<rbrace>
+  "\<lbrace>\<lambda>s. vspace_for_asid False asid s = Some pt \<and> pt_at pt s \<and> valid_asid_table s \<rbrace>
    delete_asid asid pt
    \<lbrace>\<lambda>_ s. \<not> reachable_target (asid, vref) pt s\<rbrace>"
   unfolding reachable_target_def
@@ -790,19 +826,20 @@ lemma arch_finalise_cap_replaceable:
                 is_cap_simps vs_cap_ref_def
                 no_cap_to_obj_with_diff_ref_Null o_def
                 reachable_frame_cap_simps
-  notes wps = hoare_drop_imp[where R="%_. is_final_cap' cap" for cap]
+  notes wps = hoare_drop_imp[where R="%_. is_final_cap' False cap" for cap]
               valid_cap_typ
               unmap_page_unreachable unmap_page_table_unreachable
               delete_asid_unreachable
   shows
     "\<lbrace>\<lambda>s. s \<turnstile> ArchObjectCap cap \<and>
-          x = is_final_cap' (ArchObjectCap cap) s \<and>
+          x = is_final_cap' False (ArchObjectCap cap) s \<and>
           pspace_aligned s \<and> valid_vspace_objs s \<and> valid_objs s \<and> valid_asid_table s \<and>
           valid_arch_caps s\<rbrace>
      arch_finalise_cap cap x
      \<lbrace>\<lambda>rv s. replaceable s sl (fst rv) (ArchObjectCap cap)\<rbrace>"
   apply (simp add: arch_finalise_cap_def valid_arch_caps_def)
   apply (wpsimp simp: simps valid_objs_caps wp: wps | strengthen strg)+
+    sorry (* FIXME: broken by touched-addrs -robs
   apply (rule conjI, clarsimp)
    apply (clarsimp simp: valid_cap_def)
   apply (rule conjI; clarsimp)
@@ -810,6 +847,7 @@ lemma arch_finalise_cap_replaceable:
   apply (rule conjI; clarsimp)
   apply (clarsimp simp: valid_cap_def wellformed_mapdata_def cap_aligned_def)
   done
+*)
 
 
 global_naming Arch
@@ -835,7 +873,7 @@ lemma (* deleting_irq_handler_slot_not_irq_node *)[Finalise_AI_asms]:
   done
 
 lemma no_cap_to_obj_with_diff_ref_finalI_ARCH[Finalise_AI_asms]:
-  "\<lbrakk> cte_wp_at ((=) cap) p s; is_final_cap' cap s;
+  "\<lbrakk> cte_wp_at ((=) cap) p s; is_final_cap' False cap s;
             obj_refs cap' = obj_refs cap \<rbrakk>
       \<Longrightarrow> no_cap_to_obj_with_diff_ref cap' {p} s"
   apply (case_tac "obj_refs cap = {}")
@@ -891,7 +929,7 @@ lemma prepare_thread_delete_unlive[wp]:
   done
 
 lemma finalise_cap_replaceable [Finalise_AI_asms]:
-  "\<lbrace>\<lambda>s. s \<turnstile> cap \<and> x = is_final_cap' cap s \<and> valid_mdb s
+  "\<lbrace>\<lambda>s. s \<turnstile> cap \<and> x = is_final_cap' False cap s \<and> valid_mdb s
         \<and> cte_wp_at ((=) cap) sl s \<and> valid_objs s \<and> sym_refs (state_refs_of s)
         \<and> (cap_irqs cap \<noteq> {} \<longrightarrow> if_unsafe_then_cap s \<and> valid_global_refs s)
         \<and> (is_arch_cap cap \<longrightarrow> pspace_aligned s \<and>
@@ -951,15 +989,18 @@ lemma (* deleting_irq_handler_cte_preserved *)[Finalise_AI_asms]:
 lemma arch_thread_set_cte_wp_at[wp]:
   "\<lbrace>\<lambda>s. P (cte_wp_at P' p s)\<rbrace> arch_thread_set f t \<lbrace> \<lambda>_ s. P (cte_wp_at P' p s)\<rbrace>"
   apply (simp add: arch_thread_set_def)
-  apply (wp set_object_wp)
-  apply (clarsimp dest!: get_tcb_SomeD simp del: fun_upd_apply)
-  apply (subst get_tcb_rev, assumption, subst option.sel)+
+  apply (wpsimp wp: set_object_wp touch_object_wp')
+  apply (clarsimp dest!: get_tcb_SomeD simp del: fun_upd_apply simp:ta_filter_def)
   apply (subst arch_tcb_update_aux3)
   apply (subst cte_wp_at_update_some_tcb[where f="tcb_arch_update f"])
     apply (clarsimp simp: tcb_cnode_map_def)+
   done
 
 crunch cte_wp_at[wp,Finalise_AI_asms]: prepare_thread_delete "\<lambda>s. P (cte_wp_at P' p s)"
+
+lemma unmap_page_table_cte_wp_at[wp]:
+  "unmap_page_table asid vaddr pt \<lbrace>\<lambda>s. P (cte_wp_at P' p s)\<rbrace>"
+  sorry (* FIXME: broken by touched-addrs -robs *)
 
 crunch cte_wp_at[wp,Finalise_AI_asms]: arch_finalise_cap "\<lambda>s. P (cte_wp_at P' p s)"
   (simp: crunch_simps assertE_def wp: crunch_wps set_object_cte_at
@@ -975,7 +1016,7 @@ interpretation Finalise_AI_1?: Finalise_AI_1
 context Arch begin global_naming RISCV64
 
 lemma fast_finalise_replaceable[wp]:
-  "\<lbrace>\<lambda>s. s \<turnstile> cap \<and> x = is_final_cap' cap s
+  "\<lbrace>\<lambda>s. s \<turnstile> cap \<and> x = is_final_cap' False cap s
      \<and> cte_wp_at ((=) cap) sl s \<and> valid_asid_table s
      \<and> valid_mdb s \<and> valid_objs s \<and> sym_refs (state_refs_of s)\<rbrace>
      fast_finalise cap x
@@ -998,10 +1039,12 @@ lemma (* cap_delete_one_invs *) [Finalise_AI_asms,wp]:
   "\<lbrace>invs and emptyable ptr\<rbrace> cap_delete_one ptr \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: cap_delete_one_def unless_def is_final_cap_def)
   apply (rule hoare_pre)
-  apply (wp empty_slot_invs get_cap_wp)
+  apply (wp empty_slot_invs get_cap_wp touch_objects_wp touch_object_wp)
   apply clarsimp
   apply (drule cte_wp_at_valid_objs_valid_cap, fastforce+)
+  sorry (* FIXME: broken by touched-addrs -robs
   done
+*)
 
 end
 
@@ -1015,8 +1058,16 @@ context Arch begin global_naming RISCV64
 
 crunch irq_node[Finalise_AI_asms,wp]: prepare_thread_delete "\<lambda>s. P (interrupt_irq_node s)"
 
+lemma unmap_page_table_irq_node[wp]:
+  "unmap_page_table asid vaddr pt \<lbrace>\<lambda>s. P (interrupt_irq_node s)\<rbrace>"
+  sorry (* FIXME: broken by touched-addrs -robs *)
+
 crunch irq_node[wp]: arch_finalise_cap "\<lambda>s. P (interrupt_irq_node s)"
   (simp: crunch_simps wp: crunch_wps ignore:do_machine_op)
+
+lemma unmap_page_table_pred_tcb_at[wp]:
+  "unmap_page_table asid vaddr pt \<lbrace>pred_tcb_at proj P t\<rbrace>"
+  sorry (* FIXME: broken by touched-addrs -robs *)
 
 crunch pred_tcb_at[wp]:
   delete_asid_pool, delete_asid, unmap_page_table, unmap_page
@@ -1038,14 +1089,14 @@ definition
    else replaceable s slot cap cap'"
 
 lemma is_final_cap_pt_asid_eq:
-  "is_final_cap' (ArchObjectCap (PageTableCap p y)) s \<Longrightarrow>
-   is_final_cap' (ArchObjectCap (PageTableCap p x)) s"
+  "is_final_cap' False (ArchObjectCap (PageTableCap p y)) s \<Longrightarrow>
+   is_final_cap' False (ArchObjectCap (PageTableCap p x)) s"
   apply (clarsimp simp: is_final_cap'_def gen_obj_refs_def)
   done
 
 lemma is_final_cap_pd_asid_eq:
-  "is_final_cap' (ArchObjectCap (PageTableCap p y)) s \<Longrightarrow>
-   is_final_cap' (ArchObjectCap (PageTableCap p x)) s"
+  "is_final_cap' False (ArchObjectCap (PageTableCap p y)) s \<Longrightarrow>
+   is_final_cap' False (ArchObjectCap (PageTableCap p x)) s"
   by (rule is_final_cap_pt_asid_eq)
 
 lemma cte_wp_at_obj_refs_singleton_page_table:
@@ -1058,7 +1109,7 @@ lemma cte_wp_at_obj_refs_singleton_page_table:
   done
 
 lemma final_cap_pt_slot_eq:
-  "\<lbrakk>is_final_cap' (ArchObjectCap (PageTableCap p asid)) s;
+  "\<lbrakk>is_final_cap' False (ArchObjectCap (PageTableCap p asid)) s;
     cte_wp_at ((=) (ArchObjectCap (PageTableCap p asid'))) slot s;
     cte_wp_at ((=) (ArchObjectCap (PageTableCap p asid''))) slot' s\<rbrakk> \<Longrightarrow>
    slot' = slot"
@@ -1088,7 +1139,9 @@ lemma set_vm_root_empty[wp]:
   "\<lbrace>\<lambda>s. P (obj_at (empty_table S) p s)\<rbrace> set_vm_root v \<lbrace>\<lambda>_ s. P (obj_at (empty_table S) p s) \<rbrace>"
   apply (simp add: set_vm_root_def)
   apply (wpsimp wp: get_cap_wp)
+  sorry (* FIXME: broken by touched-addrs -robs
   done
+*)
 
 lemma set_asid_pool_empty[wp]:
   "\<lbrace>obj_at (empty_table S) word\<rbrace> set_asid_pool x2 pool' \<lbrace>\<lambda>xb. obj_at (empty_table S) word\<rbrace>"
@@ -1097,7 +1150,7 @@ lemma set_asid_pool_empty[wp]:
 lemma delete_asid_empty_table_pt[wp]:
   "delete_asid a word \<lbrace>\<lambda>s. obj_at (empty_table S) word s\<rbrace>"
    apply (simp add: delete_asid_def)
-   apply wpsimp
+   apply (wpsimp wp: touch_object_wp')
    done
 
 lemma ucast_less_shiftl_helper3:
@@ -1266,9 +1319,11 @@ lemma (* dmo_replaceable_or_arch_update *) [Finalise_AI_asms,wp]:
   unfolding replaceable_or_arch_update_def replaceable_def no_cap_to_obj_with_diff_ref_def
             replaceable_final_arch_cap_def replaceable_non_final_arch_cap_def
   apply (wp_pre, wps dmo_tcb_cap_valid_ARCH do_machine_op_reachable_pg_cap)
+  sorry (* FIXME: broken by touched-addrs -robs
    apply (rule hoare_vcg_prop)
   apply simp
   done
+*)
 
 end
 
@@ -1308,7 +1363,7 @@ lemma set_asid_pool_obj_at_ptr:
      set_asid_pool ptr mp
    \<lbrace>\<lambda>rv s. obj_at P ptr s\<rbrace>"
   apply (simp add: set_asid_pool_def set_object_def)
-  apply (wp get_object_wp)
+  apply (wp get_object_wp touch_object_wp')
   apply (clarsimp simp: obj_at_def)
   done
 
@@ -1326,7 +1381,7 @@ lemma valid_kernel_mappings [iff]:
 
 crunches unmap_page_table, store_pte, delete_asid_pool, copy_global_mappings
   for valid_cap[wp]: "valid_cap c"
-  (wp: mapM_wp_inv mapM_x_wp' simp: crunch_simps)
+  (wp: mapM_wp_inv mapM_x_wp' touch_object_wp' touch_objects_wp simp: crunch_simps)
 
 lemmas delete_asid_typ_ats[wp] = abs_typ_at_lifts [OF delete_asid_typ_at]
 

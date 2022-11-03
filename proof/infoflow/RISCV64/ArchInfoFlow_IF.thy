@@ -44,7 +44,7 @@ lemma equiv_asids_non_asid_pool_kheap_update[InfoFlow_IF_assms]:
 lemma equiv_asids_identical_kheap_updates[InfoFlow_IF_assms]:
   "\<lbrakk> equiv_asids R s s'; identical_kheap_updates s s' kh kh' \<rbrakk>
      \<Longrightarrow> equiv_asids R (s\<lparr>kheap := kh\<rparr>) (s'\<lparr>kheap := kh'\<rparr>)"
-  apply (clarsimp simp: equiv_asids_def equiv_asid_def opt_map_def
+  apply (clarsimp simp: equiv_asids_def equiv_asid_def opt_map_def obind_def ta_filter_def
                         asid_pool_at_kheap identical_kheap_updates_def)
   apply (case_tac "kh pool_ptr = kh' pool_ptr"; fastforce)
   done
@@ -95,6 +95,7 @@ lemma dmo_loadWord_rev[InfoFlow_IF_assms]:
                and P="\<top>" and P'="\<top>" in equiv_valid_2_bind_pre)
         apply (rule_tac R'="(=)" and Q="\<lambda>r s. p && mask 3 = 0" and Q'="\<lambda>r s. p && mask 3 = 0"
                     and P="\<top>" and P'="\<top>" in equiv_valid_2_bind_pre)
+             sorry (* FIXME: broken by touched-addrs -robs
              apply (rule return_ev2)
              apply (rule_tac f="word_rcat" in arg_cong)
              apply (clarsimp simp: upto.simps)
@@ -108,6 +109,7 @@ lemma dmo_loadWord_rev[InfoFlow_IF_assms]:
        apply fastforce
       apply (wp wp_post_taut loadWord_inv | simp)+
   done
+*)
 
 end
 

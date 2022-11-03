@@ -25,14 +25,16 @@ lemma set_per_domain_default_vm_root_valid_list:
 
 crunch valid_list[wp, Deterministic_AI_assms]:
   set_vm_root valid_list
-  (wp: set_per_domain_default_vm_root_valid_list)
+  (wp: set_per_domain_default_vm_root_valid_list get_cap_inv find_vspace_for_asid_wp touch_object_wp'
+   simp: ta_agnostic_def)
 
 crunch valid_list[wp, Deterministic_AI_assms]:
   cap_swap_for_delete,set_cap,finalise_cap,arch_get_sanitise_register_info,
   arch_post_modify_registers,
   arch_mask_interrupts, arch_switch_domain_kernel, arch_domainswitch_flush
   valid_list
-  (wp: crunch_wps simp: unless_def crunch_simps)
+  (wp: crunch_wps pt_lookup_from_level_tainv find_vspace_for_asid_wp
+   simp: unless_def crunch_simps ta_agnostic_def)
 declare get_cap_inv[Deterministic_AI_assms]
 
 end
