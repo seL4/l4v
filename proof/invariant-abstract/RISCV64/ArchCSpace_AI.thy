@@ -138,13 +138,12 @@ lemma set_untyped_cap_as_full_valid_arch_caps [CSpace_AI_assms]:
    \<lbrace>\<lambda>ya. valid_arch_caps\<rbrace>"
   supply if_split[split del]
   apply (clarsimp simp: valid_arch_caps_def set_untyped_cap_as_full_def)
-  apply (wpsimp wp: set_cap_valid_vs_lookup set_cap_valid_table_caps
+  apply (wpsimp wp: touch_object_wp' set_cap_valid_vs_lookup set_cap_valid_table_caps
                 simp_del: fun_upd_apply simp: cte_wp_at_caps_of_state)
-  sorry (* FIXME: Broken by timeprot-touch-objs. -robs checked -scottb
   apply (fastforce simp: unique_table_refs_upd_eqD unique_table_caps_upd_eqD
                          is_cap_simps cte_wp_at_caps_of_state)
   done
-*)
+
 
 lemma set_untyped_cap_as_full[wp, CSpace_AI_assms]:
   "\<lbrace>\<lambda>s. no_cap_to_obj_with_diff_ref a b s \<and> cte_wp_at ((=) src_cap) src s\<rbrace>
@@ -176,28 +175,23 @@ lemma is_derived_is_cap:
               split: cap.splits arch_cap.splits)+
 
 lemma vs_lookup_pages_non_aobj_upd:
-  "\<lbrakk> f_kheap ta_f s p = Some ko; \<not> is_ArchObj ko; \<not> is_ArchObj ko' \<rbrakk>
+  "\<lbrakk> kheap s p = Some ko; \<not> is_ArchObj ko; \<not> is_ArchObj ko' \<rbrakk>
    \<Longrightarrow> vs_lookup_pages (s\<lparr>kheap := kheap s(p \<mapsto> ko')\<rparr>) = vs_lookup_pages s"
   unfolding vs_lookup_target_def vs_lookup_slot_def
+  apply (simp only:f_kheap_to_kheap)
   apply (frule aobjs_of_non_aobj_upd[where ko'=ko'], simp+)
   apply (rule ext)+
   apply (simp add: obind_assoc)
   apply (rule obind_eqI)
    apply (rule vs_lookup_table_eq_lift; simp)
   apply (clarsimp split del: if_split)
-  sorry (* broken by touched-addrs -scottb
-  note: there are a series of lemmas following this one (see below). not entirely sure
-  if we should be using "f_kheap ta_f" or True or False, or if we should also be adding
-  some updated TA state to the assumptions too? This is a complex thing, to figure out
-  later on.
   apply (rule obind_eqI, clarsimp)
   apply (clarsimp split del: if_split)
   apply (rule obind_eqI; clarsimp)
   done
-*)
 
 lemma vs_lookup_target_non_aobj_upd:
-  "\<lbrakk> f_kheap ta_f s p = Some ko; \<not> is_ArchObj ko; \<not> is_ArchObj ko' \<rbrakk>
+  "\<lbrakk> kheap s p = Some ko; \<not> is_ArchObj ko; \<not> is_ArchObj ko' \<rbrakk>
    \<Longrightarrow> vs_lookup_target level asid vref (s\<lparr>kheap := kheap s(p \<mapsto> ko')\<rparr>)
       = vs_lookup_target level asid vref s"
   by (drule vs_lookup_pages_non_aobj_upd[where ko'=ko'], auto dest: fun_cong)
@@ -209,10 +203,10 @@ lemma set_untyped_cap_as_full_not_reachable_pg_cap[wp]:
   apply (clarsimp simp: set_untyped_cap_as_full_def set_cap_def split_def
                         set_object_def)
   apply (wpsimp wp: get_object_wp touch_object_wp' simp_del: fun_upd_apply)
-  sorry (* broken by touched-addrs -scottb
+  
   apply (auto simp: obj_at_def reachable_frame_cap_def is_cap_simps
                     reachable_target_def vs_lookup_target_non_aobj_upd)
-  done *)
+  done
 
 lemma table_cap_ref_eq_rewrite:
   "\<lbrakk>cap_master_cap cap = cap_master_cap capa; (is_frame_cap cap \<or> vs_cap_ref cap = vs_cap_ref capa)\<rbrakk>

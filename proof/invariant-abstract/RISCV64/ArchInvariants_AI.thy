@@ -2574,8 +2574,8 @@ lemma vs_lookup_table_eq_lift[simplified f_kheap_to_kheap]:
   by (auto simp: obind_def split: option.splits)
 
 lemma aobjs_of_non_aobj_upd:
-  "\<lbrakk> f_kheap ta_f s p = Some ko; \<not> is_ArchObj ko; \<not> is_ArchObj ko' \<rbrakk>
-   \<Longrightarrow> f_kheap ta_f s(p \<mapsto> ko') |> aobj_of = aobjs_of ta_f s"
+  "\<lbrakk> kheap s p = Some ko; \<not> is_ArchObj ko; \<not> is_ArchObj ko' \<rbrakk>
+   \<Longrightarrow> kheap s(p \<mapsto> ko') |> aobj_of = aobjs_of False s"
   by (rule ext)
      (auto simp: opt_map_def is_ArchObj_def aobj_of_def split: kernel_object.splits if_split_asm)
 
