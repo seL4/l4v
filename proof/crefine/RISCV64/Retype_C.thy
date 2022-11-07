@@ -1474,6 +1474,7 @@ proof (intro impI allI)
     and pno: "pspace_no_overlap' ptr sz \<sigma>"
     and rzo: "ret_zero ptr (n * (2 ^ objBitsKO ko)) \<sigma>"
     and empty: "region_is_bytes ptr (n * (2 ^ objBitsKO ko)) x"
+    and empty': "region_is_bytes (ptr_val ?ptr) (n * (2 ^ objBitsKO ko)) x"
     and zero: "heap_list_is_zero (hrs_mem (t_hrs_' (globals x))) ptr (n * (2 ^ objBitsKO ko))"
     and rc: "range_cover ptr sz (objBitsKO ko) n"
     and kdr: "{ptr..+n * (2 ^ objBitsKO ko)} \<inter> kernel_data_refs = {}"
@@ -1490,26 +1491,33 @@ proof (intro impI allI)
     apply (simp add: Let_def makeObject_endpoint size_of_def endpoint_lift_def)
     apply (simp add: from_bytes_def)
     apply (simp add: typ_info_simps endpoint_C_tag_def endpoint_lift_def
-      size_td_lt_final_pad size_td_lt_ti_typ_pad_combine Let_def size_of_def)
-    apply (simp add: final_pad_def Let_def size_td_lt_ti_typ_pad_combine Let_def
-      size_of_def padup_def align_td_array' size_td_array update_ti_adjust_ti
-      ti_typ_pad_combine_def Let_def ti_typ_combine_def empty_typ_info_def)
+                     size_td_lt_final_pad size_td_lt_ti_typ_pad_combine Let_def size_of_def)
+    apply (simp add: final_pad_def size_td_lt_ti_typ_pad_combine Let_def
+                     size_of_def padup_def align_td_array' size_td_array update_ti_adjust_ti
+                     ti_typ_pad_combine_def ti_typ_combine_def empty_typ_info_def)
     apply (simp add: typ_info_array array_tag_def eval_nat_numeral)
     apply (simp add: array_tag_n_eq)
     apply (simp add: final_pad_def Let_def size_td_lt_ti_typ_pad_combine
-      size_of_def padup_def align_td_array' size_td_array update_ti_adjust_ti
-      ti_typ_pad_combine_def ti_typ_combine_def empty_typ_info_def)
+                     size_of_def padup_def align_td_array' size_td_array update_ti_adjust_ti
+                     ti_typ_pad_combine_def ti_typ_combine_def empty_typ_info_def)
     apply (simp add: EPState_Idle_def update_ti_t_machine_word_0s)
     done
 
   (* /obj specific *)
 
+  note endpoint_C_size[simp del]
+
   (* s/obj/obj'/ *)
-  have szo: "size_of TYPE(endpoint_C) = 2 ^ objBitsKO ko" by (simp add: size_of_def objBits_simps' ko_def)
+  have szo: "size_of TYPE(endpoint_C) = 2 ^ objBitsKO ko"
+    by (simp add: size_of_def objBits_simps' ko_def)
   have szo': "n * (2 ^ objBitsKO ko) = n * size_of TYPE(endpoint_C)"
     by (metis szo)
 
   note rl' = cslift_ptr_retyp_other_inst[OF empty cover[simplified] szo' szo]
+  note rl'' = clift_ptr_retyps_gen_other
+               [OF empty'[simplified szo[symmetric]]
+                   cover[THEN range_cover.strong_times_64, simplified szo[symmetric]],
+                simplified]
 
   note rl = projectKO_opt_retyp_other [OF rc pal pno ko_def]
   note cterl = retype_ctes_helper [OF pal pdst pbound pno al sz szb mko rc, simplified]
@@ -1542,18 +1550,16 @@ proof (intro impI allI)
     done
 
   thus ?thesis using rf empty kdr rzo
-  apply (simp add: rf_sr_def cstate_relation_def Let_def rl'
-                   tag_disj_via_td_name)
-  apply (simp add: carch_state_relation_def cmachine_state_relation_def)
-  apply (simp add: rl' cterl tag_disj_via_td_name h_t_valid_clift_Some_iff)
-  apply (clarsimp simp: hrs_htd_update ptr_retyps_htd_safe_neg szo
-                        kernel_data_refs_domain_eq_rotate
-                        ht_rl foldr_upd_app_if [folded data_map_insert_def]
-                        rl cvariable_array_ptr_retyps[OF szo]
-                        zero_ranges_ptr_retyps
-              simp del: endpoint_C_size)
-  subgoal sorry (* FIXME RT: refill_buffer_relation *)
-  done
+    apply (simp add: rf_sr_def cstate_relation_def Let_def rl'
+                     tag_disj_via_td_name)
+    apply (simp add: carch_state_relation_def cmachine_state_relation_def)
+    apply (simp add: rl' cterl tag_disj_via_td_name h_t_valid_clift_Some_iff)
+    apply (clarsimp simp: hrs_htd_update ptr_retyps_htd_safe_neg szo
+                          kernel_data_refs_domain_eq_rotate
+                          ht_rl foldr_upd_app_if [folded data_map_insert_def]
+                          rl cvariable_array_ptr_retyps[OF szo]
+                          zero_ranges_ptr_retyps)
+    by (clarsimp simp: refill_buffer_relation_def Let_def rl rl'' tag_disj_via_td_name)
 qed
 
 lemma createObjects_ccorres_ntfn:
@@ -1590,6 +1596,7 @@ proof (intro impI allI)
     and pno: "pspace_no_overlap' ptr sz \<sigma>"
     and rzo: "ret_zero ptr (n * (2 ^ objBitsKO ko)) \<sigma>"
     and empty: "region_is_bytes ptr (n * (2 ^ objBitsKO ko)) x"
+    and empty': "region_is_bytes (ptr_val ?ptr) (n * (2 ^ objBitsKO ko)) x"
     and zero: "heap_list_is_zero (hrs_mem (t_hrs_' (globals x))) ptr (n * (2 ^ objBitsKO ko))"
     and rc: "range_cover ptr sz (objBitsKO ko) n"
     and kdr: "{ptr..+n * 2 ^ objBitsKO ko} \<inter> kernel_data_refs = {}"
@@ -1619,6 +1626,8 @@ proof (intro impI allI)
 
   (* /obj specific *)
 
+  note notification_C_size[simp del]
+
   (* s/obj/obj'/ *)
   have szo: "size_of TYPE(notification_C) = 2 ^ objBitsKO ko"
     by (simp add: size_of_def objBits_simps' ko_def)
@@ -1628,6 +1637,10 @@ proof (intro impI allI)
     done
 
   note rl' = cslift_ptr_retyp_other_inst[OF empty cover[simplified] szo' szo]
+  note rl'' = clift_ptr_retyps_gen_other
+               [OF empty'[simplified szo[symmetric]]
+                   cover[THEN range_cover.strong_times_64, simplified szo[symmetric]],
+                simplified]
 
   (* rest is generic *)
   note rl = projectKO_opt_retyp_other [OF rc pal pno ko_def]
@@ -1667,10 +1680,8 @@ proof (intro impI allI)
                           kernel_data_refs_domain_eq_rotate
                           ht_rl foldr_upd_app_if [folded data_map_insert_def]
                           rl projectKOs cvariable_array_ptr_retyps[OF szo]
-                          zero_ranges_ptr_retyps
-                simp del: notification_C_size)
-    subgoal sorry (* FIXME RT: refill_buffer_relation *)
-    done
+                          zero_ranges_ptr_retyps)
+    by (clarsimp simp: refill_buffer_relation_def Let_def rl rl'' tag_disj_via_td_name)
 qed
 
 
@@ -1745,6 +1756,7 @@ proof (intro impI allI)
     and pno: "pspace_no_overlap' ptr sz \<sigma>"
     and rzo: "ret_zero ptr (n * 2 ^ objBitsKO ko) \<sigma>"
     and empty: "region_is_bytes ptr (n * (2 ^ objBitsKO ko)) x"
+    and empty': "region_is_bytes (ptr_val ?ptr) (n * (2 ^ objBitsKO ko)) x"
     and zero: "heap_list_is_zero (hrs_mem (t_hrs_' (globals x))) ptr (n * (2 ^ objBitsKO ko))"
     and rc: "range_cover ptr sz (objBitsKO ko) n"
     and kdr: "{ptr..+n * 2 ^ objBitsKO ko} \<inter> kernel_data_refs = {}"
@@ -1767,6 +1779,10 @@ proof (intro impI allI)
     done
 
   note rl' = cslift_ptr_retyp_other_inst[OF empty cover szo' szo]
+  note rl'' = clift_ptr_retyps_gen_other
+               [OF empty'[simplified szo[symmetric]]
+                   cover[THEN range_cover.strong_times_64, simplified szo[symmetric]],
+                simplified]
 
   (* rest is generic *)
   note rl = projectKO_opt_retyp_other [OF rc pal pno ko_def]
@@ -1814,11 +1830,10 @@ proof (intro impI allI)
     apply (simp add: rl' cterl tag_disj_via_td_name h_t_valid_clift_Some_iff)
     apply (clarsimp simp: hrs_htd_update ptr_retyps_htd_safe_neg szo
                           kernel_data_refs_domain_eq_rotate
-                          rl foldr_upd_app_if [folded data_map_insert_def] projectKOs
+                          rl foldr_upd_app_if [folded data_map_insert_def]
                           zero_ranges_ptr_retyps
                           ht_rl cvariable_array_ptr_retyps[OF szo])
-    subgoal sorry (* FIXME RT: refill_buffer_relation *)
-    done
+    by (clarsimp simp: refill_buffer_relation_def Let_def rl rl'' tag_disj_via_td_name)
 qed
 
 lemma h_t_valid_ptr_retyps_gen_disjoint_iff:
@@ -1914,22 +1929,22 @@ lemma aligned_new_cap_addrs_eq_base:
   done
 
 lemma cmap_relation_array_add_array[OF refl]:
-  "ptrf = Ptr \<Longrightarrow> carray_map_relation n ahp chp ptrf
-    \<Longrightarrow> is_aligned p n
-    \<Longrightarrow> ahp' = (\<lambda>x. if x \<in> set (new_cap_addrs sz p ko) then Some v else ahp x)
-    \<Longrightarrow> (\<forall>x. chp x \<longrightarrow> is_aligned (ptr_val x) n \<Longrightarrow> \<forall>y. chp' y = (y = ptrf p | chp y))
-    \<Longrightarrow> sz = 2 ^ (n - objBits v)
-    \<Longrightarrow> objBitsKO ko = objBitsKO (injectKOS v)
-    \<Longrightarrow> objBits v \<le> n \<Longrightarrow> n < word_bits
-    \<Longrightarrow> carray_map_relation n ahp' chp' ptrf"
-  apply (clarsimp simp: carray_map_relation_def (* objBits_koTypeOf *)
-                        (* objBitsT_koTypeOf[symmetric] *)
-                        koTypeOf_injectKO
-              simp del: (* objBitsT_koTypeOf *))
+  "\<lbrakk>ptrf = (Ptr :: _ \<Rightarrow> 'a ptr); carray_map_relation n ahp chp ptrf; is_aligned p n;
+    ahp' =
+      (\<lambda>x. if x \<in> set (new_cap_addrs sz p ko)
+             then Some (v :: 'b :: pspace_storable)
+             else ahp x);
+    (\<forall>x. chp x \<longrightarrow> is_aligned (ptr_val x) n \<Longrightarrow> \<forall>y. chp' y = (y = ptrf p | chp y));
+    sz = 2 ^ (n - objBits v);
+    objBitsKO (injectKOS v) = objBitsKO ko; (\<And>v :: 'b. objBits v = objBitsT (koType TYPE('b)));
+    objBitsKO ko = objBitsT (koTypeOf ko); objBits v \<le> n ; n < word_bits\<rbrakk>
+   \<Longrightarrow> carray_map_relation n ahp' chp' ptrf"
+  apply (clarsimp simp: carray_map_relation_def)
+  apply (prop_tac "objBitsT (koTypeOf ko) = objBitsT (koType TYPE('b))")
+   apply (clarsimp simp: objBits_simps)
   apply (drule meta_mp)
    apply auto[1]
-sorry (* FIXME RT: cmap_relation_array_add_array *)
-(*  apply (case_tac "pa = p"; clarsimp)
+  apply (case_tac "pa = p"; clarsimp)
    apply (subst if_P; simp add: new_cap_addrs_def)
    apply (rule_tac x="unat ((p' && mask n) >> objBitsKO ko)" in image_eqI)
     apply (simp add: shiftr_shiftl1 is_aligned_andI1 add.commute
@@ -1944,7 +1959,7 @@ sorry (* FIXME RT: cmap_relation_array_add_array *)
   apply (clarsimp simp: new_cap_addrs_def)
   apply (subst(asm) is_aligned_add_helper, simp_all)
   apply (rule shiftl_less_t2n, rule word_of_nat_less, simp_all add: word_bits_def)
-  done *)
+  done
 
 lemma createObjects_ccorres_pte:
   defines "ko \<equiv> (KOArch (KOPTE (makeObject :: pte)))"
@@ -1981,6 +1996,7 @@ proof (intro impI allI)
     and pno: "pspace_no_overlap' ptr sz \<sigma>"
     and rzo: "ret_zero ptr (2 ^ ptBits) \<sigma>"
     and empty: "region_is_bytes ptr (2 ^ ptBits) x"
+    and empty': "region_is_bytes (ptr_val ?ptr) (2 ^ ptBits) x"
     and zero: "heap_list_is_zero (hrs_mem (t_hrs_' (globals x))) ptr (2 ^ ptBits)"
     and kernel_data_refs_disj : "kernel_data_refs \<inter> {ptr..+ 2 ^ ptBits} = {}"
     by (clarsimp simp:range_cover_def[where 'a=machine_word_len, folded word_bits_def])+
@@ -2019,9 +2035,22 @@ proof (intro impI allI)
   have szo': "size_of TYPE(pte_C) = 2 ^ objBitsKO ko"
     by (simp add: objBits_simps ko_def archObjSize_def bit_simps)
 
+  have szo'': "size_of TYPE(pte_C[512]) < 2 ^ word_bits"
+    apply (simp only: szo)
+    apply (rule power_strict_increasing_iff[THEN iffD2, where b1=2])
+     apply simp
+    using sz szb
+    apply fastforce
+    done
+
   note rl' = cslift_ptr_retyp_other_inst[where n=1,
     simplified, OF empty, simplified, OF cover[simplified]
     szo[symmetric] szo[simplified bit_simps_corres]]
+
+  note rl'' = clift_ptr_retyps_gen_other
+               [where nptrs=1, simplified,
+                OF empty'[simplified bit_simps_corres[symmetric] szo[symmetric]],
+                OF szo'']
 
   have sz_weaken: "objBitsKO ko \<le> ptBits"
     by (simp add: objBits_simps ko_def archObjSize_def bit_simps)
@@ -2072,7 +2101,7 @@ proof (intro impI allI)
          simp_all only: szo refl empty, simp_all add: zero[simplified])[1]
         apply (simp add: bit_simps word_bits_def)
        apply (auto split: if_split)[1]
-      apply (simp_all add: objBits_simps archObjSize_def bit_simps
+      apply (simp_all add: objBits_simps archObjSize_def bit_simps objBitsT_simps
                            ko_def word_bits_def)
    done
 
@@ -2125,8 +2154,7 @@ proof (intro impI allI)
     apply (simp add:szo ptr_retyps_htd_safe_neg hrs_htd_def
       kernel_data_refs_domain_eq_rotate bit_simps
       Int_ac del: replicate_numeral)
-    subgoal sorry (* FIXME RT: refill_buffer_relation *)
-    done
+    by (clarsimp simp: refill_buffer_relation_def Let_def rl rl'' tag_disj_via_td_name)
 qed
 
 definition
@@ -2970,6 +2998,7 @@ lemma cnc_tcb_helper:
   assumes al: "is_aligned (ctcb_ptr_to_tcb_ptr p) (objBitsKO kotcb)"
   assumes ptr0: "ctcb_ptr_to_tcb_ptr p \<noteq> 0"
   assumes vq: "valid_queues \<sigma>"
+  assumes vrlq: "valid_release_queue \<sigma>"
   assumes pal: "pspace_aligned' (\<sigma>\<lparr>ksPSpace := ks\<rparr>)"
   assumes pno: "pspace_no_overlap' (ctcb_ptr_to_tcb_ptr p) (objBitsKO kotcb) (\<sigma>\<lparr>ksPSpace := ks\<rparr>)"
   assumes pds: "pspace_distinct' (\<sigma>\<lparr>ksPSpace := ks\<rparr>)"
@@ -3384,10 +3413,8 @@ proof -
     apply (simp add: ko_wp_at'_def)
     done
 
-  have pks': "ksPSpace \<sigma> (ctcb_ptr_to_tcb_ptr p) = None" using pks kssub
-    apply -
-    apply (erule contrapos_pp)
-    apply (fastforce simp: dom_def)
+  have pks': "ksPSpace \<sigma> (ctcb_ptr_to_tcb_ptr p) = None" using pks kssub dom_def
+    apply fastforce
     done
 
   hence kstcb: "\<And>qdom prio. ctcb_ptr_to_tcb_ptr p \<notin> set (ksReadyQueues \<sigma> (qdom, prio))" using vq
@@ -3397,6 +3424,17 @@ proof -
     apply clarsimp
     apply (drule (1) bspec)
     apply (simp add: obj_at'_def)
+    done
+
+  have pks': "ksPSpace \<sigma> (ctcb_ptr_to_tcb_ptr p) = None" using pks kssub
+    apply -
+    apply (erule contrapos_pp)
+    apply (fastforce simp: dom_def)
+    done
+
+  hence ksrlqtcb: "ctcb_ptr_to_tcb_ptr p \<notin> set (ksReleaseQueue \<sigma>)"
+  using vrlq
+    apply (fastforce simp: valid_release_queue_def obj_at'_def)
     done
 
   have ball_subsetE:
@@ -3461,6 +3499,20 @@ proof -
     h_t_array_valid_ptr_retyps_gen[where n=1, simplified, OF refl empty_smaller(1)]
     h_t_array_valid_ptr_retyps_gen[where p="Ptr x" for x, simplified, OF refl empty_smaller(2)]
 
+  have map_to_scs: "map_to_scs ?ks = map_to_scs ks"
+    apply (rule ext)
+    apply (clarsimp simp: map_comp_def split: if_splits)
+    apply (clarsimp simp: kotcb_def set_sc'.not_tcb)
+    apply (fastforce simp: pks)
+    done
+
+  have rfbr: "refill_buffer_relation ?ks (t_hrs_' ?gs) (ghost'state_' (globals x))"
+    apply (insert rfsr)
+    apply (frule rf_sr_refill_buffer_relation)
+    apply (clarsimp simp: refill_buffer_relation_def Let_def)
+    apply (simp add: cl_rest[simplified] tag_disj_via_td_name map_to_scs)
+    done
+
   from rfsr have "cpspace_relation ks (underlying_memory (ksMachineState \<sigma>)) (t_hrs_' (globals x))"
     unfolding rf_sr_def cstate_relation_def by (simp add: Let_def)
   hence "cpspace_relation ?ks (underlying_memory (ksMachineState \<sigma>))  (t_hrs_' ?gs)"
@@ -3515,16 +3567,17 @@ proof -
     done
 
   ultimately show ?thesis
-    using rfsr zro'
+    using rfsr zro' rfbr
     apply (simp add: rf_sr_def cstate_relation_def Let_def h_t_valid_clift_Some_iff
                      tag_disj_via_td_name carch_state_relation_def
                      cmachine_state_relation_def irq)
     apply (simp add: cl_cte [simplified] cl_tcb [simplified] cl_rest [simplified] tag_disj_via_td_name)
     apply (clarsimp simp: cready_queues_relation_def Let_def
                           htd_safe[simplified] kernel_data_refs_domain_eq_rotate)
-    apply (simp add: heap_updates_def kstcb tcb_queue_update_other' hrs_htd_update
+    apply (simp add: heap_updates_def
+                     kstcb tcb_queue_update_other'
+                     ksrlqtcb tcb_queue_update_other hrs_htd_update
                      ptr_retyp_to_array[simplified] irq[simplified])
-    subgoal sorry (* FIXME RT: refill_buffer_relation *)
     done
 qed
 
@@ -4511,7 +4564,7 @@ lemma Arch_initContext_spec':
 lemma ccorres_placeNewObject_tcb:
   "ccorresG rf_sr \<Gamma> dc xfdc
    (pspace_aligned' and pspace_distinct' and pspace_bounded'
-      and pspace_no_overlap' regionBase tcbBlockSizeBits and valid_queues and (\<lambda>s. sym_refs (state_refs_of' s))
+      and pspace_no_overlap' regionBase tcbBlockSizeBits and valid_queues and valid_release_queue and (\<lambda>s. sym_refs (state_refs_of' s))
       and (\<lambda>s. 2 ^ tcbBlockSizeBits \<le> gsMaxObjectSize s)
       and ret_zero regionBase (2 ^ tcbBlockSizeBits)
       and K (regionBase \<noteq> 0 \<and> range_cover regionBase tcbBlockSizeBits tcbBlockSizeBits 1
