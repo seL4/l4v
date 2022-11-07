@@ -361,10 +361,10 @@ lemma pas_refined_no_label_straddling_objs[intro]:
 (* If there are no label-straddling objects on the kheap, then adding a policy-accessible
    kheap object to the TA set cannot falsify the ta_subset_inv. *)
 lemma safe_addition_to_ta:
-  "no_label_straddling_objs aag s \<Longrightarrow>
+  "ta_subset_inv aag s \<Longrightarrow>
+   no_label_straddling_objs aag s \<Longrightarrow>
    pasObjectAbs aag p \<in> pas_labels_accessible_to aag (cur_label aag s) \<Longrightarrow>
    ko_at ko p s \<Longrightarrow>
-   ta_subset_inv aag s \<Longrightarrow>
    ta_subset_inv aag (ms_ta_update ((\<union>) (obj_range p ko)) s)"
   apply(clarsimp simp:ta_subset_inv_def)
   apply(clarsimp simp:no_label_straddling_objs_def)
@@ -670,9 +670,9 @@ lemma lookup_slot_for_thread_ta_subset_inv:
   apply(rule conjI)
    apply(rule safe_addition_to_ta)
       apply force
-     apply(clarsimp simp:pas_labels_accessible_to_def)
-     using domains_distinct cur_label_to_subj
      apply force
+    apply(clarsimp simp:pas_labels_accessible_to_def)
+    using domains_distinct cur_label_to_subj
     apply force
    apply force
   apply clarsimp
@@ -781,6 +781,10 @@ lemma set_cap_ta_subset_inv:
   using domains_distinct cur_label_to_subj
   by (fastforce intro:safe_addition_to_ta simp:pas_labels_accessible_to_def obj_at_def)
 
+lemma set_cap_pas_cur_domain:
+  "set_cap cap capcref \<lbrace>pas_cur_domain aag\<rbrace>"
+  by (wpsimp wp: crunch_wps)
+
 lemma set_untyped_cap_as_full_ta_subset_inv:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
@@ -793,9 +797,74 @@ lemma set_untyped_cap_as_full_ta_subset_inv:
   unfolding set_untyped_cap_as_full_def
   by (wpsimp wp: crunch_wps touch_objects_wp touch_object_wp' set_cap_ta_subset_inv)
 
-(* FIXME: Not sure how to deal with the "ext" version. *)
-crunch ta_subset_inv: cap_insert "ta_subset_inv aag"
+crunch ta_subset_inv: update_cdt "ta_subset_inv aag"
   (wp: crunch_wps touch_objects_wp touch_object_wp')
+
+lemma set_cdt_list_ta_subset_inv:
+  (* FIXME: We need a new precondition that says this object is accessible. What is reasonable? *)
+  "\<lbrace>ta_subset_inv aag\<rbrace> set_cdt_list t \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  unfolding set_cdt_list_def
+  apply (wpsimp wp: crunch_wps touch_objects_wp touch_object_wp')
+  sorry
+
+thm update_cdt_list_pas_refined
+lemma cap_insert_ext_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag
+    \<comment> \<open>Do we even need this stuff?
+    and pas_refined aag
+    and (pas_cur_domain aag and)
+     K (is_subject aag (fst src_slot)) and K (is_subject aag (fst dest_slot))\<close>\<rbrace>
+     cap_insert_ext src_parent src_slot dest_slot src_p dest_p
+   \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  unfolding cap_insert_ext_def
+  apply (wpsimp wp: crunch_wps touch_objects_wp touch_object_wp')
+  sorry (* FIXME *)
+
+(* Note: cap_insert is an example of a function for which crunching with `touch_object_wp`
+   propagates up a new "true for state if object was added to TA" precondition for each object
+   it calls touch_object on. But we will use `safe_addition_to_ta` to discharge these. -robs *)
+thm set_cap_pas_refined get_cap_wp
+lemma cap_insert_ta_subset_inv:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
+  "\<lbrace>ta_subset_inv aag and
+    (pas_refined aag and pas_cur_domain aag and
+     K (is_subject aag (fst src_slot)) and K (is_subject aag (fst dest_slot)) and
+     \<comment> \<open>Demanded by set_cap_pas_refined\<close>
+     pspace_aligned and valid_vspace_objs and valid_arch_state and
+     (\<lambda>s. is_transferable_in src_slot s \<and> \<not> Option.is_none (cdt s src_slot) \<longrightarrow>
+       (pasObjectAbs aag (fst $ the $ cdt s src_slot), Control, pasSubject aag) \<in> pasPolicy aag))\<rbrace>
+     cap_insert new_cap src_slot dest_slot
+   \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  unfolding cap_insert_def
+  apply (wpsimp wp: crunch_wps touch_objects_wp touch_object_wp'
+    set_original_ta_subset_inv cap_insert_ext_ta_subset_inv
+    update_cdt_ta_subset_inv update_cdt_pas_refined update_cdt_cur_domain
+    set_cap_ta_subset_inv set_cap_pas_refined set_cap_pas_cur_domain
+    set_untyped_cap_as_full_ta_subset_inv get_cap_wp)
+  apply(rename_tac s cap cap')
+  (* FIXME: There must a better intro/dest rule we can prove and use to improve this process. *)
+  apply(drule_tac p="fst src_slot" and ko="the (kheap s (fst src_slot))" in safe_addition_to_ta)
+     apply force
+    apply(clarsimp simp:pas_labels_accessible_to_def)
+    using domains_distinct cur_label_to_subj
+    apply force
+   apply(force dest:cte_at_pspace simp:obj_at_def)
+  apply(drule_tac p="fst dest_slot" and ko="the (kheap s (fst dest_slot))" in safe_addition_to_ta)
+     apply force
+    apply(clarsimp simp:pas_labels_accessible_to_def)
+    using domains_distinct cur_label_to_subj
+    apply force
+   apply(force dest:cte_at_pspace simp:obj_at_def)
+  apply clarsimp
+  apply(drule_tac p="fst src_slot" and ko="the (kheap s (fst src_slot))" in safe_addition_to_ta)
+     apply force
+    apply(clarsimp simp:pas_labels_accessible_to_def)
+    using domains_distinct cur_label_to_subj
+    apply force
+   apply(force dest:cte_at_pspace simp:obj_at_def)
+  apply clarsimp
+  by (metis (full_types) cap_auth_caps_of_state cte_wp_at_caps_of_state)
 
 (* FIXME *)
 crunch ta_subset_inv: transfer_caps_loop "ta_subset_inv aag"
