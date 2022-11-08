@@ -221,9 +221,7 @@ crunch tcb_at_arch: unmap_page "\<lambda>s. P (ko_at (TCB tcb) t s)"
 lemmas unmap_page_tcb_at = unmap_page_tcb_at_arch
 
 lemma unmap_page_tcb_cap_valid:
-  "\<lbrace>\<lambda>s. tcb_cap_valid cap r s\<rbrace>
-    unmap_page sz asid vaddr pptr
-   \<lbrace>\<lambda>rv s. tcb_cap_valid cap r s\<rbrace>"
+  "unmap_page sz asid vaddr pptr \<lbrace>\<lambda>s. tcb_cap_valid cap r s\<rbrace>"
   apply (rule tcb_cap_valid_typ_st)
     apply wp
    apply (simp add: pred_tcb_at_def2)
