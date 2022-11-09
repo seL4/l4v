@@ -1279,6 +1279,10 @@ lemma valid_objsE [elim]:
   "\<lbrakk> valid_objs s; kheap s x = Some obj; valid_obj x obj s \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
   unfolding valid_objs_def by (auto simp: dom_def)
 
+lemma valid_obj_arch_valid_obj:
+  "valid_obj p (ArchObj ao) s = arch_valid_obj ao s"
+  by (simp add: valid_obj_def)
+
 
 lemma obj_at_ko_at:
   "obj_at P p s \<Longrightarrow> \<exists>ko. ko_at ko p s \<and> P ko"

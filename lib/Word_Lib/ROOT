@@ -23,7 +23,6 @@ session Word_Lib (lib) = HOL +
     More_Misc
     Strict_part_mono
     Many_More
-    Ancient_Numeral
     Examples
   theories
     Guide

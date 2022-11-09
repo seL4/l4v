@@ -1319,12 +1319,9 @@ lemma pageTableMapped_ccorres:
             apply (rule allI, rule conseqPre, vcg)
             apply (clarsimp simp: cpde_relation_def Let_def return_def addrFromPPtr_def
                                   pde_pde_coarse_lift_def)
-             apply (rule conjI)
-              apply (simp add: pde_lift_def Let_def split: if_split_asm)
-             apply (clarsimp simp: option_to_0_def option_to_ptr_def split: if_split)
-             apply (clarsimp simp: ARM.addrFromPPtr_def ARM.ptrFromPAddr_def)
-            apply (auto simp: Let_def pde_lift_def addrFromPPtr_def ptrFromPAddr_def option_to_ptr_def
-                       split: if_splits)[1]
+            apply (fastforce simp: Let_def pde_lift_def addrFromPPtr_def ptrFromPAddr_def
+                                   option_to_ptr_def
+                            split: if_splits)
            apply ((rule ccorres_cond_false_seq ccorres_cond_false
                           ccorres_return_C | simp)+)[3]
         apply (simp only: simp_thms)
