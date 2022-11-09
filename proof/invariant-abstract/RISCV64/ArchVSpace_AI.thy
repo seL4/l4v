@@ -860,8 +860,7 @@ lemma store_pte_invalid_vs_lookup_target_unmap:
   apply clarsimp
   apply (clarsimp simp: vs_lookup_target_def vs_lookup_slot_def pool_for_asid_vs_lookup
                   split: if_split_asm)
-  sorry (* broken by touched-addrs -scottb
-   apply (prop_tac "asid_pools_of s pt_ptr = None")
+   apply (prop_tac "asid_pools_of False s pt_ptr = None")
     apply (clarsimp simp: opt_map_def)
    apply simp
    apply (prop_tac "vs_lookup_table max_pt_level asid vref s = Some (max_pt_level, p')")
@@ -927,12 +926,12 @@ lemma store_pte_invalid_vs_lookup_target_unmap:
   apply (clarsimp simp: in_omonad)
   apply (subst (asm) (3) pte_of_def)
   apply (clarsimp simp: in_omonad fun_upd_apply split: if_split_asm)
-  done *)
+  done
 
 lemma pt_lookup_from_level_wrp:
-  "(\<And>p. ta_agnostic (Q p)) \<Longrightarrow> ta_agnostic (E InvalidRoot) \<Longrightarrow>
-
-\<lbrace>\<lambda>s. \<exists>asid. vspace_for_asid False asid s = Some top_level_pt \<and>
+  "\<lbrakk>(\<And>p. ta_agnostic (Q p));
+  ta_agnostic (E InvalidRoot)\<rbrakk> \<Longrightarrow>
+  \<lbrace>\<lambda>s. \<exists>asid. vspace_for_asid False asid s = Some top_level_pt \<and>
                (\<forall>level slot pte.
                    vs_lookup_slot level asid vref s = Some (level, slot) \<longrightarrow>
                    ptes_of False s slot = Some pte \<longrightarrow>
@@ -943,19 +942,19 @@ lemma pt_lookup_from_level_wrp:
                    E InvalidRoot s)\<rbrace>
    pt_lookup_from_level max_pt_level top_level_pt vref pt
    \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>"
-  apply (wp pt_lookup_from_level_wp touch_object_wp')
+  apply (wp pt_lookup_from_level_wp touch_object_wp', simp)
   apply (clarsimp simp: vspace_for_asid_def)
   apply (rule conjI; clarsimp)
    apply (frule pt_walk_max_level)
    apply (erule_tac x=level in allE)
-   apply (erule allE, erule impE[where P="f = Some x" for f x])
+   apply (erule_tac x="(pt_slot_offset level pt' vref)" in allE)
+   apply (erule impE[where P="f = Some x" for f x])
     apply (clarsimp simp: vs_lookup_slot_def vs_lookup_table_def in_omonad)
-    sorry (* broken bu touched-addrs -scottb
     apply fastforce
    apply simp
   apply (erule allE, erule (1) impE)
   apply (clarsimp simp: vs_lookup_table_def split: if_split_asm)
-  done *)
+  done
 
 lemma unmap_page_table_not_target:
   "\<lbrace>\<lambda>s. pt_at pt s \<and> pspace_aligned s \<and> valid_asid_table s \<and> valid_vspace_objs s \<and>
