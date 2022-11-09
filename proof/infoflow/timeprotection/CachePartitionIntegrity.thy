@@ -330,6 +330,7 @@ crunches touch_objects, touch_object, get_cap, get_object
   (wp: crunch_wps touch_objects_wp touch_object_wp')
 *)
 
+(* KHeap_A *)
 (* If objects in TA are a subset of the policy-allowed ones before modifying the object,
    that will remain the case after modifying the object using `set_object`. *)
 lemma set_object_ta_subset_inv:
@@ -341,13 +342,6 @@ lemma set_object_ta_subset_inv:
   (* By cases, for all kinds of kernel objects: The change cannot have affected its size. *)
   by (clarsimp simp:obj_at_def a_type_def obj_range_def
     split:kernel_object.splits if_splits arch_kernel_obj.splits)
-
-(* XXX: Shouldn't this be later than the rab proof? Just comment out to make sure it isn't
-   used by anything later.
-lemma syscall_ta_subset_inv:
-  "syscall m_fault h_fault m_error h_error m_finalise \<lbrace>ta_subset_inv aag\<rbrace>"
-  sorry
-*)
 
 (* Note: The fact that `pas_refined` is `ta_agnostic` is now proved earlier, in Access_AC. *)
 thm pas_refined_ta_agnostic
@@ -384,6 +378,7 @@ lemma safe_addition_to_ta_validI:
   unfolding valid_def
   by blast
 
+(* KHeap_A *)
 (* FIXME: Perhaps there is a better form for this that avoids us having to use it in the
    convoluted way we do in lookup_cap_and_slot_ta_subset_inv (see further below). *)
 lemma touch_object_ta_subset_inv:
@@ -392,6 +387,7 @@ lemma touch_object_ta_subset_inv:
      touch_object p \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   by (wpsimp wp:touch_object_wp' simp:safe_addition_to_ta obj_at_def)
 
+(* CSpaceAcc_A *)
 (* Need something like this *)
 thm get_tcb_Some_True_False get_cap_det
 (* FIXME: Move back far enough to be useful everywhere else this was needed. -robs *)
@@ -406,6 +402,8 @@ lemma get_cap_True_False[dest]:
 
 lemma pas_cur_domain_ta_agnostic: "ta_agnostic (pas_cur_domain aag)"
   by (clarsimp simp:ta_agnostic_def)
+
+(* CSpace_A *)
 
 thm CNode_AC.resolve_address_bits_authorised_aux
 (* Scott (@scottbuckley) recommends trying to prove this one -robs. *)
@@ -652,6 +650,7 @@ proof (induct capcref rule: resolve_address_bits'.induct)
   done
 qed
 
+(* Tcb_A *)
 (* FIXME: I think this needs a manual proof like for resolve_address_bits. -robs
 crunch ta_subset_inv: load_word_offs "ta_subset_inv aag"
   (wp: crunch_wps touch_objects_wp simp: crunch_simps ignore: do_machine_op)
@@ -660,6 +659,7 @@ lemma load_word_offs_ta_subset_inv:
   "\<lbrace>ta_subset_inv aag\<rbrace> load_word_offs ptr offs \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   sorry
 
+(* TcbAcc_A *)
 (* FIXME: This will probably be along the same vein as load_word_offs
 crunch ta_subset_inv: store_word_offs "ta_subset_inv aag"
   (wp: crunch_wps touch_objects_wp simp: crunch_simps ignore: do_machine_op)
@@ -668,6 +668,7 @@ lemma store_word_offs_ta_subset_inv:
   "\<lbrace>ta_subset_inv aag\<rbrace> store_word_offs ptr offs v \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   sorry
 
+(* Ipc_A *)
 (* FIXME: Needs manual proof? liftM/mapM wp rules don't seem to help. -robs
 crunch ta_subset_inv: get_extra_cptrs "ta_subset_inv aag"
   (wp: crunch_wps touch_objects_wp touch_object_wp' liftM_wp liftME_wp mapM_wp mapM_wp'
@@ -676,6 +677,8 @@ crunch ta_subset_inv: get_extra_cptrs "ta_subset_inv aag"
 lemma get_extra_cptrs_ta_subset_inv:
   "\<lbrace>ta_subset_inv aag\<rbrace> get_extra_cptrs buf mi \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   sorry
+
+(* CSpace_A *)
 
 (* Note: Needed manual proof with customised precondition, just like rab. -robs *)
 thm lookup_slot_for_thread_authorised
@@ -787,6 +790,7 @@ lemma lookup_cap_and_slot_ta_subset_inv:
   apply clarsimp
   sorry
 
+(* Ipc_A *)
 thm lookup_extra_caps_authorised lookup_cap_and_slot_authorised
 lemma lookup_extra_caps_ta_subset_inv:
   (* Follow convention used in Noninterference.thy for handling pas_domains_distinct assumption. *)
@@ -803,6 +807,7 @@ lemma lookup_extra_caps_ta_subset_inv:
        the preconditions, does this mean we have to copy them all to the postcondition too? *)
   sorry
 
+(* KHeap_A *)
 thm set_thread_state_cur_domain
 (* FIXME: I think this needs a manual proof like for resolve_address_bits. -robs
 crunch ta_subset_inv: set_thread_state "ta_subset_inv aag"
@@ -818,6 +823,8 @@ lemma set_thread_state_ta_subset_inv:
       set_thread_state ref ts
     \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   sorry
+
+(* CSpace_A *)
 
 lemma lookup_cap_ta_subset_inv:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
@@ -869,6 +876,8 @@ lemma get_receive_slots_ta_subset_inv:
   (* FIXME *)
   sorry
 
+(* CSpaceAcc_A *)
+
 crunches set_cdt, set_original
   for ta_subset_inv: "ta_subset_inv aag"
   (simp: ta_subset_inv_def)
@@ -892,6 +901,10 @@ lemma set_cap_pas_cur_domain:
   "set_cap cap capcref \<lbrace>pas_cur_domain aag\<rbrace>"
   by (wpsimp wp: crunch_wps)
 
+crunch ta_subset_inv: update_cdt "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp')
+
+(* CSpace_A *)
 lemma set_untyped_cap_as_full_ta_subset_inv:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
@@ -906,8 +919,7 @@ lemma set_untyped_cap_as_full_ta_subset_inv:
   unfolding set_untyped_cap_as_full_def
   by (wpsimp wp: crunch_wps touch_objects_wp touch_object_wp' set_cap_ta_subset_inv)
 
-crunch ta_subset_inv: update_cdt "ta_subset_inv aag"
-  (wp: crunch_wps touch_objects_wp touch_object_wp')
+(* Deterministic_A *)
 
 lemma set_cdt_list_ta_subset_inv:
   (* FIXME: We need a new precondition that says this object is accessible. What is reasonable? *)
@@ -929,6 +941,7 @@ lemma cap_insert_ext_ta_subset_inv:
   apply (wpsimp wp: crunch_wps touch_objects_wp touch_object_wp')
   sorry (* FIXME *)
 
+(* CSpace_A *)
 (* Note: cap_insert is an example of a function for which crunching with `touch_object_wp`
    propagates up a new "true for state if object was added to TA" precondition for each object
    it calls touch_object on. But we will use `safe_addition_to_ta` to discharge these. -robs *)
@@ -975,6 +988,7 @@ lemma cap_insert_ta_subset_inv:
   apply clarsimp
   by (metis (full_types) cap_auth_caps_of_state cte_wp_at_caps_of_state)
 
+(* Ipc_A *)
 (* FIXME: Prove or improve. Preconditions below were found using crunch.
 crunch ta_subset_inv: transfer_caps_loop "ta_subset_inv aag"
   (wp: crunch_wps touch_objects_wp touch_object_wp')
@@ -986,6 +1000,7 @@ lemma transfer_caps_loop_ta_subset_inv:
    \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   sorry
 
+(* KHeap_A *)
 (* FIXME: Prove or improve.
 crunch ta_subset_inv: as_user "ta_subset_inv aag"
   (wp: crunch_wps touch_objects_wp touch_object_wp')
@@ -1005,6 +1020,7 @@ crunch pas_cur_domain: get_receive_slots "pas_cur_domain aag"
   (wp: crunch_wps touch_objects_wp resolve_address_bits'_pas_cur_domain
      lookup_slot_for_cnode_op_pas_cur_domain)
 
+(* Ipc_A *)
 lemma transfer_caps_ta_subset_inv:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
@@ -1023,6 +1039,7 @@ crunch ta_subset_inv: transfer_caps "ta_subset_inv aag"
   (wp: crunch_wps touch_objects_wp touch_object_wp')
 *)
 
+(* TcbAcc_A *)
 (* FIXME: Prove or improve.
 crunch ta_subset_inv: set_mrs "ta_subset_inv aag"
   (wp: crunch_wps touch_objects_wp touch_object_wp')
@@ -1037,6 +1054,8 @@ lemma set_mrs_ta_subset_inv:
      set_mrs thread buf msgs
    \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   sorry
+
+(* Tcb_A *)
 
 (* FIXME: Prove or improve.
 crunch ta_subset_inv: copy_mrs "ta_subset_inv aag"
@@ -1081,6 +1100,7 @@ lemma do_normal_transfer_ta_subset_inv:
    \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   sorry
 
+(* Ipc_A *)
 (* FIXME: Prove or improve.
 crunch ta_subset_inv: send_ipc "ta_subset_inv aag"
   (wp: crunch_wps touch_objects_wp touch_object_wp')
@@ -1107,160 +1127,1229 @@ lemma send_ipc_ta_subset_inv:
    \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   sorry
 
+(* Decode_A *)
+
 (* FIXME: Prove or improve.
-   NB: That Hoare triple targetting undefined as a goal looks worrying.
+   NB: Those Hoare triples targetting undefined look worrying.
 crunch ta_subset_inv: decode_read_registers "ta_subset_inv aag"
-  (wp: crunch_wps touch_objects_wp touch_object_wp')
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
 *)
 lemma decode_read_registers_ta_subset_inv:
   "decode_read_registers data cap \<lbrace>ta_subset_inv aag\<rbrace>"
   sorry
 
-. (* DOWN TO HERE
+(* FIXME: Prove or improve.
+   NB: More Hoare triples targetting undefined here.
+crunch ta_subset_inv: decode_write_registers "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
+*)
 lemma decode_write_registers_ta_subset_inv:
   "decode_write_registers data cap \<lbrace>ta_subset_inv aag\<rbrace>"
   sorry
 
+(* FIXME: Prove or improve.
+   NB: More Hoare triples targetting undefined here.
+   Is this a case of it not being reasonable to prove this lemma at this level of granularity?
+crunch ta_subset_inv: decode_copy_registers "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
+*)
 lemma decode_copy_registers_ta_subset_inv:
   "decode_copy_registers data cap extra_caps \<lbrace>ta_subset_inv aag\<rbrace>"
   sorry
 
+(* KHeap_A *)
+(* FIXME: Prove or improve.
+crunch ta_subset_inv: thread_set "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
+*)
+lemma thread_set_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag tptr
+           \<in> pas_labels_accessible_to aag (cur_label aag s))) and
+    (\<lambda>s. ta_subset_inv aag
+           (machine_state_update
+             (touched_addresses_update
+               ((\<union>) (obj_range tptr (the (kheap s tptr)))))
+             s))\<rbrace>
+   thread_set f tptr \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+(* Ipc_A *)
+(* FIXME: Prove or improve.
+crunch ta_subset_inv: send_fault_ipc "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
+*)
 lemma send_fault_ipc_ta_subset_inv:
-  "send_fault_ipc tptr fault \<lbrace>ta_subset_inv aag\<rbrace>"
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag tptr
+           \<in> pas_labels_accessible_to aag (cur_label aag s))) and
+    (pas_refined aag and pas_cur_domain aag and
+     K (is_subject aag tptr)) and
+    \<comment> \<open> FIXME: Trim this out using safe_addition_to_ta? -robs \<close>
+    (\<lambda>s. ta_subset_inv aag
+           (machine_state_update
+             (touched_addresses_update
+               ((\<union>) (obj_range tptr (the (kheap s tptr)))))
+             s)) and
+    (pspace_aligned and valid_vspace_objs and valid_arch_state and
+     (\<lambda>s. is_transferable_in (tptr, tcb_cnode_index 2) s \<and>
+           \<not> Option.is_none (cdt s (tptr, tcb_cnode_index 2)) \<longrightarrow>
+           (pasObjectAbs aag
+             (fst $ the $ cdt s (tptr, tcb_cnode_index 2)),
+            Control, pasSubject aag)
+           \<in> pasPolicy aag))\<rbrace>
+   send_fault_ipc tptr fault \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   sorry
 
+(* CSpace_A *)
+lemma lookup_target_slot_ta_subset_inv:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
+  "\<lbrace>ta_subset_inv aag and
+    (pas_refined aag and pas_cur_domain aag and
+     K (is_cnode_cap croot \<longrightarrow>
+        (\<forall>x\<in>obj_refs_ac croot. is_subject aag x)))\<rbrace>
+   lookup_target_slot croot ptr depth \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+(* CSpaceAcc_A *)
+lemma ensure_empty_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag (fst slot)
+           \<in> pas_labels_accessible_to aag (cur_label aag s)))\<rbrace>
+   ensure_empty slot \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+(* Decode_A *)
+
+lemma check_prio_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag auth_tcb
+           \<in> pas_labels_accessible_to aag (cur_label aag s)))\<rbrace>
+   check_prio new_prio auth_tcb \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma decode_set_priority_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and no_label_straddling_objs aag\<rbrace>
+   decode_set_priority args cap slot extra_caps
+   \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma decode_set_sched_params_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and no_label_straddling_objs aag\<rbrace>
+   decode_set_sched_params args cap slot extra_caps
+   \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma decode_set_mcpriority_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and no_label_straddling_objs aag\<rbrace>
+   decode_set_mcpriority args cap slot extra_caps
+   \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma decode_unbind_notification_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and no_label_straddling_objs aag\<rbrace>
+   decode_unbind_notification cap \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma arch_decode_irq_control_invocation_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and
+    (pas_refined aag and pas_cur_domain aag and
+     K (is_cnode_cap (cps ! 0) \<longrightarrow>
+        (\<forall>x\<in>obj_refs_ac (cps ! 0). is_subject aag x))) and
+    no_label_straddling_objs aag\<rbrace>
+   arch_decode_irq_control_invocation label args src_slot cps
+   \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma decode_irq_control_invocation_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and
+    (pas_refined aag and pas_cur_domain aag and
+     K (is_cnode_cap (cps ! 0) \<longrightarrow>
+        (\<forall>x\<in>obj_refs_ac (cps ! 0). is_subject aag x))) and
+    no_label_straddling_objs aag\<rbrace>
+   decode_irq_control_invocation label args src_slot cps
+   \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma decode_asid_control_invocation_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and
+    (pas_refined aag and pas_cur_domain aag and
+     K (is_cnode_cap (fst (extra_caps ! 1)) \<longrightarrow>
+        (\<forall>x\<in>obj_refs_ac (fst (extra_caps ! 1)). is_subject aag x))) and
+    no_label_straddling_objs aag\<rbrace>
+   decode_asid_control_invocation label args cte cap extra_caps
+   \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma check_slot_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+       (\<lambda>s. pasObjectAbs aag slot
+             \<in> pas_labels_accessible_to aag (cur_label aag s)))\<rbrace>
+   check_slot slot test
+   \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma decode_untyped_invocation_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and (pas_refined aag and pas_cur_domain aag) and
+    no_label_straddling_objs aag\<rbrace>
+   decode_untyped_invocation label args slot cap excaps
+   \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma decode_asid_pool_invocation_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag (acap_obj cap)
+           \<in> pas_labels_accessible_to aag (cur_label aag s)))\<rbrace>
+   decode_asid_pool_invocation label args cte cap extra_caps
+   \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+(* IpcCancel_A *)
+lemma is_final_cap_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag\<rbrace> is_final_cap cap \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+(* Decode_A *)
+lemma decode_bind_notification_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and no_label_straddling_objs aag\<rbrace>
+   decode_bind_notification cap extra_caps \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+(* ArchDecode_A *)
+lemma arch_decode_invocation_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and no_label_straddling_objs aag and
+    (pas_refined aag and pas_cur_domain aag and
+     K (is_cnode_cap (fst (extra_caps ! 1)) \<longrightarrow>
+        (\<forall>x\<in>obj_refs_ac (fst (extra_caps ! 1)). is_subject aag x)))\<rbrace>
+   arch_decode_invocation label args x_slot cte cap extra_caps
+   \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+(* FIXME: Prove or improve.
+crunch ta_subset_inv: decode_invocation "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
+*)
+(* Decode_A *)
 lemma decode_invocation_ta_subset_inv:
-  "decode_invocation label args cap_index slot cap excaps \<lbrace>ta_subset_inv aag\<rbrace>"
+  "\<lbrace>ta_subset_inv aag and
+    (pas_refined aag and pas_cur_domain aag and
+     no_label_straddling_objs aag) and
+    K (is_cnode_cap (map fst excaps ! 0) \<longrightarrow>
+       (\<forall>x\<in>obj_refs_ac (map fst excaps ! 0). is_subject aag x)) and
+    K (is_cnode_cap (fst (excaps ! 1)) \<longrightarrow>
+       (\<forall>x\<in>obj_refs_ac (fst (excaps ! 1)). is_subject aag x))\<rbrace>
+   decode_invocation label args cap_index slot cap excaps 
+   \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   sorry
 
+(* Retype_A *)
+
+(* FIXME: Prove or improve.
+crunch ta_subset_inv: delete_objects "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps ignore: do_machine_op)
+*)
 lemma delete_objects_ta_subset_inv:
   "delete_objects ptr bits \<lbrace>ta_subset_inv aag\<rbrace>"
   sorry
 
+(* FIXME: Prove.
+crunch ta_subset_inv: reset_untyped_cap "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps ignore: do_machine_op)
+*)
 lemma reset_untyped_cap_ta_subset_inv:
-  "reset_untyped_cap src_slot \<lbrace>ta_subset_inv aag\<rbrace>"
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag (fst src_slot)
+           \<in> pas_labels_accessible_to aag (cur_label aag s))) and
+    (pas_refined aag and pas_cur_domain aag and
+     K (is_subject aag (fst src_slot)))\<rbrace>
+   reset_untyped_cap src_slot \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   sorry
 
+(* FIXME: Prove.
+crunch ta_subset_inv: retype_region "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
+*)
 lemma retype_region_ta_subset_inv:
   "retype_region ptr numObjects o_bits type dev \<lbrace>ta_subset_inv aag\<rbrace>"
   sorry
 
+(* FIXME: Prove.
+crunch ta_subset_inv: create_cap "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
+*)
 lemma create_cap_ta_subset_inv:
-  "create_cap type bits untyped is_device dest_oref \<lbrace>ta_subset_inv aag\<rbrace>"
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
+  "\<lbrace>ta_subset_inv aag and no_label_straddling_objs aag and
+    (pas_refined aag and pas_cur_domain aag)\<rbrace>
+   create_cap type bits untyped is_device dest_oref \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   sorry
 
+(* FIXME: Prove.
+crunch ta_subset_inv: invoke_untyped "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
+*)
 lemma invoke_untyped_ta_subset_inv:
-  "invoke_untyped ui \<lbrace>ta_subset_inv aag\<rbrace>"
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and pas_refined aag and
+     pas_cur_domain aag)\<rbrace>
+   invoke_untyped ui \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   sorry
 
+(* IpcCancel_A *)
+
+(* FIXME: Prove or improve.
+crunch ta_subset_inv: cancel_all_ipc "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
+*)
 lemma cancel_all_ipc_ta_subset_inv:
-  "cancel_all_ipc epptr \<lbrace>ta_subset_inv aag\<rbrace>"
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag epptr
+           \<in> pas_labels_accessible_to aag (cur_label aag s))) and
+    \<comment> \<open> FIXME: Trim this out using safe_addition_to_ta? -robs \<close>
+    (\<lambda>s. ta_subset_inv aag
+           (machine_state_update
+             (touched_addresses_update
+               ((\<union>) (obj_range epptr (the (kheap s epptr)))))
+             s))\<rbrace>
+   cancel_all_ipc epptr \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   sorry
 
+(* FIXME: Prove or improve.
+crunch ta_subset_inv: cancel_all_signals "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
+*)
 lemma cancel_all_signals_ta_subset_inv:
-  "cancel_all_signals ntftnptr \<lbrace>ta_subset_inv aag\<rbrace>"
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag ntftnptr
+           \<in> pas_labels_accessible_to aag (cur_label aag s))) and
+    \<comment> \<open> FIXME: Trim this out using safe_addition_to_ta? -robs \<close>
+    (\<lambda>s. ta_subset_inv aag
+           (machine_state_update
+             (touched_addresses_update
+               ((\<union>) (obj_range ntftnptr (the (kheap s ntftnptr)))))
+             s))\<rbrace>
+   cancel_all_signals ntftnptr \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   sorry
 
+(* KHeap_A *)
+(* FIXME: Prove.
+crunch ta_subset_inv: set_irq_state "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps ignore:do_machine_op)
+*)
 lemma set_irq_state_ta_subset_inv:
   "set_irq_state state irq \<lbrace>ta_subset_inv aag\<rbrace>"
   sorry
 
-lemma reply_cancel_ipc_ta_subset_inv:
-  "reply_cancel_ipc tptr \<lbrace>ta_subset_inv aag\<rbrace>"
+lemma set_bound_notification_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag ref
+           \<in> pas_labels_accessible_to aag (cur_label aag s))) and
+    \<comment> \<open> FIXME: Trim this out using safe_addition_to_ta? -robs \<close>
+    (\<lambda>s. ta_subset_inv aag
+           (machine_state_update
+             (touched_addresses_update
+               ((\<union>) (obj_range ref (the (kheap s ref)))))
+             s))\<rbrace>
+   set_bound_notification ref ntfn \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   sorry
 
-lemma update_waiting_ntfn_ta_subset_inv:
-  "update_waiting_ntfn ntfnptr queue bound_tcb badge \<lbrace>ta_subset_inv aag\<rbrace>"
-  sorry
-
-lemma send_signal_ta_subset_inv:
-  "send_signal ntfnptr badge \<lbrace>ta_subset_inv aag\<rbrace>"
-  sorry
-
-lemma suspend_ta_subset_inv:
-  "suspend thread \<lbrace>ta_subset_inv aag\<rbrace>"
-  sorry
-
-lemma restart_ta_subset_inv:
-  "restart thread \<lbrace>ta_subset_inv aag\<rbrace>"
-  sorry
-
-lemma cap_swap_ta_subset_inv:
-  "cap_swap cap1 slot1 cap2 slot2 \<lbrace>ta_subset_inv aag\<rbrace>"
-  sorry
+(* IpcCancel_A *)
 
 lemma empty_slot_ta_subset_inv:
-  "empty_slot slot cleanup_info \<lbrace>ta_subset_inv aag\<rbrace>"
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag (fst slot)
+           \<in> pas_labels_accessible_to aag (cur_label aag s))) and
+    (pas_refined aag and pas_cur_domain aag and
+     K (is_subject aag (fst slot)))\<rbrace>
+   empty_slot slot cleanup_info \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   sorry
 
+lemma cap_delete_one_ta_subset_inv:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag (fst slot)
+           \<in> pas_labels_accessible_to aag (cur_label aag s))) and
+    (pas_refined aag and pas_cur_domain aag and
+     K (is_subject aag (fst slot)))\<rbrace>
+   cap_delete_one slot \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+(* FIXME: Prove or improve.
+crunch ta_subset_inv: reply_cancel_ipc "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
+*)
+lemma reply_cancel_ipc_ta_subset_inv:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag tptr
+           \<in> pas_labels_accessible_to aag (cur_label aag s)) and
+    \<comment> \<open> FIXME: Trim this out using safe_addition_to_ta? -robs \<close>
+     (\<lambda>s. ta_subset_inv aag
+            (machine_state_update
+              (touched_addresses_update
+                ((\<union>) (obj_range tptr (the (kheap s tptr)))))
+              s))) and
+    (pas_refined aag and pas_cur_domain aag)\<rbrace>
+   reply_cancel_ipc tptr \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+(* FIXME: Prove or improve.
+crunch ta_subset_inv: cancel_ipc "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
+*)
+lemma cancel_ipc_ta_subset_inv:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag tptr
+           \<in> pas_labels_accessible_to aag (cur_label aag s))) and
+    \<comment> \<open> FIXME: Trim this out using safe_addition_to_ta? -robs \<close>
+    (\<lambda>s. ta_subset_inv aag
+           (machine_state_update
+             (touched_addresses_update
+               ((\<union>) (obj_range tptr (the (kheap s tptr)))))
+             s)) and
+    (pas_refined aag and pas_cur_domain aag)\<rbrace>
+   cancel_ipc tptr \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+(* FIXME
+crunch ta_subset_inv: unbind_maybe_notification "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
+*)
+lemma unbind_maybe_notification_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag ntfnptr
+           \<in> pas_labels_accessible_to aag (cur_label aag s))) and
+    \<comment> \<open> FIXME: Trim this out using safe_addition_to_ta? -robs \<close>
+    (\<lambda>s. ta_subset_inv aag
+           (machine_state_update
+             (touched_addresses_update
+               ((\<union>) (obj_range ntfnptr (the (kheap s ntfnptr)))))
+             s))\<rbrace>
+   unbind_maybe_notification ntfnptr \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+(* Ipc_A *)
+
+(* FIXME: Prove or improve.
+crunch ta_subset_inv: update_waiting_ntfn "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
+*)
+lemma update_waiting_ntfn_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag ntfnptr
+           \<in> pas_labels_accessible_to aag (cur_label aag s))) and
+    \<comment> \<open> FIXME: Trim this out using safe_addition_to_ta? -robs \<close>
+    (\<lambda>s. ta_subset_inv aag
+           (machine_state_update
+             (touched_addresses_update
+               ((\<union>) (obj_range ntfnptr (the (kheap s ntfnptr)))))
+             s))\<rbrace>
+   update_waiting_ntfn ntfnptr queue bound_tcb badge 
+   \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+(* FIXME: Prove or improve.
+crunch ta_subset_inv: send_signal "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
+*)
+lemma send_signal_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag ntfnptr
+           \<in> pas_labels_accessible_to aag (cur_label aag s))) and
+    \<comment> \<open> FIXME: Trim this out using safe_addition_to_ta? -robs \<close>
+    (\<lambda>s. ta_subset_inv aag
+           (machine_state_update
+             (touched_addresses_update
+               ((\<union>) (obj_range ntfnptr (the (kheap s ntfnptr)))))
+             s)) and
+    (pas_refined aag and pas_cur_domain aag)\<rbrace>
+   send_signal ntfnptr badge \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+(* IpcCancel_A *)
+(* FIXME: Prove or improve.
+crunch ta_subset_inv: suspend "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
+*)
+lemma suspend_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag thread
+           \<in> pas_labels_accessible_to aag (cur_label aag s)) and
+     \<comment> \<open> FIXME: Trim this out using safe_addition_to_ta? -robs \<close>
+     (\<lambda>s. ta_subset_inv aag
+            (machine_state_update
+              (touched_addresses_update
+                ((\<union>) (obj_range thread (the (kheap s thread)))))
+              s)) and
+     pas_refined aag and
+     pas_cur_domain aag)\<rbrace>
+   suspend thread \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+(* Tcb_A *)
+
+(* FIXME: Prove
+crunch ta_subset_inv: setup_reply_master "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
+*)
+lemma setup_reply_master_ta_subset_inv:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag thread
+           \<in> pas_labels_accessible_to aag (cur_label aag s))) and
+    (pas_refined aag and pas_cur_domain aag and
+     K (is_subject aag (fst (thread, tcb_cnode_index 2))))\<rbrace>
+   setup_reply_master thread \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+(* FIXME: Prove or improve
+crunch ta_subset_inv: restart "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
+*)
+lemma restart_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag thread
+           \<in> pas_labels_accessible_to aag (cur_label aag s))) and
+    \<comment> \<open> FIXME: Trim this out using safe_addition_to_ta? -robs \<close>
+    ((\<lambda>s. ta_subset_inv aag
+            (machine_state_update
+              (touched_addresses_update
+                ((\<union>) (obj_range thread (the (kheap s thread)))))
+              s)) and
+     pas_refined aag and
+     pas_cur_domain aag) and
+    K (is_subject aag (fst (thread, tcb_cnode_index 2)))\<rbrace>
+   restart thread \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+(* CSpace_A *)
+(* FIXME
+crunch ta_subset_inv: cap_swap "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
+*)
+lemma cap_swap_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and
+    \<comment> \<open> FIXME: Trim this out using safe_addition_to_ta? -robs \<close>
+    (\<lambda>s. ta_subset_inv aag
+           (machine_state_update
+             (touched_addresses_update
+               ((\<union>) (\<Union>(x, y)\<in>{(p, ko).
+                                p \<in> {fst slot1, fst slot2} \<and>
+                                ko_at ko p s}.
+                         obj_range x y)))
+             s)) and
+    (pas_refined aag and pas_cur_domain aag and
+     K (is_subject aag (fst slot1))) and
+    K (is_subject aag (fst slot2))\<rbrace>
+   cap_swap cap1 slot1 cap2 slot2 \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+(* ArchVSpace_A *)
+
+(* FIXME
+crunch ta_subset_inv: set_vm_root "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps ignore:do_machine_op)
+*)
+lemma set_vm_root_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and no_label_straddling_objs aag\<rbrace>
+   set_vm_root tcb \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+(* FIXME
+crunch ta_subset_inv: delete_asid_pool "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps ignore:do_machine_op)
+*)
 lemma delete_asid_pool_ta_subset_inv:
-  "delete_asid_pool base ptr \<lbrace>ta_subset_inv aag\<rbrace>"
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag ptr
+           \<in> pas_labels_accessible_to aag (cur_label aag s)))\<rbrace>
+   delete_asid_pool base ptr \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   sorry
 
+(* CSpace_A *)
+
+lemma cap_swap_for_delete_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and
+    (\<lambda>s. ta_subset_inv aag
+           (machine_state_update
+             (touched_addresses_update
+               ((\<union>) (\<Union>(x, y)\<in>{(p, ko).
+                                p \<in> {fst slot1, fst slot2} \<and>
+                                ko_at ko p s}.
+                         obj_range x y)))
+             s)) and
+    (pas_refined aag and pas_cur_domain aag and
+     K (is_subject aag (fst slot1)) and
+     K (is_subject aag (fst slot2)))\<rbrace>
+   cap_swap_for_delete slot1 slot2 \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma deleting_irq_handler_ta_subset_inv:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and pas_refined aag and
+     pas_cur_domain aag)\<rbrace>
+   deleting_irq_handler irq \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+(* ArchVSpaceAcc_A *)
+
+lemma store_pte_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and no_label_straddling_objs aag\<rbrace>
+   store_pte p pte \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma copy_global_mappings_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and no_label_straddling_objs aag\<rbrace>
+   copy_global_mappings new_pm \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+(* ArchVSpace_A *)
+
+lemma unmap_page_table_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and no_label_straddling_objs aag\<rbrace>
+   unmap_page_table asid vaddr pt \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma delete_asid_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and no_label_straddling_objs aag\<rbrace>
+   delete_asid asid pt \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma arch_finalise_cap_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and no_label_straddling_objs aag\<rbrace>
+   arch_finalise_cap c x \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+(* CSpace_A *)
+(* FIXME: Prove or improve.
+crunch ta_subset_inv: rec_del "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
+*)
 lemma rec_del_ta_subset_inv:
-  "rec_del rdc \<lbrace>ta_subset_inv aag\<rbrace>"
+  "\<lbrace>ta_subset_inv aag and (pas_refined aag and pas_cur_domain aag) and
+   no_label_straddling_objs aag\<rbrace>
+   rec_del rdc \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   sorry
 
+(* Tcb_A *)
+
+(* FIXME
+crunch ta_subset_inv: check_cap_at "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
+*)
 lemma check_cap_at_ta_subset_inv:
-  "check_cap_at cap slot m \<lbrace>ta_subset_inv aag\<rbrace>"
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag (fst slot)
+           \<in> pas_labels_accessible_to aag (cur_label aag s)))\<rbrace>
+  check_cap_at cap slot m \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   sorry
 
+(* FIXME
+crunch ta_subset_inv: invoke_domain "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
+*)
 lemma invoke_domain_ta_subset_inv:
   "invoke_domain thread domain \<lbrace>ta_subset_inv aag\<rbrace>"
   sorry
 
+lemma get_mrs_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag thread
+           \<in> pas_labels_accessible_to aag (cur_label aag s)))\<rbrace>
+   get_mrs thread buf info \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma bind_notification_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag ntfnptr
+           \<in> pas_labels_accessible_to aag (cur_label aag s))) and
+    \<comment> \<open> FIXME: Trim this out using safe_addition_to_ta? -robs \<close>
+    (\<lambda>s. ta_subset_inv aag
+           (machine_state_update
+             (touched_addresses_update
+               ((\<union>) (obj_range ntfnptr (the (kheap s ntfnptr)))))
+             s)) and
+    ((\<lambda>s. pasObjectAbs aag tcbptr
+           \<in> pas_labels_accessible_to aag (cur_label aag s)) and
+     \<comment> \<open> FIXME: Trim this out using safe_addition_to_ta? -robs \<close>
+     (\<lambda>s. ta_subset_inv aag
+            (machine_state_update
+              (touched_addresses_update
+                ((\<union>) (obj_range tcbptr (the (kheap s tcbptr)))))
+              s)))\<rbrace>
+   bind_notification tcbptr ntfnptr \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+(* Ipc_A *)
+
+(* FIXME
+crunch ta_subset_inv: do_ipc_transfer "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
+*)
+lemma do_ipc_transfer_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag sender
+           \<in> pas_labels_accessible_to aag (cur_label aag s))) and
+    ((\<lambda>s. ta_subset_inv aag
+            (machine_state_update
+              (touched_addresses_update
+                ((\<union>) (obj_range sender (the (kheap s sender)))))
+              s)) and
+     pas_refined aag and
+     pas_cur_domain aag and
+     K (is_subject aag sender) and
+     (\<lambda>s. pasObjectAbs aag receiver
+           \<in> pas_labels_accessible_to aag (cur_label aag s)) and
+     (\<lambda>s. ta_subset_inv aag
+            (machine_state_update
+              (touched_addresses_update
+                ((\<union>) (obj_range receiver (the (kheap s receiver)))))
+              s)))\<rbrace>
+   do_ipc_transfer sender ep badge grant receiver 
+   \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma handle_fault_reply_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and no_label_straddling_objs aag\<rbrace>
+   handle_fault_reply fault thread label msg 
+   \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+(* FIXME
+crunch ta_subset_inv: do_reply_transfer "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
+*)
 lemma do_reply_transfer_ta_subset_inv:
-  "do_reply_transfer sender receiver slot grant  \<lbrace>ta_subset_inv aag\<rbrace>"
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag receiver
+           \<in> pas_labels_accessible_to aag (cur_label aag s))) and
+    ((\<lambda>s. pasObjectAbs aag sender
+           \<in> pas_labels_accessible_to aag (cur_label aag s)) and
+     \<comment> \<open> FIXME: Trim this out using safe_addition_to_ta? -robs \<close>
+     (\<lambda>s. ta_subset_inv aag
+            (machine_state_update
+              (touched_addresses_update
+                ((\<union>) (obj_range sender (the (kheap s sender)))))
+              s)) and
+     pas_refined aag and
+     pas_cur_domain aag and
+     K (is_subject aag sender) and
+     \<comment> \<open> FIXME: Trim this out using safe_addition_to_ta? -robs \<close>
+     (\<lambda>s. ta_subset_inv aag
+            (machine_state_update
+              (touched_addresses_update
+                ((\<union>) (obj_range receiver (the (kheap s receiver)))))
+              s))) and
+    ((\<lambda>s. pasObjectAbs aag (fst slot)
+           \<in> pas_labels_accessible_to aag (cur_label aag s)) and
+     K (is_subject aag (fst slot)))\<rbrace>
+  do_reply_transfer sender receiver slot grant 
+  \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   sorry
 
+lemma handle_fault_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag thread
+           \<in> pas_labels_accessible_to aag (cur_label aag s))) and
+    (pas_refined aag and pas_cur_domain aag and
+     K (is_subject aag thread) and
+     \<comment> \<open> FIXME: Trim this out using safe_addition_to_ta? -robs \<close>
+     (\<lambda>s. ta_subset_inv aag
+            (machine_state_update
+              (touched_addresses_update
+                ((\<union>) (obj_range thread (the (kheap s thread)))))
+              s)) and
+     pspace_aligned and
+     valid_vspace_objs and
+     valid_arch_state and
+     (\<lambda>s. is_transferable_in (thread, tcb_cnode_index 2) s \<and>
+           \<not> Option.is_none (cdt s (thread, tcb_cnode_index 2)) \<longrightarrow>
+           (pasObjectAbs aag
+             (fst $ the $ cdt s (thread, tcb_cnode_index 2)),
+            Control, pasSubject aag)
+           \<in> pasPolicy aag))\<rbrace>
+   handle_fault thread ex \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma reply_from_kernel_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag thread
+           \<in> pas_labels_accessible_to aag (cur_label aag s)) and
+     \<comment> \<open> FIXME: Trim this out using safe_addition_to_ta? -robs \<close>
+     (\<lambda>s. ta_subset_inv aag
+            (machine_state_update
+              (touched_addresses_update
+                ((\<union>) (obj_range thread (the (kheap s thread)))))
+              s)))\<rbrace>
+   reply_from_kernel thread x \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma setup_caller_cap_ta_subset_inv:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag sender
+           \<in> pas_labels_accessible_to aag (cur_label aag s)) and
+     \<comment> \<open> FIXME: Trim this out using safe_addition_to_ta? -robs \<close>
+     (\<lambda>s. ta_subset_inv aag
+            (machine_state_update
+              (touched_addresses_update
+                ((\<union>) (obj_range sender (the (kheap s sender)))))
+              s))) and
+    (pas_refined aag and pas_cur_domain aag and
+     K (is_subject aag (fst (sender, tcb_cnode_index 2))) and
+     K (is_subject aag (fst (receiver, tcb_cnode_index 3))) and
+     pspace_aligned and
+     valid_vspace_objs and
+     valid_arch_state and
+     (\<lambda>s. is_transferable_in (sender, tcb_cnode_index 2) s \<and>
+           \<not> Option.is_none (cdt s (sender, tcb_cnode_index 2)) \<longrightarrow>
+           (pasObjectAbs aag
+             (fst $ the $ cdt s (sender, tcb_cnode_index 2)),
+            Control, pasSubject aag)
+           \<in> pasPolicy aag))\<rbrace>
+   setup_caller_cap sender receiver grant \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma complete_signal_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag ntfnptr
+           \<in> pas_labels_accessible_to aag (cur_label aag s))) and
+    ((\<lambda>s. pasObjectAbs aag tcb
+           \<in> pas_labels_accessible_to aag (cur_label aag s)) and
+     \<comment> \<open> FIXME: Trim this out using safe_addition_to_ta? -robs \<close>
+     (\<lambda>s. ta_subset_inv aag
+            (machine_state_update
+              (touched_addresses_update
+                ((\<union>) (obj_range tcb (the (kheap s tcb)))))
+              s))) and
+     \<comment> \<open> FIXME: Trim this out using safe_addition_to_ta? -robs \<close>
+    (\<lambda>s. ta_subset_inv aag
+           (machine_state_update
+             (touched_addresses_update
+               ((\<union>) (obj_range ntfnptr (the (kheap s ntfnptr)))))
+             s))\<rbrace>
+   complete_signal ntfnptr tcb  \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma receive_signal_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and no_label_straddling_objs aag and
+    ((\<lambda>s. pasObjectAbs aag thread
+           \<in> pas_labels_accessible_to aag (cur_label aag s)) and
+     \<comment> \<open> FIXME: Trim this out using safe_addition_to_ta? -robs \<close>
+     (\<lambda>s. ta_subset_inv aag
+            (machine_state_update
+              (touched_addresses_update
+                ((\<union>) (obj_range thread (the (kheap s thread)))))
+              s)))\<rbrace>
+   receive_signal thread cap is_blocking \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+(* CSpace_A *)
+(* FIXME
+crunch ta_subset_inv: cap_move "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
+*)
 lemma cap_move_ta_subset_inv:
-  "cap_move new_cap src_slot dest_slot \<lbrace>ta_subset_inv aag\<rbrace>"
+  "\<lbrace>ta_subset_inv aag and
+    \<comment> \<open> FIXME: Trim this out using safe_addition_to_ta? -robs \<close>
+    (\<lambda>s. ta_subset_inv aag
+           (machine_state_update
+             (touched_addresses_update
+               ((\<union>) (\<Union>(x, y)\<in>{(p, ko).
+                                p \<in> {fst dest_slot, fst src_slot} \<and>
+                                ko_at ko p s}.
+                         obj_range x y)))
+             s)) and
+    (pas_refined aag and pas_cur_domain aag and
+     K (is_subject aag (fst dest_slot))) and
+    K (is_subject aag (fst src_slot))\<rbrace>
+   cap_move new_cap src_slot dest_slot \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   sorry
 
+(* IpcCancel_A *)
+(* FIXME
+crunch ta_subset_inv: cancel_badged_sends "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
+*)
 lemma cancel_badged_sends_ta_subset_inv:
-  "cancel_badged_sends epptr badge \<lbrace>ta_subset_inv aag\<rbrace>"
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag epptr
+           \<in> pas_labels_accessible_to aag (cur_label aag s))) and
+    \<comment> \<open> FIXME: Trim this out using safe_addition_to_ta? -robs \<close>
+    (\<lambda>s. ta_subset_inv aag
+           (machine_state_update
+             (touched_addresses_update
+               ((\<union>) (obj_range epptr (the (kheap s epptr)))))
+             s))\<rbrace>
+  cancel_badged_sends epptr badge \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   sorry
 
+lemma unbind_notification_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag tcb
+           \<in> pas_labels_accessible_to aag (cur_label aag s))) and
+    \<comment> \<open> FIXME: Trim this out using safe_addition_to_ta? -robs \<close> 
+    (\<lambda>s. ta_subset_inv aag
+           (machine_state_update
+             (touched_addresses_update
+               ((\<union>) (obj_range tcb (the (kheap s tcb)))))
+             s))\<rbrace>
+   unbind_notification tcb \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>" 
+  sorry
+
+(* ArchInterrupt_A *)
+lemma arch_invoke_irq_handler_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag\<rbrace> arch_invoke_irq_handler irqh_invocation \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+(* Interrupt_A *)
+
+(* FIXME:
+crunch ta_subset_inv: invoke_irq_handler "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps ignore:do_machine_op)
+*)
 lemma invoke_irq_handler_ta_subset_inv:
-  "invoke_irq_handler irqh_invocation \<lbrace>ta_subset_inv aag\<rbrace>"
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and pas_refined aag and
+     pas_cur_domain aag) and
+    (pspace_aligned and valid_vspace_objs and valid_arch_state)\<rbrace>
+   invoke_irq_handler irqh_invocation \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   sorry
 
+(* FIXME
+crunch ta_subset_inv: handle_interrupt "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps ignore:do_machine_op)
+*)
+lemma handle_interrupt_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and no_label_straddling_objs aag and
+    (pas_refined aag and pas_cur_domain aag)\<rbrace>
+   handle_interrupt irq \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma invoke_irq_control_ta_subset_inv:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
+  "\<lbrace>ta_subset_inv aag and
+    (pas_refined aag and pas_cur_domain aag and pspace_aligned and
+     valid_vspace_objs and
+     valid_arch_state)\<rbrace>
+   invoke_irq_control invok \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+(* CSpace_A *)
+
+crunch ta_subset_inv: cap_delete "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
+
+(* FIXME: There seems to be a type error here!?
+crunch ta_subset_inv: cap_revoke "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
+*)
 lemma cap_revoke_ta_subset_inv:
   "cap_revoke slot \<lbrace>ta_subset_inv aag\<rbrace>"
   sorry
 
-lemma perform_asid_control_invocation_ta_subset_inv:
-  "perform_asid_control_invocation iv \<lbrace>ta_subset_inv aag\<rbrace>"
+lemma invoke_cnode_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and
+    (pas_refined aag and pas_cur_domain aag and pspace_aligned and
+     valid_vspace_objs and
+     valid_arch_state) and
+    no_label_straddling_objs aag\<rbrace>
+   invoke_cnode i \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   sorry
 
+(* Arch_A *)
+(* FIXME
+crunch ta_subset_inv: perform_asid_control_invocation "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
+*)
+lemma perform_asid_control_invocation_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and no_label_straddling_objs aag and
+    (pas_refined aag and pas_cur_domain aag) and
+    (pspace_aligned and valid_vspace_objs and valid_arch_state)\<rbrace>
+   perform_asid_control_invocation iv \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma arch_invoke_irq_control_ta_subset_inv:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
+  "\<lbrace>ta_subset_inv aag and
+    (pas_refined aag and pas_cur_domain aag and pspace_aligned and
+     valid_vspace_objs and
+     valid_arch_state)\<rbrace>
+   arch_invoke_irq_control invok \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma perform_pt_inv_map_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and
+    (\<lambda>s. ta_subset_inv aag
+           (machine_state_update
+             (touched_addresses_update
+               ((\<union>) (\<Union>(x, y)\<in>{(p, ko).
+                                p \<in> {fst ct_slot, slot} \<and>
+                                ko_at ko p s}.
+                         obj_range x y)))
+             s)) and
+    (pas_refined aag and pas_cur_domain aag and
+     K (is_subject aag (fst ct_slot))) and
+    no_label_straddling_objs aag\<rbrace>
+   perform_pt_inv_map cap ct_slot pte slot
+   \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma perform_pt_inv_unmap_ta_subset_inv:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
+  "\<lbrace>ta_subset_inv aag and no_label_straddling_objs aag and
+    (\<lambda>s. pasObjectAbs aag (fst ct_slot)
+          \<in> pas_labels_accessible_to aag (cur_label aag s)) and
+    (pas_refined aag and pas_cur_domain aag and
+     K (is_subject aag (fst ct_slot)))\<rbrace>
+   perform_pt_inv_unmap cap ct_slot \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma perform_page_table_invocation_ta_subset_inv:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
+  "\<lbrace>ta_subset_inv aag and
+    (pas_refined aag and pas_cur_domain aag and
+     no_label_straddling_objs aag)\<rbrace>
+   perform_page_table_invocation iv \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma perform_pg_inv_map_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and
+    \<comment> \<open> FIXME: Trim this out using safe_addition_to_ta? -robs \<close>
+    (\<lambda>s. ta_subset_inv aag
+           (machine_state_update
+             (touched_addresses_update
+               ((\<union>) (\<Union>(x, y)\<in>{(p, ko).
+                                p \<in> {fst ct_slot, slot} \<and>
+                                ko_at ko p s}.
+                         obj_range x y)))
+             s)) and
+    (pas_refined aag and pas_cur_domain aag and
+     K (is_subject aag (fst ct_slot))) and
+    no_label_straddling_objs aag\<rbrace>
+   perform_pg_inv_map cap ct_slot pte slot 
+   \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma perform_pg_inv_unmap_ta_subset_inv:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
+  "\<lbrace>ta_subset_inv aag and no_label_straddling_objs aag and
+    (\<lambda>s. pasObjectAbs aag (fst ct_slot)
+          \<in> pas_labels_accessible_to aag (cur_label aag s)) and
+    (pas_refined aag and pas_cur_domain aag and
+     K (is_subject aag (fst ct_slot)))\<rbrace>
+   perform_pg_inv_unmap cap ct_slot \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma perform_page_invocation_ta_subset_inv:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
+  "\<lbrace>ta_subset_inv aag and
+    (pas_refined aag and pas_cur_domain aag and
+     no_label_straddling_objs aag)\<rbrace>
+   perform_page_invocation iv \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma store_asid_pool_entry_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag pool_ptr
+           \<in> pas_labels_accessible_to aag (cur_label aag s))) and
+    \<comment> \<open> FIXME: Trim this out using safe_addition_to_ta? -robs \<close>
+    (\<lambda>s. ta_subset_inv aag
+           (machine_state_update
+             (touched_addresses_update
+               ((\<union>) (obj_range pool_ptr (the (kheap s pool_ptr)))))
+             s))\<rbrace>
+   store_asid_pool_entry pool_ptr asid ptr
+   \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma arch_perform_invocation_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and
+    (pas_refined aag and pas_cur_domain aag and
+     no_label_straddling_objs aag) and
+    (pspace_aligned and valid_vspace_objs and valid_arch_state)\<rbrace>
+   arch_perform_invocation i \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+(* Syscall_A *)
+(* FIXME
+crunch ta_subset_inv: handle_yield "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
+*)
 lemma handle_yield_ta_subset_inv:
   "handle_yield \<lbrace>ta_subset_inv aag\<rbrace>"
   sorry
 
-lemma handle_interrupt_ta_subset_inv:
-  "handle_interrupt irq \<lbrace>ta_subset_inv aag\<rbrace>"
+lemma syscall_ta_subset_inv:
+  "syscall m_fault h_fault m_error h_error m_finalise \<lbrace>ta_subset_inv aag\<rbrace>"
   sorry
 
+lemma handle_invocation_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and no_label_straddling_objs aag and
+    (pas_refined aag and pas_cur_domain aag) and
+    (pspace_aligned and valid_vspace_objs and valid_arch_state)\<rbrace>
+   handle_invocation calling blocking \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace> "
+  sorry
+
+lemma delete_caller_cap_ta_subset_inv:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag (fst (t, tcb_cnode_index 3))
+           \<in> pas_labels_accessible_to aag (cur_label aag s)) and
+     pas_refined aag and
+     pas_cur_domain aag and
+     K (is_subject aag (fst (t, tcb_cnode_index 3))))\<rbrace>
+   delete_caller_cap t \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma handle_reply_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and no_label_straddling_objs aag and
+    (pas_refined aag and pas_cur_domain aag)\<rbrace>
+   handle_reply \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+(* FIXME
+crunch ta_subset_inv: handle_event "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps ignore:do_machine_op)
+*)
 lemma handle_event_ta_subset_inv:
-  "handle_event ev \<lbrace>ta_subset_inv aag\<rbrace>"
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and pas_refined aag and
+     pas_cur_domain aag and
+     pspace_aligned and
+     valid_vspace_objs and
+     valid_arch_state)\<rbrace>
+   handle_event ev \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   sorry
 
 (* For schedule_if *)
 
+(* Arch_A *)
+lemma arch_mask_interrupts_ta_subset_inv:
+  "arch_mask_interrupts m irqs \<lbrace>ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma arch_domainswitch_flush_ta_subset_inv:
+  "arch_domainswitch_flush \<lbrace>ta_subset_inv aag\<rbrace>"
+  sorry
+
+(* ArchVSpace_A *)
+lemma arch_switch_domain_kernel_ta_subset_inv:
+  "arch_switch_domain_kernel newdom \<lbrace>ta_subset_inv aag\<rbrace>"
+  sorry
+
+(* Deterministic_A *)
+lemma set_scheduler_action_ta_subset_inv:
+  "set_scheduler_action action \<lbrace>ta_subset_inv aag\<rbrace>"
+  sorry
+
+(* Schedule_A *)
+
+(* FIXME
+crunch ta_subset_inv: switch_to_idle_thread "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps ignore:do_machine_op)
+*)
 lemma switch_to_idle_thread_ta_subset_inv:
-  "switch_to_idle_thread \<lbrace>ta_subset_inv aag\<rbrace>"
+  "\<lbrace>ta_subset_inv aag and no_label_straddling_objs aag\<rbrace>
+   switch_to_idle_thread \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   sorry
 
+lemma guarded_switch_to_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag thread
+           \<in> pas_labels_accessible_to aag (cur_label aag s)))\<rbrace>
+   guarded_switch_to thread \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma choose_thread_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and no_label_straddling_objs aag\<rbrace> choose_thread 
+   \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+(* FIXME
+crunch ta_subset_inv: schedule_choose_new_thread "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps ignore:do_machine_op)
+*)
 lemma schedule_choose_new_thread_ta_subset_inv:
-  "schedule_choose_new_thread \<lbrace>ta_subset_inv aag\<rbrace>"
+  "\<lbrace>ta_subset_inv aag and no_label_straddling_objs aag\<rbrace>
+   schedule_choose_new_thread \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   sorry
 
+(* FIXME
+crunch ta_subset_inv: switch_to_thread "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps ignore:do_machine_op)
+*)
 lemma switch_to_thread_ta_subset_inv:
-  "switch_to_thread t \<lbrace>ta_subset_inv aag\<rbrace>"
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and
+     (\<lambda>s. pasObjectAbs aag t
+           \<in> pas_labels_accessible_to aag (cur_label aag s)))\<rbrace>
+   switch_to_thread t \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   sorry
 
+(* FIXME
+crunch ta_subset_inv: schedule "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps ignore:do_machine_op)
+*)
 lemma schedule_ta_subset_inv:
-  "schedule \<lbrace>ta_subset_inv aag\<rbrace>"
+  "\<lbrace>ta_subset_inv aag and no_label_straddling_objs aag\<rbrace> schedule 
+   \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   sorry
 
 (* Need to import InfoFlow.ADT_IF for the following section:
@@ -1315,7 +2404,6 @@ lemma "ta_subset_accessible_addrs aag s0"
   unfolding ta_subset_accessible_addrs_def
   using init_ta_empty
   by blast
-
 end
 
 end
