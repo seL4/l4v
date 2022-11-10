@@ -381,9 +381,13 @@ lemma safe_addition_to_ta_validI:
 (* KHeap_A *)
 (* FIXME: Perhaps there is a better form for this that avoids us having to use it in the
    convoluted way we do in lookup_cap_and_slot_ta_subset_inv (see further below). *)
+(* Toby: Consider rephrasing to be in terms of is_subject, or at least having a version
+   that is in terms of that.
+   Or, the *weakest precondition* rule will have this more generic version,
+   and we have another lemma that says is_subject gives us this. *)
 lemma touch_object_ta_subset_inv:
   "\<lbrace>ta_subset_inv aag and no_label_straddling_objs aag and
-   (\<lambda>s. pasObjectAbs aag p \<in> pas_labels_accessible_to aag (cur_label aag s)) and ko_at ko p\<rbrace>
+   (\<lambda>s. pasObjectAbs aag p \<in> pas_labels_accessible_to aag (cur_label aag s)) and obj_at P p\<rbrace>
      touch_object p \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   by (wpsimp wp:touch_object_wp' simp:safe_addition_to_ta obj_at_def)
 
@@ -680,6 +684,11 @@ lemma get_extra_cptrs_ta_subset_inv:
 
 (* CSpace_A *)
 
+(* Toby: Consider fixing broken Access proofs enough to repair old reasoning
+   that affects the proofs in this file too, especially anything to do with
+   invariant preservation lemmas that got broken: Can we make them such that
+   they say if P (e.g. pas_refined) ignores TA then P is preserved by the
+   function f if f *only* changes TA. *)
 (* Note: Needed manual proof with customised precondition, just like rab. -robs *)
 thm lookup_slot_for_thread_authorised
 (* FIXME: Perhaps there is a better form for this that avoids us having to use it in the
@@ -693,12 +702,9 @@ lemma lookup_slot_for_thread_ta_subset_inv:
   apply(wpsimp wp: resolve_address_bits'_ta_subset_inv touch_object_wp
     simp: lookup_slot_for_thread_def resolve_address_bits_def)
   apply(rule conjI)
-   apply(rule safe_addition_to_ta)
-      apply force
-     apply force
-    apply(clarsimp simp:pas_labels_accessible_to_def)
-    using domains_distinct cur_label_to_subj
-    apply force
+   using safe_addition_to_ta
+   apply(clarsimp simp:pas_labels_accessible_to_def)
+   using domains_distinct cur_label_to_subj
    apply force
   apply clarsimp
   apply(drule get_tcb_Some_True_False)
@@ -713,11 +719,32 @@ crunch pas_refined: lookup_slot_for_thread "pas_refined aag"
 lemma lookup_cap_and_slot_ta_subset_inv:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
+  (* Toby: Note, when you do stuff in your cspace, or arch-specific stuff (because it pertains
+     to your own address space) everything will typically be is_subject.
+     It'll only be otherwise for Notifications, Ipc etc. *)
   "\<lbrace>ta_subset_inv aag and pas_refined aag and pas_cur_domain aag and K (is_subject aag thread)\<rbrace>
      lookup_cap_and_slot thread cptr
    \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   unfolding lookup_cap_and_slot_def
-  apply(wpsimp wp:crunch_wps) (* touch_object_ta_subset_inv *)
+  (* NB: This is same as applying (wpsimp wp: crunch_wps touch_object_ta_subset_inv) *)
+  (* Toby: wpc is the tactic that handles cases for wp *)
+  apply(wpc | wp touch_object_ta_subset_inv)+
+  apply clarsimp
+  (* Toby: 1. Ask Corey how to break down this conjunction with forall
+     or how to avoid getting into this situation. *)
+  (* Toby: 2. Look at how lookup_slot_real_cte_at_wp is used in existing proofs
+     and how these proofs are set up in order to be able to use it. *)
+  (* Toby: The usual pattern here is to use individual lemmas that each discharge
+     (as their single postcondition) one of the conjuncts of this proof goal.
+     So, for these:
+     - lookup_slot_for_thread_ta_subset_inv
+     - something that preserves no_label_straddling_objs (we're supposing pas_refined, for now)
+     - something that preserves is_subject to give us "pasObjectAbs ... \<in> pas_labels etc",
+       probably lookup_slot_for_thread_authorised?
+     - here, obj_at should be discharged by lookup_slot_real_cte_at_wp? *)
+  find_theorems lookup_slot_for_thread obj_at
+(*
+  apply (wpsimp wp: crunch_wps) (* touch_object_ta_subset_inv *)
     apply(rename_tac p bb x2)
     using use_valid[OF _ touch_object_ta_subset_inv[where aag=aag]]
     apply(clarsimp simp:valid_def)
@@ -788,6 +815,7 @@ lemma lookup_cap_and_slot_ta_subset_inv:
    using domains_distinct cur_label_to_subj
    apply force
   apply clarsimp
+*)
   sorry
 
 (* Ipc_A *)
@@ -866,9 +894,9 @@ lemma get_receive_slots_ta_subset_inv:
   shows
   "\<lbrace>ta_subset_inv aag and (pas_refined aag and pas_cur_domain aag and
       K (\<forall>rbuf. recv_buf = Some rbuf \<longrightarrow> is_subject aag receiver))\<rbrace>
-     get_receive_slots receiver receive_buf
+     get_receive_slots receiver recv_buf
    \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
-  apply(cases receive_buf)
+  apply(cases recv_buf)
    apply(wpsimp wp: crunch_wps touch_objects_wp touch_object_wp')
   apply(wpsimp wp: crunch_wps touch_objects_wp touch_object_wp'
     (* XXX: Not helpful... *)
@@ -2229,6 +2257,7 @@ lemma arch_perform_invocation_ta_subset_inv:
 crunch ta_subset_inv: handle_yield "ta_subset_inv aag"
   (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
 *)
+thm handle_yield_pas_refined
 lemma handle_yield_ta_subset_inv:
   "handle_yield \<lbrace>ta_subset_inv aag\<rbrace>"
   sorry
@@ -2237,6 +2266,27 @@ lemma syscall_ta_subset_inv:
   "syscall m_fault h_fault m_error h_error m_finalise \<lbrace>ta_subset_inv aag\<rbrace>"
   sorry
 
+thm perform_invocation_pas_refined
+lemma perform_invocation_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and pas_refined aag and pas_cur_domain aag) and
+    (pspace_aligned and valid_vspace_objs and valid_arch_state)\<rbrace>
+   perform_invocation calling blocking oper \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+thm invoke_tcb_pas_refined
+lemma invoke_tcb_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and
+    (no_label_straddling_objs aag and pas_refined aag and pas_cur_domain aag) and
+    (pspace_aligned and valid_vspace_objs and valid_arch_state)\<rbrace>
+   invoke_tcb tcbi \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+(* FIXME
+crunch ta_subset_inv: handle_invocation "ta_subset_inv aag"
+  (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
+*)
+thm handle_invocation_pas_refined
 lemma handle_invocation_ta_subset_inv:
   "\<lbrace>ta_subset_inv aag and no_label_straddling_objs aag and
     (pas_refined aag and pas_cur_domain aag) and
@@ -2320,6 +2370,8 @@ lemma guarded_switch_to_ta_subset_inv:
 lemma choose_thread_ta_subset_inv:
   "\<lbrace>ta_subset_inv aag and no_label_straddling_objs aag\<rbrace> choose_thread 
    \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  unfolding choose_thread_def
+  apply (wpsimp wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
   sorry
 
 (* FIXME
@@ -2329,18 +2381,23 @@ crunch ta_subset_inv: schedule_choose_new_thread "ta_subset_inv aag"
 lemma schedule_choose_new_thread_ta_subset_inv:
   "\<lbrace>ta_subset_inv aag and no_label_straddling_objs aag\<rbrace>
    schedule_choose_new_thread \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  unfolding schedule_choose_new_thread_def
+  apply (wpsimp wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
   sorry
 
 (* FIXME
 crunch ta_subset_inv: switch_to_thread "ta_subset_inv aag"
   (wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps ignore:do_machine_op)
 *)
+
 lemma switch_to_thread_ta_subset_inv:
   "\<lbrace>ta_subset_inv aag and
     (no_label_straddling_objs aag and
      (\<lambda>s. pasObjectAbs aag t
            \<in> pas_labels_accessible_to aag (cur_label aag s)))\<rbrace>
    switch_to_thread t \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  unfolding switch_to_thread_def
+  apply (wpsimp wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
   sorry
 
 (* FIXME
@@ -2350,6 +2407,8 @@ crunch ta_subset_inv: schedule "ta_subset_inv aag"
 lemma schedule_ta_subset_inv:
   "\<lbrace>ta_subset_inv aag and no_label_straddling_objs aag\<rbrace> schedule 
    \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  unfolding schedule_def
+  apply (wpsimp wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
   sorry
 
 (* Need to import InfoFlow.ADT_IF for the following section:
