@@ -12,6 +12,10 @@ theory ArchRetype_AI
 imports Retype_AI
 begin
 
+sublocale touched_addresses_inv \<subseteq> cap_refs_respects_device_region:touched_addresses_P_inv _ _
+    cap_refs_respects_device_region
+  by unfold_locales (clarsimp simp: ta_agnostic_def)+
+
 context Arch begin global_naming RISCV64
 
 named_theorems Retype_AI_assms
@@ -106,67 +110,33 @@ crunch cap_refs_respects_device_region[wp]: reserve_region cap_refs_respects_dev
 
 crunch invs [wp]: reserve_region "invs"
 
-crunch iflive[wp]: copy_global_mappings "if_live_then_nonz_cap"
+crunches copy_global_mappings
+  for iflive[wp]: if_live_then_nonz_cap
+  and zombies[wp]: zombies_final
+  and state_refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
+  and valid_idle[wp]: valid_idle
+  and only_idle[wp]: only_idle
+  and ifunsafe[wp]: if_unsafe_then_cap
+  and reply_caps[wp]: valid_reply_caps
+  and reply_masters[wp]: valid_reply_masters
+  and valid_global[wp]: valid_global_refs
+  and irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
+  and irq_states[wp]: "\<lambda>s. P (interrupt_states s)"
+  and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
+  and pspace_in_kernel_window[wp]: pspace_in_kernel_window
+  and cap_refs_in_kernel_window[wp]: cap_refs_in_kernel_window
+  and pspace_respects_device_region[wp]: pspace_respects_device_region
+  and cap_refs_respects_device_region[wp]: cap_refs_respects_device_region
   (wp: crunch_wps)
-
-crunch zombies[wp]: copy_global_mappings "zombies_final"
-  (wp: crunch_wps)
-
-crunch state_refs_of[wp]: copy_global_mappings "\<lambda>s. P (state_refs_of s)"
-  (wp: crunch_wps)
-
-crunch valid_idle[wp]: copy_global_mappings "valid_idle"
-  (wp: crunch_wps)
-
-crunch only_idle[wp]: copy_global_mappings "only_idle"
-  (wp: crunch_wps)
-
-crunch ifunsafe[wp]: copy_global_mappings "if_unsafe_then_cap"
-  (wp: crunch_wps)
-
-crunch reply_caps[wp]: copy_global_mappings "valid_reply_caps"
-  (wp: crunch_wps)
-
-crunch reply_masters[wp]: copy_global_mappings "valid_reply_masters"
-  (wp: crunch_wps)
-
-crunch valid_global[wp]: copy_global_mappings "valid_global_refs"
-  (wp: crunch_wps)
-
-crunch irq_node[wp]: copy_global_mappings "\<lambda>s. P (interrupt_irq_node s)"
-  (wp: crunch_wps)
-
-crunch irq_states[wp]: copy_global_mappings "\<lambda>s. P (interrupt_states s)"
-  (wp: crunch_wps)
-
-crunch caps_of_state[wp]: copy_global_mappings "\<lambda>s. P (caps_of_state s)"
-  (wp: crunch_wps)
-
-crunch pspace_in_kernel_window[wp]: copy_global_mappings "pspace_in_kernel_window"
-  (wp: crunch_wps)
-
-crunch cap_refs_in_kernel_window[wp]: copy_global_mappings "cap_refs_in_kernel_window"
-  (wp: crunch_wps)
-
-crunch pspace_respects_device_region[wp]: copy_global_mappings "pspace_respects_device_region"
-  (wp: crunch_wps)
-
-lemma copy_global_mappings_cap_refs_respects_device_region:
-  "\<lbrace>cap_refs_respects_device_region\<rbrace>
-     copy_global_mappings new_pm
-   \<lbrace>\<lambda>_. cap_refs_respects_device_region\<rbrace>"
-  sorry (* FIXME: broken by touched-addrs -robs
-
-crunch cap_refs_respects_device_region[wp]: copy_global_mappings "cap_refs_respects_device_region"
-  (wp: crunch_wps simp:crunch_simps ignore:do_machine_op)
-*)
 
 lemma dmo_eq_kernel_restricted [wp, Retype_AI_assms]:
   "\<lbrace>\<lambda>s. equal_kernel_mappings (kheap_update (f (kheap s)) s)\<rbrace>
        do_machine_op m
    \<lbrace>\<lambda>rv s. equal_kernel_mappings (kheap_update (f (kheap s)) s)\<rbrace>"
-  unfolding do_machine_op_def equal_kernel_mappings_def has_kernel_mappings_def
-  by (wpsimp simp: in_omonad vspace_for_asid_def pool_for_asid_def ta_filter_def)
+  unfolding do_machine_op_def equal_kernel_mappings_def has_kernel_mappings_def 
+  apply (wpsimp simp: in_omonad vspace_for_asid_def pool_for_asid_def ta_filter_def obind_def)
+  apply (clarsimp split:option.splits if_split simp: obind_def ta_filter_def)
+  done
 
 definition
   "post_retype_invs_check tp \<equiv> False"
@@ -361,34 +331,40 @@ lemma valid_global_refs:
   apply (simp add: cte_retype cap_range_def)
   done
 
-lemma asid_pools[simplified f_kheap_to_kheap]:
+lemma asid_pools [simplified f_kheap_to_kheap]:
   "asid_pools_of False s p = Some pool \<Longrightarrow> asid_pools_of False s' p = Some pool"
-  by (clarsimp simp: in_opt_map_eq s'_def ps_def ta_filter_def obind_def)
-     (erule pspace_no_overlapC [OF orth _ _ cover vp])
+  apply (clarsimp simp: in_opt_map_eq s'_def ps_def ta_filter_def obind_def
+                 split: option.splits if_split_asm)
+  apply (erule pspace_no_overlapC [OF orth _ _ cover vp], assumption)
+  done
 
-lemma pts_of[simplified f_kheap_to_kheap]:
+lemma pts_of [simplified f_kheap_to_kheap]:
   "pts_of False s p = Some pt \<Longrightarrow> pts_of False s' p = Some pt"
-  by (clarsimp simp: in_opt_map_eq s'_def ps_def ta_filter_def obind_def)
-     (erule pspace_no_overlapC [OF orth _ _ cover vp])
+  apply (clarsimp simp: in_opt_map_eq s'_def ps_def ta_filter_def obind_def
+                 split: option.splits if_split)
+  apply (erule pspace_no_overlapC [OF orth _ _ cover vp], assumption)
+  done
 
-lemma pts_of'[simplified f_kheap_to_kheap]:
+lemma pts_of' [simplified f_kheap_to_kheap]:
   "pts_of False s' p = Some pt \<Longrightarrow>
    pts_of False s p = Some pt \<or> pt = empty_pt \<and> p \<in> set (retype_addrs ptr ty n us)"
-  apply (clarsimp simp: in_opt_map_eq s'_def ps_def ta_filter_def split: if_split_asm)
+  apply (clarsimp simp: in_opt_map_eq s'_def ps_def ta_filter_def obind_def
+                 split: option.splits if_split_asm)
   apply (simp add: default_object_def default_arch_object_def tyunt
-              split: apiobject_type.splits aobject_type.splits)
+            split: apiobject_type.splits aobject_type.splits)
   done
 
 lemma valid_asid_table:
   "valid_asid_table s \<Longrightarrow> valid_asid_table s'"
-  unfolding valid_asid_table_def
-  by (auto simp: asid_pools)
+  unfolding valid_asid_table_def by (auto simp: asid_pools)
 
 lemma valid_global_arch_objs:
   "valid_global_arch_objs s \<Longrightarrow> valid_global_arch_objs s'"
   by (fastforce simp: valid_global_arch_objs_def pt_at_eq pts_of)
 
-lemma ptes_of[simplified f_kheap_to_kheap]:
+find_theorems ta_filter obind
+
+lemma ptes_of [simplified f_kheap_to_kheap]:
   "ptes_of False s p = Some pte \<Longrightarrow> ptes_of False s' p = Some pte"
   by (simp add: pte_of_def obind_def pts_of split: option.splits)
 
@@ -397,11 +373,12 @@ lemma default_empty:
   by (simp add: default_object_def default_arch_object_def tyunt
            split: apiobject_type.splits aobject_type.splits)
 
-lemma ptes_of'[simplified f_kheap_to_kheap]:
+lemma ptes_of' [simplified f_kheap_to_kheap]:
   "ptes_of False s' p = Some pte \<Longrightarrow> ptes_of False s p = Some pte \<or> pte = InvalidPTE"
-  by (fastforce simp: ptes_of_def in_omonad s'_def ps_def ta_filter_def split: if_splits dest: default_empty)
+  by (fastforce simp: ptes_of_def in_omonad s'_def ps_def ta_filter_def
+               split: if_splits dest: default_empty)
 
-lemma pt_walk[simplified f_kheap_to_kheap]:
+lemma pt_walk [simplified f_kheap_to_kheap]:
   "pt_walk top_level bot_level pt vref (ptes_of False s) = Some (level, p) \<Longrightarrow>
    pt_walk top_level bot_level pt vref (ptes_of False s') = Some (level, p)"
   apply (induct top_level arbitrary: pt)
@@ -422,7 +399,7 @@ lemma pt_walk[simplified f_kheap_to_kheap]:
   apply (simp add: in_omonad)
   done
 
-lemma pt_walk'[simplified f_kheap_to_kheap]:
+lemma pt_walk' [simplified f_kheap_to_kheap]:
   "pt_walk top_level level pt vref (ptes_of False s') = Some (level, p) \<Longrightarrow>
    pt_walk top_level level pt vref (ptes_of False s) = Some (level, p)"
   apply (induct top_level arbitrary: pt)
@@ -435,13 +412,12 @@ lemma pt_walk'[simplified f_kheap_to_kheap]:
   apply (fastforce simp add: in_omonad)
   done
 
-lemma pt_walk_eq[simplified f_kheap_to_kheap, simp]:
+lemma pt_walk_eq[simp, simplified f_kheap_to_kheap]:
   "(pt_walk top_level level pt_ptr vptr (ptes_of False s') = Some (level, p)) =
    (pt_walk top_level level pt_ptr vptr (ptes_of False s) = Some (level, p))"
+  apply simp
   apply (rule iffI)
-   apply clarsimp
    apply (erule pt_walk')
-  apply clarsimp
   apply (erule pt_walk)
   done
 
@@ -455,13 +431,14 @@ lemma global_pts_no_retype:
    pt_ptr \<notin> set (retype_addrs ptr ty n us)"
   by (drule riscv_global_pts_global_ref, erule global_no_retype)
 
-lemma valid_global_tables:
+lemma valid_global_tables [simplified f_kheap_to_kheap]:
   "valid_global_tables s \<Longrightarrow> valid_global_tables s'"
+  apply simp
   apply (clarsimp simp: valid_global_tables_def Let_def)
   apply (fold riscv_global_pt_def)
   apply (intro conjI; clarsimp)
      apply (drule pt_walk_level)
-     apply fastforce
+     using pt_walk' apply blast
     apply (drule pts_of', fastforce)
    apply (drule pts_of', fastforce)
   apply (drule pts_of', fastforce simp: vm_kernel_only_def pte_rights_of_def)
@@ -472,42 +449,41 @@ lemma valid_arch_state:
   apply (simp add: valid_arch_state_def valid_asid_table valid_global_arch_objs valid_global_tables
               del: arch_state)
   apply simp
-  sorry (* FIXME: broken by touched-addrs -robs
   done
-*)
 
-lemma vspace_for_pool1[simplified f_kheap_to_kheap]:
+lemma vspace_for_pool1 [simplified f_kheap_to_kheap]:
   "(vspace_for_pool asid p (asid_pools_of False s) = Some pt) \<Longrightarrow>
    vspace_for_pool asid p (asid_pools_of False s') = Some pt"
   by (simp add: vspace_for_pool_def asid_pools obind_def split: option.splits)
 
-lemma vspace_for_pool2[simplified f_kheap_to_kheap]:
+lemma vspace_for_pool2 [simplified f_kheap_to_kheap]:
   "vspace_for_pool asid p (asid_pools_of False s') = Some pt \<Longrightarrow>
    vspace_for_pool asid p (asid_pools_of False s) = Some pt"
-  apply (clarsimp simp: vspace_for_pool_def in_omonad s'_def ps_def ta_filter_def
-                  split: if_split_asm)
+  apply (simp, clarsimp simp: vspace_for_pool_def in_omonad s'_def ps_def split: if_split_asm)
   apply (clarsimp simp: default_object_def default_arch_object_def tyunt
                   split: apiobject_type.splits aobject_type.splits)
   done
 
-lemma vspace_for_pool[simplified f_kheap_to_kheap, simp]:
+lemma vspace_for_pool[simp, simplified f_kheap_to_kheap]:
   "(vspace_for_pool asid p (asid_pools_of False s') = Some pt) =
    (vspace_for_pool asid p (asid_pools_of False s) = Some pt)"
-  by (rule iffI, clarsimp, erule vspace_for_pool2, clarsimp, erule vspace_for_pool1)
+  by (simp, rule iffI, erule vspace_for_pool2, erule vspace_for_pool1)
 
 lemma vs_lookup_table':
   "(vs_lookup_table level asid vref s' = Some (level, p)) =
    (vs_lookup_table level asid vref s = Some (level, p))"
-  by (fastforce simp: vs_lookup_table_def in_omonad pool_for_asid_def split: if_split_asm)
+  apply (clarsimp simp: vs_lookup_table_def in_omonad pool_for_asid_def split: if_split_asm)
+  using pt_walk_eq vspace_for_pool1 vspace_for_pool2 apply blast
+  done
 
 lemma vs_lookup_target':
   "(vs_lookup_target level asid vref s' = Some (level,p)) =
    (vs_lookup_target level asid vref s = Some (level,p))"
-  unfolding vs_lookup_target_def vs_lookup_slot_def
+  unfolding vs_lookup_target_def vs_lookup_slot_def f_kheap_to_kheap
   supply vs_lookup_table'[simp]
   apply (clarsimp simp: in_omonad)
   apply (cases "level = asid_pool_level"; clarsimp)
-   apply fastforce
+   apply (simp add: asid_pool_level_eq vspace_for_pool)
   apply (rule iffI; clarsimp simp: asid_pool_level_eq)
    apply (fastforce dest: ptes_of')
   apply (fastforce dest: ptes_of)
@@ -539,7 +515,7 @@ lemma obj_at_valid_pte:
   apply (clarsimp | elim disjE)+
   done
 
-lemma pt_lookup_slot_from_level[simplified f_kheap_to_kheap]:
+lemma pt_lookup_slot_from_level [simplified f_kheap_to_kheap]:
   "\<lbrakk> vref \<in> kernel_mappings; valid_global_tables s; valid_global_arch_objs s; pspace_aligned s;
      valid_global_refs s \<rbrakk> \<Longrightarrow>
    (pt_lookup_slot_from_level max_pt_level 0 (riscv_global_pt (arch_state s)) vref (ptes_of False s')
@@ -554,7 +530,7 @@ lemma pt_lookup_slot_from_level[simplified f_kheap_to_kheap]:
   apply (simp add: opt_map_def s'_def ps_def split: option.splits)
   done
 
-lemma translate_address[simplified f_kheap_to_kheap]:
+lemma translate_address [simplified f_kheap_to_kheap]:
   "\<lbrakk> vref \<in> kernel_mappings; valid_global_tables s; valid_global_arch_objs s; pspace_aligned s;
      valid_global_refs s \<rbrakk> \<Longrightarrow>
    (translate_address (riscv_global_pt (arch_state s)) vref (ptes_of False s') = Some p) =
@@ -564,7 +540,7 @@ lemma translate_address[simplified f_kheap_to_kheap]:
   apply (auto simp: pt_lookup_slot_from_level dest: ptes_of' ptes_of)
   done
 
-lemma valid_global_vspace_mappings[simplified f_kheap_to_kheap]:
+lemma valid_global_vspace_mappings:
   "\<lbrakk> valid_global_vspace_mappings s; valid_global_tables s; valid_global_arch_objs s;
      pspace_aligned s; valid_global_refs s; valid_uses s \<rbrakk>
    \<Longrightarrow> valid_global_vspace_mappings s'"
@@ -594,13 +570,17 @@ lemma valid_vspace_obj_pres:
 lemma valid_vspace_objs':
   assumes va: "valid_vspace_objs s"
   shows "valid_vspace_objs s'"
+sorry (* broken by touched-addrs -scottb.
+  looks like there is some pattern-matching stuff here caused by f_kheap stuff. will either
+  need to rephrase this proof or ask somebody with more experience with this proof format.
 proof
   fix level p ao asid vref
   assume p: "vs_lookup_table level asid (vref_for_level vref (level + 1)) s' = Some (level, p)"
   assume vref: "vref \<in> user_region"
-  assume "(kheap s' |> aobj_of) p = Some ao"
+  assume "aobjs_of False s' p = Some ao"
   hence "aobjs_of False s p = Some ao \<or> ArchObj ao = default_object ty dev us"
-    by (simp add: ps_def obj_at_def s'_def in_opt_map_eq split: if_split_asm)
+    by (simp add: ps_def obj_at_def s'_def in_opt_map_eq ta_filter_def obind_def
+           split: if_split_asm)
   moreover
   { assume "ArchObj ao = default_object ty dev us" with tyunt
     have "valid_vspace_obj level ao s'" by (rule valid_vspace_obj_default)
@@ -615,7 +595,7 @@ proof
   }
   ultimately
   show "valid_vspace_obj level ao s'" by blast
-qed
+qed *)
 
 
 sublocale retype_region_proofs_gen?: retype_region_proofs_gen
@@ -745,7 +725,7 @@ lemmas unique_table_refs_eq
     = arg_cong[where f=unique_table_refs_2, OF null_filter,
                simplified unique_table_refs_null]
 
-lemma valid_table_caps[simplified f_kheap_to_kheap]:
+lemma valid_table_caps [simplified f_kheap_to_kheap]:
   "valid_table_caps s \<Longrightarrow> valid_table_caps s'"
   unfolding valid_table_caps_def
   by (fastforce dest: caps_retype[rotated] intro: pts_of)
@@ -767,10 +747,10 @@ lemma valid_asid_pool_caps:
 
 lemma valid_arch_caps:
   "valid_arch_caps s \<Longrightarrow> valid_arch_caps s'"
-  by (clarsimp simp add: valid_arch_caps_def null_filter valid_table_caps valid_vs_lookup
-                         vs_lookup_target' unique_table_caps_eq unique_table_refs_eq
-                         valid_asid_pool_caps
-               simp del: arch_state)
+  by (clarsimp simp: valid_arch_caps_def null_filter valid_table_caps valid_vs_lookup
+                        vs_lookup_target' unique_table_caps_eq unique_table_refs_eq
+                        valid_asid_pool_caps
+              simp del: arch_state)
 
 lemma valid_kernel_mappings:
   "valid_kernel_mappings s \<Longrightarrow> valid_kernel_mappings s'"
@@ -782,7 +762,7 @@ lemma valid_asid_map:
 
 lemma vspace_for_asid:
   "vspace_for_asid False asid s' = Some pt \<Longrightarrow> vspace_for_asid False asid s = Some pt"
-  by (clarsimp simp: vspace_for_asid_def in_omonad pool_for_asid_def)
+  by (clarsimp simp: vspace_for_asid_def in_omonad pool_for_asid_def vspace_for_pool)
 
 lemma has_kernel_mappings:
   "\<lbrakk> has_kernel_mappings pt s; valid_global_arch_objs s; valid_global_refs s \<rbrakk> \<Longrightarrow> has_kernel_mappings pt s'"
@@ -997,8 +977,7 @@ lemma clearMemory_um_eq_0:
 lemma invs_irq_state_independent:
   "invs (s\<lparr>machine_state := machine_state s\<lparr>irq_state := f (irq_state (machine_state s))\<rparr>\<rparr>)
    = invs s"
-  sorry (* FIXME: broken by touched-addrs -robs
-  by (clarsimp simp: irq_state_independent_A_def invs_def
+  by (clarsimp simp: ta_filter_def obind_def irq_state_independent_A_def invs_def
                      valid_state_def valid_pspace_def valid_mdb_def valid_ioc_def valid_idle_def
                      only_idle_def if_unsafe_then_cap_def valid_reply_caps_def
                      valid_reply_masters_def valid_global_refs_def valid_arch_state_def
@@ -1009,8 +988,7 @@ lemma invs_irq_state_independent:
                      pspace_in_kernel_window_def cap_refs_in_kernel_window_def
                      cur_tcb_def sym_refs_def state_refs_of_def state_hyp_refs_of_def
                      swp_def valid_irq_states_def
-              split: option.split)
-*)
+              split: option.splits)
 
 crunch irq_masks_inv[wp]: storeWord, clearMemory "\<lambda>s. P (irq_masks s)"
   (wp: crunch_wps ignore_del: storeWord clearMemory)

@@ -37,8 +37,11 @@ locale Detype_AI =
   assumes mapM_x_storeWord:
    "\<And>ptr. is_aligned ptr word_size_bits
      \<Longrightarrow> mapM_x (\<lambda>x. storeWord (ptr + of_nat x * word_size) 0) [0..<n]
-         = modify (underlying_memory_update
-                (\<lambda>m x. if \<exists>k. x = ptr + of_nat k \<and> k < n * word_size then 0 else m x))"
+         = do ta \<leftarrow> gets touched_addresses;
+       assert ({ptr + of_nat x * word_size| x. x<n} \<subseteq> ta);
+       modify (underlying_memory_update
+             (\<lambda>m x. if \<exists>k. x = ptr + of_nat k \<and> k < n * word_size then 0 else m x))
+    od"
   assumes empty_fail_freeMemory:
     "empty_fail (freeMemory ptr bits)"
   assumes valid_ioports_detype:
@@ -926,40 +929,83 @@ lemma of_nat_le_pow:
   apply simp
   done
 
+lemma mapM_x_storeWord_step_aux2:
+  "\<lbrakk>is_aligned ptr sz;
+  sz \<le> word_bits;
+  \<not> ptr + 2 ^ sz - 1 < ptr;
+  xb < 2 ^ (sz - word_size_bits) \<rbrakk> \<Longrightarrow>
+  ptr + word_of_nat xb * word_size \<in> {ptr + word_of_nat k |k. k < 2 ^ sz}"
+  apply clarsimp
+  apply (intro exI [where x="xb * word_size"])
+  apply (intro conjI)
+   apply (clarsimp simp:word_size_def)
+  apply (metis word_size_word_size_bits One_nat_def add_diff_cancel_left' diff_diff_less lessI
+         nat_1_add_1 nat_mult_power_less_eq)
+  done
+
+
+lemma mapM_x_storeWord_step_aux:
+  "\<lbrakk>is_aligned ptr sz;
+  sz \<le> word_bits;
+  \<not> ptr + 2 ^ sz - 1 < ptr;
+  k < 2 ^ sz\<rbrakk> \<Longrightarrow>
+  ptr + word_of_nat k \<in> {ptr + word_of_nat x * word_size |x. x < 2 ^ (sz - word_size_bits)}"
+  apply clarsimp
+  oops
+
 (* FIXME: copied from Retype_C and slightly adapted. *)
 lemma (in Detype_AI) mapM_x_storeWord_step:
   assumes al: "is_aligned ptr sz"
   and    sz2: "word_size_bits \<le> sz"
   and     sz: "sz <= word_bits"
-  shows "mapM_x (\<lambda>p. storeWord p 0) [ptr , ptr + word_size .e. ptr + 2 ^ sz - 1] =
-  modify (underlying_memory_update
-    (\<lambda>m x. if x \<in> {x. \<exists>k. x = ptr + of_nat k \<and> k < 2 ^ sz} then 0 else m x))"
+  shows "mapM_x (\<lambda>p. storeWord p 0) [ptr , ptr + word_size .e. ptr + 2 ^ sz - 1]
+  = do ta \<leftarrow> gets touched_addresses;
+       assert ({x. \<exists>k. x = ptr + of_nat k \<and> k < 2 ^ sz} \<subseteq> ta);
+       modify (underlying_memory_update
+         (\<lambda>m x. if x \<in> {x. \<exists>k. x = ptr + of_nat k \<and> k < 2 ^ sz} then 0 else m x))
+    od"
   using al sz
   apply (simp only: upto_enum_step_def field_simps cong: if_cong)
-  apply (subst if_not_P)
+  apply (prop_tac "\<not> ptr + 2 ^ sz - 1 < ptr")
    apply (subst not_less)
    apply (erule is_aligned_no_overflow)
+  apply simp
   apply (simp add: mapM_x_map comp_def upto_enum_word del: upt.simps)
   apply (simp add: Suc_unat_mask_div_obfuscated[simplified mask_2pm1] min_def)
   apply (subst mapM_x_storeWord)
    apply (erule is_aligned_weaken [OF _ sz2])
-  apply (rule arg_cong)
-  apply (subgoal_tac "2^word_size_bits = (word_size :: nat)")
-   apply (cut_tac power_add[symmetric,of "2::nat" "sz - word_size_bits" word_size_bits])
-   apply (simp only: le_add_diff_inverse2[OF sz2])
-  apply (simp add: word_size_size_bits_nat)
+  apply (rule ext)
+  apply (clarsimp simp: assert_def fail_def return_def simpler_gets_def bind_def
+                        simpler_modify_def
+                 split: if_splits)
+  apply (intro conjI; clarsimp)+
+    apply (rule arg_cong2 [where f=underlying_memory_update, OF _ refl])
+    apply (subgoal_tac "2^word_size_bits = (word_size :: nat)")
+     apply (cut_tac power_add[symmetric,of "2::nat" "sz - word_size_bits" word_size_bits])
+     apply (simp only: le_add_diff_inverse2[OF sz2])
+    apply (simp add: word_size_size_bits_nat)
+   subgoal sorry (* broken by touched-addrs. not sure if this is exactly the
+   approach to take. need to take another look, and see how this approach goes. *)
+   (* using mapM_x_storeWord_step_aux apply fastforce *)
+  using mapM_x_storeWord_step_aux2 apply blast
   done
 
 lemma (in Detype_AI) mapM_storeWord_clear_um:
-  "is_aligned p n \<Longrightarrow> word_size_bits\<le>n \<Longrightarrow> n<=word_bits \<Longrightarrow>
-   do_machine_op (mapM_x (\<lambda>p. storeWord p 0) [p, p + word_size .e. p + 2 ^ n - 1]) =
-   modify (clear_um {x.  \<exists>k. x = p + of_nat k \<and> k < 2 ^ n})"
+  "\<lbrakk>is_aligned p n;
+  word_size_bits\<le>n;
+  n<=word_bits\<rbrakk> \<Longrightarrow>
+  do_machine_op (mapM_x (\<lambda>p. storeWord p 0) [p, p + word_size .e. p + 2 ^ n - 1]) =
+  do
+    ta \<leftarrow> gets (\<lambda>s. touched_addresses (machine_state s));
+    assert ({x. \<exists>k. x = p + of_nat k \<and> k < 2 ^ n} \<subseteq> ta);
+    modify (clear_um {x.  \<exists>k. x = p + of_nat k \<and> k < 2 ^ n})
+  od"
   apply (simp add: mapM_x_storeWord_step)
   apply (rule ext)
   apply (simp add: do_machine_op_def select_f_def split_def simpler_modify_def
-                   simpler_gets_def bind_def return_def clear_um_def)
+                   simpler_gets_def bind_def return_def clear_um_def assert_def
+                   fail_def)
   done
-
 
 lemma intvl_range_conv':
   "\<lbrakk>is_aligned (ptr::'a :: len word) bits; bits \<le> len_of TYPE('a)\<rbrakk> \<Longrightarrow>

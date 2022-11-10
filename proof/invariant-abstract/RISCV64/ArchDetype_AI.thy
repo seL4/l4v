@@ -33,18 +33,35 @@ lemma caps_of_state_ko[Detype_AI_asms]:
                     split: option.splits if_splits)+
   done
 
+lemma insert_collect:
+  "insert (P y) {P x | x. Q x} = {P x | x. Q x \<or> x=y}"
+  by fastforce
+
+lemma Collect_less_Suc_extract:
+  "{P x |x. x < Suc n} = {P x |x. x < n} \<union> {P n}"
+  apply simp
+  apply (subst insert_collect)
+  apply fastforce
+  done
+
 lemma mapM_x_storeWord[Detype_AI_asms]:
 (* FIXME: taken from Retype_C.thy and adapted wrt. the missing intvl syntax. *)
+(* note: the original versionof this is no longer true - storeWord may now fail,
+  if touched_addresses stuff isn't met *)
   assumes al: "is_aligned ptr word_size_bits"
   shows "mapM_x (\<lambda>x. storeWord (ptr + of_nat x * word_size) 0) [0..<n]
-  = modify (underlying_memory_update
-             (\<lambda>m x. if \<exists>k. x = ptr + of_nat k \<and> k < n * word_size then 0 else m x))"
+  = do ta \<leftarrow> gets touched_addresses;
+       assert ({ptr + of_nat x * word_size| x. x<n} \<subseteq> ta);
+       modify (underlying_memory_update
+             (\<lambda>m x. if \<exists>k. x = ptr + of_nat k \<and> k < n * word_size then 0 else m x))
+    od"
 proof (induct n)
   case 0
   thus ?case
     apply (rule ext)
     apply (simp add: mapM_x_mapM mapM_def sequence_def
-                     modify_def get_def put_def bind_def return_def)
+                     modify_def get_def put_def bind_def return_def
+                     simpler_gets_def)
     done
 next
   case (Suc n')
@@ -72,15 +89,20 @@ next
 
   thus ?case
     apply (simp add: mapM_x_append bind_assoc Suc.hyps mapM_x_singleton)
+    apply (rule ext)
     apply (simp add: storeWord_def b assert_def is_aligned_mask modify_modify
-                     comp_def word_size_bits_def)
-    sorry (* FIXME: broken by touched-addrs -robs
-    apply (rule arg_cong[where f=modify])
-    apply (rule arg_cong[where f=underlying_memory_update])
-    apply (rule ext, rule ext, rule sym)
-    apply (simp add: x upto0_7_def)
+                     comp_def word_size_bits_def simpler_gets_def 
+                     return_def bind_def simpler_modify_def fail_def)
+    apply (intro conjI; clarsimp)+
+       apply (rule arg_cong2 [where f=underlying_memory_update])
+        apply (rule ext, rule ext, rule sym)
+        apply (simp add: x upto0_7_def)
+       apply (rule refl)
+      apply (case_tac "xb = n'"; fastforce)
+     apply (subst (asm) Collect_less_Suc_extract)
+     apply fastforce
+    apply fastforce
     done
-  *)
 qed
 
 lemma empty_fail_freeMemory [Detype_AI_asms]: "empty_fail (freeMemory ptr bits)"
@@ -187,23 +209,28 @@ declare arch_state_det[simp]
 
 lemma aobjs_of_detype[simplified f_kheap_to_kheap, simp]:
   "(aobjs_of False (detype S s) p = Some aobj) = (p \<notin> S \<and> aobjs_of False s p = Some aobj)"
-  by (simp add: in_omonad detype_def ta_filter_def)
+  by (fastforce simp: in_omonad)
 
 lemma pts_of_detype[simplified f_kheap_to_kheap, simp]:
   "(pts_of False (detype S s) p = Some pt) = (p \<notin> S \<and> pts_of False s p = Some pt)"
-  by (simp add: in_omonad detype_def ta_filter_def)
+  by (fastforce simp: in_omonad)
 
 lemma ptes_of_detype_Some[simplified f_kheap_to_kheap, simp]:
   "(ptes_of False (detype S s) p = Some pte) = (table_base p \<notin> S \<and> ptes_of False s p = Some pte)"
-  by (simp add: in_omonad ptes_of_def detype_def ta_filter_def)
+  by (clarsimp simp: in_omonad ptes_of_def ta_filter_def obind_def detype_def
+                     opt_map_def
+              split: option.splits)
 
 lemma asid_pools_of_detype[simplified f_kheap_to_kheap]:
   "asid_pools_of False (detype S s) = (\<lambda>p. if p\<in>S then None else asid_pools_of False s p)"
-  by (rule ext) (simp add: detype_def opt_map_def ta_filter_def obind_def)
+  apply (rule ext)
+  apply (clarsimp simp: opt_map_def split:option.splits)
+  apply (clarsimp simp: detype_def)
+  done
 
 lemma asid_pools_of_detype_Some[simplified f_kheap_to_kheap, simp]:
   "(asid_pools_of False (detype S s) p = Some ap) = (p \<notin> S \<and> asid_pools_of False s p = Some ap)"
-  by (simp add: in_omonad detype_def ta_filter_def)
+  by (fastforce simp:in_omonad split:option.splits)
 
 lemma pool_for_asid_detype_Some[simp]:
   "(pool_for_asid asid (detype S s) = Some p) = (pool_for_asid asid s = Some p)"
@@ -221,7 +248,7 @@ lemma vspace_for_asid_detype_Some[simp]:
   apply (auto simp: pool_for_asid_def)
   done
 
-lemma pt_walk_detype[simplified f_kheap_to_kheap]:
+lemma pt_walk_detype [simplified f_kheap_to_kheap]:
   "pt_walk level bot_level pt_ptr vref (ptes_of False (detype S s)) = Some (bot_level, p) \<Longrightarrow>
    pt_walk level bot_level pt_ptr vref (ptes_of False s) = Some (bot_level, p)"
   apply (induct level arbitrary: pt_ptr)
@@ -295,7 +322,7 @@ lemma valid_arch_state_detype[detype_invs_proofs]:
   unfolding valid_arch_state_def pred_conj_def
   by (simp only: valid_asid_table valid_global_arch_objs valid_global_tables) simp
 
-lemma vs_lookup_asid_pool_level[simplified f_kheap_to_kheap]:
+lemma vs_lookup_asid_pool_level [simplified f_kheap_to_kheap]:
   assumes lookup: "vs_lookup_table level asid vref s = Some (level, p)" "vref \<in> user_region"
   assumes ap: "asid_pools_of False s p = Some ap"
   shows "level = asid_pool_level"
@@ -310,13 +337,14 @@ proof (rule ccontr)
   have "valid_asid_table s" "pspace_aligned s"
     using invs by (auto simp: invs_def valid_state_def valid_arch_state_def)
   ultimately
-  have "\<exists>pt. pts_of False s p = Some pt \<and> valid_vspace_obj level (PageTable pt) s"
-    using valid_vspace_objs_strongD by fastforce
+  have "\<exists>pt. pts_of False s p = Some pt \<and> valid_vspace_obj level (PageTable pt) s"    
+    using valid_vspace_objs_strongD f_kheap_to_kheap
+    by metis
   with ap
   show False by (clarsimp simp: in_omonad)
 qed
 
-lemma vs_lookup_pt_level[simplified f_kheap_to_kheap]:
+lemma vs_lookup_pt_level [simplified f_kheap_to_kheap]:
   assumes lookup: "vs_lookup_table level asid vref s = Some (level, p)" "vref \<in> user_region"
   assumes pt: "pts_of False s p = Some pt"
   shows "level \<le> max_pt_level"
@@ -338,14 +366,14 @@ lemma data_at_detype[simp]:
   "data_at sz p (detype S s) = (p \<notin> S \<and> data_at sz p s)"
   by (auto simp: data_at_def)
 
-lemma valid_vspace_obj:
+lemma valid_vspace_obj [simplified f_kheap_to_kheap]:
   "\<lbrakk> valid_vspace_obj level ao s; aobjs_of False s p = Some ao; \<exists>\<rhd>(level,p) s \<rbrakk> \<Longrightarrow>
      valid_vspace_obj level ao (detype (untyped_range cap) s)"
   using invs
   apply (cases ao; clarsimp split del: if_split)
    apply (frule (1) vs_lookup_asid_pool_level, simp add: in_omonad)
    apply simp
-   apply (drule_tac ta_f=False in vs_lookup_table_ap_step, simp add: in_omonad, assumption)
+   apply (drule vs_lookup_table_ap_step, simp add: in_omonad, assumption)
    apply clarsimp
    apply (erule (2) vs_lookup_target_preserved)
   apply (rename_tac pt idx asid vref)
@@ -423,12 +451,9 @@ lemma valid_asid_pools_caps:
   by (fastforce simp: valid_asid_pool_caps_def dest: non_null_caps)
 
 lemma valid_arch_caps_detype[detype_invs_proofs]: "valid_arch_caps (detype (untyped_range cap) s)"
-  using valid_arch_caps
-  sorry (* FIXME: broken by touched-addrs -robs
-  by (simp add: valid_arch_caps_def unique_table_caps valid_vs_lookup' unique_table_refs
-                valid_table_caps valid_asid_pools_caps
-           del: caps_of_state_detype arch_state_det)
-*)
+  using valid_arch_caps valid_table_caps unique_table_caps unique_table_refs
+  by (clarsimp simp: valid_arch_caps_def valid_vs_lookup' valid_asid_pools_caps
+              simp del: caps_of_state_detype arch_state_det)
 
 lemma valid_global_objs_detype[detype_invs_proofs]:
   "valid_global_objs (detype (untyped_range cap) s)"

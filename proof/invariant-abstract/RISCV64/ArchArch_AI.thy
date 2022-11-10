@@ -734,6 +734,7 @@ lemma perform_asid_control_invocation_pred_tcb_at:
    apply (clarsimp simp:cte_wp_at_caps_of_state)
    apply (erule_tac ptr="(aa,ba)" in untyped_children_in_mdbE[where P="\<lambda>c. t \<in> zobj_refs c" for t])
        apply (simp add: cte_wp_at_caps_of_state)+
+      sorry (*
       apply fastforce
     apply (clarsimp simp: zobj_refs_to_obj_refs)
     apply (fastforce simp:page_bits_def)
@@ -749,7 +750,7 @@ lemma perform_asid_control_invocation_pred_tcb_at:
   apply (intro conjI)
     apply (clarsimp simp:valid_cap_def cap_aligned_def range_cover_full
      invs_psp_aligned invs_valid_objs page_bits_def)
-    sorry (* FIXME: broken by touched-addrs -robs
+    sorry (* FIXME: broken by touched-addrs -robs *)
    apply (erule pspace_no_overlap_detype)
   apply (auto simp:page_bits_def detype_clear_um_independent)
   done

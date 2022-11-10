@@ -571,7 +571,7 @@ lemma arch_update_cap_pspace':
   apply (erule real_cte_tcb_valid[rule_format])
   done
 
-lemma arch_update_cap_invs_unmap_page_table:
+lemma arch_update_cap_invs_unmap_page_table [simplified f_kheap_to_kheap]:
   "\<lbrace>cte_wp_at (is_arch_update cap) p
              and real_cte_at p
              and invs and valid_cap cap
@@ -648,32 +648,12 @@ lemma pte_of_remove_tafilter [simp]:
   apply (clarsimp simp: pte_of_def obind_def opt_map_def ta_filter_def
                  split: option.splits if_splits)
   done
-  
-(* currently fiddling with the below proof -scottb
-pte_of (pt_slot_offset top_level top_level_pt vref)
-         (kheap s >>=
-          ta_filter True
-           (obj_range (pt_slot_offset top_level top_level_pt vref)
-             (the (kheap s (pt_slot_offset top_level top_level_pt vref))) \<union>
-            touched_addresses (machine_state s)) |>
-          aobj_of |>
-          pt_of) =
-        Some y
 
-
-lemma sdf: "pte_of p (ms_ta_update f s) |> aobj_of |> pt_of = Some y \<Longrightarrow> pte_of p s |> aobj_of |> pt_of = Some y"
-  apply (cases ta_f; clarsimp)
-   apply (drule get_tcb_Some_True_False)
-   apply (drule get_tcb_SomeD)
-   apply (subst (asm) f_kheap_to_kheap, simp)
-  apply (drule get_tcb_SomeD)
-  apply (clarsimp simp: ta_filter_def obind_def split:option.splits)
-  done
-
-lemma sdf [simp]:
-  "ta_filter False S = (\<lambda>obj _. Some obj)"
-  unfolding ta_filter_def by clarsimp
-  *)
+(*FIXME: replace the original f_kheap_to_kheap with this? *)
+lemma f_kheap_to_kheap''[simp]:
+  "obind (kheap s) (ta_filter False ta) = kheap s"
+  apply(rule ext)
+  by (clarsimp simp:ta_filter_def obind_def split:option.splits)
 
 lemma pt_lookup_from_level_wp:
  assumes e: "ta_agnostic (E InvalidRoot)"
@@ -699,7 +679,6 @@ next
   from \<open>0 < top_level\<close>
   show ?case
     apply (subst pt_lookup_from_level_simps)
-apply simp
     apply (wpsimp wp: IH pt_lookup_from_level_tainv touch_object_wp')
     apply (rule conjI; clarsimp)
      prefer 2
@@ -707,35 +686,44 @@ apply simp
      apply (subst (asm) (2) pt_walk.simps)
      apply clarsimp
     using q apply (clarsimp simp:ta_agnostic_def)
-    apply (rule conjI; clarsimp)
-     apply (erule_tac x="top_level" in allE)
+    apply (rule conjI impI)
      apply (clarsimp simp: in_omonad is_PageTablePTE_def pptr_from_pte_def)
-    apply (rule conjI; clarsimp)
+    apply clarsimp
+    apply (rule conjI impI)
+     apply (clarsimp)
      apply (rename_tac pt' pte)
-     apply (frule pt_walk_max_level)
-     apply (erule_tac x=level in allE)
+     apply (frule pt_walk_max_level)apply (erule_tac x=level in allE)
      apply (erule_tac x=pt' in allE)
      apply simp
      apply (erule mp)
      apply (subst pt_walk.simps)
      apply (simp add: in_omonad bit0.leq_minus1_less)
-
-
-     sorry (* broken by touched-addrs -robs -scottb
+    apply (clarsimp dest!:pte_of_remove_tafilter)
+    apply (subgoal_tac "E InvalidRoot s")
+     using e apply (clarsimp simp: ta_agnostic_def)
+    apply clarsimp
     apply (subst (asm) (3) pt_walk.simps)
     apply (case_tac "level = top_level - 1"; clarsimp)
     apply (subgoal_tac "level < top_level - 1", fastforce)
     apply (frule bit0.zero_least)
     apply (subst (asm) bit0.leq_minus1_less[symmetric], assumption)
     apply simp
-    done *)
+    done
 qed
+
+lemma f_kheap_unfolded_Some_simplify:
+  "((obind (kheap s) (ta_filter ta_f ta)) |> zz |> qq) p = Some pt \<Longrightarrow>
+  (kheap s |> zz |> qq) p = Some pt"
+  apply (cases ta_f; clarsimp)
+  apply (clarsimp simp: obind_def ta_filter_def opt_map_def split:option.splits if_splits)
+  done
 
 (* weaker than pspace_aligned_pts_ofD, but still sometimes useful because it matches better *)
 lemma pts_of_Some_alignedD:
   "\<lbrakk> pts_of ta_f s p = Some pt; pspace_aligned s \<rbrakk> \<Longrightarrow> is_aligned p pt_bits"
-  apply (drule pspace_aligned_pts_ofD; clarsimp simp:ta_filter_def obind_def)
-  sorry (* broken by touched-addrs -scottb *)
+  apply (drule f_kheap_unfolded_Some_simplify)
+  apply (drule pspace_aligned_pts_ofD; fastforce)
+  done
    
 
 lemma vs_lookup_target_not_global:
@@ -762,19 +750,20 @@ lemma unmap_page_table_invs[wp]:
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: unmap_page_table_def)
   apply (rule hoare_pre)
-   apply (wp dmo_invs | wpc | simp)+
+   apply (wp touch_object_wp' dmo_invs | wpc | simp)+
      apply (rule_tac Q="\<lambda>_. invs" in hoare_post_imp)
       apply safe
        apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p =
                                   underlying_memory m p" in use_valid)
          apply ((wp | simp)+)[3]
       apply(erule use_valid, wp no_irq, assumption)
-     apply (wpsimp wp: store_pte_invs_unmap pt_lookup_from_level_wp)+
-  sorry (* broken by touched-addrs -scottb
+     apply (wpsimp wp: touch_object_wp' store_pte_invs_unmap pt_lookup_from_level_wp
+                       find_vspace_for_asid_wp
+                 simp: ta_agnostic_def)+
   apply (frule pt_walk_max_level)
   apply (drule (2) pt_lookup_vs_lookupI)
   apply (frule (2) valid_vspace_objs_strongD[rotated]; clarsimp)
-  apply (frule pts_of_Some_alignedD; clarsimp)
+  apply (frule pts_of_Some_alignedD [where ta_f=False, simplified]; clarsimp)
   apply (rule conjI)
    apply (drule (1) vs_lookup_table_target)
    apply (drule valid_vs_lookupD, erule vref_for_level_user_region, clarsimp)
@@ -787,7 +776,7 @@ lemma unmap_page_table_invs[wp]:
    apply (simp add: table_index_max_level_slots)
   apply (drule (1) vs_lookup_table_target)
   apply (drule vs_lookup_target_not_global, erule vref_for_level_user_region; simp)
-  done *)
+  done
 
 lemma final_cap_lift:
   assumes x: "\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
@@ -871,8 +860,7 @@ lemma store_pte_invalid_vs_lookup_target_unmap:
   apply clarsimp
   apply (clarsimp simp: vs_lookup_target_def vs_lookup_slot_def pool_for_asid_vs_lookup
                   split: if_split_asm)
-  sorry (* broken by touched-addrs -scottb
-   apply (prop_tac "asid_pools_of s pt_ptr = None")
+   apply (prop_tac "asid_pools_of False s pt_ptr = None")
     apply (clarsimp simp: opt_map_def)
    apply simp
    apply (prop_tac "vs_lookup_table max_pt_level asid vref s = Some (max_pt_level, p')")
@@ -938,12 +926,12 @@ lemma store_pte_invalid_vs_lookup_target_unmap:
   apply (clarsimp simp: in_omonad)
   apply (subst (asm) (3) pte_of_def)
   apply (clarsimp simp: in_omonad fun_upd_apply split: if_split_asm)
-  done *)
+  done
 
 lemma pt_lookup_from_level_wrp:
-  "(\<And>p. ta_agnostic (Q p)) \<Longrightarrow> ta_agnostic (E InvalidRoot) \<Longrightarrow>
-
-\<lbrace>\<lambda>s. \<exists>asid. vspace_for_asid False asid s = Some top_level_pt \<and>
+  "\<lbrakk>(\<And>p. ta_agnostic (Q p));
+  ta_agnostic (E InvalidRoot)\<rbrakk> \<Longrightarrow>
+  \<lbrace>\<lambda>s. \<exists>asid. vspace_for_asid False asid s = Some top_level_pt \<and>
                (\<forall>level slot pte.
                    vs_lookup_slot level asid vref s = Some (level, slot) \<longrightarrow>
                    ptes_of False s slot = Some pte \<longrightarrow>
@@ -954,19 +942,19 @@ lemma pt_lookup_from_level_wrp:
                    E InvalidRoot s)\<rbrace>
    pt_lookup_from_level max_pt_level top_level_pt vref pt
    \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>"
-  apply (wp pt_lookup_from_level_wp touch_object_wp')
+  apply (wp pt_lookup_from_level_wp touch_object_wp', simp)
   apply (clarsimp simp: vspace_for_asid_def)
   apply (rule conjI; clarsimp)
    apply (frule pt_walk_max_level)
    apply (erule_tac x=level in allE)
-   apply (erule allE, erule impE[where P="f = Some x" for f x])
+   apply (erule_tac x="(pt_slot_offset level pt' vref)" in allE)
+   apply (erule impE[where P="f = Some x" for f x])
     apply (clarsimp simp: vs_lookup_slot_def vs_lookup_table_def in_omonad)
-    sorry (* broken bu touched-addrs -scottb
     apply fastforce
    apply simp
   apply (erule allE, erule (1) impE)
   apply (clarsimp simp: vs_lookup_table_def split: if_split_asm)
-  done *)
+  done
 
 lemma unmap_page_table_not_target:
   "\<lbrace>\<lambda>s. pt_at pt s \<and> pspace_aligned s \<and> valid_asid_table s \<and> valid_vspace_objs s \<and>
@@ -1802,7 +1790,7 @@ proof -
   with pool p
   obtain asid' where
     vs_target: "vs_lookup_target asid_pool_level asid' 0 s = Some (asid_pool_level, p)"
-    using vs_lookup_table_ap_step by blast
+    using vs_lookup_table_ap_step f_kheap_to_kheap by metis
   with vsl
   have "asid' \<noteq> 0" by (fastforce simp add: valid_vs_lookup_def)
   with vs_target
