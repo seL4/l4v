@@ -988,7 +988,7 @@ lemma setSchedContext_pop_head_corres:
        apply (rule_tac P="(\<lambda>s. (sc_replies_of s |> hd_opt) ptr = Some rp)
                           and sc_obj_at (objBits sc' - minSchedContextBits) ptr"
                   and n1="objBits sc' - minSchedContextBits"
-                            in monadic_rewrite_corres[OF _ update_sched_context_rewrite])
+                            in monadic_rewrite_corres_l[OF update_sched_context_rewrite])
        apply (rule corres_symb_exec_l)
           apply (rule corres_guard_imp)
             apply (rule_tac P="(\<lambda>s. kheap s ptr =

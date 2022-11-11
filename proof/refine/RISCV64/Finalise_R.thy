@@ -4789,7 +4789,7 @@ lemma schedContextZeroRefillMax_corres:
   apply (rule corres_underlying_lift_ex1')
   apply (rule corres_guard_imp)
     apply (subst bind_dummy_ret_val, subst update_sched_context_decompose[symmetric])
-    apply (rule_tac n1=n in monadic_rewrite_corres[OF _ update_sched_context_rewrite])
+    apply (rule_tac n1=n in monadic_rewrite_corres_l[OF update_sched_context_rewrite])
     apply (rule corres_split[OF get_sc_corres])
       apply (rule_tac P="ko_at (kernel_object.SchedContext sc n) scPtr"
                   and P'="ko_at' rv' scPtr"

@@ -716,7 +716,7 @@ lemma schedule_tcb_choose_new_thread_rewrite:
   apply (rule monadic_rewrite_bind_tail[OF _ hoare_gets_sp], simp)
   apply (rule monadic_rewrite_bind_tail[OF _ is_schedulable_inv])
   apply (simp add: when_def split del: if_split)
-  apply (rule monadic_rewrite_imp[OF monadic_rewrite_if])
+  apply (rule monadic_rewrite_guard_imp[OF monadic_rewrite_if])
     apply (rule reschedule_required_resume_cur_thread_choose_new_thread_rewrite)
    apply (rule monadic_rewrite_refl)
   by simp
@@ -9348,8 +9348,7 @@ lemma schedule_used_ordered_disjoint:
   apply (intro conjI impI)
    apply (subst unat_sub, clarsimp simp: word_le_nat_alt)
    apply (prop_tac "unat (r_time a) + unat (r_amount a) \<le> unat (r_time (hd lista))")
-    apply (metis One_nat_def butlast.simps(2) hd_conv_nth length_butlast lessI list.size
-                 nth_Cons_0 semiring_norm(175))
+    apply (metis diff_Suc_Suc diff_zero hd_conv_nth length_greater_0_conv nth_Cons_0)
    apply (rule_tac j="unat (r_time (hd lista))" in le_trans; blast?)
    apply (prop_tac "hd lista = last lista")
     apply (metis hd_conv_nth last_conv_nth length_butlast list.size(3))
@@ -21111,7 +21110,7 @@ lemma handle_event_scheduler_act_sane:
     done
       apply (wpsimp wp: check_budget_restart_if_lift, fastforce)
      apply (wpsimp wp: check_budget_restart_if_lift, fastforce)
-    apply (wpsimp wp: hoare_drop_imp, fastforce)
+    apply (wpsimp wp: hoare_drop_imp do_machine_op_ct_in_state, fastforce)
    apply (wpsimp wp: check_budget_restart_if_lift, fastforce)
   apply (wpsimp, fastforce)
   done

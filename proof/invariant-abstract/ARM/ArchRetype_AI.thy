@@ -399,7 +399,7 @@ lemma copy_global_equal_kernel_mappings_restricted:
   apply (drule_tac x="ucast w" in spec, drule mp)
    apply (clarsimp simp: kernel_mapping_slots_def)
    apply (rule conjI)
-    apply (simp add: word_le_nat_alt unat_ucast_kernel_base_rshift)
+    apply (simp add: word_le_nat_alt shiftr_20_unat_ucast)
     apply (simp only: unat_ucast, subst mod_less)
      apply (rule order_less_le_trans, rule unat_lt2p)
      apply simp

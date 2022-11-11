@@ -374,7 +374,7 @@ lemma monadic_rewrite_receive_ipc_idle:
   "monadic_rewrite False True (tcb_at t) (receive_ipc_blocked is_blocking t ep_ptr reply pl [])
                                          (receive_ipc_idle is_blocking t ep_ptr reply pl)"
   apply (cases is_blocking; simp add: receive_ipc_blocked_def receive_ipc_idle_def
-                                      monadic_rewrite_imp[OF monadic_rewrite_refl])
+                                      monadic_rewrite_guard_imp[OF monadic_rewrite_refl])
   apply (rule monadic_rewrite_bind_tail[OF _ set_thread_state_tcb])
   apply (rule monadic_rewrite_bind_tail[where Q="\<lambda>_. tcb_at t", rotated], wpsimp)
   apply (subst return_bind[where x="[t]" and f="\<lambda>q. set_endpoint ep_ptr (RecvEP q)", symmetric])

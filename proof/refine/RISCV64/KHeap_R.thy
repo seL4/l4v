@@ -4359,7 +4359,7 @@ lemma update_sched_context_rewrite:
    defer
    apply (rule get_object_sp)
   apply (case_tac obj;
-         fastforce simp: monadic_rewrite_refl3 set_object_def monadic_rewrite_def obj_at_def
+         fastforce simp: monadic_rewrite_pre_imp_eq set_object_def monadic_rewrite_def obj_at_def
                          is_sc_obj_def)
   done
 
@@ -4513,15 +4513,15 @@ lemma updateSchedContext_decompose_fold:
       od)"
   apply (induction fs arbitrary: f)
    apply (clarsimp simp: mapM_x_Nil)
-   apply (rule monadic_rewrite_imp)
+   apply (rule monadic_rewrite_guard_imp)
     apply (rule monadic_rewrite_refl, simp)
   apply (clarsimp simp: mapM_x_Cons)
   apply (drule_tac x="a o f" in meta_spec)
-  apply (rule monadic_rewrite_imp)
+  apply (rule monadic_rewrite_guard_imp)
    apply (rule monadic_rewrite_trans)
     apply simp
    apply (subst bind_assoc[symmetric])
-   apply (rule monadic_rewrite_imp)
+   apply (rule monadic_rewrite_guard_imp)
     apply (rule monadic_rewrite_bind_head)
     apply (rule updateSchedContext_decompose[simplified])
    apply simp

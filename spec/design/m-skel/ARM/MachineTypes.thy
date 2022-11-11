@@ -82,7 +82,7 @@ axiomatization
 where
   irq_oracle_max_irq: "\<forall> n. (irq_oracle n) <= ARM.maxIRQ"
 
-text {* The values the timer device will return (how much time passed since last query) *}
+text \<open>The values the timer device will return (how much time passed since last query)\<close>
 axiomatization
   time_oracle :: "nat \<Rightarrow> nat"
 
