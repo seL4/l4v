@@ -1077,6 +1077,7 @@ lemma invoke_untyped_pas_refined:
    apply (rule_tac Q="\<lambda>_. pas_refined aag and pspace_aligned and valid_vspace_objs
                                           and valid_arch_state and pas_cur_domain aag" in hoare_strengthen_post)
    apply (rule invoke_untyped_Q)
+         apply (clarsimp simp: ta_agnostic_def)
         apply (rule hoare_pre, wp create_cap_pas_refined)
         apply (clarsimp simp: authorised_untyped_inv_def
                               range_cover.aligned ptr_range_def[symmetric]
@@ -1158,6 +1159,9 @@ lemma authorised_untyped_invI:
   apply (simp add: blah word_and_le2)
   done
 
+sublocale touched_addresses_det_inv \<subseteq> cte_wp_at:
+  touched_addresses_P_det_inv _ "cte_wp_at ((=) cap) slot"
+  by unfold_locales (simp)
 
 context Retype_AC_1 begin
 

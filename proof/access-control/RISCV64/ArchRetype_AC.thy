@@ -318,6 +318,16 @@ lemma storeWord_respects:
   by (auto simp: upto.simps integrity_def is_aligned_mask [symmetric] word_bits_def
             intro!: trm_write ptr_range_memI ptr_range_add_memI)
 
+lemma loadWord_respects:
+  "\<lbrace>\<lambda>ms. integrity aag X st (s\<lparr>machine_state := ms\<rparr>) \<and>
+         (\<forall>p' \<in> ptr_range p word_size_bits. aag_has_auth_to aag Write p')\<rbrace>
+   loadWord p
+   \<lbrace>\<lambda>_ ms. integrity aag X st (s\<lparr>machine_state := ms\<rparr>)\<rbrace>"
+  unfolding loadWord_def word_size_bits_def
+  apply wp
+  by (auto simp: upto.simps integrity_def is_aligned_mask [symmetric] word_bits_def
+            intro!: trm_write ptr_range_memI ptr_range_add_memI)
+
 lemma dmo_clearMemory_respects'[Retype_AC_assms]:
   "\<lbrace>integrity aag X st and
     K (is_aligned ptr bits \<and> bits < word_bits \<and> word_size_bits \<le> bits \<and>
@@ -377,6 +387,6 @@ proof goal_cases
     by (unfold_locales; (fact Retype_AC_assms | wpsimp wp: init_arch_objects_inv)?)
 qed
 
-requalify_facts RISCV64.storeWord_respects
+requalify_facts RISCV64.storeWord_respects RISCV64.loadWord_respects
 
 end

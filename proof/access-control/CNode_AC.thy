@@ -238,16 +238,28 @@ lemma get_cap_cur_auth:
   apply (clarsimp simp: cte_wp_at_caps_of_state cap_cur_auth_caps_of_state)
   done
 
+sublocale touched_addresses_det_inv \<subseteq> pas_refined:touched_addresses_P_det_inv _ "pas_refined aag"
+  by unfold_locales (simp add:pas_refined_ta_agnostic)
+
+sublocale touched_addresses_det_inv \<subseteq> integrity:touched_addresses_P_det_inv _ "integrity aag X st"
+  by unfold_locales (simp add:integrity_ta_agnostic)
+
+crunch pas_refined[wp]: ensure_empty "pas_refined aag"
+  (wp: touch_object_wp')
+
+crunch pas_refined[wp]: lookup_slot_for_cnode_op "pas_refined aag"
+  (wp: touch_object_wp')
+
 lemma decode_cnode_inv_authorised:
   "\<lbrace>pas_refined aag and invs and valid_cap cap
                     and K (\<forall>c \<in> {cap} \<union> set excaps. pas_cap_cur_auth aag c)\<rbrace>
    decode_cnode_invocation label args cap excaps
    \<lbrace>\<lambda>rv s. authorised_cnode_inv aag rv s\<rbrace>,-"
-  sorry (* XXX: broken by touched_addresses. -robs
   apply (simp add: authorised_cnode_inv_def decode_cnode_invocation_def
                    split_def whenE_def unlessE_def set_eq_iff
              cong: if_cong Invocations_A.cnode_invocation.case_cong split del: if_split)
   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R lsfco_cte_at
+                    touch_object_wp'
          | wp (once) get_cap_cur_auth)+
   apply (subgoal_tac "\<forall>n. n < length excaps
                           \<longrightarrow> (is_cnode_cap (excaps ! n)
@@ -255,7 +267,6 @@ lemma decode_cnode_inv_authorised:
    apply (fastforce simp: invs_valid_objs is_cnode_into_is_subject)
   apply (intro allI impI is_cnode_into_is_subject; fastforce)
   done
-*)
 
 lemma set_cap_thread_st_auth[wp]:
   "set_cap cap ptr \<lbrace>\<lambda>s. P (thread_st_auth s)\<rbrace>"
@@ -1677,14 +1688,12 @@ lemma decode_cnode_invocation_auth_derived:
    decode_cnode_invocation label args cap excaps
    \<lbrace>cnode_inv_auth_derivations\<rbrace>,-"
   apply (simp add: decode_cnode_invocation_def split_def whenE_def unlessE_def split del: if_split)
-  sorry (* XXX: broken by touched_addresses. -robs
   apply (wpsimp wp: derive_cap_auth_derived get_cap_auth_derived hoare_vcg_all_lift
               simp: cnode_inv_auth_derivations_If_Insert_Move[unfolded cnode_inv_auth_derivations_def]
                     cnode_inv_auth_derivations_def split_def whenE_def split_del: if_split
          | strengthen cte_wp_at_auth_derived_mask_cap_strg cte_wp_at_auth_derived_update_cap_data_strg
          | wp (once) hoare_drop_imps)+
   done
-*)
 
 lemma derive_cap_clas:
   "\<lbrace>\<lambda>s :: det_ext state. cap_links_asid_slot aag p b \<rbrace>
