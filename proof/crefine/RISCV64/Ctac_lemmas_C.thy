@@ -36,6 +36,16 @@ lemma c_guard_abs_tcb:
 
 lemmas ccorres_move_c_guard_tcb [ccorres_pre] = ccorres_move_c_guards [OF c_guard_abs_tcb]
 
+lemma c_guard_abs_sc:
+  fixes p :: "sched_context_C ptr"
+  shows "\<forall>s s'. (s, s') \<in> rf_sr \<and> sc_at' (ptr_val p) s \<and> True \<longrightarrow> s' \<Turnstile>\<^sub>c p"
+  apply clarsimp
+  apply (drule (1) sc_at_h_t_valid)
+  apply simp
+  done
+
+lemmas ccorres_move_c_guard_sc[corres_pre] = ccorres_move_c_guards[OF c_guard_abs_sc]
+
 lemma cte_array_relation_array_assertion:
   "gsCNodes s p = Some n \<Longrightarrow> cte_array_relation s cstate
     \<Longrightarrow> array_assertion (cte_Ptr p) (2 ^ n) (hrs_htd (t_hrs_' cstate))"

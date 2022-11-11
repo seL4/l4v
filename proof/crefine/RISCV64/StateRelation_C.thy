@@ -385,7 +385,7 @@ where
 definition crefill_size :: "sched_context_C \<Rightarrow> nat" where
   "crefill_size sc \<equiv> if scRefillHead_C sc \<le> scRefillTail_C sc
                         then unat (scRefillTail_C sc - scRefillHead_C sc + 1)
-                        else unat (scRefillTail_C sc + 1 + (scRefillMax_C sc - scRefillHead_C sc))"
+                        else unat (scRefillTail_C sc + 1 + scRefillMax_C sc - scRefillHead_C sc)"
 
 definition csched_context_relation :: "Structures_H.sched_context \<Rightarrow> sched_context_C \<Rightarrow> bool" where
   "csched_context_relation asc csc \<equiv>
@@ -399,7 +399,8 @@ definition csched_context_relation :: "Structures_H.sched_context \<Rightarrow> 
      \<and> option_to_ptr (scYieldFrom asc) = scYieldFrom_C csc
      \<and> scRefillMax asc = unat (scRefillMax_C csc)
      \<and> scRefillHead asc = unat (scRefillHead_C csc)
-     \<and> scRefillCount asc = crefill_size csc"
+     \<and> scRefillCount asc = crefill_size csc
+     \<and> refillTailIndex asc = unat (scRefillTail_C csc)"
 
 definition crefill_relation :: "refill \<Rightarrow> refill_C \<Rightarrow> bool" where
   "crefill_relation ar cr \<equiv> rTime ar = rTime_C cr \<and> rAmount ar = rAmount_C cr"

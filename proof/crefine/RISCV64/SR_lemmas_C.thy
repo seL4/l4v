@@ -1271,7 +1271,19 @@ qed
 lemma map_to_tcbs_from_tcb_at:
   "tcb_at' thread s \<Longrightarrow> map_to_tcbs (ksPSpace s) thread \<noteq> None"
   unfolding obj_at'_def
-  by (clarsimp simp: projectKOs)
+  by clarsimp
+
+lemma map_to_scs_from_sc_at:
+  "sc_at' thread s \<Longrightarrow> map_to_scs (ksPSpace s) thread \<noteq> None"
+  unfolding obj_at'_def
+  by clarsimp
+
+(* FIXME RT: generalise to other kernel object types *)
+lemma dom_eq:
+  "\<exists>ko. ko_at' (ko :: sched_context) p s \<Longrightarrow>
+   dom (map_to_scs ((ksPSpace s)(p \<mapsto> KOSchedContext ko))) = dom (map_to_scs (ksPSpace s))"
+  apply (clarsimp simp: dom_def map_comp_def)
+  by (fastforce simp: obj_at'_def split: if_splits kernel_object.splits)
 
 lemma tcb_at_h_t_valid:
   "\<lbrakk> tcb_at' thread s; (s, s') \<in> rf_sr \<rbrakk> \<Longrightarrow> s' \<Turnstile>\<^sub>c tcb_ptr_to_ctcb_ptr thread"
@@ -1294,6 +1306,22 @@ lemma st_tcb_at_h_t_valid:
   apply (erule (1) tcb_at_h_t_valid)
   done
 
+lemma sc_at_h_t_valid:
+  "\<lbrakk> sc_at' scPtr s; (s, s') \<in> rf_sr \<rbrakk> \<Longrightarrow> s' \<Turnstile>\<^sub>c PTR(sched_context_C) scPtr"
+  apply (drule cmap_relation_sched_context)
+  apply (drule map_to_scs_from_sc_at)
+  apply (clarsimp simp add: cmap_relation_def)
+  apply (drule (1) bspec [OF _ domI])
+  apply (clarsimp simp add: dom_def tcb_ptr_to_ctcb_ptr_def image_def)
+  apply (drule equalityD1)
+  apply (drule subsetD)
+   apply simp
+   apply (rule exI [where x = scPtr])
+   apply simp
+  apply (clarsimp simp: typ_heap_simps)
+  done
+
+
 (* MOVE *)
 lemma exs_getObject:
   assumes x: "\<And>q n ko. loadObject p q n ko =
@@ -1311,6 +1339,64 @@ lemma exs_getObject:
                  split: option.splits)
   by (fastforce simp: word_le_less_eq)
 
+lemma setObject_modify_variable_size:
+  fixes v :: "'a :: pspace_storable" shows
+  "\<lbrakk>obj_at' (P :: 'a \<Rightarrow> bool) p s; updateObject v = updateObject_default v;
+    (1 :: machine_word) < 2 ^ objBits v; obj_at' (\<lambda>obj. objBits v = objBits obj) p s\<rbrakk>
+   \<Longrightarrow> setObject p v s = modify (ksPSpace_update (\<lambda>ps. ps (p \<mapsto> injectKO v))) s"
+  apply (clarsimp simp: setObject_def split_def exec_gets obj_at'_def lookupAround2_known1
+                        assert_opt_def updateObject_default_def bind_assoc)
+  apply (simp add: projectKO_def alignCheck_assert)
+  apply (simp add: project_inject objBits_def)
+  apply (clarsimp simp only: koTypeOf_injectKO)
+  apply (frule in_magnitude_check[where s'=s])
+    apply blast
+   apply fastforce
+  apply (simp add: magnitudeCheck_assert in_monad bind_def gets_def oassert_opt_def
+                   get_def return_def)
+  apply (simp add: simpler_modify_def)
+  done
+
+lemma setObject_modify:
+  fixes v :: "'a :: pspace_storable" shows
+  "\<lbrakk>obj_at' (P :: 'a \<Rightarrow> bool) p s; updateObject v = updateObject_default v;
+    (1 :: machine_word) < 2 ^ objBits v; \<And>ko. P ko \<Longrightarrow> objBits ko = objBits v \<rbrakk>
+   \<Longrightarrow> setObject p v s = modify (ksPSpace_update (\<lambda>ps. ps (p \<mapsto> injectKO v))) s"
+  apply (rule setObject_modify_variable_size)
+     apply fastforce
+    apply fastforce
+  apply fastforce
+  unfolding obj_at'_def
+  by fastforce
+
+lemma getObject_return:
+  fixes v :: "'a :: pspace_storable" shows
+  "\<lbrakk> \<And>q n ko. loadObject p q n ko =
+                (loadObject_default p q n ko :: 'a :: pspace_storable kernel_r);
+     ko_at' v p s; (1 :: machine_word) < 2 ^ objBits v \<rbrakk> \<Longrightarrow>
+   getObject p s = return v s"
+  apply (clarsimp simp: getObject_def readObject_def omonad_defs split_def gets_the_def gets_def
+                        get_def bind_def return_def assert_opt_def fail_def obj_at'_def
+                        lookupAround2_known1 loadObject_default_def in_omonad
+                 split: option.splits)
+  by (fastforce simp add: project_inject objBits_def)
+
+lemmas getObject_return_tcb
+    = getObject_return[OF meta_eq_to_obj_eq, OF loadObject_tcb,
+                       unfolded objBits_simps, simplified]
+
+lemmas setObject_modify_tcb
+    = setObject_modify[OF _ meta_eq_to_obj_eq, OF _ updateObject_tcb,
+                       unfolded objBits_simps, simplified]
+
+lemma setObject_eq_variable_size:
+  fixes v :: "'a :: pspace_storable" shows
+  "\<lbrakk>obj_at' (P :: 'a \<Rightarrow> bool) p s; updateObject v = updateObject_default v;
+   (1 :: machine_word) < 2 ^ objBits v; obj_at' (\<lambda>obj. objBits v = objBits obj) p s\<rbrakk>
+   \<Longrightarrow> ((), s\<lparr> ksPSpace := (ksPSpace s)(p \<mapsto> injectKO v)\<rparr>) \<in> fst (setObject p v s)"
+  apply (frule (3) setObject_modify_variable_size)
+  by (clarsimp simp: modify_def get_def bind_def put_def)
+
 lemma setObject_eq:
   fixes ko :: "'a :: pspace_storable"
   assumes x: "\<And>(val :: 'a) old ptr ptr' next. updateObject val old ptr ptr' next =
@@ -1319,22 +1405,18 @@ lemma setObject_eq:
   and     ob: "\<And>(v :: 'a) (v' :: 'a). objBits v = objBits v'"
   and objat: "obj_at' (P :: ('a::pspace_storable \<Rightarrow> bool)) p s"
   shows  "((), s\<lparr> ksPSpace := (ksPSpace s)(p \<mapsto> injectKO ko)\<rparr>) \<in> fst (setObject p ko s)"
-  using objat ob unfolding setObject_def obj_at'_def
-  apply (clarsimp simp: updateObject_default_def in_monad return_def lookupAround2_char1
-                        split_def x P lookupAround2_char1 projectKOs
-                        objBits_def[symmetric] in_magnitude_check project_inject)
-  apply (frule ssubst [OF ob, where P = "is_aligned p" and v1 = ko])
-  apply (simp add: P in_magnitude_check)
-  apply (rule conjI)
-   apply (rule_tac x = obj in exI)
-   apply simp
-  by metis
+  apply (rule setObject_eq_variable_size)
+     apply (fastforce intro: objat)
+    apply (fastforce intro: x)
+   apply (fastforce intro: P)
+  apply (insert ob objat)
+  unfolding obj_at'_def
+  by fastforce
 
 lemma getObject_eq:
   fixes ko :: "'a :: pspace_storable"
   assumes x: "\<And>q n ko. loadObject p q n ko =
                 (loadObject_default p q n ko :: 'a :: pspace_storable kernel_r)"
-  assumes P: "\<And>(v::'a). (1 :: machine_word) < 2 ^ (objBits v)"
   and objat: "ko_at' ko p s"
   shows      "(ko, s) \<in> fst (getObject p s)"
   using objat unfolding exs_valid_def obj_at'_def
@@ -1354,13 +1436,14 @@ lemma threadSet_eq:
   apply (rule exI)
   apply (rule conjI)
    apply (rule getObject_eq)
+    apply simp
+   apply (simp add: objBits_simps')
+  apply (frule setObject_eq_variable_size)
      apply simp
-    apply (simp add: objBits_simps')
-   apply assumption
-  apply (drule setObject_eq [rotated -1])
-     apply simp
-    apply (simp add: objBits_simps')
-   apply (simp add: objBits_simps)
+    apply (clarsimp simp: objBits_simps')
+   apply (clarsimp simp: obj_at_simps)
+   apply (rule_tac x=tcb in exI)
+   apply simp
   apply simp
   done
 
@@ -1545,6 +1628,22 @@ lemma update_tcb_map_tos:
   by (auto elim!: obj_atE' intro!: map_to_ctes_upd_other map_comp_eqI
     simp: projectKOs projectKO_opts_defs split: kernel_object.splits if_split_asm)+
 
+lemma update_scs_map_tos:
+  fixes P :: "sched_context \<Rightarrow> bool"
+  assumes at: "obj_at' P p s"
+  shows   "map_to_eps ((ksPSpace s)(p \<mapsto> KOSchedContext ko)) = map_to_eps (ksPSpace s)"
+  and     "map_to_ntfns ((ksPSpace s)(p \<mapsto> KOSchedContext ko)) = map_to_ntfns (ksPSpace s)"
+  and     "map_to_tcbs ((ksPSpace s)(p \<mapsto> KOSchedContext ko)) = map_to_tcbs (ksPSpace s)"
+  and     "map_to_ctes ((ksPSpace s)(p \<mapsto> KOSchedContext ko)) = map_to_ctes (ksPSpace s)"
+  and     "map_to_replies ((ksPSpace s)(p \<mapsto> KOSchedContext ko)) = map_to_replies (ksPSpace s)"
+  and     "map_to_ptes ((ksPSpace s)(p \<mapsto> KOSchedContext ko)) = map_to_ptes (ksPSpace s)"
+  and     "map_to_asidpools ((ksPSpace s)(p \<mapsto> KOSchedContext ko)) = map_to_asidpools (ksPSpace s)"
+  and     "map_to_user_data ((ksPSpace s)(p \<mapsto> KOSchedContext ko)) = map_to_user_data (ksPSpace s)"
+  and     "map_to_user_data_device ((ksPSpace s)(p \<mapsto> KOSchedContext ko)) = map_to_user_data_device (ksPSpace s)"
+  using at
+  by (auto elim!: obj_atE' intro!: map_to_ctes_upd_other map_comp_eqI
+    simp: projectKOs projectKO_opts_defs split: kernel_object.splits if_split_asm)+
+
 lemma update_asidpool_map_tos:
   fixes P :: "asidpool \<Rightarrow> bool"
   assumes at: "obj_at' P p s"
@@ -1654,6 +1753,19 @@ lemma obj_at_cslift_tcb:
   apply (frule obj_at_ko_at')
   apply clarsimp
   apply (frule cmap_relation_tcb)
+  apply (drule (1) cmap_relation_ko_atD)
+  apply fastforce
+  done
+
+lemma obj_at_cslift_sc:
+  fixes P :: "sched_context \<Rightarrow> bool"
+  shows "\<lbrakk>obj_at' P sc s; (s, s') \<in> rf_sr\<rbrakk> \<Longrightarrow>
+  \<exists>ko ko'. ko_at' ko sc s \<and> P ko \<and>
+        cslift s' (Ptr sc) = Some ko' \<and>
+        csched_context_relation ko ko'"
+  apply (frule obj_at_ko_at')
+  apply clarsimp
+  apply (frule cmap_relation_sched_context)
   apply (drule (1) cmap_relation_ko_atD)
   apply fastforce
   done
@@ -2211,6 +2323,75 @@ lemma physBase_spec:
 lemma sizeof_sched_context_t_eq:
   "sizeof_sched_context_t = size_of TYPE(sched_context_C)"
   by (simp add: sizeof_sched_context_t_def word_size_def)
+
+lemma rf_sr_sc_update_no_refill_buffer_update:
+  "\<lbrakk>(s, s') \<in> rf_sr; ko_at' (old_sc :: sched_context) scPtr s;
+    t_hrs_' (globals t) = hrs_mem_update (heap_update (PTR(sched_context_C) scPtr) sc')
+                                         (t_hrs_' (globals s'));
+    csched_context_relation sc sc';
+    refill_buffer_relation ((ksPSpace s)(scPtr \<mapsto> KOSchedContext sc))
+                           (hrs_mem_update (heap_update (PTR(sched_context_C) scPtr) sc')
+                                           (t_hrs_' (globals s')))
+                           (ghost'state_' (globals s'))\<rbrakk>
+   \<Longrightarrow> (s\<lparr>ksPSpace := (ksPSpace s)(scPtr \<mapsto> KOSchedContext sc)\<rparr>,
+        t'\<lparr>globals := globals s'\<lparr>t_hrs_' := t_hrs_' (globals t)\<rparr>\<rparr>) \<in> rf_sr"
+  unfolding rf_sr_def state_relation_def cstate_relation_def cpspace_relation_def
+  apply (clarsimp simp: Let_def update_scs_map_tos)
+  apply (frule_tac ptr=scPtr in cmap_relation_ko_atD[rotated])
+  apply fastforce
+  apply (erule obj_atE')
+  apply clarsimp
+  apply (clarsimp simp: map_comp_update projectKO_opt_sc typ_heap_simps')
+  apply (intro conjI)
+    subgoal by (clarsimp simp: cmap_relation_def split: if_splits)
+   subgoal by (clarsimp simp: carch_state_relation_def typ_heap_simps')
+  by (simp add: cmachine_state_relation_def)
+
+lemma rf_sr_obj_update_helper:
+  "(s, s'\<lparr> globals := globals s' \<lparr> t_hrs_' := t_hrs_' (globals (undefined
+              \<lparr> globals := (undefined \<lparr> t_hrs_' := f (globals s') (t_hrs_' (globals s')) \<rparr>)\<rparr>))\<rparr>\<rparr>) \<in> rf_sr
+          \<Longrightarrow> (s, globals_update (\<lambda>v. t_hrs_'_update (f v) v) s') \<in> rf_sr"
+  by (simp cong: StateSpace.state.fold_congs globals.fold_congs)
+
+lemmas rf_sr_sc_update_no_refill_buffer_update2 =
+  rf_sr_obj_update_helper[OF rf_sr_sc_update_no_refill_buffer_update, simplified]
+
+(* FIXME RT: move higher up? *)
+lemma cheap_dom_eq:
+ "\<exists>old_ko :: 'a :: c_type. cslift s' (Ptr ptr) = Some old_ko
+  \<Longrightarrow> dom (lift_t c_guard (hrs_mem_update (heap_update (Ptr ptr) (f (ko :: 'a)))
+                          (t_hrs_' (globals s'))))
+      = dom (lift_t c_guard (t_hrs_' (globals s')))"
+  apply (subst set_eq_subset)
+  by (intro conjI; (clarsimp, metis h_t_valid_clift_Some_iff hrs_htd_mem_update))
+
+lemma refill_buffer_relation_sc_no_refills_update:
+  "\<lbrakk>refill_buffer_relation (ksPSpace s) (t_hrs_' (globals s')) (ghost'state_' (globals s'));
+    ko_at' sc scPtr s; scSize (g sc) = scSize sc; scRefills (g sc) = scRefills sc;
+    \<exists>old_sc' :: sched_context_C. cslift s' (Ptr scPtr) = Some old_sc';
+    lift_t c_guard (t_hrs_' (globals s')) (PTR(sched_context_C) scPtr) = Some sc'\<rbrakk>
+   \<Longrightarrow> refill_buffer_relation
+         ((ksPSpace s)(scPtr \<mapsto> KOSchedContext (g sc)))
+         (hrs_mem_update (heap_update (PTR(sched_context_C) scPtr) (f sc')) (t_hrs_' (globals s')))
+         (ghost'state_' (globals s'))"
+  apply (simp (no_asm_simp) only: refill_buffer_relation_def Let_def)
+  apply (intro context_conjI)
+     apply (drule refill_buffer_relation_crefill_hp_dom)
+     apply (subst cheap_dom_eq)
+      apply fastforce
+     apply (subst dom_eq)
+      apply (clarsimp simp: obj_at_simps)
+     apply (fastforce simp: obj_at'_def map_comp_def split: if_splits)
+    apply (drule refill_buffer_relation_crefill_relation)
+    apply (clarsimp simp: Let_def)
+    apply (case_tac "p \<noteq> scPtr")
+     apply (clarsimp simp: map_comp_def typ_heap_simps)
+    apply (clarsimp simp: obj_at'_def dyn_array_list_rel_pointwise typ_heap_simps)
+   apply (drule refill_buffer_relation_gs_dom)
+   apply (subst dom_eq; force)
+  apply (frule refill_buffer_relation_size_eq)
+  apply (clarsimp simp: obj_at'_def map_comp_def)
+  done
 
 end
 end

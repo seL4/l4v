@@ -463,40 +463,176 @@ lemma isHighestPrio_ccorres:
   done
 
 lemma isRoundRobin_ccorres:
-  "ccorres dc xfdc \<top> \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> [] (isRoundRobin scPtr) (Call isRoundRobin_'proc)"
-sorry (* FIXME RT: isRoundRobin_ccorres *)
+  "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_'
+     \<top> \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> [] (isRoundRobin scPtr) (Call isRoundRobin_'proc)"
+  apply cinit
+   apply (rule ccorres_pre_getObject_sc)
+   apply (rule ccorres_Guard)
+   apply (rule ccorres_return_C)
+     apply simp+
+  apply (fastforce simp: rf_sr_def csched_context_relation_def typ_heap_simps
+                  split: if_splits)
+  done
+
+definition refillSize :: "machine_word \<Rightarrow> (kernel_state, nat) nondet_monad" where
+  "refillSize scPtr \<equiv>
+     do sc \<leftarrow> getSchedContext scPtr;
+        return (scRefillCount sc)
+     od"
+
+(* FIXME RT: use automation here *)
+lemma refillFull_refill_size:
+  "monadic_rewrite True False (sc_at' scPtr)
+     (refillFull scPtr)
+     (do count \<leftarrow> refillSize scPtr;
+         sc \<leftarrow> getSchedContext scPtr;
+         return $ count = scRefillMax sc
+      od)"
+  apply (clarsimp simp: refillFull_def refillSize_def)
+  apply (rule monadic_rewrite_guard_imp)
+   apply (rule monadic_rewrite_symb_exec_r)
+      apply (rule monadic_rewrite_bind_tail)
+       apply (rename_tac sc')
+       apply (rule_tac Q="\<lambda>_. sc' = sc" in monadic_rewrite_guard_imp)
+        apply (rule monadic_rewrite_from_simple)
+        apply fastforce
+       apply simp
+      apply wpsimp
+     apply wpsimp
+    apply wpsimp+
+  apply (clarsimp simp: obj_at_simps)
+  done
+
+lemma refill_size_ccorres:
+  "ccorres (\<lambda>rv rv'. rv = unat rv') ret__unsigned_long_'
+     (sc_at' scPtr and valid_refills' scPtr) \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
+     (refillSize scPtr)
+     (Call refill_size_'proc)"
+  apply (cinit lift: sc_', rename_tac sc')
+   apply (rule ccorres_pre_getObject_sc, rename_tac sc)
+   apply (rule ccorres_Guard_Seq)+
+   apply (rule ccorres_cond_seq)
+   apply ccorres_rewrite
+   apply (rule_tac R="ko_at' sc scPtr and K (sc_valid_refills' sc)"
+               and P="\<lambda>s. scRefillHead sc \<le> refillTailIndex sc"
+                in ccorres_cond_both)
+     apply clarsimp
+     apply (drule obj_at_cslift_sc)
+      apply fastforce
+     apply (clarsimp simp: csched_context_relation_def word_le_nat_alt typ_heap_simps)
+    apply (rule ccorres_Guard)+
+    apply (ctac add: ccorres_return_C)
+   apply (rule ccorres_Guard)+
+   apply (ctac add: ccorres_return_C)
+  apply (clarsimp simp: csched_context_relation_def typ_heap_simps obj_at_simps
+                        valid_refills'_def opt_map_def crefill_size_def opt_pred_def
+                 split: if_splits)
+  done
 
 lemma refill_full_ccorres:
-  "ccorres dc xfdc \<top> \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> [] (refillFull scPtr) (Call refill_full_'proc)"
-sorry (* FIXME RT: refill_full_ccorres *)
+  "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_'
+     (sc_at' scPtr and valid_refills' scPtr) \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
+     (refillFull scPtr) (Call refill_full_'proc)"
+  apply (rule monadic_rewrite_ccorres_assemble[where P=P and Q=P for P,
+                                               unfolded pred_conj_def, simplified, rotated])
+   apply (rule monadic_rewrite_guard_imp)
+    apply (rule refillFull_refill_size)
+   apply fastforce
+  apply cinit'
+   apply (ctac (no_vcg) add: refill_size_ccorres)
+    apply (rule ccorres_pre_getObject_sc)
+    apply (rule ccorres_Guard)
+    apply (rule ccorres_return_C)
+      apply wpsimp
+     apply simp
+    apply simp
+   apply wpsimp
+  apply (fastforce dest: obj_at_cslift_sc
+                   simp: csched_context_relation_def typ_heap_simps split: if_splits)
+  done
 
 lemma refill_single_ccorres:
-  "ccorres dc xfdc \<top> \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> [] (refillSingle scPtr) (Call refill_single_'proc)"
-sorry (* FIXME RT: refill_single_ccorres *)
+  "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_'
+     (sc_at' scPtr) \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> [] (refillSingle scPtr) (Call refill_single_'proc)"
+  apply cinit
+   apply (rule ccorres_pre_getObject_sc)
+   apply (rule ccorres_Guard)+
+   apply (ctac add: ccorres_return_C)
+  by (clarsimp simp: csched_context_relation_def typ_heap_simps
+              split: if_splits)
 
 lemma refill_capacity_ccorres:
-  "ccorres dc xfdc
+  "ccorres (=) ret__unsigned_longlong_'
      \<top> (\<lbrace>\<acute>sc = Ptr scPtr\<rbrace> \<inter> \<lbrace>\<acute>usage = usage\<rbrace>) []
      (refillCapacity scPtr usage) (Call refill_capacity_'proc)"
 sorry (* FIXME RT: refill_capacity_ccorres *)
 
 lemma refill_ready_ccorres:
-  "ccorres dc xfdc
+  "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_'
      \<top> \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
      (refillReady scPtr) (Call refill_ready_'proc)"
 sorry (* FIXME RT: refill_ready_ccorres *)
 
 lemma sc_active_ccorres:
-  "ccorres dc xfdc
+  "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_'
      \<top> \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
      (scActive scPtr) (Call sc_active_'proc)"
-sorry (* FIXME RT: sc_active_ccorres *)
+  apply cinit
+   apply (rule ccorres_pre_getObject_sc)
+   apply (rule ccorres_Guard)+
+   apply (ctac add: ccorres_return_C)
+  by (clarsimp simp: csched_context_relation_def typ_heap_simps word_less_nat_alt
+              split: if_splits)
+
+lemma scReleased_rewrite:
+  "monadic_rewrite True False \<top>
+     (scReleased scPtr)
+     (do active \<leftarrow> scActive scPtr;
+         if active
+           then do ready \<leftarrow> refillReady scPtr;
+                   return ready
+                od
+           else return False
+      od)"
+  apply (clarsimp simp: scReleased_def)
+  apply (rule monadic_rewrite_bind_tail)
+   apply (rule_tac P="active" and R=\<top> in monadic_rewrite_if_r)
+    apply (rule monadic_rewrite_is_refl)
+    apply fastforce
+   apply (rule monadic_rewrite_symb_exec_l)
+      apply wpsimp
+      apply (rule monadic_rewrite_is_refl)
+      apply (wpsimp simp: refillReady_def)+
+  done
 
 lemma sc_released_ccorres:
-  "ccorres dc xfdc
+  "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_'
      \<top> \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
      (scReleased scPtr) (Call sc_released_'proc)"
-sorry (* FIXME RT: sc_released_ccorres *)
+  apply (rule monadic_rewrite_ccorres_assemble[where P=P and Q=P for P,
+                                               unfolded pred_conj_def, simplified, rotated])
+   apply (rule monadic_rewrite_guard_imp)
+    apply (rule scReleased_rewrite)
+   apply fastforce
+  apply cinit'
+   apply (ctac add: sc_active_ccorres, rename_tac active)
+     apply (rule ccorres_cond[where R=\<top>])
+       apply (clarsimp simp: to_bool_def split: if_splits)
+      apply (ctac add: refill_ready_ccorres)
+        apply (rule ccorres_return_C)
+          apply fastforce
+         apply fastforce
+        apply fastforce
+       apply wpsimp
+      apply vcg
+     apply (rule ccorres_return_C)
+       apply fastforce
+      apply fastforce
+     apply fastforce
+    apply wpsimp
+   apply vcg
+  apply clarsimp
+  done
 
 lemma switchSchedContext_ccorres:
   "ccorres dc xfdc \<top> UNIV [] switchSchedContext (Call switchSchedContext_'proc)"

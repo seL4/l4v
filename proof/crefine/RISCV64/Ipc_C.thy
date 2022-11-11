@@ -803,7 +803,6 @@ lemma handleFaultReply':
        apply (rule monadic_rewrite_bind_tail)+
                apply (subst (2) upto_enum_word)
                apply (case_tac "ma < unat n_timeoutMessage - 4")
-
                 apply (erule disjE[OF nat_less_cases'],
                        ( clarsimp simp: n_timeoutMessage_def bind_assoc asUser_bind_distrib
                                         mapM_x_Cons mapM_x_Nil zipWithM_x_mapM_x mapM_Cons
@@ -5054,11 +5053,6 @@ lemma schedContext_donate_ccorres:
      \<top> (\<lbrace>\<acute>sc = Ptr callerPtr\<rbrace> \<inter> \<lbrace>\<acute>to = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace>) []
      (schedContextDonate scPtr tcbPtr) (Call schedContext_donate_'proc)"
 sorry (* FIXME RT: schedContext_donate_ccorres *)
-
-lemma tcbReleaseRemove_ccorres:
-  "ccorres dc xfdc \<top> \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace> []
-     (tcbReleaseRemove tcbPtr) (Call tcbReleaseRemove_'proc)"
-sorry (* FIXME RT: tcbReleaseRemove_ccorres *)
 
 lemma tcbReleaseDequeue_ccorres:
   "ccorres dc xfdc \<top> UNIV [] tcbReleaseDequeue (Call tcbReleaseDequeue_'proc)"

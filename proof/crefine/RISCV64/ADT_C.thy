@@ -87,7 +87,6 @@ lemma setTCBContext_C_corres:
   apply (frule (1) obj_at_cslift_tcb)
   apply clarsimp
   apply (frule getObject_eq [rotated -1], simp)
-   apply (simp add: objBits_simps')
   apply (simp add: Nondet_Monad.bind_def split_def)
   apply (rule bexI)
    prefer 2

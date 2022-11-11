@@ -1194,7 +1194,9 @@ lemma invokeTCB_CopyRegisters_ccorres:
   "ccorres (cintr \<currency> (\<lambda>rv rv'. rv = [])) (liftxf errstate id (K ()) ret__unsigned_long_')
    (invs' and sch_act_simple and tcb_at' destn and tcb_at' source
           and ex_nonz_cap_to' destn and ex_nonz_cap_to' source
-          and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s))
+          and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)
+          and (\<lambda>s. \<forall>d p. distinct (ksReadyQueues s (d, p)))
+          and ready_or_release')
    (UNIV \<inter> {s. dest___ptr_to_struct_tcb_C_' s = tcb_ptr_to_ctcb_ptr destn}
          \<inter> {s. tcb_src_' s = tcb_ptr_to_ctcb_ptr source}
          \<inter> {s. to_bool (resumeTarget_' s) = resume}
@@ -1746,7 +1748,8 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
 
 lemma invokeTCB_Suspend_ccorres:
   "ccorres (cintr \<currency> (\<lambda>rv rv'. rv = [])) (liftxf errstate id (K ()) ret__unsigned_long_')
-     (invs' and sch_act_simple and tcb_at' t and ex_nonz_cap_to' t)
+     (invs' and sch_act_simple and tcb_at' t and ex_nonz_cap_to' t
+      and (\<lambda>s. \<forall>d p. distinct (ksReadyQueues s (d, p))) and ready_or_release')
      (UNIV \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr t}) []
    (invokeTCB (Suspend t)) (Call invokeTCB_Suspend_'proc)"
   apply (cinit lift: thread_')
@@ -1837,6 +1840,8 @@ shows
        (invs' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)
               and (\<lambda>s. ksCurThread s = thread) and ct_in_state' ((=) Restart)
               and tcb_at' target and sch_act_simple and (\<lambda>s. target \<noteq> ksIdleThread s)
+              and (\<lambda>s. \<forall>d p. distinct (ksReadyQueues s (d, p)))
+              and ready_or_release'
               and (\<lambda>_. target \<noteq> thread))
        (UNIV
             \<inter> {s. tcb_src_' s = tcb_ptr_to_ctcb_ptr target}
@@ -2244,7 +2249,9 @@ lemma decodeReadRegisters_ccorres:
               and (\<lambda>s. ksCurThread s = thread) and ct_active'
               and sysargs_rel args buffer
               and tcb_at' (capTCBPtr cp) and ex_nonz_cap_to' (capTCBPtr cp)
-              and K (isThreadCap cp))
+              and K (isThreadCap cp)
+              and (\<lambda>s. \<forall>d p. distinct (ksReadyQueues s (d, p)))
+              and ready_or_release')
        (UNIV
             \<inter> {s. ccap_relation cp (cap_' s)}
             \<inter> {s. unat (length___unsigned_long_' s) = length args}
@@ -2336,7 +2343,7 @@ lemma decodeReadRegisters_ccorres:
            apply (rule ccorres_return_CE, simp+)[1]
           apply (rule ccorres_return_C_errorE, simp+)[1]
          apply wp
-        apply (wp ct_in_state'_set sts_invs_minor')
+        apply (wp ct_in_state'_set sts_invs_minor' sts_ksQ)
        apply (simp add: Collect_const_mem intr_and_se_rel_def
                         cintr_def exception_defs)
        apply (vcg exspec=setThreadState_modifies)
@@ -2490,6 +2497,8 @@ lemma decodeCopyRegisters_ccorres:
               and (\<lambda>s. \<forall>v \<in> set extraCaps. \<forall>y \<in> zobj_refs' (fst v).
                               ex_nonz_cap_to' y s)
               and sysargs_rel args buffer
+              and (\<lambda>s. \<forall>d p. distinct (ksReadyQueues s (d,p)))
+              and ready_or_release'
               and K (isThreadCap cp))
        (UNIV
             \<inter> {s. ccap_relation cp (cap_' s)}
@@ -2554,7 +2563,7 @@ lemma decodeCopyRegisters_ccorres:
              apply wp
             apply (simp add: cintr_def intr_and_se_rel_def exception_defs)
             apply (vcg exspec=invokeTCB_CopyRegisters_modifies)
-           apply (wp sts_invs_minor')
+           apply (wp sts_invs_minor' sts_ksQ)
           apply (simp add: Collect_const_mem)
           apply (vcg exspec=setThreadState_modifies)
          apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
@@ -4644,7 +4653,7 @@ lemma decodeTCBInvocation_ccorres:
         apply (rule ccorres_return_C_errorE, simp+)[1]
        apply wp
       apply (vcg exspec=invokeTCB_Suspend_modifies)
-     apply (wp sts_invs_minor')
+     apply (wp sts_invs_minor' sts_ksQ)
     apply (vcg exspec=setThreadState_modifies)
    apply (rule ccorres_Cond_rhs)
     apply (simp add: returnOk_bind ccorres_invocationCatch_Inr)

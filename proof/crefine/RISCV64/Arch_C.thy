@@ -661,7 +661,7 @@ lemma bind_bindE_liftE:
    = doE a <- liftE f;
          g a >>=E h
      odE"
-  by (simp add: liftE_def bindE_def lift_def bind_assoc)
+  by (simp add: liftE_def bindE_def bind_assoc)
 
 lemma liftME_option_catch_bind:
   "(liftME Some m <catch> const (return None))
@@ -2664,10 +2664,10 @@ lemma decodeRISCVMMUInvocation_ccorres:
      apply csymbr
      apply (rule ccorres_Guard_Seq)+
      apply (rule ccorres_add_return)
-     apply (rule_tac r'="\<lambda>_ rv'. rv' = option_to_ptr (x (ucast (asid_high_bits_of (ucast (capASIDBase cp)))))
-                                 \<and> x (ucast (asid_high_bits_of (ucast (capASIDBase cp)))) \<noteq> Some 0"
+     apply (rule_tac r'="\<lambda>_ rv'. rv' = option_to_ptr (asidTable (ucast (asid_high_bits_of (ucast (capASIDBase cp)))))
+                                 \<and> asidTable (ucast (asid_high_bits_of (ucast (capASIDBase cp)))) \<noteq> Some 0"
                  and xf'=pool_' in ccorres_split_nothrow)
-         apply (rule_tac P="\<lambda>s. x = riscvKSASIDTable (ksArchState s)
+         apply (rule_tac P="\<lambda>s. asidTable = riscvKSASIDTable (ksArchState s)
                                 \<and> valid_arch_state' s \<and> s \<turnstile>' ArchObjectCap cp"
                          in ccorres_from_vcg[where P'=UNIV])
          apply (rule allI, rule conseqPre, vcg)
@@ -2719,15 +2719,15 @@ lemma decodeRISCVMMUInvocation_ccorres:
                        in ccorres_split_nothrow)
            apply (rule ccorres_add_return2)
            apply (rule ccorres_pre_getObject_asidpool)
-           apply (rule_tac P="\<forall>x \<in> ran (inv ASIDPool xa). x \<noteq> 0"
+           apply (rule_tac P="\<forall>x \<in> ran (inv ASIDPool x). x \<noteq> 0"
                            in ccorres_gen_asm2)
-           apply (rule_tac P="ko_at' xa (capASIDPool cp)"
+           apply (rule_tac P="ko_at' x (capASIDPool cp)"
                            in ccorres_from_vcg[where P'=UNIV])
            apply (clarsimp simp: option_to_0_def option_to_ptr_def
                                  return_def)
            apply (rule HoarePartial.SeqSwap)
             apply (rule_tac I="{t. (\<sigma>, t) \<in> rf_sr \<and> i_' t \<le> 2 ^ asid_low_bits
-                                 \<and> ko_at' xa (capASIDPool cp) \<sigma>
+                                 \<and> ko_at' x (capASIDPool cp) \<sigma>
                                  \<and> (\<exists>v. cslift t (ap_Ptr (capASIDPool cp))
                                          = Some v \<and> (\<forall>x < i_' t. capASIDBase cp + x = 0
                                                         \<or> index (array_C v) (unat x) \<noteq> NULL)
@@ -2739,10 +2739,11 @@ lemma decodeRISCVMMUInvocation_ccorres:
              apply (rule conseqPre, vcg)
              apply (clarsimp simp: asidLowBits_handy_convs
                                    word_sle_def word_sless_def from_bool_0)
+             apply (rename_tac s' asid_pool)
              apply (subgoal_tac "capASIDBase_CL (cap_asid_pool_cap_lift cap)
                                      = capASIDBase cp")
-              apply (subgoal_tac "\<And>x. (x < (i_' xb + 1))
-                                        = (x < i_' xb \<or> x = i_' xb)")
+              apply (subgoal_tac "\<And>x. (x < (i_' s' + 1))
+                                        = (x < i_' s' \<or> x = i_' s')")
                apply (clarsimp simp: inc_le typ_heap_simps asid_low_bits_def not_less field_simps
                               split: if_split bool.splits)
                apply unat_arith
@@ -2750,7 +2751,7 @@ lemma decodeRISCVMMUInvocation_ccorres:
                apply (rule disjCI)
                apply (drule plus_one_helper)
                apply simp
-              apply (subgoal_tac "i_' xb < i_' xb + 1")
+              apply (subgoal_tac "i_' s' < i_' s' + 1")
                apply (erule_tac P="x < y" for x y in disjE, simp_all)[1]
               apply (rule plus_one_helper2 [OF order_refl])
               apply (rule notI, drule max_word_wrap)
@@ -2766,7 +2767,7 @@ lemma decodeRISCVMMUInvocation_ccorres:
             apply (clarsimp simp: typ_heap_simps casid_pool_relation_def
                                     inv_ASIDPool array_relation_def
                              split: asidpool.split_asm asid_pool_C.split_asm)
-            apply (case_tac "i_' xb = 2 ^ asid_low_bits")
+            apply (case_tac "i_' xa = 2 ^ asid_low_bits")
              apply (clarsimp split: list.split)
              apply (drule_tac f="\<lambda>xs. (a, ba) \<in> set xs" in arg_cong)
              apply (clarsimp simp: in_assocs_is_fun)

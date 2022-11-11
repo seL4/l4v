@@ -40,38 +40,6 @@ lemma cap_case_ThreadCap2:
   by (simp add: isCap_simps
          split: capability.split)
 
-lemma threadSet_isSchedulable_bool:
-  "\<lbrakk>\<forall>tcb. tcbState tcb = tcbState (f tcb); \<forall>tcb. tcbInReleaseQueue tcb = tcbInReleaseQueue (f tcb);
-    \<forall>tcb. tcbSchedContext tcb = tcbSchedContext (f tcb)\<rbrakk>
-   \<Longrightarrow> threadSet f t \<lbrace>\<lambda>s. P (isSchedulable_bool t s)\<rbrace>"
-  apply (wpsimp wp: threadSet_wp)
-  apply (erule_tac P=P in back_subst)
-  apply (fastforce simp: pred_map_simps isSchedulable_bool_def isScActive_def opt_map_def obj_at_simps
-                  split: if_splits option.splits)
-  done
-
-lemma tcbSchedDequeue_isSchedulable_bool[wp]:
-  "tcbSchedDequeue t \<lbrace>\<lambda>s. P (isSchedulable_bool t s)\<rbrace>"
-  unfolding tcbSchedDequeue_def setQueue_def
-  apply (wpsimp wp: threadSet_isSchedulable_bool threadGet_wp simp: bitmap_fun_defs)
-  apply (fastforce simp: isSchedulable_bool_def isScActive_def obj_at_simps
-                  split: if_splits)
-  done
-
-lemma threadSet_ready_or_release'[wp]:
-  "threadSet f tptr \<lbrace>ready_or_release'\<rbrace>"
-  unfolding threadSet_def
-  apply (wpsimp wp: setObject_tcb_wp getTCB_wp')
-  apply (clarsimp simp: ready_or_release'_def)
-  done
-
-lemma tcbSchedDequeue_ready_or_release'_inv:
-  "tcbSchedDequeue tptr \<lbrace>ready_or_release'\<rbrace>"
-  unfolding tcbSchedDequeue_def setQueue_def
-  apply (wpsimp wp: threadGet_wp simp: bitmap_fun_defs)
-  apply (fastforce simp: ready_or_release'_def obj_at_simps split: if_splits)
-  done
-
 lemma setDomain_ccorres:
   "ccorres dc xfdc
       (invs' and tcb_at' t and sch_act_simple and (\<lambda>s. \<forall>d p. distinct (ksReadyQueues s (d, p)))
@@ -132,57 +100,6 @@ lemma setDomain_ccorres:
                    simp: isSchedulable_bool_def pred_map_simps opt_map_def obj_at_simps
                          valid_release_queue_def)
   done
-
-lemma active_runnable':
-  "active' state \<Longrightarrow> runnable' state"
-  by fastforce
-
-lemma tcbSchedEnqueue_ksReadyQueues_distinct:
-  "\<lbrace>\<lambda>s. distinct (ksReadyQueues s (d, p)) \<and> thread \<notin> set (ksReadyQueues s (d,p))\<rbrace>
-   tcbSchedEnqueue thread
-   \<lbrace>\<lambda>_ s. distinct (ksReadyQueues s (d, p))\<rbrace>"
-  unfolding tcbSchedEnqueue_def
-  apply (wpsimp wp: threadGet_wp)
-  by (fastforce split: if_splits simp: obj_at_simps)
-
-lemma setThreadState_ksReadyQueues_distinct:
-  "\<lbrace>\<lambda>s. \<forall>d p. distinct (ksReadyQueues s (d, p)) \<and> thread \<notin> set (ksReadyQueues s (d,p))\<rbrace>
-   setThreadState ts thread
-   \<lbrace>\<lambda>_ s. distinct (ksReadyQueues s (d, p))\<rbrace>"
-  unfolding setThreadState_def scheduleTCB_def rescheduleRequired_def
-  apply (wpsimp wp: tcbSchedEnqueue_ksReadyQueues_distinct isSchedulable_wp threadSet_wp)
-  by (fastforce split: if_splits)
-
-lemma tcbSchedEnqueue_ready_or_release'[wp]:
-  "\<lbrace>\<lambda>s. ready_or_release' s \<and> tcbPtr \<notin> set (ksReleaseQueue s)\<rbrace>
-   tcbSchedEnqueue tcbPtr
-   \<lbrace>\<lambda>_. ready_or_release'\<rbrace>"
-  unfolding tcbSchedEnqueue_def setQueue_def
-  apply (wpsimp wp: threadGet_wp simp: bitmap_fun_defs)
-  apply (fastforce simp: ready_or_release'_def obj_at_simps split: if_splits)
-  done
-
-lemma ready_or_release'_ksSchedulerAction_update[simp]:
-  "ready_or_release' (ksSchedulerAction_update f s) = ready_or_release' s"
-  by (fastforce simp: ready_or_release'_def)
-
-lemma rescheduleRequired_ready_or_release'[wp]:
-  "\<lbrace>valid_release_queue and ready_or_release'\<rbrace>
-   rescheduleRequired
-   \<lbrace>\<lambda>_. ready_or_release'\<rbrace>"
-  unfolding rescheduleRequired_def
-  apply (wpsimp wp: isSchedulable_wp)
-  apply (fastforce simp: isSchedulable_bool_def opt_map_def pred_map_simps valid_release_queue_def
-                         obj_at_simps
-                  split: if_splits)
-  done
-
-lemma setThreadState_ready_or_release'[wp]:
-  "\<lbrace>ready_or_release' and valid_release_queue\<rbrace>
-   setThreadState f tptr
-   \<lbrace>\<lambda>_. ready_or_release'\<rbrace>"
-  unfolding setThreadState_def scheduleTCB_def
-  by (wpsimp wp: hoare_vcg_if_lift2 hoare_drop_imps threadSet_vrq_inv)
 
 lemma decodeDomainInvocation_ccorres:
   notes Collect_const[simp del]
@@ -274,7 +191,7 @@ lemma decodeDomainInvocation_ccorres:
            apply (ctac add: ccorres_return_CE)
           apply wp
          apply (vcg exspec=setDomain_modifies)
-        apply (wp sts_invs_minor' setThreadState_ksReadyQueues_distinct hoare_vcg_all_lift)
+        apply (wp sts_invs_minor' sts_ksQ hoare_vcg_all_lift)
        apply (vcg exspec=setThreadState_modifies)
       apply wp
       apply simp

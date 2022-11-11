@@ -12,11 +12,14 @@ begin
 context kernel
 begin
 
-lemma ccorres_pre_threadGet:
+lemma ccorres_pre_threadGet_P:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (g rv) c"
-  shows   "ccorres r xf
+  shows "ccorres r xf
            (\<lambda>s. \<forall>tcb. ko_at' tcb p s \<longrightarrow> P (f tcb) s)
-           ({s'. \<forall>tcb ctcb. cslift s' (tcb_ptr_to_ctcb_ptr p) = Some ctcb \<and> ctcb_relation tcb ctcb \<longrightarrow> s' \<in> P' (f tcb)})
+           ({s'. \<forall>s tcb ctcb. (s, s') \<in> rf_sr \<and> P (f tcb) s
+                               \<and> cslift s' (tcb_ptr_to_ctcb_ptr p) = Some ctcb
+                               \<and> ctcb_relation tcb ctcb
+                              \<longrightarrow> s' \<in> P' (f tcb)})
            hs (threadGet f p >>= (\<lambda>rv. g rv)) c"
   apply (rule ccorres_guard_imp)
     apply (rule ccorres_symb_exec_l)
@@ -32,8 +35,23 @@ lemma ccorres_pre_threadGet:
    apply assumption
   apply clarsimp
   apply (frule (1) obj_at_cslift_tcb)
-  apply clarsimp
-  done
+  by fastforce
+
+lemmas ccorres_pre_gettcbYieldTo_P = ccorres_pre_threadGet_P[where f=tcbYieldTo]
+
+lemma ccorres_pre_threadGet:
+  assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (g rv) c"
+  shows   "ccorres r xf
+           (\<lambda>s. \<forall>tcb. ko_at' tcb p s \<longrightarrow> P (f tcb) s)
+           ({s'. \<forall>tcb ctcb. cslift s' (tcb_ptr_to_ctcb_ptr p) = Some ctcb \<and> ctcb_relation tcb ctcb \<longrightarrow> s' \<in> P' (f tcb)})
+           hs (threadGet f p >>= (\<lambda>rv. g rv)) c"
+  apply (rule ccorres_guard_imp)
+    apply (rule ccorres_pre_threadGet_P)
+    apply (rule cc)
+   apply assumption
+  by simp
+
+lemmas ccorres_pre_gettcbYieldTo = ccorres_pre_threadGet[where f=tcbYieldTo]
 
 lemma ccorres_pre_archThreadGet:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (g rv) c"
@@ -68,9 +86,8 @@ lemma threadGet_eq:
   apply (rule exI [where x = tcb])
   apply simp
   apply (subst getObject_eq)
-     apply simp
-    apply (simp add: objBits_simps')
-   apply assumption
+    apply simp
+   apply (simp add: objBits_simps')
   apply simp
   done
 
@@ -81,9 +98,8 @@ lemma archThreadGet_eq:
   apply (rule exI [where x = tcb])
   apply simp
   apply (subst getObject_eq)
-     apply simp
+    apply simp
     apply (simp add: objBits_simps')
-   apply assumption
   apply simp
   done
 

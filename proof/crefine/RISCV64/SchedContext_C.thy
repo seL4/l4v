@@ -69,13 +69,6 @@ lemma schedContext_updateConsumed_ccorres:
      (Call schedContext_updateConsumed_'proc)"
 sorry (* FIXME RT: schedContext_updateConsumed_ccorres *)
 
-lemma schedContext_cancelYieldTo_ccorres:
-  "ccorres dc xfdc
-     invs' \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tptr\<rbrace> []
-     (schedContextCancelYieldTo tptr)
-     (Call schedContext_cancelYieldTo_'proc)"
-sorry (* FIXME RT: schedContext_cancelYieldTo_ccorres *)
-
 lemma invokeSchedControl_ConfigureFlags_ccorres:
   "ccorres dc xfdc
      invs' UNIV []

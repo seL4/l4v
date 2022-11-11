@@ -1385,7 +1385,7 @@ lemma rf_sr_tcb_update_no_queue:
      ctcb_relation tcb' ctcb
    \<rbrakk>
   \<Longrightarrow> (s\<lparr>ksPSpace := (ksPSpace s)(thread \<mapsto> KOTCB tcb')\<rparr>,
-       x\<lparr>globals := globals s'\<lparr>t_hrs_' := t_hrs_' (globals t)\<rparr>\<rparr>) \<in> rf_sr"
+       t'\<lparr>globals := globals s'\<lparr>t_hrs_' := t_hrs_' (globals t)\<rparr>\<rparr>) \<in> rf_sr"
   unfolding rf_sr_def state_relation_def cstate_relation_def cpspace_relation_def
   apply (clarsimp simp: Let_def update_tcb_map_tos map_to_ctes_upd_tcb_no_ctes
                         heap_to_user_data_def)
@@ -1415,14 +1415,8 @@ lemma rf_sr_tcb_update_no_queue:
    subgoal by (clarsimp simp: carch_state_relation_def typ_heap_simps')
   by (simp add: cmachine_state_relation_def)
 
-lemma rf_sr_tcb_update_no_queue_helper:
-  "(s, s'\<lparr> globals := globals s' \<lparr> t_hrs_' := t_hrs_' (globals (undefined
-              \<lparr> globals := (undefined \<lparr> t_hrs_' := f (globals s') (t_hrs_' (globals s')) \<rparr>)\<rparr>))\<rparr>\<rparr>) \<in> rf_sr
-          \<Longrightarrow> (s, globals_update (\<lambda>v. t_hrs_'_update (f v) v) s') \<in> rf_sr"
-  by (simp cong: StateSpace.state.fold_congs globals.fold_congs)
-
-lemmas rf_sr_tcb_update_no_queue2
-    = rf_sr_tcb_update_no_queue_helper [OF rf_sr_tcb_update_no_queue, simplified]
+lemmas rf_sr_tcb_update_no_queue2  =
+  rf_sr_obj_update_helper[OF rf_sr_tcb_update_no_queue, simplified]
 
 lemma tcb_queue_relation_not_in_q:
   "ctcb_ptr_to_tcb_ptr x \<notin> set xs \<Longrightarrow>
