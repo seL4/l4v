@@ -18,7 +18,7 @@ definition
 lemma kernel_mappings_slots_eq:
   "p \<in> kernel_mappings \<longleftrightarrow> ucast (p >> 20) \<in> kernel_mapping_slots"
   apply (simp add: kernel_mappings_def kernel_mapping_slots_def word_le_nat_alt
-                   shiftr_20_unat_ucast unat_ucast_kernel_base_rshift)
+                   shiftr_20_unat_ucast shiftr_20_unat_ucast)
   apply (fold word_le_nat_alt)
   apply (rule iffI)
    apply (simp add: le_shiftr)

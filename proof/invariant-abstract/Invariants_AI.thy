@@ -257,6 +257,11 @@ definition sc_at_pred_n ::
   where
   "sc_at_pred_n N proj P p s \<equiv> obj_at (\<lambda>ko. \<exists>sc n. ko = SchedContext sc n \<and> N n \<and> P (proj sc)) p s"
 
+lemma sc_at_pred_n_pspaceI:
+  "\<lbrakk> sc_at_pred_n N proj P ref s; kheap s = kheap s' \<rbrakk> \<Longrightarrow> sc_at_pred_n N proj P ref s'"
+  by (simp add: sc_at_pred_n_def obj_at_pspaceI)
+
+
 (* for compatibility with existing sc_*_sc_at predicates *)
 abbreviation "sc_at_ppred \<equiv> sc_at_pred_n (\<lambda>_. True)"
 
