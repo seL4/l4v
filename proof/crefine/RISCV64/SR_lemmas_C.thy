@@ -1820,9 +1820,9 @@ lemma memory_cross_over:
   apply (cut_tac p=ptr in unat_mask_3_less_8)
   apply (subgoal_tac "(ptr && ~~ mask 3) + (ptr && mask 3) = ptr")
    apply (subgoal_tac "!n x. n < 8 \<longrightarrow> (unat (x::machine_word) = n) = (x = of_nat n)")
-    apply (auto simp add: eval_nat_numeral unat_eq_0 add.commute
-                elim!: less_SucE)[1]
-    apply (clarsimp simp add: unat64_eq_of_nat word_bits_def)
+    apply (clarsimp simp: eval_nat_numeral)
+    apply (fastforce simp: add.commute elim!: less_SucE)
+   apply (clarsimp simp: unat64_eq_of_nat word_bits_def)
   apply (simp add: add.commute word_plus_and_or_coroll2)
   done
 

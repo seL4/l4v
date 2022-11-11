@@ -2014,9 +2014,9 @@ lemma memory_cross_over:
   apply (cut_tac p=ptr in unat_mask_2_less_4)
   apply (subgoal_tac "(ptr && ~~ mask 2) + (ptr && mask 2) = ptr")
    apply (subgoal_tac "!n x. n < 4 \<longrightarrow> (unat (x::word32) = n) = (x = of_nat n)")
-    apply (auto simp add: eval_nat_numeral unat_eq_0 add.commute take_bit_Suc
-                elim!: less_SucE)[1]
-    apply (clarsimp simp add: unat32_eq_of_nat word_bits_def)
+    apply (clarsimp simp: eval_nat_numeral)
+    apply (fastforce simp: add.commute elim!: less_SucE)
+   apply (clarsimp simp: unat32_eq_of_nat word_bits_def)
   apply (simp add: add.commute word_plus_and_or_coroll2)
   done
 

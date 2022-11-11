@@ -622,16 +622,13 @@ lemma shiftr1_0_or_1:"(x::('a::len) word) >> 1 = 0 \<Longrightarrow> x = 0 \<or>
   done
 
 lemma shiftr1_irrelevant_lsb: "bit (x::('a::len) word) 0 \<or> x >> 1 = (x + 1) >> 1"
-  apply (cases \<open>LENGTH('a)\<close>; transfer)
-   apply (simp_all add: take_bit_drop_bit)
-  apply (simp add: drop_bit_take_bit drop_bit_Suc)
-  done
+  by (auto simp add: bit_0 shiftr_def drop_bit_Suc ac_simps elim: evenE)
 
 lemma shiftr1_0_imp_only_lsb:"((x::('a::len) word) + 1) >> 1 = 0 \<Longrightarrow> x = 0 \<or> x + 1 = 0"
   by (metis One_nat_def shiftr1_0_or_1 word_less_1 word_overflow)
 
 lemma shiftr1_irrelevant_lsb': "\<not> (bit (x::('a::len) word) 0) \<Longrightarrow> x >> 1 = (x + 1) >> 1"
-  by (metis shiftr1_irrelevant_lsb)
+  using shiftr1_irrelevant_lsb [of x] by simp
 
 (* Perhaps this one should be a simp lemma, but it seems a little dangerous. *)
 lemma cast_chunk_assemble_id:

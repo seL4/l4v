@@ -950,21 +950,6 @@ lemma no_fail_obj_at [wp]:
   apply (fastforce simp: obj_at_def)
   done
 
-
-
-lemma do_machine_op_obj_at[wp]:
-  "\<lbrace>\<lambda>s. P (obj_at Q p s)\<rbrace> do_machine_op f \<lbrace>\<lambda>_ s. P (obj_at Q p s)\<rbrace>"
-  by (clarsimp simp: do_machine_op_def split_def | wp)+
-
-
-lemma dmo_cur_tcb[wp]:
-  "\<lbrace>cur_tcb\<rbrace> do_machine_op f \<lbrace>\<lambda>_. cur_tcb\<rbrace>"
-   apply (simp add: do_machine_op_def split_def)
-   apply wp
-   apply (clarsimp simp: cur_tcb_def)
-   done
-
-
 lemma valid_irq_states_machine_state_updateI:
   "(\<And>irq. interrupt_states s irq = IRQInactive \<Longrightarrow> irq_masks m irq) \<Longrightarrow>
    valid_irq_states (s\<lparr>machine_state := m\<rparr>)"
@@ -976,45 +961,47 @@ lemma valid_irq_statesE:
   by(auto simp: valid_irq_states_def valid_irq_masks_def)
 
 lemma cap_refs_respects_region_cong:
-  "\<lbrakk>caps_of_state a  = caps_of_state b; device_state (machine_state a) = device_state (machine_state b)\<rbrakk>
+  "\<lbrakk> caps_of_state a  = caps_of_state b;
+     device_state (machine_state a) = device_state (machine_state b) \<rbrakk>
   \<Longrightarrow> cap_refs_respects_device_region a = cap_refs_respects_device_region b"
-  by (simp add: cap_refs_respects_device_region_def cte_wp_at_caps_of_state dom_def cap_range_respects_device_region_def)
+  by (simp add: cap_refs_respects_device_region_def cte_wp_at_caps_of_state dom_def
+                cap_range_respects_device_region_def)
 
 lemmas device_region_congs[cong] = pspace_respects_region_cong cap_refs_respects_region_cong
 
 lemma dmo_invs1:
-  assumes valid_mf: "\<And>P. \<lbrace>\<lambda>ms.  P (device_state ms)\<rbrace> f \<lbrace>\<lambda>r ms.  P (device_state ms)\<rbrace>"
-  shows "\<lbrace>(\<lambda>s. \<forall>m. \<forall>(r,m')\<in>fst (f m). m = machine_state s \<longrightarrow> (\<forall>p.
-       in_user_frame p s  \<or> underlying_memory m' p = underlying_memory m p) \<and>
-         ((\<forall>irq. (interrupt_states s irq = IRQInactive \<longrightarrow> irq_masks m' irq) \<or>
-                 (irq_masks m' irq = irq_masks m irq))))
-    and invs\<rbrace>
+  assumes "\<And>P. f \<lbrace>\<lambda>ms. P (device_state ms)\<rbrace>"
+  shows
+  "\<lbrace>\<lambda>s. \<forall>m. \<forall>(r,m')\<in>fst (f m). m = machine_state s \<longrightarrow>
+               (\<forall>p. in_user_frame p s  \<or> underlying_memory m' p = underlying_memory m p) \<and>
+               (\<forall>irq. (interrupt_states s irq = IRQInactive \<longrightarrow> irq_masks m' irq) \<or>
+                       irq_masks m' irq = irq_masks m irq) \<and>
+               invs s\<rbrace>
    do_machine_op f
    \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (simp add: do_machine_op_def split_def)
-  apply wp
-  apply (clarsimp simp: invs_def  cur_sc_tcb_def sc_tcb_sc_at_def)
-  apply (frule_tac P1 = "(=) (device_state (machine_state s))" in use_valid[OF _ valid_mf])
-   apply simp
-  apply (fastforce simp: cur_tcb_def valid_state_def valid_machine_state_def
-                  intro: valid_irq_states_machine_state_updateI
+   unfolding do_machine_op_def
+   apply wpsimp
+   apply (rename_tac s rv s')
+   apply (clarsimp simp: invs_def cur_tcb_def valid_state_def valid_machine_state_def
+                   intro!: valid_irq_states_machine_state_updateI
                    elim: valid_irq_statesE)
-  done
+   apply (frule_tac P1 = "(=) (device_state (machine_state s))" in use_valid[OF _ assms], simp)
+   apply (fastforce simp: invs_def cur_tcb_def valid_state_def valid_machine_state_def
+                   intro: valid_irq_states_machine_state_updateI
+                    elim: valid_irq_statesE)
+   done
 
 lemma dmo_invs:
-  assumes valid_mf: "\<And>P. \<lbrace>\<lambda>ms.  P (device_state ms)\<rbrace> f \<lbrace>\<lambda>r ms.  P (device_state ms)\<rbrace>"
-  shows "\<lbrace>(\<lambda>s. \<forall>m. \<forall>(r,m')\<in>fst (f m). (\<forall>p.
-       in_user_frame p s  \<or> underlying_memory m' p = underlying_memory m p) \<and>
-         ((\<forall>irq. m = machine_state s \<longrightarrow>
-           (interrupt_states s irq = IRQInactive \<longrightarrow> irq_masks m' irq) \<or> (irq_masks m' irq = irq_masks m irq))))
-    and invs\<rbrace>
+  "(\<And>P. f \<lbrace>\<lambda>ms. P (device_state ms)\<rbrace>) \<Longrightarrow>
+   \<lbrace>\<lambda>s. \<forall>m. \<forall>(r,m')\<in>fst (f m).
+              (\<forall>p. in_user_frame p s  \<or> underlying_memory m' p = underlying_memory m p) \<and>
+              (\<forall>irq. m = machine_state s \<longrightarrow>
+                      (interrupt_states s irq = IRQInactive \<longrightarrow> irq_masks m' irq) \<or>
+                      irq_masks m' irq = irq_masks m irq) \<and>
+              invs s\<rbrace>
    do_machine_op f
    \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (wp dmo_invs1 valid_mf)
-  apply clarsimp
-  apply (drule spec, drule(1) bspec)
-  apply simp
-  done
+  by (wpsimp wp: dmo_invs1) fastforce
 
 lemma as_user_bind[wp]:
   "as_user t (f >>= g) = (as_user t f) >>= (\<lambda>x. as_user t (g x))"
@@ -1184,6 +1171,63 @@ lemma set_object_memory[wp]:
   unfolding set_object_def
   apply wp
   by simp
+
+(* post conditions does not depend on state *)
+lemma do_machine_op_result[wp]:
+  "\<lbrace>P\<rbrace> mop \<lbrace>\<lambda>rv s. Q rv\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s. P (machine_state s)\<rbrace> do_machine_op mop \<lbrace>\<lambda>rv s. Q rv\<rbrace>"
+  unfolding do_machine_op_def
+  by wpsimp (erule(2) use_valid)
+
+crunches do_machine_op
+  for obj_at[wp]: "\<lambda>s. P (obj_at Q p s)"
+  and cur_tcb[wp]: cur_tcb
+  and zombies[wp]: zombies_final
+  and iflive[wp]: if_live_then_nonz_cap
+  and ifunsafe[wp]: if_unsafe_then_cap
+  and refs_of[wp]: "\<lambda>s. P (state_refs_of s)"
+  and hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
+  and it[wp]: "\<lambda>s. P (idle_thread s)"
+  and irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
+  and cte_wp_at[wp]: "\<lambda>s. P (cte_wp_at P' c s)"
+  and valid_idle[wp]: valid_idle
+  and reply[wp]: valid_reply_caps
+  and reply_masters[wp]: valid_reply_masters
+  and valid_irq_handlers[wp]: valid_irq_handlers
+  and valid_global_objs[wp]: valid_global_objs
+  and valid_global_vspace_mappings[wp]: valid_global_vspace_mappings
+  and valid_arch_caps[wp]: valid_arch_caps
+  and cap_to[wp]: "ex_nonz_cap_to p"
+  and st_tcb [wp]: "\<lambda>s. Q (pred_tcb_at proj P t s)"
+  and ct[wp]: "\<lambda>s. P (cur_thread s)"
+  and arch[wp]: "\<lambda>s. P (arch_state s)"
+  and aobjs_of[wp]: "\<lambda>s. P (aobjs_of s)"
+  and valid_arch[wp]: valid_arch_state
+  and vs_lookup[wp]: "\<lambda>s. P (vs_lookup s)"
+  and valid_objs[wp]: valid_objs
+  and ct_in_state[wp]: "\<lambda>s. Q (ct_in_state P s)"
+  and valid_ioc[wp]: valid_ioc
+  and distinct[wp]: pspace_distinct
+  and valid_mdb[wp]: valid_mdb
+  and only_idle[wp]: only_idle
+  and valid_global_refs[wp]: valid_global_refs
+  and valid_irq_node[wp]: valid_irq_node
+  and irq_states[wp]: "\<lambda>s. P (interrupt_states s)"
+  (simp: cur_tcb_def zombies_final_pspaceI state_refs_of_pspaceI ex_nonz_cap_to_def ct_in_state_def
+   wp: crunch_wps valid_arch_state_lift vs_lookup_vspace_obj_at_lift)
+
+lemma dmo_inv:
+  assumes "\<And>P. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>"
+  shows "\<lbrace>P\<rbrace> do_machine_op f \<lbrace>\<lambda>_. P\<rbrace>"
+  unfolding do_machine_op_def
+  by wpsimp
+     (fastforce dest: in_inv_by_hoareD [OF assms])
+
+lemma dmo_inv_prop_lift:
+  assumes "\<And>P. f \<lbrace>\<lambda>ms. P (g ms)\<rbrace>"
+  shows "do_machine_op f \<lbrace>\<lambda>s. P (g (machine_state s))\<rbrace>"
+  unfolding do_machine_op_def
+  by wpsimp
+     (erule (1) use_valid[OF _ assms])
 
 end
 
@@ -1793,10 +1837,12 @@ lemmas set_simple_ko_valid_irq_handlers[wp]
 
 lemmas hoare_use_eq_irq_node = hoare_use_eq[where f=interrupt_irq_node]
 
+lemma cap_table_at_lift_valid:
+  "(\<And>T. f \<lbrace>typ_at T p\<rbrace>) \<Longrightarrow> f \<lbrace>cap_table_at n p\<rbrace>"
+  by (simp add: cap_table_at_typ)
 
 lemmas cap_table_at_lift_irq =
   hoare_use_eq_irq_node [OF _ cap_table_at_typ_at]
-
 
 lemma set_simple_ko_only_idle [wp]:
   "set_simple_ko f p ntfn \<lbrace>only_idle\<rbrace>"
@@ -1862,17 +1908,16 @@ lemma set_simple_ko_valid_ioc[wp]:
   "set_simple_ko f ptr val \<lbrace>valid_ioc\<rbrace>"
   by (set_simple_ko_method wp_thm: set_object_valid_ioc_no_caps[THEN hoare_set_object_weaken_pre]
                                    get_object_wp
-           simp_thm: is_tcb_def is_cap_table_def)
+                           simp_thm: is_tcb_def is_cap_table_def)
 
 lemma set_object_machine_state[wp]:
   "set_object p ko \<lbrace>\<lambda>s. P (machine_state s)\<rbrace>"
   by (wpsimp wp: set_object_wp_strong)
 
 lemma valid_irq_states_triv:
-  assumes irqs: "\<And>P. \<lbrace>\<lambda>s. P (interrupt_states s)\<rbrace> f \<lbrace>\<lambda>_ s. P (interrupt_states s)\<rbrace>"
-  assumes ms: "\<And>P. \<lbrace>\<lambda>s. P (machine_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (machine_state s)\<rbrace>"
-  shows
-  "\<lbrace> valid_irq_states \<rbrace> f \<lbrace>\<lambda>_. valid_irq_states \<rbrace>"
+  assumes irqs: "\<And>P. f \<lbrace>\<lambda>s. P (interrupt_states s)\<rbrace>"
+  assumes ms: "\<And>P. f \<lbrace>\<lambda>s. P (machine_state s)\<rbrace>"
+  shows "f \<lbrace>valid_irq_states\<rbrace>"
   apply(clarsimp simp: valid_def valid_irq_states_def valid_irq_masks_def)
   apply(case_tac "interrupt_states s irq = IRQInactive")
    apply(erule use_valid[OF _ ms])
@@ -1881,32 +1926,9 @@ lemma valid_irq_states_triv:
    apply assumption
   by blast
 
-crunch valid_irq_states[wp]: set_simple_ko "valid_irq_states"
-  (wp: crunch_wps simp: crunch_simps rule: valid_irq_states_triv)
-
-crunch valid_irq_states[wp]: set_cap "valid_irq_states"
-  (wp: crunch_wps simp: crunch_simps)
-
-crunch valid_irq_states[wp]: thread_set "valid_irq_states"
-  (wp: crunch_wps simp: crunch_simps)
-
-lemma valid_irq_states_scheduler_action[simp]:
-  "valid_irq_states (s\<lparr>scheduler_action := x\<rparr>) = valid_irq_states s"
-  by (simp add: valid_irq_states_def)
-
-crunches set_thread_state, set_tcb_obj_ref, update_sched_context, set_reply
+crunches set_simple_ko, set_cap, thread_set, set_thread_state, set_bound_notification
   for valid_irq_states[wp]: "valid_irq_states"
-  (wp: crunch_wps simp: crunch_simps)
-
-global_interpretation set_notification: non_reply_op "set_notification ptr val"
-  by unfold_locales (wpsimp wp: set_simple_ko_sk_obj_at_pred)
-
-global_interpretation set_notification: non_sc_op "set_notification ptr val"
-  by unfold_locales (wpsimp wp: set_simple_ko_sc_at_pred_n)
-
-lemma set_ntfn_valid_replies[wp]:
-  "set_notification ptr val \<lbrace> valid_replies_pred P \<rbrace>"
-  by (wpsimp wp: valid_replies_lift)
+  (wp: crunch_wps simp: crunch_simps rule: valid_irq_states_triv)
 
 lemma set_ntfn_minor_invs:
   "\<lbrace>invs and obj_at (\<lambda>ko. refs_of ko = refs_of_ntfn val) ptr
@@ -1918,143 +1940,6 @@ lemma set_ntfn_minor_invs:
   apply (wpsimp simp: invs_def valid_state_def valid_pspace_def
           wp: valid_irq_node_typ valid_ioports_lift simp_del: fun_upd_apply)
   apply (clarsimp simp: state_refs_of_def obj_at_def ext elim!: rsubst[where P = sym_refs])
-  done
-
-
-lemma do_machine_op_result[wp]:
-  "\<lbrace>P\<rbrace> mop \<lbrace>\<lambda>rv s. Q rv\<rbrace> \<Longrightarrow>
-   \<lbrace>\<lambda>s. P (machine_state s)\<rbrace> do_machine_op mop \<lbrace>\<lambda>rv s. Q rv\<rbrace>"
-  apply (simp add: do_machine_op_def split_def)
-  apply wp
-  apply clarsimp
-  apply (erule(2) use_valid)
-  done
-
-
-lemma dmo_zombies[wp]:
-  "do_machine_op oper \<lbrace>zombies_final\<rbrace>"
-  apply (simp add: do_machine_op_def split_def)
-  apply wp
-  apply (clarsimp elim!: zombies_final_pspaceI)
-  done
-
-
-lemma dmo_iflive[wp]:
-  "do_machine_op oper \<lbrace>if_live_then_nonz_cap\<rbrace>"
-  apply (simp add: do_machine_op_def split_def)
-  apply wp
-  apply (clarsimp elim!: iflive_pspaceI)
-  done
-
-
-lemma dmo_ifunsafe[wp]:
-  "do_machine_op oper \<lbrace>if_unsafe_then_cap\<rbrace>"
-  apply (simp add: do_machine_op_def split_def)
-  apply wp
-  apply (clarsimp elim!: ifunsafe_pspaceI)
-  done
-
-
-lemma dmo_refs_of[wp]:
-  "do_machine_op oper \<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace>"
-  apply (simp add: do_machine_op_def split_def)
-  apply wp
-  apply (clarsimp elim!: state_refs_of_pspaceI)
-  done
-
-
-lemma dmo_hyp_refs_of[wp]:
-  "do_machine_op oper \<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>"
-  apply (simp add: do_machine_op_def split_def)
-  apply wp
-  apply (clarsimp elim!: state_hyp_refs_of_pspaceI)
-  done
-
-crunch it[wp]: do_machine_op "\<lambda>s. P (idle_thread s)"
-
-crunch irq_node[wp]: do_machine_op "\<lambda>s. P (interrupt_irq_node s)"
-
-
-crunch cte_wp_at[wp]: do_machine_op "\<lambda>s. P (cte_wp_at P' c s)"
- (wp: crunch_wps)
-
-
-crunch valid_idle[wp]: do_machine_op "valid_idle"
-  (wp: crunch_wps simp: crunch_simps)
-
-crunch valid_irq_handlers[wp]: do_machine_op "valid_irq_handlers"
-
-crunch valid_global_objs[wp]: do_machine_op "valid_global_objs"
-
-crunch valid_global_vspace_mappings[wp]: do_machine_op "valid_global_vspace_mappings"
-
-crunch valid_arch_caps[wp]: do_machine_op "valid_arch_caps"
-
-
-lemma dmo_cap_to[wp]:
-  "do_machine_op mop \<lbrace>ex_nonz_cap_to p\<rbrace>"
-  by (simp add: ex_nonz_cap_to_def, wp hoare_vcg_ex_lift)
-
-(* cleanup: This is not an accurate name *)
-lemma dmo_st_tcb [wp]:
-  "do_machine_op f \<lbrace>\<lambda>s. Q (pred_tcb_at proj P t s)\<rbrace>"
-  apply (simp add: do_machine_op_def split_def)
-  apply (wp select_wp)
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
-  done
-
-(*
-  FIXME: replace these and similar with
-         global_interpretation do_machine_op: non_heap_op "do_machine_op f"
-*)
-lemma dmo_sc_at_pred_n [wp]:
-  "do_machine_op f \<lbrace>\<lambda>s. Q (sc_at_pred_n N proj P t s)\<rbrace>"
-  apply (simp add: do_machine_op_def split_def)
-  apply (wp select_wp)
-  apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
-  done
-
-crunch ct[wp]: do_machine_op "\<lambda>s. P (cur_thread s)" (wp: select_wp)
-
-
-lemma do_machine_op_arch [wp]:
-  "do_machine_op f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>"
-  apply (simp add: do_machine_op_def split_def)
-  apply wp
-  apply simp
-  done
-
-crunches do_machine_op
-  for aobjs_of[wp]: "\<lambda>s. P (aobjs_of s)"
-
-lemma do_machine_op_valid_arch [wp]:
-  "do_machine_op f \<lbrace>valid_arch_state\<rbrace>"
-  by (rule valid_arch_state_lift; wpsimp)
-
-lemma do_machine_op_vs_lookup [wp]:
-  "do_machine_op f \<lbrace>\<lambda>s. P (vs_lookup s)\<rbrace>"
-  apply (rule vs_lookup_vspace_obj_at_lift)
-  apply (simp add: do_machine_op_def split_def)
-  apply (wp | simp)+
-  done
-
-
-lemma dmo_inv:
-  assumes R: "\<And>P. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>"
-  shows "\<lbrace>P\<rbrace> do_machine_op f \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (simp add: do_machine_op_def split_def)
-  apply (wp select_f_wp)
-  apply (clarsimp simp del: )
-  apply (drule in_inv_by_hoareD [OF R])
-  apply simp
-  done
-
-
-lemma dom_objs [wp]:
-  "do_machine_op f \<lbrace>valid_objs\<rbrace>"
-  apply (simp add: do_machine_op_def split_def)
-  apply (wp select_wp)
-  apply (fastforce intro: valid_objs_pspaceI)
   done
 
 
@@ -2094,8 +1979,6 @@ lemma thread_get_wp':
   apply (clarsimp simp: obj_at_def dest!: get_tcb_SomeD)
   done
 
-
-crunch valid_ioc[wp]: do_machine_op valid_ioc
 
 crunch inv[wp]: get_irq_slot "P"
 
@@ -2687,11 +2570,5 @@ lemma update_sched_context_no_fail[wp]:
   apply (wpsimp wp: get_object_wp)
   apply (clarsimp simp: obj_at_def a_type_def)
   done
-
-lemma dmo_ct_in_state:
-  "do_machine_op f \<lbrace>ct_in_state P\<rbrace>"
-  apply (simp add: ct_in_state_def)
-  apply (rule hoare_lift_Pf [where f=cur_thread])
-  by wp+
 
 end

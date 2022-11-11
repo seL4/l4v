@@ -13,19 +13,6 @@ theory More_Word
     More_Divides
 begin
 
-context unique_euclidean_semiring_with_bit_operations \<comment>\<open>TODO: move\<close>
-begin
-
-lemma possible_bit [simp]:
-  \<open>possible_bit TYPE('a) n\<close>
-  by (simp add: possible_bit_def)
-
-lemma drop_bit_mask_eq:
-  \<open>drop_bit m (mask n) = mask (n - m)\<close>
-  by (rule bit_eqI) (auto simp add: bit_simps possible_bit_def)
-
-end
-
 context
   includes bit_operations_syntax
 begin
@@ -59,10 +46,6 @@ proof -
              prefer 10
              apply (subst signed_take_bit_int_eq_self)
                apply (auto simp add: signed_take_bit_int_eq_self signed_take_bit_eq_take_bit_minus take_bit_Suc_from_most n not_less intro!: *)
-       apply (smt (z3) take_bit_nonnegative)
-      apply (smt (z3) take_bit_int_less_exp)
-     apply (smt (z3) take_bit_nonnegative)
-    apply (smt (z3) take_bit_int_less_exp)
     done
   then show ?thesis
     apply (simp only: One_nat_def word_size drop_bit_eq_zero_iff_not_bit_last bit_and_iff bit_xor_iff)
@@ -2178,10 +2161,10 @@ lemma odd_word_imp_even_next:"odd (unat (x::('a::len) word)) \<Longrightarrow> x
   done
 
 lemma overflow_imp_lsb:"(x::('a::len) word) + 1 = 0 \<Longrightarrow> bit x 0"
-  using even_plus_one_iff [of x] by simp
+  using even_plus_one_iff [of x] by (simp add: bit_0)
 
 lemma odd_iff_lsb:"odd (unat (x::('a::len) word)) = bit x 0"
-  by transfer (simp add: even_nat_iff)
+  by transfer (simp add: even_nat_iff bit_0)
 
 lemma of_nat_neq_iff_word:
       "x mod 2 ^ LENGTH('a) \<noteq> y mod 2 ^ LENGTH('a) \<Longrightarrow>
@@ -2196,7 +2179,7 @@ lemma of_nat_neq_iff_word:
   done
 
 lemma lsb_this_or_next: "\<not> (bit ((x::('a::len) word) + 1) 0) \<Longrightarrow> bit x 0"
-  by simp
+  by (simp add: bit_0)
 
 lemma mask_or_not_mask:
   "x AND mask n OR x AND NOT (mask n) = x"
@@ -2275,8 +2258,8 @@ lemma word_ops_nth:
 lemma word_power_nonzero:
   "\<lbrakk> (x :: 'a::len word) < 2 ^ (LENGTH('a) - n); n < LENGTH('a); x \<noteq> 0 \<rbrakk>
   \<Longrightarrow> x * 2 ^ n \<noteq> 0"
-  by (metis gr_implies_not0 mult_eq_0_iff nat_mult_power_less_eq numeral_2_eq_2
-    p2_gt_0 unat_eq_zero unat_less_power unat_mult_lem unat_power_lower word_gt_a_gt_0 zero_less_Suc)
+  by (metis Word.word_div_mult bits_div_0 len_gt_0 len_of_finite_2_def nat_mult_power_less_eq
+    p2_gt_0 unat_mono unat_power_lower word_gt_a_gt_0)
 
 lemma less_1_helper:
   "n \<le> m \<Longrightarrow> (n - 1 :: int) < m"

@@ -299,6 +299,8 @@ deleteASID asid pt = do
             when (maybeRoot == Just pt) $ do
                 invalidateTLBByASID asid
                 invalidateASIDEntry asid
+                -- re-read pool, because invalidateASIDEntry changes it
+                ASIDPool pool <- getObject poolPtr
                 let pool' = pool//[(asid .&. mask asidLowBits, Nothing)]
                 setObject poolPtr $ ASIDPool pool'
                 tcb <- getCurThread
@@ -777,8 +779,7 @@ performPageTableInvocation (PageTableUnmap cap slot) = do
         Just (asid, vaddr) -> do
             let ptr = capPTBasePtr cap
             unmapPageTable asid vaddr ptr
-            -- ptBits NormalPT_T, because it can't be a VSpace table
-            let slots = [ptr, ptr + bit pteBits .. ptr + bit (ptBits NormalPT_T) - 1]
+            let slots = [ptr, ptr + bit pteBits .. ptr + bit (ptBits (capPTType cap)) - 1]
             mapM_ (flip storePTE InvalidPTE) slots
         _ -> return ()
     ArchObjectCap cap <- getSlotCap slot

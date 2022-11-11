@@ -1,4 +1,5 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -653,18 +654,15 @@ lemma armv_contextSwitch_HWASID_fp_rewrite:
                         checkPDAt_def checkPDUniqueToASID_def
                         checkPDASIDMapMembership_def
                         stateAssert_def2[folded assert_def])
-  apply (rule monadic_rewrite_imp)
+  apply (rule monadic_rewrite_guard_imp)
    apply (rule monadic_rewrite_gets_l)
    apply (rule monadic_rewrite_symb_exec_l)
-      apply (wpsimp)+
-     apply (simp add: empty_fail_findPDForASID empty_fail_catch)
-    apply (rule monadic_rewrite_assert monadic_rewrite_gets_l)+
-    apply (rule_tac P="asidMap asid \<noteq> None \<and> fst (the (asidMap asid)) = the (pde_stored_asid v)"
-        in monadic_rewrite_gen_asm)
-    apply (simp only: case_option_If2 simp_thms if_True if_False
-                      split_def, simp)
-    apply (rule monadic_rewrite_refl)
-   apply (wp findPDForASID_pd_at_wp | simp only: const_def)+
+      apply (rule monadic_rewrite_assert monadic_rewrite_gets_l)+
+      apply (rule_tac P="asidMap asid \<noteq> None \<and> fst (the (asidMap asid)) = the (pde_stored_asid v)"
+               in monadic_rewrite_gen_asm)
+      apply (simp add: case_option_If2 split_def)
+      apply (rule monadic_rewrite_refl)
+     apply (wpsimp wp: findPDForASID_pd_at_wp simp: empty_fail_catch)+
   apply (clarsimp simp: pd_has_hwasid_def cte_level_bits_def
                         field_simps cte_wp_at_ctes_of
                         word_0_sle_from_less

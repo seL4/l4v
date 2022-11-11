@@ -304,7 +304,11 @@ datatype aobject_type =
   | VCPUObj
 
 definition arch_is_frame_type :: "aobject_type \<Rightarrow> bool" where
-  "arch_is_frame_type aobj \<equiv> aobj \<noteq> PageTableObj"
+  "arch_is_frame_type aobj \<equiv> case aobj of
+     SmallPageObj \<Rightarrow> True
+   | LargePageObj \<Rightarrow> True
+   | HugePageObj \<Rightarrow> True
+   | _ \<Rightarrow> False"
 
 definition arch_default_cap :: "aobject_type \<Rightarrow> obj_ref \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> arch_cap" where
   "arch_default_cap tp r n dev \<equiv> case tp of

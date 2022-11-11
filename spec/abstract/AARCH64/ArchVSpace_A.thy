@@ -130,8 +130,8 @@ definition invalidate_vmid_entry :: "vmid \<Rightarrow> (unit,'z::state_ext) s_m
 text \<open>Remove mappings in either direction involving this ASID.\<close>
 definition invalidate_asid_entry :: "asid \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "invalidate_asid_entry asid \<equiv> do
-     maybe_hw_asid \<leftarrow> load_vmid asid;
-     when (maybe_hw_asid \<noteq> None) $ invalidate_vmid_entry (the maybe_hw_asid);
+     maybe_vmid \<leftarrow> load_vmid asid;
+     when (maybe_vmid \<noteq> None) $ invalidate_vmid_entry (the maybe_vmid);
      invalidate_asid asid
   od"
 
@@ -263,6 +263,8 @@ definition delete_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::st
          when (\<exists>vmid. pool (asid_low_bits_of asid) = Some (ASIDPoolVSpace vmid pt)) $ do
            invalidate_tlb_by_asid asid;
            invalidate_asid_entry asid;
+           \<comment> \<open>re-read here, because @{text invalidate_asid_entry} changes the ASID pool:\<close>
+           pool \<leftarrow> get_asid_pool pool_ptr;
            pool' \<leftarrow> return $ pool (asid_low_bits_of asid := None);
            set_asid_pool pool_ptr pool';
            tcb \<leftarrow> gets cur_thread;

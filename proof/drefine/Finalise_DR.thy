@@ -1,4 +1,5 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -2779,11 +2780,9 @@ lemma monadic_trancl_f:
 lemma monadic_trancl_step:
   "monadic_rewrite False False \<top>
        (monadic_trancl f x) (do y \<leftarrow> f x; monadic_trancl f y od)"
-  apply (rule monadic_rewrite_imp)
-   apply (rule monadic_rewrite_trans)
-    apply (rule monadic_trancl_steps)
-   apply (rule monadic_rewrite_bind_head)
-   apply (rule monadic_trancl_f)
+  apply (monadic_rewrite_l monadic_trancl_steps)
+  apply (monadic_rewrite_l monadic_trancl_f)
+  apply (rule monadic_rewrite_refl)
   apply simp
   done
 
@@ -2819,30 +2818,20 @@ lemma monadic_trancl_preemptible_steps:
       (monadic_trancl_preemptible f x)
       (doE y \<leftarrow> monadic_trancl_preemptible f x;
               monadic_trancl_preemptible f y odE)"
-  apply (simp add: monadic_trancl_preemptible_def)
-  apply (rule monadic_rewrite_imp)
-   apply (rule monadic_rewrite_trans)
-    apply (rule monadic_trancl_steps)
-   apply (simp add: bindE_def)
-   apply (rule_tac Q="\<top>\<top>" in monadic_rewrite_bind_tail)
-    apply (case_tac x)
-     apply (simp add: lift_def monadic_trancl_lift_Inl)
-     apply (rule monadic_rewrite_refl)
-    apply (simp add: lift_def)
-    apply (rule monadic_rewrite_refl)
-   apply (wp | simp)+
+  unfolding monadic_trancl_preemptible_def bindE_def
+  apply (monadic_rewrite_l monadic_trancl_steps)
+  apply (rule monadic_rewrite_bind_tail)
+    apply (case_tac y; simp add: lift_def monadic_trancl_lift_Inl)
+     apply (rule monadic_rewrite_refl)+
+   apply wpsimp+
   done
 
 lemma monadic_trancl_preemptible_f:
   "monadic_rewrite False False (\<lambda>_. True)
      (monadic_trancl_preemptible f x) (f x)"
-  apply (simp add: monadic_trancl_preemptible_def)
-  apply (rule monadic_rewrite_imp)
-   apply (rule monadic_rewrite_trans)
-    apply (rule monadic_trancl_f)
-   apply (simp add: lift_def)
-   apply (rule monadic_rewrite_refl)
-  apply simp
+  unfolding monadic_trancl_preemptible_def
+  apply (monadic_rewrite_l monadic_trancl_f)
+   apply (fastforce simp: lift_def intro!: monadic_rewrite_refl)+
   done
 
 lemma monadic_trancl_preemptible_step:
@@ -2850,24 +2839,17 @@ lemma monadic_trancl_preemptible_step:
       (monadic_trancl_preemptible f x)
       (doE y \<leftarrow> f x;
             monadic_trancl_preemptible f y odE)"
-  apply (rule monadic_rewrite_imp)
-   apply (rule monadic_rewrite_trans)
-    apply (rule monadic_trancl_preemptible_steps)
-   apply (rule monadic_rewrite_bindE_head)
-   apply (rule monadic_trancl_preemptible_f)
-  apply simp
+  apply (monadic_rewrite_l monadic_trancl_preemptible_steps)
+   apply (monadic_rewrite_l monadic_trancl_preemptible_f)
+   apply (fastforce intro!: monadic_rewrite_refl)+
   done
 
 lemma monadic_trancl_preemptible_return:
   "monadic_rewrite False False (\<lambda>_. True)
      (monadic_trancl_preemptible f x) (returnOk x)"
-  apply (simp add: monadic_trancl_preemptible_def)
-  apply (rule monadic_rewrite_imp)
-   apply (rule monadic_rewrite_trans)
-    apply (rule monadic_trancl_return)
-   apply (simp add: returnOk_def)
-   apply (rule monadic_rewrite_refl)
-  apply simp
+  unfolding monadic_trancl_preemptible_def
+  apply (monadic_rewrite_l monadic_trancl_return)
+   apply (fastforce simp: returnOk_def intro!: monadic_rewrite_refl)+
   done
 
 lemma dcorres_get_cap_symb_exec:
@@ -3211,24 +3193,18 @@ lemma finalise_slot_inner1_add_if_Null:
        od
      od)"
   supply if_cong[cong]
-  apply (simp add: finalise_slot_inner1_def)
-  apply (rule monadic_rewrite_imp)
-   apply (rule monadic_rewrite_bind_tail)
-    apply (rule monadic_rewrite_if_rhs)
-     apply (simp add: PageTableUnmap_D.is_final_cap_def)
-     apply (rule monadic_rewrite_trans)
-      apply (rule monadic_rewrite_bind_tail[where j="\<lambda>_. j" for j, OF _ gets_wp])+
-      apply (rename_tac remove, rule_tac P=remove in monadic_rewrite_gen_asm)
-      apply simp
-      apply (rule monadic_rewrite_refl)
-     apply (simp add: gets_bind_ign when_def)
-     apply (rule monadic_rewrite_trans)
-      apply (rule monadic_rewrite_bind_head)
-      apply (rule monadic_rewrite_pick_alternative_1)
-     apply simp
-     apply (rule monadic_rewrite_refl)
-    apply (rule monadic_rewrite_refl)
-   apply wp
+  apply (rule monadic_rewrite_weaken_flags[where F=False and E=False, simplified])
+  apply (simp add: finalise_slot_inner1_def when_def PageTableUnmap_D.is_final_cap_def)
+  apply (rule monadic_rewrite_bind_tail)
+   apply (rule monadic_rewrite_if_r, clarsimp)
+    apply (monadic_rewrite_l monadic_rewrite_pick_alternative_1)
+    apply (monadic_rewrite_l monadic_rewrite_if_l_False)
+    apply monadic_rewrite_symb_exec_l_drop
+     apply (monadic_rewrite_symb_exec_l_known True)
+      apply monadic_rewrite_symb_exec_l
+       apply (rule monadic_rewrite_refl)
+      apply wpsimp+
+   apply (rule monadic_rewrite_refl)
   apply (clarsimp simp: CSpace_D.cap_removeable_def)
   done
 
@@ -3275,12 +3251,12 @@ lemma finalise_preemption_corres:
            apply (rule dcorres_symb_exec_rE)
              apply (simp split: option.splits)
              apply (rule conjI, clarsimp)
-              apply (rule monadic_rewrite_corres2)
+              apply (rule monadic_rewrite_corres_l)
                apply (rule monadic_trancl_preemptible_return)
               apply (rule dcorres_returnOk, simp)
              apply clarsimp
              apply (rule corres_guard_imp)
-               apply (rule monadic_rewrite_corres2)
+               apply (rule monadic_rewrite_corres_l)
                 apply (rule monadic_trancl_preemptible_f)
                apply (rule corres_alternate2[OF dcorres_throw], simp_all)[4]
            apply ((wp | simp)+)[1]
@@ -3288,7 +3264,7 @@ lemma finalise_preemption_corres:
          apply ((simp add: reset_work_units_def | wp)+)[1]
         apply clarsimp
         apply (rule corres_guard_imp)
-          apply (rule monadic_rewrite_corres2)
+          apply (rule monadic_rewrite_corres_l)
            apply (rule monadic_trancl_preemptible_return)
           apply (rule dcorres_returnOk, simp_all)[3]
        apply (rule hoare_TrueI)
@@ -3405,7 +3381,7 @@ proof (induct arbitrary: S rule: rec_del.induct,
     apply (subst rec_del_simps_ext[unfolded split_def])
     apply simp
     apply (rule corres_guard_imp)
-      apply (rule monadic_rewrite_corres2)
+      apply (rule monadic_rewrite_corres_l)
        apply (rule monadic_trancl_preemptible_steps)
       apply (simp add: cutMon_walk_bindE)
       apply (rule corres_splitEE)
@@ -3414,7 +3390,7 @@ proof (induct arbitrary: S rule: rec_del.induct,
         apply (simp add: liftME_def[symmetric])
         apply (rule_tac R="fst rv" in corres_cases)
          apply (simp add: when_def)
-         apply (rule monadic_rewrite_corres2)
+         apply (rule monadic_rewrite_corres_l)
           apply (rule monadic_trancl_preemptible_f)
          apply (simp add: finalise_slot_inner2_def[unfolded split_def])
          apply (rule corres_alternate1, rule corres_alternate2)
@@ -3425,7 +3401,7 @@ proof (induct arbitrary: S rule: rec_del.induct,
          apply (simp add: liftM_def[symmetric] o_def dc_def[symmetric])
          apply (rule empty_slot_corres)
         apply (simp add: when_def)
-        apply (rule monadic_rewrite_corres2)
+        apply (rule monadic_rewrite_corres_l)
          apply (rule monadic_trancl_preemptible_return)
         apply (rule corres_trivial, simp add: returnOk_liftE)
        apply wp
@@ -3499,7 +3475,7 @@ next
     apply (rule stronger_corres_guard_imp)
       apply (simp add: cutMon_walk_bind)
       apply (rule corres_drop_cutMon_bind)
-      apply (rule monadic_rewrite_corres2)
+      apply (rule monadic_rewrite_corres_l)
        apply (rule monadic_rewrite_bindE_head)
        apply (rule monadic_trancl_preemptible_step)
       apply (simp add: finalise_slot_inner2_def
@@ -3508,7 +3484,7 @@ next
       apply (rule corres_alternate1)+
       apply (simp add: liftE_bindE bind_bindE_assoc bind_assoc)
       apply (rule select_pick_corres_asm, assumption)
-      apply (rule monadic_rewrite_corres2)
+      apply (rule monadic_rewrite_corres_l)
        apply (rule monadic_rewrite_bind_head)
        apply (rule finalise_slot_inner1_add_if_Null[unfolded split_def])
       apply (simp add: bind_assoc if_to_top_of_bind)
@@ -3521,7 +3497,7 @@ next
           apply simp
          apply (rule corres_drop_cutMon)
          apply (rule corres_underlying_gets_pre_lhs)+
-         apply (rule monadic_rewrite_corres2)
+         apply (rule monadic_rewrite_corres_l)
           apply (rule monadic_rewrite_bindE_head)
           apply (rule monadic_trancl_preemptible_return)
          apply simp
@@ -3551,13 +3527,10 @@ next
             apply (rule corres_if_rhs_only)
              apply (rule_tac F=remove in corres_note_assumption, simp)
              apply (simp add: when_def)
-             apply (rule monadic_rewrite_corres2)
-              apply (rule monadic_rewrite_bind)
-                apply (rule monadic_rewrite_pick_alternative_1)
-               apply (rule monadic_rewrite_bind_tail)
-                apply (rule monadic_rewrite_bindE_head)
-                apply (rule monadic_trancl_preemptible_return)
-               apply wp+
+             apply (rule monadic_rewrite_corres_l)
+              apply (monadic_rewrite_l monadic_rewrite_pick_alternative_1, simp)
+              apply (monadic_rewrite_l monadic_trancl_preemptible_return)
+              apply (rule monadic_rewrite_refl)
              apply simp
              apply (rule corres_underlying_gets_pre_lhs)
              apply (rule corres_drop_cutMon)
@@ -3565,7 +3538,7 @@ next
             apply (rule corres_if_rhs_only)
              apply simp
              apply (rule corres_drop_cutMon)
-             apply (rule monadic_rewrite_corres2)
+             apply (rule monadic_rewrite_corres_l)
               apply (rule monadic_rewrite_bind)
                 apply (rule monadic_rewrite_pick_alternative_2)
                apply (rule monadic_rewrite_bind_tail)
@@ -3576,7 +3549,7 @@ next
                apply (rule corres_underlying_gets_pre_lhs)
                apply (rule corres_trivial, simp add: returnOk_liftE)
               apply (wp | simp)+
-            apply (rule monadic_rewrite_corres2)
+            apply (rule monadic_rewrite_corres_l)
              apply (rule monadic_rewrite_bind_head)
              apply (rule monadic_rewrite_pick_alternative_2)
             apply (simp add: cutMon_walk_bind)
@@ -3599,7 +3572,7 @@ next
                  apply (frule cte_at_replicate_zbits)
                  apply (clarsimp simp: cte_wp_at_caps_of_state caps_of_state_transform_opt_cap)
                  apply (clarsimp simp: transform_cslot_ptr_def)
-                apply (rule monadic_rewrite_corres2)
+                apply (rule monadic_rewrite_corres_l)
                  apply (rule monadic_rewrite_bindE_head)
                  apply (rule monadic_rewrite_trans)
                   apply (rule monadic_trancl_preemptible_steps)
@@ -3674,7 +3647,7 @@ next
     apply (rule corres_drop_cutMon)
     apply (simp add: liftME_def[symmetric] liftE_bindE[symmetric])
     apply (rule stronger_corres_guard_imp)
-      apply (rule monadic_rewrite_corres2)
+      apply (rule monadic_rewrite_corres_l)
        apply (rule monadic_trancl_preemptible_f)
       apply (simp add: finalise_slot_inner2_def[unfolded split_def])
       apply (rule corres_alternate1, rule corres_alternate1, rule corres_alternate2)
@@ -3696,7 +3669,7 @@ next
     apply simp
     apply (rule stronger_corres_guard_imp)
       apply (simp add: cutMon_walk_bindE)
-      apply (rule monadic_rewrite_corres2)
+      apply (rule monadic_rewrite_corres_l)
        apply (rule monadic_trancl_preemptible_steps)
       apply (rule corres_splitEE)
          apply (rule "4.hyps"[simplified, folded dc_def])
@@ -3706,7 +3679,7 @@ next
         apply (simp add: liftE_bindE)
         apply (rule corres_symb_exec_r)
            apply (simp add: liftME_def[symmetric] split del: if_split)
-           apply (rule monadic_rewrite_corres2)
+           apply (rule monadic_rewrite_corres_l)
             apply (rule monadic_trancl_preemptible_return)
            apply (rule corres_if_rhs_only)
             apply (simp add: returnOk_liftE)

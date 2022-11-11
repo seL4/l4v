@@ -60,7 +60,7 @@ lemma interferences_twp[wp]:
   (is "\<lbrace>?P\<rbrace>,\<lbrace>R\<rbrace> ?f \<lbrace>G\<rbrace>,\<lbrace>?Q\<rbrace>")
   apply (rule validI_strengthen_post, rule repeat_validI)
    apply wp
-   apply (clarsimp simp: reflpD[where r=G])
+   apply (clarsimp simp: reflpD[where R=G])
    apply (metis rtranclp_trans)
   apply simp
   done
@@ -470,7 +470,7 @@ lemma rel_tr_refinement_bind_left_general:
   apply (simp add: image_def)
   apply (strengthen bexI[mk_strg I _ E] | simp)+
   apply (simp add: list_all2_append rely_cond_append
-                   list_all2_same reflpD[where r=sr] rel_prod_sel
+                   list_all2_same reflpD[where R=sr] rel_prod_sel
         split del: if_split)
   apply (erule rely_cond_equiv_s)
   apply (erule disjE)
@@ -493,7 +493,7 @@ lemma rel_tr_refinement_bind_right_general:
   apply (erule elem_bindE)
    apply (clarsimp simp: bind_def)
    apply (strengthen bexI[mk_strg I _ E], simp)
-   apply (auto simp: list_all2_same reflpD[where r=sr])[1]
+   apply (auto simp: list_all2_same reflpD[where R=sr])[1]
   apply (clarsimp simp: rely_cond_append)
   apply (drule validI_D, erule(1) conjI, assumption+, clarsimp)
   apply (drule spec, drule(3) rel_tr_refinementD,
@@ -502,7 +502,7 @@ lemma rel_tr_refinement_bind_right_general:
   apply (simp add: image_def)
   apply (strengthen bexI[mk_strg I _ E] | simp)+
   apply (simp add: list_all2_append list_all2_lengthD)
-  apply (simp add: rely_cond_append list_all2_same reflpD[where r=sr] rel_prod_sel
+  apply (simp add: rely_cond_append list_all2_same reflpD[where R=sr] rel_prod_sel
         split del: if_split)
   done
 

@@ -201,6 +201,19 @@ abbreviation(input)
 
 lemmas option_map_def = map_option_case
 
+(* Function update for functions with two arguments. This is just nested normal function update,
+   but writing it out in goals leads to large annoying terms with if-s that get split etc, so we
+   introduce a constant for it. Syntax precedence is same as fun_upd, but we are only allowing
+   a single update, no sequences. *)
+definition fun_upd2 ::
+  "('a \<Rightarrow> 'b \<Rightarrow> 'c) \<Rightarrow> 'a \<Rightarrow> 'b \<Rightarrow> 'c \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> 'c)" ("_ '(_, _ := _')" [1000, 0, 0] 900) where
+  "f (x, y := v) \<equiv> \<lambda>x'. if x' = x then (f x) (y := v) else f x'"
+
+(* precedence same as MapUpd, only single updates as above, no general maplets. *)
+abbreviation fun_upd2_Some :: "('a \<Rightarrow> 'b \<Rightarrow> 'c option) \<Rightarrow> 'a \<Rightarrow> 'b \<Rightarrow> 'c \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> 'c option)"
+  ("_ '(_, _ \<mapsto> _')" [900, 0, 0] 900) where
+  "f (x, y \<mapsto> v) \<equiv> f (x, y := Some v)"
+
 lemma False_implies_equals [simp]:
   "((False \<Longrightarrow> P) \<Longrightarrow> PROP Q) \<equiv> PROP Q"
   apply (rule equal_intr_rule)
@@ -1364,10 +1377,6 @@ lemma if_eq_elem_helperE:
   \<Longrightarrow> a = (if P then b else c)"
   by fastforce
 
-lemma if_option_Some:
-  "((if P then None else Some x) = Some y) = (\<not>P \<and> x = y)"
-  by simp
-
 lemma insert_minus_eq:
   "x \<notin> A \<Longrightarrow> A - S = (A - (S - {x}))"
   by auto
@@ -1776,6 +1785,25 @@ lemma is_inv_inj2:
   "is_inv f g \<Longrightarrow> inj_on g (dom g)"
   using is_inv_com is_inv_inj by blast
 
+lemma is_inv_eq:
+  "is_inv f g = (\<forall>x y. (f x = Some y) = (g y = Some x))"
+proof
+  assume "\<forall>x y. (f x = Some y) = (g y = Some x)"
+  thus "is_inv f g" by (auto simp: is_inv_def ran_def)
+next
+  assume "is_inv f g"
+  moreover
+  from this have "is_inv g f" by (rule is_inv_com)
+  ultimately
+  show "\<forall>x y. (f x = Some y) = (g y = Some x)"
+    unfolding is_inv_def by blast
+qed
+
+lemma is_inv_Some_upd:
+  "\<lbrakk> is_inv f g; f x = None; g y = None \<rbrakk> \<Longrightarrow> is_inv (f(x \<mapsto> y)) (g(y \<mapsto> x))"
+  unfolding is_inv_def
+  by clarsimp
+
 text \<open>Map inversion (implicitly assuming injectivity).\<close>
 definition
   "the_inv_map m = (\<lambda>s. if s\<in>ran m then Some (THE x. m x = Some s) else None)"
@@ -2017,6 +2045,11 @@ lemma domE :
 lemma dom_eqD:
   "\<lbrakk> f x = Some v; dom f = S \<rbrakk> \<Longrightarrow> x \<in> S"
   by clarsimp
+
+lemma dom_eq_All:
+  "dom f = dom f' \<Longrightarrow>
+   (\<forall>x. f x = None \<longrightarrow> f' x = None) \<and> (\<forall>x v. f x = Some v \<longrightarrow> (\<exists>v'. f' x = Some v'))"
+  by auto
 
 lemma exception_set_finite1:
   "finite {x. P x} \<Longrightarrow> finite {x. (x = y \<longrightarrow> Q x) \<and> P x}"
@@ -2735,15 +2768,31 @@ lemma distinct_map_enum:
   Why does this lemma exist when lemmas like @{thm subst} already exist?
   Because patterns like `?P ?x` usually have multiple unifiers with the
   conclusion of a rule, whereas `(\<And>x. ?P x x)` only has one. This means
-  you can "inline" `equify` like this: `my_cool_thm[THEN equify]`.
-\<close>
+  you can "inline" `equify` like this: `my_cool_thm[THEN equify]`.\<close>
 lemma equify:
   "(\<And>x. P x x) \<Longrightarrow> x = x' \<Longrightarrow> P x x'"
   by simp
 
+lemma if_option_Some:
+  "((if P then None else Some x) = Some y) = (\<not>P \<and> x = y)"
+  by simp
+
+lemma if_option_Some2:
+  "((if P then Some x else None) = Some y) = (P \<and> x = y)"
+  by simp
+
+(* sometimes safer as [simp] than if_option_Some *)
+lemma if_option_Some_eq:
+  "((if P then None else Some x) = Some x) = (\<not>P)"
+  "((if P then Some x else None) = Some x) = P"
+  by simp+
+
 lemma if_option_None_eq:
   "((if P then None else Some x) = None) = P"
-  by (auto split: if_splits)
+  "((if P then Some x else None) = None) = (\<not>P)"
+  by simp+
+
+lemmas if_option = if_option_None_eq if_option_Some if_option_Some2
 
 lemma not_in_ran_None_upd:
   "x \<notin> ran m \<Longrightarrow> x \<notin> ran (m(y := None))"
