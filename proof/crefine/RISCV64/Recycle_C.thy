@@ -203,11 +203,11 @@ lemma hrs_mem_update_fold_eq:
 
 lemma power_user_page_foldl_zero_ranges:
   " \<forall>p<2 ^ (pageBitsForSize sz - pageBits).
-      hrs_htd hrs \<Turnstile>\<^sub>t (Ptr (ptr + of_nat p * 0x1000) :: user_data_C ptr)
+      hrs_htd hrs \<Turnstile>\<^sub>t (Ptr (ptr + of_nat p * of_nat (2 ^ pageBits)) :: user_data_C ptr)
     \<Longrightarrow> zero_ranges_are_zero rngs hrs
     \<Longrightarrow> zero_ranges_are_zero rngs
         (hrs_mem_update (\<lambda>s. foldl (\<lambda>s x. heap_update (Ptr x) (user_data_C (arr x)) s) s
-            (map (\<lambda>n. ptr + of_nat n * 0x1000) [0..<2 ^ (pageBitsForSize sz - pageBits)]))
+            (map (\<lambda>n. ptr + of_nat n * of_nat (2 ^ pageBits)) [0..<2 ^ (pageBitsForSize sz - pageBits)]))
             hrs)"
   apply (simp add: foldl_conv_fold hrs_mem_update_fold_eq)
   apply (rule conjunct1)
@@ -216,6 +216,24 @@ lemma power_user_page_foldl_zero_ranges:
       and xs=xs and Q="\<lambda>x. x \<in> set xs" for xs], simp_all)
   apply (subst zero_ranges_are_zero_update, simp_all)
   apply clarsimp
+  done
+
+lemma power_user_page_foldl_refill_buffer_relation:
+  "\<forall>p<2 ^ (pageBitsForSize sz - pageBits).
+     hrs_htd hrs \<Turnstile>\<^sub>t (Ptr (ptr + of_nat p * of_nat (2 ^ pageBits)) :: user_data_C ptr)
+   \<Longrightarrow> refill_buffer_relation (ksPSpace \<sigma>) hrs (ghost'state_' (globals x))
+   \<Longrightarrow> refill_buffer_relation
+         (ksPSpace \<sigma>)
+         (hrs_mem_update (\<lambda>s. foldl (\<lambda>s x. heap_update (Ptr x) (user_data_C (arr x)) s) s
+            (map (\<lambda>n. ptr + of_nat n * of_nat (2 ^ pageBits)) [0..<2 ^ (pageBitsForSize sz - pageBits)])) hrs)
+         (ghost'state_' (globals x))"
+  apply (simp add: foldl_conv_fold hrs_mem_update_fold_eq)
+  apply (rule conjunct1)
+  apply (rule fold_invariant[where P="\<lambda>hrs'. refill_buffer_relation (ksPSpace \<sigma>) hrs'
+                                                                    (ghost'state_' (globals x))
+                                             \<and> hrs_htd hrs' = hrs_htd hrs"
+                               and xs=xs and Q="\<lambda>x. x \<in> set xs" for xs], simp_all)
+  apply (clarsimp simp: refill_buffer_relation_def Let_def typ_heap_simps)
   done
 
 lemma heap_to_device_data_disj_mdf':
@@ -330,15 +348,14 @@ lemma clearMemory_PageCap_ccorres:
                          carch_state_relation_def
                          cmachine_state_relation_def
                          foldl_fun_upd_const[unfolded fun_upd_def]
-                         power_user_page_foldl_zero_ranges[simplified pageBits_def]
+                         power_user_page_foldl_zero_ranges[simplified pageBits_def, simplified]
+                         power_user_page_foldl_refill_buffer_relation[simplified pageBits_def, simplified]
                          dom_heap_to_device_data)
    apply (rule conjI[rotated])
-    apply (rule conjI)
     apply (simp add:pageBitsForSize_mess_multi)
     apply (rule cmap_relationI)
      apply (clarsimp simp: dom_heap_to_device_data cmap_relation_def)
     apply (simp add:cuser_user_data_device_relation_def)
-    subgoal sorry (* FIXME RT: refill_buffer_relation *)
    apply (subst help_force_intvl_range_conv, assumption)
      subgoal by (simp add: pageBitsForSize_def bit_simps split: vmpage_size.split)
     apply simp

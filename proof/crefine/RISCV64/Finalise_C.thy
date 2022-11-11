@@ -744,7 +744,8 @@ lemma doUnbindNotification_ccorres:
                apply (clarsimp simp: cnotification_relation_def Let_def
                                      mask_def [where n=2] NtfnState_Waiting_def)
                apply (case_tac "ntfnObj ntfn", ((simp add: option_to_ctcb_ptr_def)+)[4])
-              subgoal sorry (* FIXME RT: refill_buffer_relation *)
+              apply (clarsimp simp: refill_buffer_relation_def Let_def typ_heap_simps
+                                    update_ntfn_map_tos)
              subgoal by (simp add: carch_state_relation_def)
             subgoal by (simp add: cmachine_state_relation_def)
            subgoal by (simp add: h_t_valid_clift_Some_iff)
@@ -780,41 +781,41 @@ lemma doUnbindNotification_ccorres':
         apply (frule cmap_relation_ntfn)
         apply (erule (1) cmap_relation_ko_atE)
         apply (rule conjI)
-         apply (erule h_t_valid_clift)
-        apply (clarsimp simp: setNotification_def split_def)
-        apply (rule bexI [OF _ setObject_eq])
-            apply (simp add: rf_sr_def cstate_relation_def Let_def init_def
-                             typ_heap_simps'
-                             cpspace_relation_def update_ntfn_map_tos)
-            apply (elim conjE)
-            apply (intro conjI)
-            \<comment> \<open>tcb relation\<close>
-              apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
-               apply (clarsimp simp: cnotification_relation_def Let_def
-                                     mask_def [where n=2] NtfnState_Waiting_def)
-               apply (fold_subgoals (prefix))[2]
-               subgoal premises prems using prems
-                       by (case_tac "ntfnObj ntfn", (simp add: option_to_ctcb_ptr_def)+)
-              subgoal sorry (* FIXME RT: refill_buffer_relation *)
-             subgoal by (simp add: carch_state_relation_def)
-            subgoal by (simp add: cmachine_state_relation_def)
-           subgoal by (simp add: h_t_valid_clift_Some_iff)
-          subgoal by (simp add: objBits_simps')
-         subgoal by (simp add: objBits_simps)
-        apply assumption
-       apply ceqv
-      apply (rule ccorres_move_c_guard_tcb)
-      apply (simp add: setBoundNotification_def)
-      apply (rule_tac P'="\<top>" and P="\<top>"
-                   in threadSet_ccorres_lemma3)
-       apply vcg
-      apply simp
-      apply (erule(1) rf_sr_tcb_update_no_queue2)
-              apply (simp add: typ_heap_simps')+
-        apply (simp add: tcb_cte_cases_def cteSizeBits_def)
-      apply (simp add: ctcb_relation_def option_to_ptr_def option_to_0_def)
-     apply (simp add: invs'_def)
-     apply (wp get_ntfn_ko' | simp add: guard_is_UNIV_def)+
+        apply (erule h_t_valid_clift)
+       apply (clarsimp simp: setNotification_def split_def)
+       apply (rule bexI [OF _ setObject_eq])
+           apply (simp add: rf_sr_def cstate_relation_def Let_def init_def
+                            typ_heap_simps'
+                            cpspace_relation_def update_ntfn_map_tos)
+           apply (elim conjE)
+           apply (intro conjI)
+             apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
+              apply (clarsimp simp: cnotification_relation_def Let_def
+                                    mask_def [where n=2] NtfnState_Waiting_def)
+              apply (fold_subgoals (prefix))[2]
+              subgoal premises prems using prems
+                      by (case_tac "ntfnObj ntfn", (simp add: option_to_ctcb_ptr_def)+)
+             apply (clarsimp simp: refill_buffer_relation_def Let_def typ_heap_simps
+                                   update_ntfn_map_tos)
+            subgoal by (simp add: carch_state_relation_def)
+           subgoal by (simp add: cmachine_state_relation_def)
+          subgoal by (simp add: h_t_valid_clift_Some_iff)
+         subgoal by (simp add: objBits_simps')
+        subgoal by (simp add: objBits_simps)
+       apply assumption
+      apply ceqv
+     apply (rule ccorres_move_c_guard_tcb)
+     apply (simp add: setBoundNotification_def)
+     apply (rule_tac P'="\<top>" and P="\<top>"
+                  in threadSet_ccorres_lemma3)
+      apply vcg
+     apply simp
+     apply (erule(1) rf_sr_tcb_update_no_queue2)
+             apply (simp add: typ_heap_simps')+
+       apply (simp add: tcb_cte_cases_def cteSizeBits_def)
+     apply (simp add: ctcb_relation_def option_to_ptr_def option_to_0_def)
+    apply (simp add: invs'_def)
+    apply (wp get_ntfn_ko' | simp add: guard_is_UNIV_def)+
   done
 
 

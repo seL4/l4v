@@ -1692,8 +1692,9 @@ proof -
                                   update_pte_map_tos update_pte_map_to_ptes
                                   carray_map_relation_upd_triv)
             subgoal by (erule (2) cmap_relation_updI; simp)
-           subgoal sorry (* FIXME RT: refill_buffer_relation *)
-           (* by (clarsimp simp: carch_state_relation_def cmachine_state_relation_def) *)
+           apply (clarsimp simp: refill_buffer_relation_def Let_def typ_heap_simps
+                                 update_pte_map_tos)
+           subgoal by (clarsimp simp: carch_state_relation_def cmachine_state_relation_def)
           apply simp
          apply (simp add: objBits_simps)
         apply (simp add: objBits_simps')

@@ -320,7 +320,9 @@ proof -
                           foldr_upd_app_if [folded data_map_insert_def]
                           zero_ranges_ptr_retyps
                           rl empty)
-    subgoal sorry (* FIXME RT: refill_buffer_relation *)
+    apply (clarsimp simp: refill_buffer_relation_def Let_def)
+    apply (clarsimp simp: rl' tag_disj_via_td_name)
+    apply (simp add: rl[unfolded ko_def] ko_def cong: if_cong)
     done
   qed
 

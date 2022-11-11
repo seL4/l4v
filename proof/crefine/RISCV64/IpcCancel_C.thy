@@ -250,7 +250,8 @@ lemma cancelSignal_ccorres_helper:
             apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
              apply (simp add: cnotification_relation_def Let_def NtfnState_Idle_def)
             apply (simp add: carch_state_relation_def carch_globals_def)
-           subgoal sorry (* FIXME RT: refill_buffer_relation *)
+           apply (clarsimp simp: refill_buffer_relation_def Let_def typ_heap_simps
+                                 update_ntfn_map_tos)
           \<comment> \<open>queue relations\<close>
           apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
           apply (clarsimp simp: comp_def)
@@ -305,7 +306,8 @@ lemma cancelSignal_ccorres_helper:
             apply (simp add: canonical_bit_def)
            apply simp
           \<comment> \<open>queue relations\<close>
-          subgoal sorry (* FIXME RT: refill_buffer_relation *)
+          apply (clarsimp simp: refill_buffer_relation_def Let_def typ_heap_simps
+                                update_ntfn_map_tos)
          apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
          apply (clarsimp simp: comp_def)
         apply (erule iffD2[OF tcb_queue_relation_only_next_prev, rotated -1])
@@ -2971,7 +2973,8 @@ lemma cancelIPC_ccorres_helper:
             apply (rule cnotification_relation_ep_queue, assumption+)
              subgoal by simp
             apply (erule (1) map_to_ko_atI')
-           subgoal sorry (* FIXME RT: refill_buffer_relation *)
+           apply (clarsimp simp: refill_buffer_relation_def Let_def typ_heap_simps
+                                 update_ep_map_tos)
           apply (simp add: heap_to_user_data_def Let_def)
         \<comment> \<open>queue relations\<close>
           apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
@@ -3036,7 +3039,8 @@ lemma cancelIPC_ccorres_helper:
            apply (rule cnotification_relation_ep_queue, assumption+)
            apply simp
            apply (erule (1) map_to_ko_atI')
-          subgoal sorry (* FIXME RT: refill_buffer_relation *)
+          apply (clarsimp simp: refill_buffer_relation_def Let_def typ_heap_simps
+                                update_ep_map_tos)
           \<comment> \<open>queue relations\<close>
          apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
          subgoal by (clarsimp simp: comp_def)

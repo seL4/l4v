@@ -4548,7 +4548,8 @@ lemma sendIPC_dequeue_ccorres_helper:
              apply (rule cnotification_relation_ep_queue, assumption+)
               apply simp
              apply (erule (1) map_to_ko_atI')
-            subgoal sorry (* FIXME RT: refill_buffer_relation *)
+            apply (clarsimp simp: refill_buffer_relation_def Let_def typ_heap_simps
+                                  update_ep_map_tos)
            \<comment> \<open>queue relations\<close>
            apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
            apply (clarsimp simp: comp_def)
@@ -4602,7 +4603,8 @@ lemma sendIPC_dequeue_ccorres_helper:
             apply (rule cnotification_relation_ep_queue, assumption+)
              apply simp
             apply (erule (1) map_to_ko_atI')
-           subgoal sorry (* FIXME RT: refill_buffer_relation *)
+           apply (clarsimp simp: refill_buffer_relation_def Let_def typ_heap_simps
+                                 update_ep_map_tos)
           \<comment> \<open>queue relations\<close>
           apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
           apply (clarsimp simp: comp_def)
@@ -4950,7 +4952,8 @@ lemma sendIPC_enqueue_ccorres_helper:
              apply (simp only:projectKOs injectKO_ep objBits_simps)
              apply clarsimp
             apply (clarsimp simp: obj_at'_def projectKOs)
-           subgoal sorry (* FIXME RT: refill_buffer_relation *)
+           apply (clarsimp simp: refill_buffer_relation_def Let_def typ_heap_simps
+                                 update_ep_map_tos)
           \<comment> \<open>queue relations\<close>
           apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
           apply (clarsimp simp: comp_def)
@@ -5009,7 +5012,8 @@ lemma sendIPC_enqueue_ccorres_helper:
             apply (erule(2) map_to_ko_at_updI')
             apply (clarsimp simp: objBitsKO_def)
            apply (clarsimp simp: obj_at'_def)
-          subgoal sorry (* FIXME RT: refill_buffer_relation *)
+          apply (clarsimp simp: refill_buffer_relation_def Let_def typ_heap_simps
+                                update_ep_map_tos)
          \<comment> \<open>queue relations\<close>
          apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
          apply (clarsimp simp: comp_def)
@@ -5389,40 +5393,41 @@ lemma receiveIPC_enqueue_ccorres_helper:
        apply (elim conjE)
        apply (intro conjI)
              \<comment> \<open>tcb relation\<close>
-            apply (erule ctcb_relation_null_queue_ptrs)
-            apply (clarsimp simp: comp_def)
-           \<comment> \<open>ep relation\<close>
-           apply (rule cpspace_relation_ep_update_ep', assumption+)
-            apply (clarsimp simp: cendpoint_relation_def Let_def
-                                  mask_def [where n=3] EPState_Recv_def
-                           split: if_split)
-            subgoal
-              apply (clarsimp simp: tcb_queue_relation'_def is_aligned_neg_mask
-                                  valid_ep'_def
-                            dest: tcb_queue_relation_next_not_NULL)
-              apply (rule conjI, clarsimp)
-               apply (rule conjI, fastforce simp: mask_def)
-               apply (clarsimp simp: valid_pspace'_def objBits_simps' simp flip: canonical_bit_def)
-               apply (erule (1) tcb_and_not_mask_canonical)
-               apply (simp (no_asm) add: tcbBlockSizeBits_def)
-              apply (clarsimp simp: valid_pspace'_def objBits_simps' simp flip: canonical_bit_def)
-              apply (rule conjI, solves \<open>simp (no_asm) add: mask_def\<close>)
-              apply (erule (1) tcb_and_not_mask_canonical)
-              apply (simp (no_asm) add: tcbBlockSizeBits_def)
-              done
-           apply (simp add: isSendEP_def isRecvEP_def)
-          \<comment> \<open>ntfn relation\<close>
-          apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
-          apply simp
-          apply (rule cnotification_relation_ep_queue, assumption+)
-            apply (simp add: isSendEP_def isRecvEP_def)
-           apply simp
-          apply (frule_tac x=p in map_to_ko_atI, clarsimp, clarsimp)
-           apply fastforce
-          apply (erule(2) map_to_ko_at_updI')
-           apply (clarsimp simp: objBitsKO_def)
-          apply (clarsimp simp: obj_at'_def)
-          subgoal sorry (* FIXME RT: refill_buffer_relation *)
+              apply (erule ctcb_relation_null_queue_ptrs)
+              apply (clarsimp simp: comp_def)
+             \<comment> \<open>ep relation\<close>
+             apply (rule cpspace_relation_ep_update_ep', assumption+)
+              apply (clarsimp simp: cendpoint_relation_def Let_def
+                                    mask_def [where n=3] EPState_Recv_def
+                             split: if_split)
+              subgoal
+                apply (clarsimp simp: tcb_queue_relation'_def is_aligned_neg_mask
+                                    valid_ep'_def
+                              dest: tcb_queue_relation_next_not_NULL)
+                apply (rule conjI, clarsimp)
+                 apply (rule conjI, fastforce simp: mask_def)
+                 apply (clarsimp simp: valid_pspace'_def objBits_simps' simp flip: canonical_bit_def)
+                 apply (erule (1) tcb_and_not_mask_canonical)
+                 apply (simp (no_asm) add: tcbBlockSizeBits_def)
+                apply (clarsimp simp: valid_pspace'_def objBits_simps' simp flip: canonical_bit_def)
+                apply (rule conjI, solves \<open>simp (no_asm) add: mask_def\<close>)
+                apply (erule (1) tcb_and_not_mask_canonical)
+                apply (simp (no_asm) add: tcbBlockSizeBits_def)
+                done
+             apply (simp add: isSendEP_def isRecvEP_def)
+            \<comment> \<open>ntfn relation\<close>
+            apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
+            apply simp
+            apply (rule cnotification_relation_ep_queue, assumption+)
+              apply (simp add: isSendEP_def isRecvEP_def)
+             apply simp
+            apply (frule_tac x=p in map_to_ko_atI, clarsimp, clarsimp)
+             apply fastforce
+            apply (erule(2) map_to_ko_at_updI')
+             apply (clarsimp simp: objBitsKO_def)
+            apply (clarsimp simp: obj_at'_def)
+           apply (clarsimp simp: refill_buffer_relation_def Let_def typ_heap_simps
+                                 update_ep_map_tos)
           \<comment> \<open>queue relations\<close>
           apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
           apply (clarsimp simp: comp_def)
@@ -5473,7 +5478,8 @@ lemma receiveIPC_enqueue_ccorres_helper:
            apply (erule(2) map_to_ko_at_updI')
             apply (clarsimp simp: objBitsKO_def)
            apply (clarsimp simp: obj_at'_def)
-          subgoal sorry (* FIXME RT: refill_buffer_relation *)
+          apply (clarsimp simp: refill_buffer_relation_def Let_def typ_heap_simps
+                                update_ep_map_tos)
          \<comment> \<open>queue relations\<close>
          apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
          apply (clarsimp simp: comp_def)
@@ -5565,7 +5571,8 @@ lemma receiveIPC_dequeue_ccorres_helper:
              apply (rule cnotification_relation_ep_queue, assumption+)
               apply simp
              apply (erule (1) map_to_ko_atI')
-            subgoal sorry (* FIXME RT: refill_buffer_relation *)
+            apply (clarsimp simp: refill_buffer_relation_def Let_def typ_heap_simps
+                                  update_ep_map_tos)
            \<comment> \<open>queue relations\<close>
            apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
            apply (clarsimp simp: comp_def)
@@ -5619,7 +5626,8 @@ lemma receiveIPC_dequeue_ccorres_helper:
             apply (rule cnotification_relation_ep_queue, assumption+)
              apply simp
             apply (erule (1) map_to_ko_atI')
-           subgoal sorry (* FIXME RT: refill_buffer_relation *)
+           apply (clarsimp simp: refill_buffer_relation_def Let_def typ_heap_simps
+                                 update_ep_map_tos)
          \<comment> \<open>queue relations\<close>
           apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
           apply (clarsimp simp: comp_def)
@@ -6149,7 +6157,8 @@ lemma sendSignal_dequeue_ccorres_helper:
               apply (simp add: cnotification_relation_def Let_def NtfnState_Idle_def
                                tcb_queue_relation'_def)
              apply simp
-            subgoal sorry (* FIXME RT: refill_buffer_relation *)
+            apply (clarsimp simp: refill_buffer_relation_def Let_def typ_heap_simps
+                                  update_ntfn_map_tos)
           \<comment> \<open>queue relations\<close>
            apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
            apply (clarsimp simp: comp_def)
@@ -6207,7 +6216,8 @@ lemma sendSignal_dequeue_ccorres_helper:
               apply clarsimp
              apply (clarsimp split: if_split)
             apply simp
-           subgoal sorry (* FIXME RT: refill_buffer_relation *)
+           apply (clarsimp simp: refill_buffer_relation_def Let_def typ_heap_simps
+                                 update_ntfn_map_tos)
           \<comment> \<open>queue relations\<close>
           apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
          apply (clarsimp simp: comp_def)
@@ -6608,7 +6618,8 @@ lemma receiveSignal_enqueue_ccorres_helper:
                                      dest!: st_tcb_strg'[rule_format])
                by clarsimp
             apply (simp add: isWaitingNtfn_def)
-           subgoal sorry (* FIXME RT: refill_buffer_relation *)
+           apply (clarsimp simp: refill_buffer_relation_def Let_def typ_heap_simps
+                                 update_ntfn_map_tos)
           \<comment> \<open>queue relations\<close>
           apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
           subgoal by (clarsimp simp: comp_def)
@@ -6674,7 +6685,8 @@ lemma receiveSignal_enqueue_ccorres_helper:
                               simp flip: canonical_bit_def)
               done
            apply (simp add: isWaitingNtfn_def)
-          subgoal sorry (* FIXME RT: refill_buffer_relation *)
+          apply (clarsimp simp: refill_buffer_relation_def Let_def typ_heap_simps
+                                update_ntfn_map_tos)
          \<comment> \<open>queue relations\<close>
          apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
          apply (clarsimp simp: comp_def)
