@@ -73,8 +73,8 @@ lemma kernel_entry_invs:
    \<lbrace>\<lambda>_ s. invs s \<and> (ct_running s \<or> ct_idle s)\<rbrace>"
   apply (simp add: kernel_entry_def)
   apply (wp akernel_invs thread_set_invs_trivial thread_set_ct_in_state select_wp
-         do_machine_op_ct_in_state static_imp_wp hoare_vcg_disj_lift
-      | clarsimp simp add: tcb_cap_cases_def)+
+            static_imp_wp hoare_vcg_disj_lift hoare_vcg_imp_lift'
+         | clarsimp simp add: tcb_cap_cases_def)+
   done
 
 lemma device_update_invs:
@@ -119,7 +119,7 @@ lemma do_user_op_invs:
    \<lbrace>\<lambda>_. invs and ct_running\<rbrace>"
   apply (simp add: do_user_op_def split_def)
   apply (wp device_update_invs)
-  apply (wp do_machine_op_ct_in_state select_wp dmo_invs | simp add:dom_restrict_plus_eq)+
+  apply (wp select_wp dmo_invs | simp add:dom_restrict_plus_eq)+
   apply (clarsimp simp: user_memory_update_def simpler_modify_def
                         restrict_map_def invs_def cur_tcb_def
                  split: option.splits if_split_asm)
@@ -2025,7 +2025,7 @@ lemma handle_event_schact_is_rct_imp_ct_activatable:
     apply (clarsimp simp: liftE_def bind_assoc)
     apply (rule_tac Q="?Q" in hoare_weaken_pre[rotated])
      apply (fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
-    apply (rule hoare_seq_ext_skip, solves \<open>wpsimp wp: hoare_vcg_imp_lift'\<close>)+
+    apply (rule hoare_seq_ext_skip, solves \<open>wpsimp wp: hoare_vcg_imp_lift' do_machine_op_ct_in_state\<close>)+
     apply (rule hoare_seq_ext_skip, wpsimp)
     apply wpsimp
    apply (clarsimp simp: liftE_def bind_assoc)

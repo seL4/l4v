@@ -970,26 +970,25 @@ lemma cap_refs_respects_region_cong:
 lemmas device_region_congs[cong] = pspace_respects_region_cong cap_refs_respects_region_cong
 
 lemma dmo_invs1:
-  assumes "\<And>P. f \<lbrace>\<lambda>ms. P (device_state ms)\<rbrace>"
+  assumes valid_mf: "\<And>P. f \<lbrace>\<lambda>ms. P (device_state ms)\<rbrace>"
   shows
-  "\<lbrace>\<lambda>s. \<forall>m. \<forall>(r,m')\<in>fst (f m). m = machine_state s \<longrightarrow>
+    "\<lbrace>\<lambda>s. \<forall>m. \<forall>(r,m')\<in>fst (f m). m = machine_state s \<longrightarrow>
                (\<forall>p. in_user_frame p s  \<or> underlying_memory m' p = underlying_memory m p) \<and>
                (\<forall>irq. (interrupt_states s irq = IRQInactive \<longrightarrow> irq_masks m' irq) \<or>
                        irq_masks m' irq = irq_masks m irq) \<and>
                invs s\<rbrace>
    do_machine_op f
    \<lbrace>\<lambda>_. invs\<rbrace>"
-   unfolding do_machine_op_def
-   apply wpsimp
-   apply (rename_tac s rv s')
-   apply (clarsimp simp: invs_def cur_tcb_def valid_state_def valid_machine_state_def
-                   intro!: valid_irq_states_machine_state_updateI
+  unfolding do_machine_op_def
+  apply wpsimp
+  apply (rename_tac s rv s')
+  apply (clarsimp simp: invs_def cur_sc_tcb_def sc_tcb_sc_at_def)
+  apply (frule_tac P1 = "(=) (device_state (machine_state s))" in use_valid[OF _ valid_mf])
+   apply simp
+  apply (fastforce simp: cur_tcb_def valid_state_def valid_machine_state_def
+                  intro: valid_irq_states_machine_state_updateI
                    elim: valid_irq_statesE)
-   apply (frule_tac P1 = "(=) (device_state (machine_state s))" in use_valid[OF _ assms], simp)
-   apply (fastforce simp: invs_def cur_tcb_def valid_state_def valid_machine_state_def
-                   intro: valid_irq_states_machine_state_updateI
-                    elim: valid_irq_statesE)
-   done
+  done
 
 lemma dmo_invs:
   "(\<And>P. f \<lbrace>\<lambda>ms. P (device_state ms)\<rbrace>) \<Longrightarrow>
@@ -1190,8 +1189,6 @@ crunches do_machine_op
   and irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   and cte_wp_at[wp]: "\<lambda>s. P (cte_wp_at P' c s)"
   and valid_idle[wp]: valid_idle
-  and reply[wp]: valid_reply_caps
-  and reply_masters[wp]: valid_reply_masters
   and valid_irq_handlers[wp]: valid_irq_handlers
   and valid_global_objs[wp]: valid_global_objs
   and valid_global_vspace_mappings[wp]: valid_global_vspace_mappings
@@ -1926,9 +1923,24 @@ lemma valid_irq_states_triv:
    apply assumption
   by blast
 
-crunches set_simple_ko, set_cap, thread_set, set_thread_state, set_bound_notification
+lemma valid_irq_states_scheduler_action[simp]:
+  "valid_irq_states (s\<lparr>scheduler_action := x\<rparr>) = valid_irq_states s"
+  by (simp add: valid_irq_states_def)
+
+crunches
+  set_simple_ko, set_cap, thread_set, set_thread_state, set_tcb_obj_ref, update_sched_context
   for valid_irq_states[wp]: "valid_irq_states"
   (wp: crunch_wps simp: crunch_simps rule: valid_irq_states_triv)
+
+global_interpretation set_notification: non_reply_op "set_notification ptr val"
+  by unfold_locales (wpsimp wp: set_simple_ko_sk_obj_at_pred)
+
+global_interpretation set_notification: non_sc_op "set_notification ptr val"
+  by unfold_locales (wpsimp wp: set_simple_ko_sc_at_pred_n)
+
+lemma set_ntfn_valid_replies[wp]:
+  "set_notification ptr val \<lbrace> valid_replies_pred P \<rbrace>"
+  by (wpsimp wp: valid_replies_lift)
 
 lemma set_ntfn_minor_invs:
   "\<lbrace>invs and obj_at (\<lambda>ko. refs_of ko = refs_of_ntfn val) ptr
@@ -1941,7 +1953,6 @@ lemma set_ntfn_minor_invs:
           wp: valid_irq_node_typ valid_ioports_lift simp_del: fun_upd_apply)
   apply (clarsimp simp: state_refs_of_def obj_at_def ext elim!: rsubst[where P = sym_refs])
   done
-
 
 lemma tcb_cap_wp_at:
   "\<lbrakk>tcb_at t s; valid_objs s; ref \<in> dom tcb_cap_cases;

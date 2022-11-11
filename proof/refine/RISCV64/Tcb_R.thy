@@ -2217,7 +2217,7 @@ lemma tc_corres_sched:
                apply (rule setPriority)
               apply (simp add: bind_assoc[symmetric])
               apply (rule corres_split_nor)
-                 apply (rule monadic_rewrite_corres[OF _ monadic_rewrite_bind_unbind])
+                 apply (rule monadic_rewrite_corres_l[OF monadic_rewrite_bind_unbind])
                  apply (rule corres_split_eqr)
                     apply (simp only: mapTCBPtr_threadGet get_tcb_obj_ref_def)
                     apply (rule threadGet_corres, clarsimp simp: tcb_relation_def)

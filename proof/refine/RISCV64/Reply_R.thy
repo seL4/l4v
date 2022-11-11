@@ -693,7 +693,7 @@ lemma update_sc_reply_stack_update_ko_at'_corres:
   apply (rule corres_guard_imp)
     apply (rule_tac P="sc_obj_at (objBits sc' - minSchedContextBits) ptr"
                and n1="objBits sc' - minSchedContextBits"
-                         in monadic_rewrite_corres[OF _ update_sched_context_rewrite])
+                         in monadic_rewrite_corres_l[OF update_sched_context_rewrite])
     apply (rule corres_symb_exec_l)
        apply (rule corres_guard_imp)
          apply (rule setSchedContext_update_corres
@@ -748,9 +748,9 @@ lemma bindScReply_corres:
                apply (simp add: isHead_def)
               apply (erule valid_replies_sc_cross; clarsimp)
              apply (rule corres_add_noop_lhs)
-             apply (rule monadic_rewrite_corres
-                          [OF _ monadic_rewrite_bind_head,
-                           OF _ set_reply_obj_ref_noop[where rptr=rptr and x=None]])
+             apply (rule monadic_rewrite_corres_l
+                          [OF monadic_rewrite_bind_head,
+                           OF set_reply_obj_ref_noop[where rptr=rptr and x=None]])
              apply (simp add: bind_assoc)
              apply (rule corres_split[OF updateReply_replyPrev_corres])
                apply (rule corres_split[OF update_sc_reply_stack_update_ko_at'_corres])
@@ -1565,7 +1565,7 @@ lemma setSchedContext_scReply_update_None_corres:
        apply (rule_tac P="(\<lambda>s. (sc_replies_of s |> hd_opt) ptr = Some rp)
                           and sc_obj_at (objBits sc' - minSchedContextBits) ptr"
                   and n1="objBits sc' - minSchedContextBits"
-                            in monadic_rewrite_corres[OF _ update_sched_context_rewrite])
+                            in monadic_rewrite_corres_l[OF update_sched_context_rewrite])
        apply (rule corres_symb_exec_l)
           apply (rule_tac P="(\<lambda>s. kheap s ptr = Some (kernel_object.SchedContext sc (objBits sc'
                                                                                     - minSchedContextBits)))
@@ -1661,7 +1661,7 @@ lemma cleanReply_sc_with_reply_None_corres:
    apply (fastforce dest!: state_relationD reply_at_cross)
   apply (simp add: cleanReply_def bind_assoc)
   apply (rule corres_guard_imp)
-    apply (rule monadic_rewrite_corres'[OF _ updateReply_Prev_Next_rewrite])
+    apply (rule monadic_rewrite_corres_r[OF updateReply_Prev_Next_rewrite])
     apply (rule corres_bind_return)
     apply (rule corres_guard_imp)
       apply (rule corres_split[OF updateReply_replyNext_not_head_corres])

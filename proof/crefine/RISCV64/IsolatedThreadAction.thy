@@ -811,38 +811,6 @@ lemma empty_fail_isRunnable[intro!, wp, simp]:
   "empty_fail (isRunnable t)"
   by (simp add: isRunnable_def isStopped_def)
 
-lemma setupCallerCap_rewrite:
-  "monadic_rewrite True True (\<lambda>s. reply_masters_rvk_fb (ctes_of s))
-   (setupCallerCap send rcv canGrant)
-   (do setThreadState BlockedOnReply send;
-       replySlot \<leftarrow> getThreadReplySlot send;
-       callerSlot \<leftarrow> getThreadCallerSlot rcv;
-       replySlotCTE \<leftarrow> getCTE replySlot;
-       assert (mdbNext (cteMDBNode replySlotCTE) = 0
-                 \<and> isReplyCap (cteCap replySlotCTE)
-                 \<and> capReplyMaster (cteCap replySlotCTE)
-                 \<and> mdbFirstBadged (cteMDBNode replySlotCTE)
-                 \<and> mdbRevocable (cteMDBNode replySlotCTE));
-       cteInsert (ReplyCap send False canGrant) replySlot callerSlot
-    od)"
-  apply (simp add: setupCallerCap_def getThreadCallerSlot_def
-                   getThreadReplySlot_def locateSlot_conv
-                   getSlotCap_def)
-  apply (rule monadic_rewrite_bind_tail)+
-    apply (rule monadic_rewrite_assert)+
-    apply (rule_tac P="mdbFirstBadged (cteMDBNode masterCTE)
-                       \<and> mdbRevocable (cteMDBNode masterCTE)"
-                in monadic_rewrite_gen_asm)
-    apply (rule monadic_rewrite_trans)
-     apply monadic_rewrite_symb_exec_l
-      apply monadic_rewrite_symb_exec_l_drop
-      apply (rule monadic_rewrite_refl)
-     apply wpsimp+
-    apply (rule monadic_rewrite_refl)
-   apply (wpsimp wp: getCTE_wp' simp: cte_wp_at_ctes_of)+
-  apply (fastforce simp: reply_masters_rvk_fb_def)
-  done
-
 lemma oblivious_getObject_ksPSpace_default:
   "\<lbrakk> \<forall>s. ksPSpace (f s) = ksPSpace s;
      \<And>a b c ko. (loadObject a b c ko :: 'a kernel_r) \<equiv> loadObject_default a b c ko \<rbrakk>
@@ -919,20 +887,8 @@ lemma oblivious_switchToThread_schact:
       | simp_all add: oblivious_setVMRoot_schact)+
 
 (* FIXME move *)
-lemma empty_fail_getCurThread[intro!, wp, simp]:
-  "empty_fail getCurThread" by (simp add: getCurThread_def)
-
-lemma activateThread_simple_rewrite:
-  "monadic_rewrite True True (ct_in_state' ((=) Running))
-       (activateThread) (return ())"
-  apply (simp add: activateThread_def)
-  apply wp_pre
-  apply (monadic_rewrite_symb_exec_l)
-  apply (monadic_rewrite_symb_exec_l_known Running, simp)
-       apply (rule monadic_rewrite_refl)
-     apply wpsimp+
-  apply (clarsimp simp: ct_in_state'_def elim!: pred_tcb'_weakenE)
-  done
+crunches getCurThread
+  for (empty_fail) empty_fail[iff]
 
 end
 
@@ -1235,7 +1191,8 @@ lemma switchToThread_rewrite:
        (switchToThread t)
        (do Arch.switchToThread t; setCurThread t od)"
   apply (simp add: switchToThread_def Thread_H.switchToThread_def)
-  apply (monadic_rewrite_l tcbSchedDequeue_rewrite, simp)
+  apply (monadic_rewrite_l monadic_rewrite_stateAssert, simp)
+   apply (monadic_rewrite_l tcbSchedDequeue_rewrite, simp)
    apply (rule monadic_rewrite_refl)
   apply (clarsimp simp: comp_def)
   done
@@ -1547,9 +1504,10 @@ lemma setThreadState_rewrite_simple:
      (setThreadState st t)
      (threadSet (tcbState_update (\<lambda>_. st)) t)"
   supply if_split[split del]
-  apply (simp add: setThreadState_def when_def)
+  apply (simp add: setThreadState_def scheduleTCB_def when_def)
   apply (monadic_rewrite_l monadic_rewrite_if_l_False
-           \<open>wpsimp wp: hoare_vcg_disj_lift hoare_vcg_imp_lift' threadSet_tcbState_st_tcb_at'\<close>)
+           \<open>wpsimp wp: hoare_vcg_disj_lift hoare_vcg_imp_lift' threadSet_tcbState_st_tcb_at'
+                       isSchedulable_wp threadSet_wp\<close>)
    (* take the threadSet, drop everything until return () *)
    apply (rule monadic_rewrite_trans[OF monadic_rewrite_bind_tail])
      apply (rule monadic_rewrite_symb_exec_l_drop)+
@@ -1557,8 +1515,10 @@ lemma setThreadState_rewrite_simple:
           apply (wpsimp simp: getCurThread_def
                         wp: hoare_vcg_disj_lift hoare_vcg_imp_lift' threadSet_tcbState_st_tcb_at')+
    apply (rule monadic_rewrite_refl)
-  apply (clarsimp simp: obj_at'_def sch_act_simple_def st_tcb_at'_def)
-  done
+  apply (clarsimp simp: isSchedulable_bool_def pred_map_simps obj_at_simps vs_all_heap_simps
+                        opt_map_def isScActive_def
+                 split: option.splits if_splits)
+  by (metis Structures_H.kernel_object.distinct(75) map_upd_eqD1)
 
 end
 

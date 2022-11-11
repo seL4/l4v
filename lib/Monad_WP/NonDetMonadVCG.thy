@@ -219,10 +219,6 @@ lemma
   pred_disj_conj_distribR: "((P and Q) or R) = ((P or R) and (Q or R))"
   by (fastforce simp: pred_conj_def pred_disj_def)+
 
-lemma pred_conj_comm:
-  "(P and Q) = (Q and P)"
-  by (auto simp: pred_conj_def)
-
 subsection "Hoare Logic Rules"
 
 lemma validE_def2:
