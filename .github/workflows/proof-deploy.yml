@@ -102,7 +102,7 @@ jobs:
         path: verification-manifest.xml
     - name: Trigger binary verification
       if: steps.enabled.outputs.enabled
-      uses: peter-evans/repository-dispatch@v1
+      uses: peter-evans/repository-dispatch@v2
       with:
         token: ${{ secrets.PRIV_REPO_TOKEN }}
         repository: ${{ github.repository }}
