@@ -114,6 +114,7 @@ definition store_pte :: "pt_type \<Rightarrow> obj_ref \<Rightarrow> pte \<Right
      assert (is_aligned p pte_bits);
      base \<leftarrow> return $ table_base pt_t p;
      pt \<leftarrow> get_pt base;
+     assert (pt_type pt = pt_t);
      set_pt base (pt_upd pt (table_index pt_t p) pte)
    od"
 

@@ -1,4 +1,5 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -434,21 +435,21 @@ crunch obj_at[wp, Ipc_AI_assms]:  make_arch_fault_msg "\<lambda>s. P (obj_at P' 
 
 lemma dmo_addressTranslateS1_valid_machine_state[wp]:
   "do_machine_op (addressTranslateS1 addr) \<lbrace> valid_machine_state \<rbrace>"
-  sorry (* FIXME AARCH64 *)
+  by (wpsimp wp: dmo_valid_machine_state)
 
 crunch vms[wp, Ipc_AI_assms]: make_arch_fault_msg valid_machine_state
   (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def ignore: do_machine_op)
 
 lemma dmo_addressTranslateS1_valid_irq_states[wp]:
   "do_machine_op (addressTranslateS1 addr) \<lbrace> valid_irq_states \<rbrace>"
-  sorry (* FIXME AARCH64 *)
+  by (wpsimp wp: dmo_valid_irq_states)
 
 crunch valid_irq_states[wp, Ipc_AI_assms]: make_arch_fault_msg "valid_irq_states"
   (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def ignore: do_machine_op)
 
 lemma dmo_addressTranslateS1_cap_refs_respects_device_region[wp]:
   "do_machine_op (addressTranslateS1 addr) \<lbrace> cap_refs_respects_device_region \<rbrace>"
-  sorry (* FIXME AARCH64 *)
+  by (wpsimp wp: cap_refs_respects_device_region_dmo)
 
 crunch cap_refs_respects_device_region[wp, Ipc_AI_assms]: make_arch_fault_msg "cap_refs_respects_device_region"
   (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def ignore: do_machine_op)
@@ -467,7 +468,7 @@ named_theorems Ipc_AI_cont_assms
 
 lemma dmo_addressTranslateS1_pspace_respects_device_region[wp]:
   "do_machine_op (addressTranslateS1 addr) \<lbrace> pspace_respects_device_region \<rbrace>"
-  sorry (* FIXME AARCH64 *)
+  by (wpsimp wp: pspace_respects_device_region_dmo)
 
 crunch pspace_respects_device_region[wp]: make_fault_msg "pspace_respects_device_region"
   (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def ignore: do_machine_op)
@@ -516,8 +517,8 @@ lemma valid_arch_mdb_cap_swap:
 end
 
 interpretation Ipc_AI_cont?: Ipc_AI_cont
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales;(fact Ipc_AI_cont_assms)?)
-  qed
+qed
 end

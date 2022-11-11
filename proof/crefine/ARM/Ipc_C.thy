@@ -1,4 +1,5 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -438,6 +439,19 @@ end
 
 context kernel_m begin interpretation Arch .
 
+lemma asUser_mapMloadWordUser_threadGet_comm:
+  "do
+     ra \<leftarrow> mapM loadWordUser xs;
+     rb \<leftarrow> threadGet fb b;
+     c ra rb
+   od = do
+     rb \<leftarrow> threadGet fb b;
+     ra \<leftarrow> mapM loadWordUser xs;
+     c ra rb
+   od"
+  by (rule bind_inv_inv_comm, auto; wp mapM_wp')
+
+
 lemma handleFaultReply':
   notes option.case_cong_weak [cong] wordSize_def'[simp] take_append[simp del]
   assumes neq: "s \<noteq> r"
@@ -461,41 +475,41 @@ lemma handleFaultReply':
                             zip_Cons ARM_H.exceptionMessage_def
                             ARM.exceptionMessage_def
                             mapM_x_Cons mapM_x_Nil)
-      apply (rule monadic_rewrite_symb_exec_l, wp+)
-       apply (rule_tac P="tcb_at' s and tcb_at' r" in monadic_rewrite_inst)
-       apply (case_tac rv; (case_tac "msgLength tag < scast n_msgRegisters",
-               (erule disjE[OF word_less_cases],
-                 ( clarsimp simp: n_msgRegisters_def asUser_bind_distrib
-                                  mapM_x_Cons mapM_x_Nil bind_assoc
-                                  asUser_getRegister_discarded
-                                  asUser_getRegister_getSanitiseRegisterInfo_comm
-                                  asUser_mapMloadWordUser_getSanitiseRegisterInfo_comm
-                                  asUser_comm[OF neq]
-                                  bind_comm_mapM_comm [OF asUser_loadWordUser_comm, symmetric]
-                                  word_le_nat_alt[of 4, simplified linorder_not_less[symmetric, of 4]]
-                                  asUser_return submonad_asUser.fn_stateAssert
-                 | rule monadic_rewrite_bind_tail monadic_rewrite_refl
-                        monadic_rewrite_symb_exec_l[OF stateAssert_inv]
-                        monadic_rewrite_symb_exec_l[OF mapM_x_mapM_valid[OF mapM_x_wp']]
-                 | wp lookupIPCBuffer_inv )+)+))
-      apply wp
+      apply (rule monadic_rewrite_symb_exec_l)
+         apply (rule_tac P="tcb_at' s and tcb_at' r" in monadic_rewrite_inst)
+         apply (case_tac sb; (case_tac "msgLength tag < scast n_msgRegisters",
+                 (erule disjE[OF word_less_cases],
+                   ( clarsimp simp: n_msgRegisters_def asUser_bind_distrib
+                                    mapM_x_Cons mapM_x_Nil bind_assoc
+                                    asUser_mapMloadWordUser_getSanitiseRegisterInfo_comm
+                                    asUser_getRegister_getSanitiseRegisterInfo_comm
+                                    asUser_getRegister_discarded asUser_mapMloadWordUser_threadGet_comm
+                                    asUser_comm[OF neq] asUser_getRegister_threadGet_comm
+                                    bind_comm_mapM_comm [OF asUser_loadWordUser_comm, symmetric]
+                                    word_le_nat_alt[of 4, simplified linorder_not_less[symmetric, of 4]]
+                                    asUser_return submonad_asUser.fn_stateAssert
+                   | rule monadic_rewrite_bind_tail monadic_rewrite_refl
+                          monadic_rewrite_symb_exec_l[OF _ stateAssert_inv]
+                          monadic_rewrite_symb_exec_l[OF _ mapM_x_mapM_valid[OF mapM_x_wp']]
+                   | wp)+)+))
+        apply wp+
      (* capFault *)
-     apply (rule monadic_rewrite_symb_exec_l, (wp empty_fail_asUser empty_fail_getRegister)+)+
-          apply(case_tac rv)
-          apply (clarsimp
-                | rule monadic_rewrite_bind_tail monadic_rewrite_refl
-                       monadic_rewrite_symb_exec_l[OF mapM_x_mapM_valid[OF mapM_x_wp']]
-                | wp mapM_x_mapM_valid[OF mapM_x_wp'[OF loadWordUser_inv]]
-                     empty_fail_loadWordUser)+
+     apply (repeat 5 \<open>rule monadic_rewrite_symb_exec_l\<close>) (* until case sb *)
+                    apply (case_tac sb)
+                     apply (clarsimp
+                           | rule monadic_rewrite_bind_tail monadic_rewrite_refl
+                                  monadic_rewrite_symb_exec_l[OF _ mapM_x_mapM_valid[OF mapM_x_wp']]
+                           | wp mapM_x_mapM_valid[OF mapM_x_wp'[OF loadWordUser_inv]]
+                                empty_fail_loadWordUser)+
     (* UnknownSyscallExceptio *)
     apply (simp add: zip_append2 mapM_x_append asUser_bind_distrib split_def bind_assoc)
-    apply (rule monadic_rewrite_imp)
+    apply (rule monadic_rewrite_guard_imp)
      apply (rule monadic_rewrite_trans[rotated])
       apply (rule monadic_rewrite_do_flip)
       apply (rule monadic_rewrite_bind_tail)
        apply (rule_tac P="inj (case_bool s r)" in monadic_rewrite_gen_asm)
        apply (rule monadic_rewrite_trans[OF _ monadic_rewrite_transverse])
-         apply (rule monadic_rewrite_weaken[where F=False and E=True], simp)
+         apply (rule monadic_rewrite_weaken_flags[where F=False and E=True], simp)
          apply (rule isolate_thread_actions_rewrite_bind
                      bool.simps setRegister_simple
                      zipWithM_setRegister_simple
@@ -515,81 +529,81 @@ lemma handleFaultReply':
                             upto_enum_word mapM_x_Cons mapM_x_Nil)
      apply (simp add: getSanitiseRegisterInfo_moreMapM_comm asUser_getRegister_getSanitiseRegisterInfo_comm getSanitiseRegisterInfo_lookupIPCBuffer_comm)
      apply (rule monadic_rewrite_bind_tail)
-     apply (rule monadic_rewrite_bind_tail [where Q="\<lambda>_. tcb_at' r"])
-      apply (case_tac sb)
+      apply (rule monadic_rewrite_bind_tail [where Q="\<lambda>_. tcb_at' r"])
+       apply (case_tac sb)
+        apply (case_tac "msgLength tag < scast n_msgRegisters")
+         apply (erule disjE[OF word_less_cases],
+                  ( clarsimp simp: n_msgRegisters_def asUser_bind_distrib
+                                   mapM_x_Cons mapM_x_Nil bind_assoc
+                                   asUser_getRegister_discarded
+                                   asUser_comm[OF neq] take_zip
+                                   word_le_nat_alt[of 4, simplified linorder_not_less[symmetric, of 4]]
+                                   asUser_return submonad_asUser.fn_stateAssert
+                  | rule monadic_rewrite_bind_tail monadic_rewrite_refl
+                         monadic_rewrite_symb_exec_l[OF _ stateAssert_inv]
+                  | wp)+)+
        apply (case_tac "msgLength tag < scast n_msgRegisters")
         apply (erule disjE[OF word_less_cases],
-                 ( clarsimp simp: n_msgRegisters_def asUser_bind_distrib
-                                  mapM_x_Cons mapM_x_Nil bind_assoc
-                                  asUser_getRegister_discarded
-                                  asUser_comm[OF neq] take_zip
-                                  word_le_nat_alt[of 4, simplified linorder_not_less[symmetric, of 4]]
-                                  asUser_return submonad_asUser.fn_stateAssert
-                 | rule monadic_rewrite_bind_tail monadic_rewrite_refl
-                        monadic_rewrite_symb_exec_l[OF stateAssert_inv]
-                 | wp)+)+
-      apply (case_tac "msgLength tag < scast n_msgRegisters")
-       apply (erule disjE[OF word_less_cases],
-                 ( clarsimp simp: n_msgRegisters_def asUser_bind_distrib
-                                  mapM_x_Cons mapM_x_Nil bind_assoc
-                                  zipWithM_x_Nil
-                                  asUser_getRegister_discarded
-                                  asUser_comm[OF neq] take_zip
-                                  bind_comm_mapM_comm [OF asUser_loadWordUser_comm, symmetric]
-                                  asUser_return submonad_asUser.fn_stateAssert
-                 | rule monadic_rewrite_bind_tail monadic_rewrite_refl
-                        monadic_rewrite_symb_exec_l[OF mapM_x_mapM_valid[OF mapM_x_wp']]
-                        monadic_rewrite_symb_exec_l[OF stateAssert_inv]
-                 | wp mapM_wp')+)+
-      apply (simp add: n_msgRegisters_def word_le_nat_alt n_syscallMessage_def
-                       linorder_not_less syscallMessage_unfold)
-      apply (clarsimp | frule neq0_conv[THEN iffD2, THEN not0_implies_Suc,
-                                        OF order_less_le_trans, rotated])+
-      apply (subgoal_tac "\<forall>n :: word32. n \<le> scast n_syscallMessage \<longrightarrow> [n .e. msgMaxLength]
-                                = [n .e. scast n_syscallMessage]
-                                    @ [scast n_syscallMessage + 1 .e. msgMaxLength]")
-       apply (simp only: upto_enum_word[where y="scast n_syscallMessage :: word32"]
-                         upto_enum_word[where y="scast n_syscallMessage + 1 :: word32"])
-       apply (clarsimp simp: bind_assoc asUser_bind_distrib
-                             mapM_x_Cons mapM_x_Nil
-                             asUser_comm [OF neq] asUser_getRegister_discarded
-                             submonad_asUser.fn_stateAssert take_zip
-                             bind_subst_lift [OF submonad_asUser.stateAssert_fn]
-                             word_less_nat_alt ARM_H.sanitiseRegister_def
-                             split_def n_msgRegisters_def msgMaxLength_def
-                             bind_comm_mapM_comm [OF asUser_loadWordUser_comm, symmetric]
-                             word_size msgLengthBits_def n_syscallMessage_def
-                  split del: if_split
-                       cong: if_weak_cong)
-       apply (rule monadic_rewrite_bind_tail)+
-               apply (subst (2) upto_enum_word)
-               apply (case_tac "ma < unat n_syscallMessage - 4")
-                apply (erule disjE[OF nat_less_cases'],
-                       ( clarsimp simp: n_syscallMessage_def bind_assoc asUser_bind_distrib
-                                        mapM_x_Cons mapM_x_Nil zipWithM_x_mapM_x mapM_Cons
-                                        bind_comm_mapM_comm [OF asUser_loadWordUser_comm, symmetric]
-                                        asUser_loadWordUser_comm loadWordUser_discarded asUser_return
-                                        zip_take_triv2 msgMaxLength_def
-                                  cong: if_weak_cong
-                       | simp
-                       | rule monadic_rewrite_bind_tail
-                              monadic_rewrite_refl
-                              monadic_rewrite_symb_exec_l[OF stateAssert_inv]
-                              monadic_rewrite_symb_exec_l[OF mapM_x_mapM_valid[OF mapM_x_wp']]
-                       | wp empty_fail_loadWordUser)+)+
-      apply (clarsimp simp: upto_enum_word word_le_nat_alt simp del: upt.simps cong: if_weak_cong)
-      apply (cut_tac i="unat n" and j="Suc (unat (scast n_syscallMessage :: word32))"
-                                and k="Suc msgMaxLength" in upt_add_eq_append')
-        apply (simp add: n_syscallMessage_def)
-       apply (simp add: n_syscallMessage_def msgMaxLength_unfold)
-      apply (simp add: n_syscallMessage_def msgMaxLength_def
-                       msgLengthBits_def shiftL_nat
-                  del: upt.simps upt_rec_numeral)
-      apply (simp add: upto_enum_word cong: if_weak_cong)
-     apply wp+
+                  ( clarsimp simp: n_msgRegisters_def asUser_bind_distrib
+                                   mapM_x_Cons mapM_x_Nil bind_assoc
+                                   zipWithM_x_Nil
+                                   asUser_getRegister_discarded
+                                   asUser_comm[OF neq] take_zip
+                                   bind_comm_mapM_comm [OF asUser_loadWordUser_comm, symmetric]
+                                   asUser_return submonad_asUser.fn_stateAssert
+                  | rule monadic_rewrite_bind_tail monadic_rewrite_refl
+                         monadic_rewrite_symb_exec_l[OF _ mapM_x_mapM_valid[OF mapM_x_wp']]
+                         monadic_rewrite_symb_exec_l[OF _ stateAssert_inv]
+                  | wp mapM_wp')+)+
+       apply (simp add: n_msgRegisters_def word_le_nat_alt n_syscallMessage_def
+                        linorder_not_less syscallMessage_unfold)
+       apply (clarsimp | frule neq0_conv[THEN iffD2, THEN not0_implies_Suc,
+                                         OF order_less_le_trans, rotated])+
+       apply (subgoal_tac "\<forall>n :: word32. n \<le> scast n_syscallMessage \<longrightarrow> [n .e. msgMaxLength]
+                                 = [n .e. scast n_syscallMessage]
+                                     @ [scast n_syscallMessage + 1 .e. msgMaxLength]")
+        apply (simp only: upto_enum_word[where y="scast n_syscallMessage :: word32"]
+                          upto_enum_word[where y="scast n_syscallMessage + 1 :: word32"])
+        apply (clarsimp simp: bind_assoc asUser_bind_distrib
+                              mapM_x_Cons mapM_x_Nil
+                              asUser_comm [OF neq] asUser_getRegister_discarded
+                              submonad_asUser.fn_stateAssert take_zip
+                              bind_subst_lift [OF submonad_asUser.stateAssert_fn]
+                              word_less_nat_alt ARM_H.sanitiseRegister_def
+                              split_def n_msgRegisters_def msgMaxLength_def
+                              bind_comm_mapM_comm [OF asUser_loadWordUser_comm, symmetric]
+                              word_size msgLengthBits_def n_syscallMessage_def
+                   split del: if_split
+                        cong: if_weak_cong)
+        apply (rule monadic_rewrite_bind_tail)+
+                apply (subst (2) upto_enum_word)
+                apply (case_tac "ma < unat n_syscallMessage - 4")
+                 apply (erule disjE[OF nat_less_cases'],
+                        ( clarsimp simp: n_syscallMessage_def bind_assoc asUser_bind_distrib
+                                         mapM_x_Cons mapM_x_Nil zipWithM_x_mapM_x mapM_Cons
+                                         bind_comm_mapM_comm [OF asUser_loadWordUser_comm, symmetric]
+                                         asUser_loadWordUser_comm loadWordUser_discarded asUser_return
+                                         zip_take_triv2 msgMaxLength_def
+                                   cong: if_weak_cong
+                        | simp
+                        | rule monadic_rewrite_bind_tail
+                               monadic_rewrite_refl
+                               monadic_rewrite_symb_exec_l[OF _ stateAssert_inv]
+                               monadic_rewrite_symb_exec_l[OF _ mapM_x_mapM_valid[OF mapM_x_wp']]
+                        | wp empty_fail_loadWordUser)+)+
+       apply (clarsimp simp: upto_enum_word word_le_nat_alt simp del: upt.simps cong: if_weak_cong)
+       apply (cut_tac i="unat n" and j="Suc (unat (scast n_syscallMessage :: word32))"
+                                 and k="Suc msgMaxLength" in upt_add_eq_append')
+         apply (simp add: n_syscallMessage_def)
+        apply (simp add: n_syscallMessage_def msgMaxLength_unfold)
+       apply (simp add: n_syscallMessage_def msgMaxLength_def
+                        msgLengthBits_def shiftL_nat
+                   del: upt.simps upt_rec_numeral)
+       apply (simp add: upto_enum_word cong: if_weak_cong)
+      apply wp+
     (* ArchFault *)
     apply (simp add: neq inj_case_bool split: bool.split)
-   apply (rule monadic_rewrite_imp)
+   apply (rule monadic_rewrite_guard_imp)
     apply (rule monadic_rewrite_is_refl)
     apply (rule ext)
     apply (unfold handleArchFaultReply'[symmetric] getMRs_def msgMaxLength_def
@@ -2335,7 +2349,7 @@ lemma transferCapsLoop_ccorres:
                  \<inter> \<lbrace>\<acute>destSlot = (if slots = [] then NULL else cte_Ptr (hd slots))
                                 \<and> length slots \<le> 1 \<and> slots \<noteq> [0]\<rbrace>)"
   defines "is_the_ep \<equiv> \<lambda>cap. isEndpointCap cap \<and> ep \<noteq> None \<and> capEPPtr cap = the ep"
-  defines "stable \<equiv> \<lambda>scap excap. excap \<noteq> scap \<longrightarrow> excap = maskedAsFull scap scap"
+  defines "stable_masked \<equiv> \<lambda>scap excap. excap \<noteq> scap \<longrightarrow> excap = maskedAsFull scap scap"
   defines "relative_at  \<equiv> \<lambda>scap slot s. cte_wp_at'
                                  (\<lambda>cte. badge_derived' scap (cteCap cte) \<and>
                                         capASID scap = capASID (cteCap cte) \<and>
@@ -2350,7 +2364,7 @@ lemma transferCapsLoop_ccorres:
            (\<lambda>s.  (\<forall>x \<in> set caps. s \<turnstile>' fst x
              \<and> cte_wp_at' (\<lambda>cte. slots \<noteq> [] \<or> is_the_ep (cteCap cte)
                \<longrightarrow> (fst x) =  (cteCap cte)) (snd x) s
-             \<and> cte_wp_at' (\<lambda>cte. fst x \<noteq> NullCap  \<longrightarrow> stable (fst x) (cteCap cte)) (snd x) s)) and
+             \<and> cte_wp_at' (\<lambda>cte. fst x \<noteq> NullCap  \<longrightarrow> stable_masked (fst x) (cteCap cte)) (snd x) s)) and
            (\<lambda>s. \<forall> sl \<in> (set slots). cte_wp_at' (isNullCap o cteCap) sl s) and
            (\<lambda>_. n + length caps \<le> 3 \<and> distinct slots ))
            (precond n mi slots)
@@ -2415,12 +2429,12 @@ next
     by (simp add:relative_at_def)
 
   have stable_eq:
-    "\<And>scap excap. \<lbrakk>stable scap excap; isEndpointCap excap\<rbrakk> \<Longrightarrow> scap = excap"
-     by (simp add:isCap_simps stable_def maskedAsFull_def split:if_splits)
+    "\<And>scap excap. \<lbrakk>stable_masked scap excap; isEndpointCap excap\<rbrakk> \<Longrightarrow> scap = excap"
+     by (simp add:isCap_simps stable_masked_def maskedAsFull_def split:if_splits)
 
   have is_the_ep_stable:
-    "\<And>a b. \<lbrakk>a \<noteq> NullCap \<longrightarrow> stable a b; \<not> is_the_ep b \<rbrakk> \<Longrightarrow> \<not> is_the_ep a"
-    apply (clarsimp simp:stable_def maskedAsFull_def is_the_ep_def isCap_simps split:if_splits)
+    "\<And>a b. \<lbrakk>a \<noteq> NullCap \<longrightarrow> stable_masked a b; \<not> is_the_ep b \<rbrakk> \<Longrightarrow> \<not> is_the_ep a"
+    apply (clarsimp simp:stable_masked_def maskedAsFull_def is_the_ep_def isCap_simps split:if_splits)
     apply auto
     done
 
@@ -2573,7 +2587,7 @@ next
                  \<and> (\<forall>x\<in>set slots. cte_wp_at' (isNullCap \<circ> cteCap) x s)
                  \<and> (\<forall>x\<in>set xs'. s \<turnstile>' fst x
                     \<and> cte_wp_at' (\<lambda>c. is_the_ep (cteCap c) \<longrightarrow> fst x = cteCap c) (snd x) s
-                    \<and> cte_wp_at' (\<lambda>c. fst x \<noteq> NullCap \<longrightarrow> stable (fst x) (cteCap c)) (snd x) s)"
+                    \<and> cte_wp_at' (\<lambda>c. fst x \<noteq> NullCap \<longrightarrow> stable_masked (fst x) (cteCap c)) (snd x) s)"
                  in hoare_post_imp_R)
                 prefer 2
                  apply (clarsimp simp:cte_wp_at_ctes_of valid_pspace_mdb' valid_pspace'_splits
@@ -2584,10 +2598,10 @@ next
                  apply (rule conjI)
                   apply (drule(1) bspec)+
                   apply (rule conjI | clarsimp)+
-                   apply (clarsimp simp:is_the_ep_def isCap_simps stable_def)
+                   apply (clarsimp simp:is_the_ep_def isCap_simps stable_masked_def)
                   apply (drule(1) bspec)+
                   apply (rule conjI | clarsimp)+
-                   apply (clarsimp simp:is_the_ep_def stable_def split:if_splits)+
+                   apply (clarsimp simp:is_the_ep_def stable_masked_def split:if_splits)+
                  apply (case_tac "a = cteCap cteb",clarsimp)
                   apply (simp add:maskedAsFull_def split:if_splits)
                  apply (simp add:maskedAsFull_again)
@@ -2689,14 +2703,14 @@ next
         apply (subgoal_tac "fst x = cteCap cte",simp)
         apply clarsimp
         apply (elim disjE)
-         apply (clarsimp simp:ep_cap_not_null stable_def)
+         apply (clarsimp simp:ep_cap_not_null stable_masked_def)
         apply (clarsimp dest!:ccap_relation_lift stable_eq simp: cap_get_tag_isCap)
        apply (clarsimp simp:valid_cap_simps' isCap_simps)
        apply (subgoal_tac "slots \<noteq> []")
         apply simp
        apply clarsimp
        apply (elim disjE)
-        apply (clarsimp simp:ep_cap_not_null stable_def)
+        apply (clarsimp simp:ep_cap_not_null stable_masked_def)
         apply (clarsimp dest!:ccap_relation_lift stable_eq simp: cap_get_tag_isCap)
        apply (clarsimp dest!:ccap_relation_lift simp:cap_get_tag_isCap is_the_ep_def)
       apply (clarsimp simp:valid_cap_simps' isCap_simps)

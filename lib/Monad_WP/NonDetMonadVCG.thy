@@ -1,4 +1,5 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: BSD-2-Clause
@@ -217,6 +218,10 @@ lemma
   pred_disj_conj_distribL: "(P or (Q and R)) = ((P or Q) and (P or R))" and
   pred_disj_conj_distribR: "((P and Q) or R) = ((P or R) and (Q or R))"
   by (fastforce simp: pred_conj_def pred_disj_def)+
+
+lemma pred_conj_comm:
+  "(P and Q) = (Q and P)"
+  by (auto simp: pred_conj_def)
 
 subsection "Hoare Logic Rules"
 

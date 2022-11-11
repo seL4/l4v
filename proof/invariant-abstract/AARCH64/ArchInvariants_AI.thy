@@ -319,8 +319,11 @@ definition wellformed_pte :: "pte \<Rightarrow> bool" where
 definition valid_vcpu :: "vcpu \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "valid_vcpu vcpu \<equiv> case_option \<top> (typ_at ATCB) (vcpu_tcb vcpu) "
 
+(* Since the page tables may translate more bits than the IPA address space has, not all mapping
+   slots in the top level table can be used. Slots with any of the top "pt_bits_left asid_pool_level
+   - ipa_size" bits set correspond to mappings outside of the address space. *)
 definition valid_vs_slot_bits :: nat where
-  "valid_vs_slot_bits = pt_bits_left asid_pool_level - ipa_size"
+  "valid_vs_slot_bits = ptTranslationBits VSRootPT_T - (pt_bits_left asid_pool_level - ipa_size)"
 
 definition invalid_mapping_slots :: "vs_index set" where
   "invalid_mapping_slots \<equiv>
@@ -359,7 +362,7 @@ definition valid_vspace_objs :: "'z::state_ext state \<Rightarrow> bool" where
      \<forall>bot_level asid vref level p ao.
        vs_lookup_table bot_level asid vref s = Some (level, p)
        \<longrightarrow> vref \<in> user_region
-       \<longrightarrow> aobjs_of s p = Some ao
+       \<longrightarrow> vspace_objs_of s p = Some ao
        \<longrightarrow> valid_vspace_obj level ao s"
 
 (* Mask out the bits that will not be used for lookups down to specified level *)
@@ -465,6 +468,10 @@ lemmas valid_table_caps_def = valid_table_caps_2_def
 
 definition is_pt_cap :: "cap \<Rightarrow> bool" where
   "is_pt_cap cap \<equiv> arch_cap_fun_lift is_PageTableCap False cap"
+
+definition is_vsroot_cap :: "cap \<Rightarrow> bool" where
+  "is_vsroot_cap cap \<equiv>
+    arch_cap_fun_lift (\<lambda>acap. is_PageTableCap acap \<and> acap_pt_type acap = VSRootPT_T) False cap"
 
 (* No two PT caps with vs_cap_ref = None may point to the same object, i.e.
    copies of unmapped caps cannot exist. *)
@@ -602,15 +609,25 @@ locale_abbrev valid_uses :: "'z::state_ext state \<Rightarrow> bool" where
 
 lemmas valid_uses_def = valid_uses_2_def
 
-definition vmid_for_asid :: "asid \<Rightarrow> 'z::state_ext state \<Rightarrow> vmid option" where
-  "vmid_for_asid asid = do {
-     entry \<leftarrow> entry_for_asid asid;
-     K $ ap_vmid entry
+definition vmid_for_asid_2 ::
+  "asid \<Rightarrow> (asid_high_index \<rightharpoonup> obj_ref) \<Rightarrow> (obj_ref \<rightharpoonup> asid_pool, vmid) lookup" where
+  "vmid_for_asid_2 asid table \<equiv> do {
+     ap_ptr \<leftarrow> K $ table (asid_high_bits_of asid);
+     entry_for_pool ap_ptr asid |> ap_vmid
    }"
+
+locale_abbrev vmid_for_asid :: "'z::state_ext state \<Rightarrow> asid \<rightharpoonup> vmid" where
+  "vmid_for_asid \<equiv> \<lambda>s asid. vmid_for_asid_2 asid (asid_table s) (asid_pools_of s)"
+
+lemmas vmid_for_asid_def = vmid_for_asid_2_def
+
+(* For name preservation with older proofs *)
+abbreviation (input) asid_map :: "'z::state_ext state \<Rightarrow> asid \<rightharpoonup> vmid" where
+  "asid_map \<equiv> vmid_for_asid"
 
 (* vmIDs stored in ASID pools form the inverse of the vmid_table *)
 definition vmid_inv :: "'z::state_ext state \<Rightarrow> bool" where
-  "vmid_inv s \<equiv> is_inv (arm_vmid_table (arch_state s)) (swp vmid_for_asid s)"
+  "vmid_inv s \<equiv> is_inv (arm_vmid_table (arch_state s)) (vmid_for_asid s)"
 
 definition valid_global_arch_objs where
   "valid_global_arch_objs \<equiv> \<lambda>s. vspace_pt_at (global_pt s) s"
@@ -882,7 +899,7 @@ lemma minus_one_max_pt_level[simp]:
   "(level - 1 = max_pt_level) = (level = asid_pool_level)"
   by (simp add: max_pt_level_def)
 
-lemma plus_one_eq_asid_pool[simp]:
+lemma plus_one_eq_asid_pool:
   "(level + 1 = asid_pool_level) = (level = max_pt_level)"
   by (metis add_right_imp_eq max_pt_level_plus_one)
 
@@ -1023,7 +1040,7 @@ lemma valid_arch_cap_typ:
   by (case_tac c; wpsimp wp: P valid_arch_cap_ref_lift)
 
 lemma valid_pte_lift2:
-  assumes x: "\<And>T p. \<lbrace>Q and typ_at (AArch T) p\<rbrace> f \<lbrace>\<lambda>rv. typ_at (AArch T) p\<rbrace>"
+  assumes x: "\<And>T p. T \<noteq> AVCPU \<Longrightarrow> \<lbrace>Q and typ_at (AArch T) p\<rbrace> f \<lbrace>\<lambda>rv. typ_at (AArch T) p\<rbrace>"
   shows "\<lbrace>\<lambda>s. Q s \<and> valid_pte level pte s\<rbrace> f \<lbrace>\<lambda>rv s. valid_pte level pte s\<rbrace>"
   by (cases pte) (simp add: data_at_def | wp hoare_vcg_disj_lift x)+
 
@@ -1068,11 +1085,37 @@ lemma aobj_of_Some[iff]:
   "(aobj_of a = Some ao) = (a = ArchObj ao)"
   by (simp add: aobj_of_def split: kernel_object.splits)
 
+lemma aobj_of_None[simp]:
+  "(aobj_of ko = None) = (\<not>is_ArchObj ko)"
+  "(None = aobj_of ko) = (\<not>is_ArchObj ko)"
+  by (cases ko; simp)+
+
 lemmas pt_of_simps[simp] = pt_of_def[split_simps arch_kernel_obj.split]
 
 lemma pt_of_Some[iff]:
   "(pt_of a = Some pt) = (a = PageTable pt)"
   by (simp add: pt_of_def split: arch_kernel_obj.splits)
+
+lemma pt_of_None[simp]:
+  "(pt_of ako = None) = (\<not>is_PageTable ako)"
+  "(None = pt_of ako) = (\<not>is_PageTable ako)"
+  by (cases ako; simp)+
+
+lemmas vcpu_of_simps[simp] = vcpu_of_def[split_simps arch_kernel_obj.split]
+
+lemma vcpu_of_Some[simp]:
+  "(vcpu_of ako = Some vcpu) = (ako = VCPU vcpu)"
+  by (cases ako; simp)
+
+lemma vcpu_of_None[simp]:
+  "(vcpu_of ako = None) = (\<not>is_VCPU ako)"
+  "(None = vcpu_of ako) = (\<not>is_VCPU ako)"
+  by (cases ako; simp)+
+
+lemma asid_pool_of_None[simp]:
+  "(asid_pool_of ako = None) = (\<not>is_ASIDPool ako)"
+  "(None = asid_pool_of ako) = (\<not>is_ASIDPool ako)"
+  by (cases ako; simp)+
 
 lemma aobjs_of_Some:
   "(aobjs_of s p = Some ao) = (kheap s p = Some (ArchObj ao))"
@@ -1081,6 +1124,28 @@ lemma aobjs_of_Some:
 lemma pts_of_Some:
   "(pts_of s p = Some pt) = (aobjs_of s p = Some (PageTable pt))"
   by (simp add: in_omonad)
+
+(* Not [simp], because we don't always want to break the vspace_obj_of abstraction *)
+lemma vspace_obj_of_None:
+  "(vspace_obj_of ako = None) = is_VCPU ako"
+  "(None = vspace_obj_of ako) = is_VCPU ako"
+  by (auto simp: vspace_obj_of_def)
+
+(* Not [simp], because we don't always want to break the vspace_obj_of abstraction *)
+lemma vspace_obj_of_Some:
+  "(vspace_obj_of ako = Some ako') = (ako' = ako \<and> \<not>is_VCPU ako)"
+  by (auto simp: vspace_obj_of_def)
+
+lemma vspace_obj_of_simps[simp]:
+  "vspace_obj_of (ASIDPool ap) = Some (ASIDPool ap)"
+  "vspace_obj_of (PageTable pt) = Some (PageTable pt)"
+  "vspace_obj_of (DataPage d sz) = Some (DataPage d sz)"
+  "vspace_obj_of (VCPU vcpu) = None"
+  by (auto simp: vspace_obj_of_def)
+
+lemma not_VCPU_eq:
+  "(\<not>is_VCPU ako) = (is_ASIDPool ako \<or> is_PageTable ako \<or> is_DataPage ako)"
+  by (cases ako) auto
 
 declare a_typeE[elim!]
 
@@ -1523,7 +1588,7 @@ lemma max_pt_bits_left[simp]:
 lemma pt_bits_left_plus1:
   "level \<le> max_pt_level \<Longrightarrow>
    pt_bits_left (level + 1) = ptTranslationBits level + pt_bits_left level"
-  by (auto simp: pt_bits_left_def intro: arg_cong)
+  by (auto simp: pt_bits_left_def plus_one_eq_asid_pool intro: arg_cong)
 
 lemma vref_for_level_idem:
   "level' \<le> level \<Longrightarrow>
@@ -1682,15 +1747,16 @@ lemma pool_for_asid_validD:
   "\<lbrakk> pool_for_asid asid s = Some p; valid_asid_table s \<rbrakk> \<Longrightarrow> asid_pools_of s p \<noteq> None"
   by (auto simp: in_opt_map_eq valid_asid_table_def pool_for_asid_def)
 
-lemma constructed_asid_low_bits_of:
-  "(asid_low_bits_of ((ucast hi_bits << asid_low_bits) || ucast lo_bits))
-   = lo_bits"
+locale_abbrev asid_of :: "asid_high_index \<Rightarrow> asid_low_index \<Rightarrow> asid" where
+  "asid_of high low \<equiv> (ucast high << asid_low_bits) || ucast low"
+
+lemma constructed_asid_low_bits_of[simp]:
+  "asid_low_bits_of (asid_of hi_bits lo_bits) = lo_bits"
   by (clarsimp simp: asid_low_bits_of_def asid_bits_defs ucast_or_distrib ucast_ucast_id
                      ucast_shiftl_eq_0)
 
-lemma constructed_asid_high_bits_of:
-  "(asid_high_bits_of ((ucast hi_bits << asid_low_bits) || ucast (lo_bits :: asid_low_index)))
-   = hi_bits"
+lemma constructed_asid_high_bits_of[simp]:
+  "asid_high_bits_of (asid_of hi_bits lo_bits) = hi_bits"
   apply (clarsimp simp: asid_high_bits_of_def shiftr_over_or_dist asid_bits_defs)
   apply (subst shiftl_shiftr_id, simp)
    apply (fastforce intro: order_less_le_trans ucast_less)
@@ -1783,11 +1849,17 @@ lemma pte_at_eq:
   "pte_at pt_t p s = (ptes_of s pt_t p \<noteq> None)"
   by (auto simp: obj_at_def pte_at_def in_omonad)
 
+lemma vspace_objs_of_Some_projections[simp]:
+  "vspace_objs_of s p = Some (ASIDPool pool) \<Longrightarrow> asid_pools_of s p = Some pool"
+  "vspace_objs_of s p = Some (PageTable pt) \<Longrightarrow> pts_of s p = Some pt"
+  (* no projections for data pages *)
+  by (auto simp: in_omonad vspace_obj_of_def split: if_splits)
+
 lemma valid_vspace_objsI [intro?]:
   "(\<And>p ao asid vref level.
        \<lbrakk> vs_lookup_table level asid (vref_for_level vref (level+1)) s = Some (level, p);
          vref \<in> user_region;
-         aobjs_of s p = Some ao \<rbrakk>
+         vspace_objs_of s p = Some ao \<rbrakk>
        \<Longrightarrow> valid_vspace_obj level ao s)
   \<Longrightarrow> valid_vspace_objs s"
   by (fastforce simp: valid_vspace_objs_def dest: vs_lookup_level_vref1)
@@ -2106,7 +2178,7 @@ lemmas vs_lookup_splitD = vs_lookup_split_Some[rotated, THEN iffD1, rotated -1]
 lemma valid_vspace_objsD:
   "\<lbrakk> valid_vspace_objs s;
      vs_lookup_table bot_level asid vref s = Some (level, p);
-     vref \<in> user_region; aobjs_of s p = Some ao \<rbrakk> \<Longrightarrow>
+     vref \<in> user_region; vspace_objs_of s p = Some ao \<rbrakk> \<Longrightarrow>
    valid_vspace_obj level ao s"
   by (simp add: valid_vspace_objs_def)
 
@@ -2357,29 +2429,14 @@ lemma swp_entry_for_asid_lift:
     apply (wpsimp wp: assms)+
   done
 
-lemma vmid_for_asid_lift:
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_table s)\<rbrace>"
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_pools_of s)\<rbrace>"
-  shows "f \<lbrace>\<lambda>s. P (swp vmid_for_asid s)\<rbrace>"
-  unfolding vmid_for_asid_def
-  by (wpsimp wp: assms swp_entry_for_asid_lift simp: swp_def obind_def)
-
 lemma vmid_inv_ap_lift:
   assumes ap[wp]: "(\<And>P. f \<lbrace> \<lambda>s. P (asid_pools_of s) \<rbrace>)"
   assumes arch[wp]: "\<And>P. \<lbrace>\<lambda>s. P (arch_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
   shows "f \<lbrace>vmid_inv\<rbrace>"
   unfolding vmid_inv_def
   apply (rule hoare_lift_Pf[where f=arch_state, rotated], rule arch)
-  apply (rule hoare_lift_Pf[where f="swp vmid_for_asid"])
-   apply wpsimp
-  apply (wpsimp wp: vmid_for_asid_lift)
+  apply wpsimp
   done
-
-lemmas vcpu_of_simps[simp] = vcpu_of_def[split_simps arch_kernel_obj.split]
-
-lemma vcpu_of_Some[simp]:
-  "(vcpu_of ako = Some vcpu) = (ako = VCPU vcpu)"
-  by (cases ako; simp)
 
 definition is_vcpu :: "kernel_object \<Rightarrow> bool" where
   "is_vcpu \<equiv> \<lambda>ko. \<exists>vcpu. ko = ArchObj (VCPU vcpu)"
@@ -2470,7 +2527,7 @@ lemma pool_for_asid_and_mask[simp]:
 
 lemma vs_lookup_table_ap_step:
   "\<lbrakk> vs_lookup_table asid_pool_level asid vref s = Some (asid_pool_level, p);
-     asid_pools_of s p = Some ap; ap ap_idx = Some entry \<rbrakk> \<Longrightarrow>
+     asid_pools_of s p = Some ap; \<exists>ap_idx. ap ap_idx = Some entry \<rbrakk> \<Longrightarrow>
    \<exists>asid'. vs_lookup_target asid_pool_level asid' vref s = Some (asid_pool_level, ap_vspace entry)"
   apply (clarsimp simp: vs_lookup_target_def vs_lookup_slot_def in_omonad ran_def)
   apply (rule_tac x="asid && ~~mask asid_low_bits || ucast ap_idx" in exI)
@@ -2489,7 +2546,7 @@ lemma pt_index_vref_for_level[simp]:
   using pt_bits_left_bound[of "level"]
   apply (simp add: pt_index_def vref_for_level_def pt_bits_left_bound_def)
   apply word_eqI
-  by (auto simp: bit_simps pt_bits_left_def size_max_pt_level split: if_split_asm)
+  by (auto simp: bit_simps pt_bits_left_def size_max_pt_level plus_one_eq_asid_pool split: if_split_asm)
 
 lemma table_index_pt_slot_offset:
   "\<lbrakk> level \<le> max_pt_level; is_aligned p (pt_bits level);
@@ -2511,7 +2568,7 @@ lemma vref_for_level_idx[simp]:
   "\<lbrakk> level \<le> max_pt_level; idx \<le> mask (ptTranslationBits level) \<rbrakk> \<Longrightarrow>
    vref_for_level (vref_for_level_idx vref idx level) (level + 1) =
    vref_for_level vref (level + 1)"
-  apply (simp add: vref_for_level_def pt_bits_left_def)
+  apply (simp add: vref_for_level_def pt_bits_left_def plus_one_eq_asid_pool)
   apply (rule conjI, clarsimp)
   apply (rule conjI; clarsimp; word_eqI_solve simp: bit_simps level_defs dest: bit_imp_possible_bit)
   done
@@ -2723,6 +2780,13 @@ lemma hyp_refs_of_rev:
 
 end
 
+locale Arch_asid_table_update_eq = Arch +
+  fixes f :: "'z::state_ext state \<Rightarrow> 'c::state_ext state"
+  assumes asid_table: "asid_table (f s) = asid_table s"
+
+locale Arch_p_asid_table_update_eq = Arch_pspace_update_eq + Arch_asid_table_update_eq
+
+
 context Arch_pspace_update_eq begin
 
 lemma oreturn_state_update[simp]:
@@ -2794,11 +2858,11 @@ lemma global_refs_update [iff]:
 
 end
 
-context Arch_p_arch_update_eq begin
+context Arch_p_asid_table_update_eq begin
 
 lemma pool_for_asid_update[iff]:
   "pool_for_asid asid (f s) = pool_for_asid asid s"
-  by (simp add: pool_for_asid_def arch)
+  by (simp add: pool_for_asid_def asid_table)
 
 lemma entry_for_asid_update[iff]:
   "entry_for_asid asid (f s) =  entry_for_asid asid s"
@@ -2809,13 +2873,17 @@ lemma vspace_for_asid_update[iff]:
   "vspace_for_asid asid (f s) =  vspace_for_asid asid s"
   by (simp add: vspace_for_asid_def obind_def split: option.splits)
 
+lemma vspace_at_asid_update[iff]:
+  "vspace_at_asid asid pt (f s) =  vspace_at_asid asid pt s"
+  by (simp add: vspace_at_asid_def)
+
 lemma vmid_for_asid_update[iff]:
-  "vmid_for_asid asid (f s) =  vmid_for_asid asid s"
-  by (simp add: vmid_for_asid_def obind_def)
+  "vmid_for_asid (f s) asid = vmid_for_asid s asid"
+  by (simp add: asid_table)
 
 lemma vs_lookup_update [iff]:
   "vs_lookup_table bot_level asid vptr (f s) = vs_lookup_table bot_level asid vptr s"
-  by (auto simp: vs_lookup_table_def pspace arch obind_def split: option.splits)
+  by (auto simp: vs_lookup_table_def pspace asid_table obind_def split: option.splits)
 
 lemma vs_lookup_slot_update[iff]:
   "vs_lookup_slot bot_level asid vref (f s) = vs_lookup_slot bot_level asid vref s"
@@ -2827,23 +2895,38 @@ lemma vs_lookup_target_update[iff]:
 
 lemma valid_vs_lookup_update [iff]:
   "valid_vs_lookup (f s) = valid_vs_lookup s"
-  by (simp add: valid_vs_lookup_def arch)
+  by (simp add: valid_vs_lookup_def asid_table)
 
 lemma valid_table_caps_update [iff]:
   "valid_table_caps (f s) = valid_table_caps s"
-  by (simp add: valid_table_caps_def arch pspace)
-
-lemma valid_ioports_update[iff]:
-  "valid_ioports (f s) = valid_ioports s"
-  by simp
+  by (simp add: valid_table_caps_def asid_table pspace)
 
 lemma valid_asid_table_update [iff]:
   "valid_asid_table (f s) = valid_asid_table s"
-  by (simp add: valid_asid_table_def arch pspace)
+  by (simp add: valid_asid_table_def asid_table pspace)
 
 lemma equal_kernel_mappings_update [iff]:
   "equal_kernel_mappings (f s) = equal_kernel_mappings s"
   by (simp add: equal_kernel_mappings_def pspace)
+
+lemma valid_vspace_objs_update [iff]:
+  "valid_vspace_objs (f s) = valid_vspace_objs s"
+  by (simp add: valid_vspace_objs_def pspace)
+
+lemma valid_arch_caps_update [iff]:
+  "valid_arch_caps (f s) = valid_arch_caps s"
+  by (simp add: valid_arch_caps_def asid_table)
+
+end
+
+context Arch_p_arch_update_eq begin
+
+sublocale Arch_p_asid_table_update_eq
+  by unfold_locales (simp add: arch)
+
+lemma valid_ioports_update[iff]:
+  "valid_ioports (f s) = valid_ioports s"
+  by simp
 
 lemma cur_vcpu_update [iff]:
   "cur_vcpu (f s) = cur_vcpu s"

@@ -1,4 +1,5 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -1610,6 +1611,10 @@ lemma valid_objsI [intro]:
 lemma valid_objsE [elim]:
   "\<lbrakk> valid_objs s; kheap s x = Some obj; valid_obj x obj s \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
   unfolding valid_objs_def by (auto simp: dom_def)
+
+lemma valid_obj_arch_valid_obj:
+  "valid_obj p (ArchObj ao) s = arch_valid_obj ao s"
+  by (simp add: valid_obj_def)
 
 
 lemma obj_at_ko_at:

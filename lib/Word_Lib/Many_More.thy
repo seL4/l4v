@@ -441,10 +441,6 @@ lemma sum_map_simps[simp]:
   "sum_map f g (Inr w) = Inr (g w)"
   by (simp add: sum_map_def)+
 
-lemma if_Some_None_eq_None:
-  "((if P then Some v else None) = None) = (\<not> P)"
-  by simp
-
 lemma CollectPairFalse [iff]:
   "{(a,b). False} = {}"
   by (simp add: split_def)
@@ -686,5 +682,8 @@ lemma plus_minus_one_rewrite:
 
 lemma Suc_0_lt_2p_len_of: "Suc 0 < 2 ^ LENGTH('a :: len)"
   by (metis One_nat_def len_gt_0 lessI numeral_2_eq_2 one_less_power)
+
+lemma bin_rest_code: "i div 2 = drop_bit 1 i" for i :: int
+  by (simp add: drop_bit_eq_div)
 
 end

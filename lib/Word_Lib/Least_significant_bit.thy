@@ -25,7 +25,7 @@ definition lsb_int :: \<open>int \<Rightarrow> bool\<close>
   where \<open>lsb i = bit i 0\<close> for i :: int
 
 instance
-  by standard (simp add: fun_eq_iff lsb_int_def)
+  by standard (simp add: fun_eq_iff lsb_int_def bit_0)
 
 end
 
@@ -42,7 +42,7 @@ lemma int_lsb_numeral [simp]:
   "lsb (numeral (num.Bit1 w) :: int) = True"
   "lsb (- numeral (num.Bit0 w) :: int) = False"
   "lsb (- numeral (num.Bit1 w) :: int) = True"
-  by (simp_all add: lsb_int_def)
+  by (simp_all add: lsb_int_def bit_0)
 
 instantiation word :: (len) lsb
 begin
@@ -64,7 +64,7 @@ lemma lsb_word_eq:
 
 lemma word_lsb_alt: "lsb w = bit w 0"
   for w :: "'a::len word"
-  by (simp add: lsb_word_eq)
+  by (simp add: lsb_word_eq bit_0)
 
 lemma word_lsb_1_0 [simp]: "lsb (1::'a::len word) \<and> \<not> lsb (0::'b::len word)"
   unfolding word_lsb_def by simp
@@ -90,5 +90,21 @@ lemma word_lsb_nat:"lsb w = (unat w mod 2 = 1)"
   apply transfer
   apply (simp add: even_nat_iff)
   done
+
+instantiation integer :: lsb
+begin
+
+context
+  includes integer.lifting
+begin
+
+lift_definition lsb_integer :: \<open>integer \<Rightarrow> bool\<close> is lsb .
+
+instance
+  by (standard; transfer) (fact lsb_odd)
+
+end
+
+end
 
 end

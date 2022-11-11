@@ -278,29 +278,10 @@ lemma cte_at_into_opt_cap:
   apply (clarsimp simp: caps_of_state_transform_opt_cap)
   done
 
-abbreviation
-  "meqv \<equiv> monadic_rewrite False True"
-
-lemma mr_opt_cap_into_object:
-  assumes mr: "\<And>obj. monadic_rewrite F E (Q obj) m m'"
-  shows   "monadic_rewrite F E ((\<lambda>s. \<forall>obj. cdl_objects s (fst p) = Some obj \<and> object_slots obj (snd p) \<noteq> None \<longrightarrow> Q obj s) and (\<lambda>s. opt_cap p s \<noteq> None)) m m'"
-  apply (rule monadic_rewrite_imp)
-  apply (rule monadic_rewrite_exists [where P = "\<lambda>obj s. cdl_objects s (fst p) = Some obj \<and> object_slots obj (snd p) \<noteq> None", OF mr])
-  apply clarsimp
-  apply (rule conjI)
-  apply simp
-  apply (simp add: opt_cap_def split_def KHeap_D.slots_of_def split: option.splits)
-  done
-
 lemma object_slots_has_slots [simp]:
   "object_slots obj p = Some v \<Longrightarrow> has_slots obj"
   unfolding object_slots_def has_slots_def
   by (simp split: cdl_object.splits)
-
-lemma meqv_sym:
-  "meqv P a a' \<Longrightarrow> meqv P a' a"
-  unfolding monadic_rewrite_def
-  by fastforce
 
 lemma dcorres_when_l:
   assumes tc: "R \<Longrightarrow> dcorres dc \<top> P l r"

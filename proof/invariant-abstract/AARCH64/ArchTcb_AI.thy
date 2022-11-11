@@ -21,23 +21,19 @@ lemma activate_idle_invs[Tcb_AI_asms]:
   by (simp add: arch_activate_idle_thread_def)
 
 
-lemma empty_fail_getRegister [intro!, simp, Tcb_AI_asms]:
-  "empty_fail (getRegister r)"
-  by (simp add: getRegister_def)
-
+declare getRegister_empty_fail [Tcb_AI_asms]
 
 lemma same_object_also_valid:  (* arch specific *)
   "\<lbrakk> same_object_as cap cap'; s \<turnstile> cap'; wellformed_cap cap;
      cap_asid cap = None \<or> (\<exists>asid. cap_asid cap = Some asid \<and> 0 < asid \<and> asid \<le> 2^asid_bits - 1);
      cap_vptr cap = None; cap_asid_base cap = None \<rbrakk>
      \<Longrightarrow> s \<turnstile> cap"
-  sorry (* FIXME AARCH64
   apply (cases cap,
          (clarsimp simp: same_object_as_def is_cap_simps cap_asid_def
                          wellformed_cap_def wellformed_acap_def
                          valid_cap_def bits_of_def cap_aligned_def
                    split: cap.split_asm arch_cap.split_asm option.splits)+)
-  done *)
+  done
 
 lemma same_object_obj_refs[Tcb_AI_asms]:
   "\<lbrakk> same_object_as cap cap' \<rbrakk>
@@ -140,11 +136,10 @@ lemma finalise_cap_not_cte_wp_at[Tcb_AI_asms]:
             | rule impI
             | rule hoare_drop_imps)+
      apply (clarsimp simp: ball_ran_eq x)
-    sorry (* FIXME AARCH64 VCPU
     apply (wp delete_one_caps_of_state
          | rule impI
          | simp add: deleting_irq_handler_def get_irq_slot_def x ball_ran_eq)+
-    done *)
+    done
 
 
 lemma table_cap_ref_max_free_index_upd[simp,Tcb_AI_asms]:
@@ -156,10 +151,10 @@ end
 global_interpretation Tcb_AI_1?: Tcb_AI_1
   where state_ext_t = state_ext_t
   and is_cnode_or_valid_arch = is_cnode_or_valid_arch
-  proof goal_cases
-    interpret Arch .
-    case 1 show ?case by (unfold_locales; (fact Tcb_AI_asms)?)
-  qed
+proof goal_cases
+  interpret Arch .
+  case 1 show ?case by (unfold_locales; (fact Tcb_AI_asms)?)
+qed
 
 context Arch begin global_naming AARCH64
 
@@ -272,16 +267,13 @@ lemma tc_invs[Tcb_AI_asms]:
         | strengthen use_no_cap_to_obj_asid_strg use_no_cap_to_obj_asid_strg[simplified conj_comms]
                      tcb_cap_always_valid_strg[where p="tcb_cnode_index 0"]
                      tcb_cap_always_valid_strg[where p="tcb_cnode_index (Suc 0)"])+)
-  apply (intro conjI impI; clarsimp?;
-     (clarsimp simp: tcb_at_cte_at_0 tcb_at_cte_at_1[simplified]
-                        is_cap_simps is_valid_vtable_root_def
-                        is_cnode_or_valid_arch_def tcb_cap_valid_def
-                        invs_valid_objs cap_asid_def vs_cap_ref_def
-                        case_bool_If valid_ipc_buffer_cap_def option_case_eq_None
-                       | split cap.splits arch_cap.splits if_splits)+)
-  sorry (* FIXME AARCH64
-  apply (simp split: option.splits)
-  done *)
+  by (intro conjI impI; clarsimp?;
+      (clarsimp simp: tcb_at_cte_at_0 tcb_at_cte_at_1[simplified]
+                      is_cap_simps is_valid_vtable_root_def
+                      is_cnode_or_valid_arch_def tcb_cap_valid_def
+                      invs_valid_objs cap_asid_def vs_cap_ref_def
+                      case_bool_If valid_ipc_buffer_cap_def option_case_eq_None
+       | split cap.splits arch_cap.splits if_splits pt_type.splits option.splits)+)
 
 lemma check_valid_ipc_buffer_inv: (* arch_specific *)
   "\<lbrace>P\<rbrace> check_valid_ipc_buffer vptr cap \<lbrace>\<lambda>rv. P\<rbrace>"
@@ -371,9 +363,8 @@ lemma update_cap_valid[Tcb_AI_asms]:
   done
 
 
-(* FIXME AARCH64 VCPU
 crunch pred_tcb_at: switch_to_thread "pred_tcb_at proj P t"
-  (wp: crunch_wps simp: crunch_simps) *)
+  (wp: crunch_wps simp: crunch_simps)
 
 crunch typ_at[wp]: invoke_tcb "\<lambda>s. P (typ_at T p s)"
   (ignore: check_cap_at setNextPC zipWithM
@@ -389,9 +380,9 @@ end
 
 global_interpretation Tcb_AI?: Tcb_AI
   where is_cnode_or_valid_arch = AARCH64.is_cnode_or_valid_arch
-  proof goal_cases
-    interpret Arch .
-    case 1 show ?case by (unfold_locales; (fact Tcb_AI_asms)?)
-  qed
+proof goal_cases
+  interpret Arch .
+  case 1 show ?case by (unfold_locales; (fact Tcb_AI_asms)?)
+qed
 
 end

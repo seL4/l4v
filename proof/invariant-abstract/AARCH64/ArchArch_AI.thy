@@ -1192,29 +1192,6 @@ lemma associate_vcpu_tcb_valid_arch_state[wp]:
       apply (wpsimp wp: arch_thread_set_wp)+
   done *)
 
-lemma dmo_valid_machine_state[wp]:
-  "do_machine_op (set_cntv_cval_64 w) \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op read_cntpct \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op (set_cntv_off_64 w') \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op (maskInterrupt m irq) \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op (setHCR word) \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op isb \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op dsb \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op (set_gic_vcpu_ctrl_hcr f) \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op (set_gic_vcpu_ctrl_lr n w'') \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op (set_gic_vcpu_ctrl_apr w''') \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op (set_gic_vcpu_ctrl_vmcr w''') \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op (get_gic_vcpu_ctrl_lr w'''') \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op get_gic_vcpu_ctrl_apr \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op get_gic_vcpu_ctrl_vmcr \<lbrace>valid_machine_state\<rbrace>"
-  "do_machine_op get_gic_vcpu_ctrl_hcr \<lbrace>valid_machine_state\<rbrace>"
-  unfolding valid_machine_state_def read_cntpct_def
-            maskInterrupt_def setHCR_def set_gic_vcpu_ctrl_hcr_def set_gic_vcpu_ctrl_lr_def
-            set_gic_vcpu_ctrl_apr_def set_gic_vcpu_ctrl_vmcr_def get_gic_vcpu_ctrl_lr_def
-            get_gic_vcpu_ctrl_apr_def get_gic_vcpu_ctrl_vmcr_def get_gic_vcpu_ctrl_hcr_def
-  sorry (* FIXME AARCH64 VCPU
-  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_disj_lift dmo_machine_state_lift)+ *)
-
 (* FIXME AARCH64 VCPU machine ops
 crunches restore_virt_timer, vcpu_restore_reg_range, vcpu_save_reg_range, vgic_update_lr
   for valid_machine_state[wp]: valid_machine_state
@@ -1269,7 +1246,7 @@ lemma vgic_update_valid_pspace[wp]:
   "\<lbrace>valid_pspace\<rbrace> vgic_update vcpuptr f \<lbrace>\<lambda>_. valid_pspace\<rbrace>"
   unfolding vgic_update_def vcpu_update_def
   apply (wpsimp wp: set_vcpu_valid_pspace get_vcpu_wp simp: valid_vcpu_def)
-  apply (fastforce simp: obj_at_def dest!: valid_pspace_vo)
+  apply (fastforce simp: obj_at_def in_omonad dest!: valid_pspace_vo)
   done
 
 crunches invoke_vcpu_inject_irq, vcpu_read_reg
@@ -1324,6 +1301,7 @@ lemma sts_valid_slots_inv[wp]:
   unfolding valid_slots_def
   apply (cases m)
   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' sts_typ_ats)
+  apply fastforce
   done
 
 lemma sts_same_ref[wp]:
@@ -1512,7 +1490,7 @@ lemma decode_fr_inv_map_wf[wp]:
    apply (drule valid_vs_lookupD; clarsimp simp: vmsz_aligned_vref_for_level)
    apply (subgoal_tac "is_pt_cap cap")
     apply (force simp: is_cap_simps)
-   apply (fastforce dest: cap_to_pt_is_pt_cap intro: valid_objs_caps)
+   apply (fastforce dest: cap_to_pt_is_pt_cap_and_type intro: valid_objs_caps)
   apply (rule strengthen_imp_same_first_conj[OF conjI])
    apply (rule_tac x=level in exI)
    apply (rule_tac x="args!0" in exI)
@@ -1539,7 +1517,7 @@ lemma decode_fr_inv_map_wf[wp]:
   apply (drule valid_vs_lookupD; clarsimp simp: vmsz_aligned_vref_for_level)
   apply (subgoal_tac "is_pt_cap cap")
    apply (force simp: is_cap_simps)
-  apply (fastforce dest: cap_to_pt_is_pt_cap intro: valid_objs_caps)
+  apply (fastforce dest: cap_to_pt_is_pt_cap_and_type intro: valid_objs_caps)
   done *)
 
 lemma decode_frame_invocation_wf[wp]:
@@ -1631,7 +1609,7 @@ lemma decode_asid_pool_invocation_wf[wp]:
   apply (rule ccontr, erule notE[where P="valid_arch_inv i s" for i s])
   apply (clarsimp simp: valid_arch_inv_def valid_apinv_def pool_for_asid_def word_neq_0_conv
                         cte_wp_at_caps_of_state neq_Nil_conv obj_at_def in_omonad valid_cap_def
-                        asid_low_hi_cast asid_high_bits_of_add_ucast)
+                        asid_low_hi_cast asid_high_bits_of_add_ucast is_vsroot_cap_def)
   done
 
 lemma decode_asid_control_invocation_wf[wp]:
@@ -1694,7 +1672,7 @@ lemma arch_decode_vcpu_invocation_wf[wp]:
       apply (simp add:global_refs_def cap_range_def)
      apply (simp add: decode_vcpu_inject_irq_def)
      apply (rule hoare_pre, wpsimp simp: whenE_def wp: get_vcpu_wp)
-     apply (clarsimp simp: valid_arch_inv_def valid_vcpu_invocation_def obj_at_def)
+     apply (clarsimp simp: valid_arch_inv_def valid_vcpu_invocation_def obj_at_def in_omonad)
     apply (simp add: decode_vcpu_read_register_def)
     apply (rule hoare_pre, wpsimp)
     apply (clarsimp simp: valid_arch_inv_def valid_cap_def valid_vcpu_invocation_def)
