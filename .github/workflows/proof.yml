@@ -11,6 +11,7 @@ on:
       - '**.txt'
     branches:
       - rt
+      - rt_merge
   # this action needs access to secrets.
   # The actual test runs in a no-privilege VM, so it's Ok to run on untrusted PRs.
   pull_request_target:
@@ -35,7 +36,7 @@ jobs:
       uses: seL4/ci-actions/aws-proofs@master
       with:
         L4V_ARCH: ${{ matrix.arch }}
-        isa_branch: ts-2021-1
+        isa_branch: ts-2022
         manifest: mcs.xml
         session: '-x AutoCorresSEL4' # exclude large AutoCorresSEL4 session for PRs
         token: ${{ secrets.READ_TOKEN }}
