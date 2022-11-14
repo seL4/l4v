@@ -104,13 +104,8 @@ lemma as_user_integrity_autarch:
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   by (wpsimp simp:as_user_def wp:set_object_integrity_autarch touch_object_wp')
 
-lemma set_message_info_integrity_autarch:
-  "\<lbrace>integrity aag X st and K (is_subject aag thread)\<rbrace>
-   set_message_info thread info
-   \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  by (wpsimp simp:set_message_info_def wp:as_user_integrity_autarch)
-
 crunch integrity_autarch: set_message_info "integrity aag X st"
+  (simp:set_message_info_def wp:as_user_integrity_autarch)
 
 (* FIXME: move *)
 lemma set_mrs_thread_st_auth[wp]:
@@ -220,32 +215,6 @@ lemma store_word_offs_integrity_autarch:
   apply simp
   done
 
-lemma dmo_loadWord_respects_Write:
-  "\<lbrace>integrity aag X st and K (\<forall>p' \<in> ptr_range p word_size_bits. aag_has_auth_to aag Write p')\<rbrace>
-   do_machine_op (loadWord p)
-   \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  apply (rule hoare_pre)
-  apply (wp dmo_wp loadWord_respects)
-  apply simp
-  done
-
-lemma load_word_offs_integrity_autarch:
-  "\<lbrace>\<lambda>s. integrity aag X st s \<and> is_subject aag thread \<and>
-        ipc_buffer_has_auth aag thread (Some buf) \<and>
-        r < 2 ^ (msg_align_bits - word_size_bits)\<rbrace>
-   load_word_offs buf r
-   \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  apply (simp add: load_word_offs_def)
-  apply (rule hoare_pre)
-   apply (wp dmo_loadWord_respects_Write touch_objects_wp)
-  apply clarsimp
-  apply (drule (1) ipc_buffer_has_auth_wordE)
-     apply (simp add: word_size_word_size_bits is_aligned_mult_triv2)
-    apply (simp add: msg_align_bits')
-   apply (erule mul_word_size_lt_msg_align_bits_ofnat)
-  apply simp
-  done
-
 lemma set_mrs_pas_refined[wp]:
   "\<lbrace>pspace_aligned and valid_vspace_objs and valid_arch_state and pas_refined aag\<rbrace>
    set_mrs thread buf msgs
@@ -264,14 +233,10 @@ lemma copy_mrs_integrity_autarch:
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (simp add: copy_mrs_def cong: if_cong split del: if_split)
-  apply (wpsimp wp: mapM_wp' as_user_integrity_autarch
+  apply (wpsimp wp: mapM_wp' as_user_getRegister_integrity as_user_integrity_autarch
                     store_word_offs_integrity_autarch[where thread=receiver]
-                    (* XXX: oops... better, but not quite what we needed. -robs *)
-                    load_word_offs_integrity_autarch[where thread=receiver]
          | fastforce)+
-    sorry (* FIXME: broken by touched-addrs -robs
   done
-*)
 
 lemma set_mrs_integrity_autarch:
   "\<lbrace>integrity aag X st and K (is_subject aag thread \<and> ipc_buffer_has_auth aag thread buf)\<rbrace>

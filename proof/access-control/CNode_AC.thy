@@ -238,17 +238,34 @@ lemma get_cap_cur_auth:
   apply (clarsimp simp: cte_wp_at_caps_of_state cap_cur_auth_caps_of_state)
   done
 
+(* Note: These sublocale proofs take care of pas_refined and integrity for resolve_address_bits. *)
 sublocale touched_addresses_det_inv \<subseteq> pas_refined:touched_addresses_P_det_inv _ "pas_refined aag"
   by unfold_locales (simp add:pas_refined_ta_agnostic)
 
 sublocale touched_addresses_det_inv \<subseteq> integrity:touched_addresses_P_det_inv _ "integrity aag X st"
   by unfold_locales (simp add:integrity_ta_agnostic)
 
-crunch pas_refined[wp]: ensure_empty "pas_refined aag"
+crunches ensure_empty, lookup_cap_and_slot, lookup_slot_for_cnode_op
+  for pas_refined[wp]: "pas_refined aag"
+  and integrity[wp]: "integrity aag X st"
   (wp: touch_object_wp')
 
-crunch pas_refined[wp]: lookup_slot_for_cnode_op "pas_refined aag"
-  (wp: touch_object_wp')
+crunches load_word_offs
+  for pas_refined[wp]: "pas_refined aag"
+  and integrity[wp]: "integrity aag X st"
+  (simp: load_word_offs_tainv.agnostic_preserved)
+
+lemma as_user_getRegister_pas_refined[wp]:
+  "\<lbrace>pas_refined aag\<rbrace> as_user t (getRegister x) \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
+  using user_getreg_inv pas_refined_ta_agnostic
+    touched_addresses_inv.agnostic_preserved touched_addresses_inv_def
+  by blast
+
+lemma as_user_getRegister_integrity[wp]:
+  "\<lbrace>integrity aag X st\<rbrace> as_user t (getRegister x) \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  using user_getreg_inv integrity_ta_agnostic
+    touched_addresses_inv.agnostic_preserved touched_addresses_inv_def
+  by blast
 
 lemma decode_cnode_inv_authorised:
   "\<lbrace>pas_refined aag and invs and valid_cap cap
