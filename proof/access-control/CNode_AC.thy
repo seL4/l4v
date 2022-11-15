@@ -245,6 +245,10 @@ sublocale touched_addresses_det_inv \<subseteq> pas_refined:touched_addresses_P_
 sublocale touched_addresses_det_inv \<subseteq> integrity:touched_addresses_P_det_inv _ "integrity aag X st"
   by unfold_locales (simp add:integrity_ta_agnostic)
 
+(* FIXME: Should this one about valid_caps be moved to AInvs? -robs *)
+sublocale touched_addresses_det_inv \<subseteq> valid_caps:touched_addresses_P_det_inv _ "valid_caps cs"
+  by unfold_locales (simp add:valid_caps_ta_agnostic)
+
 crunches ensure_empty, lookup_cap_and_slot, lookup_slot_for_cnode_op
   for pas_refined[wp]: "pas_refined aag"
   and integrity[wp]: "integrity aag X st"

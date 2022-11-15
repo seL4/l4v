@@ -1070,6 +1070,15 @@ lemma pas_refined_ms_ta_independent[intro!, simp]:
   using pas_refined_ta_agnostic
   by (simp add: ta_agnostic_def)
 
+(* FIXME: Should these helpers for valid_caps be moved to AInvs? -robs *)
+lemma valid_caps_ta_agnostic: "ta_agnostic (valid_caps cs)"
+  by (clarsimp simp:ta_agnostic_def valid_caps_def)
+
+lemma valid_caps_ms_ta_independent[intro!, simp]:
+  "valid_caps cs (ms_ta_update taf s) = valid_caps cs s"
+  using valid_caps_ta_agnostic
+  by (metis ta_agnostic_def)
+
 lemma eintegrity_sa_update[simp]:
   "integrity aag X st (scheduler_action_update f s) = integrity aag X st s"
   by (simp add: integrity_subjects_def)
