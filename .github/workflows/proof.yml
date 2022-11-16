@@ -35,7 +35,6 @@ jobs:
       uses: seL4/ci-actions/aws-proofs@master
       with:
         L4V_ARCH: ${{ matrix.arch }}
-        isa_branch: ts-2021-1
         manifest: mcs.xml
         session: '-x AutoCorresSEL4' # exclude large AutoCorresSEL4 session for PRs
         token: ${{ secrets.READ_TOKEN }}
