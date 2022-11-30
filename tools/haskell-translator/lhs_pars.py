@@ -690,6 +690,7 @@ def newtype_transform(d):
 known_type_assignments = [
     'domain_schedule',
     'kernel',
+    'kernel_r',
     'kernel_f',
     'kernel_f f',  # there is a KernelF instance that gets transformed into this
     'kernel_init',
@@ -697,7 +698,10 @@ known_type_assignments = [
     'machine_data',
     'machine_monad',
     'ready_queue',
-    'user_monad'
+    'release_queue',
+    'user_monad',
+    'reader_m',
+    'reader_m s',
 ]
 
 
@@ -706,7 +710,8 @@ def typename_transform(line, header, d):
         [oldtype] = line.split()
     except:
         if header not in known_type_assignments:
-            warning('type assignment with parameters not supported %s' % d.body, filename)
+            warning('type assignment with parameters not supported %s, (%s)' %
+                    (d.body, header), filename)
             call.bad_type_assignment = True
         return
     if oldtype.startswith('Data.Word.Word'):
