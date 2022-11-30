@@ -1262,14 +1262,12 @@ lemma unmap_page_table_pool_for_asid[wp]:
   unfolding unmap_page_table_def by (wpsimp simp: pool_for_asid_def)
 
 lemma unmap_page_table_unreachable:
-  "\<lbrace> (\<lambda>s. \<exists>pt_t. pt_at pt_t pt s)
+  "\<lbrace> normal_pt_at pt
      and valid_asid_table and valid_vspace_objs and pspace_aligned and pspace_distinct
      and unique_table_refs and valid_vs_lookup and (\<lambda>s. valid_caps (caps_of_state s) s)
-     and K (0 < asid \<and> vref \<in> user_region)
-     and (\<lambda>s. vspace_for_asid asid s \<noteq> Some pt) \<rbrace>
+     and K (0 < asid \<and> vref \<in> user_region) \<rbrace>
    unmap_page_table asid vref pt
    \<lbrace>\<lambda>_ s. \<not> reachable_target (asid, vref) pt s\<rbrace>"
-  (* FIXME AARCH64: eliminate "vspace_for_asid asid s \<noteq> Some pt" *)
   unfolding reachable_target_def
   apply (wpsimp wp: hoare_vcg_all_lift unmap_page_table_not_target)
   apply (drule (1) pool_for_asid_validD)
@@ -1353,16 +1351,16 @@ lemma arch_finalise_cap_replaceable:
                     split: if_split_asm)
   apply clarsimp
   apply (in_case "PageTableCap ?p ?T ?m")
-  sorry (* FIXME AARCH64
   apply (rule conjI; clarsimp)
    apply (in_case "PageTableCap ?p VSRootPT_T ?m")
    apply (rule conjI; clarsimp simp: valid_cap_def wellformed_mapdata_def data_at_def obj_at_def
                                split: if_split_asm) (* vspace_for_asid *)
+   subgoal sorry (* FIXME AARCH64 *)
   apply (in_case "PageTableCap ?p NormalPT_T ?m")
   apply (rule conjI; clarsimp)
    apply (clarsimp simp: valid_cap_def obj_at_def)
-  apply (clarsimp simp: valid_cap_def wellformed_mapdata_def cap_aligned_def obj_at_def) (* vspace_for_asid *)
-  done *)
+  apply (clarsimp simp: valid_cap_def wellformed_mapdata_def cap_aligned_def obj_at_def)
+  done
 
 global_naming Arch
 lemma (* deleting_irq_handler_slot_not_irq_node *)[Finalise_AI_asms]:

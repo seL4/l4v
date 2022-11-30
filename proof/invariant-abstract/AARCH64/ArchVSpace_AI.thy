@@ -499,7 +499,7 @@ definition
        and real_cte_at cslot
        and valid_arch_cap acap
        and is_final_cap' (ArchObjectCap acap)
-       and K (is_PageTableCap acap)
+       and K (is_PageTableCap acap \<and> acap_pt_type acap = NormalPT_T)
        and (\<lambda>s. \<forall>asid vref. vs_cap_ref_arch acap = Some (asid, vref) \<longrightarrow>
                             vspace_for_asid asid s \<noteq> aobj_ref acap)"
 
@@ -1564,15 +1564,25 @@ lemma pt_lookup_from_level_wrp:
 crunches invalidate_tlb_by_asid
   for vs_lookup_target[wp]: "\<lambda>s. P (vs_lookup_target level asid vref s)"
 
+lemma normal_pt_not_vspace_for_asid:
+  "\<lbrakk> normal_pt_at pt s; pspace_aligned s; valid_asid_table s; valid_vspace_objs s \<rbrakk>
+   \<Longrightarrow> vspace_for_asid asid s \<noteq> Some pt"
+  apply clarsimp
+  apply (drule vspace_for_asid_vs_lookup)
+  apply (drule vs_lookup_table_pt_at; simp)
+  apply (clarsimp simp: obj_at_def)
+  done
+
 lemma unmap_page_table_not_target:
-  "\<lbrace>\<lambda>s. (\<exists>pt_t. pt_at pt_t pt s) \<and> pspace_aligned s \<and> pspace_distinct s \<and>
+  "\<lbrace>\<lambda>s. normal_pt_at pt s \<and> pspace_aligned s \<and> pspace_distinct s \<and>
         valid_asid_table s \<and> valid_vspace_objs s \<and>
-        0 < asid \<and> vref \<in> user_region \<and> vspace_for_asid asid s \<noteq> Some pt \<and>
+        0 < asid \<and> vref \<in> user_region \<and>
         asid' = asid \<and> pt' = pt \<and> vref' = vref \<rbrace>
    unmap_page_table asid vref pt
    \<lbrace>\<lambda>_ s. vs_lookup_target level asid' vref' s \<noteq> Some (level, pt')\<rbrace>"
   unfolding unmap_page_table_def
   apply (wpsimp wp: store_pte_invalid_vs_lookup_target_unmap pt_lookup_from_level_wrp)
+  apply (frule normal_pt_not_vspace_for_asid[where asid=asid]; assumption?)
   apply (rule conjI; clarsimp)
    apply (clarsimp simp: vs_lookup_target_def vs_lookup_slot_def vs_lookup_table_def
                    split: if_split_asm;
