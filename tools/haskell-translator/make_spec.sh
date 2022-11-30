@@ -70,20 +70,19 @@ ARCHES=("ARM" "RISCV64")
 function cpp_opts () {
     case ${1} in
         ARM)
-            L4CPP="-DPLATFORM=QEmu -DPLATFORM_QEmu -DTARGET=ARM -DTARGET_ARM"
+            L4CPP="-Wno-unicode -DPLATFORM=QEmu -DPLATFORM_QEmu -DTARGET=ARM -DTARGET_ARM"
             ;;
         ARM_HYP)
-            L4CPP="-DPLATFORM=TK1 -DPLATFORM_TK1 -DTARGET=ARM -DTARGET_ARM -DCONFIG_ARM_HYPERVISOR_SUPPORT"
+            L4CPP="-Wno-unicode -DPLATFORM=TK1 -DPLATFORM_TK1 -DTARGET=ARM -DTARGET_ARM -DCONFIG_ARM_HYPERVISOR_SUPPORT"
             ;;
         RISCV64)
-            L4CPP="-DPLATFORM=HiFive -DPLATFORM_HiFive -DTARGET=RISCV64 -DTARGET_RISCV64"
+            L4CPP="-Wno-unicode -DPLATFORM=HiFive -DPLATFORM_HiFive -DTARGET=RISCV64 -DTARGET_RISCV64"
             ;;
         AARCH64)
-            L4CPP="-DPLATFORM=TX2 -DPLATFORM_TX2 -DTARGET=AARCH64 -DTARGET_AARCH64"
+            L4CPP="-Wno-unicode -DPLATFORM=TX2 -DPLATFORM_TX2 -DTARGET=AARCH64 -DTARGET_AARCH64"
             ;;
         X64)
-            # this space intentionally left blank:
-            L4CPP=""
+            L4CPP="-Wno-unicode"
             ;;
         *)
             echo "Warning: No CPP configuration for achitecture ${1}"
