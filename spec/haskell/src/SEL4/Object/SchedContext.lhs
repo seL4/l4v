@@ -491,8 +491,7 @@ This module uses the C preprocessor to select a target architecture.
 >     scPtrOpt <- threadGet tcbYieldTo tptr
 >     when (scPtrOpt /= Nothing) $ do
 >         scPtr <- return $ fromJust scPtrOpt
->         sc <- getSchedContext scPtr
->         setSchedContext scPtr (sc { scYieldFrom = Nothing })
+>         updateSchedContext scPtr (\sc -> sc { scYieldFrom = Nothing })
 >         threadSet (\tcb -> tcb { tcbYieldTo = Nothing }) tptr
 
 > schedContextCompleteYieldTo :: PPtr TCB -> Kernel ()
