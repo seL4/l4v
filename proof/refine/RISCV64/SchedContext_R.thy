@@ -306,31 +306,47 @@ lemma schedContextUpdateConsumed_invs'[wp]:
               simp: cteCaps_of_def o_def)
   done
 
+(* FIXME RT: should other update wp rules for valid_objs/valid_objs' be in this form?
+   The following might be nicer:
+   ∀sc'. scs_of' s scp = Some sc' ⟶ valid_obj' (injectKO sc') s
+         ⟶ valid_obj' (injectKO (f' sc') s) *)
+lemma updateSchedContext_valid_objs'[wp]:
+  "\<lbrace>valid_objs' and
+    (\<lambda>s. ((\<lambda>sc'. valid_obj' (injectKO sc') s \<longrightarrow> valid_obj' (injectKO (f' sc')) s)
+              |< scs_of' s) scp)\<rbrace>
+   updateSchedContext scp f'
+   \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
+  apply (wpsimp simp: updateSchedContext_def wp: set_sc'.valid_objs')
+  by (fastforce simp: valid_obj'_def valid_sched_context'_def valid_sched_context_size'_def
+                      obj_at'_def scBits_simps objBits_simps opt_map_red opt_pred_def)
+
+lemma valid_tcb'_tcbYieldTo_update:
+  "valid_tcb' tcb s \<Longrightarrow> valid_tcb' (tcbYieldTo_update Map.empty tcb) s"
+  by (simp add: valid_tcb'_def tcb_cte_cases_def cteSizeBits_def )
+
 lemma schedContextCancelYieldTo_valid_objs'[wp]:
   "schedContextCancelYieldTo tptr \<lbrace>valid_objs'\<rbrace>"
   apply (clarsimp simp: schedContextCancelYieldTo_def)
-  apply (rule hoare_seq_ext[OF _ threadGet_sp])
-  apply (rule hoare_when_cases; (solves \<open>wpsimp\<close>)?)
-  apply (rule hoare_seq_ext[OF _ get_sc_sp'])
-  apply (rule_tac B="\<lambda>_. valid_objs'" in hoare_seq_ext[rotated])
-   apply (wpsimp wp: set_sc_valid_objs')
-   apply (fastforce dest!: obj_at_valid_objs'
-                     simp: valid_obj'_def valid_sched_context'_def
-                           valid_sched_context_size'_def scBits_simps objBits_simps')
-  apply (wpsimp wp: threadSet_valid_objs')
-  apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def cteSizeBits_def)
-  done
+  apply (wpsimp wp: threadSet_valid_objs' hoare_vcg_all_lift threadGet_wp
+         | strengthen valid_tcb'_tcbYieldTo_update)+
+  apply normalise_obj_at'
+  apply (rename_tac ko)
+  apply (rule_tac x=ko in exI)
+  apply clarsimp
+  apply (frule (1) tcb_ko_at_valid_objs_valid_tcb')
+  by (fastforce simp: valid_obj'_def opt_map_def obj_at_simps valid_tcb'_def
+                      valid_sched_context'_def valid_sched_context_size'_def opt_pred_def)
 
 lemma schedContextCancelYieldTo_valid_mdb'[wp]:
   "schedContextCancelYieldTo tptr \<lbrace>valid_mdb'\<rbrace>"
-  apply (clarsimp simp: schedContextCancelYieldTo_def threadSet_def )
+  apply (clarsimp simp: schedContextCancelYieldTo_def updateSchedContext_def threadSet_def)
   apply (wpsimp wp: getObject_tcb_wp hoare_drop_imps hoare_vcg_ex_lift threadGet_wp)
   apply (fastforce simp: obj_at'_def tcb_cte_cases_def cteSizeBits_def)
   done
 
 lemma schedContextCancelYieldTo_sch_act_wf[wp]:
   "schedContextCancelYieldTo tptr \<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  apply (clarsimp simp: schedContextCancelYieldTo_def)
+  apply (clarsimp simp: schedContextCancelYieldTo_def updateSchedContext_def)
   apply (wpsimp wp: threadSet_sch_act threadGet_wp)
   apply (fastforce simp: obj_at'_def)
   done
@@ -339,29 +355,22 @@ lemma schedContextCancelYieldTo_if_live_then_nonz_cap'[wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s\<rbrace>
    schedContextCancelYieldTo tptr
    \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
-  apply (clarsimp simp: schedContextCancelYieldTo_def)
-  apply (rule hoare_seq_ext[OF _ threadGet_sp])
-  apply (rule hoare_when_cases; (solves \<open>wpsimp\<close>)?)
-  apply (rule hoare_seq_ext[OF _ get_sc_sp'])
-  apply (rule_tac B="\<lambda>_ s. if_live_then_nonz_cap' s"
-               in hoare_seq_ext[rotated])
-   apply (wpsimp wp: setSchedContext_iflive')
-   apply (erule if_live_then_nonz_capE')
-   apply (clarsimp simp: ko_wp_at'_def obj_at'_def live_sc'_def)
-  apply (wpsimp wp: threadSet_iflive' setSchedContext_iflive' threadGet_wp)
-  apply (fastforce simp: obj_at'_def)
-  done
+  apply (clarsimp simp: schedContextCancelYieldTo_def updateSchedContext_def)
+  apply (wpsimp wp: threadSet_iflive' setSchedContext_iflive' hoare_vcg_imp_lift' hoare_vcg_all_lift
+                    threadGet_wp)
+  by (fastforce elim: if_live_then_nonz_capE'
+                simp: ko_wp_at'_def obj_at'_def live_sc'_def)
 
 lemma schedContextCancelYieldTo_if_unsafe_then_cap'[wp]:
   "schedContextCancelYieldTo tptr \<lbrace>if_unsafe_then_cap'\<rbrace>"
-  apply (clarsimp simp: schedContextCancelYieldTo_def)
+  apply (clarsimp simp: schedContextCancelYieldTo_def updateSchedContext_def)
   apply (wpsimp wp: threadSet_ifunsafe' threadGet_wp)
   apply (fastforce simp: obj_at'_def)
   done
 
 lemma schedContextCancelYieldTo_valid_idle'[wp]:
   "schedContextCancelYieldTo tptr \<lbrace>valid_idle'\<rbrace>"
-  apply (clarsimp simp: schedContextCancelYieldTo_def)
+  apply (clarsimp simp: schedContextCancelYieldTo_def updateSchedContext_def)
   apply (wpsimp wp: threadSet_idle' setObject_sc_idle' updateObject_default_inv
                     threadGet_wp hoare_vcg_imp_lift' hoare_vcg_all_lift)
   apply (fastforce simp: valid_idle'_def obj_at'_def idle_tcb'_def)
@@ -369,31 +378,30 @@ lemma schedContextCancelYieldTo_valid_idle'[wp]:
 
 lemma schedContextCancelYieldTo_valid_release_queue[wp]:
   "schedContextCancelYieldTo tptr \<lbrace>valid_release_queue\<rbrace>"
-  apply (clarsimp simp: schedContextCancelYieldTo_def)
+  apply (clarsimp simp: schedContextCancelYieldTo_def updateSchedContext_def)
   apply (wpsimp wp: threadSet_valid_release_queue threadGet_wp)
   apply (fastforce simp: obj_at'_def)
   done
 
 lemma schedContextCancelYieldTo_ct_not_inQ[wp]:
   "schedContextCancelYieldTo tptr \<lbrace>ct_not_inQ\<rbrace>"
-  apply (clarsimp simp: schedContextCancelYieldTo_def)
+  apply (clarsimp simp: schedContextCancelYieldTo_def updateSchedContext_def)
   apply (wpsimp wp: threadSet_not_inQ threadGet_wp)
   apply (fastforce simp: obj_at'_def)
   done
 
 lemma schedContextCancelYieldTo_cur_tcb'[wp]:
   "schedContextCancelYieldTo tptr \<lbrace>cur_tcb'\<rbrace>"
-  apply (wpsimp simp: schedContextCancelYieldTo_def
+  apply (wpsimp simp: schedContextCancelYieldTo_def updateSchedContext_def
                   wp: threadSet_cur threadGet_wp)
   apply (fastforce simp: obj_at'_def)
   done
 
 lemma schedContextCancelYeldTo_valid_release_queue'[wp]:
   "schedContextCancelYieldTo t \<lbrace>valid_release_queue'\<rbrace>"
-  apply (clarsimp simp: schedContextCancelYieldTo_def)
+  apply (clarsimp simp: schedContextCancelYieldTo_def updateSchedContext_def)
   apply (rule hoare_seq_ext[OF _ threadGet_sp])
   apply (rule hoare_when_cases; (solves \<open>wpsimp\<close>)?)
-  apply (rule hoare_seq_ext[OF _ get_sc_sp'])
   apply (rule_tac B="\<lambda>_. valid_release_queue'" in hoare_seq_ext[rotated])
    apply wpsimp
   apply (wpsimp wp: threadSet_valid_release_queue' setObject_tcb_wp)
@@ -430,7 +438,7 @@ crunches schedContextCancelYieldTo
   and valid_replies' [wp]: valid_replies'
   and st_tcb_at'[wp]: "\<lambda>s. P (st_tcb_at' P' t s)"
   and pspace_in_kernel_mappings'[wp]: pspace_in_kernel_mappings'
-  (wp: crunch_wps threadSet_pred_tcb_no_state simp: crunch_simps)
+  (wp: crunch_wps threadSet_pred_tcb_no_state simp: crunch_simps updateSchedContext_def comp_def)
 
 global_interpretation schedContextCancelYieldTo: typ_at_all_props' "schedContextCancelYieldTo t"
   by typ_at_props'
@@ -518,7 +526,8 @@ lemma schedContextCancelYieldTo_corres:
           (schedContextCancelYieldTo t)" (is "corres _ ?abs_guard _ _ _")
   apply (rule_tac Q="tcb_at' t" in corres_cross_add_guard)
    apply (fastforce dest!: state_relationD elim!: tcb_at_cross)
-  apply (clarsimp simp: sched_context_cancel_yield_to_def schedContextCancelYieldTo_def maybeM_def)
+  apply (clarsimp simp: sched_context_cancel_yield_to_def schedContextCancelYieldTo_def
+                        updateSchedContext_def maybeM_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF get_tcb_yield_to_corres _ gyt_sp threadGet_sp
                              , where Q="?abs_guard"])
@@ -527,7 +536,6 @@ lemma schedContextCancelYieldTo_corres:
    apply simp
   apply (case_tac scPtrOpt; clarsimp?)
   apply (rule corres_guard_imp)
-    apply (subst bind_assoc[symmetric])
     apply (rule corres_split[OF update_sc_no_reply_stack_update_corres])
           apply (simp add: sc_relation_tcb_yield_to_update)
          apply simp
@@ -682,17 +690,6 @@ lemma schedContextDonate_bound_tcb_sc_at[wp]:
   "\<lbrace>\<top>\<rbrace> schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>_. obj_at' (\<lambda>a. \<exists>y. scTCB a = Some y) scPtr\<rbrace>"
    unfolding schedContextDonate_def
    by (wpsimp wp: set_sc'.obj_at')
-
-(* should other update wp rules for valid_objs/valid_objs' be in this form? *)
-lemma updateSchedContext_valid_objs'[wp]:
-  "\<lbrace>valid_objs' and
-    (\<lambda>s. ((\<lambda>sc'. valid_obj' (injectKO sc') s \<longrightarrow> valid_obj' (injectKO (f' sc')) s)
-              |< scs_of' s) scp)\<rbrace>
-    updateSchedContext scp f'
-   \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
-  apply (wpsimp simp: updateSchedContext_def wp: set_sc'.valid_objs')
-  by (fastforce simp: valid_obj'_def valid_sched_context'_def valid_sched_context_size'_def
-                      obj_at'_def scBits_simps objBits_simps opt_map_red opt_pred_def)
 
 lemma updateSchedContext_obj_at'[wp]:
   "\<forall>sc'. objBits sc' = objBits (f' sc'::sched_context) \<Longrightarrow>

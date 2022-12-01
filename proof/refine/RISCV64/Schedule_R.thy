@@ -3715,6 +3715,10 @@ lemma mergeRefills_valid_refills'[wp]:
   apply (wpsimp simp: updateRefillHd_def refillPopHead_def wp: updateSchedContext_wp)
   by (fastforce simp: valid_refills'_def obj_at_simps refillNextIndex_def opt_map_red opt_pred_def)
 
+lemma no_fail_refillPopHead[wp]:
+  "no_fail (sc_at' scPtr) (refillPopHead scPtr)"
+  by (wpsimp simp: refillPopHead_def obj_at'_def opt_map_def opt_pred_def objBits_simps)
+
 crunches mergeRefills
   for (no_fail) no_fail[wp]
   (simp: opt_map_red opt_pred_def obj_at_simps)
