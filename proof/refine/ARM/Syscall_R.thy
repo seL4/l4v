@@ -902,7 +902,6 @@ lemma schedContextCancelYieldTo_bound_scTCB[wp]:
   apply (clarsimp simp: schedContextCancelYieldTo_def)
   apply (rule hoare_seq_ext_skip, wpsimp)
   apply (rule hoare_when_cases, simp)
-  apply (rule hoare_seq_ext[OF _ get_sc_sp'])
   apply (wpsimp wp: set_sc'.obj_at' simp: updateSchedContext_def)
   apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def split: if_split)
   done

@@ -3470,7 +3470,7 @@ lemma schedContextCancelYieldTo_makes_unlive:
     obj_at' (\<lambda>sc. scReply sc = None) scPtr and bound_yt_tcb_at' (\<lambda>yieldTo. yieldTo = Some scPtr) tptr\<rbrace>
    schedContextCancelYieldTo tptr
    \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> live') scPtr\<rbrace>"
-  unfolding schedContextCancelYieldTo_def
+  unfolding schedContextCancelYieldTo_def updateSchedContext_def
   apply (wpsimp wp: threadSet_unlive_other set_sc'.ko_wp_at threadGet_wp)
   apply (auto simp: pred_tcb_at'_def obj_at'_def ko_wp_at'_def projectKOs live_sc'_def)
   done
