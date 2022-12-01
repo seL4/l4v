@@ -221,7 +221,8 @@ proof -
 qed
 
 crunch typ_at [wp]:
-  perform_page_table_invocation, perform_page_invocation, perform_asid_pool_invocation
+  perform_page_table_invocation, perform_page_invocation, perform_asid_pool_invocation,
+  perform_vspace_invocation
   "\<lambda>s. P (typ_at T p s)"
   (wp: crunch_wps simp: crunch_simps ignore: store_pte)
 
@@ -239,6 +240,9 @@ lemmas perform_asid_pool_invocation_typ_ats [wp] =
 
 lemmas perform_vcpu_invocation_typ_ats [wp] =
   abs_typ_at_lifts [OF perform_vcpu_invocation_typ_at]
+
+lemmas perform_vspace_invocation_typ_ats [wp] =
+  abs_typ_at_lifts [OF perform_vspace_invocation_typ_at]
 
 lemma perform_asid_control_invocation_tcb_at:
   "\<lbrace>invs and valid_aci aci and st_tcb_at active p and
@@ -267,10 +271,9 @@ lemma perform_asid_control_invocation_tcb_at:
     apply fastforce
    apply (clarsimp simp: zobj_refs_to_obj_refs)
    apply (erule(1) in_empty_interE)
-    sorry (* FIXME AARCH64
-    apply (clarsimp simp:page_bits_def)
+    apply (clarsimp simp: pageBits_def)
   apply simp
-  done *)
+  done
 
 
 lemma ucast_asid_high_btis_of_le [simp]:
@@ -290,7 +293,6 @@ lemma invoke_arch_tcb:
   \<lbrace>\<lambda>rv. tcb_at tptr\<rbrace>"
   apply (simp add: arch_perform_invocation_def)
   apply (cases ai; simp; (wp; clarsimp simp add: st_tcb_at_tcb_at)?)
-  sorry (* FIXME AARCH64
   apply (wp perform_asid_control_invocation_tcb_at)
   apply (clarsimp simp add: valid_arch_inv_def)
   apply (clarsimp simp: valid_aci_def)
@@ -311,7 +313,7 @@ lemma invoke_arch_tcb:
     apply (simp add: pageBits_def field_simps del: atLeastAtMost_iff)
    apply (metis (no_types) orthD1 x_power_minus_1)
   apply simp
-  done *)
+  done
 
 end
 
@@ -442,9 +444,9 @@ lemma valid_asid_map':
 lemma vspace_for_asid[simp]:
   "vspace_for_asid asid s' = vspace_for_asid asid s"
   using ko empty
-  sorry (* FIXME AARCH64
   by (clarsimp simp: vspace_for_asid_def obind_def pool_for_asid_def s'_def vspace_for_pool_def
-               split: option.splits) *)
+                     entry_for_asid_def entry_for_pool_def
+               split: option.splits)
 
 lemma global_pt[simp]:
   "global_pt s' = global_pt s"
@@ -452,8 +454,7 @@ lemma global_pt[simp]:
 
 lemma equal_kernel_mappings:
   "equal_kernel_mappings s' = equal_kernel_mappings s"
-  sorry (* FIXME AARCH64
-  by (simp add: equal_kernel_mappings_def has_kernel_mappings_def) *)
+  by (simp add: equal_kernel_mappings_def)
 
 end
 
@@ -462,12 +463,13 @@ context Arch begin global_naming AARCH64
 
 lemma valid_arch_state_strg:
   "valid_arch_state s \<and> ap \<notin> ran (asid_table s) \<and> asid_pool_at ap s \<longrightarrow>
-   valid_arch_state (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table (arch_state s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
+   valid_arch_state (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := (asid_table s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
   apply (clarsimp simp: valid_arch_state_def)
-  apply (clarsimp simp: valid_asid_table_def ran_def)
-  sorry (* FIXME AARCH64
+  apply (clarsimp simp: valid_asid_table_def ran_def valid_global_arch_objs_def)
+  apply (prop_tac "vmid_inv (asid_table_update asid ap s)")
+   subgoal sorry
   apply (fastforce intro!: inj_on_fun_updI simp: asid_pools_at_eq)
-  done *)
+  done
 
 
 lemma valid_vs_lookup_at_upd_strg:
