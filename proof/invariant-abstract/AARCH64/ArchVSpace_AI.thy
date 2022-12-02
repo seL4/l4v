@@ -476,7 +476,8 @@ definition
             case_option True (valid_unmap sz) m \<and>
             cte_wp_at ((=) (ArchObjectCap acap)) cslot s \<and>
             valid_arch_cap acap s
-  | PageGetAddr ptr \<Rightarrow> \<top>"
+  | PageGetAddr ptr \<Rightarrow> \<top>
+  | PageFlush _ _ _ _ _ _ \<Rightarrow> \<top>"
 
 definition
   "valid_pti pti \<equiv> case pti of
