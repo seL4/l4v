@@ -1530,7 +1530,7 @@ lemma set_pt_vms[wp]:
      set_pt p pt \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
   apply (simp add: set_pt_def set_object_def)
   apply (wp get_object_wp touch_object_wp')
-  apply (clarify, simp only:base.valid_machine_state.use_ta_agnostic)
+  apply (clarify, simp only:base.valid_machine_state.ms_ta_update_simplify)
   apply (erule valid_machine_state_heap_updI)
    apply (fastforce simp: obj_at_def a_type_def
                    split: kernel_object.splits arch_kernel_obj.splits)+
@@ -2015,7 +2015,7 @@ lemma set_asid_pool_vms[wp]:
      set_asid_pool p S \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
   apply (simp add: set_asid_pool_def set_object_def)
   apply (wp get_object_wp touch_object_wp')
-  apply (clarify, simp only: base.valid_machine_state.use_ta_agnostic)
+  apply (clarify, simp only: base.valid_machine_state.ms_ta_update_simplify)
   apply (rule valid_machine_state_heap_updI)
   apply (fastforce simp: a_type_def obj_at_def
                   split: kernel_object.splits arch_kernel_obj.splits)+

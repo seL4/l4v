@@ -174,31 +174,6 @@ interpretation lookup_target_slot_tainv:
   touched_addresses_inv _ "lookup_target_slot cap capref x"
   by unfold_locales wp
 
-(* some (more) lemmas that help us automate proofs about
-  ta_agnostic properties *)
-lemma ta_agnostic_irrel_imp:
-  "\<lbrakk>ta_agnostic P\<rbrakk> \<Longrightarrow>
-  ta_agnostic (\<lambda>s. Q \<longrightarrow> P s)"
-  apply (clarsimp simp:ta_agnostic_def)
-  done
-
-lemma eq_from_imps:
-  "A \<longrightarrow> B \<Longrightarrow> B \<longrightarrow> A \<Longrightarrow> A = B"
-  apply (cases A; cases B; simp)
-  done
-
-lemma ignored_agnostic:
-  "ta_agnostic (ignore_ta P)"
-  apply (clarsimp simp:ta_agnostic_def)
-  apply (rule eq_from_imps; clarsimp)
-  apply (drule_tac x="\<lambda>_. tafa (touched_addresses (machine_state s))" in spec)
-  apply clarsimp
-  apply (metis (mono_tags, lifting) RISCV64.fold_congs(5) abstract_state.fold_congs(6))
-  done
-
-lemmas ta_agnostic_lemmas = ta_agnostic_conj ta_agnostic_irrel_imp ignored_agnostic ta_agnostic_predconj
-
-
 lemma get_cap_tainv[wp]:
   "get_cap ta_f p \<lbrace>ignore_ta P\<rbrace>"
   by (simp add: ensure_empty_def whenE_def | wp touch_object_wp)+
