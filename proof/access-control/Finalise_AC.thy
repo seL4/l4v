@@ -257,6 +257,23 @@ crunch valid_mdb[wp]: fast_finalise "valid_mdb :: det_ext state \<Rightarrow> bo
 crunch valid_objs[wp]: fast_finalise "valid_objs :: det_ext state \<Rightarrow> bool"
   (wp: crunch_wps simp: crunch_simps)
 
+(* Note: The reason we now need these is that the `is_final_cap_inv` lemma used to preserve
+   all `P`, but now it only preserves `ignore_ta P`. -robs *)
+crunches is_final_cap
+  for pas_refined[wp]: "pas_refined aag"
+  and integrity[wp]: "integrity aag X st"
+  and invs[wp]: "invs"
+  and pspace_aligned[wp]: "pspace_aligned"
+  and valid_vspace_objs[wp]: "valid_vspace_objs"
+  and valid_arch_state[wp]: "valid_arch_state"
+  and valid_mdb[wp]: "valid_mdb"
+  and is_transferable_in[wp]: "is_transferable_in slot"
+  and valid_cap_syn[wp]: "\<lambda>s. s \<turnstile> cap"
+  and valid_list[wp]: "valid_list"
+  and valid_objs[wp]: "valid_objs"
+  and sym_refs_of[wp]: "\<lambda>s. sym_refs (state_refs_of s)"
+  and cdt_change_allowed[wp]: "cdt_change_allowed' aag slot"
+  (wp: touch_objects_wp)
 
 context Finalise_AC_1 begin
 
@@ -321,18 +338,6 @@ crunches unbind_maybe_notification, cancel_all_ipc, cancel_all_signals,
   and valid_arch_state[wp]: valid_arch_state
   (ignore: cap_move_ext tcb_sched_action reschedule_required wp: dxo_wp_weak mapM_x_inv_wp)
 
-lemma cap_delete_one_pas_refined_transferable[wp_transferable]:
-  "\<lbrace>pas_refined aag and (pspace_aligned and valid_vspace_objs and valid_arch_state) and
-   (valid_mdb and is_transferable_in param_a)\<rbrace>
-   cap_delete_one param_a \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
-  sorry (* FIXME: broken by touched-addrs -robs *)
-
-lemma cap_delete_one_pas_refined[wp, wp_not_transferable]:
-  "\<lbrace>pas_refined aag and (pspace_aligned and valid_vspace_objs and valid_arch_state) and
-   (valid_mdb and is_transferable_in param_a)\<rbrace>
-   cap_delete_one param_a \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
-  sorry (* FIXME: broken by touched-addrs -robs *)
-
 crunches cap_delete_one
   for pas_refined_transferable[wp_transferable]: "pas_refined aag"
   and pas_refined[wp, wp_not_transferable]: "pas_refined aag"
@@ -377,12 +382,10 @@ lemma reply_cancel_ipc_pas_refined[wp]:
   apply (wp add: select_wp wp_transferable del: wp_not_transferable)
    apply (rule hoare_strengthen_post[where Q="\<lambda>_. invs and tcb_at t and pas_refined aag"])
     apply (wpsimp wp: hoare_wp_combs thread_set_tcb_fault_reset_invs thread_set_pas_refined)+
-     sorry (* FIXME: broken by touched-addrs -robs
    apply (frule(1) reply_cap_descends_from_master0)
    apply (fastforce simp: cte_wp_at_caps_of_state intro:it_Reply)
   apply fastforce
   done
-*)
 
 lemma deleting_irq_handler_pas_refined[wp]:
   "\<lbrace>pas_refined aag and invs and K (is_subject_irq aag irq)\<rbrace>
@@ -390,10 +393,8 @@ lemma deleting_irq_handler_pas_refined[wp]:
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: deleting_irq_handler_def get_irq_slot_def)
   apply wp
-  sorry (* FIXME: broken by touched-addrs -robs
   apply (fastforce simp: pas_refined_def irq_map_wellformed_aux_def)
   done
-*)
 
 crunches suspend
   for pspace_aligned[wp]: "\<lambda>s :: det_ext state. pspace_aligned s"
@@ -522,7 +523,7 @@ lemma fast_finalise_respects[wp]:
   done
 
 (* Based on fast_finalise_respects proof, maybe some of these preconds are unnecessary -robs *)
-lemma fast_finalise_pas_refined:
+lemma fast_finalise_pas_refined':
   "\<lbrace>pas_refined aag and integrity aag X st and invs and valid_cap cap
                                 and K (pas_cap_cur_auth aag cap)\<rbrace>
    fast_finalise cap fin
@@ -539,13 +540,9 @@ lemma cap_delete_one_respects[wp,wp_not_transferable]:
    cap_delete_one slot
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: cap_delete_one_def unless_def bind_assoc)
-  apply (wpsimp wp: hoare_drop_imps get_cap_auth_wp [where aag = aag]
-    (* FIXME: This new lemma alone wasn't enough to get us past this anyway -robs *)
-    fast_finalise_pas_refined)
-  sorry (* FIXME: broken by touched-addrs -robs
+  apply (wpsimp wp: hoare_drop_imps get_cap_auth_wp [where aag = aag] touch_object_wp')
   apply (fastforce simp: caps_of_state_valid)
   done
-*)
 
 end
 
@@ -563,11 +560,10 @@ lemma cap_delete_one_respects_transferable[wp_transferable]:
    cap_delete_one slot
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: cap_delete_one_def unless_def bind_assoc)
-  apply (wp add: hoare_drop_imps get_cap_wp wp_transferable del: wp_not_transferable | simp)+
-  sorry (* FIXME: broken by touched-addrs -robs
+  apply (wp add: hoare_drop_imps get_cap_wp touch_object_wp' wp_transferable
+    del: wp_not_transferable | simp)+
   apply (fastforce simp: caps_of_state_valid cte_wp_at_caps_of_state)
   done
-*)
 
 lemma thread_set_tcb_state_trivial:
   "(\<And>tcb. tcb_state (f tcb) = tcb_state tcb)
