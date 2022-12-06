@@ -1901,6 +1901,11 @@ locale Ipc_AC_2 = Ipc_AC_1 +
     "cap_insert_ext src_parent src_slot dest_slot src_p dest_p
      \<lbrace>\<lambda>s. integrity_asids aag subjects x asid st
             (s\<lparr>kheap := \<lambda>a. if a = receiver then kheap st receiver else kheap s a\<rparr>)\<rbrace>"
+  (* FIXME: The way this fixes the type 'b returned by proj appears to be a problem. -robs *)
+  and do_ipc_transfer_pred_tcb[wp]:
+    "\<And>proj test t.
+     do_ipc_transfer sender ep badge grant receiver \<lbrace>\<lambda>s :: det_ext state. pred_tcb_at proj test t s\<rbrace>"
+
 begin
 
 lemma cap_insert_ext_integrity_in_ipc_autarch:
@@ -2873,9 +2878,10 @@ lemma empty_slot_respects_in_ipc_autarch:
   by (force dest: valid_list_empty simp: no_children_empty_desc simp del: split_paired_All)
 *)
 
-. (* XXX: DOWN TO HERE -robs
 crunches is_final_cap
   for integrity_tcb_in_ipc[wp]: "integrity_tcb_in_ipc aag X receiver epptr ctxt st"
+  and is_reply_cap[wp]: "cte_wp_at is_reply_cap slot"
+  (wp: touch_objects_wp)
 
 lemma cte_delete_one_respects_in_ipc_autharch:
   "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr ctxt st and valid_mdb and
@@ -2883,10 +2889,9 @@ lemma cte_delete_one_respects_in_ipc_autharch:
    cap_delete_one slot
    \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr ctxt st\<rbrace>"
   unfolding cap_delete_one_def
-  apply (wp empty_slot_respects_in_ipc_autarch fast_finalise_reply_respects_in_ipc_autarch get_cap_wp)
-  sorry (* FIXME: broken by touched-addrs -robs
+  apply (wp empty_slot_respects_in_ipc_autarch fast_finalise_reply_respects_in_ipc_autarch
+    get_cap_wp touch_object_wp')
   by (fastforce simp:cte_wp_at_caps_of_state is_cap_simps)
-*)
 
 end
 
@@ -3000,9 +3005,17 @@ lemma do_reply_transfer_respects:
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (rule hoare_gen_asm)+
   apply (simp add: do_reply_transfer_def thread_get_def get_thread_state_def)
-  sorry (* FIXME: broken by touched-addrs -robs
+  apply (rule hoare_seq_ext[OF _ touch_object_tainv_sp])
+   prefer 2
+   apply (clarsimp simp:ta_agnostic_def)
   apply (rule hoare_seq_ext[OF _ assert_get_tcb_sp];force?)
   apply (rule hoare_seq_ext[OF _ assert_sp])
+  apply (rule hoare_seq_ext[OF _ touch_object_tainv_sp])
+   prefer 2
+   apply (clarsimp simp:ta_agnostic_def)
+   (* FIXME: again unsure, maybe we need to tweak `touch_object_tainv_sp` for this? -robs *)
+   defer
+  apply clarsimp
   apply (rule hoare_seq_ext[OF _ assert_get_tcb_sp];force?)
   apply wpc
     \<comment> \<open>No fault case\<close>
@@ -3025,8 +3038,18 @@ lemma do_reply_transfer_respects:
                cte_delete_one_respects_in_ipc_autharch cap_delete_one_reply_st_tcb_at
                do_ipc_transfer_pred_tcb do_ipc_transfer_respects_in_ipc
                do_ipc_transfer_non_null_cte_wp_at2
+               mapM_wp_inv (* XXX: Thought I needed this for fault_tcb_at... -robs *)
            | simp add: is_cap_simps is_reply_cap_to_def
            | clarsimp)+)[1]
+    (* FIXME: I suspect there's no way to have do_ipc_transfer_pred_tcb for any generic type as
+       I've drafted it in the locale interface; it appears to have fixed the type variable to 'b
+       and is now complaining that `fault option` isn't 'b. -robs *)
+    apply(rule hoare_vcg_conj_lift)
+    (* XXX: See below.
+    apply(wp do_ipc_transfer_pred_tcb)
+    using do_ipc_transfer_pred_tcb[where proj=itcb_fault]
+    *)
+    sorry (* FIXME: broken by touched-addrs -robs
    \<comment> \<open>fault case\<close>
    apply (rule hoare_vcg_if_split[where P= "is_subject aag receiver" and f=f and g=f for f,
                                   simplified if_cancel])
