@@ -897,7 +897,7 @@ proof -
            simp add: empty_descendants_range_in)
     apply (frule pspace_no_overlap_detype, clarify+)
     apply (frule intvl_range_conv[where bits = pageBits])
-     apply (simp add:pageBits_def word_bits_def)
+     apply (simp add: pageBits_def word_bits_def)
     apply (clarsimp)
     apply (frule(1) ex_cte_cap_protects)
         apply (simp add:empty_descendants_range_in)
@@ -925,7 +925,8 @@ proof -
        apply (simp add: is_aligned_no_overflow)
       apply simp
      apply clarsimp
-    sorry (* FIXME AARCH64 *)
+    apply (clarsimp simp: fun_upd_apply)
+    done
 qed
 
 
@@ -946,21 +947,24 @@ lemma as_user_hyp_refs_empty[wp]:
   apply (wpsimp wp: set_object_wp)
   by (clarsimp simp: get_tcb_Some_ko_at obj_at_def arch_tcb_context_set_def)
 
+lemma vcpu_tcb_refs_None[simp]:
+  "vcpu_tcb_refs None = {}"
+  by (simp add: vcpu_tcb_refs_def)
+
 lemma dissociate_vcpu_tcb_obj_at_hyp_refs[wp]:
   "\<lbrace>\<lambda>s. p \<notin> {t, vr} \<longrightarrow> obj_at (\<lambda>ko. hyp_refs_of ko = {}) p s \<rbrace>
-     dissociate_vcpu_tcb t vr
+   dissociate_vcpu_tcb t vr
    \<lbrace>\<lambda>rv s. obj_at (\<lambda>ko. hyp_refs_of ko = {}) p s\<rbrace>"
   unfolding dissociate_vcpu_tcb_def
   apply (cases "p \<notin> {t, vr}"; clarsimp)
    apply (wp arch_thread_set_wp set_vcpu_wp)
         apply (clarsimp simp: obj_at_upd2 obj_at_update)
-        sorry (* FIXME AARCH64 VCPU
         apply (wp hoare_drop_imp get_vcpu_wp)+
    apply (clarsimp simp: obj_at_upd2 obj_at_update)
   apply (erule disjE;
-          (wp arch_thread_set_wp set_vcpu_wp
+          (wp arch_thread_set_wp set_vcpu_wp hoare_drop_imp
           | clarsimp simp: obj_at_upd2 obj_at_update)+)
-  done *)
+  done
 
 lemma associate_vcpu_tcb_sym_refs_hyp[wp]:
   "\<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of s)\<rbrace> associate_vcpu_tcb vr t \<lbrace>\<lambda>rv s. sym_refs (state_hyp_refs_of s)\<rbrace>"
@@ -1104,7 +1108,7 @@ crunches associate_vcpu_tcb
   for valid_global_refs[wp]: valid_global_refs
   (wp: crunch_wps)
 
-crunches vcpu_restore_reg
+crunches vcpu_restore_reg, vcpu_write_reg
   for valid_irq_states[wp]: valid_irq_states
   (wp: crunch_wps dmo_valid_irq_states simp: writeVCPUHardwareReg_def)
 
@@ -1115,15 +1119,14 @@ lemma is_irq_active_sp:
 lemma restore_virt_timer_valid_irq_states[wp]:
   "restore_virt_timer vcpu_ptr \<lbrace>valid_irq_states\<rbrace>"
   apply (clarsimp simp: restore_virt_timer_def is_irq_active_def liftM_def)
-  sorry (* FIXME AARCH64 VCPU
   apply (repeat_unless \<open>rule hoare_seq_ext[OF _ is_irq_active_sp]\<close>
                        \<open>rule hoare_seq_ext_skip,
                         wpsimp wp: dmo_valid_irq_states
-                             simp: isb_def setHCR_def set_cntv_cval_64_def read_cntpct_def
-                                   set_cntv_off_64_def\<close>)
-  apply (wpsimp simp: do_machine_op_def is_irq_active_def get_irq_state_def)
+                             simp: isb_def setHCR_def read_cntpct_def\<close>)
+  apply (wpsimp simp: do_machine_op_def is_irq_active_def get_irq_state_def
+                wp_del: dmo_valid_irq_states)
   apply (clarsimp simp: valid_irq_states_def valid_irq_masks_def maskInterrupt_def in_monad)
-  done *)
+  done
 
 crunches vcpu_switch
   for valid_irq_states[wp]: valid_irq_states
@@ -1407,89 +1410,134 @@ lemma check_vspace_root_wp[wp]:
   unfolding check_vspace_root_def
   by wpsimp
 
+(* FIXME AARCH64: move ArchInvariants *)
+lemma user_vtop_leq_canonical_user:
+  "user_vtop \<le> canonical_user"
+  by (simp add: user_vtop_def pptrUserTop_def canonical_user_def mask_def ipa_size_def)
+
+(* FIXME AARCH64: move ArchInvariants *)
+lemma user_vtop_canonical_user:
+  "vref < user_vtop \<Longrightarrow> vref \<le> canonical_user"
+  using user_vtop_leq_canonical_user by simp
+
+lemma pt_asid_pool_no_overlap:
+  "\<lbrakk> kheap s (table_base (level_type level) pte_ptr) = Some (ArchObj (PageTable pt));
+     kheap s (table_base (level_type asid_pool_level) pte_ptr) = Some (ArchObj (ASIDPool pool));
+     pspace_distinct s; pt_type pt = level_type level \<rbrakk>
+   \<Longrightarrow> False"
+  apply (simp add: level_type_def split: if_split_asm)
+   apply (cases "table_base VSRootPT_T pte_ptr = table_base NormalPT_T pte_ptr", simp)
+   apply (drule (3) pspace_distinctD)
+   apply (clarsimp simp: is_aligned_no_overflow_mask)
+   apply (metis and_neg_mask_plus_mask_mono pt_bits_NormalPT_T pt_bits_def word_and_le)
+  apply (simp add: level_defs split: if_split_asm)
+  done
+
+(* FIXME AARCH64: move close to pts_of_type_unique *)
+lemma pts_of_level_type_unique:
+  "\<lbrakk> pts_of s (table_base (level_type level) pte_ptr) = Some pt;
+     pts_of s (table_base (level_type level') pte_ptr) = Some pt';
+     pt_type pt = level_type level; pt_type pt' = level_type level';
+     pspace_distinct s \<rbrakk>
+   \<Longrightarrow> level_type level' = level_type level"
+  by (metis pts_of_type_unique)
+
+lemma pageBitsForSize_max_page_level:
+  "pt_bits_left level = pageBitsForSize vmpage_size \<Longrightarrow> level \<le> max_page_level"
+  using bit1.size_inj[where x=level and y=max_page_level, unfolded level_defs, simplified]
+  by (simp add: pageBitsForSize_def pt_bits_left_def ptTranslationBits_def level_defs
+           split: vmpage_size.splits if_split_asm)
+
+lemma pageBitsForSize_level_0_eq:
+  "pt_bits_left level = pageBitsForSize vmpage_size \<Longrightarrow> (vmpage_size = ARMSmallPage) = (level = 0)"
+  using bit1.size_inj[where x=level and y=max_page_level, unfolded level_defs, simplified]
+  by (simp add: pageBitsForSize_def pt_bits_left_def ptTranslationBits_def
+           split: vmpage_size.splits if_split_asm)
+
+(* FIXME AARCH64: move, intergrate with max_pt_level_not_asid_pool_level *)
+lemma asid_pool_level_not_max_pt_level[simp]:
+  "asid_pool_level \<noteq> max_pt_level"
+  by (simp add: level_defs)
+
 lemma decode_fr_inv_map_wf[wp]:
-  "arch_cap = FrameCap p rights vmpage_size dev option \<Longrightarrow>
-   \<lbrace>invs and valid_cap (ArchObjectCap arch_cap) and
+  assumes "arch_cap = FrameCap p rights vmpage_size dev option"
+  shows
+  "\<lbrace>invs and valid_cap (ArchObjectCap arch_cap) and
     cte_wp_at ((=) (ArchObjectCap arch_cap)) slot and
     (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at ((=) (fst x)) (snd x) s)\<rbrace>
    decode_fr_inv_map label args slot arch_cap excaps
    \<lbrace>valid_arch_inv\<rbrace>,-"
-  unfolding decode_fr_inv_map_def Let_def
-  apply (cases arch_cap; simp split del: if_split)
-  apply (wpsimp wp: check_vp_wpR split_del: if_split)
-  apply (clarsimp simp: valid_arch_inv_def valid_page_inv_def neq_Nil_conv)
-  sorry (* FIXME AARCH64
-  apply (cases option; clarsimp)
-  apply (rename_tac s pt_ptr asid vref ab ba ys pt_slot level)
-  apply (prop_tac "args!0 \<in> user_region")
-   apply (clarsimp simp: user_region_def not_le)
-   apply (rule user_vtop_canonical_user)
-   apply (erule aligned_add_mask_lessD)
-   apply (simp add: vmsz_aligned_def)
-  apply (clarsimp simp: cte_wp_at_caps_of_state is_arch_update_def is_cap_simps cap_master_cap_simps)
-  apply (thin_tac "Ball S P" for S P)
-  apply (frule (1) pt_lookup_slot_vs_lookup_slotI, clarsimp)
-  apply (clarsimp simp: valid_arch_cap_def valid_cap_def cap_aligned_def wellformed_mapdata_def)
-  apply (frule is_aligned_pageBitsForSize_table_size)
-  apply (frule (3) vs_lookup_slot_table_base)
-  apply (clarsimp simp: same_ref_def make_user_pte_def ptrFromPAddr_addr_from_ppn)
-  (* FIXME RISCV: remove duplication due to PagePTE/InvalidPTE cases: *)
-  apply (rule conjI; clarsimp)
-   apply (rule strengthen_imp_same_first_conj[OF conjI])
-    apply (rule_tac x=level in exI)
-    apply (rule_tac x="args!0" in exI)
-    apply (fastforce simp: vmsz_aligned_vref_for_level)
-   apply (rule strengthen_imp_same_first_conj[OF conjI])
-    apply (clarsimp simp: valid_slots_def make_user_pte_def wellformed_pte_def
-                          ptrFromPAddr_addr_from_ppn)
-    apply (rename_tac level' asid' vref')
+proof -
+  have pull_out: "\<lbrakk> P \<and> Q \<or> P' \<Longrightarrow> T \<rbrakk> \<Longrightarrow> (P \<longrightarrow> Q \<longrightarrow> T) \<and> (P' \<longrightarrow> T)" for P Q P' T by blast
+  from assms show ?thesis
+    unfolding decode_fr_inv_map_def Let_def
+    apply (cases arch_cap; simp split del: if_split)
+    apply (wpsimp wp: check_vp_wpR split_del: if_split)
+    apply (clarsimp simp: if_distribR if_bool_simps disj_imp cong: if_cong split del: if_split)
+    apply (rule pull_out)
+    apply clarsimp
+    apply (prop_tac "\<not> user_vtop \<le> args ! 0 + mask (pageBitsForSize vmpage_size) \<longrightarrow> args!0 \<in> user_region")
+     apply (clarsimp simp: user_region_def not_le)
+     apply (rule user_vtop_canonical_user)
+     apply (erule aligned_add_mask_lessD)
+     apply (simp add: vmsz_aligned_def)
+    apply (rename_tac pte_ptr level)
+    apply (clarsimp simp: valid_arch_inv_def valid_page_inv_def neq_Nil_conv)
+    apply (rename_tac cptr cidx excaps')
+    apply (clarsimp simp: cte_wp_at_caps_of_state is_arch_update_def is_cap_simps cap_master_cap_simps)
+    apply (thin_tac "Ball S P" for S P)
+    apply (frule (1) pt_lookup_slot_vs_lookup_slotI, clarsimp)
+    apply (clarsimp simp: valid_arch_cap_def valid_cap_def cap_aligned_def wellformed_mapdata_def)
+    apply (frule is_aligned_pageBitsForSize_table_size)
+    apply (prop_tac "args!0 \<in> user_region")
+     apply (fastforce simp: wellformed_mapdata_def)
     apply (frule (3) vs_lookup_slot_table_base)
-    apply (prop_tac "level' \<le> max_pt_level")
-     apply (drule_tac level=level in valid_vspace_objs_strongD[rotated]; clarsimp)
-     apply (rule ccontr, clarsimp simp: not_le)
-     apply (drule vs_lookup_asid_pool; clarsimp)
-     apply (clarsimp simp: in_omonad)
-    apply (drule (1) vs_lookup_table_unique_level; clarsimp)
-    apply (simp add: vs_lookup_slot_pte_at data_at_def vmpage_size_of_level_pt_bits_left
-              split: if_split_asm)
-   apply (rule strengthen_imp_same_first_conj[OF conjI])
-    apply (clarsimp simp: wellformed_mapdata_def vspace_for_asid_def)
-   apply (clarsimp simp: parent_for_refs_def)
-   apply (frule (3) vs_lookup_slot_table_base)
-   apply (frule (2) valid_vspace_objs_strongD[rotated]; clarsimp)
-   apply (drule (1) vs_lookup_table_target)
-   apply (drule valid_vs_lookupD; clarsimp simp: vmsz_aligned_vref_for_level)
-   apply (subgoal_tac "is_pt_cap cap")
-    apply (force simp: is_cap_simps)
-   apply (fastforce dest: cap_to_pt_is_pt_cap_and_type intro: valid_objs_caps)
-  apply (rule strengthen_imp_same_first_conj[OF conjI])
-   apply (rule_tac x=level in exI)
-   apply (rule_tac x="args!0" in exI)
-   apply (fastforce simp: vmsz_aligned_vref_for_level)
-  apply (rule strengthen_imp_same_first_conj[OF conjI])
-   apply (clarsimp simp: valid_slots_def make_user_pte_def wellformed_pte_def
-                         ptrFromPAddr_addr_from_ppn)
-   apply (rename_tac level' asid' vref')
-   apply (frule (3) vs_lookup_slot_table_base)
-   apply (prop_tac "level' \<le> max_pt_level")
-    apply (drule_tac level=level in valid_vspace_objs_strongD[rotated]; clarsimp)
-    apply (rule ccontr, clarsimp simp: not_le)
-    apply (drule vs_lookup_asid_pool; clarsimp)
-    apply (clarsimp simp: in_omonad)
-   apply (drule (1) vs_lookup_table_unique_level; clarsimp)
-   apply (simp add: vs_lookup_slot_pte_at data_at_def vmpage_size_of_level_pt_bits_left
-             split: if_split_asm)
-  apply (rule strengthen_imp_same_first_conj[OF conjI])
-   apply (clarsimp simp: wellformed_mapdata_def vspace_for_asid_def)
-  apply (clarsimp simp: parent_for_refs_def)
-  apply (frule (3) vs_lookup_slot_table_base)
-  apply (frule (2) valid_vspace_objs_strongD[rotated]; clarsimp)
-  apply (drule (1) vs_lookup_table_target)
-  apply (drule valid_vs_lookupD; clarsimp simp: vmsz_aligned_vref_for_level)
-  apply (subgoal_tac "is_pt_cap cap")
-   apply (force simp: is_cap_simps)
-  apply (fastforce dest: cap_to_pt_is_pt_cap_and_type intro: valid_objs_caps)
-  done *)
+    apply (clarsimp simp: same_ref_def make_user_pte_def)
+    apply (prop_tac "\<exists>vref. args ! 0 = vref_for_level vref level \<and>
+                            vs_lookup_slot level asid vref s = Some (level, pte_ptr) \<and>
+                            vref \<in> user_region")
+     apply (rule_tac x="args!0" in exI)
+     apply (fastforce simp: vmsz_aligned_vref_for_level)
+    apply clarsimp
+    apply (rule conjI, fastforce)
+    apply (clarsimp simp: valid_slots_def make_user_pte_def wellformed_pte_def)
+    apply (rule conjI, clarsimp)
+     apply (rename_tac level' asid' vref')
+     apply (prop_tac "level' \<le> max_pt_level")
+      apply (drule_tac level=level in valid_vspace_objs_strongD[rotated]; clarsimp)
+      apply (rule ccontr, clarsimp simp: not_le)
+      apply (drule vs_lookup_asid_pool; clarsimp)
+      apply (clarsimp simp: in_omonad)
+      apply (drule (1) pt_asid_pool_no_overlap, fastforce; assumption)
+     apply (prop_tac "\<exists>pt. pts_of s (table_base (level_type level) pte_ptr) = Some pt \<and>
+                           pt_type pt = level_type level")
+      apply (drule valid_vspace_objs_strongD[rotated]; clarsimp)
+     apply (prop_tac "\<exists>pt. pts_of s (table_base (level_type level') pte_ptr) = Some pt \<and>
+                           pt_type pt = level_type level'")
+      apply (drule_tac level=level' in valid_vspace_objs_strongD[rotated]; clarsimp)
+     apply clarsimp
+     apply (drule (3) pts_of_level_type_unique, fastforce)
+     apply (drule (1) vs_lookup_table_unique_level; clarsimp)
+     apply (simp add: vs_lookup_slot_pte_at data_at_def vmpage_size_of_level_pt_bits_left
+                      pageBitsForSize_max_page_level pageBitsForSize_level_0_eq
+               split: if_split_asm)
+    apply (frule vs_lookup_table_asid_not_0; clarsimp simp: word_neq_0_conv)
+    apply (clarsimp simp: parent_for_refs_def)
+    apply (frule (2) valid_vspace_objs_strongD[rotated]; clarsimp)
+    apply (drule (1) vs_lookup_table_target)
+    apply (drule valid_vs_lookupD; clarsimp simp: vmsz_aligned_vref_for_level)
+    apply (rule conjI)
+     apply (subgoal_tac "is_pt_cap cap \<and> cap_pt_type cap = level_type level")
+      apply (force simp: is_cap_simps)
+     apply (fastforce dest: cap_to_pt_is_pt_cap_and_type intro: valid_objs_caps)
+    apply (clarsimp simp: valid_mapping_insert_def vs_lookup_slot_def)
+    apply (thin_tac "if dev then _ else _")
+    apply (fastforce dest!: vs_lookup_table_is_aligned
+                     simp: pt_slot_offset_offset[where level=max_pt_level, simplified]
+                           user_region_invalid_mapping_slots
+                     split: if_split_asm)
+    done
+qed
 
 lemma decode_fr_inv_flush_wf[wp]:
   "\<lbrace>\<top>\<rbrace>

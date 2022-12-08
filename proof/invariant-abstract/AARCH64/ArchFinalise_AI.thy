@@ -873,7 +873,6 @@ lemma set_vcpu_if_live_then_nonz_cap_same_refs:
   apply (wpsimp wp: set_object_iflive[THEN hoare_set_object_weaken_pre]
               simp: a_type_def live_def hyp_live_def arch_live_def)
   apply (rule if_live_then_nonz_capD; simp)
-  apply (case_tac ko; simp)
   apply (clarsimp simp: live_def hyp_live_def arch_live_def,
          clarsimp simp: vcpu_tcb_refs_def split: option.splits)
   done

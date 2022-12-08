@@ -680,7 +680,7 @@ definition hyp_refs_of :: "kernel_object \<Rightarrow> (obj_ref \<times> reftype
                    | Notification ntfn \<Rightarrow> {}
                    | ArchObj ao        \<Rightarrow> refs_of_ao ao"
 
-lemmas hyp_refs_of_simps[simp] = hyp_refs_of_def[split_simps arch_kernel_obj.split]
+lemmas hyp_refs_of_simps[simp] = hyp_refs_of_def[split_simps kernel_object.split]
 
 definition state_hyp_refs_of :: "'z::state_ext state \<Rightarrow> obj_ref \<Rightarrow> (obj_ref \<times> reftype) set" where
   "state_hyp_refs_of \<equiv> \<lambda>s p. case_option {} (hyp_refs_of) (kheap s p)"
