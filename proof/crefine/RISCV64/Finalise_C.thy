@@ -1047,8 +1047,8 @@ lemma doUnbindNotification_ccorres:
                apply (clarsimp simp: cnotification_relation_def Let_def
                                      mask_def [where n=2] NtfnState_Waiting_def)
                apply (case_tac "ntfnObj ntfn", ((simp add: option_to_ctcb_ptr_def)+)[4])
-              apply (clarsimp simp: refill_buffer_relation_def Let_def typ_heap_simps
-                                    update_ntfn_map_tos)
+              apply (simp add: refill_buffer_relation_def image_def dom_def Let_def typ_heap_simps
+                               update_ntfn_map_tos)
              subgoal by (simp add: carch_state_relation_def)
             subgoal by (simp add: cmachine_state_relation_def)
            subgoal by (simp add: h_t_valid_clift_Some_iff)
@@ -1098,8 +1098,8 @@ lemma doUnbindNotification_ccorres':
               apply (fold_subgoals (prefix))[2]
               subgoal premises prems using prems
                       by (case_tac "ntfnObj ntfn", (simp add: option_to_ctcb_ptr_def)+)
-             apply (clarsimp simp: refill_buffer_relation_def Let_def typ_heap_simps
-                                   update_ntfn_map_tos)
+             apply (simp add: refill_buffer_relation_def image_def dom_def Let_def typ_heap_simps
+                              update_ntfn_map_tos)
             subgoal by (simp add: carch_state_relation_def)
            subgoal by (simp add: cmachine_state_relation_def)
           subgoal by (simp add: h_t_valid_clift_Some_iff)

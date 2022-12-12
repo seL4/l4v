@@ -1559,7 +1559,8 @@ proof (intro impI allI)
                           ht_rl foldr_upd_app_if [folded data_map_insert_def]
                           rl cvariable_array_ptr_retyps[OF szo]
                           zero_ranges_ptr_retyps)
-    by (clarsimp simp: refill_buffer_relation_def Let_def rl rl'' tag_disj_via_td_name)
+    by (clarsimp simp: refill_buffer_relation_def dom_def image_def Let_def rl rl''
+                       tag_disj_via_td_name hrs_htd_update cvariable_array_ptr_retyps[OF szo])
 qed
 
 lemma createObjects_ccorres_ntfn:
@@ -1681,7 +1682,8 @@ proof (intro impI allI)
                           ht_rl foldr_upd_app_if [folded data_map_insert_def]
                           rl projectKOs cvariable_array_ptr_retyps[OF szo]
                           zero_ranges_ptr_retyps)
-    by (clarsimp simp: refill_buffer_relation_def Let_def rl rl'' tag_disj_via_td_name)
+    by (clarsimp simp: refill_buffer_relation_def dom_def image_def Let_def rl rl''
+                       tag_disj_via_td_name hrs_htd_update cvariable_array_ptr_retyps[OF szo])
 qed
 
 
@@ -1833,7 +1835,8 @@ proof (intro impI allI)
                           rl foldr_upd_app_if [folded data_map_insert_def]
                           zero_ranges_ptr_retyps
                           ht_rl cvariable_array_ptr_retyps[OF szo])
-    by (clarsimp simp: refill_buffer_relation_def Let_def rl rl'' tag_disj_via_td_name)
+    by (clarsimp simp: refill_buffer_relation_def dom_def image_def Let_def rl rl''
+                       tag_disj_via_td_name hrs_htd_update cvariable_array_ptr_retyps[OF szo])
 qed
 
 lemma h_t_valid_ptr_retyps_gen_disjoint_iff:
@@ -2154,7 +2157,11 @@ proof (intro impI allI)
     apply (simp add:szo ptr_retyps_htd_safe_neg hrs_htd_def
       kernel_data_refs_domain_eq_rotate bit_simps
       Int_ac del: replicate_numeral)
-    by (clarsimp simp: refill_buffer_relation_def Let_def rl rl'' tag_disj_via_td_name)
+    using empty
+    apply (clarsimp simp: refill_buffer_relation_def dom_def image_def Let_def rl rl''
+                          tag_disj_via_td_name hrs_htd_update cvariable_array_ptr_retyps[OF szo])
+    done
+
 qed
 
 definition
@@ -3511,7 +3518,9 @@ proof -
     apply (frule rf_sr_refill_buffer_relation)
     apply (clarsimp simp: refill_buffer_relation_def Let_def)
     apply (simp add: cl_rest[simplified] tag_disj_via_td_name map_to_scs)
-    done
+    apply (clarsimp simp: heap_updates_def hrs_htd_update map_comp_update)
+    by (intro cvariable_array_ptr_retyps[OF refl, where n=1, simplified],
+        simp_all add: empty_smaller[simplified])
 
   from rfsr have "cpspace_relation ks (underlying_memory (ksMachineState \<sigma>)) (t_hrs_' (globals x))"
     unfolding rf_sr_def cstate_relation_def by (simp add: Let_def)
@@ -3722,10 +3731,11 @@ lemma rf_sr_rep0:
   assumes empty: "region_is_bytes ptr sz x"
   shows "(\<sigma>, globals_update (t_hrs_'_update (hrs_mem_update (heap_update_list ptr (replicate sz 0)))) x) \<in> rf_sr"
   using sr
-  by (clarsimp simp: rf_sr_def cstate_relation_def Let_def cpspace_relation_def
-                     carch_state_relation_def refill_buffer_relation_def
-                     cmachine_state_relation_def hrs_mem_update
-                     cslift_bytes_mem_update[OF empty, simplified] cte_C_size)
+  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def cpspace_relation_def
+                        carch_state_relation_def refill_buffer_relation_def
+                        cmachine_state_relation_def hrs_mem_update
+                        cslift_bytes_mem_update[OF empty, simplified] cte_C_size)
+  by blast
 
 (* FIXME: generalise *)
 lemma ccorres_already_have_rrel:
@@ -4221,7 +4231,12 @@ proof (intro impI allI)
     done
 
   thus  ?thesis using rf empty kdr rzo
-    apply (simp add: rf_sr_def cstate_relation_def Let_def rl' tag_disj_via_td_name )
+    apply (simp add: rf_sr_def cstate_relation_def Let_def rl' tag_disj_via_td_name)
+    apply (rule conjI)
+     apply (clarsimp simp: refill_buffer_relation_def Let_def hrs_htd_update szo p2dist
+                           objBits_simps ko_def rl foldr_upd_app_if[folded data_map_insert_def]
+                           cvariable_array_ptr_retyps tag_disj_via_td_name rl')
+     apply blast
     apply (simp add: carch_state_relation_def cmachine_state_relation_def refill_buffer_relation_def)
     apply (simp add: tag_disj_via_td_name rl' tcb_C_size h_t_valid_clift_Some_iff)
     apply (clarsimp simp: hrs_htd_update szo'[symmetric])
@@ -4816,15 +4831,16 @@ proof (intro impI allI)
     done (* dont need to track all the device memory *)
 
   thus  ?thesis using rf empty kdr rzo
-    apply (simp add: rf_sr_def cstate_relation_def Let_def rl' tag_disj_via_td_name )
-    apply (simp add: carch_state_relation_def cmachine_state_relation_def refill_buffer_relation_def)
-    apply (simp add: tag_disj_via_td_name rl' tcb_C_size h_t_valid_clift_Some_iff)
+    apply (simp add: rf_sr_def cstate_relation_def Let_def rl' tag_disj_via_td_name)
+    apply (rule conjI)
+     apply (clarsimp simp: refill_buffer_relation_def Let_def hrs_htd_update rl
+                           foldr_upd_app_if[folded data_map_insert_def] tag_disj_via_td_name rl')
+     apply (simp add: cvariable_array_ptr_retyps[OF szo] rb')
+    apply (simp add: carch_state_relation_def cmachine_state_relation_def)
+    apply (simp add: tag_disj_via_td_name rl' h_t_valid_clift_Some_iff)
     apply (clarsimp simp: hrs_htd_update szo'[symmetric] cvariable_array_ptr_retyps[OF szo] rb')
     apply (subst zero_ranges_ptr_retyps, simp_all only: szo'[symmetric] power_add, simp)
-    apply (simp add:szo  p2dist objBits_simps ko_def ptr_retyps_htd_safe_neg
-                    kernel_data_refs_domain_eq_rotate
-                    rl foldr_upd_app_if [folded data_map_insert_def]
-                    projectKOs cvariable_array_ptr_retyps)
+    apply (simp add: rl foldr_upd_app_if[folded data_map_insert_def])
     apply (subst cvariable_array_ptr_retyps[OF szo])
     apply (simp add: rb' ptr_retyps_htd_safe_neg)+
     apply (erule ptr_retyps_htd_safe_neg; simp add: pageBits_def field_simps)
@@ -4975,7 +4991,7 @@ lemma gsUserPages_update_ccorres:
                         carch_state_relation_def cmachine_state_relation_def
                         ghost_size_rel_def ghost_assertion_data_get_def refill_buffer_relation_def
                   cong: if_cong)
-  done
+  by blast
 
 lemma placeNewObject_user_data_device:
   "ccorresG rf_sr \<Gamma> dc xfdc

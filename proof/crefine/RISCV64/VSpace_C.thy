@@ -1590,11 +1590,14 @@ lemma setObjectASID_Basic_ccorres:
    apply clarsimp
    apply (erule cmap_relation_updI,
           erule ko_at_projectKO_opt, simp+)
+  apply (rule conjI)
+   apply (simp add: Let_def typ_heap_simps refill_buffer_relation_def image_def dom_def
+                    cvariable_array_map_relation_def update_asidpool_map_tos)
   apply (simp add: cready_queues_relation_def
                    carch_state_relation_def
                    cmachine_state_relation_def
                    Let_def typ_heap_simps
-                   update_asidpool_map_tos refill_buffer_relation_def)
+                   update_asidpool_map_tos)
   done
 
 lemma canonical_address_page_table_at':

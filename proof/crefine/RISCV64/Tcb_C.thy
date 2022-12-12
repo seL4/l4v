@@ -3896,8 +3896,8 @@ lemma bindNotification_ccorres:
                                   simp flip: canonical_bit_def)+)[3]
               apply (auto simp: option_to_ctcb_ptr_def objBits_simps'
                                 bindNTFN_alignment_junk canonical_bit_def)[1]
-              apply (clarsimp simp: refill_buffer_relation_def Let_def typ_heap_simps
-                                    update_ntfn_map_tos)
+              apply (simp add: refill_buffer_relation_def image_def dom_def Let_def typ_heap_simps
+                               update_ntfn_map_tos)
              apply (simp add: carch_state_relation_def)
             apply (simp add: cmachine_state_relation_def)
            apply (simp add: h_t_valid_clift_Some_iff)

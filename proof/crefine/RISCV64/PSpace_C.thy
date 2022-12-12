@@ -137,9 +137,10 @@ lemma storePTE_Basic_ccorres':
                          carray_map_relation_upd_triv)
    apply (case_tac "f x", simp)
    apply (erule cmap_relation_updI)
-      by (simp add: cready_queues_relation_def carch_state_relation_def
-                    cmachine_state_relation_def Let_def typ_heap_simps
-                    cteCaps_of_def update_pte_map_tos bit_simps refill_buffer_relation_def)+
+      by (fastforce simp: cready_queues_relation_def carch_state_relation_def
+                          cmachine_state_relation_def Let_def typ_heap_simps
+                          cteCaps_of_def update_pte_map_tos bit_simps refill_buffer_relation_def
+                  intro!: refill_buffer_relation_pte_update)+
 
 lemma storePTE_Basic_ccorres:
   "\<lbrakk> cpte_relation pte pte' \<rbrakk> \<Longrightarrow>

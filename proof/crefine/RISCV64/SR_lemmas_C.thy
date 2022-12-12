@@ -1644,6 +1644,22 @@ lemma update_scs_map_tos:
   by (auto elim!: obj_atE' intro!: map_to_ctes_upd_other map_comp_eqI
     simp: projectKOs projectKO_opts_defs split: kernel_object.splits if_split_asm)+
 
+lemma update_replies_map_tos:
+  fixes P :: "reply \<Rightarrow> bool"
+  assumes at: "obj_at' P p s"
+  shows   "map_to_eps ((ksPSpace s)(p \<mapsto> KOReply ko)) = map_to_eps (ksPSpace s)"
+  and     "map_to_ntfns ((ksPSpace s)(p \<mapsto> KOReply ko)) = map_to_ntfns (ksPSpace s)"
+  and     "map_to_tcbs ((ksPSpace s)(p \<mapsto> KOReply ko)) = map_to_tcbs (ksPSpace s)"
+  and     "map_to_scs ((ksPSpace s)(p \<mapsto> KOReply ko)) = map_to_scs (ksPSpace s)"
+  and     "map_to_ctes ((ksPSpace s)(p \<mapsto> KOReply ko)) = map_to_ctes (ksPSpace s)"
+  and     "map_to_ptes ((ksPSpace s)(p \<mapsto> KOReply ko)) = map_to_ptes (ksPSpace s)"
+  and     "map_to_asidpools ((ksPSpace s)(p \<mapsto> KOReply ko)) = map_to_asidpools (ksPSpace s)"
+  and     "map_to_user_data ((ksPSpace s)(p \<mapsto> KOReply ko)) = map_to_user_data (ksPSpace s)"
+  and     "map_to_user_data_device ((ksPSpace s)(p \<mapsto> KOReply ko)) = map_to_user_data_device (ksPSpace s)"
+  using at
+  by (auto elim!: obj_atE' intro!: map_to_ctes_upd_other map_comp_eqI
+            simp: projectKOs projectKO_opts_defs split: kernel_object.splits if_split_asm)+
+
 lemma update_asidpool_map_tos:
   fixes P :: "asidpool \<Rightarrow> bool"
   assumes at: "obj_at' P p s"
@@ -2324,6 +2340,14 @@ lemma sizeof_sched_context_t_eq:
   "sizeof_sched_context_t = size_of TYPE(sched_context_C)"
   by (simp add: sizeof_sched_context_t_def word_size_def)
 
+lemma refill_buffer_relation_pte_update:
+  "\<lbrakk>ko_at' (v :: pte) (ptr_val (f x)) \<sigma>; cslift x (f x) = Some y';
+    refill_buffer_relation (ksPSpace \<sigma>) (t_hrs_' (globals x)) (ghost'state_' (globals x))\<rbrakk>
+   \<Longrightarrow> refill_buffer_relation ((ksPSpace \<sigma>)(ptr_val (f x) \<mapsto> KOArch (KOPTE ko)))
+                              (hrs_mem_update (heap_update (f x) (ko' :: pte_C)) (t_hrs_' (globals x)))
+                              (ghost'state_' (globals x))"
+  by (fastforce simp: typ_heap_simps update_pte_map_tos  refill_buffer_relation_def Let_def)
+
 lemma rf_sr_sc_update_no_refill_buffer_update:
   "\<lbrakk>(s, s') \<in> rf_sr; ko_at' (old_sc :: sched_context) scPtr s;
     t_hrs_' (globals t) = hrs_mem_update (heap_update (PTR(sched_context_C) scPtr) sc')
@@ -2376,7 +2400,15 @@ lemma refill_buffer_relation_sc_no_refills_update:
          (ghost'state_' (globals s'))"
   apply (simp (no_asm_simp) only: refill_buffer_relation_def Let_def)
   apply (intro context_conjI)
-     apply (drule refill_buffer_relation_crefill_hp_dom)
+      apply (drule refill_buffer_relation_cvariable_array_map_relation)
+      apply (clarsimp simp: cvariable_array_map_relation_def)
+      apply (case_tac "p \<noteq> scPtr")
+       apply (clarsimp simp: map_comp_def)
+      apply (drule_tac x=scPtr in spec)
+      apply (clarsimp simp: map_comp_def split: option.splits)
+       apply (clarsimp simp: obj_at_simps)
+      apply (fastforce simp: obj_at_simps)
+     apply (drule refill_buffer_relation_refill_to_sc)
      apply (subst cheap_dom_eq)
       apply fastforce
      apply (subst dom_eq)
@@ -2392,6 +2424,118 @@ lemma refill_buffer_relation_sc_no_refills_update:
   apply (frule refill_buffer_relation_size_eq)
   apply (clarsimp simp: obj_at'_def map_comp_def)
   done
+
+lemma refillSizeBytes_sizeof:
+  "refillSizeBytes = size_of TYPE(refill_C)"
+  by (simp add: refillSizeBytes_def)
+
+(* FIXME RT: move to Refine *)
+lemma ko_at_is_aligned'[intro?]:
+  "ko_at' ko p s \<Longrightarrow> is_aligned p (objBits ko)"
+  apply (erule obj_atE')
+  apply (simp add: objBits_def project_inject)
+  done
+
+(* FIXME RT: move to StateRelation.thy in Refine *)
+lemma scRefills_sc_size_rel:
+  "valid_sched_context' sc s \<Longrightarrow>
+   schedContextStructSize + length (scRefills sc) * refillSizeBytes
+   \<le> 2 ^ (objBits sc)"
+  supply refill_C_size[simp del] sched_context_C_size[simp del]
+  apply (clarsimp simp: objBits_simps valid_sched_context'_def add_ac)
+  apply (rule refillAbsoluteMax'_leq)
+  apply (rule_tac y="2 ^ minSchedContextBits" in order_trans)
+   apply (rule schedContextStructSize_minSchedContextBits)
+  apply fastforce
+  done
+
+lemma h_t_valid_refill:
+  "\<lbrakk>refill_buffer_relation (ksPSpace s) (t_hrs_' (globals s')) gs;
+    ko_at' sc scPtr s; valid_sched_context' sc s; n < length (scRefills sc); scPtr \<noteq> 0\<rbrakk>
+   \<Longrightarrow> s' \<Turnstile>\<^sub>c (sc_ptr_to_crefill_ptr scPtr +\<^sub>p int n)"
+  supply refill_C_size[simp del] refillSizeBytes_sizeof[symmetric, simp add]
+  apply (rule h_t_array_valid_field)
+    apply (frule refill_buffer_relation_cvariable_array_map_relation)
+    apply (clarsimp simp: Let_def cvariable_array_map_relation_def)
+    apply (fastforce intro: ko_at_projectKO_opt)
+   apply simp
+  apply (clarsimp simp: sc_ptr_to_crefill_ptr_def2)
+  apply (rule_tac n="4" and m="3" in is_aligned_c_guard)
+      apply clarsimp
+      apply (rule is_aligned_add)
+       apply (rule is_aligned_add)
+        apply (frule ko_at_is_aligned')
+        apply (rule_tac x="objBits sc" in is_aligned_weaken)
+         apply simp
+        apply (clarsimp simp: objBits_simps minSchedContextBits_def)
+       apply (clarsimp simp: is_aligned_def schedContextStructSize_sizeof)
+      apply (rule_tac k="word_of_nat n" in is_alignedI)
+      apply (simp add: refillSizeBytes_def refill_C_size)
+     apply (simp add: add_ac)
+     apply (rule_tac n="objBits sc" in aligned_offset_non_zero)
+       apply (clarsimp simp: obj_at_simps)
+      apply (frule scRefills_sc_size_rel)
+      apply (subst Abs_fnat_hom_mult)
+      apply (subst word_of_nat_plus[symmetric])
+      apply (rule word_of_nat_less)
+      apply (subst unat_power_lower64')
+       apply (clarsimp simp: obj_at'_def objBits_simps word_bits_def)
+      apply (clarsimp simp: objBits_simps word_bits_def refillSizeBytes_def)
+     apply fastforce
+    apply (simp add: add.assoc)
+    apply (clarsimp simp: align_of_def)
+   apply (insert refill_C_size)
+   apply force
+  apply linarith
+  done
+
+lemma refill_within_sc_size:
+  "\<lbrakk>ko_at' sc p s; valid_sched_context' sc s; pspace_bounded' s;
+    sc_ptr_to_crefill_ptr p +\<^sub>p int n = PTR(refill_C) x; n < length (scRefills sc) \<rbrakk>
+   \<Longrightarrow> {x..+size_of TYPE(refill_C)} \<subseteq> {p..+2 ^ objBits sc}"
+  supply refill_C_size[simp del]
+  apply (insert scRefills_sc_size_rel[where sc=sc and s=s])
+  apply (simp add: sc_ptr_to_crefill_ptr_def2)
+  apply (simp only: Abs_fnat_hom_mult add.assoc
+              flip: word_of_nat_plus)
+  apply (erule subst)
+  apply (rule intvl_sub_offset)
+  apply (subst unat_of_nat_eq)
+   apply (rule_tac y="2 ^ objBitsKO (KOSchedContext sc)" in le_less_trans)
+    apply (simp flip: refillSizeBytes_sizeof
+                 add: refillSizeBytes_def)
+    apply (fastforce simp: objBits_simps)
+   apply (frule pspace_boundedD'[rotated])
+    apply (fastforce simp: obj_at_simps)
+   apply (fastforce simp: word_bits_def
+                   intro: power_strict_increasing_iff[THEN iffD2])
+  apply (simp flip: refillSizeBytes_sizeof
+               add: objBits_simps refillSizeBytes_def)
+  done
+
+lemma sc_from_refill:
+  "\<lbrakk>clift (t_hrs_' (globals s')) (x :: refill_C ptr) = Some refill;
+    refill_buffer_relation (ksPSpace s) (t_hrs_' (globals s')) (ghost'state_' (globals s'));
+    invs' s\<rbrakk>
+   \<Longrightarrow> \<exists>p sc n. ko_at' sc p s
+                \<and> {ptr_val x..+size_of TYPE(refill_C)} \<subseteq> {p..+2 ^ objBits sc}
+                \<and> ptr_val x \<in> {p..+2 ^ objBits sc}
+                \<and> n < length (scRefills sc)
+                \<and> x = sc_ptr_to_crefill_ptr p +\<^sub>p int n"
+  supply refill_C_size[simp del]
+  apply (frule refill_buffer_relation_refill_to_sc)
+  apply (clarsimp simp: Let_def)
+  apply (prop_tac "x \<in> dom (clift (t_hrs_' (globals s')))")
+   apply fastforce
+  apply (drule (1) set_rev_mp)
+  apply clarsimp
+  apply (rename_tac p n sc)
+  apply (rule_tac x=p in exI)
+  apply (rule_tac x=sc in exI)
+  apply (intro context_conjI; fastforce?)
+   apply (fastforce intro: map_to_ko_atI')
+  by (frule_tac x="ptr_val x" in refill_within_sc_size;
+      fastforce dest: sc_ko_at_valid_objs_valid_sc')
 
 end
 end

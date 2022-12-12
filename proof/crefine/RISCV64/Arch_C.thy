@@ -312,7 +312,8 @@ proof -
   thus ?thesis using rf empty kdr zro
     apply (simp add: rf_sr_def cstate_relation_def Let_def rl' tag_disj_via_td_name
                      ko_def[symmetric])
-    apply (simp add: carch_state_relation_def cmachine_state_relation_def)
+    apply (simp add: carch_state_relation_def cmachine_state_relation_def
+                     refill_buffer_relation_def Let_def)
     apply (simp add: rl' cterl tag_disj_via_td_name h_t_valid_clift_Some_iff tcb_C_size)
     apply (clarsimp simp: hrs_htd_update ptr_retyps_htd_safe_neg szo szko
                           kernel_data_refs_domain_eq_rotate
@@ -320,9 +321,7 @@ proof -
                           foldr_upd_app_if [folded data_map_insert_def]
                           zero_ranges_ptr_retyps
                           rl empty)
-    apply (clarsimp simp: refill_buffer_relation_def Let_def)
-    apply (clarsimp simp: rl' tag_disj_via_td_name)
-    apply (simp add: rl[unfolded ko_def] ko_def cong: if_cong)
+    apply blast
     done
   qed
 

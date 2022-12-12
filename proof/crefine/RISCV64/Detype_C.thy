@@ -397,12 +397,6 @@ proof -
   qed
 qed
 
-lemma ko_at_is_aligned' [intro?]:
-  "ko_at' ko p s \<Longrightarrow> is_aligned p (objBits ko)"
-  apply (erule obj_atE')
-  apply (simp add: objBits_def project_inject)
-  done
-
 (* FIXME RT: write valid_untyped_cap_ko_at_disjoint with intvl notation? *)
 lemma valid_untyped_cap_ko_at_disjoint':
   assumes vu: "s \<turnstile>' UntypedCap d ptr bits idx"
@@ -935,81 +929,6 @@ proof -
       done
   qed
 qed
-
-lemma schedContextStructSize_sizeof:
-  "schedContextStructSize = size_of TYPE(sched_context_C)"
-  by (simp add: sc_const_eq sizeof_sched_context_t_def word_size_def)
-
-lemma refillSizeBytes_sizeof:
-  "refillSizeBytes = size_of TYPE(refill_C)"
-  by (simp add: refillSizeBytes_def)
-
-lemma scRefills_sc_size_rel:
-  "valid_sched_context' sc s \<Longrightarrow>
-   schedContextStructSize + length (scRefills sc) * refillSizeBytes
-   \<le> 2 ^ objBitsKO (KOSchedContext sc)"
-  supply refill_C_size[simp del] sched_context_C_size[simp del]
-  apply (clarsimp simp: objBits_simps valid_sched_context'_def add_ac)
-  apply (rule refillAbsoluteMax'_leq)
-  apply (rule_tac y="2 ^ minSchedContextBits" in order_trans)
-   apply (rule schedContextStructSize_minSchedContextBits)
-  by fastforce
-
-lemma refill_intvl_self:
-  "ptr_val (PTR(refill_C) x) \<in> {x..+size_of TYPE(refill_C)}"
-  by (fastforce intro: intvl_self)
-
-lemma refill_within_sc_size:
-  "\<lbrakk>ko_at' sc p s; valid_sched_context' sc s; pspace_bounded' s;
-    sc_ptr_to_crefill_ptr p +\<^sub>p int n = PTR(refill_C) x; n < length (scRefills sc) \<rbrakk>
-   \<Longrightarrow> {x..+size_of TYPE(refill_C)} \<subseteq> {p..+2 ^ objBits sc}"
-  supply refill_C_size[simp del] sched_context_C_size[simp del]
-  apply (insert scRefills_sc_size_rel[where sc=sc and s=s])
-  apply (simp add: sc_ptr_to_crefill_ptr_def schedContextStructSize_sizeof refillSizeBytes_sizeof)
-  apply (drule sym)
-  apply clarsimp
-  apply (subgoal_tac "{p + word_of_nat (size_of TYPE(sched_context_C)) +
-                       word_of_nat n * word_of_nat (size_of TYPE(refill_C))..+size_of TYPE(refill_C)}
-                      \<subseteq> {p..+2 ^ objBits sc}")
-   apply fastforce
-  apply (prop_tac "{p + word_of_nat (size_of TYPE(sched_context_C)) +
-                    word_of_nat n * word_of_nat (size_of TYPE(refill_C))..+size_of TYPE(refill_C)}
-                   = {p + word_of_nat (size_of TYPE(sched_context_C) +
-                      n * size_of TYPE(refill_C))..+size_of TYPE(refill_C)} ")
-   apply (simp add: word_of_nat_plus add_ac)
-  apply (simp only:)
-  apply (rule intvl_sub_offset)
-  apply (frule pspace_boundedD'[rotated])
-   apply (fastforce simp: obj_at_simps)
-  apply (subst unat_of_nat_eq)
-   apply (rule_tac y="2 ^ objBits sc" in le_less_trans)
-    using word_bits_def
-    by (fastforce simp: refill_C_size objBits_simps)+
-
-lemma sc_from_refill:
-  "\<lbrakk>clift (t_hrs_' (globals s')) (x :: refill_C ptr) = Some refill;
-    refill_buffer_relation (ksPSpace s) (t_hrs_' (globals s')) (ghost'state_' (globals s'));
-    invs' s\<rbrakk>
-   \<Longrightarrow> \<exists>p sc n. ko_at' sc p s
-                \<and> {ptr_val x..+size_of TYPE(refill_C)} \<subseteq> {p..+2 ^ objBits sc}
-                \<and> ptr_val x \<in> {p..+2 ^ objBits sc}
-                \<and> n < length (scRefills sc)
-                \<and> x = sc_ptr_to_crefill_ptr p +\<^sub>p int n"
-  supply refill_C_size[simp del]
-  apply (frule refill_buffer_relation_crefill_hp_dom)
-  apply (clarsimp simp: Let_def)
-  apply (drule equalityD1)
-  apply (prop_tac "x \<in> dom (clift (t_hrs_' (globals s')))")
-   apply fastforce
-  apply (drule (1) set_rev_mp)
-  apply clarsimp
-  apply (rename_tac p n sc)
-  apply (rule_tac x=p in exI)
-  apply (rule_tac x=sc in exI)
-  apply (intro context_conjI; fastforce?)
-   apply (fastforce intro: map_to_ko_atI')
-  by (frule_tac x="ptr_val x" in refill_within_sc_size;
-      fastforce dest: sc_ko_at_valid_objs_valid_sc')
 
 lemma refill_disjoint:
   fixes x :: "refill_C ptr"
@@ -1660,12 +1579,11 @@ lemma h_t_array_valid_typ_region_bytes:
   done
 
 lemma cvariable_array_map_relation_detype:
-  "cvariable_array_map_relation mp szs ptrfun htd
-    \<Longrightarrow> ptrfun = (Ptr :: _ \<Rightarrow> ('a :: c_type ptr))
-    \<Longrightarrow> \<forall>p v. mp p = Some v \<longrightarrow> p \<notin> {ptr ..+ 2 ^ bits}
-        \<longrightarrow> {p ..+ szs v * size_of TYPE('a)} \<inter> {ptr ..+ 2 ^ bits} = {}
-    \<Longrightarrow> cvariable_array_map_relation (mp |` (- {ptr..+2 ^ bits}))
-        szs ptrfun (typ_region_bytes ptr bits htd)"
+  "cvariable_array_map_relation mp szs (ptrfun :: obj_ref \<Rightarrow> 'a :: c_type ptr) htd
+   \<Longrightarrow> \<forall>p v. mp p = Some v \<longrightarrow> p \<notin> {ptr ..+ 2 ^ bits} \<longrightarrow>
+             {ptr_val (ptrfun p) ..+ szs v * size_of TYPE('a)} \<inter> {ptr ..+ 2 ^ bits} = {}
+   \<Longrightarrow> cvariable_array_map_relation (mp |` (- {ptr..+2 ^ bits}))
+                                    szs ptrfun (typ_region_bytes ptr bits htd)"
   apply (clarsimp simp: cvariable_array_map_relation_def restrict_map_def)
   apply (elim allE, (drule(1) mp)+)
   apply (simp add: h_t_array_valid_typ_region_bytes)
@@ -2108,8 +2026,8 @@ proof -
     "refill_buffer_relation (ksPSpace s|`(- {ptr..+2 ^ bits}))
                             (hrs_htd_update (typ_region_bytes ptr bits) (t_hrs_' (globals s')))
                             (gs_clear_region ptr bits (ghost'state_' (globals s')))"
+    supply sched_context_C_size[simp del]
     apply (insert sr invs)
-    apply (frule rf_sr_refill_buffer_relation)
     apply (simp only: refill_buffer_relation_def Let_def)
     apply (subst lift_t_typ_region_bytes)
       subgoal by (fastforce dest!: refill_disjoint[OF D.valid_untyped invs])
@@ -2117,50 +2035,71 @@ proof -
     apply (subst lift_t_typ_region_bytes)
       subgoal by (fastforce dest!: refill_disjoint[OF D.valid_untyped invs])
      apply fastforce
+    apply (frule rf_sr_refill_buffer_relation)
+    apply (drule cmap_relation_sched_context)
+    apply (simp add: hrs_htd_update)
     apply (intro context_conjI)
-       apply (frule rf_sr_refill_buffer_relation)
-       apply (simp only: set_eq_subset)
-       apply (rule conjI)
+        apply (drule refill_buffer_relation_cvariable_array_map_relation)
+        apply (simp_all add: map_comp_restrict_map rf_sr_def cstate_relation_def Let_def)
+        apply (erule cvariable_array_map_relation_detype)
         apply clarsimp
-        apply (frule (2) sc_from_refill)
-        apply clarsimp
-        apply (rename_tac p sc n)
-        apply (rule_tac x=p in rev_bexI')
-        apply (rule context_conjI)
-         apply (simp add: map_comp_restrict_map)
-         apply (rule conjI)
-          apply (force simp: obj_at_simps)
-         apply clarsimp
-         apply (frule valid_untyped_cap_ko_at_disjoint'[OF D.valid_untyped])
-          subgoal by (fastforce intro!: intvl_self)
-         apply (force simp: image_def)
-        apply (force simp: obj_at_simps map_comp_def restrict_map_def split: if_splits)
-       apply clarsimp
-       apply (rule conjI)
-        apply (fastforce simp: map_comp_def restrict_map_def split: if_splits)
-       apply clarsimp
-       apply (rename_tac p n refill sc)
-       apply (prop_tac "ko_at' sc p s")
-        apply (fastforce intro: map_to_ko_atI'
-                          simp: map_comp_def restrict_map_def
-                         split: if_splits)
-       apply (frule_tac x="PTR(sched_context_C) p" in sched_context_disjoint[OF D.valid_untyped])
+        apply (rename_tac p sc)
+        apply (frule (1) map_to_ko_atI')
+        apply (frule (1) invs'_ko_at_valid_sched_context')
+        apply (elim conjE)
+        apply (frule_tac x="Ptr p" in sched_context_disjoint[OF D.valid_untyped])
+           apply (fastforce intro: sr)
           apply fastforce
-         apply clarsimp
+         apply force
+        apply (frule scRefills_sc_size_rel)
+        apply (clarsimp simp: sc_ptr_to_crefill_ptr_def2 schedContextStructSize_sizeof
+                              refillSizeBytes_def)
+        apply (rule_tac A="intvl (p, 2 ^ objBits sc)" in disjoint_subset)
+         apply (rule intvl_sub_offset)
+         apply (subst unat_of_nat_eq)
+          apply (fastforce simp: sched_context_C_size)
+         apply (clarsimp simp: objBits_simps)
         apply fastforce
-       apply (frule (1) invs'_ko_at_valid_sched_context')
-       apply (insert refill_intvl_self)
-       apply (fastforce dest!: refill_within_sc_size)
-      apply (clarsimp simp: dyn_array_list_rel_pointwise)
-      apply (elim allE)
-      apply (clarsimp simp: map_comp_def restrict_map_def split: if_splits)
-      apply (prop_tac "sc_ptr_to_crefill_ptr p +\<^sub>p int n
-                       \<in> dom (cslift s'|`(- PTR(refill_C) ` {ptr..+2 ^ bits}))")
+       apply (frule refill_buffer_relation_refill_to_sc)
+       apply (clarsimp simp: Let_def)
+       apply (frule (2) sc_from_refill)
        apply clarsimp
-       apply (force intro!: bexI)
-      apply (force simp: restrict_map_def)
-     subgoal by (auto simp: gs_clear_region_def dom_def map_comp_def restrict_map_def)
-    by (auto simp: gs_clear_region_def map_comp_def)
+       apply (rename_tac p sc n)
+       apply (rule_tac x=p in rev_bexI')
+       apply (rule context_conjI)
+        apply (simp add: map_comp_restrict_map)
+        apply (rule conjI)
+         apply (force simp: obj_at_simps)
+        apply clarsimp
+        apply (frule valid_untyped_cap_ko_at_disjoint'[OF D.valid_untyped])
+         apply (frule invs_pspace_bounded')
+         apply (frule pspace_boundedD'[rotated])
+          apply (fastforce simp: obj_at_simps)
+         apply (rule_tac x=p in not_emptyI)
+          apply (rule intvl_self)
+          apply (fastforce simp: objBits_simps)
+         apply fastforce
+        apply (force simp: image_def)
+       apply (force simp: obj_at_simps map_comp_def restrict_map_def split: if_splits)
+      apply (frule refill_buffer_relation_crefill_relation)
+      apply (clarsimp simp: dyn_array_list_rel_pointwise cvariable_array_map_relation_def)
+      apply (drule_tac x=p in spec)+
+      apply (clarsimp simp: restrict_map_def split: if_splits)
+      apply (drule_tac x=n in spec)
+      apply (drule_tac k=n and gd=c_guard in h_t_array_valid_field)
+        apply fastforce
+       apply (rule_tac hp="t_hrs_' (globals s')" in c_guard_h_t_valid)
+       apply (clarsimp simp: typ_heap_simps)
+      apply (simp flip: hrs_htd_update
+                   add: h_t_valid_clift_Some_iff)
+      apply (subst (asm) lift_t_typ_region_bytes)
+        subgoal by (rule refill_disjoint[OF D.valid_untyped invs], fastforce+)
+       apply fastforce
+      apply (clarsimp simp: restrict_map_def)
+     apply (drule refill_buffer_relation_gs_dom)
+     subgoal by (auto simp: gs_clear_region_def)
+    apply (drule refill_buffer_relation_size_eq)
+    by (auto simp: gs_clear_region_def)
 
   ultimately
   show "(?t, globals_update
