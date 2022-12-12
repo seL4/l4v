@@ -1,4 +1,5 @@
 (*
+ * Copyright 2022, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -49,7 +50,7 @@ lemma eq_no_cap_to_obj_with_diff_ref [Syscall_AI_assms]:
                             table_cap_ref_mask_cap Ball_def)
   done
 
-crunches getDFSR, getFAR,getIFSR
+crunches getDFSR, getFAR, getIFSR
   for inv[wp]: "P"
 
 lemma do_machine_op_getDFSR_inv[wp]:
@@ -67,19 +68,10 @@ lemma do_machine_op_getIFSR_inv[wp]:
 lemma hv_invs[wp, Syscall_AI_assms]: "\<lbrace>invs\<rbrace> handle_vm_fault t' flt \<lbrace>\<lambda>r. invs\<rbrace>"
   unfolding handle_vm_fault_def by (cases flt; wpsimp wp: dmo_invs_lift)
 
-lemma hv_inv_ex [Syscall_AI_assms]:
-  "\<lbrace>P\<rbrace> handle_vm_fault t vp \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
-  unfolding handle_vm_fault_def
-  sorry (* FIXME AARCH64 addressTranslateS1
-  by (cases vp; wpsimp wp: dmo_inv getRestartPC_inv det_getRestartPC as_user_inv) *)
-
 lemma handle_vm_fault_valid_fault[wp, Syscall_AI_assms]:
   "\<lbrace>\<top>\<rbrace> handle_vm_fault thread ft -,\<lbrace>\<lambda>rv s. valid_fault rv\<rbrace>"
   unfolding handle_vm_fault_def
-  apply (cases ft, simp_all)
-   apply (wp | simp add: valid_fault_def)+
-  done
-
+  by (cases ft; wpsimp simp: valid_fault_def)
 
 lemma hvmf_active [Syscall_AI_assms]:
   "\<lbrace>st_tcb_at active t\<rbrace> handle_vm_fault t w \<lbrace>\<lambda>rv. st_tcb_at active t\<rbrace>"
@@ -92,18 +84,17 @@ lemma hvmf_ex_cap[wp, Syscall_AI_assms]:
 declare arch_get_sanitise_register_info_ex_nonz_cap_to[Syscall_AI_assms]
 
 lemma hh_invs[wp, Syscall_AI_assms]:
-  "\<lbrace>invs and ct_active and st_tcb_at active thread and ex_nonz_cap_to_thread\<rbrace>
-     handle_hypervisor_fault thread fault
+  "\<lbrace>invs and ct_active and st_tcb_at active thread and ex_nonz_cap_to thread\<rbrace>
+   handle_hypervisor_fault thread fault
    \<lbrace>\<lambda>rv. invs\<rbrace>"
-  sorry (* FIXME AARCH64 ARMVCPUFault
-  by (cases fault) wpsimp *)
+  by (cases fault) (wpsimp simp: valid_fault_def)
 
 end
 
 global_interpretation Syscall_AI?: Syscall_AI
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact Syscall_AI_assms)?)
-  qed
+qed
 
 end
