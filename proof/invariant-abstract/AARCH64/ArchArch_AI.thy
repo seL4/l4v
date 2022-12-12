@@ -1351,22 +1351,6 @@ declare mask_shift [simp]
 declare word_less_sub_le [simp del]
 
 
-lemma ptrFromPAddr_addr_from_ppn:
-  "is_aligned pt_ptr pageBits \<Longrightarrow>
-   ptrFromPAddr (paddr_from_ppn (ppn_from_pptr pt_ptr)) = pt_ptr"
-  apply (simp add: paddr_from_ppn_def ppn_from_pptr_def ucast_ucast_mask bit_simps)
-  apply (frule is_aligned_addrFromPPtr[simplified bit_simps])
-  apply (simp add: aligned_shiftr_mask_shiftl mask_len_id[where 'a=machine_word_len, simplified])
-  oops (* FIXME AARCH64: need "addrFromPPtr pt_ptr && mask 44 = addrFromPPtr pt_ptr" here, which
-                         means we need a concept like canonical. Pointers can't take more than 44 bits. *)
-
-(* FIXME AARCH64:
-lemma ptrFromPAddr_addr_from_ppn':
-  "is_aligned pt_ptr pt_bits \<Longrightarrow>
-   ptrFromPAddr (addr_from_ppn (ucast (addrFromPPtr pt_ptr >> pt_bits))) = pt_ptr"
-  using ptrFromPAddr_addr_from_ppn by (simp add: bit_simps)
-*)
-
 lemma is_aligned_pageBitsForSize_table_size:
   "is_aligned p (pageBitsForSize vmpage_size) \<Longrightarrow> is_aligned p (table_size NormalPT_T)"
   apply (erule is_aligned_weaken)
@@ -1567,11 +1551,39 @@ lemma neg_mask_user_region:
   apply simp
   done
 
-lemma
-  "is_aligned pt_ptr pageBits \<Longrightarrow> ptrFromPAddr (paddr_from_ppn (ppn_from_pptr pt_ptr)) = pt_ptr"
-  apply (simp add: ptrFromPAddr_def paddr_from_ppn_def ppn_from_pptr_def pptrBaseOffset_def
-                   paddrBase_def pptrBase_def addrFromPPtr_def)
-  oops
+(* FIXME AARCH64: move to Kernel_Config_Lemmas *)
+(* ptr is expected to be a kernel-virtual pointer/obj_ref *)
+lemma ucast_ucast_ppn:
+  "(ucast (ucast ptr::ppn)::machine_word) = ptr && mask (ipa_size - pageBits)" for ptr::machine_word
+  by (simp add: ucast_ucast_mask bit_simps Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
+
+(* FIXME AARCH64: move *)
+lemma pptrTop_le_ipa_size:
+  "pptrTop \<le> mask ipa_size"
+  by (simp add: bit_simps pptrTop_def mask_def)
+
+(* FIXME AARCH64: move *)
+lemma addrFromPPtr_mask_ipa:
+  "\<lbrakk> pptr_base \<le> pt_ptr; pt_ptr < pptrTop \<rbrakk>
+   \<Longrightarrow> addrFromPPtr pt_ptr && mask ipa_size = addrFromPPtr pt_ptr"
+  using pptrTop_le_ipa_size
+  by (simp add: and_mask_eq_iff_le_mask addrFromPPtr_def pptr_base_def pptrBaseOffset_def
+                paddrBase_def word_le_imp_diff_le)
+
+
+(* FIXME AARCH64: move *)
+lemma pageBits_less_ipa_size[simp]:
+  "pageBits < ipa_size"
+  by (simp add: bit_simps)
+
+lemma ptrFromPAddr_addr_from_ppn:
+  "\<lbrakk> is_aligned pt_ptr pageBits; pptr_base \<le> pt_ptr; pt_ptr < pptrTop \<rbrakk> \<Longrightarrow>
+   ptrFromPAddr (paddr_from_ppn (ppn_from_pptr pt_ptr)) = pt_ptr"
+  apply (simp add: paddr_from_ppn_def ppn_from_pptr_def ucast_ucast_ppn)
+  apply (frule is_aligned_addrFromPPtr)
+  apply (simp add: nat_minus_add_max aligned_shiftr_mask_shiftl addrFromPPtr_mask_ipa
+                   mask_len_id[where 'a=machine_word_len, simplified])
+  done
 
 lemma decode_pt_inv_map_wf[wp]:
   "arch_cap = PageTableCap pt_ptr NormalPT_T pt_map_data \<Longrightarrow>
@@ -1581,6 +1593,7 @@ lemma decode_pt_inv_map_wf[wp]:
     decode_pt_inv_map label args slot arch_cap excaps
    \<lbrace>valid_arch_inv\<rbrace>,-"
   unfolding decode_pt_inv_map_def Let_def
+  apply (simp split del: if_split)
   apply wpsimp
   apply (clarsimp simp: valid_arch_inv_def valid_pti_def pte_at_eq invalid_pte_at_def
                         wellformed_pte_def valid_cap_def cte_wp_at_caps_of_state)
@@ -1591,20 +1604,20 @@ lemma decode_pt_inv_map_wf[wp]:
   apply (rule conjI, clarsimp simp: valid_arch_cap_def wellformed_mapdata_def vspace_for_asid_def
                                     entry_for_asid_def neg_mask_user_region)
   apply (rule conjI, clarsimp simp: is_arch_update_def is_cap_simps cap_master_cap_simps)
-  sorry (* FIXME AARCH64
-  apply (simp add: ptrFromPAddr_addr_from_ppn cap_aligned_def)
+  apply (frule cap_refs_in_kernel_windowD, fastforce)
+  apply (clarsimp simp: cap_range_def)
+  apply (drule valid_uses_kernel_window[rotated], fastforce)
+  apply (clarsimp simp: cap_aligned_def pptr_from_pte_def)
+  apply (simp add: table_size_def bit_simps ptrFromPAddr_addr_from_ppn)
   apply (drule (1) pt_lookup_slot_vs_lookup_slotI)
-  apply (rule_tac x=level in exI, simp add: vm_level_not_less_zero)
-  apply (clarsimp simp: obj_at_def)
-  apply (rule conjI, clarsimp)
-  apply (drule valid_table_caps_pdD, clarsimp)
-  apply (clarsimp simp: in_omonad)
   apply (rule_tac x="args!0" in exI)
   apply (simp add: vref_for_level_def)
-  done *)
+  apply (drule valid_table_caps_pdD, clarsimp)
+  apply (clarsimp simp: vm_level_not_less_zero obj_at_def in_omonad)
+  done
 
 lemma decode_page_table_invocation_wf[wp]:
-  "arch_cap = PageTableCap pt_ptr pt_t pt_map_data \<Longrightarrow>
+  "arch_cap = PageTableCap pt_ptr NormalPT_T pt_map_data \<Longrightarrow>
    \<lbrace>invs and valid_cap (ArchObjectCap arch_cap) and
     cte_wp_at ((=) (ArchObjectCap arch_cap)) slot and real_cte_at slot and
     (\<lambda>s. \<forall>x \<in> set excaps. cte_wp_at ((=) (fst x)) (snd x) s)\<rbrace>
@@ -1613,9 +1626,8 @@ lemma decode_page_table_invocation_wf[wp]:
   unfolding decode_page_table_invocation_def is_final_cap_def
   apply (wpsimp simp: valid_arch_inv_def valid_pti_def valid_arch_cap_def valid_cap_def
                       cte_wp_at_caps_of_state is_cap_simps)
-  sorry (* FIXME AARCH64
-  apply (rule conjI; clarsimp)
-  done *)
+  apply (fastforce dest: vspace_for_asid_valid_pt simp: in_omonad obj_at_def)
+  done
 
 lemma cte_wp_at_eq_simp:
   "cte_wp_at ((=) cap) = cte_wp_at (\<lambda>c. c = cap)"
@@ -1731,7 +1743,7 @@ lemma arch_decode_inv_wf[wp]:
      arch_decode_invocation label args x_slot slot arch_cap excaps
    \<lbrace>valid_arch_inv\<rbrace>,-"
   unfolding arch_decode_invocation_def
-  by wpsimp fastforce
+  by (wpsimp | fastforce)+
 
 declare word_less_sub_le [simp]
 
