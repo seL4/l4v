@@ -1935,7 +1935,7 @@ lemma use_retype_region_proofs':
                         foldr_upd_app_if fun_upd_def[symmetric])
   apply safe
   
-  soxxy (* scottb
+  sorry (* scottb
   apply (rule x)
    apply (rule retype_region_proofs.intro, simp_all)[1]
 

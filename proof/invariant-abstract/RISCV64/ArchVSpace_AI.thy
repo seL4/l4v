@@ -1388,122 +1388,8 @@ lemma pt_bits_left_not_asid_pool_size:
   by (cases sz; simp add: pt_bits_left_def bit_simps asid_pool_level_size)
 
 
-(*
-lemma gets_the_wp'':
-  "\<lbrace>\<lambda>s. \<forall>rv. Q rv s\<rbrace> gets_the f \<lbrace>Q\<rbrace>"
-  unfolding gets_the_def by wpsimp
-*)
-
-lemma gets_map_wp'':
-  "\<lbrace>\<lambda>s. \<forall>rv. Q rv s\<rbrace> gets_map f p \<lbrace>Q\<rbrace>"
-  unfolding gets_map_def by wpsimp
-thm gets_map_wp'
-
-lemma longshot:
-  "ta_filter True (obj_range xa ko \<union>
-                               ((\<Union>(x,
-y)\<in>{(p, ko). p \<in> vs_all_pts_of asid vptr s \<and> ko_at ko p s}.
-obj_range x y) \<union>
-                                touched_addresses (machine_state s))) x sa
-  = ta_filter False {} x sa"
-  unfolding ta_filter_def
-  apply clarsimp
-  
-oops
-
-lemma sdfsdf:
-  "
-is_aligned xa pte_bits \<Longrightarrow>
-(obj_range (table_base xa) x2
-              \<subseteq> obj_range xa (the (kheap s xa)) \<union>
-                 ((\<Union>x\<in>{(p, ko).
-                        p \<in> vs_all_pts_of asid vptr s \<and> ko_at ko p s}.
-                      case x of (x, xa) \<Rightarrow> obj_range x xa) \<union>
-                  touched_addresses (machine_state s)))"
-  apply clarsimp
-  apply (clarsimp simp: obj_at_def)
-  apply (rule_tac x=xa in exI, intro conjI)
-  oops
-
-lemma other_barry:
-  "is_aligned xa pte_bits \<Longrightarrow>
-             obj_range (table_base xa) x2
-             \<subseteq> obj_range xa (the (kheap s xa)) \<union>
-                ((\<Union>p\<in>vs_all_pts_of asid vptr s.
-                     obj_range p (the (kheap s p))) \<union>
-                 touched_addresses (machine_state s))"
-  apply clarsimp
-  find_theorems name:is_aligned name:base
-  apply (clarsimp simp: vs_all_pts_of_def vs_all_pts_of_from_level_def)
-
-  apply (subgoal_tac "table_base xa = xa")
-   apply clarsimp
-  apply (clarsimp simp: pt_bits_def)
-oops
-
-lemma gets_the_wp'':
-  "\<lbrace>\<lambda>s. Q (the (f s)) s\<rbrace> gets_the f \<lbrace>Q\<rbrace>"
-  by (unfold gets_the_def, wp, clarsimp)
 
 
-lemma gets_the_wp''':
-  "\<lbrace>\<lambda>s. \<forall>x. Q x s\<rbrace> gets_the f \<lbrace>Q\<rbrace>"
-  by (unfold gets_the_def, wp, clarsimp)
-
-
-lemma gets_the_wp'''':
-  "\<lbrace>\<lambda>s. \<forall>rv. f s = Some rv \<longrightarrow> Q rv s\<rbrace> gets_the f \<lbrace>Q\<rbrace>"
-  unfolding gets_the_def by wpsimp
-
-
-lemma gets_map_wp'22[wp]:
-  "\<lbrace>\<lambda>s. \<forall>rv. f s p = Some rv \<longrightarrow> Q rv s\<rbrace> gets_map f p \<lbrace>Q\<rbrace>"
-  unfolding gets_map_def by wpsimp
-
-
-(* what is the general problem?
-  the problem is that we branch on the TA set.
-
-*)
-
-lemma if_conj_s:
-  "((if q then A  else B ) z
-  \<and> (if q then A' else B') z)
-  = (if q then A and A' else B and B') z"
-  by simp
-
-lemma if_True_s:
-  "(if q then (\<lambda>_. True) else B) z = (q \<or> B z)"
-  by simp
-
-lemma if_else_True_s':
-  "(T z = True) \<Longrightarrow>
-  (if q then A else T) z = (\<not>q \<or> A z)"
-  by simp
-
-lemma test1:
-  "(True \<and> True) = True"
-  by simp
-
-thm arg_cong
-
-lemma True_and:
-  "((\<lambda>_. True) and A) = A"
-  by simp
-
-lemma big_rw_meow:
-  "(\<lambda>pte s.
-           (if is_PagePTE pte \<and> pptr_from_pte pte = pptr then \<lambda>_. True
-            else (\<lambda>s. invs s \<and> True))
-            s \<and>
-           (if is_PagePTE pte \<and> pptr_from_pte pte = pptr
-            then invs and Q1 and Q2 and Q3 and Q4
-            else (\<lambda>s. True \<and> True)) s)
- = (\<lambda>pte s. invs s \<and> (is_PagePTE pte \<and> pptr_from_pte pte = pptr
-            \<longrightarrow> (Q1 and Q2 and Q3 and Q4) s))
-            "
-  apply fastforce
-  done
 
 (* a lemma i proved for the unmodified version of unmap_page. probably not heaps useful *)
 lemma already_touched_meow2:
@@ -1547,6 +1433,9 @@ lemma already_touched_meow_pteofaux:
      (obind (kheap s) (ta_filter True S) |> aobj_of |> pt_of) =
     pte_of (pt_slot_offset level pt vptr)
      (kheap s |> aobj_of |> pt_of)"
+  sorry
+  (*
+
   apply (subst pte_of_def, subst pte_of_def, clarsimp)
   apply (intro obind_eqI_full; clarsimp)
   apply (subst (asm) obind_def opt_map_def)+
@@ -1578,20 +1467,11 @@ lemma already_touched_meow_pteofaux:
   apply (clarsimp simp: obind_def opt_map_def aobj_of_def pte_of_def 
                  split: option.splits)
   apply (intro conjI impI allI)
-  sorry
+  sorry *)
   
-thm pt_walk.simps
 
 lemma obind_def2:
   "(obind f g) s = (case (f s) of None \<Rightarrow> None | Some x \<Rightarrow> g x s)"
-  by (simp add: obind_def)
-
-lemma obind_late_return:
-  "(do { r \<leftarrow> f;
-         oreturn (P r)
-       }) s
-  =
-  (case f s of None \<Rightarrow> None | Some x \<Rightarrow> oreturn (P x) s)"
   by (simp add: obind_def)
 
 lemma all_slots_of_subset_aux:
@@ -1671,22 +1551,8 @@ lemma already_touched_meow_ptwalkaux:
    apply (rule subset_trans)
     apply (rule_tac level="level" and pt_ptr=pt_ptr in all_slots_of_subset)
      apply clarsimp+
-  
-   
-   apply (rule already_touched_meow_pteofaux)
+  apply (rule already_touched_meow_pteofaux)
     apply simp+
-  
-  apply (case_tac " pte_of (pt_slot_offset level pt_ptr vptr)
-            (kheap s |> aobj_of |> pt_of)"; clarsimp)
-   subgoal sorry (* this should be easy *)
-  apply (drule_tac x="a" in meta_spec)
-  apply (drule_tac x="\<lambda>p'. pte_of p' (kheap s |> aobj_of |> pt_of)" in meta_spec)
-  apply clarsimp
-
-
-   apply (rule already_touched_meow_pteofaux)
-   apply simp+
-
   done
 
 lemma already_touched_meow:
@@ -1729,7 +1595,8 @@ lemma unmap_page_invs:
    apply ta
   apply clarsimp
   apply (clarsimp simp: already_touched_meow pte_of_ta_filter_simplify)
-
+  (* at this point i should be back to the regular proof *)
+  sorry (*
   apply (intro conjI; clarsimp)
   apply (frule pt_lookup_slot_vs_lookup_slotI)
    apply (clarsimp simp: pt_lookup_slot_def pt_lookup_slot_from_level_def )
@@ -1864,7 +1731,7 @@ lemma perform_pg_inv_get_addr[wp]:
 
 lemma unmap_page_pool_for_asid[wp]:
   "unmap_page pgsz asid vref pt \<lbrace>\<lambda>s. P (pool_for_asid asid s)\<rbrace>"
-  soxxy (*unfolding unmap_page_def apply (wpsimp simp: pool_for_asid_def wp: touch_object_wp' touch_objects_wp) *)
+  sorry (*unfolding unmap_page_def apply (wpsimp simp: pool_for_asid_def wp: touch_object_wp' touch_objects_wp) *)
 
 lemma data_at_level:
   "\<lbrakk> data_at pgsz p s; data_at (vmpage_size_of_level level) p s;
@@ -1896,7 +1763,7 @@ lemma unmap_page_not_target:
          vs_lookup_slot_pool_for_asid[simp]
          pool_for_asid_vs_lookup[simp]
   apply (wpsimp wp: store_pte_invalid_vs_lookup_target_unmap touch_object_wp' touch_objects_wp)
-  soxxy (* broken by touched-addrs -scottb
+  sorry (* broken by touched-addrs -scottb
   apply (rule conjI; clarsimp)
    apply (clarsimp simp: vs_lookup_target_def vspace_for_asid_def obind_def vs_lookup_slot_def
                          vs_lookup_table_def ta_filter_def obind_def
@@ -2060,13 +1927,13 @@ lemma pool_for_asid[simp]:
 
 lemma asid_pools_of[simp]:
   "asid_pools_of False s' = (asid_pools_of False s)(ap \<mapsto> pool(asid_low_bits_of asid \<mapsto> ptp))"
-  soxxy (* broken by touched-addrs -scottb
+  sorry (* broken by touched-addrs -scottb
   apply (simp add: s'_def)
   done *)
 
 lemma pts_of[simp]:
   "pts_of False s' = pts_of False s"
-  soxxy (* broken by touched-addrs -scottb
+  sorry (* broken by touched-addrs -scottb
 proof -
   from ap
   have "pts_of s ap = None" by (simp add: opt_map_def split: option.splits)
@@ -2094,7 +1961,7 @@ lemma vs_lookup_table:
    using pt aligned
    apply (clarsimp simp: obind_def ptes_of_def empty_for_user)
    apply (simp add: pt_slot_offset_def)
-   soxxy (* broken by touched-addresses -scottb
+   sorry (* broken by touched-addresses -scottb
    apply (erule notE)
    apply (rule is_aligned_add)
     apply (erule is_aligned_weaken)
@@ -2159,7 +2026,7 @@ lemma vs_lookup_target:
    apply (simp add: pool_for_asid_def vspace_for_pool_def in_omonad)
   apply (cases "asid' = asid")
    apply clarsimp
-   soxxy (* broken by touched-addrs -scottb
+   sorry (* broken by touched-addrs -scottb
    apply (clarsimp simp: vs_lookup_target_def)
    apply (clarsimp simp: obind_def vs_lookup_slot_None vs_lookup_slot pte_refs_of_None)
   apply clarsimp
@@ -2199,12 +2066,12 @@ lemma valid_pte:
   using ap
   apply (cases pte; simp add: pt_at_eq)
   apply (clarsimp simp: data_at_def obj_at_def s'_def in_omonad)
-  soxxy (*  broken by touched-addrs -scottb
+  sorry (*  broken by touched-addrs -scottb
   done *)
 
 lemma valid_vspace_obj:
   "valid_vspace_obj level ao s \<Longrightarrow> valid_vspace_obj level ao s'"
-  soxxy (* -scottb
+  sorry (* -scottb
   apply (cases ao; simp add: pt_at_eq valid_pte)
 *)
 
@@ -2224,7 +2091,7 @@ lemma set_asid_pool_arch_objs_map:
   unfolding set_asid_pool_def
   supply fun_upd_apply[simp del]
   apply (wpsimp wp: set_object_wp)
-  soxxy (* broken -scottb
+  sorry (* broken -scottb
   apply (frule (5) asid_pool_map.intro)
     apply (clarsimp simp: valid_arch_state_def)
    apply (erule pspace_aligned_pts_ofD, simp)
@@ -2262,7 +2129,7 @@ lemma set_asid_pool_valid_arch_caps_map:
   unfolding set_asid_pool_def
   supply fun_upd_apply[simp del]
   apply (wpsimp wp: set_object_wp)
-  soxxy (* -scottb
+  sorry (* -scottb
   apply (frule (5) asid_pool_map.intro)
     apply (clarsimp simp: valid_arch_state_def)
    apply (erule pspace_aligned_pts_ofD, simp)
@@ -2319,7 +2186,7 @@ lemma set_asid_pool_invs_map:
   apply (wpsimp wp: valid_irq_node_typ set_asid_pool_typ_at set_asid_pool_arch_objs_map
                     valid_irq_handlers_lift set_asid_pool_valid_arch_caps_map)
   apply (erule disjE, clarsimp simp: kernel_mappings_only_has)
-  soxxy (* scottb
+  sorry (* scottb
   apply (erule (4) toplevel_pt_has_kernel_mappings)
   apply (simp add: valid_arch_caps_def)
   done *)
@@ -2330,7 +2197,7 @@ lemma ako_asid_pools_of:
 
 lemma copy_global_mappings_asid_pools[wp]:
   "copy_global_mappings pt_ptr \<lbrace>\<lambda>s. P (asid_pools_of False s)\<rbrace>"
-  soxxy (* scottb
+  sorry (* scottb
   unfolding copy_global_mappings_def by (wpsimp wp: mapM_x_wp') *)
 
 lemma copy_global_mappings_pool_for_asid[wp]:
@@ -2443,7 +2310,7 @@ lemma copy_global_mappings_copies[wp]:
    copy_global_mappings pt_ptr
    \<lbrace>\<lambda>_ s. \<exists>pt. pts_of False s pt_ptr = Some pt \<and> kernel_mappings_only pt s\<rbrace>"
   unfolding copy_global_mappings_def
-  soxxy (* scottb
+  sorry (* scottb
   apply wp
       apply (rule hoare_strengthen_post)
        apply (rule_tac I="\<lambda>s. (\<exists>pt. pts_of s pt_ptr = Some pt \<and>
@@ -2513,7 +2380,7 @@ lemma copy_global_mappings_invs:
                          store_pte_vs_lookup_table_unreachable touch_objects_wp)
        apply (fold mask_2pm1)[1]
        apply (clarsimp simp: table_base_plus table_index_plus ta_filter_def obind_def)
-       soxxy (* scottb
+       sorry (* scottb
        apply (rule conjI, erule ptes_of_wellformed_pte, clarsimp)
        apply clarsimp
        apply (frule invs_valid_asid_table)
@@ -2537,7 +2404,7 @@ lemma perform_asid_pool_invs [wp]:
                     copy_global_mappings_invs arch_update_cap_invs_map get_cap_wp set_cap_typ_at
                 simp: ako_asid_pools_of
          | wp (once) hoare_vcg_ex_lift)+
-  soxxy (* scottb
+  sorry (* scottb
   apply (clarsimp simp: cte_wp_at_caps_of_state valid_apinv_def cong: conj_cong)
   apply (rename_tac asid pool_ptr slot_ptr slot_idx s pool cap)
   apply (clarsimp simp: is_cap_simps update_map_data_def is_arch_update_def is_arch_cap_def

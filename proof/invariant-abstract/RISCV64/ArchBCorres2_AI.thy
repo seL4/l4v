@@ -122,12 +122,12 @@ lemma decode_tcb_invocation_bcorres[wp]:
 lemma decode_fr_inv_map_bcorres[wp]:
   "bcorres (decode_fr_inv_map param_a param_b param_c param_d param_e)
            (decode_fr_inv_map param_a param_b param_c param_d param_e)"
-  soxxy (* FIXME: broken by touched-addrs -robs *)
+  sorry (* FIXME: broken by touched-addrs -robs *)
 
 lemma decode_pt_inv_map_bcorres[wp]:
   "bcorres (decode_pt_inv_map param_a param_b param_c param_d param_e)
            (decode_pt_inv_map param_a param_b param_c param_d param_e)"
-  soxxy (* FIXME: broken by touched-addrs -robs *)
+  sorry (* FIXME: broken by touched-addrs -robs *)
 
 crunch (bcorres)bcorres[wp]: arch_decode_invocation truncate_state
   (simp: crunch_simps)

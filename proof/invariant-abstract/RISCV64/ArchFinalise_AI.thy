@@ -75,7 +75,7 @@ lemma delete_asid_pool_invs[wp]:
   unfolding delete_asid_pool_def
   supply fun_upd_apply[simp del]
   apply (wpsimp wp:touch_object_wp')
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (strengthen invs_riscv_asid_table_unmap)
   apply (simp add: asid_low_bits_of_def asid_low_bits_def ucast_zero_is_aligned)
   done
@@ -93,13 +93,13 @@ lemma do_machine_op_vspace_for_asid[wp]:
 
 lemma set_vm_root_pool_for_asid[wp]:
   "set_vm_root pt \<lbrace>\<lambda>s. P (pool_for_asid asid s)\<rbrace>"
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   by (wpsimp simp: set_vm_root_def wp: get_cap_wp)
 *)
 
 lemma set_vm_root_vspace_for_asid[wp]:
   "set_vm_root pt \<lbrace> \<lambda>s. P (vspace_for_asid False asid s) \<rbrace>"
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   by (wpsimp simp: set_vm_root_def wp: get_cap_wp)
 *)
 
@@ -231,7 +231,7 @@ lemma (* empty_slot_invs *) [Finalise_AI_asms]:
   apply (thin_tac "info \<noteq> NullCap \<longrightarrow> P info" for P)
   apply (rule conjI)
    apply (clarsimp simp: valid_machine_state_def)
-   soxxy (* FIXME: broken by touched-addrs -robs
+   sorry (* FIXME: broken by touched-addrs -robs
   apply (rule conjI)
    apply (clarsimp simp:descendants_inc_def mdb_empty_abs.descendants)
   apply (rule conjI)
@@ -549,7 +549,7 @@ lemma arch_thread_set_valid_objs_context[wp]:
   "arch_thread_set (tcb_context_update f) v \<lbrace>valid_objs\<rbrace>"
   apply (simp add: arch_thread_set_def)
   apply (wp set_object_valid_objs touch_object_wp')
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (clarsimp simp: Ball_def obj_at_def valid_objs_def dest!: get_tcb_SomeD)
   apply (erule_tac x=v in allE)
   apply (clarsimp simp: dom_def)
@@ -570,7 +570,7 @@ lemma arch_thread_sym_refs[wp]:
   "\<lbrace>\<lambda>s. sym_refs (state_refs_of s)\<rbrace> arch_thread_set f p \<lbrace>\<lambda>rv s. sym_refs (state_refs_of s)\<rbrace>"
   apply (simp add: arch_thread_set_def set_object_def get_object_def)
   apply (wp touch_object_wp')
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (clarsimp simp del: fun_upd_apply dest!: get_tcb_SomeD)
   apply (subst get_tcb_rev, assumption, subst option.sel)+
   apply (subst arch_tcb_update_aux3)
@@ -601,7 +601,7 @@ lemma arch_thread_set_if_live_then_nonz_cap':
    \<lbrace>if_live_then_nonz_cap\<rbrace> arch_thread_set p v \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
   apply (simp add: arch_thread_set_def)
   apply (wp set_object_iflive touch_object_wp')
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (clarsimp simp: ex_nonz_cap_to_def if_live_then_nonz_cap_def
                   dest!: get_tcb_SomeD)
   apply (subst get_tcb_rev, assumption, subst option.sel)+
@@ -648,7 +648,7 @@ lemma arch_finalise_cap_invs' [wp,Finalise_AI_asms]:
    apply (wp unmap_page_invs | wpc)+
   apply (clarsimp simp: valid_cap_def cap_aligned_def)
   apply (auto simp: mask_def vmsz_aligned_def wellformed_mapdata_def)
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   done
 *)
 
@@ -667,7 +667,7 @@ lemma obj_at_not_live_valid_arch_cap_strg [Finalise_AI_asms]:
 
 lemma set_vm_root_ptes_of[wp]:
   "set_vm_root tcb \<lbrace>\<lambda>s. P (ptes_of False s)\<rbrace>"
-  soxxy (* FIXME: broken by touched-addrs -robs *)
+  sorry (* FIXME: broken by touched-addrs -robs *)
 
 lemma set_vm_root_ptes_of'[simplified f_kheap_to_kheap, wp]:
   "set_vm_root tcb \<lbrace>\<lambda>s. P (ptes_of False s)\<rbrace>"
@@ -675,7 +675,7 @@ lemma set_vm_root_ptes_of'[simplified f_kheap_to_kheap, wp]:
 
 lemma set_vm_root_asid_pools_of[wp]:
   "set_vm_root tcb \<lbrace>\<lambda>s. P (asid_pools_of False s)\<rbrace>"
-  soxxy (* FIXME: broken by touched-addrs -robs *)
+  sorry (* FIXME: broken by touched-addrs -robs *)
 
 lemma set_vm_root_asid_pools_of'[simplified f_kheap_to_kheap, wp]:
   "set_vm_root tcb \<lbrace>\<lambda>s. P (asid_pools_of False s)\<rbrace>"
@@ -724,7 +724,7 @@ lemma delete_asid_pool_not_target[wp]:
   apply (wpsimp wp:touch_object_wp')
   apply (rule conjI; clarsimp)
    apply (frule vs_lookup_target_no_asid_pool[of _ _ level asid]; assumption?)
-   soxxy (* FIXME: broken by touched-addrs -robs
+   sorry (* FIXME: broken by touched-addrs -robs
    apply (erule vs_lookup_target_clear_asid_table)
   apply (erule (4) vs_lookup_target_no_asid_pool)
   done
@@ -757,7 +757,7 @@ lemma vs_lookup_slot_non_PageTablePTE:
 lemma unmap_page_table_pool_for_asid[wp]:
   "unmap_page_table asid vref pt \<lbrace>\<lambda>s. P (pool_for_asid asid s)\<rbrace>"
   unfolding unmap_page_table_def
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   by (wpsimp simp: pool_for_asid_def)
 *)
 
@@ -839,7 +839,7 @@ lemma arch_finalise_cap_replaceable:
      \<lbrace>\<lambda>rv s. replaceable s sl (fst rv) (ArchObjectCap cap)\<rbrace>"
   apply (simp add: arch_finalise_cap_def valid_arch_caps_def)
   apply (wpsimp simp: simps valid_objs_caps wp: wps | strengthen strg)+
-    soxxy (* FIXME: broken by touched-addrs -robs
+    sorry (* FIXME: broken by touched-addrs -robs
   apply (rule conjI, clarsimp)
    apply (clarsimp simp: valid_cap_def)
   apply (rule conjI; clarsimp)
@@ -1000,7 +1000,7 @@ crunch cte_wp_at[wp,Finalise_AI_asms]: prepare_thread_delete "\<lambda>s. P (cte
 
 lemma unmap_page_table_cte_wp_at[wp]:
   "unmap_page_table asid vaddr pt \<lbrace>\<lambda>s. P (cte_wp_at P' p s)\<rbrace>"
-  soxxy (* FIXME: broken by touched-addrs -robs *)
+  sorry (* FIXME: broken by touched-addrs -robs *)
 
 crunch cte_wp_at[wp,Finalise_AI_asms]: arch_finalise_cap "\<lambda>s. P (cte_wp_at P' p s)"
   (simp: crunch_simps assertE_def wp: crunch_wps set_object_cte_at
@@ -1042,7 +1042,7 @@ lemma (* cap_delete_one_invs *) [Finalise_AI_asms,wp]:
   apply (wp empty_slot_invs get_cap_wp touch_objects_wp touch_object_wp)
   apply clarsimp
   apply (drule cte_wp_at_valid_objs_valid_cap, fastforce+)
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   done
 *)
 
@@ -1060,14 +1060,14 @@ crunch irq_node[Finalise_AI_asms,wp]: prepare_thread_delete "\<lambda>s. P (inte
 
 lemma unmap_page_table_irq_node[wp]:
   "unmap_page_table asid vaddr pt \<lbrace>\<lambda>s. P (interrupt_irq_node s)\<rbrace>"
-  soxxy (* FIXME: broken by touched-addrs -robs *)
+  sorry (* FIXME: broken by touched-addrs -robs *)
 
 crunch irq_node[wp]: arch_finalise_cap "\<lambda>s. P (interrupt_irq_node s)"
   (simp: crunch_simps wp: crunch_wps ignore:do_machine_op)
 
 lemma unmap_page_table_pred_tcb_at[wp]:
   "unmap_page_table asid vaddr pt \<lbrace>pred_tcb_at proj P t\<rbrace>"
-  soxxy (* FIXME: broken by touched-addrs -robs *)
+  sorry (* FIXME: broken by touched-addrs -robs *)
 
 crunch pred_tcb_at[wp]:
   delete_asid_pool, delete_asid, unmap_page_table, unmap_page
@@ -1139,7 +1139,7 @@ lemma set_vm_root_empty[wp]:
   "\<lbrace>\<lambda>s. P (obj_at (empty_table S) p s)\<rbrace> set_vm_root v \<lbrace>\<lambda>_ s. P (obj_at (empty_table S) p s) \<rbrace>"
   apply (simp add: set_vm_root_def)
   apply (wpsimp wp: get_cap_wp)
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   done
 *)
 
@@ -1319,7 +1319,7 @@ lemma (* dmo_replaceable_or_arch_update *) [Finalise_AI_asms,wp]:
   unfolding replaceable_or_arch_update_def replaceable_def no_cap_to_obj_with_diff_ref_def
             replaceable_final_arch_cap_def replaceable_non_final_arch_cap_def
   apply (wp_pre, wps dmo_tcb_cap_valid_ARCH do_machine_op_reachable_pg_cap)
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
    apply (rule hoare_vcg_prop)
   apply simp
   done

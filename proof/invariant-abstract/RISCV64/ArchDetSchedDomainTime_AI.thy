@@ -21,7 +21,7 @@ lemma set_per_domain_default_vm_root_domain_list:
    od)
    \<lbrace>\<lambda>s. P (domain_list s)\<rbrace>"
   (* TODO: Made necessary by experimental-tpspec. -robs *)
-  soxxy
+  sorry
 
 lemma set_per_domain_default_vm_root_domain_time:
   "\<And>P. do_extended_op (do
@@ -32,7 +32,7 @@ lemma set_per_domain_default_vm_root_domain_time:
    od)
    \<lbrace>\<lambda>s. P (domain_time s)\<rbrace>"
   (* TODO: Made necessary by experimental-tpspec. -robs *)
-  soxxy
+  sorry
 
 crunch domain_list_inv[wp]: set_vm_root "\<lambda>s. P (domain_list s)"
   (wp: set_per_domain_default_vm_root_domain_list get_cap_wp find_vspace_for_asid_wp)
@@ -122,7 +122,7 @@ lemma handle_interrupt_valid_domain_time [DetSchedDomainTime_AI_assms]:
          apply wpsimp
         apply (wpsimp wp: get_cap_wp)
        apply (wpsimp wp: touch_object_wp')
-       soxxy (* FIXME: broken by touched-addrs -robs
+       sorry (* FIXME: broken by touched-addrs -robs
        apply (rule hoare_post_imp[where Q="\<lambda>_. ?dtnot0" and a="get_cap p" for p], fastforce)
       apply (wpsimp wp: timer_tick_valid_domain_time simp: handle_reserved_irq_def)+
      apply (rule hoare_post_imp[where Q="\<lambda>_. ?dtnot0" and a="get_irq_state i" for i], fastforce)

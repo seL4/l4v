@@ -984,7 +984,7 @@ lemma (in Detype_AI) mapM_x_storeWord_step:
      apply (cut_tac power_add[symmetric,of "2::nat" "sz - word_size_bits" word_size_bits])
      apply (simp only: le_add_diff_inverse2[OF sz2])
     apply (simp add: word_size_size_bits_nat)
-   subgoal soxxy (* broken by touched-addrs. not sure if this is exactly the
+   subgoal sorry (* broken by touched-addrs. not sure if this is exactly the
    approach to take. need to take another look, and see how this approach goes. *)
    (* using mapM_x_storeWord_step_aux apply fastforce *)
   using mapM_x_storeWord_step_aux2 apply blast

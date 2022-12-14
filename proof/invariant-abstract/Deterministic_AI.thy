@@ -1509,7 +1509,7 @@ lemma set_cap_match: "(\<And>s x. P s = P (s\<lparr>kheap := x\<rparr>)) \<Longr
   *)
   apply (simp add: set_cap_def split_def set_object_def get_object_def)
   apply (wpsimp wp: touch_object_wp' simp:ta_filter_def split: if_splits)
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   done
 *)
 
@@ -3846,7 +3846,7 @@ lemma test_all_but_exst_and_ta:
 
 interpretation set_thread_state_ext_extended: is_extended "set_thread_state_ext a"
   apply (unfold_locales; wp)
-  soxxy (* FIXME: broken by touched-addrs -robs *)
+  sorry (* FIXME: broken by touched-addrs -robs *)
 
 crunch all_but_exst[wp]: reschedule_required "all_but_exst P"
   (ignore_del: reschedule_required)
@@ -3858,7 +3858,7 @@ crunch valid_list[wp]: fast_finalise valid_list (wp: crunch_wps)
 
 lemma cap_delete_one_valid_list[wp]: "\<lbrace>valid_list\<rbrace> cap_delete_one a \<lbrace>\<lambda>_.valid_list\<rbrace>"
   unfolding cap_delete_one_def
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   by (wpsimp simp: unless_def)
 *)
 
@@ -3973,7 +3973,7 @@ lemma set_priority_all_but_exst[wp]: "\<lbrace>all_but_exst P and
   ((\<union>) (\<Union>(x, y)\<in>{(p, ko). p \<in> {param_a} \<and> ko_at ko p s}. obj_range x y))) s))\<rbrace>
     set_priority param_a param_b
   \<lbrace>\<lambda>_. all_but_exst P\<rbrace>"
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
 crunch all_but_exst[wp]: set_priority "all_but_exst P"
   (simp: ethread_get_def ignore_del: set_priority)
 *)
@@ -3986,26 +3986,26 @@ crunch (empty_fail)empty_fail[wp]: set_priority,set_mcpriority
 
 global_interpretation set_priority_extended: is_extended "set_priority a b"
   apply (unfold_locales; wp)
-  soxxy (* FIXME: broken by touched-addrs -robs *)
+  sorry (* FIXME: broken by touched-addrs -robs *)
 
 lemma set_domain_all_but_exst[wp]: "\<lbrace>all_but_exst P and
   (\<lambda>s. all_but_exst P (machine_state_update (RISCV64.touched_addresses_update
   ((\<union>) (\<Union>(x, y)\<in>{(p, ko). p \<in> {param_a} \<and> ko_at ko p s}. obj_range x y))) s))\<rbrace>
     set_domain param_a param_b
   \<lbrace>\<lambda>_. all_but_exst P\<rbrace>"
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
 crunch all_but_exst[wp]: set_domain "all_but_exst P" (simp: ethread_get_def)
 *)
 
 global_interpretation set_domain_extended: is_extended "set_domain a b"
   apply (unfold_locales; wp)
-  soxxy (* FIXME: broken by touched-addrs -robs *)
+  sorry (* FIXME: broken by touched-addrs -robs *)
 
 global_interpretation thread_set_domain_extended: is_extended "thread_set_domain a b"
   apply (unfold_locales)
    defer
   apply wp
-  soxxy (* FIXME: broken by touched-addrs -robs *)
+  sorry (* FIXME: broken by touched-addrs -robs *)
 
 crunch all_but_exst[wp]: dec_domain_time "all_but_exst P" (simp: ethread_get_def)
 
@@ -4036,7 +4036,7 @@ global_interpretation retype_region_ext_extended: is_extended "retype_region_ext
   by (unfold_locales; wp)
 
 lemma timer_tick_all_but_exst[wp]: "timer_tick \<lbrace>all_but_exst P\<rbrace>"
-  soxxy (* FIXME: broken by touched-addrs -robs *)
+  sorry (* FIXME: broken by touched-addrs -robs *)
 
 crunches timer_tick
   for valid_list[wp]: "valid_list"

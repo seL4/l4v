@@ -605,7 +605,7 @@ next
     apply (simp only: split_def)
     apply (rule split_spec_bindE[rotated])
      apply (rule drop_spec_validE, simp)
-     soxxy (* FIXME: broken by touched-addrs -robs
+     sorry (* FIXME: broken by touched-addrs -robs
      apply (rule get_cap_sp)
     apply (rule hoare_pre_spec_validE)
      apply (wp replace_cap_invs | simp)+
@@ -780,7 +780,7 @@ next
      apply (rule spec_valid_conj_liftE2)
       apply (wp rec_del_delete_cases[where ex=False, simplified])[1]
      apply (rule spec_strengthen_postE)
-      soxxy (* FIXME: broken by touched-addrs -robs
+      sorry (* FIXME: broken by touched-addrs -robs
       apply (rule "4.hyps"[simplified rec_del_call.simps slot_rdcall.simps simp_thms pred_conj_def])
       apply (simp add: in_monad)
      apply simp
@@ -896,7 +896,7 @@ next
         apply (wp | simp)+
       apply (wp get_cap_wp)[1]
      apply (rule spec_strengthen_postE)
-      soxxy (* FIXME: broken by touched-addrs -robs
+      sorry (* FIXME: broken by touched-addrs -robs
       apply (rule wp, assumption+)
      apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_defs)
      apply (strengthen rvk_prog_update_strg[unfolded fun_upd_def o_def])

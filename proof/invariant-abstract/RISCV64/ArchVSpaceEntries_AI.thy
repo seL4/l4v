@@ -69,7 +69,7 @@ lemma mapM_x_store_pte_updates:
   apply (wp get_pt_wp get_object_wp touch_object_wp')
   apply (clarsimp simp: obj_at_def a_type_simps)
   apply (erule rsubst[where P=Q])
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (rule abstract_state.fold_congs[OF refl refl])
   apply (rule ext, clarsimp)
   apply (rule ext, clarsimp)
@@ -107,7 +107,7 @@ lemma unmap_page_valid_vspace_objs'[wp]:
     defer
    apply simp
   apply simp
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   done
 *)
 
@@ -323,7 +323,7 @@ lemma perform_invocation_valid_vspace_objs'[wp]:
 (* this was previously crunched as part of the following crunches. can hopefully crunch this again *)
 lemma send_fault_ipc_valid_vspace_objs' [wp]:
   "send_fault_ipc a b \<lbrace>valid_vspace_objs'\<rbrace>"
-  soxxy (* FIXME: broken by touched-addrs v1 (Dec 2021) *)
+  sorry (* FIXME: broken by touched-addrs v1 (Dec 2021) *)
 
 crunches reply_from_kernel, handle_fault
   for valid_vspace_objs [wp]: valid_vspace_objs'
@@ -332,7 +332,7 @@ crunches reply_from_kernel, handle_fault
 lemma handle_invocation_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs' and invs and ct_active\<rbrace>
         handle_invocation calling blocking \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
-  soxxy (* FIXME: broken by touched-addrs v1 (Dec 2021)
+  sorry (* FIXME: broken by touched-addrs v1 (Dec 2021)
   apply (simp add: handle_invocation_def)
   apply (wp syscall_valid set_thread_state_ct_st
                | simp add: split_def | wpc

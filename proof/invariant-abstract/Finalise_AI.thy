@@ -414,7 +414,7 @@ lemma set_cap_revokable_update:
   apply (clarsimp simp add: set_cap_def in_monad get_object_def)
   apply (case_tac y)
   apply (auto simp add: in_monad set_object_def get_object_def split: if_split_asm)
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   done
 *)
 
@@ -425,7 +425,7 @@ lemma set_cap_cdt_update:
   apply (clarsimp simp add: set_cap_def in_monad get_object_def)
   apply (case_tac y)
   apply (auto simp add: in_monad set_object_def get_object_def split: if_split_asm)
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   done
 *)
 
@@ -469,7 +469,7 @@ lemma cap_delete_one_caps_of_state:
    \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
   apply (simp add: cap_delete_one_def unless_def
                    is_final_cap_def)
-  soxxy (* FIXME: broken by touched-addrs.
+  sorry (* FIXME: broken by touched-addrs.
     We might want a form of touch_object_wp that is applicable here using hoare_seq_ext. -robs
   apply (rule hoare_seq_ext [OF _ get_cap_sp])
   apply (case_tac "can_fast_finalise cap")
@@ -503,7 +503,7 @@ lemma cancel_ipc_caps_of_state:
      apply (simp add: cte_wp_at_caps_of_state)
      apply (wpsimp wp: hoare_vcg_all_lift hoare_convert_imp thread_set_caps_of_state_trivial
                  simp: ran_tcb_cap_cases)+
-    soxxy (* FIXME: broken by touched-addrs -robs
+    sorry (* FIXME: broken by touched-addrs -robs
    prefer 2
    apply assumption
   apply (rule hoare_strengthen_post [OF gts_sp])
@@ -635,7 +635,7 @@ lemma tcb_st_refs_no_TCBBound:
 lemma (in Finalise_AI_1) unbind_maybe_notification_invs:
   "\<lbrace>invs\<rbrace> unbind_maybe_notification ntfnptr \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: unbind_maybe_notification_def invs_def valid_state_def valid_pspace_def)
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
    apply (wpsimp wp: valid_irq_node_typ set_simple_ko_valid_objs valid_ioports_lift)
@@ -884,7 +884,7 @@ lemma unbind_maybe_notification_emptyable[wp]:
 lemma cancel_all_signals_emptyable[wp]:
   "\<lbrace>invs and emptyable sl\<rbrace> cancel_all_signals ptr \<lbrace>\<lambda>_. emptyable sl\<rbrace>"
   unfolding cancel_all_signals_def unbind_maybe_notification_def
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
   apply (wp cancel_all_emptyable_helper
@@ -898,7 +898,7 @@ lemma cancel_all_signals_emptyable[wp]:
 lemma cancel_all_ipc_emptyable[wp]:
   "\<lbrace>invs and emptyable sl\<rbrace> cancel_all_ipc ptr \<lbrace>\<lambda>_. emptyable sl\<rbrace>"
   apply (simp add: cancel_all_ipc_def)
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
   apply (case_tac ep, simp_all)
     apply (wp, simp)
@@ -963,7 +963,7 @@ lemma cap_delete_one_reply_st_tcb_at:
     cap_delete_one slot
    \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
   apply (simp add: cap_delete_one_def unless_def is_final_cap_def)
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (rule hoare_seq_ext [OF _ get_cap_sp])
   apply (rule hoare_assume_pre)
   apply (clarsimp simp: cte_wp_at_caps_of_state when_def is_reply_cap_to_def)

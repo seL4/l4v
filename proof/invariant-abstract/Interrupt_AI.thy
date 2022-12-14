@@ -266,7 +266,7 @@ lemma send_signal_interrupt_states[wp_unsafe]:
   apply (clarsimp)
   apply (erule (1) obj_at_valid_objsE)
   apply (clarsimp simp: valid_obj_def valid_ntfn_def obj_at_def is_tcb_def)
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (case_tac ko, simp_all)
   apply (auto simp: pred_tcb_at_def obj_at_def receive_blocked_def)
   done

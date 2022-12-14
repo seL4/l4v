@@ -567,7 +567,7 @@ lemma set_thread_state_runnable_valid_sched_action:
    \<lbrace>\<lambda>_. valid_sched_action\<rbrace>"
   apply (simp add: valid_sched_action_def
         | wp set_thread_state_runnable_weak_valid_sched_action)+
-   soxxy (* FIXME: broken by touched-addrs -robs
+   sorry (* FIXME: broken by touched-addrs -robs
   done
 *)
 
@@ -1190,7 +1190,7 @@ lemma choose_thread_valid_sched[wp]:
   apply (clarsimp simp: valid_queues_def next_thread_def is_activatable_2_def
                  dest!: next_thread_queued)
   apply (fastforce simp: st_tcb_def2 in_cur_domain_def etcb_at_def split: option.splits)
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   done
 *)
 
@@ -1286,7 +1286,7 @@ context DetSchedSchedule_AI begin
 lemma choose_thread_ct_not_queued:
   "\<lbrace> valid_queues and valid_idle and valid_etcbs \<rbrace> choose_thread \<lbrace>\<lambda>_. ct_not_queued \<rbrace>"
   apply (wpsimp simp: choose_thread_def wp: guarded_switch_to_lift)
-  soxxy (* FIXME: broken by touched-addrs -robs *)
+  sorry (* FIXME: broken by touched-addrs -robs *)
 
 lemma choose_thread_ct_activatable:
   "\<lbrace> valid_queues and valid_idle \<rbrace> choose_thread \<lbrace>\<lambda>_ s.  st_tcb_at activatable (cur_thread s) s \<rbrace>"
@@ -1295,7 +1295,7 @@ lemma choose_thread_ct_activatable:
                     stt_activatable[simplified ct_in_state_def])
   apply (fastforce dest!: next_thread_queued
                    simp: next_thread_def valid_queues_def is_activatable_def in_cur_domain_def)
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   done
 *)
 
@@ -1312,13 +1312,13 @@ lemma choose_thread_cur_dom_or_idle:
   apply clarsimp
   apply (fastforce dest!: next_thread_queued split: option.splits
                    simp: etcb_at_def next_thread_def valid_queues_def in_cur_domain_def)
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   done
 *)
 
 lemma choose_thread_sched_act[wp]:
   "\<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> choose_thread \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
 crunch sched_act[wp]: choose_thread "\<lambda>s. P (scheduler_action s)"
   (wp: guarded_switch_to_lift)
 *)
@@ -1388,7 +1388,7 @@ lemma schedule_choose_new_thread_valid_sched:
                  wp: set_scheduler_action_rct_valid_sched choose_thread_ct_not_queued
                      choose_thread_ct_activatable choose_thread_cur_dom_or_idle
                      hoare_vcg_disj_lift)+
-    soxxy (* FIXME: Broken by experimental-tpspec. -robs
+    sorry (* FIXME: Broken by experimental-tpspec. -robs
     apply (wpsimp wp: next_domain_valid_sched_action next_domain_valid_etcbs
                       next_domain_valid_queues next_domain_valid_blocked next_domain_ct_in_q)+
   done
@@ -1421,7 +1421,7 @@ lemma schedule_valid_sched:
                          stt_activatable[simplified ct_in_state_def]
                          hoare_disjI1[OF switch_to_thread_cur_in_cur_domain]
                          switch_to_thread_sched_act_is_cur)+
-               soxxy (* FIXME: broken by touched-addrs -robs
+               sorry (* FIXME: broken by touched-addrs -robs
                  I think the guarded_switch_to change might be wreaking havoc...
            (* discard result of fastfail calculation *)
            apply (wpsimp wp: hoare_drop_imp)+
@@ -1535,7 +1535,7 @@ lemma thread_set_not_state_valid_sched:
 lemma unbind_notification_valid_sched[wp]:
   "\<lbrace>valid_sched\<rbrace> unbind_notification ntfnptr \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (simp add: unbind_notification_def)
-  soxxy (* FIXME: broken by touched-addrs. need sp rule for touch_object -robs
+  sorry (* FIXME: broken by touched-addrs. need sp rule for touch_object -robs
   apply (rule hoare_seq_ext[OF _ gbn_sp])
   apply (case_tac ntfnptra, simp, wp, simp)
   apply (clarsimp)
@@ -2054,7 +2054,7 @@ lemma restart_valid_sched[wp]:
    apply (simp add: get_thread_state_def | wp hoare_drop_imps)+
   apply (clarsimp simp: not_cur_thread_def valid_sched_def valid_sched_action_def
                         is_activatable_def)
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (drule_tac test="\<lambda>ts. \<not> activatable ts" in st_tcb_at_get_lift)
    apply simp
   apply (simp only: st_tcb_at_not)
@@ -2210,7 +2210,7 @@ lemmas set_thread_state_active_valid_sched_except_blocked =
 lemma set_thread_state_runnable_valid_blocked:
   "\<lbrace>valid_blocked and st_tcb_at runnable ref and (\<lambda>s. runnable ts)\<rbrace> set_thread_state ref ts \<lbrace>\<lambda>_. valid_blocked\<rbrace>"
   apply (simp add: set_thread_state_def)
-  soxxy (* FIXME: broken by touched-addrs. need sp rule for touch_object -robs
+  sorry (* FIXME: broken by touched-addrs. need sp rule for touch_object -robs
   apply (rule hoare_seq_ext[OF _ gets_the_get_tcb_sp])
   apply (rule_tac B="\<lambda>rv. valid_blocked and st_tcb_at runnable ref" in hoare_seq_ext[rotated])
    apply (wp set_object_wp)
@@ -2562,7 +2562,7 @@ lemma do_reply_transfer_valid_sched[wp]:
            apply simp
           apply (wp thread_set_not_state_valid_sched thread_set_no_change_tcb_state
                     cap_delete_one_reply_st_tcb_at thread_set_ct_active_wp | simp add: ct_in_state_def | wps)+
-       soxxy (* FIXME: broken by touched-addrs -robs
+       sorry (* FIXME: broken by touched-addrs -robs
     apply (wp hoare_drop_imps hoare_vcg_all_lift)[1]
    apply (simp add: get_thread_state_def thread_get_def | wp)+
   apply (clarsimp simp: ct_in_state_def cte_wp_at_caps_of_state not_cur_thread_def)
@@ -3028,7 +3028,7 @@ lemma unbind_maybe_notification_sym_refs[wp]:
      unbind_maybe_notification a
    \<lbrace>\<lambda>rv s. sym_refs (state_refs_of s)\<rbrace>"
   apply (simp add: unbind_maybe_notification_def)
-  soxxy (* FIXME: broken by touched-addrs. need sp rule for touch_object -robs
+  sorry (* FIXME: broken by touched-addrs. need sp rule for touch_object -robs
   apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
    apply (wp | wpc | clarsimp)+
@@ -3072,7 +3072,7 @@ lemma cap_delete_one_not_queued[wp]:
     sym_refs \<circ> state_refs_of)\<rbrace>
    cap_delete_one param_a
    \<lbrace>\<lambda>_. not_queued t\<rbrace>"
-  soxxy (* FIXME: broken by touched-addrs -robs *)
+  sorry (* FIXME: broken by touched-addrs -robs *)
 
 crunch not_queued: delete_caller_cap "not_queued t"
   (wp: fast_finalise_not_queued hoare_drop_imps simp: if_fun_split unless_def)
@@ -3150,7 +3150,7 @@ lemma handle_recv_valid_sched:
   "\<lbrace>valid_sched and invs and ct_active
       and ct_not_queued and scheduler_act_sane\<rbrace>
    handle_recv is_blocking \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
-  soxxy (* FIXME: broken by touched-addrs v1 (Jan 2022)
+  sorry (* FIXME: broken by touched-addrs v1 (Jan 2022)
   apply (simp add: handle_recv_def Let_def ep_ntfn_cap_case_helper
               cong: if_cong)
   apply (wp get_simple_ko_wp handle_fault_valid_sched delete_caller_cap_not_queued
@@ -3270,7 +3270,7 @@ lemma invoke_domain_valid_sched[wp]:
              ethread_set_valid_blocked ethread_set_ssa_valid_sched_action
              ethread_set_not_cur_ct_in_cur_domain ethread_set_not_idle_valid_sched
              ethread_set_not_idle_valid_idle_etcb touch_object_wp')
-      soxxy (* FIXME: broken by touch-addrs -robs
+      sorry (* FIXME: broken by touch-addrs -robs
       apply (wp static_imp_wp static_imp_conj_wp tcb_dequeue_not_queued tcb_sched_action_dequeue_valid_blocked_except)
      apply simp
      apply (wp hoare_vcg_disj_lift)
@@ -3326,7 +3326,7 @@ lemma handle_invocation_valid_sched:
     (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
      handle_invocation a b
    \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
-  soxxy (* FIXME: broken by touched-addrs v1 (Jan 2022)
+  sorry (* FIXME: broken by touched-addrs v1 (Jan 2022)
   apply (simp add: handle_invocation_def)
   apply (wp syscall_valid handle_fault_valid_sched | wpc)+
                 apply (wp set_thread_state_runnable_valid_sched)[1]
@@ -3406,7 +3406,7 @@ lemma do_reply_transfer_not_queued[wp]:
      do_reply_transfer sender receiver slot grant
    \<lbrace>\<lambda>_. not_queued t\<rbrace>"
   apply (simp add: do_reply_transfer_def)
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (wp cap_delete_one_not_queued hoare_vcg_if_lift | wpc |
          clarsimp split del: if_split | wp (once) hoare_drop_imps)+
    apply (simp add: invs_def valid_state_def valid_pspace_def)+
@@ -3420,7 +3420,7 @@ lemma do_reply_transfer_schedact_not[wp]:
   apply (simp add: do_reply_transfer_def)
   apply (wp hoare_vcg_if_lift | wpc | clarsimp split del: if_split |
          wp (once) hoare_drop_imps)+
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   done
 *)
 
@@ -3549,7 +3549,7 @@ lemma handle_event_valid_sched:
               wpc |
               clarsimp simp: ct_in_state_def valid_sched_ct_not_queued |
               fastforce simp: valid_fault_def)+
-     soxxy (* FIXME: broken by touched-addrs -robs
+     sorry (* FIXME: broken by touched-addrs -robs
   done
 *)
 
@@ -3581,7 +3581,7 @@ lemma domainswitch_sequence_valid_list[wp]:
    \<lbrace> valid_list \<rbrace>"
   apply wp
   (* FIXME: Made necessary by experimental-tpspec. -robs *)
-  soxxy
+  sorry
 
 crunch valid_list[wp]: schedule_choose_new_thread valid_list
   (wp: crunch_wps)

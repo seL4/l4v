@@ -73,7 +73,7 @@ lemma (in Tcb_AI_1) activate_invs:
   apply (rule hoare_seq_ext [OF _ gets_sp])
   (* FIXME: I guess what we're needing here and in similar situations in previous files
      is a touch_object_sp (strongest postcondition) rule. -robs *)
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (rule hoare_seq_ext [OF _ gts_sp])
   apply (case_tac state, simp_all)
     apply wp
@@ -133,7 +133,7 @@ lemma setup_reply_master_nonz_cap[wp]:
 lemma restart_invs[wp]:
   "\<lbrace>invs and tcb_at t and ex_nonz_cap_to t\<rbrace> restart t \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: restart_def)
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (rule hoare_seq_ext [OF _ gts_sp])
   apply (wp sts_invs_minor cancel_ipc_ex_nonz_cap_to_tcb
             hoare_vcg_disj_lift cancel_ipc_simple2
@@ -305,7 +305,7 @@ lemma thread_set_valid_objs':
   apply (clarsimp dest!: get_tcb_SomeD' simp: obj_at_def)
   apply (erule (1) pspace_valid_objsE)
   apply (simp add: valid_obj_def)
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   done
 *)
 
@@ -394,7 +394,7 @@ lemma check_cap_inv2:
   assumes x: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
   shows      "\<lbrace>P and Q ()\<rbrace> check_cap_at cap slot f \<lbrace>Q\<rbrace>"
   unfolding check_cap_at_def
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   by (wp x get_cap_wp, clarsimp)
 *)
 
@@ -637,7 +637,7 @@ lemma thread_set_tcb_ipc_buffer_cap_cleared_invs:
   apply (cut_tac P="(=) v" and t="(t, tcb_cnode_index 4)" for v
             in  cte_wp_at_tcbI)
      apply simp
-     soxxy (* FIXME: broken by touched-addrs -robs
+     sorry (* FIXME: broken by touched-addrs -robs
     apply fastforce
    apply (rule refl)
   apply (clarsimp simp: cte_wp_at_caps_of_state
@@ -793,7 +793,7 @@ lemma set_set_simple_ko_has_reply[wp]:
 lemma unbind_notification_has_reply[wp]:
   "\<lbrace>\<lambda>s. P (has_reply_cap t s)\<rbrace> unbind_notification t' \<lbrace>\<lambda>rv s. P (has_reply_cap t s)\<rbrace>"
   apply (simp add: unbind_notification_def has_reply_cap_def cte_wp_at_caps_of_state)
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (rule hoare_seq_ext[OF _ gbn_sp])
   apply (case_tac ntfnptr, simp, wp, simp)
   apply (clarsimp)
@@ -814,7 +814,7 @@ lemma bind_notification_invs:
      bind_notification tcbptr ntfnptr
    \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: bind_notification_def invs_def valid_state_def valid_pspace_def)
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (wp valid_irq_node_typ set_simple_ko_valid_objs simple_obj_set_prop_at valid_ioports_lift
          | clarsimp simp:idle_no_ex_cap split del: if_split)+
@@ -977,7 +977,7 @@ lemma check_prio_wp:
   "\<lbrace>\<lambda>s. mcpriority_tcb_at (\<lambda>mcp. prio \<le> ucast mcp) auth s \<longrightarrow> Q s\<rbrace> check_prio prio auth \<lbrace>\<lambda>_. Q\<rbrace>, -"
   apply (clarsimp simp: check_prio_def)
   apply (wp get_mcpriority_wp whenE_throwError_wp touch_object_wp')
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (intro allI impI, elim mp pred_tcb_weakenE)
   apply fastforce
   done
@@ -1116,7 +1116,7 @@ lemma (in Tcb_AI) decode_set_space_wf[wp]:
    apply (wp derive_cap_valid_cap
              | simp add: o_def split del: if_split
              | rule hoare_drop_imps)+
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (clarsimp split del: if_split simp: ball_conj_distrib
                    simp del: length_greater_0_conv)
   apply (simp add: update_cap_data_validI word_bits_def
@@ -1133,7 +1133,7 @@ lemma decode_set_space_inv[wp]:
           split del: if_split)
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps | simp)+
-   soxxy (* FIXME: broken by touched-addrs -robs
+   sorry (* FIXME: broken by touched-addrs -robs
   done
 *)
 
@@ -1365,7 +1365,7 @@ lemma unbind_notification_sym_refs[wp]:
      unbind_notification a
    \<lbrace>\<lambda>rv s. sym_refs (state_refs_of s)\<rbrace>"
   apply (simp add: unbind_notification_def)
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (rule hoare_seq_ext [OF _ gbn_sp])
   apply (case_tac ntfnptr, simp_all)
    apply (wp, simp)

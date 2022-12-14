@@ -82,13 +82,13 @@ lemma get_pte_valid[wp]:
     K (level = max_pt_level \<longrightarrow> table_index p \<notin> kernel_mapping_slots)\<rbrace>
    get_pte p
    \<lbrace>valid_pte level\<rbrace>"
-  soxxy (* broken by touched-addrs -scottb
+  sorry (* broken by touched-addrs -scottb
   by wpsimp (fastforce dest: valid_vspace_objs_pte) *)
 
 lemma get_pte_wellformed[wp]:
   "\<lbrace>valid_objs\<rbrace> get_pte p \<lbrace>\<lambda>rv _. wellformed_pte rv\<rbrace>"
   apply wpsimp
-  soxxy (* broken by touched-addrs -scottb
+  sorry (* broken by touched-addrs -scottb
   apply (fastforce simp: valid_objs_def dom_def valid_obj_def ptes_of_def in_opt_map_eq)
   done *)
 
@@ -570,7 +570,7 @@ lemma valid_vspace_obj_pres:
 lemma valid_vspace_objs':
   assumes va: "valid_vspace_objs s"
   shows "valid_vspace_objs s'"
-soxxy (* broken by touched-addrs -scottb.
+sorry (* broken by touched-addrs -scottb.
   looks like there is some pattern-matching stuff here caused by f_kheap stuff. will either
   need to rephrase this proof or ask somebody with more experience with this proof format.
 proof

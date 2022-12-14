@@ -24,7 +24,7 @@ lemma set_per_domain_default_vm_root_valid_etcbs[wp]:
    od)
    \<lbrace>valid_etcbs\<rbrace>"
   (* TODO: Made necessary by experimental-tpspec. -robs *)
-  soxxy
+  sorry
 
 crunch valid_etcbs [wp, DetSchedSchedule_AI_assms]:
   arch_switch_to_idle_thread, arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers valid_etcbs
@@ -39,7 +39,7 @@ lemma set_per_domain_default_vm_root_valid_queues[wp]:
    od)
    \<lbrace>valid_queues\<rbrace>"
   (* TODO: Made necessary by experimental-tpspec. -robs *)
-  soxxy
+  sorry
 
 crunch valid_queues [wp, DetSchedSchedule_AI_assms]:
   switch_to_idle_thread, switch_to_thread, set_vm_root, arch_get_sanitise_register_info, arch_post_modify_registers valid_queues
@@ -55,7 +55,7 @@ lemma set_per_domain_default_vm_root_weak_valid_sched_action[wp]:
    od)
    \<lbrace>weak_valid_sched_action\<rbrace>"
   (* TODO: Made necessary by experimental-tpspec. -robs *)
-  soxxy
+  sorry
 
 crunch weak_valid_sched_action [wp, DetSchedSchedule_AI_assms]:
   switch_to_idle_thread, switch_to_thread, set_vm_root, arch_get_sanitise_register_info, arch_post_modify_registers "weak_valid_sched_action"
@@ -70,7 +70,7 @@ lemma set_per_domain_default_vm_root_ct_not_in_q[wp]:
    od)
    \<lbrace>ct_not_in_q\<rbrace>"
   (* TODO: Made necessary by experimental-tpspec. -robs *)
-  soxxy
+  sorry
 
 crunch ct_not_in_q[wp]: set_vm_root "ct_not_in_q"
   (wp: crunch_wps find_vspace_for_asid_inv simp: crunch_simps ta_agnostic_def)
@@ -84,7 +84,7 @@ lemma set_per_domain_default_vm_root_ct_not_in_q'[wp]:
    od)
    \<lbrace>\<lambda>s. ct_not_in_q_2 (ready_queues s) (scheduler_action s) t\<rbrace>"
   (* TODO: Made necessary by experimental-tpspec. -robs *)
-  soxxy
+  sorry
 
 crunch ct_not_in_q'[wp]: set_vm_root "\<lambda>s. ct_not_in_q_2 (ready_queues s) (scheduler_action s) t"
   (wp: crunch_wps find_vspace_for_asid_inv simp: crunch_simps ta_agnostic_def)
@@ -108,7 +108,7 @@ lemma set_per_domain_default_vm_root_valid_sched_action'[wp]:
    od)
    \<lbrace>\<lambda>s. valid_sched_action_2 (scheduler_action s) (ekheap s) (kheap s) thread (cur_domain s)\<rbrace>"
   (* TODO: Made necessary by experimental-tpspec. -robs *)
-  soxxy
+  sorry
 
 crunch valid_sched_action'[wp]: set_vm_root "\<lambda>s. valid_sched_action_2 (scheduler_action s)
                                                  (ekheap s) (kheap s) thread (cur_domain s)"
@@ -135,7 +135,7 @@ lemma set_per_domain_default_vm_root_ct_in_cur_domain'[wp]:
    od)
    \<lbrace>\<lambda>s. ct_in_cur_domain_2 t (idle_thread s) (scheduler_action s) (cur_domain s) (ekheap s)\<rbrace>"
   (* TODO: Made necessary by experimental-tpspec. -robs *)
-  soxxy
+  sorry
 
 crunch ct_in_cur_domain'[wp]: set_vm_root "\<lambda>s. ct_in_cur_domain_2 t (idle_thread s)
                                                    (scheduler_action s) (cur_domain s) (ekheap s)"
@@ -160,7 +160,7 @@ lemma set_per_domain_default_vm_root_is_activatable[wp]:
    od)
    \<lbrace>is_activatable t\<rbrace>"
   (* TODO: Made necessary by experimental-tpspec. -robs *)
-  soxxy
+  sorry
 
 crunch is_activatable [wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers "is_activatable t"
   (simp: crunch_simps ta_agnostic_def wp: find_vspace_for_asid_inv)
@@ -174,7 +174,7 @@ lemma set_per_domain_default_vm_root_valid_sched_action[wp]:
    od)
    \<lbrace>valid_sched_action\<rbrace>"
   (* TODO: Made necessary by experimental-tpspec. -robs *)
-  soxxy
+  sorry
 
 crunch valid_sched_action [wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers valid_sched_action
   (simp: crunch_simps ta_agnostic_def wp: find_vspace_for_asid_inv)
@@ -188,7 +188,7 @@ lemma set_per_domain_default_vm_root_valid_sched[wp]:
    od)
    \<lbrace>valid_sched\<rbrace>"
   (* TODO: Made necessary by experimental-tpspec. -robs *)
-  soxxy
+  sorry
 
 crunch valid_sched [wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers valid_sched
   (simp: crunch_simps ta_agnostic_def wp: find_vspace_for_asid_inv)
@@ -202,7 +202,7 @@ lemma set_per_domain_default_vm_root_exst[wp]:
    od)
    \<lbrace>\<lambda>s. P (exst s)\<rbrace>"
   (* TODO: Made necessary by experimental-tpspec. -robs *)
-  soxxy
+  sorry
 
 crunch exst[wp]: set_vm_root "\<lambda>s. P (exst s)"
   (wp: crunch_wps hoare_whenE_wp find_vspace_for_asid_inv simp: crunch_simps ta_agnostic_def
@@ -221,7 +221,7 @@ lemma set_per_domain_default_vm_root_valid_blocked[wp]:
    od)
    \<lbrace>valid_blocked\<rbrace>"
   (* TODO: Made necessary by experimental-tpspec. -robs *)
-  soxxy
+  sorry
 
 crunch valid_blocked[wp]: set_vm_root valid_blocked
   (simp: crunch_simps ta_agnostic_def wp: find_vspace_for_asid_inv)
@@ -235,7 +235,7 @@ lemma set_per_domain_default_vm_root_ct_in_q[wp]:
    od)
    \<lbrace>ct_in_q\<rbrace>"
   (* TODO: Made necessary by experimental-tpspec. -robs *)
-  soxxy
+  sorry
 
 crunch ct_in_q[wp]: set_vm_root ct_in_q
   (simp: crunch_simps ta_agnostic_def ct_in_q_def wp: find_vspace_for_asid_inv touch_object_wp')
@@ -252,7 +252,7 @@ lemma set_per_domain_default_vm_root_valid_idle[wp]:
    od)
    \<lbrace>valid_idle\<rbrace>"
   (* TODO: Made necessary by experimental-tpspec. -robs *)
-  soxxy
+  sorry
 
 crunch valid_idle [wp, DetSchedSchedule_AI_assms]:
   arch_switch_to_idle_thread "valid_idle"
@@ -298,7 +298,7 @@ lemma set_per_domain_default_vm_root_valid_blocked_2[wp]:
    od)
    \<lbrace>\<lambda>s. valid_blocked_2 (ready_queues s) (kheap s) (scheduler_action s) thread\<rbrace>"
   (* TODO: Made necessary by experimental-tpspec. -robs *)
-  soxxy
+  sorry
 
 crunch valid_blocked_2[wp]: set_vm_root "\<lambda>s.
            valid_blocked_2 (ready_queues s) (kheap s)
@@ -437,7 +437,7 @@ crunch scheduler_action [wp, DetSchedSchedule_AI_assms]: arch_get_sanitise_regis
 
 lemma make_arch_fault_msg_inv:
   "make_arch_fault_msg f t \<lbrace>P\<rbrace>"
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   by (cases f) wpsimp
 *)
 

@@ -48,7 +48,7 @@ lemma schedule_invs[wp]: "\<lbrace>invs\<rbrace> (Schedule_A.schedule :: (unit,d
                            ethread_get_when_def
           | wp (once) hoare_drop_imps
           | simp add: schedule_choose_new_thread_def if_apply_def2)+
-  soxxy (* FIXME: Broken by experimental-tpspec. -robs
+  sorry (* FIXME: Broken by experimental-tpspec. -robs
   done
   *)
 
@@ -63,7 +63,7 @@ lemma schedule_choose_new_thread_ct_activatable[wp]:
                              next_domain_def Let_def tcb_sched_action_def set_tcb_queue_def
                              get_tcb_queue_def ethread_get_def bind_assoc)
     apply (wpsimp wp: stt_activatable stit_activatable gts_wp touch_object_wp')+
-    soxxy (* FIXME: Broken by experimental-tpspec. -robs
+    sorry (* FIXME: Broken by experimental-tpspec. -robs
     apply (force simp: ct_in_state_def pred_tcb_at_def obj_at_def invs_def valid_state_def
                        valid_idle_def split: if_split_asm)+
   done
@@ -345,7 +345,7 @@ lemma (in Systemcall_AI_Pre) handle_fault_reply_cte_wp_at:
     show ?thesis
       apply (case_tac f; clarsimp simp: as_user_def)
         apply (wp set_object_wp thread_get_wp' touch_object_wp' | simp add: split_def NC | wp (once) hoare_drop_imps)+
-         soxxy (* FIXME: broken by touched-addrs -robs
+         sorry (* FIXME: broken by touched-addrs -robs
       done
     *)
   qed
@@ -428,7 +428,7 @@ lemma (in Systemcall_AI_Pre2) do_reply_invs[wp]:
       apply (clarsimp)
      apply (wp cap_delete_one_deletes_reply cap_delete_one_reply_st_tcb_at)+
     apply (clarsimp)
-    soxxy (* FIXME: broken by touched-addrs -robs
+    sorry (* FIXME: broken by touched-addrs -robs
     apply (wp hoare_drop_imp hoare_allI)[1]
    apply (wp assert_wp)
   apply (clarsimp)
@@ -463,7 +463,7 @@ lemma (in Systemcall_AI_Pre2) pinv_invs[wp]:
 
 lemma get_mrs_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> get_mrs param_a param_b param_c \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
-  soxxy (* FIXME: broken by touched-addrs -robs *)
+  sorry (* FIXME: broken by touched-addrs -robs *)
 
 crunch typ_at[wp]: do_reply_transfer "\<lambda>s. P (typ_at T p s)"
   (wp: hoare_drop_imps)
@@ -695,7 +695,7 @@ lemma lcs_valid [wp]:
 
 lemma lec_valid_cap [wp]:
   "\<lbrace>invs\<rbrace> lookup_extra_caps t xa mi \<lbrace>\<lambda>rv s. (\<forall>x\<in>set rv. s \<turnstile> fst x)\<rbrace>, -"
-  soxxy
+  sorry
 (*  unfolding lookup_extra_caps_def
   apply (wpsimp wp: mapME_set)
 *)
@@ -722,7 +722,7 @@ lemma lec_ex_cap_to [wp]:
   "\<lbrace>invs\<rbrace>
   lookup_extra_caps t xa mi
   \<lbrace>\<lambda>rv s. (\<forall>cap \<in> set rv. \<forall>r\<in>cte_refs (fst cap) (interrupt_irq_node s). ex_cte_cap_to r s)\<rbrace>, -"
-  soxxy
+  sorry
 (*  unfolding lookup_extra_caps_def
   by (wp mapME_set | simp)+ *)
 
@@ -730,7 +730,7 @@ lemma lec_ex_nonz_cap_to [wp]:
   "\<lbrace>invs\<rbrace>
   lookup_extra_caps t xa mi
   \<lbrace>\<lambda>rv s. (\<forall>cap \<in> set rv. \<forall>r\<in>zobj_refs (fst cap). ex_nonz_cap_to r s)\<rbrace>, -"
-  soxxy
+  sorry
 (*  unfolding lookup_extra_caps_def
   by (wp mapME_set | simp)+ *)
 
@@ -786,7 +786,7 @@ lemma resolve_address_bits_valid_fault:
    resolve_address_bits param
    \<lbrace>\<lambda>_. valid_objs\<rbrace>,
    \<lbrace>\<lambda>f s. valid_fault (ExceptionTypes_A.fault.CapFault x y f)\<rbrace>"
-soxxy (* FIXME: broken by touched-addrs v1 (Dec 2021) *)
+sorry (* FIXME: broken by touched-addrs v1 (Dec 2021) *)
 (*
 unfolding resolve_address_bits_def
 proof (induct param rule: resolve_address_bits'.induct)
@@ -996,7 +996,7 @@ lemma hinv_invs':
     "\<And>a b. \<lbrace>invs and Q\<rbrace> set_thread_state a b \<lbrace>\<lambda>_.Q\<rbrace>"
   shows
     "\<lbrace>invs and Q and ct_active\<rbrace> handle_invocation calling blocking \<lbrace>\<lambda>rv s. invs s \<and> Q s\<rbrace>"
-  soxxy
+  sorry
   (*
   apply (simp add: handle_invocation_def ts_Restart_case_helper split_def
                    liftE_liftM_liftME liftME_def bindE_assoc)
@@ -1031,7 +1031,7 @@ lemma hinv_tcb[wp]:
     \<lbrace>st_tcb_at active t and invs and ct_active\<rbrace>
       handle_invocation calling blocking
     \<lbrace>\<lambda>rv. tcb_at t :: 'state_ext state \<Rightarrow> bool\<rbrace>"
-  soxxy
+  sorry
   (*
   apply (simp add: handle_invocation_def split_def
                    ts_Restart_case_helper
@@ -1132,7 +1132,7 @@ lemma invs_valid_tcb_ctable_strengthen:
   by (clarsimp simp: invs_valid_tcb_ctable)
 
 lemma hw_invs[wp]: "\<lbrace>invs and ct_active\<rbrace> handle_recv is_blocking \<lbrace>\<lambda>r. invs\<rbrace>"
-  soxxy (* FIXME: broken by touched-addrs v1 (Dec 2021) *)
+  sorry (* FIXME: broken by touched-addrs v1 (Dec 2021) *)
   (*
   apply (simp add: handle_recv_def Let_def ep_ntfn_cap_case_helper
     cong: if_cong)
@@ -1206,7 +1206,7 @@ lemma tcb_caller_cap:
 lemma (in Syscall_AI) hr_invs[wp]:
   "\<lbrace>invs :: 'state_ext state \<Rightarrow> _\<rbrace> handle_reply \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: handle_reply_def)
-  soxxy (* FIXME: broken by touched-addrs. need sp rule for touch_object -robs
+  sorry (* FIXME: broken by touched-addrs. need sp rule for touch_object -robs
   apply (rule hoare_seq_ext [OF _ gets_sp])
   apply (rule hoare_seq_ext [OF _ get_cap_sp])
   apply (rule hoare_pre)
@@ -1268,7 +1268,7 @@ lemma do_reply_transfer_nonz_cap:
      do_reply_transfer sender receiver slot grant
    \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
   apply (simp add: do_reply_transfer_def)
-  soxxy (* FIXME: broken by touched-addrs. need sp rule for touch_object -robs
+  sorry (* FIXME: broken by touched-addrs. need sp rule for touch_object -robs
   apply (rule hoare_seq_ext [OF _ gts_sp])
   apply (rule hoare_pre)
    apply (wp cap_delete_one_cte_wp_at_preserved hoare_vcg_ex_lift | simp split del: if_split
@@ -1323,7 +1323,7 @@ lemma do_reply_transfer_st_tcb_at_active:
             hoare_drop_imps thread_set_no_change_tcb_state
             do_ipc_transfer_non_null_cte_wp_at2
        | wpc | clarsimp simp: is_reply_cap_to_def)+
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (wp hoare_allI hoare_drop_imp)+
   apply (fastforce simp add: st_tcb_def2 is_reply_cap_to_def)
   done
@@ -1412,7 +1412,7 @@ lemma delete_caller_cap_sym_refs:
   "\<lbrace>invs\<rbrace> delete_caller_cap t \<lbrace>\<lambda>rv s::det_ext state. sym_refs (state_refs_of s) \<rbrace>"
   apply (simp add: delete_caller_cap_def cap_delete_one_def unless_def)
   apply (wp fast_finalise_sym_refs get_cap_wp)
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   apply fastforce
   done
 *)
@@ -1460,7 +1460,7 @@ lemma receive_ipc_st_tcb_at_runnable:
              apply (wp gts_wp)
             apply (wp touch_object_wp')
            apply (wp hoare_drop_imps hoare_vcg_all_lift)[1]
-           soxxy (* FIXME: broken by touched-addrs -robs 
+           sorry (* FIXME: broken by touched-addrs -robs 
           apply ((wp sts_st_tcb_at_other get_simple_ko_wp gbn_wp get_simple_ko_wp | wpc)+)
   apply clarsimp
   apply (rule conjI)
@@ -1524,7 +1524,7 @@ lemma handle_recv_st_tcb_at:
              get_simple_ko_wp hoare_drop_imps hoare_vcg_all_lift_R)
     apply clarsimp
     apply wp+
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   apply fastforce
   done
 *)

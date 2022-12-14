@@ -482,7 +482,7 @@ lemma guarded_sub_switch: "((),x) \<in> fst (guarded_switch_to word s) \<Longrig
    apply force
   (* FIXME: Need some lemma saying switch_to_thread isn't impacted by adding word to the TA
      because the very first thing it does is add it to the TA anyway? -robs *)
-  soxxy
+  sorry
 
 lemma truncate_state_updates[simp]:
   "truncate_state (scheduler_action_update f s) = truncate_state s"
@@ -524,7 +524,7 @@ lemma guarded_switch_bcorres: "s_bcorres (guarded_switch_to t :: 'a state \<Righ
                         in_monad in_select
             split del: if_split)
   apply (drule guarded_sub_switch)
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (rule_tac x=t in exI, clarsimp split del: if_split)
   apply (drule_tac s=s in drop_sbcorres_underlying)
   apply (clarsimp simp: s_bcorres_underlying_def)
@@ -571,7 +571,7 @@ lemma schedule_choose_new_thread_bcorres1:
          | fastforce simp: s_bcorres_underlying_def set_scheduler_action_def
                            when_def exec_gets simpler_modify_def return_def
                            next_domain_def Let_def)+
-  soxxy (* FIXME: Broken by experimental-tpspec. -robs
+  sorry (* FIXME: Broken by experimental-tpspec. -robs
   done
   *)
 
@@ -593,7 +593,7 @@ lemma schedule_bcorres1:
   supply if_split[split del]
   apply (clarsimp simp: bcorres_underlying_def fail_def)
   apply (simp add: bdefs)
-  soxxy (* FIXME: broken by touched-addrs -robs
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (simp add: assert_opt_def)
   apply (simp split: option.split, intro conjI impI)
    apply (simp add: s_bcorres_underlying_def fail_def)
