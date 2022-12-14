@@ -710,11 +710,77 @@ lemma lookup_slot_for_thread_ta_subset_inv:
   apply(drule get_tcb_Some_True_False)
   using owns_thread_owns_cspace by blast
 
-(* XXX: Note, this doesn't exist, it's only proved for functions that call it like
-   do_normal_transfer (Ipc_A) and handle_invocation (Syscall_A).
-crunch pas_refined: lookup_slot_for_thread "pas_refined aag"
-  (wp: crunch_wps resolve_address_bits_pas_refined)
-*)
+crunches lookup_slot_for_thread
+  for pas_cur_domain: "pas_cur_domain aag"
+  (wp: touch_object_wp')
+
+(* Use this to simplify so stuff in the RHS of the antecedent is in terms of the return value,
+   before using hoare_drop_imp_R to drop the antecedent. -robs *)
+lemma hoare_imp_rev_unfold_R:
+  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. (a = fst (fst r) \<and> b = snd (fst r) \<and> c = snd r) \<longrightarrow> Q r s\<rbrace>, - \<Longrightarrow>
+   \<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. r = ((a, b), c) \<longrightarrow> Q r s\<rbrace>, -"
+  by (auto simp: validE_R_def validE_def)
+
+(* Derived from proof of resolve_address_bits_real_cte_at. -robs *)
+thm resolve_address_bits_real_cte_at
+lemma resolve_address_bits_rv_ko_at:
+  "\<lbrace> valid_objs and valid_cap (fst args) \<rbrace>
+  resolve_address_bits args
+  \<lbrace> \<lambda>rv s. ko_at (the (kheap s (fst (fst rv)))) (fst (fst rv)) s \<rbrace>, -"
+unfolding resolve_address_bits_def
+proof (induct args rule: resolve_address_bits'.induct)
+  case (1 z cap cref)
+  show ?case
+    apply (clarsimp simp add: validE_R_def validE_def valid_def split: sum.split)
+    apply (subst (asm) resolve_address_bits'.simps)
+    apply (cases cap)
+              defer 6 (* cnode *)
+          apply (auto simp: in_monad)[11]
+    apply (rename_tac obj_ref nat list)
+    apply (simp only: cap.simps)
+    apply (case_tac "nat + length list = 0")
+     apply (simp add: fail_def)
+    apply (simp only: if_False)
+    apply (simp only: K_bind_def in_bindE_R)
+    apply (elim conjE exE)
+    apply (simp only: split: if_split_asm)
+     apply (clarsimp simp add: in_monad)
+     apply (clarsimp simp add: valid_cap_def obj_at_def)
+    apply (simp only: K_bind_def in_bindE_R)
+    apply (elim conjE exE)
+    apply (simp only: split: if_split_asm)
+     apply (frule (9) "1.hyps")
+     apply (clarsimp simp: in_monad validE_def validE_R_def valid_def)
+     apply (frule in_inv_by_hoareD [OF get_cap_inv])
+     apply simp
+     apply clarsimp
+     apply (frule(1) post_by_hoare [OF touch_object_tainv.valid_objs.m_inv])
+     apply (frule(1) post_by_hoare [OF get_cap_valid])
+     apply (erule allE, erule impE, blast)
+     apply (drule (1) bspec, simp)
+    apply (clarsimp simp: in_monad)
+    apply (frule in_inv_by_hoareD [OF get_cap_inv])
+    apply (frule(1) post_by_hoare [OF touch_object_tainv.valid_cap.m_inv])
+    apply (clarsimp simp add: valid_cap_def obj_at_def)
+    done
+qed
+
+(* Derived from proof of lookup_slot_real_cte_at_wp. -robs *)
+thm lookup_slot_real_cte_at_wp
+lemma lookup_slot_rv_ko_at_wp [wp]:
+  "\<lbrace> \<lambda>s. valid_objs s \<rbrace> lookup_slot_for_thread t addr
+   \<lbrace> \<lambda>rv s. ko_at (the (kheap s (fst (fst rv)))) (fst (fst rv)) s \<rbrace>,-"
+  apply (simp add: lookup_slot_for_thread_def)
+  apply wp
+     apply (rule resolve_address_bits_rv_ko_at)
+    apply simp
+    apply wp
+   apply(wp touch_object_wp')
+  apply clarsimp
+  apply(drule get_tcb_to_unfiltered_Some)
+  apply(erule_tac t=t in objs_valid_tcb_ctable)
+  apply(clarsimp simp:get_tcb_def ta_filter_def split:option.splits)
+  done
 
 lemma lookup_cap_and_slot_ta_subset_inv:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
@@ -722,101 +788,35 @@ lemma lookup_cap_and_slot_ta_subset_inv:
   (* Toby: Note, when you do stuff in your cspace, or arch-specific stuff (because it pertains
      to your own address space) everything will typically be is_subject.
      It'll only be otherwise for Notifications, Ipc etc. *)
-  "\<lbrace>ta_subset_inv aag and pas_refined aag and pas_cur_domain aag and K (is_subject aag thread)\<rbrace>
+  "\<lbrace>ta_subset_inv aag and pas_refined aag and pas_cur_domain aag and K (is_subject aag thread) and
+    valid_objs\<rbrace> \<comment> \<open>Needed for lookup_slot_rv_ko_at_wp, new version of lookup_slot_real_cte_at_wp.\<close>
      lookup_cap_and_slot thread cptr
    \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   unfolding lookup_cap_and_slot_def
-  (* NB: This is same as applying (wpsimp wp: crunch_wps touch_object_ta_subset_inv) *)
   (* Toby: wpc is the tactic that handles cases for wp *)
   apply(wpc | wp touch_object_ta_subset_inv)+
   apply clarsimp
-  (* Toby: 1. Ask Corey how to break down this conjunction with forall
-     or how to avoid getting into this situation. *)
-  (* Toby: 2. Look at how lookup_slot_real_cte_at_wp is used in existing proofs
-     and how these proofs are set up in order to be able to use it. *)
-  (* Toby: The usual pattern here is to use individual lemmas that each discharge
-     (as their single postcondition) one of the conjuncts of this proof goal.
-     So, for these:
-     - lookup_slot_for_thread_ta_subset_inv
-     - something that preserves no_label_straddling_objs (we're supposing pas_refined, for now)
-     - something that preserves is_subject to give us "pasObjectAbs ... \<in> pas_labels etc",
-       probably lookup_slot_for_thread_authorised?
-     - here, obj_at should be discharged by lookup_slot_real_cte_at_wp? *)
-  find_theorems lookup_slot_for_thread obj_at
-(*
-  apply (wpsimp wp: crunch_wps) (* touch_object_ta_subset_inv *)
-    apply(rename_tac p bb x2)
-    using use_valid[OF _ touch_object_ta_subset_inv[where aag=aag]]
-    apply(clarsimp simp:valid_def)
-    apply(rename_tac p bb x2 s s')
-    apply(erule_tac x=s' in meta_allE)
-    apply(erule_tac x=p in meta_allE)
-    apply(erule_tac x=s in meta_allE)
-    apply(erule_tac x="the (kheap s p)" in meta_allE)
-    apply clarsimp
-    (* Do a bit of surgery to discard the preconditions we don't want to propagate up. *)
-    apply(erule meta_impE)
-     (* clarsimp avoids unifying with the schematic *)
-     apply(clarsimp simp only:conj_assoc[symmetric])
-     apply(rule conjI)
-      apply assumption
-     apply(clarsimp simp:obj_at_def)
-     (* p must be on the kheap because otherwise touch_object's assertion must have failed *)
-     apply(clarsimp simp:touch_object_def touch_objects_def exec_gets)
-     apply(force simp:bind_def in_assert)
-    apply force
+  apply(rule validE_allI)+
+   apply(wpsimp wp:lookup_slot_for_thread_ta_subset_inv)
+   apply(rule hoare_imp_rev_unfold_R)
    apply clarsimp
-   (* FIXME: Surely there is a better form for lookup_slot_for_thread_ta_subset_inv that
-      prevents us from having to use it in this convoluted way. *)
-   using use_valid[OF _ lookup_slot_for_thread_ta_subset_inv
-     [where aag=aag and thread=thread and cref=cptr, OF domains_distinct]]
-   apply(clarsimp simp:validE_def valid_def)
-   apply(clarsimp split:sum.splits)
-   apply(rule conjI)
-    apply clarsimp
-    apply(rename_tac s s' x1)
-    apply(erule_tac x="Inl x1" in meta_allE)
-    apply(erule_tac x=s' in meta_allE)
-    apply(erule_tac x=s in meta_allE)
-    apply clarsimp
-    (* FIXME: All this just to unify the schematic with the desired precondition, once again.
-       There must be a better way. *)
-    apply(erule meta_impE)
-     apply assumption
-    apply force
+   (* Now that everything's been simplified to be in terms of the rv, we can drop the antecedent
+      that gave us that. The bound variables that were causing us pain below now go away. -robs *)
+   apply(rule hoare_drop_impE_R)
    apply clarsimp
-   apply(rename_tac s s' aa ba bb)
-   apply(erule_tac x="Inr ((aa, ba), bb)" in meta_allE)
-   apply(erule_tac x=s' in meta_allE)
-   apply(erule_tac x=s in meta_allE)
-   apply clarsimp
-   (* This is the crux of it. We need lemmas that tell us `lookup_slot_for_thread` preserves
-      the relevant implications of each of these conjuncts. *)
-   apply(prop_tac "no_label_straddling_objs aag s")
-    apply force
-   (* For the next one we need lookup_slot_for_thread_authorised to tell us the *return value*
-      is accessible; our precondition that the thread `is_subject` isn't enough. *)
-   apply(prop_tac "is_subject aag aa")
-    using use_validE_R[OF _ lookup_slot_for_thread_authorised]
-    apply fastforce
-   (* Now for the part where we prove/invoke that `lookup_slot_for_thread` preserves these. *)
-   apply(rule conjI)
-    (* That `lookup_slot_for_thread` doesn't create any new straddling objects. *)
-    apply(clarsimp simp:no_label_straddling_objs_def split:option.splits)
-    (* XXX: We haven't even thought about this yet - so far we've assumed we'll be able to
-       prove it as a new invariant or even as a consequence of pas_refined, but we might not
-       even have pas_refined at this level of granularity! *)
-    defer (* FIXME: prove? *)
-   (* That `lookup_slot_for_thread` doesn't change the accessibility (according to the policy)
-      of the object it returns, because it doesn't change the current domain. *)
-   apply(prop_tac "pas_cur_domain aag s'")
-    defer (* FIXME: We should get this by proving it doesn't change cur_domain. *)
-   apply(clarsimp simp:pas_labels_accessible_to_def)
-   using domains_distinct cur_label_to_subj
-   apply force
-  apply clarsimp
-*)
-  sorry
+   apply(wpsimp wp: touch_object_ta_subset_inv lookup_slot_for_thread_ta_subset_inv)
+   apply(rule hoare_vcg_conj_lift_R)
+    apply(rule_tac Q'="\<lambda>_. pas_refined aag" in hoare_post_imp_R)
+     apply wp
+    apply(force simp:pas_refined_no_label_straddling_objs)
+   apply(rule_tac Q'="\<lambda>rv s. pas_cur_domain aag s \<and> is_subject aag (fst (fst rv)) \<and>
+     obj_at ((=) (the (kheap s (fst (fst rv))))) (fst (fst rv)) s" in hoare_post_imp_R)
+    apply(wpsimp wp:lookup_slot_for_thread_pas_cur_domain lookup_slot_for_thread_authorised
+      lookup_slot_real_cte_at_wp)
+   apply(clarsimp simp:pas_labels_accessible_to_def obj_at_def)
+   apply(force dest:cur_label_to_subj[OF domains_distinct])
+  apply force
+  done
 
 (* Ipc_A *)
 thm lookup_extra_caps_authorised lookup_cap_and_slot_authorised
