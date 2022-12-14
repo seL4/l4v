@@ -782,28 +782,30 @@ lemma lookup_slot_rv_ko_at_wp [wp]:
   apply(clarsimp simp:get_tcb_def ta_filter_def split:option.splits)
   done
 
-lemma lookup_cap_and_slot_ta_subset_inv:
+(* This variant is needed at times to deal with typical postconditions on its retval. -robs *)
+lemma lookup_slot_for_thread_ta_subset_inv':
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  assumes Q_def: "Q = (\<lambda>rv s. (\<forall>a b c. rv = ((a, b), c) \<longrightarrow>
+    ta_subset_inv aag s \<and>
+    no_label_straddling_objs aag s \<and>
+    pasObjectAbs aag a \<in> pas_labels_accessible_to aag (cur_label aag s) \<and>
+    obj_at ((=) (the (kheap s (fst (fst rv))))) (fst (fst rv)) s))"
   shows
   (* Toby: Note, when you do stuff in your cspace, or arch-specific stuff (because it pertains
      to your own address space) everything will typically be is_subject.
      It'll only be otherwise for Notifications, Ipc etc. *)
   "\<lbrace>ta_subset_inv aag and pas_refined aag and pas_cur_domain aag and K (is_subject aag thread) and
-    valid_objs\<rbrace> \<comment> \<open>Needed for lookup_slot_rv_ko_at_wp, new version of lookup_slot_real_cte_at_wp.\<close>
-     lookup_cap_and_slot thread cptr
+    valid_objs\<rbrace>
+     lookup_slot_for_thread thread cref
+   \<lbrace>Q\<rbrace>,
    \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
-  unfolding lookup_cap_and_slot_def
-  (* Toby: wpc is the tactic that handles cases for wp *)
-  apply(wpc | wp touch_object_ta_subset_inv)+
-  apply clarsimp
+  unfolding Q_def
   apply(rule validE_allI)+
-   apply(wpsimp wp:lookup_slot_for_thread_ta_subset_inv)
+  apply(wp lookup_slot_for_thread_ta_subset_inv)
+   (* Simplify to be in terms of the rv then drop antecedent and bound variables. -robs *)
    apply(rule hoare_imp_rev_unfold_R)
    apply clarsimp
-   (* Now that everything's been simplified to be in terms of the rv, we can drop the antecedent
-      that gave us that. The bound variables that were causing us pain below now go away. -robs *)
    apply(rule hoare_drop_impE_R)
-   apply clarsimp
    apply(wpsimp wp: touch_object_ta_subset_inv lookup_slot_for_thread_ta_subset_inv)
    apply(rule hoare_vcg_conj_lift_R)
     apply(rule_tac Q'="\<lambda>_. pas_refined aag" in hoare_post_imp_R)
@@ -817,6 +819,17 @@ lemma lookup_cap_and_slot_ta_subset_inv:
    apply(force dest:cur_label_to_subj[OF domains_distinct])
   apply force
   done
+
+lemma lookup_cap_and_slot_ta_subset_inv:
+  assumes domains_distinct[wp]: "pas_domains_distinct aag"
+  shows
+  "\<lbrace>ta_subset_inv aag and pas_refined aag and pas_cur_domain aag and K (is_subject aag thread) and
+    valid_objs\<rbrace> \<comment> \<open>Needed for lookup_slot_rv_ko_at_wp, new version of lookup_slot_real_cte_at_wp.\<close>
+     lookup_cap_and_slot thread cptr
+   \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  unfolding lookup_cap_and_slot_def
+  by (wpsimp wp: touch_object_ta_subset_inv lookup_slot_for_thread_ta_subset_inv'
+    | fastforce simp: obj_at_def)+
 
 (* Ipc_A *)
 thm lookup_extra_caps_authorised lookup_cap_and_slot_authorised
@@ -857,14 +870,13 @@ lemma set_thread_state_ta_subset_inv:
 lemma lookup_cap_ta_subset_inv:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows
-  "\<lbrace>ta_subset_inv aag and (pas_refined aag and pas_cur_domain aag and K (is_subject aag thread))\<rbrace>
+  "\<lbrace>ta_subset_inv aag and (pas_refined aag and pas_cur_domain aag and K (is_subject aag thread)) and
+    valid_objs\<rbrace>
      lookup_cap thread ref
    \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   unfolding lookup_cap_def
-  apply (wpsimp wp: crunch_wps touch_objects_wp touch_object_wp'
-    lookup_slot_for_thread_ta_subset_inv)
-   (* FIXME: Again unable to use lookup_slot_for_thread_ta_subset_inv *)
-   sorry
+  by (wpsimp wp: touch_object_ta_subset_inv lookup_slot_for_thread_ta_subset_inv'
+    | fastforce simp: obj_at_def)+
 
 thm lookup_slot_for_cnode_op_authorised (* preconds taken from here *)
 lemma lookup_slot_for_cnode_op_ta_subset_inv:
@@ -875,10 +887,10 @@ lemma lookup_slot_for_cnode_op_ta_subset_inv:
      lookup_slot_for_cnode_op is_source croot ptr depth
    \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   unfolding lookup_slot_for_cnode_op_def
-  apply(wpsimp wp: crunch_wps touch_objects_wp touch_object_wp'
-    resolve_address_bits_ta_subset_inv)
-  (* FIXME: resolve_address_bits_ta_subset_inv doesn't seem to be applicable here *)
-  sorry
+  apply wpsimp
+       apply(rule validE_allI)+
+       apply(wpsimp wp: hoare_drop_impE_R resolve_address_bits_ta_subset_inv)+
+  done
 
 crunch pas_cur_domain: lookup_slot_for_cnode_op "pas_cur_domain aag"
   (wp: crunch_wps touch_objects_wp resolve_address_bits'_pas_cur_domain)
