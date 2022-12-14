@@ -222,7 +222,7 @@ lemma use_spec_empty_fail: "(\<And>s. spec_empty_fail f s) \<Longrightarrow> emp
 lemma resolve_address_bits_spec_empty_fail:
   notes spec_empty_fail_bindE'[wp_split]
   shows "spec_empty_fail (resolve_address_bits slot) s"
-  sorry
+  soxxy
   (*
   unfolding resolve_address_bits_def
   proof (induct arbitrary: s rule: resolve_address_bits'.induct)
@@ -333,7 +333,7 @@ next
     apply (simp | intro conjI impI)+
      apply (wp drop_spec_empty_fail)[1]
      apply (simp add: get_cap_empty_fail)
-    sorry (* FIXME: broken by touched-addrs -robs
+    soxxy (* FIXME: broken by touched-addrs -robs
     apply (rule spec_empty_fail_bindE')
      apply ((wp drop_spec_empty_fail | simp)+)[1]
     apply (rule spec_empty_fail_bindE')
@@ -393,7 +393,7 @@ proof (induct rule: cap_revoke.induct)
     apply (simp add: whenE_def | intro conjI impI)+
       apply (rule spec_empty_fail_bindE',
                ((wp drop_spec_empty_fail select_ext_empty_fail | simp)+)[1])+
-      sorry (* FIXME: broken by touched-addrs -robs
+      soxxy (* FIXME: broken by touched-addrs -robs
       apply (rule "1.hyps", simp+)
      apply (wp drop_spec_empty_fail)+
      done

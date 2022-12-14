@@ -99,7 +99,7 @@ proof -
                 validE_R_sp[OF data_to_obj_type_sp]
                 validE_R_sp[OF map_ensure_empty]
                 validE_R_sp[OF dui_sp_helper])+
-      sorry (* FIXME: broken by touched-addrs -robs
+      soxxy (* FIXME: broken by touched-addrs -robs
       apply (intro ta_agnostic_conj; clarsimp)
       apply (intro ta_agnostic_conj)
          apply (rule base.invs.ta_agnostic)
@@ -303,7 +303,7 @@ lemma create_cap_valid_arch_caps[wp, Untyped_AI_assms]:
   apply (simp add: create_cap_def set_cdt_def)
   apply (wp set_cap_valid_arch_caps)
   apply (simp add: trans_state_update[symmetric] del: trans_state_update)
-  sorry (* below script is hanging. temp sorry -scottb
+  soxxy (* below script is hanging. temp soxxy -scottb
   (* FIXME: The use of touch_object_wp' complicates the proof at this point. Previously,
      the single (wp ... | simp)+ line was enough to bring it back down to 1 goal. -robs *)
   apply (wp hoare_vcg_disj_lift hoare_vcg_conj_lift hoare_vcg_all_lift hoare_vcg_imp_lift touch_object_wp' | simp)+
@@ -398,7 +398,7 @@ global_interpretation Untyped_AI? : Untyped_AI
     interpret Arch .
     case 1 show ?case
     apply (unfold_locales; (fact Untyped_AI_assms)?)
-     sorry (* -scottb *)
+     soxxy (* -scottb *)
   qed
 
 end

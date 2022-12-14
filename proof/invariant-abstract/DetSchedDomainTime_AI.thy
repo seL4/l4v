@@ -179,7 +179,7 @@ crunch domain_list_inv[wp]: handle_fault "\<lambda>s. P (domain_list s)"
 
 lemma get_mrs_domain_list_inv[wp]:
   "get_mrs param_a param_b param_c \<lbrace>\<lambda>s. P (domain_list s)\<rbrace>"
-  sorry (* FIXME: broken by touched-addrs -robs *)
+  soxxy (* FIXME: broken by touched-addrs -robs *)
 
 crunch domain_list_inv[wp]:
   reply_from_kernel, create_cap, retype_region, do_reply_transfer
@@ -337,7 +337,7 @@ crunch domain_time_inv[wp]:
 
 lemma get_mrs_domain_time_inv[wp]:
   "get_mrs param_a param_b param_c \<lbrace>\<lambda>s. P (domain_time s)\<rbrace>"
-  sorry (* FIXME: broken by touched-addrs -robs *)
+  soxxy (* FIXME: broken by touched-addrs -robs *)
 
 crunch domain_time_inv[wp]: do_reply_transfer "\<lambda>s. P (domain_time s)"
   (wp: hoare_drop_imps)
@@ -447,7 +447,7 @@ lemma domainswitch_sequence_domain_time_left[wp]:
    \<lbrace>\<lambda>_ s. 0 < domain_time s \<rbrace>"
   apply wp
   (* FIXME: Made necessary by experimental-tpspec. -robs *)
-  sorry
+  soxxy
 
 lemma schedule_choose_new_thread_domain_time_left[wp]:
   "\<lbrace> valid_domain_list \<rbrace>

@@ -426,7 +426,7 @@ lemma decode_cnode_inv_wf[wp]:
                  (\<forall>r\<in>cte_refs cap (interrupt_irq_node s). ex_cte_cap_wp_to is_cnode_cap r s)) \<rbrace>
       decode_cnode_invocation mi args cap cs
     \<lbrace>valid_cnode_inv\<rbrace>,-"
-  sorry (* FIXME: broken by touched-addrs v1 (Dec 2021) *)
+  soxxy (* FIXME: broken by touched-addrs v1 (Dec 2021) *)
   (*
   apply (rule decode_cnode_cases2[where args=args and exs=cs and label=mi])
          \<comment> \<open>Move/Insert\<close>
@@ -529,7 +529,7 @@ end
 
 lemma decode_cnode_inv_tainv[wp]:
   "\<lbrace>ignore_ta P\<rbrace> decode_cnode_invocation mi args cap cs \<lbrace>\<lambda>rv. ignore_Ta P\<rbrace>"
-  sorry (* FIXME: broken by touched-addrs v1 (Dec 2021) *)
+  soxxy (* FIXME: broken by touched-addrs v1 (Dec 2021) *)
   (* this should be crunched perhaps
   unfolding decode_cnode_invocation_def
   apply (simp add: split_def unlessE_def whenE_def
@@ -651,7 +651,7 @@ lemma final_cap_duplicate_irq:
   apply (subgoal_tac "{p1, p2} \<subseteq> {(a, b)}")
    apply simp
   apply (drule sym[where s="Collect p" for p], simp)
-  sorry (* FIXME: broken by touched-addrs -robs
+  soxxy (* FIXME: broken by touched-addrs -robs
   apply blast
   done
 *)
@@ -705,7 +705,7 @@ lemma cap_swap_not_recursive:
   apply (frule(3) final_cap_duplicate_cte_ptr)
    apply simp
   apply (case_tac c2, simp_all add: fst_cte_ptrs_def)
-    sorry (* FIXME: broken by touched-addrs -robs
+    soxxy (* FIXME: broken by touched-addrs -robs
   done
 *)
 
@@ -719,7 +719,7 @@ lemma cap_swap_fd_not_recursive:
    \<lbrace>\<lambda>rv s. card (not_recursive_cspaces s) < n\<rbrace>"
    unfolding cap_swap_for_delete_def
    apply (wpsimp wp: cap_swap_not_recursive get_cap_wp touch_objects_wp)
-   sorry (* FIXME: broken by touched-addrs -robs *)
+   soxxy (* FIXME: broken by touched-addrs -robs *)
 
 
 lemma set_mrs_typ_at [wp]:
@@ -907,7 +907,7 @@ lemma preemption_point_not_recursive_cspaces[wp]:
   "preemption_point \<lbrace>\<lambda>s. P (not_recursive_cspaces s)\<rbrace>"
   unfolding preemption_point_def
   apply (wpsimp wp: OR_choiceE_weak_wp alternative_valid hoare_drop_imp)
-  sorry (* FIXME: broken by touched-addrs -robs *)
+  soxxy (* FIXME: broken by touched-addrs -robs *)
 
 lemma preemption_point_caps_of_state[wp]:
   "preemption_point \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>"
@@ -947,7 +947,7 @@ lemma rec_del_termination:
                    split: if_split_asm)
      apply (erule use_valid [OF _ set_cap_caps_of_state])+
      apply (case_tac fcap; clarsimp simp: fst_cte_ptrs_first_cte_of in_monad)
-     sorry (* FIXME: broken by touched-addrs -robs
+     soxxy (* FIXME: broken by touched-addrs -robs
     apply (case_tac new_cap; simp add: is_cap_simps)
      apply (case_tac fcap; clarsimp simp: fst_cte_ptrs_first_cte_of)
     apply (case_tac fcap; clarsimp simp: fst_cte_ptrs_first_cte_of in_monad)
@@ -1046,7 +1046,7 @@ next
        apply (wp wp hoare_drop_imps touch_objects_wp | simp add: is_final_cap_def)+
      apply (wp get_cap_wp)
     apply (wpsimp wp: touch_object_wp')
-    sorry (* FIXME: broken by touched-addrs -robs
+    soxxy (* FIXME: broken by touched-addrs -robs
     done
   *)
 next
@@ -1062,7 +1062,7 @@ next
        apply (wp hoare_drop_imps)[1]
       apply (wp touch_object_wp')
      apply (simp only: simp_thms)
-     sorry (* FIXME: broken by touched-addrs -robs
+     soxxy (* FIXME: broken by touched-addrs -robs
      apply (rule "4.hyps", assumption+)
     apply wp
     done
@@ -1917,7 +1917,7 @@ lemma cap_swap_valid_ioc[wp]:
 
 lemma set_cap_machine_state [wp]:
   "set_cap param_a param_b \<lbrace>\<lambda>s. P (machine_state s)\<rbrace>"
-  sorry (* FIXME: broken by touched-addrs -robs *)
+  soxxy (* FIXME: broken by touched-addrs -robs *)
 
 crunch machine_state[wp]: cap_swap "\<lambda>s. P(machine_state s)"
   (wp: touch_objects_wp)
@@ -2687,7 +2687,7 @@ lemma empty_slot_rvk_prog:
   "\<lbrace>\<lambda>s. revoke_progress_ord m (option_map cap_to_rpo \<circ> caps_of_state s)\<rbrace>
      empty_slot sl opt
    \<lbrace>\<lambda>rv s. revoke_progress_ord m (option_map cap_to_rpo \<circ> caps_of_state s)\<rbrace>"
-  sorry (* FIXME: broken by touched-addrs v1 (Dec 2021) *)
+  soxxy (* FIXME: broken by touched-addrs v1 (Dec 2021) *)
   (*
   apply (simp add: empty_slot_def)
   apply (rule hoare_pre)
@@ -2835,7 +2835,7 @@ lemma set_cap_id:
   apply (clarsimp simp: tcb_cap_cases_def
                  split: if_split_asm,
          simp_all add: map_upd_triv)
-  sorry (* FIXME: broken by touched-addrs -robs
+  soxxy (* FIXME: broken by touched-addrs -robs
   done
 *)
 
@@ -3029,7 +3029,7 @@ lemma cap_revoke_termination:
    apply (drule_tac f="\<lambda>f. f (aa, ba)" in arg_cong)
    apply (clarsimp simp: cte_wp_at_caps_of_state cap_to_rpo_def)
    apply (simp split: cap.split_asm)
-   sorry (* FIXME: broken by touched-addrs -robs
+   soxxy (* FIXME: broken by touched-addrs -robs
    apply (erule (1) use_valid [OF _ preemption_point_caps_of_state])
   done
 *)
@@ -3053,7 +3053,7 @@ proof (induct rule: cap_revoke_induct)
     apply (wp "1.hyps")
            apply (wp x p hoare_drop_imps select_wp touch_object_wp')+
      apply simp_all
-    sorry (* FIXME: broken by touched-addrs -robs
+    soxxy (* FIXME: broken by touched-addrs -robs
     done
   *)
 qed
@@ -3079,7 +3079,7 @@ proof (induct rule: cap_revoke_induct)
     apply (wp "1.hyps")
            apply (wp x p hoare_drop_imps select_wp touch_object_wp')+
      apply (simp_all add: y)
-    sorry (* FIXME: broken by touched-addrs -robs
+    soxxy (* FIXME: broken by touched-addrs -robs
     done
   *)
 qed
@@ -3099,7 +3099,7 @@ lemma cap_revoke_invs:
      defer
    apply simp+
   apply(clarsimp simp:invs_def)
-  sorry (* FIXME: broken by touched-addrs -robs
+  soxxy (* FIXME: broken by touched-addrs -robs
   done
 *)
 

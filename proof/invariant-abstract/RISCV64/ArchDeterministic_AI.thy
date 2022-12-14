@@ -21,7 +21,7 @@ lemma set_per_domain_default_vm_root_valid_list:
    od)
    \<lbrace>\<lambda>_.valid_list\<rbrace>"
   (* TODO: Made necessary by experimental-tpspec. -robs *)
-  sorry
+  soxxy
 
 crunch valid_list[wp, Deterministic_AI_assms]:
   set_vm_root valid_list

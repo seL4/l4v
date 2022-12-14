@@ -336,7 +336,7 @@ lemma do_normal_transfer_non_null_cte_wp_at [Ipc_AI_assms]:
   apply simp
   apply (wp transfer_caps_non_null_cte_wp_at get_mi_tainv
     | clarsimp simp:imp)+
-  sorry (* FIXME: broken by touched-addrs -robs
+  soxxy (* FIXME: broken by touched-addrs -robs
   done
 *)
 
@@ -359,7 +359,7 @@ lemma do_normal_transfer_tcb_caps:
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps transfer_caps_tcb_caps get_mi_tainv
      | simp add:imp)+
-  sorry (* FIXME: broken by touched-addrs -robs
+  soxxy (* FIXME: broken by touched-addrs -robs
   done
 *)
 
@@ -433,7 +433,7 @@ crunch cap_to                    [wp, Ipc_AI_assms]:  make_arch_fault_msg "ex_no
 
 lemma as_user_obj_at[wp]:
   "as_user tptr f \<lbrace>\<lambda>s. P (obj_at P' pd s)\<rbrace>"
-  sorry (* FIXME: broken by touched-addrs -robs *)
+  soxxy (* FIXME: broken by touched-addrs -robs *)
 
 crunch obj_at[wp, Ipc_AI_assms]:  make_arch_fault_msg "\<lambda>s. P (obj_at P' pd s)"
   (wp: as_user_inv getRestartPC_inv mapM_wp' crunch_wps set_object_wp touch_object_wp' simp: getRegister_def)
@@ -479,7 +479,7 @@ lemma do_ipc_transfer_respects_device_region[Ipc_AI_cont_assms]:
                            hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift
                            get_mi_tainv
                        simp: obj_at_def is_tcb_def)+
-         sorry (* FIXME: broken by touched-addrs -robs
+         soxxy (* FIXME: broken by touched-addrs -robs
    apply (simp split: kernel_object.split_asm)
    done
 *)

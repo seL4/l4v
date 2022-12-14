@@ -1505,7 +1505,7 @@ lemma big_rw_meow:
   apply fastforce
   done
 
-
+(* a lemma i proved for the unmodified version of unmap_page. probably not heaps useful *)
 lemma already_touched_meow2:
   "table_base xa \<in> vs_all_pts_of asid vptr s \<Longrightarrow>
   ((\<Union>x\<in>{(p, ko). p \<in> vs_all_pts_of asid vptr s \<and> ko_at ko p s}.
@@ -1529,135 +1529,6 @@ lemma already_touched_meow2:
   done
 
 
-lemma already_touched_meow_aux:
-  "(\<Union>x\<in>{(p, ko).
-          p \<in> vs_all_pts_of asid vptr s \<and> ko_at ko p s}.
-        case x of (x, xa) \<Rightarrow> obj_range x xa)
-    \<subseteq> S \<Longrightarrow>
-    (do {
-       (level', pt_ptr') \<leftarrow>
-         pt_walk lvs 0 pt vptr;
-       oreturn
-        (level', pt_slot_offset level' pt_ptr' vptr)
-     })
-     (\<lambda>p. pte_of p
-           (obind (kheap s) (ta_filter True S) |> aobj_of |>
-            pt_of)) =
-    (do {
-       (level', pt_ptr') \<leftarrow>
-         pt_walk lvs 0 pt vptr;
-       oreturn
-        (level', pt_slot_offset level' pt_ptr' vptr)
-     })
-     (\<lambda>p. pte_of p (kheap s |> aobj_of |> pt_of))"
-  thm pt_walk.induct
-  term pt_walk
-  apply (induct lvs _ pt vptr rule:pt_walk.induct)
-  apply (clarsimp simp: obind_def pte_of_def split:option.splits)
-  oops
-
-lemma aux2:
-  "(\<Union>x\<in>{(p, ko). p \<in> vs_all_pts_of asid vptr s \<and> ko_at ko p s}.
-        case x of (x, xa) \<Rightarrow> obj_range x xa)
-    \<subseteq> S \<Longrightarrow>
-    (do {
-       (level', pt_ptr') \<leftarrow> pt_walk mlv blv pt vptr;
-       oreturn (level', pt_slot_offset level' pt_ptr' vptr)
-     })
-     (\<lambda>p. pte_of p
-           (obind (kheap s) (ta_filter True S) |> aobj_of |> pt_of)) =
-    (do {
-       (level', pt_ptr') \<leftarrow> pt_walk mlv blv pt vptr;
-       oreturn (level', pt_slot_offset level' pt_ptr' vptr)
-     })
-     (\<lambda>p. pte_of p (kheap s |> aobj_of |> pt_of))"
-  thm pt_walk.induct
-  apply (induction mlv blv pt vptr rule:pt_walk.induct)
-  apply clarsimp
-  apply (case_tac "bot_level < level"; clarsimp)
-   defer
-   apply (clarsimp simp: obind_def oreturn_def)
-  sorry
-
-
-
-lemma pt_walk_generalised_rewrite:
-  "(\<And>p. table_base p \<in> vs_all_pts_of asid vptr s \<Longrightarrow> fn p = fn' p) \<Longrightarrow>
-  pt_walk max_pt_level 0 pt vptr fn = pt_walk max_pt_level 0 pt vptr fn'"
-  thm pt_walk.induct
-  apply (induction rule: pt_walk.induct)
-  apply clarsimp
-  apply (case_tac "bot_level < level"; clarsimp simp: pt_walk_top)
-  apply (subst pt_walk.simps, clarsimp)+
-
-  find_theorems obind name:obind
-
-  thm vs_all_pts_of_def
-  thm vs_all_pts_of_from_level_def
-  apply (case_tac "fn (pt_slot_offset level pt_ptr vptr)")
-
-  apply (intro obind_eqI)
-   apply clarsimp
-
-  apply (clarsimp simp: obind_def)
-  
-
-  apply (case_tac "fn' (pt_slot_offset level pt_ptr vptr)", clarsimp)
-   apply (case_tac "fn (pt_slot_offset level pt_ptr vptr)", clarsimp)
-   apply clarsimp
-   apply (drule_tac x=a in meta_spec)
-   apply (drule_tac x=fn in meta_spec)
-   apply clarsimp
-   
-
-
-  apply (prop_tac "fn (pt_slot_offset level pt_ptr vptr) = fn' (pt_slot_offset level pt_ptr vptr)")
-   apply (drule_tac x="pt_slot_offset level pt_ptr vptr" in meta_spec)
-   apply (subgoal_tac "table_base (pt_slot_offset level pt_ptr vptr) \<in> vs_all_pts_of asid vptr s")
-    apply blast
-   
-
-  apply (case_tac "fn (pt_slot_offset level pt_ptr vptr)", clarsimp)
-   apply (case_tac "fn' (pt_slot_offset level pt_ptr vptr)", clarsimp)
-   apply clarify
-  sorry
-
-lemma pt_lookup_slot_generalised_rewrite:
-  "(\<And>p. table_base p \<in> vs_all_pts_of asid vptr s \<Longrightarrow> P (kheap s) p = P (obind (kheap s) fl) p) \<Longrightarrow>
-  pt_lookup_slot pt vptr (P (kheap s)) = pt_lookup_slot pt vptr (P (obind (kheap s) fl))"
-  apply (clarsimp simp: pt_lookup_slot_def pt_lookup_slot_from_level_def)
-  apply (clarsimp simp: oreturn_def obind_def split: option.splits)
-  apply (subst pt_walk_generalised_rewrite, blast)
-  apply clarsimp
-  done
-
-lemma already_touched_meow:
-  "((\<Union>x\<in>{(p, ko). p \<in> vs_all_pts_of asid vptr s \<and> ko_at ko p s}.
-                           case x of (x, xa) \<Rightarrow> obj_range x xa)) \<subseteq> S \<Longrightarrow>
-  pt_lookup_slot pt vptr
-              (\<lambda>p. pte_of p
-                    (obind (kheap s) (ta_filter True S) |> aobj_of |> pt_of))
-  =
-  pt_lookup_slot pt vptr
-              (\<lambda>p. pte_of p
-                    (kheap s |> aobj_of |> pt_of))"
-  apply (subst pt_lookup_slot_generalised_rewrite)
-   apply (rule already_touched_meow2, assumption, assumption)
-  apply clarsimp
-  done
-
-
-
-lemma eq_subset_eq:
-  "A \<subseteq> A"
-  by simp
-
-
-
-
-
-
-
 
 lemma table_base_apology:
   "x = table_base (pt_slot_offset level pt_ptr vptr) \<Longrightarrow>
@@ -1666,71 +1537,184 @@ lemma table_base_apology:
   apply (clarsimp simp: obj_range_def)
   sorry (* I am pretty sure this is true, I'm just not sure how to prove it *)
 
-lemma aux:
-  "\<lbrakk>level \<le> max_pt_level;
-        vspace_for_asid False asid s = Some pt;
-        (kheap s |> aobj_of |> asid_pool_of) x2 = Some x2a;
-        x2a (asid_low_bits_of asid) = Some x2b;
-        pool_for_asid asid s = Some x2;
 
-        l < max_pt_level
-\<rbrakk>
-       \<Longrightarrow> 
-  
-  pt_walk max_pt_level l x2b vptr
-            (\<lambda>p. pte_of p (kheap s |> aobj_of |> pt_of)) =
-           Some
-            (l', table_base (pt_slot_offset level pt_ptr vptr))"
-  apply (clarsimp simp: pt_walk.simps)
-  apply (clarsimp simp: obind_def opt_map_def aobj_of_def pte_of_def split:option.splits split:kernel_object.splits)
-
+lemma already_touched_meow_pteofaux:
+  "0 < level \<Longrightarrow>
+((\<Union>x\<in>{(p, ko). p \<in> pt_all_slots_of level pt vptr
+            (\<lambda>p'. pte_of p' (kheap s |> aobj_of |> pt_of)) \<and> ko_at ko p s}.
+                           case x of (x, xa) \<Rightarrow> obj_range x xa)) \<subseteq> S \<Longrightarrow>
+    pte_of (pt_slot_offset level pt vptr)
+     (obind (kheap s) (ta_filter True S) |> aobj_of |> pt_of) =
+    pte_of (pt_slot_offset level pt vptr)
+     (kheap s |> aobj_of |> pt_of)"
+  apply (subst pte_of_def, subst pte_of_def, clarsimp)
+  apply (intro obind_eqI_full; clarsimp)
+  apply (subst (asm) obind_def opt_map_def)+
+  apply (clarsimp split: option.splits)
+  apply (clarsimp simp: obind_def opt_map_def ta_filter_def split: option.splits)
   apply (intro conjI impI allI)
-            sledgehammer
-
-lemma helloguy:
-  " level \<le> max_pt_level \<Longrightarrow>
-  vspace_for_asid False asid s = Some pt \<Longrightarrow>
-  table_base (pt_slot_offset level pt_ptr vptr) \<in> ((\<Union>x\<in>{(p, ko). p \<in> vs_all_pts_of asid vptr s}.
-                           case x of (x, xa) \<Rightarrow> obj_range x xa))"
-  apply (clarsimp simp: vs_all_pts_of_def vs_all_pts_of_from_level_def)
-  apply (clarsimp simp: vs_lookup_table_def [simplified f_kheap_to_kheap])
-  apply (rule_tac x="table_base (pt_slot_offset level pt_ptr vptr)" in exI)
+    apply clarsimp+
   
+  apply (subgoal_tac "x \<in> S", simp)
+  apply (erule set_mp)
+  apply clarsimp
+  apply (rule exI [where x="table_base (pt_slot_offset level pt vptr)"])
   apply (intro conjI)
    defer
-   using table_base_apology apply clarsimp
+   apply (simp add: obj_at_def)
+  find_theorems table_base pt_slot_offset
+  apply (clarsimp simp: pt_all_slots_of_def pt_lookup_slot_from_level_def)
+  apply (subst pt_walk.simps)
+  apply (rule_tac x=level in exI)
+  apply clarsimp
+  find_theorems table_base
+  find_theorems pt_slot_offset table_base
   
-  thm touch_objects_wp'
+  
+  apply (clarsimp simp: pt_all_slots_of_def pt_lookup_slot_def pt_lookup_slot_from_level_def)
+  apply (clarsimp simp: obind_def opt_map_def aobj_of_def pte_of_def 
+                 split: option.splits)
+  apply (subst pt_walk.simps)
+  apply (clarsimp simp: obind_def opt_map_def aobj_of_def pte_of_def 
+                 split: option.splits)
+  apply (intro conjI impI allI)
+  sorry
+  
+thm pt_walk.simps
 
-  apply (rule_tac x="max_pt_level-1" in exI) (* not sure about this guess *)
-  apply (intro conjI)
+lemma obind_def2:
+  "(obind f g) s = (case (f s) of None \<Rightarrow> None | Some x \<Rightarrow> g x s)"
+  by (simp add: obind_def)
+
+lemma obind_late_return:
+  "(do { r \<leftarrow> f;
+         oreturn (P r)
+       }) s
+  =
+  (case f s of None \<Rightarrow> None | Some x \<Rightarrow> oreturn (P x) s)"
+  by (simp add: obind_def)
+
+lemma all_slots_of_subset_aux:
+  "0 < level \<Longrightarrow>
+  pte_of (pt_slot_offset level pt_ptr vptr) (kheap s |> aobj_of |> pt_of) = Some x \<Longrightarrow>
+  is_PageTablePTE x \<Longrightarrow>
+  {(p, ko).
+              p \<in> pt_all_slots_of (level-1) (pptr_from_pte x) vptr
+                    (\<lambda>p'. pte_of p' (kheap s |> aobj_of |> pt_of)) \<and>
+              ko_at ko p s}
+  \<subseteq>
+  {(p, ko).
+              p \<in> pt_all_slots_of level pt_ptr vptr
+                    (\<lambda>p'. pte_of p' (kheap s |> aobj_of |> pt_of)) \<and>
+              ko_at ko p s}"
+    apply clarsimp             
+  apply (subst pt_all_slots_of_def pt_lookup_slot_def pt_lookup_slot_from_level_def)+
+  apply clarsimp
+  apply (clarsimp simp: pt_all_slots_of_def)
+  apply (clarsimp simp: pt_lookup_slot_from_level_def)
+  apply (subst pt_walk.simps)
+  apply (rule_tac x="aa" in exI)
+  apply clarsimp
+  apply (subst obind_def2)
+  apply (subst obind_def2)
+  apply clarsimp
+  done
+
+lemma subset_eq_obj_range:
+  "A \<subseteq> B \<Longrightarrow>
+  (\<Union>x\<in>A. case x of (x, xa) \<Rightarrow> obj_range x xa)
+  \<subseteq>
+  (\<Union>x\<in>B. case x of (x, xa) \<Rightarrow> obj_range x xa)"
+  by blast
+
+lemma all_slots_of_subset:
+  "0 < level \<Longrightarrow>
+  pte_of (pt_slot_offset level pt_ptr vptr) (kheap s |> aobj_of |> pt_of) = Some x \<Longrightarrow>
+  is_PageTablePTE x \<Longrightarrow>
+  (\<Union>x\<in>{(p, ko).
+              p \<in> pt_all_slots_of (level-1) (pptr_from_pte x) vptr
+                    (\<lambda>p'. pte_of p' (kheap s |> aobj_of |> pt_of)) \<and>
+              ko_at ko p s}.
+            case x of (x, xa) \<Rightarrow> obj_range x xa)
+  \<subseteq>
+  (\<Union>x\<in>{(p, ko).
+              p \<in> pt_all_slots_of level pt_ptr vptr
+                    (\<lambda>p'. pte_of p' (kheap s |> aobj_of |> pt_of)) \<and>
+              ko_at ko p s}.
+            case x of (x, xa) \<Rightarrow> obj_range x xa)"
+  apply (drule all_slots_of_subset_aux, simp, simp)
+  apply (rule subset_eq_obj_range, simp)
+  done
+
+lemma already_touched_meow_ptwalkaux:
+  "((\<Union>x\<in>{(p, ko). p \<in> pt_all_slots_of max_pt_level pt vptr
+            (\<lambda>p'. pte_of p' (kheap s |> aobj_of |> pt_of)) \<and> ko_at ko p s}.
+                           case x of (x, xa) \<Rightarrow> obj_range x xa)) \<subseteq> S \<Longrightarrow>
+    pt_walk max_pt_level 0 pt vptr (\<lambda>p. pte_of p
+                    (obind (kheap s) (ta_filter True S) |> aobj_of |> pt_of))
+  = pt_walk max_pt_level 0 pt vptr (\<lambda>p. pte_of p (kheap s |> aobj_of |> pt_of))"
+  apply (induct rule:pt_walk.induct; clarsimp)
+  apply (subst (1 2) pt_walk.simps)
+  apply (case_tac "bot_level < level"; clarsimp)
+  apply (intro obind_eqI_full; clarsimp)
+   defer
+   apply (drule_tac x=x in meta_spec)
+   apply (drule_tac x="\<lambda>x. pte_of x (obind (kheap s) (ta_filter True S) |> aobj_of |> pt_of)" in meta_spec)
    apply clarsimp
-  apply (rule_tac x="level+5" in exI) (* even less sure about this one *)
-  apply (clarsimp simp: obind_def vspace_for_pool_def split:option.splits)
-  apply (intro conjI impI allI)
-           apply (fastforce simp: vspace_for_asid_def vspace_for_pool_def max_pt_level_def)+
+   apply (subgoal_tac "(\<Union>x\<in>{(p, ko).
+               p \<in> pt_all_slots_of (level - 1) (pptr_from_pte x) vptr
+                     (\<lambda>p'. pte_of p' (kheap s |> aobj_of |> pt_of)) \<and>
+               ko_at ko p s}.
+             case x of (x, xa) \<Rightarrow> obj_range x xa)
+         \<subseteq> S", clarsimp)
+   apply (drule pte_of_remove_tafilter)
+   apply (rule subset_trans)
+    apply (rule_tac level="level" and pt_ptr=pt_ptr in all_slots_of_subset)
+     apply clarsimp+
   
-  thm pt_walk.simps
-  apply (clarsimp simp: pt_walk.simps)
-  apply (clarsimp simp: obind_def split:option.splits)
-  apply (intro conjI impI allI)
-          sledgehammer
-  
-
-  apply (intro conjI impI allI)
-       apply (clarsimp simp: opt_map_def split:option.splits)
-       apply (rule exI)
-       apply (clarsimp simp: pte_of_def obind_def split:option.splits)
    
+   apply (rule already_touched_meow_pteofaux)
+    apply simp+
   
+  apply (case_tac " pte_of (pt_slot_offset level pt_ptr vptr)
+            (kheap s |> aobj_of |> pt_of)"; clarsimp)
+   subgoal sorry (* this should be easy *)
+  apply (drule_tac x="a" in meta_spec)
+  apply (drule_tac x="\<lambda>p'. pte_of p' (kheap s |> aobj_of |> pt_of)" in meta_spec)
+  apply clarsimp
 
-  
-  oops
 
+   apply (rule already_touched_meow_pteofaux)
+   apply simp+
 
+  done
 
+lemma already_touched_meow:
+  "((\<Union>x\<in>{(p, ko). p \<in> pt_all_slots_of max_pt_level pt vptr
+            (\<lambda>p'. pte_of p' (kheap s |> aobj_of |> pt_of)) \<and> ko_at ko p s}.
+                           case x of (x, xa) \<Rightarrow> obj_range x xa)) \<subseteq> S \<Longrightarrow>
+    pt_lookup_slot pt vptr (\<lambda>p. pte_of p
+                    (obind (kheap s) (ta_filter True S) |> aobj_of |> pt_of))
+  = pt_lookup_slot pt vptr (\<lambda>p. pte_of p (kheap s |> aobj_of |> pt_of))"
+  unfolding pt_lookup_slot_def pt_lookup_slot_from_level_def
+  apply (drule already_touched_meow_ptwalkaux)
+  apply (clarsimp simp: obind_def oreturn_def split: option.splits)
+  done
 
-
+lemma pte_of_ta_filter_simplify:
+  "pte_of p (obind (kheap s)
+     (ta_filter True (obj_range p (the (kheap s p)) \<union> S))
+     |> aobj_of |> pt_of)
+  = pte_of p (kheap s |> aobj_of |> pt_of)"
+  apply (rule ptes_of_eqI)
+  apply (clarsimp simp: opt_map_def obind_def ta_filter_def
+                 split: option.splits)
+  apply (intro conjI impI allI; simp)
+  apply (clarsimp simp: pt_of_def split: arch_kernel_obj.splits)
+  (* at this point I think this is true,
+     IFF I am correct in assuming that the obj_range of a whole table
+     contains the ranges of all its entries. Surely this is the case *)
+  sorry
 
 lemma unmap_page_invs:
   "\<lbrace>invs and K (vptr \<in> user_region \<and> vmsz_aligned vptr sz)\<rbrace>
@@ -1738,23 +1722,17 @@ lemma unmap_page_invs:
    \<lbrace>\<lambda>_. invs\<rbrace>"
   unfolding unmap_page_def
 
-
   apply_trace (wpsimp wp: touch_object_wp' touch_objects_wp store_pte_invs_unmap
                           find_vspace_for_asid_wp)
-    
+    apply (clarsimp simp: already_touched_meow pte_of_ta_filter_simplify)
     apply ta
-         apply (subst already_touched_meow2 [where asid=asid and vptr=vptr, rotated])
-           apply simp
-           
-         apply (subst  already_touched_meow2, force, clarsimp simp: ta_agnostic_def)+
-   apply simp
-
+   apply ta
   apply clarsimp
-  apply (subst already_touched_meow2, force)+
-  apply (subst already_touched_meow2)
+  apply (clarsimp simp: already_touched_meow pte_of_ta_filter_simplify)
+
   apply (intro conjI; clarsimp)
   apply (frule pt_lookup_slot_vs_lookup_slotI)
-   apply (clarsimp simp: pt_lookup_slot_def pt_lookup_slot_from_level_def)
+   apply (clarsimp simp: pt_lookup_slot_def pt_lookup_slot_from_level_def )
   apply (clarsimp simp: vs_lookup_slot_def split: if_split_asm)
   apply (rename_tac level pte pt_ptr)
   apply (drule vs_lookup_level)
@@ -1886,7 +1864,7 @@ lemma perform_pg_inv_get_addr[wp]:
 
 lemma unmap_page_pool_for_asid[wp]:
   "unmap_page pgsz asid vref pt \<lbrace>\<lambda>s. P (pool_for_asid asid s)\<rbrace>"
-  sorry (*unfolding unmap_page_def apply (wpsimp simp: pool_for_asid_def wp: touch_object_wp' touch_objects_wp) *)
+  soxxy (*unfolding unmap_page_def apply (wpsimp simp: pool_for_asid_def wp: touch_object_wp' touch_objects_wp) *)
 
 lemma data_at_level:
   "\<lbrakk> data_at pgsz p s; data_at (vmpage_size_of_level level) p s;
@@ -1918,7 +1896,7 @@ lemma unmap_page_not_target:
          vs_lookup_slot_pool_for_asid[simp]
          pool_for_asid_vs_lookup[simp]
   apply (wpsimp wp: store_pte_invalid_vs_lookup_target_unmap touch_object_wp' touch_objects_wp)
-  sorry (* broken by touched-addrs -scottb
+  soxxy (* broken by touched-addrs -scottb
   apply (rule conjI; clarsimp)
    apply (clarsimp simp: vs_lookup_target_def vspace_for_asid_def obind_def vs_lookup_slot_def
                          vs_lookup_table_def ta_filter_def obind_def
@@ -2082,13 +2060,13 @@ lemma pool_for_asid[simp]:
 
 lemma asid_pools_of[simp]:
   "asid_pools_of False s' = (asid_pools_of False s)(ap \<mapsto> pool(asid_low_bits_of asid \<mapsto> ptp))"
-  sorry (* broken by touched-addrs -scottb
+  soxxy (* broken by touched-addrs -scottb
   apply (simp add: s'_def)
   done *)
 
 lemma pts_of[simp]:
   "pts_of False s' = pts_of False s"
-  sorry (* broken by touched-addrs -scottb
+  soxxy (* broken by touched-addrs -scottb
 proof -
   from ap
   have "pts_of s ap = None" by (simp add: opt_map_def split: option.splits)
@@ -2116,7 +2094,7 @@ lemma vs_lookup_table:
    using pt aligned
    apply (clarsimp simp: obind_def ptes_of_def empty_for_user)
    apply (simp add: pt_slot_offset_def)
-   sorry (* broken by touched-addresses -scottb
+   soxxy (* broken by touched-addresses -scottb
    apply (erule notE)
    apply (rule is_aligned_add)
     apply (erule is_aligned_weaken)
@@ -2181,7 +2159,7 @@ lemma vs_lookup_target:
    apply (simp add: pool_for_asid_def vspace_for_pool_def in_omonad)
   apply (cases "asid' = asid")
    apply clarsimp
-   sorry (* broken by touched-addrs -scottb
+   soxxy (* broken by touched-addrs -scottb
    apply (clarsimp simp: vs_lookup_target_def)
    apply (clarsimp simp: obind_def vs_lookup_slot_None vs_lookup_slot pte_refs_of_None)
   apply clarsimp
@@ -2221,12 +2199,12 @@ lemma valid_pte:
   using ap
   apply (cases pte; simp add: pt_at_eq)
   apply (clarsimp simp: data_at_def obj_at_def s'_def in_omonad)
-  sorry (*  broken by touched-addrs -scottb
+  soxxy (*  broken by touched-addrs -scottb
   done *)
 
 lemma valid_vspace_obj:
   "valid_vspace_obj level ao s \<Longrightarrow> valid_vspace_obj level ao s'"
-  sorry (* -scottb
+  soxxy (* -scottb
   apply (cases ao; simp add: pt_at_eq valid_pte)
 *)
 
@@ -2246,7 +2224,7 @@ lemma set_asid_pool_arch_objs_map:
   unfolding set_asid_pool_def
   supply fun_upd_apply[simp del]
   apply (wpsimp wp: set_object_wp)
-  sorry (* broken -scottb
+  soxxy (* broken -scottb
   apply (frule (5) asid_pool_map.intro)
     apply (clarsimp simp: valid_arch_state_def)
    apply (erule pspace_aligned_pts_ofD, simp)
@@ -2284,7 +2262,7 @@ lemma set_asid_pool_valid_arch_caps_map:
   unfolding set_asid_pool_def
   supply fun_upd_apply[simp del]
   apply (wpsimp wp: set_object_wp)
-  sorry (* -scottb
+  soxxy (* -scottb
   apply (frule (5) asid_pool_map.intro)
     apply (clarsimp simp: valid_arch_state_def)
    apply (erule pspace_aligned_pts_ofD, simp)
@@ -2341,7 +2319,7 @@ lemma set_asid_pool_invs_map:
   apply (wpsimp wp: valid_irq_node_typ set_asid_pool_typ_at set_asid_pool_arch_objs_map
                     valid_irq_handlers_lift set_asid_pool_valid_arch_caps_map)
   apply (erule disjE, clarsimp simp: kernel_mappings_only_has)
-  sorry (* scottb
+  soxxy (* scottb
   apply (erule (4) toplevel_pt_has_kernel_mappings)
   apply (simp add: valid_arch_caps_def)
   done *)
@@ -2352,7 +2330,7 @@ lemma ako_asid_pools_of:
 
 lemma copy_global_mappings_asid_pools[wp]:
   "copy_global_mappings pt_ptr \<lbrace>\<lambda>s. P (asid_pools_of False s)\<rbrace>"
-  sorry (* scottb
+  soxxy (* scottb
   unfolding copy_global_mappings_def by (wpsimp wp: mapM_x_wp') *)
 
 lemma copy_global_mappings_pool_for_asid[wp]:
@@ -2465,7 +2443,7 @@ lemma copy_global_mappings_copies[wp]:
    copy_global_mappings pt_ptr
    \<lbrace>\<lambda>_ s. \<exists>pt. pts_of False s pt_ptr = Some pt \<and> kernel_mappings_only pt s\<rbrace>"
   unfolding copy_global_mappings_def
-  sorry (* scottb
+  soxxy (* scottb
   apply wp
       apply (rule hoare_strengthen_post)
        apply (rule_tac I="\<lambda>s. (\<exists>pt. pts_of s pt_ptr = Some pt \<and>
@@ -2535,7 +2513,7 @@ lemma copy_global_mappings_invs:
                          store_pte_vs_lookup_table_unreachable touch_objects_wp)
        apply (fold mask_2pm1)[1]
        apply (clarsimp simp: table_base_plus table_index_plus ta_filter_def obind_def)
-       sorry (* scottb
+       soxxy (* scottb
        apply (rule conjI, erule ptes_of_wellformed_pte, clarsimp)
        apply clarsimp
        apply (frule invs_valid_asid_table)
@@ -2559,7 +2537,7 @@ lemma perform_asid_pool_invs [wp]:
                     copy_global_mappings_invs arch_update_cap_invs_map get_cap_wp set_cap_typ_at
                 simp: ako_asid_pools_of
          | wp (once) hoare_vcg_ex_lift)+
-  sorry (* scottb
+  soxxy (* scottb
   apply (clarsimp simp: cte_wp_at_caps_of_state valid_apinv_def cong: conj_cong)
   apply (rename_tac asid pool_ptr slot_ptr slot_idx s pool cap)
   apply (clarsimp simp: is_cap_simps update_map_data_def is_arch_update_def is_arch_cap_def

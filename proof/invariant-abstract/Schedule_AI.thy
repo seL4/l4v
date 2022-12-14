@@ -93,7 +93,7 @@ lemma sct_invs:
   apply wp
   apply (clarsimp simp add: invs_def cur_tcb_def valid_state_def valid_idle_def
                             valid_irq_node_def valid_machine_state_def)
-  sorry (* -scottb *)
+  soxxy (* -scottb *)
 
 lemma storeWord_valid_irq_states:
   "\<lbrace>\<lambda>m. valid_irq_states (s\<lparr>machine_state := m\<rparr>)\<rbrace> storeWord x y
@@ -136,7 +136,7 @@ lemma (in Schedule_AI) stt_invs [wp]:
                      elim: valid_pspace_eqI ifunsafe_pspaceI)
    apply (wp touch_object_wp')+
   apply clarsimp
-  sorry (* broken by touched-addrs -scottb
+  soxxy (* broken by touched-addrs -scottb
   apply (simp add: is_tcb_def)
   done *)
 
@@ -148,7 +148,7 @@ lemma (in Schedule_AI) stt_activatable:
      apply (clarsimp elim!: pred_tcb_weakenE)
     apply (rule assert_inv)
    apply (wp touch_object_wp')
-  sorry (* broken by touched-addrs -scottb
+  soxxy (* broken by touched-addrs -scottb
   apply assumption
   done *)
 

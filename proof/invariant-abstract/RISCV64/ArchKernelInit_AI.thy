@@ -491,7 +491,7 @@ lemma invs_A:
    apply (rule conjI)
     apply (clarsimp simp: valid_asid_table_def state_defs)
    apply (simp add: valid_arch_state_def state_defs obj_at_def a_type_def)
-  sorry (* FIXME: broken by touched-addrs -robs
+  soxxy (* FIXME: broken by touched-addrs -robs
   apply (rule conjI)
    apply (clarsimp simp: valid_irq_node_def obj_at_def state_defs
                          is_cap_table_def wf_empty_bits

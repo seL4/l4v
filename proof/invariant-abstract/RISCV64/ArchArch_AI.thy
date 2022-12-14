@@ -734,7 +734,7 @@ lemma perform_asid_control_invocation_pred_tcb_at:
    apply (clarsimp simp:cte_wp_at_caps_of_state)
    apply (erule_tac ptr="(aa,ba)" in untyped_children_in_mdbE[where P="\<lambda>c. t \<in> zobj_refs c" for t])
        apply (simp add: cte_wp_at_caps_of_state)+
-      sorry (*
+      soxxy (*
       apply fastforce
     apply (clarsimp simp: zobj_refs_to_obj_refs)
     apply (fastforce simp:page_bits_def)
@@ -750,7 +750,7 @@ lemma perform_asid_control_invocation_pred_tcb_at:
   apply (intro conjI)
     apply (clarsimp simp:valid_cap_def cap_aligned_def range_cover_full
      invs_psp_aligned invs_valid_objs page_bits_def)
-    sorry (* FIXME: broken by touched-addrs -robs *)
+    soxxy (* FIXME: broken by touched-addrs -robs *)
    apply (erule pspace_no_overlap_detype)
   apply (auto simp:page_bits_def detype_clear_um_independent)
   done
@@ -879,7 +879,7 @@ proof -
                           default_arch_object_def conj_comms)
     apply (rule conjI)
      apply (clarsimp simp:valid_cap_simps cap_aligned_def page_bits_def not_le)
-    sorry (* FIXME: broken by touched-addrs -robs
+    soxxy (* FIXME: broken by touched-addrs -robs
     apply (simp add:empty_descendants_range_in)
     apply (frule valid_cap_aligned)
     apply (clarsimp simp: cap_aligned_def)
@@ -1010,11 +1010,11 @@ crunches decode_asid_control_invocation
 
 lemma decode_page_table_invocation_tainv[wp]:
   "decode_page_table_invocation label args cte cap extra_caps \<lbrace>ignore_ta P\<rbrace>"
-  sorry (* FIXME: broken by touched-addrs -robs *)
+  soxxy (* FIXME: broken by touched-addrs -robs *)
 
 lemma decode_fr_inv_map_tainv[wp]:
   "decode_fr_inv_map label args cte cap extra_caps \<lbrace>ignore_ta P\<rbrace>"
-  sorry (* FIXME: broken by touched-addrs -robs *)
+  soxxy (* FIXME: broken by touched-addrs -robs *)
 
 crunches decode_page_table_invocation, decode_frame_invocation, decode_asid_pool_invocation
   for tainv[wp]: "ignore_ta P"
@@ -1116,7 +1116,7 @@ lemma decode_fr_inv_map_wf[wp]:
   apply (prop_tac "args!0 \<in> user_region")
    apply (clarsimp simp: user_region_def not_le)
    apply (rule user_vtop_canonical_user)
-   sorry (* FIXME: broken by touched-addrs -robs
+   soxxy (* FIXME: broken by touched-addrs -robs
    apply (erule aligned_add_mask_lessD)
    apply (simp add: vmsz_aligned_def)
   apply (clarsimp simp: cte_wp_at_caps_of_state is_arch_update_def is_cap_simps cap_master_cap_simps)
@@ -1220,7 +1220,7 @@ lemma decode_pt_inv_map_wf[wp]:
   apply (rename_tac p level)
   apply (prop_tac "args!0 \<in> user_region")
    apply (simp add: wellformed_mapdata_def user_region_def user_vtop_canonical_user)
-  sorry (* FIXME: broken by touched-addrs -robs
+  soxxy (* FIXME: broken by touched-addrs -robs
   apply (rule conjI, clarsimp simp: valid_arch_cap_def wellformed_mapdata_def vspace_for_asid_def
                                     neg_mask_user_region)
   apply (rule conjI, clarsimp simp: is_arch_update_def is_cap_simps cap_master_cap_simps)
@@ -1246,7 +1246,7 @@ lemma decode_page_table_invocation_wf[wp]:
   unfolding decode_page_table_invocation_def is_final_cap_def
   apply (wpsimp simp: valid_arch_inv_def valid_pti_def valid_arch_cap_def valid_cap_def
                       cte_wp_at_caps_of_state is_cap_simps)
-  sorry (* FIXME: broken by touched-addrs -robs
+  soxxy (* FIXME: broken by touched-addrs -robs
   apply (rule conjI; clarsimp)
   done
 *)

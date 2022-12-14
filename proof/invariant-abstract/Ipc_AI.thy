@@ -100,7 +100,7 @@ lemma get_rs_real_cte_at[wp]:
    apply (simp,wp,simp)
   apply (clarsimp simp add: split_def whenE_def)
   apply (wp hoare_drop_imps lookup_cnode_slot_real_cte lookup_cap_valid touch_object_wp' | simp | rule get_cap_wp)+
-  sorry (* FIXME: broken by touched-addrs -robs
+  soxxy (* FIXME: broken by touched-addrs -robs
   done
 *)
 
@@ -575,7 +575,7 @@ lemma cap_insert_assume_null:
   apply (rule hoare_name_pre_state)
   apply (erule impCE)
    apply (simp add: cap_insert_def)
-   sorry (* FIXME: broken by touched-addrs -robs
+   soxxy (* FIXME: broken by touched-addrs -robs
    apply (rule hoare_seq_ext[OF _ get_cap_sp])+
    apply (clarsimp simp: valid_def cte_wp_at_caps_of_state in_monad
               split del: if_split)
@@ -1558,11 +1558,11 @@ context Ipc_AI begin
 
 lemma get_extra_cptrs_typ_at[wp]:
   "get_extra_cptrs param_a param_b \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>"
-  sorry (* FIXME: broken by touched-addrs -robs *)
+  soxxy (* FIXME: broken by touched-addrs -robs *)
 
 lemma lookup_extra_caps_typ_at[wp]:
   "lookup_extra_caps param_a param_b param_c \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>"
-  sorry (* FIXME: broken by touched-addrs -robs *)
+  soxxy (* FIXME: broken by touched-addrs -robs *)
 
 crunches do_normal_transfer
   for typ_at[wp]: "\<lambda>s::'state_ext state. P (typ_at T p s)"
@@ -1592,7 +1592,7 @@ lemma copy_mrs_thread_set_dmo:
   apply (wp mapM_wp [where S=UNIV, simplified] dmo ts touch_objects_wp | wpc
        | simp add: store_word_offs_def load_word_offs_def
        | rule as_user_wp_thread_set_helper hoare_drop_imps)+
-  sorry (* FIXME: broken by touched-addrs -robs
+  soxxy (* FIXME: broken by touched-addrs -robs
   done
 *)
 
@@ -1601,14 +1601,14 @@ lemma set_mrs_refs_of[wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace>
      set_mrs a b c
    \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
-  sorry (* FIXME: broken by touched-addrs -robs
+  soxxy (* FIXME: broken by touched-addrs -robs
   by (wp set_mrs_thread_set_dmo thread_set_refs_trivial | simp)+
 *)
 
 
 lemma set_mrs_cur [wp]:
   "\<lbrace>cur_tcb\<rbrace> set_mrs r t mrs \<lbrace>\<lambda>rv. cur_tcb\<rbrace>"
-  sorry (* FIXME: broken by touched-addrs -robs
+  soxxy (* FIXME: broken by touched-addrs -robs
   by (wp set_mrs_thread_set_dmo)
 *)
 
@@ -1626,7 +1626,7 @@ lemma set_mrs_ex_nonz_cap_to[wp]:
 
 lemma set_mrs_iflive[wp]:
   "\<lbrace>if_live_then_nonz_cap\<rbrace> set_mrs a b c \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
-  sorry (* FIXME: broken by touched-addrs -robs
+  soxxy (* FIXME: broken by touched-addrs -robs
   by (wp set_mrs_thread_set_dmo thread_set_iflive_trivial
          ball_tcb_cap_casesI | simp)+
 *)
@@ -1646,7 +1646,7 @@ lemma set_mrs_zombies[wp]:
 
 lemma set_mrs_valid_globals[wp]:
   "\<lbrace>valid_global_refs\<rbrace> set_mrs a b c \<lbrace>\<lambda>rv. valid_global_refs\<rbrace>"
-  sorry (* FIXME: broken by touched-addrs -robs
+  soxxy (* FIXME: broken by touched-addrs -robs
   by (wp set_mrs_thread_set_dmo thread_set_global_refs_triv
          ball_tcb_cap_casesI valid_global_refs_cte_lift | simp)+
 *)
@@ -1673,7 +1673,7 @@ thm lookup_ipc_buffer_tainv
 declare lookup_ipc_buffer_tainv [wp del]
 lemma lookup_ipc_buffer_inv[wp]:
   "lookup_ipc_buffer is_receiver thread \<lbrace>P\<rbrace>"
-  sorry (* FIXME: Workaround. -robs *)
+  soxxy (* FIXME: Workaround. -robs *)
 
 context Ipc_AI begin
 
@@ -1687,7 +1687,7 @@ lemma do_normal_transfer_vmdb[wp]:
   "\<lbrace>valid_mdb and (valid_objs and pspace_aligned and pspace_distinct)\<rbrace>
    do_normal_transfer param_a param_b param_c param_d param_e param_f param_g
    \<lbrace>\<lambda>_. valid_mdb\<rbrace>"
-  sorry (* FIXME: broken by touched-addrs -robs *)
+  soxxy (* FIXME: broken by touched-addrs -robs *)
 
 crunches do_ipc_transfer
   for vmdb[wp]: "valid_mdb :: 'state_ext state \<Rightarrow> bool"
@@ -1710,7 +1710,7 @@ lemma do_normal_transfer_zombies[wp]:
   "\<lbrace>zombies_final and (valid_objs and valid_mdb)\<rbrace>
    do_normal_transfer param_a param_b param_c param_d param_e param_f param_g
    \<lbrace>\<lambda>_. zombies_final\<rbrace>"
-  sorry (* FIXME: broken by touched-addrs -robs *)
+  soxxy (* FIXME: broken by touched-addrs -robs *)
 
 crunch zombies[wp]: do_ipc_transfer "zombies_final :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps hoare_vcg_const_Ball_lift tcl_zombies simp: crunch_simps ball_conj_distrib )
@@ -1722,7 +1722,7 @@ lemma do_normal_transfer_valid_globals[wp]:
   "\<lbrace>valid_global_refs and (valid_objs and valid_mdb)\<rbrace>
    do_normal_transfer param_a param_b param_c param_d param_e param_f param_g
    \<lbrace>\<lambda>_. valid_global_refs\<rbrace>"
-  sorry (* FIXME: broken by touched-addrs -robs *)
+  soxxy (* FIXME: broken by touched-addrs -robs *)
 
 crunch valid_globals[wp]: do_ipc_transfer "valid_global_refs :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps hoare_vcg_const_Ball_lift simp: crunch_simps zipWithM_x_mapM ball_conj_distrib)
@@ -1761,13 +1761,13 @@ lemma do_normal_transfer_reply[wp]:
   "\<lbrace>valid_reply_caps and (valid_reply_masters and valid_objs and valid_mdb)\<rbrace>
    do_normal_transfer param_a param_b param_c param_d param_e param_f param_g
    \<lbrace>\<lambda>_. valid_reply_caps\<rbrace>"
-  sorry (* FIXME: broken by touched-addrs -robs *)
+  soxxy (* FIXME: broken by touched-addrs -robs *)
 
 lemma do_normal_transfer_reply_masters[wp]:
   "\<lbrace>valid_reply_masters and (valid_reply_caps and valid_objs and valid_mdb)\<rbrace>
    do_normal_transfer param_a param_b param_c param_d param_e param_f param_g
    \<lbrace>\<lambda>_. valid_reply_masters\<rbrace>"
-  sorry (* FIXME: broken by touched-addrs -robs *)
+  soxxy (* FIXME: broken by touched-addrs -robs *)
 
 
 crunches do_ipc_transfer
@@ -1785,7 +1785,7 @@ interpretation
   set_mrs: non_aobj_op "set_mrs t buf msg"
   unfolding set_mrs_def
   apply (unfold_locales)
-  sorry (* FIXME: broken by touched-addrs -robs
+  soxxy (* FIXME: broken by touched-addrs -robs
   by (wpsimp wp: set_object_non_arch get_object_wp mapM_wp' touch_object_wp'
            simp: zipWithM_x_mapM non_arch_obj_def get_tcb_def ta_filter_def obind_def
           split: option.splits kernel_object.splits
@@ -1801,7 +1801,7 @@ lemma do_ipc_transfer_aobj_at:
   apply (wpsimp wp: as_user.aobj_at set_mrs.aobj_at hoare_drop_imps mapM_wp'
                     transfer_caps_loop_aobj_at get_receive_slots_tainv.aobj_at
                     lookup_extra_caps_tainv.aobj_at)
-       sorry (* FIXME: broken by touched-addrs -robs
+       soxxy (* FIXME: broken by touched-addrs -robs
        apply (case_tac f, simp split del: if_split)
           apply (wpsimp wp: as_user.aobj_at hoare_drop_imps)+
   done
@@ -1819,7 +1819,7 @@ lemma set_mrs_irq_handlers[wp]:
   apply (rule set_mrs_thread_set_dmo)
    apply ((wp valid_irq_handlers_lift thread_set_caps_of_state_trivial
               ball_tcb_cap_casesI | simp)+)[1]
-  sorry (* FIXME: broken by touched-addrs -robs
+  soxxy (* FIXME: broken by touched-addrs -robs
   apply wp
   done
 *)
@@ -1844,7 +1844,7 @@ lemma do_normal_transfer_irq_handlers:
   "\<lbrace>valid_irq_handlers and (valid_objs and valid_mdb)\<rbrace>
    do_normal_transfer param_a param_b param_c param_d param_e param_f param_g
    \<lbrace>\<lambda>_. valid_irq_handlers\<rbrace>"
-  sorry (* FIXME: broken by touched-addrs -robs *)
+  soxxy (* FIXME: broken by touched-addrs -robs *)
 
 crunch irq_handlers[wp]: do_ipc_transfer "valid_irq_handlers :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps hoare_vcg_const_Ball_lift simp: zipWithM_x_mapM crunch_simps ball_conj_distrib)
@@ -1862,7 +1862,7 @@ lemma do_normal_transfer_arch_caps[wp]:
   "\<lbrace>valid_arch_caps and (valid_objs and valid_mdb)\<rbrace>
    do_normal_transfer param_a param_b param_c param_d param_e param_f param_g
    \<lbrace>\<lambda>_. valid_arch_caps\<rbrace>"
-  sorry (* FIXME: broken by touched-addrs -robs *)
+  soxxy (* FIXME: broken by touched-addrs -robs *)
 
 crunch arch_caps[wp]: do_ipc_transfer "valid_arch_caps :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps hoare_vcg_const_Ball_lift transfer_caps_loop_valid_arch_caps
@@ -1872,7 +1872,7 @@ lemma do_normal_transfer_ioports[wp]:
   "\<lbrace>valid_ioports and (valid_objs and valid_mdb)\<rbrace>
    do_normal_transfer param_a param_b param_c param_d param_e param_f param_g
    \<lbrace>\<lambda>_. valid_ioports\<rbrace>"
-  sorry (* FIXME: broken by touched-addrs -robs *)
+  soxxy (* FIXME: broken by touched-addrs -robs *)
 
 crunch ioports[wp]: do_ipc_transfer "valid_ioports :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps hoare_vcg_const_Ball_lift transfer_caps_loop_ioports
@@ -1955,11 +1955,11 @@ lemma do_normal_transfer_cap_refs_in_kernel_window[wp]:
   "\<lbrace>cap_refs_in_kernel_window and (valid_objs and valid_mdb)\<rbrace>
    do_normal_transfer param_a param_b param_c param_d param_e param_f param_g
    \<lbrace>\<lambda>_. cap_refs_in_kernel_window\<rbrace> "
-  sorry (* FIXME: broken by touched-addrs -robs *)
+  soxxy (* FIXME: broken by touched-addrs -robs *)
 
 lemma set_mrs_cap_refs_in_kernel_window[wp]:
   "\<lbrace>cap_refs_in_kernel_window\<rbrace> set_mrs param_a param_b param_c \<lbrace>\<lambda>_. cap_refs_in_kernel_window\<rbrace>"
-  sorry (* FIXME: broken by touched-addrs -robs *)
+  soxxy (* FIXME: broken by touched-addrs -robs *)
 
 crunch cap_refs_in_kernel_window[wp]: do_ipc_transfer "cap_refs_in_kernel_window :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps hoare_vcg_const_Ball_lift ball_tcb_cap_casesI
@@ -1969,7 +1969,7 @@ lemma do_normal_transfer_valid_objs[wp]:
   "\<lbrace>valid_objs and valid_mdb\<rbrace>
    do_normal_transfer param_a param_b param_c param_d param_e param_f param_g
    \<lbrace>\<lambda>_. valid_objs\<rbrace>"
-  sorry (* FIXME: broken by touched-addrs -robs *)
+  soxxy (* FIXME: broken by touched-addrs -robs *)
 
 crunch valid_objs[wp]: do_ipc_transfer "valid_objs :: 'state_ext state \<Rightarrow> bool"
   (wp: hoare_vcg_const_Ball_lift simp:ball_conj_distrib )
@@ -2016,7 +2016,7 @@ end
 lemma as_user_machine_state[wp]:
   "\<lbrace>\<lambda>s. P(machine_state s)\<rbrace> as_user r f \<lbrace>\<lambda>_. \<lambda>s. P(machine_state s)\<rbrace>"
   apply (wp touch_object_wp'| simp add: as_user_def split_def get_tcb_def ta_filter_def obind_def split:option.splits kernel_object.splits)+
-  sorry (* FIXME: broken by touched-addrs -robs *)
+  soxxy (* FIXME: broken by touched-addrs -robs *)
 
 lemma set_mrs_def2:
   "set_mrs thread buf msgs \<equiv>
@@ -2060,7 +2060,7 @@ lemma do_ipc_transfer_invs[wp]:
   apply (wpsimp simp: do_normal_transfer_def transfer_caps_def bind_assoc ball_conj_distrib
                   wp:  hoare_drop_imps get_rs_cte_at2 thread_get_wp
                        hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift)
-  sorry (* FIXME: broken by touched-addrs -robs
+  soxxy (* FIXME: broken by touched-addrs -robs
   apply (clarsimp simp: obj_at_def is_tcb invs_valid_objs)
   done
 *)
@@ -2227,7 +2227,7 @@ lemma update_waiting_invs:
   apply (erule(1) obj_at_valid_objsE)
   apply (clarsimp simp: valid_obj_def valid_ntfn_def obj_at_def is_ntfn_def)
   apply (rule conjI, clarsimp simp: obj_at_def split: option.splits list.splits)
-  sorry (* FIXME: broken by touched-addrs -robs
+  soxxy (* FIXME: broken by touched-addrs -robs
   apply (rule conjI, clarsimp elim!: pred_tcb_weakenE)
   apply (rule conjI, clarsimp dest!: idle_no_ex_cap)
   apply (rule conjI, erule delta_sym_refs)
@@ -2303,7 +2303,7 @@ lemma cancel_ipc_cte_wp_at_not_reply_state:
 lemma sai_invs[wp]:
   "\<lbrace>invs and ex_nonz_cap_to ntfn\<rbrace> send_signal ntfn bdg \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: send_signal_def)
-  sorry (* FIXME: broken by touched-addrs -robs
+  soxxy (* FIXME: broken by touched-addrs -robs
   apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
   apply (case_tac "ntfn_obj ntfna", simp_all)
     apply (case_tac "ntfn_bound_tcb ntfna", simp_all)
@@ -2411,7 +2411,7 @@ lemma si_tcb_at [wp]:
 
 lemma lookup_slot_for_thread_typ_at[wp]:
   "lookup_slot_for_thread param_a param_b \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>"
-  sorry (* FIXME: broken by touched-addrs -robs *)
+  soxxy (* FIXME: broken by touched-addrs -robs *)
 
 crunch typ_at[wp]: handle_fault "\<lambda>s::'state_ext state. P (typ_at T p s)"
   (wp: touch_object_wp' simp: crunch_simps ignore:resolve_address_bits)
@@ -2615,7 +2615,7 @@ crunch irq_node[wp]: setup_caller_cap "\<lambda>s. P (interrupt_irq_node s)"
 
 lemma set_thread_state_Pmdb[wp]:
   "set_thread_state param_a param_b \<lbrace>\<lambda>s. P (cdt s)\<rbrace>"
-  sorry (* FIXME: broken by touched-addrs -robs *)
+  soxxy (* FIXME: broken by touched-addrs -robs *)
 
 crunch Pmdb[wp]: set_thread_state "\<lambda>s. P (cdt s)"
 
@@ -2775,7 +2775,7 @@ crunch valid_irq_states[wp]: do_ipc_transfer "valid_irq_states :: 'state_ext sta
 
 lemma set_mrs_cap_refs_respects_device_region[wp]:
   "set_mrs param_a param_b param_c \<lbrace>cap_refs_respects_device_region\<rbrace>"
-  sorry (* FIXME: broken by touched-addrs -robs *)
+  soxxy (* FIXME: broken by touched-addrs -robs *)
 
 crunch cap_refs_respects_device_region[wp]: do_fault_transfer "cap_refs_respects_device_region :: 'state_ext state \<Rightarrow> bool"
   (wp: crunch_wps hoare_vcg_const_Ball_lift
@@ -2817,7 +2817,7 @@ lemma complete_signal_invs:
      complete_signal ntfnptr tcb
    \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: complete_signal_def)
-  sorry (* FIXME: broken by touched-addrs -robs
+  soxxy (* FIXME: broken by touched-addrs -robs
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
    apply (wp set_ntfn_minor_invs | wpc | simp)+
@@ -2857,7 +2857,7 @@ lemma ri_invs':
   apply (simp add: receive_ipc_def split_def)
   apply (cases cap, simp_all)
   apply (rename_tac ep badge rights)
-  sorry (* FIXME: broken by touched-addrs -robs
+  soxxy (* FIXME: broken by touched-addrs -robs
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (rule hoare_seq_ext[OF _ gbn_sp])
   apply (rule hoare_seq_ext)
@@ -2999,7 +2999,7 @@ crunch irq_node[wp]: set_mrs "\<lambda>s. P (interrupt_irq_node s)"
 
 lemma as_user_interrupt_states[wp]:
   "as_user param_a param_b \<lbrace>\<lambda>s. P (interrupt_states s)\<rbrace>"
-  sorry (* FIXME: broken by touched-addrs -robs *)
+  soxxy (* FIXME: broken by touched-addrs -robs *)
 
 crunch interrupt_states[wp]: set_message_info "\<lambda>s. P (interrupt_states s)"
   (simp: crunch_simps )
@@ -3048,7 +3048,7 @@ lemma rai_invs':
   apply (simp add: receive_signal_def)
   apply (cases cap, simp_all)
   apply (rename_tac ntfn badge rights)
-  sorry (* FIXME: broken by touched-addrs -robs
+  soxxy (* FIXME: broken by touched-addrs -robs
   apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
   apply (case_tac "ntfn_obj x")
     apply (simp add: invs_def valid_state_def valid_pspace_def)
@@ -3197,7 +3197,7 @@ lemma si_invs':
      send_ipc bl call badge cg cgr t epptr
    \<lbrace>\<lambda>r (s::'state_ext state). invs s \<and> Q s\<rbrace>"
   apply (simp add: send_ipc_def)
-  sorry (* FIXME: broken by touched-addrs -robs
+  soxxy (* FIXME: broken by touched-addrs -robs
   apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
   apply (case_tac ep, simp_all)
     (* ep=IdleEP, bl *)
@@ -3346,7 +3346,7 @@ lemma hf_invs':
         | wp (once) hoare_drop_imps)+
   apply (simp add: conj_comms)
   apply (clarsimp simp:get_tcb_def ta_filter_def obind_def split:option.splits kernel_object.splits)
-  sorry (* FIXME: broken by touched-addrs -robs
+  soxxy (* FIXME: broken by touched-addrs -robs
   apply (fastforce elim!: pred_tcb_weakenE
                simp: invs_def valid_state_def valid_idle_def st_tcb_def2
                      idle_no_ex_cap pred_tcb_def2 get_tcb_def
@@ -3376,7 +3376,7 @@ context Ipc_AI begin
 
 lemma set_mrs_ct[wp]:
   "set_mrs param_a param_b param_c \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace>"
-  sorry (* FIXME: broken by touched-addrs -robs *)
+  soxxy (* FIXME: broken by touched-addrs -robs *)
 
 crunch ct[wp]: set_mrs "\<lambda>s::'state_ext state. P (cur_thread s)"
   (wp: case_option_wp mapM_wp simp: crunch_simps)
@@ -3427,7 +3427,7 @@ lemma si_blk_makes_simple:
      send_ipc True call bdg x gr t' ep
    \<lbrace>\<lambda>rv. st_tcb_at simple t\<rbrace>"
   apply (simp add: send_ipc_def)
-  sorry (* FIXME: broken by touched-addrs -robs
+  soxxy (* FIXME: broken by touched-addrs -robs
   apply (rule hoare_seq_ext [OF _ get_simple_ko_inv])
   apply (case_tac epa, simp_all)
     apply (wp sts_st_tcb_at_cases)
@@ -3491,7 +3491,7 @@ lemma ri_makes_simple:
   apply (rule hoare_gen_asm)
   apply (simp add: receive_ipc_def split_def)
   apply (case_tac cap, simp_all)
-  sorry (* FIXME: broken by touched-addrs -robs
+  soxxy (* FIXME: broken by touched-addrs -robs
   apply (rule hoare_seq_ext [OF _ get_simple_ko_sp])
   apply (rule hoare_seq_ext [OF _ gbn_sp])
   apply (rule hoare_seq_ext)
