@@ -18,7 +18,7 @@ crunches arch_post_cap_deletion, set_pt, set_asid_pool, prepare_thread_delete, i
   (wp: domain_sep_inv_triv crunch_wps set_asid_pool_cte_wp_at set_pt_cte_wp_at)
 
 crunch domain_sep_inv[DomainSepInv_assms, wp]: arch_finalise_cap "domain_sep_inv irqs st"
-  (wp: crunch_wps pt_lookup_from_level_tainv find_vspace_for_asid_inv
+  (wp: crunch_wps pt_lookup_from_level_tainv find_vspace_for_asid_tainv
    simp: crunch_simps ta_agnostic_def ignore:do_machine_op)
 
 lemma arch_finalise_cap_rv[DomainSepInv_assms]:

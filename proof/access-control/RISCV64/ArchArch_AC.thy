@@ -923,7 +923,7 @@ lemma pt_walk_is_subject[simplified f_kheap_to_kheap]:
   apply (fastforce simp: kobjs_of_False_Some pptr_from_pte_def
                    dest: table_index_max_level_slots
                    elim: rev_bexI bexI_minus[rotated]
-                 intro!: pts_of_Some_alignedD[where ta_f=False, simplified])
+                 intro!: pts_of_Some_alignedD)
   done
 
 lemma pt_lookup_slot_from_level_is_subject[simplified f_kheap_to_kheap]:
