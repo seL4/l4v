@@ -252,7 +252,7 @@ definition unmap_page :: "vmpage_size \<Rightarrow> asid \<Rightarrow> vspace_re
   where
   "unmap_page pgsz asid vptr pptr \<equiv> doE
      top_level_pt \<leftarrow> find_vspace_for_asid asid;
-     accessed_pts \<leftarrow> liftE $ gets $ pt_all_slots_of max_pt_level top_level_pt vptr \<circ> ptes_of False;
+     accessed_pts \<leftarrow> liftE $ gets $ ((pt_all_slots_of max_pt_level top_level_pt vptr) \<circ> ptes_of False);
      liftE $ touch_objects accessed_pts;
      (lev, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot top_level_pt vptr \<circ> ptes_of True;
      unlessE (pt_bits_left lev = pageBitsForSize pgsz) $ throwError InvalidRoot;

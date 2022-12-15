@@ -78,9 +78,8 @@ lemma m_inv [wp]:
 (*FIXME: maybe this should be in a different locale, as this will be duplicated (and
   added to the simp set) for every monad that instantiates touched_addresses_inv *)
 lemma ms_ta_update_simplify [simp]:
-  "P (ms_ta_update p obj s) = P s"
+  "P (ms_ta_update taf s) = P s"
   by (meson ta_agnostic ta_agnostic_def)
-
 
 lemma ms_ta_obj_update_simplify [simp]:
   "P (ms_ta_obj_update p obj s) = P s"
