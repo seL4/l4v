@@ -226,17 +226,33 @@ definition vs_all_pts_of_from_level ::
      l \<le> level \<and> l \<ge> bot_level \<and>
      vs_lookup_table l asid vptr s = Some (l', ptr))}"
 
-definition vs_all_pts_of::
+definition vs_all_pts_of ::
   "asid \<Rightarrow> vspace_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref set"
   where
   "vs_all_pts_of \<equiv> vs_all_pts_of_from_level max_pt_level 0"
+
+thm pt_lookup_slot_def
+thm pt_lookup_slot_from_level_def
+definition pt_all_slots_of ::
+  "vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref \<rightharpoonup> pte) \<Rightarrow> obj_ref set"
+  where
+  "pt_all_slots_of ltop pt vptr kh \<equiv> {ptr. (\<exists>l.
+    pt_lookup_slot_from_level ltop 0 pt vptr kh = Some (l, ptr)
+  )}"
+
+definition pt_all_slots_of' ::
+  "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref \<rightharpoonup> pte) \<Rightarrow> obj_ref set"
+  where
+  "pt_all_slots_of' pt vptr kh \<equiv> {ptr. (\<exists>l'.
+    pt_lookup_slot pt vptr kh = Some (l', ptr)
+  )}"
 
 text \<open>Unmap a mapped page if the given mapping details are still current.\<close>
 definition unmap_page :: "vmpage_size \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
   where
   "unmap_page pgsz asid vptr pptr \<equiv> doE
      top_level_pt \<leftarrow> find_vspace_for_asid asid;
-     accessed_pts \<leftarrow> liftE $ gets $ vs_all_pts_of asid vptr;
+     accessed_pts \<leftarrow> liftE $ gets $ ((pt_all_slots_of max_pt_level top_level_pt vptr) \<circ> ptes_of False);
      liftE $ touch_objects accessed_pts;
      (lev, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot top_level_pt vptr \<circ> ptes_of True;
      unlessE (pt_bits_left lev = pageBitsForSize pgsz) $ throwError InvalidRoot;

@@ -28,7 +28,7 @@ lemma set_per_domain_default_vm_root_valid_etcbs[wp]:
 
 crunch valid_etcbs [wp, DetSchedSchedule_AI_assms]:
   arch_switch_to_idle_thread, arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers valid_etcbs
-  (simp: crunch_simps wp: find_vspace_for_asid_inv)
+  (simp: crunch_simps wp: find_vspace_for_asid_tainv)
 
 lemma set_per_domain_default_vm_root_valid_queues[wp]:
   "do_extended_op (do
@@ -44,7 +44,7 @@ lemma set_per_domain_default_vm_root_valid_queues[wp]:
 crunch valid_queues [wp, DetSchedSchedule_AI_assms]:
   switch_to_idle_thread, switch_to_thread, set_vm_root, arch_get_sanitise_register_info, arch_post_modify_registers valid_queues
   (simp: crunch_simps ta_agnostic_def ignore: set_tcb_queue tcb_sched_action
-   wp: touch_object_wp' find_vspace_for_asid_inv)
+   wp: touch_object_wp' find_vspace_for_asid_tainv)
 
 lemma set_per_domain_default_vm_root_weak_valid_sched_action[wp]:
   "do_extended_op (do
@@ -59,7 +59,7 @@ lemma set_per_domain_default_vm_root_weak_valid_sched_action[wp]:
 
 crunch weak_valid_sched_action [wp, DetSchedSchedule_AI_assms]:
   switch_to_idle_thread, switch_to_thread, set_vm_root, arch_get_sanitise_register_info, arch_post_modify_registers "weak_valid_sched_action"
-  (simp: crunch_simps ta_agnostic_def wp: find_vspace_for_asid_inv touch_object_wp')
+  (simp: crunch_simps ta_agnostic_def wp: find_vspace_for_asid_tainv touch_object_wp')
 
 lemma set_per_domain_default_vm_root_ct_not_in_q[wp]:
   "do_extended_op (do
@@ -73,7 +73,7 @@ lemma set_per_domain_default_vm_root_ct_not_in_q[wp]:
   sorry
 
 crunch ct_not_in_q[wp]: set_vm_root "ct_not_in_q"
-  (wp: crunch_wps find_vspace_for_asid_inv simp: crunch_simps ta_agnostic_def)
+  (wp: crunch_wps find_vspace_for_asid_tainv simp: crunch_simps ta_agnostic_def)
 
 lemma set_per_domain_default_vm_root_ct_not_in_q'[wp]:
   "do_extended_op (do
@@ -87,7 +87,7 @@ lemma set_per_domain_default_vm_root_ct_not_in_q'[wp]:
   sorry
 
 crunch ct_not_in_q'[wp]: set_vm_root "\<lambda>s. ct_not_in_q_2 (ready_queues s) (scheduler_action s) t"
-  (wp: crunch_wps find_vspace_for_asid_inv simp: crunch_simps ta_agnostic_def)
+  (wp: crunch_wps find_vspace_for_asid_tainv simp: crunch_simps ta_agnostic_def)
 
 lemma switch_to_idle_thread_ct_not_in_q [wp, DetSchedSchedule_AI_assms]:
   "\<lbrace>valid_queues and valid_idle\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>_. ct_not_in_q\<rbrace>"
@@ -112,7 +112,7 @@ lemma set_per_domain_default_vm_root_valid_sched_action'[wp]:
 
 crunch valid_sched_action'[wp]: set_vm_root "\<lambda>s. valid_sched_action_2 (scheduler_action s)
                                                  (ekheap s) (kheap s) thread (cur_domain s)"
-  (wp: crunch_wps find_vspace_for_asid_inv simp: crunch_simps ta_agnostic_def)
+  (wp: crunch_wps find_vspace_for_asid_tainv simp: crunch_simps ta_agnostic_def)
 
 lemma switch_to_idle_thread_valid_sched_action [wp, DetSchedSchedule_AI_assms]:
   "\<lbrace>valid_sched_action and valid_idle\<rbrace>
@@ -139,7 +139,7 @@ lemma set_per_domain_default_vm_root_ct_in_cur_domain'[wp]:
 
 crunch ct_in_cur_domain'[wp]: set_vm_root "\<lambda>s. ct_in_cur_domain_2 t (idle_thread s)
                                                    (scheduler_action s) (cur_domain s) (ekheap s)"
-  (wp: crunch_wps find_vspace_for_asid_inv simp: crunch_simps ta_agnostic_def)
+  (wp: crunch_wps find_vspace_for_asid_tainv simp: crunch_simps ta_agnostic_def)
 
 lemma switch_to_idle_thread_ct_in_cur_domain [wp, DetSchedSchedule_AI_assms]:
   "\<lbrace>\<top>\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>_. ct_in_cur_domain\<rbrace>"
@@ -163,7 +163,7 @@ lemma set_per_domain_default_vm_root_is_activatable[wp]:
   sorry
 
 crunch is_activatable [wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers "is_activatable t"
-  (simp: crunch_simps ta_agnostic_def wp: find_vspace_for_asid_inv)
+  (simp: crunch_simps ta_agnostic_def wp: find_vspace_for_asid_tainv)
 
 lemma set_per_domain_default_vm_root_valid_sched_action[wp]:
   "do_extended_op (do
@@ -177,7 +177,7 @@ lemma set_per_domain_default_vm_root_valid_sched_action[wp]:
   sorry
 
 crunch valid_sched_action [wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers valid_sched_action
-  (simp: crunch_simps ta_agnostic_def wp: find_vspace_for_asid_inv)
+  (simp: crunch_simps ta_agnostic_def wp: find_vspace_for_asid_tainv)
 
 lemma set_per_domain_default_vm_root_valid_sched[wp]:
   "do_extended_op (do
@@ -191,7 +191,7 @@ lemma set_per_domain_default_vm_root_valid_sched[wp]:
   sorry
 
 crunch valid_sched [wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread, arch_get_sanitise_register_info, arch_post_modify_registers valid_sched
-  (simp: crunch_simps ta_agnostic_def wp: find_vspace_for_asid_inv)
+  (simp: crunch_simps ta_agnostic_def wp: find_vspace_for_asid_tainv)
 
 lemma set_per_domain_default_vm_root_exst[wp]:
   "do_extended_op (do
@@ -205,7 +205,7 @@ lemma set_per_domain_default_vm_root_exst[wp]:
   sorry
 
 crunch exst[wp]: set_vm_root "\<lambda>s. P (exst s)"
-  (wp: crunch_wps hoare_whenE_wp find_vspace_for_asid_inv simp: crunch_simps ta_agnostic_def
+  (wp: crunch_wps hoare_whenE_wp find_vspace_for_asid_tainv simp: crunch_simps ta_agnostic_def
    ignore: do_machine_op)
 
 crunch ct_in_cur_domain_2 [wp, DetSchedSchedule_AI_assms]: arch_switch_to_thread
@@ -224,7 +224,7 @@ lemma set_per_domain_default_vm_root_valid_blocked[wp]:
   sorry
 
 crunch valid_blocked[wp]: set_vm_root valid_blocked
-  (simp: crunch_simps ta_agnostic_def wp: find_vspace_for_asid_inv)
+  (simp: crunch_simps ta_agnostic_def wp: find_vspace_for_asid_tainv)
 
 lemma set_per_domain_default_vm_root_ct_in_q[wp]:
   "do_extended_op (do
@@ -238,7 +238,7 @@ lemma set_per_domain_default_vm_root_ct_in_q[wp]:
   sorry
 
 crunch ct_in_q[wp]: set_vm_root ct_in_q
-  (simp: crunch_simps ta_agnostic_def ct_in_q_def wp: find_vspace_for_asid_inv touch_object_wp')
+  (simp: crunch_simps ta_agnostic_def ct_in_q_def wp: find_vspace_for_asid_tainv touch_object_wp')
 
 crunch etcb_at [wp, DetSchedSchedule_AI_assms]: switch_to_thread "etcb_at P t"
   (wp: touch_object_wp')
@@ -256,7 +256,7 @@ lemma set_per_domain_default_vm_root_valid_idle[wp]:
 
 crunch valid_idle [wp, DetSchedSchedule_AI_assms]:
   arch_switch_to_idle_thread "valid_idle"
-  (wp: crunch_wps find_vspace_for_asid_inv simp: crunch_simps ta_agnostic_def ignore: do_machine_op)
+  (wp: crunch_wps find_vspace_for_asid_tainv simp: crunch_simps ta_agnostic_def ignore: do_machine_op)
 
 crunch etcb_at [wp, DetSchedSchedule_AI_assms]: arch_switch_to_idle_thread "etcb_at P t"
 
@@ -303,7 +303,7 @@ lemma set_per_domain_default_vm_root_valid_blocked_2[wp]:
 crunch valid_blocked_2[wp]: set_vm_root "\<lambda>s.
            valid_blocked_2 (ready_queues s) (kheap s)
             (scheduler_action s) thread"
-  (wp: crunch_wps find_vspace_for_asid_inv simp: crunch_simps ta_agnostic_def)
+  (wp: crunch_wps find_vspace_for_asid_tainv simp: crunch_simps ta_agnostic_def)
 
 lemma switch_to_idle_thread_valid_blocked [wp, DetSchedSchedule_AI_assms]:
   "\<lbrace>valid_blocked and ct_in_q\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>rv. valid_blocked\<rbrace>"
@@ -352,26 +352,26 @@ lemma set_asid_pool_valid_sched[wp]:
 crunch ct_not_in_q [wp, DetSchedSchedule_AI_assms]:
   arch_finalise_cap, prepare_thread_delete ct_not_in_q
   (wp: crunch_wps hoare_drop_imps hoare_unless_wp select_inv mapM_wp pt_lookup_from_level_tainv
-       subset_refl if_fun_split find_vspace_for_asid_inv simp: crunch_simps ta_agnostic_def
+       subset_refl if_fun_split find_vspace_for_asid_tainv simp: crunch_simps ta_agnostic_def
    ignore: tcb_sched_action)
 
 crunch valid_etcbs [wp, DetSchedSchedule_AI_assms]:
   arch_finalise_cap, prepare_thread_delete valid_etcbs
   (wp: hoare_drop_imps hoare_unless_wp select_inv mapM_x_wp mapM_wp subset_refl
-       if_fun_split pt_lookup_from_level_tainv find_vspace_for_asid_inv
+       if_fun_split pt_lookup_from_level_tainv find_vspace_for_asid_tainv
    simp: crunch_simps ta_agnostic_def
    ignore: set_object thread_set)
 
 crunch simple_sched_action [wp, DetSchedSchedule_AI_assms]:
   arch_finalise_cap, prepare_thread_delete simple_sched_action
   (wp: hoare_drop_imps mapM_x_wp mapM_wp select_wp subset_refl pt_lookup_from_level_tainv
-       find_vspace_for_asid_inv
+       find_vspace_for_asid_tainv
    simp: unless_def if_fun_split ta_agnostic_def)
 
 crunch valid_sched [wp, DetSchedSchedule_AI_assms]:
   arch_finalise_cap, prepare_thread_delete, arch_invoke_irq_handler, arch_mask_irq_signal
   "valid_sched"
-  (ignore: set_object wp: crunch_wps subset_refl pt_lookup_from_level_tainv find_vspace_for_asid_inv
+  (ignore: set_object wp: crunch_wps subset_refl pt_lookup_from_level_tainv find_vspace_for_asid_tainv
    simp: if_fun_split ta_agnostic_def)
 
 lemma activate_thread_valid_sched [DetSchedSchedule_AI_assms]:
@@ -471,7 +471,7 @@ crunch delete_asid_pool[wp]: delete_asid_pool "\<lambda>(s:: det_ext state). P (
 
 crunch arch_finalise_cap[wp, DetSchedSchedule_AI_assms]:
   arch_finalise_cap "\<lambda>(s:: det_ext state). P (idle_thread s)"
-  (wp: crunch_wps pt_lookup_from_level_tainv find_vspace_for_asid_inv
+  (wp: crunch_wps pt_lookup_from_level_tainv find_vspace_for_asid_tainv
    simp: if_fun_split ta_agnostic_def)
 
 end

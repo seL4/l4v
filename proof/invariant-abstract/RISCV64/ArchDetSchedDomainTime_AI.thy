@@ -35,10 +35,12 @@ lemma set_per_domain_default_vm_root_domain_time:
   sorry
 
 crunch domain_list_inv[wp]: set_vm_root "\<lambda>s. P (domain_list s)"
-  (wp: set_per_domain_default_vm_root_domain_list get_cap_wp find_vspace_for_asid_wp)
+  (wp: set_per_domain_default_vm_root_domain_list get_cap_wp find_vspace_for_asid_wp
+      simp: ta_agnostic_def)
 
 crunch domain_time_inv[wp]: set_vm_root "\<lambda>s. P (domain_time s)"
-  (wp: set_per_domain_default_vm_root_domain_time find_vspace_for_asid_wp)
+  (wp: set_per_domain_default_vm_root_domain_time find_vspace_for_asid_wp
+  simp: ta_agnostic_def)
 
 crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]: arch_finalise_cap "\<lambda>s. P (domain_list s)"
   (wp: hoare_drop_imps mapM_wp subset_refl find_vspace_for_asid_wp pt_lookup_from_level_tainv
