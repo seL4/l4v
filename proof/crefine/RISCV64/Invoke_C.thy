@@ -2142,7 +2142,7 @@ lemma zero_bytes_heap_update:
 
 lemma invokeUntyped_Retype_ccorres:
   "ccorres (cintr \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-     (invs' and ct_active' and ex_cte_cap_to' cnodeptr
+     (invs' and (\<lambda>s. sym_refs (state_refs_of' s)) and ct_active' and ex_cte_cap_to' cnodeptr
        and (\<lambda>s. case gsCNodes s cnodeptr of None \<Rightarrow> False
                   | Some n \<Rightarrow> length destSlots + unat start \<le> 2 ^ n)
        and valid_untyped_inv' (Retype cref reset ptr_base ptr newType us destSlots isdev)
@@ -2172,7 +2172,8 @@ lemma invokeUntyped_Retype_ccorres:
                 Invocations_H.untyped_invocation.Retype slot reset ptr_base ptr ty us slots d \<Rightarrow>
                   capability.UntypedCap d (ptr && ~~ mask sz) sz idx))
          s"
-      and misc1[simplified]: "ct_active' s" "invs' s" "ex_cte_cap_to' cnodeptr s"
+      and misc1[simplified]: "ct_active' s" "invs' s" "sym_refs (state_refs_of' s)"
+                             "ex_cte_cap_to' cnodeptr s"
       "case gsCNodes s cnodeptr of None \<Rightarrow> False
         | Some n \<Rightarrow> length destSlots + unat start \<le> 2 ^ n"
      "K (isdev \<longrightarrow> (newType = APIObjectType ArchTypes_H.apiobject_type.Untyped \<or> isFrameType newType)) s"
@@ -2186,7 +2187,7 @@ lemma invokeUntyped_Retype_ccorres:
       using vui misc1
       by (clarsimp simp: cte_wp_at_ctes_of invokeUntyped_proofs_def)
 
-   note no_simps[simp del] = untyped_range.simps usable_untyped_range.simps
+    note no_simps[simp del] = untyped_range.simps usable_untyped_range.simps
          atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
          usableUntypedRange.simps
@@ -2357,7 +2358,7 @@ lemma invokeUntyped_Retype_ccorres:
          prefer 2
          apply simp
         apply (clarsimp simp only: )
-        apply (frule(2) invokeUntyped_proofs.intro)
+        apply (frule (3) invokeUntyped_proofs.intro)
         apply (cut_tac bits_low us_misc us_misc')
         apply (clarsimp simp: cte_wp_at_ctes_of
                               invokeUntyped_proofs.caps_no_overlap'
@@ -2728,7 +2729,8 @@ lemma decodeUntypedInvocation_ccorres_helper:
   shows
   "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-       (invs' and (\<lambda>s. ksCurThread s = thread)
+       (invs' and (\<lambda>s. sym_refs (state_refs_of' s))
+              and (\<lambda>s. ksCurThread s = thread)
               and sch_act_simple and ct_active'
               and valid_cap' cp and K (isUntypedCap cp)
               and cte_wp_at' (\<lambda>cte. cteCap cte = cp) slot
@@ -2883,7 +2885,6 @@ lemma decodeUntypedInvocation_ccorres_helper:
                                   fromEnum_object_type_to_H
                                   object_type_from_H_def minSchedContextBits_def
                                   fromAPIType_def RISCV64_H.fromAPIType_def)
-sorry (* decodeUntypedInvocation_ccorres_helper: needs minSchedContextBits update
                 apply (rule syscall_error_throwError_ccorres_n)
                 apply (simp add: syscall_error_to_H_cases)
                apply (rule_tac xf'="nodeCap_'"
@@ -3149,8 +3150,9 @@ sorry (* decodeUntypedInvocation_ccorres_helper: needs minSchedContextBits updat
                                 apply wp
                                apply (rule hoare_vcg_conj_lift
                                       | rule_tac p="capCNodePtr rv" in setThreadState_cap_to'
-                                      | wp (once) sts_invs_minor' setThreadStateRestart_ct_active'
-                                                sts_valid_untyped_inv')+
+                                      | wp (once) sts_invs_minor' sts_sym_refs'
+                                                  setThreadStateRestart_ct_active'
+                                                  sts_valid_untyped_inv')+
                              apply (clarsimp simp: ccap_relation_untyped_CL_simps shiftL_nat
                                                    toEnum_object_type_to_H unat_of_nat_APIType_capBits
                                                    word_size valid_untyped_capBlockSize_misc
@@ -3218,7 +3220,8 @@ sorry (* decodeUntypedInvocation_ccorres_helper: needs minSchedContextBits updat
                    apply simp
                   apply simp
                   apply (rule_tac Q'="\<lambda>r. cte_wp_at' (\<lambda>cte. cteCap cte = cp) slot
-                      and invs' and  (\<lambda>s. ksCurThread s = thread)
+                      and invs' and (\<lambda>s. sym_refs (state_refs_of' s))
+                      and (\<lambda>s. ksCurThread s = thread)
                       and ex_cte_cap_to' (capCNodePtr rv)
                       and (\<lambda>s. case gsCNodes s (capCNodePtr rv) of None \<Rightarrow> False
                             | Some n \<Rightarrow> args ! 4 + args ! 5 - 1 < 2 ^ n)
@@ -3269,7 +3272,7 @@ sorry (* decodeUntypedInvocation_ccorres_helper: needs minSchedContextBits updat
                   apply (subst (asm) mem_Collect_eq, assumption)
                  apply clarsimp
                 apply (rule_tac Q'="\<lambda>r s. cte_wp_at' (\<lambda>cte. cteCap cte = cp) slot s
-                      \<and> invs' s \<and> ksCurThread s = thread
+                      \<and> invs' s \<and> sym_refs (state_refs_of' s) \<and> ksCurThread s = thread
                       \<and> valid_cap' r s
                       \<and> (\<forall>rf\<in>cte_refs' r (irq_node' s). ex_cte_cap_to' rf s)
                       \<and> sch_act_simple s \<and> ct_active' s
@@ -3356,7 +3359,7 @@ sorry (* decodeUntypedInvocation_ccorres_helper: needs minSchedContextBits updat
                          capCNodeRadix_CL_less_64s rf_sr_ksCurThread not_le
                   elim!: inl_inrE)
   apply (clarsimp simp: enum_object_type enum_apiobject_type word_le_nat_alt seL4_ObjectTypeCount_def)
-  done *)
+  done
 
 lemma decodeUntypedInvocation_ccorres:
 notes TripleSuc[simp]
@@ -3364,7 +3367,8 @@ notes valid_untyped_inv_wcap'.simps[simp del]
 shows
   "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-       (invs' and (\<lambda>s. ksCurThread s = thread)
+       (invs' and (\<lambda>s. sym_refs (state_refs_of' s))
+              and (\<lambda>s. ksCurThread s = thread)
               and sch_act_simple and ct_active'
               and valid_cap' cp and K (isUntypedCap cp)
               and cte_wp_at' (\<lambda>cte. cteCap cte = cp) slot

@@ -514,7 +514,7 @@ lemma refill_size_ccorres:
    apply (rule ccorres_cond_seq)
    apply ccorres_rewrite
    apply (rule_tac R="ko_at' sc scPtr and K (sc_valid_refills' sc)"
-               and P="\<lambda>s. scRefillHead sc \<le> refillTailIndex sc"
+               and P="\<lambda>s. ko_at' sc scPtr s \<and> scRefillHead sc \<le> refillTailIndex sc"
                 in ccorres_cond_both)
      apply clarsimp
      apply (drule obj_at_cslift_sc)
@@ -524,9 +524,10 @@ lemma refill_size_ccorres:
     apply (ctac add: ccorres_return_C)
    apply (rule ccorres_Guard)+
    apply (ctac add: ccorres_return_C)
-  apply (clarsimp simp: csched_context_relation_def typ_heap_simps obj_at_simps
-                        valid_refills'_def opt_map_def crefill_size_def opt_pred_def
-                 split: if_splits)
+  apply (fastforce dest: obj_at_cslift_sc
+                   simp: active_sc_at'_def csched_context_relation_def typ_heap_simps obj_at_simps
+                         valid_refills'_def in_omonad crefill_size_def
+                  split: if_splits)
   done
 
 lemma refill_full_ccorres:
@@ -738,6 +739,7 @@ lemma refill_capacity_ccorres:
   apply clarsimp
   apply (frule (1) sc_ko_at_valid_objs_valid_sc')
   apply (frule_tac n="scRefillHead sc" in h_t_valid_refill)
+       apply fastforce
       apply fastforce
      apply fastforce
     apply (clarsimp simp: valid_sched_context'_def)

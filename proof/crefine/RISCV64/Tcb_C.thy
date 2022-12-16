@@ -4002,7 +4002,7 @@ lemma decodeUnbindNotification_ccorres:
       apply wp
      apply (vcg exspec=invokeTCB_NotificationControl_modifies)
     apply simp
-    apply (wp sts_invs_minor' hoare_case_option_wp sts_bound_tcb_at' | wpc | simp)+
+    apply (wp sts_invs_minor' hoare_case_option_wp sts_bound_tcb_at' sts_sym_refs' | wpc | simp)+
    apply (vcg exspec=setThreadState_modifies)
   apply (clarsimp, frule obj_at_ko_at', clarsimp)
   apply (rule cmap_relationE1[OF cmap_relation_tcb], assumption)
@@ -4014,7 +4014,7 @@ lemma decodeUnbindNotification_ccorres:
                          mask_def rf_sr_ksCurThread valid_tcb_state'_def
                   elim!: pred_tcb'_weakenE
                   dest!: valid_objs_boundNTFN_NULL)
-sorry (* FIXME RT: decodeUnbindNotification_ccorres. sym_refs argument *)
+  done
 
 lemma nTFN_case_If_ptr:
   "(case x of capability.NotificationCap a b c d \<Rightarrow> P a d | _ \<Rightarrow> Q) = (if (isNotificationCap x) then P (capNtfnPtr x) (capNtfnCanReceive x) else Q)"
@@ -4143,7 +4143,7 @@ lemma decodeBindNotification_ccorres:
             apply wp
            apply (vcg exspec=invokeTCB_NotificationControl_modifies)
           apply simp
-          apply (wp sts_invs_minor' hoare_case_option_wp sts_bound_tcb_at' | wpc | simp)+
+          apply (wp sts_invs_minor' hoare_case_option_wp sts_bound_tcb_at' sts_sym_refs' | wpc | simp)+
          apply (vcg exspec=setThreadState_modifies)
         apply (simp add: case_option_If del: Collect_const)
         apply (rule ccorres_Cond_rhs_Seq)
@@ -4167,7 +4167,7 @@ lemma decodeBindNotification_ccorres:
            apply wp
           apply (vcg exspec=invokeTCB_NotificationControl_modifies)
          apply simp
-         apply (wp sts_invs_minor' hoare_case_option_wp sts_bound_tcb_at' | wpc | simp)+
+         apply (wp sts_invs_minor' hoare_case_option_wp sts_bound_tcb_at' sts_sym_refs' | wpc | simp)+
         apply (vcg exspec=setThreadState_modifies)
        apply (simp add: bindE_bind_linearise[symmetric] injection_handler_throwError
                         invocationCatch_use_injection_handler throwError_bind invocationCatch_def)
@@ -4196,8 +4196,7 @@ lemma decodeBindNotification_ccorres:
                                   dest!: valid_objs_boundNTFN_NULL)
                  apply ((fastforce elim!: pred_tcb'_weakenE obj_at'_weakenE
                                     simp: ct_in_state'_def from_bool_0 isCap_simps excaps_map_def
-                                          neq_Nil_conv obj_at'_def pred_tcb_at'_def valid_tcb_state'_def)+)[1]
-sorry (* FIXME RT: decodeBindNotification_ccorres
+                                          neq_Nil_conv obj_at'_def pred_tcb_at'_def valid_tcb_state'_def)+)[12]
      apply (clarsimp dest!: obj_at_valid_objs'[OF _ invs_valid_objs']
                       simp: projectKOs valid_obj'_def)
     apply (clarsimp simp: excaps_map_Nil cte_wp_at_ctes_of excaps_map_def neq_Nil_conv
@@ -4217,8 +4216,7 @@ sorry (* FIXME RT: decodeBindNotification_ccorres
        apply (auto simp: word_sless_alt typ_heap_simps cap_get_tag_ThreadCap ctcb_relation_def
                          option_to_ptr_def option_to_0_def
                   split: if_split)
-  done *)
-
+  done
 
 lemma decodeSetSpace_ccorres:
   notes tl_drop_1[simp] scast_mask_8 [simp]

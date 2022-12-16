@@ -943,9 +943,7 @@ lemma refill_disjoint:
   apply (prop_tac "\<exists>refill. cslift s' x = Some refill")
    apply (clarsimp simp: clift_Some_eq_valid)
   apply clarsimp
-  apply (frule_tac x=x in sc_from_refill[rotated])
-    apply clarsimp
-   apply fastforce
+  apply (frule_tac x=x in sc_from_refill[rotated], fastforce+)
   apply clarsimp
   apply (rename_tac p sc n)
   apply (frule_tac x="Ptr p" and sc=sc in sched_context_disjoint; fastforce?)
@@ -2062,7 +2060,11 @@ proof -
         apply fastforce
        apply (frule refill_buffer_relation_refill_to_sc)
        apply (clarsimp simp: Let_def)
-       apply (frule (2) sc_from_refill)
+       apply (frule (1) sc_from_refill)
+           apply fastforce
+          apply fastforce
+         apply fastforce
+        apply fastforce
        apply clarsimp
        apply (rename_tac p sc n)
        apply (rule_tac x=p in rev_bexI')

@@ -36,6 +36,9 @@ abbreviation
 abbreviation sched_context_Ptr :: "word64 \<Rightarrow> sched_context_C ptr" where
   "sched_context_Ptr == Ptr"
 
+abbreviation refill_Ptr :: "word64 \<Rightarrow> refill_C ptr" where
+  "refill_Ptr == Ptr"
+
 abbreviation reply_Ptr :: "word64 \<Rightarrow> reply_C ptr" where
   "reply_Ptr == Ptr"
 
