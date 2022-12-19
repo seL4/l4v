@@ -96,6 +96,8 @@ associateVCPUTCB vcpuPtr tcbPtr = do
         _ -> return ()
     archThreadSet (\atcb -> atcb { atcbVCPUPtr = Just vcpuPtr }) tcbPtr
     setObject vcpuPtr $ vcpu { vcpuTCBPtr = Just tcbPtr }
+    ct <- getCurThread
+    when (tcbPtr == ct) $ vcpuSwitch (Just vcpuPtr)
     return []
 
 {- VCPU: Update functions -}
