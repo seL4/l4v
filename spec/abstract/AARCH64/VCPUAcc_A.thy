@@ -166,39 +166,6 @@ definition vcpu_invalidate_active :: "(unit,'z::state_ext) s_monad" where
     modify (\<lambda>s. s\<lparr> arch_state := (arch_state s)\<lparr> arm_current_vcpu := None \<rparr>\<rparr>)
   od"
 
-text \<open>VCPU objects can be associated with and dissociated from TCBs.\<close>
-
-text \<open>Removing the connection between a TCB and VCPU:\<close>
-definition dissociate_vcpu_tcb :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
-  "dissociate_vcpu_tcb vr t \<equiv> do
-     t_vcpu \<leftarrow> arch_thread_get tcb_vcpu t;
-     v \<leftarrow> get_vcpu vr;
-     assert (t_vcpu = Some vr \<and> vcpu_tcb v = Some t); \<comment> \<open>make sure they were associated\<close>
-     cur_v \<leftarrow> gets (arm_current_vcpu \<circ> arch_state);
-     when (\<exists>a. cur_v = Some (vr,a)) vcpu_invalidate_active;
-     arch_thread_set (\<lambda>x. x \<lparr> tcb_vcpu := None \<rparr>) t;
-     set_vcpu vr (v\<lparr> vcpu_tcb := None \<rparr>);
-     as_user t $ do
-       sr \<leftarrow> getRegister SPSR_EL1;
-       setRegister SPSR_EL1 $ sanitise_register False SPSR_EL1 sr
-     od
-   od"
-
-text \<open>Associating a TCB and VCPU, removing any potentially existing associations:\<close>
-definition associate_vcpu_tcb :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
-  "associate_vcpu_tcb vr t \<equiv> do
-     t_vcpu \<leftarrow> arch_thread_get tcb_vcpu t;
-     case t_vcpu of
-       Some p \<Rightarrow> dissociate_vcpu_tcb p t
-     | _ \<Rightarrow> return ();
-     v \<leftarrow> get_vcpu vr;
-     case vcpu_tcb v of
-       Some p \<Rightarrow> dissociate_vcpu_tcb vr p
-     | _ \<Rightarrow> return ();
-     arch_thread_set (\<lambda>x. x \<lparr> tcb_vcpu := Some vr \<rparr>) t;
-     set_vcpu vr (v\<lparr> vcpu_tcb := Some t \<rparr>)
-  od"
-
 text \<open>Register + context save for VCPUs\<close>
 definition vcpu_save :: "(obj_ref \<times> bool) option \<Rightarrow> (unit,'z::state_ext) s_monad" where
   "vcpu_save vb \<equiv>
@@ -291,6 +258,42 @@ definition vcpu_switch :: "obj_ref option \<Rightarrow> (unit,'z::state_ext) s_m
                 modify (\<lambda>s. s\<lparr> arch_state := (arch_state s)\<lparr> arm_current_vcpu := Some (new, True) \<rparr>\<rparr>)
               od))
      od"
+
+
+text \<open>VCPU objects can be associated with and dissociated from TCBs.\<close>
+
+text \<open>Removing the connection between a TCB and VCPU:\<close>
+definition dissociate_vcpu_tcb :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "dissociate_vcpu_tcb vr t \<equiv> do
+     t_vcpu \<leftarrow> arch_thread_get tcb_vcpu t;
+     v \<leftarrow> get_vcpu vr;
+     assert (t_vcpu = Some vr \<and> vcpu_tcb v = Some t); \<comment> \<open>make sure they were associated\<close>
+     cur_v \<leftarrow> gets (arm_current_vcpu \<circ> arch_state);
+     when (\<exists>a. cur_v = Some (vr,a)) vcpu_invalidate_active;
+     arch_thread_set (\<lambda>x. x \<lparr> tcb_vcpu := None \<rparr>) t;
+     set_vcpu vr (v\<lparr> vcpu_tcb := None \<rparr>);
+     as_user t $ do
+       sr \<leftarrow> getRegister SPSR_EL1;
+       setRegister SPSR_EL1 $ sanitise_register False SPSR_EL1 sr
+     od
+   od"
+
+text \<open>Associating a TCB and VCPU, removing any potentially existing associations:\<close>
+definition associate_vcpu_tcb :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "associate_vcpu_tcb vcpu_ptr t \<equiv> do
+     t_vcpu \<leftarrow> arch_thread_get tcb_vcpu t;
+     case t_vcpu of
+       Some p \<Rightarrow> dissociate_vcpu_tcb p t
+     | _ \<Rightarrow> return ();
+     v \<leftarrow> get_vcpu vcpu_ptr;
+     case vcpu_tcb v of
+       Some p \<Rightarrow> dissociate_vcpu_tcb vcpu_ptr p
+     | _ \<Rightarrow> return ();
+     arch_thread_set (\<lambda>x. x \<lparr> tcb_vcpu := Some vcpu_ptr \<rparr>) t;
+     set_vcpu vcpu_ptr (v\<lparr> vcpu_tcb := Some t \<rparr>);
+     ct \<leftarrow> gets cur_thread;
+     when (t = ct) $ vcpu_switch (Some vcpu_ptr)
+  od"
 
 text \<open>
   Prepare a given VCPU for removal: dissociate it, and clean up current VCPU state
