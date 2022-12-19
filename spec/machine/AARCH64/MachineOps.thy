@@ -104,10 +104,10 @@ definition plic_complete_claim :: "irq \<Rightarrow> unit machine_monad" where
   "plic_complete_claim irq \<equiv> machine_op_lift (plic_complete_claim_impl irq)"
 
 text \<open>
-  Interrupts that cannot occur while the kernel is running (e.g. at preemption points), but
-  that can occur from user mode. Empty on AARCH64.\<close>
+  Interrupts that cannot occur while the kernel is running (e.g. at preemption points),
+  but that can occur from user mode.\<close>
 definition non_kernel_IRQs :: "irq set" where
-  "non_kernel_IRQs = {}"
+  "non_kernel_IRQs = {irqVGICMaintenance, irqVTimerEvent}"
 
 text \<open>@{term getActiveIRQ} is oracle-based and deterministic to allow information flow proofs. It
 updates the IRQ state to the reflect the passage of time since last the IRQ, then it gets the active
