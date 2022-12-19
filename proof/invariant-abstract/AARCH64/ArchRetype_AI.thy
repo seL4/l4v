@@ -422,10 +422,15 @@ lemma vmid_inv':
      (fastforce simp: s'_def ps_def vmid_for_asid_def entry_for_pool_def in_omonad
                 elim!: pspace_no_overlapC[OF orth _ _ cover vp])
 
+lemma valid_global_tables':
+  "valid_global_tables s \<Longrightarrow> valid_global_tables s'"
+  unfolding valid_global_tables_2_def
+  by (simp add: pts_of)
+
 lemma valid_arch_state:
   "valid_arch_state s \<Longrightarrow> valid_arch_state s'"
   apply (simp add: valid_arch_state_def valid_asid_table vcpu_hyp_live_of' vmid_inv'
-                   valid_global_arch_objs
+                   valid_global_arch_objs valid_global_tables'
               del: arch_state)
   apply simp
   done

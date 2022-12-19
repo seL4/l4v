@@ -337,10 +337,18 @@ lemma valid_global_arch_objs:
   by (fastforce dest!: valid_global_refsD[OF globals cap]
                 simp: cap_range_def valid_global_arch_objs_def valid_arch_state_def)
 
+lemma valid_global_tables:
+  "valid_global_tables (detype (untyped_range cap) s)"
+  using valid_arch_state
+  apply (clarsimp simp: valid_global_tables_2_def valid_arch_state_def)
+  using untyped_range_in_cap_range[of cap] valid_global_refsD[OF globals cap]
+  apply (blast intro: global_pt_in_global_refs[of s])
+  done
+
 lemma valid_arch_state_detype[detype_invs_proofs]:
   "valid_arch_state (detype (untyped_range cap) s)"
   using valid_vs_lookup valid_arch_state ut_mdb valid_global_refsD [OF globals cap] cap
-        cur_vcpu_detype vmid_inv_detype valid_global_arch_objs
+        cur_vcpu_detype vmid_inv_detype valid_global_arch_objs valid_global_tables
   unfolding valid_arch_state_def pred_conj_def
   by (simp only: valid_asid_table) simp
 

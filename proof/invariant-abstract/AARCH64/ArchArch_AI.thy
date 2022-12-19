@@ -1045,7 +1045,8 @@ lemma associate_vcpu_tcb_if_live_then_nonz_cap[wp]:
 lemma set_vcpu_valid_arch_Some[wp]:
   "set_vcpu vcpu (v\<lparr>vcpu_tcb := Some tcb\<rparr>) \<lbrace>valid_arch_state\<rbrace>"
   apply (wp set_vcpu_wp)
-  apply (clarsimp simp: valid_arch_state_def asid_pools_of_vcpu_None_upd_idem)
+  apply (clarsimp simp: valid_arch_state_def asid_pools_of_vcpu_None_upd_idem
+                        pts_of_vcpu_None_upd_idem)
   apply (rule conjI)
    apply (clarsimp simp: vmid_inv_def asid_pools_of_vcpu_None_upd_idem)
   apply (rule conjI)
@@ -1085,7 +1086,8 @@ crunches associate_vcpu_tcb
   and valid_asid_map[wp]: valid_asid_map
   and valid_global_vspace_mappings[wp]: valid_global_vspace_mappings
   and pspace_in_kernel_window[wp]: pspace_in_kernel_window
-  (wp: crunch_wps dmo_valid_irq_states device_region_dmos simp: crunch_simps)
+  (wp: crunch_wps dmo_valid_irq_states device_region_dmos
+   simp: crunch_simps valid_kernel_mappings_def)
 
 crunches vcpu_switch
   for valid_idle[wp]: valid_idle
@@ -1163,10 +1165,27 @@ lemma set_vcpu_tcb_Some_hyp_live[wp]:
   apply (clarsimp simp: obj_at_def hyp_live_def arch_live_def)
   done
 
+lemma arch_thread_set_vcpus_of[wp]:
+  "arch_thread_set f p \<lbrace>\<lambda>s. P (vcpus_of s)\<rbrace>"
+  apply (wp arch_thread_set_wp)
+  apply (clarsimp simp: get_tcb_Some_ko_at)
+  apply (erule rsubst[where P=P])
+  apply (clarsimp simp: obj_at_def opt_map_def)
+  done
+
+(* FIXME AARCH64: move *)
+lemma opt_pred_proj_upd_eq[simp]:
+  "(P |< proj (p \<mapsto> v)) p = P v"
+  by simp
+
 lemma associate_vcpu_tcb_valid_arch_state[wp]:
   "associate_vcpu_tcb vcpu tcb \<lbrace>valid_arch_state\<rbrace>"
+  supply fun_upd_apply[simp del]
   apply (clarsimp simp: associate_vcpu_tcb_def)
   apply (wpsimp wp: vcpu_switch_valid_arch)
+        apply (rule_tac Q="\<lambda>_ s. valid_arch_state s \<and> vcpu_hyp_live_of s vcpu" in hoare_post_imp)
+         apply fastforce
+        apply wpsimp+
   done
 
 crunches restore_virt_timer, vcpu_restore_reg_range, vcpu_save_reg_range, vgic_update_lr

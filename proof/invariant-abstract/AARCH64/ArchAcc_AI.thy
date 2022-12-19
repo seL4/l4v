@@ -826,6 +826,10 @@ lemma set_asid_pool_valid_asid_table[wp]:
   using set_asid_pool_asid_pools_of[wp del]
   by (wp_pre, wps, wp, clarsimp)
 
+lemma set_asid_pool_valid_global_tables[wp]:
+  "set_asid_pool p ap \<lbrace>valid_global_tables\<rbrace>"
+  by (wp_pre, wps, wp, clarsimp)
+
 lemma set_asid_pool_None_valid_arch:
   "\<lbrace>\<lambda>s. valid_arch_state s \<and>
         asid_pools_of s p = Some ap \<and>
@@ -2811,6 +2815,13 @@ lemma store_pte_valid_arch_caps:
    \<lbrace>\<lambda>_. valid_arch_caps \<rbrace>"
   unfolding valid_arch_caps_def
   by (wpsimp wp: store_pte_valid_vs_lookup store_pte_valid_table_caps)
+
+lemma store_pte_valid_global_tables[wp]:
+  "\<lbrace> \<lambda>s. table_base pt_t p \<notin> global_refs s \<and> valid_global_tables s \<rbrace>
+   store_pte pt_t p pte
+   \<lbrace> \<lambda>_. valid_global_tables \<rbrace>"
+  unfolding store_pte_def valid_global_tables_2_def
+  by (wpsimp wp: set_pt_pts_of simp: global_refs_def | wps)+
 
 lemma store_pte_invs:
   "\<lbrace> invs

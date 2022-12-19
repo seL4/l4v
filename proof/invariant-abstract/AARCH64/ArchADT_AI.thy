@@ -102,7 +102,7 @@ definition
                     (machine_word \<times> nat \<times> vm_attributes \<times> vm_rights)"
 where
   "get_page_info aobjs pt_ref vptr \<equiv> (do {
-      oassert (canonical_address vptr);
+      oassert (vptr \<in> user_region);
       (level, slot) \<leftarrow> pt_lookup_slot pt_ref vptr;
       pte \<leftarrow> oapply2 (level_type level) slot;
       K $ pte_info level pte
@@ -123,8 +123,8 @@ definition ptable_rights :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightar
    case_option {} (snd o snd o snd)
       (get_page_info (aobjs_of s) (get_vspace_of_thread (kheap s) (arch_state s) tcb) addr)"
 
-lemma ptable_lift_Some_canonical_addressD:
-  "ptable_lift t s vptr = Some p \<Longrightarrow> canonical_address vptr"
+lemma ptable_lift_Some_user_regionD:
+  "ptable_lift t s vptr = Some p \<Longrightarrow> vptr \<in> user_region"
   by (clarsimp simp: ptable_lift_def get_page_info_def
               split: if_splits option.splits)
 

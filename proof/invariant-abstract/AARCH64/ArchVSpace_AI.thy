@@ -300,13 +300,17 @@ lemma hyp_live_vcpu_tcb:
   "hyp_live (ArchObj (VCPU vcpu)) = (vcpu_tcb vcpu \<noteq> None)"
   by (clarsimp simp: hyp_live_def arch_live_def)
 
+lemma pts_of_vcpu_None_upd_idem:
+  "vcpu_at p s \<Longrightarrow> (pts_of s)(p := None) = pts_of s"
+  by (clarsimp simp: opt_map_def obj_at_def)
+
 lemma set_vcpu_valid_arch_state_hyp_live:
   "\<lbrace>valid_arch_state and K (hyp_live (ArchObj (VCPU vcpu)))\<rbrace> set_vcpu t vcpu \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
   apply (wpsimp wp: set_vcpu_wp simp: valid_arch_state_def)
   apply (clarsimp simp: asid_pools_of_vcpu_None_upd_idem vmid_inv_def)
   apply (rule conjI)
    apply (clarsimp simp: cur_vcpu_2_def hyp_live_vcpu_tcb split: option.splits)
-  apply (clarsimp simp: valid_global_arch_objs_def obj_at_def)
+  apply (clarsimp simp: valid_global_arch_objs_def obj_at_def pts_of_vcpu_None_upd_idem)
   done
 
 lemma set_vcpu_obj_at:
@@ -732,6 +736,9 @@ lemma find_free_vmid_vmid_inv[wp]:
                    split: if_split_asm
                    dest: inj_on_domD)
   done
+
+crunches find_free_vmid
+  for valid_global_tables[wp]: "valid_global_tables"
 
 lemma find_free_vmid_valid_arch [wp]:
   "find_free_vmid \<lbrace>valid_arch_state\<rbrace>"
@@ -2831,7 +2838,7 @@ lemma set_vcpu_valid_arch_eq_hyp:
    \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
   unfolding valid_arch_state_def
   apply (wp set_vcpu_wp)
-  apply (clarsimp simp: vmid_inv_set_vcpu asid_pools_of_vcpu_None_upd_idem
+  apply (clarsimp simp: vmid_inv_set_vcpu asid_pools_of_vcpu_None_upd_idem pts_of_vcpu_None_upd_idem
                         valid_global_arch_objs_def pt_at_eq_set_vcpu)
   apply (clarsimp simp: cur_vcpu_def split: option.splits)
   by (auto simp: obj_at_def  vcpu_tcb_refs_def opt_map_def split: option.splits)
