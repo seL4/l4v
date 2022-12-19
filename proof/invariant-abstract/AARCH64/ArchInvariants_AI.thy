@@ -628,9 +628,21 @@ definition vmid_inv :: "'z::state_ext state \<Rightarrow> bool" where
 definition valid_global_arch_objs where
   "valid_global_arch_objs \<equiv> \<lambda>s. vspace_pt_at (global_pt s) s"
 
+(* global_pt is the empty default user-level vspace, corresponding to armKSGlobalUserVSpace in C.
+   On HYP platforms, the kernel has its own separate page table.
+   We need to know that the user-level table is empty so we can derive that user-level lookups
+   fail when there is no other vspace set. *)
+definition valid_global_tables_2 :: "(obj_ref \<Rightarrow> pt option) \<Rightarrow> obj_ref \<Rightarrow> bool" where
+  "valid_global_tables_2 \<equiv> \<lambda>pts global. pts global = Some (empty_pt VSRootPT_T)"
+
+locale_abbrev valid_global_tables :: "'z::state_ext state \<Rightarrow> bool" where
+  "valid_global_tables \<equiv> \<lambda>s. valid_global_tables_2 (pts_of s) (global_pt s)"
+
+lemmas valid_global_tables_def = valid_global_tables_2_def
+
 definition valid_arch_state :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_arch_state \<equiv> valid_asid_table and valid_uses and vmid_inv and cur_vcpu and
-                      valid_global_arch_objs"
+                      valid_global_arch_objs and valid_global_tables"
 
 (* ---------------------------------------------------------------------------------------------- *)
 
