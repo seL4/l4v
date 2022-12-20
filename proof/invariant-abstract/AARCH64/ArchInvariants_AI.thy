@@ -2395,6 +2395,10 @@ lemma pt_slot_offset_pt_range:
   for level::vm_level
   by (clarsimp simp: ptes_of_Some)
 
+lemma ucast_ucast_ppn:
+  "ucast (ucast ptr::ppn) = ptr && mask ppn_len" for ptr::obj_ref
+  by (simp add: ucast_ucast_mask ppn_len_def)
+
 lemma pte_base_addr_PageTablePTE[simp]:
   "pte_base_addr (PageTablePTE ppn) = paddr_from_ppn ppn"
   by (simp add: pte_base_addr_def)

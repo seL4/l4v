@@ -1540,16 +1540,10 @@ lemma neg_mask_user_region:
   apply simp
   done
 
-(* FIXME AARCH64: move to Kernel_Config_Lemmas *)
-(* ptr is expected to be a kernel-virtual pointer/obj_ref *)
-lemma ucast_ucast_ppn:
-  "(ucast (ucast ptr::ppn)::machine_word) = ptr && mask (ipa_size - pageBits)" for ptr::machine_word
-  by (simp add: ucast_ucast_mask bit_simps Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
-
 lemma ptrFromPAddr_addr_from_ppn:
   "\<lbrakk> is_aligned pt_ptr pageBits; pptr_base \<le> pt_ptr; pt_ptr < pptrTop \<rbrakk> \<Longrightarrow>
    ptrFromPAddr (paddr_from_ppn (ppn_from_pptr pt_ptr)) = pt_ptr"
-  apply (simp add: paddr_from_ppn_def ppn_from_pptr_def ucast_ucast_ppn)
+  apply (simp add: paddr_from_ppn_def ppn_from_pptr_def ucast_ucast_ppn ppn_len_def')
   apply (frule is_aligned_addrFromPPtr)
   apply (simp add: nat_minus_add_max aligned_shiftr_mask_shiftl addrFromPPtr_mask_ipa
                    mask_len_id[where 'a=machine_word_len, simplified])
