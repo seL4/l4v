@@ -342,9 +342,9 @@ definition read_cntpct :: "64 word machine_monad" where
 
 subsection "Hypervisor Banked Registers"
 
-consts' vcpuHardwareRegVal :: "vcpureg \<Rightarrow> machine_state \<Rightarrow> machine_word"
+consts' vcpuHardwareReg_val :: "vcpureg \<Rightarrow> machine_state \<Rightarrow> machine_word"
 definition readVCPUHardwareReg :: "vcpureg \<Rightarrow> machine_word machine_monad" where
-  "readVCPUHardwareReg reg \<equiv> gets (vcpuHardwareRegVal reg)"
+  "readVCPUHardwareReg reg \<equiv> gets (vcpuHardwareReg_val reg)"
 
 consts' writeVCPUHardwareReg_impl :: "vcpureg \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
 definition writeVCPUHardwareReg :: "vcpureg \<Rightarrow> machine_word \<Rightarrow> unit machine_monad" where
