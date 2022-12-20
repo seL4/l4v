@@ -292,6 +292,7 @@ crunch_ignore (valid, empty_fail, no_fail)
    with the following manual interventions:
    - remove false positives: get_def, gets_def, getFPUState, getRegister, getRestartPC
    - add readVCPUHardwareReg (which uses non-standard "Val" instead of "_val" (FIXME AARCH64))
+   - add read_cntpct
    - remove final comma
    - getActiveIRQ does not preserve no_irq *)
 crunches
@@ -345,7 +346,6 @@ crunches
   switchFpuOwner,
   readVCPUHardwareReg,
   writeVCPUHardwareReg,
-  (* FIXME AARCH64: machine ops missed by the grep above: *)
   read_cntpct
   for (no_fail) no_fail[intro!, wp, simp]
   and (empty_fail) empty_fail[intro!, wp, simp]

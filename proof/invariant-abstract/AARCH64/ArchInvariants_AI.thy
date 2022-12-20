@@ -1342,7 +1342,6 @@ lemma hyp_sym_refs_obj_atD:
   "\<lbrakk> obj_at P p s; sym_refs (state_hyp_refs_of s) \<rbrakk>
    \<Longrightarrow> \<exists>ko. P ko \<and> state_hyp_refs_of s p = hyp_refs_of ko \<and>
            (\<forall>(x, tp)\<in>hyp_refs_of ko. obj_at (\<lambda>ko. (p, symreftype tp) \<in> hyp_refs_of ko) x s)"
-  supply hyp_refs_of_simps[simp del]
   apply (drule obj_at_state_hyp_refs_ofD)
   apply (erule exEI, clarsimp)
   apply (drule sym, simp)
