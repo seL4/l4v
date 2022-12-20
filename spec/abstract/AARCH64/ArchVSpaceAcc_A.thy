@@ -96,6 +96,7 @@ type_synonym ptes_of = "pt_type \<Rightarrow> obj_ref \<rightharpoonup> pte"
 locale_abbrev ptes_of :: "'z::state_ext state \<Rightarrow> ptes_of" where
   "ptes_of s pt_t p \<equiv> level_pte_of pt_t p (pts_of s)"
 
+lemmas ptes_of_def = level_pte_of_def
 
 text \<open>The following function takes a pointer to a PTE in kernel memory and returns the PTE.\<close>
 locale_abbrev get_pte :: "pt_type \<Rightarrow> obj_ref \<Rightarrow> (pte,'z::state_ext) s_monad" where

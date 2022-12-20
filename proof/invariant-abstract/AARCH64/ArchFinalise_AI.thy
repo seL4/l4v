@@ -1644,10 +1644,6 @@ crunch pred_tcb_at[wp]:
 crunch pred_tcb_at[wp_unsafe]: arch_finalise_cap "pred_tcb_at proj P t"
   (simp: crunch_simps wp: crunch_wps)
 
-(* FIXME AARCH64
-crunch empty[wp]: find_free_hw_asid, store_hw_asid, load_hw_asid, set_vm_root_for_flush, page_table_mapped, invalidate_tlb_by_asid
-  "\<lambda>s. P (obj_at (empty_table {}) word s)" *)
-
 lemma set_vcpu_empty[wp]:
   "\<lbrace>\<lambda>s. P (obj_at (empty_table {}) word s)\<rbrace> set_vcpu p v \<lbrace>\<lambda>_ s. P (obj_at (empty_table {}) word s)\<rbrace>"
   apply (rule set_vcpu.vsobj_at)

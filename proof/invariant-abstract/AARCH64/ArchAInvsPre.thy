@@ -42,27 +42,6 @@ lemma data_at_aligned:
   "\<lbrakk> data_at sz p s; pspace_aligned s\<rbrakk> \<Longrightarrow> is_aligned p (pageBitsForSize sz)"
   unfolding data_at_def by (auto simp: obj_at_def dest: pspace_alignedD)
 
-lemma is_aligned_pptrBaseOffset_pt_bits_left:
-  "level \<le> max_pt_level \<Longrightarrow> is_aligned pptrBaseOffset (pt_bits_left level)"
-  apply (drule pt_bits_left_le_max_pt_level)
-  apply (fastforce elim: is_aligned_weaken[rotated]
-                   simp: pptrBaseOffset_def pptrBase_def paddrBase_def
-                         is_aligned_def pt_bits_left_bound_def bit_simps
-                   split: if_split_asm)
-  done
-
-lemma is_aligned_ptrFromPAddr_n_eq:
-  "level \<le> max_pt_level \<Longrightarrow>
-   is_aligned (ptrFromPAddr x) (pt_bits_left level) = is_aligned x (pt_bits_left level)"
-  apply (rule iffI)
-   apply (simp add: ptrFromPAddr_def)
-   apply (erule is_aligned_addD2)
-   apply (erule is_aligned_pptrBaseOffset_pt_bits_left)
-  apply (erule is_aligned_ptrFromPAddr_n)
-  apply (drule pt_bits_left_le_max_pt_level)
-  apply (clarsimp simp: pt_bits_left_bound_def bit_simps split: if_split_asm)
-  done
-
 lemma some_get_page_info_umapsD:
   "\<lbrakk>get_page_info (aobjs_of s) pt_ref vptr = Some (b, a, attr, r);
     \<exists>\<rhd> (max_pt_level, pt_ref) s; vptr \<in> user_region; valid_vspace_objs s; pspace_aligned s;

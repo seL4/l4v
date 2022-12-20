@@ -1301,6 +1301,14 @@ lemma level_type_eq[simp]:
   "(level_type level = VSRootPT_T) = (level = max_pt_level)"
   by (simp add: level_type_def)+
 
+lemma level_type_less_max_pt_level:
+  "level < max_pt_level \<Longrightarrow> level_type level = NormalPT_T"
+  by (clarsimp simp: level_type_def)
+
+lemma ptTranslationBits_NormalPT_T_leq:
+  "ptTranslationBits NormalPT_T \<le> ptTranslationBits VSRootPT_T"
+  by (simp add: bit_simps)
+
 lemma valid_vspace_obj_default'[simp]:
   "\<lbrakk> ao_type = VSpaceObj \<Longrightarrow> level = max_pt_level;
      ao_type = PageTableObj \<Longrightarrow> level \<noteq> max_pt_level \<rbrakk> \<Longrightarrow>
@@ -1690,9 +1698,6 @@ lemma vspace_for_asid_SomeI:
    \<Longrightarrow> vspace_for_asid asid s = Some pt_ptr"
   by (clarsimp simp: entry_for_asid_def pool_for_asid_def entry_for_pool_def vspace_for_pool_def
                      vspace_for_asid_def obind_def)
-
-(* FIXME AARCH64: move up *)
-lemmas ptes_of_def = level_pte_of_def
 
 lemma ptes_of_pts_of:
   "ptes_of s pt_t pte_ptr = Some pte \<Longrightarrow>
@@ -2236,39 +2241,64 @@ lemma aligned_vref_for_level[simp]:
 
 lemmas pt_walk_0[simp] = pt_walk.simps[where level=0, simplified]
 
-(* FIXME AARCH64: the 39 is from the construction of pptrBaseOffset, not sure if we can de-magic that number *)
+(* The current definition of pptrBaseOffset comes out to 2^39. The number below is the maximum
+   alignment this offset allows. We need this to be greater or equal to pt_bits_left max_pt_level *)
+definition pptrBaseOffset_alignment :: nat where
+  "pptrBaseOffset_alignment \<equiv> 39"
+
+(* sanity check for size *)
+lemma pptrBaseOffset_alignment_pt_bits_left[simp, intro!]:
+  "pt_bits_left max_pt_level \<le> pptrBaseOffset_alignment"
+  by (simp add: bit_simps pt_bits_left_def pptrBaseOffset_alignment_def size_max_pt_level)
+
+(* sanity check for alignment *)
+lemma pptrBaseOffset_aligned[simp, intro!]:
+  "is_aligned pptrBaseOffset pptrBaseOffset_alignment"
+  by (simp add: pptrBaseOffset_alignment_def pptrBaseOffset_def pptrBase_def paddrBase_def
+                is_aligned_def)
+
 lemma is_aligned_addrFromPPtr_n:
-  "\<lbrakk> is_aligned p n; n \<le> 39 \<rbrakk> \<Longrightarrow> is_aligned (addrFromPPtr p) n"
+  "\<lbrakk> is_aligned p n; n \<le> pptrBaseOffset_alignment \<rbrakk> \<Longrightarrow> is_aligned (addrFromPPtr p) n"
   apply (simp add: addrFromPPtr_def)
   apply (erule aligned_sub_aligned)
-   apply (simp add: pptrBaseOffset_def pptrBase_def paddrBase_def)
-   apply (erule is_aligned_weaken[rotated])
-   apply (simp add: is_aligned_def)
-  apply simp
+   apply (erule is_aligned_weaken[OF pptrBaseOffset_aligned])
+  apply (simp add: pptrBaseOffset_alignment_def)
   done
 
 lemma is_aligned_addrFromPPtr[intro!]:
   "is_aligned p pageBits \<Longrightarrow> is_aligned (addrFromPPtr p) pageBits"
-  by (simp add: is_aligned_addrFromPPtr_n pageBits_def)
+  by (simp add: is_aligned_addrFromPPtr_n pageBits_def pptrBaseOffset_alignment_def)
 
-(* FIXME AARCH64: the 39 is from the construction of pptrBaseOffset, via is_aligned_addrFromPPtr_n *)
 lemma is_aligned_ptrFromPAddr_n:
-  "\<lbrakk>is_aligned x sz; sz \<le> 39\<rbrakk>
+  "\<lbrakk>is_aligned x sz; sz \<le> pptrBaseOffset_alignment\<rbrakk>
    \<Longrightarrow> is_aligned (ptrFromPAddr x) sz"
-  apply (simp add: ptrFromPAddr_def pptrBaseOffset_def pptrBase_def paddrBase_def)
+  unfolding ptrFromPAddr_def
   apply (erule aligned_add_aligned)
-   apply (erule is_aligned_weaken[rotated])
-   apply (simp add: is_aligned_def)
+   apply (erule is_aligned_weaken[OF pptrBaseOffset_aligned])
   apply (rule order.refl)
+  done
+
+lemma is_aligned_pptrBaseOffset_pt_bits_left:
+  "level \<le> max_pt_level \<Longrightarrow> is_aligned pptrBaseOffset (pt_bits_left level)"
+  by (blast intro: order_trans pt_bits_left_mono is_aligned_weaken)
+
+lemma is_aligned_ptrFromPAddr_n_eq:
+  "level \<le> max_pt_level \<Longrightarrow>
+   is_aligned (ptrFromPAddr x) (pt_bits_left level) = is_aligned x (pt_bits_left level)"
+  apply (rule iffI)
+   apply (simp add: ptrFromPAddr_def)
+   apply (erule is_aligned_addD2)
+   apply (erule is_aligned_pptrBaseOffset_pt_bits_left)
+  apply (blast intro: order_trans pt_bits_left_mono is_aligned_ptrFromPAddr_n)
   done
 
 lemma is_aligned_ptrFromPAddr:
   "is_aligned p pageBits \<Longrightarrow> is_aligned (ptrFromPAddr p) pageBits"
-  by (simp add: is_aligned_ptrFromPAddr_n pageBits_def)
+  by (simp add: is_aligned_ptrFromPAddr_n pageBits_def pptrBaseOffset_alignment_def)
 
 lemma is_aligned_ptrFromPAddr_pt_bits[intro!]:
   "is_aligned p (pt_bits pt_t) \<Longrightarrow> is_aligned (ptrFromPAddr p) (pt_bits pt_t)"
-  by (simp add: is_aligned_ptrFromPAddr_n bit_simps)
+  by (simp add: is_aligned_ptrFromPAddr_n bit_simps pptrBaseOffset_alignment_def)
 
 lemma pspace_aligned_pts_ofD:
   "\<lbrakk> pspace_aligned s; pts_of s pt_ptr = Some pt \<rbrakk> \<Longrightarrow> is_aligned pt_ptr (pt_bits (pt_type pt))"

@@ -206,17 +206,6 @@ lemma unique_vs_lookup_table:
   apply (drule table_cap_ref_vs_cap_ref; simp)
   done
 
-(* FIXME AARCH64: move *)
-lemma level_type_less_max_pt_level:
-  "level < max_pt_level \<Longrightarrow> level_type level = NormalPT_T"
-  by (clarsimp simp: level_type_def)
-
-(* FIXME AARCH64: move *)
-(* Depending on config, ptTranslationBits NormalPT_T might be equal to ptTranslationBits VSRootPT_T *)
-lemma ptTranslationBits_NormalPT_T_leq:
-  "ptTranslationBits NormalPT_T \<le> ptTranslationBits VSRootPT_T"
-  by (simp add: bit_simps)
-
 lemma vref_for_level_pt_index_idem:
   assumes "level' \<le> max_pt_level" and "level'' \<le> level'" and "level < max_pt_level"
   shows "vref_for_level
@@ -1493,24 +1482,6 @@ lemma kernel_regionsI:
   "p \<in> kernel_device_window s \<Longrightarrow> p \<in> kernel_regions s"
   unfolding kernel_regions_def
   by auto
-
-(* FIXME AARCH64: probably remove
-lemma user_region_canonical_pptr_base:
-  "\<lbrakk> p \<notin> user_region; canonical_address p \<rbrakk> \<Longrightarrow> pptr_base \<le> p"
-  using canonical_below_pptr_base_canonical_user word_le_not_less
-  by (auto simp add: user_region_def not_le) *)
-
-(* FIXME AARCH64: probably remove
-lemma kernel_regions_pptr_base:
-  "\<lbrakk> p \<in> kernel_regions s; valid_uses s \<rbrakk> \<Longrightarrow> pptr_base \<le> p"
-  apply (rule user_region_canonical_pptr_base)
-   apply (simp add: valid_uses_def window_defs)
-   apply (erule_tac x=p in allE)
-   apply auto[1]
-  apply (simp add: valid_uses_def window_defs)
-  apply (erule_tac x=p in allE)
-  apply auto[1]
-  done *)
 
 lemma set_pt_valid_global_vspace_mappings[wp]:
   "\<lbrace>\<top>\<rbrace> set_pt p pt \<lbrace>\<lambda>_. valid_global_vspace_mappings\<rbrace>"
