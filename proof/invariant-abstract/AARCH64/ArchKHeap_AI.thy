@@ -492,15 +492,11 @@ definition level_of_slot :: "asid \<Rightarrow> vspace_ref \<Rightarrow> obj_ref
   "level_of_slot asid vref p s \<equiv>
      GREATEST level. vs_lookup_slot level asid vref s = Some (level, p)"
 
-(* FIXME AARCH64: move *)
-lemmas vm_level_GreatestI = bit1.GreatestI
-lemmas vm_level_Greatest_le = bit1.Greatest_le
-
 lemma level_of_slotI:
   "\<lbrakk> vs_lookup_slot level' asid vref s = Some (level', p); level < level'\<rbrakk>
    \<Longrightarrow> vs_lookup_slot (level_of_slot asid vref p s) asid vref s = Some (level_of_slot asid vref p s, p)
        \<and> level < level_of_slot asid vref p s"
-  by (auto simp: level_of_slot_def dest: vm_level_GreatestI vm_level_Greatest_le)
+  by (auto simp: level_of_slot_def dest: vm_level.GreatestI vm_level.Greatest_le)
 
 lemma pool_for_asid_no_pt:
   "\<lbrakk> pool_for_asid asid s = Some p; pts_of s p = Some pte; valid_asid_table s; pspace_aligned s \<rbrakk>
@@ -574,9 +570,6 @@ lemma vs_lookup_slot_level_type:
    \<Longrightarrow> level_type level = pt_t"
   by (fastforce simp: ptes_of_Some intro!: pts_of_type_unique dest: valid_vspace_objs_strong_slotD)
 
-(* FIXME AARCH64: move *)
-lemmas vm_level_from_top_full_induct = bit1.from_top_full_induct
-
 (* Removing a page table pte entry at p will cause lookups to stop at higher levels than requested.
    If performing a shallower lookup than the one requested results in p, then any deeper lookup
    in the updated state will return a higher level result along the original path. *)
@@ -590,7 +583,7 @@ lemma vs_lookup_non_PageTablePTE:
      (if \<exists>level'. vs_lookup_slot level' asid vref s = Some (level', p) \<and> level < level'
       then vs_lookup_table (level_of_slot asid vref p s) asid vref s
       else vs_lookup_table level asid vref s)"
-  apply (induct level rule: vm_level_from_top_full_induct[where y=max_pt_level])
+  apply (induct level rule: vm_level.from_top_full_induct[where y=max_pt_level])
    apply (clarsimp simp: geq_max_pt_level)
    apply (erule disjE; clarsimp)
     apply (rule conjI; clarsimp)
@@ -616,10 +609,10 @@ lemma vs_lookup_non_PageTablePTE:
   subgoal for x old_pte
     apply (subst vs_lookup_split[where level'="x+1"])
       apply (simp add: less_imp_le)
-     apply (simp add: vm_level_plus_one_leq)
+     apply (simp add: vm_level.plus_one_leq)
     apply (subst (2) vs_lookup_split[where level'="x+1"])
       apply (simp add: less_imp_le)
-     apply (simp add: vm_level_plus_one_leq)
+     apply (simp add: vm_level.plus_one_leq)
     apply (erule_tac x="x+1" in allE)
     apply (simp add: less_imp_le)
     apply (simp  split: if_split_asm)

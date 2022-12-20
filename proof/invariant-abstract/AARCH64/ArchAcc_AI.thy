@@ -278,9 +278,9 @@ lemma pt_walk_loop_last_level_ptpte_helper_induct:
                     ptes
             = Some (level' - 1, pptr_from_pte pte)")
    apply (drule meta_spec, drule meta_spec, drule meta_spec, drule (1) meta_mp, drule meta_mp)
-    apply (simp add: bit1.minus_one_leq_less)  (* FIXME AARCH64: bit1 *)
+    apply (simp add: vm_level.minus_one_leq_less)
    apply (drule meta_mp)
-    apply (simp add: bit1.minus_one_leq_less bit1.neq_0_conv pt_walk_max_level) (* FIXME AARCH64: bit1 *)
+    apply (simp add: vm_level.minus_one_leq_less vm_level.neq_0_conv pt_walk_max_level)
    apply (clarsimp simp: pptr_from_pte_aligned_pt_bits)
    apply (subst pt_walk.simps)
    apply (clarsimp simp: in_omonad)
@@ -297,7 +297,7 @@ lemma pt_walk_loop_last_level_ptpte_helper_induct:
       apply (drule_tac level'="level'+1" in  vref_for_level_eq_mono)
        apply (fastforce intro: vref_for_level_pt_index_idem)
       apply (fastforce intro: vref_for_level_pt_index_idem)
-     apply (erule bit1.plus_one_leq)
+     apply (erule vm_level.plus_one_leq)
     apply simp
    apply (rule conjI, blast)
    apply (drule_tac level'="level'+1" in  vref_for_level_eq_mono
@@ -306,7 +306,7 @@ lemma pt_walk_loop_last_level_ptpte_helper_induct:
   apply (rule_tac pt_walk_split_Some[where level'="level" and level="level - 1" for level,
                                      THEN iffD2])
     apply (fastforce dest!: vm_level_not_less_zero intro: less_imp_le)
-   apply (meson bit1.leq_minus1_less bit1.not_less_zero_bit0 le_less less_linear less_trans)
+   apply (meson vm_level.leq_minus1_less vm_level.not_less_zero_bit0 le_less less_linear less_trans)
   apply (subgoal_tac
            "pt_walk (level - 1) level' (pptr_from_pte pte)
                     (vref_for_level vref (level' + 1) || (pt_index level vref << pt_bits_left level'))
@@ -314,7 +314,7 @@ lemma pt_walk_loop_last_level_ptpte_helper_induct:
    prefer 2
    apply (rule pt_walk_vref_for_level_eq)
     apply (subst vref_for_level_pt_index_idem, simp+)
-   apply (meson bit1.leq_minus1_less bit1.not_less_zero_bit0 le_less less_linear less_trans)
+   apply (meson vm_level.leq_minus1_less vm_level.not_less_zero_bit0 le_less less_linear less_trans)
   apply clarsimp
   apply (subst pt_walk.simps)
   apply clarsimp
@@ -2342,7 +2342,7 @@ lemma pt_walk_below_pt_upd_idem:
    apply (rename_tac level'')
    apply (prop_tac "level'' < level'")
     apply (drule pt_walk_max_level)
-    apply (simp add: vm_level_leq_minus1_less)
+    apply (simp add: vm_level.leq_minus1_less)
    apply (prop_tac "pt_walk level' level'' (table_base level' p) vref (ptes_of s) =
                       Some (level'', table_base level' p)")
     apply (subst pt_walk.simps)

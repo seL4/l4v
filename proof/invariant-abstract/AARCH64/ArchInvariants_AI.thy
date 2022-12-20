@@ -804,12 +804,12 @@ lemma max_pt_level_gt0[simp]:
 lemma max_pt_level_enum:
   "level \<le> max_pt_level \<Longrightarrow> if config_ARM_PA_SIZE_BITS_40 then level \<in> {0,1,2} else level \<in> {0,1,2,3}"
   unfolding level_defs Kernel_Config.config_ARM_PA_SIZE_BITS_40_def
-  by (cases level rule: vm_level_of_nat_cases) (case_tac m; simp; rename_tac m)+
+  by (cases level rule: vm_level.of_nat_cases) (case_tac m; simp; rename_tac m)+
 
 lemma max_page_level_enum:
   "level \<le> max_page_level \<Longrightarrow> level \<in> {0,1,2}"
   unfolding level_defs
-  by (cases level rule: vm_level_of_nat_cases) (case_tac m; simp; rename_tac m)+
+  by (cases level rule: vm_level.of_nat_cases) (case_tac m; simp; rename_tac m)+
 
 lemma asid_pool_level_size:
   "size asid_pool_level = (if config_ARM_PA_SIZE_BITS_40 then 3 else 4)"
@@ -827,7 +827,7 @@ lemma asid_pool_level_not_0[simp]:
 lemma vm_level_not_less_zero:
   fixes level :: vm_level
   shows "level \<noteq> 0 \<Longrightarrow> level > 0"
-  using vm_level_not_less_zero_bit0 neqE by blast
+  using vm_level.not_less_zero_bit0 neqE by blast
 
 lemma asid_pool_level_neq[simp]:
   "(x \<noteq> asid_pool_level) = (x \<le> max_pt_level)"
@@ -836,7 +836,7 @@ proof
   hence "x < asid_pool_level"
     unfolding asid_pool_level_def by simp
   thus "x \<le> max_pt_level"
-    by (simp add: max_pt_level_def vm_level_leq_minus1_less)
+    by (simp add: max_pt_level_def vm_level.leq_minus1_less)
 next
   note maxBound_minus_one_bit[simp del]
   assume "x \<le> max_pt_level"
@@ -892,7 +892,7 @@ lemma max_pt_level_plus_one:
 
 lemma max_pt_level_less_Suc[iff]:
   "(level < level + 1) = (level \<le> max_pt_level)"
-  apply (simp add: vm_level_no_overflow_eq_max_bound max_pt_level_def flip: asid_pool_level_minus)
+  apply (simp add: vm_level.no_overflow_eq_max_bound max_pt_level_def flip: asid_pool_level_minus)
   by (metis asid_pool_level_max asid_pool_level_neq max_pt_level_def antisym_conv2)
 
 lemma size_level1[simp]:
@@ -900,7 +900,7 @@ lemma size_level1[simp]:
 proof
   assume "size level = Suc 0"
   hence "size level = size (1::vm_level)" by simp
-  thus "level = 1" by (subst (asm) vm_level_size_inj)
+  thus "level = 1" by (subst (asm) vm_level.size_inj)
 qed auto
 
 lemma minus_one_max_pt_level[simp]:
@@ -917,7 +917,7 @@ lemma max_inc_pt_level[simp]:
 
 lemma vm_level_le_plus_1_mono:
   "\<lbrakk>level' \<le> level; level \<le> max_pt_level \<rbrakk> \<Longrightarrow> level' + 1 \<le> level + 1"
-  by (simp add: vm_level_plus_one_leq le_less_trans)
+  by (simp add: vm_level.plus_one_leq le_less_trans)
 
 lemma vm_level_less_plus_1_mono:
   "\<lbrakk> level' < level; level \<le> max_pt_level \<rbrakk> \<Longrightarrow> level' + 1 < level + 1"
@@ -925,7 +925,7 @@ lemma vm_level_less_plus_1_mono:
 
 lemma level_minus_one_max_pt_level[iff]:
   "(level - 1 \<le> max_pt_level) = (0 < level)"
-  by (metis max_pt_level_less_Suc vm_level_not_less_zero_bit0 vm_level_pred diff_add_cancel
+  by (metis max_pt_level_less_Suc vm_level.not_less_zero_bit0 vm_level.pred diff_add_cancel
            not_less_iff_gr_or_eq)
 
 (* Sometimes you need type nat directly in the goal, not vm_level *)
@@ -1506,8 +1506,8 @@ lemma pt_walk_max_level:
   apply (clarsimp simp: in_omonad split: if_split_asm)
   apply (erule disjE; clarsimp)
   apply (drule meta_spec, drule (1) meta_mp)
-  apply (drule vm_level_zero_least)
-  using vm_level_pred less_trans not_less by blast
+  apply (drule vm_level.zero_least)
+  using vm_level.pred less_trans not_less by blast
 
 lemma pt_walk_min_level:
   "pt_walk top_level bot_level pt_ptr vptr ptes = Some (level, p)
@@ -1519,7 +1519,7 @@ lemma pt_walk_min_level:
   apply (clarsimp simp: in_omonad split: if_split_asm)
   apply (erule disjE; clarsimp)
   apply (drule meta_spec, drule (1) meta_mp)
-  apply (auto simp: min_def split: if_split_asm dest: vm_level_minus1_leq)
+  apply (auto simp: min_def split: if_split_asm dest: vm_level.minus1_leq)
   done
 
 lemma pt_walk_top:
@@ -1642,9 +1642,9 @@ lemma pt_walk_vref_for_level_eq:
    apply (simp add: pt_walk.simps)
   apply (subst pt_walk.simps)
   apply (subst (2) pt_walk.simps)
-  apply (simp add: Let_def vm_level_leq_minus1_less)
+  apply (simp add: Let_def vm_level.leq_minus1_less)
   apply (drule_tac level'=top_level in vref_for_level_eq_mono)
-   apply (simp add: vm_level_plus_one_leq)
+   apply (simp add: vm_level.plus_one_leq)
   apply (drule_tac pt=pt in vref_for_level_pt_slot_offset)
   apply (clarsimp simp: obind_def split: option.splits)
   done
@@ -1659,7 +1659,7 @@ lemma pt_walk_vref_for_level1:
   "\<lbrakk> level \<le> bot_level; bot_level \<le> top_level; top_level \<le> max_pt_level \<rbrakk> \<Longrightarrow>
    pt_walk top_level bot_level pt (vref_for_level vref (level+1)) =
    pt_walk top_level bot_level pt vref"
-  by (meson max_pt_level_less_Suc vm_level_plus_one_leq leD leI order.trans vref_for_level_idem
+  by (meson max_pt_level_less_Suc vm_level.plus_one_leq leD leI order.trans vref_for_level_idem
             pt_walk_vref_for_level_eq)
 
 lemma vs_lookup_vref_for_level1:
@@ -1784,7 +1784,7 @@ lemma pt_walk_level:
   apply (clarsimp simp: in_omonad split: if_split_asm)
   apply (erule disjE; clarsimp)
   apply (drule meta_spec, drule (1) meta_mp)
-  by (fastforce simp: vm_level_leq_minus1_less dest: pt_walk_max_level)
+  by (fastforce simp: vm_level.leq_minus1_less dest: pt_walk_max_level)
 
 lemma vs_lookup_level:
   "vs_lookup_table bot_level asid vref s = Some (level, p) \<Longrightarrow>
@@ -1912,7 +1912,7 @@ lemma pt_slot_offset_vref:
   apply (prop_tac "size level \<le> size max_pt_level", simp)
   apply (simp add: size_max_pt_level split: if_split_asm)
    apply (erule_tac x="(9 + (9 * size level + n))" in allE,
-          (erule impE; clarsimp), simp flip: vm_level_size_less)+
+          (erule impE; clarsimp), simp flip: vm_level.size_less)+
   done
 
 lemma pt_slot_offset_vref_for_level_eq:
@@ -2078,7 +2078,7 @@ lemma pt_walk_split:
    apply (fastforce simp: obind_assoc intro: opt_bind_cong)
   apply (subgoal_tac "level' < top_level -1")
    apply (fastforce simp: obind_assoc intro: opt_bind_cong)
-  apply (meson vm_level_minus1_leq not_le less_le)
+  apply (meson vm_level.minus1_leq not_le less_le)
   done
 
 lemma pt_walk_split_short:
@@ -2098,7 +2098,7 @@ lemma pt_walk_split_short:
   apply (subgoal_tac "level' < top_level -1")
    apply (clarsimp simp: obind_assoc)
    apply (fastforce simp: obind_def pt_walk.simps intro!: opt_bind_cong)
-  apply (meson vm_level_minus1_leq not_le less_le)
+  apply (meson vm_level.minus1_leq not_le less_le)
   done
 
 lemma pt_walk_split_Some:
@@ -2155,7 +2155,7 @@ lemma vs_lookup_table_split_last_Some:
   apply (clarsimp simp: vs_lookup_table_def in_omonad asid_pool_level_eq
                          vm_level_less_max_pt_level)
   apply (subst (asm) pt_walk_split_Some[where level'="level+1"])
-    apply (clarsimp simp add: less_imp_le vm_level_plus_one_leq)+
+    apply (clarsimp simp add: less_imp_le vm_level.plus_one_leq)+
   apply (subst (asm) (2) pt_walk.simps)
   apply (clarsimp simp: in_omonad split: if_splits)
   done
@@ -2301,7 +2301,7 @@ lemma valid_vspace_objs_strongD:
         pt_type pt = level_type level"
   supply valid_vspace_obj.simps[simp del]
   apply (drule vs_lookup_level)
-  apply (induct level arbitrary: pt_ptr rule: vm_level_from_top_induct[where y="max_pt_level"])
+  apply (induct level arbitrary: pt_ptr rule: vm_level.from_top_induct[where y="max_pt_level"])
    apply simp
    apply (drule (3) vs_lookup_max_pt_valid, simp)
   apply (rename_tac level pt_ptr)
@@ -2610,7 +2610,7 @@ lemma vref_for_level_idx_canonical_user:
    apply (frule bit_imp_possible_bit)
    apply simp
    apply (drule xt1(11), simp)
-   apply (subst (asm) vm_level_size_less[symmetric])
+   apply (subst (asm) vm_level.size_less[symmetric])
    apply (simp add: size_max_pt_level)
   apply (cases "level = max_pt_level")
    apply (clarsimp simp: bit_simps pt_bits_left_def size_max_pt_level asid_pool_level_eq word_size)
@@ -2622,7 +2622,7 @@ lemma vref_for_level_idx_canonical_user:
   apply (simp add: bit_simps pt_bits_left_def size_max_pt_level asid_pool_level_eq word_size)
   apply (frule bit_imp_possible_bit)
   apply (drule xt1(11), simp)
-  apply (subst (asm) vm_level_size_less[symmetric])
+  apply (subst (asm) vm_level.size_less[symmetric])
   apply (simp add: size_max_pt_level)
   done
 
@@ -2729,7 +2729,7 @@ lemma pt_bits_left_inj[simp]:
   apply (intro iffI; clarsimp?)
   apply (clarsimp simp: pt_bits_left_def bit_simps
                  split: if_splits)
-     by (metis vm_level_size_less_eq diff_is_0_eq' mult_zero_right right_diff_distrib' sum_imp_diff
+     by (metis vm_level.size_less_eq diff_is_0_eq' mult_zero_right right_diff_distrib' sum_imp_diff
                zero_neq_numeral)+
 
 lemma pt_walk_stopped:

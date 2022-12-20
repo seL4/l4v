@@ -1330,12 +1330,12 @@ next
      apply simp
      apply (erule mp)
      apply (subst pt_walk.simps)
-     apply (simp add: in_omonad vm_level_leq_minus1_less)
+     apply (simp add: in_omonad vm_level.leq_minus1_less)
     apply (subst (asm) (3) pt_walk.simps)
     apply (case_tac "level = top_level - 1"; clarsimp)
     apply (subgoal_tac "level < top_level - 1", fastforce)
-    apply (frule vm_level_zero_least)
-    apply (subst (asm) vm_level_leq_minus1_less[symmetric], assumption)
+    apply (frule vm_level.zero_least)
+    apply (subst (asm) vm_level.leq_minus1_less[symmetric], assumption)
     apply simp
     done
 qed
@@ -1486,7 +1486,7 @@ lemma store_pte_invalid_vs_lookup_target_unmap:
     (* PageTablePTE: level' would have to be asid_pool_level, contradiction *)
     apply (drule (1) vs_lookup_table_step; simp?)
       apply (rule ccontr)
-      apply (clarsimp simp flip: bit1.neq_0_conv simp: is_PageTablePTE_def)
+      apply (clarsimp simp flip: vm_level.neq_0_conv simp: is_PageTablePTE_def)
      apply (fastforce simp: pte_ref_Some_cases)
     apply (drule (1) no_loop_vs_lookup_table; simp?)
    (* PagePTE *)
@@ -1613,7 +1613,7 @@ lemma unmap_page_table_not_target:
    apply (clarsimp simp: data_at_def obj_at_def)
   apply (clarsimp simp: vs_lookup_slot_def split: if_split_asm)
   apply (drule (4) vs_lookup_table_step, simp)
-  apply (prop_tac "level - 1 < max_pt_level", erule (1) bit1.minus_one_leq_less) (* FIXME AARCH64: bit1 *)
+  apply (prop_tac "level - 1 < max_pt_level", erule (1) vm_level.minus_one_leq_less)
   apply fastforce
   done
 

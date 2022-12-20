@@ -1447,13 +1447,13 @@ lemma pts_of_level_type_unique:
 
 lemma pageBitsForSize_max_page_level:
   "pt_bits_left level = pageBitsForSize vmpage_size \<Longrightarrow> level \<le> max_page_level"
-  using bit1.size_inj[where x=level and y=max_page_level, unfolded level_defs, simplified]
+  using vm_level.size_inj[where x=level and y=max_page_level, unfolded level_defs, simplified]
   by (simp add: pageBitsForSize_def pt_bits_left_def ptTranslationBits_def level_defs
            split: vmpage_size.splits if_split_asm)
 
 lemma pageBitsForSize_level_0_eq:
   "pt_bits_left level = pageBitsForSize vmpage_size \<Longrightarrow> (vmpage_size = ARMSmallPage) = (level = 0)"
-  using bit1.size_inj[where x=level and y=max_page_level, unfolded level_defs, simplified]
+  using vm_level.size_inj[where x=level and y=max_page_level, unfolded level_defs, simplified]
   by (simp add: pageBitsForSize_def pt_bits_left_def ptTranslationBits_def
            split: vmpage_size.splits if_split_asm)
 

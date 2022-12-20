@@ -10,25 +10,61 @@ imports
   BCorres_AI
 begin
 
+(* This context block finds all lemmas with names *.bit1.* or *.bit0.* depending on the size
+   of vm_level, and locally re-declares them under the prefix vm_level.* so that their name
+   is available generically without reference to whether vm_level is even or odd *)
+context begin global_naming vm_level
+
+local_setup \<open>
+  let
+    (* From find_theorems.ML *)
+    fun all_facts_of lthy =
+      let
+        val ctxt = Local_Theory.target_of lthy;
+        val thy = Proof_Context.theory_of ctxt;
+        val transfer = Global_Theory.transfer_theories thy;
+        val global_facts = Global_Theory.facts_of thy;
+      in
+       (Facts.dest_all (Context.Proof ctxt) false [] global_facts)
+       |> maps Facts.selections
+       |> map (apsnd transfer)
+      end;
+
+    (* We will not be referencing lemma collections, only single names *)
+    fun is_single (Facts.Named (_, NONE)) = true
+      | is_single _ = false
+
+    fun name_of (Facts.Named ((name, _), _)) = name
+      | name_of _ = raise ERROR "name_of: no name"
+
+    (* Add a single theorem with name to the local theory *)
+    fun add_thm (name, thm) lthy =
+       Local_Theory.notes [((Binding.name name, []), [([thm], [])])] lthy |> #2
+
+    (* Add a list of theorems with names to the local theory *)
+    fun add_thms lthy xs = fold add_thm xs lthy
+
+    (* The top-level constructor name of the vm_level numeral type tells us whether to match
+       on bit0 or bit1 *)
+    val bit_name = dest_Type @{typ AARCH64_A.vm_level} |> fst |> Long_Name.base_name
+
+    (* Check whether an exploded long name does have a bit0/bit1 name *)
+    fun matches_bit_name names = member (op =) names bit_name
+
+    fun redeclare_short_names lthy =
+      all_facts_of lthy
+      |> filter (matches_bit_name o Long_Name.explode o Facts.ref_name o fst)
+      |> filter (is_single o fst)
+      |> map (fn (thm_ref, thm) => (name_of thm_ref |> Long_Name.base_name, thm))
+      |> add_thms lthy
+  in
+    redeclare_short_names
+  end
+\<close>
+
+end
+
 context Arch begin global_naming AARCH64
-
-(* FIXME AARCH64: move/generalise; port back to RISC-V before we seed AInvs from there.
-   Ideally we want to pick bit0/bit1 automatically based on the value of asid_pool_level. *)
-lemmas vm_level_minus_induct = bit1.minus_induct
-lemmas vm_level_of_nat_cases = bit1.of_nat_cases
-lemmas vm_level_not_less_zero_bit0 = bit1.not_less_zero_bit0
-lemmas vm_level_leq_minus1_less = bit1.leq_minus1_less
-lemmas vm_level_no_overflow_eq_max_bound = bit1.no_overflow_eq_max_bound
-lemmas vm_level_size_inj = bit1.size_inj
-lemmas vm_level_plus_one_leq = bit1.plus_one_leq
-lemmas vm_level_pred = bit1.pred
-lemmas vm_level_zero_least = bit1.zero_least
-lemmas vm_level_minus1_leq = bit1.minus1_leq
-lemmas vm_level_size_plus = bit1.size_plus
-lemmas vm_level_size_less = bit1.size_less
-lemmas vm_level_from_top_induct = bit1.from_top_induct
-lemmas vm_level_size_less_eq = bit1.size_less_eq
-
 
 lemma entry_for_asid_truncate[simp]:
   "entry_for_asid asid (truncate_state s) = entry_for_asid asid s"
@@ -53,7 +89,7 @@ lemma vs_lookup_slot_truncate[simp]:
 
 lemma pt_lookup_from_level_bcorres[wp]:
   "bcorres (pt_lookup_from_level l r b c) (pt_lookup_from_level l r b c)"
-  by (induct l arbitrary: r b c rule: vm_level_minus_induct; wpsimp simp: pt_lookup_from_level_simps)
+  by (induct l arbitrary: r b c rule: vm_level.minus_induct; wpsimp simp: pt_lookup_from_level_simps)
 
 crunch (bcorres) bcorres[wp]: arch_finalise_cap truncate_state
 crunch (bcorres) bcorres[wp]: prepare_thread_delete truncate_state
