@@ -180,7 +180,7 @@ lemma set_cap_valid_table_caps:
   apply (wp hoare_vcg_all_lift
             hoare_vcg_disj_lift hoare_convert_imp[OF set_cap_caps_of_state]
             hoare_use_eq[OF set_cap_arch set_cap_obj_at_impossible])
-  apply (fastforce simp: cap_asid_def the_arch_cap_def split: if_split_asm) (* FIXME AARCH64: the_arch_cap has duplicate definition *)
+  apply (fastforce simp: cap_asid_def split: if_split_asm)
   done
 
 lemma cap_asid_vs_cap_ref_None:
