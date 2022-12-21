@@ -997,6 +997,7 @@ crunches do_machine_op
   and valid_global_refs[wp]: valid_global_refs
   and valid_irq_node[wp]: valid_irq_node
   and irq_states[wp]: "\<lambda>s. P (interrupt_states s)"
+  and kheap[wp]: "\<lambda>s. P (kheap s)"
   (simp: cur_tcb_def zombies_final_pspaceI state_refs_of_pspaceI ex_nonz_cap_to_def ct_in_state_def
    wp: crunch_wps valid_arch_state_lift vs_lookup_vspace_obj_at_lift)
 

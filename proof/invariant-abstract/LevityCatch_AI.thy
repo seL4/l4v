@@ -50,6 +50,10 @@ declare select_singleton[simp]
 
 crunch_ignore (add: do_extended_op)
 
+lemma None_Some_strg:
+  "x = None \<Longrightarrow> x \<noteq> Some y"
+  by simp
+
 (* Weakest precondition lemmas that need ASpec concepts: *)
 
 lemma const_on_failure_wp:

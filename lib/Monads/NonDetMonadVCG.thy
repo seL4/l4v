@@ -1338,7 +1338,11 @@ lemma hoare_weak_lift_imp:
 lemma hoare_vcg_weaken_imp:
   "\<lbrakk> \<And>rv s. Q rv s \<Longrightarrow> Q' rv s ; \<lbrace> P \<rbrace> f \<lbrace>\<lambda>rv s. Q' rv s \<longrightarrow> R rv s\<rbrace> \<rbrakk>
    \<Longrightarrow> \<lbrace> P \<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<longrightarrow> R rv s\<rbrace>"
-  by (clarsimp simp: valid_def split_def)
+  by (rule hoare_weaken_imp)
+
+lemma hoare_pre_cases:
+  "\<lbrakk> \<lbrace>\<lambda>s. R s \<and> P s\<rbrace> f \<lbrace>Q\<rbrace>; \<lbrace>\<lambda>s. \<not>R s \<and> P' s\<rbrace> f \<lbrace>Q\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P and P'\<rbrace> f \<lbrace>Q\<rbrace>"
+  unfolding valid_def by fastforce
 
 lemma hoare_vcg_ex_lift:
   "\<lbrakk> \<And>x. \<lbrace>P x\<rbrace> f \<lbrace>Q x\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. \<exists>x. P x s\<rbrace> f \<lbrace>\<lambda>rv s. \<exists>x. Q x rv s\<rbrace>"
@@ -1393,8 +1397,7 @@ lemma hoare_vcg_R_conj:
 
 lemma valid_validE:
   "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv. Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv. Q\<rbrace>,\<lbrace>\<lambda>rv. Q\<rbrace>"
-  apply (simp add: validE_def)
-  done
+  by (rule hoare_post_imp_dc)
 
 lemma valid_validE2:
   "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. Q'\<rbrace>; \<And>s. Q' s \<Longrightarrow> Q s; \<And>s. Q' s \<Longrightarrow> E s \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. Q\<rbrace>,\<lbrace>\<lambda>_. E\<rbrace>"

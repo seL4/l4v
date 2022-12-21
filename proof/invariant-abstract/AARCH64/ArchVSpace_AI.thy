@@ -142,14 +142,6 @@ lemma vs_lookup_target_clear_asid_table:
   apply blast
   done
 
-(* FIXME AARCH64: move to Word_Lib *)
-lemma word_mask_shift_eqI:
-  "\<lbrakk> x && mask n = y && mask n; x >> n = y >> n \<rbrakk> \<Longrightarrow> x = y"
-  apply (subst mask_or_not_mask[of x n, symmetric])
-  apply (subst mask_or_not_mask[of y n, symmetric])
-  apply (rule arg_cong2[where f="(OR)"]; blast intro: shiftr_eq_neg_mask_eq)
-  done
-
 lemma vmid_for_asid_unmap_pool:
   "\<forall>asid_low. vmid_for_asid_2 (asid_of asid_high asid_low) table pools = None \<Longrightarrow>
    vmid_for_asid_2 asid (table(asid_high := None)) pools = vmid_for_asid_2 asid table pools"
@@ -332,9 +324,6 @@ lemma hyp_live_vcpu_vtimer_idem[simp]:
 lemma vcpu_update_vtimer_hyp_live[wp]:
   "vcpu_update vcpu_ptr (vcpu_vtimer_update f) \<lbrace> obj_at hyp_live p \<rbrace>"
   by (wpsimp wp: vcpu_update_obj_at simp: obj_at_def in_omonad)
-
-crunches do_machine_op (* FIXME AARCH64: move to KHeap crunches *)
-  for kheap[wp]: "\<lambda>s. P (kheap s)"
 
 crunches vcpu_save_reg, vcpu_write_reg
   for vcpu_hyp_live[wp]: "\<lambda>s. P (vcpu_hyp_live_of s)"

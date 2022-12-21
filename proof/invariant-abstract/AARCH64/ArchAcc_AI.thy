@@ -2234,11 +2234,6 @@ lemma pt_index_table_index_slot_offset_eq:
   using table_base_index_eq pt_slot_offset_def
   by force
 
-(* FIXME AARCH64: move *)
-lemma mask_shiftr_mask_eq:
-  "m \<le> m' + n \<Longrightarrow> (w && mask m >> n) && mask m' = w && mask m >> n" for w :: "'a::len word"
-  by word_eqI_solve
-
 (* If you start with a lookup from asid down to level, and you split off a walk at level', then an
    update at level' does not affect the extended pt_walk from level'-1 down to level. *)
 (* FIXME: we should do the same on RISCV64 *)

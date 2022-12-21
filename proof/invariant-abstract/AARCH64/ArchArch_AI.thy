@@ -1173,11 +1173,6 @@ lemma arch_thread_set_vcpus_of[wp]:
   apply (clarsimp simp: obj_at_def opt_map_def)
   done
 
-(* FIXME AARCH64: move *)
-lemma opt_pred_proj_upd_eq[simp]:
-  "(P |< proj (p \<mapsto> v)) p = P v"
-  by simp
-
 lemma associate_vcpu_tcb_valid_arch_state[wp]:
   "associate_vcpu_tcb vcpu tcb \<lbrace>valid_arch_state\<rbrace>"
   supply fun_upd_apply[simp del]

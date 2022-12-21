@@ -189,6 +189,12 @@ lemma opt_pred_unfold_proj:
   "(P |< (f ||> g))=  (P o g |< f)"
   by (clarsimp simp: opt_map_def split: option.splits)
 
+(* This rule is useful when fun_upd_apply is not in the simp set: *)
+lemma opt_pred_proj_upd_eq[simp]:
+  "(P |< proj (p \<mapsto> v)) p = P v"
+  by simp
+
+
 (* obind, etc. *)
 
 definition

@@ -515,10 +515,7 @@ proof (induct xs)
 next
   case (Cons y ys)
   have PQ_inv: "\<And>x. x \<in> set ys \<Longrightarrow> \<lbrace>P and Q y\<rbrace> f x \<lbrace>\<lambda>_. P and Q y\<rbrace>"
-    apply (simp add: pred_conj_def)
-    apply (rule hoare_pre)
-     apply (wp Cons|simp)+
-    done
+    by (wpsimp wp: Cons)
   show ?case
     apply (simp add: mapM_Cons)
     apply wp
@@ -530,6 +527,17 @@ next
      apply (wp Cons|simp)+
     done
 qed
+
+lemma mapM_set_inv:
+  assumes "\<And>x. x \<in> set xs \<Longrightarrow> \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>_. P\<rbrace>"
+  assumes "\<And>x. x \<in> set xs \<Longrightarrow> \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>_. Q x\<rbrace>"
+  assumes "\<And>x y. \<lbrakk> x \<in> set xs; y \<in> set xs \<rbrakk> \<Longrightarrow> \<lbrace>P and Q y\<rbrace> f x \<lbrace>\<lambda>_. Q y\<rbrace>"
+  shows "\<lbrace>P\<rbrace> mapM f xs \<lbrace>\<lambda>_ s. P s \<and> (\<forall>x \<in> set xs. Q x s)\<rbrace>"
+  apply (rule hoare_weaken_pre, rule hoare_vcg_conj_lift)
+    apply (rule mapM_wp', erule assms)
+   apply (rule mapM_set; rule assms; assumption)
+  apply simp
+  done
 
 lemma mapM_x_wp:
   assumes x: "\<And>x. x \<in> S \<Longrightarrow> \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>rv. P\<rbrace>"

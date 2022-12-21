@@ -658,6 +658,17 @@ lemmas shiftl_t2n' = shiftl_eq_mult[where x="w::'a::len word" for w]
 
 (* candidates for moving to AFP Word_Lib: *)
 
+lemma word_mask_shift_eqI:
+  "\<lbrakk> x && mask n = y && mask n; x >> n = y >> n \<rbrakk> \<Longrightarrow> x = y"
+  apply (subst mask_or_not_mask[of x n, symmetric])
+  apply (subst mask_or_not_mask[of y n, symmetric])
+  apply (rule arg_cong2[where f="(OR)"]; blast intro: shiftr_eq_neg_mask_eq)
+  done
+
+lemma mask_shiftr_mask_eq:
+  "m \<le> m' + n \<Longrightarrow> (w && mask m >> n) && mask m' = w && mask m >> n" for w :: "'a::len word"
+  by word_eqI_solve
+
 lemma mask_split_aligned:
   assumes len: "m \<le> a + len_of TYPE('a)"
   assumes align: "is_aligned p a"

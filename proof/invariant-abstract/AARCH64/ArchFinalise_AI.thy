@@ -60,18 +60,6 @@ lemma invs_arm_asid_table_unmap:
                    valid_asid_pool_caps_def equal_kernel_mappings_asid_table_unmap)
   done
 
-(* FIXME AARCH64: move next to mapM_set *)
-lemma mapM_set_inv:
-  assumes "\<And>x. x \<in> set xs \<Longrightarrow> \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>_. P\<rbrace>"
-  assumes "\<And>x. x \<in> set xs \<Longrightarrow> \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>_. Q x\<rbrace>"
-  assumes "\<And>x y. \<lbrakk> x \<in> set xs; y \<in> set xs \<rbrakk> \<Longrightarrow> \<lbrace>P and Q y\<rbrace> f x \<lbrace>\<lambda>_. Q y\<rbrace>"
-  shows "\<lbrace>P\<rbrace> mapM f xs \<lbrace>\<lambda>_ s. P s \<and> (\<forall>x \<in> set xs. Q x s)\<rbrace>"
-  apply (rule hoare_weaken_pre, rule hoare_vcg_conj_lift)
-    apply (rule mapM_wp', erule assms)
-   apply (rule mapM_set; rule assms; assumption)
-  apply simp
-  done
-
 lemma asid_low_bits_of_add:
   "\<lbrakk> is_aligned base asid_low_bits; offset \<le> mask asid_low_bits \<rbrakk> \<Longrightarrow>
    asid_low_bits_of (base + offset) = ucast offset"
@@ -1229,11 +1217,6 @@ lemma vs_lookup_target_clear_asid_strg:
   by (clarsimp simp: vs_lookup_target_def vs_lookup_slot_def vs_lookup_table_def pool_for_asid_def
                      obind_def)
 
-(* FIXME AARCH64: move *)
-lemma None_Some_strg:
-  "x = None \<Longrightarrow> x \<noteq> Some y"
-  by simp
-
 lemma delete_asid_pool_not_target[wp]:
   "\<lbrace>asid_pool_at ptr and valid_vspace_objs and valid_asid_table and pspace_aligned\<rbrace>
    delete_asid_pool asid ptr
@@ -1305,11 +1288,6 @@ lemma delete_asid_no_vs_lookup_target_vspace:
                         vspace_for_asid_def vspace_for_pool_def entry_for_asid_def obind_None_eq
                   split: if_split_asm)
   done
-
-(* FIXME AARCH64: move *)
-lemma hoare_pre_cases:
-  "\<lbrakk> \<lbrace>\<lambda>s. R s \<and> P s\<rbrace> f \<lbrace>Q\<rbrace>; \<lbrace>\<lambda>s. \<not>R s \<and> P' s\<rbrace> f \<lbrace>Q\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P and P'\<rbrace> f \<lbrace>Q\<rbrace>"
-  unfolding valid_def by fastforce
 
 lemma delete_asid_no_vs_lookup_target_no_vspace:
   "\<lbrace>\<lambda>s. vspace_for_asid asid s \<noteq> Some pt \<and> 0 < asid \<and> vref \<in> user_region \<and> vspace_pt_at pt s \<and>
