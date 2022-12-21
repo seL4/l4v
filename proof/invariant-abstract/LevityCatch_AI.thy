@@ -23,7 +23,6 @@ end
 
 method spec for x :: "_ :: type" = (erule allE[of _ x])
 method bspec for x :: "_ :: type" = (erule ballE[of _ _ x])
-method prove for x :: "prop" = (rule revcut_rl[of "PROP x"])
 
 lemmas aobj_ref_arch_cap_simps[simp] = aobj_ref_arch_cap
 

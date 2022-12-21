@@ -376,13 +376,13 @@ lemma pde_at_aligned_vptr:  (* ARMHYP *) (* 0x3C \<rightarrow> 0x78?, 24 \<right
                  split: kernel_object.split_asm
                         arch_kernel_obj.split_asm if_split_asm
                  cong: kernel_object.case_cong)
-  apply (prove "is_aligned x 3")
+  apply (prop_tac "is_aligned x 3")
   subgoal
     apply (clarsimp simp: upto_enum_step_def word_shift_by_n[of _ 3, simplified])
     by (rule is_aligned_shiftl_self)
   apply (simp add: vspace_bits_defs aligned_add_aligned word_bits_conv
                    is_aligned_shiftl_self)+
-  apply (prove "pd = (x + (pd + (vptr >> pageBits + pt_bits - pte_bits << pde_bits)) && ~~ mask pd_bits)")
+  apply (prop_tac "pd = (x + (pd + (vptr >> pageBits + pt_bits - pte_bits << pde_bits)) && ~~ mask pd_bits)")
   subgoal
     apply (subst mask_lower_twice[symmetric, where n=7])
      apply (simp add: pd_bits_def pageBits_def)
@@ -561,7 +561,7 @@ lemma lookup_pt_slot_ptes_aligned_valid: (* ARMHYP *)
   apply (frule (2) valid_vspace_objsD)
   apply clarsimp
   subgoal for s _ _ x
-    apply (prove "page_table_at (ptrFromPAddr x) s")
+    apply (prop_tac "page_table_at (ptrFromPAddr x) s")
     subgoal
       by (spec "(ucast (pd + (vptr >> (pageBits + pt_bits - pte_bits) << pde_bits) && mask pd_bits >> pde_bits))";clarsimp)
     apply (rule conjI)
@@ -702,7 +702,7 @@ lemma create_mapping_entries_valid [wp]:
    apply (erule (1) page_directory_pde_at_lookupI)
    apply (wpsimp simp: valid_mapping_entries_def superSectionPDE_offsets_def vspace_bits_defs
                        lookup_pd_slot_def)
-  apply (prove "is_aligned pd 14")
+  apply (prop_tac "is_aligned pd 14")
    apply (clarsimp simp: obj_at_def add.commute invs_def valid_state_def valid_pspace_def pspace_aligned_def)
    apply (drule bspec, blast)
    apply (clarsimp simp: a_type_def vspace_bits_defs split: kernel_object.splits arch_kernel_obj.splits if_split_asm)
@@ -1340,14 +1340,14 @@ lemma set_pt_valid_vspace_objs[wp]:
   apply (clarsimp simp: valid_vspace_objs_def)
   subgoal for s opt pa rs ao
     apply (spec pa)
-    apply (prove "(\<exists>\<rhd> pa) s")
+    apply (prop_tac "(\<exists>\<rhd> pa) s")
      apply (rule exI[where x=rs])
      apply (erule vs_lookupE)
      apply clarsimp
      apply (erule vs_lookupI)
      apply (erule rtrancl.induct, simp)
      subgoal for \<dots> b c
-       apply (prove "(b \<rhd>1 c) s")
+       apply (prop_tac "(b \<rhd>1 c) s")
        apply (thin_tac "_ : rtrancl _")+
        apply (clarsimp simp add: vs_lookup1_def obj_at_def vs_refs_def
                             split: if_split_asm)
@@ -2212,8 +2212,8 @@ lemma lookup_pt_slot_looks_up [wp]: (* ARMHYP *)
   apply (clarsimp simp: vs_lookup1_def lookup_pd_slot_def Let_def pd_shifting pd_shifting_dual)
   apply (rule exI, rule conjI, assumption)
   subgoal for s _ x
-    apply (prove "ptrFromPAddr x + ((vptr >> 12) && 0x1FF << 3) && ~~ mask pt_bits = ptrFromPAddr x")
-     apply (prove "is_aligned (ptrFromPAddr x) 12")
+    apply (prop_tac "ptrFromPAddr x + ((vptr >> 12) && 0x1FF << 3) && ~~ mask pt_bits = ptrFromPAddr x")
+     apply (prop_tac "is_aligned (ptrFromPAddr x) 12")
       apply (drule (2) valid_vspace_objsD)
       apply clarsimp
       apply (erule_tac x="ucast (vptr >> pageBits + pt_bits - pte_bits << pde_bits >> pde_bits)" in allE)
