@@ -1012,17 +1012,6 @@ lemma vcpu_disable_valid_machine_state[wp]:
              simp: isb_def setHCR_def setSCTLR_def set_gic_vcpu_ctrl_hcr_def getSCTLR_def
                    get_gic_vcpu_ctrl_hcr_def dsb_def writeVCPUHardwareReg_def maskInterrupt_def)
 
-(* FIXME AARCH64: move to ArchVSpace_AI above valid_irq_node_arch_state_update *)
-lemma arm_asid_table_current_vcpu_update[simp]:
-  "arm_asid_table ((arm_current_vcpu_update v) (arch_state s)) = arm_asid_table (arch_state s)"
-  by clarsimp
-
-(* FIXME AARCH64: move to ArchVSpace_AI above valid_irq_node_arch_state_update *)
-lemma vmid_inv_current_vcpu_update[simp]:
-  "vmid_inv (s\<lparr>arch_state := arm_current_vcpu_update Map.empty (arch_state s)\<rparr>) =
-   vmid_inv s"
-  by (clarsimp simp: vmid_inv_def)
-
 lemma valid_arch_state_vcpu_update_str:
   "valid_arch_state s \<Longrightarrow> valid_arch_state (s\<lparr>arch_state := arm_current_vcpu_update Map.empty (arch_state s)\<rparr>)"
   unfolding valid_arch_state_def

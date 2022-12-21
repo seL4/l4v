@@ -62,11 +62,6 @@ lemma vcpu_switch_weak_valid_sched_action[wp]:
   "\<lbrace>weak_valid_sched_action\<rbrace> vcpu_switch v \<lbrace>\<lambda>_. weak_valid_sched_action\<rbrace>"
   by (rule weak_valid_sched_action_lift; wp)
 
-lemma set_asid_pool_pred_tcb_atP[wp]: (* FIXME AARCH64: replace set_asid_pool_pred_tcb_at in ArchAcc *)
-  "set_asid_pool ptr val \<lbrace>\<lambda>s. P (pred_tcb_at proj Q t s)\<rbrace>"
-  unfolding set_asid_pool_def set_object_def
-  by (wpsimp wp: get_object_wp simp: pred_tcb_at_def obj_at_def)
-
 crunch pred_tcb_atP[wp]: set_vm_root "\<lambda>s. P (pred_tcb_at proj Q t s)"
   (wp: crunch_wps simp: crunch_simps)
 

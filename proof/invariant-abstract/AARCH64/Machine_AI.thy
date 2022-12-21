@@ -410,6 +410,10 @@ lemma dmo_getActiveIRQ_non_kernel[wp]:
   apply clarsimp
   done
 
+lemma dmo_gets_inv[wp]:
+  "do_machine_op (gets f) \<lbrace>P\<rbrace>"
+  unfolding do_machine_op_def by (wpsimp simp: simpler_gets_def)
+
 end
 
 context begin interpretation Arch .

@@ -1413,37 +1413,17 @@ lemma check_vspace_root_wp[wp]:
   unfolding check_vspace_root_def
   by wpsimp
 
-(* FIXME AARCH64: move ArchInvariants *)
-lemma user_vtop_leq_canonical_user:
-  "user_vtop \<le> canonical_user"
-  by (simp add: user_vtop_def pptrUserTop_def canonical_user_def mask_def ipa_size_def)
-
-(* FIXME AARCH64: move ArchInvariants *)
-lemma user_vtop_canonical_user:
-  "vref < user_vtop \<Longrightarrow> vref \<le> canonical_user"
-  using user_vtop_leq_canonical_user by simp
-
 lemma pt_asid_pool_no_overlap:
   "\<lbrakk> kheap s (table_base (level_type level) pte_ptr) = Some (ArchObj (PageTable pt));
      kheap s (table_base (level_type asid_pool_level) pte_ptr) = Some (ArchObj (ASIDPool pool));
      pspace_distinct s; pt_type pt = level_type level \<rbrakk>
    \<Longrightarrow> False"
   apply (simp add: level_type_def split: if_split_asm)
-   apply (cases "table_base VSRootPT_T pte_ptr = table_base NormalPT_T pte_ptr", simp)
-   apply (drule (3) pspace_distinctD)
-   apply (clarsimp simp: is_aligned_no_overflow_mask)
-   apply (metis and_neg_mask_plus_mask_mono pt_bits_NormalPT_T pt_bits_def word_and_le)
-  apply (simp add: level_defs split: if_split_asm)
+  apply (cases "table_base VSRootPT_T pte_ptr = table_base NormalPT_T pte_ptr", simp)
+  apply (drule (3) pspace_distinctD)
+  apply (clarsimp simp: is_aligned_no_overflow_mask)
+  apply (metis and_neg_mask_plus_mask_mono pt_bits_NormalPT_T pt_bits_def word_and_le)
   done
-
-(* FIXME AARCH64: move close to pts_of_type_unique *)
-lemma pts_of_level_type_unique:
-  "\<lbrakk> pts_of s (table_base (level_type level) pte_ptr) = Some pt;
-     pts_of s (table_base (level_type level') pte_ptr) = Some pt';
-     pt_type pt = level_type level; pt_type pt' = level_type level';
-     pspace_distinct s \<rbrakk>
-   \<Longrightarrow> level_type level' = level_type level"
-  by (metis pts_of_type_unique)
 
 lemma pageBitsForSize_max_page_level:
   "pt_bits_left level = pageBitsForSize vmpage_size \<Longrightarrow> level \<le> max_page_level"
@@ -1456,11 +1436,6 @@ lemma pageBitsForSize_level_0_eq:
   using vm_level.size_inj[where x=level and y=max_page_level, unfolded level_defs, simplified]
   by (simp add: pageBitsForSize_def pt_bits_left_def ptTranslationBits_def
            split: vmpage_size.splits if_split_asm)
-
-(* FIXME AARCH64: move, intergrate with max_pt_level_not_asid_pool_level *)
-lemma asid_pool_level_not_max_pt_level[simp]:
-  "asid_pool_level \<noteq> max_pt_level"
-  by (simp add: level_defs)
 
 lemma decode_fr_inv_map_wf[wp]:
   assumes "arch_cap = FrameCap p rights vmpage_size dev option"
@@ -1575,25 +1550,6 @@ lemma neg_mask_user_region:
 lemma ucast_ucast_ppn:
   "(ucast (ucast ptr::ppn)::machine_word) = ptr && mask (ipa_size - pageBits)" for ptr::machine_word
   by (simp add: ucast_ucast_mask bit_simps Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
-
-(* FIXME AARCH64: move *)
-lemma pptrTop_le_ipa_size:
-  "pptrTop \<le> mask ipa_size"
-  by (simp add: bit_simps pptrTop_def mask_def)
-
-(* FIXME AARCH64: move *)
-lemma addrFromPPtr_mask_ipa:
-  "\<lbrakk> pptr_base \<le> pt_ptr; pt_ptr < pptrTop \<rbrakk>
-   \<Longrightarrow> addrFromPPtr pt_ptr && mask ipa_size = addrFromPPtr pt_ptr"
-  using pptrTop_le_ipa_size
-  by (simp add: and_mask_eq_iff_le_mask addrFromPPtr_def pptr_base_def pptrBaseOffset_def
-                paddrBase_def word_le_imp_diff_le)
-
-
-(* FIXME AARCH64: move *)
-lemma pageBits_less_ipa_size[simp]:
-  "pageBits < ipa_size"
-  by (simp add: bit_simps)
 
 lemma ptrFromPAddr_addr_from_ppn:
   "\<lbrakk> is_aligned pt_ptr pageBits; pptr_base \<le> pt_ptr; pt_ptr < pptrTop \<rbrakk> \<Longrightarrow>

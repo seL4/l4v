@@ -561,6 +561,14 @@ lemma pts_of_type_unique:
                 simp: in_omonad is_aligned_no_overflow_mask and_neg_mask_plus_mask_mono pt_bits_def
                       word_and_le)
 
+lemma pts_of_level_type_unique:
+  "\<lbrakk> pts_of s (table_base (level_type level) pte_ptr) = Some pt;
+     pts_of s (table_base (level_type level') pte_ptr) = Some pt';
+     pt_type pt = level_type level; pt_type pt' = level_type level';
+     pspace_distinct s \<rbrakk>
+   \<Longrightarrow> level_type level' = level_type level"
+  by (metis pts_of_type_unique)
+
 (* If we look up a slot for some level, and we know there is a pte for type pt_t at that slot,
    then it must agree with the level type of the lookup. *)
 lemma vs_lookup_slot_level_type:

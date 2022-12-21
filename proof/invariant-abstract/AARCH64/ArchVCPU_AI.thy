@@ -11,7 +11,7 @@ begin
 
 context Arch begin global_naming AARCH64 (*FIXME: arch_split*)
 
-(* FIXME AARCH64: move to ArchInvariants_AI and use there *)
+(* This is similar to cur_vcpu_2, but not close enough to reuse. *)
 definition active_cur_vcpu_of :: "'z state \<Rightarrow> obj_ref option" where
   "active_cur_vcpu_of s \<equiv> case arm_current_vcpu (arch_state s) of Some (vr, True) \<Rightarrow> Some vr
                                                                  | _  \<Rightarrow> None"

@@ -191,31 +191,6 @@ lemma pt_walk_init_A_st[simp]:
                    is_aligned_pt_slot_offset_pte[where pt_t=VSRootPT_T])
   done
 
-(* FIXME AARCH64: statement -- this depends on PA_40 config; potentially not needed
-lemma table_index_arm_global_pt_ptr:
-  "table_index VSRootPT_T (pt_slot_offset max_pt_level arm_global_pt_ptr vref) =
-  (vref >> (ptTranslationBits NormalPT_T) * 2 + pageBits) && mask (ptTranslationBits NormalPT_T)"
-  apply (simp add: pt_slot_offset_def pt_index_def pt_bits_left_def  level_defs
-                   arm_global_pt_ptr_def pptr_base_def pptrBase_def canonical_bit_def)
-  apply (subst word_plus_and_or_coroll)
-   apply word_bitwise
-   apply simp
-  apply word_bitwise
-  apply (clarsimp simp: word_size)
-  done *)
-
-lemma kernel_window_1G:
-  "\<lbrakk> pptr_base \<le> vref; vref < pptr_base + (1 << 30) \<rbrakk> \<Longrightarrow>
-    table_index VSRootPT_T (pt_slot_offset max_pt_level arm_global_pt_ptr vref) = 0x100"
-  oops (* FIXME AARCH64 -- this depends on PA_40 config; potentially not needed
-  apply (simp add: table_index_arm_global_pt_ptr)
-  apply (simp add: bit_simps pptr_base_def pptrBase_def neg_mask_le_high_bits word_size flip: NOT_mask)
-  apply (subst (asm) mask_def)
-  apply (simp add: canonical_bit_def)
-  apply word_bitwise
-  apply (clarsimp simp: word_size)
-  done  *)
-
 lemma kernel_window_init_st:
   "kernel_window init_A_st = { pptr_base ..< pptr_base + (1 << 30) }"
   by (auto simp: state_defs kernel_window_def)

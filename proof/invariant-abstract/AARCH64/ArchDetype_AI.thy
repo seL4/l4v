@@ -315,11 +315,6 @@ lemma vcpu_tcbs_of_detype[simp]:
   "(vcpu_tcbs_of (detype S s) p = Some aobj) = (p \<notin> S \<and> vcpu_tcbs_of s p = Some aobj)"
   by (simp add: in_omonad detype_def)
 
-(* FIXME AARCH64: move above obj_at_vcpu_hyp_live_of *)
-lemma obj_at_vcpu_hyp_live_of_s:
-  "obj_at (is_vcpu and hyp_live) p s = vcpu_hyp_live_of s p"
-  by (rule arg_cong[OF obj_at_vcpu_hyp_live_of, where f="\<lambda>x. x s"])
-
 lemma cur_vcpu_detype:
   "cur_vcpu (detype (untyped_range cap) s)"
   using valid_arch_state
