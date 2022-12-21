@@ -17,7 +17,6 @@ imports
   Local_Method
 begin
 
-
 section \<open>Debugging methods\<close>
 
 method print_concl = (match conclusion in P for P \<Rightarrow> \<open>print_term P\<close>)
@@ -352,6 +351,11 @@ end
 
 section \<open>Utility methods\<close>
 
+subsection \<open>Instantiations\<close>
+
+text \<open>These do not admit goal parameters in "x", so erule_tac is still sometimes necessary\<close>
+method spec for x :: "_ :: type" = (erule allE[of _ x])
+method bspec for x :: "_ :: type" = (erule ballE[of _ _ x])
 
 subsection \<open>Finding a goal based on successful application of a method\<close>
 

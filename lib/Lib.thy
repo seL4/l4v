@@ -2318,6 +2318,10 @@ lemma bspec_split:
   "\<lbrakk> \<forall>(a, b) \<in> S. P a b; (a, b) \<in> S \<rbrakk> \<Longrightarrow> P a b"
   by fastforce
 
+lemma all_eq_trans:
+  "\<lbrakk> \<forall>x. P x = Q x; \<forall>x. Q x = R x \<rbrakk> \<Longrightarrow> \<forall>x. P x = R x"
+  by simp
+
 lemma set_zip_same:
   "set (zip xs xs) = Id \<inter> (set xs \<times> set xs)"
   by (induct xs) auto
@@ -2523,6 +2527,10 @@ lemmas if_option = if_option_None_eq if_option_Some if_option_Some2
 lemma not_in_ran_None_upd:
   "x \<notin> ran m \<Longrightarrow> x \<notin> ran (m(y := None))"
   by (auto simp: ran_def split: if_split)
+
+lemma ranD:
+  "v \<in> ran f \<Longrightarrow> \<exists>x. f x = Some v"
+  by (auto simp: ran_def)
 
 text \<open>Prevent clarsimp and others from creating Some from not None by folding this and unfolding
   again when safe.\<close>

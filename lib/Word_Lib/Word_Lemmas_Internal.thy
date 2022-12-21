@@ -655,4 +655,49 @@ lemma FF_eq_minus_1:
 
 lemmas shiftl_t2n' = shiftl_eq_mult[where x="w::'a::len word" for w]
 
+
+(* candidates for moving to AFP Word_Lib: *)
+
+lemma mask_split_aligned:
+  assumes len: "m \<le> a + len_of TYPE('a)"
+  assumes align: "is_aligned p a"
+  shows "(p && ~~ mask m) + (ucast ((ucast (p && mask m >> a))::'a::len word) << a) = p"
+  apply (insert align[simplified is_aligned_nth])
+  apply (subst word_plus_and_or_coroll; word_eqI)
+  apply (rule iffI)
+   apply (erule disjE; clarsimp)
+  apply (case_tac "n < m"; case_tac "n < a")
+  using len by auto
+
+lemma mask_split_aligned_neg:
+  fixes x :: "'a::len word"
+  fixes p :: "'b::len word"
+  assumes len: "a + len_of TYPE('a) \<le> len_of TYPE('b)"
+               "m = a + len_of TYPE('a)"
+  assumes x: "x \<noteq> ucast (p && mask m >> a)"
+  shows "(p && ~~ mask m) + (ucast x << a) = p \<Longrightarrow> False"
+  apply (subst (asm) word_plus_and_or_coroll)
+   apply word_eqI
+   using len apply linarith
+  apply (insert x)
+  apply (erule notE)
+  apply word_eqI
+  subgoal for n
+    using len
+    apply (clarsimp)
+    apply (drule_tac x="n + a" in spec)
+    by (clarsimp simp: add.commute)
+  done
+
+lemma mask_alignment_ugliness:
+  "\<lbrakk> x \<noteq> x + z && ~~ mask m;
+     is_aligned (x + z && ~~ mask m) m;
+     is_aligned x m;
+     \<forall>n \<ge> m. \<not>z !! n\<rbrakk>
+  \<Longrightarrow> False"
+  apply (erule notE)
+  apply (subst word_plus_and_or_coroll; word_eqI)
+   apply (meson linorder_not_le)
+  by (auto simp: le_def)
+
 end
