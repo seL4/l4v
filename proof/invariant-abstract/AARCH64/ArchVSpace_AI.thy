@@ -277,7 +277,7 @@ lemma set_vcpu_valid_arch_state_hyp_live:
   apply (wpsimp wp: set_vcpu_wp simp: valid_arch_state_def)
   apply (clarsimp simp: asid_pools_of_vcpu_None_upd_idem vmid_inv_def)
   apply (rule conjI)
-   apply (clarsimp simp: cur_vcpu_2_def hyp_live_vcpu_tcb split: option.splits)
+   apply (clarsimp simp: cur_vcpu_2_def hyp_live_vcpu_tcb in_opt_pred split: option.splits)
   apply (clarsimp simp: valid_global_arch_objs_def obj_at_def pts_of_vcpu_None_upd_idem)
   done
 
@@ -2769,7 +2769,7 @@ lemma set_vcpu_valid_arch_eq_hyp:
   apply (clarsimp simp: vmid_inv_set_vcpu asid_pools_of_vcpu_None_upd_idem pts_of_vcpu_None_upd_idem
                         valid_global_arch_objs_def pt_at_eq_set_vcpu)
   apply (clarsimp simp: cur_vcpu_def split: option.splits)
-  by (auto simp: obj_at_def  vcpu_tcb_refs_def opt_map_def split: option.splits)
+  by (auto simp: obj_at_def  vcpu_tcb_refs_def opt_map_def in_opt_pred split: option.splits)
 
 lemma set_vcpu_invs_eq_hyp:
   "\<lbrace>obj_at (\<lambda>ko'. hyp_refs_of ko' = hyp_refs_of (ArchObj (VCPU v))) p

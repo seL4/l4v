@@ -1016,7 +1016,7 @@ lemma set_vcpu_None_valid_arch[wp]:
   apply (wpsimp wp: set_vcpu_wp)
   apply (clarsimp simp: valid_arch_state_def valid_global_arch_objs_def pts_of_vcpu_None_upd_idem
                         asid_pools_of_vcpu_None_upd_idem vmid_inv_def pt_at_eq_set_vcpu)
-  apply (clarsimp simp add: cur_vcpu_def fun_upd_apply split: option.splits)
+  apply (clarsimp simp add: cur_vcpu_def fun_upd_apply in_opt_pred split: option.splits)
   done
 
 lemma dissociate_vcpu_valid_arch[wp]:

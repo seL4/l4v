@@ -1050,7 +1050,7 @@ lemma set_vcpu_valid_arch_Some[wp]:
   apply (rule conjI)
    apply (clarsimp simp: vmid_inv_def asid_pools_of_vcpu_None_upd_idem)
   apply (rule conjI)
-   apply (clarsimp simp: cur_vcpu_2_def obj_at_def is_vcpu_def hyp_live_def arch_live_def
+   apply (clarsimp simp: cur_vcpu_2_def obj_at_def is_vcpu_def hyp_live_def arch_live_def in_opt_pred
                    split: option.splits)
   apply (clarsimp simp: valid_global_arch_objs_def obj_at_def)
   done

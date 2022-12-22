@@ -318,12 +318,9 @@ lemma vcpu_tcbs_of_detype[simp]:
 lemma cur_vcpu_detype:
   "cur_vcpu (detype (untyped_range cap) s)"
   using valid_arch_state
-  apply (clarsimp simp: valid_arch_state_def cur_vcpu_def)
-  (* FIXME AARCH64: work around <| being an abbreviation for option_case *)
-  apply (case_tac "arm_current_vcpu (arch_state s)"; simp)
-  apply clarsimp
+  apply (clarsimp simp: valid_arch_state_def cur_vcpu_def split: option.splits)
   apply (frule obj_at_vcpu_hyp_live_of_s[THEN iffD2])
-  apply (clarsimp elim!: live_okE simp: hyp_live_strg split: option.splits)
+  apply (clarsimp elim!: live_okE simp: hyp_live_strg in_opt_pred split: option.splits)
   done
 
 lemma valid_global_arch_objs:

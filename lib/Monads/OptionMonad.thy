@@ -157,42 +157,39 @@ definition map_set :: "('a \<Rightarrow> 'b set option) \<Rightarrow> 'a \<Right
 
 (* opt_pred *)
 
-abbreviation
-  opt_pred :: "('a \<Rightarrow> bool) \<Rightarrow> ('b \<Rightarrow> 'a option) \<Rightarrow> ('b \<Rightarrow> bool)" (infixl "|<" 55) where
+definition opt_pred :: "('a \<Rightarrow> bool) \<Rightarrow> ('b \<Rightarrow> 'a option) \<Rightarrow> ('b \<Rightarrow> bool)" (infixl "|<" 55) where
   "P |< proj \<equiv> (\<lambda>x. case_option False P (proj x))"
 
 lemma opt_pred_conj:
   "((P1 |< hp) p \<and> (P2 |< hp) p) = (((P1 and P2) |< hp) p)"
-  by (fastforce simp: pred_conj_def split: option.splits)
+  by (fastforce simp: pred_conj_def opt_pred_def split: option.splits)
 
 lemma opt_pred_disj:
   "((P1 |< hp) p \<or> (P2 |< hp) p) = (((P1 or P2) |< hp) p)"
-  by (fastforce simp: pred_disj_def split: option.splits)
-
-lemma opt_predD:
-  "(P |< proj) x \<Longrightarrow> \<exists>y. proj x = Some y \<and> P y"
-  by (clarsimp split: option.splits)
-
-lemma opt_predE:
-  "\<lbrakk>(P |< proj) x; \<And>y. \<lbrakk>proj x = Some y; P y\<rbrakk> \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
-  by (clarsimp split: option.splits)
+  by (fastforce simp: pred_disj_def opt_pred_def split: option.splits)
 
 lemma in_opt_pred:
   "(P |< f) p = (\<exists>v. f p = Some v \<and> P v)"
-  by (auto dest: opt_predD)
+  by (auto simp: opt_pred_def split: option.splits)
+
+lemmas opt_predD = in_opt_pred[THEN iffD1]
+
+lemma opt_predE:
+  "\<lbrakk>(P |< proj) x; \<And>y. \<lbrakk>proj x = Some y; P y\<rbrakk> \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
+  by (blast dest: opt_predD)
 
 lemma opt_pred_unfold_map:
   "(P |< (f |> g)) = ((P |< g) |< f)"
-  by (fastforce simp: opt_map_def split: option.splits)
+  by (fastforce simp: opt_map_def in_opt_pred split: option.splits)
 
 lemma opt_pred_unfold_proj:
   "(P |< (f ||> g))=  (P o g |< f)"
-  by (clarsimp simp: opt_map_def split: option.splits)
+  by (clarsimp simp: opt_map_def opt_pred_def split: option.splits)
 
 (* This rule is useful when fun_upd_apply is not in the simp set: *)
 lemma opt_pred_proj_upd_eq[simp]:
   "(P |< proj (p \<mapsto> v)) p = P v"
-  by simp
+  by (simp add: in_opt_pred)
 
 
 (* obind, etc. *)
