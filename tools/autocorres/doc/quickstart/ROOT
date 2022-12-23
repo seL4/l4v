@@ -5,7 +5,7 @@
  *)
 
 session "AutoCorresQuickstart" = "AutoCorres" +
-  options [document = pdf, document_output = output, show_question_marks = false]
+  options [document = pdf, document_output = "output", show_question_marks = false]
   theories
     Chapter1_MinMax
     Chapter2_HoareHeap
