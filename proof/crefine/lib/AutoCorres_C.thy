@@ -256,11 +256,11 @@ method ccorres_to_corres_pre_step =
   (rule ccorres_to_corres_pre_intros | erule ccorres_to_corres_pre_elims)
 
 method ccorres_to_corres_pre_process = (
-  (elim pred_andE)?,
+  (elim inf1E inf2E)?,
   (simp only: Int_assoc)?,
   (ccorres_to_corres_pre_step+)?,
   (rule ccorres_to_corres_pre_finalise),
-  (intro pred_andI TrueI; clarsimp)
+  (intro pred_conjI TrueI; clarsimp)
 )
 
 text \<open>

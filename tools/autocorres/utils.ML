@@ -678,7 +678,7 @@ fun isa_str_list_to_ml t =
 fun chain_preds stateT [] = Abs ("s", stateT, @{term "HOL.True"})
   | chain_preds     _ [x] = x
   | chain_preds stateT (x::xs) =
-      Const (@{const_name "pred_conj"},
+      Const (@{const_name "inf_class.inf"},
           (stateT --> @{typ bool}) --> (stateT --> @{typ bool}) --> (stateT --> @{typ bool}))
         $ x $ (chain_preds stateT xs)
 

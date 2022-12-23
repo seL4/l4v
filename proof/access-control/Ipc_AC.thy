@@ -671,7 +671,7 @@ lemma remove_rights_cur_auth:
   by (clarsimp dest!: remove_rights_cap_auth_conferred_subset)
 
 (* FIXME MOVE *)
-lemmas hoare_gen_asmE2 = hoare_gen_asmE[where P'=\<top>,simplified pred_and_true_var]
+lemmas hoare_gen_asmE2 = hoare_gen_asmE[where P'=\<top>,simplified pred_top_left_neutral]
 
 lemma derive_cap_is_transferable:
   "\<lbrace>K (is_transferable_cap cap)\<rbrace> derive_cap slot cap \<lbrace>\<lambda>rv _. is_transferable_cap rv\<rbrace>, -"

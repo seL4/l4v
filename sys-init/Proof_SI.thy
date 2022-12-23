@@ -254,7 +254,7 @@ lemma sys_init_explicit:
   apply (subst objects_empty_by_parts, assumption)+
   apply (subst objects_empty_objects_initialised_capless)+
   apply (clarsimp simp: linorder_not_le)
-  apply (intro conjI allI impI pred_andI | sep_cancel+)+
+  apply (intro conjI allI impI pred_conjI | sep_cancel+)+
          apply fastforce
         apply (clarsimp simp: less_diff_conv)
         apply (rule list_all_drop, erule (1) le_list_all)

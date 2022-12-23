@@ -721,12 +721,12 @@ where
 | "tcb_inv_wf (tcb_invocation.ThreadControl t sl fe mcp pr croot vroot buf)
              = (tcb_at t and case_option \<top> (valid_cap \<circ> fst) croot
                         and K (case_option True (is_cnode_cap \<circ> fst) croot)
-                        and case_option \<top> ((cte_at And ex_cte_cap_to) \<circ> snd) croot
+                        and case_option \<top> ((cte_at and ex_cte_cap_to) \<circ> snd) croot
                         and case_option \<top> (no_cap_to_obj_dr_emp \<circ> fst) croot
                         and K (case_option True (is_valid_vtable_root \<circ> fst) vroot)
                         and case_option \<top> (valid_cap \<circ> fst) vroot
                         and case_option \<top> (no_cap_to_obj_dr_emp \<circ> fst) vroot
-                        and case_option \<top> ((cte_at And ex_cte_cap_to) \<circ> snd) vroot
+                        and case_option \<top> ((cte_at and ex_cte_cap_to) \<circ> snd) vroot
                         and (case_option \<top> (case_option \<top> (valid_cap o fst) o snd) buf)
                         and (case_option \<top> (case_option \<top>
                               (no_cap_to_obj_dr_emp o fst) o snd) buf)
@@ -735,7 +735,7 @@ where
                                ((swp valid_ipc_buffer_cap (fst v)
                                     and is_arch_cap and is_cnode_or_valid_arch)
                                               o fst) (snd v)) buf)
-                        and (case_option \<top> (case_option \<top> ((cte_at And ex_cte_cap_to) o snd) o snd) buf)
+                        and (case_option \<top> (case_option \<top> ((cte_at and ex_cte_cap_to) o snd) o snd) buf)
                         and (\<lambda>s. {croot, vroot, option_map undefined buf} \<noteq> {None}
                                     \<longrightarrow> cte_at sl s \<and> ex_cte_cap_to sl s)
                         and K (case_option True (\<lambda>bl. length bl = word_bits) fe)

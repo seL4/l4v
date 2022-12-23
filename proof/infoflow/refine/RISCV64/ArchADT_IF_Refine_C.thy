@@ -53,7 +53,7 @@ lemma handleInvocation_ccorres'[ADT_IF_Refine_assms]:
        (UNIV \<inter> {s. isCall_' s = from_bool isCall}
              \<inter> {s. isBlocking_' s = from_bool isBlocking}) []
        (handleInvocation isCall isBlocking) (Call handleInvocation_'proc)"
-  apply (simp only: arch_extras_def pred_and_true)
+  apply (simp only: arch_extras_def pred_top_right_neutral)
   apply (rule handleInvocation_ccorres)
   done
 

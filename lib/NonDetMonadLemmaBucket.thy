@@ -1485,7 +1485,7 @@ lemma hoare_eq_P:
   by (rule assms)
 
 lemma hoare_validE_R_conj:
-  "\<lbrakk>\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, -; \<lbrace>P\<rbrace> f \<lbrace>R\<rbrace>, -\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q And R\<rbrace>, -"
+  "\<lbrakk>\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, -; \<lbrace>P\<rbrace> f \<lbrace>R\<rbrace>, -\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q and R\<rbrace>, -"
   by (simp add: valid_def validE_def validE_R_def Let_def split_def split: sum.splits)
 
 lemma hoare_vcg_const_imp_lift_R:

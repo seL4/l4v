@@ -66,7 +66,7 @@ lemma seL4_IRQHandler_SetEndpoint_irq_initialised_helper_sep:
                  (si_cnode_id, unat seL4_CapInitThreadCNode) \<mapsto>c si_cnode_cap \<and>*
                  (si_cnode_id, unat seL4_CapIRQControl) \<mapsto>c IrqControlCap \<and>*
                   si_asid \<and>*  R"])
-   apply (intro pred_andI)
+   apply (intro pred_conjI)
     apply (clarsimp simp: object_type_is_object default_cap_def)
     apply (sep_drule sep_map_c_sep_map_s [where cap=NullCap])
      apply (rule object_slots_object_default_state_NullCap', (simp add: object_type_has_slots)+)

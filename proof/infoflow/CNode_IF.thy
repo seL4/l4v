@@ -500,7 +500,7 @@ lemma gets_irq_masks_equiv_valid:
   by (fastforce simp: equiv_valid_def2 equiv_valid_2_def in_monad)
 
 lemma irq_state_increment_reads_respects_memory:
-  "equiv_valid_inv (equiv_machine_state P And equiv_irq_state)
+  "equiv_valid_inv (equiv_machine_state P and equiv_irq_state)
                    (equiv_for (\<lambda>x. aag_can_affect_label aag l \<and>
                                    pasObjectAbs aag x \<in> subjectReads (pasPolicy aag) l)
                               underlying_memory)
@@ -511,7 +511,7 @@ lemma irq_state_increment_reads_respects_memory:
   done
 
 lemma irq_state_increment_reads_respects_device:
-  "equiv_valid_inv (equiv_machine_state P And equiv_irq_state)
+  "equiv_valid_inv (equiv_machine_state P and equiv_irq_state)
                    (equiv_for (\<lambda>x. aag_can_affect_label aag l \<and>
                                    pasObjectAbs aag x \<in> subjectReads (pasPolicy aag) l)
                               device_state)

@@ -493,7 +493,7 @@ fun get_inst_precond ctxt pre extra (mapply, goal) = let
        match what we were trying to prove, thus a THM exception from RS *)
   handle THM _ => NONE;
 
-fun split_precond (Const (@{const_name pred_conj}, _) $ P $ Q)
+fun split_precond (Const (@{const_name inf}, _) $ P $ Q)
     = split_precond P @ split_precond Q
   | split_precond (Abs (n, T, @{const "HOL.conj"} $ P $ Q))
     = maps (split_precond o Envir.eta_contract) [Abs (n, T, P), Abs (n, T, Q)]
@@ -517,7 +517,7 @@ fun combine_preconds ctxt pre pres = let
       |> remove (op aconv) pre |> distinct (op aconv)
       |> filter (precond_needed ctxt pre ctxt);
     val T = fastype_of pre;
-    val conj = Const (@{const_name pred_conj}, T --> T --> T)
+    val conj = Const (@{const_name inf}, T --> T --> T)
   in case pres' of
       [] => pre
     | _ => let val precond = foldl1 (fn (a, b) => conj $ a $ b) pres'

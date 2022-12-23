@@ -148,13 +148,13 @@ lemma monadic_rewrite_bindE:
   done
 
 lemmas monadic_rewrite_bind_tail
-  = monadic_rewrite_bind[OF monadic_rewrite_refl, simplified pred_and_true_var]
+  = monadic_rewrite_bind[OF monadic_rewrite_refl, simplified pred_top_left_neutral]
 
 lemmas monadic_rewrite_bind_head
-  = monadic_rewrite_bind[OF _ monadic_rewrite_refl hoare_vcg_prop, simplified pred_and_true]
+  = monadic_rewrite_bind[OF _ monadic_rewrite_refl hoare_vcg_prop, simplified pred_top_right_neutral]
 
 lemmas monadic_rewrite_bindE_tail
-  = monadic_rewrite_bindE[OF monadic_rewrite_refl, simplified pred_and_true_var]
+  = monadic_rewrite_bindE[OF monadic_rewrite_refl, simplified pred_top_left_neutral]
 
 lemmas monadic_rewrite_bindE_head
     = monadic_rewrite_bindE[OF _ monadic_rewrite_refl hoare_vcg_propE_R]
@@ -521,7 +521,7 @@ lemma monadic_rewrite_bind_alternative:
   done
 
 lemmas monadic_rewrite_bind_alternative_l
-  = monadic_rewrite_trans[OF monadic_rewrite_bind_alternative, simplified pred_and_true_var]
+  = monadic_rewrite_trans[OF monadic_rewrite_bind_alternative, simplified pred_top_left_neutral]
 
 lemma monadic_rewrite_alternative_l:
   "monadic_rewrite F False \<top> (alternative f g) g"

@@ -7148,13 +7148,11 @@ next
   case (4 ptr bits n slot)
   let ?target = "(ptr, nat_to_cref (zombie_cte_bits bits) n)"
   note hyps = "4.hyps"[simplified rec_del_concrete_unfold spec_corres_liftME2]
-  have pred_conj_assoc: "\<And>P Q R. (P and (Q and R)) = (P and Q and R)"
-    by (rule ext, simp)
   show ?case
     apply (simp only: rec_del_concrete_unfold cap_relation.simps)
     apply (simp add: reduceZombie_def Let_def
                      liftE_bindE
-                del: pred_conj_app)
+                del: inf_apply)
     apply (subst rec_del_simps_ext)
     apply (rule_tac F="ptr + 2 ^ cte_level_bits * of_nat n
                          = cte_map ?target"

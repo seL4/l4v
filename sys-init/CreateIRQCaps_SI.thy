@@ -455,7 +455,7 @@ lemma create_irq_caps_sep:
   apply (elim conjE)
   apply (subst si_objects_extra_caps'_split, assumption+)
   apply (rule hoare_chain [OF create_irq_caps_sep_helper, where orig_caps1=orig_caps])
-   apply (rule pred_andI)
+   apply (rule pred_conjI)
     apply sep_solve
    apply clarsimp
   apply clarsimp
