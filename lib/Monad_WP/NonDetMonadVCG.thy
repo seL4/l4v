@@ -148,70 +148,6 @@ lemma bind_eqI:
   apply (auto simp: split_def)
   done
 
-subsection "Simplification Rules for Lifted And/Or"
-
-lemma pred_andE[elim!]: "\<lbrakk> (A and B) x; \<lbrakk> A x; B x \<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
-  by(simp add:pred_conj_def)
-
-lemma pred_andI[intro!]: "\<lbrakk> A x; B x \<rbrakk> \<Longrightarrow> (A and B) x"
-  by(simp add:pred_conj_def)
-
-lemma pred_conj_app[simp]: "(P and Q) x = (P x \<and> Q x)"
-  by(simp add:pred_conj_def)
-
-lemma bipred_andE[elim!]: "\<lbrakk> (A And B) x y; \<lbrakk> A x y; B x y \<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
-  by(simp add:bipred_conj_def)
-
-lemma bipred_andI[intro!]: "\<lbrakk> A x y; B x y \<rbrakk> \<Longrightarrow> (A And B) x y"
-  by (simp add:bipred_conj_def)
-
-lemma bipred_conj_app[simp]: "(P And Q) x = (P x and Q x)"
-  by(simp add:pred_conj_def bipred_conj_def)
-
-lemma pred_disjE[elim!]: "\<lbrakk> (P or Q) x; P x \<Longrightarrow> R; Q x \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
-  by (fastforce simp: pred_disj_def)
-
-lemma pred_disjI1[intro]: "P x \<Longrightarrow> (P or Q) x"
-  by (simp add: pred_disj_def)
-
-lemma pred_disjI2[intro]: "Q x \<Longrightarrow> (P or Q) x"
-  by (simp add: pred_disj_def)
-
-lemma pred_disj_app[simp]: "(P or Q) x = (P x \<or> Q x)"
-  by auto
-
-lemma bipred_disjI1[intro]: "P x y \<Longrightarrow> (P Or Q) x y"
-  by (simp add: bipred_disj_def)
-
-lemma bipred_disjI2[intro]: "Q x y \<Longrightarrow> (P Or Q) x y"
-  by (simp add: bipred_disj_def)
-
-lemma bipred_disj_app[simp]: "(P Or Q) x = (P x or Q x)"
-  by(simp add:pred_disj_def bipred_disj_def)
-
-lemma pred_notnotD[simp]: "(not not P) = P"
-  by(simp add:pred_neg_def)
-
-lemma pred_and_true[simp]: "(P and \<top>) = P"
-  by(simp add:pred_conj_def)
-
-lemma pred_and_true_var[simp]: "(\<top> and P) = P"
-  by(simp add:pred_conj_def)
-
-lemma pred_and_false[simp]: "(P and \<bottom>) = \<bottom>"
-  by(simp add:pred_conj_def)
-
-lemma pred_and_false_var[simp]: "(\<bottom> and P) = \<bottom>"
-  by(simp add:pred_conj_def)
-
-lemma pred_conj_assoc:
-  "(P and Q and R) = (P and (Q and R))"
-  unfolding pred_conj_def by simp
-
-lemma pred_conj_comm:
-  "(P and Q) = (Q and P)"
-  by (auto simp: pred_conj_def)
-
 subsection "Hoare Logic Rules"
 
 lemma validE_def2:
@@ -280,15 +216,15 @@ lemma hoare_True_E_R [simp]:
   by (auto simp add: validE_R_def validE_def valid_def split: sum.splits)
 
 lemma hoare_post_conj [intro]:
-  "\<lbrakk> \<lbrace> P \<rbrace> a \<lbrace> Q \<rbrace>; \<lbrace> P \<rbrace> a \<lbrace> R \<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace> P \<rbrace> a \<lbrace> Q And R \<rbrace>"
-  by (fastforce simp: valid_def split_def bipred_conj_def)
+  "\<lbrakk> \<lbrace> P \<rbrace> a \<lbrace> Q \<rbrace>; \<lbrace> P \<rbrace> a \<lbrace> R \<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace> P \<rbrace> a \<lbrace> Q and R \<rbrace>"
+  by (fastforce simp: valid_def)
 
 lemma hoare_pre_disj [intro]:
   "\<lbrakk> \<lbrace> P \<rbrace> a \<lbrace> R \<rbrace>; \<lbrace> Q \<rbrace> a \<lbrace> R \<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace> P or Q \<rbrace> a \<lbrace> R \<rbrace>"
   by (simp add:valid_def pred_disj_def)
 
 lemma hoare_conj:
-  "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>; \<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P and P'\<rbrace> f \<lbrace>Q And Q'\<rbrace>"
+  "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>; \<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P and P'\<rbrace> f \<lbrace>Q and Q'\<rbrace>"
   unfolding valid_def by auto
 
 lemma hoare_post_taut: "\<lbrace> P \<rbrace> a \<lbrace> \<top>\<top> \<rbrace>"
@@ -1247,7 +1183,7 @@ lemma hoare_vcg_conj_lift:
   assumes x: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
   assumes y: "\<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace>"
   shows      "\<lbrace>\<lambda>s. P s \<and> P' s\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> Q' rv s\<rbrace>"
-  apply (subst bipred_conj_def[symmetric], rule hoare_post_conj)
+  apply (subst pred_conj_def[symmetric], subst pred_conj_def[symmetric], rule hoare_post_conj)
    apply (rule hoare_pre_imp [OF _ x], simp)
   apply (rule hoare_pre_imp [OF _ y], simp)
   done
@@ -1808,7 +1744,7 @@ lemma hoare_fun_app_wp[wp]:
   by simp+
 
 lemma hoare_validE_pred_conj:
-  "\<lbrakk> \<lbrace>P\<rbrace>f\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>; \<lbrace>P\<rbrace>f\<lbrace>R\<rbrace>,\<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>f\<lbrace>Q And R\<rbrace>,\<lbrace>E\<rbrace>"
+  "\<lbrakk> \<lbrace>P\<rbrace>f\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>; \<lbrace>P\<rbrace>f\<lbrace>R\<rbrace>,\<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>f\<lbrace>Q and R\<rbrace>,\<lbrace>E\<rbrace>"
   unfolding valid_def validE_def by (simp add: split_def split: sum.splits)
 
 lemma hoare_validE_conj:
@@ -2038,7 +1974,7 @@ lemma validNF_prop [wp_unsafe]:
   by (wp validNF)+
 
 lemma validNF_post_conj [intro!]:
-  "\<lbrakk> \<lbrace> P \<rbrace> a \<lbrace> Q \<rbrace>!; \<lbrace> P \<rbrace> a \<lbrace> R \<rbrace>! \<rbrakk> \<Longrightarrow> \<lbrace> P \<rbrace> a \<lbrace> Q And R \<rbrace>!"
+  "\<lbrakk> \<lbrace> P \<rbrace> a \<lbrace> Q \<rbrace>!; \<lbrace> P \<rbrace> a \<lbrace> R \<rbrace>! \<rbrakk> \<Longrightarrow> \<lbrace> P \<rbrace> a \<lbrace> Q and R \<rbrace>!"
   by (auto simp: validNF_def)
 
 lemma no_fail_or:
@@ -2095,7 +2031,7 @@ lemma validNF_if_split [wp_split]:
 lemma validNF_vcg_conj_lift:
   "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>!; \<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace>! \<rbrakk> \<Longrightarrow>
       \<lbrace>\<lambda>s. P s \<and> P' s\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> Q' rv s\<rbrace>!"
-  apply (subst bipred_conj_def[symmetric], rule validNF_post_conj)
+  apply (subst pred_conj_def[symmetric], subst pred_conj_def[symmetric], rule validNF_post_conj)
    apply (erule validNF_weaken_pre, fastforce)
   apply (erule validNF_weaken_pre, fastforce)
   done

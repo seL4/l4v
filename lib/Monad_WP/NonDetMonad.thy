@@ -791,46 +791,6 @@ where
  "\<lbrace>P\<rbrace> f -,\<lbrace>Q\<rbrace> \<equiv> validE P f (\<lambda>x y. True) Q"
 
 
-text \<open>Abbreviations for trivial preconditions:\<close>
-abbreviation(input)
-  top :: "'a \<Rightarrow> bool" ("\<top>")
-where
-  "\<top> \<equiv> \<lambda>_. True"
-
-abbreviation(input)
-  bottom :: "'a \<Rightarrow> bool" ("\<bottom>")
-where
-  "\<bottom> \<equiv> \<lambda>_. False"
-
-text \<open>Abbreviations for trivial postconditions (taking two arguments):\<close>
-abbreviation(input)
-  toptop :: "'a \<Rightarrow> 'b \<Rightarrow> bool" ("\<top>\<top>")
-where
- "\<top>\<top> \<equiv> \<lambda>_ _. True"
-
-abbreviation(input)
-  botbot :: "'a \<Rightarrow> 'b \<Rightarrow> bool" ("\<bottom>\<bottom>")
-where
- "\<bottom>\<bottom> \<equiv> \<lambda>_ _. False"
-
-text \<open>
-  Lifting @{text "\<and>"} and @{text "\<or>"} over two arguments.
-  Lifting @{text "\<and>"} and @{text "\<or>"} over one argument is already
-  defined (written @{text "and"} and @{text "or"}).
-\<close>
-definition
-  bipred_conj :: "('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool)"
-  (infixl "And" 96)
-where
-  "bipred_conj P Q \<equiv> \<lambda>x y. P x y \<and> Q x y"
-
-definition
-  bipred_disj :: "('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool)"
-  (infixl "Or" 91)
-where
-  "bipred_disj P Q \<equiv> \<lambda>x y. P x y \<or> Q x y"
-
-
 subsection "Determinism"
 
 text \<open>A monad of type @{text nondet_monad} is deterministic iff it

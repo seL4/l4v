@@ -18,6 +18,7 @@ imports
   Extract_Conjunct
   ML_Goal
   Eval_Bool
+  Fun_Pred_Syntax
   NICTATools
   "Word_Lib.WordSetup"
 begin
@@ -77,33 +78,6 @@ lemma prod_injects:
   "(x,y) = p \<Longrightarrow> x = fst p \<and> y = snd p"
   "p = (x,y) \<Longrightarrow> x = fst p \<and> y = snd p"
   by auto
-
-definition
-  pred_conj :: "('a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> bool)" (infixl "and" 35)
-where
-  "pred_conj P Q \<equiv> \<lambda>x. P x \<and> Q x"
-
-lemma pred_conj_absorb[simp]:
-  "(P and P) = P"
-  by (simp add: pred_conj_def)
-
-definition
-  pred_disj :: "('a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> bool)" (infixl "or" 30)
-where
-  "pred_disj P Q \<equiv> \<lambda>x. P x \<or> Q x"
-
-lemma pred_disj_absorb[simp]:
-  "(P or P) = P"
-  by (simp add: pred_disj_def)
-
-definition
-  pred_neg :: "('a \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> bool)" ("not _" [40] 40)
-where
-  "pred_neg P \<equiv> \<lambda>x. \<not> P x"
-
-lemma pred_neg_simp[simp]:
-  "(not P) s \<longleftrightarrow> \<not> (P s)"
-  by (simp add: pred_neg_def)
 
 definition "K \<equiv> \<lambda>x y. x"
 
@@ -238,7 +212,7 @@ lemma delete_remove1:
 
 lemma ignore_if:
   "(y and z) s \<Longrightarrow> (if x then y else z) s"
-  by (clarsimp simp: pred_conj_def)
+  by simp
 
 lemma zipWith_Nil2 :
   "zipWith f xs [] = []"

@@ -95,7 +95,7 @@ fun get_wp_simps_strgs ctxt rules asms = let
 
 fun postcond_ss ctxt = ctxt
     |> put_simpset HOL_basic_ss
-    |> (fn ctxt => ctxt addsimps [@{thm pred_conj_def}])
+    |> (fn ctxt => ctxt addsimps @{thms pred_conj_def})
     |> simpset_of
 
 fun wp_default_ss ctxt = ctxt

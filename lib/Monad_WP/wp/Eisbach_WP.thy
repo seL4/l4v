@@ -66,7 +66,7 @@ method post_asm_raw methods m =
    rule trivial_imp)
 
 method post_asm methods m =
-  (post_asm_raw \<open>(simp only: bipred_conj_def pred_conj_def)?,(elim conjE)?,m\<close>)
+  (post_asm_raw \<open>(simp only: pred_conj_def)?,(elim conjE)?,m\<close>)
 
 
 named_theorems packed_validEs
@@ -86,7 +86,7 @@ method post_raw methods m =
 
 method post_strong methods m_distinct m_all =
   (post_raw
-     \<open>(simp only: pred_conj_def bipred_conj_def)?,
+     \<open>(simp only: pred_conj_def)?,
       (intro impI conjI allI)?,
       distinct_subgoals_strong \<open>m_distinct\<close>,
       all \<open>m_all\<close>,
@@ -121,6 +121,9 @@ private lemma hoare_decomposeE:
   by (fastforce simp add: validE_R_def validE_E_def validE_def valid_def pred_conj_def split: prod.splits sum.splits)
 
 private lemmas hoare_decomposes' = hoare_decompose hoare_decomposeE_R hoare_decomposeE_E hoare_decomposeE
+
+private lemmas bipred_conj_def =
+  inf_fun_def[where 'b="'b \<Rightarrow> bool", unfolded inf_fun_def[where 'b="bool"], simplified]
 
 private method add_pred_conj = (subst pred_conj_def[symmetric])
 private method add_bipred_conj = (subst bipred_conj_def[symmetric])
