@@ -293,15 +293,13 @@ definition tcb_st_refs_of' :: "thread_state \<Rightarrow> ref_set" where
   | BlockedOnNotification x   \<Rightarrow> {(x, TCBSignal)}
   | _                         \<Rightarrow> {}"
 
-definition tcb_bound_refs' :: "obj_ref option \<Rightarrow> obj_ref option \<Rightarrow> obj_ref option \<Rightarrow> ref_set" where
-  "tcb_bound_refs' ntfn sc yt \<equiv> get_refs TCBBound ntfn
-                                  \<union> get_refs TCBSchedContext sc
-                                  \<union> get_refs TCBYieldTo yt"
+definition tcb_bound_refs' :: "tcb \<Rightarrow> ref_set" where
+  "tcb_bound_refs' tcb \<equiv> get_refs TCBBound (tcbBoundNotification tcb)
+                          \<union> get_refs TCBSchedContext (tcbSchedContext tcb)
+                          \<union> get_refs TCBYieldTo (tcbYieldTo tcb)"
 
 definition refs_of_tcb' :: "tcb \<Rightarrow> ref_set" where
-  "refs_of_tcb' tcb \<equiv>
-     tcb_st_refs_of' (tcbState tcb)
-       \<union> tcb_bound_refs' (tcbBoundNotification tcb) (tcbSchedContext tcb) (tcbYieldTo tcb)"
+  "refs_of_tcb' tcb \<equiv> tcb_st_refs_of' (tcbState tcb) \<union> tcb_bound_refs' tcb"
 
 definition ep_q_refs_of' :: "endpoint \<Rightarrow> (obj_ref \<times> reftype) set" where
   "ep_q_refs_of' ep \<equiv> case ep of
@@ -1505,18 +1503,11 @@ lemma ntfn_bound_refs'_simps[simp]:
   "ntfn_bound_refs' None = {}"
   by (auto simp: ntfn_bound_refs'_def)
 
-lemma tcb_bound_refs'_simps[simp]:
-  "tcb_bound_refs' (Some a) b c = {(a, TCBBound)} \<union> tcb_bound_refs' None b c"
-  "tcb_bound_refs' b (Some a) c = {(a, TCBSchedContext)} \<union> tcb_bound_refs' b None c"
-  "tcb_bound_refs' b c (Some a) = {(a, TCBYieldTo)} \<union> tcb_bound_refs' b c None"
-  "tcb_bound_refs' None None None = {}"
-  by (auto simp: tcb_bound_refs'_def)
-
 lemma prod_in_refsD:
   "\<And>ref x y. (x, ref) \<in> ep_q_refs_of' y \<Longrightarrow> ref \<in> {EPRecv, EPSend}"
   "\<And>ref x y. (x, ref) \<in> ntfn_q_refs_of' y \<Longrightarrow> ref \<in> {NTFNSignal}"
   "\<And>ref x y. (x, ref) \<in> tcb_st_refs_of' y \<Longrightarrow> ref \<in> {TCBBlockedRecv, TCBReply, TCBSignal, TCBBlockedSend}"
-  "\<And>ref x a b c. (x, ref) \<in> tcb_bound_refs' a b c \<Longrightarrow> ref \<in> {TCBBound, TCBSchedContext, TCBYieldTo}"
+  "\<And>ref x y. (x, ref) \<in> tcb_bound_refs' y \<Longrightarrow> ref \<in> {TCBBound, TCBSchedContext, TCBYieldTo}"
   apply (rename_tac ep; case_tac ep; simp)
   apply (rename_tac ep; case_tac ep; simp)
   apply (rename_tac ep; case_tac ep; clarsimp split: if_splits)
@@ -1617,25 +1608,19 @@ definition
 where
   "tcb_ntfn_is_bound' ntfn tcb \<equiv> tcbBoundNotification tcb = ntfn"
 
-lemma st_tcb_at_state_refs_ofD':
-  "st_tcb_at' P t s \<Longrightarrow>
-    \<exists>ts ntfnptr sc_ptr yieldto_ptr. P ts
-                 \<and> obj_at' ((=) ntfnptr o tcbBoundNotification) t s
-                 \<and> obj_at' ((=) sc_ptr o tcbSchedContext) t s
-                 \<and> obj_at' ((=) yieldto_ptr o tcbYieldTo) t s
-                 \<and> state_refs_of' s t = (tcb_st_refs_of' ts
-                                         \<union> tcb_bound_refs' ntfnptr sc_ptr yieldto_ptr)"
-  by (auto simp: pred_tcb_at'_def tcb_ntfn_is_bound'_def obj_at'_def projectKO_eq
-                 project_inject state_refs_of'_def)
+lemma simple_st_tcb_at_state_refs_ofD':
+  "st_tcb_at' simple' t s \<Longrightarrow> obj_at' (\<lambda>x. tcb_bound_refs' x = state_refs_of' s t) t s"
+  by (fastforce simp: pred_tcb_at'_def obj_at'_def state_refs_of'_def
+                      projectKO_eq project_inject)
 
-lemma bound_tcb_at_state_refs_ofD':
-  "bound_tcb_at' P t s \<Longrightarrow>
-    \<exists>ts ntfnptr sc_ptr yieldto_ptr. P ntfnptr
-                 \<and> obj_at' ((=) ntfnptr o tcbBoundNotification) t s
-                 \<and> obj_at' ((=) sc_ptr o tcbSchedContext) t s
-                 \<and> obj_at' ((=) yieldto_ptr o tcbYieldTo) t s
-          \<and> state_refs_of' s t = (tcb_st_refs_of' ts \<union> tcb_bound_refs' ntfnptr sc_ptr yieldto_ptr)"
-  by (auto simp: pred_tcb_at'_def obj_at'_def tcb_ntfn_is_bound'_def projectKO_eq
+lemma active'_st_tcb_at_state_refs_ofD':
+  "st_tcb_at' active' t s \<Longrightarrow> obj_at' (\<lambda>tcb. tcb_st_refs_of' (tcbState tcb) = {}) t s"
+  by (fastforce simp: pred_tcb_at'_def obj_at'_def)
+
+lemma st_tcb_at_state_refs_ofD':
+  "st_tcb_at' P t s \<Longrightarrow> \<exists>ts tcb. P ts \<and> ko_at' tcb t s
+          \<and> state_refs_of' s t = (tcb_st_refs_of' ts \<union> tcb_bound_refs' tcb)"
+  by (auto simp: pred_tcb_at'_def tcb_ntfn_is_bound'_def obj_at'_def projectKO_eq
                  project_inject state_refs_of'_def)
 
 lemma sym_refs_obj_atD':
@@ -1657,36 +1642,14 @@ lemma sym_refs_ko_atD':
 
 lemma sym_refs_st_tcb_atD':
   "\<lbrakk> st_tcb_at' P t s; sym_refs (state_refs_of' s) \<rbrakk> \<Longrightarrow>
-     \<exists>ts ntfnptr sc_ptr yieldto_ptr. P ts
-        \<and> obj_at' ((=) ntfnptr o tcbBoundNotification) t s
-        \<and> state_refs_of' s t = tcb_st_refs_of' ts \<union> tcb_bound_refs' ntfnptr sc_ptr yieldto_ptr
-        \<and> (\<forall>(x, tp)\<in>tcb_st_refs_of' ts \<union> tcb_bound_refs' ntfnptr sc_ptr yieldto_ptr.
-              ko_wp_at' (\<lambda>ko. (t, symreftype tp) \<in> refs_of' ko) x s)"
+     \<exists>ts tcb. P ts \<and> ko_at' tcb t s
+        \<and> state_refs_of' s t = tcb_st_refs_of' ts \<union> tcb_bound_refs' tcb
+        \<and> (\<forall>(x, tp)\<in>tcb_st_refs_of' ts \<union> tcb_bound_refs' tcb.
+                             ko_wp_at' (\<lambda>ko. (t, symreftype tp) \<in> refs_of' ko) x s)"
   apply (drule st_tcb_at_state_refs_ofD')
   apply (erule exE)+
   apply (rule_tac x=ts in exI)
-  apply (rule_tac x=ntfnptr in exI)
-  apply (rule_tac x=sc_ptr in exI)
-  apply (rule_tac x=yieldto_ptr in exI)
-  apply clarsimp
-  apply (frule obj_at_state_refs_ofD')
-  apply (drule (1)sym_refs_obj_atD')
-  apply auto
-  done
-
-lemma sym_refs_bound_tcb_atD':
-  "\<lbrakk> bound_tcb_at' P t s; sym_refs (state_refs_of' s) \<rbrakk> \<Longrightarrow>
-     \<exists>ts ntfnptr sc_ptr yieldto_ptr. P ntfnptr
-        \<and> obj_at' ((=) ntfnptr o tcbBoundNotification) t s
-        \<and> state_refs_of' s t = tcb_st_refs_of' ts \<union> tcb_bound_refs' ntfnptr sc_ptr yieldto_ptr
-        \<and> (\<forall>(x, tp)\<in>tcb_st_refs_of' ts \<union> tcb_bound_refs' ntfnptr sc_ptr yieldto_ptr.
-              ko_wp_at' (\<lambda>ko. (t, symreftype tp) \<in> refs_of' ko) x s)"
-  apply (drule bound_tcb_at_state_refs_ofD')
-  apply (erule exE)+
-  apply (rule_tac x=ts in exI)
-  apply (rule_tac x=ntfnptr in exI)
-  apply (rule_tac x=sc_ptr in exI)
-  apply (rule_tac x=yieldto_ptr in exI)
+  apply (rule_tac x=tcb in exI)
   apply clarsimp
   apply (frule obj_at_state_refs_ofD')
   apply (drule (1)sym_refs_obj_atD')
@@ -1713,7 +1676,7 @@ lemma refs_of_live'[simplified]:
      apply (rename_tac notification)
      apply (case_tac "ntfnObj notification";
             fastforce simp: live_ntfn'_def)
-    apply fastforce
+    apply (fastforce simp: tcb_bound_refs'_def)
    apply (fastforce simp: live_sc'_def)
   apply (fastforce simp: live_reply'_def)
   done
@@ -1816,7 +1779,8 @@ lemma valid_pspaceE' [elim]:
 lemma idle'_only_sc_refs:
   "valid_idle' s \<Longrightarrow> state_refs_of' s (ksIdleThread s) = {(idle_sc_ptr, TCBSchedContext)}"
   by (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def tcb_ntfn_is_bound'_def
-                     projectKO_eq project_inject state_refs_of'_def idle_tcb'_def)
+                     projectKO_eq project_inject state_refs_of'_def idle_tcb'_def
+                     tcb_bound_refs'_def)
 
 lemma idle'_not_queued':
   "\<lbrakk>valid_idle' s; sym_refs (state_refs_of' s);
@@ -3672,12 +3636,6 @@ lemma invs'_bitmapQ_no_L1_orphans:
 lemma invs_ksCurDomain_maxDomain' [elim!]:
   "invs' s \<Longrightarrow> ksCurDomain s \<le> maxDomain"
   by (simp add: invs'_def)
-
-(* FIXME RT: not going to work any more like this:
-lemma simple_st_tcb_at_state_refs_ofD':
-  "st_tcb_at' simple' t s \<Longrightarrow> bound_tcb_at' (\<lambda>x. tcb_bound_refs' x = state_refs_of' s t) t s"
-  by (fastforce simp: pred_tcb_at'_def obj_at'_def state_refs_of'_def
-                      projectKO_eq project_inject) *)
 
 lemma cur_tcb_arch' [iff]:
   "cur_tcb' (ksArchState_update f s) = cur_tcb' s"

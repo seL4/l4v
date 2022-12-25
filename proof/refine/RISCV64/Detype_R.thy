@@ -975,9 +975,9 @@ lemma refs_of':
     apply (clarsimp simp: obj_at'_def ko_wp_at'_def)
     using live_idle_untyped_range' apply simp
    apply (clarsimp simp: obj_at'_def ko_wp_at'_def idle_tcb'_def)
-   using live_idle_untyped_range' apply simp
+   using live_idle_untyped_range' tcb_bound_refs'_def apply simp
   apply (prop_tac "ko_at' ko p s'")
-   apply (fastforce simp: ko_wp_at'_def obj_at'_def project_inject)
+   apply (fastforce simp: ko_wp_at'_def obj_at'_def project_inject tcb_bound_refs'_def)
   apply (frule sym_refs_ko_atD')
    apply (fastforce intro: refs_of_live' dest!: live_notRange)+
   done
@@ -1024,7 +1024,7 @@ lemma valid_obj':
       apply (erule (2) cte_wp_at_tcbI')
        apply fastforce
       apply simp
-     apply (clarsimp simp: valid_tcb_state'_def valid_bound_reply'_def
+     apply (clarsimp simp: valid_tcb_state'_def valid_bound_reply'_def tcb_bound_refs'_def
                     split: option.splits thread_state.splits)
     apply (clarsimp simp: valid_cte'_def)
     apply (rule_tac p=p in valid_cap2)
@@ -1074,7 +1074,7 @@ lemma sc_tcb_not_idle_thread':
   apply (frule sc_tcb_not_idle_thread'_helper; blast?)
   apply (insert valid_idle')
   apply (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def state_refs_of'_def
-                        idle_tcb'_def
+                        idle_tcb'_def tcb_bound_refs'_def
                  dest!: sc_tcb_not_idle_thread'_helper if_live_then_nonz_capD')
   done
 
@@ -1082,7 +1082,7 @@ lemma thread_not_idle_implies_sc_not_idle'_helper:
   "\<lbrakk> pspace_aligned' s'; pspace_distinct' s'; pspace_bounded' s'; tcbSchedContext tcb = Some scp;
      ksPSpace s' tp = Some (KOTCB tcb); sym_refs (state_refs_of' s') \<rbrakk>
    \<Longrightarrow> (tp, SCTcb) \<in> state_refs_of' s' scp"
-  apply (clarsimp simp: state_refs_of'_def
+  apply (clarsimp simp: state_refs_of'_def tcb_bound_refs'_def
                  elim!: sym_refsE)
   by (simp add: pspace_alignedD' pspace_distinctD' pspace_boundedD')
 
@@ -1120,7 +1120,7 @@ lemma state_refs:
     apply (insert refs valid_objs valid_idle' iflive pspace)
     apply (frule (8) thread_not_idle_implies_sc_not_idle')
      apply (fastforce simp: state_refs_of'_def)
-    apply (fastforce simp: ko_wp_at'_def)
+    apply (fastforce simp: ko_wp_at'_def tcb_bound_refs'_def)
    apply (frule (6) sc_tcb_not_idle_thread')
      apply (fastforce simp: state_refs_of'_def)
     apply (fastforce simp: state_refs_of'_def)
@@ -1336,9 +1336,9 @@ lemma (in delete_locale) delete_invs':
   assumes "\<forall>t. t \<in> set (ksReleaseQueue s) \<longrightarrow> obj_at' (runnable' \<circ> tcbState) t s"
   and "sym_refs (state_refs_of' s')"
   shows "invs' (ksMachineState_update
-           (\<lambda>ms. underlying_memory_update
-              (\<lambda>m x. if base \<le> x \<and> x \<le> base + (2 ^ bits - 1) then 0 else m x) ms)
-           state')" (is "invs' (?state'')")
+                (\<lambda>ms. underlying_memory_update
+                 (\<lambda>m x. if base \<le> x \<and> x \<le> base + (2 ^ bits - 1) then 0 else m x) ms)
+                state')" (is "invs' (?state'')")
 using vds
 proof (simp add: invs'_def valid_pspace'_def
                  valid_mdb'_def valid_mdb_ctes_def,
@@ -1615,6 +1615,28 @@ proof (simp add: invs'_def valid_pspace'_def
 
 qed (clarsimp simp: valid_dom_schedule'_def)
 
+lemma (in delete_locale) delete_sym_refs':
+  "sym_refs
+    (state_refs_of'
+     (ksMachineState_update
+      (underlying_memory_update
+        (\<lambda>m x. if base \<le> x \<and> x \<le> base + (2 ^ bits - 1) then 0 else m x))
+      state'))"
+  (is "sym_refs (state_refs_of' (?state''))")
+proof -
+  interpret Arch . (*FIXME: arch_split*)
+  let ?s = state'
+  let ?ran = base_bits
+
+  have pspace_distinct'_state': "pspace_distinct' ?s" using pd invs
+    by (clarsimp simp add: pspace_distinct'_def ps_clear_def
+                           dom_if_None Diff_Int_distrib)
+
+  show ?thesis
+    apply (insert pspace_distinct'_state' sym_refs invs)
+    by (frule state_refs[rotated 3]; fastforce?)
+qed
+
 lemma (in delete_locale) delete_ko_wp_at':
   assumes    objs: "ko_wp_at' P p s' \<and> ex_nonz_cap_to' p s'"
   shows      "ko_wp_at' P p state'"
@@ -1715,6 +1737,38 @@ lemma deleteObjects_invs':
      apply blast
     apply blast
    apply (simp add: field_simps mask_def)
+  apply clarsimp
+  apply (drule invs_valid_objs')
+  apply (drule (1) cte_wp_at_valid_objs_valid_cap')
+  apply (clarsimp simp add: valid_cap'_def capAligned_def untypedBits_defs)
+  done
+
+lemma deleteObjects_sym_refs':
+  "\<lbrace>cte_wp_at' (\<lambda>c. cteCap c = UntypedCap d ptr bits idx) p
+     and invs' and (\<lambda>s. sym_refs (state_refs_of' s)) and ct_active' and sch_act_simple
+     and (\<lambda>s. descendants_range' (UntypedCap d ptr bits idx) p (ctes_of s))\<rbrace>
+   deleteObjects ptr bits
+   \<lbrace>\<lambda>_ s. sym_refs (state_refs_of' s)\<rbrace>"
+  apply (rule hoare_pre)
+   apply (rule_tac G="is_aligned ptr bits \<and> 3 \<le> bits \<and> bits \<le> word_bits" in hoare_grab_asm)
+   apply (clarsimp simp add: deleteObjects_def2)
+   apply (simp add: freeMemory_def bind_assoc doMachineOp_bind ef_storeWord)
+   apply (simp add: bind_assoc[where f="\<lambda>_. modify f" for f, symmetric])
+   apply (simp add: mapM_x_storeWord_step[simplified word_size_bits_def]
+                    doMachineOp_modify modify_modify)
+   apply (simp add: bind_assoc intvl_range_conv'[where 'a=machine_word_len, folded word_bits_def])
+   apply wp
+  apply (simp cong: if_cong)
+  apply (subgoal_tac "is_aligned ptr bits \<and> 3 \<le> bits \<and> bits < word_bits",simp)
+   apply clarsimp
+   apply (frule(2) delete_locale.intro, simp_all)[1]
+     apply (simp add: valid_idle'_asrt_def)
+    apply (simp add: release_q_runnable_asrt_def)
+   apply (simp add: sym_refs_asrt_def)
+   apply (rule subst[rotated, where P="\<lambda>s. sym_refs (state_refs_of' s)"],
+          erule delete_locale.delete_sym_refs')
+   apply (simp add: field_simps mask_def)
+  apply (simp add: sym_refs_asrt_def state_refs_of'_def)
   apply clarsimp
   apply (drule invs_valid_objs')
   apply (drule (1) cte_wp_at_valid_objs_valid_cap')

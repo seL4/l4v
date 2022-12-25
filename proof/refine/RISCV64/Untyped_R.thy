@@ -3899,7 +3899,7 @@ locale invokeUntyped_proofs =
     assumes vui: "valid_untyped_inv_wcap'
       (Invocations_H.Retype cref reset ptr_base ptr tp us slots dev)
           (Some (UntypedCap dev (ptr && ~~ mask sz) sz idx)) s"
-  and misc: "ct_active' s" "invs' s"
+  and misc: "ct_active' s" "invs' s" "sym_refs (state_refs_of' s)"
 
 begin
 
@@ -4488,17 +4488,20 @@ lemma setCTE_ct_in_state:
 crunch ct_in_state[wp]: updateFreeIndex "ct_in_state' P"
 crunch nosch[wp]: updateFreeIndex "\<lambda>s. P (ksSchedulerAction s)"
 
+crunches updateFreeIndex
+  for state_refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"
+
 lemma resetUntypedCap_invs_etc:
-  "\<lbrace>invs' and valid_untyped_inv_wcap' ui
+  "\<lbrace>invs' and (\<lambda>s. sym_refs (state_refs_of' s)) and valid_untyped_inv_wcap' ui
       (Some (UntypedCap dev ptr sz idx))
          and ct_active'
          and K (\<exists>ptr_base ptr' ty us slots. ui = Retype slot True ptr_base ptr' ty us slots dev)\<rbrace>
     resetUntypedCap slot
-  \<lbrace>\<lambda>_. invs' and valid_untyped_inv_wcap' ui (Some (UntypedCap dev ptr sz 0))
+  \<lbrace>\<lambda>_. invs' and (\<lambda>s. sym_refs (state_refs_of' s)) and valid_untyped_inv_wcap' ui (Some (UntypedCap dev ptr sz 0))
       and ct_active'
       and pspace_no_overlap' ptr sz\<rbrace>, \<lbrace>\<lambda>_. invs'\<rbrace>"
-  (is "\<lbrace>invs' and valid_untyped_inv_wcap' ?ui (Some ?cap) and ct_active' and ?asm\<rbrace>
-    ?f \<lbrace>\<lambda>_. invs' and ?vu2 and ct_active' and ?psp\<rbrace>, \<lbrace>\<lambda>_. invs'\<rbrace>")
+  (is "\<lbrace>invs' and (\<lambda>s. sym_refs (state_refs_of' s)) and valid_untyped_inv_wcap' ?ui (Some ?cap) and ct_active' and ?asm\<rbrace>
+    ?f \<lbrace>\<lambda>_. invs' and (\<lambda>s. sym_refs (state_refs_of' s)) and ?vu2 and ct_active' and ?psp\<rbrace>, \<lbrace>\<lambda>_. invs'\<rbrace>")
   apply (simp add: resetUntypedCap_def getSlotCap_def
                    liftE_bind_return_bindE_returnOk bindE_assoc)
   apply (rule hoare_vcg_seqE[rotated])
@@ -4518,14 +4521,16 @@ lemma resetUntypedCap_invs_etc:
        (simp_all add: cte_wp_at_ctes_of)+)[1]
   apply (clarsimp simp: unlessE_def cte_wp_at_ctes_of
              split del: if_split)
-  apply (rule_tac B="\<lambda>_. invs' and valid_untyped_inv_wcap' ?ui (Some ?cap)
-        and ct_active' and ?psp" in hoare_vcg_seqE[rotated])
+  apply (rule_tac B="\<lambda>_. invs' and (\<lambda>s. sym_refs (state_refs_of' s))
+                         and valid_untyped_inv_wcap' ?ui (Some ?cap)
+                         and ct_active' and ?psp" in hoare_vcg_seqE[rotated])
    apply clarsimp
    apply (rule hoare_pre)
     apply (simp add: sch_act_simple_def)
     apply (wps )
     apply (wp deleteObject_no_overlap[where idx=idx]
               deleteObjects_invs'[where idx=idx and p=slot]
+              deleteObjects_sym_refs'[where idx=idx and p=slot]
               hoare_vcg_ex_lift hoare_vcg_const_Ball_lift
               deleteObjects_cte_wp_at'[where idx=idx]
               deleteObjects_descendants[where p=slot]
@@ -4556,13 +4561,14 @@ lemma resetUntypedCap_invs_etc:
               doMachineOp_psp_no_overlap
               updateFreeIndex_ctes_of
               updateFreeIndex_cte_wp_at
-           | simp | wps | wp (once) ex_cte_cap_to'_pres)+
+           | simp | wp (once) ex_cte_cap_to'_pres)+
    apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps
                          modify_map_def)
    apply auto[1]
   apply simp
   apply (rule hoare_pre, rule hoare_post_impErr,
-    rule_tac P="\<lambda>i. invs' and ?psp and ct_active' and valid_untyped_inv_wcap' ?ui
+    rule_tac P="\<lambda>i. invs' and (\<lambda>s. sym_refs (state_refs_of' s)) and ?psp and ct_active'
+    and valid_untyped_inv_wcap' ?ui
         (Some (UntypedCap dev ptr sz (if i = 0 then idx
             else (length [ptr , ptr + 2 ^ resetChunkBits .e. getFreeRef ptr idx - 1] - i) * 2 ^ resetChunkBits)))"
       and E="\<lambda>_. invs'"
@@ -4640,12 +4646,13 @@ lemma resetUntypedCap_invs_etc:
 end
 
 lemma whenE_reset_resetUntypedCap_invs_etc:
-  "\<lbrace>invs' and valid_untyped_inv_wcap' ui
+  "\<lbrace>invs' and (\<lambda>s. sym_refs (state_refs_of' s)) and valid_untyped_inv_wcap' ui
       (Some (UntypedCap dev ptr sz idx))
          and ct_active'
          and K (\<exists>ptr_base ty us slots. ui = Retype slot reset ptr_base ptr' ty us slots dev)\<rbrace>
     whenE reset (resetUntypedCap slot)
-  \<lbrace>\<lambda>_. invs' and valid_untyped_inv_wcap' ui (Some (UntypedCap dev ptr sz (if reset then 0 else idx)))
+  \<lbrace>\<lambda>_. invs' and (\<lambda>s. sym_refs (state_refs_of' s))
+      and valid_untyped_inv_wcap' ui (Some (UntypedCap dev ptr sz (if reset then 0 else idx)))
       and ct_active'
       and pspace_no_overlap' (if reset then ptr else ptr') sz\<rbrace>, \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (rule hoare_pre)
@@ -4681,7 +4688,7 @@ lemma inv_untyped_corres':
   "\<lbrakk> untypinv_relation ui ui' \<rbrakk> \<Longrightarrow>
    corres (dc \<oplus> (=))
      (einvs and valid_machine_time and valid_untyped_inv ui and ct_active and (\<lambda>s. schact_is_rct s))
-     (invs' and valid_untyped_inv' ui' and ct_active')
+     (invs' and valid_untyped_inv' ui' and ct_active' and (\<lambda>s. sym_refs (state_refs_of' s)))
      (invoke_untyped ui) (invokeUntyped ui')"
   apply (cases ui)
   apply (rule corres_name_pre)
@@ -4700,7 +4707,7 @@ lemma inv_untyped_corres':
 
     assume invs: "invs (s :: det_state)" "ct_active s" "valid_list s" "valid_sched s"
                  "schact_is_rct s" "valid_machine_time s"
-    and   invs': "invs' s'" "ct_active' s'"
+    and   invs': "invs' s'" "ct_active' s'" "sym_refs (state_refs_of' s')"
     and      sr: "(s, s') \<in> state_relation"
     and     vui: "valid_untyped_inv_wcap ?ui (Some (cap.UntypedCap dev (ptr && ~~ mask sz) sz idx)) s"
                  (is "valid_untyped_inv_wcap _ (Some ?cap) s")
@@ -5072,7 +5079,7 @@ lemma inv_untyped_corres':
          apply simp
         apply clarsimp
         apply (simp only: ui')
-        apply (frule(2) invokeUntyped_proofs.intro)
+        apply (frule(3) invokeUntyped_proofs.intro)
         apply (clarsimp simp: cte_wp_at_ctes_of
                               invokeUntyped_proofs.caps_no_overlap'
                               invokeUntyped_proofs.ps_no_overlap'
@@ -5459,7 +5466,7 @@ lemma invokeUntyped_invs'':
     createNewCaps tp ptr n us dev \<lbrace>\<lambda>_. Q\<rbrace>"
  assumes set_free_Q[wp]: "\<And>slot idx. \<lbrace>invs' and Q\<rbrace> updateFreeIndex slot idx \<lbrace>\<lambda>_.Q\<rbrace>"
  assumes reset_Q: "\<lbrace>Q'\<rbrace> resetUntypedCap (case ui of Invocations_H.Retype src_slot _ _ _ _ _ _ _ \<Rightarrow> src_slot) \<lbrace>\<lambda>_. Q\<rbrace>"
- shows "\<lbrace>invs' and valid_untyped_inv' ui
+ shows "\<lbrace>invs' and (\<lambda>s. sym_refs (state_refs_of' s)) and valid_untyped_inv' ui
           and (\<lambda>s. (case ui of Invocations_H.Retype _ reset _ _ _ _ _ _ \<Rightarrow> reset) \<longrightarrow> Q' s)
           and Q and ct_active'\<rbrace>
      invokeUntyped ui
@@ -5472,7 +5479,7 @@ lemma invokeUntyped_invs'':
         (Some (case ui of
                 Invocations_H.untyped_invocation.Retype slot reset ptr_base ptr ty us slots d \<Rightarrow>
                   capability.UntypedCap d (ptr && ~~ mask sz) sz idx)) s"
-    assume misc: "invs' s" "Q s" "ct_active' s"
+    assume misc: "invs' s" "Q s" "ct_active' s" "sym_refs (state_refs_of' s)"
         "(case ui of
          Invocations_H.untyped_invocation.Retype x reset _ _ _ _ _ _ \<Rightarrow> reset) \<longrightarrow>
         Q' s"
@@ -5482,7 +5489,7 @@ lemma invokeUntyped_invs'':
       and ui: "ui = Invocations_H.Retype cref reset (ptr && ~~ mask sz) ptr tp us slots dev"
       using vui1 misc
       apply (cases ui, simp only: Invocations_H.untyped_invocation.simps)
-      apply (frule(2) invokeUntyped_proofs.intro)
+      apply (frule(3) invokeUntyped_proofs.intro)
       apply clarsimp
       apply (unfold cte_wp_at_ctes_of)
       apply (drule meta_mp; clarsimp)
@@ -5546,7 +5553,7 @@ lemma invokeUntyped_invs'':
     apply (clarsimp simp:invokeUntyped_def getSlotCap_def ui)
     apply (rule validE_valid)
     apply (rule hoare_pre)
-     apply (rule_tac B="\<lambda>_ s. invs' s \<and> Q s \<and> ct_active' s
+     apply (rule_tac B="\<lambda>_ s. invs' s \<and> sym_refs (state_refs_of' s) \<and> Q s \<and> ct_active' s
           \<and> valid_untyped_inv_wcap' ui
               (Some (UntypedCap dev (ptr && ~~ mask sz) sz (if reset then 0 else idx))) s
           \<and> (reset \<longrightarrow> pspace_no_overlap' (ptr && ~~ mask sz) sz s)
@@ -5606,7 +5613,7 @@ lemma invokeUntyped_invs'':
        apply (wp updateFreeIndex_caps_overlap_reserved
                  updateFreeIndex_descendants_range_in' getCTE_wp | simp)+
     apply (clarsimp simp only: ui)
-    apply (frule(2) invokeUntyped_proofs.intro)
+    apply (frule(3) invokeUntyped_proofs.intro)
     apply (frule invokeUntyped_proofs.idx_le_new_offs)
     apply (frule invokeUntyped_proofs.szw)
     apply (frule invokeUntyped_proofs.descendants_range(2), simp)
@@ -5642,7 +5649,7 @@ lemma invokeUntyped_invs'':
 qed
 
 lemma invokeUntyped_invs'[wp]:
-  "\<lbrace>invs' and valid_untyped_inv' ui and ct_active'\<rbrace>
+  "\<lbrace>invs' and (\<lambda>s. sym_refs (state_refs_of' s)) and valid_untyped_inv' ui and ct_active'\<rbrace>
      invokeUntyped ui
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (wp invokeUntyped_invs''[where Q=\<top>, simplified hoare_post_taut, simplified])
@@ -5650,14 +5657,15 @@ lemma invokeUntyped_invs'[wp]:
   done
 
 lemma resetUntypedCap_st_tcb_at':
-  "\<lbrace>invs' and st_tcb_at' (P and ((\<noteq>) Inactive) and ((\<noteq>) IdleThreadState)) t
+  "\<lbrace>invs' and (\<lambda>s. sym_refs (state_refs_of' s))
+      and st_tcb_at' (P and ((\<noteq>) Inactive) and ((\<noteq>) IdleThreadState)) t
       and cte_wp_at' (\<lambda>cp. isUntypedCap (cteCap cp)) slot
       and ct_active' and sch_act_simple and (\<lambda>s. descendants_of' slot (ctes_of s) = {})\<rbrace>
    resetUntypedCap slot
    \<lbrace>\<lambda>_. st_tcb_at' P t\<rbrace>"
   apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps)
   apply (rule_tac
-          Q="\<lambda>s. \<exists>d v0 v1 f. invs' s
+          Q="\<lambda>s. \<exists>d v0 v1 f. invs' s \<and> sym_refs (state_refs_of' s)
                              \<and> st_tcb_at' (P and (\<noteq>) Structures_H.thread_state.Inactive and
                                             (\<noteq>) Structures_H.thread_state.IdleThreadState) t s
                              \<and> (cte_wp_at' (\<lambda>cp. cteCap cp = capability.UntypedCap d v0 v1 f) slot s)
@@ -5679,7 +5687,8 @@ lemma resetUntypedCap_st_tcb_at':
   done
 
 lemma inv_untyp_st_tcb_at'[wp]:
-  "\<lbrace>invs' and st_tcb_at' (P and ((\<noteq>) Inactive) and ((\<noteq>) IdleThreadState)) tptr
+  "\<lbrace>invs' and (\<lambda>s. sym_refs (state_refs_of' s))
+         and st_tcb_at' (P and ((\<noteq>) Inactive) and ((\<noteq>) IdleThreadState)) tptr
          and valid_untyped_inv' ui and ct_active'\<rbrace>
      invokeUntyped ui
    \<lbrace>\<lambda>rv. st_tcb_at' P tptr\<rbrace>"
@@ -5694,7 +5703,7 @@ lemma inv_untyp_st_tcb_at'[wp]:
   done
 
 lemma inv_untyp_tcb'[wp]:
-  "\<lbrace>invs' and st_tcb_at' active' tptr
+  "\<lbrace>invs' and (\<lambda>s. sym_refs (state_refs_of' s)) and st_tcb_at' active' tptr
          and valid_untyped_inv' ui and ct_active'\<rbrace>
      invokeUntyped ui
    \<lbrace>\<lambda>rv. tcb_at' tptr\<rbrace>"

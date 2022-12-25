@@ -485,7 +485,7 @@ lemma akernel_invariant:
   done
 
 lemma ckernel_invs:
-  "\<lbrace>invs'
+  "\<lbrace>invs' and (\<lambda>s. sym_refs (state_refs_of' s))
     and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running' s) and (ct_running' or ct_idle')
     and (\<lambda>s. is_active_sc' (ksCurSc s) s) and sym_heap_tcbSCs
     and (\<lambda>s. obj_at' (\<lambda>sc. scTCB sc = Some (ksCurThread s)) (ksCurSc s) s)
@@ -545,7 +545,7 @@ lemma threadSet_sym_heap_tcbSCs:
   done
 
 lemma kernelEntry_invs':
-  "\<lbrace> invs' and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running' s)
+  "\<lbrace> invs' and (\<lambda>s. sym_refs (state_refs_of' s)) and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running' s)
     and (ct_running' or ct_idle')
     and (\<lambda>s. is_active_sc' (ksCurSc s) s) and sym_heap_tcbSCs
     and (\<lambda>s. obj_at' (\<lambda>sc. scTCB sc = Some (ksCurThread s)) (ksCurSc s) s)
@@ -559,8 +559,9 @@ lemma kernelEntry_invs':
    apply (clarsimp simp: obj_at'_tcb_scs_of_equiv obj_at'_sc_tcbs_of_equiv sym_heap_def)
    apply (fastforce simp: ct_in_state'_def pred_tcb_at'_def obj_at'_def)
   apply (simp add: kernelEntry_def)
-  apply (wpsimp wp: ckernel_invs threadSet_invs_trivial threadSet_ct_in_state'
-                    hoare_weak_lift_imp hoare_vcg_disj_lift threadSet_sym_heap_tcbSCs
+  apply (wpsimp wp: ckernel_invs threadSet_invs_trivial threadSet_state_refs_of'[where f'=id and g'=id]
+                    threadSet_ct_in_state' hoare_weak_lift_imp hoare_vcg_disj_lift threadSet_sym_heap_tcbSCs
+              simp: tcb_bound_refs'_def
          | wps)+
     apply (rule hoare_vcg_conj_lift)
      apply (wpsimp wp: threadSet_wp)
@@ -801,6 +802,7 @@ lemma kernel_corres':
               od)" (is "corres _ ?P ?P' _ _")
   unfolding call_kernel_def
   apply add_cur_tcb'
+  apply add_sym_refs
   apply (rule_tac Q="\<lambda>s. obj_at' (\<lambda>sc. scTCB sc = Some (ksCurThread s)) (ksCurSc s) s" in corres_cross_add_guard)
    apply (fastforce simp: invs_def valid_state_def valid_pspace_def intro!: cur_sc_tcb_cross)
   apply (rule_tac Q="\<lambda>s'. pred_map (\<lambda>tcb. \<not> tcbInReleaseQueue tcb) (tcbs_of' s') (ksCurThread s')"
@@ -1236,6 +1238,11 @@ lemma ckernel_invariant:
       apply (rule kernelEntry_invs')
      apply clarsimp
      apply (rename_tac s' s; intro conjI)
+         apply (frule_tac s=s in invs_sym_refs)
+         apply (frule_tac s'=s' in state_refs_of_cross_eq)
+           apply fastforce
+          apply fastforce
+         apply force
         apply (prop_tac "cur_sc s = ksCurSc s'", fastforce dest!: state_relationD)
         apply (prop_tac "sc_at (cur_sc s) s")
          apply (rule cur_sc_tcb_sc_at_cur_sc[OF invs_valid_objs invs_cur_sc_tcb]; simp)

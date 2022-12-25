@@ -1930,7 +1930,7 @@ lemma setCTE_state_refs_of'[wp]:
   "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace> setCTE p cte \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   unfolding setCTE_def
   apply (rule setObject_state_refs_of_eq)
-   by (clarsimp simp: updateObject_cte in_monad typeError_def
+   by (clarsimp simp: updateObject_cte in_monad typeError_def tcb_bound_refs'_def
                          in_magnitude_check objBits_simps
                   split: kernel_object.split_asm if_split_asm)+
 

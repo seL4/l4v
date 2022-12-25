@@ -47,7 +47,7 @@ lemma sym_refs_tcbSchedContext:
   "\<lbrakk>ko_at' tcb tcbPtr s; sym_refs (state_refs_of' s); tcbSchedContext tcb = Some scPtr\<rbrakk>
    \<Longrightarrow> obj_at' (\<lambda>sc. scTCB sc = Some tcbPtr) scPtr s"
   apply (drule (1) sym_refs_obj_atD')
-  apply (auto simp: state_refs_of'_def ko_wp_at'_def obj_at'_def refs_of_rev')
+  apply (auto simp: state_refs_of'_def ko_wp_at'_def obj_at'_def refs_of_rev' tcb_bound_refs'_def)
   done
 
 lemma setSchedContext_valid_idle'[wp]:

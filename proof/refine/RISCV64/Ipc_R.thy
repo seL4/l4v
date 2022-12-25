@@ -3495,7 +3495,7 @@ lemma sendSignal_corres:
             apply (prop_tac "tcb_st_refs_of ts = {}")
              apply (fastforce simp: tcb_st_refs_of_def)
             apply simp
-            apply (clarsimp simp add: get_refs_def split: option.splits; fastforce?)
+            apply (clarsimp simp add: get_refs_def2 split: option.splits; fastforce?)
            apply (fold fun_upd_def, simp)
           apply (wpsimp wp: cancel_ipc_simple_except_awaiting_reply cancel_ipc_ex_nonz_cap_to_tcb)
          apply (clarsimp cong: conj_cong simp: pred_conj_def valid_tcb_state'_def pred_tcb_at'_eq_commute)
@@ -4386,7 +4386,7 @@ lemma maybeReturnSc_invs'_and_valid_idle':
   apply (clarsimp simp: valid_idle'_def obj_at'_def sym_refs_asrt_def)
   apply (drule_tac ko="tcb" and p=tptr in sym_refs_ko_atD'[rotated])
    apply (fastforce simp: obj_at'_def)
-  apply (clarsimp simp: ko_wp_at'_def refs_of_rev')
+  apply (clarsimp simp: ko_wp_at'_def refs_of_rev' tcb_bound_refs'_def)
   done
 
 lemma
@@ -6071,7 +6071,7 @@ lemma si_invs'[wp]:
     apply (drule_tac ko=obj and p=t in sym_refs_ko_atD'[rotated])
      apply (clarsimp simp: obj_at'_def)
     apply (clarsimp simp: ko_wp_at'_def obj_at'_def refs_of_rev' live_sc'_def valid_idle'_def
-                          idle_tcb'_def)
+                          idle_tcb'_def tcb_bound_refs'_def)
    apply (clarsimp simp: pred_tcb_at'_def obj_at'_def isReceive_def is_BlockedOnReply_def)
   \<comment> \<open>epa = IdleEP\<close>
    apply (cases bl)

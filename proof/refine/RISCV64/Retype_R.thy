@@ -3782,6 +3782,7 @@ lemma createNewCaps_state_refs_of':
                            archObjSize_def createObjects_def curDomain_def scBits_simps
                            pteBits_def makeObject_sc makeObject_reply pte_bits_def pt_bits_def
                            table_size_def ptTranslationBits_def word_size_bits_def
+                           tcb_bound_refs'_def
                | intro conjI impI )+
 
 lemma createObjects_iflive':

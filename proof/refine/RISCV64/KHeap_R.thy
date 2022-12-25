@@ -4797,29 +4797,17 @@ lemma aligned'_distinct'_obj_at'I:
   apply (case_tac "injectKO y"; clarsimp simp: valid_sz_simps dest!: pspace_boundedD')
   done
 
-(* FIXME RT: maybe move? *)
-lemma prod_in_refsD:
-  "\<And>ref x y. (x, ref) \<in> ep_q_refs_of' y \<Longrightarrow> ref \<in> {EPRecv, EPSend}"
-  "\<And>ref x y. (x, ref) \<in> ntfn_q_refs_of' y \<Longrightarrow> ref \<in> {NTFNSignal}"
-  "\<And>ref x y. (x, ref) \<in> tcb_st_refs_of' y \<Longrightarrow> ref \<in> {TCBBlockedRecv, TCBReply, TCBSignal, TCBBlockedSend}"
-  "\<And>ref x a b c. (x, ref) \<in> tcb_bound_refs' a b c \<Longrightarrow> ref \<in> {TCBBound, TCBSchedContext, TCBYieldTo}"
-  apply (rename_tac ep; case_tac ep; simp)
-  apply (rename_tac ep; case_tac ep; simp)
-  apply (rename_tac ep; case_tac ep; clarsimp split: if_splits)
-  apply (clarsimp simp: tcb_bound_refs'_def get_refs_def2)
-  done
-
 lemma sym_refs_tcbSCs:
   "\<lbrakk>sym_refs (state_refs_of' s); pspace_aligned' s; pspace_distinct' s; pspace_bounded' s\<rbrakk>
    \<Longrightarrow> sym_heap_tcbSCs s"
   apply (clarsimp simp: sym_heap_def)
   apply (rule iffI)
    apply (drule_tac tp=SCTcb and x=p and y=p' in sym_refsE;
-          force simp: get_refs_def2 state_refs_of'_def projectKOs opt_map_red refs_of_rev'
+          force simp: get_refs_def2 state_refs_of'_def projectKOs in_omonad refs_of_rev' tcb_bound_refs'_def
                 dest: pspace_alignedD' pspace_distinctD' pspace_boundedD' elim!: opt_mapE
                split: if_split_asm option.split_asm)+
   by (drule_tac tp=TCBSchedContext and x=p' and y=p in sym_refsE;
-      force simp: get_refs_def2 state_refs_of'_def projectKOs opt_map_red refs_of_rev'
+      force simp: get_refs_def2 state_refs_of'_def projectKOs in_omonad refs_of_rev'
             dest: pspace_alignedD' pspace_distinctD' pspace_boundedD'
            elim!: opt_mapE split: if_split_asm option.split_asm)+
 

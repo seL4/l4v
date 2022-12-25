@@ -2282,10 +2282,6 @@ lemma get_refs_NTFNSchedContext_not_Bound:
   "(tcb, NTFNBound) \<notin> get_refs NTFNSchedContext (ntfnSc ntfn)"
   by (clarsimp simp: get_refs_def split: option.splits)
 
-lemma tcb_bound_refs'_not_Bound:
-  "(y, TCBBound) \<notin> tcb_bound_refs' None sc_ptr yieldto_ptr"
-  by (clarsimp simp: tcb_bound_refs'_def get_refs_def split: option.splits)
-
 lemma unbindNotification_invs[wp]:
   "unbindNotification tcb \<lbrace>invs'\<rbrace>"
   apply (simp add: unbindNotification_def invs'_def valid_dom_schedule'_def)
@@ -2991,16 +2987,6 @@ lemma valid_cong:
     \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> = \<lbrace>P'\<rbrace> f' \<lbrace>Q'\<rbrace>"
   by (clarsimp simp add: valid_def, blast)
 
-lemma sym_refs_ntfn_bound_eq: "sym_refs (state_refs_of' s)
-    \<Longrightarrow> obj_at' (\<lambda>ntfn. ntfnBoundTCB ntfn = Some t) x s
-    = bound_tcb_at' (\<lambda>st. st = Some x) t s"
-  apply (rule iffI)
-   apply (drule (1) sym_refs_obj_atD')
-   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def ko_wp_at'_def refs_of_rev')
-  apply (drule(1) sym_refs_bound_tcb_atD')
-  apply (clarsimp simp: obj_at'_def ko_wp_at'_def refs_of_rev')
-  done
-
 lemma unbindMaybeNotification_obj_at'_ntfnBound:
   "\<lbrace>\<top>\<rbrace>
    unbindMaybeNotification r
@@ -3168,7 +3154,7 @@ lemma bound_sc_tcb_at'_sym_refsD:
    \<Longrightarrow> obj_at' (\<lambda>sc. scTCB sc = Some tcbPtr) scPtr s"
   apply (clarsimp simp: pred_tcb_at'_def)
   apply (drule (1) sym_refs_obj_atD')
-  apply (auto simp: state_refs_of'_def ko_wp_at'_def obj_at'_def refs_of_rev')
+  apply (auto simp: state_refs_of'_def ko_wp_at'_def obj_at'_def refs_of_rev' tcb_bound_refs'_def)
   done
 
 lemma schedContextUnbindTCB_bound_sc_tcb_at'_None:
@@ -4319,8 +4305,8 @@ lemma unbindNotification_corres:
     apply (simp add: get_tcb_rev)
    apply (clarsimp simp: valid_tcb_def cteSizeBits_def invs_def valid_state_def valid_pspace_def)
    apply (metis obj_at_simps(1) valid_bound_obj_Some)
-  apply (clarsimp dest!: obj_at_valid_objs' bound_tcb_at_state_refs_ofD' invs_valid_objs'
-                   simp: valid_obj'_def valid_tcb'_def valid_bound_ntfn'_def
+  apply (clarsimp dest!: obj_at_valid_objs' invs_valid_objs'
+                   simp: valid_obj'_def valid_tcb'_def valid_bound_ntfn'_def pred_tcb_at'_def
                   split: option.splits)
   done
 

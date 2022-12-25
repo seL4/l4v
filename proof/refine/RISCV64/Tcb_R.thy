@@ -2486,7 +2486,8 @@ lemma tc_sched_invs':
   apply (clarsimp simp: invs'_def valid_idle'_def
                         pred_tcb_at'_def obj_at'_def tcs_cross_asrt1_def valid_idle'_asrt_def)
   apply (frule_tac p=t and ko="ko :: tcb" for ko in sym_refs_ko_atD'[rotated])
-   apply (auto simp: ko_wp_at'_def obj_at'_def projectKOs valid_idle'_def dest!: global'_no_ex_cap)
+   apply (auto simp: ko_wp_at'_def obj_at'_def projectKOs valid_idle'_def tcb_bound_refs'_def
+              dest!: global'_no_ex_cap)
   done
 
 lemma setSchedulerAction_invs'[wp]:

@@ -526,7 +526,7 @@ global_interpretation handleFault: typ_at_all_props' "handleFault t ex"
   by typ_at_props'
 
 lemma pinv_tcb'[wp]:
-  "\<lbrace>invs' and st_tcb_at' active' tptr
+  "\<lbrace>invs' and (\<lambda>s. sym_refs (state_refs_of' s)) and st_tcb_at' active' tptr
           and valid_invocation' i and ct_active'\<rbrace>
      RetypeDecls_H.performInvocation block call can_donate i
    \<lbrace>\<lambda>rv. tcb_at' tptr\<rbrace>"
@@ -1038,7 +1038,7 @@ lemma invokeSchedControlConfigureFlags_invs':
   by (fastforce simp: valid_refills_number'_def)
 
 lemma performInv_invs'[wp]:
-  "\<lbrace>invs' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
+  "\<lbrace>invs' and (\<lambda>s. sym_refs (state_refs_of' s)) and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
           and ct_active' and valid_invocation' i
           and (\<lambda>s. can_donate \<longrightarrow> bound_sc_tcb_at' bound (ksCurThread s) s)\<rbrace>
    performInvocation block call can_donate i
@@ -1236,6 +1236,7 @@ lemma handleInvocation_corres:
   apply add_cur_tcb'
   apply add_ct_not_inQ
   apply add_valid_idle'
+  apply add_sym_refs
   apply (rule_tac Q="\<lambda>s'. bound_sc_tcb_at' bound (ksCurThread s') s'" in corres_cross_add_guard)
    apply (fastforce intro: ct_released_cross_weak)
   apply (simp add: handle_invocation_def handleInvocation_def liftE_bindE)
@@ -1296,16 +1297,17 @@ lemma handleInvocation_corres:
               apply (clarsimp simp: simple_from_active ct_in_state_def schact_is_rct_def
                                     current_time_bounded_def
                              elim!: st_tcb_weakenE)
-             apply (wp sts_st_tcb_at' set_thread_state_simple_sched_action
+             apply (wp sts_st_tcb_at' set_thread_state_simple_sched_action sts_sym_refs'
                        set_thread_state_active_valid_sched set_thread_state_schact_is_rct_strong)
-            apply (rule_tac Q="\<lambda>_. invs' and ct_not_inQ and valid_invocation' rve'
+            apply (rule_tac Q="\<lambda>_. invs' and (\<lambda>s. sym_refs (state_refs_of' s))
+                                   and ct_not_inQ and valid_invocation' rve'
                                    and (\<lambda>s. thread = ksCurThread s)
                                    and st_tcb_at' active' thread
                                    and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
                                    and (\<lambda>s. bound_sc_tcb_at' bound (ksCurThread s) s)"
                    in hoare_post_imp)
              apply (clarsimp simp: ct_in_state'_def)
-            apply ((wpsimp wp: setThreadState_nonqueued_state_update setThreadState_st_tcb
+            apply ((wpsimp wp: sts_sym_refs' setThreadState_nonqueued_state_update setThreadState_st_tcb
                                setThreadState_rct setThreadState_ct_not_inQ sts_bound_sc_tcb_at'
                     | wps)+)[1]
            apply clarsimp
@@ -1338,6 +1340,8 @@ lemma handleInvocation_corres:
    apply (frule state_relation_schact, simp)
    apply (subgoal_tac "isSchedulable_bool (ksCurThread s') s'")
     apply (clarsimp simp: isSchedulable_bool_def pred_map_conj[simplified pred_conj_def])
+    apply (frule active'_st_tcb_at_state_refs_ofD')
+    apply (clarsimp simp: pred_tcb_at'_def)
    apply (frule curthread_relation, simp)
    apply (frule_tac t1="cur_thread s" in cross_relF[OF _ isSchedulable_bool_cross_rel];
           simp add: invs_def valid_state_def valid_pspace_def)
@@ -1373,7 +1377,7 @@ lemma rfk_ksQ[wp]:
   done
 
 lemma hinv_invs'[wp]:
-  "\<lbrace>invs' and ct_isSchedulable
+  "\<lbrace>invs' and (\<lambda>s. sym_refs (state_refs_of' s)) and ct_isSchedulable
     and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)\<rbrace>
    handleInvocation calling blocking can_donate first_phase cptr
    \<lbrace>\<lambda>_. invs'\<rbrace>"
@@ -1390,14 +1394,15 @@ lemma hinv_invs'[wp]:
          apply clarsimp
           apply (fastforce elim!: pred_tcb'_weakenE st_tcb_ex_cap'')
         apply wp+
-       apply (rule_tac Q="\<lambda>rv'. invs' and ct_not_inQ and valid_invocation' rv
+       apply (rule_tac Q="\<lambda>rv'. invs' and (\<lambda>s. sym_refs (state_refs_of' s)) and ct_not_inQ
+                                and valid_invocation' rv
                                 and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
                                 and (\<lambda>s. ksCurThread s = thread)
                                 and st_tcb_at' active' thread
                                 and (\<lambda>s. bound_sc_tcb_at' bound (ksCurThread s) s)"
                   in hoare_post_imp)
         apply (clarsimp simp: ct_in_state'_def)
-       apply (wpsimp wp: sts_invs_minor' setThreadState_st_tcb setThreadState_rct
+       apply (wpsimp wp: sts_invs_minor' sts_sym_refs' setThreadState_st_tcb setThreadState_rct
                          setThreadState_ct_not_inQ hoare_vcg_imp_lift'
               | wps)+
   apply (fastforce simp: ct_in_state'_def simple_sane_strg sch_act_simple_def pred_map_simps
@@ -1438,7 +1443,7 @@ lemma handleSend_corres:
   done
 
 lemma hs_invs'[wp]:
-  "\<lbrace>invs' and ct_isSchedulable and
+  "\<lbrace>invs' and (\<lambda>s. sym_refs (state_refs_of' s)) and ct_isSchedulable and
     (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
     (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)\<rbrace>
    handleSend blocking \<lbrace>\<lambda>r. invs'\<rbrace>"
@@ -2253,7 +2258,8 @@ lemma handleCall_corres:
   done
 
 lemma hc_invs'[wp]:
-  "\<lbrace>invs' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_isSchedulable\<rbrace>
+  "\<lbrace>invs' and (\<lambda>s. sym_refs (state_refs_of' s)) and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
+    and ct_isSchedulable\<rbrace>
    handleCall
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (clarsimp simp: handleCall_def)
@@ -2435,8 +2441,11 @@ crunches performInvocation
        hoare_drop_imps hoare_vcg_all_lift
    simp: crunch_simps)
 
+crunches updateTimeStamp
+  for state_refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"
+
 lemma he_invs'[wp]:
-  "\<lbrace>invs' and
+  "\<lbrace>invs' and (\<lambda>s. sym_refs (state_refs_of' s)) and
       (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and
       (\<lambda>s. ct_running' s \<longrightarrow> ct_isSchedulable s) and
       (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)\<rbrace>
@@ -2528,6 +2537,7 @@ lemma handleInv_handleRecv_corres:
           liftE (handleRecv True canReply)
       odE)"
   apply add_cur_tcb'
+  apply add_sym_refs
   apply (rule_tac Q="\<lambda>s'. pred_map (\<lambda>scPtr. isScActive scPtr s') (tcbSCs_of s') (ksCurThread s')"
          in corres_cross_add_guard)
    apply (clarsimp simp: released_sc_tcb_at_def active_sc_tcb_at_def2)

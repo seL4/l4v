@@ -481,9 +481,7 @@ lemma setObject_tcb_mdb' [wp]:
   by (rule setObject_tcb_ctes_of)
 
 lemma setObject_tcb_state_refs_of'[wp]:
-  "\<lbrace>\<lambda>s. P ((state_refs_of' s) (t := tcb_st_refs_of' (tcbState v)
-                                  \<union> tcb_bound_refs' (tcbBoundNotification v) (tcbSchedContext v)
-                                                    (tcbYieldTo v)))\<rbrace>
+  "\<lbrace>\<lambda>s. P ((state_refs_of' s) (t := tcb_st_refs_of' (tcbState v) \<union> tcb_bound_refs' v))\<rbrace>
      setObject t (v :: tcb) \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   by (wp setObject_state_refs_of',
       simp_all add: objBits_simps' fun_upd_def)
@@ -654,79 +652,74 @@ lemmas threadSet_ifunsafe' =
     threadSet_ifunsafe'T [OF all_tcbI, OF ball_tcb_cte_casesI]
 
 lemma threadSet_state_refs_of'_helper[simp]:
-  "{r. (r \<in> tcb_st_refs_of' ts \<or> r \<in> tcb_bound_refs' ntfnptr sc_ptr yt_ptr)
+  "{r. (r \<in> tcb_st_refs_of' (tcbState tcb) \<or> r \<in> tcb_bound_refs' tcb)
        \<and> (snd r = TCBBound \<or> snd r = TCBSchedContext \<or> snd r = TCBYieldTo)}
-   = tcb_bound_refs' ntfnptr sc_ptr yt_ptr"
+   = tcb_bound_refs' tcb"
   by (auto simp: tcb_st_refs_of'_def tcb_bound_refs'_def get_refs_def
-          split: thread_state.splits reftype.splits option.splits)
+          split: thread_state.splits reftype.splits option.splits tcb.splits)
 
 lemma threadSet_state_refs_of'_helper'[simp]:
-  "{r. (r \<in> tcb_st_refs_of' ts \<or> r \<in> tcb_bound_refs' ntfnptr sc_ptr yt_ptr)
+  "{r. (r \<in> tcb_st_refs_of' (tcbState tcb) \<or> r \<in> tcb_bound_refs' tcb)
        \<and> (snd r \<noteq> TCBBound \<and> snd r \<noteq> TCBSchedContext \<and> snd r \<noteq> TCBYieldTo)}
-   = tcb_st_refs_of' ts"
+   = tcb_st_refs_of' (tcbState tcb)"
   by (auto simp: tcb_st_refs_of'_def tcb_bound_refs'_def get_refs_def
-          split: thread_state.splits reftype.splits option.splits)
+          split: thread_state.splits reftype.splits option.splits tcb.splits)
 
 lemma threadSet_state_refs_of'_helper_TCBBound[simp]:
-  "{r. (r \<in> tcb_st_refs_of' (tcbState obj)
-        \<or> r \<in> tcb_bound_refs' (tcbBoundNotification obj)(tcbSchedContext obj) (tcbYieldTo obj))
-          \<and> snd r = TCBBound}
+  "{r. (r \<in> tcb_st_refs_of' (tcbState obj) \<or> r \<in> tcb_bound_refs' obj) \<and> snd r = TCBBound}
   = get_refs TCBBound (tcbBoundNotification obj)"
   by (auto simp: tcb_st_refs_of'_def tcb_bound_refs'_def get_refs_def
           split: thread_state.splits reftype.splits option.splits)
 
 lemma threadSet_state_refs_of'_helper_TCBSchedContext[simp]:
-  "{r. (r \<in> tcb_st_refs_of' (tcbState obj)
-        \<or> r \<in> tcb_bound_refs' (tcbBoundNotification obj)(tcbSchedContext obj) (tcbYieldTo obj))
-          \<and> snd r = TCBSchedContext}
+  "{r. (r \<in> tcb_st_refs_of' (tcbState obj) \<or> r \<in> tcb_bound_refs' obj) \<and> snd r = TCBSchedContext}
   = get_refs TCBSchedContext (tcbSchedContext obj)"
   by (auto simp: tcb_st_refs_of'_def tcb_bound_refs'_def get_refs_def
           split: thread_state.splits reftype.splits option.splits)
 
 lemma threadSet_state_refs_of'_helper_TCBYieldTo[simp]:
-  "{r. (r \<in> tcb_st_refs_of' (tcbState obj)
-        \<or> r \<in> tcb_bound_refs' (tcbBoundNotification obj)(tcbSchedContext obj) (tcbYieldTo obj))
-          \<and> snd r = TCBYieldTo}
+  "{r. (r \<in> tcb_st_refs_of' (tcbState obj) \<or> r \<in> tcb_bound_refs' obj) \<and> snd r = TCBYieldTo}
   = get_refs TCBYieldTo (tcbYieldTo obj)"
   by (auto simp: tcb_st_refs_of'_def tcb_bound_refs'_def get_refs_def
           split: thread_state.splits reftype.splits option.splits)
+
+lemma state_refs_of'_upd_helper[simp]:
+  "(state_refs_of' s)
+   (ptr :=
+     {r \<in> state_refs_of' s ptr. snd r \<noteq> TCBBound \<and> snd r \<noteq> TCBSchedContext \<and> snd r \<noteq> TCBYieldTo}
+     \<union> ({r \<in> state_refs_of' s ptr. snd r = TCBBound}
+        \<union> {r \<in> state_refs_of' s ptr. snd r = TCBSchedContext}
+        \<union> {r \<in> state_refs_of' s ptr. snd r = TCBYieldTo}))
+   = state_refs_of' s"
+  by (force simp: state_refs_of'_def split: option.splits intro!: ext)
 
 lemma threadSet_state_refs_of'T_P:
   assumes x: "\<forall>tcb. (P' \<longrightarrow> Q (tcbState tcb)) \<longrightarrow>
                      tcb_st_refs_of' (tcbState (F tcb))
                        = f' (tcb_st_refs_of' (tcbState tcb))"
-  assumes y: "\<forall>tcb. (P' \<longrightarrow> Q' (tcbBoundNotification tcb)) \<longrightarrow>
-                     (get_refs TCBBound (tcbBoundNotification (F tcb))
-                      = (g' (get_refs TCBBound (tcbBoundNotification tcb))))"
-  assumes z: "\<forall>tcb. (P' \<longrightarrow> Q'' (tcbSchedContext tcb)) \<longrightarrow>
-                     (get_refs TCBSchedContext (tcbSchedContext (F tcb))
-                      = (h' (get_refs TCBSchedContext (tcbSchedContext tcb))))"
-  assumes w: "\<forall>tcb. (P' \<longrightarrow> Q''' (tcbYieldTo tcb)) \<longrightarrow>
-                     (get_refs TCBYieldTo (tcbYieldTo (F tcb))
-                      = (i' (get_refs TCBYieldTo (tcbYieldTo tcb))))"
+  assumes y: "\<forall>tcb. (P' \<longrightarrow> Q' tcb) \<longrightarrow>
+                     tcb_bound_refs' (F tcb)
+                       = g' (tcb_bound_refs' tcb)"
   shows
   "\<lbrace>\<lambda>s. P ((state_refs_of' s) (t := f' {r \<in> state_refs_of' s t. snd r \<notin> {TCBBound, TCBSchedContext, TCBYieldTo}}
-                                    \<union> g' {r \<in> state_refs_of' s t. snd r = TCBBound}
-                                    \<union> h' {r \<in> state_refs_of' s t. snd r = TCBSchedContext}
-                                    \<union> i' {r \<in> state_refs_of' s t. snd r = TCBYieldTo}))
-        \<and> (P' \<longrightarrow> st_tcb_at' Q t s \<and> bound_tcb_at' Q' t s \<and> bound_sc_tcb_at' Q'' t s
-                  \<and> bound_yt_tcb_at' Q''' t s)\<rbrace>
-   threadSet F t
+                                    \<union> g' {r \<in> state_refs_of' s t. snd r \<in> {TCBBound, TCBSchedContext, TCBYieldTo}}))
+              \<and> (P' \<longrightarrow> st_tcb_at' Q t s \<and> obj_at' Q' t s)  \<rbrace>
+     threadSet F t
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   apply (simp add: threadSet_def)
   apply (wp getObject_tcb_wp)
-  apply (clarsimp simp: obj_at'_def pred_tcb_at'_def tcb_bound_refs'_def
+  apply (clarsimp simp: obj_at'_def pred_tcb_at'_def
                  elim!: rsubst[where P=P] intro!: ext)
   apply (cut_tac s=s and p=t and 'a=tcb in ko_at_state_refs_ofD')
    apply (simp add: obj_at'_def)
-  apply (fastforce simp: x y z w)
+  apply (clarsimp simp: x y)
   done
 
 lemmas threadSet_state_refs_of'T =
     threadSet_state_refs_of'T_P [where P'=False, simplified]
 
 lemmas threadSet_state_refs_of' =
-    threadSet_state_refs_of'T [OF all_tcbI all_tcbI all_tcbI all_tcbI]
+    threadSet_state_refs_of'T [OF all_tcbI all_tcbI]
 
 lemma state_refs_of'_helper[simp]:
   "{r \<in> state_refs_of' s t. snd r \<noteq> TCBBound \<and> snd r \<noteq> TCBSchedContext \<and> snd r \<noteq> TCBYieldTo}
@@ -1596,8 +1589,7 @@ lemma asUser_st_refs_of'[wp]:
      asUser t m
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   apply (simp add: asUser_def split_def)
-  apply (wp threadSet_state_refs_of'[where h'=id and i'=id] hoare_drop_imps | simp)+
-  done
+  by (wp threadSet_state_refs_of'[where g'=id] hoare_drop_imps | simp add: tcb_bound_refs'_def)+
 
 lemma asUser_iflive'[wp]:
   "\<lbrace>if_live_then_nonz_cap'\<rbrace> asUser t m \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
@@ -4616,7 +4608,7 @@ crunches setThreadState, setBoundNotification
   (wp: hoare_when_weak_wp crunch_wps)
 
 crunch refs_of'[wp]: rescheduleRequired "\<lambda>s. P (state_refs_of' s)"
-  (wp: threadSet_state_refs_of' crunch_wps)
+  (wp: threadSet_state_refs_of'[where g'=id] crunch_wps simp: tcb_bound_refs'_def)
 
 crunches scheduleTCB
   for state_refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"
@@ -4634,16 +4626,16 @@ lemma state_refs_of'_helper2[simp]:
      \<union> {r \<in> state_refs_of' s t. snd r = TCBYieldTo}"
   by fastforce
 
-lemma setThreadState_state_refs_of'[wp]:
-  "\<lbrace>\<lambda>s. P ((state_refs_of' s) (t := tcb_st_refs_of' st
-                                    \<union> tcb_non_st_state_refs_of' s t))\<rbrace>
+lemma setThreadState_state_refs_of':
+  "\<lbrace>\<lambda>s. P ((state_refs_of' s) (t := tcb_st_refs_of' st \<union> tcb_non_st_state_refs_of' s t))\<rbrace>
    setThreadState st t
-   \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
+   \<lbrace>\<lambda>_ s. P (state_refs_of' s)\<rbrace>"
   apply (clarsimp simp: setThreadState_def)
   apply (wpsimp wp: threadSet_state_refs_of')
       apply simp
-     apply force+
-  by (metis Un_assoc)
+     apply (force simp: tcb_bound_refs'_def)+
+  apply (subst state_refs_of'_helper2)
+  by fastforce
 
 lemma setBoundNotification_state_refs_of'[wp]:
   "\<lbrace>\<lambda>s. P ((state_refs_of' s) (t := (case ntfn of None \<Rightarrow> {} | Some new \<Rightarrow> {(new, TCBBound)})
@@ -4652,18 +4644,14 @@ lemma setBoundNotification_state_refs_of'[wp]:
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   apply (clarsimp simp: setBoundNotification_def)
   apply (wpsimp wp: threadSet_state_refs_of'
-                     [where f'=id and h'=id and i'=id and F="tcbBoundNotification_update (\<lambda>_. ntfn)"]
+                     [where g'="\<lambda>refset. (case ntfn of None \<Rightarrow> {} | Some new \<Rightarrow> {(new, TCBBound)})
+                                          \<union> {r \<in> refset. snd r \<noteq> TCBBound}"
+                        and F="tcbBoundNotification_update (\<lambda>_. ntfn)"]
               simp: get_refs_def)
      apply simp
-    apply simp
-   apply simp
-  apply (prop_tac "{r \<in> state_refs_of' s t. snd r \<noteq> TCBBound}
-                    = {r \<in> state_refs_of' s t. snd r \<noteq> TCBBound \<and> snd r \<noteq> TCBSchedContext
-                                               \<and> snd r \<noteq> TCBYieldTo}
-                      \<union> {r \<in> state_refs_of' s t. snd r = TCBSchedContext}
-                      \<union> {r \<in> state_refs_of' s t. snd r = TCBYieldTo}")
-   apply fastforce
-  by (metis id_def Un_ac(1) Un_ac(4))
+    apply  (fastforce simp add: tcb_bound_refs'_def get_refs_def2 split: option.splits)
+  apply (erule subst[rotated,where P = P])
+  by (fastforce split: option.splits reftype.splits if_splits)
 
 lemma setBoundNotification_list_refs_of_replies'[wp]:
   "setBoundNotification ntfn t \<lbrace>\<lambda>s. P (list_refs_of_replies' s)\<rbrace>"
@@ -5133,10 +5121,10 @@ lemma pair_inject:
   by blast
 
 lemma tcb_bound_refs'_helper:
-  "tcb_bound_refs' ntfnptr sc_ptr yieldto_ptr
-   = {r. (r \<in> tcb_st_refs_of' st \<or> r \<in> tcb_bound_refs' ntfnptr sc_ptr yieldto_ptr) \<and> snd r = TCBBound}
-     \<union> {r. (r \<in> tcb_st_refs_of' st \<or> r \<in> tcb_bound_refs' ntfnptr sc_ptr yieldto_ptr) \<and> snd r = TCBSchedContext}
-     \<union> {r. (r \<in> tcb_st_refs_of' st \<or> r \<in> tcb_bound_refs' ntfnptr sc_ptr yieldto_ptr) \<and> snd r = TCBYieldTo}"
+  "tcb_bound_refs' tcb
+   = {r. (r \<in> tcb_st_refs_of' st \<or> r \<in> tcb_bound_refs' tcb) \<and> snd r = TCBBound}
+     \<union> {r. (r \<in> tcb_st_refs_of' st \<or> r \<in> tcb_bound_refs' tcb) \<and> snd r = TCBSchedContext}
+     \<union> {r. (r \<in> tcb_st_refs_of' st \<or> r \<in> tcb_bound_refs' tcb) \<and> snd r = TCBYieldTo}"
   apply (clarsimp simp: tcb_bound_refs'_def get_refs_def tcb_st_refs_of'_def
                  split: option.splits thread_state.splits reftype.splits)
   apply (intro conjI impI allI; fastforce?)
@@ -5181,6 +5169,17 @@ lemma sts_invs':
   apply (wpsimp wp: sts_sch_act' valid_irq_node_lift irqs_masked_lift setThreadState_ct_not_inQ
               simp: cteCaps_of_def o_def)
   by metis
+
+lemma sts_sym_refs':
+  "\<lbrace>\<lambda>s. sym_refs (state_refs_of' s)
+        \<and> st_tcb_at' (\<lambda>st'. tcb_st_refs_of' st' = tcb_st_refs_of' st) t s\<rbrace>
+   setThreadState st t
+   \<lbrace>\<lambda>_ s. sym_refs (state_refs_of' s)\<rbrace>"
+  apply (wpsimp wp: setThreadState_state_refs_of')
+  apply (clarsimp dest!: st_tcb_at_state_refs_ofD'
+                  elim!: rsubst[where P=sym_refs]
+                 intro!: ext)
+  by (fastforce simp: tcb_bound_refs'_def get_refs_def2)
 
 lemma sts_cap_to'[wp]:
   "\<lbrace>ex_nonz_cap_to' p\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. ex_nonz_cap_to' p\<rbrace>"
@@ -5542,7 +5541,7 @@ lemma setReleaseQueue_pred_tcb_at'[wp]:
  "setReleaseQueue qs \<lbrace>\<lambda>s. P (pred_tcb_at' proj P' t' s)\<rbrace>"
   by (wpsimp simp: setReleaseQueue_def)
 
-crunches tcbReleaseDequeue
+crunches tcbReleaseDequeue, setReprogramTimer, setReleaseQueue
   for valid_pspace'[wp]: valid_pspace'
   and state_refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"
   and list_refs_of_replies'[wp]: "\<lambda>s. P (list_refs_of_replies' s)"
@@ -5558,21 +5557,19 @@ crunches tcbReleaseDequeue
   and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
   and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
   and valid_machine_state'[wp]: valid_machine_state'
-  (simp: crunch_simps wp: crunch_wps)
-
-crunches tcbReleaseDequeue
-  for cur_tcb'[wp]: cur_tcb'
-  (simp: crunch_simps cur_tcb'_def wp: crunch_wps threadSet_cur ignore: threadSet)
+  and cur_tcb'[wp]: cur_tcb'
+  (wp: crunch_wps threadSet_state_refs_of'[where f'=id and g'=id]
+   simp: crunch_simps tcb_cte_cases_def tcb_bound_refs'_def cur_tcb'_def threadSet_cur)
 
 crunches tcbReleaseRemove
   for pspace_aligned'[wp]: pspace_aligned'
+  and state_refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"
   and pspace_distinct'[wp]: pspace_distinct'
   and pspace_bounded'[wp]: pspace_bounded'
   and pspace_canonical'[wp]: pspace_canonical'
   and no_0_obj'[wp]: no_0_obj'
   and ksSchedulerAction[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   and list_refs_of_replies[wp]: "\<lambda>s. sym_refs (list_refs_of_replies' s)"
-  and state_refs_of'[wp]: "\<lambda>s. sym_refs (state_refs_of' s)"
   and valid_global_refs'[wp]: valid_global_refs'
   and valid_arch_state'[wp]: valid_arch_state'
   and irq_node[wp]: "\<lambda>s. P (irq_node' s)"
@@ -5589,7 +5586,8 @@ crunches tcbReleaseRemove
   and ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
   and ksMachineState[wp]: "\<lambda>s. P (ksMachineState s)"
   and reply_projs[wp]: "\<lambda>s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)"
-  (wp: crunch_wps simp: crunch_simps tcb_cte_cases_def)
+  (wp: crunch_wps threadSet_state_refs_of'[where f'=id and g'=id]
+   simp: crunch_simps tcb_cte_cases_def tcb_bound_refs'_def)
 
 global_interpretation tcbReleaseRemove: typ_at_all_props' "tcbReleaseRemove tptr"
   by typ_at_props'

@@ -3711,7 +3711,7 @@ lemma cancelBadgedSends_filterM_helper':
   apply (rule hoare_seq_ext [OF _ gts_inv'])
   apply (simp add: opt_map_Some_eta_fold split del: if_split)
   apply (rule hoare_pre)
-   apply (wpsimp wp: valid_irq_node_lift hoare_vcg_const_Ball_lift
+   apply (wpsimp wp: setThreadState_state_refs_of' valid_irq_node_lift hoare_vcg_const_Ball_lift
                      valid_irq_handlers_lift'' irqs_masked_lift sts_st_tcb'
                      hoare_vcg_all_lift sts_sch_act'
                      threadGet_inv[THEN hoare_drop_imp] hoare_vcg_imp_lift'

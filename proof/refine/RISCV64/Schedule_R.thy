@@ -484,6 +484,8 @@ crunches tcbSchedAppend, tcbSchedDequeue, tcbSchedEnqueue
   for tcb_at'[wp]: "tcb_at' t"
   and state_refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"
   and cap_to'[wp]: "ex_nonz_cap_to' p"
+  (wp: crunch_wps threadSet_state_refs_of'[where f'=id and g'=id]
+  simp: crunch_simps tcb_cte_cases_def tcb_bound_refs'_def)
 
 lemma tcbSchedAppend_iflive'[wp]:
   "\<lbrace>if_live_then_nonz_cap' and ex_nonz_cap_to' tcb\<rbrace>
