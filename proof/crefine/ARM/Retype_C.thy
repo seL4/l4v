@@ -498,46 +498,6 @@ lemma h_t_array_valid_retyp:
   apply (simp add: addr_card_wb unat_of_nat32)
   done
 
-lemma typ_slice_list_array:
-  "x < size_td td * n
-    \<Longrightarrow> typ_slice_list (map (\<lambda>i. DTPair td (nm i)) [0..<n]) x
-        = typ_slice_t td (x mod size_td td)"
-proof (induct n arbitrary: x nm)
-  case 0 thus ?case by simp
-next
-  case (Suc n)
-  from Suc.prems show ?case
-    apply (simp add: upt_conv_Cons map_Suc_upt[symmetric]
-                del: upt.simps)
-    apply (split if_split, intro conjI impI)
-     apply auto[1]
-    apply (simp add: o_def)
-    apply (subst Suc.hyps)
-     apply arith
-    apply (metis mod_geq)
-    done
-qed
-
-lemma h_t_array_valid_field:
-  "h_t_array_valid htd (p :: ('a :: wf_type) ptr) n
-    \<Longrightarrow> k < n
-    \<Longrightarrow> gd (p +\<^sub>p int k)
-    \<Longrightarrow> h_t_valid htd gd (p +\<^sub>p int k)"
-  apply (clarsimp simp: h_t_array_valid_def h_t_valid_def valid_footprint_def
-                        size_of_def[symmetric, where t="TYPE('a)"])
-  apply (drule_tac x="k * size_of TYPE('a) + y" in spec)
-  apply (drule mp)
-   apply (frule_tac k="size_of TYPE('a)" in mult_le_mono1[where j=n, OF Suc_leI])
-   apply (simp add: mult.commute)
-  apply (clarsimp simp: ptr_add_def add.assoc)
-  apply (erule map_le_trans[rotated])
-  apply (clarsimp simp: uinfo_array_tag_n_m_def)
-  apply (subst typ_slice_list_array)
-   apply (frule_tac k="size_of TYPE('a)" in mult_le_mono1[where j=n, OF Suc_leI])
-   apply (simp add: mult.commute size_of_def)
-  apply (simp add: size_of_def list_map_mono)
-  done
-
 lemma h_t_valid_ptr_retyps_gen:
   assumes sz: "nptrs * size_of TYPE('a :: mem_type) < addr_card"
     and gd: "gd p'"
