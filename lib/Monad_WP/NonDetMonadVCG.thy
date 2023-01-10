@@ -795,6 +795,18 @@ lemma empty_fail_return [simp, wp]:
   "empty_fail (return x)"
   by (simp add: empty_fail_def return_def)
 
+lemma empty_fail_bindE:
+  "\<lbrakk> empty_fail f; \<And>rv. empty_fail (g rv) \<rbrakk>
+       \<Longrightarrow> empty_fail (f >>=E g)"
+  apply (simp add: bindE_def)
+  apply (erule empty_fail_bind)
+  apply (simp add: lift_def throwError_def split: sum.split)
+  done
+
+lemma empty_fail_If:
+  "\<lbrakk> P \<Longrightarrow> empty_fail f; \<not> P \<Longrightarrow> empty_fail g \<rbrakk> \<Longrightarrow> empty_fail (if P then f else g)"
+  by (simp split: if_split)
+
 lemma empty_fail_mapM [simp]:
   assumes m: "\<And>x. empty_fail (m x)"
   shows "empty_fail (mapM m xs)"

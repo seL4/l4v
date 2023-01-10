@@ -373,6 +373,10 @@ lemma allEI:
   shows   "\<forall>x. Q x"
   using assms by (rule all_forward)
 
+lemma bexEI:
+  "\<lbrakk>\<exists>x\<in>S. Q x; \<And>x. \<lbrakk>x \<in> S; Q x\<rbrakk> \<Longrightarrow> P x\<rbrakk> \<Longrightarrow> \<exists>x\<in>S. P x"
+  by blast
+
 text \<open>General lemmas that should be in the library\<close>
 
 lemma dom_ran:
@@ -1091,10 +1095,6 @@ proof (rule set_eqI)
 qed
 
 
-lemma cart_singleton_image:
-  "S \<times> {s} = (\<lambda>v. (v, s)) ` S"
-  by auto
-
 lemma singleton_eq_o2s:
   "({x} = set_option v) = (v = Some x)"
   by (cases v, auto)
@@ -1393,16 +1393,6 @@ lemma inj_case_bool:
 lemma foldl_fun_upd:
   "foldl (\<lambda>s r. s (r := g r)) f rs = (\<lambda>x. if x \<in> set rs then g x else f x)"
   by (induct rs arbitrary: f) (auto simp: fun_eq_iff)
-
-lemma all_rv_choice_fn_eq_pred:
-  "\<lbrakk> \<And>rv. P rv \<Longrightarrow> \<exists>fn. f rv = g fn \<rbrakk> \<Longrightarrow> \<exists>fn. \<forall>rv. P rv \<longrightarrow> f rv = g (fn rv)"
-  apply (rule_tac x="\<lambda>rv. SOME h. f rv = g h" in exI)
-  apply (clarsimp split: if_split)
-  by (meson someI_ex)
-
-lemma ex_const_function:
-  "\<exists>f. \<forall>s. f (f' s) = v"
-  by force
 
 lemma if_Const_helper:
   "If P (Con x) (Con y) = Con (If P x y)"
@@ -2080,14 +2070,6 @@ lemma case_option_over_if:
         = (if G then Q v else P)"
   by (simp split: if_split)+
 
-lemma map_length_cong:
-  "\<lbrakk> length xs = length ys; \<And>x y. (x, y) \<in> set (zip xs ys) \<Longrightarrow> f x = g y \<rbrakk>
-     \<Longrightarrow> map f xs = map g ys"
-  apply atomize
-  apply (erule rev_mp, erule list_induct2)
-   apply auto
-  done
-
 lemma take_min_len:
   "take (min (length xs) n) xs = take n xs"
   by (simp add: min_def)
@@ -2179,16 +2161,9 @@ lemma zip_take_triv:
   apply (case_tac as; simp)
   done
 
-lemma zip_take_triv2:
-  "length as \<le> n \<Longrightarrow> zip as (take n bs) = zip as bs"
-  apply (induct as arbitrary: n bs; simp)
-  apply (case_tac n; simp)
-  apply (case_tac bs; simp)
-  done
-
 lemma zip_take_length:
   "zip xs (take (length xs) ys) = zip xs ys"
-  by (metis order_refl zip_take_triv2)
+  by (metis length_take length_zip nat_le_linear take_all take_zip)
 
 lemma zip_singleton:
   "ys \<noteq> [] \<Longrightarrow> zip [a] ys = [(a, ys ! 0)]"
