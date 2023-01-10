@@ -6,6 +6,7 @@
 
 theory NonDetMonadLemmaBucket
 imports
+  Lib
   NonDetMonadVCG
   MonadEq
   WhileLoopRulesCompleteness

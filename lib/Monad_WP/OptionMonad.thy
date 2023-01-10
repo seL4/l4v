@@ -13,7 +13,8 @@
 
 theory OptionMonad (* FIXME: this is really a Reader_Option_Monad *)
   imports
-    Lib (* FIXME: reduce dependencies *)
+    Monad_Lib
+    Fun_Pred_Syntax
     Less_Monad_Syntax
 begin
 
@@ -586,7 +587,8 @@ where
 lemma owhile_unroll:
   "owhile C B r = ocondition (C r) (B r |>> owhile C B) (oreturn r)"
   by (auto simp: ocondition_def obind_def oreturn_def owhile_def
-           option_while_simps K_def split: option.split)
+                 option_while_simps
+           split: option.split)
 
 text \<open>rule for terminating loops\<close>
 

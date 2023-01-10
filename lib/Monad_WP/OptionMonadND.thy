@@ -84,19 +84,19 @@ lemma gets_the_obind:
 
 lemma gets_the_return:
   "gets_the (oreturn x) = return x"
-  by (simp add: monad_simps oreturn_def K_def)
+  by (simp add: monad_simps oreturn_def)
 
 lemma gets_the_fail:
   "gets_the ofail = fail"
-  by (simp add: monad_simps ofail_def K_def)
+  by (simp add: monad_simps ofail_def)
 
 lemma gets_the_returnOk:
   "gets_the (oreturnOk x) = returnOk x"
-  by (simp add: monad_simps K_def oreturnOk_def returnOk_def)
+  by (simp add: monad_simps oreturnOk_def returnOk_def)
 
 lemma gets_the_throwError:
   "gets_the (othrow e) = throwError e"
-  by (simp add: monad_simps othrow_def throwError_def K_def)
+  by (simp add: monad_simps othrow_def throwError_def)
 
 lemma gets_the_assert:
   "gets_the (oassert P) = assert P"

@@ -562,7 +562,7 @@ lemma whileLoop_terminates_liftE:
    apply clarsimp
   apply (subgoal_tac "case (Inr r) of Inl _ \<Rightarrow> True | Inr r \<Rightarrow>
       whileLoop_terminates (\<lambda>r s. (\<lambda>r s. case r of Inl _ \<Rightarrow> False | Inr v \<Rightarrow> C v s) (Inr r) s)
-           (\<lambda>r. (lift (\<lambda>r. liftE (B r)) (Inr r)) >>= (\<lambda>x. return (theRight x))) r s")
+           (\<lambda>r. (lift (\<lambda>r. liftE (B r)) (Inr r)) >>= (\<lambda>x. return (projr x))) r s")
    apply (clarsimp simp: liftE_def lift_def)
   apply (erule whileLoop_terminates.induct)
    apply (clarsimp simp: liftE_def lift_def split: sum.splits)
@@ -586,9 +586,9 @@ lemma whileLoopE_liftE:
     apply clarsimp
     apply (clarsimp simp: in_bind whileLoop_def liftE_def)
     apply (rule_tac x="b" in exI)
-    apply (rule_tac x="theRight a" in exI)
+    apply (rule_tac x="projr a" in exI)
     apply (rule conjI)
-     apply (erule whileLoop_results_bisim [where rt=theRight and st="\<lambda>x. x" and I="\<lambda>r s. case r of Inr x \<Rightarrow> True | _ \<Rightarrow> False"],
+     apply (erule whileLoop_results_bisim [where rt=projr and st="\<lambda>x. x" and I="\<lambda>r s. case r of Inr x \<Rightarrow> True | _ \<Rightarrow> False"],
         auto intro: whileLoop_results.intros simp: bind_def return_def lift_def split: sum.splits)[1]
     apply (drule whileLoop_results_induct_lemma2 [where P="\<lambda>(r, s). case r of Inr x \<Rightarrow> True | _ \<Rightarrow> False"] )
         apply (rule refl)
@@ -602,7 +602,7 @@ lemma whileLoopE_liftE:
   apply (rule iffI)
    apply (clarsimp simp: whileLoop_def liftE_def del: notI)
    apply (erule disjE)
-    apply (erule whileLoop_results_bisim [where rt=theRight and st="\<lambda>x. x" and I="\<lambda>r s. case r of Inr x \<Rightarrow> True | _ \<Rightarrow> False"],
+    apply (erule whileLoop_results_bisim [where rt=projr and st="\<lambda>x. x" and I="\<lambda>r s. case r of Inr x \<Rightarrow> True | _ \<Rightarrow> False"],
       auto intro: whileLoop_results.intros simp: bind_def return_def lift_def split: sum.splits)[1]
    apply (subst (asm) whileLoop_terminates_liftE [symmetric])
    apply (fastforce simp: whileLoop_def liftE_def whileLoop_terminatesE_def)
@@ -698,7 +698,7 @@ lemma validNF_whileLoopE:
    apply (rule wf_Un)
      apply (rule wf_custom_measure [where f="\<lambda>(r, s). case r of Inl _ \<Rightarrow> 0 | _ \<Rightarrow> 1"])
      apply clarsimp
-    apply (insert wf_inv_image [OF wf, where f="\<lambda>(r, s). (theRight r, s)"])
+    apply (insert wf_inv_image [OF wf, where f="\<lambda>(r, s). (projr r, s)"])
     apply (drule wf_Int1 [where r'="{((r', s'),(r, s)). (\<exists>x. r = Inr x) \<and> (\<exists>x. r' = Inr x)}"])
     apply (erule wf_subset)
     apply rule
@@ -733,7 +733,7 @@ lemma validNF_whileLoopE_inv_measure [wp]:
   done
 
 lemma validNF_whileLoopE_inv_measure_twosteps:
-  assumes inv: "\<And>r s. \<lbrace>\<lambda>s'. I r s' \<and> C r s' \<rbrace> B r \<lbrace> \<lambda>r' s'. I r' s' \<rbrace>, \<lbrace> E \<rbrace>!"
+  assumes inv: "\<And>r. \<lbrace>\<lambda>s'. I r s' \<and> C r s' \<rbrace> B r \<lbrace> \<lambda>r' s'. I r' s' \<rbrace>, \<lbrace> E \<rbrace>!"
   assumes measure: "\<And>r m. \<lbrace>\<lambda>s. I r s \<and> C r s \<and> M r s = m \<rbrace> B r \<lbrace> \<lambda>r' s'. M r' s' < m \<rbrace>, \<lbrace> \<lambda>_ _. True \<rbrace>"
   and post_cond: "\<And>r s. \<lbrakk>I r s; \<not> C r s\<rbrakk> \<Longrightarrow> Q r s"
   shows "\<lbrace>I r\<rbrace> whileLoopE_inv C B r I (measure' (\<lambda>(r, s). M r s)) \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>!"

@@ -5,7 +5,7 @@
  *)
 theory TraceMonad
 imports
-  Lib
+  Monad_Lib
   Strengthen
 begin
 

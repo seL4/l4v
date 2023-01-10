@@ -6,8 +6,8 @@
 theory TraceMonadVCG
 imports
   TraceMonad
+  Fun_Pred_Syntax
   WPSimp
-  Strengthen
 begin
 
 lemma trace_steps_append:
@@ -496,8 +496,6 @@ lemma Await_sync_twp:
 (* Wrap up the standard usage pattern of wp/wpc/simp into its own command: *)
 method wpsimp uses wp simp split split_del cong =
   ((determ \<open>wp add: wp|wpc|clarsimp simp: simp split: split split del: split_del cong: cong\<close>)+)[1]
-
-declare K_def [simp]
 
 section "Satisfiability"
 
@@ -2002,7 +2000,7 @@ lemma wpc_helper_validNF:
   by (metis hoare_wp_combs(2) no_fail_pre validNF_def)
 
 lemma wpc_helper_validI:
-  "(\<lbrace>Q\<rbrace>,\<lbrace>R\<rbrace> g \<lbrace>G\<rbrace>,\<lbrace>S\<rbrace>) \<Longrightarrow> wpc_helper (P, P') (split Q, Q') (\<lbrace>curry P\<rbrace>,\<lbrace>R\<rbrace> g \<lbrace>G\<rbrace>,\<lbrace>S\<rbrace>)"
+  "(\<lbrace>Q\<rbrace>,\<lbrace>R\<rbrace> g \<lbrace>G\<rbrace>,\<lbrace>S\<rbrace>) \<Longrightarrow> wpc_helper (P, P') (case_prod Q, Q') (\<lbrace>curry P\<rbrace>,\<lbrace>R\<rbrace> g \<lbrace>G\<rbrace>,\<lbrace>S\<rbrace>)"
   by (clarsimp simp: wpc_helper_def elim!: validI_weaken_pre)
 
 wpc_setup "\<lambda>m. \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace>" wpc_helper_valid

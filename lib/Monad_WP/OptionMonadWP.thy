@@ -16,8 +16,6 @@ imports
   WP
 begin
 
-declare K_def [simp]
-
 (* Hoare triples.
    TODO: design a sensible syntax for them. *)
 

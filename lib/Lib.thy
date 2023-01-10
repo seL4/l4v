@@ -19,6 +19,7 @@ imports
   ML_Goal
   Eval_Bool
   Fun_Pred_Syntax
+  Monad_Lib
   NICTATools
   "Word_Lib.WordSetup"
 begin
@@ -46,25 +47,6 @@ lemma Collect_eq:
 (* FIXME: move next to HOL.iff_allI *)
 lemma iff_impI: "\<lbrakk>P \<Longrightarrow> Q = R\<rbrakk> \<Longrightarrow> (P \<longrightarrow> Q) = (P \<longrightarrow> R)" by blast
 
-(* Long ago, I, fun_app, the verification master of darkness, unleashed an unspeakable evil
-upon the world. But a foolish proof engineer wielding an input abbreviation stepped forth
-to oppose me. Before the final blow was struck, I tore open a hole in a number of refinement
-proofs, and flung him into a broken proof state, where my evil is law. *)
-
-definition
-  fun_app :: "('a \<Rightarrow> 'b) \<Rightarrow> 'a \<Rightarrow> 'b" (infixr "$" 10) where
-  "f $ x \<equiv> f x"
-
-declare fun_app_def [iff]
-
-lemma fun_app_cong[fundef_cong]:
-  "\<lbrakk> f x = f' x' \<rbrakk> \<Longrightarrow> (f $ x) = (f' $ x')"
-  by simp
-
-lemma fun_app_apply_cong[fundef_cong]:
-  "f x y = f' x' y' \<Longrightarrow> (f $ x) y = (f' $ x') y'"
-  by simp
-
 lemma if_apply_cong[fundef_cong]:
   "\<lbrakk> P = P'; x = x'; P' \<Longrightarrow> f x' = f' x'; \<not> P' \<Longrightarrow> g x' = g' x' \<rbrakk>
      \<Longrightarrow> (if P then f else g) x = (if P' then f' else g') x'"
@@ -79,23 +61,11 @@ lemma prod_injects:
   "p = (x,y) \<Longrightarrow> x = fst p \<and> y = snd p"
   by auto
 
-definition "K \<equiv> \<lambda>x y. x"
-
-definition
-  zipWith :: "('a \<Rightarrow> 'b \<Rightarrow> 'c) \<Rightarrow> 'a list \<Rightarrow> 'b list \<Rightarrow> 'c list" where
-  "zipWith f xs ys \<equiv> map (case_prod f) (zip xs ys)"
-
 primrec
   delete :: "'a \<Rightarrow> 'a list \<Rightarrow> 'a list"
 where
   "delete y [] = []"
 | "delete y (x#xs) = (if y=x then xs else x # delete y xs)"
-
-definition
- "swp f \<equiv> \<lambda>x y. f y x"
-
-lemma swp_apply[simp]: "swp f y x = f x y"
-  by (simp add: swp_def)
 
 primrec (nonexhaustive)
   theRight :: "'a + 'b \<Rightarrow> 'b" where
@@ -214,22 +184,9 @@ lemma ignore_if:
   "(y and z) s \<Longrightarrow> (if x then y else z) s"
   by simp
 
-lemma zipWith_Nil2 :
-  "zipWith f xs [] = []"
-  unfolding zipWith_def by simp
-
 lemma isRight_right_map:
   "isRight (case_sum Inl (Inr o f) v) = isRight v"
   by (simp add: isRight_def split: sum.split)
-
-lemma zipWith_nth:
-  "\<lbrakk> n < min (length xs) (length ys) \<rbrakk> \<Longrightarrow> zipWith f xs ys ! n = f (xs ! n) (ys ! n)"
-  unfolding zipWith_def by simp
-
-lemma length_zipWith [simp]:
-  "length (zipWith f xs ys) = min (length xs) (length ys)"
-  unfolding zipWith_def by simp
-
 
 lemma first_in_uptoD:
   "a \<le> b \<Longrightarrow> (a::'a::order) \<in> {a..b}"
@@ -252,10 +209,6 @@ lemma Some_helper:
 lemma in_empty_interE:
   "\<lbrakk> A \<inter> B = {}; x \<in> A; x \<in> B \<rbrakk> \<Longrightarrow> False"
   by blast
-
-lemma None_upd_eq:
-  "g x = None \<Longrightarrow> g(x := None) = g"
-  by (rule ext) simp
 
 lemma exx [iff]: "\<exists>x. x" by blast
 lemma ExNot [iff]: "Ex Not" by blast
@@ -779,11 +732,6 @@ lemma in_set_zip_refl :
 lemma map_conv_upd:
   "m v = None \<Longrightarrow> m o (f (x := v)) = (m o f) (x := None)"
   by (rule ext) (clarsimp simp: o_def)
-
-lemma sum_all_ex [simp]:
-  "(\<forall>a. x \<noteq> Inl a) = (\<exists>a. x = Inr a)"
-  "(\<forall>a. x \<noteq> Inr a) = (\<exists>a. x = Inl a)"
-  by (metis Inr_not_Inl sum.exhaust)+
 
 lemma split_distrib: "case_prod (\<lambda>a b. T (f a b)) = (\<lambda>x. T (case_prod (\<lambda>a b. f a b) x))"
   by (clarsimp simp: split_def)

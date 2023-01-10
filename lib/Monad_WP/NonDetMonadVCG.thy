@@ -12,8 +12,6 @@ imports
   Strengthen
 begin
 
-declare K_def [simp]
-
 section "Satisfiability"
 
 text \<open>
@@ -1293,7 +1291,7 @@ lemma hoare_liftP_ext:
   shows "m \<lbrace>\<lambda>s. P (f s)\<rbrace>"
   unfolding valid_def
   apply clarsimp
-  apply (erule rsubst[where P=P])
+  apply (erule subst[rotated, where P=P])
   apply (rule ext)
   apply (drule use_valid, rule assms, rule refl)
   apply simp
@@ -1916,7 +1914,7 @@ lemma hoare_vcg_set_pred_lift:
   assumes "\<And>P x. m \<lbrace> \<lambda>s. P (f x s) \<rbrace>"
   shows "m \<lbrace> \<lambda>s. P {x. f x s} \<rbrace>"
   using assms[where P="\<lambda>x . x"] assms[where P=Not] use_valid
-  by (fastforce simp: valid_def elim!: rsubst[where P=P])
+  by (fastforce simp: valid_def elim!: subst[rotated, where P=P])
 
 lemma hoare_vcg_set_pred_lift_mono:
   assumes f: "\<And>x. m \<lbrace> f x \<rbrace>"

@@ -11,7 +11,9 @@
 chapter "Nondeterministic State Monad with Failure"
 
 theory NonDetMonad
-imports Lib
+  imports
+    Fun_Pred_Syntax
+    Monad_Lib
 begin
 
 text \<open>
