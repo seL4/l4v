@@ -5,6 +5,7 @@
  *)
 theory Plus2_Prefix
 imports
+  Lib.Lib
   Prefix_Refinement
 begin
 

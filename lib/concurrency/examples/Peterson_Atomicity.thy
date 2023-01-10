@@ -5,6 +5,7 @@
  *)
 theory Peterson_Atomicity
 imports
+  Lib.Lib
   Atomicity_Lib
 begin
 

@@ -1102,7 +1102,7 @@ lemma checkMappingPPtr_Section:
 
 lemma mapM_x_mapM_valid:
   "\<lbrace> P \<rbrace> mapM_x f xs \<lbrace>\<lambda>r. Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace>mapM f xs \<lbrace>\<lambda>r. Q\<rbrace>"
-  apply (simp add:NonDetMonadLemmaBucket.mapM_x_mapM)
+  apply (simp add: mapM_x_mapM)
   apply (clarsimp simp:valid_def return_def bind_def)
   apply (drule spec)
   apply (erule impE)
