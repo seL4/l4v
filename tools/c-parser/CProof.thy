@@ -453,4 +453,37 @@ qed
 
 lemmas hoarep_Seq_nothrow = hoarep_Seq[OF empty_subsetI subset_refl]
 
+lemma intvl_nowrap:
+  "\<lbrakk>y \<noteq> 0; unat y + z \<le> 2 ^ len_of TYPE('a)\<rbrakk> \<Longrightarrow> x \<notin> {x + y ..+ z}" for x :: "'a :: len word"
+  apply clarsimp
+  apply (drule intvlD)
+  apply clarsimp
+  apply (simp add: unat_arith_simps)
+  apply (simp split: if_split_asm)
+  apply (simp add: unat_of_nat)
+  done
+
+lemma is_aligned_ptr_aligned:
+  fixes p :: "'a :: c_type ptr"
+  assumes al: "is_aligned (ptr_val p) n"
+  and  alignof: "align_of TYPE('a) = 2 ^ n"
+  shows "ptr_aligned p"
+  using al unfolding is_aligned_def ptr_aligned_def
+  by (simp add: alignof)
+
+lemma is_aligned_c_guard:
+  "is_aligned (ptr_val p) n
+    \<Longrightarrow> ptr_val p \<noteq> 0
+    \<Longrightarrow> align_of TYPE('a) = 2 ^ m
+    \<Longrightarrow> size_of TYPE('a) \<le> 2 ^ n
+    \<Longrightarrow> m \<le> n
+    \<Longrightarrow> c_guard (p :: 'a :: c_type ptr)"
+  apply (clarsimp simp: c_guard_def c_null_guard_def)
+  apply (rule conjI)
+   apply (rule is_aligned_ptr_aligned, erule(1) is_aligned_weaken, simp)
+  apply (erule is_aligned_get_word_bits, simp_all)
+  apply (rule intvl_nowrap[where x=0, simplified], simp)
+  apply (erule is_aligned_no_wrap_le, simp+)
+  done
+
 end
