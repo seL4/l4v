@@ -1108,29 +1108,6 @@ lemma update_ti_t_word64_0s:
   "word_rcat [0, 0, 0, 0, 0, 0, 0, (0 :: 8 word)] = (0 :: 64 word)"
   by (simp_all add: typ_info_word word_rcat_def bin_rcat_def)
 
-lemma is_aligned_ptr_aligned:
-  fixes p :: "'a :: c_type ptr"
-  assumes al: "is_aligned (ptr_val p) n"
-  and  alignof: "align_of TYPE('a) = 2 ^ n"
-  shows "ptr_aligned p"
-  using al unfolding is_aligned_def ptr_aligned_def
-  by (simp add: alignof)
-
-lemma is_aligned_c_guard:
-  "is_aligned (ptr_val p) n
-    \<Longrightarrow> ptr_val p \<noteq> 0
-    \<Longrightarrow> align_of TYPE('a) = 2 ^ m
-    \<Longrightarrow> size_of TYPE('a) \<le> 2 ^ n
-    \<Longrightarrow> m \<le> n
-    \<Longrightarrow> c_guard (p :: ('a :: c_type) ptr)"
-  apply (clarsimp simp: c_guard_def c_null_guard_def)
-  apply (rule conjI)
-   apply (rule is_aligned_ptr_aligned, erule(1) is_aligned_weaken, simp)
-  apply (erule is_aligned_get_word_bits, simp_all)
-  apply (rule intvl_nowrap[where x=0, simplified], simp)
-  apply (erule is_aligned_no_wrap_le, simp+)
-  done
-
 lemma retype_guard_helper:
   assumes cover: "range_cover p sz (objBitsKO ko) n"
   and ptr0: "p \<noteq> 0"

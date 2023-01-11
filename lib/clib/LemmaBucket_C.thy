@@ -265,16 +265,6 @@ next
   qed
 qed
 
-lemma intvl_nowrap:
-  "\<lbrakk>y \<noteq> 0; unat y + z \<le> 2 ^ len_of TYPE('a)\<rbrakk> \<Longrightarrow> x \<notin> {x + y ..+ z}" for x :: "'a::len word"
-  apply clarsimp
-  apply (drule intvlD)
-  apply clarsimp
-  apply (simp add: unat_arith_simps)
-  apply (simp split: if_split_asm)
-  apply (simp add: unat_of_nat)
-  done
-
 lemma heap_update_list_update:
   fixes v :: word8
   shows "x \<noteq> y \<Longrightarrow> heap_update_list s xs (hp(y := v)) x = heap_update_list s xs hp x"
