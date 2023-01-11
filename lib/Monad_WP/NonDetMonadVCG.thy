@@ -12,6 +12,11 @@ imports
   Strengthen
 begin
 
+(* FIXME lib: split this theory into at least: Hoare logic things, Det, EmptyFail, NoFail *)
+(* FIXME lib: put definitions of det, empty_fail, no_fail, into Det, EmptyFail, NoFail *)
+(* FIXME lib: move Hoare logic stuff from NonDetMonadLemmas to here *)
+(* FIXME lib: move monad equalities from here to NonDetMonadLemmas *)
+
 section "Satisfiability"
 
 text \<open>
@@ -796,8 +801,7 @@ lemma empty_fail_return [simp, wp]:
   by (simp add: empty_fail_def return_def)
 
 lemma empty_fail_bindE:
-  "\<lbrakk> empty_fail f; \<And>rv. empty_fail (g rv) \<rbrakk>
-       \<Longrightarrow> empty_fail (f >>=E g)"
+  "\<lbrakk> empty_fail f; \<And>rv. empty_fail (g rv) \<rbrakk> \<Longrightarrow> empty_fail (f >>=E g)"
   apply (simp add: bindE_def)
   apply (erule empty_fail_bind)
   apply (simp add: lift_def throwError_def split: sum.split)
@@ -825,6 +829,10 @@ lemma empty_fail [simp]:
   "empty_fail fail"
   by (simp add: fail_def empty_fail_def)
 
+lemma empty_fail_assert:
+  "empty_fail (assert P)"
+  unfolding assert_def by simp
+
 lemma empty_fail_assert_opt [simp]:
   "empty_fail (assert_opt x)"
   by (simp add: assert_opt_def split: option.splits)
@@ -836,6 +844,44 @@ lemma empty_fail_mk_ef:
 lemma empty_fail_gets_map[simp]:
   "empty_fail (gets_map f p)"
   unfolding gets_map_def by simp
+
+lemma empty_fail_error_bits[simp]:
+  "empty_fail (returnOk v)"
+  "empty_fail (throwError v)"
+  "empty_fail (liftE f) = empty_fail f"
+  by (fastforce simp: returnOk_def throwError_def liftE_def empty_fail_def bind_def return_def)+
+
+lemma empty_fail_whenEs:
+  "empty_fail f \<Longrightarrow> empty_fail (whenE P f)"
+  "empty_fail f \<Longrightarrow> empty_fail (unlessE P f)"
+  by (auto simp add: whenE_def unlessE_def)
+
+lemma empty_fail_assertE:
+  "empty_fail (assertE P)"
+  by (simp add: assertE_def split: if_split)
+
+lemma empty_fail_get:
+  "empty_fail get"
+  by (simp add: empty_fail_def get_def)
+
+lemma empty_fail_catch:
+  "\<lbrakk> empty_fail f; \<And>x. empty_fail (g x) \<rbrakk> \<Longrightarrow> empty_fail (catch f g)"
+  by (simp add: catch_def split: sum.split)
+
+lemma empty_fail_select[simp]:
+  "empty_fail (select V) = (V \<noteq> {})"
+  by (clarsimp simp: select_def empty_fail_def)
+
+lemma empty_fail_not_snd:
+  "\<lbrakk> \<not> snd (m s); empty_fail m \<rbrakk> \<Longrightarrow> \<exists>v. v \<in> fst (m s)"
+  by (fastforce simp: empty_fail_def)
+
+lemmas empty_failD2 = empty_fail_not_snd[rotated]
+
+lemma empty_failD3:
+  "\<lbrakk> empty_fail f; \<not> snd (f s) \<rbrakk> \<Longrightarrow> fst (f s) \<noteq> {}"
+  by (drule(1) empty_failD2, clarsimp)
+
 
 subsection "Failure"
 

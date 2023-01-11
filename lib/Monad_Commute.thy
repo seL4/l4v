@@ -13,10 +13,6 @@ theory Monad_Commute
     More_Monad (* for mapM_x *)
 begin
 
-lemma empty_fail_not_snd:
-  "\<lbrakk> \<not> snd (m s); empty_fail m \<rbrakk> \<Longrightarrow> \<exists>v. v \<in> fst (m s)"
-  by (fastforce simp: empty_fail_def)
-
 
 definition monad_commute where
   "monad_commute P a b \<equiv>

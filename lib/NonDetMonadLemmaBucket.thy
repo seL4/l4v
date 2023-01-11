@@ -98,18 +98,6 @@ lemma mapME_x_inv_wp:
   apply assumption
   done
 
-
-lemma empty_fail_error_bits:
-  "empty_fail (returnOk v)"
-  "empty_fail (throwError v)"
-  "empty_fail (liftE f) = empty_fail f"
-  apply (simp_all add: returnOk_def throwError_def)
-  apply (rule iffI, simp_all add: liftE_def)
-  apply (simp add: empty_fail_def bind_def return_def)
-  apply (erule allEI)
-  apply clarsimp
-  done
-
 lemma mapM_upd:
   assumes "\<And>x rv s s'. (rv,s') \<in> fst (f x s) \<Longrightarrow> x \<in> set xs \<Longrightarrow> (rv, g s') \<in> fst (f x (g s))"
   shows "(rv,s') \<in> fst (mapM f xs s) \<Longrightarrow> (rv, g s') \<in> fst (mapM f xs (g s))"
@@ -129,15 +117,6 @@ next
     apply simp
     done
 qed
-
-lemma empty_fail_whenEs:
-  "empty_fail f \<Longrightarrow> empty_fail (whenE P f)"
-  "empty_fail f \<Longrightarrow> empty_fail (unlessE P f)"
-  by (auto simp add: whenE_def unlessE_def empty_fail_error_bits split: if_split)
-
-lemma empty_fail_assertE:
-  "empty_fail (assertE P)"
-  by (simp add: assertE_def empty_fail_error_bits split: if_split)
 
 lemma gets_the_validE_R_wp:
   "\<lbrace>\<lambda>s. f s \<noteq> None \<and> isRight (the (f s)) \<and> Q (theRight (the (f s))) s\<rbrace>
@@ -173,44 +152,11 @@ lemma list_case_return: (* FIXME lib: move to Lib *)
     = return (case xs of [] \<Rightarrow> v | y # ys \<Rightarrow> f y ys)"
   by (simp split: list.split)
 
+lemma lifted_if_collapse: (* FIXME lib: move to Lib *)
+  "(if P then \<top> else f) = (\<lambda>s. \<not>P \<longrightarrow> f s)"
+  by auto
+
 lemmas list_case_return2 = list_case_return (* FIXME lib: eliminate *)
-
-lemma empty_fail_get:
-  "empty_fail get"
-  by (simp add: empty_fail_def get_def)
-
-lemma empty_failD2:
-  "\<lbrakk> empty_fail f; \<not> snd (f s) \<rbrakk> \<Longrightarrow> \<exists>v. v \<in> fst (f s)"
-  by (fastforce simp add: empty_fail_def)
-
-lemma empty_failD3:
-  "\<lbrakk> empty_fail f; \<not> snd (f s) \<rbrakk> \<Longrightarrow> fst (f s) \<noteq> {}"
-  by (drule(1) empty_failD2, clarsimp)
-
-lemma bind_inv_inv_comm:
-  "\<lbrakk> \<And>P. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>; \<And>P. \<lbrace>P\<rbrace> g \<lbrace>\<lambda>_. P\<rbrace>;
-     empty_fail f; empty_fail g \<rbrakk> \<Longrightarrow>
-   do x \<leftarrow> f; y \<leftarrow> g; n x y od = do y \<leftarrow> g; x \<leftarrow> f; n x y od"
-  apply (rule ext)
-  apply (rename_tac s)
-  apply (rule_tac s="(do (x, y) \<leftarrow> do x \<leftarrow> f; y \<leftarrow> (\<lambda>_. g s) ; (\<lambda>_. return (x, y) s) od;
-                         n x y od) s" in trans)
-   apply (simp add: bind_assoc)
-   apply (intro bind_apply_cong, simp_all)[1]
-    apply (metis in_inv_by_hoareD)
-   apply (simp add: return_def bind_def)
-   apply (metis in_inv_by_hoareD)
-  apply (rule_tac s="(do (x, y) \<leftarrow> do y \<leftarrow> g; x \<leftarrow> (\<lambda>_. f s) ; (\<lambda>_. return (x, y) s) od;
-                      n x y od) s" in trans[rotated])
-   apply (simp add: bind_assoc)
-   apply (intro bind_apply_cong, simp_all)[1]
-    apply (metis in_inv_by_hoareD)
-   apply (simp add: return_def bind_def)
-   apply (metis in_inv_by_hoareD)
-  apply (rule bind_apply_cong, simp_all)
-  apply (clarsimp simp: bind_def split_def return_def)
-  apply (auto | drule(1) empty_failD3)+
-  done
 
 lemma no_fail_mapM:
   "\<forall>x. no_fail \<top> (f x) \<Longrightarrow> no_fail \<top> (mapM f xs)"
@@ -219,11 +165,6 @@ lemma no_fail_mapM:
   apply (simp add: mapM_Cons)
   apply (wp|fastforce)+
   done
-
-
-lemma lifted_if_collapse: (* FIXME lib: move to Lib *)
-  "(if P then \<top> else f) = (\<lambda>s. \<not>P \<longrightarrow> f s)"
-  by auto
 
 lemma filterM_preserved:
   "\<lbrakk> \<And>x. x \<in> set xs \<Longrightarrow> \<lbrace>P\<rbrace> m x \<lbrace>\<lambda>rv. P\<rbrace> \<rbrakk>
@@ -314,10 +255,6 @@ lemma mapM_x_wp:
   shows      "set xs \<subseteq> S \<Longrightarrow> \<lbrace>P\<rbrace> mapM_x f xs \<lbrace>\<lambda>rv. P\<rbrace>"
   by (subst mapM_x_mapM) (wp mapM_wp x)
 
-
-lemma empty_fail_assert : "empty_fail (assert P)"
-  unfolding assert_def by simp
-
 lemma no_fail_mapM':
   assumes rl: "\<And>x. no_fail (\<lambda>_. P x) (f x)"
   shows "no_fail (\<lambda>_. \<forall>x \<in> set xs. P x) (mapM f xs)"
@@ -361,19 +298,6 @@ lemma empty_fail_sequence_x :
   shows "empty_fail (sequence_x ms)" using assms
   by (induct ms) (auto simp: sequence_x_def)
 
-lemma bind_known_operation_eq:
-  "\<lbrakk> no_fail P f; \<lbrace>Q\<rbrace> f \<lbrace>\<lambda>rv s. rv = x \<and> s = t\<rbrace>; P s; Q s; empty_fail f \<rbrakk>
-     \<Longrightarrow> (f >>= g) s = g x t"
-  apply (drule(1) no_failD)
-  apply (subgoal_tac "fst (f s) = {(x, t)}")
-   apply (clarsimp simp: bind_def)
-  apply (rule not_psubset_eq)
-   apply (drule(1) empty_failD2, clarsimp)
-   apply fastforce
-  apply clarsimp
-  apply (drule(1) use_valid, simp+)
-  done
-
 lemma mapME_set:
   assumes  est: "\<And>x. \<lbrace>R\<rbrace> f x \<lbrace>P\<rbrace>, -"
   and     invp: "\<And>x y. \<lbrace>R and P x\<rbrace> f y \<lbrace>\<lambda>_. P x\<rbrace>, -"
@@ -413,13 +337,6 @@ lemma empty_fail_mapM_x [simp]:
   apply (induct_tac xs)
    apply (clarsimp simp: mapM_x_Nil)
   apply (clarsimp simp: mapM_x_Cons)
-  done
-
-lemma empty_fail_catch:
-  "\<lbrakk> empty_fail f; \<And>x. empty_fail (g x) \<rbrakk> \<Longrightarrow> empty_fail (catch f g)"
-  apply (simp add: catch_def)
-  apply (erule empty_fail_bind)
-  apply (simp split: sum.split)
   done
 
 lemma valid_isRight_theRight_split:
@@ -469,13 +386,5 @@ lemma case_option_find_give_me_a_map:
   apply (rule bind_cong [OF refl])
   apply (simp add: lift_def throwError_def returnOk_def split: sum.split)
   done
-
-lemma empty_fail_select [simp]: "empty_fail (select V) = (V \<noteq> {})"
-  apply (clarsimp simp: select_def empty_fail_def)
-  done
-
-lemma empty_fail_liftE [simp]:
-  "empty_fail (liftE X) = empty_fail X"
-  by (rule empty_fail_error_bits)
 
 end

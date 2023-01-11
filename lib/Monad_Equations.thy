@@ -523,4 +523,38 @@ lemma simple_bind_fail [simp]:
   "(gets X >>= (\<lambda>_. fail)) = fail"
   by (auto intro!: bind_fail_propagates)
 
+lemma bind_inv_inv_comm:
+  "\<lbrakk> \<And>P. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>; \<And>P. \<lbrace>P\<rbrace> g \<lbrace>\<lambda>_. P\<rbrace>;
+     empty_fail f; empty_fail g \<rbrakk> \<Longrightarrow>
+   do x \<leftarrow> f; y \<leftarrow> g; n x y od = do y \<leftarrow> g; x \<leftarrow> f; n x y od"
+  apply (rule ext)
+  apply (rename_tac s)
+  apply (rule_tac s="(do (x, y) \<leftarrow> do x \<leftarrow> f; y \<leftarrow> (\<lambda>_. g s) ; (\<lambda>_. return (x, y) s) od;
+                         n x y od) s" in trans)
+   apply (simp add: bind_assoc)
+   apply (intro bind_apply_cong, simp_all)[1]
+    apply (metis in_inv_by_hoareD)
+   apply (simp add: return_def bind_def)
+   apply (metis in_inv_by_hoareD)
+  apply (rule_tac s="(do (x, y) \<leftarrow> do y \<leftarrow> g; x \<leftarrow> (\<lambda>_. f s) ; (\<lambda>_. return (x, y) s) od;
+                      n x y od) s" in trans[rotated])
+   apply (simp add: bind_assoc)
+   apply (intro bind_apply_cong, simp_all)[1]
+    apply (metis in_inv_by_hoareD)
+   apply (simp add: return_def bind_def)
+   apply (metis in_inv_by_hoareD)
+  apply (rule bind_apply_cong, simp_all)
+  apply (clarsimp simp: bind_def split_def return_def)
+  apply (auto | drule(1) empty_failD3)+
+  done
+
+lemma bind_known_operation_eq:
+  "\<lbrakk> no_fail P f; \<lbrace>Q\<rbrace> f \<lbrace>\<lambda>rv s. rv = x \<and> s = t\<rbrace>; P s; Q s; empty_fail f \<rbrakk>
+     \<Longrightarrow> (f >>= g) s = g x t"
+  apply (drule(1) no_failD)
+  apply (subgoal_tac "fst (f s) = {(x, t)}")
+   apply (clarsimp simp: bind_def)
+  apply (fastforce simp: valid_def empty_fail_def)
+  done
+
 end
