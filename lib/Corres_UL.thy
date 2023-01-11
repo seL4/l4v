@@ -581,7 +581,7 @@ lemma corres_symb_exec_l:
          apply (erule x)
         apply (rule gets_wp)
        apply (erule nf)
-      apply (rule non_fail_gets)
+      apply (rule no_fail_gets)
      apply (rule y)
     apply (rule gets_wp)
    apply simp+
@@ -598,7 +598,7 @@ lemma corres_symb_exec_r:
       apply (rule corres_noop2)
          apply (simp add: simpler_gets_def exs_valid_def)
         apply (erule x)
-       apply (rule non_fail_gets)
+       apply (rule no_fail_gets)
       apply (erule nf)
      apply (rule gets_wp)
     apply (rule y)

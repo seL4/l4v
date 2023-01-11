@@ -1141,16 +1141,16 @@ lemma no_failD:
   "\<lbrakk> no_fail P m; P s \<rbrakk> \<Longrightarrow> Failed \<notin> snd ` m s"
   by (simp add: no_fail_def)
 
-lemma non_fail_modify [wp,simp]:
+lemma no_fail_modify [wp,simp]:
   "no_fail \<top> (modify f)"
   by (simp add: no_fail_def modify_def get_def put_def bind_def)
 
-lemma non_fail_gets_simp[simp]:
+lemma no_fail_gets_simp[simp]:
   "no_fail P (gets f)"
   unfolding no_fail_def gets_def get_def return_def bind_def
   by simp
 
-lemma non_fail_gets:
+lemma no_fail_gets:
   "no_fail \<top> (gets f)"
   by simp
 
@@ -1158,7 +1158,7 @@ lemma snd_pair_image:
  "snd ` Pair x ` S = S"
   by (simp add: image_def)
 
-lemma non_fail_select [simp]:
+lemma no_fail_select [simp]:
   "no_fail \<top> (select S)"
   by (simp add: no_fail_def select_def image_def)
 
@@ -1194,7 +1194,7 @@ lemma no_fail_fail [simp, wp]:
   "no_fail \<bottom> fail"
   by (simp add: fail_def no_fail_def)
 
-lemmas [wp] = non_fail_gets
+lemmas [wp] = no_fail_gets
 
 lemma no_fail_assert [simp, wp]:
   "no_fail (\<lambda>_. P) (assert P)"

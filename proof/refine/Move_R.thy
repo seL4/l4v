@@ -72,7 +72,7 @@ lemma hoare_vcg_if_lift3:
 lemmas hoare_pre_post = hoare_pre_imp[where R="\<lambda>_. Q" and Q=Q for Q]
 
 lemmas corres_underlying_gets_pre_rhs =
-  corres_symb_exec_r[OF _ _ gets_inv no_fail_pre[OF non_fail_gets TrueI]]
+  corres_symb_exec_r[OF _ _ gets_inv no_fail_pre[OF no_fail_gets TrueI]]
 
 lemma corres_if_r':
   "\<lbrakk> G' \<Longrightarrow> corres_underlying sr nf nf' r P P' a c; \<not>G' \<Longrightarrow> corres_underlying sr nf nf' r P Q' a d \<rbrakk>
@@ -122,7 +122,7 @@ lemma corres_symb_exec_l':
        apply (rule corres_noop3)
          apply (erule x)
         apply (rule gets_wp)
-       apply (rule non_fail_gets)
+       apply (rule no_fail_gets)
       apply (rule z)
      apply (rule y)
     apply (rule gets_wp)

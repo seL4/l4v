@@ -3282,7 +3282,7 @@ lemma storePML4E_setCTE_commute:
      apply (subst modify_specify)
      apply (rule modify_obj_commute')
     apply (rule commute_commute[OF locateCTE_commute])
-         apply (wp locateCTE_cte_no_fail non_fail_modify
+         apply (wp locateCTE_cte_no_fail no_fail_modify
                    modify_pml4e_pspace_distinct'
                    modify_pml4e_pspace_aligned'| subst modify_specify)+
      apply (clarsimp simp:simpler_modify_def valid_def typ_at'_def)

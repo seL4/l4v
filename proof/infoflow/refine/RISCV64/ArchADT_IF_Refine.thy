@@ -170,7 +170,7 @@ lemma do_user_op_if_corres[ADT_IF_Refine_assms]:
       apply (rule corres_split[OF corres_machine_op,where r'="(=)"])
          apply (rule corres_underlying_trivial)
          apply (clarsimp simp: user_memory_update_def)
-         apply (rule non_fail_modify)
+         apply (rule no_fail_modify)
         apply (rule corres_split[OF corres_machine_op,where r'="(=)"])
            apply (rule corres_underlying_trivial)
            apply wp
@@ -278,7 +278,7 @@ lemma getActiveIRQ_nf:
   "no_fail (\<lambda>_. True) (getActiveIRQ in_kernel)"
   apply (simp add: getActiveIRQ_def)
   apply (rule no_fail_pre)
-   apply (rule non_fail_gets non_fail_modify
+   apply (rule no_fail_gets no_fail_modify
                no_fail_return | rule no_fail_bind | simp
           | intro impI conjI)+
      apply (wp del: no_irq | simp)+
