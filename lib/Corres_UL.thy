@@ -1194,7 +1194,7 @@ lemmas corres_split_dc = corres_split[where r'=dc, simplified]
 
 lemma isLeft_case_sum:
   "isLeft v \<Longrightarrow> (case v of Inl v' \<Rightarrow> f v' | Inr v' \<Rightarrow> g v') = f (theLeft v)"
-  by (clarsimp simp: isLeft_def)
+  by (clarsimp split: sum.splits)
 
 lemma corres_symb_exec_catch_r:
   "\<lbrakk> \<And>rv. corres_underlying sr nf nf' r P (Q' rv) f (h rv);
@@ -1207,7 +1207,7 @@ lemma corres_symb_exec_catch_r:
    apply assumption
   apply (simp add: validE_def)
   apply (erule hoare_chain, simp_all)[1]
-  apply (simp add: isLeft_def split: sum.split_asm)
+  apply (simp split: sum.split_asm)
   done
 
 lemma corres_return_eq_same:

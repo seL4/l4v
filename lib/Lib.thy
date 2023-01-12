@@ -67,19 +67,31 @@ where
   "delete y [] = []"
 | "delete y (x#xs) = (if y=x then xs else x # delete y xs)"
 
-primrec (nonexhaustive)
-  theRight :: "'a + 'b \<Rightarrow> 'b" where
-  "theRight (Inr x) = x"
+(* Nicer names for sum discriminators and selectors *)
 
-primrec (nonexhaustive)
-  theLeft :: "'a + 'b \<Rightarrow> 'a" where
-  "theLeft (Inl x) = x"
+abbreviation theLeft :: "'a + 'b \<Rightarrow> 'a" where
+  "theLeft \<equiv> projl"
 
-definition
- "isLeft x \<equiv> (\<exists>y. x = Inl y)"
+lemmas theLeft_simps = sum.sel(1)
 
-definition
- "isRight x \<equiv> (\<exists>y. x = Inr y)"
+abbreviation theRight :: "'a + 'b \<Rightarrow> 'b" where
+  "theRight \<equiv> projr"
+
+lemmas theRight_simps = sum.sel(2)
+
+abbreviation isLeft :: "'a + 'b \<Rightarrow> bool" where
+  "isLeft \<equiv> isl"
+
+lemmas isLeft_def = isl_def
+
+(* When you feel the urge to match something like "?P (isRight ?x)", consider using
+   "?P (isLeft ?x)" instead, because there is no primitive "isr", just "\<not>isl _". *)
+abbreviation isRight :: "'a + 'b \<Rightarrow> bool" where
+  "isRight \<equiv> \<lambda>x. \<not> isl x"
+
+lemma isRight_def:
+  "isRight x = (\<exists>y. x = Inr y)"
+  by (cases x; simp)
 
 definition
  "const x \<equiv> \<lambda>y. x"
@@ -186,7 +198,7 @@ lemma ignore_if:
 
 lemma isRight_right_map:
   "isRight (case_sum Inl (Inr o f) v) = isRight v"
-  by (simp add: isRight_def split: sum.split)
+  by (simp split: sum.split)
 
 lemma first_in_uptoD:
   "a \<le> b \<Longrightarrow> (a::'a::order) \<in> {a..b}"

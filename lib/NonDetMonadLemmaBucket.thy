@@ -40,7 +40,7 @@ lemma gets_the_validE_R_wp:
 
 lemma return_bindE:
   "isRight v \<Longrightarrow> return v >>=E f = f (theRight v)"
-  by (clarsimp simp: isRight_def return_returnOk)
+  by (cases v; clarsimp simp: return_returnOk)
 
 lemma list_case_return: (* FIXME lib: move to Lib *)
   "(case xs of [] \<Rightarrow> return v | y # ys \<Rightarrow> return (f y ys))
@@ -53,13 +53,15 @@ lemma lifted_if_collapse: (* FIXME lib: move to Lib *)
 
 lemmas list_case_return2 = list_case_return (* FIXME lib: eliminate *)
 
-lemma valid_isRight_theRight_split:
-  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q True rv s\<rbrace>,\<lbrace>\<lambda>e s. \<forall>v. Q False v s\<rbrace> \<Longrightarrow>
-     \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q (isRight rv) (theRight rv) s\<rbrace>"
+(* We use isLeft, because isLeft=isl is the primitive concept; isRight=\<not>isl matches on isl. *)
+lemma valid_isLeft_theRight_split:
+  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q False rv s\<rbrace>,\<lbrace>\<lambda>e s. \<forall>v. Q True v s\<rbrace> \<Longrightarrow>
+     \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q (isLeft rv) (theRight rv) s\<rbrace>"
   apply (simp add: validE_def)
   apply (erule hoare_strengthen_post)
-  apply (simp add: isRight_def split: sum.split_asm)
+  apply (simp split: sum.split_asm)
   done
+
 
 (* depends on Lib.list_induct_suffix *)
 lemma mapM_x_inv_wp2:

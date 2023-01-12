@@ -633,7 +633,7 @@ lemma monadic_rewrite_case_sum:
      \<And>v. x = Inr v \<Longrightarrow> monadic_rewrite F E (Q v) (b v) (d v) \<rbrakk>
    \<Longrightarrow> monadic_rewrite F E (\<lambda>s. (\<not> isRight x \<longrightarrow> P (theLeft x) s) \<and> (isRight x \<longrightarrow> Q (theRight x) s))
         (case_sum a b x) (case_sum c d x)"
-  by (cases x, simp_all add: isRight_def)
+  by (cases x; simp)
 
 text \<open>WP proof via monadic rewriting\<close>
 
