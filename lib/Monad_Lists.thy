@@ -8,7 +8,7 @@
 (* Monadic functions over lists: sequence, mapM, filter, etc
    Definitions, equations, Hoare logic and no_fail/empty_fail setup. *)
 
-theory More_Monad
+theory Monad_Lists
   imports
     NonDetMonadVCG
 begin
@@ -21,7 +21,6 @@ lemma mapME_Nil : "mapME f [] = returnOk []"
   unfolding mapME_def by (simp add: sequenceE_def)
 
 lemmas mapME_simps = mapME_Nil mapME_Cons
-
 
 lemma zipWithM_x_inv:
   assumes x: "\<And>x y. \<lbrace>P\<rbrace> m x y \<lbrace>\<lambda>rv. P\<rbrace>"
@@ -105,7 +104,6 @@ lemma zipWithM_x_Cons:
   shows "(zipWithM_x f (x # xs) (y # ys)) = (f x y >>=  (\<lambda>_. zipWithM_x f xs ys))"
   unfolding zipWithM_x_def zipWith_def
   by (simp, rule sequence_x_Cons)
-
 
 lemma mapME_x_map_simp:
   "mapME_x m (map f xs) = mapME_x (m o f) xs"
@@ -192,7 +190,6 @@ lemma mapM_x_singleton:
   "mapM_x f [x] = f x"
   by (simp add: mapM_x_mapM mapM_singleton)
 
-
 lemma mapME_x_sequenceE:
   "mapME_x f xs \<equiv> doE _ \<leftarrow> sequenceE (map f xs); returnOk () odE"
   apply (induct xs, simp_all add: mapME_x_def sequenceE_def sequenceE_x_def)
@@ -223,10 +220,7 @@ lemma mapM_last_Cons:
   "\<lbrakk> xs = [] \<Longrightarrow> g v = y;
      xs \<noteq> [] \<Longrightarrow> do x \<leftarrow> f (last xs); return (g x) od
              = do x \<leftarrow> f (last xs); return y od \<rbrakk> \<Longrightarrow>
-   do ys \<leftarrow> mapM f xs;
-      return (g (last (v # ys))) od
-   = do mapM_x f xs;
-      return y od"
+   do ys \<leftarrow> mapM f xs; return (g (last (v # ys))) od = do mapM_x f xs; return y od"
   apply (cases "xs = []")
    apply (simp add: mapM_x_Nil mapM_Nil)
   apply (simp add: mapM_x_mapM)
@@ -245,7 +239,7 @@ lemma map_length_cong:
 
 lemma mapM_length_cong:
   "\<lbrakk> length xs = length ys; \<And>x y. (x, y) \<in> set (zip xs ys) \<Longrightarrow> f x = g y \<rbrakk>
-      \<Longrightarrow> mapM f xs = mapM g ys"
+   \<Longrightarrow> mapM f xs = mapM g ys"
   by (simp add: mapM_def map_length_cong)
 
 (* FIXME: duplicate *)
@@ -264,7 +258,8 @@ lemma zipWithM_If_cut:
   "zipWithM (\<lambda>a b. if a < n then f a b else g a b) [0 ..< m] xs
      = do ys \<leftarrow> zipWithM f [0 ..< min n m] xs;
           zs \<leftarrow> zipWithM g [n ..< m] (drop n xs);
-          return (ys @ zs) od"
+          return (ys @ zs)
+       od"
   apply (cases "n < m")
    apply (cut_tac i=0 and j=n and k="m - n" in upt_add_eq_append)
     apply simp
@@ -280,8 +275,7 @@ lemma zipWithM_If_cut:
   done
 
 lemma mapM_liftM_const:
-  "mapM (\<lambda>x. liftM (\<lambda>y. f x) (g x)) xs
-     = liftM (\<lambda>ys. map f xs) (mapM g xs)"
+  "mapM (\<lambda>x. liftM (\<lambda>y. f x) (g x)) xs = liftM (\<lambda>ys. map f xs) (mapM g xs)"
   apply (induct xs)
    apply (simp add: mapM_Nil)
   apply (simp add: mapM_Cons)
@@ -297,11 +291,11 @@ lemma mapM_x_map:
   by (simp add: mapM_x_def o_def)
 
 lemma filterM_append:
-  "filterM f (xs @ ys) = (do
+  "filterM f (xs @ ys) = do
      xs' \<leftarrow> filterM f xs;
      ys' \<leftarrow> filterM f ys;
      return (xs' @ ys')
-   od)"
+   od"
   apply (induct xs)
    apply simp
   apply (simp add: bind_assoc)
@@ -310,10 +304,10 @@ lemma filterM_append:
   done
 
 lemma filterM_mapM:
-  "filterM f xs = (do
+  "filterM f xs = do
      ys \<leftarrow> mapM (\<lambda>x. do v \<leftarrow> f x; return (x, v) od) xs;
      return (map fst (filter snd ys))
-   od)"
+   od"
   apply (induct xs)
    apply (simp add: mapM_def sequence_def)
   apply (simp add: mapM_Cons bind_assoc)
@@ -364,7 +358,6 @@ lemma mapM_x_split_append:
   using mapM_x_append[where f=f and xs="take n xs" and ys="drop n xs"]
   by simp
 
-
 lemma mapME_wp:
   assumes x: "\<And>x. x \<in> S \<Longrightarrow> \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>_. P\<rbrace>, \<lbrace>\<lambda>_. E\<rbrace>"
   shows      "set xs \<subseteq> S \<Longrightarrow> \<lbrace>P\<rbrace> mapME f xs \<lbrace>\<lambda>_. P\<rbrace>, \<lbrace>\<lambda>_. E\<rbrace>"
@@ -386,8 +379,7 @@ lemma mapM_x_inv_wp3:
   using hr
 proof (induct xs rule: rev_induct)
   case Nil thus ?case
-    apply (simp add: mapM_x_Nil)
-    done
+    by (simp add: mapM_x_Nil)
 next
   case (snoc x xs)
   show ?case
