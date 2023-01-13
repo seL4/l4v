@@ -409,8 +409,8 @@ If the current thread is no longer runnable, has used its entire timeslice, an I
 >             scheduleChooseNewThread
 
 >     scAndTimer
-
-
+>     stateAssert ct_activatable'_asrt
+>         "Assert that `ct_in_state' activatable' s` holds"
 
 
 Threads are scheduled using a simple multiple-priority round robin algorithm.

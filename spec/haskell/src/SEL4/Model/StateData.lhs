@@ -476,3 +476,9 @@ release queue have runnable' thread state. We add an assertion that it does hold
 
 > release_q_runnable_asrt :: KernelState -> Bool
 > release_q_runnable_asrt _ = True
+
+Various lemmas in Refine_C.thy would like the fact that the current thread is
+activatable' after schedule runs. We add an assertion that this is the case.
+
+> ct_activatable'_asrt :: KernelState -> Bool
+> ct_activatable'_asrt _ = True
