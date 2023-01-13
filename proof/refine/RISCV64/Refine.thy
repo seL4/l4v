@@ -778,6 +778,33 @@ lemma kernel_preemption_corres:
   apply (clarsimp simp: invs'_def)
   done
 
+lemma resume_cur_thread_cross:
+  "\<lbrakk>(a, c) \<in> state_relation; scheduler_action a = resume_cur_thread\<rbrakk>
+   \<Longrightarrow> ksSchedulerAction c = ResumeCurrentThread"
+  by (case_tac "scheduler_action a", simp_all add: state_relation_def)
+
+lemma ct_running_cross:
+  "\<lbrakk>(a,c) \<in> state_relation; ct_running a; pspace_aligned a; pspace_distinct a\<rbrakk> \<Longrightarrow> ct_running' c"
+  apply (clarsimp simp: ct_in_state_def ct_in_state'_def)
+  apply (frule st_tcb_at_coerce_concrete)
+     apply fastforce+
+  apply (clarsimp simp: obj_at_simps state_relation_def)
+  done
+
+lemma ct_idle_cross:
+  "\<lbrakk>(a,c) \<in> state_relation; ct_idle a; pspace_aligned a; pspace_distinct a\<rbrakk> \<Longrightarrow> ct_idle' c"
+  apply (clarsimp simp: ct_in_state_def ct_in_state'_def)
+  apply (frule st_tcb_at_coerce_concrete)
+     apply fastforce+
+  apply (clarsimp simp: obj_at_simps state_relation_def)
+  done
+
+lemma ct_running_or_idle_cross:
+  "\<lbrakk>(a,c) \<in> state_relation; ct_running a \<or> ct_idle a; pspace_aligned a; pspace_distinct a\<rbrakk>
+   \<Longrightarrow> ct_running' c \<or> ct_idle' c"
+  apply (fastforce dest: ct_running_cross ct_idle_cross)
+  done
+
 lemma kernel_corres':
   "corres dc (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and (ct_running or ct_idle)
               and current_time_bounded and consumed_time_bounded and valid_machine_time
@@ -785,8 +812,7 @@ lemma kernel_corres':
               and (\<lambda>s. cur_sc_offset_ready (consumed_time s) s)
               and (\<lambda>s. cur_sc_offset_sufficient (consumed_time s) s)
               and (\<lambda>s. scheduler_action s = resume_cur_thread))
-             (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and (ct_running' or ct_idle') and
-              (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
+             invs'
              (call_kernel event)
              (do _ \<leftarrow> runExceptT $
                       handleEvent event `~catchError~`
@@ -803,6 +829,13 @@ lemma kernel_corres':
   unfolding call_kernel_def
   apply add_cur_tcb'
   apply add_sym_refs
+  apply (rule_tac Q="\<lambda>s. ksSchedulerAction s = ResumeCurrentThread" in corres_cross_add_guard)
+   apply (fastforce intro!: resume_cur_thread_cross)
+  apply (rule_tac Q="\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s" in corres_cross_add_guard)
+   apply (fastforce intro!: ct_running_cross)
+  apply (rule_tac Q="ct_running' or ct_idle'" in corres_cross_add_guard)
+   apply (simp only: pred_disj_def)
+   apply (rule ct_running_or_idle_cross, fastforce+)
   apply (rule_tac Q="\<lambda>s. obj_at' (\<lambda>sc. scTCB sc = Some (ksCurThread s)) (ksCurSc s) s" in corres_cross_add_guard)
    apply (fastforce simp: invs_def valid_state_def valid_pspace_def intro!: cur_sc_tcb_cross)
   apply (rule_tac Q="\<lambda>s'. pred_map (\<lambda>tcb. \<not> tcbInReleaseQueue tcb) (tcbs_of' s') (ksCurThread s')"
@@ -942,22 +975,26 @@ lemma kernel_corres:
               and (\<lambda>s. cur_sc_offset_sufficient (consumed_time s) s)
               and (\<lambda>s. scheduler_action s = resume_cur_thread)
               and valid_domain_list)
-             (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and (ct_running' or ct_idle') and
-              (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
+             invs'
              (call_kernel event) (callKernel event)"
   unfolding callKernel_def K_bind_def
   apply (rule corres_guard_imp)
     apply (rule corres_add_noop_lhs2)
     apply (simp only: bind_assoc[symmetric])
-    apply (rule corres_split[where r'=dc and
-                                   R="\<lambda>_ s. valid_domain_list s" and
-                                   R'="\<lambda>_. \<top>"])
-       apply (simp only: bind_assoc)
-       apply (rule kernel_corres')
-      apply (rule corres_bind_return2, rule corres_stateAssert_assume_stronger)
-       apply simp
-      apply (simp add: kernelExitAssertions_def state_relation_def)
-     apply (wp call_kernel_domain_time_inv_det_ext call_kernel_domain_list_inv_det_ext)
+    apply (rule corres_split_deprecated[where r'=dc and R="\<lambda>_ s. invs s \<and> valid_domain_list s"
+                                          and R'="\<lambda>_. \<top>"])
+       apply (rule corres_bind_return2, rule corres_stateAssert_assume_stronger)
+        apply simp
+       apply (simp add: kernelExitAssertions_def)
+       apply (intro conjI)
+        apply (clarsimp simp: state_relation_def)
+       apply (fastforce intro!: cur_tcb_cross)
+      apply (simp only: bind_assoc)
+      apply (rule kernel_corres')
+     apply (rule hoare_vcg_conj_lift)
+      apply (rule_tac Q="\<lambda>_ s. invs s \<and> (ct_running s \<or> ct_idle s)" in hoare_post_imp, fastforce)
+      apply (wp akernel_invs_det_ext)
+     apply (wp call_kernel_domain_list_inv_det_ext)
     apply wpsimp
    apply clarsimp
   apply clarsimp
@@ -978,9 +1015,7 @@ lemma device_mem_corres:
 lemma entry_corres:
   "corres (=)
       (\<lambda>s. mcs_invs s \<and> (ct_running s \<or> ct_idle s) \<and> (event \<noteq> Interrupt \<longrightarrow> ct_running s))
-      (invs' and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and (ct_running' or ct_idle')
-       and valid_domain_list'
-       and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
+      (invs' and valid_domain_list')
       (kernel_entry event tc) (kernelEntry event tc)"
   apply (simp add: kernel_entry_def kernelEntry_def)
   apply add_cur_tcb'
@@ -1159,11 +1194,6 @@ lemma sched_act_rct_related:
      \<Longrightarrow> scheduler_action a = resume_cur_thread"
   by (case_tac "scheduler_action a", simp_all add: state_relation_def)
 
-lemma resume_cur_thread_cross:
-  "\<lbrakk> (a, c) \<in> state_relation; scheduler_action a = resume_cur_thread\<rbrakk>
-     \<Longrightarrow> ksSchedulerAction c = ResumeCurrentThread"
-  by (case_tac "scheduler_action a", simp_all add: state_relation_def)
-
 lemma domain_time_rel_eq:
   "(a, c) \<in> state_relation \<Longrightarrow> P (ksDomainTime c) = P (domain_time a)"
   by (clarsimp simp: state_relation_def)
@@ -1174,28 +1204,6 @@ lemma domain_list_rel_eq:
 
 crunch valid_objs': doUserOp, checkActiveIRQ valid_objs'
   (wp: crunch_wps)
-
-lemma ct_running_cross:
-  "\<lbrakk>(a,c) \<in> state_relation; ct_running a; pspace_aligned a; pspace_distinct a\<rbrakk> \<Longrightarrow> ct_running' c"
-  apply (clarsimp simp: ct_in_state_def ct_in_state'_def)
-  apply (frule st_tcb_at_coerce_concrete)
-     apply fastforce+
-  apply (clarsimp simp: obj_at_simps state_relation_def)
-  done
-
-lemma ct_idle_cross:
-  "\<lbrakk>(a,c) \<in> state_relation; ct_idle a; pspace_aligned a; pspace_distinct a\<rbrakk> \<Longrightarrow> ct_idle' c"
-  apply (clarsimp simp: ct_in_state_def ct_in_state'_def)
-  apply (frule st_tcb_at_coerce_concrete)
-     apply fastforce+
-  apply (clarsimp simp: obj_at_simps state_relation_def)
-  done
-
-lemma ct_running_or_idle_cross:
-  "\<lbrakk>(a,c) \<in> state_relation; ct_running a \<or> ct_idle a; pspace_aligned a; pspace_distinct a\<rbrakk>
-   \<Longrightarrow> ct_running' c \<or> ct_idle' c"
-  apply (fastforce dest: ct_running_cross ct_idle_cross)
-  done
 
 lemma ckernel_invariant:
   "ADT_H uop \<Turnstile> full_invs'"
@@ -1238,37 +1246,36 @@ lemma ckernel_invariant:
       apply (rule kernelEntry_invs')
      apply clarsimp
      apply (rename_tac s' s; intro conjI)
-         apply (frule_tac s=s in invs_sym_refs)
-         apply (frule_tac s'=s' in state_refs_of_cross_eq)
-           apply fastforce
-          apply fastforce
-         apply force
-        apply (prop_tac "cur_sc s = ksCurSc s'", fastforce dest!: state_relationD)
-        apply (prop_tac "sc_at (cur_sc s) s")
-         apply (rule cur_sc_tcb_sc_at_cur_sc[OF invs_valid_objs invs_cur_sc_tcb]; simp)
-        apply (prop_tac "sc_at' (ksCurSc s') s'")
-         apply (rule sc_at_cross[OF state_relation_pspace_relation invs_psp_aligned invs_distinct]; simp)
-        apply (prop_tac "is_active_sc' (ksCurSc s') s'")
-         apply (rule is_active_sc'2_cross[OF _ invs_psp_aligned invs_distinct], simp+)
-
-       apply (clarsimp simp: invs'_def valid_pspace'_def, rule sym_refs_tcbSCs; simp?)
-       apply (clarsimp simp: invs_def valid_state_def valid_pspace_def state_refs_of_cross_eq)
-      apply (fastforce dest!: cur_sc_tcb_cross[simplified schact_is_rct_def]
-                        simp: invs_def valid_state_def valid_pspace_def)
-     apply (clarsimp simp: invs'_def valid_release_queue'_def)
-     apply (prop_tac "cur_tcb' s'")
-      apply (rule cur_tcb_cross[OF invs_cur invs_psp_aligned invs_distinct]; simp?)
-     apply (clarsimp simp: cur_tcb'_def)
-     apply (clarsimp simp: pred_map_def obj_at'_def projectKOs opt_map_red not_in_release_q_def
-                           release_queue_relation_def
-                    dest!: state_relationD)
+            apply (frule_tac s=s in invs_sym_refs)
+            apply (frule_tac s'=s' in state_refs_of_cross_eq)
+              apply fastforce
+             apply fastforce
+            apply force
+           subgoal by (fastforce intro!: ct_running_cross)
+          apply (rule ct_running_or_idle_cross; simp?; fastforce)
+         apply (prop_tac "cur_sc s = ksCurSc s'", fastforce dest!: state_relationD)
+         apply (prop_tac "sc_at (cur_sc s) s")
+          apply (rule cur_sc_tcb_sc_at_cur_sc[OF invs_valid_objs invs_cur_sc_tcb]; simp)
+         apply (prop_tac "sc_at' (ksCurSc s') s'")
+          apply (rule sc_at_cross[OF state_relation_pspace_relation invs_psp_aligned invs_distinct]; simp)
+         apply (prop_tac "is_active_sc' (ksCurSc s') s'")
+          apply (rule is_active_sc'2_cross[OF _ invs_psp_aligned invs_distinct], simp+)
+        apply (clarsimp simp: invs'_def valid_pspace'_def, rule sym_refs_tcbSCs; simp?)
+        apply (clarsimp simp: invs_def valid_state_def valid_pspace_def state_refs_of_cross_eq)
+       apply (fastforce dest!: cur_sc_tcb_cross[simplified schact_is_rct_def]
+                         simp: invs_def valid_state_def valid_pspace_def)
+      apply (clarsimp simp: invs'_def valid_release_queue'_def)
+      apply (prop_tac "cur_tcb' s'")
+       apply (rule cur_tcb_cross[OF invs_cur invs_psp_aligned invs_distinct]; simp?)
+      apply (clarsimp simp: cur_tcb'_def)
+      apply (clarsimp simp: pred_map_def obj_at'_def projectKOs opt_map_red not_in_release_q_def
+                            release_queue_relation_def
+                     dest!: state_relationD)
+     subgoal by (fastforce intro!: resume_cur_thread_cross)
 
     apply clarsimp
     apply (rule_tac x=abs_state in exI)
     apply (intro conjI; (clarsimp; fail)?)
-      subgoal by (fastforce intro: ct_running_cross)
-     apply (rule ct_running_or_idle_cross; simp?; fastforce)
-    subgoal by (fastforce intro!: resume_cur_thread_cross)
 
    apply clarsimp
    apply (intro conjI impI)
@@ -1368,8 +1375,6 @@ lemma fw_sim_A_H:
     apply (clarsimp simp: corres_underlying_def)
     apply (drule_tac x="(abs_state, conc_state)" in bspec, blast)
     apply clarsimp
-    apply (frule (1) ct_running_or_idle_cross; clarsimp)
-    apply (prop_tac "event \<noteq> Interrupt \<longrightarrow> ct_running' conc_state", fastforce dest!: ct_running_cross)
     apply (prop_tac "valid_domain_list' conc_state \<and> ksSchedulerAction conc_state = ResumeCurrentThread")
      apply (clarsimp simp: state_relation_def)
     apply clarsimp
