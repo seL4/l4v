@@ -499,13 +499,11 @@ lemma ccorres_corres_u_xf:
   done
 
 definition
-  "all_invs' e \<equiv> \<lambda>s'. \<exists>s :: det_state.
-    (s,s') \<in> state_relation \<and>
-    (mcs_invs s \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s) \<and> (ct_running s \<or> ct_idle s)
-     \<and> domain_time s \<noteq> 0) \<and>
-    (invs' s' \<and>
-      (e \<noteq> Interrupt \<longrightarrow> ct_running' s') \<and> (ct_running' s' \<or> ct_idle' s') \<and>
-      ksSchedulerAction s' = ResumeCurrentThread  \<and> ksDomainTime s' \<noteq> 0)"
+  "all_invs' e \<equiv>
+     \<lambda>s'. \<exists>s. (s, s') \<in> state_relation
+              \<and> (mcs_invs s \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s)
+                 \<and> (ct_running s \<or> ct_idle s))
+              \<and> invs' s'"
 
 lemma no_fail_callKernel:
   "no_fail (all_invs' e) (callKernel e)"
@@ -548,43 +546,53 @@ lemma callKernel_corres_C:
   using no_fail_callKernel [of e]
   apply (clarsimp simp: callKernel_C_def)
   apply (cases e, simp_all)
-      prefer 4
-      apply (rule ccorres_corres_u)
-       apply simp
-       apply (rule ccorres_guard_imp)
-         apply (rule handleInterruptEntry_ccorres)
-        apply (clarsimp simp: all_invs'_def sch_act_simple_def)
-       apply simp
-      apply assumption
-     prefer 2
+       prefer 4
+       apply (rule ccorres_corres_u)
+        apply simp
+        apply (rule ccorres_guard_imp)
+          apply (rule handleInterruptEntry_ccorres)
+         apply (clarsimp simp: all_invs'_def sch_act_simple_def)
+         apply (fastforce intro!: resume_cur_thread_cross)
+        apply simp
+       apply assumption
+      prefer 2
+      apply (rule ccorres_corres_u [rotated], assumption)
+      apply simp
+      apply (rule ccorres_guard_imp)
+        apply (rule ccorres_call)
+           apply (rule handleUnknownSyscall_ccorres)
+          apply (clarsimp simp: all_invs'_def sch_act_simple_def)+
+       apply (fastforce intro!: resume_cur_thread_cross ct_running_cross)
+      apply fastforce
+     prefer 3
      apply (rule ccorres_corres_u [rotated], assumption)
-     apply simp
-     apply (rule ccorres_guard_imp)
-       apply (rule ccorres_call)
-          apply (rule handleUnknownSyscall_ccorres)
-         apply (clarsimp simp: all_invs'_def sch_act_simple_def)+
-    prefer 3
-    apply (rule ccorres_corres_u [rotated], assumption)
      apply (rule ccorres_guard_imp)
        apply (rule ccorres_call)
           apply (rule handleVMFaultEvent_ccorres)
          apply (clarsimp simp: all_invs'_def sch_act_simple_def)+
-   prefer 2
-   apply (rule ccorres_corres_u [rotated], assumption)
+      apply (fastforce intro!: resume_cur_thread_cross ct_running_cross)
+     apply fastforce
+    prefer 2
+    apply (rule ccorres_corres_u [rotated], assumption)
     apply (rule ccorres_guard_imp)
       apply (rule ccorres_call)
          apply (rule handleUserLevelFault_ccorres)
         apply (clarsimp simp: all_invs'_def sch_act_simple_def)+
-  apply (rule ccorres_corres_u [rotated], assumption)
+     apply (fastforce intro!: resume_cur_thread_cross ct_running_cross)
+    apply fastforce
+   apply (rule ccorres_corres_u [rotated], assumption)
    apply (rule ccorres_guard_imp)
      apply (rule ccorres_call)
         apply (rule handleSyscall_ccorres)
        apply (clarsimp simp: all_invs'_def sch_act_simple_def)+
-   apply (rule ccorres_corres_u [rotated], assumption)
-    apply (rule ccorres_guard_imp)
-         apply (rule handleHypervisorEvent_ccorres)
-        apply (clarsimp simp: all_invs'_def sch_act_simple_def)
-       apply simp
+    apply (fastforce intro!: resume_cur_thread_cross ct_running_cross)
+   apply fastforce
+  apply (rule ccorres_corres_u [rotated], assumption)
+  apply (rule ccorres_guard_imp)
+    apply (rule handleHypervisorEvent_ccorres)
+   apply (clarsimp simp: all_invs'_def sch_act_simple_def)
+   apply (fastforce intro!: resume_cur_thread_cross)
+  apply simp
   done
 
 lemma ccorres_add_gets:
@@ -1021,34 +1029,87 @@ lemma refinement2_both:
 
   apply (erule_tac P="a \<and> (\<exists>x. b x)" for a b in disjE)
   apply (clarsimp simp add: kernel_call_C_def kernel_call_H_def)
-  apply (subgoal_tac "all_invs' x b")
-   apply (drule_tac fp=fp and tc=af in entry_refinement_C, simp+)
-   apply clarsimp
-   apply (drule spec, drule spec, drule(1) mp)
-   apply (clarsimp simp: full_invs'_def)
-   apply (frule use_valid, rule kernelEntry_invs',
-          simp add: sch_act_simple_def)
-sorry (* FIXME RT: refinement2_both
+   apply (rename_tac haskell_state uc' cstate md cstate' abstract_state uc e)
+   apply (subgoal_tac "all_invs' e haskell_state")
+    apply (drule_tac fp=fp and tc=uc in entry_refinement_C, simp+)
+    apply clarsimp
+    apply (drule spec, drule spec, drule(1) mp)
+    apply (clarsimp simp: full_invs'_def)
+    apply (frule use_valid, rule kernelEntry_invs',
+           simp add: sch_act_simple_def)
+     apply (clarsimp simp: ex_abs_def full_invs_def)
+     apply (intro conjI)
+             apply (frule_tac s=abstract_state in invs_sym_refs)
+             apply (frule_tac s'=haskell_state in state_refs_of_cross_eq)
+               apply fastforce
+              apply fastforce
+             apply force
+            apply clarsimp
+            apply (erule (1) ct_running_cross)
+             apply fastforce
+            apply fastforce
+           apply (rule ct_running_or_idle_cross; simp?; fastforce)
+          apply (prop_tac "cur_sc abstract_state = ksCurSc haskell_state",
+                 fastforce dest!: state_relationD)
+          apply (prop_tac "sc_at (cur_sc abstract_state) abstract_state")
+           apply (rule cur_sc_tcb_sc_at_cur_sc[OF invs_valid_objs invs_cur_sc_tcb]; simp)
+          apply (prop_tac "sc_at' (ksCurSc haskell_state) haskell_state")
+           apply (rule sc_at_cross[OF state_relation_pspace_relation invs_psp_aligned invs_distinct]; simp)
+          apply (prop_tac "is_active_sc' (ksCurSc haskell_state) haskell_state")
+           apply (rule is_active_sc'2_cross[OF _ invs_psp_aligned invs_distinct], simp+)
+         apply (clarsimp simp: invs'_def valid_pspace'_def)
+         apply (rule sym_refs_tcbSCs; simp?)
+         apply (clarsimp simp: invs_def valid_state_def valid_pspace_def state_refs_of_cross_eq)
+        apply (fastforce dest!: cur_sc_tcb_cross[simplified schact_is_rct_def]
+                          simp: invs_def valid_state_def valid_pspace_def)
+       apply (clarsimp simp: invs'_def valid_release_queue'_def)
+       apply (prop_tac "cur_tcb' haskell_state")
+        apply (rule cur_tcb_cross[OF invs_cur invs_psp_aligned invs_distinct]; simp?)
+       apply (clarsimp simp: cur_tcb'_def)
+       apply (clarsimp simp: pred_map_def obj_at'_def opt_map_red not_in_release_q_def
+                             release_queue_relation_def
+                      dest!: state_relationD)
+      apply (frule_tac a=abstract_state in resume_cur_thread_cross; fastforce)
+     apply (clarsimp simp: state_relation_def)
     apply (fastforce simp: ct_running'_C)
-    apply (clarsimp simp: full_invs_def full_invs'_def all_invs'_def)
-   apply fastforce
+   apply (fastforce simp: full_invs_def full_invs'_def all_invs'_def
+                   intro: resume_cur_thread_cross)
 
   apply (erule_tac P="a \<and> b \<and> c \<and> d \<and> e" for a b c d e in disjE)
    apply (clarsimp simp add: do_user_op_C_def do_user_op_H_def monad_to_transition_def)
    apply (rule rev_mp, rule_tac f="uop" and tc=af in do_user_op_corres_C)
    apply (clarsimp simp: corres_underlying_def invs_def ex_abs_def)
-   apply (fastforce simp: full_invs'_def ex_abs_def)
+   apply (drule bspec)
+    apply fastforce
+   apply clarsimp
+   apply (elim impE)
+    apply (clarsimp simp: full_invs'_def ex_abs_def)
+    apply (intro conjI)
+     apply (rule_tac s=s in sch_act_wf_cross; fastforce?)
+     subgoal by (clarsimp simp: valid_sched_def)
+    apply fastforce
+   apply fastforce
 
   apply (erule_tac P="a \<and> b \<and> c \<and> (\<exists>x. e x)" for a b c d e in disjE)
    apply (clarsimp simp add: do_user_op_C_def do_user_op_H_def monad_to_transition_def)
    apply (rule rev_mp, rule_tac f="uop" and tc=af in do_user_op_corres_C)
    apply (clarsimp simp: corres_underlying_def invs_def ex_abs_def)
-   apply (fastforce simp: full_invs'_def ex_abs_def)
+   apply (drule bspec)
+    apply fastforce
+   apply clarsimp
+   apply (elim impE)
+    apply (clarsimp simp: full_invs'_def ex_abs_def)
+    apply (intro conjI)
+     apply (rule_tac s=s in sch_act_wf_cross; fastforce?)
+     subgoal by (clarsimp simp: valid_sched_def)
+    apply fastforce
+   apply fastforce
 
   apply (clarsimp simp: check_active_irq_C_def check_active_irq_H_def)
   apply (rule rev_mp, rule check_active_irq_corres_C)
-  apply (fastforce simp: corres_underlying_def full_invs'_def ex_abs_def)
-  done *)
+  by (fastforce simp: corres_underlying_def full_invs'_def ex_abs_def
+               intro: resume_cur_thread_cross)
+
 
 theorem refinement2:
   "ADT_C uop \<sqsubseteq> ADT_H uop"
