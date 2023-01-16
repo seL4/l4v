@@ -10,7 +10,8 @@ begin
 
 text \<open>
   This theory deals with the preservation of domain_list validity over kernel invocations,
-  as well as ensuring preserving that the domain time is never zero at kernel exit.
+  as well as ensuring preserving that the domain time is never zero at kernel exit (if there is
+  more than one domain).
 \<close>
 
 (* Note: domains in the domain list should also be \<le> maxDomain, but this is not needed right now *)
@@ -323,7 +324,11 @@ lemma call_kernel_domain_list_inv_det_ext:
 end
 
 
-section \<open>Preservation of domain time remaining\<close>
+section \<open>Preservation of domain time remaining.\<close>
+
+text \<open> When numDomains = 1, the domain scheduler is not in use, and the notion of the domain time
+       does not hold any significance. Therefore, many of our results on the domain time are stated
+       only in the case where 1 < numDomains. \<close>
 
 lemma check_domain_time_domain_time_zero_imp_sched_act_choose_new_thread[wp]:
   "\<lbrace>\<top>\<rbrace>
@@ -400,7 +405,7 @@ crunches activate_thread
 lemma call_kernel_domain_time_inv_det_ext:
   "\<lbrace>valid_domain_list and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running s)\<rbrace>
    call_kernel e
-   \<lbrace>\<lambda>_ s :: det_state. Suc 0 < numDomains \<longrightarrow> 0 < domain_time s \<rbrace>"
+   \<lbrace>\<lambda>_ s :: det_state. Suc 0 < numDomains \<longrightarrow> 0 < domain_time s\<rbrace>"
   unfolding call_kernel_def
   apply (case_tac "e = Interrupt"; clarsimp)
    apply (wpsimp wp: schedule_domain_time_left)
