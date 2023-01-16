@@ -236,7 +236,15 @@ thm pt_lookup_slot_from_level_def
 definition pt_all_slots_of ::
   "vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref \<rightharpoonup> pte) \<Rightarrow> obj_ref set"
   where
-  "pt_all_slots_of ltop pt vptr kh \<equiv> {ptr. (\<exists>l.
+  "pt_all_slots_of ltop pt vptr kh \<equiv> {ptr. (\<exists>lbot l.
+    pt_walk ltop lbot pt vptr kh = Some (l, ptr)
+  )}"
+
+
+definition pt_all_slots_of'' ::
+  "vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref \<rightharpoonup> pte) \<Rightarrow> obj_ref set"
+  where
+  "pt_all_slots_of'' ltop pt vptr kh \<equiv> {ptr. (\<exists>l.
     pt_lookup_slot_from_level ltop 0 pt vptr kh = Some (l, ptr)
   )}"
 

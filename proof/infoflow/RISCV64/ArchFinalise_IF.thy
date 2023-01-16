@@ -42,7 +42,7 @@ lemma equiv_asid_ready_queues_update[Finalise_IF_assms, simp]:
 
 lemma arch_finalise_cap_makes_halted[Finalise_IF_assms]:
   "\<lbrace>invs and valid_cap (ArchObjectCap arch_cap)
-        and (\<lambda>s. ex = is_final_cap' (ArchObjectCap arch_cap) s)
+        and (\<lambda>s. ex = is_final_cap' False (ArchObjectCap arch_cap) s)
         and cte_wp_at ((=) (ArchObjectCap arch_cap)) slot\<rbrace>
    arch_finalise_cap arch_cap ex
    \<lbrace>\<lambda>rv s. \<forall>t \<in> obj_refs_ac (fst rv). halted_if_tcb t s\<rbrace>"
@@ -52,7 +52,7 @@ lemma arch_finalise_cap_makes_halted[Finalise_IF_assms]:
 lemma set_object_modifies_at_most:
   "modifies_at_most aag {pasObjectAbs aag ptr}
                     (\<lambda>s. \<not> asid_pool_at ptr s \<and> (\<forall>asid_pool. obj \<noteq> ArchObj (ASIDPool asid_pool)))
-                    (set_object ptr obj)"
+                    (set_object False ptr obj)"
   apply (rule modifies_at_mostI)
   apply (wp set_object_equiv_but_for_labels)
   apply clarsimp

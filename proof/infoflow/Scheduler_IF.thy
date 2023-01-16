@@ -33,7 +33,7 @@ abbreviation reads_scheduler_cur_domain where
      pasDomainAbs aag (cur_domain s) \<inter> reads_scheduler aag l \<noteq> {}"
 
 definition idle_context where
-  "idle_context s = arch_tcb_context_get (tcb_arch (the (get_tcb (idle_thread s) s)))"
+  "idle_context s = arch_tcb_context_get (tcb_arch (the (get_tcb False (idle_thread s) s)))"
 
 
 locale Scheduler_IF_1 =
@@ -105,7 +105,7 @@ locale Scheduler_IF_1 =
   and arch_switch_to_idle_thread_work_units_completed[wp]:
     "\<And>P. arch_switch_to_idle_thread \<lbrace>\<lambda>s. P (work_units_completed s)\<rbrace>"
   and equiv_asid_equiv_update:
-    "\<lbrakk> get_tcb x s = Some y; equiv_asid asid st s \<rbrakk>
+    "\<lbrakk> get_tcb False x s = Some y; equiv_asid asid st s \<rbrakk>
        \<Longrightarrow> equiv_asid asid st (s\<lparr>kheap := kheap s(x \<mapsto> TCB y')\<rparr>)"
   and equiv_asid_cur_thread_update[simp]:
     "\<And>f. equiv_asid asid (cur_thread_update f s) s' = equiv_asid asid s s'"
@@ -637,7 +637,7 @@ crunch idle_thread[wp]: guarded_switch_to,schedule "\<lambda>(s :: det_state). P
   (wp: crunch_wps simp: crunch_simps)
 
 crunch kheap[wp]: guarded_switch_to, schedule "\<lambda>s :: det_state. P (kheap s)"
-  (wp: dxo_wp_weak crunch_wps simp: crunch_simps)
+  (wp: dxo_wp_weak crunch_wps touch_objects_wp simp: crunch_simps)
 
 end
 
@@ -1051,7 +1051,7 @@ locale Scheduler_IF_2 = Scheduler_IF_1 +
      thread_set (tcb_arch_update (arch_tcb_context_set tc)) x
      \<lbrace>\<lambda>_. scheduler_affects_equiv aag l st\<rbrace>"
   and set_object_reads_respects_scheduler[wp]:
-    "reads_respects_scheduler aag l \<top> (set_object ptr obj)"
+    "reads_respects_scheduler aag l \<top> (set_object False ptr obj)"
   and arch_activate_idle_thread_reads_respects_scheduler[wp]:
     "reads_respects_scheduler aag l \<top> (arch_activate_idle_thread rv)"
   and arch_activate_idle_thread_silc_dom_equiv[wp]:
@@ -2136,7 +2136,7 @@ lemma reads_respects_only_scheduler:
 
 lemma get_tcb_scheduler_equiv:
   "\<lbrakk> pasObjectAbs aag rv \<in> reads_scheduler aag l; scheduler_affects_equiv aag l s t \<rbrakk>
-     \<Longrightarrow> get_tcb rv s = get_tcb rv t"
+     \<Longrightarrow> get_tcb False rv s = get_tcb False rv t"
   by (clarsimp simp: get_tcb_def scheduler_affects_equiv_def states_equiv_for_def equiv_for_def
               split: option.splits kernel_object.splits)
 
@@ -2253,7 +2253,7 @@ lemma set_scheduler_action_wp[wp]:
 context Scheduler_IF_1 begin
 
 lemma scheduler_affects_equiv_update:
-  "\<lbrakk> get_tcb x s = Some y; pasObjectAbs aag x \<notin> reads_scheduler aag l;
+  "\<lbrakk> get_tcb False x s = Some y; pasObjectAbs aag x \<notin> reads_scheduler aag l;
      scheduler_affects_equiv aag l st s \<rbrakk>
      \<Longrightarrow> scheduler_affects_equiv aag l st (s\<lparr>kheap := kheap s(x \<mapsto> TCB y')\<rparr>)"
   by (clarsimp simp: scheduler_affects_equiv_def equiv_for_def equiv_asids_def

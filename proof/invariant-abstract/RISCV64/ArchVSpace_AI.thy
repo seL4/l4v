@@ -356,42 +356,6 @@ lemma find_vspace_for_asid_tainv:
   this later on. Undfortunately as this is now asking for two different properties, we can't
   really push this into the framework nicely. *)
 
-
-
-lemma ta_agnostic_allI:
-  "(\<forall>x. ta_agnostic (\<lambda>s. P x s)) \<Longrightarrow>
-  ta_agnostic (\<lambda>s. \<forall>x. P x s)"
-  apply (clarsimp simp: ta_agnostic_def)
-  done
-
-lemma ta_agnostic_imp:
-  "\<lbrakk>ta_agnostic Q;
-  ta_agnostic P\<rbrakk> \<Longrightarrow>
-  ta_agnostic (\<lambda>s. Q s \<longrightarrow> P s)"
-  apply (clarsimp simp:ta_agnostic_def)
-  done
-
-
-\<comment> \<open>note that ta is not strictly safe! conj and predconj and irrel_imp aren't safe,
-   but we haven't yet come across scenarios where it isn't true, so `ta` intros these without
-   backtracking\<close>
-method ta uses simp = (
-  \<comment> \<open>simplest solve by unwrapping ta_agnostic (plus whatever is given in simp)\<close>
-  (solves \<open>clarsimp simp: ta_agnostic_def simp\<close>)
-  \<comment> \<open>optionally do some simplification before trying other approaches\<close>
-  | (clarsimp simp: simp)?, (
-  \<comment> \<open>unwrap conj and predconj\<close>
-  \<comment> \<open>fixme: only succeed if we complete generated subgoals?\<close>
-  intro allI impI
-        ta_agnostic_irrel_imp ta_agnostic_predconj ta_agnostic_conj
-        ta_agnostic_ex_all ta_agnostic_allI ta_agnostic_imp; ta?
-  ))
-
-method tasafe uses simp =
-  (solves \<open>ta\<close>)
-
-
-
 lemma set_vm_root_typ_at[wp]:
   "set_vm_root t \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>"
   unfolding set_vm_root_def
@@ -1414,16 +1378,6 @@ lemma already_touched_meow2:
   apply (case_tac "obj_range (table_base xa) (ArchObj (PageTable x2)) \<subseteq> S"; clarsimp)
   done
 
-
-
-lemma table_base_apology:
-  "x = table_base (pt_slot_offset level pt_ptr vptr) \<Longrightarrow>
-  (x::obj_ref) \<in> obj_range x (y::kernel_object)"
-  unfolding obj_range_def
-  apply (clarsimp simp: obj_range_def)
-  sorry (* I am pretty sure this is true, I'm just not sure how to prove it *)
-
-
 lemma already_touched_meow_pteofaux:
   "0 < level \<Longrightarrow>
 ((\<Union>x\<in>{(p, ko). p \<in> pt_all_slots_of level pt vptr
@@ -1433,9 +1387,6 @@ lemma already_touched_meow_pteofaux:
      (obind (kheap s) (ta_filter True S) |> aobj_of |> pt_of) =
     pte_of (pt_slot_offset level pt vptr)
      (kheap s |> aobj_of |> pt_of)"
-  sorry
-  (*
-
   apply (subst pte_of_def, subst pte_of_def, clarsimp)
   apply (intro obind_eqI_full; clarsimp)
   apply (subst (asm) obind_def opt_map_def)+
@@ -1443,7 +1394,6 @@ lemma already_touched_meow_pteofaux:
   apply (clarsimp simp: obind_def opt_map_def ta_filter_def split: option.splits)
   apply (intro conjI impI allI)
     apply clarsimp+
-  
   apply (subgoal_tac "x \<in> S", simp)
   apply (erule set_mp)
   apply clarsimp
@@ -1451,23 +1401,10 @@ lemma already_touched_meow_pteofaux:
   apply (intro conjI)
    defer
    apply (simp add: obj_at_def)
+  apply (clarsimp simp: pt_all_slots_of_def pt_walk.simps)
   find_theorems table_base pt_slot_offset
-  apply (clarsimp simp: pt_all_slots_of_def pt_lookup_slot_from_level_def)
-  apply (subst pt_walk.simps)
-  apply (rule_tac x=level in exI)
-  apply clarsimp
-  find_theorems table_base
-  find_theorems pt_slot_offset table_base
+  sorry
   
-  
-  apply (clarsimp simp: pt_all_slots_of_def pt_lookup_slot_def pt_lookup_slot_from_level_def)
-  apply (clarsimp simp: obind_def opt_map_def aobj_of_def pte_of_def 
-                 split: option.splits)
-  apply (subst pt_walk.simps)
-  apply (clarsimp simp: obind_def opt_map_def aobj_of_def pte_of_def 
-                 split: option.splits)
-  apply (intro conjI impI allI)
-  sorry *)
   
 
 lemma obind_def2:
@@ -1491,6 +1428,8 @@ lemma all_slots_of_subset_aux:
   apply (subst pt_all_slots_of_def pt_lookup_slot_def pt_lookup_slot_from_level_def)+
   apply clarsimp
   apply (clarsimp simp: pt_all_slots_of_def)
+  sorry (*
+  apply (erule disjE; clarsimp)
   apply (clarsimp simp: pt_lookup_slot_from_level_def)
   apply (subst pt_walk.simps)
   apply (rule_tac x="aa" in exI)
@@ -1498,7 +1437,7 @@ lemma all_slots_of_subset_aux:
   apply (subst obind_def2)
   apply (subst obind_def2)
   apply clarsimp
-  done
+  done *)
 
 lemma subset_eq_obj_range:
   "A \<subseteq> B \<Longrightarrow>
@@ -1537,22 +1476,21 @@ lemma already_touched_meow_ptwalkaux:
   apply (subst (1 2) pt_walk.simps)
   apply (case_tac "bot_level < level"; clarsimp)
   apply (intro obind_eqI_full; clarsimp)
-   defer
-   apply (drule_tac x=x in meta_spec)
-   apply (drule_tac x="\<lambda>x. pte_of x (obind (kheap s) (ta_filter True S) |> aobj_of |> pt_of)" in meta_spec)
-   apply clarsimp
-   apply (subgoal_tac "(\<Union>x\<in>{(p, ko).
-               p \<in> pt_all_slots_of (level - 1) (pptr_from_pte x) vptr
-                     (\<lambda>p'. pte_of p' (kheap s |> aobj_of |> pt_of)) \<and>
-               ko_at ko p s}.
-             case x of (x, xa) \<Rightarrow> obj_range x xa)
-         \<subseteq> S", clarsimp)
-   apply (drule pte_of_remove_tafilter)
-   apply (rule subset_trans)
-    apply (rule_tac level="level" and pt_ptr=pt_ptr in all_slots_of_subset)
-     apply clarsimp+
-  apply (rule already_touched_meow_pteofaux)
+   apply (rule already_touched_meow_pteofaux)
     apply simp+
+  apply (drule_tac x=x in meta_spec)
+  apply (drule_tac x="\<lambda>x. pte_of x (obind (kheap s) (ta_filter True S) |> aobj_of |> pt_of)" in meta_spec)
+  apply clarsimp
+  apply (subgoal_tac "(\<Union>x\<in>{(p, ko).
+              p \<in> pt_all_slots_of (level - 1) (pptr_from_pte x) vptr
+                    (\<lambda>p'. pte_of p' (kheap s |> aobj_of |> pt_of)) \<and>
+              ko_at ko p s}.
+            case x of (x, xa) \<Rightarrow> obj_range x xa)
+        \<subseteq> S", clarsimp)
+  apply (drule pte_of_remove_tafilter)
+  apply (rule subset_trans)
+   apply (rule_tac level="level" and pt_ptr=pt_ptr in all_slots_of_subset)
+    apply clarsimp+
   done
 
 lemma already_touched_meow:

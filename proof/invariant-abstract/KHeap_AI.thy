@@ -1669,46 +1669,6 @@ lemma dmo_ct_in_state:
 
 subsection "TA Agnostic for invs"
 
-lemma ta_agnostic_conj:
-  "\<lbrakk>ta_agnostic P1; ta_agnostic P2\<rbrakk> \<Longrightarrow>
-  ta_agnostic (\<lambda>s. P1 s \<and> P2 s)"
-  by (clarsimp simp:ta_agnostic_def)
-
-lemma ta_agnostic_predconj:
-  "\<lbrakk>ta_agnostic P1; ta_agnostic P2\<rbrakk> \<Longrightarrow>
-  ta_agnostic (P1 and P2)"
-  by (clarsimp simp:ta_agnostic_def)
-
-lemma ta_agnostic_null[simp]:
-  "ta_agnostic (\<lambda>s. P)"
-  by (clarsimp simp:ta_agnostic_def)
-
-lemma ta_agnostic_irrel_imp:
-  "\<lbrakk>ta_agnostic P\<rbrakk> \<Longrightarrow>
-  ta_agnostic (\<lambda>s. Q \<longrightarrow> P s)"
-  apply (clarsimp simp:ta_agnostic_def)
-  done
-
-lemma ignored_agnostic [simp]:
-  "ta_agnostic (ignore_ta P)"
-  apply (clarsimp simp:ta_agnostic_def)
-  apply (rule iffI; clarsimp)
-  apply (drule_tac x="\<lambda>_. tafa (touched_addresses (machine_state s))" in spec)
-  apply clarsimp
-  apply (metis (mono_tags, lifting) RISCV64.fold_congs(5) abstract_state.fold_congs(6))
-  done
-
-lemma ta_agnostic_ex_all:
-  "(\<forall>x. ta_agnostic (P x)) \<Longrightarrow>
-  ta_agnostic (\<lambda>s. \<exists>x. P x s)"
-  apply (clarsimp simp:ta_agnostic_def)
-  done
-
-lemmas ta_agnostic_lemmas = ignored_agnostic
-                            ta_agnostic_conj
-                            ta_agnostic_predconj
-                            ta_agnostic_irrel_imp
-
 sublocale touched_addresses_inv \<subseteq> valid_pspace: touched_addresses_P_inv _ _ valid_pspace
                                 + valid_irq_states: touched_addresses_P_inv _ _ valid_irq_states
                                 + valid_machine_state: touched_addresses_P_inv _ _ valid_machine_state

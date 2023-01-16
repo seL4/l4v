@@ -604,6 +604,18 @@ lemma reads_respects_g_from_inv:
    apply simp+
   done
 
+lemma globals_equiv_ta_agnostic:
+  "ta_agnostic (globals_equiv st)"
+  sorry (* in RISCV64 this is true *)
+
+(* as read_respects_g_from_inv, but for tainv *)
+lemma reads_respects_g_from_tainv:
+  "\<lbrakk> reads_respects aag l P f; \<And>st. f \<lbrace>ignore_ta (globals_equiv st)\<rbrace> \<rbrakk>
+     \<Longrightarrow> reads_respects_g aag l P f"
+  apply (subst (asm) agnostic_ignores, rule globals_equiv_ta_agnostic)+
+  apply (erule reads_respects_g_from_inv; clarsimp)
+  done
+
 (*Useful for chaining OFs so we don't have to re-state rules*)
 lemma reads_respects_g':
   assumes rev: "reads_respects aag l P f"

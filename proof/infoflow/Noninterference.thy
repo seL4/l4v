@@ -325,7 +325,7 @@ lemma prop_of_two_valid:
   by (rule hoare_pre, wps f g, wp, simp)
 
 lemma thread_set_tcb_context_update_wp:
-  "\<lbrace>\<lambda>s. P (s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb_arch_update f (the (get_tcb t s))))\<rparr>)\<rbrace>
+  "\<lbrace>\<lambda>s. P (s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb_arch_update f (the (get_tcb False t s))))\<rparr>)\<rbrace>
    thread_set (tcb_arch_update f) t
    \<lbrace>\<lambda>_. P\<rbrace>"
   apply (simp add: thread_set_def)
@@ -2927,7 +2927,7 @@ lemma thread_get_tcb_context_reads_respects_g_helper:
   "equiv_valid_rv_inv (reads_equiv_g aag) (affects_equiv aag l)
      (\<lambda>rv rv'. arch_tcb_context_get (tcb_arch rv) = arch_tcb_context_get (tcb_arch rv'))
      (\<lambda>s. t = idle_thread s \<or> is_subject aag t)
-     (gets (get_tcb t) >>= assert_opt)"
+     (gets (get_tcb False t) >>= assert_opt)"
   apply (clarsimp simp: equiv_valid_2_def in_monad reads_equiv_g_def)
   apply (erule disjE)
    apply (frule globals_equiv_idle_thread_ptr)

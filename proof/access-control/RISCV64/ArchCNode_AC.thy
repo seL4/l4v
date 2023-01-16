@@ -97,7 +97,7 @@ crunches set_cdt
 
 crunches prepare_thread_delete, arch_finalise_cap
   for cur_domain[CNode_AC_assms, wp]:"\<lambda>s. P (cur_domain s)"
-  (wp: crunch_wps select_wp hoare_vcg_if_lift2 pt_lookup_from_level_tainv find_vspace_for_asid_inv
+  (wp: crunch_wps select_wp hoare_vcg_if_lift2 pt_lookup_from_level_tainv find_vspace_for_asid_tainv
    simp: unless_def ta_agnostic_def)
 
 lemma state_vrefs_tcb_upd[CNode_AC_assms]:

@@ -52,7 +52,7 @@ lemma set_vm_root_silc_inv[FinalCaps_assms, wp]:
 
 crunches arch_finalise_cap, prepare_thread_delete, init_arch_objects
   for silc_inv[FinalCaps_assms, wp]: "silc_inv aag st"
-  (wp: crunch_wps modify_wp pt_lookup_from_level_tainv find_vspace_for_asid_inv
+  (wp: crunch_wps modify_wp pt_lookup_from_level_tainv find_vspace_for_asid_tainv
    simp: crunch_simps ta_agnostic_def ignore: set_object)
 
 lemma arch_mask_interrupts_silc_inv[FinalCaps_assms, wp]:

@@ -561,7 +561,7 @@ lemma decode_invocation_authorised_globals_inv:
 lemma handle_invocation_reads_respects_g:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   notes gts_st_tcb[wp del] gts_st_tcb_at[wp del]
-  notes get_message_info_reads_respects_g = reads_respects_g_from_inv[OF get_message_info_rev get_mi_inv]
+  notes get_message_info_reads_respects_g = reads_respects_g_from_tainv[OF get_message_info_rev get_mi_tainv]
   shows "reads_respects_f_g aag l
            (silc_inv aag st and only_timer_irq_inv irq st' and einvs and schact_is_rct and ct_active
                             and pas_refined aag and pas_cur_domain aag

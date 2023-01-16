@@ -45,7 +45,7 @@ locale Finalise_IF_1 =
                           (arch_finalise_cap cap is_final)"
   and arch_finalise_cap_makes_halted:
     "\<lbrace>invs and valid_cap (ArchObjectCap acap)
-           and (\<lambda>s. ex = is_final_cap' (ArchObjectCap acap) s)
+           and (\<lambda>s. ex = is_final_cap' False (ArchObjectCap acap) s)
            and cte_wp_at ((=) (ArchObjectCap acap)) slot\<rbrace>
      arch_finalise_cap acap ex
      \<lbrace>\<lambda>rv s :: det_state. \<forall>t \<in> obj_refs_ac (fst rv). halted_if_tcb t s\<rbrace>"
@@ -110,7 +110,7 @@ end
 
 lemma requiv_get_tcb_eq':
   "\<lbrakk> reads_equiv aag s t; aag_can_read aag thread \<rbrakk>
-     \<Longrightarrow> get_tcb thread s = get_tcb thread t"
+     \<Longrightarrow> get_tcb False thread s = get_tcb False thread t"
   by (auto simp: reads_equiv_def2 get_tcb_def
            elim: states_equiv_forE_kheap
           dest!: aag_can_read_self)
@@ -209,7 +209,7 @@ lemma get_ep_queue_reads_respects:
   done
 
 lemma get_object_reads_respects:
-  "reads_respects aag l (K (aag_can_read aag ptr \<or> (aag_can_affect aag l ptr))) (get_object ptr)"
+  "reads_respects aag l (K (aag_can_read aag ptr \<or> (aag_can_affect aag l ptr))) (get_object False ptr)"
   apply (unfold get_object_def fun_app_def)
   apply (subst gets_apply)
   apply (wp gets_apply_ev | wp (once) hoare_drop_imps)+
