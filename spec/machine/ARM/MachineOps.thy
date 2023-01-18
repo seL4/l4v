@@ -129,6 +129,13 @@ type_synonym time  = "64 word"
 abbreviation max_time :: time where
   "max_time \<equiv> max_word"
 
+definition \<mu>s_in_ms :: "64 word" where
+  "\<mu>s_in_ms = 1000"
+
+text \<open> This matches @{text "60 * 60 * MS_IN_S * US_IN_MS"} because it should be in micro-seconds. \<close>
+definition MAX_PERIOD_US :: "64 word" where
+  "MAX_PERIOD_US \<equiv> 60 * 60 * 1000 * 1000"
+
 \<comment> \<open>The following notepad shows that the axioms introduced below, which provide various results
     about several constants and their conversion via us_to_ticks, are consistent.\<close>
 
@@ -137,11 +144,16 @@ notepad begin
 define ticks_per_timer_unit :: "64 word" where "ticks_per_timer_unit = of_nat 50"
 define timer_unit :: "64 word" where "timer_unit = of_nat 1"
 define kernelWCET_us :: "64 word" where "kernelWCET_us = of_nat 100"
-define MAX_PERIOD_US :: "64 word" where "MAX_PERIOD_US = 60 * 60 * 1000 * 1000"
-define \<mu>s_in_ms :: "64 word" where "\<mu>s_in_ms = 1000"
+define us_to_ticks :: "64 word \<Rightarrow> 64 word" where
+  "us_to_ticks = (\<lambda>us. (us * ticks_per_timer_unit) div timer_unit)"
 
-have ticks_per_timer_unit_non_zero:
-  "ticks_per_timer_unit \<noteq> 0"
+have kernelWCET_us_pos2: "0 < 2 * kernelWCET_us"
+  by (simp add: kernelWCET_us_def)
+
+have MIN_BUDGET_le_MAX_PERIOD: "2 * kernelWCET_us \<le> MAX_PERIOD_US"
+  by (simp add: kernelWCET_us_def MAX_PERIOD_US_def)
+
+have ticks_per_timer_unit_non_zero: "ticks_per_timer_unit \<noteq> 0"
   by (simp add: ticks_per_timer_unit_def)
 
 have MIN_BUDGET_bound: "2 * unat kernelWCET_us * unat ticks_per_timer_unit < unat max_time"
@@ -169,55 +181,45 @@ have getCurrentTime_buffer_bound:
   apply linarith
   done
 
-have kernelWCET_pos': "0 < (kernelWCET_us * ticks_per_timer_unit) div timer_unit"
-  apply (clarsimp simp: word_less_nat_alt)
+have kernelWCET_pos': "0 < us_to_ticks kernelWCET_us"
+  apply (clarsimp simp: us_to_ticks_def word_less_nat_alt)
   apply (subst unat_mult_lem' | subst unat_div
          | fastforce simp: kernelWCET_us_def ticks_per_timer_unit_def timer_unit_def unat_minus_one_word)+
   done
 
-have MIN_BUDGET_pos': "0 < 2 * ((kernelWCET_us * ticks_per_timer_unit) div timer_unit)"
-  apply (clarsimp simp: word_less_nat_alt)
+have MIN_BUDGET_pos': "0 < 2 * us_to_ticks kernelWCET_us"
+  apply (clarsimp simp: us_to_ticks_def word_less_nat_alt)
   apply (subst unat_mult_lem' | subst unat_div
          | fastforce simp: kernelWCET_us_def ticks_per_timer_unit_def timer_unit_def unat_minus_one_word)+
   done
 
-have domain_time_pos: "0 < ((15 * \<mu>s_in_ms) * ticks_per_timer_unit) div timer_unit"
-  apply (clarsimp simp: word_less_nat_alt)
+have init_domain_time_pos: "0 < us_to_ticks (15 * \<mu>s_in_ms)"
+  apply (clarsimp simp: us_to_ticks_def word_less_nat_alt)
   apply (subst unat_mult_lem' | subst unat_div
          | fastforce simp: \<mu>s_in_ms_def ticks_per_timer_unit_def timer_unit_def unat_minus_one_word)+
   done
 
+have init_domain_time_bound: "15 * unat \<mu>s_in_ms * unat ticks_per_timer_unit < unat max_time"
+  apply (subst unat_mult_lem'
+         | fastforce simp: \<mu>s_in_ms_def ticks_per_timer_unit_def unat_minus_one_word)+
+  done
+
 have getCurrentTime_buffer_pos:
-  "0 < (kernelWCET_us * ticks_per_timer_unit) div timer_unit
-       + 5 * (MAX_PERIOD_US * ticks_per_timer_unit div timer_unit)"
-  apply (clarsimp simp: word_less_nat_alt)
+  "0 < us_to_ticks kernelWCET_us + 5 * us_to_ticks MAX_PERIOD_US"
+  apply (clarsimp simp: us_to_ticks_def word_less_nat_alt)
   apply (subst unat_add_lem'' | subst unat_mult_lem' | subst unat_div
          | fastforce simp: kernelWCET_us_def MAX_PERIOD_US_def ticks_per_timer_unit_def
                            timer_unit_def unat_minus_one_word)+
   done
 
-have MIN_BUDGET_le_MAX_PERIOD:
-  "2 * kernelWCET_us \<le> MAX_PERIOD_US"
-  by (simp add: kernelWCET_us_def MAX_PERIOD_US_def)
-
 end
 
-axiomatization
-  kernelWCET_us :: ticks
-where
-  kernelWCET_us_pos: "0 < kernelWCET_us"
-and
+consts' kernelWCET_us :: ticks
+
+axiomatization where
   kernelWCET_us_pos2: "0 < 2 * kernelWCET_us"
-
- text \<open>
-   This matches @{text "60 * 60 * MS_IN_S * US_IN_MS"} because it should be in micro-seconds.
- \<close>
- definition
-   MAX_PERIOD_US :: "64 word"
- where
-   "MAX_PERIOD_US \<equiv> 60 * 60 * 1000 * 1000"
-
-definition "\<mu>s_in_ms = 1000"
+and
+  MIN_BUDGET_le_MAX_PERIOD: "2 * kernelWCET_us \<le> MAX_PERIOD_US"
 
 consts' ticks_per_timer_unit :: ticks
 consts' timer_unit :: ticks
@@ -230,6 +232,7 @@ axiomatization where
 and
   MIN_BUDGET_bound: "2 * unat kernelWCET_us * unat ticks_per_timer_unit < unat max_time"
 and
+  \<comment> \<open>the 5 is from time_buffer_const (defined below)\<close>
   getCurrentTime_buffer_bound:
     "unat kernelWCET_us * unat ticks_per_timer_unit
       + 5 * unat MAX_PERIOD_US * unat ticks_per_timer_unit
@@ -239,11 +242,14 @@ and
 and
   MIN_BUDGET_pos': "0 < 2 * us_to_ticks kernelWCET_us"
 and
-  domain_time_pos: "0 < us_to_ticks (15 * \<mu>s_in_ms)"
+  \<comment> \<open>the 15 is from the domain time of the initial state\<close>
+  init_domain_time_pos: "0 < us_to_ticks (15 * \<mu>s_in_ms)"
 and
+  \<comment> \<open>the 15 is from the domain time of the initial state\<close>
+  init_domain_time_bound: "15 * unat \<mu>s_in_ms * unat ticks_per_timer_unit < unat max_time"
+and
+  \<comment> \<open>the 5 is from time_buffer_const (defined below)\<close>
   getCurrentTime_buffer_pos: "0 < us_to_ticks kernelWCET_us + 5 * us_to_ticks MAX_PERIOD_US"
-and
-  MIN_BUDGET_le_MAX_PERIOD: "2 * kernelWCET_us \<le> MAX_PERIOD_US"
 
 definition "MAX_PERIOD = us_to_ticks MAX_PERIOD_US"
 
@@ -254,8 +260,12 @@ end_qualify
 
 context Arch begin global_naming ARM
 
+lemma kernelWCET_us_pos:
+  "0 < kernelWCET_us"
+  using kernelWCET_us_pos2 double_eq_zero_iff word_greater_zero_iff by blast
+
 definition
-  "kernelWCET_ticks = us_to_ticks (kernelWCET_us)"
+  "kernelWCET_ticks = us_to_ticks kernelWCET_us"
 
 text \<open>
   It is crucial that time does not overflow, and that overflow does not occur when performing any
