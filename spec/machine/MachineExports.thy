@@ -61,6 +61,7 @@ requalify_consts
   max_us_to_ticks
   MAX_PERIOD_US
   MAX_PERIOD
+  ticks_per_timer_unit
   us_to_ticks
   ticks_to_us
   setDeadline
@@ -86,7 +87,8 @@ requalify_facts
   getCurrentTime_buffer_bound
   kernelWCET_pos'
   MIN_BUDGET_pos'
-  domain_time_pos
+  init_domain_time_pos
+  init_domain_time_bound
   getCurrentTime_buffer_pos
   getCurrentTime_buffer_no_overflow
   us_to_ticks_mono
