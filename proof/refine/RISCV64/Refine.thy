@@ -414,7 +414,7 @@ lemma valid_sched_init[simp]:
 
 lemma valid_domain_list_init[simp]:
   "valid_domain_list init_A_st"
-  apply (insert domain_time_pos)
+  apply (insert init_domain_time_pos init_domain_time_bound)
   by (simp add: init_A_st_def ext_init_def valid_domain_list_def)
 
 lemma cur_sc_active_init[simp]:
