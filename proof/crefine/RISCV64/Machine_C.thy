@@ -67,11 +67,6 @@ assumes setIRQTrigger_ccorres:
            (doMachineOp (RISCV64.setIRQTrigger irq trigger))
            (Call setIRQTrigger_'proc)"
 
-assumes resetTimer_ccorres:
-  "ccorres dc xfdc \<top> UNIV []
-           (doMachineOp resetTimer)
-           (Call resetTimer_'proc)"
-
 assumes getCurrentTime_ccorres:
   "ccorres dc xfdc \<top> UNIV []
            (doMachineOp getCurrentTime)
