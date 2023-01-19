@@ -229,10 +229,16 @@ lemma ccorres_pre_getObject_sc:
   done
 
 lemma sc_active_ccorres:
-  "ccorres dc xfdc
+  "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_'
      \<top> \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
      (scActive scPtr) (Call sc_active_'proc)"
-sorry (* FIXME RT: sc_active_ccorres *)
+  apply cinit
+   apply (rule ccorres_pre_getObject_sc)
+   apply (rule ccorres_Guard)+
+   apply (ctac add: ccorres_return_C)
+  apply (clarsimp simp: csched_context_relation_def typ_heap_simps word_less_nat_alt
+                 split: if_splits)
+  done
 
 lemma refill_sufficient_ccorres:
   "ccorres dc xfdc
