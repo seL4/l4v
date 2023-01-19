@@ -345,48 +345,84 @@ lemma ksDomSched_length_relation[simp]:
   done
 
 lemma ksDomSched_length_dom_relation[simp]:
-  "\<lbrakk>cdom_schedule_relation (kernel_state.ksDomSchedule s) kernel_all_global_addresses.ksDomSchedule \<rbrakk> \<Longrightarrow> length (kernel_state.ksDomSchedule s) = unat (ksDomScheduleLength)"
+  "\<lbrakk>cdom_schedule_relation (kernel_state.ksDomSchedule s) ksDomSchedule\<rbrakk>
+   \<Longrightarrow> length (kernel_state.ksDomSchedule s) = unat (ksDomScheduleLength)"
   apply (auto simp: cstate_relation_def cdom_schedule_relation_def Let_def ksDomScheduleLength_def)
   done
 
-lemma nextDomain_ccorres:
-  "ccorres dc xfdc invs' UNIV [] nextDomain (Call nextDomain_'proc)"
-sorry (* FIXME RT: nextDomain_ccorres. Involves usToTicks
-  apply (cinit)
+(* FIXME RT: move to Lib *)
+lemma mult_non_zero_less_eq:
+  fixes a b c :: nat
+  assumes "a * b \<le> c"
+      and "0 < b"
+  shows "a \<le> c"
+  using assms
+  by (metis le_0_eq le_eq_less_or_eq less_irrefl_nat multi_lessD nat_le_linear)
+
+lemma domain_time_overflow_condition_helper:
+  "\<lbrakk>cdom_schedule_relation (kernel_state.ksDomSchedule s) ksDomSchedule; valid_domain_list' s\<rbrakk>
+   \<Longrightarrow> \<forall>n<length(kernel_state.ksDomSchedule s).
+        unat (dschedule_C.length_C (ksDomSchedule.[n]) * \<mu>s_in_ms) * unat ticks_per_timer_unit
+        \<le> unat max_time"
+  apply (clarsimp simp: valid_domain_list'_def)
+  apply (drule_tac x="(kernel_state.ksDomSchedule s) ! n" in bspec)
+   apply fastforce
+  apply clarsimp
+  apply (rename_tac n d time)
+  apply (prop_tac "dschedule_C.length_C (ksDomSchedule.[n]) = time")
+   apply (frule ksDomSched_length_dom_relation)
    apply (simp add: ksDomScheduleLength_def sdiv_word_def sdiv_int_def)
-   apply (rule_tac P=invs' and P'=UNIV in ccorres_from_vcg)
+   apply (clarsimp simp: cdom_schedule_relation_def dom_schedule_entry_relation_def
+               simp del: ksDomSched_length_dom_relation)
+   apply (drule_tac x=n in spec)
+   apply clarsimp
+  apply (subst unat_mult_lem')
+   apply (rule_tac b="unat ticks_per_timer_unit" in mult_non_zero_less_eq)
+    apply simp
+   apply (fastforce simp: ticks_per_timer_unit_non_zero neq_0_unat)
+  apply simp
+  done
+
+lemma nextDomain_ccorres:
+  "ccorres dc xfdc (invs' and valid_domain_list') UNIV [] nextDomain (Call nextDomain_'proc)"
+  supply ksDomSched_length_dom_relation[simp del]
+  apply cinit
+   apply (simp add: ksDomScheduleLength_def sdiv_word_def sdiv_int_def)
+   apply (rule_tac P="invs' and valid_domain_list'" and P'=UNIV in ccorres_from_vcg)
    apply (rule allI, rule conseqPre, vcg)
-   apply (clarsimp simp: simpler_modify_def Let_def
-                         rf_sr_def cstate_relation_def
-                         carch_state_relation_def cmachine_state_relation_def)
+   apply (simp add: rf_sr_def cstate_relation_def carch_state_relation_def
+                    cmachine_state_relation_def)
+   apply (clarsimp simp: simpler_modify_def Let_def)
+   apply (rename_tac s s')
    apply (rule conjI)
     apply clarsimp
-    apply (subgoal_tac "ksDomScheduleIdx \<sigma> = unat (ksDomScheduleLength - 1)")
-     apply (fastforce simp add: cdom_schedule_relation_def dom_schedule_entry_relation_def dschDomain_def dschLength_def ksDomScheduleLength_def sdiv_word_def sdiv_int_def simp del: ksDomSched_length_dom_relation)
-    apply (simp add: ksDomScheduleLength_def)
-    apply (frule invs'_ksDomScheduleIdx)
-    apply (simp add: invs'_ksDomSchedule newKernelState_def)
-    apply (simp only: Abs_fnat_hom_1 Abs_fnat_hom_add)
-    apply (drule unat_le_helper)
-    apply (simp add: sdiv_int_def sdiv_word_def)
-    apply (clarsimp simp: cdom_schedule_relation_def)
+    apply (prop_tac "ksDomScheduleIdx s = unat (ksDomScheduleLength - 1)")
+     apply (simp add: ksDomScheduleLength_def)
+     apply (frule invs'_ksDomScheduleIdx)
+     apply (simp add: invs'_ksDomSchedule newKernelState_def)
+     apply (simp only: Abs_fnat_hom_1 Abs_fnat_hom_add)
+     apply (drule unat_le_helper)
+     apply (clarsimp simp: cdom_schedule_relation_def)
+    apply (rule conjI)
+     apply (fastforce dest!: domain_time_overflow_condition_helper
+                       simp: \<mu>s_in_ms_def valid_domain_list'_def)
+    apply (fastforce simp: usInMs_def cdom_schedule_relation_def dom_schedule_entry_relation_def
+                           dschDomain_def dschLength_def ksDomScheduleLength_def)
    apply (simp only: Abs_fnat_hom_1 Abs_fnat_hom_add word_not_le)
    apply clarsimp
    apply (subst (asm) of_nat_Suc[symmetric])
    apply (drule iffD1[OF of_nat_mono_maybe'[where x=3, simplified, symmetric], rotated 2])
      apply simp
     apply (frule invs'_ksDomScheduleIdx)
-    apply (simp add: invs'_ksDomSchedule newKernelState_def)
-    apply (clarsimp simp: cdom_schedule_relation_def)
+    apply (simp add: invs'_ksDomSchedule cdom_schedule_relation_def)
    apply (clarsimp simp: ksDomScheduleLength_def)
    apply (subst of_nat_Suc[symmetric])+
-   apply (subst unat_of_nat64)
-    apply (simp add: word_bits_def)
-   apply (subst unat_of_nat64)
-    apply (simp add: word_bits_def)
-   apply (fastforce simp add: cdom_schedule_relation_def dom_schedule_entry_relation_def dschDomain_def dschLength_def simp del: ksDomSched_length_dom_relation)
+   apply (subst unat_of_nat64, simp add: word_bits_def)+
+   apply (frule (1) domain_time_overflow_condition_helper)
+   apply (clarsimp simp: cdom_schedule_relation_def dom_schedule_entry_relation_def
+                         dschDomain_def dschLength_def \<mu>s_in_ms_def usInMs_def)
   apply simp
-  done *)
+  done
 
 (* FIXME RT: move *)
 crunches nextDomain
@@ -398,7 +434,9 @@ crunches nextDomain
 lemma scheduleChooseNewThread_ccorres:
   "ccorres dc xfdc
      (\<lambda>s. invs' s \<and> valid_idle' s \<and> (\<forall>d p. distinct (ksReadyQueues s (d, p)))
-          \<and> ksSchedulerAction s = ChooseNewThread \<and> ready_or_release' s) UNIV hs
+          \<and> ksSchedulerAction s = ChooseNewThread \<and> ready_or_release' s
+          \<and> valid_domain_list' s)
+     UNIV hs
      (do domainTime \<leftarrow> getDomainTime;
          y \<leftarrow> when (domainTime = 0) nextDomain;
          chooseThread

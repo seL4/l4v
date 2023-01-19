@@ -388,15 +388,15 @@ lemma ctzl_spec:
 
 \<comment> \<open>From sel4/include/arch/riscv/arch/machine/timer.h\<close>
 defs kernelWCET_us_def:
-  "kernelWCET_us \<equiv> (0xA :: ticks)"
+  "kernelWCET_us \<equiv> (10 :: ticks)"
 
 \<comment> \<open>From the config.cmake file for the hifive platform\<close>
 defs ticks_per_timer_unit_def:
-  "ticks_per_timer_unit \<equiv> (0xF4240 :: ticks)"
+  "ticks_per_timer_unit \<equiv> (1000000 :: ticks)"
 
 \<comment> \<open>From sel4/include/arch/riscv/arch/machine/timer.h\<close>
 defs timer_unit_def:
-  "timer_unit \<equiv> (0x3E8 * 0x3E8 :: ticks)"
+  "timer_unit \<equiv> (1000 * 1000 :: ticks)"
 
 lemmas timer_defs =
   kernelWCET_us_def ticks_per_timer_unit_def timer_unit_def us_to_ticks_def MAX_PERIOD_US_def
@@ -406,31 +406,28 @@ lemmas timer_defs =
     and us_to_ticks are true with the definitions given immediately above.\<close>
 
 lemma
-shows
-  kernelWCET_us_pos: "0 < kernelWCET_us"
-and
-  kernelWCET_us_pos2: "0 < 2 * kernelWCET_us"
-and
-  MIN_BUDGET_le_MAX_PERIOD: "2 * kernelWCET_us \<le> MAX_PERIOD_US"
-and
-  ticks_per_timer_unit_non_zero: "ticks_per_timer_unit \<noteq> 0"
-and
-  MIN_BUDGET_bound: "2 * unat kernelWCET_us * unat ticks_per_timer_unit < unat max_time"
-and
-  getCurrentTime_buffer_bound:
+  shows kernelWCET_us_pos2:
+    "0 < 2 * kernelWCET_us"
+  and MIN_BUDGET_le_MAX_PERIOD:
+    "2 * kernelWCET_us \<le> MAX_PERIOD_US"
+  and ticks_per_timer_unit_non_zero:
+    "ticks_per_timer_unit \<noteq> 0"
+  and MIN_BUDGET_bound:
+    "2 * unat kernelWCET_us * unat ticks_per_timer_unit < unat max_time"
+  and getCurrentTime_buffer_bound:
     "unat kernelWCET_us * unat ticks_per_timer_unit
       + 5 * unat MAX_PERIOD_US * unat ticks_per_timer_unit
      < unat max_time"
-and
-  kernelWCET_pos': "0 < us_to_ticks kernelWCET_us"
-and
-  MIN_BUDGET_pos': "0 < 2 * us_to_ticks kernelWCET_us"
-and
-  init_domain_time_pos: "0 < us_to_ticks (15 * \<mu>s_in_ms)"
-and
-  init_domain_time_bound: "15 * unat \<mu>s_in_ms * unat ticks_per_timer_unit < unat max_time"
-and
-  getCurrentTime_buffer_pos: "0 < us_to_ticks kernelWCET_us + 5 * us_to_ticks MAX_PERIOD_US"
+  and kernelWCET_pos':
+    "0 < us_to_ticks kernelWCET_us"
+  and MIN_BUDGET_pos':
+    "0 < 2 * us_to_ticks kernelWCET_us"
+  and init_domain_time_pos:
+    "0 < us_to_ticks (15 * \<mu>s_in_ms)"
+  and init_domain_time_bound:
+    "15 * unat \<mu>s_in_ms * unat ticks_per_timer_unit < unat max_time"
+  and getCurrentTime_buffer_pos:
+    "0 < us_to_ticks kernelWCET_us + 5 * us_to_ticks MAX_PERIOD_US"
   by (simp_all add: timer_defs unat_max_word)
 
 lemma usToTicks_spec:
@@ -438,7 +435,7 @@ lemma usToTicks_spec:
                Call usToTicks_'proc
                \<lbrace>\<acute>ret__unsigned_longlong = usToTicks us\<rbrace>"
   apply vcg
-  apply (fastforce simp: usToTicks_def timer_defs mult_div_assoc)
+  apply (fastforce simp: usToTicks_def timer_defs word_mult_div_assoc)
   done
 
 lemma getKernelWcetTicks_spec:
