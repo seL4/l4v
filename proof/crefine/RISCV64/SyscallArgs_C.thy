@@ -207,6 +207,27 @@ lemma ccorres_pre_getCurSc:
   apply (clarsimp simp: rf_sr_ksCurSC)
   done
 
+lemma ccorres_pre_getObject_sc:
+  assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
+  shows   "ccorres r xf
+                  (\<lambda>s. (\<forall>sc. ko_at' sc p s \<longrightarrow> P sc s))
+                  {s. \<forall> sc sc'. cslift s (Ptr p) = Some sc' \<and> csched_context_relation sc sc'
+                           \<longrightarrow> s \<in> P' sc}
+                          hs (getSchedContext p >>= (\<lambda>rv :: sched_context. f rv)) c"
+  apply (rule ccorres_guard_imp2)
+   apply (rule ccorres_symb_exec_l)
+      apply (rule ccorres_guard_imp2)
+       apply (rule cc)
+      apply (rule conjI)
+       apply (rule_tac Q="ko_at' rv p s" in conjunct1)
+       apply assumption
+      apply assumption
+     apply (wpsimp wp: set_sc'.getObject_wp empty_fail_getObject simp: getSchedContext_def)+
+  apply (erule cmap_relationE1[OF cmap_relation_sched_context],
+         erule ko_at_projectKO_opt)
+  apply simp
+  done
+
 lemma sc_active_ccorres:
   "ccorres dc xfdc
      \<top> \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
