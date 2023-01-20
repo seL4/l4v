@@ -12,8 +12,8 @@ session Lib (lib) = Word_Lib +
     Eisbach_Tools
     ML_Utils
   directories
-    "Monad_WP"
-    "Monad_WP/wp"
+    "Monads"
+    "Monads/wp"
   theories
     Lib
     AddUpdSimps
@@ -74,27 +74,27 @@ session Lib (lib) = Word_Lib +
 
     (* should really be a separate session, but too entangled atm: *)
     NonDetMonadLemmaBucket
-    "Monad_WP/WhileLoopRules"
-    "Monad_WP/TraceMonad"
-    "Monad_WP/OptionMonadND"
-    "Monad_WP/OptionMonadWP"
-    "Monad_WP/Strengthen_Demo"
-    "Monad_WP/TraceMonadLemmas"
-    "Monad_WP/wp/WPBang"
-    "Monad_WP/wp/WPFix"
-    "Monad_WP/wp/Eisbach_WP"
-    "Monad_WP/wp/WPI"
-    "Monad_WP/wp/WPC"
-    "Monad_WP/wp/WP_Pre"
-    "Monad_WP/wp/WP"
-    "Monad_WP/Datatype_Schematic"
-    "Monad_WP/WhileLoopRulesCompleteness"
-    "Monad_WP/Strengthen"
-    "Monad_WP/OptionMonad"
-    "Monad_WP/TraceMonadVCG"
-    "Monad_WP/NonDetMonadVCG"
-    "Monad_WP/NonDetMonad"
-    "Monad_WP/NonDetMonadLemmas"
+    "Monads/WhileLoopRules"
+    "Monads/TraceMonad"
+    "Monads/OptionMonadND"
+    "Monads/OptionMonadWP"
+    "Monads/Strengthen_Demo"
+    "Monads/TraceMonadLemmas"
+    "Monads/wp/WPBang"
+    "Monads/wp/WPFix"
+    "Monads/wp/Eisbach_WP"
+    "Monads/wp/WPI"
+    "Monads/wp/WPC"
+    "Monads/wp/WP_Pre"
+    "Monads/wp/WP"
+    "Monads/Datatype_Schematic"
+    "Monads/WhileLoopRulesCompleteness"
+    "Monads/Strengthen"
+    "Monads/OptionMonad"
+    "Monads/TraceMonadVCG"
+    "Monads/NonDetMonadVCG"
+    "Monads/NonDetMonad"
+    "Monads/NonDetMonadLemmas"
 
 session CLib (lib) in clib = CParser +
   sessions
