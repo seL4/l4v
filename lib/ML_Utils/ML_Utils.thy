@@ -5,7 +5,7 @@
  *)
 
 \<comment>\<open>
-  MLUtils is a collection of 'basic' ML utilities (kind of like @{file
+  ML_Utils is a collection of 'basic' ML utilities (kind of like @{file
   "~~/src/Pure/library.ML"}, but maintained by Trustworthy Systems). If you
   find yourself implementing:
       - A simple data-structure-shuffling task,
@@ -16,7 +16,7 @@
   consider adding it here.
 \<close>
 
-theory MLUtils
+theory ML_Utils
 imports Main
 begin
 ML_file "StringExtras.ML"

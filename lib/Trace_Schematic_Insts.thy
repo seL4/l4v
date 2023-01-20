@@ -6,7 +6,7 @@
 
 theory Trace_Schematic_Insts
 imports
-  ML_Utils.MLUtils
+  ML_Utils.ML_Utils
   ML_Utils.TermPatternAntiquote
 begin
 

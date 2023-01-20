@@ -6,7 +6,7 @@
 theory Datatype_Schematic
 
 imports
-  ML_Utils.MLUtils
+  ML_Utils.ML_Utils
   ML_Utils.TermPatternAntiquote
 begin
 

@@ -8,7 +8,7 @@
  * Provides an alternate refinement function which takes an additional stateful journaling operation. *)
 theory Apply_Trace
 imports
-  ML_Utils.MLUtils
+  ML_Utils.ML_Utils
 begin
 
 

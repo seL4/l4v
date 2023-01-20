@@ -8,7 +8,7 @@ chapter Lib
 
 session ML_Utils (lib) = HOL +
   theories
-    MLUtils
+    ML_Utils
     MkTermAntiquote
     TermPatternAntiquote
     TacticAntiquotation

@@ -127,7 +127,7 @@ cat > "$outputdir/src/lib/ROOT" <<EOF
 
 session Lib = HOL +
   directories "ml-helpers"
-  theories "MLUtils"
+  theories "ML_Utils"
 EOF
 
 echo "Rearranging directories"

@@ -9,7 +9,7 @@ imports
   WP_Pre
   WPFix
   Apply_Debug
-  ML_Utils.MLUtils
+  ML_Utils.ML_Utils
 begin
 
 definition
