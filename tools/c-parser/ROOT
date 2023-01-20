@@ -16,6 +16,7 @@ session CParser = "Simpl-VCG" +
   sessions
     "HOL-Library"
     "Lib"
+    "ML_Utils"
   directories
     "umm_heap"
     "umm_heap/$L4V_ARCH"

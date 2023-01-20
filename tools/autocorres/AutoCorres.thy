@@ -24,8 +24,8 @@ imports
   "Lib.OptionMonadWP"
   "Lib.Apply_Trace"
   AutoCorresSimpset
-  "Lib.MkTermAntiquote"
-  "Lib.TermPatternAntiquote"
+  "ML_Utils.MkTermAntiquote"
+  "ML_Utils.TermPatternAntiquote"
   keywords "autocorres" :: thy_decl
 begin
 
