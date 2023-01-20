@@ -9,8 +9,8 @@ text \<open>
 \<close>
 theory MkTermAntiquote_Tests
 imports
-  Lib.MkTermAntiquote
-  Main
+  MkTermAntiquote
+  Main (* MkTermAntiquote imports only Pure *)
 begin
 
 text \<open>

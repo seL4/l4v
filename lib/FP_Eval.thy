@@ -6,8 +6,8 @@
 
 theory FP_Eval
 imports
-  HOL.HOL
-  TermPatternAntiquote
+  HOL.HOL (* FIXME lib: remove *)
+  ML_Utils.TermPatternAntiquote
 begin
 
 text \<open>

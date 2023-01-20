@@ -8,7 +8,7 @@ theory Crunch
 imports
   WPSimp
   Lib
-  MLUtils
+  ML_Utils.MLUtils
 keywords "crunch" "crunch_ignore" "crunches" :: thy_decl
 begin
 

@@ -6,8 +6,8 @@
 
 theory TermPatternAntiquote_Tests
 imports
-  Lib.TermPatternAntiquote
-  Main
+  TermPatternAntiquote
+  Main (* TermPatternAntiquote imports only Pure *)
 begin
 
 text \<open>

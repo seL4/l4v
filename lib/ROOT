@@ -10,8 +10,8 @@ session Lib (lib) = Word_Lib +
   sessions
     "HOL-Library"
     "HOL-Eisbach"
+    ML_Utils
   directories
-    "ml-helpers"
     "subgoal_focus"
     "Monad_WP"
     "Monad_WP/wp"
@@ -49,14 +49,6 @@ session Lib (lib) = Word_Lib +
     Apply_Debug
     MonadicRewrite
     HaskellLemmaBucket
-    "ml-helpers/MkTermAntiquote"
-    "ml-helpers/TermPatternAntiquote"
-    "ml-helpers/TacticAntiquotation"
-    "ml-helpers/MLUtils"
-    "ml-helpers/TacticTutorial"
-    "ml-helpers/MkTermAntiquote_Tests"
-    "ml-helpers/TacticAntiquotation_Test"
-    "ml-helpers/TermPatternAntiquote_Tests"
     FP_Eval
     "subgoal_focus/Subgoal_Methods"
     Insulin

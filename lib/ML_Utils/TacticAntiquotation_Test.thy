@@ -8,7 +8,7 @@
 
 theory TacticAntiquotation_Test
 imports
-  Lib.TacticAntiquotation
+  TacticAntiquotation
 begin
 
 text \<open>Simple tests.\<close>
