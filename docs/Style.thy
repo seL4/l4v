@@ -298,6 +298,64 @@ text \<open>
   approach it with a breadth-first approach. Since the default isabelle strategy is depth-first,
   prefers (or defers) will be needed, e.g. corres proofs.\<close>
 
+subsection \<open>Using by\<close>
+
+text \<open>
+  When all subgoals of a proof can be solved in one apply statement, use `by`.\<close>
+
+lemma
+  "True"
+  by simp
+
+lemma
+  "X"
+  apply (subgoal_tac "True")
+   prefer 2
+   subgoal by blast
+  apply (subgoal_tac "True")
+   prefer 2
+   subgoal
+     by blast \<comment> \<open>for tactic invocations that would overflow the line\<close>
+  oops
+
+text \<open>
+  When all subgoals of a proof can be solved in two apply statements, use `by` to indicate the
+  intermediate state is not interesting.\<close>
+
+lemma
+  "True \<and> True"
+  by (rule conjI) auto
+
+lemma
+  "True \<and> True"
+  by (rule conjI)
+     auto \<comment> \<open>for tactic invocations that would overflow the line\<close>
+
+text \<open>
+  Avoid using `by` at the end of an apply-style proof with multiple steps.
+  The exception to this rule are long-running statements (over 2 seconds) that complete the proof.
+  There, we favour parallelism (proof forking in interactive mode) over visual consistency.
+
+  If you do use `by` starting on a line of its own, it should be indented as if it were an
+  apply statement.
+  NOTE: the default Isabelle auto-indenter will not indent `by` according to the number of goals,
+        which is another reason to avoid mixing it with apply style\<close>
+
+lemma
+  "True \<and> True \<and> True \<and> True \<and> True \<and> True \<and> True"
+  apply (intro conjI)
+        apply blast
+       apply blast
+      apply auto
+  done \<comment> \<open>use this style in general: no by\<close>
+
+lemma long_running_ending:
+  "True \<and> True \<and> True \<and> True \<and> True \<and> True \<and> True"
+  apply (intro conjI)
+        apply blast
+       apply blast
+      by auto \<comment> \<open>only if long-running, and note indentation!\<close>
+
 subsection \<open>Unfolding definitions\<close>
 
 text \<open>
