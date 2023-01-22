@@ -9,7 +9,7 @@
    "cutMon P f" executes f when P is true, otherwise fails. Cuts off uninteresting executions. *)
 
 theory CutMon
-  imports NonDetMonadVCG
+  imports Monads.NonDetMonadVCG
 begin
 
 definition

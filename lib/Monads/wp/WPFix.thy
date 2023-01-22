@@ -18,7 +18,7 @@ after goals are solved. They should be instantiated to True.
   2. Schematics which appear in multiple precondition positions. They should
 be instantiated to a conjunction and then separated.
   3/4. Schematics applied to datatype expressions such as @{term True} or
-@{term "Some x"}. See @{theory "Lib.Datatype_Schematic"} for details.
+@{term "Some x"}. See @{theory "Monads.Datatype_Schematic"} for details.
 \<close>
 
 lemma use_strengthen_prop_intro:

@@ -9,7 +9,7 @@ imports
   "WP"
   "WPC"
   "WPFix"
-  Simp_No_Conditional
+  Eisbach_Tools.Simp_No_Conditional
 begin
 
 (* Wrap up the standard usage pattern of wp/wpc/simp into its own command: *)

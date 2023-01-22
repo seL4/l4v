@@ -8,10 +8,10 @@
 
 theory Eisbach_WP
 imports
-  Eisbach_Methods
+  Eisbach_Tools.Eisbach_Methods
   NonDetMonadVCG
-  Conjuncts
-  Rule_By_Method
+  Eisbach_Tools.Conjuncts
+  Eisbach_Tools.Rule_By_Method
   WPI
 begin
 

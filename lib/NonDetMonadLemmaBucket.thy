@@ -12,12 +12,12 @@ imports
   Monad_Lists
   Monad_Equations
   Monad_Commute
-  No_Fail
-  No_Throw
+  Monads.No_Fail
+  Monads.No_Throw
   CutMon
   Oblivious
   Injection_Handler
-  WhileLoopRulesCompleteness
+  Monads.WhileLoopRulesCompleteness
   "Word_Lib.Distinct_Prop" (* for distinct_tuple_helper *)
 begin
 

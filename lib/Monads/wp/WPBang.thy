@@ -7,7 +7,7 @@
 theory WPBang
 imports
   WP
-  ProvePart
+  Eisbach_Tools.ProvePart
   NonDetMonadVCG
 begin
 

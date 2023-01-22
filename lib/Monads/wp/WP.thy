@@ -8,7 +8,7 @@ theory WP
 imports
   WP_Pre
   WPFix
-  Apply_Debug
+  Eisbach_Tools.Apply_Debug
   ML_Utils.ML_Utils
 begin
 

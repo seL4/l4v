@@ -8,7 +8,7 @@
 
 theory Bisim_UL
 imports
-  NonDetMonadVCG
+  Monads.NonDetMonadVCG
   Corres_UL
   EmptyFailLib
 begin

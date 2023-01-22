@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<!--
+     Copyright 2023, Proofcraft Pty Ltd
+
+     SPDX-License-Identifier: BSD-2-Clause
+-->
+
+<!--
+
+     Regression Specification File
+
+     See "misc/regression/tests.xml" for a description of the file
+     format.
+
+-->
+<testsuite cpu-timeout="600">
+
+    <set depends="isabelle">
+        <test name="Monads">../../isabelle/bin/isabelle build -v -d ../.. Monads</test>
+    </set>
+
+</testsuite>

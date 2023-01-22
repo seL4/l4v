@@ -9,7 +9,7 @@
    If it doesn't contain a Hoare triple it likely doesn't belong in here. *)
 
 theory More_NonDetMonadVCG
-  imports NonDetMonadVCG
+  imports Monads.NonDetMonadVCG
 begin
 
 lemma gets_exs_valid:

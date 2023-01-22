@@ -14,7 +14,7 @@ imports
   Lib
   NatBitwise
   More_Numeral_Type
-  NonDetMonadVCG
+  Monads.NonDetMonadVCG
 begin
 
 abbreviation (input) "flip \<equiv> swp"

@@ -11,9 +11,7 @@ session Lib (lib) = Word_Lib +
     "HOL-Library"
     Eisbach_Tools
     ML_Utils
-  directories
-    "Monads"
-    "Monads/wp"
+    Monads
   theories
     Lib
     AddUpdSimps
@@ -72,29 +70,8 @@ session Lib (lib) = Word_Lib +
     Named_Eta
     Rules_Tac
 
-    (* should really be a separate session, but too entangled atm: *)
+    (* should move to Monads: *)
     NonDetMonadLemmaBucket
-    "Monads/WhileLoopRules"
-    "Monads/TraceMonad"
-    "Monads/OptionMonadND"
-    "Monads/OptionMonadWP"
-    "Monads/Strengthen_Demo"
-    "Monads/TraceMonadLemmas"
-    "Monads/wp/WPBang"
-    "Monads/wp/WPFix"
-    "Monads/wp/Eisbach_WP"
-    "Monads/wp/WPI"
-    "Monads/wp/WPC"
-    "Monads/wp/WP_Pre"
-    "Monads/wp/WP"
-    "Monads/Datatype_Schematic"
-    "Monads/WhileLoopRulesCompleteness"
-    "Monads/Strengthen"
-    "Monads/OptionMonad"
-    "Monads/TraceMonadVCG"
-    "Monads/NonDetMonadVCG"
-    "Monads/NonDetMonad"
-    "Monads/NonDetMonadLemmas"
 
 session CLib (lib) in clib = CParser +
   sessions

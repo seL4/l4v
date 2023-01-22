@@ -10,7 +10,7 @@
 
 theory Monad_Lists
   imports
-    NonDetMonadVCG
+    Monads.NonDetMonadVCG
 begin
 
 lemma mapME_Cons:

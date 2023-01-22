@@ -9,7 +9,7 @@
 
 theory MonadicRewrite
 imports
-  NonDetMonadVCG
+  Monads.NonDetMonadVCG
   Corres_UL
   EmptyFailLib
   LemmaBucket

@@ -7,7 +7,7 @@
 (* Definition of injection_handler and supporting lemmas. *)
 
 theory Injection_Handler
-  imports NonDetMonadVCG
+  imports Monads.NonDetMonadVCG
 begin
 
 definition injection_handler ::
