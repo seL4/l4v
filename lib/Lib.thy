@@ -20,6 +20,7 @@ imports
   Eval_Bool
   Monads.Fun_Pred_Syntax
   Monads.Monad_Lib
+  CLib
   NICTATools
   "Word_Lib.WordSetup"
 begin
@@ -579,11 +580,6 @@ lemma min_of_mono':
   unfolding min_def
   by (subst if_distrib [where f = f, symmetric], rule arg_cong [where f = f], rule if_cong [OF _ refl refl]) fact+
 
-lemma nat_diff_less:
-  fixes x :: nat
-  shows "\<lbrakk> x < y + z; z \<le> x\<rbrakk> \<Longrightarrow> x - z < y"
-  using less_diff_conv2 by blast
-
 lemma take_map_Not:
   "(take n (map Not xs) = take n xs) = (n = 0 \<or> xs = [])"
   by (cases n; simp) (cases xs; simp)
@@ -748,9 +744,6 @@ lemma in_set_zip_refl :
 lemma map_conv_upd:
   "m v = None \<Longrightarrow> m o (f (x := v)) = (m o f) (x := None)"
   by (rule ext) (clarsimp simp: o_def)
-
-lemma split_distrib: "case_prod (\<lambda>a b. T (f a b)) = (\<lambda>x. T (case_prod (\<lambda>a b. f a b) x))"
-  by (clarsimp simp: split_def)
 
 lemma case_sum_triv [simp]:
     "(case x of Inl x \<Rightarrow> Inl x | Inr x \<Rightarrow> Inr x) = x"
@@ -2042,23 +2035,6 @@ shows "foldl (+) (x+y) zs = x + (foldl (+) y zs)"
 lemma (in monoid_add) foldl_absorb0:
 shows "x + (foldl (+) 0 zs) = foldl (+) x zs"
   by (induct zs) (simp_all add:foldl_assoc)
-
-lemma foldl_conv_concat:
-  "foldl (@) xs xss = xs @ concat xss"
-proof (induct xss arbitrary: xs)
-  case Nil show ?case by simp
-next
-  interpret monoid_add "(@)" "[]" proof qed simp_all
-  case Cons then show ?case by (simp add: foldl_absorb0)
-qed
-
-lemma foldl_concat_concat:
-  "foldl (@) [] (xs @ ys) = foldl (@) [] xs @ foldl (@) [] ys"
-  by (simp add: foldl_conv_concat)
-
-lemma foldl_does_nothing:
-  "\<lbrakk> \<And>x. x \<in> set xs \<Longrightarrow> f s x = s \<rbrakk> \<Longrightarrow> foldl f s xs = s"
-  by (induct xs) auto
 
 lemma foldl_use_filter:
   "\<lbrakk> \<And>v x. \<lbrakk> \<not> g x; x \<in> set xs \<rbrakk> \<Longrightarrow> f v x = v \<rbrakk> \<Longrightarrow> foldl f v xs = foldl f v (filter g xs)"

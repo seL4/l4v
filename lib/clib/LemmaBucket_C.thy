@@ -6,13 +6,9 @@
 
 theory LemmaBucket_C
 imports
-  "Lib.Lib"
-  "Word_Lib.WordSetup"
+  Lib.CLib
   CParser.TypHeapLib
-  "CParser.ArrayAssertion"
 begin
-
-declare word_neq_0_conv [simp del]
 
 lemma Ptr_not_null_pointer_not_zero: "(Ptr p \<noteq> NULL)=(p\<noteq>0)"
  by simp
@@ -56,7 +52,7 @@ lemma to_bytes_word8:
 
 lemma byte_ptr_guarded:"ptr_val (x::8 word ptr) \<noteq> 0 \<Longrightarrow> c_guard x"
   unfolding c_guard_def c_null_guard_def ptr_aligned_def
-  by (clarsimp simp: intvl_Suc)
+  by (clarsimp simp: intvl_Suc simp del: word_neq_0_conv)
 
 lemma heap_update_list_append:
   fixes v :: word8
@@ -125,7 +121,8 @@ next
     apply (erule dvd_mult_left)
     done
 
-  hence "2 ^ bits dvd kp" by (simp add: dvd_reduce_multiple)
+  hence "2 ^ bits dvd kp"
+    by (simp add: dvd_add_right_iff)
   with kp have "kp = 0"
     apply -
     apply (erule contrapos_pp)
@@ -143,7 +140,6 @@ next
 qed
 
 lemma intvl_mem_weaken: "x \<in> {p..+a - n} \<Longrightarrow> x \<in> {p..+a}"
-  apply -
   apply (drule intvlD)
   apply clarsimp
   apply (rule intvlI)
@@ -352,7 +348,7 @@ lemma intvl_disjoint1:
   and     blt: "b < 2 ^ len_of TYPE('a)"
   and     dlt: "d < 2 ^ len_of TYPE('a)"
   shows   "{a..+b} \<inter> {c..+d} = {}"
-proof (rule disjointI, rule notI)
+proof (unfold disjoint_iff_not_equal, intro ballI notI)
   fix x y
   assume x: "x \<in> {a..+b}" and y: "y \<in> {c..+d}" and xy: "x = y"
 
@@ -583,7 +579,7 @@ lemma access_in_array:
    apply (subst subst, assumption)
    apply (subst(asm) subst, assumption)
    apply simp
-  apply (simp add: size_of_def)
+  apply (simp add: size_of_def min.absorb_iff2[symmetric])
   apply (subst le_diff_conv2)
    apply simp
   apply (fold mult_Suc, rule mult_le_mono1)
@@ -610,16 +606,6 @@ lemma access_ti_list_array:
   apply simp
   apply (erule meta_mp)
   apply (auto simp add: drop_take)
-  done
-
-lemma take_drop_foldl_concat:
-  "\<lbrakk> \<And>y. y < m \<Longrightarrow> length (f y) = n; x < m \<rbrakk>
-      \<Longrightarrow> take n (drop (x * n) (foldl (@) [] (map f [0 ..< m]))) = f x"
-  apply (subst split_upt_on_n, assumption)
-  apply (simp only: foldl_concat_concat map_append)
-  apply (subst drop_append_miracle)
-   apply (induct x, simp_all)[1]
-  apply simp
   done
 
 definition
@@ -887,7 +873,7 @@ lemma h_t_valid_Array_element':
     apply (simp add: align_of_def size_of_def addr_card_def card_word)
     apply (simp add: dvd_mod)
    apply (thin_tac "\<forall>x. P x" for P)
-   apply (clarsimp simp: intvl_def)
+   apply (clarsimp simp: intvl_def simp del: word_neq_0_conv)
    apply (drule_tac x="offs * size_of TYPE('a) + k" in spec)
    apply (drule mp)
     apply (simp add: array_ptr_index_def CTypesDefs.ptr_add_def field_simps)
@@ -1091,11 +1077,11 @@ lemma ptr_retyp_disjoint2:
   "\<lbrakk>ptr_retyp (p::'a::mem_type ptr) d,g \<Turnstile>\<^sub>t q;
     {ptr_val p..+size_of TYPE('a)} \<inter> {ptr_val q..+size_of TYPE('b)} = {} \<rbrakk>
   \<Longrightarrow> d,g \<Turnstile>\<^sub>t (q::'b::mem_type ptr)"
-apply(clarsimp simp: h_t_valid_def)
-apply(erule ptr_retyp_valid_footprint_disjoint2)
-apply(simp add: size_of_def)
-apply fast
-done
+  apply(clarsimp simp: h_t_valid_def)
+  apply(erule ptr_retyp_valid_footprint_disjoint2)
+  apply(simp add: size_of_def)
+  apply fast
+  done
 
 lemma ptr_retyp_disjoint_iff:
   "{ptr_val p..+size_of TYPE('a)} \<inter> {ptr_val q..+size_of TYPE('b)} = {}
