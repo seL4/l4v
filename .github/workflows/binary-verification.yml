@@ -1,0 +1,72 @@
+# Copyright 2023 Kry10 Limited
+#
+# SPDX-License-Identifier: BSD-2-Clause
+
+# Can be called from an l4v proof workflow run to trigger binary verification.
+#
+# This works by issuing a repository-dispatch event on the graph-refine
+# repository, but only if there are c-graph-lang artifacts available. The event
+# starts a graph-refine binary-decompilation workflow run, which retrieves
+# kernel build artifacts from the l4v proof workflow and runs the decompiler.
+#
+# The final stage of binary verification, graph refinement, may be triggered by
+# the completion of the graph-refine binary-decompilation workflow. Graph
+# refinement is performed by a custom back end. Graph refinement is expensive,
+# so policy settings in the graph-refine back end may be used to limit which
+# decompilation runs actually proceed to graph refinement. The `tag` parameter
+# of the repository-dispatch payload may be used in that policy decision.
+
+name: Trigger binary verification
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
+        description: |
+          A brief description of the source of the event,
+          e.g. a workflow identifier. This is used when
+          reporting the results of a binary verification
+          run, to help users identify the proof run that
+          triggered the binary verification run.
+
+jobs:
+  binary-verification:
+    name: Trigger binary verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch artifacts
+        uses: actions/download-artifact@v3
+        # download-artifact doesn't have an option to ignore missing artifacts,
+        # so we download them all to test if c-graph-lang exists.
+        with:
+          path: artifacts
+      - name: Check for C graph-lang artifacts
+        id: enabled
+        run: |
+          # Check if there are any C graph-lang artifacts
+          # matching configurations compatible with binary verification.
+          for TARGET in ARM-O1 ARM-O2 ARM-MCS-O1 ARM-MCS-O2 RISCV64-O1 RISCV64-MCS-O1; do
+            if [ -e "artifacts/kernel-builds/${TARGET}/CFunctions.txt" ]; then
+              echo "C graph-lang artifacts found, will trigger binary verification"
+              echo "enabled=true" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+          done
+          echo "No C graph-lang artifacts found, will not trigger binary verification"
+      - name: Trigger binary verification
+        if: steps.enabled.outputs.enabled
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.PRIV_REPO_TOKEN }}
+          repository: seL4/graph-refine
+          event-type: binary-verification
+          # The graph-refine binary-verification event handler uses the
+          # `repo` and `run_id` to retrieve the caller workflow's artifacts.
+          client-payload: |
+            {
+              "repo": "${{ github.repository }}",
+              "run_id": "${{ github.run_id }}",
+              "tag": "${{ inputs.tag }}"
+            }

@@ -47,11 +47,11 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_SSH: ${{ secrets.AWS_SSH }}
-    - name: Upload C graph-lang
+    - name: Upload kernel builds
       uses: actions/upload-artifact@v3
       with:
-        name: c-graph-lang
-        path: artifacts/simpl-export
+        name: kernel-builds
+        path: artifacts/kernel-builds
         if-no-files-found: ignore
     - name: Upload logs
       uses: actions/upload-artifact@v3
@@ -72,46 +72,8 @@ jobs:
 
   binary-verification:
     name: Trigger binary verification
-    runs-on: ubuntu-latest
-    needs: [code, proofs]
-    steps:
-    # download-artifact doesn't have an option to ignore missing artifacts,
-    # so we download them all to test if c-graph-lang exists.
-    - name: Fetch artifacts
-      uses: actions/download-artifact@v3
-      with:
-        path: artifacts
-    - name: Get scripts from ci-actions repo
-      uses: actions/checkout@v3
-      with:
-        repository: seL4/ci-actions
-        path: ci-actions
-    - name: Check for C graph-lang artifacts
-      id: enabled
-      env:
-        MANIFEST: ${{ needs.code.outputs.xml }}
-      run: |
-        # Check if there are any C graph-lang artifacts
-        if [ -e artifacts/c-graph-lang ]; then
-          echo "C graph-lang artifacts found, will trigger binary verification"
-          echo -n "${MANIFEST}"| ./ci-actions/scripts/nl-unescape.sh > verification-manifest.xml
-          echo "::set-output name=enabled::true"
-        else
-          echo "No C graph-lang artifacts found, will not trigger binary verification"
-        fi
-    - name: Upload manifest
-      if: steps.enabled.outputs.enabled
-      uses: actions/upload-artifact@v3
-      with:
-        name: manifest
-        path: verification-manifest.xml
-    - name: Trigger binary verification
-      if: steps.enabled.outputs.enabled
-      uses: peter-evans/repository-dispatch@v2
-      with:
-        token: ${{ secrets.PRIV_REPO_TOKEN }}
-        repository: ${{ github.repository }}
-        event-type: binary-verification
-        # binary-verification uses the run_id to retrieve this workflow's artifacts.
-        client-payload: |
-          { "repo": "${{ github.repository }}", "run_id": "${{ github.run_id }}" }
+    needs: deploy
+    uses: ./.github/workflows/binary-verification.yml
+    secrets: inherit
+    with:
+      tag: "l4v/proof-deploy/${{ github.event_name }}"
