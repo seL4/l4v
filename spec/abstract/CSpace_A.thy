@@ -15,7 +15,7 @@ imports
   ArchVSpace_A
   IpcCancel_A
   ArchCSpace_A
-  "Lib.NonDetMonadLemmas"
+  "Monads.NonDetMonadLemmas"
   "HOL-Library.Prefix_Order"
 begin
 

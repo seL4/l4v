@@ -8,7 +8,7 @@ theory Include_AI
 imports
   Lib.Lib
   ArchCrunchSetup_AI
-  "Lib.Eisbach_WP"
+  "Monads.Eisbach_WP"
   "ASpec.Syscall_A"
   "Lib.LemmaBucket"
   "Lib.ListLibLemmas"

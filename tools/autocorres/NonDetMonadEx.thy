@@ -12,7 +12,7 @@ theory NonDetMonadEx
 imports
   "Word_Lib.WordSetup"
   "Lib.NonDetMonadLemmaBucket"
-  "Lib.OptionMonadND"
+  "Monads.OptionMonadND"
 begin
 
 (*

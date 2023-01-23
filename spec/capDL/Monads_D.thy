@@ -11,7 +11,7 @@
 theory Monads_D
 imports
   Types_D
-  "Lib.NonDetMonadVCG"
+  "Monads.NonDetMonadVCG"
 begin
 
 (* Kernel state monad *)

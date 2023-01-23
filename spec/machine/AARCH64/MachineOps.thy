@@ -10,7 +10,7 @@ chapter "Machine Operations"
 theory MachineOps
 imports
   Word_Lib.WordSetup
-  Lib.NonDetMonad
+  Monads.NonDetMonad
   MachineMonad
 begin
 

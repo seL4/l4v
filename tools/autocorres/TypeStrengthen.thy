@@ -14,7 +14,7 @@
 theory TypeStrengthen
 imports
   L2Defs
-  "Lib.OptionMonadND"
+  "Monads.OptionMonadND"
   ExecConcrete
 begin
 

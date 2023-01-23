@@ -21,8 +21,8 @@ imports
   TypHeapSimple
   HeapLift
   WordAbstract
-  "Lib.OptionMonadWP"
-  "Lib.Apply_Trace"
+  "Monads.OptionMonadWP"
+  "Eisbach_Tools.Apply_Trace"
   AutoCorresSimpset
   "ML_Utils.MkTermAntiquote"
   "ML_Utils.TermPatternAntiquote"

@@ -5,7 +5,7 @@
  *)
 
 theory ArchInvariants_AI
-imports InvariantsPre_AI "Lib.Apply_Trace_Cmd"
+imports InvariantsPre_AI "Eisbach_Tools.Apply_Trace_Cmd"
 begin
 
 section "Move this up"
