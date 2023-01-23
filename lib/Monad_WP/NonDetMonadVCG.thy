@@ -872,6 +872,10 @@ lemma empty_fail_select[simp]:
   "empty_fail (select V) = (V \<noteq> {})"
   by (clarsimp simp: select_def empty_fail_def)
 
+lemma empty_fail_guard[simp]:
+  "empty_fail (state_assert G)"
+  by (clarsimp simp: state_assert_def empty_fail_get empty_fail_assert)
+
 lemma empty_fail_not_snd:
   "\<lbrakk> \<not> snd (m s); empty_fail m \<rbrakk> \<Longrightarrow> \<exists>v. v \<in> fst (m s)"
   by (fastforce simp: empty_fail_def)

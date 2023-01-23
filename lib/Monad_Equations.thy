@@ -513,9 +513,6 @@ lemma bind_fail_propagates:
   "empty_fail A \<Longrightarrow> A >>= (\<lambda>_. fail) = fail"
   by (monad_eq simp: empty_fail_def) fastforce
 
-lemma empty_fail_guard [simp]: "empty_fail (state_assert G)"
-  by (clarsimp simp: state_assert_def assert_def empty_fail_def get_def return_def bind_def)
-
 lemma simple_bind_fail [simp]:
   "(state_assert X >>= (\<lambda>_. fail)) = fail"
   "(modify M >>= (\<lambda>_. fail)) = fail"
