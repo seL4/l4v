@@ -12,7 +12,6 @@
 theory HaskellLib_H
 imports
   Lib
-  NatBitwise
   More_Numeral_Type
   Monads.NonDetMonadVCG
 begin

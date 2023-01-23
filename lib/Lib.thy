@@ -2513,38 +2513,6 @@ lemma option_Some_value_independent:
   "\<lbrakk> f x = Some v; \<And>v'. f x = Some v' \<Longrightarrow> f y = Some v' \<rbrakk> \<Longrightarrow> f y = Some v"
   by blast
 
-text \<open>Some int bitwise lemmas. Helpers for proofs about \<^file>\<open>NatBitwise.thy\<close>\<close>
-lemma int_2p_eq_shiftl:
-  "(2::int)^x = 1 << x"
-  by (simp add: shiftl_int_def)
-
-lemma nat_int_mul:
-  "nat (int a * b) = a * nat b"
-  by (simp add: nat_mult_distrib)
-
-lemma int_shiftl_less_cancel:
-  "n \<le> m \<Longrightarrow> ((x :: int) << n < y << m) = (x < y << (m - n))"
-  apply (drule le_Suc_ex)
-  apply (clarsimp simp: shiftl_int_def power_add)
-  done
-
-lemma int_shiftl_lt_2p_bits:
-  "0 \<le> (x::int) \<Longrightarrow> x < 1 << n \<Longrightarrow> \<forall>i \<ge> n. \<not> x !! i"
-  apply (clarsimp simp: shiftl_int_def)
-  by (metis bit_take_bit_iff not_less take_bit_int_eq_self_iff)
-\<comment> \<open>TODO: The converse should be true as well, but seems hard to prove.\<close>
-
-lemmas int_eq_test_bit = bin_eq_iff
-lemmas int_eq_test_bitI = int_eq_test_bit[THEN iffD2, rule_format]
-
-lemma le_nat_shrink_left:
-  "y \<le> z \<Longrightarrow> y = Suc x \<Longrightarrow> x < z"
-  by simp
-
-lemma length_ge_split:
-  "n < length xs \<Longrightarrow> \<exists>x xs'. xs = x # xs' \<and> n \<le> length xs'"
-  by (cases xs) auto
-
 text \<open>Support for defining enumerations on datatypes derived from enumerations\<close>
 lemma distinct_map_enum:
   "\<lbrakk> (\<forall> x y. (F x = F y \<longrightarrow> x = y )) \<rbrakk>

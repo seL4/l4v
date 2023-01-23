@@ -8,7 +8,7 @@ theory WordAbstract
 imports
   L2Defs
   ExecConcrete
-  Lib.NatBitwise
+  NatBitwise
 begin
 
 definition "WORD_MAX x \<equiv> ((2 ^ (len_of x - 1) - 1) :: int)"

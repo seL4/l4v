@@ -4,11 +4,11 @@
  * SPDX-License-Identifier: BSD-2-Clause
  *)
 
-(* Instance of bit ops for nat. Used by HaskellLib and AutoCorres.
- * Lemmas about this instance should also go here. *)
+(* Instance of bit ops for nat.
+   Lemmas about this instance should also go here. *)
 theory NatBitwise
 imports
-  Lib
+  Word_Lib.WordSetup
 begin
 
 instantiation nat :: lsb
@@ -50,9 +50,19 @@ lemma nat_2p_eq_shiftl:
 
 lemmas shiftl_nat_alt_def = shiftl_nat_def
 
+lemma nat_int_mul:
+  "nat (int a * b) = a * nat b"
+  by (simp add: nat_mult_distrib)
+
 lemma shiftl_nat_def:
   "(x::nat) << y = nat (int x << y)"
   by (simp add: nat_int_mul push_bit_eq_mult shiftl_def)
+
+lemma int_shiftl_less_cancel:
+  "n \<le> m \<Longrightarrow> ((x :: int) << n < y << m) = (x < y << (m - n))"
+  apply (drule le_Suc_ex)
+  apply (clarsimp simp: shiftl_int_def power_add)
+  done
 
 lemma nat_shiftl_less_cancel:
   "n \<le> m \<Longrightarrow> ((x :: nat) << n < y << m) = (x < y << (m - n))"
@@ -68,5 +78,17 @@ lemma nat_shiftl_lt_2p_bits:
 
 lemmas nat_eq_test_bit = bit_eq_iff
 lemmas nat_eq_test_bitI = bit_eq_iff[THEN iffD2, rule_format]
+
+lemma int_2p_eq_shiftl:
+  "(2::int)^x = 1 << x"
+  by (simp add: shiftl_int_def)
+
+lemma int_shiftl_lt_2p_bits:
+  "0 \<le> (x::int) \<Longrightarrow> x < 1 << n \<Longrightarrow> \<forall>i \<ge> n. \<not> x !! i"
+  apply (clarsimp simp: shiftl_int_def)
+  by (metis bit_take_bit_iff not_less take_bit_int_eq_self_iff)
+\<comment> \<open>TODO: The converse should be true as well, but seems hard to prove.\<close>
+
+lemmas int_eq_test_bitI = bin_eq_iff[THEN iffD2, rule_format]
 
 end
