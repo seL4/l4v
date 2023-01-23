@@ -5,12 +5,11 @@
  *)
 
 theory TypHeapLib
-imports "CParser.CTranslation"
+  imports CTranslation
 begin
 
 (* This file contains everything you need to know and use for the
-   day-to-day solving of TypHeap related goals.  See KernelState.thy for
-   abbreviations for cslift etc. *)
+   day-to-day solving of TypHeap related goals. *)
 
 section "Abbreviations and helpers"
 
