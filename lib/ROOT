@@ -19,11 +19,9 @@ session Lib (lib) = Word_Lib +
     List_Lib
     SubMonadLib
     Simulation
-    MonadEq
     SimpStrategy
     Extract_Conjunct
     GenericLib
-    ProvePart
     Corres_Adjust_Preconds
     Requalify
     Value_Abbreviation
@@ -41,7 +39,6 @@ session Lib (lib) = Word_Lib +
     Try_Methods
     ListLibLemmas
     Time_Methods_Cmd
-    Apply_Debug
     MonadicRewrite
     HaskellLemmaBucket
     FP_Eval
@@ -122,7 +119,6 @@ session LibTest (lib) in test = Refine +
     RangeMap_Test
     FP_Eval_Tests
     Trace_Schematic_Insts_Test
-    Local_Method_Tests
     Qualify_Test
     Locale_Abbrev_Test
     Value_Type_Test

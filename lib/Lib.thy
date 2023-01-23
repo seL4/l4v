@@ -18,8 +18,8 @@ imports
   Extract_Conjunct
   ML_Goal
   Eval_Bool
-  Fun_Pred_Syntax
-  Monad_Lib
+  Monads.Fun_Pred_Syntax
+  Monads.Monad_Lib
   NICTATools
   "Word_Lib.WordSetup"
 begin

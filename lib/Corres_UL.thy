@@ -7,8 +7,8 @@
 theory Corres_UL
 imports
   Crunch_Instances_NonDet
-  WPEx
-  WPFix
+  Monads.WPEx
+  Monads.WPFix
   HaskellLemmaBucket
 begin
 

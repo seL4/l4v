@@ -6,7 +6,7 @@
 
 theory BitFieldProofsLib
 imports
-  "Lib.Eisbach_Methods"
+  "Eisbach_Tools.Eisbach_Methods"
   TypHeapLib
 begin
 

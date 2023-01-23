@@ -7,7 +7,7 @@ theory Prefix_Refinement
 
 imports
   Triv_Refinement
-  "Lib.TraceMonadLemmas"
+  "Monads.TraceMonadLemmas"
 
 begin
 

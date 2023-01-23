@@ -55,7 +55,7 @@ In this sense, EquivValid statements could be thought of as \<^emph>\<open>relat
 
 text \<open> This tutorial will introduce some syntactic sugar to emphasise the similarity
 between Hoare triples and EquivValid statements.
-(Here, \<open>\<top>\<top>\<close> is an alias provided by Lib.NonDetMonad for the trivial binary predicate,
+(Here, \<open>\<top>\<top>\<close> is an alias provided by Monads.NonDetMonad for the trivial binary predicate,
 which always returns \<open>True\<close>; similarly, there is also \<open>\<bottom>\<bottom>\<close> for \<open>False\<close>.) \<close>
 
 abbreviation
@@ -140,7 +140,7 @@ where
 text \<open> We could just as well define equivalences similarly for
 \<open>inbox\<close>, \<open>outbox\<close>, or \<open>job\<close> -- we omit these here. \<close>
 
-text \<open> Furthermore, you can use the \<open>and\<close> alias provided by @{theory Lib.Fun_Pred_Syntax}
+text \<open> Furthermore, you can use the \<open>and\<close> alias provided by @{theory Monads.Fun_Pred_Syntax}
 to write the conjunction of two binary predicates.
 (Similarly, there is also an \<open>or\<close> alias for disjunction.)\<close>
 

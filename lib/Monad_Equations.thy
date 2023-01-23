@@ -9,7 +9,7 @@
    Should not be Hoare triples (those go into a different theory). *)
 
 theory Monad_Equations
-  imports MonadEq_Lemmas
+  imports Monads.MonadEq_Lemmas
 begin
 
 lemmas assertE_assert = assertE_liftE

@@ -6,8 +6,8 @@
 
 theory Guess_ExI
 imports
-  Eisbach_Methods
-  Apply_Debug
+  Eisbach_Tools.Eisbach_Methods
+  Eisbach_Tools.Apply_Debug
 begin
 
 (*

@@ -10,8 +10,8 @@ text \<open>A simple proof method for rewriting Simpl programs under a predicate
 theory Simpl_Rewrite
 imports
   "Simpl-VCG.Vcg"
-  "Lib.Eisbach_Methods"
-  "Lib.Apply_Debug"
+  "Eisbach_Tools.Eisbach_Methods"
+  "Eisbach_Tools.Apply_Debug"
 begin
 
 text \<open>One layer of context around a Simpl program.

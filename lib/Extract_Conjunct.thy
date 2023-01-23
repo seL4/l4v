@@ -7,7 +7,7 @@
 theory Extract_Conjunct
 imports
   "Main"
-  "Eisbach_Methods"
+  Eisbach_Tools.Eisbach_Methods
 begin
 
 section \<open>Extracting conjuncts in the conclusion\<close>

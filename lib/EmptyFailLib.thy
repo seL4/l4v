@@ -6,7 +6,7 @@
 
 theory EmptyFailLib
 imports
-  NonDetMonad
+  Monads.NonDetMonad
   HaskellLib_H
 begin
 

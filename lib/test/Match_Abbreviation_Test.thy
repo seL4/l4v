@@ -7,7 +7,7 @@ theory Match_Abbreviation_Test
 
 imports
   Lib.Match_Abbreviation
-  Lib.NonDetMonad
+  Monads.NonDetMonad
 begin
 
 experiment
