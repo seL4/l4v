@@ -1,0 +1,27 @@
+(*
+ * Copyright 2023, Proofcraft Pty Ltd
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ *)
+
+chapter Lib
+
+session Eisbach_Tools (lib) = HOL +
+
+  sessions
+    "HOL-Eisbach"
+    ML_Utils
+
+  theories
+    Apply_Debug
+    Apply_Trace_Cmd
+    Conjuncts
+    Eisbach_Methods
+    Local_Method
+    ProvePart
+    Rule_By_Method
+    Subgoal_Methods
+    Simp_No_Conditional
+    Trace_Schematic_Insts
+
+    Local_Method_Tests

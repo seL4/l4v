@@ -9,15 +9,13 @@ chapter Lib
 session Lib (lib) = Word_Lib +
   sessions
     "HOL-Library"
-    "HOL-Eisbach"
+    Eisbach_Tools
     ML_Utils
   directories
-    "subgoal_focus"
     "Monad_WP"
     "Monad_WP/wp"
   theories
     Lib
-    Apply_Trace_Cmd
     AddUpdSimps
     EmptyFailLib
     List_Lib
@@ -31,7 +29,6 @@ session Lib (lib) = Word_Lib +
     Corres_Adjust_Preconds
     Requalify
     Value_Abbreviation
-    Eisbach_Methods
     HaskellLib_H
     Eval_Bool
     Bisim_UL
@@ -50,14 +47,12 @@ session Lib (lib) = Word_Lib +
     MonadicRewrite
     HaskellLemmaBucket
     FP_Eval
-    "subgoal_focus/Subgoal_Methods"
     Insulin
     ExtraCorres
     NICTATools
     BCorres_UL
     Qualify
     LexordList
-    Rule_By_Method
     Defs
     Distinct_Cmd
     Match_Abbreviation
@@ -69,7 +64,6 @@ session Lib (lib) = Word_Lib +
     FastMap
     RangeMap
     Corres_Method
-    Conjuncts
     DetWPLib
     Guess_ExI
     GenericTag

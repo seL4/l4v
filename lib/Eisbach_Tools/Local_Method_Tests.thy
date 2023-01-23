@@ -6,7 +6,7 @@
 
 theory Local_Method_Tests
 imports
-  Lib.Eisbach_Methods
+  Eisbach_Methods
 begin
 
 text \<open>
