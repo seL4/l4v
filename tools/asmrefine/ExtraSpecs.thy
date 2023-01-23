@@ -7,7 +7,7 @@
 theory ExtraSpecs
 
 imports
-  "CLib.TypHeapLib"
+  "CParser.TypHeapLib"
 
 begin
 

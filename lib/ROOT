@@ -87,7 +87,6 @@ session CLib (lib) in clib = CParser +
     LemmaBucket_C
     SIMPL_Lemmas
     SimplRewrite
-    TypHeapLib
     BitFieldProofsLib
     XPres
 

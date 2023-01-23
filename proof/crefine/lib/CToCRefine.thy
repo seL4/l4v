@@ -9,7 +9,8 @@ theory CToCRefine
 imports
     "CSpec.Substitute"
     "CLib.SimplRewrite"
-    "CLib.TypHeapLib"
+    Lib.Lib
+    "CParser.TypHeapLib"
 begin
 
 lemma spec_statefn_simulates_lookup_tree_Node:

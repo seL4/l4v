@@ -8,7 +8,7 @@ theory LemmaBucket_C
 imports
   "Lib.Lib"
   "Word_Lib.WordSetup"
-  TypHeapLib
+  CParser.TypHeapLib
   "CParser.ArrayAssertion"
 begin
 

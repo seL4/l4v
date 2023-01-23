@@ -5,7 +5,7 @@
  *)
 
 theory TypHeapLimits
-imports "CLib.TypHeapLib"
+  imports CParser.TypHeapLib
 begin
 
 definition
