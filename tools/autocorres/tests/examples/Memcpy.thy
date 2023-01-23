@@ -182,8 +182,7 @@ lemma memcpy_word:
      apply clarsimp
     apply (clarsimp simp: h_val_def)[1]
     apply (rule arg_cong[where f=from_bytes])
-    apply (subst numeral_eqs(3))+
-    apply simp
+    apply (simp add: numeral_nat)
     apply (rule_tac x=0 in allE, assumption, erule impE, unat_arith)
     apply (rule_tac x=1 in allE, assumption, erule impE, unat_arith)
     apply (rule_tac x=2 in allE, assumption, erule impE, unat_arith)
@@ -383,7 +382,8 @@ lemma update_bytes_postpend: "length bs = x + 1 \<Longrightarrow>
   apply (clarsimp simp:ptr_add_def)
   apply (subst heap_update_list_concat_fold_hrs_mem)
    apply clarsimp+
-  by (metis append_eq_conv_conj append_self_conv hd_drop_conv_nth2 lessI take_hd_drop)
+  apply (metis append.right_neutral append_eq_conv_conj lessI take_Suc_conv_app_nth)
+  done
 
 lemma h_val_not_id_general:
   fixes y :: "'a::mem_type ptr"
@@ -600,8 +600,7 @@ lemma memcpy_wp':
       apply clarsimp
       apply (rule update_bytes_eq)
         apply (subgoal_tac "min (unat i) (unat (i + 1)) = unat i")
-         apply clarsimp
-        apply clarsimp
+         apply presburger
         apply unat_arith
        apply (clarsimp simp:ptr_add_def)
       apply clarsimp
