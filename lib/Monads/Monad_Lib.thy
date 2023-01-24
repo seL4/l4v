@@ -46,7 +46,7 @@ definition
   zipWith :: "('a \<Rightarrow> 'b \<Rightarrow> 'c) \<Rightarrow> 'a list \<Rightarrow> 'b list \<Rightarrow> 'c list" where
   "zipWith f xs ys \<equiv> map (case_prod f) (zip xs ys)"
 
-lemma zipWith_Nil2 :
+lemma zipWith_Nil[simp]:
   "zipWith f xs [] = []"
   unfolding zipWith_def by simp
 

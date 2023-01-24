@@ -208,7 +208,7 @@ lemma zipWithM_One:
   "zipWithM f (x#xs) [a] = (do z \<leftarrow> f x a; return [z] od)"
   by (simp add: zipWithM_def zipWith_def sequence_def)
 
-lemma zipWithM_x_Nil:
+lemma zipWithM_x_Nil[simp]:
   "zipWithM_x f xs [] = return ()"
   by (simp add: zipWithM_x_def zipWith_def sequence_x_def)
 
@@ -332,8 +332,6 @@ lemma mapM_map_simp:
    apply (simp add: mapM_def sequence_def)
   apply (simp add: mapM_Cons)
   done
-
-lemmas zipWithM_x_Nil2 = zipWithM_x_Nil (* FIXME lib: eliminate, make the original [simp] *)
 
 lemma filterM_voodoo:
   "\<forall>ys. P ys (do zs \<leftarrow> filterM m xs; return (ys @ zs) od)

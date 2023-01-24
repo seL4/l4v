@@ -1204,10 +1204,6 @@ shows
   apply (auto split: if_split)
   done
 
-declare zipWith_Nil2[simp]
-
-declare zipWithM_x_Nil2[simp]
-
 lemma asUser_tcbFault_obj_at:
   "\<lbrace>obj_at' (\<lambda>tcb. P (tcbFault tcb)) t\<rbrace> asUser t' m
    \<lbrace>\<lambda>rv. obj_at' (\<lambda>tcb. P (tcbFault tcb)) t\<rbrace>"
