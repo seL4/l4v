@@ -12,8 +12,8 @@ theory NonDetMonadEx
 imports
   "Word_Lib.WordSetup"
   "Monads.NonDetMonadVCG"
-  "Lib.Monad_Equations"
-  "Lib.More_NonDetMonadVCG"
+  "Monads.Monad_Equations"
+  "Monads.More_NonDetMonadVCG"
   "Monads.No_Throw"
   "Monads.No_Fail"
   "Monads.OptionMonadND"

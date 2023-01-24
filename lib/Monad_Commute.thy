@@ -9,7 +9,7 @@
 
 theory Monad_Commute
   imports
-    Monad_Equations
+    Monads.Monad_Equations
     Monad_Lists (* for mapM_x *)
 begin
 

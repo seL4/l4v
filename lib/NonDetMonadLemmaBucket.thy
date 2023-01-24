@@ -8,9 +8,9 @@
 theory NonDetMonadLemmaBucket
 imports
   Lib
-  More_NonDetMonadVCG
+  Monads.More_NonDetMonadVCG
   Monad_Lists
-  Monad_Equations
+  Monads.Monad_Equations
   Monad_Commute
   Monads.No_Fail
   Monads.No_Throw

@@ -11,8 +11,7 @@
 session AutoCorres = CParser +
   sessions
     "HOL-Eisbach"
-    Lib
-    CLib
+    Monads
   theories
     "DataStructures"
     "AutoCorres"

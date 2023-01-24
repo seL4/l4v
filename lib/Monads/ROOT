@@ -30,10 +30,12 @@ session Monads (lib) = HOL +
     OptionMonad
     TraceMonadVCG
     NonDetMonadVCG
+    More_NonDetMonadVCG
     NonDetMonad
     NonDetMonadLemmas
     No_Fail
     No_Throw
+    Monad_Equations
     "wp/WPBang"
     "wp/WPFix"
     "wp/Eisbach_WP"
