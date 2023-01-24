@@ -73,7 +73,7 @@ lemma createObject_typ_at':
          pspace_aligned' s \<and> pspace_no_overlap' ptr (objBitsKO ty) s\<rbrace>
    createObjects' ptr (Suc 0) ty 0
    \<lbrace>\<lambda>rv s. typ_at' otype ptr s\<rbrace>"
-  apply (clarsimp simp:createObjects'_def alignError_def split_def | wp hoare_unless_wp | wpc )+
+  apply (clarsimp simp:createObjects'_def alignError_def split_def | wp unless_wp | wpc )+
   apply (clarsimp simp: obj_at'_def ko_wp_at'_def typ_at'_def pspace_distinct'_def)+
   apply (subgoal_tac "ps_clear ptr (objBitsKO ty)
     (s\<lparr>ksPSpace := \<lambda>a. if a = ptr then Some ty else ksPSpace s a\<rparr>)")
@@ -423,7 +423,7 @@ lemma checkVP_wpR [wp]:
   checkVPAlignment sz w \<lbrace>P\<rbrace>, -"
   apply (simp add: checkVPAlignment_def unlessE_whenE cong: vmpage_size.case_cong)
   apply (rule hoare_pre)
-   apply (wp hoare_whenE_wp|wpc)+
+   apply (wp whenE_wp|wpc)+
   apply (simp add: is_aligned_mask vmsz_aligned'_def)
   done
 
@@ -451,7 +451,7 @@ lemma ARMMMU_improve_cases:
   by (cases cap, simp_all add: isCap_simps) (* not sure if this is useful as is *)
 
 lemma decodeVCPUInjectIRQ_inv[wp]: "\<lbrace>P\<rbrace> decodeVCPUInjectIRQ a b \<lbrace>\<lambda>_. P\<rbrace>"
-  by (wpsimp simp: decodeVCPUInjectIRQ_def Let_def wp: hoare_whenE_wp getVCPU_wp | rule conjI)+
+  by (wpsimp simp: decodeVCPUInjectIRQ_def Let_def wp: whenE_wp getVCPU_wp | rule conjI)+
 
 crunch inv [wp]: "ARM_HYP_H.decodeInvocation" "P"
   (wp: crunch_wps mapME_x_inv_wp getASID_wp
@@ -957,11 +957,11 @@ shows
                  apply (simp add: returnOk_liftE[symmetric])
                  apply (rule corres_returnOk)
                  apply (simp add: archinv_relation_def asid_pool_invocation_map_def)
-                apply (rule hoare_pre, wp hoare_whenE_wp)
+                apply (rule hoare_pre, wp whenE_wp)
                 apply (clarsimp simp: ucast_fst_hd_assocs)
-                apply (wp hoareE_TrueI hoare_whenE_wp getASID_wp | simp)+
+                apply (wp hoareE_TrueI whenE_wp getASID_wp | simp)+
             apply ((clarsimp simp: p2_low_bits_max | rule TrueI impI)+)[2]
-          apply (wp hoare_whenE_wp getASID_wp)+
+          apply (wp whenE_wp getASID_wp)+
         apply (clarsimp simp: valid_cap_def)
        apply auto[1]
       apply (simp add: isCap_simps split del: if_split)
@@ -1035,7 +1035,7 @@ shows
                   apply (simp add: ord_le_eq_trans [OF word_n1_ge])
                  apply (wp hoare_drop_imps)+
            apply (simp add: o_def validE_R_def)
-           apply (wp hoare_whenE_wp)+
+           apply (wp whenE_wp)+
        apply fastforce
       apply clarsimp
       apply (simp add: null_def split_def asid_high_bits_def
@@ -1156,7 +1156,7 @@ shows
              apply (rule corres_returnOk)
              apply (clarsimp simp: archinv_relation_def page_table_invocation_map_def)
              apply (simp add: shiftr_shiftl1)
-            apply (wp hoare_whenE_wp get_master_pde_wp getPDE_wp find_pd_for_asid_inv
+            apply (wp whenE_wp get_master_pde_wp getPDE_wp find_pd_for_asid_inv
                    | wp (once) hoare_drop_imps)+
       apply (fastforce simp: valid_cap_def mask_def)
      apply (clarsimp simp: valid_cap'_def)
@@ -1524,7 +1524,7 @@ lemma tcbSchedEnqueue_vs_entry_align[wp]:
    tcbSchedEnqueue pa
   \<lbrace>\<lambda>rv. ko_wp_at' (\<lambda>ko. P (vs_entry_align ko)) p\<rbrace>"
   apply (clarsimp simp: tcbSchedEnqueue_def setQueue_def)
-  by (wp hoare_unless_wp | simp)+
+  by (wp unless_wp | simp)+
 
 crunch vs_entry_align[wp]:
   setThreadState  "ko_wp_at' (\<lambda>ko. P (vs_entry_align ko)) p"

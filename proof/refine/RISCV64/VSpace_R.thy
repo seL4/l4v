@@ -794,13 +794,13 @@ lemma dmo_setVSpaceRoot_invs_no_cicd'[wp]:
 lemma setVMRoot_invs [wp]:
   "setVMRoot p \<lbrace>invs'\<rbrace>"
   unfolding setVMRoot_def getThreadVSpaceRoot_def
-  by (wpsimp wp: hoare_whenE_wp findVSpaceForASID_vs_at_wp hoare_drop_imps hoare_vcg_ex_lift
+  by (wpsimp wp: whenE_wp findVSpaceForASID_vs_at_wp hoare_drop_imps hoare_vcg_ex_lift
                  hoare_vcg_all_lift)
 
 lemma setVMRoot_invs_no_cicd':
   "\<lbrace>invs_no_cicd'\<rbrace> setVMRoot p \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
   unfolding setVMRoot_def getThreadVSpaceRoot_def
-  by (wpsimp wp: hoare_whenE_wp findVSpaceForASID_vs_at_wp hoare_drop_imps hoare_vcg_ex_lift
+  by (wpsimp wp: whenE_wp findVSpaceForASID_vs_at_wp hoare_drop_imps hoare_vcg_ex_lift
                  hoare_vcg_all_lift)
 
 crunch nosch [wp]: setVMRoot "\<lambda>s. P (ksSchedulerAction s)"

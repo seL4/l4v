@@ -1696,27 +1696,27 @@ lemma hoare_list_case:
   apply simp
   done
 
-lemma hoare_when_wp [wp_split]:
+lemma when_wp[wp_split]:
  "\<lbrakk> P \<Longrightarrow> \<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>if P then Q else R ()\<rbrace> when P f \<lbrace>R\<rbrace>"
   by (clarsimp simp: when_def valid_def return_def)
 
-lemma hoare_unless_wp[wp_split]:
+lemma unless_wp[wp_split]:
   "(\<not>P \<Longrightarrow> \<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>) \<Longrightarrow> \<lbrace>if P then R () else Q\<rbrace> unless P f \<lbrace>R\<rbrace>"
   unfolding unless_def by wp auto
 
-lemma hoare_whenE_wp:
+lemma whenE_wp:
   "(P \<Longrightarrow> \<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>, \<lbrace>E\<rbrace>) \<Longrightarrow> \<lbrace>if P then Q else R ()\<rbrace> whenE P f \<lbrace>R\<rbrace>, \<lbrace>E\<rbrace>"
   unfolding whenE_def by clarsimp wp
 
-lemmas hoare_whenE_wps[wp_split]
-    = hoare_whenE_wp hoare_whenE_wp[THEN validE_validE_R] hoare_whenE_wp[THEN validE_validE_E]
+lemmas whenE_wps[wp_split]
+    = whenE_wp whenE_wp[THEN validE_validE_R] whenE_wp[THEN validE_validE_E]
 
-lemma hoare_unlessE_wp:
+lemma unlessE_wp:
   "(\<not> P \<Longrightarrow> \<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>, \<lbrace>E\<rbrace>) \<Longrightarrow> \<lbrace>if P then R () else Q\<rbrace> unlessE P f \<lbrace>R\<rbrace>, \<lbrace>E\<rbrace>"
   unfolding unlessE_def by wp auto
 
-lemmas hoare_unlessE_wps[wp_split]
-    = hoare_unlessE_wp hoare_unlessE_wp[THEN validE_validE_R] hoare_unlessE_wp[THEN validE_validE_E]
+lemmas unlessE_wps[wp_split]
+    = unlessE_wp unlessE_wp[THEN validE_validE_R] unlessE_wp[THEN validE_validE_E]
 
 lemma hoare_use_eq:
   assumes x: "\<And>P. \<lbrace>\<lambda>s. P (f s)\<rbrace> m \<lbrace>\<lambda>rv s. P (f s)\<rbrace>"

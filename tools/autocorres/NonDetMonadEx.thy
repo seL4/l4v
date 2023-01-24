@@ -86,7 +86,7 @@ lemma when_wp_nf [wp]:
            \<Longrightarrow> \<lbrace> if P then Q else R () \<rbrace> when P f \<lbrace> R \<rbrace>!"
   by (monad_eq simp: validNF_def valid_def no_fail_def)
 
-lemmas [wp] = hoare_whenE_wp
+lemmas [wp] = whenE_wp
 
 lemma gets_the_wp_nf [wp]:
   "\<lbrace>\<lambda>s. (f s \<noteq> None) \<and> Q (the (f s)) s\<rbrace> gets_the f \<lbrace>Q\<rbrace>!"

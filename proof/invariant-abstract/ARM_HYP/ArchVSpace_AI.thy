@@ -1377,7 +1377,7 @@ lemma set_vm_root_valid_arch[wp]:
   "\<lbrace>valid_arch_state and sym_refs o state_hyp_refs_of\<rbrace> set_vm_root pd \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
   unfolding set_vm_root_def
   apply (wpsimp wp: gets_the_get_tcb_wp get_hw_asid_valid_arch
-                    hoare_vcg_imp_lift hoare_vcg_all_lift hoare_whenE_wp
+                    hoare_vcg_imp_lift hoare_vcg_all_lift whenE_wp
                     hoare_drop_imps get_cap_wp
               simp: if_apply_def2)
   done
@@ -2690,7 +2690,7 @@ lemma dmo_setIRQTrigger_invs[wp]: "\<lbrace>invs\<rbrace> do_machine_op (setIRQT
 lemma svr_invs [wp]:
   "\<lbrace>invs\<rbrace> set_vm_root t' \<lbrace>\<lambda>_. invs\<rbrace>"
   unfolding set_vm_root_def
-  apply (wpsimp wp: gets_the_get_tcb_wp hoare_vcg_all_lift hoare_vcg_imp_lift hoare_whenE_wp
+  apply (wpsimp wp: gets_the_get_tcb_wp hoare_vcg_all_lift hoare_vcg_imp_lift whenE_wp
                     hoare_vcg_disj_lift hoare_drop_imps get_cap_wp
               simp: if_apply_def2)
   apply (thin_tac "cte_wp_at ((=) x) t s" for t)

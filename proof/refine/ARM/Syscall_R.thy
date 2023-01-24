@@ -855,9 +855,9 @@ lemma valid_irq_node_tcbSchedEnqueue[wp]:
   \<lbrace>\<lambda>rv s'. valid_irq_node' (irq_node' s') s'\<rbrace>"
   apply (rule hoare_pre)
   apply (simp add:valid_irq_node'_def )
-  apply (wp hoare_unless_wp hoare_vcg_all_lift | wps)+
+  apply (wp unless_wp hoare_vcg_all_lift | wps)+
   apply (simp add:tcbSchedEnqueue_def)
-  apply (wp hoare_unless_wp| simp)+
+  apply (wp unless_wp| simp)+
   apply (simp add:valid_irq_node'_def)
   done
 
@@ -971,7 +971,7 @@ lemma setDomain_invs':
   (\<lambda>y. domain \<le> maxDomain))\<rbrace>
   setDomain ptr domain \<lbrace>\<lambda>y. invs'\<rbrace>"
   apply (simp add:setDomain_def )
-  apply (wp add: hoare_when_wp static_imp_wp static_imp_conj_wp rescheduleRequired_all_invs_but_extra
+  apply (wp add: when_wp static_imp_wp static_imp_conj_wp rescheduleRequired_all_invs_but_extra
     tcbSchedEnqueue_valid_action hoare_vcg_if_lift2)
      apply (rule_tac Q = "\<lambda>r s. all_invs_but_sch_extra s \<and> curThread = ksCurThread s
       \<and> (ptr \<noteq> curThread \<longrightarrow> ct_not_inQ s \<and> sch_act_wf (ksSchedulerAction s) s \<and> ct_idle_or_in_cur_domain' s)"

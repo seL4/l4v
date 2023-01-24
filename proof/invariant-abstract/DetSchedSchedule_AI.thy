@@ -1359,7 +1359,7 @@ lemma schedule_choose_new_thread_valid_sched:
    schedule_choose_new_thread
    \<lbrace>\<lambda>_. valid_sched \<rbrace>"
   unfolding schedule_choose_new_thread_def
-  apply (wpsimp wp_del: hoare_when_wp
+  apply (wpsimp wp_del: when_wp
                  wp: set_scheduler_action_rct_valid_sched choose_thread_ct_not_queued
                      choose_thread_ct_activatable choose_thread_cur_dom_or_idle
                      hoare_vcg_disj_lift)+
@@ -1380,7 +1380,7 @@ lemma schedule_valid_sched:
                    tcb_sched_enqueue_cur_ct_in_q)
        (* switch_thread candidate *)
        apply (rename_tac candidate)
-       apply (wp del: hoare_when_wp
+       apply (wp del: when_wp
                   add: set_scheduler_action_rct_valid_sched schedule_choose_new_thread_valid_sched)
                 apply (rule hoare_vcg_conj_lift)
                  apply (rule_tac t=candidate in set_scheduler_action_cnt_valid_blocked')
@@ -1416,7 +1416,7 @@ crunches update_restart_pc
 
 
 crunch ct_not_in_q[wp]: finalise_cap ct_not_in_q
-  (wp: crunch_wps hoare_drop_imps hoare_unless_wp select_inv mapM_wp
+  (wp: crunch_wps hoare_drop_imps unless_wp select_inv mapM_wp
        subset_refl if_fun_split simp: crunch_simps ignore: tcb_sched_action)
 
 end
@@ -1516,7 +1516,7 @@ crunches update_restart_pc
 context DetSchedSchedule_AI begin
 
 crunch valid_etcbs[wp]: finalise_cap valid_etcbs
-  (wp: hoare_drop_imps hoare_unless_wp select_inv mapM_x_wp mapM_wp subset_refl
+  (wp: hoare_drop_imps unless_wp select_inv mapM_x_wp mapM_wp subset_refl
        if_fun_split simp: crunch_simps ignore: set_object)
 
 crunch valid_sched[wp]: cap_swap_for_delete, empty_slot, cap_delete_one valid_sched

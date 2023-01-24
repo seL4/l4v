@@ -8865,7 +8865,7 @@ declare withoutPreemption_lift [wp]
 crunch irq_states' [wp]: capSwapForDelete valid_irq_states'
 
 crunch irq_states' [wp]: finaliseCap valid_irq_states'
-  (wp: crunch_wps hoare_unless_wp getASID_wp no_irq_setVSpaceRoot no_irq_hwASIDFlush
+  (wp: crunch_wps unless_wp getASID_wp no_irq_setVSpaceRoot no_irq_hwASIDFlush
    simp: crunch_simps o_def pteAtIndex_def)
 
 lemma finaliseSlot_IRQInactive':
@@ -8909,7 +8909,7 @@ lemma cteDelete_IRQInactive:
   "\<lbrace>valid_irq_states'\<rbrace> cteDelete x y
   -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
   apply (simp add: cteDelete_def split_def)
-  apply (wp hoare_whenE_wp)
+  apply (wp whenE_wp)
    apply (rule hoare_post_impErr)
      apply (rule validE_E_validE)
      apply (rule finaliseSlot_IRQInactive)
@@ -8922,7 +8922,7 @@ lemma cteDelete_irq_states':
   "\<lbrace>valid_irq_states'\<rbrace> cteDelete x y
   \<lbrace>\<lambda>rv. valid_irq_states'\<rbrace>"
   apply (simp add: cteDelete_def split_def)
-  apply (wp hoare_whenE_wp)
+  apply (wp whenE_wp)
    apply (rule hoare_post_impErr)
      apply (rule hoare_valid_validE)
      apply (rule finaliseSlot_irq_states')
@@ -8946,7 +8946,7 @@ proof (induct rule: cteRevoke.induct)
   case (1 p s')
   show ?case
     apply (subst cteRevoke.simps)
-    apply (wp "1.hyps" unlessE_wp hoare_whenE_wp preemptionPoint_IRQInactive_spec
+    apply (wp "1.hyps" unlessE_wp whenE_wp preemptionPoint_IRQInactive_spec
               cteDelete_IRQInactive cteDelete_irq_states' getCTE_wp')+
     apply clarsimp
     done
@@ -8967,7 +8967,7 @@ lemma inv_cnode_IRQInactive:
   apply (rule hoare_pre)
    apply (wp cteRevoke_IRQInactive finaliseSlot_IRQInactive
              cteDelete_IRQInactive
-             hoare_whenE_wp
+             whenE_wp
            | wpc
            | simp add:  split_def)+
   done

@@ -354,7 +354,7 @@ crunches send_ipc, send_fault_ipc, receive_ipc, handle_fault, handle_interrupt, 
 
 crunches init_arch_objects, reset_untyped_cap
   for arch_state[wp]: "\<lambda>s. P (arch_state s)"
-  (wp: crunch_wps preemption_point_inv hoare_unless_wp mapME_x_wp'
+  (wp: crunch_wps preemption_point_inv unless_wp mapME_x_wp'
    simp: crunch_simps)
 
 crunches invoke_untyped

@@ -250,11 +250,11 @@ lemma reset_untyped_cap_wp:
     cdl.lift (uref \<mapsto>c UntypedCap dev obj_range fr \<and>* (\<And>*ptr\<in>tot_free_range. ptr \<mapsto>o Untyped) \<and>* P) s\<rbrace>,-"
   apply (simp add:reset_untyped_cap_def bind_assoc bindE_assoc)
   apply (rule hoare_pre)
-   apply (wp hoare_whenE_wp)
+   apply (wp whenE_wp)
       apply (rule_tac P = "\<exists>fr. cap = UntypedCap dev obj_range fr
           \<and> (\<forall>fr\<in> set x. free_range \<subseteq> fr \<and> fr \<subseteq> obj_range)" in hoare_gen_asmE)
       apply clarsimp
-      apply (wp hoare_whenE_wp mapME_x_wp alternativeE_wp)
+      apply (wp whenE_wp mapME_x_wp alternativeE_wp)
       apply (rule ballI)
        apply (rule hoare_pre)
        apply (wp alternative_wp)
@@ -292,11 +292,11 @@ lemma reset_untyped_cap_wp:
   done
 
 crunch cdl_current_domain[wp]: reset_untyped_cap "\<lambda>s. P (cdl_current_domain s)"
-(wp:select_wp mapM_x_wp' mapME_x_inv_wp alternativeE_wp crunch_wps hoare_unless_wp
+(wp:select_wp mapM_x_wp' mapME_x_inv_wp alternativeE_wp crunch_wps unless_wp
   simp: detype_def crunch_simps)
 
 crunch cdl_current_domain[wp]: invoke_untyped "\<lambda>s. P (cdl_current_domain s)"
-(wp: select_wp mapM_x_wp' mapME_x_inv_wp alternativeE_wp crunch_wps hoare_unless_wp
+(wp: select_wp mapM_x_wp' mapME_x_inv_wp alternativeE_wp crunch_wps unless_wp
   simp: detype_def crunch_simps validE_E_def)
 
 lemma invoke_untyped_wp:
@@ -793,12 +793,12 @@ lemma invoke_untyped_cdt_inc[wp]:
       apply (wp mapM_x_wp[OF _ subset_refl])
        apply (simp add:create_cap_def)
         apply (rule hoare_pre)
-        apply (wp set_parent_other hoare_unless_wp unlessE_wp
+        apply (wp set_parent_other unless_wp unlessE_wp
                | wpc | simp)+
    apply (simp add: reset_untyped_cap_def validE_def sum.case_eq_if)
    apply (rule_tac Q = "\<lambda>r s. cdl_cdt s child = Some parent" in hoare_post_imp)
     apply simp
-   apply (wp hoare_whenE_wp alternativeE_wp mapME_x_inv_wp select_wp | simp)+
+   apply (wp whenE_wp alternativeE_wp mapME_x_inv_wp select_wp | simp)+
   apply (clarsimp simp:detype_def)
   done
 
@@ -960,7 +960,7 @@ lemma invoke_untyped_preempt:
          sep_map_set_conj sep_any_map_o obj_range \<and>* Q) s\<rbrace>"
   apply (simp add: invoke_untyped_def)
   apply (wp unlessE_wp)
-   apply (simp add: reset_untyped_cap_def whenE_liftE | wp hoare_whenE_wp alternative_wp)+
+   apply (simp add: reset_untyped_cap_def whenE_liftE | wp whenE_wp alternative_wp)+
       apply (rule_tac P = "\<exists>a. cap = UntypedCap dev obj_range a" in hoare_gen_asmEx)
       apply (rule hoare_post_impErr[where E = E and F = E for E])
         apply (rule mapME_x_inv_wp[where P = P and E = "\<lambda>r. P" for P])
@@ -1107,7 +1107,7 @@ lemma is_pending_cap_set_available_range[simp]:
 lemma reset_untyped_cap_no_pending[wp]:
   "\<lbrace>no_pending \<rbrace> reset_untyped_cap cref \<lbrace>\<lambda>rv. no_pending\<rbrace>"
   apply (simp add: reset_untyped_cap_def)
-  apply (wp hoare_whenE_wp)
+  apply (wp whenE_wp)
      apply (rule_tac P = "snd cref = tcb_pending_op_slot \<longrightarrow> \<not> is_pending_cap cap" in hoare_gen_asmEx)
      apply (wp mapME_x_inv_wp alternativeE_wp | simp)+
     apply (wp select_wp)+
@@ -1161,7 +1161,7 @@ lemma reset_untyped_cap_not_pending_cap[wp]:
   reset_untyped_cap cref
   \<lbrace>\<lambda>rv s.  (\<exists>cap. opt_cap cref s = Some cap) \<longrightarrow> \<not> is_pending_cap (the (opt_cap cref s))\<rbrace>"
   apply (simp add: reset_untyped_cap_def)
-  apply (wp hoare_whenE_wp)
+  apply (wp whenE_wp)
      apply (rule_tac P = " \<not> is_pending_cap cap" in hoare_gen_asmEx)
      apply (wp mapME_x_inv_wp alternativeE_wp set_cap_opt_cap)+
      apply simp

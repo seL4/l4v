@@ -4345,7 +4345,7 @@ lemma createNewCaps_pde_mappings'[wp]:
 lemma createObjects'_irq_states' [wp]:
   "\<lbrace>valid_irq_states'\<rbrace> createObjects' a b c d \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
   apply (simp add: createObjects'_def split_def)
-  apply (wp hoare_unless_wp|wpc|simp add: alignError_def)+
+  apply (wp unless_wp|wpc|simp add: alignError_def)+
   apply fastforce
   done
 
@@ -4638,7 +4638,7 @@ lemma createObjects_null_filter':
    createObjects' ptr n val gbits
    \<lbrace>\<lambda>addrs a. P (null_filter' (ctes_of a))\<rbrace>"
    apply (clarsimp simp: createObjects'_def split_def)
-   apply (wp hoare_unless_wp|wpc
+   apply (wp unless_wp|wpc
           | clarsimp simp:haskell_assert_def alignError_def
             split del: if_splits simp del:fun_upd_apply)+
    apply (subst new_cap_addrs_fold')

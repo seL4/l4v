@@ -78,7 +78,7 @@ lemma createObject_typ_at':
   supply
     is_aligned_neg_mask_eq[simp del]
     is_aligned_neg_mask_weaken[simp del]
-  apply (clarsimp simp:createObjects'_def alignError_def split_def | wp hoare_unless_wp | wpc )+
+  apply (clarsimp simp:createObjects'_def alignError_def split_def | wp unless_wp | wpc )+
   apply (clarsimp simp:obj_at'_def ko_wp_at'_def typ_at'_def pspace_distinct'_def)+
   apply (subgoal_tac "ps_clear ptr (objBitsKO ty)
     (s\<lparr>ksPSpace := \<lambda>a. if a = ptr then Some ty else ksPSpace s a\<rparr>)")
@@ -403,7 +403,7 @@ lemma checkVP_wpR [wp]:
   checkVPAlignment sz w \<lbrace>P\<rbrace>, -"
   apply (simp add: checkVPAlignment_def unlessE_whenE cong: vmpage_size.case_cong)
   apply (rule hoare_pre)
-   apply (wp hoare_whenE_wp|wpc)+
+   apply (wp whenE_wp|wpc)+
   apply (simp add: is_aligned_mask vmsz_aligned_def)
   done
 
@@ -687,7 +687,7 @@ lemma decodeX64PageTableInvocation_corres:
              apply (rule leq_mask_shift)
              apply (simp add: bit_simps le_mask_high_bits word_size)
             apply ((clarsimp cong: if_cong
-                     | wp hoare_whenE_wp hoare_vcg_all_lift_R getPTE_wp get_pte_wp
+                     | wp whenE_wp hoare_vcg_all_lift_R getPTE_wp get_pte_wp
                      | wp (once) hoare_drop_imps)+)
     apply (clarsimp simp: invs_vspace_objs invs_valid_asid_table invs_psp_aligned invs_distinct)
     apply (clarsimp simp: valid_cap_def wellformed_mapdata_def not_le below_user_vtop_in_user_region)
@@ -813,11 +813,11 @@ shows
                apply (simp add: returnOk_liftE[symmetric])
                apply (rule corres_returnOk)
                apply (simp add: archinv_relation_def asid_pool_invocation_map_def)
-              apply (rule hoare_pre, wp hoare_whenE_wp)
+              apply (rule hoare_pre, wp whenE_wp)
               apply (clarsimp simp: ucast_fst_hd_assocs)
-             apply (wp hoareE_TrueI hoare_whenE_wp getASID_wp | simp)+
+             apply (wp hoareE_TrueI whenE_wp getASID_wp | simp)+
           apply ((clarsimp simp: p2_low_bits_max | rule TrueI impI)+)[2]
-        apply (wp hoare_whenE_wp getASID_wp)+
+        apply (wp whenE_wp getASID_wp)+
       apply (auto simp: valid_cap_def)[1]
      apply auto[1]
     \<comment> \<open>ASIDControlCap\<close>

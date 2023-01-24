@@ -2058,7 +2058,7 @@ lemma invokeCNode_no_orphans [wp]:
    \<lbrace> \<lambda>rv. no_orphans \<rbrace>"
   unfolding invokeCNode_def
   apply (rule hoare_pre)
-   apply (wp hoare_drop_imps hoare_unless_wp | wpc | clarsimp split del: if_split)+
+   apply (wp hoare_drop_imps unless_wp | wpc | clarsimp split del: if_split)+
   apply (simp add: invs_valid_queues')
   done
 

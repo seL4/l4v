@@ -642,7 +642,7 @@ lemma createObject_valid_duplicates'[wp]:
          apply (simp add: placeNewObject_def placeNewDataObject_def
                           placeNewObject'_def split_def copyGlobalMappings_def
                      split del: if_split
-           | wp hoare_unless_wp[where P="d"] hoare_unless_wp[where Q=\<top>]
+           | wp unless_wp[where P="d"] unless_wp[where Q=\<top>]
            | wpc | simp add: alignError_def split del: if_split)+
   apply (intro conjI impI)
              apply clarsimp+
@@ -874,7 +874,7 @@ lemma deleteObjects_valid_duplicates'[wp]:
 
 crunch arch_inv[wp]: resetUntypedCap "\<lambda>s. P (ksArchState s)"
   (simp: crunch_simps
-     wp: hoare_drop_imps hoare_unless_wp mapME_x_inv_wp
+     wp: hoare_drop_imps unless_wp mapME_x_inv_wp
          preemptionPoint_inv
    ignore: freeMemory)
 
@@ -909,7 +909,7 @@ lemma invokeUntyped_valid_duplicates[wp]:
          and valid_untyped_inv' ui and ct_active'\<rbrace>
      invokeUntyped ui
    \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s) \<rbrace>"
-  supply hoare_whenE_wps[wp_split del]
+  supply whenE_wps[wp_split del]
   apply (simp only: invokeUntyped_def updateCap_def)
   apply (rule hoare_name_pre_state)
   apply (cases ui)
@@ -922,7 +922,7 @@ lemma invokeUntyped_valid_duplicates[wp]:
    apply ((rule validE_validE_R)?, rule hoare_post_impErr)
      apply (rule combine_validE)
       apply (rule_tac ui=ui in whenE_reset_resetUntypedCap_invs_etc)
-     apply (rule hoare_whenE_wp)
+     apply (rule whenE_wp)
      apply (rule valid_validE)
      apply (rule resetUntypedCap_valid_duplicates')
     defer
@@ -1415,7 +1415,7 @@ lemma invokeCNode_valid_duplicates'[wp]:
       apply (simp add:invs_valid_objs' invs_pspace_aligned')
      apply (clarsimp simp add:invokeCNode_def | wp | intro conjI)+
     apply (rule hoare_pre)
-    apply (wp hoare_unless_wp | wpc | simp)+
+    apply (wp unless_wp | wpc | simp)+
    apply (simp add:invokeCNode_def)
    apply (wp getSlotCap_inv hoare_drop_imp
      |simp add:locateSlot_conv getThreadCallerSlot_def
@@ -1847,7 +1847,7 @@ lemma placeASIDPool_valid_duplicates'[wp]:
   placeNewObject' ptr (KOArch (KOASIDPool makeObject)) 0
   \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (simp add: placeNewObject'_def)
-  apply (wp hoare_unless_wp | wpc |  simp add:alignError_def split_def)+
+  apply (wp unless_wp | wpc |  simp add:alignError_def split_def)+
   apply (subgoal_tac "vs_valid_duplicates' (\<lambda>a. if a = ptr then Some (KOArch (KOASIDPool makeObject)) else ksPSpace s a)")
    apply fastforce
   apply clarsimp
@@ -2051,7 +2051,7 @@ crunch valid_duplicates' [wp]:
 
 crunch valid_duplicates' [wp]:
   tcbSchedAppend "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
-  (simp:crunch_simps wp:hoare_unless_wp)
+  (simp:crunch_simps wp:unless_wp)
 
 lemma timerTick_valid_duplicates'[wp]:
   "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>
@@ -2114,7 +2114,7 @@ crunch valid_duplicates'[wp]:
 
 crunch valid_duplicates'[wp]:
   handleYield "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
- (ignore: threadGet simp:crunch_simps wp:hoare_unless_wp)
+ (ignore: threadGet simp:crunch_simps wp:unless_wp)
 
 crunch valid_duplicates'[wp]:
   "VSpace_H.handleVMFault", handleHypervisorFault "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"

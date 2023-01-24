@@ -17,7 +17,7 @@ crunches init_arch_objects
   for exst[wp]: "\<lambda>s. P (exst s)"
   and ct[wp]: "\<lambda>s. P (cur_thread s)"
   and valid_etcbs[wp, DetSchedAux_AI_assms]: valid_etcbs
-  (wp: crunch_wps hoare_unless_wp)
+  (wp: crunch_wps unless_wp)
 
 crunch ct[wp, DetSchedAux_AI_assms]: invoke_untyped "\<lambda>s. P (cur_thread s)"
   (wp: crunch_wps dxo_wp_weak preemption_point_inv mapME_x_inv_wp

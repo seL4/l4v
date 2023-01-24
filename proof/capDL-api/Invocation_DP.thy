@@ -12,7 +12,7 @@ crunch cdl_current_domain[wp]: update_available_range, generate_object_ids, upda
                                mark_tcb_intent_error, corrupt_ipc_buffer, insert_cap_sibling,
                                insert_cap_child, move_cap, invoke_irq_control, invoke_irq_handler
                                                     "\<lambda>s. P (cdl_current_domain s)"
-(wp: crunch_wps select_wp alternative_wp alternativeE_wp hoare_unless_wp simp: split_def corrupt_intents_def)
+(wp: crunch_wps select_wp alternative_wp alternativeE_wp unless_wp simp: split_def corrupt_intents_def)
 
 crunch cdl_irq_node [wp]:  corrupt_ipc_buffer "\<lambda>s. P (cdl_irq_node s)"
 (wp: crunch_wps select_wp simp: corrupt_intents_def)
@@ -371,7 +371,7 @@ lemma handle_event_syscall_no_decode_exception:
       apply (rule liftE_wp_split_r)+
        apply (rule wp_no_exception_seq_r)
         apply (rule liftE_wp_no_exception)
-         apply (rule hoare_whenE_wp)
+         apply (rule whenE_wp)
          apply simp
          apply wp
            apply (rule_tac P = "y = cur_thread" in hoare_gen_asm)
@@ -682,18 +682,18 @@ lemma cdl_cur_thread_detype:
   by (simp add:detype_def)
 
 crunch cdl_current_thread[wp]: reset_untyped_cap "\<lambda>s. P (cdl_current_thread s)"
-  (wp: select_wp alternativeE_wp mapME_x_inv_wp hoare_whenE_wp
+  (wp: select_wp alternativeE_wp mapME_x_inv_wp whenE_wp
     simp: cdl_cur_thread_detype crunch_simps)
 
 lemmas helper = valid_validE_E[OF reset_untyped_cap_cdl_current_thread]
 
 crunch cdl_current_thread[wp]: invoke_untyped "\<lambda>s. P (cdl_current_thread s)"
-(wp:select_wp mapM_x_wp' crunch_wps hoare_unless_wp alternativeE_wp
+(wp:select_wp mapM_x_wp' crunch_wps unless_wp alternativeE_wp
     helper
   simp:cdl_cur_thread_detype crunch_simps)
 
 crunch cdl_current_thread[wp]: move_cap "\<lambda>s. P (cdl_current_thread s)"
-(wp:select_wp mapM_x_wp' crunch_wps hoare_unless_wp
+(wp:select_wp mapM_x_wp' crunch_wps unless_wp
   simp:crunch_simps)
 
 lemma cnode_insert_cap_cdl_current_thread:
@@ -930,7 +930,7 @@ lemma handle_event_syscall_allow_error:
       apply (rule liftE_wp_split_r)+
        apply (rule wp_no_exception_seq_r)
         apply (rule liftE_wp_no_exception)
-         apply (rule hoare_whenE_wp)
+         apply (rule whenE_wp)
          apply (simp)
          apply wp
            apply (rule_tac P = "y = cur_thread" in hoare_gen_asm)

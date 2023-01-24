@@ -1192,14 +1192,14 @@ lemma cap_delete_one_silc_inv:
    cap_delete_one slot
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding cap_delete_one_def
-  by (wpsimp wp: hoare_unless_wp empty_slot_silc_inv get_cap_wp)
+  by (wpsimp wp: unless_wp empty_slot_silc_inv get_cap_wp)
 
 lemma cap_delete_one_silc_inv_subject:
   "\<lbrace>silc_inv aag st and K (is_subject aag (fst slot))\<rbrace>
    cap_delete_one slot
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding cap_delete_one_def
-  apply (wpsimp wp: hoare_unless_wp empty_slot_silc_inv get_cap_wp)
+  apply (wpsimp wp: unless_wp empty_slot_silc_inv get_cap_wp)
   unfolding silc_inv_def
   by simp
 
@@ -1703,7 +1703,7 @@ lemma thread_set_tcb_registers_caps_merge_default_tcb_silc_inv[wp]:
   by (rule thread_set_silc_inv; simp add: tcb_cap_cases_def tcb_registers_caps_merge_def)
 
 crunch silc_inv[wp]: cancel_badged_sends "silc_inv aag st"
-  (  wp: crunch_wps hoare_unless_wp simp: crunch_simps ignore: filterM set_object thread_set
+  (  wp: crunch_wps unless_wp simp: crunch_simps ignore: filterM set_object thread_set
    simp: filterM_mapM)
 
 
@@ -2266,7 +2266,7 @@ lemma cap_delete_one_cte_wp_at_other:
    cap_delete_one irq_slot
    \<lbrace>\<lambda>rv s. cte_wp_at P slot s\<rbrace>"
   unfolding cap_delete_one_def
-  apply (wp hoare_unless_wp empty_slot_cte_wp_elsewhere get_cap_wp | simp)+
+  apply (wp unless_wp empty_slot_cte_wp_elsewhere get_cap_wp | simp)+
   done
 
 

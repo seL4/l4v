@@ -215,7 +215,7 @@ lemma preemptionPoint_irq [wp]:
   "\<lbrace>valid_irq_states'\<rbrace> preemptionPoint -,
    \<lbrace>\<lambda>irq s. intStateIRQTable (ksInterruptState s) irq \<noteq> IRQInactive\<rbrace>"
   apply (simp add: preemptionPoint_def setWorkUnits_def modifyWorkUnits_def getWorkUnits_def)
-  apply (wp hoare_whenE_wp|wpc)+
+  apply (wp whenE_wp|wpc)+
      apply (rule hoare_post_imp)
       prefer 2
      apply (rule doMachineOp_getActiveIRQ_IRQ_active)

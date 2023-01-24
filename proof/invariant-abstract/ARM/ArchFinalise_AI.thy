@@ -694,7 +694,7 @@ lemma flush_table_empty:
     flush_table ac aa b word
    \<lbrace>\<lambda>rv s. obj_at (empty_table (set (arm_global_pts (arch_state s)))) word s\<rbrace>"
   apply (clarsimp simp: flush_table_def set_vm_root_def)
-  apply (wp do_machine_op_obj_at arm_context_switch_empty hoare_whenE_wp
+  apply (wp do_machine_op_obj_at arm_context_switch_empty whenE_wp
     | wpc
     | simp
     | wps)+
@@ -867,10 +867,10 @@ crunch caps_of_state [wp]: arch_finalise_cap "\<lambda>s. P (caps_of_state s)"
    (wp: crunch_wps simp: crunch_simps)
 
 crunch obj_at[wp]: set_vm_root, invalidate_tlb_by_asid "\<lambda>s. P' (obj_at P p s)"
-  (wp: hoare_whenE_wp simp: crunch_simps)
+  (wp: whenE_wp simp: crunch_simps)
 
 crunch arm_global_pts[wp]: set_vm_root, invalidate_asid_entry "\<lambda>s. P' (arm_global_pts (arch_state s))"
-  (wp: hoare_whenE_wp simp: crunch_simps)
+  (wp: whenE_wp simp: crunch_simps)
 
 lemma delete_asid_empty_table_pd:
   "\<lbrace>\<lambda>s. page_directory_at word s

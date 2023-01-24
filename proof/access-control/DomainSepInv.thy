@@ -432,7 +432,7 @@ context DomainSepInv_1 begin
 
 crunches cap_delete_one
   for domain_sep_inv[wp]: "\<lambda>s. domain_sep_inv irqs  (st :: 'state_ext state) (s :: det_ext state)"
-  (wp: mapM_x_wp' hoare_unless_wp dxo_wp_weak simp: crunch_simps)
+  (wp: mapM_x_wp' unless_wp dxo_wp_weak simp: crunch_simps)
 
 lemma reply_cancel_ipc_domain_sep_inv[wp]:
   "\<lbrace>domain_sep_inv irqs st\<rbrace>

@@ -587,7 +587,7 @@ lemma tcbSchedAppend_sch_act_wf[wp]:
   "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace> tcbSchedAppend thread
   \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
   apply (simp add:tcbSchedAppend_def bitmap_fun_defs)
-  apply (wp hoare_unless_wp setQueue_sch_act threadGet_wp|simp)+
+  apply (wp unless_wp setQueue_sch_act threadGet_wp|simp)+
   apply (fastforce simp:typ_at'_def obj_at'_def)
   done
 

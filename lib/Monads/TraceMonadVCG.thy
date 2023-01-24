@@ -978,7 +978,7 @@ lemma hoare_gen_asm:
   "(P \<Longrightarrow> \<lbrace>P'\<rbrace> f \<lbrace>Q\<rbrace>) \<Longrightarrow> \<lbrace>P' and K P\<rbrace> f \<lbrace>Q\<rbrace>"
   by (fastforce simp add: valid_def)
 
-lemma hoare_when_wp [wp]:
+lemma when_wp [wp]:
  "\<lbrakk> P \<Longrightarrow> \<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>if P then Q else R ()\<rbrace> when P f \<lbrace>R\<rbrace>"
   by (clarsimp simp: when_def valid_def return_def mres_def)
 
@@ -1922,7 +1922,7 @@ lemma hoare_add_post:
   apply simp
   done
 
-lemma hoare_whenE_wp:
+lemma whenE_wp:
   "(P \<Longrightarrow> \<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>, \<lbrace>E\<rbrace>) \<Longrightarrow> \<lbrace>if P then Q else R ()\<rbrace> whenE P f \<lbrace>R\<rbrace>, \<lbrace>E\<rbrace>"
   unfolding whenE_def by clarsimp wp
 
@@ -1942,7 +1942,7 @@ lemma hoare_list_case:
   apply simp
   done
 
-lemma hoare_unless_wp:
+lemma unless_wp:
   "(\<not>P \<Longrightarrow> \<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>) \<Longrightarrow> \<lbrace>if P then R () else Q\<rbrace> unless P f \<lbrace>R\<rbrace>"
   unfolding unless_def by wp auto
 

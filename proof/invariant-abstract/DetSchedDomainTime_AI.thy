@@ -128,7 +128,7 @@ crunch domain_list_inv[wp]:
   "\<lambda>s. P (domain_list s)"
 
 crunch domain_list_inv[wp]: finalise_cap "\<lambda>s. P (domain_list s)"
-  (wp: crunch_wps hoare_unless_wp select_inv simp: crunch_simps)
+  (wp: crunch_wps unless_wp select_inv simp: crunch_simps)
 
 lemma rec_del_domain_list[wp]:
   "\<lbrace>\<lambda>s. P (domain_list s)\<rbrace> rec_del call \<lbrace>\<lambda>rv s. P (domain_list s)\<rbrace>"
@@ -172,7 +172,7 @@ crunch domain_list_inv[wp]: preemption_point "\<lambda>s. P (domain_list s)"
   (wp: OR_choiceE_weak_wp ignore_del: preemption_point)
 
 crunch domain_list_inv[wp]: reset_untyped_cap "\<lambda>s. P (domain_list s)"
-  (wp: crunch_wps hoare_unless_wp mapME_x_inv_wp select_inv
+  (wp: crunch_wps unless_wp mapME_x_inv_wp select_inv
    simp: crunch_simps)
 
 context DetSchedDomainTime_AI begin
@@ -269,7 +269,7 @@ crunch domain_time_inv[wp]:
   "\<lambda>s. P (domain_time s)"
 
 crunch domain_time_inv[wp]: finalise_cap "\<lambda>s. P (domain_time s)"
-  (wp: crunch_wps hoare_drop_imps hoare_unless_wp select_inv mapM_wp
+  (wp: crunch_wps hoare_drop_imps unless_wp select_inv mapM_wp
        subset_refl if_fun_split simp: crunch_simps ignore: tcb_sched_action)
 
 lemma rec_del_domain_time[wp]:
@@ -314,7 +314,7 @@ crunch domain_time_inv[wp]: preemption_point "\<lambda>s. P (domain_time s)"
   (wp: OR_choiceE_weak_wp ignore_del: preemption_point)
 
 crunch domain_time_inv[wp]: reset_untyped_cap "\<lambda>s. P (domain_time s)"
-  (wp: crunch_wps hoare_unless_wp mapME_x_inv_wp select_inv
+  (wp: crunch_wps unless_wp mapME_x_inv_wp select_inv
    simp: crunch_simps)
 
 context DetSchedDomainTime_AI begin

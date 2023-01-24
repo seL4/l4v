@@ -1027,11 +1027,11 @@ lemma cancel_all_ipc_ct_active[wp]:
   done
 
 crunch ct_active[wp]: cap_swap_for_delete "ct_active"
-  (wp: crunch_wps filterM_preserved hoare_unless_wp simp: crunch_simps ignore: do_extended_op)
+  (wp: crunch_wps filterM_preserved unless_wp simp: crunch_simps ignore: do_extended_op)
 
 crunch ct_active[wp]: post_cap_deletion, empty_slot "\<lambda>s :: det_ext state. ct_active s"
   (simp: crunch_simps empty_slot_ext_def ignore: do_extended_op
-     wp: crunch_wps filterM_preserved hoare_unless_wp)
+     wp: crunch_wps filterM_preserved unless_wp)
 
 crunch cur_thread[wp]: cap_swap_for_delete, finalise_cap "\<lambda>s :: det_ext state. P (cur_thread s)"
   (wp: select_wp dxo_wp_weak crunch_wps simp: crunch_simps)

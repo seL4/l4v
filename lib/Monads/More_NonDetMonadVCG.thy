@@ -295,8 +295,6 @@ lemma shrinks_proof:
    apply simp
   by (metis use_valid w z)
 
-lemmas unlessE_wp = hoare_unlessE_wp (* FIXME lib: eliminate *)
-
 lemma use_validE_R:
   "\<lbrakk> (Inr r, s') \<in> fst (f s); \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,-; P s \<rbrakk> \<Longrightarrow> Q r s'"
   unfolding validE_R_def validE_def

@@ -4052,11 +4052,11 @@ lemma valid_sched_etcbs[elim!]: "valid_sched_2 queues ekh sa cdom kh ct it \<Lon
   by (simp add: valid_sched_def)
 
 crunch ksIdleThread[wp]: deleteObjects "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps wp: hoare_drop_imps hoare_unless_wp)
+  (simp: crunch_simps wp: hoare_drop_imps unless_wp)
 crunch ksCurDomain[wp]: deleteObjects "\<lambda>s. P (ksCurDomain s)"
-  (simp: crunch_simps wp: hoare_drop_imps hoare_unless_wp)
+  (simp: crunch_simps wp: hoare_drop_imps unless_wp)
 crunch irq_node[wp]: deleteObjects "\<lambda>s. P (irq_node' s)"
-  (simp: crunch_simps wp: hoare_drop_imps hoare_unless_wp)
+  (simp: crunch_simps wp: hoare_drop_imps unless_wp)
 
 lemma deleteObjects_ksCurThread[wp]:
   "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> deleteObjects ptr sz \<lbrace>\<lambda>_ s. P (ksCurThread s)\<rbrace>"
@@ -4598,7 +4598,7 @@ lemma whenE_reset_resetUntypedCap_invs_etc:
       and ct_active'
       and pspace_no_overlap' (if reset then ptr else ptr') sz\<rbrace>, \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (rule hoare_pre)
-   apply (wp hoare_whenE_wp resetUntypedCap_invs_etc[where idx=idx,
+   apply (wp whenE_wp resetUntypedCap_invs_etc[where idx=idx,
            simplified pred_conj_def conj_assoc]
        | simp)+
   apply (clarsimp simp: cte_wp_at_ctes_of)
@@ -5071,7 +5071,7 @@ lemma sts_valid_untyped_inv':
 
 crunch nosch[wp]: invokeUntyped "\<lambda>s. P (ksSchedulerAction s)"
   (simp: crunch_simps zipWithM_x_mapM
-     wp: crunch_wps hoare_unless_wp mapME_x_inv_wp preemptionPoint_inv)
+     wp: crunch_wps unless_wp mapME_x_inv_wp preemptionPoint_inv)
 
 crunch no_0_obj'[wp]: insertNewCap no_0_obj'
   (wp: crunch_wps)
@@ -5669,7 +5669,7 @@ lemma inv_untyped_IRQInactive:
    invokeUntyped ui
    -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
   unfolding invokeUntyped_def
-  by (wpsimp wp: hoare_whenE_wp resetUntypedCap_IRQInactive)
+  by (wpsimp wp: whenE_wp resetUntypedCap_IRQInactive)
 
 end
 end

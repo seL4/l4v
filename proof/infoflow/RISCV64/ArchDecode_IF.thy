@@ -97,7 +97,7 @@ lemma pas_cap_cur_auth_ASIDControlCap:
 
 lemma decode_asid_pool_invocation_reads_respects_f:
   notes reads_respects_f_inv' = reads_respects_f_inv[where st=st]
-  notes hoare_whenE_wps[wp_split del]
+  notes whenE_wps[wp_split del]
   shows
     "reads_respects_f aag l
        (silc_inv aag st and invs and pas_refined aag and cte_wp_at ((=) (cap.ArchObjectCap cap)) slot
@@ -128,7 +128,7 @@ lemma decode_asid_pool_invocation_reads_respects_f:
 
 lemma decode_asid_control_invocation_reads_respects_f:
   notes reads_respects_f_inv' = reads_respects_f_inv[where st=st]
-  notes hoare_whenE_wps[wp_split del]
+  notes whenE_wps[wp_split del]
   shows
     "reads_respects_f aag l
        (silc_inv aag st and invs and pas_refined aag and cte_wp_at ((=) (cap.ArchObjectCap cap)) slot
@@ -174,7 +174,7 @@ lemma decode_asid_control_invocation_reads_respects_f:
 
 lemma decode_frame_invocation_reads_respects_f:
   notes reads_respects_f_inv' = reads_respects_f_inv[where st=st]
-  notes hoare_whenE_wps[wp_split del]
+  notes whenE_wps[wp_split del]
   shows
     "reads_respects_f aag l
        (silc_inv aag st and invs and pas_refined aag and cte_wp_at ((=) (cap.ArchObjectCap cap)) slot
@@ -236,7 +236,7 @@ lemma decode_frame_invocation_reads_respects_f:
 
 lemma decode_page_table_invocation_reads_respects_f:
   notes reads_respects_f_inv' = reads_respects_f_inv[where st=st]
-  notes hoare_whenE_wps[wp_split del]
+  notes whenE_wps[wp_split del]
   shows
     "reads_respects_f aag l
        (silc_inv aag st and invs and pas_refined aag and cte_wp_at ((=) (cap.ArchObjectCap cap)) slot
@@ -303,7 +303,7 @@ lemma decode_page_table_invocation_reads_respects_f:
 
 lemma arch_decode_invocation_reads_respects_f[Decode_IF_assms]:
   notes reads_respects_f_inv' = reads_respects_f_inv[where st=st]
-  notes hoare_whenE_wps[wp_split del]
+  notes whenE_wps[wp_split del]
   shows
     "reads_respects_f aag l
        (silc_inv aag st and invs and pas_refined aag and cte_wp_at ((=) (cap.ArchObjectCap cap)) slot
