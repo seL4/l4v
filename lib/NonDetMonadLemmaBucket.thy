@@ -42,14 +42,10 @@ lemma return_bindE:
   "isRight v \<Longrightarrow> return v >>=E f = f (theRight v)"
   by (cases v; clarsimp simp: return_returnOk)
 
-lemma list_case_return: (* FIXME lib: move to Lib *)
+lemma list_case_return: (* not in Lib, because "return" is not in scope there *)
   "(case xs of [] \<Rightarrow> return v | y # ys \<Rightarrow> return (f y ys))
     = return (case xs of [] \<Rightarrow> v | y # ys \<Rightarrow> f y ys)"
   by (simp split: list.split)
-
-lemma lifted_if_collapse: (* FIXME lib: move to Lib *)
-  "(if P then \<top> else f) = (\<lambda>s. \<not>P \<longrightarrow> f s)"
-  by auto
 
 (* We use isLeft, because isLeft=isl is the primitive concept; isRight=\<not>isl matches on isl. *)
 lemma valid_isLeft_theRight_split:

@@ -1472,6 +1472,10 @@ lemma list_case_If:
   "(case xs of [] \<Rightarrow> P | _ \<Rightarrow> Q) = (if xs = [] then P else Q)"
   by (rule list.case_eq_if)
 
+lemma lifted_if_collapse:
+  "(if P then \<top> else f) = (\<lambda>s. \<not>P \<longrightarrow> f s)"
+  by auto
+
 lemma remove1_Nil_in_set:
   "\<lbrakk> remove1 x xs = []; xs \<noteq> [] \<rbrakk> \<Longrightarrow> x \<in> set xs"
   by (induct xs) (auto split: if_split_asm)
