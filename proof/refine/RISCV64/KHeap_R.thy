@@ -183,7 +183,7 @@ lemma obj_at_setObject1:
    setObject p (v::'a::pspace_storable)
   \<lbrace> \<lambda>rv. obj_at' (\<lambda>x::'a::pspace_storable. True) t \<rbrace>"
   apply (simp add: setObject_def split_def)
-  apply (rule hoare_seq_ext [OF _ hoare_gets_post])
+  apply (rule hoare_seq_ext [OF _ hoare_gets_sp])
   apply (clarsimp simp: valid_def in_monad obj_at'_def lookupAround2_char1 project_inject
                  dest!: R)
   apply (subgoal_tac "objBitsKO (injectKO v) = objBitsKO (injectKO obj)")
@@ -203,7 +203,7 @@ lemma obj_at_setObject2:
    setObject p (v::'a)
   \<lbrace> \<lambda>rv. obj_at' P t \<rbrace>"
   apply (simp add: setObject_def split_def)
-  apply (rule hoare_seq_ext [OF _ hoare_gets_post])
+  apply (rule hoare_seq_ext [OF _ hoare_gets_sp])
   apply (clarsimp simp: valid_def in_monad)
   apply (frule updateObject_type)
   apply (drule R)
