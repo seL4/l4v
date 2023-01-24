@@ -10,7 +10,7 @@ imports
   TailrecPre
   GraphLangLemmas
   Lib.Lib
-  "CLib.LemmaBucket_C"
+  "CParser.LemmaBucket_C"
   ExtraSpecs
 begin
 

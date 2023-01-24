@@ -7,7 +7,7 @@
 theory FieldAccessors
   imports
     Lib.Lib
-    CLib.LemmaBucket_C
+    CParser.LemmaBucket_C
 begin
 
 lemma h_val_mono:

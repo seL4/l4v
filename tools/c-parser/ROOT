@@ -16,9 +16,10 @@ session CParser = "Simpl-VCG" +
   sessions
     "HOL-Library"
     "ML_Utils"
+    "Basics"
   directories
     "umm_heap"
     "umm_heap/$L4V_ARCH"
   theories
     "CTranslation"
-    "TypHeapLib"
+    "LemmaBucket_C"

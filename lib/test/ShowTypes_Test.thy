@@ -7,7 +7,7 @@
 theory ShowTypes_Test
 imports
   Lib.ShowTypes
-  CLib.LemmaBucket_C
+  CParser.LemmaBucket_C
   CParser.CTranslation
 begin
 

@@ -7,7 +7,7 @@
 theory LemmaBucket_C
 imports
   Basics.CLib
-  CParser.TypHeapLib
+  TypHeapLib
 begin
 
 lemma Ptr_not_null_pointer_not_zero: "(Ptr p \<noteq> NULL)=(p\<noteq>0)"

@@ -85,7 +85,6 @@ session CLib (lib) in clib = CParser +
     Simpl_Rewrite
     MonadicRewrite_C
     CTranslationNICTA
-    LemmaBucket_C
     SIMPL_Lemmas
     SimplRewrite
     BitFieldProofsLib
