@@ -6,7 +6,7 @@
 
 theory LemmaBucket_C
 imports
-  Lib.CLib
+  Basics.CLib
   CParser.TypHeapLib
 begin
 

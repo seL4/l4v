@@ -20,7 +20,7 @@ imports
   Eval_Bool
   Monads.Fun_Pred_Syntax
   Monads.Monad_Lib
-  CLib
+  Basics.CLib
   NICTATools
   "Word_Lib.WordSetup"
 begin

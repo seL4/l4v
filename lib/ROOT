@@ -9,6 +9,7 @@ chapter Lib
 session Lib (lib) = Word_Lib +
   sessions
     "HOL-Library"
+    Basics
     Eisbach_Tools
     ML_Utils
     Monads
