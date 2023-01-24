@@ -59,8 +59,6 @@ lemma objBitsKO_bounded2[simp]:
   by (simp add: objBits_simps' word_bits_def pageBits_def archObjSize_def pdeBits_def pteBits_def
            split: Structures_H.kernel_object.split arch_kernel_object.split)
 
-declare select_singleton_is_return[simp]
-
 definition
   APIType_capBits :: "ARM_H.object_type \<Rightarrow> nat \<Rightarrow> nat"
 where

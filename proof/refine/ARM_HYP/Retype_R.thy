@@ -61,8 +61,6 @@ lemma objBitsKO_bounded2[simp]:
   by (simp add: objBits_simps' word_bits_def vspace_bits_defs vcpu_bits_def archObjSize_def
          split: Structures_H.kernel_object.split arch_kernel_object.split)
 
-declare select_singleton_is_return[simp]
-
 definition
   APIType_capBits :: "ARM_HYP_H.object_type \<Rightarrow> nat \<Rightarrow> nat"
 where

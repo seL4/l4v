@@ -273,11 +273,9 @@ lemma maybe_fail_bind_fail:
   by (clarsimp simp: bind_def fail_def return_def
                      unless_def when_def)+
 
-lemma select_singleton:(* FIXME lib: [simp]? *)
+lemma select_singleton[simp]:
   "select {x} = return x"
   by (fastforce simp add: fun_eq_iff select_def return_def)
-
-lemmas select_singleton_is_return = select_singleton (* FIXME lib: eliminate *)
 
 lemma return_modify:
   "return () = modify id"
