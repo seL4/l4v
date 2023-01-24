@@ -465,9 +465,7 @@ lemma hoare_set_preserved:
   apply assumption
   done
 
-lemmas hoare_ex_wp = hoare_vcg_ex_lift (* FIXME lib: eliminate *)
-
-lemma hoare_ex_pre: (* safe, unlike hoare_ex_wp *)
+lemma hoare_ex_pre: (* safe, unlike hoare_vcg_ex_lift *)
   "(\<And>x. \<lbrace>P x\<rbrace> f \<lbrace>Q\<rbrace>) \<Longrightarrow> \<lbrace>\<lambda>s. \<exists>x. P x s\<rbrace> f \<lbrace>Q\<rbrace>"
   by (fastforce simp: valid_def)
 

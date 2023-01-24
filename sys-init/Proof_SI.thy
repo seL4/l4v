@@ -228,14 +228,14 @@ lemma sys_init_explicit:
   apply (insert distinct_card [symmetric, where xs ="[obj\<leftarrow>obj_ids . cnode_or_tcb_at obj spec]"], simp)
   apply (frule distinct_card [symmetric])
   apply (clarsimp simp: init_system_def, wp valid_case_prod')
-            apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t in start_threads_sep [sep_wandise], simp)
-           apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t and
+            apply (rule hoare_vcg_ex_lift, rename_tac t, rule_tac t=t in start_threads_sep [sep_wandise], simp)
+           apply (rule hoare_vcg_ex_lift, rename_tac t, rule_tac t=t and
                                                   free_cptrs="[fstart .e. fend - 1]" in init_cspace_sep [sep_wandise])
-          apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t in init_tcbs_sep [sep_wandise])
-         apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t in init_vspace_sep [sep_wandise])
-        apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t in init_pd_asids_sep [sep_wandise])
-       apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t and dev=False in init_irqs_sep [sep_wandise])
-      apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t and dev=False and
+          apply (rule hoare_vcg_ex_lift, rename_tac t, rule_tac t=t in init_tcbs_sep [sep_wandise])
+         apply (rule hoare_vcg_ex_lift, rename_tac t, rule_tac t=t in init_vspace_sep [sep_wandise])
+        apply (rule hoare_vcg_ex_lift, rename_tac t, rule_tac t=t in init_pd_asids_sep [sep_wandise])
+       apply (rule hoare_vcg_ex_lift, rename_tac t, rule_tac t=t and dev=False in init_irqs_sep [sep_wandise])
+      apply (rule hoare_vcg_ex_lift, rename_tac t, rule_tac t=t and dev=False and
                                              untyped_cptrs = "[ustart .e. uend - 1]" and
                                              free_cptrs_orig = "[fstart .e. fend - 1]" in duplicate_caps_sep [sep_wandise])
      apply (rule create_irq_caps_sep [where dev = False,sep_wandise,

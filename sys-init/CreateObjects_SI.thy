@@ -38,7 +38,7 @@ lemma seL4_Untyped_Retype_has_children_wp:
   \<lbrace>\<lambda>rv s. has_children parent (kernel_state s)\<rbrace>"
   apply (clarsimp simp: has_children_def is_cdt_parent_def)
   apply (subst ex_conj_increase)+
-  apply (rule hoare_ex_wp)+
+  apply (rule hoare_vcg_ex_lift)+
   apply (rule hoare_chain)
     apply (rule seL4_Untyped_Retype_inc_no_preempt
                 [where root_size=si_cnode_size and root_cnode_cap=si_cnode_cap and obj = obj

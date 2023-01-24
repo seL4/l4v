@@ -4910,7 +4910,7 @@ lemma cteSwap_valid_pspace'[wp]:
          apply (strengthen imp_consequent, strengthen ctes_of_strng)
          apply ((wp sch_act_wf_lift valid_queues_lift
                     cur_tcb_lift updateCap_no_0  updateCap_ctes_of_wp
-                    hoare_ex_wp updateMDB_cte_wp_at_other getCTE_wp
+                    hoare_vcg_ex_lift updateMDB_cte_wp_at_other getCTE_wp
                   | simp add: cte_wp_at_ctes_ofI o_def
                   | rule hoare_drop_imps)+)[6]
   apply (clarsimp simp: valid_pspace_no_0[unfolded valid_pspace'_def valid_mdb'_def]

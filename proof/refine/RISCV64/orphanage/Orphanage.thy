@@ -144,7 +144,7 @@ lemma ksQ_all_queued_tcb_ptrs_lift:
   shows "\<lbrace>\<lambda>s. P (t \<in> all_queued_tcb_ptrs s)\<rbrace> f \<lbrace>\<lambda>_ s. P (t \<in> all_queued_tcb_ptrs s)\<rbrace>"
   apply (clarsimp simp: all_queued_tcb_ptrs_def)
   apply (rule_tac P=P in P_bool_lift)
-   apply (wp hoare_ex_wp assms)
+   apply (wp hoare_vcg_ex_lift assms)
   apply (clarsimp)
   apply (wp hoare_vcg_all_lift assms)
   done
@@ -644,7 +644,7 @@ lemma tcbSchedDequeue_all_queued_tcb_ptrs:
   apply (clarsimp simp: tcbSchedDequeue_def all_queued_tcb_ptrs_def)
   apply (rule hoare_pre)
    apply (wp, clarsimp)
-       apply (wp hoare_ex_wp)+
+       apply (wp hoare_vcg_ex_lift)+
      apply (rename_tac d p)
      apply (rule_tac Q="\<lambda>_ s. x \<in> set (ksReadyQueues s (d, p))"
                      in hoare_post_imp, clarsimp)
@@ -733,7 +733,7 @@ lemma findM_on_success:
   apply (induct xs; clarsimp)
   apply wp+
   apply (clarsimp simp: imp_conv_disj Bex_def)
-  apply (wp hoare_vcg_disj_lift hoare_ex_wp | clarsimp | assumption)+
+  apply (wp hoare_vcg_disj_lift hoare_vcg_ex_lift | clarsimp | assumption)+
   done
 
 crunch st_tcb' [wp]: switchToThread "\<lambda>s. P' (st_tcb_at' P t s)"
@@ -755,7 +755,7 @@ lemma tcbSchedDequeue_not_empty:
    \<lbrace> \<lambda>rv s. \<exists>tcb. tcb \<in> set (ksReadyQueues s p) \<and> st_tcb_at' P tcb s \<rbrace>"
   unfolding tcbSchedDequeue_def
   apply wp
-         apply (wp hoare_ex_wp threadSet_pred_tcb_no_state)
+         apply (wp hoare_vcg_ex_lift threadSet_pred_tcb_no_state)
          apply clarsimp
         apply (wp setQueue_deq_not_empty)
        apply clarsimp
@@ -2160,7 +2160,7 @@ lemma performASIDControlInvocation_no_orphans [wp]:
   apply (strengthen invs_pspace_aligned' invs_pspace_distinct' invs_valid_pspace')
   apply (clarsimp simp:conj_comms)
      apply (wp deleteObjects_invs'[where idx = idx and d=False]
-       hoare_ex_wp deleteObjects_cte_wp_at'[where idx = idx and d=False] hoare_vcg_const_imp_lift )
+       hoare_vcg_ex_lift deleteObjects_cte_wp_at'[where idx = idx and d=False] hoare_vcg_const_imp_lift )
   using invs' misc cte exclude no_orphans cover
   apply (clarsimp simp: is_active_thread_state_def makeObject_tcb valid_aci'_def
                         cte_wp_at_ctes_of invs_pspace_aligned' invs_pspace_distinct'

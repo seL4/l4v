@@ -456,7 +456,7 @@ lemma valid_global_objs_lift':
   apply (rule hoare_pre)
    apply (rule hoare_use_eq [where f="\<lambda>s. arm_global_pts (arch_state s)", OF pts])
    apply (rule hoare_use_eq [where f="\<lambda>s. arm_global_pd (arch_state s)", OF pd])
-   apply (wp obj ko emp hoare_vcg_const_Ball_lift hoare_ex_wp)
+   apply (wp obj ko emp hoare_vcg_const_Ball_lift hoare_vcg_ex_lift)
   apply (clarsimp simp: second_level_tables_def)
   done
 
