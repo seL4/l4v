@@ -427,8 +427,6 @@ lemma hoare_Ball_helper:
   done
 
 lemmas hoare_gets_post = hoare_gets_sp (* FIXME lib: eliminate *)
-lemmas hoare_return_post = return_sp (* FIXME lib: eliminate, rename original *)
-
 
 lemma handy_prop_divs:
   assumes x: "\<And>P. \<lbrace>\<lambda>s. P (Q s) \<and> S s\<rbrace> f \<lbrace>\<lambda>rv s. P (Q' rv s)\<rbrace>"
