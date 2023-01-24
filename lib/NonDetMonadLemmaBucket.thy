@@ -51,8 +51,6 @@ lemma lifted_if_collapse: (* FIXME lib: move to Lib *)
   "(if P then \<top> else f) = (\<lambda>s. \<not>P \<longrightarrow> f s)"
   by auto
 
-lemmas list_case_return2 = list_case_return (* FIXME lib: eliminate *)
-
 (* We use isLeft, because isLeft=isl is the primitive concept; isRight=\<not>isl matches on isl. *)
 lemma valid_isLeft_theRight_split:
   "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q False rv s\<rbrace>,\<lbrace>\<lambda>e s. \<forall>v. Q True v s\<rbrace> \<Longrightarrow>
