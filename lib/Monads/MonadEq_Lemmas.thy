@@ -199,9 +199,6 @@ lemma snd_condition[monad_eq]:
   "(snd (condition C L R s)) = ((C s \<longrightarrow> snd (L s)) \<and> (\<not> C s \<longrightarrow> snd (R s)))"
   by (rule condition_split)
 
-lemma empty_fail_spec [simp]: "empty_fail (state_select F)"
-  by (clarsimp simp: state_select_def empty_fail_def)
-
 declare snd_fail [simp]
 
 declare snd_returnOk [simp, monad_eq]

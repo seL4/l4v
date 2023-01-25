@@ -9,7 +9,8 @@
    If it doesn't contain a Hoare triple it likely doesn't belong in here. *)
 
 theory More_NonDetMonadVCG
-  imports Monads.NonDetMonadVCG
+  imports
+    NonDetMonadVCG
 begin
 
 lemma gets_exs_valid:
@@ -764,10 +765,6 @@ lemma valid_pre_satisfies_post:
 lemma validE_pre_satisfies_post:
   "\<lbrakk> \<And>s r' s'. P s \<Longrightarrow> Q r' s'; \<And>s r' s'. P s \<Longrightarrow> R r' s' \<rbrakk> \<Longrightarrow> \<lbrace> P \<rbrace> m \<lbrace> Q \<rbrace>,\<lbrace> R \<rbrace>"
   by (clarsimp simp: validE_def2 split: sum.splits)
-
-lemma hoare_assume_preNF:
-  "(\<And>s. P s \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>!) \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>!"
-  by (metis validNF_alt_def)
 
 lemma hoare_validE_R_conjI:
   "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, - ; \<lbrace>P\<rbrace> f \<lbrace>Q'\<rbrace>, - \<rbrakk>  \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> Q' rv s\<rbrace>, -"

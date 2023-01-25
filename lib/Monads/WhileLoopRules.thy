@@ -5,7 +5,9 @@
  *)
 
 theory WhileLoopRules
-imports "NonDetMonadVCG"
+  imports
+    Empty_Fail
+    No_Fail
 begin
 
 section "Well-ordered measures"

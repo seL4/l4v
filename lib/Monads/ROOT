@@ -27,14 +27,18 @@ session Monads (lib) = HOL +
     Datatype_Schematic
     WhileLoopRulesCompleteness
     Strengthen
+    Strengthen_Setup
     OptionMonad
     TraceMonadVCG
+    In_Monad
     NonDetMonadVCG
     More_NonDetMonadVCG
     NonDetMonad
     NonDetMonadLemmas
+    Det
     No_Fail
     No_Throw
+    Empty_Fail
     Monad_Equations
     "wp/WPBang"
     "wp/WPFix"

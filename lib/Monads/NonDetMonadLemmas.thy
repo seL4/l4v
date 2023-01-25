@@ -73,6 +73,10 @@ lemma nested_bind [simp]:
   apply (clarsimp simp add: Let_def split_def return_def)
   done
 
+lemma bind_dummy_ret_val:
+  "do y \<leftarrow> a; b od = do a; b od"
+  by simp
+
 lemma fail_bind [simp]:
   "fail >>= f = fail"
   by (simp add: bind_def fail_def)
@@ -159,6 +163,59 @@ lemma liftE_handleE [simp]: "((liftE a) <handle> b) = liftE a"
   apply simp
   done
 
+
+subsection "Lifting and Alternative Basic Definitions"
+
+lemma liftE_liftM: "liftE = liftM Inr"
+  apply (rule ext)
+  apply (simp add: liftE_def liftM_def)
+  done
+
+lemma liftME_liftM: "liftME f = liftM (case_sum Inl (Inr \<circ> f))"
+  apply (rule ext)
+  apply (simp add: liftME_def liftM_def bindE_def returnOk_def lift_def)
+  apply (rule_tac f="bind x" in arg_cong)
+  apply (rule ext)
+  apply (case_tac xa)
+   apply (simp_all add: lift_def throwError_def)
+  done
+
+lemma liftE_bindE:
+  "(liftE a) >>=E b = a >>= b"
+  apply (simp add: liftE_def bindE_def lift_def bind_assoc)
+  done
+
+lemma liftM_id[simp]: "liftM id = id"
+  apply (rule ext)
+  apply (simp add: liftM_def)
+  done
+
+lemma liftM_bind:
+  "(liftM t f >>= g) = (f >>= (\<lambda>x. g (t x)))"
+  by (simp add: liftM_def bind_assoc)
+
+lemma gets_bind_ign: "gets f >>= (\<lambda>x. m) = m"
+  apply (rule ext)
+  apply (simp add: bind_def simpler_gets_def)
+  done
+
+lemma exec_get:
+  "(get >>= f) x = f x x"
+  by (simp add: get_def bind_def)
+
+lemmas get_bind_apply = exec_get (* FIXME lib: eliminate *)
+
+lemma exec_gets:
+  "(gets f >>= m) s = m (f s) s"
+  by (simp add: simpler_gets_def bind_def)
+
+lemma bind_eqI:
+  "\<lbrakk> f = f'; \<And>x. g x = g' x \<rbrakk> \<Longrightarrow> f >>= g = f' >>= g'"
+  apply (rule ext)
+  apply (simp add: bind_def)
+  apply (auto simp: split_def)
+  done
+
 lemma condition_split:
   "P (condition C a b s) = ((((C s) \<longrightarrow> P (a s)) \<and> (\<not> (C s) \<longrightarrow> P (b s))))"
   apply (clarsimp simp: condition_def)
@@ -231,6 +288,7 @@ lemma whileLoopE_cond_fail:
   apply (clarsimp simp: whileLoopE_def returnOk_def)
   apply (auto intro: whileLoop_cond_fail)
   done
+
 
 lemma whileLoop_results_simps_no_move [simp]:
   shows "((Some x, Some x) \<in> whileLoop_results C B) = (\<not> C (fst x) (snd x))"
@@ -309,36 +367,5 @@ lemma whileLoopE_unroll':
   apply (subst whileLoopE_cond_fail, simp)
   apply (clarsimp simp: returnOk_def return_def)
   done
-
-(* These lemmas are useful to apply to rules to convert valid rules into
- * a format suitable for wp. *)
-
-lemma valid_make_schematic_post:
-  "(\<forall>s0. \<lbrace> \<lambda>s. P s0 s \<rbrace> f \<lbrace> \<lambda>rv s. Q s0 rv s \<rbrace>) \<Longrightarrow>
-   \<lbrace> \<lambda>s. \<exists>s0. P s0 s \<and> (\<forall>rv s'. Q s0 rv s' \<longrightarrow> Q' rv s') \<rbrace> f \<lbrace> Q' \<rbrace>"
-  by (auto simp add: valid_def no_fail_def split: prod.splits)
-
-lemma validNF_make_schematic_post:
-  "(\<forall>s0. \<lbrace> \<lambda>s. P s0 s \<rbrace> f \<lbrace> \<lambda>rv s. Q s0 rv s \<rbrace>!) \<Longrightarrow>
-   \<lbrace> \<lambda>s. \<exists>s0. P s0 s \<and> (\<forall>rv s'. Q s0 rv s' \<longrightarrow> Q' rv s') \<rbrace> f \<lbrace> Q' \<rbrace>!"
-  by (auto simp add: valid_def validNF_def no_fail_def split: prod.splits)
-
-lemma validE_make_schematic_post:
-  "(\<forall>s0. \<lbrace> \<lambda>s. P s0 s \<rbrace> f \<lbrace> \<lambda>rv s. Q s0 rv s \<rbrace>, \<lbrace> \<lambda>rv s. E s0 rv s \<rbrace>) \<Longrightarrow>
-   \<lbrace> \<lambda>s. \<exists>s0. P s0 s \<and> (\<forall>rv s'. Q s0 rv s' \<longrightarrow> Q' rv s')
-        \<and> (\<forall>rv s'. E s0 rv s' \<longrightarrow> E' rv s') \<rbrace> f \<lbrace> Q' \<rbrace>, \<lbrace> E' \<rbrace>"
-  by (auto simp add: validE_def valid_def no_fail_def split: prod.splits sum.splits)
-
-lemma validE_NF_make_schematic_post:
-  "(\<forall>s0. \<lbrace> \<lambda>s. P s0 s \<rbrace> f \<lbrace> \<lambda>rv s. Q s0 rv s \<rbrace>, \<lbrace> \<lambda>rv s. E s0 rv s \<rbrace>!) \<Longrightarrow>
-   \<lbrace> \<lambda>s. \<exists>s0. P s0 s \<and> (\<forall>rv s'. Q s0 rv s' \<longrightarrow> Q' rv s')
-        \<and> (\<forall>rv s'. E s0 rv s' \<longrightarrow> E' rv s') \<rbrace> f \<lbrace> Q' \<rbrace>, \<lbrace> E' \<rbrace>!"
-  by (auto simp add: validE_NF_def validE_def valid_def no_fail_def split: prod.splits sum.splits)
-
-lemma validNF_conjD1: "\<lbrace> P \<rbrace> f \<lbrace> \<lambda>rv s. Q rv s \<and> Q' rv s \<rbrace>! \<Longrightarrow> \<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>!"
-  by (fastforce simp: validNF_def valid_def no_fail_def)
-
-lemma validNF_conjD2: "\<lbrace> P \<rbrace> f \<lbrace> \<lambda>rv s. Q rv s \<and> Q' rv s \<rbrace>! \<Longrightarrow> \<lbrace> P \<rbrace> f \<lbrace> Q' \<rbrace>!"
-  by (fastforce simp: validNF_def valid_def no_fail_def)
 
 end

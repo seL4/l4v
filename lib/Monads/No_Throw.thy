@@ -14,6 +14,18 @@ theory No_Throw
     MonadEq_Lemmas
 begin
 
+section "Basic exception reasoning"
+
+text \<open>
+  The following predicates @{text no_throw} and @{text no_return} allow
+  reasoning about functions in the exception monad that either never
+  throw an exception or never return normally.
+\<close>
+
+definition "no_throw P A \<equiv> \<lbrace> P \<rbrace> A \<lbrace> \<lambda>_ _. True \<rbrace>,\<lbrace> \<lambda>_ _. False \<rbrace>"
+
+definition "no_return P A \<equiv> \<lbrace> P \<rbrace> A \<lbrace>\<lambda>_ _. False\<rbrace>,\<lbrace>\<lambda>_ _. True \<rbrace>"
+
 (* Alternative definition of no_throw; easier to work with than unfolding validE. *)
 lemma no_throw_def':
   "no_throw P A = (\<forall>s. P s \<longrightarrow> (\<forall>(r, t) \<in> fst (A s). (\<exists>x. r = Inr x)))"
