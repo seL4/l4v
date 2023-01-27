@@ -15,6 +15,7 @@
 
 /spec/cspec/c/build
 /spec/cspec/c/config-build
+/spec/cspec/c/export
 
 /spec/haskell/stack.yaml.lock
 /spec/haskell/doc/**/*.aux
