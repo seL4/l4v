@@ -55,23 +55,26 @@ lemma empty_fail_select_f [simp]:
 
 lemma empty_fail_bind [simp]:
   "\<lbrakk> empty_fail a; \<And>x. empty_fail (b x) \<rbrakk> \<Longrightarrow> empty_fail (a >>= b)"
-  apply (simp add: bind_def empty_fail_def split_def)
-  apply clarsimp
-  apply (case_tac "fst (a s) = {}")
-   apply blast
-  apply (clarsimp simp: ex_in_conv [symmetric])
-  done
+  by (fastforce simp: bind_def empty_fail_def split_def)
 
 lemma empty_fail_return [simp, wp]:
   "empty_fail (return x)"
   by (simp add: empty_fail_def return_def)
 
+lemma empty_fail_error_bits[simp]:
+  "empty_fail (returnOk v)"
+  "empty_fail (throwError v)"
+  "empty_fail (liftE f) = empty_fail f"
+  by (fastforce simp: returnOk_def throwError_def liftE_def empty_fail_def bind_def return_def)+
+
+lemma empty_fail_lift:
+  "\<lbrakk> \<And>x. empty_fail (f x) \<rbrakk> \<Longrightarrow> empty_fail (lift f x)"
+  unfolding lift_def
+  by (auto split: sum.split)
+
 lemma empty_fail_bindE:
   "\<lbrakk> empty_fail f; \<And>rv. empty_fail (g rv) \<rbrakk> \<Longrightarrow> empty_fail (f >>=E g)"
-  apply (simp add: bindE_def)
-  apply (erule empty_fail_bind)
-  apply (simp add: lift_def throwError_def split: sum.split)
-  done
+  by (simp add: bindE_def empty_fail_lift)
 
 lemma empty_fail_If:
   "\<lbrakk> P \<Longrightarrow> empty_fail f; \<not> P \<Longrightarrow> empty_fail g \<rbrakk> \<Longrightarrow> empty_fail (if P then f else g)"
@@ -110,12 +113,6 @@ lemma empty_fail_mk_ef:
 lemma empty_fail_gets_map[simp]:
   "empty_fail (gets_map f p)"
   unfolding gets_map_def by simp
-
-lemma empty_fail_error_bits[simp]:
-  "empty_fail (returnOk v)"
-  "empty_fail (throwError v)"
-  "empty_fail (liftE f) = empty_fail f"
-  by (fastforce simp: returnOk_def throwError_def liftE_def empty_fail_def bind_def return_def)+
 
 lemma empty_fail_whenEs:
   "empty_fail f \<Longrightarrow> empty_fail (whenE P f)"
