@@ -6,7 +6,7 @@
 
 theory SubMonadLib
 imports
-  EmptyFailLib
+  Monads.Empty_Fail
   Corres_UL
 begin
 
@@ -415,6 +415,7 @@ proof -
     done
   note empty_failD [OF efim, simp]
   note empty_failD [OF efim', simp]
+  note empty_fail_select_f[simp]
   show ?thesis
     apply (clarsimp simp: submonad_fn_def y bind_assoc split_def)
     apply (subst bind_subst_lift [OF modify_stateAssert], rule gp gp')+

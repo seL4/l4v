@@ -479,6 +479,11 @@ lemma empty_fail_whileLoopE:
   apply (clarsimp simp: empty_fail_def lift_def throwError_def return_def split: sum.splits)
   done
 
+lemma empty_fail_whileM[empty_fail_cond, intro!, wp]:
+  "\<lbrakk> empty_fail C; empty_fail B \<rbrakk> \<Longrightarrow> empty_fail (whileM C B)"
+  unfolding whileM_def
+  by (wpsimp wp: empty_fail_whileLoop empty_fail_bind)
+
 lemma whileLoop_results_bisim:
   assumes base: "(a, b) \<in> whileLoop_results C B"
   and vars1: "Q = (case a of Some (r, s) \<Rightarrow> Some (rt r, st s) | _ \<Rightarrow> None)"
