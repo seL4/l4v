@@ -24,37 +24,26 @@ lemma in_returnOk:
 lemma in_bind:
   "((r,s') \<in> fst ((do x \<leftarrow> f; g x od) s)) =
    (\<exists>s'' x. (x, s'') \<in> fst (f s) \<and> (r, s') \<in> fst (g x s''))"
-  apply (simp add: bind_def split_def)
-  apply force
-  done
+  by (force simp: bind_def split_def)
 
 lemma in_bindE_R:
   "((Inr r,s') \<in> fst ((doE x \<leftarrow> f; g x odE) s)) =
   (\<exists>s'' x. (Inr x, s'') \<in> fst (f s) \<and> (Inr r, s') \<in> fst (g x s''))"
-  apply (simp add: bindE_def lift_def split_def bind_def)
-  apply (clarsimp simp: throwError_def return_def lift_def split: sum.splits)
-  apply safe
-   apply (case_tac a)
-    apply fastforce
-   apply fastforce
-  apply force
-  done
+  unfolding bindE_def lift_def split_def bind_def
+  by (force simp: throwError_def return_def split: sum.splits)
 
 lemma in_bindE_L:
   "((Inl r, s') \<in> fst ((doE x \<leftarrow> f; g x odE) s)) \<Longrightarrow>
-  (\<exists>s'' x. (Inr x, s'') \<in> fst (f s) \<and> (Inl r, s') \<in> fst (g x s'')) \<or> ((Inl r, s') \<in> fst (f s))"
-  apply (simp add: bindE_def lift_def bind_def)
-  apply safe
-  apply (simp add: return_def throwError_def lift_def split_def split: sum.splits if_split_asm)
-  apply force
-  done
+   (\<exists>s'' x. (Inr x, s'') \<in> fst (f s) \<and> (Inl r, s') \<in> fst (g x s'')) \<or> ((Inl r, s') \<in> fst (f s))"
+  by (simp add: bindE_def bind_def)
+     (force simp: return_def throwError_def lift_def split_def split: sum.splits if_split_asm)
 
 lemma in_liftE:
   "((v, s') \<in> fst (liftE f s)) = (\<exists>v'. v = Inr v' \<and> (v', s') \<in> fst (f s))"
   by (force simp add: liftE_def bind_def return_def split_def)
 
-lemma in_whenE:  "((v, s') \<in> fst (whenE P f s)) = ((P \<longrightarrow> (v, s') \<in> fst (f s)) \<and>
-                                                   (\<not>P \<longrightarrow> v = Inr () \<and> s' = s))"
+lemma in_whenE:
+  "((v, s') \<in> fst (whenE P f s)) = ((P \<longrightarrow> (v, s') \<in> fst (f s)) \<and> (\<not>P \<longrightarrow> v = Inr () \<and> s' = s))"
   by (simp add: whenE_def in_returnOk)
 
 lemma inl_whenE:
@@ -113,14 +102,25 @@ lemma in_alternative:
   "(r,s') \<in> fst ((f \<sqinter> g) s) = ((r,s') \<in> fst (f s) \<or> (r,s') \<in> fst (g s))"
   by (simp add: alternative_def)
 
-(* FIXME lib: remove unlessE_whenE unless_when here and replace with in_unless lemmas *)
+lemma in_liftM:
+  "((r, s') \<in> fst (liftM t f s)) = (\<exists>r'. (r', s') \<in> fst (f s) \<and> r = t r')"
+  by (simp add: liftM_def return_def bind_def Bex_def)
+
+lemmas handy_liftM_lemma = in_liftM (* FIXME lib: eliminate *)
+
+lemma in_bindE:
+  "(rv, s') \<in> fst ((f >>=E (\<lambda>rv'. g rv')) s) =
+   ((\<exists>ex. rv = Inl ex \<and> (Inl ex, s') \<in> fst (f s)) \<or>
+    (\<exists>rv' s''. (rv, s') \<in> fst (g rv' s'') \<and> (Inr rv', s'') \<in> fst (f s)))"
+  by (force simp: bindE_def bind_def lift_def throwError_def return_def  split: sum.splits)
+
+(* FIXME lib: remove unlessE_whenE + unless_when here and replace with in_unless lemmas *)
 lemmas in_monad = inl_whenE in_whenE in_liftE in_bind in_bindE_L
                   in_bindE_R in_returnOk in_throwError in_fail
                   in_assertE in_assert in_return in_assert_opt
                   in_get in_gets in_put in_when unlessE_whenE
                   unless_when in_modify gets_the_in_monad
-                  in_alternative
-
+                  in_alternative in_liftM
 
 lemma bind_det_exec:
   "fst (a s) = {(r,s')} \<Longrightarrow> fst ((a >>= b) s) = fst (b r s')"
@@ -135,9 +135,7 @@ lemma exec_put:
   by (simp add: bind_def put_def)
 
 lemma bind_execI:
-  "\<lbrakk> (r'',s'') \<in> fst (f s); \<exists>x \<in> fst (g r'' s''). P x \<rbrakk> \<Longrightarrow>
-  \<exists>x \<in> fst ((f >>= g) s). P x"
+  "\<lbrakk> (r'',s'') \<in> fst (f s); \<exists>x \<in> fst (g r'' s''). P x \<rbrakk> \<Longrightarrow> \<exists>x \<in> fst ((f >>= g) s). P x"
   by (force simp: in_bind split_def bind_def)
-
 
 end
