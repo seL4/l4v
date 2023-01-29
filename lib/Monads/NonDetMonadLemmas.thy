@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: BSD-2-Clause
@@ -8,52 +9,39 @@ theory NonDetMonadLemmas
 imports NonDetMonad
 begin
 
-section "General Lemmas Regarding the Nondeterministic State Monad"
+section \<open>General Lemmas Regarding the Nondeterministic State Monad\<close>
 
-subsection "Congruence Rules for the Function Package"
+subsection \<open>Congruence Rules for the Function Package\<close>
 
 lemma bind_cong[fundef_cong]:
   "\<lbrakk> f = f'; \<And>v s s'. (v, s') \<in> fst (f' s) \<Longrightarrow> g v s' = g' v s' \<rbrakk> \<Longrightarrow> f >>= g = f' >>= g'"
-  apply (rule ext)
-  apply (auto simp: bind_def Let_def split_def intro: rev_image_eqI)
-  done
+  by (auto simp: bind_def Let_def split_def intro: rev_image_eqI)
 
 lemma bind_apply_cong [fundef_cong]:
   "\<lbrakk> f s = f' s'; \<And>rv st. (rv, st) \<in> fst (f' s') \<Longrightarrow> g rv st = g' rv st \<rbrakk>
-       \<Longrightarrow> (f >>= g) s = (f' >>= g') s'"
-  apply (simp add: bind_def)
-  apply (auto simp: split_def intro: SUP_cong [OF refl] intro: rev_image_eqI)
-  done
+   \<Longrightarrow> (f >>= g) s = (f' >>= g') s'"
+  by (auto simp: bind_def split_def intro: SUP_cong [OF refl] intro: rev_image_eqI)
 
 lemma bindE_cong[fundef_cong]:
   "\<lbrakk> M = M' ; \<And>v s s'. (Inr v, s') \<in> fst (M' s) \<Longrightarrow> N v s' = N' v s' \<rbrakk> \<Longrightarrow> bindE M N = bindE M' N'"
-  apply (simp add: bindE_def)
-  apply (rule bind_cong)
-   apply (rule refl)
-  apply (unfold lift_def)
-  apply (case_tac v, simp_all)
-  done
+  by (auto simp: bindE_def lift_def split: sum.splits intro!: bind_cong)
 
 lemma bindE_apply_cong[fundef_cong]:
   "\<lbrakk> f s = f' s'; \<And>rv st. (Inr rv, st) \<in> fst (f' s') \<Longrightarrow> g rv st = g' rv st \<rbrakk>
   \<Longrightarrow> (f >>=E g) s = (f' >>=E g') s'"
-  apply (simp add: bindE_def)
-  apply (rule bind_apply_cong)
-   apply assumption
-  apply (case_tac rv, simp_all add: lift_def)
-  done
+  by (auto simp: bindE_def lift_def split: sum.splits intro!: bind_apply_cong)
 
 lemma K_bind_apply_cong[fundef_cong]:
   "\<lbrakk> f st = f' st' \<rbrakk> \<Longrightarrow> K_bind f arg st = K_bind f' arg' st'"
   by simp
 
 lemma when_apply_cong[fundef_cong]:
-  "\<lbrakk> C = C'; s = s'; C' \<Longrightarrow> m s' = m' s' \<rbrakk> \<Longrightarrow> whenE C m s = whenE C' m' s'"
-  by (simp add: whenE_def)
+  "\<lbrakk> C = C'; s = s'; C' \<Longrightarrow> m s' = m' s' \<rbrakk> \<Longrightarrow> when C m s = when C' m' s'"
+  by (simp add: when_def)
 
 lemma unless_apply_cong[fundef_cong]:
-  "\<lbrakk> C = C'; s = s'; \<not> C' \<Longrightarrow> m s' = m' s' \<rbrakk> \<Longrightarrow> unlessE C m s = unlessE C' m' s'"
-  by (simp add: unlessE_def)
+  "\<lbrakk> C = C'; s = s'; \<not> C' \<Longrightarrow> m s' = m' s' \<rbrakk> \<Longrightarrow> unless C m s = unless C' m' s'"
+  by (simp add: when_def unless_def)
 
 lemma whenE_apply_cong[fundef_cong]:
   "\<lbrakk> C = C'; s = s'; C' \<Longrightarrow> m s' = m' s' \<rbrakk> \<Longrightarrow> whenE C m s = whenE C' m' s'"
@@ -63,87 +51,103 @@ lemma unlessE_apply_cong[fundef_cong]:
   "\<lbrakk> C = C'; s = s'; \<not> C' \<Longrightarrow> m s' = m' s' \<rbrakk> \<Longrightarrow> unlessE C m s = unlessE C' m' s'"
   by (simp add: unlessE_def)
 
-subsection "Simplifying Monads"
 
-lemma nested_bind [simp]:
-  "do x <- do y <- f; return (g y) od; h x od =
-   do y <- f; h (g y) od"
-  apply (clarsimp simp add: bind_def)
-  apply (rule ext)
-  apply (clarsimp simp add: Let_def split_def return_def)
-  done
+subsection \<open>Simplifying Monads\<close>
+
+lemma nested_bind[simp]:
+  "do x <- do y <- f; return (g y) od; h x od = do y <- f; h (g y) od"
+  by (clarsimp simp: bind_def Let_def split_def return_def)
 
 lemma bind_dummy_ret_val:
   "do y \<leftarrow> a; b od = do a; b od"
   by simp
 
-lemma fail_bind [simp]:
+lemma fail_update[iff]:
+  "fail (f s) = fail s"
+  by (simp add: fail_def)
+
+lemma fail_bind[simp]:
   "fail >>= f = fail"
   by (simp add: bind_def fail_def)
 
-lemma fail_bindE [simp]:
+lemma fail_bindE[simp]:
   "fail >>=E f = fail"
   by (simp add: bindE_def bind_def fail_def)
 
-lemma assert_False [simp]:
+lemma assert_A_False[simp]:
+  "assert False = fail"
+  by (simp add: assert_def)
+
+lemma assert_A_True[simp]:
+  "assert True = return ()"
+  by (simp add: assert_def)
+
+lemma assert_False[simp]:
   "assert False >>= f = fail"
-  by (simp add: assert_def)
+  by simp
 
-lemma assert_True [simp]:
+lemma assert_True[simp]:
   "assert True >>= f = f ()"
-  by (simp add: assert_def)
+  by simp
 
-lemma assertE_False [simp]:
+lemma assertE_False[simp]:
   "assertE False >>=E f = fail"
   by (simp add: assertE_def)
 
-lemma assertE_True [simp]:
+lemma assertE_True[simp]:
   "assertE True >>=E f = f ()"
   by (simp add: assertE_def)
 
-lemma when_False_bind [simp]:
+lemma when_False_bind[simp]:
   "when False g >>= f = f ()"
   by (rule ext) (simp add: when_def bind_def return_def)
 
-lemma when_True_bind [simp]:
+lemma when_True_bind[simp]:
   "when True g >>= f = g >>= f"
   by (simp add: when_def bind_def return_def)
 
-lemma whenE_False_bind [simp]:
+lemma whenE_False_bind[simp]:
   "whenE False g >>=E f = f ()"
   by (simp add: whenE_def bindE_def returnOk_def lift_def)
 
-lemma whenE_True_bind [simp]:
+lemma whenE_True_bind[simp]:
   "whenE True g >>=E f = g >>=E f"
   by (simp add: whenE_def bindE_def returnOk_def lift_def)
 
-lemma when_True [simp]: "when True X = X"
+lemma when_True[simp]:
+  "when True X = X"
   by (clarsimp simp: when_def)
 
-lemma when_False [simp]: "when False X = return ()"
+lemma when_False[simp]:
+  "when False X = return ()"
   by (clarsimp simp: when_def)
 
-lemma unless_False [simp]: "unless False X = X"
+lemma unless_False[simp]:
+  "unless False X = X"
   by (clarsimp simp: unless_def)
 
-lemma unlessE_False [simp]: "unlessE False f = f"
+lemma unlessE_False[simp]:
+  "unlessE False f = f"
   unfolding unlessE_def by fastforce
 
-lemma unless_True [simp]: "unless True X = return ()"
+lemma unless_True[simp]:
+  "unless True X = return ()"
   by (clarsimp simp: unless_def)
 
-lemma unlessE_True [simp]: "unlessE True f = returnOk ()"
+lemma unlessE_True[simp]:
+  "unlessE True f = returnOk ()"
   unfolding unlessE_def by fastforce
 
 lemma unlessE_whenE:
-  "unlessE P = whenE (~P)"
-  by (rule ext)+ (simp add: unlessE_def whenE_def)
+  "unlessE P = whenE (\<not>P)"
+  by (rule ext) (simp add: unlessE_def whenE_def)
 
 lemma unless_when:
-  "unless P = when (~P)"
-  by (rule ext)+ (simp add: unless_def when_def)
+  "unless P = when (\<not>P)"
+  by (rule ext) (simp add: unless_def when_def)
 
-lemma gets_to_return [simp]: "gets (\<lambda>s. v) = return v"
+lemma gets_to_return[simp]:
+  "gets (\<lambda>s. v) = return v"
   by (clarsimp simp: gets_def put_def get_def bind_def return_def)
 
 lemma assert_opt_Some:
@@ -154,50 +158,60 @@ lemma assertE_liftE:
   "assertE P = liftE (assert P)"
   by (simp add: assertE_def assert_def liftE_def returnOk_def)
 
-lemma liftE_handleE' [simp]: "((liftE a) <handle2> b) = liftE a"
-  apply (clarsimp simp: liftE_def handleE'_def)
-  done
+lemma liftE_handleE'[simp]:
+  "(liftE a <handle2> b) = liftE a"
+  by (clarsimp simp: liftE_def handleE'_def)
 
-lemma liftE_handleE [simp]: "((liftE a) <handle> b) = liftE a"
-  apply (unfold handleE_def)
-  apply simp
-  done
+lemma liftE_handleE[simp]:
+  "(liftE a <handle> b) = liftE a"
+  unfolding handleE_def by simp
+
+lemma alternative_bind:
+  "((a \<sqinter> b) >>= c) = ((a >>= c) \<sqinter> (b >>= c))"
+  by (fastforce simp add: alternative_def bind_def split_def)
+
+lemma alternative_refl:
+  "(a \<sqinter> a) = a"
+  by (simp add: alternative_def)
+
+lemma alternative_com:
+  "(f \<sqinter> g) = (g \<sqinter> f)"
+  by (auto simp: alternative_def)
+
+lemma liftE_alternative:
+  "liftE (a \<sqinter> b) = (liftE a \<sqinter> liftE b)"
+  by (simp add: liftE_def alternative_bind)
 
 
-subsection "Lifting and Alternative Basic Definitions"
+subsection \<open>Lifting and Alternative Basic Definitions\<close>
 
-lemma liftE_liftM: "liftE = liftM Inr"
-  apply (rule ext)
-  apply (simp add: liftE_def liftM_def)
-  done
+lemma liftE_liftM:
+  "liftE = liftM Inr"
+  by (auto simp: liftE_def liftM_def)
 
-lemma liftME_liftM: "liftME f = liftM (case_sum Inl (Inr \<circ> f))"
-  apply (rule ext)
-  apply (simp add: liftME_def liftM_def bindE_def returnOk_def lift_def)
+lemma liftME_liftM:
+  "liftME f = liftM (case_sum Inl (Inr \<circ> f))"
+  unfolding liftME_def liftM_def bindE_def returnOk_def lift_def
+  apply (rule ext, rename_tac x)
   apply (rule_tac f="bind x" in arg_cong)
-  apply (rule ext)
-  apply (case_tac xa)
-   apply (simp_all add: lift_def throwError_def)
+  apply (fastforce simp: throwError_def split: sum.splits)
   done
 
 lemma liftE_bindE:
-  "(liftE a) >>=E b = a >>= b"
-  apply (simp add: liftE_def bindE_def lift_def bind_assoc)
-  done
+  "liftE a >>=E b = a >>= b"
+  by (simp add: liftE_def bindE_def lift_def bind_assoc)
 
-lemma liftM_id[simp]: "liftM id = id"
-  apply (rule ext)
-  apply (simp add: liftM_def)
-  done
+lemma liftM_id[simp]:
+  "liftM id = id"
+  by (auto simp: liftM_def)
 
 lemma liftM_bind:
-  "(liftM t f >>= g) = (f >>= (\<lambda>x. g (t x)))"
+  "liftM t f >>= g = f >>= (\<lambda>x. g (t x))"
   by (simp add: liftM_def bind_assoc)
 
-lemma gets_bind_ign: "gets f >>= (\<lambda>x. m) = m"
-  apply (rule ext)
-  apply (simp add: bind_def simpler_gets_def)
-  done
+lemma gets_bind_ign:
+  "gets f >>= (\<lambda>x. m) = m"
+  by (simp add: bind_def simpler_gets_def)
 
 lemma exec_get:
   "(get >>= f) x = f x x"
@@ -211,88 +225,76 @@ lemma exec_gets:
 
 lemma bind_eqI:
   "\<lbrakk> f = f'; \<And>x. g x = g' x \<rbrakk> \<Longrightarrow> f >>= g = f' >>= g'"
-  apply (rule ext)
-  apply (simp add: bind_def)
-  apply (auto simp: split_def)
-  done
+  by (auto simp: bind_def split_def)
 
 lemma condition_split:
-  "P (condition C a b s) = ((((C s) \<longrightarrow> P (a s)) \<and> (\<not> (C s) \<longrightarrow> P (b s))))"
-  apply (clarsimp simp: condition_def)
-  done
+  "P (condition C a b s) \<longleftrightarrow> (C s \<longrightarrow> P (a s)) \<and> (\<not>C s \<longrightarrow> P (b s))"
+  by (clarsimp simp: condition_def)
 
 lemma condition_split_asm:
-  "P (condition C a b s) = (\<not> (C s \<and> \<not> P (a s) \<or> \<not> C s \<and> \<not> P (b s)))"
-  apply (clarsimp simp: condition_def)
-  done
+  "P (condition C a b s) \<longleftrightarrow> (\<not>(C s \<and> \<not> P (a s) \<or> \<not>C s \<and> \<not>P (b s)))"
+  by (clarsimp simp: condition_def)
 
 lemmas condition_splits = condition_split condition_split_asm
 
-lemma condition_true_triv [simp]:
+lemma condition_true_triv[simp]:
   "condition (\<lambda>_. True) A B = A"
-  apply (rule ext)
-  apply (clarsimp split: condition_splits)
-  done
+  by (fastforce split: condition_splits)
 
-lemma condition_false_triv [simp]:
+lemma condition_false_triv[simp]:
   "condition (\<lambda>_. False) A B = B"
-  apply (rule ext)
-  apply (clarsimp split: condition_splits)
-  done
+  by (fastforce split: condition_splits)
 
-lemma condition_true: "\<lbrakk> P s \<rbrakk> \<Longrightarrow> condition P A B s = A s"
-  apply (clarsimp simp: condition_def)
-  done
+lemma condition_true:
+  "P s \<Longrightarrow> condition P A B s = A s"
+  by (clarsimp simp: condition_def)
 
-lemma condition_false: "\<lbrakk> \<not> P s \<rbrakk> \<Longrightarrow> condition P A B s = B s"
-  apply (clarsimp simp: condition_def)
-  done
+lemma condition_false:
+  "\<not> P s \<Longrightarrow> condition P A B s = B s"
+  by (clarsimp simp: condition_def)
 
 lemmas arg_cong_bind = arg_cong2[where f=bind]
 lemmas arg_cong_bind1 = arg_cong_bind[OF refl ext]
 
-section "Low-level monadic reasoning"
+
+subsection \<open>Low-level monadic reasoning\<close>
 
 lemma monad_eqI [intro]:
   "\<lbrakk> \<And>r t s. (r, t) \<in> fst (A s) \<Longrightarrow> (r, t) \<in> fst (B s);
      \<And>r t s. (r, t) \<in> fst (B s) \<Longrightarrow> (r, t) \<in> fst (A s);
      \<And>x. snd (A x) = snd (B x) \<rbrakk>
-  \<Longrightarrow> (A :: ('s, 'a) nondet_monad) = B"
-  apply (fastforce intro!: set_eqI prod_eqI)
-  done
+  \<Longrightarrow> A = B" for A :: "('s, 'a) nondet_monad"
+  by (fastforce intro!: set_eqI prod_eqI)
 
 lemma monad_state_eqI [intro]:
   "\<lbrakk> \<And>r t. (r, t) \<in> fst (A s) \<Longrightarrow> (r, t) \<in> fst (B s');
      \<And>r t. (r, t) \<in> fst (B s') \<Longrightarrow> (r, t) \<in> fst (A s);
      snd (A s) = snd (B s') \<rbrakk>
-  \<Longrightarrow> (A :: ('s, 'a) nondet_monad) s = B s'"
-  apply (fastforce intro!: set_eqI prod_eqI)
-  done
+  \<Longrightarrow> A s = B s'" for A :: "('s, 'a) nondet_monad"
+  by (fastforce intro!: set_eqI prod_eqI)
 
-subsection "General whileLoop reasoning"
 
-definition
-  "whileLoop_terminatesE C B \<equiv> (\<lambda>r.
-     whileLoop_terminates (\<lambda>r s. case r of Inr v \<Rightarrow> C v s | _ \<Rightarrow> False) (lift B) (Inr r))"
+subsection \<open>General @{const whileLoop} reasoning\<close>
+
+definition whileLoop_terminatesE ::
+  "('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> ('s, 'e + 'a) nondet_monad) \<Rightarrow> 'a \<Rightarrow> 's \<Rightarrow> bool" where
+  "whileLoop_terminatesE C B \<equiv>
+     \<lambda>r. whileLoop_terminates (\<lambda>r s. case r of Inr v \<Rightarrow> C v s | _ \<Rightarrow> False) (lift B) (Inr r)"
 
 lemma whileLoop_cond_fail:
-    "\<lbrakk> \<not> C x s \<rbrakk> \<Longrightarrow> (whileLoop C B x s) = (return x s)"
-  apply (auto simp: return_def whileLoop_def
-       intro: whileLoop_results.intros
-              whileLoop_terminates.intros
-       elim!: whileLoop_results.cases)
-  done
+  "\<not> C x s \<Longrightarrow> whileLoop C B x s = return x s"
+  by (auto simp: return_def whileLoop_def
+           intro: whileLoop_results.intros whileLoop_terminates.intros
+           elim!: whileLoop_results.cases)
 
 lemma whileLoopE_cond_fail:
-    "\<lbrakk> \<not> C x s \<rbrakk> \<Longrightarrow> (whileLoopE C B x s) = (returnOk x s)"
-  apply (clarsimp simp: whileLoopE_def returnOk_def)
-  apply (auto intro: whileLoop_cond_fail)
-  done
+  "\<not> C x s \<Longrightarrow> whileLoopE C B x s = returnOk x s"
+  unfolding whileLoopE_def returnOk_def
+  by (auto intro: whileLoop_cond_fail)
 
-
-lemma whileLoop_results_simps_no_move [simp]:
-  shows "((Some x, Some x) \<in> whileLoop_results C B) = (\<not> C (fst x) (snd x))"
-    (is "?LHS x = ?RHS x")
+lemma whileLoop_results_simps_no_move[simp]:
+  "(Some x, Some x) \<in> whileLoop_results C B \<longleftrightarrow> \<not>C (fst x) (snd x)"
+  (is "?LHS x \<longleftrightarrow> ?RHS x")
 proof (rule iffI)
   assume "?LHS x"
   then have "(\<exists>a. Some x = Some a) \<longrightarrow> ?RHS (the (Some x))"
@@ -306,15 +308,13 @@ next
 qed
 
 lemma whileLoop_unroll:
-  "(whileLoop C B r) =  ((condition (C r) (B r >>= (whileLoop C B)) (return r)))"
+  "whileLoop C B r = condition (C r) (B r >>= whileLoop C B) (return r)"
   (is "?LHS r = ?RHS r")
 proof -
-  have cond_fail: "\<And>r s. \<not> C r s \<Longrightarrow> ?LHS r s = ?RHS r s"
-    apply (subst whileLoop_cond_fail, simp)
-    apply (clarsimp simp: condition_def bind_def return_def)
-    done
-
-  have cond_pass: "\<And>r s. C r s \<Longrightarrow> whileLoop C B r s = (B r >>= (whileLoop C B)) s"
+  have "\<And>r s. \<not> C r s \<Longrightarrow> ?LHS r s = ?RHS r s"
+    by (clarsimp simp: whileLoop_cond_fail condition_def bind_def return_def)
+  moreover
+  have "\<And>r s. C r s \<Longrightarrow> ?LHS r s = (B r >>= whileLoop C B) s"
     apply (rule monad_state_eqI)
       apply (clarsimp simp: whileLoop_def bind_def split_def)
       apply (subst (asm) whileLoop_results_simps_valid)
@@ -327,45 +327,34 @@ proof -
     apply (subst whileLoop_terminates.simps)
     apply fastforce
     done
-
-  show ?thesis
-    apply (rule ext)
-    apply (metis cond_fail cond_pass condition_def)
-    done
+  ultimately
+  show ?thesis by (fastforce simp: condition_def)
 qed
 
 lemma whileLoop_unroll':
-    "(whileLoop C B r) = ((condition (C r) (B r) (return r)) >>= (whileLoop C B))"
-  apply (rule ext)
+  "whileLoop C B r = condition (C r) (B r) (return r) >>= whileLoop C B"
   apply (subst whileLoop_unroll)
-  apply (clarsimp simp: condition_def bind_def return_def split_def)
-  apply (subst whileLoop_cond_fail, simp)
-  apply (clarsimp simp: return_def)
+  apply (auto simp: condition_def bind_def return_def split_def whileLoop_cond_fail)
   done
 
 lemma whileLoopE_unroll:
-  "(whileLoopE C B r) =  ((condition (C r) (B r >>=E (whileLoopE C B)) (returnOk r)))"
-  apply (rule ext)
-  apply (unfold whileLoopE_def)
+  "whileLoopE C B r = condition (C r) (B r >>=E whileLoopE C B) (returnOk r)"
+  unfolding whileLoopE_def
+  apply (rule ext, rename_tac x)
   apply (subst whileLoop_unroll)
-  apply (clarsimp simp: whileLoopE_def bindE_def returnOk_def split: condition_splits)
-  apply (clarsimp simp: lift_def)
+  apply (clarsimp simp: bindE_def returnOk_def lift_def split: condition_splits)
   apply (rule_tac f="\<lambda>a. (B r >>= a) x" in arg_cong)
   apply (rule ext)+
   apply (clarsimp simp: lift_def split: sum.splits)
   apply (subst whileLoop_unroll)
-  apply (subst condition_false)
-   apply fastforce
-  apply (clarsimp simp: throwError_def)
+  apply (clarsimp simp: condition_false throwError_def)
   done
 
 lemma whileLoopE_unroll':
-  "(whileLoopE C B r) =  ((condition (C r) (B r) (returnOk r)) >>=E (whileLoopE C B))"
-  apply (rule ext)
+  "whileLoopE C B r = condition (C r) (B r) (returnOk r) >>=E whileLoopE C B"
   apply (subst whileLoopE_unroll)
-  apply (clarsimp simp: condition_def bindE_def bind_def returnOk_def return_def lift_def split_def)
-  apply (subst whileLoopE_cond_fail, simp)
-  apply (clarsimp simp: returnOk_def return_def)
+  apply (fastforce simp: condition_def bindE_def bind_def lift_def split_def whileLoopE_cond_fail
+                         returnOk_def return_def)
   done
 
 end
