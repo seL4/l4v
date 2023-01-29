@@ -552,4 +552,16 @@ lemma bind_known_operation_eq:
   apply (fastforce simp: valid_def empty_fail_def)
   done
 
+lemma assert_opt_If:
+  "assert_opt v = If (v = None) fail (return (the v))"
+  by (simp add: assert_opt_def split: option.split)
+
+lemma if_to_top_of_bind:
+  "(bind (If P x y) z) = If P (bind x z) (bind y z)"
+  by (simp split: if_split)
+
+lemma if_to_top_of_bindE:
+  "(bindE (If P x y) z) = If P (bindE x z) (bindE y z)"
+  by (simp split: if_split)
+
 end
