@@ -32,6 +32,7 @@ session Monads (lib) = HOL +
     TraceMonadVCG
     In_Monad
     NonDetMonadVCG
+    NonDetMonad_Sat
     More_NonDetMonadVCG
     NonDetMonad
     NonDetMonadLemmas
