@@ -14,6 +14,7 @@ imports
   CParser.LemmaBucket_C
   Lib.LemmaBucket
   SIMPL_Lemmas
+  Monads.OptionMonadWP
 begin
 
 declare word_neq_0_conv [simp del]
@@ -170,6 +171,13 @@ lemma ccorresE:
    apply simp
   apply simp
   done
+
+lemma ccorresE_gets_the:
+  "\<lbrakk>ccorresG srel \<Gamma> rrel xf G G' hs (gets_the c) c'; (s, s') \<in> srel; G s; s' \<in> G'; no_ofail G c;
+    \<Gamma> \<turnstile>\<^sub>h \<langle>c' # hs, s'\<rangle> \<Rightarrow> (n, Normal t')\<rbrakk>
+   \<Longrightarrow> (s, t') \<in> srel \<and> rrel (the (c s)) (xf t')"
+  by (fastforce simp: ccorres_underlying_def no_ofail_def unif_rrel_def gets_the_def gets_def
+                      get_def bind_def return_def)
 
 lemma ccorres_empty_handler_abrupt:
   assumes cc: "ccorres_underlying sr \<Gamma> rrel xf' arrel axf P P' [] a c"
