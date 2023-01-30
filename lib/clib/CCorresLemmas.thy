@@ -345,9 +345,6 @@ lemma ccorres_expand_while_iff:
   apply (auto elim!: exec_Normal_elim_cases intro: exec.intros)
   done
 
-abbreviation
-  "ccorresG rf_sr \<Gamma> r xf \<equiv> ccorres_underlying rf_sr \<Gamma> r xf r xf"
-
 lemma exec_handlers_Hoare_call_Basic:
   "\<lbrakk> \<forall>s' t x. s' \<in> P \<longrightarrow> g s' t (ret s' t) \<in> Q; UNIV \<subseteq> A \<rbrakk> \<Longrightarrow>
     exec_handlers_Hoare \<Gamma> P (call initfn p ret (\<lambda>x y. Basic (g x y)) # hs) Q A"

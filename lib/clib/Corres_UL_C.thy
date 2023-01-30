@@ -86,6 +86,9 @@ where
                             \<and> unif_rrel (n = length hs) rrel xf arrel axf r s'')
        | _ \<Rightarrow> False))"
 
+abbreviation
+  "ccorresG rf_sr \<Gamma> r xf \<equiv> ccorres_underlying rf_sr \<Gamma> r xf r xf"
+
 declare isNormal_simps [simp]
 
 lemma ccorresI [case_names fail nofail]:
