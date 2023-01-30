@@ -945,17 +945,18 @@ lemmas hoare_wp_splits[wp_split] =
 
 lemmas [wp_comb] = hoare_wp_state_combsE hoare_wp_combsE  hoare_wp_combs
 
+(* rules towards the bottom will be matched first *)
 lemmas [wp] = hoare_vcg_prop
               wp_post_taut
               hoare_fun_app_wp
-              return_wp
+              returnOk_E
+              liftE_validE_E
               put_wp
               get_wp
               gets_wp
               modify_wp
+              return_wp
               returnOk_wp
-              returnOk_E
-              liftE_validE_E
               throwError_wp
               fail_wp
               failE_wp

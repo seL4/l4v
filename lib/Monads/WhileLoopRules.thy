@@ -441,7 +441,7 @@ proof (clarsimp simp: exs_valid_def Bex_def)
     by (metis \<open>P s\<close> fst_conv init_T snd_conv final_I fst_whileLoop_cond_false)
 qed
 
-lemma empty_fail_whileLoop:
+lemma empty_fail_whileLoop[empty_fail_cond, intro!, wp]:
   assumes body_empty_fail: "\<And>r. empty_fail (B r)"
   shows "empty_fail (whileLoop C B r)"
 proof -
@@ -470,14 +470,10 @@ proof -
     by (clarsimp simp: empty_fail_def)
 qed
 
-lemma empty_fail_whileLoopE:
-  assumes body_empty_fail: "\<And>r. empty_fail (B r)"
+lemma empty_fail_whileLoopE[empty_fail_cond, intro!, wp]:
+  assumes "\<And>r. empty_fail (B r)"
   shows "empty_fail (whileLoopE C B r)"
-  apply (clarsimp simp: whileLoopE_def)
-  apply (rule empty_fail_whileLoop)
-  apply (insert body_empty_fail)
-  apply (clarsimp simp: empty_fail_def lift_def throwError_def return_def split: sum.splits)
-  done
+  by (clarsimp simp: whileLoopE_def assms)
 
 lemma empty_fail_whileM[empty_fail_cond, intro!, wp]:
   "\<lbrakk> empty_fail C; empty_fail B \<rbrakk> \<Longrightarrow> empty_fail (whileM C B)"
