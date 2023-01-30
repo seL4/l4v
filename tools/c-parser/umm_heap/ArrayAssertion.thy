@@ -106,6 +106,13 @@ lemma array_ptr_valid_array_assertionI:
   by (auto dest: array_ptr_valid_array_assertionD
            simp: array_assertion_shrink_right)
 
+lemma h_t_array_valid_array_assertion:
+  "h_t_array_valid htd ptr n \<Longrightarrow> 0 < n
+   \<Longrightarrow> array_assertion ptr n htd"
+  apply (simp add: array_assertion_def)
+  apply (fastforce intro: exI[where x=0])
+  done
+
 text \<open>Derived from array_assertion, an appropriate assertion for performing
 a pointer addition, or for dereferencing a pointer addition (the strong case).
 
