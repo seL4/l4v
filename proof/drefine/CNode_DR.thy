@@ -792,7 +792,7 @@ lemma cap_revoke_corres_helper:
              in corres_split_forwards')
               apply (rule corres_guard_imp[OF corres_trivial[OF preemption_corres]])
                apply simp+
-             apply (rule alternative_valid)
+             apply (rule alternative_wp)
               apply (simp add:valid_def throwError_def return_def)
              apply (simp add:valid_def returnOk_def return_def)
             apply (clarsimp simp: valid_def)

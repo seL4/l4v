@@ -896,12 +896,12 @@ context CNodeInv_AI begin
 lemma preemption_point_not_recursive_cspaces[wp]:
   "preemption_point \<lbrace>\<lambda>s. P (not_recursive_cspaces s)\<rbrace>"
   unfolding preemption_point_def
-  by (wpsimp wp: OR_choiceE_weak_wp alternative_valid hoare_drop_imp)
+  by (wpsimp wp: OR_choiceE_weak_wp alternative_wp hoare_drop_imp)
 
 lemma preemption_point_caps_of_state[wp]:
   "preemption_point \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>"
   unfolding preemption_point_def
-  by (wpsimp wp: OR_choiceE_weak_wp alternative_valid hoare_drop_imp)
+  by (wpsimp wp: OR_choiceE_weak_wp alternative_wp hoare_drop_imp)
 
 lemma rec_del_termination:
   "All (rec_del_dom :: rec_del_call \<times> 'state_ext state \<Rightarrow> bool)"

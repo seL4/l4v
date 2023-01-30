@@ -699,7 +699,7 @@ lemma schedule_separate_state [wp]:
   "\<lbrace>separate_state\<rbrace> schedule :: (unit,unit) s_monad \<lbrace>\<lambda>_. separate_state\<rbrace>"
   unfolding schedule_def switch_to_thread_def arch_switch_to_thread_def
             switch_to_idle_thread_def arch_switch_to_idle_thread_def allActiveTCBs_def
-  by (wpsimp wp: select_inv separate_state_pres' alternative_valid
+  by (wpsimp wp: select_inv separate_state_pres' alternative_wp
              simp: arch_activate_idle_thread_def |
       strengthen imp_consequent)+
 
