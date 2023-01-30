@@ -2255,7 +2255,6 @@ lemma hi_IRQInactive:
     -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
   apply (simp add: handleInvocation_def split_def)
   apply (wp syscall_valid' retype_pi_IRQInactive)
-    apply simp_all
   done
 
 lemma handleSend_IRQInactive:

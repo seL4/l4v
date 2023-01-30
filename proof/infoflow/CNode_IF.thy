@@ -576,7 +576,7 @@ lemma preemption_point_def2:
    odE"
   apply (rule ext)
   apply (simp add: preemption_point_def OR_choiceE_def wrap_ext_bool_det_ext_ext_def
-                   ef_mk_ef work_units_limit_reached_def select_f_def)
+                   ef_mk_ef work_units_limit_reached_def select_f_def empty_fail_cond)
   apply (clarsimp simp: work_units_limit_reached_def gets_def liftE_def select_f_def get_def
                         lift_def return_def bind_def bindE_def split_def image_def
                  split: option.splits sum.splits)

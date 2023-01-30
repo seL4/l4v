@@ -792,9 +792,10 @@ lemma cap_revoke_corres_helper:
              in corres_split_forwards')
               apply (rule corres_guard_imp[OF corres_trivial[OF preemption_corres]])
                apply simp+
-             apply (rule alternative_wp)
-              apply (simp add:valid_def throwError_def return_def)
-             apply (simp add:valid_def returnOk_def return_def)
+             apply (wp alternative_wp)
+               apply (simp add:valid_def throwError_def return_def)
+              apply (simp add:valid_def returnOk_def return_def)
+             apply fastforce
             apply (clarsimp simp: valid_def)
            apply clarsimp
            apply (case_tac rva)
@@ -1346,7 +1347,7 @@ next
   show ?case
     apply (clarsimp simp:mapM_Cons)
     apply (subst do_machine_op_bind)
-      apply (clarsimp simp:ef_storeWord)+
+      apply (clarsimp simp:ef_storeWord empty_fail_cond)+
     apply (subst corrupt_frame_duplicate[symmetric])
     apply (rule corres_guard_imp)
       apply (rule corres_split)

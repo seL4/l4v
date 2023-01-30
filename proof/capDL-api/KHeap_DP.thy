@@ -862,14 +862,9 @@ lemma lookup_cap_rvu :
   done
 
 lemma lookup_cap_wp:
-  "\<lbrace>P\<rbrace>
-     lookup_cap thread cap_ptr
-   \<lbrace>\<lambda>_. P\<rbrace>, \<lbrace>\<lambda>_ .P \<rbrace> "
-   apply (clarsimp simp: lookup_cap_def)
-   apply (wp lookup_slot_wp get_cap_wp)
-   apply (clarsimp)
-   apply (wp lookup_slot_wp)
-  apply assumption
+  "\<lbrace>P\<rbrace> lookup_cap thread cap_ptr \<lbrace>\<lambda>_. P\<rbrace>, \<lbrace>\<lambda>_ .P \<rbrace> "
+  apply (clarsimp simp: lookup_cap_def)
+  apply (wp lookup_slot_wp get_cap_wp)
   done
 
 
@@ -1119,9 +1114,9 @@ lemma get_thread_sep_wp:
   done
 
 lemma get_thread_inv:
-"\<lbrace> Q \<rbrace>
-  get_thread thread \<lbrace>\<lambda>t s. Q s\<rbrace>"
-  by (simp add:get_thread_def | wp | wpc)+
+  "\<lbrace> Q \<rbrace> get_thread thread \<lbrace>\<lambda>t s. Q s\<rbrace>"
+  unfolding get_thread_def
+  by wpsimp
 
 lemma get_thread_sep_wp_precise:
   "\<lbrace>\<lambda>s. tcb_at' (\<lambda>tcb. Q tcb s) thread s \<rbrace>
@@ -1145,8 +1140,7 @@ lemma has_restart_cap_sep_wp:
    \<lbrace>\<lambda>rv. Q rv\<rbrace>"
   apply (rule hoare_name_pre_state)
   apply (clarsimp simp: object_at_def)
-  apply (simp add: object_at_def get_thread_def has_restart_cap_def
-       | wp+ | wpc | intro conjI)+
+  apply (wpsimp simp: object_at_def get_thread_def has_restart_cap_def | intro conjI)+
   apply (clarsimp dest!: opt_cap_sep_imp
                    simp: opt_cap_def slots_of_def)
   apply (clarsimp simp: object_slots_def)

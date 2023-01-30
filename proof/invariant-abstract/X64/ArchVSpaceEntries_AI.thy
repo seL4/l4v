@@ -681,8 +681,6 @@ lemma perform_invocation_valid_vspace_objs'[wp]:
          \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
   apply (cases i, simp_all)
   apply (wp send_signal_interrupt_states | simp)+
-  apply (clarsimp simp:)
-  apply (wp | wpc | simp)+
   apply (simp add: arch_perform_invocation_def)
   apply (wp | wpc | simp)+
   apply (auto simp: valid_arch_inv_def )

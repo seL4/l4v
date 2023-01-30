@@ -8,8 +8,10 @@ chapter \<open>ARM\_HYP Machine Types\<close>
 
 theory MachineTypes
 imports
-  "Word_Lib.WordSetup"
-  "Monads.OptionMonadND"
+  Word_Lib.WordSetup
+  Monads.Empty_Fail
+  Monads.No_Fail
+  Monads.OptionMonadND
   Setup_Locale
   Platform
 begin

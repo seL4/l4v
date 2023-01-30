@@ -1594,7 +1594,9 @@ lemma doFlush_ccorres:
      apply (rule ccorres_cond_false)
      apply (rule ccorres_cond_false)
      apply (rule ccorres_cond_true)
-     apply (simp add: empty_fail_cleanCacheRange_PoU empty_fail_dsb empty_fail_invalidateCacheRange_I empty_fail_branchFlushRange empty_fail_isb doMachineOp_bind)
+     apply (simp add: empty_fail_cond empty_fail_cleanCacheRange_PoU empty_fail_dsb
+                      empty_fail_invalidateCacheRange_I empty_fail_branchFlushRange empty_fail_isb
+                      doMachineOp_bind)
      apply (rule ccorres_rhs_assoc)+
      apply (fold dc_def)
      apply (ctac (no_vcg) add: cleanCacheRange_PoU_ccorres)

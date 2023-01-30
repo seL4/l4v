@@ -45,7 +45,7 @@ lemma do_machine_op_empty_fail[wp]:
   "empty_fail f \<Longrightarrow> empty_fail (do_machine_op f)"
   apply (simp add: do_machine_op_def | wp)+
    apply (simp add: empty_fail_def)
-  apply (simp add: split_def)
+  apply (simp add: split_def empty_fail_cond)
   done
 
 lemma throw_on_false_empty_fail[wp]:

@@ -2103,8 +2103,7 @@ lemma tcb_sched_action_reads_respects_g':
             apply (rule doesnt_touch_globalsI | simp | wp)+
        apply (clarsimp simp: equiv_valid_2_def gets_apply_def get_def bind_def return_def
                              labels_are_invisible_def)
-       apply wp+
-  apply clarsimp
+       apply wpsimp+
   apply (clarsimp simp: pas_refined_def tcb_domain_map_wellformed_aux_def)
   apply (erule_tac x="(thread, tcb_domain y)" in ballE)
    apply force

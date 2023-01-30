@@ -1769,7 +1769,8 @@ lemma createMappingEntires_valid_slots_duplicated'[wp]:
        in  hoare_post_imp_R)
       apply (wp lookupPTSlot_aligned lookupPTSlot_page_table_at'
            | simp add: vspace_bits_defs largePagePTEOffsets_def superSectionPDEOffsets_def)+
-     apply (rule_tac x = r in exI)
+     apply (rename_tac rv s)
+     apply (rule_tac x = rv in exI)
      apply clarsimp
      apply (frule is_aligned_no_wrap'[where off = "0x78"])
       apply simp

@@ -551,7 +551,7 @@ lemma mapM_load_word_offs_do_machine_op:
   "mapM (load_word_offs ptr) list
      = do_machine_op (mapM loadWord (map (\<lambda>offs. ptr + of_nat (offs * word_size)) list))"
   apply (subst submonad_mapM[OF submonad_do_machine_op submonad_do_machine_op])
-   apply (simp add: loadWord_def)
+   apply (simp add: loadWord_def empty_fail_cond)
   apply (simp add: load_word_offs_def[abs_def] mapM_map_simp o_def)
   done
 

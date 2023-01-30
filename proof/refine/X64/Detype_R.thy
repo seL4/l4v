@@ -2122,7 +2122,7 @@ qed
 
 lemma empty_fail_locateCTE:
   "empty_fail (locateCTE src)"
-  by (simp add:locateCTE_def bind_assoc split_def)
+  by (fastforce simp: locateCTE_def bind_assoc split_def)
 
 lemma fail_empty_locateCTE:
   "snd (locateCTE src s) \<Longrightarrow> fst (locateCTE src s) = {}"

@@ -1540,6 +1540,7 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
          \<inter> {s. buffer_' s = option_to_ptr buffer}) []
    (invokeTCB (WriteRegisters dst resume values arch))
    (Call invokeTCB_WriteRegisters_'proc)"
+  supply empty_fail_cond[simp]
   apply (rule ccorres_gen_asm)
   apply (erule conjE)
   apply (cinit lift: n_' dest_' resumeTarget_' buffer_'
@@ -1788,6 +1789,7 @@ shows
        (doE reply \<leftarrow> invokeTCB (ReadRegisters target susp n archCp);
            liftE (replyOnRestart thread reply isCall) odE)
        (Call invokeTCB_ReadRegisters_'proc)"
+  supply empty_fail_cond[simp]
   apply (rule ccorres_gen_asm) using [[goals_limit=1]]
   apply (cinit' lift: tcb_src_' suspendSource_' n_' call_'
                 simp: invokeTCB_def liftE_bindE bind_assoc)
@@ -3652,11 +3654,10 @@ lemma decodeSetSchedParams_ccorres:
   apply (simp only: cap_get_tag_isCap[symmetric], drule(1) cap_get_tag_to_H)
   apply (clarsimp simp: valid_cap'_def capAligned_def interpret_excaps_eq excaps_map_def)
   apply (intro conjI impI allI)
-                      apply (clarsimp simp: unat_eq_0 le_max_word_ucast_id
-                                            thread_control_update_mcp_def thread_control_update_priority_def
-                                            cap_get_tag_isCap_unfolded_H_cap isCap_simps
-                                            interpret_excaps_eq excaps_map_def)+
-  done
+                      by (clarsimp simp: unat_eq_0 le_max_word_ucast_id
+                                         thread_control_update_mcp_def thread_control_update_priority_def
+                                         cap_get_tag_isCap_unfolded_H_cap isCap_simps
+                                         interpret_excaps_eq excaps_map_def)+
 
 lemma decodeSetIPCBuffer_ccorres:
   "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>

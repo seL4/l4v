@@ -345,6 +345,9 @@ lemma getObject_get_assert:
   apply (simp add: lookupAround2_known1 assert_opt_def
                    obj_at'_def projectKO_def2
             split: option.split)
+  apply (rule conjI)
+   apply (clarsimp simp: fail_def fst_return conj_comms project_inject
+                         objBits_def bind_def simpler_gets_def)
   apply (clarsimp simp: fail_def fst_return conj_comms project_inject
                         objBits_def)
   apply (simp only: assert2[symmetric],
@@ -757,7 +760,7 @@ lemma doIPCTransfer_simple_rewrite:
 (* FIXME move *)
 lemma empty_fail_isRunnable[intro!, wp, simp]:
   "empty_fail (isRunnable t)"
-  by (simp add: isRunnable_def isStopped_def)
+  by (simp add: isRunnable_def isStopped_def empty_fail_cond)
 
 lemma setupCallerCap_rewrite:
   "monadic_rewrite True True (\<lambda>s. reply_masters_rvk_fb (ctes_of s))

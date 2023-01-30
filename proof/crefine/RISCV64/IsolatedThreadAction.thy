@@ -400,7 +400,7 @@ lemma getObject_get_assert:
   apply (simp add: lookupAround2_known1 assert_opt_def
                    obj_at'_def projectKO_def2
             split: option.split)
-  apply (clarsimp simp: fail_def fst_return conj_comms project_inject
+  apply (clarsimp simp: fail_set fst_return conj_comms project_inject
                         objBits_def)
   apply (simp only: assert2[symmetric],
          rule bind_apply_cong[OF refl])
@@ -816,7 +816,7 @@ lemma rescheduleRequired_simple_rewrite:
 (* FIXME move *)
 lemma empty_fail_isRunnable[intro!, wp, simp]:
   "empty_fail (isRunnable t)"
-  by (simp add: isRunnable_def isStopped_def)
+  by (simp add: isRunnable_def isStopped_def empty_fail_cond)
 
 lemma setupCallerCap_rewrite:
   "monadic_rewrite True True (\<lambda>s. reply_masters_rvk_fb (ctes_of s))

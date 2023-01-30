@@ -1222,8 +1222,9 @@ lemma seL4_TCB_WriteRegisters_wp:
   apply (wp do_kernel_op_pull_back)
   apply (rule hoare_post_imp[OF _ call_kernel_with_intent_allow_error_helper
      [where check = False,simplified]])
+                 apply (rename_tac rv s)
                  apply clarsimp
-                 apply (case_tac r,(clarsimp,assumption)+)[1]
+                 apply (case_tac rv, (clarsimp,assumption)+)[1]
                 apply fastforce
                apply (rule hoare_strengthen_post[OF set_cap_wp])
                apply (sep_select 3,sep_cancel)

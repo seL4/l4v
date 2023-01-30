@@ -699,12 +699,13 @@ lemma cancelSignal_invs':
        apply assumption
       apply (rule hoare_strengthen_post)
        apply (rule get_ntfn_sp')
+      apply (rename_tac rv s)
       apply (clarsimp simp: pred_tcb_at')
       apply (frule NIQ)
        apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
       apply (rule conjI)
        apply (clarsimp simp: valid_ntfn'_def)
-       apply (case_tac "ntfnObj r", simp_all add: isWaitingNtfn_def)
+       apply (case_tac "ntfnObj rv", simp_all add: isWaitingNtfn_def)
        apply (frule ko_at_valid_objs')
          apply (simp add: valid_pspace_valid_objs')
         apply (clarsimp simp: projectKO_opt_ntfn split: kernel_object.splits)
@@ -729,7 +730,7 @@ lemma cancelSignal_invs':
                         split: ntfn.splits)
        apply (rule conjI, clarsimp elim!: if_live_state_refsE)
        apply (fastforce simp: sym_refs_def dest!: idle'_no_refs)
-      apply (case_tac "ntfnObj r", simp_all)
+      apply (case_tac "ntfnObj rv", simp_all)
       apply (frule obj_at_valid_objs', clarsimp)
       apply (clarsimp simp: projectKOs valid_obj'_def valid_ntfn'_def)
       apply (rule conjI, clarsimp split: option.splits)
@@ -745,7 +746,7 @@ lemma cancelSignal_invs':
                               set_eq_subset)
       apply (rule conjI, clarsimp elim!: if_live_state_refsE)
       apply (rule conjI)
-       apply (case_tac "ntfnBoundTCB r")
+       apply (case_tac "ntfnBoundTCB rv")
         apply (clarsimp elim!: if_live_state_refsE)+
       apply (clarsimp dest!: idle'_no_refs)
       done

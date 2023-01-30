@@ -18,22 +18,22 @@ context word_abs_options begin
 
 lemma "\<lbrace> \<top> \<rbrace> isum1' (a :: sword32) (b :: sword32) \<lbrace> \<lambda>r _. r = a + b \<rbrace>"
   unfolding isum1'_def
-  apply (wp refl)
+  apply (wp refl impI)
   done
 
 lemma "\<lbrace> \<top> \<rbrace> isum2' (a :: int) (b :: int) \<lbrace> \<lambda>r _. r = a + b \<rbrace>"
   unfolding isum2'_def
-  apply (wp refl)
+  apply (wp refl impI)
   done
 
 lemma "\<lbrace> \<top> \<rbrace> usum1' (a :: word32) (b :: word32) \<lbrace> \<lambda>r _. r = a + b \<rbrace>"
   unfolding usum1'_def
-  apply (wp refl)
+  apply (wp refl impI)
   done
 
 lemma "\<lbrace> \<top> \<rbrace> usum2' (a :: nat) (b :: nat) \<lbrace> \<lambda>r _. r = a + b \<rbrace>"
   unfolding usum2'_def
-  apply (wp refl)
+  apply (wp refl impI)
   done
 
 end

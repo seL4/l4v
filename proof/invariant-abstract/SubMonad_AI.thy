@@ -42,7 +42,7 @@ lemma assert_get_thread_do_machine_op_comm:
   apply (rule submonad_comm2 [OF _ _ submonad_do_machine_op])
         apply (rule submonad_args_pspace)
        apply (rule assert_get_tcb_pspace)
-      apply simp+
+      apply (simp add: empty_fail_cond)+
   done
 
 end

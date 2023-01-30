@@ -342,6 +342,10 @@ lemma magnitudeCheck_assert2:
   using in_magnitude_check[where x=x and n=n and s=s and s'=s and v="()"]
   by (simp add: magnitudeCheck_assert in_monad)
 
+lemma fst_fail: (* FIXME lib: move up *)
+  "fst (fail s) = {}"
+  by (simp add: fail_def)
+
 lemma getObject_get_assert:
   assumes deflt: "\<And>a b c d. (loadObject a b c d :: ('a :: pspace_storable) kernel)
                           = loadObject_default a b c d"
@@ -361,7 +365,7 @@ lemma getObject_get_assert:
   apply (simp add: lookupAround2_known1 assert_opt_def
                    obj_at'_def projectKO_def2
             split: option.split)
-  apply (clarsimp simp: fail_def fst_return conj_comms project_inject
+  apply (clarsimp simp: fst_fail fst_return conj_comms project_inject
                         objBits_def)
   apply (simp only: assert2[symmetric],
          rule bind_apply_cong[OF refl])

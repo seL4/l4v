@@ -2022,7 +2022,7 @@ lemma vcpu_disable_ccorres:
        and (case v of None \<Rightarrow> \<top> | Some new \<Rightarrow> vcpu_at' new))
      (UNIV \<inter>  {s. vcpu_' s = option_to_ptr v}) hs
      (vcpuDisable v) (Call vcpu_disable_'proc)"
-  supply if_cong[cong] option.case_cong[cong]
+  supply if_cong[cong] option.case_cong[cong] empty_fail_cond[simp]
   apply (cinit lift: vcpu_')
    apply (ctac (no_vcg) add: dsb_ccorres)
     apply (rule ccorres_split_nothrow_novcg)
@@ -2072,6 +2072,7 @@ lemma vcpu_enable_ccorres:
        and valid_arch_state' and vcpu_at' v)
      (UNIV \<inter> {s. vcpu_' s = vcpu_Ptr v}) hs
      (vcpuEnable v) (Call vcpu_enable_'proc)"
+  supply empty_fail_cond[simp]
   apply (cinit lift: vcpu_')
    apply (ctac (no_vcg) add: vcpu_restore_reg_ccorres)+
     apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
@@ -2132,6 +2133,7 @@ lemma vcpu_restore_ccorres:
         and vcpu_at' vcpuPtr)
        (UNIV \<inter> {s. vcpu_' s = vcpu_Ptr vcpuPtr}) hs
      (vcpuRestore vcpuPtr) (Call vcpu_restore_'proc)"
+  supply empty_fail_cond[simp]
   apply (cinit lift: vcpu_' simp: whileAnno_def)
    apply (simp add: doMachineOp_bind uncurry_def split_def doMachineOp_mapM_x)+
    apply (clarsimp simp: bind_assoc)
@@ -2724,7 +2726,7 @@ lemma doFlush_ccorres:
    apply (rule ccorres_cond_true)
    apply (simp add: empty_fail_cleanCacheRange_PoU empty_fail_dsb
                     empty_fail_invalidateCacheRange_I empty_fail_branchFlushRange empty_fail_isb
-                   doMachineOp_bind)
+                    doMachineOp_bind empty_fail_cond)
    apply (rule ccorres_rhs_assoc)+
    apply (fold dc_def)
    apply (ctac (no_vcg) add: cleanCacheRange_PoU_ccorres)

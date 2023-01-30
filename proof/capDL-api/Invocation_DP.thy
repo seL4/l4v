@@ -622,13 +622,7 @@ lemma invoke_cnode_insert_cap:
   apply (simp add:validE_def)
   apply (rule hoare_name_pre_state)
   apply (clarsimp simp:invoke_cnode_def liftE_bindE validE_def[symmetric])
-  apply (rule alternative_wp)
-   apply (rule hoare_pre)
-    apply (rule insert_cap_sibling_wp)
-   apply simp
-  apply (rule hoare_pre)
-   apply (rule insert_cap_child_wp)
-  apply simp
+  apply (wpsimp wp: alternative_wp insert_cap_sibling_wp insert_cap_child_wp)
   done
 
 lemma invoke_cnode_move_wp:
@@ -1136,13 +1130,8 @@ lemma invoke_cnode_insert_cap':
   apply (simp add:validE_def)
   apply (rule hoare_name_pre_state)
   apply (clarsimp simp:invoke_cnode_def liftE_bindE validE_def[symmetric])
-  apply (rule alternative_wp)
-   apply (rule hoare_pre)
-    apply (rule insert_cap_sibling_wp)
-   apply (simp add:cap_of_insert_call_def)
-  apply (rule hoare_pre)
-   apply (rule insert_cap_child_wp)
-  apply (simp add:cap_of_insert_call_def)
+  apply (wpsimp wp: alternative_wp insert_cap_sibling_wp insert_cap_child_wp
+                simp: cap_of_insert_call_def)
   done
 
 lemma object_to_sep_state_slot:

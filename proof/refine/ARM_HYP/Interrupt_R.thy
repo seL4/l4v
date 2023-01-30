@@ -186,6 +186,7 @@ crunches arch_check_irq, checkIRQ
 lemma arch_check_irq_maxIRQ_valid:
   "\<lbrace>\<top>\<rbrace> arch_check_irq y \<lbrace>\<lambda>_. (\<lambda>s. unat y \<le> unat maxIRQ)\<rbrace>, -"
   unfolding arch_check_irq_def
+  supply hoare_vcg_prop[wp del] (* FIXME lib: check rule order *)
   apply (wpsimp simp: validE_R_def wp: whenE_throwError_wp)
   by (metis unat_ucast_10_32 word_le_nat_alt word_le_not_less)
 
@@ -874,14 +875,15 @@ proof -
                                             \<and> sch_act_not rv x
                                             \<and> (\<forall>d p. rv \<notin> set (ksReadyQueues x (d, p)))"
                            in hoare_post_imp)
+                   apply (rename_tac rv s)
                    apply clarsimp
                    apply (strengthen st_tcb_ex_cap''[where P=active'])
                    apply (strengthen invs_iflive')
                    apply (clarsimp cong: imp_cong conj_cong simp: not_pred_tcb')
                    apply (clarsimp simp: pred_tcb_at'_def)
-                   apply (rule conjI, erule_tac p=r in obj_at'_weakenE
-                          , fastforce split: thread_state.splits)
-                   apply (erule_tac p=r in obj_at'_weakenE, fastforce split: thread_state.splits)
+                   apply (rule conjI, erule_tac p=rv in obj_at'_weakenE,
+                          fastforce split: thread_state.splits)
+                   apply (erule_tac p=rv in obj_at'_weakenE, fastforce split: thread_state.splits)
                   apply wp
                  apply (wpsimp wp: wplr wplr' hoare_vcg_all_lift
                                    hoare_vcg_imp_lift' dmo_gets_wp dmo'_gets_wp
@@ -946,12 +948,13 @@ lemma vppiEvent_corres:
                                     \<and> invs' x
                                     \<and> sch_act_not rv x
                                     \<and> (\<forall>d p. rv \<notin> set (ksReadyQueues x (d, p)))" in hoare_post_imp)
+           apply (rename_tac rv s)
            apply (strengthen st_tcb_ex_cap''[where P=active'])
            apply (strengthen invs_iflive')
            apply (clarsimp cong: imp_cong conj_cong simp: not_pred_tcb')
            apply (clarsimp simp: pred_tcb_at'_def)
-           apply (rule conjI, erule_tac p=r in obj_at'_weakenE, fastforce split: thread_state.splits)
-           apply (erule_tac p=r in obj_at'_weakenE, fastforce split: thread_state.splits)
+           apply (rule conjI, erule_tac p=rv in obj_at'_weakenE, fastforce split: thread_state.splits)
+           apply (erule_tac p=rv in obj_at'_weakenE, fastforce split: thread_state.splits)
           apply wp
          apply (wpsimp wp: vcpu_update_tcb_at hoare_vcg_all_lift hoare_vcg_imp_lift'
                        cong: vcpu.fold_congs)+
@@ -1026,10 +1029,6 @@ lemma handleInterrupt_corres:
                apply (rule corres_machine_op, rule corres_eq_trivial ;
                       (simp add:  no_fail_maskInterrupt no_fail_bind no_fail_ackInterrupt)+)+
              apply wp+
-           apply clarsimp
-          apply clarsimp
-          apply (rule hoare_post_taut) (* FIXME: wp (once) does not terminate? *)
-         apply wp+
      apply clarsimp
     apply fastforce
    apply (rule corres_guard_imp)

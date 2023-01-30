@@ -399,8 +399,9 @@ lemma find_pd_for_asid_assert_reads_respects:
   apply (wpsimp wp: get_pde_rev find_pd_for_asid_reads_respects hoare_vcg_all_lift)
    apply (rule_tac Q'="\<lambda>rv s. is_subject aag (lookup_pd_slot rv 0 && ~~ mask pd_bits)"
                 in hoare_post_imp_R)
-   apply (rule find_pd_for_asid_pd_slot_authorised)
-   apply (subgoal_tac "lookup_pd_slot r 0 = r")
+    apply (rule find_pd_for_asid_pd_slot_authorised)
+   apply (rename_tac rv s)
+   apply (subgoal_tac "lookup_pd_slot rv 0 = rv")
     apply fastforce
    apply (simp add: lookup_pd_slot_def)
   apply fastforce
@@ -410,7 +411,7 @@ lemma modify_arm_hwasid_table_reads_respects:
   "reads_respects aag l \<top> (modify (\<lambda>s. s\<lparr>arch_state := arch_state s\<lparr>arm_hwasid_table := param\<rparr>\<rparr>))"
   apply (simp add: equiv_valid_def2)
   apply (rule modify_ev2)
-  (* FIXME: slow 5s *)
+  (* slow 5s *)
   by (auto simp: reads_equiv_def affects_equiv_def states_equiv_for_def equiv_for_def
           intro: equiv_asids_triv' split: if_splits)
 
@@ -419,7 +420,7 @@ lemma modify_arm_asid_map_reads_respects:
   "reads_respects aag l \<top> (modify (\<lambda>s. s\<lparr>arch_state := arch_state s\<lparr>arm_asid_map := param\<rparr>\<rparr>))"
   apply (simp add: equiv_valid_def2)
   apply (rule modify_ev2)
-  (* FIXME: slow 5s *)
+  (* slow 5s *)
   by (auto simp: reads_equiv_def affects_equiv_def states_equiv_for_def equiv_for_def
           intro: equiv_asids_triv' split: if_splits)
 
@@ -427,7 +428,7 @@ lemma modify_arm_next_asid_reads_respects:
   "reads_respects aag l \<top> (modify (\<lambda>s. s\<lparr>arch_state := arch_state s\<lparr>arm_next_asid := param\<rparr>\<rparr>))"
   apply (simp add: equiv_valid_def2)
   apply (rule modify_ev2)
-  (* FIXME: slow 5s *)
+  (* slow 5s *)
   by (auto simp: reads_equiv_def affects_equiv_def states_equiv_for_def equiv_for_def
           intro: equiv_asids_triv' split: if_splits)
 
@@ -1277,6 +1278,7 @@ lemma do_flush_globals_equiv:
   apply (cases "typ")
   by (wp dmo_cacheRangeOp_lift
       | simp add: do_flush_def cache_machine_op_defs do_flush_defs do_machine_op_bind when_def
+                  empty_fail_cond
       | clarsimp | rule conjI)+
 
 lemma perform_page_directory_invocation_globals_equiv:

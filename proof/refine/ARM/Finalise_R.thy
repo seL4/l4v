@@ -2396,11 +2396,12 @@ lemma deleteASID_invs'[wp]:
   apply (simp add: deleteASID_def cong: option.case_cong)
   apply (rule hoare_pre)
    apply (wp | wpc)+
-      apply (rule_tac Q="\<lambda>rv. valid_obj' (injectKO rv) and invs'"
-                in hoare_post_imp)
+    apply (rule_tac Q="\<lambda>rv. valid_obj' (injectKO rv) and invs'"
+              in hoare_post_imp)
+     apply (rename_tac rv s)
      apply (clarsimp split: if_split_asm del: subsetI)
      apply (simp add: fun_upd_def[symmetric] valid_obj'_def)
-     apply (case_tac r, simp)
+     apply (case_tac rv, simp)
      apply (subst inv_f_f, rule inj_onI, simp)+
      apply (rule conjI)
       apply clarsimp

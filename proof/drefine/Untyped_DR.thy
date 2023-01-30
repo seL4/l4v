@@ -65,12 +65,16 @@ next
      apply (rule someI2_ex, fastforce+)+
     done
 
+  (* FIXME: For some reason In_Monad.in_fail doesn't fire below. This version would probably
+            have been better in the first place. *)
+  have [simp]: "\<And>s. fst (fail s) = {}" by (simp add: fail_def)
+
   have loadWord_const:
    "\<And>a s. \<forall>x\<in>fst (loadWord a s). snd x = s"
     apply (case_tac "is_aligned a 2")
      apply (simp add: loadWord_def is_aligned_mask exec_gets)
      apply (simp add: return_def)
-    apply (simp add: loadWord_def exec_gets fail_def is_aligned_mask)
+    apply (simp add: loadWord_def exec_gets is_aligned_mask)
     done
 
   have loadWord_atMostOneResult:
@@ -78,7 +82,7 @@ next
     apply (case_tac "is_aligned a 2")
      apply (simp add: loadWord_def is_aligned_mask exec_gets)
      apply (simp add: return_def)
-    apply (simp add: loadWord_def exec_gets fail_def is_aligned_mask)
+    apply (simp add: loadWord_def exec_gets is_aligned_mask)
     done
 
   have mapM_loadWord_atMostOneResult[rule_format]:
@@ -648,6 +652,7 @@ lemma clearMemory_unused_corres_noop:
      (return ())
      (do_machine_op (clearMemory p (2 ^ (obj_bits_api ty us))))"
   (is "\<lbrakk> ?def; ?szv; ?in \<rbrakk> \<Longrightarrow> dcorres dc \<top> ?P ?f ?g")
+  supply empty_fail_cond[simp]
   apply (drule page_objects_default_object[where us=us and dev = dev], clarsimp)
   apply (rename_tac pgsz)
   apply (simp add: clearMemory_def do_machine_op_bind cleanCacheRange_PoC_def

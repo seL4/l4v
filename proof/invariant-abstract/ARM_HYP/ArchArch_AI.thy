@@ -1145,7 +1145,7 @@ lemma vcpu_enable_valid_machine_state[wp]:
 
 crunches vcpu_restore, vcpu_save
   for valid_machine_state[wp]: valid_machine_state
-  (wp: mapM_wp_inv simp: do_machine_op_bind dom_mapM ignore: do_machine_op)
+  (wp: mapM_wp_inv simp: do_machine_op_bind dom_mapM empty_fail_cond ignore: do_machine_op)
 
 crunches associate_vcpu_tcb
   for valid_machine_state[wp]: valid_machine_state

@@ -1074,8 +1074,6 @@ lemma perform_invocation_valid_pdpt[wp]:
          \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
   apply (cases i, simp_all)
   apply (wp send_signal_interrupt_states | simp)+
-  apply (clarsimp simp: invocation_duplicates_valid_def)
-  apply (wp | wpc | simp)+
   apply (simp add: arch_perform_invocation_def)
   apply (rule hoare_pre)
   apply (wp | wpc | simp)+
