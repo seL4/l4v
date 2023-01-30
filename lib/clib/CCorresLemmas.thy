@@ -1033,4 +1033,122 @@ lemma ccorres_Guard_True_Seq:
    \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf A C hs a (Guard F \<lbrace>True\<rbrace> c ;; d)"
    by (simp, ccorres_rewrite, assumption)
 
+lemma exec_While_final_inv'':
+  "\<lbrakk> \<Gamma> \<turnstile> \<langle>b, x\<rangle> \<Rightarrow> s'; b = While C B; x = Normal s;
+    \<And>s. s \<notin> C \<Longrightarrow> I s (Normal s);
+    \<And>t t' t''. \<lbrakk> t \<in> C; \<Gamma>\<turnstile> \<langle>B, Normal t\<rangle> \<Rightarrow> Normal t'; \<Gamma>\<turnstile> \<langle>While C B, Normal t'\<rangle> \<Rightarrow> t'';
+                 I t' t'' \<rbrakk> \<Longrightarrow> I t t'';
+    \<And>t t'. \<lbrakk> t \<in> C; \<Gamma>\<turnstile> \<langle>B, Normal t\<rangle> \<Rightarrow> Abrupt t' \<rbrakk> \<Longrightarrow> I t (Abrupt t');
+    \<And>t. \<lbrakk> t \<in> C; \<Gamma> \<turnstile> \<langle>B, Normal t\<rangle> \<Rightarrow> Stuck \<rbrakk> \<Longrightarrow> I t Stuck;
+    \<And>t f. \<lbrakk> t \<in> C; \<Gamma>\<turnstile> \<langle>B, Normal t\<rangle> \<Rightarrow> Fault f \<rbrakk> \<Longrightarrow> I t (Fault f) \<rbrakk>
+   \<Longrightarrow> I s s'"
+  apply (induct arbitrary: s rule: exec.induct; simp)
+  apply (erule exec_elim_cases; fastforce simp: exec.WhileTrue exec.WhileFalse)
+  done
+
+lemma intermediate_Normal_state:
+  "\<lbrakk>\<Gamma> \<turnstile> \<langle>Seq c\<^sub>1 c\<^sub>2, Normal t\<rangle> \<Rightarrow> t''; t \<in> P; \<Gamma> \<turnstile> P c\<^sub>1 Q\<rbrakk>
+   \<Longrightarrow> \<exists>t'. \<Gamma> \<turnstile> \<langle>c\<^sub>1, Normal t\<rangle> \<Rightarrow> Normal t' \<and> \<Gamma> \<turnstile> \<langle>c\<^sub>2, Normal t'\<rangle> \<Rightarrow> t''"
+  apply (erule exec_Normal_elim_cases(8))
+  apply (insert hoarep_exec)
+  apply fastforce
+  done
+
+lemma While_inv_from_body:
+  "\<Gamma> \<turnstile> (G \<inter> C) B G \<Longrightarrow> \<Gamma> \<turnstile> G While C B G"
+  apply (drule hoare_sound)+
+  apply (rule hoare_complete)
+  apply (clarsimp simp: cvalid_def HoarePartialDef.valid_def)
+  by (erule exec_While_final_inv''[where I="\<lambda>s s'. s \<in> G \<longrightarrow> s' \<in> Normal ` G", THEN impE],
+      fastforce+)
+
+lemma While_inv_from_body_setter:
+  "\<lbrakk>\<Gamma> \<turnstile> G setter (G \<inter> {s. s \<in> C \<longrightarrow> s \<in> Cnd}); \<Gamma> \<turnstile> (G \<inter> Cnd) B G\<rbrakk>
+   \<Longrightarrow> \<Gamma> \<turnstile> (G \<inter> {s. s \<in> C \<longrightarrow> s \<in> Cnd}) While C (Seq B setter) G"
+  apply (drule hoare_sound)+
+  apply (rule hoare_complete)
+  apply (clarsimp simp: cvalid_def HoarePartialDef.valid_def)
+  by (rule exec_While_final_inv''
+            [where I="\<lambda>s s'. s \<in> G \<and> (s \<in> C \<longrightarrow> s \<in> Cnd) \<longrightarrow> s' \<in> Normal ` G", THEN impE],
+      (fastforce dest!: intermediate_Normal_state[where c\<^sub>1=B and P="G \<inter> Cnd" and Q=G]
+                 intro: hoare_complete
+                  simp: cvalid_def HoarePartialDef.valid_def)+)
+
+lemmas hoarep_Int_pre_fix = hoarep_Int[where P=P and P'=P for P, simplified]
+
+lemma ccorres_While:
+  assumes body_ccorres:
+    "\<And>r. ccorresG srel \<Gamma> (=) xf (G and (\<lambda>s. the (C r s))) (G' \<inter> C') hs (B r) B'"
+  and cond_ccorres:
+    "\<And>r. ccorresG srel \<Gamma> (\<lambda>rv rv'. rv = to_bool rv') cond_xf G G' hs (gets_the (C r)) setter"
+  and nf: "\<And>r. no_fail (G and (\<lambda>s. the (C r s))) (B r)"
+  and no_ofail: "\<And>r. no_ofail G (C r)"
+  and body_inv: "\<And>r. \<lbrace>G and (\<lambda>s. the (C r s))\<rbrace> B r \<lbrace>\<lambda>_. G\<rbrace>"
+                "\<Gamma> \<turnstile> (G' \<inter> C') B' G'"
+  and setter_inv_cond: "\<Gamma> \<turnstile> G' setter (G' \<inter> {s'. cond_xf s' \<noteq> 0 \<longrightarrow> s' \<in> C'})"
+  and setter_xf_inv: "\<And>val. \<Gamma> \<turnstile> {s'. xf s' = val} setter {s'. xf s' = val}"
+  shows "ccorresG srel \<Gamma> (=) xf G (G' \<inter> {s'. xf s' = r}) hs
+           (whileLoop (\<lambda>r s. the (C r s)) B r)
+           (Seq setter (While {s'. cond_xf s' \<noteq> 0} (Seq B' setter)))"
+proof -
+  note unif_rrel_def[simp add] to_bool_def[simp add]
+  have helper:
+    "\<And>state xstate'.
+       \<Gamma> \<turnstile> \<langle>While {s'. cond_xf s' \<noteq> 0} (Seq B' setter), Normal state\<rangle> \<Rightarrow> xstate' \<Longrightarrow>
+       \<forall>st r s. Normal st = xstate' \<and> (s, state) \<in> srel
+                 \<and> (cond_xf state \<noteq> 0) = the (C r s) \<and> xf state = r \<and> G s
+                 \<and> state \<in> G' \<and>  (cond_xf state \<noteq> 0 \<longrightarrow> state \<in> C')
+                \<longrightarrow> (\<exists>rv s'. (rv, s') \<in> fst (whileLoop (\<lambda>r s. the (C r s)) B r s)
+                             \<and> (s', st) \<in> srel \<and> rv = xf st)"
+    apply (erule exec_While_final_inv''; simp)
+     apply (fastforce simp: whileLoop_cond_fail return_def)
+    apply clarsimp
+    apply (rename_tac t t' t'' s)
+    apply (frule intermediate_Normal_state[where P="G' \<inter> C'"])
+      apply fastforce
+     apply (fastforce intro: body_inv)
+    apply clarsimp
+    apply (rename_tac inter_t)
+    apply (prop_tac "\<exists>s'. (xf inter_t, s') \<in> fst (B (xf t) s) \<and> (s', inter_t) \<in> srel")
+     subgoal by (erule ccorresE[OF body_ccorres])
+                (fastforce simp: no_fail_def nf[simplified no_fail_def] dest: EHOther)+
+    apply clarsimp
+    apply (prop_tac "G s'")
+     apply (fastforce dest: use_valid intro: body_inv)
+    apply (prop_tac "inter_t \<in> G'")
+     apply (fastforce dest: hoarep_exec[rotated] intro: body_inv)
+    apply (drule_tac x=s' in spec)
+    apply (elim impE)
+     apply (drule_tac s'=inter_t and r1="xf t'" in ccorresE_gets_the[OF cond_ccorres]; assumption?)
+       apply (fastforce intro: no_ofail)
+      apply (fastforce dest: EHOther)
+     subgoal by (fastforce dest: hoarep_exec intro: setter_inv_cond)
+    apply (prop_tac "xf inter_t = xf t'")
+     apply (fastforce dest: hoarep_exec[rotated] intro: setter_xf_inv)
+    apply (fastforce simp: whileLoop_def intro: whileLoop_results.intros(3))
+    done
+
+  show ?thesis
+    apply (clarsimp simp: ccorres_underlying_def)
+    apply (rename_tac s s' n xstate)
+    apply (frule (1) exec_handlers_use_hoare_nothrow_hoarep)
+     apply (rule_tac R="G' \<inter> {s'. s' \<in> {t. cond_xf t \<noteq> 0} \<longrightarrow> s' \<in> C'}" in HoarePartial.Seq)
+      apply (fastforce intro: setter_inv_cond)
+     apply (fastforce intro: While_inv_from_body_setter setter_inv_cond body_inv)
+    apply clarsimp
+    apply (frule (1) intermediate_Normal_state)
+     apply (fastforce intro: setter_inv_cond)
+    apply clarsimp
+    apply (rename_tac inter_t)
+    apply (drule (2) ccorresE_gets_the[OF cond_ccorres _ _ _ no_ofail])
+     apply (fastforce dest: EHOther)
+    apply (prop_tac "xf inter_t = xf s'")
+     apply (fastforce dest: hoarep_exec[rotated] intro: setter_xf_inv)
+    apply (clarsimp simp: isNormal_def)
+    apply (auto dest: hoarep_exec dest!: helper spec intro: setter_inv_cond)
+    done
+qed
+
+lemmas ccorres_While' = ccorres_While[where C'=UNIV, simplified]
+
 end
