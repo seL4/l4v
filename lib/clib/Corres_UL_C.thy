@@ -56,6 +56,12 @@ lemma exec_handlers_use_hoare_nothrow:
   apply simp
   done
 
+lemma exec_handlers_use_hoare_nothrow_hoarep:
+  "\<lbrakk>E \<turnstile>\<^sub>h \<langle>c # hs, s'\<rangle> \<Rightarrow> (n, t); s' \<in> R'; E \<turnstile> R' c Q'\<rbrakk> \<Longrightarrow> E \<turnstile> \<langle>c, Normal s'\<rangle> \<Rightarrow> t \<and> isNormal t"
+  apply (drule hoare_sound)
+  apply (clarsimp simp: cvalid_def HoarePartialDef.valid_def)
+  apply (erule exec_handlers.cases; fastforce simp: isNormal_def isAbr_def)
+  done
 
 definition
   unif_rrel :: "bool \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('t \<Rightarrow> 'b)
