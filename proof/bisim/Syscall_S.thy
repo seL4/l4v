@@ -723,7 +723,7 @@ lemma send_signal_separate_state [wp]:
   unfolding send_signal_def cancel_ipc_def
   apply (rule separate_state_pres)
   apply (rule hoare_pre)
-  apply (wp gts_wp get_simple_ko_wp hoare_pre_cont[where a = "reply_cancel_ipc x" for x]
+  apply (wp gts_wp get_simple_ko_wp hoare_pre_cont[where f="reply_cancel_ipc x" for x]
         | wpc | wps
         | simp add: update_waiting_ntfn_def)+
   apply (clarsimp)

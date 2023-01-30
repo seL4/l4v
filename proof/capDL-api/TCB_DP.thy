@@ -1169,7 +1169,7 @@ lemma restart_cdl_current_domain:
   apply (simp add:restart_def)
   apply (wp alternative_wp)
     apply (simp add:cancel_ipc_def)
-    apply (wpsimp wp: hoare_pre_cont[where a="revoke_cap_simple sl" for sl])+
+    apply (wpsimp wp: hoare_pre_cont[where f="revoke_cap_simple sl" for sl])+
   apply (drule opt_cap_sep_imp)
   apply (clarsimp dest!: reset_cap_asid_pending)
   apply (auto simp add: is_pending_cap_def)
@@ -1182,7 +1182,7 @@ lemma restart_cdl_current_thread:
   apply (simp add:restart_def)
   apply (wp alternative_wp)
     apply (simp add:cancel_ipc_def)
-    apply (wpsimp wp: hoare_pre_cont[where a="revoke_cap_simple sl" for sl])+
+    apply (wpsimp wp: hoare_pre_cont[where f="revoke_cap_simple sl" for sl])+
   apply (drule opt_cap_sep_imp)
   apply (clarsimp dest!: reset_cap_asid_pending)
   apply (auto simp add: is_pending_cap_def)

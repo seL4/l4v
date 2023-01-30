@@ -1431,7 +1431,7 @@ lemma when_next_domain_domain_fields:
   "\<lbrace>\<lambda>s. \<not> B \<and> domain_fields Q s\<rbrace>
    when B next_domain
    \<lbrace>\<lambda>_. domain_fields Q\<rbrace>"
-  by (wpsimp | rule hoare_pre_cont[where a=next_domain])+
+  by (wpsimp | rule hoare_pre_cont[where f=next_domain])+
 
 lemma cur_thread_cur_domain:
   "\<lbrakk> st_tcb_at ((=) st) (cur_thread s) s; \<not> idle st; invs s; guarded_pas_domain aag s \<rbrakk>
@@ -1488,7 +1488,7 @@ lemma schedule_no_domain_switch:
   apply (wpsimp wp: hoare_drop_imps simp: if_apply_def2
          | simp add: schedule_choose_new_thread_def
          | wpc
-         | rule hoare_pre_cont[where a=next_domain] )+
+         | rule hoare_pre_cont[where f=next_domain] )+
   done
 
 lemma schedule_no_domain_fields:
@@ -1500,7 +1500,7 @@ lemma schedule_no_domain_fields:
   apply (wpsimp wp: hoare_drop_imps simp: if_apply_def2
          | simp add: schedule_choose_new_thread_def
          | wpc
-         | rule hoare_pre_cont[where a=next_domain] )+
+         | rule hoare_pre_cont[where f=next_domain] )+
   done
 
 lemma set_scheduler_action_unobservable:
@@ -1687,7 +1687,7 @@ lemma schedule_choose_new_thread_schedule_affects_no_switch:
      \<lbrace>\<lambda>_. scheduler_affects_equiv aag l st\<rbrace>"
   unfolding schedule_choose_new_thread_def
   by (wpsimp wp: set_scheduler_action_unobservable choose_thread_unobservable
-                 hoare_pre_cont[where a=next_domain])
+                 hoare_pre_cont[where f=next_domain])
 
 lemma reads_respects_scheduler_invisible_no_domain_switch:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
@@ -1713,7 +1713,7 @@ lemma reads_respects_scheduler_invisible_no_domain_switch:
              hoare_vcg_all_lift
              hoare_vcg_disj_lift
           | wpc | simp
-          | rule hoare_pre_cont[where a=next_domain]
+          | rule hoare_pre_cont[where f=next_domain]
           | wp (once) hoare_drop_imp[where f="set_scheduler_action choose_new_thread"])+
             (* stop on fastfail calculation *)
             apply (clarsimp simp: conj_ac cong: imp_cong conj_cong)
