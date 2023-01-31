@@ -21,7 +21,6 @@ ifndef SOURCE_ROOT
 endif
 
 CSPEC_DIR := ${L4V_REPO_PATH}/spec/cspec
-STANDALONE_C_PARSER_PATH := ${L4V_REPO_PATH}/tools/c-parser/standalone-parser
 
 ifndef L4V_ARCH
   $(error L4V_ARCH is not set)
@@ -141,9 +140,24 @@ ${KERNEL_BUILD_ROOT}/kernel.elf.txt: ${KERNEL_BUILD_ROOT}/kernel.elf
 ${KERNEL_BUILD_ROOT}/kernel.elf.symtab: ${KERNEL_BUILD_ROOT}/kernel.elf
 	${OBJDUMP} -t $^ > $@
 
+# Normally, this make file is used in a context where STANDALONE_C_PARSER_EXE
+# and STANDALONE_C_PARSER_DIR are not set. Consequently the rule for `kernel.sigs`
+# attempts to build a standalone C parser before using it.
+# If that is not desirable, because you want to use a pre-built C parser, you
+# can set STANDALONE_C_PARSER_EXE to the location of the pre-built C parser before
+# loading this make file. The `kernel.sigs` rule will then skip the C parser build
+# step.
+ifndef STANDALONE_C_PARSER_EXE
+  STANDALONE_C_PARSER_DIR := ${L4V_REPO_PATH}/tools/c-parser/standalone-parser
+  STANDALONE_C_PARSER_EXE := ${STANDALONE_C_PARSER_DIR}/${L4V_ARCH}/c-parser
+endif
+
+# We don't track dependencies of the C parser here.
 ${KERNEL_BUILD_ROOT}/kernel.sigs: ${KERNEL_BUILD_ROOT}/kernel_all.c_pp
-	MAKEFILES= make -C ${STANDALONE_C_PARSER_PATH} ${STANDALONE_C_PARSER_PATH}/${L4V_ARCH}/c-parser
-	${STANDALONE_C_PARSER_PATH}/${L4V_ARCH}/c-parser --cpp=${CPP} --underscore_idents --mmbytes $^ > $@.tmp
+ifdef STANDALONE_C_PARSER_DIR
+	${MAKE} -C ${STANDALONE_C_PARSER_DIR} ${STANDALONE_C_PARSER_EXE}
+endif
+	${STANDALONE_C_PARSER_EXE} --cpp=${CPP} --underscore_idents --mmbytes $^ > $@.tmp
 	mv $@.tmp $@
 
 # Export kernel build for binary verification.
