@@ -12,6 +12,12 @@ context Arch begin global_naming RISCV64
 
 named_theorems Ipc_AC_assms
 
+(* FIXME: I was proving this for the interface used by Ipc_AC, but how do I ensure it's
+   generic for all types that are the return value of `proj`? -robs *)
+crunch pred_tcb[Ipc_AC_assms, wp]: do_ipc_transfer "pred_tcb_at proj P t"
+  (wp: crunch_wps simp: crunch_simps)
+thm do_ipc_transfer_pred_tcb
+
 lemma make_fault_message_inv[Ipc_AC_assms, wp]:
   "make_fault_msg ft t \<lbrace>P\<rbrace>"
   apply (cases ft, simp_all split del: if_split)

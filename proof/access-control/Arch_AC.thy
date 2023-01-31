@@ -104,13 +104,8 @@ lemma as_user_integrity_autarch:
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   by (wpsimp simp:as_user_def wp:set_object_integrity_autarch touch_object_wp')
 
-lemma set_message_info_integrity_autarch:
-  "\<lbrace>integrity aag X st and K (is_subject aag thread)\<rbrace>
-   set_message_info thread info
-   \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  by (wpsimp simp:set_message_info_def wp:as_user_integrity_autarch)
-
 crunch integrity_autarch: set_message_info "integrity aag X st"
+  (simp:set_message_info_def wp:as_user_integrity_autarch)
 
 (* FIXME: move *)
 lemma set_mrs_thread_st_auth[wp]:
@@ -238,12 +233,10 @@ lemma copy_mrs_integrity_autarch:
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (simp add: copy_mrs_def cong: if_cong split del: if_split)
-  apply (wpsimp wp: mapM_wp' as_user_integrity_autarch
+  apply (wpsimp wp: mapM_wp' as_user_getRegister_integrity as_user_integrity_autarch
                     store_word_offs_integrity_autarch[where thread=receiver]
          | fastforce)+
-    sorry (* FIXME: broken by touched-addrs -robs
   done
-*)
 
 lemma set_mrs_integrity_autarch:
   "\<lbrace>integrity aag X st and K (is_subject aag thread \<and> ipc_buffer_has_auth aag thread buf)\<rbrace>

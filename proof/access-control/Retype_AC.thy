@@ -1159,6 +1159,9 @@ lemma authorised_untyped_invI:
   apply (simp add: blah word_and_le2)
   done
 
+sublocale touched_addresses_det_inv \<subseteq> cte_wp_at:
+  touched_addresses_P_det_inv _ "cte_wp_at ((=) cap) slot"
+  by unfold_locales (simp)
 
 context Retype_AC_1 begin
 
