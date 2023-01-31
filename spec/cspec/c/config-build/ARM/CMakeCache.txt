@@ -61,11 +61,11 @@ CMAKE_C_COMPILER:FILEPATH=/usr/bin/cc
 
 //A wrapper around 'ar' adding the appropriate '--plugin' option
 // for the GCC compiler
-CMAKE_C_COMPILER_AR:FILEPATH=/usr/bin/gcc-ar-10
+CMAKE_C_COMPILER_AR:FILEPATH=/usr/bin/gcc-ar-11
 
 //A wrapper around 'ranlib' adding the appropriate '--plugin' option
 // for the GCC compiler
-CMAKE_C_COMPILER_RANLIB:FILEPATH=/usr/bin/gcc-ranlib-10
+CMAKE_C_COMPILER_RANLIB:FILEPATH=/usr/bin/gcc-ranlib-11
 
 //Flags used by the C compiler during all build types.
 CMAKE_C_FLAGS:STRING=
@@ -285,6 +285,10 @@ KernelCtz64:BOOL=OFF
 // the use      of __builtin_ctzl and __builtin_ctzll.
 KernelCtzNoBuiltin:BOOL=OFF
 
+//Provide an additional overlay to append to the selected KernelPlatform's
+//         device tree during build time
+KernelCustomDTSOverlay:FILEPATH=
+
 //Do not enable branch prediction (also called program flow control)
 // on startup.     This makes execution time more deterministic
 // at the expense of dramatically decreasing     performance. Primary
@@ -400,10 +404,16 @@ XMLLINT_PATH:FILEPATH=/home/sbuckley/repos/verification_timeprot/seL4/tools/xmll
 libsel4_BINARY_DIR:STATIC=/home/sbuckley/repos/verification_timeprot/l4v/spec/cspec/c/config-build/ARM/libsel4
 
 //Value Computed by CMake
+libsel4_IS_TOP_LEVEL:STATIC=OFF
+
+//Value Computed by CMake
 libsel4_SOURCE_DIR:STATIC=/home/sbuckley/repos/verification_timeprot/seL4/libsel4
 
 //Value Computed by CMake
 seL4_BINARY_DIR:STATIC=/home/sbuckley/repos/verification_timeprot/l4v/spec/cspec/c/config-build/ARM
+
+//Value Computed by CMake
+seL4_IS_TOP_LEVEL:STATIC=ON
 
 //Value Computed by CMake
 seL4_SOURCE_DIR:STATIC=/home/sbuckley/repos/verification_timeprot/seL4
@@ -415,14 +425,14 @@ seL4_SOURCE_DIR:STATIC=/home/sbuckley/repos/verification_timeprot/seL4
 
 //Default ASM flags for compilation     (subset of flags used by
 // the kernel build)
-BASE_ASM_FLAGS:INTERNAL= -march=armv7-a   -D__KERNEL_32__
+BASE_ASM_FLAGS:INTERNAL= -march=armv7-a  -D__KERNEL_32__
 //Default CXX flags for compilation
-BASE_CXX_FLAGS:INTERNAL=  -march=armv7-a -marm   -D__KERNEL_32__
+BASE_CXX_FLAGS:INTERNAL=  -march=armv7-a -marm  -D__KERNEL_32__
 //Default C flags for compilation     (subset of flags used by
 // the kernel)
-BASE_C_FLAGS:INTERNAL= -march=armv7-a -marm   -D__KERNEL_32__
+BASE_C_FLAGS:INTERNAL= -march=armv7-a -marm  -D__KERNEL_32__
 //Default flags for linker an elf binary application
-BASE_EXE_LINKER_FLAGS:INTERNAL='  -D__KERNEL_32__  '
+BASE_EXE_LINKER_FLAGS:INTERNAL=' -D__KERNEL_32__  '
 //ADVANCED property for variable: BF_GEN_PATH
 BF_GEN_PATH-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CIRCULAR_INCLUDES
@@ -453,9 +463,9 @@ CMAKE_CACHEFILE_DIR:INTERNAL=/home/sbuckley/repos/verification_timeprot/l4v/spec
 //Major version of cmake used to create the current loaded cache
 CMAKE_CACHE_MAJOR_VERSION:INTERNAL=3
 //Minor version of cmake used to create the current loaded cache
-CMAKE_CACHE_MINOR_VERSION:INTERNAL=18
+CMAKE_CACHE_MINOR_VERSION:INTERNAL=23
 //Patch version of cmake used to create the current loaded cache
-CMAKE_CACHE_PATCH_VERSION:INTERNAL=4
+CMAKE_CACHE_PATCH_VERSION:INTERNAL=1
 //Path to CMake executable.
 CMAKE_COMMAND:INTERNAL=/usr/bin/cmake
 //Path to cpack program executable.
@@ -538,7 +548,7 @@ CMAKE_RANLIB-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_READELF
 CMAKE_READELF-ADVANCED:INTERNAL=1
 //Path to CMake installation.
-CMAKE_ROOT:INTERNAL=/usr/share/cmake-3.18
+CMAKE_ROOT:INTERNAL=/usr/share/cmake-3.23
 //ADVANCED property for variable: CMAKE_SHARED_LINKER_FLAGS
 CMAKE_SHARED_LINKER_FLAGS-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_SHARED_LINKER_FLAGS_DEBUG
@@ -612,12 +622,10 @@ KernelAarch64VspaceS2StartL1:INTERNAL=OFF
 //STRINGS property for variable: KernelArch
 KernelArch-STRINGS:INTERNAL=arm
 KernelArchARM:INTERNAL=ON
-KernelArchArmV6:INTERNAL=OFF
 KernelArchArmV7a:INTERNAL=ON
 KernelArchArmV7ve:INTERNAL=OFF
 KernelArchArmV8a:INTERNAL=OFF
 KernelArch_all_strings:INTERNAL=arm;riscv;x86
-KernelArm1136JF_S:INTERNAL=OFF
 KernelArmArmV:INTERNAL=armv7-a
 KernelArmCPU:INTERNAL=cortex-a9
 KernelArmCacheLineSizeBits:INTERNAL=5
@@ -738,18 +746,10 @@ KernelColourPrinting_DISABLED:INTERNAL=TRUE
 //Location of kernel DTB file
 KernelDTBPath:INTERNAL=/home/sbuckley/repos/verification_timeprot/l4v/spec/cspec/c/config-build/ARM/kernel.dtb
 //Size of DTB blob, in bytes
-KernelDTBSize:INTERNAL=41713
+KernelDTBSize:INTERNAL= 41713
 //Adds a system call that allows users to specify code to be run
 // in kernel mode.     Useful for profiling.
 KernelDangerousCodeInjection:INTERNAL=OFF
-//Replaces the undefined instruction handler with a call to a function
-// pointer in r8.     This is an alternative mechanism to the code
-// injection syscall. On ARMv6 the syscall     interferes with
-// the caches and branch predictor in such a way that it is unsuitable
-//     for benchmarking. This option has no effect on non-ARMv6
-// platforms.
-KernelDangerousCodeInjectionOnUndefInstr:INTERNAL=OFF
-KernelDangerousCodeInjectionOnUndefInstr_DISABLED:INTERNAL=TRUE
 KernelDangerousCodeInjection_DISABLED:INTERNAL=TRUE
 //Enable debug facilities (symbols and assertions) in the kernel
 KernelDebugBuild:INTERNAL=OFF
@@ -770,7 +770,6 @@ KernelDebugDisablePrefetchers_DISABLED:INTERNAL=TRUE
 KernelEnableBenchmarks:INTERNAL=OFF
 KernelEnableSMPSupport:INTERNAL=OFF
 KernelFPUMaxRestoresSinceSwitch_UNAVAILABLE:INTERNAL=ON
-KernelGlobalsFrame:INTERNAL=OFF
 KernelHaveFPU:INTERNAL=OFF
 //seL4 does not properly check for and handle spurious interrupts.
 // This can result     in unnecessary output from the kernel during
@@ -801,7 +800,7 @@ KernelPlatImx6:INTERNAL=ON
 KernelPlatImx6dq:INTERNAL=ON
 KernelPlatImx7:INTERNAL=OFF
 //STRINGS property for variable: KernelPlatform
-KernelPlatform-STRINGS:INTERNAL=allwinnerA20;am335x;apq8064;bcm2711;bcm2837;exynos4;exynos5;hikey;imx31;imx6;imx7;imx8mq-evk;imx8mm-evk;omap3;qemu-arm-virt;tk1;tqma8xqp1gb;zynq7000;zynqmp
+KernelPlatform-STRINGS:INTERNAL=allwinnerA20;am335x;apq8064;bcm2711;bcm2837;exynos4;exynos5;hikey;imx6;imx7;imx8mq-evk;imx8mm-evk;omap3;qemu-arm-virt;tk1;tqma8xqp1gb;zynq7000;zynqmp
 KernelPlatformAM335X:INTERNAL=OFF
 KernelPlatformAPQ8064:INTERNAL=OFF
 KernelPlatformAllwinnerA20:INTERNAL=OFF
@@ -809,7 +808,6 @@ KernelPlatformExynos4:INTERNAL=OFF
 KernelPlatformHikey:INTERNAL=OFF
 KernelPlatformImx8mm-evk:INTERNAL=OFF
 KernelPlatformImx8mq-evk:INTERNAL=OFF
-KernelPlatformKZM:INTERNAL=OFF
 KernelPlatformOMAP3:INTERNAL=OFF
 KernelPlatformQEMUArmVirt:INTERNAL=OFF
 KernelPlatformRpi3:INTERNAL=OFF
@@ -819,7 +817,7 @@ KernelPlatformTK1:INTERNAL=OFF
 KernelPlatformTqma8xqp1gb:INTERNAL=OFF
 KernelPlatformZynq7000:INTERNAL=OFF
 KernelPlatformZynqmp:INTERNAL=OFF
-KernelPlatform_all_strings:INTERNAL=allwinnerA20;am335x;apq8064;ariane;bcm2711;bcm2837;exynos4;exynos5;fvp;hifive;hikey;imx31;imx6;imx7;imx8mq-evk;imx8mm-evk;odroidc2;odroidc4;omap3;pc99;polarfire;qemu-arm-virt;rocketchip;rockpro64;spike;tk1;tqma8xqp1gb;tx1;tx2;zynq7000;zynqmp
+KernelPlatform_all_strings:INTERNAL=allwinnerA20;am335x;apq8064;ariane;bcm2711;bcm2837;exynos4;exynos5;fvp;hifive;hikey;imx6;imx7;imx8mq-evk;imx8mm-evk;odroidc2;odroidc4;omap3;pc99;polarfire;qemu-arm-virt;rocketchip;rockpro64;spike;tk1;tqma8xqp1gb;tx1;tx2;zynq7000;zynqmp
 //Allow the kernel to print out messages to the serial console
 // during bootup and execution.
 KernelPrinting:INTERNAL=OFF
@@ -849,6 +847,8 @@ KernelTk1SMMUInterruptEnable_DISABLED:INTERNAL=TRUE
 KernelTk1SMMU_DISABLED:INTERNAL=TRUE
 KernelUserStackTraceLength:INTERNAL=0
 KernelUserStackTraceLength_UNAVAILABLE:INTERNAL=ON
+KernelUserTop:INTERNAL=0xa0000000
+KernelUserTop_UNAVAILABLE:INTERNAL=ON
 KernelWcetScale_UNAVAILABLE:INTERNAL=ON
 KernelWordSize:INTERNAL=32
 LibSel4FunctionAttributeDefault:INTERNAL=OFF

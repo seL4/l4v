@@ -43,6 +43,7 @@ definition arch_activate_idle_thread :: "obj_ref \<Rightarrow> (unit,'z::state_e
 definition store_asid_pool_entry :: "obj_ref \<Rightarrow> asid \<Rightarrow> obj_ref option \<Rightarrow> (unit, 'z::state_ext) s_monad"
   where
   "store_asid_pool_entry pool_ptr asid ptr \<equiv> do
+    touch_object pool_ptr;
     pool \<leftarrow> get_asid_pool pool_ptr;
     pool' \<leftarrow> return $ pool(asid_low_bits_of asid := ptr);
     set_asid_pool pool_ptr pool'
@@ -57,8 +58,10 @@ definition perform_asid_control_invocation :: "asid_control_invocation \<Rightar
   where
   "perform_asid_control_invocation iv \<equiv> case iv of
      MakePool frame slot parent base \<Rightarrow> do
+       touch_object frame;
        delete_objects frame pageBits;
-       pcap \<leftarrow> get_cap parent;
+       touch_object (fst parent);
+       pcap \<leftarrow> get_cap True parent;
        set_cap (max_free_index_update pcap) parent;
        retype_region frame 1 0 (ArchObject ASIDPoolObj) False;
        cap_insert (ArchObjectCap $ ASIDPoolCap frame base) parent slot;
@@ -73,7 +76,8 @@ definition perform_asid_pool_invocation :: "asid_pool_invocation \<Rightarrow> (
   where
   "perform_asid_pool_invocation iv \<equiv> case iv of
      Assign asid pool_ptr ct_slot \<Rightarrow> do
-       pt_cap \<leftarrow> get_cap ct_slot;
+       touch_object (fst ct_slot);
+       pt_cap \<leftarrow> get_cap True ct_slot;
        assert $ is_ArchObjectCap pt_cap;
        acap \<leftarrow> return $ the_arch_cap pt_cap;
        assert $ is_PageTableCap acap;
@@ -90,13 +94,15 @@ definition perform_pg_inv_unmap :: "arch_cap \<Rightarrow> cslot_ptr \<Rightarro
      case acap_map_data cap of
        Some (asid, vaddr) \<Rightarrow> unmap_page (acap_fsize cap) asid vaddr (acap_obj cap)
      | _ \<Rightarrow> return ();
-     old_cap \<leftarrow> get_cap ct_slot;
+     touch_object (fst ct_slot);
+     old_cap \<leftarrow> get_cap True ct_slot;
      set_cap (ArchObjectCap $ update_map_data (the_arch_cap old_cap) None) ct_slot
    od"
 
 definition perform_pg_inv_map :: "arch_cap \<Rightarrow> cslot_ptr \<Rightarrow> pte \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
   where
   "perform_pg_inv_map cap ct_slot pte slot \<equiv> do
+     touch_objects {fst ct_slot, slot};
      set_cap (ArchObjectCap cap) ct_slot;
      store_pte slot pte;
      do_machine_op sfence
@@ -124,6 +130,7 @@ definition perform_page_invocation :: "page_invocation \<Rightarrow> (unit,'z::s
 definition perform_pt_inv_map :: "arch_cap \<Rightarrow> cslot_ptr \<Rightarrow> pte \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
   where
   "perform_pt_inv_map cap ct_slot pte slot = do
+     touch_objects {fst ct_slot, slot};
      set_cap (ArchObjectCap cap) ct_slot;
      store_pte slot pte;
      do_machine_op sfence
@@ -138,10 +145,12 @@ definition perform_pt_inv_unmap :: "arch_cap \<Rightarrow> cslot_ptr \<Rightarro
          p \<leftarrow> return $ acap_obj cap;
          unmap_page_table asid vaddr p;
          slots \<leftarrow> return [p, p + (1 << pte_bits) .e. p + (1 << pt_bits) - 1];
+         touch_objects (set slots);
          mapM_x (swp store_pte InvalidPTE) slots
        od
      | _ \<Rightarrow> return ();
-     old_cap \<leftarrow> liftM the_arch_cap $ get_cap ct_slot;
+     touch_object (fst ct_slot);
+     old_cap \<leftarrow> liftM the_arch_cap $ get_cap True ct_slot;
      set_cap (ArchObjectCap $ update_map_data old_cap None) ct_slot
    od"
 

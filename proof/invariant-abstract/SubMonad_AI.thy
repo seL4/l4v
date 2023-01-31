@@ -25,7 +25,7 @@ lemma submonad_args_pspace:
   by (simp add: submonad_args_def)
 
 schematic_goal assert_get_tcb_pspace:
-  "gets_the (get_tcb t) = submonad_fn kheap (kheap_update o (\<lambda>x _. x)) \<top> ?f"
+  "gets_the (get_tcb False t) = submonad_fn kheap (kheap_update o (\<lambda>x _. x)) \<top> ?f"
   apply (unfold gets_the_def)
   apply (rule submonad_bind_alt [OF submonad_args_pspace])
      apply (rule gets_submonad [OF submonad_args_pspace _ refl])
@@ -37,8 +37,8 @@ schematic_goal assert_get_tcb_pspace:
 
 lemma assert_get_thread_do_machine_op_comm:
   "empty_fail m' \<Longrightarrow>
-   do x \<leftarrow> gets_the (get_tcb t); y \<leftarrow> do_machine_op m'; n x y od =
-   do y \<leftarrow> do_machine_op m'; x \<leftarrow> gets_the (get_tcb t); n x y od"
+   do x \<leftarrow> gets_the (get_tcb False t); y \<leftarrow> do_machine_op m'; n x y od =
+   do y \<leftarrow> do_machine_op m'; x \<leftarrow> gets_the (get_tcb False t); n x y od"
   apply (rule submonad_comm2 [OF _ _ submonad_do_machine_op])
         apply (rule submonad_args_pspace)
        apply (rule assert_get_tcb_pspace)

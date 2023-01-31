@@ -42,7 +42,7 @@ lemma const_on_failure_wp :
   done
 
 lemma get_cap_id:
-  "(v, s') \<in> fst (get_cap p s) \<Longrightarrow> (s' = s)"
+  "(v, s') \<in> fst (get_cap ta_f p s) \<Longrightarrow> (s' = s)"
   by (clarsimp simp: get_cap_def get_object_def in_monad
                      split_def
               split: Structures_A.kernel_object.splits)

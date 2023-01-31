@@ -34,9 +34,13 @@ lemma dmo_return [simp]:
                 bind_def modify_def put_def)
 
 lemma get_object_sp:
-  "\<lbrace>P\<rbrace> get_object p \<lbrace>\<lambda>r. P and ko_at r p\<rbrace>"
+  "\<lbrace>P\<rbrace> get_object ta_f p \<lbrace>\<lambda>r. P and ko_at r p and (if ta_f then obj_in_ta p else \<top>)\<rbrace>"
   apply (simp add: get_object_def)
-  apply wp
+  apply(rule conjI)
+   apply wpsimp
+   apply (force simp: obj_at_def ta_filter_def obj_in_ta_def obind_def
+     split:if_splits option.splits)
+  apply wpsimp
   apply (auto simp add: obj_at_def)
   done
 
@@ -107,31 +111,86 @@ locale arch_only_obj_pred =
   fixes P :: "kernel_object \<Rightarrow> bool"
   assumes arch_only: "arch_obj_pred P"
 
+lemma dmo_addTouchedAddresses_wp:
+  "\<lbrace>\<lambda>s. Q () (ms_ta_update ((\<union>) S) s)\<rbrace> do_machine_op (addTouchedAddresses S) \<lbrace>Q\<rbrace>"
+  apply (wpsimp simp: simpler_do_machine_op_addTouchedAddresses_def)
+  done
+
+lemma touch_object_wp:
+  "\<lbrace>\<lambda>s. \<forall>ko. ko_at ko p s \<longrightarrow> Q () (ms_ta_update ((\<union>) (obj_range p ko)) s) \<rbrace>
+   touch_object p \<lbrace>Q\<rbrace>"
+  apply (wpsimp simp:touch_object_def2 wp: dmo_addTouchedAddresses_wp)
+  apply (clarsimp simp:obj_at_def)
+  done
+
+lemma touch_object_wp':
+  "\<lbrace>\<lambda>s. Q () (ms_ta_update ((\<union>) (obj_range p (the (kheap s p)))) s) \<rbrace>
+   touch_object p \<lbrace>Q\<rbrace>"
+  apply (wp touch_object_wp)
+  apply (clarsimp simp:obj_at_def)
+  done
+
+lemma touch_objects_wp:
+  "\<lbrace>\<lambda>s. Q () (ms_ta_update ((\<union>) (\<Union>(p, ko)\<in>{(p, ko). p\<in>P \<and> ko_at ko p s}. obj_range p ko)) s) \<rbrace>
+   touch_objects P \<lbrace>Q\<rbrace>"
+  apply (wpsimp simp:touch_objects_def wp: dmo_addTouchedAddresses_wp)
+  apply (clarsimp simp:obj_at_def)
+  done
+
+lemma touch_objects_wp':
+  "\<lbrace>\<lambda>s. Q () (ms_ta_update ((\<union>) (\<Union>p\<in>P. obj_range p (the (kheap s p)))) s) \<rbrace>
+   touch_objects P \<lbrace>Q\<rbrace>"
+  apply (wp touch_objects_wp)
+  apply (clarsimp simp:obj_at_def)
+  oops
+
 lemma set_object_typ_at [wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p' s)\<rbrace>
-  set_object p ko \<lbrace>\<lambda>rv s. P (typ_at T p' s)\<rbrace>"
+  set_object ta_f p ko \<lbrace>\<lambda>rv s. P (typ_at T p' s)\<rbrace>"
   apply (simp add: set_object_def get_object_def)
-  apply wp
+  apply (wp touch_object_wp)
   apply clarsimp
-  apply (erule rsubst [where P=P])
-  apply (clarsimp simp: obj_at_def)
+  apply (clarsimp simp: obj_at_def obind_def ta_filter_def split:if_splits)
   done
 
 lemma set_object_neg_ko:
   "\<lbrace>not ko_at ko' p' and K (p = p' \<longrightarrow> ko \<noteq> ko')\<rbrace>
-  set_object p ko
+  set_object ta_f p ko
   \<lbrace>\<lambda>_ s. \<not> ko_at ko' p' s\<rbrace>"
   apply (simp add: set_object_def get_object_def)
-  apply wp
+  apply (wp touch_object_wp)
   apply (simp add: pred_neg_def obj_at_def)
   done
 
-lemma get_tcb_SomeD: "get_tcb t s = Some v \<Longrightarrow> kheap s t = Some (TCB v)"
-  apply (case_tac "kheap s t", simp_all add: get_tcb_def)
+lemma get_tcb_SomeD: "get_tcb ta_f t s = Some v \<Longrightarrow> f_kheap ta_f s t = Some (TCB v)"
+  apply (case_tac "f_kheap ta_f s t", simp_all add: get_tcb_def)
   apply (case_tac a, simp_all)
   done
 
-lemma get_tcb_at: "tcb_at t s \<Longrightarrow> (\<exists>tcb. get_tcb t s = Some tcb)"
+lemma get_tcb_Some_True_False:
+  "get_tcb True p (ms_ta_update f s) = Some y \<Longrightarrow>
+  get_tcb False p s = Some y"
+  by (clarsimp simp: get_tcb_def obind_def ta_filter_def
+              split: option.splits kernel_object.splits if_splits)
+
+(* note-to-rob: this lemma should help in maaaaaaany places, when used instead
+   of get_tch_SomeD *)
+lemma get_tcb_SomeD': "get_tcb ta_f t (ms_ta_update f s) = Some y \<Longrightarrow> kheap s t = Some (TCB y)"
+  apply (cases ta_f; clarsimp)
+   apply (drule get_tcb_Some_True_False)
+   apply (drule get_tcb_SomeD)
+   apply (subst (asm) f_kheap_to_kheap, simp)
+  apply (drule get_tcb_SomeD)
+  apply (clarsimp simp: ta_filter_def obind_def split:option.splits)
+  done
+
+lemma get_tcb_to_unfiltered_Some:
+  "get_tcb True t s = Some tcb \<Longrightarrow> get_tcb False t s = Some tcb"
+  (* by (metis f_kheap_to_unfiltered_Some get_tcb_SomeD get_tcb_def) -below taken from robs's fix (just quickly trying it) -scottb *)
+  using f_kheap_to_unfiltered_Some get_tcb_SomeD get_tcb_def
+  by (metis f_kheap_to_unfiltered_Some get_tcb_SomeD get_tcb_def f_kheap_to_kheap)
+
+lemma get_tcb_at: "tcb_at t s \<Longrightarrow> (\<exists>tcb. get_tcb False t s = Some tcb)"
   by (simp add: tcb_at_def)
 
 lemma typ_at_same_type:
@@ -165,17 +224,18 @@ lemma hoare_to_pure_kheap_upd:
   by (auto simp add: obj_at_def a_type_def split: kernel_object.splits if_splits)
 
 lemma set_object_wp:
-  "\<lbrace>\<lambda>s. Q (s\<lparr> kheap := kheap s (p \<mapsto> v)\<rparr>) \<rbrace> set_object p v \<lbrace>\<lambda>_. Q\<rbrace>"
+  "\<lbrace>\<lambda>s. Q (ms_ta_obj_update p v (s\<lparr> kheap := kheap s (p \<mapsto> v)\<rparr>)) \<rbrace>
+     set_object ta_f p v \<lbrace>\<lambda>_. Q\<rbrace>"
   apply (simp add: set_object_def get_object_def)
-  apply wp
-  apply blast
+  apply (wpsimp wp: touch_object_wp')
+  apply (clarsimp simp:fun_upd_def)
   done
 
 lemma get_object_wp:
-  "\<lbrace>\<lambda>s. \<forall>ko. ko_at ko p s \<longrightarrow> Q ko s\<rbrace> get_object p \<lbrace>Q\<rbrace>"
+  "\<lbrace>\<lambda>s. \<forall>ko. ko_at ko p s \<longrightarrow> Q ko s\<rbrace> get_object ta_f p \<lbrace>Q\<rbrace>"
   apply (clarsimp simp: get_object_def)
   apply wp
-  apply (clarsimp simp: obj_at_def)
+  apply (clarsimp simp: obj_at_def ta_filter_def obind_def split:option.splits)
   done
 
 (* FIXME: move *)
@@ -191,10 +251,12 @@ lemma hoare_strengthen_pre_via_assert_forward:
   apply (erule rel)
   done
 
+(* FIXME: Consider removing the ta_f argument to set_object and have it hardcode True
+   if we are never using it with False. -robs *)
 lemma hoare_set_object_weaken_pre:
-  assumes "\<lbrace>P\<rbrace> set_object p v \<lbrace>\<lambda>_. Q\<rbrace>"
+  assumes "\<lbrace>P\<rbrace> set_object ta_f p v \<lbrace>\<lambda>_. Q\<rbrace>"
   shows "\<lbrace>\<lambda>s. \<forall>ko. ko_at ko p s \<longrightarrow> (a_type v = a_type ko) \<longrightarrow> P s\<rbrace>
-         set_object p v
+         set_object ta_f p v
          \<lbrace>\<lambda>_. Q\<rbrace>"
   apply (rule hoare_strengthen_pre_via_assert_forward
                 [OF assms, where N="\<lambda>s. \<forall>ko. ko_at ko p s \<longrightarrow> a_type ko \<noteq> a_type v"])

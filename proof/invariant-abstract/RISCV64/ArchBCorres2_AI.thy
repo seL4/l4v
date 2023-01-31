@@ -19,7 +19,10 @@ crunch (bcorres)bcorres[wp, BCorres2_AI_assms]: invoke_cnode truncate_state
 crunch (bcorres)bcorres[wp]: create_cap,init_arch_objects,retype_region,delete_objects truncate_state
   (ignore: freeMemory clearMemory retype_region_ext)
 
-crunch (bcorres)bcorres[wp]: set_extra_badge,derive_cap truncate_state (ignore: storeWord)
+crunch (bcorres)bcorres[wp]: set_extra_badge,derive_cap truncate_state (ignore: storeWord
+  (* FIXME: Prove without referring to RISCV64-specific definition here?
+     Was broken by touched-addrs -robs *)
+  simp: RISCV64_A.user_frames_of_def)
 
 crunch (bcorres)bcorres[wp]: invoke_untyped truncate_state
   (ignore: sequence_x)
@@ -84,7 +87,9 @@ lemmas schedule_bcorres[wp] = schedule_bcorres1[OF BCorres2_AI_axioms]
 context Arch begin global_naming RISCV64
 
 crunch (bcorres)bcorres[wp]: send_ipc,send_signal,do_reply_transfer,arch_perform_invocation truncate_state
-  (simp: gets_the_def swp_def
+  (* FIXME: Prove without referring to RISCV64-specific definition here?
+     Was broken by touched-addrs -robs *)
+  (simp: gets_the_def swp_def RISCV64_A.user_frames_of_def
    ignore: freeMemory clearMemory loadWord cap_fault_on_failure
            storeWord lookup_error_on_failure getRestartPC getRegister mapME )
 
@@ -113,6 +118,16 @@ lemma decode_tcb_invocation_bcorres[wp]:
   "bcorres (decode_tcb_invocation a b (ThreadCap c) d e)
            (decode_tcb_invocation a b (ThreadCap c) d e)"
   unfolding decode_tcb_invocation_def by wpsimp
+
+lemma decode_fr_inv_map_bcorres[wp]:
+  "bcorres (decode_fr_inv_map param_a param_b param_c param_d param_e)
+           (decode_fr_inv_map param_a param_b param_c param_d param_e)"
+  sorry (* FIXME: broken by touched-addrs -robs *)
+
+lemma decode_pt_inv_map_bcorres[wp]:
+  "bcorres (decode_pt_inv_map param_a param_b param_c param_d param_e)
+           (decode_pt_inv_map param_a param_b param_c param_d param_e)"
+  sorry (* FIXME: broken by touched-addrs -robs *)
 
 crunch (bcorres)bcorres[wp]: arch_decode_invocation truncate_state
   (simp: crunch_simps)

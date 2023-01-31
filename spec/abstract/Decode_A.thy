@@ -69,7 +69,8 @@ where
     ensure_empty dest_slot;
     src_slot \<leftarrow>
          lookup_source_slot src_root_cap src_index src_depth;
-    src_cap \<leftarrow> liftE $ get_cap src_slot;
+    liftE $ touch_object (fst src_slot);
+    src_cap \<leftarrow> liftE $ get_cap True src_slot;
     whenE (src_cap = NullCap) $
          throwError $ FailedLookup True $ MissingCapability src_depth;
     (rights, cap_data, is_move) \<leftarrow> case (gen_invocation_type label, args) of
@@ -98,7 +99,8 @@ where
     returnOk $ SaveCall dest_slot
   odE
   else if gen_invocation_type label = CNodeCancelBadgedSends then doE
-    cap \<leftarrow> liftE $ get_cap dest_slot;
+    liftE $ touch_object (fst dest_slot);
+    cap \<leftarrow> liftE $ get_cap True dest_slot;
     unlessE (has_cancel_send_rights cap) $ throwError IllegalOperation;
     returnOk $ CancelBadgedSendsCall cap
   odE
@@ -122,11 +124,13 @@ where
 
     unlessE (src_slot = dest_slot) $ ensure_empty dest_slot;
 
-    src_cap <- liftE $ get_cap src_slot;
+    liftE $ touch_object (fst src_slot);
+    src_cap <- liftE $ get_cap True src_slot;
     whenE (src_cap = NullCap) $
       throwError $ FailedLookup True $ MissingCapability src_depth;
 
-    pivot_cap <- liftE $ get_cap pivot_slot;
+    liftE $ touch_object (fst pivot_slot);
+    pivot_cap <- liftE $ get_cap True pivot_slot;
     whenE (pivot_cap = NullCap) $
       throwError $ FailedLookup False $ MissingCapability pivot_depth;
 
@@ -207,6 +211,7 @@ definition
 where
   "check_prio new_prio auth_tcb \<equiv>
     doE
+      liftE $ touch_object auth_tcb;
       mcp \<leftarrow> liftE $ thread_get tcb_mcpriority auth_tcb;
       whenE (new_prio > ucast mcp) $ throwError (RangeError 0 (ucast mcp))
     odE"
@@ -346,6 +351,7 @@ where
   "decode_bind_notification cap extra_caps \<equiv> case cap of
     ThreadCap tcb \<Rightarrow> doE
      whenE (length extra_caps = 0) $ throwError TruncatedMessage;
+     liftE $ touch_object tcb;
      nTFN \<leftarrow> liftE $ get_bound_notification tcb;
      case nTFN of
          Some _ \<Rightarrow> throwError IllegalOperation
@@ -354,6 +360,7 @@ where
          NotificationCap ptr _ r \<Rightarrow> returnOk (ptr, r)
        | _ \<Rightarrow> throwError IllegalOperation;
      whenE (AllowRecv \<notin> rights) $ throwError IllegalOperation;
+     liftE $ touch_object ntfnptr;
      ntfn \<leftarrow> liftE  $ get_notification ntfnptr;
      case (ntfn_obj ntfn, ntfn_bound_tcb ntfn) of
          (IdleNtfn, None) \<Rightarrow> returnOk ()
@@ -369,6 +376,7 @@ definition
 where
   "decode_unbind_notification cap \<equiv> case cap of
      ThreadCap tcb \<Rightarrow> doE
+       liftE $ touch_object tcb;
        nTFN \<leftarrow> liftE $ get_bound_notification tcb;
        case nTFN of
            None \<Rightarrow> throwError IllegalOperation
@@ -525,7 +533,8 @@ where
         else doE
             node_slot \<leftarrow> lookup_target_slot
                 root_cap node_index node_depth;
-            liftE $ get_cap node_slot
+            liftE $ touch_object (fst node_slot);
+            liftE $ get_cap True node_slot
         odE;
 
   if is_cnode_cap node_cap

@@ -58,7 +58,7 @@ lemma cap_revoke_domain_fields[wp]:
 lemma invoke_cnode_domain_fields[wp]:
   "invoke_cnode a \<lbrace>domain_fields P\<rbrace>"
   unfolding invoke_cnode_def
-  by (wpsimp wp: get_cap_wp hoare_vcg_all_lift hoare_vcg_imp_lift | rule conjI)+
+  by (wpsimp wp: get_cap_wp hoare_vcg_all_lift hoare_vcg_imp_lift touch_object_wp' | rule conjI)+
 
 end
 

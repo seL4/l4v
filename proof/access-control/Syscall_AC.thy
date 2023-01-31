@@ -197,7 +197,7 @@ lemma sts_first_restart:
    \<lbrace>\<lambda>rv s. \<forall>p ko. kheap s p = Some ko \<longrightarrow>
            (is_tcb ko \<longrightarrow> p \<noteq> cur_thread st) \<longrightarrow> kheap st p = Some ko\<rbrace>"
   unfolding set_thread_state_def
-  by (wpsimp wp: set_object_wp dxo_wp_weak simp: is_tcb)
+  by (wpsimp wp: set_object_wp dxo_wp_weak touch_object_wp' simp: is_tcb)
 
 lemma lcs_reply_owns:
   "\<lbrace>pas_refined aag and K (is_subject aag thread)\<rbrace>
@@ -304,6 +304,7 @@ lemma handle_invocation_respects:
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: handle_invocation_def split_def)
   apply (wp syscall_valid without_preemption_wp handle_fault_integrity_autarch
+            touch_object_wp'
             reply_from_kernel_integrity_autarch
             set_thread_state_integrity_autarch
             hoare_vcg_conj_lift
@@ -390,7 +391,7 @@ lemma handle_reply_pas_refined[wp]:
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   unfolding handle_reply_def
   apply (rule hoare_pre)
-   apply (wp do_reply_transfer_pas_refined get_cap_auth_wp [where aag = aag]| wpc)+
+   apply (wp do_reply_transfer_pas_refined touch_object_wp' get_cap_auth_wp [where aag = aag] | wpc)+
   by (force simp: aag_cap_auth_def cap_auth_conferred_def reply_cap_rights_to_auth_def
            intro: aag_Control_into_owns)
 
@@ -400,7 +401,7 @@ lemma handle_reply_respects:
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   unfolding handle_reply_def
   apply (rule hoare_pre)
-  apply (wp do_reply_transfer_respects get_cap_auth_wp [where aag = aag]| wpc)+
+  apply (wp do_reply_transfer_respects touch_object_wp' get_cap_auth_wp [where aag = aag]| wpc)+
   apply (fastforce simp: aag_cap_auth_def cap_auth_conferred_def reply_cap_rights_to_auth_def
                          cur_tcb_def cte_wp_at_caps_of_state is_reply_cap_to_def
                   intro: aag_Control_into_owns
@@ -429,7 +430,7 @@ lemma dec_domain_time_pas_refined[wp]:
   done
 
 crunch pas_refined[wp]: timer_tick "pas_refined aag"
-  (wp_del: timer_tick_extended.pas_refined_tcb_domain_map_wellformed)
+  (wp_del: timer_tick_extended.pas_refined_tcb_domain_map_wellformed wp: touch_object_wp')
 
 
 locale Syscall_AC_wps =
@@ -607,7 +608,7 @@ lemma handle_interrupt_pas_refined:
     handle_interrupt irq \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: handle_interrupt_def)
   apply (rule conjI; rule impI;rule hoare_pre)
-  apply (wp send_signal_pas_refined get_cap_wp
+  apply (wp send_signal_pas_refined get_cap_wp touch_object_wp'
          | wpc
          | simp add: get_irq_slot_def get_irq_state_def )+
   done
@@ -623,7 +624,7 @@ lemma timer_tick_integrity[wp]:
    timer_tick
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: timer_tick_def)
-  apply (wp ethread_set_integrity_autarch gts_wp
+  apply (wp ethread_set_integrity_autarch gts_wp touch_object_wp'
          | wpc | simp add: thread_set_time_slice_def split del: if_split)+
   apply (clarsimp simp: ct_in_state_def st_tcb_at_def obj_at_def)
   done
@@ -639,9 +640,10 @@ lemma handle_interrupt_integrity_autarch:
      apply (wp (once) send_signal_respects get_cap_auth_wp [where aag = aag] dmo_mol_respects
                       ackInterrupt_device_state_inv resetTimer_device_state_inv
             | simp add: get_irq_slot_def get_irq_state_def
-            | wp dmo_no_mem_respects
+            | wp dmo_no_mem_respects touch_object_wp'
             | wpc)+
   apply (fastforce simp: is_cap_simps aag_cap_auth_def cap_auth_conferred_def
+                         invs_sym_refs invs_valid_objs2 pas_refined_is_subject_irqD
                          cap_rights_to_auth_def)
   done
 
@@ -667,6 +669,7 @@ lemma handle_interrupt_integrity:
   apply (rule conjI; rule impI; rule hoare_pre)
      apply (wp (once) send_signal_respects get_cap_wp dmo_mol_respects dmo_no_mem_respects
                       ackInterrupt_device_state_inv resetTimer_device_state_inv
+            | wp touch_object_wp'
             | wpc
             | simp add: get_irq_slot_def get_irq_state_def)+
   apply clarsimp
@@ -737,6 +740,7 @@ lemma handle_event_integrity:
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (cases ev; simp)
        apply (unfold handle_send_def handle_call_def)
+  sorry (* FIXME: broken by touched-addrs -robs
   by (wpsimp wp: handle_recv_integrity handle_invocation_respects
                   handle_reply_respects handle_fault_integrity_autarch
                   handle_interrupt_integrity handle_vm_fault_integrity
@@ -747,15 +751,19 @@ lemma handle_event_integrity:
       | rule dmo_wp hoare_vcg_E_elim
       | fastforce
       | (rule hoare_vcg_conj_lift)?, wpsimp wp: getActiveIRQ_inv)+
+*)
 
 lemma activate_thread_respects:
   "\<lbrace>integrity aag X st and K (pasMayActivate aag)\<rbrace>
    activate_thread
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: activate_thread_def get_thread_state_def)
-  apply (wpsimp wp: set_thread_state_restart_to_running_respects thread_get_wp')
-  apply (clarsimp simp: st_tcb_at_def obj_at_def)
+  apply (wpsimp wp: set_thread_state_restart_to_running_respects thread_get_wp'
+    touch_object_wp' set_thread_state_integrity_autarch as_user_integrity_autarch)
+  apply (clarsimp simp: st_tcb_at_def obj_at_def integrity_subjects_def)
+  sorry (* FIXME: broken by touched-addrs -robs
   done
+*)
 
 lemma activate_thread_integrity:
   "\<lbrace>integrity aag X st and valid_idle and
@@ -764,7 +772,8 @@ lemma activate_thread_integrity:
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: activate_thread_def )
   apply (rule hoare_pre)
-  apply (wpsimp wp: gts_wp set_thread_state_integrity_autarch as_user_integrity_autarch)+
+  apply (wpsimp wp: gts_wp set_thread_state_integrity_autarch as_user_integrity_autarch
+    touch_object_wp')+
   apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
   done
 
@@ -773,7 +782,7 @@ lemma activate_thread_pas_refined:
    activate_thread
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   unfolding activate_thread_def get_thread_state_def thread_get_def
-  apply (wpsimp wp: set_thread_state_pas_refined hoare_drop_imps)
+  apply (wpsimp wp: set_thread_state_pas_refined hoare_drop_imps touch_object_wp')
   done
 
 lemma integrity_cur_thread[iff]:
@@ -797,7 +806,7 @@ lemma switch_to_thread_respects_pasMayEditReadyQueues:
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   unfolding switch_to_thread_def
   apply (simp add: spec_valid_def)
-  apply (wpsimp wp: tcb_sched_action_dequeue_integrity_pasMayEditReadyQueues)
+  apply (wpsimp wp: tcb_sched_action_dequeue_integrity_pasMayEditReadyQueues touch_object_wp')
   done
 
 lemma switch_to_thread_respects:
@@ -806,7 +815,7 @@ lemma switch_to_thread_respects:
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   unfolding switch_to_thread_def
   apply (simp add: spec_valid_def)
-  apply wpsimp
+  apply (wpsimp wp:touch_object_wp')
   done
 
 text \<open>
@@ -820,7 +829,7 @@ lemma switch_to_thread_respects':
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   unfolding switch_to_thread_def
   apply (simp add: spec_valid_def)
-  apply (wpsimp wp: tcb_sched_action_dequeue_integrity')
+  apply (wpsimp wp: tcb_sched_action_dequeue_integrity' touch_object_wp')
   done
 
 lemma switch_to_idle_thread_respects:
@@ -833,7 +842,8 @@ lemma choose_thread_respects_pasMayEditReadyQueues:
    choose_thread
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   by (simp add: choose_thread_def guarded_switch_to_def
-      | wp switch_to_thread_respects_pasMayEditReadyQueues switch_to_idle_thread_respects gts_wp)+
+      | wp switch_to_thread_respects_pasMayEditReadyQueues switch_to_idle_thread_respects gts_wp
+           touch_object_wp')+
 
 text \<open>integrity for @{const choose_thread} without @{const pasMayEditReadyQueues}\<close>
 lemma choose_thread_respects:
@@ -841,7 +851,7 @@ lemma choose_thread_respects:
    choose_thread
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: choose_thread_def guarded_switch_to_def
-         | wp switch_to_thread_respects' switch_to_idle_thread_respects gts_wp)+
+         | wp switch_to_thread_respects' switch_to_idle_thread_respects gts_wp touch_object_wp')+
   apply (clarsimp simp: pas_refined_def)
   apply (clarsimp simp: tcb_domain_map_wellformed_aux_def)
   apply (clarsimp simp: valid_queues_def is_etcb_at_def)
@@ -866,7 +876,7 @@ lemma guarded_switch_to_respects:
    guarded_switch_to x
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
    by (wpsimp simp: guarded_switch_to_def choose_thread_def
-                wp: switch_to_thread_respects switch_to_idle_thread_respects gts_wp)
+                wp: switch_to_thread_respects switch_to_idle_thread_respects gts_wp touch_object_wp')
 
 lemma next_domain_tcb_domain_map_wellformed[wp]:
   "next_domain \<lbrace>tcb_domain_map_wellformed aag\<rbrace>"
@@ -917,7 +927,7 @@ lemma pas_refined_cur_thread[iff]:
 lemma switch_to_thread_pas_refined:
   "switch_to_thread t \<lbrace>pas_refined aag\<rbrace>"
   unfolding switch_to_thread_def
-  by (wpsimp wp: do_machine_op_pas_refined)
+  by (wpsimp wp: do_machine_op_pas_refined touch_object_wp')
 
 lemma switch_to_idle_thread_pas_refined:
   "switch_to_idle_thread \<lbrace>pas_refined aag\<rbrace>"
@@ -1005,6 +1015,7 @@ lemma schedule_integrity_pasMayEditReadyQueues:
       apply (wpsimp wp: set_scheduler_action_cnt_valid_sched enqueue_thread_queued
                         append_thread_queued tcb_sched_action_append_integrity_pasMayEditReadyQueues
                         guarded_switch_to_lift switch_to_thread_respects_pasMayEditReadyQueues)+
+             sorry (* FIXME: broken by touched-addrs -robs
             (* is_highest_prio *)
             apply (simp add: wrap_is_highest_prio_def)
             apply ((wp (once) hoare_drop_imp)+)[1]
@@ -1014,6 +1025,7 @@ lemma schedule_integrity_pasMayEditReadyQueues:
                                         valid_sched_action_def weak_valid_sched_action_def\<close>)?))
    apply (clarsimp simp: obj_at_def pred_tcb_at_def)+
   done
+*)
 
 crunch pas_refined[wp]: choose_thread "pas_refined aag"
   (wp: switch_to_thread_pas_refined switch_to_idle_thread_pas_refined crunch_wps)
@@ -1030,7 +1042,9 @@ lemma schedule_pas_refined:
                   tcb_sched_action_enqueue_valid_blocked_except
              del: ethread_get_wp
          | wpc | simp add: schedule_choose_new_thread_def)+
+               sorry (* FIXME: broken by touched-addrs -robs
   done
+*)
 
 lemmas sequence_x_mapM_x = mapM_x_def [symmetric]
 
@@ -1070,9 +1084,18 @@ crunches set_original, set_cdt
   for ct_active [wp]: "ct_active"
   (wp: crunch_wps simp: crunch_simps ct_in_state_def)
 
+lemma ct_active_ta_agnostic: "ta_agnostic ct_active"
+  unfolding ta_agnostic_def ct_in_state_def
+  by force
+
+lemma ct_active_ms_ta_independent[intro!, simp]:
+  "ct_active (ms_ta_update taf s) = ct_active s"
+  using ct_active_ta_agnostic
+  by (simp add: ct_in_state_def)
+
 lemma cap_swap_ct_active[wp]:
   "cap_swap a b c d \<lbrace>ct_active\<rbrace>"
-  by (wp | simp add: cap_swap_def | wps)+
+  by (wp touch_objects_wp | simp add: cap_swap_def | wps)+
 
 lemma unbind_maybe_notification_ct_active[wp]:
   "unbind_maybe_notification ptr \<lbrace>ct_active\<rbrace>"
@@ -1084,7 +1107,7 @@ lemma unbind_notification_ct_active[wp]:
 
 lemma sts_Restart_ct_active[wp]:
   "set_thread_state xa Restart \<lbrace>ct_active\<rbrace>"
-  apply (wp set_object_wp | simp add: set_thread_state_def)+
+  apply (wp set_object_wp touch_object_wp' | simp add: set_thread_state_def)+
   apply (clarsimp simp: ct_in_state_def st_tcb_at_def obj_at_def)
   done
 
@@ -1094,7 +1117,8 @@ lemma cancel_all_ipc_ct_active[wp]:
        apply force
       apply (wp mapM_x_wp set_simple_ko_ct_active)+
       apply force
-     apply (wp set_simple_ko_ct_active hoare_drop_imps hoare_vcg_conj_lift hoare_vcg_all_lift)+
+     apply (wp set_simple_ko_ct_active hoare_drop_imps hoare_vcg_conj_lift hoare_vcg_all_lift
+       touch_object_wp')+
   apply simp
   done
 

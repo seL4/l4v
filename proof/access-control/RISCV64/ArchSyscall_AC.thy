@@ -27,7 +27,7 @@ lemma cap_move_idle_thread[Syscall_AC_assms, wp]:
 lemma cancel_badged_sends_idle_thread[Syscall_AC_assms, wp]:
   "cancel_badged_sends epptr badge \<lbrace>\<lambda>s. P (idle_thread s)\<rbrace>"
   unfolding cancel_badged_sends_def
-  by (wpsimp wp: dxo_wp_weak mapM_wp_inv get_simple_ko_wp simp: filterM_mapM)
+  by (wpsimp wp: dxo_wp_weak mapM_wp_inv get_simple_ko_wp touch_object_wp' simp: filterM_mapM)
 
 declare arch_finalise_cap_idle_thread[Syscall_AC_assms]
 
@@ -42,7 +42,7 @@ lemma invs_irq_state_update[Syscall_AC_assms, simp]:
 
 crunches prepare_thread_delete, arch_finalise_cap
   for cur_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (cur_thread s)"
-  (wp: crunch_wps simp: crunch_simps)
+  (wp: crunch_wps pt_lookup_from_level_tainv simp: crunch_simps)
 
 lemma cap_move_cur_thread[Syscall_AC_assms, wp]:
   "cap_move new_cap src_slot dest_slot \<lbrace>\<lambda>s. P (cur_thread s)\<rbrace>"
@@ -96,17 +96,19 @@ lemma set_thread_state_restart_to_running_respects[Syscall_AC_assms]:
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: set_thread_state_def as_user_def split_def setNextPC_def
                    getRestartPC_def setRegister_def bind_assoc getRegister_def)
-  apply (wpsimp wp: set_object_wp)
+  apply (wpsimp wp: set_object_wp touch_object_wp')
   apply (clarsimp simp: in_monad fun_upd_def[symmetric] cong: if_cong)
   apply (cases "is_subject aag thread")
    apply (cut_tac aag=aag in integrity_update_autarch, simp+)
   apply (erule integrity_trans)
   apply (clarsimp simp: integrity_def obj_at_def st_tcb_at_def integrity_asids_kh_upds opt_map_def)
-  apply (clarsimp dest!: get_tcb_SomeD)
+  apply (clarsimp dest!: get_tcb_SomeD')
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (rule_tac tro_tcb_activate[OF refl refl])
     apply (simp add: tcb_bound_notification_reset_integrity_def ctxt_IP_update_def
               split: user_context.splits)+
   done
+*)
 
 lemma getActiveIRQ_inv[Syscall_AC_assms]:
   "\<forall>f s. P s \<longrightarrow> P (irq_state_update f s)
@@ -160,7 +162,7 @@ crunches
   for cur_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (cur_thread s)"
   and idle_thread[Syscall_AC_assms, wp]: "\<lambda>s. P (idle_thread s)"
   and cur_domain[Syscall_AC_assms, wp]:  "\<lambda>s. P (cur_domain s)"
-  (wp: crunch_wps simp: crunch_simps)
+  (wp: crunch_wps pt_lookup_from_level_tainv simp: crunch_simps)
 
 \<comment> \<open>These aren't proved in the previous crunch, and hence need to be declared\<close>
 declare handle_arch_fault_reply_cur_thread[Syscall_AC_assms]

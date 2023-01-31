@@ -18,6 +18,7 @@ context begin interpretation Arch .
 
 requalify_consts
   in_user_frame
+  user_frames_of
 
 end
 
@@ -27,6 +28,7 @@ definition
  "store_word_offs ptr offs v \<equiv>
     do s \<leftarrow> get;
        assert (in_user_frame (ptr + of_nat (offs * word_size)) s);
+       touch_objects (user_frames_of (ptr + of_nat (offs * word_size)) s);
        do_machine_op $ storeWord (ptr + of_nat (offs * word_size)) v
     od"
 
@@ -44,12 +46,13 @@ definition
   set_mrs :: "obj_ref \<Rightarrow> obj_ref option \<Rightarrow> message list \<Rightarrow> (length_type,'z::state_ext) s_monad" where
   "set_mrs thread buf msgs \<equiv>
    do
-     tcb \<leftarrow> gets_the $ get_tcb thread;
+     touch_object thread;
+     tcb \<leftarrow> gets_the $ get_tcb True thread;
      context \<leftarrow> return (arch_tcb_get_registers (tcb_arch tcb));
      new_regs \<leftarrow> return (\<lambda>reg. if reg \<in> set (take (length msgs) msg_registers)
                               then msgs ! (the_index msg_registers reg)
                               else context reg);
-     set_object thread (TCB (tcb \<lparr> tcb_arch := arch_tcb_set_registers new_regs (tcb_arch tcb) \<rparr>));
+     set_object True thread (TCB (tcb \<lparr> tcb_arch := arch_tcb_set_registers new_regs (tcb_arch tcb) \<rparr>));
      remaining_msgs \<leftarrow> return (drop (length msg_registers) msgs);
      case buf of
      None      \<Rightarrow> return $ nat_to_len (min (length msg_registers) (length msgs))

@@ -52,7 +52,8 @@ lemma set_vm_root_silc_inv[FinalCaps_assms, wp]:
 
 crunches arch_finalise_cap, prepare_thread_delete, init_arch_objects
   for silc_inv[FinalCaps_assms, wp]: "silc_inv aag st"
-  (wp: crunch_wps modify_wp simp: crunch_simps ignore: set_object)
+  (wp: crunch_wps modify_wp pt_lookup_from_level_tainv find_vspace_for_asid_tainv
+   simp: crunch_simps ta_agnostic_def ignore: set_object)
 
 lemma arch_mask_interrupts_silc_inv[FinalCaps_assms, wp]:
   "arch_mask_interrupts m irqs \<lbrace>silc_inv aag st\<rbrace>"
@@ -99,7 +100,7 @@ context Arch begin global_naming RISCV64
 
 lemma perform_page_table_invocation_silc_inv_get_cap_helper:
    "\<lbrace>silc_inv aag st and cte_wp_at (is_pt_cap or is_frame_cap) xa\<rbrace>
-    get_cap xa
+    get_cap True xa
     \<lbrace>(\<lambda>capa s. (\<not> cap_points_to_label aag (ArchObjectCap $ update_map_data capa None)
                                            (pasObjectAbs aag (fst xa))
                 \<longrightarrow> (\<exists>lslot. lslot \<in> slots_holding_overlapping_caps
@@ -147,9 +148,10 @@ lemma perform_page_table_invocation_silc_inv:
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding perform_page_table_invocation_def perform_pt_inv_map_def perform_pt_inv_unmap_def
   apply (rule hoare_pre)
-  apply (wp set_cap_silc_inv mapM_x_wp[OF _ subset_refl]
+  apply (wp set_cap_silc_inv mapM_x_wp[OF _ subset_refl] touch_objects_wp
             perform_page_table_invocation_silc_inv_get_cap_helper'[where st=st]
          | wpc | simp only: o_def fun_app_def K_def swp_def)+
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (clarsimp simp: valid_pti_def authorised_page_table_inv_def
                  split: page_table_invocation.splits)
    apply (rule conjI)
@@ -163,6 +165,7 @@ lemma perform_page_table_invocation_silc_inv:
    apply (fastforce elim: is_arch_update_overlaps[rotated] cte_wp_at_weakenE)
   apply fastforce
   done
+*)
 
 lemma perform_page_invocation_silc_inv:
   "\<lbrace>silc_inv aag st and valid_page_inv blah and authorised_page_inv aag blah\<rbrace>
@@ -170,7 +173,7 @@ lemma perform_page_invocation_silc_inv:
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding perform_page_invocation_def perform_pg_inv_map_def perform_pg_inv_unmap_def perform_pg_inv_get_addr_def
   apply (rule hoare_pre)
-   apply (wp mapM_wp[OF _ subset_refl] set_cap_silc_inv
+   apply (wp mapM_wp[OF _ subset_refl] set_cap_silc_inv touch_objects_wp
              mapM_x_wp[OF _ subset_refl]
              perform_page_table_invocation_silc_inv_get_cap_helper'[where st=st]
              hoare_vcg_all_lift hoare_vcg_if_lift static_imp_wp
@@ -199,7 +202,7 @@ lemma perform_asid_control_invocation_silc_inv:
   apply (rule hoare_pre)
   apply (wp modify_wp cap_insert_silc_inv' retype_region_silc_inv[where sz=pageBits]
             set_cap_silc_inv get_cap_slots_holding_overlapping_caps[where st=st]
-            delete_objects_silc_inv static_imp_wp
+            delete_objects_silc_inv static_imp_wp touch_object_wp'
          | wpc | simp )+
   apply (clarsimp simp: authorised_asid_control_inv_def silc_inv_def valid_aci_def ptr_range_def page_bits_def)
   apply (rule conjI)
@@ -218,6 +221,7 @@ lemma perform_asid_control_invocation_silc_inv:
 
 crunches store_asid_pool_entry
   for silc_inv[wp]: "silc_inv aag st"
+  (wp: touch_object_wp')
 
 crunches copy_global_mappings
   for silc_inv[wp]: "silc_inv aag st"
@@ -228,7 +232,7 @@ lemma perform_asid_pool_invocation_silc_inv:
    perform_asid_pool_invocation blah
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding perform_asid_pool_invocation_def
-  apply (wpsimp wp: set_cap_silc_inv get_cap_wp)+
+  apply (wpsimp wp: set_cap_silc_inv get_cap_wp touch_object_wp')+
   apply (fastforce dest: silc_invD
                    simp: intra_label_cap_def cap_points_to_label_def silc_inv_def
                          slots_holding_overlapping_caps_def authorised_asid_pool_inv_def

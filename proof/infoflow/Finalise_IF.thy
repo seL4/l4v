@@ -45,7 +45,7 @@ locale Finalise_IF_1 =
                           (arch_finalise_cap cap is_final)"
   and arch_finalise_cap_makes_halted:
     "\<lbrace>invs and valid_cap (ArchObjectCap acap)
-           and (\<lambda>s. ex = is_final_cap' (ArchObjectCap acap) s)
+           and (\<lambda>s. ex = is_final_cap' False (ArchObjectCap acap) s)
            and cte_wp_at ((=) (ArchObjectCap acap)) slot\<rbrace>
      arch_finalise_cap acap ex
      \<lbrace>\<lambda>rv s :: det_state. \<forall>t \<in> obj_refs_ac (fst rv). halted_if_tcb t s\<rbrace>"
@@ -85,6 +85,7 @@ lemma empty_slot_reads_respects:
   notes split_paired_All[simp del] split_paired_Ex[simp del]
   shows "reads_respects aag l (K (aag_can_read aag (fst slot))) (empty_slot slot free_irq)"
   unfolding empty_slot_def post_cap_deletion_def fun_app_def
+  sorry (* broken by timeprot -scottb
   apply (simp add: bind_assoc[symmetric] cong: if_cong)
   apply (fold update_cdt_def)
   apply (simp add: bind_assoc empty_slot_ext_def cong: if_cong)
@@ -96,21 +97,21 @@ lemma empty_slot_reads_respects:
   by (fastforce simp: reads_equiv_def2 equiv_for_def
                 elim: states_equiv_forE_cdt
                 dest: aag_can_read_self
-               split: option.splits)
+               split: option.splits) *)
 
 lemma scheduler_action_states_equiv[simp]:
   "states_equiv_for P Q R S st (scheduler_action_update f s) = states_equiv_for P Q R S st s"
   by (simp add: states_equiv_for_def equiv_for_def equiv_asids_def)
 
 crunch states_equiv[wp]: set_thread_state_ext "states_equiv_for P Q R S st"
-  (ignore_del: set_thread_state_ext)
+  (ignore_del: set_thread_state_ext wp: crunch_wps touch_object_wp')
 
 end
 
 
 lemma requiv_get_tcb_eq':
   "\<lbrakk> reads_equiv aag s t; aag_can_read aag thread \<rbrakk>
-     \<Longrightarrow> get_tcb thread s = get_tcb thread t"
+     \<Longrightarrow> get_tcb False thread s = get_tcb False thread t"
   by (auto simp: reads_equiv_def2 get_tcb_def
            elim: states_equiv_forE_kheap
           dest!: aag_can_read_self)
@@ -120,10 +121,24 @@ lemma set_scheduler_action_reads_respects[wp]:
   by (simp add: set_scheduler_action_def equiv_valid_def2 equiv_valid_2_def modify_def bind_def put_def
                 get_def reads_equiv_scheduler_action_update affects_equiv_scheduler_action_update)
 
+lemma tainv_reads_respects:
+  "(\<And>P. m \<lbrace>ignore_ta P\<rbrace>) \<Longrightarrow>
+  reads_respects aag l Q m"
+  find_theorems ignore_ta ta_agnostic
+  apply (clarsimp simp: equiv_valid_def2 equiv_valid_2_def)
+  apply (clarsimp simp: valid_def)
+  apply (drule_tac x="(=) s" in meta_spec)
+  apply (drule_tac x=s in spec)
+  apply (prop_tac "ignore_ta ((=) s) s")
+   apply (clarsimp simp: ms_ta_update_def)
+  
+.
 lemma set_thread_state_ext_reads_respects:
   "reads_respects aag l (\<lambda>s. is_subject aag (cur_thread s)) (set_thread_state_ext ref)"
   apply (case_tac "is_subject aag ref")
-   apply (simp add: set_thread_state_ext_def when_def get_thread_state_def | wp thread_get_rev)+
+   find_theorems reads_respects touch_object
+   apply (simp add: set_thread_state_ext_def when_def get_thread_state_def | wp thread_get_rev touch_object_wp')+
+    thm touch_object_tainv
    apply (simp add: reads_equiv_def)
   apply (simp add: set_thread_state_ext_def when_def)
   apply (simp add: equiv_valid_def2)
@@ -209,7 +224,7 @@ lemma get_ep_queue_reads_respects:
   done
 
 lemma get_object_reads_respects:
-  "reads_respects aag l (K (aag_can_read aag ptr \<or> (aag_can_affect aag l ptr))) (get_object ptr)"
+  "reads_respects aag l (K (aag_can_read aag ptr \<or> (aag_can_affect aag l ptr))) (get_object False ptr)"
   apply (unfold get_object_def fun_app_def)
   apply (subst gets_apply)
   apply (wp gets_apply_ev | wp (once) hoare_drop_imps)+

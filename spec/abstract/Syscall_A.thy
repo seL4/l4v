@@ -235,6 +235,7 @@ where
             without_preemption $ set_thread_state thread Restart;
             reply \<leftarrow> perform_invocation blocking calling oper;
             without_preemption $ do
+                touch_object thread;
                 state \<leftarrow> get_thread_state thread;
                 case state of
                       Restart \<Rightarrow> do
@@ -293,6 +294,7 @@ definition
            | NotificationCap ref badge rights \<Rightarrow>
              (if AllowRecv \<in> rights
               then doE
+                liftE $ touch_object ref;
                 ntfn \<leftarrow> liftE $ get_notification ref;
                 boundTCB \<leftarrow> returnOk $ ntfn_bound_tcb ntfn;
                 if boundTCB = Some thread \<or> boundTCB = None
@@ -309,7 +311,8 @@ definition
   handle_reply :: "(unit,'z::state_ext) s_monad" where
  "handle_reply \<equiv> do
     thread \<leftarrow> gets cur_thread;
-    caller_cap \<leftarrow> get_cap (thread, tcb_cnode_index 3);
+    touch_object thread;
+    caller_cap \<leftarrow> get_cap True (thread, tcb_cnode_index 3);
     case caller_cap of
       ReplyCap caller False R \<Rightarrow>
         do_reply_transfer thread caller (thread, tcb_cnode_index 3) (AllowGrant \<in> R)

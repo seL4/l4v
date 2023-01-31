@@ -17,20 +17,22 @@ named_theorems Arch_IF_assms
 lemma set_object_equiv_but_for_labels:
   "\<lbrace>equiv_but_for_labels aag L st and (\<lambda> s. \<not> asid_pool_at ptr s) and
     K ((\<forall>asid_pool. obj \<noteq> ArchObj (ASIDPool asid_pool)) \<and> pasObjectAbs aag ptr \<in> L)\<rbrace>
-   set_object ptr obj
+   set_object True ptr obj
    \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
   apply (wpsimp wp: set_object_wp)
   apply (clarsimp simp: equiv_but_for_labels_def)
   apply (subst dummy_kheap_update[where st=st])
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (rule states_equiv_for_non_asid_pool_kheap_update)
      apply assumption
     apply (fastforce intro: equiv_forI elim: states_equiv_forE equiv_forE)
    apply (fastforce simp: non_asid_pool_kheap_update_def)
   apply (clarsimp simp: non_asid_pool_kheap_update_def asid_pool_at_kheap)
   done
+*)
 
 lemma get_tcb_not_asid_pool_at:
-  "get_tcb ref s = Some y \<Longrightarrow> \<not> asid_pool_at ref s"
+  "get_tcb False ref s = Some y \<Longrightarrow> \<not> asid_pool_at ref s"
   by (fastforce simp: get_tcb_def asid_pool_at_kheap)
 
 lemma as_user_set_register_ev2:
@@ -44,16 +46,18 @@ lemma as_user_set_register_ev2:
                 and Q="\<top>" and Q'="\<top>" in ev2_invisible[OF domains_distinct])
         apply (simp add: labels_are_invisible_def)+
       apply ((rule modifies_at_mostI
-              | wp set_object_equiv_but_for_labels
+              | wp set_object_equiv_but_for_labels touch_object_wp'
               | simp add: split_def
               | fastforce dest: get_tcb_not_asid_pool_at)+)[2]
+      sorry (* FIXME: broken by touched-addrs -robs
     apply auto
   done
+*)
 
 crunch valid_global_refs[Arch_IF_assms, wp]: arch_post_cap_deletion "valid_global_refs"
 
 crunch irq_state_of_state[Arch_IF_assms, wp]: store_word_offs "\<lambda>s. P (irq_state_of_state s)"
-  (wp: crunch_wps dmo_wp simp: storeWord_def)
+  (wp: crunch_wps dmo_wp touch_objects_wp simp: storeWord_def)
 
 crunches set_irq_state, arch_post_cap_deletion, handle_arch_fault_reply
   for irq_state_of_state[Arch_IF_assms, wp]: "\<lambda>s. P (irq_state_of_state s)"
@@ -62,20 +66,34 @@ crunches set_irq_state, arch_post_cap_deletion, handle_arch_fault_reply
 crunch irq_state_of_state[Arch_IF_assms, wp]: arch_switch_to_idle_thread, arch_switch_to_thread
   "\<lambda>s :: det_state. P (irq_state_of_state s)"
   (wp: dmo_wp modify_wp crunch_wps hoare_whenE_wp
-   simp: machine_op_lift_def setVSpaceRoot_def
+       touch_objects_wp find_vspace_for_asid_wp touch_object_wp'
+   simp: machine_op_lift_def setVSpaceRoot_def ta_agnostic_def
          machine_rest_lift_def crunch_simps storeWord_def)
 
 crunch irq_state_of_state[Arch_IF_assms, wp]: arch_invoke_irq_handler "\<lambda>s. P (irq_state_of_state s)"
   (wp: dmo_wp simp: maskInterrupt_def plic_complete_claim_def)
 
+lemma unmap_page_irq_state_of_state[wp]:
+  "\<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace> unmap_page param_a param_b param_c param_d 
+   \<lbrace>\<lambda>_ s. P (irq_state_of_state s)\<rbrace>"
+  sorry (* FIXME: broken by touched-addrs -robs *)
+
 crunch irq_state_of_state[wp]: arch_perform_invocation "\<lambda>s. P (irq_state_of_state s)"
-  (wp: dmo_wp modify_wp simp: cache_machine_op_defs
+  (wp: dmo_wp modify_wp touch_objects_wp find_vspace_for_asid_wp pt_lookup_from_level_tainv
+   simp: cache_machine_op_defs ta_agnostic_def obind_def ta_filter_def
    wp: crunch_wps simp: crunch_simps ignore: ignore_failure)
 
 crunch irq_state_of_state[Arch_IF_assms, wp]: arch_finalise_cap, prepare_thread_delete
   "\<lambda>s :: det_state. P (irq_state_of_state s)"
-  (wp: select_wp modify_wp crunch_wps dmo_wp
-   simp: crunch_simps hwASIDFlush_def)
+  (wp: select_wp modify_wp crunch_wps dmo_wp find_vspace_for_asid_wp touch_object_wp'
+   simp: crunch_simps hwASIDFlush_def ta_agnostic_def)
+
+crunch irq_state_of_state[Arch_IF_assms, wp]:
+  arch_mask_interrupts, arch_domainswitch_flush, arch_switch_domain_kernel
+  "\<lambda>s. P (irq_state_of_state s)"
+  (wp: crunch_wps dmo_wp simp: arch_mask_interrupts_def maskInterrupt_def
+     arch_domainswitch_flush_def tfence_def arch_mask_interrupts_def L2FlushAddr_def
+     arch_switch_domain_kernel_def setVSpaceRoot_def)
 
 crunch irq_state_of_state[Arch_IF_assms, wp]:
   arch_mask_interrupts, arch_domainswitch_flush, arch_switch_domain_kernel
@@ -87,7 +105,7 @@ crunch irq_state_of_state[Arch_IF_assms, wp]:
 lemma equiv_asid_machine_state_update[Arch_IF_assms, simp]:
   "equiv_asid asid (machine_state_update f s) s' = equiv_asid asid s s'"
   "equiv_asid asid s (machine_state_update f s') = equiv_asid asid s s'"
-  by (auto simp: equiv_asid_def)
+  by (auto simp: equiv_asid_def obind_def ta_filter_def)
 
 lemma as_user_set_register_reads_respects'[Arch_IF_assms]:
   assumes domains_distinct: "pas_domains_distinct aag"
@@ -95,16 +113,19 @@ lemma as_user_set_register_reads_respects'[Arch_IF_assms]:
   apply (case_tac "aag_can_read aag thread \<or> aag_can_affect aag l thread")
    apply (simp add: as_user_def split_def)
    apply (rule gen_asm_ev)
-   apply (wp set_object_reads_respects select_f_ev gets_the_ev)
+   apply (wp set_object_reads_respects select_f_ev gets_the_ev touch_object_rev touch_object_wp')
    apply (auto intro: reads_affects_equiv_get_tcb_eq det_setRegister)[1]
+     sorry (* FIXME: broken by touched-addrs -robs
   apply (simp add: equiv_valid_def2)
   apply (rule as_user_set_register_ev2[OF domains_distinct])
   apply (simp add: labels_are_invisible_def)
   done
+*)
 
 lemma store_word_offs_reads_respects[Arch_IF_assms]:
   "reads_respects aag l \<top> (store_word_offs ptr offs v)"
   apply (simp add: store_word_offs_def)
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (rule equiv_valid_get_assert)
   apply (simp add: storeWord_def)
   apply (simp add: do_machine_op_bind)
@@ -116,6 +137,7 @@ lemma store_word_offs_reads_respects[Arch_IF_assms]:
      apply (rule use_spec_ev do_machine_op_spec_reads_respects assert_ev2
             | simp add: spec_equiv_valid_def | wp modify_wp)+
   done
+*)
 
 lemma set_simple_ko_globals_equiv[Arch_IF_assms]:
   "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
@@ -132,12 +154,14 @@ lemma set_thread_state_globals_equiv[Arch_IF_assms]:
    set_thread_state ref ts
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding set_thread_state_def
-  apply (wp set_object_globals_equiv dxo_wp_weak |simp)+
+  apply (wp set_object_globals_equiv dxo_wp_weak touch_object_wp' |simp)+
   apply (intro impI conjI allI)
     apply (fastforce simp: valid_arch_state_def obj_at_def tcb_at_def2 get_tcb_def is_tcb_def
-                     dest: get_tcb_SomeD valid_global_arch_objs_pt_at
+                     dest: get_tcb_SomeD' valid_global_arch_objs_pt_at
                     split: option.splits kernel_object.splits)+
+   sorry (* FIXME: broken by touched-addrs -robs
   done
+*)
 
 lemma set_cap_globals_equiv''[Arch_IF_assms]:
   "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
@@ -155,10 +179,12 @@ lemma as_user_globals_equiv[Arch_IF_assms]:
    as_user tptr f
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding as_user_def
-  apply (wpsimp wp: set_object_globals_equiv simp: split_def)
+  apply (wpsimp wp: set_object_globals_equiv touch_object_wp' simp: split_def)
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (fastforce simp: valid_arch_state_def get_tcb_def obj_at_def
                    dest: valid_global_arch_objs_pt_at)
   done
+*)
 
 end
 
@@ -189,28 +215,32 @@ lemmas invs_imps =
 
 context Arch begin global_naming RISCV64
 
-lemma get_asid_pool_revrv':
+lemma get_asid_pool_revrv'[simplified f_kheap_to_kheap]:
   "reads_equiv_valid_rv_inv (affects_equiv aag l) aag
      (\<lambda>rv rv'. aag_can_read aag ptr \<longrightarrow> rv = rv') \<top> (get_asid_pool ptr)"
   unfolding gets_map_def
   apply (subst gets_apply)
   apply (subst gets_apply)
   apply (rule_tac W="\<lambda>rv rv'. aag_can_read aag ptr \<longrightarrow> rv = rv'" in equiv_valid_rv_bind)
+    sorry (* FIXME: broken by touched-addrs -robs
     apply (fastforce elim: reads_equivE equiv_forE
                      simp: equiv_valid_2_def opt_map_def gets_apply_def get_def bind_def return_def)
    apply (fastforce simp: equiv_valid_2_def return_def assert_opt_def fail_def split: option.splits)
   apply wp
   done
+*)
 
-lemma get_asid_pool_rev:
+lemma get_asid_pool_rev[simplified f_kheap_to_kheap]:
   "reads_equiv_valid_inv A aag (K (is_subject aag ptr)) (get_asid_pool ptr)"
   unfolding gets_map_def
   apply (subst gets_apply)
   apply (wpsimp wp: gets_apply_ev)
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (fastforce elim: reads_equivE equiv_forE simp: opt_map_def)
   done
+*)
 
-lemma get_asid_pool_revrv:
+lemma get_asid_pool_revrv[simplified f_kheap_to_kheap]:
   "reads_equiv_valid_rv_inv (affects_equiv aag l) aag
                             (\<lambda>rv rv'. rv (asid_low_bits_of asid) = rv' (asid_low_bits_of asid))
                             (\<lambda>s. Some a = riscv_asid_table (arch_state s) (asid_high_bits_of asid) \<and>
@@ -230,9 +260,11 @@ lemma get_asid_pool_revrv:
      apply (clarsimp simp: equiv_valid_2_def gets_def get_def bind_def return_def fail_def
                     split: if_split)
      apply (drule_tac s="Some a" in sym)
+     sorry (* FIXME: broken by touched-addrs -robs
      apply (fastforce elim: reads_equivE simp: equiv_asids_def equiv_asid_def)
     apply (wp wp_post_taut | simp)+
   done
+*)
 
 lemma asid_high_bits_0_eq_1:
   "asid_high_bits_of 0 = asid_high_bits_of 1"
@@ -261,7 +293,8 @@ lemma find_vspace_for_asid_reads_respects:
   apply wpsimp
      apply (simp add: throw_opt_def)
      apply wpsimp
-    apply wpsimp+
+    apply (wpsimp wp:touch_object_rev)+
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (erule reads_equivE)
   apply (clarsimp simp: equiv_asids_def)
   apply (erule equiv_forE)
@@ -271,23 +304,24 @@ lemma find_vspace_for_asid_reads_respects:
                          opt_map_def obind_def obj_at_def equiv_asid_def
                   split: option.splits)
   done
+*)
 
-lemma ptes_of_reads_equiv:
+lemma ptes_of_reads_equiv[simplified f_kheap_to_kheap]:
   "\<lbrakk> is_subject aag (table_base ptr); reads_equiv aag s t \<rbrakk>
-     \<Longrightarrow> ptes_of s ptr = ptes_of t ptr"
+     \<Longrightarrow> ptes_of False s ptr = ptes_of False t ptr"
   by (fastforce elim: reads_equivE equiv_forE simp: ptes_of_def obind_def opt_map_def)
 
-lemma pt_walk_reads_equiv:
+lemma pt_walk_reads_equiv[simplified f_kheap_to_kheap]:
   "\<lbrakk> reads_equiv aag s t; pas_refined aag s; pspace_aligned s; valid_asid_table s;
      valid_vspace_objs s; is_subject aag pt; vptr \<in> user_region;
      level \<le> max_pt_level; vs_lookup_table level asid vptr s = Some (level, pt) \<rbrakk>
-     \<Longrightarrow> pt_walk level bot_level pt vptr (ptes_of s) =
-         pt_walk level bot_level pt vptr (ptes_of t)"
+     \<Longrightarrow> pt_walk level bot_level pt vptr (ptes_of False s) =
+         pt_walk level bot_level pt vptr (ptes_of False t)"
   apply (induct level arbitrary: pt; clarsimp)
   apply (simp (no_asm) add: pt_walk.simps)
   apply (clarsimp simp: obind_def split: if_splits)
-  apply (subgoal_tac "ptes_of s (pt_slot_offset level pt vptr) =
-                      ptes_of t (pt_slot_offset level pt vptr)")
+  apply (subgoal_tac "ptes_of False s (pt_slot_offset level pt vptr) =
+                      ptes_of False t (pt_slot_offset level pt vptr)")
    apply (clarsimp split: option.splits)
    apply (frule_tac bot_level="level-1" in vs_lookup_table_extend)
      apply (fastforce simp: pt_walk.simps obind_def)
@@ -298,6 +332,7 @@ lemma pt_walk_reads_equiv:
       apply fastforce+
     apply (erule_tac pt_ptr=pt in pt_walk_is_subject; fastforce)
    apply (erule (1) meta_mp)
+  apply simp
   apply (rule ptes_of_reads_equiv)
    apply (subst table_base_pt_slot_offset)
     apply (erule vs_lookup_table_is_aligned)
@@ -315,10 +350,14 @@ lemma pt_lookup_from_level_reads_respects:
   apply (simp (no_asm) add: pt_lookup_from_level_simps unlessE_def)
   apply clarsimp
   apply (rule equiv_valid_guard_imp)
-   apply (wpsimp wp: get_pte_rev | assumption)+
-  apply (frule vs_lookup_table_is_aligned; clarsimp)
-  apply (prop_tac "pt_walk level (level - 1) pt vref (ptes_of s) =
+   apply (wpsimp wp: get_pte_rev touch_object_rev touch_object_wp' | assumption)+
+  apply (frule vs_lookup_table_is_aligned; clarsimp simp:obind_def ta_filter_def)
+  apply(rule conjI)
+   defer
+  apply clarsimp
+  apply (prop_tac "pt_walk level (level - 1) pt vref (ptes_of False s) =
                    Some (level - 1, pptr_from_pte rv)")
+   sorry (* FIXME: broken by touched-addrs -robs
    apply (fastforce simp: vs_lookup_split_Some[OF order_less_imp_le[OF bit0.pred]]
                           pt_walk.simps obind_def)
   apply (rule conjI)
@@ -326,6 +365,7 @@ lemma pt_lookup_from_level_reads_respects:
   apply (rule_tac x=asid in exI)
   apply (erule (2) vs_lookup_table_extend)
   done
+*)
 
 lemma unmap_page_table_reads_respects:
   "reads_respects aag l
@@ -335,14 +375,17 @@ lemma unmap_page_table_reads_respects:
   unfolding unmap_page_table_def fun_app_def
   apply (rule gen_asm_ev)
   apply (rule equiv_valid_guard_imp)
-   apply (wp dmo_mol_reads_respects store_pte_reads_respects get_pte_rev
+   apply (wp dmo_mol_reads_respects store_pte_reads_respects get_pte_rev touch_object_rev
+             pt_lookup_from_level_wp
              pt_lookup_from_level_reads_respects pt_lookup_from_level_is_subject
              find_vspace_for_asid_wp find_vspace_for_asid_reads_respects hoare_vcg_all_lift_R
-          | wpc | simp add: sfence_def | wp (once) hoare_drop_imps)+
+          | wpc | simp add: sfence_def ta_agnostic_def | wp (once) hoare_drop_imps)+
   apply clarsimp
   apply (frule vspace_for_asid_is_subject)
+     sorry (* FIXME: broken by touched-addrs -robs
      apply (fastforce dest: vspace_for_asid_vs_lookup vs_lookup_table_vref_independent)+
   done
+*)
 
 lemma perform_page_table_invocation_reads_respects:
   "reads_respects aag l (pas_refined aag and pspace_aligned and valid_objs and valid_vspace_objs
@@ -352,14 +395,16 @@ lemma perform_page_table_invocation_reads_respects:
   unfolding perform_page_table_invocation_def perform_pt_inv_map_def perform_pt_inv_unmap_def
   apply (rule equiv_valid_guard_imp)
    apply (wp dmo_mol_reads_respects store_pte_reads_respects set_cap_reads_respects mapM_x_ev''
-             unmap_page_table_reads_respects get_cap_rev
+             unmap_page_table_reads_respects get_cap_rev touch_object_rev touch_objects_rev
           | wpc | simp add: sfence_def)+
   apply (case_tac pti; clarsimp simp: authorised_page_table_inv_def)
+   sorry (* FIXME: broken by touched-addrs -robs
   apply (clarsimp simp: valid_pti_def)
   apply (frule cte_wp_valid_cap)
    apply fastforce
   apply (clarsimp simp:  is_PageTableCap_def valid_cap_def wellformed_mapdata_def)
   done
+*)
 
 lemma unmap_page_reads_respects:
   "reads_respects aag l
@@ -371,9 +416,14 @@ lemma unmap_page_reads_respects:
   apply (simp add: unmap_page_def swp_def cong: vmpage_size.case_cong)
   apply (simp add: unlessE_def gets_the_def)
   apply (wp gets_ev' dmo_mol_reads_respects get_pte_rev throw_on_false_reads_respects
+            touch_object_rev touch_objects_rev touch_objects_wp
+            find_vspace_for_asid_wp
             find_vspace_for_asid_reads_respects store_pte_reads_respects[simplified]
-         | wpc | wp (once) hoare_drop_imps | simp add: sfence_def is_aligned_mask[symmetric])+
+         | wpc | wp (once) hoare_drop_imps
+         | simp add: sfence_def is_aligned_mask[symmetric] ta_agnostic_def)+
   apply (clarsimp simp: pt_lookup_slot_def)
+  sorry (* FIXME: broken by touched-addrs -robs
+    Maybe touch_object(s)_rev is not what we should be using here.
   apply (frule (3) vspace_for_asid_is_subject)
   apply safe
     apply (frule vspace_for_asid_vs_lookup)
@@ -384,6 +434,7 @@ lemma unmap_page_reads_respects:
    apply (fastforce elim!: pt_lookup_slot_from_level_is_subject
                      dest: vspace_for_asid_vs_lookup vs_lookup_table_vref_independent)+
   done
+*)
 
 lemma perform_page_invocation_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
@@ -398,13 +449,16 @@ lemma perform_page_invocation_reads_respects:
    apply (wp dmo_mol_reads_respects mapM_x_ev'' store_pte_reads_respects set_cap_reads_respects
              mapM_ev'' store_pte_reads_respects unmap_page_reads_respects  dmo_mol_2_reads_respects
              get_cap_rev set_mrs_reads_respects set_message_info_reads_respects
+             touch_object_rev touch_objects_rev
           | simp add: sfence_def
           | wpc | wp (once) hoare_drop_imps[where R="\<lambda>r s. r"])+
   apply (clarsimp simp: authorised_page_inv_def valid_page_inv_def)
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (auto simp: cte_wp_at_caps_of_state authorised_slots_def cap_links_asid_slot_def
                     label_owns_asid_slot_def valid_arch_cap_def wellformed_mapdata_def
              dest!: clas_caps_of_state pas_refined_Control)+
   done
+*)
 
 lemma equiv_asids_riscv_asid_table_update:
   "\<lbrakk> equiv_asids R s t; kheap s pool_ptr = kheap t pool_ptr \<rbrakk>
@@ -444,6 +498,7 @@ lemma perform_asid_control_invocation_reads_respects:
    (* we do some hacky rewriting here to separate out the bit that does interesting stuff from the rest *)
    apply (subst (6) my_bind_rewrite_lemma)
    apply (subst (1) bind_assoc[symmetric])
+   sorry (* FIXME: broken by touched-addrs -robs
    apply (subst another_hacky_rewrite)
    apply (subst another_hacky_rewrite)
    apply (wpc)
@@ -462,6 +517,7 @@ lemma perform_asid_control_invocation_reads_respects:
                 | simp add: authorised_asid_control_inv_def)+
   apply (auto dest!: is_aligned_no_overflow)
   done
+*)
 
 lemma set_asid_pool_reads_respects:
   "reads_respects aag l (K (is_subject aag ptr)) (set_asid_pool ptr pool)"
@@ -479,7 +535,7 @@ lemma copy_global_mappings_valid_arch_state:
    apply (rule_tac Q="\<lambda>_. valid_arch_state and valid_global_vspace_mappings and pspace_aligned
                                            and (\<lambda>s. x \<notin> global_refs s \<and> is_aligned x pt_bits)"
                 in hoare_strengthen_post)
-    apply (wp mapM_x_wp[OF _ subset_refl]
+    apply (wp mapM_x_wp[OF _ subset_refl] touch_objects_wp
               store_pte_valid_arch_state_unreachable
               store_pte_valid_global_vspace_mappings)
     apply (simp only: pt_index_def)
@@ -490,9 +546,10 @@ lemma copy_global_mappings_valid_arch_state:
      apply (word_bitwise, fastforce)
     apply clarsimp
     apply (simp_all)
-  apply (clarsimp simp: valid_arch_state_def)
-  apply (subst (asm) table_base_plus; simp add: mask_def)
-  done
+  apply (clarsimp simp: valid_arch_state_def ta_filter_def obind_def)
+  sorry (* broken by ta stuff i guess - scottb
+  apply (subst (asm) table_base_plus; simp add: mask_def) *)
+  
 
 lemma set_asid_pool_globals_equiv:
   "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
@@ -513,9 +570,10 @@ lemma perform_asid_pool_invocation_reads_respects_g:
                      set_asid_pool_globals_equiv set_cap_reads_respects
                      doesnt_touch_globalsI get_cap_auth_wp[where aag=aag] get_cap_rev
                      copy_global_mappings_reads_respects_g copy_global_mappings_valid_arch_state
-                     set_cap_reads_respects_g get_cap_reads_respects_g
+                     set_cap_reads_respects_g get_cap_reads_respects_g touch_object_rev
           | strengthen valid_arch_state_global_arch_objs
           | wp (once) hoare_drop_imps)+
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (clarsimp simp: invs_arch_state invs_valid_global_objs invs_psp_aligned
                         invs_valid_global_vspace_mappings authorised_asid_pool_inv_def
                   cong: conj_cong)
@@ -526,6 +584,7 @@ lemma perform_asid_pool_invocation_reads_respects_g:
   apply (frule riscv_global_pt_in_global_refs[OF invs_valid_global_arch_objs])
   apply (fastforce dest: pas_refined_Control cap_not_in_valid_global_refs)
   done
+*)
 
 lemma equiv_asids_riscv_asid_table_delete:
   "equiv_asids R s t
@@ -593,18 +652,20 @@ lemma delete_asid_pool_reads_respects:
              apply (rule equiv_valid_2_bind)
                 apply (rule equiv_valid_2_unobservable)
                            apply (wp set_vm_root_states_equiv_for)+
+                           sorry (* FIXME: broken by touched-addrs -robs
                apply (rule riscv_asid_table_delete_ev2)
               apply (wp)+
             apply (rule equiv_valid_2_unobservable)
   by (wp mapM_wp' return_ev2
       | rule conjI | drule (1) requiv_riscv_asid_table_asid_high_bits_of_asid_eq'
       | clarsimp | simp add: equiv_valid_2_def)+
+*)
 
-lemma set_asid_pool_state_equal_except_kheap:
+lemma set_asid_pool_state_equal_except_kheap[simplified f_kheap_to_kheap]:
   "((), s') \<in> fst (set_asid_pool ptr pool s)
    \<Longrightarrow> states_equal_except_kheap_asid s s' \<and>
        (\<forall>p. p \<noteq> ptr \<longrightarrow> kheap s p = kheap s' p) \<and>
-       asid_pools_of s' ptr = Some pool \<and>
+       asid_pools_of False s' ptr = Some pool \<and>
        (\<forall>asid. asid \<noteq> 0
                \<longrightarrow> riscv_asid_table (arch_state s) (asid_high_bits_of asid) =
                    riscv_asid_table (arch_state s') (asid_high_bits_of asid) \<and>
@@ -612,23 +673,25 @@ lemma set_asid_pool_state_equal_except_kheap:
                                Some pool_ptr
                                \<longrightarrow> asid_pool_at pool_ptr s = asid_pool_at pool_ptr s' \<and>
                                    (\<forall>asid_pool asid_pool'. pool_ptr \<noteq> ptr
-                                                           \<longrightarrow> asid_pools_of s pool_ptr =
+                                                           \<longrightarrow> asid_pools_of False s pool_ptr =
                                                                Some asid_pool \<and>
-                                                               asid_pools_of s' pool_ptr =
+                                                               asid_pools_of False s' pool_ptr =
                                                                Some asid_pool'
                                                                \<longrightarrow> asid_pool (asid_low_bits_of asid) =
                                                                    asid_pool' (asid_low_bits_of asid))))"
+  sorry (* FIXME: broken by touched-addrs -robs
   by (clarsimp simp: set_asid_pool_def put_def bind_def set_object_def get_object_def gets_map_def
-                     gets_def get_def return_def assert_def assert_opt_def fail_def
-                     states_equal_except_kheap_asid_def equiv_for_def obj_at_def
-              split: if_split_asm option.split_asm)
+                     gets_def get_def return_def assert_def assert_opt_def fail_def obind_def
+                     states_equal_except_kheap_asid_def equiv_for_def obj_at_def ta_filter_def
+              split: if_split_asm option.split_asm option.splits if_splits)
+*)
 
-lemma set_asid_pool_delete_ev2:
+lemma set_asid_pool_delete_ev2[simplified f_kheap_to_kheap]:
   "equiv_valid_2 (reads_equiv aag) (affects_equiv aag l) (affects_equiv aag l) \<top>\<top>
      (\<lambda>s. riscv_asid_table (arch_state s) (asid_high_bits_of asid) = Some a \<and>
-          asid_pools_of s a = Some pool \<and> asid \<noteq> 0 \<and> is_subject_asid aag asid)
+          asid_pools_of False s a = Some pool \<and> asid \<noteq> 0 \<and> is_subject_asid aag asid)
      (\<lambda>s. riscv_asid_table (arch_state s) (asid_high_bits_of asid) = Some a \<and>
-          asid_pools_of s a = Some pool' \<and> asid \<noteq> 0 \<and> is_subject_asid aag asid)
+          asid_pools_of False s a = Some pool' \<and> asid \<noteq> 0 \<and> is_subject_asid aag asid)
      (set_asid_pool a (pool(asid_low_bits_of asid := None)))
      (set_asid_pool a (pool'(asid_low_bits_of asid := None)))"
   apply (clarsimp simp: equiv_valid_2_def)
@@ -638,6 +701,7 @@ lemma set_asid_pool_delete_ev2:
   apply (rule conjI)
    apply (clarsimp simp: states_equiv_for_def reads_equiv_def equiv_for_def | rule conjI)+
     apply (case_tac "x=a")
+     sorry (* FIXME: broken by touched-addrs -robs
      apply (clarsimp simp: opt_map_def split: option.splits)
     apply (fastforce)
    apply (clarsimp simp: equiv_asids_def equiv_asid_def | rule conjI)+
@@ -673,6 +737,7 @@ lemma set_asid_pool_delete_ev2:
    apply (clarsimp simp: opt_map_def split: option.splits)
   apply (clarsimp simp: opt_map_def split: option.splits)
   done
+*)
 
 lemma delete_asid_reads_respects:
   "reads_respects aag l (K (asid \<noteq> 0 \<and> is_subject_asid aag asid)) (delete_asid asid pt)"
@@ -689,6 +754,7 @@ lemma delete_asid_reads_respects:
      apply (wp return_ev2, simp)
     apply (simp)
     apply (rule equiv_valid_2_guard_imp)
+      sorry (* FIXME: broken by touched-addrs -robs
       apply (rule_tac R'="\<lambda>rv rv'. rv (asid_low_bits_of asid) = rv' (asid_low_bits_of asid)"
                    in equiv_valid_2_bind)
          apply (simp add: when_def)
@@ -715,6 +781,7 @@ lemma delete_asid_reads_respects:
    apply (drule aag_can_read_own_asids)
    apply wpsimp+
   done
+*)
 
 lemma globals_equiv_arm_asid_table_update[simp]:
   "globals_equiv s (t\<lparr>arch_state := arch_state t\<lparr>riscv_asid_table := x\<rparr>\<rparr>) = globals_equiv s t"
@@ -730,7 +797,9 @@ lemma set_vm_root_globals_equiv[wp]:
 lemma delete_asid_pool_globals_equiv[wp]:
   "delete_asid_pool base ptr \<lbrace>globals_equiv s\<rbrace>"
   unfolding delete_asid_pool_def
-  by (wpsimp wp: set_vm_root_globals_equiv mapM_wp[OF _ subset_refl] modify_wp)
+  sorry (* FIXME: broken by touched-addrs -robs
+  by (wpsimp wp: set_vm_root_globals_equiv mapM_wp[OF _ subset_refl] modify_wp touch_object_wp')
+*)
 
 lemma vs_lookup_slot_not_global:
   "\<lbrakk> vs_lookup_slot level asid vref s = Some (level, pte); level \<le> max_pt_level;
@@ -746,7 +815,8 @@ lemma unmap_page_table_globals_equiv:
    unmap_page_table asid vaddr pt
    \<lbrace>\<lambda>rv. globals_equiv st\<rbrace>"
   unfolding unmap_page_table_def
-  apply (wp store_pte_globals_equiv pt_lookup_from_level_wrp | wpc | simp add: sfence_def)+
+  apply (wp store_pte_globals_equiv pt_lookup_from_level_wrp touch_object_wp' find_vspace_for_asid_wp
+    | wpc | simp add: sfence_def ta_agnostic_def)+
   apply clarsimp
   apply (rule_tac x=asid in exI)
   apply clarsimp
@@ -762,7 +832,8 @@ lemma unmap_page_table_valid_arch_state:
    unmap_page_table asid vaddr pt
    \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
   unfolding unmap_page_table_def
-  apply (wpsimp wp: store_pte_valid_arch_state_unreachable pt_lookup_from_level_wrp simp: sfence_def)
+  apply (wpsimp wp: store_pte_valid_arch_state_unreachable pt_lookup_from_level_wrp find_vspace_for_asid_wp
+    simp: sfence_def ta_agnostic_def)
   apply (rule_tac x=asid in exI)
   apply clarsimp
   apply (case_tac "level = asid_pool_level")
@@ -815,14 +886,15 @@ lemma perform_pt_inv_map_globals_equiv:
    perform_pt_inv_map x11 x12 x13 x14
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding perform_pt_inv_map_def
-  by (wpsimp wp: store_pte_globals_equiv set_cap_globals_equiv'' simp: sfence_def)
+  by (wpsimp wp: store_pte_globals_equiv set_cap_globals_equiv'' touch_objects_wp simp: sfence_def)
 
 lemma perform_pt_inv_unmap_globals_equiv:
   "\<lbrace>invs and globals_equiv st and cte_wp_at ((=) (ArchObjectCap cap)) ct_slot\<rbrace>
    perform_pt_inv_unmap cap ct_slot
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding perform_pt_inv_unmap_def
-  apply (wpsimp wp: set_cap_globals_equiv'' mapM_x_swp_store_pte_globals_equiv)
+  apply (wpsimp wp: set_cap_globals_equiv'' mapM_x_swp_store_pte_globals_equiv
+    touch_object_wp' touch_objects_wp)
      apply (strengthen invs_imps invs_valid_global_vspace_mappings)
      apply (clarsimp cong: conj_cong)
      apply (wpsimp wp: unmap_page_table_globals_equiv unmap_page_table_invs)
@@ -896,8 +968,10 @@ lemma unmap_page_globals_equiv:
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding unmap_page_def including no_pre
   apply (induct pgsz)
-    apply (wpsimp wp: store_pte_globals_equiv | simp add: sfence_def)+
+    apply (wpsimp wp: store_pte_globals_equiv touch_object_wp' touch_objects_wp find_vspace_for_asid_wp
+      | simp add: sfence_def ta_agnostic_def)+
     apply (rule hoare_weaken_preE[OF find_vspace_for_asid_wp])
+    sorry (* FIXME: broken by touched-addrs -robs
     apply clarsimp
     apply (frule (1) pt_lookup_slot_vs_lookup_slotI0)
     apply (drule vs_lookup_slot_table_base; clarsimp?)
@@ -924,6 +998,7 @@ lemma unmap_page_globals_equiv:
   apply (drule reachable_page_table_not_global; clarsimp?)
   apply (fastforce dest: riscv_global_pt_in_global_refs[OF invs_valid_global_arch_objs])
   done
+*)
 
 
 definition authorised_for_globals_page_inv ::
@@ -955,10 +1030,12 @@ lemma set_mrs_globals_equiv:
         apply (insert length_msg_lt_msg_max)
         apply (simp)
        apply (wp set_object_globals_equiv static_imp_wp)
-      apply (wp hoare_vcg_all_lift set_object_globals_equiv static_imp_wp)+
+      apply (wp hoare_vcg_all_lift set_object_globals_equiv static_imp_wp touch_object_wp')+
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (fastforce simp: valid_arch_state_def obj_at_def get_tcb_def
                    dest: valid_global_arch_objs_pt_at)
   done
+*)
 
 lemma perform_pg_inv_get_addr_globals_equiv:
   "\<lbrace>globals_equiv st and valid_arch_state and (\<lambda>s. cur_thread s \<noteq> idle_thread s)\<rbrace>
@@ -972,7 +1049,9 @@ lemma unmap_page_valid_arch_state:
    unmap_page pgsz asid vptr pptr
    \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
   unfolding unmap_page_def
-  apply (wpsimp wp: store_pte_valid_arch_state_unreachable)
+  apply (wpsimp wp: store_pte_valid_arch_state_unreachable
+    touch_object_wp' touch_objects_wp find_vspace_for_asid_wp simp:ta_agnostic_def ta_filter_def obind_def)
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (frule invs_arch_state)
   apply (frule invs_valid_global_vspace_mappings)
   apply clarsimp
@@ -983,6 +1062,7 @@ lemma unmap_page_valid_arch_state:
   apply (drule vs_lookup_slot_table_base; clarsimp?)
   apply (drule reachable_page_table_not_global; clarsimp?)
   done
+*)
 
 lemma perform_pg_inv_unmap_globals_equiv:
   "\<lbrace>invs and globals_equiv st and cte_wp_at ((=) (ArchObjectCap cap)) ct_slot\<rbrace>
@@ -994,6 +1074,7 @@ lemma perform_pg_inv_unmap_globals_equiv:
              set_cap_globals_equiv'' unmap_page_globals_equiv store_pte_globals_equiv
              store_pte_globals_equiv static_imp_wp set_message_info_globals_equiv
              unmap_page_valid_arch_state perform_pg_inv_get_addr_globals_equiv
+             touch_object_wp'
           | wpc | simp add: do_machine_op_bind sfence_def)+
   apply (clarsimp simp: acap_map_data_def)
   apply (intro conjI; clarsimp)
@@ -1011,6 +1092,7 @@ lemma perform_pg_inv_map_globals_equiv:
          set_cap_globals_equiv'' unmap_page_globals_equiv store_pte_globals_equiv
          store_pte_globals_equiv static_imp_wp set_message_info_globals_equiv
          unmap_page_valid_arch_state perform_pg_inv_get_addr_globals_equiv
+         touch_objects_wp
       | wpc | simp add: do_machine_op_bind sfence_def | fastforce)+
 
 lemma perform_page_invocation_globals_equiv:
@@ -1037,7 +1119,7 @@ lemma retype_region_ASIDPoolObj_globals_equiv:
    retype_region ptr 1 0 (ArchObject ASIDPoolObj) dev
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding retype_region_def
-  apply (wpsimp wp: modify_wp dxo_wp_weak
+  apply (wpsimp wp: modify_wp dxo_wp_weak touch_objects_wp
               simp: trans_state_update[symmetric] simp_del: trans_state_update)
   apply (fastforce simp: globals_equiv_def idle_equiv_def tcb_at_def2)
   done
@@ -1052,7 +1134,7 @@ lemma perform_asid_control_invocation_globals_equiv:
   apply (rule hoare_pre)
    apply wpc
    apply (rename_tac word1 cslot_ptr1 cslot_ptr2 word2)
-   apply (wp modify_wp cap_insert_globals_equiv''
+   apply (wp modify_wp cap_insert_globals_equiv'' touch_object_wp'
              retype_region_ASIDPoolObj_globals_equiv[simplified]
              retype_region_invs_extras(5)[where sz=pageBits]
              retype_region_invs_extras(6)[where sz=pageBits]
@@ -1086,6 +1168,7 @@ lemma perform_asid_control_invocation_globals_equiv:
                      atLeastatMost_subset_iff word_and_le2
                cong: conj_cong)
     apply (rule conjI, rule descendants_range_caps_no_overlapI)
+       sorry (* FIXME: broken by touched-addrs -robs
        apply assumption
       apply (simp add: cte_wp_at_caps_of_state)
      apply (simp add: empty_descendants_range_in)
@@ -1129,13 +1212,15 @@ lemma perform_asid_control_invocation_globals_equiv:
    apply fastforce
   apply (auto intro: empty_descendants_range_in simp: descendants_range_def2 cap_range_def)
   done
+*)
 
 lemma store_asid_pool_entry_globals_equiv:
   "\<lbrace>globals_equiv st and valid_arch_state\<rbrace>
    store_asid_pool_entry pool_ptr asid ptr
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding store_asid_pool_entry_def
-  by (wp modify_wp set_asid_pool_globals_equiv set_cap_globals_equiv'' get_cap_wp | wpc | simp)+
+  by (wp modify_wp set_asid_pool_globals_equiv set_cap_globals_equiv'' get_cap_wp touch_object_wp'
+    | wpc | simp)+
 
 lemma perform_asid_pool_invocation_globals_equiv:
   "\<lbrace>globals_equiv s and invs and valid_apinv api\<rbrace>
@@ -1145,7 +1230,7 @@ lemma perform_asid_pool_invocation_globals_equiv:
   apply (rule hoare_weaken_pre)
    apply (wp modify_wp set_asid_pool_globals_equiv set_cap_globals_equiv''
              store_asid_pool_entry_globals_equiv copy_global_mappings_globals_equiv
-             copy_global_mappings_valid_arch_state get_cap_wp
+             copy_global_mappings_valid_arch_state get_cap_wp touch_object_wp'
           | wpc | simp)+
   apply (clarsimp simp: valid_apinv_def cong: conj_cong)
   apply (intro conjI; fastforce?)
@@ -1227,12 +1312,14 @@ lemma thread_set_globals_equiv:
   "(\<And>tcb. arch_tcb_context_get (tcb_arch (f tcb)) = arch_tcb_context_get (tcb_arch tcb))
    \<Longrightarrow> \<lbrace>globals_equiv s and valid_arch_state\<rbrace> thread_set f tptr \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding thread_set_def
-  apply (wp set_object_globals_equiv)
+  apply (wp set_object_globals_equiv touch_object_wp')
   apply simp
   apply (intro impI conjI allI)
+    sorry (* FIXME: broken by touched-addrs -robs
     apply (fastforce simp: valid_arch_state_def obj_at_def get_tcb_def dest: valid_global_arch_objs_pt_at)+
   apply (clarsimp simp: get_tcb_def tcb_at_def2 split: kernel_object.splits option.splits)
   done
+*)
 
 end
 

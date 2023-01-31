@@ -138,11 +138,12 @@ lemma set_untyped_cap_as_full_valid_arch_caps [CSpace_AI_assms]:
    \<lbrace>\<lambda>ya. valid_arch_caps\<rbrace>"
   supply if_split[split del]
   apply (clarsimp simp: valid_arch_caps_def set_untyped_cap_as_full_def)
-  apply (wpsimp wp: set_cap_valid_vs_lookup set_cap_valid_table_caps
+  apply (wpsimp wp: touch_object_wp' set_cap_valid_vs_lookup set_cap_valid_table_caps
                 simp_del: fun_upd_apply simp: cte_wp_at_caps_of_state)
   apply (fastforce simp: unique_table_refs_upd_eqD unique_table_caps_upd_eqD
                          is_cap_simps cte_wp_at_caps_of_state)
   done
+
 
 lemma set_untyped_cap_as_full[wp, CSpace_AI_assms]:
   "\<lbrace>\<lambda>s. no_cap_to_obj_with_diff_ref a b s \<and> cte_wp_at ((=) src_cap) src s\<rbrace>
@@ -177,6 +178,7 @@ lemma vs_lookup_pages_non_aobj_upd:
   "\<lbrakk> kheap s p = Some ko; \<not> is_ArchObj ko; \<not> is_ArchObj ko' \<rbrakk>
    \<Longrightarrow> vs_lookup_pages (s\<lparr>kheap := kheap s(p \<mapsto> ko')\<rparr>) = vs_lookup_pages s"
   unfolding vs_lookup_target_def vs_lookup_slot_def
+  apply (simp only:f_kheap_to_kheap)
   apply (frule aobjs_of_non_aobj_upd[where ko'=ko'], simp+)
   apply (rule ext)+
   apply (simp add: obind_assoc)
@@ -200,7 +202,8 @@ lemma set_untyped_cap_as_full_not_reachable_pg_cap[wp]:
    \<lbrace>\<lambda>rv s. \<not> reachable_frame_cap cap' s\<rbrace>"
   apply (clarsimp simp: set_untyped_cap_as_full_def set_cap_def split_def
                         set_object_def)
-  apply (wpsimp wp: get_object_wp simp_del: fun_upd_apply)
+  apply (wpsimp wp: get_object_wp touch_object_wp' simp_del: fun_upd_apply)
+  
   apply (auto simp: obj_at_def reachable_frame_cap_def is_cap_simps
                     reachable_target_def vs_lookup_target_non_aobj_upd)
   done
@@ -230,12 +233,15 @@ lemma set_untyped_cap_as_full_reachable_target[wp]:
   unfolding reachable_target_def
   apply (cases avref, clarsimp)
   apply (rule hoare_lift_Pf[where f="pool_for_asid asid" for asid])
-  apply (clarsimp simp: set_untyped_cap_as_full_def, wp)+
+  apply (clarsimp simp: set_untyped_cap_as_full_def, wp touch_object_wp')+
+   apply simp
+  apply (clarsimp simp: set_untyped_cap_as_full_def, wp touch_object_wp')+
+   apply simp
   done
 
-(* FIXME this is generic *)
 crunches set_untyped_cap_as_full
-  for aobjs_of[wp]: "\<lambda>s. P (aobjs_of s)"
+  for aobjs_of[wp]: "\<lambda>s. P (kheap s |> aobj_of)"
+  (wp: crunch_wps touch_object_wp ignore:do_machine_op)
 
 lemma is_derived_is_pt:
   "is_derived m p cap cap' \<Longrightarrow> (is_pt_cap cap = is_pt_cap cap')"
@@ -259,7 +265,7 @@ lemma cap_insert_valid_arch_caps [CSpace_AI_assms]:
         apply (erule iffD2[OF caps_of_state_cteD'])
        apply (wp set_untyped_cap_as_full_cte_wp_at hoare_vcg_all_lift hoare_vcg_imp_lift
                  set_untyped_cap_as_full_cte_wp_at_neg hoare_vcg_ex_lift | clarsimp)+
-     apply (wp get_cap_wp)+
+     apply (wp get_cap_wp touch_object_wp)+
   apply (intro conjI allI impI disj_subst)
        apply simp
       apply clarsimp
@@ -303,6 +309,9 @@ end
 
 global_interpretation cap_insert_crunches?: cap_insert_crunches .
 
+sublocale touched_addresses_inv \<subseteq> no_cap_to_obj_with_diff_ref:touched_addresses_P_inv _ _
+                                    "no_cap_to_obj_with_diff_ref a b"
+  by unfold_locales (clarsimp simp: ta_agnostic_def no_cap_to_obj_with_diff_ref_def)
 
 context Arch begin global_naming RISCV64
 
@@ -312,7 +321,7 @@ lemma cap_insert_cap_refs_in_kernel_window[wp, CSpace_AI_assms]:
      cap_insert cap src dest
    \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
   apply (simp add: cap_insert_def set_untyped_cap_as_full_def)
-  apply (wp get_cap_wp | simp split del: if_split)+
+  apply (wp get_cap_wp touch_object_wp | simp split del: if_split)+
   apply (clarsimp simp: cte_wp_at_caps_of_state is_derived_def)
   apply (frule(1) cap_refs_in_kernel_windowD[where ptr=src])
   apply auto
@@ -418,7 +427,7 @@ lemma setup_reply_master_arch_caps[wp, CSpace_AI_assms]:
      setup_reply_master t
    \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
   apply (simp add: setup_reply_master_def)
-  apply (wp set_cap_valid_arch_caps get_cap_wp)
+  apply (wp set_cap_valid_arch_caps get_cap_wp touch_object_wp)
   apply (clarsimp simp: cte_wp_at_caps_of_state
                         is_pt_cap_def vs_cap_ref_def)
   apply (rule no_cap_to_obj_with_diff_ref_triv,
@@ -433,7 +442,7 @@ lemma setup_reply_master_cap_refs_in_kernel_window[wp, CSpace_AI_assms]:
       setup_reply_master t
    \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
   apply (simp add: setup_reply_master_def)
-  apply (wp get_cap_wp)
+  apply (wp get_cap_wp touch_object_wp)
   apply (clarsimp simp: pspace_in_kernel_window_def obj_at_def
                         cap_range_def)
   done
@@ -472,10 +481,11 @@ lemma cap_insert_simple_arch_caps_no_ap:
     set_untyped_cap_as_full_empty_table_at hoare_vcg_ex_lift
     set_untyped_cap_as_full_caps_of_state_diff[where dest=dest]
     | wps)+
-      apply (wp get_cap_wp)+
+      apply (wp get_cap_wp touch_object_wp)+
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (intro conjI impI allI)
-  by (auto simp:is_simple_cap_def[simplified is_simple_cap_arch_def] is_cap_simps)
+  apply (auto simp:is_simple_cap_def[simplified is_simple_cap_arch_def] is_cap_simps)
+  done
 
 lemma setup_reply_master_ioports[wp, CSpace_AI_assms]:
   "\<lbrace>valid_ioports\<rbrace> setup_reply_master c \<lbrace>\<lambda>rv. valid_ioports\<rbrace>"

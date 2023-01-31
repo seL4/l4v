@@ -19,9 +19,11 @@ text \<open>
 definition lookup_ipc_buffer :: "bool \<Rightarrow> obj_ref \<Rightarrow> (obj_ref option,'z::state_ext) s_monad"
   where
   "lookup_ipc_buffer is_receiver thread \<equiv> do
+     touch_object thread;
      buffer_ptr \<leftarrow> thread_get tcb_ipc_buffer thread;
      buffer_frame_slot \<leftarrow> return (thread, tcb_cnode_index 4);
-     buffer_cap \<leftarrow> get_cap buffer_frame_slot;
+     touch_object (fst buffer_frame_slot);
+     buffer_cap \<leftarrow> get_cap True buffer_frame_slot;
      case buffer_cap of
        ArchObjectCap (FrameCap p R vms False _) \<Rightarrow>
          if vm_read_write \<subseteq> R \<or> vm_read_only \<subseteq> R \<and> \<not>is_receiver
@@ -41,19 +43,31 @@ definition vspace_for_pool :: "obj_ref \<Rightarrow> asid \<Rightarrow> (obj_ref
      K $ pool (asid_low_bits_of asid)
    }"
 
-definition vspace_for_asid :: "asid \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref option"
+definition vspace_for_asid :: "bool \<Rightarrow> asid \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref option"
   where
-  "vspace_for_asid asid = do {
+  "vspace_for_asid ta_f asid = do {
+     \<comment> \<open>TODO: Increase this 0 to the maximum per-domain ASID once we reserve these
+         for each of the per-domain top-level kernel page tables. -robs\<close>
      oassert (0 < asid);
      pool_ptr \<leftarrow> pool_for_asid asid;
-     vspace_for_pool pool_ptr asid \<circ> asid_pools_of
+     vspace_for_pool pool_ptr asid \<circ> asid_pools_of ta_f
    }"
 
 text \<open>Locate the top-level page table associated with a given virtual ASID.\<close>
 definition find_vspace_for_asid :: "asid \<Rightarrow> (obj_ref,'z::state_ext) lf_monad"
   where
   "find_vspace_for_asid asid \<equiv> doE
-    vspace_opt \<leftarrow> liftE $ gets $ vspace_for_asid asid;
+    \<comment> \<open>Account for vspace_for_asid's access to any ASID pool it uses or vspace root it returns.
+      Note: We can't similarly add the top-level ASID table (riscv_asid_table) to the TA set using
+      touch_object because it's not on the kheap and doesn't have an address in the ASpec.
+      Even if we added it to the TA set, no assertion currently below would enforce it's there;
+      `vspace_for_asid True` invocation's use of `f_kheap` doesn't affect its accessibility. -robs\<close>
+    pool_ptr_opt \<leftarrow> liftE $ gets $ pool_for_asid asid;
+    vspace_opt \<leftarrow> liftE $ gets $ vspace_for_asid False asid;
+    liftE $ case pool_ptr_opt of Some pool_ptr \<Rightarrow> touch_object pool_ptr | None \<Rightarrow> return ();
+    liftE $ case vspace_opt of Some vspace \<Rightarrow> touch_object vspace | None \<Rightarrow> return ();
+    vspace_ta_f_opt \<leftarrow> liftE $ gets $ vspace_for_asid True asid;
+    assertE (vspace_opt \<noteq> None \<longrightarrow> vspace_ta_f_opt \<noteq> None);
     throw_opt InvalidRoot vspace_opt
   odE"
 
@@ -101,7 +115,8 @@ definition set_vm_root :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
   where
   "set_vm_root tcb \<equiv> do
     thread_root_slot \<leftarrow> return (tcb, tcb_cnode_index 1);
-    thread_root \<leftarrow> get_cap thread_root_slot;
+    touch_object (fst thread_root_slot);
+    thread_root \<leftarrow> get_cap True thread_root_slot;
     (case thread_root of
        ArchObjectCap (PageTableCap pt (Some (asid, _))) \<Rightarrow> doE
            pt' \<leftarrow> find_vspace_for_asid asid;
@@ -132,6 +147,7 @@ definition delete_asid_pool :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'
      assert (asid_low_bits_of base = 0);
      asid_table \<leftarrow> gets (riscv_asid_table \<circ> arch_state);
      when (asid_table (asid_high_bits_of base) = Some ptr) $ do
+       touch_object ptr;
        pool \<leftarrow> get_asid_pool ptr;
        asid_table' \<leftarrow> return $ asid_table (asid_high_bits_of base:= None);
        modify (\<lambda>s. s \<lparr> arch_state := (arch_state s) \<lparr> riscv_asid_table := asid_table' \<rparr>\<rparr>);
@@ -148,6 +164,7 @@ definition delete_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::st
      case asid_table (asid_high_bits_of asid) of
        None \<Rightarrow> return ()
      | Some pool_ptr \<Rightarrow> do
+         touch_object pool_ptr;
          pool \<leftarrow> get_asid_pool pool_ptr;
          when (pool (asid_low_bits_of asid) = Some pt) $ do
            do_machine_op $ hwASIDFlush (ucast asid);
@@ -164,6 +181,7 @@ definition unmap_page_table :: "asid \<Rightarrow> vspace_ref \<Rightarrow> obj_
   "unmap_page_table asid vaddr pt \<equiv> doE
      top_level_pt \<leftarrow> find_vspace_for_asid asid;
      pt_slot \<leftarrow> pt_lookup_from_level max_pt_level top_level_pt vaddr pt;
+     liftE $ touch_object pt_slot;
      liftE $ store_pte pt_slot InvalidPTE;
      liftE $ do_machine_op sfence
    odE <catch> (K $ return ())"
@@ -181,8 +199,8 @@ definition vs_lookup_table :: "vm_level \<Rightarrow> asid \<Rightarrow> vspace_
      if bot_level = asid_pool_level
      then oreturn (asid_pool_level, pool_ptr)
      else do {
-       top_level_pt \<leftarrow> vspace_for_pool pool_ptr asid \<circ> asid_pools_of;
-       pt_walk max_pt_level bot_level top_level_pt vptr \<circ> ptes_of
+       top_level_pt \<leftarrow> vspace_for_pool pool_ptr asid \<circ> asid_pools_of False;
+       pt_walk max_pt_level bot_level top_level_pt vptr \<circ> ptes_of False
      }
    }"
 
@@ -201,13 +219,52 @@ definition vs_lookup_slot :: "vm_level \<Rightarrow> asid \<Rightarrow> vspace_r
        oreturn (level', pt_slot_offset level' table vref)
    }"
 
+definition vs_all_pts_of_from_level ::
+  "vm_level \<Rightarrow> vm_level \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref set"
+  where
+  "vs_all_pts_of_from_level level bot_level asid vptr s \<equiv> {ptr. (\<exists> l l'.
+     l \<le> level \<and> l \<ge> bot_level \<and>
+     vs_lookup_table l asid vptr s = Some (l', ptr))}"
+
+definition vs_all_pts_of ::
+  "asid \<Rightarrow> vspace_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref set"
+  where
+  "vs_all_pts_of \<equiv> vs_all_pts_of_from_level max_pt_level 0"
+
+thm pt_lookup_slot_def
+thm pt_lookup_slot_from_level_def
+definition pt_all_slots_of ::
+  "vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref \<rightharpoonup> pte) \<Rightarrow> obj_ref set"
+  where
+  "pt_all_slots_of ltop pt vptr kh \<equiv> {ptr. (\<exists>lbot l.
+    pt_walk ltop lbot pt vptr kh = Some (l, ptr)
+  )}"
+
+
+definition pt_all_slots_of'' ::
+  "vm_level \<Rightarrow> obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref \<rightharpoonup> pte) \<Rightarrow> obj_ref set"
+  where
+  "pt_all_slots_of'' ltop pt vptr kh \<equiv> {ptr. (\<exists>l.
+    pt_lookup_slot_from_level ltop 0 pt vptr kh = Some (l, ptr)
+  )}"
+
+definition pt_all_slots_of' ::
+  "obj_ref \<Rightarrow> vspace_ref \<Rightarrow> (obj_ref \<rightharpoonup> pte) \<Rightarrow> obj_ref set"
+  where
+  "pt_all_slots_of' pt vptr kh \<equiv> {ptr. (\<exists>l'.
+    pt_lookup_slot pt vptr kh = Some (l', ptr)
+  )}"
+
 text \<open>Unmap a mapped page if the given mapping details are still current.\<close>
 definition unmap_page :: "vmpage_size \<Rightarrow> asid \<Rightarrow> vspace_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
   where
   "unmap_page pgsz asid vptr pptr \<equiv> doE
      top_level_pt \<leftarrow> find_vspace_for_asid asid;
-     (lev, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot top_level_pt vptr \<circ> ptes_of;
+     accessed_pts \<leftarrow> liftE $ gets $ ((pt_all_slots_of max_pt_level top_level_pt vptr) \<circ> ptes_of False);
+     liftE $ touch_objects accessed_pts;
+     (lev, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot top_level_pt vptr \<circ> ptes_of True;
      unlessE (pt_bits_left lev = pageBitsForSize pgsz) $ throwError InvalidRoot;
+     liftE $ touch_object slot;
      pte \<leftarrow> liftE $ get_pte slot;
      unlessE (is_PagePTE pte \<and> pptr_from_pte pte = pptr) $ throwError InvalidRoot;
      liftE $ store_pte slot InvalidPTE;
@@ -283,6 +340,16 @@ definition in_user_frame :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightar
   where
   "in_user_frame p s \<equiv>
      \<exists>sz. kheap s (p && ~~ mask (pageBitsForSize sz)) = Some (ArchObj (DataPage False sz))"
+
+definition user_frames_of :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref set"
+  where
+  "user_frames_of p s \<equiv> {p'.
+     \<exists>sz. p' = (p && ~~ mask (pageBitsForSize sz)) \<and>
+          kheap s p' = Some (ArchObj (DataPage False sz))}"
+
+lemma in_user_frame_from_user_frames_of:
+  "in_user_frame p s = (user_frames_of p s \<noteq> {})"
+  by (clarsimp simp:in_user_frame_def user_frames_of_def)
 
 definition prepare_thread_delete :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
   where

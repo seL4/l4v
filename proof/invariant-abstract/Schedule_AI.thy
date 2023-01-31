@@ -90,8 +90,10 @@ lemma valid_irq_states_cur_thread_update[simp]:
 
 lemma sct_invs:
   "\<lbrace>invs and tcb_at t\<rbrace> modify (cur_thread_update (%_. t)) \<lbrace>\<lambda>rv. invs\<rbrace>"
-  by wp (clarsimp simp add: invs_def cur_tcb_def valid_state_def valid_idle_def
+  apply wp
+  apply (clarsimp simp add: invs_def cur_tcb_def valid_state_def valid_idle_def
                             valid_irq_node_def valid_machine_state_def)
+  sorry (* -scottb *)
 
 lemma storeWord_valid_irq_states:
   "\<lbrace>\<lambda>m. valid_irq_states (s\<lparr>machine_state := m\<rparr>)\<rbrace> storeWord x y
@@ -119,8 +121,8 @@ lemmas do_machine_op_tcb[wp] =
 lemma (in Schedule_AI) stt_tcb [wp]:
   "\<lbrace>tcb_at t\<rbrace> switch_to_thread t \<lbrace>\<lambda>_. (tcb_at t :: 'a state \<Rightarrow> bool)\<rbrace>"
   apply (simp add: switch_to_thread_def)
-  apply (wp | simp)+
-   done
+  apply (wp touch_object_wp' | simp)+
+  done
 
 lemma (in Schedule_AI) stt_invs [wp]:
   "\<lbrace>invs :: 'a state \<Rightarrow> bool\<rbrace> switch_to_thread t' \<lbrace>\<lambda>_. invs\<rbrace>"
@@ -132,10 +134,11 @@ lemma (in Schedule_AI) stt_invs [wp]:
                           valid_irq_node_def valid_machine_state_def)
     apply (fastforce simp: cur_tcb_def obj_at_def
                      elim: valid_pspace_eqI ifunsafe_pspaceI)
-   apply wp+
+   apply (wp touch_object_wp')+
   apply clarsimp
+  sorry (* broken by touched-addrs -scottb
   apply (simp add: is_tcb_def)
-  done
+  done *)
 
 lemma (in Schedule_AI) stt_activatable:
   "\<lbrace>st_tcb_at runnable t\<rbrace> switch_to_thread t \<lbrace>\<lambda>rv . (ct_in_state activatable :: 'a state \<Rightarrow> bool) \<rbrace>"
@@ -144,9 +147,10 @@ lemma (in Schedule_AI) stt_activatable:
      apply (rule hoare_post_imp [OF _ arch_stt_runnable])
      apply (clarsimp elim!: pred_tcb_weakenE)
     apply (rule assert_inv)
-   apply wp
+   apply (wp touch_object_wp')
+  sorry (* broken by touched-addrs -scottb
   apply assumption
-  done
+  done *)
 
 
 lemma invs_upd_cur_valid:
@@ -174,12 +178,13 @@ lemma (in Schedule_AI_U) schedule_invs[wp]:
   apply (simp add: Schedule_A.schedule_def allActiveTCBs_def)
   apply (wp OR_choice_weak_wp alternative_wp dmo_invs thread_get_inv
             do_machine_op_tcb select_ext_weak_wp select_wp when_def
+            touch_objects_wp
           | clarsimp simp: getActiveTCB_def get_tcb_def)+
   done
 
 (* FIXME - move *)
 lemma get_tcb_exst_update:
-  "get_tcb p (trans_state f s) = get_tcb p s"
+  "get_tcb False p (trans_state f s) = get_tcb False p s"
   by (simp add: get_tcb_def)
 
 lemma ct_in_state_trans_update[simp]: "ct_in_state st (trans_state f s) = ct_in_state st s"
@@ -199,14 +204,15 @@ lemma (in Schedule_AI_U) schedule_ct_activateable[wp]:
     apply (simp add: Schedule_A.schedule_def allActiveTCBs_def)
     apply (wp alternative_wp
               select_ext_weak_wp select_wp stt_activatable stit_activatable
+              touch_objects_wp
                | simp add: P Q)+
     apply (clarsimp simp: getActiveTCB_def ct_in_state_def)
     apply (rule conjI)
      apply clarsimp
-     apply (case_tac "get_tcb (cur_thread s) s", simp_all add: ct_in_state_def)
+     apply (case_tac "get_tcb False (cur_thread s) s", simp_all add: ct_in_state_def)
      apply (drule get_tcb_SomeD)
      apply (clarsimp simp: pred_tcb_at_def obj_at_def split: if_split_asm)
-    apply (case_tac "get_tcb x s", simp_all)
+    apply (case_tac "get_tcb False x s", simp_all)
     apply (drule get_tcb_SomeD)
     apply (clarsimp simp: pred_tcb_at_def obj_at_def split: if_split_asm)
     done

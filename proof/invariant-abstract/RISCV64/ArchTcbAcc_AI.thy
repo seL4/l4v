@@ -72,10 +72,11 @@ proof -
   show ?thesis
     apply (wp dmo_invs)
     apply (clarsimp simp: storeWord_def invs_def valid_state_def upto0_7_def)
-    apply (fastforce simp: valid_machine_state_def in_user_frame_def
+    apply (clarsimp simp: valid_machine_state_def in_user_frame_def simpler_gets_def
                assert_def simpler_modify_def fail_def bind_def return_def
                pageBits_def aligned_offset_ignore
              split: if_split_asm)
+    apply fastforce
     done
 qed
 
@@ -89,7 +90,7 @@ lemma thread_set_hyp_refs_trivial [TcbAcc_AI_assms]:
   assumes y: "\<And>tcb. tcb_arch_ref (f tcb) = tcb_arch_ref tcb"
   shows      "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace> thread_set f t \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
   apply (simp add: thread_set_def set_object_def get_object_def)
-  apply wp
+  apply (wp touch_object_wp')
   apply (clarsimp dest!: get_tcb_SomeD)
   apply (clarsimp elim!: rsubst[where P=P])
   apply (rule all_ext;
@@ -107,7 +108,7 @@ lemma mab_wb [simp]:
 
 lemma get_cap_valid_ipc [TcbAcc_AI_assms]:
   "\<lbrace>valid_objs and obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> tcb_ipc_buffer tcb = v) t\<rbrace>
-     get_cap (t, tcb_cnode_index 4)
+     get_cap ta_f (t, tcb_cnode_index 4)
    \<lbrace>\<lambda>rv s. valid_ipc_buffer_cap rv v\<rbrace>"
   apply (wp get_cap_wp)
   apply clarsimp
@@ -138,7 +139,7 @@ lemma as_user_hyp_refs_of[wp, TcbAcc_AI_assms]:
   "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>
      as_user t m
    \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
-  apply (wp as_user_wp_thread_set_helper
+  apply (wp touch_object_wp' as_user_wp_thread_set_helper
             thread_set_hyp_refs_trivial | simp)+
   done
 

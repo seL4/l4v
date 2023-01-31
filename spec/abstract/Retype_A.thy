@@ -53,6 +53,7 @@ where
     cdt \<leftarrow> gets cdt;
     set_cdt (cdt (dest \<mapsto> untyped));
     do_extended_op (create_cap_ext untyped dest dest_p);
+    touch_object (fst dest);
     set_original dest True;
     set_cap (default_cap type oref bits is_device) dest
    od"
@@ -105,6 +106,7 @@ where
     when (type \<noteq> Untyped) (do
       kh \<leftarrow> gets kheap;
       kh' \<leftarrow> return $ foldr (\<lambda>p kh. kh(p \<mapsto> default_object type dev o_bits)) ptrs kh;
+      touch_objects (set ptrs);
       do_extended_op (retype_region_ext ptrs type);
       modify $ kheap_update (K kh')
     od);
@@ -148,12 +150,14 @@ definition
   reset_untyped_cap :: "cslot_ptr \<Rightarrow> (unit,'z::state_ext) p_monad"
 where
   "reset_untyped_cap src_slot = doE
-  cap \<leftarrow> liftE $ get_cap src_slot;
+  liftE $ touch_object (fst src_slot);
+  cap \<leftarrow> liftE $ get_cap True src_slot;
   sz \<leftarrow> returnOk $ bits_of cap;
   base \<leftarrow> returnOk $ obj_ref_of cap;
   if free_index_of cap = 0
     then returnOk ()
   else doE
+    liftE $ touch_object base;
     liftE $ delete_objects base sz;
   dev \<leftarrow> returnOk $ is_device_untyped_cap cap;
 
@@ -185,7 +189,8 @@ doE
   whenE reset $ reset_untyped_cap src_slot;
   liftE $ do
 
-  cap \<leftarrow> get_cap src_slot;
+  touch_object (fst src_slot);
+  cap \<leftarrow> get_cap True src_slot;
 
   \<comment> \<open>Update the untyped cap to track the amount of space used.\<close>
   total_object_size \<leftarrow> return $ (of_nat (length slots) << (obj_bits_api new_type obj_sz));

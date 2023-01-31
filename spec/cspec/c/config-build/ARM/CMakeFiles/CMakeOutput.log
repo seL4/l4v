@@ -1,4 +1,4 @@
-The system is: Linux - 5.14.0-2-amd64 - x86_64
+The system is: Linux - 5.17.0-1-amd64 - x86_64
 Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
 Compiler: /usr/bin/cc 
 Build flags: 
@@ -10,11 +10,11 @@ The output was:
 
 Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "a.out"
 
-The C compiler identification is GNU, found in "/home/sbuckley/repos/verification_timeprot/l4v/spec/cspec/c/config-build/ARM/CMakeFiles/3.18.4/CompilerIdC/a.out"
+The C compiler identification is GNU, found in "/home/sbuckley/repos/verification_timeprot/l4v/spec/cspec/c/config-build/ARM/CMakeFiles/3.23.1/CompilerIdC/a.out"
 
 Checking whether the ASM compiler is GNU using "--version" matched "(GNU assembler)|(GCC)|(Free Software Foundation)":
-cc (Debian 10.3.0-11) 10.3.0
-Copyright (C) 2020 Free Software Foundation, Inc.
+cc (Debian 11.3.0-1) 11.3.0
+Copyright (C) 2021 Free Software Foundation, Inc.
 This is free software; see the source for copying conditions.  There is NO
 warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 

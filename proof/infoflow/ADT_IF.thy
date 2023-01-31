@@ -1443,7 +1443,7 @@ definition big_step_ADT_A_if ::
   "big_step_ADT_A_if utf \<equiv> big_step_adt (ADT_A_if utf) big_step_R big_step_evmap"
 
 definition cur_context where
-  "cur_context s = arch_tcb_context_get (tcb_arch (the (get_tcb (cur_thread s) s)))"
+  "cur_context s = arch_tcb_context_get (tcb_arch (the (get_tcb False (cur_thread s) s)))"
 
 
 subsection \<open>Locales setup\<close>
@@ -1673,7 +1673,7 @@ lemma handle_preemption_context:
   done
 
 lemma get_tcb_machine_stat_update[simp]:
-  "get_tcb t (s\<lparr>machine_state := x\<rparr>) = get_tcb t s"
+  "get_tcb False t (s\<lparr>machine_state := x\<rparr>) = get_tcb False t s"
   by (simp add: get_tcb_def)
 
 lemma handle_preemption_globals_equiv[wp]:

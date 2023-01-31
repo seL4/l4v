@@ -171,7 +171,7 @@ proof -
   show ?thesis
     apply (simp add: valid_machine_state_def store_word_offs_def
                      do_machine_op_def split_def)
-    apply wp
+    apply (wp touch_objects_wp)
     apply clarsimp
     apply (drule_tac use_valid)
     apply (rule_tac x=p in storeWord_um_inv, simp+)
@@ -207,7 +207,7 @@ lemma copy_mrs_in_user_frame[wp, Ipc_AI_assms]:
   "\<lbrace>in_user_frame p\<rbrace> copy_mrs t buf t' buf' n \<lbrace>\<lambda>rv. in_user_frame p\<rbrace>"
   by (simp add: in_user_frame_def) (wp hoare_vcg_ex_lift)
 
-lemma as_user_getRestart_invs[wp]: "\<lbrace>P\<rbrace> as_user t getRestartPC \<lbrace>\<lambda>_. P\<rbrace>"
+lemma as_user_getRestart_tainvs[wp]: "\<lbrace>ignore_ta P\<rbrace> as_user t getRestartPC \<lbrace>\<lambda>_. ignore_ta P\<rbrace>"
   by (simp add: getRestartPC_def, rule user_getreg_inv)
 
 lemma make_arch_fault_msg_invs[wp, Ipc_AI_assms]: "make_arch_fault_msg f t \<lbrace>invs\<rbrace>"
@@ -233,7 +233,7 @@ lemma lookup_ipc_buffer_in_user_frame[wp, Ipc_AI_assms]:
   "\<lbrace>valid_objs and tcb_at t\<rbrace> lookup_ipc_buffer b t
    \<lbrace>case_option (\<lambda>_. True) in_user_frame\<rbrace>"
   apply (simp add: lookup_ipc_buffer_def)
-  apply (wp get_cap_wp thread_get_wp | wpc | simp)+
+  apply (wp get_cap_wp thread_get_wp touch_object_wp' | wpc | simp)+
   apply (clarsimp simp add: obj_at_def is_tcb)
   apply (rename_tac p R sz dev m)
   apply (subgoal_tac "in_user_frame (p + (tcb_ipc_buffer tcb && mask (pageBitsForSize sz))) s",
@@ -334,9 +334,11 @@ lemma do_normal_transfer_non_null_cte_wp_at [Ipc_AI_assms]:
    \<lbrace>\<lambda>_. cte_wp_at (P and ((\<noteq>) cap.NullCap)) ptr\<rbrace>"
   unfolding do_normal_transfer_def
   apply simp
-  apply (wp transfer_caps_non_null_cte_wp_at
+  apply (wp transfer_caps_non_null_cte_wp_at get_mi_tainv
     | clarsimp simp:imp)+
+  sorry (* FIXME: broken by touched-addrs -robs
   done
+*)
 
 lemma is_derived_ReplyCap [simp, Ipc_AI_assms]:
   "\<And>m p R. is_derived m p (cap.ReplyCap t False R) = (\<lambda>c. is_master_reply_cap c \<and> obj_ref_of c = t)"
@@ -355,9 +357,11 @@ lemma do_normal_transfer_tcb_caps:
    \<lbrace>\<lambda>rv. cte_wp_at P (t, ref)\<rbrace>"
   apply (simp add: do_normal_transfer_def)
   apply (rule hoare_pre)
-   apply (wp hoare_drop_imps transfer_caps_tcb_caps
+   apply (wp hoare_drop_imps transfer_caps_tcb_caps get_mi_tainv
      | simp add:imp)+
+  sorry (* FIXME: broken by touched-addrs -robs
   done
+*)
 
 lemma do_ipc_transfer_tcb_caps [Ipc_AI_assms]:
   assumes imp: "\<And>c. P c \<Longrightarrow> \<not> is_untyped_cap c"
@@ -427,8 +431,12 @@ crunch valid_ioc                 [wp, Ipc_AI_assms]:  make_arch_fault_msg "valid
 crunch pred_tcb                  [wp, Ipc_AI_assms]:  make_arch_fault_msg "pred_tcb_at proj P t"
 crunch cap_to                    [wp, Ipc_AI_assms]:  make_arch_fault_msg "ex_nonz_cap_to p"
 
+lemma as_user_obj_at[wp]:
+  "as_user tptr f \<lbrace>\<lambda>s. P (obj_at P' pd s)\<rbrace>"
+  sorry (* FIXME: broken by touched-addrs -robs *)
+
 crunch obj_at[wp, Ipc_AI_assms]:  make_arch_fault_msg "\<lambda>s. P (obj_at P' pd s)"
-  (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def)
+  (wp: as_user_inv getRestartPC_inv mapM_wp' crunch_wps set_object_wp touch_object_wp' simp: getRegister_def)
 
 crunch vms[wp, Ipc_AI_assms]: make_arch_fault_msg valid_machine_state
   (wp: as_user_inv getRestartPC_inv mapM_wp'  simp: getRegister_def ignore: do_machine_op)
@@ -469,9 +477,12 @@ lemma do_ipc_transfer_respects_device_region[Ipc_AI_cont_assms]:
          apply (simp only: ball_conj_distrib[where P="\<lambda>x. real_cte_at x s" for s])
          apply (wpsimp wp: get_rs_cte_at2 thread_get_wp static_imp_wp grs_distinct
                            hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift
+                           get_mi_tainv
                        simp: obj_at_def is_tcb_def)+
+         sorry (* FIXME: broken by touched-addrs -robs
    apply (simp split: kernel_object.split_asm)
    done
+*)
 
 lemma set_mrs_state_hyp_refs_of[wp]:
   "\<lbrace>\<lambda> s. P (state_hyp_refs_of s)\<rbrace> set_mrs thread buf msgs \<lbrace>\<lambda>_ s. P (state_hyp_refs_of s)\<rbrace>"

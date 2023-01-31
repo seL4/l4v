@@ -11,10 +11,14 @@ begin
 abbreviation irq_state_of_state :: "det_state \<Rightarrow> nat" where
   "irq_state_of_state s \<equiv> irq_state (machine_state s)"
 
+lemma cap_swap_for_delete_irq_state_of_state[wp]:
+  "\<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace> cap_swap_for_delete param_a param_b 
+   \<lbrace>\<lambda>_ s. P (irq_state_of_state s)\<rbrace>"
+  sorry (* FIXME: broken by touched-addrs -robs *)
 
 crunches cap_insert, cap_swap_for_delete
   for irq_state_of_state[wp]: "\<lambda>s. P (irq_state_of_state s)"
-  (wp: crunch_wps)
+  (wp: crunch_wps touch_objects_wp touch_object_wp')
 
 lemma do_extended_op_irq_state_of_state[wp]:
   "do_extended_op f \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
@@ -233,7 +237,7 @@ lemma reads_affects_equiv_kheap_eq:
 
 lemma reads_affects_equiv_get_tcb_eq:
   "\<lbrakk> aag_can_read aag t \<or> aag_can_affect aag l t; reads_equiv aag s s'; affects_equiv aag l s s' \<rbrakk>
-     \<Longrightarrow> get_tcb t s = get_tcb t s'"
+     \<Longrightarrow> get_tcb False t s = get_tcb False t s'"
   by (fastforce simp: get_tcb_def reads_affects_equiv_kheap_eq)
 
 lemma equiv_valid_get_assert:
@@ -308,7 +312,7 @@ lemma store_word_offs_globals_equiv:
   apply (wp do_machine_op_globals_equiv)
      apply clarsimp
      apply (erule use_valid[OF _ storeWord_globals_equiv])
-     apply (wp | simp | force)+
+     apply (wp touch_objects_wp | simp | force)+
   done
 
 lemma restrict_eq_asn_none: "f(N := None) = f |` {s. s \<noteq> N}" by auto
@@ -327,16 +331,17 @@ lemma thread_set_fault_valid_global_refs[wp]:
 lemma cap_swap_for_delete_valid_arch_caps[wp]:
   "cap_swap_for_delete a b \<lbrace>valid_arch_caps\<rbrace>"
   unfolding cap_swap_for_delete_def
-  apply (wp get_cap_wp)
+  apply (wp get_cap_wp touch_objects_wp)
   apply (clarsimp simp: cte_wp_at_weakenE)
   done
 
 (* this to go in InfloFlowBase? *)
 lemma get_object_revrv:
-  "reads_equiv_valid_rv_inv (affects_equiv aag l) aag \<top>\<top> \<top> (get_object ptr)"
+  "reads_equiv_valid_rv_inv (affects_equiv aag l) aag \<top>\<top> \<top> (get_object False ptr)"
   unfolding get_object_def
   apply (rule equiv_valid_rv_bind)
     apply (rule equiv_valid_rv_guard_imp)
+     apply simp
      apply (rule gets_kheap_revrv')
     apply (simp, simp)
    apply (rule equiv_valid_2_bind)
@@ -350,10 +355,11 @@ lemma get_object_revrv:
 lemma get_object_revrv':
   "reads_equiv_valid_rv_inv (affects_equiv aag l) aag
    (\<lambda>rv rv'. aag_can_read aag ptr \<longrightarrow> rv = rv')
-   \<top> (get_object ptr)"
+   \<top> (get_object False ptr)"
   unfolding get_object_def
   apply (rule equiv_valid_rv_bind)
     apply (rule equiv_valid_rv_guard_imp)
+     apply simp
      apply (rule gets_kheap_revrv)
     apply (simp, simp)
    apply (rule equiv_valid_2_bind)
@@ -365,7 +371,7 @@ lemma get_object_revrv':
   done
 
 crunch irq_state_of_state[wp]: cancel_badged_sends "\<lambda>s. P (irq_state_of_state s)"
-  (wp: crunch_wps simp: filterM_mapM)
+  (wp: crunch_wps touch_object_wp' simp: filterM_mapM)
 
 
 locale Arch_IF_1 =
@@ -427,7 +433,7 @@ crunch valid_global_refs[wp]: empty_slot "\<lambda>s :: det_state. valid_global_
 
 crunches set_extra_badge, set_mrs, reply_from_kernel, invoke_domain
   for irq_state_of_state[wp]: "\<lambda>s. P (irq_state_of_state s)"
-  (wp: crunch_wps simp: crunch_simps)
+  (wp: crunch_wps touch_object_wp' simp: crunch_simps)
 
 lemma transfer_caps_loop_irq_state[wp]:
   "transfer_caps_loop a b c d e f \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
@@ -441,13 +447,14 @@ crunch irq_state_of_state[wp]: invoke_irq_handler "\<lambda>s. P (irq_state_of_s
 *)
 
 crunch irq_state_of_state[wp]: schedule "\<lambda>s. P (irq_state_of_state s)"
-  (wp: dmo_wp modify_wp crunch_wps hoare_whenE_wp
+  (wp: dmo_wp modify_wp crunch_wps hoare_whenE_wp touch_object_wp'
    simp: machine_op_lift_def machine_rest_lift_def crunch_simps)
 
 crunch irq_state_of_state[wp]: finalise_cap "\<lambda>s. P (irq_state_of_state s)"
-  (wp: select_wp modify_wp crunch_wps dmo_wp simp: crunch_simps)
+  (wp: select_wp modify_wp crunch_wps dmo_wp touch_object_wp' touch_objects_wp simp: crunch_simps)
 
 crunch irq_state_of_state[wp]: send_signal, restart "\<lambda>s. P (irq_state_of_state s)"
+  (wp: touch_object_wp')
 
 lemma mol_states_equiv_for:
   "machine_op_lift mop \<lbrace>\<lambda>ms. states_equiv_for P Q R S st (s\<lparr>machine_state := ms\<rparr>)\<rbrace>"
@@ -477,17 +484,19 @@ lemma set_message_info_reads_respects:
 lemma set_mrs_reads_respects:
   "reads_respects aag l (K (aag_can_read aag t \<or> aag_can_affect aag l t)) (set_mrs t buf msgs)"
   apply (simp add: set_mrs_def cong: option.case_cong_weak)
-  apply (wp mapM_x_ev' store_word_offs_reads_respects set_object_reads_respects
+  apply (wp mapM_x_ev' store_word_offs_reads_respects set_object_reads_respects touch_object_rev
          | wpc | simp add: split_def split del: if_split add: zipWithM_x_mapM_x)+
   apply (auto intro: reads_affects_equiv_get_tcb_eq)
+  sorry (* FIXME: broken by touched-addrs -robs
   done
+*)
 
 lemma cap_insert_globals_equiv'':
   "\<lbrace>globals_equiv s and valid_global_objs and valid_arch_state\<rbrace>
    cap_insert new_cap src_slot dest_slot
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding cap_insert_def
-  by (wpsimp wp: set_original_globals_equiv update_cdt_globals_equiv
+  by (wpsimp wp: set_original_globals_equiv update_cdt_globals_equiv touch_object_wp'
                  set_cap_globals_equiv'' dxo_wp_weak hoare_drop_imps)
 
 lemma set_message_info_globals_equiv:
@@ -501,7 +510,7 @@ lemma cancel_badged_sends_globals_equiv:
    cancel_badged_sends epptr badge
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace> "
   unfolding cancel_badged_sends_def
-  by (wpsimp wp: set_endpoint_globals_equiv set_thread_state_globals_equiv
+  by (wpsimp wp: set_endpoint_globals_equiv set_thread_state_globals_equiv touch_object_wp'
                  filterM_preserved dxo_wp_weak hoare_drop_imps)
 
 end

@@ -24,7 +24,7 @@ abbreviation aag_can_read_or_affect where
 
 
 lemma get_cap_reads_respects:
-  "reads_respects aag l (K (aag_can_read aag (fst slot) \<or> aag_can_affect aag l (fst slot))) (get_cap slot)"
+  "reads_respects aag l (K (aag_can_read aag (fst slot) \<or> aag_can_affect aag l (fst slot))) (get_cap False slot)"
   apply (simp add: get_cap_def split_def)
   apply (wp get_object_reads_respects | wpc | simp)+
   done
@@ -354,7 +354,7 @@ lemma sts_noop:
 lemma sts_to_modify':
   "monadic_rewrite True True (tcb_at tcb and (\<lambda>s :: det_state. tcb \<noteq> cur_thread s))
      (set_thread_state tcb st)
-     (modify (\<lambda>s. s\<lparr>kheap := kheap s(tcb \<mapsto> TCB (the (get_tcb tcb s)\<lparr>tcb_state := st\<rparr>))\<rparr>))"
+     (modify (\<lambda>s. s\<lparr>kheap := kheap s(tcb \<mapsto> TCB (the (get_tcb False tcb s)\<lparr>tcb_state := st\<rparr>))\<rparr>))"
   apply (clarsimp simp: set_thread_state_def set_object_def)
   apply (rule monadic_rewrite_add_get)
   apply (rule monadic_rewrite_bind_tail)
@@ -823,7 +823,12 @@ lemma get_mrs_rev:
          | clarsimp split: if_split_asm)+
   done
 
-lemmas get_mrs_reads_respects_g = reads_respects_g_from_inv[OF get_mrs_rev get_mrs_inv]
+(* TODO sorry - how do we deal with the absence of get_mrs_inv here? *)
+
+thm reads_respects_g_from_inv
+
+lemmas get_mrs_reads_respects_g = reads_respects_g_from_tainv[OF get_mrs_rev get_mrs_tainv]
+
 
 end
 
@@ -1141,7 +1146,7 @@ lemma cancel_badged_sends_reads_respects:
 
 lemma get_cap_ret_is_subject':
   "\<lbrace>pas_refined aag and K (is_subject aag (fst ptr))\<rbrace>
-   get_cap ptr
+   get_cap False ptr
    \<lbrace>\<lambda>rv s. is_cnode_cap rv \<longrightarrow> (\<forall>x\<in>obj_refs_ac rv. is_subject aag x)\<rbrace>"
   apply (rule hoare_strengthen_post[OF get_cap_ret_is_subject])
   apply (clarsimp simp: is_cap_simps)

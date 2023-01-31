@@ -408,7 +408,6 @@ abbreviation reads_equiv_valid_rv where
 abbreviation reads_equiv_valid_rv_inv where
   "reads_equiv_valid_rv_inv A aag R P f \<equiv> reads_equiv_valid_rv A A aag R P f"
 
-
 section \<open>Constraining modifications to a set of label\<close>
 (*
    We define here some machinery for reasoning about updates that occur

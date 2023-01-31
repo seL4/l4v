@@ -146,7 +146,7 @@ lemma arch_scheduler_affects_equiv_update[Scheduler_IF_assms]:
   by (clarsimp simp: arch_scheduler_affects_equiv_def)
 
 lemma equiv_asid_equiv_update[Scheduler_IF_assms]:
-  "\<lbrakk> get_tcb x s = Some y; equiv_asid asid st s \<rbrakk>
+  "\<lbrakk> get_tcb False x s = Some y; equiv_asid asid st s \<rbrakk>
      \<Longrightarrow> equiv_asid asid st (s\<lparr>kheap := kheap s(x \<mapsto> TCB y')\<rparr>)"
   by (clarsimp simp: equiv_asid_def obj_at_def get_tcb_def)
 
@@ -404,7 +404,7 @@ lemma thread_set_scheduler_affects_equiv[Scheduler_IF_assms, wp]:
   done
 
 lemma set_object_reads_respects_scheduler[Scheduler_IF_assms, wp]:
-  "reads_respects_scheduler aag l \<top> (set_object ptr obj)"
+  "reads_respects_scheduler aag l \<top> (set_object False ptr obj)"
   unfolding equiv_valid_def2 equiv_valid_2_def
   by (auto simp: set_object_def bind_def get_def put_def return_def get_object_def assert_def
                  fail_def gets_def scheduler_equiv_def domain_fields_equiv_def equiv_for_def

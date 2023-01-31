@@ -74,7 +74,37 @@ lemma ups_of_heap_non_arch_upd:
   "h x = Some ko \<Longrightarrow> non_arch_obj ko \<Longrightarrow> non_arch_obj ko' \<Longrightarrow> ups_of_heap (h(x \<mapsto> ko')) = ups_of_heap h"
   by (rule ext) (auto simp add: ups_of_heap_def non_arch_obj_def split: kernel_object.splits)
 
-crunch inv[wp]: lookup_ipc_buffer "I"
+(*
+interpretation lookup_slot_for_cnode_op_tainv:
+  touched_addresses_inv _ "lookup_ipc_buffer a b"
+  apply unfold_locales apply (rule lookup_slot_for_cnode_op_tainv) *)
+
+crunches thread_get
+  for tainv[wp]: "ignore_ta P"
+  (wp: crunch_wps touch_object_wp' ignore:do_machine_op simp:crunch_simps)
+
+interpretation thread_get_tainv:
+  touched_addresses_inv _ "thread_get az bz"
+  by unfold_locales wp
+
+
+lemma lookup_ipc_buffer_tainv [wp]:
+  "lookup_ipc_buffer a b \<lbrace>ignore_ta P\<rbrace>"
+  apply (wpsimp wp: hoare_drop_imps
+              simp: lookup_ipc_buffer_def)
+      defer
+      apply (simp, subst conj_absorb)
+      apply (rule touch_object_tainv.tainv)
+     apply (rule thread_get_tainv.tainv)
+    apply (rule touch_object_tainv.tainv)
+   apply assumption
+  apply (rule hoare_allI)
+  apply (wpsimp wp: hoare_drop_imps)
+  done
+
+interpretation lookup_ipc_buffer_tainv:
+  touched_addresses_inv _ "lookup_ipc_buffer ax bx"
+  by unfold_locales wp
 
 lemma vs_cap_ref_to_table_cap_ref:
   "\<not> is_frame_cap cap \<Longrightarrow> vs_cap_ref cap = table_cap_ref cap"
@@ -171,7 +201,7 @@ lemma set_untyped_cap_as_full_valid_arch_mdb:
   "\<lbrace>\<lambda>s. valid_arch_mdb (is_original_cap s) (caps_of_state s)\<rbrace>
             set_untyped_cap_as_full src_cap c src
    \<lbrace>\<lambda>rv s. valid_arch_mdb (is_original_cap s) (caps_of_state s)\<rbrace>"
-  by (wpsimp wp: set_cap_update_free_index_valid_arch_mdb
+  by (wpsimp wp: set_cap_update_free_index_valid_arch_mdb touch_object_wp
            simp: set_untyped_cap_as_full_def)
 
 lemma valid_arch_mdb_not_arch_cap_update:

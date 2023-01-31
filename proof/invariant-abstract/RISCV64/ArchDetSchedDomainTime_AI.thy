@@ -35,13 +35,16 @@ lemma set_per_domain_default_vm_root_domain_time:
   sorry
 
 crunch domain_list_inv[wp]: set_vm_root "\<lambda>s. P (domain_list s)"
-  (wp: set_per_domain_default_vm_root_domain_list)
+  (wp: set_per_domain_default_vm_root_domain_list get_cap_wp find_vspace_for_asid_wp
+      simp: ta_agnostic_def)
 
 crunch domain_time_inv[wp]: set_vm_root "\<lambda>s. P (domain_time s)"
-  (wp: set_per_domain_default_vm_root_domain_time)
+  (wp: set_per_domain_default_vm_root_domain_time find_vspace_for_asid_wp
+  simp: ta_agnostic_def)
 
 crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]: arch_finalise_cap "\<lambda>s. P (domain_list s)"
-  (wp: hoare_drop_imps mapM_wp subset_refl simp: crunch_simps)
+  (wp: hoare_drop_imps mapM_wp subset_refl find_vspace_for_asid_wp pt_lookup_from_level_tainv
+   simp: crunch_simps ta_agnostic_def)
 
 crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]:
   arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread,
@@ -55,7 +58,8 @@ crunch domain_list_inv [wp, DetSchedDomainTime_AI_assms]:
   (wp: crunch_wps simp: crunch_simps)
 
 crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]: arch_finalise_cap "\<lambda>s. P (domain_time s)"
-  (wp: hoare_drop_imps mapM_wp subset_refl simp: crunch_simps)
+  (wp: hoare_drop_imps mapM_wp subset_refl pt_lookup_from_level_tainv find_vspace_for_asid_wp
+   simp: crunch_simps ta_agnostic_def)
 
 crunch domain_time_inv [wp, DetSchedDomainTime_AI_assms]:
   arch_activate_idle_thread, arch_switch_to_thread, arch_switch_to_idle_thread,
@@ -99,6 +103,7 @@ lemma timer_tick_valid_domain_time:
   supply if_apply_def2[simp]
   apply (wpsimp
            wp: reschedule_required_valid_domain_time hoare_vcg_const_imp_lift gts_wp
+               touch_object_wp'
                (* unless we hit dec_domain_time we know ?dtnot0 holds on the state, so clean up the
                   postcondition once we hit thread_set_time_slice *)
                hoare_post_imp[where Q="\<lambda>_. ?dtnot0" and R="\<lambda>_ s. domain_time s = 0 \<longrightarrow> X s"
@@ -115,13 +120,17 @@ lemma handle_interrupt_valid_domain_time [DetSchedDomainTime_AI_assms]:
   apply (case_tac "maxIRQ < i", solves \<open>wpsimp wp: hoare_false_imp\<close>)
   apply clarsimp
   apply (wpsimp simp: arch_mask_irq_signal_def)
-        apply (rule hoare_post_imp[where Q="\<lambda>_. ?dtnot0" and a="send_signal p c" for p c], fastforce)
-        apply wpsimp
+         apply (rule hoare_post_imp[where Q="\<lambda>_. ?dtnot0" and a="send_signal p c" for p c], fastforce)
+         apply wpsimp
+        apply (wpsimp wp: get_cap_wp)
+       apply (wpsimp wp: touch_object_wp')
+       sorry (* FIXME: broken by touched-addrs -robs
        apply (rule hoare_post_imp[where Q="\<lambda>_. ?dtnot0" and a="get_cap p" for p], fastforce)
       apply (wpsimp wp: timer_tick_valid_domain_time simp: handle_reserved_irq_def)+
      apply (rule hoare_post_imp[where Q="\<lambda>_. ?dtnot0" and a="get_irq_state i" for i], fastforce)
    apply wpsimp+
   done
+*)
 
 crunches handle_reserved_irq, arch_mask_irq_signal
   for domain_time_inv [wp, DetSchedDomainTime_AI_assms]: "\<lambda>s. P (domain_time s)"

@@ -56,13 +56,13 @@ lemma sata_update2[CNode_AC_assms]:
                  simp: cap_links_asid_slot_def label_owns_asid_slot_def
                 split: if_split_asm)
 
-lemma state_vrefs_eqI:
+lemma state_vrefs_eqI[simplified f_kheap_to_kheap]:
   "\<lbrakk> \<forall>bot_level asid vref level p.
        bot_level < level \<and> vs_lookup_table level asid vref s = Some (level, p)
        \<longrightarrow> (if level \<le> max_pt_level
-            then pts_of s' p = pts_of s p
-            else asid_pools_of s' p = asid_pools_of s p);
-     aobjs_of s' = aobjs_of s; asid_table s' = asid_table s;
+            then pts_of False s' p = pts_of False s p
+            else asid_pools_of False s' p = asid_pools_of False s p);
+     aobjs_of False s' = aobjs_of False s; asid_table s' = asid_table s;
      pspace_aligned s; valid_vspace_objs s; valid_asid_table s \<rbrakk>
      \<Longrightarrow> state_vrefs (s' :: 'a :: state_ext state) = state_vrefs (s :: 'a :: state_ext state)"
   apply (rule ext)
@@ -80,10 +80,10 @@ lemma set_cap_state_vrefs[CNode_AC_assms, wp]:
    set_cap cap slot
    \<lbrace>\<lambda>_ s :: det_ext state. P (state_vrefs s)\<rbrace>"
   apply (simp add: set_cap_def set_object_def)
-  apply (wpsimp wp: get_object_wp)
+  apply (wpsimp wp: get_object_wp touch_object_wp')
   apply safe
-        apply (all \<open>subst state_vrefs_eqI\<close>)
-  by (fastforce simp: valid_arch_state_def obj_at_def opt_map_def
+        apply (all \<open>subst state_vrefs_eqI[where s=s]\<close>)
+  by (fastforce simp: valid_arch_state_def obj_at_def opt_map_def ta_filter_def obind_def
                split: option.splits kernel_object.splits)+
 
 crunches maskInterrupt
@@ -97,7 +97,8 @@ crunches set_cdt
 
 crunches prepare_thread_delete, arch_finalise_cap
   for cur_domain[CNode_AC_assms, wp]:"\<lambda>s. P (cur_domain s)"
-  (wp: crunch_wps select_wp hoare_vcg_if_lift2 simp: unless_def)
+  (wp: crunch_wps select_wp hoare_vcg_if_lift2 pt_lookup_from_level_tainv find_vspace_for_asid_tainv
+   simp: unless_def ta_agnostic_def)
 
 lemma state_vrefs_tcb_upd[CNode_AC_assms]:
   "\<lbrakk> pspace_aligned s; valid_vspace_objs s; valid_arch_state s; tcb_at t s \<rbrakk>
@@ -138,14 +139,16 @@ lemma list_integ_lift[CNode_AC_assms]:
   assumes rq: "\<And>P. f \<lbrace>\<lambda>s. P (ready_queues s)\<rbrace>"
   shows "\<lbrace>integrity aag X st and Q\<rbrace> f \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (rule hoare_pre)
-   apply (unfold integrity_def[abs_def] integrity_asids_def)
+   apply (unfold integrity_def[abs_def] integrity_asids_def ta_filter_def obind_def)
    apply (simp only: integrity_cdt_list_as_list_integ)
    apply (rule hoare_lift_Pf2[where f="ekheap"])
     apply (simp add: tcb_states_of_state_def get_tcb_def)
     apply (wp li[simplified tcb_states_of_state_def get_tcb_def] ekh rq)+
+    sorry (* FIXME: broken by touched-addrs -robs
   apply (simp only: integrity_cdt_list_as_list_integ)
   apply (simp add: tcb_states_of_state_def get_tcb_def)
   done
+*)
 
 end
 

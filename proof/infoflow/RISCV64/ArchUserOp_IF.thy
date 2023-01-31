@@ -20,7 +20,7 @@ definition ptable_rights_s where
 definition ptable_attrs :: "obj_ref \<Rightarrow> 's :: state_ext state \<Rightarrow> obj_ref \<Rightarrow> vm_attributes" where
  "ptable_attrs tcb s \<equiv>
     \<lambda>addr. case_option {} (fst o snd o snd)
-             (get_page_info (aobjs_of s) (get_vspace_of_thread (kheap s) (arch_state s) tcb) addr)"
+             (get_page_info (aobjs_of False s) (get_vspace_of_thread (kheap s) (arch_state s) tcb) addr)"
 
 definition ptable_attrs_s :: "'s :: state_ext state \<Rightarrow> obj_ref \<Rightarrow> vm_attributes" where
  "ptable_attrs_s s \<equiv> ptable_attrs (cur_thread s) s"
@@ -131,7 +131,7 @@ lemma requiv_get_pt_of_thread_eq:
 lemma requiv_get_pt_entry_eq:
   "\<lbrakk> reads_equiv aag s t; invs s; pas_refined aag s; is_subject aag pt; vref \<in> user_region;
      \<exists>asid vref. vs_lookup_table max_pt_level asid vref s = Some (max_pt_level, pt) \<rbrakk>
-     \<Longrightarrow> pt_lookup_slot pt vref (ptes_of s) = pt_lookup_slot pt vref (ptes_of t)"
+     \<Longrightarrow> pt_lookup_slot pt vref (ptes_of False s) = pt_lookup_slot pt vref (ptes_of False t)"
   apply (clarsimp simp: pt_lookup_slot_def)
   apply (clarsimp simp: pt_lookup_slot_from_level_def)
   apply (frule_tac pt=pt and vptr=vref in pt_walk_reads_equiv[where bot_level=0])
@@ -144,7 +144,7 @@ lemma requiv_get_pt_entry_eq:
 lemma requiv_get_page_info_eq:
   "\<lbrakk> reads_equiv aag s s'; pas_refined aag s; invs s; is_subject aag pt; x \<notin> kernel_mappings;
      \<exists>asid. vs_lookup_table max_pt_level asid x s = Some (max_pt_level, pt) \<rbrakk>
-     \<Longrightarrow> get_page_info (aobjs_of s) pt x = get_page_info (aobjs_of s') pt x"
+     \<Longrightarrow> get_page_info (aobjs_of False s) pt x = get_page_info (aobjs_of False s') pt x"
   apply (clarsimp simp: get_page_info_def obind_def)
   apply (subgoal_tac "pt_lookup_slot pt x (ptes_of s) = pt_lookup_slot pt x (ptes_of s')")
    apply (clarsimp split: option.splits)
@@ -199,7 +199,7 @@ lemma requiv_vspace_of_thread_global_pt:
 
 lemma vspace_for_asid_get_vspace_of_thread:
   "get_vspace_of_thread (kheap s) (arch_state s) ct \<noteq> global_pt s
-   \<Longrightarrow> \<exists>asid. vspace_for_asid asid s = Some (get_vspace_of_thread (kheap s) (arch_state s) ct)"
+   \<Longrightarrow> \<exists>asid. vspace_for_asid False asid s = Some (get_vspace_of_thread (kheap s) (arch_state s) ct)"
   by (fastforce simp: get_vspace_of_thread_def
                split: option.splits kernel_object.splits cap.splits arch_cap.splits)
 

@@ -95,7 +95,7 @@ lemma checked_insert_tcb_invs[wp]: (* arch specific *)
        (cap_insert new_cap src_slot (target, ref))) \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: check_cap_at_def)
   apply (rule hoare_pre)
-   apply (wp get_cap_wp)
+   apply (wp get_cap_wp touch_object_wp)
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (frule caps_of_state_valid_cap[where p=src_slot], fastforce)
   apply (frule caps_of_state_valid_cap[where p=slot], fastforce)
@@ -194,11 +194,11 @@ lemma as_user_valid_cap[wp]:
 lemma as_user_ipc_tcb_cap_valid4[wp]:
   "as_user t f \<lbrace>tcb_cap_valid cap (t, tcb_cnode_index 4)\<rbrace>"
   apply (simp add: as_user_def set_object_def)
-  apply (wp assert_inv | wpc | simp)+
+  apply (wp assert_inv touch_object_wp' | wpc | simp)+
   apply (clarsimp simp: tcb_cap_valid_def obj_at_def
                         pred_tcb_at_def is_tcb
-                 dest!: get_tcb_SomeD)
-  apply (clarsimp simp: get_tcb_def)
+                 dest!: get_tcb_SomeD')
+  apply (clarsimp simp: get_tcb_def ta_filter_def obind_def)
   done
 
 lemma is_nondevice_page_cap_simp[simp]:
