@@ -820,9 +820,6 @@ lemma set_cap_empty_slot_ext_comm:
   apply (case_tac y; simp add: return_def fail_def split: option.splits)
   done
 
-(* FIXME: MOVE *)
-lemmas bind_eqI' = NonDetMonadVCG.bind_eqI[OF _ refl]
-
 lemma K_bind_assoc:
   "(do (do f; g od); h od) = (do f; g; h od)"
   by (simp add: bind_assoc)
