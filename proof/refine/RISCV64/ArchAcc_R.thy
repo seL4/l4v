@@ -20,7 +20,7 @@ declare if_cong[cong] (* FIXME: if_cong *)
 
 lemma asid_pool_at_ko:
   "asid_pool_at p s \<Longrightarrow> \<exists>pool. ko_at (ArchObj (RISCV64_A.ASIDPool pool)) p s"
-  by (clarsimp simp: asid_pools_at_eq obj_at_def)
+  by (clarsimp simp: asid_pools_at_eq obj_at_def elim!: opt_mapE)
 
 lemma corres_gets_asid:
   "corres (\<lambda>a c. a = c o ucast) \<top> \<top> (gets (riscv_asid_table \<circ> arch_state)) (gets (riscvKSASIDTable \<circ> ksArchState))"
@@ -355,7 +355,7 @@ lemma getObject_PTE_corres:
   apply (clarsimp simp: pte_at_eq)
   apply (clarsimp simp: ptes_of_def)
   apply (clarsimp simp: typ_at'_def ko_wp_at'_def in_magnitude_check objBits_simps bit_simps)
-  apply (clarsimp simp: state_relation_def pspace_relation_def)
+  apply (clarsimp simp: state_relation_def pspace_relation_def elim!: opt_mapE)
   apply (drule bspec, blast)
   apply (clarsimp simp: other_obj_relation_def pte_relation_def)
   apply (erule_tac x="table_index p" in allE)
@@ -382,6 +382,7 @@ lemma setObject_PT_corres:
               pspace_aligned and pspace_distinct) \<top>
           (set_pt (table_base p) (pt(table_index p := pte)))
           (setObject p pte')"
+  supply opt_mapE[elim!]
   apply (rule corres_cross_over_pte_at[where p=p])
    apply (simp add: pte_at_eq ptes_of_def in_omonad)
   apply (simp add: set_pt_def get_object_def bind_assoc set_object_def gets_map_def)
@@ -651,7 +652,7 @@ next
      apply (frule (5) vs_lookup_table_is_aligned)
      apply (rule conjI)
       apply (drule (5) valid_vspace_objs_strongD)
-      apply (clarsimp simp: pte_at_def obj_at_def)
+      apply (clarsimp simp: pte_at_def obj_at_def elim!: opt_mapE)
       apply (simp add: pt_slot_offset_def)
       apply (rule is_aligned_add)
        apply (erule is_aligned_weaken)
@@ -782,7 +783,7 @@ next
      apply (frule (5) vs_lookup_table_is_aligned)
      apply (rule conjI)
       apply (drule (5) valid_vspace_objs_strongD)
-      apply (clarsimp simp: pte_at_def obj_at_def)
+      apply (clarsimp simp: pte_at_def obj_at_def elim!: opt_mapE)
       apply (simp add: pt_slot_offset_def)
       apply (rule is_aligned_add)
        apply (erule is_aligned_weaken)
