@@ -722,6 +722,38 @@ where
 notation (output)
   whileLoopE  ("(whileLoopE (_)//  (_))" [1000, 1000] 1000)
 
+
+section "Combinators that have conditions with side effects"
+
+definition
+  whileM :: "('s, bool) nondet_monad \<Rightarrow> ('s, 'a) nondet_monad \<Rightarrow> ('s, unit) nondet_monad" where
+  "whileM C B \<equiv> do
+    c \<leftarrow> C;
+    whileLoop (\<lambda>c s. c) (\<lambda>_. do B; C od) c;
+    return ()
+  od"
+
+definition
+  ifM :: "('s, bool) nondet_monad \<Rightarrow> ('s, 'a) nondet_monad \<Rightarrow> ('s, 'a) nondet_monad \<Rightarrow>
+          ('s, 'a) nondet_monad" where
+  "ifM test t f = do
+    c \<leftarrow> test;
+    if c then t else f
+   od"
+
+definition
+  whenM :: "('s, bool) nondet_monad \<Rightarrow> ('s, unit) nondet_monad \<Rightarrow> ('s, unit) nondet_monad" where
+  "whenM t m = ifM t m (return ())"
+
+definition
+  orM :: "('s, bool) nondet_monad \<Rightarrow> ('s, bool) nondet_monad \<Rightarrow> ('s, bool) nondet_monad" where
+  "orM a b = ifM a (return True) b"
+
+definition
+  andM :: "('s, bool) nondet_monad \<Rightarrow> ('s, bool) nondet_monad \<Rightarrow> ('s, bool) nondet_monad" where
+  "andM a b = ifM a b (return False)"
+
+
 section "Hoare Logic"
 
 subsection "Validity"

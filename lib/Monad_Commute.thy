@@ -32,6 +32,12 @@ lemma monad_commute_simple:
   apply (simp add: bind_assoc)
   done
 
+lemma monad_commute_simple':
+  "monad_commute \<top> a b \<Longrightarrow> (do x \<leftarrow> a; y \<leftarrow> b; g x y od) = (do y \<leftarrow> b; x \<leftarrow> a; g x y od)"
+  apply (clarsimp simp: monad_commute_def)
+  apply (fastforce simp: bind_def' return_def)
+  done
+
 lemma commute_commute:
   "monad_commute P f h \<Longrightarrow> monad_commute P h f"
   apply (simp (no_asm) add: monad_commute_def)

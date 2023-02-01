@@ -812,4 +812,23 @@ lemma snd_whileLoop_subset:
   apply (metis b_success_step snd_whileLoop_first_step snd_whileLoop_unfold)
   done
 
+
+subsection "Some rules for whileM"
+
+lemma whileM_wp_gen:
+  assumes termin:"\<And>s. I False s \<Longrightarrow> Q s"
+  assumes [wp]: "\<lbrace>I'\<rbrace> C \<lbrace>I\<rbrace>"
+  assumes [wp]: "\<lbrace>I True\<rbrace> f \<lbrace>\<lambda>_. I'\<rbrace>"
+  shows "\<lbrace>I'\<rbrace> whileM C f \<lbrace>\<lambda>_. Q\<rbrace>"
+  unfolding whileM_def
+  using termin
+  by (wpsimp wp: whileLoop_wp[where I=I])
+
+lemma whileM_inv:
+  "\<lbrakk>f \<lbrace>Q\<rbrace>; P \<lbrace>Q\<rbrace>\<rbrakk> \<Longrightarrow> whileM P f \<lbrace>Q\<rbrace>"
+  by (fastforce intro: whileM_wp_gen)
+
+lemmas whileM_post_inv
+  = hoare_strengthen_post[where R="\<lambda>_. Q" for Q, OF whileM_inv[where P=C for C], rotated -1]
+
 end

@@ -8,6 +8,7 @@ theory EmptyFailLib
 imports
   Monads.NonDetMonad
   HaskellLib_H
+  Monads.WhileLoopRules
 begin
 
 (* Collect generic empty_fail lemmas here. naming convention is emtpy_fail_NAME.
@@ -47,5 +48,26 @@ lemma empty_fail_stateAssert [intro!, simp]:
   "empty_fail (stateAssert P l)"
   by (simp add: stateAssert_def empty_fail_def get_def assert_def
                 return_def fail_def bind_def)
+
+lemma ifM_empty_fail[intro!, wp, simp]:
+  "\<lbrakk> empty_fail P; empty_fail a; empty_fail b \<rbrakk> \<Longrightarrow> empty_fail (ifM P a b)"
+  by (simp add: ifM_def)
+
+lemma whenM_empty_fail[intro!, wp, simp]:
+  "\<lbrakk> empty_fail P; empty_fail f \<rbrakk> \<Longrightarrow> empty_fail (whenM P f)"
+  by (simp add: whenM_def)
+
+lemma andM_empty_fail[intro!, wp, simp]:
+  "\<lbrakk> empty_fail A; empty_fail B \<rbrakk> \<Longrightarrow> empty_fail (andM A B)"
+  by (simp add: andM_def)
+
+lemma orM_empty_fail[intro!, wp, simp]:
+  "\<lbrakk> empty_fail A; empty_fail B \<rbrakk> \<Longrightarrow> empty_fail (orM A B)"
+  by (simp add: orM_def)
+
+lemma whileM_empty_fail[intro!, wp, simp]:
+  "\<lbrakk> empty_fail C; empty_fail B \<rbrakk> \<Longrightarrow> empty_fail (whileM C B)"
+  unfolding whileM_def
+  by (wpsimp wp: empty_fail_whileLoop empty_fail_bind)
 
 end
