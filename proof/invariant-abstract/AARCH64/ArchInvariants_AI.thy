@@ -9,10 +9,6 @@ theory ArchInvariants_AI
 imports InvariantsPre_AI "Eisbach_Tools.Apply_Trace_Cmd"
 begin
 
-(* setup *)
-
-declare opt_mapE[rule del]
-
 context Arch begin global_naming AARCH64
 
 (* compatibility with other architectures, input only *)
