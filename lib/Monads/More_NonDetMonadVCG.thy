@@ -25,6 +25,20 @@ lemma hoare_post_add:
   "\<lbrace>P\<rbrace> S \<lbrace>\<lambda>r s. R r s \<and> Q r s\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> S \<lbrace>Q\<rbrace>"
   by (erule hoare_strengthen_post, simp)
 
+lemma hoare_post_addE:
+  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>_ s. R s \<and> Q s\<rbrace>, \<lbrace>T\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_ s. Q s\<rbrace>, \<lbrace>T\<rbrace>"
+  by (erule hoare_post_impErr'; simp)
+
+lemma hoare_pre_add:
+  "(\<forall>s. P s \<longrightarrow> R s) \<Longrightarrow> (\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<longleftrightarrow> \<lbrace>P and R\<rbrace> f \<lbrace>Q\<rbrace>)"
+  apply (subst iff_conv_conj_imp)
+  by(intro conjI impI; rule hoare_weaken_pre, assumption, clarsimp)
+
+lemma hoare_pre_addE:
+  "(\<forall>s. P s \<longrightarrow> R s) \<Longrightarrow> (\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>S\<rbrace> \<longleftrightarrow> \<lbrace>P and R\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>S\<rbrace>)"
+  apply (subst iff_conv_conj_imp)
+  by(intro conjI impI; rule hoare_weaken_preE, assumption, clarsimp)
+
 lemma hoare_disjI1:
   "\<lbrace>R\<rbrace> f \<lbrace>P\<rbrace> \<Longrightarrow> \<lbrace>R\<rbrace> f \<lbrace>\<lambda>r s. P r s \<or> Q r s\<rbrace>"
   apply (erule hoare_post_imp [rotated])
@@ -55,25 +69,31 @@ lemma hoare_vcg_if_lift:
   \<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv. if P then X rv else Y rv\<rbrace>"
   by (auto simp: valid_def split_def)
 
-lemma hoare_lift_Pf:
-  assumes P: "\<And>x. \<lbrace>P x\<rbrace> m \<lbrace>\<lambda>_. P x\<rbrace>"
-  assumes f: "\<And>P. \<lbrace>\<lambda>s. P (f s)\<rbrace> m \<lbrace>\<lambda>_ s. P (f s)\<rbrace>"
-  shows "\<lbrace>\<lambda>s. P (f s) s\<rbrace> m \<lbrace>\<lambda>_ s. P (f s) s\<rbrace>"
-  using f P by (rule hoare_use_eq)
+lemma hoare_vcg_if_lift_strong:
+  "\<lbrakk> \<lbrace>P'\<rbrace> f \<lbrace>P\<rbrace>; \<lbrace>\<lambda>s. \<not> P' s\<rbrace> f \<lbrace>\<lambda>rv s. \<not> P rv s\<rbrace>; \<lbrace>Q'\<rbrace> f \<lbrace>Q\<rbrace>; \<lbrace>R'\<rbrace> f \<lbrace>R\<rbrace> \<rbrakk> \<Longrightarrow>
+   \<lbrace>\<lambda>s. if P' s then Q' s else R' s\<rbrace> f \<lbrace>\<lambda>rv s. if P rv s then Q rv s else R rv s\<rbrace>"
 
-lemma hoare_lift_Pf2:
-  assumes P: "\<And>x. \<lbrace>Q x\<rbrace> m \<lbrace>\<lambda>_. P x\<rbrace>"
-  assumes f: "\<And>P. \<lbrace>\<lambda>s. P (f s)\<rbrace> m \<lbrace>\<lambda>_ s. P (f s)\<rbrace>"
-  shows "\<lbrace>\<lambda>s. Q (f s) s\<rbrace> m \<lbrace>\<lambda>_ s. P (f s) s\<rbrace>"
-  using f P by (rule hoare_use_eq)
+  "\<lbrakk> \<lbrace>P'\<rbrace> f \<lbrace>P\<rbrace>; \<lbrace>\<lambda>s. \<not> P' s\<rbrace> f \<lbrace>\<lambda>rv s. \<not> P rv s\<rbrace>; \<lbrace>Q'\<rbrace> f \<lbrace> Q\<rbrace>; \<lbrace>R'\<rbrace> f \<lbrace>R\<rbrace> \<rbrakk> \<Longrightarrow>
+   \<lbrace>\<lambda>s. if P' s then Q' s else R' s\<rbrace> f \<lbrace>\<lambda>rv s. (if P rv s then Q rv else R rv) s\<rbrace>"
+  by (wpsimp wp: hoare_vcg_imp_lift' | assumption | fastforce)+
 
-lemma hoare_lift_Pf3:
-  assumes P: "\<And>x. \<lbrace>Q x\<rbrace> m \<lbrace>P x\<rbrace>"
-  assumes f: "\<And>P. \<lbrace>\<lambda>s. P (f s)\<rbrace> m \<lbrace>\<lambda>_ s. P (f s)\<rbrace>"
-  shows "\<lbrace>\<lambda>s. Q (f s) s\<rbrace> m \<lbrace>\<lambda>rv s. P (f s) rv s\<rbrace>"
-  apply (clarsimp simp add: valid_def)
-  apply (frule (1) use_valid [OF _ P], drule (2) use_valid [OF _ f])
+lemma hoare_lift_Pf_pre_conj:
+  assumes P: "\<And>x. \<lbrace>\<lambda>s. Q x s\<rbrace> m \<lbrace>P x\<rbrace>"
+  assumes f: "\<And>P. \<lbrace>\<lambda>s. P (g s) \<and> R s\<rbrace> m \<lbrace>\<lambda>_ s. P (f s)\<rbrace>"
+  shows "\<lbrace>\<lambda>s. Q (g s) s \<and> R s\<rbrace> m \<lbrace>\<lambda>rv s. P (f s) rv s\<rbrace>"
+  apply (clarsimp simp: valid_def)
+  apply (rule use_valid [OF _ P], simp)
+  apply (rule use_valid [OF _ f], simp, simp)
   done
+
+lemmas hoare_lift_Pf4 = hoare_lift_Pf_pre_conj[where R=\<top>, simplified]
+lemmas hoare_lift_Pf3 = hoare_lift_Pf4[where f=f and g=f for f]
+lemmas hoare_lift_Pf2 = hoare_lift_Pf3[where P="\<lambda>f _. P f" for P]
+lemmas hoare_lift_Pf = hoare_lift_Pf2[where Q=P and P=P for P]
+
+lemmas hoare_lift_Pf3_pre_conj = hoare_lift_Pf_pre_conj[where f=f and g=f for f]
+lemmas hoare_lift_Pf2_pre_conj = hoare_lift_Pf3_pre_conj[where P="\<lambda>f _. P f" for P]
+lemmas hoare_lift_Pf_pre_conj' = hoare_lift_Pf2_pre_conj[where Q=P and P=P for P]
 
 lemma hoare_if_r_and:
   "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>r. if R r then Q r else Q' r\<rbrace>
@@ -645,6 +665,11 @@ lemma weak_if_wp:
   \<lbrace>P and P'\<rbrace> f \<lbrace>\<lambda>r. if C r then Q r else Q' r\<rbrace>"
   by (auto simp add: valid_def split_def)
 
+lemma weak_if_wp':
+  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>r. Q r and Q' r\<rbrace> \<Longrightarrow>
+   \<lbrace>P\<rbrace> f \<lbrace>\<lambda>r. if C r then Q r else Q' r\<rbrace>"
+  by (auto simp add: valid_def split_def)
+
 lemma bindE_split_recursive_asm:
   assumes x: "\<And>x s'. \<lbrakk> (Inr x, s') \<in> fst (f s) \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. B x s \<and> s = s'\<rbrace> g x \<lbrace>C\<rbrace>, \<lbrace>E\<rbrace>"
   shows      "\<lbrace>A\<rbrace> f \<lbrace>B\<rbrace>, \<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>st. A st \<and> st = s\<rbrace> f >>=E g \<lbrace>C\<rbrace>, \<lbrace>E\<rbrace>"
@@ -747,6 +772,11 @@ lemma hoare_assume_preNF:
 lemma hoare_validE_R_conjI:
   "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, - ; \<lbrace>P\<rbrace> f \<lbrace>Q'\<rbrace>, - \<rbrakk>  \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> Q' rv s\<rbrace>, -"
   apply (clarsimp simp: Ball_def validE_R_def validE_def valid_def)
+  by (case_tac a; fastforce)
+
+lemma hoare_validE_E_conjI:
+  "\<lbrakk> \<lbrace>P\<rbrace> f -, \<lbrace>Q\<rbrace> ; \<lbrace>P\<rbrace> f -, \<lbrace>Q'\<rbrace> \<rbrakk>  \<Longrightarrow> \<lbrace>P\<rbrace> f -, \<lbrace>\<lambda>rv s. Q rv s \<and> Q' rv s\<rbrace>"
+  apply (clarsimp simp: Ball_def validE_E_def validE_def valid_def)
   by (case_tac a; fastforce)
 
 lemma validE_R_post_conjD1:

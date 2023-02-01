@@ -258,6 +258,9 @@ definition
 definition
   "oskip \<equiv> oreturn ()"
 
+lemmas omonad_defs = ofail_def oreturn_def oassert_def oassert_opt_def asks_def ounless_def
+                     owhen_def
+
 
 subsection \<open>Monad laws\<close>
 

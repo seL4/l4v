@@ -22,24 +22,30 @@ lemma mapME_Nil : "mapME f [] = returnOk []"
 
 lemmas mapME_simps = mapME_Nil mapME_Cons
 
-lemma zipWithM_x_inv:
-  assumes x: "\<And>x y. \<lbrace>P\<rbrace> m x y \<lbrace>\<lambda>rv. P\<rbrace>"
-  shows      "length xs = length ys \<Longrightarrow> \<lbrace>P\<rbrace> zipWithM_x m xs ys \<lbrace>\<lambda>rv. P\<rbrace>"
-proof (induct xs ys rule: list_induct2)
+lemma zipWithM_x_inv':
+  assumes x: "\<And>x y. m x y \<lbrace>P\<rbrace>"
+  shows      "zipWithM_x m xs ys \<lbrace>P\<rbrace>"
+proof (induct xs arbitrary: ys)
   case Nil
   show ?case
     by (simp add: zipWithM_x_def sequence_x_def zipWith_def)
 next
-  case (Cons a as b bs)
+  case (Cons x xs)
   have zipWithM_x_Cons:
-    "\<And>m x xs y ys. zipWithM_x m (x # xs) (y # ys)
-                 = do m x y; zipWithM_x m xs ys od"
+    "\<And>m x xs y ys. zipWithM_x m (x # xs) (y # ys) = do m x y; zipWithM_x m xs ys od"
     by (simp add: zipWithM_x_def sequence_x_def zipWith_def)
-  have IH: "\<lbrace>P\<rbrace> zipWithM_x m as bs \<lbrace>\<lambda>rv. P\<rbrace>"
-    by fact
+  have zipWithM_x_Nil:
+    "\<And>m xs. zipWithM_x m xs [] = return ()"
+    by (simp add: zipWithM_x_def sequence_x_def zipWith_def)
   show ?case
-    by (simp add: zipWithM_x_Cons) (wp IH x)
+    by (cases ys; wpsimp simp: zipWithM_x_Nil zipWithM_x_Cons wp: Cons x)
 qed
+
+(* For compatibility with existing proofs. *)
+lemma zipWithM_x_inv:
+  assumes x: "\<And>x y. m x y \<lbrace>P\<rbrace>"
+  shows      "length xs = length ys \<Longrightarrow> zipWithM_x m xs ys \<lbrace>P\<rbrace>"
+  by (rule zipWithM_x_inv', rule x)
 
 lemma sequence_x_Cons: "\<And>x xs. sequence_x (x # xs) = (x >>= (\<lambda>_. sequence_x xs))"
   by (simp add: sequence_x_def)
