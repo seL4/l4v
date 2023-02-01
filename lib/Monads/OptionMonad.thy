@@ -416,7 +416,7 @@ lemma oreturnOkE:
   by simp
 
 lemmas omonadE [elim!] =
-  opt_mapE obindE oreturnE ofailE othrowE oreturnOkE oassertE
+  obindE oreturnE ofailE othrowE oreturnOkE oassertE
 
 lemma in_opt_map_Some_eq:
   "((f ||> g) x = Some y) = (\<exists>v. f x = Some v \<and> g v = y)"
