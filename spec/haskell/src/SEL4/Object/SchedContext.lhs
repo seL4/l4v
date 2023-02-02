@@ -390,7 +390,7 @@ This module uses the C preprocessor to select a target architecture.
 >       when ((not roundRobin) && ready) $ do
 >         setReprogramTimer True
 >         curTime <- getCurTime
->         updateRefillHd scPtr $ \head -> head { rTime = curTime + kernelWCETTicks }
+>         updateRefillHd scPtr $ \head -> head { rTime = curTime }
 >         refillHeadOverlappingLoop scPtr
 
 > ifCondRefillUnblockCheck :: Maybe (PPtr SchedContext) -> Maybe Bool -> Maybe Bool -> Kernel ()
