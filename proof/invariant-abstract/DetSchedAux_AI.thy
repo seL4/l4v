@@ -594,20 +594,7 @@ lemma released_sc_cur_time_increasing:
   "\<lbrakk>sc_refill_cfg_sc_at (released_sc (cur_time s)) scp s'; cur_time s \<le> cur_time s';
     valid_machine_time s; valid_machine_time s'\<rbrakk>
    \<Longrightarrow> sc_refill_cfg_sc_at (released_sc (cur_time s')) scp s'"
-  apply (clarsimp simp: sc_refill_cfg_sc_at_def obj_at_def refill_ready_def)
-  apply (frule_tac s=s in valid_machine_time_refill_ready_buffer)
-  apply (frule_tac s=s' in valid_machine_time_refill_ready_buffer)
-  apply (prop_tac "cur_time s \<le> cur_time s'")
-   apply blast
-  apply (rule_tac y="cur_time s + kernelWCET_ticks" in order_trans)
-   apply linarith
-  apply (clarsimp simp: word_le_nat_alt)
-  apply (subst unat_add_lem')
-   using no_olen_add_nat valid_machine_time_refill_ready_buffer apply blast
-  apply (subst unat_add_lem')
-   using no_olen_add_nat valid_machine_time_refill_ready_buffer apply blast
-  apply linarith
-  done
+  by (clarsimp simp: sc_refill_cfg_sc_at_def obj_at_def refill_ready_def word_le_nat_alt)
 
 \<comment> \<open>Used for retyping Untyped memory, including ASID pool creation. Retyping may destroy objects
     if the Untyped memory is reset. But under the invariants, destruction can only occur for objects
@@ -748,48 +735,29 @@ lemma valid_sched_tcb_state_preservation_gen:
        (* remove 6 inconsistent cases; thread state for s and s' should be the same *)
              apply (find_goal \<open>solves
                     \<open>(simp add: is_blocked_thread_state_defs obj_at_def pred_tcb_at_def, clarsimp)\<close>\<close>)+
-     (* Eisbach somehow fails to catch the last case; clean it up separately *)
-     apply (find_goal \<open>match premises in "st_tcb_at is_blocked_on_recv_ntfn t s'"
-                                     and "st_tcb_at is_blocked_on_send t s" for t \<Rightarrow> \<open>-\<close>\<close>)
-     apply (simp add: is_blocked_thread_state_defs obj_at_def pred_tcb_at_def, clarsimp)
-     (* three valid cases left *)
-     apply (all \<open>elim conjE, drule mp, assumption\<close>)
-     apply (find_goal \<open>match conclusion in "fault_tcb_at _ _ _ \<and> _ \<or> _" \<Rightarrow>
-              \<open>erule disjE, erule conjE, rule disjI1, rule conjI\<close>\<close>)
-     apply (find_goal \<open>match conclusion in "fault_tcb_at _ _ _ \<and> _ \<or> _" \<Rightarrow> \<open>rule disjI2\<close>\<close>)
-     apply (find_goal \<open>match conclusion in "bound_sc_tcb_at _ _ _ \<or> _" \<Rightarrow>
-              \<open>erule disjE, (frule use_valid[OF _ bound_sc]; fastforce)?; rule disjI2\<close>\<close>)+
-     apply (find_goal \<open>match conclusion in "\<exists>_. _" \<Rightarrow>
-              \<open>erule exEI, rename_tac ref, frule use_valid[OF _ bound_sc], fastforce; clarsimp\<close>\<close>)+
-     apply (find_goal \<open>match conclusion in "sc_refill_cfg_sc_at _ _ _" \<Rightarrow>
-              \<open>clarsimp simp:  pred_tcb_at_def[unfolded obj_at_def],
-               frule (2) ex_nonz_cap_to_tcb_implies_ex_nonz_cap_to_sc, rule sym, simp,
-               frule use_valid, rule_tac p=ref in sc_refill_cfg; simp\<close>\<close>)+
-     apply (frule use_valid[OF _ fault_tcb], fastforce)
-     apply fast
-    apply (frule use_valid[OF _ valid_machine_time], simp)
-    apply (frule use_valid[OF _ cur_time_nondecreasing], simp)
-    apply (clarsimp simp: sc_refill_cfg_sc_at_def obj_at_def refill_ready_def)
-    apply (rule_tac y="cur_time s + kernelWCET_ticks" in order_trans)
-     apply linarith
-    apply (clarsimp simp: word_le_nat_alt)
-    apply (subst unat_add_lem')
-     using no_olen_add_nat valid_machine_time_refill_ready_buffer apply blast
-    apply (subst unat_add_lem')
-     using no_olen_add_nat valid_machine_time_refill_ready_buffer apply blast
-    apply linarith
-   apply (frule use_valid[OF _ valid_machine_time], simp)
-   apply (frule use_valid[OF _ cur_time_nondecreasing], simp)
-   apply (clarsimp simp: sc_refill_cfg_sc_at_def obj_at_def refill_ready_def)
-   apply (rule_tac y="cur_time s + kernelWCET_ticks" in order_trans)
-    apply linarith
-   apply (clarsimp simp: word_le_nat_alt)
-   apply (subst unat_add_lem')
-    using no_olen_add_nat valid_machine_time_refill_ready_buffer apply blast
-   apply (subst unat_add_lem')
-    using no_olen_add_nat valid_machine_time_refill_ready_buffer apply blast
-   apply linarith
-  done
+        (* Eisbach somehow fails to catch the last case; clean it up separately *)
+        apply (find_goal \<open>match premises in "st_tcb_at is_blocked_on_recv_ntfn t s'"
+                                        and "st_tcb_at is_blocked_on_send t s" for t \<Rightarrow> \<open>-\<close>\<close>)
+        apply (simp add: is_blocked_thread_state_defs obj_at_def pred_tcb_at_def, clarsimp)
+       (* three valid cases left *)
+       apply (all \<open>elim conjE, drule mp, assumption\<close>)
+       apply (find_goal \<open>match conclusion in "fault_tcb_at _ _ _ \<and> _ \<or> _" \<Rightarrow>
+               \<open>erule disjE, erule conjE, rule disjI1, rule conjI\<close>\<close>)
+         apply (find_goal \<open>match conclusion in "fault_tcb_at _ _ _ \<and> _ \<or> _" \<Rightarrow> \<open>rule disjI2\<close>\<close>)
+         apply (find_goal \<open>match conclusion in "bound_sc_tcb_at _ _ _ \<or> _" \<Rightarrow>
+                  \<open>erule disjE, (frule use_valid[OF _ bound_sc]; fastforce)?; rule disjI2\<close>\<close>)+
+         apply (find_goal \<open>match conclusion in "\<exists>_. _" \<Rightarrow>
+                  \<open>erule exEI, rename_tac ref, frule use_valid[OF _ bound_sc], fastforce; clarsimp\<close>\<close>)+
+         apply (find_goal \<open>match conclusion in "sc_refill_cfg_sc_at _ _ _" \<Rightarrow>
+                  \<open>clarsimp simp:  pred_tcb_at_def[unfolded obj_at_def],
+                   frule (2) ex_nonz_cap_to_tcb_implies_ex_nonz_cap_to_sc, rule sym, simp,
+                   frule use_valid, rule_tac p=ref in sc_refill_cfg; simp\<close>\<close>)+
+       apply (frule use_valid[OF _ fault_tcb], fastforce)
+       apply fast
+      apply (frule use_valid[OF _ cur_time_nondecreasing], simp)
+      apply (clarsimp simp: sc_refill_cfg_sc_at_def obj_at_def refill_ready_def word_le_nat_alt)
+     apply (frule use_valid[OF _ cur_time_nondecreasing], simp)
+     by (clarsimp simp: sc_refill_cfg_sc_at_def obj_at_def refill_ready_def word_le_nat_alt)
   apply (prop_tac "active_sc_valid_refills s'")
    subgoal for s rv s'
    unfolding active_sc_valid_refills_def
@@ -1031,11 +999,6 @@ lemma update_time_stamp_is_refill_ready[wp]:
             in hoare_weaken_pre[rotated], assumption)
      apply wpsimp
     apply (clarsimp simp: vs_all_heap_simps refill_ready_def)
-    apply (rule_tac b="cur_time s + kernelWCET_ticks" in order.trans, simp)
-    apply (rule word_plus_mono_left, simp)
-    apply (subst olen_add_eqv)
-    apply (subst add.commute)
-    apply (rule no_plus_overflow_neg)
     apply (insert getCurrentTime_buffer_minus')
     apply fastforce
    apply wpsimp
