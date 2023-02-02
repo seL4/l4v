@@ -406,7 +406,7 @@ where
 
 definition refill_ready' :: "time \<Rightarrow> time \<Rightarrow> refill \<Rightarrow> bool" where
   "refill_ready' usage curtime refill \<equiv>
-    r_time refill + usage \<le> curtime + kernelWCET_ticks"
+    r_time refill + usage \<le> curtime"
 
 abbreviation refill_ready :: "time \<Rightarrow> refill \<Rightarrow> bool" where
   "refill_ready \<equiv> refill_ready' 0"
