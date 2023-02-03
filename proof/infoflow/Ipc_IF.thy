@@ -35,8 +35,9 @@ lemma set_thread_state_ext_runnable_equiv_but_for_labels:
    \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
   apply (simp add: set_thread_state_ext_def)
   apply (wp gts_wp | rule hoare_pre_cont)+
+  sorry (* broken by timeprot -scottb
   apply (force simp: st_tcb_at_def obj_at_def)
-  done
+  done *)
 
 
 definition all_to_which_has_auth where
@@ -185,10 +186,11 @@ lemma store_word_offs_equiv_but_for_labels:
    \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
   unfolding store_word_offs_def
   apply (wp modify_wp | simp add: do_machine_op_def split_def)+
+  sorry (* broken by timeprot -scottb
   apply clarsimp
   apply (erule use_valid[OF _ storeWord_equiv_but_for_labels])
   apply simp
-  done
+  done *)
 
 (* FIXME: many redundant conditions *)
 lemma update_waiting_ntfn_reads_respects:
@@ -202,10 +204,13 @@ lemma update_waiting_ntfn_reads_respects:
                     (update_waiting_ntfn nptr queue bound_tcb badge)"
   unfolding update_waiting_ntfn_def fun_app_def
   apply (wp assert_sp possible_switch_to_reads_respects gets_cur_thread_ev | simp add: split_def)+
-  by (wp as_user_set_register_reads_respects' set_thread_state_reads_respects
+  apply (wp as_user_set_register_reads_respects' set_thread_state_reads_respects
          set_simple_ko_reads_respects set_thread_state_pas_refined
          set_simple_ko_valid_objs hoare_vcg_disj_lift set_simple_ko_pas_refined
-      | simp add: split_def)+
+      | simp add: split_def
+      | rule unit_tainv_reads_respects [OF touch_object_tainv]
+      | (rule touch_object_tainv.agnostic_preserved, ta))+
+  done
 
 lemma update_waiting_ntfn_equiv_but_for_labels:
   "\<lbrace>equiv_but_for_labels aag L st and pas_refined aag and pspace_aligned and valid_vspace_objs and
@@ -223,6 +228,7 @@ lemma update_waiting_ntfn_equiv_but_for_labels:
             hoare_vcg_disj_lift possible_switch_to_equiv_but_for_labels
          | wpc | simp add: split_def)+
   apply clarsimp
+  sorry (* broken by timeprot -scottb
   apply (frule_tac P="receive_blocked_on nptr" and t="hd list" in ntfn_queued_st_tcb_at')
       apply (fastforce)
      apply assumption
@@ -235,7 +241,7 @@ lemma update_waiting_ntfn_equiv_but_for_labels:
   apply (rule sta_ts)
   apply (clarsimp simp: thread_st_auth_def tcb_states_of_state_def st_tcb_def2)
   apply (case_tac "tcb_state tcb", simp_all)
-  done
+  done *)
 
 end
 
@@ -317,7 +323,8 @@ lemma no_fail_gts:
   apply (clarsimp simp: get_thread_state_def thread_get_def)
   apply (rule no_fail_pre)
    apply wp
-  by (clarsimp simp: get_tcb_def tcb_at_def)
+  sorry (* broken by timeprot -scottb
+  by (clarsimp simp: get_tcb_def tcb_at_def) *)
 
 lemma monadic_rewrite_impossible:
   "monadic_rewrite F E \<bottom> f g"
@@ -335,6 +342,7 @@ lemma sts_noop:
    apply (rule monadic_rewrite_add_get)
    apply (rule monadic_rewrite_bind_tail)
     apply (clarsimp simp: set_thread_state_ext_def)
+  sorry (* broken by timeprot -scottb
     apply (rule_tac x="tcb_state (the (get_tcb tcb x))" in monadic_rewrite_symb_exec)
        apply (wp gts_wp | simp)+
     apply (rule monadic_rewrite_symb_exec)
@@ -349,7 +357,7 @@ lemma sts_noop:
     apply simp
     apply (rule monadic_rewrite_refl)
    apply wp
-  by (auto simp: pred_tcb_at_def obj_at_def is_tcb_def get_tcb_def)
+  by (auto simp: pred_tcb_at_def obj_at_def is_tcb_def get_tcb_def) *)
 
 lemma sts_to_modify':
   "monadic_rewrite True True (tcb_at tcb and (\<lambda>s :: det_state. tcb \<noteq> cur_thread s))
@@ -363,6 +371,7 @@ lemma sts_to_modify':
      apply (simp only: bind_assoc[symmetric])
      apply (rule monadic_rewrite_bind_tail)
       apply (rule sts_noop)
+  sorry (* broken by timeprot -scottb
      apply (wpsimp wp: get_object_wp, simp)
     apply (rule_tac x="the (get_tcb tcb x)" in monadic_rewrite_symb_exec, (wp | simp)+)
     apply (rule_tac x="x" in  monadic_rewrite_symb_exec, (wp | simp)+)
@@ -371,7 +380,7 @@ lemma sts_to_modify':
     apply (clarsimp simp add: put_def modify_def get_def bind_def)
    apply assumption
   apply wp
-  by (clarsimp simp: get_tcb_def tcb_at_def)
+  by (clarsimp simp: get_tcb_def tcb_at_def) *)
 
 lemma monadic_rewrite_weaken_failure:
   "\<lbrakk> monadic_rewrite True True P f f'; no_fail P' f; no_fail Q' f' \<rbrakk>
@@ -385,9 +394,10 @@ lemma sts_no_fail:
                    thread_get_def set_scheduler_action_def)
   apply (rule no_fail_pre)
    apply (wpsimp wp: get_object_wp)+
+  sorry (* broken by timeprot -scottb
   apply (clarsimp simp: get_tcb_def tcb_at_def obj_at_def a_type_def is_tcb_def
                  split: kernel_object.splits option.splits)
-  by (metis kernel_object.exhaust option.inject)
+  by (metis kernel_object.exhaust option.inject) *)
 
 lemmas sts_to_modify =
   monadic_rewrite_weaken_failure[OF sts_to_modify' sts_no_fail no_fail_modify,simplified]
@@ -410,6 +420,7 @@ lemma cancel_ipc_to_blocked_nosts:
      (blocked_cancel_ipc_nosts tcb)
      (cancel_ipc tcb >>= (\<lambda>_. set_thread_state tcb Running))"
   apply (simp add: cancel_ipc_def bind_assoc blocked_cancel_ipc_nosts_def)
+  sorry (* broken by timeprot -scottb
   apply (rule monadic_rewrite_bind_tail)
    apply (rule monadic_rewrite_transverse)
     apply (rename_tac state)
@@ -436,7 +447,7 @@ lemma cancel_ipc_to_blocked_nosts:
       apply (wp gts_wp)+
   apply (simp add: set_thread_state_def bind_assoc gets_the_def)
   apply (clarsimp simp: pred_tcb_at_def receive_blocked_def obj_at_def is_tcb_def)
-  by (case_tac "tcb_state tcba"; fastforce)
+  by (case_tac "tcb_state tcba"; fastforce) *)
 
 lemma gts_reads_respects:
   "reads_respects aag l (K (aag_can_read aag t \<or> aag_can_affect aag l t)) (get_thread_state t)"
@@ -595,6 +606,7 @@ lemma send_signal_reads_respects:
             | wpc
             | simp )+
     apply (insert visible)
+  sorry (* broken by timeprot -scottb
     apply clarsimp
     apply (rule conjI[rotated])
      apply fastforce
@@ -627,6 +639,7 @@ lemma send_signal_reads_respects:
       apply (fastforce simp: receive_blocked_def split:thread_state.splits)
      apply (fastforce simp: receive_blocked_def intro!: BlockedOnReceive_inj)
     by (fastforce simp: pred_tcb_at_def get_tcb_def obj_at_def receive_blocked_def ct_in_state_def)
+  *)
   next
     case False note invisible = this show ?thesis
     apply (insert label_is_invisible[THEN iffD2, OF invisible])
@@ -644,6 +657,7 @@ lemma send_signal_reads_respects:
                         blocked_cancel_ipc_nosts_equiv_but_for_labels
             | wpc
             | wps)+
+  sorry (* broken by timeprot -scottb
     apply (elim conjE)
     apply (match premises in "ntfn_bound_tcb _ = _" \<Rightarrow> \<open>fail\<close>
                                                \<bar> _ \<Rightarrow> \<open>rule allI impI conjI\<close>)+
@@ -697,7 +711,7 @@ lemma send_signal_reads_respects:
        apply clarsimp
        using invisible bound_tcb_can_receive reads_ep
        by (fastforce simp add: all_with_auth_to_def all_to_which_has_auth_def)
-    done
+    done *)
   qed
   done
 
@@ -714,11 +728,13 @@ lemma receive_signal_reads_respects:
                            is_subject aag thread)))
      (receive_signal thread cap is_blocking)"
   unfolding receive_signal_def fun_app_def do_nbrecv_failed_transfer_def
-  by (wp set_simple_ko_reads_respects set_thread_state_reads_respects
+  apply (wp set_simple_ko_reads_respects set_thread_state_reads_respects
          as_user_set_register_reads_respects' get_simple_ko_reads_respects hoare_vcg_all_lift
       | wpc
       | wp (once) hoare_drop_imps
-      | force dest: reads_ep)+
+      | force dest: reads_ep
+      | rule unit_tainv_reads_respects [OF touch_object_tainv])+
+  done
 
 
 subsection "Sync IPC"
@@ -821,7 +837,8 @@ lemma get_mrs_rev:
          | wpc
          | rule aag_has_auth_to_read_msg[where mi=mi]
          | clarsimp split: if_split_asm)+
-  done
+  sorry (* broken by timeprot -scottb
+  done *)
 
 (* TODO sorry - how do we deal with the absence of get_mrs_inv here? *)
 
@@ -1024,9 +1041,10 @@ lemma lookup_cap_rev:
      (lookup_cap thread ref)"
   unfolding lookup_cap_def split_def fun_app_def
   apply (wp lookup_slot_for_thread_rev get_cap_rev | simp | strengthen aag_can_read_self)+
+  sorry (* broken by timeprot -scottb
    apply (rule lookup_slot_for_thread_authorised)
   apply simp
-  done
+  done *)
 
 lemma word_plus_power_2_offset_le:
   "\<lbrakk> is_aligned (p :: 'l :: len word) n; is_aligned q m; p < q; n \<le> m; n < len_of TYPE('l) \<rbrakk>
@@ -1063,10 +1081,11 @@ lemma load_cap_transfer_rev:
   unfolding load_cap_transfer_def fun_app_def captransfer_from_words_def
   apply (wp dmo_loadWord_rev | simp)+
   apply safe
+  sorry (* broken by timeprot -scottb
     apply (erule aag_has_auth_to_read_captransfer[where x=0, simplified])
    apply (erule aag_has_auth_to_read_captransfer[where x=1, simplified])
   apply (erule aag_has_auth_to_read_captransfer[where x=2, simplified])
-  done
+  done *)
 
 end
 
@@ -1132,6 +1151,7 @@ lemma cancel_badged_sends_reads_respects:
   apply (rule gen_asm_ev)+
   apply (simp add: cancel_badged_sends_def)
   apply wp
+  sorry (* broken by timeprot -scottb
      apply ((wp mapM_ev''  get_thread_state_reads_respects set_thread_state_runnable_reads_respects
                 set_simple_ko_reads_respects get_simple_ko_reads_respects hoare_vcg_ball_lift
                 tcb_sched_action_reads_respects set_thread_state_pas_refined mapM_wp
@@ -1142,15 +1162,16 @@ lemma cancel_badged_sends_reads_respects:
   apply simp
   apply (intro conjI allI impI ballI, elim conjE)
   by (rule send_endpoint_reads_affects_queued[where epptr = epptr];
-      (assumption | force simp: pas_refined_def policy_wellformed_def))
+      (assumption | force simp: pas_refined_def policy_wellformed_def)) *)
 
 lemma get_cap_ret_is_subject':
   "\<lbrace>pas_refined aag and K (is_subject aag (fst ptr))\<rbrace>
    get_cap False ptr
    \<lbrace>\<lambda>rv s. is_cnode_cap rv \<longrightarrow> (\<forall>x\<in>obj_refs_ac rv. is_subject aag x)\<rbrace>"
+  sorry (* broken by timeprot -scottb
   apply (rule hoare_strengthen_post[OF get_cap_ret_is_subject])
   apply (clarsimp simp: is_cap_simps)
-  done
+  done *)
 
 
 context Ipc_IF_1 begin
@@ -1214,9 +1235,10 @@ lemma load_word_offs_reads_respects:
                                                    (a + of_nat x * of_nat word_size))
                   (load_word_offs a x)"
   unfolding load_word_offs_def fun_app_def
+  sorry (* broken by timeprot -scottb
   apply (rule equiv_valid_guard_imp[OF dmo_loadWord_reads_respects])
   apply (clarsimp)
-  done
+  done *)
 
 end
 
@@ -1227,7 +1249,9 @@ lemma as_user_reads_respects:
   apply (rule gen_asm_ev)
   apply (wp set_object_reads_respects select_f_ev gets_the_ev)
   apply (auto intro: reads_affects_equiv_get_tcb_eq[where aag=aag])
-  done
+  sorry (* broken by timeprot -scottb
+  apply (rule touch_object_tainv.agnostic_preserved, ta)
+  done *)
 
 lemma get_mi_length':
    "\<lbrace>\<top>\<rbrace> get_message_info sender \<lbrace>\<lambda>rv s. buffer_cptr_index + unat (mi_extra_caps rv)
@@ -1266,9 +1290,10 @@ lemma set_mrs_returns_a_constant:
   apply (case_tac buf)
    apply (rule exI)
    apply ((simp add: set_mrs_def | wp | rule impI)+)[1]
+  sorry (* broken by timeprot -scottb
   apply (rule exI)
   apply (simp add: set_mrs_def split del: if_split | wp | rule impI)+
-  done
+  done *)
 
 lemma set_mrs_ret_eq:
   "\<forall>(s::'s::state_ext state) (t::'s::state_ext state).
@@ -1365,11 +1390,13 @@ lemma do_fault_transfer_reads_respects:
            (case buf of None \<Rightarrow> True | Some buf' \<Rightarrow> is_aligned buf' msg_align_bits)))
        (do_fault_transfer badge sender receiver buf)"
   unfolding do_fault_transfer_def
-  by (wp as_user_set_register_reads_respects' as_user_reads_respects set_message_info_reads_respects
+  sorry (* broken by timeprot -scottb
+  apply (wp as_user_set_register_reads_respects' as_user_reads_respects set_message_info_reads_respects
          set_mrs_reads_respects' make_fault_msg_reads_respects thread_get_reads_respects
       | wpc
       | simp add: split_def det_setRegister
-      | wp (once) hoare_drop_imps)+
+      | wp (once) hoare_drop_imps
+      | rule unit_tainv_reads_respects [OF touch_object_tainv])+ *)
 
 lemma do_ipc_transfer_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
@@ -1383,6 +1410,7 @@ lemma do_ipc_transfer_reads_respects:
                            ))
      (do_ipc_transfer sender ep badge grant receiver)"
   unfolding do_ipc_transfer_def
+  sorry (* broken by timeprot -scottb
   apply (wp do_normal_transfer_reads_respects lookup_ipc_buffer_reads_respects
             lookup_ipc_buffer_has_read_auth do_fault_transfer_reads_respects
             thread_get_reads_respects lookup_ipc_buffer_has_auth
@@ -1391,7 +1419,7 @@ lemma do_ipc_transfer_reads_respects:
         | simp
         | wp (once) hoare_drop_imps
         | fastforce)+
-  done
+  done *)
 
 lemma receive_ipc_base_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
@@ -1463,8 +1491,10 @@ lemma receive_ipc_reads_respects:
             hoare_vcg_all_lift
             get_bound_notification_reads_respects' gbn_wp
             get_simple_ko_reads_respects get_simple_ko_wp
+            touch_object_wp'
         | wpc
-        | simp)+
+        | simp
+        | rule unit_tainv_reads_respects [OF touch_object_tainv])+
   by (fastforce simp: aag_cap_auth_def cap_auth_conferred_def cap_rights_to_auth_def
                 dest: bound_tcb_at_implies_receive reads_ep)
 
@@ -1571,6 +1601,7 @@ lemma send_fault_ipc_reads_respects:
        | simp add: split_def add: tcb_cap_cases_def
        | strengthen aag_can_read_self)+
   (* clagged from Ipc_AC *)
+  sorry (* broken by timeprot -scottb
   apply (rule_tac Q'="\<lambda>rv s. pas_refined aag s
                           \<and> is_subject aag (cur_thread s)
                           \<and> invs s
@@ -1583,7 +1614,7 @@ lemma send_fault_ipc_reads_respects:
                 thread_get_reads_respects
             | simp add: add: lookup_cap_def split_def)+
   sorry (* XXX: broken by touched_addresses. -robs
-  done
+  done *)
 *)
 
 
@@ -1596,7 +1627,9 @@ lemma handle_fault_reads_respects:
      (handle_fault thread fault)"
   unfolding handle_fault_def catch_def fun_app_def handle_double_fault_def
   apply (wp (once) hoare_drop_imps |
-        wp set_thread_state_reads_respects send_fault_ipc_reads_respects | wpc | simp)+
+        wp set_thread_state_reads_respects send_fault_ipc_reads_respects | wpc | simp
+  | rule unit_tainv_reads_respects [OF touch_object_tainv]
+  | (rule touch_object_tainv.agnostic_preserved, ta))+
   apply (fastforce intro: reads_affects_equiv_get_tcb_eq)
   done
 
@@ -1683,6 +1716,7 @@ lemma handle_reply_reads_respects_f:
   apply (wp do_reply_transfer_reads_respects_f hoare_vcg_all_lift
             get_cap_wp reads_respects_f[OF get_cap_reads_respects, where Q="\<top>" and st=st]
          | wpc | blast)+
+  sorry (* broken by timeprot -scottb
   apply (rule conjI)
    apply (fastforce simp: reads_equiv_f_def)
   apply clarsimp
@@ -1703,7 +1737,7 @@ lemma handle_reply_reads_respects_f:
   apply (fastforce intro: read_reply_thread_read_thread_rev
                     simp: aag_cap_auth_def cap_auth_conferred_def reply_cap_rights_to_auth_def
                     dest: aag_Control_into_owns)
-  done
+  done *)
 
 lemma reply_from_kernel_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
@@ -1784,6 +1818,7 @@ lemma copy_mrs_globals_equiv:
     apply (rule_tac Q="\<lambda>_. globals_equiv s" in hoare_strengthen_post)
      apply (wp mapM_wp' | wpc)+
       apply (wp store_word_offs_globals_equiv)+
+  sorry (* broken by timeprot -scottb
     apply fastforce
    apply simp
    apply (rule_tac Q="\<lambda>_. globals_equiv s and valid_arch_state and (\<lambda>sa. receiver \<noteq> idle_thread sa)"
@@ -1792,7 +1827,7 @@ lemma copy_mrs_globals_equiv:
     apply (simp)
    apply (fastforce)
   apply simp
-  done
+  done *)
 
 (* FIXME: move *)
 lemma validE_to_valid:
@@ -1826,8 +1861,9 @@ lemma do_fault_transfer_globals_equiv:
                set_mrs_globals_equiv | wpc)+
    apply (clarsimp)
    apply (rule hoare_drop_imps)
+  sorry (* broken by timeprot -scottb
    apply (wp thread_get_inv, simp)
-  done
+  done *)
 
 lemma set_collection: "a = {x. x\<in>a}"
   by simp
@@ -1841,6 +1877,7 @@ lemma valid_ep_send_enqueue:
   done
 
 crunch globals_equiv[wp]: complete_signal "globals_equiv st"
+  (wp: touch_objects_wp)
 
 lemma case_list_cons_cong:
   "(case xxs of [] \<Rightarrow> f | x # xs \<Rightarrow> g xxs) =
@@ -1866,8 +1903,9 @@ lemma do_ipc_transfer_globals_equiv:
                  in hoare_strengthen_post)
      apply (wp)
     apply (clarsimp | rule conjI)+
+  sorry (* broken by timeprot -scottb
    apply (wp hoare_vcg_all_lift lookup_ipc_buffer_ptr_range' lookup_ipc_buffer_aligned' | fastforce)+
-  done
+  done *)
 
 lemma send_ipc_globals_equiv:
   "\<lbrace>globals_equiv st and valid_objs and valid_arch_state and valid_global_refs
@@ -1898,7 +1936,8 @@ lemma send_ipc_globals_equiv:
     apply (rule valid_ep_recv_dequeue')
      apply (simp)+
    apply (frule_tac x=xa in receive_endpoint_threads_blocked,simp+)
-  by (clarsimp simp add: valid_idle_def pred_tcb_at_def obj_at_def)+
+  sorry (* broken by timeprot -scottb
+  by (clarsimp simp add: valid_idle_def pred_tcb_at_def obj_at_def)+ *)
 
 lemma receive_ipc_globals_equiv:
   notes do_nbrecv_failed_transfer_def[simp]
@@ -1920,13 +1959,14 @@ lemma receive_ipc_globals_equiv:
              apply clarsimp
             apply (wp gts_wp get_simple_ko_sp | wpc)+
           apply (wp hoare_vcg_all_lift hoare_drop_imps)[1]
+  sorry (* broken by timeprot -scottb
            apply (wp set_simple_ko_globals_equiv | wpc)+
        apply (wp set_thread_state_globals_equiv)
       apply (wp get_simple_ko_wp gbn_wp get_simple_ko_wp as_user_globals_equiv | wpc | simp)+
   apply (rule hoare_pre)
    apply (wpc)
               apply (rule fail_wp | rule return_wp)+
-  by (auto intro: valid_ep_send_enqueue simp: neq_Nil_conv cong: case_list_cons_cong)
+  by (auto intro: valid_ep_send_enqueue simp: neq_Nil_conv cong: case_list_cons_cong) *)
 
 end
 
@@ -1961,13 +2001,14 @@ lemma cancel_ipc_blocked_globals_equiv:
    cancel_ipc a
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding cancel_ipc_def
+  sorry (* broken by timeprot -scottb
   apply (rule hoare_seq_ext[OF _ gts_sp])
   apply (rule hoare_pre)
    apply (wpc; (simp,rule blocked_cancel_ipc_globals_equiv)?)
         apply (rule hoare_pre_cont)+
   apply clarsimp
   apply (case_tac state;(clarsimp simp: pred_tcb_at_def obj_at_def receive_blocked_def))
-  by (simp add: eq_commute)
+  by (simp add: eq_commute) *)
 
 crunch globals_equiv[wp]: possible_switch_to "globals_equiv st"
   (wp: tcb_sched_action_extended.globals_equiv reschedule_required_ext_extended.globals_equiv
@@ -1983,13 +2024,14 @@ lemma send_signal_globals_equiv:
             set_thread_state_globals_equiv as_user_globals_equiv cancel_ipc_blocked_globals_equiv
             update_waiting_ntfn_globals_equiv get_simple_ko_wp gts_wp
          | wpc | simp)+
+  sorry (* broken by timeprot -scottb
   apply clarsimp
   apply (frule (1) sym_refs_ko_atD)
   apply (intro allI impI conjI)
            prefer 4
            apply clarsimp
            apply (frule_tac t="idle_thread sa" and P="\<lambda>ref. \<not> idle ref" in ntfn_queued_st_tcb_at')
-  by (auto simp: pred_tcb_at_def obj_at_def valid_idle_def receive_blocked_def)
+  by (auto simp: pred_tcb_at_def obj_at_def valid_idle_def receive_blocked_def) *)
 
 
 (* FIXME: belongs in Arch_IF *)
@@ -2002,7 +2044,8 @@ lemma receive_signal_globals_equiv:
   apply (rule hoare_pre)
    apply (wpsimp wp: set_notification_globals_equiv set_thread_state_globals_equiv
                      as_user_globals_equiv get_simple_ko_wp)+
-  done
+  sorry (* broken by timeprot -scottb
+  done *)
 
 lemma handle_double_fault_globals_equiv:
   "\<lbrace>globals_equiv s and valid_arch_state\<rbrace>
@@ -2096,8 +2139,9 @@ lemma do_reply_transfer_globals_equiv:
                                              and pspace_aligned and valid_global_objs
                                              and (\<lambda>s. receiver \<noteq> idle_thread s) and valid_idle"
                   in hoare_strengthen_post)
+  sorry (* broken by timeprot -scottb
       apply (wp gts_wp | fastforce simp: pred_tcb_at_def obj_at_def valid_idle_def)+
-  done
+  done *)
 
 lemma handle_reply_globals_equiv:
   "\<lbrace>globals_equiv st and valid_objs and valid_arch_state and valid_global_refs

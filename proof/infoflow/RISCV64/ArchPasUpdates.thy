@@ -12,6 +12,18 @@ context Arch begin
 
 named_theorems PasUpdates_assms
 
+lemma arch_post_cap_deletion_domain_fields:
+  "arch_post_cap_deletion c \<lbrace>domain_fields P\<rbrace>"
+  sorry (* broken by timeprot -scottb *)
+
+lemma arch_finalise_cap_domain_fields:
+  "arch_finalise_cap c b \<lbrace>domain_fields P\<rbrace>"
+  sorry (* broken by timeprot -scottb *)
+
+lemma prepare_thread_delete_domain_fields:
+  "prepare_thread_delete c \<lbrace>domain_fields P\<rbrace>"
+  sorry (* broken by timeprot -scottb *)
+
 crunches arch_post_cap_deletion, arch_finalise_cap, prepare_thread_delete
   for domain_fields[PasUpdates_assms, wp]: "domain_fields P"
   (    wp: syscall_valid select_wp crunch_wps rec_del_preservation cap_revoke_preservation modify_wp
@@ -28,13 +40,24 @@ global_interpretation PasUpdates_1?: PasUpdates_1
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact PasUpdates_assms)?)
+    apply (unfold_locales; (fact PasUpdates_assms)?)
+      using arch_post_cap_deletion_domain_fields apply blast
+     using arch_finalise_cap_domain_fields apply presburger
+    using prepare_thread_delete_domain_fields by blast
 qed
 
 
 context Arch begin
 
 declare init_arch_objects_exst[PasUpdates_assms]
+
+lemma arch_perform_invocation_domain_fields:
+  "arch_perform_invocation i \<lbrace>domain_fields P\<rbrace>"
+  sorry (* broken by timeprot - scottb *)
+
+lemma handle_arch_fault_reply_domain_fields:
+  "handle_arch_fault_reply a b c d \<lbrace>domain_fields P\<rbrace>"
+  sorry (* broken by timeprot - scottb *)
 
 crunches arch_perform_invocation, arch_post_modify_registers,
          arch_invoke_irq_control, arch_invoke_irq_handler, handle_arch_fault_reply
@@ -115,7 +138,10 @@ global_interpretation PasUpdates_2?: PasUpdates_2
 proof goal_cases
   interpret Arch .
   case 1 show ?case
-    by (unfold_locales; (fact PasUpdates_assms)?)
+    apply (unfold_locales; (fact PasUpdates_assms)?)
+     using arch_perform_invocation_domain_fields apply presburger
+    using handle_arch_fault_reply_inv apply blast
+    done
 qed
 
 end

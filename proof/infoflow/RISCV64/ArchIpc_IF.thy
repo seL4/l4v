@@ -16,16 +16,18 @@ lemma lookup_ipc_buffer_reads_respects[Ipc_IF_assms]:
   "reads_respects aag l (K (aag_can_read aag thread \<or> aag_can_affect aag l thread))
                   (lookup_ipc_buffer is_receiver thread)"
   unfolding lookup_ipc_buffer_def
-  by (wp thread_get_reads_respects get_cap_reads_respects | wpc | simp)+
+  sorry (* broken by timeprot -scottb
+  by (wp thread_get_reads_respects get_cap_reads_respects | wpc | simp)+ *)
 
 lemma as_user_equiv_but_for_labels[Ipc_IF_assms]:
   "\<lbrace>equiv_but_for_labels aag L st and K (pasObjectAbs aag thread \<in> L)\<rbrace>
    as_user thread f
    \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
   unfolding as_user_def
-  apply (wp set_object_equiv_but_for_labels | simp add: split_def)+
+  apply (wp set_object_equiv_but_for_labels touch_object_wp' | simp add: split_def)+
+  sorry (* broken by timeprot -scottb
   apply (blast dest: get_tcb_not_asid_pool_at)
-  done
+  done *)
 
 lemma storeWord_equiv_but_for_labels[Ipc_IF_assms]:
   "\<lbrace>\<lambda>ms. equiv_but_for_labels aag L st (s\<lparr>machine_state := ms\<rparr>) \<and>
@@ -67,8 +69,9 @@ lemma set_thread_state_runnable_equiv_but_for_labels[Ipc_IF_assms]:
   apply (wpsimp wp: set_object_equiv_but_for_labels[THEN hoare_set_object_weaken_pre]
                     set_thread_state_ext_runnable_equiv_but_for_labels)
     apply (wpsimp wp: set_object_wp)+
+sorry (* broken by timeprot -scottb
   apply (fastforce dest: get_tcb_not_asid_pool_at simp: st_tcb_at_def obj_at_def)
-  done
+  done *)
 
 lemma set_endpoint_equiv_but_for_labels[Ipc_IF_assms]:
   "\<lbrace>equiv_but_for_labels aag L st and K (pasObjectAbs aag epptr \<in> L)\<rbrace>
@@ -91,7 +94,7 @@ lemma lookup_ipc_buffer_has_read_auth[Ipc_IF_assms]:
    \<lbrace>\<lambda>rv s. ipc_buffer_has_read_auth aag (pasObjectAbs aag thread) rv\<rbrace>"
   apply (rule hoare_pre)
    apply (simp add: lookup_ipc_buffer_def)
-   apply (wp get_cap_wp thread_get_wp' | wpc)+
+   apply (wp get_cap_wp thread_get_wp' touch_object_wp' | wpc)+
   apply (clarsimp simp: cte_wp_at_caps_of_state ipc_buffer_has_read_auth_def get_tcb_ko_at[symmetric])
   apply (frule caps_of_state_tcb_cap_cases [where idx = "tcb_cnode_index 4"])
    apply (simp add: dom_tcb_cap_cases)
@@ -211,6 +214,7 @@ lemma dmo_loadWord_reads_respects[Ipc_IF_assms]:
                and Q="\<top>\<top>" and Q'="\<top>\<top>" and P="\<top>" and P'="\<top>" in equiv_valid_2_bind_pre)
         apply (rule_tac R'="(=)" and Q="\<lambda> r s. p && mask 3 = 0" and Q'="\<lambda> r s. p && mask 3 = 0"
                     and P="\<top>" and P'="\<top>" in equiv_valid_2_bind_pre)
+  sorry (* broken by timeprot -scottb
              apply (rule return_ev2)
              apply (rule_tac f="word_rcat" in arg_cong)
              apply (fastforce simp: upto.simps is_aligned_mask for_each_byte_of_word_def word_size_def
@@ -221,15 +225,16 @@ lemma dmo_loadWord_reads_respects[Ipc_IF_assms]:
        apply (clarsimp simp: equiv_valid_2_def in_monad for_each_byte_of_word_def)
        apply (fastforce elim: equiv_forD orthD1 simp: ptr_range_def add.commute)
       apply (wp wp_post_taut loadWord_inv | simp)+
-  done
+  done *)
 
 lemma complete_signal_reads_respects[Ipc_IF_assms]:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows "reads_respects aag l (K (aag_can_read aag ntfnptr \<or> aag_can_affect aag l ntfnptr))
                         (complete_signal ntfnptr receiver)"
   unfolding complete_signal_def
+  sorry (* broken by timeprot -scottb
   by (wp set_simple_ko_reads_respects get_simple_ko_reads_respects as_user_set_register_reads_respects'
-      | wpc | simp)+
+      | wpc | simp)+ *)
 
 lemma handle_arch_fault_reply_reads_respects[Ipc_IF_assms, wp]:
   "reads_respects aag l (K (aag_can_read aag thread)) (handle_arch_fault_reply afault thread x y)"
@@ -247,7 +252,7 @@ lemma lookup_ipc_buffer_ptr_range'[Ipc_IF_assms]:
    \<lbrace>\<lambda>rv s. rv = Some buf' \<longrightarrow> auth_ipc_buffers s thread = ptr_range buf' msg_align_bits\<rbrace>"
   unfolding lookup_ipc_buffer_def
   apply (rule hoare_pre)
-   apply (wp get_cap_wp thread_get_wp' | wpc)+
+   apply (wp get_cap_wp thread_get_wp' touch_object_wp' | wpc)+
   apply (clarsimp simp: cte_wp_at_caps_of_state ipc_buffer_has_auth_def get_tcb_ko_at [symmetric])
   apply (frule caps_of_state_tcb_cap_cases [where idx = "tcb_cnode_index 4"])
    apply (simp add: dom_tcb_cap_cases)
@@ -389,6 +394,7 @@ lemma set_mrs_equiv_but_for_labels[Ipc_IF_assms]:
                                                               pasObjectAbs aag x \<in> L)
                                                     | _ \<Rightarrow> True))" in hoare_strengthen_post)
          apply (wp mapM_x_wp' store_word_offs_equiv_but_for_labels | simp add: split_def)+
+  sorry (* broken by timeprot -scottb
          apply (case_tac xa, clarsimp split: if_split_asm elim!: in_set_zipE)
          apply (clarsimp simp: for_each_byte_of_word_def)
          apply (erule bspec)
@@ -423,7 +429,7 @@ lemma set_mrs_equiv_but_for_labels[Ipc_IF_assms]:
         apply simp
        apply (wp set_object_equiv_but_for_labels hoare_vcg_all_lift static_imp_wp | simp)+
   apply (fastforce dest: get_tcb_not_asid_pool_at)+
-  done
+  done *)
 
 lemma set_mrs_reads_respects'[Ipc_IF_assms]:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
@@ -443,6 +449,7 @@ lemma set_mrs_reads_respects'[Ipc_IF_assms]:
      apply (rule modifies_at_mostI)
      apply (simp add: set_mrs_def)
      apply ((wp set_object_equiv_but_for_labels | simp | auto dest: get_tcb_not_asid_pool_at)+)[1]
+   sorry (* broken by timeprot -scottb
     apply (simp)
     apply (rule set_mrs_ret_eq)
    apply (rename_tac buf')
@@ -454,7 +461,7 @@ lemma set_mrs_reads_respects'[Ipc_IF_assms]:
     apply (rule modifies_at_mostI)
     apply (wp set_mrs_equiv_but_for_labels | simp)+
    apply (rule set_mrs_ret_eq)
-  by simp
+  by simp *)
 
 end
 

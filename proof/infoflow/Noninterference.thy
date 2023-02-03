@@ -313,8 +313,8 @@ where
 
 lemma thread_set_tcb_context_update_ct_active[wp]:
   "thread_set (tcb_arch_update (arch_tcb_context_set f)) t \<lbrace>\<lambda>s. P (ct_active s)\<rbrace>"
-  apply (simp add: thread_set_def ct_in_state_def | wp set_object_wp)+
-  apply (clarsimp simp: st_tcb_at_def obj_at_def get_tcb_def
+  apply (simp add: thread_set_def ct_in_state_def | wp set_object_wp touch_object_wp')+
+  apply (clarsimp simp: st_tcb_at_def obj_at_def get_tcb_def ta_filter_def
                  split: option.splits kernel_object.splits)
   done
 

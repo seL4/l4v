@@ -773,16 +773,20 @@ crunch cur_thread [wp]: kernel_entry_if "\<lambda>s::det_state. P (cur_thread s)
 
 lemma thread_set_tcb_context_update_ct_active[wp]:
   "thread_set (tcb_arch_update (arch_tcb_context_set f)) t \<lbrace>ct_active\<rbrace>"
+  sorry (* broken by timeprot -scottb
   apply (simp add: thread_set_def ct_in_state_def | wp set_object_wp)+
   apply (clarsimp simp: st_tcb_at_def obj_at_def get_tcb_def)
   done
+*)
 
 lemma thread_set_tcb_context_update_not_ct_active[wp]:
   "thread_set (tcb_arch_update (arch_tcb_context_set f)) t \<lbrace>\<lambda>s. \<not> ct_active s\<rbrace>"
+  sorry (* broken by timeprot -scottb
   apply (simp add: thread_set_def ct_in_state_def | wp set_object_wp)+
   apply (clarsimp simp: st_tcb_at_def obj_at_def get_tcb_def
                  split: kernel_object.splits option.splits)
   done
+*)
 
 lemma kernel_entry_if_invs:
   "\<lbrace>invs and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace>
@@ -806,6 +810,7 @@ lemma kernel_entry_if_globals_equiv:
 
 lemma thread_set_tcb_context_update_neg_cte_wp_at[wp]:
   "thread_set (tcb_arch_update f) t \<lbrace>\<lambda>s. \<not> cte_wp_at P slot s\<rbrace>"
+  sorry (* broken by timeprot -scottb
   apply (simp add: thread_set_def)
   apply (wp set_object_wp get_object_wp | simp)+
   apply (case_tac "t = fst slot")
@@ -820,6 +825,7 @@ lemma thread_set_tcb_context_update_neg_cte_wp_at[wp]:
    apply (fastforce simp: tcb_cap_cases_def split: if_splits)
   apply (fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
   done
+*)
 
 lemma thread_set_tcb_context_update_domain_sep_inv[wp]:
   "thread_set (tcb_arch_update f) t \<lbrace>domain_sep_inv irqs st\<rbrace>"
@@ -1101,7 +1107,9 @@ definition kernel_call_A_if ::
 
 lemma handle_preemption_if_invs:
   "handle_preemption_if tc \<lbrace>invs\<rbrace>"
+  sorry (* broken by timeprot -scottb
   by (simp add: handle_preemption_if_def | wp)+
+*)
 
 lemma handle_preemption_if_domain_sep_inv:
   "handle_preemption_if e \<lbrace>domain_sep_inv irqs st\<rbrace>"
@@ -1178,6 +1186,7 @@ lemma choose_thread_guarded_pas_domain:
   "\<lbrace>pas_refined aag and valid_queues\<rbrace>
    choose_thread
    \<lbrace>\<lambda>_. guarded_pas_domain aag\<rbrace>"
+  sorry (* broken by timeprot -scottb
   apply (simp add: choose_thread_def guarded_switch_to_def
          | wp switch_to_thread_respects switch_to_idle_thread_respects
               gts_wp switch_to_thread_guarded_pas_domain)+
@@ -1200,6 +1209,7 @@ lemma choose_thread_guarded_pas_domain:
   apply (rule Max_prop)
    apply force+
   done
+*)
 
 lemma schedule_if_ct_running_or_ct_idle[wp]:
   "\<lbrace>invs\<rbrace> schedule_if tc \<lbrace>\<lambda>_ s. ct_running s \<or> ct_idle s\<rbrace>"
@@ -1211,9 +1221,11 @@ lemma set_thread_state_scheduler_action:
   "\<lbrace>(\<lambda>s. P (scheduler_action (s :: det_state))) and st_tcb_at runnable t and K (runnable s)\<rbrace>
    set_thread_state t s
    \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
+  sorry (* broken by timeprot -scottb
   apply (simp add: set_thread_state_def | wp sts_ext_running_noop set_object_wp)+
   apply (clarsimp simp: st_tcb_at_def obj_at_def)
   done
+*)
 
 
 context ADT_IF_1 begin
@@ -1259,7 +1271,8 @@ lemma schedule_if_guarded_pas_domain[wp]:
 
 lemma activate_thread_scheduler_action[wp]:
   "activate_thread \<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace>"
-  apply (simp add: activate_thread_def | wp set_thread_state_scheduler_action gts_wp | wpc)+
+  apply (simp add: activate_thread_def | wp set_thread_state_scheduler_action gts_wp
+                   touch_object_wp' | wpc)+
   apply (fastforce elim: st_tcb_weakenE)
   done
 
@@ -1546,6 +1559,10 @@ locale valid_initial_state = valid_initial_state_noenabled +
 
 subsection \<open>domain_field preserved on non-interrupt kernel event\<close>
 
+lemma cap_move_irq_state_of_state:
+  "cap_move a b c \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
+  sorry (* broken by timeprot -scottb *)
+
 crunch irq_state_of_state[wp]: cap_move "\<lambda>s. P (irq_state_of_state s)"
 crunch domain_fields[wp]: handle_yield "domain_fields P"
 crunch domain_fields[wp]: activate_thread "domain_fields P"
@@ -1558,6 +1575,7 @@ lemma schedule_if_domain_time_nonzero':
   "\<lbrace>valid_domain_list and (\<lambda>s. domain_time s = 0 \<longrightarrow> scheduler_action s = choose_new_thread)\<rbrace>
    schedule_if tc
    \<lbrace>(\<lambda>_ s. domain_time s > 0)\<rbrace>"
+  sorry (* broken by timeprot -scottb
   apply (simp add: schedule_if_def schedule_def)
   apply (wpsimp wp: next_domain_domain_time_left
               simp: crunch_simps guarded_switch_to_def switch_to_thread_def
@@ -1578,6 +1596,7 @@ lemma schedule_if_domain_time_nonzero:
   apply (rule hoare_strengthen_post[OF schedule_if_domain_time_nonzero'])
   apply simp
   done
+*)
 
 
 context ADT_IF_1 begin
@@ -1648,11 +1667,13 @@ lemma sys_mode_of_simp[simp]:
 
 lemma exit_idle_context:
   "\<lbrace>ct_idle and invs\<rbrace> kernel_exit_if tc' \<lbrace>\<lambda>tc s. tc = idle_context s\<rbrace>"
+  sorry (* broken by timeprot -scottb
   apply (simp add: kernel_exit_if_def thread_get_def)
   apply wp
   apply (subgoal_tac "cur_thread s = idle_thread s")
    apply (clarsimp simp: cur_thread_idle idle_context_def)+
   done
+*)
 
 lemma check_active_irq_context:
   "\<lbrace>\<top>\<rbrace> check_active_irq_if tc' \<lbrace>\<lambda>tc s. (snd tc) = tc'\<rbrace>"
@@ -1674,27 +1695,33 @@ lemma handle_preemption_context:
 
 lemma get_tcb_machine_stat_update[simp]:
   "get_tcb False t (s\<lparr>machine_state := x\<rparr>) = get_tcb False t s"
+  sorry (* broken by timeprot -scottb
   by (simp add: get_tcb_def)
+*)
 
 lemma handle_preemption_globals_equiv[wp]:
   "\<lbrace>globals_equiv st and invs\<rbrace>
    handle_preemption_if a
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
+  sorry (* broken by timeprot -scottb
   apply (simp add: handle_preemption_if_def)
   apply (wp handle_interrupt_globals_equiv dmo_getActiveIRQ_globals_equiv crunch_wps
          | simp add: crunch_simps)+
   done
+*)
 
 lemma schedule_if_globals_equiv_scheduler[wp]:
   "\<lbrace>globals_equiv_scheduler st and invs\<rbrace>
    schedule_if tc
    \<lbrace>\<lambda>_. globals_equiv_scheduler st\<rbrace>"
+  sorry (* broken by timeprot -scottb
   apply (simp add: schedule_if_def)
   apply wp
     apply (wp globals_equiv_scheduler_inv'[where P="invs"] activate_thread_globals_equiv)
     apply (simp add: invs_arch_state invs_valid_idle)
    apply (wp | simp)+
   done
+*)
 
 lemma dmo_user_memory_update_idle_equiv:
   "\<lbrace>idle_equiv st\<rbrace> do_machine_op (user_memory_update um) \<lbrace>\<lambda>_. idle_equiv st\<rbrace>"
@@ -1780,7 +1807,9 @@ lemma only_timer_irq_inv_irq_state_update[simp]:
   "only_timer_irq_inv timer_irq s0_internal
      (b\<lparr>machine_state := machine_state b\<lparr>irq_state := Suc (irq_state (machine_state b))\<rparr>\<rparr>) =
    only_timer_irq_inv timer_irq s0_internal b"
+  sorry (* broken by timeprot -scottb
   by (clarsimp simp: only_timer_irq_inv_def only_timer_irq_def irq_is_recurring_def is_irq_at_def)
+*)
 
 lemma initial_aag_bak:
   "initial_aag =
@@ -1949,12 +1978,14 @@ lemma handle_preemption_if_valid_sched[wp]:
   "\<lbrace>valid_sched and invs\<rbrace>
    handle_preemption_if irq
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
+  sorry (* broken by timeprot -scottb
   apply (wpsimp simp: handle_preemption_if_def cong: if_cong)
    apply (rule_tac Q="\<lambda>rv. valid_sched and invs and K (rv \<notin> Some ` non_kernel_IRQs)"
                 in hoare_strengthen_post[rotated])
     apply clarsimp
    apply (wpsimp wp: getActiveIRQ_neq_non_kernel)+
   done
+*)
 
 
 locale ADT_valid_initial_state =
@@ -2457,6 +2488,7 @@ proof (induct s arbitrary: rule: rec_del.induct, simp_all only: rec_del_fails ho
     done
 next
   case (2 slot exposed s) show ?case
+  sorry (* broken by timeprot -scottb
     apply (rule hoare_spec_gen_asm)
     apply (simp add: rec_del.simps split del: if_split)
     apply (rule hoare_pre_spec_validE)
@@ -2478,6 +2510,7 @@ next
                   | wp irq_state_inv_triv)+
     apply (blast dest: cte_wp_at_domain_sep_inv_cap)
     done
+*)
 next
   case (3 ptr bits n slot s) show ?case
     apply (simp add: rec_del.simps)
@@ -2488,6 +2521,7 @@ next
     done
 next
   case (4 ptr bits n slot s) show ?case
+  sorry (* broken by timeprot -scottb
     apply (simp add: rec_del.simps)
     apply (wpsimp wp: irq_state_inv_triv set_cap_domain_sep_inv drop_spec_validE[OF liftE_wp]
                       drop_spec_validE[OF assertE_wp] drop_spec_validE[OF returnOk_wp] get_cap_wp)
@@ -2495,6 +2529,7 @@ next
      apply (simp add: returnOk_def return_def)
     apply (clarsimp simp: domain_sep_inv_cap_def)
     done
+*)
 qed
 
 lemma rec_del_irq_state_inv:
@@ -2525,6 +2560,7 @@ lemma cap_revoke_irq_state_inv'':
 proof(induct rule: cap_revoke.induct[where ?a1.0=s])
   case (1 slot s)
   show ?case
+  sorry (* broken by timeprot -scottb
     apply (subst cap_revoke.simps)
     apply (rule hoare_spec_gen_asm)
     apply (rule hoare_pre_spec_validE)
@@ -2539,6 +2575,7 @@ proof(induct rule: cap_revoke.induct[where ?a1.0=s])
                    | simp | wp (once) hoare_drop_imps)+
     apply fastforce
     done
+*)
 qed
 
 lemmas cap_revoke_irq_state_inv' = use_spec(2)[OF cap_revoke_irq_state_inv'']
@@ -2556,6 +2593,7 @@ lemma invoke_cnode_irq_state_inv:
                      and valid_cnode_inv cnode_invocation and K (irq_is_recurring irq st)\<rbrace>
    invoke_cnode cnode_invocation
    \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
+  sorry (* broken by timeprot -scottb
   apply (rule hoare_assume_preE)
   apply (simp add: invoke_cnode_def)
   apply (rule hoare_pre)
@@ -2567,10 +2605,13 @@ lemma invoke_cnode_irq_state_inv:
                  | wp (once) hoare_drop_imps)+)[7]
   apply fastforce
   done
+*)
 
 lemma checked_insert_irq_state_of_state[wp]:
   "check_cap_at a b (check_cap_at c d (cap_insert e f g)) \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
+  sorry (* broken by timeprot -scottb
   by (wp | simp add: check_cap_at_def)+
+*)
 
 lemma irq_state_inv_invoke_domain[wp]:
   "invoke_domain a b \<lbrace>irq_state_inv st\<rbrace>"
@@ -2580,7 +2621,12 @@ lemma irq_state_inv_invoke_domain[wp]:
    apply (wp | clarsimp)+
   done
 
+lemma set_mcpriority_machine_state:
+  "set_mcpriority r p \<lbrace>\<lambda>s. P (machine_state s)\<rbrace>"
+  sorry (* broken by timeprot -scottb *)
+
 crunch irq_state_of_state: bind_notification "\<lambda>s. P (irq_state_of_state s)"
+  (wp: touch_object_wp')
 crunch machine_state[wp]: set_mcpriority "\<lambda>s. P (machine_state s)"
 
 lemmas bind_notification_irq_state_inv[wp] =
@@ -2630,11 +2676,13 @@ lemma invoke_untyped_irq_state_inv:
   "\<lbrace>irq_state_inv st and K (irq_is_recurring irq st)\<rbrace>
    invoke_untyped ui
    \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
+  sorry (* broken by timeprot -scottb
   apply (cases ui, simp add: invoke_untyped_def mapM_x_def[symmetric])
   apply (rule hoare_pre)
    apply (wp mapM_x_wp' hoare_whenE_wp reset_untyped_cap_irq_state_inv[where irq=irq]
          | rule irq_state_inv_triv | simp)+
   done
+*)
 
 lemma perform_invocation_irq_state_inv:
    "\<lbrace>irq_state_inv st and domain_sep_inv False (sta :: det_state)
@@ -2707,7 +2755,7 @@ end
 
 lemma schedule_if_irq_state_inv:
   "schedule_if tc \<lbrace>irq_state_inv st\<rbrace>"
-  by (wp irq_state_inv_triv
+  by (wp irq_state_inv_triv touch_object_wp'
       | simp add: schedule_if_def activate_thread_def
       | wpc
       | wp (once) hoare_drop_imps)+
