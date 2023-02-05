@@ -59,52 +59,35 @@ lemma pptr_base_num:
   "pptr_base = 0x8000000000"
   by (simp add: pptr_base_def pptrBase_def canonical_bit_def)
 
-(* IRQ nodes occupy 14 bits of address space in this AARCH64 example state:
-   9 for irq number, 5 for cte_level_bits. *)
+definition irq_node_bits :: nat where
+  "irq_node_bits = cte_level_bits + LENGTH(irq_len)"
+
+lemmas irq_node_bits_num = irq_node_bits_def[unfolded cte_level_bits_def, simplified]
+
+(* Some other architectures need to prove more here, but if the init_irq_node is the last object
+   in the init state, we only need info about  init_irq_node_ptr, and not about
+   init_irq_node_ptr + mask irq_node bits *)
 lemma init_irq_ptrs_ineqs:
   "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits) \<ge> init_irq_node_ptr"
-  "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits) + mask cte_level_bits
-                \<le> init_irq_node_ptr + mask 14"
-  "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits)
-                \<le> init_irq_node_ptr + mask 14"
 proof -
-  have P: "ucast irq < (2 ^ (14 - cte_level_bits) :: machine_word)"
+  have P: "ucast irq < (2 ^ (irq_node_bits - cte_level_bits) :: machine_word)"
     apply (rule order_le_less_trans[OF
-        ucast_le_ucast[where 'a=9 and 'b=64, simplified, THEN iffD2, OF word_n1_ge]])
-    apply (simp add: cte_level_bits_def minus_one_norm)
+        ucast_le_ucast[where 'a=irq_len and 'b=machine_word_len, simplified, THEN iffD2, OF word_n1_ge]])
+    apply (simp add: cte_level_bits_def minus_one_norm irq_node_bits_def)
     done
   show "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits) \<ge> init_irq_node_ptr"
-    apply (rule is_aligned_no_wrap'[where sz=14])
-     apply (simp add: is_aligned_def init_irq_node_ptr_def pptr_base_num)
+    apply (rule is_aligned_no_wrap'[where sz=irq_node_bits])
+     apply (simp add: is_aligned_def init_irq_node_ptr_def pptr_base_num irq_node_bits_num)
     apply (rule shiftl_less_t2n[OF P])
-    apply simp
-    done
-  show Q: "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits) + mask cte_level_bits
-                \<le> init_irq_node_ptr + mask 14"
-    apply (simp only: add_diff_eq[symmetric] add.assoc)
-    apply (rule word_add_le_mono2)
-     apply (simp only: trans [OF shiftl_t2n mult.commute] mask_def mult_1)
-     apply (rule nasty_split_lt[OF P])
-      apply (auto simp: cte_level_bits_def init_irq_node_ptr_def mask_def pptr_base_num)
-    done
-  show "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits)
-                \<le> init_irq_node_ptr + mask 14"
-    apply (simp only: add_diff_eq[symmetric] mask_def mult_1 shiftl_t2n mult.commute)
-    apply (rule word_add_le_mono2)
-     apply (rule word_le_minus_one_leq)
-     apply (rule shiftl_less_t2n[OF P, simplified shiftl_t2n mult.commute])
-     apply simp
-    apply (simp add: cte_level_bits_def init_irq_node_ptr_def pptr_base_num)
+    apply (simp add: irq_node_bits_num)
     done
 qed
 
 lemmas init_irq_ptrs_less_ineqs
    = init_irq_ptrs_ineqs(1)[THEN order_less_le_trans[rotated]]
-     init_irq_ptrs_ineqs(2-3)[THEN order_le_less_trans]
 
 lemmas init_irq_ptrs_all_ineqs[unfolded init_irq_node_ptr_def cte_level_bits_def]
    = init_irq_ptrs_ineqs(1)[THEN order_trans[rotated]]
-     init_irq_ptrs_ineqs(2-3)[THEN order_trans]
      init_irq_ptrs_less_ineqs
      init_irq_ptrs_less_ineqs[THEN less_imp_neq]
      init_irq_ptrs_less_ineqs[THEN less_imp_neq, THEN not_sym]
@@ -377,7 +360,7 @@ lemma invs_A:
                           valid_cap_def obj_at_def valid_tcb_state_def valid_arch_tcb_def
                           cap_aligned_def word_bits_def valid_ipc_buffer_cap_simps)+
     apply (clarsimp simp: valid_cs_def word_bits_def cte_level_bits_def
-                          init_irq_ptrs_all_ineqs valid_tcb_def
+                          valid_tcb_def
                    split: if_split_asm)
    apply (simp add: pspace_aligned_init_A pspace_distinct_init_A)
     apply (clarsimp simp: if_live_then_nonz_cap_def obj_at_def state_defs live_def hyp_live_def arch_live_def)
