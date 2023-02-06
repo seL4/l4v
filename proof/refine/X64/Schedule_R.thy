@@ -1680,12 +1680,6 @@ lemma nextDomain_invs_no_cicd':
                         all_invs_but_ct_idle_or_in_cur_domain'_def)
   done
 
-lemma bind_dummy_ret_val:
-  "do y \<leftarrow> a;
-      b
-   od = do a; b od"
-  by simp
-
 lemma scheduleChooseNewThread_fragment_corres:
   "corres dc (invs and valid_sched and (\<lambda>s. scheduler_action s = choose_new_thread)) (invs' and (\<lambda>s. ksSchedulerAction s = ChooseNewThread))
      (do _ \<leftarrow> when (domainTime = 0) next_domain;
