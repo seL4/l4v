@@ -2517,11 +2517,11 @@ lemma decodeTCBConfigure_corres:
        apply (rule decodeSetIPCBuffer_corres; simp)
       apply (rule corres_splitEE)
          apply (rule decodeSetSpace_corres; simp)
-        apply (rule_tac F="is_thread_control set_params" in corres_gen_asm)
-        apply (rule_tac F="is_thread_control set_space" in corres_gen_asm)
+        apply (rule_tac F="tcb_invocation.is_ThreadControl set_params" in corres_gen_asm)
+        apply (rule_tac F="tcb_invocation.is_ThreadControl set_space" in corres_gen_asm)
         apply (rule_tac F="tcThreadCapSlot setSpace = cte_map slot" in corres_gen_asm2)
         apply (rule corres_trivial)
-        apply (clarsimp simp: returnOk_def is_thread_control_def2 is_cap_simps)
+        apply (clarsimp simp: tcb_invocation.is_ThreadControl_def returnOk_def is_cap_simps)
        apply (wp | simp add: invs_def valid_sched_def)+
   done
 

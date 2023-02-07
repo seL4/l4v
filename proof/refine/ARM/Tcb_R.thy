@@ -3345,13 +3345,12 @@ lemma decodeTCBConfigure_corres:
        apply (rule decodeSetIPCBuffer_corres; simp)
       apply (rule corres_splitEE)
          apply (rule decodeCVSpace_corres; simp)
-        apply (rule_tac F="is_thread_control_caps set_params" in corres_gen_asm)
-        apply (rule_tac F="is_thread_control_caps set_space" in corres_gen_asm)
+        apply (rule_tac F="tcb_invocation.is_ThreadControlCaps set_params" in corres_gen_asm)
+        apply (rule_tac F="tcb_invocation.is_ThreadControlCaps set_space" in corres_gen_asm)
         apply (rule_tac F="tcCapsSlot setSpace = cte_map slot" in corres_gen_asm2)
         apply (rule corres_trivial)
         apply (clarsimp simp: returnOk_def is_cap_simps newroot_rel_def
-                              is_thread_control_caps_def
-                       split: tcb_invocation.splits)
+                              tcb_invocation.is_ThreadControlCaps_def)
        apply (wpsimp simp: invs_def valid_sched_def)+
   done
 
