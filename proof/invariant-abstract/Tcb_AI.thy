@@ -1250,37 +1250,9 @@ lemma decode_set_sched_params_wf[wp]:
 
 end
 
-definition
-  is_thread_control_caps :: "tcb_invocation \<Rightarrow> bool"
-where
- "is_thread_control_caps tinv \<equiv> case tinv of tcb_invocation.ThreadControlCaps a b c d e f g \<Rightarrow> True
- | _ \<Rightarrow> False"
-
-definition
-  is_thread_control_sched :: "tcb_invocation \<Rightarrow> bool"
-where
- "is_thread_control_sched tinv \<equiv> case tinv of tcb_invocation.ThreadControlSched _ _ _ _ _ _ \<Rightarrow> True
- | _ \<Rightarrow> False"
-
-primrec (nonexhaustive)
-  thread_control_target :: "tcb_invocation \<Rightarrow> machine_word"
-where
-  "thread_control_target (tcb_invocation.ThreadControlCaps a _ _ _ _ _ _) = a"
-| "thread_control_target (tcb_invocation.ThreadControlSched a _ _ _ _ _) = a"
-
-lemma is_thread_control_caps_true[simp]:
-  "is_thread_control_caps (tcb_invocation.ThreadControlCaps a b c d e f g)"
-  by (simp add: is_thread_control_caps_def)
-
-lemma is_thread_control_caps_def2:
-  "is_thread_control_caps tinv =
-    (\<exists>target slot fh th prio mcp croot vroot buffer sc.
-        tinv = tcb_invocation.ThreadControlCaps target slot fh th croot vroot buffer)"
-  by (cases tinv, simp_all add: is_thread_control_caps_def)
-
 lemma decode_set_priority_is_tc[wp]:
-  "\<lbrace>\<top>\<rbrace> decode_set_priority args cap slot excs \<lbrace>\<lambda>rv s. is_thread_control_sched rv\<rbrace>,-"
-   by (wpsimp simp: decode_set_priority_def is_thread_control_sched_def)
+  "\<lbrace>\<top>\<rbrace> decode_set_priority args cap slot excs \<lbrace>\<lambda>rv s. is_ThreadControlSched rv\<rbrace>,-"
+   by (wpsimp simp: decode_set_priority_def)
 
 lemma decode_set_priority_inv[wp]:
   "\<lbrace>P\<rbrace> decode_set_priority args cap slot excs \<lbrace>\<lambda>rv. P\<rbrace>"
@@ -1322,7 +1294,7 @@ lemma (in Tcb_AI) decode_set_ipc_wf[wp]:
   done
 
 lemma decode_set_ipc_is_tc[wp]:
-  "\<lbrace>\<top>\<rbrace> decode_set_ipc_buffer args cap slot excaps \<lbrace>\<lambda>rv s. is_thread_control_caps rv\<rbrace>,-"
+  "\<lbrace>\<top>\<rbrace> decode_set_ipc_buffer args cap slot excaps \<lbrace>\<lambda>rv s. is_ThreadControlCaps rv\<rbrace>,-"
   supply if_weak_cong[cong del]
   apply (rule hoare_pre)
   apply (simp    add: decode_set_ipc_buffer_def split_def
@@ -1355,7 +1327,7 @@ lemma decode_cv_space_inv[wp]:
   done
 
 lemma decode_cv_space_is_tc[wp]:
-  "\<lbrace>\<top>\<rbrace> decode_cv_space args cap slot excs \<lbrace>\<lambda>rv s. is_thread_control_caps rv\<rbrace>,-"
+  "\<lbrace>\<top>\<rbrace> decode_cv_space args cap slot excs \<lbrace>\<lambda>rv s. is_ThreadControlCaps rv\<rbrace>,-"
   by (wpsimp simp: decode_cv_space_def simp_del: hoare_True_E_R split_del: if_split)
 
 context Tcb_AI
@@ -1381,10 +1353,10 @@ lemma (in Tcb_AI) decode_cv_space_wf[wp]:
   done
 
 lemma tcb_inv_set_space_strg:
-  "\<lbrakk> tcb_inv_wf rv s; is_thread_control_caps rv; cte_at slot s; ex_cte_cap_to slot s;
+  "\<lbrakk> tcb_inv_wf rv s; is_ThreadControlCaps rv; cte_at slot s; ex_cte_cap_to slot s;
      tcb_inv_wf (ThreadControlCaps t slot fh None None None None) s \<rbrakk> \<Longrightarrow>
   tcb_inv_wf (ThreadControlCaps t slot fh None (tc_new_croot rv) (tc_new_vroot rv) None ) s"
-  by (cases rv; simp add: is_thread_control_caps_def)
+  by (cases rv; simp)
 
 lemma decode_set_space_wf[wp]:
   "\<lbrace>(invs::'state_ext state\<Rightarrow>bool)
@@ -1417,24 +1389,24 @@ lemma decode_set_space_inv[wp]:
   by (wpsimp wp: hoare_drop_imps)
 
 lemma decode_set_space_is_tc[wp]:
-  "\<lbrace>\<top>\<rbrace> decode_set_space args cap slot extras \<lbrace>\<lambda>rv s. is_thread_control_caps rv\<rbrace>,-"
+  "\<lbrace>\<top>\<rbrace> decode_set_space args cap slot extras \<lbrace>\<lambda>rv s. is_ThreadControlCaps rv\<rbrace>,-"
   apply (simp add: decode_set_space_def)
-  apply (wp | simp only: is_thread_control_caps_true)+
+  apply (wp | simp only: tcb_invocation.disc)+
   apply simp
   done
 
 lemma decode_set_mcpriority_is_tc[wp]:
-  "\<lbrace>\<top>\<rbrace> decode_set_mcpriority args cap slot excs \<lbrace>\<lambda>rv s. is_thread_control_sched rv\<rbrace>,-"
-   by (wpsimp simp: decode_set_mcpriority_def is_thread_control_sched_def)
+  "\<lbrace>\<top>\<rbrace> decode_set_mcpriority args cap slot excs \<lbrace>\<lambda>rv s. is_ThreadControlSched rv\<rbrace>,-"
+   by (wpsimp simp: decode_set_mcpriority_def)
 
 lemma decode_set_space_target[wp]:
-  "\<lbrace>\<lambda>s. P (obj_ref_of cap)\<rbrace> decode_set_space args cap slot extras \<lbrace>\<lambda>rv s. P (thread_control_target rv)\<rbrace>,-"
+  "\<lbrace>\<lambda>s. P (obj_ref_of cap)\<rbrace>
+   decode_set_space args cap slot extras
+   \<lbrace>\<lambda>rv s. P (tc_target rv)\<rbrace>,-"
   apply (simp add: decode_set_space_def)
-  apply (wp | simp only: thread_control_target.simps)+
-  apply simp
-  done
+  by (wpsimp split_del: if_split)
 
-(* FIXME: move *)
+(* FIXME: move to lib and rename*)
 lemma boring_simp[simp]:
   "(if x then True else False) = x" by simp
 
@@ -1442,7 +1414,7 @@ context Tcb_AI
 begin
 
 lemma decode_cv_space_target[wp]:
-  "\<lbrace>\<top>\<rbrace> decode_cv_space args (ThreadCap t) slot caps \<lbrace>\<lambda>rv s. thread_control_target rv = t\<rbrace>, -"
+  "\<lbrace>\<top>\<rbrace> decode_cv_space args (ThreadCap t) slot caps \<lbrace>\<lambda>rv s. tc_target rv = t\<rbrace>, -"
   unfolding decode_cv_space_def
   by (wpsimp split_del: if_split simp_del: hoare_True_E_R)
 
@@ -1459,14 +1431,12 @@ lemma decode_tcb_conf_wf[wp]:
   apply (clarsimp simp add: decode_tcb_configure_def)
   apply wp
       apply (rule_tac Q'="\<lambda>set_space s. tcb_inv_wf set_space s \<and> tcb_inv_wf set_params s
-                                   \<and> is_thread_control_caps set_space \<and> is_thread_control_caps set_params
-                                   \<and> thread_control_target set_space = t
+                                   \<and> is_ThreadControlCaps set_space \<and> is_ThreadControlCaps set_params
+                                   \<and> tc_target set_space = t
                                    \<and> cte_at slot s \<and> ex_cte_cap_to slot s"
                       in hoare_post_imp_R)
        apply wpsimp
-      apply (subst (asm) is_thread_control_caps_def2)
-      apply (subst (asm) is_thread_control_caps_def2)
-      apply clarsimp
+      apply (clarsimp simp: is_ThreadControlCaps_def)
      apply (wpsimp simp: real_cte_at_cte)+
   apply (fastforce dest!: in_set_takeD)
   done
