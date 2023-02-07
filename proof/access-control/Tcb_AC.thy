@@ -445,7 +445,7 @@ lemma decode_tcb_configure_authorised_helper:
   "\<lbrace>K True and K (is_subject aag t \<and> (\<forall>x \<in> set excaps. is_subject aag (fst (snd x)))
                                    \<and> (\<forall>x \<in> set excaps. pas_cap_cur_auth aag (fst x))
                                    \<and> authorised_tcb_inv aag set_param
-                                   \<and> is_thread_control set_param)\<rbrace>
+                                   \<and> is_ThreadControl set_param)\<rbrace>
    decode_set_space ws (ThreadCap t) slot excaps
    \<lbrace>\<lambda>rv _ :: det_ext state. authorised_tcb_inv aag (ThreadControl t slot (tc_new_fault_ep rv)
                                                                   None None (tc_new_croot rv)
@@ -453,7 +453,7 @@ lemma decode_tcb_configure_authorised_helper:
                                                                   (tc_new_buffer set_param))\<rbrace>, -"
   apply (rule hoare_gen_asmE)
   apply (cases set_param)
-  apply (simp_all add: is_thread_control_def decode_set_space_def authorised_tcb_inv_def
+  apply (simp_all add: decode_set_space_def authorised_tcb_inv_def
                  cong: list.case_cong option.case_cong prod.case_cong
                 split: prod.split_asm split del: if_split)
   apply (cases "excaps!0")
