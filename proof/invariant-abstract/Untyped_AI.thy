@@ -2437,7 +2437,8 @@ lemma mapME_append:
     ys_r \<leftarrow> mapME f ys;
     returnOk (xs_r @ ys_r)
   odE"
-  by (induct xs, simp_all add: mapME_Cons bindE_assoc)
+  by (induct xs, simp_all add: mapME_Cons mapME_Nil bindE_assoc)
+
 lemma mapME_validE_nth_induct:
   "\<lbrakk> \<And>i ys. i < length xs \<Longrightarrow> \<lbrace>P i ys\<rbrace> f (zs ! i) \<lbrace>\<lambda>y. P (Suc i) (y # ys)\<rbrace>, \<lbrace>E\<rbrace>;
         \<And>i. i < length xs \<Longrightarrow> zs ! i = xs ! i \<rbrakk>
@@ -2445,7 +2446,7 @@ lemma mapME_validE_nth_induct:
 proof (induct xs rule: rev_induct)
   case Nil
   show ?case
-    by wpsimp+
+    by (wpsimp simp: mapME_Nil)+
 next
   case (snoc x xs)
   from snoc.prems have x: "x = zs ! length xs"
@@ -2454,7 +2455,7 @@ next
     by (metis length_append_singleton less_SucI nth_append)
   show ?case
     apply (simp add: mapME_append mapME_Cons bindE_assoc x)
-    apply (wp snoc.hyps snoc.prems | simp add: zs)+
+    apply (wp snoc.hyps snoc.prems | simp add: zs mapME_Nil)+
     done
 qed
 
@@ -3683,7 +3684,6 @@ lemma invoke_untyp_invs':
                    retype_region_descendants_range_ret[where sz = sz]
                    retype_region_obj_at_other2
                      [where P="is_cap_table n" for n]
-                   distinct_tuple_helper
                    init_arch_objects_wps
                    init_arch_objects_nonempty_table
               | wp (once) retype_region_ret_folded_general)+

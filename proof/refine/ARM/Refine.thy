@@ -516,7 +516,8 @@ lemma ckernel_invs:
     apply (clarsimp simp: active_from_running')+
   apply (clarsimp simp: sym_heap_def pred_map_def)
   apply (rule_tac x="ksCurSc s" in exI)
-  apply (clarsimp simp: obj_at_simps is_active_sc'_def isScActive_def opt_map_red pred_map_def)
+  apply (clarsimp simp: obj_at_simps is_active_sc'_def isScActive_def opt_map_red pred_map_def
+                        opt_pred_def)
   done
 
 (* abstract and haskell have identical domain list fields *)

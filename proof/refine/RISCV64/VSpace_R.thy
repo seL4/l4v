@@ -754,7 +754,6 @@ lemma performASIDPoolInvocation_corres:
                          update_map_data_def in_omonad)
    apply (drule (1) caps_of_state_valid_cap)
    apply (simp add: valid_cap_def obj_at_def)
-   apply (fastforce simp: opt_map_def split: option.splits)
   apply (fastforce simp: valid_apinv'_def cte_wp_at_ctes_of)
   done
 

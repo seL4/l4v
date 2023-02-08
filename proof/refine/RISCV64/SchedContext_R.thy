@@ -692,7 +692,7 @@ lemma updateSchedContext_valid_objs'[wp]:
    \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   apply (wpsimp simp: updateSchedContext_def wp: set_sc'.valid_objs')
   by (fastforce simp: valid_obj'_def valid_sched_context'_def valid_sched_context_size'_def
-                      obj_at'_def scBits_simps objBits_simps opt_map_red)
+                      obj_at'_def scBits_simps objBits_simps opt_map_red opt_pred_def)
 
 lemma updateSchedContext_obj_at'[wp]:
   "\<forall>sc'. objBits sc' = objBits (f' sc'::sched_context) \<Longrightarrow>
@@ -762,7 +762,7 @@ lemma updateRefillHd_corres:
     apply (rule updateSchedContext_corres_gen[where P=\<top>
       and P'="valid_refills' sc_ptr"])
       apply (clarsimp, drule (2) state_relation_sc_relation)
-      apply (fastforce simp: is_sc_obj obj_at_simps is_active_sc'_def opt_map_red valid_refills'_def
+      apply (fastforce simp: is_sc_obj obj_at_simps opt_map_red opt_pred_def valid_refills'_def
                       elim!: sc_relation_updateRefillHd)
      apply (fastforce simp: obj_at_simps is_sc_obj opt_map_red
                      dest!: state_relation_sc_replies_relation_sc)
@@ -813,7 +813,7 @@ lemma updateRefillTl_corres:
     apply (rule updateSchedContext_corres_gen[where P=\<top> and P'="valid_refills' scPtr"])
       apply (clarsimp, drule (2) state_relation_sc_relation)
       apply (clarsimp simp: is_sc_obj obj_at_simps is_active_sc'_def valid_refills'_def)
-      apply (clarsimp simp: sc_relation_updateRefillTl opt_map_red)
+      apply (clarsimp simp: sc_relation_updateRefillTl opt_map_red opt_pred_def)
      apply (fastforce simp: obj_at_simps is_sc_obj opt_map_red
                      dest!: state_relation_sc_replies_relation_sc)
   by (clarsimp simp: objBits_simps)+

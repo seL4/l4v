@@ -1483,6 +1483,7 @@ lemma lookup_extra_caps_srcs[wp]:
 
 lemma mapME_length:
   "\<lbrace>\<lambda>s. P (length xs)\<rbrace> mapME m xs \<lbrace>\<lambda>ys s. P (length ys)\<rbrace>, -"
+  supply mapME_Nil[simp]
   apply (induct xs arbitrary: P)
    apply wpsimp+
   apply (simp add: mapME_def sequenceE_def)

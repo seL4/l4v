@@ -316,7 +316,7 @@ lemma getObject_PTE_corres[corres]:
   apply (drule bspec, blast)
   apply (clarsimp simp: other_obj_relation_def pte_relation_def)
   apply (erule_tac x="table_index p" in allE)
-  apply (clarsimp simp: mask_pt_bits_inner_beauty[simplified bit_simps] bit_simps)
+  apply (clarsimp simp: mask_pt_bits_inner_beauty[simplified bit_simps] bit_simps obj_at'_def)
   done
 
 lemmas aligned_distinct_pte_atI'

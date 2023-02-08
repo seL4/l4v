@@ -937,7 +937,7 @@ lemma reply_push_sender_sc_Some_invs:
   apply (rule hoare_seq_ext[OF _ gsc_sp])
   apply (rule hoare_seq_ext[OF _ gsc_sp])
   apply (rule_tac S="sender_sc = sc_caller \<and> sender \<noteq> thread \<and> sender \<noteq> reply_ptr \<and> thread \<noteq> reply_ptr"
-           in hoare_gen_asm'', fastforce simp: sk_obj_at_pred_def pred_tcb_at_def obj_at_def)
+               in hoare_gen_asm_spec, fastforce simp: sk_obj_at_pred_def pred_tcb_at_def obj_at_def)
   apply (rule subst[of "do _ <- do _ <- a; b od; c od"
                        "do _ <- a; _ <- b; c od"
                        "\<lambda>c. \<lbrace>P\<rbrace> c \<lbrace>Q\<rbrace>"
@@ -2103,7 +2103,7 @@ lemma si_invs'_helper_fault:
                       reply_unlink_tcb_valid_replies_BlockedOnReceive
                       reply_unlink_tcb_bound_sc_tcb_at hoare_vcg_imp_lift
                       reply_unlink_tcb_reply_tcb_reply_at)
-   apply (wpsimp wp: hoare_ex_wp valid_irq_node_typ hoare_vcg_imp_lift)
+   apply (wpsimp wp: hoare_vcg_ex_lift valid_irq_node_typ hoare_vcg_imp_lift)
   apply clarsimp
   apply (subgoal_tac "reply_tcb_reply_at (\<lambda>b. b = Some dest) rptr s")
    apply (intro conjI)

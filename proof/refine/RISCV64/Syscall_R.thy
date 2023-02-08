@@ -1795,7 +1795,7 @@ lemma endTimeslice_corres: (* called when ct_schedulable *)
            apply (clarsimp dest!: valid_sched_active_sc_valid_refills
                             simp: invs_def cur_sc_tcb_def valid_state_def valid_pspace_def
                                   sc_tcb_sc_at_def obj_at_def is_sc_obj opt_map_red vs_all_heap_simps
-                                  sc_refills_sc_at_def)
+                                  sc_refills_sc_at_def opt_pred_def)
            apply (drule (1) valid_sched_context_size_objsI, clarsimp)
            apply (drule active_sc_valid_refillsE[rotated])
             apply (fastforce simp: vs_all_heap_simps)
@@ -1971,6 +1971,7 @@ lemma chargeBudget_corres:
             apply (rule refillBudgetCheck_corres, simp)
            apply (rule updateSchedContext_corres)
              apply (fastforce simp: sc_relation_def obj_at'_def obj_at_def is_sc_obj opt_map_red
+                                    opt_pred_def
                              dest!: state_relation_sc_relation)
             apply (fastforce simp: sc_relation_def obj_at'_def obj_at_def is_sc_obj opt_map_red
                             dest!: state_relation_sc_replies_relation elim: sc_replies_relation_prevs_list)
@@ -2149,7 +2150,7 @@ lemma handleYield_corres:
                apply (rule updateSchedContext_corres)
                  apply clarsimp
                  apply (drule (2) state_relation_sc_relation)
-                 apply (clarsimp simp: sc_relation_def obj_at_simps is_sc_obj opt_map_red)
+                 apply (clarsimp simp: sc_relation_def obj_at_simps is_sc_obj opt_map_red opt_pred_def)
                 apply clarsimp
                 apply (frule (2) state_relation_sc_relation)
                 apply (drule state_relation_sc_replies_relation)
@@ -2168,7 +2169,7 @@ lemma handleYield_corres:
            apply (fastforce intro: cur_sc_tcb_sc_at_cur_sc)
           apply simp
          apply (wpsimp wp: get_refills_wp)
-         apply (clarsimp simp: obj_at_def is_sc_obj)
+         apply (clarsimp simp: obj_at_def is_sc_obj elim!: opt_mapE)
         apply (wpsimp simp: get_refills_def split: Structures_A.kernel_object.splits)
        apply wpsimp+
    apply (frule invs_valid_objs)

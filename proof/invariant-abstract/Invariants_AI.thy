@@ -2848,7 +2848,7 @@ lemma sc_obj_at_typ_at:
 
 lemma sc_at_typ_at:
   "(\<And>T p. \<lbrace>typ_at T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at T p\<rbrace>) \<Longrightarrow> \<lbrace>sc_at c\<rbrace> f \<lbrace>\<lambda>rv. sc_at c\<rbrace>"
- by (simp add: sc_at_typ hoare_ex_wp)
+ by (simp add: sc_at_typ hoare_vcg_ex_lift)
 
 lemma reply_at_typ_at:
   "(\<And>T p. \<lbrace>typ_at T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at T p\<rbrace>) \<Longrightarrow> \<lbrace>reply_at c\<rbrace> f \<lbrace>\<lambda>rv. reply_at c\<rbrace>"
@@ -2902,16 +2902,16 @@ lemma valid_ntfn_typ:
     defer 2
   apply ((rule hoare_vcg_conj_lift,
          (case_tac "ntfn_bound_tcb ntfn", simp_all add: hoare_post_taut tcb_at_typ P);
-         (case_tac "ntfn_sc ntfn", simp_all add: hoare_post_taut hoare_ex_wp sc_at_typ Q))+)[2]
+         (case_tac "ntfn_sc ntfn", simp_all add: hoare_post_taut hoare_vcg_ex_lift sc_at_typ Q))+)[2]
   apply (rule hoare_vcg_conj_lift [OF hoare_vcg_prop])+
   apply (rule hoare_vcg_conj_lift)
    apply (rule hoare_vcg_const_Ball_lift [OF P])
   apply (rule hoare_vcg_conj_lift [OF hoare_vcg_prop])
   apply ((case_tac "ntfn_bound_tcb ntfn", simp_all add: hoare_post_taut tcb_at_typ P);
-         (case_tac "ntfn_sc ntfn", simp_all add: hoare_post_taut sc_at_typ hoare_ex_wp Q))
+         (case_tac "ntfn_sc ntfn", simp_all add: hoare_post_taut sc_at_typ hoare_vcg_ex_lift Q))
   apply (rule hoare_vcg_conj_lift [OF hoare_vcg_prop], simp add: P Q)
   apply (rule hoare_vcg_conj_lift [OF hoare_vcg_prop])
-  apply (rule hoare_vcg_conj_lift; simp add: P hoare_ex_wp Q)
+  apply (rule hoare_vcg_conj_lift; simp add: P hoare_vcg_ex_lift Q)
   done
 
 lemma list_all_obj_at_lift:
@@ -2957,7 +2957,7 @@ lemma valid_reply_typ:
    apply (case_tac "reply_tcb reply";
           simp add: wp_post_taut t[simplified tcb_at_typ[symmetric]])
   apply (case_tac "reply_sc reply";
-         simp add: wp_post_taut hoare_ex_wp[OF s] sc_at_typ)
+         simp add: wp_post_taut hoare_vcg_ex_lift[OF s] sc_at_typ)
   done
 
 lemma valid_obj_typ:

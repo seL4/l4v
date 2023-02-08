@@ -799,7 +799,7 @@ lemmas threadSet_cap_to' = ex_nonz_cap_to_pres' [OF threadSet_cte_wp_at']
 lemma threadSet_cap_to:
   "(\<And>tcb. \<forall>(getF, v)\<in>ran tcb_cte_cases. getF (f tcb) = getF tcb)
   \<Longrightarrow> \<lbrace>ex_nonz_cap_to' p\<rbrace> threadSet f tptr \<lbrace>\<lambda>_. ex_nonz_cap_to' p\<rbrace>"
-  by (wpsimp wp: hoare_ex_wp threadSet_cte_wp_at'
+  by (wpsimp wp: hoare_vcg_ex_lift threadSet_cte_wp_at'
            simp: ex_nonz_cap_to'_def tcb_cte_cases_def objBits_simps')
 
 lemma threadSet_ctes_ofT:
@@ -2704,6 +2704,7 @@ lemma setObject_tcb_valid_replies'_except_Blocked:
         \<and> (tcbState v = BlockedOnReply (Some rptr))\<rbrace>
    setObject t (v :: tcb)
    \<lbrace>\<lambda>rv. valid_replies'\<rbrace>"
+  supply opt_mapE[elim!]
   unfolding valid_replies'_def valid_replies'_except_def
   apply (subst pred_tcb_at'_eq_commute)+
   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' hoare_vcg_ex_lift
@@ -2948,7 +2949,7 @@ lemma threadSet_isSchedulable_bool_nochange:
   unfolding isSchedulable_bool_def threadSet_def
   apply (rule hoare_seq_ext[OF _ getObject_tcb_sp])
   apply (wpsimp wp: setObject_tcb_wp simp: pred_map_def obj_at'_def opt_map_def)
-  apply (fastforce simp: pred_map_def isScActive_def)
+  apply (fastforce simp: pred_map_def isScActive_def elim!: opt_mapE)
   done
 
 lemma threadSet_isSchedulable_bool:
@@ -2960,7 +2961,7 @@ lemma threadSet_isSchedulable_bool:
   unfolding isSchedulable_bool_def threadSet_def
   apply (rule hoare_seq_ext[OF _ getObject_tcb_sp])
   apply (wpsimp wp: setObject_tcb_wp simp: pred_map_def obj_at'_def opt_map_def)
-  apply (fastforce simp: pred_map_def isScActive_def)
+  apply (fastforce simp: pred_map_def isScActive_def elim!: opt_mapE)
   done
 
 lemma setObject_queued_pred_tcb_at'[wp]:
@@ -3039,7 +3040,7 @@ lemma sts_sch_act':
                             (ksCurThread s \<noteq> t \<or> ksSchedulerAction s \<noteq> ResumeCurrentThread \<longrightarrow>
                                sch_act_wf (ksSchedulerAction s) s)"
            in hoare_post_imp)
-   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def pred_map_def)
+   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def pred_map_def elim!: opt_mapE)
   apply (simp only: imp_conv_disj)
   apply (wpsimp wp: threadSet_pred_tcb_at_state threadSet_sch_act_wf hoare_vcg_disj_lift)
   done
@@ -3059,7 +3060,7 @@ lemma sts_sch_act[wp]:
                             (ksCurThread s \<noteq> t \<or> ksSchedulerAction s \<noteq> ResumeCurrentThread \<longrightarrow>
                                sch_act_wf (ksSchedulerAction s) s)"
            in hoare_post_imp)
-   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def pred_map_def)
+   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def pred_map_def elim!: opt_mapE)
   apply (simp only: imp_conv_disj)
   apply (wpsimp wp: threadSet_pred_tcb_at_state threadSet_sch_act_wf hoare_vcg_disj_lift)
   apply (fastforce simp: sch_act_simple_def)

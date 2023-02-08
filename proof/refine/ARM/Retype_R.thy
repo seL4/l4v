@@ -56,8 +56,6 @@ lemma createObjects_ret:
                         shiftl_t2n power_add)
   done
 
-declare select_singleton_is_return[simp]
-
 definition
   APIType_capBits :: "ARM_H.object_type \<Rightarrow> nat \<Rightarrow> nat"
 where
@@ -1302,7 +1300,8 @@ proof -
     using sr pr
     unfolding sc_replies_relation_def
     apply (clarsimp simp: sc_replies_of_scs_def map_project_def scs_of_kh_def
-                   split: Structures_A.kernel_object.split_asm)
+                   split: Structures_A.kernel_object.split_asm
+                   elim!: opt_mapE)
     apply (rename_tac sc n'; drule_tac x=p and y="sc_replies sc" in spec2)
     apply (clarsimp simp: foldr_upd_app_if[folded data_map_insert_def] split: if_split_asm)
      apply (case_tac "p \<in> set (new_cap_addrs m ptr ko)")

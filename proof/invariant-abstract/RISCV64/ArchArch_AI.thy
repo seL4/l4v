@@ -723,7 +723,7 @@ lemma perform_asid_control_invocation_non_cspace_obj_at:
                      \<and> pageBits \<le> 32 \<and> page_bits = pageBits
                      \<and> frame && ~~ mask pageBits = frame \<and> is_aligned frame pageBits
                      \<and> obj_bits_api (ArchObject ASIDPoolObj) 0 = pageBits"
-           in hoare_gen_asm'')
+               in hoare_gen_asm_spec)
    apply (clarsimp dest!: valid_aci_frame_aligned[OF _ invs_valid_objs]
                     simp: word_size_bits_def word_bits_def page_bits_def pageBits_def
                           obj_bits_api_def default_arch_object_def)

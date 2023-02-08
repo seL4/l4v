@@ -550,22 +550,22 @@ where
 | "tcb_inv_wf' (tcb_invocation.ThreadControlCaps t sl fh th croot vroot buf)
              = (tcb_at t and case_option \<top> (valid_cap \<circ> fst) croot
                         and K (case_option True (is_cnode_cap \<circ> fst) croot)
-                        and case_option \<top> ((real_cte_at And ex_cte_cap_to) \<circ> snd) croot
+                        and case_option \<top> ((real_cte_at and ex_cte_cap_to) \<circ> snd) croot
                         and case_option \<top> (no_cap_to_obj_dr_emp \<circ> fst) croot
                         and case_option \<top> (valid_cap \<circ> fst) vroot
                         and K (case_option True (is_valid_vtable_root \<circ> fst) vroot)
                         and case_option \<top> (no_cap_to_obj_dr_emp \<circ> fst) vroot
-                        and case_option \<top> ((real_cte_at And ex_cte_cap_to) \<circ> snd) vroot
+                        and case_option \<top> ((real_cte_at and ex_cte_cap_to) \<circ> snd) vroot
                         and case_option \<top> (valid_cap \<circ> fst) fh
                         and K (case_option True (valid_fault_handler o fst) fh)
                         and case_option \<top> (\<lambda>(cap, slot). cte_wp_at ((=) cap) slot) fh
                         and case_option \<top> (no_cap_to_obj_dr_emp \<circ> fst) fh
-                        and case_option \<top> ((real_cte_at And ex_cte_cap_to) \<circ> snd) fh
+                        and case_option \<top> ((real_cte_at and ex_cte_cap_to) \<circ> snd) fh
                         and case_option \<top> (valid_cap \<circ> fst) th
                         and K (case_option True (valid_fault_handler o fst) th)
                         and case_option \<top> (\<lambda>(cap, slot). cte_wp_at ((=) cap) slot) th
                         and case_option \<top> (no_cap_to_obj_dr_emp \<circ> fst) th
-                        and case_option \<top> ((real_cte_at And ex_cte_cap_to) \<circ> snd) th
+                        and case_option \<top> ((real_cte_at and ex_cte_cap_to) \<circ> snd) th
                         and (case_option \<top> (case_option \<top> (valid_cap o fst) o snd) buf)
                         and (case_option \<top> (case_option \<top>
                               (no_cap_to_obj_dr_emp o fst) o snd) buf)
@@ -574,7 +574,7 @@ where
                                ((swp valid_ipc_buffer_cap (fst v)
                                     and is_arch_cap and is_cnode_or_valid_arch)
                                               o fst) (snd v)) buf)
-                        and (case_option \<top> (case_option \<top> ((cte_at And ex_cte_cap_to) o snd) o snd) buf)
+                        and (case_option \<top> (case_option \<top> ((cte_at and ex_cte_cap_to) o snd) o snd) buf)
                         and (\<lambda>s. {fh, th, croot, vroot, option_map undefined buf} \<noteq> {None}
                                     \<longrightarrow> cte_at sl s \<and> ex_cte_cap_to sl s)
                         and ex_nonz_cap_to t)"
@@ -584,7 +584,7 @@ where
                         and K (case_option True (valid_fault_handler o fst) fh)
                         and case_option \<top> (\<lambda>(cap, slot). cte_wp_at ((=) cap) slot) fh
                         and case_option \<top> (no_cap_to_obj_dr_emp \<circ> fst) fh
-                        and case_option \<top> ((real_cte_at And ex_cte_cap_to) \<circ> snd) fh
+                        and case_option \<top> ((real_cte_at and ex_cte_cap_to) \<circ> snd) fh
                         and case_option \<top>
                               (case_option
                                 (\<lambda>s. t \<noteq> cur_thread s)

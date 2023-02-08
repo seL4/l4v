@@ -543,8 +543,8 @@ lemma blocked_cancel_ipc_invs:
   apply (rule hoare_seq_ext[OF _ get_epq_sp])
   apply (rule_tac S="(\<exists>rcv_data. st = BlockedOnReceive epptr r rcv_data)
                      \<or> r = None \<and> (\<exists>sender_data. st = BlockedOnSend epptr sender_data)"
-           in hoare_gen_asm'', fastforce)
-  apply (rule_tac S="ep \<in> {SendEP queue, RecvEP queue} \<and> ep \<noteq> IdleEP \<and> t \<noteq> epptr" in hoare_gen_asm''
+           in hoare_gen_asm_spec, fastforce)
+  apply (rule_tac S="ep \<in> {SendEP queue, RecvEP queue} \<and> ep \<noteq> IdleEP \<and> t \<noteq> epptr" in hoare_gen_asm_spec
          , fastforce simp: pred_tcb_at_def obj_at_def)
   apply (rule_tac B="\<lambda>rv s. ko_at (Endpoint (case remove1 t queue
                                                of [] \<Rightarrow> IdleEP
@@ -840,7 +840,7 @@ lemma reply_unlink_sc_sym_refs:
    apply (clarsimp simp: sc_at_ppred_def obj_at_def)
    apply (case_tac "sc_replies sc"; simp)
   apply (rule hoare_seq_ext[OF _ assert_sp])
-  apply (rule_tac S="\<exists>replies'. replies = rp # replies'" in hoare_gen_asm'')
+  apply (rule_tac S="\<exists>replies'. replies = rp # replies'" in hoare_gen_asm_spec)
    apply (clarsimp simp: sc_replies_sc_at_def obj_at_def)
    apply (frule_tac x=rp and y=scp and tp=SCReply in sym_refsE
           ; fastforce simp: in_state_refs_of_iff get_refs_def2)
@@ -1343,7 +1343,7 @@ lemma reply_remove_tcb_invs:
   apply (rename_tac sc_ptr)
   apply (rule hoare_seq_ext[OF _ gscrpls_sp[simplified]]; clarsimp)
   apply (rename_tac replies)
-  apply (rule_tac S="replies \<noteq> []" in hoare_gen_asm''
+  apply (rule_tac S="replies \<noteq> []" in hoare_gen_asm_spec
          , fastforce simp: sc_replies_sc_at_def obj_at_def dest: sc_with_reply_SomeD1)
   apply (rule hoare_seq_ext[OF _ get_sk_obj_ref_sp])
   apply (rule hoare_seq_ext[OF _ assert_sp, OF hoare_gen_asm_conj], simp)
@@ -1372,9 +1372,9 @@ lemma reply_remove_tcb_invs:
   apply (clarsimp simp: reply_sc_reply_at_def obj_at_def if_bool_simps cong: if_cong)
   apply (rename_tac reply)
   apply (rule_tac V="distinct [r,t,sc_ptr]" in revcut_rl, fastforce, clarsimp cong: if_cong)
-  by (erule delta_sym_refs
-      ; fastforce simp: in_state_refs_of_iff get_refs_def2 refs_of_rev takeWhile_eq_Cons_iff
-                 split: if_splits)
+  by (erule delta_sym_refs;
+      auto simp: in_state_refs_of_iff get_refs_def2 refs_of_rev takeWhile_eq_Cons_iff
+          split: if_splits)
 
 lemma cancel_ipc_invs[wp]:
   "\<lbrace>invs\<rbrace> cancel_ipc t \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -2043,7 +2043,7 @@ lemma cancel_all_ipc_invs_helper':
   supply if_cong[cong]
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule mapM_x_inv_wp2, fastforce, rename_tac t q')
-  apply (rule_tac S="distinct (t # q')" in hoare_gen_asm'', simp)
+  apply (rule_tac S="distinct (t # q')" in hoare_gen_asm_spec, simp)
   apply (rule hoare_conjI)
    apply (rule hoare_seq_ext[OF _ gts_sp], rename_tac st)
    apply (wpsimp wp: valid_ioports_lift

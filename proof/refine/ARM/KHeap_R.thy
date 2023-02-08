@@ -278,7 +278,7 @@ lemma pspace_relation_tcb_at:
   assumes p: "pspace_relation (kheap s) (ksPSpace s')"
   assumes t: "tcbs_of' s' t \<noteq> None"
   shows "tcb_at t s" using assms
-  by (fastforce elim!: pspace_dom_relatedE obj_relation_cutsE
+  by (fastforce elim!: pspace_dom_relatedE obj_relation_cutsE opt_mapE
                  simp: other_obj_relation_def obj_at_def projectKOs is_tcb_def
                 split: Structures_A.kernel_object.split_asm if_split_asm
                        ARM_A.arch_kernel_obj.split_asm kernel_object.splits)
@@ -287,7 +287,7 @@ lemma pspace_relation_sc_at:
   assumes p: "pspace_relation (kheap s) (ksPSpace s')"
   assumes t: "scs_of' s' scp \<noteq> None"
   shows "sc_at scp s" using assms
-  by (fastforce elim!: pspace_dom_relatedE obj_relation_cutsE
+  by (fastforce elim!: pspace_dom_relatedE obj_relation_cutsE opt_mapE
                  simp: other_obj_relation_def is_sc_obj obj_at_def projectKOs
                 split: Structures_A.kernel_object.split_asm if_split_asm
                        ARM_A.arch_kernel_obj.split_asm)
@@ -521,7 +521,7 @@ lemma setObject_distinct_types_preserves_obj_at'_pre:
     "distinct_updateObject_types TYPE('a) TYPE('b)"
   shows "setObject p v \<lbrace>\<lambda>s. P' (obj_at' P t s)\<rbrace>"
   apply (simp add: setObject_def split_def)
-  apply (rule hoare_seq_ext [OF _ hoare_gets_post])
+  apply (rule hoare_seq_ext [OF _ hoare_gets_sp])
   apply (clarsimp simp: valid_def in_monad)
   apply (frule updateObject_type)
   apply (erule_tac P="P'" in rsubst)
@@ -1463,7 +1463,7 @@ lemma setReply_not_queued_corres: (* for reply updates on replies not in fst ` r
   "reply_relation r1 r2 \<Longrightarrow>
   corres dc (\<lambda>s. ptr \<notin> fst ` replies_with_sc s) (reply_at' ptr)
             (set_reply ptr r1) (setReply ptr r2)"
-  proof -
+proof -
   have x: "updateObject r2 = updateObject_default r2" by clarsimp
   have z: "\<And>s. reply_at' ptr s
                \<Longrightarrow> map_to_ctes ((ksPSpace s) (ptr \<mapsto> injectKO r2)) = map_to_ctes (ksPSpace s)"
@@ -1523,17 +1523,17 @@ lemma setReply_not_queued_corres: (* for reply updates on replies not in fst ` r
     apply (simp add: sc_replies_relation_def)
     apply (clarsimp simp: sc_replies_of_scs_def map_project_def scs_of_kh_def)
     apply (drule_tac x=p in spec)
-   apply (subgoal_tac "((scs_of' b)(ptr := sc_of' (KOReply r2)) |> scReply) p = scReplies_of b p")
+    apply (subgoal_tac "((scs_of' b)(ptr := sc_of' (KOReply r2)) |> scReply) p = scReplies_of b p")
      apply simp
-    apply (subgoal_tac "heap_ls (replyPrevs_of b) (scReplies_of b p) (sc_replies z)")
-     apply (erule heap_path_heap_upd_not_in)
-     apply (clarsimp simp: sc_at_pred_n_def obj_at_def replies_with_sc_def image_def)
-     apply (drule_tac x=p in spec)
+     apply (subgoal_tac "heap_ls (replyPrevs_of b) (scReplies_of b p) (sc_replies z)")
+      apply (erule heap_path_heap_upd_not_in)
+      apply (clarsimp simp: sc_at_pred_n_def obj_at_def replies_with_sc_def image_def)
+      apply (drule_tac x=p in spec)
+      apply (fastforce elim!: opt_mapE)
      apply (simp add: typ_at'_def ko_wp_at'_def obj_at'_def project_inject opt_map_def)
     apply (simp add: typ_at'_def ko_wp_at'_def obj_at'_def project_inject opt_map_def)
-   apply (simp add: typ_at'_def ko_wp_at'_def obj_at'_def project_inject opt_map_def)
-  done
-  qed
+    done
+qed
 
 lemma sc_at'_cross:
   assumes p: "pspace_relation (kheap s) (ksPSpace s')"
@@ -4048,7 +4048,7 @@ lemma valid_replies_sc_cross:
   "\<lbrakk>(s, s') \<in> state_relation; valid_replies s; sym_refs (state_refs_of s);
     pspace_aligned s; pspace_distinct s; reply_at rptr s\<rbrakk>
    \<Longrightarrow> valid_replies'_sc_asrt rptr s'"
-  apply (clarsimp simp: valid_replies_defs valid_replies'_sc_asrt_def)
+  apply (clarsimp simp: valid_replies_defs valid_replies'_sc_asrt_def elim!: opt_mapE)
   apply (rename_tac scptr rp ko)
   apply (prop_tac "sc_replies_sc_at (\<lambda>rs. rptr \<in> set rs) scptr s")
    apply (frule_tac sc_ptr=scptr and reply_ptr=rptr in sym_refs_sc_replies_sc_at)
@@ -4211,7 +4211,7 @@ lemma refillSufficient_wp:
 
 lemma pred_map_rewrite:
   "pred_map P proj = opt_pred P proj"
-  by (fastforce simp: pred_map_def2)
+  by (fastforce simp: pred_map_def2 opt_pred_def)
 
 abbreviation sc_of2 :: "Structures_A.kernel_object \<rightharpoonup> Structures_A.sched_context" where
   "sc_of2 ko \<equiv> case ko of kernel_object.SchedContext sc n \<Rightarrow> Some sc | _ \<Rightarrow> None"
@@ -4255,16 +4255,8 @@ definition is_active_sc2 where
 lemma is_active_sc_rewrite:
   "is_active_sc p s = is_active_sc2 p s"
   by (fastforce simp: is_active_sc2_def vs_all_heap_simps is_active_sc_def
-                      active_sc_def opt_map_red opt_map_def
+                      active_sc_def opt_map_red opt_map_def opt_pred_def
                split: option.split_asm Structures_A.kernel_object.splits)
-
-lemma active_sc_at'_imp_is_active_sc':
-  "active_sc_at' scp s \<Longrightarrow> is_active_sc' scp s"
-  by (clarsimp simp: active_sc_at'_def is_active_sc'_def obj_at'_def opt_map_def projectKOs)
-
-lemma active_sc_at'_rewrite:
-  "active_sc_at' scp s = (is_active_sc' scp s \<and> sc_at' scp s)"
-  by (fastforce simp: active_sc_at'_def is_active_sc'_def obj_at'_def opt_map_def projectKOs)
 
 abbreviation
   "valid_refills2 scp s \<equiv>
@@ -4276,7 +4268,8 @@ lemmas valid_refills2_def = rr_valid_refills_def sp_valid_refills_def
 
 lemma valid_refills_rewrite:
   "valid_refills scp s = valid_refills2 scp s"
-  by (fastforce simp: opt_map_red vs_all_heap_simps valid_refills_def
+  by (fastforce simp: opt_map_red vs_all_heap_simps valid_refills_def opt_pred_def
+               elim!: opt_mapE
                split: option.splits Structures_A.kernel_object.splits)
 
 definition
@@ -4286,7 +4279,8 @@ where
 
 lemma round_robin_rewrite:
   "round_robin scp s = round_robin2 scp s"
-  by (clarsimp simp: round_robin_def round_robin2_def vs_all_heap_simps opt_map_def
+  by (clarsimp simp: round_robin_def round_robin2_def vs_all_heap_simps opt_map_def opt_pred_def
+               elim!: opt_mapE
               split: option.splits Structures_A.kernel_object.splits)
 
 abbreviation
@@ -4295,7 +4289,8 @@ abbreviation
 
 lemma sc_refills_sc_at_rewrite:
   "sc_refills_sc_at P scp s = sc_refills_sc_at2 P scp s"
-  by (fastforce simp: sc_refills_sc_at_def obj_at_def is_sc_obj opt_map_red
+  by (fastforce simp: sc_refills_sc_at_def obj_at_def is_sc_obj opt_map_red opt_pred_def
+               elim!: opt_mapE
                split: option.splits Structures_A.kernel_object.split_asm)
 
 lemmas projection_rewrites = pred_map_rewrite scs_of_rewrite is_active_sc_rewrite
@@ -4308,15 +4303,15 @@ lemma is_active_sc'_cross:
   shows "is_active_sc' ptr s'"
   using assms
   supply projection_rewrites[simp]
-  apply (clarsimp simp: projectKOs is_active_sc2_def is_active_sc'_def
-                 split: option.split_asm Structures_A.kernel_object.split_asm)
+  apply (clarsimp simp: projectKOs is_active_sc2_def is_active_sc'_def opt_pred_def
+                 split: option.split_asm Structures_A.kernel_object.split_asm elim!: opt_mapE)
   apply (drule (1) pspace_relation_absD, clarsimp split: if_split_asm)
   by (case_tac z; simp add: sc_relation_def opt_map_red)
 
 lemma set_refills_is_active_sc2[wp]:
   "set_refills ptr new \<lbrace>is_active_sc2 ptr'\<rbrace>"
   apply (wpsimp simp: is_active_sc2_def wp: set_refills_wp)
-  by (clarsimp simp: obj_at_def opt_map_def)
+  by (clarsimp simp: obj_at_def opt_map_def opt_pred_def)
 
 (* end : projection rewrites *)
 
@@ -4385,7 +4380,7 @@ lemma state_relation_sc_update:
      apply (frule bspec, erule domI)
      apply (rule ballI, drule(1) bspec)
      apply (drule domD)
-     apply (clarsimp simp: project_inject
+     apply (clarsimp simp: project_inject opt_pred_def
                     split: if_split_asm kernel_object.split_asm)
      apply (drule_tac x=sc' in spec)
      apply (rename_tac bb aa ba)
@@ -4434,13 +4429,14 @@ lemma updateSchedContext_wp:
      (clarsimp simp: obj_at'_def projectKOs opt_map_red elim!: rsubst[where P=Q])
 
 lemma no_fail_setSchedContext[wp]:
-  "no_fail (sc_at' ptr and (\<lambda>s'. ((\<lambda>k::sched_context. objBits k = objBits new) |< scs_of' s') ptr)) (setSchedContext ptr new)"
-  unfolding setSchedContext_def by (wpsimp simp: opt_map_def obj_at'_def projectKOs)
+  "no_fail (sc_at' ptr and (\<lambda>s'. ((\<lambda>k::sched_context. objBits k = objBits new) |< scs_of' s') ptr))
+           (setSchedContext ptr new)"
+  unfolding setSchedContext_def by (wpsimp simp: opt_map_def obj_at'_def projectKOs opt_pred_def)
 
 lemma no_fail_updateSchedContext[wp]:
   "no_fail (sc_at' ptr and (\<lambda>s'. ((\<lambda>k::sched_context. objBits k = objBits (f k)) |< scs_of' s') ptr))
-         (updateSchedContext ptr f)"
-  by (wpsimp simp: updateSchedContext_def obj_at'_def projectKOs opt_map_def)
+           (updateSchedContext ptr f)"
+  by (wpsimp simp: updateSchedContext_def obj_at'_def projectKOs opt_map_def opt_pred_def)
 
 lemma update_sched_context_rewrite:
   "monadic_rewrite False True (sc_obj_at n scp)
@@ -4665,7 +4661,7 @@ lemma updateSchedContext_corres_gen:
    apply (clarsimp simp: update_sched_context_def obj_at_def in_monad
                          get_object_def set_object_def a_type_def)
   apply (clarsimp intro!: no_failD[OF no_fail_updateSchedContext]
-                    simp: obj_at'_def projectKOs opt_map_def)
+                    simp: obj_at'_def projectKOs opt_map_def opt_pred_def)
   done
 
 lemmas updateSchedContext_corres = updateSchedContext_corres_gen[where P=\<top> and P'=\<top>, simplified]
@@ -4839,7 +4835,8 @@ lemma not_idle_scTCB:
    apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def)
   apply (subst (asm) sym_heap_symmetric)
   apply (clarsimp simp: obj_at'_sc_tcbs_of_equiv sym_heap_def)
-  apply (clarsimp simp: valid_idle'_def obj_at'_real_def ko_wp_at'_def idle_tcb'_def projectKOs)
+  apply (clarsimp simp: valid_idle'_def obj_at'_real_def ko_wp_at'_def idle_tcb'_def projectKOs
+                 elim!: opt_mapE)
   done
 
 lemma not_idle_tcbSC:
@@ -4848,7 +4845,8 @@ lemma not_idle_tcbSC:
   apply (subgoal_tac "\<not>obj_at' (\<lambda>x. tcbSchedContext x = Some idle_sc_ptr) p s")
    apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def)
   apply (clarsimp simp: obj_at'_tcb_scs_of_equiv sym_heap_def)
-  apply (clarsimp simp: valid_idle'_def obj_at'_real_def ko_wp_at'_def idle_tcb'_def projectKOs)
+  apply (clarsimp simp: valid_idle'_def obj_at'_real_def ko_wp_at'_def idle_tcb'_def projectKOs
+                 elim!: opt_mapE)
   done
 
 lemma setObject_tcb_tcbs_of':
@@ -4896,10 +4894,12 @@ lemma sym_refs_tcbSCs:
   apply (rule iffI)
    apply (drule_tac tp=SCTcb and x=p and y=p' in sym_refsE;
           force simp: get_refs_def2 state_refs_of'_def projectKOs opt_map_red refs_of_rev'
-                dest: pspace_alignedD' pspace_distinctD' pspace_boundedD' split: if_split_asm option.split_asm)+
+                dest: pspace_alignedD' pspace_distinctD' pspace_boundedD' elim!: opt_mapE
+               split: if_split_asm option.split_asm)+
   by (drule_tac tp=TCBSchedContext and x=p' and y=p in sym_refsE;
       force simp: get_refs_def2 state_refs_of'_def projectKOs opt_map_red refs_of_rev'
-               dest: pspace_alignedD' pspace_distinctD' pspace_boundedD' split: if_split_asm option.split_asm)+
+            dest: pspace_alignedD' pspace_distinctD' pspace_boundedD'
+           elim!: opt_mapE split: if_split_asm option.split_asm)+
 
 lemma sym_refs_scReplies:
   "\<lbrakk>sym_refs (state_refs_of' s); pspace_aligned' s; pspace_distinct' s; pspace_bounded' s\<rbrakk>
@@ -4908,10 +4908,14 @@ lemma sym_refs_scReplies:
   apply (rule iffI)
    apply (drule_tac tp=ReplySchedContext and x=p and y=p' in sym_refsE;
           force simp: get_refs_def2 state_refs_of'_def projectKOs opt_map_red refs_of_rev'
-                dest: pspace_alignedD' pspace_distinctD' pspace_boundedD' split: if_split_asm option.split_asm)+
+                dest: pspace_alignedD' pspace_distinctD' pspace_boundedD'
+               elim!: opt_mapE
+               split: if_split_asm option.split_asm)+
   by (drule_tac tp=SCReply and x=p' and y=p in sym_refsE;
       force simp: get_refs_def2 state_refs_of'_def projectKOs opt_map_red refs_of_rev'
-               dest: pspace_alignedD' pspace_distinctD' pspace_boundedD' split: if_split_asm option.split_asm)+
+               dest: pspace_alignedD' pspace_distinctD' pspace_boundedD'
+              elim!: opt_mapE
+              split: if_split_asm option.split_asm)+
 
 lemma setSchedContext_scTCBs_of:
   "\<lbrace>\<lambda>s. P (\<lambda>a. if a = scPtr then scTCB sc else scTCBs_of s a)\<rbrace>
@@ -5086,7 +5090,7 @@ lemma is_active_sc'2_cross:
   apply (clarsimp simp: pspace_relation_def obj_at_def is_sc_obj_def)
   apply (drule_tac x=sc_ptr in bspec, blast)
   apply (clarsimp simp: sc_relation_def vs_all_heap_simps obj_at'_def projectKOs
-                        active_sc_def opt_map_red StateRelation.is_active_sc'_def)
+                        active_sc_def opt_map_red StateRelation.is_active_sc'_def opt_pred_def)
   done
 
 lemma release_q_runnable_cross:

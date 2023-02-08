@@ -277,7 +277,7 @@ lemma blocked_cancelIPC_corres:
        \<comment>\<open>BlockedOnReceive\<close>
        apply (rename_tac list)
        apply (cases reply_opt;
-              simp split del: if_split add: if_return_closure bind_assoc cong: if_cong)
+              simp split del: if_split add: bind_assoc cong: if_cong)
          \<comment>\<open>reply_opt = None\<close>
         apply (rule corres_guard_imp)
           apply (rule corres_split[OF setEndpoint_corres])
@@ -560,7 +560,8 @@ lemma sr_inv_sc_with_reply_None_helper:
     apply (prop_tac "rp \<notin> set replies")
      apply (drule_tac sc=scp in valid_replies_sc_with_reply_None, simp)
      apply (clarsimp simp: sc_replies_sc_at_def obj_at_def is_reply sc_replies_of_scs_def
-                           scs_of_kh_def map_project_def)
+                           scs_of_kh_def map_project_def
+                    elim!: opt_mapE)
     apply (erule (1) heap_ls_prev_not_in)
     apply (fastforce elim!: sym_refs_replyNext_replyPrev_sym[THEN iffD1] simp: opt_map_red)
    apply (wpsimp wp: updateReply_valid_objs' simp: valid_reply'_def obj_at'_def)
@@ -721,7 +722,7 @@ lemma replyRemoveTCB_corres:
               apply (case_tac "hd xs = rp")
                apply (drule heap_path_head, clarsimp)
                apply (drule (3) sym_refs_scReplies)
-               apply (clarsimp simp: obj_at'_def sym_heap_def)
+               apply (clarsimp simp: obj_at'_def sym_heap_def elim!: opt_mapE)
 
               apply (frule (1) heap_path_takeWhile_lookup_next)
               apply (frule heap_path_head, clarsimp)
@@ -731,7 +732,8 @@ lemma replyRemoveTCB_corres:
               apply (drule_tac p1="hd xs" and ps1="tl (takeWhile ((\<noteq>) rp) xs)"
                      in sym_refs_reply_heap_path_doubly_linked_Nexts_rev[where p'=rp, THEN iffD1])
                apply clarsimp
-              apply (case_tac "rev (tl (takeWhile ((\<noteq>) rp) xs))"; clarsimp simp: obj_at'_def)
+              apply (case_tac "rev (tl (takeWhile ((\<noteq>) rp) xs))";
+                     clarsimp simp: obj_at'_def elim!: opt_mapE)
              apply (clarsimp simp: liftM_def bind_assoc split del: if_split)
              apply (rename_tac next_reply)
              apply (rule_tac Q="\<lambda>x. ?abs_guard
@@ -794,7 +796,8 @@ lemma replyRemoveTCB_corres:
                                             P'=" (\<lambda>s'. \<forall>prp. replyPrev reply' = Some prp
                                                              \<longrightarrow> replyNexts_of s' prev_rp = Some rp)"
                                          in updateReply_sr_inv)
-                             apply (clarsimp simp: reply_relation_def  obj_at'_def obj_at_def)
+                             apply (clarsimp simp: reply_relation_def  obj_at'_def obj_at_def
+                                            elim!: opt_mapE)
                             apply clarsimp
                             apply (drule_tac rp=prev_rp in sc_replies_relation_replyNext_update, simp)
                             apply simp
@@ -878,7 +881,8 @@ lemma replyRemoveTCB_corres:
                                              P'=" (\<lambda>s'. \<forall>prp. replyPrev reply' = Some prp
                                                               \<longrightarrow> replyNexts_of s' prev_rp = Some rp)"
                                     in updateReply_sr_inv)
-                              apply (clarsimp simp: reply_relation_def  obj_at'_def obj_at_def)
+                              apply (clarsimp simp: reply_relation_def  obj_at'_def obj_at_def
+                                             elim!: opt_mapE)
                              apply clarsimp
                              apply (drule_tac rp=prev_rp in sc_replies_relation_replyNext_update, simp)
                              apply simp
@@ -910,7 +914,7 @@ lemma replyRemoveTCB_corres:
                     apply (rule conjI)
                      apply (clarsimp simp: list_all_iff dest!: set_takeWhileD)
                     apply (drule (2) sc_replies_middle_reply_sc_None)
-                       apply (clarsimp simp: vs_heap_simps obj_at_def)
+                       apply (clarsimp simp: vs_heap_simps obj_at_def elim!: opt_mapE)
                       apply (fastforce simp: obj_at_def is_sc_obj_def elim!: valid_sched_context_size_objsI)
                      apply (erule reply_sc_reply_at)
                     apply (clarsimp simp: reply_sc_reply_at_def obj_at_def)
@@ -967,6 +971,7 @@ lemma setSchedContext_pop_head_corres:
           (do sc' \<leftarrow> getSchedContext ptr;
               setSchedContext ptr (scReply_update (\<lambda>_. replyPrev reply') sc')
            od)"
+  supply opt_mapE[elim!]
   apply (rule_tac Q="sc_at' ptr" in corres_cross_add_guard)
    apply (fastforce dest!: state_relationD simp: obj_at_def is_sc_obj_def vs_heap_simps
                     elim!: sc_at_cross valid_objs_valid_sched_context_size)
@@ -1010,7 +1015,7 @@ lemma setSchedContext_pop_head_corres:
          apply (wpsimp wp: get_sched_context_exs_valid simp: is_sc_obj_def obj_at_def)
           apply (rename_tac ko xs; case_tac ko; clarsimp)
          apply simp
-        apply (wpsimp simp: obj_at_def is_sc_obj_def vs_heap_simps)
+        apply (wpsimp simp: obj_at_def is_sc_obj_def vs_heap_simps opt_pred_def)
        apply (wpsimp wp: get_sched_context_no_fail simp: obj_at_def is_sc_obj)
       apply (clarsimp simp: obj_at_def is_sc_obj_def)
      apply simp
@@ -1074,7 +1079,7 @@ lemma setSchedContext_local_sym_refs:
    setSchedContext scp (scReply_update (\<lambda>_. replyPrev r') sc)
    \<lbrace>\<lambda>rv s. \<forall>p'. scReplies_of s p' \<noteq> Some rp\<rbrace>"
   apply (wpsimp wp: setObject_sc_wp simp: setSchedContext_def)
-  apply (clarsimp simp: obj_at'_def  opt_map_red split: if_split_asm)
+  apply (clarsimp simp: obj_at'_def  opt_map_red elim!: opt_mapE split: if_split_asm)
   apply (drule_tac x=p' in spec)
   apply (clarsimp simp: opt_map_red)
   done
@@ -1103,7 +1108,7 @@ lemma replyPop_corres:
                               and bound_sc_tcb_at ((=) tcbsc) t and reply_tcb_reply_at ((=) (Some t)) rp
                               and (\<lambda>s. sc_with_reply rp s = _) and ?sc_replies)
                              (?conc_guard and (\<lambda>s'. sym_refs (list_refs_of_replies' s'))) _ _")
-  supply if_split[split del]
+  supply if_split[split del] opt_mapE[elim!]
   apply add_sym_refs
   apply (rule_tac Q="st_tcb_at' ((=) st') t" in corres_cross_add_guard)
    apply (fastforce dest!: st_tcb_at_coerce_concrete elim!: pred_tcb'_weakenE)
@@ -1321,7 +1326,8 @@ lemma replyPop_corres:
                 apply (intro conjI impI allI; rename_tac ls; case_tac ls; clarsimp)
                apply (clarsimp simp: valid_obj'_def  opt_map_red opt_map_Some_eta_fold)
                apply (intro conjI impI)
-                   apply (fastforce simp: obj_at'_def opt_map_red  valid_sched_context'_def valid_obj'_def valid_reply'_def)
+                   apply (fastforce simp: obj_at'_def opt_map_red opt_pred_def
+                                          valid_sched_context'_def valid_obj'_def valid_reply'_def)
                   apply (fold fun_upd_def)
                   apply (clarsimp simp: obj_at'_def  opt_map_red ps_clear_upd objBits_simps
                                  split: if_split)
@@ -1458,7 +1464,7 @@ lemma replyRemove_corres:
                  apply (case_tac "hd xs = rp")
                   apply (drule heap_path_head, clarsimp)
                   apply (drule (3) sym_refs_scReplies)
-                  apply (clarsimp simp: obj_at'_def  sym_heap_def)
+                  apply (clarsimp simp: obj_at'_def sym_heap_def elim!: opt_mapE)
                  apply (frule (1) heap_path_takeWhile_lookup_next)
                  apply (frule heap_path_head, clarsimp)
                  apply (prop_tac "takeWhile ((\<noteq>) rp) xs = hd xs # tl (takeWhile ((\<noteq>) rp) xs)")
@@ -1467,7 +1473,8 @@ lemma replyRemove_corres:
                  apply (drule_tac p1="hd xs" and ps1="tl (takeWhile ((\<noteq>) rp) xs)"
                         in sym_refs_reply_heap_path_doubly_linked_Nexts_rev[where p'=rp, THEN iffD1])
                   apply clarsimp
-                 apply (case_tac "rev (tl (takeWhile ((\<noteq>) rp) xs))"; clarsimp simp: obj_at'_def)
+                 apply (case_tac "rev (tl (takeWhile ((\<noteq>) rp) xs))";
+                        clarsimp simp: obj_at'_def elim!: opt_mapE)
                 apply (clarsimp simp: liftM_def bind_assoc split del: if_split)
                 apply (rename_tac next_reply)
                 apply (rule_tac Q="\<lambda>sc. ?abs_guard
@@ -1589,7 +1596,8 @@ lemma replyRemove_corres:
                                                       P'=" (\<lambda>s'. \<forall>prp. replyPrev reply' = Some prp
                                                                        \<longrightarrow> replyNexts_of s' prev_rp = Some rp)"
                                              in updateReply_sr_inv)
-                                       apply (clarsimp simp: reply_relation_def  obj_at'_def obj_at_def)
+                                       apply (clarsimp simp: reply_relation_def  obj_at'_def obj_at_def
+                                                      elim!: opt_mapE)
                                       apply clarsimp
                                       apply (drule_tac rp=prev_rp in sc_replies_relation_replyNext_update, simp)
                                       apply simp
@@ -1647,7 +1655,7 @@ lemma replyRemove_corres:
                                        simp: sc_replies_sc_at_def obj_at_def reply_sc_reply_at_def)
                     apply (fastforce dest!: sc_replies_middle_reply_sc_None
                                       simp: vs_heap_simps obj_at_def is_sc_obj is_reply reply_sc_reply_at_def
-                                     elim!: valid_sched_context_size_objsI)
+                                     elim!: valid_sched_context_size_objsI opt_mapE)
                    apply (wpsimp simp: get_tcb_obj_ref_def thread_get_def st_tcb_def2)
                   apply (wpsimp wp: get_sched_context_exs_valid)
                    apply (fastforce dest!: sc_with_reply_SomeD1 simp: sc_replies_sc_at_def obj_at_def)
@@ -1864,6 +1872,7 @@ lemma blockedCancelIPC_valid_pspace'[wp]:
   "\<lbrace>valid_pspace' and st_tcb_at' ((=) st) tptr\<rbrace>
    blockedCancelIPC st tptr rptrOpt
    \<lbrace>\<lambda>_. valid_pspace'\<rbrace>"
+  supply opt_mapE[elim!]
   unfolding valid_pspace'_def blockedCancelIPC_def getBlockingObject_def
   apply (wpsimp wp: valid_mdb'_lift hoare_vcg_imp_lift getEndpoint_wp
                     hoare_vcg_all_lift sts'_valid_replies' replyUnlink_st_tcb_at'
@@ -2581,13 +2590,14 @@ lemma valid_refills'_tcbQueued_update[simp]:
    valid_refills' scp
             (s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbQueued_update (\<lambda>_. True) tcb))\<rparr>)
    = valid_refills' scp s"
-  by (clarsimp simp: valid_refills'_def)
+  by (clarsimp simp: valid_refills'_def opt_pred_def)
 
 lemma threadSet_valid_refills'[wp]:
   "threadSet f tp \<lbrace> valid_refills' scp \<rbrace>"
   apply (wpsimp wp: threadSet_wp)
-  by (clarsimp simp: valid_refills'_def  obj_at'_def
-              dest!: opt_predD split: kernel_object.splits)
+  by (clarsimp simp: valid_refills'_def obj_at'_def opt_pred_def
+               dest!: opt_predD split: kernel_object.splits option.splits
+               elim!: opt_mapE)
 
 crunches setThreadState
   for valid_refills'[wp]: "valid_refills' scp"
@@ -2627,7 +2637,7 @@ lemma restart_thread_if_no_fault_corres:
                                        pspace_aligned s \<and> pspace_distinct s \<and> valid_tcbs s \<and>
                                        active_sc_valid_refills s \<and> current_time_bounded s"
                  in hoare_strengthen_post[rotated])
-           apply (fastforce split: option.splits simp: obj_at_def is_sc_obj opt_map_red)
+           apply (fastforce split: option.splits simp: obj_at_def is_sc_obj opt_map_red opt_pred_def)
           apply (wpsimp wp: thread_get_wp' simp: get_tcb_obj_ref_def)
          apply (clarsimp simp: bool.case_eq_if option.case_eq_if)
          apply (wpsimp wp: threadGet_wp)
@@ -2940,7 +2950,7 @@ lemma ntfn_cancel_corres_helper:
                                     and valid_sched_action and tcb_at tp"
                     in hoare_strengthen_post[rotated])
               apply (fastforce simp: pred_tcb_at_def is_tcb is_sc_obj obj_at_def opt_map_red
-                                     valid_tcbs_def valid_tcb_def valid_bound_obj_def
+                                     valid_tcbs_def valid_tcb_def valid_bound_obj_def opt_pred_def
                               split: option.splits)
              apply (wp set_thread_state_valid_sched_action)
             apply (simp add: option.case_eq_if bool.case_eq_if)
@@ -3142,7 +3152,8 @@ lemma refillPopHead_valid_pspace'[wp]:
   apply (wpsimp wp: whileLoop_wp')
   by (fastforce simp: obj_at'_def  valid_obj'_def refillNextIndex_def MIN_REFILLS_def
                       valid_sched_context'_def valid_sched_context_size'_def scBits_simps objBits_simps
-               dest!: opt_predD)
+               dest!: opt_predD
+               elim!: opt_mapE)
 
 lemma refillUnblockCheck_ko_wp_at_not_live[wp]:
   "refillUnblockCheck scp \<lbrace>\<lambda>s. P (ko_wp_at' (Not \<circ> live') p' s)\<rbrace>"

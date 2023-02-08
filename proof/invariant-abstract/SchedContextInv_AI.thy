@@ -1330,7 +1330,7 @@ lemma thread_set_cap_to:
   "(\<And>tcb. \<forall>(getF, v)\<in>ran tcb_cap_cases. getF (f tcb) = getF tcb)
   \<Longrightarrow> \<lbrace>ex_nonz_cap_to p\<rbrace> thread_set f tptr \<lbrace>\<lambda>_. ex_nonz_cap_to p\<rbrace>"
   apply (clarsimp simp add: ex_nonz_cap_to_def)
-  apply (wpsimp wp: hoare_ex_wp thread_set_cte_wp_at_trivial)
+  apply (wpsimp wp: hoare_vcg_ex_lift thread_set_cte_wp_at_trivial)
   apply auto
   done
 

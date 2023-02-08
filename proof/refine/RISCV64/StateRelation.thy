@@ -232,11 +232,13 @@ definition is_active_sc' where
 
 lemma active_sc_at'_imp_is_active_sc':
   "active_sc_at' scp s \<Longrightarrow> is_active_sc' scp s"
-  by (clarsimp simp: active_sc_at'_def is_active_sc'_def obj_at'_def opt_map_def projectKO_eq)
+  by (clarsimp simp: active_sc_at'_def is_active_sc'_def obj_at'_def opt_map_def projectKO_eq
+                     opt_pred_def)
 
 lemma active_sc_at'_rewrite:
   "active_sc_at' scp s = (is_active_sc' scp s \<and> sc_at' scp s)"
-  by (fastforce simp: active_sc_at'_def is_active_sc'_def obj_at'_def opt_map_def projectKO_eq)
+  by (fastforce simp: active_sc_at'_def is_active_sc'_def obj_at'_def opt_map_def projectKO_eq
+                      opt_pred_def)
 
 (* valid_refills' *)
 
@@ -253,7 +255,7 @@ definition valid_refills' :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> b
 
 lemma valid_refills'_nonzero_scRefillCount:
   "valid_refills' scp s' \<Longrightarrow> ((\<lambda>sc. 0 < scRefillCount sc) |< scs_of' s') scp"
-  by (clarsimp simp: valid_refills'_def split: option.splits)
+  by (clarsimp simp: valid_refills'_def opt_pred_def split: option.splits)
 
 lemma valid_objs'_valid_refills':
   "\<lbrakk>valid_objs' s'; sc_at' scp s'; is_active_sc' scp s'\<rbrakk> \<Longrightarrow> valid_refills' scp s'"
@@ -261,7 +263,7 @@ lemma valid_objs'_valid_refills':
                  split: option.split_asm)
   apply (case_tac ko; clarsimp)
   apply (erule (1) valid_objsE')
-  by (clarsimp simp: valid_refills'_def valid_obj'_def valid_sched_context'_def
+  by (clarsimp simp: valid_refills'_def valid_obj'_def valid_sched_context'_def opt_pred_def
                      is_active_sc'_def opt_map_red projectKO_opt_sc)
 
 lemma

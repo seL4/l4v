@@ -43,14 +43,14 @@ lemma alignCheck_assert:
 
 lemma magnitudeCheck_inv:   "\<lbrace>P\<rbrace> magnitudeCheck x y n \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (clarsimp simp add: magnitudeCheck_def split: option.splits)
-  apply (wp hoare_when_wp)
+  apply (wp when_wp)
   apply simp
   done
 
 lemma alignCheck_inv:
   "\<lbrace>P\<rbrace> alignCheck x n \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: alignCheck_def unless_def alignError_def)
-  apply (wp hoare_when_wp)
+  apply (wp when_wp)
   apply simp
   done
 

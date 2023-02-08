@@ -387,7 +387,7 @@ lemma checkVP_wpR [wp]:
   apply (simp add: checkVPAlignment_def unlessE_whenE cong: vmpage_size.case_cong)
   apply (rule hoare_pre)
    apply (wp whenE_wp|wpc)+
-  apply (simp add: is_aligned_mask vmsz_aligned'_def)
+  apply (simp add: is_aligned_mask vmsz_aligned_def)
   done
 
 lemma asidHighBits [simp]:

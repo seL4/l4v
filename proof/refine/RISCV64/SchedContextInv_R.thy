@@ -387,7 +387,7 @@ lemma schedContextBindNtfn_corres:
            apply (clarsimp simp: ntfn_relation_def split: Structures_A.ntfn.splits)
           apply (fold updateSchedContext_def)
           apply (rule updateSchedContext_corres)
-            apply (clarsimp simp: opt_map_red obj_at_simps is_sc_obj)
+            apply (clarsimp simp: opt_map_red opt_pred_def obj_at_simps is_sc_obj)
             apply (drule (1) pspace_relation_absD[OF _ state_relation_pspace_relation])
             apply (clarsimp simp: sc_relation_def)
            apply (clarsimp simp: opt_map_red obj_at_simps is_sc_obj)
@@ -817,7 +817,8 @@ lemma refillResetRR_corres:
   apply (rule_tac Q="\<lambda>s'. ((\<lambda>sc'. scRefillCount sc' = 2) |< scs_of' s') csc_ptr"
          in corres_cross_add_guard)
    apply (clarsimp simp: obj_at'_def round_robin2_def obj_at_def is_sc_obj
-                         rr_valid_refills_def is_active_sc2_def is_active_sc'_def opt_map_red)
+                         rr_valid_refills_def is_active_sc2_def is_active_sc'_def opt_map_red
+                         opt_pred_def)
    apply (drule (1) pspace_relation_absD[where x=csc_ptr, OF _ state_relation_pspace_relation])
    apply (erule (1) valid_objsE')
    apply (clarsimp simp: sc_relation_def refills_map_def valid_sched_context'_def valid_obj'_def)
@@ -829,13 +830,14 @@ lemma refillResetRR_corres:
                  P="(\<lambda>s. ((\<lambda>sc. length (sc_refills sc) = 2 \<and> sc_refill_max sc = MIN_REFILLS) |< scs_of2 s) csc_ptr)"
             and P'="valid_objs' and is_active_sc' csc_ptr and (\<lambda>s'. ((\<lambda>sc'. scRefillCount sc' = 2) |< scs_of' s') csc_ptr)"])
       apply (clarsimp, drule (2) state_relation_sc_relation)
-      apply (clarsimp simp: is_sc_obj obj_at_simps is_active_sc'_def opt_map_red)
+      apply (clarsimp simp: is_sc_obj obj_at_simps is_active_sc'_def opt_map_red opt_pred_def)
       apply (erule (1) valid_objsE', clarsimp simp: valid_obj'_def valid_sched_context'_def)
       apply (fastforce elim!: sc_relation_refillResetRR[simplified])
      apply (fastforce simp: obj_at_simps is_sc_obj opt_map_red
                      dest!: state_relation_sc_replies_relation_sc)
     apply (clarsimp simp: objBits_simps)+
-   apply (clarsimp simp: round_robin2_def obj_at_def is_sc_obj rr_valid_refills_def opt_map_red)
+   apply (clarsimp simp: round_robin2_def obj_at_def is_sc_obj rr_valid_refills_def opt_map_red
+                         opt_pred_def)
   by (clarsimp simp: objBits_simps)
 
 lemma refillNew_corres:
@@ -849,19 +851,19 @@ lemma refillNew_corres:
   apply (rule corres_cross_add_guard[where
       Q = "sc_at' sc_ptr and (\<lambda>s'. ((\<lambda>sc. objBits sc = minSchedContextBits + n) |< scs_of' s') sc_ptr)"])
    apply (fastforce dest!: sc_obj_at_cross[OF state_relation_pspace_relation]
-                     simp: obj_at'_def opt_map_red)
+                     simp: obj_at'_def opt_map_red opt_pred_def)
   apply (unfold refillNew_def refill_new_def setRefillHd_def updateRefillHd_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr[OF getCurTime_corres])
       (* period *)
       apply (rule corres_split[OF updateSchedContext_corres]; clarsimp simp: objBits_simps)
-          apply (fastforce simp: obj_at_simps is_sc_obj sc_relation_def opt_map_red
+          apply (fastforce simp: obj_at_simps is_sc_obj sc_relation_def opt_map_red opt_pred_def
                           dest!: state_relation_sc_relation)
          apply (fastforce simp: obj_at_simps is_sc_obj opt_map_red
                          dest!: state_relation_sc_replies_relation_sc)
         (* budget *)
         apply (rule corres_split[OF updateSchedContext_corres]; (clarsimp simp: objBits_simps)?)
-            apply (fastforce simp: obj_at_simps is_sc_obj sc_relation_def opt_map_red
+            apply (fastforce simp: obj_at_simps is_sc_obj sc_relation_def opt_map_red opt_pred_def
                             dest!: state_relation_sc_relation)
            apply (fastforce simp: obj_at_simps is_sc_obj opt_map_red
                            dest!: state_relation_sc_replies_relation_sc)
@@ -893,7 +895,7 @@ lemma refillNew_corres:
                         in corres_inst)
                  apply (rule_tac F="length (scRefills sc') = max_num_refills (min_sched_context_bits + n)"
                         in corres_req)
-                  apply (clarsimp simp: obj_at_simps scBits_simps opt_map_red)
+                  apply (clarsimp simp: obj_at_simps scBits_simps opt_map_red opt_pred_def)
                   using scBits_inverse_sc apply fastforce
                  apply (rule stronger_corres_guard_imp)
                    apply (rule_tac sc'="sc'\<lparr> scRefillMax := max_refills,
@@ -919,17 +921,18 @@ lemma refillNew_corres:
               apply (rule stronger_corres_guard_imp)
                 apply (rule maybeAddEmptyTail_corres[simplified dc_def])
                apply simp
-              apply (clarsimp simp: obj_at_simps is_sc_obj scBits_simps opt_map_red
+              apply (clarsimp simp: obj_at_simps is_sc_obj scBits_simps opt_map_red opt_pred_def
                                     valid_refills_number'_def)
               apply (drule (1) pspace_relation_absD[OF _ state_relation_pspace_relation, rotated])
               using scBits_inverse_sc apply fastforce
              apply (wpsimp wp: update_sched_context_wp updateSchedContext_wp)+
            apply (clarsimp simp:  obj_at_def is_sc_obj is_active_sc2_def)
           apply (clarsimp simp: obj_at_simps fun_upd_def[symmetric] valid_objs'_def ps_clear_upd
-                                opt_map_red)
+                                opt_map_red opt_pred_def)
          apply (wpsimp wp: update_sched_context_wp updateSchedContext_wp)+
    apply (clarsimp simp:  obj_at_def is_sc_obj is_active_sc2_def)
-  apply (clarsimp simp: obj_at_simps fun_upd_def[symmetric] valid_objs'_def ps_clear_upd opt_map_red)
+  apply (clarsimp simp: obj_at_simps fun_upd_def[symmetric] valid_objs'_def ps_clear_upd opt_map_red
+                        opt_pred_def)
   done
 
 lemma refillUpdate_corres:
@@ -944,7 +947,7 @@ lemma refillUpdate_corres:
   apply (rule corres_cross_add_guard[where
       Q = "sc_at' sc_ptr and (\<lambda>s'. ((\<lambda>sc. objBits sc = minSchedContextBits + n) |< scs_of' s') sc_ptr)"])
    apply (fastforce dest!: sc_obj_at_cross[OF state_relation_pspace_relation]
-                     simp: obj_at'_def opt_map_red)
+                     simp: obj_at'_def opt_map_red opt_pred_def)
   apply (rule_tac Q="is_active_sc' sc_ptr" in corres_cross_add_guard)
    apply (rule is_active_sc'_cross, fastforce+)
   apply (rule corres_guard_imp)
@@ -1001,19 +1004,19 @@ lemma refillUpdate_corres:
          apply (drule state_relation_sc_relation[where ptr=sc_ptr];
                (fastforce simp: obj_at_simps is_sc_obj obj_bits_def)?)
          apply (clarsimp simp: obj_at_simps is_sc_obj valid_refills_number'_def scBits_simps
-                               opt_map_red valid_refills'_def
+                               opt_map_red opt_pred_def valid_refills'_def
                         dest!: scRefills_length)
         (* sc_period *)
         apply (rule corres_split[OF updateSchedContext_corres])
              apply (fastforce dest!: state_relation_sc_relation
-                               simp: obj_at_simps is_sc_obj sc_relation_def opt_map_red)
+                               simp: obj_at_simps is_sc_obj sc_relation_def opt_map_red opt_pred_def)
             apply (fastforce dest!: state_relation_sc_replies_relation_sc
                               simp: obj_at_simps is_sc_obj sc_relation_def opt_map_red)
            apply (simp add: objBits_simps)
           (* sc_budget *)
           apply (rule corres_split[OF updateSchedContext_corres])
                apply (fastforce dest!: state_relation_sc_relation
-                                 simp: obj_at_simps is_sc_obj sc_relation_def opt_map_red)
+                                 simp: obj_at_simps is_sc_obj sc_relation_def opt_map_red opt_pred_def)
               apply (fastforce dest!: state_relation_sc_replies_relation_sc
                                 simp: obj_at_simps is_sc_obj sc_relation_def opt_map_red)
              apply (simp add: objBits_simps)
@@ -1057,8 +1060,8 @@ lemma refillUpdate_corres:
                        apply (wpsimp simp: updateRefillHd_def wp: updateSchedContext_wp)
                       apply (rule refillAddTail_corres)
                       apply (clarsimp simp: refill_map_def)
-                     apply (clarsimp simp: obj_at_def is_sc_obj is_active_sc2_def opt_map_red)
-                    apply (clarsimp simp: obj_at_simps opt_map_red is_sc_obj ps_clear_upd
+                     apply (clarsimp simp: obj_at_def is_sc_obj is_active_sc2_def opt_map_red opt_pred_def)
+                    apply (clarsimp simp: obj_at_simps opt_map_red opt_pred_def is_sc_obj ps_clear_upd
                                           scBits_simps fun_upd_def[symmetric] valid_refills'_def)
                    apply wpsimp
                   apply (wpsimp wp: getSchedContext_wp')
@@ -1067,14 +1070,14 @@ lemma refillUpdate_corres:
                                 wp: updateSchedContext_wp)
                apply (wpsimp wp: get_sc_refill_ready_wp)
               apply (wpsimp wp: refillReady_wp')
-             apply (fastforce simp: obj_at_def is_sc_obj is_active_sc2_def opt_map_red)
+             apply (fastforce simp: obj_at_def is_sc_obj is_active_sc2_def opt_map_red opt_pred_def)
             apply (fastforce simp: obj_at_simps ps_clear_upd fun_upd_def[symmetric]
-                                   valid_refills'_def opt_map_red)
+                                   valid_refills'_def opt_map_red opt_pred_def)
            apply ((wpsimp wp: updateSchedContext_wp update_sched_context_wp simp: objBits_simps)+)[5]
       apply (rule monadic_rewrite_refine_valid[where P''=\<top>, OF updateSchedContext_decompose_x3, simplified])
         apply ((clarsimp simp: objBits_simps)+)[2]
       apply (wpsimp wp: updateSchedContext_wp simp: objBits_simps)
-     apply (clarsimp simp: obj_at_def is_sc_obj is_active_sc2_def opt_map_red)
+     apply (clarsimp simp: obj_at_def is_sc_obj is_active_sc2_def opt_map_red opt_pred_def)
     apply (clarsimp simp: obj_at_simps scBits_simps ps_clear_upd fun_upd_def[symmetric]
                           valid_refills_number'_def is_sc_obj)
     apply (drule (1) pspace_relation_absD[OF _ state_relation_pspace_relation])
@@ -1211,12 +1214,12 @@ lemma refillUpdate_invs':
      apply (wpsimp wp: updateSchedContext_wp)
      apply (clarsimp simp: obj_at_simps ko_wp_at'_def ps_clear_def opt_map_def)
     apply (wpsimp wp: updateSchedContext_wp)
-    apply (clarsimp simp: obj_at_simps ko_wp_at'_def ps_clear_def opt_map_def)
+    apply (clarsimp simp: obj_at_simps ko_wp_at'_def ps_clear_def opt_map_def opt_pred_def)
    apply (wpsimp wp: updateSchedContext_wp)
   apply (wpsimp wp: updateSchedContext_invs')
   apply (fastforce dest: invs'_ko_at_valid_sched_context'
                    simp: valid_sched_context'_def valid_sched_context_size'_def obj_at_simps
-                         ko_wp_at'_def valid_refills_number'_def opt_map_red)
+                         ko_wp_at'_def valid_refills_number'_def opt_map_red opt_pred_def)
   done
 
 lemma tcbSchedDequeue_valid_refills'[wp]:
@@ -1225,7 +1228,7 @@ lemma tcbSchedDequeue_valid_refills'[wp]:
   apply (wpsimp wp: threadSet_wp threadGet_wp
               simp: bitmap_fun_defs setQueue_def
          | intro conjI impI)+
-  apply (fastforce simp: obj_at_simps valid_refills'_def opt_map_def split: option.splits)
+  apply (fastforce simp: obj_at_simps valid_refills'_def opt_map_def opt_pred_def split: option.splits)
   done
 
 crunches tcbSchedDequeue, tcbReleaseRemove
@@ -1238,7 +1241,7 @@ lemma tcbReleaseRemove_valid_refills'[wp]:
   apply (wpsimp wp: threadSet_wp threadGet_wp
               simp: bitmap_fun_defs setReleaseQueue_def setReprogramTimer_def
          | intro conjI impI)+
-    apply (fastforce simp: obj_at_simps valid_refills'_def opt_map_def split: option.splits)+
+    apply (fastforce simp: obj_at_simps valid_refills'_def opt_map_def opt_pred_def split: option.splits)+
   done
 
 crunches commitTime, refillNew, refillUpdate
@@ -1298,12 +1301,12 @@ lemma invokeSchedControlConfigureFlags_corres:
    apply (intro conjI impI allI)
      apply (rename_tac abs_state conc_state n')
      apply (frule_tac ptr=sc_ptr and s=abs_state in state_relation_sc_relation; simp?)
-     apply (clarsimp simp: sc_relation_def opt_map_def is_sc_obj_def obj_at_simps
+     apply (clarsimp simp: sc_relation_def opt_map_def opt_pred_def is_sc_obj_def obj_at_simps
                     split: Structures_A.kernel_object.splits)
     apply (rename_tac abs_state conc_state)
     apply (frule_tac s=abs_state in state_relation_sc_replies_relation)
     apply (clarsimp simp: sc_replies_relation2_def sc_replies_relation_rewrite)
-    apply (fastforce simp: opt_map_def is_sc_obj_def obj_at_simps
+    apply (fastforce simp: opt_map_def opt_pred_def is_sc_obj_def obj_at_simps
                     split: option.splits Structures_A.kernel_object.splits)
    apply (clarsimp simp: obj_at_simps)
 
@@ -1330,12 +1333,12 @@ lemma invokeSchedControlConfigureFlags_corres:
    apply (intro conjI impI allI)
      apply (rename_tac abs_state conc_state n')
      apply (frule_tac ptr=sc_ptr and s=abs_state in state_relation_sc_relation; simp?)
-     apply (clarsimp simp: sc_relation_def opt_map_def is_sc_obj_def obj_at_simps
+     apply (clarsimp simp: sc_relation_def opt_map_def opt_pred_def is_sc_obj_def obj_at_simps
                     split: Structures_A.kernel_object.splits)
     apply (rename_tac abs_state conc_state)
     apply (frule_tac s=abs_state in state_relation_sc_replies_relation)
     apply (clarsimp simp: sc_replies_relation2_def sc_replies_relation_rewrite)
-    subgoal by (fastforce simp: opt_map_def is_sc_obj_def obj_at_simps
+    subgoal by (fastforce simp: opt_map_def opt_pred_def is_sc_obj_def obj_at_simps
                          split: option.splits Structures_A.kernel_object.splits)
    apply (clarsimp simp: obj_at_simps)
 

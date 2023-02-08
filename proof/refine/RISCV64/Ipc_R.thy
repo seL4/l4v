@@ -2543,7 +2543,8 @@ lemma sendIPC_corres:
                                     in hoare_strengthen_post[rotated])
                               apply (case_tac r; clarsimp simp: pred_tcb_at_def obj_at_def is_tcb option.case_eq_if)
                               apply (drule sym[of "Some _"])
-                              apply (fastforce simp: valid_tcbs_def valid_tcb_def obj_at_def is_sc_obj opt_map_red)
+                              apply (fastforce simp: valid_tcbs_def valid_tcb_def obj_at_def
+                                                     is_sc_obj opt_map_red opt_pred_def)
 
                              apply (wpsimp wp: thread_get_wp')
                             apply (wpsimp wp: threadGet_wp)
@@ -3032,7 +3033,7 @@ lemma schedContextResume_corres:
      apply (clarsimp simp: vs_all_heap_simps)
     apply (intro conjI impI)
         apply (fastforce simp: valid_refills_def vs_all_heap_simps rr_valid_refills_def
-                               opt_map_red MIN_REFILLS_def
+                               opt_map_red opt_pred_def MIN_REFILLS_def
                         dest!: active_sc_valid_refillsE split: if_split_asm)
        apply (fastforce simp: valid_refills_def vs_all_heap_simps rr_valid_refills_def
                        dest!: active_sc_valid_refillsE)
@@ -3063,7 +3064,8 @@ lemma schedContextResume_corres:
   apply (drule sym[where s="Some ptr"])
   apply (clarsimp simp: projection_rewrites isScActive_def opt_map_red)
   apply (erule (1) valid_objsE')
-  apply (clarsimp simp: valid_obj'_def valid_sched_context'_def sc_relation_def valid_refills'_def opt_map_def)
+  apply (clarsimp simp: valid_obj'_def valid_sched_context'_def sc_relation_def valid_refills'_def
+                        opt_map_def opt_pred_def)
   done
 
 lemma getScTime_wp:
@@ -3457,7 +3459,8 @@ lemma sendSignal_corres:
                                            and pspace_distinct and valid_objs"
                            in hoare_strengthen_post[rotated])
                      apply (clarsimp, drule (1) valid_objs_ko_at)
-                     apply (fastforce simp: valid_tcb_def obj_at_def is_sc_obj opt_map_def valid_obj_def
+                     apply (fastforce simp: valid_tcb_def obj_at_def is_sc_obj opt_map_def
+                                            opt_pred_def valid_obj_def
                                      split: option.split)
                     apply wpsimp
                    apply (rule_tac Q="\<lambda>_. tcb_at' a and valid_objs'" in hoare_strengthen_post[rotated])
@@ -3542,7 +3545,8 @@ lemma sendSignal_corres:
                                        and pspace_distinct and valid_objs"
                        in hoare_strengthen_post[rotated])
                  apply (clarsimp, drule (1) valid_objs_ko_at)
-                 apply (fastforce simp: valid_tcb_def obj_at_def is_sc_obj opt_map_def valid_obj_def
+                 apply (fastforce simp: valid_tcb_def obj_at_def is_sc_obj opt_map_def opt_pred_def
+                                        valid_obj_def
                                  split: option.split)
                 apply wpsimp
                apply (rule_tac Q="\<lambda>_. tcb_at' (hd list) and valid_objs'" in hoare_strengthen_post[rotated])
@@ -4129,12 +4133,11 @@ lemma completeSignal_corres:
                        apply (wpsimp wp: getNotification_wp)
                       apply (clarsimp simp: obj_at_def is_ntfn)
                       apply (drule active_sc_valid_refillsE[rotated])
-                       apply (fastforce simp: vs_all_heap_simps is_sc_obj)
-                      apply (clarsimp simp: valid_refills_def vs_all_heap_simps rr_valid_refills_def)
-                     apply clarsimp
-                     apply (erule valid_objs'_valid_refills', clarsimp simp: obj_at'_def)
-                     apply (clarsimp dest!: valid_objs'_valid_refills'
-                                      simp: opt_map_red is_active_sc'_def obj_at'_def)
+                       apply (fastforce simp: vs_all_heap_simps is_sc_obj elim!: opt_mapE)
+                      apply (clarsimp simp: opt_map_red opt_pred_def valid_refills_def
+                                            vs_all_heap_simps rr_valid_refills_def)
+                     apply (fastforce dest!: valid_objs'_valid_refills'
+                                      simp: opt_map_red opt_pred_def is_active_sc'_def obj_at'_def)
                     apply wpsimp
                    apply wpsimp
                   apply (clarsimp simp: pred_tcb_at_def obj_at_def valid_obj_def valid_tcb_def
@@ -4173,7 +4176,8 @@ lemma completeSignal_corres:
    apply (clarsimp simp: valid_obj_def valid_ntfn_def fun_upd_def[symmetric])
    apply (clarsimp simp: state_refs_of_def get_refs_def2 obj_at_def ntfn_q_refs_of_def
                          Ipc_A.isActive_def fun_upd_idem
-                  dest!: opt_predD split: Structures_A.ntfn.splits)
+                  dest!: opt_predD split: Structures_A.ntfn.splits
+                  elim!: opt_mapE)
   apply (clarsimp simp: valid_pspace'_def invs'_def)
   apply (frule (1) ntfn_ko_at_valid_objs_valid_ntfn')
   apply (clarsimp simp: obj_at'_def)
@@ -4738,7 +4742,7 @@ lemma receiveIPC_corres:
                             apply (erule_tac x=sender in valid_objsE, simp)
                             apply (clarsimp simp: obj_at_def is_sc_obj valid_tcb_def valid_obj_def)
                            apply (clarsimp simp: valid_sched_active_sc_valid_refills
-                                                 opt_map_red obj_at_def is_sc_obj)
+                                                 opt_map_red opt_pred_def obj_at_def is_sc_obj)
                           apply (clarsimp simp: obj_at_def is_tcb pred_tcb_at_def sc_tcb_sc_at_def
                                          split: if_split)
                           apply (drule send_signal_WN_sym_refs_helper)
@@ -4856,7 +4860,7 @@ lemma receiveIPC_corres:
                                      None \<Rightarrow> \<lambda>_. True
                                      | Some x \<Rightarrow> ntfn_at x) s")
         apply (clarsimp simp: invs_def valid_state_def valid_pspace_def obj_at_def is_ep is_tcb
-                              is_ntfn opt_map_red valid_sched_def valid_sched_action_def
+                              is_ntfn opt_map_red opt_pred_def valid_sched_def valid_sched_action_def
                               valid_objs_valid_tcbs current_time_bounded_def
                        split: if_split)
        apply (clarsimp, frule (1) valid_objs_ko_at[OF invs_valid_objs])
@@ -5017,7 +5021,7 @@ lemma receiveSignal_corres:
                 in hoare_strengthen_post[rotated])
           apply (clarsimp simp: obj_at_def is_tcb)
           apply (erule (1) valid_objsE)
-          apply (fastforce simp: valid_obj_def valid_tcb_def obj_at_def opt_map_def is_sc_obj
+          apply (fastforce simp: valid_obj_def valid_tcb_def obj_at_def opt_map_def opt_pred_def is_sc_obj
                           split: option.splits)
          apply (wpsimp wp: abs_typ_at_lifts)
         apply (rule_tac Q="\<lambda>_. tcb_at' thread and valid_objs'" in hoare_strengthen_post[rotated])
@@ -6538,7 +6542,8 @@ lemma doReplyTransfer_corres:
                 in hoare_strengthen_post[rotated])
           apply (clarsimp simp: valid_sched_def invs_def valid_state_def valid_pspace_def
                          dest!: idle_no_ex_cap)
-          apply (erule disjE; clarsimp simp: vs_all_heap_simps obj_at_def is_sc_obj opt_map_red)
+          apply (erule disjE;
+                 clarsimp simp: vs_all_heap_simps obj_at_def is_sc_obj opt_map_red opt_pred_def)
           apply (rule conjI)
            apply (erule (1) valid_sched_context_size_objsI)
           apply (clarsimp split: if_split)

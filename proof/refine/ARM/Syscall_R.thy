@@ -1014,7 +1014,8 @@ lemma setDomain_invs':
    apply (wpsimp wp: tcbSchedDequeue_nonq hoare_vcg_all_lift)
   apply (rule hoare_seq_ext_skip, wpsimp wp: threadSet_tcbDomain_update_invs')
   apply (wpsimp wp: tcbSchedEnqueue_invs' isSchedulable_wp)
-  apply (clarsimp simp: isSchedulable_bool_def pred_map_simps st_tcb_at'_def obj_at_simps)
+  apply (clarsimp simp: isSchedulable_bool_def pred_map_simps st_tcb_at'_def obj_at_simps
+                 elim!: opt_mapE)
   done
 
 lemma invokeSchedControlConfigureFlags_invs':
@@ -1448,7 +1449,7 @@ lemma hinv_invs'[wp]:
               | wps)+
   apply (fastforce simp: ct_in_state'_def simple_sane_strg sch_act_simple_def pred_map_simps
                          obj_at_simps pred_tcb_at'_def
-                  elim!: pred_tcb'_weakenE st_tcb_ex_cap''
+                  elim!: pred_tcb'_weakenE st_tcb_ex_cap'' opt_mapE
                    dest: st_tcb_at_idle_thread')+
   done
 
@@ -1841,7 +1842,7 @@ lemma endTimeslice_corres: (* called when ct_schedulable *)
            apply (clarsimp dest!: valid_sched_active_sc_valid_refills
                             simp: invs_def cur_sc_tcb_def valid_state_def valid_pspace_def
                                   sc_tcb_sc_at_def obj_at_def is_sc_obj opt_map_red vs_all_heap_simps
-                                  sc_refills_sc_at_def)
+                                  sc_refills_sc_at_def opt_pred_def)
            apply (drule (1) valid_sched_context_size_objsI, clarsimp)
            apply (drule active_sc_valid_refillsE[rotated])
             apply (fastforce simp: vs_all_heap_simps)
@@ -2015,7 +2016,8 @@ lemma chargeBudget_corres:
              apply (rule refillResetRR_corres)
             apply (rule refillBudgetCheck_corres, simp)
            apply (rule updateSchedContext_corres)
-             apply (fastforce simp: sc_relation_def obj_at'_def projectKOs obj_at_def is_sc_obj opt_map_red
+             apply (fastforce simp: sc_relation_def obj_at'_def projectKOs obj_at_def is_sc_obj
+                                    opt_map_red opt_pred_def
                              dest!: state_relation_sc_relation)
             apply (fastforce simp: sc_relation_def obj_at'_def projectKOs obj_at_def is_sc_obj opt_map_red
                             dest!: state_relation_sc_replies_relation elim: sc_replies_relation_prevs_list)
@@ -2054,7 +2056,8 @@ lemma chargeBudget_corres:
                      [where Q="\<lambda>_. invs' and cur_tcb'", rotated])
        apply (clarsimp simp: invs'_def valid_pspace'_def valid_objs'_valid_tcbs' cur_tcb'_def
                              isSchedulable_bool_def runnable_eq_active' pred_map_def
-                             obj_at'_def projectKOs pred_tcb_at'_def ct_in_state'_def)
+                             obj_at'_def projectKOs pred_tcb_at'_def ct_in_state'_def
+                      elim!: opt_mapE)
       apply wpsimp
      apply (clarsimp simp: schedulable_def2 ct_in_state_def runnable_eq_active current_time_bounded_def
                            invs_def valid_state_def valid_pspace_def cur_tcb_def
@@ -2180,11 +2183,12 @@ lemma handleYield_corres:
            apply (rule corres_gen_asm')
            apply (rule_tac F="r_amount (hd refills) = rAmount (refillHd sc')" in corres_req)
             apply (clarsimp dest!: invs_valid_objs' invs_valid_objs simp: obj_at_def obj_at'_def projectKOs
-                            split: Structures_A.kernel_object.splits)
+                            split: Structures_A.kernel_object.splits elim!: opt_mapE)
             apply (erule (1) valid_objsE', clarsimp simp: valid_obj'_def)
             apply (frule (1) refill_hd_relation2[rotated -1])
              apply (drule (1) active_sc_valid_refillsE[OF _ valid_sched_active_sc_valid_refills])
-             apply (clarsimp simp: valid_refills_def vs_all_heap_simps rr_valid_refills_def split: if_split_asm)
+             apply (clarsimp simp: valid_refills_def vs_all_heap_simps rr_valid_refills_def
+                            split: if_split_asm)
             apply clarsimp
            apply simp
            apply (rule corres_guard_imp)
@@ -2192,7 +2196,7 @@ lemma handleYield_corres:
                apply (rule updateSchedContext_corres)
                  apply clarsimp
                  apply (drule (2) state_relation_sc_relation)
-                 apply (clarsimp simp: sc_relation_def obj_at_simps is_sc_obj opt_map_red)
+                 apply (clarsimp simp: sc_relation_def obj_at_simps is_sc_obj opt_map_red opt_pred_def)
                 apply clarsimp
                 apply (frule (2) state_relation_sc_relation)
                 apply (drule state_relation_sc_replies_relation)
@@ -2211,8 +2215,10 @@ lemma handleYield_corres:
            apply (fastforce intro: cur_sc_tcb_sc_at_cur_sc)
           apply simp
          apply (wpsimp wp: get_refills_wp)
-         apply (clarsimp simp: obj_at_def is_sc_obj)
+         apply (clarsimp simp: obj_at_def is_sc_obj elim!: opt_mapE)
         apply (wpsimp simp: get_refills_def split: Structures_A.kernel_object.splits)
+        apply (fastforce simp: obj_at_def cur_sc_tcb_def sc_tcb_sc_at_def
+                        dest!: invs_cur_sc_tcb)
        apply wpsimp+
    apply (frule invs_valid_objs)
    apply (fastforce simp: obj_at_def is_sc_obj cur_sc_tcb_def sc_tcb_sc_at_def opt_map_red
@@ -2228,7 +2234,8 @@ lemma chargeBudget_invs'[wp]:
      apply (rule hoare_strengthen_post[where Q="\<lambda>_. invs'"])
       apply wpsimp
      apply (clarsimp simp: isSchedulable_bool_def obj_at'_def projectKOs
-                           pred_map_def ct_in_state'_def pred_tcb_at'_def runnable_eq_active')
+                           pred_map_def ct_in_state'_def pred_tcb_at'_def runnable_eq_active'
+                    elim!: opt_mapE)
   by (wpsimp wp: hoare_drop_imp updateSchedContext_invs'
       | strengthen live_sc'_ex_cap[OF invs_iflive'] valid_sc_strengthen[OF invs_valid_objs'])+
 

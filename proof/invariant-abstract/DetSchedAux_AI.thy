@@ -184,7 +184,7 @@ lemma retype_region_etcb_at':
                 \<and> range_cover ptr sz (obj_bits_api ty us) n)\<rbrace>
   retype_region ptr n us ty dev
   \<lbrace>\<lambda>rv. etcb_at P t\<rbrace>"
-  apply (rule_tac S="t \<notin> set (retype_addrs ptr ty n us)" in hoare_gen_asm'')
+  apply (rule_tac S="t \<notin> set (retype_addrs ptr ty n us)" in hoare_gen_asm_spec)
    subgoal using pspace_no_overlap_obj_not_in_range retype_addrs_subset_ptr_bits by blast
   by (wpsimp wp: retype_region_etcb_at_other)
 

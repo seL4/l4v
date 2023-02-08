@@ -34,8 +34,12 @@ lemma obj_ref_elemD:
 
 lemma get_cap_id:
   "(v, s') \<in> fst (get_cap p s) \<Longrightarrow> (s' = s)"
-  by (clarsimp simp: get_cap_def get_object_def in_monad split_def
-              split: kernel_object.splits)
+  by (clarsimp simp: get_cap_def get_object_def read_object_def gets_the_def
+                     split_def gets_def get_def assert_opt_def bind_def
+                     return_def fail_def assert_def
+              split: option.splits)
+     (rename_tac ko a; case_tac ko;
+      simp add: fail_def bind_def return_def assert_def split: if_split_asm)
 
 lemmas cap_irq_opt_simps[simp] =
   cap_irq_opt_def [split_simps cap.split sum.split]

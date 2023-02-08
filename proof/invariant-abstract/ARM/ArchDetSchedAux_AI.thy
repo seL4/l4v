@@ -46,8 +46,8 @@ lemma init_arch_objects_valid_sched_pred[wp, DetSchedAux_AI_assms]:
 crunches init_arch_objects
   for exst[wp]: "\<lambda>s. P (exst s)"
   and ct[wp]: "\<lambda>s. P (cur_thread s)"
-  and valid_etcbs[wp, DetSchedAux_AI_assms]: valid_etcbs
-  (wp: crunch_wps unless_wp valid_etcbs_lift)
+  and valid_idle[wp, DetSchedAux_AI_assms]: valid_idle
+  (wp: crunch_wps unless_wp)
 
 lemma valid_machine_time_getCurrentTime[DetSchedAux_AI_assms]:
   "valid_machine_time s \<Longrightarrow> (x, s') \<in> fst (getCurrentTime (machine_state s))
@@ -203,7 +203,7 @@ lemma perform_asid_control_invocation_obj_at_live:
   apply (rename_tac region_ptr target_slot_cnode target_slot_idx untyped_slot_cnode untyped_slot_idx asid)
   apply (rule_tac S="region_ptr && ~~mask page_bits = region_ptr \<and> is_aligned region_ptr page_bits
                      \<and> word_size_bits \<le> page_bits \<and> page_bits < word_bits
-                     \<and> obj_bits_api (ArchObject ASIDPoolObj) 0 = page_bits" in hoare_gen_asm''
+                     \<and> obj_bits_api (ArchObject ASIDPoolObj) 0 = page_bits" in hoare_gen_asm_spec
          , fastforce simp: valid_aci_def cte_wp_at_caps_of_state valid_cap_simps
                            cap_aligned_def page_bits_def pageBits_def word_size_bits_def
                            obj_bits_api_def default_arch_object_def

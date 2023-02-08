@@ -2463,7 +2463,7 @@ lemma replyPop_valid_replies'[wp]:
    apply (frule_tac p=replyPtr in sym_heapD1)
     apply (fastforce simp: opt_map_def obj_at'_def)
    apply clarsimp
-  apply (fastforce simp: obj_at'_def)
+  apply (fastforce simp: obj_at'_def elim!: opt_mapE)
   done
 
 lemma replyRemove_valid_replies'[wp]:

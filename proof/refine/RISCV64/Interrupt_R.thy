@@ -690,7 +690,7 @@ lemma handleInterrupt_corres:
 
 crunches rescheduleRequired, tcbSchedAppend
   for ksDomainTime[wp]: "\<lambda>s. P (ksDomainTime s)"
-  (simp: tcbSchedEnqueue_def wp: hoare_unless_wp crunch_wps)
+  (simp: tcbSchedEnqueue_def wp: crunch_wps)
 
 (* catch up tcbSchedAppend to tcbSchedEnqueue, which has these from crunches on possibleSwitchTo *)
 crunches tcbSchedAppend

@@ -203,7 +203,7 @@ lemma restart_corres:
             apply (drule_tac x=t in bspec, clarsimp simp: pred_tcb_at_def obj_at_def)
             apply (clarsimp simp: valid_obj_def valid_tcb_def pred_tcb_at_def obj_at_def valid_bound_obj_def
                            dest!: sym[of "Some _"])
-           apply (clarsimp simp: obj_at_def opt_map_red is_sc_obj)
+           apply (clarsimp simp: obj_at_def opt_map_red opt_pred_def is_sc_obj)
           apply (rule_tac Q="\<lambda>rv. invs' and tcb_at' t" in hoare_strengthen_post[rotated])
            apply (clarsimp simp: invs'_def valid_pspace'_def o_def)
           apply (wpsimp wp: setThreadState_Restart_invs' hoare_drop_imps)
@@ -253,7 +253,8 @@ lemma restart_invs':
         apply wpsimp
         apply (clarsimp simp: isSchedulable_bool_def pred_map_pred_conj[simplified pred_conj_def]
                               projectKO_opt_tcb pred_map_def pred_tcb_at'_def
-                              obj_at'_real_def ko_wp_at'_def)
+                              obj_at'_real_def ko_wp_at'_def
+                       elim!: opt_mapE)
        apply (wpsimp wp: hoare_vcg_imp_lift')
       apply (rule_tac Q="\<lambda>_. invs'" in hoare_strengthen_post[rotated])
        apply (fastforce elim: isSchedulable_bool_runnableE)
@@ -1893,7 +1894,7 @@ lemma setSchedContext_scTCB_update_valid_refills[wp]:
    setSchedContext ptr (scTCB_update f sc)
    \<lbrace>\<lambda>_. valid_refills' ptr'\<rbrace>"
   apply (wpsimp wp: set_sc'.set_wp)
-  by (clarsimp simp: valid_refills'_def obj_at_simps opt_map_red)
+  by (clarsimp simp: valid_refills'_def obj_at_simps opt_map_red opt_pred_def)
 
 lemma schedContextBindTCB_corres:
   "corres dc (valid_objs and pspace_aligned and pspace_distinct and (\<lambda>s. sym_refs (state_refs_of s))
@@ -1961,10 +1962,11 @@ lemma schedContextBindTCB_corres:
                                       bound_sc_tcb_at (\<lambda>a. a = Some ptr) t s)"
                  in hoare_strengthen_post[rotated])
            apply (clarsimp simp: sc_tcb_sc_at_def obj_at_def is_sc_obj invs_def valid_state_def
-                                 valid_pspace_def option.case_eq_if opt_map_red)
+                                 valid_pspace_def option.case_eq_if opt_map_red opt_pred_def)
            apply (drule (1) valid_sched_context_size_objsI)
            apply clarsimp
-           apply (clarsimp simp: pred_tcb_at_def obj_at_def vs_all_heap_simps option.case_eq_if opt_map_red)
+           apply (clarsimp simp: pred_tcb_at_def obj_at_def vs_all_heap_simps option.case_eq_if
+                                 opt_map_red)
            apply (rename_tac sc ta tcb tcb')
            apply (drule_tac tp=ta in sym_ref_tcb_sc)
              apply (fastforce+)[3]
@@ -2944,7 +2946,7 @@ lemma decodeSetSchedParams_corres:
                      apply (rule corres_returnOkTT, simp)
                     apply (wpsimp simp: is_blocked_def)+
               apply (wpsimp wp: thread_get_wp' threadGet_wp)+
-            apply (clarsimp simp: liftE_bindE_bind bindE_assoc)
+            apply (clarsimp simp: bindE_assoc)
             apply (rule whenE_throwError_corres; simp add: cap_rel_valid_fh)
             apply (rule corres_returnOkTT)
             apply (clarsimp simp: newroot_rel_def)

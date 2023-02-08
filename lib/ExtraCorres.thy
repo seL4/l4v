@@ -5,7 +5,7 @@
  *)
 
 theory ExtraCorres
-imports Corres_UL
+imports Corres_UL Monads.OptionMonadWP
 begin
 
 lemma corres_mapM:

@@ -1036,7 +1036,8 @@ lemma list_refs_of_replies_live':
    \<Longrightarrow> ko_wp_at' live' p s'"
   apply (clarsimp simp: ko_wp_at'_def list_refs_of_replies'_def list_refs_of_reply'_def pspace_bounded'_def
                         pspace_aligned'_def pspace_distinct'_def get_refs_def projectKOs
-                 split: option.splits)
+                 split: option.splits
+                 elim!: opt_mapE)
     by (metis live_reply'_def not_in_domIff option.discI option.sel)+
 
 lemma replyPrev_list_refs_of_replies:
@@ -3175,7 +3176,7 @@ lemma storePDE_setCTE_commute:
      apply (rule modify_obj_commute')
     apply (subst modify_specify)
     apply (rule commute_commute[OF locateCTE_commute])
-          apply (rule non_fail_modify)
+          apply (rule no_fail_modify)
          apply (rule locateCTE_cte_no_fail)
         apply (rule modify_pde_pspace_distinct')
        apply (rule modify_pde_pspace_aligned')

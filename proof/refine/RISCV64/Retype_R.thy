@@ -54,8 +54,6 @@ lemma createObjects_ret:
                         shiftl_t2n power_add)
   done
 
-declare select_singleton_is_return[simp]
-
 definition
   APIType_capBits :: "RISCV64_H.object_type \<Rightarrow> nat \<Rightarrow> nat"
 where

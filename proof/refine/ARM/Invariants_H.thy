@@ -2729,7 +2729,7 @@ lemma typ_at_lift_cte_at':
   done
 
 lemma typ_at_lift_page_directory_at'_strong:
-  assumes x: "\<And>p. f \<lbrace>\<lambda>s. P (typ_at' (ArchT PDET) p s)\<rbrace>"
+  assumes x: "\<And>P p. f \<lbrace>\<lambda>s. P (typ_at' (ArchT PDET) p s)\<rbrace>"
   shows      "f \<lbrace>\<lambda>s. P (page_directory_at' p s)\<rbrace>"
   unfolding page_directory_at'_def All_less_Ball
   using x
@@ -2740,7 +2740,7 @@ lemma typ_at_lift_page_directory_at'_strong:
   done
 
 lemma typ_at_lift_page_table_at'_strong:
-  assumes x: "\<And>p. f \<lbrace>\<lambda>s. P (typ_at' (ArchT PTET) p s)\<rbrace>"
+  assumes x: "\<And>P p. f \<lbrace>\<lambda>s. P (typ_at' (ArchT PTET) p s)\<rbrace>"
   shows      "f \<lbrace>\<lambda>s. P (page_table_at' p s)\<rbrace>"
   unfolding page_table_at'_def All_less_Ball
   using x
@@ -4120,6 +4120,7 @@ declare upd_simps[simp]
 lemma sym_refs_replyNext_replyPrev_sym:
   "sym_refs (list_refs_of_replies' s') \<Longrightarrow>
     replyNexts_of s' rp = Some rp' \<longleftrightarrow> replyPrevs_of s' rp' = Some rp"
+  supply opt_mapE[elim!]
   apply (rule iffI; clarsimp simp: projectKO_opts_defs split: kernel_object.split_asm)
    apply (drule_tac tp=ReplyNext and y=rp' and x=rp in sym_refsD[rotated])
     apply (clarsimp simp: map_set_def opt_map_red list_refs_of_reply'_def projectKO_opt_reply)
