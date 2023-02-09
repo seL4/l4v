@@ -5,6 +5,7 @@
  *)
 theory Plus2_Prefix
 imports
+  Lib.Lib
   Prefix_Refinement
 begin
 
@@ -90,8 +91,8 @@ corollary plus2_x_parallel:
   apply (rule validI_weaken_pre)
    apply (rule validI_strengthen_post)
     apply ((rule rg_validI plus2_x_property[where tids="{1, 2}"])+; simp add: plus2_rel_def le_fun_def)
-   apply (clarsimp simp: plus2_inv_def bipred_conj_def)
-  apply (clarsimp simp add: bipred_conj_def plus2_inv_def)
+   apply (clarsimp simp: plus2_inv_def)
+  apply (clarsimp simp add: plus2_inv_def)
   done
 
 section \<open>Mapping across prefix refinement.\<close>
@@ -170,7 +171,7 @@ lemma plus2_x_n_parallel_induct:
     rule rg_validI, rule plus2_x_property[where tids="{..< N}"],
     assumption, (clarsimp simp: plus2_rel_def)+)
    apply (auto dest: less_Suc_eq[THEN iffD1])[1]
-  apply (clarsimp simp: bipred_conj_def)
+  apply clarsimp
   done
 
 theorem plus2_x_n_parallel:
@@ -204,9 +205,9 @@ lemma fold_parallel_prefix_closed[where xs="rev xs" for xs, simplified]:
   by (induct xs, simp_all add: parallel_prefix_closed)
 
 lemma bipred_disj_top_eq:
-  "(Rel Or (\<lambda>_ _. True)) = (\<lambda>_ _. True)"
-  "((\<lambda>_ _. True) Or Rel) = (\<lambda>_ _. True)"
-  by (auto simp add: bipred_disj_def)
+  "(Rel or (\<lambda>_ _. True)) = (\<lambda>_ _. True)"
+  "((\<lambda>_ _. True) or Rel) = (\<lambda>_ _. True)"
+  by auto
 
 lemma fold_parallel_pfx_refn_induct:
   "list_all2 (prefix_refinement sr sr sr (\<lambda>_ _. True) P Q (\<top>\<top>) (\<top>\<top>)) xs ys

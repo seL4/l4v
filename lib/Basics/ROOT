@@ -1,0 +1,12 @@
+(*
+ * Copyright 2023, Proofcraft Pty Ltd
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ *)
+
+chapter Lib
+
+session Basics (lib) = Word_Lib +
+
+  theories
+    CLib

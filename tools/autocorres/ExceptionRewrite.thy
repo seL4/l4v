@@ -75,10 +75,10 @@ lemma no_return_bindE:
     apply (erule disjE)
      apply clarsimp
     apply clarsimp
-    apply (erule (1) my_BallE)
+    apply (drule (1) bspec)
     apply clarsimp
    apply clarsimp
-   apply (erule (1) my_BallE)
+   apply (drule (1) bspec)
    apply (clarsimp split: sum.splits)
   apply (clarsimp simp: snd_bindE no_return_def validE_def valid_def)
   apply (erule_tac x=x in allE)
@@ -344,13 +344,17 @@ lemma L1_catch_cond_seq:
   apply (rule L1_catch_single_cond)
   done
 
+lemma unit_not_Inr:
+  "(a \<noteq> Inr ()) = (a = Inl ())"
+  by (cases a; clarsimp)
+
 (* This exciting lemma lets up break up a L1_catch into two parts in
  * the exciting circumstance that "E" never returns. *)
 lemma L1_catch_seq_cond_noreturn_ex:
   "\<lbrakk> no_return \<top> E \<rbrakk> \<Longrightarrow> (L1_catch (L1_seq (L1_condition c A B) C) E) = (L1_seq (L1_catch (L1_condition c A B) E) (L1_catch C E))"
   apply (clarsimp simp: L1_defs)
-  apply (monad_eq simp: no_return_def valid_def validE_def Ball_def
-      Bex_def unit_Inl_or_Inr split:sum.splits)
+  apply (monad_eq simp: no_return_def valid_def validE_def Ball_def Bex_def unit_not_Inr
+                  split: sum.splits)
   apply (safe, (metis Inr_not_Inl)+)
   done
 

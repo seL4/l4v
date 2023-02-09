@@ -69,10 +69,10 @@ FIXME: Move this change into AutoCorres itself, or the underlying VCG library.
 
 lemmas [wp del] =
   NonDetMonadEx.validE_whenE
-  NonDetMonadVCG.hoare_whenE_wps
+  NonDetMonadVCG.whenE_wps
 
 lemmas hoare_whenE_wp2 [wp] =
-  NonDetMonadVCG.hoare_whenE_wps[simplified if_apply_def2]
+  NonDetMonadVCG.whenE_wps[simplified if_apply_def2]
 
 section \<open>Rules for proving @{term ccorres_underlying} goals\<close>
 
@@ -256,11 +256,11 @@ method ccorres_to_corres_pre_step =
   (rule ccorres_to_corres_pre_intros | erule ccorres_to_corres_pre_elims)
 
 method ccorres_to_corres_pre_process = (
-  (elim pred_andE)?,
+  (elim inf1E inf2E)?,
   (simp only: Int_assoc)?,
   (ccorres_to_corres_pre_step+)?,
   (rule ccorres_to_corres_pre_finalise),
-  (intro pred_andI TrueI; clarsimp)
+  (intro pred_conjI TrueI; clarsimp)
 )
 
 text \<open>
@@ -932,7 +932,7 @@ lemma terminates_spec_no_fail:
       using spec_result_Normal p_spec by simp
     have L1_call_simpl_no_fail:
       "no_fail (\<lambda>s. P s s) (L1_call_simpl check_termination \<Gamma> f_'proc)"
-      apply (wpsimp simp: L1_call_simpl_def wp: non_fail_select select_wp)
+      apply (wpsimp simp: L1_call_simpl_def wp: no_fail_select select_wp)
       using terminates normal by auto
     have select_f_L1_call_simpl_no_fail:
       "\<And>s. no_fail (\<lambda>_. P s s) (select_f (L1_call_simpl check_termination \<Gamma> f_'proc s))"
@@ -945,7 +945,7 @@ lemma terminates_spec_no_fail:
       using normal by auto
     show ?thesis
       apply (clarsimp simp: ac AC_call_L1_def L2_call_L1_def)
-      apply (wpsimp wp: select_f_L1_call_simpl_no_fail non_fail_select
+      apply (wpsimp wp: select_f_L1_call_simpl_no_fail no_fail_select
                 wp_del: select_f_wp)
       apply (rule hoare_strengthen_post[OF select_f_L1_call_simpl_rv], fastforce)
       apply (wpsimp wp: select_wp nf_pre)+

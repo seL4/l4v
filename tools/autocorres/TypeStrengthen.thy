@@ -14,7 +14,7 @@
 theory TypeStrengthen
 imports
   L2Defs
-  "Lib.OptionMonadND"
+  "Monads.OptionMonadND"
   ExecConcrete
 begin
 
@@ -100,6 +100,9 @@ lemma TS_return_L2_seq:
 lemma TS_return_L2_condition:
     "L2_condition (\<lambda>_. c) (TS_return A) (TS_return B) = TS_return (if c then A else B)"
   by (monad_eq simp: L2_defs TS_return_def)
+
+lemma split_distrib: "case_prod (\<lambda>a b. T (f a b)) = (\<lambda>x. T (case_prod (\<lambda>a b. f a b) x))"
+  by (clarsimp simp: split_def)
 
 lemmas [ts_rule pure] =
   TS_return_L2_gets

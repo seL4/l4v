@@ -235,7 +235,7 @@ abbreviation equiv_valid_rv_inv where
   "equiv_valid_rv_inv I A R P f \<equiv> equiv_valid_rv I A A R P f"
 
 lemma get_evrv:
-  "equiv_valid_rv_inv I A (I And A) \<top> get"
+  "equiv_valid_rv_inv I A (I and A) \<top> get"
   by(auto simp: equiv_valid_2_def get_def)
 
 lemma equiv_valid_rv_bind_general:
@@ -308,7 +308,7 @@ lemma get_bind_ev2:
   assumes "\<And> rv rv'. \<lbrakk>I rv rv'; A rv rv'\<rbrakk> \<Longrightarrow> equiv_valid_2 I A B R (P and ((=) rv)) (P' and ((=) rv')) (f rv) (f' rv')"
   shows "equiv_valid_2 I A B R P P' (get >>= f) (get >>= f')"
   apply(rule equiv_valid_2_guard_imp)
-  apply(rule_tac R'="I And A" in equiv_valid_2_bind_general)
+  apply(rule_tac R'="I and A" in equiv_valid_2_bind_general)
        apply(rule assms, simp+)
       apply(rule get_evrv)
      apply(wp get_sp)+

@@ -9,7 +9,7 @@ chapter \<open>ARM\_HYP Machine Types\<close>
 theory MachineTypes
 imports
   "Word_Lib.WordSetup"
-  "Lib.OptionMonadND"
+  "Monads.OptionMonadND"
   Setup_Locale
   Platform
 begin

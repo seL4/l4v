@@ -8,10 +8,6 @@ theory ArchInvariants_AI
 imports InvariantsPre_AI
 begin
 
-(* setup *)
-
-declare opt_mapE[rule del]
-
 \<comment> \<open>---------------------------------------------------------------------------\<close>
 
 section "RISCV64-specific invariant definitions"

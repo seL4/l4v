@@ -1946,7 +1946,7 @@ context
 notes if_cong[cong]
 begin
 crunch valid_etcbs[wp]: cancel_badged_sends valid_etcbs
-(wp: mapM_x_wp hoare_drop_imps hoare_unless_wp ignore: filterM)
+(wp: mapM_x_wp hoare_drop_imps unless_wp ignore: filterM)
 end
 
 lemma cap_revoke_valid_etcbs[wp]:
@@ -2090,7 +2090,7 @@ lemma decode_cnode_error_corres:
      apply (rule corres_symb_exec_r_dcE, wp)
       apply (rule corres_symb_exec_r_dcE, wp)
        apply (rule corres_symb_exec_r_dcE)
-         apply (rule hoare_pre, wp hoare_whenE_wp)
+         apply (rule hoare_pre, wp whenE_wp)
          apply simp
         apply (rule corres_trivial)
         apply (simp split: gen_invocation_labels.split invocation_label.split list.split)
@@ -2648,7 +2648,7 @@ lemma decode_cnode_corres:
                         apply simp
                        apply (rule dcorres_returnOk)
                        apply (simp add:translate_cnode_invocation_def)
-                      apply (wp get_cap_wp hoare_whenE_wp|clarsimp)+
+                      apply (wp get_cap_wp whenE_wp|clarsimp)+
          apply (rule hoare_post_imp_R[OF validE_validE_R])
          apply (rule hoareE_TrueI[where P = \<top>])
           apply fastforce

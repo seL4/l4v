@@ -886,7 +886,7 @@ lemma asid_wf_0:
 lemma svr_invs [wp]:
   "\<lbrace>invs\<rbrace> set_vm_root t' \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: set_vm_root_def)
-  apply (wp hoare_whenE_wp
+  apply (wp whenE_wp
          | wpc
          | simp add: split_def if_apply_def2 cong: conj_cong if_cong
          | strengthen valid_cr3_make_cr3)+

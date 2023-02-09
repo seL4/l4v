@@ -105,10 +105,10 @@ lemmas mapM_x_accumulate_checks
 lemma isRight_rel_sum_comb2:
   "\<lbrakk> (f \<oplus> r) v v'; isRight v' \<rbrakk>
        \<Longrightarrow> isRight v \<and> r (theRight v) (theRight v')"
-  by (clarsimp simp: isRight_def)
+  by (cases v; clarsimp)
 
 lemma isRight_case_sum: "isRight x \<Longrightarrow> case_sum f g x = g (theRight x)"
-  by (clarsimp simp add: isRight_def)
+  by (cases x; clarsimp)
 
 lemma enumerate_append:"enumerate i (xs @ ys) = enumerate i xs @ enumerate (i + length xs) ys"
   apply (induct xs arbitrary:ys i)

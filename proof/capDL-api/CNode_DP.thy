@@ -31,7 +31,7 @@ lemma decode_cnode_copy_same_parent_rvu:
   \<lbrace>\<lambda>rv s. Q rv\<rbrace>, -"
   apply (clarsimp simp:user_pointer_at_def Let_def)
   apply (clarsimp simp: decode_cnode_invocation_def split_def split: sum.splits)
-  apply (wp hoare_whenE_wp | simp)+
+  apply (wp whenE_wp | simp)+
         apply (rule validE_validE_R)
         apply (wp derive_cap_invE)+
       apply (rule validE_validE_R)

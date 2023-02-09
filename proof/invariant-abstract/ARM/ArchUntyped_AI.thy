@@ -544,7 +544,7 @@ lemma init_arch_objects_nonempty_table[Untyped_AI_assms, wp]:
   apply (rule hoare_gen_asm)
   apply (simp add: init_arch_objects_def split del: if_split)
   apply (rule hoare_pre)
-   apply (wp hoare_unless_wp | wpc | simp add: reserve_region_def second_level_tables_def)+
+   apply (wp unless_wp | wpc | simp add: reserve_region_def second_level_tables_def)+
   apply (clarsimp simp: obj_bits_api_def default_arch_object_def pd_bits_def pageBits_def)
   done
 
@@ -575,7 +575,7 @@ lemma set_pd_cte_wp_at_iin[wp]:
 
 crunch cte_wp_at_iin[wp]: init_arch_objects
   "\<lambda>s. P (cte_wp_at (P' (interrupt_irq_node s)) p s)"
-  (ignore: clearMemory wp: crunch_wps hoare_unless_wp)
+  (ignore: clearMemory wp: crunch_wps unless_wp)
 
 lemmas init_arch_objects_ex_cte_cap_wp_to
     = init_arch_objects_excap

@@ -7,7 +7,7 @@
 theory DomainSepInv
 imports
   "ArchIpc_AC" (* for transfer_caps_loop_pres_dest lec_valid_cap' set_simple_ko_get_tcb thread_set_tcb_fault_update_valid_mdb *)
-  "Lib.WPBang"
+  "Monads.WPBang"
 begin
 
 text \<open>
@@ -432,7 +432,7 @@ context DomainSepInv_1 begin
 
 crunches cap_delete_one
   for domain_sep_inv[wp]: "\<lambda>s. domain_sep_inv irqs  (st :: 'state_ext state) (s :: det_ext state)"
-  (wp: mapM_x_wp' hoare_unless_wp dxo_wp_weak simp: crunch_simps)
+  (wp: mapM_x_wp' unless_wp dxo_wp_weak simp: crunch_simps)
 
 lemma reply_cancel_ipc_domain_sep_inv[wp]:
   "\<lbrace>domain_sep_inv irqs st\<rbrace>

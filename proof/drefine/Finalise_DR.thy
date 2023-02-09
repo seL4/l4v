@@ -698,7 +698,7 @@ lemma dcorres_set_vm_root:
        apply (wp do_machine_op_wp | clarsimp)+
      apply (rule_tac Q = "\<lambda>_ s. transform s = cs" in hoare_post_imp)
       apply simp
-     apply (wpsimp wp: hoare_whenE_wp do_machine_op_wp [OF allI] hoare_drop_imps find_pd_for_asid_inv
+     apply (wpsimp wp: whenE_wp do_machine_op_wp [OF allI] hoare_drop_imps find_pd_for_asid_inv
                 simp: arm_context_switch_def get_hw_asid_def load_hw_asid_def if_apply_def2)+
   done
 

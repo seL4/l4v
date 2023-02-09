@@ -14,7 +14,7 @@ specification. The specification draws in additional interface files from
 `design` and `machine`.
 
 The specification is written in monadic style. See
-`l4v/lib/Monad_WP/NonDetMonad` for the definition of this monad.
+`l4v/lib/Monads/NonDetMonad` for the definition of this monad.
 
 Top-Level Theory
 ----------------

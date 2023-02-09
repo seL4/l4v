@@ -60,8 +60,6 @@ lemma objBitsKO_bounded2[simp]:
   by (simp add: objBits_simps' word_bits_def pageBits_def archObjSize_def
          split: Structures_H.kernel_object.split arch_kernel_object.split)
 
-declare select_singleton_is_return[simp]
-
 definition
   APIType_capBits :: "X64_H.object_type \<Rightarrow> nat \<Rightarrow> nat"
 where
@@ -4359,7 +4357,7 @@ lemma createNewCaps_ioports':
 lemma createObjects'_irq_states' [wp]:
   "\<lbrace>valid_irq_states'\<rbrace> createObjects' a b c d \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
   apply (simp add: createObjects'_def split_def)
-  apply (wp hoare_unless_wp|wpc|simp add: alignError_def)+
+  apply (wp unless_wp|wpc|simp add: alignError_def)+
   apply fastforce
   done
 
@@ -4638,7 +4636,7 @@ lemma createObjects_null_filter':
    createObjects' ptr n val gbits
    \<lbrace>\<lambda>addrs a. P (null_filter' (ctes_of a))\<rbrace>"
    apply (clarsimp simp: createObjects'_def split_def)
-   apply (wp hoare_unless_wp|wpc
+   apply (wp unless_wp|wpc
           | clarsimp simp:haskell_assert_def alignError_def
             split del: if_splits simp del:fun_upd_apply)+
    apply (subst new_cap_addrs_fold')

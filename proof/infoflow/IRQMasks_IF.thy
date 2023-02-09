@@ -189,7 +189,7 @@ lemma preemption_point_irq_masks[wp]:
   by (wp preemption_point_inv, simp+)
 
 crunch irq_masks[wp]: cancel_badged_sends "\<lambda>s. P (irq_masks_of_state s)"
-  (wp: crunch_wps dmo_wp no_irq hoare_unless_wp
+  (wp: crunch_wps dmo_wp no_irq unless_wp
    simp: filterM_mapM crunch_simps no_irq_clearMemory
    ignore: filterM)
 

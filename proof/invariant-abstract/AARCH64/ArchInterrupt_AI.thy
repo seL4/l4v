@@ -19,7 +19,7 @@ primrec arch_irq_control_inv_valid_real ::
       cte_wp_at ((=) cap.IRQControlCap) src_slot and
       ex_cte_cap_wp_to is_cnode_cap dest_slot and
       real_cte_at dest_slot and
-      K (irq \<le> maxIRQ))" (*FIXME AARCH64 check this is gone: \<and> irq \<noteq> irqInvalid))" *)
+      K (irq \<le> maxIRQ))"
 
 defs arch_irq_control_inv_valid_def:
   "arch_irq_control_inv_valid \<equiv> arch_irq_control_inv_valid_real"
@@ -49,12 +49,7 @@ lemma decode_irq_control_valid [Interrupt_AI_asms]:
   apply (clarsimp simp: linorder_not_less word_le_nat_alt unat_ucast maxIRQ_def)
   apply (cases caps; clarsimp simp: cte_wp_at_eq_simp)
   apply (intro conjI impI; clarsimp)
-  done (* FIXME AARCH64 this felt too easy, old proof went:
-  apply (drule ucast_ucast_mask_eq)
-   apply (subst and_mask_eq_iff_le_mask)
-   apply (simp add: mask_def word_le_nat_alt)
-  apply fast
-  done *)
+  done
 
 lemma get_irq_slot_different_ARCH[Interrupt_AI_asms]:
   "\<lbrace>\<lambda>s. valid_global_refs s \<and> ex_cte_cap_wp_to is_cnode_cap ptr s\<rbrace>

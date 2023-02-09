@@ -433,7 +433,7 @@ lemma seL4_IRQHandler_SetEndpoint_wp:
   apply (rule hoare_gen_asm)
   apply (wp seL4_IRQHandler_SetEndpoint_wp_helper [where irq_handler_slot=endpoint_slot
                                                      and cap'=old_cap and t="obj_tcb root_tcb"], simp)
-  apply (rule pred_andI)
+  apply (rule pred_conjI)
    apply sep_solve
   apply clarsimp
   apply (case_tac endpoint_cap, simp_all add: is_memory_cap_def cap_type_def)

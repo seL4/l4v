@@ -269,7 +269,7 @@ lemma ccorresE_termination':
   apply clarsimp
   apply (erule allE, erule (1) impE)
   apply (clarsimp split: sum.splits xstate.splits)
-  apply (erule (1) my_BallE)
+  apply (drule (1) bspec)
   apply clarsimp
   apply (erule allE, erule impE, rule refl)
   apply clarsimp
@@ -313,7 +313,7 @@ lemma ccorresE_While:
        apply (insert ccorresE_exec_Normal [OF body_refines])[1]
        apply clarsimp
        apply atomize
-       apply (erule allE2, erule (1) impE)
+       apply (erule allE, erule allE, erule (1) impE)
        apply (frule snd_whileLoopE_first_step, force simp: cond_match)
        apply clarsimp
        apply (erule impE)
@@ -329,7 +329,7 @@ lemma ccorresE_While:
       apply (insert ccorresE_exec_Abrupt [OF body_refines])[1]
       apply clarsimp
       apply atomize
-      apply (erule allE2, erule (1) impE)
+      apply (erule allE, erule allE, erule (1) impE)
       apply (frule snd_whileLoopE_first_step, force simp: cond_match)
       apply clarsimp
       apply (subst whileLoopE_unroll)
@@ -414,13 +414,10 @@ lemma ccorresE_symb_exec_l:
   apply (clarsimp simp: ccorresE_def validE_def valid_def exs_valid_def)
   apply (erule allE, erule impE, assumption)+
   apply (clarsimp)
-  apply (erule (1) my_BallE)
-  apply clarsimp
-  apply (erule_tac x=aa and y=s in allE2)
+  apply (drule (1) bspec)
   apply clarsimp
   apply (monad_eq simp: Bex_def Ball_def split: xstate.splits)
-  apply fastforce
-  done
+  by fastforce
 
 lemma ccorresE_no_fail_term:
   " \<lbrakk> ccorresE st ct \<Gamma> G G' A B; no_fail G A; s \<in> G'; G (st s); ct \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> B \<down> Normal s"

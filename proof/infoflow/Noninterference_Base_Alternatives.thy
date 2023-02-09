@@ -5,7 +5,9 @@
  *)
 
 theory Noninterference_Base_Alternatives
-imports Noninterference_Base "Lib.Eisbach_Methods"
+  imports
+    Noninterference_Base
+    Eisbach_Tools.Eisbach_Methods
 begin
 
 text \<open>

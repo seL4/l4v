@@ -75,7 +75,7 @@ lemma createObject_typ_at':
   supply
     is_aligned_neg_mask_eq[simp del]
     is_aligned_neg_mask_weaken[simp del]
-  apply (clarsimp simp:createObjects'_def alignError_def split_def | wp hoare_unless_wp | wpc )+
+  apply (clarsimp simp:createObjects'_def alignError_def split_def | wp unless_wp | wpc )+
   apply (clarsimp simp:obj_at'_def ko_wp_at'_def typ_at'_def pspace_distinct'_def)+
   apply (subgoal_tac "ps_clear ptr (objBitsKO ty)
     (s\<lparr>ksPSpace := \<lambda>a. if a = ptr then Some ty else ksPSpace s a\<rparr>)")
@@ -453,7 +453,7 @@ lemma checkVP_wpR [wp]:
   "\<lbrace>\<lambda>s. vmsz_aligned w sz \<longrightarrow> P () s\<rbrace>
   checkVPAlignment sz w \<lbrace>P\<rbrace>, -"
   apply (simp add: checkVPAlignment_def)
-  by (wpsimp wp: hoare_whenE_wp simp: is_aligned_mask vmsz_aligned_def)
+  by (wpsimp wp: whenE_wp simp: is_aligned_mask vmsz_aligned_def)
 
 lemma asidHighBits [simp]:
   "asidHighBits = asid_high_bits"
@@ -703,7 +703,7 @@ lemma decodeX64PageTableInvocation_corres:
              apply (clarsimp simp: attribs_from_word_def filter_frame_attrs_def
                                    attribsFromWord_def Let_def)
             apply ((clarsimp cong: if_cong
-                     | wp hoare_whenE_wp hoare_vcg_all_lift_R getPDE_wp get_pde_wp
+                     | wp whenE_wp hoare_vcg_all_lift_R getPDE_wp get_pde_wp
                      | wp (once) hoare_drop_imps)+)[6]
       apply (clarsimp intro!: validE_R_validE)
       apply (rule_tac Q'="\<lambda>rv s.  pspace_aligned s \<and> valid_vspace_objs s \<and> valid_arch_state s \<and>
@@ -794,7 +794,7 @@ lemma decodeX64PageDirectoryInvocation_corres:
              apply (clarsimp simp: attribs_from_word_def filter_frame_attrs_def
                                    attribsFromWord_def Let_def)
             apply ((clarsimp cong: if_cong
-                        | wp hoare_whenE_wp hoare_vcg_all_lift_R getPDPTE_wp get_pdpte_wp
+                        | wp whenE_wp hoare_vcg_all_lift_R getPDPTE_wp get_pdpte_wp
                         | wp (once) hoare_drop_imps)+)[6]
       apply (clarsimp intro!: validE_R_validE)
       apply (rule_tac Q'="\<lambda>rv s.  pspace_aligned s \<and> valid_vspace_objs s \<and> valid_arch_state s \<and>
@@ -882,7 +882,7 @@ lemma decodeX64PDPointerTableInvocation_corres:
              apply (clarsimp simp: attribs_from_word_def filter_frame_attrs_def
                                    attribsFromWord_def Let_def)
             apply ((clarsimp cong: if_cong
-                    | wp hoare_whenE_wp hoare_vcg_all_lift_R getPML4E_wp get_pml4e_wp
+                    | wp whenE_wp hoare_vcg_all_lift_R getPML4E_wp get_pml4e_wp
                     | wp (once) hoare_drop_imps)+)
     apply (fastforce simp: valid_cap_def mask_def intro!: page_map_l4_pml4e_at_lookupI)
    apply (clarsimp simp: valid_cap'_def)
@@ -1161,11 +1161,11 @@ shows
                 apply (simp add: returnOk_liftE[symmetric])
                 apply (rule corres_returnOk)
                 apply (simp add: archinv_relation_def asid_pool_invocation_map_def)
-               apply (rule hoare_pre, wp hoare_whenE_wp)
+               apply (rule hoare_pre, wp whenE_wp)
                apply (clarsimp simp: ucast_fst_hd_assocs)
-              apply (wp hoareE_TrueI hoare_whenE_wp getASID_wp | simp)+
+              apply (wp hoareE_TrueI whenE_wp getASID_wp | simp)+
            apply ((clarsimp simp: p2_low_bits_max | rule TrueI impI)+)[2]
-         apply (wp hoare_whenE_wp getASID_wp)+
+         apply (wp whenE_wp getASID_wp)+
        apply (clarsimp simp: valid_cap_def)
       apply auto[1]
      \<comment> \<open>ASIDControlCap\<close>

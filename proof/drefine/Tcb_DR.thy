@@ -637,7 +637,7 @@ lemma invoke_tcb_corres_write_regs:
             apply simp
            apply wp
           apply (clarsimp simp: when_def)
-          apply (wpsimp wp: hoare_when_wp)+
+          apply (wpsimp wp: when_wp)+
      apply (wp wp_post_taut | simp add:invs_def valid_state_def | fastforce)+
   done
 
@@ -1114,7 +1114,7 @@ lemma dcorres_tcb_update_ipc_buffer:
               apply wp
              apply wp
             apply wpsimp
-           apply (wp hoare_when_wp)+
+           apply (wp when_wp)+
           apply (rule hoare_strengthen_post[OF hoare_TrueI[where P = \<top>]],clarsimp+)
         apply (wp wp_post_taut hoare_drop_imp get_cap_weak_wp)+
       apply (clarsimp simp:conj_comms)
@@ -1207,7 +1207,7 @@ lemma dcorres_tcb_update_vspace_root:
            apply (drule (3) ex_cte_cap_to_not_idle, simp add: not_idle_thread_def)
           apply (rule corres_trivial)
           apply clarsimp
-         apply (wp hoare_when_wp)
+         apply (wp when_wp)
         apply (rule hoare_strengthen_post[OF hoare_TrueI[where P =\<top> ]])
         apply clarsimp
        apply (rule hoare_strengthen_post[OF hoare_TrueI[where P =\<top> ]])
@@ -1294,7 +1294,7 @@ lemma dcorres_tcb_update_cspace_root:
            apply (erule valid_cap_aligned)
           apply (rule corres_trivial)
           apply (clarsimp)
-         apply (wp hoare_when_wp)
+         apply (wp when_wp)
         apply (rule hoare_strengthen_post[OF hoare_TrueI[where P =\<top> ]])
         apply clarsimp
        apply wp+

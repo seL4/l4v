@@ -7,16 +7,16 @@
 (* Miscellaneous Isabelle tools. *)
 theory NICTATools
 imports
-  Apply_Trace_Cmd
-  Apply_Debug
+  Eisbach_Tools.Apply_Trace_Cmd
+  Eisbach_Tools.Apply_Debug
   Find_Names
   (* Solves_Tac *)
-  Rule_By_Method
-  Eisbach_Methods
+  Eisbach_Tools.Rule_By_Method
+  Eisbach_Tools.Eisbach_Methods
   Time_Methods_Cmd
   Try_Attribute
   Repeat_Attribute
-  Trace_Schematic_Insts
+  Eisbach_Tools.Trace_Schematic_Insts
   Insulin
   ShowTypes
   Locale_Abbrev

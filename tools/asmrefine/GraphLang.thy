@@ -7,7 +7,7 @@
 theory GraphLang
 
 imports
-  "CLib.TypHeapLib"
+  "CParser.TypHeapLib"
   "Lib.SplitRule"
   "CommonOps"
 

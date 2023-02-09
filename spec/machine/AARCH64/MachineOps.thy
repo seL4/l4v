@@ -10,7 +10,7 @@ chapter "Machine Operations"
 theory MachineOps
 imports
   Word_Lib.WordSetup
-  Lib.NonDetMonad
+  Monads.NonDetMonad
   MachineMonad
 begin
 
@@ -104,10 +104,10 @@ definition plic_complete_claim :: "irq \<Rightarrow> unit machine_monad" where
   "plic_complete_claim irq \<equiv> machine_op_lift (plic_complete_claim_impl irq)"
 
 text \<open>
-  Interrupts that cannot occur while the kernel is running (e.g. at preemption points), but
-  that can occur from user mode. Empty on AARCH64.\<close>
+  Interrupts that cannot occur while the kernel is running (e.g. at preemption points),
+  but that can occur from user mode.\<close>
 definition non_kernel_IRQs :: "irq set" where
-  "non_kernel_IRQs = {}"
+  "non_kernel_IRQs = {irqVGICMaintenance, irqVTimerEvent}"
 
 text \<open>@{term getActiveIRQ} is oracle-based and deterministic to allow information flow proofs. It
 updates the IRQ state to the reflect the passage of time since last the IRQ, then it gets the active
@@ -342,9 +342,9 @@ definition read_cntpct :: "64 word machine_monad" where
 
 subsection "Hypervisor Banked Registers"
 
-consts' vcpuHardwareRegVal :: "vcpureg \<Rightarrow> machine_state \<Rightarrow> machine_word"
+consts' vcpuHardwareReg_val :: "vcpureg \<Rightarrow> machine_state \<Rightarrow> machine_word"
 definition readVCPUHardwareReg :: "vcpureg \<Rightarrow> machine_word machine_monad" where
-  "readVCPUHardwareReg reg \<equiv> gets (vcpuHardwareRegVal reg)"
+  "readVCPUHardwareReg reg \<equiv> gets (vcpuHardwareReg_val reg)"
 
 consts' writeVCPUHardwareReg_impl :: "vcpureg \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
 definition writeVCPUHardwareReg :: "vcpureg \<Rightarrow> machine_word \<Rightarrow> unit machine_monad" where

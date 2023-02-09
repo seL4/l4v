@@ -3389,7 +3389,7 @@ lemma set_untyped_cap_as_full_has_reply_cap:
    set_untyped_cap_as_full src_cap cap src
    \<lbrace>\<lambda>rv s. (has_reply_cap t s)\<rbrace>"
   apply (clarsimp simp:has_reply_cap_def is_reply_cap_to_def)
-  apply (wp hoare_ex_wp)
+  apply (wp hoare_vcg_ex_lift)
    apply (wp set_untyped_cap_as_full_cte_wp_at)
   apply (clarsimp simp:cte_wp_at_caps_of_state)
   apply (rule_tac x = a in exI)

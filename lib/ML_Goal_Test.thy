@@ -7,7 +7,7 @@
 theory ML_Goal_Test
 imports
   ML_Goal
-  MLUtils
+  ML_Utils.ML_Utils
 begin
 experiment begin
 

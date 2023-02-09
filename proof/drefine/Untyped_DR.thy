@@ -1041,7 +1041,7 @@ lemma create_caps_loop_dcorres:
   done
 
 crunch valid_idle[wp]: init_arch_objects "valid_idle"
-  (wp: crunch_wps hoare_unless_wp ignore: clearMemory)
+  (wp: crunch_wps unless_wp ignore: clearMemory)
 
 lemma update_available_range_dcorres:
   "dcorres dc \<top> ( K(\<exists>idx. untyped_cap = transform_cap (cap.UntypedCap dev ptr sz idx)
@@ -1556,7 +1556,7 @@ lemma invoke_untyped_corres:
                                 (Some (cap.UntypedCap dev ptr' sz (if reset then 0 else idx))) and ct_active
                              and (\<lambda>s. reset \<longrightarrow> pspace_no_overlap {ptr' .. ptr' + 2 ^ sz - 1} s)"
                       in hoare_post_impErr)
-        apply (wp hoare_whenE_wp)
+        apply (wp whenE_wp)
         apply (rule validE_validE_R, rule hoare_post_impErr, rule reset_untyped_cap_invs_etc)
          apply (clarsimp simp only: if_True simp_thms ptrs, intro conjI, assumption+)
         apply simp

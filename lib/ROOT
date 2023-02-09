@@ -9,30 +9,23 @@ chapter Lib
 session Lib (lib) = Word_Lib +
   sessions
     "HOL-Library"
-    "HOL-Eisbach"
-  directories
-    "ml-helpers"
-    "subgoal_focus"
-    "Monad_WP"
-    "Monad_WP/wp"
+    Basics
+    Eisbach_Tools
+    ML_Utils
+    Monads
   theories
     Lib
-    Log
-    Apply_Trace_Cmd
     AddUpdSimps
     EmptyFailLib
     List_Lib
     SubMonadLib
     Simulation
-    MonadEq
     SimpStrategy
     Extract_Conjunct
     GenericLib
-    ProvePart
     Corres_Adjust_Preconds
     Requalify
     Value_Abbreviation
-    Eisbach_Methods
     HaskellLib_H
     Eval_Bool
     Bisim_UL
@@ -47,26 +40,15 @@ session Lib (lib) = Word_Lib +
     Try_Methods
     ListLibLemmas
     Time_Methods_Cmd
-    Apply_Debug
     MonadicRewrite
     HaskellLemmaBucket
-    "ml-helpers/MkTermAntiquote"
-    "ml-helpers/TermPatternAntiquote"
-    "ml-helpers/TacticAntiquotation"
-    "ml-helpers/MLUtils"
-    "ml-helpers/TacticTutorial"
-    "ml-helpers/MkTermAntiquote_Tests"
-    "ml-helpers/TacticAntiquotation_Test"
-    "ml-helpers/TermPatternAntiquote_Tests"
     FP_Eval
-    "subgoal_focus/Subgoal_Methods"
     Insulin
     ExtraCorres
     NICTATools
     BCorres_UL
     Qualify
     LexordList
-    Rule_By_Method
     Defs
     Distinct_Cmd
     Match_Abbreviation
@@ -78,7 +60,6 @@ session Lib (lib) = Word_Lib +
     FastMap
     RangeMap
     Corres_Method
-    Conjuncts
     DetWPLib
     Guess_ExI
     GenericTag
@@ -87,29 +68,8 @@ session Lib (lib) = Word_Lib +
     Named_Eta
     Rules_Tac
 
-    (* should really be a separate session, but too entangled atm: *)
+    (* should move to Monads: *)
     NonDetMonadLemmaBucket
-    "Monad_WP/WhileLoopRules"
-    "Monad_WP/TraceMonad"
-    "Monad_WP/OptionMonadND"
-    "Monad_WP/OptionMonadWP"
-    "Monad_WP/Strengthen_Demo"
-    "Monad_WP/TraceMonadLemmas"
-    "Monad_WP/wp/WPBang"
-    "Monad_WP/wp/WPFix"
-    "Monad_WP/wp/Eisbach_WP"
-    "Monad_WP/wp/WPI"
-    "Monad_WP/wp/WPC"
-    "Monad_WP/wp/WP_Pre"
-    "Monad_WP/wp/WP"
-    "Monad_WP/Datatype_Schematic"
-    "Monad_WP/WhileLoopRulesCompleteness"
-    "Monad_WP/Strengthen"
-    "Monad_WP/OptionMonad"
-    "Monad_WP/TraceMonadVCG"
-    "Monad_WP/NonDetMonadVCG"
-    "Monad_WP/NonDetMonad"
-    "Monad_WP/NonDetMonadLemmas"
 
 session CLib (lib) in clib = CParser +
   sessions
@@ -125,10 +85,8 @@ session CLib (lib) in clib = CParser +
     Simpl_Rewrite
     MonadicRewrite_C
     CTranslationNICTA
-    LemmaBucket_C
     SIMPL_Lemmas
     SimplRewrite
-    TypHeapLib
     BitFieldProofsLib
     XPres
 
@@ -160,7 +118,6 @@ session LibTest (lib) in test = Refine +
     RangeMap_Test
     FP_Eval_Tests
     Trace_Schematic_Insts_Test
-    Local_Method_Tests
     Qualify_Test
     Locale_Abbrev_Test
     Value_Type_Test

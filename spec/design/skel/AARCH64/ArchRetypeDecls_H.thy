@@ -21,7 +21,7 @@ context Arch begin global_naming AARCH64_H
 #INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures/AARCH64.hs
 
 #INCLUDE_HASKELL SEL4/API/Invocation/AARCH64.hs CONTEXT AARCH64_H decls_only \
-  NOT Invocation IRQControlInvocation isVSpaceFlushLabel isPageFlushLabel
+  NOT Invocation IRQControlInvocation isVSpaceFlushLabel isPageFlushLabel FlushType
 
 #INCLUDE_HASKELL SEL4/API/Invocation/AARCH64.hs CONTEXT AARCH64_H decls_only ONLY Invocation IRQControlInvocation
 

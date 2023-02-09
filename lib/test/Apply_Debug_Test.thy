@@ -6,8 +6,8 @@
 
 theory Apply_Debug_Test
 imports
-  Lib.Apply_Debug
-  Lib.Apply_Trace_Cmd
+  Eisbach_Tools.Apply_Debug
+  Eisbach_Tools.Apply_Trace_Cmd
 begin
 
 chapter \<open>Apply_Debug\<close>

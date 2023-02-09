@@ -1913,13 +1913,6 @@ lemmas ccorres_move_c_guards =
   ccorres_move_Guard[OF abs_c_guard_from_abs_h_t_valid]
   ccorres_move_Guard
 
-lemma h_t_array_valid_array_assertion:
-  "h_t_array_valid htd ptr n \<Longrightarrow> 0 < n
-    \<Longrightarrow> array_assertion ptr n htd"
-  apply (simp add: array_assertion_def)
-  apply (fastforce intro: exI[where x=0])
-  done
-
 lemma array_assertion_abs_to_const:
   "\<forall>s s'. (s, s') \<in> rf_sr \<and> P s \<and> P' s'
     \<longrightarrow> (Suc 0 = 0 \<or> array_assertion (ptr s s') (n s s') (htd s s'))

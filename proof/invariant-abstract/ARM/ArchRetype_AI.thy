@@ -60,17 +60,17 @@ declare store_pde_state_hyp_refs_of [wp]
 
 (* These also prove facts about copy_global_mappings *)
 crunch pspace_aligned[wp]: init_arch_objects "pspace_aligned"
-  (ignore: clearMemory wp: crunch_wps hoare_unless_wp)
+  (ignore: clearMemory wp: crunch_wps unless_wp)
 crunch pspace_distinct[wp]: init_arch_objects "pspace_distinct"
-  (ignore: clearMemory wp: crunch_wps hoare_unless_wp)
+  (ignore: clearMemory wp: crunch_wps unless_wp)
 crunch mdb_inv[wp]: init_arch_objects "\<lambda>s. P (cdt s)"
-  (ignore: clearMemory wp: crunch_wps hoare_unless_wp)
+  (ignore: clearMemory wp: crunch_wps unless_wp)
 crunch valid_mdb[wp]: init_arch_objects "valid_mdb"
-  (ignore: clearMemory wp: crunch_wps hoare_unless_wp)
+  (ignore: clearMemory wp: crunch_wps unless_wp)
 crunch cte_wp_at[wp]: init_arch_objects "\<lambda>s. P (cte_wp_at P' p s)"
-  (ignore: clearMemory wp: crunch_wps hoare_unless_wp)
+  (ignore: clearMemory wp: crunch_wps unless_wp)
 crunch typ_at[wp]: init_arch_objects "\<lambda>s. P (typ_at T p s)"
-  (ignore: clearMemory wp: crunch_wps hoare_unless_wp)
+  (ignore: clearMemory wp: crunch_wps unless_wp)
 
 lemma mdb_cte_at_store_pde[wp]:
   "\<lbrace>\<lambda>s. mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)\<rbrace>
@@ -129,14 +129,14 @@ lemma get_pde_wellformed[wp]:
   done
 
 crunch valid_objs[wp]: init_arch_objects "valid_objs"
-  (ignore: clearMemory wp: crunch_wps hoare_unless_wp)
+  (ignore: clearMemory wp: crunch_wps unless_wp)
 
 lemma set_pd_arch_state[wp]:
   "\<lbrace>valid_arch_state\<rbrace> set_pd ptr val \<lbrace>\<lambda>rv. valid_arch_state\<rbrace>"
   by (rule set_pd_valid_arch)
 
 crunch valid_arch_state[wp]: init_arch_objects "valid_arch_state"
-  (ignore: clearMemory set_object wp: crunch_wps hoare_unless_wp)
+  (ignore: clearMemory set_object wp: crunch_wps unless_wp)
 
 lemmas init_arch_objects_valid_cap[wp] = valid_cap_typ [OF init_arch_objects_typ_at]
 

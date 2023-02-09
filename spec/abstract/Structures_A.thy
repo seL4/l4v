@@ -148,10 +148,6 @@ definition
   case cap of
     CNodeCap oref bits guard \<Rightarrow> (oref, bits, guard)"
 
-definition
-  the_arch_cap :: "cap \<Rightarrow> arch_cap" where
-  "the_arch_cap cap \<equiv> case cap of ArchObjectCap a \<Rightarrow> a"
-
 primrec (nonexhaustive)
   cap_ep_badge :: "cap \<Rightarrow> badge"
 where

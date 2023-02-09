@@ -60,18 +60,6 @@ lemma invs_arm_asid_table_unmap:
                    valid_asid_pool_caps_def equal_kernel_mappings_asid_table_unmap)
   done
 
-(* FIXME AARCH64: move next to mapM_set *)
-lemma mapM_set_inv:
-  assumes "\<And>x. x \<in> set xs \<Longrightarrow> \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>_. P\<rbrace>"
-  assumes "\<And>x. x \<in> set xs \<Longrightarrow> \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>_. Q x\<rbrace>"
-  assumes "\<And>x y. \<lbrakk> x \<in> set xs; y \<in> set xs \<rbrakk> \<Longrightarrow> \<lbrace>P and Q y\<rbrace> f x \<lbrace>\<lambda>_. Q y\<rbrace>"
-  shows "\<lbrace>P\<rbrace> mapM f xs \<lbrace>\<lambda>_ s. P s \<and> (\<forall>x \<in> set xs. Q x s)\<rbrace>"
-  apply (rule hoare_weaken_pre, rule hoare_vcg_conj_lift)
-    apply (rule mapM_wp', erule assms)
-   apply (rule mapM_set; rule assms; assumption)
-  apply simp
-  done
-
 lemma asid_low_bits_of_add:
   "\<lbrakk> is_aligned base asid_low_bits; offset \<le> mask asid_low_bits \<rbrakk> \<Longrightarrow>
    asid_low_bits_of (base + offset) = ucast offset"
@@ -873,7 +861,6 @@ lemma set_vcpu_if_live_then_nonz_cap_same_refs:
   apply (wpsimp wp: set_object_iflive[THEN hoare_set_object_weaken_pre]
               simp: a_type_def live_def hyp_live_def arch_live_def)
   apply (rule if_live_then_nonz_capD; simp)
-  apply (case_tac ko; simp)
   apply (clarsimp simp: live_def hyp_live_def arch_live_def,
          clarsimp simp: vcpu_tcb_refs_def split: option.splits)
   done
@@ -1013,17 +1000,6 @@ lemma vcpu_disable_valid_machine_state[wp]:
              simp: isb_def setHCR_def setSCTLR_def set_gic_vcpu_ctrl_hcr_def getSCTLR_def
                    get_gic_vcpu_ctrl_hcr_def dsb_def writeVCPUHardwareReg_def maskInterrupt_def)
 
-(* FIXME AARCH64: move to ArchVSpace_AI above valid_irq_node_arch_state_update *)
-lemma arm_asid_table_current_vcpu_update[simp]:
-  "arm_asid_table ((arm_current_vcpu_update v) (arch_state s)) = arm_asid_table (arch_state s)"
-  by clarsimp
-
-(* FIXME AARCH64: move to ArchVSpace_AI above valid_irq_node_arch_state_update *)
-lemma vmid_inv_current_vcpu_update[simp]:
-  "vmid_inv (s\<lparr>arch_state := arm_current_vcpu_update Map.empty (arch_state s)\<rparr>) =
-   vmid_inv s"
-  by (clarsimp simp: vmid_inv_def)
-
 lemma valid_arch_state_vcpu_update_str:
   "valid_arch_state s \<Longrightarrow> valid_arch_state (s\<lparr>arch_state := arm_current_vcpu_update Map.empty (arch_state s)\<rparr>)"
   unfolding valid_arch_state_def
@@ -1038,9 +1014,9 @@ lemma set_vcpu_None_valid_arch[wp]:
   set_vcpu vr (vcpu_tcb_update Map.empty v) \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
   supply fun_upd_apply[simp del]
   apply (wpsimp wp: set_vcpu_wp)
-  apply (clarsimp simp: valid_arch_state_def valid_global_arch_objs_def
+  apply (clarsimp simp: valid_arch_state_def valid_global_arch_objs_def pts_of_vcpu_None_upd_idem
                         asid_pools_of_vcpu_None_upd_idem vmid_inv_def pt_at_eq_set_vcpu)
-  apply (clarsimp simp add: cur_vcpu_def fun_upd_apply split: option.splits)
+  apply (clarsimp simp add: cur_vcpu_def fun_upd_apply in_opt_pred split: option.splits)
   done
 
 lemma dissociate_vcpu_valid_arch[wp]:
@@ -1224,15 +1200,22 @@ lemma vs_lookup_target_no_asid_pool:
   apply (clarsimp simp: in_omonad)
   apply (frule (1) vs_lookup_table_is_aligned; clarsimp?)
   apply (clarsimp simp: ptes_of_def)
+  apply (rename_tac pt)
   apply (drule (1) valid_vspace_objsD; simp add: in_omonad)
   apply (simp add: is_aligned_mask pt_range_def)
-  sorry (* FIXME AARCH64
-  apply (drule_tac x=0 in bspec)
-   apply (clarsimp simp: kernel_mapping_slots_def pptr_base_def pptrBase_def pt_bits_left_def
-                         bit_simps level_defs canonical_bit_def)
+  apply (erule_tac x=0 in allE)
   apply (clarsimp simp: pte_ref_def data_at_def obj_at_def split: pte.splits)
-  done *)
+  apply (simp add: pptr_from_pte_def)
+  done
 
+lemma vs_lookup_target_clear_asid_strg:
+  "table = asid_table s \<Longrightarrow>
+   vs_lookup_target level asid 0
+                    (s\<lparr>arch_state := (arch_state s) \<lparr>arm_asid_table :=
+                                                      table (asid_high_bits_of asid := None)\<rparr>\<rparr>)
+   = None"
+  by (clarsimp simp: vs_lookup_target_def vs_lookup_slot_def vs_lookup_table_def pool_for_asid_def
+                     obind_def)
 
 lemma delete_asid_pool_not_target[wp]:
   "\<lbrace>asid_pool_at ptr and valid_vspace_objs and valid_asid_table and pspace_aligned\<rbrace>
@@ -1240,13 +1223,11 @@ lemma delete_asid_pool_not_target[wp]:
    \<lbrace>\<lambda>rv s. vs_lookup_target level asid 0 s \<noteq> Some (level, ptr)\<rbrace>"
   unfolding delete_asid_pool_def
   supply fun_upd_apply[simp del]
-  apply wpsimp
-  sorry (* FIXME AARCH64
-  apply (rule conjI; clarsimp)
-   apply (frule vs_lookup_target_no_asid_pool[of _ _ level asid]; assumption?)
-   apply (erule vs_lookup_target_clear_asid_table)
+  apply (wpsimp)
+      apply (strengthen vs_lookup_target_clear_asid_strg[THEN None_Some_strg])
+      apply (wpsimp wp: mapM_wp' get_asid_pool_wp)+
   apply (erule (4) vs_lookup_target_no_asid_pool)
-  done *)
+  done
 
 lemma delete_asid_pool_not_reachable[wp]:
   "\<lbrace>asid_pool_at ptr and valid_vspace_objs and valid_asid_table and pspace_aligned\<rbrace>
@@ -1262,14 +1243,12 @@ lemma unmap_page_table_pool_for_asid[wp]:
   unfolding unmap_page_table_def by (wpsimp simp: pool_for_asid_def)
 
 lemma unmap_page_table_unreachable:
-  "\<lbrace> (\<lambda>s. \<exists>pt_t. pt_at pt_t pt s)
+  "\<lbrace> normal_pt_at pt
      and valid_asid_table and valid_vspace_objs and pspace_aligned and pspace_distinct
      and unique_table_refs and valid_vs_lookup and (\<lambda>s. valid_caps (caps_of_state s) s)
-     and K (0 < asid \<and> vref \<in> user_region)
-     and (\<lambda>s. vspace_for_asid asid s \<noteq> Some pt) \<rbrace>
+     and K (0 < asid \<and> vref \<in> user_region) \<rbrace>
    unmap_page_table asid vref pt
    \<lbrace>\<lambda>_ s. \<not> reachable_target (asid, vref) pt s\<rbrace>"
-  (* FIXME AARCH64: eliminate "vspace_for_asid asid s \<noteq> Some pt" *)
   unfolding reachable_target_def
   apply (wpsimp wp: hoare_vcg_all_lift unmap_page_table_not_target)
   apply (drule (1) pool_for_asid_validD)
@@ -1297,25 +1276,57 @@ lemma delete_asid_pool_for_asid[wp]:
   "delete_asid asid pt \<lbrace>\<lambda>s. P (pool_for_asid asid' s)\<rbrace>"
   unfolding delete_asid_def by (wpsimp wp: hoare_drop_imps)
 
-lemma delete_asid_no_vs_lookup_target:
-  "\<lbrace>\<lambda>s. vspace_for_asid asid s = Some pt\<rbrace>
+lemma delete_asid_no_vs_lookup_target_vspace:
+  "\<lbrace>\<lambda>s. vspace_for_asid asid s = Some pt \<rbrace>
    delete_asid asid pt
    \<lbrace>\<lambda>rv s. vs_lookup_target level asid vref s \<noteq> Some (level, pt)\<rbrace>"
-  (* FIXME AARCH64: eliminate vspace_for_asid precondition *)
   apply (rule hoare_assume_pre)
   apply (prop_tac "0 < asid")
-   apply (clarsimp simp: vspace_for_asid_def)
-  sorry (* FIXME AARCH64
+   apply (clarsimp simp: vspace_for_asid_def entry_for_asid_def)
   apply (rule hoare_strengthen_post, rule delete_asid_unmapped)
-  apply (clarsimp simp: vs_lookup_target_def split: if_split_asm)
-   apply (clarsimp simp: vs_lookup_slot_def vs_lookup_table_def split: if_split_asm)
-   apply (clarsimp simp: vspace_for_asid_def obind_def)
-  apply (clarsimp simp: vs_lookup_slot_def vs_lookup_table_def split: if_split_asm)
-  apply (clarsimp simp: vspace_for_asid_def obind_def)
-  done *)
+  apply (clarsimp simp: vs_lookup_target_def vs_lookup_slot_def vs_lookup_table_def
+                        vspace_for_asid_def vspace_for_pool_def entry_for_asid_def obind_None_eq
+                  split: if_split_asm)
+  done
+
+lemma delete_asid_no_vs_lookup_target_no_vspace:
+  "\<lbrace>\<lambda>s. vspace_for_asid asid s \<noteq> Some pt \<and> 0 < asid \<and> vref \<in> user_region \<and> vspace_pt_at pt s \<and>
+        valid_vspace_objs s \<and> valid_asid_table s \<and> pspace_aligned s \<rbrace>
+   delete_asid asid pt
+   \<lbrace>\<lambda>rv s. vs_lookup_target level asid vref s \<noteq> Some (level, pt)\<rbrace>"
+  unfolding delete_asid_def
+  (* We know we are in the case where delete_asid does not do anything *)
+  apply (wpsimp wp: when_wp[where Q="\<lambda>_. False", simplified])
+  apply (rule conjI, fastforce simp: vs_lookup_target_def vs_lookup_slot_def vs_lookup_table_def)
+  (* pool_for_asid asid s \<noteq> None *)
+  apply clarsimp
+  apply (rename_tac ap pool)
+  apply (rule conjI; clarsimp)
+   apply (clarsimp simp: vspace_for_asid_def entry_for_asid_def entry_for_pool_def obind_def
+                   split: option.splits if_split_asm)
+  apply (clarsimp simp: vs_lookup_target_def vs_lookup_slot_pool_for_asid split: if_split_asm)
+   (* asid_pool_level *)
+   apply (fastforce simp: vspace_for_asid_def entry_for_asid_def vspace_for_pool_def obind_def
+                    split: option.splits)
+  apply (drule (5) valid_vspace_objs_strong_slotD)
+  apply (clarsimp simp: in_omonad)
+  apply (rename_tac pte)
+  apply (case_tac pte; clarsimp simp: obj_at_def data_at_def)
+  apply (simp add: pptr_from_pte_def)
+  done
+
+lemma delete_asid_no_vs_lookup_target:
+  "\<lbrace>\<lambda>s. 0 < asid \<and> vref \<in> user_region \<and> vspace_pt_at pt s \<and> valid_vspace_objs s \<and>
+        valid_asid_table s \<and> pspace_aligned s \<rbrace>
+   delete_asid asid pt
+   \<lbrace>\<lambda>rv s. vs_lookup_target level asid vref s \<noteq> Some (level, pt)\<rbrace>"
+  by (rule hoare_pre_cases[where P="\<lambda>_.True", simplified,
+                           OF delete_asid_no_vs_lookup_target_vspace
+                              delete_asid_no_vs_lookup_target_no_vspace])
 
 lemma delete_asid_unreachable:
-  "\<lbrace>\<lambda>s. vspace_for_asid asid s = Some pt \<and> pt_at VSRootPT_T pt s \<and> valid_asid_table s \<rbrace>
+  "\<lbrace>\<lambda>s. 0 < asid \<and> vref \<in> user_region \<and> vspace_pt_at pt s \<and> valid_vspace_objs s \<and>
+        valid_asid_table s \<and> pspace_aligned s \<rbrace>
    delete_asid asid pt
    \<lbrace>\<lambda>_ s. \<not> reachable_target (asid, vref) pt s\<rbrace>"
   unfolding reachable_target_def
@@ -1353,16 +1364,15 @@ lemma arch_finalise_cap_replaceable:
                     split: if_split_asm)
   apply clarsimp
   apply (in_case "PageTableCap ?p ?T ?m")
-  sorry (* FIXME AARCH64
   apply (rule conjI; clarsimp)
    apply (in_case "PageTableCap ?p VSRootPT_T ?m")
    apply (rule conjI; clarsimp simp: valid_cap_def wellformed_mapdata_def data_at_def obj_at_def
-                               split: if_split_asm) (* vspace_for_asid *)
+                               split: if_split_asm)
   apply (in_case "PageTableCap ?p NormalPT_T ?m")
   apply (rule conjI; clarsimp)
    apply (clarsimp simp: valid_cap_def obj_at_def)
-  apply (clarsimp simp: valid_cap_def wellformed_mapdata_def cap_aligned_def obj_at_def) (* vspace_for_asid *)
-  done *)
+  apply (clarsimp simp: valid_cap_def wellformed_mapdata_def cap_aligned_def obj_at_def)
+  done
 
 global_naming Arch
 lemma (* deleting_irq_handler_slot_not_irq_node *)[Finalise_AI_asms]:
@@ -1600,10 +1610,6 @@ crunch pred_tcb_at[wp]:
 
 crunch pred_tcb_at[wp_unsafe]: arch_finalise_cap "pred_tcb_at proj P t"
   (simp: crunch_simps wp: crunch_wps)
-
-(* FIXME AARCH64
-crunch empty[wp]: find_free_hw_asid, store_hw_asid, load_hw_asid, set_vm_root_for_flush, page_table_mapped, invalidate_tlb_by_asid
-  "\<lambda>s. P (obj_at (empty_table {}) word s)" *)
 
 lemma set_vcpu_empty[wp]:
   "\<lbrace>\<lambda>s. P (obj_at (empty_table {}) word s)\<rbrace> set_vcpu p v \<lbrace>\<lambda>_ s. P (obj_at (empty_table {}) word s)\<rbrace>"

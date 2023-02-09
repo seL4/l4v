@@ -1476,10 +1476,6 @@ shows
   apply (auto split: if_split)
   done
 
-declare zipWith_Nil2[simp]
-
-declare zipWithM_x_Nil2[simp]
-
 lemma getRestartPC_ccorres [corres]:
   "ccorres (=) ret__unsigned_long_' \<top>
      (UNIV \<inter> \<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr thread\<rbrace>) hs

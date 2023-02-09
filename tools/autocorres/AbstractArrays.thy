@@ -6,7 +6,7 @@
 
 theory AbstractArrays
 imports
-  "CLib.TypHeapLib"
+  "CParser.TypHeapLib"
   "Word_Lib.WordSetup"
 begin
 

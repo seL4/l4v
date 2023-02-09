@@ -801,7 +801,7 @@ lemma cancelBadgedSends_ccorres:
               (UNIV \<inter> {s. epptr_' s = Ptr ptr} \<inter> {s. badge___unsigned_long_' s = bdg}) []
        (cancelBadgedSends ptr bdg) (Call cancelBadgedSends_'proc)"
   apply (cinit lift: epptr_' badge___unsigned_long_' simp: whileAnno_def)
-   apply (simp add: list_case_return2
+   apply (simp add: list_case_return
               cong: list.case_cong Structures_H.endpoint.case_cong call_ignore_cong
                del: Collect_const)
 sorry (* FIXME RT: cancelBadgedSends_ccorres *) (*

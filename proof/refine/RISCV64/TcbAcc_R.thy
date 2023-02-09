@@ -3239,7 +3239,6 @@ lemma removeFromBitmap_bitmapQ_no_L2_orphans[wp]:
   unfolding bitmap_fun_defs
   apply (wp, clarsimp simp: bitmap_fun_defs bitmapQ_no_L2_orphans_def)+
   apply (rule conjI, clarsimp)
-   apply (rule conjI, clarsimp)
    apply (clarsimp simp: complement_nth_w2p l2BitmapSize_def')
   apply clarsimp
   apply metis

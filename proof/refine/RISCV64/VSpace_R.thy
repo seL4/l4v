@@ -751,7 +751,7 @@ lemma performASIDPoolInvocation_corres:
          apply (wp getASID_wp)+
        apply (wpsimp wp: set_cap_typ_at hoare_drop_imps|strengthen valid_arch_state_global_arch_objs)+
    apply (clarsimp simp: valid_apinv_def cte_wp_at_caps_of_state is_cap_simps cap_master_cap_simps
-                         update_map_data_def)
+                         update_map_data_def in_omonad)
    apply (drule (1) caps_of_state_valid_cap)
    apply (simp add: valid_cap_def obj_at_def)
    apply (fastforce simp: opt_map_def split: option.splits)
@@ -807,7 +807,7 @@ lemma dmo_setVSpaceRoot_memory[wp]:
 lemma setVMRoot_invs [wp]:
   "setVMRoot p \<lbrace>invs'\<rbrace>"
   unfolding setVMRoot_def getThreadVSpaceRoot_def
-  by (wpsimp wp: hoare_whenE_wp findVSpaceForASID_vs_at_wp hoare_drop_imps hoare_vcg_ex_lift
+  by (wpsimp wp: whenE_wp findVSpaceForASID_vs_at_wp hoare_drop_imps hoare_vcg_ex_lift
                  hoare_vcg_all_lift)
 
 crunch nosch [wp]: setVMRoot "\<lambda>s. P (ksSchedulerAction s)"

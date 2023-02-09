@@ -11,9 +11,10 @@
 
 theory Corres_UL_C
 imports
-  "LemmaBucket_C"
-  "Lib.LemmaBucket"
-  "SIMPL_Lemmas"
+  CParser.LemmaBucket_C
+  Lib.LemmaBucket
+  SIMPL_Lemmas
+  Monads.OptionMonadWP
 begin
 
 declare word_neq_0_conv [simp del]
@@ -56,6 +57,12 @@ lemma exec_handlers_use_hoare_nothrow:
   apply simp
   done
 
+lemma exec_handlers_use_hoare_nothrow_hoarep:
+  "\<lbrakk>E \<turnstile>\<^sub>h \<langle>c # hs, s'\<rangle> \<Rightarrow> (n, t); s' \<in> R'; E \<turnstile> R' c Q'\<rbrakk> \<Longrightarrow> E \<turnstile> \<langle>c, Normal s'\<rangle> \<Rightarrow> t \<and> isNormal t"
+  apply (drule hoare_sound)
+  apply (clarsimp simp: cvalid_def HoarePartialDef.valid_def)
+  apply (erule exec_handlers.cases; fastforce simp: isNormal_def isAbr_def)
+  done
 
 definition
   unif_rrel :: "bool \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('t \<Rightarrow> 'b)
@@ -85,6 +92,9 @@ where
          Normal s'' \<Rightarrow> (\<exists>(r, t) \<in> fst (m s). (t, s'') \<in> srel
                             \<and> unif_rrel (n = length hs) rrel xf arrel axf r s'')
        | _ \<Rightarrow> False))"
+
+abbreviation
+  "ccorresG rf_sr \<Gamma> r xf \<equiv> ccorres_underlying rf_sr \<Gamma> r xf r xf"
 
 declare isNormal_simps [simp]
 
@@ -161,6 +171,13 @@ lemma ccorresE:
    apply simp
   apply simp
   done
+
+lemma ccorresE_gets_the:
+  "\<lbrakk>ccorresG srel \<Gamma> rrel xf G G' hs (gets_the c) c'; (s, s') \<in> srel; G s; s' \<in> G'; no_ofail G c;
+    \<Gamma> \<turnstile>\<^sub>h \<langle>c' # hs, s'\<rangle> \<Rightarrow> (n, Normal t')\<rbrakk>
+   \<Longrightarrow> (s, t') \<in> srel \<and> rrel (the (c s)) (xf t')"
+  by (fastforce simp: ccorres_underlying_def no_ofail_def unif_rrel_def gets_the_def gets_def
+                      get_def bind_def return_def)
 
 lemma ccorres_empty_handler_abrupt:
   assumes cc: "ccorres_underlying sr \<Gamma> rrel xf' arrel axf P P' [] a c"

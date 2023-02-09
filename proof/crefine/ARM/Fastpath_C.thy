@@ -1811,9 +1811,10 @@ proof -
           apply (simp add: from_bool_0 if_1_0_0 cong: if_cong)
           apply (rule ccorres_cond_true_seq)
           apply (rule ccorres_split_throws)
-           apply (fold dc_def)[1]
            apply (rule ccorres_call_hSkip)
-             apply (rule slowpath_ccorres, simp+)
+             apply (erule disjE; simp flip: dc_def; rule slowpath_ccorres)
+            apply simp
+           apply simp
           apply (vcg exspec=slowpath_noreturn_spec)
          apply (rule ccorres_rhs_assoc)+
          apply csymbr+
@@ -2329,7 +2330,7 @@ proof -
          apply (vcg exspec=endpoint_ptr_get_epQueue_head_modifies
                     exspec=endpoint_ptr_get_state_modifies)
         apply (simp add: if_1_0_0 getSlotCap_def)
-        apply (rule valid_isRight_theRight_split)
+        apply (rule valid_isLeft_theRight_split)
         apply simp
         apply (wp getCTE_wp')
         apply (rule validE_R_abstract_rv)
@@ -2640,9 +2641,8 @@ lemma fastpath_reply_recv_ccorres:
           apply (simp add: if_1_0_0 cong: if_cong)
           apply (rule ccorres_cond_true_seq)
           apply (rule ccorres_split_throws)
-           apply (fold dc_def)[1]
            apply (rule ccorres_call_hSkip)
-             apply (rule slowpath_ccorres)
+             apply (erule disjE; simp flip: dc_def; rule slowpath_ccorres)
             apply simp
            apply simp
           apply (vcg exspec=slowpath_noreturn_spec)
@@ -3084,7 +3084,7 @@ lemma fastpath_reply_recv_ccorres:
            apply (simp del: Collect_const)
            apply vcg
           apply (simp add: if_1_0_0 getSlotCap_def)
-          apply (rule valid_isRight_theRight_split)
+          apply (rule valid_isLeft_theRight_split)
           apply (wp getCTE_wp')
           apply (rule validE_R_abstract_rv)
           apply wp

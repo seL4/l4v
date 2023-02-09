@@ -17,7 +17,8 @@ begin
 
 context Arch begin global_naming AARCH64
 
-type_synonym irq = "9 word" (* match IRQ_CNODE_SLOT_BITS in seL4 config *)
+type_synonym irq_len = 9 (* match IRQ_CNODE_SLOT_BITS in seL4 config *)
+type_synonym irq = "irq_len word"
 type_synonym paddr = machine_word
 
 abbreviation (input) "toPAddr \<equiv> id"
@@ -71,7 +72,7 @@ schematic_goal pptrUserTop_def': (* direct constant definition *)
            del: word_eq_numeral_iff_iszero)
 
 definition pptrTop :: machine_word where
-  "pptrTop = 0xFFFFFFFF80000000" (* FIXME AARCH64: review; copy/paste from Haskell *)
+  "pptrTop = 2^40 - 2^30" (* FIXME AARCH64: see also seL4/seL4#957 *)
 
 definition paddrBase :: machine_word where
   "paddrBase \<equiv> 0"

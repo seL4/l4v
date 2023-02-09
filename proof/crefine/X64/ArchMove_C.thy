@@ -272,7 +272,7 @@ lemma setCurrentUserCR3_valid_arch_state'[wp]:
 lemma setVMRoot_valid_arch_state':
   "\<lbrace>valid_arch_state'\<rbrace> setVMRoot t \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
   apply (simp add: setVMRoot_def getThreadVSpaceRoot_def setCurrentUserVSpaceRoot_def)
-  apply (wp hoare_whenE_wp getCurrentUserCR3_wp findVSpaceForASID_vs_at_wp
+  apply (wp whenE_wp getCurrentUserCR3_wp findVSpaceForASID_vs_at_wp
          | wpcw
          | clarsimp simp: if_apply_def2 asid_wf_0
          | strengthen valid_cr3'_makeCR3)+

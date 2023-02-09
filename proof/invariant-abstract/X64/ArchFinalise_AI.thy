@@ -522,7 +522,7 @@ lemma suspend_unlive':
 
 crunch obj_at[wp]: fpu_thread_delete
   "\<lambda>s. P' (obj_at P p s)"
-  (wp: hoare_whenE_wp simp: crunch_simps)
+  (wp: whenE_wp simp: crunch_simps)
 
 lemma (* fpu_thread_delete_no_cap_to_obj_ref *)[wp,Finalise_AI_asms]:
   "\<lbrace>no_cap_to_obj_with_diff_ref cap S\<rbrace>
@@ -738,7 +738,7 @@ lemma flush_table_empty:
     flush_table ac aa word b
    \<lbrace>\<lambda>rv s. obj_at (empty_table (set (x64_global_pdpts (arch_state s)))) word s\<rbrace>"
   apply (clarsimp simp: flush_table_def set_vm_root_def)
-  apply (wp do_machine_op_obj_at  hoare_whenE_wp mapM_x_wp'
+  apply (wp do_machine_op_obj_at  whenE_wp mapM_x_wp'
     | wpc
     | simp
     | wps
@@ -1003,11 +1003,11 @@ crunch caps_of_state [wp]: arch_finalise_cap "\<lambda>s. P (caps_of_state s)"
 
 crunch obj_at[wp]: invalidate_page_structure_cache_asid, hw_asid_invalidate
   "\<lambda>s. P' (obj_at P p s)"
-  (wp: hoare_whenE_wp simp: crunch_simps)
+  (wp: whenE_wp simp: crunch_simps)
 
 crunch x64_global_pdpts[wp]: invalidate_page_structure_cache_asid, hw_asid_invalidate
   "\<lambda>s. P' (x64_global_pdpts (arch_state s))"
-  (wp: hoare_whenE_wp simp: crunch_simps)
+  (wp: whenE_wp simp: crunch_simps)
 
 lemma delete_asid_empty_table_pml4:
   "\<lbrace>\<lambda>s. page_map_l4_at word s

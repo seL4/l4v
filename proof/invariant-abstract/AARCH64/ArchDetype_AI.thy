@@ -315,20 +315,12 @@ lemma vcpu_tcbs_of_detype[simp]:
   "(vcpu_tcbs_of (detype S s) p = Some aobj) = (p \<notin> S \<and> vcpu_tcbs_of s p = Some aobj)"
   by (simp add: in_omonad detype_def)
 
-(* FIXME AARCH64: move above obj_at_vcpu_hyp_live_of *)
-lemma obj_at_vcpu_hyp_live_of_s:
-  "obj_at (is_vcpu and hyp_live) p s = vcpu_hyp_live_of s p"
-  by (rule arg_cong[OF obj_at_vcpu_hyp_live_of, where f="\<lambda>x. x s"])
-
 lemma cur_vcpu_detype:
   "cur_vcpu (detype (untyped_range cap) s)"
   using valid_arch_state
-  apply (clarsimp simp: valid_arch_state_def cur_vcpu_def)
-  (* FIXME AARCH64: work around <| being an abbreviation for option_case *)
-  apply (case_tac "arm_current_vcpu (arch_state s)"; simp)
-  apply clarsimp
+  apply (clarsimp simp: valid_arch_state_def cur_vcpu_def split: option.splits)
   apply (frule obj_at_vcpu_hyp_live_of_s[THEN iffD2])
-  apply (clarsimp elim!: live_okE simp: hyp_live_strg split: option.splits)
+  apply (clarsimp elim!: live_okE simp: hyp_live_strg in_opt_pred split: option.splits)
   done
 
 lemma valid_global_arch_objs:
@@ -337,10 +329,18 @@ lemma valid_global_arch_objs:
   by (fastforce dest!: valid_global_refsD[OF globals cap]
                 simp: cap_range_def valid_global_arch_objs_def valid_arch_state_def)
 
+lemma valid_global_tables:
+  "valid_global_tables (detype (untyped_range cap) s)"
+  using valid_arch_state
+  apply (clarsimp simp: valid_global_tables_2_def valid_arch_state_def)
+  using untyped_range_in_cap_range[of cap] valid_global_refsD[OF globals cap]
+  apply (blast intro: global_pt_in_global_refs[of s])
+  done
+
 lemma valid_arch_state_detype[detype_invs_proofs]:
   "valid_arch_state (detype (untyped_range cap) s)"
   using valid_vs_lookup valid_arch_state ut_mdb valid_global_refsD [OF globals cap] cap
-        cur_vcpu_detype vmid_inv_detype valid_global_arch_objs
+        cur_vcpu_detype vmid_inv_detype valid_global_arch_objs valid_global_tables
   unfolding valid_arch_state_def pred_conj_def
   by (simp only: valid_asid_table) simp
 

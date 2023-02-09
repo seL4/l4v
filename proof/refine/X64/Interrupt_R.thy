@@ -667,7 +667,7 @@ lemma decDomainTime_corres:
 lemma tcbSchedAppend_valid_objs':
   "\<lbrace>valid_objs'\<rbrace>tcbSchedAppend t \<lbrace>\<lambda>r. valid_objs'\<rbrace>"
   apply (simp add:tcbSchedAppend_def)
-  apply (wpsimp wp: hoare_unless_wp threadSet_valid_objs' threadGet_wp)
+  apply (wpsimp wp: unless_wp threadSet_valid_objs' threadGet_wp)
   apply (clarsimp simp add:obj_at'_def typ_at'_def)
   done
 
@@ -829,10 +829,10 @@ lemma threadSet_ksDomainTime[wp]:
   done
 
 crunch ksDomainTime[wp]: rescheduleRequired "\<lambda>s. P (ksDomainTime s)"
-(simp:tcbSchedEnqueue_def wp:hoare_unless_wp)
+(simp:tcbSchedEnqueue_def wp:unless_wp)
 
 crunch ksDomainTime[wp]: tcbSchedAppend "\<lambda>s. P (ksDomainTime s)"
-(simp:tcbSchedEnqueue_def wp:hoare_unless_wp)
+(simp:tcbSchedEnqueue_def wp:unless_wp)
 
 lemma updateTimeSlice_valid_pspace[wp]:
   "\<lbrace>valid_pspace'\<rbrace> threadSet (tcbTimeSlice_update (\<lambda>_. ts')) thread

@@ -87,7 +87,7 @@ crunch valid_sched [wp, DetSchedSchedule_AI_assms]:
   (simp: crunch_simps ignore: )
 
 crunch exst[wp]: set_vm_root "\<lambda>s. P (exst s)"
-  (wp: crunch_wps hoare_whenE_wp simp: crunch_simps)
+  (wp: crunch_wps whenE_wp simp: crunch_simps)
 
 crunch ct_in_cur_domain_2[wp]: set_vm_root
   "\<lambda>s. ct_in_cur_domain_2 thread (idle_thread s) (scheduler_action s) (cur_domain s) (ekheap s)"
@@ -215,7 +215,7 @@ lemma set_asid_pool_valid_sched[wp]:
   by (wp hoare_drop_imps valid_sched_lift | simp add: set_asid_pool_def)+
 
 crunch ct_not_in_q[wp]: set_object ct_not_in_q
-  (wp: crunch_wps hoare_drop_imps hoare_unless_wp select_inv mapM_wp
+  (wp: crunch_wps hoare_drop_imps unless_wp select_inv mapM_wp
        subset_refl if_fun_split simp: crunch_simps ignore: tcb_sched_action)
 
 lemma flush_table_ct_not_in_q[wp]: "\<lbrace>ct_not_in_q\<rbrace> flush_table a b c d \<lbrace>\<lambda>rv. ct_not_in_q\<rbrace>"
@@ -223,7 +223,7 @@ lemma flush_table_ct_not_in_q[wp]: "\<lbrace>ct_not_in_q\<rbrace> flush_table a 
 
 crunch ct_not_in_q [wp, DetSchedSchedule_AI_assms]:
   arch_finalise_cap, prepare_thread_delete ct_not_in_q
-  (wp: crunch_wps hoare_drop_imps hoare_unless_wp select_inv mapM_wp
+  (wp: crunch_wps hoare_drop_imps unless_wp select_inv mapM_wp
        subset_refl if_fun_split simp: crunch_simps ignore: tcb_sched_action)
 
 lemma flush_table_valid_etcbs[wp]: "\<lbrace>valid_etcbs\<rbrace> flush_table a b c d \<lbrace>\<lambda>rv. valid_etcbs\<rbrace>"
@@ -235,7 +235,7 @@ lemma set_object_valid_etcbs[wp]:
 
 crunch valid_etcbs [wp, DetSchedSchedule_AI_assms]:
   arch_finalise_cap, prepare_thread_delete valid_etcbs
-  (wp: hoare_drop_imps hoare_unless_wp select_inv mapM_x_wp mapM_wp subset_refl
+  (wp: hoare_drop_imps unless_wp select_inv mapM_x_wp mapM_wp subset_refl
        if_fun_split simp: crunch_simps ignore: set_object set_object thread_set)
 
 lemma flush_table_simple_sched_action[wp]: "\<lbrace>simple_sched_action\<rbrace> flush_table a b c d \<lbrace>\<lambda>rv. simple_sched_action\<rbrace>"

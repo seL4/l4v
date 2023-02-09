@@ -55,7 +55,7 @@ In this sense, EquivValid statements could be thought of as \<^emph>\<open>relat
 
 text \<open> This tutorial will introduce some syntactic sugar to emphasise the similarity
 between Hoare triples and EquivValid statements.
-(Here, \<open>\<top>\<top>\<close> is an alias provided by Lib.NonDetMonad for the trivial binary predicate,
+(Here, \<open>\<top>\<top>\<close> is an alias provided by Monads.NonDetMonad for the trivial binary predicate,
 which always returns \<open>True\<close>; similarly, there is also \<open>\<bottom>\<bottom>\<close> for \<open>False\<close>.) \<close>
 
 abbreviation
@@ -140,15 +140,14 @@ where
 text \<open> We could just as well define equivalences similarly for
 \<open>inbox\<close>, \<open>outbox\<close>, or \<open>job\<close> -- we omit these here. \<close>
 
-text \<open> Furthermore, you can use the \<open>And\<close> alias provided by Lib.NonDetMonad
+text \<open> Furthermore, you can use the \<open>and\<close> alias provided by @{theory Monads.Fun_Pred_Syntax}
 to write the conjunction of two binary predicates.
-(Similarly, there is also an \<open>Or\<close> alias for disjunction.)\<close>
+(Similarly, there is also an \<open>or\<close> alias for disjunction.)\<close>
 
-thm bipred_conj_def bipred_disj_def
 lemma
-  "(desk_equivalence And window_equivalence) r1 r2 =
+  "(desk_equivalence and window_equivalence) r1 r2 =
    (desk r1 = desk r2 \<and> window r1 = window r2)"
-  unfolding bipred_conj_def desk_equivalence_def window_equivalence_def
+  unfolding desk_equivalence_def window_equivalence_def
   by simp
 
 text \<open> In this setting, we might consider a trivial program that just returns
@@ -294,12 +293,12 @@ text \<open> As before, however, we should expect this to hold with a pre-equiva
 that includes \<open>desk_equivalence\<close>. \<close>
 
 lemma reveal_desk_equiv_window_equiv:
-  "\<lbrace>|desk_equivalence And window_equivalence|, \<top>\<rbrace>
+  "\<lbrace>|desk_equivalence and window_equivalence|, \<top>\<rbrace>
      reveal_desk_to_window
-   \<lbrace>|desk_equivalence And window_equivalence|\<rbrace>"
+   \<lbrace>|desk_equivalence and window_equivalence|\<rbrace>"
   unfolding reveal_desk_to_window_def
   apply(rule modify_ev'')
-  unfolding bipred_conj_def desk_equivalence_def window_equivalence_def
+  unfolding desk_equivalence_def window_equivalence_def
   by clarsimp
 
 
@@ -349,13 +348,13 @@ thm reveal_desk_equiv_window_equiv
   modify_ev
 
 lemma reveal_desk_equiv_window_equiv_using_wp:
-  "\<lbrace>|desk_equivalence And window_equivalence|, \<top>\<rbrace>
+  "\<lbrace>|desk_equivalence and window_equivalence|, \<top>\<rbrace>
      reveal_desk_to_window
-   \<lbrace>|desk_equivalence And window_equivalence|\<rbrace>"
+   \<lbrace>|desk_equivalence and window_equivalence|\<rbrace>"
   unfolding reveal_desk_to_window_def
   apply(rule pre_ev)
    apply(wp add:modify_ev)
-  unfolding bipred_conj_def desk_equivalence_def window_equivalence_def
+  unfolding desk_equivalence_def window_equivalence_def
   by clarsimp
 
 text \<open> As another example:
@@ -513,9 +512,9 @@ thm return_ev2
   modify_ev2
 
 lemma reveal_desk_equiv_window_equiv_using_ev2:
-  "\<lbrace>|desk_equivalence And window_equivalence|, \<top>\<rbrace>
+  "\<lbrace>|desk_equivalence and window_equivalence|, \<top>\<rbrace>
      reveal_desk_to_window
-   \<lbrace>|desk_equivalence And window_equivalence|\<rbrace>"
+   \<lbrace>|desk_equivalence and window_equivalence|\<rbrace>"
   unfolding reveal_desk_to_window_def
   apply(clarsimp simp:equiv_valid_def2)
   \<comment> \<open> After peeling back to \<open>equiv_valid_2\<close> form, we can use its \<open>modify\<close> rule. \<close>

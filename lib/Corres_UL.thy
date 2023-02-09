@@ -7,8 +7,8 @@
 theory Corres_UL
 imports
   Crunch_Instances_NonDet
-  WPEx
-  WPFix
+  Monads.WPEx
+  Monads.WPFix
   HaskellLemmaBucket
 begin
 
@@ -716,7 +716,7 @@ lemma corres_symb_exec_l:
          apply (erule x)
         apply (rule gets_wp)
        apply (erule nf)
-      apply (rule non_fail_gets)
+      apply (rule no_fail_gets)
      apply (rule y)
     apply (rule gets_wp)
    apply simp+
@@ -733,7 +733,7 @@ lemma corres_symb_exec_r:
       apply (rule corres_noop2)
          apply (simp add: simpler_gets_def exs_valid_def)
         apply (erule x)
-       apply (rule non_fail_gets)
+       apply (rule no_fail_gets)
       apply (erule nf)
      apply (rule gets_wp)
     apply (rule y)
@@ -896,7 +896,7 @@ lemma corres_assert_gen_asm_cross:
   "\<lbrakk> \<And>s s'. \<lbrakk>(s, s') \<in> sr; P' s; Q' s'\<rbrakk> \<Longrightarrow> A;
      A \<Longrightarrow> corres_underlying sr nf nf' r P Q f (g ()) \<rbrakk>
   \<Longrightarrow> corres_underlying sr nf nf' r (P and P') (Q and Q') f (assert A >>= g)"
-  by (metis corres_assert_assume corres_assume_pre corres_guard_imp pred_andE)
+  by (metis corres_assert_assume corres_assume_pre corres_weaker_disj_division)
 
 lemma corres_state_assert:
   "corres_underlying sr nf nf' rr P Q f (g ()) \<Longrightarrow>
@@ -1417,7 +1417,7 @@ lemmas corres_split_dc = corres_split[where r'=dc, simplified]
 
 lemma isLeft_case_sum:
   "isLeft v \<Longrightarrow> (case v of Inl v' \<Rightarrow> f v' | Inr v' \<Rightarrow> g v') = f (theLeft v)"
-  by (clarsimp simp: isLeft_def)
+  by (clarsimp split: sum.splits)
 
 lemma corres_symb_exec_catch_r:
   "\<lbrakk> \<And>rv. corres_underlying sr nf nf' r P (Q' rv) f (h rv);
@@ -1430,7 +1430,7 @@ lemma corres_symb_exec_catch_r:
    apply assumption
   apply (simp add: validE_def)
   apply (erule hoare_chain, simp_all)[1]
-  apply (simp add: isLeft_def split: sum.split_asm)
+  apply (simp split: sum.split_asm)
   done
 
 lemma corres_return_eq_same:

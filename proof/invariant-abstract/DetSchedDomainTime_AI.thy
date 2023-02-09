@@ -97,17 +97,8 @@ crunch domain_list_inv[wp]:
   "\<lambda>s::det_state. P (domain_list s)"
   (wp: dxo_wp_weak)
 
-crunch domain_list_inv[wp]: reply_unlink_tcb, reply_unlink_sc, tcb_sched_action "\<lambda>s. P (domain_list s)"
-  (wp: crunch_wps hoare_unless_wp maybeM_inv select_inv gets_the_inv simp: crunch_simps set_object_def)
-
-crunch domain_list_inv[wp]: reply_remove, sched_context_unbind_tcb, sched_context_zero_refill_max "\<lambda>s. P (domain_list s)"
-  (wp: hoare_drop_imps get_simple_ko_wp)
-
-crunch domain_list_inv[wp]: cancel_all_ipc, cancel_all_signals "\<lambda>s. P (domain_list s)"
-  (wp: hoare_drop_imps mapM_x_wp' whileLoop_wp')
-
-crunch domain_list_inv[wp]: finalise_cap "\<lambda>s::det_state. P (domain_list s)"
-  (wp: crunch_wps hoare_unless_wp maybeM_inv dxo_wp_weak select_inv simp: crunch_simps)
+crunch domain_list_inv[wp]: finalise_cap "\<lambda>s. P (domain_list s)"
+  (wp: crunch_wps unless_wp select_inv simp: crunch_simps)
 
 lemma rec_del_domain_list[wp]:
   "\<lbrace>\<lambda>s::det_state. P (domain_list s)\<rbrace> rec_del call \<lbrace>\<lambda>rv s. P (domain_list s)\<rbrace>"

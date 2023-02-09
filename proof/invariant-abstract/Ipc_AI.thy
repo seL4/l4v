@@ -7,7 +7,7 @@
 theory Ipc_AI
 imports
   ArchFinalise_AI
-  "Lib.WPBang"
+  "Monads.WPBang"
 begin
 
 context begin interpretation Arch .

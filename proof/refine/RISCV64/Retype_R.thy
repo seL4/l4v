@@ -4360,7 +4360,7 @@ lemma createNewCaps_irq_handlers':
 lemma createObjects'_irq_states' [wp]:
   "\<lbrace>valid_irq_states'\<rbrace> createObjects' a b c d \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"
   apply (simp add: createObjects'_def split_def)
-  apply (wp hoare_unless_wp|wpc|simp add: alignError_def)+
+  apply (wp unless_wp|wpc|simp add: alignError_def)+
   apply fastforce
   done
 
@@ -4717,12 +4717,12 @@ lemma createObjects_null_filter':
         pspace_aligned' s \<and> pspace_distinct' s \<and> pspace_bounded' s \<and> pspace_no_overlap' ptr sz s\<rbrace>
    createObjects' ptr n val gbits
    \<lbrace>\<lambda>addrs a. P (null_filter' (ctes_of a))\<rbrace>"
-  apply (clarsimp simp: createObjects'_def split_def)
-  apply (wp hoare_unless_wp|wpc
-         | clarsimp simp: alignError_def split del: if_split simp del: fun_upd_apply)+
-  apply (subst new_cap_addrs_fold')
-   apply (simp add:unat_1_0 unat_gt_0)
-   apply (rule range_cover_not_zero_shift)
+   apply (clarsimp simp: createObjects'_def split_def)
+   apply (wp unless_wp|wpc
+          | clarsimp simp: alignError_def split del: if_split simp del:fun_upd_apply)+
+   apply (subst new_cap_addrs_fold')
+     apply (simp add:unat_1_0 unat_gt_0)
+     apply (rule range_cover_not_zero_shift)
      apply fastforce+
   apply (subst new_cap_addrs_fold')
    apply (simp add:unat_1_0 unat_gt_0)

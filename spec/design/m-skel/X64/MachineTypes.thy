@@ -9,7 +9,7 @@ chapter "x86-64bit Machine Types"
 theory MachineTypes
 imports
   "Word_Lib.WordSetup"
-  "Lib.OptionMonadND"
+  "Monads.OptionMonadND"
   "Lib.HaskellLib_H"
   Platform
 begin

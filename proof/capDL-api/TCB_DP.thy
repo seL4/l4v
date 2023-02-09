@@ -128,7 +128,7 @@ lemma tcb_update_ipc_buffer_wp:
 \<lbrace>\<lambda>_. <(target_tcb, tcb_ipcbuffer_slot) \<mapsto>c ipc_buffer_cap \<and>* tcb_cap_slot \<mapsto>c (TcbCap target_tcb) \<and>* (ipc_buffer_slot) \<mapsto>c cap \<and>* R>\<rbrace>, \<lbrace>E\<rbrace>"
   apply (clarsimp simp: tcb_update_ipc_buffer_def sep_any_All)
   apply (rule hoare_name_pre_stateE)
-  apply (wp hoare_whenE_wp tcb_update_thread_slot_wp[sep_wand_side_wpE])
+  apply (wp whenE_wp tcb_update_thread_slot_wp[sep_wand_side_wpE])
       apply (clarsimp)
      apply (wp get_cap_rv'[where cap=cap])
     apply (clarsimp)
@@ -148,7 +148,7 @@ lemma tcb_update_ipc_buffer_wp':
 \<lbrace>\<lambda>_. <(target_tcb, tcb_ipcbuffer_slot) \<mapsto>c ipc_buffer_cap \<and>* tcb_cap_slot \<mapsto>c (TcbCap target_tcb) \<and>* (ipc_buffer_slot) \<mapsto>c cap \<and>* R>\<rbrace>, \<lbrace>E\<rbrace>"
   apply (rule hoare_name_pre_stateE)
   apply (clarsimp simp: tcb_update_ipc_buffer_def sep_any_All)
-  apply (wp hoare_whenE_wp tcb_update_thread_slot_wp[sep_wandise] get_cap_rv[where cap=cap])
+  apply (wp whenE_wp tcb_update_thread_slot_wp[sep_wandise] get_cap_rv[where cap=cap])
     apply (rule hoare_allI)
     apply (rule hoare_impI)
     apply (clarsimp)
@@ -172,7 +172,7 @@ lemma tcb_update_vspace_root_wp:
 \<lbrace>\<lambda>_. < (target_tcb, tcb_vspace_slot) \<mapsto>c vrt_cap \<and>* tcb_cap_slot \<mapsto>c (TcbCap target_tcb) \<and>* (vrt_slot) \<mapsto>c cap \<and>* R>\<rbrace>, \<lbrace>E\<rbrace>"
   apply (rule hoare_name_pre_stateE)
   apply (clarsimp simp: tcb_update_vspace_root_def sep_any_All)
-  apply (wp hoare_whenE_wp tcb_update_thread_slot_wp[sep_wand_side_wpE] get_cap_rv)
+  apply (wp whenE_wp tcb_update_thread_slot_wp[sep_wand_side_wpE] get_cap_rv)
     apply (wp get_cap_rv'[where cap=cap])
    apply (clarsimp)
    apply (wp tcb_empty_thread_slot_wpE[sep_wand_wpE])
@@ -188,7 +188,7 @@ lemma tcb_update_vspace_root_wp':
 \<lbrace>\<lambda>_. < (target_tcb, tcb_vspace_slot) \<mapsto>c vrt_cap \<and>* tcb_cap_slot \<mapsto>c (TcbCap target_tcb) \<and>* (vrt_slot) \<mapsto>c cap \<and>* R>\<rbrace>, \<lbrace>E\<rbrace>"
   apply (rule hoare_name_pre_stateE)
   apply (clarsimp simp: tcb_update_vspace_root_def sep_any_All)
-  apply (wp hoare_whenE_wp tcb_update_thread_slot_wp[sep_wand_side_wpE'] get_cap_rv)+
+  apply (wp whenE_wp tcb_update_thread_slot_wp[sep_wand_side_wpE'] get_cap_rv)+
    apply (wp hoare_vcg_conj_liftE1)
     apply (wp tcb_empty_thread_slot_wpE[sep_wand_wpE], (clarsimp simp: sep_conj_assoc | sep_solve) +)
    apply (wp tcb_empty_thread_slot_wpE[sep_wand_wpE], (clarsimp simp: sep_conj_assoc | sep_solve) +)
@@ -218,7 +218,7 @@ lemma tcb_update_cspace_root_wp:
 \<lbrace>\<lambda>_. < (target_tcb, tcb_cspace_slot) \<mapsto>c crt_cap \<and>* tcb_cap_slot \<mapsto>c (TcbCap target_tcb) \<and>* (crt_slot) \<mapsto>c cap \<and>* R>\<rbrace>, \<lbrace>E\<rbrace>"
   apply (rule hoare_name_pre_stateE)
   apply (clarsimp simp: tcb_update_cspace_root_def sep_any_All_side cong:cap_type_bad_cong)
-  apply (wpsimp wp: hoare_whenE_wp tcb_update_thread_slot_wp[sep_wand_side_wpE] get_cap_rv
+  apply (wpsimp wp: whenE_wp tcb_update_thread_slot_wp[sep_wand_side_wpE] get_cap_rv
                     hoare_vcg_conj_liftE1)
     apply (wpsimp wp: tcb_empty_thread_slot_wpE[sep_wand_wpE] simp: sep_conj_assoc)
    apply (wpsimp wp: hoare_vcg_all_lift_R[THEN hoare_vcg_E_elim[rotated]]
@@ -474,7 +474,7 @@ lemma tcb_update_vspace_root_inv:
    tcb_update_vspace_root a b c
  \<lbrace>\<lambda>_ s. P (cdl_current_thread s)\<rbrace>"
   apply (clarsimp simp: tcb_update_vspace_root_def)
-  apply (wp hoare_drop_imps hoare_whenE_wp alternative_wp
+  apply (wp hoare_drop_imps whenE_wp alternative_wp
        | simp add: tcb_update_vspace_root_def tcb_update_thread_slot_def)+
    apply (wp tcb_empty_thread_slot_wp_inv)
   apply auto
@@ -486,7 +486,7 @@ lemma tcb_update_cspace_root_inv:
    tcb_update_cspace_root a b c
  \<lbrace>\<lambda>_ s. P (cdl_current_thread s)\<rbrace>"
   apply (clarsimp simp: tcb_update_cspace_root_def)
-  apply (wp hoare_drop_imps hoare_whenE_wp alternative_wp
+  apply (wp hoare_drop_imps whenE_wp alternative_wp
        | simp add: tcb_update_vspace_root_def tcb_update_thread_slot_def)+
    apply (wp tcb_empty_thread_slot_wp_inv)
   apply auto
@@ -497,7 +497,7 @@ lemma tcb_update_ipc_buffer_inv:
    tcb_update_ipc_buffer a b c
  \<lbrace>\<lambda>_ s. P (cdl_current_thread s)\<rbrace>"
   apply (clarsimp simp: tcb_update_ipc_buffer_def)
-  apply (wp hoare_drop_imps hoare_whenE_wp alternative_wp
+  apply (wp hoare_drop_imps whenE_wp alternative_wp
        | simp add: tcb_update_vspace_root_def tcb_update_thread_slot_def)+
    apply (wp tcb_empty_thread_slot_wp_inv)
   apply auto
@@ -516,7 +516,7 @@ lemma invoke_tcb_ThreadControl_cur_thread:
   \<lbrace>\<lambda>_ s. P  (cdl_current_thread s) \<rbrace>"
   including no_pre
   apply (simp add:invoke_tcb_def comp_def)
-    apply (wp alternative_wp hoare_whenE_wp
+    apply (wp alternative_wp whenE_wp
       tcb_empty_thread_slot_wp_inv
       [where R = "(target_tcb, tcb_vspace_slot) \<mapsto>c -
         \<and>* (target_tcb,tcb_cspace_slot) \<mapsto>c -
@@ -527,7 +527,7 @@ lemma invoke_tcb_ThreadControl_cur_thread:
     apply (clarsimp simp:conj_comms)
     apply (rule hoare_post_impErr[OF valid_validE,rotated],assumption)
      apply (fastforce split:option.splits)
-     apply (wp hoare_drop_imps hoare_whenE_wp alternative_wp
+     apply (wp hoare_drop_imps whenE_wp alternative_wp
        | simp add: tcb_update_vspace_root_def tcb_update_thread_slot_def)+
          apply (rule hoare_post_imp[OF _  insert_cap_child_wp])
         apply (sep_erule_concl refl_imp sep_any_imp, assumption)
@@ -553,7 +553,7 @@ lemma invoke_tcb_ThreadControl_cur_thread:
       apply (wp tcb_empty_thread_slot_wp_inv)
      apply clarsimp
      apply (sep_solve)
-    apply (wp hoare_drop_imps hoare_whenE_wp alternative_wp
+    apply (wp hoare_drop_imps whenE_wp alternative_wp
       | simp add: tcb_update_vspace_root_def tcb_update_thread_slot_def)+
         apply (rule hoare_post_imp[OF _  insert_cap_child_wp])
         apply (sep_select 2)
@@ -590,8 +590,8 @@ lemma invoke_tcb_ThreadControl_cur_thread:
       \<and>* target_tcb \<mapsto>f - \<and>* R> s)
        " in hoare_post_impErr[rotated -1])
      apply assumption
-    apply (wp hoare_whenE_wp |wpc|simp add:tcb_update_cspace_root_def)+
-      apply (wp hoare_drop_imps hoare_whenE_wp alternative_wp
+    apply (wp whenE_wp |wpc|simp add:tcb_update_cspace_root_def)+
+      apply (wp hoare_drop_imps whenE_wp alternative_wp
         | simp add: tcb_update_vspace_root_def tcb_update_thread_slot_def)+
         apply (rule hoare_post_imp[OF _  insert_cap_child_wp])
         apply (sep_schem)
@@ -782,7 +782,7 @@ lemma invoke_tcb_ThreadControl_cdl_current_domain:
   \<rbrace> invoke_tcb (ThreadControl target_tcb tcb_cap_slot faultep croot vroot ipc_buffer)
   \<lbrace>\<lambda>_ s. P  (cdl_current_domain s) \<rbrace>"
   apply (simp add:invoke_tcb_def comp_def)
-    apply (wp alternative_wp hoare_whenE_wp
+    apply (wp alternative_wp whenE_wp
       tcb_empty_thread_slot_wp_inv
       [where R = "(target_tcb, tcb_vspace_slot) \<mapsto>c -
         \<and>* (target_tcb,tcb_cspace_slot) \<mapsto>c -
@@ -793,7 +793,7 @@ lemma invoke_tcb_ThreadControl_cdl_current_domain:
     apply (clarsimp simp:conj_comms)
     apply (rule hoare_post_impErr[OF valid_validE,rotated],assumption)
      apply (fastforce split:option.splits)
-     apply (wp hoare_drop_imps hoare_whenE_wp alternative_wp
+     apply (wp hoare_drop_imps whenE_wp alternative_wp
        | simp add: tcb_update_vspace_root_def tcb_update_thread_slot_def)+
          apply (rule hoare_post_imp[OF _  insert_cap_child_wp])
          apply (sep_schem)
@@ -818,7 +818,7 @@ lemma invoke_tcb_ThreadControl_cdl_current_domain:
        apply (wp tcb_empty_thread_slot_wp_inv)
       apply clarsimp
       apply (sep_solve)
-     apply (wp hoare_drop_imps hoare_whenE_wp alternative_wp
+     apply (wp hoare_drop_imps whenE_wp alternative_wp
       | simp add: tcb_update_vspace_root_def tcb_update_thread_slot_def)+
          apply (rule hoare_post_imp[OF _  insert_cap_child_wp])
          apply (sep_select 2)
@@ -855,8 +855,8 @@ lemma invoke_tcb_ThreadControl_cdl_current_domain:
       \<and>* target_tcb \<mapsto>f - \<and>* R> s)
        " in hoare_post_impErr[rotated -1])
       apply assumption
-     apply (wp hoare_whenE_wp |wpc|simp add:tcb_update_cspace_root_def)+
-       apply (wp hoare_drop_imps hoare_whenE_wp alternative_wp
+     apply (wp whenE_wp |wpc|simp add:tcb_update_cspace_root_def)+
+       apply (wp hoare_drop_imps whenE_wp alternative_wp
         | simp add: tcb_update_vspace_root_def tcb_update_thread_slot_def)+
          apply (rule hoare_post_imp[OF _  insert_cap_child_wp])
          apply (sep_select 2)

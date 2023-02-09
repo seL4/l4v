@@ -7,7 +7,7 @@
 theory GenericLib
 imports
   Crunch_Instances_NonDet
-  WPEx
+  Monads.WPEx
   HaskellLemmaBucket
 begin
 

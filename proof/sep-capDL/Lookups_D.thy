@@ -7,7 +7,7 @@
 theory Lookups_D
 imports
   "DSpec.Syscall_D"
-  "Lib.OptionMonadND"
+  "Monads.OptionMonadND"
 begin
 
 type_synonym 'a lookup = "cdl_state \<Rightarrow> 'a option"

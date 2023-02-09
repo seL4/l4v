@@ -887,7 +887,7 @@ lemma set_asid_wp:
   apply (rule valid_si_caps_at_si_cap_at [where obj_id=obj_id], clarsimp+)
   apply (clarsimp simp: si_cap_at_def sep_conj_assoc sep_conj_exists)
   apply (subst ex_conj_increase)+
-  apply (rule hoare_ex_wp)+
+  apply (rule hoare_vcg_ex_lift)+
   apply (rename_tac kobj_id)
   apply (rule hoare_grab_asm)+
   apply wpsimp

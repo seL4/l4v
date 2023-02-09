@@ -7,7 +7,7 @@ theory Prefix_Refinement
 
 imports
   Triv_Refinement
-  "Lib.TraceMonadLemmas"
+  "Monads.TraceMonadLemmas"
 
 begin
 
@@ -441,15 +441,15 @@ lemma validI_drop_next_G:
 lemma tr_in_parallel_validI:
   assumes elem: "(tr, res) \<in> parallel (K {(f_tr, res)}) (K {(g_tr, res)}) s"
   and trs: "(f_tr, res) \<in> f s" "(g_tr, res) \<in> g s"
-  and validI: "\<lbrace>P\<rbrace>, \<lbrace>E Or Gg\<rbrace> f \<lbrace>Gf\<rbrace>, \<lbrace>Q\<rbrace>" "\<lbrace>P\<rbrace>, \<lbrace>E Or Gf\<rbrace> g \<lbrace>Gg\<rbrace>, \<lbrace>Q2\<rbrace>"
+  and validI: "\<lbrace>P\<rbrace>, \<lbrace>E or Gg\<rbrace> f \<lbrace>Gf\<rbrace>, \<lbrace>Q\<rbrace>" "\<lbrace>P\<rbrace>, \<lbrace>E or Gf\<rbrace> g \<lbrace>Gg\<rbrace>, \<lbrace>Q2\<rbrace>"
   and P: "P s0 s" and rel: "rely_cond E s0 tr"
-  shows "rely_cond (E Or Gg) s0 f_tr \<and> rely_cond (E Or Gf) s0 g_tr"
+  shows "rely_cond (E or Gg) s0 f_tr \<and> rely_cond (E or Gf) s0 g_tr"
   using parallel_rely_induct0[where R=E and G="\<top>\<top>", OF elem _ _ validI, OF P P]
   by (clarsimp simp: rel trs predicate2I)
 
 lemma env_closed_parallel_fragment:
-  "is_matching_fragment sr osr rvr ctr1 cres1 s0 (E Or Gg) s f
-    \<Longrightarrow> is_matching_fragment sr osr' rvr ctr2 cres2 s0 (E Or Gf) s g
+  "is_matching_fragment sr osr rvr ctr1 cres1 s0 (E or Gg) s f
+    \<Longrightarrow> is_matching_fragment sr osr' rvr ctr2 cres2 s0 (E or Gf) s g
     \<Longrightarrow> par_tr_fin_principle f
     \<Longrightarrow> par_tr_fin_principle g
     \<Longrightarrow> cres1 = cres2 \<Longrightarrow> length ctr1 = length ctr2
@@ -470,7 +470,7 @@ lemma env_closed_parallel_fragment:
   apply (frule(1) is_matching_fragment_trD[where f=f])
   apply (frule(1) is_matching_fragment_trD[where f=g])
   apply (clarsimp simp: matching_tr_pfx_aCons rely_cond_Cons_eq
-                        last_st_tr_map_zip bipred_disj_def)
+                        last_st_tr_map_zip pred_disj_def)
   apply (drule spec2, drule(1) mp[where P="Q xs s" for xs s])
   apply clarsimp
   apply (drule_tac s'=s' in env_closedD[where f=f, OF is_matching_fragment_env_closed, rotated];
@@ -486,13 +486,13 @@ lemma env_closed_parallel_fragment:
 lemma self_closed_parallel_fragment:
   notes if_split[split del]
   shows
-  "is_matching_fragment sr osr rvr ctr1 cres1 s0 (E Or Gg) s f
-    \<Longrightarrow> is_matching_fragment sr osr' rvr ctr2 cres2 s0 (E Or Gf) s g
+  "is_matching_fragment sr osr rvr ctr1 cres1 s0 (E or Gg) s f
+    \<Longrightarrow> is_matching_fragment sr osr' rvr ctr2 cres2 s0 (E or Gf) s g
     \<Longrightarrow> par_tr_fin_principle f
     \<Longrightarrow> par_tr_fin_principle g
     \<Longrightarrow> list_all2 (\<lambda>y z. (fst y = Env \<or> fst z = Env) \<and> snd y = snd z) ctr1 ctr2
-    \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>E Or Gg\<rbrace> f \<lbrace>Gf\<rbrace>,\<lbrace>\<lambda>_ _ _. True\<rbrace>
-    \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>E Or Gf\<rbrace> g \<lbrace>Gg\<rbrace>,\<lbrace>\<lambda>_ _ _. True\<rbrace>
+    \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>E or Gg\<rbrace> f \<lbrace>Gf\<rbrace>,\<lbrace>\<lambda>_ _ _. True\<rbrace>
+    \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>E or Gf\<rbrace> g \<lbrace>Gg\<rbrace>,\<lbrace>\<lambda>_ _ _. True\<rbrace>
     \<Longrightarrow> P s0 s
     \<Longrightarrow> cres1 = cres2
     \<Longrightarrow> Q = (\<lambda>xs. length xs < length ctr1 \<and> (fst (rev ctr1 ! length xs) \<noteq> Env
@@ -570,15 +570,15 @@ lemma rely_env_closed:
   done
 
 theorem prefix_refinement_parallel:
-  "prefix_refinement sr isr osr rvr P Q (AE Or Gc) (E Or Gd) a b
-    \<Longrightarrow> prefix_refinement sr isr osr rvr P Q (AE Or Ga) (E Or Gb) c d
+  "prefix_refinement sr isr osr rvr P Q (AE or Gc) (E or Gd) a b
+    \<Longrightarrow> prefix_refinement sr isr osr rvr P Q (AE or Ga) (E or Gb) c d
     \<Longrightarrow> par_tr_fin_principle a
     \<Longrightarrow> par_tr_fin_principle c
-    \<Longrightarrow> \<lbrace>Q\<rbrace>,\<lbrace>E Or Gd\<rbrace> b \<lbrace>Gb\<rbrace>,\<lbrace>\<lambda>_ _ _. True\<rbrace>
-    \<Longrightarrow> \<lbrace>Q\<rbrace>,\<lbrace>E Or Gb\<rbrace> d \<lbrace>Gd\<rbrace>,\<lbrace>\<lambda>_ _ _. True\<rbrace>
+    \<Longrightarrow> \<lbrace>Q\<rbrace>,\<lbrace>E or Gd\<rbrace> b \<lbrace>Gb\<rbrace>,\<lbrace>\<lambda>_ _ _. True\<rbrace>
+    \<Longrightarrow> \<lbrace>Q\<rbrace>,\<lbrace>E or Gb\<rbrace> d \<lbrace>Gd\<rbrace>,\<lbrace>\<lambda>_ _ _. True\<rbrace>
     \<Longrightarrow> (Ga = \<top>\<top> \<and> Gc = \<top>\<top>)
-        \<or> (\<lbrace>P\<rbrace>,\<lbrace>AE Or Gc\<rbrace> a \<lbrace>Ga\<rbrace>,\<lbrace>\<lambda>_ _ _. True\<rbrace>
-            \<and> \<lbrace>P\<rbrace>,\<lbrace>AE Or Ga\<rbrace> c \<lbrace>Gc\<rbrace>,\<lbrace>\<lambda>_ _ _. True\<rbrace>)
+        \<or> (\<lbrace>P\<rbrace>,\<lbrace>AE or Gc\<rbrace> a \<lbrace>Ga\<rbrace>,\<lbrace>\<lambda>_ _ _. True\<rbrace>
+            \<and> \<lbrace>P\<rbrace>,\<lbrace>AE or Ga\<rbrace> c \<lbrace>Gc\<rbrace>,\<lbrace>\<lambda>_ _ _. True\<rbrace>)
     \<Longrightarrow> prefix_refinement sr isr osr rvr P Q AE E (parallel a c) (parallel b d)"
   apply (subst prefix_refinement_def, clarsimp)
   apply (drule tr_in_parallel, clarify)
@@ -893,7 +893,7 @@ theorem prefix_refinement_bind_general[rule_format]:
     \<Longrightarrow> (\<forall>x y. rvr x y \<longrightarrow> prefix_refinement sr intsr osr rvr' (P'' x) (Q'' y) AR R (b x) (d y))
     \<Longrightarrow> \<lbrace>P'\<rbrace>,\<lbrace>AR\<rbrace> a \<lbrace>\<top>\<top>\<rbrace>,\<lbrace>P''\<rbrace> \<or> \<lbrace>\<lambda>s. \<exists>s0. P' s0 s\<rbrace> a \<lbrace>\<lambda>rv s. \<forall>s0. P'' rv s0 s\<rbrace>
     \<Longrightarrow> \<lbrace>Q'\<rbrace>,\<lbrace>R\<rbrace> c \<lbrace>\<top>\<top>\<rbrace>,\<lbrace>Q''\<rbrace>
-    \<Longrightarrow> prefix_refinement sr isr osr rvr' (P And P') (Q And Q') AR R (a >>= b) (c >>= d)"
+    \<Longrightarrow> prefix_refinement sr isr osr rvr' (P and P') (Q and Q') AR R (a >>= b) (c >>= d)"
   apply (subst prefix_refinement_def, clarsimp simp: bind_def)
   apply (rename_tac c_tr c_res cd_tr cd_res)
   apply (drule(5) prefix_refinementD, simp)
@@ -978,7 +978,7 @@ theorem prefix_refinement_validI:
     \<Longrightarrow> \<forall>s0 t0 t. sr s0 t0 \<and> R t0 t \<longrightarrow> (\<exists>s. R' s0 s \<and> sr s t)
     \<Longrightarrow> prefix_closed g
     \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> g \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
-  apply (subst validI_def, clarsimp simp: bipred_conj_def rely_def)
+  apply (subst validI_def, clarsimp simp: rely_def)
   apply (drule spec2, drule(1) mp, clarsimp)
   apply (drule(6) prefix_refinement_rely_cond_trD[where R'=R', simplified])
     apply blast
@@ -1021,7 +1021,7 @@ lemma prefix_refinement_bind_v[rule_format]:
   "prefix_refinement sr isr intsr rvr P Q AR R a c
     \<Longrightarrow> (\<forall>x y. rvr x y \<longrightarrow> prefix_refinement sr intsr osr rvr' (\<lambda>s0. P'' x) (Q'' y) AR R (b x) (d y))
     \<Longrightarrow> \<lbrace>P'\<rbrace> a \<lbrace>P''\<rbrace> \<Longrightarrow> \<lbrace>Q'\<rbrace>,\<lbrace>R\<rbrace> c \<lbrace>\<top>\<top>\<rbrace>,\<lbrace>Q''\<rbrace>
-    \<Longrightarrow> prefix_refinement sr isr osr rvr' (\<lambda>s0. P s0 and P') (Q And Q') AR R (a >>= b) (c >>= d)"
+    \<Longrightarrow> prefix_refinement sr isr osr rvr' (\<lambda>s0. P s0 and P') (Q and Q') AR R (a >>= b) (c >>= d)"
   apply (rule prefix_refinement_weaken_pre,
     rule prefix_refinement_bind_general[where P'="\<lambda>_. P'"])
        apply assumption
@@ -1323,13 +1323,13 @@ lemmas pfx_refn_bind = prefix_refinement_bind_v[where sr=sr
     and isr=sr and osr=sr and intsr=sr for sr]
 lemmas pfx_refn_bindT
     = pfx_refn_bind[where P'="\<top>" and Q'="\<lambda>_ _. True", OF _ _ hoare_post_taut validI_triv,
-        simplified bipred_conj_def, simplified]
+        simplified pred_conj_def, simplified]
 
 lemma prefix_refinement_assume_pre:
   "(P \<Longrightarrow> prefix_refinement sr isr osr rvr P' Q' AR R f g)
-    \<Longrightarrow> prefix_refinement sr isr osr rvr (P' And (\<lambda>_ _. P)) Q' AR R f g"
+    \<Longrightarrow> prefix_refinement sr isr osr rvr (P' and (\<lambda>_ _. P)) Q' AR R f g"
   "(P \<Longrightarrow> prefix_refinement sr isr osr rvr P' Q' AR R f g)
-    \<Longrightarrow> prefix_refinement sr isr osr rvr P' (Q' And (\<lambda>_ _. P)) AR R f g"
+    \<Longrightarrow> prefix_refinement sr isr osr rvr P' (Q' and (\<lambda>_ _. P)) AR R f g"
   by (auto simp: prefix_refinement_def)
 
 lemma prefix_refinement_modify:
@@ -1351,7 +1351,7 @@ lemmas pfx_refn_modifyT = prefix_refinement_modify[where P="\<top>" and Q="\<top
 lemmas prefix_refinement_get_pre
     = prefix_refinement_bind[OF prefix_refinement_get _
         valid_validI_wp[OF _ get_sp] valid_validI_wp[OF _ get_sp],
-    simplified bipred_conj_def no_trace_all, simplified]
+    simplified pred_conj_def no_trace_all, simplified]
 
 lemma prefix_refinement_gets:
   "\<forall>s t. iosr s t \<and> P s \<and> Q t \<longrightarrow> rvr (f s) (f' t)
@@ -1454,7 +1454,7 @@ lemma prefix_refinement_mapM:
         apply (rule prefix_refinement_triv_pre, rule prefix_refinement_return_imp, simp)
        apply (wp validI_triv)+
       apply (blast intro: validI_prefix_closed)
-     apply (wp validI_triv | simp add: bipred_conj_def
+     apply (wp validI_triv | simp add: pred_conj_def
         | blast dest: validI_prefix_closed)+
   done
 

@@ -3289,7 +3289,7 @@ lemma placeNewObject_tcb_at':
          placeNewObject ptr (makeObject::tcb) 0
          \<lbrace>\<lambda>_ s. tcb_at' ptr s \<rbrace>"
   apply (simp add: placeNewObject_def placeNewObject'_def split_def)
-  apply (wp hoare_unless_wp |wpc | simp add:alignError_def)+
+  apply (wp unless_wp |wpc | simp add:alignError_def)+
   by (auto simp: obj_at'_def is_aligned_mask lookupAround2_None1
                     lookupAround2_char1 field_simps objBits_simps
     projectKO_opt_tcb projectKO_def return_def ps_clear_def
@@ -3728,7 +3728,7 @@ proof -
      apply (drule_tac gbits = us in range_cover_not_zero_shift[rotated])
        apply simp+
      apply (simp add:word_le_sub1)
-    apply (wp haskell_assert_wp hoare_unless_wp | wpc
+    apply (wp haskell_assert_wp unless_wp | wpc
         | simp add:alignError_def if_apply_def2 del: fun_upd_apply hoare_fail_any)+
     apply (rule impI)
     apply (subgoal_tac
@@ -4270,7 +4270,7 @@ lemma createObjects_Cons:
         apply simp
        apply (wp haskell_assert_wp | wpc)+
       apply simp
-     apply (wp hoare_unless_wp |clarsimp)+
+     apply (wp unless_wp |clarsimp)+
   apply (drule range_cover.aligned)
   apply (simp add:is_aligned_mask)
   done
@@ -4599,7 +4599,7 @@ proof -
    apply (drule_tac gbits = us in range_cover_not_zero_shift[rotated])
     apply simp+
    apply (simp add:word_le_sub1)
-   apply (wp haskell_assert_wp hoare_unless_wp |wpc
+   apply (wp haskell_assert_wp unless_wp |wpc
          |simp add:alignError_def del:fun_upd_apply)+
   apply (rule conjI)
    apply (rule impI)
@@ -4661,7 +4661,7 @@ lemma createTCBs_tcb_at':
   \<lbrace>\<lambda>rv s.
   (\<forall>x\<in>set [0.e.of_nat n]. tcb_at' (ptr + x * 2^tcbBlockSizeBits) s)\<rbrace>"
   apply (simp add:createObjects'_def split_def alignError_def)
-  apply (wp hoare_unless_wp |wpc)+
+  apply (wp unless_wp |wpc)+
   apply (subst data_map_insert_def[symmetric])+
   apply clarsimp
   apply (subgoal_tac "(\<forall>x\<le>of_nat n.
@@ -5488,7 +5488,7 @@ lemma createObject_pspace_aligned_distinct':
   createObject ty ptr us d
   \<lbrace>\<lambda>xa s. pspace_aligned' s \<and> pspace_distinct' s\<rbrace>"
   apply (rule hoare_pre)
-  apply (wp placeNewObject_pspace_aligned' hoare_unless_wp
+  apply (wp placeNewObject_pspace_aligned' unless_wp
       placeNewObject_pspace_distinct'
     | simp add:ARM_HYP_H.createObject_def
       Retype_H.createObject_def objBits_simps

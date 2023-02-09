@@ -15,7 +15,7 @@
 
 theory TypHeapSimple
 imports
-  "CLib.TypHeapLib"
+  "CParser.TypHeapLib"
 begin
 
 (*

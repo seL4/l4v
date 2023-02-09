@@ -21,11 +21,11 @@ imports
   TypHeapSimple
   HeapLift
   WordAbstract
-  "Lib.OptionMonadWP"
-  "Lib.Apply_Trace"
+  "Monads.OptionMonadWP"
+  "Eisbach_Tools.Apply_Trace"
   AutoCorresSimpset
-  "Lib.MkTermAntiquote"
-  "Lib.TermPatternAntiquote"
+  "ML_Utils.MkTermAntiquote"
+  "ML_Utils.TermPatternAntiquote"
   keywords "autocorres" :: thy_decl
 begin
 

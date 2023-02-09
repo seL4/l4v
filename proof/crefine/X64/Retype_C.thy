@@ -633,46 +633,6 @@ lemma field_of_t_refl:
   apply (simp add: unat_eq_0)
   done
 
-lemma typ_slice_list_array:
-  "x < size_td td * n
-    \<Longrightarrow> typ_slice_list (map (\<lambda>i. DTPair td (nm i)) [0..<n]) x
-        = typ_slice_t td (x mod size_td td)"
-proof (induct n arbitrary: x nm)
-  case 0 thus ?case by simp
-next
-  case (Suc n)
-  from Suc.prems show ?case
-    apply (simp add: upt_conv_Cons map_Suc_upt[symmetric]
-                del: upt.simps)
-    apply (split if_split, intro conjI impI)
-     apply auto[1]
-    apply (simp add: o_def)
-    apply (subst Suc.hyps)
-     apply arith
-    apply (metis mod_geq)
-    done
-qed
-
-lemma h_t_array_valid_field:
-  "h_t_array_valid htd (p :: ('a :: wf_type) ptr) n
-    \<Longrightarrow> k < n
-    \<Longrightarrow> gd (p +\<^sub>p int k)
-    \<Longrightarrow> h_t_valid htd gd (p +\<^sub>p int k)"
-  apply (clarsimp simp: h_t_array_valid_def h_t_valid_def valid_footprint_def
-                        size_of_def[symmetric, where t="TYPE('a)"])
-  apply (drule_tac x="k * size_of TYPE('a) + y" in spec)
-  apply (drule mp)
-   apply (frule_tac k="size_of TYPE('a)" in mult_le_mono1[where j=n, OF Suc_leI])
-   apply (simp add: mult.commute)
-  apply (clarsimp simp: ptr_add_def add.assoc)
-  apply (erule map_le_trans[rotated])
-  apply (clarsimp simp: uinfo_array_tag_n_m_def)
-  apply (subst typ_slice_list_array)
-   apply (frule_tac k="size_of TYPE('a)" in mult_le_mono1[where j=n, OF Suc_leI])
-   apply (simp add: mult.commute size_of_def)
-  apply (simp add: size_of_def list_map_mono)
-  done
-
 lemma h_t_valid_ptr_retyps_gen:
   assumes sz: "nptrs * size_of TYPE('a :: mem_type) < addr_card"
     and gd: "gd p'"
@@ -1172,29 +1132,6 @@ lemma update_ti_t_machine_word_0s:
   "update_ti_t (typ_info_t TYPE(machine_word)) [0,0,0,0,0,0,0,0] X = 0"
   "word_rcat [0, 0, 0, 0,0,0,0,(0 :: word8)] = (0 :: machine_word)"
   by (simp_all add: typ_info_word word_rcat_def bin_rcat_def)
-
-lemma is_aligned_ptr_aligned:
-  fixes p :: "'a :: c_type ptr"
-  assumes al: "is_aligned (ptr_val p) n"
-  and  alignof: "align_of TYPE('a) = 2 ^ n"
-  shows "ptr_aligned p"
-  using al unfolding is_aligned_def ptr_aligned_def
-  by (simp add: alignof)
-
-lemma is_aligned_c_guard:
-  "is_aligned (ptr_val p) n
-    \<Longrightarrow> ptr_val p \<noteq> 0
-    \<Longrightarrow> align_of TYPE('a) = 2 ^ m
-    \<Longrightarrow> size_of TYPE('a) \<le> 2 ^ n
-    \<Longrightarrow> m \<le> n
-    \<Longrightarrow> c_guard (p :: ('a :: c_type) ptr)"
-  apply (clarsimp simp: c_guard_def c_null_guard_def)
-  apply (rule conjI)
-   apply (rule is_aligned_ptr_aligned, erule(1) is_aligned_weaken, simp)
-  apply (erule is_aligned_get_word_bits, simp_all)
-  apply (rule intvl_nowrap[where x=0, simplified], simp)
-  apply (erule is_aligned_no_wrap_le, simp+)
-  done
 
 lemma retype_guard_helper:
   assumes cover: "range_cover p sz (objBitsKO ko) n"

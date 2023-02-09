@@ -612,7 +612,7 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
                             simp: locateSlot_conv)
         apply (simp add: drop_postfix_eq)
         apply clarsimp
-        apply (prove "is_aligned ptr (4 + cbits) \<and> cbits \<le> word_bits - cte_level_bits")
+        apply (prop_tac "is_aligned ptr (4 + cbits) \<and> cbits \<le> word_bits - cte_level_bits")
         apply (erule valid_CNodeCapE; fastforce simp: cte_level_bits_def)
         subgoal premises prems for s s' x
           apply (insert prems)
@@ -625,8 +625,8 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
             apply (subst \<open>to_bl _ = _\<close>[symmetric])
             apply (drule postfix_dropD)
             apply clarsimp
-            apply (prove "32 + (cbits + length guard) - length cref =
-                         (cbits + length guard) + (32 - length cref)")
+            apply (prop_tac "32 + (cbits + length guard) - length cref =
+                             (cbits + length guard) + (32 - length cref)")
              apply (drule len_drop_lemma, simp, arith)
             apply simp
             apply (subst drop_drop [symmetric])

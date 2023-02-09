@@ -1470,7 +1470,7 @@ lemma flush_table_empty:
     flush_table ac aa b word
    \<lbrace>\<lambda>rv s. obj_at (empty_table {}) word s\<rbrace>"
   apply (clarsimp simp: flush_table_def set_vm_root_def)
-  apply (wp do_machine_op_obj_at arm_context_switch_P_obj_at hoare_whenE_wp hoare_drop_imp
+  apply (wp do_machine_op_obj_at arm_context_switch_P_obj_at whenE_wp hoare_drop_imp
     | wpc
     | simp
     | wps)+
@@ -1653,7 +1653,7 @@ lemma set_vm_root_empty[wp]:
   done
 
 crunch obj_at[wp]: invalidate_tlb_by_asid "\<lambda>s. P' (obj_at P p s)"
-  (wp: hoare_whenE_wp simp: crunch_simps)
+  (wp: whenE_wp simp: crunch_simps)
 
 lemma set_asid_pool_empty[wp]:
   "\<lbrace>obj_at (empty_table {}) word\<rbrace> set_asid_pool x2 pool' \<lbrace>\<lambda>xb. obj_at (empty_table {}) word\<rbrace>"

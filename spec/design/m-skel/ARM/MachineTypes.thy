@@ -9,7 +9,7 @@ chapter "ARM Machine Types"
 theory MachineTypes
 imports
   "Word_Lib.WordSetup"
-  "Lib.OptionMonadND"
+  "Monads.OptionMonadND"
   Setup_Locale
   Platform
 begin

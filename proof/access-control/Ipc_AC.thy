@@ -37,7 +37,7 @@ lemma send_signal_caps_of_state[wp]:
   done
 
 crunch mdb[wp]: blocked_cancel_ipc, update_waiting_ntfn "\<lambda>s. P (cdt (s :: det_ext state))"
-  (wp: crunch_wps hoare_unless_wp select_wp dxo_wp_weak simp: crunch_simps)
+  (wp: crunch_wps unless_wp select_wp dxo_wp_weak simp: crunch_simps)
 
 lemma cancel_ipc_receive_blocked_mdb:
   "\<lbrace>\<lambda>s :: det_ext state. P (cdt s) \<and> st_tcb_at receive_blocked t s\<rbrace>
@@ -671,7 +671,7 @@ lemma remove_rights_cur_auth:
   by (clarsimp dest!: remove_rights_cap_auth_conferred_subset)
 
 (* FIXME MOVE *)
-lemmas hoare_gen_asmE2 = hoare_gen_asmE[where P'=\<top>,simplified pred_and_true_var]
+lemmas hoare_gen_asmE2 = hoare_gen_asmE[where P'=\<top>,simplified pred_top_left_neutral]
 
 lemma derive_cap_is_transferable:
   "\<lbrace>K (is_transferable_cap cap)\<rbrace> derive_cap slot cap \<lbrace>\<lambda>rv _. is_transferable_cap rv\<rbrace>, -"

@@ -289,12 +289,12 @@ lemma arch_thread_set_valid_sched[wp]:
 
 crunch ct_not_in_q [wp, DetSchedSchedule_AI_assms]:
   arch_finalise_cap, prepare_thread_delete ct_not_in_q
-  (wp: crunch_wps hoare_drop_imps hoare_unless_wp select_inv mapM_wp
+  (wp: crunch_wps hoare_drop_imps unless_wp select_inv mapM_wp
        subset_refl if_fun_split simp: crunch_simps ignore: tcb_sched_action)
 
 crunch valid_etcbs [wp, DetSchedSchedule_AI_assms]:
   arch_finalise_cap, prepare_thread_delete valid_etcbs
-  (wp: hoare_drop_imps hoare_unless_wp select_inv mapM_x_wp mapM_wp subset_refl
+  (wp: hoare_drop_imps unless_wp select_inv mapM_x_wp mapM_wp subset_refl
        if_fun_split simp: crunch_simps ignore: set_object thread_set)
 
 crunch simple_sched_action [wp, DetSchedSchedule_AI_assms]:

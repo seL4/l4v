@@ -3226,7 +3226,7 @@ crunch valid_cap'[wp]: prepareThreadDelete "valid_cap' cap"
 crunch invs[wp]: prepareThreadDelete "invs'" (ignore: doMachineOp)
 crunch obj_at'[wp]: prepareThreadDelete
   "\<lambda>s. P' (obj_at' P p s)"
-  (wp: hoare_whenE_wp simp: crunch_simps)
+  (wp: whenE_wp simp: crunch_simps)
 
 end
 

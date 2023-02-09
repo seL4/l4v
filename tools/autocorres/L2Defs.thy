@@ -174,8 +174,7 @@ lemma L2corres_spec:
   apply (clarsimp simp: L2corres_def L2_defs L1_spec_def corresXF_def
                         liftE_def spec_alt_def return_def bind_def select_def)
   apply (clarsimp simp: image_def)
-  apply (subst (asm) set_eq_UNIV)
-  apply metis
+  apply (smt (verit) UNIV_I mem_Collect_eq)
   done
 
 lemma L2corres_seq:
@@ -280,7 +279,7 @@ lemma corresXF_E:
   apply clarsimp
   apply (erule allE, erule impE, fastforce)
   apply clarsimp
-  apply (erule (1) my_BallE)
+  apply (drule (1) bspec)
   apply (clarsimp split: sum.splits)
   done
 
@@ -506,9 +505,7 @@ lemma L2_gets_bind: "\<lbrakk> \<And>s s'. V s = V s' \<rbrakk> \<Longrightarrow
   apply (rule ext)
   apply (clarsimp simp: L2_seq_def L2_gets_def gets_def get_def return_def bindE_def)
   apply (clarsimp simp: liftE_def2 bind_def lift_def)
-  apply atomize
-  apply (erule_tac x=x and y=undefined in allE2)
-  apply simp
+  apply metis
   done
 
 (* TODO: remove internal var if it is not user-visible *)

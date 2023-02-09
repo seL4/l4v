@@ -41,10 +41,8 @@ declare dxo_wp_weak[wp del]
 
  (*Some nasty hackery to get around lack of polymorphic type class operations*)
 
-lemma and_assoc: "(A and (B and C)) = (A and B and C)"
-  apply (rule ext)
-  apply simp
-done
+lemma and_assoc: "(A and (B and C)) = (A and B and C)" (* FIXME: eliminate *)
+  by (simp add: pred_conj_aci)
 
 lemma no_children_empty_desc:
   "(\<forall>c. m c \<noteq> Some slot) = (descendants_of slot m = {})"

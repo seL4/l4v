@@ -179,8 +179,8 @@ lemma corresXF_simple_exec_concrete:
 lemma corresXF_exec_concrete_self:
     "corresXF st (\<lambda>r s. r) (\<lambda>r s. r) P (exec_concrete st M) M"
   apply (subst corresXF_simple_corresXF [symmetric])
-  apply clarsimp
-  apply (rule corresXF_simple_exec_concrete)
+  apply (simp add: surjective_sum[where f=id, simplified])
+  apply (rule corresXF_simple_exec_concrete)+
   done
 
 lemma corresXF_exec_concrete [intro?]:
@@ -307,7 +307,7 @@ lemma corresXF_simple_exec_abstract:
 lemma corresXF_exec_abstract_self:
     "corresXF st (\<lambda>r s. r) (\<lambda>r s. r) P M (exec_abstract st M)"
   apply (subst corresXF_simple_corresXF [symmetric])
-  apply clarsimp
+  apply (simp add: surjective_sum[where f=id, simplified])
   apply (rule corresXF_simple_exec_abstract)
   done
 

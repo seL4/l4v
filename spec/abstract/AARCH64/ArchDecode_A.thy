@@ -59,10 +59,10 @@ definition make_user_pte :: "paddr \<Rightarrow> vm_attributes \<Rightarrow> vm_
   "make_user_pte addr attr rights vm_size \<equiv>
      PagePTE addr (vm_size = ARMSmallPage) (attr - {Global}) rights"
 
-definition check_vspace_root :: "arch_cap \<Rightarrow> nat \<Rightarrow> (obj_ref \<times> asid, 'z) se_monad" where
+definition check_vspace_root :: "cap \<Rightarrow> nat \<Rightarrow> (obj_ref \<times> asid, 'z) se_monad" where
   "check_vspace_root cap arg_no \<equiv>
      case cap of
-       PageTableCap pt VSRootPT_T (Some (asid, _)) \<Rightarrow> returnOk (pt, asid)
+       ArchObjectCap (PageTableCap pt VSRootPT_T (Some (asid, _))) \<Rightarrow> returnOk (pt, asid)
      | _ \<Rightarrow> throwError $ InvalidCapability arg_no"
 
 type_synonym 'z arch_decoder =
@@ -79,7 +79,7 @@ definition decode_fr_inv_map :: "'z::state_ext arch_decoder" where
            attr = args ! 2;
            vspace_cap = fst (extra_caps ! 0)
          in doE
-           (pt, asid) \<leftarrow> check_vspace_root cap 1;
+           (pt, asid) \<leftarrow> check_vspace_root vspace_cap 1;
            pt' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid;
            whenE (pt' \<noteq> pt) $ throwError $ InvalidCapability 1;
            check_vp_alignment pgsz vaddr;
@@ -167,7 +167,7 @@ definition decode_pt_inv_map :: "'z::state_ext arch_decoder" where
            vspace_cap = fst (extra_caps ! 0)
          in doE
            whenE (mapped_address \<noteq> None) $ throwError $ InvalidCapability 0;
-           (pt, asid) \<leftarrow> check_vspace_root cap 1;
+           (pt, asid) \<leftarrow> check_vspace_root vspace_cap 1;
            whenE (user_vtop < vaddr) $ throwError $ InvalidArgument 0;
            pt' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid;
            whenE (pt' \<noteq> pt) $ throwError $ InvalidCapability 1;
@@ -225,7 +225,7 @@ definition decode_vs_inv_flush :: "'z::state_ext arch_decoder" where
         in doE
           whenE (end \<le> start) $ throwError $ InvalidArgument 1;
           whenE (end > pptrUserTop) $ throwError $ IllegalOperation;
-          (vspace, asid) \<leftarrow> check_vspace_root cap 0;
+          (vspace, asid) \<leftarrow> check_vspace_root (ArchObjectCap cap) 0;
           vspace' \<leftarrow> lookup_error_on_failure False $ find_vspace_for_asid asid;
           whenE (vspace' \<noteq> vspace) $ throwError $ InvalidCapability 0;
           frame_info \<leftarrow> liftE $ gets $ lookup_frame p start \<circ> ptes_of;

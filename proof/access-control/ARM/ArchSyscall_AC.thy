@@ -154,7 +154,7 @@ crunch arch_state[Syscall_AC_assms, wp]: init_arch_objects "\<lambda>s. P (arch_
   (wp: crunch_wps)
 
 crunch ct_active [Syscall_AC_assms, wp]: arch_post_cap_deletion "ct_active"
-  (wp: crunch_wps filterM_preserved hoare_unless_wp
+  (wp: crunch_wps filterM_preserved unless_wp
    simp: crunch_simps ignore: do_extended_op)
 
 crunches

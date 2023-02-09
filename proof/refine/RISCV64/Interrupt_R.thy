@@ -620,7 +620,7 @@ lemma decDomainTime_corres:
 lemma tcbSchedAppend_valid_objs':
   "\<lbrace>valid_objs'\<rbrace>tcbSchedAppend t \<lbrace>\<lambda>r. valid_objs'\<rbrace>"
   apply (simp add:tcbSchedAppend_def)
-  apply (wpsimp wp: hoare_unless_wp threadSet_valid_objs' threadGet_wp)
+  apply (wpsimp wp: unless_wp threadSet_valid_objs' threadGet_wp)
   apply (clarsimp simp add:obj_at'_def typ_at'_def)
   done
 

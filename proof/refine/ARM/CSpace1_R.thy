@@ -590,29 +590,29 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
                             simp: locateSlot_conv stateAssert_def)
         apply (simp add: drop_postfix_eq)
         apply clarsimp
-        apply (prove "is_aligned ptr (cte_level_bits + cbits) \<and> cbits \<le> word_bits - cte_level_bits")
-         apply (erule valid_CNodeCapE; fastforce simp: cte_level_bits_def)
+        apply (prop_tac "is_aligned ptr (cte_level_bits + cbits) \<and> cbits \<le> word_bits - cte_level_bits")
+        apply (erule valid_CNodeCapE; fastforce simp: cte_level_bits_def)
         subgoal premises prems for s s' x
           apply (insert prems)
           apply (rule context_conjI)
-           apply (simp add: guard_mask_shift[OF \<open>to_bl _ = _\<close>, where guard=guard,symmetric])
-          apply (simp add: caps lookup_failure_map_def)
-          apply (rule conjI)
-           apply (clarsimp split: if_splits)
-           apply (intro conjI impI allI;clarsimp?)
-             apply (subst \<open>to_bl _ = _\<close>[symmetric])
-             apply (drule postfix_dropD)
-             apply clarsimp
-             apply (prove "32 + (cbits + length guard) - length cref =
-                          (cbits + length guard) + (32 - length cref)")
-              apply (drule len_drop_lemma, simp, arith)
-             apply simp
-             apply (subst drop_drop [symmetric])
-             subgoal by simp
-            apply (erule (2) valid_CNodeCapE)
-            apply (rule cap_table_at_cte_at[OF _ refl])
-            apply (simp add: obj_at_def is_cap_table_def well_formed_cnode_n_def)
-           apply (frule (2) cte_wp_valid_cap)
+            apply (simp add: guard_mask_shift[OF \<open>to_bl _ = _\<close>, where guard=guard,symmetric])
+            apply (simp add: caps lookup_failure_map_def)
+            apply (rule conjI)
+            apply (clarsimp split: if_splits)
+            apply (intro conjI impI allI;clarsimp?)
+            apply (subst \<open>to_bl _ = _\<close>[symmetric])
+            apply (drule postfix_dropD)
+            apply clarsimp
+            apply (prop_tac "32 + (cbits + length guard) - length cref =
+                             (cbits + length guard) + (32 - length cref)")
+             apply (drule len_drop_lemma, simp, arith)
+            apply simp
+            apply (subst drop_drop [symmetric])
+           subgoal by simp
+              apply (erule (2) valid_CNodeCapE)
+              apply (rule cap_table_at_cte_at[OF _ refl])
+              apply (simp add: obj_at_def is_cap_table_def well_formed_cnode_n_def)
+             apply (frule (2) cte_wp_valid_cap)
            apply (rule context_conjI)
            apply (intro conjI impI allI;clarsimp?)
             apply (erule (2) valid_CNodeCapE)

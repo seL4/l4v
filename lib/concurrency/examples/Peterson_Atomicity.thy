@@ -5,6 +5,7 @@
  *)
 theory Peterson_Atomicity
 imports
+  Lib.Lib
   Atomicity_Lib
 begin
 
@@ -597,7 +598,7 @@ theorem peterson_proc_refinement:
          apply (rule critical_section_refinement)
         apply (rule release_lock_refinement)
        apply (wpsimp wp: validI_triv acquire_lock_wp
-                     simp: bipred_conj_def)+
+                     simp: pred_conj_def)+
   done
 
 definition

@@ -354,7 +354,7 @@ lemma invoke_untyped_integrity:
              init_arch_objects_integrity retype_region_integrity
              retype_region_ret_is_subject
              set_cap_integrity_autarch hoare_vcg_if_lift
-             hoare_whenE_wp reset_untyped_cap_integrity
+             whenE_wp reset_untyped_cap_integrity
           | clarsimp simp: split_paired_Ball
           | erule in_set_zipE
           | blast)+

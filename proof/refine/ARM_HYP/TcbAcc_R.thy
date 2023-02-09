@@ -229,7 +229,7 @@ lemma preemptionPoint_irq [wp]:
   "\<lbrace>valid_irq_states'\<rbrace> preemptionPoint -,
    \<lbrace>\<lambda>irq s. intStateIRQTable (ksInterruptState s) irq \<noteq> IRQInactive\<rbrace>"
   apply (simp add: preemptionPoint_def setWorkUnits_def modifyWorkUnits_def getWorkUnits_def)
-  apply (wp hoare_whenE_wp|wpc)+
+  apply (wp whenE_wp|wpc)+
      apply (rule hoare_post_imp)
       prefer 2
      apply (rule doMachineOp_getActiveIRQ_IRQ_active)
@@ -2645,7 +2645,6 @@ lemma removeFromBitmap_bitmapQ_no_L2_orphans[wp]:
   unfolding bitmap_fun_defs
   apply (wp, clarsimp simp: bitmap_fun_defs bitmapQ_no_L2_orphans_def)+
   apply (rule conjI, clarsimp)
-   apply (rule conjI, clarsimp)
    apply (clarsimp simp: complement_nth_w2p l2BitmapSize_def')
   apply clarsimp
   apply metis

@@ -555,12 +555,6 @@ lemma mapM_load_word_offs_do_machine_op:
   apply (simp add: load_word_offs_def[abs_def] mapM_map_simp o_def)
   done
 
-lemma and_assoc:
-  "(A and B and C) = (A and (B and C))"
-  apply (rule ext)
-  apply clarsimp
-done
-
 lemma det_spec_return:
   "det_spec P (return x)"
   by (clarsimp simp:return_def det_spec_def)
@@ -1044,7 +1038,7 @@ lemma get_ipc_buffer_words:
   "\<lbrace>(=) sa and ko_at (TCB obj) thread and K_bind (evalMonad (lookup_ipc_buffer in_receive thread) sa = Some (Some buf))\<rbrace>
     mapM (load_word_offs (buf)) (ls)
    \<lbrace>\<lambda>buf_mrs s. buf_mrs = get_ipc_buffer_words (machine_state sa) obj (ls)\<rbrace>"
-  apply (simp add:and_assoc get_ipc_buffer_words_def)
+  apply (simp add: pred_conj_aci get_ipc_buffer_words_def)
   apply (rule wp_spec)
   apply clarsimp
   apply (drule lookup_ipc_buffer_SomeB_evalMonad)

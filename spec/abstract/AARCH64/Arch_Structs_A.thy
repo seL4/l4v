@@ -88,6 +88,11 @@ text \<open>
 value_type ppn_len = "ipa_size - pageBits"
 type_synonym ppn = "ppn_len word"
 
+text \<open>This lemma encodes @{typ ppn_len} value above as a term, so we can use it generically:\<close>
+lemma ppn_len_def':
+  "ppn_len = ipa_size - pageBits"
+  by (simp add: ppn_len_def pageBits_def ipa_size_def Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
+
 datatype pte =
     InvalidPTE
   | PagePTE

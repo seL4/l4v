@@ -12,7 +12,8 @@
 theory MonadMono
 imports
   NonDetMonadEx
-  "Lib.OptionMonadWP"
+  Monads.WhileLoopRulesCompleteness
+  Monads.OptionMonadWP
 begin
 
 (*
@@ -284,15 +285,11 @@ definition "option_monad_mono f \<equiv>
 lemma option_monad_mono_eq:
   "(\<And>m. f m = gets_the (f' m)) \<Longrightarrow> monad_mono f = option_monad_mono f'"
   apply (clarsimp simp: monad_mono_def option_monad_mono_def gets_the_def
-    gets_def get_def assert_opt_def return_def fail_def bind_def' split: option.splits)
-  apply (rule iff_allI iff_impI)+
-  apply (rule_tac t = "\<forall>r. f' x s = Some r \<longrightarrow> (\<exists>r'. f' y s = Some r') \<and> (\<forall>r'. f' y s = Some r' \<longrightarrow> r = r')"
-              and s = "\<forall>r. f' x s = Some r \<longrightarrow> f' y s = Some r" in subst)
-   apply (force intro: iff_allI iff_impI)
-  apply (rule iffI)
-   apply (metis (no_types) option.exhaust)
-  apply force
-  done
+                        gets_def get_def assert_opt_def return_def fail_def bind_def'
+                  split: option.splits)
+  apply (intro iff_allI iffI impI allI)
+   apply (metis option.collapse)
+  by fastforce
 
 lemma measure_ocall_ovalid [wp]:
     "\<lbrakk> \<forall> m. ovalid P (x m) Q; option_monad_mono x \<rbrakk> \<Longrightarrow> ovalid P (measure_ocall x) Q"

@@ -9,7 +9,8 @@ theory GraphRefine
 imports
   TailrecPre
   GraphLangLemmas
-  "CLib.LemmaBucket_C"
+  Lib.Lib
+  "CParser.LemmaBucket_C"
   ExtraSpecs
 begin
 

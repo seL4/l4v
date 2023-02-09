@@ -4855,7 +4855,7 @@ lemma cteSwap_valid_pspace'[wp]:
          apply (strengthen imp_consequent, strengthen ctes_of_strng)
          apply ((wp sch_act_wf_lift valid_queues_lift
                     cur_tcb_lift updateCap_no_0  updateCap_ctes_of_wp
-                    hoare_ex_wp updateMDB_cte_wp_at_other getCTE_wp
+                    hoare_vcg_ex_lift updateMDB_cte_wp_at_other getCTE_wp
                   | rule hoare_drop_imps)+)[6]
   apply (clarsimp simp: valid_pspace_no_0[unfolded valid_pspace'_def valid_mdb'_def]
                         cte_wp_at_ctes_of)
@@ -7191,13 +7191,11 @@ next
   case (4 ptr bits n slot)
   let ?target = "(ptr, nat_to_cref (zombie_cte_bits bits) n)"
   note hyps = "4.hyps"[simplified rec_del_concrete_unfold spec_corres_liftME2]
-  have pred_conj_assoc: "\<And>P Q R. (P and (Q and R)) = (P and Q and R)"
-    by (rule ext, simp)
   show ?case
     apply (simp only: rec_del_concrete_unfold cap_relation.simps)
     apply (simp add: reduceZombie_def Let_def
                      liftE_bindE
-                del: pred_conj_app)
+                del: inf_apply)
     apply (subst rec_del_simps_ext)
     apply (rule_tac F="ptr + 2 ^ cte_level_bits * of_nat n
                          = cte_map ?target"
@@ -8775,7 +8773,7 @@ crunches capSwapForDelete
 
 crunches finaliseCap
   for irq_states' [wp]: valid_irq_states'
-  (wp: crunch_wps hoare_unless_wp getASID_wp no_irq
+  (wp: crunch_wps unless_wp getASID_wp no_irq
        no_irq_invalidateLocalTLB_ASID no_irq_setHardwareASID
        no_irq_set_current_pd no_irq_invalidateLocalTLB_VAASID
        no_irq_cleanByVA_PoU hoare_vcg_all_lift
@@ -8789,7 +8787,7 @@ lemma cteDelete_irq_states':
   "\<lbrace>valid_irq_states'\<rbrace> cteDelete x y
   \<lbrace>\<lambda>rv. valid_irq_states'\<rbrace>"
   apply (simp add: cteDelete_def split_def)
-  apply (wp hoare_whenE_wp)
+  apply (wp whenE_wp)
    apply (rule hoare_post_impErr)
      apply (rule hoare_valid_validE)
      apply (rule finaliseSlot_irq_states')

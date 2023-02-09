@@ -54,7 +54,7 @@ lemma retype_region_ret_folded [Retype_AI_assms]:
    apply (simp add:retype_addrs_def)
   done
 
-lemmas [wp] =  hoare_unless_wp
+lemmas [wp] =  unless_wp
 
 (* These also prove facts about copy_global_mappings *)
 crunch pspace_aligned[wp]: init_arch_objects "pspace_aligned"

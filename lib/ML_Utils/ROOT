@@ -1,0 +1,18 @@
+(*
+ * Copyright 2023, Proofcraft Pty Ltd
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ *)
+
+chapter Lib
+
+session ML_Utils (lib) = HOL +
+  theories
+    ML_Utils
+    MkTermAntiquote
+    TermPatternAntiquote
+    TacticAntiquotation
+    TacticTutorial
+    MkTermAntiquote_Tests
+    TacticAntiquotation_Test
+    TermPatternAntiquote_Tests

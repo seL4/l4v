@@ -2964,7 +2964,7 @@ lemma setCTE_irq_states' [wp]:
   apply (wp setObject_ksMachine)
    apply (simp add: updateObject_cte)
    apply (rule hoare_pre)
-    apply (wp hoare_unless_wp|wpc|simp)+
+    apply (wp unless_wp|wpc|simp)+
    apply fastforce
   apply assumption
   done
@@ -3084,7 +3084,7 @@ lemma setCTE_ksMachine[wp]:
   apply (wp setObject_ksMachine)
   apply (clarsimp simp: updateObject_cte
                  split: Structures_H.kernel_object.splits)
-  apply (safe, (wp hoare_unless_wp | simp)+)
+  apply (safe, (wp unless_wp | simp)+)
   done
 
 crunch ksMachine[wp]: cteInsert "\<lambda>s. P (ksMachineState s)"

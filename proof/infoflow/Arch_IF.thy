@@ -433,7 +433,7 @@ crunch irq_state_of_state[wp]: handle_recv, handle_reply "\<lambda>s. P (irq_sta
 crunch irq_state_of_state[wp]: invoke_irq_handler "\<lambda>s. P (irq_state_of_state s)"
 
 crunch irq_state_of_state[wp]: schedule "\<lambda>s. P (irq_state_of_state s)"
-  (wp: dmo_wp modify_wp crunch_wps hoare_whenE_wp
+  (wp: dmo_wp modify_wp crunch_wps whenE_wp
    simp: machine_op_lift_def machine_rest_lift_def crunch_simps)
 
 crunch irq_state_of_state[wp]: finalise_cap "\<lambda>s. P (irq_state_of_state s)"

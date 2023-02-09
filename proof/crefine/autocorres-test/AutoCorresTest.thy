@@ -164,7 +164,7 @@ lemma corres_symb_exec_l_no_exs:
           apply (erule x)
          apply (rule gets_wp)
         apply (erule nf)
-       apply (rule non_fail_gets)
+       apply (rule no_fail_gets)
       apply (rule z)
      apply (rule y)
     apply (rule gets_wp)

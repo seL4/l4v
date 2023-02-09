@@ -6,8 +6,8 @@
 
 theory BitFieldProofsLib
 imports
-  "Lib.Eisbach_Methods"
-  TypHeapLib
+  Eisbach_Tools.Eisbach_Methods
+  CParser.TypHeapLib
 begin
 
 lemmas guard_simps =

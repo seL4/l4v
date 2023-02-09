@@ -106,6 +106,13 @@ lemma array_ptr_valid_array_assertionI:
   by (auto dest: array_ptr_valid_array_assertionD
            simp: array_assertion_shrink_right)
 
+lemma h_t_array_valid_array_assertion:
+  "h_t_array_valid htd ptr n \<Longrightarrow> 0 < n
+   \<Longrightarrow> array_assertion ptr n htd"
+  apply (simp add: array_assertion_def)
+  apply (fastforce intro: exI[where x=0])
+  done
+
 text \<open>Derived from array_assertion, an appropriate assertion for performing
 a pointer addition, or for dereferencing a pointer addition (the strong case).
 
@@ -171,5 +178,55 @@ lemma ptr_arr_retyps_to_retyp:
   "n = CARD('b :: finite)
     \<Longrightarrow> ptr_arr_retyps n (p :: ('c :: wf_type) ptr) = ptr_retyp (ptr_coerce p :: ('c['b]) ptr)"
   by (auto simp: ptr_arr_retyps_def ptr_retyp_def typ_slices_def typ_uinfo_array_tag_n_m_eq)
+
+lemma size_td_uinfo_array_tag_n_m[simp]:
+  "size_td (uinfo_array_tag_n_m (t :: 'a :: c_type itself) n m)
+   = size_of (TYPE('a)) * n"
+  apply (induct n)
+   apply (simp add: uinfo_array_tag_n_m_def)
+  apply (simp add: uinfo_array_tag_n_m_def size_of_def)
+  done
+
+lemma typ_slice_list_array:
+  "x < size_td td * n
+    \<Longrightarrow> typ_slice_list (map (\<lambda>i. DTPair td (nm i)) [0..<n]) x
+        = typ_slice_t td (x mod size_td td)"
+proof (induct n arbitrary: x nm)
+  case 0 thus ?case by simp
+next
+  note if_split[split del]
+  case (Suc n)
+  from Suc.prems show ?case
+    apply (simp add: upt_conv_Cons map_Suc_upt[symmetric]
+                del: upt.simps)
+    apply (split if_split, intro conjI impI)
+     apply auto[1]
+    apply (simp add: o_def)
+    apply (subst Suc.hyps)
+     apply arith
+    apply (metis mod_geq)
+    done
+qed
+
+lemma h_t_array_valid_field:
+  "h_t_array_valid htd (p :: 'a :: wf_type ptr) n
+    \<Longrightarrow> k < n
+    \<Longrightarrow> gd (p +\<^sub>p int k)
+    \<Longrightarrow> h_t_valid htd gd (p +\<^sub>p int k)"
+  supply if_split[split del]
+  apply (clarsimp simp: h_t_array_valid_def h_t_valid_def valid_footprint_def
+                        size_of_def[symmetric, where t="TYPE('a)"] Let_def)
+  apply (drule_tac x="k * size_of TYPE('a) + y" in spec)
+  apply (drule mp)
+   apply (frule_tac k="size_of TYPE('a)" in mult_le_mono1[where j=n, OF Suc_leI])
+   apply (simp add: mult.commute)
+  apply (clarsimp simp: ptr_add_def add.assoc)
+  apply (erule map_le_trans[rotated])
+  apply (clarsimp simp: uinfo_array_tag_n_m_def)
+  apply (subst typ_slice_list_array)
+   apply (frule_tac k="size_of TYPE('a)" in mult_le_mono1[where j=n, OF Suc_leI])
+   apply (simp add: mult.commute size_of_def)
+  apply (simp add: size_of_def list_map_mono)
+  done
 
 end

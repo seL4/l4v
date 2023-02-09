@@ -33,11 +33,7 @@ context Arch begin global_naming RISCV64_A (*FIXME: arch_split*)
 
 lemma asid_pool_at_ko:
   "asid_pool_at p s \<Longrightarrow> \<exists>pool. ko_at (ArchObj (RISCV64_A.ASIDPool pool)) p s"
-  apply (clarsimp simp: obj_at_def a_type_def)
-  apply (case_tac ko, simp_all split: if_split_asm)
-  apply (rename_tac arch_kernel_obj)
-  apply (case_tac arch_kernel_obj, auto split: if_split_asm)
-  done
+  by (clarsimp simp: asid_pools_at_eq obj_at_def elim!: opt_mapE)
 
 declare valid_arch_state_def[@def_to_elim, conjuncts]
 
@@ -315,14 +311,12 @@ lemma getObject_PTE_corres[corres]:
   apply (simp add: bind_assoc exec_gets fst_assert_opt)
   apply (clarsimp simp: pte_at_eq)
   apply (clarsimp simp: ptes_of_def)
-  apply (clarsimp simp: state_relation_def pspace_relation_def)
-  apply (clarsimp simp: obj_relation_cuts_def2)
-  apply (drule_tac x="table_base p'" in bspec)
-   apply (clarsimp simp: obj_at_def opt_map_def split: option.splits)
-  apply (clarsimp simp: pts_of_Some opt_map_def split: option.splits)
-  apply (clarsimp simp: pte_relation_def)
-  apply (drule_tac x="table_index p'" in spec)
-  apply (clarsimp simp: mask_pt_bits_inner_beauty[simplified bit_simps] bit_simps obj_at'_def)
+  apply (clarsimp simp: typ_at'_def ko_wp_at'_def in_magnitude_check objBits_simps bit_simps)
+  apply (clarsimp simp: state_relation_def pspace_relation_def elim!: opt_mapE)
+  apply (drule bspec, blast)
+  apply (clarsimp simp: other_obj_relation_def pte_relation_def)
+  apply (erule_tac x="table_index p" in allE)
+  apply (clarsimp simp: mask_pt_bits_inner_beauty[simplified bit_simps] bit_simps)
   done
 
 lemmas aligned_distinct_pte_atI'
@@ -345,6 +339,7 @@ lemma setObject_PT_corres:
               pspace_aligned and pspace_distinct) \<top>
           (set_pt (table_base p) (pt(table_index p := pte)))
           (setObject p pte')"
+  supply opt_mapE[elim!]
   apply (rule corres_cross_over_pte_at[where p=p])
    apply (simp add: pte_at_eq ptes_of_def in_omonad)
   apply (simp add: set_pt_def get_object_def bind_assoc set_object_def gets_map_def)
@@ -609,7 +604,7 @@ next
      apply (frule (5) vs_lookup_table_is_aligned)
      apply (rule conjI)
       apply (drule (5) valid_vspace_objs_strongD)
-      apply (clarsimp simp: pte_at_def obj_at_def pts_of_ko_at)
+      apply (clarsimp simp: pte_at_def obj_at_def elim!: opt_mapE)
       apply (simp add: pt_slot_offset_def)
       apply (rule is_aligned_add)
        apply (erule is_aligned_weaken)
@@ -740,7 +735,7 @@ next
      apply (frule (5) vs_lookup_table_is_aligned)
      apply (rule conjI)
       apply (drule (5) valid_vspace_objs_strongD)
-      apply (clarsimp simp: pte_at_def obj_at_def pts_of_ko_at)
+      apply (clarsimp simp: pte_at_def obj_at_def elim!: opt_mapE)
       apply (simp add: pt_slot_offset_def)
       apply (rule is_aligned_add)
        apply (erule is_aligned_weaken)

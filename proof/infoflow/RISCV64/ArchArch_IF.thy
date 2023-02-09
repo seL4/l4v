@@ -61,7 +61,7 @@ crunches set_irq_state, arch_post_cap_deletion, handle_arch_fault_reply
 
 crunch irq_state_of_state[Arch_IF_assms, wp]: arch_switch_to_idle_thread, arch_switch_to_thread
   "\<lambda>s :: det_state. P (irq_state_of_state s)"
-  (wp: dmo_wp modify_wp crunch_wps hoare_whenE_wp
+  (wp: dmo_wp modify_wp crunch_wps whenE_wp
    simp: machine_op_lift_def setVSpaceRoot_def
          machine_rest_lift_def crunch_simps storeWord_def)
 
@@ -243,7 +243,7 @@ lemma set_vm_root_states_equiv_for[wp]:
   "set_vm_root thread \<lbrace>states_equiv_for P Q R S st\<rbrace>"
   unfolding set_vm_root_def catch_def fun_app_def
   by (wpsimp wp: do_machine_op_mol_states_equiv_for
-                 hoare_vcg_all_lift hoare_whenE_wp hoare_drop_imps
+                 hoare_vcg_all_lift whenE_wp hoare_drop_imps
            simp: setVSpaceRoot_def dmo_bind_valid if_apply_def2)+
 
 lemma find_vspace_for_asid_reads_respects:

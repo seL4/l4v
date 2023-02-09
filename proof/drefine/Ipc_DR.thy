@@ -1987,13 +1987,13 @@ lemma dcorres_handle_arch_fault_reply:
   "dcorres dc \<top> (tcb_at y and valid_idle and not_idle_thread y and  valid_etcbs)
    (corrupt_tcb_intent y)
    (handle_arch_fault_reply a y mi mrs)"
-   apply (cases a)
-   apply (clarsimp simp: handle_arch_fault_reply_def)
-   apply (rule corres_guard_imp)
-     apply (rule corres_corrupt_tcb_intent_return)
-    apply assumption
-   apply (erule pred_andE | rule pred_andI | assumption)+
-   done
+  apply (cases a)
+  apply (clarsimp simp: handle_arch_fault_reply_def)
+  apply (rule corres_guard_imp)
+    apply (rule corres_corrupt_tcb_intent_return)
+   apply assumption
+  apply clarsimp
+  done
 
 
 lemma dcorres_handle_fault_reply:

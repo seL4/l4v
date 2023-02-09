@@ -86,7 +86,7 @@ lemma switch_to_idle_thread_ct_in_cur_domain [wp]:
       | simp add: ct_in_cur_domain_def)+
 
 crunch exst[wp]: set_vm_root "\<lambda>s. P (exst s)"
-  (wp: crunch_wps hoare_whenE_wp simp: crunch_simps)
+  (wp: crunch_wps whenE_wp simp: crunch_simps)
 
 crunch etcb_at[wp]: switch_to_thread "etcb_at P t"
   (wp: hoare_drop_imp)

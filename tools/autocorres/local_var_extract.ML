@@ -32,7 +32,7 @@ val the' = Utils.the'
 
 (* Simpset we use for automated tactics. *)
 fun setup_l2_ss ctxt = put_simpset AUTOCORRES_SIMPSET ctxt
-                         addsimps [@{thm pred_conj_def}]
+                         addsimps @{thms pred_conj_def}
 
 (* Convert a set of variable names into an Isabelle list of strings. *)
 fun var_set_to_isa_list prog_info s =
@@ -1354,7 +1354,7 @@ fun get_l2corres_thm ctxt prog_info l1_infos l1_call_info do_opt trace_opt fn_na
     |> apply_tac "solve main goal" (resolve_tac ctxt [thm] 1)
     |> apply_tac "solve guard_imp" (REPEAT (FIRST [
           resolve_tac ctxt @{thms HOL.refl} 1,
-          resolve_tac ctxt @{thms pred_andI} 1,
+          resolve_tac ctxt @{thms pred_conjI} 1,
           resolve_tac ctxt @{thms conjI} 1,
           CHANGED (asm_full_simp_tac (setup_l2_ss ctxt) 1)]))
     |> Goal.finish ctxt

@@ -349,13 +349,13 @@ lemma pde_at_aligned_vptr:
                  split: kernel_object.split_asm
                         arch_kernel_obj.split_asm if_split_asm
                  cong: kernel_object.case_cong)
-  apply (prove "is_aligned x 2")
-   subgoal
+  apply (prop_tac "is_aligned x 2")
+  subgoal
     apply (clarsimp simp: upto_enum_step_def word_shift_by_2)
     by (rule is_aligned_shiftl_self)
   apply (simp add: aligned_add_aligned word_bits_conv
                    is_aligned_shiftl_self)+
-  apply (prove "pd = (x + (pd + (vptr >> 20 << 2)) && ~~ mask pd_bits)")
+  apply (prop_tac "pd = (x + (pd + (vptr >> 20 << 2)) && ~~ mask pd_bits)")
   subgoal
     supply bit_simps[simp del]
     apply (subst mask_lower_twice[symmetric, where n=6])
@@ -552,7 +552,7 @@ lemma lookup_pt_slot_ptes_aligned_valid:
   apply (frule (2) valid_vspace_objsD)
   apply (clarsimp simp: )
   subgoal for s _ _ x
-    apply (prove "page_table_at (ptrFromPAddr x) s")
+    apply (prop_tac "page_table_at (ptrFromPAddr x) s")
     subgoal
       apply (bspec "(ucast (pd + (vptr >> 20 << 2) && mask pd_bits >> 2))";clarsimp)
       apply (frule kernel_mapping_slots_empty_pdeI)
@@ -672,7 +672,7 @@ lemma create_mapping_entries_valid [wp]:
    apply (clarsimp simp add: valid_mapping_entries_def)
    apply wp
   apply (simp add: lookup_pd_slot_def Let_def)
-  apply (prove "is_aligned pd 14")
+  apply (prop_tac "is_aligned pd 14")
    apply (clarsimp simp: obj_at_def add.commute invs_def valid_state_def valid_pspace_def pspace_aligned_def)
    apply (drule bspec, blast)
    apply (clarsimp simp: a_type_def split: kernel_object.splits arch_kernel_obj.splits if_split_asm)
@@ -1217,14 +1217,14 @@ lemma set_pt_valid_vspace_objs[wp]:
   apply (clarsimp simp: valid_vspace_objs_def)
   subgoal for s opt pa rs ao
     apply (spec pa)
-    apply (prove "(\<exists>\<rhd> pa) s")
+    apply (prop_tac "(\<exists>\<rhd> pa) s")
      apply (rule exI[where x=rs])
      apply (erule vs_lookupE)
      apply clarsimp
      apply (erule vs_lookupI)
      apply (erule rtrancl.induct, simp)
      subgoal for \<dots> b c
-       apply (prove "(b \<rhd>1 c) s")
+       apply (prop_tac "(b \<rhd>1 c) s")
        apply (thin_tac "_ : rtrancl _")+
        apply (clarsimp simp add: vs_lookup1_def obj_at_def vs_refs_def
                             split: if_split_asm)
@@ -2111,8 +2111,8 @@ lemma lookup_pt_slot_looks_up [wp]:
   apply (clarsimp simp: vs_lookup1_def lookup_pd_slot_def Let_def pd_shifting pd_shifting_dual)
   apply (rule exI, rule conjI, assumption)
   subgoal for s _ x
-    apply (prove "ptrFromPAddr x + ((vptr >> 12) && 0xFF << 2) && ~~ mask pt_bits = ptrFromPAddr x")
-     apply (prove "is_aligned (ptrFromPAddr x) 10")
+    apply (prop_tac "ptrFromPAddr x + ((vptr >> 12) && 0xFF << 2) && ~~ mask pt_bits = ptrFromPAddr x")
+     apply (prop_tac "is_aligned (ptrFromPAddr x) 10")
       apply (drule (2) valid_vspace_objsD)
       apply clarsimp
       apply (erule_tac x="ucast (vptr >> 20 << 2 >> 2)" in ballE)

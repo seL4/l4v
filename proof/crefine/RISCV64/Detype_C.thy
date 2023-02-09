@@ -1464,14 +1464,6 @@ lemma map_comp_restrict_map:
   "(f \<circ>\<^sub>m (restrict_map m S)) = (restrict_map (f \<circ>\<^sub>m m) S)"
   by (rule ext, simp add: restrict_map_def map_comp_def)
 
-lemma size_td_uinfo_array_tag_n_m[simp]:
-  "size_td (uinfo_array_tag_n_m (ta :: ('a :: c_type) itself) n m)
-    = size_of (TYPE('a)) * n"
-  apply (induct n)
-   apply (simp add: uinfo_array_tag_n_m_def)
-  apply (simp add: uinfo_array_tag_n_m_def size_of_def)
-  done
-
 lemma modify_machinestate_assert_cnodes_swap:
   "do x \<leftarrow> modify (ksMachineState_update f);
     y \<leftarrow> stateAssert (\<lambda>s. \<not> cNodePartialOverlap (gsCNodes s) S) []; g od

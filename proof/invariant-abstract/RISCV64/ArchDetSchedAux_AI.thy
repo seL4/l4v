@@ -38,8 +38,9 @@ lemma init_arch_objects_valid_sched_pred[wp, DetSchedAux_AI_assms]:
 
 crunches init_arch_objects
   for exst[wp]: "\<lambda>s. P (exst s)"
-  and valid_idle[wp, DetSchedAux_AI_assms]: "\<lambda>s. valid_idle s"
-  (wp: crunch_wps)
+  and ct[wp]: "\<lambda>s. P (cur_thread s)"
+  and valid_etcbs[wp, DetSchedAux_AI_assms]: valid_etcbs
+  (wp: crunch_wps unless_wp valid_etcbs_lift)
 
 lemma valid_machine_time_getCurrentTime[DetSchedAux_AI_assms]:
   "valid_machine_time s \<Longrightarrow> (x, s') \<in> fst (getCurrentTime (machine_state s))

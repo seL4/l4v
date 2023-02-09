@@ -551,7 +551,7 @@ lemma cap_delete_one_original:
   "slot \<noteq> slot' \<Longrightarrow> \<lbrace>\<lambda>s. is_original_cap s slot\<rbrace> cap_delete_one slot'
             \<lbrace>\<lambda>r s. is_original_cap s slot\<rbrace>"
   apply (clarsimp simp:cap_delete_one_def unless_def)
-  apply (wp hoare_when_wp)
+  apply (wp when_wp)
      apply (clarsimp simp:empty_slot_def)
      apply wp
          apply (clarsimp simp:set_cdt_def)
@@ -570,7 +570,7 @@ lemma cte_wp_at_neq_slot_cap_delete_one:
             \<lbrace>\<lambda>rv. cte_wp_at P slot\<rbrace>"
   supply send_signal_interrupt_states [wp_unsafe del] validNF_prop [wp_unsafe del]
   apply (clarsimp simp:cap_delete_one_def unless_def)
-  apply (wp hoare_when_wp)
+  apply (wp when_wp)
       apply (clarsimp simp:empty_slot_def)
       apply (wp cte_wp_at_neq_slot_set_cap)
            apply clarsimp

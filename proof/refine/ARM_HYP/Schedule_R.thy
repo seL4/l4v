@@ -587,7 +587,7 @@ lemma tcbSchedAppend_sch_act_wf[wp]:
   "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace> tcbSchedAppend thread
   \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
   apply (simp add:tcbSchedAppend_def bitmap_fun_defs)
-  apply (wp hoare_unless_wp setQueue_sch_act threadGet_wp|simp)+
+  apply (wp unless_wp setQueue_sch_act threadGet_wp|simp)+
   apply (fastforce simp:typ_at'_def obj_at'_def)
   done
 
@@ -1811,12 +1811,6 @@ lemma nextDomain_invs_no_cicd':
                         ct_not_inQ_def cur_tcb'_def ct_idle_or_in_cur_domain'_def dschDomain_def
                         all_invs_but_ct_idle_or_in_cur_domain'_def)
   done
-
-lemma bind_dummy_ret_val:
-  "do y \<leftarrow> a;
-      b
-   od = do a; b od"
-  by simp
 
 lemma scheduleChooseNewThread_fragment_corres:
   "corres dc (invs and valid_sched and (\<lambda>s. scheduler_action s = choose_new_thread)) (invs' and (\<lambda>s. ksSchedulerAction s = ChooseNewThread))

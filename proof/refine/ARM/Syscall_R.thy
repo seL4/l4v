@@ -818,9 +818,9 @@ lemma valid_irq_node_tcbSchedEnqueue[wp]:
   \<lbrace>\<lambda>rv s'. valid_irq_node' (irq_node' s') s'\<rbrace>"
   apply (rule hoare_pre)
   apply (simp add:valid_irq_node'_def )
-  apply (wp hoare_unless_wp hoare_vcg_all_lift | wps)+
+  apply (wp unless_wp hoare_vcg_all_lift | wps)+
   apply (simp add:tcbSchedEnqueue_def)
-  apply (wp hoare_unless_wp| simp)+
+  apply (wp unless_wp| simp)+
   apply (simp add:valid_irq_node'_def)
   done
 

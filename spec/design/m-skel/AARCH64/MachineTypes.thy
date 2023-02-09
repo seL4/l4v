@@ -8,7 +8,7 @@ chapter "AARCH64 Machine Types"
 theory MachineTypes
 imports
   "Word_Lib.WordSetup"
-  "Lib.OptionMonadND"
+  "Monads.OptionMonadND"
   "Lib.HaskellLib_H"
   Platform
 begin

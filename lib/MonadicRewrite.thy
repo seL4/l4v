@@ -9,7 +9,7 @@
 
 theory MonadicRewrite
 imports
-  NonDetMonadVCG
+  Monads.NonDetMonadVCG
   Corres_UL
   EmptyFailLib
   LemmaBucket
@@ -148,13 +148,13 @@ lemma monadic_rewrite_bindE:
   done
 
 lemmas monadic_rewrite_bind_tail
-  = monadic_rewrite_bind[OF monadic_rewrite_refl, simplified pred_and_true_var]
+  = monadic_rewrite_bind[OF monadic_rewrite_refl, simplified pred_top_left_neutral]
 
 lemmas monadic_rewrite_bind_head
-  = monadic_rewrite_bind[OF _ monadic_rewrite_refl hoare_vcg_prop, simplified pred_and_true]
+  = monadic_rewrite_bind[OF _ monadic_rewrite_refl hoare_vcg_prop, simplified pred_top_right_neutral]
 
 lemmas monadic_rewrite_bindE_tail
-  = monadic_rewrite_bindE[OF monadic_rewrite_refl, simplified pred_and_true_var]
+  = monadic_rewrite_bindE[OF monadic_rewrite_refl, simplified pred_top_left_neutral]
 
 lemmas monadic_rewrite_bindE_head
     = monadic_rewrite_bindE[OF _ monadic_rewrite_refl hoare_vcg_propE_R]
@@ -521,7 +521,7 @@ lemma monadic_rewrite_bind_alternative:
   done
 
 lemmas monadic_rewrite_bind_alternative_l
-  = monadic_rewrite_trans[OF monadic_rewrite_bind_alternative, simplified pred_and_true_var]
+  = monadic_rewrite_trans[OF monadic_rewrite_bind_alternative, simplified pred_top_left_neutral]
 
 lemma monadic_rewrite_alternative_l:
   "monadic_rewrite F False \<top> (alternative f g) g"
@@ -633,7 +633,7 @@ lemma monadic_rewrite_case_sum:
      \<And>v. x = Inr v \<Longrightarrow> monadic_rewrite F E (Q v) (b v) (d v) \<rbrakk>
    \<Longrightarrow> monadic_rewrite F E (\<lambda>s. (\<not> isRight x \<longrightarrow> P (theLeft x) s) \<and> (isRight x \<longrightarrow> Q (theRight x) s))
         (case_sum a b x) (case_sum c d x)"
-  by (cases x, simp_all add: isRight_def)
+  by (cases x; simp)
 
 text \<open>WP proof via monadic rewriting\<close>
 

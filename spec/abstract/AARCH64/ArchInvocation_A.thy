@@ -13,9 +13,6 @@ begin
 
 context Arch begin global_naming AARCH64_A
 
-(* FIXME AARCH64: import flush_type directly from Haskell *)
-datatype flush_type = Clean | Invalidate | CleanInvalidate | Unify
-
 text \<open>
   These datatypes encode the arguments to the various possible AARCH64-specific system calls.
   Selectors are defined for various fields for convenience elsewhere.

@@ -15,6 +15,7 @@ theory Types_D
 imports
   "ASpec.VMRights_A"
   Intents_D
+  "Lib.Lib"
   "Lib.SplitRule"
   "HOL-Combinatorics.Transposition" (* for Fun.swap *)
 begin

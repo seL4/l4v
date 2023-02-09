@@ -8,7 +8,7 @@ theory CLevityCatch
 imports
   "CBaseRefine.Include_C"
   ArchMove_C
-  "CLib.LemmaBucket_C"
+  "CParser.LemmaBucket_C"
   "Lib.LemmaBucket"
 begin
 

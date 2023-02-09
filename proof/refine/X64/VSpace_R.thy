@@ -1546,7 +1546,7 @@ lemma getCurrentUserCR3_wp:
 lemma setVMRoot_invs [wp]:
   "\<lbrace>invs'\<rbrace> setVMRoot p \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: setVMRoot_def getThreadVSpaceRoot_def setCurrentUserVSpaceRoot_def)
-  apply (wp hoare_whenE_wp getCurrentUserCR3_wp findVSpaceForASID_vs_at_wp
+  apply (wp whenE_wp getCurrentUserCR3_wp findVSpaceForASID_vs_at_wp
          | wpcw
          | clarsimp simp: if_apply_def2 asid_wf_0
          | strengthen valid_cr3'_makeCR3)+
@@ -1555,7 +1555,7 @@ lemma setVMRoot_invs [wp]:
 lemma setVMRoot_invs_no_cicd':
   "\<lbrace>invs_no_cicd'\<rbrace> setVMRoot p \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
   apply (simp add: setVMRoot_def getThreadVSpaceRoot_def setCurrentUserVSpaceRoot_def)
-  apply (wp hoare_whenE_wp getCurrentUserCR3_wp findVSpaceForASID_vs_at_wp
+  apply (wp whenE_wp getCurrentUserCR3_wp findVSpaceForASID_vs_at_wp
          | wpcw
          | clarsimp simp: if_apply_def2 asid_wf_0
          | strengthen valid_cr3'_makeCR3)+

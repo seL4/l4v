@@ -83,7 +83,7 @@ lemma gts_st_tcb':
   apply (rule hoare_vcg_precond_imp)
    apply (rule hoare_post_imp[where Q="\<lambda>rv s. \<exists>rv'. rv = rv' \<and> st_tcb_at' (\<lambda>st. st = rv') t s"])
     apply simp
-   apply (wp hoare_ex_wp)
+   apply (wp hoare_vcg_ex_lift)
   apply (clarsimp simp add: pred_tcb_at'_def obj_at'_def)
   done
 

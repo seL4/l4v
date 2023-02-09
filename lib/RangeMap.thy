@@ -8,7 +8,7 @@ theory RangeMap
 imports
   FastMap
   FP_Eval
-  MkTermAntiquote
+  ML_Utils.MkTermAntiquote
 begin
 
 text \<open>

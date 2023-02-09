@@ -1,0 +1,45 @@
+(*
+ * Copyright 2023, Proofcraft Pty Ltd
+ *
+ * SPDX-License-Identifier: BSD-2-Clause
+ *)
+
+chapter Lib
+
+session Monads (lib) = HOL +
+
+  sessions
+    "HOL-Library"
+    "HOL-Eisbach"
+    Eisbach_Tools
+    ML_Utils
+
+  directories
+    wp
+
+  theories
+    WhileLoopRules
+    TraceMonad
+    OptionMonadND
+    OptionMonadWP
+    Strengthen_Demo
+    TraceMonadLemmas
+    Datatype_Schematic
+    WhileLoopRulesCompleteness
+    Strengthen
+    OptionMonad
+    TraceMonadVCG
+    NonDetMonadVCG
+    More_NonDetMonadVCG
+    NonDetMonad
+    NonDetMonadLemmas
+    No_Fail
+    No_Throw
+    Monad_Equations
+    "wp/WPBang"
+    "wp/WPFix"
+    "wp/Eisbach_WP"
+    "wp/WPI"
+    "wp/WPC"
+    "wp/WP_Pre"
+    "wp/WP"

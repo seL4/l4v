@@ -6,8 +6,9 @@
 
 theory EmptyFailLib
 imports
-  NonDetMonad
+  Monads.NonDetMonad
   HaskellLib_H
+  Monads.WhileLoopRules
 begin
 
 (* Collect generic empty_fail lemmas here. naming convention is emtpy_fail_NAME.

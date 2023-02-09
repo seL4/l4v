@@ -150,7 +150,7 @@ lemma no_fail_getActiveIRQ[wp]:
   "no_fail \<top> (getActiveIRQ in_kernel)"
   apply (simp add: getActiveIRQ_def)
   apply (rule no_fail_pre)
-   apply (wp non_fail_select)
+   apply (wp no_fail_select)
   apply simp
   done
 
@@ -291,7 +291,7 @@ crunch_ignore (valid, empty_fail, no_fail)
    grep -oE "(\w+_impl)|(get\w+)" MachineOps.thy|sort|uniq|sed "s/_impl//;s/$/,/;s/^/  /"
    with the following manual interventions:
    - remove false positives: get_def, gets_def, getFPUState, getRegister, getRestartPC
-   - add readVCPUHardwareReg (which uses non-standard "Val" instead of "_val" (FIXME AARCH64))
+   - add read_cntpct
    - remove final comma
    - getActiveIRQ does not preserve no_irq *)
 crunches
@@ -345,7 +345,6 @@ crunches
   switchFpuOwner,
   readVCPUHardwareReg,
   writeVCPUHardwareReg,
-  (* FIXME AARCH64: machine ops missed by the grep above: *)
   read_cntpct
   for (no_fail) no_fail[intro!, wp, simp]
   and (empty_fail) empty_fail[intro!, wp, simp]
@@ -410,6 +409,10 @@ lemma dmo_getActiveIRQ_non_kernel[wp]:
   apply (drule use_valid, rule getActiveIRQ_neq_non_kernel, rule TrueI)
   apply clarsimp
   done
+
+lemma dmo_gets_inv[wp]:
+  "do_machine_op (gets f) \<lbrace>P\<rbrace>"
+  unfolding do_machine_op_def by (wpsimp simp: simpler_gets_def)
 
 end
 

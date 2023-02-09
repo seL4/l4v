@@ -71,10 +71,10 @@ paddrBase :: PAddr
 paddrBase = Platform.PAddr 0x0
 
 pptrBase :: VPtr
-pptrBase = VPtr 0xFFFFFFC000000000
+pptrBase = VPtr 0x0000008000000000
 
 pptrTop :: VPtr
-pptrTop = VPtr 0xFFFFFFFF80000000
+pptrTop = VPtr 0x000000FFC0000000
 
 kernelELFPAddrBase :: PAddr
 kernelELFPAddrBase = toPAddr $ (fromPAddr Platform.physBase) + 0x4000000

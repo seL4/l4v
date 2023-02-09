@@ -40,10 +40,13 @@ TOKENIZERS=$(TOKENIZER_ARM) $(TOKENIZER_ARM_HYP) $(TOKENIZER_AARCH64) \
 
 .PHONY: all cparser_tools stp_all standalone-cparser standalone-tokenizer
 
+# Target "all" gains additional dependencies in the included Makefile below, so
+# we keep "stp_all" as the first (= default) target
+stp_all: standalone-cparser standalone-tokenizer
 all: stp_all
 
-standalone-cparser stp_all: $(STPARSERS)
-standalone-tokenizer stp_all: $(TOKENIZERS)
+standalone-cparser: $(STPARSERS)
+standalone-tokenizer: $(TOKENIZERS)
 
 include $(STP_PFX)/../Makefile
 

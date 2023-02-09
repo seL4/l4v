@@ -14,7 +14,8 @@ theory CSpace_A
 imports
   SchedContext_A
   IpcCancel_A
-  "Lib.NonDetMonadLemmas"
+  ArchCSpace_A
+  "Monads.NonDetMonadLemmas"
   "HOL-Library.Prefix_Order"
 begin
 

@@ -2602,7 +2602,7 @@ lemma invoke_untyped_irq_state_inv:
    \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>, \<lbrace>\<lambda>_. irq_state_next st\<rbrace>"
   apply (cases ui, simp add: invoke_untyped_def mapM_x_def[symmetric])
   apply (rule hoare_pre)
-   apply (wp mapM_x_wp' hoare_whenE_wp reset_untyped_cap_irq_state_inv[where irq=irq]
+   apply (wp mapM_x_wp' whenE_wp reset_untyped_cap_irq_state_inv[where irq=irq]
          | rule irq_state_inv_triv | simp)+
   done
 
