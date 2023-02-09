@@ -36,3 +36,4 @@ in weakest-precondition style.
 [nondet]: ./NonDetMonad.thy
 [option]: ./OptionMonad.thy
 [trace]: ./TraceMonad.thy
+[AutoCorres]: ../../tools/autocorres/
