@@ -558,6 +558,11 @@ lemma hoare_case_option_wp:
   \<Longrightarrow> \<lbrace>case_option P P' v\<rbrace> f v \<lbrace>\<lambda>rv. case v of None \<Rightarrow> Q rv | Some x \<Rightarrow> Q' x rv\<rbrace>"
   by (cases v) auto
 
+lemma hoare_case_option_wp2:
+  "\<lbrakk> \<lbrace>P\<rbrace> f None \<lbrace>Q\<rbrace>; \<And>x.  \<lbrace>P' x\<rbrace> f (Some x) \<lbrace>Q' x\<rbrace> \<rbrakk>
+   \<Longrightarrow> \<lbrace>case_option P P' v\<rbrace> f v \<lbrace>\<lambda>rv s. case v of None \<Rightarrow> Q rv s | Some x \<Rightarrow> Q' x rv s\<rbrace>"
+  by (cases v) auto
+
 (* Might be useful for forward reasoning, when P is known. *)
 lemma hoare_when_cases:
   "(\<And>s. \<not>B \<Longrightarrow> P s \<Longrightarrow> Q s)
