@@ -446,14 +446,11 @@ lemma syscall_requiv_f_g:
       apply assumption+
    apply (rule hoare_strengthen_post)
     apply assumption
-   apply (case_tac r)
-    apply simp
-   apply simp
+   apply (simp split: sum.splits)
   apply (rule hoare_strengthen_post, rule hoare_pre)
     apply assumption
    apply simp
-  apply (case_tac r)
-   apply simp+
+  apply (simp split: sum.splits)
   done
 
 (*FIXME: Move to base*)

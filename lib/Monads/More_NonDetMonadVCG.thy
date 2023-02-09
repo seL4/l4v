@@ -5,16 +5,13 @@
  * SPDX-License-Identifier: BSD-2-Clause
  *)
 
-(* Hoare logic lemmas over the nondet monad. Hoare triples, lifting lemmas, etc.
+(* Partial correctness Hoare logic lemmas over the nondet monad. Hoare triples, lifting lemmas, etc.
    If it doesn't contain a Hoare triple it likely doesn't belong in here. *)
 
 theory More_NonDetMonadVCG
-  imports Monads.NonDetMonadVCG
+  imports
+    NonDetMonadVCG
 begin
-
-lemma gets_exs_valid:
-  "\<lbrace>(=) s\<rbrace> gets f \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>"
-  by (rule exs_valid_gets)
 
 lemma hoare_take_disjunct:
   "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. P' rv s \<and> (False \<or> P'' rv s)\<rbrace>
@@ -41,9 +38,7 @@ lemma hoare_pre_addE:
 
 lemma hoare_disjI1:
   "\<lbrace>R\<rbrace> f \<lbrace>P\<rbrace> \<Longrightarrow> \<lbrace>R\<rbrace> f \<lbrace>\<lambda>r s. P r s \<or> Q r s\<rbrace>"
-  apply (erule hoare_post_imp [rotated])
-  apply simp
-  done
+  by (erule hoare_post_imp [rotated]) simp
 
 lemma hoare_disjI2:
   "\<lbrace>R\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>R\<rbrace> f \<lbrace>\<lambda>r s. P r s \<or> Q r s \<rbrace>"
@@ -63,10 +58,10 @@ lemma valid_prove_more: (* FIXME: duplicate *)
 
 lemma hoare_vcg_if_lift:
   "\<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv s. (P \<longrightarrow> X rv s) \<and> (\<not>P \<longrightarrow> Y rv s)\<rbrace> \<Longrightarrow>
-  \<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv s. if P then X rv s else Y rv s\<rbrace>"
+   \<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv s. if P then X rv s else Y rv s\<rbrace>"
 
   "\<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv s. (P \<longrightarrow> X rv s) \<and> (\<not>P \<longrightarrow> Y rv s)\<rbrace> \<Longrightarrow>
-  \<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv. if P then X rv else Y rv\<rbrace>"
+   \<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv. if P then X rv else Y rv\<rbrace>"
   by (auto simp: valid_def split_def)
 
 lemma hoare_vcg_if_lift_strong:
@@ -618,9 +613,9 @@ lemma hoare_walk_assmsE:
   assumes x: "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv. P\<rbrace>" and y: "\<And>s. P s \<Longrightarrow> Q s" and z: "\<lbrace>P\<rbrace> g \<lbrace>\<lambda>rv. Q\<rbrace>"
   shows      "\<lbrace>P\<rbrace> doE x \<leftarrow> f; g odE \<lbrace>\<lambda>rv. Q\<rbrace>"
   apply (wp z)
-  apply (simp add: validE_def)
-  apply (rule hoare_strengthen_post [OF x])
-  apply (case_tac r, simp_all add: y)
+   apply (simp add: validE_def)
+   apply (rule hoare_strengthen_post [OF x])
+   apply (auto simp: y split: sum.splits)
   done
 
 lemma univ_wp:
@@ -764,10 +759,6 @@ lemma valid_pre_satisfies_post:
 lemma validE_pre_satisfies_post:
   "\<lbrakk> \<And>s r' s'. P s \<Longrightarrow> Q r' s'; \<And>s r' s'. P s \<Longrightarrow> R r' s' \<rbrakk> \<Longrightarrow> \<lbrace> P \<rbrace> m \<lbrace> Q \<rbrace>,\<lbrace> R \<rbrace>"
   by (clarsimp simp: validE_def2 split: sum.splits)
-
-lemma hoare_assume_preNF:
-  "(\<And>s. P s \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>!) \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>!"
-  by (metis validNF_alt_def)
 
 lemma hoare_validE_R_conjI:
   "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, - ; \<lbrace>P\<rbrace> f \<lbrace>Q'\<rbrace>, - \<rbrakk>  \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> Q' rv s\<rbrace>, -"

@@ -17,19 +17,19 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemmas forM_empty_fail[intro!, wp, simp] = empty_fail_mapM[simplified forM_def[symmetric]]
 lemmas forM_x_empty_fail[intro!, wp, simp] = empty_fail_mapM_x[simplified forM_x_def[symmetric]]
-lemmas forME_x_empty_fail[intro!, wp, simp] = mapME_x_empty_fail[simplified forME_x_def[symmetric]]
+lemmas forME_x_empty_fail[intro!, wp, simp] = empty_fail_mapME_x[simplified forME_x_def[symmetric]]
 
 lemma withoutPreemption_empty_fail[intro!, wp, simp]:
   "empty_fail m \<Longrightarrow> empty_fail (withoutPreemption m)"
-  by (simp add: withoutPreemption_def)
+  by simp
 
 lemma withoutFailure_empty_fail[intro!, wp, simp]:
   "empty_fail m \<Longrightarrow> empty_fail (withoutFailure m)"
-  by (simp add: withoutFailure_def)
+  by simp
 
 lemma catchFailure_empty_fail[intro!, wp, simp]:
   "\<lbrakk> empty_fail f; \<And>x. empty_fail (g x) \<rbrakk> \<Longrightarrow> empty_fail (catchFailure f g)"
-  by (simp add: catchFailure_def empty_fail_catch)
+  by (simp add: empty_fail_catch)
 
 lemma emptyOnFailure_empty_fail[intro!, wp, simp]:
   "empty_fail m \<Longrightarrow> empty_fail (emptyOnFailure m)"
@@ -85,9 +85,6 @@ proof (induct arbitrary: s rule: resolveAddressBits.induct)
 
 lemmas resolveAddressBits_empty_fail[intro!, wp, simp] =
        resolveAddressBits_spec_empty_fail[THEN use_spec_empty_fail]
-
-crunch (empty_fail) empty_fail[intro!, wp, simp]: lookupIPCBuffer
-(simp:Let_def)
 
 declare ef_dmo'[intro!, wp, simp]
 
@@ -175,7 +172,7 @@ crunch (empty_fail) "_H_empty_fail"[intro!, wp, simp]: "ThreadDecls_H.suspend"
 
 lemma ThreadDecls_H_restart_empty_fail[intro!, wp, simp]:
   "empty_fail (ThreadDecls_H.restart target)"
-  by (simp add:restart_def)
+  by (fastforce simp: restart_def)
 
 crunch (empty_fail) empty_fail[intro!, wp, simp]: finaliseCap, preemptionPoint, capSwapForDelete
   (wp: empty_fail_catch simp: Let_def)
@@ -213,17 +210,13 @@ lemmas finaliseSlot_empty_fail[intro!, wp, simp] =
 
 lemma checkCapAt_empty_fail[intro!, wp, simp]:
   "empty_fail action \<Longrightarrow> empty_fail (checkCapAt cap ptr action)"
-  by (simp add: checkCapAt_def)
+  by (fastforce simp: checkCapAt_def)
 
 lemma assertDerived_empty_fail[intro!, wp, simp]:
   "empty_fail f \<Longrightarrow> empty_fail (assertDerived src cap f)"
-  by (simp add: assertDerived_def)
+  by (fastforce simp: assertDerived_def)
 
 crunch (empty_fail) empty_fail[intro!, wp, simp]: cteDelete
-
-lemma liftE_empty_fail[intro!, wp, simp]:
-  "empty_fail f \<Longrightarrow> empty_fail (liftE f)"
-  by simp
 
 lemma spec_empty_fail_unlessE':
   "\<lbrakk> \<not> P \<Longrightarrow> spec_empty_fail f s \<rbrakk> \<Longrightarrow> spec_empty_fail (unlessE P f) s"
@@ -254,7 +247,7 @@ lemma Syscall_H_syscall_empty_fail[intro!, wp, simp]:
 
 lemma catchError_empty_fail[intro!, wp, simp]:
   "\<lbrakk> empty_fail f; \<And>x. empty_fail (g x) \<rbrakk> \<Longrightarrow> empty_fail (catchError f g)"
-  by (simp add: catchError_def handle_empty_fail)
+  by fastforce
 
 crunch (empty_fail) empty_fail[intro!, wp, simp]:
   chooseThread, getDomainTime, nextDomain, isHighestPrio

@@ -11,7 +11,9 @@
    function f on the state *)
 
 theory Oblivious
-  imports Monads.NonDetMonadVCG
+  imports
+    Monads.In_Monad
+    Monads.NonDetMonadVCG
 begin
 
 

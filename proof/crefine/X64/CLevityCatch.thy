@@ -55,12 +55,12 @@ lemma empty_fail_getExtraCPtrs [intro!, simp]:
   "empty_fail (getExtraCPtrs sendBuffer info)"
   apply (simp add: getExtraCPtrs_def)
   apply (cases info, simp)
-  apply (cases sendBuffer, simp_all)
+  apply (cases sendBuffer; fastforce)
   done
 
 lemma empty_fail_loadCapTransfer [intro!, simp]:
   "empty_fail (loadCapTransfer a)"
-  by (simp add: loadCapTransfer_def capTransferFromWords_def)
+  by (fastforce simp: loadCapTransfer_def capTransferFromWords_def)
 
 lemma empty_fail_emptyOnFailure [intro!, simp]:
   "empty_fail m \<Longrightarrow> empty_fail (emptyOnFailure m)"

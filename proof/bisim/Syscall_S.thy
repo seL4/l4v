@@ -699,7 +699,7 @@ lemma schedule_separate_state [wp]:
   "\<lbrace>separate_state\<rbrace> schedule :: (unit,unit) s_monad \<lbrace>\<lambda>_. separate_state\<rbrace>"
   unfolding schedule_def switch_to_thread_def arch_switch_to_thread_def
             switch_to_idle_thread_def arch_switch_to_idle_thread_def allActiveTCBs_def
-  by (wpsimp wp: select_inv separate_state_pres' alternative_valid
+  by (wpsimp wp: select_inv separate_state_pres' alternative_wp
              simp: arch_activate_idle_thread_def |
       strengthen imp_consequent)+
 
@@ -723,7 +723,7 @@ lemma send_signal_separate_state [wp]:
   unfolding send_signal_def cancel_ipc_def
   apply (rule separate_state_pres)
   apply (rule hoare_pre)
-  apply (wp gts_wp get_simple_ko_wp hoare_pre_cont[where a = "reply_cancel_ipc x" for x]
+  apply (wp gts_wp get_simple_ko_wp hoare_pre_cont[where f="reply_cancel_ipc x" for x]
         | wpc | wps
         | simp add: update_waiting_ntfn_def)+
   apply (clarsimp)

@@ -2752,6 +2752,7 @@ crunches getThreadBufferSlot, setPriority, setMCPriority
 lemma inv_tcb_IRQInactive:
   "\<lbrace>valid_irq_states'\<rbrace> invokeTCB tcb_inv
   -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
+  including no_pre
   apply (simp add: invokeTCB_def)
   apply (rule hoare_pre)
    apply (wpc |

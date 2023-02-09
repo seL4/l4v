@@ -27,22 +27,6 @@ lemma dmo_mapM_storeWord_0_invs[wp,Schedule_AI_asms]:
    apply wp
   apply (clarsimp simp: word_bits_conv)
   done
-(*
-global_naming ARM_HYP (*FIXME: arch_split*)
-lemma set_vm_root_kheap_arch_state[wp]:
-  "\<lbrace>\<lambda>s. P (kheap s) (arm_globals_frame (arch_state s))\<rbrace> set_vm_root a
-   \<lbrace>\<lambda>_ s. P (kheap s) (arm_globals_frame (arch_state s))\<rbrace>" (is "valid ?P _ _")
-  apply (simp add: set_vm_root_def arm_context_switch_def)
-  apply (wp | wpcw | simp add: arm_context_switch_def get_hw_asid_def
-           store_hw_asid_def find_pd_for_asid_assert_def find_free_hw_asid_def
-           invalidate_hw_asid_entry_def invalidate_asid_def load_hw_asid_def)+
-     apply (simp add: whenE_def, intro conjI impI)
-      apply (wp, simp add: returnOk_def validE_E_def validE_def)+
-    apply (simp add: whenE_def, intro conjI[rotated] impI)
-     apply (wp | simp add: returnOk_def validE_E_def validE_def)+
-    apply (wp | simp add: throwError_def validE_R_def validE_def)+
-done
-*)
 
 crunch device_state_inv[wp]: clearExMonitor "\<lambda>ms. P (device_state ms)"
 

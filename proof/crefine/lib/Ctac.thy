@@ -1818,8 +1818,8 @@ lemmas mapME_x_simpl_sequence_same
 lemmas call_ignore_cong = refl[of "call i f g r" for i f g r]
 
 (* These could be done with ML patterns, but this fits in better with tactics *)
-lemmas match_valid = trivial[of "NonDetMonad.valid P a P'" for P a P']
-lemmas match_validE = trivial[of "NonDetMonad.validE P a P' P''" for P a P' P'']
+lemmas match_valid = trivial[of "NonDetMonadVCG.valid P a P'" for P a P']
+lemmas match_validE = trivial[of "NonDetMonadVCG.validE P a P' P''" for P a P' P'']
 lemmas match_hoare = trivial[of "HoarePartialDef.hoarep G T F P C P' A" for G T F P C P' A]
 lemmas match_all_hoare = trivial[of "\<forall>x. HoarePartialDef.hoarep G T F (P x) C (P' x) (A x)" for G T F P C P' A]
 lemmas match_xpres = trivial[of "xpres xf v \<Gamma> c" for xf v \<Gamma> c]

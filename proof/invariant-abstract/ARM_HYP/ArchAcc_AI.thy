@@ -3167,7 +3167,7 @@ lemma cap_refs_respects_device_region_dmo:
 
 lemma machine_op_lift_device_state[wp]:
   "\<lbrace>\<lambda>ms. P (device_state ms)\<rbrace> machine_op_lift f \<lbrace>\<lambda>_ ms. P (device_state ms)\<rbrace>"
-  by (clarsimp simp: machine_op_lift_def NonDetMonad.valid_def bind_def
+  by (clarsimp simp: machine_op_lift_def NonDetMonadVCG.valid_def bind_def
                      machine_rest_lift_def gets_def simpler_modify_def get_def return_def
                      select_def ignore_failure_def select_f_def
               split: if_splits)

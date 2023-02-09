@@ -10,7 +10,7 @@ theory Bisim_UL
 imports
   Monads.NonDetMonadVCG
   Corres_UL
-  EmptyFailLib
+  Monads.Empty_Fail
 begin
 
 (* This still looks a bit wrong to me, although it is more or less what I want \<emdash> we want to be

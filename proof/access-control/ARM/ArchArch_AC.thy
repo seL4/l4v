@@ -959,8 +959,9 @@ lemma delete_asid_pool_pas_refined [wp]:
 crunch respects[wp]: invalidate_asid_entry "integrity aag X st"
 
 crunch respects[wp]: flush_space "integrity aag X st"
-  (ignore: do_machine_op simp: invalidateLocalTLB_ASID_def cleanCaches_PoU_def
-           dsb_def clean_D_PoU_def invalidate_I_PoU_def do_machine_op_bind)
+  (ignore: do_machine_op
+   simp: invalidateLocalTLB_ASID_def cleanCaches_PoU_def dsb_def clean_D_PoU_def invalidate_I_PoU_def
+         do_machine_op_bind empty_fail_cond)
 
 lemma delete_asid_pool_respects[wp]:
   "\<lbrace>integrity aag X st and

@@ -3968,8 +3968,9 @@ lemma setupReplyMaster_corres:
                             cte_wp_at' ((=) rv) (cte_map (t, tcb_cnode_index 2))"
                  in hoare_strengthen_post)
      apply (wp hoare_drop_imps getCTE_wp')
+    apply (rename_tac rv s)
     apply (clarsimp simp: cte_wp_at_ctes_of valid_mdb'_def valid_mdb_ctes_def)
-    apply (case_tac r, fastforce elim: valid_nullcapsE)
+    apply (case_tac rv, fastforce elim: valid_nullcapsE)
    apply (fastforce elim: tcb_at_cte_at)
   apply (clarsimp simp: cte_at'_obj_at' tcb_cte_cases_def cte_map_def)
   apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)

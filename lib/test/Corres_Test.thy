@@ -208,7 +208,6 @@ lemma invalidateASIDEntry_corres:
    finish (* invalidate_asid *)
 
   apply (corressimp wp: load_hw_asid_wp)+
-  apply clarsimp
   apply (fastforce simp: pd_at_asid_uniq)
   done
 

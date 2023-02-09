@@ -9,7 +9,10 @@
    Should not be Hoare triples (those go into a different theory). *)
 
 theory Monad_Equations
-  imports Monads.MonadEq_Lemmas
+  imports
+    Empty_Fail
+    No_Fail
+    MonadEq_Lemmas
 begin
 
 lemmas assertE_assert = assertE_liftE
@@ -491,9 +494,6 @@ lemma bind_inv_inv_comm_weak:
 lemma state_assert_false[simp]: "state_assert (\<lambda>_. False) = fail"
   by monad_eq
 
-lemma no_fail_state_assert[wp]: "no_fail P (state_assert P)"
-  by (monad_eq simp: no_fail_def state_assert_def)
-
 lemma condition_fail_rhs: "condition C X fail = (state_assert C >>= (\<lambda>_. X))"
   by (monad_eq simp: Bex_def)
 
@@ -551,5 +551,17 @@ lemma bind_known_operation_eq:
    apply (clarsimp simp: bind_def)
   apply (fastforce simp: valid_def empty_fail_def)
   done
+
+lemma assert_opt_If:
+  "assert_opt v = If (v = None) fail (return (the v))"
+  by (simp add: assert_opt_def split: option.split)
+
+lemma if_to_top_of_bind:
+  "(bind (If P x y) z) = If P (bind x z) (bind y z)"
+  by (simp split: if_split)
+
+lemma if_to_top_of_bindE:
+  "(bindE (If P x y) z) = If P (bindE x z) (bindE y z)"
+  by (simp split: if_split)
 
 end

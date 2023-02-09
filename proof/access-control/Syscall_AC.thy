@@ -904,7 +904,7 @@ lemma schedule_integrity:
                     set_scheduler_action_cnt_valid_sched append_thread_queued enqueue_thread_queued
                     tcb_sched_action_enqueue_valid_blocked_except tcb_sched_action_append_integrity'
          | simp add: allActiveTCBs_def schedule_choose_new_thread_def
-         | rule hoare_pre_cont[where a=next_domain])+
+         | rule hoare_pre_cont[where f=next_domain])+
   apply (auto simp: obj_at_def st_tcb_at_def not_cur_thread_2_def valid_sched_def
                     valid_sched_action_def weak_valid_sched_action_def
                     valid_sched_action_switch_subject_thread)

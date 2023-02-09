@@ -83,13 +83,13 @@ lemma det_getRestartPC: "det getRestartPC"
 lemma det_setNextPC: "det (setNextPC p)"
   by (simp add: setNextPC_def det_setRegister)
 
-
+(* FIXME empty_fail: make all empty_fail [intro!, wp], and non-conditional ones [simp] *)
 lemma ef_loadWord: "empty_fail (loadWord x)"
-  by (simp add: loadWord_def)
+  by (fastforce simp: loadWord_def)
 
 
 lemma ef_storeWord: "empty_fail (storeWord x y)"
-  by (simp add: storeWord_def)
+  by (fastforce simp: storeWord_def)
 
 
 lemma no_fail_getRestartPC: "no_fail \<top> getRestartPC"
@@ -772,7 +772,7 @@ lemma empty_fail_setHCR[simp, intro!]:
 
 lemma empty_fail_addressTranslateS1[simp, intro!]:
   "empty_fail (addressTranslateS1 w)"
-  by (simp add: addressTranslateS1_def)
+  by (fastforce simp: addressTranslateS1_def)
 
 lemma empty_fail_writeContextIDAndPD[simp, intro!]:
   "empty_fail (writeContextIDAndPD asid w)"
@@ -804,7 +804,7 @@ lemma empty_fail_set_gic_vcpu_ctrl_apr[simp, intro!]:
 
 lemma empty_fail_get_gic_vcpu_ctrl_lr[simp, intro!]:
   "empty_fail (get_gic_vcpu_ctrl_lr n)"
-  by (simp add: get_gic_vcpu_ctrl_lr_def)
+  by (fastforce simp: get_gic_vcpu_ctrl_lr_def)
 
 lemma empty_fail_set_gic_vcpu_ctrl_lr[simp, intro!]:
   "empty_fail (set_gic_vcpu_ctrl_lr n w)"
@@ -846,11 +846,12 @@ lemma empty_fail_cleanCacheRange_PoC[simp, intro!]:
 
 lemma empty_fail_cleanInvalidateCacheRange_RAM[simp, intro!]:
   "empty_fail (cleanInvalidateCacheRange_RAM s e p)"
-  by (simp add: cleanInvalidateCacheRange_RAM_def empty_fail_dsb empty_fail_cleanInvalidateL2Range empty_fail_cleanInvalByVA)
+  by (fastforce simp: cleanInvalidateCacheRange_RAM_def empty_fail_dsb
+                      empty_fail_cleanInvalidateL2Range empty_fail_cleanInvalByVA)
 
 lemma empty_fail_cleanCacheRange_RAM[simp, intro!]:
   "empty_fail (cleanCacheRange_RAM s e p)"
-  by (simp add: cleanCacheRange_RAM_def empty_fail_dsb empty_fail_cleanL2Range)
+  by (fastforce simp: cleanCacheRange_RAM_def empty_fail_dsb empty_fail_cleanL2Range)
 
 lemma empty_fail_invalidateCacheRange_I[simp, intro!]:
   "empty_fail (invalidateCacheRange_I s e p)"
@@ -858,8 +859,8 @@ lemma empty_fail_invalidateCacheRange_I[simp, intro!]:
 
 lemma empty_fail_invalidateCacheRange_RAM[simp, intro!]:
   "empty_fail (invalidateCacheRange_RAM s e p)"
-  by (simp add: invalidateCacheRange_RAM_def lineStart_def cacheLineBits_def
-                   empty_fail_invalidateL2Range empty_fail_invalidateByVA empty_fail_dsb)
+  by (fastforce simp: invalidateCacheRange_RAM_def lineStart_def cacheLineBits_def
+                      empty_fail_invalidateL2Range empty_fail_invalidateByVA empty_fail_dsb)
 
 lemma empty_fail_branchFlushRange[simp, intro!]:
   "empty_fail (branchFlushRange s e p)"
@@ -867,16 +868,16 @@ lemma empty_fail_branchFlushRange[simp, intro!]:
 
 lemma empty_fail_cleanCaches_PoU[simp, intro!]:
   "empty_fail cleanCaches_PoU"
-  by (simp add: cleanCaches_PoU_def empty_fail_dsb empty_fail_clean_D_PoU empty_fail_invalidate_I_PoU)
+  by (fastforce simp: cleanCaches_PoU_def empty_fail_dsb empty_fail_clean_D_PoU empty_fail_invalidate_I_PoU)
 
 lemma empty_fail_cleanInvalidateL1Caches[simp, intro!]:
   "empty_fail cleanInvalidateL1Caches"
-  by (simp add: cleanInvalidateL1Caches_def empty_fail_dsb empty_fail_cleanInvalidate_D_PoC
-                empty_fail_invalidate_I_PoU)
+  by (fastforce simp: cleanInvalidateL1Caches_def empty_fail_dsb empty_fail_cleanInvalidate_D_PoC
+                     empty_fail_invalidate_I_PoU)
 
 lemma empty_fail_clearMemory [simp, intro!]:
   "\<And>a b. empty_fail (clearMemory a b)"
-  by (simp add: clearMemory_def mapM_x_mapM ef_storeWord)
+  by (fastforce simp: clearMemory_def mapM_x_mapM ef_storeWord)
 
 
 end

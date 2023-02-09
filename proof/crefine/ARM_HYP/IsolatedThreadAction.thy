@@ -1016,7 +1016,7 @@ lemma rescheduleRequired_simple_rewrite:
 (* FIXME move *)
 lemma empty_fail_isRunnable[intro!, wp, simp]:
   "empty_fail (isRunnable t)"
-  by (simp add: isRunnable_def isStopped_def)
+  by (simp add: isRunnable_def isStopped_def empty_fail_cond)
 
 lemma setupCallerCap_rewrite:
   "monadic_rewrite True True (\<lambda>s. reply_masters_rvk_fb (ctes_of s))
@@ -1203,9 +1203,9 @@ lemma setThreadState_no_sch_change:
   "\<lbrace>\<lambda>s. P (ksSchedulerAction s) \<and> (runnable' st \<or> t \<noteq> ksCurThread s)\<rbrace>
       setThreadState st t
    \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
-  (is "NonDetMonad.valid ?P ?f ?Q")
+  (is "NonDetMonadVCG.valid ?P ?f ?Q")
   apply (simp add: setThreadState_def setSchedulerAction_def)
-  apply (wp hoare_pre_cont[where a=rescheduleRequired])
+  apply (wp hoare_pre_cont[where f=rescheduleRequired])
   apply (rule_tac Q="\<lambda>_. ?P and st_tcb_at' ((=) st) t" in hoare_post_imp)
    apply (clarsimp split: if_split)
    apply (clarsimp simp: obj_at'_def st_tcb_at'_def projectKOs)

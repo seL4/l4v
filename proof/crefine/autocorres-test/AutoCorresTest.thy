@@ -77,7 +77,7 @@ lemma reorder_gets:
    (do g;
        x \<leftarrow> gets f;
        h x od)"
-  by (fastforce simp: bind_def' NonDetMonad.valid_def gets_def get_def return_def)
+  by (fastforce simp: bind_def' NonDetMonadVCG.valid_def gets_def get_def return_def)
 
 thm
   (* no arguments, no precondition, dc return *)
@@ -100,7 +100,7 @@ lemma (* handleYield_ccorres: *)
    (* Show that current thread is unmodified.
     * FIXME: proper way to do this? *)
    apply (subst reorder_gets[symmetric, unfolded K_bind_def])
-    using tcbSchedDequeue'_modifies apply (fastforce simp: NonDetMonad.valid_def)
+    using tcbSchedDequeue'_modifies apply (fastforce simp: NonDetMonadVCG.valid_def)
    apply (subst double_gets_drop_regets)
    apply (rule corres_pre_getCurThread_wrapper)
    apply (rule corres_split[OF tcbSchedDequeue_ccorres[ac]])
@@ -146,7 +146,7 @@ lemma corres_noop2_no_exs:
   apply (clarsimp simp: corres_underlying_def)
   apply (rule conjI)
    apply (drule x, drule y)
-   apply (clarsimp simp: NonDetMonad.valid_def empty_fail_def Ball_def Bex_def)
+   apply (clarsimp simp: NonDetMonadVCG.valid_def empty_fail_def Ball_def Bex_def)
    apply fast
   apply (insert z)
   apply (clarsimp simp: no_fail_def)

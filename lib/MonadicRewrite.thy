@@ -11,7 +11,7 @@ theory MonadicRewrite
 imports
   Monads.NonDetMonadVCG
   Corres_UL
-  EmptyFailLib
+  Monads.Empty_Fail
   LemmaBucket
   Rules_Tac
 begin

@@ -58,12 +58,6 @@ lemma alwaysfail_noreturn: "always_fail P A \<Longrightarrow> no_return P A"
 lemma alwaysfail_nothrow: "always_fail P A \<Longrightarrow> no_throw P A"
   by (clarsimp simp: always_fail_def no_throw_def validE_def valid_def split: sum.splits)
 
-lemma empty_fail_handleE: "\<lbrakk> empty_fail L; \<And>r. empty_fail (R r) \<rbrakk> \<Longrightarrow> empty_fail (L <handle> R)"
-  apply (clarsimp simp: handleE_def handleE'_def)
-  apply (erule empty_fail_bind)
-  apply (clarsimp simp: empty_fail_error_bits split: sum.splits)
-  done
-
 lemma no_return_bindE:
   "no_return (\<lambda>_. True) A \<Longrightarrow> (A >>=E B) = A"
   apply (rule ext)+
@@ -120,20 +114,13 @@ lemma L1_condition_empty_fail: "\<lbrakk> empty_fail L; empty_fail R \<rbrakk> \
   by (clarsimp simp: empty_fail_def L1_defs returnOk_def return_def split: condition_splits)
 
 lemma L1_seq_empty_fail: "\<lbrakk> empty_fail L; empty_fail R \<rbrakk> \<Longrightarrow> empty_fail (L1_seq L R)"
-  apply (clarsimp simp: L1_defs)
-  apply (erule (1) empty_fail_bindE)
-  done
+  by (clarsimp simp: L1_defs)
 
 lemma L1_catch_empty_fail: "\<lbrakk> empty_fail L; empty_fail R \<rbrakk> \<Longrightarrow> empty_fail (L1_catch L R)"
-  apply (clarsimp simp: L1_defs)
-  apply (erule (1) empty_fail_handleE)
-  done
+  by (clarsimp simp: L1_defs)
 
 lemma L1_while_empty_fail: "empty_fail B \<Longrightarrow> empty_fail (L1_while C B)"
-  apply (clarsimp simp: L1_while_def)
-  apply (rule empty_fail_whileLoopE)
-  apply simp
-  done
+  by (clarsimp simp: L1_while_def)
 
 (*
  * no_throw lemmas.

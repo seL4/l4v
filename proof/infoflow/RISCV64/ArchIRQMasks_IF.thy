@@ -128,7 +128,7 @@ lemma invoke_tcb_irq_masks[IRQMasks_IF_assms]:
        apply (rule hoare_post_impErr[OF cap_delete_irq_masks[where P=P]])
         apply blast
        apply blast
-      apply (wpsimp wp: hoare_vcg_all_lift_R hoare_vcg_const_imp_lift_R
+      apply (wpsimp wp: hoare_vcg_all_lift_R hoare_vcg_const_imp_lift_R hoare_vcg_all_lift hoare_drop_imps
                         checked_cap_insert_domain_sep_inv)+
       apply (rule_tac Q="\<lambda> r s. domain_sep_inv False st s \<and> P (irq_masks_of_state s)"
                   and E="\<lambda>_ s. P (irq_masks_of_state s)" in hoare_post_impErr)

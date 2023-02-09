@@ -2821,8 +2821,8 @@ lemma getCTE_pre_cte_at:
 lemmas ccorres_getCTE_cte_at = ccorres_guard_from_wp [OF getCTE_pre_cte_at empty_fail_getCTE]
   ccorres_guard_from_wp_bind [OF getCTE_pre_cte_at empty_fail_getCTE]
 
-lemmas ccorres_guard_from_wp_liftM = ccorres_guard_from_wp [OF liftM_pre iffD2 [OF empty_fail_liftM]]
-lemmas ccorres_guard_from_wp_bind_liftM = ccorres_guard_from_wp_bind [OF liftM_pre iffD2 [OF empty_fail_liftM]]
+lemmas ccorres_guard_from_wp_liftM = ccorres_guard_from_wp [OF liftM_pre empty_fail_liftM]
+lemmas ccorres_guard_from_wp_bind_liftM = ccorres_guard_from_wp_bind [OF liftM_pre empty_fail_liftM]
 
 lemmas ccorres_liftM_getCTE_cte_at = ccorres_guard_from_wp_liftM [OF getCTE_pre_cte_at empty_fail_getCTE]
   ccorres_guard_from_wp_bind_liftM [OF getCTE_pre_cte_at empty_fail_getCTE]
@@ -7553,7 +7553,8 @@ lemma createObject_caps_overlap_reserved_ret':
       apply clarsimp
      apply (rule hoare_strengthen_post[OF createNewCaps_caps_overlap_reserved_ret'[where sz = "APIType_capBits ty us"]])
     apply assumption
-   apply (case_tac r,simp)
+   apply (rename_tac rv s)
+   apply (case_tac rv,simp)
    apply clarsimp
    apply (erule caps_overlap_reserved'_subseteq)
    apply (rule untypedRange_in_capRange)
@@ -7626,7 +7627,8 @@ lemma createObject_IRQHandler:
       apply clarsimp
      apply (rule hoare_strengthen_post[OF createNewCaps_IRQHandler[where irq = x and P = "\<lambda>_ _. False"]])
     apply assumption
-   apply (case_tac r,clarsimp+)
+   apply (rename_tac rv s)
+   apply (case_tac rv; clarsimp)
   apply (clarsimp simp:word_bits_conv)
   done
 
@@ -7643,7 +7645,8 @@ lemma createObject_capClass[wp]:
       apply clarsimp
      apply (rule hoare_strengthen_post[OF createNewCaps_range_helper])
     apply assumption
-   apply (case_tac r,clarsimp+)
+   apply (rename_tac rv s)
+   apply (case_tac rv; clarsimp)
   apply (clarsimp simp:word_bits_conv )
   apply (rule range_cover_full)
    apply (simp add:word_bits_conv)+

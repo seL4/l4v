@@ -287,8 +287,6 @@ lemma perform_invocation_valid_vspace_objs'[wp]:
          \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
   apply (cases i, simp_all)
   apply (wp send_signal_interrupt_states | simp)+
-  apply (clarsimp simp:)
-  apply (wp | wpc | simp)+
   apply (simp add: arch_perform_invocation_def)
   apply (wp | wpc | simp)+
   apply (auto simp: valid_arch_inv_def intro: valid_objs_caps)
@@ -311,7 +309,7 @@ lemma handle_invocation_valid_vspace_objs'[wp]:
 crunch valid_vspace_objs'[wp]: activate_thread,switch_to_thread, handle_hypervisor_fault,
        switch_to_idle_thread, handle_call, handle_recv, handle_reply,
        handle_send, handle_yield, handle_interrupt "valid_vspace_objs'"
-  (simp: crunch_simps wp: crunch_wps alternative_valid select_wp OR_choice_weak_wp select_ext_weak_wp
+  (simp: crunch_simps wp: crunch_wps alternative_wp select_wp OR_choice_weak_wp select_ext_weak_wp
       ignore: without_preemption getActiveIRQ resetTimer ackInterrupt
               OR_choice set_scheduler_action)
 

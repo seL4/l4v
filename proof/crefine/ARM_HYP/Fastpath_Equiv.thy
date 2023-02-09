@@ -867,7 +867,7 @@ lemma receiveIPC_simple_rewrite:
 
 lemma empty_fail_isFinalCapability:
   "empty_fail (isFinalCapability cte)"
-  by (simp add: isFinalCapability_def Let_def split: if_split)
+  by (simp add: isFinalCapability_def Let_def empty_fail_cond split: if_split)
 
 lemma cteDeleteOne_replycap_rewrite:
   "monadic_rewrite True False

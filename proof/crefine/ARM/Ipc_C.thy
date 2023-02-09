@@ -377,6 +377,7 @@ lemma handleArchFaultReply':
     msg \<leftarrow> getMRs s sb tag;
     handleArchFaultReply f r (msgLabel tag) msg
   od) x' = handleArchFaultReply' f s r tag x'"
+  supply  empty_fail_cond[simp]
   apply (unfold handleArchFaultReply'_def getMRs_def msgMaxLength_def
                 bit_def msgLengthBits_def msgRegisters_unfold
                 fromIntegral_simp1 fromIntegral_simp2
@@ -461,6 +462,7 @@ lemma handleFaultReply':
     msg \<leftarrow> getMRs s sb tag;
     handleFaultReply f r (msgLabel tag) msg
   od) (handleFaultReply' f s r)"
+  supply empty_fail_cond[simp]
   apply (unfold handleFaultReply'_def getMRs_def msgMaxLength_def
                 bit_def msgLengthBits_def msgRegisters_unfold
                 fromIntegral_simp1 fromIntegral_simp2
@@ -1607,6 +1609,7 @@ proof -
   let ?obj_at_ft = "obj_at' (\<lambda>tcb. tcbFault tcb = Some ft) sender"
   note symb_exec_r_fault = ccorres_symb_exec_r_known_rv_UNIV
           [where xf'=ret__unsigned_' and R="?obj_at_ft" and R'=UNIV]
+  note empty_fail_cond[simp]
   show ?thesis
     apply (unfold K_def)
     apply (intro ccorres_gen_asm)
@@ -2919,6 +2922,7 @@ proof -
   let ?curr = "\<lambda>s. current_extra_caps_' (globals s)"
   let ?EXCNONE = "{s. ret__unsigned_long_' s = scast EXCEPTION_NONE}"
   let ?interpret = "\<lambda>v n. take n (array_to_list (excaprefs_C v))"
+  note empty_fail_cond[simp]
   show ?thesis
     apply (rule ccorres_gen_asm)+
     apply (cinit(no_subst_asm) lift: thread_' bufferPtr_' info_' simp: whileAnno_def)

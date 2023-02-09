@@ -89,7 +89,7 @@ text \<open>Failure on empty result\<close>
 
 crunches loadWord, storeWord, machine_op_lift, clearMemory
   for (empty_fail) empty_fail[intro!, wp, simp]
-  (ignore: NonDetMonad.bind mapM_x simp: machine_op_lift_def)
+  (ignore: NonDetMonad.bind mapM_x simp: machine_op_lift_def empty_fail_cond)
 
 lemmas ef_machine_op_lift = machine_op_lift_empty_fail \<comment> \<open>required for generic interface\<close>
 

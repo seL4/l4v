@@ -1169,7 +1169,7 @@ lemma restart_cdl_current_domain:
   apply (simp add:restart_def)
   apply (wp alternative_wp)
     apply (simp add:cancel_ipc_def)
-    apply (wpsimp wp: hoare_pre_cont[where a="revoke_cap_simple sl" for sl])+
+    apply (wpsimp wp: hoare_pre_cont[where f="revoke_cap_simple sl" for sl])+
   apply (drule opt_cap_sep_imp)
   apply (clarsimp dest!: reset_cap_asid_pending)
   apply (auto simp add: is_pending_cap_def)
@@ -1182,7 +1182,7 @@ lemma restart_cdl_current_thread:
   apply (simp add:restart_def)
   apply (wp alternative_wp)
     apply (simp add:cancel_ipc_def)
-    apply (wpsimp wp: hoare_pre_cont[where a="revoke_cap_simple sl" for sl])+
+    apply (wpsimp wp: hoare_pre_cont[where f="revoke_cap_simple sl" for sl])+
   apply (drule opt_cap_sep_imp)
   apply (clarsimp dest!: reset_cap_asid_pending)
   apply (auto simp add: is_pending_cap_def)
@@ -1222,8 +1222,9 @@ lemma seL4_TCB_WriteRegisters_wp:
   apply (wp do_kernel_op_pull_back)
   apply (rule hoare_post_imp[OF _ call_kernel_with_intent_allow_error_helper
      [where check = False,simplified]])
+                 apply (rename_tac rv s)
                  apply clarsimp
-                 apply (case_tac r,(clarsimp,assumption)+)[1]
+                 apply (case_tac rv, (clarsimp,assumption)+)[1]
                 apply fastforce
                apply (rule hoare_strengthen_post[OF set_cap_wp])
                apply (sep_select 3,sep_cancel)

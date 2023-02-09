@@ -8,7 +8,8 @@ theory Crunch_Instances_NonDet
 imports
   Crunch
   Monads.WPEx
-  Monads.NonDetMonadVCG
+  Monads.Empty_Fail
+  Monads.No_Fail
 begin
 
 lemmas [crunch_param_rules] = Let_def return_bind returnOk_bindE

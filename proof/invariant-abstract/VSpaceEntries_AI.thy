@@ -148,7 +148,6 @@ lemma mapME_x_wp:
   shows      "set xs \<subseteq> S \<Longrightarrow> \<lbrace>P\<rbrace> mapME_x f xs \<lbrace>\<lambda>rv. P\<rbrace>, \<lbrace>E\<rbrace>"
   apply (subst mapME_x_mapME)
   apply wp
-  apply simp
   apply (rule mapME_wp)
    apply (rule x)
    apply assumption+

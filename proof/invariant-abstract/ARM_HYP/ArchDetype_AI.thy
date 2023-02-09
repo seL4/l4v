@@ -93,7 +93,7 @@ next
 qed
 
 lemma empty_fail_freeMemory [Detype_AI_asms]: "empty_fail (freeMemory ptr bits)"
-  by (simp add: freeMemory_def mapM_x_mapM ef_storeWord)
+  by (fastforce simp: freeMemory_def mapM_x_mapM ef_storeWord)
 
 
 lemma region_in_kernel_window_detype[simp]:

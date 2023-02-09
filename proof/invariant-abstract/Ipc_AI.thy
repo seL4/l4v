@@ -2120,7 +2120,7 @@ lemma cancel_ipc_cte_wp_at_not_reply_state:
    \<lbrace>\<lambda>r. cte_wp_at P p\<rbrace>"
   apply (simp add: cancel_ipc_def)
   apply (rule hoare_pre)
-   apply (wp hoare_pre_cont[where a="reply_cancel_ipc t"] gts_wp | wpc)+
+   apply (wp hoare_pre_cont[where f="reply_cancel_ipc t"] gts_wp | wpc)+
   apply (clarsimp simp: st_tcb_at_def obj_at_def)
   done
 

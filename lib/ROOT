@@ -16,7 +16,6 @@ session Lib (lib) = Word_Lib +
   theories
     Lib
     AddUpdSimps
-    EmptyFailLib
     List_Lib
     SubMonadLib
     Simulation

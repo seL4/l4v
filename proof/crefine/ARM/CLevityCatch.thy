@@ -66,7 +66,7 @@ lemma asUser_get_registers:
    apply (simp add: mapM_empty asUser_return)
    apply wp
    apply simp
-  apply (simp add: mapM_Cons asUser_bind_distrib asUser_return)
+  apply (simp add: mapM_Cons asUser_bind_distrib asUser_return empty_fail_cond)
   apply wp
    apply simp
    apply (rule hoare_strengthen_post)
