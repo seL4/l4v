@@ -501,7 +501,8 @@ lemma invoke_tcb_reads_respects_f:
                 | wpsimp wp: when_ev restart_reads_respects_f reschedule_required_reads_respects_f
                              as_user_reads_respects_f restart_silc_inv restart_pas_refined hoare_vcg_if_lift)+
             apply (rule hoare_strengthen_post[where Q="\<lambda>_ s. \<forall>rv. R rv s" and R=R for R, rotated])
-             apply (erule_tac x=r in allE, assumption)
+             apply (rename_tac rv s)
+             apply (erule_tac x=rv in allE, assumption)
             apply wpsimp+
          apply (solves \<open>auto intro!: det_zipWithM
                                simp: det_setRegister det_getRestartPC det_setNextPC

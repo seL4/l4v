@@ -187,21 +187,13 @@ lemma dmo_invalidateCacheRange_RAM_invs'[wp]:
 
 lemma empty_fail_findPDForASID[iff]:
   "empty_fail (findPDForASID asid)"
-  apply (simp add: findPDForASID_def liftME_def)
-  apply (intro empty_fail_bindE, simp_all split: option.split)
-     apply (simp add: assertE_def split: if_split)
-    apply (simp add: assertE_def split: if_split)
-   apply (simp add: empty_fail_getObject)
-  apply (simp add: assertE_def liftE_bindE checkPDAt_def split: if_split)
-  done
+  unfolding findPDForASID_def checkPDAt_def
+  by (wpsimp wp: empty_fail_getObject)
 
 lemma empty_fail_findPDForASIDAssert[iff]:
   "empty_fail (findPDForASIDAssert asid)"
-  apply (simp add: findPDForASIDAssert_def catch_def
-                   checkPDAt_def checkPDUniqueToASID_def
-                   checkPDASIDMapMembership_def)
-  apply (intro empty_fail_bind, simp_all split: sum.split)
-  done
+  unfolding findPDForASIDAssert_def checkPDAt_def checkPDUniqueToASID_def checkPDASIDMapMembership_def
+  by (wpsimp wp: empty_fail_getObject)
 
 lemma vcpu_at_ko:
   "vcpu_at' p s \<Longrightarrow> \<exists>vcpu. ko_at' (vcpu::vcpu) p s"
@@ -229,7 +221,7 @@ lemma atg_sp':
 (* FIXME: MOVE to EmptyFail *)
 lemma empty_fail_archThreadGet [intro!, wp, simp]:
   "empty_fail (archThreadGet f p)"
-  by (simp add: archThreadGet_def getObject_def split_def)
+  by (fastforce simp: archThreadGet_def getObject_def split_def)
 
 lemma mab_gt_2 [simp]:
   "2 \<le> msg_align_bits" by (simp add: msg_align_bits)
@@ -608,7 +600,7 @@ lemma cap_case_isPageDirectoryCap:
 
 lemma empty_fail_loadWordUser[intro!, simp]:
   "empty_fail (loadWordUser x)"
-  by (simp add: loadWordUser_def ef_loadWord ef_dmo')
+  by (fastforce simp: loadWordUser_def ef_loadWord ef_dmo')
 
 lemma empty_fail_getMRs[iff]:
   "empty_fail (getMRs t buf mi)"
@@ -618,26 +610,14 @@ lemma empty_fail_getReceiveSlots:
   "empty_fail (getReceiveSlots r rbuf)"
 proof -
   note
-    empty_fail_assertE[iff]
-    empty_fail_resolveAddressBits[iff]
+    empty_fail_resolveAddressBits[wp]
+    empty_fail_rethrowFailure[wp]
+    empty_fail_rethrowFailure[wp]
   show ?thesis
-  apply (clarsimp simp: getReceiveSlots_def loadCapTransfer_def split_def
-                 split: option.split)
-  apply (rule empty_fail_bind)
-   apply (simp add: capTransferFromWords_def)
-  apply (simp add: emptyOnFailure_def unifyFailure_def)
-  apply (intro empty_fail_catch empty_fail_bindE empty_fail_rethrowFailure,
-         simp_all add: empty_fail_whenEs)
-   apply (simp_all add: lookupCap_def split_def lookupCapAndSlot_def
-                        lookupSlotForThread_def liftME_def
-                        getThreadCSpaceRoot_def locateSlot_conv bindE_assoc
-                        lookupSlotForCNodeOp_def lookupErrorOnFailure_def
-                  cong: if_cong)
-   apply (intro empty_fail_bindE,
-          simp_all add: getSlotCap_def)
-  apply (intro empty_fail_If empty_fail_bindE empty_fail_rethrowFailure impI,
-         simp_all add: empty_fail_whenEs rangeCheck_def)
-  done
+  unfolding getReceiveSlots_def loadCapTransfer_def lookupCap_def lookupCapAndSlot_def
+  by (wpsimp simp: emptyOnFailure_def unifyFailure_def lookupSlotForThread_def
+                   capTransferFromWords_def getThreadCSpaceRoot_def locateSlot_conv bindE_assoc
+                   lookupSlotForCNodeOp_def lookupErrorOnFailure_def rangeCheck_def)
 qed
 
 lemma user_getreg_rv:

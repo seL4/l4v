@@ -982,7 +982,7 @@ lemma vcpuDisable_corres:
   apply (cases vcpuopt; clarsimp simp: vcpu_disable_def vcpuDisable_def)
    (* no current VCPU *)
    subgoal
-     apply (clarsimp simp: doMachineOp_bind do_machine_op_bind)
+     apply (clarsimp simp: doMachineOp_bind do_machine_op_bind empty_fail_cond)
      apply (rule corres_guard_imp)
        apply (rule corres_split_dc[OF corres_machine_op]
          | rule corres_machine_op corres_Id
@@ -1036,7 +1036,7 @@ lemma vcpuRestore_corres:
             apply (case_tac vcpu'
                    , clarsimp simp: comp_def vcpu_relation_def vgic_map_def mapM_x_mapM
                                     uncurry_def split_def mapM_map_simp)
-            apply (simp add: doMachineOp_bind do_machine_op_bind bind_assoc)
+            apply (simp add: doMachineOp_bind do_machine_op_bind bind_assoc empty_fail_cond)
             apply (rule corres_split_dc[OF corres_machine_op])
                apply (rule corres_Id; wpsimp)
               apply (rule corres_split_dc[OF corres_machine_op])
@@ -4125,7 +4125,7 @@ lemma vcpuDisable_invs'[wp]:
              getSCTLR_def get_gic_vcpu_ctrl_hcr_def dsb_def vgicUpdate_def vcpuUpdate_def
              vcpuSaveReg_def
   by (wpsimp wp: dmo'_gets_wp setVCPU_vgic_invs' setVCPU_regs_invs' dmo_maskInterrupt_True
-             simp: doMachineOp_bind)
+             simp: doMachineOp_bind empty_fail_cond)
 
 lemma vcpuInvalidateActive_invs'[wp]:
   "vcpuInvalidateActive \<lbrace>invs'\<rbrace>"

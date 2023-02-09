@@ -123,6 +123,10 @@ lemma stateAssert_wp:
   "\<lbrace>\<lambda>s. P s \<longrightarrow> Q () s\<rbrace> stateAssert P e \<lbrace>Q\<rbrace>"
   by (clarsimp simp: stateAssert_def) wp
 
+lemma empty_fail_stateAssert[intro!, simp]:
+  "empty_fail (stateAssert P l)"
+  unfolding stateAssert_def by simp
+
 lemma haskell_assert_wp:
   "\<lbrace>\<lambda>s. Q \<longrightarrow> P s\<rbrace> haskell_assert Q xs \<lbrace>\<lambda>_. P\<rbrace>"
   by simp wp
@@ -148,10 +152,6 @@ lemma no_fail_stateAssert:
   apply (rule no_fail_pre, wp no_fail_bind)
   apply simp
   done
-
-lemma empty_fail_stateAssert:
-  "empty_fail (stateAssert P s)"
-  by (simp add: stateAssert_def assert_def empty_fail_get)
 
 lemma haskell_fail_wp:
   "\<lbrace>\<top>\<rbrace> haskell_fail x \<lbrace>P\<rbrace>"
@@ -266,6 +266,8 @@ lemma filter_assocs_Cons:
   apply (simp(no_asm))
   apply simp
   done
+
+lemmas stateAssert_def = stateAssert_def[unfolded state_assert_def]
 
 lemma snd_stateAssert_after:
   "\<not> snd ((do _ \<leftarrow> f; stateAssert R vs od) s) \<Longrightarrow>

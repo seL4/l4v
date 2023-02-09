@@ -6,7 +6,7 @@
 
 theory SubMonadLib
 imports
-  EmptyFailLib
+  Monads.Empty_Fail
   Corres_UL
 begin
 
@@ -168,11 +168,9 @@ lemma submonad_bind:
   apply (subst select_f_stateAssert, assumption)
   apply (subst gets_stateAssert)
   apply (subst bind_subst_lift [OF stateAssert_stateAssert])
-  apply (clarsimp simp: pred_conj_def)
-  apply (clarsimp simp: bind_assoc split_def select_f_walk
-                empty_fail_stateAssert empty_failD
-                bind_subst_lift[OF modify_modify] submonad_args.args o_def
-                bind_subst_lift[OF bind_select_f_bind])
+  apply (clarsimp simp: bind_assoc split_def select_f_walk empty_failD pred_conj_def
+                        bind_subst_lift[OF modify_modify] submonad_args.args o_def
+                        bind_subst_lift[OF bind_select_f_bind])
   done
 
 lemma (in submonad) guard_preserved:
@@ -275,7 +273,7 @@ proof (induct l)
     using sm sm' efm
     apply (simp add: mapM_Cons)
     apply (simp add: bind_subst_lift [OF submonad.stateAssert_fn])
-    apply (simp add: bind_assoc submonad_bind submonad.return)
+    apply (simp add: bind_assoc submonad_bind submonad.return empty_fail_cond)
     apply (subst submonad.fn_stateAssert [OF sm'])
     apply (intro ext bind_apply_cong [OF refl])
     apply (subgoal_tac "g sta")
@@ -415,6 +413,7 @@ proof -
     done
   note empty_failD [OF efim, simp]
   note empty_failD [OF efim', simp]
+  note empty_fail_select_f[simp]
   show ?thesis
     apply (clarsimp simp: submonad_fn_def y bind_assoc split_def)
     apply (subst bind_subst_lift [OF modify_stateAssert], rule gp gp')+

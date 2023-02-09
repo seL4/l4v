@@ -261,6 +261,7 @@ method_setup datatype_schem = \<open>
 declare prod.sel[datatype_schematic]
 declare option.sel[datatype_schematic]
 declare list.sel(1,3)[datatype_schematic]
+declare sum.sel[datatype_schematic]
 
 locale datatype_schem_demo begin
 

@@ -244,7 +244,7 @@ proof -
                  simp add: valid_queues_def)
          apply (wp hoare_vcg_if_lift hoare_vcg_conj_lift hoare_vcg_imp_lift)+
              apply (wp hoare_vcg_imp_lift setQueue_valid_queues_no_bitmap_except_dequeue_wp
-                       setQueue_valid_bitmapQ threadGet_const_tcb_at)+
+                       setQueue_valid_bitmapQ threadGet_const_tcb_at hoare_vcg_if_lift)+
   (* wp done *)
   apply (normalise_obj_at')
   apply (clarsimp simp: correct_queue_def)

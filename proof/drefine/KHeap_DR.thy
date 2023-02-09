@@ -2776,15 +2776,16 @@ lemma get_tcb_reply_cap_wp_original_cap:
   apply (rule hoare_post_imp
      [where Q="\<lambda>r. cte_wp_at (\<lambda>c. r \<noteq> cap.NullCap) (sid,tcb_cnode_index 2) and valid_mdb
        and tcb_at sid and valid_objs and cte_wp_at ((=) r) (sid,tcb_cnode_index 2)"])
+   apply (rename_tac rv s)
    apply clarsimp
-   apply (subgoal_tac "is_master_reply_cap r \<and> obj_ref_of r = sid")
+   apply (subgoal_tac "is_master_reply_cap rv \<and> obj_ref_of rv = sid")
     apply clarsimp
     apply (frule cte_wp_tcb_cap_valid)
      apply simp+
     apply (clarsimp simp:valid_mdb_def reply_master_revocable_def)
-    apply (drule_tac x = "obj_ref_of r" in spec)
+    apply (drule_tac x = "obj_ref_of rv" in spec)
     apply (drule_tac x = "tcb_cnode_index 2" in spec)
-    apply (drule_tac x = r in spec)
+    apply (drule_tac x = rv in spec)
     apply (drule iffD1[OF cte_wp_at_caps_of_state])+
     apply clarsimp
    apply (frule cte_wp_tcb_cap_valid)

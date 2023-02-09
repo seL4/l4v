@@ -24,9 +24,6 @@ lemma delete_objects_irq_masks[IRQMasks_IF_assms, wp]:
   apply (wp dmo_wp no_irq_mapM_x no_irq | simp add: freeMemory_def no_irq_storeWord)+
   done
 
-crunch irq_masks[wp]: cleanCacheRange_PoU "\<lambda>s. P (irq_masks s)"
-  (ignore_del: cleanCacheRange_PoU)
-
 crunch irq_masks[IRQMasks_IF_assms, wp]: invoke_untyped "\<lambda>s. P (irq_masks_of_state s)"
   (ignore: delete_objects wp: crunch_wps dmo_wp
        wp: mapME_x_inv_wp preemption_point_inv
@@ -135,7 +132,7 @@ lemma invoke_tcb_irq_masks[IRQMasks_IF_assms]:
        apply (rule hoare_post_impErr[OF cap_delete_irq_masks[where P=P]])
         apply blast
        apply blast
-      apply (wpsimp wp: hoare_vcg_all_lift_R hoare_vcg_const_imp_lift_R
+      apply (wpsimp wp: hoare_vcg_all_lift_R hoare_vcg_const_imp_lift_R hoare_vcg_all_lift hoare_drop_imps
                         checked_cap_insert_domain_sep_inv)+
       apply (rule_tac Q="\<lambda> r s. domain_sep_inv False st s \<and> P (irq_masks_of_state s)"
                   and E="\<lambda>_ s. P (irq_masks_of_state s)" in hoare_post_impErr)

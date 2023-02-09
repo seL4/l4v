@@ -2864,7 +2864,7 @@ lemma vcpu_enable_invs[wp]:
 
 lemma vcpu_restore_invs[wp]:
   "vcpu_restore v \<lbrace>invs\<rbrace>"
-  apply (simp add: vcpu_restore_def do_machine_op_bind dom_mapM)
+  apply (simp add: vcpu_restore_def do_machine_op_bind dom_mapM empty_fail_cond)
   apply (wpsimp wp: mapM_wp_inv)
   done
 

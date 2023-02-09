@@ -2353,6 +2353,7 @@ lemma scheduleTCB_ccorres':
        rescheduleRequired
   od)
   (Call scheduleTCB_'proc)"
+  supply empty_fail_cond[simp]
   apply (cinit' lift: tptr_')
    apply (rule ccorres_rhs_assoc2)+
    apply (rule_tac xf'="ret__int_'" in ccorres_split_nothrow_novcg)
@@ -2407,7 +2408,8 @@ lemma scheduleTCB_ccorres_valid_queues'_pre:
              when (\<not> runnable \<and> curThread = thread \<and> action = ResumeCurrentThread) rescheduleRequired
           od)
          (Call scheduleTCB_'proc)"
-  apply (cinit' lift: tptr_' simp del: word_neq_0_conv)
+  supply empty_fail_cond[simp]
+  apply (cinit' lift: tptr_')
    apply (rule ccorres_rhs_assoc2)+
    apply (rule_tac xf'="ret__int_'" in ccorres_split_nothrow_novcg)
        defer
@@ -2428,7 +2430,7 @@ lemma scheduleTCB_ccorres_valid_queues'_pre:
                                  \<and> weak_sch_act_wf (ksSchedulerAction s) s"
                            and P'=UNIV in ccorres_from_vcg)
            apply (rule allI, rule conseqPre, vcg)
-           apply (clarsimp simp: return_def if_1_0_0 split del: if_split)
+           apply (clarsimp simp: return_def)
            apply (clarsimp simp: from_bool_0 rf_sr_ksCurThread)
            apply (rule conjI)
             apply (clarsimp simp: st_tcb_at'_def)
@@ -2499,6 +2501,7 @@ lemma scheduleTCB_ccorres_valid_queues'_pre_simple:
              when (\<not> runnable \<and> curThread = thread \<and> action = ResumeCurrentThread) rescheduleRequired
           od)
          (Call scheduleTCB_'proc)"
+  supply empty_fail_cond[simp]
   apply (cinit' lift: tptr_' simp del: word_neq_0_conv)
    apply (rule ccorres_rhs_assoc2)+
    apply (rule_tac xf'="ret__int_'" in ccorres_split_nothrow_novcg)

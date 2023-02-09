@@ -2538,7 +2538,7 @@ lemma vcpu_enable_invs[wp]:
 
 lemma vcpu_restore_invs[wp]:
   "\<lbrace>\<lambda>s. invs s\<rbrace> vcpu_restore v \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (simp add: vcpu_restore_def do_machine_op_bind dom_mapM)
+  apply (simp add: vcpu_restore_def do_machine_op_bind dom_mapM empty_fail_cond)
   apply (wpsimp wp: mapM_wp_inv)
   done
 
@@ -2571,7 +2571,7 @@ lemma vcpu_save_invs[wp]:
 lemma vcpu_disable_invs[wp]:
   "\<lbrace>\<lambda> s. invs s\<rbrace> vcpu_disable v \<lbrace>\<lambda>_ s . invs s\<rbrace>"
   apply (simp add: vcpu_disable_def)
-  apply (wpsimp simp: do_machine_op_bind empty_fail_isb
+  apply (wpsimp simp: do_machine_op_bind empty_fail_isb empty_fail_cond
                   wp: set_vcpu_invs_eq_hyp get_vcpu_wp maskInterrupt_invs
         | wp hoare_vcg_all_lift hoare_vcg_imp_lift')+
   done

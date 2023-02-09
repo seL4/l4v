@@ -42,6 +42,10 @@ lemma K_apply[simp]:
 (* FIXME: eliminate *)
 declare K_def [simp]
 
+lemma o_const_simp[simp]:
+  "(\<lambda>x. C) \<circ> f = (\<lambda>x. C)"
+  by (simp add: o_def)
+
 definition
   zipWith :: "('a \<Rightarrow> 'b \<Rightarrow> 'c) \<Rightarrow> 'a list \<Rightarrow> 'b list \<Rightarrow> 'c list" where
   "zipWith f xs ys \<equiv> map (case_prod f) (zip xs ys)"

@@ -1185,7 +1185,7 @@ lemma setObject_ccorres_lemma:
     apply (subgoal_tac "fst (setObject ptr val \<sigma>) = {}")
      apply simp
      apply (erule notE, erule_tac s=\<sigma> in empty_failD[rotated])
-     apply (simp add: setObject_def split_def)
+     apply (simp add: setObject_def split_def empty_fail_cond)
     apply (rule ccontr)
     apply (clarsimp elim!: nonemptyE)
     apply (frule use_valid [OF _ obj_at_setObject3[where P=\<top>]], simp_all)[1]

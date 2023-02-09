@@ -1727,7 +1727,6 @@ lemma cteDelete_valid_duplicates':
   apply (rule hoare_gen_asm)
   apply (simp add: cteDelete_def whenE_def split_def)
   apply (rule hoare_pre, wp finaliseSlot_invs)
-   apply simp
    apply (rule valid_validE)
    apply (rule hoare_post_imp[OF _ finaliseSlot_valid_duplicates'])
    apply simp

@@ -16,7 +16,7 @@ lemma ps_clear_is_aligned_ksPSpace_None:
    \<Longrightarrow> ksPSpace s (p + d) = None"
   apply (simp add: ps_clear_def add_diff_eq[symmetric] mask_2pm1[symmetric])
   apply (drule equals0D[where a="p + d"])
-  apply (simp add: dom_def word_gt_0 del: word_neq_0_conv)
+  apply (simp add: dom_def word_gt_0)
   apply (drule mp)
    apply (rule word_plus_mono_right)
     apply simp
@@ -46,8 +46,6 @@ definition
 where
   "port_mask start end =
      mask (unat (end && mask wordRadix)) && ~~ mask (unat (start && mask wordRadix))"
-
-declare word_neq_0_conv [simp del]
 
 lemma unat_ucast_prio_L1_cmask_simp:
   "unat (ucast (p::priority) && 0x3F :: machine_word) = unat (p && 0x3F)"
@@ -183,13 +181,8 @@ lemma vmsz_aligned_aligned_pageBits:
 
 lemma empty_fail_findVSpaceForASID[iff]:
   "empty_fail (findVSpaceForASID asid)"
-  apply (simp add: findVSpaceForASID_def liftME_def)
-  apply (intro empty_fail_bindE, simp_all split: option.split)
-     apply (simp add: assertE_def split: if_split)
-    apply (simp add: assertE_def split: if_split)
-   apply (simp add: empty_fail_getObject)
-  apply (simp add: assertE_def liftE_bindE checkPML4At_def split: if_split)
-  done
+  unfolding findVSpaceForASID_def checkPML4At_def
+  by (wpsimp wp: empty_fail_getObject)
 
 crunch inv'[wp]: archThreadGet P
 
@@ -209,7 +202,7 @@ lemma atg_sp':
 (* FIXME: MOVE to EmptyFail *)
 lemma empty_fail_archThreadGet [intro!, wp, simp]:
   "empty_fail (archThreadGet f p)"
-  by (simp add: archThreadGet_def getObject_def split_def)
+  by (fastforce simp: archThreadGet_def getObject_def split_def)
 
 lemma more_pageBits_inner_beauty:
   fixes x :: "9 word"
@@ -354,7 +347,7 @@ lemma asUser_get_registers:
    apply (simp add: mapM_empty asUser_return)
    apply wp
    apply simp
-  apply (simp add: mapM_Cons asUser_bind_distrib asUser_return)
+  apply (simp add: mapM_Cons asUser_bind_distrib asUser_return empty_fail_cond)
   apply wp
    apply simp
    apply (rule hoare_strengthen_post)
@@ -374,7 +367,7 @@ lemma asUser_get_registers:
 (* FIXME: move to where is_aligned_ptrFromPAddr is *)
 lemma is_aligned_ptrFromPAddr_pageBitsForSize:
   "is_aligned p (pageBitsForSize sz) \<Longrightarrow> is_aligned (ptrFromPAddr p) (pageBitsForSize sz)"
-  by (cases sz ; simp add: is_aligned_ptrFromPAddr_n pageBits_def bit_simps)
+  by (cases sz ; simp add: is_aligned_ptrFromPAddr_n bit_simps)
 
 lemma is_aligned_pageBitsForSize_minimum:
   "\<lbrakk> is_aligned p (pageBitsForSize sz) ; n \<le> pageBits \<rbrakk> \<Longrightarrow> is_aligned p n"
@@ -404,10 +397,6 @@ lemma valid_eq_wf_asid_pool'[simp]:
 
 declare valid_asid_pool'.simps[simp del]
 (*<<<*)
-
-(* FIXME: change the original to be predicated! *)
-crunch ko_at'2[wp]: doMachineOp "\<lambda>s. P (ko_at' p t s)"
-  (simp: crunch_simps)
 
 (* FIXME: change the original to be predicated! *)
 crunch pred_tcb_at'2[wp]: doMachineOp "\<lambda>s. P (pred_tcb_at' a b p s)"
@@ -473,7 +462,7 @@ lemma length_msgRegisters[simplified size_msgRegisters_def]:
 
 lemma empty_fail_loadWordUser[intro!, simp]:
   "empty_fail (loadWordUser x)"
-  by (simp add: loadWordUser_def ef_loadWord ef_dmo')
+  by (fastforce simp: loadWordUser_def ef_loadWord ef_dmo')
 
 lemma empty_fail_getMRs[iff]:
   "empty_fail (getMRs t buf mi)"
@@ -483,26 +472,14 @@ lemma empty_fail_getReceiveSlots:
   "empty_fail (getReceiveSlots r rbuf)"
 proof -
   note
-    empty_fail_assertE[iff]
-    empty_fail_resolveAddressBits[iff]
+    empty_fail_resolveAddressBits[wp]
+    empty_fail_rethrowFailure[wp]
+    empty_fail_rethrowFailure[wp]
   show ?thesis
-  apply (clarsimp simp: getReceiveSlots_def loadCapTransfer_def split_def
-                 split: option.split)
-  apply (rule empty_fail_bind)
-   apply (simp add: capTransferFromWords_def)
-  apply (simp add: emptyOnFailure_def unifyFailure_def)
-  apply (intro empty_fail_catch empty_fail_bindE empty_fail_rethrowFailure,
-         simp_all add: empty_fail_whenEs)
-   apply (simp_all add: lookupCap_def split_def lookupCapAndSlot_def
-                        lookupSlotForThread_def liftME_def
-                        getThreadCSpaceRoot_def locateSlot_conv bindE_assoc
-                        lookupSlotForCNodeOp_def lookupErrorOnFailure_def
-                  cong: if_cong)
-   apply (intro empty_fail_bindE,
-          simp_all add: getSlotCap_def)
-  apply (intro empty_fail_If empty_fail_bindE empty_fail_rethrowFailure impI,
-         simp_all add: empty_fail_whenEs rangeCheck_def)
-  done
+  unfolding getReceiveSlots_def loadCapTransfer_def lookupCap_def lookupCapAndSlot_def
+  by (wpsimp simp: emptyOnFailure_def unifyFailure_def lookupSlotForThread_def
+                   capTransferFromWords_def getThreadCSpaceRoot_def locateSlot_conv bindE_assoc
+                   lookupSlotForCNodeOp_def lookupErrorOnFailure_def rangeCheck_def)
 qed
 
 lemma user_getreg_rv:

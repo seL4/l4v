@@ -1132,8 +1132,8 @@ lemma ccorres_symb_exec_l:
 
 lemma ccorres_symb_exec_l':
   assumes cc: "\<And>rv. ccorres_underlying sr \<Gamma> r xf arrel axf (Q rv) G' hs (f rv) c"
-  and     v1: "\<And>s. NonDetMonad.valid ((=) s) m (\<lambda>r. (=) s)"
-  and     v2: "NonDetMonad.valid G m Q"
+  and     v1: "\<And>s. valid ((=) s) m (\<lambda>r. (=) s)"
+  and     v2: "valid G m Q"
   and     ef: "empty_fail m"
   shows   "ccorres_underlying sr \<Gamma> r xf arrel axf G G' hs (m >>= (\<lambda>rv. f rv)) c"
   apply (rule ccorres_guard_imp)
@@ -1144,7 +1144,7 @@ lemma ccorres_symb_exec_l':
 lemma ccorres_symb_exec_l2:
   assumes cc: "\<And>rv. ccorres_underlying sr \<Gamma> r xf arrel axf (Q rv) (Q' rv) hs (f rv) c"
   and     v1: "\<And>s. G s \<Longrightarrow> exs_valid ((=) s) m (\<lambda>r. (=) s)"
-  and     v2: "NonDetMonad.valid G m Q"
+  and     v2: "valid G m Q"
   shows   "ccorres_underlying sr \<Gamma> r xf arrel axf G {s'. \<forall>rv s. (s, s') \<in> sr \<and> Q rv s \<longrightarrow> s' \<in> Q' rv} hs (m >>= (\<lambda>rv. f rv)) c"
   apply (rule ccorresI')
   apply (frule use_exs_valid [OF v1])

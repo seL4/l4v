@@ -8,13 +8,14 @@ theory Include_AI
 imports
   Lib.Lib
   ArchCrunchSetup_AI
-  "Monads.Eisbach_WP"
-  "ASpec.Syscall_A"
-  "Lib.LemmaBucket"
-  "Lib.ListLibLemmas"
-  "Lib.LemmaBucket"
-  "Lib.SplitRule"
-  "Rights_AI"
+  Monads.Eisbach_WP
+  Monads.Strengthen_Setup
+  ASpec.Syscall_A
+  Lib.LemmaBucket
+  Lib.ListLibLemmas
+  Lib.LemmaBucket
+  Lib.SplitRule
+  Rights_AI
 begin
 
 no_notation bind_drop (infixl ">>" 60)

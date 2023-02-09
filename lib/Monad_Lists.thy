@@ -10,7 +10,10 @@
 
 theory Monad_Lists
   imports
-    Monads.NonDetMonadVCG
+    Monads.In_Monad
+    Monads.Det
+    Monads.Empty_Fail
+    Monads.No_Fail
 begin
 
 lemma mapME_Cons:

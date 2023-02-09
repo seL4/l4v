@@ -83,13 +83,13 @@ lemma det_getRestartPC: "det getRestartPC"
 lemma det_setNextPC: "det (setNextPC p)"
   by (simp add: setNextPC_def det_setRegister)
 
-
+(* FIXME empty_fail: make all empty_fail [intro!, wp], and non-conditional ones [simp] *)
 lemma ef_loadWord: "empty_fail (loadWord x)"
-  by (simp add: loadWord_def)
+  by (fastforce simp: loadWord_def)
 
 
 lemma ef_storeWord: "empty_fail (storeWord x y)"
-  by (simp add: storeWord_def)
+  by (fastforce simp: storeWord_def)
 
 
 lemma no_fail_getRestartPC: "no_fail \<top> getRestartPC"
@@ -407,16 +407,14 @@ lemma empty_fail_initL2Cache: "empty_fail  initL2Cache"
 
 lemma empty_fail_clearMemory [simp, intro!]:
   "\<And>a b. empty_fail (clearMemory a b)"
-  by (simp add: clearMemory_def mapM_x_mapM ef_storeWord)
+  by (fastforce simp: clearMemory_def mapM_x_mapM ef_storeWord)
 
 lemma getFaultAddress_ef[simp,wp]: "empty_fail getFaultAddress"
   by (simp add: getFaultAddress_def)
 
-(* FIXME x64: move *)
 lemma ioapicMapPinToVector_ef[simp,wp]: "empty_fail (ioapicMapPinToVector a b c d e)"
   by (simp add: ioapicMapPinToVector_def)
 
-(* FIXME x64: move *)
 lemma invalidateTLBEntry_ef[simp,wp]: "empty_fail (invalidateTLBEntry b)"
   by (simp add: invalidateTLBEntry_def)
 
@@ -426,39 +424,30 @@ lemma invalidateASID_ef[simp,wp]: "empty_fail (invalidateASID a b)"
 lemma invalidateTranslationSingleASID_ef[simp,wp]: "empty_fail (invalidateTranslationSingleASID a b)"
   by (simp add: invalidateTranslationSingleASID_def)
 
-(* FIXME x64: move *)
 lemma hwASIDInvalidate_ef[simp,wp]: "empty_fail (hwASIDInvalidate b a)"
   by (simp add: hwASIDInvalidate_def)
 
-(* FIXME x64: move *)
 lemma updateIRQState_ef[simp,wp]: "empty_fail (updateIRQState b c)"
-  by (simp add: updateIRQState_def)
+  by (fastforce simp: updateIRQState_def)
 
-(* FIXME x64: move *)
 lemma writeCR3_ef[simp,wp]: "empty_fail (writeCR3 a b)"
   by (simp add: writeCR3_def)
 
-(* FIXME x64: move *)
 lemma in8_ef[simp,wp]: "empty_fail (in8 port)"
-  by (simp add: in8_def)
+  by (fastforce simp: in8_def)
 
-(* FIXME x64: move *)
 lemma in16_ef[simp,wp]: "empty_fail (in16 port)"
-  by (simp add: in16_def)
+  by (fastforce simp: in16_def)
 
-(* FIXME x64: move *)
 lemma in32_ef[simp,wp]: "empty_fail (in32 port)"
-  by (simp add: in32_def)
+  by (fastforce simp: in32_def)
 
-(* FIXME x64: move *)
 lemma out8_ef[simp,wp]: "empty_fail (out8 port dat)"
   by (simp add: out8_def)
 
-(* FIXME x64: move *)
 lemma out16_ef[simp,wp]: "empty_fail (out16 port dat)"
   by (simp add: out16_def)
 
-(* FIXME x64: move *)
 lemma out32_ef[simp,wp]: "empty_fail (out32 port dat)"
   by (simp add: out32_def)
 

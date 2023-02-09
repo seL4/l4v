@@ -5823,8 +5823,7 @@ lemma inv_untyped_IRQInactive:
   "\<lbrace>valid_irq_states'\<rbrace> invokeUntyped ui
   -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
   apply (simp add: invokeUntyped_def)
-  apply (rule hoare_pre)
-   apply (wp whenE_wp resetUntypedCap_IRQInactive | wpc | simp)+
+  apply (wpsimp wp: resetUntypedCap_IRQInactive)
   done
 
 end

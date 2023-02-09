@@ -81,14 +81,14 @@ schematic_goal strong_sep_impl_sep_wp':
     "\<And>sep_lift.
      (\<And>R. \<lbrace>(\<lambda>s. (P \<and>* R) (sep_lift s) )\<rbrace> f \<lbrace>\<lambda>rv. (\<lambda>s. (Q rv \<and>* R) (sep_lift s))\<rbrace>) \<Longrightarrow>
      \<lbrace>(\<lambda>s. ( P \<and>* (?f Q R)) (sep_lift s))\<rbrace> f \<lbrace>\<lambda>rv s . R rv (sep_lift s)\<rbrace>"
- apply (atomize)
- apply (erule_tac x="(\<lambda>s. \<forall>x. (Q x \<longrightarrow>* R x) s)" in allE)
- apply (rule hoare_strengthen_post)
- apply (assumption)
- apply (sep_drule (direct)  extract_all)
- apply (erule_tac x=r in allE)
- apply (sep_solve)
-done
+  apply (atomize)
+  apply (erule_tac x="(\<lambda>s. \<forall>x. (Q x \<longrightarrow>* R x) s)" in allE)
+  apply (erule hoare_strengthen_post)
+  apply (rename_tac rv s)
+  apply (sep_drule (direct)  extract_all)
+  apply (erule_tac x=rv in allE)
+  apply (sep_solve)
+  done
 
 lemma strong_sep_impl_sep_wp'':
     "\<And>sep_lift.

@@ -689,12 +689,13 @@ lemma cancelSignal_invs':
        apply assumption
       apply (rule hoare_strengthen_post)
        apply (rule get_ntfn_sp')
+      apply (rename_tac rv s)
       apply (clarsimp simp: pred_tcb_at')
       apply (frule NIQ)
        apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
       apply (rule conjI)
        apply (clarsimp simp: valid_ntfn'_def)
-       apply (case_tac "ntfnObj r", simp_all add: isWaitingNtfn_def)
+       apply (case_tac "ntfnObj rv", simp_all add: isWaitingNtfn_def)
        apply (frule ko_at_valid_objs')
          apply (simp add: valid_pspace_valid_objs')
         apply (clarsimp simp: projectKO_opt_ntfn split: kernel_object.splits)
@@ -717,7 +718,7 @@ lemma cancelSignal_invs':
                         split: ntfn.splits)
        apply (rule conjI, clarsimp elim!: if_live_state_refsE)
        apply (fastforce simp: sym_refs_def dest!: idle'_no_refs)
-      apply (case_tac "ntfnObj r", simp_all)
+      apply (case_tac "ntfnObj rv", simp_all)
       apply (frule obj_at_valid_objs', clarsimp)
       apply (clarsimp simp: valid_obj'_def valid_ntfn'_def)
       apply (rule conjI, clarsimp split: option.splits)
@@ -2224,14 +2225,15 @@ lemma cancelAllIPC_invs'[wp]:
    prefer 2
    apply assumption
   apply (rule hoare_strengthen_post [OF get_ep_sp'])
+  apply (rename_tac rv s)
   apply (clarsimp simp: invs'_def valid_state'_def valid_ep'_def)
   apply (frule obj_at_valid_objs', fastforce)
   apply (clarsimp simp: valid_obj'_def)
   apply (rule conjI)
-   apply (case_tac r, simp_all add: valid_ep'_def)[1]
+   apply (case_tac rv, simp_all add: valid_ep'_def)[1]
   apply (rule conjI[rotated])
    apply (drule(1) sym_refs_ko_atD')
-   apply (case_tac r, simp_all add: st_tcb_at_refs_of_rev')[1]
+   apply (case_tac rv, simp_all add: st_tcb_at_refs_of_rev')[1]
     apply (clarsimp elim!: if_live_state_refsE
            | drule(1) bspec | drule st_tcb_at_state_refs_ofD')+
   apply (drule(2) ep_q_refs_max)
