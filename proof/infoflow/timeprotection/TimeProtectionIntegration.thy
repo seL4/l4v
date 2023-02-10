@@ -27,10 +27,19 @@ locale integration_setup =
 + fixes time_per_tick :: time
   fixes slice_length_min :: time
   fixes timer_delay_max :: time
-  fixes ta :: "if_other_state \<Rightarrow> vpaddr set"
+  fixes vaddr_to_paddr :: "if_other_state \<Rightarrow> TimeProtection.vaddr \<Rightarrow> TimeProtection.paddr"
   assumes timer_delay_lt_slice_length:
     "timer_delay_max < slice_length_min"
 begin
+
+
+definition touched_vaddrs :: "if_other_state \<Rightarrow> vaddr set" where
+  "touched_vaddrs s \<equiv>
+  VAddr ` (let is = internal_state_if s in (machine_state.touched_addresses (machine_state is)))"
+
+definition touched_addresses :: "if_other_state \<Rightarrow> vpaddr set" where
+  "touched_addresses s \<equiv> (\<lambda>v. (v, vaddr_to_paddr s v)) ` (touched_vaddrs s)"
+
 
 (* get the list of (domain, tickcount) from the initial state *)
 (* this system assumes that domain_list_internal won't change *)
@@ -44,11 +53,11 @@ definition schedule_list where
 
 interpretation sched_o:schedule_oracle_delayed _ schedule_list slice_length_min timer_delay_max
   apply unfold_locales
-   (* we need to know that the domain list has some minimum time *)
+    (* we need to know that the domain list has some minimum time *)
+    subgoal sorry
+   (* we need to know that the domain list is never empty *)
    subgoal sorry
-  (* we need to know that the domain list is never empty *)
-  subgoal sorry
-
+  (* we need to know something about the timer delay WC *)
   subgoal sorry
   done
 
@@ -64,9 +73,10 @@ lemma nlds_flatsteps:
   "\<lbrakk>t \<le> t'; t' < nlds t\<rbrakk> \<Longrightarrow> nlds t' = nlds t"
   apply (clarsimp simp:nlds_def sched_o.next_delayed_start_flatsteps)
   done
-                    
+
+
 interpretation tphuwr:time_protection_hardware_uwr gentypes PSched 
-  _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ part uwr nlds ta
+  _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ part uwr nlds
   apply unfold_locales
    apply (simp add: schedIncludesCurrentDom)
   using uwr_equiv_rel apply blast
@@ -116,8 +126,9 @@ begin
 
 *)
 
-find_theorems do_machine_op machine_state
 
+
+(* this tells us, from the state, whether the next irq will be the timer *)
 definition is_timer_irq :: "det_ext Structures_A.state \<Rightarrow> bool" where
   "is_timer_irq s \<equiv> let irq = irq_oracle (Suc (irq_state_of_state s)) in
                      \<exists>s'. (Some irq, s') \<in> fst (do_machine_op (getActiveIRQ False) s)
@@ -134,98 +145,39 @@ lemma is_timer_irq_def2:
   apply fastforce
   done
 
+(* this tells us if our domain time is about to be finished on the next timer irq *)
 definition domain_time_zero :: "det_ext Structures_A.state \<Rightarrow> bool" where
   "domain_time_zero os \<equiv> domain_time_internal (exst os) = 1"
 
+(* this combines a few things to decide that the next kernel call is about to do a domain switch *)
 definition will_domain_switch :: "if_other_state \<Rightarrow> bool" where
   "will_domain_switch os \<equiv> interrupted_modes (snd os)
                          \<and> is_timer_irq (internal_state_if os)
                          \<and> domain_time_zero (internal_state_if os)"
 
-lemma ex_eq:
-  "(\<exists>y. (P y = P' y)) \<Longrightarrow>(\<exists>x. P x) = (\<exists>x. P' x)"
-  oops
 
+(* PROPERTY will_domain_switch_public: this tells us that the public "uwr"
+   decides whether we will perform a domain switch *)
 lemma will_domain_switch_from_uwr:
   "uwr2 os PSched ot \<Longrightarrow>
   will_domain_switch ot = will_domain_switch os"
   unfolding uwr_def
   apply (clarsimp simp: will_domain_switch_def uwr_def sameFor_def sameFor_scheduler_def)
   apply (case_tac bc; case_tac ba; clarsimp split:event.splits)
-    
-    apply (prop_tac "interrupt_states (internal_state_if ((aa, bb), KernelEntry Interrupt))
-                   = interrupt_states (internal_state_if ((a , b ), KernelEntry Interrupt))")
-     apply simp 
-     subgoal sorry
-  oops
+     apply (prop_tac "interrupt_states (internal_state_if ((aa, bb), KernelEntry Interrupt))
+                    = interrupt_states (internal_state_if ((a , b ), KernelEntry Interrupt))")
+      apply simp
+  sorry
+
+
+
+
+
 
 definition can_split_four_ways where
-  "can_split_four_ways s1 s5 oldclean dirty gadget newclean \<equiv>
-   \<exists> s2 s3 s4. s2 \<in> oldclean s1 \<and> s3 \<in> dirty s2 \<and> s4 \<in> gadget s3 \<and> s4 \<in> newclean s4"
-
-lemma step_bigstepR:
-  "(s, s') \<in> Step () \<Longrightarrow>
-  big_step_R s s'"
-  apply (drule big_Step2, rule small_step_to_big_step; simp)
-  done
-
-term global_automaton_if
-term ADT_A_if
-
-find_theorems name:obs_det
-
-lemma big_step_Init:
-  "(s1, s3) \<in> Step () \<Longrightarrow>
-  Init (ADT_A_if utf) s1 = {s1}"
-  apply (clarsimp simp:system.Step_def execution_def big_step_ADT_A_if_def
-    big_step_adt_def Fin_ADT_if)
-  apply (prop_tac "s1 \<in> full_invs_if")
-   apply (smt (verit, best) ImageE Init_ADT_if IntE empty_iff foldl.simps(1)
-     foldl.simps(2) insert_iff steps_def)
-  apply (prop_tac "step_restrict s1")
-   apply (metis (no_types, lifting) ADT_A_if_def IntE Step_big_step_ADT_A_if big_step_ADT_A_if_def
-     big_step_adt_def data_type.simps(1) mem_Collect_eq singletonD steps_eq_Run)
-  apply (clarsimp simp: Init_ADT_if)
-  done
-
-
-inductive_set sub_big_steps_alt
-  :: "('istate,'estate,'event) data_type \<Rightarrow> ('istate \<Rightarrow> bool) \<Rightarrow> ('istate \<times> 'istate \<times> 'event list) set"
-  for A :: "('istate,'estate,'event) data_type" and J :: "('istate \<Rightarrow> bool)"
-where
-  nil: "\<lbrakk>evlist = []; s2 = s1; \<not> J s1\<rbrakk> \<Longrightarrow>  (s1, s2, evlist) \<in> sub_big_steps_alt A J" |
-  step: "\<lbrakk>evlist = [e] @ evlist'; (s2, s3, evlist') \<in> sub_big_steps_alt A J;
-          (s1, s2) \<in> data_type.Step A e; \<not> J s2\<rbrakk> \<Longrightarrow> (s1, s3, evlist) \<in> sub_big_steps_alt A J"
-                                          
-
-
-lemma sub_big_steps_sub_big_steps_alt_aux:
- " (s2, es1) \<in> sub_big_steps A R s1 \<Longrightarrow>    
-   (s2, s3, es2) \<in> sub_big_steps_alt A (\<lambda> b. R s1 b) \<Longrightarrow>
-   (s1, s3, es1 @ es2) \<in> sub_big_steps_alt A (\<lambda> b. R s1 b)"
-  apply (induct s2 es1 arbitrary:s3 es2 rule:sub_big_steps.induct)
-   apply clarsimp
-  apply clarsimp
-  apply (simp add: sub_big_steps_alt.step)
-  done
-
-
-
-lemma sub_big_steps_sub_big_steps_alt:
- "(s2, es1) \<in> sub_big_steps A R s1 \<Longrightarrow>    
-  (s1, s2, es1) \<in> sub_big_steps_alt A (\<lambda> b. R s1 b)"
-  by (metis (mono_tags) append_Nil2 sub_big_steps_Run sub_big_steps_alt.nil sub_big_steps_sub_big_steps_alt_aux)
-
-(*
-lemma big_stepsD:
-  "(s,t) \<in> big_steps A R exmap ev
-   \<Longrightarrow> \<exists>s' as a. (s',as) \<in> sub_big_steps A R s \<and> (s',t) \<in> Step A a \<and> R s t \<and> ev = exmap (as @ [a])"
-  apply (erule big_steps.induct)
-  apply blast
-  done
-*)
-
-term global_automaton_if
+  "can_split_four_ways s1 s5 stepfn oldclean dirty gadget newclean \<equiv>
+  ((s1, s5) \<in> stepfn \<Longrightarrow>
+  \<exists> s2 s3 s4. s2 \<in> oldclean s1 \<and> s3 \<in> dirty s2 \<and> s4 \<in> gadget s3 \<and> s4 \<in> newclean s4)"
 
 lemma step_to_KernelExit:
   "(s1, s2) \<in> data_type.Step (ADT_A_if utf) () \<Longrightarrow>
@@ -291,11 +243,14 @@ lemma kernel_entry_if_Inr:
   apply (wpsimp simp: kernel_entry_if_def liftE_def)
   done
 
+(* PATHING: if we take a step, as long as we are in an interrupted mode,
+  we will either go through kernel_handle_preemption_if or (kernel_call_A_if Interrupt)
+  , and then we will always go through kernel_schedule_if *)
 lemma domainswitch_two_paths:
   "(s1, s3) \<in> Step () \<Longrightarrow>
   interrupted_modes (snd s1) \<Longrightarrow>
   \<exists>s2. (s2, (), fst s3) \<in> kernel_schedule_if \<and>
-       ((fst s1, (), s2) \<in> kernel_handle_preemption_if
+        ((fst s1, (), s2) \<in> kernel_handle_preemption_if
       \<or> (fst s1, False, s2) \<in> kernel_call_A_if Interrupt)"
   apply (drule big_Step2)
   apply (rule_tac s=s1 and s''=s3 in scheduler_steps)
@@ -332,6 +287,7 @@ lemma kernel_handle_preemption_if_handle_preemption_if:
 crunches arch_mask_irq_signal
   for scheduler_action: "\<lambda>s. P (scheduler_action s)"
 
+(* this is what handle_interrupt will look like when the irq is the timer *)
 definition
   handle_interrupt_IRQTimer where
  "handle_interrupt_IRQTimer \<equiv>
@@ -341,16 +297,6 @@ definition
      timer_tick;
      do_machine_op resetTimer
    od"
-
-lemma weirdthing:
-  "\<lbrakk>A; B\<rbrakk> \<Longrightarrow> A \<and> B"
-  by simp
-
-find_theorems getActiveIRQ name:wp
-
-thm dmo_getActiveIRQ_wp
-
-find_theorems name:gets
 
 definition irq_at' :: "nat \<Rightarrow> irq option" where
   "irq_at' pos \<equiv> Some (irq_oracle pos)"
@@ -396,7 +342,6 @@ lemma dmo_getActiveIRQ_timer_withoutextras:
   apply simp
   done
 
-
 lemma dmo_getActiveIRQ_timer2:
   "\<lbrace>\<lambda>s. is_timer_irq s\<rbrace>
      do_machine_op (getActiveIRQ b)
@@ -415,44 +360,10 @@ lemma dmo_getActiveIRQ_timer2:
   (* apply (clarsimp simp:return_def) *)
   done
 
-find_theorems monadic_rewrite name:"wp"
-
-find_theorems getActiveIRQ valid
-
-thm dmo_getActiveIRQ_wp
-
-
-
-term "do_machine_op (getActiveIRQ True)"
-
-(*
-lemma dmo_getActiveIRQ_wp[CNode_IF_assms]:
-  "\<lbrace>\<lambda>s. is_timer_irq s \<and> (P (irq_at' (irq_state (machine_state s) + 1))
-          (s\<lparr>machine_state := (machine_state s\<lparr>irq_state := irq_state (machine_state s) + 1\<rparr>)\<rparr>))\<rbrace>
-   do_machine_op (getActiveIRQ b) :: user_context \<times> det_ext Structures_A.state
-   \<lbrace>P\<rbrace>"
-  apply (simp add: do_machine_op_def getActiveIRQ_def non_kernel_IRQs_def)
-  apply (wp modify_wp | wpc)+
-  apply clarsimp
-  apply (erule use_valid)
-   apply (wp modify_wp)
-  apply (auto simp: irq_at_def Let_def split: if_splits)
-  done
-*)
-
 lemma set_ext:
   "(\<forall>x. (x \<in> S) = (x \<in> T)) \<Longrightarrow> (S = T)"
   apply blast
   done
-
-lemma pair_eq:
-  "(fst f = fst g) \<Longrightarrow> snd f = snd g \<Longrightarrow> (f = g)"
-  by (simp add: prod.expand)
-
-lemma ex_eq:
-  "P = Q \<Longrightarrow> ((\<exists>x. P) = (\<exists>x. Q))"
-  by simp
-
 
 lemma det_empty_fail:
   "det f \<Longrightarrow> empty_fail f"
@@ -480,7 +391,7 @@ lemma strong_post_elim:
   apply (drule_tac x=x in spec)
   apply (clarsimp simp:exec_get exec_modify)
   apply (clarsimp simp:return_def)
-  apply (rule pair_eq; clarsimp)
+  apply (rule prod.expand; rule conjI; clarsimp)
    apply (rule set_ext; clarsimp)
    apply (case_tac "((a, b) \<in> fst (f x))"; clarsimp)
     apply (drule_tac x="(a, b)" in bspec, assumption)
@@ -512,7 +423,7 @@ lemma weak_pre_elim_P:
   apply (clarsimp simp:return_def)
   apply (drule_tac x="\<lambda>r s. r=Pr s' \<and> s=Ps s'" in spec)
   apply (drule_tac x=s' in spec)
-  apply (rule pair_eq; clarsimp)
+  apply (rule prod.expand; rule conjI; clarsimp)
    apply (rule set_ext; clarsimp)
    apply (case_tac "((a, b) \<in> fst (f s'))"; clarsimp)
     apply (drule_tac x="(a, b)" in bspec, assumption)
@@ -571,33 +482,6 @@ lemma weak_pre_rewrite_bind:
   apply (rule rewrite_return_bind)
   apply simp
   done
-
-
-(* not needed i guess. they're true though
-lemma and_refl [simp]:
-  "(P and P) = P"
-  by (simp add: pred_conj_def)
-
-lemma no_fail_bind_simple:
-  assumes f: "no_fail P f"
-  assumes g: "\<And>rv. no_fail (R rv) (g rv)"
-  assumes v: "\<lbrace>P\<rbrace> f \<lbrace>R\<rbrace>"
-  shows "no_fail P (f >>= (\<lambda>rv. g rv))"
-  apply (insert f g v)
-  apply (rule no_fail_bind [where P=P and Q=P and R=R, simplified]; assumption)
-  done
-
-lemma no_fail_bind_simple_top:
-  assumes f: "no_fail P f"
-  assumes g: "\<And>rv. no_fail \<top> (g rv)"
-  shows "no_fail P (f >>= (\<lambda>rv. g rv))"
-  apply (insert f g)
-  apply (rule no_fail_bind [where Q=\<top>, simplified])
-    apply assumption
-   apply assumption
-  apply (clarsimp simp:valid_def)
-  done
-*)
 
 lemma do_machine_op_no_fail [wp_unsafe]:
   "no_fail Q f \<Longrightarrow>
@@ -716,6 +600,9 @@ lemma dmo_getActiveIRQ_handle_interrupt_IRQTimer:
   using irq_oracle_max_irq word_not_le apply blast
   done
 
+
+(* PATHING: if we have is_timer_irq (given by will_domain_switch), then
+  handle_preemption_if is equivalent to handle_interrupt_IRQTimer (our very simple monad) *)
 lemma handle_preemption_if_timer_irq:
   "monadic_rewrite F E
     is_timer_irq
@@ -733,19 +620,25 @@ lemma handle_preemption_if_timer_irq:
 
 
 
-
 definition kernel_entry_IRQTimer where
   "kernel_entry_IRQTimer tc \<equiv> do t \<leftarrow> gets cur_thread; return (Inr (), tc) od"
 
+(* this isn't 100% true - we need machine_state ta agnosticism for P *)
 lemma set_object_machine_state_interrupt_states [wp]:
-  "set_object a b \<lbrace>\<lambda>s. P (machine_state s) (interrupt_states s)\<rbrace>"
+  "set_object True a b \<lbrace>\<lambda>s. P (machine_state s) (interrupt_states s)\<rbrace>"
   apply (rule hoare_weaken_pre)
   apply (wps | wpsimp)+
-  done
+  sorry
+  
 
+lemma thread_set_is_timer_irq:
+  "thread_set a b \<lbrace>is_timer_irq\<rbrace>"
+  sorry
+(*
 crunches thread_set
   for is_timer_irq: is_timer_irq
   (simp: is_timer_irq_def2 wp:crunch_wps)
+*)
 
 lemma kernel_entry_is_timer_irq:
   "monadic_rewrite F E
@@ -781,12 +674,12 @@ lemma
   \<lbrace>domain_time_zero\<rbrace> timer_tick \<lbrace>\<lambda>_ s. scheduler_action s = choose_new_thread\<rbrace>"
   apply (wpsimp simp:timer_tick_def domain_time_zero_def dec_domain_time_def)
   apply (intro conjI; clarsimp)
-              apply (wpsimp simp: thread_set_time_slice_def ethread_set_def set_eobject_def)
-             apply (wpsimp simp: reschedule_required_def)
-            apply wpsimp+
-    apply (wpsimp simp: get_thread_state_def thread_get_def)
-   apply wp
-  apply clarsimp
+               apply (wpsimp simp: thread_set_time_slice_def ethread_set_def set_eobject_def)
+              apply (wpsimp simp: reschedule_required_def)
+             apply wpsimp+
+     apply (wpsimp simp: get_thread_state_def thread_get_def touch_object_wp')
+    apply (wp touch_object_wp')
+   apply (wp touch_object_wp')
   apply (clarsimp simp:domain_time_zero_def)
   done
                 
@@ -799,13 +692,14 @@ lemma kernel_entry_is_timer_irq:
     timer_tick
     reschedule_required"
   unfolding timer_tick_def
+  oops
 
 term ct_in_state
 term st_tcb_at
 find_theorems name:running name:thread
-
 thm schedule_det_ext_ext_def
-lemma kernel_entry_is_timer_irq:
+
+lemma schedule_if_choose_new_thread:
   "monadic_rewrite F E
     domain_time_zero
     (schedule_if tc)
@@ -819,7 +713,7 @@ lemma kernel_entry_is_timer_irq:
     unfolding schedule_def
     apply (rule monadic_rewrite_bind_tail)
      apply (rule monadic_rewrite_bind_tail)
-      apply (rule monadic_rewrite_bind_tail)
+  sorry
 
 
 
@@ -862,35 +756,73 @@ lemma domainswitch_splits_four_ways:
 
   apply (clarsimp simp:Step_def big_step_ADT_A_if_def system.Step_def big_step_adt_def
     )
+  oops
+
+
+(* based on the monad next_domain and the functions part/partition.
+  Never returns PSched. *)
+term next_domain
+definition get_next_domain
+  :: "(user_context \<times> det_ext Structures_A.state) \<times> sys_mode \<Rightarrow> 'l partition" where
+  "get_next_domain s \<equiv> 
+    let ds = internal_state_if s in
+    let domain_index' = (domain_index ds + 1) mod length (domain_list ds) in
+    let next_dom = (domain_list ds)!domain_index' in
+      Partition (label_of (the_elem ((pasDomainAbs initial_aag) (fst next_dom))))"
+
+
+lemma get_next_domain_public:
+  "uwr2 s PSched t \<Longrightarrow>
+  get_next_domain t = get_next_domain s"
+  apply (clarsimp simp: get_next_domain_def)
+  apply (clarsimp simp: uwr_def sameFor_def sameFor_scheduler_def)
+  apply (clarsimp simp: domain_fields_equiv_def)
+  done
+   
+
+
+term time_protection_system
 
 interpretation ma?:time_protection_system PSched fch_lookup fch_read_impact fch_write_impact
   empty_fch fch_flush_cycles fch_flush_WCET pch_lookup pch_read_impact pch_write_impact do_pch_flush
   pch_flush_cycles pch_flush_WCET collides_in_pch read_cycles write_cycles addr_domain addr_colour
-  colour_userdomain part uwr nlds ta select_trace
-  "big_step_ADT_A_if utf" s0 "policyFlows (pasPolicy initial_aag)" _ _ _ will_domain_switch
+  colour_userdomain part uwr nlds select_trace
+  "big_step_ADT_A_if utf" s0 "policyFlows (pasPolicy initial_aag)"
+  _ _ _ touched_addresses _ _ _ will_domain_switch _ _ _ get_next_domain
   
   apply unfold_locales
-               (* external_uwr_same_domain *)
-               using schedIncludesCurrentDom apply presburger
-              (* external_uwr_equiv *)
-              apply (simp add: uwr_equiv_rel)
-             (* will_domain_switch_public *)
-             subgoal sorry
-            (* next_latest_domainswitch_in_future *)
-            apply (rule nlds_in_future)
-           (* next_latest_domainswitch_flatsteps *)
-           apply (rule nlds_flatsteps; simp)
-          (* get_next_domain_public *)
-          subgoal sorry
-          (* get_domainswitch_middle_state_nonempty *)
-         subgoal sorry
+                  (* external_uwr_same_domain *)
+                  using schedIncludesCurrentDom apply presburger
+                 (* external_uwr_equiv *)
+                 apply (simp add: uwr_equiv_rel)
+                (* will_domain_switch_public *)
+                apply (rule will_domain_switch_from_uwr)
+                subgoal sorry (* need to adjust how we talk about sched uwr i guess *)
+               (* next_latest_domainswitch_in_future *)
+               apply (rule nlds_in_future)
+              (* next_latest_domainswitch_flatsteps *)
+              apply (erule(1) nlds_flatsteps)
+             (* get_next_domain_public *)
+             apply (erule get_next_domain_public)
+            (* middle state stuff *)
+            subgoal sorry
+            subgoal sorry
+            subgoal sorry
+            subgoal sorry
+        (* step_is_uwr_determined gives us (ta t = ta t') *)
         subgoal sorry
+       (* step_is_publicly determined gives us (ta t = ta t') *)
        subgoal sorry
+      (* a version of touched_addresses_inv for all reachable states *)
       subgoal sorry
+     (* every step is either domain_switch with properties, or not, with other properties *)
      subgoal sorry
+    (* middle state stuff about dirty touched invs. *)
     subgoal sorry
-   subgoal sorry
-  subgoal sorry
+   (* artifacts from "defines" *)
+   (* TODO: is there a better way to do this?
+      seems like "defines" is just an alias for "assumes" and means we have to
+      do all this extra bookkeeping. *)
   done
 end
 

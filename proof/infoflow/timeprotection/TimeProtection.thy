@@ -130,9 +130,6 @@ corollary colours_not_shared:
   "colour_userdomain c1 \<noteq> colour_userdomain c2 \<Longrightarrow> c1 \<noteq> c2"
   by blast
 
-definition all_paddrs_of :: "'domain \<Rightarrow> paddr set" where
-  "all_paddrs_of d = {a. addr_domain a = d}"
-
 abbreviation collision_set :: "paddr \<Rightarrow> paddr set" where
   "collision_set a \<equiv> {b. a coll b}"
 
@@ -392,24 +389,12 @@ locale time_protection_hardware_uwr =
   fixes current_domain :: "'other_state \<Rightarrow> 'domain"
   fixes external_uwr :: "'domain \<Rightarrow> ('other_state \<times> 'other_state) set"
   fixes next_latest_domainswitch_start :: "time \<Rightarrow> time"
-  fixes touched_addrs :: "'other_state \<Rightarrow> vpaddr set"
   assumes external_uwr_same_domain:
     "(s1, s2) \<in> external_uwr Sched \<Longrightarrow> current_domain s2 = current_domain s1"
   assumes external_uwr_equiv_rel:
     "equiv UNIV (external_uwr d)"
 
 begin
-
-\<comment> \<open> TA inv stuff\<close>
-(* the invariant that touched_addresses is always sensible for its current domain *)
-definition touched_addrs_inv :: "'other_state \<Rightarrow> bool" where
-  "touched_addrs_inv s \<equiv>
-     snd ` touched_addrs s \<subseteq> all_paddrs_of (current_domain s) \<union> kernel_shared_precise"
-
-definition touched_addrs_dirty_inv :: "'domain \<Rightarrow> 'domain \<Rightarrow> 'other_state \<Rightarrow> bool" where
-  "touched_addrs_dirty_inv u u' s \<equiv>
-     touched_addrs s \<subseteq> {(v, p) | v p. p \<in> (all_paddrs_of u \<union> all_paddrs_of u' \<union> kernel_shared_precise)}"
-
 
 abbreviation nlds where "nlds \<equiv> next_latest_domainswitch_start"
 
@@ -509,6 +494,21 @@ locale time_protection_system =
   and step_is_uwr_determined :: "'other_state \<Rightarrow> bool"
   
 +
+
+  fixes touched_addrs :: "'other_state \<Rightarrow> vpaddr set"
+
+  fixes all_paddrs_of :: "'domain \<Rightarrow> paddr set"
+  defines "all_paddrs_of d \<equiv> {a. addr_domain a = d}"
+
+  \<comment> \<open> TA inv stuff\<close>
+  (* the invariant that touched_addresses is always sensible for its current domain *)
+  fixes touched_addrs_inv :: "'other_state \<Rightarrow> bool"
+  defines "touched_addrs_inv s \<equiv>
+       snd ` touched_addrs s \<subseteq> all_paddrs_of (current_domain s) \<union> kernel_shared_precise"
+
+  fixes touched_addrs_dirty_inv :: "'domain \<Rightarrow> 'domain \<Rightarrow> 'other_state \<Rightarrow> bool"
+  defines "touched_addrs_dirty_inv u u' s \<equiv>
+       touched_addrs s \<subseteq> {(v, p) | v p. p \<in> (all_paddrs_of u \<union> all_paddrs_of u' \<union> kernel_shared_precise)}"
 
   \<comment> \<open>external uwr stuff\<close>
   
