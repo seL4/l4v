@@ -283,6 +283,11 @@ lemma empty_fail_zipWithM[empty_fail_cond]:
   unfolding zipWithM_def zipWith_def
   by (fastforce intro: empty_fail_term empty_fail_cond)
 
+lemma empty_fail_maybeM[empty_fail_cond]:
+  "\<forall>x. empty_fail (f x) \<Longrightarrow> empty_fail (maybeM f t)"
+  unfolding maybeM_def
+  by (fastforce intro: empty_fail_term split: option.splits)
+
 lemma empty_fail_ifM[empty_fail_cond]:
   "\<lbrakk> empty_fail P; empty_fail a; empty_fail b \<rbrakk> \<Longrightarrow> empty_fail (ifM P a b)"
   by (simp add: ifM_def empty_fail_cond)

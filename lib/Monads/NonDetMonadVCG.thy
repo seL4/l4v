@@ -538,6 +538,8 @@ lemma alternative_wp:
   using post_by_hoare[OF x] post_by_hoare[OF y]
   by fastforce
 
+lemmas alternative_valid = alternative_wp[where P=P and P'=P for P, simplified]
+
 lemma alternativeE_wp:
   assumes "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   assumes "\<lbrace>P'\<rbrace> f' \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
@@ -596,6 +598,36 @@ lemma unlessE_wp:
   "(\<not> P \<Longrightarrow> \<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>, \<lbrace>E\<rbrace>) \<Longrightarrow> \<lbrace>if P then R () else Q\<rbrace> unlessE P f \<lbrace>R\<rbrace>, \<lbrace>E\<rbrace>"
   unfolding unlessE_def
   by (wpsimp wp: returnOk_wp)
+
+lemma maybeM_wp:
+  "(\<And>x. y = Some x \<Longrightarrow> \<lbrace>P x\<rbrace> m x \<lbrace>Q\<rbrace>) \<Longrightarrow>
+   \<lbrace>\<lambda>s. (\<forall>x. y = Some x \<longrightarrow> P x s) \<and> (y = None \<longrightarrow> Q () s)\<rbrace> maybeM m y \<lbrace>Q\<rbrace>"
+  unfolding maybeM_def by (cases y; simp add: bind_def return_def valid_def)
+
+lemma ifM_wp:
+  assumes [wp]: "\<lbrace>Q\<rbrace> f \<lbrace>S\<rbrace>" "\<lbrace>R\<rbrace> g \<lbrace>S\<rbrace>"
+  assumes [wp]: "\<lbrace>A\<rbrace> P \<lbrace>\<lambda>c s. c \<longrightarrow> Q s\<rbrace>" "\<lbrace>B\<rbrace> P \<lbrace>\<lambda>c s. \<not>c \<longrightarrow> R s\<rbrace>"
+  shows "\<lbrace>A and B\<rbrace> ifM P f g \<lbrace>S\<rbrace>"
+  unfolding ifM_def using assms
+  by (fastforce simp: bind_def valid_def split: if_splits)
+
+lemma andM_wp:
+  assumes [wp]: "\<lbrace>Q'\<rbrace> B \<lbrace>Q\<rbrace>"
+  assumes [wp]: "\<lbrace>P\<rbrace> A \<lbrace>\<lambda>c s. c \<longrightarrow> Q' s\<rbrace>" "\<lbrace>P'\<rbrace> A \<lbrace>\<lambda>c s. \<not> c \<longrightarrow> Q False s\<rbrace>"
+  shows "\<lbrace>P and P'\<rbrace> andM A B \<lbrace>Q\<rbrace>"
+  unfolding andM_def by (wp ifM_wp return_wp)
+
+lemma orM_wp:
+  assumes [wp]: "\<lbrace>Q'\<rbrace> B \<lbrace>Q\<rbrace>"
+  assumes [wp]: "\<lbrace>P\<rbrace> A \<lbrace>\<lambda>c s. c \<longrightarrow> Q True s\<rbrace>" "\<lbrace>P'\<rbrace> A \<lbrace>\<lambda>c s. \<not> c \<longrightarrow> Q' s\<rbrace>"
+  shows "\<lbrace>P and P'\<rbrace> orM A B \<lbrace>Q\<rbrace>"
+  unfolding orM_def by (wp ifM_wp return_wp)
+
+lemma whenM_wp:
+  assumes [wp]: "\<lbrace>Q\<rbrace> f \<lbrace>S\<rbrace>"
+  assumes [wp]: "\<lbrace>A\<rbrace> P \<lbrace>\<lambda>c s. c \<longrightarrow> Q s\<rbrace>" "\<lbrace>B\<rbrace> P \<lbrace>\<lambda>c s. \<not>c \<longrightarrow> S () s\<rbrace>"
+  shows "\<lbrace>A and B\<rbrace> whenM P f \<lbrace>S\<rbrace>"
+  unfolding whenM_def by (wp ifM_wp return_wp)
 
 lemma hoare_K_bind[wp_split]:
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> K_bind f x \<lbrace>Q\<rbrace>"
@@ -975,6 +1007,7 @@ lemmas [wp] = hoare_vcg_prop
               state_select_wp
               condition_wp
               conditionE_wp
+              maybeM_wp ifM_wp andM_wp orM_wp whenM_wp
 
 lemmas [wp_trip] = valid_is_triple validE_is_triple validE_E_is_triple validE_R_is_triple
 
