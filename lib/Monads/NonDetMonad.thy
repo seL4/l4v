@@ -426,6 +426,10 @@ text \<open>The same for the exception monad:\<close>
 definition liftME :: "('a \<Rightarrow> 'b) \<Rightarrow> ('s,'e+'a) nondet_monad \<Rightarrow> ('s,'e+'b) nondet_monad" where
   "liftME f m \<equiv> doE x \<leftarrow> m; returnOk (f x) odE"
 
+text \<open> Execute @{term f} for @{term "Some x"}, otherwise do nothing. \<close>
+definition maybeM :: "('a \<Rightarrow> ('s, unit) nondet_monad) \<Rightarrow> 'a option \<Rightarrow> ('s, unit) nondet_monad" where
+  "maybeM f y \<equiv> case y of Some x \<Rightarrow> f x | None \<Rightarrow> return ()"
+
 text \<open>
   Run a sequence of monads from left to right, ignoring return values.\<close>
 definition sequence_x :: "('s, 'a) nondet_monad list \<Rightarrow> ('s, unit) nondet_monad" where
