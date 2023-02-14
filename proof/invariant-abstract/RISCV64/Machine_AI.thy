@@ -83,13 +83,13 @@ lemma det_getRestartPC: "det getRestartPC"
 lemma det_setNextPC: "det (setNextPC p)"
   by (simp add: setNextPC_def det_setRegister)
 
-
+(* FIXME empty_fail: make all empty_fail [intro!, wp], and non-conditional ones [simp] *)
 lemma ef_loadWord: "empty_fail (loadWord x)"
-  by (simp add: loadWord_def)
+  by (fastforce simp: loadWord_def)
 
 
 lemma ef_storeWord: "empty_fail (storeWord x y)"
-  by (simp add: storeWord_def)
+  by (fastforce simp: storeWord_def)
 
 
 lemma no_fail_getRestartPC: "no_fail \<top> getRestartPC"
@@ -363,7 +363,7 @@ lemma empty_fail_initL2Cache: "empty_fail initL2Cache"
 
 lemma empty_fail_clearMemory [simp, intro!]:
   "\<And>a b. empty_fail (clearMemory a b)"
-  by (simp add: clearMemory_def mapM_x_mapM ef_storeWord)
+  by (fastforce simp: clearMemory_def mapM_x_mapM ef_storeWord)
 
 lemma no_irq_setVSpaceRoot:
   "no_irq (setVSpaceRoot r a)"

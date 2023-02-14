@@ -640,7 +640,7 @@ proof -
     apply (rule P)
     apply assumption
    apply (erule(1) nf')
-  apply (case_tac ra, simp_all)
+  apply (simp split: sum.splits)
   done
 qed
 

@@ -189,7 +189,6 @@ lemma cap_delete_no_cap_to_obj_asid[wp, Tcb_AI_asms]:
   apply (simp add: cap_delete_def
                    no_cap_to_obj_with_diff_ref_ran_caps_form)
   apply wp
-   apply simp
    apply (rule use_spec)
    apply (rule rec_del_all_caps_in_range)
       apply (rule mp[OF _ obj_ref_none_no_asid(1)[of cap]], simp)
@@ -240,8 +239,9 @@ lemma tc_invs[Tcb_AI_asms]:
   apply (simp add: split_def set_mcpriority_def cong: option.case_cong)
   apply (rule hoare_vcg_precond_imp)
    apply wp
-      (* takes long: *)
-      apply ((simp only: simp_thms
+      (* takes long: (30 sec) *)
+      apply ((simp only: simp_thms cong: conj_cong
+        | (strengthen invs_strengthen)+
         | rule wp_split_const_if wp_split_const_if_R
                    hoare_vcg_all_lift_R
                    hoare_vcg_E_elim hoare_vcg_const_imp_lift_R

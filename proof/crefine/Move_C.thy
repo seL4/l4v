@@ -668,6 +668,7 @@ lemma empty_fail_asUser[iff]:
 lemma asUser_mapM_x:
   "(\<And>x. empty_fail (f x)) \<Longrightarrow>
     asUser t (mapM_x f xs) = do stateAssert (tcb_at' t) []; mapM_x (\<lambda>x. asUser t (f x)) xs od"
+  supply empty_fail_cond[simp]
   apply (simp add: mapM_x_mapM asUser_bind_distrib)
   apply (subst submonad_mapM [OF submonad_asUser submonad_asUser])
    apply simp
@@ -783,7 +784,7 @@ lemma empty_fail_rethrowFailure:
 lemma empty_fail_resolveAddressBits:
   "empty_fail (resolveAddressBits cap cptr bits)"
 proof -
-  note empty_fail_assertE[iff]
+  note empty_fail_cond[simp]
   show ?thesis
   apply (rule empty_fail_use_cutMon)
   apply (induct rule: resolveAddressBits.induct)
@@ -791,8 +792,7 @@ proof -
   apply (unfold Let_def cnode_cap_case_if fun_app_def
                 K_bind_def haskell_assertE_def split_def)
   apply (intro empty_fail_cutMon_intros)
-  apply (clarsimp simp: empty_fail_drop_cutMon empty_fail_whenEs
-                        locateSlot_conv returnOk_liftE[symmetric]
+  apply (clarsimp simp: empty_fail_drop_cutMon locateSlot_conv returnOk_liftE[symmetric]
                         isCap_simps)+
   done
 qed
@@ -826,8 +826,9 @@ lemma getMessageInfo_le3:
   apply wp
   apply (rule_tac Q="\<lambda>_. \<top>" in hoare_strengthen_post)
    apply wp
+  apply (rename_tac rv s)
   apply (simp add: messageInfoFromWord_def Let_def msgExtraCapBits_def)
-  apply (cut_tac y="r >> Types_H.msgLengthBits" in word_and_le1 [where a=3])
+  apply (cut_tac y="rv >> Types_H.msgLengthBits" in word_and_le1 [where a=3])
   apply (simp add: word_le_nat_alt)
   done
 
@@ -982,8 +983,7 @@ lemma empty_fail_slotCapLongRunningDelete:
   "empty_fail (slotCapLongRunningDelete slot)"
   by (auto simp: slotCapLongRunningDelete_def Let_def
                  case_Null_If isFinalCapability_def
-          split: if_split
-         intro!: empty_fail_bind)
+          split: if_split)
 
 lemmas mapM_x_append = mapM_x_append2
 

@@ -1224,7 +1224,7 @@ lemma getSyscallArg_ccorres_foo:
        apply (clarsimp simp: index_msgRegisters_less' ucast_up_less_bounded_iff_less_ucast_down')
        apply wp[1]
      apply (wp getMRs_tcbContext)
-    apply simp
+    apply fastforce
    apply (rule ccorres_seq_skip [THEN iffD2])
    apply (rule ccorres_add_return2)
    apply (rule ccorres_symb_exec_l)
@@ -1248,7 +1248,7 @@ lemma getSyscallArg_ccorres_foo:
                  in hoare_pre(1))
      apply (wp getMRs_user_word)
     apply (clarsimp simp: msgMaxLength_def unat_less_helper)
-   apply simp
+   apply fastforce
   apply (clarsimp simp: sysargs_rel_def sysargs_rel_n_def)
   apply (rule conjI, clarsimp simp: unat_of_nat64 word_bits_def)
    apply (drule equalityD2)

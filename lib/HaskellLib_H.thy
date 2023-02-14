@@ -60,7 +60,7 @@ declare haskell_assert_def [simp] haskell_assertE_def [simp]
 
 definition
   stateAssert :: "('a \<Rightarrow> bool) \<Rightarrow> unit list \<Rightarrow> ('a, unit) nondet_monad" where
- "stateAssert P L \<equiv> get >>= (\<lambda>s. assert (P s))"
+ "stateAssert P L \<equiv> state_assert P"
 
 definition
   stateAssertE :: "('a \<Rightarrow> bool) \<Rightarrow> unit list \<Rightarrow> ('a, 'e + unit) nondet_monad" where

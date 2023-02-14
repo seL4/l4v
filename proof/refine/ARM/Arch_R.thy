@@ -1522,7 +1522,8 @@ lemma createMappingEntires_valid_slots_duplicated'[wp]:
      apply (rule_tac Q' = "\<lambda>p s.  is_aligned p 6 \<and> page_table_at' (p && ~~ mask ptBits) s"
        in  hoare_post_imp_R)
       apply (wp lookupPTSlot_aligned lookupPTSlot_page_table_at')
-     apply (rule_tac x = r in exI)
+     apply (rename_tac rv s)
+     apply (rule_tac x = rv in exI)
      apply (clarsimp simp: largePagePTEOffsets_def pteBits_def)
      apply (frule is_aligned_no_wrap'[where off = "0x3c"])
       apply simp

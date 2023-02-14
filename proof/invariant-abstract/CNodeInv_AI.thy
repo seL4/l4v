@@ -423,6 +423,7 @@ lemma decode_cnode_inv_wf[wp]:
                                        and cte_wp_at (\<lambda>c. c = src_cap) src_slot
                                        and cte_wp_at ((=) cap.NullCap) x"
                        in hoare_post_imp)
+             apply (rename_tac rv s)
              apply (clarsimp simp: cte_wp_at_caps_of_state all_rights_def)
              apply (simp add: cap_master_update_cap_data weak_derived_update_cap_data
                               cap_asid_update_cap_data
@@ -430,7 +431,7 @@ lemma decode_cnode_inv_wf[wp]:
              apply (strengthen cap_badge_update_cap_data)
              apply simp
              apply (frule (1) caps_of_state_valid_cap)
-             apply (case_tac "is_zombie r")
+             apply (case_tac "is_zombie rv")
               apply (clarsimp simp add: valid_cap_def2 update_cap_data_def
                                         is_cap_simps
                               split: if_split_asm)

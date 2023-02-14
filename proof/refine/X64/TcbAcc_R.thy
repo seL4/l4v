@@ -14,7 +14,6 @@ declare if_weak_cong [cong]
 declare result_in_set_wp[wp]
 declare hoare_in_monad_post[wp]
 declare trans_state_update'[symmetric,simp]
-declare empty_fail_sequence_x[simp]
 declare storeWordUser_typ_at' [wp]
 
 (* Auxiliaries and basic properties of priority bitmap functions *)

@@ -188,6 +188,7 @@ crunches arch_check_irq, checkIRQ
 lemma arch_check_irq_maxIRQ_valid:
   "\<lbrace>\<top>\<rbrace> arch_check_irq y \<lbrace>\<lambda>_. (\<lambda>s. unat y \<le> unat maxIRQ)\<rbrace>, -"
   unfolding arch_check_irq_def
+  supply hoare_vcg_prop[wp del] (* FIXME lib: check rule order *)
   apply (wpsimp simp: validE_R_def wp: whenE_throwError_wp)
   by (metis unat_ucast_10_32 word_le_nat_alt word_le_not_less)
 

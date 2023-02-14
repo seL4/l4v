@@ -783,7 +783,8 @@ next
                   apply (rule corres_from_rdonly, simp_all)[1]
                     apply (wp+ | simp)+
                   apply (rule hoare_strengthen_post, rule hoare_post_taut)
-                  apply (case_tac r, auto simp add: in_monad)[1]
+                  apply (rename_tac rv s)
+                  apply (case_tac rv, auto simp add: in_monad)[1]
                  apply (simp add: corres_whenE_throwError_split_rhs corres_alternate2
                                   check_vp_alignment_def unlessE_whenE)
                  apply (clarsimp simp add: liftE_bindE[symmetric])
@@ -822,7 +823,8 @@ next
                  apply (rule corres_from_rdonly, simp_all)[1]
                    apply (wp+ | simp)+
                  apply (rule hoare_strengthen_post, rule hoare_post_taut)
-                 apply (case_tac r, auto simp add: in_monad)[1]
+                 apply (rename_tac rv s)
+                 apply (case_tac rv, auto simp add: in_monad)[1]
                 apply (simp add: corres_whenE_throwError_split_rhs corres_alternate2
                                  check_vp_alignment_def unlessE_whenE)
                 apply (clarsimp simp add: liftE_bindE[symmetric])
@@ -935,7 +937,8 @@ next
          apply (rule corres_from_rdonly, simp_all)[1]
            apply (wp | simp)+
          apply (rule hoare_strengthen_post, rule hoare_post_taut)
-         apply (case_tac r, auto simp add: in_monad)[1]
+         apply (rename_tac rv s)
+         apply (case_tac rv, auto simp add: in_monad)[1]
         apply (simp add: corres_whenE_throwError_split_rhs corres_alternate2
                          check_vp_alignment_def unlessE_whenE)
         apply clarsimp

@@ -1531,23 +1531,13 @@ lemma in_mres:
   "(tr, Result (rv, s)) \<in> S \<Longrightarrow> (rv, s) \<in> mres S"
   by (fastforce simp: mres_def intro: image_eqI[rotated])
 
-lemma alternative_valid:
-  assumes x: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
-  assumes y: "\<lbrace>P\<rbrace> f' \<lbrace>Q\<rbrace>"
-  shows      "\<lbrace>P\<rbrace> f \<sqinter> f' \<lbrace>Q\<rbrace>"
-  apply (simp add: valid_def alternative_def mres_def)
-  using post_by_hoare[OF x _ in_mres] post_by_hoare[OF y _ in_mres]
-  apply auto
-  done
-
 lemma alternative_wp:
   assumes x: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
   assumes y: "\<lbrace>P'\<rbrace> f' \<lbrace>Q\<rbrace>"
   shows      "\<lbrace>P and P'\<rbrace> f \<sqinter> f' \<lbrace>Q\<rbrace>"
-  apply (rule alternative_valid)
-   apply (rule hoare_pre_imp [OF _ x], simp)
-  apply (rule hoare_pre_imp [OF _ y], simp)
-  done
+  unfolding valid_def alternative_def mres_def
+  using post_by_hoare[OF x _ in_mres] post_by_hoare[OF y _ in_mres]
+  by fastforce
 
 lemma alternativeE_wp:
   assumes x: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>" and y: "\<lbrace>P'\<rbrace> f' \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"

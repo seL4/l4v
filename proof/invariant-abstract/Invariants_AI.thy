@@ -4695,4 +4695,14 @@ lemmas invs_implies =
   invs_sym_refs
   tcb_at_invs
 
+(* Pull invs out of a complex goal and prove it only once. Use as (strengthen invs_strengthen)+,
+   best in combination with simp and potentially conj_cong. *)
+lemma invs_strengthen:
+  "invs s \<Longrightarrow> P s \<longrightarrow> invs s"
+  "invs s \<and> (P s \<longrightarrow> Q s) \<Longrightarrow> P s \<longrightarrow> invs s \<and> Q s"
+  "invs s \<and> (P s \<longrightarrow> Q s) \<Longrightarrow> P s \<longrightarrow> Q s \<and> invs s"
+  "invs s \<and> (P s \<longrightarrow> Q s) \<Longrightarrow> P s \<longrightarrow> (invs and Q) s"
+  "invs s \<and> (P s \<longrightarrow> Q s) \<Longrightarrow> P s \<longrightarrow> (Q and invs) s"
+  by auto
+
 end

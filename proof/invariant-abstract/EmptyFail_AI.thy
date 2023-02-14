@@ -14,64 +14,7 @@ requalify_facts
   empty_fail_setDeadline
 end
 
-lemmas [wp] = empty_fail_bind empty_fail_bindE empty_fail_get empty_fail_modify
-              empty_fail_whenEs empty_fail_when empty_fail_gets empty_fail_assertE
-              empty_fail_error_bits empty_fail_mapM_x empty_fail_mapM empty_fail_sequence_x
-              ef_ignore_failure ef_machine_op_lift
-lemmas empty_fail_error_bits[simp]
-
-lemma maybeM_empty_fail[wp]: "\<forall>x. empty_fail (f x) \<Longrightarrow> empty_fail (maybeM f t)"
-  by (wpsimp simp: maybeM_def)
-
-lemma sequence_empty_fail[wp]:
-  "(\<And>m. m \<in> set ms \<Longrightarrow> empty_fail m) \<Longrightarrow> empty_fail (sequence ms)"
-  apply (induct ms)
-   apply (simp add: sequence_def | wp)+
-   done
-
-lemma sequenceE_empty_fail[wp]:
-  "(\<And>m. m \<in> set ms \<Longrightarrow> empty_fail m) \<Longrightarrow> empty_fail (sequenceE ms)"
-  apply (induct ms)
-   apply (simp add: sequenceE_def | wp)+
-   done
-
-lemma sequenceE_x_empty_fail[wp]:
-  "(\<And>m. m \<in> set ms \<Longrightarrow> empty_fail m) \<Longrightarrow> empty_fail (sequenceE_x ms)"
-  apply (induct ms)
-   apply (simp add: sequenceE_x_def | wp)+
-   done
-
-lemma mapME_empty_fail[wp]:
-  "(\<And>x. empty_fail (m x)) \<Longrightarrow> empty_fail (mapME m xs)"
-  by (clarsimp simp: mapME_def image_def | wp)+
-
-lemma mapME_x_empty_fail[wp]:
-  "(\<And>x. empty_fail (f x)) \<Longrightarrow> empty_fail (mapME_x f xs)"
-  by (clarsimp simp: mapME_x_def | wp)+
-
-lemma filterM_empty_fail[wp]:
-  "(\<And>m. m \<in> set ms \<Longrightarrow> empty_fail (P m)) \<Longrightarrow> empty_fail (filterM P ms)"
-  apply (induct ms)
-   apply (simp | wp)+
-   done
-
-lemma zipWithM_x_empty_fail[wp]:
-  "(\<And>x y. empty_fail (f x y)) \<Longrightarrow> empty_fail (zipWithM_x f xs ys)"
-  by (clarsimp simp: zipWithM_x_def zipWith_def | wp)+
-
-lemma zipWithM_empty_fail[wp]:
-  "(\<And>x y. empty_fail (f x y)) \<Longrightarrow> empty_fail (zipWithM f xs ys)"
-  by (clarsimp simp: zipWithM_def zipWith_def | wp)+
-
-lemma handle'_empty_fail[wp]:
-  "\<lbrakk>empty_fail f; \<And>e. empty_fail (handler e)\<rbrakk> \<Longrightarrow> empty_fail (f <handle2> handler)"
-  apply (simp add: handleE'_def | wp)+
-  apply (case_tac x, simp_all)
-  done
-
-lemma handle_empty_fail[wp]:
-  "\<lbrakk>empty_fail f; \<And>e. empty_fail (handler e)\<rbrakk> \<Longrightarrow> empty_fail (f <handle> handler)"
-  by (simp add: handleE_def | wp)+
+lemmas [wp] = ef_ignore_failure ef_machine_op_lift
 
 lemma lookup_error_on_failure_empty_fail[wp]:
   "empty_fail f \<Longrightarrow> empty_fail (lookup_error_on_failure a f)"
@@ -85,30 +28,9 @@ lemma unify_failure_empty_fail[wp]:
   "empty_fail f \<Longrightarrow> empty_fail (unify_failure f)"
   by (simp add: unify_failure_def | wp)+
 
-lemma if_split_empty_fail[wp]:
-  "\<lbrakk>P \<Longrightarrow> empty_fail f; \<not> P \<Longrightarrow> empty_fail g\<rbrakk> \<Longrightarrow> empty_fail (if P then f else g)"
-  by simp
-
 lemma const_on_failure_empty_fail[wp]:
   "empty_fail f \<Longrightarrow> empty_fail (const_on_failure a f)"
   by (simp add: const_on_failure_def catch_def split: sum.splits | wp)+
-
-lemma liftME_empty_fail[simp]:
-  "empty_fail (liftME f m) = empty_fail m"
-  apply (simp add: liftME_def)
-  apply (rule iffI)
-   apply (simp add: bindE_def)
-   apply (drule empty_fail_bindD1)
-   apply (simp | wp)+
-   done
-
-lemma select_empty_fail[wp]:
-  "S \<noteq> {} \<Longrightarrow> empty_fail (select S)"
-  by (simp add: empty_fail_def select_def)
-
-lemma select_f_empty_fail[wp]:
-  "(fst S = {} \<Longrightarrow> snd S) \<Longrightarrow> empty_fail (select_f S)"
-  by (simp add: select_f_def empty_fail_def)
 
 lemma select_ext_empty_fail:
   "S \<noteq> {} \<Longrightarrow> empty_fail (select_ext a S)"
@@ -124,7 +46,7 @@ lemma do_machine_op_empty_fail[wp]:
   "empty_fail f \<Longrightarrow> empty_fail (do_machine_op f)"
   apply (simp add: do_machine_op_def | wp)+
    apply (simp add: empty_fail_def)
-  apply (simp add: split_def)
+  apply (simp add: split_def empty_fail_cond)
   done
 
 lemma throw_on_false_empty_fail[wp]:
@@ -135,13 +57,9 @@ lemma without_preemption_empty_fail[wp]:
   "empty_fail f \<Longrightarrow> empty_fail (without_preemption f)"
   by simp
 
-lemma put_empty_fail[wp]:
-  "empty_fail (put f)"
-  by (simp add: put_def empty_fail_def)
-
 crunch_ignore (empty_fail)
   (add: NonDetMonad.bind bindE lift liftE liftM "when" whenE unless unlessE return fail
-        assert_opt mapM mapM_x sequence_x catch handleE do_extended_op
+        assert_opt mapM mapM_x sequence_x catch handleE do_extended_op returnOk throwError
         cap_insert_ext empty_slot_ext create_cap_ext cap_swap_ext cap_move_ext
         OR_choice OR_choiceE getRegister lookup_error_on_failure
         mapME_x const_on_failure liftME mapME do_machine_op select
@@ -149,7 +67,7 @@ crunch_ignore (empty_fail)
         decode_tcb_invocation without_preemption as_user syscall
         cap_fault_on_failure check_cap_at zipWithM filterM)
 
-crunch (empty_fail) empty_fail[wp]: set_object, gets_the, get_cap
+crunch (empty_fail) empty_fail[wp]: set_object, get_cap
   (simp: split_def kernel_object.splits)
 
 lemma check_cap_at_empty_fail[wp]:
@@ -282,7 +200,8 @@ context EmptyFail_AI_derive_cap begin
 
 lemma decode_cnode_invocation_empty_fail[wp]:
   "\<And>a b c d. empty_fail (decode_cnode_invocation a b c d :: (cnode_invocation, 'state_ext) se_monad)"
-  by (simp add: decode_cnode_invocation_def split: invocation_label.splits list.splits | wp | wpc | intro impI conjI allI)+
+  unfolding decode_cnode_invocation_def
+  by (wp | wpc | intro impI conjI allI)+
 
 end
 
@@ -326,7 +245,7 @@ context EmptyFail_AI_rec_del begin
 lemma rec_del_spec_empty_fail:
   fixes call and s :: "'state_ext state"
   shows "spec_empty_fail (rec_del call) s"
-proof (induct rule: rec_del.induct, simp_all only: drop_spec_empty_fail[OF empty_fail] rec_del_fails)
+proof (induct rule: rec_del.induct, simp_all only: drop_spec_empty_fail[OF empty_fail_fail] rec_del_fails)
   case (1 slot exposed s)
   show ?case
     apply (subst rec_del.simps)

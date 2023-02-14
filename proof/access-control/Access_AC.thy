@@ -1530,7 +1530,7 @@ lemma integrity_mono:
    apply (erule integrity_obj_atomic.cases[OF _ integrity_obj_atomic.intros];
           auto simp: indirect_send_def direct_send_def direct_call_def direct_reply_def
                elim: reply_cap_deletion_integrity_mono cnode_integrity_mono
-                     arch_integrity_obj_atomic_mono)
+                     arch_integrity_obj_atomic_mono)[1]
   apply (rule conjI)
    apply clarsimp
    apply (drule_tac x=x in spec)+

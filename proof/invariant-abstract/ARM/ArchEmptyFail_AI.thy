@@ -42,7 +42,7 @@ crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: possible_switch_to,set_t
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_fault
   (simp: kernel_object.splits option.splits arch_cap.splits cap.splits endpoint.splits
          bool.splits list.splits thread_state.splits split_def catch_def sum.splits
-         Let_def wp: zipWithM_x_empty_fail)
+         Let_def)
 
 crunch (empty_fail) empty_fail[wp]: decode_tcb_configure, decode_bind_notification, decode_unbind_notification,
   decode_set_priority, decode_set_mcpriority, decode_set_sched_params, decode_set_timeout_ep,
@@ -65,11 +65,13 @@ lemma arch_decode_ARMASIDControlMakePool_empty_fail:
    apply (simp add: isPageFlushLabel_def isPDFlushLabel_def split: arch_cap.splits)+
    apply (rule impI)
    apply (simp add: split_def)
-   apply wp
-    apply simp
+   apply (wp (once), simp)
    apply (subst bindE_assoc[symmetric])
    apply (rule empty_fail_bindE)
-    subgoal by (fastforce simp: empty_fail_def whenE_def throwError_def select_ext_def bindE_def bind_def return_def returnOk_def lift_def liftE_def fail_def gets_def get_def assert_def select_def split: if_split_asm)
+    subgoal by (force simp: empty_fail_def whenE_def throwError_def select_ext_def bindE_def
+                            bind_def return_def returnOk_def lift_def liftE_def fail_def gets_def
+                            get_def assert_def select_def
+                      split: if_split_asm)
    by (simp add: Let_def split: cap.splits arch_cap.splits option.splits bool.splits | wp | intro conjI impI allI)+
 
 lemma arch_decode_ARMASIDPoolAssign_empty_fail:
@@ -87,9 +89,9 @@ lemma arch_decode_ARMASIDPoolAssign_empty_fail:
    apply ((simp | wp)+)[1]
   apply (subst bindE_assoc[symmetric])
   apply (rule empty_fail_bindE)
-   subgoal by (fastforce simp: empty_fail_def whenE_def throwError_def select_def bindE_def
-                               bind_def return_def returnOk_def lift_def liftE_def select_ext_def
-                               gets_def get_def assert_def fail_def)
+   subgoal by (force simp: empty_fail_def whenE_def throwError_def select_def bindE_def
+                           bind_def return_def returnOk_def lift_def liftE_def select_ext_def
+                           gets_def get_def assert_def fail_def)
   apply wp
   done
 

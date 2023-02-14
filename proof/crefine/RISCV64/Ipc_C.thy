@@ -426,6 +426,7 @@ lemma handleArchFaultReply':
     msg \<leftarrow> getMRs s sb tag;
     handleArchFaultReply f r (msgLabel tag) msg
   od) x' = handleArchFaultReply' f s r tag x'"
+  supply  empty_fail_cond[simp]
   apply (unfold handleArchFaultReply'_def getMRs_def msgMaxLength_def
                 bit_def msgLengthBits_def msgRegisters_unfold
                 fromIntegral_simp1 fromIntegral_simp2
@@ -570,6 +571,7 @@ lemma handleFaultReply':
     msg \<leftarrow> getMRs s sb tag;
     handleFaultReply f r (msgLabel tag) msg
   od) (handleFaultReply' f s r)"
+  supply empty_fail_cond[simp]
   apply (unfold handleFaultReply'_def getMRs_def msgMaxLength_def
                 bit_def msgLengthBits_def msgRegisters_unfold
                 fromIntegral_simp1 fromIntegral_simp2
@@ -1889,12 +1891,12 @@ proof -
   let ?obj_at_ft = "obj_at' (\<lambda>tcb. tcbFault tcb = Some ft) sender"
   note symb_exec_r_fault = ccorres_symb_exec_r_known_rv_UNIV
           [where xf'=ret__unsigned_longlong_' and R="?obj_at_ft" and R'=UNIV]
+  note empty_fail_cond[simp]
   show ?thesis
     apply (unfold K_def)
     apply (intro ccorres_gen_asm)
     apply (cinit' lift: sender_' receiver_' receiveIPCBuffer_' simp: whileAnno_def)
-     apply (simp add: makeFaultMessage_def setMRs_to_setMR
-                 del: Collect_const split del: if_split)
+     apply (simp add: makeFaultMessage_def setMRs_to_setMR)
      apply (rule_tac val="fault_to_fault_tag ft" in symb_exec_r_fault)
         apply (vcg, clarsimp)
         apply (drule(1) obj_at_cslift_tcb)
@@ -1907,8 +1909,7 @@ proof -
       apply wpc
          apply (simp add: bind_assoc seL4_Fault_tag_defs ccorres_cond_iffs
                           Collect_True Collect_False
-                          zipWithM_mapM zip_append2 mapM_append
-                     del: Collect_const split del: if_split)
+                          zipWithM_mapM zip_append2 mapM_append)
          apply (rule ccorres_symb_exec_l)
             apply (rule ccorres_stateAssert)
             apply (rule_tac P="length msg = unat n_exceptionMessage"
@@ -3291,6 +3292,7 @@ proof -
   let ?curr = "\<lambda>s. current_extra_caps_' (globals s)"
   let ?EXCNONE = "{s. ret__unsigned_long_' s = scast EXCEPTION_NONE}"
   let ?interpret = "\<lambda>v n. take n (array_to_list (excaprefs_C v))"
+  note empty_fail_cond[simp]
   show ?thesis
   apply (rule ccorres_gen_asm)+
   apply (cinit(no_subst_asm) lift: thread_' bufferPtr_' info_' simp: whileAnno_def)
@@ -3845,6 +3847,7 @@ lemma copyMRsFaultReply_ccorres_syscall:
   let ?obj_at_ft = "obj_at' (\<lambda>tcb. tcbFault tcb = Some f) s"
   note symb_exec_r_fault = ccorres_symb_exec_r_known_rv_UNIV
           [where xf'=ret__unsigned_' and R="?obj_at_ft" and R'=UNIV]
+  note empty_fail_cond[simp]
   show ?thesis
     apply (unfold K_def, rule ccorres_gen_asm) using [[goals_limit=1]]
     apply (cinit' lift: sender_' receiver_'

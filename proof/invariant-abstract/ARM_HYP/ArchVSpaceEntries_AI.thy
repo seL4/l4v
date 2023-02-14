@@ -1033,8 +1033,6 @@ lemma perform_invocation_valid_pdpt[wp]:
          \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
   apply (cases i, simp_all)
   apply (wp send_signal_interrupt_states | simp)+
-  apply (clarsimp simp: invocation_duplicates_valid_def)
-  apply (wp | wpc | simp)+
   apply (simp add: arch_perform_invocation_def)
   apply (rule hoare_pre)
   apply (wp | wpc | simp)+
@@ -1513,7 +1511,7 @@ lemma handle_invocation_valid_pdpt[wp]:
 
 crunch valid_pdpt[wp]: handle_event, activate_thread,switch_to_thread,
        switch_to_idle_thread "valid_pdpt_objs"
-  (simp: crunch_simps wp: crunch_wps alternative_valid select_wp OR_choice_weak_wp select_ext_weak_wp
+  (simp: crunch_simps wp: crunch_wps alternative_wp select_wp OR_choice_weak_wp select_ext_weak_wp
       ignore: without_preemption getActiveIRQ resetTimer ackInterrupt
               getFAR getDFSR getIFSR OR_choice set_scheduler_action
               clearExMonitor)

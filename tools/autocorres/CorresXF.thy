@@ -249,7 +249,7 @@ lemma corresXF_join:
     apply (simp add: corresXF_simple_def split: sum.splits unit.splits)
     apply (clarsimp simp: NonDetMonad.lift_def throwError_def return_def)
     apply fastforce
-   apply (fastforce simp: NonDetMonad.validE_def split: sum.splits cong del: unit.case_cong)
+   apply (fastforce simp: NonDetMonadVCG.validE_def split: sum.splits cong del: unit.case_cong)
   apply simp
   done
 
@@ -263,7 +263,7 @@ lemma corresXF_except:
     apply (simp add: corresXF_simple_def split: sum.splits unit.splits)
     apply (clarsimp simp: NonDetMonad.lift_def throwError_def return_def)
     apply fastforce
-   apply (clarsimp simp: NonDetMonad.validE_def split: sum.splits cong del: unit.case_cong)
+   apply (clarsimp simp: NonDetMonadVCG.validE_def split: sum.splits cong del: unit.case_cong)
   apply simp
   done
 

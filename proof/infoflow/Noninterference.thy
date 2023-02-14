@@ -460,7 +460,7 @@ lemma schedule_cur_domain:
    schedule
    \<lbrace>\<lambda>_ s. P (cur_domain s)\<rbrace>"
    (is "\<lbrace>?PRE\<rbrace> _ \<lbrace>_\<rbrace>")
-  supply hoare_pre_cont[where a=next_domain, wp add]
+  supply hoare_pre_cont[where f=next_domain, wp add]
          ethread_get_wp[wp del] if_split[split del] if_cong[cong]
   apply (simp add: schedule_def schedule_choose_new_thread_def | wp | wpc)+
                apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_strengthen_post)
@@ -477,7 +477,7 @@ lemma schedule_domain_fields:
    schedule
    \<lbrace>\<lambda>_. domain_fields P\<rbrace>"
    (is "\<lbrace>?PRE\<rbrace> _ \<lbrace>_\<rbrace>")
-  supply hoare_pre_cont[where a=next_domain, wp add]
+  supply hoare_pre_cont[where f=next_domain, wp add]
          ethread_get_wp[wp del] if_split[split del] if_cong[cong]
   apply (simp add: schedule_def schedule_choose_new_thread_def | wp | wpc)+
                apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_strengthen_post)
@@ -2103,8 +2103,7 @@ lemma tcb_sched_action_reads_respects_g':
             apply (rule doesnt_touch_globalsI | simp | wp)+
        apply (clarsimp simp: equiv_valid_2_def gets_apply_def get_def bind_def return_def
                              labels_are_invisible_def)
-       apply wp+
-  apply clarsimp
+       apply wpsimp+
   apply (clarsimp simp: pas_refined_def tcb_domain_map_wellformed_aux_def)
   apply (erule_tac x="(thread, tcb_domain y)" in ballE)
    apply force
@@ -2272,7 +2271,7 @@ lemma schedule_choose_new_thread_reads_respects_g:
   apply (subst gets_app_rewrite[where y=domain_time and f="\<lambda>x. x = 0"])+
   apply (wp gets_domain_time_zero_ev set_scheduler_action_reads_respects_g
             choose_thread_reads_respects_g ev_pre_cont[where f=next_domain]
-            hoare_pre_cont[where a=next_domain] when_ev)
+            hoare_pre_cont[where f=next_domain] when_ev)
   apply (clarsimp simp: valid_sched_def word_neq_0_conv)
   done
 

@@ -432,8 +432,7 @@ lemma set_parent_has_children[wp]:
 lemma create_cap_has_children[wp]:
   "\<lbrace>\<top>\<rbrace> create_cap new_type sz uref slot dev \<lbrace>\<lambda>r. has_children uref\<rbrace>"
   apply (clarsimp simp :create_cap_def split_def)
-  apply wp
-  apply simp
+  apply wpsimp
   done
 
 abbreviation (input) "retype_with_kids uinv
@@ -533,12 +532,10 @@ lemma invoke_untyped_one_wp:
 
 lemma mark_tcb_intent_error_has_children[wp]:
   "\<lbrace>\<lambda>s. P (has_children ptr s)\<rbrace>
-  mark_tcb_intent_error cur_thread b
-  \<lbrace>\<lambda>rv s. P (has_children ptr s)\<rbrace>"
-  apply (simp add:has_children_def is_cdt_parent_def
-    mark_tcb_intent_error_def update_thread_def
-    set_object_def | wp | wpc)+
-  done
+   mark_tcb_intent_error cur_thread b
+   \<lbrace>\<lambda>rv s. P (has_children ptr s)\<rbrace>"
+  by (wpsimp simp: has_children_def is_cdt_parent_def mark_tcb_intent_error_def update_thread_def
+                   set_object_def)
 
 crunch cdt[wp]: corrupt_frame "\<lambda>s. P (cdl_cdt s)"
 (wp:select_wp simp:crunch_simps corrupt_intents_def)
@@ -871,12 +868,10 @@ lemma update_thread_no_pending:
     K(\<forall>x. (case cdl_tcb_caps x tcb_pending_op_slot of Some cap \<Rightarrow> \<not> is_pending_cap cap | _ \<Rightarrow> True)\<longrightarrow>
           (case cdl_tcb_caps (t x) tcb_pending_op_slot of Some cap \<Rightarrow> \<not> is_pending_cap cap | _ \<Rightarrow> True))\<rbrace>
     update_thread thread_ptr t \<lbrace>\<lambda>rv. no_pending\<rbrace>"
-  apply (simp add: update_thread_def set_object_def | (wp modify_wp)+ | wpc)+
-  apply (clarsimp simp: no_pending_def)
-  apply (drule_tac x = oid in spec)
-  apply (clarsimp simp: opt_cap_def slots_of_def
-                        object_slots_def
-                 split: if_splits option.splits)
+  unfolding update_thread_def set_object_def
+  apply wpsimp
+  apply (fastforce simp: opt_cap_def slots_of_def object_slots_def no_pending_def
+                   split: if_splits option.splits)
   done
 
 lemma update_thread_tcb_at:

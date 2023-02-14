@@ -204,7 +204,6 @@ lemma cap_delete_no_cap_to_obj_asid[wp, Tcb_AI_asms]:
   apply (simp add: cap_delete_def
                    no_cap_to_obj_with_diff_ref_ran_caps_form)
   apply wp
-  apply simp
   apply (rule use_spec)
   apply (rule rec_del_all_caps_in_range)
      apply (simp | rule obj_ref_none_no_asid)+

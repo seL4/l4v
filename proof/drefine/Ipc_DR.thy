@@ -1345,7 +1345,8 @@ next
        \<and> valid_mdb s \<and> QM s cap'))" for QM
        in hoare_post_imp_R)
        prefer 2
-       apply (subgoal_tac "r\<noteq> cap.NullCap \<longrightarrow> cte_wp_at ((\<noteq>) cap.NullCap) (slot_ptr, slot_idx) s")
+       apply (rename_tac rv s)
+       apply (subgoal_tac "rv \<noteq> cap.NullCap \<longrightarrow> cte_wp_at ((\<noteq>) cap.NullCap) (slot_ptr, slot_idx) s")
         apply (intro impI)
         apply simp
         apply (elim conjE)

@@ -37,7 +37,7 @@ context Arch begin global_naming X64
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_fault
   (simp: kernel_object.splits option.splits arch_cap.splits cap.splits endpoint.splits
          bool.splits list.splits thread_state.splits split_def catch_def sum.splits
-         Let_def wp: zipWithM_x_empty_fail)
+         Let_def)
 
 lemma port_out_empty_fail[simp, intro!]:
   assumes ef: "\<And>a. empty_fail (oper a)"
@@ -80,12 +80,11 @@ lemma arch_decode_X64ASIDControlMakePool_empty_fail:
    apply (simp split: arch_cap.splits)
    apply (intro conjI impI)
    apply (simp add: split_def)
-   apply wp
-    apply simp
+   apply (wp (once), simp)
    apply (subst bindE_assoc[symmetric])
    apply (rule empty_fail_bindE)
-    subgoal by (fastforce simp: empty_fail_def whenE_def throwError_def select_ext_def bindE_def bind_def return_def
-                                returnOk_def lift_def liftE_def fail_def gets_def get_def assert_def select_def split: if_split_asm)
+    subgoal by (force simp: empty_fail_def whenE_def throwError_def select_ext_def bindE_def bind_def return_def
+                            returnOk_def lift_def liftE_def fail_def gets_def get_def assert_def select_def split: if_split_asm)
   apply (simp add: Let_def split: cap.splits arch_cap.splits option.splits bool.splits | wp | intro conjI impI allI)+
   by (clarsimp simp add: decode_page_invocation_def decode_page_table_invocation_def
                          decode_page_directory_invocation_def decode_pdpt_invocation_def
@@ -110,9 +109,9 @@ lemma arch_decode_X64ASIDPoolAssign_empty_fail:
    apply ((simp | wp)+)[1]
   apply (subst bindE_assoc[symmetric])
   apply (rule empty_fail_bindE)
-   subgoal by (fastforce simp: empty_fail_def whenE_def throwError_def select_def bindE_def
-                               bind_def return_def returnOk_def lift_def liftE_def select_ext_def
-                               gets_def get_def assert_def fail_def)
+   subgoal by (force simp: empty_fail_def whenE_def throwError_def select_def bindE_def
+                           bind_def return_def returnOk_def lift_def liftE_def select_ext_def
+                           gets_def get_def assert_def fail_def)
   apply (clarsimp simp: decode_page_invocation_def decode_page_table_invocation_def
                          decode_page_directory_invocation_def decode_pdpt_invocation_def | wp | intro conjI)+
   done
@@ -142,9 +141,7 @@ context Arch begin global_naming X64
 
 lemma flush_table_empty_fail[simp, wp]: "empty_fail (flush_table a b c d)"
   unfolding flush_table_def
-  apply simp
-  apply (wp | wpc | simp)+
-  done
+  by wpsimp
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: maskInterrupt, empty_slot,
     finalise_cap, preemption_point,
@@ -152,7 +149,7 @@ crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: maskInterrupt, empty_slo
   (simp: Let_def catch_def split_def OR_choiceE_def mk_ef_def option.splits endpoint.splits
          notification.splits thread_state.splits sum.splits cap.splits arch_cap.splits
          kernel_object.splits vmpage_size.splits pde.splits bool.splits list.splits
-         forM_x_def empty_fail_mapM_x set_object_def
+         set_object_def
    ignore: nativeThreadUsingFPU_impl switchFpuOwner_impl)
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: setRegister, setNextPC

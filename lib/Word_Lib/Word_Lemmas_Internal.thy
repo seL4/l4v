@@ -30,6 +30,13 @@ unbundle bit_operations_syntax
 unbundle bit_projection_infix_syntax
 unbundle l4v_word_context
 
+(* Override default word enum code generation setup, so that "value" and "eval"
+   work with quantification over word. *)
+lemma [code]:
+  \<open>Enum.enum_all P \<longleftrightarrow> list_all P enum\<close>
+  \<open>Enum.enum_ex P \<longleftrightarrow> list_ex P enum\<close> for P :: \<open>'a::len word \<Rightarrow> bool\<close>
+  by (auto simp: list_all_iff list_ex_iff)
+
 lemmas shiftl_nat_def = push_bit_eq_mult[of _ a for a::nat, folded shiftl_def]
 lemmas shiftr_nat_def = drop_bit_eq_div[of _ a for a::nat, folded shiftr_def]
 

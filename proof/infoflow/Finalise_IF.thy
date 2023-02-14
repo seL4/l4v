@@ -583,7 +583,7 @@ lemma tcb_sched_action_reads_respects:
         apply (simp | wp)+
        apply (clarsimp simp: equiv_valid_2_def gets_apply_def get_def
                              bind_def return_def labels_are_invisible_def)
-      apply wp+
+      apply wpsimp+
   apply (force intro: domtcbs simp: get_etcb_def pas_refined_def tcb_domain_map_wellformed_aux_def)
   done
 
