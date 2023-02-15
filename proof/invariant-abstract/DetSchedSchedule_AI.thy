@@ -6776,7 +6776,7 @@ lemma preemption_point_current_time_bounded[wp]:
   "preemption_point \<lbrace>current_time_bounded\<rbrace>"
   unfolding preemption_point_def
   apply (wpsimp simp: preemption_point_def do_extended_op_def
-                  wp: OR_choiceE_weak_wp hoare_drop_imps
+                  wp: OR_choiceE_weak_wp hoare_drop_imps hoare_vcg_all_lift
                       update_time_stamp_current_time_bounded)
   done
 
@@ -13509,8 +13509,8 @@ lemma sched_context_donate_weak_budget_conditions:
      sched_context_donate scp tcbptr
    \<lbrace>\<lambda>r s. budget_ready tcbptr s \<and> budget_sufficient tcbptr s\<rbrace>"
   unfolding sched_context_donate_def
-  apply (wpsimp wp: set_object_wp get_object_wp tcb_sched_context_update_weak_budget_conditions sc_tcb_update_budget_conditions)
-  apply (wpsimp wp: set_object_wp get_object_wp simp: test_reschedule_def get_sc_obj_ref_def)+
+  apply (wpsimp wp: set_object_wp get_object_wp tcb_sched_context_update_weak_budget_conditions
+                    sc_tcb_update_budget_conditions)
   done
 
 lemma refill_unblock_check_released_if_bound[wp]:
@@ -17378,6 +17378,7 @@ lemma handle_event_cur_sc_chargeable:
        apply (case_tac syscall; simp)
                  apply (wpsimp simp: handle_send_def handle_call_def
                                  wp: handle_invocation_cur_sc_chargeable check_budget_restart_true
+                                     hoare_vcg_if_lift2
                         | erule active_from_running)+
   done
 
@@ -20416,18 +20417,18 @@ crunches update_time_stamp
   and tcb_scps_of_sc_tcbs_of[wp]: "\<lambda>s. P (tcb_scps_of s) (sc_tcbs_of s)"
 
 method handle_event_valid_sched_single
-  = (wpsimp wp: handle_invocation_valid_sched)
-     , simp add: imp_conjR
-     , ((wpsimp wp: hoare_vcg_conj_lift
-         | wpsimp wp: check_budget_restart_true check_budget_restart_valid_sched_weaker
-                      update_time_stamp_current_time_bounded)+
-     , fastforce elim!: valid_sched_ct_not_queued active_from_running
-                 intro: active_sc_valid_refillsE)
+  = wpsimp wp: handle_invocation_valid_sched hoare_vcg_if_lift2,
+    simp add: imp_conjR,
+    ((wpsimp wp: hoare_vcg_conj_lift
+      | wpsimp wp: check_budget_restart_true check_budget_restart_valid_sched_weaker
+                   update_time_stamp_current_time_bounded)+,
+    fastforce elim!: valid_sched_ct_not_queued active_from_running
+              intro: active_sc_valid_refillsE)
 
 method handle_event_valid_sched_combined
-  =(wpsimp wp: handle_invocation_valid_sched handle_recv_valid_sched
-                check_budget_restart_valid_sched_weaker handle_invocation_current_time_bounded
-          simp: schedulable_def2 active_sc_tcb_at_fold),
+  = wpsimp wp: handle_invocation_valid_sched handle_recv_valid_sched hoare_vcg_if_lift2
+               check_budget_restart_valid_sched_weaker handle_invocation_current_time_bounded
+         simp: schedulable_def2 active_sc_tcb_at_fold,
     simp add: imp_conjR,
     (wpsimp wp: hoare_vcg_conj_lift
      | wpsimp wp: check_budget_restart_true check_budget_restart_valid_sched_weaker
@@ -20443,23 +20444,22 @@ method handle_event_valid_sched_combined
     (rule cur_sc_not_idle_sc_ptr; fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
 
 method handle_event_valid_sched_yield
-  = (wpsimp wp: handle_yield_valid_sched
-     , simp add: imp_conjR
-     , (wpsimp wp: check_budget_restart_true check_budget_restart_valid_sched_weaker
-                   update_time_stamp_current_time_bounded)+
-     , fastforce elim!: valid_sched_ct_not_queued elim: invs_cur_sc_chargeableE
-                intro!: active_sc_valid_refillsE)
+  = wpsimp wp: handle_yield_valid_sched hoare_vcg_if_lift2,
+    simp add: imp_conjR,
+    (wpsimp wp: check_budget_restart_true check_budget_restart_valid_sched_weaker
+                update_time_stamp_current_time_bounded)+,
+    fastforce elim!: valid_sched_ct_not_queued elim: invs_cur_sc_chargeableE
+             intro!: active_sc_valid_refillsE
 
 method handle_event_valid_sched_fault
-  = ((wpsimp wp: handle_fault_valid_sched check_budget_restart_valid_sched_weaker
+  = (wpsimp wp: handle_fault_valid_sched check_budget_restart_valid_sched_weaker
                  check_budget_restart_true hoare_vcg_if_lift2 hoare_vcg_disj_lift
                  update_time_stamp_current_time_bounded
-      | strengthen invs_retract_tcb_scps)+
-     , frule active_from_running
-     , clarsimp simp: valid_fault_def ct_in_state_def2[symmetric] is_timeout_fault_def
-     , strengthen schact_is_rct_sane valid_sched_ct_not_queued
-                  ct_runnable_ct_not_blocked
-     , simp,subgoal_tac "ct_released s",
+     | strengthen invs_retract_tcb_scps)+,
+    frule active_from_running,
+    clarsimp simp: valid_fault_def ct_in_state_def2[symmetric] is_timeout_fault_def,
+    strengthen schact_is_rct_sane valid_sched_ct_not_queued ct_runnable_ct_not_blocked,
+    simp, subgoal_tac "ct_released s",
     fastforce dest: valid_sched_ct_not_queued
               elim: active_from_running
               simp: runnable_eq_active released_sc_tcb_at_def
@@ -20467,7 +20467,7 @@ method handle_event_valid_sched_fault
              intro: active_sc_valid_refillsE,
     (rule schact_is_rct_ct_released; fastforce?),
     (frule invs_strengthen_cur_sc_tcb_are_bound; fastforce?),
-    (rule cur_sc_not_idle_sc_ptr; fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def))
+    (rule cur_sc_not_idle_sc_ptr; fastforce simp: ct_in_state_def pred_tcb_at_def obj_at_def)
 
 lemma handle_event_valid_sched:
   "\<lbrace>invs
@@ -20488,10 +20488,10 @@ lemma handle_event_valid_sched:
 
   (* SyscallEvent *)
        subgoal for syscall
-         by (case_tac syscall, simp_all add: handle_send_def handle_call_def liftE_bindE
-             , (handle_event_valid_sched_single
-                | handle_event_valid_sched_combined
-                | handle_event_valid_sched_yield)+)
+         by (case_tac syscall, simp_all add: handle_send_def handle_call_def liftE_bindE,
+             (handle_event_valid_sched_single
+              | handle_event_valid_sched_combined
+              | handle_event_valid_sched_yield)+)
 
       apply (find_goal \<open>match premises in "_ = Interrupt" \<Rightarrow> \<open>-\<close>\<close>)
       defer
@@ -20551,7 +20551,7 @@ lemma handle_event_consumed_time_bounded[wp]:
   "\<lbrace>consumed_time_bounded and valid_machine_time\<rbrace>
    handle_event e
    \<lbrace>\<lambda>_. consumed_time_bounded :: det_state \<Rightarrow> _\<rbrace>"
-  apply (case_tac e; simp; wpsimp wp: hoare_drop_imp hoare_drop_impE cong: conj_cong)
+  apply (case_tac e; simp; wpsimp wp: hoare_drop_imp hoare_vcg_if_lift2)
   done
 
 end
@@ -20685,6 +20685,7 @@ lemma handle_event_ct_not_queuedE_E[wp]:
              apply (case_tac syscall; simp)
              apply (wpsimp simp: handle_call_def handle_send_def
                              wp: handle_invocation_ct_not_queued_E_E check_budget_restart_true
+                                 hoare_vcg_if_lift2
                     | erule active_from_running)+
        done
       apply wpsimp+
@@ -20776,7 +20777,7 @@ lemma handle_event_ct_not_in_release_qE_E[wp]:
        apply (case_tac syscall; simp)
                  apply (wpsimp simp: handle_send_def handle_call_def
                                  wp: handle_invocation_ct_not_in_release_qE_E
-                                     check_budget_restart_true)+
+                                     check_budget_restart_true hoare_vcg_if_lift2)+
   done
 
 lemma check_budget_restart_scheduler_act_sane[wp]:
@@ -20997,11 +20998,12 @@ lemma handle_event_ct_not_blockedE_E[wp]:
    -, \<lbrace>\<lambda>rv. ct_not_blocked :: 'state_ext state \<Rightarrow> _\<rbrace>"
   apply (case_tac e; simp)
        subgoal for syscall
-       apply (case_tac syscall; simp)
-                  apply (wpsimp simp: handle_call_def handle_send_def wp: check_budget_restart_true
-                         | erule active_from_running)+
-       done
-       apply (wpsimp)+
+         apply (case_tac syscall; simp)
+                    apply (wpsimp simp: handle_call_def handle_send_def
+                                    wp: check_budget_restart_true hoare_vcg_if_lift2
+                           | erule active_from_running)+
+         done
+      apply wpsimp+
   done
 
 lemma handle_yield_scheduler_act_sane[wp]:
@@ -21070,18 +21072,19 @@ lemma handle_event_scheduler_act_sane:
   subgoal for syscall
     apply (case_tac syscall; simp)
               apply (wpsimp simp: handle_call_def
-                              wp: handle_invocation_schact_sane check_budget_restart_true check_budget_restart_false)
+                              wp: handle_invocation_schact_sane check_budget_restart_true
+                                  check_budget_restart_false hoare_vcg_if_lift2)
               apply (fastforce elim: active_from_running)
              apply ((wpsimp wp: handle_invocation_schact_sane check_budget_restart_true
-                                 check_budget_restart_false
-                    | strengthen ct_runnable_ct_not_blocked active_from_running)+)[1]
+                                check_budget_restart_false hoare_vcg_if_lift2
+                     | strengthen ct_runnable_ct_not_blocked active_from_running)+)[1]
              apply (clarsimp simp: schedulable_def2 )
              apply (strengthen schact_is_rct_ct_active_sc)
              apply (clarsimp simp: schact_is_rct_def ct_in_state_def2[symmetric] runnable_eq_active)
              apply (fastforce elim: active_from_running)
             apply ((wpsimp simp: handle_call_def handle_send_def
                             wp: handle_invocation_schact_sane check_budget_restart_true
-                                check_budget_restart_false
+                                check_budget_restart_false hoare_vcg_if_lift2
                    | strengthen ct_runnable_ct_not_blocked active_from_running)+)[1]
             apply (clarsimp simp: schedulable_def2 )
             apply (strengthen schact_is_rct_ct_active_sc)
@@ -21089,7 +21092,7 @@ lemma handle_event_scheduler_act_sane:
             apply (fastforce elim: active_from_running)
            apply ((wpsimp simp: handle_call_def handle_send_def
                            wp: handle_invocation_schact_sane check_budget_restart_true
-                               check_budget_restart_false
+                               check_budget_restart_false hoare_vcg_if_lift2
                   | strengthen ct_runnable_ct_not_blocked active_from_running)+)[1]
            apply (clarsimp simp: schedulable_def2 )
            apply (strengthen schact_is_rct_ct_active_sc)
@@ -21097,17 +21100,17 @@ lemma handle_event_scheduler_act_sane:
            apply (fastforce elim: active_from_running)
           apply ((wpsimp simp: handle_call_def handle_send_def
                           wp: handle_invocation_schact_sane check_budget_restart_true
-                              check_budget_restart_false
+                              check_budget_restart_false hoare_vcg_if_lift2
                  | strengthen ct_runnable_ct_not_blocked active_from_running)+)[1]
           apply fastforce
          apply ((wpsimp simp: handle_call_def handle_send_def
-                         wp: handle_invocation_schact_sane check_budget_restart_true
-                             check_budget_restart_false
+                          wp: handle_invocation_schact_sane check_budget_restart_true
+                              check_budget_restart_false hoare_vcg_if_lift2
                 | strengthen ct_runnable_ct_not_blocked active_from_running)+)[1]
          apply fastforce
         apply (wpsimp simp: handle_call_def handle_send_def
                         wp: handle_invocation_schact_sane check_budget_restart_true
-                            check_budget_restart_false
+                            check_budget_restart_false hoare_vcg_if_lift2
                | strengthen ct_runnable_ct_not_blocked active_from_running)+
     done
       apply (wpsimp wp: check_budget_restart_if_lift, fastforce)
@@ -22503,8 +22506,9 @@ lemma handle_event_cur_sc_offset_readyE_E[wp]:
    -, \<lbrace>\<lambda>rv s. cur_sc_active s \<longrightarrow> cur_sc_offset_ready (consumed_time s) (s::det_state)\<rbrace>"
   apply (case_tac e; (solves \<open>wpsimp\<close>)?; simp)
   apply (rename_tac syscall)
-  apply (case_tac syscall; simp add: handle_send_def handle_call_def; (solves \<open>wpsimp\<close>)?)
-       by (wpsimp wp: check_budget_restart_true)+
+  apply (case_tac syscall; simp add: handle_send_def handle_call_def;
+         wpsimp wp: check_budget_restart_true hoare_vcg_if_lift2)
+  done
 
 end
 
@@ -24977,10 +24981,11 @@ method cur_sc_in_release_q_imp_zero_consumed_syscall_single for e
                             \<and> (cur_sc_active s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s)
                             \<and> consumed_time_bounded s \<and> current_time_bounded s"
           in hoare_vcg_seqE[rotated],
-    wpsimp wp: update_time_stamp_current_time_bounded hoare_vcg_disj_lift,
+    wpsimp wp: update_time_stamp_current_time_bounded hoare_vcg_disj_lift hoare_vcg_if_lift2,
     wpsimp simp: handle_call_def handle_send_def,
     ((wpsimp simp: imp_conjR
                wp: hoare_vcg_conj_lift check_budget_restart_true_cur_sc_more_than_ready
+                   hoare_vcg_if_lift2
       | wp check_budget_restart_true check_budget_restart_false)+)[1],
     wpsimp wp: update_timestamp_cur_sc_in_release_q_imp_zero_consumed
          cong: conj_cong,
@@ -25011,15 +25016,16 @@ method cur_sc_in_release_q_imp_zero_consumed_syscall_combined for e
                       \<and> current_time_bounded s"
           in hoare_vcg_seqE[rotated],
     wpsimp wp: update_timestamp_cur_sc_in_release_q_imp_zero_consumed
-               update_time_stamp_current_time_bounded hoare_vcg_disj_lift,
+               update_time_stamp_current_time_bounded hoare_vcg_disj_lift hoare_vcg_if_lift2,
     fastforce dest: invs_cur_sc_chargeableE,
     clarsimp simp: current_time_bounded_2_def,
     wpsimp wp: handle_invocation_valid_sched
                check_budget_restart_cur_sc_in_release_q_imp_zero_consumed
-                check_budget_restart_true_cur_sc_more_than_ready,
+               check_budget_restart_true_cur_sc_more_than_ready hoare_vcg_if_lift2,
     ((wpsimp simp: imp_conjR
                wp: hoare_vcg_conj_lift check_budget_restart_true_cur_sc_more_than_ready
-      | wp check_budget_restart_true check_budget_restart_false
+                   hoare_vcg_if_lift2
+      | wp check_budget_restart_true check_budget_restart_false hoare_vcg_if_lift2
            handle_invocation_current_time_bounded)+),
     clarsimp cong: conj_cong,
     (intro conjI impI;
@@ -25303,8 +25309,9 @@ lemma install_tcb_cap_not_ipc_queued_thread[wp]:
    install_tcb_cap target slot n slot_opt
    \<lbrace>\<lambda>_. st_tcb_at (not ipc_queued_thread_state) t :: det_state \<Rightarrow> _\<rbrace>"
   unfolding install_tcb_cap_def
-  by (wpsimp wp: check_cap_inv hoare_drop_imp thread_set_not_state_valid_sched
-      | fastforce simp: pred_tcb_weakenE)+
+  apply (wpsimp wp: check_cap_inv hoare_drop_imp thread_set_not_state_valid_sched
+         | fastforce simp: pred_tcb_weakenE pred_neg_def)+
+  done
 
 lemma finalise_cap_released_if_bound[wp]:
   "\<lbrace>released_if_bound_sc_tcb_at t and st_tcb_at (not ipc_queued_thread_state) t
@@ -25368,8 +25375,9 @@ lemma install_tcb_cap_released_if_bound[wp]:
    install_tcb_cap target slot n slot_opt
    \<lbrace>\<lambda>_. released_if_bound_sc_tcb_at t :: det_state \<Rightarrow> _\<rbrace>"
   unfolding install_tcb_cap_def
-  by (wpsimp wp: check_cap_inv hoare_drop_imp thread_set_not_state_valid_sched
-      | fastforce simp: pred_tcb_weakenE)+
+  apply (wpsimp wp: check_cap_inv hoare_drop_imp thread_set_not_state_valid_sched hoare_vcg_if_lift2
+         | fastforce simp: pred_tcb_weakenE)+
+  done
 
 lemma maybe_sched_context_unbind_tcb_released_if_bound[wp]:
   "maybe_sched_context_unbind_tcb target \<lbrace>\<lambda>s. released_if_bound_sc_tcb_at t s\<rbrace>"
@@ -26156,24 +26164,24 @@ method wpsimp_str uses wp simp str
                    consumed_time_bounded_helper)+)[1]
 
 method he_ctris_handle_recv
-  = wpsimp_str wp: check_budget_restart_false check_budget_restart_true
+  = wpsimp_str wp: check_budget_restart_false check_budget_restart_true hoare_vcg_if_lift2
                    update_time_stamp_current_time_bounded,
     fastforce intro!: schact_is_rct_ct_released
                 elim: invs_cur_sc_chargeableE
 
 method he_ctris_handle_fault
   = wpsimp_str wp: check_budget_restart_if_lift
-                     handle_fault_ct_ready_if_schedulable_not_blocked_on_receive
-                     update_time_stamp_current_time_bounded,
+                   handle_fault_ct_ready_if_schedulable_not_blocked_on_receive
+                   update_time_stamp_current_time_bounded hoare_vcg_if_lift2,
     fastforce intro!: schact_is_rct_ct_released
                 elim: invs_cur_sc_chargeableE ct_in_state_weaken
 
 method he_ctris_two_phase_wp
- = wpsimp_str wp: check_budget_restart_false handle_invocation_valid_sched,
+ = wpsimp_str wp: check_budget_restart_false handle_invocation_valid_sched hoare_vcg_if_lift2,
    wpsimp simp: factor_imp_on_left
                 conj_commute[where Q="schact_is_rct s" for s]
                 move_Q_to_front_conj[where Q="cur_sc_offset_sufficient a b" for a b],
-   wpsimp wp: check_budget_restart_false check_budget_restart_true,
+   wpsimp wp: check_budget_restart_false check_budget_restart_true hoare_vcg_if_lift2,
    wpsimp_str simp: schedulable_def2
                wp: check_budget_restart_false handle_invocation_valid_sched
                    update_time_stamp_current_time_bounded
@@ -26204,7 +26212,8 @@ lemma handle_event_ct_ready_if_schedulable[wp]:
   subgoal for syscall
     apply (case_tac syscall; simp add: handle_call_def handle_send_def)
               apply (wpsimp simp: conj_commute[where Q="schact_is_rct s" for s]
-                                  move_Q_to_front_conj[where Q="cur_sc_offset_sufficient a b" for a b])
+                                  move_Q_to_front_conj[where Q="cur_sc_offset_sufficient a b" for a b]
+                              wp: hoare_vcg_if_lift2)
                 apply (wpsimp wp: check_budget_restart_false check_budget_restart_true
                                   update_time_stamp_current_time_bounded)
                apply (wpsimp_str wp: update_time_stamp_current_time_bounded)

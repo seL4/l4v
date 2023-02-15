@@ -285,7 +285,7 @@ lemma awaken_empty_fail[intro!, wp, simp]:
 lemma ThreadDecls_H_schedule_empty_fail[intro!, wp, simp]:
   "empty_fail schedule"
   apply (simp add: schedule_def scAndTimer_def checkDomainTime_def)
-  apply (clarsimp simp: scheduleChooseNewThread_def split: if_split | wp | wpc)+
+  apply (clarsimp simp: scheduleChooseNewThread_def split: if_split | wp | wpc | intro conjI impI)+
   done
 
 crunch (empty_fail) empty_fail[wp, simp]: setMRs, setMessageInfo
@@ -293,7 +293,7 @@ crunch (empty_fail) empty_fail[wp, simp]: setMRs, setMessageInfo
 
 lemma tcbEPFindIndex_empty_fail[intro!, wp, simp]:
   "empty_fail (tcbEPFindIndex t qs ci)"
-  by (induct ci; subst tcbEPFindIndex.simps; simp)
+  by (induct ci; subst tcbEPFindIndex.simps; wpsimp)
 
 crunch (empty_fail) empty_fail: callKernel
   (wp: empty_fail_catch)

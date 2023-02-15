@@ -32,7 +32,7 @@ context Arch begin global_naming RISCV64
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: possible_switch_to,set_thread_state_act
   (simp: kernel_object.splits option.splits arch_cap.splits cap.splits endpoint.splits
          bool.splits list.splits thread_state.splits split_def catch_def sum.splits
-         Let_def wp: zipWithM_x_empty_fail)
+         Let_def wp: empty_fail_zipWithM_x)
 
 crunch (empty_fail) empty_fail[wp, EmptyFail_AI_assms]: handle_fault
   (simp: kernel_object.splits option.splits arch_cap.splits cap.splits endpoint.splits

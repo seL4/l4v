@@ -227,7 +227,8 @@ lemma retype_region_not_bound_sc[wp]:
 
 crunches arch_perform_invocation
   for not_bound_sc_tcb_at[wp]: "(\<lambda>s. \<not> bound_sc_tcb_at P t s)"
-  (wp: crunch_wps cur_sc_tcb_only_sym_bound_lift ignore: retype_region delete_objects)
+  (wp: crunch_wps cur_sc_tcb_only_sym_bound_lift ignore: retype_region delete_objects
+   simp: crunch_simps)
 
 lemma arch_perform_invocation_cur_sc_tcb_only_sym_bound[DetSchedSchedule_AI_assms]:
   "arch_perform_invocation i \<lbrace>cur_sc_tcb_only_sym_bound\<rbrace>"
@@ -323,7 +324,8 @@ lemma arch_mask_irq_signal_valid_sched_pred_strong[wp]:
   unfolding arch_mask_irq_signal_def by wpsimp
 
 crunches arch_switch_to_thread, arch_switch_to_idle_thread
-for cdt_cdt_list_exst [wp]:  "\<lambda>s. P (cdt s) (cdt_list_internal (exst s))"
+  for cdt_cdt_list_exst [wp]:  "\<lambda>s. P (cdt s) (cdt_list_internal (exst s))"
+  (simp: crunch_simps)
 
 lemma handle_hyp_fault_trivial[wp]:
   "handle_hypervisor_fault t fault \<lbrace>Q\<rbrace>"

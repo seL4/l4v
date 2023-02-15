@@ -1112,7 +1112,7 @@ qed
 crunches armv_contextSwitch, setVMRoot, setVMRootForFlush
   for typ_at' [wp]: "\<lambda>s. P (typ_at' T p s)"
   and sc_at'_n[wp]: "\<lambda>s. P (sc_at'_n n p s)"
-  (wp: hoare_drop_imps)
+  (wp: hoare_drop_imps simp: crunch_simps)
 
 end
 

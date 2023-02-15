@@ -107,7 +107,7 @@ crunches invoke_untyped
                                (ready_queues s) (release_queue s) (scheduler_action s)
                                (cur_sc s)"
   (wp: crunch_wps mapME_x_inv_wp preemption_point_inv
-   simp: detype_def whenE_def unless_def wrap_ext_det_ext_ext_def mapM_x_defsym
+   simp: detype_def whenE_def unless_def wrap_ext_det_ext_ext_def mapM_x_defsym crunch_simps
    ignore: do_machine_op)
 
 end
@@ -514,9 +514,10 @@ lemma cur_sc_chargeable_invoke_untypedE_R:
   "\<lbrace>cur_sc_tcb_only_sym_bound\<rbrace>
    invoke_untyped i
    -, \<lbrace>\<lambda>rv. cur_sc_tcb_only_sym_bound\<rbrace>"
+  supply validE_validE_E[wp del]
   unfolding invoke_untyped_def
   apply wpsimp
-    apply (rule valid_validE_E)
+    apply (rule hoare_post_imp_dc2E_actual)
     apply (clarsimp simp: cur_sc_tcb_only_sym_bound_def tcb_at_kh_simps[symmetric])
     apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift)
       apply (rule valid_validE, wps)

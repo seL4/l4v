@@ -926,7 +926,9 @@ lemma install_tcb_cap_cte_wp_at_ep:
    install_tcb_cap target slot n slot_opt
    \<lbrace>\<lambda>rv. cte_wp_at P p\<rbrace>, -"
   apply (simp add: install_tcb_cap_def)
-  by (wpsimp wp: checked_insert_cte_wp_at_weak cap_delete_ep hoare_vcg_const_imp_lift_R)
+  apply (wpsimp wp: checked_insert_cte_wp_at_weak cap_delete_ep hoare_vcg_const_imp_lift_R
+                    hoare_vcg_if_lift_ER)
+  done
 
 lemma tcb_ep_slot_cte_wp_at:
   "\<lbrakk> invs s; tcb_at t s; slot = 3 \<or> slot = 4 \<rbrakk> \<Longrightarrow>
@@ -1215,7 +1217,7 @@ lemma check_handler_ep_wpE[wp]:
 
 lemma decode_update_sc_inv[wp]:
   "\<lbrace>P\<rbrace> decode_update_sc cap slot sc_cap \<lbrace>\<lambda>_. P\<rbrace>"
-  unfolding decode_update_sc_def is_blocked_def by (wpsimp wp: hoare_drop_imps)
+  unfolding decode_update_sc_def is_blocked_def by (wpsimp wp: hoare_drop_imps gts_wp)
 
 context Tcb_AI
 begin
@@ -1347,10 +1349,9 @@ lemma derive_cap_cnode[wp]:
   by (wpsimp simp: derive_cap_def) (auto intro: hoare_FalseE_R)
 
 lemma decode_cv_space_inv[wp]:
-  "\<lbrace>P\<rbrace> decode_cv_space args cap slot extras \<lbrace>\<lambda>rv. P\<rbrace>"
+  "decode_cv_space args cap slot extras \<lbrace>P\<rbrace>"
   unfolding decode_cv_space_def
-  apply (wpsimp wp: hoare_drop_imps simp: comp_def split_del: if_split
-         | rule valid_validE_E valid_validE_R)+
+  apply (wpsimp wp: hoare_drop_imps hoare_vcg_if_lift2 hoare_vcg_if_lift_ER)
   done
 
 lemma decode_cv_space_is_tc[wp]:
@@ -1371,7 +1372,8 @@ lemma (in Tcb_AI) decode_cv_space_wf[wp]:
   decode_cv_space (take 2 args) (ThreadCap t) slot cv_caps
   \<lbrace>tcb_inv_wf\<rbrace>, -"
   apply (simp add: decode_cv_space_def split del: if_split)
-  apply (wpsimp wp: derive_cap_valid_cap simp: o_def split_del: if_split
+  apply (wpsimp wp: derive_cap_valid_cap hoare_vcg_if_lift_ER hoare_vcg_if_lift2
+              simp: o_def split_del: if_split
          | rule hoare_drop_imps)+
   apply (simp add: update_cap_data_validI
                    no_cap_to_obj_with_diff_ref_update_cap_data
@@ -1505,7 +1507,9 @@ lemma decode_bind_notification_inv[wp]:
              simp: whenE_def if_apply_def2
              split_del: if_split)
 
-crunch inv[wp]: decode_set_timeout_ep P
+crunches decode_set_timeout_ep
+  for inv[wp]: P
+  (simp: crunch_simps)
 
 lemma (in Tcb_AI) decode_tcb_inv_inv:
   "\<lbrace>P::'state_ext state \<Rightarrow> bool\<rbrace> decode_tcb_invocation label args (cap.ThreadCap t) slot extras \<lbrace>\<lambda>rv. P\<rbrace>"
@@ -1924,7 +1928,8 @@ lemma install_tcb_cap_bound_sc_tcb_at[wp]:
    install_tcb_cap target slot 3 slot_opt
    \<lbrace>\<lambda>_. bound_sc_tcb_at P target'\<rbrace>"
   unfolding install_tcb_cap_def
-  by (wpsimp wp: check_cap_inv cap_delete_fh_lift hoare_vcg_const_imp_lift)
+  apply (wpsimp wp: check_cap_inv cap_delete_fh_lift hoare_vcg_if_lift2 | simp)+
+  done
 
 lemma install_tcb_cap_not_ipc_queued_thread[wp]:
   "\<lbrace>st_tcb_at (not ipc_queued_thread_state) t and tcb_at target and invs\<rbrace>
@@ -1932,7 +1937,9 @@ lemma install_tcb_cap_not_ipc_queued_thread[wp]:
    \<lbrace>\<lambda>_. st_tcb_at (not ipc_queued_thread_state) t\<rbrace>"
   unfolding install_tcb_cap_def
   by (wpsimp wp: check_cap_inv cap_delete_fh_lift cancel_all_ipc_st_tcb_at hoare_vcg_const_imp_lift
-           simp: pred_neg_def st_tcb_at_tcb_at)
+                 hoare_vcg_if_lift2
+           simp: pred_neg_def st_tcb_at_tcb_at
+      | simp)+
 
 lemma set_simple_ko_sc_at_pred_n[wp]:
   "set_simple_ko g ep v \<lbrace> \<lambda>s. P (sc_at_pred_n N proj f t s) \<rbrace>"
@@ -1965,7 +1972,7 @@ lemma install_tcb_cap_ex_nonz_cap_to:
   unfolding install_tcb_cap_def
   apply wpsimp
     apply (wpsimp wp: check_cap_inv cap_insert_ex_cap)
-   apply (simp, rule valid_validE)
+   apply (simp only: simp_thms if_cancel, rule valid_validE)
    apply (rule cap_delete_fh_lift[where L="not ep_at t"](* [where Q1="valid_objs and tcb_at t' and not ep_at t"] *))
       apply (wpsimp simp: ex_nonz_cap_to_def wp: hoare_vcg_ex_lift empty_slot_cte_wp_elsewhere)
      apply (rule_tac Q="\<lambda>_. valid_objs and ex_nonz_cap_to t and not ep_at t and tcb_at t'" in hoare_strengthen_post)

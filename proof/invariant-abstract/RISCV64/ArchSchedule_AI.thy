@@ -91,7 +91,9 @@ lemma stit_activatable[Schedule_AI_asms]:
                  elim!: pred_tcb_weaken_strongerE)
   done
 
-crunch scheduler_action[wp]: set_vm_root "\<lambda>s. P (scheduler_action s)"
+crunches set_vm_root
+  for scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
+  (simp: crunch_simps)
 
 lemma arch_stt_scheduler_action [wp, Schedule_AI_asms]:
   "\<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> arch_switch_to_thread t' \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"

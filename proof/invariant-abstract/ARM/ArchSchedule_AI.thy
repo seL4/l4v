@@ -77,6 +77,7 @@ crunches set_vm_root
   for ct[wp]:  "\<lambda>s. P (cur_thread s)"
   and st_tcb_at[wp]: "\<lambda>s. P (st_tcb_at Q t s)"
   and scheduler_action[wp]: "\<lambda>s. P (scheduler_action s)"
+  (simp: crunch_simps)
 
 lemma arch_stit_sc_at[wp, Schedule_AI_asms]:
   "arch_switch_to_idle_thread \<lbrace>sc_at sc_ptr\<rbrace>"

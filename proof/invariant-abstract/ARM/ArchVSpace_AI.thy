@@ -1666,7 +1666,7 @@ crunch pred_tcb_at[wp]: arm_context_switch "\<lambda>s. Q (pred_tcb_at proj P t 
 
 lemma svr_pred_st_tcb[wp]:
   "set_vm_root t \<lbrace>\<lambda>s. Q (pred_tcb_at proj P t s)\<rbrace>"
-  unfolding set_vm_root_def by (wpsimp wp: get_cap_wp)
+  unfolding set_vm_root_def by (wpsimp wp: get_cap_wp hoare_vcg_if_lift_ER hoare_drop_imps)
 
 crunch typ_at [wp]: set_vm_root "\<lambda>s. P (typ_at T p s)"
   (simp: crunch_simps)

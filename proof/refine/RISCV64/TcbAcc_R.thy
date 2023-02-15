@@ -2936,8 +2936,8 @@ lemma sts_weak_sch_act_wf[wp]:
   apply (wpsimp wp: hoare_vcg_if_lift2 hoare_vcg_imp_lift hoare_vcg_all_lift
                     threadSet_pred_tcb_at_state threadSet_tcbDomain_triv
                     isSchedulable_inv
-                    hoare_pre_cont[where a="isSchedulable x" and P="\<lambda>rv _. rv" for x]
-                    hoare_pre_cont[where a="isSchedulable x" and P="\<lambda>rv _. \<not>rv" for x]
+                    hoare_pre_cont[where f="isSchedulable x" and P="\<lambda>rv _. rv" for x]
+                    hoare_pre_cont[where f="isSchedulable x" and P="\<lambda>rv _. \<not>rv" for x]
               simp: weak_sch_act_wf_def)
   done
 
@@ -5412,8 +5412,8 @@ lemma setThreadState_tcb_obj_at'_no_change:
   unfolding setThreadState_def scheduleTCB_def rescheduleRequired_def
   apply (wpsimp wp: tcbSchedEnqueue_tcb_obj_at'_no_change hoare_vcg_if_lift2 isSchedulable_inv
                     hoare_vcg_imp_lift threadSet_obj_at'_simple_strongest
-                    hoare_pre_cont[where a="isSchedulable x" and P="\<lambda>rv _. rv" for x]
-                    hoare_pre_cont[where a="isSchedulable x" and P="\<lambda>rv _. \<not>rv" for x])
+                    hoare_pre_cont[where f="isSchedulable x" and P="\<lambda>rv _. rv" for x]
+                    hoare_pre_cont[where f="isSchedulable x" and P="\<lambda>rv _. \<not>rv" for x])
   done
 
 lemma setThreadState_oa:
@@ -5426,8 +5426,8 @@ lemma setThreadState_oa:
   unfolding setThreadState_def scheduleTCB_def rescheduleRequired_def tcbSchedEnqueue_def
   apply (wpsimp wp: threadSet_obj_at'_simple_strongest hoare_vcg_imp_lift hoare_vcg_if_lift2
                     threadGet_obj_at'_field isSchedulable_inv
-                    hoare_pre_cont[where a="isSchedulable x" and P="\<lambda>rv _. rv" for x]
-                    hoare_pre_cont[where a="isSchedulable x" and P="\<lambda>rv _. \<not>rv" for x])
+                    hoare_pre_cont[where f="isSchedulable x" and P="\<lambda>rv _. rv" for x]
+                    hoare_pre_cont[where f="isSchedulable x" and P="\<lambda>rv _. \<not>rv" for x])
   done
 
 lemma getThreadState_only_rv_wp[wp]:

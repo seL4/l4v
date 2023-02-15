@@ -1631,7 +1631,7 @@ lemma installTCBCap_invs':
                     getThreadCSpaceRoot_def getThreadVSpaceRoot_def getThreadFaultHandlerSlot_def)
   apply (wpsimp split_del: if_split
                        wp: checked_insert_tcb_invs cteDelete_invs'
-                           cteDelete_deletes hoare_vcg_const_imp_lift_R
+                           cteDelete_deletes hoare_vcg_const_imp_lift_R hoare_vcg_if_lift_ER
                      simp: locateSlotBasic_def maybe_def returnOk_bindE
                            getThreadTimeoutHandlerSlot_def locateSlotTCB_def)+
   apply (auto simp: objBits_def objBitsKO_def cteSizeBits_def tcbTimeoutHandlerSlot_def)
@@ -2087,7 +2087,7 @@ lemma installTCBCap_fh_ex_nonz_cap_to':
   apply (rule valid_validE)
   apply (rule hoare_gen_asm)
   apply (clarsimp simp: objBits_def objBitsKO_def)
-  apply (wpsimp wp: checkCap_wp assertDerived_wp_weak cteInsert_cap_to')
+  apply (wpsimp wp: checkCap_wp assertDerived_wp_weak cteInsert_cap_to' split_del: if_splits)
    apply (rule_tac Q="\<lambda>_ s. cte_wp_at' (\<lambda>c. cteCap c = capability.NullCap)
                                        (target + 2 ^ cteSizeBits * tcbFaultHandlerSlot) s \<and>
                             ex_nonz_cap_to' p s" in hoare_post_impErr)

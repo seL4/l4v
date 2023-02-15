@@ -205,7 +205,8 @@ lemma retype_region_not_bound_sc[wp]:
 
 crunches arch_perform_invocation
   for not_bound_sc_tcb_at[wp]: "(\<lambda>s. \<not> bound_sc_tcb_at P t s)"
-  (wp: crunch_wps cur_sc_tcb_only_sym_bound_lift ignore: retype_region delete_objects)
+  (wp: crunch_wps cur_sc_tcb_only_sym_bound_lift ignore: retype_region delete_objects
+   simp: crunch_simps)
 
 lemma arch_perform_invocation_cur_sc_tcb_only_sym_bound[DetSchedSchedule_AI_assms]:
   "arch_perform_invocation i \<lbrace>cur_sc_tcb_only_sym_bound\<rbrace>"

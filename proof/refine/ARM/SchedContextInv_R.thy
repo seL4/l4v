@@ -118,7 +118,7 @@ lemma decodeSchedContext_YieldTo_wf:
   apply (wpsimp wp: gts_wp' threadGet_wp getNotification_wp getTCB_wp
               simp: scReleased_def scActive_def isBlocked_def refillReady_def)
   apply (clarsimp simp: valid_cap'_def)
-  apply (clarsimp simp: pred_tcb_at'_def obj_at'_def projectKOs)
+  apply (fastforce simp: pred_tcb_at'_def obj_at'_def projectKOs)
   done
 
 lemma decodeSchedContextInvocation_wf:
@@ -302,7 +302,7 @@ lemma decodeSchedContext_YieldTo_corres:
      apply (fastforce simp: cur_tcb'_def)
     apply (rule liftE_validE[THEN iffD2, OF thread_get_sp])
    apply (rule liftE_validE[THEN iffD2, OF threadGet_sp])
-  apply (rule corres_splitEE_skip; corressimp)
+  apply (rule corres_splitEE_skip; corressimp; fastforce?)
   apply (rule corres_splitEE_forwards'[where r'="(=)"])
      apply (subst corres_liftE_rel_sum)
      apply (rule corres_guard_imp)
@@ -312,8 +312,7 @@ lemma decodeSchedContext_YieldTo_corres:
      apply fastforce
     apply (rule liftE_validE[THEN iffD2, OF thread_get_sp])
    apply (rule liftE_validE[THEN iffD2, OF threadGet_sp])
-  apply (rule corres_splitEE_skip; corressimp)
-  apply (clarsimp simp: obj_at'_def)
+  apply (rule corres_splitEE_skip; corressimp; fastforce?)
   done
 
 lemma decode_sc_inv_corres:
@@ -344,7 +343,7 @@ lemma decode_sc_inv_corres:
      apply (corressimp corres: getCurThread_corres)
     apply (rule liftE_validE[THEN iffD2, OF gets_sp])
    apply (rule liftE_validE[THEN iffD2, OF getCurThread_sp])
-  apply (rule corres_splitEE_skip; corressimp)
+  apply (rule corres_splitEE_skip; corressimp; fastforce?)
   apply (clarsimp simp: sc_relation_def)
   done
 
@@ -679,10 +678,10 @@ lemma schedContextYieldTo_corres:
                                  sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s"
                in hoare_strengthen_post[rotated])
          apply (clarsimp simp: sc_yf_sc_at_def obj_at_def)
-        apply (wpsimp wp: hoare_case_option_wp complete_yield_to_invs)
+        apply (wpsimp wp: hoare_case_option_wp complete_yield_to_invs split: option.splits)
         apply ((wpsimp wp: complete_yield_to_sc_tcb_sc_at | wps)+)
        apply (clarsimp split: if_split simp: sc_yf_sc_at_def obj_at_def)
-      apply (wpsimp wp: hoare_case_option_wp schedContextCompleteYieldTo_invs')
+      apply (wpsimp wp: hoare_case_option_wp schedContextCompleteYieldTo_invs' split: option.splits)
      apply wpsimp+
    apply (fastforce simp: sc_tcb_sc_at_def obj_at_def is_sc_obj
                    elim!: valid_sched_context_size_objsI[OF invs_valid_objs])

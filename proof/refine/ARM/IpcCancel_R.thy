@@ -3394,7 +3394,6 @@ lemma sch_act_wf_weak[elim!]:
   by (case_tac sa, (simp add: weak_sch_act_wf_def)+)
 
 lemma cancelAllIPC_invs'[wp]:
-<<<<<<< HEAD
   "cancelAllIPC ep_ptr \<lbrace>invs'\<rbrace>"
   supply valid_dom_schedule'_def[simp]
   unfolding cancelAllIPC_def cancelAllIPC_loop_body_def restartThreadIfNoFault_def
@@ -3473,33 +3472,6 @@ lemma ntfn_queued_st_tcb_at':
   apply (clarsimp)
   apply (erule_tac y="(t,NTFNSignal)" in my_BallE)
    apply (clarsimp simp: refs_of_rev' pred_tcb_at'_def obj_at'_def ko_wp_at'_def projectKOs)+
-=======
-  "\<lbrace>invs'\<rbrace> cancelAllIPC ep_ptr \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: cancelAllIPC_def ep'_Idle_case_helper cong del: if_cong)
-  apply (wp rescheduleRequired_all_invs_but_ct_not_inQ
-            cancel_all_invs'_helper hoare_vcg_const_Ball_lift
-            valid_global_refs_lift' valid_arch_state_lift'
-            valid_irq_node_lift ssa_invs' sts_sch_act'
-            irqs_masked_lift
-         | simp only: sch_act_wf.simps forM_x_def | simp)+
-   prefer 2
-   apply assumption
-  apply (rule hoare_strengthen_post [OF get_ep_sp'])
-  apply (rename_tac rv s)
-  apply (clarsimp simp: invs'_def valid_state'_def valid_ep'_def)
-  apply (frule obj_at_valid_objs', fastforce)
-  apply (clarsimp simp: projectKOs valid_obj'_def)
-  apply (rule conjI)
-   apply (case_tac rv, simp_all add: valid_ep'_def)[1]
-  apply (rule conjI[rotated])
-   apply (drule(1) sym_refs_ko_atD')
-   apply (case_tac rv, simp_all add: st_tcb_at_refs_of_rev')[1]
-    apply (clarsimp elim!: if_live_state_refsE
-           | drule(1) bspec | drule st_tcb_at_state_refs_ofD')+
-  apply (drule(2) ep_q_refs_max)
-  apply (erule delta_sym_refs)
-   apply (clarsimp dest!: symreftype_inverse' split: if_split_asm | drule(1) bspec subsetD)+
->>>>>>> verification/master
   done
 
 lemma cancelAllSignals_invs'[wp]:

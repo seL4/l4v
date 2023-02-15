@@ -343,7 +343,7 @@ proof -
                  simp add: valid_queues_def)
          apply (wp hoare_vcg_if_lift hoare_vcg_conj_lift hoare_vcg_imp_lift)+
              apply (wp hoare_vcg_imp_lift setQueue_valid_queues_no_bitmap_except_dequeue_wp
-                       setQueue_valid_bitmapQ threadGet_wp)+
+                       setQueue_valid_bitmapQ threadGet_wp hoare_vcg_if_lift2)+
   (* wp done *)
   apply (clarsimp simp: correct_queue_def)
   apply (normalise_obj_at')
@@ -901,6 +901,7 @@ lemma arch_switchToIdleThread_corres:
 crunches switchToIdleThread
   for ready_qs_runnable[wp]: "\<lambda>s. \<forall>d p. \<forall>t\<in>set (ksReadyQueues s (d, p)).
                        st_tcb_at' runnable' t s"
+  (simp: crunch_simps)
 
 lemma switchToIdleThread_corres:
   "corres dc (invs and valid_ready_qs) invs' switch_to_idle_thread switchToIdleThread"
@@ -4551,16 +4552,8 @@ lemma handle_overrun_loop_body_no_fail:
   "no_fail (\<lambda>s. (\<exists>sc n. kheap s (cur_sc s) = Some (Structures_A.SchedContext sc n))
                 \<and> pred_map (\<lambda>cfg. scrc_refills cfg \<noteq> []) (sc_refill_cfgs_of s) (cur_sc s))
            (handle_overrun_loop_body usage)"
-  apply (clarsimp simp: handle_overrun_loop_body_def)
-  apply (rule no_fail_bind'[OF _ _ gets_sp])
-   apply wpsimp
-  apply (rule no_fail_skip)
-    apply (wpsimp simp: refill_single_def refill_size_def get_refills_def)
-   apply wpsimp
-  apply (rule no_fail_bind'[OF _ _ get_sched_context_sp])
-   apply wpsimp
-  apply (rule no_fail_bind'; (solves wpsimp)?)
-  apply (wpsimp simp: update_refill_hd_def
+  unfolding handle_overrun_loop_body_def
+  apply (wpsimp simp: refill_single_def refill_size_def get_refills_def update_refill_hd_def
                   wp: refill_pop_head_no_fail)
   done
 

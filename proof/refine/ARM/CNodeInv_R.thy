@@ -303,7 +303,7 @@ lemma decodeCNodeInvocation_corres:
                  apply simp
                  apply (intro conjI)
                   apply (erule cap_map_update_data)+
-                apply (wp hoare_drop_imps)+
+                apply (wp hoare_drop_imps hoare_vcg_if_lift_ER)+
     apply (fastforce elim!: valid_cnode_capI)
    apply (clarsimp dest!: list_all2_lengthD simp: invs'_def valid_pspace'_def)
   \<comment> \<open>Errors\<close>

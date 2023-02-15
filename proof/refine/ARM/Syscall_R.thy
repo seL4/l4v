@@ -2569,7 +2569,7 @@ proof -
     apply (case_tac event, simp_all add: handleEvent_def)
          apply (rename_tac syscall)
          apply (case_tac syscall,
-                (wpsimp wp: checkBudgetRestart_true checkBudgetRestart_false
+                (wpsimp wp: checkBudgetRestart_true checkBudgetRestart_false hoare_vcg_if_lift2
                  | clarsimp simp: active_from_running' simple_from_running' simple_sane_strg
                                   stateAssertE_def stateAssert_def
                         simp del: split_paired_All

@@ -262,14 +262,16 @@ lemma install_tcb_cap_invs:
           \<and> real_cte_at src_slot s \<and> no_cap_to_obj_dr_emp new_cap s)\<rbrace>
    install_tcb_cap target slot n slot_opt
    \<lbrace>\<lambda>_. invs\<rbrace>"
+  supply if_split[split del]
   apply (simp add: install_tcb_cap_def)
   apply (wpsimp wp: checked_insert_tcb_invs cap_delete_deletes
-                    hoare_vcg_imp_lift_R
+                    hoare_vcg_imp_lift_R hoare_vcg_if_lift_ER
          | strengthen tcb_cap_always_valid_strg use_no_cap_to_obj_asid_strg
          | wpsimp wp: cap_delete_ep)+
-  by (auto simp: typ_at_eq_kheap_obj cap_table_at_typ tcb_at_typ
-                 is_cnode_or_valid_arch_def is_cap_simps real_cte_at_cte
-          elim!: cte_wp_at_weakenE)
+  apply (auto simp: typ_at_eq_kheap_obj cap_table_at_typ tcb_at_typ
+                    is_cnode_or_valid_arch_def is_cap_simps real_cte_at_cte
+             elim!: cte_wp_at_weakenE)
+  done
 
 lemma install_tcb_cap_no_cap_to_obj_dr_emp[wp, Tcb_AI_asms]:
   "\<lbrace>no_cap_to_obj_dr_emp cap and
@@ -278,7 +280,8 @@ lemma install_tcb_cap_no_cap_to_obj_dr_emp[wp, Tcb_AI_asms]:
    install_tcb_cap target slot n slot_opt
    \<lbrace>\<lambda>_. no_cap_to_obj_dr_emp cap\<rbrace>"
   apply (simp add: install_tcb_cap_def)
-  by (wpsimp wp: checked_insert_no_cap_to hoare_vcg_const_imp_lift)
+  apply (wpsimp wp: checked_insert_no_cap_to hoare_vcg_const_imp_lift hoare_vcg_if_lift_ER)
+  done
 
 lemma is_cnode_or_valid_arch_is_cap_simps:
   "is_cnode_cap cap \<Longrightarrow> is_cnode_or_valid_arch cap"
@@ -376,7 +379,8 @@ lemma install_tcb_cap_sc_tcb_sc_at[wp]:
    install_tcb_cap target slot 3 slot_opt
    \<lbrace>\<lambda>_. sc_tcb_sc_at P d\<rbrace>"
   unfolding install_tcb_cap_def
-  by (wpsimp wp: check_cap_inv cap_delete_fh_lift hoare_vcg_const_imp_lift)
+  apply (wpsimp wp: check_cap_inv cap_delete_fh_lift hoare_vcg_if_lift2 | simp)+
+  done
 
 lemma tcs_invs[Tcb_AI_asms]:
   "\<lbrace>invs and tcb_inv_wf (ThreadControlSched t sl fh mcp pr sc)\<rbrace>

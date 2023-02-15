@@ -1401,8 +1401,7 @@ lemma invokeUntyped_valid_duplicates[wp]:
   apply (frule(2) invokeUntyped_proofs.intro)
   apply (rule hoare_pre)
    apply simp
-   apply (wp add: updateFreeIndex_pspace_no_overlap'
-             del: whenE_E_wp whenE_R_wp)
+   apply (wp add: updateFreeIndex_pspace_no_overlap')
    apply (rule hoare_post_impErr)
      apply (rule combine_validE)
       apply (rule_tac ui=ui in whenE_reset_resetUntypedCap_invs_etc)
@@ -2274,7 +2273,9 @@ lemma handleEvent_valid_duplicates':
   supply if_cong[cong]
   apply (case_tac e; simp add: handleEvent_def)
        apply (rename_tac syscall, case_tac syscall; simp)
-  by (wpsimp wp: checkBudgetRestart_gen stateAssertE_inv active_from_running')+
+                 apply (wpsimp wp: checkBudgetRestart_gen stateAssertE_inv active_from_running'
+                                   hoare_vcg_if_lift2)+
+  done
 
 lemma callKernel_valid_duplicates':
   "\<lbrace>invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and

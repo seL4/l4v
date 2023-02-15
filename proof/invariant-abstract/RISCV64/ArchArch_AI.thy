@@ -1104,7 +1104,7 @@ lemma decode_fr_inv_map_wf[wp]:
   unfolding decode_fr_inv_map_def Let_def
   apply (wpsimp wp: check_vp_wpR split_del: if_split)
   apply (clarsimp simp: valid_arch_inv_def valid_page_inv_def neq_Nil_conv)
-  apply (rename_tac s pt_ptr asid vref pt_slot level ab ba ys)
+  apply (rename_tac s pt_ptr asid vref ab ba ys pt_slot level)
   apply (prop_tac "args!0 \<in> user_region")
    apply (clarsimp simp: user_region_def not_le)
    apply (rule user_vtop_canonical_user)

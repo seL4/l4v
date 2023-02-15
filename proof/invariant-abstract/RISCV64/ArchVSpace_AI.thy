@@ -624,6 +624,7 @@ next
     apply (subst pt_lookup_from_level_simps)
     apply (wpsimp wp: IH)
     apply (rule conjI; clarsimp)
+     prefer 2
      apply (subst (asm) (2) pt_walk.simps)
      apply (clarsimp)
     apply (rule conjI; clarsimp)
@@ -1225,6 +1226,7 @@ lemma unmap_page_invs:
    \<lbrace>\<lambda>_. invs\<rbrace>"
   unfolding unmap_page_def
   apply (wpsimp wp: store_pte_invs_unmap)
+  apply (rule conjI; clarsimp)
   apply (frule (1) pt_lookup_slot_vs_lookup_slotI)
   apply (clarsimp simp: vs_lookup_slot_def split: if_split_asm)
   apply (rename_tac level pte pt_ptr)
@@ -1297,7 +1299,6 @@ lemma unmap_page_not_target:
   supply pt_bits_left_not_asid_pool_size[simp]
          vs_lookup_slot_pool_for_asid[simp]
          pool_for_asid_vs_lookup[simp]
-  supply subst_all [simp del]
   apply (wpsimp wp: store_pte_invalid_vs_lookup_target_unmap)
   apply (rule conjI; clarsimp)
    apply (clarsimp simp: vs_lookup_target_def vspace_for_asid_def obind_def vs_lookup_slot_def
@@ -1305,13 +1306,12 @@ lemma unmap_page_not_target:
                    split: if_split_asm option.splits)
   apply (frule (1) pt_lookup_slot_vs_lookup_slotI0)
   apply (rule conjI; clarsimp simp: in_omonad)
-   prefer 2
    apply (drule vs_lookup_slot_level)
-   apply (rename_tac level' slot pte)
+   apply (rename_tac slot level' pte)
    apply (rule conjI; clarsimp)
-    prefer 2
     apply (rule conjI, fastforce)
     apply (clarsimp simp: pte_ref_def is_PagePTE_def pptr_from_pte_def)
+   apply (rule conjI; clarsimp)
    apply (clarsimp simp: vs_lookup_target_def split: if_split_asm)
     apply (prop_tac "vs_lookup_table max_pt_level asid vref s = Some (max_pt_level, pptr)")
      apply (clarsimp simp: vs_lookup_table_def in_omonad)
@@ -1328,7 +1328,7 @@ lemma unmap_page_not_target:
    apply (clarsimp simp: is_PagePTE_def)
    apply (drule (3) data_at_level, simp)
   (* lookup has stopped at wrong level for pgsz *)
-  apply (rename_tac level' slot')
+  apply (rename_tac level')
   apply (clarsimp simp: vs_lookup_target_def split: if_split_asm)
    apply (prop_tac "vs_lookup_table max_pt_level asid vref s = Some (max_pt_level, pptr)")
     apply (clarsimp simp: vs_lookup_table_def in_omonad)

@@ -2504,7 +2504,8 @@ lemma sendIPC_corres:
                                                     and active_sc_valid_refills
                                                     and current_time_bounded"
                                     in hoare_strengthen_post[rotated])
-                              apply (case_tac r; clarsimp simp: pred_tcb_at_def obj_at_def is_tcb option.case_eq_if)
+                             apply (clarsimp, rename_tac rv s)
+                             apply (case_tac rv; clarsimp simp: pred_tcb_at_def obj_at_def is_tcb option.case_eq_if)
                               apply (drule sym[of "Some _"])
                               apply (fastforce simp: valid_tcbs_def valid_tcb_def obj_at_def
                                                      is_sc_obj opt_map_red opt_pred_def)
@@ -5646,6 +5647,7 @@ lemma replyRemoveTCB_sym_heap_scReplies [wp]:
       apply wpsimp
      apply (rule_tac Q="\<lambda>replya s. sym_heap_scReplies s \<and> sym_refs (list_refs_of_replies' s)"
             in hoare_strengthen_post[rotated])
+      apply (rename_tac rv s)
       apply (clarsimp split: if_splits)
       apply (intro conjI; intro allI impI)
        apply clarsimp
@@ -5653,7 +5655,8 @@ lemma replyRemoveTCB_sym_heap_scReplies [wp]:
          apply (clarsimp simp: isHead_to_head)
          apply (intro conjI; intro allI impI)
           apply clarsimp
-          apply (subgoal_tac "replyPrevs_of s r = Some ya")
+          apply (rename_tac replyPtr scPtr sc)
+          apply (subgoal_tac "replyPrevs_of s rv = Some replyPtr")
            apply (rule replyNexts_Some_replySCs_None)
            apply (simp add: sym_refs_replyNext_replyPrev_sym[symmetric])
           apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs opt_map_def)
@@ -5661,13 +5664,15 @@ lemma replyRemoveTCB_sym_heap_scReplies [wp]:
           apply clarsimp
           apply (drule ko_at'_inj, assumption, simp)
           apply (clarsimp simp: isHead_to_head)
-          apply (subgoal_tac "replyPrevs_of s r = Some rPtr")
+          apply (rename_tac rPtr)
+          apply (subgoal_tac "replyPrevs_of s rv = Some rPtr")
            apply (insert replyNexts_Some_replySCs_None)
            apply (simp add: sym_refs_replyNext_replyPrev_sym[symmetric])
            apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs opt_map_def)
           apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs opt_map_def)
          apply clarsimp
-         apply (subgoal_tac "replyPrevs_of s r = Some ya")
+         apply (rename_tac replyPtr reply rPtr reply')
+         apply (subgoal_tac "replyPrevs_of s rv = Some replyPtr")
           apply (rule replyNexts_Some_replySCs_None)
           apply (simp add: sym_refs_replyNext_replyPrev_sym[symmetric])
          apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs opt_map_def)
@@ -5680,7 +5685,8 @@ lemma replyRemoveTCB_sym_heap_scReplies [wp]:
        apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs opt_map_def)
       apply (intro conjI, intro allI impI)
        apply clarsimp
-       apply (subgoal_tac "replyPrevs_of s r = Some y")
+       apply (rename_tac replyPtr)
+       apply (subgoal_tac "replyPrevs_of s rv = Some replyPtr")
         apply (rule replyNexts_Some_replySCs_None)
         apply (simp add: sym_refs_replyNext_replyPrev_sym[symmetric])
        apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs opt_map_def)
