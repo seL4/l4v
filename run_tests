@@ -82,13 +82,11 @@ EXCLUDE["RISCV64"]=[
     "RefineOrphanage",
     "SimplExportAndRefine",
     "AsmRefine",
-    "CRefine",
     "ASepSpec",
     "Bisim",
     "SepTactics",
     "TakeGrant",
     "Sep_Algebra",
-    "CBaseRefine",
     "LibTest"
 ]
 
