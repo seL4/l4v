@@ -36,6 +36,7 @@ jobs:
       with:
         L4V_ARCH: ${{ matrix.arch }}
         manifest: mcs.xml
+        L4V_FEATURES: MCS
         session: '-x AutoCorresSEL4' # exclude large AutoCorresSEL4 session for PRs
         token: ${{ secrets.READ_TOKEN }}
         cache_bucket: ${{ secrets.CACHE_BUCKET }}
