@@ -3304,7 +3304,7 @@ proof -
    apply (rename_tac word1 word2 word3 word4)
    apply (simp del: Collect_const)
    apply wpc
-    apply (simp add: option_to_ptr_def option_to_0_def)
+    apply (simp add: option_to_ptr_def option_to_0_def mapME_Nil)
     apply (rule ccorres_rhs_assoc2, rule ccorres_split_throws)
      apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
      apply (rule allI, rule conseqPre, vcg)
@@ -4178,7 +4178,7 @@ lemma handleFaultReply_ccorres [corres]:
      apply clarsimp
      apply vcg_step
      apply (clarsimp simp: n_exceptionMessage_def n_syscallMessage_def
-                           message_info_to_H_def scast_def
+                           message_info_to_H_def to_bool_def scast_def
                            length_exceptionMessage length_syscallMessage
                            min_def word_less_nat_alt
                            guard_is_UNIV_def seL4_Faults seL4_Arch_Faults
@@ -5053,7 +5053,7 @@ lemma sendIPC_ccorres [corres]:
            \<inter> \<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr thread\<rbrace>
            \<inter> \<lbrace>\<acute>epptr = Ptr epptr\<rbrace>
            \<inter> \<lbrace>badge && mask 64 = badge\<rbrace>) hs
-     (sendIPC blocking do_call badge canGrant canDonate canGrantReply thread epptr)
+     (sendIPC blocking do_call badge canGrant canGrantReply canDonate thread epptr)
      (Call sendIPC_'proc)"
   unfolding K_def
   apply (rule ccorres_gen_asm2)
@@ -5615,6 +5615,12 @@ lemma schedContext_bindTCB_ccorres:
      \<top> (\<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace> \<inter> \<lbrace>\<acute>sc = Ptr scPtr\<rbrace>) []
      (schedContextBindTCB scPtr tcbPtr) (Call schedContext_bindTCB_'proc)"
 sorry (* FIXME RT: schedContext_bindTCB_ccorres *)
+
+lemma schedContext_bindNtfn_ccorres:
+  "ccorres dc xfdc
+     \<top> (\<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace> \<inter> \<lbrace>\<acute>sc = Ptr scPtr\<rbrace>) []
+     (schedContextBindNtfn scPtr tcbPtr) (Call schedContext_bindNtfn_'proc)"
+sorry (* FIXME RT: schedContext_bindNtfn_ccorres *)
 
 lemma completeSignal_ccorres:
   notes if_split[split del]
@@ -6259,7 +6265,7 @@ lemma sendSignal_ccorres [corres]:
        apply csymbr
        apply (rule ccorres_abstract_cleanup)
        apply (rule_tac P="(ret__unsigned_longlong = scast ThreadState_BlockedOnReceive)
-                 = receiveBlocked rva" in ccorres_gen_asm2)
+                 = receiveBlocked rv" in ccorres_gen_asm2)
        apply (rule ccorres_cond[where R=\<top>])
          apply (simp add: Collect_const_mem)
         apply (rule ccorres_rhs_assoc)+
@@ -6507,7 +6513,6 @@ lemma receiveSignal_enqueue_ccorres_helper:
   subgoal sorry (* FIXME RT: sym_refs argument *)
   apply (subgoal_tac "ko_at' (NTFN (WaitingNtfn queue) (ntfnBoundTCB ntfn) (ntfnSc ntfn)) ntfnptr (\<sigma>\<lparr>ksPSpace :=
                              (ksPSpace \<sigma>)(ntfnptr \<mapsto> KONotification (NTFN (WaitingNtfn queue) (ntfnBoundTCB ntfn) (ntfnSc ntfn)))\<rparr>)")
-                             (ksPSpace \<sigma>)(ntfnptr \<mapsto> KONotification (NTFN (WaitingNtfn queue) (ntfnBoundTCB ntfn)))\<rparr>)")
    prefer 2
    apply (clarsimp simp: obj_at'_def projectKOs objBitsKO_def ps_clear_upd)
   apply (intro conjI impI allI)

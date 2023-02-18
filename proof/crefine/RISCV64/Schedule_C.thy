@@ -22,7 +22,7 @@ end
 context kernel_m begin
 
 lemma Arch_switchToIdleThread_ccorres:
-  "ccorres dc xfdc invs_no_cicd' UNIV []
+  "ccorres dc xfdc (invs' and valid_idle') UNIV []
            Arch.switchToIdleThread (Call Arch_switchToIdleThread_'proc)"
   apply (cinit simp: RISCV64_H.switchToIdleThread_def)
    apply (rule ccorres_pre_getIdleThread)
@@ -31,27 +31,29 @@ lemma Arch_switchToIdleThread_ccorres:
     apply vcg
    apply (rule conseqPre, vcg)
    apply clarsimp
-  apply (clarsimp simp: invs_no_cicd'_def valid_pspace'_def valid_idle'_tcb_at'_ksIdleThread)
+  apply (clarsimp simp: valid_pspace'_def valid_idle'_tcb_at'_ksIdleThread)
   done
 
 lemma switchToIdleThread_ccorres:
-  "ccorres dc xfdc invs_no_cicd' UNIV hs
+  "ccorres dc xfdc (invs' and valid_idle') UNIV hs
            switchToIdleThread (Call switchToIdleThread_'proc)"
-  apply (cinit)
+  apply cinit
+   apply (rule ccorres_stateAssert)+
    apply (rule ccorres_symb_exec_l)
       apply (ctac (no_vcg) add: Arch_switchToIdleThread_ccorres)
        apply (simp add: setCurThread_def)
+       apply (rule ccorres_stateAssert)
        apply (rule_tac P="\<lambda>s. thread = ksIdleThread s" and P'=UNIV in ccorres_from_vcg)
        apply (rule allI, rule conseqPre, vcg)
        apply (clarsimp simp: simpler_modify_def)
        apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                              carch_state_relation_def cmachine_state_relation_def)
-      apply (wpsimp simp: RISCV64_H.switchToIdleThread_def)+
+      apply (wpsimp simp: RISCV64_H.switchToIdleThread_def wp: hoare_drop_imps)+
   done
 
 lemma Arch_switchToThread_ccorres:
   "ccorres dc xfdc
-           (all_invs_but_ct_idle_or_in_cur_domain' and tcb_at' t)
+           (invs' and tcb_at' t)
            (UNIV \<inter> \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr t\<rbrace>)
            []
            (Arch.switchToThread t) (Call Arch_switchToThread_'proc)"
@@ -62,28 +64,49 @@ lemma Arch_switchToThread_ccorres:
   apply clarsimp
   done
 
+lemma tcbSchedDequeue_ready_qs_runnable[wp]:
+  "tcbSchedDequeue tcbPtr \<lbrace>ready_qs_runnable\<rbrace>"
+  unfolding tcbSchedDequeue_def
+  apply (clarsimp simp: ready_qs_runnable_def)
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_ball_lift2 threadGet_wp)
+    apply (fastforce simp: obj_at_simps split: if_splits)
+   apply (wpsimp wp: threadSet_st_tcb_at2)
+  by fastforce
 
+lemma ready_qs_runnable_ksMachineState[simp]:
+  "ready_qs_runnable (ksMachineState_update f s) = ready_qs_runnable s"
+  by (clarsimp simp: ready_qs_runnable_def)
 
+crunches setVMRoot
+  for ready_qs_runnable'[wp]: ready_qs_runnable
+  (wp: crunch_wps)
+
+lemma switchToThread_ready_qs_runnable[wp]:
+  "RISCV64_H.switchToThread t \<lbrace>ready_qs_runnable\<rbrace>"
+  unfolding RISCV64_H.switchToThread_def
+  by wpsimp
 
 (* FIXME: move *)
 lemma switchToThread_ccorres:
   "ccorres dc xfdc
-           (all_invs_but_ct_idle_or_in_cur_domain' and tcb_at' t)
+           (invs' and tcb_at' t and (\<lambda>s. \<forall>d p. distinct (ksReadyQueues s (d, p))))
            (UNIV \<inter> \<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr t\<rbrace>)
            hs
            (switchToThread t)
            (Call switchToThread_'proc)"
   apply (cinit lift: thread_')
+   apply (rule ccorres_stateAssert)
    apply (ctac (no_vcg) add: Arch_switchToThread_ccorres)
     apply (ctac (no_vcg) add: tcbSchedDequeue_ccorres)
-     apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
+     apply (rule_tac P=ready_qs_runnable and P'=UNIV in ccorres_from_vcg)
      apply clarsimp
      apply (rule conseqPre, vcg)
-     apply (clarsimp simp: setCurThread_def simpler_modify_def)
+     apply (clarsimp simp: setCurThread_def simpler_modify_def
+                           stateAssert_def get_def bind_def return_def fail_def)
      apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                            carch_state_relation_def cmachine_state_relation_def)
-    apply wp+
-  apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def)
+    apply (wpsimp wp: hoare_vcg_all_lift)+
+  apply (fastforce simp: ready_qs_runnable_def)
   done
 
 lemma get_tsType_ccorres2:
@@ -112,6 +135,7 @@ lemma activateThread_ccorres:
            activateThread
            (Call activateThread_'proc)"
   apply (cinit)
+sorry (* FIXME RT: activeThread_ccorres
    apply (rule ccorres_pre_getCurThread)
    apply (ctac add: get_tsType_ccorres2 [where f="\<lambda>s. ksCurThread_' (globals s)"])
      apply (rule_tac P="activatable' rv" in ccorres_gen_asm)
@@ -155,7 +179,7 @@ lemma activateThread_ccorres:
    prefer 2
    apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
   apply (clarsimp simp: typ_heap_simps ThreadState_Running_def mask_def)
-  done
+  done *)
 
 lemma ceqv_Guard_UNIV_Skip:
   "ceqv Gamma xf v s s' (a ;; Guard F UNIV Skip) a"
@@ -187,7 +211,7 @@ lemmas ccorres_remove_tail_Guard_Skip
 
 lemma switchToThread_ccorres':
   "ccorres dc xfdc
-           (all_invs_but_ct_idle_or_in_cur_domain' and tcb_at' t)
+           (invs' and tcb_at' t and (\<lambda>s. \<forall>d p. distinct (ksReadyQueues s (d, p))))
            (UNIV \<inter> \<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr t\<rbrace>)
            hs
            (switchToThread t)
@@ -200,23 +224,23 @@ lemma switchToThread_ccorres':
 lemmas word_log2_max_word_word_size = word_log2_max[where 'a=machine_word_len, simplified word_size, simplified]
 
 lemma chooseThread_ccorres:
-  "ccorres dc xfdc all_invs_but_ct_idle_or_in_cur_domain' UNIV [] chooseThread (Call chooseThread_'proc)"
+  "ccorres dc xfdc
+     (invs' and valid_idle' and (\<lambda>s.  \<forall>d p. distinct (ksReadyQueues s (d, p)))) UNIV []
+     chooseThread (Call chooseThread_'proc)"
 proof -
 
   note prio_and_dom_limit_helpers [simp]
   note ksReadyQueuesL2Bitmap_nonzeroI [simp]
   note Collect_const_mem [simp]
+  note invs_ksCurDomain_maxDomain'[intro]
   (* when numDomains = 1, array bounds checks would become _ = 0 rather than _ < 1, changing the
      shape of the proof compared to when numDomains > 1 *)
   include no_less_1_simps
 
-  have invs_no_cicd'_max_CurDomain[intro]:
-    "\<And>s. invs_no_cicd' s \<Longrightarrow> ksCurDomain s \<le> maxDomain"
-    by (simp add: invs_no_cicd'_def)
-
   show ?thesis
     supply if_split[split del]
     apply (cinit)
+    apply (rule ccorres_stateAssert)
      apply (simp add: numDomains_sge_1_simp)
      apply (rule_tac xf'=dom_' and r'="\<lambda>rv rv'. rv' = ucast rv" in ccorres_split_nothrow_novcg)
          apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
@@ -269,9 +293,8 @@ proof -
             apply clarsimp
             apply (rule conseqPre, vcg)
             apply clarsimp
-           apply (wp isRunnable_wp)+
+           apply (wpsimp wp: isSchedulable_wp)+
        apply (clarsimp simp: Let_def guard_is_UNIV_def)
-       apply (drule invs_no_cicd'_queues)
        apply (case_tac queue, simp)
        apply (clarsimp simp: tcb_queue_relation'_def cready_queues_index_to_C_def numPriorities_def)
        apply (clarsimp simp add: maxDom_to_H maxPrio_to_H
@@ -280,21 +303,28 @@ proof -
       apply wpsimp
      apply (clarsimp simp: guard_is_UNIV_def le_maxDomain_eq_less_numDomains word_less_nat_alt
                            numDomains_less_numeric_explicit)
-    apply (frule invs_no_cicd'_queues)
-    apply (frule invs_no_cicd'_max_CurDomain)
-    apply (frule invs_no_cicd'_queues)
+    apply clarsimp
+    apply (frule invs_queues)
+    apply (frule invs_ksCurDomain_maxDomain')
+    apply (frule invs'_bitmapQ_no_L1_orphans)
+    apply (prop_tac "\<forall>d p. \<forall>t \<in> set (ksReadyQueues s (d,p)). isSchedulable_bool t s")
+     subgoal sorry (* FIXME RT: use cross lemmas or remove assert from the Haskell *)
     apply (clarsimp simp: valid_queues_def lookupBitmapPriority_le_maxPriority)
     apply (intro conjI impI)
        apply (fastforce dest: bitmapQ_from_bitmap_lookup simp: valid_bitmapQ_bitmapQ_simp)
-      apply (fastforce dest: lookupBitmapPriority_obj_at'
-                       simp: pred_conj_def obj_at'_def st_tcb_at'_def)
+      apply (drule (2) bitmapQ_from_bitmap_lookup)
+      apply (simp add: valid_bitmapQ_bitmapQ_simp)
+      apply (case_tac "ksReadyQueues s (ksCurDomain s, lookupBitmapPriority (ksCurDomain s) s)", simp)
+      apply (fastforce dest: cons_set_intro)
      apply (fastforce dest: bitmapQ_from_bitmap_lookup simp: valid_bitmapQ_bitmapQ_simp)
-    apply (clarsimp simp: pred_conj_def obj_at'_def st_tcb_at'_def)
     apply (clarsimp simp: not_less le_maxDomain_eq_less_numDomains)
     apply (prop_tac "ksCurDomain s = 0")
      using unsigned_eq_0_iff apply force
-    apply (cut_tac s=s in lookupBitmapPriority_obj_at'; simp?)
-    apply (clarsimp simp: pred_conj_def obj_at'_def st_tcb_at'_def)
+    apply (drule (2) bitmapQ_from_bitmap_lookup)
+    apply (simp add: valid_bitmapQ_bitmapQ_simp)
+    apply (case_tac "ksReadyQueues s (ksCurDomain s, lookupBitmapPriority (ksCurDomain s) s)", simp)
+    apply (fastforce dest: cons_set_intro
+                     simp: valid_queues_no_bitmap_def inQ_def obj_at'_def st_tcb_at'_def)
     done
 qed
 
@@ -310,6 +340,7 @@ lemma ksDomSched_length_dom_relation[simp]:
 
 lemma nextDomain_ccorres:
   "ccorres dc xfdc invs' UNIV [] nextDomain (Call nextDomain_'proc)"
+sorry (* FIXME RT: nextDomain_ccorres. Involves usToTicks
   apply (cinit)
    apply (simp add: ksDomScheduleLength_def sdiv_word_def sdiv_int_def)
    apply (rule_tac P=invs' and P'=UNIV in ccorres_from_vcg)
@@ -344,11 +375,18 @@ lemma nextDomain_ccorres:
     apply (simp add: word_bits_def)
    apply (fastforce simp add: cdom_schedule_relation_def dom_schedule_entry_relation_def dschDomain_def dschLength_def simp del: ksDomSched_length_dom_relation)
   apply simp
-  done
+  done *)
+
+(* FIXME RT: move *)
+crunches nextDomain
+  for valid_idle'[wp]: valid_idle'
+  and distinct_queues[wp]: "\<lambda>s. distinct (ksReadyQueues s (d, p))"
+  (simp: crunch_simps)
 
 lemma scheduleChooseNewThread_ccorres:
   "ccorres dc xfdc
-     (\<lambda>s. invs' s \<and> ksSchedulerAction s = ChooseNewThread) UNIV hs
+     (\<lambda>s. invs' s \<and> valid_idle' s \<and> (\<forall>d p. distinct (ksReadyQueues s (d, p)))
+          \<and> ksSchedulerAction s = ChooseNewThread) UNIV hs
      (do domainTime \<leftarrow> getDomainTime;
          y \<leftarrow> when (domainTime = 0) nextDomain;
          chooseThread
@@ -362,10 +400,10 @@ lemma scheduleChooseNewThread_ccorres:
        apply (rule_tac xf'=xfdc in ccorres_call[OF nextDomain_ccorres] ; simp)
       apply ceqv
      apply (ctac (no_vcg) add: chooseThread_ccorres)
-    apply (wp nextDomain_invs_no_cicd')
+    apply (wpsimp wp: nextDomain_invs' hoare_vcg_all_lift)
    apply clarsimp
    apply (vcg exspec=nextDomain_modifies)
-  apply (clarsimp simp: if_apply_def2 invs'_invs_no_cicd')
+  apply (clarsimp simp: if_apply_def2)
   done
 
 lemma isHighestPrio_ccorres:
@@ -412,8 +450,63 @@ lemma isHighestPrio_ccorres:
                   split: if_splits)
   done
 
+lemma isRoundRobin_ccorres:
+  "ccorres dc xfdc \<top> \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> [] (isRoundRobin scPtr) (Call isRoundRobin_'proc)"
+sorry (* FIXME RT: isRoundRobin_ccorres *)
+
+lemma refill_full_ccorres:
+  "ccorres dc xfdc \<top> \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> [] (refillFull scPtr) (Call refill_full_'proc)"
+sorry (* FIXME RT: refill_full_ccorres *)
+
+lemma refill_single_ccorres:
+  "ccorres dc xfdc \<top> \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> [] (refillSingle scPtr) (Call refill_single_'proc)"
+sorry (* FIXME RT: refill_single_ccorres *)
+
+lemma refill_capacity_ccorres:
+  "ccorres dc xfdc
+     \<top> (\<lbrace>\<acute>sc = Ptr scPtr\<rbrace> \<inter> \<lbrace>\<acute>usage = usage\<rbrace>) []
+     (refillCapacity scPtr usage) (Call refill_capacity_'proc)"
+sorry (* FIXME RT: refill_capacity_ccorres *)
+
+lemma refill_ready_ccorres:
+  "ccorres dc xfdc
+     \<top> \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
+     (refillReady scPtr) (Call refill_ready_'proc)"
+sorry (* FIXME RT: refill_ready_ccorres *)
+
+lemma sc_active_ccorres:
+  "ccorres dc xfdc
+     \<top> \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
+     (scActive scPtr) (Call sc_active_'proc)"
+sorry (* FIXME RT: sc_active_ccorres *)
+
+lemma sc_released_ccorres:
+  "ccorres dc xfdc
+     \<top> \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
+     (scReleased scPtr) (Call sc_released_'proc)"
+sorry (* FIXME RT: sc_released_ccorres *)
+
+lemma switchSchedContext_ccorres:
+  "ccorres dc xfdc \<top> UNIV [] switchSchedContext (Call switchSchedContext_'proc)"
+sorry (* FIXME RT: switchSchedContext_ccorres *)
+
+lemma refill_budget_check_ccorres:
+  "ccorres dc xfdc
+     \<top> \<lbrace>\<acute>usage = usage\<rbrace> []
+     (refillBudgetCheck usage) (Call refill_budget_check_'proc)"
+sorry (* FIXME RT: refill_budget_check_ccorres *)
+
+lemma checkDomainTime_ccorres:
+  "ccorres dc xfdc \<top> UNIV [] checkDomainTime (Call checkDomainTime_'proc)"
+sorry (* FIXME RT: checkDomainTime_ccorres *)
+
+lemma commitTime_ccorres:
+  "ccorres dc xfdc \<top> UNIV [] commitTime (Call commitTime_'proc)"
+sorry (* FIXME RT: commitTime_ccorres *)
+
 lemma schedule_ccorres:
   "ccorres dc xfdc invs' UNIV [] schedule (Call schedule_'proc)"
+sorry (* FIXME RT: schedule_ccorres
   supply Collect_const [simp del]
   supply prio_and_dom_limit_helpers[simp]
   supply Collect_const_mem [simp]
@@ -652,7 +745,7 @@ lemma schedule_ccorres:
                   simp: cscheduler_action_relation_def)
   apply (intro conjI impI allI; clarsimp simp: typ_heap_simps ctcb_relation_def)
      apply (fastforce simp: tcb_at_not_NULL tcb_at_1 dest: pred_tcb_at')+
-  done
+  done *)
 
 (* FIXME: move *)
 lemma map_to_tcbs_upd:
@@ -670,136 +763,6 @@ lemma cep_relations_drop_fun_upd:
   by (intro ext cendpoint_relation_upd_tcb_no_queues[where thread=x]
                 cnotification_relation_upd_tcb_no_queues[where thread=x]
           | simp split: if_split)+
-
-lemma threadSet_timeSlice_ccorres [corres]:
-  "ccorres dc xfdc (tcb_at' thread) {s. thread' s = tcb_ptr_to_ctcb_ptr thread \<and> unat (v' s) = v} hs
-           (threadSet (tcbTimeSlice_update (\<lambda>_. v)) thread)
-           (Basic (\<lambda>s. globals_update (t_hrs_'_update (hrs_mem_update (heap_update (Ptr &(thread' s\<rightarrow>[''tcbTimeSlice_C''])::machine_word ptr) (v' s)))) s))"
-  apply (rule ccorres_guard_imp2)
-   apply (rule threadSet_ccorres_lemma4 [where P=\<top> and P'=\<top>])
-    apply vcg
-   prefer 2
-   apply (rule conjI, simp)
-   apply assumption
-  apply clarsimp
-  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
-  apply (clarsimp simp: cmachine_state_relation_def carch_state_relation_def cpspace_relation_def)
-  apply (clarsimp simp: update_tcb_map_tos typ_heap_simps')
-  apply (simp add: map_to_ctes_upd_tcb_no_ctes tcb_cte_cases_def
-                   map_to_tcbs_upd cteSizeBits_def)
-
-  apply (simp add: cep_relations_drop_fun_upd cvariable_relation_upd_const
-                   ko_at_projectKO_opt)
-  apply (rule conjI)
-   defer
-   apply (erule cready_queues_relation_not_queue_ptrs)
-    apply (rule ext, simp split: if_split)
-   apply (rule ext, simp split: if_split)
-  apply (drule ko_at_projectKO_opt)
-  apply (erule (2) cmap_relation_upd_relI)
-    apply (simp add: ctcb_relation_def)
-   apply assumption
-  apply simp
-  done
-
-lemma timerTick_ccorres:
-  "ccorres dc xfdc invs' UNIV [] timerTick (Call timerTick_'proc)"
-  supply subst_all [simp del]
-  apply (cinit)
-   apply (rule ccorres_pre_getCurThread)
-   apply (ctac add: get_tsType_ccorres2 [where f="\<lambda>s. ksCurThread_' (globals s)"])
-     apply (rule ccorres_split_nothrow_novcg)
-         apply wpc
-                apply (simp add: "StrictC'_thread_state_defs", rule ccorres_cond_false, rule ccorres_return_Skip)+
-             (* thread_state.Running *)
-             apply simp
-             apply (rule ccorres_cond_true)
-             apply (rule ccorres_pre_threadGet)
-             apply (rule_tac P="cur_tcb'" and P'=\<top> in ccorres_move_c_guards(8))
-              apply (clarsimp simp: cur_tcb'_def)
-              apply (drule (1) tcb_at_h_t_valid)
-              apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
-             apply (rule_tac Q="\<lambda>s. obj_at' (\<lambda>tcb. tcbTimeSlice tcb = rva) (ksCurThread s) s"
-                         and Q'=\<top> in ccorres_cond_both')
-               apply clarsimp
-               apply (drule (1) obj_at_cslift_tcb)
-               apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
-               apply (clarsimp simp: typ_heap_simps)
-               apply (clarsimp simp: ctcb_relation_def word_less_nat_alt)
-              apply (rule_tac P="cur_tcb'" and P'=\<top> in ccorres_move_c_guards(8))
-               apply (clarsimp simp: cur_tcb'_def)
-               apply (fastforce simp: rf_sr_def cstate_relation_def Let_def typ_heap_simps dest: tcb_at_h_t_valid)
-              apply (rule_tac P="cur_tcb'" and P'=\<top> in ccorres_move_c_guards(8))
-               apply (clarsimp simp: cur_tcb'_def)
-               apply (fastforce simp: rf_sr_def cstate_relation_def Let_def typ_heap_simps dest: tcb_at_h_t_valid)
-              apply (ctac add: threadSet_timeSlice_ccorres)
-             apply (rule ccorres_rhs_assoc)+
-             apply (ctac)
-               apply simp
-               apply (ctac (no_vcg) add: tcbSchedAppend_ccorres)
-                apply (ctac add: rescheduleRequired_ccorres)
-               apply (wp weak_sch_act_wf_lift_linear threadSet_valid_queues
-                         threadSet_pred_tcb_at_state tcbSchedAppend_valid_objs' threadSet_valid_objs' threadSet_tcbDomain_triv
-                    | clarsimp simp: st_tcb_at'_def o_def split: if_splits)+
-             apply (vcg exspec=tcbSchedDequeue_modifies)
-        apply (simp add: "StrictC'_thread_state_defs", rule ccorres_cond_false, rule ccorres_return_Skip)+
-        apply ceqv
-       apply (clarsimp simp: decDomainTime_def numDomains_sge_1_simp)
-       apply (rule ccorres_when[where R=\<top>])
-        apply (solves \<open>clarsimp split: if_split\<close>)
-       apply (rule ccorres_split_nothrow_novcg)
-           apply (rule_tac rrel=dc and xf=xfdc and P=\<top> and P'=UNIV in ccorres_from_vcg)
-           apply (rule allI, rule conseqPre, vcg)
-           apply (clarsimp simp: simpler_modify_def)
-           apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
-                                 carch_state_relation_def cmachine_state_relation_def)
-          apply ceqv
-         apply (rule ccorres_pre_getDomainTime)
-         apply (rename_tac rva rv'a rvb)
-         apply (rule_tac P'="{s. ksDomainTime_' (globals s) = rvb}" in ccorres_inst, simp)
-         apply (case_tac "rvb = 0")
-          apply clarsimp
-          apply (rule ccorres_guard_imp2)
-           apply (rule ccorres_cond_true)
-           apply (ctac add: rescheduleRequired_ccorres)
-          apply clarsimp
-          apply assumption
-         apply clarsimp
-         apply (rule ccorres_guard_imp2)
-          apply (rule ccorres_cond_false)
-          apply (rule ccorres_return_Skip)
-         apply clarsimp
-        apply wp
-       apply (clarsimp simp: guard_is_UNIV_def)
-      apply (wp hoare_vcg_conj_lift hoare_vcg_all_lift hoare_drop_imps)
-       apply (wpc | wp threadSet_weak_sch_act_wf threadSet_valid_objs' rescheduleRequired_weak_sch_act_wf
-                       tcbSchedAppend_valid_objs' weak_sch_act_wf_lift_linear threadSet_st_tcb_at2 threadGet_wp
-                  | simp split del: if_splits)+
-     apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem word_sle_def word_sless_def)
-    apply (wp gts_wp')
-   apply vcg
-  apply (clarsimp simp: invs_weak_sch_act_wf)
-  apply (fold cur_tcb'_def)
-  apply (rule conjI, clarsimp)
-  apply (rule conjI, clarsimp)
-   apply (rule conjI)
-    apply (clarsimp simp: invs'_def valid_state'_def)
-    apply (auto simp: obj_at'_def inQ_def weak_sch_act_wf_def st_tcb_at'_def
-                      valid_pspace'_def ct_idle_or_in_cur_domain'_def valid_tcb'_def valid_idle'_def projectKOs)[1]
-   apply (rule conjI, clarsimp simp: invs'_def valid_state'_def valid_tcb'_def)+
-    apply (auto simp: obj_at'_def inQ_def weak_sch_act_wf_def st_tcb_at'_def
-                      valid_pspace'_def ct_idle_or_in_cur_domain'_def valid_tcb'_def valid_idle'_def projectKOs)[1]
-   apply (auto simp: invs'_def valid_state'_def valid_tcb'_def tcb_cte_cases_def
-                     cteSizeBits_def)[1]
-
-  apply (frule invs_cur')
-  apply (clarsimp simp: cur_tcb'_def)
-  apply (drule (1) obj_at_cslift_tcb)
-  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def typ_heap_simps' Kernel_Config.timeSlice_def)
-  apply (subst unat_sub)
-   apply simp
-  apply (clarsimp simp: ctcb_relation_def)
-  done
 
 end
 

@@ -30,12 +30,24 @@ begin
 
 declare liftE_handle [simp]
 
+crunches setConsumedTime
+  for sch_act_wf[wp]: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
+  (wp: crunch_wps)
+
+lemma commitTime_sch_act_wf[wp]:
+  "commitTime \<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
+  unfolding commitTime_def
+  by (wpsimp wp: isRoundRobin_wp split: if_splits)
+
+crunches setNextInterrupt, switchSchedContext
+  for sch_act_wf[wp]: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
+  (wp: crunch_wps)
+
 lemma schedule_sch_act_wf:
-  "\<lbrace>invs'\<rbrace> schedule \<lbrace>\<lambda>_ s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-apply (rule hoare_post_imp)
- apply (erule invs_sch_act_wf')
-apply (rule schedule_invs')
-done
+  "\<lbrace>\<lambda>s. invs' s \<and> sch_act_wf (ksSchedulerAction s) s\<rbrace>
+   schedule
+   \<lbrace>\<lambda>_ s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
+sorry (* FIXME RT: schedule_sch_act_wf. Move above Hoare triples to Refine *)
 
 lemma ucast_8_32_neq:
   "x \<noteq> 0xFF \<Longrightarrow> UCAST(8 \<rightarrow> 32 signed) x \<noteq> 0xFF"
@@ -51,6 +63,7 @@ proof -
   apply (cinit')
    apply (simp add: callKernel_def handleEvent_def minus_one_norm)
    apply (simp add: liftE_bind bind_assoc)
+sorry (* FIXME RT: handleInterruptEntry_ccorres
     apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
     apply (rule ccorres_Guard_Seq)?
     apply wpc
@@ -82,7 +95,7 @@ proof -
     apply (clarsimp simp: non_kernel_IRQs_def)
    apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0x3FF | simp)+
   apply (clarsimp simp: invs'_def valid_state'_def)
-  done
+  done *)
 qed
 
 lemma handleUnknownSyscall_ccorres:
@@ -95,6 +108,7 @@ lemma handleUnknownSyscall_ccorres:
    apply (simp add: callKernel_def handleEvent_def)
    apply (simp add: liftE_bind bind_assoc)
    apply (rule ccorres_symb_exec_r)
+sorry (* FIXME RT: handleUnknownSyscall_ccorres
      apply (rule ccorres_pre_getCurThread)
      apply (ctac (no_vcg) add: handleFault_ccorres)
       apply (ctac (no_vcg) add: schedule_ccorres)
@@ -120,7 +134,7 @@ lemma handleUnknownSyscall_ccorres:
   apply (frule st_tcb_idle'[rotated])
    apply (erule invs_valid_idle')
   apply (clarsimp simp: cfault_rel_def seL4_Fault_UnknownSyscall_lift is_cap_fault_def)
-  done
+  done *)
 
 lemma handleVMFaultEvent_ccorres:
   "ccorres dc xfdc
@@ -131,6 +145,7 @@ lemma handleVMFaultEvent_ccorres:
   apply (cinit' lift:vm_faultType_')
    apply (simp add: callKernel_def handleEvent_def)
    apply (simp add: liftE_bind bind_assoc)
+sorry (* FIXME RT: handleVMFaultEvent_ccorres
    apply (rule ccorres_pre_getCurThread)
    apply (simp add: catch_def)
    apply (rule ccorres_rhs_assoc2)
@@ -169,7 +184,7 @@ lemma handleVMFaultEvent_ccorres:
   apply (auto simp: ct_in_state'_def cfault_rel_def is_cap_fault_def ct_not_ksQ
               elim: pred_tcb'_weakenE st_tcb_ex_cap''
               dest: st_tcb_at_idle_thread' rf_sr_ksCurThread)
-  done
+  done *)
 
 lemma handleUserLevelFault_ccorres:
   "ccorres dc xfdc
@@ -181,6 +196,7 @@ lemma handleUserLevelFault_ccorres:
    apply (simp add: callKernel_def handleEvent_def)
    apply (simp add: liftE_bind bind_assoc)
    apply (rule ccorres_symb_exec_r)
+sorry (* FIXME RT: handleUserLevelFault_ccorres
      apply (rule ccorres_pre_getCurThread)
      apply (ctac (no_vcg) add: handleFault_ccorres)
       apply (ctac (no_vcg) add: schedule_ccorres)
@@ -210,15 +226,15 @@ lemma handleUserLevelFault_ccorres:
    apply simp
   apply (clarsimp simp: cfault_rel_def seL4_Fault_UserException_lift)
   apply (simp add: is_cap_fault_def)
-  done
+  done *)
 
 lemmas syscall_defs =
   Kernel_C.SysSend_def Kernel_C.SysNBSend_def
   Kernel_C.SysCall_def Kernel_C.SysRecv_def Kernel_C.SysNBRecv_def
-  Kernel_C.SysReply_def Kernel_C.SysReplyRecv_def Kernel_C.SysYield_def
+  Kernel_C.SysReplyRecv_def Kernel_C.SysYield_def
 
 lemma ct_active_not_idle'_strengthen:
-  "invs' s \<and> ct_active' s \<longrightarrow> ksCurThread s \<noteq> ksIdleThread s"
+  "valid_idle' s \<and> ct_active' s \<longrightarrow> ksCurThread s \<noteq> ksIdleThread s"
   by clarsimp
 
 
@@ -231,6 +247,7 @@ lemma handleSyscall_ccorres:
            (callKernel (SyscallEvent sysc)) (Call handleSyscall_'proc)"
   supply if_cong[cong] option.case_cong[cong]
   apply (cinit' lift: syscall_')
+sorry (* FIXME RT: handleSyscall_ccorres
    apply (simp add: callKernel_def handleEvent_def minus_one_norm)
    apply (simp add: handleE_def handleE'_def)
    apply (rule ccorres_split_nothrow_novcg)
@@ -427,7 +444,7 @@ lemma handleSyscall_ccorres:
                         isReply_def ct_not_ksQ irqInvalid_def Kernel_C.irqInvalid_def)
   apply (auto simp: syscall_from_H_def Kernel_C.SysSend_def
               split: option.split_asm)
-  done
+  done *)
 
 lemma ccorres_corres_u:
   "\<lbrakk> ccorres dc xfdc P (Collect P') [] H C; no_fail P H \<rbrakk> \<Longrightarrow>
@@ -476,8 +493,8 @@ lemma ccorres_corres_u_xf:
 definition
   "all_invs' e \<equiv> \<lambda>s'. \<exists>s :: det_state.
     (s,s') \<in> state_relation \<and>
-    (einvs s \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s) \<and> (ct_running s \<or> ct_idle s) \<and>
-      scheduler_action s = resume_cur_thread \<and> domain_time s \<noteq> 0 \<and> valid_domain_list s) \<and>
+    (mcs_invs s \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s) \<and> (ct_running s \<or> ct_idle s)
+     \<and> domain_time s \<noteq> 0) \<and>
     (invs' s' \<and>
       (e \<noteq> Interrupt \<longrightarrow> ct_running' s') \<and> (ct_running' s' \<or> ct_idle' s') \<and>
       ksSchedulerAction s' = ResumeCurrentThread  \<and> ksDomainTime s' \<noteq> 0)"
@@ -503,6 +520,7 @@ lemma handleHypervisorEvent_ccorres:
   apply (rule ccorres_guard_imp)
     apply (rule ccorres_symb_exec_l)
        apply (cases t; simp add: handleHypervisorFault_def)
+sorry (* FIXME RT: handleHypervisorEvent_ccorres
        apply (ctac (no_vcg) add: schedule_ccorres)
         apply (rule ccorres_stateAssert_after)
         apply (rule ccorres_guard_imp[where A="A and P" and Q=A for A P])
@@ -512,7 +530,7 @@ lemma handleHypervisorEvent_ccorres:
        apply (wp schedule_sch_act_wf schedule_invs'
               | strengthen invs_queues_imp invs_valid_objs_strengthen)+
     apply clarsimp+
-  done
+  done *)
 
 lemma callKernel_corres_C:
   "corres_underlying rf_sr False True dc
@@ -638,6 +656,7 @@ lemma threadSet_all_invs_triv':
                          atcbContextSet_def arch_tcb_relation_def)
        apply (simp add: tcb_cap_cases_def)
       apply (simp add: tcb_cte_cases_def cteSizeBits_def)
+sorry (* FIXME RT: threadSet_all_invs_triv'
      apply (simp add: exst_same_def)
     apply (wp thread_set_invs_trivial thread_set_ct_running thread_set_not_state_valid_sched
               threadSet_invs_trivial threadSet_ct_running' hoare_weak_lift_imp
@@ -652,7 +671,7 @@ lemma threadSet_all_invs_triv':
    apply (clarsimp simp: invs_def)
   apply (clarsimp simp: invs_psp_aligned invs_distinct)
   apply (clarsimp simp: invs_def cur_tcb_def cur_tcb'_def state_relation_def)
-  done
+  done *)
 
 lemma getContext_corres:
   "t' = tcb_ptr_to_ctcb_ptr t \<Longrightarrow>
@@ -676,9 +695,10 @@ lemma callKernel_cur:
   "\<lbrace>all_invs' e\<rbrace> callKernel e \<lbrace>\<lambda>rv s. tcb_at' (ksCurThread s) s\<rbrace>"
   apply (rule hoare_chain)
     apply (rule ckernel_invs)
+sorry (* FIXME RT: callKernel_cur. Possibly cross cur_tcb and use an assertion?
    apply (clarsimp simp: all_invs'_def sch_act_simple_def)
   apply clarsimp
-  done
+  done *)
 
 lemma entry_corres_C:
   "fp = False \<Longrightarrow> \<comment> \<open>FIXME: fastpath\<close>
@@ -703,9 +723,10 @@ lemma entry_corres_C:
              apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
             apply (rule getContext_corres, simp)
            apply (wp threadSet_all_invs_triv' callKernel_cur)+
-   apply (clarsimp simp: all_invs'_def invs'_def cur_tcb'_def valid_state'_def)
+   apply (clarsimp simp: all_invs'_def invs'_def cur_tcb'_def)
+sorry (* FIXME RT: entry_corres_C
   apply simp
-  done
+  done *)
 
 lemma entry_refinement_C:
   "\<lbrakk>all_invs' e s; (s, t) \<in> rf_sr; fp = False \<comment> \<open>FIXME: fastpath\<close> \<rbrakk>
@@ -757,7 +778,7 @@ context kernel_m
 begin
 
 lemma user_memory_update_corres_C_helper:
-      "\<lbrakk>(a, b) \<in> rf_sr; pspace_aligned' a; pspace_distinct' a;
+      "\<lbrakk>(a, b) \<in> rf_sr; pspace_aligned' a; pspace_distinct' a; pspace_bounded' a;
         dom um \<subseteq> dom (user_mem' a)\<rbrakk>
        \<Longrightarrow> (ksMachineState_update
             (underlying_memory_update
@@ -781,13 +802,13 @@ apply (frule_tac ptr=x and b="the (um x)" in storeByteUser_rf_sr_upd)
    apply simp
   apply simp
  apply (thin_tac "(x,y) : rf_sr" for x y)+
- apply (fastforce simp add: pointerInUserData_def dom_user_mem')
+ apply (fastforce simp add: pointerInUserData_def dom_user_mem')+
 apply (simp add: o_def hrs_mem_update_def)
 done
 
 lemma user_memory_update_corres_C:
   "corres_underlying rf_sr False nf (%_ _. True)
-     (\<lambda>s. pspace_aligned' s \<and> pspace_distinct' s \<and> dom um \<subseteq> dom (user_mem' s))
+     (\<lambda>s. pspace_aligned' s \<and> pspace_distinct' s \<and> pspace_bounded' s \<and> dom um \<subseteq> dom (user_mem' s))
      \<top>
      (doMachineOp (user_memory_update um)) (setUserMem_C um)"
   supply if_cong[cong] option.case_cong[cong]
@@ -878,10 +899,10 @@ lemma do_user_op_corres_C:
     apply (rule_tac P=\<top> and P'=\<top> and r'="(=)" in corres_split)
        apply (clarsimp simp: simpler_gets_def getCurThread_def
                 corres_underlying_def rf_sr_def cstate_relation_def Let_def)
-      apply (rule_tac P=valid_state' and P'=\<top> and r'="(=)" in corres_split)
+      apply (rule_tac P=invs' and P'=\<top> and r'="(=)" in corres_split)
          apply (clarsimp simp: cstate_to_A_def absKState_def
                                rf_sr_def cstate_to_H_correct ptable_lift_def)
-        apply (rule_tac P=valid_state' and P'=\<top> and r'="(=)" in corres_split)
+        apply (rule_tac P=invs' and P'=\<top> and r'="(=)" in corres_split)
            apply (clarsimp simp: cstate_to_A_def absKState_def
                                  rf_sr_def cstate_to_H_correct ptable_rights_def)
           apply (rule_tac P=pspace_distinct' and P'=\<top> and r'="(=)"
@@ -899,7 +920,7 @@ lemma do_user_op_corres_C:
                                cpspace_relation_def)
                apply (drule(1) device_mem_C_relation[symmetric])
                apply simp
-              apply (rule_tac P=valid_state' and P'=\<top> and r'="(=)" in corres_split)
+              apply (rule_tac P=invs' and P'=\<top> and r'="(=)" in corres_split)
                  apply (clarsimp simp: cstate_relation_def rf_sr_def
                    Let_def cmachine_state_relation_def)
                 apply (rule_tac P=\<top> and P'=\<top> and r'="(=)" in corres_split)
@@ -920,13 +941,13 @@ lemma do_user_op_corres_C:
                                          where R="\<top>\<top>" and R'="\<top>\<top>"])
                         apply (wp | simp)+
    apply (intro conjI allI ballI impI)
-     apply ((clarsimp simp add: invs'_def valid_state'_def valid_pspace'_def)+)[5]
+     apply ((clarsimp simp add: invs'_def valid_pspace'_def)+)[5]
     apply (clarsimp simp:  ex_abs_def restrict_map_def
                   split: if_splits)
     apply (drule ptable_rights_imp_UserData[rotated -1])
      apply fastforce+
-    apply (clarsimp simp: invs'_def valid_state'_def user_mem'_def device_mem'_def
-                   split: if_splits)
+    apply (clarsimp simp: invs'_def valid_pspace'_def user_mem'_def device_mem'_def
+                   split: if_splits)+
     apply (drule_tac c = x in subsetD[where B = "dom S" for S])
      apply (simp add:dom_def)
     apply fastforce
@@ -997,6 +1018,7 @@ lemma refinement2_both:
    apply (clarsimp simp: full_invs'_def)
    apply (frule use_valid, rule kernelEntry_invs',
           simp add: sch_act_simple_def)
+sorry (* FIXME RT: refinement2_both
     apply (fastforce simp: ct_running'_C)
     apply (clarsimp simp: full_invs_def full_invs'_def all_invs'_def)
    apply fastforce
@@ -1016,7 +1038,7 @@ lemma refinement2_both:
   apply (clarsimp simp: check_active_irq_C_def check_active_irq_H_def)
   apply (rule rev_mp, rule check_active_irq_corres_C)
   apply (fastforce simp: corres_underlying_def full_invs'_def ex_abs_def)
-  done
+  done *)
 
 theorem refinement2:
   "ADT_C uop \<sqsubseteq> ADT_H uop"
