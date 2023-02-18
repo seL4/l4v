@@ -1,7 +1,7 @@
 (*
  * Copyright 2023, Proofcraft Pty Ltd
- * Copyright 2014, General Dynamics C4 Systems
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
+ * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
  *)
@@ -2745,7 +2745,7 @@ lemma cpspace_relation_ep_update_an_ep:
   and     psp: "pspace_aligned' s" "pspace_distinct' s" "pspace_bounded' s"
   and  others: "\<And>epptr' ep'. \<lbrakk> ko_at' ep' epptr' s; epptr' \<noteq> epptr; ep' \<noteq> IdleEP \<rbrakk>
                                  \<Longrightarrow> set (epQueue ep') \<inter> (ctcb_ptr_to_tcb_ptr ` S) = {}"
-  shows "cmap_relation (map_to_eps (ksPSpace s(epptr \<mapsto> KOEndpoint ep')))
+  shows "cmap_relation (map_to_eps ((ksPSpace s)(epptr \<mapsto> KOEndpoint ep')))
            ((cslift t)(Ptr epptr \<mapsto> endpoint)) Ptr (cendpoint_relation mp')"
   using cp koat psp rel unfolding cmap_relation_def
   apply -
@@ -3037,6 +3037,20 @@ lemma reply_unlink_ccorres:
     (\<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace> \<inter> \<lbrace>\<acute>reply = Ptr replyPtr\<rbrace>) []
     (replyUnlink tcbPtr replyPtr) (Call reply_unlink_'proc)"
 sorry (* FIXME RT: reply_unlink_ccorres *)
+
+lemma reply_pop_ccorres:
+  "ccorres dc xfdc
+    (invs' and tcb_at' tcbPtr and reply_at' replyPtr)
+    (\<lbrace>\<acute>reply = Ptr replyPtr\<rbrace> \<inter> \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace>) []
+    (replyPop replyPtr tcbPtr) (Call reply_pop_'proc)"
+sorry (* FIXME RT: reply_pop_ccorres *)
+
+lemma reply_remove_ccorres:
+  "ccorres dc xfdc
+    (invs' and tcb_at' tcbPtr and reply_at' replyPtr)
+    (\<lbrace>\<acute>reply = Ptr replyPtr\<rbrace> \<inter> \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace>) []
+    (replyRemove replyPtr tcbPtr) (Call reply_remove_'proc)"
+sorry (* FIXME RT: reply_remove_ccorres *)
 
 lemma cancelIPC_ccorres1:
   assumes cteDeleteOne_ccorres:

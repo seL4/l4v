@@ -139,6 +139,8 @@ where
   "cmachine_state_relation s s' \<equiv>
   irq_masks s = irq_masks (phantom_machine_state_' s') \<and>
   irq_state s = irq_state (phantom_machine_state_' s') \<and>
+  time_state s = time_state (phantom_machine_state_' s') \<and>
+  last_machine_time s = last_machine_time (phantom_machine_state_' s') \<and>
   device_state s = device_state (phantom_machine_state_' s') \<and>
   \<comment> \<open>exclusive_state s = exclusive_state (phantom_machine_state_' s') \<and>\<close> \<comment> \<open>FIXME: this is needed for infoflow so we'll leave it commented\<close>
   machine_state_rest s = machine_state_rest (phantom_machine_state_' s')"

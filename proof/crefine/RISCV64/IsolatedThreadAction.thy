@@ -720,7 +720,7 @@ lemma lookupExtraCaps_simple_rewrite:
   "msgExtraCaps mi = 0 \<Longrightarrow>
       (lookupExtraCaps thread rcvBuf mi = returnOk [])"
   by (cases mi, simp add: lookupExtraCaps_def getExtraCPtrs_def
-                          liftE_bindE upto_enum_step_def mapM_Nil
+                          liftE_bindE upto_enum_step_def mapM_Nil mapME_Nil
                    split: option.split)
 
 lemma lookupIPC_inv: "\<lbrace>P\<rbrace> lookupIPCBuffer f t \<lbrace>\<lambda>rv. P\<rbrace>"

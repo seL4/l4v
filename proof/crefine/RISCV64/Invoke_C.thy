@@ -2527,7 +2527,7 @@ lemma mapME_ensureEmptySlot':
   \<lbrace>\<lambda>rva s. P s \<and> (\<forall>slot \<in> set slots. (\<exists>cte. cteCap cte = capability.NullCap \<and> ctes_of s (f slot) = Some cte))\<rbrace>, -"
   including no_pre
   apply (induct slots arbitrary: P)
-   apply wpsimp
+   apply (wpsimp wp: mapME_wp')
   apply (rename_tac a slots P)
   apply (simp add: mapME_def sequenceE_def Let_def)
   apply (rule_tac Q="\<lambda>rv. P and (\<lambda>s. \<exists>cte. cteCap cte = capability.NullCap \<and> ctes_of s (f a) = Some cte)" in validE_R_sp)

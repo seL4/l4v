@@ -1990,12 +1990,6 @@ lemma schedContext_unbindNtfn_ccorres:
     (schedContextUnbindNtfn scPtr) (Call schedContext_unbindNtfn_'proc)"
 sorry (* FIXME RT: schedContext_unbindNtfn_ccorres *)
 
-lemma reply_remove_ccorres:
-  "ccorres dc xfdc
-    (invs' and sc_at' scPtr) (\<lbrace>\<acute>reply = Ptr replyPtr\<rbrace> \<inter> \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace>) []
-    (replyRemove replyPtr tcbPtr) (Call reply_remove_'proc)"
-sorry (* FIXME RT: reply_remove_ccorres *)
-
 lemma schedContext_unbindTCB_ccorres:
   "ccorres dc xfdc
     (invs' and sc_at' scPtr) (\<lbrace>\<acute>sc = Ptr scPtr\<rbrace> \<inter> \<lbrace>\<acute>tcb = tcb_ptr_to_ctcb_ptr tcbPtr\<rbrace>) []

@@ -130,8 +130,7 @@ using [[goals_limit=20]]
   apply (clarsimp simp: cap_lift_page_table_cap cap_to_H_def
                         cap_page_table_cap_lift_def isCap_simps
                         valid_cap'_def get_capSizeBits_CL_def
-                        bit_simps capAligned_def
-                        to_bool_def mask_def page_table_at'_def
+                        bit_simps capAligned_def mask_def page_table_at'_def
                         capRange_def Int_commute asid_bits_def
                         wellformed_mapdata'_def
              simp flip: canonical_bit_def
@@ -2923,7 +2922,7 @@ lemma decodeRISCVMMUInvocation_ccorres:
                           cap_to_H_def[split_simps cap_CL.split]
                           hd_conv_nth length_ineq_not_Nil Kernel_C_defs
                    elim!: ccap_relationE)
-   apply (clarsimp simp: to_bool_def unat_eq_of_nat objBits_simps pageBits_def case_bool_If
+   apply (clarsimp simp: unat_eq_of_nat objBits_simps pageBits_def case_bool_If
                   split: if_splits)
   apply (clarsimp simp: asid_low_bits_word_bits isCap_simps neq_Nil_conv
                         excaps_map_def excaps_in_mem_def
