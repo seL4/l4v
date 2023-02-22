@@ -721,7 +721,7 @@ lemma schedule_if_choose_new_thread:
 lemma domainswitch_splits_four_ways:
   "(s1, s5) \<in> Step () \<Longrightarrow>
   will_domain_switch s1 \<Longrightarrow>
-  can_split_four_ways s1 s5 a b c d"
+  can_split_four_ways s1 s5 (Step ()) a b c d"
   apply (frule step_bigstepR)
   apply (clarsimp simp: big_step_R_def)
   apply (erule disjE)
@@ -762,6 +762,7 @@ lemma domainswitch_splits_four_ways:
 (* based on the monad next_domain and the functions part/partition.
   Never returns PSched. *)
 term next_domain
+term part
 definition get_next_domain
   :: "(user_context \<times> det_ext Structures_A.state) \<times> sys_mode \<Rightarrow> 'l partition" where
   "get_next_domain s \<equiv> 
@@ -770,6 +771,7 @@ definition get_next_domain
     let next_dom = (domain_list ds)!domain_index' in
       Partition (label_of (the_elem ((pasDomainAbs initial_aag) (fst next_dom))))"
 
+(* note: make a version of part that never returns PSched *)
 
 lemma get_next_domain_public:
   "uwr2 s PSched t \<Longrightarrow>
@@ -797,6 +799,9 @@ interpretation ma?:time_protection_system PSched fch_lookup fch_read_impact fch_
                  apply (simp add: uwr_equiv_rel)
                 (* will_domain_switch_public *)
                 apply (rule will_domain_switch_from_uwr)
+term uwr
+term same_for
+term sameFor
                 subgoal sorry (* need to adjust how we talk about sched uwr i guess *)
                (* next_latest_domainswitch_in_future *)
                apply (rule nlds_in_future)
