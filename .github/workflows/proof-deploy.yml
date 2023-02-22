@@ -89,7 +89,7 @@ jobs:
         # Check if there are any C graph-lang artifacts
         if [ -e artifacts/c-graph-lang ]; then
           echo "C graph-lang artifacts found, will trigger binary verification"
-          echo -n "${MANIFEST}" > verification-manifest.xml
+          echo -n "${MANIFEST}"| nl-unescape.sh > verification-manifest.xml
           echo "::set-output name=enabled::true"
         else
           echo "No C graph-lang artifacts found, will not trigger binary verification"
