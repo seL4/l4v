@@ -45,6 +45,7 @@ EXCLUDE["ARM_HYP"]=[
 EXCLUDE["ARM"]=[
     "Access",
     "AutoCorres",
+    "BaseRefine",
     "CamkesGlueSpec",
     "Concurrency",
     "DBaseRefine",
