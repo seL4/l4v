@@ -34,6 +34,7 @@ imports
   Rsplit
   Signed_Words
   Syntax_Bundles
+  Sgn_Abs
   Typedef_Morphisms
   Type_Syntax
   Word_EqI
