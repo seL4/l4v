@@ -132,7 +132,7 @@ lemma
 (* Example use when the goal is not in simp normal form: *)
 lemma word_xor_le_nand:
   "x XOR y \<le> NOT (x AND y)" for x :: "'a::len word"
-  by (clarsimp simp: word_bool_le_funs)
+  by (simp add: word_bool_le_funs)
 
 end
 
