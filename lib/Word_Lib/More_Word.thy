@@ -63,7 +63,7 @@ lemma unat_p2: "n < LENGTH('a :: len) \<Longrightarrow> unat (2 ^ n :: 'a word) 
 
 lemma word_div_lt_eq_0:
   "x < y \<Longrightarrow> x div y = 0" for x :: "'a :: len word"
-  by transfer simp
+  by (fact div_word_less)
 
 lemma word_div_eq_1_iff: "n div m = 1 \<longleftrightarrow> n \<ge> m \<and> unat n < 2 * unat (m :: 'a :: len word)"
   apply (simp only: word_arith_nat_defs word_le_nat_alt word_of_nat_eq_iff flip: nat_div_eq_Suc_0_iff)
@@ -93,7 +93,7 @@ lemma p2_eq_0:
 
 lemma p2len:
   \<open>(2 :: 'a word) ^ LENGTH('a::len) = 0\<close>
-  by simp
+  by (fact word_pow_0)
 
 lemma neg_mask_is_div:
   "w AND NOT (mask n) = (w div 2^n) * 2^n"
@@ -157,10 +157,7 @@ lemma less_eq_mask_iff_take_bit_eq_self:
 
 lemma NOT_eq:
   "NOT (x :: 'a :: len word) = - x - 1"
-  apply (cut_tac x = "x" in word_add_not)
-  apply (drule add.commute [THEN trans])
-  apply (drule eq_diff_eq [THEN iffD2])
-  by simp
+  by (fact not_eq_complement)
 
 lemma NOT_mask: "NOT (mask n :: 'a::len word) = - (2 ^ n)"
   by (simp add : NOT_eq mask_2pm1)
@@ -216,16 +213,12 @@ lemma of_int_uint:
 corollary word_plus_and_or_coroll:
   "x AND y = 0 \<Longrightarrow> x + y = x OR y"
   for x y :: \<open>'a::len word\<close>
-  using word_plus_and_or[where x=x and y=y]
-  by simp
+  by (fact disjunctive_add2)
 
 corollary word_plus_and_or_coroll2:
   "(x AND w) + (x AND NOT w) = x"
   for x w :: \<open>'a::len word\<close>
-  apply (subst disjunctive_add)
-   apply (simp add: bit_simps)
-  apply (simp flip: bit.conj_disj_distrib)
-  done
+  by (fact and_plus_not_and)
 
 lemma unat_mask_eq:
   \<open>unat (mask n :: 'a::len word) = mask (min LENGTH('a) n)\<close>
@@ -626,7 +619,7 @@ lemma word_power_less_1 [simp]:
   done
 
 lemma word_sub_1_le:
-  "x \<noteq> 0 \<Longrightarrow> x - 1 \<le> (x :: ('a :: len) word)"
+  "x \<noteq> 0 \<Longrightarrow> x - 1 \<le> (x :: 'a :: len word)"
   apply (subst no_ulen_sub)
   apply simp
   apply (cases "uint x = 0")
@@ -749,13 +742,13 @@ qed
 lemma mask_out_sub_mask:
   "(x AND NOT (mask n)) = x - (x AND (mask n))"
   for x :: \<open>'a::len word\<close>
-  by (simp add: field_simps word_plus_and_or_coroll2)
+  by (fact and_not_eq_minus_and)
 
 lemma subtract_mask:
   "p - (p AND mask n) = (p AND NOT (mask n))"
   "p - (p AND NOT (mask n)) = (p AND mask n)"
   for p :: \<open>'a::len word\<close>
-  by (simp add: field_simps word_plus_and_or_coroll2)+
+  by (auto simp: and_not_eq_minus_and)
 
 lemma take_bit_word_eq_self_iff:
   \<open>take_bit n w = w \<longleftrightarrow> n \<ge> LENGTH('a) \<or> w < 2 ^ n\<close>
@@ -764,7 +757,7 @@ lemma take_bit_word_eq_self_iff:
   by (transfer fixing: n) auto
 
 lemma word_power_increasing:
-  assumes x: "2 ^ x < (2 ^ y::'a::len word)" "x < LENGTH('a::len)" "y < LENGTH('a::len)"
+  assumes x: "2 ^ x < (2 ^ y::'a::len word)" "x < LENGTH('a)" "y < LENGTH('a)"
   shows "x < y" using x
   using assms by transfer simp
 
@@ -788,18 +781,8 @@ lemma plus_one_helper2:
                 unatSuc)
 
 lemma less_x_plus_1:
-  fixes x :: "'a :: len word" shows
-  "x \<noteq> - 1 \<Longrightarrow> (y < (x + 1)) = (y < x \<or> y = x)"
-  apply (rule iffI)
-   apply (rule disjCI)
-   apply (drule plus_one_helper)
-   apply simp
-  apply (subgoal_tac "x < x + 1")
-   apply (erule disjE, simp_all)
-  apply (rule plus_one_helper2 [OF order_refl])
-  apply (rule notI, drule max_word_wrap)
-  apply simp
-  done
+  "x \<noteq> - 1 \<Longrightarrow> (y < x + 1) = (y < x \<or> y = x)" for x :: "'a::len word"
+  by (meson max_word_wrap plus_one_helper plus_one_helper2 word_le_less_eq)
 
 lemma word_Suc_leq:
   fixes k::"'a::len word" shows "k \<noteq> - 1 \<Longrightarrow> x < k + 1 \<longleftrightarrow> x \<le> k"
@@ -825,10 +808,10 @@ lemma word_atLeastLessThan_Suc_atLeastAtMost_union:
   fixes l::"'a::len word"
   assumes "m \<noteq> - 1" and "l \<le> m" and "m \<le> u"
   shows "{l..m} \<union> {m+1..u} = {l..u}"
-  proof -
+proof -
   from ivl_disj_un_two(8)[OF assms(2) assms(3)] have "{l..u} = {l..m} \<union> {m<..u}" by blast
   with assms show ?thesis by(simp add: word_atLeastAtMost_Suc_greaterThanAtMost)
-  qed
+qed
 
 lemma max_word_less_eq_iff [simp]:
   \<open>- 1 \<le> w \<longleftrightarrow> w = - 1\<close> for w :: \<open>'a::len word\<close>
@@ -1079,17 +1062,12 @@ lemma word_less_sub_1:
   by (fact word_le_minus_one_leq)
 
 lemma word_sub_mono2:
-  "\<lbrakk> a + b \<le> c + d; c \<le> a; b \<le> a + b; d \<le> c + d \<rbrakk>
-    \<Longrightarrow> b \<le> (d :: 'a :: len word)"
-  apply (drule(1) word_sub_mono)
-    apply simp
-   apply simp
-  apply simp
-  done
+  "\<lbrakk> a + b \<le> c + d; c \<le> a; b \<le> a + b; d \<le> c + d \<rbrakk> \<Longrightarrow> b \<le> (d :: 'a :: len word)"
+  by (drule(1) word_sub_mono; simp)
 
 lemma word_not_le:
   "(\<not> x \<le> (y :: 'a :: len word)) = (y < x)"
-  by fastforce
+  by (fact not_le)
 
 lemma word_subset_less:
   "\<lbrakk> {x .. x + r - 1} \<subseteq> {y .. y + s - 1};
@@ -1227,11 +1205,9 @@ lemma word_minus_one_le:
   by (fact word_order.extremum_unique)
 
 lemma up_scast_inj:
-      "\<lbrakk> scast x = (scast y :: 'b :: len word); size x \<le> LENGTH('b) \<rbrakk>
-         \<Longrightarrow> x = y"
+  "\<lbrakk> scast x = (scast y :: 'b :: len word); size x \<le> LENGTH('b) \<rbrakk> \<Longrightarrow> x = y"
   apply transfer
-  apply (cases \<open>LENGTH('a)\<close>)
-  apply simp_all
+  apply (cases \<open>LENGTH('a)\<close>; simp)
   apply (metis order_refl take_bit_signed_take_bit take_bit_tightened)
   done
 
@@ -1246,12 +1222,8 @@ lemma word_le_add:
   by (rule exI [where x = "unat (y - x)"]) simp
 
 lemma word_plus_mcs_4':
-  fixes x :: "'a :: len word"
-  shows "\<lbrakk>x + v \<le> x + w; x \<le> x + v\<rbrakk> \<Longrightarrow> v \<le> w"
-  apply (rule word_plus_mcs_4)
-   apply (simp add: add.commute)
-  apply (simp add: add.commute)
-  done
+  "\<lbrakk>x + v \<le> x + w; x \<le> x + v\<rbrakk> \<Longrightarrow> v \<le> w" for x :: "'a::len word"
+  by (rule word_plus_mcs_4; simp add: add.commute)
 
 lemma unat_eq_1:
   \<open>unat x = Suc 0 \<longleftrightarrow> x = 1\<close>
@@ -1466,11 +1438,12 @@ lemma unat_1_0:
 lemma x_less_2_0_1':
   fixes x :: "'a::len word"
   shows "\<lbrakk>LENGTH('a) \<noteq> 1; x < 2\<rbrakk> \<Longrightarrow> x = 0 \<or> x = 1"
-  apply (cases \<open>2 \<le> LENGTH('a)\<close>)
-  apply simp_all
+  apply (cases \<open>2 \<le> LENGTH('a)\<close>; simp)
   apply transfer
-  apply auto
-  apply (metis add.commute add.right_neutral even_two_times_div_two mod_div_trivial mod_pos_pos_trivial mult.commute mult_zero_left not_less not_take_bit_negative odd_two_times_div_two_succ)
+  apply clarsimp
+  apply (metis add.commute add.right_neutral even_two_times_div_two mod_div_trivial
+               mod_pos_pos_trivial mult.commute mult_zero_left not_less not_take_bit_negative
+               odd_two_times_div_two_succ)
   done
 
 lemmas word_add_le_iff2 = word_add_le_iff [folded no_olen_add_nat]
@@ -1817,7 +1790,7 @@ lemma test_bit_size: "bit w n \<Longrightarrow> n < size w"
   for w :: "'a::len word"
   by transfer simp
 
-lemma word_eq_iff: "x = y \<longleftrightarrow> (\<forall>n<LENGTH('a). bit x n = bit y n)" (is \<open>?P \<longleftrightarrow> ?Q\<close>)
+lemma word_eq_iff: "x = y \<longleftrightarrow> (\<forall>n<LENGTH('a). bit x n = bit y n)"
   for x y :: "'a::len word"
   by transfer (auto simp add: bit_eq_iff bit_take_bit_iff)
 
@@ -2120,8 +2093,8 @@ lemma div_of_0_id[simp]:"(0::('a::len) word) div n = 0"
 lemma degenerate_word:"LENGTH('a) = 1 \<Longrightarrow> (x::('a::len) word) = 0 \<or> x = 1"
   by (metis One_nat_def less_irrefl_nat sint_1_cases)
 
-lemma div_by_0_word:"(x::('a::len) word) div 0 = 0"
-  by (metis div_0 div_by_0 unat_0 word_arith_nat_defs(6) word_div_1)
+lemma div_by_0_word: "(x::'a::len word) div 0 = 0"
+  by (fact bits_div_by_0)
 
 lemma div_less_dividend_word:"\<lbrakk>x \<noteq> 0; n \<noteq> 1\<rbrakk> \<Longrightarrow> (x::('a::len) word) div n < x"
   apply (cases \<open>n = 0\<close>)
