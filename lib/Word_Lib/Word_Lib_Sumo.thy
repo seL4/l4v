@@ -16,7 +16,6 @@ imports
   Bits_Int
   Bitwise_Signed
   Bitwise
-  Boolean_Inequalities
   Enumeration_Word
   Generic_set_bit
   Hex_Words
