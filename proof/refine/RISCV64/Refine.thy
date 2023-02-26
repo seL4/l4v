@@ -257,7 +257,8 @@ abbreviation (input) mcs_invs where
                  \<and> valid_machine_time s \<and> current_time_bounded s \<and> consumed_time_bounded s
                  \<and> (cur_sc_offset_ready (consumed_time s) s
                     \<and> cur_sc_offset_sufficient (consumed_time s) s)
-                 \<and> valid_domain_list s "
+                 \<and> valid_domain_list s
+                 \<and> (Suc 0 < numDomains \<longrightarrow> 0 < domain_time s)"
 
 lemma kernel_entry_invs:
   "\<lbrace>\<lambda>s. mcs_invs s \<and> (ct_running s \<or> ct_idle s) \<and> (e \<noteq> Interrupt \<longrightarrow> ct_running s)\<rbrace>
@@ -271,7 +272,8 @@ lemma kernel_entry_invs:
                            \<and> valid_list s \<and> scheduler_action s = resume_cur_thread
                            \<and> cur_sc_active s \<and> ct_not_in_release_q s
                            \<and> valid_machine_time s \<and> current_time_bounded s
-                           \<and> consumed_time_bounded s"
+                           \<and> consumed_time_bounded s
+                           \<and> (Suc 0 < numDomains \<longrightarrow> 0 < domain_time s)"
             in hoare_post_imp)
    apply clarsimp
   apply (rule hoare_vcg_conj_lift_pre_fix)
@@ -314,8 +316,11 @@ lemma kernel_entry_invs:
   apply (rule hoare_vcg_conj_lift_pre_fix)
    apply (clarsimp simp: kernel_entry_def)
    apply (wpsimp wp: call_kernel_current_time_bounded)
+  apply (rule hoare_vcg_conj_lift_pre_fix)
+   apply (clarsimp simp: kernel_entry_def)
+   apply (wpsimp wp: call_kernel_consumed_time_bounded)
   apply (clarsimp simp: kernel_entry_def)
-  apply (wpsimp wp: call_kernel_consumed_time_bounded)
+  apply (wpsimp wp: call_kernel_domain_time_inv_det_ext)
   done
 
 definition
@@ -373,7 +378,8 @@ lemma do_user_op_invs2:
                            \<and> valid_machine_time s \<and> current_time_bounded s
                            \<and> consumed_time_bounded s
                            \<and> cur_sc_offset_ready (consumed_time s) s
-                           \<and> cur_sc_offset_sufficient (consumed_time s) s"
+                           \<and> cur_sc_offset_sufficient (consumed_time s) s
+                           \<and> (Suc 0 < numDomains \<longrightarrow> 0 < domain_time s)"
                in hoare_post_imp, fastforce)
   apply (rule hoare_vcg_conj_lift_pre_fix)
    apply (wpsimp wp: do_user_op_invs[simplified pred_conj_def])
