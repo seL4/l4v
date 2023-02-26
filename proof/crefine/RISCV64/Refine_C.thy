@@ -661,9 +661,14 @@ lemma callKernel_withFastpath_corres_C:
   done
 *)
 
+(* FIXME RT: move to AInvs *)
+crunches thread_set
+  for domain_time[wp]: "\<lambda>s. P (domain_time s)"
+
 lemma threadSet_all_invs_triv':
   "\<lbrace>all_invs' e and (\<lambda>s. t = ksCurThread s)\<rbrace>
-  threadSet (\<lambda>tcb. tcbArch_update (\<lambda>_. atcbContextSet f (tcbArch tcb)) tcb) t \<lbrace>\<lambda>_. all_invs' e\<rbrace>"
+   threadSet (\<lambda>tcb. tcbArch_update (\<lambda>_. atcbContextSet f (tcbArch tcb)) tcb) t
+   \<lbrace>\<lambda>_. all_invs' e\<rbrace>"
   unfolding all_invs'_def
   apply (rule hoare_pre)
    apply (rule wp_from_corres_unit)
@@ -672,9 +677,7 @@ lemma threadSet_all_invs_triv':
                          atcbContextSet_def arch_tcb_relation_def)
        apply (simp add: tcb_cap_cases_def)
       apply (simp add: tcb_cte_cases_def cteSizeBits_def)
-sorry (* FIXME RT: threadSet_all_invs_triv'
-     apply (simp add: exst_same_def)
-    apply (wp thread_set_invs_trivial thread_set_ct_running thread_set_not_state_valid_sched
+    apply (wp thread_set_invs_trivial thread_set_not_state_valid_sched
               threadSet_invs_trivial threadSet_ct_running' hoare_weak_lift_imp
               thread_set_ct_in_state
            | simp add: tcb_cap_cases_def tcb_arch_ref_def
@@ -686,8 +689,10 @@ sorry (* FIXME RT: threadSet_all_invs_triv'
   apply (prop_tac "invs s'")
    apply (clarsimp simp: invs_def)
   apply (clarsimp simp: invs_psp_aligned invs_distinct)
-  apply (clarsimp simp: invs_def cur_tcb_def cur_tcb'_def state_relation_def)
-  done *)
+  apply (frule invs_valid_release_queue')
+  apply (clarsimp simp: invs_def cur_tcb_def state_relation_def valid_release_queue'_def
+                        obj_at'_def)
+  done
 
 lemma getContext_corres:
   "t' = tcb_ptr_to_ctcb_ptr t \<Longrightarrow>
