@@ -405,7 +405,7 @@ crunches activate_thread
 lemma call_kernel_domain_time_inv_det_ext:
   "\<lbrace>valid_domain_list\<rbrace>
    call_kernel e
-   \<lbrace>\<lambda>_ s :: det_state. 1 < numDomains \<longrightarrow> 0 < domain_time s\<rbrace>"
+   \<lbrace>\<lambda>_ s :: det_state. Suc 0 < numDomains \<longrightarrow> 0 < domain_time s\<rbrace>"
   unfolding call_kernel_def
   apply (case_tac "e = Interrupt"; clarsimp)
    apply (wpsimp wp: schedule_domain_time_left)
