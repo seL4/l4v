@@ -1255,8 +1255,13 @@ lemma ckernel_invariant:
               apply fastforce
              apply fastforce
             apply force
-           subgoal by (fastforce intro!: ct_running_cross)
-          apply (rule ct_running_or_idle_cross; simp?; fastforce)
+           apply clarsimp
+           apply (erule (1) ct_running_cross)
+            apply fastforce
+           apply fastforce
+          apply (erule (1) ct_running_or_idle_cross)
+           apply fastforce
+          apply fastforce
          apply (prop_tac "cur_sc s = ksCurSc s'", fastforce dest!: state_relationD)
          apply (prop_tac "sc_at (cur_sc s) s")
           apply (rule cur_sc_tcb_sc_at_cur_sc[OF invs_valid_objs invs_cur_sc_tcb]; simp)
@@ -1275,7 +1280,9 @@ lemma ckernel_invariant:
       apply (clarsimp simp: pred_map_def obj_at'_def projectKOs opt_map_red not_in_release_q_def
                             release_queue_relation_def
                      dest!: state_relationD)
-     subgoal by (fastforce intro!: resume_cur_thread_cross)
+     apply (rule_tac a=s in resume_cur_thread_cross)
+      apply assumption
+     apply fastforce
 
     apply clarsimp
     apply (rule_tac x=abs_state in exI)
@@ -1296,7 +1303,11 @@ lemma ckernel_invariant:
      apply (clarsimp simp: ex_abs_def)
      apply (rule conjI)
       apply metis
-     apply (fastforce intro: resume_cur_thread_cross ct_running_cross)
+     apply (rule conjI)
+      apply (erule (1) resume_cur_thread_cross)
+     apply (erule (1) ct_running_cross)
+      apply fastforce
+     apply fastforce
     apply (clarsimp simp: ex_abs_def, rule_tac x=s in exI,
            clarsimp simp: ct_running_related sched_act_rct_related)
    apply (fastforce simp: ex_abs_def)
@@ -1310,7 +1321,11 @@ lemma ckernel_invariant:
      apply (clarsimp simp: ex_abs_def)
      apply (rule conjI)
       apply metis
-     apply (fastforce intro: resume_cur_thread_cross ct_running_cross)
+     apply (rule conjI)
+      apply (erule (1) resume_cur_thread_cross)
+     apply (erule (1) ct_running_cross)
+      apply fastforce
+     apply fastforce
     apply (fastforce simp: ex_abs_def ct_running_related sched_act_rct_related)
    apply (fastforce simp: ex_abs_def)
 
@@ -1323,7 +1338,11 @@ lemma ckernel_invariant:
      apply (clarsimp simp: ex_abs_def)
      apply (rule conjI)
       apply blast
-     apply (fastforce intro: resume_cur_thread_cross ct_running_cross)
+     apply (rule conjI)
+      apply (erule (1) ct_running_cross)
+       apply fastforce
+      apply fastforce
+     apply (erule (1) resume_cur_thread_cross)
     apply (fastforce simp: ex_abs_def ct_running_related sched_act_rct_related)
    apply (fastforce simp: ex_abs_def)
 
