@@ -165,44 +165,55 @@ Running the Proofs
 ------------------
 
 If Isabelle is set up correctly, a full test for the proofs in this repository
-can be run with the command
+for seL4 on the `ARM` architecture can be run with the command
 
-    ./run_tests
+    L4V_ARCH=ARM ./run_tests
 
 from the directory `l4v/`.
 
-Not all of the proof sessions can be built directly with the `isabelle build` command.
-The seL4 verification proofs depend on Isabelle specifications that are
-generated from the C source code and Haskell model.
-Therefore, it's recommended to always build using the supplied makefiles,
-which will ensure that these generated specs are up to date.
+Set the environment variable `L4V_ARCH` to one of `ARM`, `ARM_HYP`, `X64`,
+`RISCV64`, or `AARCH64` to get the proofs for the respective architecture. `ARM`
+has the most complete set of proofs, the other architectures tend to support
+only a subset of the proof sessions defined for `ARM`.
+
+Not all of the proof sessions can be built directly with the `isabelle build`
+command. The seL4 proofs depend on Isabelle specifications that are generated
+from the C source code and Haskell model. Therefore, it is recommended to always
+build using the `run_tests` command or the supplied Makefiles, which will ensure
+that these generated specs are up to date.
 
 To do this, enter one level under the `l4v/` directory and run `make <session-name>`.
-For example, to build the C refinement proof session, do
+For example, to build the abstract specification, do
 
-    cd l4v/proof
-    make CRefine
-
-As another example, to build the session for the Haskell model, do
-
+    export L4V_ARCH=ARM
     cd l4v/spec
-    make ExecSpec
+    make ASpec
 
 See the `HEAPS` variable in the corresponding `Makefile` for available targets.
+The sessions that directly depend on generated sources are `ASpec`, `ExecSpec`,
+and `CKernel`. These, and all sessions that depend on them, need to be run using
+`run_tests` or `make`.
 
 Proof sessions that do not depend on generated inputs can be built directly with
 
     ./isabelle/bin/isabelle build -d . -v -b <session name>
 
-from the directory `l4v/`. For available sessions, see the corresponding
-`ROOT` files in this repository. There is roughly one session corresponding to
-each major directory in the repository.
+from the directory `l4v/`. For available sessions and their dependencies, see
+the corresponding `ROOT` files in this repository. There is roughly one session
+corresponding to each major directory in the repository.
 
 For interactively exploring, say the invariant proof of the abstract
-specification with a pre-built logic image for the abstract specification and
-all of the invariant proof's dependencies, run
+specification on `ARM`, note that in `proof/ROOT` the parent session for
+`AInvs` is `ASpec` and therefore run:
 
+    export L4V_ARCH=ARM
+    ./run_tests ASpec
     ./isabelle/bin/isabelle jedit -d . -R AInvs
 
-in `l4v/` and open one of the files in `proof/invariant-abstract`.
+or, if you prefer `make`:
 
+    export L4V_ARCH=ARM
+    cd spec; make ASpec
+    ../isabelle/bin/isabelle jedit -d . -R AInvs
+
+in `l4v/` and open one of the files in `proof/invariant-abstract`.
