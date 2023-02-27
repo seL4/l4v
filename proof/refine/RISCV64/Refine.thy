@@ -517,11 +517,16 @@ abbreviation valid_domain_list' :: "'a kernel_state_scheme \<Rightarrow> bool" w
 lemmas valid_domain_list'_def = valid_domain_list_2_def
 
 defs kernelExitAssertions_def:
-  "kernelExitAssertions s \<equiv> valid_domain_list' s"
+  "kernelExitAssertions s \<equiv> valid_domain_list' s \<and> cur_tcb' s"
 
 lemma callKernel_valid_domain_list':
   "\<lbrace> \<top> \<rbrace> callKernel e \<lbrace>\<lambda>_ s. valid_domain_list' s \<rbrace>"
   unfolding callKernel_def kernelExitAssertions_def by wpsimp
+
+lemma callKernel_cur_tcb':
+  "\<lbrace>\<top>\<rbrace> callKernel e \<lbrace>\<lambda>_ s. cur_tcb' s\<rbrace>"
+  unfolding callKernel_def kernelExitAssertions_def
+  by wpsimp
 
 lemma doMachineOp_sch_act_simple:
   "doMachineOp f \<lbrace>sch_act_simple\<rbrace>"
@@ -981,16 +986,15 @@ lemma kernel_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_add_noop_lhs2)
     apply (simp only: bind_assoc[symmetric])
-    apply (rule corres_split_deprecated[where r'=dc and R="\<lambda>_ s. invs s \<and> valid_domain_list s"
-                                          and R'="\<lambda>_. \<top>"])
-       apply (rule corres_bind_return2, rule corres_stateAssert_assume_stronger)
-        apply simp
-       apply (simp add: kernelExitAssertions_def)
-       apply (intro conjI)
-        apply (clarsimp simp: state_relation_def)
-       apply (fastforce intro!: cur_tcb_cross)
-      apply (simp only: bind_assoc)
-      apply (rule kernel_corres')
+    apply (rule corres_split[where r'=dc and
+                                   R="\<lambda>_ s. invs s \<and> valid_domain_list s" and
+                                   R'="\<lambda>_. \<top>"])
+       apply (simp only: bind_assoc)
+       apply (rule kernel_corres')
+      apply (rule corres_bind_return2, rule corres_stateAssert_assume_stronger)
+       apply simp
+      apply (simp add: kernelExitAssertions_def)
+      apply (fastforce intro: cur_tcb_cross simp: state_relation_def)
      apply (rule hoare_vcg_conj_lift)
       apply (rule_tac Q="\<lambda>_ s. invs s \<and> (ct_running s \<or> ct_idle s)" in hoare_post_imp, fastforce)
       apply (wp akernel_invs_det_ext)

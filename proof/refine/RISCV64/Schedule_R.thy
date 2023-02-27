@@ -2824,7 +2824,7 @@ lemma schedule_invs':
     apply (rule_tac hoare_seq_ext[OF _ isSchedulable_sp])
     apply (rule_tac hoare_seq_ext[OF _ getSchedulerAction_sp])
     apply (rule hoare_seq_ext)
-     apply (wpsimp wp: switchSchedContext_invs')
+     apply (wpsimp wp: switchSchedContext_invs' hoare_drop_imp)
     apply (wpsimp wp: scheduleChooseNewThread_invs' isSchedulable_wp setSchedulerAction_invs'
                       ssa_invs' hoare_vcg_disj_lift)
            apply (wpsimp simp: isHighestPrio_def')
@@ -2890,7 +2890,8 @@ crunches switchSchedContext, setNextInterrupt
 lemma schedule_sch:
   "\<lbrace>\<top>\<rbrace> schedule \<lbrace>\<lambda>rv s. ksSchedulerAction s = ResumeCurrentThread\<rbrace>"
   unfolding schedule_def scAndTimer_def
-  by (wpsimp wp: setSchedulerAction_direct simp: getReprogramTimer_def scheduleChooseNewThread_def)
+  by (wpsimp wp: setSchedulerAction_direct simp: getReprogramTimer_def scheduleChooseNewThread_def
+      | wp (once) hoare_drop_imp)+
 
 lemma schedule_sch_act_simple:
   "\<lbrace>\<top>\<rbrace> schedule \<lbrace>\<lambda>rv. sch_act_simple\<rbrace>"
@@ -5020,12 +5021,34 @@ lemma schedule_switch_thread_branch_valid_state_and_cur_tcb:
                   wp: switch_to_thread_invs thread_get_inv hoare_drop_imps)
   done
 
+(* FIXME RT: move to Corres_UL.thy *)
+lemma corres_underlying_return_stateAssert:
+  assumes "\<And>s s'. \<lbrakk> (s,s') \<in> rf_sr; P s; P' s'\<rbrakk> \<Longrightarrow> Q' s'"
+  shows "corres_underlying rf_sr nf nf' dc P P' (return ()) (stateAssert Q' [])"
+  by (auto simp: stateAssert_def get_def Nondet_Monad.bind_def corres_underlying_def
+                 assert_def return_def fail_def assms)
+
 lemma schedule_corres:
   "corres dc (invs and valid_sched and current_time_bounded and ct_ready_if_schedulable
               and (\<lambda>s. schact_is_rct s \<longrightarrow> cur_sc_active s))
              invs'
              (Schedule_A.schedule)
              schedule"
+  supply bind_return[simp del]
+  apply (rule corres_bind_return)
+  apply (clarsimp simp: schedule_def)
+  apply (subst bind_assoc[symmetric])+
+  apply (rule_tac r'=dc and Q'="\<top>\<top>" and Q="\<lambda>_. invs and ct_in_state activatable"
+               in corres_underlying_split)
+     defer
+     apply clarsimp
+     apply (rule corres_underlying_return_stateAssert)
+     apply (fastforce intro!: st_tcb_at_activatable_cross
+                        simp: ct_activatable'_asrt_def ct_in_state_def ct_in_state'_def
+                              state_relation_def)
+    apply (wpsimp wp: schedule_invs' schedule_ct_activateable)
+   apply wpsimp
+  apply (subst bind_assoc)+
   apply add_sch_act_wf
   apply add_cur_tcb'
   apply (clarsimp simp: Schedule_A.schedule_def schedule_def sch_act_wf_asrt_def cur_tcb'_asrt_def)
@@ -5045,6 +5068,8 @@ lemma schedule_corres:
                      simp: invs_def valid_state_def)
   apply (rule corres_underlying_split[rotated 2, OF gets_sp getCurThread_sp])
    apply corresKsimp
+  apply clarsimp
+  apply (rename_tac curThread)
   apply (rule corres_underlying_split[rotated 2, OF is_schedulable_sp' isSchedulable_sp])
    apply (corresKsimp corres: isSchedulable_corres)
    apply (fastforce intro: weak_sch_act_wf_at_cross

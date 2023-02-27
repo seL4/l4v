@@ -730,6 +730,10 @@ lemma sts_rel_runnable :
   "\<lbrakk>thread_state_relation st st'; runnable st\<rbrakk> \<Longrightarrow> runnable' st'"
   by (cases st, auto)
 
+lemma sts_rel_activatable:
+  "\<lbrakk>thread_state_relation st st'; activatable st\<rbrakk> \<Longrightarrow> activatable' st'"
+  by (cases st, auto)
+
 lemma pspace_relation_absD:
   "\<lbrakk> ab x = Some y; pspace_relation ab con \<rbrakk>
       \<Longrightarrow> \<forall>(x', P) \<in> obj_relation_cuts y x. \<exists>z. con x' = Some z \<and> P y z"

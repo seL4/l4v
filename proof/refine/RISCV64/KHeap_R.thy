@@ -3594,6 +3594,12 @@ lemma st_tcb_at_runnable_cross:
   apply (drule (3) st_tcb_at_coerce_concrete)
   by (clarsimp simp: pred_tcb_at'_def obj_at'_def sts_rel_runnable)
 
+lemma st_tcb_at_activatable_cross:
+  "\<lbrakk>st_tcb_at activatable t s; pspace_aligned s; pspace_distinct s; (s, s') \<in> state_relation\<rbrakk>
+   \<Longrightarrow> st_tcb_at' activatable' t s'"
+  apply (drule (3) st_tcb_at_coerce_concrete)
+  by (clarsimp simp: pred_tcb_at'_def obj_at'_def sts_rel_activatable)
+
 lemma bound_sc_tcb_at_cross:
   assumes t: "bound_sc_tcb_at P t s"
   assumes sr: "(s, s') \<in> state_relation" "pspace_aligned s" "pspace_distinct s"
