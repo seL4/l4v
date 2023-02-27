@@ -15,8 +15,12 @@ begin
 
 text \<open>
   Some word equalities can be solved by considering the problem bitwise for all
-  @{prop "n < LENGTH('a::len)"}, which is different to running @{text word_bitwise}
-  and expanding into an explicit list of bits.
+  @{prop "n < LENGTH('a::len)"}. This is similar to the existing method @{text word_bitwise}
+  and expanding into an explicit list of bits. The @{text word_bitwise} only works on
+  concrete word lengths, but can treat a wider number of operators (in particular a mix of
+  arithmetic, order, and bit operations). The @{text word_eqI} method below works on words of
+  abstract size (@{typ "'a word"}) and produces smaller, more abstract goals, but does not deal
+  with arithmetic operations.
 \<close>
 
 lemmas le_mask_high_bits_len = le_mask_high_bits[unfolded word_size]
@@ -49,6 +53,8 @@ lemma test_bit_lenD:
   "bit x n \<Longrightarrow> n < LENGTH('a) \<and> bit x n" for x :: "'a :: len word"
   by (fastforce dest: test_bit_size simp: word_size)
 
+\<comment> \<open>Method to reduce goals of the form @{prop "P \<Longrightarrow> x = y"} for words of abstract length to
+    reasoning on bits of the words. Leaves open goal if unsolved.\<close>
 method word_eqI uses simp simp_del split split_del cong flip =
   ((* reduce conclusion to test_bit: *)
    rule word_eqI_rules,
@@ -72,6 +78,8 @@ method word_eqI uses simp simp_del split split_del cong flip =
    (* helps sometimes, rarely: *)
    (simp add: simp test_bit_conj_lt del: simp_del flip: flip split: split split del: split_del cong: cong)?)
 
+\<comment> \<open>Method to reduce goals of the form @{prop "P \<Longrightarrow> x = y"} for words of abstract length to
+    reasoning on bits of the words. Fails if goal unsolved, but tries harder than @{method word_eqI}.\<close>
 method word_eqI_solve uses simp simp_del split split_del cong flip dest =
   solves \<open>word_eqI simp: simp simp_del: simp_del split: split split_del: split_del
                    cong: cong simp flip: flip;
