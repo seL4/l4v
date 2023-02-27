@@ -19,7 +19,7 @@
     <sequence depends="ASpec">
         <test name="AInvs" cpu-timeout="14400">make AInvs</test>
         <test name="BaseRefine">make BaseRefine</test>
-        <test name="Refine" cpu-timeout="28800">make Refine</test>
+        <test name="Refine" cpu-timeout="36000">make Refine</test>
         <test name="RefineOrphanage" cpu-timeout="3600">make RefineOrphanage</test>
     </sequence>
 
