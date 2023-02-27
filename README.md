@@ -164,8 +164,16 @@ statements.
 Running the Proofs
 ------------------
 
-If Isabelle is set up correctly, a full test for the proofs in this repository
-can be run with the command
+In order to open the AInvs session, the file `Kernel_Config.thy` must be generated.
+This can be done by first setting the environment variable `L4V_ARCH` to `RISCV64`
+and running
+
+    make ASpec
+
+from the directory `l4v/spec`.
+
+Once `Kernel_Config.thy` has been generated and Isabelle is set up correctly,
+a full test for the proofs in this repository can be run with the command
 
     ./run_tests
 
