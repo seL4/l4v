@@ -43,11 +43,19 @@ crunches setNextInterrupt, switchSchedContext
   for sch_act_wf[wp]: "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
   (wp: crunch_wps)
 
+lemma schedule_ct_activatable'[wp]:
+  "\<lbrace>\<top>\<rbrace> schedule \<lbrace>\<lambda>_. ct_in_state' activatable'\<rbrace>"
+  unfolding schedule_def ct_activatable'_asrt_def
+  by wpsimp
+
 lemma schedule_sch_act_wf:
   "\<lbrace>\<lambda>s. invs' s \<and> sch_act_wf (ksSchedulerAction s) s\<rbrace>
    schedule
    \<lbrace>\<lambda>_ s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-sorry (* FIXME RT: schedule_sch_act_wf. Move above Hoare triples to Refine *)
+  apply (rule_tac Q="\<lambda>_ s. ksSchedulerAction s = ResumeCurrentThread \<and> ct_in_state' activatable' s"
+               in hoare_post_imp)
+   apply (clarsimp simp: sch_act_wf_def)
+  by (wpsimp wp: schedule_sch)
 
 lemma ucast_8_32_neq:
   "x \<noteq> 0xFF \<Longrightarrow> UCAST(8 \<rightarrow> 32 signed) x \<noteq> 0xFF"
@@ -691,15 +699,6 @@ lemma getContext_corres:
   apply (clarsimp simp: typ_heap_simps ctcb_relation_def carch_tcb_relation_def from_user_context_C)
   done
 
-lemma callKernel_cur:
-  "\<lbrace>all_invs' e\<rbrace> callKernel e \<lbrace>\<lambda>rv s. tcb_at' (ksCurThread s) s\<rbrace>"
-  apply (rule hoare_chain)
-    apply (rule ckernel_invs)
-sorry (* FIXME RT: callKernel_cur. Possibly cross cur_tcb and use an assertion?
-   apply (clarsimp simp: all_invs'_def sch_act_simple_def)
-  apply clarsimp
-  done *)
-
 lemma entry_corres_C:
   "fp = False \<Longrightarrow> \<comment> \<open>FIXME: fastpath\<close>
   corres_underlying rf_sr False True (=)
@@ -722,11 +721,14 @@ lemma entry_corres_C:
           apply (rule corres_split[where P=\<top> and P'=\<top> and r'="\<lambda>t t'. t' = tcb_ptr_to_ctcb_ptr t"])
              apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
             apply (rule getContext_corres, simp)
-           apply (wp threadSet_all_invs_triv' callKernel_cur)+
-   apply (clarsimp simp: all_invs'_def invs'_def cur_tcb'_def)
-sorry (* FIXME RT: entry_corres_C
+           apply (wpsimp wp: threadSet_all_invs_triv' callKernel_cur_tcb'[unfolded cur_tcb'_def])+
+   apply (clarsimp simp: all_invs'_def invs'_def)
+   apply (rename_tac s' s)
+   apply (clarsimp simp: invs_def valid_state_def)
+   apply (frule_tac s=s and s'=s' in cur_tcb_cross, fastforce+)
+   apply (clarsimp simp: cur_tcb'_def)
   apply simp
-  done *)
+  done
 
 lemma entry_refinement_C:
   "\<lbrakk>all_invs' e s; (s, t) \<in> rf_sr; fp = False \<comment> \<open>FIXME: fastpath\<close> \<rbrakk>

@@ -458,10 +458,10 @@ lemma kernelExitAssertions_isolatable:
   unfolding stateAssert_def kernelExitAssertions_def
   apply (clarsimp simp: thread_actions_isolatable_def get_def assert_def bind_def)
   apply (simp add: isolate_thread_actions_def select_f_returns liftM_def bind_assoc)
-  apply (clarsimp simp: monadic_rewrite_def exec_gets getSchedulerAction_def exec_modify
-                  split: if_split)
-  apply (simp add: simpler_gets_def return_def fail_def modify_def get_def put_def
-                   ksPSpace_update_partial_id o_def bind_def select_f_def)
+  apply (clarsimp simp: monadic_rewrite_def exec_gets getSchedulerAction_def)
+  apply (fastforce simp: cur_tcb'_def simpler_gets_def return_def fail_def modify_def get_def
+                         put_def ksPSpace_update_partial_id o_def bind_def select_f_def
+                         obj_at_partial_overwrite_If)
   done
 
 lemma isolate_thread_actions_wrap_bind:
