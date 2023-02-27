@@ -779,4 +779,16 @@ lemma shiftr_anti_mono:
   apply (simp add: drop_bit_eq_div zdiv_mono2)
   done
 
+lemma word_mult_div_assoc:
+  fixes x y z :: "'a :: len word"
+  assumes "unat z dvd unat y"
+      and "unat x * unat y \<le> unat (max_word :: 'a :: len word)"
+      and "z \<noteq> 0"
+  shows "(x * y) div z = x * (y div z)"
+  using assms
+  apply (clarsimp simp: dvd_def)
+  apply (metis le_unat_uoi mult.left_commute nonzero_mult_div_cancel_left unat_div_distrib
+               unat_eq_zero word_arith_nat_div word_arith_nat_mult)
+  done
+
 end
