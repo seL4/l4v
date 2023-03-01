@@ -128,4 +128,5 @@ ${KERNEL_CONFIG_ROOT}/.cmake_done: ${KERNEL_DEPS} gen-config-thy.py
 		-DCMAKE_TOOLCHAIN_FILE=${CSPEC_DIR}/c/no-compiler.cmake \
 		${KERNEL_CMAKE_EXTRA_OPTIONS} \
 		-G Ninja ${SOURCE_ROOT}
+	cd ${KERNEL_CONFIG_ROOT} && ninja gen_config/kernel/gen_config.json
 	touch ${KERNEL_CONFIG_ROOT}/.cmake_done
