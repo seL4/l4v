@@ -81,6 +81,11 @@ jobs:
       uses: actions/download-artifact@v3
       with:
         path: artifacts
+    - name: Get scripts from ci-actions repo
+      uses: actions/checkout@v3
+      with:
+        repository: seL4/ci-actions
+        path: ci-actions
     - name: Check for C graph-lang artifacts
       id: enabled
       env:
@@ -89,7 +94,7 @@ jobs:
         # Check if there are any C graph-lang artifacts
         if [ -e artifacts/c-graph-lang ]; then
           echo "C graph-lang artifacts found, will trigger binary verification"
-          echo -n "${MANIFEST}"| nl-unescape.sh > verification-manifest.xml
+          echo -n "${MANIFEST}"| ./ci-actions/scripts/nl-unescape.sh > verification-manifest.xml
           echo "::set-output name=enabled::true"
         else
           echo "No C graph-lang artifacts found, will not trigger binary verification"
