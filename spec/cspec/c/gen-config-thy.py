@@ -193,7 +193,7 @@ def parse_gen_config(gen_config_file: str) -> Dict[str, str]:
     """
     Parse gen_config.h and return a dictionary of the values.
     """
-    end_comment_re = re.compile(r'  /\*.*\*/')
+    end_comment_re = re.compile(r'/\*.*\*/')
 
     config = {}
     with open(gen_config_file, 'r') as f:
