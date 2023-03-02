@@ -92,14 +92,23 @@ ${KERNEL_BUILD_ROOT}/kernel_all.c_pp: ${KERNEL_BUILD_ROOT}/.cmake_done
 	cd ${KERNEL_BUILD_ROOT} && ninja kernel_all_pp_wrapper
 	cp -a ${KERNEL_BUILD_ROOT}/kernel_all_pp.c $@
 
+ifneq ($(L4V_ARCH),X64)
+OVERLAY := overlays/$(L4V_ARCH)/overlay.dts
+OVERLAY_OPT := -DKernelCustomDTSOverlay=../../${OVERLAY}
+DEFAULT_OVERLAY := overlays/$(L4V_ARCH)/default-overlay.dts
+
+${OVERLAY}: overlays/$(L4V_ARCH)/default-overlay.dts
+	@cp $< $@
+endif
+
 # Initialize the CMake build. We purge the build directory and start again
 # whenever any of the kernel sources change, so that we can reliably pick up
 # changes to the build config.
 # This step also generates a large number of files, so we create a dummy file
 # .cmake_done to represent overall completion for make's dependency tracking.
-${KERNEL_BUILD_ROOT}/.cmake_done: ${KERNEL_DEPS} ${CONFIG_DOMAIN_SCHEDULE}
-	rm -rf ${KERNEL_BUILD_ROOT}
-	mkdir -p ${KERNEL_BUILD_ROOT}
+${KERNEL_BUILD_ROOT}/.cmake_done: ${KERNEL_DEPS} ${CONFIG_DOMAIN_SCHEDULE} ${OVERLAY}
+	@rm -rf ${KERNEL_BUILD_ROOT}
+	@mkdir -p ${KERNEL_BUILD_ROOT}
 	cd ${KERNEL_BUILD_ROOT} && \
 	cmake -C ${CONFIG} \
 		-DCROSS_COMPILER_PREFIX=${TOOLPREFIX} \
@@ -107,8 +116,16 @@ ${KERNEL_BUILD_ROOT}/.cmake_done: ${KERNEL_DEPS} ${CONFIG_DOMAIN_SCHEDULE}
 		-DKernelDomainSchedule=${CONFIG_DOMAIN_SCHEDULE} \
 		-DUMM_TYPES=$(abspath ${UMM_TYPES}) -DCSPEC_DIR=${CSPEC_DIR} \
 		${KERNEL_CMAKE_OPTIMISATION} ${KERNEL_CMAKE_EXTRA_OPTIONS} \
+		${OVERLAY_OPT} \
 		-G Ninja ${SOURCE_ROOT}
-	touch ${KERNEL_BUILD_ROOT}/.cmake_done
+	@touch ${KERNEL_BUILD_ROOT}/.cmake_done
+ifneq ($(L4V_ARCH),X64)
+	@if [ "$$(diff -q ${OVERLAY} ${DEFAULT_OVERLAY})" ]; then \
+		echo "++ Used custom overlay for $(L4V_ARCH)"; \
+	else \
+		echo "-- Used default overlay for $(L4V_ARCH)"; \
+	fi
+endif
 
 ${UMM_TYPES}: ${KERNEL_BUILD_ROOT}/kernel_all.c_pp
 	${CSPEC_DIR}/mk_umm_types.py --root $(L4V_REPO_PATH) ${KERNEL_BUILD_ROOT}/kernel_all.c_pp $@
@@ -116,16 +133,24 @@ ${UMM_TYPES}: ${KERNEL_BUILD_ROOT}/kernel_all.c_pp
 # This target generates config files and headers only. It does not invoke
 # the C tool chain or preprocessor. We force CMake to skip tests for these,
 # so that ASpec and ExecSpec can be built with fewer dependencies.
-${KERNEL_CONFIG_ROOT}/.cmake_done: ${KERNEL_DEPS} gen-config-thy.py
-	rm -rf ${KERNEL_CONFIG_ROOT}
-	mkdir -p ${KERNEL_CONFIG_ROOT}
+${KERNEL_CONFIG_ROOT}/.cmake_done: ${KERNEL_DEPS} gen-config-thy.py ${OVERLAY}
+	@rm -rf ${KERNEL_CONFIG_ROOT}
+	@mkdir -p ${KERNEL_CONFIG_ROOT}
 	cd ${KERNEL_CONFIG_ROOT} && \
 	cmake -C ${CONFIG} \
 		-DCMAKE_TOOLCHAIN_FILE=${CSPEC_DIR}/c/no-compiler.cmake \
 		${KERNEL_CMAKE_OPTIMISATION} ${KERNEL_CMAKE_EXTRA_OPTIONS} \
+		${OVERLAY_OPT} \
 		-G Ninja ${SOURCE_ROOT}
 	cd ${KERNEL_CONFIG_ROOT} && ninja gen_config/kernel/gen_config.json
-	touch ${KERNEL_CONFIG_ROOT}/.cmake_done
+	@touch ${KERNEL_CONFIG_ROOT}/.cmake_done
+ifneq ($(L4V_ARCH),X64)
+	@if [ "$$(diff -q ${OVERLAY} ${DEFAULT_OVERLAY})" ]; then \
+		echo "++ Used custom overlay for $(L4V_ARCH)"; \
+	else \
+		echo "-- Used default overlay for $(L4V_ARCH)"; \
+	fi
+endif
 
 # Various targets useful for binary verification.
 ${KERNEL_BUILD_ROOT}/kernel.elf: ${KERNEL_BUILD_ROOT}/kernel_all.c_pp
