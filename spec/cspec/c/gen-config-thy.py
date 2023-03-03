@@ -208,6 +208,24 @@ def parse_gen_config(gen_config_file: str) -> Dict[str, str]:
     return config
 
 
+def parse_physBase(l4v_arch: str, devices_gen_h_file: str) -> str:
+    """
+    Parse devices_gen.h and return the physBase value as string in hex or
+    decimal form. Return None for architectures that don't use physBase.
+    """
+    if l4v_arch == 'X64':
+        return None
+
+    physBase_re = re.compile(r'#define PHYS_BASE_RAW (0x[0-9a-fA-F]+|[0-9]+)')
+    with open(devices_gen_h_file, 'r') as f:
+        for line in f:
+            line = line.strip()
+            m = physBase_re.match(line)
+            if m:
+                return m.group(1)
+    raise Exception(f'Could not find PHYS_BASE_RAW in {devices_gen_h_file}')
+
+
 def add_defaults(config: Dict[str, str]):
     """
     Defaults are boolean config keys that are mentioned in known_config_keys
@@ -215,7 +233,7 @@ def add_defaults(config: Dict[str, str]):
     config file.
     """
     for key, (_, name) in known_config_keys.items():
-        if key not in config and not name is None:
+        if key not in config and name is not None:
             config[key] = 0
 
 
@@ -235,25 +253,27 @@ begin
   GENERATED -- DO NOT EDIT! Changes will be overwritten.
 
   This file was generated from {}
+  and {}
   by the script {}.
 *)
 
 """
 
 
-def write_config_thy(config_thy_path, config: Dict[str, str]):
+def write_config_thy(header, config_thy_path, config: Dict[str, str], physBase=None):
     """
     Write a Kernel_Config.thy file for a given configuration dict.
     """
     file_name = path.realpath(path.join(config_thy_path, 'Kernel_Config.thy'))
     with open(file_name, 'w') as f:
-        f.write(theory_header.format(
-            date.today().year,
-            config_path,
-            path.realpath(__file__))
-        )
+        f.write(header)
 
-        names = []
+        if physBase:
+            f.write('(* This value is PHYS_BASE_RAW in the devices_gen.h header listed above. *)\n')
+            f.write('definition physBase :: machine_word where\n')
+            f.write(f'  "physBase \\<equiv> {physBase}"\n\n')
+
+        names = ['physBase'] if physBase else []
         for key, value in config.items():
             type = type_of(key)
             if type is nat or type is word:
@@ -278,26 +298,36 @@ def write_config_thy(config_thy_path, config: Dict[str, str]):
                 pass
 
         f.write('\n(* These definitions should only be unfolded consciously and carefully: *)\n')
-
         for name in names:
             f.write(f'hide_fact (open) {name}_def\n')
 
         f.write('\nend\n')
 
-    print(f'Wrote {file_name}.')
+    print(f'Wrote {file_name}')
 
 
 if __name__ == '__main__':
-    L4V_ARCH = getenv('L4V_ARCH')
-    if not L4V_ARCH:
+    l4v_arch = getenv('L4V_ARCH')
+    if not l4v_arch:
         print('L4V_ARCH environment variable not set')
         exit(1)
 
     this_dir = path.dirname(path.realpath(__file__))
+    build_dir = path.join(this_dir, f"config-build/{l4v_arch}")
 
-    config_path = path.join(this_dir, f"config-build/{L4V_ARCH}/gen_config/kernel/gen_config.h")
-    thy_path = path.join(this_dir, f'../../machine/{L4V_ARCH}')
+    config_path = path.join(build_dir, "gen_config/kernel/gen_config.h")
+    devices_gen_path = path.join(build_dir, "gen_headers/plat/machine/devices_gen.h")
+
+    thy_path = path.join(this_dir, f'../../machine/{l4v_arch}')
 
     config = parse_gen_config(config_path)
+    physBase = parse_physBase(l4v_arch, devices_gen_path)
     add_defaults(config)
-    write_config_thy(thy_path, config)
+
+    header = theory_header.format(
+        date.today().year,
+        config_path,
+        devices_gen_path,
+        path.realpath(__file__)
+    )
+    write_config_thy(header, thy_path, config, physBase)
