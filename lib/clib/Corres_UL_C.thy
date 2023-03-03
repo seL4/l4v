@@ -820,6 +820,46 @@ lemma ccorres_call:
   apply simp
   done
 
+text \<open>
+  This rule is intended to be used in the case where the C calls a function and then uses the
+  returned value to update a global variable. Typically, the Haskell will split this up into a
+  getter function followed by a setter function. Note that the getter function may change the
+  state.
+
+  The extra return statement on the Haskell side allows us to establish a nontrivial return relation
+  between the values set on the concrete and abstract side. The @{thm bind_assoc_reverse} rule
+  may assist with rewriting statements to add the extra return needed by this rule\<close>
+lemma ccorres_call_getter_setter:
+  assumes cul: "ccorresG sr \<Gamma> (=) xf' P (i ` P') [] getter (Call f)"
+  and     gsr: "\<And>x x' s t rv rv'.
+                  \<lbrakk> (x, t) \<in> sr; rv = xf' t; (rv', x') \<in> fst (setter rv x) \<rbrakk>
+                  \<Longrightarrow> (x', g s t (clean s t)) \<in> sr"
+  and     res: "\<And>s t rv. rv = xf' t \<Longrightarrow> rv = xf (g s t (clean s t))"
+  and     ist: "\<And>x s. (x, s) \<in> sr \<Longrightarrow> (x, i s) \<in> sr"
+  and      ef: "\<And>val. empty_fail (setter val)"
+  shows "ccorresG sr \<Gamma> (=) xf P P' hs
+           (do val \<leftarrow> getter; setter val; return val od)
+           (call i f clean (\<lambda>s t. Basic (g s t)))"
+  apply (rule ccorresI')
+  apply (rename_tac s s' n z)
+  apply (prop_tac "\<not> snd (getter s)")
+   apply (clarsimp simp: bind_def)
+  apply (erule exec_handlers.cases; clarsimp)
+   apply (erule exec_call_Normal_elim; simp?)
+    apply (clarsimp elim!: exec_Normal_elim_cases)
+   apply (fastforce intro: ccorresE[OF cul ist] EHAbrupt EHEmpty elim: exec.Call)
+  apply (erule exec_call_Normal_elim; simp?)
+     apply (rule ccorresE[OF cul ist], simp+)
+      apply (fastforce intro: EHOther elim: exec.Call)
+     using ef
+     apply (fastforce intro: gsr res
+                       simp: unif_rrel_simps bind_def empty_fail_def return_def
+                       elim: exec_Normal_elim_cases)
+    apply (fastforce intro: ccorresE[OF cul ist] EHOther elim: exec.Call)
+   apply (fastforce intro: ccorresE[OF cul ist] EHOther elim: exec.Call)
+  apply (fastforce intro: ccorresE[OF cul ist] EHOther elim: exec.CallUndefined)
+  done
+
 declare semantic_equivD1 [dest]
 declare semantic_equivD2 [dest]
 
