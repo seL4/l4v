@@ -40,9 +40,12 @@ jobs:
         path: logs.tar.xz
 
   binary-verification:
-    name: Trigger binary verification
+    name: Trigger BV
+    runs-on: ubuntu-latest
     needs: proofs
-    uses: ./.github/workflows/binary-verification.yml
-    secrets: inherit
-    with:
-      tag: l4v/weekly-clean
+    steps:
+    - name: Trigger binary verification
+      uses: seL4/ci-actions/bv-trigger@master
+      with:
+        token: ${{ secrets.PRIV_REPO_TOKEN }}
+        tag: l4v/weekly-clean

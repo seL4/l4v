@@ -69,11 +69,8 @@ jobs:
         xml: ${{ needs.code.outputs.xml }}
       env:
         GH_SSH: ${{ secrets.CI_SSH }}
-
-  binary-verification:
-    name: Trigger binary verification
-    needs: deploy
-    uses: ./.github/workflows/binary-verification.yml
-    secrets: inherit
-    with:
-      tag: "l4v/proof-deploy/${{ github.event_name }}"
+    - name: Trigger binary verification
+      uses: seL4/ci-actions/bv-trigger@master
+      with:
+        token: ${{ secrets.PRIV_REPO_TOKEN }}
+        tag: "l4v/proof-deploy/${{ github.event_name }}"
