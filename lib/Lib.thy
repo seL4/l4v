@@ -2522,7 +2522,25 @@ lemma if_option_None_eq:
   "((if P then Some x else None) = None) = (\<not>P)"
   by simp+
 
-lemmas if_option = if_option_None_eq if_option_Some if_option_Some2
+lemma lhs_sym_eq:
+  "(a = b) = x \<longleftrightarrow> (b = a) = x"
+  by auto
+
+(* if_option is not [simp], because it can add x = y equations to the premises of the goal, which
+   get picked up by the simplifier and may lead to non-termination. *)
+lemmas if_option =
+  if_option_Some
+  if_option_Some[unfolded lhs_sym_eq]
+  if_option_Some2
+  if_option_Some2[unfolded lhs_sym_eq]
+
+(* if_option_eq should be safer, but is still not [simp], because P can be an equation, which can
+   lead to non-termination. *)
+lemmas if_option_eq =
+  if_option_None_eq
+  if_option_None_eq[unfolded lhs_sym_eq]
+  if_option_Some_eq
+  if_option_Some_eq[unfolded lhs_sym_eq]
 
 lemma not_in_ran_None_upd:
   "x \<notin> ran m \<Longrightarrow> x \<notin> ran (m(y := None))"
