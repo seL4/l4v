@@ -9,9 +9,7 @@ theory ArchKHeap_AI
 imports KHeapPre_AI
 begin
 
-(* FIXME AARCH64: if_option is missing all cases for None/Some = if .. *)
-
-declare if_option_Some_eq[simp]
+declare if_option_eq[simp]
 
 context Arch begin global_naming AARCH64
 
