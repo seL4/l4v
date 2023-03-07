@@ -461,12 +461,10 @@ isVTableRoot :: Capability -> Bool
 isVTableRoot (ArchObjectCap (PageTableCap { capPTType = VSRootPT_T })) = True
 isVTableRoot _ = False
 
--- FIXME AARCH64: name indirection kept here for sync with C; both (C and
--- Haskell) should define isValidVTableRoot directly
-isValidNativeRoot :: Capability -> Bool
-isValidNativeRoot cap = isVTableRoot cap && isJust (capPTMappedAddress (capCap cap))
+isValidVTableRoot :: Capability -> Bool
+isValidVTableRoot cap = isVTableRoot cap && isJust (capPTMappedAddress (capCap cap))
 
--- if isValidNativeRoot holds, return VSpace and ASID, otherwise throw error
+-- if isValidVTableRoot holds, return VSpace and ASID, otherwise throw error
 checkVSpaceRoot :: Capability  -> Int -> KernelF SyscallError (PPtr PTE, ASID)
 checkVSpaceRoot vspaceCap argNo =
     case vspaceCap of
@@ -475,9 +473,6 @@ checkVSpaceRoot vspaceCap argNo =
                 capPTBasePtr = vspace })
             -> return (vspace, asid)
         _ -> throw $ InvalidCapability argNo
-
-isValidVTableRoot :: Capability -> Bool
-isValidVTableRoot = isValidNativeRoot
 
 checkValidIPCBuffer :: VPtr -> Capability -> KernelF SyscallError ()
 checkValidIPCBuffer vptr (ArchObjectCap (FrameCap {capFIsDevice = False})) = do
