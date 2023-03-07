@@ -52,6 +52,9 @@ indicating the architecture-specific definitions and proofs to use. The default
 architecture is `ARM` and will be selected if none is provided. See
 `l4v/spec/cspec/c/Makefile` for seL4 configuration details.
 
+The build process has an option for providing a device tree overlay file if
+desired, which can customise the memory regions available to the kernel. See
+the [README](c/overlays/README.md) file in `c/overlays/` for more details.
 
 Remarks
 -------
