@@ -2787,32 +2787,49 @@ lemma decodeARMFrameInvocation_ccorres:
              apply csymbr
              apply csymbr
              apply csymbr
+             apply csymbr
+             (* can't csymbr the IF calculation because of the function calls, but we can show
+                it's the same as the condition on the Haskell side*)
+             apply (rule ccorres_rhs_assoc2)
+             apply (rule_tac xf'=ret__int_' and R'=UNIV and R=\<top> and
+                             val="from_bool (
+                                    addrFromPPtr v0 + hd args < physBase \<or>
+                                    ARM_HYP_H.fromPAddr paddrTop
+                                      < hd (drop (Suc 0) args) - hd args +
+                                        ARM_HYP_H.fromPAddr (addrFromPPtr v0 + hd args))"
+                             in ccorres_symb_exec_r_known_rv)
+                apply (rule conseqPre, vcg)
+                (* FIXME: temporary workaround, there should only be one physBase *)
+                apply (clarsimp simp: unify_physBase dest!: ccap_relation_PageCap_generics)
+                apply (clarsimp simp: paddrTop_def pptrTop_def fromPAddr_def
+                                      ARM_HYP.physBase_def ARM_HYP.pptrBase_def
+                                      hd_drop_conv_nth hd_conv_nth false_def true_def
+                                split: if_split)
+               apply ceqv
 
-             apply (rule ccorres_if_cond_throws[rotated -1,where Q = \<top> and Q' = \<top>])
-                apply vcg
-               apply (clarsimp simp: paddrTop_def ARM_HYP.paddrTop_def pptrTop_def fromPAddr_def
-                                     physBase_def ARM_HYP.physBase_def ARM_HYP.pptrBase_def
-                                     hd_drop_conv_nth hd_conv_nth)
-               apply (clarsimp dest!: ccap_relation_PageCap_generics)
-              apply (simp add:injection_handler_throwError)
-              apply (rule syscall_error_throwError_ccorres_n)
-              apply (simp add: syscall_error_to_H_cases)
-             apply (simp add: performARMMMUInvocations bindE_assoc)
-             apply (ctac add: setThreadState_ccorres)
-               apply (ctac(no_vcg) add: performPageFlush_ccorres)
-                 apply (rule ccorres_gen_asm)
-                 apply (erule ssubst[OF if_P, where P="\<lambda>x. ccorres _ _ _ _ _ x _"])
-                 apply (rule ccorres_alternative2)
-                 apply (rule ccorres_return_CE, simp+)[1]
-                apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
-               apply (wpsimp simp: performPageInvocation_def)
+              apply (rule ccorres_if_cond_throws[rotated -1,where Q = \<top> and Q' = \<top>])
+                 apply vcg
+                apply (solves clarsimp)
+               apply (simp add:injection_handler_throwError)
+               apply (rule syscall_error_throwError_ccorres_n)
+               apply (simp add: syscall_error_to_H_cases)
+              apply (simp add: performARMMMUInvocations bindE_assoc)
+              apply (ctac add: setThreadState_ccorres)
+                apply (ctac(no_vcg) add: performPageFlush_ccorres)
+                  apply (rule ccorres_gen_asm)
+                  apply (erule ssubst[OF if_P, where P="\<lambda>x. ccorres _ _ _ _ _ x _"])
+                  apply (rule ccorres_alternative2)
+                  apply (rule ccorres_return_CE, simp+)[1]
+                 apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
+                apply (wpsimp simp: performPageInvocation_def)
+               apply simp
+               apply (strengthen unat_sub_le_strg[where v="2 ^ pageBitsForSize (capVPSize cp)"])
+               apply (simp add: linorder_not_less linorder_not_le order_less_imp_le)
+               apply (wp sts_invs_minor')
               apply simp
-              apply (strengthen unat_sub_le_strg[where v="2 ^ pageBitsForSize (capVPSize cp)"])
-              apply (simp add: linorder_not_less linorder_not_le order_less_imp_le)
-              apply (wp sts_invs_minor')
+              apply (vcg exspec=setThreadState_modifies)
              apply simp
-             apply (vcg exspec=setThreadState_modifies)
-            apply simp
+             apply vcg
             apply wp
            apply vcg
           apply wp

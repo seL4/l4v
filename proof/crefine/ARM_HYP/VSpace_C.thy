@@ -781,7 +781,8 @@ lemma ptrFromPAddr_spec:
    Call ptrFromPAddr_'proc
    \<lbrace>\<acute>ret__ptr_to_void = Ptr (ptrFromPAddr (paddr_' s))\<rbrace>"
   apply vcg
-  apply (simp add: ptrFromPAddr_def pptrBaseOffset_def pptrBase_def physBase_def)
+  (* FIXME: unify_physBase will be unnecessary once there is only one physBase *)
+  apply (simp add: ptrFromPAddr_def pptrBaseOffset_def pptrBase_def unify_physBase)
   done
 
 lemma addrFromPPtr_spec:
@@ -789,7 +790,8 @@ lemma addrFromPPtr_spec:
    Call addrFromPPtr_'proc
    \<lbrace>\<acute>ret__unsigned_long = addrFromPPtr (ptr_val (pptr_' s))\<rbrace>"
   apply vcg
-  apply (simp add: addrFromPPtr_def pptrBaseOffset_def pptrBase_def physBase_def)
+  (* FIXME: unify_physBase will be unnecessary once there is only one physBase *)
+  apply (simp add: addrFromPPtr_def pptrBaseOffset_def pptrBase_def unify_physBase)
   done
 
 lemma addrFromKPPtr_spec:
@@ -797,8 +799,9 @@ lemma addrFromKPPtr_spec:
    Call addrFromKPPtr_'proc
    \<lbrace>\<acute>ret__unsigned_long = addrFromKPPtr (ptr_val (pptr_' s))\<rbrace>"
   apply vcg
+  (* FIXME: unify_physBase will be unnecessary once there is only one physBase *)
   apply (simp add: addrFromKPPtr_def kernelELFBaseOffset_def kernelELFPAddrBase_def
-                   kernelELFBase_def physBase_def pptrBase_def mask_def)
+                   kernelELFBase_def unify_physBase pptrBase_def mask_def)
   done
 
 abbreviation
