@@ -88,6 +88,11 @@ crunch irq_state_of_state[Arch_IF_assms, wp]: arch_finalise_cap, prepare_thread_
   (wp: select_wp modify_wp crunch_wps dmo_wp find_vspace_for_asid_wp touch_object_wp'
    simp: crunch_simps hwASIDFlush_def ta_agnostic_def)
 
+lemma clearTouchedAddresses_irq_state[wp]:
+  "clearTouchedAddresses \<lbrace>\<lambda> s. P (irq_state s)\<rbrace>"
+  apply (clarsimp simp: valid_def clearTouchedAddresses_def simpler_modify_def)
+  done
+
 crunch irq_state_of_state[Arch_IF_assms, wp]:
   arch_mask_interrupts, arch_domainswitch_flush, arch_switch_domain_kernel
   "\<lambda>s. P (irq_state_of_state s)"

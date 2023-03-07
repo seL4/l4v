@@ -8,6 +8,7 @@
 theory TimeProtectionIntegration
 imports TimeProtection
   "InfoFlow.Noninterference" schedule_oracle
+  CachePartitionIntegrity
 begin
 
 type_synonym context_and_state = "user_context \<times> det_ext Structures_A.state"
@@ -156,6 +157,25 @@ definition will_domain_switch :: "if_other_state \<Rightarrow> bool" where
                          \<and> domain_time_zero (internal_state_if os)"
 
 
+lemma do_machine_op_spec_eq:
+  "f (machine_state t) = f (machine_state s) \<Longrightarrow>
+  (\<exists>t'. (a, t') \<in>fst (do_machine_op f t)) = (\<exists>s'. (a, s') \<in> fst (do_machine_op f s))"
+  apply (clarsimp simp: do_machine_op_def bind_def simpler_gets_def simpler_modify_def return_def
+                        select_f_def)
+  apply force
+  done  
+
+lemma spec_dmo_getActiveURQ_from_uwr:
+  "uwr2 os PSched ot \<Longrightarrow>
+  (\<exists>t'. (a, t') \<in> fst (do_machine_op (getActiveIRQ False) (internal_state_if ot)))
+= (\<exists>s'. (a, s') \<in> fst (do_machine_op (getActiveIRQ False) (internal_state_if os)))"
+  apply (rule do_machine_op_spec_eq)
+  apply (clarsimp simp: uwr_def sameFor_def sameFor_scheduler_def)
+  apply (clarsimp simp: getActiveIRQ_def bind_def simpler_gets_def simpler_modify_def return_def)
+  apply (intro conjI impI allI)
+  sorry (* made as a helper for will_domain_switch_from_uwr below. not 100% sure it's
+           true, but I think it is -scottb *)
+
 (* PROPERTY will_domain_switch_public: this tells us that the public "uwr"
    decides whether we will perform a domain switch *)
 lemma will_domain_switch_from_uwr:
@@ -164,20 +184,10 @@ lemma will_domain_switch_from_uwr:
   unfolding uwr_def
   apply (clarsimp simp: will_domain_switch_def uwr_def sameFor_def sameFor_scheduler_def)
   apply (case_tac bc; case_tac ba; clarsimp split:event.splits)
-     apply (prop_tac "interrupt_states (internal_state_if ((aa, bb), KernelEntry Interrupt))
-                    = interrupt_states (internal_state_if ((a , b ), KernelEntry Interrupt))")
-      apply simp
+     apply (rule refl_conj_eq, rule conj_cong)
+      apply (clarsimp simp: is_timer_irq_def Let_def)
+  (* NOTE: maybe we should use monadic_rewrite_dmo_getActiveIRQ here? *)
   sorry
-
-
-
-
-
-
-definition can_split_four_ways where
-  "can_split_four_ways s1 s5 stepfn oldclean dirty gadget newclean \<equiv>
-  ((s1, s5) \<in> stepfn \<Longrightarrow>
-  \<exists> s2 s3 s4. s2 \<in> oldclean s1 \<and> s3 \<in> dirty s2 \<and> s4 \<in> gadget s3 \<and> s4 \<in> newclean s4)"
 
 lemma step_to_KernelExit:
   "(s1, s2) \<in> data_type.Step (ADT_A_if utf) () \<Longrightarrow>
@@ -244,8 +254,8 @@ lemma kernel_entry_if_Inr:
   done
 
 (* PATHING: if we take a step, as long as we are in an interrupted mode,
-  we will either go through kernel_handle_preemption_if or (kernel_call_A_if Interrupt)
-  , and then we will always go through kernel_schedule_if *)
+  we will either go through kernel_handle_preemption_if or (kernel_call_A_if Interrupt),
+  and then we will always go through kernel_schedule_if *)
 lemma domainswitch_two_paths:
   "(s1, s3) \<in> Step () \<Longrightarrow>
   interrupted_modes (snd s1) \<Longrightarrow>
@@ -684,21 +694,6 @@ lemma
   done
                 
   
-  
-
-lemma kernel_entry_is_timer_irq:
-  "monadic_rewrite F E
-    domain_time_zero
-    timer_tick
-    reschedule_required"
-  unfolding timer_tick_def
-  oops
-
-term ct_in_state
-term st_tcb_at
-find_theorems name:running name:thread
-thm schedule_det_ext_ext_def
-
 lemma schedule_if_choose_new_thread:
   "monadic_rewrite F E
     domain_time_zero
@@ -717,52 +712,151 @@ lemma schedule_if_choose_new_thread:
 
 
 
+thm domainswitch_two_paths
+thm handle_preemption_if_timer_irq
+thm kernel_entry_is_timer_irq
+thm schedule_if_choose_new_thread
+(*
+  SPLITS FOUR WAYS
+  Let's figure out what the four ways are, precisely.
+
+  WHAT WE HAVE SO FAR:
+  - domainswitch_two_paths
+    - This is a top-level theory about the entire path of the domainswitch step.
+  - handle_preemption_if_timer_irq
+  - kernel_entry_is_timer_irq
+  - schedule_if_choose_new_thread (sorried)
+  
+*)
+
+term kernel_entry_if
+term global_automaton_if
+term "Step ()"
+
+definition fourways_oldclean_monad where
+  "fourways_oldclean_monad tc \<equiv>
+  do
+    handle_interrupt_IRQTimer;
+    olddom \<leftarrow> gets cur_domain;
+    next_domain;
+    newdom \<leftarrow> gets cur_domain;
+    assert (newdom \<noteq> olddom);
+    irqs_of \<leftarrow> gets domain_irqs;
+    arch_mask_interrupts True (irqs_of olddom);
+    arch_switch_domain_kernel newdom;
+    arch_mask_interrupts False (irqs_of newdom);
+    return tc
+  od"
+
+definition timeprot_gadget_monad where
+  "timeprot_gadget_monad tc \<equiv>
+  do
+    arch_domainswitch_flush;
+    return tc
+  od"
+
+(* {(s, e, s'). s' \<in> fst (split schedule_if s)} *)
+term schedule_if
+term split
+
+definition fourways_oldclean :: "(((user_context \<times> det_ext state) \<times> sys_mode) \<times> ((user_context \<times> det_ext state) \<times> sys_mode)) set" where
+  "fourways_oldclean = {((s, k), (s', k')). s' \<in> (fst (split fourways_oldclean_monad s))}"
+
+\<comment> \<open>the dirty transition is empty\<close>
+definition fourways_dirty :: "(((user_context \<times> det_ext state) \<times> sys_mode) \<times> ((user_context \<times> det_ext state) \<times> sys_mode)) set" where
+  "fourways_dirty \<equiv> {(s, s). True}"
+
+\<comment> \<open>the gadget is all in arch_domainswitch_flush\<close>
+definition fourways_gadget :: "(((user_context \<times> det_ext state) \<times> sys_mode) \<times> ((user_context \<times> det_ext state) \<times> sys_mode)) set" where
+  "fourways_gadget \<equiv> {((s, k), (s', k')). s' \<in> (fst (split timeprot_gadget_monad s)) \<and> k'=k}"
+
+\<comment> \<open>the newclean transition is also empty\<close>
+definition fourways_newclean :: "(((user_context \<times> det_ext state) \<times> sys_mode) \<times> ((user_context \<times> det_ext state) \<times> sys_mode)) set" where
+  "fourways_newclean \<equiv> {(s, s). True}"
+
+lemma tfence_inv:
+  "tfence \<lbrace>P\<rbrace>"
+  sorry
+
+lemma L2FlushAddr_inv:
+  "L2FlushAddr x \<lbrace>P\<rbrace>"
+  apply (clarsimp simp: L2FlushAddr_def)
+  sorry (* hmm axiomatise this? not sure we can do it any other way *)
+
+
+lemma simpler_do_machine_op_clearTouchedAddresses_def:
+  "do_machine_op clearTouchedAddresses \<equiv> modify (ms_ta_update (\<lambda>_. {}))"
+  by (clarsimp simp: bind_def do_machine_op_def clearTouchedAddresses_def simpler_gets_def
+                        simpler_modify_def select_f_def return_def)
+
+lemma fourways_gadget_simplechange:
+  "(os, os') \<in> fourways_gadget \<Longrightarrow>
+  os = ((tc, s), k) \<Longrightarrow>
+  os' = ((tc', s'), k') \<Longrightarrow>
+  tc' = tc \<and> k' = k \<and> s' = ms_ta_update (\<lambda>_. {}) s"
+  apply (clarsimp simp: fourways_gadget_def timeprot_gadget_monad_def)
+  apply (clarsimp simp: bind_def return_def)
+  apply (clarsimp simp: arch_domainswitch_flush_def)
+  apply (clarsimp simp: gets_def bind_def return_def)
+  apply (drule_tac s'=ba in use_valid)
+    apply (rule mapM_x_wp, rule_tac P="(=) b" in dmo_inv, rule L2FlushAddr_inv)
+    apply (rule equalityD1 [OF refl], rule refl)
+  apply (clarsimp simp: simpler_do_machine_op_clearTouchedAddresses_def simpler_modify_def)
+  apply (clarsimp simp: get_def)
+  apply (drule_tac s'=bb in use_valid, rule_tac P="(=) s" in dmo_inv, rule tfence_inv, rule refl)
+  apply simp
+  done
+
+lemma fourways_gadget_simplechange':
+  "(((tc, s), k), ((tc', ms_ta_update (\<lambda>_. {}) s), k')) \<in> fourways_gadget"
+  oops
+
+lemma monadic_rewrite_eq:
+  "P s \<Longrightarrow>
+  (\<And> F E. monadic_rewrite F E P f f') \<Longrightarrow>
+  f s = f' s"
+  apply (clarsimp simp: monadic_rewrite_def)
+  apply force
+  done
+
+(* this will be where we need to do a bunch of monadic rewrite stuff *)
+lemma domainswitch_fourways_stuffs:
+  "(s1, s3) \<in> Step () \<Longrightarrow>
+  will_domain_switch s1 \<Longrightarrow>
+  \<exists> s2. (s1, s2) \<in> fourways_oldclean \<and>
+    (s2, s3) \<in> fourways_gadget"
+  sorry
 
 lemma domainswitch_splits_four_ways:
-  "(s1, s5) \<in> Step () \<Longrightarrow>
-  will_domain_switch s1 \<Longrightarrow>
-  can_split_four_ways s1 s5 (Step ()) a b c d"
-  apply (frule step_bigstepR)
-  apply (clarsimp simp: big_step_R_def)
-  apply (erule disjE)
-   apply (clarsimp simp:will_domain_switch_def)
+  "can_split_four_ways
+    will_domain_switch
+    (Step ())
+    fourways_oldclean
+    fourways_dirty
+    fourways_gadget
+    fourways_newclean"
+  apply (clarsimp simp: can_split_four_ways_def)
+  apply (drule(1) domainswitch_fourways_stuffs)
+  apply (clarsimp)
+  apply (rule_tac x=ab in exI)
+  apply (rule_tac x=bd in exI)
+  apply (rule_tac x=be in exI)
   apply clarsimp
-
-  apply (drule(1) domainswitch_two_paths, clarsimp)
-  apply (rename_tac s2a s2b)
-  apply (simp add: kernel_handle_preemption_if_handle_preemption_if)
-
-  (* 
-     From big_step_R, we know that each step is either some user sequence,
-     or we are starting from the scheduler modes:
-     - KernelEntry Interrupt, or
-     - KernelPreempted
-
-     For each of these options, there are exactly TWO small steps that make up the big step,
-     and the second is identical. In the first step we take either:
-     - kernel_callf Interrupt
-     - preemptionf
-     ... and then we always perform `schedulef`.
-
-     We should make some lemmas that break this down for us so we can reason about those
-     individual steps.
-
-     I am still kinda trying to figure out if preemption can ever cause a (domain) schedule switch,
-     and if not, how do I prove this?
- *)
-  apply (clarsimp simp:interrupted_modes_def)
-
-  apply (clarsimp simp: Step_def big_step_ADT_A_if_def)
-
-  apply (clarsimp simp:Step_def big_step_ADT_A_if_def system.Step_def big_step_adt_def
-    )
-  oops
+  apply (rule_tac x=ab in exI)
+  apply (rule_tac x=bd in exI)
+  apply (rule_tac x=be in exI)
+  apply (clarsimp simp: fourways_dirty_def)
+  apply (rule_tac x=ab in exI)
+  apply (rule_tac x="ms_ta_update (\<lambda>_. {}) bd" in exI)
+  apply (rule_tac x=be in exI)
+  apply (frule fourways_gadget_simplechange, rule refl, rule refl)
+  apply clarsimp
+  apply (clarsimp simp: fourways_newclean_def)
+  done
 
 
 (* based on the monad next_domain and the functions part/partition.
   Never returns PSched. *)
-term next_domain
-term part
 definition get_next_domain
   :: "(user_context \<times> det_ext Structures_A.state) \<times> sys_mode \<Rightarrow> 'l partition" where
   "get_next_domain s \<equiv> 
@@ -780,10 +874,6 @@ lemma get_next_domain_public:
   apply (clarsimp simp: uwr_def sameFor_def sameFor_scheduler_def)
   apply (clarsimp simp: domain_fields_equiv_def)
   done
-   
-
-
-term time_protection_system
 
 interpretation ma?:time_protection_system PSched fch_lookup fch_read_impact fch_write_impact
   empty_fch fch_flush_cycles fch_flush_WCET pch_lookup pch_read_impact pch_write_impact do_pch_flush
@@ -791,43 +881,43 @@ interpretation ma?:time_protection_system PSched fch_lookup fch_read_impact fch_
   colour_userdomain part uwr nlds select_trace
   "big_step_ADT_A_if utf" s0 "policyFlows (pasPolicy initial_aag)"
   _ _ _ touched_addresses _ _ _ will_domain_switch _ _ _ get_next_domain
+  fourways_oldclean fourways_dirty fourways_gadget fourways_newclean
   
   apply unfold_locales
-                  (* external_uwr_same_domain *)
-                  using schedIncludesCurrentDom apply presburger
-                 (* external_uwr_equiv *)
-                 apply (simp add: uwr_equiv_rel)
-                (* will_domain_switch_public *)
-                apply (rule will_domain_switch_from_uwr)
-term uwr
-term same_for
-term sameFor
-                subgoal sorry (* need to adjust how we talk about sched uwr i guess *)
-               (* next_latest_domainswitch_in_future *)
-               apply (rule nlds_in_future)
-              (* next_latest_domainswitch_flatsteps *)
-              apply (erule(1) nlds_flatsteps)
-             (* get_next_domain_public *)
-             apply (erule get_next_domain_public)
-            (* middle state stuff *)
-            subgoal sorry
-            subgoal sorry
-            subgoal sorry
-            subgoal sorry
-        (* step_is_uwr_determined gives us (ta t = ta t') *)
-        subgoal sorry
-       (* step_is_publicly determined gives us (ta t = ta t') *)
-       subgoal sorry
-      (* a version of touched_addresses_inv for all reachable states *)
+                (* external_uwr_same_domain *)
+                using schedIncludesCurrentDom apply presburger
+               (* external_uwr_equiv *)
+               apply (simp add: uwr_equiv_rel)
+              (* will_domain_switch_public *)
+              apply (rule will_domain_switch_from_uwr)
+              subgoal sorry (* need to adjust how we talk about sched uwr i guess *)
+             (* next_latest_domainswitch_in_future *)
+             apply (rule nlds_in_future)
+            (* next_latest_domainswitch_flatsteps *)
+            apply (erule(1) nlds_flatsteps)
+           (* get_next_domain_public *)
+           apply (erule get_next_domain_public)
+          (* touched addresses inv *)
+          
+          (* middle state stuff *)
+          subgoal sorry
+          subgoal sorry
+          subgoal sorry
+          subgoal sorry
+      (* step_is_uwr_determined gives us (ta t = ta t') *)
       subgoal sorry
-     (* every step is either domain_switch with properties, or not, with other properties *)
+     (* step_is_publicly determined gives us (ta t = ta t') *)
      subgoal sorry
-    (* middle state stuff about dirty touched invs. *)
+    (* a version of touched_addresses_inv for all reachable states *)
     subgoal sorry
-   (* artifacts from "defines" *)
-   (* TODO: is there a better way to do this?
-      seems like "defines" is just an alias for "assumes" and means we have to
-      do all this extra bookkeeping. *)
+   (* every step is either domain_switch with properties, or not, with other properties *)
+   subgoal sorry
+  (* middle state stuff about dirty touched invs. *)
+  subgoal sorry
+ (* artifacts from "defines" *)
+ (* TODO: is there a better way to do this?
+    seems like "defines" is just an alias for "assumes" and means we have to
+    do all this extra bookkeeping. *)
   done
 end
 

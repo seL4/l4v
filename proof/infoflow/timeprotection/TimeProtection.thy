@@ -478,10 +478,10 @@ end
   - gadget - only the time protection mechanisms
   - newclean - a step only accessing the new domain's memory
  *)
-definition can_split_four_ways :: "('s \<times> 's) set \<Rightarrow> ('s \<Rightarrow> 's set) \<Rightarrow> ('s \<Rightarrow> 's set) \<Rightarrow>
-                                   ('s \<Rightarrow> 's set) \<Rightarrow> ('s \<Rightarrow> 's set) \<Rightarrow> bool" where
-  "can_split_four_ways step oldclean dirty gadget newclean \<equiv> \<forall> s1 s5. (s1, s5) \<in> step \<longrightarrow>
-  (\<exists> s2 s3 s4. s2 \<in> oldclean s1 \<and> s3 \<in> dirty s2 \<and> s4 \<in> gadget s3 \<and> s5 \<in> newclean s4)"
+definition can_split_four_ways :: "('s \<Rightarrow> bool) \<Rightarrow> ('s \<times> 's) set \<Rightarrow> ('s \<times> 's) set \<Rightarrow> ('s \<times> 's) set \<Rightarrow>
+                                   ('s \<times> 's) set \<Rightarrow> ('s \<times> 's) set \<Rightarrow> bool" where
+  "can_split_four_ways P step oldclean dirty gadget newclean \<equiv> \<forall> s1 s5. (P s1 \<longrightarrow> (s1, s5) \<in> step \<longrightarrow>
+  (\<exists> s2 s3 s4. (s1, s2) \<in> oldclean \<and> (s2, s3) \<in> dirty \<and> (s3, s4) \<in> gadget \<and> (s4, s5) \<in> newclean))"
 
 locale time_protection_system =
   ab: unwinding_system A s0 "\<lambda>_. current_domain" external_uwr policy out Sched +
@@ -552,23 +552,34 @@ locale time_protection_system =
 
   (* note: these ask for 'other_state instead of 'other_state because of the inner/outer
     state thing in the noninterference framework *)
-  fixes ds_substep_oldclean :: "'other_state \<Rightarrow> 'other_state set"
-  fixes ds_substep_dirty :: "'other_state \<Rightarrow> 'other_state set"
-  fixes ds_substep_gadget :: "'other_state \<Rightarrow> 'other_state set"
-  fixes ds_substep_newclean :: "'other_state \<Rightarrow> 'other_state set"
+  fixes ds_substep_oldclean :: "('other_state \<times> 'other_state) set"
+  fixes ds_substep_dirty :: "('other_state \<times> 'other_state) set"
+  fixes ds_substep_gadget :: "('other_state \<times> 'other_state) set"
+  fixes ds_substep_newclean :: "('other_state \<times> 'other_state) set"
 
-  (* PROBLEM: this step_or_substep isn't deterministic - the same initial state could take
-     either the big step or the small step, right? so solving this will be impossible. *)
-  (* step_is_uwr_determimed tells us that touched_addrs will be determined *)
+  (* step_is_uwr_determimed tells us that touched_addrs will be determined.
+    the steps that we need this for are non-ds big steps, oldclean and newclean *)
   assumes external_uwr_same_touched_addrs:
     "(s, t) \<in> external_uwr d \<Longrightarrow>
     current_domain s = d \<Longrightarrow>
     step_is_uwr_determined s \<Longrightarrow>
+    (step = ab.Step () \<and> \<not>will_domain_switch s)
+    \<or> step = ds_substep_oldclean \<or> step = ds_substep_newclean \<Longrightarrow>
     (s, s') \<in> ab.Step () \<Longrightarrow>
     (t, t') \<in> ab.Step () \<Longrightarrow>
     touched_addrs t' = touched_addrs s'"
 
+
+  (* we only need the dirty step to be publicly determined *)
+  assumes external_uwr_public_same_touched_addrs:
+    "(s, t) \<in> external_uwr Sched \<Longrightarrow>
+    step_is_publicly_determined s \<Longrightarrow>
+    (s, s') \<in> ds_substep_dirty \<Longrightarrow>
+    (t, t') \<in> ds_substep_dirty \<Longrightarrow>
+    touched_addrs t' = touched_addrs s'"
+
   assumes fourways: "can_split_four_ways
+    will_domain_switch
     (ab.Step ())
     ds_substep_oldclean
     ds_substep_dirty
@@ -577,19 +588,6 @@ locale time_protection_system =
 
   (* marking that a step only performs the time protection gadget *)
   fixes step_is_only_timeprotection_gadget :: "'other_state \<Rightarrow> 'other_state \<Rightarrow> bool"
-
-  assumes fourways_determinism:
-    "\<lbrakk>(s1, s5) \<in> ab.Step ();
-    ab.reachable s1;
-    will_domain_switch s1;
-    s2 \<in> ds_substep_oldclean s1;
-    s3 \<in> ds_substep_dirty s2;
-    s4 \<in> ds_substep_gadget s3;
-    s5 \<in> ds_substep_newclean s4\<rbrakk> \<Longrightarrow>
-      step_is_uwr_determined s1
-    \<and> step_is_publicly_determined s2
-    \<and> step_is_only_timeprotection_gadget s3 s4
-    \<and> step_is_uwr_determined s4"
 
   (*
     RELATED QUESTION:
@@ -619,51 +617,25 @@ locale time_protection_system =
       verbose, and also requires the interpreter to provide the fact that their uwr is
       maintained by each of the substeps. However, this represents a more natural application
       of the uwr and the `step_is_uwr_determined` etc predicates.
-
   *)
-
-
-  assumes oldclean_same_ta:
-    "\<lbrakk>(s', t') \<in> external_uwr d;
-    ab.reachable s;
-    ab.reachable t;
-    will_domain_switch s;
-    current_domain s = d;
-    s' \<in> ds_substep_oldclean s;
-    t' \<in> ds_substep_oldclean t \<rbrakk> \<Longrightarrow>
-    touched_addresses s' = touched_addresses t'"
-
-
-  assumes dirty_same_ta:
-    "\<lbrakk>(s, t) \<in> external_uwr d;
-    ab.reachable s;
-    ab.reachable t;
-    will_domain_switch s;
-    current_domain s = d;
-    s' \<in> ds_substep_oldclean s;
-    t' \<in> ds_substep_oldclean t \<rbrakk> \<Longrightarrow>
-    touched_addresses s' = touched_addresses t'"
 
   (* should we also ask that touched_addrs is clean after the gadget? that might not be
     strictly true though. *)
-  assumes fourways_invs:
-    "ab.reachable s1 \<Longrightarrow>
-    will_domain_switch s1 \<Longrightarrow>
-    s2 \<in> ds_substep_oldclean s1 \<Longrightarrow>
-    s3 \<in> ds_substep_dirty s2 \<Longrightarrow>
-    s4 \<in> ds_substep_gadget s3 \<Longrightarrow>
-    s5 \<in> ds_substep_newclean s4 \<Longrightarrow>
-      touched_addrs_inv s2
-    \<and> touched_addrs_dirty_inv (current_domain s) (get_next_domain s) s3
-    \<and> touched_addrs_inv s5"
 
-  (* we only need the dirty step to be publicly determined *)
-  assumes external_uwr_public_same_touched_addrs:
-    "(s, t) \<in> external_uwr Sched \<Longrightarrow>
-    step_is_publicly_determined s \<Longrightarrow>
-    s' \<in> ds_substep_dirty s \<Longrightarrow>
-    t' \<in> ds_substep_dirty t \<Longrightarrow>
-    touched_addrs t' = touched_addrs s'"
+  assumes fourways_properties:
+    "\<lbrakk>(s1, s5) \<in> ab.Step ();
+    ab.reachable s1;
+    will_domain_switch s1;
+    (s1, s2) \<in> ds_substep_oldclean;
+    (s2, s3) \<in> ds_substep_dirty;
+    (s3, s4) \<in> ds_substep_gadget;
+    (s4, s5) \<in> ds_substep_newclean\<rbrakk> \<Longrightarrow>
+      step_is_uwr_determined s1
+    \<and> touched_addrs_inv s2
+    \<and> step_is_publicly_determined s2
+    \<and> touched_addrs_dirty_inv (current_domain s) (get_next_domain s) s3
+    \<and> step_is_only_timeprotection_gadget s3 s4
+    \<and> step_is_uwr_determined s4"
 
 begin
 
@@ -696,9 +668,9 @@ definition maStep :: "unit \<Rightarrow>
                  \<and> s' = trace_multistep p s )
                \<or> (will_domain_switch os
                  \<comment> \<open>we have intermediate external states\<close>
-                 \<and> osa \<in> ds_substep_oldclean os
-                 \<and> osb \<in> ds_substep_dirty osa
-                 \<and> osc \<in> ds_substep_gadget osb
+                 \<and> (os, osa) \<in> ds_substep_oldclean
+                 \<and> (osa, osb) \<in> ds_substep_dirty
+                 \<and> (osb, osc) \<in> ds_substep_gadget
                  \<comment> \<open>we select traces for each substep\<close>
                  \<and> p_oldclean = select_user_trace (os, s) (touched_addrs osa)
                  \<and> p_dirty = select_public_trace (osa, sa) dirty_step_WCET (touched_addrs osb)
@@ -765,8 +737,8 @@ lemma ma_single_step_enabled:
   apply (clarsimp simp: steps_def maStep_def)
   apply (frule ab.enabled_Step, clarsimp)
   apply (frule ab.reachable_Step, simp)
-  apply (metis can_split_four_ways_def fourways)
-done
+  apply (metis (mono_tags, opaque_lifting) can_split_four_ways_def fourways)
+  done
 
 lemma ma_execution_enabledness:
   "ab.reachable os \<Longrightarrow>
@@ -1460,21 +1432,6 @@ lemma public_trace_obeys_wcet:
     le_iff_add mem_Collect_eq next_latest_domainswitch_start_in_future trace_multistep_time_forward)
   done
 
-lemma in_sub:
-  "\<lbrakk>x \<in> S1;
-  S1 \<subseteq> S2 \<rbrakk> \<Longrightarrow>
-  x \<in> S2"
-  oops
-
-term traces_obeying_ta
-
-lemma xyz1:
-  "(\<forall>z S1 S2. S1 \<subseteq> S2 \<longrightarrow> z \<in> f S1 \<longrightarrow> z \<in> f S2) \<Longrightarrow>
-  S1 \<subseteq> S2 \<Longrightarrow>
-  x \<in> f S1 \<Longrightarrow>
-  x \<in> f S2"
-  by blast
-
 lemma traces_obeying_set_subset:
   "S1 \<subseteq> S2 \<Longrightarrow>
   traces_obeying_set S1 \<subseteq> traces_obeying_set S2"
@@ -1507,7 +1464,6 @@ lemma ma_confidentiality_u_ds:
   ab.uwr2 os' Sched ot';
   ab.uwr2 os' u ot';
   ab.reachable os;
-  step_is_publicly_determined os;
   ((os, s), os', s') \<in> maStep ();
   ((ot, t), ot', t') \<in> maStep ()\<rbrakk>
   \<Longrightarrow> ma.uwr2 (os', s') u (ot', t')"
@@ -1526,8 +1482,11 @@ lemma ma_confidentiality_u_ds:
 
   (* show that the TAs are the same *)  
   apply (prop_tac "touched_addrs osa' = touched_addrs osa")
+   apply (rule external_uwr_same_touched_addrs [where d=u])
+        apply assumption
+       apply simp
+   thm external_uwr_same_touched_addrs
    term big_step_ADT_A_if
-
 
   apply (prop_tac "touched_addrs osma = touched_addrs osm")
    apply (rule external_uwr_public_same_touched_addrs [where s=os and t=ot])
@@ -1542,6 +1501,7 @@ lemma ma_confidentiality_u_ds:
    apply (rule dirty_multistep [where p="(select_public_trace (ot, t) dirty_step_WCET
            (touched_addrs _))"
           and u="current_domain os" and u'="get_next_domain os"]; (rule refl)?)
+  sorry (*
      apply (drule middle_step_holds_dirty_ta; simp)
      apply (rule ta_dirty_inv_applied, simp)
     apply blast
@@ -1558,7 +1518,7 @@ lemma ma_confidentiality_u_ds:
    apply assumption
   apply (clarsimp simp: trace_multistep_fold)
   apply (simp add: uwr_same_nlds)
-  done
+  done *)
 
 theorem ma_confidentiality_u:
   "ab.confidentiality_u \<Longrightarrow> ma.confidentiality_u"
@@ -1589,13 +1549,14 @@ theorem ma_confidentiality_u:
 
   apply (case_tac "will_domain_switch os")
    defer
+  sorry (*
    apply (erule ma_confidentiality_u_ta; simp)
 
   apply (rule ma_confidentiality_u_ds; simp?)
    apply (rule ma_to_ab_reachable, assumption)
   apply (metis ab.enabled_Step domainswitch_step_splittable fst_conv insert_iff
     ma_to_ab_reachable')
-  done
+  done *)
 
 theorem extended_Nonleakage:
   "ab.Nonleakage_gen \<Longrightarrow> ma.Nonleakage_gen"

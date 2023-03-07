@@ -82,6 +82,11 @@ crunches arch_mask_irq_signal, handle_reserved_irq
   for integrity[Syscall_AC_assms, wp]: "integrity aag X st"
   (wp: dmo_no_mem_respects)
 
+
+crunches clearTouchedAddresses
+  for underlying_memory [wp]: "\<lambda>s. P (underlying_memory s)"
+  and device_state [wp]: "\<lambda>s. P (device_state s)"
+
 crunches arch_mask_interrupts, arch_switch_domain_kernel, arch_domainswitch_flush
   for pas_refined[Syscall_AC_assms, wp]: "pas_refined aag"
   and integrity[Syscall_AC_assms, wp]: "integrity aag X st"
