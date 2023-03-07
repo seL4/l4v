@@ -68,7 +68,7 @@ lookupIPCBuffer isReceiver thread = do
 
 {- ASID Lookups -}
 
--- FIXME AARCH64: make this a Reader Monad
+-- FIXME: make this a Reader Monad when we move to MCS
 getPoolPtr :: ASID -> Kernel (Maybe (PPtr ASIDPool))
 getPoolPtr asid = do
     assert (asid > 0) "ASID 0 is used for objects that are not mapped"
@@ -76,7 +76,7 @@ getPoolPtr asid = do
     asidTable <- gets (armKSASIDTable . ksArchState)
     return $ asidTable!(asidHighBitsOf asid)
 
--- FIXME AARCH64: make this a Reader Monad
+-- FIXME: make this a Reader Monad when we move to MCS
 getASIDPoolEntry :: ASID -> Kernel (Maybe ASIDPoolEntry)
 getASIDPoolEntry asid = do
     poolPtr <- getPoolPtr asid

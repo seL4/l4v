@@ -45,7 +45,7 @@ import Data.Maybe
 
 {- VCPU: Helper functions -}
 
--- FIXME AARCH64: can be Reader Monad
+-- FIXME: make this a Reader Monad when we move to MCS
 curVCPUActive :: Kernel Bool
 curVCPUActive = do
     vcpu <- gets (armHSCurVCPU . ksArchState)
