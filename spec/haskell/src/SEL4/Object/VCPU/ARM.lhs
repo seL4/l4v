@@ -43,6 +43,7 @@ hypervisor extensions on ARM.
 
 > import Data.Bits hiding (countTrailingZeros)
 > import Data.Word(Word8, Word16, Word32, Word64)
+> import Data.WordLib(countTrailingZeros)
 > import Data.Array
 > import Data.Maybe
 
@@ -490,10 +491,6 @@ For initialisation, see makeVCPUObject.
 >                         modifyArchState (\s -> s { armHSCurVCPU = Just (new, True) })
 
 \subsection{VGICMaintenance}
-
-> countTrailingZeros :: (Bits b, FiniteBits b) => b -> Int
-> countTrailingZeros w =
->     length . takeWhile not . map (testBit w) $ [0 .. finiteBitSize w - 1]
 
 > vgicMaintenance :: Kernel ()
 > vgicMaintenance = do
