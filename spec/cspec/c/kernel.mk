@@ -94,7 +94,7 @@ ${KERNEL_BUILD_ROOT}/kernel_all.c_pp: ${KERNEL_BUILD_ROOT}/.cmake_done
 
 ifneq ($(L4V_ARCH),X64)
 OVERLAY := overlays/$(L4V_ARCH)/overlay.dts
-OVERLAY_OPT := -DKernelCustomDTSOverlay=../../${OVERLAY}
+OVERLAY_OPT := -DKernelCustomDTSOverlay=${CSPEC_DIR}/c/${OVERLAY}
 DEFAULT_OVERLAY := overlays/$(L4V_ARCH)/default-overlay.dts
 
 ${OVERLAY}: overlays/$(L4V_ARCH)/default-overlay.dts
