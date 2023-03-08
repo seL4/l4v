@@ -771,7 +771,7 @@ lemmas simple_bit_simps =
 lemmas table_bits_simps =
   pt_bits_def[simplified] pte_bits_def[unfolded word_size_bits_def] vs_index_bits_def
 
-named_theorems bit_simps (* FIXME AARCH64: shadows Word_Lib bit_simps *)
+named_theorems bit_simps
 
 lemmas [bit_simps] = table_bits_simps simple_bit_simps ipa_size_def valid_vs_slot_bits_def
 
