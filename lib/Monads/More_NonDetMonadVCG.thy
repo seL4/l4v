@@ -364,6 +364,12 @@ lemma whenE_throwError_wp:
   "\<lbrace>\<lambda>s. \<not> P \<longrightarrow> Q s\<rbrace> whenE P (throwError e) \<lbrace>\<lambda>_. Q\<rbrace>, \<lbrace>\<top>\<top>\<rbrace>"
   by wpsimp
 
+lemma ifM_throwError_returnOk:
+  "\<lbrace>Q\<rbrace> test \<lbrace>\<lambda>c s. \<not> c \<longrightarrow> P s\<rbrace> \<Longrightarrow> \<lbrace>Q\<rbrace> ifM test (throwError e) (returnOk ()) \<lbrace>\<lambda>_. P\<rbrace>, -"
+  by (fastforce simp: ifM_def returnOk_def throwError_def return_def validE_R_def valid_def
+                      validE_def bind_def
+               split: if_splits)
+
 lemma gets_the_inv: "\<lbrace>P\<rbrace> gets_the V \<lbrace>\<lambda>rv. P\<rbrace>" by wpsimp
 
 lemma select_f_inv:
