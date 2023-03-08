@@ -604,6 +604,10 @@ lemma maybeM_wp:
    \<lbrace>\<lambda>s. (\<forall>x. y = Some x \<longrightarrow> P x s) \<and> (y = None \<longrightarrow> Q () s)\<rbrace> maybeM m y \<lbrace>Q\<rbrace>"
   unfolding maybeM_def by (cases y; simp add: bind_def return_def valid_def)
 
+lemma notM_wp:
+  "\<lbrace>P\<rbrace> m \<lbrace>\<lambda>c. Q (\<not> c)\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> notM m \<lbrace>Q\<rbrace>"
+  unfolding notM_def by (fastforce simp: bind_def return_def valid_def)
+
 lemma ifM_wp:
   assumes [wp]: "\<lbrace>Q\<rbrace> f \<lbrace>S\<rbrace>" "\<lbrace>R\<rbrace> g \<lbrace>S\<rbrace>"
   assumes [wp]: "\<lbrace>A\<rbrace> P \<lbrace>\<lambda>c s. c \<longrightarrow> Q s\<rbrace>" "\<lbrace>B\<rbrace> P \<lbrace>\<lambda>c s. \<not>c \<longrightarrow> R s\<rbrace>"
@@ -1007,7 +1011,7 @@ lemmas [wp] = hoare_vcg_prop
               state_select_wp
               condition_wp
               conditionE_wp
-              maybeM_wp ifM_wp andM_wp orM_wp whenM_wp
+              maybeM_wp notM_wp ifM_wp andM_wp orM_wp whenM_wp
 
 lemmas [wp_trip] = valid_is_triple validE_is_triple validE_E_is_triple validE_R_is_triple
 
