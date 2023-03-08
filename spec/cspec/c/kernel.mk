@@ -93,11 +93,12 @@ ${KERNEL_BUILD_ROOT}/kernel_all.c_pp: ${KERNEL_BUILD_ROOT}/.cmake_done
 	cp -a ${KERNEL_BUILD_ROOT}/kernel_all_pp.c $@
 
 ifneq ($(L4V_ARCH),X64)
-OVERLAY := overlays/$(L4V_ARCH)/overlay.dts
-OVERLAY_OPT := -DKernelCustomDTSOverlay=${CSPEC_DIR}/c/${OVERLAY}
-DEFAULT_OVERLAY := overlays/$(L4V_ARCH)/default-overlay.dts
+OVERLAY_DIR := ${CSPEC_DIR}/c/overlays/${L4V_ARCH}
+OVERLAY := ${OVERLAY_DIR}/overlay.dts
+OVERLAY_OPT := -DKernelCustomDTSOverlay=${OVERLAY}
+DEFAULT_OVERLAY := ${OVERLAY_DIR}/default-overlay.dts
 
-${OVERLAY}: overlays/$(L4V_ARCH)/default-overlay.dts
+${OVERLAY}: ${DEFAULT_OVERLAY}
 	@cp $< $@
 endif
 
