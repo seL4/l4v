@@ -137,4 +137,12 @@ lemma gets_exs_valid:
   "\<lbrace>(=) s\<rbrace> gets f \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>"
   by (rule exs_valid_gets)
 
+lemma exs_valid_assert_opt[wp]:
+  "\<lbrace>\<lambda>s. \<exists>x. G = Some x \<and> Q x s\<rbrace> assert_opt G \<exists>\<lbrace>Q\<rbrace>"
+  by (clarsimp simp: assert_opt_def exs_valid_def get_def assert_def bind_def' return_def)
+
+lemma gets_the_exs_valid[wp]:
+  "\<lbrace>\<lambda>s. \<exists>x. h s = Some x \<and> Q x s\<rbrace> gets_the h \<exists>\<lbrace>Q\<rbrace>"
+  by (wpsimp simp: gets_the_def)
+
 end
