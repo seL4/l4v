@@ -10,6 +10,7 @@ imports
   ArchMove_C
   "CParser.LemmaBucket_C"
   "Lib.LemmaBucket"
+  Boolean_C
 begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)

@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
@@ -804,8 +805,7 @@ lemma lookupIPCBuffer_ccorres[corres]:
            apply (frule cap_get_tag_isCap_unfolded_H_cap(15),simp)
            apply (frule capFVMRights_range)
            apply (simp add: cap_frame_cap_lift)
-           apply (clarsimp simp: cap_to_H_def vmrights_to_H_def to_bool_def
-                                 word_le_make_less
+           apply (clarsimp simp: cap_to_H_def vmrights_to_H_def word_le_make_less
                                  Kernel_C.VMReadWrite_def Kernel_C.VMReadOnly_def
                                  Kernel_C.VMKernelOnly_def
                            dest: word_less_cases)

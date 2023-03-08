@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -16,7 +17,7 @@ lemma invokeIRQHandler_AckIRQ_ccorres:
      (InterruptDecls_H.invokeIRQHandler (AckIRQ irq)) (Call invokeIRQHandler_AckIRQ_'proc)"
   apply (cinit lift: irq_' simp: Interrupt_H.invokeIRQHandler_def invokeIRQHandler_def)
    apply (ctac add: maskInterrupt_ccorres)
-  apply (simp add: from_bool_def false_def)
+  apply simp
   done
 
 lemma getIRQSlot_ccorres:
@@ -266,12 +267,12 @@ lemma decodeIRQHandlerInvocation_ccorres:
     sysargs_rel_n_def word_less_nat_alt)
   apply (clarsimp simp: cte_wp_at_ctes_of neq_Nil_conv sysargs_rel_def n_msgRegisters_def
                     excaps_map_def excaps_in_mem_def word_less_nat_alt hd_conv_nth
-                    slotcap_in_mem_def valid_tcb_state'_def from_bool_def toBool_def
+                    slotcap_in_mem_def valid_tcb_state'_def
              dest!: interpret_excaps_eq split: bool.splits)
   apply (intro conjI impI allI)
   apply (clarsimp simp: cte_wp_at_ctes_of neq_Nil_conv sysargs_rel_def n_msgRegisters_def
                     excaps_map_def excaps_in_mem_def word_less_nat_alt hd_conv_nth
-                    slotcap_in_mem_def valid_tcb_state'_def from_bool_def toBool_def
+                    slotcap_in_mem_def valid_tcb_state'_def
              dest!: interpret_excaps_eq split: bool.splits)+
      apply (auto dest: st_tcb_at_idle_thread' ctes_of_valid')[4]
     apply (drule ctes_of_valid')
@@ -582,7 +583,7 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
   apply (clarsimp simp: Kernel_C.maxIRQ_def word_le_nat_alt
                         ucast_nat_def ucast_ucast_mask mask_eq_ucast_eq unat_ucast_mask
                         less_mask_eq[unfolded word_less_nat_alt])
-  apply (cases "args ! Suc 0 = 0"; clarsimp simp: true_def false_def)
+  apply (cases "args ! Suc 0 = 0"; clarsimp)
   done
 
 lemma decodeIRQControlInvocation_ccorres:

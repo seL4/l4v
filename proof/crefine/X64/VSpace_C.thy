@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -81,7 +82,7 @@ lemma checkVPAlignment_ccorres:
        apply simp
       apply simp
      apply simp
-    apply (simp split: if_split add: to_bool_def)
+    apply (simp split: if_split)
    apply (clarsimp simp: mask_def unlessE_def throwError_def split: if_split)
    apply (rule ccorres_guard_imp)
      apply (rule ccorres_return_C)
@@ -89,7 +90,7 @@ lemma checkVPAlignment_ccorres:
       apply simp
      apply simp
     apply simp
-   apply (simp split: if_split add: to_bool_def)
+   apply (simp split: if_split)
   apply (clarsimp split: if_split)
   apply (simp add: word_less_nat_alt)
   apply (rule order_le_less_trans, rule pageBitsForSize_le)
@@ -288,7 +289,7 @@ lemma handleVMFault_ccorres:
         apply terminates_trivial
        apply (drule sym, clarsimp)
        apply (wpc; simp add: vm_fault_type_from_H_def X86InstructionFault_def X86DataFault_def
-                             true_def false_def bind_assoc)
+                             bind_assoc)
         apply (rule returnVMFault_corres;
                clarsimp simp: exception_defs mask_twice lift_rv_def)+
       apply wpsimp+
@@ -1276,13 +1277,12 @@ lemma setVMRoot_ccorres:
    apply (frule cte_wp_at_valid_objs_valid_cap'; clarsimp simp: invs_cicd_valid_objs')
    apply (clarsimp simp: isCap_simps valid_cap'_def mask_def asid_wf_def)
   apply (clarsimp simp: tcb_cnode_index_defs cte_level_bits_def tcbVTableSlot_def
-                        cte_at_tcb_at_32' to_bool_def)
+                        cte_at_tcb_at_32')
   apply (clarsimp simp: cap_get_tag_isCap_ArchObject2
                  dest!: isCapDs)
   apply (clarsimp simp: cap_get_tag_isCap_ArchObject[symmetric]
                         cap_lift_pml4_cap cap_to_H_def
-                        cap_pml4_cap_lift_def
-                        to_bool_def mask_def
+                        cap_pml4_cap_lift_def mask_def
                         ccr3_relation_defs Let_def
                         cr3_lift_def word_bw_assocs
                  elim!: ccap_relationE
@@ -1828,7 +1828,7 @@ lemma unmapPage_ccorres:
           apply (ctac add: modeUnmapPage_ccorres)
             apply (rule ccorres_from_vcg_might_throw[where P="\<top>" and P'=UNIV])
             apply (rule allI, rule conseqPre, vcg)
-            apply (clarsimp simp: true_def false_def return_def inl_rrel_def split: sum.split_asm)
+            apply (clarsimp simp: return_def inl_rrel_def split: sum.split_asm)
            apply wp
           apply (vcg exspec=modeUnmapPage_modifies)
          apply ceqv
@@ -2382,7 +2382,7 @@ lemma performASIDPoolInvocation_ccorres:
              apply (simp add: cte_to_H_def c_valid_cte_def)
              apply (simp add: cap_pml4_cap_lift)
              apply (simp (no_asm) add: cap_to_H_def)
-             apply (simp add: to_bool_def asid_bits_def le_mask_imp_and_mask word_bits_def)
+             apply (simp add: asid_bits_def le_mask_imp_and_mask word_bits_def)
              apply (clarsimp simp: c_valid_cap_def cl_valid_cap_def)
              apply (erule (1) cap_lift_PML4Cap_Base)
             apply simp

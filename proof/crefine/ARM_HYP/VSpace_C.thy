@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -95,7 +96,7 @@ proof -
        apply simp
       apply simp
      apply simp
-    apply (simp split: if_split add: to_bool_def)
+    apply (simp split: if_split)
    apply (clarsimp simp: mask_def unlessE_def throwError_def split: if_split)
    apply (rule ccorres_guard_imp)
      apply (rule ccorres_return_C)
@@ -103,7 +104,7 @@ proof -
       apply simp
      apply simp
     apply simp
-   apply (simp split: if_split add: to_bool_def)
+   apply (simp split: if_split)
   apply (clarsimp split: if_split)
   apply (simp add: word_less_nat_alt)
   apply (rule order_le_less_trans, rule pageBitsForSize_le)
@@ -375,7 +376,7 @@ lemma storeHWASID_ccorres:
      apply (subst asid_map_pd_to_hwasids_update, assumption)
       subgoal by clarsimp
      apply (rule ext, simp add: pd_pointer_to_asid_slot_def map_comp_def split: if_split)
-     apply (clarsimp simp: pde_stored_asid_def true_def mask_def[where n="Suc 0"])
+     apply (clarsimp simp: pde_stored_asid_def)
      apply (subst less_mask_eq)
       apply (rule order_less_le_trans, rule ucast_less)
        subgoal by simp
@@ -467,7 +468,7 @@ lemma invalidateASID_ccorres:
      apply (subst asid_map_pd_to_hwasids_clear, assumption)
       subgoal by clarsimp
      apply (rule ext, simp add: pd_pointer_to_asid_slot_def map_comp_def split: if_split)
-     subgoal by (clarsimp simp: pde_stored_asid_def false_def mask_def[where n="Suc 0"])
+     subgoal by (clarsimp simp: pde_stored_asid_def)
     apply wp[1]
    apply (wp findPDForASIDAssert_pd_at_wp2)
   apply (clarsimp simp: asidLowBits_handy_convs word_sle_def word_sless_def
@@ -510,7 +511,7 @@ lemma handleVMFault_ccorres:
        apply (rule conseqPre)
         apply vcg
        apply (clarsimp simp: errstate_def EXCEPTION_FAULT_def EXCEPTION_NONE_def)
-       apply (wpsimp simp: seL4_Fault_VMFault_lift false_def mask_def)+
+       apply (wpsimp simp: seL4_Fault_VMFault_lift mask_def)+
   apply (simp add: vm_fault_type_from_H_def Kernel_C.ARMDataAbort_def Kernel_C.ARMPrefetchAbort_def)
    apply (simp add: ccorres_cond_univ_iff ccorres_cond_empty_iff)
    apply (rule ccorres_rhs_assoc)+
@@ -527,7 +528,7 @@ lemma handleVMFault_ccorres:
       apply (rule conseqPre)
        apply vcg
       apply (clarsimp simp: errstate_def EXCEPTION_FAULT_def EXCEPTION_NONE_def)
-      apply (wpsimp simp: seL4_Fault_VMFault_lift true_def mask_def)+
+      apply (wpsimp simp: seL4_Fault_VMFault_lift mask_def)+
   done
 
 lemma unat_asidLowBits [simp]:
@@ -1862,8 +1863,7 @@ lemma isIRQActive_ccorres:
                          Let_def cinterrupt_relation_def)
    apply (drule spec, drule(1) mp)
    apply (case_tac "intStateIRQTable (ksInterruptState \<sigma>) irq")
-     apply (simp add: from_bool_def irq_state_defs Kernel_C.maxIRQ_def
-                      word_le_nat_alt)+
+      apply (simp add: irq_state_defs Kernel_C.maxIRQ_def word_le_nat_alt)+
   done
 
 lemma restore_virt_timer_ccorres:
@@ -2059,7 +2059,7 @@ lemma vcpu_disable_ccorres:
            apply (ctac (no_vcg) add: save_virt_timer_ccorres)
             apply (ctac (no_vcg) add: maskInterrupt_ccorres)
            apply (wpsimp wp: hoare_vcg_all_lift)+
-    apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem from_bool_def true_def hcrNative_def
+    apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem hcrNative_def
                           irqVTimerEvent_def IRQ_def)
     apply (rule refl (* stray ?sctlr *))
    apply (wpsimp wp: hoare_vcg_all_lift)+
@@ -2353,7 +2353,7 @@ lemma vcpu_switch_ccorres_None:
      apply (clarsimp simp: cur_vcpu_relation_def dest!: rf_sr_ksArchState_armHSCurVCPU)
     apply (ctac add: vcpu_disable_ccorres)
       apply (rule_tac v=x2 in armHSCurVCPU_update_active_ccorres[simplified dc_def])
-       apply (simp add: from_bool_def false_def)
+       apply simp
       apply simp
      apply wp
      apply clarsimp
@@ -2393,7 +2393,7 @@ lemma vcpu_switch_ccorres_Some:
    apply (rename_tac ccurv cactive)
    apply (rule_tac R="\<lambda>s. (armHSCurVCPU \<circ> ksArchState) s = Some (ccurv, cactive)" in ccorres_cond)
      apply (clarsimp dest!: rf_sr_ksArchState_armHSCurVCPU
-                     simp: Collect_const_mem cur_vcpu_relation_def from_bool_def true_def
+                     simp: Collect_const_mem cur_vcpu_relation_def
                      split: option.splits)
     (* new \<noteq> CurVCPU or equivalently v \<noteq> ccurv *)
     apply (rule ccorres_cond_true)
@@ -2420,7 +2420,7 @@ lemma vcpu_switch_ccorres_Some:
     apply (ctac (no_vcg) add: isb_ccorres)
      apply (ctac (no_vcg) add: vcpu_enable_ccorres)
       apply (rule_tac v="(v, cactive)" in armHSCurVCPU_update_active_ccorres[simplified dc_def])
-       apply (simp add: from_bool_def true_def)
+       apply simp
       apply simp
      apply wp
     apply (wpsimp wp: hoare_vcg_conj_lift vcpuSave_invs_no_cicd' vcpuSave_typ_at')
@@ -2429,10 +2429,10 @@ lemma vcpu_switch_ccorres_Some:
   (* last goal *)
   apply simp
   apply (rule conjI
-      | clarsimp dest!: rf_sr_ksArchState_armHSCurVCPU
-                 simp: Collect_const_mem cur_vcpu_relation_def from_bool_def true_def
-      | fastforce dest: invs_cicd_arch_state'  split: option.splits
-                  simp: valid_arch_state'_def vcpu_at_is_vcpu' ko_wp_at'_def Collect_const_mem)+
+         | clarsimp dest!: rf_sr_ksArchState_armHSCurVCPU
+                     simp: Collect_const_mem cur_vcpu_relation_def
+         | fastforce dest: invs_cicd_arch_state'  split: option.splits
+                     simp: valid_arch_state'_def vcpu_at_is_vcpu' ko_wp_at'_def Collect_const_mem)+
   done
 
 lemma vcpu_switch_ccorres:
@@ -2561,16 +2561,13 @@ lemma setVMRoot_ccorres:
    apply (clarsimp simp: obj_at'_def typ_at'_def ko_wp_at'_def projectKOs)
   apply (clarsimp simp: size_of_def cte_level_bits_def
                         tcbVTableSlot_def tcb_cnode_index_defs
-                        ccap_rights_relation_def cap_rights_to_H_def
-                        to_bool_def true_def allRights_def
-                        mask_def[where n="Suc 0"]
+                        ccap_rights_relation_def cap_rights_to_H_def allRights_def
                         cte_at_tcb_at_16' addrFromPPtr_def)
   apply (clarsimp simp: cap_get_tag_isCap_ArchObject2
                  dest!: isCapDs)
   apply (clarsimp simp: cap_get_tag_isCap_ArchObject[symmetric]
                         cap_lift_page_directory_cap cap_to_H_def
                         cap_page_directory_cap_lift_def
-                        to_bool_def
                  elim!: ccap_relationE split: if_split_asm)
   done
 
@@ -2605,7 +2602,7 @@ lemma setVMRootForFlush_ccorres:
        apply (ctac (no_vcg)add: armv_contextSwitch_ccorres)
         apply (ctac add: ccorres_return_C)
        apply wp
-      apply (simp add: true_def from_bool_def)
+      apply simp
       apply vcg
      apply (rule conseqPre, vcg)
      apply (simp add: Collect_const_mem)
@@ -2615,7 +2612,7 @@ lemma setVMRootForFlush_ccorres:
    apply vcg
   apply (clarsimp simp: Collect_const_mem word_sle_def
                         ccap_rights_relation_def cap_rights_to_H_def
-                        mask_def[where n="Suc 0"] true_def to_bool_def
+                        mask_def[where n="Suc 0"]
                         allRights_def size_of_def cte_level_bits_def
                         tcbVTableSlot_def Kernel_C.tcbVTable_def invs'_invs_no_cicd)
   apply (clarsimp simp: rf_sr_ksCurThread ptr_add_assertion_positive)
@@ -2624,8 +2621,7 @@ lemma setVMRootForFlush_ccorres:
   apply (clarsimp simp: rf_sr_ksCurThread ptr_val_tcb_ptr_mask' [OF tcb_at_invs'])
   apply (frule cte_at_tcb_at_16'[OF tcb_at_invs'], clarsimp simp: cte_wp_at_ctes_of)
   apply (rule cmap_relationE1[OF cmap_relation_cte], assumption+)
-  apply (clarsimp simp: false_def true_def from_bool_def
-                        typ_heap_simps')
+  apply (clarsimp simp: typ_heap_simps')
   apply (case_tac "isArchObjectCap rv \<and> isPageDirectoryCap (capCap rv)")
    apply (clarsimp simp: isCap_simps(2) cap_get_tag_isCap_ArchObject[symmetric])
    apply (clarsimp simp: cap_page_directory_cap_lift cap_to_H_def
@@ -2770,7 +2766,7 @@ lemma performPageFlush_ccorres:
        apply (ctac (no_vcg) add: setVMRootForFlush_ccorres)
         apply (ctac (no_vcg) add: doFlush_ccorres)
          apply (rule ccorres_cond2[where R=\<top>])
-           apply (simp add: from_bool_def split: if_split bool.splits)
+           apply (simp split: if_split bool.splits)
           apply (rule ccorres_pre_getCurThread)
           apply (ctac add: setVMRoot_ccorres)
          apply (rule ccorres_return_Skip)
@@ -2947,7 +2943,7 @@ lemma performPageDirectoryInvocationFlush_ccorres:
       apply (rule ccorres_add_return2)
       apply (rule ccorres_split_nothrow_novcg_dc)
          apply (rule ccorres_cond2[where R=\<top>])
-           apply (simp add: from_bool_def split: if_split bool.splits)
+           apply (simp split: if_split bool.splits)
           apply (rule ccorres_pre_getCurThread)
           apply (ctac add: setVMRoot_ccorres)
          apply (rule ccorres_return_Skip)
@@ -3022,8 +3018,8 @@ lemma flushPage_ccorres:
    apply (wp hoare_drop_imps setVMRootForFlush_invs')
   apply (clarsimp simp: Collect_const_mem word_sle_def)
   apply (rule conjI, clarsimp+)
-  apply (clarsimp simp: pde_stored_asid_def to_bool_def cong: conj_cong
-                        ucast_ucast_mask)
+  apply (clarsimp simp: pde_stored_asid_def to_bool_def ucast_ucast_mask
+                  cong: conj_cong)
   apply (drule is_aligned_neg_mask_eq)
   apply (simp add: pde_pde_invalid_lift_def pde_lift_def mask_def[where n=8]
                    word_bw_assocs mask_def[where n=pageBits])
@@ -4104,7 +4100,7 @@ lemma performASIDPoolInvocation_ccorres:
                 apply (simp add: cte_to_H_def c_valid_cte_def)
                 apply (simp add: cap_page_directory_cap_lift)
                 apply (simp (no_asm) add: cap_to_H_def)
-                apply (simp add: to_bool_def asid_bits_def le_mask_imp_and_mask word_bits_def)
+                apply (simp add: asid_bits_def le_mask_imp_and_mask word_bits_def)
                 apply (erule (1) cap_lift_PDCap_Base)
                apply simp
               apply (erule_tac t = s' in ssubst)
@@ -4213,8 +4209,7 @@ lemma flushTable_ccorres:
    apply (strengthen invs_valid_pde_mappings')
    apply (wp setVMRootForFlush_invs' hoare_drop_imps)
   apply (clarsimp simp:Collect_const_mem)
-  apply (simp add: pde_pde_invalid_lift_def
-         pde_lift_def pde_stored_asid_def to_bool_def)
+  apply (simp add: pde_pde_invalid_lift_def pde_lift_def pde_stored_asid_def to_bool_def)
   done
 
 lemma performPageTableInvocationMap_ccorres:

@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -792,7 +793,7 @@ lemma lookupIPCBuffer_ccorres[corres]:
                apply (frule capFVMRights_range)
                apply (simp add: cap_frame_cap_lift
                                generic_frame_cap_get_capFVMRights_CL_def)
-               apply (clarsimp simp: cap_to_H_def vmrights_to_H_def to_bool_def
+               apply (clarsimp simp: cap_to_H_def vmrights_to_H_def
                                word_le_make_less Kernel_C.VMNoAccess_def
                                Kernel_C.VMReadWrite_def Kernel_C.VMReadOnly_def
                                Kernel_C.VMKernelOnly_def
@@ -847,7 +848,7 @@ lemma lookupIPCBuffer_ccorres[corres]:
                apply (frule capFVMRights_range)
                apply (simp add: cap_frame_cap_lift
                                 generic_frame_cap_get_capFVMRights_CL_def)
-                apply (clarsimp simp: cap_to_H_def vmrights_to_H_def to_bool_def
+                apply (clarsimp simp: cap_to_H_def vmrights_to_H_def
                                       word_le_make_less Kernel_C.VMNoAccess_def
                                       Kernel_C.VMReadWrite_def Kernel_C.VMReadOnly_def
                                       Kernel_C.VMKernelOnly_def
