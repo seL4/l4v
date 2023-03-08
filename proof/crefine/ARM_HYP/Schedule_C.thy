@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -437,7 +438,7 @@ lemma isHighestPrio_ccorres:
       apply (rule ccorres_return_C, simp, simp, simp)
      apply (rule wp_post_taut)
     apply (vcg exspec=getHighestPrio_modifies)+
-  apply (clarsimp simp: word_le_nat_alt true_def to_bool_def maxDomain_le_unat_ucast_explicit
+  apply (clarsimp simp: word_le_nat_alt maxDomain_le_unat_ucast_explicit
                   split: if_splits)
   done
 
@@ -534,17 +535,17 @@ lemma schedule_ccorres:
               apply (rule ccorres_cond2'[where R=\<top>], fastforce)
                apply clarsimp
                apply (rule ccorres_return[where R'=UNIV], clarsimp, vcg)
-               apply (rule_tac P="\<lambda>s. obj_at' (\<lambda>tcb. tcbPriority tcb = curPrio) curThread s
-                                      \<and> curThread = ksCurThread s
-                                      \<and> obj_at' (\<lambda>tcb. tcbPriority tcb = targetPrio) candidate s"
-                        and P'=UNIV in ccorres_from_vcg)
-               apply clarsimp
-               apply (rule conseqPre, vcg)
-               apply (clarsimp simp: return_def cur_tcb'_def rf_sr_ksCurThread)
-               apply (drule (1) obj_at_cslift_tcb)+
-               apply (clarsimp simp: typ_heap_simps ctcb_relation_def to_bool_def split: if_split)
-               apply unat_arith
-              apply (wpsimp wp: threadGet_obj_at2)
+              apply (rule_tac P="\<lambda>s. obj_at' (\<lambda>tcb. tcbPriority tcb = curPrio) curThread s
+                                     \<and> curThread = ksCurThread s
+                                     \<and> obj_at' (\<lambda>tcb. tcbPriority tcb = targetPrio) candidate s"
+                       and P'=UNIV in ccorres_from_vcg)
+              apply clarsimp
+              apply (rule conseqPre, vcg)
+              apply (clarsimp simp: return_def cur_tcb'_def rf_sr_ksCurThread)
+              apply (drule (1) obj_at_cslift_tcb)+
+              apply (clarsimp simp: typ_heap_simps ctcb_relation_def split: if_split)
+              apply unat_arith
+              apply clarsimp
              apply vcg
             apply ceqv
            (* fastfail calculation complete *)
@@ -605,10 +606,10 @@ lemma schedule_ccorres:
                       in ccorres_symb_exec_r_known_rv)
                 apply clarsimp
                 apply (rule conseqPre, vcg)
-                apply (clarsimp simp: false_def cur_tcb'_def rf_sr_ksCurThread)
+                apply (clarsimp simp: cur_tcb'_def rf_sr_ksCurThread)
 
                 apply (drule (1) obj_at_cslift_tcb)+
-                apply (clarsimp simp: typ_heap_simps ctcb_relation_def to_bool_def split: if_split)
+                apply (clarsimp simp: typ_heap_simps ctcb_relation_def split: if_split)
                 apply (solves \<open>unat_arith, rule iffI; simp\<close>)
                apply ceqv
               apply clarsimp
@@ -653,9 +654,9 @@ lemma schedule_ccorres:
           apply wp
          apply (clarsimp, vcg exspec=tcbSchedEnqueue_modifies)
         apply (clarsimp, vcg exspec=tcbSchedEnqueue_modifies)
-       apply (clarsimp simp: to_bool_def true_def)
+       apply clarsimp
        apply (strengthen ko_at'_obj_at'_field)
-       apply (clarsimp cong: imp_cong simp: ko_at'_obj_at'_field to_bool_def true_def)
+       apply (clarsimp cong: imp_cong simp: ko_at'_obj_at'_field)
        apply wp
       apply clarsimp
       (* when runnable tcbSchedEnqueue curThread *)
@@ -667,7 +668,6 @@ lemma schedule_ccorres:
       apply (wp | clarsimp simp: dc_def)+
      apply (vcg exspec=tcbSchedEnqueue_modifies)
     apply wp
-   apply (clarsimp simp: to_bool_def false_def)
    apply vcg
 
   apply (clarsimp simp: tcb_at_invs' rf_sr_ksCurThread if_apply_def2 invs_queues invs_valid_objs'
@@ -678,7 +678,7 @@ lemma schedule_ccorres:
    apply (clarsimp dest!: rf_sr_cscheduler_relation simp: cscheduler_action_relation_def)
   apply (rule conjI; clarsimp)
    apply (frule (1) obj_at_cslift_tcb)
-   apply (clarsimp simp: cscheduler_action_relation_def typ_heap_simps max_word_not_0
+   apply (clarsimp simp: cscheduler_action_relation_def typ_heap_simps
                   split: scheduler_action.splits)
   apply (frule (1) obj_at_cslift_tcb)
   apply (clarsimp dest!: rf_sr_cscheduler_relation invs_sch_act_wf'
