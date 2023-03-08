@@ -252,18 +252,13 @@ getIFSR =  error "Unimplemented - machine op"
 
 {- Hypervisor-specific status/control registers -}
 
--- FIXME AARCH64: unused due to using asm intrinsics, but this should be fixed in C
-getHSR :: MachineMonad Word
-getHSR = error "Unimplemented - machine op"
-
--- FIXME AARCH64: unused due to using asm intrinsics, but this should be fixed in C
 setHCR :: Word -> MachineMonad ()
 setHCR _hcr = error "Unimplemented - machine op"
 
 getESR :: MachineMonad Word
 getESR = error "Unimplemented - machine op"
 
-addressTranslateS1 :: VPtr -> MachineMonad VPtr -- FIXME AARCH64: pending C PR
+addressTranslateS1 :: VPtr -> MachineMonad VPtr
 addressTranslateS1 = error "Unimplemented - machine op"
 
 getSCTLR :: MachineMonad Word
