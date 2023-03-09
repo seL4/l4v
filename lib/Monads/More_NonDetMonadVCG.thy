@@ -370,6 +370,10 @@ lemma ifM_throwError_returnOk:
                       validE_def bind_def
                split: if_splits)
 
+lemma ifME_liftE:
+  "ifME (liftE test) a b = ifM test a b"
+  by (simp add: ifME_def ifM_def liftE_bindE)
+
 lemma gets_the_inv: "\<lbrace>P\<rbrace> gets_the V \<lbrace>\<lambda>rv. P\<rbrace>" by wpsimp
 
 lemma select_f_inv:
