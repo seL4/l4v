@@ -48,13 +48,10 @@ definition kdevBase :: machine_word where
   "kdevBase = 0x000000FFFFE00000"
 
 definition kernelELFBase :: machine_word where
-  "kernelELFBase = 2^39 + 2^31"
-
-lemma "kernelELFBase = 0x8080000000" (* Sanity check with C *)
-  by (simp add: kernelELFBase_def)
+  "kernelELFBase = 2^39 + physBase"
 
 definition kernelELFPAddrBase :: machine_word where
-  "kernelELFPAddrBase = 0x80000000" (* 2^31 *)
+  "kernelELFPAddrBase = physBase"
 
 definition kernelELFBaseOffset :: machine_word where
   "kernelELFBaseOffset = kernelELFBase - kernelELFPAddrBase"
