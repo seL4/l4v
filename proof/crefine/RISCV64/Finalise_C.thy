@@ -1734,22 +1734,6 @@ lemma cnotification_relation_udpate_arch:
   apply (safe ; case_tac "xa = p" ; clarsimp simp: option_map2_def map_option_case)
   done
 
-lemma sanitiseSetRegister_ccorres:
-  "\<lbrakk> val = val'; reg' = register_from_H reg\<rbrakk> \<Longrightarrow>
-     ccorres dc xfdc (tcb_at' tptr)
-                      UNIV
-                      hs
-             (asUser tptr (setRegister reg (local.sanitiseRegister False reg val)))
-             (\<acute>unsigned_long_eret_2 :== CALL sanitiseRegister(reg',val',0);;
-              CALL setRegister(tcb_ptr_to_ctcb_ptr tptr,reg',\<acute>unsigned_long_eret_2))"
-  apply (rule ccorres_guard_imp2)
-   apply (rule ccorres_symb_exec_r)
-     apply (ctac add: setRegister_ccorres)
-    apply (vcg)
-   apply (rule conseqPre, vcg)
-   apply (fastforce simp: sanitiseRegister_def split: register.splits)
-  by (auto simp: sanitiseRegister_def from_bool_def simp del: Collect_const split: register.splits bool.splits)
-
 lemma case_option_both[simp]:
   "(case f of None \<Rightarrow> P | _ \<Rightarrow> P) = P"
   by (auto split: option.splits)
