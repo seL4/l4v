@@ -39,7 +39,7 @@ definition cacheLineBits :: nat where
 definition cacheLine :: nat where
   "cacheLine = 2^cacheLineBits"
 
-(* Arch specific kernel base address used for haskell spec *)
+(* The first virtual address of the kernel's physical memory window *)
 definition pptrBase :: word32 where
   "pptrBase \<equiv> 0xe0000000"
 
