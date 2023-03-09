@@ -105,16 +105,14 @@ definition kdevBase :: machine_word
 lemma "kdevBase = 0xFFFFFFFFC0000000" (* Sanity check with C *)
   by (simp add: kdevBase_def)
 
-definition kernelELFBase :: machine_word
-  where
-  "kernelELFBase = - (1 << 31) + 0x4000000" (* 2^64 - 2 GiB + 2^26 *)
-
-lemma "kernelELFBase = 0xFFFFFFFF84000000" (* Sanity check with C *)
-  by (simp add: kernelELFBase_def)
-
 definition kernelELFPAddrBase :: machine_word
   where
-  "kernelELFPAddrBase = 0x84000000"
+  "kernelELFPAddrBase = physBase + 0x4000000"
+
+definition kernelELFBase :: machine_word
+  where
+  (* note: the - (1 << 31) here is PADDR_TOP in C *)
+  "kernelELFBase = - (1 << 31) + (kernelELFPAddrBase && mask 30)" (* 2^64 - 2 GiB + ... *)
 
 definition kernelELFBaseOffset :: machine_word
   where

@@ -43,11 +43,10 @@ definition cacheLine :: nat where
 definition pptrBase :: word32 where
   "pptrBase \<equiv> 0xe0000000"
 
-definition physBase :: word32 where
-  "physBase \<equiv> 0x10000000"
+abbreviation (input) "paddrBase \<equiv> physBase"
 
 definition pptrBaseOffset :: word32 where
-  "pptrBaseOffset \<equiv> pptrBase - physBase"
+  "pptrBaseOffset \<equiv> pptrBase - paddrBase"
 
 definition kernelELFPAddrBase :: word32 where
   "kernelELFPAddrBase \<equiv> physBase"
