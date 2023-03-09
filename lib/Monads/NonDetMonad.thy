@@ -625,6 +625,14 @@ definition
     if c then t else f
    od"
 
+definition ifME ::
+  "('a, 'b + bool) nondet_monad \<Rightarrow> ('a, 'b + 'c) nondet_monad \<Rightarrow> ('a, 'b + 'c) nondet_monad
+   \<Rightarrow> ('a, 'b + 'c) nondet_monad" where
+  "ifME test t f = doE
+    c \<leftarrow> test;
+    if c then t else f
+   odE"
+
 definition
   whenM :: "('s, bool) nondet_monad \<Rightarrow> ('s, unit) nondet_monad \<Rightarrow> ('s, unit) nondet_monad" where
   "whenM t m = ifM t m (return ())"
