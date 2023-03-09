@@ -9,8 +9,6 @@ theory ArchKHeap_AI
 imports KHeapPre_AI
 begin
 
-declare if_option_eq[simp]
-
 context Arch begin global_naming AARCH64
 
 definition non_vspace_obj :: "kernel_object \<Rightarrow> bool" where
@@ -510,7 +508,7 @@ lemma is_aligned_table_base[intro!, simp]:
 lemma ptes_of_other_typ_at:
   "\<lbrakk> ptes_of s pt_t p = Some pte; typ_at T p s; T \<noteq> AArch (APageTable pt_t);
      pspace_aligned s; pspace_distinct s \<rbrakk> \<Longrightarrow> False"
-  apply (clarsimp simp: obj_at_def in_omonad level_pte_of_def)
+  apply (clarsimp simp: obj_at_def in_omonad level_pte_of_def if_option_eq)
   apply (rename_tac ko pt)
   apply (case_tac "table_base (pt_type pt) p = p", simp)
   apply (frule (1) pspace_alignedD)

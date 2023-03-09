@@ -332,7 +332,7 @@ lemma valid_global_arch_objs:
 
 lemma ptes_of:
   "ptes_of s pt_t p = Some pte \<Longrightarrow> ptes_of s' pt_t p = Some pte"
-  by (auto simp: level_pte_of_def obind_def pts_of split: option.splits)
+  by (auto simp: level_pte_of_def obind_def pts_of if_option split: option.splits)
 
 lemma default_empty:
   "default_object ty dev us = ArchObj (PageTable pt) \<Longrightarrow> pt = (empty_pt (pt_type pt))"
