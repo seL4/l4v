@@ -576,7 +576,7 @@ lemma decodeARMPageFlush_corres:
                         page_size \<leftarrow> returnOk $ 1 << pageBitsForSize vmpage_size;
                         whenE (page_size \<le> start \<or> page_size < end) $
                         throwError $ ExceptionTypes_A.syscall_error.InvalidArgument 0;
-                        whenE (pstart < ARM_HYP.physBase \<or> ARM_HYP.paddrTop < end - start + pstart) $
+                        whenE (pstart < physBase \<or> ARM_HYP.paddrTop < end - start + pstart) $
                         throwError ExceptionTypes_A.syscall_error.IllegalOperation;
                         returnOk $
                         arch_invocation.InvokePage $
@@ -605,7 +605,7 @@ lemma decodeARMPageFlush_corres:
       apply (rule whenE_throwError_corres, simp)
        apply simp
       apply (rule whenE_throwError_corres, simp)
-       apply (simp add: fromPAddr_def physBase_def paddrTop_def add.commute)
+       apply (simp add: fromPAddr_def Kernel_Config.physBase_def paddrTop_def add.commute)
       apply (rule corres_trivial)
       apply (rule corres_returnOk)
     apply (clarsimp simp: archinv_relation_def page_invocation_map_def flush_type_map_def)
@@ -1726,7 +1726,7 @@ lemma ensureSafeMapping_valid_slots_duplicated':
 lemma is_aligned_ptrFromPAddr_aligned:
   "m \<le> 28 \<Longrightarrow> is_aligned (ptrFromPAddr p) m = is_aligned p m"
   apply (simp add:ptrFromPAddr_def is_aligned_mask
-    pptrBaseOffset_def pptrBase_def ARM_HYP.physBase_def physBase_def)
+    pptrBaseOffset_def pptrBase_def Kernel_Config.physBase_def)
   apply (subst add.commute)
   apply (subst mask_add_aligned)
    apply (erule is_aligned_weaken[rotated])

@@ -2137,5 +2137,12 @@ lemma msgRegisters_size_sanity:
   "size_msgRegisters = unat (n_msgRegisters)"
   by (simp add: n_msgRegisters_def size_msgRegisters_def)
 
+(* link up Kernel_Config loaded from the seL4 build system with physBase in C code *)
+lemma physBase_spec:
+  "\<forall>s. \<Gamma>\<turnstile> {s} Call physBase_'proc {t. ret__unsigned_long_' t = Kernel_Config.physBase }"
+  apply (rule allI, rule conseqPre, vcg)
+  apply (simp add: Kernel_Config.physBase_def)
+  done
+
 end
 end

@@ -906,7 +906,7 @@ lemma Sys1AgentMap_simps:
   unfolding Sys1AgentMap_def
   apply simp_all
   by (auto simp: ptrFromPAddr_def pptrBaseOffset_def
-          pptrBase_def physBase_def s0_ptr_defs)
+          pptrBase_def Kernel_Config.physBase_def s0_ptr_defs)
 
 definition
   Sys1ASIDMap :: "(auth_graph_label subject_label) agent_asid_map"
@@ -1032,7 +1032,7 @@ lemma Sys1_pas_refined:
       apply (clarsimp simp: irq_map_wellformed_aux_def s0_internal_def Sys1AgentMap_simps Sys1PAS_def)
       apply (clarsimp simp: Sys1AgentMap_def)
       apply (clarsimp simp: ptrFromPAddr_def s0_ptr_defs cte_level_bits_def
-                            pptrBaseOffset_def pptrBase_def physBase_def)
+                            pptrBaseOffset_def pptrBase_def Kernel_Config.physBase_def)
       apply (drule le_less_trans[OF irq_node_offs_min[simplified s0_ptr_defs cte_level_bits_def, simplified]])
       apply simp
      apply (clarsimp simp: tcb_domain_map_wellformed_aux_def
@@ -1067,14 +1067,14 @@ lemma Sys1_pas_refined:
      apply (rule Sys1AgentMap_simps(13))
       apply simp
      apply (drule_tac x=ac in plus_one_helper2)
-      apply (simp add: ptrFromPAddr_def pptrBaseOffset_def pptrBase_def physBase_def
+      apply (simp add: ptrFromPAddr_def pptrBaseOffset_def pptrBase_def Kernel_Config.physBase_def
                        shared_page_ptr_def kernel_base_def)
      apply (simp add: add.commute)
     apply (erule notE)
     apply (rule Sys1AgentMap_simps(13)[symmetric])
      apply simp
     apply (drule_tac x=ac in plus_one_helper2)
-     apply (simp add: ptrFromPAddr_def pptrBaseOffset_def pptrBase_def physBase_def
+     apply (simp add: ptrFromPAddr_def pptrBaseOffset_def pptrBase_def Kernel_Config.physBase_def
                       s0_ptr_defs)
     apply (simp add: add.commute)
 
@@ -1612,7 +1612,7 @@ lemma valid_arch_objs_s0[simp]:
   apply (clarsimp simp: valid_vspace_objs_def obj_at_def s0_internal_def)
   apply (drule kh0_SomeD)
   apply (erule disjE | clarsimp simp:  pageBits_def addrFromPPtr_def
-      pptrBaseOffset_def pptrBase_def physBase_def is_aligned_def
+      pptrBaseOffset_def pptrBase_def Kernel_Config.physBase_def is_aligned_def
       obj_at_def kh0_def kh0_obj_def kernel_mapping_slots_def
       High_pt'_def Low_pt'_def High_pd'_def Low_pd'_def ptrFromPAddr_def
      | erule vs_lookupE, force simp: vs_lookup_def arch_state0_def vs_asid_refs_def)+
@@ -1640,7 +1640,7 @@ lemma valid_global_objs_s0[simp]:
   apply (clarsimp simp: valid_global_objs_def s0_internal_def arch_state0_def)
   by (force simp: valid_vso_at_def obj_at_def kh0_def kh0_obj_def s0_ptr_defs
                      addrFromPPtr_def pptrBaseOffset_def pptrBase_def
-                     physBase_def is_aligned_def pageBits_def
+                     Kernel_Config.physBase_def is_aligned_def pageBits_def
                      kernel_mapping_slots_def empty_table_def pde_ref_def
                      valid_pde_mappings_def)+
 
@@ -1661,7 +1661,7 @@ lemma equal_kernel_mappings_s0[simp]:
   apply (drule kh0_SomeD)+
   by (erule disjE
      | force simp: kh0_obj_def High_pd'_def Low_pd'_def s0_ptr_defs kernel_mapping_slots_def
-                   addrFromPPtr_def pptrBaseOffset_def pptrBase_def physBase_def)+
+                   addrFromPPtr_def pptrBaseOffset_def pptrBase_def Kernel_Config.physBase_def)+
 
 lemma valid_asid_map_s0[simp]:
   "valid_asid_map s0_internal"

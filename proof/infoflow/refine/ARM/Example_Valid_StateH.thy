@@ -2187,26 +2187,26 @@ lemma s0H_valid_objs':
                       split: if_split_asm)
       apply (clarsimp simp: valid_obj'_def global_pdH'_def valid_mapping'_def s0_ptr_defs
                             is_aligned_def ARM.addrFromPPtr_def ARM.ptrFromPAddr_def
-                            pptrBaseOffset_def ARM.pptrBase_def ARM.physBase_def
-                            pptrBase_def physBase_def
+                            pptrBaseOffset_def ARM.pptrBase_def Kernel_Config.physBase_def
+                            pptrBase_def
                      split: if_split_asm)
      apply (clarsimp simp: valid_obj'_def High_pdH_def High_pd'H_def valid_pde'_def pteBits_def
                            valid_mapping'_def s0_ptr_defs is_aligned_def ARM.addrFromPPtr_def
-                           ARM.pptrBase_def ARM.physBase_def ARM.ptrFromPAddr_def ptBits_def
-                           pageBits_def pptrBaseOffset_def pptrBase_def physBase_def
+                           ARM.pptrBase_def ARM.ptrFromPAddr_def ptBits_def
+                           pageBits_def pptrBaseOffset_def pptrBase_def Kernel_Config.physBase_def
                     split: if_split_asm)
     apply (clarsimp simp: valid_obj'_def Low_pdH_def Low_pd'H_def valid_pde'_def valid_mapping'_def
                           s0_ptr_defs is_aligned_def ARM.addrFromPPtr_def pteBits_def
-                          ARM.ptrFromPAddr_def ARM.physBase_def ptBits_def pageBits_def
-                          pptrBaseOffset_def pptrBase_def physBase_def
+                          ARM.ptrFromPAddr_def ptBits_def pageBits_def
+                          pptrBaseOffset_def pptrBase_def Kernel_Config.physBase_def
                    split: if_split_asm)
    apply (clarsimp simp: valid_obj'_def High_ptH_def High_pt'H_def valid_mapping'_def s0_ptr_defs
                          is_aligned_def ARM.addrFromPPtr_def ARM.ptrFromPAddr_def ARM.pptrBase_def
-                         ARM.physBase_def pptrBaseOffset_def pptrBase_def physBase_def
+                         pptrBaseOffset_def pptrBase_def Kernel_Config.physBase_def
                   split: if_split_asm)
   apply (clarsimp simp: valid_obj'_def Low_ptH_def Low_pt'H_def valid_mapping'_def s0_ptr_defs
-                        is_aligned_def ARM.addrFromPPtr_def ARM.physBase_def ARM.ptrFromPAddr_def
-                        pptrBaseOffset_def pptrBase_def physBase_def
+                        is_aligned_def ARM.addrFromPPtr_def ARM.ptrFromPAddr_def
+                        pptrBaseOffset_def pptrBase_def Kernel_Config.physBase_def
                  split: if_split_asm)
   done
 

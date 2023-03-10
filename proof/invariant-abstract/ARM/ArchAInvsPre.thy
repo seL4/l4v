@@ -100,7 +100,7 @@ lemma get_pd_of_thread_reachable:
 
 lemma is_aligned_ptrFromPAddrD:
 "\<lbrakk>is_aligned (ptrFromPAddr b) a; a \<le> 24\<rbrakk> \<Longrightarrow> is_aligned b a"
-  apply (clarsimp simp: ptrFromPAddr_def pptrBaseOffset_def pptrBase_def physBase_def)
+  apply (clarsimp simp: ptrFromPAddr_def pptrBaseOffset_def pptrBase_def Kernel_Config.physBase_def)
   apply (erule is_aligned_addD2)
   apply (rule is_aligned_weaken[where x = 24])
    apply (simp add: is_aligned_def)
@@ -188,7 +188,7 @@ lemma device_frame_in_device_region:
 lemma is_aligned_pptrBaseOffset:
 "is_aligned pptrBaseOffset (pageBitsForSize sz)"
   by (case_tac sz, simp_all add: pptrBaseOffset_def
-                   pptrBase_def physBase_def is_aligned_def)[1]
+                   pptrBase_def Kernel_Config.physBase_def is_aligned_def)[1]
 
 global_naming Arch
 named_theorems AInvsPre_asms
