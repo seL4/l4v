@@ -369,4 +369,53 @@ lemma corres_whileLoop_abs:
   apply (fastforce intro: wf_subset[OF whileLoop_terminates_wf[where C=C']])
   done
 
+
+text \<open>Some corres_underlying rules for monadic combinators\<close>
+
+lemma ifM_corres:
+  assumes   test: "corres_underlying srel nf nf' (=) A A' test test'"
+  and          l: "corres_underlying srel nf nf' rrel Q Q' a a'"
+  and          r: "corres_underlying srel nf nf' rrel R R' b b'"
+  and  abs_valid: "\<lbrace>B\<rbrace> test \<lbrace>\<lambda>c s. c \<longrightarrow> Q s\<rbrace>"
+                  "\<lbrace>C\<rbrace> test \<lbrace>\<lambda>c s. \<not> c \<longrightarrow> R s\<rbrace>"
+  and conc_valid: "\<lbrace>B'\<rbrace> test' \<lbrace>\<lambda>c s. c \<longrightarrow> Q' s\<rbrace>"
+                  "\<lbrace>C'\<rbrace> test' \<lbrace>\<lambda>c s. \<not> c \<longrightarrow> R' s\<rbrace>"
+  shows "corres_underlying srel nf nf' rrel (A and B and C) (A' and B' and C')
+           (ifM test a b) (ifM test' a' b')"
+  unfolding ifM_def
+  apply (rule corres_guard_imp)
+    apply (rule corres_split[OF test])
+      apply (erule corres_if[OF _ l r])
+     apply (wpsimp wp: abs_valid conc_valid hoare_vcg_if_lift2)+
+  done
+
+lemma orM_corres:
+  "\<lbrakk>corres_underlying srel nf nf' (=) A A' a a'; corres_underlying srel nf nf' (=) R R' b b';
+    \<lbrace>B\<rbrace> a \<lbrace>\<lambda>c s. \<not> c \<longrightarrow> R s\<rbrace>; \<lbrace>B'\<rbrace> a' \<lbrace>\<lambda>c s. \<not> c \<longrightarrow> R' s\<rbrace>\<rbrakk>
+   \<Longrightarrow> corres_underlying srel nf nf' (=) (A and B) (A' and B') (orM a b) (orM a' b')"
+  unfolding orM_def
+  apply (rule corres_guard_imp)
+    apply (rule ifM_corres[where Q=\<top> and Q'=\<top>])
+        apply (wpsimp | fastforce)+
+  done
+
+lemma andM_corres:
+  "\<lbrakk>corres_underlying srel nf nf' (=) A A' a a'; corres_underlying srel nf nf' (=) Q Q' b b';
+    \<lbrace>B\<rbrace> a \<lbrace>\<lambda>c s. c \<longrightarrow> Q s\<rbrace>; \<lbrace>B'\<rbrace> a' \<lbrace>\<lambda>c s. c \<longrightarrow> Q' s\<rbrace>\<rbrakk>
+   \<Longrightarrow> corres_underlying srel nf nf' (=) (A and B) (A' and B') (andM a b) (andM a' b')"
+  unfolding andM_def
+  apply (rule corres_guard_imp)
+    apply (erule (1) ifM_corres[where R=\<top> and R'=\<top>])
+        apply (wpsimp | assumption)+
+  done
+
+lemma notM_corres:
+  "corres_underlying srel nf nf' (=) G G' a a'
+   \<Longrightarrow> corres_underlying srel nf nf' (=) G G' (notM a) (notM a')"
+  unfolding notM_def
+  apply (rule corres_guard_imp)
+    apply (erule corres_split)
+      apply wpsimp+
+  done
+
 end
