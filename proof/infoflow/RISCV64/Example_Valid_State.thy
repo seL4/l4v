@@ -1497,21 +1497,25 @@ lemma valid_arch_state_s0[simp]:
                           simp: init_vspace_uses_def split: if_splits)
         apply (fastforce elim: dual_order.strict_trans[rotated] split: if_splits
                          simp: init_vspace_uses_def pptr_base_def pptrBase_def
-                               canonical_bit_def kernel_elf_base_def kernelELFBase_def)
+                               canonical_bit_def kernel_elf_base_def kernelELFBase_def
+                               kernelELFPAddrBase_def Kernel_Config.physBase_def mask_def)
        apply (fastforce dest: dual_order.strict_trans1[where a=kernel_elf_base, rotated]
                               dual_order.strict_trans1[OF _ pptr_base_kernel_elf_base]
                               canonical_user_below_pptr_base
                         simp: init_vspace_uses_def pptr_base_def pptrBase_def
                               canonical_bit_def kernel_elf_base_def kernelELFBase_def
+                              kernelELFPAddrBase_def Kernel_Config.physBase_def mask_def
                        split: if_splits)
       apply (fastforce dest: dual_order.strict_trans2 canonical_user_below_pptr_base
                        simp: init_vspace_uses_def pptr_base_def pptrBase_def canonical_bit_def
                              kdev_base_def kdevBase_def kernel_elf_base_def kernelELFBase_def
+                             kernelELFPAddrBase_def Kernel_Config.physBase_def mask_def
                       split: if_splits)
      apply (fastforce dest: dual_order.strict_trans1[where a=kernel_elf_base, rotated]
                             canonical_user_below_pptr_base
                       simp: user_window_def user_region_def init_vspace_uses_def pptr_base_def
                             pptrBase_def canonical_bit_def kernel_elf_base_def kernelELFBase_def
+                            kernelELFPAddrBase_def Kernel_Config.physBase_def mask_def
                      split: if_splits)+
    apply (fastforce simp: valid_global_arch_objs_def obj_at_def kh0_def a_type_def
                          init_global_pt_def max_pt_level_not_asid_pool_level[symmetric])
@@ -1814,21 +1818,24 @@ lemma valid_global_pd_mappings_s0_helper':
    apply (clarsimp simp: ptes_of_def pts_of_s0 riscv_global_pt_is_aligned global_pte_def
                          table_index_offset_pt_bits_left is_aligned_pt_slot_offset_pte
                   split: if_splits)
-    apply (clarsimp simp: misc kernel_elf_base_def kernelELFBase_def)
+    apply (clarsimp simp: misc kernel_elf_base_def kernelELFBase_def kernelELFPAddrBase_def
+                          Kernel_Config.physBase_def)
     apply (word_bitwise, fastforce)
    apply (clarsimp simp: misc s0_ptr_defs kernel_mapping_slots_def
-                         kernel_elf_base_def kernelELFBase_def)
+                         kernel_elf_base_def kernelELFBase_def kernelELFPAddrBase_def
+                         Kernel_Config.physBase_def)
    apply (word_bitwise, fastforce)
   apply (clarsimp simp: ptes_of_def pts_of_s0 riscv_global_pt_is_aligned
                         is_aligned_pt_slot_offset_pte global_pte_def
                  split: if_splits)
    apply (clarsimp simp: addr_from_ppn_def bit_simps s0_ptr_defs pt_bits_left_def mask_def
-                         pt_slot_offset_def pt_index_def kernel_elf_base_def kernelELFBase_def)
+                         pt_slot_offset_def pt_index_def kernel_elf_base_def kernelELFBase_def
+                         kernelELFPAddrBase_def Kernel_Config.physBase_def)
    apply (word_bitwise, fastforce)
   apply (clarsimp simp: addr_from_ppn_def ptrFromPAddr_def addrFromKPPtr_def bit_simps
                         is_aligned_def s0_ptr_defs pt_bits_left_def mask_def pptrBaseOffset_def
                         paddrBase_def kernel_elf_base_def kernelELFBase_def
-                        kernelELFBaseOffset_def kernelELFPAddrBase_def)
+                        kernelELFBaseOffset_def kernelELFPAddrBase_def Kernel_Config.physBase_def)
   apply (word_bitwise, fastforce)
   done
 

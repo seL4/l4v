@@ -1209,8 +1209,7 @@ lemma lookupPTSlot_le_0x3C:
    apply simp
   apply (simp add: ARM_HYP.ptrFromPAddr_def pptrBaseOffset_def)
   apply (erule aligned_add_aligned)
-   apply (simp add: pptrBase_def ARM_HYP.physBase_def
-     physBase_def is_aligned_def)
+   apply (simp add: pptrBase_def Kernel_Config.physBase_def is_aligned_def)
   apply (simp add: word_bits_def)
   done
 
@@ -1471,7 +1470,7 @@ lemma obj_at_pte_aligned:
 lemma addrFromPPtr_mask_5:
   "addrFromPPtr ptr && mask (5::nat) = ptr && mask (5::nat)"
   apply (simp add:addrFromPPtr_def pptrBaseOffset_def
-    pptrBase_def physBase_def ARM_HYP.physBase_def)
+    pptrBase_def Kernel_Config.physBase_def)
   apply word_bitwise
   apply (simp add:mask_def)
   done
@@ -1479,7 +1478,7 @@ lemma addrFromPPtr_mask_5:
 lemma addrFromPPtr_mask_6:
   "addrFromPPtr ptr && mask (6::nat) = ptr && mask (6::nat)"
   apply (simp add:addrFromPPtr_def pptrBaseOffset_def
-    pptrBase_def physBase_def ARM_HYP.physBase_def)
+    pptrBase_def Kernel_Config.physBase_def)
   apply word_bitwise
   apply (simp add:mask_def)
   done
@@ -2273,7 +2272,7 @@ lemma vmsz_aligned_addrFromPPtr':
    apply (erule(1) aligned_sub_aligned)
     apply (simp add: pageBitsForSize_def word_bits_def split: vmpage_size.split)
   apply (simp add: pageBitsForSize_def pptrBaseOffset_def pptrBase_def
-                   physBase_def ARM_HYP.physBase_def is_aligned_def
+                   Kernel_Config.physBase_def is_aligned_def
             split: vmpage_size.split)
   done
 
@@ -2800,9 +2799,9 @@ lemma decodeARMFrameInvocation_ccorres:
                              in ccorres_symb_exec_r_known_rv)
                 apply (rule conseqPre, vcg)
                 (* FIXME: temporary workaround, there should only be one physBase *)
-                apply (clarsimp simp: unify_physBase dest!: ccap_relation_PageCap_generics)
-                apply (clarsimp simp: paddrTop_def pptrTop_def fromPAddr_def
-                                      ARM_HYP.physBase_def ARM_HYP.pptrBase_def
+                apply (clarsimp dest!: ccap_relation_PageCap_generics)
+                apply (clarsimp simp: paddrTop_def pptrTop_def fromPAddr_def pptrBaseOffset_def
+                                      Kernel_Config.physBase_def ARM_HYP.pptrBase_def
                                       hd_drop_conv_nth hd_conv_nth false_def true_def
                                 split: if_split)
                apply ceqv

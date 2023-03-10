@@ -1676,7 +1676,7 @@ lemma addrFromPPtr_mask:
   "n \<le> 28
     \<Longrightarrow> addrFromPPtr ptr && mask n = ptr && mask n"
   apply (simp add: addrFromPPtr_def pptrBaseOffset_def pptrBase_def
-                   ARM_HYP.physBase_def)
+                   Kernel_Config.physBase_def)
   apply word_bitwise
   apply simp
   done

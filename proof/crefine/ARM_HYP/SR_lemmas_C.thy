@@ -2438,19 +2438,12 @@ lemma unat_scast_numDomains:
   "unat (SCAST(32 signed \<rightarrow> machine_word_len) Kernel_C.numDomains) = unat Kernel_C.numDomains"
   by (simp add: scast_eq sint_numDomains_to_H unat_numDomains_to_H numDomains_machine_word_safe)
 
-(* FIXME physBase now has two definitions: Kernel_Config.physBase and Platform.ARM_HYP.physBase,
-     the latter should be removed, but sees plenty of use in ARM_HYP *)
-(* doubles as a sanity check of Kernel_Config being correctly loaded from the seL4 build system *)
+(* link up Kernel_Config loaded from the seL4 build system with physBase in C code *)
 lemma physBase_spec:
   "\<forall>s. \<Gamma>\<turnstile> {s} Call physBase_'proc {t. ret__unsigned_long_' t = Kernel_Config.physBase }"
   apply (rule allI, rule conseqPre, vcg)
   apply (simp add: Kernel_Config.physBase_def)
   done
-
-(* FIXME: this is a temporary fix, only Kernel_Config.physBase should remain in the end *)
-lemma unify_physBase:
-  "Kernel_Config.physBase = Platform.ARM_HYP.physBase"
-  by (simp add: Kernel_Config.physBase_def Platform.ARM_HYP.physBase_def)
 
 end
 end

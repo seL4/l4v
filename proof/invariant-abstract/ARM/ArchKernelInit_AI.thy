@@ -360,7 +360,7 @@ lemma invs_A:
                          valid_pde_mappings_def valid_vso_at_def)
    apply (simp add: kernel_base_def kernel_mapping_slots_def
                     Platform.ARM.addrFromPPtr_def pptrBaseOffset_def
-                    pptrBase_def physBase_def pageBits_def is_aligned_def)
+                    pptrBase_def Kernel_Config.physBase_def pageBits_def is_aligned_def)
   apply (rule conjI)
    apply (simp add: valid_kernel_mappings_def state_defs
                          valid_kernel_mappings_if_pd_def pde_ref_def

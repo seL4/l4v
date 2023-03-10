@@ -252,7 +252,8 @@ lemma irq_node_pptr_base_kernel_elf_base:
   "\<lbrakk>x \<le> pptr_base + (m + (mask cte_level_bits + 0x3000)); m \<le> mask (size irq) << cte_level_bits \<rbrakk>
    \<Longrightarrow> \<not> kernel_elf_base \<le> x" for irq::irq
   apply (simp add: word_size cte_level_bits_def mask_def pptr_base_def pptrBase_def
-                   kernel_elf_base_def kernelELFBase_def canonical_bit_def not_le)
+                   Kernel_Config.physBase_def kernel_elf_base_def kernelELFBase_def canonical_bit_def
+                   not_le)
   apply unat_arith
   done
 

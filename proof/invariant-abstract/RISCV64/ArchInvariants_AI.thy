@@ -1280,9 +1280,10 @@ lemma canonical_user_pptr_base:
   "canonical_user < pptr_base"
   by (simp add: canonical_user_def pptr_base_def pptrBase_def canonical_bit_def mask_def)
 
-lemma pptr_base_kernel_elf_base:
+lemma pptr_base_kernel_elf_base: (* FIXME MK: candidate for Kernel_Config_Lemmas *)
   "pptr_base < kernel_elf_base"
-  by (simp add: pptr_base_def pptrBase_def canonical_bit_def kernel_elf_base_def kernelELFBase_def)
+  by (simp add: pptr_base_def pptrBase_def canonical_bit_def kernel_elf_base_def kernelELFBase_def
+                kernelELFPAddrBase_def Kernel_Config.physBase_def mask_def)
 
 lemma above_pptr_base_canonical:
   "pptr_base \<le> p \<Longrightarrow> canonical_address p"

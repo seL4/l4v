@@ -1494,7 +1494,8 @@ lemma ensureSafeMapping_valid_slots_duplicated':
 
 lemma is_aligned_ptrFromPAddr_aligned:
   "m \<le> 28 \<Longrightarrow> is_aligned (ptrFromPAddr p) m = is_aligned p m"
-  apply (simp add:ptrFromPAddr_def is_aligned_mask pptrBaseOffset_def pptrBase_def physBase_def)
+  apply (simp add: ptrFromPAddr_def is_aligned_mask pptrBaseOffset_def pptrBase_def
+                   Kernel_Config.physBase_def)
   apply (subst add.commute)
   apply (subst mask_add_aligned)
    apply (erule is_aligned_weaken[rotated])

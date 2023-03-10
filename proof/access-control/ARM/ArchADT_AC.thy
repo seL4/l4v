@@ -101,7 +101,7 @@ lemma ptable_state_objs_to_policy:
                       vspace_cap_rights_to_auth b)" in bexI)
    apply clarsimp
    apply (rule_tac x="(ptrFromPAddr a + (x && mask aa), auth)" in image_eqI)
-    apply (simp add: ptrFromPAddr_def pptrBaseOffset_def pptrBase_def physBase_def)
+    apply (simp add: ptrFromPAddr_def pptrBaseOffset_def pptrBase_def Kernel_Config.physBase_def)
    apply (simp add: ptr_offset_in_ptr_range)
   apply (simp add: kernel_mappings_kernel_mapping_slots')
   apply (clarsimp simp: graph_of_def)
@@ -165,7 +165,7 @@ lemma get_page_info_state_objs_to_policy:
                       vspace_cap_rights_to_auth r)" in bexI)
    apply clarsimp
    apply (rule_tac x="(ptrFromPAddr base + (x && mask sz), auth)" in image_eqI)
-    apply (simp add: ptrFromPAddr_def pptrBaseOffset_def pptrBase_def physBase_def)
+    apply (simp add: ptrFromPAddr_def pptrBaseOffset_def pptrBase_def Kernel_Config.physBase_def)
    apply (simp add: ptr_offset_in_ptr_range)
   apply (clarsimp simp: get_page_info_def get_pd_entry_def get_pt_info_def
                         get_pt_entry_def get_arch_obj_def pte_ref_def graph_of_def
