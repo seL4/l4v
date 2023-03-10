@@ -292,6 +292,10 @@ lemma empty_fail_ifM[empty_fail_cond]:
   "\<lbrakk> empty_fail P; empty_fail a; empty_fail b \<rbrakk> \<Longrightarrow> empty_fail (ifM P a b)"
   by (simp add: ifM_def empty_fail_cond)
 
+lemma empty_fail_ifME[empty_fail_cond]:
+  "\<lbrakk> empty_fail P; empty_fail a; empty_fail b \<rbrakk> \<Longrightarrow> empty_fail (ifME P a b)"
+  by (simp add: ifME_def empty_fail_cond)
+
 lemma empty_fail_whenM[empty_fail_cond]:
   "\<lbrakk> empty_fail P; empty_fail f \<rbrakk> \<Longrightarrow> empty_fail (whenM P f)"
   by (simp add: whenM_def empty_fail_term empty_fail_cond)
@@ -303,6 +307,10 @@ lemma empty_fail_andM[empty_fail_cond]:
 lemma empty_fail_orM[empty_fail_cond]:
   "\<lbrakk> empty_fail A; empty_fail B \<rbrakk> \<Longrightarrow> empty_fail (orM A B)"
   by (simp add: orM_def empty_fail_term empty_fail_cond)
+
+lemma empty_fail_notM[empty_fail_cond]:
+  "empty_fail A \<Longrightarrow> empty_fail (notM A)"
+  by (simp add: notM_def empty_fail_term empty_fail_cond)
 
 (* not everything [simp] by default, because side conditions can slow down simp a lot *)
 lemmas empty_fail[wp, intro!] = empty_fail_term empty_fail_cond
