@@ -86,20 +86,27 @@ endif
 # kernel rebuilds if we treated them as dependencies of the kernel build.
 # We avoid this by excluding __pycache__ directories from the kernel dependencies.
 KERNEL_DEPS := $(shell find ${SOURCE_ROOT} -name .git -prune -o -name __pycache__ -prune -o -type f -print)
+ifneq (${.SHELLSTATUS},0)
+  $(error Failed to populate KERNEL_DEPS)
+endif
 
 # Top level rule for rebuilding kernel_all.c_pp
 ${KERNEL_BUILD_ROOT}/kernel_all.c_pp: ${KERNEL_BUILD_ROOT}/.cmake_done
 	cd ${KERNEL_BUILD_ROOT} && ninja kernel_all_pp_wrapper
 	cp -a ${KERNEL_BUILD_ROOT}/kernel_all_pp.c $@
 
-ifneq ($(L4V_ARCH),X64)
 OVERLAY_DIR := ${CSPEC_DIR}/c/overlays/${L4V_ARCH}
-OVERLAY := ${OVERLAY_DIR}/overlay.dts
-OVERLAY_OPT := -DKernelCustomDTSOverlay=${OVERLAY}
-DEFAULT_OVERLAY := ${OVERLAY_DIR}/default-overlay.dts
-
-${OVERLAY}: ${DEFAULT_OVERLAY}
-	@cp $< $@
+ifneq ($(L4V_ARCH),X64)
+  OVERLAY_MSG := "-- Used default overlay for $(L4V_ARCH)"
+  ifndef OVERLAY
+    ifneq (,$(wildcard ${OVERLAY_DIR}/overlay.dts))
+      OVERLAY := ${OVERLAY_DIR}/overlay.dts
+    endif
+  endif
+  ifdef OVERLAY
+    OVERLAY_MSG := "++ Used custom overlay for $(L4V_ARCH)"
+    OVERLAY_OPT := -DKernelCustomDTSOverlay=${OVERLAY}
+  endif
 endif
 
 # Initialize the CMake build. We purge the build directory and start again
@@ -120,12 +127,8 @@ ${KERNEL_BUILD_ROOT}/.cmake_done: ${KERNEL_DEPS} ${CONFIG_DOMAIN_SCHEDULE} ${OVE
 		${OVERLAY_OPT} \
 		-G Ninja ${SOURCE_ROOT}
 	@touch ${KERNEL_BUILD_ROOT}/.cmake_done
-ifneq ($(L4V_ARCH),X64)
-	@if [ "$$(diff -q ${OVERLAY} ${DEFAULT_OVERLAY})" ]; then \
-		echo "++ Used custom overlay for $(L4V_ARCH)"; \
-	else \
-		echo "-- Used default overlay for $(L4V_ARCH)"; \
-	fi
+ifneq (,${OVERLAY_MSG})
+	@echo ${OVERLAY_MSG}
 endif
 
 ${UMM_TYPES}: ${KERNEL_BUILD_ROOT}/kernel_all.c_pp
@@ -145,12 +148,8 @@ ${KERNEL_CONFIG_ROOT}/.cmake_done: ${KERNEL_DEPS} gen-config-thy.py ${OVERLAY}
 		-G Ninja ${SOURCE_ROOT}
 	cd ${KERNEL_CONFIG_ROOT} && ninja gen_config/kernel/gen_config.json
 	@touch ${KERNEL_CONFIG_ROOT}/.cmake_done
-ifneq ($(L4V_ARCH),X64)
-	@if [ "$$(diff -q ${OVERLAY} ${DEFAULT_OVERLAY})" ]; then \
-		echo "++ Used custom overlay for $(L4V_ARCH)"; \
-	else \
-		echo "-- Used default overlay for $(L4V_ARCH)"; \
-	fi
+ifneq (,${OVERLAY_MSG})
+	@echo ${OVERLAY_MSG}
 endif
 
 # Various targets useful for binary verification.
