@@ -56,7 +56,7 @@ These instructions use Homebrew, which can be installed from [their website][hom
 The main packages that are needed are:
 
 ```
-brew install git libxml2 ncurses librsvg dtc cmake ninja texlive rysnc python ccache \
+brew install git libxml2 ncurses librsvg dtc cmake ninja texlive rsync python ccache \
     zstd haskell-stack
 ```
 
