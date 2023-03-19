@@ -700,6 +700,17 @@ lemma state_vrefs_store_PageTablePTE_wp[simplified f_kheap_to_kheap]:
   apply (fastforce simp: fun_upd_def obj_at_def state_vrefs_store_PageTablePTE)
   done
 
+(* FIXME: Should these helpers for invalid_pte_at be moved to AInvs? -robs *)
+lemma invalid_pte_at_ta_agnostic:
+  "ta_agnostic (invalid_pte_at p)"
+  unfolding ta_agnostic_def invalid_pte_at_def
+  by force
+
+lemma invalid_pte_at_ms_ta_independent[intro!, simp]:
+  "invalid_pte_at p (ms_ta_update taf s) = invalid_pte_at p s"
+  using invalid_pte_at_ta_agnostic
+  by (metis ta_agnostic_def)
+
 lemma perform_pt_inv_map_pas_refined[wp]:
   "\<lbrace>pas_refined aag and invs and valid_pti (PageTableMap acap (a, b) pte p)
                     and K (authorised_page_table_inv aag (PageTableMap acap (a, b) pte p))\<rbrace>
@@ -731,16 +742,14 @@ lemma perform_pt_inv_map_pas_refined[wp]:
    apply (drule valid_vs_lookupD, erule vref_for_level_user_region; clarsimp)
    apply (frule (1) cap_to_pt_is_pt_cap)
      apply simp
-     defer
     apply (fastforce intro: valid_objs_caps)
    apply (clarsimp simp: cte_wp_at_caps_of_state)
    apply (clarsimp simp: is_cap_simps is_arch_update_def cap_master_cap_def
                   split: cap.splits arch_cap.splits)
    apply (drule (1) unique_table_refsD[rotated])
-     defer
+     apply simp
     apply (fastforce simp: table_cap_ref_def)
    apply (fastforce simp: table_cap_ref_def)
-  sorry (* FIXME: broken by touched-addrs -robs
   apply (intro exI conjI; (simp | clarsimp))
   apply (intro conjI)
     apply (clarsimp simp: pas_refined_def cte_wp_at_caps_of_state auth_graph_map_def)
@@ -770,7 +779,7 @@ lemma perform_pt_inv_map_pas_refined[wp]:
                        simp: vs_lookup_slot_def vs_lookup_table_def invalid_pte_at_def)
      apply (subst (asm) vs_lookup_slot_table_unfold; clarsimp)
      apply (erule state_vrefsD)
-       apply (fastforce simp: aobjs_of_Some obj_at_def)
+       apply (fastforce simp: kobjs_of_False_Some obj_at_def)
       apply clarsimp
      apply (fastforce simp: vs_refs_aux_def graph_of_def pte_ref2_def)
     apply (clarsimp simp: is_arch_update_def cap_master_cap_def
@@ -792,7 +801,6 @@ lemma perform_pt_inv_map_pas_refined[wp]:
   apply (clarsimp split: if_splits)
   apply (fastforce dest: sita_controlled)
   done
-*)
 
 lemma perform_page_table_invocation_pas_refined:
   "\<lbrace>pas_refined aag and invs and valid_pti iv and K (authorised_page_table_inv aag iv)\<rbrace>
@@ -915,7 +923,7 @@ lemma pt_walk_is_subject[simplified f_kheap_to_kheap]:
   apply (fastforce simp: kobjs_of_False_Some pptr_from_pte_def
                    dest: table_index_max_level_slots
                    elim: rev_bexI bexI_minus[rotated]
-                 intro!: pts_of_Some_alignedD[where ta_f=False, simplified])
+                 intro!: pts_of_Some_alignedD)
   done
 
 lemma pt_lookup_slot_from_level_is_subject[simplified f_kheap_to_kheap]:
@@ -1008,6 +1016,12 @@ lemma perform_pg_inv_get_addr_pas_refined [wp]:
   apply wpsimp
   apply fastforce
   done
+
+(* FIXME: Is proving like this possible, or even desirable? -robs *)
+lemma pt_lookup_slot_of_pte_of_remove_tafilter [simp]:
+  "pt_lookup_slot pt vptr (\<lambda>pte_ptr. pte_of pte_ptr (obind (kheap s) (ta_filter ta_f b) |> aobj_of |> pt_of)) = Some x \<Longrightarrow>
+   pt_lookup_slot pt vptr (\<lambda>pte_ptr. pte_of pte_ptr (kheap s |> aobj_of |> pt_of)) = Some x"
+  oops
 
 lemma unmap_page_pas_refined:
   "\<lbrace>pas_refined aag and invs and K (vptr \<in> user_region)\<rbrace>
@@ -1112,6 +1126,28 @@ lemma set_cap_same_ref[wp]:
   apply clarsimp
   done
 
+(* FIXME: Should these helpers all be moved to AInvs? -robs *)
+
+lemma authorised_slots_ta_agnostic:
+  "ta_agnostic (authorised_slots aag (pte, slot))"
+  unfolding ta_agnostic_def authorised_slots_def
+  by force
+
+lemma authorised_slots_ms_ta_independent[intro!, simp]:
+  "authorised_slots aag (pte, slot) (ms_ta_update taf s) = authorised_slots aag (pte, slot) s"
+  using authorised_slots_ta_agnostic
+  by (metis ta_agnostic_def)
+
+lemma same_ref_ta_agnostic:
+  "ta_agnostic (same_ref (pte, slot) cap)"
+  unfolding ta_agnostic_def same_ref_def
+  by force
+
+lemma same_ref_ms_ta_independent[intro!, simp]:
+  "same_ref (pte, slot) cap (ms_ta_update taf s) = same_ref (pte, slot) cap s"
+  using same_ref_ta_agnostic
+  by (metis ta_agnostic_def)
+
 lemma perform_pg_inv_map_pas_refined:
   "\<lbrace>pas_refined aag and invs and valid_page_inv (PageMap cap ct_slot (pte,slot))
                     and authorised_page_inv aag (PageMap cap ct_slot (pte,slot))\<rbrace>
@@ -1178,11 +1214,9 @@ lemma perform_pg_inv_map_pas_refined:
                  split: arch_cap.splits)
   apply (rule conjI)
    apply (fastforce dest: vs_lookup_slot_unique_level simp: same_ref_def parent_for_refs_def)
-  sorry (* FIXME: broken by touched-addrs -robs
   apply (fastforce dest: vs_lookup_slot_unique_level caps_of_state_valid
                    simp: valid_arch_cap_def valid_cap_def cap_aligned_def)
   done
-*)
 
 lemma perform_page_invocation_pas_refined:
   "\<lbrace>pas_refined aag and invs and authorised_page_inv aag pgi and valid_page_inv pgi\<rbrace>
@@ -1383,7 +1417,7 @@ lemma perform_asid_control_invocation_pas_refined:
   apply wpc
    apply (rule pas_refined_asid_control_helper hoare_seq_ext hoare_K_bind)+
          apply (wp cap_insert_pas_refined' static_imp_wp | simp)+
-      sorry (* XXX: broken by touched_addresses. -robs
+      (* Long running *)
       apply ((wp retype_region_pas_refined'[where sz=pageBits]
                  hoare_vcg_ex_lift hoare_vcg_all_lift static_imp_wp hoare_wp_combs hoare_drop_imp
                  retype_region_invs_extras(1)[where sz = pageBits]
@@ -1396,8 +1430,10 @@ lemma perform_asid_control_invocation_pas_refined:
                  set_cap_descendants_range_in set_cap_no_overlap get_cap_wp set_cap_caps_no_overlap
                  hoare_vcg_all_lift static_imp_wp retype_region_invs_extras
                  set_cap_pas_refined_not_transferable arch_update_cap_valid_mdb
+                 touch_object_wp'
              | simp add: do_machine_op_def region_in_kernel_window_def cte_wp_at_neg2)+)[3]
-   apply (rename_tac frame slot parent base )
+    apply (wpsimp wp: touch_object_wp')
+   apply (rename_tac frame slot parent base x)
    apply (case_tac slot, rename_tac slot_ptr slot_idx)
    apply (case_tac parent, rename_tac parent_ptr parent_idx)
    apply (rule_tac Q="\<lambda>rv s.
@@ -1435,6 +1471,7 @@ lemma perform_asid_control_invocation_pas_refined:
     apply (cut_tac s=s and ptr="(parent_ptr, parent_idx)" in cap_refs_in_kernel_windowD)
       apply ((fastforce simp: caps_of_state_def cap_range_def)+)[3]
    apply (fastforce simp: x_power_minus_1 is_aligned_no_overflow')
+   apply (wp touch_object_wp')
   apply (clarsimp simp: valid_aci_def authorised_asid_control_inv_def cte_wp_at_caps_of_state)
   apply (rule conjI)
    apply (drule untyped_slots_not_in_untyped_range)
@@ -1452,9 +1489,9 @@ lemma perform_asid_control_invocation_pas_refined:
                         cap_links_irq_def range_cover_def obj_bits_api_def pageBits_def
                         default_arch_object_def and_mask_eq_iff_shiftr_0 mask_zero)
   apply (subst is_aligned_neg_mask_eq[THEN sym], assumption)
+  (* Long running *)
   apply (intro conjI; fastforce intro: empty_descendants_range_in)
   done
-*)
 
 lemma copy_global_mappings_integrity:
   "\<lbrace>integrity aag X st and K (is_aligned x pt_bits \<and> is_subject aag x)\<rbrace>
@@ -1545,8 +1582,9 @@ lemma copy_global_mappings_state_vrefs:
     apply (prop_tac "table_base (pt_ptr + (x << pte_bits)) = pt_ptr \<and>
                      table_base (global_pt + (x << pte_bits)) = global_pt")
      apply (metis mask_2pm1 table_base_plus)
-    apply (clarsimp simp: valid_objs_caps ptes_of_wellformed_pte)
-    sorry (* FIXME: broken by touched-addrs -robs
+    apply (clarsimp simp: valid_objs_caps)
+    using ptes_of_wellformed_pte pte_of_remove_tafilter
+    apply blast
    apply wpsimp+
   apply (simp add: invs_valid_global_vspace_mappings)
   apply (intro conjI; clarsimp)
@@ -1554,7 +1592,6 @@ lemma copy_global_mappings_state_vrefs:
   apply (frule valid_global_arch_objs_pt_at)
   using not_in_global_refs_vs_lookup apply fastforce
   done
-*)
 
 crunches copy_global_mappings
   for tcb_domain_map_wellformed[wp]: "\<lambda>s. P (tcb_domain_map_wellformed aag s)"
@@ -1751,13 +1788,11 @@ lemma copy_global_mappings_vs_lookup_table_noteq:
     apply (wpsimp wp: mapM_x_wp' store_pte_valid_vspace_objs store_pte_vs_lookup_table_unreachable
                       touch_objects_wp
                       store_pte_valid_vs_lookup_unreachable hoare_vcg_all_lift hoare_vcg_imp_lift')
-    apply (frule pte_of_remove_tafilter) (* XXX: Useful? *)
-    sorry (* FIXME: broken by touched-addrs -robs
+    apply (drule pte_of_remove_tafilter)
     apply (metis valid_objs_caps ptes_of_wellformed_pte mask_2pm1 table_base_plus)
    apply wpsimp
   apply fastforce
   done
-*)
 
 lemma perform_asid_pool_invocation_pas_refined [wp]:
   "\<lbrace>pas_refined aag and invs and valid_apinv api and K (authorised_asid_pool_inv aag api)\<rbrace>

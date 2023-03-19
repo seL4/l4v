@@ -79,8 +79,6 @@ interpretation lookup_slot_for_cnode_op_tainv:
   touched_addresses_inv _ "lookup_ipc_buffer a b"
   apply unfold_locales apply (rule lookup_slot_for_cnode_op_tainv) *)
 
-
-
 crunches thread_get
   for tainv[wp]: "ignore_ta P"
   (wp: crunch_wps touch_object_wp' ignore:do_machine_op simp:crunch_simps)
@@ -89,9 +87,20 @@ interpretation thread_get_tainv:
   touched_addresses_inv _ "thread_get az bz"
   by unfold_locales wp
 
+
 lemma lookup_ipc_buffer_tainv [wp]:
   "lookup_ipc_buffer a b \<lbrace>ignore_ta P\<rbrace>"
-  sorry (* this should be true, just a bit tricky to prove -scottb *)
+  apply (wpsimp wp: hoare_drop_imps
+              simp: lookup_ipc_buffer_def)
+      defer
+      apply (simp, subst conj_absorb)
+      apply (rule touch_object_tainv.tainv)
+     apply (rule thread_get_tainv.tainv)
+    apply (rule touch_object_tainv.tainv)
+   apply assumption
+  apply (rule hoare_allI)
+  apply (wpsimp wp: hoare_drop_imps)
+  done
 
 interpretation lookup_ipc_buffer_tainv:
   touched_addresses_inv _ "lookup_ipc_buffer ax bx"

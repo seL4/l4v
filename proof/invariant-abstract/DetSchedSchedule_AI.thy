@@ -3406,9 +3406,9 @@ lemma do_reply_transfer_not_queued[wp]:
      do_reply_transfer sender receiver slot grant
    \<lbrace>\<lambda>_. not_queued t\<rbrace>"
   apply (simp add: do_reply_transfer_def)
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (wp cap_delete_one_not_queued hoare_vcg_if_lift | wpc |
          clarsimp split del: if_split | wp (once) hoare_drop_imps)+
-   sorry (* FIXME: broken by touched-addrs -robs
    apply (simp add: invs_def valid_state_def valid_pspace_def)+
   done
 *)

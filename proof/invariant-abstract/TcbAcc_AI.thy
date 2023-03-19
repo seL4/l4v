@@ -572,55 +572,48 @@ lemma in_ta_ms_ta_update:
 lemma as_user_wp_thread_set_helper:
   assumes x: "
          \<lbrace>P\<rbrace> do
-                tcb \<leftarrow> gets_the (get_tcb ta_f t);
+                y \<leftarrow> touch_object t;
+                tcb \<leftarrow> gets_the (get_tcb True t);
                 p \<leftarrow> select_f (m (arch_tcb_context_get (tcb_arch tcb)));
                 thread_set (\<lambda>tcb. tcb\<lparr>tcb_arch := arch_tcb_context_set (snd p) (tcb_arch tcb)\<rparr>) t
          od \<lbrace>\<lambda>rv. Q\<rbrace>"
   shows "\<lbrace>P\<rbrace> as_user t m \<lbrace>\<lambda>rv. Q\<rbrace>"
 proof -
-  have P: "\<And>P Q a b c f.
-           \<lbrace>P\<rbrace> do x \<leftarrow> a; y \<leftarrow> b x; z \<leftarrow> c x y; return (f x y z) od \<lbrace>\<lambda>rv. Q\<rbrace>
-         = \<lbrace>P\<rbrace> do x \<leftarrow> a; y \<leftarrow> b x; c x y od \<lbrace>\<lambda>rv. Q\<rbrace>"
+  have P: "\<And>P Q aa a b c f.
+           \<lbrace>P\<rbrace> do w \<leftarrow> aa; x \<leftarrow> a; y \<leftarrow> b x; z \<leftarrow> c x y; return (f x y z) od \<lbrace>\<lambda>rv. Q\<rbrace>
+         = \<lbrace>P\<rbrace> do w \<leftarrow> aa; x \<leftarrow> a; y \<leftarrow> b x; c x y od \<lbrace>\<lambda>rv. Q\<rbrace>"
     apply (simp add: valid_def bind_def return_def split_def)
     done
   have Q: "do
-             tcb \<leftarrow> gets_the (get_tcb ta_f t);
+             y \<leftarrow> touch_object t;
+             tcb \<leftarrow> gets_the (get_tcb True t);
              p \<leftarrow> select_f (m (arch_tcb_context_get (tcb_arch tcb)));
              thread_set (\<lambda>tcb. tcb\<lparr>tcb_arch := arch_tcb_context_set (snd p) (tcb_arch tcb)\<rparr>) t
            od
          = do
-             tcb \<leftarrow> gets_the (get_tcb ta_f t);
+             y \<leftarrow> touch_object t;
+             tcb \<leftarrow> gets_the (get_tcb True t);
              p \<leftarrow> select_f (m (arch_tcb_context_get (tcb_arch tcb)));
-             set_object ta_f t (TCB (tcb \<lparr>tcb_arch := arch_tcb_context_set (snd p) (tcb_arch tcb)\<rparr>))
+             set_object True t (TCB (tcb \<lparr>tcb_arch := arch_tcb_context_set (snd p) (tcb_arch tcb)\<rparr>))
            od"
     apply (simp add: thread_set_def)
-    apply (rule ext)
+    apply (rule bind_cong, rule refl)
     apply (rule bind_apply_cong [OF refl])+
+    apply (simp add: select_f_def in_monad gets_the_def gets_def)
     apply (simp add: select_f_def in_monad gets_the_def gets_def touch_object_def2
                      simpler_do_machine_op_addTouchedAddresses_def get_def assert_def
                      simpler_modify_def bind_def return_def fail_def assert_opt_def)
     apply (clarsimp split:option.splits simp:fail_def return_def)
-    apply (intro conjI; clarsimp)
-     apply (intro conjI; clarsimp)
-      apply (clarsimp simp: get_tcb_def ta_filter_def obind_def)
-      apply (cases ta_f; simp)
-      apply (case_tac "in_ta t x y"; simp)
-     apply (clarsimp simp: get_tcb_def ta_filter_def obind_def)
-    apply (intro conjI; clarsimp)
-     apply (clarsimp simp: get_tcb_def ta_filter_def obind_def)
-     apply (cases ta_f; simp)
-      apply (case_tac "in_ta t x y"; simp)
-      apply (case_tac y; clarsimp)
-      apply (drule in_ta_ms_ta_update, clarsimp)
-     apply (case_tac y; clarsimp)
-     (* at this point, it might not be true. sorrying for now, in the name of progress *)
-     subgoal sorry subgoal sorry
-    (* apply (clarsimp simp add: get_def bind_def return_def assert_opt_def) *)
+    apply (intro conjI impI; clarsimp simp: get_tcb_def ta_filter_def obind_def)
+     apply (clarsimp split: if_splits)
+    apply (intro conjI; clarsimp simp: get_tcb_def ta_filter_def obind_def)
+    apply (clarsimp split: if_splits kernel_object.splits)
+     apply (simp add: in_return union_fixedpoint)
+    apply (simp add: in_fail)
     done
   show ?thesis
     apply (simp add: as_user_def split_def)
-    subgoal sorry
-    (* apply (simp add: P x [simplified Q]) *)
+    apply (simp add: P x [simplified Q])
     done
 qed
 
@@ -631,21 +624,20 @@ end
 
 lemma as_user_psp_distinct[wp]:
   "\<lbrace>pspace_distinct\<rbrace> as_user t m \<lbrace>\<lambda>rv. pspace_distinct\<rbrace>"
-  by (wp as_user_wp_thread_set_helper) simp
+  by (wp as_user_wp_thread_set_helper touch_object_wp') simp
 
 
 lemma as_user_psp_aligned[wp]:
   "\<lbrace>pspace_aligned\<rbrace> as_user t m \<lbrace>\<lambda>rv. pspace_aligned\<rbrace>"
-  by (wp as_user_wp_thread_set_helper) simp
+  by (wp as_user_wp_thread_set_helper touch_object_wp') simp
 
 
 context TcbAcc_AI_valid_ipc_buffer_cap_0 begin
 
 lemma as_user_objs [wp]:
   "\<lbrace>valid_objs\<rbrace> as_user a f \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
-  apply (wp as_user_wp_thread_set_helper
-            thread_set_valid_objs_triv)
-  apply (wpsimp simp: ran_tcb_cap_cases valid_arch_arch_tcb_context_set)+
+  apply (wp as_user_wp_thread_set_helper  touch_object_wp' thread_set_valid_objs_triv)
+  apply (wpsimp simp: ran_tcb_cap_cases valid_arch_arch_tcb_context_set wp: touch_object_wp')+
   done
 
 end
@@ -663,13 +655,13 @@ lemma as_user_idle[wp]:
 
 lemma as_user_reply[wp]:
   "\<lbrace>valid_reply_caps\<rbrace> as_user t f \<lbrace>\<lambda>_. valid_reply_caps\<rbrace>"
-  by (wp as_user_wp_thread_set_helper thread_set_valid_reply_caps_trivial
+  by (wp as_user_wp_thread_set_helper touch_object_wp' thread_set_valid_reply_caps_trivial
          ball_tcb_cap_casesI | simp)+
 
 
 lemma as_user_reply_masters[wp]:
   "\<lbrace>valid_reply_masters\<rbrace> as_user t f \<lbrace>\<lambda>_. valid_reply_masters\<rbrace>"
-  by (wp as_user_wp_thread_set_helper thread_set_valid_reply_masters_trivial
+  by (wp as_user_wp_thread_set_helper touch_object_wp' thread_set_valid_reply_masters_trivial
          ball_tcb_cap_casesI | simp)+
 
 
@@ -684,26 +676,26 @@ lemma as_user_arch[wp]:
 lemma as_user_irq_handlers[wp]:
   "\<lbrace>valid_irq_handlers\<rbrace> as_user t f \<lbrace>\<lambda>_. valid_irq_handlers\<rbrace>"
   apply (rule as_user_wp_thread_set_helper)
-  apply (wp valid_irq_handlers_lift thread_set_caps_of_state_trivial
+  apply (wp touch_object_wp' valid_irq_handlers_lift thread_set_caps_of_state_trivial
                 ball_tcb_cap_casesI | simp)+
   done
 
 
 lemma as_user_iflive[wp]:
   "\<lbrace>if_live_then_nonz_cap\<rbrace> as_user t f \<lbrace>\<lambda>_. if_live_then_nonz_cap\<rbrace>"
-  by (wp as_user_wp_thread_set_helper thread_set_iflive_trivial
+  by (wp touch_object_wp' as_user_wp_thread_set_helper thread_set_iflive_trivial
          ball_tcb_cap_casesI | simp add:)+
 
 
 lemma as_user_ifunsafe[wp]:
   "\<lbrace>if_unsafe_then_cap\<rbrace> as_user t f \<lbrace>\<lambda>_. if_unsafe_then_cap\<rbrace>"
-  by (wp as_user_wp_thread_set_helper thread_set_ifunsafe_trivial
+  by (wp touch_object_wp' as_user_wp_thread_set_helper thread_set_ifunsafe_trivial
          ball_tcb_cap_casesI | simp)+
 
 
 lemma as_user_zombies[wp]:
   "\<lbrace>zombies_final\<rbrace> as_user t f \<lbrace>\<lambda>_. zombies_final\<rbrace>"
-  by (wp as_user_wp_thread_set_helper thread_set_zombies_trivial
+  by (wp touch_object_wp' as_user_wp_thread_set_helper thread_set_zombies_trivial
          ball_tcb_cap_casesI | simp)+
 
 
@@ -712,7 +704,8 @@ lemma as_user_refs_of[wp]:
      as_user t m
    \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
   apply (wp as_user_wp_thread_set_helper
-            thread_set_refs_trivial | simp)+
+            thread_set_refs_trivial touch_object_wp | simp)+
+  apply (simp add: machine_state_update.state_refs_update)
   done
 
 
@@ -751,11 +744,12 @@ lemma as_user_ct: "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> as_user t m \<
 
 lemma as_user_cur [wp]:
   "\<lbrace>cur_tcb\<rbrace> as_user t f \<lbrace>\<lambda>_. cur_tcb\<rbrace>"
-  by (wp as_user_wp_thread_set_helper) simp
+  by (wp touch_object_wp' as_user_wp_thread_set_helper) simp
 
 lemma as_user_cte_wp_at [wp]:
   "\<lbrace>\<lambda>s. P (cte_wp_at P' c s)\<rbrace> as_user p' f \<lbrace>\<lambda>rv s. P (cte_wp_at P' c s)\<rbrace>"
   by (wp as_user_wp_thread_set_helper
+         touch_object_wp'
          thread_set_cte_wp_at_trivial
          ball_tcb_cap_casesI | simp)+
 
@@ -765,7 +759,7 @@ lemma as_user_ex_nonz_cap_to[wp]:
 
 lemma as_user_pred_tcb_at [wp]:
   "\<lbrace>pred_tcb_at proj P t\<rbrace> as_user t' m \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
-  by (wp as_user_wp_thread_set_helper thread_set_no_change_tcb_pred
+  by (wp touch_object_wp' as_user_wp_thread_set_helper thread_set_no_change_tcb_pred
       | simp add: tcb_to_itcb_def)+
 
 lemma ct_in_state_thread_state_lift:
@@ -1151,10 +1145,6 @@ lemma sbn_cur_tcb [wp]:
   apply (drule get_tcb_SomeD)
   apply (clarsimp simp: cur_tcb_def obj_at_def is_tcb_def)
   done
-
-lemma kheap_False_simplify:
-  "f_kheap False s t = kheap s t"
-  by simp
 
 lemma sts_iflive[wp]:
   "\<lbrace>\<lambda>s. (\<not> halted st \<longrightarrow> ex_nonz_cap_to t s)
@@ -1920,7 +1910,7 @@ context TcbAcc_AI begin
 lemma as_user_invs[wp]: "\<lbrace>invs:: 'state_ext state \<Rightarrow> bool\<rbrace> as_user t m \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (rule as_user_wp_thread_set_helper)
   apply (rule hoare_pre)
-  apply (wp thread_set_invs_trivial ball_tcb_cap_casesI | simp)+
+  apply (wp touch_object_wp' thread_set_invs_trivial ball_tcb_cap_casesI | simp)+
   done
 
 lemma the_Some':

@@ -534,7 +534,7 @@ definition valid_asid_table_2 :: "(asid_high_index \<rightharpoonup> obj_ref) \<
 locale_abbrev valid_asid_table :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_asid_table \<equiv> \<lambda>s. valid_asid_table_2 (asid_table s) (kheap s |> aobj_of |> asid_pool_of)"
 (* Sanity check *)
-lemma valid_asid_table_def2:
+lemma valid_asid_table_def2 [simplified f_kheap_to_kheap]:
   "valid_asid_table \<equiv> \<lambda>s. valid_asid_table_2 (asid_table s) (asid_pools_of False s)"
   by simp
 
@@ -1919,7 +1919,7 @@ lemma a_type_ArchObj[simp]:
   "a_type (ArchObj ao) = AArch (aa_type ao)"
   by (simp add: a_type_aa_type)
 
-lemma typ_at_aobjs:
+lemma typ_at_aobjs [simplified f_kheap_to_kheap]:
   "typ_at (AArch T) p s = (atyps_of s p = Some T)"
   by (auto simp: obj_at_def in_opt_map_eq obind_def ta_filter_def split:option.splits)
 
@@ -2405,15 +2405,16 @@ lemma pool_for_asid_and_mask[simp]:
    pool_for_asid asid s"
   by (simp add: pool_for_asid_def)
 
-lemma vs_lookup_table_ap_step:
+lemma vs_lookup_table_ap_step [simplified f_kheap_to_kheap]:
   "\<lbrakk> vs_lookup_table asid_pool_level asid vref s = Some (asid_pool_level, p);
-     asid_pools_of ta_f s p = Some ap; pt \<in> ran ap \<rbrakk> \<Longrightarrow>
+     asid_pools_of False s p = Some ap; pt \<in> ran ap \<rbrakk> \<Longrightarrow>
    \<exists>asid'. vs_lookup_target asid_pool_level asid' vref s = Some (asid_pool_level, pt)"
   apply (clarsimp simp: vs_lookup_target_def vs_lookup_slot_def in_omonad ran_def)
   apply (rename_tac asid_low)
   apply (rule_tac x="asid && ~~mask asid_low_bits || ucast asid_low" in exI)
   apply (clarsimp simp: vs_lookup_table_def vspace_for_pool_def in_omonad)
-  by (metis Some_helper asid_pool_level_eq ta_filter_def)
+  using asid_pool_level_neq apply blast
+  done
 
 locale_abbrev vref_for_index :: "pt_index \<Rightarrow> vm_level \<Rightarrow> vspace_ref" where
   "vref_for_index idx level \<equiv> ucast (idx::pt_index) << pt_bits_left level"
@@ -2573,8 +2574,8 @@ lemma vs_lookup_table_eq_lift[simplified f_kheap_to_kheap]:
   by (auto simp: obind_def split: option.splits)
 
 lemma aobjs_of_non_aobj_upd:
-  "\<lbrakk> f_kheap ta_f s p = Some ko; \<not> is_ArchObj ko; \<not> is_ArchObj ko' \<rbrakk>
-   \<Longrightarrow> f_kheap ta_f s(p \<mapsto> ko') |> aobj_of = aobjs_of ta_f s"
+  "\<lbrakk> kheap s p = Some ko; \<not> is_ArchObj ko; \<not> is_ArchObj ko' \<rbrakk>
+   \<Longrightarrow> kheap s(p \<mapsto> ko') |> aobj_of = aobjs_of False s"
   by (rule ext)
      (auto simp: opt_map_def is_ArchObj_def aobj_of_def split: kernel_object.splits if_split_asm)
 
@@ -2766,7 +2767,7 @@ lemma valid_vs_lookup_update [iff]:
   "valid_vs_lookup (f s) = valid_vs_lookup s"
   by (simp add: valid_vs_lookup_def arch)
 
-lemma valid_table_caps_update [iff]:
+lemma valid_table_caps_update [iff, simplified f_kheap_to_kheap]:
   "valid_table_caps (f s) = valid_table_caps s"
   apply(clarsimp simp:valid_table_caps_def)
   by (simp add: pspace)

@@ -99,7 +99,7 @@ lemma cte_wp_at_wellformed_strengthen:
 
 (* FIXME: move *)
 lemma get_cap_cte_wp_at_P:
-  "\<lbrace>cte_wp_at P p\<rbrace> get_cap False p \<lbrace>\<lambda>rv s. cte_wp_at (%c. c = rv) p s \<and> P rv\<rbrace>"
+  "\<lbrace>cte_wp_at P p\<rbrace> get_cap ta_f p \<lbrace>\<lambda>rv s. cte_wp_at (%c. c = rv) p s \<and> P rv\<rbrace>"
   apply (rule hoare_weaken_pre)
   apply (rule get_cap_wp)
   apply (clarsimp simp: cte_wp_at_caps_of_state)
@@ -112,7 +112,6 @@ lemma lookup_cap_ex:
                                   cte_wp_at (\<lambda>c. c = c') (p1, p2) s)\<rbrace>,-"
   apply (simp add: lookup_cap_def split_def)
   apply wp
-    sorry (* FIXME: broken by touched-addrs -robs
     apply (rule_tac P1=wellformed_cap in hoare_strengthen_post[OF get_cap_cte_wp_at_P])
     apply clarsimp
     apply (rule exI)+
@@ -120,7 +119,6 @@ lemma lookup_cap_ex:
     apply fastforce
    apply (wpsimp|strengthen cte_wp_at_wellformed_strengthen)+
   done
-*)
 
 
 lemma is_cnode_mask:
@@ -176,19 +174,33 @@ interpretation lookup_target_slot_tainv:
   touched_addresses_inv _ "lookup_target_slot cap capref x"
   by unfold_locales wp
 
+lemma get_cap_tainv[wp]:
+  "get_cap ta_f p \<lbrace>ignore_ta P\<rbrace>"
+  by (simp add: ensure_empty_def whenE_def | wp touch_object_wp)+
+
+interpretation get_cap_tainv:
+  touched_addresses_inv _ "get_cap ta_f p"
+  by unfold_locales (rule get_cap_tainv)
+
+lemma hoare_conj_imp_drop_rv:
+  "\<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace> \<Longrightarrow>
+  \<lbrace>P\<rbrace> m \<lbrace>Q'\<rbrace> \<Longrightarrow>
+  \<lbrace>P\<rbrace> m \<lbrace>\<lambda>rv s. (R rv \<longrightarrow> Q rv s) \<and> Q' rv s\<rbrace>"
+  apply (clarsimp simp:valid_def)
+  apply blast
+  done
+
 lemma dui_tainv[wp]:
   "decode_untyped_invocation label args slot (cap.UntypedCap dev w n idx) cs \<lbrace>ignore_ta P\<rbrace>"
   apply (simp add: decode_untyped_invocation_def whenE_def
                    split_def data_to_obj_type_def unlessE_def
               split del: if_split cong: if_cong)
-  sorry (* FIXME: broken by touched-addrs -robs
-  apply (wpsimp wp: const_on_failure_wp mapME_x_inv_wp)
-               apply fastforce
-              apply wpsimp+
-           apply (wp hoare_drop_imps)
-          apply wpsimp+
+  apply (wpsimp wp: const_on_failure_wp mapME_x_inv_wp ensure_empty_tainv.agnostic_preservedE_R get_cap_tainv.agnostic_preserved
+              simp: ta_agnostic_lemmas)
+               apply blast
+            (* this takes a good 20 seconds *)
+            apply (wpsimp wp: hoare_conj_imp_drop_rv hoare_drop_imp)+
   done
-*)
 
 lemma map_ensure_empty_cte_wp_at:
   "\<lbrace>cte_wp_at P p\<rbrace> mapME_x ensure_empty xs \<lbrace>\<lambda>rv. cte_wp_at P p\<rbrace>,-"
@@ -196,7 +208,8 @@ lemma map_ensure_empty_cte_wp_at:
 
 
 lemma map_ensure_empty:
-  "\<lbrace>P\<rbrace> mapME_x ensure_empty xs \<lbrace>\<lambda>rv s. (\<forall>x \<in> set xs. cte_wp_at ((=) cap.NullCap) x s) \<and> P s\<rbrace>,-"
+  "ta_agnostic P \<Longrightarrow>
+  \<lbrace>P\<rbrace> mapME_x ensure_empty xs \<lbrace>\<lambda>rv s. (\<forall>x \<in> set xs. cte_wp_at ((=) cap.NullCap) x s) \<and> P s\<rbrace>,-"
   apply (induct xs)
    apply (simp add: mapME_x_def sequenceE_x_def)
    apply wp
@@ -208,11 +221,10 @@ lemma map_ensure_empty:
     apply (rule map_ensure_empty_cte_wp_at)
    apply assumption
   apply (simp add: ensure_empty_def whenE_def)
-  apply (rule hoare_pre, wp get_cap_wp)
-  apply clarsimp
-  sorry (* FIXME: broken by touched-addrs -robs
+  apply (rule hoare_pre)
+   apply (wp get_cap_wp touch_object_wp)
+  apply (clarsimp simp: ta_agnostic_def)
   done
-*)
 
 
 lemma ensure_no_children_sp:
@@ -237,7 +249,7 @@ lemma data_to_obj_type_inv2 [wp]:
 
 lemma get_cap_gets:
   "\<lbrace>valid_objs\<rbrace>
-    get_cap False ptr
+    get_cap True ptr
    \<lbrace>\<lambda>rv s. \<exists>cref msk. cte_wp_at (\<lambda>cap. rv = mask_cap msk cap) cref s\<rbrace>"
   apply (wp get_cap_wp)
   apply (intro allI impI)
@@ -252,11 +264,13 @@ lemma get_cap_gets:
 lemma lookup_cap_gets:
   "\<lbrace>valid_objs\<rbrace> lookup_cap t c \<lbrace>\<lambda>rv s. \<exists>cref msk. cte_wp_at (\<lambda>cap. rv = mask_cap msk cap) cref s\<rbrace>,-"
   unfolding lookup_cap_def fun_app_def split_def
-  apply (rule hoare_pre, wp get_cap_gets)
+  apply (rule hoare_pre)
+   apply (wp touch_object_wp)
+     apply (wpsimp simp_del:split_paired_Ex wp:get_cap_gets)
+    apply (wpsimp wp: touch_object_wp')
+   apply wpsimp
   apply simp
-  sorry (* FIXME: broken by touched-addrs -robs
   done
-*)
 
 lemma dui_sp_helper:
   "ta_agnostic P \<Longrightarrow>
@@ -264,7 +278,7 @@ lemma dui_sp_helper:
    \<lbrace>P\<rbrace> if val = 0 then returnOk root_cap
        else doE node_slot \<leftarrow>
                   lookup_target_slot root_cap (to_bl (args ! 2)) (unat (args ! 3));
-                  liftE $ get_cap True node_slot
+                  liftE $ get_cap ta_f node_slot
             odE \<lbrace>\<lambda>rv s. (rv = root_cap \<or> (\<exists>slot. cte_wp_at ((=) rv) slot s)) \<and> P s\<rbrace>, -"
   apply (simp add: split_def lookup_target_slot_def)
   apply (intro impI conjI)
@@ -684,9 +698,13 @@ lemma alignUp_eq:
   done
 
 lemma map_ensure_empty_wp:
-  "\<lbrace> \<lambda>s. (\<forall>x\<in>set xs. cte_wp_at ((=) NullCap) x s) \<longrightarrow> P () s \<rbrace>
+  "ta_agnostic (P ()) \<Longrightarrow>
+  \<lbrace> \<lambda>s. (\<forall>x\<in>set xs. cte_wp_at ((=) NullCap) x s) \<longrightarrow> P () s \<rbrace>
       mapME_x ensure_empty xs \<lbrace>P\<rbrace>, -"
-  by (rule hoare_post_imp_R, rule map_ensure_empty, simp)
+  apply (rule hoare_post_imp_R, rule map_ensure_empty)
+   apply (clarsimp simp:ta_agnostic_def)
+  apply clarsimp
+  done
 
 lemma cases_imp_eq:
   "((P \<longrightarrow> Q \<longrightarrow> R) \<and> (\<not> P \<longrightarrow> Q \<longrightarrow> S)) = (Q \<longrightarrow> (P \<longrightarrow> R) \<and> (\<not> P \<longrightarrow> S))"
@@ -1357,6 +1375,14 @@ lemma obj_at_foldr_intro:
   "P obj \<and> p \<in> set xs \<Longrightarrow> obj_at P p (s \<lparr> kheap := foldr (\<lambda>p ps. ps (p \<mapsto> obj)) xs (kheap s) \<rparr>)"
   by (clarsimp simp: obj_at_def foldr_upd_app_if)
 
+lemma ms_ta_update_kheap_update:
+  "ms_ta_update taf s\<lparr>kheap := Q s\<rparr> = ms_ta_update taf (s\<lparr>kheap := Q s\<rparr>)"
+  by simp
+
+lemma ms_ta_update_kheap_update_valid_cap_syn:
+  "ms_ta_update taf s\<lparr>kheap := Q s\<rparr> \<turnstile> c = s\<lparr>kheap := Q s\<rparr> \<turnstile> c"
+  apply (subst ms_ta_update_kheap_update, simp)
+  done
 
 context Untyped_AI_arch begin
 lemma retype_ret_valid_caps:
@@ -1368,17 +1394,16 @@ lemma retype_ret_valid_caps:
         retype_region ptr n us tp dev\<lbrace>\<lambda>rv (s::'state_ext state). \<forall>y\<in>set rv. s \<turnstile> default_cap tp y us dev\<rbrace>"
   apply (simp add: retype_region_def split del: if_split cong: if_cong)
   apply wp
-  apply (simp only: trans_state_update[symmetric] more_update.valid_cap_update)
-  apply (wp touch_objects_wp)
-  apply wp
-  apply (case_tac tp,simp_all)
-   sorry (* FIXME: broken by touched-addrs -robs
+     apply (simp only: trans_state_update[symmetric] more_update.valid_cap_update)
+    apply (wp touch_objects_wp)
+   apply wp
+  apply (case_tac tp; subst ms_ta_update_kheap_update_valid_cap_syn,simp_all)
    defer
-      apply ((clarsimp simp:valid_cap_def default_object_def cap_aligned_def
-        is_obj_defs well_formed_cnode_n_def empty_cnode_def
-        dom_def  ptr_add_def | rule conjI | intro conjI obj_at_foldr_intro imageI
-      | rule is_aligned_add_multI[OF _ le_refl],
-        (simp add:range_cover_def word_bits_def obj_bits_api_def)+)+)[3]
+       apply ((clarsimp simp:valid_cap_def default_object_def cap_aligned_def
+         is_obj_defs well_formed_cnode_n_def empty_cnode_def
+         dom_def  ptr_add_def | rule conjI | intro conjI obj_at_foldr_intro imageI
+       | rule is_aligned_add_multI[OF _ le_refl],
+         (simp add:range_cover_def word_bits_def obj_bits_api_def)+)+)[3]
     apply (rule_tac ptr=ptr and sz=sz in retype_ret_valid_caps_captable; simp)
    apply (rule_tac ptr=ptr and sz=sz in retype_ret_valid_caps_aobj; simp)
   apply (clarsimp simp:valid_cap_def default_object_def cap_aligned_def
@@ -1400,7 +1425,6 @@ lemma retype_ret_valid_caps:
    apply blast
   apply (erule(2) range_cover_no_0)
  done
-*)
 end
 
 (* FIXME: move to Lib *)
@@ -2738,6 +2762,37 @@ lemma set_untyped_cap_invs_simple:
   apply (clarsimp intro!: safe_ioport_insert_triv simp: is_cap_simps)
   done
 
+sublocale touched_addresses_inv \<subseteq> valid_untyped_inv_wcap: touched_addresses_P_inv _ _ "valid_untyped_inv_wcap qa qb"
+  apply unfold_locales
+  apply (cases qa; simp)
+  apply (clarsimp simp: valid_untyped_inv_wcap_def ta_agnostic_def)
+  done
+
+sublocale touched_addresses_inv \<subseteq> ct_active: touched_addresses_P_inv _ _ ct_active
+  apply unfold_locales
+  apply (clarsimp simp: ct_in_state_def ta_agnostic_def)
+  done
+
+sublocale touched_addresses_inv \<subseteq> caps_no_overlap: touched_addresses_P_inv _ _ "caps_no_overlap la lb"
+  apply unfold_locales
+  apply (clarsimp simp: caps_no_overlap_def ta_agnostic_def)
+  done
+
+sublocale touched_addresses_inv \<subseteq> descendants_range_in: touched_addresses_P_inv _ _ "descendants_range_in zaw zbw"
+  apply unfold_locales
+  apply (clarsimp simp: descendants_range_in_def ta_agnostic_def)
+  done
+
+sublocale touched_addresses_inv \<subseteq> pred_tcb_at: touched_addresses_P_inv _ _ "pred_tcb_at (a::itcb \<Rightarrow> 'az) (b::'az \<Rightarrow> bool) c"
+  apply unfold_locales
+  apply (clarsimp simp: ta_agnostic_def)
+  done
+
+lemma invs_irq_state_independent':
+  "invs s \<Longrightarrow>
+  invs (machine_state_update (irq_state_update (\<lambda>_. f (irq_state (machine_state s)))) s)"
+  using invs_irq_state_independent by auto
+
 lemma reset_untyped_cap_invs_etc:
   "\<lbrace>invs and valid_untyped_inv_wcap ui
       (Some (UntypedCap dev ptr sz idx))
@@ -2751,7 +2806,9 @@ lemma reset_untyped_cap_invs_etc:
     ?f \<lbrace>\<lambda>_. invs and ?vu2 and ct_active and ?psp\<rbrace>, \<lbrace>\<lambda>_. invs\<rbrace>")
   apply (simp add: reset_untyped_cap_def)
   apply (rule hoare_vcg_seqE[rotated])
-   sorry (* FIXME: broken by touched-addrs -robs
+   apply (simp, rule touch_object_tainv.agnostic_preserved)
+   apply (simp add: ta_agnostic_lemmas)
+  apply (rule hoare_vcg_seqE[rotated])
    apply ((wp (once) get_cap_sp)+)[1]
   apply (rule hoare_name_pre_stateE)
   apply (clarsimp simp: cte_wp_at_caps_of_state bits_of_def split del: if_split)
@@ -2766,6 +2823,11 @@ lemma reset_untyped_cap_invs_etc:
    apply (frule(1) caps_of_state_pspace_no_overlapD, simp+)
    apply (simp add: word_bw_assocs field_simps)
   apply (clarsimp simp: free_index_of_def split del: if_split)
+  thm hoare_vcg_seqE
+  apply (rule_tac B="\<lambda>_. (=) (ms_ta_obj_update (ptr' && ~~ mask sz)
+            (the (kheap s (ptr' && ~~ mask sz))) s)"
+           in hoare_vcg_seqE[rotated])
+   apply (wp touch_object_wp', simp)
   apply (rule_tac B="\<lambda>_. invs and valid_untyped_inv_wcap ?ui (Some ?cap)
         and ct_active and ?psp" in hoare_vcg_seqE[rotated])
    apply clarsimp
@@ -2821,7 +2883,7 @@ lemma reset_untyped_cap_invs_etc:
                 | strengthen empty_descendants_range_in
                 | simp
                 | rule irq_state_independent_A_conjI
-                | simp add: cte_wp_at_caps_of_state
+                | simp add: cte_wp_at_caps_of_state invs_irq_state_independent'
                 | wp (once) ct_in_state_thread_state_lift
                 | (rule irq_state_independent_A_def[THEN meta_eq_to_obj_eq, THEN iffD2],
                   simp add: ex_cte_cap_wp_to_def ct_in_state_def))+
@@ -2834,10 +2896,9 @@ lemma reset_untyped_cap_invs_etc:
    apply simp
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   done
-*)
 
 lemma get_cap_prop_known:
-  "\<lbrace>cte_wp_at (\<lambda>cp. f cp = v) slot and Q v\<rbrace> get_cap True slot \<lbrace>\<lambda>rv. Q (f rv)\<rbrace>"
+  "\<lbrace>cte_wp_at (\<lambda>cp. f cp = v) slot and Q v\<rbrace> get_cap ta_f slot \<lbrace>\<lambda>rv. Q (f rv)\<rbrace>"
   apply (wp get_cap_wp)
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   done
@@ -2848,7 +2909,7 @@ lemma reset_untyped_cap_pred_tcb_at:
    \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>, \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
   apply (simp add: reset_untyped_cap_def)
   apply (rule hoare_pre)
-   apply (wp mapME_x_inv_wp preemption_point_inv | simp add: unless_def)+
+   apply (wp mapME_x_inv_wp preemption_point_inv touch_object_wp' | simp add: unless_def)+
     apply (simp add: delete_objects_def)
     apply (wp get_cap_wp hoare_vcg_const_imp_lift touch_object_wp' | simp)+
   apply (auto simp: cte_wp_at_caps_of_state cap_range_def
@@ -2949,7 +3010,7 @@ lemma create_cap_valid_reply_caps[wp]:
                    set_cdt_def)
   apply (simp only: imp_conv_disj)
   apply (rule hoare_pre)
-   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift | simp)+
+   apply (wp touch_object_wp' hoare_vcg_all_lift hoare_vcg_disj_lift | simp)+
   apply (clarsimp simp: default_cap_reply)
   apply (erule conjI [OF allEI], fastforce)
   apply (simp add: unique_reply_caps_def default_cap_reply)
@@ -3012,7 +3073,7 @@ lemma create_cap_irq_handlers[wp]:
   apply (simp add: valid_irq_handlers_def irq_issued_def)
   apply (simp add: create_cap_def Ball_def)
   apply (simp only: imp_conv_disj)
-  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_disj_lift)
+  apply (wpsimp wp: touch_object_wp' hoare_vcg_all_lift hoare_vcg_disj_lift)
   apply (auto simp: ran_def split: if_split_asm)
   done
 
@@ -3070,13 +3131,11 @@ crunch pspace_in_kernel_window[wp]: create_cap "pspace_in_kernel_window"
 lemma set_original_valid_ioc[wp]:
   "\<lbrace>valid_ioc\<rbrace> create_cap tp sz p dev slot \<lbrace>\<lambda>_. valid_ioc\<rbrace>"
   apply (cases slot)
-  apply (wpsimp wp: set_cdt_cos_ioc set_cap_caps_of_state touch_object_wp'
+  apply (clarsimp simp: create_cap_def set_original_set_cap_comm)
+  apply (wpsimp wp: touch_object_wp' set_cdt_cos_ioc set_cap_caps_of_state
               simp: create_cap_def set_original_set_cap_comm cte_wp_at_caps_of_state)
-      apply (metis trans_state_update(3) valid_ioc_more_update)
-     sorry (* FIXME: broken by touched-addrs -robs
   apply (cases tp; simp)
   done
-*)
 
 interpretation create_cap: non_vspace_non_mem_op "create_cap tp sz p slot dev"
   apply (cases slot)
@@ -3101,7 +3160,7 @@ lemma create_cap_refs_respects_device:
   apply (simp add: create_cap_def)
   apply (rule hoare_pre)
    apply (wp set_cap_cap_refs_respects_device_region hoare_vcg_ex_lift
-     set_cdt_cte_wp_at touch_object_wp' | simp del: split_paired_Ex)+
+     set_cdt_cte_wp_at | simp del: split_paired_Ex)+
   apply (rule_tac x = p in exI)
   apply clarsimp
   apply (erule cte_wp_at_weakenE)
@@ -3163,7 +3222,7 @@ lemma (in Untyped_AI_nonempty_table) create_cap_nonempty_tables[wp]:
   apply (rule hoare_pre)
    apply (rule hoare_use_eq [where f=arch_state, OF create_cap_arch_state])
    apply (simp add: create_cap_def set_cdt_def)
-   apply (wp set_cap_obj_at_impossible touch_object_wp'|simp)+
+   apply (wp touch_object_wp' set_cap_obj_at_impossible|simp)+
   apply (clarsimp simp: nonempty_table_caps_of)
   done
 
@@ -3622,6 +3681,7 @@ lemma retype_region_ranges_obj_bits_api:
 context Untyped_AI begin
 
 lemma invoke_untyp_invs':
+ assumes ta_agnostic_Q: "ta_agnostic Q"
  assumes create_cap_Q: "\<And>tp sz cref slot oref reset ptr us slots dev.
      ui = Invocations_A.Retype slot reset (ptr && ~~ mask sz) ptr tp us slots dev
     \<Longrightarrow> \<lbrace>invs and Q and cte_wp_at (\<lambda>c. is_untyped_cap c
@@ -3793,9 +3853,7 @@ lemma invoke_untyp_invs':
                  set_cap_cte_cap_wp_to
                  hoare_vcg_ex_lift
                | wp (once) hoare_drop_imps)+
-       apply (wp set_cap_cte_wp_at_neg hoare_vcg_all_lift get_cap_wp touch_object_wp')+
-       (* FIXME: The new precondition from touch_object_wp' causes trouble.
-          See the sorry further below. -robs *)
+       apply (wp touch_object_wp set_cap_cte_wp_at_neg hoare_vcg_all_lift get_cap_wp)+
 
       apply (clarsimp simp: slot_not_in field_simps ui free_index_of_def
                    split del: if_split)
@@ -3827,42 +3885,41 @@ lemma invoke_untyp_invs':
       apply (simp_all add: field_simps ui)
 
       apply (intro conjI)
+              using ta_agnostic_Q apply (clarsimp simp: ta_agnostic_def)
 
-            (* slots not in retype_addrs *)
-            apply (clarsimp dest!:retype_addrs_subset_ptr_bits)
-            sorry (* FIXME: broken by touched-addrs -robs
-            apply (drule(1) invoke_untyped_proofs.slots_invD)
-            apply (drule(1) subsetD)
-            apply (simp add:p_assoc_help)
+             (* slots not in retype_addrs *)
+             apply (clarsimp dest!:retype_addrs_subset_ptr_bits)
+             apply (drule(1) invoke_untyped_proofs.slots_invD)
+             apply (drule(1) subsetD)
+             apply (simp add:p_assoc_help)
 
-           (* not global refs*)
-           apply (simp add: Int_commute, erule disjoint_subset2[rotated])
-           apply (simp add: atLeastatMost_subset_iff word_and_le2)
+            (* not global refs*)
+            apply (simp add: Int_commute, erule disjoint_subset2[rotated])
+            apply (simp add: atLeastatMost_subset_iff word_and_le2)
 
-          (* idx less_eq new offs *)
-          apply (auto dest: invoke_untyped_proofs.idx_le_new_offs)[1]
+           (* idx less_eq new offs *)
+           apply (auto dest: invoke_untyped_proofs.idx_le_new_offs)[1]
 
           (* not empty tables *)
           apply clarsimp
-          apply (drule(1) pspace_no_overlap_obj_not_in_range, clarsimp+)[1]
+          apply (drule_tac ptr'=x in pspace_no_overlap_obj_not_in_range, assumption, clarsimp+)[1]
 
          (* set ineqs *)
          apply (simp add: atLeastatMost_subset_iff word_and_le2)
 
-        apply (erule order_trans[OF invoke_untyped_proofs.subset_stuff])
-        apply (simp add: atLeastatMost_subset_iff word_and_le2)
+         apply (erule order_trans[OF invoke_untyped_proofs.subset_stuff])
+         apply (simp add: atLeastatMost_subset_iff word_and_le2)
 
-       (* new untyped range disjoint *)
-       apply (drule invoke_untyped_proofs.usable_range_disjoint)
-       apply (clarsimp simp: field_simps mask_out_sub_mask shiftl_t2n)
+        (* new untyped range disjoint *)
+        apply (drule invoke_untyped_proofs.usable_range_disjoint)
+        apply (clarsimp simp: field_simps mask_out_sub_mask shiftl_t2n)
 
-      (* something about caps *)
-      apply clarsimp
-      apply (frule untyped_mdb_descendants_range, clarsimp+,
-        erule invoke_untyped_proofs.descendants_range, simp_all+)[1]
-      apply (simp add: untyped_range_def atLeastatMost_subset_iff word_and_le2)
+       (* something about caps *)
+       apply clarsimp
+       apply (frule untyped_mdb_descendants_range, clarsimp+,
+         erule invoke_untyped_proofs.descendants_range, simp_all+)[1]
+       apply (simp add: untyped_range_def atLeastatMost_subset_iff word_and_le2)
       done
-    *)
 qed
 
 lemmas invoke_untyp_invs[wp] =

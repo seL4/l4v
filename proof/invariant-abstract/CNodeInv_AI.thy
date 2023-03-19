@@ -426,8 +426,6 @@ lemma decode_cnode_inv_wf[wp]:
                  (\<forall>r\<in>cte_refs cap (interrupt_irq_node s). ex_cte_cap_wp_to is_cnode_cap r s)) \<rbrace>
       decode_cnode_invocation mi args cap cs
     \<lbrace>valid_cnode_inv\<rbrace>,-"
-  sorry (* FIXME: broken by touched-addrs v1 (Dec 2021) *)
-  (*
   apply (rule decode_cnode_cases2[where args=args and exs=cs and label=mi])
          \<comment> \<open>Move/Insert\<close>
         apply (simp add: decode_cnode_invocation_def unlessE_whenE
@@ -467,8 +465,6 @@ lemma decode_cnode_inv_wf[wp]:
              apply (fastforce simp: is_untyped_update_cap_data
                                     weak_derived_update_cap_data[OF _ weak_derived_refl])
             apply (wp get_cap_cte_wp_at ensure_empty_cte_wp_at)+
-           apply (wpsimp)
-        apply simp
         apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
        \<comment> \<open>Revoke\<close>
        apply (simp add: decode_cnode_invocation_def unlessE_whenE cong: if_cong)
@@ -493,7 +489,7 @@ lemma decode_cnode_inv_wf[wp]:
     apply (simp add: decode_cnode_invocation_def
                      unlessE_def whenE_def
                split del: if_split)
-    apply (wp get_cap_wp hoare_vcg_all_lift_R | simp add: )+
+    apply (wp get_cap_wp hoare_vcg_all_lift_R touch_object_wp' | simp add: )+
      apply (rule_tac Q'="\<lambda>rv. invs and cte_wp_at (\<lambda>_. True) rv" in hoare_post_imp_R)
       apply (wp lsfco_cte_at)
      apply (clarsimp simp: cte_wp_valid_cap invs_valid_objs has_cancel_send_rights_ep_cap)+
@@ -501,7 +497,7 @@ lemma decode_cnode_inv_wf[wp]:
    apply (simp add: decode_cnode_invocation_def split_def
                     whenE_def unlessE_def)
    apply (rule hoare_pre)
-    apply (wp get_cap_wp ensure_empty_stronger | simp)+
+    apply (wp get_cap_wp ensure_empty_stronger touch_object_wp' | simp)+
       apply (rule_tac Q'="\<lambda>rv s. real_cte_at rv s \<and> real_cte_at x s
                               \<and> real_cte_at src_slot s
                               \<and> ex_cte_cap_wp_to is_cnode_cap rv s
@@ -515,6 +511,8 @@ lemma decode_cnode_inv_wf[wp]:
                        caps_of_state_valid_cap)
       subgoal by (auto,(clarsimp simp:is_cap_simps update_cap_data_def)+)[1](* Bad practise *)
      apply wp+
+     defer
+    apply wp
    apply clarsimp
   apply (elim disjE exE conjE,
          simp_all add: decode_cnode_invocation_def validE_R_def
@@ -522,13 +520,13 @@ lemma decode_cnode_inv_wf[wp]:
                 split: list.split_asm
             split del: if_split)
   apply (wp | simp)+
+  sorry (* FIXME: broken by touched-addrs -robs
   done
-  *)
-
+*)
 end
 
 lemma decode_cnode_inv_tainv[wp]:
-  "\<lbrace>ignore_ta P\<rbrace> decode_cnode_invocation mi args cap cs \<lbrace>\<lambda>rv. ignore_Ta P\<rbrace>"
+  "\<lbrace>ignore_ta P\<rbrace> decode_cnode_invocation mi args cap cs \<lbrace>\<lambda>rv. ignore_ta P\<rbrace>"
   sorry (* FIXME: broken by touched-addrs v1 (Dec 2021) *)
   (* this should be crunched perhaps
   unfolding decode_cnode_invocation_def
@@ -538,6 +536,9 @@ lemma decode_cnode_inv_tainv[wp]:
    apply (wp hoare_drop_imps | simp | wpcw)+
   done *)
 
+interpretation decode_cnode_inv_tainv:
+  touched_addresses_invE _ "decode_cnode_invocation mi args cap cs"
+  by unfold_locales (rule decode_cnode_inv_tainv)
 
 definition
   not_recursive_cspaces :: "'z::state_ext state \<Rightarrow> cslot_ptr set"

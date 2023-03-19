@@ -1922,13 +1922,13 @@ end
 
 lemma as_user_cap_refs_in_kernel_window[wp]:
   "\<lbrace>cap_refs_in_kernel_window\<rbrace> as_user t m \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
-  by (wp as_user_wp_thread_set_helper ball_tcb_cap_casesI
+  by (wp touch_object_wp' as_user_wp_thread_set_helper ball_tcb_cap_casesI
             thread_set_cap_refs_in_kernel_window
             | simp)+
 
 lemma as_user_cap_refs_respects_device_region[wp]:
   "\<lbrace>cap_refs_respects_device_region\<rbrace> as_user t m \<lbrace>\<lambda>rv. cap_refs_respects_device_region\<rbrace>"
-  by (wp as_user_wp_thread_set_helper ball_tcb_cap_casesI
+  by (wp touch_object_wp' as_user_wp_thread_set_helper ball_tcb_cap_casesI
             thread_set_cap_refs_respects_device_region
             | simp)+
 

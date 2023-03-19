@@ -93,6 +93,14 @@ interpretation touch_object_tainv:
   touched_addresses_inv _ "touch_object obj"
   by unfold_locales wpsimp
 
+crunches touch_objects
+  for tainv[wp]: "ignore_ta P"
+  (ignore: do_machine_op)
+
+interpretation touch_objects_tainv:
+  touched_addresses_inv _ "touch_objects obj"
+  by unfold_locales wpsimp
+
 crunches get_object
   for tainv[wp]: "ignore_ta P"
   (ignore: do_machine_op)
@@ -835,20 +843,38 @@ lemma dmo_invs:
   apply simp
   done
 
+lemma kheap_update_rewrite [simp]:
+ "kheap (ms_ta_update taf s) t = kheap s t"
+  by simp
+
+lemma ms_ta_update_fn_eq:
+  "taf' = taf \<Longrightarrow>
+  ms_ta_update taf' s = ms_ta_update taf s"
+  by simp
+
+lemma union_fixedpoint:
+  "(\<union>) A \<circ> (\<union>) A = (\<union>) A"
+  by fastforce
+
 lemma as_user_bind[wp]:
   "as_user t (f >>= g) = (as_user t f) >>= (\<lambda>x. as_user t (g x))"
   apply (monad_eq simp: as_user_def select_f_def set_object_def get_object_def gets_the_def get_tcb_def touch_object_def2 simpler_do_machine_op_addTouchedAddresses_def)
-  
   apply (clarsimp simp:ta_filter_def obind_def split: option.splits kernel_object.splits)
-  sorry (* FIXME: Broken by timeprot-touch-objs. -robs checked -scottb
-    Changing the pattern match to be against f_kheap here doesn't seem straightforward.
   apply (intro conjI impI allI;
          match premises in "kheap _ t = Some (TCB _)" \<Rightarrow> succeed \<bar> _ \<Rightarrow> fastforce)
     apply clarsimp
     apply (rename_tac value_g s tcb fail_g value_f fail_f)
     apply (rule_tac x="value_f" in exI)
-    apply (rule_tac x="s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb\<lparr>tcb_arch := arch_tcb_context_set fail_f (tcb_arch tcb)\<rparr>))\<rparr>" in exI)
-    apply fastforce
+    apply (rule_tac x="ms_ta_update ((\<union>) (obj_range t
+                    (TCB (tcb\<lparr>tcb_arch :=
+                                arch_tcb_context_set fail_f
+                                 (tcb_arch tcb)\<rparr>))) \<circ>
+             (\<union>) (obj_range t (TCB tcb))) s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb\<lparr>tcb_arch := arch_tcb_context_set fail_f (tcb_arch tcb)\<rparr>))\<rparr>" in exI)
+    apply (intro conjI allI; clarsimp)
+    apply (intro conjI)
+     apply (rule_tac x="fail_f" in exI; clarsimp)
+    apply (rule_tac x="fail_g" in exI; clarsimp)
+    apply (clarsimp simp: obj_range_def union_fixedpoint)
    apply clarsimp
    apply (rename_tac value_g ta s tcb value_f fail_g ko)
    apply (drule_tac x="ko" in spec)
@@ -857,7 +883,10 @@ lemma as_user_bind[wp]:
    apply (rename_tac tcb_2)
    apply (drule_tac x=tcb_2 in spec)
    apply clarsimp
-   apply blast
+   apply (rule_tac x=ba in exI)
+   apply (intro conjI impI)
+    apply fastforce
+   apply (clarsimp simp: obj_range_def union_fixedpoint)
   apply (rename_tac tcb_2)
   apply (case_tac "snd (f (arch_tcb_context_get (tcb_arch tcb_2)))")
    apply simp
@@ -873,7 +902,6 @@ lemma as_user_bind[wp]:
   apply clarsimp
   apply blast
   done
-*)
 
 lemma as_user_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> as_user t m \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
@@ -1654,6 +1682,32 @@ lemma ta_agnostic_predconj:
 lemma ta_agnostic_null[simp]:
   "ta_agnostic (\<lambda>s. P)"
   by (clarsimp simp:ta_agnostic_def)
+
+lemma ta_agnostic_irrel_imp:
+  "\<lbrakk>ta_agnostic P\<rbrakk> \<Longrightarrow>
+  ta_agnostic (\<lambda>s. Q \<longrightarrow> P s)"
+  apply (clarsimp simp:ta_agnostic_def)
+  done
+
+lemma ignored_agnostic [simp]:
+  "ta_agnostic (ignore_ta P)"
+  apply (clarsimp simp:ta_agnostic_def)
+  apply (rule iffI; clarsimp)
+  apply (drule_tac x="\<lambda>_. tafa (touched_addresses (machine_state s))" in spec)
+  apply clarsimp
+  apply (metis (mono_tags, lifting) RISCV64.fold_congs(5) abstract_state.fold_congs(6))
+  done
+
+lemma ta_agnostic_ex_all:
+  "(\<forall>x. ta_agnostic (P x)) \<Longrightarrow>
+  ta_agnostic (\<lambda>s. \<exists>x. P x s)"
+  apply (clarsimp simp:ta_agnostic_def)
+  done
+
+lemmas ta_agnostic_lemmas = ignored_agnostic
+                            ta_agnostic_conj
+                            ta_agnostic_predconj
+                            ta_agnostic_irrel_imp
 
 sublocale touched_addresses_inv \<subseteq> valid_pspace: touched_addresses_P_inv _ _ valid_pspace
                                 + valid_irq_states: touched_addresses_P_inv _ _ valid_irq_states

@@ -140,11 +140,15 @@ lemma m_inv [wp]:
   "m \<lbrace>P\<rbrace>"
   by (rule agnostic_preserved [OF ta_agnostic])
 
-(*FIXME: maybe this should be in a different locale, as this will be duplicated (and
-  added to the simp set) for every monad that instantiates touched_addresses_inv *)
-lemma use_ta_agnostic [simp]:
+(*FIXME: maybe these should be in a different locale, as this will be duplicated (and
+  added to the simp set) for every monad that instantiates touched_addresses_inv -scottb *)
+lemma ms_ta_update_simplify [simp]:
   "P (ms_ta_update taf s) = P s"
   by (meson ta_agnostic ta_agnostic_def)
+
+lemma ms_ta_obj_update_simplify [simp]:
+  "P (ms_ta_obj_update p obj s) = P s"
+  by simp
 
 end
 

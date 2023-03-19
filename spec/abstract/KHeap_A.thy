@@ -66,7 +66,7 @@ lemma f_kheap_to_kheap'[simp]:
     | Some kobj \<Rightarrow> ta_filter False (touched_addresses (machine_state s)) kobj a) = kheap s a"
   by (clarsimp simp:ta_filter_def split:option.splits)
 
-lemma f_kheap_to_unfiltered_Some:
+lemma f_kheap_to_unfiltered_Some [simplified f_kheap_to_kheap]:
   "f_kheap True s ptr = Some obj \<Longrightarrow> f_kheap False s ptr = Some obj"
   by (clarsimp simp:ta_filter_def obind_def split:if_splits option.splits)
 
@@ -90,7 +90,7 @@ where
      touch_object ptr
    od"
 
-abbreviation (input)
+abbreviation
   ms_ta_update  :: "(machine_word set \<Rightarrow> machine_word set) \<Rightarrow>
     'a abstract_state_scheme \<Rightarrow> 'a abstract_state_scheme" where
  "ms_ta_update f \<equiv> \<lambda>s. machine_state_update (machine_state.touched_addresses_update f) s"
