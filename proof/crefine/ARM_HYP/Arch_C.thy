@@ -4310,7 +4310,7 @@ lemma decodeARMMMUInvocation_ccorres:
                   elim!: ccap_relationE split: if_split_asm)
    apply (clarsimp split: list.split)
   apply (clarsimp simp: cap_lift_asid_pool_cap cap_lift_page_directory_cap
-                        cap_to_H_def cap_page_directory_cap_lift_def
+                        cap_to_H_def cap_page_directory_cap_lift_def to_bool_def
                  elim!: ccap_relationE split: if_split_asm)
   done
 
