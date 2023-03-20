@@ -2227,7 +2227,7 @@ lemma decodeRISCVFrameInvocation_ccorres:
              apply (match conclusion in \<open>cpte_relation _ _\<close> \<Rightarrow>
                       \<open>solves \<open>simp (no_asm) add: cpte_relation_def,
                                clarsimp simp: Let_def makeUserPTE_def attribsFromWord_def
-                                              pageBits_def
+                                              pageBits_def word_and_1
                                         split: pte.splits if_splits\<close>\<close>
                     | match conclusion in \<open>ccap_relation _ _\<close> \<Rightarrow>
                         \<open>solves \<open>simp (no_asm) add: ccap_relation_def,

@@ -1969,10 +1969,9 @@ lemma ccap_relation_PDPT_IsMapped:
   "ccap_relation (ArchObjectCap (PDPointerTableCap x1 x2)) cap \<Longrightarrow>
      capPDPTIsMapped_CL (cap_pdpt_cap_lift cap) = from_bool (\<not> Option.is_none x2)"
   apply (frule cap_get_tag_isCap_unfolded_H_cap)
-  apply (clarsimp simp: ccap_relation_def cap_to_H_def cap_pdpt_cap_lift_def cap_lift_def Let_def
-                        cap_tag_defs to_bool_def true_def
-                  split: if_split)
-  apply word_bitwise
+  apply (clarsimp simp: ccap_relation_def cap_to_H_def cap_pdpt_cap_lift_def cap_lift_def
+                        cap_tag_defs to_bool_def
+                 split: if_split)
   done
 
 lemma ccap_relation_PML4_IsMapped:
@@ -1980,9 +1979,8 @@ lemma ccap_relation_PML4_IsMapped:
      capPML4IsMapped_CL (cap_pml4_cap_lift cap) = from_bool (\<not> Option.is_none x2)"
   apply (frule cap_get_tag_isCap_unfolded_H_cap)
   apply (clarsimp simp: ccap_relation_def cap_to_H_def cap_pml4_cap_lift_def cap_lift_def
-                        cap_tag_defs to_bool_def true_def
-                  split: if_split)
-  apply word_bitwise
+                        cap_tag_defs to_bool_def
+                 split: if_split)
   done
 
 lemma if_case_opt_same_branches:

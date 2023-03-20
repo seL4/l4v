@@ -125,6 +125,11 @@ lemma minus_eq_and_not_minus_xor:
   "x - y = 2 * (x AND NOT y) - (x XOR y)"
   by (metis and.commute minus_diff_eq minus_eq_xor_minus_not_and xor.commute)
 
+lemma and_one_neq_simps[simp]:
+  "x AND 1 \<noteq> 0 \<longleftrightarrow> x AND 1 = 1"
+  "x AND 1 \<noteq> 1 \<longleftrightarrow> x AND 1 = 0"
+  by (clarsimp simp: and_one_eq)+
+
 end
 end
 
