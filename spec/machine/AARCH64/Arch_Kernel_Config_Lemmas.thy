@@ -14,5 +14,10 @@ begin
 
 context Arch begin global_naming AARCH64
 
+lemma pptrBase_kernelELFBase:
+  "pptrBase < kernelELFBase"
+  by (simp add: pptrBase_def canonical_bit_def kernelELFBase_def kernelELFPAddrBase_def pptrTop_def
+                Kernel_Config.physBase_def mask_def)
+
 end
 end
