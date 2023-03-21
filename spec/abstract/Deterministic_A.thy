@@ -107,7 +107,7 @@ text \<open>The current scheduler action,
   which is part of the scheduling state.\<close>
 datatype scheduler_action =
     resume_cur_thread
-  | switch_thread obj_ref
+  | switch_thread (sch_act_target : obj_ref)
   | choose_new_thread
 
 type_synonym domain = word8

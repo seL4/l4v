@@ -403,7 +403,8 @@ This type is used to represent the required action, if any, of the scheduler nex
 
 \item IPC operations may request that the scheduler switch to a specific thread.
 
->     | SwitchToThread (PPtr TCB)
+>     | SwitchToThread {
+>         schActTarget :: PPtr TCB }
 
 >     deriving (Eq, Show)
 
