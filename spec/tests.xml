@@ -15,8 +15,10 @@
 -->
 <testsuite cpu-timeout="3600">
 
-    <!-- Run the haskell translator. -->
     <set>
+        <!-- Extract kernel configuration into Kernel_Config.thy. -->
+        <test name="kernel-config" cpu-timeout="300">make c-config</test>
+        <!-- Run the haskell translator. -->
         <test name="haskell-translator" cpu-timeout="600">make design-spec</test>
     </set>
 
@@ -24,7 +26,7 @@
         <!-- Various seL4 specifications. -->
         <test name="TakeGrant">make TakeGrant</test>
 
-        <set depends="haskell-translator">
+        <set depends="haskell-translator kernel-config">
             <test name="ASpec">make ASpec</test>
             <test name="ExecSpec">make ExecSpec</test>
             <test name="DSpec">make DSpec</test>
