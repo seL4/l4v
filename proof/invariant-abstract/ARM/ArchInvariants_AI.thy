@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -2491,6 +2492,56 @@ lemma vs_refs_pages_subset: "vs_refs ko \<subseteq> vs_refs_pages ko"
 lemma vas_valid_asid_table:
   "valid_arch_state s \<Longrightarrow> valid_asid_table (asid_table s) s"
   by (simp add: valid_arch_state_def)
+
+(* sanity check Arch_Kernel_Config_Lemmas version and shadow original name *)
+lemma physBase_aligned[simplified pageBitsForSize_simps]:
+  "is_aligned physBase (pageBitsForSize ARMSuperSection)"
+  by simp (rule physBase_aligned)
+
+lemma pptrBase_aligned[simplified pageBitsForSize_simps]:
+  "is_aligned pptrBase (pageBitsForSize ARMSuperSection)"
+  by (simp add: is_aligned_def pptrBase_def)
+
+lemma pptrBaseOffset_aligned[simplified pageBitsForSize_simps]:
+  "is_aligned pptrBaseOffset (pageBitsForSize ARMSuperSection)"
+  by (auto simp: pptrBaseOffset_def physBase_aligned pptrBase_aligned
+           elim: is_aligned_weaken intro: aligned_sub_aligned)
+
+lemma pageBitsForSize_limit[simplified pageBitsForSize_simps, simp]:
+  "pageBitsForSize sz \<le> pageBitsForSize ARMSuperSection"
+  by (cases sz; simp)
+
+lemma is_aligned_pptrBaseOffset[simplified pageBitsForSize_simps]:
+  "is_aligned pptrBaseOffset (pageBitsForSize sz)"
+  by (cases sz; clarsimp intro!: is_aligned_weaken[OF pptrBaseOffset_aligned])
+
+lemma is_aligned_addrFromPPtr_n[simplified pageBitsForSize_simps]:
+  "\<lbrakk> is_aligned p n; n \<le> (pageBitsForSize ARMSuperSection) \<rbrakk>
+   \<Longrightarrow> is_aligned (Platform.ARM.addrFromPPtr p) n"
+  by (auto simp: addrFromPPtr_def
+           elim!: aligned_sub_aligned
+           intro: is_aligned_weaken pptrBaseOffset_aligned)
+
+lemma is_aligned_addrFromPPtr:
+  "is_aligned p pageBits \<Longrightarrow> is_aligned (Platform.ARM.addrFromPPtr p) pageBits"
+  by (simp add: is_aligned_addrFromPPtr_n pageBits_def)
+
+lemma is_aligned_ptrFromPAddr_n[simplified pageBitsForSize_simps]:
+  "\<lbrakk> is_aligned p n; n \<le> (pageBitsForSize ARMSuperSection)\<rbrakk>
+   \<Longrightarrow> is_aligned (ptrFromPAddr p) n"
+  by (auto simp: ptrFromPAddr_def
+           elim!: aligned_add_aligned
+           intro: is_aligned_weaken pptrBaseOffset_aligned)
+
+lemma is_aligned_ptrFromPAddr:
+  "is_aligned p pageBits \<Longrightarrow> is_aligned (ptrFromPAddr p) pageBits"
+  by (simp add: is_aligned_ptrFromPAddr_n pageBits_def)
+
+lemma is_aligned_ptrFromPAddrD[simplified pageBitsForSize_simps]:
+  "\<lbrakk> is_aligned (ptrFromPAddr b) a; a \<le> (pageBitsForSize ARMSuperSection)\<rbrakk>
+   \<Longrightarrow> is_aligned b a"
+  by (simp add: ptrFromPAddr_def)
+     (erule is_aligned_addD2, erule is_aligned_weaken[OF pptrBaseOffset_aligned])
 
 end
 

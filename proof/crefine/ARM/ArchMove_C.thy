@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -234,6 +235,22 @@ crunches insertNewCap, Arch_createNewCaps, threadSet, Arch.createObject, setThre
   (wp: crunch_wps setObject_ksPSpace_only
    simp: unless_def updateObject_default_def crunch_simps
    ignore_del: preemptionPoint)
+
+lemma addrFromPPtr_mask[simplified ARM.pageBitsForSize_simps]:
+  "n \<le> pageBitsForSize ARMSuperSection
+   \<Longrightarrow> addrFromPPtr ptr && mask n = ptr && mask n"
+  apply (simp add: addrFromPPtr_def)
+  apply (prop_tac "pptrBaseOffset AND mask n = 0")
+   apply (rule mask_zero[OF is_aligned_weaken[OF pptrBaseOffset_aligned]], simp)
+  apply (simp flip: mask_eqs(8))
+  done
+
+(* this could be done as
+   lemmas addrFromPPtr_mask_5 = addrFromPPtr_mask[where n=5, simplified]
+   but that wouldn't give a sanity check of the n \<le> ... assumption  disappearing *)
+lemma addrFromPPtr_mask_5:
+  "addrFromPPtr ptr && mask 5 = ptr && mask 5"
+  by (rule addrFromPPtr_mask[where n=5, simplified])
 
 end
 

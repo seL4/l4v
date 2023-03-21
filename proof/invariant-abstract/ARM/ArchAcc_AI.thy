@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -2327,13 +2328,16 @@ lemma shiftr_20_less:
   by (simp add: word_less_nat_alt word_le_nat_alt shiftr_20_unat_ucast)+
 
 
+lemma kernel_base_aligned_pageBits:
+  "is_aligned kernel_base pageBits"
+  by (simp add: is_aligned_def kernel_base_def pageBits_def)
+
 lemma kernel_base_ge_observation:
   "(kernel_base \<le> x) = (x && ~~ mask 29 = kernel_base)"
   apply (subst mask_in_range)
    apply (simp add: kernel_base_def is_aligned_def)
   apply (simp add: kernel_base_def)
   done
-
 
 lemma kernel_base_less_observation:
   "(x < kernel_base) = (x && ~~ mask 29 \<noteq> kernel_base)"
@@ -2542,39 +2546,6 @@ lemma create_mapping_entries_valid_slots [wp]:
   apply (subst add.commute)
   apply (fastforce intro!: aligned_add_aligned is_aligned_shiftl_self)
   done
-
-lemma is_aligned_addrFromPPtr_n:
-  "\<lbrakk> is_aligned p n; n \<le> 28 \<rbrakk> \<Longrightarrow> is_aligned (Platform.ARM.addrFromPPtr p) n"
-  apply (simp add: Platform.ARM.addrFromPPtr_def)
-  apply (erule aligned_sub_aligned, simp_all)
-  apply (simp add: pptrBaseOffset_def Kernel_Config.physBase_def
-                   pptrBase_def pageBits_def)
-  apply (erule is_aligned_weaken[rotated])
-  apply (simp add: is_aligned_def)
-  done
-
-lemma is_aligned_addrFromPPtr:
-  "is_aligned p pageBits \<Longrightarrow> is_aligned (Platform.ARM.addrFromPPtr p) pageBits"
-  by (simp add: is_aligned_addrFromPPtr_n pageBits_def)
-
-lemma is_aligned_ptrFromPAddr_n:
-  "\<lbrakk>is_aligned x sz; sz\<le> 28\<rbrakk>
-  \<Longrightarrow> is_aligned (ptrFromPAddr x) sz"
-  apply (simp add:ptrFromPAddr_def pptrBaseOffset_def
-    pptrBase_def Kernel_Config.physBase_def)
-  apply (erule aligned_add_aligned)
-   apply (erule is_aligned_weaken[rotated])
-   apply (simp add:is_aligned_def)
-  apply (simp add:word_bits_def)
-  done
-
-lemma is_aligned_ptrFromPAddr:
-  "is_aligned p pageBits \<Longrightarrow> is_aligned (ptrFromPAddr p) pageBits"
-  by (simp add: is_aligned_ptrFromPAddr_n pageBits_def)
-
-lemma pbfs_le_28[simp]:
-  "pageBitsForSize sz \<le> 28"
-  by (cases sz; simp)
 
 lemma store_pde_lookup_pd:
   "\<lbrace>\<exists>\<rhd> pd and page_directory_at pd and valid_vspace_objs

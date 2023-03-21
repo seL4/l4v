@@ -14,5 +14,10 @@ begin
 
 context Arch begin global_naming ARM_HYP
 
+(* note: 25 = pageBitsForSize ARMSuperSection, we do not have access to ASpec at this point *)
+lemma physBase_aligned:
+  "is_aligned physBase 25"
+  by (simp add: is_aligned_def Kernel_Config.physBase_def)
+
 end
 end

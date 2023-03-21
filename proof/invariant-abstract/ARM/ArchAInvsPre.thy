@@ -98,15 +98,6 @@ lemma get_pd_of_thread_reachable:
           split: Structures_A.kernel_object.splits if_split_asm option.splits
                  cap.splits arch_cap.splits)
 
-lemma is_aligned_ptrFromPAddrD:
-"\<lbrakk>is_aligned (ptrFromPAddr b) a; a \<le> 24\<rbrakk> \<Longrightarrow> is_aligned b a"
-  apply (clarsimp simp: ptrFromPAddr_def pptrBaseOffset_def pptrBase_def Kernel_Config.physBase_def)
-  apply (erule is_aligned_addD2)
-  apply (rule is_aligned_weaken[where x = 24])
-   apply (simp add: is_aligned_def)
-  apply simp
-  done
-
 lemma obj_bits_data_at:
   "data_at sz (ptrFromPAddr b) s
   \<Longrightarrow> obj_bits (the (kheap s (ptrFromPAddr b))) = pageBitsForSize sz"
@@ -185,10 +176,6 @@ lemma device_frame_in_device_region:
   \<Longrightarrow> device_state (machine_state s) p \<noteq> None"
   by (auto simp add: pspace_respects_device_region_def dom_def device_mem_def)
 
-lemma is_aligned_pptrBaseOffset:
-"is_aligned pptrBaseOffset (pageBitsForSize sz)"
-  by (case_tac sz, simp_all add: pptrBaseOffset_def
-                   pptrBase_def Kernel_Config.physBase_def is_aligned_def)[1]
 
 global_naming Arch
 named_theorems AInvsPre_asms

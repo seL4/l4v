@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -1186,10 +1187,9 @@ lemma lookupPTSlot_le_0x3C:
      apply clarsimp
     apply (simp add: word_bits_def)
    apply simp
-  apply (simp add: ARM.ptrFromPAddr_def pptrBaseOffset_def)
-  apply (erule aligned_add_aligned)
-   apply (simp add: pptrBase_def Kernel_Config.physBase_def is_aligned_def)
-  apply (simp add: word_bits_def pteBits_def)
+  apply (rule is_aligned_ptrFromPAddr_n[rotated], simp)
+  apply (erule is_aligned_weaken)
+  apply (simp add: pteBits_def)
   done
 
 lemma pte_get_tag_exhaust:
@@ -1430,13 +1430,6 @@ lemma valid_pde_slots_lift2:
   apply (cases slots, simp_all add: valid_pde_slots'2_def hoare_post_taut)
   apply clarsimp
   apply (wp hoare_vcg_ex_lift hoare_vcg_conj_lift | assumption)+
-  done
-
-lemma addrFromPPtr_mask_5:
-  "addrFromPPtr ptr && mask (5::nat) = ptr && mask (5::nat)"
-  apply (simp add:addrFromPPtr_def pptrBaseOffset_def  pptrBase_def Kernel_Config.physBase_def)
-  apply word_bitwise
-  apply (simp add:mask_def)
   done
 
 lemma pteCheckIfMapped_ccorres:
@@ -2006,20 +1999,15 @@ lemma performPageGetAddress_ccorres:
   done
 
 lemma vmsz_aligned_addrFromPPtr':
-  "vmsz_aligned' (addrFromPPtr p) sz
-       = vmsz_aligned' p sz"
-  apply (simp add: vmsz_aligned'_def addrFromPPtr_def
-                   ARM.addrFromPPtr_def)
-  apply (subgoal_tac "is_aligned pptrBaseOffset (pageBitsForSize sz)")
-   apply (rule iffI)
-    apply (drule(1) aligned_add_aligned)
-      apply (simp add: pageBitsForSize_def word_bits_def split: vmpage_size.split)
-     apply simp
-   apply (erule(1) aligned_sub_aligned)
-    apply (simp add: pageBitsForSize_def word_bits_def split: vmpage_size.split)
-  apply (simp add: pageBitsForSize_def pptrBaseOffset_def pptrBase_def
-                   Kernel_Config.physBase_def is_aligned_def
-            split: vmpage_size.split)
+  "vmsz_aligned' (addrFromPPtr p) sz = vmsz_aligned' p sz"
+  apply (simp add: vmsz_aligned'_def)
+  apply (rule iffI)
+   apply (simp add: addrFromPPtr_def is_aligned_mask)
+   apply (prop_tac "pptrBaseOffset AND mask (pageBitsForSize sz) = 0")
+    apply (rule mask_zero[OF is_aligned_weaken[OF pptrBaseOffset_aligned]], simp)
+   apply (simp flip: mask_eqs(8))
+  apply (erule is_aligned_addrFromPPtr_n)
+  apply (cases sz; clarsimp)
   done
 
 lemmas vmsz_aligned_addrFromPPtr

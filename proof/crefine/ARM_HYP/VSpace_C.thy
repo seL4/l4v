@@ -2681,11 +2681,6 @@ lemma ccorres_seq_IF_False:
   "ccorres_underlying sr \<Gamma> r xf arrel axf G G' hs a (IF False THEN x ELSE y FI ;; c) = ccorres_underlying sr \<Gamma> r xf arrel axf G G' hs a (y ;; c)"
   by simp
 
-lemma ptrFromPAddr_mask6_simp[simp]:
-  "ptrFromPAddr ps && mask 6 = ps && mask 6"
-  unfolding ptrFromPAddr_def pptrBaseOffset_def pptrBase_def Kernel_Config.physBase_def
-  by (subst add.commute, subst mask_add_aligned ; simp add: is_aligned_def)
-
 lemma doFlush_ccorres:
   "ccorres dc xfdc (\<lambda>s. vs \<le> ve \<and> ps \<le> ps + (ve - vs) \<and> vs && mask 6 = ps && mask 6
         \<comment> \<open>ahyp version translates ps into kernel virtual before flushing\<close>
@@ -2741,6 +2736,7 @@ lemma doFlush_ccorres:
                         Kernel_C.ARMPageInvalidate_Data_def Kernel_C.ARMPDInvalidate_Data_def
                         Kernel_C.ARMPageCleanInvalidate_Data_def Kernel_C.ARMPDCleanInvalidate_Data_def
                         Kernel_C.ARMPageUnify_Instruction_def Kernel_C.ARMPDUnify_Instruction_def
+                        ptrFromPAddr_mask_6
                   dest: ghost_assertion_size_logic[rotated]
                  split: ARM_HYP_H.flush_type.splits)
   done

@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -1207,10 +1208,9 @@ lemma lookupPTSlot_le_0x3C:
       apply clarsimp
     apply simp
    apply simp
-  apply (simp add: ARM_HYP.ptrFromPAddr_def pptrBaseOffset_def)
-  apply (erule aligned_add_aligned)
-   apply (simp add: pptrBase_def Kernel_Config.physBase_def is_aligned_def)
-  apply (simp add: word_bits_def)
+  apply (rule is_aligned_ptrFromPAddr_n[rotated], simp)
+  apply (erule is_aligned_weaken)
+  apply (simp add: pteBits_def)
   done
 
 lemma createSafeMappingEntries_PTE_ccorres:
@@ -1466,23 +1466,6 @@ lemma obj_at_pte_aligned:
                   simp: objBits_simps archObjSize_def table_bits_defs
                   elim!: is_aligned_weaken)
   done
-
-lemma addrFromPPtr_mask_5:
-  "addrFromPPtr ptr && mask (5::nat) = ptr && mask (5::nat)"
-  apply (simp add:addrFromPPtr_def pptrBaseOffset_def
-    pptrBase_def Kernel_Config.physBase_def)
-  apply word_bitwise
-  apply (simp add:mask_def)
-  done
-
-lemma addrFromPPtr_mask_6:
-  "addrFromPPtr ptr && mask (6::nat) = ptr && mask (6::nat)"
-  apply (simp add:addrFromPPtr_def pptrBaseOffset_def
-    pptrBase_def Kernel_Config.physBase_def)
-  apply word_bitwise
-  apply (simp add:mask_def)
-  done
-
 
 lemma pteCheckIfMapped_ccorres:
   "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_' \<top>
@@ -2260,20 +2243,15 @@ lemma performPageGetAddress_ccorres:
   done
 
 lemma vmsz_aligned_addrFromPPtr':
-  "vmsz_aligned' (addrFromPPtr p) sz
-       = vmsz_aligned' p sz"
-  apply (simp add: vmsz_aligned'_def addrFromPPtr_def
-                   ARM_HYP.addrFromPPtr_def)
-  apply (subgoal_tac "is_aligned pptrBaseOffset (pageBitsForSize sz)")
-   apply (rule iffI)
-    apply (drule(1) aligned_add_aligned)
-      apply (simp add: pageBitsForSize_def word_bits_def split: vmpage_size.split)
-     apply simp
-   apply (erule(1) aligned_sub_aligned)
-    apply (simp add: pageBitsForSize_def word_bits_def split: vmpage_size.split)
-  apply (simp add: pageBitsForSize_def pptrBaseOffset_def pptrBase_def
-                   Kernel_Config.physBase_def is_aligned_def
-            split: vmpage_size.split)
+  "vmsz_aligned' (addrFromPPtr p) sz = vmsz_aligned' p sz"
+  apply (simp add: vmsz_aligned'_def)
+  apply (rule iffI)
+   apply (simp add: addrFromPPtr_def is_aligned_mask)
+   apply (prop_tac "pptrBaseOffset AND mask (pageBitsForSize sz) = 0")
+    apply (rule mask_zero[OF is_aligned_weaken[OF pptrBaseOffset_aligned]], simp)
+   apply (simp flip: mask_eqs(8))
+  apply (erule is_aligned_addrFromPPtr_n)
+  apply (cases sz; clarsimp)
   done
 
 lemmas vmsz_aligned_addrFromPPtr
@@ -2798,12 +2776,11 @@ lemma decodeARMFrameInvocation_ccorres:
                                         ARM_HYP_H.fromPAddr (addrFromPPtr v0 + hd args))"
                              in ccorres_symb_exec_r_known_rv)
                 apply (rule conseqPre, vcg)
-                (* FIXME: temporary workaround, there should only be one physBase *)
                 apply (clarsimp dest!: ccap_relation_PageCap_generics)
-                apply (clarsimp simp: paddrTop_def pptrTop_def fromPAddr_def pptrBaseOffset_def
-                                      Kernel_Config.physBase_def ARM_HYP.pptrBase_def
-                                      hd_drop_conv_nth hd_conv_nth false_def true_def
-                                split: if_split)
+                apply (clarsimp simp: hd_drop_conv_nth hd_conv_nth)
+                (* sync up preprocessor-defined number sources coming from C *)
+                apply (clarsimp simp: fromPAddr_def paddrTop_def pptrBase_def pptrTop_def
+                                      pptrBaseOffset_def add.commute from_bool_eq_if')
                apply ceqv
 
               apply (rule ccorres_if_cond_throws[rotated -1,where Q = \<top> and Q' = \<top>])

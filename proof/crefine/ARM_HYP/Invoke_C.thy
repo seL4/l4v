@@ -1672,15 +1672,6 @@ lemma pspace_no_overlap_underlying_zero_update:
   apply blast
   done
 
-lemma addrFromPPtr_mask:
-  "n \<le> 28
-    \<Longrightarrow> addrFromPPtr ptr && mask n = ptr && mask n"
-  apply (simp add: addrFromPPtr_def pptrBaseOffset_def pptrBase_def
-                   Kernel_Config.physBase_def)
-  apply word_bitwise
-  apply simp
-  done
-
 lemma clearMemory_untyped_ccorres:
   "ccorres dc xfdc ((\<lambda>s. invs' s
               \<and> (\<exists>cap. cte_wp_at' (\<lambda>cte. cteCap cte = cap) ut_slot s
