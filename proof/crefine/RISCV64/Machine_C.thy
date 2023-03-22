@@ -68,9 +68,8 @@ assumes setIRQTrigger_ccorres:
            (Call setIRQTrigger_'proc)"
 
 assumes getCurrentTime_ccorres:
-  "ccorres dc xfdc \<top> UNIV []
-           (doMachineOp getCurrentTime)
-           (Call getCurrentTime_'proc)"
+  "ccorres (=) ret__unsigned_longlong_' \<top> UNIV hs
+     (doMachineOp getCurrentTime) (Call getCurrentTime_'proc)"
 
 (* This is not very correct, however our current implementation of Hardware in haskell is stateless *)
 assumes isIRQPending_ccorres:

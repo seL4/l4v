@@ -177,9 +177,66 @@ lemma ccorres_pre_getConsumedTime:
   apply (clarsimp simp: rf_sr_ksConsumed)
   done
 
+(* FIXME RT: move to Refine *)
+crunch (empty_fail) empty_fail[wp, simp]: setCurTime
+
 lemma updateTimestamp_ccorres:
   "ccorres dc xfdc \<top> UNIV [] updateTimeStamp (Call updateTimestamp_'proc)"
-sorry (* FIXME RT: updateTimestamp_ccorres *)
+  apply cinit
+   apply (rule ccorres_pre_getCurTime, rename_tac prevTime)
+   apply (rule ccorres_symb_exec_r)
+     apply (subst bind_assoc_return_reverse)
+     apply (rule ccorres_split_nothrow)
+         apply (simp (no_asm) only: bind_dummy_ret_val)
+         apply (rule_tac xf="ksCurTime_' \<circ> globals" and r="(=)" and r'="(=)"
+                         in ccorres_call_getter_setter)
+             apply (fastforce intro: getCurrentTime_ccorres)
+            apply (clarsimp simp: setCurTime_def modify_def bind_def get_def put_def
+                                  rf_sr_def cstate_relation_def Let_def carch_state_relation_def
+                                  cmachine_state_relation_def)
+           apply fastforce
+          apply fastforce
+         apply fastforce
+        apply ceqv
+       apply (rename_tac curTime)
+       apply (rule ccorres_pre_getConsumedTime, rename_tac consumed)
+       apply (rule_tac val="curTime - prevTime"
+                   and R'="\<lbrace>\<acute>ksCurTime = curTime\<rbrace> \<inter> \<lbrace>\<acute>prev___unsigned_longlong = prevTime\<rbrace>"
+                   and xf'=consumed_'
+                    in ccorres_symb_exec_r_known_rv)
+          apply (rule conseqPre, vcg)
+          apply clarsimp
+         apply ceqv
+        apply (rule_tac P'="\<lbrace>\<acute>ksConsumed = consumed\<rbrace>" and r'=dc and P=\<top> in ccorres_split_nothrow)
+            apply (rule ccorres_from_vcg)
+            apply (rule allI, rule conseqPre, vcg)
+            apply (clarsimp simp: setConsumedTime_def modify_def get_def put_def bind_def
+                                  rf_sr_def cstate_relation_def Let_def carch_state_relation_def
+                                  cmachine_state_relation_def)
+           apply ceqv
+          apply clarsimp
+          apply (rule ccorres_pre_getDomainTime, rename_tac domainTime)
+          apply (clarsimp simp: when_def numDomains_sge_1_simp)
+          apply (rule ccorres_cond)
+            apply (clarsimp split: if_splits)
+           apply csymbr
+           apply (rule_tac P'="\<lbrace>\<acute>ksDomainTime = domainTime\<rbrace>" in ccorres_from_vcg)
+           apply (rule allI, rule conseqPre, vcg)
+           subgoal
+             by (clarsimp simp: minBudget_def setDomainTime_def modify_def get_def put_def bind_def
+                                rf_sr_def cstate_relation_def Let_def carch_state_relation_def
+                                cmachine_state_relation_def)
+          apply (rule ccorres_return_Skip')
+         apply wpsimp
+        apply vcg
+       apply vcg
+      apply wpsimp
+     apply (vcg exspec=getCurrentTime_modifies)
+    apply vcg
+   apply (rule conseqPre, vcg)
+   apply clarsimp
+  apply clarsimp
+  done
 
 lemma rf_sr_ksCurSC:
   "(s, s') \<in> rf_sr \<Longrightarrow> ksCurSC_' (globals s') = Ptr (ksCurSc s)"
