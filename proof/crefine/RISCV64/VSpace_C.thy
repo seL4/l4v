@@ -868,7 +868,7 @@ lemma addrFromKPPtr_spec:
    \<lbrace>\<acute>ret__unsigned_long = addrFromKPPtr (ptr_val (pptr_' s))\<rbrace>"
   apply vcg
   apply (simp add: addrFromKPPtr_def kernelELFBaseOffset_def
-                   kernelELFBase_def kernelELFPAddrBase_def mask_def)
+                   kernelELFBase_def kernelELFPAddrBase_def mask_def pptrTop_def)
   done
 
 lemma isValidVTableRoot_def2:
