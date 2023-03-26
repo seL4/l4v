@@ -827,7 +827,7 @@ text \<open>
   state.
 
   The extra return statement on the Haskell side allows us to establish a nontrivial return relation
-  between the values set on the concrete and abstract side. The @{thm bind_assoc_reverse} rule
+  between the values set on the concrete and abstract side. The @{thm bind_assoc_return_reverse} rule
   may assist with rewriting statements to add the extra return needed by this rule\<close>
 lemma ccorres_call_getter_setter:
   assumes cul: "ccorresG sr \<Gamma> (=) xf' P (i ` P') [] getter (Call f)"

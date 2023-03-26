@@ -5162,7 +5162,7 @@ lemma corres_retype_region_createNewCaps:
       \<comment> \<open>CapTable\<close>
       apply (subst retype_region2_extra_ext_trivial)
        apply (simp add: APIType_map2_def)
-      apply (subst bind_assoc_reverse[of "createObjects y n (KOCTE makeObject) us"])
+      apply (subst bind_assoc_return_reverse[of "createObjects y n (KOCTE makeObject) us"])
       apply (subst liftM_def[of "map (\<lambda>addr. capability.CNodeCap addr us 0 0)", symmetric])
       apply simp
       apply (rule corres_rel_imp)

@@ -388,9 +388,17 @@ lemma bind_assoc2:
   "(do x \<leftarrow> a; _ \<leftarrow> b; c x od) = (do x \<leftarrow> (do x' \<leftarrow> a; _ \<leftarrow> b; return x' od); c x od)"
   by (simp add: bind_assoc)
 
-lemma bind_assoc_reverse:
-  "(do x \<leftarrow> A; _ \<leftarrow> B x; C x od) =
-   (do x \<leftarrow> do x \<leftarrow> A; _ \<leftarrow> B x; return x od; C x od)"
+lemma bind_assoc_return_reverse:
+  "do x \<leftarrow> f;
+      _ \<leftarrow> g x;
+      h x
+   od =
+   do x \<leftarrow> do x \<leftarrow> f;
+              _ \<leftarrow> g x;
+              return x
+           od;
+      h x
+   od"
   by (simp only: bind_assoc return_bind)
 
 lemma if_bind:
