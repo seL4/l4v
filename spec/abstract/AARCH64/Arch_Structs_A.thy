@@ -12,7 +12,7 @@ imports
   "ExecSpec.Arch_Structs_B"
   ExceptionTypes_A
   VMRights_A
-  ExecSpec.Kernel_Config_Lemmas
+  ExecSpec.Arch_Kernel_Config_Lemmas
 begin
 
 context begin interpretation Arch .

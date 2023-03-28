@@ -12,7 +12,7 @@ imports
   "Word_Lib.WordSetup"
   "Lib.Defs"
   Setup_Locale
-  Kernel_Config_Lemmas
+  Kernel_Config
 begin
 
 context Arch begin global_naming RISCV64

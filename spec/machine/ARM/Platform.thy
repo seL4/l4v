@@ -12,7 +12,7 @@ imports
   "Lib.Lib"
   "Word_Lib.WordSetup"
   Setup_Locale
-  Kernel_Config_Lemmas
+  Kernel_Config
 begin
 
 context Arch begin global_naming ARM
