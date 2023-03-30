@@ -24,13 +24,12 @@ and Andrew Boyton's PhD thesis.
 Building
 --------
 
-To build from the `l4v/` directory, run:
+To build for the ARM architecture from the `l4v/` directory, run:
 
-    ./isabelle/bin/isabelle build -d . -v -b DSpecProofs
+    L4V_ARCH=ARM ./run_tests DSpecProofs
 
 Important Theories
 ------------------
 
 The top-level theory is [`API_DP`](API_DP.thy). The seL4 API and kernel
 model are located in [`Kernel_DP`](Kernel_DP.thy).
-

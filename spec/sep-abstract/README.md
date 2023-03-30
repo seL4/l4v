@@ -19,9 +19,9 @@ appropriately can be found in the `proof` directory under
 Building
 --------
 
-To build from the `l4v/` directory, run:
+To build from the `l4v/` directory for the ARM architecture, run:
 
-    ./isabelle/bin/isabelle build -d . -v -b ASepSpec
+    L4V_ARCH=ARM ./run_tests ASepSpec
 
 Important Theories
 ------------------

@@ -17,9 +17,9 @@ described in a TPHOLS '08 [paper][1].
 Building
 --------
 
-To build from the `l4v/` directory, run:
+To build for the ARM architecture from the `l4v/` directory, run:
 
-    ./isabelle/bin/isabelle build -d . -v -b AInvs
+    L4V_ARCH=ARM ./run_tests AInvs
 
 Important Theories
 ------------------

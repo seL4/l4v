@@ -29,9 +29,10 @@ Overview
 Building
 --------
 
-The corresponding Isabelle session is `TakeGrant`. To build, run in directory `l4v/spec`:
+The corresponding Isabelle session is `TakeGrant`. To build for the ARM
+architecture, run in directory `l4v/`:
 
-    make TakeGrant
+    L4V_ARCH=ARM ./run_tests TakeGrant
 
 
 Remarks
