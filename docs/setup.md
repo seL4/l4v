@@ -33,9 +33,11 @@ The Haskell Stack package is unavailable on Bullseye and out-of-date on Buster,
 so you will need to install it from the [Haskell Stack
 website](https://docs.haskellstack.org/en/stable/).
 
+Continue with the [python setup step](#python) below.
+
 ### Linux Packages - Ubuntu
 
-These instructions are intended for Ubuntu LTS versions 18.04, 20.04, and 22.04.
+These instructions are intended for Ubuntu LTS versions 20.04, and 22.04.
 
 To run all proofs against the **ARMv7-A** architecture you will need to install
 the following packages:
@@ -47,33 +49,26 @@ sudo apt-get install \
     ncurses-dev librsvg2-bin device-tree-compiler cmake \
     ninja-build curl zlib1g-dev texlive-fonts-recommended \
     texlive-latex-extra texlive-metapost texlive-bibtex-extra \
-    mlton-compiler haskell-stack
+    mlton-compiler haskell-stack repo
 ```
+
+Continue with the [python setup step](#python) below.
 
 ### macOS packages
 
+The proofs work well on Intel Macs. For Apple silicon Macs, the `mlton` compiler
+is currently not well supported. One approach would be to cross-compile `mlton` on
+another architecture and transfer it. Most proof sessions work without `mlton`,
+but the C parser and therefore the C refinement proofs depend on it.
+
 These instructions use Homebrew, which can be installed from [their website][homebrewwebsite].
-The main packages that are needed are:
+To install the main dependencies and cross compilers, use the following steps:
 
-```
+```sh
 brew install git libxml2 ncurses librsvg dtc cmake ninja texlive rsync python ccache \
-    zstd haskell-stack
-```
+    zstd haskell-stack mlton arm-none-eabi-gcc repo
 
-The installation of mlton on Apple silicon is currently not well supported. One
-approach would be to cross-compile mlton on another architecture and transfer it. On
-Intel machines, the following works:
-
-```
-brew install mlton
-```
-
-To install the cross-compilers, run
-
-```
 brew install --cask gcc-arm-embedded
-
-brew install arm-none-eabi-gcc
 
 brew tap messense/macos-cross-toolchains
 brew install x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu
@@ -82,9 +77,7 @@ brew tap riscv/riscv
 brew install riscv-tools
 ```
 
-Note that CMake will require the x86 compiler before it can be invoked.
-
-The instructions in the sections below should apply for both Linux and macOS.
+The instructions in the sections below apply for both Linux and macOS.
 
 [homebrewwebsite]: https://brew.sh
 
@@ -99,21 +92,55 @@ pip3 install --user sel4-deps
 
 ### Haskell Stack
 
-After installing
-[haskell-stack](https://docs.haskellstack.org/en/stable/), make sure
-you've adjusted your `PATH` to include `$HOME/.local/bin`, and that you're
-running an up-to-date version:
+After installing [haskell-stack](https://docs.haskellstack.org/en/stable/)
+(already included in the packages above on Mac and Ubuntu), make sure you've
+adjusted your `PATH` to include `$HOME/.local/bin`, and that you're running an
+up-to-date version:
 
 ```bash
 stack upgrade --binary-only
 which stack # should be $HOME/.local/bin/stack
 ```
 
+## Checking out the repository collection
+
+The seL4 repositories use the [Google `repo` tool][repo] for configuration
+control and managing sets of repositories. For verification, this means in
+particular managing the correct combinations of the proofs, the kernel sources,
+and the Isabelle/HOL theorem prover.
+
+The [verification-manifest] repository records which versions of these are known
+to work well together.
+
+To check out a consistent set of repositories, run the following steps:
+
+```sh
+mkdir verification
+cd verification
+repo init -u https://git@github.com/seL4/verification-manifest.git
+repo sync
+```
+
+If you are developing proofs, intending to contribute, and have `ssh` set up
+for GitHub, use
+
+```sh
+repo init -m devel.xml -u ssh://git@github.com/seL4/verification-manifest.git
+```
+
+instead for the `init` line. The `-m devel.xml` gives you the `master` branch of
+the `l4v` repository instead of the last known-good version. To set up `git` for
+`ssh` make sure to use the `ssh://` protocol explicitly as above instead of just
+`git@github.com`, because the short form seems to confuse `repo`.
+
+[repo]: https://gerrit.googlesource.com/git-repo/+/HEAD/README.md
+[verification-manifest]: https://github.com/seL4/verification-manifest
+
 ## Isabelle Setup
 
-After the repository is set up using `repo` with
-`seL4/verification-manifest`, you should have following directory
-structure, where `l4v` is the repository you are currently looking at:
+After the repository is set up using `repo` with the [verification-manifest]
+repository, you should have following directory structure, where `l4v` is the
+repository you are currently looking at:
 
 ```bash
 verification/
@@ -153,7 +180,7 @@ These commands perform the following steps:
 * build basic Isabelle images to ensure that
   the installation works. This may take a few minutes.
 
-Alternatively, it is possible to use the official Isabelle2021 release
+Alternatively, it is possible to use the official Isabelle2022 release
 bundle for your platform from the [Isabelle website][isabelle]. In this case, the
 installation steps above can be skipped, and you would replace the directory
 `verification/isabelle/` with a symbolic link to the Isabelle home directory
@@ -161,6 +188,13 @@ of the release version. Note that this is not recommended for development,
 since Google repo will overwrite this link when you synchronise repositories
 and Isabelle upgrades will have to be performed manually as development
 progresses.
+
+You are now set up to process proofs, for instance by following the instructions
+at the bottom of the main [README page][running-proofs].
+
+The sections below contain a few tools and tips for proof development on seL4.
+
+[running-proofs]: https://github.com/seL4/l4v/blob/master/README.md#running-the-proofs
 
 ## PIDE Tools
 
@@ -193,12 +227,18 @@ below to bind a key to the "Back" function. We recommend ``[ctrl]+[`]``.
 
 Run the following commands in the directory `verification/l4v/`:
 
-```
+```sh
 mkdir -p ~/.isabelle/jedit/macros
 cp misc/jedit/macros/goto-error.bsh ~/.isabelle/jedit/macros/.
 ```
 
 You can add keybindings for this macro in the usual way, by going to
-Utilities -> Global Options -> jEdit -> Shortcuts.
+`Utilities -> Global Options -> jEdit -> Shortcuts`.
+
+Additionally, our fork of Isabelle/jEdit has an updated indenter which is more
+proof-context aware than the 'original' indenter. Pressing `ctrl+i` while some
+`apply`-script text is selected should auto-indent the script while respecting
+subgoal depth and maintaining the relative indentation of multi-line `apply`
+statements.
 
 [isabelle]: http://isabelle.in.tum.de

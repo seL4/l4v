@@ -35,19 +35,12 @@ assistant [Isabelle/HOL][2]. For an introduction to Isabelle, see its
 Setup
 -----
 
-This repository is meant to be used as part of a Google [repo][5] setup.
-Instead of cloning it directly, follow the instructions at the [manifest git
-repo](https://github.com/seL4/verification-manifest).
+This repository is meant to be used as part of a Google [repo][5] setup. Instead
+of cloning it directly, please follow the directions for software dependencies
+and Isabelle installation in the [setup.md](docs/setup.md) file in the `docs`
+directory.
 
-  [5]: http://source.android.com/source/downloading.html#installing-repo     "google repo installation"
-
-
-Dependencies
-------------
-
-For software dependencies and Isabelle setup, see the
-[setup.md](docs/setup.md) file in the `docs` directory.
-
+[5]: https://gerrit.googlesource.com/git-repo/+/HEAD/README.md
 
 Contributing
 ------------
@@ -137,29 +130,6 @@ about 16GB of RAM.
 
 The proofs distribute reasonably well over multiple cores, up to about 8
 cores are useful.
-
-
-jEdit
------
-
-We provide a jEdit macro that is very useful when working with large theory
-files, **goto-error**, which moves the cursor to the first error in the file.
-
-To install the macro, run the following commands in the directory
-`verification/l4v/`:
-```bash
-mkdir -p ~/.isabelle/jedit/macros
-cp misc/jedit/macros/goto-error.bsh ~/.isabelle/jedit/macros/.
-```
-
-You can add keybindings for this macro in the usual way, by going to
-`Utilities -> Global Options -> jEdit -> Shortcuts`.
-
-Additionally, our fork of Isabelle/jEdit has an updated indenter which is more
-proof-context aware than the 'original' indenter. Pressing `ctrl+i` while some
-`apply`-script text is selected should auto-indent the script while respecting
-subgoal depth and maintaining the relative indentation of multi-line `apply`
-statements.
 
 Running the Proofs
 ------------------
