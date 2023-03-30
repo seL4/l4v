@@ -7,6 +7,8 @@ name: Weekly Clean
 on:
   schedule:
     - cron: '1 15 * * 6'  # 15:01 UTC every Sat = 1:01 am Syd every Sun
+  # for testing:
+  workflow_dispatch:
 
 jobs:
   proofs:

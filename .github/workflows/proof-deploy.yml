@@ -13,6 +13,8 @@ on:
   repository_dispatch:
     types:
       - manifest-update
+  # for testing:
+  workflow_dispatch:
 
 jobs:
   code:
