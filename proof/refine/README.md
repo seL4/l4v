@@ -20,12 +20,9 @@ Proof](../invariant-abstract/). It is described in the TPHOLS '08
 Building
 --------
 
-Make sure that the `L4V_ARCH` environment variable is set to the desired
-target architecture. If in doubt, use `L4V_ARCH=ARM`.
+To build for the ARM architecture from the `l4v/` directory, run:
 
-To build from the `l4v/` directory, run:
-
-    ./isabelle/bin/isabelle build -d . -v -b Refine
+    L4V_ARCH=ARM ./run_tests Refine
 
 Important Theories
 ------------------

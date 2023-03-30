@@ -34,10 +34,10 @@ Building
 The corresponding Isabelle sessions for this module are `CKernel` and `CSpec`.
 `CSpec` contains `CKernel` plus automated bitfield proofs.
 
-To build the image, run the corresponding session in directory `l4v/spec`,
-e.g.:
+To build the image for the ARM architecture, run the corresponding session in
+directory `l4v/`, e.g.:
 
-    make CSpec
+    L4V_ARCH=ARM ./run_tests CSpec
 
 This will also configure and preprocess the kernel sources.
 

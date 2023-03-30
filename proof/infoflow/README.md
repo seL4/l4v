@@ -24,9 +24,9 @@ the [C Refinement Proof](../crefine/).
 Building
 --------
 
-To build from the `l4v/` directory, run:
+To build for the ARM architecture from the `l4v/` directory, run:
 
-    ./isabelle/bin/isabelle build -d . -v -b InfoFlow
+    L4V_ARCH=ARM ./run_tests InfoFlow
 
 Important Theories
 ------------------
@@ -42,4 +42,3 @@ specification is [`InfoFlow`](InfoFlow.thy). Confidentiality is
 a relational property and the theory [`EquivValid`](../../lib/EquivValid.thy)
 defines these generically for the nondeterministic state monad of the
 abstract specification.
-

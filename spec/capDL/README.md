@@ -44,8 +44,7 @@ tables is uniformly modelled as capabilities.
 Building
 --------
 
-The corresponding Isabelle session is `DSpec`. To build, run in directory
-`l4v/spec`:
+The corresponding Isabelle session is `DSpec`. To build for the ARM
+architecture, run in directory `l4v/`:
 
-    make DSpec
-
+    L4V_ARCH=ARM ./run_tests DSpec
