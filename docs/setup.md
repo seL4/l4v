@@ -56,17 +56,14 @@ Continue with the [python setup step](#python) below.
 
 ### macOS packages
 
-The proofs work well on Intel Macs. For Apple silicon Macs, the `mlton` compiler
-is currently not well supported. One approach would be to cross-compile `mlton` on
-another architecture and transfer it. Most proof sessions work without `mlton`,
-but the C parser and therefore the C refinement proofs depend on it.
+The proofs work well on Intel and Apple Silicon Macs.
 
 These instructions use Homebrew, which can be installed from [their website][homebrewwebsite].
 To install the main dependencies and cross compilers, use the following steps:
 
 ```sh
 brew install git libxml2 ncurses librsvg dtc cmake ninja texlive rsync python ccache \
-    zstd haskell-stack mlton arm-none-eabi-gcc repo
+     zstd haskell-stack mlton arm-none-eabi-gcc repo
 
 brew install --cask gcc-arm-embedded
 
