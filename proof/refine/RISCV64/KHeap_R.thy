@@ -17,7 +17,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 
 (* From Invariants_AI of main experimental-timeprot branch. -robs *)
 term in_ta
-term obj_in_ta
+thm obj_in_ta_def
 thm obj_in_ta_def2
 
 definition
@@ -25,15 +25,39 @@ definition
 where
   "obj_in_ta2 ref s \<equiv> \<exists>ko. f_kheap True s ref = Some ko"
 
-definition
-  obj_in_ta2' :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool"
-where
-  "obj_in_ta2' ref s \<equiv> \<exists>ko. ksPSpace s ref = Some ko"
-
 lemma
   "obj_in_ta ref s \<Longrightarrow> obj_in_ta2 ref s"
   unfolding obj_in_ta_def2 obj_in_ta2_def obj_at_def
   by (clarsimp simp:obind_def ta_filter_def)
+
+term f_kheap
+(* XXX: Adaptations to ExecSpec -robs *)
+definition
+  ta_filter' :: "bool \<Rightarrow> machine_word set \<Rightarrow> kernel_object \<Rightarrow> obj_ref \<Rightarrow> kernel_object option" where
+  "ta_filter' apply ta obj ptr \<equiv> if ~apply \<or> obj_range' ptr obj \<subseteq> ta then Some obj else None"
+
+abbreviation f_ksPSpace :: "bool \<Rightarrow> kernel_state \<Rightarrow> obj_ref \<Rightarrow> kernel_object option" where
+  "f_ksPSpace apply s \<equiv> ksPSpace s |>> ta_filter' apply (touched_addresses (ksMachineState s))"
+
+abbreviation
+  in_ta' :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> kernel_object \<Rightarrow> bool"
+where
+  "in_ta' ref s ko \<equiv> obj_range' ref ko \<subseteq> touched_addresses (ksMachineState s)"
+
+definition
+  obj_in_ta' :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool"
+where
+  "obj_in_ta' ref s \<equiv> \<exists>ko. ksPSpace s ref = Some ko \<and> in_ta' ref s ko"
+
+definition
+  obj_in_ta2' :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool"
+where
+  "obj_in_ta2' ref s \<equiv> \<exists>ko. f_ksPSpace True s ref = Some ko"
+
+lemma
+  "obj_in_ta' ref s \<Longrightarrow> obj_in_ta2' ref s"
+  unfolding obj_in_ta'_def obj_in_ta2'_def
+  by (clarsimp simp:obind_def ta_filter'_def)
 
 (* New for ExecSpec level. XXX: The ASpec version of this was retired by Scott,
    so I'm trialling adapting its replacement to the ExecSpec level below. -robs
@@ -268,20 +292,11 @@ lemma touchObject_corres_others:
   done
 
 thm get_object_def
-term f_kheap
-
-(* XXX: Adaptations to ExecSpec -robs *)
-definition
-  ta_filter' :: "bool \<Rightarrow> machine_word set \<Rightarrow> kernel_object \<Rightarrow> obj_ref \<Rightarrow> kernel_object option" where
-  "ta_filter' apply ta obj ptr \<equiv> if ~apply \<or> obj_range' ptr obj \<subseteq> ta then Some obj else None"
-
-abbreviation f_ksPSpace :: "bool \<Rightarrow> kernel_state \<Rightarrow> obj_ref \<Rightarrow> kernel_object option" where
-  "f_ksPSpace apply s \<equiv> ksPSpace s |>> ta_filter' apply (touched_addresses (ksMachineState s))"
-
 (* Copied from PSpaceFuns_H for experimentation. To correspond with get_object. -robs *)
 definition getObject_x_copy where
 "getObject_x_copy ta_f ptr\<equiv> (do
-        map \<leftarrow> gets $ psMap \<circ> ksPSpace;
+        map \<leftarrow> gets $ psMap \<circ> f_ksPSpace ta_f;
+        assert (map ptr \<noteq> None);
         (before, after) \<leftarrow> return ( lookupAround2 (fromPPtr ptr) map);
         (ptr', val) \<leftarrow> maybeToMonad before;
         loadObject (fromPPtr ptr) ptr' after val
@@ -291,9 +306,10 @@ lemma obj_at_getObject:
   assumes R:
   "\<And>a b n ko s obj::'a::pspace_storable.
   \<lbrakk> (a, b) \<in> fst (loadObject t t n ko s); projectKO_opt ko = Some obj \<rbrakk> \<Longrightarrow> a = obj"
-  shows "\<lbrace>obj_at' P t\<rbrace> getObject_x_copy ta_f t \<lbrace>\<lambda>(rv::'a::pspace_storable) s. P rv\<rbrace>"
+  shows "\<lbrace>obj_at' P t and obj_in_ta2' t\<rbrace> getObject_x_copy ta_f t \<lbrace>\<lambda>(rv::'a::pspace_storable) s. P rv\<rbrace>"
   by (auto simp: getObject_x_copy_def obj_at'_def in_monad valid_def
-                 split_def lookupAround2_known1
+                 split_def lookupAround2_known1 obind_def obj_in_ta2'_def ta_filter'_def
+           split: if_splits
            dest: R)
 
 declare projectKO_inv [wp]
@@ -339,8 +355,14 @@ lemma no_fail_loadObject_default [wp]:
   apply simp
   done
 
-lemma no_fail_getObject_tcb [wp]:
-  "no_fail (tcb_at' t) (getObject_x_copy ta_f t :: tcb kernel)"
+thm f_kheap_to_kheap ta_filter_def ta_filter'_def
+lemma f_ksPSpace_to_ksPSpace[simp]:
+  "obind (ksPSpace s) (ta_filter' False (touched_addresses (ksMachineState s))) = ksPSpace s"
+  apply(rule ext)
+  by (clarsimp simp:ta_filter'_def obind_def split:option.splits)
+
+lemma no_fail_getObject_tcb_False [wp]:
+  "no_fail (tcb_at' t) (getObject_x_copy False t :: tcb kernel)"
   apply (simp add: getObject_x_copy_def split_def)
   apply (rule no_fail_pre)
    apply wp
@@ -351,8 +373,25 @@ lemma no_fail_getObject_tcb [wp]:
    apply (simp add: field_simps)
    apply (erule is_aligned_no_wrap')
    apply simp
+  by (fastforce split: option.split_asm option.splits simp: objBits_simps' lookupAround2_known1 obind_def ta_filter'_def)
+
+lemma no_fail_getObject_tcb_True [wp]:
+  "no_fail (tcb_at' t and obj_in_ta2' t) (getObject_x_copy True t :: tcb kernel)"
+  apply (simp add: getObject_x_copy_def split_def)
+  apply (rule no_fail_pre)
+   apply wp
+  apply (clarsimp simp add: obj_at'_def obj_in_ta2'_def objBits_simps' obind_def ta_filter'_def
+                      cong: conj_cong
+                     split: option.splits if_splits)
+  apply (rule ps_clear_lookupAround2[where p=t], assumption+)
+    apply simp
+   apply (simp add: field_simps)
+   apply (erule is_aligned_no_wrap')
+   apply simp
+  sorry (* FIXME
   apply (fastforce split: option.split_asm simp: objBits_simps')
   done
+*)
 
 lemma typ_at_to_obj_at':
   "typ_at' (koType (TYPE ('a :: pspace_storable))) p s
@@ -370,8 +409,9 @@ lemmas page_table_at_obj_at'
 
 
 lemma corres_get_tcb:
-  "corres (tcb_relation \<circ> the) (tcb_at t and obj_in_ta2 t) (tcb_at' t) (gets (get_tcb ta_f t)) (getObject_x_copy ta_f t)"
+  "corres (tcb_relation \<circ> the) (tcb_at t and obj_in_ta2 t) (tcb_at' t and obj_in_ta2' t) (gets (get_tcb ta_f t)) (getObject_x_copy ta_f t)"
   apply (rule corres_no_failI)
+   sorry (* FIXME
    apply wp
   apply (clarsimp simp add: gets_def get_def return_def bind_def get_tcb_def)
   apply (frule in_inv_by_hoareD [OF getObject_inv_tcb])
@@ -389,6 +429,7 @@ lemma corres_get_tcb:
   apply (clarsimp simp add: other_obj_relation_def obj_in_ta2_def obind_def ta_filter_def
                             lookupAround2_known1 split: if_splits)
   done
+*)
 
 lemma lookupAround2_same1[simp]:
   "(fst (lookupAround2 x s) = Some (x, y)) = (s x = Some y)"
@@ -399,9 +440,11 @@ lemma lookupAround2_same1[simp]:
 
 lemma getObject_tcb_at':
   "\<lbrace> \<top> \<rbrace> getObject_x_copy ta_f t \<lbrace>\<lambda>r::tcb. tcb_at' t\<rbrace>"
+  sorry (* FIXME
   by (clarsimp simp: valid_def getObject_x_copy_def in_monad
                      loadObject_default_def obj_at'_def split_def
                      in_magnitude_check objBits_simps')
+*)
 
 text \<open>updateObject_cte lemmas\<close>
 
@@ -446,24 +489,44 @@ lemma updateObject_default_result:
   "(x, s'') \<in> fst (updateObject_default e ko p q n s) \<Longrightarrow> x = injectKO e"
   by (clarsimp simp add: updateObject_default_def in_monad)
 
+thm set_object_def
+getObject_def
+getObject_x_copy_def
+get_object_def
+(* Copied from PSpaceFuns_H for experimentation. To correspond with set_object. -robs *)
+definition setObject_x_copy where
+"setObject_x_copy ta_f ptr val\<equiv> (do
+        ps \<leftarrow> gets (f_ksPSpace ta_f);
+        map \<leftarrow> return ( psMap ps);
+        (before, after) \<leftarrow> return ( lookupAround2 (fromPPtr ptr) map);
+        (ptr', obj) \<leftarrow> maybeToMonad before;
+        obj' \<leftarrow> updateObject val obj (fromPPtr ptr) ptr' after;
+        map' \<leftarrow> return ( data_map_insert ptr' obj' map);
+        ps' \<leftarrow> return ( ps \<lparr> psMap := map' \<rparr>);
+        modify (\<lambda> ks. ks \<lparr> ksPSpace := ps'\<rparr>);
+        touchObject ptr
+od)"
+
 lemma obj_at_setObject1:
   assumes R: "\<And>(v::'a::pspace_storable) p q n ko s x s''.
                 (x, s'') \<in> fst (updateObject v ko p q n s) \<Longrightarrow> x = injectKO v"
   assumes Q: "\<And>(v::'a::pspace_storable) (v'::'a). objBits v = objBits v'"
   shows
   "\<lbrace> obj_at' (\<lambda>x::'a::pspace_storable. True) t \<rbrace>
-   setObject p (v::'a::pspace_storable)
+   setObject_x_copy True p (v::'a::pspace_storable)
   \<lbrace> \<lambda>rv. obj_at' (\<lambda>x::'a::pspace_storable. True) t \<rbrace>"
-  apply (simp add: setObject_def split_def)
+  apply (simp add: setObject_x_copy_def split_def)
   apply (rule hoare_seq_ext [OF _ hoare_gets_post])
   apply (clarsimp simp: valid_def in_monad obj_at'_def lookupAround2_char1 project_inject
                  dest!: R)
+  sorry (* FIXME
   apply (subgoal_tac "objBitsKO (injectKO v) = objBitsKO (injectKO obj)")
    apply (intro conjI impI, simp_all)
       apply fastforce+
   apply (fold objBits_def)
   apply (rule Q)
   done
+*)
 
 lemma obj_at_setObject2:
   fixes v :: "'a::pspace_storable"
@@ -472,20 +535,22 @@ lemma obj_at_setObject2:
                                   \<Longrightarrow> koTypeOf ko \<noteq> koType TYPE('b)"
   shows
   "\<lbrace> obj_at' P t \<rbrace>
-   setObject p (v::'a)
+   setObject_x_copy ta_f p (v::'a)
   \<lbrace> \<lambda>rv. obj_at' P t \<rbrace>"
-  apply (simp add: setObject_def split_def)
+  apply (simp add: setObject_x_copy_def split_def)
   apply (rule hoare_seq_ext [OF _ hoare_gets_post])
   apply (clarsimp simp: valid_def in_monad)
   apply (frule updateObject_type)
   apply (drule R)
   apply (clarsimp simp: obj_at'_def)
+  sorry (* FIXME
   apply (rule conjI)
    apply (clarsimp simp: lookupAround2_char1)
    apply (drule iffD1 [OF project_koType, OF exI])
    apply simp
   apply (clarsimp simp: ps_clear_upd lookupAround2_char1)
   done
+*)
 
 lemma updateObject_ep_eta:
   "updateObject (v :: endpoint) = updateObject_default v"
@@ -505,6 +570,8 @@ lemmas updateObject_eta =
 lemma objBits_type:
   "koTypeOf k = koTypeOf k' \<Longrightarrow> objBitsKO k = objBitsKO k'"
   by (erule koType_objBitsKO)
+
+. (* DOWN TO HERE. FIXME: Just add all *_x_copy so far to Haskell spec and proceed properly.
 
 lemma setObject_typ_at_inv:
   "\<lbrace>typ_at' T p'\<rbrace> setObject p v \<lbrace>\<lambda>r. typ_at' T p'\<rbrace>"
@@ -620,9 +687,12 @@ lemma setObject_tcb_ep_at:
   "\<lbrace> ep_at' t \<rbrace>
    setObject p (x::tcb)
   \<lbrace> \<lambda>rv. ep_at' t \<rbrace>"
+  by (simp add: setObject_typ_ats)
+(* XXX: Delete?
   apply (rule obj_at_setObject2)
   apply (auto dest: updateObject_default_result)
   done
+*)
 
 lemma obj_at_setObject3:
   fixes Q::"'a::pspace_storable \<Rightarrow> bool"
@@ -658,10 +728,12 @@ lemma getObject_obj_at':
                 (loadObject_default p q n ko :: ('a :: pspace_storable) kernel)"
   assumes P: "\<And>(v::'a::pspace_storable). (1 :: machine_word) < 2 ^ (objBits v)"
   shows      "\<lbrace> \<top> \<rbrace> getObject_x_copy ta_f p \<lbrace>\<lambda>r::'a::pspace_storable. obj_at' ((=) r) p\<rbrace>"
+  sorry (* FIXME
   by (clarsimp simp: valid_def getObject_x_copy_def in_monad
                      loadObject_default_def obj_at'_def
                      split_def in_magnitude_check lookupAround2_char1
                      x P project_inject objBits_def[symmetric])
+*)
 
 lemma getObject_valid_obj:
   assumes x: "\<And>p q n ko. loadObject p q n ko =
@@ -705,7 +777,7 @@ lemma getObject_ko_at_tcb [wp]:
   by (rule getObject_ko_at | simp add: objBits_simps')+
 
 lemma OMG_getObject_tcb:
-  "\<lbrace>obj_at' P t\<rbrace> getObject_x_copy ta_f t \<lbrace>\<lambda>(tcb :: tcb) s. P tcb\<rbrace>"
+  "\<lbrace>obj_at' P t and obj_in_ta2' t\<rbrace> getObject_x_copy ta_f t \<lbrace>\<lambda>(tcb :: tcb) s. P tcb\<rbrace>"
   apply (rule obj_at_getObject)
   apply (clarsimp simp: loadObject_default_def in_monad)
   done
@@ -1082,16 +1154,18 @@ lemma no_fail_getEndpoint [wp]:
   apply (rule no_fail_pre)
    apply wp
   apply (clarsimp simp add: obj_at'_def objBits_simps' lookupAround2_known1)
-  apply (erule(1) ps_clear_lookupAround2)
+  apply (erule(1) ps_clear_lookupAround2[where p=ptr])
     apply simp
    apply (simp add: field_simps)
    apply (erule is_aligned_no_wrap')
    apply (simp add: word_bits_conv)
   apply (clarsimp split: option.split_asm simp: objBits_simps')
+  sorry (* FIXME
   done
+*)
 
 lemma getEndpoint_corres:
-  "corres ep_relation (ep_at ptr and obj_in_ta2 ptr) (ep_at' ptr)
+  "corres ep_relation (ep_at ptr and obj_in_ta2 ptr) (ep_at' ptr and obj_in_ta2' ptr)
      (get_endpoint ptr) (getEndpoint_x_copy True ptr)"
   apply (rule corres_no_failI)
    apply wp
@@ -1099,6 +1173,7 @@ lemma getEndpoint_corres:
                    getObject_x_copy_def bind_assoc ep_at_def2)
   apply (clarsimp simp: in_monad split_def bind_def gets_def get_def return_def)
   apply (clarsimp simp: assert_def fail_def obj_at_def return_def is_ep partial_inv_def)
+  sorry (* FIXME
   apply (clarsimp simp: loadObject_default_def in_monad in_magnitude_check objBits_simps')
   apply (clarsimp simp add: state_relation_def pspace_relation_def)
   apply (drule bspec)
@@ -1106,6 +1181,7 @@ lemma getEndpoint_corres:
   apply (simp add: other_obj_relation_def)
   apply (clarsimp simp: obj_in_ta2_def obind_def ta_filter_def split:if_splits)
   done
+*)
 
 declare magnitudeCheck_inv [wp]
 
@@ -1192,10 +1268,6 @@ fun exst_same' :: "Structures_H.kernel_object \<Rightarrow> Structures_H.kernel_
 where
   "exst_same' (KOTCB tcb) (KOTCB tcb') = exst_same tcb tcb'" |
   "exst_same' _ _ = True"
-
-. (* XXX: DOWN TO HERE. Perhaps figure out how to adapt the Haskell spec itself for
-     getObject, getEndpoint and getNotification so we can do away with their `_x_copy`
-     versions before moving on to experiment with adapting setObject? -robs
 
 lemma setObject_other_corres:
   fixes ob' :: "'a :: pspace_storable"
