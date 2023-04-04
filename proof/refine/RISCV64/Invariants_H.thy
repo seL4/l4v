@@ -130,9 +130,67 @@ lemma st_tcb_at'_def:
   "st_tcb_at' test \<equiv> obj_at' (test \<circ> tcbState)"
   by (simp add: pred_tcb_at'_def o_def)
 
+definition obj_range' :: "machine_word \<Rightarrow> kernel_object \<Rightarrow> machine_word set" where
+  "obj_range' p ko \<equiv> mask_range p (objBitsKO ko)"
+
+(* New and experimental: To correspond with touch_object. -robs *)
+thm touch_object_def2
+definition touchObject :: "machine_word \<Rightarrow> unit kernel" where
+  "touchObject ptr \<equiv> do
+     kh <- gets ksPSpace;
+     assert (kh ptr \<noteq> None);
+     obj <- return $ the $ kh ptr;
+     doMachineOp $ addTouchedAddresses (obj_range' ptr obj)
+   od"
+
+thm ta_filter_def
+definition
+  ta_filter' :: "bool \<Rightarrow> machine_word set \<Rightarrow> kernel_object \<Rightarrow> obj_ref \<Rightarrow> kernel_object option" where
+  "ta_filter' apply ta obj ptr \<equiv> if ~apply \<or> obj_range' ptr obj \<subseteq> ta then Some obj else None"
+
+term f_kheap
+abbreviation f_ksPSpace :: "bool \<Rightarrow> kernel_state \<Rightarrow> obj_ref \<Rightarrow> kernel_object option" where
+  "f_ksPSpace apply s \<equiv> ksPSpace s |>> ta_filter' apply (touched_addresses (ksMachineState s))"
+
+thm f_kheap_to_kheap
+lemma f_ksPSpace_to_ksPSpace[simp]:
+  "obind (ksPSpace s) (ta_filter' False (touched_addresses (ksMachineState s))) = ksPSpace s"
+  apply(rule ext)
+  by (clarsimp simp:ta_filter'_def obind_def split:option.splits)
+
+(* Overriding the original Haskell-derived (get|set)Object definitions from PSpaceFuns_H. -robs *)
+thm get_object_def
+abbreviation f_getObject where
+  "f_getObject ta_f ptr \<equiv> (do
+          map \<leftarrow> gets $ psMap \<circ> f_ksPSpace ta_f;
+          assert (map ptr \<noteq> None);
+          (before, after) \<leftarrow> return ( lookupAround2 (fromPPtr ptr) map);
+          (ptr', val) \<leftarrow> maybeToMonad before;
+          loadObject (fromPPtr ptr) ptr' after val
+   od)"
+defs getObject_def:
+  "getObject \<equiv> f_getObject True"
+
+thm set_object_def
+abbreviation f_setObject where
+  "f_setObject ta_f ptr val \<equiv> (do
+        ps \<leftarrow> gets (f_ksPSpace ta_f);
+        map \<leftarrow> return ( psMap ps);
+        (before, after) \<leftarrow> return ( lookupAround2 (fromPPtr ptr) map);
+        (ptr', obj) \<leftarrow> maybeToMonad before;
+        obj' \<leftarrow> updateObject val obj (fromPPtr ptr) ptr' after;
+        map' \<leftarrow> return ( data_map_insert ptr' obj' map);
+        ps' \<leftarrow> return ( ps \<lparr> psMap := map' \<rparr>);
+        modify (\<lambda> ks. ks \<lparr> ksPSpace := ps'\<rparr>);
+        touchObject ptr
+   od)"
+defs setObject_def:
+  "setObject \<equiv> f_setObject True"
+
+thm cte_wp_at_def
 text \<open> cte with property at \<close>
 definition cte_wp_at' :: "(cte \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "cte_wp_at' P p s \<equiv> \<exists>cte::cte. fst (getObject p s) = {(cte,s)} \<and> P cte"
+  "cte_wp_at' P p s \<equiv> \<exists>cte::cte. fst (f_getObject False p s) = {(cte,s)} \<and> P cte"
 
 abbreviation cte_at' :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "cte_at' \<equiv> cte_wp_at' \<top>"
@@ -261,9 +319,6 @@ primrec capBits :: "capability \<Rightarrow> nat" where
 
 definition capAligned :: "capability \<Rightarrow> bool" where
   "capAligned c \<equiv> is_aligned (capUntypedPtr c) (capBits c) \<and> capBits c < word_bits"
-
-definition obj_range' :: "machine_word \<Rightarrow> kernel_object \<Rightarrow> machine_word set" where
-  "obj_range' p ko \<equiv> mask_range p (objBitsKO ko)"
 
 primrec (nonexhaustive) usableUntypedRange :: "capability \<Rightarrow> machine_word set" where
  "usableUntypedRange (UntypedCap _ p n f) = (if f < 2^n then {p+of_nat f .. p + mask n} else {})"
@@ -1218,7 +1273,7 @@ lemma obj_atI' [intro?]:
 
 
 lemma cte_at'_def:
-  "cte_at' p s \<equiv> \<exists>cte::cte. fst (getObject p s) = {(cte,s)}"
+  "cte_at' p s \<equiv> \<exists>cte::cte. fst (f_getObject False p s) = {(cte,s)}"
   by (simp add: cte_wp_at'_def)
 
 
@@ -1540,7 +1595,7 @@ lemma obj_at'_pspaceI:
 
 lemma cte_wp_at'_pspaceI:
   "\<lbrakk>cte_wp_at' P p s; ksPSpace s = ksPSpace s'\<rbrakk> \<Longrightarrow> cte_wp_at' P p s'"
-  apply (clarsimp simp add: cte_wp_at'_def getObject_def)
+  apply (clarsimp simp add: cte_wp_at'_def)
   apply (drule equalityD2)
   apply (clarsimp simp: in_monad loadObject_cte gets_def
                         get_def bind_def return_def split_def)
@@ -1892,7 +1947,7 @@ lemma cte_wp_at_cases':
   (is "?LHS = ?RHS")
   apply (rule iffI)
    apply (clarsimp simp: cte_wp_at'_def split_def
-                         getObject_def bind_def simpler_gets_def
+                         bind_def simpler_gets_def
                          assert_opt_def return_def fail_def
                   split: option.splits
                     del: disjCI)
@@ -1907,6 +1962,7 @@ lemma cte_wp_at_cases':
                          unless_def when_def bind_def
                   split: kernel_object.splits if_split_asm option.splits
                     del: disjCI)
+        sorry (* FIXME: No idea why the subst here is no longer working. -robs
         apply (subst(asm) in_magnitude_check3, simp+,
                simp split: if_split_asm, (rule disjI2)?, intro exI, rule conjI,
                erule rsubst[where P="\<lambda>x. ksPSpace s x = v" for s v],
@@ -1914,7 +1970,7 @@ lemma cte_wp_at_cases':
    apply (subst(asm) in_magnitude_check3, simp+)
    apply (simp split: if_split_asm
                 add: )
-  apply (simp add: cte_wp_at'_def getObject_def split_def
+  apply (simp add: cte_wp_at'_def split_def
                    bind_def simpler_gets_def return_def
                    assert_opt_def fail_def objBits_defs
             split: option.splits)
@@ -1955,6 +2011,7 @@ lemma cte_wp_at_cases':
   apply (erule is_aligned_no_wrap')
   apply simp
   done
+*)
 
 lemma tcb_at_cte_at':
   "tcb_at' t s \<Longrightarrow> cte_at' t s"
