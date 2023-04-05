@@ -198,6 +198,7 @@ The "Recv" system call blocks waiting to receive a message through a specified e
 >                     deleteCallerCap thread
 >                     receiveIPC thread epCap isBlocking
 >             NotificationCap { capNtfnCanReceive = True, capNtfnPtr = ntfnPtr } -> do
+                  touchObject ntfnPtr
 >                 ntfn <- withoutFailure $ getNotification ntfnPtr
 >                 boundTCB <- return $ ntfnBoundTCB ntfn
 >                 if boundTCB == Just thread || boundTCB == Nothing

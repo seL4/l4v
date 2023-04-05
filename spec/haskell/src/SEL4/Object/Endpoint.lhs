@@ -81,6 +81,7 @@ If the endpoint is receiving, then a thread is removed from its queue, and an IP
 >                 setEndpoint epptr $ case queue of
 >                     [] -> IdleEP
 >                     _ -> RecvEP queue
+>                 touchObject dest
 >                 recvState <- getThreadState dest
 >                 assert (isReceive recvState)
 >                        "TCB in receive endpoint queue must be blocked on send"
@@ -116,10 +117,12 @@ The IPC receive operation is essentially the same as the send operation, but wit
 > receiveIPC thread cap@(EndpointCap {}) isBlocking = do
 >         let epptr = capEPPtr cap
 >         let recvCanGrant = capEPCanGrant cap
+>         touchObject epptr
 >         ep <- getEndpoint epptr
 >         -- check if anything is waiting on bound ntfn
+>         touchObject thread
 >         ntfnPtr <- getBoundNotification thread
->         ntfn <- maybe (return $ NTFN IdleNtfn Nothing) (getNotification) ntfnPtr
+>         ntfn <- maybe (return $ NTFN IdleNtfn Nothing) (\p -> do touchObject p; getNotification p od) ntfnPtr
 >         if (isJust ntfnPtr && isActive ntfn)
 >           then completeSignal (fromJust ntfnPtr) thread
 >           else case ep of
@@ -182,6 +185,7 @@ If a thread is waiting for an IPC operation, it may be necessary to move the thr
 
 > cancelIPC :: PPtr TCB -> Kernel ()
 > cancelIPC tptr = do
+>         touchObject tptr
 >         state <- getThreadState tptr
 >         case state of
 
@@ -210,6 +214,7 @@ If the thread is blocking on an endpoint, then the endpoint is fetched and the t
 >                     cteDeleteOne callerCap
 >             blockedIPCCancel state = do
 >                 let epptr = blockingObject state
+>                 touchObject epptr
 >                 ep <- getEndpoint epptr
 >                 assert (not $ isIdle ep)
 >                     "blockedIPCCancel: endpoint must not be idle"
@@ -230,6 +235,7 @@ If an endpoint is deleted, then every pending IPC operation using it must be can
 
 > cancelAllIPC :: PPtr Endpoint -> Kernel ()
 > cancelAllIPC epptr = do
+>         touchObject epptr
 >         ep <- getEndpoint epptr
 >         case ep of
 >             IdleEP ->
@@ -245,6 +251,7 @@ If a badged endpoint is recycled, then cancel every pending send operation using
 
 > cancelBadgedSends :: PPtr Endpoint -> Word -> Kernel ()
 > cancelBadgedSends epptr badge = do
+>     touchObject epptr
 >     ep <- getEndpoint epptr
 >     case ep of
 >         IdleEP -> return ()
@@ -252,6 +259,7 @@ If a badged endpoint is recycled, then cancel every pending send operation using
 >         SendEP queue -> do
 >             setEndpoint epptr IdleEP
 >             queue' <- (flip filterM queue) $ \t -> do
+>                 touchObject t
 >                 st <- getThreadState t
 >                 if blockingIPCBadge st == badge
 >                     then do
