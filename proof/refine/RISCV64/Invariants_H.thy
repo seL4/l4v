@@ -135,7 +135,8 @@ definition obj_range' :: "machine_word \<Rightarrow> kernel_object \<Rightarrow>
 
 (* New and experimental: To correspond with touch_object. -robs *)
 thm touch_object_def2
-definition touchObject :: "machine_word \<Rightarrow> unit kernel" where
+(* Overriding an empty Haskell placeholder from PSpaceFuns_H. -robs *)
+defs touchObject_def:
   "touchObject ptr \<equiv> do
      kh <- gets ksPSpace;
      assert (kh ptr \<noteq> None);

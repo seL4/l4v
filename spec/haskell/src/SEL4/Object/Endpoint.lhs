@@ -44,6 +44,7 @@ This function performs an IPC send operation, given a pointer to the sending thr
 The normal (blocking) version of the send operation will remove a recipient from the endpoint's queue if one is available, or otherwise add the sender to the queue.
 
 > sendIPC blocking call badge canGrant canGrantReply thread epptr = do
+>         touchObject epptr
 >         ep <- getEndpoint epptr
 >         case ep of
 
