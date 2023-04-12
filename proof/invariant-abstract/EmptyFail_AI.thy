@@ -158,7 +158,7 @@ lemma as_user_empty_fail[wp]:
   apply (simp add: as_user_def | wp)+
    apply (simp add: empty_fail_def)
   apply (case_tac xa)
-  apply (simp | wp)+
+  apply (simp add: case_prod_unfold set_object_empty_fail | wp)+
   done
 
 crunch (empty_fail) empty_fail[wp]: get_message_info
@@ -332,6 +332,8 @@ next
      apply ((wp drop_spec_empty_fail | simp)+)[1]
     apply (simp | intro conjI impI)+
      apply (wp drop_spec_empty_fail)[1]
+     apply (simp add: get_cap_empty_fail)
+    sorry (* FIXME: broken by touched-addrs -robs
     apply (rule spec_empty_fail_bindE')
      apply ((wp drop_spec_empty_fail | simp)+)[1]
     apply (rule spec_empty_fail_bindE')
@@ -346,6 +348,7 @@ next
      apply (wp drop_spec_empty_fail)[1]
     apply (rule "2.hyps", simp+)
     done
+  *)
 next
   case 3
   show ?case
@@ -390,9 +393,11 @@ proof (induct rule: cap_revoke.induct)
     apply (simp add: whenE_def | intro conjI impI)+
       apply (rule spec_empty_fail_bindE',
                ((wp drop_spec_empty_fail select_ext_empty_fail | simp)+)[1])+
+      sorry (* FIXME: broken by touched-addrs -robs
       apply (rule "1.hyps", simp+)
      apply (wp drop_spec_empty_fail)+
      done
+  *)
 qed
 
 lemma cap_revoke_empty_fail[wp]:

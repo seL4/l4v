@@ -190,7 +190,8 @@ where
      paddrs_to_flush \<leftarrow> gets shared_data_flush_paddrs;
      forM_x paddrs_to_flush (\<lambda>x. do_machine_op (RISCV64.L2FlushAddr x));
      \<comment> \<open>Wistoff et al. 2022's \<open>fence.t\<close> includes both on-core state flush and time pad.\<close>
-     do_machine_op $ tfence
+     do_machine_op $ tfence;
+     do_machine_op clearTouchedAddresses
    od"
 
 end

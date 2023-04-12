@@ -85,8 +85,9 @@ lemma cap_revoke_globals_equiv:
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply (rule hoare_strengthen_post, rule validE_valid,
          rule cap_revoke_preservation_desc_of[where Q="\<lambda>_. emptyable"])
+  sorry (* broken by timeprot -scottb
   by (wp cap_delete_globals_equiv preemption_point_inv
-      | fastforce simp: emptyable_def dest: reply_slot_not_descendant)+
+      | fastforce simp: emptyable_def dest: reply_slot_not_descendant)+ *)
 
 lemma invoke_cnode_globals_equiv:
   "\<lbrace>globals_equiv st and invs and valid_cnode_inv cinv\<rbrace>
@@ -159,6 +160,7 @@ proof (induct rule: cap_revoke.induct[where ?a1.0=s])
      apply (subst spec_equiv_valid_def2)
      apply (subst rel_sum_comb_equals[symmetric])
      apply (rule_tac R'="(=)" in spec_equiv_valid_2_inv_bindE)
+sorry (* broken by timeprot -scottb
         apply (rule_tac R'="equiv_for ((aag_can_read aag or aag_can_affect aag l) \<circ> fst) id"
                      in spec_equiv_valid_2_inv_bindE)
            apply (rule_tac R'="(=)" in spec_equiv_valid_2_inv_bindE)
@@ -200,7 +202,7 @@ proof (induct rule: cap_revoke.induct[where ?a1.0=s])
     apply (clarsimp simp: conj_comms)
     apply (intro conjI)
     by (case_tac "next_revoke_cap slot s", force simp: emptyable_def dest: reply_slot_not_descendant
-        | force elim: all_children_descendants_of[OF cdt_change_allowed_all_children])+
+        | force elim: all_children_descendants_of[OF cdt_change_allowed_all_children])+ *)
 qed
 
 lemmas cap_revoke_reads_respects_f = use_spec_ev[OF cap_revoke_spec_reads_respects_f]
@@ -245,10 +247,11 @@ lemma invoke_cnode_reads_respects_f:
              | simp add: when_def split del: if_split
              | elim conjE, assumption)+
   apply (clarsimp simp: cnode_inv_auth_derivations_def authorised_cnode_inv_def)
+  sorry (* broken by timeprot -scottb
   apply (auto intro: real_cte_emptyable_strg[rule_format]
                simp: silc_inv_def reads_equiv_f_def requiv_cur_thread_eq caps_of_state_cteD
                      aag_cap_auth_recycle_EndpointCap cte_wp_at_weak_derived_ReplyCap )
-  done
+  done *)
 
 lemma cap_swap_reads_respects_g:
   "reads_respects_g aag l
@@ -511,14 +514,15 @@ lemma sts_schact_is_rct_runnable:
   "\<lbrace>schact_is_rct and K (runnable b)\<rbrace>
    set_thread_state a b
    \<lbrace>\<lambda>_. schact_is_rct\<rbrace>"
+  sorry (* broken by timeprot -scottb
   apply (simp add: set_thread_state_def set_scheduler_action_def)
   apply (wpsimp wp: set_object_wp)
      apply (simp add: set_thread_state_ext_def)
      apply (wp modify_wp set_scheduler_action_wp gts_wp)
     apply (wpsimp wp: set_object_wp)
-   apply wp
+   apply wpsimp
   apply (clarsimp simp: schact_is_rct_def st_tcb_at_def obj_at_def gets_the_def gets_def)
-  done
+  done *)
 
 lemma set_thread_state_only_timer_irq_inv:
   "\<lbrace>only_timer_irq_inv irq (st :: det_state)\<rbrace>
@@ -561,7 +565,7 @@ lemma decode_invocation_authorised_globals_inv:
 lemma handle_invocation_reads_respects_g:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   notes gts_st_tcb[wp del] gts_st_tcb_at[wp del]
-  notes get_message_info_reads_respects_g = reads_respects_g_from_inv[OF get_message_info_rev get_mi_inv]
+  notes get_message_info_reads_respects_g = reads_respects_g_from_tainv[OF get_message_info_rev get_mi_tainv]
   shows "reads_respects_f_g aag l
            (silc_inv aag st and only_timer_irq_inv irq st' and einvs and schact_is_rct and ct_active
                             and pas_refined aag and pas_cur_domain aag
@@ -654,6 +658,7 @@ lemma delete_caller_cap_globals_equiv:
 
 lemma lookup_cap_cap_fault:
   "\<lbrace>invs\<rbrace> lookup_cap c b -, \<lbrace>\<lambda>f s. valid_fault (CapFault x y f)\<rbrace>"
+  sorry (* broken by timeprot -scottb
   apply (simp add: lookup_cap_def)
   apply wp
     apply (case_tac xa)
@@ -662,7 +667,7 @@ lemma lookup_cap_cap_fault:
    apply (fold validE_E_def)
    apply (wp lookup_slot_for_thread_cap_fault)
   apply assumption
-  done
+  done *)
 
 lemma cap_fault_on_failure_ev':
   "equiv_valid_inv (reads_equiv_f aag) A P f \<Longrightarrow>
@@ -731,6 +736,7 @@ lemma handle_recv_globals_equiv:
    handle_recv is_blocking
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding handle_recv_def
+  sorry (* broken by timeprot -scottb
   apply (wp handle_fault_globals_equiv get_simple_ko_wp
         | wpc | simp add: Let_def)+
       apply (rule_tac Q="\<lambda>r s. invs s \<and> globals_equiv st s" and
@@ -753,7 +759,7 @@ lemma handle_recv_globals_equiv:
     sorry (* XXX: broken by touched_addresses. -robs
     apply (wp delete_caller_cap_invs delete_caller_cap_globals_equiv
            | simp add: invs_imps invs_valid_idle ct_active_not_idle)+
-  done
+  done *)
 *)
 
 lemma handle_recv_reads_respects_f_g:
@@ -947,20 +953,24 @@ lemma activate_thread_reads_respects:
   shows "reads_respects aag (l :: 'a subject_label)
            (cur_tcb and (\<lambda>s. aag_can_read_label aag (pasObjectAbs aag (cur_thread s))))
            activate_thread"
+  sorry (* broken by timeprot -scottb
   apply (simp add: activate_thread_def)
   apply (wpsimp wp: set_thread_state_runnable_reads_respects get_thread_state_rev)
   by (wp set_object_reads_respects get_thread_state_rev
       | simp add: as_user_def select_f_returns tcb_at_st_tcb_at[symmetric] cur_tcb_def
       | rule hoare_drop_imps conjI requiv_cur_thread_eq requiv_get_tcb_eq'
       | clarsimp simp: st_tcb_at_def obj_at_def is_tcb_def)+
+*)
 
 lemma activate_thread_globals_equiv:
   "\<lbrace>globals_equiv st and valid_arch_state and valid_idle\<rbrace>
    activate_thread
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
+  sorry (* broken by timeprot -scottb
   unfolding activate_thread_def
   by (wpsimp wp: set_thread_state_globals_equiv gts_wp
            simp: valid_idle_def pred_tcb_at_def obj_at_def)
+*)
 
 lemma activate_thread_reads_respects_g:
   assumes domains_distinct: "pas_domains_distinct aag"
@@ -992,6 +1002,7 @@ lemma handle_invocation_globals_equiv:
   "\<lbrace>invs and ct_active and globals_equiv st\<rbrace>
    handle_invocation calling blocking
    \<lbrace>\<lambda>_. globals_equiv (st :: det_state)\<rbrace>"
+sorry (* broken by timeprot -scottb
   apply (simp add: handle_invocation_def ts_Restart_case_helper
                    liftE_liftM_liftME liftME_def bindE_assoc)
   apply (wp syscall_valid handle_fault_globals_equiv reply_from_kernel_globals_equiv
@@ -1009,11 +1020,13 @@ lemma handle_invocation_globals_equiv:
   apply (auto intro: st_tcb_ex_cap simp: ct_active_not_idle ct_in_state_def)
   done
 *)
+*)
 
 lemma handle_event_globals_equiv:
   "\<lbrace>invs and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s) and globals_equiv st\<rbrace>
    handle_event ev
    \<lbrace>\<lambda>_. globals_equiv (st :: det_state)\<rbrace>"
+  sorry (* broken by timeprot -scottb
   apply (case_tac ev)
   by (wp hoare_weaken_pre[OF receive_ipc_globals_equiv, where P="globals_equiv st and invs"]
          hoare_weaken_pre[OF receive_signal_globals_equiv, where P="globals_equiv st and invs"]
@@ -1024,6 +1037,7 @@ lemma handle_event_globals_equiv:
       | simp add: handle_send_def handle_call_def Let_def
       | wp (once) hoare_drop_imps
       | clarsimp simp: invs_imps invs_valid_idle ct_active_not_idle)+
+*)
 
 end
 

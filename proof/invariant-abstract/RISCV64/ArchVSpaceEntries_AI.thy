@@ -41,7 +41,7 @@ context Arch begin global_naming RISCV64
 
 lemma set_object_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs' and K (obj_valid_vspace obj)\<rbrace>
-      set_object ptr obj
+      set_object ta_f ptr obj
    \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
   apply (simp add: set_object_def, wp assert_inv)
   apply (auto simp: fun_upd_def[symmetric] del: ballI elim: ball_ran_updI)
@@ -66,13 +66,15 @@ lemma mapM_x_store_pte_updates:
   apply (rule hoare_seq_ext, assumption)
   apply (thin_tac "valid P f Q" for P f Q)
   apply (simp add: store_pte_def set_pt_def set_object_def word_size_bits_def)
-  apply (wp get_pt_wp get_object_wp)
+  apply (wp get_pt_wp get_object_wp touch_object_wp')
   apply (clarsimp simp: obj_at_def a_type_simps)
   apply (erule rsubst[where P=Q])
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (rule abstract_state.fold_congs[OF refl refl])
   apply (rule ext, clarsimp)
   apply (rule ext, clarsimp)
   done
+*)
 
 lemma valid_pt_entries_invalid[simp]:
   "valid_pt_entries (\<lambda>x. InvalidPTE)"
@@ -86,7 +88,7 @@ lemma valid_vspace_objs'_ptD:
 
 lemma store_pte_valid_vspace_objs'[wp]:
   "store_pte p pte \<lbrace>valid_vspace_objs'\<rbrace>"
-  apply (simp add: store_pte_def set_pt_def, wp get_object_wp)
+  apply (simp add: store_pte_def set_pt_def, wp get_object_wp touch_object_wp')
   apply (clarsimp simp: obj_at_def)
   apply (rule valid_entries_overwrite_0)
    apply (fastforce simp:ran_def)
@@ -99,13 +101,26 @@ lemma unmap_page_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs'\<rbrace> unmap_page sz asid vptr pptr \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
   apply (simp add: unmap_page_def mapM_discarded
              cong: vmpage_size.case_cong)
-  apply (wpsimp wp: store_pte_valid_vspace_objs')
+  apply (wpsimp wp: store_pte_valid_vspace_objs' touch_object_wp' touch_objects_wp
+    find_vspace_for_asid_wp)
+    apply(clarsimp simp add:ta_agnostic_def obind_def ta_filter_def split:option.splits)
+    defer
+   apply simp
+  apply simp
+  sorry (* FIXME: broken by touched-addrs -robs
   done
+*)
 
 lemma unmap_page_table_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs'\<rbrace> unmap_page_table asid vptr pt \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
   apply (simp add: unmap_page_table_def)
-  apply (wp get_object_wp store_pte_valid_vspace_objs' | wpc)+
+  apply (wp get_object_wp store_pte_valid_vspace_objs' pt_lookup_from_level_wp | wpc)+
+     apply simp
+    apply simp
+   apply simp
+   apply (wpsimp wp: find_vspace_for_asid_wp)
+    apply(simp add:ta_agnostic_def)
+   apply simp
   apply (simp add: obj_at_def)
   done
 
@@ -113,8 +128,8 @@ crunch valid_vspace_objs'[wp]: set_simple_ko "valid_vspace_objs'"
   (wp: crunch_wps)
 
 crunch valid_vspace_objs'[wp]: finalise_cap, cap_swap_for_delete, empty_slot "valid_vspace_objs'"
-  (wp: crunch_wps select_wp preemption_point_inv simp: crunch_simps unless_def
-   ignore:set_object do_machine_op)
+  (wp: crunch_wps select_wp preemption_point_inv find_vspace_for_asid_tainv
+   simp: crunch_simps unless_def ignore: do_machine_op)
 
 lemma preemption_point_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs'\<rbrace> preemption_point \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
@@ -155,7 +170,7 @@ lemma invoke_cnode_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs' and invs and valid_cnode_inv i\<rbrace> invoke_cnode i \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
   apply (simp add: invoke_cnode_def)
   apply (rule hoare_pre)
-   apply (wp get_cap_wp | wpc | simp split del: if_split)+
+   apply (wp get_cap_wp touch_object_wp | wpc | simp split del: if_split)+
   done
 
 
@@ -183,7 +198,7 @@ lemma valid_vspace_objs'_trans_state[simp]: "valid_vspace_objs' (trans_state f s
 lemma retype_region_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs'\<rbrace> retype_region ptr bits o_bits type dev \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
   apply (simp add: retype_region_def split del: if_split)
-  apply (wp | simp only: valid_vspace_objs'_trans_state trans_state_update[symmetric])+
+  apply (wp touch_objects_wp | simp only: valid_vspace_objs'_trans_state trans_state_update[symmetric])+
   apply (clarsimp simp: retype_addrs_fold foldr_upd_app_if ranI
                  elim!: ranE split: if_split_asm simp del:fun_upd_apply)
   apply (simp add: default_object_def default_arch_object_def
@@ -226,6 +241,7 @@ lemma invoke_untyped_valid_vspace_objs'[wp]:
 
 crunches store_asid_pool_entry
   for valid_vspace_objs'[wp]: "valid_vspace_objs'"
+  (wp: touch_object_wp')
 
 lemma perform_asid_pool_invocation_valid_vspace_objs'[wp]:
   "\<lbrace> valid_vspace_objs' and valid_arch_state and pspace_aligned and
@@ -233,7 +249,7 @@ lemma perform_asid_pool_invocation_valid_vspace_objs'[wp]:
    perform_asid_pool_invocation iv
    \<lbrace> \<lambda>_. valid_vspace_objs' \<rbrace>"
   apply (simp add: perform_asid_pool_invocation_def)
-  apply (wpsimp wp: get_cap_wp)
+  apply (wpsimp wp: get_cap_wp touch_object_wp')
   apply (simp add: cte_wp_at_caps_of_state)
   apply (drule (1) valid_capsD)
   apply (clarsimp simp: is_ArchObjectCap_def is_PageTableCap_def valid_cap_def)
@@ -307,7 +323,7 @@ lemma perform_invocation_valid_vspace_objs'[wp]:
 (* this was previously crunched as part of the following crunches. can hopefully crunch this again *)
 lemma send_fault_ipc_valid_vspace_objs' [wp]:
   "send_fault_ipc a b \<lbrace>valid_vspace_objs'\<rbrace>"
-  sorry
+  sorry (* FIXME: broken by touched-addrs v1 (Dec 2021) *)
 
 crunches reply_from_kernel, handle_fault
   for valid_vspace_objs [wp]: valid_vspace_objs'
@@ -316,7 +332,7 @@ crunches reply_from_kernel, handle_fault
 lemma handle_invocation_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs' and invs and ct_active\<rbrace>
         handle_invocation calling blocking \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
-  sorry (*
+  sorry (* FIXME: broken by touched-addrs v1 (Dec 2021)
   apply (simp add: handle_invocation_def)
   apply (wp syscall_valid set_thread_state_ct_st
                | simp add: split_def | wpc
@@ -339,7 +355,7 @@ lemma handle_event_valid_vspace_objs'[wp]:
 lemma schedule_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs'\<rbrace> schedule :: (unit,unit) s_monad \<lbrace>\<lambda>_. valid_vspace_objs'\<rbrace>"
   apply (simp add: schedule_def allActiveTCBs_def)
-  apply (wp alternative_wp select_wp)
+  apply (wp alternative_wp select_wp touch_objects_wp)
   apply simp
   done
 

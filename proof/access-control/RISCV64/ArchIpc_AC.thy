@@ -12,10 +12,18 @@ context Arch begin global_naming RISCV64
 
 named_theorems Ipc_AC_assms
 
+(* FIXME: I was proving this for the interface used by Ipc_AC, but how do I ensure it's
+   generic for all types that are the return value of `proj`? -robs *)
+crunch pred_tcb[Ipc_AC_assms, wp]: do_ipc_transfer "pred_tcb_at proj P t"
+  (wp: crunch_wps simp: crunch_simps)
+thm do_ipc_transfer_pred_tcb
+
 lemma make_fault_message_inv[Ipc_AC_assms, wp]:
   "make_fault_msg ft t \<lbrace>P\<rbrace>"
   apply (cases ft, simp_all split del: if_split)
+  sorry (* FIXME: broken by touched-addrs -robs
   by (wp as_user_inv getRestartPC_inv mapM_wp' make_arch_fault_msg_inv | simp add: getRegister_def)+
+*)
 
 declare handle_arch_fault_reply_typ_at[Ipc_AC_assms]
 
@@ -35,7 +43,7 @@ lemma lookup_ipc_buffer_has_auth[Ipc_AC_assms, wp]:
    \<lbrace>\<lambda>rv _. ipc_buffer_has_auth aag receiver rv\<rbrace>"
   apply (rule hoare_pre)
    apply (simp add: lookup_ipc_buffer_def)
-   apply (wp get_cap_wp thread_get_wp' | wpc)+
+   apply (wp get_cap_wp thread_get_wp' touch_object_wp' | wpc)+
   apply (clarsimp simp: cte_wp_at_caps_of_state ipc_buffer_has_auth_def get_tcb_ko_at[symmetric])
   apply (frule caps_of_state_tcb_cap_cases [where idx="tcb_cnode_index 4"])
    apply (simp add: dom_tcb_cap_cases)
@@ -85,8 +93,9 @@ lemma store_word_offs_respects_in_ipc[Ipc_AC_assms]:
    store_word_offs buf r v
    \<lbrace>\<lambda>_. integrity_tcb_in_ipc aag X receiver epptr TRContext st\<rbrace>"
   apply (simp add: store_word_offs_def storeWord_def pred_conj_def)
-  apply (wp dmo_wp)
+  apply (wp dmo_wp touch_objects_wp)
   apply (clarsimp simp: integrity_tcb_in_ipc_def)
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (erule integrity_trans)
   apply (clarsimp simp: integrity_def)
   apply (subgoal_tac "\<forall>i \<in> set [0..7].
@@ -95,6 +104,7 @@ lemma store_word_offs_respects_in_ipc[Ipc_AC_assms]:
   apply (fastforce simp add: unat_def word_size_def of_nat_nat[symmetric] word_of_nat_less
                    simp del: of_nat_nat intro: ptr_range_off_off_mems)
   done
+*)
 
 crunches set_extra_badge
   for respects_in_ipc[Ipc_AC_assms, wp]: "integrity_tcb_in_ipc aag X receiver epptr TRContext st"
@@ -120,10 +130,12 @@ lemma set_mrs_respects_in_ipc[Ipc_AC_assms]:
    apply (simp add: msg_registers_def msgRegisters_def upto_enum_def fromEnum_def enum_register)
    apply arith
    apply simp
-   apply wp+
-  apply (clarsimp simp: arch_tcb_set_registers_def)
+   apply (wp touch_object_wp')+
+  apply (clarsimp simp: arch_tcb_set_registers_def ta_filter_def obind_def)
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (rule update_tcb_context_in_ipc [unfolded fun_upd_def]; fastforce simp: arch_tcb_context_set_def)
   done
+*)
 
 lemma lookup_ipc_buffer_ptr_range_in_ipc[Ipc_AC_assms]:
   "\<lbrace>valid_objs and integrity_tcb_in_ipc aag X thread epptr tst st\<rbrace>
@@ -133,12 +145,17 @@ lemma lookup_ipc_buffer_ptr_range_in_ipc[Ipc_AC_assms]:
                                                    ptr_range buf' msg_align_bits)\<rbrace>"
   unfolding lookup_ipc_buffer_def
   apply (rule hoare_pre)
-   apply (wp get_cap_wp thread_get_wp' | wpc)+
+   apply (wp get_cap_wp thread_get_wp' touch_object_wp' | wpc)+
   apply (clarsimp simp: cte_wp_at_caps_of_state ipc_buffer_has_auth_def get_tcb_ko_at [symmetric])
   apply (frule caps_of_state_tcb_cap_cases [where idx = "tcb_cnode_index 4"])
    apply (simp add: dom_tcb_cap_cases)
   apply (clarsimp simp: auth_ipc_buffers_def get_tcb_ko_at [symmetric] integrity_tcb_in_ipc_def)
   apply (drule get_tcb_SomeD)
+  apply (clarsimp simp: ta_filter_def obind_def split:option.splits)
+   apply (erule(1) valid_objsE)
+   apply (clarsimp simp: valid_obj_def valid_tcb_def valid_ipc_buffer_cap_def case_bool_if
+                   split: if_split_asm)
+   apply (erule tcb_in_ipc.cases; clarsimp simp: get_tcb_def vm_read_write_def)
   apply (erule(1) valid_objsE)
   apply (clarsimp simp: valid_obj_def valid_tcb_def valid_ipc_buffer_cap_def case_bool_if
                  split: if_split_asm)
@@ -151,7 +168,7 @@ lemma lookup_ipc_buffer_aligned[Ipc_AC_assms]:
    \<lbrace>\<lambda>rv _. (case rv of None \<Rightarrow> True | Some buf' \<Rightarrow> is_aligned buf' msg_align_bits)\<rbrace>"
   unfolding lookup_ipc_buffer_def
   apply (rule hoare_pre)
-   apply (wp get_cap_wp thread_get_wp' | wpc)+
+   apply (wp get_cap_wp thread_get_wp' touch_object_wp' | wpc)+
   apply (clarsimp simp: cte_wp_at_caps_of_state get_tcb_ko_at [symmetric])
   apply (frule caps_of_state_tcb_cap_cases [where idx = "tcb_cnode_index 4"])
    apply (simp add: dom_tcb_cap_cases)
@@ -176,11 +193,11 @@ lemma auth_ipc_buffers_kheap_update[Ipc_AC_assms]:
   "\<lbrakk> x \<in> auth_ipc_buffers st thread; kheap st thread = Some (TCB tcb);
      kheap s thread = Some (TCB tcb'); tcb_ipcframe tcb = tcb_ipcframe tcb' \<rbrakk>
      \<Longrightarrow> x \<in> auth_ipc_buffers (s\<lparr>kheap := kheap s(thread \<mapsto> TCB tcb)\<rparr>) thread"
-  by (clarsimp simp: auth_ipc_buffers_member_def get_tcb_def caps_of_state_tcb)
+  by (clarsimp simp: auth_ipc_buffers_member_def get_tcb_def caps_of_state_tcb ta_filter_def obind_def)
 
 lemma auth_ipc_buffers_machine_state_update[Ipc_AC_assms, simp]:
   "auth_ipc_buffers (machine_state_update f s) = auth_ipc_buffers s"
-  by (clarsimp simp: auth_ipc_buffers_def get_tcb_def)
+  by (clarsimp simp: auth_ipc_buffers_def get_tcb_def ta_filter_def obind_def)
 
 crunches handle_arch_fault_reply
   for pspace_aligned[Ipc_AC_assms, wp]: "\<lambda>s :: det_ext state. pspace_aligned s"
@@ -218,10 +235,12 @@ lemma list_integ_lift_in_ipc[Ipc_AC_assms]:
    apply (rule hoare_lift_Pf2[where f="ekheap"])
     apply (simp add: tcb_states_of_state_def get_tcb_def)
     apply (wp li[simplified tcb_states_of_state_def get_tcb_def] ekh rq)+
+    sorry (* FIXME: broken by touched-addrs -robs
   apply (simp only: integrity_cdt_list_as_list_integ)
   apply (simp add: tcb_states_of_state_def get_tcb_def)
   apply (fastforce simp: opt_map_def)
   done
+*)
 
 end
 

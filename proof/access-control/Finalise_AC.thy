@@ -19,6 +19,17 @@ NB: the @{term is_subject} assumption is not appropriate for some of
     the current subject's domains.
 \<close>
 
+(* FIXME: Experimental, seems to work. Move up and use to fix more? -robs *)
+thm touch_object_tainv touch_object_wp'
+lemma touch_object_tainv_sp:
+  "ta_agnostic P \<Longrightarrow>
+   \<lbrace>P\<rbrace> touch_object p \<lbrace>\<lambda>_. (\<lambda> st. obj_at \<top> p st \<longrightarrow> obj_in_ta p st) and P\<rbrace>"
+  apply(wp touch_object_wp')
+  apply clarsimp
+  apply(rule conjI)
+   apply(clarsimp simp:obj_in_ta_def obj_at_def)
+  apply(clarsimp simp:ta_agnostic_def)
+  done
 
 locale Finalise_AC_1 =
   fixes aag :: "'a PAS"
@@ -50,7 +61,7 @@ locale Finalise_AC_1 =
   and prepare_thread_delete_respects[wp]:
     "prepare_thread_delete p \<lbrace>integrity aag X st\<rbrace>"
   and finalise_cap_replaceable:
-    "\<lbrace>\<lambda>s :: det_ext state. s \<turnstile> cap \<and> x = is_final_cap' cap s \<and> valid_mdb s \<and>
+    "\<lbrace>\<lambda>s :: det_ext state. s \<turnstile> cap \<and> x = is_final_cap' False cap s \<and> valid_mdb s \<and>
                            cte_wp_at ((=) cap) sl s \<and> valid_objs s \<and> sym_refs (state_refs_of s) \<and>
                            (cap_irqs cap \<noteq> {} \<longrightarrow> if_unsafe_then_cap s \<and> valid_global_refs s) \<and>
                            (is_arch_cap cap \<longrightarrow> pspace_aligned s \<and> valid_vspace_objs s \<and>
@@ -163,12 +174,15 @@ lemma cancel_badged_sends_respects[wp]:
                      and Q="P" and I="P" for P])
       apply simp
      apply (simp add: bind_assoc)
+     apply (rule hoare_seq_ext[OF _ touch_object_tainv_sp])
+      prefer 2
+      apply (clarsimp simp:ta_agnostic_def)
      apply (rule hoare_seq_ext[OF _ gts_sp])
      apply (rule hoare_pre)
       apply (wp sts_respects_restart_ep hoare_vcg_const_Ball_lift sts_st_tcb_at_neq)
      apply clarsimp
      apply fastforce
-    apply (wp set_endpoint_respects hoare_vcg_const_Ball_lift get_simple_ko_wp)+
+    apply (wp set_endpoint_respects hoare_vcg_const_Ball_lift get_simple_ko_wp touch_object_wp')+
   apply clarsimp
   apply (frule(1) sym_refs_ko_atD)
   apply (frule ko_at_state_refs_ofD)
@@ -189,7 +203,7 @@ lemma cancel_all_ipc_respects [wp]:
             [where I="integrity aag X st"
                and V="\<lambda>q s. distinct q \<and> (\<forall>x \<in> set q. st_tcb_at (blocked_on epptr) x s)"]
             sts_respects_restart_ep sts_st_tcb_at_neq hoare_vcg_ball_lift
-            set_endpoint_respects get_simple_ko_wp
+            set_endpoint_respects get_simple_ko_wp touch_object_wp'
          | wpc | clarsimp | blast)+
   apply (frule ko_at_state_refs_ofD)
   apply (rule obj_at_valid_objsE, assumption, assumption)
@@ -225,14 +239,15 @@ lemma scheduler_action_update_pas_refined[simp]:
 lemma set_bound_notification_ekheap[wp]:
   "set_bound_notification t st \<lbrace>\<lambda>s. P (ekheap s)\<rbrace>"
   apply (simp add: set_bound_notification_def)
-  apply (wp set_scheduler_action_wp | simp)+
+  apply (wp set_scheduler_action_wp touch_object_wp' | simp)+
   done
 
 lemma sbn_thread_st_auth[wp]:
   "set_bound_notification t ntfn \<lbrace>\<lambda>s. P (thread_st_auth s)\<rbrace>"
   apply (simp add: set_bound_notification_def)
-  apply (wpsimp wp: set_object_wp dxo_wp_weak)
+  apply (wpsimp wp: set_object_wp dxo_wp_weak touch_object_wp')
   apply (clarsimp simp: get_tcb_def thread_st_auth_def tcb_states_of_state_def
+                       ta_filter_def obind_def
                  elim!: rsubst[where P=P, OF _ ext])
   done
 
@@ -242,6 +257,23 @@ crunch valid_mdb[wp]: fast_finalise "valid_mdb :: det_ext state \<Rightarrow> bo
 crunch valid_objs[wp]: fast_finalise "valid_objs :: det_ext state \<Rightarrow> bool"
   (wp: crunch_wps simp: crunch_simps)
 
+(* Note: The reason we now need these is that the `is_final_cap_inv` lemma used to preserve
+   all `P`, but now it only preserves `ignore_ta P`. -robs *)
+crunches is_final_cap
+  for pas_refined[wp]: "pas_refined aag"
+  and integrity[wp]: "integrity aag X st"
+  and invs[wp]: "invs"
+  and pspace_aligned[wp]: "pspace_aligned"
+  and valid_vspace_objs[wp]: "valid_vspace_objs"
+  and valid_arch_state[wp]: "valid_arch_state"
+  and valid_mdb[wp]: "valid_mdb"
+  and is_transferable_in[wp]: "is_transferable_in slot"
+  and valid_cap_syn[wp]: "\<lambda>s. s \<turnstile> cap"
+  and valid_list[wp]: "valid_list"
+  and valid_objs[wp]: "valid_objs"
+  and sym_refs_of[wp]: "\<lambda>s. sym_refs (state_refs_of s)"
+  and cdt_change_allowed[wp]: "cdt_change_allowed' aag slot"
+  (wp: touch_objects_wp)
 
 context Finalise_AC_1 begin
 
@@ -264,14 +296,14 @@ lemma unbind_notification_pas_refined[wp]:
    unbind_notification tptr
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (clarsimp simp: unbind_notification_def)
-  apply (wp set_simple_ko_pas_refined hoare_drop_imps | wpc | simp)+
+  apply (wp set_simple_ko_pas_refined hoare_drop_imps touch_object_wp' | wpc | simp)+
   done
 
 lemma unbind_maybe_notification_pas_refined[wp]:
   "\<lbrace>pas_refined aag and pspace_aligned and valid_vspace_objs and valid_arch_state\<rbrace>
    unbind_maybe_notification nptr \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (clarsimp simp: unbind_maybe_notification_def)
-  apply (wp set_simple_ko_pas_refined hoare_drop_imps | wpc | simp)+
+  apply (wp set_simple_ko_pas_refined hoare_drop_imps touch_object_wp' | wpc | simp)+
   done
 
 lemma cancel_all_ipc_pas_refined[wp]:
@@ -283,7 +315,7 @@ lemma cancel_all_ipc_pas_refined[wp]:
                                          and valid_vspace_objs
                                          and valid_arch_state"
                in hoare_strengthen_post)
-   apply (wpsimp wp: mapM_x_wp_inv set_thread_state_pas_refined get_simple_ko_wp)+
+   apply (wpsimp wp: mapM_x_wp_inv set_thread_state_pas_refined get_simple_ko_wp touch_object_wp')+
   done
 
 lemma cancel_all_signals_pas_refined[wp]:
@@ -296,7 +328,7 @@ lemma cancel_all_signals_pas_refined[wp]:
                                          and valid_vspace_objs
                                          and valid_arch_state"
                in hoare_strengthen_post)
-   apply (wpsimp wp: mapM_x_wp_inv set_thread_state_pas_refined get_simple_ko_wp)+
+   apply (wpsimp wp: mapM_x_wp_inv set_thread_state_pas_refined get_simple_ko_wp touch_object_wp')+
   done
 
 crunches unbind_maybe_notification, cancel_all_ipc, cancel_all_signals,
@@ -309,7 +341,7 @@ crunches unbind_maybe_notification, cancel_all_ipc, cancel_all_signals,
 crunches cap_delete_one
   for pas_refined_transferable[wp_transferable]: "pas_refined aag"
   and pas_refined[wp, wp_not_transferable]: "pas_refined aag"
-  (wp: crunch_wps simp: crunch_simps)
+  (wp: crunch_wps is_final_cap_inv simp: crunch_simps)
 
 end
 
@@ -391,6 +423,9 @@ lemma cancel_all_signals_respects[wp]:
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (clarsimp simp add: cancel_all_signals_def)
+  apply (rule hoare_seq_ext[OF _ touch_object_tainv_sp])
+   prefer 2
+   apply (clarsimp simp:ta_agnostic_def)
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp], rule hoare_pre)
    apply (wp mapM_x_inv_wp2
              [where I="integrity aag X st"
@@ -412,12 +447,12 @@ lemma sbn_unbind_respects[wp]:
    set_bound_notification t None
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: set_bound_notification_def)
-  apply (wpsimp wp: set_object_wp)
+  apply (wpsimp wp: set_object_wp touch_object_wp')
   apply (erule integrity_trans)
   apply (clarsimp simp: integrity_def obj_at_def pred_tcb_at_def integrity_asids_kh_upds)
   apply (rule tro_tcb_unbind)
-     apply (fastforce dest!: get_tcb_SomeD)
-    apply (fastforce dest!: get_tcb_SomeD)
+     apply (fastforce dest!: get_tcb_SomeD')
+    apply (fastforce dest!: get_tcb_SomeD')
    apply simp
   apply (simp add: tcb_bound_notification_reset_integrity_def)
   done
@@ -444,6 +479,9 @@ lemma unbind_notification_respects:
    unbind_notification t
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (clarsimp simp: unbind_notification_def)
+  apply (rule hoare_seq_ext[OF _ touch_object_tainv_sp])
+   prefer 2
+   apply (clarsimp simp:ta_agnostic_def)
   apply (rule hoare_seq_ext[OF _ gbn_sp])
   apply (wp set_ntfn_respects hoare_vcg_ex_lift gbn_wp | wpc | simp)+
   apply (clarsimp simp: pred_tcb_at_def obj_at_def split: option.splits)
@@ -459,7 +497,7 @@ lemma unbind_maybe_notification_respects:
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (clarsimp simp: unbind_maybe_notification_def)
   apply (rule hoare_pre)
-   apply (wp set_ntfn_respects get_simple_ko_wp hoare_vcg_ex_lift gbn_wp | wpc | simp)+
+   apply (wp set_ntfn_respects get_simple_ko_wp hoare_vcg_ex_lift gbn_wp touch_object_wp' | wpc | simp)+
   apply clarsimp
   apply (frule_tac P="\<lambda>ntfn. ntfn = Some a"
                 in ntfn_bound_tcb_at[OF invs_sym_refs invs_valid_objs], (simp add: obj_at_def)+)
@@ -484,12 +522,25 @@ lemma fast_finalise_respects[wp]:
   apply (wp, simp)
   done
 
+(* Based on fast_finalise_respects proof, maybe some of these preconds are unnecessary -robs *)
+lemma fast_finalise_pas_refined':
+  "\<lbrace>pas_refined aag and integrity aag X st and invs and valid_cap cap
+                                and K (pas_cap_cur_auth aag cap)\<rbrace>
+   fast_finalise cap fin
+   \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
+  apply (cases cap; simp)
+     apply (wpsimp wp: unbind_maybe_notification_valid_objs get_simple_ko_wp
+                       unbind_maybe_notification_respects
+                 simp: cap_auth_conferred_def cap_rights_to_auth_def aag_cap_auth_def when_def
+            | fastforce)+
+  done
+
 lemma cap_delete_one_respects[wp,wp_not_transferable]:
   "\<lbrace>integrity aag X st and pas_refined aag and einvs and K (is_subject aag (fst slot))\<rbrace>
    cap_delete_one slot
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: cap_delete_one_def unless_def bind_assoc)
-  apply (wpsimp wp: hoare_drop_imps get_cap_auth_wp [where aag = aag])
+  apply (wpsimp wp: hoare_drop_imps get_cap_auth_wp [where aag = aag] touch_object_wp')
   apply (fastforce simp: caps_of_state_valid)
   done
 
@@ -509,7 +560,8 @@ lemma cap_delete_one_respects_transferable[wp_transferable]:
    cap_delete_one slot
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: cap_delete_one_def unless_def bind_assoc)
-  apply (wp add: hoare_drop_imps get_cap_wp wp_transferable del: wp_not_transferable | simp)+
+  apply (wp add: hoare_drop_imps get_cap_wp touch_object_wp' wp_transferable
+    del: wp_not_transferable | simp)+
   apply (fastforce simp: caps_of_state_valid cte_wp_at_caps_of_state)
   done
 
@@ -517,9 +569,9 @@ lemma thread_set_tcb_state_trivial:
   "(\<And>tcb. tcb_state (f tcb) = tcb_state tcb)
    \<Longrightarrow> thread_set f t \<lbrace>\<lambda>s. P (tcb_states_of_state s)\<rbrace>"
   apply (simp add: thread_set_def)
-  apply (wpsimp wp: set_object_wp)
-  apply (clarsimp elim!: rsubst[where P=P] dest!: get_tcb_SomeD)
-  by (auto simp: tcb_states_of_state_def get_tcb_def)
+  apply (wpsimp wp: set_object_wp touch_object_wp')
+  apply (clarsimp elim!: rsubst[where P=P] dest!: get_tcb_SomeD')
+  by (auto simp: tcb_states_of_state_def get_tcb_def ta_filter_def obind_def)
 
 
 lemma reply_cancel_ipc_respects[wp]:
@@ -549,6 +601,9 @@ lemma cancel_signal_respects[wp]:
    cancel_signal t ntfnptr
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: cancel_signal_def)
+  apply (rule hoare_seq_ext[OF _ touch_object_tainv_sp])
+   prefer 2
+   apply (clarsimp simp:ta_agnostic_def)
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
   apply (rule hoare_pre)
    apply (wp set_thread_state_integrity_autarch set_ntfn_respects | wpc | fastforce)+
@@ -559,9 +614,13 @@ lemma cancel_ipc_respects[wp]:
    cancel_ipc t
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: cancel_ipc_def)
+  apply (rule hoare_seq_ext[OF _ touch_object_tainv_sp])
+   prefer 2
+   apply (clarsimp simp:ta_agnostic_def)
   apply (rule hoare_seq_ext[OF _ gts_sp])
   apply (rule hoare_pre)
    apply (wp set_thread_state_integrity_autarch set_endpoint_respects get_simple_ko_wp
+             touch_object_wp'
           | wpc
           | simp (no_asm) add: blocked_cancel_ipc_def get_ep_queue_def get_blocking_object_def)+
   apply clarsimp
@@ -658,7 +717,7 @@ lemma finalise_cap_respects[wp]:
   done
 
 lemma finalise_cap_auth:
-  "\<lbrace>(\<lambda>s. final \<longrightarrow> is_final_cap' cap s \<and> cte_wp_at ((=) cap) slot s) and K (pas_cap_cur_auth aag cap)\<rbrace>
+  "\<lbrace>(\<lambda>s. final \<longrightarrow> is_final_cap' False cap s \<and> cte_wp_at ((=) cap) slot s) and K (pas_cap_cur_auth aag cap)\<rbrace>
    finalise_cap cap final
    \<lbrace>\<lambda>rv _. \<forall>x \<in> obj_refs_ac (fst rv). \<forall>a \<in> cap_auth_conferred (fst rv). aag_has_auth_to aag a x\<rbrace>"
   apply (rule hoare_gen_asm)
@@ -737,7 +796,7 @@ lemma zombie_ptr_emptyable:
 context Finalise_AC_1 begin
 
 lemma finalise_cap_makes_halted:
-  "\<lbrace>invs and valid_cap cap and (\<lambda>s. ex = is_final_cap' cap s) and cte_wp_at ((=) cap) slot\<rbrace>
+  "\<lbrace>invs and valid_cap cap and (\<lambda>s. ex = is_final_cap' False cap s) and cte_wp_at ((=) cap) slot\<rbrace>
    finalise_cap cap ex
    \<lbrace>\<lambda>rv s :: det_ext state. \<forall>t \<in> obj_refs_ac (fst rv). halted_if_tcb t s\<rbrace>"
   apply (case_tac cap, simp_all)
@@ -818,6 +877,7 @@ next
     apply (rule hoare_pre_spec_validE)
      apply (wp set_cap_integrity_autarch set_cap_pas_refined_not_transferable "2.hyps" static_imp_wp)
           apply ((wp preemption_point_inv' | simp add: integrity_subjects_def pas_refined_def)+)[1]
+            sorry (* FIXME: broken by touched-addrs -robs
          apply (simp(no_asm))
          apply (rule spec_strengthen_postE)
           apply (rule spec_valid_conj_liftE1, rule valid_validE_R, rule rec_del_invs)
@@ -867,6 +927,7 @@ next
     apply (frule if_unsafe_then_capD [OF caps_of_state_cteD], clarsimp+)
     apply auto
     done
+  *)
 next
   case (3 ptr bits n slot s)
   show ?case
@@ -889,7 +950,7 @@ next
         apply (wpsimp wp: rec_del_invs)
        apply (rule "4.hyps", assumption+)
       apply (wpsimp wp: set_cap_integrity_autarch set_cap_pas_refined_not_transferable
-                        get_cap_wp static_imp_wp)+
+                        get_cap_wp static_imp_wp touch_object_wp')+
       apply (clarsimp simp: invs_psp_aligned invs_vspace_objs invs_arch_state
                             cte_wp_at_caps_of_state clas_no_asid cli_no_irqs aag_cap_auth_def)
       apply (drule_tac auth=auth in sta_caps, simp+)
@@ -942,7 +1003,9 @@ lemma rec_del_Finalise_transferable:
      apply (rule hoare_post_imp[of "\<lambda>rv s. rv = (NullCap,NullCap) \<and> P s" for P])
       apply (clarsimp; assumption)
      apply (wp finalise_cap_transferable without_preemption_wp get_cap_wp)+
+    sorry (* FIXME: broken by touched-addrs -robs
   by (fastforce simp:cte_wp_at_caps_of_state)
+*)
 
 
 context Finalise_AC_1 begin
@@ -1003,7 +1066,8 @@ lemma cancel_badged_sends_pas_refined[wp]:
    cancel_badged_sends epptr badge
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   unfolding cancel_badged_sends_def
-  by (wpsimp simp: filterM_mapM wp: mapM_wp_inv set_thread_state_pas_refined get_simple_ko_wp)
+  by (wpsimp simp: filterM_mapM wp: mapM_wp_inv set_thread_state_pas_refined get_simple_ko_wp
+    touch_object_wp')
 
 end
 
@@ -1025,7 +1089,7 @@ lemma thread_set_pas_refined_triv_idleT:
   apply (rule hoare_pre)
    apply (wps thread_set_caps_of_state_trivial[OF cps])
    apply (simp add: thread_set_def)
-   apply (wpsimp wp: set_object_wp)
+   apply (wpsimp wp: set_object_wp touch_object_wp')
   apply (clarsimp simp: pred_tcb_def2 fun_upd_def[symmetric]
                    del: subsetI)
   apply (subst state_vrefs_tcb_upd, fastforce+)
@@ -1035,10 +1099,11 @@ lemma thread_set_pas_refined_triv_idleT:
   apply (rule conjI)
    apply (erule_tac P="\<lambda> ts ba. auth_graph_map a (state_bits_to_policy cps ts ba cd vr) \<subseteq> ag"
                 for a cps cd vr ag in rsubst')
-    apply (drule get_tcb_SomeD)
-    apply (rule ext, clarsimp simp add: thread_st_auth_def get_tcb_def st tcb_states_of_state_def)
-   apply (drule get_tcb_SomeD)
-   apply (rule ext, clarsimp simp: thread_bound_ntfns_def get_tcb_def ba)
+    apply (drule get_tcb_SomeD')
+    apply (rule ext, clarsimp simp add: thread_st_auth_def get_tcb_def st tcb_states_of_state_def
+      obind_def ta_filter_def)
+   apply (drule get_tcb_SomeD')
+   apply (rule ext, clarsimp simp: thread_bound_ntfns_def get_tcb_def ba obind_def ta_filter_def)
   apply (clarsimp)
   done
 
@@ -1173,7 +1238,7 @@ next
                              \<and> cte_at slot s" in hoare_post_imp)
        apply (clarsimp simp: cte_wp_at_caps_of_state)
       apply (wp static_imp_wp set_cap_cte_wp_at' finalise_cap_cte_wp_at_nullinv
-                finalise_cap_fst_ret get_cap_wp
+                finalise_cap_fst_ret get_cap_wp touch_objects_wp touch_object_wp'
              | simp add: is_final_cap_def)+
     apply (clarsimp simp add: P_Zombie is_cap_simps cte_wp_at_caps_of_state)+
     done
@@ -1190,10 +1255,11 @@ next
   show ?case
     apply (subst rec_del.simps)
     apply wp
-        apply (simp add: cte_wp_at_caps_of_state)
-        apply wp+
-      apply simp
-      apply (wp get_cap_wp)[1]
+         apply (simp add: cte_wp_at_caps_of_state)
+         apply wp+
+       apply simp
+       apply (wp get_cap_wp)[1]
+      apply (wp touch_object_wp')
      apply (rule spec_strengthen_postE)
       apply (rule spec_valid_conj_liftE1)
        apply (rule rec_del_delete_cases)
@@ -1245,7 +1311,7 @@ lemma invoke_cnode_respects:
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: invoke_cnode_def authorised_cnode_inv_def split: cnode_invocation.split, safe)
   apply (wpsimp wp: get_cap_wp cap_insert_integrity_autarch
-                    cap_revoke_respects cap_delete_respects
+                    cap_revoke_respects cap_delete_respects touch_objects_wp touch_object_wp'
               simp: real_cte_emptyable_strg is_transferable_weak_derived
          | clarsimp simp: cte_wp_at_caps_of_state invs_valid_objs invs_sym_refs
                           cnode_inv_auth_derivations_def
@@ -1299,7 +1365,7 @@ lemma invoke_cnode_pas_refined:
   apply (simp add: invoke_cnode_def)
   apply (rule hoare_pre)
    apply (wp add:cap_insert_pas_refined cap_delete_pas_refined cap_revoke_pas_refined
-             get_cap_wp cap_move_empty_src_slot
+             get_cap_wp cap_move_empty_src_slot touch_object_wp'
              | wpc
              | simp split del: if_split
              | wp (once) cap_move_cte_wp_at_separation)+

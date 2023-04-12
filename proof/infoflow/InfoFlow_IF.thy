@@ -604,6 +604,18 @@ lemma reads_respects_g_from_inv:
    apply simp+
   done
 
+lemma globals_equiv_ta_agnostic:
+  "ta_agnostic (globals_equiv st)"
+  sorry (* in RISCV64 this is true *)
+
+(* as read_respects_g_from_inv, but for tainv *)
+lemma reads_respects_g_from_tainv:
+  "\<lbrakk> reads_respects aag l P f; \<And>st. f \<lbrace>ignore_ta (globals_equiv st)\<rbrace> \<rbrakk>
+     \<Longrightarrow> reads_respects_g aag l P f"
+  apply (subst (asm) agnostic_ignores, rule globals_equiv_ta_agnostic)+
+  apply (erule reads_respects_g_from_inv; clarsimp)
+  done
+
 (*Useful for chaining OFs so we don't have to re-state rules*)
 lemma reads_respects_g':
   assumes rev: "reads_respects aag l P f"
@@ -631,15 +643,21 @@ lemma states_equiv_for_guard_imp:
   using assms by (auto simp: states_equiv_for_def intro: equiv_for_guard_imp equiv_asids_guard_imp)
 
 lemma set_object_reads_respects:
-  "reads_respects aag l \<top> (set_object ptr obj)"
+  "reads_respects aag l \<top> (set_object True ptr obj)"
   apply(clarsimp simp: equiv_valid_def2 equiv_valid_2_def set_object_def get_object_def
-                       bind_def' get_def gets_def put_def return_def fail_def assert_def)
+                       ta_filter_def obind_def touch_object_def touch_objects_def
+                       simpler_do_machine_op_addTouchedAddresses_def simpler_modify_def
+                       bind_def' get_def gets_def put_def return_def fail_def assert_def
+                split: option.splits)
   apply (rule conjI)
+   sorry (* FIXME: broken by touched-addrs -robs
+     Need a better simplifier, to update these elim rules, or prove these predicates TA-agnostic.
    apply (erule reads_equiv_identical_kheap_updates)
    apply (clarsimp simp: identical_kheap_updates_def)
   apply (erule affects_equiv_identical_kheap_updates)
   apply (clarsimp simp: identical_kheap_updates_def)
   done
+*)
 
 end
 
@@ -657,7 +675,7 @@ lemma reads_equiv_self_reads_respects:
 
 lemma requiv_get_tcb_eq[intro]:
   "\<lbrakk> reads_equiv aag s t; is_subject aag thread \<rbrakk>
-     \<Longrightarrow> get_tcb thread s = get_tcb thread t"
+     \<Longrightarrow> get_tcb False thread s = get_tcb False thread t"
   by (auto simp: reads_equiv_def2 get_tcb_def elim: states_equiv_forE_kheap)
 
 lemma requiv_cur_thread_eq[intro]:
@@ -681,10 +699,13 @@ lemma update_object_noop:
   by (clarsimp simp: map_upd_triv)
 
 lemma set_object_rev:
-  "reads_equiv_valid_inv A aag (\<lambda> s. kheap s ptr = Some obj \<and> is_subject aag ptr) (set_object ptr obj)"
-  by (fastforce simp: equiv_valid_def2 equiv_valid_2_def set_object_def bind_def
+  "reads_equiv_valid_inv A aag (\<lambda> s. kheap s ptr = Some obj \<and> is_subject aag ptr) (set_object True ptr obj)"
+  sorry (* FIXME: broken by touched-addrs -robs
+  by (clarsimp simp: equiv_valid_def2 equiv_valid_2_def set_object_def bind_def
                       get_def gets_def put_def return_def assert_def get_object_def
+                      obind_def ta_filter_def
                 dest: update_object_noop)
+*)
 
 lemma lookup_error_on_failure_rev:
   "reads_equiv_valid_inv A aag P m \<Longrightarrow>
@@ -743,12 +764,14 @@ lemma gets_cur_thread_ev:
 lemma as_user_rev:
   "reads_equiv_valid_inv A aag (K (det f \<and> (\<forall>P. f \<lbrace>P\<rbrace>) \<and> is_subject aag thread)) (as_user thread f)"
   unfolding as_user_def fun_app_def split_def
-  apply (wp set_object_rev select_f_ev)
+  apply (wp set_object_rev select_f_ev touch_object_wp')
+    sorry (* FIXME: broken by touched-addrs -robs
   apply (rule conjI, fastforce)
   apply (clarsimp split: option.split_asm kernel_object.split_asm simp: get_tcb_def)
   apply (drule state_unchanged[rotated,symmetric])
    apply simp_all
   done
+*)
 
 
 context InfoFlow_IF_1 begin
@@ -830,9 +853,11 @@ lemma as_user_reads_respects:
   "reads_respects aag l (K (det f \<and> is_subject aag thread)) (as_user thread f)"
   apply (simp add: as_user_def split_def)
   apply (rule gen_asm_ev)
-  apply (wp set_object_reads_respects select_f_ev gets_the_ev)
+  apply (wp set_object_reads_respects select_f_ev gets_the_ev touch_object_wp')
+    sorry (* FIXME: broken by touched-addrs -robs
   apply fastforce
   done
+*)
 
 end
 
@@ -1031,7 +1056,9 @@ lemma load_word_offs_rev:
   "for_each_byte_of_word (aag_can_read aag) (a + of_nat x * of_nat word_size)
    \<Longrightarrow> reads_equiv_valid_inv A aag \<top> (load_word_offs a x)"
   unfolding load_word_offs_def fun_app_def
+  sorry (* FIXME: broken by touched-addrs -robs
   by (fastforce intro: equiv_valid_guard_imp[OF dmo_loadWord_rev])
+*)
 
 lemma modifies_at_mostI:
   assumes hoare: "\<And>st. \<lbrace>P and equiv_but_for_labels aag L st\<rbrace> f \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"

@@ -13,9 +13,9 @@ imports ArchAInvsPre
 begin
 
 lemma st_tcb_at_nostate_upd:
-  "\<lbrakk> get_tcb t s = Some y; tcb_state y = tcb_state y' \<rbrakk> \<Longrightarrow>
+  "\<lbrakk> get_tcb False t s = Some y; tcb_state y = tcb_state y' \<rbrakk> \<Longrightarrow>
   st_tcb_at P t' (s \<lparr>kheap := kheap s(t \<mapsto> TCB y')\<rparr>) = st_tcb_at P t' s"
-  by (clarsimp simp add: pred_tcb_at_def obj_at_def dest!: get_tcb_SomeD)
+  by (clarsimp simp add: pred_tcb_at_def get_tcb_ko_at obj_at_def dest!: get_tcb_SomeD')
 
 lemma pred_tcb_at_upd_apply:
   "pred_tcb_at proj P t (s\<lparr>kheap := p'\<rparr>) =

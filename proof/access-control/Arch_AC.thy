@@ -72,8 +72,8 @@ lemma as_user_state_vrefs:
    as_user t f
    \<lbrace>\<lambda>_ s :: det_ext state. P (state_vrefs s)\<rbrace>"
   apply (simp add: as_user_def)
-  apply (wpsimp wp: set_object_wp)
-  apply (clarsimp simp: state_vrefs_tcb_upd obj_at_def is_obj_defs
+  apply (wpsimp wp: set_object_wp touch_object_wp')
+  apply (clarsimp simp: state_vrefs_tcb_upd obj_at_def is_obj_defs ta_filter_def
                  elim!: rsubst[where P=P, OF _ ext]
                  dest!: get_tcb_SomeD)
   done
@@ -97,25 +97,46 @@ crunches do_machine_op
   for thread_st_auth[wp]: "\<lambda>s. P (thread_st_auth s)"
   and state_vrefs[wp]: "\<lambda>s :: 'a :: state_ext state. P (state_vrefs s)"
 
+(* FIXME: More instances of crunch not discovering the right precondition. -robs *)
+lemma as_user_integrity_autarch:
+  "\<lbrace>integrity aag X st and K (is_subject aag thread)\<rbrace>
+   as_user thread info
+   \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  by (wpsimp simp:as_user_def wp:set_object_integrity_autarch touch_object_wp')
+
 crunch integrity_autarch: set_message_info "integrity aag X st"
+  (simp:set_message_info_def wp:as_user_integrity_autarch)
 
 (* FIXME: move *)
 lemma set_mrs_thread_st_auth[wp]:
   "set_mrs thread buf msgs \<lbrace>\<lambda>s. P (thread_st_auth s)\<rbrace>"
   supply if_split[split del]
   apply (simp add: set_mrs_def split_def set_object_def get_object_def)
-  apply (wpsimp wp: gets_the_wp get_wp put_wp mapM_x_wp'
-              simp: zipWithM_x_mapM_x split_def store_word_offs_def)
-  apply (clarsimp simp: fun_upd_def[symmetric] thread_st_auth_preserved)
+  apply (wpsimp wp: gets_the_wp get_wp put_wp mapM_x_wp' touch_objects_wp touch_object_wp'
+              simp: zipWithM_x_mapM_x split_def store_word_offs_def ta_filter_def obind_def)
+  apply (frule get_tcb_SomeD')
+  apply (insert get_tcb_True_False)
+  apply (rename_tac s ko tcb)
+  apply (erule_tac x="TCB ko" in meta_allE)
+  apply (erule_tac x=thread in meta_allE)
+  apply (erule_tac x=s in meta_allE)
+  apply (clarsimp simp: fun_upd_def[symmetric] thread_st_auth_preserved obj_at_def)
   done
 
 lemma set_mrs_thread_bound_ntfns[wp]:
   "set_mrs thread buf msgs \<lbrace>\<lambda>s. P (thread_bound_ntfns s)\<rbrace>"
   supply if_split[split del]
   apply (simp add: set_mrs_def split_def set_object_def get_object_def )
-  apply (wpsimp wp: gets_the_wp get_wp put_wp mapM_x_wp' dmo_wp
-              simp: zipWithM_x_mapM_x split_def store_word_offs_def no_irq_storeWord)
-  apply (clarsimp simp: fun_upd_def[symmetric] thread_bound_ntfns_preserved)
+  apply (wpsimp wp: gets_the_wp get_wp put_wp mapM_x_wp' dmo_wp touch_objects_wp touch_object_wp'
+              simp: zipWithM_x_mapM_x split_def store_word_offs_def no_irq_storeWord ta_filter_def)
+  apply (frule get_tcb_SomeD')
+  apply clarsimp
+  apply (insert get_tcb_True_False)
+  apply (rename_tac s ko tcb)
+  apply (erule_tac x="TCB ko" in meta_allE)
+  apply (erule_tac x=thread in meta_allE)
+  apply (erule_tac x=s in meta_allE)
+  apply (clarsimp simp: fun_upd_def[symmetric] thread_bound_ntfns_preserved obj_at_def)
   done
 
 lemma delete_objects_pspace_no_overlap:
@@ -185,7 +206,7 @@ lemma store_word_offs_integrity_autarch:
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: store_word_offs_def)
   apply (rule hoare_pre)
-   apply (wp dmo_storeWord_respects_Write)
+   apply (wp dmo_storeWord_respects_Write touch_objects_wp)
   apply clarsimp
   apply (drule (1) ipc_buffer_has_auth_wordE)
      apply (simp add: word_size_word_size_bits is_aligned_mult_triv2)
@@ -212,7 +233,7 @@ lemma copy_mrs_integrity_autarch:
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (simp add: copy_mrs_def cong: if_cong split del: if_split)
-  apply (wpsimp wp: mapM_wp' as_user_integrity_autarch
+  apply (wpsimp wp: mapM_wp' as_user_getRegister_integrity as_user_integrity_autarch
                     store_word_offs_integrity_autarch[where thread=receiver]
          | fastforce)+
   done

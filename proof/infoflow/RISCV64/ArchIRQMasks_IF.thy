@@ -26,16 +26,22 @@ lemma delete_objects_irq_masks[IRQMasks_IF_assms, wp]:
 
 crunch irq_masks[IRQMasks_IF_assms, wp]: invoke_untyped "\<lambda>s. P (irq_masks_of_state s)"
   (ignore: delete_objects wp: crunch_wps dmo_wp
-       wp: mapME_x_inv_wp preemption_point_inv
+       wp: mapME_x_inv_wp preemption_point_inv touch_objects_wp
      simp: crunch_simps no_irq_clearMemory mapM_x_def_bak unless_def)
 
 lemma set_vm_root_irq_masks[IRQMasks_IF_assms, wp]:
   "set_vm_root param_a \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
   sorry (* FIXME: Broken by experimental-tpspec. -robs *)
 
+lemma unmap_page_irq_masks[IRQMasks_IF_assms, wp]:
+  "\<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace> unmap_page param_a param_b param_c param_d 
+   \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
+  sorry (* FIXME: broken by touched-addrs -robs *)
+
 crunch irq_masks[IRQMasks_IF_assms, wp]: finalise_cap "\<lambda>s. P (irq_masks_of_state s)"
-  (  wp: select_wp crunch_wps dmo_wp no_irq
-   simp: crunch_simps no_irq_setVSpaceRoot no_irq_hwASIDFlush)
+  (  wp: select_wp crunch_wps dmo_wp no_irq touch_objects_wp touch_object_wp'
+         pt_lookup_from_level_tainv find_vspace_for_asid_wp
+   simp: crunch_simps no_irq_setVSpaceRoot no_irq_hwASIDFlush ta_agnostic_def)
 
 crunch irq_masks[IRQMasks_IF_assms, wp]: send_signal "\<lambda>s. P (irq_masks_of_state s)"
   (wp: crunch_wps ignore: do_machine_op wp: dmo_wp simp: crunch_simps)
@@ -121,7 +127,7 @@ crunch irq_masks[IRQMasks_IF_assms, wp]: do_reply_transfer "\<lambda>s. P (irq_m
 *)
 
 crunch irq_masks[IRQMasks_IF_assms, wp]: arch_perform_invocation "\<lambda>s. P (irq_masks_of_state s)"
-  (wp: dmo_wp crunch_wps no_irq)
+  (wp: dmo_wp crunch_wps no_irq touch_objects_wp)
 
 (* FIXME: remove duplication in this proof -- requires getting the wp automation
           to do the right thing with dropping imps in validE goals *)

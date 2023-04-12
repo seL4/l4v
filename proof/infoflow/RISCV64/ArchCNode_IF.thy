@@ -19,7 +19,7 @@ lemma set_object_globals_equiv:
                     \<longrightarrow> (\<exists>tcb'. obj = (TCB tcb')
                               \<and> arch_tcb_context_get (tcb_arch tcb) = arch_tcb_context_get (tcb_arch tcb'))) \<and>
              (\<forall>tcb'. obj = (TCB tcb') \<longrightarrow> tcb_at (idle_thread t) t))\<rbrace>
-   set_object ptr obj
+   set_object True ptr obj
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   apply (wpsimp wp: set_object_wp)
   apply (case_tac "ptr = idle_thread sa")
@@ -30,7 +30,7 @@ lemma set_object_globals_equiv:
 
 lemma set_object_globals_equiv'':
   "\<lbrace>globals_equiv s and (\<lambda> s. ptr \<noteq> riscv_global_pt (arch_state s)) and (\<lambda>t. ptr \<noteq> idle_thread t)\<rbrace>
-   set_object ptr obj
+   set_object True ptr obj
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   by (wpsimp wp: set_object_globals_equiv)
 

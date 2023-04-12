@@ -9,7 +9,7 @@ imports ArchFinalise_IF
 begin
 
 crunch valid_global_objs[wp]: cap_delete_one "valid_global_objs"
-  (wp: dxo_wp_weak simp: unless_def ignore: empty_slot_ext)
+  (wp: dxo_wp_weak touch_object_wp' touch_objects_wp simp: unless_def ignore: empty_slot_ext)
 
 
 locale Interrupt_IF_1 =

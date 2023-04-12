@@ -419,7 +419,7 @@ lemma get_cap_cte_wp_at:
   done
 
 lemma get_cap_sp:
-  "\<lbrace>P\<rbrace> get_cap False p \<lbrace>\<lambda>rv. P and cte_wp_at (\<lambda>c. c = rv) p\<rbrace>"
+  "\<lbrace>P\<rbrace> get_cap ta_f p \<lbrace>\<lambda>rv. P and cte_wp_at (\<lambda>c. c = rv) p\<rbrace>"
   by (wp get_cap_cte_wp_at)
 
 lemma wf_cs_nD:
@@ -4193,7 +4193,7 @@ lemma ensure_empty_tainv[wp]:
   by (simp add: ensure_empty_def whenE_def | wp touch_object_wp)+
 
 interpretation ensure_empty_tainv:
-  touched_addresses_inv _ "ensure_empty p"
+  touched_addresses_invE _ "ensure_empty p"
   by unfold_locales (rule ensure_empty_tainv)
 
 lemma get_cap_cte_wp_at3:

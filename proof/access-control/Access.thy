@@ -204,7 +204,7 @@ definition thread_st_auth where
   "thread_st_auth s \<equiv> case_option {} tcb_st_to_auth \<circ> tcb_states_of_state s"
 
 definition thread_bound_ntfns where
-  "thread_bound_ntfns s \<equiv> \<lambda>p. case_option None tcb_bound_notification (get_tcb p s)"
+  "thread_bound_ntfns s \<equiv> \<lambda>p. case_option None tcb_bound_notification (get_tcb False p s)"
 
 inductive_set state_bits_to_policy for caps thread_sts thread_bas cdt vrefs where
   sbta_caps:

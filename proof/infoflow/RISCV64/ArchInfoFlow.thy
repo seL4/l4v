@@ -22,8 +22,8 @@ definition equiv_asid :: "asid \<Rightarrow> det_ext state \<Rightarrow> det_ext
      (riscv_asid_table (arch_state s') (asid_high_bits_of asid))) \<and>
     (\<forall>pool_ptr. riscv_asid_table (arch_state s) (asid_high_bits_of asid) = Some pool_ptr
                 \<longrightarrow> asid_pool_at pool_ptr s = asid_pool_at pool_ptr s' \<and>
-                    (\<forall>asid_pool asid_pool'. asid_pools_of s pool_ptr = Some asid_pool \<and>
-                                            asid_pools_of s' pool_ptr = Some asid_pool'
+                    (\<forall>asid_pool asid_pool'. asid_pools_of False s pool_ptr = Some asid_pool \<and>
+                                            asid_pools_of False s' pool_ptr = Some asid_pool'
                                             \<longrightarrow> asid_pool (asid_low_bits_of asid) =
                                                 asid_pool' (asid_low_bits_of asid)))"
 

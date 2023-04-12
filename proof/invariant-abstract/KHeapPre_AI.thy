@@ -186,7 +186,8 @@ lemma get_tcb_SomeD': "get_tcb ta_f t (ms_ta_update f s) = Some y \<Longrightarr
 
 lemma get_tcb_to_unfiltered_Some:
   "get_tcb True t s = Some tcb \<Longrightarrow> get_tcb False t s = Some tcb"
-  by (metis f_kheap_to_unfiltered_Some get_tcb_SomeD get_tcb_def)
+  using f_kheap_to_unfiltered_Some get_tcb_SomeD get_tcb_def
+  by (metis f_kheap_to_unfiltered_Some get_tcb_SomeD get_tcb_def f_kheap_to_kheap)
 
 lemma get_tcb_at: "tcb_at t s \<Longrightarrow> (\<exists>tcb. get_tcb False t s = Some tcb)"
   by (simp add: tcb_at_def)

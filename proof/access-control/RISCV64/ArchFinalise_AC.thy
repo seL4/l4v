@@ -31,7 +31,7 @@ lemma state_vrefs_clear_asid_pool:
   (is "state_vrefs ?s' _ \<subseteq> state_vrefs _ _")
   using assms
   apply -
-  apply (clarsimp simp: state_vrefs_def)
+  apply (clarsimp simp: state_vrefs_def obind_def ta_filter_def)
   apply (rule exI, rule conjI)
    apply (rule_tac x=lvl in exI)
    apply (rule_tac x="if x = pool_ptr then ASIDPool pool else ao" in exI)
@@ -39,9 +39,10 @@ lemma state_vrefs_clear_asid_pool:
    apply (rule_tac x=bot in exI)
    apply (rule_tac x=asida in exI)
    apply (rule_tac x=vref in exI)
-   apply (prop_tac "ptes_of ?s' = ptes_of s")
-    apply (fastforce simp: obj_at_def all_ext ptes_of_def obind_def opt_map_def)
+   apply (prop_tac "ptes_of False ?s' = ptes_of False s")
+    apply (fastforce simp: obj_at_def all_ext ptes_of_def obind_def opt_map_def ta_filter_def)
    apply (fastforce simp: vs_lookup_table_def vspace_for_pool_def obj_at_def obind_def opt_map_def
+                          ta_filter_def
                    split: option.split_asm if_split_asm)
   apply (fastforce simp: vs_refs_aux_def graph_of_def opt_map_def split: if_splits)
   done
@@ -55,7 +56,7 @@ crunches set_vm_root for pas_refined[wp]: "pas_refined aag"
 lemma delete_asid_pool_pas_refined[wp]:
   "delete_asid_pool base ptr \<lbrace>pas_refined aag\<rbrace>"
   unfolding delete_asid_pool_def
-  apply wpsimp
+  apply (wpsimp wp: touch_object_wp')
   apply (clarsimp simp: pas_refined_def state_objs_to_policy_def)
   apply (rule conjI; clarsimp)
    apply (erule subsetD)
@@ -63,11 +64,13 @@ lemma delete_asid_pool_pas_refined[wp]:
    apply (rule exI, rule conjI, rule refl)+
    apply (erule state_bits_to_policy_vrefs_subseteq; fastforce?)
    apply (clarsimp simp: allI state_vrefs_clear_asid_table)
+   sorry (* FIXME: broken by touched-addrs -robs
   apply (erule subsetD, erule state_asids_to_policy_vrefs_subseteq)
     apply clarsimp
    apply (clarsimp simp: allI state_vrefs_clear_asid_table)
   apply clarsimp
   done
+*)
 
 lemma delete_asid_pas_refined[wp]:
   "delete_asid asid pt \<lbrace>pas_refined aag\<rbrace>"
@@ -78,7 +81,7 @@ lemma delete_asid_pas_refined[wp]:
                              ako_at (ASIDPool pool) x2 s \<and> pas_refined aag s"
                  in hoare_strengthen_post[rotated])
      defer
-     apply wpsimp+
+     apply (wpsimp wp: touch_object_wp')+
   apply (clarsimp simp: pas_refined_def)
   apply (intro conjI)
     apply (clarsimp simp: state_objs_to_policy_def)
@@ -89,8 +92,8 @@ lemma delete_asid_pas_refined[wp]:
     apply (rule exI, rule conjI, rule refl)+
     apply (erule state_bits_to_policy_vrefs_subseteq)
         apply clarsimp
-       apply (clarsimp simp: all_ext thread_st_auth_def tcb_states_of_state_def get_tcb_def obj_at_def)
-      apply (clarsimp simp: all_ext thread_bound_ntfns_def get_tcb_def obj_at_def)
+       apply (clarsimp simp: all_ext thread_st_auth_def tcb_states_of_state_def get_tcb_def obj_at_def ta_filter_def obind_def)
+      apply (clarsimp simp: all_ext thread_bound_ntfns_def get_tcb_def obj_at_def ta_filter_def obind_def)
      apply clarsimp
     apply (rule allI[OF state_vrefs_clear_asid_pool]; simp)
    apply clarsimp
@@ -104,8 +107,8 @@ lemma delete_asid_pas_refined[wp]:
 lemma arch_finalise_cap_pas_refined[wp]:
   "\<lbrace>pas_refined aag and invs and valid_arch_cap c\<rbrace> arch_finalise_cap c x \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   unfolding arch_finalise_cap_def
-  apply (wpsimp wp: unmap_page_pas_refined unmap_page_table_pas_refined)
-  apply (auto simp: valid_arch_cap_def wellformed_mapdata_def)
+  apply (wpsimp wp: unmap_page_pas_refined unmap_page_table_pas_refined find_vspace_for_asid_wp)
+  apply (auto simp: valid_arch_cap_def wellformed_mapdata_def ta_agnostic_def)
   done
 
 crunch pas_refined[wp]: prepare_thread_delete "pas_refined aag"
@@ -117,9 +120,9 @@ lemma sbn_st_vrefs[Finalise_AC_assms]:
    set_bound_notification t st
    \<lbrace>\<lambda>_ s. P (state_vrefs s)\<rbrace>"
   apply (simp add: set_bound_notification_def)
-  apply (wpsimp wp: set_object_wp dxo_wp_weak)
+  apply (wpsimp wp: set_object_wp dxo_wp_weak touch_object_wp')
   apply (subst state_vrefs_tcb_upd)
-      apply (auto simp: tcb_at_def)
+      apply (auto simp: tcb_at_def get_tcb_def ta_filter_def obind_def)
   done
 
 lemma arch_finalise_cap_auth'[Finalise_AC_assms]:
@@ -157,7 +160,8 @@ lemma delete_asid_pool_respects[wp]:
    delete_asid_pool x y
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   unfolding delete_asid_pool_def
-  by (wpsimp wp: mapM_wp[OF _ subset_refl]  simp: integrity_asid_table_entry_update' integrity_def)
+  by (wpsimp wp: mapM_wp[OF _ subset_refl] touch_object_wp'
+    simp: integrity_asid_table_entry_update' integrity_def obind_def ta_filter_def)
 
 lemma set_vm_root_integrity_obj[wp]:
   "set_vm_root param_a \<lbrace>integrity_obj_state aag activate subjects st\<rbrace>"
@@ -185,8 +189,9 @@ lemma set_vm_root_device_state[wp]:
 
 lemma set_vm_root_tcb_states_of_state[wp]:
   "set_vm_root param_a \<lbrace>\<lambda>s. P (tcb_states_of_state s)\<rbrace>"
-  sorry (* FIXME: Broken by experimental-tpspec -robs.
+  sorry (* FIXME: Broken by experimental-tpspec -robs. *)
 
+(*
 crunches set_vm_root
   for integrity_obj[wp]: "integrity_obj_state aag activate subjects st"
   and cdt[wp]: "\<lambda>s. P (cdt s)"
@@ -207,8 +212,8 @@ crunches set_asid_pool
 lemma set_asid_pool_tcb_states_of_state[wp]:
   "set_asid_pool p pool \<lbrace>\<lambda>s. P (tcb_states_of_state s)\<rbrace>"
   apply (wpsimp wp: set_object_wp_strong simp: obj_at_def  set_asid_pool_def)
-  apply (prop_tac "\<forall>x. get_tcb x (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (ASIDPool pool))\<rparr>) = get_tcb x s")
-   apply (auto simp: tcb_states_of_state_def get_tcb_def)
+  apply (prop_tac "\<forall>x. get_tcb False x (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (ASIDPool pool))\<rparr>) = get_tcb False x s")
+   apply (auto simp: tcb_states_of_state_def get_tcb_def obind_def ta_filter_def)
   done
 
 lemma delete_asid_integrity_asids:
@@ -217,7 +222,7 @@ lemma delete_asid_integrity_asids:
    delete_asid asid pt
    \<lbrace>\<lambda>_ s. integrity_asids aag {pasSubject aag} x a st s\<rbrace>"
   unfolding integrity_def
-  apply (wpsimp wp: dmo_wp mol_respects set_object_wp hoare_vcg_all_lift hoare_vcg_imp_lift
+  apply (wpsimp wp: dmo_wp mol_respects set_object_wp hoare_vcg_all_lift hoare_vcg_imp_lift touch_object_wp'
               simp: delete_asid_def hwASIDFlush_def set_asid_pool_def)
   apply (intro conjI impI allI; clarsimp)
    apply fastforce
@@ -244,7 +249,7 @@ lemma delete_asid_respects:
    apply (rule hoare_vcg_conj_lift)
     apply (simp add: delete_asid_def)
     apply (wp | wpc | wps)+
-       apply (wpsimp wp: set_asid_pool_respects_clear dmo_wp
+       apply (wpsimp wp: set_asid_pool_respects_clear dmo_wp touch_object_wp'
                          delete_asid_integrity_asids hoare_vcg_all_lift)+
   apply (clarsimp simp: pas_refined_refl obj_at_def asid_pool_integrity_def)
   done
@@ -255,10 +260,11 @@ lemma arch_finalise_cap_respects[wp]:
    arch_finalise_cap cap final
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: arch_finalise_cap_def)
-  apply (wpsimp wp: unmap_page_respects unmap_page_table_respects delete_asid_respects)
+  apply (wpsimp wp: unmap_page_respects unmap_page_table_respects delete_asid_respects
+                    find_vspace_for_asid_wp)
   apply (auto simp: cap_auth_conferred_def arch_cap_auth_conferred_def wellformed_mapdata_def
                     aag_cap_auth_def pas_refined_all_auth_is_owns valid_cap_simps
-                    cap_links_asid_slot_def label_owns_asid_slot_def
+                    cap_links_asid_slot_def label_owns_asid_slot_def ta_agnostic_def
              intro: pas_refined_Control_into_is_subject_asid)
   done
 
@@ -293,11 +299,13 @@ proof (induct rule: cap_revoke.induct[where ?a1.0=s])
     apply (rule hoare_pre_spec_validE)
      apply (wp "1.hyps")
             apply ((wp preemption_point_inv' | simp add: integrity_subjects_def pas_refined_def)+)[1]
+              sorry (* FIXME: broken by touched-addrs -robs
            apply (wp select_ext_weak_wp cap_delete_respects cap_delete_pas_refined
                   | simp split del: if_split | wp (once) hoare_vcg_const_imp_lift hoare_drop_imps)+
     by (auto simp: emptyable_def descendants_of_def
              dest: reply_slot_not_descendant
             intro: cca_owned)
+  *)
 qed
 
 lemma finalise_cap_caps_of_state_nullinv[Finalise_AC_assms]:

@@ -170,7 +170,7 @@ lemma set_cap_valid_vs_lookup:
   apply fastforce
   done
 
-lemma set_cap_valid_table_caps:
+lemma set_cap_valid_table_caps[simplified f_kheap_to_kheap]:
   "\<lbrace>\<lambda>s. valid_table_caps s \<and>
         (is_pt_cap cap \<longrightarrow> cap_asid cap = None \<longrightarrow> (\<forall>r \<in> obj_refs cap. pts_of False s r = Some empty_pt))\<rbrace>
      set_cap cap ptr

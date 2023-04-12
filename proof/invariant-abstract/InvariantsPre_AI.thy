@@ -30,6 +30,84 @@ abbreviation ignore_ta :: "('s state \<Rightarrow> bool) \<Rightarrow> ('s state
   "ignore_ta P \<equiv> \<lambda>s. \<forall>taf. P (ms_ta_update taf s)"
 
 
+lemma ta_agnostic_conj:
+  "\<lbrakk>ta_agnostic P1; ta_agnostic P2\<rbrakk> \<Longrightarrow>
+  ta_agnostic (\<lambda>s. P1 s \<and> P2 s)"
+  by (clarsimp simp:ta_agnostic_def)
+
+lemma ta_agnostic_predconj:
+  "\<lbrakk>ta_agnostic P1; ta_agnostic P2\<rbrakk> \<Longrightarrow>
+  ta_agnostic (P1 and P2)"
+  by (clarsimp simp:ta_agnostic_def)
+
+lemma ta_agnostic_null[simp]:
+  "ta_agnostic (\<lambda>s. P)"
+  by (clarsimp simp:ta_agnostic_def)
+
+lemma ta_agnostic_irrel_imp:
+  "\<lbrakk>ta_agnostic P\<rbrakk> \<Longrightarrow>
+  ta_agnostic (\<lambda>s. Q \<longrightarrow> P s)"
+  apply (clarsimp simp:ta_agnostic_def)
+  done
+
+
+lemma ta_agnostic_allI:
+  "(\<forall>x. ta_agnostic (\<lambda>s. P x s)) \<Longrightarrow>
+  ta_agnostic (\<lambda>s. \<forall>x. P x s)"
+  apply (clarsimp simp: ta_agnostic_def)
+  done
+
+lemma ta_agnostic_imp:
+  "\<lbrakk>ta_agnostic Q;
+  ta_agnostic P\<rbrakk> \<Longrightarrow>
+  ta_agnostic (\<lambda>s. Q s \<longrightarrow> P s)"
+  apply (clarsimp simp:ta_agnostic_def)
+  done
+
+lemma ignored_agnostic [simp]:
+  "ta_agnostic (ignore_ta P)"
+  apply (clarsimp simp:ta_agnostic_def)
+  apply (rule iffI; clarsimp simp: comp_def)
+  apply (drule_tac x="\<lambda>_. tafa (touched_addresses (machine_state s))" in spec)
+  apply (metis (mono_tags, lifting) RISCV64.fold_congs(5) abstract_state.fold_congs(6))
+  done
+
+lemma agnostic_ignores:
+  "ta_agnostic P \<Longrightarrow>
+  ignore_ta P = P"
+  apply (clarsimp simp: ta_agnostic_def)
+  done
+
+lemma ta_agnostic_ex_all:
+  "(\<forall>x. ta_agnostic (P x)) \<Longrightarrow>
+  ta_agnostic (\<lambda>s. \<exists>x. P x s)"
+  apply (clarsimp simp:ta_agnostic_def)
+  done
+
+lemmas ta_agnostic_lemmas = ignored_agnostic
+                            ta_agnostic_conj
+                            ta_agnostic_predconj
+                            ta_agnostic_irrel_imp
+
+\<comment> \<open>note that ta is not strictly safe! conj and predconj and irrel_imp aren't safe,
+   but we haven't yet come across scenarios where it isn't true, so `ta` intros these without
+   backtracking\<close>
+method ta uses simp = (
+  \<comment> \<open>simplest solve by unwrapping ta_agnostic (plus whatever is given in simp)\<close>
+  (solves \<open>clarsimp simp: ta_agnostic_def simp\<close>)
+  \<comment> \<open>optionally do some simplification before trying other approaches\<close>
+  | (clarsimp simp: simp)?, (
+  \<comment> \<open>unwrap conj and predconj\<close>
+  \<comment> \<open>fixme: only succeed if we complete generated subgoals?\<close>
+  intro allI impI
+        ta_agnostic_irrel_imp ta_agnostic_predconj ta_agnostic_conj
+        ta_agnostic_ex_all ta_agnostic_allI ta_agnostic_imp; ta?
+  ))
+
+method tasafe uses simp =
+  (solves \<open>ta\<close>)
+
+
 \<comment> \<open>A locale for monads m that only change the TA set\<close>
 locale touched_addresses_inv =
   fixes state_ext_t :: "'state_ext::state_ext itself"
@@ -140,11 +218,15 @@ lemma m_inv [wp]:
   "m \<lbrace>P\<rbrace>"
   by (rule agnostic_preserved [OF ta_agnostic])
 
-(*FIXME: maybe this should be in a different locale, as this will be duplicated (and
-  added to the simp set) for every monad that instantiates touched_addresses_inv *)
-lemma use_ta_agnostic [simp]:
+(*FIXME: maybe these should be in a different locale, as this will be duplicated (and
+  added to the simp set) for every monad that instantiates touched_addresses_inv -scottb *)
+lemma ms_ta_update_simplify [simp]:
   "P (ms_ta_update taf s) = P s"
   by (meson ta_agnostic ta_agnostic_def)
+
+lemma ms_ta_obj_update_simplify [simp]:
+  "P (ms_ta_obj_update p obj s) = P s"
+  by simp
 
 end
 

@@ -37,6 +37,50 @@ Protocol:
 Features:
 - Time protection extension locale and example instantiation (InfoFlow)
   development by Scott and Rob from Nov 2021 to May 2022.
+<<<<<<< HEAD
+- Touched-addresses set collection mechanism (ASpec) draft by Scott.
+  - Partial fixes and sorries of its breakages in AInvs session by Scott.
+  - Sorries of its breakages in Access, InfoFlow session by Rob.
+- Domainswitch sequence (ASpec) draft by Rob.
+  - Partial fixes and sorries of its breakages in AInvs, Access, InfoFlow.
+
+Status: Merged up to `verification/master` commit `e1fd4229b`.
+
+(See: <https://github.com/seL4/l4v/compare/master...experimental-timeprot>)
+
+## Active development branches
+
+### `scottbuckley/experimental-timeprot`
+
+Features:
+- Split of extension locale into interfaces for HW + transition system.
+- Instantiation of transition system locale by seL4 InfoFlow automaton.
+
+Status: Based on `verification/experimental-timeprot` commit `f1827a969`.
+
+(See: <https://github.com/seL4/l4v/compare/experimental-timeprot...scottbuckley:experimental-timeprot>)
+
+### `robs-cse/timeprot-subset-invs`
+
+Feature: Touched-addresses subset invariant properties (InfoFlow) draft by Rob.
+
+Status: Based on `verification/experimental-timeprot` commit `f1827a969`.
+
+(See: <https://github.com/seL4/l4v/compare/experimental-timeprot...robs-cse:timeprot-subset-invs>)
+
+### `robs-cse/experimental-tpspec`
+
+Features:
+- Domainswitch sequence (ASpec) draft by Rob.
+- Partial fixes & sorries of its breakages in AInvs, Access, InfoFlow sessions.
+
+Status: Merged up to `verification/experimental-timeprot` commit `f1827a969`.
+
+(See: <https://github.com/seL4/l4v/compare/experimental-timeprot...robs-cse:experimental-tpspec>)
+
+## Archive branches
+||||||| f1827a969
+=======
 - Partial fixes and sorries in AInvs, Access, InfoFlow for the following:
   - Initial *touched-addresses* (TA) set collection and enforcement mechanisms
     for `kheap` accesses (ASpec) by Scott.
@@ -75,6 +119,7 @@ Status: Based on `verification/experimental-timeprot` commit `f1827a969`.
 (See: <https://github.com/seL4/l4v/compare/experimental-timeprot...robs-cse:timeprot-subset-invs>)
 
 ## Archive branches we're not intending to merge
+>>>>>>> scotts_fork/timeprot-ainvs-withtouches
 
 - `robs-cse/experimental-timeprot-pr425-backup`:
   Safety backup of former status of `verification/experimental-timeprot`

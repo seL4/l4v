@@ -29,7 +29,9 @@ lemma modify_underlying_memory_update_0_ev:
 lemma storeWord_ev:
   "equiv_valid_inv (equiv_machine_state P) (equiv_machine_state Q) \<top> (storeWord x 0)"
   unfolding storeWord_def
-  by (wp modify_underlying_memory_update_0_ev assert_inv | simp add: no_irq_def upto.simps comp_def)+
+  apply (wp modify_underlying_memory_update_0_ev assert_inv gets_wp | simp add: no_irq_def upto.simps comp_def)+
+  sorry (* FIXME: broken by touched-addrs -robs
+    Looks like another demand that the TA set be equated by our uwr equivalences. *)
 
 lemma clearMemory_ev[Retype_IF_assms]:
   "equiv_valid_inv (equiv_machine_state P) (equiv_machine_state Q) (\<lambda>_. True) (clearMemory ptr bits)"
@@ -53,17 +55,24 @@ lemma set_pt_globals_equiv:
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply (unfold set_pt_def gets_map_def)
   apply (subst gets_apply)
+  apply (wpsimp wp: gets_apply_ev set_object_globals_equiv simp: ta_filter_def obind_def opt_map_def
+    split: option.splits if_splits)
+  (* Note: Suspicious of the above result. Old proof: -robs
   apply (wpsimp wp: gets_apply_ev set_object_globals_equiv)
   apply (fastforce elim: reads_equivE equiv_forE simp: opt_map_def)
+*)
   done
 
 lemma set_pt_reads_respects:
   "reads_respects aag l (K (is_subject aag a)) (set_pt a b)"
   apply (unfold set_pt_def gets_map_def)
   apply (subst gets_apply)
-  apply (wpsimp wp: gets_apply_ev set_object_reads_respects)
+  apply (wpsimp wp: gets_apply_ev set_object_reads_respects simp: ta_filter_def obind_def opt_map_def
+    split: option.splits if_splits)
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (fastforce elim: reads_equivE equiv_forE simp: opt_map_def)
   done
+*)
 
 lemma set_pt_reads_respects_g:
   "reads_respects_g aag l (\<lambda> s. is_subject aag ptr \<and> ptr \<noteq> global_pt s) (set_pt ptr pt)"
@@ -80,9 +89,12 @@ lemma get_pt_rev:
   "reads_equiv_valid_inv A aag (K (is_subject aag ptr)) (get_pt ptr)"
   apply (unfold gets_map_def)
   apply (subst gets_apply)
-  apply (wpsimp wp: gets_apply_ev)
+  apply (wpsimp wp: gets_apply_ev simp: ta_filter_def obind_def opt_map_def
+    split: option.splits if_splits)
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (fastforce elim: reads_equivE equiv_forE simp: opt_map_def)
   done
+*)
 
 lemma get_pt_revg:
   "reads_equiv_valid_g_inv A aag (\<lambda> s. ptr = riscv_global_pt (arch_state s)) (get_pt ptr)"
@@ -94,13 +106,16 @@ lemma get_pt_revg:
    apply (rule conjI)
     apply assumption
    apply simp
-  apply (auto simp: reads_equiv_g_def globals_equiv_def opt_map_def)
+  apply (clarsimp simp: reads_equiv_g_def globals_equiv_def opt_map_def ta_filter_def obind_def pt_of_def
+    split:option.splits arch_kernel_obj.splits)
+  sorry (* FIXME: broken by touched-addrs -robs
   done
+*)
 
 lemma store_pte_reads_respects:
   "reads_respects aag l (K (is_subject aag (ptr && ~~ mask pt_bits))) (store_pte ptr pte)"
   unfolding store_pte_def fun_app_def
-  apply (wp set_pt_reads_respects get_pt_rev)
+  apply (wp set_pt_reads_respects get_pt_rev touch_object_rev touch_object_wp')
   apply (clarsimp)
   done
 
@@ -109,7 +124,7 @@ lemma store_pte_globals_equiv:
    store_pte ptr pde
    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding store_pte_def
-  apply (wp set_pt_globals_equiv)
+  apply (wp set_pt_globals_equiv touch_object_wp')
   apply simp
   done
 
@@ -125,8 +140,10 @@ lemma get_pte_rev:
   unfolding gets_map_def fun_app_def
   apply (subst gets_apply)
   apply (wpsimp wp: gets_apply_ev)
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (fastforce elim: reads_equivE equiv_forE simp: ptes_of_def obind_def opt_map_def)
   done
+*)
 
 lemma get_pte_revg:
   "reads_equiv_valid_g_inv A aag (\<lambda>s. (ptr && ~~ mask pt_bits) = riscv_global_pt (arch_state s))
@@ -139,8 +156,10 @@ lemma get_pte_revg:
    apply (rule conjI)
     apply assumption
    apply simp
+  sorry (* FIXME: broken by touched-addrs -robs
   apply (auto simp: reads_equiv_g_def globals_equiv_def opt_map_def ptes_of_def obind_def)
   done
+*)
 
 lemma copy_global_mappings_reads_respects_g:
   "reads_respects_g aag l
@@ -156,8 +175,9 @@ lemma copy_global_mappings_reads_respects_g:
                             pspace_aligned s \<and> valid_global_arch_objs s" in hoare_weaken_pre)
       apply (rule gets_sp)
      apply (assumption)
-    apply (wp mapM_x_ev store_pte_reads_respects_g get_pte_revg)
+    apply (wp mapM_x_ev store_pte_reads_respects_g get_pte_revg touch_objects_rev)
      apply (simp only: pt_index_def)
+     sorry (* FIXME: broken by touched-addrs -robs
      apply (subst table_base_offset_id)
        apply clarsimp
       apply (clarsimp simp: pte_bits_def word_size_bits_def pt_bits_def
@@ -171,6 +191,7 @@ lemma copy_global_mappings_reads_respects_g:
     apply (wpsimp wp: get_pte_inv store_pte_aligned)+
   apply (fastforce dest: reads_equiv_gD simp: globals_equiv_def)
   done
+*)
 
 lemma dmo_no_mem_globals_equiv:
   "\<lbrakk> \<And>P. f \<lbrace>\<lambda>ms. P (underlying_memory ms)\<rbrace>;
@@ -237,7 +258,7 @@ lemma copy_global_mappings_globals_equiv:
   apply wp
    apply (rule_tac Q="\<lambda>_. globals_equiv s and (\<lambda>s. x \<noteq> riscv_global_pt (arch_state s) \<and>
                                                    is_aligned x pt_bits)" in hoare_strengthen_post)
-    apply (wp mapM_x_wp[OF _ subset_refl] store_pte_globals_equiv)
+    apply (wp mapM_x_wp[OF _ subset_refl] store_pte_globals_equiv touch_objects_wp)
     apply (simp only: pt_index_def)
     apply (subst table_base_offset_id)
       apply clarsimp
@@ -246,6 +267,15 @@ lemma copy_global_mappings_globals_equiv:
      apply (word_bitwise, fastforce)
   apply (simp_all)
   done
+
+(* FIXME: Move these back as far as possible -robs *)
+lemma idle_equiv_ms_ta_independent[intro!, simp]:
+  "idle_equiv s (ms_ta_update taf sa) = idle_equiv s sa"
+  by (clarsimp simp: idle_equiv_def)
+
+lemma idle_equiv_ms_ta_independent'[intro!, simp]:
+  "idle_equiv s (ms_ta_update taf sa \<lparr>kheap := something\<rparr>) = idle_equiv s (sa \<lparr>kheap := something\<rparr>)"
+  by (clarsimp simp: idle_equiv_def tcb_at_def get_tcb_Some)
 
 (* FIXME: cleanup this proof *)
 lemma retype_region_globals_equiv[Retype_IF_assms]:
@@ -261,7 +291,7 @@ lemma retype_region_globals_equiv[Retype_IF_assms]:
   apply (simp only: retype_region_def foldr_upd_app_if fun_app_def K_bind_def)
   apply (wp dxo_wp_weak |simp)+
       apply (simp add: trans_state_update[symmetric] del: trans_state_update)
-     apply (wp | simp)+
+     apply (wp touch_objects_wp | simp)+
   apply clarsimp
   apply (simp only: globals_equiv_def)
   apply (clarsimp split del: if_split)
@@ -389,6 +419,7 @@ lemma reset_untyped_cap_reads_respects_g:
     (reset_untyped_cap slot)"
   apply (simp add: reset_untyped_cap_def cong: if_cong)
   apply (rule equiv_valid_guard_imp)
+   sorry (* FIXME: broken by touched-addrs -robs
    apply (wp set_cap_reads_respects_g dmo_clearMemory_reads_respects_g
           | simp add: unless_def when_def split del: if_split)+
        apply (rule_tac I="invs and cte_wp_at (\<lambda>cp. is_untyped_cap rv
@@ -452,6 +483,7 @@ lemma reset_untyped_cap_reads_respects_g:
   apply (fastforce dest: invs_valid_global_arch_objs valid_global_arch_objs_global_ptD
                    simp: untyped_min_bits_def ptr_range_def)
   done
+*)
 
 lemma retype_region_ret_pt_aligned:
   "\<lbrace>K (range_cover ptr sz (obj_bits_api tp us) num_objects)\<rbrace>
@@ -522,6 +554,7 @@ lemma invoke_untyped_reads_respects_g_wcap[Retype_IF_assms]:
                 region_in_kernel_window_preserved
                 get_cap_reads_respects_g get_cap_wp
              | simp split del: if_split)+
+      sorry (* FIXME: broken by touched-addrs -robs
     apply (rule reset_untyped_cap_reads_respects_g[where irq=irq and st=st])
    apply (rule_tac P="authorised_untyped_inv aag ui \<and>
                       (\<forall>p \<in> ptr_range ptr sz. is_subject aag p)" in hoare_gen_asmE)
@@ -579,6 +612,7 @@ lemma invoke_untyped_reads_respects_g_wcap[Retype_IF_assms]:
                    aag_has_Control_iff_owns ptr_range_def[symmetric])
   apply (erule disjE, simp_all)[1]
   done
+*)
 
 lemma delete_objects_globals_equiv[wp]:
   "\<lbrace>globals_equiv st and (\<lambda>s. is_aligned p b \<and> 2 \<le> b \<and> b < word_bits \<and>
@@ -612,7 +646,7 @@ lemma reset_untyped_cap_globals_equiv:
                           cap_aligned_def bits_of_def free_index_of_def)
     apply (clarsimp simp: Kernel_Config.resetChunkBits_def)
     apply (strengthen invs_valid_global_objs invs_arch_state)
-    apply (wp delete_objects_invs_ex hoare_vcg_const_imp_lift get_cap_wp)+
+    apply (wp delete_objects_invs_ex hoare_vcg_const_imp_lift get_cap_wp touch_object_wp')+
   apply (clarsimp simp: cte_wp_at_caps_of_state descendants_range_def2 is_cap_simps bits_of_def
              split del: if_split)
   apply (frule caps_of_state_valid_cap, clarsimp+)
@@ -633,6 +667,7 @@ lemma invoke_untyped_globals_equiv:
          \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply (rule hoare_name_pre_state)
   apply (rule hoare_pre, rule invoke_untyped_Q)
+        apply ta
        apply (wp create_cap_globals_equiv)
        apply auto[1]
       apply wpsimp

@@ -139,7 +139,7 @@ lemma as_user_hyp_refs_of[wp, TcbAcc_AI_assms]:
   "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace>
      as_user t m
    \<lbrace>\<lambda>rv s. P (state_hyp_refs_of s)\<rbrace>"
-  apply (wp as_user_wp_thread_set_helper
+  apply (wp touch_object_wp' as_user_wp_thread_set_helper
             thread_set_hyp_refs_trivial | simp)+
   done
 

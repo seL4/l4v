@@ -112,9 +112,9 @@ crunch arch [wp]: retype_region "\<lambda>s. P (arch_state s)"
   (simp: crunch_simps)
 
 lemma set_free_index_final_cap:
-  "\<lbrace>\<lambda>s. P (is_final_cap' cap s) \<and> cte_wp_at ((=) src_cap) src s\<rbrace>
+  "\<lbrace>\<lambda>s. P (is_final_cap' False cap s) \<and> cte_wp_at ((=) src_cap) src s\<rbrace>
    set_cap (free_index_update f src_cap) src
-   \<lbrace>\<lambda>rv s. P (is_final_cap' cap s) \<rbrace>"
+   \<lbrace>\<lambda>rv s. P (is_final_cap' False cap s) \<rbrace>"
   apply (simp add:is_final_cap'_def2)
   apply (clarsimp simp:valid_def)
   apply (drule set_cap_caps_of_state_monad)

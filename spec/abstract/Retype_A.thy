@@ -53,8 +53,8 @@ where
     cdt \<leftarrow> gets cdt;
     set_cdt (cdt (dest \<mapsto> untyped));
     do_extended_op (create_cap_ext untyped dest dest_p);
-    set_original dest True;
     touch_object (fst dest);
+    set_original dest True;
     set_cap (default_cap type oref bits is_device) dest
    od"
 

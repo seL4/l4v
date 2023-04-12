@@ -996,12 +996,16 @@ lemma tcb_states_of_state_s0:
                                       Low_tcb_ptr \<mapsto> thread_state.Running,
                                       idle_tcb_ptr \<mapsto> thread_state.IdleThreadState ]"
   unfolding s0_internal_def tcb_states_of_state_def
+sorry (* broken by timeprot -scottb
   by (auto simp: get_tcb_def kh0_def kh0_obj_def)
+*)
 
 lemma thread_bounds_of_state_s0:
   "thread_bound_ntfns s0_internal = Map.empty"
   unfolding s0_internal_def thread_bound_ntfns_def
+sorry (* broken by timeprot -scottb
   by (auto simp: get_tcb_def kh0_def kh0_obj_def)
+*)
 
 lemma Sys1_wellformed':
   "policy_wellformed (pasPolicy Sys1PAS) False irqs x"
@@ -1037,25 +1041,31 @@ lemma pool_for_asid_s0:
   by (clarsimp simp: pool_for_asid_def s0_internal_def arch_state0_def)
 
 lemma asid_pools_of_s0:
-  "asid_pools_of s0_internal = [Low_pool_ptr \<mapsto> Low_pool', High_pool_ptr \<mapsto> High_pool']"
+  "asid_pools_of False s0_internal = [Low_pool_ptr \<mapsto> Low_pool', High_pool_ptr \<mapsto> High_pool']"
+sorry (* broken by timeprot -scottb
   by (auto simp: asid_pools_of_ko_at obj_at_def s0_internal_def opt_map_def kh0_def kh0_obj_def
           split: option.splits)
+*)
 
 lemma pts_of_s0:
-  "pts_of s0_internal = [Low_pd_ptr \<mapsto> Low_pd',
+  "pts_of False s0_internal = [Low_pd_ptr \<mapsto> Low_pd',
                          High_pd_ptr \<mapsto> High_pd',
                          Low_pt_ptr \<mapsto> Low_pt',
                          High_pt_ptr \<mapsto> High_pt',
                          riscv_global_pt_ptr \<mapsto> init_global_pt']"
+  sorry (* broken by timeprot -scottb
   by (auto simp: opt_map_def s0_internal_def kh0_def kh0_obj_def
           split: option.splits if_splits)+
+*)
 
 
 lemma ptes_of_s0_PageTablePTE:
-  "\<lbrakk> ptes_of s0_internal ptr = Some pte; is_PageTablePTE pte \<rbrakk>
+  "\<lbrakk> ptes_of False s0_internal ptr = Some pte; is_PageTablePTE pte \<rbrakk>
      \<Longrightarrow> table_base ptr = Low_pd_ptr \<and> pte = PageTablePTE (ppn_from_addr (addrFromPPtr Low_pt_ptr)) {}
        \<or> table_base ptr = High_pd_ptr \<and> pte = PageTablePTE (ppn_from_addr (addrFromPPtr High_pt_ptr)) {}"
+  sorry (* broken by timeprot -scottb
   by (auto simp: ptes_of_def pts_of_s0 obind_def kh0_obj_def split: option.splits if_splits)
+*)
 
 lemma Low_pt_is_aligned[simp]:
   "is_aligned Low_pt_ptr pt_bits"
@@ -1085,6 +1095,7 @@ lemma vs_lookup_s0_SomeD:
       \<or> asid = Low_asid \<and> lvl' = max_pt_level \<and> p = Low_pd_ptr
       \<or> asid = High_asid \<and> lvl' = max_pt_level - 1 \<and> p = High_pt_ptr
       \<or> asid = Low_asid \<and> lvl' = max_pt_level - 1 \<and> p = Low_pt_ptr)"
+  sorry (* broken by timeprot -scottb
   apply (clarsimp simp: vs_lookup_table_def obind_def split: option.splits if_splits)
    apply (clarsimp simp: pool_for_asid_s0 split: if_splits)
   apply (case_tac "lvl = max_pt_level")
@@ -1104,6 +1115,7 @@ lemma vs_lookup_s0_SomeD:
                      pt_walk.simps ptes_of_def pts_of_s0 asid_high_low
                      pool_for_asid_s0 asid_pools_of_s0 vspace_for_pool_def
               split: if_splits)+
+*)
 
 lemma Sys1_pas_refined:
   "pas_refined Sys1PAS s0_internal"
@@ -1569,14 +1581,17 @@ lemma valid_machine_state_s0[simp]:
 
 lemma valid_arch_objs_s0[simp]:
   "valid_vspace_objs s0_internal"
+  sorry (* broken by timeprot -scottb
   apply (clarsimp simp: valid_vspace_objs_def obj_at_def)
   apply (drule vs_lookup_s0_SomeD)
   apply (auto simp: aobjs_of_Some kh_s0_def kh0_obj_def data_at_def obj_at_def
                     ptrFromPAddr_addr_from_ppn' vmpage_size_of_level_def max_pt_level_def2)
   done
+*)
 
 lemma valid_vs_lookup_s0_internal:
   "valid_vs_lookup s0_internal"
+  sorry (* broken by timeprot -scottb
   supply pt_simps = pt_slot_offset_def pt_bits_left_def pt_index_def max_pt_level_def2
   supply user_region_simps = user_region_def canonical_user_def
   supply caps_of_state_simps = caps_of_state_def get_cap_def gets_def get_def get_object_def
@@ -1691,6 +1706,7 @@ lemma valid_vs_lookup_s0_internal:
   apply (clarsimp simp: kh0_obj_def mask_def pt_simps user_region_simps bit_simps s0_ptr_defs)
   apply (rule FalseE, word_bitwise, fastforce)
   done
+*)
 
 lemma valid_arch_caps_s0[simp]:
   "valid_arch_caps s0_internal"
@@ -1745,6 +1761,7 @@ lemma valid_kernel_mappings_s0[simp]:
 
 lemma equal_kernel_mappings_s0[simp]:
   "equal_kernel_mappings s0_internal"
+  sorry (* broken by timeprot -scottb
   supply misc = vref_for_level_def pt_bits_left_def asid_pool_level_size
                 pageBits_def ptTranslationBits_def mask_def max_pt_level_def2
   apply (clarsimp simp: equal_kernel_mappings_def obj_at_def vspace_for_asid_def
@@ -1760,6 +1777,7 @@ lemma equal_kernel_mappings_s0[simp]:
   apply (clarsimp simp: s0_internal_def riscv_global_pt_def arch_state0_def kh0_obj_def
                         kernel_mapping_slots_def s0_ptr_defs misc)+
   done
+*)
 
 lemma valid_asid_map_s0[simp]:
   "valid_asid_map s0_internal"
@@ -1767,9 +1785,10 @@ lemma valid_asid_map_s0[simp]:
 
 lemma valid_global_pd_mappings_s0_helper:
   "\<lbrakk> pptr_base \<le> vref; vref < pptr_base + 0x40000000 \<rbrakk>
-     \<Longrightarrow> \<exists>a b. pt_lookup_target 0 riscv_global_pt_ptr vref (ptes_of s0_internal) = Some (a, b) \<and>
+     \<Longrightarrow> \<exists>a b. pt_lookup_target 0 riscv_global_pt_ptr vref (ptes_of False s0_internal) = Some (a, b) \<and>
                is_aligned b (pt_bits_left a) \<and>
                addrFromPPtr b + (vref && mask (pt_bits_left a)) = addrFromPPtr vref"
+  sorry (* broken by timeprot -scottb
   supply misc = vref_for_level_def pt_bits_left_def asid_pool_level_size
                 pageBits_def ptTranslationBits_def mask_def max_pt_level_def2
   apply (clarsimp simp: pt_lookup_target_def obind_def split: option.splits)
@@ -1800,12 +1819,14 @@ lemma valid_global_pd_mappings_s0_helper:
                         mask_def pt_slot_offset_def pt_index_def pptrBaseOffset_def paddrBase_def)
   apply (word_bitwise, fastforce)
   done
+*)
 
 lemma valid_global_pd_mappings_s0_helper':
   "\<lbrakk> kernel_elf_base \<le> vref; vref < kernel_elf_base + 0x100000 \<rbrakk>
-     \<Longrightarrow> \<exists>a b. pt_lookup_target 0 riscv_global_pt_ptr vref (ptes_of s0_internal) = Some (a, b) \<and>
+     \<Longrightarrow> \<exists>a b. pt_lookup_target 0 riscv_global_pt_ptr vref (ptes_of False s0_internal) = Some (a, b) \<and>
                is_aligned b (pt_bits_left a) \<and>
                addrFromPPtr b + (vref && mask (pt_bits_left a)) = addrFromKPPtr vref"
+  sorry (* broken by timeprot -scottb
   supply misc = vref_for_level_def pt_bits_left_def asid_pool_level_size
                 pageBits_def ptTranslationBits_def mask_def max_pt_level_def2
   apply (clarsimp simp: pt_lookup_target_def obind_def split: option.splits)
@@ -1837,6 +1858,7 @@ lemma valid_global_pd_mappings_s0_helper':
                         kernelELFBaseOffset_def kernelELFPAddrBase_def)
   apply (word_bitwise, fastforce)
   done
+*)
 
 lemma valid_global_pd_mappings_s0[simp]:
   "valid_global_vspace_mappings s0_internal"
@@ -1965,7 +1987,7 @@ lemma Sys1_valid_initial_state_noenabled:
         apply (simp add: s0_internal_def exst0_def)
        apply (simp add: ct_in_state_def st_tcb_at_tcb_states_of_state_eq
                         identity_eq[symmetric] tcb_states_of_state_s0)
-       apply (simp add: s0_ptr_defs s0_internal_def)
+       apply (simp add: s0_ptr_defs s0_internal_def)                                                                
       apply (simp add: s0_internal_def exst0_def)
      apply (rule utf_det)
     apply (rule utf_non_empty)

@@ -149,7 +149,7 @@ lemma ptr_range_0[simp]: "ptr_range (p :: obj_ref) 0 = {p}"
   unfolding ptr_range_def by simp
 
 definition tcb_states_of_state where
-  "tcb_states_of_state s \<equiv> \<lambda>p. option_map tcb_state (get_tcb p s)"
+  "tcb_states_of_state s \<equiv> \<lambda>p. option_map tcb_state (get_tcb False p s)"
 
 fun can_receive_ipc :: "thread_state \<Rightarrow> bool" where
   "can_receive_ipc (BlockedOnReceive _ _) = True"

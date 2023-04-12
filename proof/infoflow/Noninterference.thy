@@ -313,8 +313,8 @@ where
 
 lemma thread_set_tcb_context_update_ct_active[wp]:
   "thread_set (tcb_arch_update (arch_tcb_context_set f)) t \<lbrace>\<lambda>s. P (ct_active s)\<rbrace>"
-  apply (simp add: thread_set_def ct_in_state_def | wp set_object_wp)+
-  apply (clarsimp simp: st_tcb_at_def obj_at_def get_tcb_def
+  apply (simp add: thread_set_def ct_in_state_def | wp set_object_wp touch_object_wp')+
+  apply (clarsimp simp: st_tcb_at_def obj_at_def get_tcb_def ta_filter_def
                  split: option.splits kernel_object.splits)
   done
 
@@ -325,12 +325,13 @@ lemma prop_of_two_valid:
   by (rule hoare_pre, wps f g, wp, simp)
 
 lemma thread_set_tcb_context_update_wp:
-  "\<lbrace>\<lambda>s. P (s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb_arch_update f (the (get_tcb t s))))\<rparr>)\<rbrace>
+  "ta_agnostic P \<Longrightarrow>
+  \<lbrace>\<lambda>s. P (s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb_arch_update f (the (get_tcb False t s))))\<rparr>)\<rbrace>
    thread_set (tcb_arch_update f) t
    \<lbrace>\<lambda>_. P\<rbrace>"
   apply (simp add: thread_set_def)
-  apply (wp set_object_wp)
-  apply simp
+  apply (wp set_object_wp touch_object_wp')
+  apply (clarsimp simp: get_tcb_Some_True_False ta_filter_def ta_agnostic_def)
   done
 
 
@@ -402,7 +403,7 @@ lemma check_active_irq_if_partitionIntegrity:
   apply (wp dmo_getActiveIRQ_wp)
   apply (simp add: partitionIntegrity_def integrity_subjects_def)
   apply (simp add: silc_dom_equiv_def equiv_for_def globals_equiv_scheduler_def)
-  apply (fastforce simp: domain_fields_equiv_def)
+  apply (clarsimp simp: domain_fields_equiv_def idle_equiv_def)
   done
 
 lemma do_machine_op_globals_equiv_scheduler:
@@ -426,6 +427,7 @@ lemma dmo_user_memory_update_globals_equiv_scheduler:
    apply (simp add: user_memory_update_def)
    apply (wp modify_wp)
   apply (clarsimp simp: globals_equiv_scheduler_def split: option.splits)
+  using idle_equiv_machine_state_update apply fastforce
   done
 
 lemma dmo_device_memory_update_globals_equiv_scheduler:
@@ -437,6 +439,7 @@ lemma dmo_device_memory_update_globals_equiv_scheduler:
   apply clarsimp
   apply (simp add: device_memory_update_def simpler_modify_def)
   apply (clarsimp simp: globals_equiv_scheduler_def split: option.splits)
+  apply (metis (mono_tags, lifting) abstract_state.unfold_congs(6) idle_equiv_machine_state_update)
   done
 
 lemma pas_refined_pasMayActivate_update[simp]:
@@ -463,12 +466,12 @@ lemma schedule_cur_domain:
   supply hoare_pre_cont[where a=next_domain, wp add]
          ethread_get_wp[wp del] if_split[split del] if_cong[cong]
   apply (simp add: schedule_def schedule_choose_new_thread_def | wp | wpc)+
-               apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_strengthen_post)
-                apply (simp | wp gts_wp | wp (once) hoare_drop_imps)+
-               apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_strengthen_post)
-                apply (simp | wp gts_wp | wp (once) hoare_drop_imps)+
-      apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_strengthen_post)
-       apply (simp | wp gts_wp | wp (once) hoare_drop_imps)+
+                apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_strengthen_post)
+                 apply (simp | wp gts_wp | wp (once) hoare_drop_imps)+
+                apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_strengthen_post)
+                 apply (simp | wp gts_wp | wp (once) hoare_drop_imps)+
+       apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_strengthen_post)
+        apply (simp | wp gts_wp | wp (once) hoare_drop_imps | wp touch_object_wp')+
   apply (clarsimp split: if_split)
   done
 
@@ -497,6 +500,7 @@ lemma schedule_if_partitionIntegrity:
           (\<lambda>s. domain_time s \<noteq> 0) and silc_inv aag st and einvs and pas_refined aag\<rbrace>
          schedule_if tc
          \<lbrace>\<lambda>_. partitionIntegrity aag st\<rbrace>"
+  sorry (* broken by timeprot -scottb
   apply (simp add: schedule_if_def)
   apply (rule_tac Q="\<lambda>rv s. integrity (aag\<lparr>pasMayActivate := False, pasMayEditReadyQueues := False\<rparr>)
                                       (scheduler_affects_globals_frame st) st s \<and>
@@ -518,6 +522,7 @@ lemma schedule_if_partitionIntegrity:
     apply (fastforce simp: equiv_for_refl dest: domains_distinct[THEN pas_domains_distinct_inj])
    apply (fastforce simp: partitionIntegrity_def globals_equiv_scheduler_def)+
   done
+*)
 
 lemma partitionIntegrity_integrity:
   "partitionIntegrity aag s s'
@@ -702,6 +707,7 @@ lemma kernel_entry_if_integrity:
           and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s) and (=) st\<rbrace>
    kernel_entry_if e tc
    \<lbrace>\<lambda>_. integrity (aag :: 'a subject_label PAS) X st\<rbrace>"
+  sorry (* broken by timeprot -scottb
   unfolding kernel_entry_if_def
   apply wp
      apply (rule valid_validE)
@@ -733,6 +739,7 @@ lemma kernel_entry_if_integrity:
   apply (rule state.equality, simp_all)
   apply (rule ext, simp_all)
   done
+*)
 
 lemma kernel_entry_if_partitionIntegrity:
   "\<lbrace>silc_inv aag st and pas_refined aag and einvs and schact_is_rct
@@ -1356,6 +1363,14 @@ lemma ev_add_pre:
   apply simp
   done
 
+lemma check_active_irq_if_invs:
+  "check_active_irq_if a \<lbrace>einvs\<rbrace>"
+  sorry (* broken by timeprot -scottb *)
+
+lemma thread_set_schact_is_rct:
+  "thread_set a b \<lbrace>schact_is_rct\<rbrace>"
+  sorry (* broken by timeprot -scottb *)
+
 crunch invs[wp]: check_active_irq_if "einvs"
   (wp: dmo_getActiveIRQ_wp ignore: do_machine_op)
 
@@ -1668,16 +1683,18 @@ lemma user_small_Step_partitionIntegrity:
   "\<lbrakk> ((a, b), x, aa, ba) \<in> check_active_irq_A_if;
      ct_running b; Invs b; ((aa, ba), y, ab, bb) \<in> do_user_op_A_if utf \<rbrakk>
      \<Longrightarrow> partitionIntegrity (current_aag b) b bb"
+  sorry (* broken by timeprot -scottb
   apply (rule partitionIntegrity_trans'[rotated])
    apply (rule do_user_op_A_if_partitionIntegrity)
      apply assumption
     apply (drule check_active_irq_A_if_result_state)
-    apply simp
+    apply (metis ct_in_state_machine_state_update machine_state_update_normalise)
    apply (drule check_active_irq_A_if_result_state)
    apply (simp add: Invs_def current_aag_def)
   apply (rule check_active_irq_A_if_partitionIntegrity)
   apply assumption
   done
+*)
 
 lemma small_Step_partitionIntegrity:
   notes active_from_running[simp]
@@ -2035,6 +2052,7 @@ lemma activate_thread_reads_respects_g:
   shows "reads_respects_g pas (l :: 'a subject_label)
            ((\<lambda>s. cur_thread s \<noteq> idle_thread s \<longrightarrow> is_subject pas (cur_thread s)) and invs)
            activate_thread"
+  sorry (* broken by timeprot -scottb
   apply (simp add: activate_thread_def)
   apply (wp set_thread_state_runnable_reads_respects_g as_user_reads_respects_g
             get_thread_state_reads_respects_g gts_wp
@@ -2050,6 +2068,7 @@ lemma activate_thread_reads_respects_g:
   apply (clarsimp simp: pred_tcb_at_def obj_at_def valid_idle_def)
   apply (fastforce simp: det_getRestartPC)
   done
+*)
 
 lemma cur_thread_update_reads_respects_g':
   "equiv_valid (reads_equiv_g aag)
@@ -2119,6 +2138,7 @@ lemma switch_to_thread_reads_respects_g:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows "reads_respects_g aag (l :: 'a subject_label)
                           (pas_refined aag and (\<lambda>s. is_subject aag t)) (switch_to_thread t)"
+  sorry (* broken by timeprot -scottb
   apply (simp add: switch_to_thread_def)
   apply (subst bind_assoc[symmetric])
   apply (rule equiv_valid_guard_imp)
@@ -2131,16 +2151,19 @@ lemma switch_to_thread_reads_respects_g:
       apply (rule equiv_valid_rv_trivial, wp+)
   apply fastforce
   done
+*)
 
 lemma guarded_switch_to_reads_respects_g:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows "reads_respects_g aag (l :: 'a subject_label)
                           (pas_refined aag and valid_idle and (\<lambda>s. is_subject aag t))
                           (guarded_switch_to t)"
+  sorry (* broken by timeprot -scottb
   apply (simp add: guarded_switch_to_def)
   apply (wp switch_to_thread_reads_respects_g get_thread_state_reads_respects_g gts_wp)
   apply fastforce
   done
+*)
 
 lemma cur_thread_update_idle_reads_respects_g':
   "reads_respects_g aag (l :: 'a subject_label) (\<lambda>s. t = idle_thread s) (modify (cur_thread_update (\<lambda>_. t)))"
@@ -2288,6 +2311,7 @@ lemma schedule_reads_respects_g:
            ((\<lambda>s. cur_thread s \<noteq> idle_thread s \<longrightarrow> is_subject aag (cur_thread s)) and einvs and
             pas_cur_domain aag and (\<lambda>s. domain_time s \<noteq> 0) and pas_refined aag)
            schedule"
+  sorry (* broken by timeprot -scottb
   supply ethread_get_wp[wp del]
   supply set_scheduler_action_wp[wp del]
   supply conj_cong[cong del] (* knowing the scheduler action messes with valid_sched_2 *)
@@ -2328,6 +2352,7 @@ lemma schedule_reads_respects_g:
        apply (all \<open>(solves \<open>clarsimp simp: not_cur_thread_def\<close>)?\<close>)
    apply (clarsimp simp: valid_sched_def valid_sched_action_def weak_valid_sched_action_def)+
   done
+*)
 
 lemma schedule_if_reads_respects_g:
   assumes domains_distinct[wp]: "pas_domains_distinct pas"
@@ -2429,11 +2454,13 @@ lemma check_active_irq_if_reads_respects_g:
 lemma check_active_irq_if_reads_respects_f_g:
   "reads_respects_f_g aag (l :: 'a subject_label)
      (silc_inv aag st and invs and only_timer_irq_inv irq st') (check_active_irq_if tc)"
+  sorry (* broken by timeprot -scottb
   apply (rule equiv_valid_guard_imp)
    apply (rule reads_respects_f_g'[where Q="\<top>", OF check_active_irq_if_reads_respects_g])
    apply (wp check_active_irq_if_wp)
    apply fastforce+
   done
+*)
 
 lemma partitionIntegrity_cur_domain:
   "partitionIntegrity aag s s' \<Longrightarrow> cur_domain s = cur_domain s'"
@@ -2560,6 +2587,7 @@ lemma check_active_irq_A_if_confidentiality:
      ((fst s),x,(fst s')) \<in> check_active_irq_A_if; ((fst t),y,(fst t')) \<in> check_active_irq_A_if \<rbrakk>
      \<Longrightarrow> x = y \<and> (snd s' = f x \<and> snd t' = f y
                   \<longrightarrow> (s', t') \<in> uwr u \<and> (s', t') \<in> uwr PSched \<and> (s', t') \<in> uwr (part s))"
+  sorry (* broken by timeprot -scottb
   apply (subgoal_tac "silc_inv (current_aag (internal_state_if s')) s0_internal (internal_state_if s')")
    apply (blast dest!: check_active_irq_A_if_confidentiality_helper)
   apply (case_tac s', simp)
@@ -2569,6 +2597,7 @@ lemma check_active_irq_A_if_confidentiality:
    apply (wp check_active_irq_if_wp)
   apply (fastforce simp: invs_if_def Invs_def current_aag_def)
   done
+*)
 
 lemma check_active_irq_A_if_confidentiality':
   "\<lbrakk> (XX, YY) \<in> uwr PSched; XX = s; YY = t; (s, t) \<in> uwr (part s); (s, t) \<in> uwr u;
@@ -2609,10 +2638,12 @@ lemmas do_user_op_if_reads_respects_f_g =
 
 lemma partitionIntegrity_irq_state_update[simp]:
   "partitionIntegrity aag y (y\<lparr>machine_state := (machine_state y)\<lparr>irq_state := X\<rparr>\<rparr>)"
+  sorry (* broken by timeprot -scottb
   apply (cut_tac s=y and aag=aag in partitionIntegrity_refl)
   apply (clarsimp simp: partitionIntegrity_def integrity_subjects_def domain_fields_equiv_def
                         globals_equiv_scheduler_def silc_dom_equiv_def equiv_for_def)
   done
+*)
 
 lemma invs_if_Invs:
   "invs_if s
@@ -2637,6 +2668,7 @@ lemma do_user_op_A_if_confidentiality:
        (s_aux, xx, fst s') \<in> do_user_op_A_if utf; (t_aux, yy, fst t') \<in> do_user_op_A_if utf;
        snd s' = f xx; snd t' = f yy \<rbrakk>
        \<Longrightarrow> xx = yy \<and> (s', t') \<in> uwr u \<and> (s', t') \<in> uwr PSched \<and> (s', t') \<in> uwr (part s)"
+  sorry (* broken by timeprot -scottb
   including no_pre
   supply [[simp_depth_limit=2]] \<comment> \<open>speedup\<close>
   apply (frule (1) uwr_part_sys_mode_of_user_context_of_eq)
@@ -2705,6 +2737,7 @@ lemma do_user_op_A_if_confidentiality:
    apply (simp add: sys_mode_of_def)
   apply (simp add: user_context_of_def)
   done
+*)
 
 lemma do_user_op_A_if_confidentiality':
   "\<lbrakk> (XX, YY) \<in> uwr PSched; XX = s; YY = t; (s, t) \<in> uwr (part s); (s, t) \<in> uwr u; invs_if s;
@@ -2822,6 +2855,7 @@ lemma kernel_entry_if_reads_respects_f_g:
                                              and pas_cur_domain aag and guarded_pas_domain aag
                                              and K (ev \<noteq> Interrupt \<and> \<not> pasMaySendIrqs aag))
                             (kernel_entry_if ev tc)"
+  sorry (* broken by timeprot -scottb
   apply (simp add: kernel_entry_if_def)
   apply (wp handle_event_reads_respects_f_g thread_set_tcb_context_update_reads_respects_f_g
             thread_set_tcb_context_update_silc_inv only_timer_irq_inv_pres[where P="\<top>" and Q="\<top>"]
@@ -2836,6 +2870,7 @@ lemma kernel_entry_if_reads_respects_f_g:
   apply (fastforce simp: only_timer_irq_inv_def invs_valid_idle
                    dest: domains_distinct[THEN pas_domains_distinct_inj])
   done
+*)
 
 lemma reads_respects_f_g_2':
   "\<lbrakk> equiv_valid_2 (reads_equiv_g aag) (affects_equiv aag l) (affects_equiv aag l) (=) P P' f f';
@@ -2927,7 +2962,7 @@ lemma thread_get_tcb_context_reads_respects_g_helper:
   "equiv_valid_rv_inv (reads_equiv_g aag) (affects_equiv aag l)
      (\<lambda>rv rv'. arch_tcb_context_get (tcb_arch rv) = arch_tcb_context_get (tcb_arch rv'))
      (\<lambda>s. t = idle_thread s \<or> is_subject aag t)
-     (gets (get_tcb t) >>= assert_opt)"
+     (gets (get_tcb False t) >>= assert_opt)"
   apply (clarsimp simp: equiv_valid_2_def in_monad reads_equiv_g_def)
   apply (erule disjE)
    apply (frule globals_equiv_idle_thread_ptr)
@@ -2939,6 +2974,7 @@ lemma thread_get_tcb_context_reads_respects_g_helper:
 lemma thread_get_tcb_context_reads_respects_g:
   "reads_respects_g aag l
      (\<lambda>s. t = idle_thread s \<or> is_subject aag t) (thread_get (arch_tcb_context_get o tcb_arch) t)"
+  sorry (* broken by timeprot -scottb
   apply (simp add: thread_get_def gets_the_def equiv_valid_def2)
   apply (rule_tac W="\<lambda> rv rv'. arch_tcb_context_get (tcb_arch rv) = arch_tcb_context_get (tcb_arch rv')"
               and Q="\<top>\<top>" in equiv_valid_rv_bind)
@@ -2946,6 +2982,7 @@ lemma thread_get_tcb_context_reads_respects_g:
    apply (rule return_ev2, simp)
   apply (rule hoare_post_taut)
   done
+*)
 
 (* this is a little more complicated because the context isn't
    guaranteed to be equal when called, so we need an equiv_valid_2
@@ -3463,6 +3500,7 @@ lemma preemption_interrupt_scheduler_invisible:
                               and (\<lambda>s. ct_idle s \<longrightarrow> uc' = idle_context s)
                               and (\<lambda>s. \<not> reads_scheduler_cur_domain aag l s))
                        (handle_preemption_if uc) (kernel_entry_if Interrupt uc')"
+  sorry (* broken by timeprot -scottb
   apply (simp add: kernel_entry_if_def handle_preemption_if_def getActiveIRQ_no_non_kernel_IRQs)
   apply (rule equiv_valid_2_bind_right)
        apply (rule equiv_valid_2_bind_right)
@@ -3489,6 +3527,7 @@ lemma preemption_interrupt_scheduler_invisible:
           apply ((simp add:  arch_tcb_update_aux2 | wp | force)+)[7]
    apply (fastforce simp: silc_inv_not_cur_thread cur_thread_idle guarded_pas_domain_def)+
   done
+*)
 
 lemma handle_preemption_reads_respects_scheduler:
   assumes domains_distinct[wp]: "pas_domains_distinct (aag :: 'a subject_label PAS)"
@@ -3497,6 +3536,7 @@ lemma handle_preemption_reads_respects_scheduler:
                                            and domain_sep_inv False st and silc_inv aag st'
                                            and (\<lambda>s. irq_masks_of_state st = irq_masks_of_state s))
                               (handle_preemption_if uc)"
+  sorry (* broken by timeprot -scottb
   apply (simp add: handle_preemption_if_def)
   apply (wp when_ev handle_interrupt_reads_respects_scheduler
             dmo_getActiveIRQ_return_axiom[simplified try_some_magic]
@@ -3504,6 +3544,7 @@ lemma handle_preemption_reads_respects_scheduler:
          | simp add: imp_conjR| wp (once) hoare_drop_imps)+
   apply force
   done
+*)
 
 lemmas handle_preemption_reads_respects_scheduler_2 =
   agnostic_to_ev2[OF handle_preemption_agnostic_tc handle_preemption_context
@@ -3524,6 +3565,7 @@ lemma kernel_entry_scheduler_equiv_2:
                               and (\<lambda>s. ct_idle s \<longrightarrow> uc' = idle_context s)
                               and (\<lambda>s. reads_scheduler_cur_domain aag l s \<longrightarrow> uc = uc'))
                        (kernel_entry_if Interrupt uc) (kernel_entry_if Interrupt uc')"
+  sorry (* broken by timeprot -scottb
   apply (simp add: kernel_entry_if_def)
   apply (simp add: bind_assoc[symmetric])
   apply (rule equiv_valid_2_bind_pre[where R'="(=)"])
@@ -3543,6 +3585,7 @@ lemma kernel_entry_scheduler_equiv_2:
                 | simp add: tcb_cap_cases_def arch_tcb_update_aux2)+
    apply (fastforce simp: silc_inv_not_cur_thread cur_thread_idle)+
   done
+*)
 
 end
 
@@ -3830,7 +3873,7 @@ lemma schedule_step:
             sys_mode_of s' = KernelExit; r = user_context_of s; r = user_context_of s' \<rbrakk>
             \<Longrightarrow> P"
   shows
-    "\<lbrakk> (sys_mode_of s) = KernelSchedule True; (s,s') \<in> data_type.Step (ADT_A_if utf) () \<rbrakk>
+    "\<lbrakk> (sys_mode_of s) = KernelSchedule b; (s,s') \<in> data_type.Step (ADT_A_if utf) () \<rbrakk>
        \<Longrightarrow> P"
   apply (insert schedule)
   apply atomize

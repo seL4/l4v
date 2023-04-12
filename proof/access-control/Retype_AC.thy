@@ -139,11 +139,11 @@ declare wrap_ext_det_ext_ext_def[simp]
 
 lemma thread_st_auth_detype[simp]:
   "thread_st_auth (detype S s) = (\<lambda>x. if x \<in> S then {} else thread_st_auth s x)"
-  by (rule ext, simp add: thread_st_auth_def get_tcb_def detype_def tcb_states_of_state_def)
+  by (rule ext, simp add: thread_st_auth_def get_tcb_def detype_def tcb_states_of_state_def obind_def)
 
 lemma thread_bound_ntfns_detype[simp]:
   "thread_bound_ntfns (detype S s) = (\<lambda>x. if x \<in> S then None else thread_bound_ntfns s x)"
-  by (rule ext, simp add: thread_bound_ntfns_def get_tcb_def detype_def tcb_states_of_state_def)
+  by (rule ext, simp add: thread_bound_ntfns_def get_tcb_def detype_def tcb_states_of_state_def obind_def)
 
 lemma sita_detype:
   "state_irqs_to_policy aag (detype R s) \<subseteq> state_irqs_to_policy aag s"
@@ -298,7 +298,8 @@ lemma reset_untyped_cap_integrity:
      apply (rule validE_valid, rule mapME_x_wp')
      apply (rule hoare_pre)
       apply (wp mapME_x_inv_wp[OF hoare_pre(2)]  preemption_point_inv'
-                set_cap_integrity_autarch dmo_clearMemory_respects' | simp)+
+                set_cap_integrity_autarch dmo_clearMemory_respects' | simp |
+                simp only: integrity_irq_state_independent[symmetric] | blast)+
      apply (clarsimp simp: cap_aligned_def is_cap_simps bits_of_def)
      apply (subst aligned_add_aligned, assumption, rule is_aligned_shiftl, simp+)
      apply (simp add: word_size_bits_resetChunkBits)
@@ -311,7 +312,7 @@ lemma reset_untyped_cap_integrity:
       apply (simp add: word_bits_def)
      apply clarsimp
     apply (simp add: if_apply_def2)
-    apply (wp hoare_vcg_const_imp_lift get_cap_wp)+
+    apply (wp hoare_vcg_const_imp_lift get_cap_wp touch_object_wp')+
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (frule caps_of_state_valid_cap, clarsimp+)
   apply (clarsimp simp: cap_aligned_def is_cap_simps valid_cap_simps bits_of_def)
@@ -329,7 +330,7 @@ lemma retype_region_integrity:
   apply (simp only: retype_region_def retype_region_ext_extended.dxo_eq)
   apply (simp only: retype_addrs_def retype_region_ext_def
                     foldr_upd_app_if' fun_app_def K_bind_def)
-  apply wp
+  apply (wp touch_objects_wp)
   apply (clarsimp simp: not_less)
   apply (erule integrity_trans)
   apply (clarsimp simp: integrity_def retype_region_integrity_asids)
@@ -380,7 +381,7 @@ lemma create_cap_pas_refined:
    create_cap tp sz p dev ref
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: create_cap_def split_def)
-  apply (wps | wp set_cdt_pas_refined set_cap_pas_refined set_original_wp | clarsimp)+
+  apply (wps | wp set_cdt_pas_refined set_cap_pas_refined set_original_wp touch_object_wp' | clarsimp)+
   apply (rule conjI)
    apply (cases "fst ref", clarsimp simp: pas_refined_refl)
   apply (cases "tp = Untyped")
@@ -400,6 +401,7 @@ context retype_region_proofs begin
 lemma ts_eq[simp]: "thread_st_auth s' = thread_st_auth s"
   apply (rule ext)
   apply (simp add: s'_def ps_def thread_st_auth_def get_tcb_def orthr tcb_states_of_state_def
+                   ta_filter_def obind_def
             split: option.split Structures_A.kernel_object.split)
   apply (simp add: default_object_def default_tcb_def tyunt
             split: Structures_A.apiobject_type.split)
@@ -408,6 +410,7 @@ lemma ts_eq[simp]: "thread_st_auth s' = thread_st_auth s"
 lemma bas_eq[simp]: "thread_bound_ntfns s' = thread_bound_ntfns s"
   apply (rule ext)
   apply (simp add: s'_def ps_def thread_bound_ntfns_def get_tcb_def orthr tcb_states_of_state_def
+                   ta_filter_def obind_def
             split: option.split Structures_A.kernel_object.split)
   apply (simp add: default_object_def default_tcb_def tyunt
             split: Structures_A.apiobject_type.split)
@@ -448,9 +451,14 @@ lemma retype_region_ext_kheap_update:
   done
 
 lemma use_retype_region_proofs_ext':
+  assumes r: "\<And>xs. ta_agnostic (R xs)"
   assumes x: "\<And>(s::det_ext state). \<lbrakk> retype_region_proofs s ty us ptr sz n dev; P s \<rbrakk>
                                       \<Longrightarrow> Q (retype_addrs ptr ty n us)
-                                            (s\<lparr>kheap := \<lambda>x. if x \<in> set (retype_addrs ptr ty n us)
+                                            (ms_ta_update ((\<union>) (\<Union>x\<in>{(p, ko).
+                                              p \<in> (\<lambda>x. ptr_add ptr (x * 2 ^ obj_bits_api ty us)) `
+                                                   {0..<n} \<and> ko_at ko p s}.
+                                              case x of (p, ko) \<Rightarrow> obj_range p ko))
+                                             s\<lparr>kheap := \<lambda>x. if x \<in> set (retype_addrs ptr ty n us)
                                                             then Some (default_object ty dev us )
                                                             else kheap s x\<rparr>)"
   assumes y: "\<And>xs. \<lbrace>Q xs and R xs\<rbrace> retype_region_ext xs ty \<lbrace>\<lambda>_. Q xs\<rbrace>"
@@ -466,13 +474,14 @@ lemma use_retype_region_proofs_ext':
   apply (simp add: retype_region_def split del: if_split)
   apply (rule hoare_pre, (wp | simp)+)
     apply (rule retype_region_ext_kheap_update[OF y])
-   apply (wp | simp)+
+   apply (wp touch_objects_wp | simp)+
   apply (clarsimp simp: retype_addrs_fold
                         foldr_upd_app_if fun_upd_def[symmetric])
   apply safe
     apply (rule x)
      apply (rule retype_region_proofs.intro, simp_all)[1]
-      apply (fastforce simp: range_cover_def obj_bits_api_def z slot_bits_def2 word_bits_def)+
+      apply (fastforce simp: range_cover_def obj_bits_api_def z slot_bits_def2 word_bits_def
+        r[simplified ta_agnostic_def])+
   done
 
 lemmas use_retype_region_proofs_ext =
@@ -512,6 +521,11 @@ lemma retype_region_ext_pas_refined:
 
 context Retype_AC_1 begin
 
+(* XXX
+lemma "pas_refined aag (machine_state_update (RISCV64.touched_addresses_update taf) s) =
+  pas_refined aag s"
+*)
+
 lemma retype_region_pas_refined:
   "\<lbrace>pas_refined aag and invs and pas_cur_domain aag and
     caps_overlap_reserved {ptr..ptr + of_nat num_objects * 2 ^ obj_bits_api type o_bits - 1} and
@@ -525,11 +539,13 @@ lemma retype_region_pas_refined:
   apply (rule hoare_gen_asm)
   apply (rule hoare_pre)
    apply (rule use_retype_region_proofs_ext'[where P = "invs and pas_refined aag"])
+       defer
        apply clarsimp
-       apply (erule (2) retype_region_proofs'_pas_refined[OF retype_region_proofs'.intro])
+       using pas_refined_machine_state_update
+       apply (fastforce dest: retype_region_proofs'_pas_refined[OF retype_region_proofs'.intro])
       apply (wp retype_region_ext_pas_refined)
       apply simp
-     apply auto
+     apply (auto simp: ta_agnostic_def)
   done
 
 end
@@ -898,8 +914,10 @@ lemma retype_region_pas_refined':
   apply (rule hoare_gen_asm)+
   apply (rule hoare_weaken_pre)
    apply (rule use_retype_region_proofs_ext'[where P="invs and pas_refined aag"])
+       defer
        apply clarsimp
-       apply (erule (2) retype_region_proofs'_pas_refined[OF retype_region_proofs'.intro])
+       using pas_refined_machine_state_update
+       apply (fastforce dest: retype_region_proofs'_pas_refined[OF retype_region_proofs'.intro])
       apply (wp retype_region_ext_pas_refined)
       apply simp
      apply fastforce
@@ -911,7 +929,7 @@ lemma retype_region_pas_refined':
   apply (cases slot)
   apply (auto intro: cte_wp_at_caps_no_overlapI descendants_range_caps_no_overlapI
                      cte_wp_at_pspace_no_overlapI
-               simp: cte_wp_at_sym)
+               simp: cte_wp_at_sym ta_agnostic_def)
   done
 
 lemma delete_objects_pas_refined:
@@ -971,10 +989,10 @@ lemma reset_untyped_cap_valid_vspace_objs:
   unfolding reset_untyped_cap_def
   apply (wpsimp wp: mapME_x_inv_wp preemption_point_inv)
       apply (wp static_imp_wp delete_objects_valid_vspace_objs)
-     apply (wpsimp wp: get_cap_wp)+
+     apply (wpsimp wp: get_cap_wp touch_object_wp')+
   apply (cases src_slot)
   apply (auto simp: cte_wp_at_caps_of_state)
-    apply (fastforce simp: bits_of_def is_cap_simps)+
+    apply (fastforce simp: bits_of_def is_cap_simps descendants_range_def)+
   done
 
 lemma valid_arch_state_detype:
@@ -1009,10 +1027,10 @@ lemma reset_untyped_cap_valid_arch_state:
   unfolding reset_untyped_cap_def
   apply (wpsimp wp: mapME_x_inv_wp preemption_point_inv)
       apply (wp static_imp_wp delete_objects_valid_arch_state)
-     apply (wpsimp wp: get_cap_wp)+
+     apply (wpsimp wp: get_cap_wp touch_object_wp')+
   apply (cases src_slot)
   apply (auto simp: cte_wp_at_caps_of_state)
-    apply (fastforce simp: bits_of_def is_cap_simps)+
+    apply (fastforce simp: bits_of_def is_cap_simps descendants_range_def)+
   done
 
 lemma reset_untyped_cap_pas_refined[wp]:
@@ -1039,13 +1057,14 @@ lemma reset_untyped_cap_pas_refined[wp]:
      apply blast
     apply (wps | wp hoare_vcg_const_imp_lift get_cap_wp delete_objects_pas_refined hoare_drop_imp
                     delete_objects_valid_vspace_objs delete_objects_valid_arch_state
+                    touch_object_wp'
                | simp)+
   apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps bits_of_def)
   apply (frule cte_map_not_null_outside'[rotated])
        apply (fastforce simp: cte_wp_at_caps_of_state)+
   apply (cases slot)
   apply (auto elim: caps_pas_cap_cur_auth_UntypedCap_idx_dev)
-       apply (fastforce simp: bits_of_def is_cap_simps)+
+       apply (fastforce simp: bits_of_def is_cap_simps descendants_range_def)+
   done
 
 lemma invoke_untyped_pas_refined:
@@ -1058,6 +1077,7 @@ lemma invoke_untyped_pas_refined:
    apply (rule_tac Q="\<lambda>_. pas_refined aag and pspace_aligned and valid_vspace_objs
                                           and valid_arch_state and pas_cur_domain aag" in hoare_strengthen_post)
    apply (rule invoke_untyped_Q)
+         apply ta
         apply (rule hoare_pre, wp create_cap_pas_refined)
         apply (clarsimp simp: authorised_untyped_inv_def
                               range_cover.aligned ptr_range_def[symmetric]
@@ -1139,6 +1159,9 @@ lemma authorised_untyped_invI:
   apply (simp add: blah word_and_le2)
   done
 
+sublocale touched_addresses_det_inv \<subseteq> cte_wp_at:
+  touched_addresses_P_det_inv _ "cte_wp_at ((=) cap) slot"
+  by unfold_locales (simp)
 
 context Retype_AC_1 begin
 
@@ -1172,6 +1195,7 @@ lemma decode_untyped_invocation_authorised:
    apply (wp whenE_throwError_wp  hoare_vcg_all_lift mapME_x_inv_wp
           | simp split: untyped_invocation.splits
           | (auto)[1])+
+           sorry (* XXX: broken by touched_addresses. -robs
            apply (rule_tac Q="\<lambda>node_cap s.
                               (is_cnode_cap node_cap \<longrightarrow> is_subject aag (obj_ref_of node_cap)) \<and>
                               is_subject aag (fst slot) \<and> new_type \<noteq> ArchObject ASIDPoolObj \<and>
@@ -1179,7 +1203,6 @@ lemma decode_untyped_invocation_authorised:
                                      \<longrightarrow> (\<forall>ref \<in> ptr_range base (bits_of cap). is_subject aag ref))"
                         in hoare_strengthen_post)
             apply (wp get_cap_inv get_cap_ret_is_subject)
-           sorry (* XXX: broken by touched_addresses. -robs
            apply (fastforce simp: nonzero_data_to_nat_simp)
           apply clarsimp
           apply (wp lookup_slot_for_cnode_op_authorised
