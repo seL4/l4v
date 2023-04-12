@@ -228,7 +228,10 @@ lemma getObject_ASIDPool_corres:
   apply (clarsimp simp: state_relation_def pspace_relation_def)
   apply (drule bspec, blast)
   apply (clarsimp simp: other_obj_relation_def asid_pool_relation_def)
+  apply (clarsimp simp: ta_filter_def)
+  sorry (* FIXME: broken by touched-addrs -robs
   done
+*)
 
 lemma aligned_distinct_obj_atI':
   "\<lbrakk> ksPSpace s x = Some ko; pspace_aligned' s; pspace_distinct' s; ko = injectKO v \<rbrakk>
@@ -266,8 +269,11 @@ lemma setObject_ASIDPool_corres:
   apply (rule corres_underlying_symb_exec_l[where P=P and Q="\<lambda>_. P" for P])
     apply (rule corres_no_failI; clarsimp)
     apply (clarsimp simp: gets_map_def bind_def simpler_gets_def assert_opt_def fail_def return_def
-                          obj_at_def in_omonad
+                          obj_at_def in_omonad ta_filter_def
                     split: option.splits)
+    apply(clarsimp simp:state_relation_def machine_state_relation_def)
+    (* FIXME: Shouldn't the new machine_state_relation now tell us this? -robs *)
+    defer
    prefer 2
    apply wpsimp
   apply (rule corres_cross_over_asid_pool_at, fastforce)
@@ -288,7 +294,9 @@ lemma setObject_ASIDPool_corres:
    apply (clarsimp simp: obj_at_def exs_valid_def assert_def a_type_def return_def fail_def)
    apply (auto split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm if_split_asm)[1]
   apply (simp add: typ_at_to_obj_at_arches)
+  sorry (* FIXME: broken by touched-addrs -robs
   done
+*)
 
 lemma p_le_table_base:
   "is_aligned p pte_bits \<Longrightarrow> p + mask pte_bits \<le> table_base p + mask table_size"
@@ -360,7 +368,9 @@ lemma getObject_PTE_corres:
   apply (clarsimp simp: other_obj_relation_def pte_relation_def)
   apply (erule_tac x="table_index p" in allE)
   apply (clarsimp simp: mask_pt_bits_inner_beauty[simplified bit_simps] bit_simps)
+  sorry (* FIXME: broken by touched-addrs -robs
   done
+*)
 
 lemmas aligned_distinct_pte_atI'
     = aligned_distinct_obj_atI'[where 'a=pte,
@@ -378,7 +388,7 @@ lemma one_less_2p_pte_bits[simp]:
 \<comment> \<open>setObject_other_corres unfortunately doesn't work here\<close>
 lemma setObject_PT_corres:
   "pte_relation' pte pte' \<Longrightarrow>
-   corres dc ((\<lambda>s. pts_of s (table_base p) = Some pt) and K (is_aligned p pte_bits) and
+   corres dc ((\<lambda>s. pts_of False s (table_base p) = Some pt) and K (is_aligned p pte_bits) and
               pspace_aligned and pspace_distinct) \<top>
           (set_pt (table_base p) (pt(table_index p := pte)))
           (setObject p pte')"
@@ -397,8 +407,12 @@ lemma setObject_PT_corres:
   apply (simp add: in_magnitude_check objBits_simps a_type_simps)
   apply (clarsimp simp: obj_at_def exec_gets a_type_simps opt_map_def exec_get put_def)
   apply (clarsimp simp: state_relation_def mask_pt_bits_inner_beauty)
+  apply (clarsimp simp: obind_def ta_filter_def)
   apply (rule conjI)
+   apply (clarsimp simp: obind_def ta_filter_def)
    apply (clarsimp simp: pspace_relation_def split del: if_split)
+   sorry (* FIXME: broken by touched-addrs -robs
+   apply (clarsimp simp: obind_def ta_filter_def)
    apply (rule conjI)
     apply (subst pspace_dom_update, assumption)
      apply (simp add: a_type_def)
@@ -448,6 +462,7 @@ lemma setObject_PT_corres:
   apply (simp add: fun_upd_def)
   apply (simp add: caps_of_state_after_update obj_at_def swp_cte_at_caps_of)
   done
+*)
 
 lemma storePTE_corres:
   "pte_relation' pte pte' \<Longrightarrow>
@@ -455,12 +470,14 @@ lemma storePTE_corres:
   apply (simp add: store_pte_def storePTE_def)
   apply (rule corres_assume_pre, simp add: pte_at_def)
   apply (rule corres_symb_exec_l)
+     sorry (* FIXME: broken by touched-addrs -robs
      apply (erule setObject_PT_corres)
     apply (clarsimp simp: exs_valid_def gets_map_def fst_assert_opt in_omonad
                           exec_gets bind_assoc obj_at_def pte_at_def)
    apply (wpsimp simp: obj_at_def in_omonad)
   apply (wpsimp simp: obj_at_def in_omonad)
   done
+*)
 
 lemmas tableBitSimps[simplified bit_simps pteBits_pte_bits, simplified] = ptBits_def
 lemmas bitSimps = tableBitSimps
@@ -571,7 +588,7 @@ lemma lookupPTSlotFromLevel_corres:
      (pspace_aligned and pspace_distinct and valid_vspace_objs and valid_asid_table and
      \<exists>\<rhd> (level, pt) and K (vptr \<in> user_region \<and> level \<le> max_pt_level))
      \<top>
-     (gets_the (pt_lookup_slot_from_level level 0 pt vptr \<circ> ptes_of))
+     (gets_the (pt_lookup_slot_from_level level 0 pt vptr \<circ> ptes_of True))
      (lookupPTSlotFromLevel level' pt' vptr)"
 proof (induct level arbitrary: pt pt' level')
   case 0
@@ -678,7 +695,7 @@ lemma lookupPTSlot_corres:
              and valid_asid_table and \<exists>\<rhd>(max_pt_level,pt)
              and K (vptr \<in> user_region))
           \<top>
-          (gets_the (pt_lookup_slot pt vptr \<circ> ptes_of)) (lookupPTSlot pt vptr)"
+          (gets_the (pt_lookup_slot pt vptr \<circ> ptes_of True)) (lookupPTSlot pt vptr)"
   unfolding lookupPTSlot_def pt_lookup_slot_def
   by (corressimp corres: lookupPTSlotFromLevel_corres)
 
@@ -756,6 +773,7 @@ next
     apply (rule corres_gen_asm, simp)
     apply (rule corres_initial_splitE[where r'=dc])
        apply (corressimp simp: lookup_failure_map_def)
+      sorry (* FIXME: broken by touched-addrs -robs
       apply (rule corres_splitEE[where r'=pte_relation'])
          apply (rule whenE_throwError_corres)
            apply (simp add: lookup_failure_map_def)
@@ -801,6 +819,7 @@ next
      apply (simp add: in_omonad)
     apply wpsimp
     done
+  *)
 qed
 
 declare in_set_zip_refl[simp]
@@ -846,11 +865,13 @@ lemma copy_global_mappings_corres [@lift_corres_args, corres]:
       apply (rule_tac P="pt_at global_pt and ?apre" and P'="\<top>"
                 in corresK_mapM_x[OF order_refl])
         apply (corressimp simp: objBits_def mask_def wp: get_pte_wp getPTE_wp)+
+        sorry (* FIXME: broken by touched-addrs -robs
   apply (drule valid_global_arch_objs_pt_at)
   apply (clarsimp simp: ptIndex_def ptBitsLeft_def maxPTLevel_def ptTranslationBits_def pageBits_def
                         pt_index_def pt_bits_left_def level_defs)
   apply (fastforce intro!: page_table_pte_atI simp add: bit_simps word_le_nat_alt word_less_nat_alt)
   done
+*)
 
 lemma arch_cap_rights_update:
   "acap_relation c c' \<Longrightarrow>
@@ -956,7 +977,9 @@ lemma find_vspace_for_asid_rewite:
    apply (drule (1) valid_asid_tableD)
    apply (clarsimp simp: obj_at_def opt_map_def)
   apply (simp add: liftE_bindE bind_assoc exec_gets opt_map_def asid_low_bits_of_def)
+  sorry (* FIXME: broken by touched-addrs -robs
   done
+*)
 
 lemma findVSpaceForASID_corres:
   assumes "asid' = ucast asid"

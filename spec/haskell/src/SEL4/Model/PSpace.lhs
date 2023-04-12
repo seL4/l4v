@@ -120,6 +120,9 @@ assumed to have checked that the address is correctly aligned for the
 requested object type and that it actually contains an object of the
 requested type.
 
+> touchObject :: PSpaceStorable a => PPtr a -> Kernel ()
+> touchObject ptr = return ()
+
 > getObject :: PSpaceStorable a => PPtr a -> Kernel a
 > getObject ptr = do
 >         map <- gets $ psMap . ksPSpace

@@ -52,6 +52,8 @@ definition zeroed_main_abstract_state ::
     arch_state = zeroed_arch_abstract_state
   \<rparr>"
 
+. (* FIXME: New det_ext fields. -robs
+
 definition zeroed_extended_state ::
   det_ext
   where

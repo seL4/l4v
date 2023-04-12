@@ -21,10 +21,10 @@ interpretation submonad_doMachineOp:
   by (rule submonad_doMachineOp)
 
 lemma corres_machine_op:
-  assumes P: "corres_underlying Id False True r \<top> \<top> x x'"
+  assumes P: "corres_underlying machine_state_relation False True r \<top> \<top> x x'"
   shows      "corres r \<top> \<top> (do_machine_op x) (doMachineOp x')"
   apply (rule corres_submonad [OF submonad_do_machine_op submonad_doMachineOp _ _ P])
-   apply (simp_all add: state_relation_def swp_def)
+   apply (simp_all add: state_relation_def machine_state_relation_def swp_def)
   done
 
 lemma doMachineOp_mapM:

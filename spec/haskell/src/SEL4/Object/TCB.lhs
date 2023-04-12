@@ -336,6 +336,7 @@ This is to ensure that the source capability is not made invalid by the deletion
 >     -- if no notification cap supplied
 >     when (null extraCaps) $ throw TruncatedMessage
 >     let tcb = capTCBPtr cap
+>     withoutFailure $ touchObject tcb
 >     ntfn <- withoutFailure $ getBoundNotification tcb
 >     -- check if tcb already has bound notification
 >     case ntfn of
@@ -348,6 +349,7 @@ This is to ensure that the source capability is not made invalid by the deletion
 >     when (not rights) $ throw IllegalOperation
 >     -- check if notification is bound
 >     -- check if anything is waiting on the notification
+>     withoutFailure $ touchObject ntfnPtr
 >     notification <- withoutFailure $ getNotification ntfnPtr
 >     case (ntfnObj notification, ntfnBoundTCB notification) of
 >         (IdleNtfn, Nothing) -> return ()
