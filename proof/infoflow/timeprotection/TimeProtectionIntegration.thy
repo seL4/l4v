@@ -106,13 +106,20 @@ definition if_policy :: "('l partition \<times> 'l partition) set" where
 
 end
 
+
+(* here we actually define the expression that checks whether a step (or substep as in
+   the four-way split) starting at `os` will be completely determined by the currently-running
+   uwr. For now I think this is always true. *)
+definition is_uwr_determined :: "if_other_state \<Rightarrow> bool" where
+  "is_uwr_determined os \<equiv> case os of ((tc, s), k) \<Rightarrow> True"
+
 locale integration =
   ii?:integration_setup _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ gentypes +
   ts?:trace_selector
     "TYPE((if_other_state \<times> ('fch, 'pch) TimeProtection.state) \<times> 'l partition \<times> trace \<times> vpaddr set)"
-    "ii.part \<circ> fst" ma_uwr PSched "[]" "step_is_uwr_determined \<circ> fst" "step_is_publicly_determined \<circ> fst" select_trace 
+    "ii.part \<circ> fst" ma_uwr PSched "[]" "is_uwr_determined \<circ> fst" "step_is_publicly_determined \<circ> fst" select_trace 
   for gentypes :: "('fch \<times> 'fch_cachedness \<times> 'pch \<times> 'pch_cachedness \<times> 'l partition \<times> 'colour) itself"
-  and select_trace and step_is_uwr_determined and step_is_publicly_determined
+  and select_trace and step_is_publicly_determined
   
 begin
 
@@ -875,12 +882,56 @@ lemma get_next_domain_public:
   apply (clarsimp simp: domain_fields_equiv_def)
   done
 
+
+definition all_paddrs_of :: "'l partition \<Rightarrow> paddr set" where
+  " all_paddrs_of d \<equiv> {a. addr_domain a = d}"
+
+definition touched_addrs_inv :: "if_other_state \<Rightarrow> bool" where
+  "touched_addrs_inv s \<equiv>
+  snd ` touched_addresses s \<subseteq> all_paddrs_of (part s) \<union> kernel_shared_precise"
+
+(* FIXME: I haven't yet figured out how to phrase tainvs with partitions, when
+   most of the stuff I have set up is phrased in terms of subject_labels. Maybe
+   I need some kind of translation between these?
+interpretation l2p?: ArchL2Partitioned "TYPE('l partition \<times> 'l partition)" addr_domain id
+  done
+
+lemma l2p_subset_inv_form:
+  "reachable s \<Longrightarrow>
+  l2p.ta_subset_inv (current_aag (snd $ fst so)) (snd $ fst s)"
+  subgoal sorry
+  done *)
+
+lemma subset_inv_proof:
+  "reachable s \<Longrightarrow>
+  touched_addrs_inv s"
+  sorry (* FIXME: needs to be somehow derived from l2-_subset_inv or something *)
+
+(* I don't think this should be too bad. Can do this with hoare logic stuff I think. *)
+lemma domainswitch_follows_get_next_domain:
+  "(s1, s2) \<in> Step () \<Longrightarrow>
+  will_domain_switch s1 \<Longrightarrow>
+  part s2 = get_next_domain s1"
+  sorry
+
+lemma non_domainswitch_unchanged_domain:
+  "(s1, s2) \<in> Step () \<Longrightarrow>
+  \<not>will_domain_switch s1 \<Longrightarrow>
+  part s2 = part s1"
+  sorry
+
+lemma non_domainswitch_uwr_determined:
+  "(s1, s2) \<in> Step () \<Longrightarrow>
+  \<not>will_domain_switch s1 \<Longrightarrow>
+  is_uwr_determined s1"
+  sorry
+
 interpretation ma?:time_protection_system PSched fch_lookup fch_read_impact fch_write_impact
   empty_fch fch_flush_cycles fch_flush_WCET pch_lookup pch_read_impact pch_write_impact do_pch_flush
   pch_flush_cycles pch_flush_WCET collides_in_pch read_cycles write_cycles addr_domain addr_colour
   colour_userdomain part uwr nlds select_trace
   "big_step_ADT_A_if utf" s0 "policyFlows (pasPolicy initial_aag)"
-  _ _ _ touched_addresses _ _ _ will_domain_switch _ _ _ get_next_domain
+  _ _ is_uwr_determined touched_addresses _ _ _ will_domain_switch _ _ _ get_next_domain
   fourways_oldclean fourways_dirty fourways_gadget fourways_newclean
   
   apply unfold_locales
@@ -898,12 +949,23 @@ interpretation ma?:time_protection_system PSched fch_lookup fch_read_impact fch_
            (* get_next_domain_public *)
            apply (erule get_next_domain_public)
           (* touched addresses inv *)
-          
-          (* middle state stuff *)
-          subgoal sorry
-          subgoal sorry
-          subgoal sorry
-          subgoal sorry
+          using subset_inv_proof touched_addrs_inv_def all_paddrs_of_def apply clarsimp
+         (* the assumption "simple_steps" which states that steps will or won't domain-switch,
+            and some basic properties about these steps *)
+         apply (case_tac "will_domain_switch s"; clarsimp)
+          apply (erule domainswitch_follows_get_next_domain; simp)
+         apply (rule conjI, erule(1) non_domainswitch_unchanged_domain)
+         apply (rule non_domainswitch_uwr_determined; simp)
+        (* step_is_uwr_determimed for particular steps tells us that the
+          output touchedaddresses depend only on uwr *)
+        apply (erule disjE; clarsimp)
+
+
+         (* middle state stuff *)
+         subgoal sorry
+         subgoal sorry
+         subgoal sorry
+         subgoal sorry
       (* step_is_uwr_determined gives us (ta t = ta t') *)
       subgoal sorry
      (* step_is_publicly determined gives us (ta t = ta t') *)

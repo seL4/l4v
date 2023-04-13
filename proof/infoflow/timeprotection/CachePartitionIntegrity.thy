@@ -37,6 +37,7 @@ lemma pas_addrs_accessible_to_def2:
 end
 
 locale ArchL2Partitioned = Arch +
+   fixes gentypes :: "('a \<times> 'colour) itself"
    fixes paddr_L2_colour :: "paddr \<Rightarrow> 'colour"
    fixes label_L2_colour :: "'a \<Rightarrow> 'colour"
 begin
@@ -2462,9 +2463,10 @@ crunches call_kernel
 
 end
 
-locale ADT_IF_L2Partitioned = ArchL2Partitioned paddr_L2_colour label_L2_colour
+locale ADT_IF_L2Partitioned = ArchL2Partitioned gentypes paddr_L2_colour label_L2_colour
   (* FIXME: Not sure how to get rid of this "RISCV64." -robs *)
-  for paddr_L2_colour :: "RISCV64.paddr \<Rightarrow> 'colour"
+  for gentypes :: "('a \<times> 'colour) itself"
+  and paddr_L2_colour :: "RISCV64.paddr \<Rightarrow> 'colour"
   and label_L2_colour :: "'a \<Rightarrow> 'colour" +
   fixes initial_aag :: "'a PAS"
   fixes s0 :: det_state

@@ -18,7 +18,7 @@ begin
 *)
 
 datatype vaddr = VAddr machine_word
-datatype paddr = PAddr machine_word
+type_synonym paddr = machine_word
 
 type_synonym vpaddr = "vaddr \<times> paddr"
 
@@ -352,7 +352,7 @@ locale trace_selector =
   assumes select_trace_public_determined:
     "trace_will_be_public_determined s \<Longrightarrow>
     (s, t) \<in> uwr sched_domain \<Longrightarrow>
-    select_trace tfn t ta = select_trace tfn s ta"
+    select_trace tfn t ta = select_trace tfn s ta" 
   begin
 corollary trace_from_superset: "default_trace \<in> tfn s ta \<Longrightarrow> q \<supseteq> tfn s ta \<Longrightarrow> select_trace tfn s ta \<in> q"
   by (simp add: in_mono trace_from_set)
@@ -565,8 +565,8 @@ locale time_protection_system =
     step_is_uwr_determined s \<Longrightarrow>
     (step = ab.Step () \<and> \<not>will_domain_switch s)
     \<or> step = ds_substep_oldclean \<or> step = ds_substep_newclean \<Longrightarrow>
-    (s, s') \<in> ab.Step () \<Longrightarrow>
-    (t, t') \<in> ab.Step () \<Longrightarrow>
+    (s, s') \<in> step \<Longrightarrow>
+    (t, t') \<in> step \<Longrightarrow>
     touched_addrs t' = touched_addrs s'"
 
 
