@@ -14,12 +14,12 @@ begin
 
 lemma monadic_rewrite_ccorres_assemble:
   assumes cc: "ccorres_underlying sr G r xf ar axf P P' hs f c"
-  assumes mr: "monadic_rewrite True False Q g f"
+  assumes mr: "monadic_rewrite F E Q g f"
   shows       "ccorres_underlying sr G r xf ar axf (P and Q) P' hs g c"
 proof -
   have snd: "\<And>s. \<lbrakk> Q s; \<not> snd (g s) \<rbrakk> \<Longrightarrow> \<not> snd (f s)"
     using mr
-    by (simp add: monadic_rewrite_def)
+    by (fastforce simp: monadic_rewrite_def)
 
   have fst: "\<And>s v. \<lbrakk> Q s; \<not> snd (g s); v \<in> fst (f s) \<rbrakk> \<Longrightarrow> v \<in> fst (g s)"
     using mr
