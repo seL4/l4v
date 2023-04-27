@@ -416,7 +416,7 @@ definition refill_buffer_relation ::
   "refill_buffer_relation ah ch gs \<equiv>
      let abs_sc_hp = map_to_scs ah;
          crefill_hp = clift ch;
-         lens_hp = gs_refill_buffer_lengths gs
+         lens_hp = gs_sc_size gs
      in
        dom abs_sc_hp = dom lens_hp
        \<and> dom crefill_hp
