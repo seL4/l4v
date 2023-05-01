@@ -482,7 +482,7 @@ lemma idle_sc_in_kernel_window_init_arch_state[simp]:
   "{idle_sc_ptr..idle_sc_ptr + 2 ^ min_sched_context_bits - 1} \<subseteq>
      kernel_window_2 (riscv_kernel_vspace init_arch_state)"
   apply (clarsimp simp: state_defs pptr_base_num bit_simps kernel_window_def kernel_elf_base_def
-                        min_sched_context_bits_def)
+                        kernel_window_bits_def min_sched_context_bits_def)
   apply (rule conjI; unat_arith)
   done
 
@@ -514,7 +514,8 @@ lemma irq_node_in_kernel_window_init_arch_state':
   "\<lbrakk> init_irq_node_ptr + m \<le> x; x \<le> init_irq_node_ptr + m + mask cte_level_bits;
      m \<le> mask (size (irq::irq)) << cte_level_bits\<rbrakk>
    \<Longrightarrow> x \<in> kernel_window_2 (riscv_kernel_vspace init_arch_state)"
-  apply (clarsimp simp: kernel_window_def init_vspace_uses_def init_arch_state_def)
+  apply (clarsimp simp: init_vspace_uses_def init_arch_state_def bit_simps kernel_window_def
+                        kernel_window_bits_def)
   apply (rule conjI)
    apply (clarsimp simp: state_defs)
    apply (rule ccontr, simp add:not_le)
@@ -525,7 +526,7 @@ lemma irq_node_in_kernel_window_init_arch_state':
      apply (simp add: add_ac)
      apply (clarsimp simp: pptr_base_num mask_def word_size pptr_base_kernel_elf_base
                            irq_node_pptr_base_kernel_elf_base cte_level_bits_def
-                           kernel_elf_base_def kernelELFBase_def)[1]
+                           kernel_elf_base_def kernelELFBase_def pptrTop_def)
      apply unat_arith
     apply (simp add: pptr_base_num canonical_bit_def is_aligned_def)
    apply (simp add: pptr_base_num cte_level_bits_def canonical_bit_def mask_def word_size)

@@ -93,7 +93,7 @@ lemma atg_sp':
 (* FIXME: MOVE to EmptyFail *)
 lemma empty_fail_archThreadGet [intro!, wp, simp]:
   "empty_fail (archThreadGet f p)"
-  by (simp add: archThreadGet_def getObject_def readObject_def gets_the_def split_def)
+  by (fastforce simp: archThreadGet_def)
 
 (* FIXME: move to ainvs? *)
 lemma sign_extend_canonical_address:

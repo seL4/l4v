@@ -2743,7 +2743,8 @@ lemma cap_get_capIsPhysical_spec:
                                           ptr_add_assertion_positive cap_get_tag_scast
                                    dest!: sym [where t = "ucast (cap_get_tag cap)" for cap]
                                    split: vmpage_size.splits)+
-  by (auto simp: cap_lifts dest!: cap_lift_Some_CapD split: option.splits cap_CL.splits)
+  by (auto simp: cap_thread_cap_lift_def cap_sched_context_cap_lift_def
+           dest: cap_lift_Some_CapD split: option.splits cap_CL.splits)
 
 lemma ccap_relation_get_capPtr_not_physical:
   "\<lbrakk> ccap_relation hcap ccap; capClass hcap \<noteq> PhysicalClass \<rbrakk> \<Longrightarrow>
