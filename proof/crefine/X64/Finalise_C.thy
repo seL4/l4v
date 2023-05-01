@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -878,7 +879,7 @@ lemma finaliseCap_True_cases_ccorres:
    apply csymbr
    apply (simp add: cap_get_tag_isCap Collect_False del: Collect_const)
    apply (fold case_bool_If)
-   apply (simp add: false_def)
+   apply simp
    apply csymbr
    apply wpc
     apply (simp add: cap_get_tag_isCap ccorres_cond_univ_iff Let_def)
@@ -1098,7 +1099,7 @@ lemma deleteASIDPool_ccorres:
                 apply (drule_tac x="of_nat n" in spec)+
                 apply (simp add: asid_low_bits_def word_le_nat_alt)
                 apply (simp add: word_unat.Abs_inverse unats_def)
-                apply (clarsimp simp: asid_map_relation_def false_def asid_map_tag_defs
+                apply (clarsimp simp: asid_map_relation_def asid_map_tag_defs
                                       asid_map_lift_def Let_def
                                split: option.split_asm asid_map_CL.split_asm if_splits)
                apply (rule ccorres_rhs_assoc)+
@@ -1223,7 +1224,7 @@ lemma deleteASID_ccorres:
         apply (simp add: asid_low_bits_def Kernel_C.asidLowBits_def
                          mask_def word_and_le1 asid_map_relation_def)
         apply (rule conjI, fastforce simp: asid_map_lifts from_bool_def case_bool_If inv_ASIDPool)
-        apply (fastforce simp: from_bool_def case_bool_If inv_ASIDPool asid_map_lift_def
+        apply (fastforce simp: case_bool_If inv_ASIDPool asid_map_lift_def
                        split: option.split_asm asid_map_CL.split_asm if_split_asm)
        apply ceqv
       apply (rule ccorres_cond2[where R=\<top>])
@@ -1534,7 +1535,7 @@ lemma isFinalCapability_ccorres:
            apply (simp add: mdbPrev_to_H[symmetric])
           apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
           apply (rule allI, rule conseqPre, vcg)
-          apply (simp add: return_def from_bool_def false_def)
+          apply (simp add: return_def)
          apply (rule ccorres_rhs_assoc)+
          apply (rule ccorres_symb_exec_l[OF _ getCTE_inv getCTE_wp empty_fail_getCTE])
          apply (rule_tac P="cte_wp_at' ((=) cte) slot
@@ -1573,10 +1574,9 @@ lemma isFinalCapability_ccorres:
        apply (rule cmap_relationE1 [OF cmap_relation_cte], assumption+,
                   simp?, simp add: typ_heap_simps)+
        apply (drule ccte_relation_ccap_relation)+
-       apply (auto simp: false_def true_def from_bool_def split: bool.splits)[1]
+       apply (auto simp: from_bool_def split: bool.splits)[1]
       apply (wp getCTE_wp')
-     apply (clarsimp simp add: guard_is_UNIV_def Collect_const_mem false_def
-                               from_bool_0 true_def from_bool_def)
+     apply (clarsimp simp add: guard_is_UNIV_def Collect_const_mem)
     apply vcg
    apply (rule conseqPre, vcg)
    apply clarsimp
@@ -1634,13 +1634,12 @@ lemma cteDeleteOne_ccorres:
         apply (strengthen invs_mdb_strengthen' invs_urz)
         apply (wp typ_at_lifts isFinalCapability_inv
             | strengthen invs_valid_objs')+
-       apply (clarsimp simp: from_bool_def true_def irq_opt_relation_def
-                             invs_pspace_aligned' cte_wp_at_ctes_of)
+       apply (clarsimp simp: irq_opt_relation_def invs_pspace_aligned' cte_wp_at_ctes_of)
        apply (erule(1) cmap_relationE1 [OF cmap_relation_cte])
        apply (clarsimp simp: typ_heap_simps ccte_relation_ccap_relation ccap_relation_NullCap_iff)
       apply (wp isFinalCapability_inv)
      apply simp
-    apply (simp del: Collect_const add: false_def)
+    apply (simp del: Collect_const)
    apply (rule ccorres_return_Skip)
   apply (clarsimp simp: Collect_const_mem cte_wp_at_ctes_of)
   apply (erule(1) cmap_relationE1 [OF cmap_relation_cte])
@@ -1810,22 +1809,6 @@ lemma cnotification_relation_udpate_arch:
   apply (safe ; case_tac "xa = p" ; clarsimp simp: option_map2_def map_option_case)
   done
 
-lemma sanitiseSetRegister_ccorres:
-  "\<lbrakk> val = val'; reg' = register_from_H reg\<rbrakk> \<Longrightarrow>
-     ccorres dc xfdc (tcb_at' tptr)
-                      UNIV
-                      hs
-             (asUser tptr (setRegister reg (local.sanitiseRegister False reg val)))
-             (\<acute>unsigned_long_eret_2 :== CALL sanitiseRegister(reg',val',0);;
-              CALL setRegister(tcb_ptr_to_ctcb_ptr tptr,reg',\<acute>unsigned_long_eret_2))"
-  apply (rule ccorres_guard_imp2)
-   apply (rule ccorres_symb_exec_r)
-     apply (ctac add: setRegister_ccorres)
-    apply (vcg)
-   apply (rule conseqPre, vcg)
-   apply (fastforce simp: sanitiseRegister_def split: register.splits)
-  by (auto simp: sanitiseRegister_def from_bool_def simp del: Collect_const split: register.splits bool.splits)
-
 lemma case_option_both[simp]:
   "(case f of None \<Rightarrow> P | _ \<Rightarrow> P) = P"
   by (auto split: option.splits)
@@ -1952,7 +1935,7 @@ lemma unmapPDPointerTable_ccorres:
           apply (erule ko_at_projectKO_opt)
          apply (rename_tac pml4e_C)
          apply (fastforce simp: typ_heap_simps cpml4e_relation_def Let_def
-                                isPDPointerTablePML4E_def from_bool_def
+                                isPDPointerTablePML4E_def
                           split: bool.splits if_split pml4e.split_asm)
         apply ceqv
        apply (rule ccorres_Cond_rhs_Seq)
@@ -1986,20 +1969,18 @@ lemma ccap_relation_PDPT_IsMapped:
   "ccap_relation (ArchObjectCap (PDPointerTableCap x1 x2)) cap \<Longrightarrow>
      capPDPTIsMapped_CL (cap_pdpt_cap_lift cap) = from_bool (\<not> Option.is_none x2)"
   apply (frule cap_get_tag_isCap_unfolded_H_cap)
-  apply (clarsimp simp: ccap_relation_def cap_to_H_def cap_pdpt_cap_lift_def cap_lift_def Let_def
-                        cap_tag_defs to_bool_def true_def false_def
-                  split: if_split)
-  apply word_bitwise
+  apply (clarsimp simp: ccap_relation_def cap_to_H_def cap_pdpt_cap_lift_def cap_lift_def
+                        cap_tag_defs to_bool_def
+                 split: if_split)
   done
 
 lemma ccap_relation_PML4_IsMapped:
   "ccap_relation (ArchObjectCap (PML4Cap x1 x2)) cap \<Longrightarrow>
      capPML4IsMapped_CL (cap_pml4_cap_lift cap) = from_bool (\<not> Option.is_none x2)"
   apply (frule cap_get_tag_isCap_unfolded_H_cap)
-  apply (clarsimp simp: ccap_relation_def cap_to_H_def cap_pml4_cap_lift_def cap_lift_def Let_def
-                        cap_tag_defs to_bool_def true_def false_def
-                  split: if_split)
-  apply word_bitwise
+  apply (clarsimp simp: ccap_relation_def cap_to_H_def cap_pml4_cap_lift_def cap_lift_def
+                        cap_tag_defs to_bool_def
+                 split: if_split)
   done
 
 lemma if_case_opt_same_branches:
@@ -2049,7 +2030,7 @@ lemma Mode_finaliseCap_ccorres_pdpt:
                    R'=UNIV
                    in ccorres_symb_exec_r_known_rv_UNIV)
       apply (vcg exspec=unmapPDPT_modifies)
-      apply (fastforce simp: false_def cap_get_tag_isCap_unfolded_H_cap
+      apply (fastforce simp: cap_get_tag_isCap_unfolded_H_cap
                              ccap_relation_PDPT_IsMapped from_bool_eq_if')
      apply ceqv
     apply (rule ccorres_Cond_rhs_Seq)
@@ -2111,7 +2092,7 @@ lemma Mode_finaliseCap_ccorres_pml4:
                    R'=UNIV
                    in ccorres_symb_exec_r_known_rv_UNIV)
       apply vcg
-      apply (fastforce simp: false_def cap_get_tag_isCap_unfolded_H_cap
+      apply (fastforce simp: cap_get_tag_isCap_unfolded_H_cap
                              ccap_relation_PML4_IsMapped from_bool_eq_if')
      apply ceqv
     apply (rule ccorres_Cond_rhs_Seq)
@@ -2164,7 +2145,7 @@ lemma Mode_finaliseCap_ccorres_page_cap:
                             od)
      (Call Mode_finaliseCap_'proc)"
   supply Collect_const[simp del]
-  apply (cinit' lift: cap_' simp: false_def)
+  apply (cinit' lift: cap_')
    apply csymbr
    apply (clarsimp simp: cap_get_tag_isCap_unfolded_H_cap cap_tag_defs)
    apply ccorres_rewrite
@@ -2252,7 +2233,7 @@ lemma Arch_finaliseCap_ccorres:
           apply (clarsimp simp: return_def)
          apply wp
         apply fastforce
-       apply (fastforce simp: false_def)
+       apply fastforce
       \<comment> \<open>PML4Cap\<close>
       apply (rule ccorres_guard_imp)
         apply (rule ccorres_add_return2)
@@ -2262,7 +2243,7 @@ lemma Arch_finaliseCap_ccorres:
          apply (clarsimp simp: return_def)
         apply wp
        apply fastforce
-      apply (fastforce simp: false_def)
+      apply fastforce
      \<comment> \<open>PageCap\<close>
      apply (clarsimp simp: isCap_simps)
      apply (rule ccorres_guard_imp[where A="?abstract_pre" and A'=UNIV])
@@ -2314,7 +2295,7 @@ lemma Arch_finaliseCap_ccorres:
      apply (frule cap_get_tag_isCap_unfolded_H_cap)
      apply (frule cap_lift_page_directory_cap)
      apply (clarsimp simp: ccap_relation_def cap_to_H_def capAligned_def
-                           to_bool_def cap_page_directory_cap_lift_def
+                           cap_page_directory_cap_lift_def
                            asid_bits_def
                     split: if_split_asm)
     apply simp
@@ -2358,8 +2339,7 @@ lemma Arch_finaliseCap_ccorres:
      apply (frule cap_get_tag_isCap_unfolded_H_cap)
      apply (frule cap_lift_page_table_cap)
      apply (clarsimp simp: ccap_relation_def cap_to_H_def capAligned_def
-                           to_bool_def cap_page_table_cap_lift_def
-                           asid_bits_def
+                           cap_page_table_cap_lift_def asid_bits_def
                     split: if_split_asm)
      apply simp
      apply (rule ccorres_inst[where P=\<top> and P'=UNIV], return_NullCap_pair_ccorres)
@@ -2493,7 +2473,7 @@ lemma finaliseCap_ccorres:
                del: Collect_const)
    apply (rule ccorres_if_lhs)
     apply (simp, rule ccorres_fail)
-   apply (simp add: from_bool_0 Collect_True Collect_False false_def
+   apply (simp add: from_bool_0 Collect_True Collect_False
                del: Collect_const)
    apply csymbr
    apply (simp add: cap_get_tag_isCap Collect_False Collect_True
@@ -2578,7 +2558,7 @@ lemma finaliseCap_ccorres:
    apply (simp add: isArchCap_T_isArchObjectCap[symmetric]
                del: Collect_const)
    apply (rule ccorres_if_lhs)
-    apply (simp add: Collect_False Collect_True Let_def true_def
+    apply (simp add: Collect_False Collect_True Let_def
                 del: Collect_const)
     apply (rule_tac P="(capIRQ cap) \<le>  X64.maxIRQ" in ccorres_gen_asm)
     apply (rule ccorres_rhs_assoc)+
@@ -2618,8 +2598,7 @@ lemma finaliseCap_ccorres:
                            irq_opt_relation_def)
     apply wp
    apply (simp add: guard_is_UNIV_def)
-  apply (clarsimp simp: cap_get_tag_isCap word_sle_def Collect_const_mem
-                        false_def from_bool_def)
+  apply (clarsimp simp: cap_get_tag_isCap word_sle_def Collect_const_mem)
   apply (intro impI conjI)
                 apply (clarsimp split: bool.splits)
                apply (clarsimp split: bool.splits)
@@ -2636,7 +2615,7 @@ lemma finaliseCap_ccorres:
                    split: option.splits cap_CL.splits if_splits)
      apply clarsimp
      apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
-     apply (clarsimp simp: isCap_simps from_bool_def false_def)
+     apply (clarsimp simp: isCap_simps)
     apply (clarsimp simp: tcb_cnode_index_defs ptr_add_assertion_def)
    apply clarsimp
    apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])

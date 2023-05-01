@@ -243,40 +243,6 @@ definition
                    | Some cap \<Rightarrow> Some \<lparr> cap_CL = cap,
                                        cteMDBNode_CL = mdb_node_lift (cteMDBNode_C c) \<rparr>"
 
-(* this is slightly weird, but the bitfield generator
-   masks everything with the expected bit length.
-   So we do that here too. *)
-definition
-  to_bool_bf :: "'a::len word \<Rightarrow> bool" where
-  "to_bool_bf w \<equiv> (w && mask 1) = 1"
-
-lemma to_bool_bf_0 [simp]: "\<not>to_bool_bf 0"
-  by (simp add: to_bool_bf_def)
-
-lemma to_bool_bf_1 [simp]: "to_bool_bf 1"
-  by (simp add: to_bool_bf_def mask_def)
-
-lemma to_bool_bf_and [simp]:
-  "to_bool_bf (a && b) = (to_bool_bf a \<and> to_bool_bf (b::word32))"
-  apply (clarsimp simp: to_bool_bf_def)
-  apply (rule iffI)
-   apply (subst (asm) bang_eq)
-   apply (simp add: word_size)
-   apply (rule conjI)
-    apply (rule word_eqI)
-    apply (auto simp add: word_size)[1]
-   apply (rule word_eqI)
-   apply (auto simp add: word_size)[1]
-  apply clarsimp
-  apply (rule word_eqI)
-  apply (subst (asm) bang_eq)+
-  apply (auto simp add: word_size)[1]
-  done
-
-lemma to_bool_bf_to_bool_mask:
-  "w && mask (Suc 0) = w \<Longrightarrow> to_bool_bf w = to_bool (w::word32)"
-  by (metis One_nat_def mask_eq1_nochoice fold_eq_0_to_bool mask_1 to_bool_bf_0 to_bool_bf_def)
-
 definition
   mdb_node_to_H :: "mdb_node_CL \<Rightarrow> mdbnode"
   where

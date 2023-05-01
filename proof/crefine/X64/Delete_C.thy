@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -147,7 +148,7 @@ lemma capRemovable_spec:
   supply if_cong[cong]
   apply vcg
   apply (clarsimp simp: cap_get_tag_isCap(1-8)[THEN trans[OF eq_commute]])
-  apply (simp add: capRemovable_def from_bool_def[where b=True] true_def)
+  apply (simp add: capRemovable_def)
   apply (clarsimp simp: ccap_zombie_radix_less4)
   apply (subst eq_commute, subst from_bool_eq_if)
   apply (rule exI, rule conjI, assumption)
@@ -648,7 +649,7 @@ lemma reduceZombie_ccorres1:
       apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
       apply simp
      apply (simp add: guard_is_UNIV_def Collect_const_mem)
-     apply (clarsimp simp: from_bool_def false_def isCap_simps size_of_def cte_level_bits_def)
+     apply (clarsimp simp: isCap_simps size_of_def cte_level_bits_def)
      apply (simp only: word_bits_def unat_of_nat unat_arith_simps, simp)
     apply (simp add: guard_is_UNIV_def)+
   apply (clarsimp simp: cte_wp_at_ctes_of)
@@ -730,8 +731,7 @@ lemma finaliseSlot_ccorres:
         apply (rule ccorres_drop_cutMon)
         apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
         apply (rule allI, rule conseqPre, vcg)
-        apply (clarsimp simp: returnOk_def return_def
-                              from_bool_def true_def ccap_relation_NullCap_iff)
+        apply (clarsimp simp: returnOk_def return_def ccap_relation_NullCap_iff)
        apply (simp add: Collect_True liftE_bindE split_def
                         ccorres_cond_iffs cutMon_walk_bind
                    del: Collect_const cong: call_ignore_cong)
@@ -768,8 +768,7 @@ lemma finaliseSlot_ccorres:
               apply (rule_tac P="\<lambda>s. cleanup_info_wf' (snd rvb)"
                               in ccorres_from_vcg_throws[where P'=UNIV])
               apply (rule allI, rule conseqPre, vcg)
-              apply (clarsimp simp: returnOk_def return_def
-                                    from_bool_def true_def)
+              apply (clarsimp simp: returnOk_def return_def)
               apply (clarsimp simp: cleanup_info_wf'_def arch_cleanup_info_wf'_def
                              split: if_split capability.splits)
              apply vcg
@@ -806,11 +805,11 @@ lemma finaliseSlot_ccorres:
                   apply (rule allI, rule conseqPre, vcg)
                   apply (clarsimp simp: returnOk_def return_def)
                   apply (drule use_valid [OF _ finaliseCap_cases, OF _ TrueI])
-                  apply (simp add: from_bool_def false_def irq_opt_relation_def true_def
+                  apply (simp add: irq_opt_relation_def
                             split: if_split_asm)
                  apply vcg
                 apply wp
-               apply (simp add: guard_is_UNIV_def true_def)
+               apply (simp add: guard_is_UNIV_def)
               apply wp
              apply (simp add: guard_is_UNIV_def)
             apply (simp only: liftE_bindE cutMon_walk_bind Let_def
@@ -835,7 +834,6 @@ lemma finaliseSlot_ccorres:
                                in ccorres_from_vcg[where P'=UNIV])
                   apply (rule allI, rule conseqPre, vcg)
                   apply (clarsimp simp: return_def)
-                  apply (simp add: from_bool_def false_def)
                   apply fastforce
                  apply ceqv
                 apply (simp only: from_bool_0 simp_thms Collect_False
@@ -910,7 +908,7 @@ lemma finaliseSlot_ccorres:
                       simp: isCap_simps final_matters'_def o_def)
         apply clarsimp
         apply (frule valid_globals_cte_wpD'[rotated], clarsimp)
-        apply (clarsimp simp: cte_wp_at_ctes_of false_def from_bool_def)
+        apply (clarsimp simp: cte_wp_at_ctes_of)
         apply (erule(1) cmap_relationE1 [OF cmap_relation_cte])
         apply (frule valid_global_refsD_with_objSize, clarsimp)
         apply (auto simp: typ_heap_simps dest!: ccte_relation_ccap_relation)[1]
@@ -1036,9 +1034,8 @@ lemma cteRevoke_ccorres1:
         apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
         apply (rule allI, rule conseqPre, vcg)
         apply (clarsimp simp: returnOk_def return_def)
-       apply (simp add: guard_is_UNIV_def from_bool_def true_def cintr_def
-                        Collect_const_mem exception_defs)
-      apply (simp add: guard_is_UNIV_def from_bool_def true_def)
+       apply (simp add: guard_is_UNIV_def cintr_def Collect_const_mem exception_defs)
+      apply (simp add: guard_is_UNIV_def)
      apply (rule getCTE_wp)
     apply (clarsimp simp: cte_wp_at_ctes_of nullPointer_def)
     apply (drule invs_mdb')

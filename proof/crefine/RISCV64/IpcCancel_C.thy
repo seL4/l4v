@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
@@ -435,9 +436,9 @@ lemma isStopped_ccorres [corres]:
    apply vcg
    apply clarsimp
   apply clarsimp
-  apply (clarsimp simp: to_bool_def true_def false_def typ_heap_simps
-    ctcb_relation_thread_state_to_tsType split: thread_state.splits)
-  apply (simp add: "StrictC'_thread_state_defs")+
+  apply (clarsimp simp: typ_heap_simps ctcb_relation_thread_state_to_tsType
+                 split: thread_state.splits)
+    apply (simp add: "StrictC'_thread_state_defs")+
   done
 
 lemma isRunnable_ccorres [corres]:
@@ -463,10 +464,10 @@ lemma isRunnable_ccorres [corres]:
     apply (vcg)
    apply (clarsimp)
   apply (clarsimp)
-  apply (clarsimp simp: to_bool_def true_def false_def typ_heap_simps
-    ctcb_relation_thread_state_to_tsType split: thread_state.splits)
-  apply (simp add: "StrictC'_thread_state_defs")+
-done
+  apply (clarsimp simp: typ_heap_simps ctcb_relation_thread_state_to_tsType
+                 split: thread_state.splits)
+       apply (simp add: "StrictC'_thread_state_defs")+
+  done
 
 
 
@@ -788,13 +789,6 @@ lemma state_relation_queue_update_helper:
    apply (erule(5) state_relation_queue_update_helper', simp_all)
   apply (clarsimp simp: valid_queues_def valid_queues_no_bitmap_def)
   done
-
-(* FIXME: move *)
-lemma from_bool_vals [simp]:
-  "from_bool True = scast true"
-  "from_bool False = scast false"
-  "scast true \<noteq> scast false"
-  by (auto simp add: from_bool_def true_def false_def)
 
 (* FIXME: move *)
 lemma cmap_relation_no_upd:
@@ -1932,10 +1926,6 @@ proof -
                        valid_obj'_def inQ_def
                 dest!: valid_queues_obj_at'D)
 qed
-
-lemma true_eq_from_bool [simp]:
-  "(scast true = from_bool P) = P"
-  by (simp add: true_def from_bool_def split: bool.splits)
 
 lemma isStopped_spec:
   "\<forall>s. \<Gamma> \<turnstile> ({s} \<inter> {s. cslift s (thread_' s) \<noteq> None}) Call isStopped_'proc

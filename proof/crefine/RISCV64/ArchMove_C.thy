@@ -100,11 +100,6 @@ lemma sign_extend_canonical_address:
   "(x = sign_extend 38 x) = canonical_address x"
   by (fastforce simp: sign_extended_iff_sign_extend canonical_address_sign_extended canonical_bit_def)
 
-lemma ptr_range_mask_range:
-  "{ptr..ptr + 2 ^ bits - 1} = mask_range ptr bits"
-  unfolding mask_def
-  by simp
-
 lemma valid_untyped':
   notes usableUntypedRange.simps[simp del]
   assumes pspace_distinct': "pspace_distinct' s" and

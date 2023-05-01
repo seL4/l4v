@@ -12,7 +12,7 @@ imports
   "Lib.Lib"
   "Word_Lib.WordSetup"
   Setup_Locale
-  Kernel_Config_Lemmas
+  Kernel_Config
 begin
 
 context Arch begin global_naming ARM_HYP
@@ -39,23 +39,20 @@ definition cacheLineBits :: nat where
 definition cacheLine :: nat where
   "cacheLine = 2^cacheLineBits"
 
-(* Arch specific kernel base address used for haskell spec *)
+(* The first virtual address of the kernel's physical memory window *)
 definition pptrBase :: word32 where
   "pptrBase \<equiv> 0xe0000000"
 
-definition physBase :: word32 where
-  "physBase \<equiv> 0x80000000"
-
 abbreviation (input) "paddrBase \<equiv> physBase"
+
+definition pptrBaseOffset :: machine_word where
+  "pptrBaseOffset = pptrBase - paddrBase"
 
 definition pptrTop :: "32 word" where
   "pptrTop \<equiv> 0xfff00000"
 
 definition paddrTop :: "32 word" where
-  "paddrTop \<equiv> pptrTop - (pptrBase - physBase)"
-
-definition pptrBaseOffset :: word32 where
-  "pptrBaseOffset \<equiv> pptrBase - physBase"
+  "paddrTop \<equiv> pptrTop - pptrBaseOffset"
 
 definition kernelELFPAddrBase :: word32 where
   "kernelELFPAddrBase \<equiv> physBase"

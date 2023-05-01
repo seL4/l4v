@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -834,7 +835,7 @@ lemma finaliseCap_True_cases_ccorres:
    apply csymbr
    apply (simp add: cap_get_tag_isCap Collect_False del: Collect_const)
    apply (fold case_bool_If)
-   apply (simp add: false_def)
+   apply simp
    apply csymbr
    apply wpc
     apply (simp add: cap_get_tag_isCap ccorres_cond_univ_iff Let_def)
@@ -1202,8 +1203,7 @@ lemma deleteASID_ccorres:
         apply (simp add: asid_low_bits_def Kernel_C.asidLowBits_def
                          mask_def word_and_le1)
         apply (drule sym, simp)
-        apply (simp add: option_to_ptr_def option_to_0_def
-                         from_bool_def inv_ASIDPool
+        apply (simp add: option_to_ptr_def option_to_0_def inv_ASIDPool
                   split: option.split if_split bool.split)
        apply ceqv
       apply (rule ccorres_cond2[where R=\<top>])
@@ -1568,7 +1568,7 @@ lemma Arch_finaliseCap_ccorres:
       apply (frule cap_get_tag_isCap_unfolded_H_cap)
       apply (frule cap_lift_page_directory_cap)
       apply (clarsimp simp: ccap_relation_def cap_to_H_def capAligned_def
-                            to_bool_def cap_page_directory_cap_lift_def
+                            cap_page_directory_cap_lift_def
                             asid_bits_def
                       split: if_split_asm)
      apply simp
@@ -1610,9 +1610,8 @@ lemma Arch_finaliseCap_ccorres:
       apply (frule cap_get_tag_isCap_unfolded_H_cap)
       apply (frule cap_lift_page_table_cap)
       apply (clarsimp simp: ccap_relation_def cap_to_H_def capAligned_def
-                            to_bool_def cap_page_table_cap_lift_def
-                            asid_bits_def
-                      split: if_split_asm)
+                            cap_page_table_cap_lift_def asid_bits_def
+                     split: if_split_asm)
      apply simp
      apply return_NullCap_pair_ccorres
     apply (clarsimp simp: isCap_simps)
@@ -1776,7 +1775,7 @@ lemma Arch_finaliseCap_ccorres:
      apply (frule cap_get_tag_isCap_unfolded_H_cap)
      apply (frule cap_lift_page_directory_cap)
      apply (clarsimp simp: ccap_relation_def cap_to_H_def capAligned_def
-                           to_bool_def cap_page_directory_cap_lift_def
+                           cap_page_directory_cap_lift_def
                            asid_bits_def
                      split: if_split_asm)
     apply (frule cap_get_tag_isCap_unfolded_H_cap)
@@ -1814,7 +1813,7 @@ lemma isFinalCapability_ccorres:
            apply (simp add: mdbPrev_to_H[symmetric])
           apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
           apply (rule allI, rule conseqPre, vcg)
-          apply (simp add: return_def from_bool_def false_def)
+          apply (simp add: return_def)
          apply (rule ccorres_rhs_assoc)+
          apply (rule ccorres_symb_exec_l[OF _ getCTE_inv getCTE_wp empty_fail_getCTE])
          apply (rule_tac P="cte_wp_at' ((=) cte) slot
@@ -1853,10 +1852,9 @@ lemma isFinalCapability_ccorres:
        apply (rule cmap_relationE1 [OF cmap_relation_cte], assumption+,
                   simp?, simp add: typ_heap_simps)+
        apply (drule ccte_relation_ccap_relation)+
-       apply (auto simp: false_def true_def from_bool_def split: bool.splits)[1]
+       apply (auto simp: from_bool_def split: bool.splits)[1]
       apply (wp getCTE_wp')
-     apply (clarsimp simp add: guard_is_UNIV_def Collect_const_mem false_def
-                               from_bool_0 true_def from_bool_def)
+     apply (clarsimp simp add: guard_is_UNIV_def Collect_const_mem)
     apply vcg
    apply (rule conseqPre, vcg)
    apply clarsimp
@@ -1914,13 +1912,12 @@ lemma cteDeleteOne_ccorres:
         apply (strengthen invs_mdb_strengthen' invs_urz)
         apply (wp typ_at_lifts isFinalCapability_inv
             | strengthen invs_valid_objs')+
-       apply (clarsimp simp: from_bool_def true_def irq_opt_relation_def
-                             invs_pspace_aligned' cte_wp_at_ctes_of)
+       apply (clarsimp simp: irq_opt_relation_def invs_pspace_aligned' cte_wp_at_ctes_of)
        apply (erule(1) cmap_relationE1 [OF cmap_relation_cte])
        apply (clarsimp simp: typ_heap_simps ccte_relation_ccap_relation ccap_relation_NullCap_iff)
       apply (wp isFinalCapability_inv)
      apply simp
-    apply (simp del: Collect_const add: false_def)
+    apply (simp del: Collect_const)
    apply (rule ccorres_return_Skip)
   apply (clarsimp simp: Collect_const_mem cte_wp_at_ctes_of)
   apply (erule(1) cmap_relationE1 [OF cmap_relation_cte])
@@ -2081,7 +2078,7 @@ lemma finaliseCap_ccorres:
                del: Collect_const)
    apply (rule ccorres_if_lhs)
     apply (simp, rule ccorres_fail)
-   apply (simp add: from_bool_0 Collect_True Collect_False false_def
+   apply (simp add: from_bool_0 Collect_True Collect_False
                del: Collect_const)
    apply csymbr
    apply (simp add: cap_get_tag_isCap Collect_False Collect_True
@@ -2165,7 +2162,7 @@ lemma finaliseCap_ccorres:
    apply (simp add: isArchCap_T_isArchObjectCap[symmetric]
                del: Collect_const)
    apply (rule ccorres_if_lhs)
-    apply (simp add: Collect_False Collect_True Let_def true_def
+    apply (simp add: Collect_False Collect_True Let_def
                 del: Collect_const)
     apply (rule_tac P="(capIRQ cap) \<le>  ARM.maxIRQ" in ccorres_gen_asm)
     apply (rule ccorres_rhs_assoc)+
@@ -2205,8 +2202,7 @@ lemma finaliseCap_ccorres:
                            irq_opt_relation_def)
     apply wp
    apply (simp add: guard_is_UNIV_def)
-  apply (clarsimp simp: cap_get_tag_isCap word_sle_def Collect_const_mem
-                        false_def from_bool_def)
+  apply (clarsimp simp: cap_get_tag_isCap word_sle_def Collect_const_mem)
   apply (intro impI conjI)
              apply (clarsimp split: bool.splits)
             apply (clarsimp split: bool.splits)
@@ -2222,7 +2218,7 @@ lemma finaliseCap_ccorres:
                       split: option.splits cap_CL.splits if_splits)
      apply clarsimp
      apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
-     apply (clarsimp simp: isCap_simps from_bool_def false_def)
+     apply (clarsimp simp: isCap_simps)
      apply (clarsimp simp: tcb_cnode_index_defs ptr_add_assertion_def)
     apply clarsimp
     apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])

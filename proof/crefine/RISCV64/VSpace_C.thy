@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
@@ -82,7 +83,7 @@ lemma checkVPAlignment_ccorres:
        apply simp
       apply simp
      apply simp
-    apply (simp split: if_split add: to_bool_def)
+    apply (simp split: if_split)
    apply (clarsimp simp: mask_def unlessE_def throwError_def split: if_split)
    apply (rule ccorres_guard_imp)
      apply (rule ccorres_return_C)
@@ -90,7 +91,7 @@ lemma checkVPAlignment_ccorres:
       apply simp
      apply simp
     apply simp
-   apply (simp split: if_split add: to_bool_def)
+   apply (simp split: if_split)
   apply (clarsimp split: if_split)
   apply (simp add: word_less_nat_alt)
   apply (rule order_le_less_trans, rule pageBitsForSize_le)
@@ -253,8 +254,7 @@ lemma handleVMFault_ccorres:
    apply (rule corres_split[OF read_stval_ccorres[ac]])
       apply terminates_trivial
      apply (drule sym, clarsimp)
-     apply (wpc; simp add: vm_fault_type_from_H_def vm_fault_defs_C
-                           true_def false_def bind_assoc)
+     apply (wpc; simp add: vm_fault_type_from_H_def vm_fault_defs_C bind_assoc)
           apply (rule returnVMFault_corres;
                  clarsimp simp: exception_defs mask_twice lift_rv_def mask_def vmFaultTypeFSR_def)+
      apply wpsimp+
@@ -383,7 +383,7 @@ lemma isPTEPageTable_spec':
                         cpte_relation pte cpte \<longrightarrow>
              \<acute>ret__unsigned_long = from_bool (isPageTablePTE pte) \<rbrace>"
   by vcg
-     (auto simp: from_bool_def cpte_relation_def isPageTablePTE_def2 Let_def
+     (auto simp: cpte_relation_def isPageTablePTE_def2 Let_def
                  readable_from_vm_rights_def writable_from_vm_rights_def bit_simps
            split: bool.split if_split pte.splits vmrights.splits)
 
@@ -406,7 +406,7 @@ lemma isPTEPageTable_corres:
   apply (drule rf_sr_cpte_relation)
   apply (drule (1) cmap_relation_ko_atD)
   apply (clarsimp simp: typ_heap_simps)
-  apply (cases pte; simp add: readable_from_vm_rights0 isPageTablePTE_def from_bool_def
+  apply (cases pte; simp add: readable_from_vm_rights0 isPageTablePTE_def
                               cpte_relation_def writable_from_vm_rights_def)
   done
 
@@ -868,7 +868,7 @@ lemma addrFromKPPtr_spec:
    \<lbrace>\<acute>ret__unsigned_long = addrFromKPPtr (ptr_val (pptr_' s))\<rbrace>"
   apply vcg
   apply (simp add: addrFromKPPtr_def kernelELFBaseOffset_def
-                   kernelELFBase_def kernelELFPAddrBase_def)
+                   kernelELFBase_def kernelELFPAddrBase_def mask_def pptrTop_def)
   done
 
 lemma isValidVTableRoot_def2:
@@ -965,11 +965,10 @@ lemma setVMRoot_ccorres:
   apply (clarsimp simp: isCap_simps isValidVTableRoot_def2)
   apply (clarsimp simp: cap_get_tag_isCap_ArchObject2)
   by (clarsimp simp: cap_get_tag_isCap_ArchObject[symmetric]
-                        cap_lift_page_table_cap cap_to_H_def
-                        cap_page_table_cap_lift_def isCap_simps
-                        to_bool_def mask_def isZombieTCB_C_def Let_def
-                 elim!: ccap_relationE
-                 split: if_split_asm cap_CL.splits)
+                     cap_lift_page_table_cap cap_to_H_def
+                     cap_page_table_cap_lift_def isCap_simps isZombieTCB_C_def Let_def
+              elim!: ccap_relationE
+              split: if_split_asm cap_CL.splits)
 
 lemma ccorres_seq_IF_False:
   "ccorres_underlying sr \<Gamma> r xf arrel axf G G' hs a (IF False THEN x ELSE y FI ;; c) = ccorres_underlying sr \<Gamma> r xf arrel axf G G' hs a (y ;; c)"
@@ -1267,7 +1266,7 @@ lemma unmapPage_ccorres:
              apply (rule checkMappingPPtr_pte_ccorres[simplified])
              apply (rule conseqPre, vcg exspec=isPTEPageTable_spec')
              apply (clarsimp simp: cpte_relation_def Let_def pte_lift_def isPagePTE_def
-                                   typ_heap_simps isPageTablePTE_def bit_simps from_bool_def
+                                   typ_heap_simps isPageTablePTE_def bit_simps
                             split: if_split_asm pte.split_asm)
             apply (rule ceqv_refl)
            apply (simp add: unfold_checkMapping_return liftE_bindE

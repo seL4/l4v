@@ -16,6 +16,7 @@ imports
   Lib.LemmaBucket
   Lib.SplitRule
   Rights_AI
+  Lib.MonadicRewrite
 begin
 
 no_notation bind_drop (infixl ">>" 60)

@@ -14,9 +14,9 @@ kernel that has no other system calls than signalling notifications.
 Building
 --------
 
-To build from the `l4v/` directory, run:
+To build for the ARM architecture from the `l4v/` directory, run:
 
-    ./isabelle/bin/isabelle build -d . -v -b Bisim
+    L4V_ARCH=ARM ./run_tests Bisim
 
 Important Theories
 ------------------

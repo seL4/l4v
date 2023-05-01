@@ -19,6 +19,7 @@ imports
   Injection_Handler
   Monads.WhileLoopRulesCompleteness
   "Word_Lib.Distinct_Prop" (* for distinct_tuple_helper *)
+  Monads.OptionMonadWP
 begin
 
 lemma distinct_tuple_helper:
@@ -77,6 +78,13 @@ next
     apply assumption
     done
 qed
+
+lemma gets_the_exs_valid_no_ofail:
+  "\<lbrakk>no_ofail P h; ovalid P h Q\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> gets_the h \<exists>\<lbrace>Q\<rbrace>"
+  apply (rule exs_valid_weaken_pre)
+   apply (rule gets_the_exs_valid)
+  apply (fastforce simp: ovalid_def no_ofail_def)
+  done
 
 lemma put_id_return:
   "put s s = return () s"

@@ -1230,7 +1230,7 @@ lemma pt_walk_eqI:
   apply (subst pt_walk.simps)
   apply (prop_tac "level' < top_level")
    apply (fastforce dest!: pt_walk_max_level simp: le_less_trans)
-  apply (fastforce simp: level_pte_of_def in_omonad)
+  apply (fastforce simp: level_pte_of_def in_omonad if_option_eq)
   done
 
 lemma valid_vspace_obj_valid_pte_upd:
@@ -1301,7 +1301,7 @@ lemma pt_walk_pt_None_updD:
 lemma ptes_of_pt_None_updD:
   "\<lbrakk> level_pte_of pt_t p' ((pts_of s)(p := None)) = Some pte \<rbrakk>
    \<Longrightarrow> ptes_of s pt_t p' = Some pte"
-  by (clarsimp simp: opt_map_def level_pte_of_def in_omonad split: option.splits if_splits)
+  by (clarsimp simp: opt_map_def level_pte_of_def in_omonad if_option split: if_splits)
 
 lemma vs_lookup_table_eqI:
   fixes s :: "'z::state_ext state"
@@ -2176,7 +2176,7 @@ lemma store_pte_valid_asid_pool_caps[wp]:
 lemma ptes_of_pts_of_pt_type:
   "\<lbrakk> ptes_of s pt_t p = Some pte'; pts_of s (table_base pt_t p) = Some pt \<rbrakk> \<Longrightarrow>
    pt_type pt = pt_t"
-  by (simp add: level_pte_of_def in_omonad)
+  by (simp add: level_pte_of_def in_omonad if_option)
 
 lemma store_pte_PagePTE_valid_vspace_objs:
   "\<lbrace> valid_vspace_objs and pspace_aligned and pspace_distinct and valid_asid_table
@@ -2399,7 +2399,7 @@ lemma store_pte_InvalidPTE_valid_vs_lookup:
   apply (subst (asm) (2) level_pte_of_def)
   apply (clarsimp simp: in_omonad)
   apply (rename_tac pt')
-  apply (clarsimp simp: fun_upd_apply)
+  apply (clarsimp simp: fun_upd_apply if_option)
   apply (case_tac "table_index level' (pt_slot_offset level' (table_base level' p) vref) =
                    table_index level' p"; clarsimp)
   (* staying on old path; we can't hit table_base p again *)
@@ -2533,7 +2533,7 @@ lemma store_pte_non_InvalidPTE_valid_vs_lookup:
   apply (subst (asm) (2) level_pte_of_def)
   apply (clarsimp simp: in_omonad)
   apply (rename_tac pt')
-  apply (clarsimp simp: fun_upd_apply)
+  apply (clarsimp simp: fun_upd_apply if_option)
   apply (case_tac "table_index level' (pt_slot_offset level' (table_base level' p) vref) =
                    table_index level' p"; clarsimp)
    (* we could not have arrived at our new empty table through a non-empty table and from
@@ -2638,7 +2638,7 @@ lemma store_pte_PageTablePTE_valid_vspace_objs:
   apply (erule disjE; clarsimp)
   apply (clarsimp simp: fun_upd_apply)
   apply (subst (asm) level_pte_of_def)
-  apply (clarsimp simp: in_omonad)
+  apply (clarsimp simp: in_omonad if_option)
   apply (rename_tac pt')
   apply (clarsimp simp: fun_upd_apply)
   apply (case_tac "table_index level' (pt_slot_offset level' (table_base level' p) vref) =

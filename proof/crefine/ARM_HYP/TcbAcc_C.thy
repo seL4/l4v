@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -347,10 +348,10 @@ lemma armHSCurVCPU_update_active_ccorres:
   apply (clarsimp simp: modifyArchState_def)
   apply (rule ccorres_from_vcg)
   apply (rule allI, rule conseqPre, vcg)
-  apply (clarsimp simp: bind_def simpler_gets_def from_bool_def simpler_modify_def)
+  apply (clarsimp simp: bind_def simpler_gets_def simpler_modify_def)
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
   by (clarsimp simp: carch_state_relation_def carch_globals_def cur_vcpu_relation_def
-                     cmachine_state_relation_def from_bool_def
+                     cmachine_state_relation_def
                split: bool.split)
 
 lemma armHSCurVCPU_update_curv_ccorres:
@@ -363,7 +364,7 @@ lemma armHSCurVCPU_update_curv_ccorres:
   apply (clarsimp simp: bind_def simpler_gets_def simpler_modify_def)
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
   by (clarsimp simp: carch_state_relation_def carch_globals_def cur_vcpu_relation_def
-                     cmachine_state_relation_def from_bool_def true_def false_def
+                     cmachine_state_relation_def
                split: bool.split)
 
 lemma armHSCurVCPU_update_ccorres:
@@ -377,7 +378,7 @@ lemma armHSCurVCPU_update_ccorres:
   apply (clarsimp simp: bind_def simpler_gets_def simpler_modify_def)
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
   by (clarsimp simp: carch_state_relation_def carch_globals_def cur_vcpu_relation_def
-                     cmachine_state_relation_def from_bool_def true_def false_def
+                     cmachine_state_relation_def
                split: bool.split)
 
 lemmas armHSCurVCPU_update_active_ccorres2 = armHSCurVCPU_update_ccorres[where curv="Some (v, b)" for v b]

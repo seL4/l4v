@@ -12,7 +12,7 @@ imports
   "Word_Lib.WordSetup"
   "Lib.Defs"
   Setup_Locale
-  Kernel_Config_Lemmas
+  Kernel_Config
 begin
 
 context Arch begin global_naming RISCV64
@@ -105,16 +105,17 @@ definition kdevBase :: machine_word
 lemma "kdevBase = 0xFFFFFFFFC0000000" (* Sanity check with C *)
   by (simp add: kdevBase_def)
 
-definition kernelELFBase :: machine_word
-  where
-  "kernelELFBase = - (1 << 31) + 0x4000000" (* 2^64 - 2 GiB + 2^26 *)
-
-lemma "kernelELFBase = 0xFFFFFFFF84000000" (* Sanity check with C *)
-  by (simp add: kernelELFBase_def)
-
 definition kernelELFPAddrBase :: machine_word
   where
-  "kernelELFPAddrBase = 0x84000000"
+  "kernelELFPAddrBase = physBase + 0x4000000"
+
+definition pptrTop :: machine_word
+  where
+  "pptrTop \<equiv> - (1 << 31)"
+
+definition kernelELFBase :: machine_word
+  where
+  "kernelELFBase = pptrTop + (kernelELFPAddrBase && mask 30)" (* 2^64 - 2 GiB + ... *)
 
 definition kernelELFBaseOffset :: machine_word
   where

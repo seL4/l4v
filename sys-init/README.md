@@ -22,13 +22,13 @@ The system initialiser and the proof are described in the
 Building
 --------
 
-To build from the `l4v/` directory, run:
+To build from the `l4v/` directory for the ARM architecture, run:
 
-    make SysInit
+    L4V_ARCH=ARM ./run_tests SysInit
 
 To build the example capDL specifications, from the `l4v/` directory, run:
 
-    make SysInitExamples
+    L4V_ARCH=ARM ./run_tests SysInitExamples
 
 
 Important Theories

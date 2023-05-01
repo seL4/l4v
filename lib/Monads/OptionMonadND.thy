@@ -90,6 +90,10 @@ lemma gets_the_fail:
   "gets_the ofail = fail"
   by (simp add: monad_simps ofail_def)
 
+lemma gets_the_ogets:
+  "gets_the (ogets s) = gets s"
+  by (clarsimp simp: monad_simps ogets_def)
+
 lemma gets_the_returnOk:
   "gets_the (oreturnOk x) = returnOk x"
   by (simp add: monad_simps oreturnOk_def returnOk_def)

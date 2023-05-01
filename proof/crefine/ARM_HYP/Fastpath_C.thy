@@ -1160,7 +1160,7 @@ lemma isValidVTableRoot_fp_spec:
        {t. ret__unsigned_long_' t = from_bool (isValidVTableRoot_C (pd_cap_' s))}"
   apply vcg
   apply (clarsimp simp: word_sle_def word_sless_def isValidVTableRoot_fp_lemma)
-  apply (simp add: from_bool_def split: if_split)
+  apply (simp split: if_split)
   done
 
 lemma isRecvEP_endpoint_case:
@@ -1570,8 +1570,8 @@ lemma cap_reply_cap_ptr_new_np_updateCap_ccorres:
                    limited_and_simps cap_reply_cap_def
                    limited_and_simps1[OF lshift_limited_and, OF limited_and_from_bool]
                    shiftr_over_or_dist word_bw_assocs mask_def shiftl_shiftr3 word_size)
-  apply (cases m ; clarsimp)
-  apply (cases canGrant ; clarsimp)
+  apply (cases m ; clarsimp simp: true_def)
+  apply (cases canGrant ; clarsimp simp: true_def false_def)
   done
 
 lemma fastpath_copy_mrs_ccorres:
@@ -2913,7 +2913,6 @@ lemma fastpath_reply_recv_ccorres:
                         apply (rule slowpath_ccorres, simp+)
                      apply (vcg exspec=slowpath_noreturn_spec)
                     apply (simp add: pde_stored_asid_def asid_map_pd_to_hwasids_def
-                                     to_bool_def
                                 del: Collect_const cong: call_ignore_cong)
 
                     apply (rule ccorres_rhs_assoc2)
@@ -2937,8 +2936,7 @@ lemma fastpath_reply_recv_ccorres:
                          apply (simp add: cep_relations_drop_fun_upd)
                          apply (erule cmap_relation_updI, erule ko_at_projectKO_opt)
                           apply (simp add: ctcb_relation_def cthread_state_relation_def
-                                           "StrictC'_thread_state_defs" from_bool_0
-                                           to_bool_def if_1_0_0)
+                                           "StrictC'_thread_state_defs")
                           apply (clarsimp simp: ccap_relation_ep_helpers)
                          apply simp
                         apply (rule conjI, erule cready_queues_relation_not_queue_ptrs)

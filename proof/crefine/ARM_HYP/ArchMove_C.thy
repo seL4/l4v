@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -633,6 +634,17 @@ crunches insertNewCap, Arch_createNewCaps, threadSet, Arch.createObject, setThre
   (wp: crunch_wps setObject_ksPSpace_only
    simp: unless_def updateObject_default_def crunch_simps
    ignore_del: preemptionPoint)
+
+(* this could be done as
+   lemmas addrFromPPtr_mask_6 = addrFromPPtr_mask[where n=6, simplified]
+   but that wouldn't give a sanity check of the n \<le> ... assumption  disappearing *)
+lemma addrFromPPtr_mask_6:
+  "addrFromPPtr ptr && mask 6 = ptr && mask 6"
+  by (rule addrFromPPtr_mask[where n=6, simplified])
+
+lemma ptrFromPAddr_mask_6:
+  "ptrFromPAddr ps && mask 6 = ps && mask 6"
+  by (rule ptrFromPAddr_mask[where n=6, simplified])
 
 end
 

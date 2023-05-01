@@ -65,7 +65,7 @@ lemma setDomain_ccorres:
           apply (rule ccorres_cond2[where R=\<top>], simp add: Collect_const_mem)
            apply (ctac add: tcbSchedEnqueue_ccorres)
           apply (rule ccorres_return_Skip)
-         apply (simp add: when_def to_bool_def)
+         apply (simp add: when_def)
          apply (rule_tac R="\<lambda>s. rv = ksCurThread s"
                     in ccorres_cond2)
            apply (clarsimp simp: rf_sr_ksCurThread)
@@ -250,7 +250,7 @@ lemma invokeCNodeDelete_ccorres:
    apply (rule ccorres_trim_returnE, simp, simp)
    apply (rule ccorres_callE)
        apply (rule cteDelete_ccorres[simplified])
-      apply (simp add: from_bool_def true_def)+
+      apply simp+
 done
 
 
@@ -270,7 +270,7 @@ lemma invokeCNodeRevoke_ccorres:
    apply (rule ccorres_trim_returnE, simp, simp)
    apply (rule ccorres_callE)
        apply (rule cteRevoke_ccorres[simplified])
-      apply (simp add: from_bool_def true_def)+
+      apply simp+
 done
 
 
@@ -494,12 +494,10 @@ lemma hasCancelSendRights_spec:
    apply clarsimp
    apply (drule sym, drule (1) cap_get_tag_to_H)
    apply (clarsimp simp: hasCancelSendRights_def to_bool_def
-                         true_def false_def
                    split: if_split bool.splits)
   apply (rule impI)
   apply (case_tac cap,
-         auto simp: cap_get_tag_isCap_unfolded_H_cap cap_tag_defs
-                     from_bool_def false_def true_def hasCancelSendRights_def
+         auto simp: cap_get_tag_isCap_unfolded_H_cap cap_tag_defs hasCancelSendRights_def
               dest: cap_get_tag_isArchCap_unfolded_H_cap
               split: capability.splits bool.splits)[1]
   done
@@ -705,7 +703,7 @@ lemma decodeCNodeInvocation_ccorres:
                                 apply (simp add: syscall_error_to_H_cases)
                                apply (simp add: whenE_def injection_handler_returnOk
                                                 ccorres_invocationCatch_Inr performInvocation_def
-                                                bindE_assoc false_def)
+                                                bindE_assoc)
                                apply (ctac add: setThreadState_ccorres)
                                  apply (simp add: ccorres_cond_iffs)
                                  apply (rule ccorres_stateAssertE_fwd)
@@ -783,7 +781,7 @@ lemma decodeCNodeInvocation_ccorres:
                                     apply (rule syscall_error_throwError_ccorres_n)
                                     apply (simp add: syscall_error_to_H_cases)
                                    apply (simp add: whenE_def injection_handler_returnOk
-                                                    ccorres_invocationCatch_Inr false_def
+                                                    ccorres_invocationCatch_Inr
                                                     performInvocation_def bindE_assoc)
                                    apply (ctac add: setThreadState_ccorres)
                                      apply (simp add: ccorres_cond_iffs)
@@ -841,7 +839,7 @@ lemma decodeCNodeInvocation_ccorres:
                                        in ccorres_gen_asm2)
                            apply csymbr
                            apply csymbr
-                           apply (simp add: cap_get_tag_NullCap true_def)
+                           apply (simp add: cap_get_tag_NullCap)
                            apply (ctac add: setThreadState_ccorres)
                              apply (simp add: ccorres_cond_iffs)
                              apply (rule ccorres_stateAssertE_fwd)
@@ -888,7 +886,7 @@ lemma decodeCNodeInvocation_ccorres:
                                               ccorres_invocationCatch_Inr numeral_eqs
                                               performInvocation_def bindE_assoc)
                              apply (ctac add: setThreadState_ccorres)
-                               apply (simp add: true_def ccorres_cond_iffs)
+                               apply (simp add: ccorres_cond_iffs)
                                apply (rule ccorres_stateAssertE_fwd)
                                apply (ctac(no_vcg) add: invokeCNodeMove_ccorres)
                                  apply (rule ccorres_alternative2)
@@ -1330,8 +1328,7 @@ lemma decodeCNodeInvocation_ccorres:
                              map_option_Some_eq2 neq_Nil_conv ccap_relation_def
                              numeral_eqs hasCancelSendRights_not_Null
                              ccap_relation_NullCap_iff[symmetric]
-                             if_1_0_0 interpret_excaps_test_null
-                             mdbRevocable_CL_cte_to_H false_def true_def
+                             interpret_excaps_test_null mdbRevocable_CL_cte_to_H
             | clarsimp simp: typ_heap_simps'
             | frule length_ineq_not_Nil)+)
   done
@@ -3233,8 +3230,8 @@ lemma decodeUntypedInvocation_ccorres_helper:
                                            unat_of_nat_APIType_capBits word_size hd_conv_nth length_ineq_not_Nil
                        not_less word_le_nat_alt isCap_simps valid_cap_simps')
                     apply (strengthen word_of_nat_less)
-                    apply (clarsimp simp: StrictC'_thread_state_defs mask_def true_def false_def
-                                          from_bool_0 ccap_relation_isDeviceCap2
+                    apply (clarsimp simp: StrictC'_thread_state_defs mask_def
+                                          ccap_relation_isDeviceCap2
                                    split: if_split)
                     apply (clarsimp simp: not_less shiftr_overflow maxUntypedSizeBits_def
                                           unat_of_nat_APIType_capBits)

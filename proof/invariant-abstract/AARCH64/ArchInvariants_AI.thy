@@ -771,7 +771,7 @@ lemmas simple_bit_simps =
 lemmas table_bits_simps =
   pt_bits_def[simplified] pte_bits_def[unfolded word_size_bits_def] vs_index_bits_def
 
-named_theorems bit_simps (* FIXME AARCH64: shadows Word_Lib bit_simps *)
+named_theorems bit_simps
 
 lemmas [bit_simps] = table_bits_simps simple_bit_simps ipa_size_def valid_vs_slot_bits_def
 
@@ -1493,10 +1493,6 @@ lemma user_vtop_ge0[intro!,simp]:
 lemma canonical_user_ge0[intro!,simp]:
   "0 < canonical_user"
   by (simp add: canonical_user_def mask_def ipa_size_def)
-
-lemma pptr_base_kernel_elf_base:
-  "pptr_base < kernel_elf_base"
-  by (simp add: pptr_base_def pptrBase_def kernel_elf_base_def kernelELFBase_def)
 
 lemma pptrTop_le_ipa_size:
   "pptrTop \<le> mask ipa_size"

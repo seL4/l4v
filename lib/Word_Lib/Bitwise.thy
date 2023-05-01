@@ -502,6 +502,6 @@ end
 
 method_setup word_bitwise =
   \<open>Scan.succeed (fn ctxt => Method.SIMPLE_METHOD (Word_Bitwise_Tac.tac ctxt 1))\<close>
-  "decomposer for word equalities and inequalities into bit propositions"
+  "decomposer for word equalities and inequalities into bit propositions on concrete word lengths"
 
 end

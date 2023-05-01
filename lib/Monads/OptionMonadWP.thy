@@ -307,6 +307,13 @@ lemma no_ofail_wp_comb2[wp_comb]:
   by (simp add: no_ofail_def)
 
 
+(* Lemmas relating ovalid and valid *)
+lemma ovalid_gets_the:
+  "ovalid P f Q \<Longrightarrow> \<lbrace>P\<rbrace> gets_the f \<lbrace>Q\<rbrace>"
+  apply wpsimp
+  apply (fastforce dest: use_ovalid)
+  done
+
 
 (* Some extra lemmas for our predicates. *)
 lemma ovalid_grab_asm:

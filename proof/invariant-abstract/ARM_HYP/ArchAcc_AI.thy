@@ -2548,39 +2548,6 @@ lemma create_mapping_entries_valid_slots [wp]: (* ARMHYP *)
   apply (fastforce intro!: aligned_add_aligned is_aligned_shiftl_self)
   done
 
-lemma is_aligned_addrFromPPtr_n:
-  "\<lbrakk> is_aligned p n; n \<le> 28 \<rbrakk> \<Longrightarrow> is_aligned (Platform.ARM_HYP.addrFromPPtr p) n"
-  apply (simp add: Platform.ARM_HYP.addrFromPPtr_def)
-  apply (erule aligned_sub_aligned, simp_all)
-  apply (simp add: pptrBaseOffset_def physBase_def
-                   pptrBase_def pageBits_def)
-  apply (erule is_aligned_weaken[rotated])
-  apply (simp add: is_aligned_def)
-  done
-
-lemma is_aligned_addrFromPPtr:
-  "is_aligned p pageBits \<Longrightarrow> is_aligned (Platform.ARM_HYP.addrFromPPtr p) pageBits"
-  by (simp add: is_aligned_addrFromPPtr_n pageBits_def)
-
-lemma is_aligned_ptrFromPAddr_n:
-  "\<lbrakk>is_aligned x sz; sz\<le> 28\<rbrakk>
-  \<Longrightarrow> is_aligned (ptrFromPAddr x) sz"
-  apply (simp add:ptrFromPAddr_def pptrBaseOffset_def
-    pptrBase_def physBase_def)
-  apply (erule aligned_add_aligned)
-   apply (erule is_aligned_weaken[rotated])
-   apply (simp add:is_aligned_def)
-  apply (simp add:word_bits_def)
-  done
-
-lemma is_aligned_ptrFromPAddr:
-  "is_aligned p pageBits \<Longrightarrow> is_aligned (ptrFromPAddr p) pageBits"
-  by (simp add: is_aligned_ptrFromPAddr_n pageBits_def)
-
-lemma pbfs_le_28[simp]:
-  "pageBitsForSize sz \<le> 28"
-  by (cases sz; simp)
-
 lemma store_pde_lookup_pd: (* ARMHYP *)
   "\<lbrace>\<exists>\<rhd> pd and page_directory_at pd and valid_vspace_objs
      and (\<lambda>s. valid_asid_table (arm_asid_table (arch_state s)) s)\<rbrace>

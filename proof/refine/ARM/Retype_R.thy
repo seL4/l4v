@@ -5470,24 +5470,24 @@ lemma corres_retype_region_createNewCaps:
                       split del: if_split)
         apply (rename_tac apiobject_type)
         apply (case_tac apiobject_type, simp_all split del: if_split)
-            \<comment> \<open>Untyped\<close>
-            apply (simp     add: retype_region_def obj_bits_api_def
-                                 APIType_map2_def
-                      split del: if_split
-                           cong: if_cong)
-            apply (subst upto_enum_red')
-             apply (drule range_cover_not_zero[rotated])
-              apply simp
-             apply unat_arith
-            apply (clarsimp simp: list_all2_same enum_word_def  range_cover.unat_of_nat_n
-                                  list_all2_map1 list_all2_map2
-                                  ptr_add_def fromIntegral_def toInteger_nat fromInteger_nat)
-            apply (subst unat_of_nat_minus_1)
-              apply (rule le_less_trans[OF range_cover.range_cover_n_le(2) power_strict_increasing])
+              \<comment> \<open>Untyped\<close>
+              apply (simp     add: retype_region_def obj_bits_api_def
+                                   APIType_map2_def
+                        split del: if_split
+                             cong: if_cong)
+              apply (subst upto_enum_red')
+               apply (drule range_cover_not_zero[rotated])
                 apply simp
-               apply (clarsimp simp: range_cover_def)
-               apply (arith+)[4]
-           \<comment> \<open>TCB\<close>
+               apply unat_arith
+              apply (clarsimp simp: list_all2_same enum_word_def  range_cover.unat_of_nat_n
+                                    list_all2_map1 list_all2_map2
+                                    ptr_add_def fromIntegral_def toInteger_nat fromInteger_nat)
+              apply (subst unat_of_nat_minus_1)
+                apply (rule le_less_trans[OF range_cover.range_cover_n_le(2) power_strict_increasing])
+                  apply simp
+                 apply (clarsimp simp: range_cover_def)
+                 apply (arith+)[4]
+             \<comment> \<open>TCB\<close>
              apply (simp_all add: curDomain_def split del: if_split)
              apply (rule corres_underlying_gets_pre_rhs[rotated])
               apply (rule gets_sp)
@@ -5506,37 +5506,37 @@ lemma corres_retype_region_createNewCaps:
                apply ((wp createObjects_tcb_at'[where sz=sz] | simp add: APIType_map2_def objBits_simps' obj_bits_api_def)+)[1]
               apply simp
              apply simp
-        \<comment> \<open>CapTable\<close>
-        apply (find_goal \<open>match premises in "_ = ArchTypes_H.apiobject_type.CapTableObject" \<Rightarrow> \<open>-\<close>\<close>)
-        apply (subst bind_assoc_reverse[of "createObjects y n (KOCTE makeObject) us"])
-        apply (subst liftM_def [of "map (\<lambda>addr. capability.CNodeCap addr us 0 0)", symmetric])
-        apply simp
-        apply (rule corres_rel_imp)
-         apply (rule corres_guard_imp)
-          apply (rule corres_retype_update_gsI,
-                 simp_all add: obj_bits_api_def objBits_simps' pageBits_def
-                               APIType_map2_def makeObjectKO_def slot_bits_def
-                               field_simps ext)[1]
-             apply ((clarsimp simp : range_cover_def APIType_map2_def word_bits_def
-                                     list_all2_same list_all2_map1 list_all2_map2
-                   | rule captable_relation_retype)+)[5]
-           \<comment> \<open>EP, NTFN\<close>
-            apply (simp add: liftM_def[symmetric] split del: if_split)
+            \<comment> \<open>CapTable\<close>
+            apply (find_goal \<open>match premises in "_ = ArchTypes_H.apiobject_type.CapTableObject" \<Rightarrow> \<open>-\<close>\<close>)
+            apply (subst bind_assoc_return_reverse[of "createObjects y n (KOCTE makeObject) us"])
+            apply (subst liftM_def [of "map (\<lambda>addr. capability.CNodeCap addr us 0 0)", symmetric])
+            apply simp
             apply (rule corres_rel_imp)
              apply (rule corres_guard_imp)
-             apply (rule corres_retype[where 'a = endpoint],
+               apply (rule corres_retype_update_gsI,
+                      simp_all add: obj_bits_api_def objBits_simps' pageBits_def
+                                    APIType_map2_def makeObjectKO_def slot_bits_def
+                                    field_simps ext)[1]
+                apply ((clarsimp simp : range_cover_def APIType_map2_def word_bits_def
+                                        list_all2_same list_all2_map1 list_all2_map2
+                      | rule captable_relation_retype)+)[5]
+           \<comment> \<open>EP, NTFN\<close>
+           apply (simp add: liftM_def[symmetric] split del: if_split)
+           apply (rule corres_rel_imp)
+            apply (rule corres_guard_imp)
+              apply (rule corres_retype[where 'a = endpoint],
+                     simp_all add: obj_bits_api_def objBits_simps' pageBits_def
+                                   APIType_map2_def makeObjectKO_def
+                                   other_objs_default_relation)[1]
+              apply ((simp add: range_cover_def APIType_map2_def
+                             list_all2_same list_all2_map1 list_all2_map2)+)[4]
+          apply (simp add: liftM_def[symmetric] split del: if_split)
+          apply (rule corres_rel_imp)
+           apply (rule corres_guard_imp)
+             apply (rule corres_retype[where 'a = notification],
                     simp_all add: obj_bits_api_def objBits_simps' pageBits_def
                                   APIType_map2_def makeObjectKO_def
                                   other_objs_default_relation)[1]
-             apply ((simp add: range_cover_def APIType_map2_def
-                            list_all2_same list_all2_map1 list_all2_map2)+)[4]
-         apply (simp add: liftM_def[symmetric] split del: if_split)
-         apply (rule corres_rel_imp)
-          apply (rule corres_guard_imp)
-            apply (rule corres_retype[where 'a = notification],
-                   simp_all add: obj_bits_api_def objBits_simps' pageBits_def
-                                 APIType_map2_def makeObjectKO_def
-                                 other_objs_default_relation)[1]
              apply ((simp add: range_cover_def APIType_map2_def
                                list_all2_same list_all2_map1 list_all2_map2)+)[4]
          \<comment> \<open>SchedContext\<close>
@@ -5547,19 +5547,19 @@ lemma corres_retype_region_createNewCaps:
                    simp_all add: obj_bits_api_def objBits_simps' pageBits_def
                                  APIType_map2_def makeObjectKO_def scBits_simps
                                  sc_relation_retype)[1]
-             apply ((simp add: range_cover_def APIType_map2_def sc_size_bounds_def
-                               list_all2_same list_all2_map1 list_all2_map2 sc_const_eq)+)[4]
-         \<comment> \<open>Reply\<close>
-         apply (simp add: liftM_def[symmetric] split del: if_split)
-         apply (rule corres_rel_imp)
-          apply (rule corres_guard_imp)
-            apply (rule corres_retype[where 'a = reply],
-                   simp_all add: obj_bits_api_def objBits_simps' pageBits_def
-                                 APIType_map2_def makeObjectKO_def
-                                 reply_relation_retype)[1]
-             apply ((simp add: range_cover_def APIType_map2_def
-                               list_all2_same list_all2_map1 list_all2_map2)+)[4]
-          \<comment> \<open>SmallPageObject\<close>
+            apply ((simp add: range_cover_def APIType_map2_def sc_size_bounds_def
+                              list_all2_same list_all2_map1 list_all2_map2 sc_const_eq)+)[4]
+        \<comment> \<open>Reply\<close>
+        apply (simp add: liftM_def[symmetric] split del: if_split)
+        apply (rule corres_rel_imp)
+         apply (rule corres_guard_imp)
+           apply (rule corres_retype[where 'a = reply],
+                  simp_all add: obj_bits_api_def objBits_simps' pageBits_def
+                                APIType_map2_def makeObjectKO_def
+                                reply_relation_retype)[1]
+           apply ((simp add: range_cover_def APIType_map2_def
+                             list_all2_same list_all2_map1 list_all2_map2)+)[4]
+       \<comment> \<open>SmallPageObject\<close>
        apply (simp add: corres_liftM2_simp[unfolded liftM_def] split del: if_split)
        apply (rule corres_rel_imp)
         apply (simp add: init_arch_objects_APIType_map2_noop split del: if_split)
@@ -5573,7 +5573,7 @@ lemma corres_retype_region_createNewCaps:
          apply simp+
        apply (simp add: APIType_map2_def arch_default_cap_def vmrights_map_def
                 vm_read_write_def list_all2_map1 list_all2_map2 list_all2_same)
-         \<comment> \<open>LargePageObject\<close>
+      \<comment> \<open>LargePageObject\<close>
       apply (simp add: corres_liftM2_simp[unfolded liftM_def] split del: if_split)
       apply (rule corres_rel_imp)
        apply (simp add: init_arch_objects_APIType_map2_noop split del: if_split)
@@ -5587,7 +5587,7 @@ lemma corres_retype_region_createNewCaps:
         apply simp+
       apply (simp add: APIType_map2_def arch_default_cap_def vmrights_map_def
                vm_read_write_def list_all2_map1 list_all2_map2 list_all2_same)
-        \<comment> \<open>SectionObject\<close>
+     \<comment> \<open>SectionObject\<close>
      apply (simp add: corres_liftM2_simp[unfolded liftM_def] split del: if_split)
      apply (rule corres_rel_imp)
       apply (simp add: init_arch_objects_APIType_map2_noop split del: if_split)
@@ -5615,23 +5615,23 @@ lemma corres_retype_region_createNewCaps:
       apply simp+
     apply (simp add: APIType_map2_def arch_default_cap_def vmrights_map_def
              vm_read_write_def list_all2_map1 list_all2_map2 list_all2_same)
-  \<comment> \<open>PageTable\<close>
+   \<comment> \<open>PageTable\<close>
    apply (simp_all add: corres_liftM2_simp[unfolded liftM_def])
    apply (rule corres_guard_imp)
-    apply (simp add: init_arch_objects_APIType_map2_noop)
-    apply (rule corres_rel_imp)
-       apply (rule corres_retype[where 'a =pte],
-            simp_all add: APIType_map2_def obj_bits_api_def
-                          default_arch_object_def objBits_simps
-                          archObjSize_def ptBits_def pageBits_def
-                          pteBits_def pdeBits_def
-                          makeObjectKO_def range_cover.aligned)[1]
-     apply (rule pagetable_relation_retype)
-    apply (wp | simp)+
-    apply (clarsimp simp: list_all2_map1 list_all2_map2 list_all2_same
+     apply (simp add: init_arch_objects_APIType_map2_noop)
+     apply (rule corres_rel_imp)
+      apply (rule corres_retype[where 'a =pte],
+           simp_all add: APIType_map2_def obj_bits_api_def
+                         default_arch_object_def objBits_simps
+                         archObjSize_def ptBits_def pageBits_def
+                         pteBits_def pdeBits_def
+                         makeObjectKO_def range_cover.aligned)[1]
+      apply (rule pagetable_relation_retype)
+     apply (wp | simp)+
+     apply (clarsimp simp: list_all2_map1 list_all2_map2 list_all2_same
 
-                          APIType_map2_def arch_default_cap_def)
-   apply simp+
+                           APIType_map2_def arch_default_cap_def)
+    apply simp+
   \<comment> \<open>PageDirectory\<close>
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr)

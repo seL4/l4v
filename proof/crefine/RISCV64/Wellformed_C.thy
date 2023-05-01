@@ -289,63 +289,6 @@ definition
                    | Some cap \<Rightarrow> Some \<lparr> cap_CL = cap,
                                        cteMDBNode_CL = mdb_node_lift (cteMDBNode_C c) \<rparr>"
 
-lemma to_bool_false [simp]: "\<not> to_bool false"
-  by (simp add: to_bool_def false_def)
-
-(* this is slightly weird, but the bitfield generator
-   masks everything with the expected bit length.
-   So we do that here too. *)
-definition
-  to_bool_bf :: "'a::len word \<Rightarrow> bool" where
-  "to_bool_bf w \<equiv> (w && mask 1) = 1"
-
-lemma to_bool_bf_mask1 [simp]:
-  "to_bool_bf (mask (Suc 0))"
-  by (simp add: mask_def to_bool_bf_def)
-
-lemma to_bool_bf_0 [simp]: "\<not>to_bool_bf 0"
-  by (simp add: to_bool_bf_def)
-
-lemma to_bool_bf_1 [simp]: "to_bool_bf 1"
-  by (simp add: to_bool_bf_def mask_def)
-
-lemma to_bool_bf_false [simp]:
-  "\<not>to_bool_bf false"
-  by (simp add: false_def)
-
-lemma to_bool_bf_true [simp]:
-  "to_bool_bf true"
-  by (simp add: true_def)
-
-lemma to_bool_to_bool_bf:
-  "w = false \<or> w = true \<Longrightarrow> to_bool_bf w = to_bool w"
-  by (auto simp: false_def true_def to_bool_def to_bool_bf_def mask_def)
-
-lemma to_bool_bf_mask_1 [simp]:
-  "to_bool_bf (w && mask (Suc 0)) = to_bool_bf w"
-  by (simp add: to_bool_bf_def)
-
-lemma to_bool_bf_and [simp]:
-  "to_bool_bf (a && b) = (to_bool_bf a \<and> to_bool_bf (b::word64))"
-  apply (clarsimp simp: to_bool_bf_def)
-  apply (rule iffI)
-   apply (subst (asm) bang_eq)
-   apply (simp add: word_size)
-   apply (rule conjI)
-    apply (rule word_eqI)
-    apply (auto simp add: word_size)[1]
-   apply (rule word_eqI)
-   apply (auto simp add: word_size)[1]
-  apply clarsimp
-  apply (rule word_eqI)
-  apply (subst (asm) bang_eq)+
-  apply (auto simp add: word_size)[1]
-  done
-
-lemma to_bool_bf_to_bool_mask:
-  "w && mask (Suc 0) = w \<Longrightarrow> to_bool_bf w = to_bool (w::word64)"
-  by (metis mask_Suc_0 bool_mask mask_1 to_bool_0 to_bool_1 to_bool_bf_def word_gt_0)
-
 definition
   mdb_node_to_H :: "mdb_node_CL \<Rightarrow> mdbnode"
   where

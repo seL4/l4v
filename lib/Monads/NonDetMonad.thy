@@ -606,6 +606,9 @@ notation (output)
 
 section "Combinators that have conditions with side effects"
 
+definition notM :: "('s, bool) nondet_monad \<Rightarrow> ('s, bool) nondet_monad" where
+  "notM m = do c \<leftarrow> m; return (\<not> c) od"
+
 definition
   whileM :: "('s, bool) nondet_monad \<Rightarrow> ('s, 'a) nondet_monad \<Rightarrow> ('s, unit) nondet_monad" where
   "whileM C B \<equiv> do
@@ -621,6 +624,14 @@ definition
     c \<leftarrow> test;
     if c then t else f
    od"
+
+definition ifME ::
+  "('a, 'b + bool) nondet_monad \<Rightarrow> ('a, 'b + 'c) nondet_monad \<Rightarrow> ('a, 'b + 'c) nondet_monad
+   \<Rightarrow> ('a, 'b + 'c) nondet_monad" where
+  "ifME test t f = doE
+    c \<leftarrow> test;
+    if c then t else f
+   odE"
 
 definition
   whenM :: "('s, bool) nondet_monad \<Rightarrow> ('s, unit) nondet_monad \<Rightarrow> ('s, unit) nondet_monad" where

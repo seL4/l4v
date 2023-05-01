@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: GPL-2.0-only
  *)
 
+(* Architecture-independent lemmas constraining Kernel_Config definitions *)
+
 theory Kernel_Config_Lemmas
 imports "$L4V_ARCH/Kernel_Config"
 begin

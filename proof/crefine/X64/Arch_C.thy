@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -79,7 +80,7 @@ lemma performPageTableInvocationUnmap_ccorres:
          apply wp
         apply (simp del: Collect_const)
         apply (vcg exspec=unmapPageTable_modifies)
-       apply (simp add: to_bool_def)
+       apply simp
        apply (rule ccorres_return_Skip')
       apply (simp add: cap_get_tag_isCap_ArchObject[symmetric])
       apply (clarsimp simp: cap_lift_page_table_cap cap_to_H_def
@@ -221,7 +222,7 @@ lemma performPageDirectoryInvocationUnmap_ccorres:
          apply wp
         apply (simp del: Collect_const)
         apply (vcg exspec=unmapPageDirectory_modifies)
-       apply (simp add: to_bool_def)
+       apply simp
        apply (rule ccorres_return_Skip')
       apply (simp add: cap_get_tag_isCap_ArchObject[symmetric])
       apply (clarsimp simp: cap_lift_page_directory_cap cap_to_H_def
@@ -363,7 +364,7 @@ lemma performPDPTInvocationUnmap_ccorres:
          apply wp
         apply (simp del: Collect_const)
         apply (vcg exspec=unmapPDPT_modifies)
-       apply (simp add: to_bool_def)
+       apply simp
        apply (rule ccorres_return_Skip')
       apply (simp add: cap_get_tag_isCap_ArchObject[symmetric])
       apply (clarsimp simp: cap_lift_pdpt_cap cap_to_H_def
@@ -940,8 +941,7 @@ lemma isValidNativeRoot_spec:
          {t. \<forall>cap. ccap_relation cap (cap_' s) \<longrightarrow> ret__unsigned_long_' t = from_bool (isArchObjectCap cap \<and> isPML4Cap (capCap cap) \<and>
                                         capPML4MappedASID (capCap cap) \<noteq> None)}"
   apply (vcg, clarsimp)
-  apply (rule conjI, clarsimp simp: from_bool_def case_bool_If if_1_0_0
-                             split: if_split)
+  apply (rule conjI, clarsimp simp: case_bool_If split: if_split)
    apply (rule conjI; clarsimp simp: cap_pml4_cap_lift)
    apply (erule ccap_relationE, clarsimp simp: cap_to_H_def isCap_simps to_bool_def
                                         split: if_split_asm)
@@ -1176,7 +1176,7 @@ lemma decodeX64PageTableInvocation_ccorres:
                   apply (clarsimp simp: typ_heap_simps from_bool_eq_if)
                   apply (auto simp: cpde_relation_def Let_def pde_pde_pt_lift_def
                                     pde_pde_pt_lift pde_tag_defs pde_pde_large_lift_def
-                                    pde_lift_def from_bool_def case_bool_If
+                                    pde_lift_def case_bool_If
                              split: pde.split_asm if_splits)[1]
                  apply ceqv
                 apply clarsimp
@@ -1215,7 +1215,7 @@ lemma decodeX64PageTableInvocation_ccorres:
                apply vcg
               apply (rule conseqPre, vcg)
               apply (clarsimp simp: throwError_def return_def syscall_error_rel_def
-                                    syscall_error_to_H_cases exception_defs false_def)
+                                    syscall_error_to_H_cases exception_defs)
               apply (erule lookup_failure_rel_fault_lift[rotated])
               apply (clarsimp simp: exception_defs)
              apply clarsimp
@@ -1233,7 +1233,7 @@ lemma decodeX64PageTableInvocation_ccorres:
            apply simp
            apply (rule conseqPre, vcg)
            apply (clarsimp simp: throwError_def return_def syscall_error_rel_def
-                                 syscall_error_to_H_cases exception_defs false_def)
+                                 syscall_error_to_H_cases exception_defs)
            apply (erule lookup_failure_rel_fault_lift[rotated])
            apply (simp add: exception_defs)
           apply simp
@@ -1291,7 +1291,6 @@ lemma decodeX64PageTableInvocation_ccorres:
   apply (clarsimp simp: cap_lift_page_directory_cap hd_conv_nth
                         cap_lift_page_table_cap bit_simps
                         cap_page_directory_cap_lift_def
-                        to_bool_def
                         typ_heap_simps' shiftl_t2n[where n=3] field_simps
                  elim!: ccap_relationE)
   apply (clarsimp simp: neq_Nil_conv[where xs=extraCaps]
@@ -1371,8 +1370,7 @@ lemma checkVPAlignment_spec:
   apply (clarsimp simp: mask_eq_iff_w2p word_size)
   apply (rule conjI)
    apply (simp add: pageBitsForSize_def bit_simps split: vmpage_size.split)
-  apply (simp add: from_bool_def vmsz_aligned_def is_aligned_mask
-                   mask_def split: if_split)
+  apply (simp add: vmsz_aligned_def is_aligned_mask mask_def split: if_split)
   done
 
 definition
@@ -2014,14 +2012,14 @@ lemma createSafeMappingEntries_PTE_ccorres:
      apply (rule_tac P'="{s. lu_ret___struct_lookupPTSlot_ret_C = errstate s}" in ccorres_from_vcg_throws[where P=\<top>])
      apply (rule allI, rule conseqPre, vcg)
      apply (clarsimp simp: fst_throwError_returnOk syscall_error_to_H_cases
-                           syscall_error_rel_def exception_defs false_def)
+                           syscall_error_rel_def exception_defs)
      apply (erule lookup_failure_rel_fault_lift[rotated])
      apply (simp add: exception_defs)
     apply wpsimp
    apply (clarsimp simp: isVMPTE_def)
    apply (vcg exspec=lookupPTSlot_modifies)
   apply clarsimp
-  apply (clarsimp simp: cpte_relation_def Let_def vm_attribs_relation_def from_bool_def)
+  apply (clarsimp simp: cpte_relation_def Let_def vm_attribs_relation_def)
   apply (rule addrFromPPtr_mask_middle_pml4ShiftBits[simplified, simplified bit_simps])
    apply (clarsimp simp: vmsz_aligned_addrFromPPtr' vmsz_aligned_aligned_pageBits[simplified bit_simps])
   apply clarsimp
@@ -2091,8 +2089,8 @@ lemma createSafeMappingEntries_PDE_ccorres:
          apply clarsimp
          apply (erule cmap_relationE1[OF rf_sr_cpde_relation], erule ko_at_projectKO_opt)
          apply (clarsimp simp: typ_heap_simps cpde_relation_def Let_def)
-         apply (case_tac x; fastforce simp: if_1_0_0 pde_lifts isPageTablePDE_def false_def true_def
-                                            pde_pde_pt_lift_def)
+         apply (case_tac x;
+                fastforce simp: pde_lifts isPageTablePDE_def pde_pde_pt_lift_def)
         apply ceqv
        apply (clarsimp simp: pde_case_isPageTablePDE)
        apply (rule ccorres_Cond_rhs_Seq, clarsimp)
@@ -2109,7 +2107,7 @@ lemma createSafeMappingEntries_PDE_ccorres:
      apply (rule_tac P'="{s. lu_ret___struct_lookupPDSlot_ret_C = errstate s}" in ccorres_from_vcg_throws[where P=\<top>])
      apply (rule allI, rule conseqPre, vcg)
      apply (clarsimp simp: fst_throwError_returnOk syscall_error_to_H_cases
-                           syscall_error_rel_def exception_defs false_def)
+                           syscall_error_rel_def exception_defs)
      apply (erule lookup_failure_rel_fault_lift[rotated])
      apply (simp add: exception_defs)
     apply clarsimp
@@ -2120,8 +2118,7 @@ lemma createSafeMappingEntries_PDE_ccorres:
                         is_aligned_addrFromPPtr_pageBitsForSize[where sz=X64LargePage, simplified]
                         vmsz_aligned_def
                   dest!: addrFromPPtr_mask_middle_shiftBits[where sz=X64LargePage, simplified])
-  apply (clarsimp simp: bit_simps cpde_relation_def Let_def true_def false_def
-                        isPageTablePDE_def of_bool_from_bool
+  apply (clarsimp simp: bit_simps cpde_relation_def isPageTablePDE_def
                 split: pde.splits)
   done
 
@@ -2160,8 +2157,8 @@ lemma createSafeMappingEntries_PDPTE_ccorres:
          apply clarsimp
          apply (erule cmap_relationE1[OF rf_sr_cpdpte_relation], erule ko_at_projectKO_opt)
          apply (clarsimp simp: typ_heap_simps cpdpte_relation_def Let_def)
-         apply (case_tac x; fastforce simp: if_1_0_0 pdpte_lifts isPageDirectoryPDPTE_def false_def true_def
-                                            pdpte_pdpte_pd_lift_def)
+         apply (case_tac x;
+                fastforce simp: pdpte_lifts isPageDirectoryPDPTE_def pdpte_pdpte_pd_lift_def)
         apply ceqv
        apply (clarsimp simp: pdpte_case_isPageDirectoryPDPTE)
        apply (rule ccorres_Cond_rhs_Seq, clarsimp)
@@ -2178,7 +2175,7 @@ lemma createSafeMappingEntries_PDPTE_ccorres:
      apply (rule_tac P'="{s. lu_ret___struct_lookupPDPTSlot_ret_C = errstate s}" in ccorres_from_vcg_throws[where P=\<top>])
      apply (rule allI, rule conseqPre, vcg)
      apply (clarsimp simp: fst_throwError_returnOk syscall_error_to_H_cases
-                           syscall_error_rel_def exception_defs false_def)
+                           syscall_error_rel_def exception_defs)
      apply (erule lookup_failure_rel_fault_lift[rotated])
      apply (simp add: exception_defs)
     apply clarsimp
@@ -2189,8 +2186,7 @@ lemma createSafeMappingEntries_PDPTE_ccorres:
                         is_aligned_addrFromPPtr_pageBitsForSize[where sz=X64HugePage, simplified]
                         vmsz_aligned_def
                   dest!: addrFromPPtr_mask_middle_shiftBits[where sz=X64HugePage, simplified])
-  apply (clarsimp simp: bit_simps cpdpte_relation_def Let_def true_def false_def
-                        isPageDirectoryPDPTE_def of_bool_from_bool
+  apply (clarsimp simp: bit_simps cpdpte_relation_def isPageDirectoryPDPTE_def
                 split: pdpte.splits)
   done
 
@@ -2653,7 +2649,7 @@ lemma decodeX64FrameInvocation_ccorres:
                   apply (simp add: Collect_False if_to_top_of_bindE)
                   apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
                      apply vcg
-                    apply (clarsimp simp: cap_lift_pml4_cap cap_to_H_def get_capPtr_CL_def to_bool_def
+                    apply (clarsimp simp: cap_lift_pml4_cap cap_to_H_def get_capPtr_CL_def
                                           cap_pml4_cap_lift_def
                                    elim!: ccap_relationE split: if_split)
                    apply (rule syscall_error_throwError_ccorres_n[simplified id_def o_def dc_def])
@@ -2762,8 +2758,7 @@ lemma decodeX64FrameInvocation_ccorres:
                   apply vcg
                  apply (rule conseqPre, vcg)
                  apply (clarsimp simp: fst_throwError_returnOk exception_defs
-                                       syscall_error_rel_def syscall_error_to_H_cases
-                                       false_def)
+                                       syscall_error_rel_def syscall_error_to_H_cases)
                  apply (erule lookup_failure_rel_fault_lift[rotated])
                  apply (simp add: exception_defs)
                 apply (simp add: isCap_simps)
@@ -2865,7 +2860,7 @@ lemma decodeX64FrameInvocation_ccorres:
   apply (rename_tac pml4_cap b ys pml4_slot)
   apply (frule ccap_relation_PageCap_MapType)
   apply (erule_tac c="ArchObjectCap (PML4Cap a b)" for a b in ccap_relationE)
-  apply (clarsimp simp: cap_lift_pml4_cap to_bool_def cap_pml4_cap_lift_def framesize_from_to_H
+  apply (clarsimp simp: cap_lift_pml4_cap cap_pml4_cap_lift_def framesize_from_to_H
                            cap_to_H_def[split_simps cap_CL.split]
                            valid_cap'_def user_vtop_def X64.pptrUserTop_def)
   apply (prop_tac "(cap_C.words_C (cte_C.cap_C pml4_slot).[0] >> 58) && 1 \<noteq> 0")
@@ -3198,7 +3193,7 @@ lemma decodeX64PageDirectoryInvocation_ccorres:
                   apply (clarsimp simp: typ_heap_simps from_bool_eq_if)
                   apply (auto simp: cpdpte_relation_def Let_def pdpte_pdpte_pd_lift_def
                                     pdpte_pdpte_pd_lift pdpte_tag_defs pdpte_pdpte_1g_lift_def
-                                    pdpte_lift_def from_bool_def case_bool_If
+                                    pdpte_lift_def case_bool_If
                               split: pdpte.split_asm if_splits)[1]
                  apply ceqv
                 apply clarsimp
@@ -3237,7 +3232,8 @@ lemma decodeX64PageDirectoryInvocation_ccorres:
               apply (rule_tac P'="{s. errstate s = lookup_pd_ret}" in ccorres_from_vcg_split_throws[where P=\<top>])
                apply vcg
               apply (rule conseqPre, vcg)
-              apply (clarsimp simp: throwError_def return_def syscall_error_rel_def syscall_error_to_H_cases exception_defs false_def)
+              apply (clarsimp simp: throwError_def return_def syscall_error_rel_def
+                                    syscall_error_to_H_cases exception_defs)
               apply (erule lookup_failure_rel_fault_lift[rotated])
               apply (clarsimp simp: exception_defs)
              apply clarsimp
@@ -3254,7 +3250,7 @@ lemma decodeX64PageDirectoryInvocation_ccorres:
            apply simp
            apply (rule conseqPre, vcg)
            apply (clarsimp simp: throwError_def return_def syscall_error_rel_def
-                                 syscall_error_to_H_cases exception_defs false_def)
+                                 syscall_error_to_H_cases exception_defs)
            apply (erule lookup_failure_rel_fault_lift[rotated])
            apply (simp add: exception_defs)
           apply simp
@@ -3309,7 +3305,6 @@ lemma decodeX64PageDirectoryInvocation_ccorres:
   apply (clarsimp simp: cap_lift_pdpt_cap hd_conv_nth
                         cap_lift_page_directory_cap bit_simps
                         cap_pdpt_cap_lift_def
-                        to_bool_def
                         typ_heap_simps' shiftl_t2n[where n=3] field_simps
                  elim!: ccap_relationE)
   apply (clarsimp simp: neq_Nil_conv[where xs=extraCaps]
@@ -3704,7 +3699,8 @@ lemma decodeX64PDPTInvocation_ccorres:
            apply (rule_tac P'="{s. errstate s = find_ret}" in ccorres_from_vcg_split_throws[where P=\<top>])
             apply vcg
            apply (rule conseqPre, vcg)
-           apply (clarsimp simp: throwError_def return_def syscall_error_rel_def syscall_error_to_H_cases exception_defs false_def)
+           apply (clarsimp simp: throwError_def return_def syscall_error_rel_def
+                                 syscall_error_to_H_cases exception_defs)
            apply (erule lookup_failure_rel_fault_lift[rotated])
            apply (fastforce simp: exception_defs)
           apply clarsimp
@@ -3986,14 +3982,13 @@ lemma decodeX64MMUInvocation_ccorres:
                   apply (cut_tac P="\<lambda>y. y < i_' x + 1 = rhs y" for rhs in allI,
                          rule less_x_plus_1)
                    apply (fastforce simp: asid_high_bits_def)
-                  apply (clarsimp simp: rf_sr_x86KSASIDTable from_bool_def
+                  apply (clarsimp simp: rf_sr_x86KSASIDTable
                                         asid_high_bits_word_bits
                                         option_to_ptr_def option_to_0_def
                                         order_less_imp_le
                                         linorder_not_less
                                         order_antisym[OF inc_le])
-                  apply (clarsimp simp: true_def false_def
-                                 split: option.split if_split)
+                  apply (clarsimp split: option.split if_split)
                   apply (auto simp: asid_high_bits_def word_le_nat_alt
                                     word_less_nat_alt unat_add_lem[THEN iffD1]
                                     Kernel_C_defs)[1]
@@ -4012,8 +4007,7 @@ lemma decodeX64MMUInvocation_ccorres:
                 apply (clarsimp simp: asidHighBits_handy_convs word_sle_def
                                       word_sless_def from_bool_0
                                       rf_sr_x86KSASIDTable[where n=0, simplified])
-                apply (simp add: asid_high_bits_def option_to_ptr_def option_to_0_def
-                                 from_bool_def Kernel_C_defs
+                apply (simp add: asid_high_bits_def option_to_ptr_def option_to_0_def Kernel_C_defs
                           split: option.split if_split)
                 apply fastforce
                apply ceqv
@@ -4190,7 +4184,7 @@ lemma decodeX64MMUInvocation_ccorres:
        apply (frule (1) slotcap_in_mem_PML4)
        apply (clarsimp simp: typ_heap_simps' from_bool_0 split: if_split)
        apply (fastforce simp: isCap_simps asidInvalid_def cap_lift_pml4_cap cap_to_H_simps
-                              get_capMappedASID_CL_def true_def c_valid_cap_def cl_valid_cap_def
+                              get_capMappedASID_CL_def c_valid_cap_def cl_valid_cap_def
                         elim!: ccap_relationE split: if_splits)
       apply ceqv
      apply (rule ccorres_Cond_rhs_Seq)
@@ -4234,8 +4228,7 @@ lemma decodeX64MMUInvocation_ccorres:
         apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
         apply (rule allI, rule conseqPre, vcg)
         apply (clarsimp simp: throwError_def return_def
-                              syscall_error_rel_def exception_defs
-                              syscall_error_to_H_cases false_def)
+                              syscall_error_rel_def exception_defs syscall_error_to_H_cases)
         apply (simp add: lookup_fault_lift_invalid_root)
        apply csymbr
        apply (simp add: liftME_def bindE_assoc if_to_top_of_bind)
@@ -4285,9 +4278,7 @@ lemma decodeX64MMUInvocation_ccorres:
                                      = capASIDBase cp")
               apply (subgoal_tac "\<And>x. (x < (i_' xb + 1))
                                         = (x < i_' xb \<or> x = i_' xb)")
-               apply (clarsimp simp: inc_le from_bool_def typ_heap_simps
-                                     asid_low_bits_def not_less field_simps
-                                     false_def
+               apply (clarsimp simp: inc_le typ_heap_simps asid_low_bits_def not_less field_simps
                               split: if_split bool.splits)
                apply unat_arith
               apply (rule iffI)
@@ -4341,11 +4332,10 @@ lemma decodeX64MMUInvocation_ccorres:
                                  word_sless_def word_sle_def)
            apply (erule cmap_relationE1[OF rf_sr_cpspace_asidpool_relation],
                   erule ko_at_projectKO_opt)
-           apply (clarsimp simp: typ_heap_simps from_bool_def split: if_split)
+           apply (clarsimp simp: typ_heap_simps split: if_split)
            apply (frule cap_get_tag_isCap_unfolded_H_cap)
            apply (clarsimp simp: cap_lift_asid_pool_cap cap_to_H_def
-                                 cap_asid_pool_cap_lift_def false_def
-                                 ucast_minus ucast_nat_def
+                                 cap_asid_pool_cap_lift_def ucast_minus ucast_nat_def
                           elim!: ccap_relationE)
           apply ceqv
          apply (rule ccorres_Guard_Seq)+
@@ -4471,8 +4461,8 @@ lemma decodeX64MMUInvocation_ccorres:
                         rf_sr_ksCurThread "StrictC'_thread_state_defs"
                         mask_def[where n=4]
                   cong: if_cong)
-  apply (clarsimp simp: to_bool_def ccap_relation_isDeviceCap2 objBits_simps
-                        archObjSize_def pageBits_def from_bool_def case_bool_If)
+  apply (clarsimp simp: ccap_relation_isDeviceCap2 objBits_simps
+                        archObjSize_def pageBits_def case_bool_If)
   apply (rule conjI)
    (* Is Asid Control Cap *)
    apply (clarsimp simp: neq_Nil_conv excaps_in_mem_def excaps_map_def)
@@ -4486,7 +4476,7 @@ lemma decodeX64MMUInvocation_ccorres:
                           hd_conv_nth length_ineq_not_Nil Kernel_C_defs
                    elim!: ccap_relationE)
    apply (clarsimp simp: to_bool_def unat_eq_of_nat
-                         objBits_simps archObjSize_def pageBits_def from_bool_def case_bool_If
+                         objBits_simps archObjSize_def pageBits_def case_bool_If
                   split: if_splits)
   apply (clarsimp simp: asid_low_bits_word_bits isCap_simps neq_Nil_conv
                         excaps_map_def excaps_in_mem_def
@@ -4497,15 +4487,14 @@ lemma decodeX64MMUInvocation_ccorres:
   apply (frule interpret_excaps_eq[rule_format, where n=0], simp)
   apply (rule conjI)
    apply (clarsimp simp: cap_lift_asid_pool_cap cap_lift_page_directory_cap
-                         cap_to_H_def to_bool_def valid_cap'_def
+                         cap_to_H_def valid_cap'_def
                          cap_page_directory_cap_lift_def
                          cap_asid_pool_cap_lift_def mask_def
                          asid_shiftr_low_bits_less[unfolded mask_def asid_bits_def] word_and_le1
                   elim!: ccap_relationE split: if_split_asm)
    apply (clarsimp split: list.split)
   apply (clarsimp simp: cap_lift_asid_pool_cap cap_lift_page_directory_cap
-                        cap_to_H_def to_bool_def
-                        cap_page_directory_cap_lift_def
+                        cap_to_H_def cap_page_directory_cap_lift_def
                  elim!: ccap_relationE split: if_split_asm)
   apply (erule rf_sr_cte_at_validD[rotated])
   apply (fastforce simp: slotcap_in_mem_def2)
@@ -5115,7 +5104,7 @@ lemma isIOPortRangeFree_spec:
                                                 !! unat (port && mask wordRadix))}"])
   apply (simp add: port_array_def)
   apply (rule conseqPre, vcg)
-    apply (all \<open>clarsimp simp: hrs_simps false_def from_bool_0 wordRadix_def is_up is_down
+    apply (all \<open>clarsimp simp: hrs_simps from_bool_0 wordRadix_def is_up is_down
                                unat_ucast_upcast uint_up_ucast sint_ucast_eq_uint up_ucast_inj_eq
                                not_max_word_simps[THEN ucast_increment]
                                ucast_cmp_ucast ucast_cmp_ucast[where 'a=16 and y="0x40", simplified]\<close>)

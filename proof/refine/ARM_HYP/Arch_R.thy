@@ -576,7 +576,7 @@ lemma decodeARMPageFlush_corres:
                         page_size \<leftarrow> returnOk $ 1 << pageBitsForSize vmpage_size;
                         whenE (page_size \<le> start \<or> page_size < end) $
                         throwError $ ExceptionTypes_A.syscall_error.InvalidArgument 0;
-                        whenE (pstart < ARM_HYP.physBase \<or> ARM_HYP.paddrTop < end - start + pstart) $
+                        whenE (pstart < physBase \<or> ARM_HYP.paddrTop < end - start + pstart) $
                         throwError ExceptionTypes_A.syscall_error.IllegalOperation;
                         returnOk $
                         arch_invocation.InvokePage $
@@ -605,7 +605,7 @@ lemma decodeARMPageFlush_corres:
       apply (rule whenE_throwError_corres, simp)
        apply simp
       apply (rule whenE_throwError_corres, simp)
-       apply (simp add: fromPAddr_def physBase_def paddrTop_def add.commute)
+       apply (clarsimp simp: add.commute fromPAddr_def)
       apply (rule corres_trivial)
       apply (rule corres_returnOk)
     apply (clarsimp simp: archinv_relation_def page_invocation_map_def flush_type_map_def)
@@ -1723,17 +1723,6 @@ lemma ensureSafeMapping_valid_slots_duplicated':
   apply (fastforce simp:valid_slots_duplicated'_def)
   done
 
-lemma is_aligned_ptrFromPAddr_aligned:
-  "m \<le> 28 \<Longrightarrow> is_aligned (ptrFromPAddr p) m = is_aligned p m"
-  apply (simp add:ptrFromPAddr_def is_aligned_mask
-    pptrBaseOffset_def pptrBase_def ARM_HYP.physBase_def physBase_def)
-  apply (subst add.commute)
-  apply (subst mask_add_aligned)
-   apply (erule is_aligned_weaken[rotated])
-   apply (simp add:is_aligned_def)
-  apply simp
-  done
-
 (* FIXME: this lemma is too specific *)
 lemma lookupPTSlot_aligned:
   "\<lbrace>\<lambda>s. is_aligned vptr 16 \<and> valid_objs' s\<rbrace> lookupPTSlot pd vptr \<lbrace>\<lambda>p s. is_aligned p 7\<rbrace>,-"
@@ -1745,15 +1734,13 @@ lemma lookupPTSlot_aligned:
     split:Structures_H.kernel_object.splits arch_kernel_object.splits)
   apply (simp add:valid_obj'_def lookup_pt_slot_no_fail_def)
   apply (rule aligned_add_aligned)
-    apply (rule is_aligned_ptrFromPAddr_aligned[where m = 7,THEN iffD2])
-     apply simp
-    apply (erule is_aligned_weaken)
-    apply (simp add: vspace_bits_defs)
+    apply (erule is_aligned_ptrFromPAddr_n)
+    apply (simp add: pt_bits_def pte_bits_def)
    apply (rule is_aligned_shiftl)
    apply (rule is_aligned_andI1)
    apply (rule is_aligned_shiftr)
    apply (simp add: pte_bits_def pageBits_def pt_bits_def)
-  apply simp
+  apply (simp add: pt_bits_def)
   done
 
 lemma createMappingEntires_valid_slots_duplicated'[wp]:

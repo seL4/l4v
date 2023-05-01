@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -1478,16 +1479,6 @@ lemma ensureSafeMapping_valid_slots_duplicated':
   apply (fastforce simp:valid_slots_duplicated'_def)
   done
 
-lemma is_aligned_ptrFromPAddr_aligned:
-  "m \<le> 28 \<Longrightarrow> is_aligned (ptrFromPAddr p) m = is_aligned p m"
-  apply (simp add:ptrFromPAddr_def is_aligned_mask pptrBaseOffset_def pptrBase_def physBase_def)
-  apply (subst add.commute)
-  apply (subst mask_add_aligned)
-   apply (erule is_aligned_weaken[rotated])
-   apply (simp add:is_aligned_def)
-  apply simp
-  done
-
 (* FIXME: this lemma is too specific *)
 lemma lookupPTSlot_aligned:
   "\<lbrace>\<lambda>s. is_aligned vptr 16 \<and> valid_objs' s\<rbrace> lookupPTSlot pd vptr \<lbrace>\<lambda>p s. is_aligned p 6\<rbrace>,-"
@@ -1499,15 +1490,13 @@ lemma lookupPTSlot_aligned:
     split:Structures_H.kernel_object.splits arch_kernel_object.splits)
   apply (simp add:valid_obj'_def lookup_pt_slot_no_fail_def)
   apply (rule aligned_add_aligned)
-    apply (rule is_aligned_ptrFromPAddr_aligned[where m = 6,THEN iffD2])
-     apply simp
-    apply (erule is_aligned_weaken)
-    apply (simp add:ptBits_def pageBits_def)
+    apply (erule is_aligned_ptrFromPAddr_n)
+    apply (simp add: ptBits_def pteBits_def)
    apply (rule is_aligned_shiftl,simp)
    apply (rule is_aligned_andI1)
    apply (rule is_aligned_shiftr)
    apply simp
-  apply simp
+  apply (simp add: ptBits_def)
   done
 
 lemma createMappingEntires_valid_slots_duplicated'[wp]:

@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -37,12 +38,22 @@ definition canonical_user :: "vspace_ref" where
 
 (* Kernel and ELF window are constructed so that they can be covered with one max_pt_level entry
    each. This is not the layout the real kernel uses, but we are only trying to show that
-   the invariants are consistent. *)
+   the invariants are consistent.
+
+   The values we pick here for the size of these regions constrain pptr_base and kernel_elf_base in
+   real kernel configurations, so we pick relatively small values that are reasonable lower bounds
+   for real platforms and that are still large enough to work for the examples. In particular, the
+   InfoFlow example gives a constraint that the kernel window is at least large enough to contain a
+   RISCVLargePage and a minimal set of other objects. This leads to picking values of:
+   4M physical memory (1 << 22) and one page (1 << pageBits) for the kernel elf region. *)
+definition kernel_window_bits :: nat where
+  "kernel_window_bits \<equiv> 22"
+
 definition init_vspace_uses :: "vspace_ref \<Rightarrow> riscvvspace_region_use"
   where
   "init_vspace_uses p \<equiv>
-     if p \<in> {pptr_base ..< pptr_base + (1 << 30)} then RISCVVSpaceKernelWindow
-     else if p \<in> {kernel_elf_base ..< kernel_elf_base + (1 << 20)} then RISCVVSpaceKernelELFWindow
+     if p \<in> {pptr_base ..< pptr_base + (1 << kernel_window_bits)} then RISCVVSpaceKernelWindow
+     else if p \<in> {kernel_elf_base ..< kernel_elf_base + (1 << pageBits)} then RISCVVSpaceKernelELFWindow
      else if p \<le> canonical_user then RISCVVSpaceUserRegion
      else RISCVVSpaceInvalidRegion"
 
@@ -54,18 +65,25 @@ definition init_arch_state :: arch_state
      riscv_kernel_vspace = init_vspace_uses
    \<rparr>"
 
+definition toplevel_bits :: nat
+  where
+  "toplevel_bits = pt_bits_left max_pt_level"
 
-(* {pptr_base ..< pptr_base + (1 << 30)} is pt index 0x100 at max_pt_level,
-   {kernel_elf_base ..< kernel_elf_base + (1 << 20)} comes out to pt index 0x1FE.
+definition elf_index :: pt_index
+  where
+  "elf_index = ucast (pt_index max_pt_level kernel_elf_base)"
+
+(* {pptr_base ..< pptr_base + (1 << kernel_window_bits)} is pt index 0x100 at max_pt_level,
+   {kernel_elf_base ..< kernel_elf_base + (1 << pageBits)} comes out to elf_index.
    The rest is constructed such that the translation lines up with what the invariants want. *)
 definition global_pte :: "pt_index \<Rightarrow> pte"
   where
   "global_pte idx \<equiv>
      if idx = 0x100
-     then PagePTE ((ucast (idx && mask (ptTranslationBits - 1)) << ptTranslationBits * 2))
+     then PagePTE ((ucast (idx && mask (ptTranslationBits - 1)) << ptTranslationBits * size max_pt_level))
                   {} vm_kernel_only
-     else if idx = 0x1FE
-     then PagePTE (2 << ptTranslationBits * 2) {} vm_kernel_only
+     else if idx = elf_index
+     then PagePTE (ucast ((kernelELFPAddrBase && ~~mask toplevel_bits) >> pageBits)) {} vm_kernel_only
      else InvalidPTE"
 
 definition init_global_pt :: kernel_object

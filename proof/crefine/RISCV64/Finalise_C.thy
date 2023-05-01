@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
@@ -921,7 +922,7 @@ lemma finaliseCap_True_cases_ccorres:
    apply csymbr
    apply (simp add: cap_get_tag_isCap Collect_False del: Collect_const)
    apply (fold case_bool_If)
-   apply (simp add: false_def)
+   apply simp
    apply csymbr
    apply wpc
     apply (simp add: cap_get_tag_isCap ccorres_cond_univ_iff Let_def)
@@ -1128,7 +1129,7 @@ lemma deleteASID_ccorres:
                         simp flip: mask_2pm1
                        split: asidpool.split_asm asid_pool_C.split_asm)
         apply (drule_tac x="asid && mask asid_low_bits" in spec)
-        apply (clarsimp simp: word_and_le1 from_bool_def case_bool_If inv_ASIDPool)
+        apply (clarsimp simp: word_and_le1 case_bool_If inv_ASIDPool)
         apply (fastforce simp: option_to_ptr_def option_to_0_def split: if_splits option.splits)
        apply ceqv
       apply (rule ccorres_cond2[where R=\<top>])
@@ -1493,7 +1494,7 @@ lemma isFinalCapability_ccorres:
            apply (simp add: mdbPrev_to_H[symmetric])
           apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
           apply (rule allI, rule conseqPre, vcg)
-          apply (simp add: return_def from_bool_def false_def)
+          apply (simp add: return_def)
          apply (rule ccorres_rhs_assoc)+
          apply (rule ccorres_symb_exec_l[OF _ getCTE_inv getCTE_wp empty_fail_getCTE])
          apply (rule_tac P="cte_wp_at' ((=) cte) slot
@@ -1532,10 +1533,9 @@ lemma isFinalCapability_ccorres:
        apply (rule cmap_relationE1 [OF cmap_relation_cte], assumption+,
                   simp?, simp add: typ_heap_simps)+
        apply (drule ccte_relation_ccap_relation)+
-       apply (auto simp: false_def true_def from_bool_def split: bool.splits)[1]
+       apply (auto simp: from_bool_def split: bool.splits)[1]
       apply (wp getCTE_wp')
-     apply (clarsimp simp add: guard_is_UNIV_def Collect_const_mem false_def
-                               from_bool_0 true_def from_bool_def)
+     apply (clarsimp simp add: guard_is_UNIV_def Collect_const_mem)
     apply vcg
    apply (rule conseqPre, vcg)
    apply clarsimp
@@ -1593,13 +1593,12 @@ lemma cteDeleteOne_ccorres:
         apply (strengthen invs_mdb_strengthen' invs_urz)
         apply (wp typ_at_lifts isFinalCapability_inv
             | strengthen invs_valid_objs')+
-       apply (clarsimp simp: from_bool_def true_def irq_opt_relation_def
-                             invs_pspace_aligned' cte_wp_at_ctes_of)
+       apply (clarsimp simp: irq_opt_relation_def invs_pspace_aligned' cte_wp_at_ctes_of)
        apply (erule(1) cmap_relationE1 [OF cmap_relation_cte])
        apply (clarsimp simp: typ_heap_simps ccte_relation_ccap_relation ccap_relation_NullCap_iff)
       apply (wp isFinalCapability_inv)
      apply simp
-    apply (simp del: Collect_const add: false_def)
+    apply (simp del: Collect_const)
    apply (rule ccorres_return_Skip)
   apply (clarsimp simp: Collect_const_mem cte_wp_at_ctes_of)
   apply (erule(1) cmap_relationE1 [OF cmap_relation_cte])
@@ -1753,22 +1752,6 @@ lemma cnotification_relation_udpate_arch:
   apply (subst ep_queue_relation_shift2; simp add: fun_eq_iff)
   apply (safe ; case_tac "xa = p" ; clarsimp simp: option_map2_def map_option_case)
   done
-
-lemma sanitiseSetRegister_ccorres:
-  "\<lbrakk> val = val'; reg' = register_from_H reg\<rbrakk> \<Longrightarrow>
-     ccorres dc xfdc (tcb_at' tptr)
-                      UNIV
-                      hs
-             (asUser tptr (setRegister reg (local.sanitiseRegister False reg val)))
-             (\<acute>unsigned_long_eret_2 :== CALL sanitiseRegister(reg',val',0);;
-              CALL setRegister(tcb_ptr_to_ctcb_ptr tptr,reg',\<acute>unsigned_long_eret_2))"
-  apply (rule ccorres_guard_imp2)
-   apply (rule ccorres_symb_exec_r)
-     apply (ctac add: setRegister_ccorres)
-    apply (vcg)
-   apply (rule conseqPre, vcg)
-   apply (fastforce simp: sanitiseRegister_def split: register.splits)
-  by (auto simp: sanitiseRegister_def from_bool_def simp del: Collect_const split: register.splits bool.splits)
 
 lemma case_option_both[simp]:
   "(case f of None \<Rightarrow> P | _ \<Rightarrow> P) = P"
@@ -1955,7 +1938,7 @@ lemma Arch_finaliseCap_ccorres:
       apply (rule ccorres_return_C; simp)
      apply (prop_tac "ret__unsigned_longlong \<noteq> 0")
       apply (clarsimp simp: ccap_relation_def map_option_Some_eq2 dest!: cap_to_H_PTCap)
-      apply (simp add: cap_page_table_cap_lift_def to_bool_def split: if_split_asm)
+      apply (simp add: cap_page_table_cap_lift_def split: if_split_asm)
      apply ccorres_rewrite
      apply (rule ccorres_rhs_assoc)+
      apply csymbr
@@ -2089,7 +2072,7 @@ lemma finaliseCap_ccorres:
                del: Collect_const)
    apply (rule ccorres_if_lhs)
     apply (simp, rule ccorres_fail)
-   apply (simp add: from_bool_0 Collect_True Collect_False false_def
+   apply (simp add: from_bool_0 Collect_True Collect_False
                del: Collect_const)
    apply csymbr
    apply (simp add: cap_get_tag_isCap Collect_False Collect_True
@@ -2175,7 +2158,7 @@ sorry (* FIXME RT: finaliseCap_ccorres *) (*
    apply (simp add: isArchCap_T_isArchObjectCap[symmetric]
                del: Collect_const)
    apply (rule ccorres_if_lhs)
-    apply (simp add: Collect_False Collect_True Let_def true_def
+    apply (simp add: Collect_False Collect_True Let_def
                 del: Collect_const)
     apply (rule_tac P="(capIRQ cap) \<le>  RISCV64.maxIRQ" in ccorres_gen_asm)
     apply (rule ccorres_rhs_assoc)+
@@ -2215,8 +2198,7 @@ sorry (* FIXME RT: finaliseCap_ccorres *) (*
                            irq_opt_relation_def)
     apply wp
    apply (simp add: guard_is_UNIV_def)
-  apply (clarsimp simp: cap_get_tag_isCap word_sle_def Collect_const_mem
-                        false_def from_bool_def)
+  apply (clarsimp simp: cap_get_tag_isCap word_sle_def Collect_const_mem)
   apply (intro impI conjI)
                 apply (clarsimp split: bool.splits)
                apply (clarsimp split: bool.splits)
@@ -2233,7 +2215,7 @@ sorry (* FIXME RT: finaliseCap_ccorres *) (*
                     split: option.splits cap_CL.splits if_splits)
       apply clarsimp
       apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
-      apply (clarsimp simp: isCap_simps from_bool_def false_def)
+      apply (clarsimp simp: isCap_simps)
      apply (clarsimp simp: tcb_cnode_index_defs ptr_add_assertion_def)
     apply clarsimp
     apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])

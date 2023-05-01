@@ -12,7 +12,7 @@ imports
   "Word_Lib.WordSetup"
   "Lib.Defs"
   Setup_Locale
-  Kernel_Config_Lemmas
+  Kernel_Config
 begin
 
 context Arch begin global_naming AARCH64
@@ -36,40 +36,34 @@ abbreviation (input) "fromPAddr \<equiv> id"
    of these constants.
 *)
 
-(* FIXME AARCH64: canonical bit isn't used, addresses >= 2^48 are invalid *)
+(* The canonical bit is the highest bit that can be set in a virtual address and still accepted
+   by the hardware. Any bit higher than that will be overwritten by sign extension, zero extension,
+   or result in a fault.
+   For AArch64 with hyp, addresses >= 2^48 are invalid, and sign-extension is not used by the
+   hardware. *)
 definition canonical_bit :: nat where
   "canonical_bit = 47"
 
 definition kdevBase :: machine_word where
   "kdevBase = 0x000000FFFFE00000"
 
-(* FIXME AARCH64: are powers-of-2 definitions with sanity checks better than the raw numbers here? *)
 definition kernelELFBase :: machine_word where
-  "kernelELFBase = 0x8000000000 + 0x80000000" (* 2^39 + 2^31 *)
-
-lemma "kernelELFBase = 0x8080000000" (* Sanity check with C *)
-  by (simp add: kernelELFBase_def)
+  "kernelELFBase = 2^39 + physBase"
 
 definition kernelELFPAddrBase :: machine_word where
-  "kernelELFPAddrBase = 0x80000000" (* 2^31 *)
+  "kernelELFPAddrBase = physBase"
 
 definition kernelELFBaseOffset :: machine_word where
   "kernelELFBaseOffset = kernelELFBase - kernelELFPAddrBase"
 
 definition pptrBase :: machine_word where
-  "pptrBase = 0x8000000000" (* 2^39 | FIXME AARCH64: likely to be moved to 0x0 *)
+  "pptrBase = 0x8000000000" (* 2^39 *)
 
 definition pptrUserTop :: machine_word where
   "pptrUserTop \<equiv> mask (if config_ARM_PA_SIZE_BITS_40 then 40 else 44)"
 
 lemma "pptrUserTop = (if config_ARM_PA_SIZE_BITS_40 then 0xFFFFFFFFFF else 0xFFFFFFFFFFF)" (* Sanity check with C *)
   by (simp add: pptrUserTop_def mask_def)
-
-(* FIXME AARCH64: we might want to remove this for improved genericity *)
-schematic_goal pptrUserTop_def': (* direct constant definition *)
-  "AARCH64.pptrUserTop = numeral ?x"
-  by (simp add: AARCH64.pptrUserTop_def Kernel_Config.config_ARM_PA_SIZE_BITS_40_def mask_def
-           del: word_eq_numeral_iff_iszero)
 
 definition pptrTop :: machine_word where
   "pptrTop = 2^40 - 2^30" (* FIXME AARCH64: see also seL4/seL4#957 *)

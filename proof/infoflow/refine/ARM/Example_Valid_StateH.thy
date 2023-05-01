@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -126,7 +127,7 @@ definition
   Low_pt'H :: "word8 \<Rightarrow> ARM_H.pte "
 where
   "Low_pt'H \<equiv> (\<lambda>_. ARM_H.InvalidPTE)
-            (0 := ARM_H.SmallPagePTE shared_page_ptr (PageCacheable \<in> {}) (Global \<in> {}) (XNever \<in> {}) (vmrights_map vm_read_write))"
+            (0 := ARM_H.SmallPagePTE shared_page_ptr_phys (PageCacheable \<in> {}) (Global \<in> {}) (XNever \<in> {}) (vmrights_map vm_read_write))"
 
 definition
   Low_ptH :: "word32 \<Rightarrow> word32 \<Rightarrow> Structures_H.kernel_object option"
@@ -173,7 +174,7 @@ definition
 where
   "High_pt'H \<equiv>
     (\<lambda>_. ARM_H.InvalidPTE)
-     (0 := ARM_H.SmallPagePTE shared_page_ptr (PageCacheable \<in> {}) (Global \<in> {}) (XNever \<in> {})
+     (0 := ARM_H.SmallPagePTE shared_page_ptr_phys (PageCacheable \<in> {}) (Global \<in> {}) (XNever \<in> {})
                       (vmrights_map vm_read_only))"
 
 
@@ -2186,28 +2187,24 @@ lemma s0H_valid_objs':
                              valid_cte'_def
                       split: if_split_asm)
       apply (clarsimp simp: valid_obj'_def global_pdH'_def valid_mapping'_def s0_ptr_defs
-                            is_aligned_def ARM.addrFromPPtr_def ARM.ptrFromPAddr_def
-                            pptrBaseOffset_def ARM.pptrBase_def ARM.physBase_def
-                            pptrBase_def physBase_def
                      split: if_split_asm)
-     apply (clarsimp simp: valid_obj'_def High_pdH_def High_pd'H_def valid_pde'_def pteBits_def
-                           valid_mapping'_def s0_ptr_defs is_aligned_def ARM.addrFromPPtr_def
-                           ARM.pptrBase_def ARM.physBase_def ARM.ptrFromPAddr_def ptBits_def
-                           pageBits_def pptrBaseOffset_def pptrBase_def physBase_def
+      apply (rule is_aligned_addrFromPPtr_n; clarsimp simp: is_aligned_def)
+     apply (clarsimp simp: valid_obj'_def High_pdH_def High_pd'H_def valid_mapping'_def s0_ptr_defs
+                           ptBits_def pteBits_def
                     split: if_split_asm)
-    apply (clarsimp simp: valid_obj'_def Low_pdH_def Low_pd'H_def valid_pde'_def valid_mapping'_def
-                          s0_ptr_defs is_aligned_def ARM.addrFromPPtr_def pteBits_def
-                          ARM.ptrFromPAddr_def ARM.physBase_def ptBits_def pageBits_def
-                          pptrBaseOffset_def pptrBase_def physBase_def
+     apply (intro conjI impI; rule is_aligned_addrFromPPtr_n; clarsimp simp: is_aligned_def)
+    apply (clarsimp simp: valid_obj'_def Low_pdH_def Low_pd'H_def valid_mapping'_def s0_ptr_defs
+                          ptBits_def pteBits_def
                    split: if_split_asm)
+    apply (intro conjI impI; rule is_aligned_addrFromPPtr_n; clarsimp simp: is_aligned_def)
    apply (clarsimp simp: valid_obj'_def High_ptH_def High_pt'H_def valid_mapping'_def s0_ptr_defs
-                         is_aligned_def ARM.addrFromPPtr_def ARM.ptrFromPAddr_def ARM.pptrBase_def
-                         ARM.physBase_def pptrBaseOffset_def pptrBase_def physBase_def
+                         ptBits_def pteBits_def shared_page_ptr_phys_def
                   split: if_split_asm)
+   apply (rule is_aligned_addrFromPPtr_n; clarsimp simp: is_aligned_def)
   apply (clarsimp simp: valid_obj'_def Low_ptH_def Low_pt'H_def valid_mapping'_def s0_ptr_defs
-                        is_aligned_def ARM.addrFromPPtr_def ARM.physBase_def ARM.ptrFromPAddr_def
-                        pptrBaseOffset_def pptrBase_def physBase_def
+                        ptBits_def pteBits_def shared_page_ptr_phys_def
                  split: if_split_asm)
+  apply (rule is_aligned_addrFromPPtr_n; clarsimp simp: is_aligned_def)
   done
 
 lemmas the_nat_to_bl_simps =

@@ -543,7 +543,6 @@ crunches get_vmid, invalidate_asid_entry, invalidate_tlb_by_asid, invalidate_tlb
   and cur[wp]: cur_tcb
   and valid_objs[wp]: valid_objs
 
-(* FIXME AARCH64: typ_at_lifts should include arch things *)
 lemmas find_free_vmid_typ_ats[wp] = abs_typ_at_lifts [OF find_free_vmid_typ_at]
 lemmas invalidate_asid_typ_ats[wp] = abs_typ_at_lifts [OF invalidate_asid_typ_at]
 lemmas update_asid_pool_entry_typ_ats[wp] = abs_typ_at_lifts [OF update_asid_pool_entry_typ_at]
@@ -712,7 +711,7 @@ lemma find_free_vmid_valid_arch [wp]:
 lemma entry_for_asid_Some_vmidD:
   "entry_for_asid asid s = Some entry \<Longrightarrow> ap_vmid entry = vmid_for_asid s asid \<and> 0 < asid"
   unfolding entry_for_asid_def vmid_for_asid_def entry_for_pool_def pool_for_asid_def
-  by (auto simp: obind_def opt_map_def split: option.splits)
+  by (auto simp: obind_def opt_map_def if_option split: option.splits)
 
 lemma load_vmid_wp[wp]:
   "\<lbrace>\<lambda>s. P (asid_map s asid) s\<rbrace> load_vmid asid \<lbrace>P\<rbrace>"

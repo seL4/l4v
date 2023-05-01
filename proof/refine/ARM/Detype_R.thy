@@ -2154,22 +2154,6 @@ lemma cte_wp_at_top:
          split: option.split;
       fastforce)
 
-lemma neq_out_intv:
-  "\<lbrakk>a \<noteq> b; b \<notin> {a..a + c - 1} - {a} \<rbrakk> \<Longrightarrow> b \<notin> {a..a + c - 1}"
-  by simp
-
-lemma rule_out_intv:
-  "\<lbrakk> ksPSpace s a = Some obj; ksPSpace s b = Some obj'; pspace_distinct' s; a\<noteq>b \<rbrakk>
-   \<Longrightarrow> b \<notin> {a..a + 2 ^ objBitsKO obj - 1}"
-  apply (drule(1) pspace_distinctD')
-  apply (subst (asm) ps_clear_def)
-  apply (drule_tac x = b in orthD2)
-   apply fastforce
-  apply (drule neq_out_intv)
-   apply simp
-  apply simp
-  done
-
 lemma locateCTE_monad:
   assumes ko_wp_at: "\<And>Q dest.
   \<lbrace>\<lambda>s. P1 s \<and> ko_wp_at' (\<lambda>obj. Q (objBitsKO obj))  dest s \<rbrace> f
@@ -2247,8 +2231,8 @@ proof -
     apply simp
    apply (fold word_bits_def)
    apply (erule (1) pspace_boundedD')
-  apply (clarsimp simp:field_simps)
-  apply blast
+  apply (clarsimp simp: field_simps)
+  apply (elim disjE; fastforce simp: mask_def p_assoc_help)
   done
   assume
     "{(ptr, s)} = fst (locateCTE src s)"

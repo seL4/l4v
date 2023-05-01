@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -8,6 +9,7 @@ theory Example_Valid_State
 imports
   "ArchNoninterference"
   "Lib.Distinct_Cmd"
+  "AInvs.KernelInit_AI"
 begin
 
 section \<open>Example\<close>
@@ -218,7 +220,8 @@ definition "High_cnode_ptr = pptr_base + 0x18000"
 definition "Silc_cnode_ptr = pptr_base + 0x20000"
 definition "irq_cnode_ptr = pptr_base + 0x28000"
 
-definition "shared_page_ptr = pptr_base + 0x200000"
+definition "shared_page_ptr_virt = pptr_base + 0x200000"
+definition "shared_page_ptr_phys = addrFromPPtr shared_page_ptr_virt"
 
 definition "timer_irq \<equiv> 10" (* not sure exactly how this fits in *)
 
@@ -236,15 +239,15 @@ lemmas s0_ptr_defs =
   ntfn_ptr_def irq_cnode_ptr_def Low_pd_ptr_def High_pd_ptr_def Low_pt_ptr_def High_pt_ptr_def
   Low_tcb_ptr_def High_tcb_ptr_def idle_tcb_ptr_def timer_irq_def Low_prio_def High_prio_def
   Low_time_slice_def Low_domain_def High_domain_def init_irq_node_ptr_def riscv_global_pt_ptr_def
-  pptr_base_def pptrBase_def canonical_bit_def shared_page_ptr_def
+  pptr_base_def pptrBase_def canonical_bit_def shared_page_ptr_virt_def
 
 (* Distinctness proof of kernel pointers. *)
 
 distinct ptrs_distinct[simp]:
   Low_tcb_ptr High_tcb_ptr idle_tcb_ptr ntfn_ptr
-  Low_pt_ptr High_pt_ptr shared_page_ptr Low_pd_ptr High_pd_ptr
+  Low_pt_ptr High_pt_ptr shared_page_ptr_virt Low_pd_ptr High_pd_ptr
   Low_cnode_ptr High_cnode_ptr Low_pool_ptr High_pool_ptr
-  Silc_cnode_ptr irq_cnode_ptr riscv_global_pt_ptr shared_page_ptr
+  Silc_cnode_ptr irq_cnode_ptr riscv_global_pt_ptr
   by (auto simp: s0_ptr_defs)
 
 
@@ -384,7 +387,7 @@ definition Low_caps :: cnode_contents where
       (the_nat_to_bl_10 4)
         \<mapsto> ArchObjectCap (ASIDPoolCap Low_pool_ptr Low_asid),
       (the_nat_to_bl_10 5)
-        \<mapsto> ArchObjectCap (FrameCap shared_page_ptr vm_read_write RISCVLargePage False (Some (Low_asid,0))),
+        \<mapsto> ArchObjectCap (FrameCap shared_page_ptr_virt vm_read_write RISCVLargePage False (Some (Low_asid,0))),
       (the_nat_to_bl_10 6)
         \<mapsto> ArchObjectCap (PageTableCap Low_pt_ptr (Some (Low_asid,0))),
       (the_nat_to_bl_10 318)
@@ -413,7 +416,7 @@ lemma Low_caps_ran:
       ArchObjectCap (PageTableCap Low_pd_ptr (Some (Low_asid,0))),
       ArchObjectCap (PageTableCap Low_pt_ptr (Some (Low_asid,0))),
       ArchObjectCap (ASIDPoolCap Low_pool_ptr Low_asid),
-      ArchObjectCap (FrameCap shared_page_ptr vm_read_write RISCVLargePage False (Some (Low_asid,0))),
+      ArchObjectCap (FrameCap shared_page_ptr_virt vm_read_write RISCVLargePage False (Some (Low_asid,0))),
       NotificationCap ntfn_ptr 0 {AllowSend},
       NullCap}"
   apply (rule equalityI)
@@ -438,7 +441,7 @@ definition High_caps :: cnode_contents where
         (the_nat_to_bl_10 4)
           \<mapsto> ArchObjectCap (ASIDPoolCap High_pool_ptr High_asid),
         (the_nat_to_bl_10 5)
-          \<mapsto> ArchObjectCap (FrameCap shared_page_ptr vm_read_only RISCVLargePage False (Some (High_asid,0))),
+          \<mapsto> ArchObjectCap (FrameCap shared_page_ptr_virt vm_read_only RISCVLargePage False (Some (High_asid,0))),
         (the_nat_to_bl_10 6)
           \<mapsto> ArchObjectCap (PageTableCap High_pt_ptr (Some (High_asid,0))),
         (the_nat_to_bl_10 318)
@@ -454,7 +457,7 @@ lemma High_caps_ran:
       ArchObjectCap (PageTableCap High_pd_ptr (Some (High_asid,0))),
       ArchObjectCap (PageTableCap High_pt_ptr (Some (High_asid,0))),
       ArchObjectCap (ASIDPoolCap High_pool_ptr High_asid),
-      ArchObjectCap (FrameCap shared_page_ptr vm_read_only RISCVLargePage False (Some (High_asid,0))),
+      ArchObjectCap (FrameCap shared_page_ptr_virt vm_read_only RISCVLargePage False (Some (High_asid,0))),
       NotificationCap ntfn_ptr 0 {AllowRecv},
       NullCap}"
   apply (rule equalityI)
@@ -473,7 +476,7 @@ definition Silc_caps :: cnode_contents where
        ((the_nat_to_bl_10 2)
           \<mapsto> CNodeCap Silc_cnode_ptr 10 (the_nat_to_bl_10 2),
         (the_nat_to_bl_10 5)
-          \<mapsto> ArchObjectCap (FrameCap shared_page_ptr vm_read_only RISCVLargePage False (Some (Silc_asid,0))),
+          \<mapsto> ArchObjectCap (FrameCap shared_page_ptr_virt vm_read_only RISCVLargePage False (Some (Silc_asid,0))),
         (the_nat_to_bl_10 318)
           \<mapsto> NotificationCap ntfn_ptr 0 {AllowSend} )"
 
@@ -483,7 +486,7 @@ definition Silc_cnode :: kernel_object where
 lemma Silc_caps_ran:
   "ran Silc_caps =
      {CNodeCap Silc_cnode_ptr 10 (the_nat_to_bl_10 2),
-      ArchObjectCap (FrameCap shared_page_ptr vm_read_only RISCVLargePage False (Some (Silc_asid,0))),
+      ArchObjectCap (FrameCap shared_page_ptr_virt vm_read_only RISCVLargePage False (Some (Silc_asid,0))),
       NotificationCap ntfn_ptr 0 {AllowSend},
       NullCap}"
   apply (rule equalityI)
@@ -514,7 +517,7 @@ abbreviation ppn_from_addr :: "paddr \<Rightarrow> pte_ppn" where
 abbreviation Low_pt' :: pt where
   "Low_pt' \<equiv>
      (\<lambda>_. InvalidPTE)
-       (0 := PagePTE (ppn_from_addr (addrFromPPtr shared_page_ptr)) {} vm_read_write)"
+       (0 := PagePTE (ppn_from_addr shared_page_ptr_phys) {} vm_read_write)"
 
 definition Low_pt :: kernel_object where
   "Low_pt \<equiv> ArchObj (PageTable Low_pt')"
@@ -533,7 +536,7 @@ text \<open>High's VSpace (PageDirectory)\<close>
 abbreviation High_pt' :: pt where
   "High_pt' \<equiv>
      (\<lambda>_. InvalidPTE)
-       (0 := PagePTE (ppn_from_addr (addrFromPPtr shared_page_ptr)) {} vm_read_only)"
+       (0 := PagePTE (ppn_from_addr shared_page_ptr_phys) {} vm_read_only)"
 
 definition High_pt :: kernel_object where
   "High_pt \<equiv> ArchObj (PageTable High_pt')"
@@ -643,7 +646,7 @@ definition kh0 :: kheap where
           Low_tcb_ptr    \<mapsto> Low_tcb,
           High_tcb_ptr   \<mapsto> High_tcb,
           idle_tcb_ptr   \<mapsto> idle_tcb,
-          shared_page_ptr \<mapsto> shared_page,
+          shared_page_ptr_virt \<mapsto> shared_page,
           riscv_global_pt_ptr \<mapsto> init_global_pt)"
 
 lemma irq_node_offs_min:
@@ -725,7 +728,7 @@ lemma irq_node_offs_range_distinct[simp]:
   "High_tcb_ptr \<notin> irq_node_offs_range"
   "idle_tcb_ptr \<notin> irq_node_offs_range"
   "riscv_global_pt_ptr \<notin> irq_node_offs_range"
-  "shared_page_ptr \<notin> irq_node_offs_range"
+  "shared_page_ptr_virt \<notin> irq_node_offs_range"
   by(simp add:irq_node_offs_range_def s0_ptr_defs)+
 
 lemma irq_node_offs_distinct[simp]:
@@ -744,11 +747,11 @@ lemma irq_node_offs_distinct[simp]:
   "init_irq_node_ptr + (ucast (irq:: irq) << 5) \<noteq> High_tcb_ptr"
   "init_irq_node_ptr + (ucast (irq:: irq) << 5) \<noteq> idle_tcb_ptr"
   "init_irq_node_ptr + (ucast (irq:: irq) << 5) \<noteq> riscv_global_pt_ptr"
-  "init_irq_node_ptr + (ucast (irq:: irq) << 5) \<noteq> shared_page_ptr"
+  "init_irq_node_ptr + (ucast (irq:: irq) << 5) \<noteq> shared_page_ptr_virt"
   by (simp add:not_inD[symmetric, OF _ irq_node_offs_in_range])+
 
 lemma kh0_dom:
-  "dom kh0 = {shared_page_ptr, riscv_global_pt_ptr, idle_tcb_ptr, High_tcb_ptr, Low_tcb_ptr,
+  "dom kh0 = {shared_page_ptr_virt, riscv_global_pt_ptr, idle_tcb_ptr, High_tcb_ptr, Low_tcb_ptr,
               High_pt_ptr, Low_pt_ptr, High_pd_ptr, Low_pd_ptr, irq_cnode_ptr, ntfn_ptr,
               Silc_cnode_ptr, High_pool_ptr, Low_pool_ptr, High_cnode_ptr, Low_cnode_ptr}
            \<union> irq_node_offs_range"
@@ -764,7 +767,7 @@ lemmas kh0_SomeD' = set_mp[OF equalityD1[OF kh0_dom[simplified dom_def]], OF Col
 
 lemma kh0_SomeD:
   "kh0 x = Some y \<Longrightarrow>
-        x = shared_page_ptr \<and> y = shared_page \<or>
+        x = shared_page_ptr_virt \<and> y = shared_page \<or>
         x = riscv_global_pt_ptr \<and> y = init_global_pt \<or>
         x = idle_tcb_ptr \<and> y = idle_tcb \<or>
         x = High_tcb_ptr \<and> y = High_tcb \<or>
@@ -839,7 +842,7 @@ definition s0_internal :: "det_ext state" where
 
 lemma kh_s0_def:
   "(kheap s0_internal x = Some y) = (
-        x = shared_page_ptr \<and> y = shared_page \<or>
+        x = shared_page_ptr_virt \<and> y = shared_page \<or>
         x = riscv_global_pt_ptr \<and> y = init_global_pt \<or>
         x = idle_tcb_ptr \<and> y = idle_tcb \<or>
         x = High_tcb_ptr \<and> y = High_tcb \<or>
@@ -866,7 +869,7 @@ subsubsection \<open>Defining the policy graph\<close>
 definition Sys1AgentMap :: "(auth_graph_label subject_label) agent_map" where
   "Sys1AgentMap \<equiv>
    \<comment> \<open>set the range of the shared_page to Low, default everything else to IRQ0\<close>
-   (\<lambda>p. if shared_page_ptr \<le> p \<and> p < shared_page_ptr + 0x200000
+   (\<lambda>p. if p \<in> ptr_range shared_page_ptr_virt (pageBitsForSize RISCVLargePage)
         then partition_label Low
         else partition_label IRQ0)
    (Low_cnode_ptr := partition_label Low,
@@ -899,11 +902,11 @@ lemma Sys1AgentMap_simps:
   "Sys1AgentMap Low_tcb_ptr = partition_label Low"
   "Sys1AgentMap High_tcb_ptr = partition_label High"
   "Sys1AgentMap idle_tcb_ptr = partition_label Low"
-  "\<And>p. \<lbrakk> shared_page_ptr \<le> p; p < shared_page_ptr + 0x200000 \<rbrakk>
+  "\<And>p. p \<in> ptr_range shared_page_ptr_virt (pageBitsForSize RISCVLargePage)
          \<Longrightarrow> Sys1AgentMap p = partition_label Low"
   unfolding Sys1AgentMap_def
   apply simp_all
-  by (auto simp: ptrFromPAddr_def pptrBaseOffset_def paddrBase_def s0_ptr_defs)
+  by (auto simp: s0_ptr_defs ptr_range_def)
 
 definition Sys1ASIDMap :: "(auth_graph_label subject_label) agent_asid_map" where
   "Sys1ASIDMap \<equiv>
@@ -950,17 +953,17 @@ lemma s0_caps_of_state :
          ((Low_cnode_ptr,(the_nat_to_bl_10 3)), ArchObjectCap (PageTableCap Low_pd_ptr (Some (Low_asid,0)))),
          ((Low_cnode_ptr,(the_nat_to_bl_10 6)), ArchObjectCap (PageTableCap Low_pt_ptr (Some (Low_asid,0)))),
          ((Low_cnode_ptr,(the_nat_to_bl_10 4)), ArchObjectCap (ASIDPoolCap Low_pool_ptr Low_asid)),
-         ((Low_cnode_ptr,(the_nat_to_bl_10 5)), ArchObjectCap (FrameCap shared_page_ptr vm_read_write RISCVLargePage False (Some (Low_asid, 0)))),
+         ((Low_cnode_ptr,(the_nat_to_bl_10 5)), ArchObjectCap (FrameCap shared_page_ptr_virt vm_read_write RISCVLargePage False (Some (Low_asid, 0)))),
          ((Low_cnode_ptr,(the_nat_to_bl_10 318)), NotificationCap ntfn_ptr 0 {AllowSend}),
          ((High_cnode_ptr,(the_nat_to_bl_10 1)), ThreadCap High_tcb_ptr),
          ((High_cnode_ptr,(the_nat_to_bl_10 2)), CNodeCap High_cnode_ptr 10 (the_nat_to_bl_10 2)),
          ((High_cnode_ptr,(the_nat_to_bl_10 3)), ArchObjectCap (PageTableCap High_pd_ptr (Some (High_asid,0)))),
          ((High_cnode_ptr,(the_nat_to_bl_10 6)), ArchObjectCap (PageTableCap High_pt_ptr (Some (High_asid,0)))),
          ((High_cnode_ptr,(the_nat_to_bl_10 4)), ArchObjectCap (ASIDPoolCap High_pool_ptr High_asid)),
-         ((High_cnode_ptr,(the_nat_to_bl_10 5)), ArchObjectCap (FrameCap shared_page_ptr vm_read_only RISCVLargePage False (Some (High_asid, 0)))),
+         ((High_cnode_ptr,(the_nat_to_bl_10 5)), ArchObjectCap (FrameCap shared_page_ptr_virt vm_read_only RISCVLargePage False (Some (High_asid, 0)))),
          ((High_cnode_ptr,(the_nat_to_bl_10 318)), NotificationCap  ntfn_ptr 0 {AllowRecv}) ,
          ((Silc_cnode_ptr,(the_nat_to_bl_10 2)), CNodeCap Silc_cnode_ptr 10 (the_nat_to_bl_10 2)),
-         ((Silc_cnode_ptr,(the_nat_to_bl_10 5)), ArchObjectCap (FrameCap shared_page_ptr vm_read_only RISCVLargePage False (Some (Silc_asid, 0)))),
+         ((Silc_cnode_ptr,(the_nat_to_bl_10 5)), ArchObjectCap (FrameCap shared_page_ptr_virt vm_read_only RISCVLargePage False (Some (Silc_asid, 0)))),
          ((Silc_cnode_ptr,(the_nat_to_bl_10 318)), NotificationCap ntfn_ptr 0 {AllowSend}),
          ((Low_tcb_ptr,(tcb_cnode_index 0)), CNodeCap Low_cnode_ptr 10 (the_nat_to_bl_10 2)),
          ((Low_tcb_ptr,(tcb_cnode_index 1)), ArchObjectCap (PageTableCap Low_pd_ptr (Some (Low_asid,0)))),
@@ -1068,7 +1071,7 @@ lemma High_pd_is_aligned[simp]:
   by (clarsimp simp: s0_ptr_defs pt_bits_def table_size_def ptTranslationBits_def pte_bits_def word_size_bits_def is_aligned_def)
 
 lemma shared_page_ptr_is_aligned[simp]:
-  "is_aligned shared_page_ptr pt_bits"
+  "is_aligned shared_page_ptr_virt pt_bits"
   by (clarsimp simp: s0_ptr_defs pt_bits_def table_size_def ptTranslationBits_def pte_bits_def word_size_bits_def is_aligned_def)
 
 lemma vs_lookup_s0_SomeD:
@@ -1099,13 +1102,18 @@ lemma vs_lookup_s0_SomeD:
                      pool_for_asid_s0 asid_pools_of_s0 vspace_for_pool_def
               split: if_splits)+
 
+lemma pt_bits_left_max_minus_1_pageBitsForSize:
+  "pt_bits_left (max_pt_level - 1) = pageBitsForSize RISCVLargePage"
+  apply (clarsimp simp: pt_bits_left_def max_pt_level_def2)
+  done
+
 lemma Sys1_pas_refined:
   "pas_refined Sys1PAS s0_internal"
   apply (clarsimp simp: pas_refined_def)
   apply (intro conjI)
        apply (simp add: Sys1_pas_wellformed)
       apply (clarsimp simp: irq_map_wellformed_aux_def s0_internal_def Sys1AgentMap_def Sys1PAS_def)
-      apply (clarsimp simp: s0_ptr_defs ptrFromPAddr_def pptrBaseOffset_def paddrBase_def)
+      apply (clarsimp simp: s0_ptr_defs ptr_range_def)
       apply word_bitwise
      apply (clarsimp simp: tcb_domain_map_wellformed_aux_def minBound_word High_domain_def Low_domain_def
                            Sys1PAS_def Sys1AgentMap_def default_domain_def)
@@ -1116,8 +1124,6 @@ lemma Sys1_pas_refined:
           apply (elim disjE; clarsimp simp: Sys1AgentMap_simps cap_auth_conferred_def ptr_range_def
                                             arch_cap_auth_conferred_def vspace_cap_rights_to_auth_def
                                             vm_read_write_def vm_read_only_def cap_rights_to_auth_def)
-            apply ((fastforce dest: Sys1AgentMap_simps(15) elim: le_less_trans
-                              simp: pt_bits_left_def bit_simps max_pt_level_def2 s0_ptr_defs)+)[3]
          apply (drule s0_caps_of_state, clarsimp)
          apply (elim disjE, simp_all)[1]
         apply (clarsimp simp: state_refs_of_def thread_st_auth_def tcb_states_of_state_s0
@@ -1128,16 +1134,11 @@ lemma Sys1_pas_refined:
     apply (clarsimp simp: state_vrefs_def)
     apply (drule vs_lookup_s0_SomeD)
     apply (elim disjE; clarsimp)
-         apply ((clarsimp simp: aobjs_of_Some s0_internal_def kh0_obj_def opt_map_def
-                                vs_refs_aux_def Sys1AgentMap_def Sys1AuthGraph_def
-                                graph_of_def pte_ref2_def ptrFromPAddr_addr_from_ppn'
-                         dest!: kh0_SomeD split: option.splits if_splits)+)[4]
-     apply ((clarsimp simp: aobjs_of_Some s0_internal_def kh0_obj_def opt_map_def vs_refs_aux_def
-                            vm_read_only_def vspace_cap_rights_to_auth_def ptr_range_def pte_ref2_def
-                            Sys1AuthGraph_def Sys1AgentMap_simps graph_of_def ptrFromPAddr_addr_from_ppn'
-                     dest!: kh0_SomeD split: option.splits if_splits,
-             fastforce dest: Sys1AgentMap_simps(15) elim: le_less_trans
-                       simp: pt_bits_left_def bit_simps max_pt_level_def2 s0_ptr_defs)+)[2]
+         apply ((clarsimp simp: s0_internal_def kh0_obj_def opt_map_def vs_refs_aux_def
+                                vm_read_only_def vspace_cap_rights_to_auth_def pte_ref2_def
+                                Sys1AuthGraph_def Sys1AgentMap_simps graph_of_def ptrFromPAddr_addr_from_ppn'
+                                shared_page_ptr_phys_def pt_bits_left_max_minus_1_pageBitsForSize
+                         dest!: kh0_SomeD split: option.splits if_splits)+)[6]
    apply (rule subsetI, clarsimp)
    apply (erule state_asids_to_policy_aux.cases)
      apply (drule s0_caps_of_state, clarsimp)
@@ -1180,8 +1181,8 @@ lemma Sys1_pas_wellformed_noninterference:
   done
 
 lemma Sys1AgentMap_shared_page_ptr:
-  "Sys1AgentMap shared_page_ptr = partition_label Low"
-  by (clarsimp simp: Sys1AgentMap_def s0_ptr_defs)
+  "Sys1AgentMap shared_page_ptr_virt = partition_label Low"
+  by (clarsimp simp: Sys1AgentMap_def s0_ptr_defs ptr_range_def bit_simps)
 
 lemma silc_inv_s0:
   "silc_inv Sys1PAS s0_internal s0_internal"
@@ -1276,9 +1277,9 @@ lemma valid_caps_s0[simp]:
   "s0_internal \<turnstile> ArchObjectCap (PageTableCap High_pd_ptr (Some (High_asid,0)))"
   "s0_internal \<turnstile> ArchObjectCap (PageTableCap Low_pt_ptr (Some (Low_asid,0)))"
   "s0_internal \<turnstile> ArchObjectCap (PageTableCap High_pt_ptr (Some (High_asid,0)))"
-  "s0_internal \<turnstile> ArchObjectCap (FrameCap shared_page_ptr vm_read_write RISCVLargePage False (Some (Low_asid,0)))"
-  "s0_internal \<turnstile> ArchObjectCap (FrameCap shared_page_ptr vm_read_only RISCVLargePage False (Some (High_asid,0)))"
-  "s0_internal \<turnstile> ArchObjectCap (FrameCap shared_page_ptr vm_read_only RISCVLargePage False (Some (Silc_asid,0)))"
+  "s0_internal \<turnstile> ArchObjectCap (FrameCap shared_page_ptr_virt vm_read_write RISCVLargePage False (Some (Low_asid,0)))"
+  "s0_internal \<turnstile> ArchObjectCap (FrameCap shared_page_ptr_virt vm_read_only RISCVLargePage False (Some (High_asid,0)))"
+  "s0_internal \<turnstile> ArchObjectCap (FrameCap shared_page_ptr_virt vm_read_only RISCVLargePage False (Some (Silc_asid,0)))"
   "s0_internal \<turnstile> NotificationCap ntfn_ptr 0 {AllowWrite}"
   "s0_internal \<turnstile> NotificationCap ntfn_ptr 0 {AllowRead}"
   "s0_internal \<turnstile> ReplyCap Low_tcb_ptr True {AllowGrant,AllowWrite}"
@@ -1305,7 +1306,7 @@ lemma valid_obj_s0[simp]:
   "valid_obj High_tcb_ptr        High_tcb       s0_internal"
   "valid_obj idle_tcb_ptr        idle_tcb       s0_internal"
   "valid_obj riscv_global_pt_ptr init_global_pt s0_internal"
-  "valid_obj shared_page_ptr shared_page s0_internal"
+  "valid_obj shared_page_ptr_virt shared_page s0_internal"
                  apply (simp_all add: valid_obj_def kh0_obj_def)
               apply (simp add: valid_cs_def Low_caps_ran High_caps_ran Silc_caps_ran
                                valid_cs_size_def word_bits_def cte_level_bits_def)+
@@ -1469,10 +1470,6 @@ lemma valid_reply_masters_s0[simp]:
   apply (force dest: s0_caps_of_state simp: cte_wp_at_caps_of_state is_master_reply_cap_to_def)
   done
 
-lemma riscv_global_pt_is_aligned:
-  "is_aligned riscv_global_pt_ptr pt_bits"
-  by (clarsimp simp: is_aligned_def bit_simps s0_ptr_defs)
-
 lemma valid_global_refs_s0[simp]:
   "valid_global_refs s0_internal"
   apply (clarsimp simp: valid_global_refs_def valid_refs_def cte_wp_at_caps_of_state)
@@ -1487,38 +1484,13 @@ lemma valid_arch_state_s0[simp]:
   "valid_arch_state s0_internal"
   apply (clarsimp simp: valid_arch_state_def s0_internal_def arch_state0_def)
   apply (intro conjI)
-     apply (auto simp: valid_asid_table_def kh0_def kh0_obj_def opt_map_def split: option.splits)[1]
-    apply (clarsimp simp: valid_uses_def)
-    apply (intro conjI; clarsimp)
-          apply (fastforce simp: init_vspace_uses_def canonical_user_canonical
-                           dest: dual_order.strict_trans1[OF _ pptr_base_kernel_elf_base]
-                                 above_pptr_base_canonical less_imp_le)
-         apply (fastforce dest: canonical_user_below_pptr_base
-                          simp: init_vspace_uses_def split: if_splits)
-        apply (fastforce elim: dual_order.strict_trans[rotated] split: if_splits
-                         simp: init_vspace_uses_def pptr_base_def pptrBase_def
-                               canonical_bit_def kernel_elf_base_def kernelELFBase_def)
-       apply (fastforce dest: dual_order.strict_trans1[where a=kernel_elf_base, rotated]
-                              dual_order.strict_trans1[OF _ pptr_base_kernel_elf_base]
-                              canonical_user_below_pptr_base
-                        simp: init_vspace_uses_def pptr_base_def pptrBase_def
-                              canonical_bit_def kernel_elf_base_def kernelELFBase_def
-                       split: if_splits)
-      apply (fastforce dest: dual_order.strict_trans2 canonical_user_below_pptr_base
-                       simp: init_vspace_uses_def pptr_base_def pptrBase_def canonical_bit_def
-                             kdev_base_def kdevBase_def kernel_elf_base_def kernelELFBase_def
-                      split: if_splits)
-     apply (fastforce dest: dual_order.strict_trans1[where a=kernel_elf_base, rotated]
-                            canonical_user_below_pptr_base
-                      simp: user_window_def user_region_def init_vspace_uses_def pptr_base_def
-                            pptrBase_def canonical_bit_def kernel_elf_base_def kernelELFBase_def
-                     split: if_splits)+
+    apply (auto simp: valid_asid_table_def kh0_def kh0_obj_def opt_map_def split: option.splits)[1]
    apply (fastforce simp: valid_global_arch_objs_def obj_at_def kh0_def a_type_def
                          init_global_pt_def max_pt_level_not_asid_pool_level[symmetric])
   apply (clarsimp simp: valid_global_tables_def pt_walk.simps obind_def)
   apply (fastforce dest: pt_walk_max_level
-                   simp: obind_def opt_map_def riscv_global_pt_is_aligned asid_pool_level_eq
-                         geq_max_pt_level pte_of_def kh0_def kh0_obj_def pte_rights_of_def
+                   simp: obind_def opt_map_def asid_pool_level_eq geq_max_pt_level pte_of_def kh0_def
+                         kh0_obj_def pte_rights_of_def
                   split: if_splits)
   done
 
@@ -1566,7 +1538,8 @@ lemma valid_arch_objs_s0[simp]:
   apply (clarsimp simp: valid_vspace_objs_def obj_at_def)
   apply (drule vs_lookup_s0_SomeD)
   apply (auto simp: aobjs_of_Some kh_s0_def kh0_obj_def data_at_def obj_at_def
-                    ptrFromPAddr_addr_from_ppn' vmpage_size_of_level_def max_pt_level_def2)
+                    ptrFromPAddr_addr_from_ppn' vmpage_size_of_level_def max_pt_level_def2
+                    shared_page_ptr_phys_def)
   done
 
 lemma valid_vs_lookup_s0_internal:
@@ -1619,7 +1592,7 @@ lemma valid_vs_lookup_s0_internal:
      apply (clarsimp simp: vref_for_level_def mask_def pt_simps user_region_simps bit_simps s0_ptr_defs)
      apply (word_bitwise, fastforce)
     apply (clarsimp simp: kh0_obj_def mask_def pt_simps user_region_simps bit_simps s0_ptr_defs)
-    apply (rule FalseE, word_bitwise, fastforce)
+    apply (rule FalseE, word_bitwise, fastforce simp: elf_index_value)
    \<comment> \<open>Low asid\<close>
    apply (rule conjI, clarsimp simp: Low_asid_def asid_low_bits_def)
    apply (rule_tac x=Low_cnode_ptr in exI)
@@ -1634,7 +1607,7 @@ lemma valid_vs_lookup_s0_internal:
     apply (clarsimp simp: vref_for_level_def mask_def pt_simps user_region_simps bit_simps s0_ptr_defs)
     apply (word_bitwise, fastforce)
    apply (clarsimp simp: kh0_obj_def mask_def pt_simps user_region_simps bit_simps s0_ptr_defs)
-   apply (rule FalseE, word_bitwise, fastforce)
+   apply (rule FalseE, word_bitwise, fastforce simp: elf_index_value)
   \<comment> \<open>bot level < max pt level\<close>
   apply (clarsimp simp: pool_for_asid_s0 vspace_for_pool_def asid_pools_of_s0
                  dest!: asid_high_low split: if_splits)
@@ -1648,7 +1621,8 @@ lemma valid_vs_lookup_s0_internal:
                       Some (max_pt_level - 1, High_pt_ptr)")
       apply (clarsimp simp: pt_walk.simps)
       apply (clarsimp simp: ptes_of_def pts_of_s0 in_omonad split: if_splits)
-     apply (clarsimp simp: ptes_of_def pts_of_s0 ptrFromPAddr_addr_from_ppn' split: if_splits)
+     apply (clarsimp simp: ptes_of_def pts_of_s0 shared_page_ptr_phys_def ptrFromPAddr_addr_from_ppn'
+                    split: if_splits)
      apply (rule_tac x=High_cnode_ptr in exI)
      apply (rule_tac x="the_nat_to_bl_10 5" in exI)
      apply (rule exI, intro conjI)
@@ -1668,7 +1642,8 @@ lemma valid_vs_lookup_s0_internal:
                      Some (max_pt_level - 1, Low_pt_ptr)")
      apply (clarsimp simp: pt_walk.simps)
      apply (clarsimp simp: ptes_of_def pts_of_s0 in_omonad split: if_splits)
-    apply (clarsimp simp: ptes_of_def pts_of_s0 ptrFromPAddr_addr_from_ppn' split: if_splits)
+    apply (clarsimp simp: ptes_of_def pts_of_s0 shared_page_ptr_phys_def ptrFromPAddr_addr_from_ppn'
+                   split: if_splits)
     apply (rule_tac x=Low_cnode_ptr in exI)
     apply (rule_tac x="the_nat_to_bl_10 5" in exI)
     apply (rule exI, intro conjI)
@@ -1680,10 +1655,10 @@ lemma valid_vs_lookup_s0_internal:
    \<comment> \<open>No lookups to other ptes\<close>
    apply (clarsimp simp: in_omonad ptes_of_def pts_of_s0  split: if_splits)
    apply (clarsimp simp: kh0_obj_def mask_def pt_simps user_region_simps bit_simps s0_ptr_defs)
-   apply (rule FalseE, word_bitwise, fastforce)
+   apply (rule FalseE, word_bitwise, fastforce simp: elf_index_value)
   apply (clarsimp simp: in_omonad ptes_of_def pts_of_s0  split: if_splits)
   apply (clarsimp simp: kh0_obj_def mask_def pt_simps user_region_simps bit_simps s0_ptr_defs)
-  apply (rule FalseE, word_bitwise, fastforce)
+  apply (rule FalseE, word_bitwise, fastforce simp: elf_index_value)
   done
 
 lemma valid_arch_caps_s0[simp]:
@@ -1752,7 +1727,7 @@ lemma equal_kernel_mappings_s0[simp]:
                    dest!: kh0_SomeD split: if_splits option.splits)
   apply (clarsimp simp: pts_of_s0)
   apply (clarsimp simp: s0_internal_def riscv_global_pt_def arch_state0_def kh0_obj_def
-                        kernel_mapping_slots_def s0_ptr_defs misc)+
+                        kernel_mapping_slots_def s0_ptr_defs misc elf_index_value)+
   done
 
 lemma valid_asid_map_s0[simp]:
@@ -1760,7 +1735,7 @@ lemma valid_asid_map_s0[simp]:
   by (clarsimp simp: valid_asid_map_def s0_internal_def arch_state0_def)
 
 lemma valid_global_pd_mappings_s0_helper:
-  "\<lbrakk> pptr_base \<le> vref; vref < pptr_base + 0x40000000 \<rbrakk>
+  "\<lbrakk> pptr_base \<le> vref; vref < pptr_base + (1 << kernel_window_bits) \<rbrakk>
      \<Longrightarrow> \<exists>a b. pt_lookup_target 0 riscv_global_pt_ptr vref (ptes_of s0_internal) = Some (a, b) \<and>
                is_aligned b (pt_bits_left a) \<and>
                addrFromPPtr b + (vref && mask (pt_bits_left a)) = addrFromPPtr vref"
@@ -1771,32 +1746,40 @@ lemma valid_global_pd_mappings_s0_helper:
                    Some (max_pt_level, pt_slot_offset max_pt_level riscv_global_pt_ptr vref)")
    apply (clarsimp simp: pt_lookup_slot_from_level_def pt_walk.simps)
    apply (fastforce simp: ptes_of_def in_omonad s0_internal_def kh0_def init_global_pt_def
-                          global_pte_def riscv_global_pt_is_aligned is_aligned_pt_slot_offset_pte)
+                          global_pte_def is_aligned_pt_slot_offset_pte)
   apply (clarsimp simp: pt_lookup_slot_from_level_def pt_walk.simps)
   apply (rule conjI; clarsimp dest!: pt_walk_max_level simp: max_pt_level_def2 split: if_splits)
   apply (rule conjI; clarsimp)
-   apply (clarsimp simp: ptes_of_def pts_of_s0 riscv_global_pt_is_aligned global_pte_def
+   apply (clarsimp simp: ptes_of_def pts_of_s0 global_pte_def kernel_window_bits_def
                          table_index_offset_pt_bits_left is_aligned_pt_slot_offset_pte
                   split: if_splits)
     apply (clarsimp simp: misc s0_ptr_defs)
     apply (word_bitwise, fastforce)
    apply (clarsimp simp: misc s0_ptr_defs kernel_mapping_slots_def)
    apply (word_bitwise, fastforce)
-  apply (clarsimp simp: ptes_of_def pts_of_s0 riscv_global_pt_is_aligned
-                        is_aligned_pt_slot_offset_pte global_pte_def
+  apply (clarsimp simp: ptes_of_def pts_of_s0 is_aligned_pt_slot_offset_pte global_pte_def
                  split: if_splits)
    apply (clarsimp simp: addr_from_ppn_def ptrFromPAddr_def addrFromPPtr_def bit_simps
                          mask_def s0_ptr_defs pt_bits_left_def max_pt_level_def2
-                         pptrBaseOffset_def paddrBase_def is_aligned_def)
+                         pptrBaseOffset_def paddrBase_def is_aligned_def kernel_window_bits_def)
    apply (word_bitwise, fastforce)
   apply (clarsimp simp: addr_from_ppn_def ptrFromPAddr_def addrFromPPtr_def bit_simps is_aligned_def
                         s0_ptr_defs pt_bits_left_def max_pt_level_def2 kernel_mapping_slots_def
-                        mask_def pt_slot_offset_def pt_index_def pptrBaseOffset_def paddrBase_def)
+                        mask_def pt_slot_offset_def pt_index_def pptrBaseOffset_def paddrBase_def
+                        toplevel_bits_value elf_index_value kernel_window_bits_def)
   apply (word_bitwise, fastforce)
   done
 
+lemma ptes_of_elf_window:
+  "\<lbrakk>kernel_elf_base \<le> vref; vref < kernel_elf_base + 2 ^ pageBits\<rbrakk>
+   \<Longrightarrow> ptes_of s0_internal (pt_slot_offset max_pt_level riscv_global_pt_ptr vref)
+       = Some (global_pte elf_index)"
+  unfolding ptes_of_def pts_of_s0
+  apply (clarsimp simp: obind_def elf_window_4k is_aligned_pt_slot_offset_pte)
+  done
+
 lemma valid_global_pd_mappings_s0_helper':
-  "\<lbrakk> kernel_elf_base \<le> vref; vref < kernel_elf_base + 0x100000 \<rbrakk>
+  "\<lbrakk> kernel_elf_base \<le> vref; vref < kernel_elf_base + (1 << pageBits) \<rbrakk>
      \<Longrightarrow> \<exists>a b. pt_lookup_target 0 riscv_global_pt_ptr vref (ptes_of s0_internal) = Some (a, b) \<and>
                is_aligned b (pt_bits_left a) \<and>
                addrFromPPtr b + (vref && mask (pt_bits_left a)) = addrFromKPPtr vref"
@@ -1807,36 +1790,21 @@ lemma valid_global_pd_mappings_s0_helper':
                    Some (max_pt_level, pt_slot_offset max_pt_level riscv_global_pt_ptr vref)")
    apply (clarsimp simp: pt_lookup_slot_from_level_def pt_walk.simps)
    apply (fastforce simp: ptes_of_def in_omonad s0_internal_def kh0_def init_global_pt_def
-                          global_pte_def riscv_global_pt_is_aligned is_aligned_pt_slot_offset_pte)
-  apply (clarsimp simp: pt_lookup_slot_from_level_def pt_walk.simps)
-  apply (rule conjI; clarsimp dest!: pt_walk_max_level simp: max_pt_level_def2 split: if_splits)
+                          global_pte_def is_aligned_pt_slot_offset_pte)
   apply (rule conjI; clarsimp)
-   apply (clarsimp simp: ptes_of_def pts_of_s0 riscv_global_pt_is_aligned global_pte_def
-                         table_index_offset_pt_bits_left is_aligned_pt_slot_offset_pte
-                  split: if_splits)
-    apply (clarsimp simp: misc kernel_elf_base_def kernelELFBase_def)
-    apply (word_bitwise, fastforce)
-   apply (clarsimp simp: misc s0_ptr_defs kernel_mapping_slots_def
-                         kernel_elf_base_def kernelELFBase_def)
-   apply (word_bitwise, fastforce)
-  apply (clarsimp simp: ptes_of_def pts_of_s0 riscv_global_pt_is_aligned
-                        is_aligned_pt_slot_offset_pte global_pte_def
-                 split: if_splits)
-   apply (clarsimp simp: addr_from_ppn_def bit_simps s0_ptr_defs pt_bits_left_def mask_def
-                         pt_slot_offset_def pt_index_def kernel_elf_base_def kernelELFBase_def)
-   apply (word_bitwise, fastforce)
-  apply (clarsimp simp: addr_from_ppn_def ptrFromPAddr_def addrFromKPPtr_def bit_simps
-                        is_aligned_def s0_ptr_defs pt_bits_left_def mask_def pptrBaseOffset_def
-                        paddrBase_def kernel_elf_base_def kernelELFBase_def
-                        kernelELFBaseOffset_def kernelELFPAddrBase_def)
-  apply (word_bitwise, fastforce)
+  apply (rule conjI; clarsimp)
+   apply (clarsimp simp: pt_lookup_slot_from_level_def pt_walk.simps)
+  apply (rule conjI; clarsimp)
+   apply (clarsimp simp: ptes_of_elf_window global_pte_def split: if_splits)
+  apply (clarsimp simp: ptes_of_elf_window global_pte_def elf_index_value)
+  apply (clarsimp simp: is_aligned_ptrFromPAddr_kernelELFPAddrBase kernelELFPAddrBase_addrFromKPPtr)
   done
 
 lemma valid_global_pd_mappings_s0[simp]:
   "valid_global_vspace_mappings s0_internal"
   unfolding valid_global_vspace_mappings_def Let_def
   apply (intro conjI)
-    apply (simp add: s0_internal_def arch_state0_def riscv_global_pt_def riscv_global_pt_is_aligned)
+    apply (simp add: s0_internal_def arch_state0_def riscv_global_pt_def)
    apply (fastforce simp: s0_internal_def arch_state0_def in_omonad kernel_window_def
                           init_vspace_uses_def translate_address_def riscv_global_pt_def
                    dest!: valid_global_pd_mappings_s0_helper split: if_splits)
@@ -1849,10 +1817,10 @@ lemma pspace_in_kernel_window_s0[simp]:
   "pspace_in_kernel_window s0_internal"
   apply (clarsimp simp: pspace_in_kernel_window_def kernel_window_def
                         init_vspace_uses_def s0_internal_def arch_state0_def)
-  apply (subgoal_tac "x \<in> {pptr_base..<pptr_base + (1 << 30)}"; clarsimp)
+  apply (subgoal_tac "x \<in> {pptr_base..<pptr_base + (1 << kernel_window_bits)}"; clarsimp)
   apply (drule kh0_SomeD)
-  by (clarsimp simp: s0_ptr_defs kh0_obj_def cte_level_bits_def
-                     table_size pageBits_def ptTranslationBits_def
+  by (clarsimp simp: s0_ptr_defs kh0_obj_def cte_level_bits_def table_size pageBits_def
+                     ptTranslationBits_def kernel_window_bits_def
               dest!: irq_node_offs_range_correct
       | erule disjE dual_order.strict_trans2[rotated] dual_order.trans
       | rule conjI | word_bitwise)+
@@ -1867,8 +1835,9 @@ lemma cap_refs_in_kernel_window_s0[simp]:
   apply (erule swap, clarsimp)
   apply (drule s0_caps_of_state)
   apply (clarsimp simp: kernel_window_def init_vspace_uses_def s0_internal_def arch_state0_def)
-  apply (subgoal_tac "x \<in> {pptr_base..<pptr_base + (1 << 30)}"; clarsimp)
+  apply (subgoal_tac "x \<in> {pptr_base..<pptr_base + (1 << kernel_window_bits)}"; clarsimp)
   by (clarsimp simp: s0_ptr_defs kh0_obj_def table_size pageBits_def ptTranslationBits_def
+                     kernel_window_bits_def
               dest!: irq_node_offs_range_correct
       | erule disjE dual_order.strict_trans2[rotated] dual_order.trans
       | rule conjI | word_bitwise)+

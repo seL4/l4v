@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -584,14 +585,6 @@ lemma ptr_retyps_gen_valid_footprint:
    apply simp
   apply (simp add: cleared[unfolded region_is_bytes'_def] not_byte)
   done
-
-(* FIXME: Move to LemmaBucket_C. Stopped by: simp rules. *)
-(* This is currently unused, but might be useful.
-   it might be worth fixing if it breaks, but ask around first. *)
-lemma dom_lift_t_heap_update:
-  "dom (lift_t g (hrs_mem_update v hp)) = dom (lift_t g hp)"
-  by (clarsimp simp add: lift_t_def lift_typ_heap_if s_valid_def hrs_htd_def hrs_mem_update_def split_def dom_def
-    intro!: Collect_cong split: if_split)
 
 lemma h_t_valid_ptr_retyps_gen_same:
   assumes guard: "\<forall>n' < nptrs. gd (CTypesDefs.ptr_add (Ptr p :: 'a ptr) (of_nat n'))"
@@ -2136,9 +2129,9 @@ lemma insertNewCap_ccorres_helper:
    apply (rule conjI)
     apply (erule (2) cmap_relation_updI)
     apply (simp add: ccap_relation_def ccte_relation_def cte_lift_def)
-    subgoal by (simp add: cte_to_H_def map_option_Some_eq2 mdb_node_to_H_def to_bool_mask_to_bool_bf is_aligned_neg_mask
-      c_valid_cte_def true_def
-      split: option.splits)
+    subgoal by (simp add: cte_to_H_def map_option_Some_eq2 mdb_node_to_H_def to_bool_mask_to_bool_bf
+                          is_aligned_neg_mask c_valid_cte_def
+                   split: option.splits)
    subgoal by simp
    apply (erule_tac t = s' in ssubst)
    apply simp
@@ -4708,7 +4701,7 @@ proof -
                 is_aligned_neg_mask_eq vmrights_to_H_def
                 Kernel_C.VMReadWrite_def Kernel_C.VMNoAccess_def
                 Kernel_C.VMKernelOnly_def Kernel_C.VMReadOnly_def)
-     apply (simp add: to_bool_def false_def isFrameType_def)
+     apply (simp add: isFrameType_def)
 
     \<comment> \<open>PageDirectoryObject\<close>
     apply (cinit' lift: t_' regionBase_' userSize_' deviceMemory_')
@@ -4731,7 +4724,7 @@ proof -
             apply simp
            apply simp
           apply wp
-         apply (clarsimp simp: false_def)
+         apply clarsimp
          apply vcg
         apply wp
        apply (clarsimp simp: pageBits_def ccap_relation_def APIType_capBits_def
@@ -4918,8 +4911,7 @@ proof -
            apply simp
           apply (clarsimp simp: ccap_relation_def cap_to_H_def
                                 getObjectSize_def apiGetObjectSize_def
-                                cap_untyped_cap_lift to_bool_eq_0 true_def
-                                aligned_add_aligned
+                                cap_untyped_cap_lift to_bool_eq_0 aligned_add_aligned
                          split: option.splits)
           apply (subst is_aligned_neg_mask_eq [OF is_aligned_weaken])
             apply (erule range_cover.aligned)
@@ -4971,8 +4963,7 @@ proof -
                                region_actually_is_bytes_def APIType_capBits_def)
          apply (frule(1) ghost_assertion_size_logic_no_unat)
          apply (clarsimp simp: ccap_relation_def cap_to_H_def getObjectSize_def
-                               apiGetObjectSize_def cap_thread_cap_lift to_bool_def true_def
-                               aligned_add_aligned
+                               apiGetObjectSize_def cap_thread_cap_lift aligned_add_aligned
                         split: option.splits)
          apply (clarsimp simp: ctcb_ptr_to_tcb_ptr_def ctcb_offset_defs
                                tcb_ptr_to_ctcb_ptr_def
@@ -5009,7 +5000,7 @@ proof -
           apply wp
          apply (clarsimp simp: ccap_relation_def cap_to_H_def getObjectSize_def
                                objBits_simps apiGetObjectSize_def epSizeBits_def
-                               cap_endpoint_cap_lift to_bool_def true_def
+                               cap_endpoint_cap_lift
                         split: option.splits
                         dest!: range_cover.aligned)
         apply (clarsimp simp: createObject_hs_preconds_def isFrameType_def)
@@ -5048,7 +5039,7 @@ proof -
          apply wp
         apply (clarsimp simp: ccap_relation_def cap_to_H_def getObjectSize_def
                               apiGetObjectSize_def ntfnSizeBits_def objBits_simps
-                              cap_notification_cap_lift to_bool_def true_def
+                              cap_notification_cap_lift
                        dest!: range_cover.aligned
                        split: option.splits)
        apply (clarsimp simp: createObject_hs_preconds_def isFrameType_def)
@@ -5107,8 +5098,7 @@ proof -
        apply (simp add: power_add cte_C_size objBits_defs)
       apply (frule range_cover.aligned)
       apply (clarsimp simp: ccap_relation_def cap_to_H_def
-                            cap_cnode_cap_lift to_bool_def true_def
-                            getObjectSize_def
+                            cap_cnode_cap_lift getObjectSize_def
                             apiGetObjectSize_def cteSizeBits_def
                             objBits_simps field_simps is_aligned_power2
                             addr_card_wb is_aligned_weaken[where y=word_size_bits]

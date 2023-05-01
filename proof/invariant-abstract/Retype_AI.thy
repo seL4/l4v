@@ -2196,13 +2196,6 @@ lemma swp_clearMemoryVM [simp]:
 
 
 (* FIXME: move *)
-lemma bind_assoc_reverse:
-  "(do x \<leftarrow> A; _ \<leftarrow> B x; C x od) =
-   (do x \<leftarrow> do x \<leftarrow> A; _ \<leftarrow> B x; return x od; C x od)"
-by (simp only: bind_assoc return_bind)
-
-
-(* FIXME: move *)
 lemmas do_machine_op_bind =
     submonad_bind [OF submonad_do_machine_op submonad_do_machine_op
                       submonad_do_machine_op]

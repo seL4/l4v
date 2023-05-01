@@ -16,6 +16,7 @@ theory Word_Lemmas
     Enumeration_Word
     Aligned
     Bit_Shifts_Infix_Syntax
+    Boolean_Inequalities
     Word_EqI
 begin
 
@@ -24,6 +25,32 @@ lemmas take_bit_Suc_numeral[simp] = take_bit_Suc[where a="numeral w" for w]
 context
   includes bit_operations_syntax
 begin
+
+lemma word_max_le_or:
+  "max x y \<le> x OR y" for x :: "'a::len word"
+  by (simp add: word_bool_le_funs)
+
+lemma word_and_le_min:
+  "x AND y \<le> min x y" for x :: "'a::len word"
+  by (simp add: word_bool_le_funs)
+
+lemma word_not_le_eq:
+  "(NOT x \<le> y) = (NOT y \<le> x)" for x :: "'a::len word"
+  by transfer (auto simp: take_bit_not_eq_mask_diff)
+
+lemma word_not_le_not_eq[simp]:
+  "(NOT y \<le> NOT x) = (x \<le> y)" for x :: "'a::len word"
+  by (subst word_not_le_eq) simp
+
+lemma not_min_eq:
+  "NOT (min x y) = max (NOT x) (NOT y)" for x :: "'a::len word"
+  unfolding min_def max_def
+  by auto
+
+lemma not_max_eq:
+  "NOT (max x y) = min (NOT x) (NOT y)" for x :: "'a::len word"
+  unfolding min_def max_def
+  by auto
 
 lemma ucast_le_ucast_eq:
   fixes x y :: "'a::len word"

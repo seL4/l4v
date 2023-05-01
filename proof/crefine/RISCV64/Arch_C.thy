@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
@@ -77,7 +78,7 @@ using [[goals_limit=20]]
          apply wp
         apply (simp del: Collect_const)
         apply (vcg exspec=unmapPageTable_modifies)
-       apply (simp add: to_bool_def)
+       apply simp
        apply (rule ccorres_return_Skip')
       apply (simp add: cap_get_tag_isCap_ArchObject[symmetric])
       apply (clarsimp simp: cap_lift_page_table_cap cap_to_H_def
@@ -1014,9 +1015,7 @@ lemma decodeRISCVPageTableInvocation_ccorres:
                apply (erule cmap_relationE1[OF rf_sr_cpte_relation], erule ko_at_projectKO_opt)
                apply (clarsimp simp: typ_heap_simps from_bool_eq_if)
                apply (simp flip: word_unat.Rep_inject)
-               apply (auto simp: cpte_relation_def Let_def
-                                  pte_lift_def
-                                  from_bool_def case_bool_If
+               apply (auto simp: cpte_relation_def Let_def pte_lift_def case_bool_If
                           split: pte.split_asm if_splits)[1]
               apply ceqv
              apply clarsimp
@@ -1064,10 +1063,10 @@ lemma decodeRISCVPageTableInvocation_ccorres:
          apply (rule conseqPre, vcg)
          apply clarsimp
          apply (clarsimp simp: throwError_def return_def syscall_error_rel_def
-                               syscall_error_to_H_cases exception_defs false_def)
+                               syscall_error_to_H_cases exception_defs)
          apply (erule lookup_failure_rel_fault_lift[rotated])
          apply (clarsimp simp: throwError_def return_def syscall_error_rel_def
-                                syscall_error_to_H_cases exception_defs false_def)
+                                syscall_error_to_H_cases exception_defs)
         apply clarsimp
         apply (wp injection_wp[OF refl] findVSpaceForASID_inv hoare_drop_imps)
        apply clarsimp
@@ -1185,8 +1184,7 @@ lemma checkVPAlignment_spec:
   apply (clarsimp simp: mask_eq_iff_w2p word_size)
   apply (rule conjI)
    apply (simp add: pageBitsForSize_def bit_simps split: vmpage_size.split)
-  apply (simp add: from_bool_def vmsz_aligned_def is_aligned_mask
-                   mask_def split: if_split)
+  apply (simp add: vmsz_aligned_def is_aligned_mask mask_def split: if_split)
   done
 
 definition
@@ -1851,7 +1849,7 @@ lemma decodeRISCVFrameInvocation_ccorres:
                  apply (clarsimp simp: throwError_def return_def bindE_def NonDetMonad.lift_def
                                        exception_defs lookup_fault_lift_invalid_root)
                  apply (clarsimp simp: syscall_error_rel_def exception_defs syscall_error_to_H_def
-                                       syscall_error_type_defs false_def)
+                                       syscall_error_type_defs)
                  apply (simp add: lookup_fault_missing_capability_lift)
                  apply (subst word_le_mask_eq)
                   apply (simp add: mask_def word_le_nat_alt)
@@ -1888,9 +1886,7 @@ lemma decodeRISCVFrameInvocation_ccorres:
                     apply clarsimp
                     apply (erule cmap_relationE1[OF rf_sr_cpte_relation], erule ko_at_projectKO_opt)
                     apply (clarsimp simp: typ_heap_simps from_bool_eq_if from_bool_0)
-                    apply (fastforce simp: cpte_relation_def Let_def
-                                       pte_lift_def
-                                       from_bool_def case_bool_If
+                    apply (fastforce simp: cpte_relation_def Let_def pte_lift_def case_bool_If
                                split: pte.split_asm if_splits)
                    apply ceqv
                   apply clarsimp
@@ -2067,10 +2063,10 @@ lemma decodeRISCVFrameInvocation_ccorres:
              apply (rule conseqPre, vcg)
              apply clarsimp
              apply (clarsimp simp: throwError_def return_def syscall_error_rel_def
-                                   syscall_error_to_H_cases exception_defs false_def)
+                                   syscall_error_to_H_cases exception_defs)
              apply (erule lookup_failure_rel_fault_lift[rotated])
              apply (clarsimp simp: throwError_def return_def syscall_error_rel_def
-                                   syscall_error_to_H_cases exception_defs false_def)
+                                   syscall_error_to_H_cases exception_defs)
             apply clarsimp
             apply (wp injection_wp[OF refl] findVSpaceForASID_inv hoare_drop_imps)
            apply clarsimp
@@ -2239,7 +2235,7 @@ lemma decodeRISCVFrameInvocation_ccorres:
              apply (match conclusion in \<open>cpte_relation _ _\<close> \<Rightarrow>
                       \<open>solves \<open>simp (no_asm) add: cpte_relation_def,
                                clarsimp simp: Let_def makeUserPTE_def attribsFromWord_def
-                                              pageBits_def
+                                              pageBits_def word_and_1
                                         split: pte.splits if_splits\<close>\<close>
                     | match conclusion in \<open>ccap_relation _ _\<close> \<Rightarrow>
                         \<open>solves \<open>simp (no_asm) add: ccap_relation_def,
@@ -2451,14 +2447,13 @@ lemma decodeRISCVMMUInvocation_ccorres:
                   apply (cut_tac P="\<lambda>y. y < i_' x + 1 = rhs y" for rhs in allI,
                          rule less_x_plus_1)
                    apply (fastforce simp: asid_high_bits_def)
-                  apply (clarsimp simp: rf_sr_riscvKSASIDTable from_bool_def
+                  apply (clarsimp simp: rf_sr_riscvKSASIDTable
                                         asid_high_bits_word_bits
                                         option_to_ptr_def option_to_0_def
                                         order_less_imp_le
                                         linorder_not_less
                                         order_antisym[OF inc_le])
-                  apply (clarsimp simp: true_def false_def
-                                 split: option.split if_split)
+                  apply (clarsimp split: option.split if_split)
                   apply (auto simp: asid_high_bits_def word_le_nat_alt
                                     word_less_nat_alt unat_add_lem[THEN iffD1]
                                     Kernel_C_defs)[1]
@@ -2477,8 +2472,7 @@ lemma decodeRISCVMMUInvocation_ccorres:
                 apply (clarsimp simp: asidHighBits_handy_convs word_sle_def
                                       word_sless_def from_bool_0
                                       rf_sr_riscvKSASIDTable[where n=0, simplified])
-                apply (simp add: asid_high_bits_def option_to_ptr_def option_to_0_def
-                                 from_bool_def Kernel_C_defs
+                apply (simp add: asid_high_bits_def option_to_ptr_def option_to_0_def Kernel_C_defs
                           split: option.split if_split)
                 apply fastforce
                apply ceqv
@@ -2654,11 +2648,10 @@ lemma decodeRISCVMMUInvocation_ccorres:
        apply (clarsimp simp: excaps_in_mem_def)
        apply (frule (1) slotcap_in_mem_PageTable)
        apply (clarsimp simp: typ_heap_simps' from_bool_0 split: if_split)
-       apply (case_tac a; clarsimp simp: isCap_simps cap_get_tag_isCap_unfolded_H_cap
-                                         cap_tag_defs true_def)
+       apply (case_tac a; clarsimp simp: isCap_simps cap_get_tag_isCap_unfolded_H_cap cap_tag_defs)
        apply (intro conjI impI
               ; solves \<open>clarsimp simp: isCap_simps asidInvalid_def cap_lift_page_table_cap cap_to_H_simps
-                                       true_def c_valid_cap_def cl_valid_cap_def
+                                       c_valid_cap_def cl_valid_cap_def
                                        ccap_relation_PageTableCap_IsMapped\<close>)
       apply ceqv
      apply (rule ccorres_Cond_rhs_Seq)
@@ -2703,8 +2696,7 @@ lemma decodeRISCVMMUInvocation_ccorres:
         apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
         apply (rule allI, rule conseqPre, vcg)
         apply (clarsimp simp: throwError_def return_def
-                              syscall_error_rel_def exception_defs
-                              syscall_error_to_H_cases false_def)
+                              syscall_error_rel_def exception_defs syscall_error_to_H_cases)
         apply (simp add: lookup_fault_lift_invalid_root)
        apply csymbr
        apply (simp add: liftME_def bindE_assoc if_to_top_of_bind)
@@ -2754,9 +2746,7 @@ lemma decodeRISCVMMUInvocation_ccorres:
                                      = capASIDBase cp")
               apply (subgoal_tac "\<And>x. (x < (i_' xb + 1))
                                         = (x < i_' xb \<or> x = i_' xb)")
-               apply (clarsimp simp: inc_le from_bool_def typ_heap_simps
-                                     asid_low_bits_def not_less field_simps
-                                     false_def
+               apply (clarsimp simp: inc_le typ_heap_simps asid_low_bits_def not_less field_simps
                               split: if_split bool.splits)
                apply unat_arith
               apply (rule iffI)
@@ -2806,11 +2796,10 @@ lemma decodeRISCVMMUInvocation_ccorres:
                                  word_sless_def word_sle_def)
            apply (erule cmap_relationE1[OF rf_sr_cpspace_asidpool_relation],
                   erule ko_at_projectKO_opt)
-           apply (clarsimp simp: typ_heap_simps from_bool_def split: if_split)
+           apply (clarsimp simp: typ_heap_simps split: if_split)
            apply (frule cap_get_tag_isCap_unfolded_H_cap)
            apply (clarsimp simp: cap_lift_asid_pool_cap cap_to_H_def
-                                 cap_asid_pool_cap_lift_def false_def
-                                 ucast_minus ucast_nat_def
+                                 cap_asid_pool_cap_lift_def ucast_minus ucast_nat_def
                           elim!: ccap_relationE)
           apply ceqv
          apply (simp add: if_to_top_of_bind)
@@ -2926,21 +2915,19 @@ lemma decodeRISCVMMUInvocation_ccorres:
                         rf_sr_ksCurThread "StrictC'_thread_state_defs"
                         mask_def[where n=4]
                   cong: if_cong)
-  apply (clarsimp simp: to_bool_def ccap_relation_isDeviceCap2 objBits_simps
-                        pageBits_def from_bool_def case_bool_If)
+  apply (clarsimp simp: ccap_relation_isDeviceCap2 objBits_simps pageBits_def case_bool_If)
   apply (rule conjI; clarsimp)
    apply (clarsimp simp: neq_Nil_conv excaps_in_mem_def excaps_map_def)
    apply (frule interpret_excaps_eq[rule_format, where n=0], simp)
    apply (frule interpret_excaps_eq[rule_format, where n=1], simp)
    apply (clarsimp simp: mask_def[where n=4] slotcap_in_mem_def
                          ccap_rights_relation_def rightsFromWord_wordFromRights)
-   apply (clarsimp simp: asid_high_bits_word_bits Kernel_C.asidHighBits_def true_def split: list.split_asm)
+   apply (clarsimp simp: asid_high_bits_word_bits Kernel_C.asidHighBits_def split: list.split_asm)
     apply (clarsimp simp: cap_untyped_cap_lift_def cap_lift_untyped_cap
                           cap_to_H_def[split_simps cap_CL.split]
                           hd_conv_nth length_ineq_not_Nil Kernel_C_defs
                    elim!: ccap_relationE)
-   apply (clarsimp simp: to_bool_def unat_eq_of_nat
-                         objBits_simps pageBits_def from_bool_def case_bool_If
+   apply (clarsimp simp: to_bool_def unat_eq_of_nat objBits_simps pageBits_def case_bool_If
                   split: if_splits)
   apply (clarsimp simp: asid_low_bits_word_bits isCap_simps neq_Nil_conv
                         excaps_map_def excaps_in_mem_def
@@ -2951,22 +2938,20 @@ lemma decodeRISCVMMUInvocation_ccorres:
   apply (frule interpret_excaps_eq[rule_format, where n=0], simp)
   apply (rule conjI)
    apply (clarsimp simp: cap_lift_asid_pool_cap cap_lift_page_table_cap
-                         cap_to_H_def to_bool_def valid_cap'_def
+                         cap_to_H_def valid_cap'_def
                          cap_page_table_cap_lift_def inv_ASIDPool
-                         cap_asid_pool_cap_lift_def mask_def true_def
+                         cap_asid_pool_cap_lift_def mask_def
                          asid_shiftr_low_bits_less[unfolded mask_def asid_bits_def] word_and_le1
                   elim!: ccap_relationE split: if_split_asm asidpool.splits)
    apply (clarsimp split: list.split)
    apply (clarsimp simp: casid_pool_relation_def)
    apply (case_tac asidpool', simp)
   apply (clarsimp simp: cap_lift_asid_pool_cap cap_lift_page_table_cap
-                        cap_to_H_def to_bool_def
-                        cap_page_table_cap_lift_def
+                        cap_to_H_def cap_page_table_cap_lift_def
                  elim!: ccap_relationE split: if_split_asm)
   apply (erule rf_sr_cte_at_validD[rotated])
   apply (fastforce simp: slotcap_in_mem_def2)
   done
-
 
 lemma setMessageInfo_ksCurThread_ccorres:
   "ccorres dc xfdc (tcb_at' thread and (\<lambda>s. ksCurThread s = thread))
