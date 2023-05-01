@@ -765,11 +765,6 @@ lemma ptr_add_orth:
    apply (simp add: addr_card_wb [symmetric])
   done
 
-lemma dom_lift_t_heap_update:
-  "dom (lift_t g (hrs_mem_update v hp)) = dom (lift_t g hp)"
-  by (clarsimp simp add: lift_t_def lift_typ_heap_if s_valid_def hrs_htd_def hrs_mem_update_def split_def dom_def
-    intro!: Collect_cong split: if_split)
-
 lemma h_t_valid_ptr_retyps_gen_same:
   assumes guard: "\<forall>n' < nptrs. gd (CTypesDefs.ptr_add (Ptr p :: 'a ptr) (of_nat n'))"
   assumes cleared: "region_is_bytes' p (nptrs * size_of TYPE('a :: mem_type)) htd"
