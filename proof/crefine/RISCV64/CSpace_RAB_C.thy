@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -222,7 +223,7 @@ next
        apply (vcg strip_guards=true) \<comment> \<open>takes a while\<close>
        apply clarsimp
       apply simp
-     apply (clarsimp simp: cap_get_tag_isCap to_bool_def)
+     apply (clarsimp simp: cap_get_tag_isCap)
   \<comment> \<open>Main thm\<close>
   proof (induct cap' cptr' guard' rule: resolveAddressBits.induct [case_names ind])
     case (ind cap cptr guard)
@@ -563,8 +564,8 @@ lemma rightsFromWord_spec:
   \<lbrace>seL4_CapRights_lift \<acute>ret__struct_seL4_CapRights_C = cap_rights_from_word_canon \<^bsup>s\<^esup>w \<rbrace>"
   apply vcg
   apply (simp add: seL4_CapRights_lift_def nth_shiftr mask_shift_simps nth_shiftr
-    cap_rights_from_word_canon_def from_bool_def word_and_1 eval_nat_numeral
-    word_sless_def word_sle_def)
+                   cap_rights_from_word_canon_def word_and_1 eval_nat_numeral
+                   word_sless_def word_sle_def)
   done
 
 
@@ -578,12 +579,6 @@ lemma cap_rights_to_H_from_word_canon [simp]:
   apply (simp add: cap_rights_from_word_canon_def)
   apply (simp add: cap_rights_to_H_def)
   done
-
-(* MOVE *)
-lemma to_bool_false [simp]:
-  "to_bool false = False"
-  unfolding to_bool_def false_def
-  by simp
 
 lemma tcb_ptr_to_ctcb_ptr_mask [simp]:
   assumes tcbat: "tcb_at' thread s"

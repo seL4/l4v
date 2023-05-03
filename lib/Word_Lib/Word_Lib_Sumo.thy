@@ -34,6 +34,7 @@ imports
   Rsplit
   Signed_Words
   Syntax_Bundles
+  Sgn_Abs
   Typedef_Morphisms
   Type_Syntax
   Word_EqI
@@ -134,6 +135,6 @@ lemmas cast_simps = cast_simps ucast_down_bl
 lemma nth_ucast:
   "(ucast (w::'a::len word)::'b::len word) !! n =
    (w !! n \<and> n < min LENGTH('a) LENGTH('b))"
-  by (auto simp add: bit_simps not_le dest: bit_imp_le_length)
+  by (auto simp: not_le dest: bit_imp_le_length)
 
 end

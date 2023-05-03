@@ -33,18 +33,19 @@ this level of abstraction.
 Building
 --------
 
-The corresponding Isabelle session is `ExecSpec`. Build in `l4v/spec/` with
+The corresponding Isabelle session is `ExecSpec`. Build in `l4v` for the ARM
+architecture with
 
-    make ExecSpec
+    L4V_ARCH=ARM ./run_tests ExecSpec
 
 
 Remarks
 -------
 
  * for regenerating the design spec from Haskell sources, go to directory
-   `l4v/tools/haskell-translator` and run
+   `l4v/` and run
 
-          ./make_spec.sh
+        ./run_test haskell-translator
 
  * skeleton files that define which parts of which Haskell files get mapped
    to which Isabelle theories are found in the sub directories `skel` and

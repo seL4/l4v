@@ -3741,6 +3741,52 @@ add_upd_simps "invs' (gsUntypedZeroRanges_update f s)"
   (obj_at'_real_def)
 declare upd_simps[simp]
 
+lemma neq_out_intv:
+  "\<lbrakk> a \<noteq> b; b \<notin> {a..a + c - 1} - {a} \<rbrakk> \<Longrightarrow> b \<notin> {a..a + c - 1}"
+  by simp
+
+lemma rule_out_intv:
+  "\<lbrakk> ksPSpace s a = Some obj; ksPSpace s b = Some obj'; pspace_distinct' s; a \<noteq> b \<rbrakk>
+   \<Longrightarrow> b \<notin> mask_range a (objBitsKO obj)"
+  apply (drule(1) pspace_distinctD')
+  apply (subst (asm) ps_clear_def)
+  apply (drule_tac x = b in orthD2)
+   apply fastforce
+  apply (drule neq_out_intv)
+   apply (simp add: mask_def add_diff_eq)
+  apply (simp add: mask_def add_diff_eq)
+  done
+
+lemma ptr_range_mask_range:
+  "{ptr..ptr + 2 ^ bits - 1} = mask_range ptr bits"
+  unfolding mask_def
+  by simp
+
+lemma distinct_obj_range'_not_subset:
+  "\<lbrakk> ksPSpace s a = Some obj; ksPSpace s b = Some obj'; pspace_distinct' s;
+     pspace_aligned' s; a \<noteq> b \<rbrakk>
+   \<Longrightarrow> \<not> obj_range' b obj' \<subseteq> obj_range' a obj"
+  unfolding obj_range'_def
+  apply (frule_tac x=a in pspace_alignedD')
+   apply assumption
+  apply (frule_tac x=b in pspace_alignedD')
+   apply assumption
+  apply (frule (3) rule_out_intv)
+  by (fastforce simp: is_aligned_no_overflow_mask ptr_range_mask_range word_add_increasing)
+
+lemma obj_range'_disjoint:
+  "\<lbrakk> ksPSpace s a = Some obj; ksPSpace s b = Some obj'; pspace_distinct' s;
+     pspace_aligned' s; a \<noteq> b \<rbrakk>
+   \<Longrightarrow> obj_range' a obj \<inter> obj_range' b obj' = {}"
+  apply (frule_tac x=a in pspace_alignedD')
+   apply assumption
+  apply (frule_tac x=b in pspace_alignedD')
+   apply assumption
+  apply (frule_tac p=a and p'=b in aligned_mask_range_cases)
+   apply assumption
+  apply (metis add_mask_fold distinct_obj_range'_not_subset obj_range'_def)
+  done
+
 qualify ARM_HYP_H (in Arch)
 
 (*

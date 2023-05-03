@@ -1494,10 +1494,6 @@ lemma canonical_user_ge0[intro!,simp]:
   "0 < canonical_user"
   by (simp add: canonical_user_def mask_def ipa_size_def)
 
-lemma pptr_base_kernel_elf_base:
-  "pptr_base < kernel_elf_base"
-  by (simp add: pptr_base_def kernel_elf_base_def pptrBase_kernelELFBase)
-
 lemma pptrTop_le_ipa_size:
   "pptrTop \<le> mask ipa_size"
   by (simp add: bit_simps pptrTop_def mask_def)

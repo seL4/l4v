@@ -19,9 +19,9 @@ specification][capDL]. It is described as part of an ICFEM '13
 Building
 --------
 
-To build from the `l4v/` directory, run:
+To build for the ARM architecture from the `l4v/` directory, run:
 
-    ./isabelle/bin/isabelle build -d . -v -b DRefine
+    L4V_ARCH=ARM ./run_tests DRefine
 
 Important Theories
 ------------------

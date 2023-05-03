@@ -35,7 +35,7 @@ Contents of this README
 Installation
 ------------
 
-AutoCorres is packaged as a theory for Isabelle2021:
+AutoCorres is packaged as a theory for Isabelle2022:
 
     https://isabelle.in.tum.de
 

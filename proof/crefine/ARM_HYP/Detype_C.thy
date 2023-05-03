@@ -123,16 +123,6 @@ lemma h_t_valid_typ_region_bytes:
   by (simp add: valid_footprint_typ_region_bytes[OF neq_byte]
                 size_of_def)
 
-lemma proj_d_lift_state_hrs_htd_update [simp]:
-  "proj_d (lift_state (hrs_htd_update f hp)) = f (hrs_htd hp)"
-  by (cases hp) (simp add: hrs_htd_update_def proj_d_lift_state hrs_htd_def)
-
-lemma proj_d_lift_state_hrs_htd [simp]:
-  "proj_d (lift_state hp), g \<Turnstile>\<^sub>t x = hrs_htd hp, g \<Turnstile>\<^sub>t x"
-  apply (cases hp)
-  apply (simp add: proj_d_lift_state hrs_htd_def)
-  done
-
 lemma heap_list_s_heap_list':
   fixes p :: "'a :: c_type ptr"
   shows "hrs_htd hp,\<top> \<Turnstile>\<^sub>t p \<Longrightarrow>
