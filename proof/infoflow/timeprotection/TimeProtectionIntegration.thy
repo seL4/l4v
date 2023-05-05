@@ -28,7 +28,7 @@ locale integration_setup =
 + fixes time_per_tick :: time
   fixes slice_length_min :: time
   fixes timer_delay_max :: time
-  fixes vaddr_to_paddr :: "if_other_state \<Rightarrow> TimeProtection.vaddr \<Rightarrow> TimeProtection.paddr"
+  fixes vaddr_to_paddr :: "TimeProtection.vaddr \<Rightarrow> TimeProtection.paddr"
   assumes timer_delay_lt_slice_length:
     "timer_delay_max < slice_length_min"
 begin
@@ -39,7 +39,7 @@ definition touched_vaddrs :: "if_other_state \<Rightarrow> vaddr set" where
   VAddr ` (let is = internal_state_if s in (machine_state.touched_addresses (machine_state is)))"
 
 definition touched_addresses :: "if_other_state \<Rightarrow> vpaddr set" where
-  "touched_addresses s \<equiv> (\<lambda>v. (v, vaddr_to_paddr s v)) ` (touched_vaddrs s)"
+  "touched_addresses s \<equiv> (\<lambda>v. (v, vaddr_to_paddr v)) ` (touched_vaddrs s)"
 
 
 (* get the list of (domain, tickcount) from the initial state *)
@@ -895,9 +895,7 @@ lemma uwr_equates_touched_addresses:
   apply (drule uwr_partition_if, rule refl, rule refl)
   apply clarsimp
   apply (clarsimp simp: ii.touched_addresses_def touched_vaddrs_def)
-  (* what we need to do here is make vaddr_to_paddr no longer take a state
-   parameter *)
-  
+  done
   
 
 
@@ -906,7 +904,7 @@ definition all_paddrs_of :: "'l partition \<Rightarrow> paddr set" where
 
 definition touched_addrs_inv :: "if_other_state \<Rightarrow> bool" where
   "touched_addrs_inv s \<equiv>
-  snd ` touched_addresses s \<subseteq> all_paddrs_of (part s) \<union> kernel_shared_precise"
+  snd ` touched_addresses s \<subseteq> all_paddrs_of (userPart s) \<union> kernel_shared_precise"
 
 (* FIXME: I haven't yet figured out how to phrase tainvs with partitions, when
    most of the stuff I have set up is phrased in terms of subject_labels. Maybe
@@ -929,13 +927,13 @@ lemma subset_inv_proof:
 lemma domainswitch_follows_get_next_domain:
   "(s1, s2) \<in> Step () \<Longrightarrow>
   will_domain_switch s1 \<Longrightarrow>
-  part s2 = get_next_domain s1"
+  userPart s2 = get_next_domain s1"
   sorry
 
 lemma non_domainswitch_unchanged_domain:
   "(s1, s2) \<in> Step () \<Longrightarrow>
   \<not>will_domain_switch s1 \<Longrightarrow>
-  part s2 = part s1"
+  userPart s2 = userPart s1"
   sorry
 
 lemma non_domainswitch_uwr_determined:
@@ -947,7 +945,7 @@ lemma non_domainswitch_uwr_determined:
 interpretation ma?:time_protection_system PSched fch_lookup fch_read_impact fch_write_impact
   empty_fch fch_flush_cycles fch_flush_WCET pch_lookup pch_read_impact pch_write_impact do_pch_flush
   pch_flush_cycles pch_flush_WCET collides_in_pch read_cycles write_cycles addr_domain addr_colour
-  colour_userdomain part uwr nlds select_trace
+  colour_userdomain userPart uwr nlds select_trace
   "big_step_ADT_A_if utf" s0 "policyFlows (pasPolicy initial_aag)"
   _ _ is_uwr_determined touched_addresses _ _ _ will_domain_switch _ _ _ get_next_domain
   fourways_oldclean fourways_dirty fourways_gadget fourways_newclean
