@@ -76,10 +76,16 @@ lemma nlds_flatsteps:
   done
 
 
+text \<open>current running partition\<close>
+definition userPart where
+  "userPart s \<equiv> Partition (partition (pasDomainAbs initial_aag) (internal_state_if s))"
+
 interpretation tphuwr:time_protection_hardware_uwr gentypes PSched 
-  _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ part uwr nlds
+  _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ userPart uwr nlds
   apply unfold_locales
-   apply (simp add: schedIncludesCurrentDom)
+   apply (simp add: userPart_def)
+   apply (clarsimp simp: uwr_def sameFor_def sameFor_scheduler_def domain_fields_equiv_def
+                         partition_def)
   using uwr_equiv_rel apply blast
   done
 
@@ -117,7 +123,7 @@ locale integration =
   ii?:integration_setup _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ gentypes +
   ts?:trace_selector
     "TYPE((if_other_state \<times> ('fch, 'pch) TimeProtection.state) \<times> 'l partition \<times> trace \<times> vpaddr set)"
-    "ii.part \<circ> fst" ma_uwr PSched "[]" "is_uwr_determined \<circ> fst" "step_is_publicly_determined \<circ> fst" select_trace 
+    "userPart \<circ> fst" ma_uwr PSched "[]" "is_uwr_determined \<circ> fst" "step_is_publicly_determined \<circ> fst" select_trace 
   for gentypes :: "('fch \<times> 'fch_cachedness \<times> 'pch \<times> 'pch_cachedness \<times> 'l partition \<times> 'colour) itself"
   and select_trace and step_is_publicly_determined
   
@@ -133,8 +139,6 @@ begin
   domainswitch, but i'm not certain how preempt works.
 
 *)
-
-
 
 (* this tells us, from the state, whether the next irq will be the timer *)
 definition is_timer_irq :: "det_ext Structures_A.state \<Rightarrow> bool" where
@@ -883,8 +887,22 @@ lemma get_next_domain_public:
   done
 
 
+
+lemma uwr_equates_touched_addresses:
+  "uwr2 s (userPart s) t \<Longrightarrow>
+  touched_addresses s = touched_addresses t"
+  apply (clarsimp simp: userPart_def)
+  apply (drule uwr_partition_if, rule refl, rule refl)
+  apply clarsimp
+  apply (clarsimp simp: ii.touched_addresses_def touched_vaddrs_def)
+  (* what we need to do here is make vaddr_to_paddr no longer take a state
+   parameter *)
+  
+  
+
+
 definition all_paddrs_of :: "'l partition \<Rightarrow> paddr set" where
-  " all_paddrs_of d \<equiv> {a. addr_domain a = d}"
+  "all_paddrs_of d \<equiv> {a. addr_domain a = d}"
 
 definition touched_addrs_inv :: "if_other_state \<Rightarrow> bool" where
   "touched_addrs_inv s \<equiv>
@@ -892,7 +910,7 @@ definition touched_addrs_inv :: "if_other_state \<Rightarrow> bool" where
 
 (* FIXME: I haven't yet figured out how to phrase tainvs with partitions, when
    most of the stuff I have set up is phrased in terms of subject_labels. Maybe
-   I need some kind of translation between these?
+   I need some kind of translation between these? *)
 interpretation l2p?: ArchL2Partitioned "TYPE('l partition \<times> 'l partition)" addr_domain id
   done
 
@@ -900,7 +918,7 @@ lemma l2p_subset_inv_form:
   "reachable s \<Longrightarrow>
   l2p.ta_subset_inv (current_aag (snd $ fst so)) (snd $ fst s)"
   subgoal sorry
-  done *)
+  done
 
 lemma subset_inv_proof:
   "reachable s \<Longrightarrow>
