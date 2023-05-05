@@ -614,6 +614,15 @@ lemma irq_state_increment_reads_respects_device:
   apply (fastforce intro: equiv_forI elim: equiv_forE)
   done
 
+lemma irq_state_increment_reads_respects_ta:
+  "equiv_valid_inv (equiv_machine_state P And equiv_irq_state)
+                   (\<lambda>s s'. touched_addresses s = touched_addresses s')
+                   \<top> (modify (\<lambda>s. s\<lparr>irq_state := Suc (irq_state s)\<rparr>))"
+  apply (simp add: equiv_valid_def2)
+  apply (rule modify_ev2)
+  apply (fastforce intro: equiv_forI elim: equiv_forE)
+  done
+
 lemma use_equiv_valid_inv:
   "\<lbrakk> x \<in> fst (f st); y \<in> fst (f s); g s; g st; I s st; P s st; equiv_valid_inv I P g f \<rbrakk>
      \<Longrightarrow> fst x = fst y \<and> P (snd y) (snd x) \<and> I (snd y) (snd x)"

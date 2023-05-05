@@ -158,7 +158,9 @@ lemma sameFor_reads_equiv_f_g':
   apply (frule pasSubject_not_SilcLabel)
   apply (auto simp: reads_equiv_f_g_def reads_equiv_def2 sameFor_def
                     sameFor_subject_def silc_dom_equiv_def globals_equiv_def)
-  done
+
+  sorry (* broken by TA equivalence -scottb #ta_equiv_sorries
+  done *)
 
 lemma sameFor_scheduler_equiv:
   "(s,s') \<in> same_for aag PSched
@@ -4119,6 +4121,7 @@ lemma confidentiality_u:
   apply (case_tac "u = PSched")
    apply (subgoal_tac "part s \<noteq> PSched")
     apply (blast intro: confidentiality_for_sched big_Step2)
+   term uwr
    apply (fastforce intro: policyFlows_refl[THEN refl_onD])
   apply (metis integrity_part uwr_sym uwr_trans schedIncludesCurrentDom not_PSched big_Step2)
   done

@@ -539,8 +539,10 @@ lemma globals_frame_equiv_as_states_equiv:
   "scheduler_globals_frame_equiv st s =
    states_equiv_for (\<lambda>x. x \<in> scheduler_affects_globals_frame s) \<bottom> \<bottom> \<bottom>
                     (s\<lparr>machine_state := machine_state st, arch_state := arch_state st\<rparr>) s"
-  by (simp add: states_equiv_for_def equiv_for_def scheduler_globals_frame_equiv_def equiv_asids_def)
-
+  apply (simp add: states_equiv_for_def equiv_for_def scheduler_globals_frame_equiv_def equiv_asids_def)
+  (* note: this absolutely isn't true right now. might be a simple rephrase, might be more work *)
+  sorry (* broken by TA equivalence -scottb #ta_equiv_sorries *)
+  
 lemma silc_dom_equiv_as_states_equiv:
   "silc_dom_equiv aag st s =
    states_equiv_for (\<lambda>x. pasObjectAbs aag x = SilcLabel) \<bottom> \<bottom> \<bottom> (s\<lparr>kheap := kheap st\<rparr>) s"

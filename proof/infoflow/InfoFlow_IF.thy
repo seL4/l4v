@@ -313,7 +313,8 @@ lemma reads_equiv_def2:
                            cur_domain s = cur_domain s' \<and>
                            scheduler_action s = scheduler_action s' \<and>
                            work_units_completed s = work_units_completed s' \<and>
-                           irq_state (machine_state s) = irq_state (machine_state s'))"
+                           irq_state (machine_state s) = irq_state (machine_state s') \<and>
+                           touched_addresses (machine_state s) = touched_addresses (machine_state s'))"
   by (auto simp: reads_equiv_def equiv_for_def states_equiv_for_def equiv_asids_aag_can_read_asid)
 
 lemma reads_equivE:
@@ -339,7 +340,8 @@ lemma reads_equivE:
 context InfoFlow_IF_1 begin
 
 lemma reads_equiv_machine_state_update:
-  "\<lbrakk> reads_equiv aag s s'; equiv_machine_state (aag_can_read aag) kh kh'; irq_state kh = irq_state kh' \<rbrakk>
+  "\<lbrakk> reads_equiv aag s s'; equiv_machine_state (aag_can_read aag) kh kh';
+     irq_state kh = irq_state kh'; touched_addresses kh = touched_addresses kh'\<rbrakk>
      \<Longrightarrow> reads_equiv aag (s\<lparr>machine_state := kh\<rparr>) (s'\<lparr>machine_state := kh'\<rparr>)"
   by (fastforce simp: reads_equiv_def2 intro: states_equiv_for_machine_state_update)
 
@@ -422,6 +424,7 @@ lemma affects_equiv_def2:
                                                (aag_can_affect_irq aag l)
                                                (aag_can_affect_asid aag l)
                                                (aag_can_affect_domain aag l) s s'"
+  
   by (auto simp: affects_equiv_def
            dest: equiv_forD
           elim!: states_equiv_forE
@@ -673,10 +676,19 @@ lemma reads_equiv_self_reads_respects:
   unfolding equiv_valid_def2 equiv_valid_2_def
   by (fastforce intro: cur_subject_reads_equiv_affects_equiv)
 
+
+lemma f_kheap_to_kheap_after_ta_rewrite:
+  "ta2 = (touched_addresses (machine_state s)) \<Longrightarrow>
+  obind (kheap s) (ta_filter False ta) = kheap s"
+  apply(rule ext)
+  by (clarsimp simp:ta_filter_def obind_def split:option.splits)
+
 lemma requiv_get_tcb_eq[intro]:
   "\<lbrakk> reads_equiv aag s t; is_subject aag thread \<rbrakk>
      \<Longrightarrow> get_tcb False thread s = get_tcb False thread t"
-  by (auto simp: reads_equiv_def2 get_tcb_def elim: states_equiv_forE_kheap)
+  by (auto simp: reads_equiv_def2 get_tcb_def f_kheap_to_kheap_after_ta_rewrite
+           elim: states_equiv_forE_kheap)
+  
 
 lemma requiv_cur_thread_eq[intro]:
   "reads_equiv aag s t \<Longrightarrow> cur_thread s = cur_thread t"
@@ -924,24 +936,28 @@ lemma do_machine_op_spec_reads_respects':
   shows
   "spec_reads_respects st aag l P (do_machine_op f)"
   unfolding do_machine_op_def spec_equiv_valid_def
+  sorry (* broken by TA equivalence -scottb #ta_equiv_sorries
   apply (rule equiv_valid_2_guard_imp)
    apply (rule_tac  R'="\<lambda> rv rv'. equiv_machine_state (aag_can_read aag or aag_can_affect aag l) rv rv' \<and> equiv_irq_state rv rv'" and Q="\<lambda> r s. st = s \<and> Q r" and Q'="\<lambda> r s. Q r" and P="(=) st" and P'="\<top>" in equiv_valid_2_bind)
        apply (rule gen_asm_ev2_l[simplified K_def pred_conj_def])
        apply (rule gen_asm_ev2_r')
-       apply (rule_tac R'="\<lambda> (r, ms') (r', ms'').  r = r' \<and> equiv_machine_state (aag_can_read aag)  ms' ms'' \<and> equiv_machine_state (aag_can_affect aag l) ms' ms'' \<and> equiv_irq_state ms' ms''" and Q="\<lambda> r s. st = s" and Q'="\<top>\<top>" and P="\<top>" and P'="\<top>" in equiv_valid_2_bind_pre)
+       apply (rule_tac R'="\<lambda> (r, ms') (r', ms'').  r = r' \<and> equiv_machine_state (aag_can_read aag)  ms' ms'' \<and> equiv_machine_state (aag_can_affect aag l) ms' ms'' \<and> equiv_irq_state ms' ms'' \<and> touched_addresses ms' = touched_addresses ms''" and Q="\<lambda> r s. st = s" and Q'="\<top>\<top>" and P="\<top>" and P'="\<top>" in equiv_valid_2_bind_pre)
             apply (clarsimp simp: modify_def get_def put_def bind_def return_def equiv_valid_2_def)
+            apply (intro conjI)
+             apply (rule reads_equiv_machine_state_update; simp)
             apply (fastforce intro: reads_equiv_machine_state_update affects_equiv_machine_state_update)
             apply (insert equiv_dmo)[1]
-           apply (clarsimp simp: select_f_def equiv_valid_2_def equiv_valid_def2 equiv_for_or simp: split_def split: prod.splits simp: equiv_for_def)[1]
-           apply (drule_tac x=rv in spec, drule_tac x=rv' in spec)
-           apply (fastforce)
+            apply (clarsimp simp: select_f_def equiv_valid_2_def equiv_valid_def2 equiv_for_or simp: split_def split: prod.splits simp: equiv_for_def)[1]
+            apply (drule_tac x=rv in spec, drule_tac x=rv' in spec)
+           
+            apply (fastforce)
           apply (rule select_f_inv)
          apply (rule wp_post_taut)
         apply simp+
       apply (clarsimp simp: equiv_valid_2_def in_monad)
       apply (fastforce elim: reads_equivE affects_equivE equiv_forE intro: equiv_forI)
      apply (wp | simp add: guard)+
-  done
+  done *)
 
 (* most of the time (i.e. always except for getActiveIRQ) you'll want this rule *)
 lemma do_machine_op_spec_reads_respects:

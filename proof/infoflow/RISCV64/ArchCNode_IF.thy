@@ -128,6 +128,7 @@ lemma dmo_getActiveIRQ_reads_respects[CNode_IF_assms]:
   apply (rule do_machine_op_spec_reads_respects')
    apply (simp add: getActiveIRQ_def)
    apply (wp irq_state_increment_reads_respects_memory irq_state_increment_reads_respects_device
+             irq_state_increment_reads_respects_ta
              gets_ev[where f="irq_oracle \<circ> irq_state"] equiv_valid_inv_conj_lift
              gets_irq_masks_equiv_valid modify_wp
           | simp add: no_irq_def)+

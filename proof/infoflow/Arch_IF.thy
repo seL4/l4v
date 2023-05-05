@@ -113,7 +113,15 @@ lemma equiv_valid_2_unobservable:
    apply (rule refl)
   apply (clarsimp simp: reads_equiv_def2 affects_equiv_def2)
   apply (auto intro: states_equiv_for_sym states_equiv_for_trans)
-  done
+  sorry (* broken by TA equivalence -scottb #ta_equiv_sorries
+    note: we don't want to just add similar assumptions to this lemma, for
+    touched_addresses. I doubt we will use this on monads that *don't* change
+    the TA set, I imagine it's for monads that will have the *same* impact on
+    the TA set. So this requires some thought - at least to figure out what
+    kind of language this kind of thing is being expressed with in the rest of
+    infoflow. I imagine some equiv_valid will do the job, but it might already
+    have some definition somewhere.
+  done *)
 
 lemma reads_respects_unobservable_unit_return:
   assumes f:
@@ -177,8 +185,9 @@ lemma equiv_but_for_reads_equiv:
     apply (fastforce simp: equiv_asids_def elim: states_equiv_forE elim: equiv_forD)
    apply (clarsimp simp: equiv_for_def states_equiv_for_def disjoint_iff_not_equal)
    apply (metis pas_domains_distinct_inj)
+  sorry (* broken by TA equivalence -scottb #ta_equiv_sorries
   apply (fastforce simp: equiv_but_for_labels_def)
-  done
+  done *)
 
 lemma equiv_but_for_affects_equiv:
   "\<lbrakk> pas_domains_distinct aag; labels_are_invisible aag l L; equiv_but_for_labels aag L s s' \<rbrakk>

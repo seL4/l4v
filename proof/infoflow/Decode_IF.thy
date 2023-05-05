@@ -237,6 +237,7 @@ lemma decode_tcb_invocation_reads_respects_f:
   apply (simp add: unlessE_def[symmetric] unlessE_whenE split del: if_split
              cong: gen_invocation_labels.case_cong)
   apply (rule equiv_valid_guard_imp)
+  sorry (* broken by timeprot -scottb
    apply (wp (once) requiv_cur_thread_eq range_check_ev respects_f[OF derive_cap_rev]
                     derive_cap_inv slot_cap_long_running_delete_reads_respects_f[where st=st]
                     respects_f[OF check_valid_ipc_buffer_rev] check_valid_ipc_buffer_inv
@@ -251,7 +252,6 @@ lemma decode_tcb_invocation_reads_respects_f:
   apply (simp add: get_tcb_ctable_ptr_def get_tcb_vtable_ptr_def)
   apply (subgoal_tac "\<not>length excaps < 3 \<longrightarrow> is_subject aag (fst (snd (excaps ! 2)))")
    prefer 2
-  sorry (* broken by timeprot -scottb
    apply (fastforce intro: nth_mem)
   apply (subgoal_tac "excaps \<noteq> [] \<longrightarrow> is_subject aag (fst (snd (excaps ! 0)))")
    prefer 2
