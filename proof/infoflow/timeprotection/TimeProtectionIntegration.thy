@@ -28,7 +28,7 @@ locale integration_setup =
 + fixes time_per_tick :: time
   fixes slice_length_min :: time
   fixes timer_delay_max :: time
-  fixes vaddr_to_paddr :: "if_other_state \<Rightarrow> TimeProtection.vaddr \<Rightarrow> TimeProtection.paddr"
+  fixes vaddr_to_paddr :: "TimeProtection.vaddr \<Rightarrow> TimeProtection.paddr"
   assumes timer_delay_lt_slice_length:
     "timer_delay_max < slice_length_min"
 begin
@@ -39,7 +39,7 @@ definition touched_vaddrs :: "if_other_state \<Rightarrow> vaddr set" where
   VAddr ` (let is = internal_state_if s in (machine_state.touched_addresses (machine_state is)))"
 
 definition touched_addresses :: "if_other_state \<Rightarrow> vpaddr set" where
-  "touched_addresses s \<equiv> (\<lambda>v. (v, vaddr_to_paddr s v)) ` (touched_vaddrs s)"
+  "touched_addresses s \<equiv> (\<lambda>v. (v, vaddr_to_paddr v)) ` (touched_vaddrs s)"
 
 
 (* get the list of (domain, tickcount) from the initial state *)
@@ -775,7 +775,7 @@ definition fourways_oldclean :: "(((user_context \<times> det_ext state) \<times
 
 \<comment> \<open>the dirty transition is empty\<close>
 definition fourways_dirty :: "(((user_context \<times> det_ext state) \<times> sys_mode) \<times> ((user_context \<times> det_ext state) \<times> sys_mode)) set" where
-  "fourways_dirty \<equiv> {(s, s). True}"
+  "fourways_dirty \<equiv> {(s, s'). s' = s}"
 
 \<comment> \<open>the gadget is all in arch_domainswitch_flush\<close>
 definition fourways_gadget :: "(((user_context \<times> det_ext state) \<times> sys_mode) \<times> ((user_context \<times> det_ext state) \<times> sys_mode)) set" where
@@ -783,7 +783,7 @@ definition fourways_gadget :: "(((user_context \<times> det_ext state) \<times> 
 
 \<comment> \<open>the newclean transition is also empty\<close>
 definition fourways_newclean :: "(((user_context \<times> det_ext state) \<times> sys_mode) \<times> ((user_context \<times> det_ext state) \<times> sys_mode)) set" where
-  "fourways_newclean \<equiv> {(s, s). True}"
+  "fourways_newclean \<equiv> {(s, s'). s' = s}"
 
 lemma tfence_inv:
   "tfence \<lbrace>P\<rbrace>"
@@ -895,9 +895,7 @@ lemma uwr_equates_touched_addresses:
   apply (drule uwr_partition_if, rule refl, rule refl)
   apply clarsimp
   apply (clarsimp simp: ii.touched_addresses_def touched_vaddrs_def)
-  (* what we need to do here is make vaddr_to_paddr no longer take a state
-   parameter *)
-  
+  done
   
 
 
@@ -906,11 +904,11 @@ definition all_paddrs_of :: "'l partition \<Rightarrow> paddr set" where
 
 definition touched_addrs_inv :: "if_other_state \<Rightarrow> bool" where
   "touched_addrs_inv s \<equiv>
-  snd ` touched_addresses s \<subseteq> all_paddrs_of (part s) \<union> kernel_shared_precise"
+  snd ` touched_addresses s \<subseteq> all_paddrs_of (userPart s) \<union> kernel_shared_precise"
 
 (* FIXME: I haven't yet figured out how to phrase tainvs with partitions, when
    most of the stuff I have set up is phrased in terms of subject_labels. Maybe
-   I need some kind of translation between these? *)
+   I need some kind of translation between these?
 interpretation l2p?: ArchL2Partitioned "TYPE('l partition \<times> 'l partition)" addr_domain id
   done
 
@@ -918,7 +916,7 @@ lemma l2p_subset_inv_form:
   "reachable s \<Longrightarrow>
   l2p.ta_subset_inv (current_aag (snd $ fst so)) (snd $ fst s)"
   subgoal sorry
-  done
+  done *)
 
 lemma subset_inv_proof:
   "reachable s \<Longrightarrow>
@@ -929,13 +927,13 @@ lemma subset_inv_proof:
 lemma domainswitch_follows_get_next_domain:
   "(s1, s2) \<in> Step () \<Longrightarrow>
   will_domain_switch s1 \<Longrightarrow>
-  part s2 = get_next_domain s1"
+  userPart s2 = get_next_domain s1"
   sorry
 
 lemma non_domainswitch_unchanged_domain:
   "(s1, s2) \<in> Step () \<Longrightarrow>
   \<not>will_domain_switch s1 \<Longrightarrow>
-  part s2 = part s1"
+  userPart s2 = userPart s1"
   sorry
 
 lemma non_domainswitch_uwr_determined:
@@ -944,22 +942,94 @@ lemma non_domainswitch_uwr_determined:
   is_uwr_determined s1"
   sorry
 
+lemma external_uwr_same_domain:
+  "uwr2 s PSched t \<Longrightarrow>
+  userPart s = userPart t"
+  apply (clarsimp simp: uwr_def sameFor_def sameFor_scheduler_def domain_fields_equiv_def
+                        userPart_def partition_def)
+  done
+
+(* "simple_steps", which states that steps will or won't domain-switch,
+            and some basic properties about these steps *)
+lemma simple_steps:
+  "(s, s') \<in> ni.Step () \<Longrightarrow>
+       \<not> will_domain_switch s \<and>
+       userPart s' = userPart s \<and> is_uwr_determined s \<or>
+       will_domain_switch s \<and> userPart s' = get_next_domain s"
+  apply (case_tac "will_domain_switch s"; clarsimp)
+   apply (erule domainswitch_follows_get_next_domain; simp)
+  apply (rule conjI, erule(1) non_domainswitch_unchanged_domain)
+  apply (rule non_domainswitch_uwr_determined; simp)
+  done
+
+lemma part_is_userPart_or_Sched:
+  "part s = userPart s \<or> part s = PSched"
+  apply (clarsimp simp: userPart_def part_def)
+  done
+
+lemma uwr_and_normal_step_gives_ta_equiv:
+  "\<lbrakk>reachable s; reachable t; uwr2 s PSched t;
+     uwr2 s (userPart s) t; \<not> will_domain_switch s;
+     (s, s') \<in> ni.Step (); (t, t') \<in> ni.Step ()\<rbrakk>
+    \<Longrightarrow> ii.touched_addresses t' = ii.touched_addresses s'"
+  apply (prop_tac "uwr2 s' (userPart s') t'")
+   apply (prop_tac "uwr2 s' (userPart s) t'")
+    apply (insert confidentiality_u [simplified confidentiality_u_def])
+    apply (drule_tac x="()" in spec)
+    apply (drule_tac x="userPart s" in spec)
+    apply (drule_tac x=s in spec)
+    apply (drule_tac x=t in spec)
+    apply clarsimp
+    apply (prop_tac "(policy2 (part s) (userPart s) \<longrightarrow> uwr2 s (part s) t)"; clarsimp)
+     apply (insert part_is_userPart_or_Sched [of s], erule disjE; clarsimp)
+    apply (cases s', clarsimp, cases t', clarsimp)
+   using non_domainswitch_unchanged_domain apply presburger
+  apply (rule sym, rule uwr_equates_touched_addresses, assumption)
+  done
+
+
+lemma uwr_determined_steps_ta_equiv:
+  "\<lbrakk>reachable s; reachable t;
+    uwr2 s PSched t;
+    uwr2 s d t; userPart s = d; is_uwr_determined s;
+        step = ni.Step () \<and> \<not> will_domain_switch s \<or>
+        step = fourways_oldclean \<or> step = fourways_newclean;
+        (s, s') \<in> step; (t, t') \<in> step\<rbrakk>
+       \<Longrightarrow> ii.touched_addresses t' = ii.touched_addresses s'"
+  apply (erule disjE; clarsimp)
+   apply (erule uwr_and_normal_step_gives_ta_equiv; assumption)
+  (* here we need to know that the UWR holds at these intermediate steps.
+     OR at least we need to know that the TA set will be the same *)
+  sorry
+
+lemma dirty_step_ta_equiv:
+  "\<lbrakk>uwr2 s PSched t; (s, s') \<in> fourways_dirty; (t, t') \<in> fourways_dirty\<rbrakk> \<Longrightarrow>
+  ii.touched_addresses t' = ii.touched_addresses s'"
+  apply (clarsimp simp: fourways_dirty_def)
+  sorry
+    
+
 interpretation ma?:time_protection_system PSched fch_lookup fch_read_impact fch_write_impact
   empty_fch fch_flush_cycles fch_flush_WCET pch_lookup pch_read_impact pch_write_impact do_pch_flush
   pch_flush_cycles pch_flush_WCET collides_in_pch read_cycles write_cycles addr_domain addr_colour
-  colour_userdomain part uwr nlds select_trace
+  colour_userdomain userPart uwr nlds select_trace
   "big_step_ADT_A_if utf" s0 "policyFlows (pasPolicy initial_aag)"
   _ _ is_uwr_determined touched_addresses _ _ _ will_domain_switch _ _ _ get_next_domain
   fourways_oldclean fourways_dirty fourways_gadget fourways_newclean
   
   apply unfold_locales
-                (* external_uwr_same_domain *)
-                using schedIncludesCurrentDom apply presburger
-               (* external_uwr_equiv *)
-               apply (simp add: uwr_equiv_rel)
+                   (* external uwr is equivalence *)
+                   apply (rule uwr_equiv_rel)                
+                  (* external uwr (sched) equalises curdomain *)
+                  apply (erule external_uwr_same_domain)
+                 (* the policy allows flows from the scheduler to everybody *)
+                 apply (rule schedFlowsToAll)
+                (* only the scheduler can flow to the scheduler *)
+                apply (erule schedNotGlobalChannel)
+               (* external uwr (sched) equalises curdomain (again...) *)
+               apply (erule external_uwr_same_domain [OF uwr_sym])
               (* will_domain_switch_public *)
-              apply (rule will_domain_switch_from_uwr)
-              subgoal sorry (* need to adjust how we talk about sched uwr i guess *)
+              apply (erule will_domain_switch_from_uwr)
              (* next_latest_domainswitch_in_future *)
              apply (rule nlds_in_future)
             (* next_latest_domainswitch_flatsteps *)
@@ -968,16 +1038,12 @@ interpretation ma?:time_protection_system PSched fch_lookup fch_read_impact fch_
            apply (erule get_next_domain_public)
           (* touched addresses inv *)
           using subset_inv_proof touched_addrs_inv_def all_paddrs_of_def apply clarsimp
-         (* the assumption "simple_steps" which states that steps will or won't domain-switch,
-            and some basic properties about these steps *)
-         apply (case_tac "will_domain_switch s"; clarsimp)
-          apply (erule domainswitch_follows_get_next_domain; simp)
-         apply (rule conjI, erule(1) non_domainswitch_unchanged_domain)
-         apply (rule non_domainswitch_uwr_determined; simp)
+         (* simple_steps *)
+         apply (erule simple_steps)
         (* step_is_uwr_determimed for particular steps tells us that the
-          output touchedaddresses depend only on uwr *)
-        apply (erule disjE; clarsimp)
-
+           output touchedaddresses depend only on uwr *)
+        apply (rule uwr_determined_steps_ta_equiv; assumption)
+      
 
          (* middle state stuff *)
          subgoal sorry

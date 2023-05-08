@@ -523,7 +523,7 @@ locale time_protection_system =
   (* We expect this to be true for, say, seL4's KSched \<rightarrow> KExit step. -robs. *)
   fixes will_domain_switch :: "'other_state \<Rightarrow> bool"
   assumes will_domain_switch_public:
-    "(os, ot) \<in> external_uwr d \<Longrightarrow> will_domain_switch ot = will_domain_switch os"
+    "(os, ot) \<in> external_uwr Sched \<Longrightarrow> will_domain_switch ot = will_domain_switch os"
 
   \<comment> \<open>domain scheduling stuff\<close>
   assumes next_latest_domainswitch_start_in_future:
@@ -561,6 +561,8 @@ locale time_protection_system =
     the steps that we need this for are non-ds big steps, oldclean and newclean *)
   assumes external_uwr_same_touched_addrs:
     "(s, t) \<in> external_uwr d \<Longrightarrow>
+     (s, t) \<in> external_uwr Sched \<Longrightarrow>
+    ab.reachable s \<Longrightarrow> ab.reachable t \<Longrightarrow>
     current_domain s = d \<Longrightarrow>
     step_is_uwr_determined s \<Longrightarrow>
     (step = ab.Step () \<and> \<not>will_domain_switch s)
@@ -576,6 +578,7 @@ locale time_protection_system =
     step_is_publicly_determined s \<Longrightarrow>
     (s, s') \<in> ds_substep_dirty \<Longrightarrow>
     (t, t') \<in> ds_substep_dirty \<Longrightarrow>
+    touched_addrs t = touched_addrs s \<Longrightarrow>
     touched_addrs t' = touched_addrs s'"
 
   assumes fourways: "can_split_four_ways
@@ -1374,6 +1377,7 @@ lemma ma_confidentiality_u_ta:
   touched_addrs_inv os';
   touched_addrs_inv ot';
   ab.reachable os;
+  ma.uwr2 (os, s) Sched (ot, t);
   ma.uwr2 (os, s) u (ot, t);
   ab.uwr2 os' Sched ot';
   ab.uwr2 os' u ot';
@@ -1461,6 +1465,8 @@ lemma ma_confidentiality_u_ds:
   "\<lbrakk>will_domain_switch os;
   ma.uwr2 (os, s) Sched (ot, t);
   ma.uwr2 (os, s) u (ot, t);
+  ab.reachable os;
+  ab.reachable ot;
   ab.uwr2 os' Sched ot';
   ab.uwr2 os' u ot';
   ab.reachable os;
@@ -1483,10 +1489,10 @@ lemma ma_confidentiality_u_ds:
   (* show that the TAs are the same *)  
   apply (prop_tac "touched_addrs osa' = touched_addrs osa")
    apply (rule external_uwr_same_touched_addrs [where d=u])
-        apply assumption
+          apply assumption+
+         using ab.reachable_Step apply blast
+        using ab.reachable_Step apply blast
        apply simp
-   thm external_uwr_same_touched_addrs
-   term big_step_ADT_A_if
 
   apply (prop_tac "touched_addrs osma = touched_addrs osm")
    apply (rule external_uwr_public_same_touched_addrs [where s=os and t=ot])
