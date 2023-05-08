@@ -370,11 +370,17 @@ primrec zombieCTEs :: "zombie_type \<Rightarrow> nat" where
 
 context begin interpretation Arch .
 
-(*FIXME AARCH64: type checks, but the pt_index is not considering root PTs, i.e. currently wrong*)
 definition page_table_at' :: "pt_type \<Rightarrow> obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
  "page_table_at' pt_t p \<equiv> \<lambda>s.
-    is_aligned p (ptBits pt_t) \<and> (\<forall>i::pt_index. pte_at' (p + (ucast i << pte_bits)) s)"
+    is_aligned p (ptBits pt_t) \<and> (\<forall>i \<le> mask (ptBits pt_t). pte_at' (p + (i << pte_bits)) s)"
 
+(* FIXME AARCH64: may come in handy; remove if not *)
+abbreviation
+  "vs_root_at' \<equiv> page_table_at' VSRootPT_T"
+
+lemmas vs_root_at'_def = page_table_at'_def
+
+(* FIXME AARCH64: is this used? *)
 lemmas vspace_table_at'_defs = page_table_at'_def
 
 abbreviation asid_pool_at' :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
@@ -394,7 +400,7 @@ definition wellformed_acap' :: "arch_capability \<Rightarrow> bool" where
        case_option True wellformed_mapdata' mapdata \<and>
        case_option True (swp vmsz_aligned sz \<circ> snd) mapdata
    | PageTableCap pt_t r (Some mapdata) \<Rightarrow> wellformed_mapdata' mapdata
-   | _ \<Rightarrow> True" (*FIXME AARCH64: confirm VCPUs are skipped for wellformed checks*)
+   | _ \<Rightarrow> True"
 
 lemmas wellformed_acap'_simps[simp] = wellformed_acap'_def[split_simps arch_capability.split]
 
@@ -403,12 +409,13 @@ definition frame_at' :: "obj_ref \<Rightarrow> vmpage_size \<Rightarrow> bool \<
      \<forall>p < 2 ^ (pageBitsForSize sz - pageBits).
        typ_at' (if dev then UserDataDeviceT else UserDataT) (r + (p << pageBits)) s"
 
+(* FIXME AARCH64: could we set these all to true and lift from abstract instead? *)
 definition valid_arch_cap_ref' :: "arch_capability \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "valid_arch_cap_ref' ac s \<equiv> case ac of
      ASIDPoolCap r as \<Rightarrow> typ_at' (ArchT ASIDPoolT) r s
    | ASIDControlCap \<Rightarrow> True
    | FrameCap r rghts sz dev mapdata \<Rightarrow> frame_at' r sz dev s
-   | PageTableCap r pt_t mapdata \<Rightarrow> page_table_at' pt_t r s \<comment> \<open>FIXME AARCH64: best guess\<close>
+   | PageTableCap r pt_t mapdata \<Rightarrow> page_table_at' pt_t r s
    | VCPUCap r \<Rightarrow> vcpu_at' r s"
 
 lemmas valid_arch_cap_ref'_simps[simp] =
@@ -453,6 +460,7 @@ where valid_cap'_def:
                     \<and> (\<forall>addr. real_cte_at' (r + 2^cteSizeBits * (addr && mask n)) s))
   | ArchObjectCap ac \<Rightarrow> valid_arch_cap' ac s)"
 
+(* FIXME AARCH64: should this be syntax instead? *)
 abbreviation (input) valid_cap'_syn ::
   "kernel_state \<Rightarrow> capability \<Rightarrow> bool" ("_ \<turnstile>'' _" [60, 60] 61) where
   "s \<turnstile>' c \<equiv> valid_cap' c s"
@@ -513,26 +521,7 @@ definition valid_ntfn' :: "Structures_H.notification \<Rightarrow> kernel_state 
 definition valid_mapping' :: "machine_word \<Rightarrow> vmpage_size \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "valid_mapping' x sz s \<equiv> is_aligned x (pageBitsForSize sz) \<and> ptrFromPAddr x \<noteq> 0"
 
-(* FIXME AARCH64: on RISCV these are empty but it's not clear whether that's the case now*)
-abbreviation (input)
-  valid_pte' :: "pte \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "valid_pte' _ _ \<equiv> True"
-abbreviation (input)
-  valid_asid_pool' :: "asidpool \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "valid_asid_pool' _ _ \<equiv> True"
-
-definition valid_vcpu' :: "vcpu \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "valid_vcpu' v \<equiv> (case vcpuTCBPtr v of
-     None \<Rightarrow> \<top>
-   | Some vt \<Rightarrow> typ_at' (TCBT) vt)"
-
-primrec
-  valid_arch_obj' :: "arch_kernel_object \<Rightarrow> kernel_state \<Rightarrow> bool"
-where
-  "valid_arch_obj' (KOASIDPool pool) = valid_asid_pool' pool"
-| "valid_arch_obj' (KOPTE pte) = valid_pte' pte"
-| "valid_arch_obj' (KOVCPU vcpu) = valid_vcpu' vcpu"
-
+(* KOArch validity can be lifted from AInvs, since all cases only consist of typ_at' predicates. *)
 definition
   valid_obj' :: "Structures_H.kernel_object \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
@@ -544,7 +533,7 @@ where
   | KOUserDataDevice \<Rightarrow> True
   | KOTCB tcb \<Rightarrow> valid_tcb' tcb s
   | KOCTE cte \<Rightarrow> valid_cte' cte s
-  | KOArch arch_kernel_object \<Rightarrow> valid_arch_obj' arch_kernel_object s"
+  | KOArch arch_kernel_object \<Rightarrow> True"
 
 definition
   pspace_aligned' :: "kernel_state \<Rightarrow> bool"
@@ -974,14 +963,14 @@ definition valid_irq_node' :: "machine_word \<Rightarrow> kernel_state \<Rightar
 definition valid_refs' :: "machine_word set \<Rightarrow> cte_heap \<Rightarrow> bool" where
   "valid_refs' R \<equiv> \<lambda>m. \<forall>c \<in> ran m. R \<inter> capRange (cteCap c) = {}"
 
-(* FIXME AARCH64: do we need these?
+(* Addresses of all PTEs in a VSRoot table at p *)
 definition table_refs' :: "machine_word \<Rightarrow> machine_word set" where
-  "table_refs' x \<equiv> (\<lambda>y. x + (y << pte_bits)) ` mask_range 0 ptTranslationBits"  *)
+  "table_refs' p \<equiv> (\<lambda>i. p + (i << pte_bits)) ` mask_range 0 (ptTranslationBits VSRootPT_T)"
 
-(* FIXME AARCH64: review *)
 definition global_refs' :: "kernel_state \<Rightarrow> obj_ref set" where
   "global_refs' \<equiv> \<lambda>s.
-   {ksIdleThread s, armKSGlobalUserVSpace (ksArchState s)} \<union>
+   {ksIdleThread s} \<union>
+   table_refs' (armKSGlobalUserVSpace (ksArchState s)) \<union>
    range (\<lambda>irq :: irq. irq_node' s + (ucast irq << cteSizeBits))"
 
 definition valid_cap_sizes' :: "nat \<Rightarrow> cte_heap \<Rightarrow> bool" where
@@ -1000,11 +989,6 @@ definition pspace_domain_valid :: "kernel_state \<Rightarrow> bool" where
 definition valid_asid_table' :: "(asid \<rightharpoonup> machine_word) \<Rightarrow> bool" where
   "valid_asid_table' table \<equiv> dom table \<subseteq> mask_range 0 asid_high_bits \<and> 0 \<notin> ran table"
 
-(* FIXME AARCH64: unclear what to do with this, ARM_HYP doesn't even use this in valid_arch_state'
-definition valid_global_pts' :: "machine_word list \<Rightarrow> kernel_state \<Rightarrow> bool" where
-  "valid_global_pts' pts \<equiv> \<lambda>s. \<forall>p \<in> set pts. page_table_at' p s"
-*)
-
 definition "is_vcpu' \<equiv> \<lambda>ko. \<exists>vcpu. ko = (KOArch (KOVCPU vcpu))"
 
 (* FIXME AARCH64: move below somewhere? *)
@@ -1018,16 +1002,15 @@ lemma vcpu_at_is_vcpu': "\<And>v. vcpu_at' v = ko_wp_at' is_vcpu' v"
 definition max_armKSGICVCPUNumListRegs :: nat where
   "max_armKSGICVCPUNumListRegs \<equiv> 63"
 
-(* FIXME AARCH64: review *)
+(* Liftable from AInvs: valid_global_arch_objs *)
+(* FIXME AARCH64: vmid_inv might be liftable point-wise via assertion. If not, may have to add here. *)
 definition valid_arch_state' :: "kernel_state \<Rightarrow> bool" where
   "valid_arch_state' \<equiv> \<lambda>s.
    valid_asid_table' (armKSASIDTable (ksArchState s)) \<and>
    (case (armHSCurVCPU (ksArchState s)) of
       Some (v, b) \<Rightarrow> ko_wp_at' (is_vcpu' and hyp_live') v s
       | _ \<Rightarrow> True) \<and>
-  \<comment> \<open>FIXME AARCH64: missing: valid_asid_map'\<close>
-  \<comment> \<open>FIXME AARCH64: missing: inv relationship between asid map and asid table\<close>
-  armKSGICVCPUNumListRegs (ksArchState s) \<le> max_armKSGICVCPUNumListRegs"
+   armKSGICVCPUNumListRegs (ksArchState s) \<le> max_armKSGICVCPUNumListRegs"
 
 definition irq_issued' :: "irq \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "irq_issued' irq \<equiv> \<lambda>s. intStateIRQTable (ksInterruptState s) irq = IRQSignal"
@@ -1112,7 +1095,6 @@ definition
 where
   "m \<turnstile> c \<leftarrow> c' \<equiv> (\<exists>z. m c' = Some z \<and> c = mdbPrev (cteMDBNode z))"
 
-(* FIXME AARCH64: review PTET case *)
 definition
   makeObjectT :: "kernel_object_type \<Rightarrow> kernel_object"
   where
@@ -1791,21 +1773,12 @@ lemma valid_cap'_pspaceI:
             simp: vspace_table_at'_defs valid_arch_cap'_def valid_arch_cap_ref'_def
            split: arch_capability.split zombie_type.split option.splits)
 
-lemma valid_arch_obj'_pspaceI:
-  "valid_arch_obj' obj s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_arch_obj' obj s'"
-  apply (cases obj; simp)
-  apply (rename_tac vcpu)
-  apply (case_tac vcpu, rename_tac tcbref x1 x2 x3)
-  apply (case_tac tcbref;
-         auto simp: valid_vcpu'_def intro: typ_at'_pspaceI[rotated] split: option.splits)
-  done
-
 lemma valid_obj'_pspaceI:
   "valid_obj' obj s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_obj' obj s'"
   unfolding valid_obj'_def
   by (cases obj)
      (auto simp: valid_ep'_def valid_ntfn'_def valid_tcb'_def valid_cte'_def
-                 valid_tcb_state'_def valid_arch_obj'_pspaceI valid_bound_tcb'_def
+                 valid_tcb_state'_def valid_bound_tcb'_def
                  valid_bound_ntfn'_def valid_arch_tcb'_def
            split: Structures_H.endpoint.splits Structures_H.notification.splits
                   Structures_H.thread_state.splits ntfn.splits option.splits
@@ -2351,7 +2324,7 @@ lemma typ_at_lift_page_table_at':
   assumes x: "\<And>T p. f \<lbrace>typ_at' T p\<rbrace>"
   shows "f \<lbrace>page_table_at' pt_t p\<rbrace>"
   unfolding page_table_at'_def
-  by (wp hoare_vcg_all_lift x)
+  by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' x)
 
 lemma ko_wp_typ_at':
   "ko_wp_at' P p s \<Longrightarrow> \<exists>T. typ_at' T p s"
@@ -2440,11 +2413,6 @@ lemma valid_bound_tcb_lift:
   \<lbrace>valid_bound_tcb' tcb\<rbrace> f \<lbrace>\<lambda>_. valid_bound_tcb' tcb\<rbrace>"
   by (auto simp: valid_bound_tcb'_def valid_def typ_at_tcb'[symmetric] split: option.splits)
 
-lemma valid_vcpu_lift':
-  assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
-  shows "\<lbrace>\<lambda>s. valid_vcpu' vcpu s\<rbrace> f \<lbrace>\<lambda>rv s. valid_vcpu' vcpu s\<rbrace>"
-  by (cases vcpu; clarsimp simp: valid_vcpu'_def split: option.split, intro conjI; wpsimp wp:x)
-
 lemma valid_arch_tcb_lift':
   assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
   shows "\<lbrace>\<lambda>s. valid_arch_tcb' tcb s\<rbrace> f \<lbrace>\<lambda>rv s. valid_arch_tcb' tcb s\<rbrace>"
@@ -2461,9 +2429,7 @@ lemmas typ_at_lifts = typ_at_lift_tcb' typ_at_lift_ep'
                       typ_at_lift_vcpu_at'
                       typ_at_lift_valid_untyped'
                       typ_at_lift_valid_cap'
-                      (* FIXME AARCH64: no valid_pte_lift', no valid_asid_pool_lift' *)
                       valid_bound_tcb_lift
-                      valid_vcpu_lift'
                       valid_arch_tcb_lift'
 
 lemma mdb_next_unfold:
@@ -2679,11 +2645,6 @@ lemma pspace_canonical_update [iff]:
   "pspace_canonical' (f s) = pspace_canonical' s"
   by (simp add: pspace pspace_canonical'_def)
 
-(* FIXME AARCH64: removed, review
-lemma pspace_in_kernel_mappings_update [iff]:
-  "pspace_in_kernel_mappings' (f s) = pspace_in_kernel_mappings' s"
-  by (simp add: pspace pspace_in_kernel_mappings'_def) *)
-
 lemma pspace_distinct_update [iff]:
   "pspace_distinct' (f s) = pspace_distinct' s"
   by (simp add: pspace pspace_distinct'_def ps_clear_def)
@@ -2700,10 +2661,6 @@ lemma typ_at_update' [iff]:
   "typ_at' T p (f s) = typ_at' T p s"
   by (simp add: typ_at'_def)
 
-lemma valid_vcpu_update' [iff]:
-  "valid_vcpu' v (f s) = valid_vcpu' v s"
-  by (case_tac "AARCH64_H.vcpuTCBPtr v"; simp add: valid_vcpu'_def)
-
 lemma page_table_at_update' [iff]:
   "page_table_at' pt_t p (f s) = page_table_at' pt_t p s"
   by (simp add: page_table_at'_def)
@@ -2711,11 +2668,6 @@ lemma page_table_at_update' [iff]:
 lemma frame_at_update' [iff]:
   "frame_at' p sz d (f s) = frame_at' p sz d s"
   by (simp add: frame_at'_def)
-
-(* FIXME AARCH64: removed, review
-lemma valid_global_pts_update' [iff]:
-  "valid_global_pts' pts (f s) = valid_global_pts' pts s"
-  by (simp add: valid_global_pts'_def) *)
 
 lemma no_0_obj'_update [iff]:
   "no_0_obj' (f s) = no_0_obj' s"
@@ -2936,9 +2888,8 @@ lemma le_maxDomain_eq_less_numDomains:
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-(* FIXME AARCH64: something looks wonky about this one *)
 lemma page_table_pte_atI':
-  "page_table_at' pt_t p s \<Longrightarrow> pte_at' (p + (ucast (x::pt_index) << pte_bits)) s"
+  "\<lbrakk> page_table_at' pt_t p s; i \<le> mask (ptBits pt_t) \<rbrakk> \<Longrightarrow> pte_at' (p + (i << pte_bits)) s"
   by (simp add: page_table_at'_def)
 
 lemma valid_global_refsD':
@@ -3424,45 +3375,6 @@ lemma valid_pspace_canonical'[elim!]:
   "valid_pspace' s \<Longrightarrow> pspace_canonical' s"
   by (clarsimp simp: valid_pspace'_def)
 
-(* FIXME AARCH64: removed, review
-lemma in_kernel_mappings_add:
-  assumes "is_aligned p n"
-  assumes "f < 2 ^ n"
-  assumes "p \<in> kernel_mappings"
-  shows "p + f \<in> kernel_mappings"
-  using assms
-  unfolding kernel_mappings_def pptr_base_def
-  using is_aligned_no_wrap' word_le_plus_either by blast
-
-
-lemma range_cover_in_kernel_mappings:
-  "\<lbrakk> range_cover ptr sz us n ; p < n ;
-     (ptr && ~~ mask sz) \<in> kernel_mappings ; sz \<le> maxUntypedSizeBits \<rbrakk>
-   \<Longrightarrow> (ptr + of_nat p * 2 ^ us) \<in> kernel_mappings"
-  apply (subst word_plus_and_or_coroll2[symmetric, where w = "mask sz"])
-  apply (subst add.commute)
-  apply (subst add.assoc)
-  apply (rule in_kernel_mappings_add[where n=sz] ; simp add: untypedBits_defs is_aligned_neg_mask)
-  apply (drule (1) range_cover.range_cover_compare)
-  apply (clarsimp simp: word_less_nat_alt)
-  apply unat_arith
-  done
-
-lemma in_kernel_mappings_neq_mask:
-  "\<lbrakk> (ptr :: machine_word) \<in> kernel_mappings ; sz \<le> 38 \<rbrakk>
-   \<Longrightarrow> ptr && ~~ mask sz \<in> kernel_mappings"
-  apply (clarsimp simp: kernel_mappings_def untypedBits_defs pptr_base_def RISCV64.pptrBase_def
-                        canonical_bit_def)
-  by (word_bitwise, clarsimp simp: neg_mask_test_bit word_size)
-
-lemma invs_pspace_in_kernel_mappings'[elim!]:
-  "invs' s \<Longrightarrow> pspace_in_kernel_mappings' s"
-  by (fastforce dest!: invs_valid_pspace' simp: valid_pspace'_def)
-
-lemma valid_pspace_in_kernel_mappings'[elim!]:
-  "valid_pspace' s \<Longrightarrow> pspace_in_kernel_mappings' s"
-  by (clarsimp simp: valid_pspace'_def) *)
-
 end
 (* The normalise_obj_at' tactic was designed to simplify situations similar to:
   ko_at' ko p s \<Longrightarrow>
@@ -3556,7 +3468,7 @@ lemma obj_range'_disjoint:
                    simp: obj_range'_def)
   done
 
-qualify ARM_HYP_H (in Arch)
+qualify AARCH64_H (in Arch)
 
 (*
   Then idea with this class is to be able to generically constrain
