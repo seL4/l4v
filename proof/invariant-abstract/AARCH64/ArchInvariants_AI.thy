@@ -698,7 +698,7 @@ definition state_hyp_refs_of :: "'z::state_ext state \<Rightarrow> obj_ref \<Rig
   "state_hyp_refs_of \<equiv> \<lambda>s p. case_option {} (hyp_refs_of) (kheap s p)"
 
 
-(* covered by ASIDPool case of valid_vspace_obj, inv_vmid, and definition of
+(* covered by ASIDPool case of valid_vspace_obj, vmid_inv, and definition of
    vspace_for_asid (asid 0 never mapped) *)
 definition valid_asid_map :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_asid_map \<equiv> \<top>"
