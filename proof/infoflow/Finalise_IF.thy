@@ -112,9 +112,11 @@ end
 lemma requiv_get_tcb_eq':
   "\<lbrakk> reads_equiv aag s t; aag_can_read aag thread \<rbrakk>
      \<Longrightarrow> get_tcb False thread s = get_tcb False thread t"
+
+  sorry (* broken by TA equivalence -scottb #ta_equiv_sorries
   by (auto simp: reads_equiv_def2 get_tcb_def
            elim: states_equiv_forE_kheap
-          dest!: aag_can_read_self)
+          dest!: aag_can_read_self) *)
 
 lemma set_scheduler_action_reads_respects[wp]:
   "reads_respects aag l \<top> (set_scheduler_action action)"
@@ -148,6 +150,8 @@ lemma ms_ta_update_id:
   apply (cases s, clarsimp)
   done
 
+(* now that we are equating the TA set, I suspect we will not want to use
+this any more - scottb *)
 lemma ignore_ta_use_only_modified:
   "(r, s') \<in> fst (m s) \<Longrightarrow>
   (\<And>P. m \<lbrace>ignore_ta P\<rbrace>) \<Longrightarrow>
@@ -169,15 +173,45 @@ lemma ignore_ta_use_only_modified:
   apply (clarsimp simp: ms_ta_update_id)
   done
 
+lemma ignore_ta_use_only_modified':
+  "(\<And>P. m \<lbrace>ignore_ta P\<rbrace>) \<Longrightarrow>
+  (\<exists> s_taf. \<forall> r s s'.
+  ((r, s') \<in> fst (m s) \<longrightarrow>
+  s' = ms_ta_update (s_taf s) s))"
+  (* I thiiiiink this is true. will see if it helps before
+  trying to prove it *)
+  oops
+
+
+lemma ignore_ta_use_only_modified'':
+  "(\<And>P. m \<lbrace>ignore_ta P\<rbrace>) \<Longrightarrow>
+  (\<exists> taf. (\<forall> s r s'. (r, s') \<in> fst (m s) \<longrightarrow>
+  s' = ms_ta_update (taf s) s))"
+  oops (* passes if the above lemma passes *)
+ (*  apply (drule ignore_ta_use_only_modified')
+  apply auto
+  done *)
+
+
 lemma unit_tainv_reads_respects:
   "(\<And>P. m \<lbrace>ignore_ta P\<rbrace>) \<Longrightarrow>
   reads_respects aag l Q m" for m :: "(det_state, unit) nondet_monad"
   apply (clarsimp simp: equiv_valid_def2 equiv_valid_2_def)
-  apply (frule_tac s=s in ignore_ta_use_only_modified, simp)
-  apply (drule_tac s=t in ignore_ta_use_only_modified, simp)
-  apply (clarsimp simp: reads_equiv_def affects_equiv_def states_equiv_for_def equiv_for_def
-                        equiv_asids_def)
-  done
+  sorry (*
+  apply (drule ignore_ta_use_only_modified'')
+  apply clarsimp
+  apply (frule_tac x=s and y=b in spec2)
+  apply (drule_tac x=t and y=ba in spec2)
+  apply clarsimp
+  apply (subgoal_tac "taf t = taf s")
+   apply (clarsimp simp: reads_equiv_def affects_equiv_def states_equiv_for_def equiv_for_def
+                         equiv_asids_def) *)
+  (*note: this is not necessarily true though, even if we have the (sorried)
+    "ignore_ta_use_only_modified'". We need some way of expressing that a monad
+    effects ONLY the TA set, PLUS the fact that what it modifies only depends on 
+    state contained in reads_equiv or affects_equiv -scottb #ta_equiv_sorries  *)
+
+
 
 lemma unit_tainv_reads_respects_f:
   "(\<And>P. m \<lbrace>ignore_ta P\<rbrace>) \<Longrightarrow>
@@ -188,19 +222,23 @@ lemma unit_tainv_reads_respects_f:
   apply (clarsimp simp: reads_equiv_f_def reads_equiv_def affects_equiv_def states_equiv_for_def equiv_for_def
                         equiv_asids_def)
   apply (clarsimp simp: silc_dom_equiv_def equiv_for_def)
-  apply (intro conjI impI allI)
-            apply (meson states_equiv_forE_kheap)
-           apply (meson states_equiv_forE_mem)
-          apply (meson equiv_forD states_equiv_forE)
-         apply (metis (no_types, lifting) fst_conv states_equiv_forE_cdt)
-        apply (meson states_equiv_forE_ekheap)
-       apply (metis (no_types, lifting) fst_conv states_equiv_forE_cdt_list)
-      apply (metis (no_types, lifting) fst_conv states_equiv_forE_is_original_cap)
-     apply (meson states_equiv_forE_interrupt_states)
-    apply (meson states_equiv_forE_interrupt_irq_node)
-   using states_equiv_forE_ready_queues apply blast
-  apply (clarsimp simp: equiv_asids_def states_equiv_for_def)
-  done
+  sorry (* broken by TA equivalence -scottb #ta_equiv_sorries
+  apply (intro conjI impI allI; simp)
+               (* TA stuff  *)
+              apply (meson states_equiv_forE_kheap)
+             apply (meson states_equiv_forE_mem)
+            apply (meson equiv_forD states_equiv_forE)
+           (* TA stuff  *)
+          apply (metis (no_types, lifting) fst_conv states_equiv_forE_cdt)
+         apply (meson states_equiv_forE_ekheap)
+        apply (metis (no_types, lifting) fst_conv states_equiv_forE_cdt_list)
+       apply (metis (no_types, lifting) fst_conv states_equiv_forE_is_original_cap)
+      apply (meson states_equiv_forE_interrupt_states)
+     apply (meson states_equiv_forE_interrupt_irq_node)
+    apply (metis (no_types, lifting) states_equiv_forE_ready_queues)
+   apply (clarsimp simp: equiv_asids_def states_equiv_for_def)
+  (* TA stuff  *)
+  done *)
 
 (* add these touch_object reads_respects facts to simp *)
 lemmas touch_object_reads_respects [simp] = unit_tainv_reads_respects [OF touch_object_tainv]

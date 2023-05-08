@@ -167,7 +167,6 @@ where
   "equiv_machine_state P s s' \<equiv> equiv_for (\<lambda>x. P x) underlying_memory s s'
                               \<and> equiv_for (\<lambda>x. P x) device_state s s'"
 
-
 subsection \<open>ASID equivalence\<close>
 
 definition equiv_asids :: "(asid \<Rightarrow> bool) \<Rightarrow> det_state \<Rightarrow> det_state \<Rightarrow> bool" where
@@ -265,7 +264,8 @@ definition reads_equiv :: "'a PAS \<Rightarrow> det_state \<Rightarrow> det_stat
         cur_domain s = cur_domain s' \<and>
         scheduler_action s = scheduler_action s' \<and>
         work_units_completed s = work_units_completed s' \<and>
-        irq_state (machine_state s) = irq_state (machine_state s')"
+        irq_state (machine_state s) = irq_state (machine_state s') \<and>
+        touched_addresses (machine_state s) = touched_addresses (machine_state s')"
 
 
 (* this is the main equivalence we want to be maintained, since it defines
