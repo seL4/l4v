@@ -906,18 +906,20 @@ definition touched_addrs_inv :: "if_other_state \<Rightarrow> bool" where
   "touched_addrs_inv s \<equiv>
   snd ` touched_addresses s \<subseteq> all_paddrs_of (userPart s) \<union> kernel_shared_precise"
 
-(* FIXME: I haven't yet figured out how to phrase tainvs with partitions, when
-   most of the stuff I have set up is phrased in terms of subject_labels. Maybe
-   I need some kind of translation between these?
-interpretation l2p?: ArchL2Partitioned "TYPE('l partition \<times> 'l partition)" addr_domain id
+interpretation l2p?: ArchL2Partitioned "TYPE('l subject_label \<times> 'l subject_label partition)"
+  "\<lambda>w. case addr_domain w of PSched \<Rightarrow> PSched | Partition l \<Rightarrow> Partition (OrdinaryLabel l)"
+  Partition
   done
 
+(* FIXME: Type errors between subject_label and partition are fixed, but we still need to
+   reconcile the following two forms of touched_addrs_inv. Form 1: *)
 lemma l2p_subset_inv_form:
   "reachable s \<Longrightarrow>
   l2p.ta_subset_inv (current_aag (snd $ fst so)) (snd $ fst s)"
   subgoal sorry
-  done *)
+  done
 
+(* FIXME: Form 2: *)
 lemma subset_inv_proof:
   "reachable s \<Longrightarrow>
   touched_addrs_inv s"
