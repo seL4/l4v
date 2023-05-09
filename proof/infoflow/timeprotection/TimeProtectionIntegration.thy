@@ -16,14 +16,27 @@ type_synonym if_other_state    = "context_and_state \<times> sys_mode"
 
 (* domain-switch monad? *)
 
+(* note the 64 word it takes is a *physical address*. *)
+definition addr_domain where
+  "addr_domain initial_aag pa \<equiv> case pasObjectAbs initial_aag ((inv RISCV64.addrFromKPPtr) pa) of
+     OrdinaryLabel l \<Rightarrow> Partition l"
+
+definition addr_colour where
+  "addr_colour initial_aag pa \<equiv> case pasObjectAbs initial_aag ((inv RISCV64.addrFromKPPtr) pa) of
+     OrdinaryLabel l \<Rightarrow> l"
+
+definition colour_userdomain where
+  "colour_userdomain \<equiv> Partition"
 
 locale integration_setup = 
   Arch +
   time_protection_hardware
     gentypes
-    PSched +
+    PSched
+    _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+    "addr_domain initial_aag" "addr_colour initial_aag" colour_userdomain +
   Noninterference_valid_initial_state _ _ _ _ initial_aag
-  for gentypes :: "('fch \<times> 'fch_cachedness \<times> 'pch \<times> 'pch_cachedness \<times> 'l partition \<times> 'colour) itself"
+  for gentypes :: "('fch \<times> 'fch_cachedness \<times> 'pch \<times> 'pch_cachedness \<times> 'l partition \<times> 'l) itself"
   and initial_aag :: "'l subject_label PAS"
 + fixes time_per_tick :: time
   fixes slice_length_min :: time
@@ -80,12 +93,16 @@ text \<open>current running partition\<close>
 definition userPart where
   "userPart s \<equiv> Partition (partition (pasDomainAbs initial_aag) (internal_state_if s))"
 
-interpretation tphuwr:time_protection_hardware_uwr gentypes PSched 
-  _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ userPart uwr nlds
+interpretation tphuwr:time_protection_hardware_uwr gentypes PSched
+  (* fch_lookup fch_read_impact fch_write_impact empty_fch fch_flush_cycles fch_flush_WCET
+     pch_lookup pch_read_impact pch_write_impact do_pch_flush pch_flush_cycles pch_flush_WCET
+     collides_in_pch read_cycles write_cycles *)
+  _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+  "addr_domain initial_aag" "addr_colour initial_aag" colour_userdomain
+  userPart uwr nlds
   apply unfold_locales
-   apply (simp add: userPart_def)
    apply (clarsimp simp: uwr_def sameFor_def sameFor_scheduler_def domain_fields_equiv_def
-                         partition_def)
+                         partition_def userPart_def)
   using uwr_equiv_rel apply blast
   done
 
@@ -118,13 +135,26 @@ end
    uwr. For now I think this is always true. *)
 definition is_uwr_determined :: "if_other_state \<Rightarrow> bool" where
   "is_uwr_determined os \<equiv> case os of ((tc, s), k) \<Rightarrow> True"
-
 locale integration =
-  ii?:integration_setup _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ gentypes +
+  ii?:integration_setup
+    (* fch_lookup fch_read_impact fch_write_impact empty_fch fch_flush_cycles fch_flush_WCET *)
+    _ _ _ _ _ _
+    (* pch_lookup pch_read_impact pch_write_impact do_pch_flush pch_flush_cycles pch_flush_WCET *)
+    _ _ _ _ _ _
+    (* collides_in_pch read_cycles write_cycles *)
+    _ _ _
+    (* arch_globals_equiv_strengthener det_inv utf s0_internal timer_irq
+       s0 s0_context Invs current_aag *)
+    _ _ _ _ _ _ _ _ _
+    gentypes
+    (* initial_aag time_per_tick slice_length_min timer_delay_max *)
+    _ _ _ _
+    (* vaddr_to_paddr *)
+    "\<lambda>v. case v of VAddr v' \<Rightarrow> (RISCV64.addrFromKPPtr v')" +
   ts?:trace_selector
     "TYPE((if_other_state \<times> ('fch, 'pch) TimeProtection.state) \<times> 'l partition \<times> trace \<times> vpaddr set)"
     "userPart \<circ> fst" ma_uwr PSched "[]" "is_uwr_determined \<circ> fst" "step_is_publicly_determined \<circ> fst" select_trace 
-  for gentypes :: "('fch \<times> 'fch_cachedness \<times> 'pch \<times> 'pch_cachedness \<times> 'l partition \<times> 'colour) itself"
+  for gentypes :: "('fch \<times> 'fch_cachedness \<times> 'pch \<times> 'pch_cachedness \<times> 'l partition \<times> 'l) itself"
   and select_trace and step_is_publicly_determined
   
 begin
@@ -898,21 +928,21 @@ lemma uwr_equates_touched_addresses:
   done
   
 
-
 definition all_paddrs_of :: "'l partition \<Rightarrow> paddr set" where
-  "all_paddrs_of d \<equiv> {a. addr_domain a = d}"
+  "all_paddrs_of d \<equiv> {a. addr_domain initial_aag a = d}"
 
 definition touched_addrs_inv :: "if_other_state \<Rightarrow> bool" where
   "touched_addrs_inv s \<equiv>
   snd ` touched_addresses s \<subseteq> all_paddrs_of (userPart s) \<union> kernel_shared_precise"
 
-interpretation l2p?: ArchL2Partitioned "TYPE('l subject_label \<times> 'l subject_label partition)"
-  "\<lambda>w. case addr_domain w of PSched \<Rightarrow> PSched | Partition l \<Rightarrow> Partition (OrdinaryLabel l)"
-  Partition
+interpretation l2p?: ArchL2Partitioned "TYPE('l subject_label \<times> 'l)"
+  "addr_colour initial_aag"
+  "\<lambda>sl. case sl of OrdinaryLabel l \<Rightarrow> l"
   done
 
-(* FIXME: Type errors between subject_label and partition are fixed, but we still need to
+(* FIXME: Type errors between `'l subject_label` and `'l` are fixed, but we still need to
    reconcile the following two forms of touched_addrs_inv. Form 1: *)
+thm ta_subset_inv_def
 lemma l2p_subset_inv_form:
   "reachable s \<Longrightarrow>
   l2p.ta_subset_inv (current_aag (snd $ fst so)) (snd $ fst s)"
@@ -1013,8 +1043,9 @@ lemma dirty_step_ta_equiv:
 
 interpretation ma?:time_protection_system PSched fch_lookup fch_read_impact fch_write_impact
   empty_fch fch_flush_cycles fch_flush_WCET pch_lookup pch_read_impact pch_write_impact do_pch_flush
-  pch_flush_cycles pch_flush_WCET collides_in_pch read_cycles write_cycles addr_domain addr_colour
-  colour_userdomain userPart uwr nlds select_trace
+  pch_flush_cycles pch_flush_WCET collides_in_pch read_cycles write_cycles
+  "addr_domain initial_aag" "addr_colour initial_aag" colour_userdomain
+  userPart uwr nlds select_trace
   "big_step_ADT_A_if utf" s0 "policyFlows (pasPolicy initial_aag)"
   _ _ is_uwr_determined touched_addresses _ _ _ will_domain_switch _ _ _ get_next_domain
   fourways_oldclean fourways_dirty fourways_gadget fourways_newclean
