@@ -896,8 +896,6 @@ lemma uwr_equates_touched_addresses:
   apply clarsimp
   apply (clarsimp simp: ii.touched_addresses_def touched_vaddrs_def)
   done
-  
-
 
 definition all_paddrs_of :: "'l partition \<Rightarrow> paddr set" where
   "all_paddrs_of d \<equiv> {a. addr_domain a = d}"
@@ -918,10 +916,19 @@ lemma l2p_subset_inv_form:
   subgoal sorry
   done *)
 
-lemma subset_inv_proof:
+
+lemma subset_inv_proof_aux:
   "reachable s \<Longrightarrow>
   touched_addrs_inv s"
   sorry (* FIXME: needs to be somehow derived from l2-_subset_inv or something *)
+
+lemma subset_inv_proof:
+  "reachable s \<Longrightarrow>
+   snd ` ii.touched_addresses s \<subseteq> {a. addr_domain a = userPart s}
+            \<union> kernel_shared_precise"
+  using all_paddrs_of_def subset_inv_proof_aux touched_addrs_inv_def
+  apply blast
+  done
 
 (* I don't think this should be too bad. Can do this with hoare logic stuff I think. *)
 lemma domainswitch_follows_get_next_domain:
@@ -987,7 +994,6 @@ lemma uwr_and_normal_step_gives_ta_equiv:
   apply (rule sym, rule uwr_equates_touched_addresses, assumption)
   done
 
-
 lemma uwr_determined_steps_ta_equiv:
   "\<lbrakk>reachable s; reachable t;
     uwr2 s PSched t;
@@ -1003,67 +1009,86 @@ lemma uwr_determined_steps_ta_equiv:
   sorry
 
 lemma dirty_step_ta_equiv:
-  "\<lbrakk>uwr2 s PSched t; (s, s') \<in> fourways_dirty; (t, t') \<in> fourways_dirty\<rbrakk> \<Longrightarrow>
+  "\<lbrakk>ii.touched_addresses t = ii.touched_addresses s;
+  (s, s') \<in> fourways_dirty;
+  (t, t') \<in> fourways_dirty\<rbrakk> \<Longrightarrow>
   ii.touched_addresses t' = ii.touched_addresses s'"
   apply (clarsimp simp: fourways_dirty_def)
+  done
+
+lemma fourways_properties:
+  "\<lbrakk>(s1, s5) \<in> ni.Step (); reachable s1;
+        will_domain_switch s1; (s1, s2) \<in> fourways_oldclean;
+        (s2, s3) \<in> fourways_dirty; (s3, s4) \<in> fourways_gadget;
+        (s4, s5) \<in> fourways_newclean\<rbrakk>
+       \<Longrightarrow> is_uwr_determined s1 \<and>
+           snd ` ii.touched_addresses s2
+           \<subseteq> {a. addr_domain a = userPart s2} \<union>
+              kernel_shared_precise \<and>
+           step_is_publicly_determined s2 \<and>
+           ii.touched_addresses s3
+           \<subseteq> {(v, p) |v p.
+               p \<in> {a. addr_domain a = userPart s} \<union>
+                    {a. addr_domain a = get_next_domain s} \<union>
+                    kernel_shared_precise} \<and>
+           step_is_only_timeprotection_gadget s3 s4 \<and>
+           is_uwr_determined s4"
+  apply (intro conjI)
   sorry
-    
+
+
+method try_solve_all methods m = all \<open>(m; fail)?\<close>
 
 interpretation ma?:time_protection_system PSched fch_lookup fch_read_impact fch_write_impact
   empty_fch fch_flush_cycles fch_flush_WCET pch_lookup pch_read_impact pch_write_impact do_pch_flush
   pch_flush_cycles pch_flush_WCET collides_in_pch read_cycles write_cycles addr_domain addr_colour
   colour_userdomain userPart uwr nlds select_trace
   "big_step_ADT_A_if utf" s0 "policyFlows (pasPolicy initial_aag)"
-  _ _ is_uwr_determined touched_addresses _ _ _ will_domain_switch _ _ _ get_next_domain
+  _ _ is_uwr_determined touched_addresses all_paddrs_of
+  "\<lambda>s. snd ` touched_addresses s \<subseteq> all_paddrs_of (userPart s) \<union> kernel_shared_precise"
+  "\<lambda>u u' s. touched_addresses s \<subseteq> {(v, p) |v p.
+                           p \<in> all_paddrs_of u \<union> all_paddrs_of u' \<union> kernel_shared_precise}"
+  will_domain_switch _ _ _ get_next_domain
   fourways_oldclean fourways_dirty fourways_gadget fourways_newclean
   
+  (* separate the locale instantiation obligations from definitions, and
+     dispatch the definition subgoals. *)
+  apply (try_solve_all \<open>simp add: all_paddrs_of_def\<close>)
+  
+  (* now we prove the locale assumptions *)
   apply unfold_locales
-                   (* external uwr is equivalence *)
-                   apply (rule uwr_equiv_rel)                
-                  (* external uwr (sched) equalises curdomain *)
-                  apply (erule external_uwr_same_domain)
-                 (* the policy allows flows from the scheduler to everybody *)
-                 apply (rule schedFlowsToAll)
-                (* only the scheduler can flow to the scheduler *)
-                apply (erule schedNotGlobalChannel)
-               (* external uwr (sched) equalises curdomain (again...) *)
-               apply (erule external_uwr_same_domain [OF uwr_sym])
-              (* will_domain_switch_public *)
-              apply (erule will_domain_switch_from_uwr)
-             (* next_latest_domainswitch_in_future *)
-             apply (rule nlds_in_future)
-            (* next_latest_domainswitch_flatsteps *)
-            apply (erule(1) nlds_flatsteps)
-           (* get_next_domain_public *)
-           apply (erule get_next_domain_public)
-          (* touched addresses inv *)
-          using subset_inv_proof touched_addrs_inv_def all_paddrs_of_def apply clarsimp
-         (* simple_steps *)
-         apply (erule simple_steps)
-        (* step_is_uwr_determimed for particular steps tells us that the
-           output touchedaddresses depend only on uwr *)
-        apply (rule uwr_determined_steps_ta_equiv; assumption)
-      
-
-         (* middle state stuff *)
-         subgoal sorry
-         subgoal sorry
-         subgoal sorry
-         subgoal sorry
-      (* step_is_uwr_determined gives us (ta t = ta t') *)
-      subgoal sorry
-     (* step_is_publicly determined gives us (ta t = ta t') *)
-     subgoal sorry
-    (* a version of touched_addresses_inv for all reachable states *)
-    subgoal sorry
-   (* every step is either domain_switch with properties, or not, with other properties *)
-   subgoal sorry
-  (* middle state stuff about dirty touched invs. *)
-  subgoal sorry
- (* artifacts from "defines" *)
- (* TODO: is there a better way to do this?
-    seems like "defines" is just an alias for "assumes" and means we have to
-    do all this extra bookkeeping. *)
+                (* external uwr is equivalence *)
+                apply (rule uwr_equiv_rel)                
+               (* external uwr (sched) equalises curdomain *)
+               apply (erule external_uwr_same_domain)
+              (* the policy allows flows from the scheduler to everybody *)
+              apply (rule schedFlowsToAll)
+             (* only the scheduler can flow to the scheduler *)
+             apply (erule schedNotGlobalChannel)
+            (* external uwr (sched) equalises curdomain (again...) *)
+            apply (erule external_uwr_same_domain [OF uwr_sym])
+           (* will_domain_switch_public *)
+           apply (erule will_domain_switch_from_uwr)
+          (* next_latest_domainswitch_in_future *)
+          apply (rule nlds_in_future)
+         (* next_latest_domainswitch_flatsteps *)
+         apply (erule nlds_flatsteps; assumption)
+        (* get_next_domain_public *)
+        apply (erule get_next_domain_public)
+       (* touched addresses inv *)
+       apply (erule subset_inv_proof; assumption)
+      (* simple_steps *)
+      apply (erule simple_steps)
+     (* step_is_uwr_determimed for particular steps tells us that the
+        output touchedaddresses depend only on uwr *)
+     apply (rule uwr_determined_steps_ta_equiv; assumption)
+    (* dirty step TA equivalence *)
+    apply (erule dirty_step_ta_equiv; assumption)
+   (* can_split_four_ways *)
+   apply (rule domainswitch_splits_four_ways)
+  (* fourways_properties - facts about various states
+     within the fourways transitions *)
+  apply (erule fourways_properties; assumption)
   done
 end
 
