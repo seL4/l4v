@@ -128,7 +128,8 @@ isPagePTE (PagePTE {}) = True
 isPagePTE _ = False
 
 getPPtrFromPTE :: PTE -> PPtr PTE
-getPPtrFromPTE pte = ptrFromPAddr $ pteBaseAddress pte
+getPPtrFromPTE pte =
+    ptrFromPAddr (if isPagePTE pte then pteBaseAddress pte else ptePPN pte `shiftL` pageBits)
 
 -- how many bits there are left to be translated at a given level (0 = bottom
 -- level). This counts the bits being translated by the levels below the current one, so
@@ -614,7 +615,7 @@ decodeARMPageTableInvocationMap cte cap vptr attr vspaceCap = do
     oldPTE <- withoutFailure $ getObject slot
     when (bitsLeft == pageBits || oldPTE /= InvalidPTE) $ throw DeleteFirst
     let pte = PageTablePTE {
-            pteBaseAddress = addrFromPPtr (capPTBasePtr cap) }
+            ptePPN = addrFromPPtr (capPTBasePtr cap) `shiftR` pageBits }
     let vptr = vptr .&. complement (mask bitsLeft)
     return $ InvokePageTable $ PageTableMap {
         ptMapCap = ArchObjectCap $ cap { capPTMappedAddress = Just (asid, vptr) },
