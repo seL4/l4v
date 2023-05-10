@@ -954,6 +954,22 @@ lemma ta_vaddr_to_paddr:
   apply clarsimp
   by (metis vaddr.exhaust vaddr.inject)
 
+lemma addrFromKPPtr_inj:
+  "inj addrFromKPPtr"
+  unfolding addrFromKPPtr_def
+  by force
+
+lemma addrFromKPPtr_surj:
+  "surj addrFromKPPtr"
+  unfolding addrFromKPPtr_def
+  by force
+
+lemma addrFromKPPtr_bij:
+  "bijection addrFromKPPtr"
+  unfolding bijection_def bij_def
+  using addrFromKPPtr_inj addrFromKPPtr_surj
+  by blast
+
 (* FIXME: Finish proving correspondence between "invariant lemmas" and "locale" form
    of the ta subset invariant. *)
 lemma accessible_vaddr_to_paddr:
@@ -962,7 +978,6 @@ lemma accessible_vaddr_to_paddr:
   unfolding all_paddrs_of_def kernel_shared_precise_def
   unfolding addr_domain_def
   apply(clarsimp simp:userPart_def)
-  apply(clarsimp split:subject_label.splits)
   apply(rule set_eqI)
   apply clarsimp
   apply(clarsimp simp:image_def)
@@ -971,11 +986,34 @@ lemma accessible_vaddr_to_paddr:
   apply(rule iffI)
    (* Case: vaddr version of accessibility implies paddr one *)
    apply(erule disjE)
+    apply(clarsimp split:subject_label.splits)
+    (* XXX: Well all this is useless, makes no difference to the proof state.
+    using inj_transfer[OF addrFromKPPtr_inj]
+    apply -
+    apply(erule_tac x="\<lambda>x. pasObjectAbs initial_aag (inv addrFromKPPtr x) =
+          OrdinaryLabel (partition_if s)" in meta_allE)
+    apply(erule_tac x=x in meta_allE)
     apply clarsimp
+    *)
     defer
+   apply(clarsimp split:subject_label.splits)
    defer
   (* Case: paddr version of accessibility implies vaddr one *)
+  apply(clarsimp split:subject_label.splits)
+  apply(clarsimp simp:partition_def)
+  using domains_distinct
+  unfolding pas_domains_distinct_def
+  apply(erule_tac x="cur_domain (internal_state_if s)" in allE)
   apply clarsimp
+  using addrFromKPPtr_inj
+  apply clarsimp
+  apply(erule disjE)
+   apply clarsimp
+   apply(metis label_of.simps)
+  apply(erule disjE)
+   (* XXX: Uh oh. There is a mismatch if one is talking about *accessible* labels, and the other
+      is talking about *just my* labels. I think this is where we need a formal statement about
+      whether we're talking about a separation kernel policy or not. -robs *)
   sorry
 
 thm ta_subset_inv_def touched_addrs_inv_def
