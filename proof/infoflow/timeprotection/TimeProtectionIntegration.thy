@@ -16,6 +16,8 @@ type_synonym if_other_state    = "context_and_state \<times> sys_mode"
 
 (* domain-switch monad? *)
 
+
+
 (* note the 64 word it takes is a *physical address*. *)
 definition addr_domain where
   "addr_domain initial_aag pa \<equiv> case pasObjectAbs initial_aag ((inv RISCV64.addrFromKPPtr) pa) of
@@ -1033,7 +1035,6 @@ lemma ta_subset_inv_reachable:
   subgoal sorry
   done
 
-
 lemma subset_inv_proof_aux:
   "reachable s \<Longrightarrow>
   touched_addrs_inv s"
@@ -1042,19 +1043,11 @@ lemma subset_inv_proof_aux:
 
 lemma subset_inv_proof:
   "reachable s \<Longrightarrow>
-   snd ` ii.touched_addresses s \<subseteq> {a. addr_domain a = userPart s}
-            \<union> kernel_shared_precise"
+         snd ` ii.touched_addresses s
+         \<subseteq> {a. addr_domain initial_aag a = userPart s} \<union>
+            kernel_shared_precise"
   using all_paddrs_of_def subset_inv_proof_aux touched_addrs_inv_def
-  apply blast
-  done
-
-lemma subset_inv_proof:
-  "reachable s \<Longrightarrow>
-   snd ` ii.touched_addresses s \<subseteq> {a. addr_domain a = userPart s}
-            \<union> kernel_shared_precise"
-  using all_paddrs_of_def subset_inv_proof_aux touched_addrs_inv_def
-  apply blast
-  done
+  by blast
 
 (* I don't think this should be too bad. Can do this with hoare logic stuff I think. *)
 lemma domainswitch_follows_get_next_domain:
@@ -1149,13 +1142,15 @@ lemma fourways_properties:
         (s4, s5) \<in> fourways_newclean\<rbrakk>
        \<Longrightarrow> is_uwr_determined s1 \<and>
            snd ` ii.touched_addresses s2
-           \<subseteq> {a. addr_domain a = userPart s2} \<union>
+           \<subseteq> {a. addr_domain initial_aag a = userPart s2} \<union>
               kernel_shared_precise \<and>
            step_is_publicly_determined s2 \<and>
            ii.touched_addresses s3
            \<subseteq> {(v, p) |v p.
-               p \<in> {a. addr_domain a = userPart s} \<union>
-                    {a. addr_domain a = get_next_domain s} \<union>
+               p \<in> {a. addr_domain initial_aag a =
+                        userPart s} \<union>
+                    {a. addr_domain initial_aag a =
+                        get_next_domain s} \<union>
                     kernel_shared_precise} \<and>
            step_is_only_timeprotection_gadget s3 s4 \<and>
            is_uwr_determined s4"
