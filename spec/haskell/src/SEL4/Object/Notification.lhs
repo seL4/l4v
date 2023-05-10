@@ -46,6 +46,7 @@ This function performs an signal operation, given a capability to a notification
 
 Fetch the notification object object, and select the operation based on its state.
 
+>         touchObject ntfnPtr
 >         nTFN <- getNotification ntfnPtr
 >         case (ntfnObj nTFN, ntfnBoundTCB nTFN) of
 
@@ -53,6 +54,7 @@ If the notification object is idle, store the badge and the value, and then
 mark the notification object as active.
 
 >             (IdleNtfn, Just tcb) -> do
+>                     touchObject tcb
 >                     state <- getThreadState tcb
 >                     if (receiveBlocked state)
 >                       then do
@@ -98,6 +100,7 @@ This function performs an receive signal operation, given a thread pointer and a
 Fetch the notification object, and select the operation based on its state.
 
 >         let ntfnPtr = capNtfnPtr cap
+>         touchObject ntfnPtr
 >         ntfn <- getNotification ntfnPtr
 >         case ntfnObj ntfn of
 
@@ -131,6 +134,7 @@ If a notification object is deleted, then pending receive operations must be can
 
 > cancelAllSignals :: PPtr Notification -> Kernel ()
 > cancelAllSignals ntfnPtr = do
+>         touchObject ntfnPtr
 >         ntfn <- getNotification ntfnPtr
 >         case ntfnObj ntfn of
 >             WaitingNtfn queue -> do
@@ -145,6 +149,7 @@ The following function will remove the given thread from the queue of the notifi
 
 > cancelSignal :: PPtr TCB -> PPtr Notification -> Kernel ()
 > cancelSignal threadPtr ntfnPtr = do
+>         touchObject ntfnPtr
 >         ntfn <- getNotification ntfnPtr
 >         assert (isWaiting (ntfnObj ntfn))
 >             "cancelSignal: notification object must be waiting"
@@ -161,6 +166,7 @@ The following function will remove the given thread from the queue of the notifi
 
 > completeSignal :: PPtr Notification -> PPtr TCB -> Kernel ()
 > completeSignal ntfnPtr tcb = do
+>         touchObject ntfnPtr
 >         ntfn <- getNotification ntfnPtr
 >         case ntfnObj ntfn of
 >             ActiveNtfn badge -> do
@@ -185,6 +191,7 @@ The following functions are specialisations of the "getObject" and "setObject" f
 > bindNotification :: PPtr TCB -> PPtr Notification -> Kernel ()
 > bindNotification tcb ntfnPtr = do
 >     -- set the bound tcb inside the ntfn
+>     touchObject ntfnPtr
 >     ntfn <- getNotification ntfnPtr
 >     setNotification ntfnPtr $ ntfn { ntfnBoundTCB = Just tcb }
 >     -- set the bound ntfn inside the thread
@@ -198,15 +205,18 @@ The following functions are specialisations of the "getObject" and "setObject" f
 
 > unbindNotification :: PPtr TCB -> Kernel ()
 > unbindNotification tcb = do
+>     touchObject tcb
 >     ntfnPtr <- getBoundNotification tcb
 >     case ntfnPtr of
 >         Just ntfnPtr' -> do
+>              touchObject ntfnPtr'
 >              ntfn <- getNotification ntfnPtr'
 >              doUnbindNotification ntfnPtr' ntfn tcb
 >         Nothing -> return ()
 
 > unbindMaybeNotification :: PPtr Notification -> Kernel ()
 > unbindMaybeNotification ntfnPtr = do
+>     touchObject ntfnPtr
 >     ntfn <- getNotification ntfnPtr
 >     case ntfnBoundTCB ntfn of
 >         Just t -> doUnbindNotification ntfnPtr ntfn t

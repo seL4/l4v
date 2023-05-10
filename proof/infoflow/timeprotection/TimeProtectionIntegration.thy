@@ -16,14 +16,32 @@ type_synonym if_other_state    = "context_and_state \<times> sys_mode"
 
 (* domain-switch monad? *)
 
+(* note the 64 word it takes is a *physical address*. *)
+definition addr_domain where
+  "addr_domain initial_aag pa \<equiv> case pasObjectAbs initial_aag ((inv RISCV64.addrFromKPPtr) pa) of
+     OrdinaryLabel l \<Rightarrow> Partition l | SilcLabel \<Rightarrow> PSched"
+
+(* FIXME: addr_colour shouldn't even actually be consulting the policy.
+   Instead we should specify an address-to-colour assignment and prove that it lines up with
+   the policy. Case in point: We'll never know what the colour will be simply from knowing
+   we're talking about a SilcLabel! We can only know it from the addr-to-colour assignment,
+   which is what this parameter is supposed to be! -robs *)
+definition addr_colour where
+  "addr_colour initial_aag pa \<equiv> case pasObjectAbs initial_aag ((inv RISCV64.addrFromKPPtr) pa) of
+     OrdinaryLabel l \<Rightarrow> l | SilcLabel \<Rightarrow> undefined"
+
+definition colour_userdomain where
+  "colour_userdomain \<equiv> Partition"
 
 locale integration_setup = 
   Arch +
   time_protection_hardware
     gentypes
-    PSched +
+    PSched
+    _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+    "addr_domain initial_aag" "addr_colour initial_aag" colour_userdomain +
   Noninterference_valid_initial_state _ _ _ _ initial_aag
-  for gentypes :: "('fch \<times> 'fch_cachedness \<times> 'pch \<times> 'pch_cachedness \<times> 'l partition \<times> 'colour) itself"
+  for gentypes :: "('fch \<times> 'fch_cachedness \<times> 'pch \<times> 'pch_cachedness \<times> 'l partition \<times> 'l) itself"
   and initial_aag :: "'l subject_label PAS"
 + fixes time_per_tick :: time
   fixes slice_length_min :: time
@@ -80,12 +98,16 @@ text \<open>current running partition\<close>
 definition userPart where
   "userPart s \<equiv> Partition (partition (pasDomainAbs initial_aag) (internal_state_if s))"
 
-interpretation tphuwr:time_protection_hardware_uwr gentypes PSched 
-  _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ userPart uwr nlds
+interpretation tphuwr:time_protection_hardware_uwr gentypes PSched
+  (* fch_lookup fch_read_impact fch_write_impact empty_fch fch_flush_cycles fch_flush_WCET
+     pch_lookup pch_read_impact pch_write_impact do_pch_flush pch_flush_cycles pch_flush_WCET
+     collides_in_pch read_cycles write_cycles *)
+  _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+  "addr_domain initial_aag" "addr_colour initial_aag" colour_userdomain
+  userPart uwr nlds
   apply unfold_locales
-   apply (simp add: userPart_def)
    apply (clarsimp simp: uwr_def sameFor_def sameFor_scheduler_def domain_fields_equiv_def
-                         partition_def)
+                         partition_def userPart_def)
   using uwr_equiv_rel apply blast
   done
 
@@ -118,13 +140,26 @@ end
    uwr. For now I think this is always true. *)
 definition is_uwr_determined :: "if_other_state \<Rightarrow> bool" where
   "is_uwr_determined os \<equiv> case os of ((tc, s), k) \<Rightarrow> True"
-
 locale integration =
-  ii?:integration_setup _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ gentypes +
+  ii?:integration_setup
+    (* fch_lookup fch_read_impact fch_write_impact empty_fch fch_flush_cycles fch_flush_WCET *)
+    _ _ _ _ _ _
+    (* pch_lookup pch_read_impact pch_write_impact do_pch_flush pch_flush_cycles pch_flush_WCET *)
+    _ _ _ _ _ _
+    (* collides_in_pch read_cycles write_cycles *)
+    _ _ _
+    (* arch_globals_equiv_strengthener det_inv utf s0_internal timer_irq
+       s0 s0_context Invs current_aag *)
+    _ _ _ _ _ _ _ _ _
+    gentypes
+    (* initial_aag time_per_tick slice_length_min timer_delay_max *)
+    _ _ _ _
+    (* vaddr_to_paddr *)
+    "\<lambda>v. case v of VAddr v' \<Rightarrow> (RISCV64.addrFromKPPtr v')" +
   ts?:trace_selector
     "TYPE((if_other_state \<times> ('fch, 'pch) TimeProtection.state) \<times> 'l partition \<times> trace \<times> vpaddr set)"
     "userPart \<circ> fst" ma_uwr PSched "[]" "is_uwr_determined \<circ> fst" "step_is_publicly_determined \<circ> fst" select_trace 
-  for gentypes :: "('fch \<times> 'fch_cachedness \<times> 'pch \<times> 'pch_cachedness \<times> 'l partition \<times> 'colour) itself"
+  for gentypes :: "('fch \<times> 'fch_cachedness \<times> 'pch \<times> 'pch_cachedness \<times> 'l partition \<times> 'l) itself"
   and select_trace and step_is_publicly_determined
   
 begin
@@ -898,29 +933,120 @@ lemma uwr_equates_touched_addresses:
   done
 
 definition all_paddrs_of :: "'l partition \<Rightarrow> paddr set" where
-  "all_paddrs_of d \<equiv> {a. addr_domain a = d}"
+  "all_paddrs_of d \<equiv> {a. addr_domain initial_aag a = d}"
 
 definition touched_addrs_inv :: "if_other_state \<Rightarrow> bool" where
   "touched_addrs_inv s \<equiv>
   snd ` touched_addresses s \<subseteq> all_paddrs_of (userPart s) \<union> kernel_shared_precise"
 
-(* FIXME: I haven't yet figured out how to phrase tainvs with partitions, when
-   most of the stuff I have set up is phrased in terms of subject_labels. Maybe
-   I need some kind of translation between these?
-interpretation l2p?: ArchL2Partitioned "TYPE('l partition \<times> 'l partition)" addr_domain id
+interpretation l2p?: ArchL2Partitioned "TYPE('l subject_label \<times> 'l)"
+  "addr_colour initial_aag"
+  "\<lambda>sl. case sl of OrdinaryLabel l \<Rightarrow> l"
   done
 
-lemma l2p_subset_inv_form:
+lemma ta_vaddr_to_paddr:
+  "snd ` ii.touched_addresses s =
+   addrFromKPPtr ` machine_state.touched_addresses (machine_state (snd $ fst s))"
+  unfolding touched_addresses_def touched_vaddrs_def image_def
+  apply(clarsimp split:vaddr.splits)
+  apply(rule set_eqI)
+  apply clarsimp
+  by (metis vaddr.exhaust vaddr.inject)
+
+lemma addrFromKPPtr_inj:
+  "inj addrFromKPPtr"
+  unfolding addrFromKPPtr_def
+  by force
+
+lemma addrFromKPPtr_surj:
+  "surj addrFromKPPtr"
+  unfolding addrFromKPPtr_def
+  by force
+
+lemma addrFromKPPtr_bij:
+  "bijection addrFromKPPtr"
+  unfolding bijection_def bij_def
+  using addrFromKPPtr_inj addrFromKPPtr_surj
+  by blast
+
+(* FIXME: Finish proving correspondence between "invariant lemmas" and "locale" form
+   of the ta subset invariant. *)
+lemma accessible_vaddr_to_paddr:
+  "all_paddrs_of (userPart s) \<union> kernel_shared_precise =
+   addrFromKPPtr ` pas_addrs_accessible_to initial_aag (cur_label initial_aag (snd $ fst s))"
+  unfolding all_paddrs_of_def kernel_shared_precise_def
+  unfolding addr_domain_def
+  apply(clarsimp simp:userPart_def)
+  apply(rule set_eqI)
+  apply clarsimp
+  apply(clarsimp simp:image_def)
+  unfolding pas_addrs_accessible_to_def pas_labels_accessible_to_def
+  apply clarsimp
+  apply(rule iffI)
+   (* Case: vaddr version of accessibility implies paddr one *)
+   apply(erule disjE)
+    apply(clarsimp split:subject_label.splits)
+    (* XXX: Well all this is useless, makes no difference to the proof state.
+    using inj_transfer[OF addrFromKPPtr_inj]
+    apply -
+    apply(erule_tac x="\<lambda>x. pasObjectAbs initial_aag (inv addrFromKPPtr x) =
+          OrdinaryLabel (partition_if s)" in meta_allE)
+    apply(erule_tac x=x in meta_allE)
+    apply clarsimp
+    *)
+    defer
+   apply(clarsimp split:subject_label.splits)
+   defer
+  (* Case: paddr version of accessibility implies vaddr one *)
+  apply(clarsimp split:subject_label.splits)
+  apply(clarsimp simp:partition_def)
+  using domains_distinct
+  unfolding pas_domains_distinct_def
+  apply(erule_tac x="cur_domain (internal_state_if s)" in allE)
+  apply clarsimp
+  using addrFromKPPtr_inj
+  apply clarsimp
+  apply(erule disjE)
+   apply clarsimp
+   apply(metis label_of.simps)
+  apply(erule disjE)
+   (* XXX: Uh oh. There is a mismatch if one is talking about *accessible* labels, and the other
+      is talking about *just my* labels. I think this is where we need a formal statement about
+      whether we're talking about a separation kernel policy or not. -robs *)
+  sorry
+
+thm ta_subset_inv_def touched_addrs_inv_def
+lemma ta_subset_inv_to_locale_form:
+  "l2p.ta_subset_inv initial_aag (snd $ fst s) \<Longrightarrow>
+  touched_addrs_inv s"
+  unfolding touched_addrs_inv_def
+  unfolding ta_subset_inv_def
+  apply(clarsimp simp: ta_vaddr_to_paddr accessible_vaddr_to_paddr)
+  apply(clarsimp simp:image_def)
+  by blast
+
+thm ta_subset_inv_def
+lemma ta_subset_inv_reachable:
+  (* According to Scott, initial_aag should be fine here rather than `current_aag (snd $ fst s0)` *)
   "reachable s \<Longrightarrow>
-  l2p.ta_subset_inv (current_aag (snd $ fst so)) (snd $ fst s)"
+  l2p.ta_subset_inv initial_aag (snd $ fst s)"
   subgoal sorry
-  done *)
+  done
 
 
 lemma subset_inv_proof_aux:
   "reachable s \<Longrightarrow>
   touched_addrs_inv s"
-  sorry (* FIXME: needs to be somehow derived from l2-_subset_inv or something *)
+  using ta_subset_inv_reachable ta_subset_inv_to_locale_form
+  by blast
+
+lemma subset_inv_proof:
+  "reachable s \<Longrightarrow>
+   snd ` ii.touched_addresses s \<subseteq> {a. addr_domain a = userPart s}
+            \<union> kernel_shared_precise"
+  using all_paddrs_of_def subset_inv_proof_aux touched_addrs_inv_def
+  apply blast
+  done
 
 lemma subset_inv_proof:
   "reachable s \<Longrightarrow>
@@ -1041,8 +1167,9 @@ method try_solve_all methods m = all \<open>(m; fail)?\<close>
 
 interpretation ma?:time_protection_system PSched fch_lookup fch_read_impact fch_write_impact
   empty_fch fch_flush_cycles fch_flush_WCET pch_lookup pch_read_impact pch_write_impact do_pch_flush
-  pch_flush_cycles pch_flush_WCET collides_in_pch read_cycles write_cycles addr_domain addr_colour
-  colour_userdomain userPart uwr nlds select_trace
+  pch_flush_cycles pch_flush_WCET collides_in_pch read_cycles write_cycles
+  "addr_domain initial_aag" "addr_colour initial_aag" colour_userdomain
+  userPart uwr nlds select_trace
   "big_step_ADT_A_if utf" s0 "policyFlows (pasPolicy initial_aag)"
   _ _ is_uwr_determined touched_addresses all_paddrs_of
   "\<lambda>s. snd ` touched_addresses s \<subseteq> all_paddrs_of (userPart s) \<union> kernel_shared_precise"

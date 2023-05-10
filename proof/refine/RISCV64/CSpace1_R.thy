@@ -254,11 +254,22 @@ lemma pspace_relation_ctes_ofI:
   apply (simp add: cte_wp_at_ctes_of)
   done
 
+(* New lemmas. -robs *)
+lemma get_cap_success:
+  fixes s cap ptr offset
+  defines "s' \<equiv> s\<lparr>kheap := [ptr \<mapsto> CNode (length offset) (\<lambda>x. if length x = length offset then Some cap else None)],
+    machine_state := ta_obj_upd ptr (CNode (length offset)
+      (\<lambda>x. if length x = length offset then Some cap else None)) (machine_state s) \<rparr>"
+  shows "(cap, s') \<in> fst (get_cap True (ptr, offset) s')"
+  by (simp add: get_cap_def get_object_def obind_def ta_filter_def
+                in_monad s'_def well_formed_cnode_n_def length_set_helper dom_def
+           split: Structures_A.kernel_object.splits)
+
 lemma get_cap_corres_P:
   "corres (\<lambda>x y. cap_relation x (cteCap y) \<and> P x)
-          (cte_wp_at P cslot_ptr)
+          (cte_wp_at P cslot_ptr and obj_in_ta2 (fst cslot_ptr))
           (pspace_aligned' and pspace_distinct')
-          (get_cap cslot_ptr) (getCTE (cte_map cslot_ptr))"
+          (get_cap True cslot_ptr) (getCTE (cte_map cslot_ptr))"
   apply (rule corres_stronger_no_failI)
    apply (rule no_fail_pre, wp)
    apply clarsimp
@@ -268,15 +279,21 @@ lemma get_cap_corres_P:
    apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (cases cslot_ptr)
   apply (rename_tac oref cref)
+  apply clarsimp
   apply (clarsimp simp: cte_wp_at_def)
   apply (frule in_inv_by_hoareD[OF getCTE_inv])
   apply (drule use_valid [where P="\<top>", OF _ getCTE_sp TrueI])
   apply (clarsimp simp: state_relation_def)
-  apply (drule pspace_relation_ctes_ofI)
+  apply (frule pspace_relation_ctes_ofI)
      apply (simp add: cte_wp_at_def)
     apply assumption+
   apply (clarsimp simp: cte_wp_at_ctes_of)
-  done
+  apply(clarsimp simp: obj_in_ta2_def)
+  apply(rename_tac oref cref a b aa cap ko v')
+  apply(rule_tac x="(cap, a)" in bexI)
+   apply clarsimp
+  sorry (* FIXME: broken by touched-addrs -robs
+    A lemma relating get_cap True with get_cap False would be really handy here. *)
 
 lemmas get_cap_corres = get_cap_corres_P[where P="\<top>", simplified]
 
@@ -316,9 +333,9 @@ lemma getCTE_wp':
 lemma getSlotCap_corres:
   "cte_ptr' = cte_map cte_ptr \<Longrightarrow>
    corres cap_relation
-     (cte_at cte_ptr)
-     (pspace_distinct' and pspace_aligned')
-     (get_cap cte_ptr)
+     (cte_at cte_ptr and obj_in_ta2 (fst cte_ptr))
+     (pspace_distinct' and pspace_aligned' and obj_in_ta2' (fst cte_ptr))
+     (get_cap True cte_ptr)
      (getSlotCap cte_ptr')"
   apply (simp add: getSlotCap_def)
   apply (subst bind_return [symmetric])
@@ -523,6 +540,245 @@ lemma cap_table_at_gsCNodes:
   apply blast
   done
 
+thm obj_relation_cuts_def
+thm obj_relation_cuts_def2
+lemma touchObj_corres_CTE:
+  (* XXX: Don't forget to check if the latest version of ASpec's resolve_address_bits
+     is even touching the CNode as opposed to the individual CTE!
+     Or if it is touching the CNode, should it be? Maybe it *should* be touching the CTE. *)
+  "corres (=) (obj_at is_CNode ptr)
+     (obj_at' (\<lambda>ko'. koTypeOf (injectKO ko') = CTET) (cte_map (ptr, offset)))
+     (touch_object ptr) (touchObj (cte_map (ptr, offset)))"
+  apply(simp add: touchObj_def touch_object_def2)
+  apply(rule corres_split')
+     apply(rule corres_stronger_no_failI)
+      apply(rule no_fail_pre, wp)
+      apply(rule TrueI)
+     apply(clarsimp simp:simpler_gets_def)
+     apply(rename_tac s s')
+     apply(rule_tac x="(kheap s, s)" in bexI)
+      apply simp (* XXX: Dummy out r as \<top>\<top> *)
+     apply(force simp:simpler_gets_def)
+    apply clarsimp
+    apply(rule corres_split')
+       apply(rule corres_underlyingI)
+        apply(clarsimp simp:in_assert)
+        apply(rename_tac kh kh' s s' ko)
+        apply(rule_tac x="((), s)" in bexI)
+         apply(clarsimp split:prod.splits)
+         apply simp (* XXX: Dummy out r as \<top>\<top> *)
+        (* XXX: Is there a better way to pass these through than forcing ?Q and ?Q'? *)
+        apply(subgoal_tac "obj_at is_CNode ptr s \<and> kh = kheap s")
+         prefer 2
+         apply assumption
+        apply(subgoal_tac "obj_at' (\<lambda>ko'. koTypeOf (injectKO ko') = CTET) (cte_map (ptr, offset)) s' \<and> kh' = ksPSpace s'")
+         prefer 2
+         apply assumption
+        apply(clarsimp simp:in_assert return_def obj_at_def)
+       apply(clarsimp simp:in_assert return_def obj_at'_def)
+      prefer 4
+      apply(wpsimp simp:obj_at_def return_def)
+     prefer 4
+     apply(wpsimp simp:obj_at'_def return_def)
+     apply blast
+    apply clarsimp
+    apply(rule corres_underlyingI)
+     apply clarsimp
+     apply(clarsimp simp:simpler_doMachineOp_addTouchedAddresses_def simpler_modify_def
+       simpler_do_machine_op_addTouchedAddresses_def)
+     apply(clarsimp simp:state_relation_def pspace_relation_def)
+     apply(rule conjI)
+      apply(clarsimp simp:cdt_relation_def)
+     apply(clarsimp simp:obj_range_def obj_range'_def)
+     apply(rename_tac kh kh' s s')
+     apply(clarsimp simp:machine_state_relation_def)
+     (* XXX: Again, is there a better way to pass these through than forcing ?Q and ?Q'? *)
+     apply(subgoal_tac "obj_at is_CNode ptr s \<and> kh = kheap s")
+      prefer 2
+      apply assumption
+     apply(subgoal_tac "obj_at' (\<lambda>ko'. koTypeOf (injectKO ko') = CTET) (cte_map (ptr, offset)) s' \<and> kh' = ksPSpace s'")
+      prefer 2
+      apply assumption
+     prefer 3
+     apply wpsimp
+    prefer 3
+    apply wpsimp
+    apply blast
+   prefer 2
+   apply(clarsimp simp:simpler_doMachineOp_addTouchedAddresses_def simpler_modify_def)
+  apply(rule conjI)
+   prefer 2
+   apply(force simp:machine_state_relation_def)
+  (* Should the `pspace_relation` relate the two objects at `ptr`? *)
+  apply(erule_tac x=ptr in ballE)
+   prefer 2
+   apply(force simp:obj_at_def)
+  apply clarsimp
+  apply(case_tac "the (kheap s ptr)"; simp add: obj_at_def is_CNode_def)
+      defer
+      apply (metis Some_to_the Structures_A.kernel_object.distinct(1))
+     apply (metis Some_to_the Structures_A.kernel_object.distinct(4))
+    apply (metis Some_to_the Structures_A.kernel_object.distinct(5))
+   apply (metis Some_to_the Structures_A.kernel_object.distinct(8))
+  (* Experiments without pspace_dom, since it doesn't look like we ought to need it.
+     The guards that are currently here already contain case-distinguished
+     content obtained from obj_relation_cuts! *)
+  apply(rename_tac s s' x sz cs)
+  apply(clarsimp split:if_splits)
+  apply(erule_tac x="cte_map (ptr, offset)" in allE)
+  apply(clarsimp simp:obj_at'_def)
+  apply(clarsimp simp:project_inject)
+  apply(simp only:objBits_def[symmetric])
+  apply(erule_tac x="cte_relation offset" in allE)
+  apply(erule impE)
+   apply(rule_tac x=offset in exI)
+   apply clarsimp
+   apply(clarsimp simp:well_formed_cnode_n_def)
+   (* FIXME: Perhaps at this point I need some extra fact that's specific to caps,
+      like the sort rab_corres has at this point but that I threw away in an attempt
+      to make a version of touchObj_corres that was agnostic of the kobj type... -robs *)
+  (* XXX: Not clear any more that there's any point to unfolding this, at least not this early.
+  apply(clarsimp simp:mask_def other_obj_relation_def objBitsKO_def)
+  *)
+  (* Experiments to unlock the information we need from pspace_dom.
+     The conclusion from all this was the information gained from unfolding pspace_dom just
+     confuses things and seems redundant with what we already have from pspace_relation.
+  apply(clarsimp simp:pspace_dom_def)
+  apply(clarsimp simp:UNION_eq)
+  apply(clarsimp simp:image_def)
+  apply(clarsimp simp:dom_def)
+  (* Shouldn't this be ptr, not the offset within it?
+  apply(erule_tac c="cte_map (ptr, offset)" in equalityCE)
+   prefer 2
+   apply(clarsimp simp:obj_at'_def)
+  *)
+  (* XXX: Maybe equalityCE is not the way to go here. And if we can't use that,
+     it's not clear how helpful the pspace_dom conjunct even is at all. *)
+  thm equalityCE
+  apply(erule_tac c=ptr in equalityCE)
+   prefer 2
+   apply(clarsimp simp:obj_at'_def)
+   defer
+  apply clarsimp
+  apply(rename_tac s s' x sz cs ptr' ko' cut ko)
+  apply(clarsimp simp:obj_at'_def)
+  apply(clarsimp split:if_splits)
+(*  apply(clarsimp simp:cte_map_def) *)
+  apply(erule_tac x="cte_map (ptr, offset)" in allE)
+  apply(erule_tac x=cut in allE)
+  apply(erule impE)
+   apply(rule_tac x=offset in exI)
+   (* Where did ptr' come from, then? If we unfolded obj_relation_cuts
+      would it tell us that ptr' has to be ptr?
+   apply(subgoal_tac "ptr' = ptr")
+    prefer 2
+    apply(clarsimp simp:obj_relation_cuts_def2 cte_map_def split:Structures_A.kernel_object.splits if_splits)
+    (* Huh. I guess not. *)
+   *)
+   apply clarsimp
+   apply(clarsimp simp:obj_relation_cuts_def2)
+   apply(erule Set.set_insert)
+   apply(clarsimp simp:project_inject) (* Ah great. This got rid of one fixed ko'. *)
+   (* XXX: Why is this all in terms of ptr'? *)
+   apply(clarsimp split:Structures_A.kernel_object.splits kernel_object.splits)
+       defer
+*)
+  sorry (* FIXME: Prove. *)
+
+lemma touchObj_corres_PageTable:
+  "corres (=) (obj_at (\<lambda>ko. case ko of ArchObj ao \<Rightarrow> is_PageTable ao | _ \<Rightarrow> False) ptr)
+    (obj_at' \<top> ptr) (touch_object ptr) (touchObj ptr)"
+  sorry (* FIXME: Prove. *)
+
+lemma touchObj_corres_DataPage:
+  "corres (=) (obj_at (\<lambda>ko. case ko of ArchObj ao \<Rightarrow> is_DataPage ao | _ \<Rightarrow> False) ptr)
+    (obj_at' \<top> ptr) (touch_object ptr) (touchObj ptr)"
+  sorry (* FIXME: Prove. *)
+
+(* XXX: It's yet not clear to me that the four cases will have similar enough preconditions
+  to make this provable. -robs *)
+lemma touchObj_corres:
+  "corres (=) (obj_at \<top> ptr) (obj_at' \<top> ptr) (touch_object ptr) (touchObj ptr)"
+  using touchObj_corres_others
+    touchObj_corres_CTE touchObj_corres_PageTable touchObj_corres_DataPage
+  apply(simp add: touchObj_def touch_object_def2 obj_at_def)
+  (* XXX: Uh this is probably not how we want to divide the problem -robs *)
+  oops
+
+(* Copied from CSpace_H for use as a sandbox. To correspond with resolve_address_bits'. -robs *)
+thm resolve_address_bits'.simps
+thm resolveAddressBits.simps
+function
+  resolveAddressBits_copy ::
+  "capability \<Rightarrow> cptr \<Rightarrow> nat \<Rightarrow>
+   (lookup_failure, (machine_word * nat)) kernel_f"
+where
+ "resolveAddressBits_copy a b c =
+(\<lambda>x0 capptr bits.  (let nodeCap = x0 in
+  if isCNodeCap nodeCap
+  then   (doE
+        radixBits \<leftarrow> returnOk ( capCNodeBits nodeCap);
+        guardBits \<leftarrow> returnOk ( capCNodeGuardSize nodeCap);
+        levelBits \<leftarrow> returnOk ( radixBits + guardBits);
+        haskell_assertE (levelBits \<noteq> 0) [];
+        offset \<leftarrow> returnOk ( (fromCPtr capptr `~shiftR~` (bits-levelBits)) &&
+                   (mask radixBits));
+        slot \<leftarrow> withoutFailure $ locateSlotCap nodeCap offset;
+        guard \<leftarrow> returnOk ( (fromCPtr capptr `~shiftR~` (bits-guardBits)) &&
+                   (mask guardBits));
+        unlessE (guardBits \<le> bits \<and> guard = capCNodeGuard nodeCap)
+            $ throw $ GuardMismatch_ \<lparr>
+                guardMismatchBitsLeft= bits,
+                guardMismatchGuardFound= capCNodeGuard nodeCap,
+                guardMismatchGuardSize= guardBits \<rparr>;
+        whenE (levelBits > bits) $ throw $ DepthMismatch_ \<lparr>
+            depthMismatchBitsLeft= bits,
+            depthMismatchBitsFound= levelBits \<rparr>;
+        bitsLeft \<leftarrow> returnOk ( bits - levelBits);
+        if (bitsLeft = 0)
+          then returnOk (slot, 0)
+          else (doE
+            \<comment> \<open> Implementing `liftE (touch_object oref)` \<close>
+            withoutFailure $ touchObj (capCNodePtr nodeCap);
+            nextCap \<leftarrow> withoutFailure $ getSlotCap slot;
+            (case nextCap of
+                  CNodeCap _ _ _ _ \<Rightarrow>   (
+                    resolveAddressBits_copy nextCap capptr bitsLeft
+                  )
+                | _ \<Rightarrow>   returnOk (slot, bitsLeft)
+                )
+          odE)
+  odE)
+  else   throw InvalidRoot
+  ))
+a b c"
+  by auto
+termination
+  apply (relation "measure (snd o snd)")
+  apply (auto simp add: in_monad split: if_split_asm)
+  done
+
+(* Just like resolveAddressBits.simps is not in the simp set. -robs *)
+declare resolveAddressBits_copy.simps [simp del]
+
+lemma touch_cap_success:
+  fixes s cap ptr cbits
+  defines "s' \<equiv> s\<lparr>kheap := [ptr \<mapsto> CNode cbits (\<lambda>x. if length x = cbits then Some cap else None)]\<rparr>"
+  defines "s'' \<equiv> s'\<lparr>machine_state := ta_obj_upd ptr (CNode (cbits)
+      (\<lambda>x. if length x = cbits then Some cap else None)) (machine_state s') \<rparr>"
+  shows "((), s'') \<in> fst (touch_object ptr s')"
+  using assms unfolding touch_object_def2
+  by (simp add:exec_gets simpler_do_machine_op_addTouchedAddresses_def simpler_modify_def)
+
+(* Easier-to-use version? -robs *)
+lemma touch_cap_success':
+  "\<lbrakk>s' = s\<lparr>kheap := [ptr \<mapsto> CNode cbits (\<lambda>x. if length x = cbits then Some cap else None)]\<rparr>;
+    s'' = s'\<lparr>machine_state := ta_obj_upd ptr (CNode (cbits)
+      (\<lambda>x. if length x = cbits then Some cap else None)) (machine_state s') \<rparr>\<rbrakk>
+   \<Longrightarrow> ((), s'') \<in> fst (touch_object ptr s')"
+  unfolding touch_object_def2
+  by (simp add:exec_gets simpler_do_machine_op_addTouchedAddresses_def simpler_modify_def)
+
 lemma rab_corres':
   "\<lbrakk> cap_relation (fst a) c'; drop (64-bits) (to_bl cref') = snd a;
      bits = length (snd a) \<rbrakk> \<Longrightarrow>
@@ -531,7 +787,7 @@ lemma rab_corres':
           (valid_objs and pspace_aligned and valid_cap (fst a))
           (valid_objs' and pspace_distinct' and pspace_aligned' and valid_cap' c')
           (resolve_address_bits a)
-          (resolveAddressBits c' cref' bits)"
+          (resolveAddressBits_copy c' cref' bits)"
 unfolding resolve_address_bits_def
 proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
   case (1 z cap cref)
@@ -556,20 +812,25 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
     (valid_objs and pspace_aligned and (\<lambda>s. s \<turnstile> fst (vd,vc)))
     (valid_objs' and pspace_distinct' and pspace_aligned' and (\<lambda>s. s \<turnstile>' c'))
     (resolve_address_bits' z (vd, vc))
-    (CSpace_H.resolveAddressBits c' cref' bits)"
+    (resolveAddressBits_copy c' cref' bits)"
       apply -
       apply (rule "1.hyps" [of _ cbits guard, OF caps(1)])
-      prefer 7
-        apply (clarsimp simp: in_monad)
-        sorry (* FIXME: Broken by touched_addresses. -robs *)
-        apply (rule get_cap_success)
-      apply (auto simp: in_monad intro!: get_cap_success) (* takes time *)
+      prefer 8
+         apply clarsimp
+         apply (rule get_cap_success)
+        apply (auto simp: in_monad intro!: get_cap_success)[6] (* takes time *)
+       apply clarsimp
+       apply(rule_tac cbits=cbits in touch_cap_success')
+        apply(rule refl)
+       apply clarsimp
+       apply fast
+      apply (auto simp: in_monad intro!: get_cap_success)
       done
     note if_split [split del]
     { assume "cbits + length guard = 0 \<or> cbits = 0 \<and> guard = []"
       hence ?thesis
         apply (simp add: caps isCap_defs
-                         resolveAddressBits.simps resolve_address_bits'.simps)
+                         resolveAddressBits_copy.simps resolve_address_bits'.simps)
         apply (rule corres_fail)
         apply (clarsimp simp: valid_cap_def)
         done
@@ -592,7 +853,7 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
          apply (fastforce simp: word_bits_def cte_level_bits_def)
         apply (thin_tac "t \<in> state_relation" for t)
         apply (erule conjE)
-        apply (subst resolveAddressBits.simps)
+        apply (subst resolveAddressBits_copy.simps)
         apply (subst resolve_address_bits'.simps)
         apply (simp add: caps isCap_defs Let_def)
         apply (simp add: linorder_not_less drop_postfix_eq)
@@ -623,50 +884,80 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
         apply (subgoal_tac "cbits + length guard < length cref"; simp)
         apply (rule corres_initial_splitE)
            apply clarsimp
-           apply (rule corres_guard_imp)
-             sorry (* FIXME: Broken by touched_addresses. -robs *)
-             apply (rule getSlotCap_corres)
-             apply (simp add: objBits_simps cte_level_bits_def)
-             apply (erule (1) cte_map_shift)
-               apply simp
-              apply assumption
-             apply (simp add: cte_level_bits_def)
-            apply clarsimp
-            apply (clarsimp simp: valid_cap_def)
-            apply (erule cap_table_at_cte_at)
-            apply simp
+           apply(rule corres_guard_imp)
+             using touchObj_corres_CTE
+. (* FIXME: Figure out what exactly resolve_address_bits ought to be touching
+     before continuing here and with the touchObj_corres proof! -robs
+             apply(rule touchObj_corres_CTE)
+            apply(force simp:valid_cap_def obj_at_def is_cap_table_def
+              split:Structures_A.kernel_object.splits)
+           apply(clarsimp simp:valid_cap'_def obj_at'_def)
+           apply(erule_tac x=0 in allE)
            apply clarsimp
-          apply (case_tac "is_cnode_cap rv")
-           prefer 2
-           apply (simp add: cnode_cap_case_if)
-           apply (rule corres_noopE)
-            prefer 2
-            apply (rule no_fail_pre, rule no_fail_returnOK)
-            apply (rule TrueI)
-           prefer 2
-           apply (simp add: unlessE_whenE cnode_cap_case_if)
-           apply (rule IH, (simp_all)[9])
-            apply clarsimp
-           apply (drule postfix_dropD)
-           apply clarsimp
-           apply (subgoal_tac "64 + (cbits + length guard) - length cref = (cbits + length guard) + (64 - length cref)")
-            prefer 2
-            apply (drule len_drop_lemma)
+           apply(rename_tac s s' zs ko obj)
+           apply(rule_tac x=obj in exI)
+           apply force
+          apply (rule corres_initial_splitE)
+             apply clarsimp
+             apply (rule_tac P="valid_objs and pspace_aligned and
+                 cte_wp_at (\<lambda>_. True) (ptr, take cbits (drop (length guard) cref)) and
+                 obj_in_ta2 (fst (ptr, take cbits (drop (length guard) cref)))"
+               and P'="(valid_objs' and pspace_distinct' and pspace_aligned' and
+                 obj_in_ta2' (fst (ptr, take cbits (drop (length guard) cref))))"
+               in corres_guard_imp)
+               apply (rule getSlotCap_corres)
+               apply (simp add: objBits_simps cte_level_bits_def)
+               apply (erule (1) cte_map_shift)
+                 apply simp
+                apply assumption
+               apply (simp add: cte_level_bits_def)
+              apply simp
              apply simp
-            apply arith
-           apply simp
-           apply (subst drop_drop [symmetric])
-           apply simp
-          apply wp
-          apply (clarsimp simp: objBits_simps cte_level_bits_def)
-          apply (erule (1) cte_map_shift)
-            apply simp
-           apply assumption
-          apply (simp add: cte_level_bits_def)
-         apply (wp get_cap_wp)
-         apply clarsimp
-         apply (erule (1) cte_wp_valid_cap)
-        apply wpsimp
+            apply(rename_tac rv rv')
+            apply (case_tac "is_cnode_cap rv")
+             prefer 2
+             apply (simp add: cnode_cap_case_if)
+             apply (rule corres_noopE)
+              prefer 2
+              apply (rule no_fail_pre, rule no_fail_returnOK)
+              apply (rule TrueI)
+             prefer 2
+             apply (simp add: unlessE_whenE cnode_cap_case_if)
+             apply (rule IH, (simp_all)[9])
+              apply clarsimp
+             apply (drule postfix_dropD)
+             apply clarsimp
+             apply (subgoal_tac "64 + (cbits + length guard) - length cref = (cbits + length guard) + (64 - length cref)")
+              prefer 2
+              apply (drule len_drop_lemma)
+               apply simp
+              apply arith
+             apply simp
+             apply (subst drop_drop [symmetric])
+             apply simp
+            apply wp
+            apply (clarsimp simp: objBits_simps cte_level_bits_def)
+            apply (erule (1) cte_map_shift)
+              apply simp
+             apply assumption
+            apply (simp add: cte_level_bits_def)
+           apply (wp get_cap_wp)
+           apply clarsimp
+           apply (erule (1) cte_wp_valid_cap)
+          apply wpsimp
+         apply (wpsimp wp:touch_object_wp)
+         apply(rule conjI)
+          apply (clarsimp simp: valid_cap_def)
+          apply (erule cap_table_at_cte_at)
+          apply simp
+         (* This hypothetical "the object would be in the TA if we were to add it" is immediate
+            when the object is on the kheap at that address. *)
+         apply(clarsimp simp:obj_in_ta2_def obind_def obj_at_def split:option.splits)
+        apply (wpsimp wp:touchObj_wp')
+        (* Again, this is immediate. *)
+        apply(clarsimp simp:obj_in_ta2'_def valid_cap'_def obj_at'_def)
+        apply(erule_tac x=0 in allE)
+        apply clarsimp
         done
     }
     ultimately
@@ -675,11 +966,13 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
     case False
     with "1.prems"
     show ?thesis
+      sorry (* FIXME *)
       by (cases cap)
          (auto simp: resolve_address_bits'.simps resolveAddressBits.simps
                      isCap_defs lookup_failure_map_def)
   qed
 qed
+. (* DOWN TO HERE
 
 lemma getThreadCSpaceRoot:
   "getThreadCSpaceRoot t = return t"

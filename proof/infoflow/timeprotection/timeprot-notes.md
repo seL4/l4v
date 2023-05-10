@@ -27,3 +27,40 @@ Why do we expose this 'latest' complication to the locale implementer? Maybe we 
 
 ### How we currently define NLDS
 - In `det_ext` there is `domain_list_internal` which specifies the sequence of domains to execute and how many ticks we get. We ask for `time_per_tick`, and multiply tick counts by this to get a modified list. This is passed to a `schedule_oracle` interpretation with an appropriate `timer_delay_max`, which creates NLDS function and proofs of the required lemmas above.
+
+## Treatment of shared kernel data at ASpec level
+
+Unlike the way we are tracking kernel heap touches at ASpec level, we have
+decided not to track *shared kernel data* (SKD) touches in this way on the
+basis that the SKD set is static and not dependent on policy.
+
+Instead, we will oblige ourselves to predict *accurately* by fixing at ASpec
+level the superset of actual SKD addresses that are touched; that accuracy will
+then be tested at CSpec level by a proof obligation that this fixed set is a
+subset of the set of all global variable addresses calculated by `GlobalsSwap`.
+
+## Approach to Refine to ExecSpec
+
+We expect to modify the Haskell spec to modify and consult the TA set just as
+ASpec does, so we can then prove `corres` between the ExecSpec (as parsed into
+Isabelle) with corresponding ASpec functions.
+
+Gerwin has advised us of the following:
+- Define the TA set interactions with correct type but "error unimplemented"
+  in Haskell, then define them in Isabelle.
+- Like for the ASpec, make the modifications properly in that manner before
+  attempting the proofs, to avoid the risk of spending effort on proofs about
+  manual draft ExecSpec functions (disconnected from the parsed Haskell code)
+  that turn out to be spurious.
+- We should expect the need for monadic rewrites to come up where we have
+  reordering of operations; we have not encountered this yet but should
+  discuss our approach to this further when we reach this point.
+
+## Approach to CRefine to CSpec
+
+We need further thought and discussion about the feasibility of modifying the
+CSpec to modify and consult the TA set:
+
+In principle, we could do similarly as for the Haskell spec by using `GHOSTUPD`
+annotations, but if done naively, the sheer number of additions -- we think,
+for every pointer dereference -- could be prohibitive.

@@ -435,6 +435,65 @@ lemma ko_at_cte_ipcbuffer:
   apply simp
   done
 
+(* New for ExecSpec level. XXX: The ASpec version of this was retired by Scott,
+   so I'm trialling adapting its replacement to the ExecSpec level below. -robs
+abbreviation ta_obj_upd' :: "machine_word \<Rightarrow> Structures_H.kernel_object \<Rightarrow> machine_state \<Rightarrow> machine_state"
+  where
+  "ta_obj_upd' p ko ms \<equiv> machine_state.touched_addresses_update ((\<union>) (obj_range' p ko)) ms"
+*)
+
+(* New for ExecSpec level, adapted from KHeap_A. -robs *)
+
+term ms_ta_update
+(* Note: Should the naming convention have the prime `'` be at the end, or
+   is there any reason these need to end with the suffix `_update`? -robs *)
+abbreviation (input)
+  ms_ta'_update :: "(machine_word set \<Rightarrow> machine_word set) \<Rightarrow>
+    kernel_state \<Rightarrow> kernel_state" where
+ "ms_ta'_update f \<equiv> \<lambda>s. ksMachineState_update (machine_state.touched_addresses_update f) s"
+
+abbreviation ms_ta'_obj_update :: "machine_word \<Rightarrow> kernel_object \<Rightarrow> kernel_state \<Rightarrow> kernel_state"
+  where
+  "ms_ta'_obj_update p ko s \<equiv> ms_ta'_update ((\<union>) (obj_range' p ko)) s"
+
+lemma simpler_doMachineOp_getTouchedAddresses_def:
+  "doMachineOp getTouchedAddresses \<equiv> gets (\<lambda>s. machine_state.touched_addresses $ ksMachineState s)"
+  by (clarsimp simp: bind_def doMachineOp_def getTouchedAddresses_def simpler_gets_def
+                        simpler_modify_def select_f_def return_def)
+
+lemma ksMachineState_update_normalise [simp]:
+  "s\<lparr>ksMachineState := f (ksMachineState s)\<rparr> = ksMachineState_update f s"
+  by simp
+
+lemma simpler_doMachineOp_addTouchedAddresses_def:
+  "doMachineOp (addTouchedAddresses S) \<equiv> modify (ms_ta'_update ((\<union>) S))"
+  by (clarsimp simp: doMachineOp_def bind_def addTouchedAddresses_def simpler_gets_def
+                     simpler_modify_def select_f_def return_def)
+
+lemma dmo_addTouchedAddresses_wp':
+  "\<lbrace>\<lambda>s. Q () (ms_ta'_update (\<lambda>ta. S \<union> ta) s)\<rbrace> doMachineOp (addTouchedAddresses S) \<lbrace>Q\<rbrace>"
+  apply (simp add: simpler_doMachineOp_addTouchedAddresses_def)
+  by (wp select_f_wp)
+
+(* XXX: Not sure how to deal with the uncertainty of the type of `ko` here.
+   Declaring its type as below doesn't seem to work... -robs
+term ko_at
+term ko_at'
+lemma touchObj_wp:
+  "\<lbrace>\<lambda>s. \<forall>ko. (ko_at'::(Structures_H.kernel_object \<Rightarrow> obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool))
+      (ko::Structures_H.kernel_object) p s \<longrightarrow> Q () (ms_ta'_obj_update p ko s) \<rbrace>
+   touchObject p \<lbrace>Q\<rbrace>"
+  apply (wpsimp simp:touch_object_def2 wp: dmo_addTouchedAddresses_wp)
+  apply (clarsimp simp:obj_at_def)
+  done
+*)
+
+lemma touchObject_wp'[wp]:
+  "\<lbrace>\<lambda>s. Q () (ms_ta'_obj_update p (the (ksPSpace s p)) s) \<rbrace>
+   touchObject p \<lbrace>Q\<rbrace>"
+  apply(wpsimp simp:touchObject_def wp:dmo_addTouchedAddresses_wp')
+  done
+
 lemma set_ep_arch':  "\<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> setEndpoint ntfn p \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
   apply (simp add: setEndpoint_def setObject_def split_def)
   apply (wp updateObject_default_inv|simp)+
