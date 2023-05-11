@@ -372,7 +372,8 @@ context begin interpretation Arch .
 
 definition page_table_at' :: "pt_type \<Rightarrow> obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
  "page_table_at' pt_t p \<equiv> \<lambda>s.
-    is_aligned p (ptBits pt_t) \<and> (\<forall>i \<le> mask (ptBits pt_t). pte_at' (p + (i << pte_bits)) s)"
+    is_aligned p (ptBits pt_t) \<and>
+    (\<forall>i \<le> mask (ptTranslationBits pt_t). pte_at' (p + (i << pte_bits)) s)"
 
 (* FIXME AARCH64: may come in handy; remove if not *)
 abbreviation
@@ -2889,7 +2890,8 @@ lemma le_maxDomain_eq_less_numDomains:
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma page_table_pte_atI':
-  "\<lbrakk> page_table_at' pt_t p s; i \<le> mask (ptBits pt_t) \<rbrakk> \<Longrightarrow> pte_at' (p + (i << pte_bits)) s"
+  "\<lbrakk> page_table_at' pt_t p s; i \<le> mask (ptTranslationBits pt_t) \<rbrakk> \<Longrightarrow>
+   pte_at' (p + (i << pte_bits)) s"
   by (simp add: page_table_at'_def)
 
 lemma valid_global_refsD':

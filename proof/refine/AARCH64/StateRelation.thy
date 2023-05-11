@@ -218,7 +218,7 @@ primrec aobj_relation_cuts :: "AARCH64_A.arch_kernel_obj \<Rightarrow> machine_w
 | "aobj_relation_cuts (AARCH64_A.ASIDPool pool) x =
      {(x, other_obj_relation)}"
 | "aobj_relation_cuts (PageTable pt) x =
-     (\<lambda>y. (x + (y << pteBits), pte_relation y)) ` {0..mask (ptBits (pt_type pt))}"
+     (\<lambda>y. (x + (y << pteBits), pte_relation y)) ` {0..mask (ptTranslationBits (pt_type pt))}"
 | "aobj_relation_cuts (AARCH64_A.VCPU v) x =
      {(x, other_obj_relation)}"
 
@@ -238,7 +238,8 @@ lemma obj_relation_cuts_def2:
    (case ko of CNode sz cs \<Rightarrow> if well_formed_cnode_n sz cs
                               then {(cte_map (x, y), cte_relation y) | y. y \<in> dom cs}
                               else {(x, \<bottom>\<bottom>)}
-             | ArchObj (PageTable pt) \<Rightarrow> (\<lambda>y. (x + (y << pteBits), pte_relation y)) ` {0..mask (ptBits (pt_type pt))}
+             | ArchObj (PageTable pt) \<Rightarrow> (\<lambda>y. (x + (y << pteBits), pte_relation y)) `
+                                         {0..mask (ptTranslationBits (pt_type pt))}
              | ArchObj (DataPage dev sz) \<Rightarrow>
                  {(x + (n << pageBits),  \<lambda>_ obj. obj =(if dev then KOUserDataDevice else KOUserData))
                   | n . n < 2 ^ (pageBitsForSize sz - pageBits) }
@@ -250,7 +251,8 @@ lemma obj_relation_cuts_def3:
   "obj_relation_cuts ko x =
    (case a_type ko of
       ACapTable n \<Rightarrow> {(cte_map (x, y), cte_relation y) | y. length y = n}
-    | AArch (APageTable pt_t) \<Rightarrow> (\<lambda>y. (x + (y << pteBits), pte_relation y)) ` {0..mask (ptBits pt_t)}
+    | AArch (APageTable pt_t) \<Rightarrow> (\<lambda>y. (x + (y << pteBits), pte_relation y)) `
+                                      {0..mask (ptTranslationBits pt_t)}
     | AArch (AUserData sz) \<Rightarrow> {(x + (n << pageBits), \<lambda>_ obj. obj = KOUserData)
                                | n . n < 2 ^ (pageBitsForSize sz - pageBits) }
     | AArch (ADeviceData sz) \<Rightarrow> {(x + (n << pageBits), \<lambda>_ obj. obj = KOUserDataDevice )
@@ -380,7 +382,7 @@ lemma obj_relation_cutsE:
                          ko' = KOCTE cte; cs z = Some cap; cap_relation cap (cteCap cte) \<rbrakk>
               \<Longrightarrow> R;
      \<And>pt z pte'. \<lbrakk> ko = ArchObj (PageTable pt); y = x + (z << pteBits);
-                   z \<le> mask (ptBits (pt_type pt)); ko' = KOArch (KOPTE pte');
+                   z \<le> mask (ptTranslationBits (pt_type pt)); ko' = KOArch (KOPTE pte');
                    pte_relation' (pt_apply pt z) pte' \<rbrakk>
               \<Longrightarrow> R;
      \<And>sz dev n. \<lbrakk> ko = ArchObj (DataPage dev sz);
