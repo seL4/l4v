@@ -511,9 +511,9 @@ locale time_protection_system =
 
   \<comment> \<open> TA inv stuff\<close>
   (* the invariant that touched_addresses is always sensible for its current domain *)
-  fixes touched_addrs_inv :: "'other_state \<Rightarrow> bool"
-  defines "touched_addrs_inv s \<equiv>
-       snd ` touched_addrs s \<subseteq> all_paddrs_of (current_domain s) \<union> kernel_shared_precise"
+  fixes touched_addrs_inv :: "'domain \<Rightarrow>'other_state \<Rightarrow> bool"
+  defines "touched_addrs_inv u s \<equiv>
+       snd ` touched_addrs s \<subseteq> all_paddrs_of u \<union> kernel_shared_precise"
 
   fixes touched_addrs_dirty_inv :: "'domain \<Rightarrow> 'domain \<Rightarrow> 'other_state \<Rightarrow> bool"
   defines "touched_addrs_dirty_inv u u' s \<equiv>
@@ -542,7 +542,7 @@ locale time_protection_system =
      get_next_domain t = get_next_domain s"
 
   assumes reachable_touched_addrs_inv:
-    "ab.reachable s \<Longrightarrow> touched_addrs_inv s"
+    "ab.reachable s \<Longrightarrow> touched_addrs_inv (current_domain s) s"
 
   assumes simple_steps:
     "(s, s') \<in> ab.Step () \<Longrightarrow>
@@ -631,16 +631,18 @@ locale time_protection_system =
     will_domain_switch s1;
     (s1, s2) \<in> ds_substep_oldclean;
     (s2, s3) \<in> ds_substep_dirty;
-    (s3, s4) \<in> ds_substep_gadget;
-    (s4, s5) \<in> ds_substep_newclean\<rbrakk> \<Longrightarrow>
+    (s3, s4) \<in> ds_substep_gadget\<rbrakk> \<Longrightarrow>
       step_is_uwr_determined s1
-    \<and> touched_addrs_inv s2
-    \<and> step_is_publicly_determined s2
-    \<and> touched_addrs_dirty_inv (current_domain s) (get_next_domain s) s3
+    \<and> touched_addrs_inv (current_domain s1) s2
+    \<and> (s3=s2 \<or> step_is_publicly_determined s2 \<and> touched_addrs_dirty_inv (current_domain s) (get_next_domain s) s3)
     \<and> step_is_only_timeprotection_gadget s3 s4
     \<and> step_is_uwr_determined s4"
 
 begin
+
+abbreviation
+  touched_addrs_inv' where
+  "touched_addrs_inv' s \<equiv> touched_addrs_inv (current_domain s) s"
 
 definition
   time_bounded_traces :: "('fch,'pch) state \<Rightarrow> trace set" where
@@ -650,9 +652,19 @@ definition select_user_trace :: "('other_state \<times> ('fch,'pch) state) \<Rig
   "select_user_trace os_s ta \<equiv>
     select_trace (\<lambda>(os, s) ta. traces_obeying_set ta \<inter> time_bounded_traces s) os_s ta"
 
+definition not_L2_flush where
+  "not_L2_flush i \<equiv> case i of IFlushL2 _ \<Rightarrow> False | _ \<Rightarrow> True"
+
+fun
+  contains_no_L2_flushes :: "trace \<Rightarrow> bool"
+where
+  "contains_no_L2_flushes [] = True"
+| "contains_no_L2_flushes (i # r) = (contains_no_L2_flushes r \<and> not_L2_flush i)"
+
+(* note: adding an assertion that the dirty trace doesn't do any pch flushes *)
 definition select_public_trace :: "('other_state \<times> ('fch,'pch) state) \<Rightarrow> time \<Rightarrow> vpaddr set \<Rightarrow> trace" where
   "select_public_trace os_s wcet ta \<equiv> 
-    select_trace (\<lambda>(os, s) ta. traces_obeying_set ta \<inter> WCET_bounded_traces wcet s) os_s ta"
+    select_trace (\<lambda>(os, s) ta. traces_obeying_set ta \<inter> WCET_bounded_traces wcet s \<inter> {t. contains_no_L2_flushes t}) os_s ta"
 
 definition pad_time :: "time \<Rightarrow> time" where
   "pad_time t \<equiv> t + dirty_step_WCET + fch_flush_WCET + pch_flush_WCET kernel_shared_precise"
@@ -801,7 +813,7 @@ lemma hd_time_bounded_traces:
 
 lemma in_touched_addrs_expand:
   "a \<in> touched_addrs os \<Longrightarrow>
-  touched_addrs_inv os \<Longrightarrow>
+  touched_addrs_inv' os \<Longrightarrow>
   snd a \<in> all_paddrs_of (current_domain os) \<or> snd a \<in> kernel_shared_precise"
   apply (clarsimp simp:touched_addrs_inv_def)
   apply blast
@@ -810,7 +822,7 @@ lemma in_touched_addrs_expand:
 lemma d_running_step:
   assumes
     "i \<in> trace_units_obeying_ta os'"
-    "touched_addrs_inv os'"
+    "touched_addrs_inv' os'"
     "((os, s), (ot, t)) \<in> uwr d"
     "(os', ot') \<in> external_uwr d"
     "current_domain os = d"
@@ -889,7 +901,7 @@ lemma d_running_step:
 (* d running \<rightarrow> d running *)
 lemma d_running: "\<lbrakk>
    p \<in> traces_obeying_ta os';
-   touched_addrs_inv os';
+   touched_addrs_inv' os';
    \<comment> \<open>initial states s and t hold uwr\<close>
    ((os, s), (ot, t)) \<in> uwr d;
    \<comment> \<open>external states hold external uwr\<close>
@@ -917,16 +929,40 @@ lemma d_running: "\<lbrakk>
    apply blast
   apply(erule meta_impE)
    apply (frule hd_trace_obeying_set, clarsimp)
-   apply (erule(3) d_running_step; simp)
+   apply (erule d_running_step)
+   apply presburger apply (assumption | simp)+
    apply (simp add:uwr_def)
   apply simp
+  done
+
+(* expressed with a different form of touched_addrs_inv *)
+lemma d_running':
+  "\<lbrakk>p \<in> traces_obeying_ta os';
+   touched_addrs_inv d os';
+   \<comment> \<open>initial states s and t hold uwr\<close>
+   ((os, s), (ot, t)) \<in> uwr d;
+   \<comment> \<open>external states hold external uwr\<close>
+   (os', ot') \<in> external_uwr Sched;
+   (os', ot') \<in> external_uwr d;
+   \<comment> \<open>NB: external_uwr should give us current_domain' t = d\<close>
+   current_domain os = d;
+   \<comment> \<open>we execute the program on both states\<close>
+   s' = trace_multistep p s;
+   t' = trace_multistep p t;
+   \<comment> \<open>the external state's domain hasn't changed\<close>
+   current_domain os' = current_domain os
+   \<rbrakk> \<Longrightarrow>
+   \<comment> \<open>new states s' and t' hold uwr\<close>
+   ((os', s'), (ot', t')) \<in> uwr d"
+  apply (rule d_running; simp?)
+  apply meson
   done
 
 \<comment> \<open>we prove this via an integrity step\<close>
 lemma d_not_running_step:
   assumes
   "i \<in> trace_units_obeying_ta os'"
-  "touched_addrs_inv os'"
+  "touched_addrs_inv' os'"
   "current_domain os \<noteq> d"
   "s' = trace_step i s"
   "current_domain os' = current_domain os"
@@ -989,7 +1025,7 @@ qed
 lemma d_not_running_integrity_uwr:
   "\<lbrakk>p \<in> traces_obeying_ta os';
   p \<in> time_bounded_traces s;
-  touched_addrs_inv os';
+  touched_addrs_inv' os';
   current_domain os \<noteq> d;
   current_domain os' = current_domain os
   \<rbrakk> \<Longrightarrow>
@@ -1021,8 +1057,8 @@ lemma d_not_running: "\<lbrakk>
    \<comment> \<open>these touched_addresses does NOT contain any addresses from d\<close>
    current_domain os \<noteq> d;
    current_domain os' = current_domain os;
-   touched_addrs_inv os';
-   touched_addrs_inv ot';
+   touched_addrs_inv' os';
+   touched_addrs_inv' ot';
    \<comment> \<open>initial states s and t hold uwr\<close>
    ((os, s), (ot, t)) \<in> uwr d;
    (os', ot') \<in> external_uwr Sched;
@@ -1059,9 +1095,15 @@ lemma d_not_running: "\<lbrakk>
 
 *)
 
+lemma not_L2_flush_contra [simp]:
+  "not_L2_flush (IFlushL2 pas) = False"
+  apply (clarsimp simp: not_L2_flush_def)
+  done
+
 lemma dirty_step_from_d:
   assumes
     "i \<in> trace_units_obeying_set {(va, pa) | va pa. pa \<in> (all_paddrs_of u \<union> all_paddrs_of u' \<union> kernel_shared_precise)}"
+    "not_L2_flush i"
     "d = u"
     "((os, s), (ot, t\<lparr>tm:=tm s\<rparr>)) \<in> uwr d"
     "s' = trace_step i s"
@@ -1092,14 +1134,7 @@ next
 next
   case (IFlushL2 pas)
   then show ?thesis using assms
-    apply (clarsimp simp: uwr_def uwr_running_def)
-    apply (clarsimp simp: pch_same_for_domain_and_shared_def)
-    (* for now let's only consider the cases where this program might
-       flush L2 within kernel_shared_expanded. We can probably prove this without that
-       restriction, but would probably need to change some locale assumptions for that. *)
-    apply (prop_tac "pas = kernel_shared_precise")
-     subgoal sorry
-    apply (metis pch_collision_flush pch_partitioned_flush)
+    apply clarsimp
     done
 next
   case (IPadToTime x5)
@@ -1111,6 +1146,7 @@ qed
 lemma dirty_step_to_d:
   assumes
     "i \<in> trace_units_obeying_set {(va, pa) | va pa. pa \<in> (all_paddrs_of u \<union> all_paddrs_of u' \<union> kernel_shared_precise)}"
+    "not_L2_flush i"
     "d = u' \<and> d \<noteq> u"
     "((os, s), (ot, t\<lparr>tm:=tm s\<rparr>)) \<in> uwr d"
     "s' = trace_step i s"
@@ -1141,14 +1177,7 @@ next
 next
   case (IFlushL2 pas)
   then show ?thesis using assms
-    apply (clarsimp simp: uwr_def uwr_notrunning_def)
-    apply (clarsimp simp: pch_same_for_domain_except_shared_def)
-    (* for now let's only consider the cases where this program might
-       flush L2 within kernel_shared_expanded. We can probably prove this without that
-       restriction, but would probably need to change some locale assumptions for that. *)
-    apply (prop_tac "pas \<subseteq> kernel_shared_expanded")
-     subgoal sorry
-    apply (smt collision_in_full_collision_set in_mono kernel_shared_expanded_full_collision_set pch_collision_flush pch_partitioned_flush)
+    apply (clarsimp)
     done
 next
   case (IPadToTime x5)
@@ -1160,6 +1189,7 @@ qed
 lemma dirty_step_unrelated:
   assumes
     "i \<in> trace_units_obeying_set {(va, pa) | va pa. pa \<in> (all_paddrs_of u \<union> all_paddrs_of u' \<union> kernel_shared_precise)}"
+    "not_L2_flush i"
     "d \<noteq> u \<and> d \<noteq> u'"
     "((os, s), (ot, t\<lparr>tm:=tm s\<rparr>)) \<in> uwr d"
     "s' = trace_step i s"
@@ -1190,14 +1220,7 @@ next
 next
   case (IFlushL2 pas)
   then show ?thesis using assms
-    apply (clarsimp simp: uwr_def uwr_notrunning_def)
-    apply (clarsimp simp: pch_same_for_domain_except_shared_def)
-    (* for now let's only consider the cases where this program might
-       flush L2 within kernel_shared_expanded. We can probably prove this without that
-       restriction, but would probably need to change some locale assumptions for that. *)
-    apply (prop_tac "pas \<subseteq> kernel_shared_expanded")
-     subgoal sorry
-    apply (smt collision_in_full_collision_set in_mono kernel_shared_expanded_full_collision_set pch_collision_flush pch_partitioned_flush)
+    apply simp
     done
 next
   case (IPadToTime x5)
@@ -1209,6 +1232,7 @@ qed
 lemma dirty_multistep_aux: "\<lbrakk>
    p \<in> traces_obeying_set {(va, pa) | va pa.
            pa \<in> (all_paddrs_of u \<union> all_paddrs_of u' \<union> kernel_shared_precise)};
+   contains_no_L2_flushes p;
    current_domain os = u;
    d = u \<or> (d = u' \<and> d \<noteq> u) \<or> (d \<noteq> u \<and> d \<noteq> u');
    \<comment> \<open>initial states s and t hold uwr (apart from time)\<close>
@@ -1243,6 +1267,7 @@ lemma dirty_multistep_aux: "\<lbrakk>
 lemma dirty_multistep: "\<lbrakk>
    p \<in> traces_obeying_set {(va, pa) | va pa.
            pa \<in> (all_paddrs_of u \<union> all_paddrs_of u' \<union> kernel_shared_precise)};
+   contains_no_L2_flushes p;
    current_domain os = u;
    d = u \<or> (d = u' \<and> d \<noteq> u) \<or> (d \<noteq> u \<and> d \<noteq> u');
    \<comment> \<open>initial states s and t hold uwr (apart from time)\<close>
@@ -1340,9 +1365,6 @@ lemma gadget_multistep: "\<lbrakk>
                    max_def pch_flush_cycles_obeys_WCET)
   done
 
-(*meowmeow here ^^*)
-
-
 (* not currently used? *)
 lemma uwr_same_nlds:
   "((os, s), (ot, t)) \<in> uwr d \<Longrightarrow>
@@ -1374,9 +1396,10 @@ lemma user_trace_from_time_bounded:
 
 lemma ma_confidentiality_u_ta:
   "\<lbrakk>\<not>will_domain_switch os;
-  touched_addrs_inv os';
-  touched_addrs_inv ot';
+  touched_addrs_inv' os';
+  touched_addrs_inv' ot';
   ab.reachable os;
+  ab.reachable ot;
   ma.uwr2 (os, s) Sched (ot, t);
   ma.uwr2 (os, s) u (ot, t);
   ab.uwr2 os' Sched ot';
@@ -1402,10 +1425,7 @@ lemma ma_confidentiality_u_ta:
   apply (case_tac "current_domain os = u")
    (* u is executing *)
    apply (prop_tac "touched_addrs ot' = touched_addrs os'")
-    subgoal sorry
-    apply clarsimp
-(*    apply (rule external_uwr_same_touched_addrs [where s=os and t=ot]; simp add:step_or_substep_def)
-   apply clarsimp *)
+    using external_uwr_same_touched_addrs uwr_external_uwr apply blast
    apply (prop_tac "select_user_trace (ot, t) (touched_addrs os')
                   = select_user_trace (os, s) (touched_addrs os')")
     apply (subst eq_sym_conv)
@@ -1448,6 +1468,21 @@ lemma traces_obeying_set_subset:
   apply blast
   done
 
+lemma public_trace_contains_no_L2_flushes:
+  "contains_no_L2_flushes
+         (select_public_trace a b c)"
+  apply (clarsimp simp: select_public_trace_def)
+  apply (subgoal_tac "(select_trace
+       (\<lambda>(os, s) ta.
+           traces_obeying_set ta \<inter> WCET_bounded_traces b s \<inter>
+           {t. contains_no_L2_flushes t})
+       a c) \<in> {t. contains_no_L2_flushes t}")
+   apply clarsimp
+  apply (rule trace_from_superset)
+   apply (clarsimp simp: WCET_bounded_traces_def traces_obeying_set_def split:prod.splits)
+  apply (clarsimp split: prod.splits)
+  done
+
 lemma ta_dirty_inv_applied:
   "touched_addrs_dirty_inv u u' os' \<Longrightarrow>
    select_public_trace (os, s) wcet (touched_addrs os')
@@ -1455,12 +1490,24 @@ lemma ta_dirty_inv_applied:
        pa \<in> all_paddrs_of u \<or>
        pa \<in> all_paddrs_of u' \<or>
        pa \<in> kernel_shared_precise}"
-  apply (smt Collect_cong Int_Collect Un_iff WCET_bounded_traces_def case_prodE case_prod_conv
-    dual_order.trans empty_in_traces_obeying_ta inf.cobounded1 le_iff_add select_public_trace_def
-    touched_addrs_dirty_inv_def trace_multistep.simps(1) traces_obeying_set_subset
-    ts.trace_from_superset)
+  apply (clarsimp simp: select_public_trace_def)
+  apply (rule trace_from_superset)
+   apply (clarsimp simp: WCET_bounded_traces_def)
+  apply (clarsimp simp: touched_addrs_dirty_inv_def)
+  apply (meson in_mono traces_obeying_set_subset)
   done
-   
+
+abbreviation simple_step_user where
+  "simple_step_user s os os'
+  \<equiv> trace_multistep (select_user_trace (os, s) (touched_addrs os')) s"
+
+abbreviation simple_step_public where
+  "simple_step_public s os os'
+  \<equiv> trace_multistep (select_public_trace (os, s) dirty_step_WCET (touched_addrs os')) s"
+
+abbreviation simple_step_gadget where
+  "simple_step_gadget s s' \<equiv> trace_multistep (gadget_trace (nlds (tm s))) s'"
+
 lemma ma_confidentiality_u_ds:
   "\<lbrakk>will_domain_switch os;
   ma.uwr2 (os, s) Sched (ot, t);
@@ -1475,24 +1522,49 @@ lemma ma_confidentiality_u_ds:
   \<Longrightarrow> ma.uwr2 (os', s') u (ot', t')"
   apply (frule uwr_external_uwr)
 
-  apply (prop_tac "will_domain_switch ot")
-   using will_domain_switch_public apply fastforce
+  apply (insert will_domain_switch_public [of os ot], simp)
 
   apply (clarsimp simp:maStep_def)
   apply (thin_tac "s' = _", thin_tac "t' = _")
-  apply (rename_tac osa osa' osb osb' osc osc')
+  apply (rename_tac osa ota osb otb osc otc)
+
   (* show that the ending domain has changed (but is the same) *)
   apply (frule simple_steps [where s=os]; clarsimp)
   apply (frule simple_steps [where s=ot]; clarsimp)
   apply (frule get_next_domain_public; clarsimp)
 
-  (* show that the TAs are the same *)  
+  (* apply (prop_tac "touched_addrs osa = touched_addrs ota") *)
+  thm external_uwr_same_touched_addrs
+  apply (frule_tac s'=osa and t'=ota in external_uwr_same_touched_addrs; simp?)
+
+  (* show that the first step (oldclean) maintains the uwr *)
+  apply (prop_tac "ma.uwr2 (osa, simple_step_user s os osa) u (ota, simple_step_user t ot ota)")
+
+   (* extract fourways_properties for both runs *)
+   apply (frule_tac ?s1.0=os in fourways_properties, simp+)
+   apply (frule_tac ?s1.0=ot in fourways_properties, simp+)
+   apply clarsimp
+
+   apply (cases "current_domain os = u")
+    (* currently-running domain *)
+    apply (rule d_running'; simp?)
+       
+         apply (metis external_uwr_same_touched_addrs user_trace_from_ta uwr_external_uwr)
+        
+  .
+  (* show that the TAs are the same
   apply (prop_tac "touched_addrs osa' = touched_addrs osa")
-   apply (rule external_uwr_same_touched_addrs [where d=u])
+   thm external_uwr_same_touched_addrs
+   apply (rule external_uwr_same_touched_addrs [where d=u]; (simp add: uwr_external_uwr)?)
+    defer
+    apply (smt (verit, del_insts) can_split_four_ways_def fourways fourways_properties)
+   defer
+     using uwr_external_uwr apply blast
           apply assumption+
          using ab.reachable_Step apply blast
         using ab.reachable_Step apply blast
        apply simp
+  *)
 
   apply (prop_tac "touched_addrs osma = touched_addrs osm")
    apply (rule external_uwr_public_same_touched_addrs [where s=os and t=ot])
@@ -1555,14 +1627,11 @@ theorem ma_confidentiality_u:
 
   apply (case_tac "will_domain_switch os")
    defer
-  sorry (*
-   apply (erule ma_confidentiality_u_ta; simp)
-
-  apply (rule ma_confidentiality_u_ds; simp?)
-   apply (rule ma_to_ab_reachable, assumption)
-  apply (metis ab.enabled_Step domainswitch_step_splittable fst_conv insert_iff
-    ma_to_ab_reachable')
-  done *)
+   (* not domain-switch *)
+   apply (erule ma_confidentiality_u_ta; simp add: ma_to_ab_reachable)
+  (* domain-switch *)
+  apply (rule ma_confidentiality_u_ds; simp add: ma_to_ab_reachable)
+  done
 
 theorem extended_Nonleakage:
   "ab.Nonleakage_gen \<Longrightarrow> ma.Nonleakage_gen"

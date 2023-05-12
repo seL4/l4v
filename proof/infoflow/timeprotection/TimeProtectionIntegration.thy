@@ -142,6 +142,14 @@ end
    uwr. For now I think this is always true. *)
 definition is_uwr_determined :: "if_other_state \<Rightarrow> bool" where
   "is_uwr_determined os \<equiv> case os of ((tc, s), k) \<Rightarrow> True"
+
+(* here we actually define the expression that checks whether a step (or substep as in
+   the four-way split) starting at `os` will be completely determined by the scheduler
+   uwr. For now I think this is always false, as we don't allow any steps to have this
+   property. *)
+definition is_publicly_determined :: "if_other_state \<Rightarrow> bool" where
+  "is_publicly_determined os \<equiv> False"
+
 locale integration =
   ii?:integration_setup
     (* fch_lookup fch_read_impact fch_write_impact empty_fch fch_flush_cycles fch_flush_WCET *)
@@ -160,9 +168,14 @@ locale integration =
     "\<lambda>v. case v of VAddr v' \<Rightarrow> (RISCV64.addrFromKPPtr v')" +
   ts?:trace_selector
     "TYPE((if_other_state \<times> ('fch, 'pch) TimeProtection.state) \<times> 'l partition \<times> trace \<times> vpaddr set)"
-    "userPart \<circ> fst" ma_uwr PSched "[]" "is_uwr_determined \<circ> fst" "step_is_publicly_determined \<circ> fst" select_trace 
+    "userPart \<circ> fst"
+    ma_uwr PSched
+    "[]"
+    "is_uwr_determined \<circ> fst"
+    "is_publicly_determined \<circ> fst"
+    select_trace 
   for gentypes :: "('fch \<times> 'fch_cachedness \<times> 'pch \<times> 'pch_cachedness \<times> 'l partition \<times> 'l) itself"
-  and select_trace and step_is_publicly_determined
+  and select_trace
   
 begin
 
@@ -1049,6 +1062,17 @@ lemma subset_inv_proof:
   using all_paddrs_of_def subset_inv_proof_aux touched_addrs_inv_def
   by blast
 
+(* note here that we are talking about the TA set being a subset of the
+   STARTING state's domain *)
+lemma oldclean_preserves_subset_inv:
+  "\<lbrakk>reachable s;
+  (s, s') \<in> fourways_oldclean\<rbrakk> \<Longrightarrow>
+  snd ` ii.touched_addresses s'
+         \<subseteq> {a. addr_domain initial_aag a = userPart s} \<union>
+            kernel_shared_precise"
+  sorry
+
+
 (* I don't think this should be too bad. Can do this with hoare logic stuff I think. *)
 lemma domainswitch_follows_get_next_domain:
   "(s1, s2) \<in> Step () \<Longrightarrow>
@@ -1113,6 +1137,14 @@ lemma uwr_and_normal_step_gives_ta_equiv:
   apply (rule sym, rule uwr_equates_touched_addresses, assumption)
   done
 
+lemma oldclean_preserves_ta_equiv:
+  "\<lbrakk>reachable s; reachable t; uwr2 s PSched t;
+     uwr2 s (userPart s) t; is_uwr_determined s;
+     (s, s') \<in> fourways_oldclean; (t, t') \<in> fourways_oldclean;
+     step = fourways_oldclean; d = userPart s\<rbrakk>
+    \<Longrightarrow> ii.touched_addresses t' = ii.touched_addresses s'"
+  sorry
+
 lemma uwr_determined_steps_ta_equiv:
   "\<lbrakk>reachable s; reachable t;
     uwr2 s PSched t;
@@ -1121,11 +1153,12 @@ lemma uwr_determined_steps_ta_equiv:
         step = fourways_oldclean \<or> step = fourways_newclean;
         (s, s') \<in> step; (t, t') \<in> step\<rbrakk>
        \<Longrightarrow> ii.touched_addresses t' = ii.touched_addresses s'"
-  apply (erule disjE; clarsimp)
-   apply (erule uwr_and_normal_step_gives_ta_equiv; assumption)
-  (* here we need to know that the UWR holds at these intermediate steps.
-     OR at least we need to know that the TA set will be the same *)
-  sorry
+  apply (elim disjE; clarsimp)
+    apply (erule uwr_and_normal_step_gives_ta_equiv; assumption)
+   apply (erule oldclean_preserves_ta_equiv; assumption)
+  apply (clarsimp simp: fourways_newclean_def)
+  apply (rule sym, rule uwr_equates_touched_addresses, assumption)  
+  done
 
 lemma dirty_step_ta_equiv:
   "\<lbrakk>ii.touched_addresses t = ii.touched_addresses s;
@@ -1136,26 +1169,30 @@ lemma dirty_step_ta_equiv:
   done
 
 lemma fourways_properties:
-  "\<lbrakk>(s1, s5) \<in> ni.Step (); reachable s1;
-        will_domain_switch s1; (s1, s2) \<in> fourways_oldclean;
-        (s2, s3) \<in> fourways_dirty; (s3, s4) \<in> fourways_gadget;
-        (s4, s5) \<in> fourways_newclean\<rbrakk>
+  "\<lbrakk>(s1, s5) \<in> ni.Step (); reachable s1; will_domain_switch s1;
+        (s1, s2) \<in> fourways_oldclean; (s2, s3) \<in> fourways_dirty;
+        (s3, s4) \<in> fourways_gadget; (s4, s5) \<in> fourways_newclean\<rbrakk>
        \<Longrightarrow> is_uwr_determined s1 \<and>
            snd ` ii.touched_addresses s2
-           \<subseteq> {a. addr_domain initial_aag a = userPart s2} \<union>
+           \<subseteq> {a. addr_domain initial_aag a = userPart s1} \<union>
               kernel_shared_precise \<and>
-           step_is_publicly_determined s2 \<and>
-           ii.touched_addresses s3
-           \<subseteq> {(v, p) |v p.
-               p \<in> {a. addr_domain initial_aag a =
-                        userPart s} \<union>
-                    {a. addr_domain initial_aag a =
-                        get_next_domain s} \<union>
-                    kernel_shared_precise} \<and>
+           (s3 = s2 \<or>
+            is_publicly_determined s2 \<and>
+            ii.touched_addresses s3
+            \<subseteq> {(v, p) |v p.
+                p \<in> {a. addr_domain initial_aag a = userPart s} \<union>
+                     {a. addr_domain initial_aag a =
+                         get_next_domain s} \<union>
+                     kernel_shared_precise}) \<and>
            step_is_only_timeprotection_gadget s3 s4 \<and>
            is_uwr_determined s4"
+  apply (clarsimp simp: fourways_dirty_def fourways_newclean_def is_uwr_determined_def)
   apply (intro conjI)
-  sorry
+   apply (rule oldclean_preserves_subset_inv; simp)
+  (* here we need a definition of "step_is_only_timeprotection_gadget" to do something
+      useful *)
+  subgoal sorry
+  done
 
 
 method try_solve_all methods m = all \<open>(m; fail)?\<close>
@@ -1166,8 +1203,8 @@ interpretation ma?:time_protection_system PSched fch_lookup fch_read_impact fch_
   "addr_domain initial_aag" "addr_colour initial_aag" colour_userdomain
   userPart uwr nlds select_trace
   "big_step_ADT_A_if utf" s0 "policyFlows (pasPolicy initial_aag)"
-  _ _ is_uwr_determined touched_addresses all_paddrs_of
-  "\<lambda>s. snd ` touched_addresses s \<subseteq> all_paddrs_of (userPart s) \<union> kernel_shared_precise"
+  _ is_publicly_determined is_uwr_determined touched_addresses all_paddrs_of
+  "\<lambda>u s. snd ` touched_addresses s \<subseteq> all_paddrs_of u \<union> kernel_shared_precise"
   "\<lambda>u u' s. touched_addresses s \<subseteq> {(v, p) |v p.
                            p \<in> all_paddrs_of u \<union> all_paddrs_of u' \<union> kernel_shared_precise}"
   will_domain_switch _ _ _ get_next_domain
