@@ -34,6 +34,15 @@ lemma pas_addrs_accessible_to_def2:
   apply(clarsimp simp:image_def pas_addrs_of_def)
   by blast
 
+definition separation_kernel_policy where
+  "separation_kernel_policy aag \<equiv> \<forall>l. pas_labels_accessible_to aag l = {l}"
+
+lemma separation_kernel_only_owned_accessible:
+  "separation_kernel_policy aag \<Longrightarrow>
+   pas_addrs_accessible_to aag l = pas_addrs_of aag l"
+  unfolding pas_addrs_accessible_to_def pas_addrs_of_def separation_kernel_policy_def
+  by simp
+
 end
 
 locale ArchL2Partitioned = Arch +

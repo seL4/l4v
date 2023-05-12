@@ -51,6 +51,8 @@ locale integration_setup =
   fixes vaddr_to_paddr :: "TimeProtection.vaddr \<Rightarrow> TimeProtection.paddr"
   assumes timer_delay_lt_slice_length:
     "timer_delay_max < slice_length_min"
+  assumes initial_aag_separation_kernel:
+    "separation_kernel_policy initial_aag"
 begin
 
 
@@ -946,6 +948,8 @@ interpretation l2p?: ArchL2Partitioned "TYPE('l subject_label \<times> 'l)"
   "\<lambda>sl. case sl of OrdinaryLabel l \<Rightarrow> l"
   done
 
+\<comment> \<open> Correspondence between "invariant lemmas" and "locale" form of the TA subset invariant. \<close>
+
 lemma ta_vaddr_to_paddr:
   "snd ` ii.touched_addresses s =
    addrFromKPPtr ` machine_state.touched_addresses (machine_state (snd $ fst s))"
@@ -971,10 +975,10 @@ lemma addrFromKPPtr_bij:
   using addrFromKPPtr_inj addrFromKPPtr_surj
   by blast
 
-(* FIXME: Finish proving correspondence between "invariant lemmas" and "locale" form
-   of the ta subset invariant. *)
+
 lemma accessible_vaddr_to_paddr:
-  "all_paddrs_of (userPart s) \<union> kernel_shared_precise =
+  "separation_kernel_policy initial_aag \<Longrightarrow>
+   all_paddrs_of (userPart s) \<comment> \<open>\<union> kernel_shared_precise\<close> =
    addrFromKPPtr ` pas_addrs_accessible_to initial_aag (cur_label initial_aag (snd $ fst s))"
   unfolding all_paddrs_of_def kernel_shared_precise_def
   unfolding addr_domain_def
@@ -982,23 +986,23 @@ lemma accessible_vaddr_to_paddr:
   apply(rule set_eqI)
   apply clarsimp
   apply(clarsimp simp:image_def)
-  unfolding pas_addrs_accessible_to_def pas_labels_accessible_to_def
-  apply clarsimp
   apply(rule iffI)
    (* Case: vaddr version of accessibility implies paddr one *)
-   apply(erule disjE)
-    apply(clarsimp split:subject_label.splits)
-    (* XXX: Well all this is useless, makes no difference to the proof state.
-    using inj_transfer[OF addrFromKPPtr_inj]
-    apply -
-    apply(erule_tac x="\<lambda>x. pasObjectAbs initial_aag (inv addrFromKPPtr x) =
-          OrdinaryLabel (partition_if s)" in meta_allE)
-    apply(erule_tac x=x in meta_allE)
-    apply clarsimp
-    *)
-    defer
    apply(clarsimp split:subject_label.splits)
-   defer
+   apply(drule_tac l="cur_label initial_aag (internal_state_if s)"
+     in separation_kernel_only_owned_accessible)
+   apply simp
+   apply(clarsimp simp:pas_addrs_of_def)
+   apply(rename_tac x)
+   apply(rule_tac x="inv addrFromKPPtr x" in exI)
+   apply(rule conjI)
+    prefer 2
+    apply(force simp:addrFromKPPtr_surj surj_f_inv_f)
+   apply(clarsimp simp:partition_def)
+   using domains_distinct
+   unfolding pas_domains_distinct_def
+   apply(erule_tac x="cur_domain (internal_state_if s)" in allE)
+   apply force
   (* Case: paddr version of accessibility implies vaddr one *)
   apply(clarsimp split:subject_label.splits)
   apply(clarsimp simp:partition_def)
@@ -1008,19 +1012,17 @@ lemma accessible_vaddr_to_paddr:
   apply clarsimp
   using addrFromKPPtr_inj
   apply clarsimp
-  apply(erule disjE)
-   apply clarsimp
-   apply(metis label_of.simps)
-  apply(erule disjE)
-   (* XXX: Uh oh. There is a mismatch if one is talking about *accessible* labels, and the other
-      is talking about *just my* labels. I think this is where we need a formal statement about
-      whether we're talking about a separation kernel policy or not. -robs *)
-  sorry
+  apply(rename_tac x l)
+  apply(drule_tac l=l in separation_kernel_only_owned_accessible)
+  apply(clarsimp simp add:pas_addrs_of_def)
+  using pasDomainAbs_not_SilcLabel
+  by blast
 
 thm ta_subset_inv_def touched_addrs_inv_def
 lemma ta_subset_inv_to_locale_form:
-  "l2p.ta_subset_inv initial_aag (snd $ fst s) \<Longrightarrow>
-  touched_addrs_inv s"
+  "separation_kernel_policy initial_aag \<Longrightarrow>
+   l2p.ta_subset_inv initial_aag (snd $ fst s) \<Longrightarrow>
+   touched_addrs_inv s"
   unfolding touched_addrs_inv_def
   unfolding ta_subset_inv_def
   apply(clarsimp simp: ta_vaddr_to_paddr accessible_vaddr_to_paddr)
@@ -1036,13 +1038,15 @@ lemma ta_subset_inv_reachable:
   done
 
 lemma subset_inv_proof_aux:
-  "reachable s \<Longrightarrow>
-  touched_addrs_inv s"
+  "separation_kernel_policy initial_aag \<Longrightarrow>
+   reachable s \<Longrightarrow>
+   touched_addrs_inv s"
   using ta_subset_inv_reachable ta_subset_inv_to_locale_form
   by blast
 
 lemma subset_inv_proof:
-  "reachable s \<Longrightarrow>
+  "separation_kernel_policy initial_aag \<Longrightarrow>
+   reachable s \<Longrightarrow>
          snd ` ii.touched_addresses s
          \<subseteq> {a. addr_domain initial_aag a = userPart s} \<union>
             kernel_shared_precise"
@@ -1198,6 +1202,7 @@ interpretation ma?:time_protection_system PSched fch_lookup fch_read_impact fch_
         (* get_next_domain_public *)
         apply (erule get_next_domain_public)
        (* touched addresses inv *)
+       using initial_aag_separation_kernel
        apply (erule subset_inv_proof; assumption)
       (* simple_steps *)
       apply (erule simple_steps)
