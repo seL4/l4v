@@ -6,7 +6,7 @@
 
 theory CachePartitionIntegrity
 imports InfoFlow.InfoFlow_IF
-  (* InfoFlow.ADT_IF - Comment this out when you don't need the InfoFlow ADT definitions *)
+  InfoFlow.ADT_IF (* Comment this out when you don't need the InfoFlow ADT definitions *)
 begin
 
 section \<open> Kernel heap-agnostic subset property definitions \<close>
@@ -43,6 +43,26 @@ lemma separation_kernel_only_owned_accessible:
   unfolding pas_addrs_accessible_to_def pas_addrs_of_def separation_kernel_policy_def
   by simp
 
+\<comment> \<open>Important: We assume that the @{term\<open>touched_addresses\<close>} set will only be used to track the
+    virtual addresses of kernel objects; therefore its physical address footprint is just the
+    image of @{term\<open>addrFromKPPtr\<close>} because @{term\<open>pspace_in_kernel_window\<close>} tells us all
+    kernel objects live in the kernel window.\<close>
+abbreviation to_phys :: "machine_word set \<Rightarrow> paddr set" where
+  "to_phys vas \<equiv> addrFromKPPtr ` vas"
+
+abbreviation phys_touched :: "det_state \<Rightarrow> paddr set" where
+  "phys_touched s \<equiv> to_phys (touched_addresses (machine_state s))"
+
+abbreviation cur_label :: "'a PAS \<Rightarrow> det_state \<Rightarrow> 'a" where
+  "cur_label aag s \<equiv> THE l. pasDomainAbs aag (cur_domain s) = {l}"
+
+\<comment> \<open>Right now we're trying a simplified version of the kheap-agnostic property.
+  It's possible to simplify out the @{term\<open>to_phys\<close>} because, assuming the TA set tracks only
+  kernel object addresses, it's just a simple subtraction of the @{term\<open>kernelELFBaseOffset\<close>}. \<close>
+definition ta_subset_inv :: "'a PAS \<Rightarrow> det_state \<Rightarrow> bool" where
+  "ta_subset_inv aag s \<equiv>
+     touched_addresses (machine_state s) \<subseteq> pas_addrs_accessible_to aag (cur_label aag s)"
+
 end
 
 locale ArchL2Partitioned = Arch +
@@ -62,19 +82,6 @@ lemma pas_partitions_accessible_to_def2:
   "pas_partitions_accessible_to aag l = \<Union> (L2_partition_of ` pas_labels_accessible_to aag l)"
   unfolding pas_partitions_accessible_to_def
   by blast
-
-\<comment> \<open>Important: We assume that the @{term\<open>touched_addresses\<close>} set will only be used to track the
-    virtual addresses of kernel objects; therefore its physical address footprint is just the
-    image of @{term\<open>addrFromKPPtr\<close>} because @{term\<open>pspace_in_kernel_window\<close>} tells us all
-    kernel objects live in the kernel window.\<close>
-abbreviation to_phys :: "machine_word set \<Rightarrow> paddr set" where
-  "to_phys vas \<equiv> addrFromKPPtr ` vas"
-
-abbreviation phys_touched :: "det_state \<Rightarrow> paddr set" where
-  "phys_touched s \<equiv> to_phys (touched_addresses (machine_state s))"
-
-abbreviation cur_label :: "'a PAS \<Rightarrow> det_state \<Rightarrow> 'a" where
-  "cur_label aag s \<equiv> THE l. pasDomainAbs aag (cur_domain s) = {l}"
 
 \<comment> \<open>When we have that the @{term\<open>cur_domain\<close>} matches the PAS record's @{term\<open>pasSubject\<close>} (as
     per @{term\<open>pas_cur_domain\<close>}) we can simplify it out thanks to @{term\<open>pas_domains_distinct\<close>}.\<close>
@@ -316,13 +323,6 @@ theorem ta_subset_accessible_objs_to_partitions_alternative:
     owned_addrs_to_objs_well_partitioned owned_to_accessible_objs_well_partitioned)
 
 section \<open>Proofs of TA subset invariance over seL4 kernel\<close>
-
-\<comment> \<open>Right now we're trying a simplified version of the kheap-agnostic property.
-  It's possible to simplify out the @{term\<open>to_phys\<close>} because, assuming the TA set tracks only
-  kernel object addresses, it's just a simple subtraction of the @{term\<open>kernelELFBaseOffset\<close>}. \<close>
-definition ta_subset_inv :: "'a PAS \<Rightarrow> det_state \<Rightarrow> bool" where
-  "ta_subset_inv aag s \<equiv>
-     touched_addresses (machine_state s) \<subseteq> pas_addrs_accessible_to aag (cur_label aag s)"
 
 lemma ta_subset_to_phys_property:
   "ta_subset_inv \<equiv> ta_subset_accessible_addrs"
@@ -903,7 +903,7 @@ lemma lookup_slot_for_cnode_op_ta_subset_inv:
   done
 
 crunch pas_cur_domain: lookup_slot_for_cnode_op "pas_cur_domain aag"
-  (wp: crunch_wps touch_objects_wp resolve_address_bits'_pas_cur_domain)
+  (wp: crunch_wps touch_objects_wp resolve_address_bits'_pas_cur_domain simp: crunch_simps)
 
 lemma captransfer_from_words_ta_subset_inv:
   "\<lbrace>ta_subset_inv aag\<rbrace> captransfer_from_words ptr \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
@@ -2433,29 +2433,59 @@ lemma schedule_ta_subset_inv:
   apply (wpsimp wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
   sorry
 
-(* Need to import InfoFlow.ADT_IF for the following section:
+(* Need to import InfoFlow.ADT_IF for the following section: *)
 
 \<comment> \<open> Instead of @{term\<open>call_kernel\<close>}, prove for monads used for each step of @{term\<open>ADT_A_if\<close>}. \<close>
 
 crunches check_active_irq_if
   for ta_subset_inv: "ta_subset_inv aag"
-  (wp: crunch_wps)
+  (wp: crunch_wps simp: ta_subset_inv_def ignore: do_machine_op)
 
 lemma do_user_op_if_ta_subset_inv:
   "do_user_op_if uop tc \<lbrace>ta_subset_inv aag\<rbrace>"
   sorry
 
+lemma XXX_tmp0:
+  "thread_set (\<lambda>tcb. tcb\<lparr>tcb_arch := arch_tcb_context_set param_b (tcb_arch tcb)\<rparr>) t 
+   \<lbrace>\<lambda>s'. no_label_straddling_objs aag s' \<and>
+        pas_refined aag s' \<and>
+        pas_cur_domain aag prev_s \<and>
+        pspace_aligned s' \<and> valid_vspace_objs s' \<and> valid_arch_state s'\<rbrace>"
+  sorry
+
+lemma XXX_tmp1:
+  "\<lbrakk>ta_subset_inv aag s; no_label_straddling_objs aag s\<rbrakk>
+   \<Longrightarrow> pasObjectAbs aag (cur_thread s)
+        \<in> pas_labels_accessible_to aag
+            (THE l. pasDomainAbs aag (cur_domain s) = {l})"
+  sorry
+
+lemma XXX_tmp2:
+  "\<lbrakk>ta_subset_inv aag s; no_label_straddling_objs aag s\<rbrakk>
+   \<Longrightarrow> ta_subset_inv aag (ms_ta_obj_update (cur_thread s) (the (kheap s (cur_thread s))) s)"
+  sorry
+
 crunches kernel_entry_if
   for ta_subset_inv: "ta_subset_inv aag"
-  (wp: crunch_wps simp:crunch_simps)
+  (wp: crunch_wps XXX_tmp0 XXX_tmp1 XXX_tmp2 simp: crunch_simps)
 
 crunches handle_preemption_if
   for ta_subset_inv: "ta_subset_inv aag"
-  (wp: crunch_wps)
+  (wp: crunch_wps simp: crunch_simps ta_subset_inv_def no_label_straddling_objs_def
+   ignore: do_machine_op)
+
+lemma schedule_no_label_straddling_objs:
+  "schedule \<lbrace>no_label_straddling_objs aag\<rbrace>"
+  sorry
+
+lemma activate_thread_ta_subset_inv:
+  "\<lbrace>ta_subset_inv aag and no_label_straddling_objs aag\<rbrace> activate_thread 
+   \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
 
 crunches schedule_if
   for ta_subset_inv: "ta_subset_inv aag"
-  (wp: crunch_wps)
+  (wp: crunch_wps schedule_no_label_straddling_objs)
 
 crunches kernel_exit_if
   for ta_subset_inv: "ta_subset_inv aag"
@@ -2464,11 +2494,19 @@ crunches kernel_exit_if
 \<comment> \<open> Now that it's true for the monads of @{term\<open>ADT_A_if\<close>}, seems it's true
      for @{term\<open>call_kernel\<close>} as well. \<close>
 
+lemma handle_interrupt_no_label_straddling_objs:
+  "handle_interrupt y \<lbrace>no_label_straddling_objs aag\<rbrace>"
+  sorry
+
+(* XXX: Not sure we even need this, ultimately. -robs
 crunches call_kernel
   for ta_subset_inv: "ta_subset_inv aag"
-  (wp: crunch_wps)
+  (wp: crunch_wps schedule_no_label_straddling_objs handle_interrupt_no_label_straddling_objs handle_event_ta_subset_inv
+   simp: crunch_simps ta_subset_inv_def no_label_straddling_objs_def
+   ignore: do_machine_op)
+*)
 
-*) (* End of part that needs InfoFlow.ADT_IF *)
+(* End of part that needs InfoFlow.ADT_IF *)
 
 end
 

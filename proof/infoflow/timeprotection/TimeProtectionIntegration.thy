@@ -53,6 +53,8 @@ locale integration_setup =
     "timer_delay_max < slice_length_min"
   assumes initial_aag_separation_kernel:
     "separation_kernel_policy initial_aag"
+  assumes initial_state_ta_subset_inv:
+    "ta_subset_inv initial_aag (internal_state_if s0)"
 begin
 
 
@@ -1021,7 +1023,7 @@ lemma accessible_vaddr_to_paddr:
 thm ta_subset_inv_def touched_addrs_inv_def
 lemma ta_subset_inv_to_locale_form:
   "separation_kernel_policy initial_aag \<Longrightarrow>
-   l2p.ta_subset_inv initial_aag (snd $ fst s) \<Longrightarrow>
+   ta_subset_inv initial_aag (snd $ fst s) \<Longrightarrow>
    touched_addrs_inv s"
   unfolding touched_addrs_inv_def
   unfolding ta_subset_inv_def
@@ -1029,13 +1031,96 @@ lemma ta_subset_inv_to_locale_form:
   apply(clarsimp simp:image_def)
   by blast
 
+lemma ta_subset_inv_if_step:
+  "\<lbrakk>(s, s') \<in> global_automaton_if check_active_irq_A_if (do_user_op_A_if utf) kernel_call_A_if
+        kernel_handle_preemption_if kernel_schedule_if kernel_exit_A_if;
+    ta_subset_inv initial_aag (internal_state_if s); step_restrict s'\<rbrakk>
+   \<Longrightarrow> ta_subset_inv initial_aag (internal_state_if s')"
+  apply(clarsimp simp:global_automaton_if_def)
+  apply(erule disjE)
+   apply(clarsimp simp:kernel_call_A_if_def)
+   apply(rule use_valid[OF _ kernel_entry_if_ta_subset_inv])
+    apply force
+   (* FIXME: Missing some extra preconditions we need to know are also invariant. *)
+   subgoal sorry
+  apply(erule disjE)
+   apply(clarsimp simp:kernel_call_A_if_def)
+   apply(rule use_valid[OF _ kernel_entry_if_ta_subset_inv])
+    apply force
+   (* FIXME: Missing invariants. *)
+   subgoal sorry
+  apply(erule disjE)
+   apply(clarsimp simp:kernel_handle_preemption_if_def)
+   apply(rule use_valid[OF _ handle_preemption_if_ta_subset_inv])
+    apply force
+   (* FIXME: Missing invariants. *)
+   subgoal sorry
+  apply(erule disjE)
+   apply(clarsimp simp:kernel_schedule_if_def)
+   apply(rule use_valid[OF _ schedule_if_ta_subset_inv])
+    apply force
+   (* FIXME: Missing invariant. *)
+   subgoal sorry
+  apply(erule disjE)
+   apply(clarsimp simp:kernel_exit_A_if_def)
+   apply(force intro:use_valid[OF _ kernel_exit_if_inv])
+  apply(erule disjE)
+   apply(clarsimp simp:check_active_irq_A_if_def do_user_op_A_if_def)
+   apply(rule use_valid[OF _ do_user_op_if_ta_subset_inv])
+    apply force
+   apply(rule use_valid[OF _ check_active_irq_if_ta_subset_inv])
+    apply force
+   apply force
+  apply(erule disjE)
+   apply(clarsimp simp:check_active_irq_A_if_def do_user_op_A_if_def)
+   apply(rule use_valid[OF _ do_user_op_if_ta_subset_inv])
+    apply force
+   apply(rule use_valid[OF _ check_active_irq_if_ta_subset_inv])
+    apply force
+   apply force
+  apply(erule disjE)
+   apply(clarsimp simp:check_active_irq_A_if_def do_user_op_A_if_def)
+   apply(rule use_valid[OF _ check_active_irq_if_ta_subset_inv])
+    apply force
+   apply force
+  apply(erule disjE)
+   apply(clarsimp simp:check_active_irq_A_if_def do_user_op_A_if_def)
+   apply(rule use_valid[OF _ check_active_irq_if_ta_subset_inv])
+    apply force
+   apply force
+  apply(clarsimp simp:check_active_irq_A_if_def do_user_op_A_if_def)
+  apply(rule use_valid[OF _ check_active_irq_if_ta_subset_inv])
+   apply force
+  apply force
+  done
+
+thm initial_state_ta_subset_inv
+lemma ta_subset_inv_execution:
+  "s \<in> execution (big_step_ADT_A_if utf) s0 js \<Longrightarrow>
+   ta_subset_inv initial_aag (internal_state_if s)"
+  apply(induct js arbitrary: s rule: rev_induct)
+   apply(force simp:execution_def steps_def
+     big_step_ADT_A_if_def big_step_adt_def ADT_A_if_def
+     initial_state_ta_subset_inv)
+  apply(clarsimp simp: execution_def steps_def
+     big_step_ADT_A_if_def big_step_adt_def ADT_A_if_def)
+  apply(drule big_steps_I_holds[where I="{s. ta_subset_inv initial_aag (internal_state_if s)}"])
+    apply force
+   apply(clarsimp simp:inv_holds_def)
+   using ta_subset_inv_if_step apply force
+   defer
+  by force
+
 thm ta_subset_inv_def
 lemma ta_subset_inv_reachable:
   (* According to Scott, initial_aag should be fine here rather than `current_aag (snd $ fst s0)` *)
   "reachable s \<Longrightarrow>
-  l2p.ta_subset_inv initial_aag (snd $ fst s)"
-  subgoal sorry
-  done
+  ta_subset_inv initial_aag (snd $ fst s)"
+  (* `reachable` is defined in Noninterference_Base.thy so it's not used in AInvs/Access.
+     Even though `silc_inv` is of IF session, it doesn't look like it's proved for `reachable`. *)
+  unfolding reachable_def
+  using ta_subset_inv_execution
+  by fastforce
 
 lemma subset_inv_proof_aux:
   "separation_kernel_policy initial_aag \<Longrightarrow>
