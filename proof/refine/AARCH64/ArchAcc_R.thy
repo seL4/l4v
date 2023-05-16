@@ -572,16 +572,10 @@ lemma ptBitsLeft_eq[simp]:
                simp: asid_pool_level_size ptTranslationBits_def maxPTLevel_def
                split: if_splits)
 
-
 lemma ptIndex_eq[simp]:
   "ptIndex (size level) p = pt_index level p"
-  apply (clarsimp simp: ptIndex_def pt_index_def levelType_def simp flip: size_maxPTLevel)
-  (* FIXME AARCH64: level_type_eq in simpset is getting in the way here,
-                    we want to show level_type level = NormalPT_T since level \<noteq> max_pt_level *)
-  supply level_type_eq[simp del]
-  apply (drule level_type_eq[THEN iffD2])
-  apply simp
-  done
+  by (clarsimp simp: ptIndex_def pt_index_def levelType_def
+               simp flip: size_maxPTLevel level_type_eq(1))
 
 lemma ptSlotIndex_eq[simp]:
   "ptSlotIndex (size level) = pt_slot_offset level"
@@ -628,15 +622,12 @@ next
        vref_for_level vref (level+1) || (pt_index level vptr << pt_bits_left level)"
     for vref
 
- (* FIXME AARCH64: bit1 vs word
   have vref_for_level_step[simp]:
     "level \<le> max_pt_level \<Longrightarrow>
      vref_for_level (vref_step vref) (level + 1) = vref_for_level vref (level + 1)"
     for vref
     unfolding vref_step_def
-    using vref_for_level_pt_index_idem[of level level vref level vptr] by simp *)
-
-  show ?case sorry (* FIXME AARCH64 
+    using vref_for_level_pt_index_idem[of level level level vref vptr] by simp
 
   have pt_walk_vref[simp]:
     "level \<le> max_pt_level \<Longrightarrow>
@@ -656,19 +647,21 @@ next
              dest!: max_pt_level_enum)
 
   have pt_slot_offset_step[simp]:
-    "\<lbrakk> is_aligned pt pt_bits; vref \<in> user_region \<rbrakk> \<Longrightarrow>
-    pt_slot_offset level pt (vref_step vref) = pt_slot_offset level pt vptr" for vref
+    "\<lbrakk> is_aligned pt (pt_bits level); vref \<in> user_region \<rbrakk> \<Longrightarrow>
+     pt_slot_offset level pt (vref_step vref) = pt_slot_offset level pt vptr" for vref
     unfolding vref_step_def using nlevel1 nlevel
+    sorry (* FIXME AARCH64
     by (auto simp: pt_slot_offset_or_def user_region_def canonical_user_def canonical_bit_def
                    word_eqI_simps pt_index_def bit_simps pt_bits_left_def
              dest!: max_pt_level_enum
-             intro!: word_eqI)
+             intro!: word_eqI) *)
 
   from `0 < level` `level' = size level` `pt' = pt` level
   show ?case
     apply (subst pt_lookup_slot_from_level_rec)
     apply (simp add: lookupPTSlotFromLevel.simps Let_def obind_comp_dist if_comp_dist
                      gets_the_if_distrib checkPTAt_def)
+    sorry (* FIXME AARCH64
     apply (rule corres_guard_imp, rule corres_split[where r'=pte_relation'])
          apply (rule pteAtIndex_corres, simp)
         apply (rule corres_if3)
@@ -726,10 +719,10 @@ lemma lookupPTSlot_corres:
 (* FIXME AARCH64: pt_lookup_from_level also returns a level on AARCH64, but lookupPTFromLevel doesn't
                   there is no point fixing this lemma until we see what's needed in
                   unmapPageTable_corres in VSpace_R, which can't use this in the same way as before
-                  (corres_split_eqrE won't apply)
+                  (corres_split_eqrE won't apply) *)
 lemma lookupPTFromLevel_corres:
   "\<lbrakk> level' = size level; pt' = pt \<rbrakk> \<Longrightarrow>
-   corres (lfr \<oplus> (=))
+   corres (lfr \<oplus> ((=) \<circ> fst))
           (pspace_aligned and pspace_distinct and valid_vspace_objs
              and valid_asid_table and \<exists>\<rhd>(level,pt)
              and K (vptr \<in> user_region \<and> level \<le> max_pt_level \<and> pt \<noteq> target))
@@ -751,7 +744,7 @@ next
   from `0 < level`
   obtain nlevel where nlevel: "level = nlevel + 1" by (auto intro: that[of "level-1"])
   with `0 < level`
-  have nlevel1: "nlevel < nlevel + 1" using bit0.pred by fastforce
+  have nlevel1: "nlevel < nlevel + 1" using bit1.pred by fastforce
   with nlevel
   have level: "size level = Suc (size nlevel)" by simp
 
@@ -765,7 +758,7 @@ next
      vref_for_level (vref_step vref) (level + 1) = vref_for_level vref (level + 1)"
     for vref
     unfolding vref_step_def
-    using vref_for_level_pt_index_idem[of level level vref level vptr] by simp
+    using vref_for_level_pt_index_idem[of level level level vref vptr] by simp
 
   have pt_walk_vref[simp]:
     "level \<le> max_pt_level \<Longrightarrow>
@@ -785,15 +778,16 @@ next
              dest!: max_pt_level_enum)
 
   have pt_slot_offset_step[simp]:
-    "\<lbrakk> is_aligned pt pt_bits; vref \<in> user_region \<rbrakk> \<Longrightarrow>
+    "\<lbrakk> is_aligned pt (pt_bits level); vref \<in> user_region \<rbrakk> \<Longrightarrow>
     pt_slot_offset level pt (vref_step vref) = pt_slot_offset level pt vptr" for vref
     unfolding vref_step_def using nlevel1 nlevel
+    sorry (* FIXME AARCH64
     by (auto simp: pt_slot_offset_or_def user_region_def canonical_user_def canonical_bit_def
                    word_eqI_simps pt_index_def bit_simps pt_bits_left_def
              dest!: max_pt_level_enum
-             intro!: word_eqI)
+             intro!: word_eqI) *)
 
-  note bit0.size_minus_one[simp]
+  note bit1.size_minus_one[simp]
   from minus.prems
   show ?case
     apply (subst lookupPTFromLevel.simps, subst pt_lookup_from_level_simps)
@@ -807,6 +801,7 @@ next
           apply (simp add: lookup_failure_map_def)
          apply (rename_tac pte pte', case_tac pte; simp add: isPageTablePTE_def)
         apply (rule corres_if)
+    sorry (* FIXME AARCH64
           apply (clarsimp simp: AARCH64_A.is_PageTablePTE_def pptr_from_pte_def getPPtrFromHWPTE_def
                                 addr_from_ppn_def)
          apply (rule corres_returnOk[where P=\<top> and P'=\<top>], rule refl)
@@ -845,8 +840,8 @@ next
      apply (subst pt_walk.simps)
      apply (simp add: in_omonad)
     apply wpsimp
-    done
-qed *)
+    done *)
+qed
 
 declare in_set_zip_refl[simp]
 
@@ -973,28 +968,72 @@ lemma find_vspace_for_asid_rewite:
   apply (simp add: obind_def split: option.splits)
   done
 
-(* FIXME AARCH64: Unresolved adhoc overloading of constant, might be useful below
-lemma
-  "(gets (do {
-                x \<leftarrow> f;
-                g x
-              })) =
-   (gets f >>= (\<lambda>x. return (map_option g x)))"
-*)
+(* FIXME AARCH64: move *)
+lemma gets_obind_bind_eq:
+  "(gets (f |>> (\<lambda>x. g x))) =
+   (gets f >>= (\<lambda>x. case x of None \<Rightarrow> return None | Some y \<Rightarrow> gets (g y)))"
+  by (auto simp: simpler_gets_def bind_def obind_def return_def split: option.splits)
 
-(* FIXME AARCH64: once proved and proved useful, needs K format *)
+(* FIXME AARCH64: move *)
+lemma gets_oapply_liftM_rewrite:
+  "monadic_rewrite False True (\<lambda>s. f s p \<noteq> None)
+                   (gets (oapply p \<circ> f)) (liftM Some (gets_map f p))"
+  unfolding monadic_rewrite_def
+  by (simp add: liftM_def simpler_gets_def bind_def gets_map_def assert_opt_def return_def
+           split: option.splits)
+
+(* FIXME AARCH64: move *)
+declare corres_guard_imp[wp_pre]
+
+lemma gets_return_gets_eq:
+  "gets f >>= (\<lambda>g. return (h g)) = gets (\<lambda>s. h (f s))"
+  by (simp add: simpler_gets_def bind_def return_def)
+
+lemma getPoolPtr_corres:
+  "corres (=) (K (0 < asid)) \<top> (gets (pool_for_asid asid)) (getPoolPtr (ucast asid))"
+  unfolding pool_for_asid_def getPoolPtr_def asidRange_def
+  apply simp
+  apply wp_pre
+    apply (rule corres_assert_gen_asm)
+    apply (rule corres_assert_gen_asm)
+    apply (rule corres_trivial)
+    apply (clarsimp simp: gets_return_gets_eq state_relation_def arch_state_relation_def
+                          ucast_up_ucast_id is_up)
+   apply (simp flip: mask_eq_exp_minus_1)
+  apply simp
+  done
+
 lemma getASIDPoolEntry_corres:
-  "\<lbrakk>asid' = UCAST(16 \<rightarrow> 64) asid; 0 < asid\<rbrakk>
-    \<Longrightarrow> corres (\<lambda>r r'. r = map_option abs_asid_entry r')
-              (valid_vspace_objs and valid_asid_table
-               and pspace_aligned and pspace_distinct
-               and K (0 < asid))
-              (no_0_obj') (gets (entry_for_asid asid))
-         (getASIDPoolEntry (UCAST(16 \<rightarrow> 64) asid))"
-  unfolding entry_for_asid_def getASIDPoolEntry_def
-  apply clarsimp
-  (* FIXME AARCH64: stuck *)
-  sorry
+  "corres (\<lambda>r r'. r = map_option abs_asid_entry r')
+          (valid_vspace_objs and valid_asid_table and pspace_aligned and pspace_distinct
+           and K (0 < asid))
+          (no_0_obj')
+          (gets (entry_for_asid asid))
+          (getASIDPoolEntry (ucast asid))"
+  unfolding entry_for_asid_def getASIDPoolEntry_def K_def
+  apply (rule corres_gen_asm)
+  apply (clarsimp simp: gets_obind_bind_eq entry_for_pool_def obind_comp_dist
+                  cong: option.case_cong)
+  apply (rule corres_guard_imp)
+    apply (rule corres_split[where r'="(=)"])
+       apply (rule getPoolPtr_corres)
+      apply (rule_tac x=pool_ptr and x'=poolPtr in option_corres)
+        apply (rule corres_trivial, simp)
+       apply clarsimp
+       apply (rule monadic_rewrite_corres_l)
+        apply (monadic_rewrite_l gets_oapply_liftM_rewrite)
+        apply (rule monadic_rewrite_refl)
+       apply (clarsimp simp: liftM_def)
+       apply (rule corres_split[OF getObject_ASIDPool_corres[OF refl]])
+         apply (rule corres_trivial)
+         apply (case_tac rv', clarsimp)
+         apply (clarsimp simp: asid_pool_relation_def asid_low_bits_of_def ucast_ucast_mask2
+                               is_down asid_low_bits_def ucast_and_mask)
+        apply wpsimp+
+   apply (drule (1) pool_for_asid_validD)
+   apply (simp add: asid_pools_at_eq)
+  apply simp
+  done
 
 lemma findVSpaceForASID_corres:
   assumes "asid' = ucast asid"
@@ -1012,7 +1051,7 @@ lemma findVSpaceForASID_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_initial_splitE[where r'="\<lambda>r r'. r = map_option abs_asid_entry r'"])
        apply simp
-       apply (erule (1) getASIDPoolEntry_corres)
+       apply (rule getASIDPoolEntry_corres)
   sorry (* FIXME AARCH64: old proof below from RISCV64
 
   using assms
