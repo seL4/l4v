@@ -418,6 +418,13 @@ definition uwr ::
                       then (s1, s2) \<in> uwr_running d
                       else (s1, s2) \<in> uwr_notrunning d ) }"
 
+definition uwr_assumerunning ::
+  "'domain \<Rightarrow> ('other_state \<times> ('fch,'pch)state) rel"
+  where
+  "uwr_assumerunning d \<equiv> {((os1, s1), (os2, s2)). (os1, os2) \<in> external_uwr d
+                    \<and> current_domain os2 = current_domain os1
+                    \<and> (s1, s2) \<in> uwr_running d }"
+
 lemma uwr_external_uwr:
   "((so, s), (to, t)) \<in> uwr d \<Longrightarrow>
   (so, to) \<in> external_uwr d"
@@ -560,8 +567,8 @@ locale time_protection_system =
   (* step_is_uwr_determimed tells us that touched_addrs will be determined.
     the steps that we need this for are non-ds big steps, oldclean and newclean *)
   assumes external_uwr_same_touched_addrs:
-    "(s, t) \<in> external_uwr d \<Longrightarrow>
-     (s, t) \<in> external_uwr Sched \<Longrightarrow>
+    "(s, t) \<in> external_uwr Sched \<Longrightarrow>
+    (s, t) \<in> external_uwr d \<Longrightarrow>
     ab.reachable s \<Longrightarrow> ab.reachable t \<Longrightarrow>
     current_domain s = d \<Longrightarrow>
     step_is_uwr_determined s \<Longrightarrow>
@@ -631,12 +638,20 @@ locale time_protection_system =
     will_domain_switch s1;
     (s1, s2) \<in> ds_substep_oldclean;
     (s2, s3) \<in> ds_substep_dirty;
-    (s3, s4) \<in> ds_substep_gadget\<rbrakk> \<Longrightarrow>
+    (s3, s4) \<in> ds_substep_gadget;
+    u = current_domain s1;
+    u' = get_next_domain s1\<rbrakk> \<Longrightarrow>
       step_is_uwr_determined s1
     \<and> touched_addrs_inv (current_domain s1) s2
     \<and> (s3=s2 \<or> step_is_publicly_determined s2 \<and> touched_addrs_dirty_inv (current_domain s) (get_next_domain s) s3)
     \<and> step_is_only_timeprotection_gadget s3 s4
-    \<and> step_is_uwr_determined s4"
+    \<and> step_is_uwr_determined s4
+    \<comment> \<open> the following specifies *when* the domain changes. We could prove this stuff
+         for a system where the domain actually changes during other sub-steps, but for
+         now we assume that it changes during oldclean. \<close>
+    \<and> current_domain s2 = u'
+    \<and> current_domain s3 = u'
+    \<and> current_domain s4 = u'"
 
 begin
 
@@ -813,30 +828,48 @@ lemma hd_time_bounded_traces:
 
 lemma in_touched_addrs_expand:
   "a \<in> touched_addrs os \<Longrightarrow>
-  touched_addrs_inv' os \<Longrightarrow>
-  snd a \<in> all_paddrs_of (current_domain os) \<or> snd a \<in> kernel_shared_precise"
+  touched_addrs_inv d os \<Longrightarrow>
+  snd a \<in> all_paddrs_of d \<or> snd a \<in> kernel_shared_precise"
   apply (clarsimp simp:touched_addrs_inv_def)
   apply blast
   done
 
-lemma d_running_step:
+
+lemma uwr_running_uwr_notrunning:
+  "(s, t) \<in> uwr_running d \<Longrightarrow>
+  (s, t) \<in> uwr_notrunning d"
+  apply (clarsimp simp: uwr_running_def uwr_notrunning_def
+    pch_same_for_domain_and_shared_def pch_same_for_domain_except_shared_def)
+  done
+
+lemma uwr_running_uwr:
+  "\<lbrakk>(s, t) \<in> uwr_running d;
+  (os, ot) \<in> external_uwr d;
+  current_domain ot = current_domain os \<rbrakk> \<Longrightarrow>
+  ((os, s), (ot, t)) \<in> uwr d"
+  apply (clarsimp simp: uwr_def uwr_running_uwr_notrunning)
+  done
+
+lemma uwr_assumerunning_uwr:
+  "(s, t) \<in> uwr_assumerunning d \<Longrightarrow>
+  (s, t) \<in> uwr d"
+  apply (clarsimp simp: uwr_def uwr_assumerunning_def uwr_running_uwr_notrunning)
+  done
+
+lemma d_running_step_uwr_running:
   assumes
     "i \<in> trace_units_obeying_ta os'"
-    "touched_addrs_inv' os'"
-    "((os, s), (ot, t)) \<in> uwr d"
-    "(os', ot') \<in> external_uwr d"
-    "current_domain os = d"
+    "touched_addrs_inv d os'"
+    "(s, t) \<in> uwr_running d"
+    (* "current_domain os = d" *)
     "s' = trace_step i s"
     "t' = trace_step i t"
-    (* the only thing we care about output other_state is that the domain hasn't changed *)
-    "current_domain os' = current_domain os"
-    "current_domain ot' = current_domain ot"
   shows
-    "((os', s'), (ot', t')) \<in> uwr d"
+    "(s', t') \<in> uwr_running d"
   proof (cases i)
     case (IRead a)
     thus ?thesis using assms
-      apply (clarsimp simp: uwr_def uwr_running_def trace_units_obeying_set_def)
+      apply (clarsimp simp:  uwr_running_def trace_units_obeying_set_def)
       apply (thin_tac "s' = _", thin_tac "t' = _")
       apply (intro conjI)
        (* pch *)
@@ -854,7 +887,7 @@ lemma d_running_step:
   next
     case (IWrite a)
     thus ?thesis using assms
-      apply (clarsimp simp: uwr_def uwr_running_def trace_units_obeying_set_def)
+      apply (clarsimp simp: uwr_def uwr_assumerunning_def uwr_running_def trace_units_obeying_set_def)
       apply (thin_tac "s' = _", thin_tac "t' = _")
       apply (intro conjI)
        (* pch *)
@@ -871,11 +904,11 @@ lemma d_running_step:
       done
   next
     case IFlushL1
-    thus ?thesis using assms by (force simp:uwr_def uwr_running_def)
+    thus ?thesis using assms by (force simp:uwr_def uwr_assumerunning_def uwr_running_def)
   next
     case (IFlushL2 fa)
     then show ?thesis using assms
-      apply (clarsimp simp: uwr_def uwr_running_def pch_same_for_domain_and_shared_def
+      apply (clarsimp simp: uwr_def uwr_assumerunning_def uwr_running_def pch_same_for_domain_and_shared_def
                             trace_units_obeying_set_def)
       apply (thin_tac "s' = _", thin_tac "t' = _") (* messy and not needed *)
       apply (prop_tac "\<forall>a1. (\<exists>a2\<in>fa. a1 coll a2) \<longrightarrow> pch_lookup (pch s) a1 = pch_lookup (pch t) a1")
@@ -895,10 +928,52 @@ lemma d_running_step:
       done
   next
     case (IPadToTime x7)
-    thus ?thesis using assms by (force simp:uwr_def uwr_running_def)
+    thus ?thesis using assms by (force simp:uwr_def uwr_assumerunning_def uwr_running_def)
   qed
 
+lemma d_running_step:
+  assumes
+    "i \<in> trace_units_obeying_ta os'"
+    "touched_addrs_inv' os'"
+    "((os, s), (ot, t)) \<in> uwr d"
+    "(os', ot') \<in> external_uwr d"
+    "current_domain os = d"
+    "s' = trace_step i s"
+    "t' = trace_step i t"
+    (* the only thing we care about output other_state is that the domain hasn't changed *)
+    "current_domain os' = current_domain os"
+    "current_domain ot' = current_domain ot"
+  shows
+    "((os', s'), (ot', t')) \<in> uwr d"
+  using assms apply -
+  apply (clarsimp simp: uwr_def)
+  apply (rule d_running_step_uwr_running; simp)
+  done
+
 (* d running \<rightarrow> d running *)
+lemma d_running_uwr_running: "\<lbrakk>
+   p \<in> traces_obeying_ta os';
+   touched_addrs_inv d os';
+   \<comment> \<open>initial states s and t hold uwr\<close>
+   (s, t) \<in> uwr_running d;
+   \<comment> \<open>we execute the program on both states\<close>
+   s' = trace_multistep p s;
+   t' = trace_multistep p t
+   \<rbrakk> \<Longrightarrow>
+   \<comment> \<open>new states s' and t' hold uwr\<close>
+   (s', t') \<in> uwr_running d"
+  apply(induct p arbitrary:s t)
+   apply (solves \<open>clarsimp simp:uwr_def\<close>)
+  apply clarsimp
+  apply(erule_tac x="trace_step a s" in meta_allE)
+  apply(erule_tac x="trace_step a t" in meta_allE)
+  apply(erule meta_impE, blast)
+  apply(erule meta_impE)
+   apply (frule hd_trace_obeying_set, clarsimp)
+   apply (erule d_running_step_uwr_running; simp)
+  apply simp
+  done
+
 lemma d_running: "\<lbrakk>
    p \<in> traces_obeying_ta os';
    touched_addrs_inv' os';
@@ -913,26 +988,13 @@ lemma d_running: "\<lbrakk>
    s' = trace_multistep p s;
    t' = trace_multistep p t;
    \<comment> \<open>the external state's domain hasn't changed\<close>
-   current_domain os' = current_domain os
+   current_domain os' = current_domain os;
+   current_domaon ot' = current_domaon ot
    \<rbrakk> \<Longrightarrow>
    \<comment> \<open>new states s' and t' hold uwr\<close>
    ((os', s'), (ot', t')) \<in> uwr d"
-  apply (frule external_uwr_same_domain)
-  apply(induct p arbitrary:s t os ot)
-   apply (solves \<open>clarsimp simp:uwr_def\<close>)
-  apply clarsimp
-  apply(erule_tac x="trace_step a s" in meta_allE)
-  apply(erule_tac x="trace_step a t" in meta_allE)
-  apply(erule_tac x="os'" in meta_allE)
-  apply(erule_tac x="ot'" in meta_allE)
-  apply(erule meta_impE)
-   apply blast
-  apply(erule meta_impE)
-   apply (frule hd_trace_obeying_set, clarsimp)
-   apply (erule d_running_step)
-   apply presburger apply (assumption | simp)+
-   apply (simp add:uwr_def)
-  apply simp
+  apply (rule uwr_running_uwr; simp add: external_uwr_same_domain)
+  apply (rule d_running_uwr_running; simp add: uwr_def)
   done
 
 (* expressed with a different form of touched_addrs_inv *)
@@ -1508,6 +1570,134 @@ abbreviation simple_step_public where
 abbreviation simple_step_gadget where
   "simple_step_gadget s s' \<equiv> trace_multistep (gadget_trace (nlds (tm s))) s'"
 
+
+lemma ma_confidentiality_u_ds_fromrunning:
+  "\<lbrakk>will_domain_switch os;
+  ma.uwr2 (os, s) Sched (ot, t);
+  ma.uwr2 (os, s) u (ot, t);
+  current_domain os = u;
+  ab.reachable os;
+  ab.reachable ot;
+  ab.uwr2 os' Sched ot';
+  ab.uwr2 os' u ot';
+  ab.reachable os;
+  ((os, s), os', s') \<in> maStep ();
+  ((ot, t), ot', t') \<in> maStep ()\<rbrakk>
+  \<Longrightarrow> ma.uwr2 (os', s') u (ot', t')"
+  apply (frule uwr_external_uwr)
+
+  apply (insert will_domain_switch_public [of os ot], simp)
+
+  apply (clarsimp simp:maStep_def)
+  apply (thin_tac "s' = _", thin_tac "t' = _")
+  apply (rename_tac osa ota osb otb osc otc)
+
+  (* apply (prop_tac "touched_addrs osa = touched_addrs ota") *)
+  apply (frule_tac d=u and s=os and t=ot in external_uwr_same_touched_addrs)
+          apply (simp add: uwr_external_uwr)
+         apply assumption
+        apply assumption
+       apply simp
+      apply (clarsimp simp: fourways_properties)
+     apply (rule disjI2, rule disjI1)
+     apply (rule refl)
+    apply assumption
+   apply assumption
+
+  (* show that the first step (oldclean) maintains the *running* uwr *)
+  apply (prop_tac "(simple_step_user s os osa, simple_step_user t ot ota) \<in> uwr_running u")
+   (* show that the oldclean *traces* are the same *)
+   apply (prop_tac "select_user_trace (os, s) (touched_addrs osa)
+                  = select_user_trace (ot, t) (touched_addrs ota)")
+    subgoal sorry
+   
+   apply clarsimp
+   apply (rule_tac s=s and t=t and os'=osa in d_running_uwr_running)
+       apply (rule user_trace_from_ta)
+      apply (clarsimp simp: fourways_properties)
+     apply (clarsimp simp: uwr_def)
+    apply (rule refl)
+   apply (rule refl)
+  
+  (* show that the second step (dirty) maintains the uwr *)
+    
+  
+
+  (* show that the ending domain has changed (but is the same btwn s/t) *)
+  apply (frule simple_steps [where s=os]; clarsimp)
+  apply (frule simple_steps [where s=ot]; clarsimp)
+  apply (frule get_next_domain_public; clarsimp)
+
+
+  apply clarsimp
+   
+
+   apply (rule_tac p="select_user_trace (os, s) (touched_addrs osa)" and os'=osa
+          and s=s and t=t in d_running_uwr_running)
+       apply (clarsimp simp: user_trace_from_ta)
+      apply (clarsimp simp: fourways_properties)
+     apply (simp add: uwr_def)
+    apply simp
+
+   (* extract fourways_properties for both runs *)
+   apply (frule_tac ?s1.0=os in fourways_properties, simp+)
+   apply (frule_tac ?s1.0=ot in fourways_properties, simp+)
+   apply clarsimp
+
+   apply (cases "current_domain os = u")
+    (* currently-running domain *)
+    apply (rule d_running'; simp?)
+       
+         apply (metis external_uwr_same_touched_addrs user_trace_from_ta uwr_external_uwr)
+        
+  .
+  (* show that the TAs are the same
+  apply (prop_tac "touched_addrs osa' = touched_addrs osa")
+   thm external_uwr_same_touched_addrs
+   apply (rule external_uwr_same_touched_addrs [where d=u]; (simp add: uwr_external_uwr)?)
+    defer
+    apply (smt (verit, del_insts) can_split_four_ways_def fourways fourways_properties)
+   defer
+     using uwr_external_uwr apply blast
+          apply assumption+
+         using ab.reachable_Step apply blast
+        using ab.reachable_Step apply blast
+       apply simp
+  *)
+
+  apply (prop_tac "touched_addrs osma = touched_addrs osm")
+   apply (rule external_uwr_public_same_touched_addrs [where s=os and t=ot])
+      apply assumption+
+
+  (* show that the traces are the same *)
+  apply (prop_tac "select_public_trace (ot, t) dirty_step_WCET (touched_addrs osm) = 
+                   select_public_trace (os, s) dirty_step_WCET (touched_addrs osm)")
+   apply (clarsimp simp:select_public_trace_def)
+   apply (rule ts.select_trace_public_determined, simp+)
+  apply (prop_tac " ((os, _), (ot, _\<lparr>tm:=tm _\<rparr>)) \<in> uwr u")
+   apply (rule dirty_multistep [where p="(select_public_trace (ot, t) dirty_step_WCET
+           (touched_addrs _))"
+          and u="current_domain os" and u'="get_next_domain os"]; (rule refl)?)
+  sorry (*
+     apply (drule middle_step_holds_dirty_ta; simp)
+     apply (rule ta_dirty_inv_applied, simp)
+    apply blast
+   apply assumption
+
+  apply (drule gadget_multistep [where p="gadget_trace (nlds (tm s))" and os'=os' and ot'=ot'])
+          apply (rule refl)
+         apply (rule refl)
+        apply (metis nat_less_le public_trace_obeys_wcet)
+       apply (metis nat_less_le public_trace_obeys_wcet uwr_same_nlds)
+      apply (rule refl)
+     apply (rule refl)
+    apply assumption
+   apply assumption
+  apply (clarsimp simp: trace_multistep_fold)
+  apply (simp add: uwr_same_nlds)
+  done *)
+
+
 lemma ma_confidentiality_u_ds:
   "\<lbrakk>will_domain_switch os;
   ma.uwr2 (os, s) Sched (ot, t);
@@ -1535,7 +1725,11 @@ lemma ma_confidentiality_u_ds:
 
   (* apply (prop_tac "touched_addrs osa = touched_addrs ota") *)
   thm external_uwr_same_touched_addrs
-  apply (frule_tac s'=osa and t'=ota in external_uwr_same_touched_addrs; simp?)
+  apply (frule_tac d=u and s=os and t=ot in external_uwr_same_touched_addrs)
+          apply (simp add: uwr_external_uwr)
+          apply assumption
+         apply assumption
+       
 
   (* show that the first step (oldclean) maintains the uwr *)
   apply (prop_tac "ma.uwr2 (osa, simple_step_user s os osa) u (ota, simple_step_user t ot ota)")
