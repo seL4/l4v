@@ -1255,7 +1255,7 @@ lemma objBitsKO_Data:
   "objBitsKO (if dev then KOUserDataDevice else KOUserData) = pageBits"
   by (simp add: objBits_def objBitsKO_def word_size_def)
 
-lemmas objBits_defs = tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def cteSizeBits_def
+lemmas objBits_defs = tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def cteSizeBits_def vcpuBits_def
 lemmas untypedBits_defs = minUntypedSizeBits_def maxUntypedSizeBits_def
 lemmas objBits_simps = objBits_def objBitsKO_def word_size_def archObjSize_def
 lemmas objBits_simps' = objBits_simps objBits_defs
