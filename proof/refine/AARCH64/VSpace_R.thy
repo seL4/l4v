@@ -13,6 +13,10 @@ theory VSpace_R
 imports TcbAcc_R
 begin
 
+lemma cteCaps_of_ctes_of_lift:
+  "(\<And>P. \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ctes_of s)\<rbrace>) \<Longrightarrow> \<lbrace>\<lambda>s. P (cteCaps_of s) \<rbrace> f \<lbrace>\<lambda>_ s. P (cteCaps_of s)\<rbrace>"
+  unfolding cteCaps_of_def .
+
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 definition (* FIXME AARCH64 review *)
@@ -59,10 +63,1532 @@ lemma liftE_return_bindE:
   "liftE (return x) >>=E f = f x"
   by (rule Crunch.crunch_param_rules(8))
 
+crunches getIRQState
+  for inv[wp]: P
+
+(* FIXME AARCH64: do we still want all of these machine op no_cicd rules? if so, can they be crunched? *)
+
+lemma isb_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp isb \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
+  apply (wpsimp wp: dmo_invs_no_cicd' no_irq no_irq_isb)
+  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid)
+  apply (wpsimp simp: machine_op_lift_def machine_rest_lift_def split_def)+
+  done
+
+lemma dsb_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp dsb \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
+  apply (wpsimp wp: dmo_invs_no_cicd' no_irq no_irq_dsb)
+  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid)
+  apply (wpsimp simp: machine_op_lift_def machine_rest_lift_def split_def)+
+  done
+
+lemma setSCTLR_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (setSCTLR w) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
+  apply (wpsimp wp: dmo_invs_no_cicd' no_irq_setSCTLR no_irq)
+  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid)
+  apply (wpsimp simp: machine_op_lift_def setSCTLR_def
+                        machine_rest_lift_def split_def)+
+  done
+
+lemma set_gic_vcpu_ctrl_hcr_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (set_gic_vcpu_ctrl_hcr w) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
+  apply (wpsimp wp: dmo_invs_no_cicd' no_irq_set_gic_vcpu_ctrl_hcr no_irq)
+  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid)
+  apply (wpsimp simp: machine_op_lift_def set_gic_vcpu_ctrl_hcr_def
+                        machine_rest_lift_def split_def)+
+  done
+
+lemma set_gic_vcpu_ctrl_lr_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (set_gic_vcpu_ctrl_lr w x) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
+  apply (wpsimp wp: dmo_invs_no_cicd' no_irq_set_gic_vcpu_ctrl_lr no_irq)
+  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid)
+  apply (wpsimp simp: machine_op_lift_def set_gic_vcpu_ctrl_lr_def
+                        machine_rest_lift_def split_def)+
+  done
+
+lemma set_gic_vcpu_ctrl_apr_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (set_gic_vcpu_ctrl_apr w) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
+  apply (wpsimp wp: dmo_invs_no_cicd' no_irq_set_gic_vcpu_ctrl_apr no_irq)
+  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid)
+  apply (wpsimp simp: machine_op_lift_def set_gic_vcpu_ctrl_apr_def
+                        machine_rest_lift_def split_def)+
+  done
+
+lemma set_gic_vcpu_ctrl_vmcr_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (set_gic_vcpu_ctrl_vmcr w) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
+  apply (wpsimp wp: dmo_invs_no_cicd' no_irq_set_gic_vcpu_ctrl_vmcr no_irq)
+  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid)
+  apply (wpsimp simp: machine_op_lift_def set_gic_vcpu_ctrl_vmcr_def
+                        machine_rest_lift_def split_def)+
+  done
+
+lemma setHCR_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (setHCR w) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
+  apply (wpsimp wp: dmo_invs_no_cicd' no_irq_setHCR no_irq)
+  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid)
+  apply (wpsimp simp: machine_op_lift_def setHCR_def
+                        machine_rest_lift_def split_def)+
+  done
+
+lemma get_gic_vcpu_ctrl_hcr_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp get_gic_vcpu_ctrl_hcr \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
+  by (wpsimp wp: dmo_invs_no_cicd' no_irq_get_gic_vcpu_ctrl_hcr no_irq
+           simp: get_gic_vcpu_ctrl_hcr_def gets_def in_monad)
+
+lemma get_gic_vcpu_ctrl_lr_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (get_gic_vcpu_ctrl_lr w) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
+  apply (wpsimp wp: dmo_invs_no_cicd' no_irq_get_gic_vcpu_ctrl_lr no_irq)
+  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid)
+  apply (wpsimp simp: machine_op_lift_def get_gic_vcpu_ctrl_lr_def
+                        machine_rest_lift_def split_def)+
+  done
+
+lemma get_gic_vcpu_ctrl_apr_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp get_gic_vcpu_ctrl_apr \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
+  by (wpsimp wp: dmo_invs_no_cicd' no_irq_get_gic_vcpu_ctrl_apr no_irq
+           simp: get_gic_vcpu_ctrl_apr_def gets_def in_monad)
+
+lemma get_gic_vcpu_ctrl_vmcr_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp get_gic_vcpu_ctrl_vmcr \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
+  by (wpsimp wp: dmo_invs_no_cicd' no_irq_get_gic_vcpu_ctrl_vmcr no_irq
+           simp: get_gic_vcpu_ctrl_vmcr_def gets_def in_monad)
+
+lemma enableFpuEL01_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp enableFpuEL01 \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
+  sorry (* FIXME AARCH64 not clear what's wrong compared to above machine ops, should be same
+  by (wpsimp wp: dmo_invs_no_cicd' no_irq_enableFpuEL01 no_irq
+           simp: enableFpuEL01_def gets_def in_monad)  *)
+
+lemma valid_irq_node_lift_asm:
+  assumes x: "\<And>P. \<lbrace>\<lambda>s. P (irq_node' s)\<rbrace> f \<lbrace>\<lambda>rv s. P (irq_node' s)\<rbrace>"
+  assumes y: "\<And>p. \<lbrace>real_cte_at' p and Q\<rbrace> f \<lbrace>\<lambda>rv. real_cte_at' p\<rbrace>"
+  shows      "\<lbrace>\<lambda>s. valid_irq_node' (irq_node' s) s \<and> Q s\<rbrace> f \<lbrace>\<lambda>rv s. valid_irq_node' (irq_node' s) s\<rbrace>"
+  apply (simp add: valid_irq_node'_def)
+  apply (rule hoare_pre)
+   apply (rule hoare_use_eq_irq_node' [OF x])
+   apply (wp hoare_vcg_all_lift y)
+  apply simp
+  done
+
+lemma isIRQActive_corres:
+  "corres (=) \<top> \<top> (is_irq_active irqVTimerEvent) (isIRQActive irqVTimerEvent)"
+  apply (clarsimp simp: isIRQActive_def getIRQState_def is_irq_active_def get_irq_state_def)
+  apply (clarsimp simp: is_irq_active_def isIRQActive_def
+                        get_irq_state_def irq_state_relation_def
+                        getIRQState_def getInterruptState_def
+                        state_relation_def interrupt_state_relation_def)
+  apply (fastforce split: irq_state.splits irqstate.splits)
+  done
+
+lemma getIRQState_wp:
+  "\<lbrace>\<lambda>s. P (intStateIRQTable (ksInterruptState s) irq) s \<rbrace> getIRQState irq \<lbrace>\<lambda>rv s. P rv s\<rbrace>"
+  unfolding getIRQState_def getInterruptState_def
+  by (wpsimp simp: comp_def)
+
+lemma maskInterrupt_irq_states':
+  "\<lbrace>valid_irq_states'
+    and (\<lambda>s. \<not>b \<longrightarrow> intStateIRQTable (ksInterruptState s) irq \<noteq> irqstate.IRQInactive)\<rbrace>
+   doMachineOp (maskInterrupt b irq)
+   \<lbrace>\<lambda>rv. valid_irq_states'\<rbrace>"
+  by (wpsimp wp: dmo_maskInterrupt)
+     (auto simp add: valid_irq_states_def valid_irq_masks'_def)
+
+lemma maskInterrupt_invs':
+  "\<lbrace>invs'
+    and (\<lambda>s. \<not>b \<longrightarrow> intStateIRQTable (ksInterruptState s) irq \<noteq> irqstate.IRQInactive)\<rbrace>
+   doMachineOp (maskInterrupt b irq)
+   \<lbrace>\<lambda>rv. invs'\<rbrace>"
+   by (wpsimp wp: maskInterrupt_irq_states' dmo_maskInterrupt simp: invs'_def valid_state'_def)
+      (auto simp: valid_irq_states_def valid_irq_masks'_def valid_machine_state'_def
+                  ct_not_inQ_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
+
+lemma dmo_machine_op_lift_invs'[wp]:
+  "doMachineOp (machine_op_lift f) \<lbrace>invs'\<rbrace>"
+    by (wpsimp wp: dmo_invs' simp: machine_op_lift_def in_monad machine_rest_lift_def select_f_def)
+
+lemma dmo'_gets_wp:
+  "\<lbrace>\<lambda>s. Q (f (ksMachineState s)) s\<rbrace> doMachineOp (gets f) \<lbrace>Q\<rbrace>"
+    unfolding doMachineOp_def by (wpsimp simp: in_monad)
+
+lemma maskInterrupt_invs_no_cicd':
+  "\<lbrace>invs_no_cicd'
+    and (\<lambda>s. \<not>b \<longrightarrow> intStateIRQTable (ksInterruptState s) irq \<noteq> irqstate.IRQInactive)\<rbrace>
+   doMachineOp (maskInterrupt b irq)
+   \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
+  by (wpsimp wp: maskInterrupt_irq_states' dmo_maskInterrupt simp: invs_no_cicd'_def)
+     (auto simp: valid_irq_states_def valid_irq_masks'_def valid_machine_state'_def
+                 ct_not_inQ_def)
+
+(* FIXME AARCH64: this is a big block of VCPU-related lemmas in an attempt to consolidate them;
+                  there may be an opportunity to factor most of these out into a separate theory *)
+(* setObject for VCPU invariant preservation *)
+
+lemma setObject_vcpu_cur_domain[wp]:
+  "setObject ptr (vcpu::vcpu) \<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace>"
+    by (wpsimp wp: updateObject_default_inv simp: setObject_def)
+
+lemma setObject_vcpu_ct[wp]:
+  "setObject ptr (vcpu::vcpu) \<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace>"
+    by (wpsimp wp: updateObject_default_inv simp: setObject_def)
+
+lemma setObject_vcpu_it[wp]:
+  "setObject ptr (vcpu::vcpu) \<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace>"
+    by (wpsimp wp: updateObject_default_inv simp: setObject_def)
+
+lemma setObject_vcpu_sched[wp]:
+  "setObject ptr (vcpu::vcpu) \<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>"
+    by (wpsimp wp: updateObject_default_inv simp: setObject_def)
+
+lemma setObject_vcpu_L1[wp]:
+  "setObject ptr (vcpu::vcpu) \<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace>"
+    by (wpsimp wp: updateObject_default_inv simp: setObject_def)
+
+lemma setObject_vcpu_L2[wp]:
+  "setObject ptr (vcpu::vcpu) \<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
+    by (wpsimp wp: updateObject_default_inv simp: setObject_def)
+
+lemma setObject_vcpu_ksInt[wp]:
+  "setObject ptr (vcpu::vcpu) \<lbrace>\<lambda>s. P (ksInterruptState s)\<rbrace>"
+    by (wpsimp wp: updateObject_default_inv simp: setObject_def)
+
+lemma setObject_vcpu_ksArch[wp]:
+  "setObject ptr (vcpu::vcpu) \<lbrace>\<lambda>s. P (ksArchState s)\<rbrace>"
+    by (wpsimp wp: updateObject_default_inv simp: setObject_def)
+
+lemma setObject_vcpu_gs[wp]:
+  "setObject ptr (vcpu::vcpu) \<lbrace>\<lambda>s. P (gsMaxObjectSize s)\<rbrace>"
+    by (wpsimp wp: updateObject_default_inv simp: setObject_def)
+
+lemma setObject_vcpu_maschine_state[wp]:
+  "setObject ptr (vcpu::vcpu) \<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace>"
+    by (wpsimp wp: updateObject_default_inv simp: setObject_def)
+
+lemma setObject_vcpu_ksDomSchedule[wp]:
+  "setObject ptr (vcpu::vcpu) \<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace>"
+    by (wpsimp wp: updateObject_default_inv simp: setObject_def)
+
+lemma setObject_vcpu_ksDomScheduleIdx[wp]:
+  "setObject ptr (vcpu::vcpu) \<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace>"
+    by (wpsimp wp: updateObject_default_inv simp: setObject_def)
+
+lemma setObject_vcpu_gsUntypedZeroRanges[wp]:
+  "setObject ptr (vcpu::vcpu) \<lbrace>\<lambda>s. P (gsUntypedZeroRanges s)\<rbrace>"
+    by (wpsimp wp: updateObject_default_inv simp: setObject_def)
+
+
+crunches vcpuEnable, vcpuSave, vcpuDisable, vcpuRestore
+  for pspace_aligned'[wp]: pspace_aligned'
+  (simp: crunch_simps wp: crunch_wps getObject_inv_vcpu loadObject_default_inv)
+
+lemma vcpuSwitch_aligned'[wp]: "\<lbrace>pspace_aligned'\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_. pspace_aligned'\<rbrace>"
+  by (wpsimp simp: vcpuSwitch_def modifyArchState_def | assumption)+
+
+crunches vcpuEnable, vcpuSave, vcpuDisable, vcpuRestore
+  for pspace_distinct'[wp]: pspace_distinct'
+  (simp: crunch_simps wp: crunch_wps getObject_inv_vcpu loadObject_default_inv)
+
+lemma vcpuSwitch_distinct'[wp]: "\<lbrace>pspace_distinct'\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_. pspace_distinct'\<rbrace>"
+  by (wpsimp simp: vcpuSwitch_def modifyArchState_def | assumption)+
+
+lemma setObject_vcpu_ctes_of[wp]:
+  "\<lbrace> \<lambda>s. P (ctes_of s)\<rbrace> setObject p (t :: vcpu) \<lbrace>\<lambda>_ s. P (ctes_of s)\<rbrace>"
+  apply (rule ctes_of_from_cte_wp_at[where Q="\<top>", simplified])
+  apply (wp setObject_cte_wp_at2'[where Q="\<top>"])
+    apply (clarsimp simp: updateObject_default_def in_monad projectKO_opts_defs)
+   apply (rule equals0I)
+   apply (clarsimp simp: updateObject_default_def in_monad)
+  apply simp
+  done
+
+lemma setObject_vcpu_untyped_ranges_zero'[wp]:
+  "setObject ptr (vcpu::vcpu) \<lbrace>untyped_ranges_zero'\<rbrace>"
+  sorry (* FIXME AARCH64
+  by (rule hoare_lift_Pf[where f=cteCaps_of]; wp cteCaps_of_ctes_of_lift) *)
+
+lemma setVCPU_if_live[wp]:
+  "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s \<and> (live' (injectKO vcpu) \<longrightarrow> ex_nonz_cap_to' v s)\<rbrace>
+   setObject v (vcpu::vcpu) \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
+  apply (wpsimp wp: setObject_iflive' [where P=\<top>]
+         | simp add: objBits_simps vcpuBits_def pageBits_def)+
+    apply (clarsimp simp: updateObject_default_def in_monad)
+   apply (clarsimp simp: updateObject_default_def in_monad bind_def)
+  apply simp
+  done
+
+lemma setVCPU_if_unsafe[wp]:
+  "setObject v (vcpu::vcpu) \<lbrace>if_unsafe_then_cap'\<rbrace>"
+  apply (wp setObject_ifunsafe')
+     apply (clarsimp simp: updateObject_default_def in_monad)
+    apply (clarsimp simp: updateObject_default_def in_monad bind_def)
+   apply wp
+  apply simp
+  done
+
+lemma projectKO_opt_no_vcpu[simp]:
+  "projectKO_opt (KOArch (KOVCPU v)) = (None::'a::no_vcpu option)"
+    by (rule ccontr) (simp add: project_koType not_vcpu[symmetric])
+
+lemma setObject_vcpu_obj_at'_no_vcpu[wp]:
+  "setObject ptr (v::vcpu) \<lbrace>\<lambda>s. P (obj_at' (P'::'a::no_vcpu \<Rightarrow> bool) t s)\<rbrace>"
+  apply (wp setObject_ko_wp_at[where
+        P'="\<lambda>ko. \<exists>obj. projectKO_opt ko = Some obj \<and> P' (obj::'a::no_vcpu)" for P',
+        folded obj_at'_real_def])
+     apply (clarsimp simp: updateObject_default_def in_monad not_vcpu[symmetric])
+    apply (simp add: objBits_simps archObjSize_def)
+   apply (simp add: vcpuBits_def pageBits_def)
+  apply (clarsimp split del: if_split)
+  apply (erule rsubst[where P=P])
+  apply normalise_obj_at'
+  apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs)
+  done
+
+lemmas setVCPU_pred_tcb'[wp] =
+  setObject_vcpu_obj_at'_no_vcpu
+      [where P'="\<lambda>ko. P (proj (tcb_to_itcb' ko))" for P proj, folded pred_tcb_at'_def]
+
+lemma setVCPU_valid_idle'[wp]:
+  "setObject v (vcpu::vcpu) \<lbrace>valid_idle'\<rbrace>"
+    unfolding valid_idle'_def by (rule hoare_lift_Pf[where f=ksIdleThread]; wp)
+
+lemma setVCPU_ksQ[wp]:
+  "\<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> setObject p (v::vcpu) \<lbrace>\<lambda>rv s. P (ksReadyQueues s)\<rbrace>"
+  by (wp setObject_qs updateObject_default_inv | simp)+
+
+lemma setVCPU_valid_queues'[wp]:
+  "setObject v (vcpu::vcpu) \<lbrace>valid_queues'\<rbrace>"
+  unfolding valid_queues'_def
+  by (rule hoare_lift_Pf[where f=ksReadyQueues]; wp hoare_vcg_all_lift updateObject_default_inv)
+
+lemma setVCPU_ct_not_inQ[wp]:
+  "setObject v (vcpu::vcpu) \<lbrace>ct_not_inQ\<rbrace>"
+  apply (wp ct_not_inQ_lift)
+   apply (rule hoare_lift_Pf[where f=ksCurThread]; wp)
+  apply assumption
+  done
+
+(* TODO: move *)
+lemma getObject_ko_at_vcpu [wp]:
+  "\<lbrace>\<top>\<rbrace> getObject p \<lbrace>\<lambda>rv::vcpu. ko_at' rv p\<rbrace>"
+  by (rule getObject_ko_at | simp add: objBits_simps vcpuBits_def pageBits_def)+
+
+lemma corres_gets_gicvcpu_numlistregs:
+  "corres (=) \<top> \<top> (gets (arm_gicvcpu_numlistregs \<circ> arch_state))
+                      (gets (armKSGICVCPUNumListRegs \<circ> ksArchState))"
+  by (simp add: state_relation_def arch_state_relation_def)
+
 lemma corres_gets_current_vcpu[corres]:
   "corres (=) \<top> \<top> (gets (arm_current_vcpu \<circ> arch_state))
                       (gets (armHSCurVCPU \<circ> ksArchState))"
   by (simp add: state_relation_def arch_state_relation_def)
+
+lemma setObject_VCPU_corres:
+  "vcpu_relation vcpuObj vcpuObj'
+   \<Longrightarrow>  corres dc (vcpu_at  vcpu)
+                  (vcpu_at' vcpu)
+                  (set_vcpu vcpu vcpuObj)
+                  (setObject vcpu vcpuObj')"
+  apply (simp add: set_vcpu_def)
+  apply (rule corres_guard_imp)
+    apply (rule setObject_other_corres [where P="\<lambda>ko::vcpu. True"], simp)
+         apply (clarsimp simp: obj_at'_def)
+         apply (erule map_to_ctes_upd_other, simp, simp)
+        apply (simp add: a_type_def is_other_obj_relation_type_def)
+       apply (simp add: objBits_simps)
+      apply simp
+     apply (simp add: objBits_simps vcpuBits_def pageBits_def)
+    apply (simp add: other_obj_relation_def asid_pool_relation_def)
+   apply (clarsimp simp: typ_at_to_obj_at'[symmetric] obj_at_def exs_valid_def
+                         assert_def a_type_def return_def fail_def)
+   apply (fastforce split: Structures_A.kernel_object.split_asm if_split_asm)
+  apply (simp add: typ_at_to_obj_at_arches)
+  done
+
+lemma setObject_vcpu_cte_wp_at'[wp]:
+  "\<lbrace>\<lambda>s. P (cte_wp_at' P' p s)\<rbrace>
+   setObject ptr (vcpu::vcpu)
+   \<lbrace>\<lambda>rv s. P (cte_wp_at' P' p s)\<rbrace>"
+  apply (wp setObject_cte_wp_at2'[where Q="\<top>"])
+    apply (clarsimp simp: updateObject_default_def in_monad projectKO_opts_defs)
+                         apply (rule equals0I)
+   apply (clarsimp simp: updateObject_default_def in_monad projectKO_opts_defs)
+  apply simp
+  done
+
+crunches vcpuSave, vcpuRestore, vcpuDisable, vcpuEnable
+  for ctes[wp]: "\<lambda>s. P (ctes_of s)"
+  (simp: crunch_simps wp: crunch_wps getObject_inv_vcpu loadObject_default_inv)
+
+lemma vcpuSwitch_ctes[wp]: "\<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> vcpuSwitch vcpu \<lbrace>\<lambda>_ s. P (ctes_of s)\<rbrace>"
+  by (wpsimp simp: vcpuSwitch_def modifyArchState_def | assumption)+
+
+crunches
+  vgicUpdate, vgicUpdateLR, vcpuWriteReg, vcpuReadReg, vcpuRestoreRegRange, vcpuSaveRegRange,
+  vcpuSave
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+  and no_0_obj'[wp]: no_0_obj'
+  (wp: crunch_wps ignore_del: setObject)
+
+crunches vcpuSave, vcpuRestore, vcpuDisable, vcpuEnable
+  for cte_wp_at'[wp]: "\<lambda>s. P (cte_wp_at' P' p s)"
+  (simp: crunch_simps wp: crunch_wps getObject_inv_vcpu loadObject_default_inv)
+
+crunches vcpuDisable, vcpuEnable, vcpuSave, vcpuRestore
+  for no_0_obj'[wp]: no_0_obj'
+  (simp: crunch_simps wp: crunch_wps getObject_inv_vcpu loadObject_default_inv)
+
+lemma vcpuSwitch_no_0_obj'[wp]: "\<lbrace>no_0_obj'\<rbrace> vcpuSwitch v \<lbrace>\<lambda>_. no_0_obj'\<rbrace>"
+  by (wpsimp simp: vcpuSwitch_def modifyArchState_def | assumption)+
+
+lemma vcpuSwitch_cte_wp_at'[wp]:
+  "\<lbrace>\<lambda>s. P (cte_wp_at' P' p s)\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_ s. P (cte_wp_at' P' p s)\<rbrace> "
+  by (wpsimp simp: vcpuSwitch_def modifyArchState_def | assumption)+
+
+lemma vcpuUpdate_corres[corres]:
+  "\<forall>v1 v2. vcpu_relation v1 v2 \<longrightarrow> vcpu_relation (f v1) (f' v2) \<Longrightarrow>
+    corres dc (vcpu_at v) (vcpu_at' v)
+           (vcpu_update v f) (vcpuUpdate v f')"
+  by (corressimp corres: getObject_vcpu_corres setObject_VCPU_corres
+                 simp: vcpu_update_def vcpuUpdate_def vcpu_relation_def)
+
+lemma vgicUpdate_corres[corres]:
+  "\<forall>vgic vgic'. vgic_map vgic = vgic' \<longrightarrow> vgic_map (f vgic) = (f' vgic')
+   \<Longrightarrow> corres dc (vcpu_at v) (vcpu_at' v) (vgic_update v f) (vgicUpdate v f')"
+  by (corressimp simp: vgic_update_def vgicUpdate_def vcpu_relation_def)
+
+lemma vgicUpdateLR_corres[corres]:
+  "corres dc (vcpu_at v) (vcpu_at' v)
+          (vgic_update_lr v idx val) (vgicUpdateLR v idx val)"
+  by (corressimp simp: vgic_update_lr_def vgicUpdateLR_def vgic_map_def)
+
+lemma vcpuReadReg_corres[corres]:
+  "corres (=) (vcpu_at v) (vcpu_at' v and no_0_obj')
+          (vcpu_read_reg v r) (vcpuReadReg v r)"
+  apply (simp add: vcpu_read_reg_def vcpuReadReg_def)
+  apply (rule corres_guard_imp)
+    apply (rule corres_assert_gen_asm2)
+    apply (rule corres_underlying_split[OF getObject_vcpu_corres])
+      apply (wpsimp simp: vcpu_relation_def)+
+  done
+
+lemma vcpuWriteReg_corres[corres]:
+  "corres dc (vcpu_at v) (vcpu_at' v and no_0_obj')
+          (vcpu_write_reg v r val) (vcpuWriteReg v r val)"
+  apply (simp add: vcpu_write_reg_def vcpuWriteReg_def)
+  apply (rule corres_guard_imp)
+    apply (rule corres_assert_gen_asm2)
+    apply (rule vcpuUpdate_corres)
+    apply (fastforce simp: vcpu_relation_def)+
+  done
+
+lemma vcpuSaveReg_corres[corres]:
+  "corres dc (vcpu_at v) (vcpu_at' v and no_0_obj')
+          (vcpu_save_reg v r) (vcpuSaveReg v r)"
+  apply (clarsimp simp: vcpu_save_reg_def vcpuSaveReg_def)
+  apply (rule corres_guard_imp)
+    apply (rule corres_assert_gen_asm2)
+    apply (rule corres_split[OF corres_machine_op[where r="(=)"]])
+       apply (rule corres_Id; simp)
+      apply (rule vcpuUpdate_corres, fastforce simp: vcpu_relation_def vgic_map_def)
+     apply wpsimp+
+  done
+
+lemma vcpuSaveRegRange_corres[corres]:
+  "corres dc (vcpu_at v) (vcpu_at' v and no_0_obj')
+          (vcpu_save_reg_range v rf rt) (vcpuSaveRegRange v rf rt)"
+  apply (clarsimp simp: vcpu_save_reg_range_def vcpuSaveRegRange_def)
+  apply (rule corres_mapM_x[OF _ _ _ _ subset_refl])
+     apply (wpsimp wp: vcpuSaveReg_corres)+
+  done
+
+lemma vcpuRestoreReg_corres[corres]:
+  "corres dc (vcpu_at v) (vcpu_at' v and no_0_obj')
+          (vcpu_restore_reg v r) (vcpuRestoreReg v r)"
+  apply (clarsimp simp: vcpu_restore_reg_def vcpuRestoreReg_def)
+  apply (rule corres_guard_imp)
+    apply (rule corres_assert_gen_asm2)
+    apply (rule corres_split[OF getObject_vcpu_corres])
+      apply (rule corres_machine_op)
+      apply (rule corres_Id)
+        apply (fastforce simp: vcpu_relation_def)
+       apply (wpsimp wp: corres_Id simp: vcpu_relation_def vgic_map_def)+
+  done
+
+lemma vcpuRestoreRegRange_corres[corres]:
+  "corres dc (vcpu_at v) (vcpu_at' v and no_0_obj')
+          (vcpu_restore_reg_range v rf rt) (vcpuRestoreRegRange v rf rt)"
+  apply (clarsimp simp: vcpu_restore_reg_range_def vcpuRestoreRegRange_def)
+  apply (rule corres_mapM_x[OF _ _ _ _ subset_refl])
+     apply (wpsimp wp: vcpuRestoreReg_corres)+
+  done
+
+lemma saveVirtTimer_corres[corres]:
+  "corres dc (vcpu_at vcpu_ptr) (vcpu_at' vcpu_ptr and no_0_obj')
+             (save_virt_timer vcpu_ptr) (saveVirtTimer vcpu_ptr)"
+  unfolding save_virt_timer_def saveVirtTimer_def
+  apply (rule corres_guard_imp)
+    apply (rule corres_split_dc[OF vcpuSaveReg_corres], simp)
+      apply (rule corres_split_dc[OF corres_machine_op], (rule corres_Id; simp))
+        apply (rule corres_split_dc[OF vcpuSaveReg_corres], simp)+
+              apply (rule corres_split_eqr[OF corres_machine_op], (rule corres_Id; simp))+
+                  apply (fold dc_def)
+                  apply (rule vcpuUpdate_corres)
+                  apply (simp add: vcpu_relation_def)
+                 apply wpsimp+
+  done
+
+lemma restoreVirtTimer_corres[corres]:
+  "corres dc (vcpu_at vcpu_ptr) (vcpu_at' vcpu_ptr and no_0_obj')
+             (restore_virt_timer vcpu_ptr) (restoreVirtTimer vcpu_ptr)"
+  unfolding restore_virt_timer_def restoreVirtTimer_def IRQ_def
+  apply (rule corres_guard_imp)
+    apply (rule corres_split_dc[OF vcpuRestoreReg_corres], simp)+
+        apply (rule corres_split_eqr[OF corres_machine_op], (rule corres_Id; simp))+
+          apply (rule corres_split[OF getObject_vcpu_corres])
+            apply (rule corres_split_eqr[OF vcpuReadReg_corres])
+              apply (clarsimp simp: vcpu_relation_def)
+              apply (rule corres_split_dc[OF vcpuWriteReg_corres])+
+                apply (rule corres_split_dc[OF vcpuRestoreReg_corres], simp)+
+                  apply (rule corres_split_eqr[OF isIRQActive_corres])
+                    apply (rule corres_split_dc[OF corres_when], simp)
+                       apply (simp add: irq_vppi_event_index_def irqVPPIEventIndex_def IRQ_def)
+                       apply (rule corres_machine_op, simp)
+                       apply (rule corres_Id; wpsimp)
+                      apply (fold dc_def)
+                      apply (rule vcpuRestoreReg_corres)
+                     apply (wpsimp simp: if_apply_def2 isIRQActive_def)+
+  done
+
+lemma vcpuSave_corres:
+  "corres dc (vcpu_at (fst cvcpu)) (vcpu_at' (fst cvcpu) and no_0_obj')
+             (vcpu_save (Some cvcpu)) (vcpuSave (Some cvcpu))"
+  supply no_fail_isb[wp] no_fail_dsb[wp]
+  apply (clarsimp simp add: vcpu_save_def vcpuSave_def armvVCPUSave_def)
+  apply (cases cvcpu, clarsimp, rename_tac v active)
+  apply (rule corres_guard_imp)
+    sorry (* FIXME AARCH64: fix spec, there's a dsb here on one side but not the other (then update proof)
+    apply (rule corres_split_dc[OF corres_machine_op])
+       apply (rule corres_Id; wpsimp)
+      apply (rule corres_split[where r'=dc])
+         apply (rule corres_when, simp)
+         apply (rule corres_split[OF vcpuSaveReg_corres])
+           apply (rule corres_split_eqr[OF corres_machine_op])
+              apply (rule corres_Id; wpsimp)
+             apply (rule corres_split[OF vgicUpdate_corres])
+                apply (clarsimp simp: vgic_map_def)
+               apply (rule saveVirtTimer_corres)
+              apply wpsimp+
+          apply (rule corres_split_eqr[OF corres_machine_op])
+           apply (rule corres_Id; wpsimp)
+          apply (rule corres_split[OF vgicUpdate_corres])
+             apply (clarsimp simp: vgic_map_def)
+            apply (rule corres_split_eqr[OF corres_machine_op])
+               apply (rule corres_Id; wpsimp)
+              apply (rule corres_split[OF vgicUpdate_corres])
+                 apply (clarsimp simp: vgic_map_def)
+                apply (rule corres_split_eqr)
+                   apply (rule corres_trivial)
+                   apply (fastforce simp add: state_relation_def arch_state_relation_def)
+                  apply (simp add: mapM_discarded)
+                  apply (rule corres_split[OF corres_mapM_x[OF _ _ _ _ subset_refl]])
+                        apply (rule corres_split_eqr[OF corres_machine_op])
+                           apply (rule corres_Id; wpsimp)
+                          apply (clarsimp, fold dc_def)
+                          apply (rule vgicUpdateLR_corres)
+                         apply wpsimp+
+                    apply (rule corres_split[OF vcpuSaveRegRange_corres])
+                      apply (rule corres_machine_op)
+                      apply (rule corres_Id; wpsimp)
+                     apply (wpsimp wp: mapM_x_wp_inv hoare_vcg_imp_lift'
+                                 simp: if_apply_def2)+
+  done *)
+
+lemma vcpuDisable_corres:
+  "corres dc (\<lambda>s. (\<exists>v. vcpuopt = Some v) \<longrightarrow> vcpu_at  (the vcpuopt) s)
+             (\<lambda>s. ((\<exists>v. vcpuopt = Some v) \<longrightarrow> vcpu_at' (the vcpuopt) s) \<and> no_0_obj' s)
+             (vcpu_disable vcpuopt)
+             (vcpuDisable vcpuopt)"
+  (* FIXME these should be in wp/simp sets *)
+  supply no_fail_isb[wp] no_fail_dsb[wp]
+  apply (cases vcpuopt; clarsimp simp: vcpu_disable_def vcpuDisable_def)
+   (* no current VCPU *)
+   subgoal
+     apply (clarsimp simp: doMachineOp_bind do_machine_op_bind empty_fail_cond)
+     apply (rule corres_guard_imp)
+       apply (rule corres_split_dc[OF corres_machine_op]
+         | rule corres_machine_op corres_Id
+         | wpsimp)+
+     done
+  (* have current VCPU *)
+   apply (rename_tac vcpu)
+   apply (clarsimp simp: doMachineOp_bind do_machine_op_bind bind_assoc IRQ_def)
+   apply (rule corres_guard_imp)
+     apply (rule corres_split_dc[OF corres_machine_op])
+        apply (rule corres_Id; wpsimp)
+       apply (rule corres_split_eqr[OF corres_machine_op])
+          apply (rule corres_Id; wpsimp)
+         apply (rule corres_split_dc[OF vgicUpdate_corres])
+            apply (clarsimp simp: vgic_map_def)
+           apply (rule corres_split_dc[OF vcpuSaveReg_corres])
+             sorry (* FIXME AARCH64 fix spec, specs inconsistent: VCPURegACTLR vs VCPURegCPACR
+             apply (rule corres_split_dc[OF corres_machine_op]
+                         corres_split_dc[OF saveVirtTimer_corres]
+                    | rule corres_machine_op corres_Id
+                    | wpsimp)+
+   done *)
+
+lemma vcpuEnable_corres:
+  "corres dc (vcpu_at  vcpu) (vcpu_at' vcpu and no_0_obj')
+             (vcpu_enable vcpu) (vcpuEnable vcpu)"
+  (* FIXME these should be in wp/simp sets *)
+  supply no_fail_isb[wp] no_fail_dsb[wp]
+  apply (simp add: vcpu_enable_def vcpuEnable_def doMachineOp_bind do_machine_op_bind bind_assoc)
+  apply (rule corres_guard_imp)
+    apply (rule corres_split_dc[OF vcpuRestoreReg_corres])+
+      apply (rule corres_split[OF getObject_vcpu_corres], rename_tac vcpu')
+        apply (case_tac vcpu')
+        apply (rule corres_split_dc[OF corres_machine_op]
+               | rule corres_split_dc[OF vcpuRestoreReg_corres]
+               | rule corres_machine_op corres_Id restoreVirtTimer_corres
+               | wpsimp simp: vcpu_relation_def vgic_map_def)+
+  done
+
+lemma vcpuRestore_corres:
+  "corres dc (vcpu_at vcpu)
+             (vcpu_at' vcpu and no_0_obj')
+             (vcpu_restore vcpu)
+             (vcpuRestore vcpu)"
+  (* FIXME these should be in wp/simp sets *)
+  supply no_fail_isb[wp] no_fail_dsb[wp]
+  apply (simp add: vcpu_restore_def vcpuRestore_def gicVCPUMaxNumLR_def)
+  apply (rule corres_guard_imp)
+    apply (rule corres_split_dc[OF corres_machine_op]
+           | (rule corres_machine_op corres_Id; wpsimp))+
+        apply (rule corres_split[OF getObject_vcpu_corres], rename_tac vcpu')
+          apply (rule corres_split[OF corres_gets_gicvcpu_numlistregs])
+            apply (case_tac vcpu'
+                   , clarsimp simp: comp_def vcpu_relation_def vgic_map_def mapM_x_mapM
+                                    uncurry_def split_def mapM_map_simp)
+            apply (simp add: doMachineOp_bind do_machine_op_bind bind_assoc empty_fail_cond)
+            apply (rule corres_split_dc[OF corres_machine_op])
+               apply (rule corres_Id; wpsimp)
+              apply (rule corres_split_dc[OF corres_machine_op])
+                 apply (rule corres_Id; wpsimp)
+                apply (rule corres_split)
+                   apply (rule corres_machine_op, rule corres_Id; wpsimp wp: no_fail_mapM)
+                  apply (rule corres_split_dc[OF vcpuRestoreRegRange_corres])
+                    apply (rule vcpuEnable_corres)
+                   apply wpsimp+
+  done
+
+crunches
+  vcpuUpdate for vcpu_at'[wp]: "\<lambda>s. P (vcpu_at' p s)"
+
+lemma vcpuSwitch_corres:
+  assumes "vcpu' = vcpu"
+  shows
+  "corres dc (\<lambda>s. (vcpu \<noteq> None \<longrightarrow> vcpu_at  (the vcpu) s) \<and>
+                  ((arm_current_vcpu \<circ> arch_state) s \<noteq> None
+                    \<longrightarrow> vcpu_at ((fst \<circ> the \<circ> arm_current_vcpu \<circ> arch_state) s) s))
+             (\<lambda>s. (vcpu' \<noteq> None \<longrightarrow> vcpu_at'  (the vcpu') s) \<and>
+                  ((armHSCurVCPU \<circ> ksArchState) s \<noteq> None
+                    \<longrightarrow> vcpu_at' ((fst \<circ> the \<circ> armHSCurVCPU \<circ> ksArchState) s) s) \<and>
+                  no_0_obj' s)
+             (vcpu_switch vcpu)
+             (vcpuSwitch vcpu')"
+  proof -
+    have modify_current_vcpu:
+      "\<And>a b. corres dc \<top> \<top> (modify (\<lambda>s. s\<lparr>arch_state := arch_state s\<lparr>arm_current_vcpu := Some (a, b)\<rparr>\<rparr>))
+                             (modifyArchState (armHSCurVCPU_update (\<lambda>_. Some (a, b))))"
+      by (clarsimp simp add: modifyArchState_def state_relation_def arch_state_relation_def
+                   intro!: corres_modify)
+    have get_current_vcpu: "corres (=) \<top> \<top> (gets (arm_current_vcpu \<circ> arch_state))
+                                               (gets (armHSCurVCPU \<circ> ksArchState))"
+      apply clarsimp
+      apply (rule_tac P = "(arm_current_vcpu (arch_state s)) = (armHSCurVCPU (ksArchState s'))"
+                     in TrueE;
+             simp add: state_relation_def arch_state_relation_def)
+      done
+    show ?thesis
+      apply (simp add: vcpu_switch_def vcpuSwitch_def assms)
+      apply (cases vcpu)
+         apply (all \<open>simp, rule corres_underlying_split[OF  _ _ gets_sp gets_sp],
+                           rule corres_guard_imp[OF get_current_vcpu TrueI TrueI],
+                           rename_tac rv rv', case_tac rv ;
+                           clarsimp simp add: when_def\<close>)
+        apply (rule corres_machine_op[OF corres_underlying_trivial[OF no_fail_isb]] TrueI TrueI
+                    vcpuDisable_corres modify_current_vcpu
+                    vcpuEnable_corres
+                    vcpuRestore_corres
+                    vcpuSave_corres
+                    hoare_post_taut conjI
+                    corres_underlying_split corres_guard_imp
+               | clarsimp simp add: when_def | wpsimp | assumption)+
+      done
+  qed
+
+lemma aligned_distinct_relation_vcpu_atI'[elim]:
+  "\<lbrakk> vcpu_at p s; pspace_relation (kheap s) (ksPSpace s');
+     pspace_aligned' s'; pspace_distinct' s' \<rbrakk>
+   \<Longrightarrow> vcpu_at' p s'"
+  apply (clarsimp simp add: obj_at_def a_type_def)
+  apply (simp split: Structures_A.kernel_object.split_asm
+                     if_split_asm arch_kernel_obj.split_asm)
+  apply (drule(1) pspace_relation_absD)
+  apply (clarsimp simp: other_obj_relation_def)
+    apply (case_tac z ; simp)
+    apply (rename_tac vcpu)
+    apply (case_tac vcpu; simp)
+  apply (clarsimp simp: vcpu_relation_def obj_at'_def typ_at'_def ko_wp_at'_def)
+  apply (fastforce simp add: pspace_aligned'_def pspace_distinct'_def dom_def)
+  done
+
+lemma vcpuSwitch_corres':
+  assumes "vcpu' = vcpu"
+  shows
+  "corres dc (\<lambda>s. (vcpu \<noteq> None \<longrightarrow> vcpu_at  (the vcpu) s) \<and>
+                  ((arm_current_vcpu \<circ> arch_state) s \<noteq> None
+                    \<longrightarrow> vcpu_at ((fst \<circ> the \<circ> arm_current_vcpu \<circ> arch_state) s) s))
+             (pspace_aligned' and pspace_distinct' and no_0_obj')
+             (vcpu_switch vcpu)
+             (vcpuSwitch vcpu')"
+  apply (rule stronger_corres_guard_imp,
+         rule vcpuSwitch_corres[OF assms])
+   apply simp
+  apply (simp add: assms)
+  apply (rule conjI)
+   apply clarsimp
+   apply (rule aligned_distinct_relation_vcpu_atI' ; clarsimp simp add: state_relation_def, assumption?)
+  apply (clarsimp simp add: state_relation_def arch_state_relation_def)
+  apply (rule aligned_distinct_relation_vcpu_atI'; assumption)
+  done
+
+crunches
+  vgicUpdateLR, vcpuWriteReg, vcpuReadReg, vcpuRestoreRegRange, vcpuSaveRegRange, vcpuSave,
+  vcpuSwitch
+  for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
+  and it'[wp]: "\<lambda>s. P (ksIdleThread s)"
+  (ignore: doMachineOp wp: crunch_wps)
+
+lemma modifyArchState_hyp[wp]:
+  "modifyArchState x \<lbrace>ko_wp_at' (is_vcpu' and hyp_live') v\<rbrace>"
+  by (wpsimp simp: modifyArchState_def wp: | subst doMachineOp_bind)+
+
+lemma vcpuSwitch_hyp[wp]:
+  "vcpuSwitch x \<lbrace>ko_wp_at' (is_vcpu' and hyp_live') v\<rbrace>"
+  apply (simp add: vcpuSwitch_def)
+  apply wpc
+    apply wpsimp
+    sorry (* FIXME AARCH64: is this in the wrong location now (missing wp rule?)
+   apply wpsimp
+  apply (clarsimp simp: ko_wp_at'_def)
+  done *)
+
+abbreviation
+  "live_vcpu_at_tcb p s \<equiv> \<exists>x. ko_at' x p s \<and>
+    (case atcbVCPUPtr (tcbArch x) of None \<Rightarrow> \<lambda>_. True
+                                   | Some x \<Rightarrow> ko_wp_at' (is_vcpu' and hyp_live') x) s"
+
+lemma valid_case_option_post_wp':
+  "(\<And>x. \<lbrace>P x\<rbrace> f \<lbrace>\<lambda>rv. Q x\<rbrace>) \<Longrightarrow>
+    \<lbrace>case ep of Some x \<Rightarrow> P x | _ \<Rightarrow> \<lambda>_. True\<rbrace>
+       f \<lbrace>\<lambda>rv. case ep of Some x \<Rightarrow> Q x | _ \<Rightarrow> \<lambda>_. True\<rbrace>"
+  by (cases ep, simp_all add: hoare_vcg_prop)
+
+crunches
+  vcpuDisable, vcpuRestore, vcpuEnable, vgicUpdateLR, vcpuWriteReg, vcpuReadReg,
+  vcpuRestoreRegRange, vcpuSaveRegRange
+  for ksQ[wp]:  "\<lambda>s. P (ksReadyQueues s)"
+  (wp: crunch_wps)
+
+lemma vcpuSave_ksQ[wp]:
+  "\<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> vcpuSave param_a \<lbrace>\<lambda>_ s. P (ksReadyQueues s)\<rbrace>"
+  supply option.case_cong_weak[cong]
+  apply (wpsimp simp: vcpuSave_def modifyArchState_def armvVCPUSave_def | simp)+
+  apply (rule_tac S="set gicIndices" in mapM_x_wp)
+  apply wpsimp+
+  done
+
+lemma vcpuSwitch_ksQ[wp]:
+  "\<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_ s. P (ksReadyQueues s)\<rbrace>"
+  by (wpsimp simp: vcpuSwitch_def modifyArchState_def | simp)+
+
+lemma hyp_live'_vcpu_regs[simp]:
+  "hyp_live' (KOArch (KOVCPU (vcpuRegs_update f vcpu))) = hyp_live' (KOArch (KOVCPU vcpu))"
+    by (simp add: hyp_live'_def arch_live'_def)
+
+lemma hyp_live'_vcpu_vgic[simp]:
+  "hyp_live' (KOArch (KOVCPU (vcpuVGIC_update f' vcpu))) = hyp_live' (KOArch (KOVCPU vcpu))"
+    by (simp add: hyp_live'_def arch_live'_def)
+
+lemma hyp_live'_vcpu_VPPIMasked[simp]:
+  "hyp_live' (KOArch (KOVCPU (vcpuVPPIMasked_update f' vcpu))) = hyp_live' (KOArch (KOVCPU vcpu))"
+    by (simp add: hyp_live'_def arch_live'_def)
+
+lemma hyp_live'_vcpu_VTimer[simp]:
+  "hyp_live' (KOArch (KOVCPU (vcpuVTimer_update f' vcpu))) = hyp_live' (KOArch (KOVCPU vcpu))"
+    by (simp add: hyp_live'_def arch_live'_def)
+
+lemma live'_vcpu_regs[simp]:
+  "live' (KOArch (KOVCPU (vcpuRegs_update f vcpu))) = live' (KOArch (KOVCPU vcpu))"
+    by (simp add: live'_def)
+
+lemma live'_vcpu_vgic[simp]:
+  "live' (KOArch (KOVCPU (vcpuVGIC_update f' vcpu))) = live' (KOArch (KOVCPU vcpu))"
+    by (simp add: live'_def)
+
+lemma live'_vcpu_VPPIMasked[simp]:
+  "live' (KOArch (KOVCPU (vcpuVPPIMasked_update f' vcpu))) = live' (KOArch (KOVCPU vcpu))"
+    by (simp add: live'_def)
+
+lemma live'_vcpu_VTimer[simp]:
+  "live' (KOArch (KOVCPU (vcpuVTimer_update f' vcpu))) = live' (KOArch (KOVCPU vcpu))"
+    by (simp add: live'_def)
+
+lemma setVCPU_regs_vcpu_live:
+  "\<lbrace>ko_wp_at' (is_vcpu' and hyp_live') p and ko_at' vcpu v\<rbrace>
+   setObject v (vcpuRegs_update f vcpu) \<lbrace>\<lambda>_. ko_wp_at' (is_vcpu' and hyp_live') p\<rbrace>"
+  apply (wp setObject_ko_wp_at, simp)
+    apply (simp add: objBits_simps)
+   apply (clarsimp simp: vcpuBits_def pageBits_def)
+  apply (clarsimp simp: pred_conj_def is_vcpu'_def ko_wp_at'_def obj_at'_real_def)
+  done
+
+lemma setVCPU_vgic_vcpu_live[wp]:
+  "\<lbrace>ko_wp_at' (is_vcpu' and hyp_live') p and ko_at' vcpu v\<rbrace>
+   setObject v (vcpuVGIC_update f vcpu) \<lbrace>\<lambda>_. ko_wp_at' (is_vcpu' and hyp_live') p\<rbrace>"
+  apply (wp setObject_ko_wp_at, simp)
+    apply (simp add: objBits_simps archObjSize_def)
+   apply (clarsimp simp: vcpuBits_def pageBits_def)
+  apply (clarsimp simp: pred_conj_def is_vcpu'_def ko_wp_at'_def obj_at'_real_def projectKOs)
+  done
+
+lemma setVCPU_VPPIMasked_vcpu_live[wp]:
+  "\<lbrace>ko_wp_at' (is_vcpu' and hyp_live') p and ko_at' vcpu v\<rbrace>
+   setObject v (vcpuVPPIMasked_update f vcpu) \<lbrace>\<lambda>_. ko_wp_at' (is_vcpu' and hyp_live') p\<rbrace>"
+  apply (wp setObject_ko_wp_at, simp)
+    apply (simp add: objBits_simps archObjSize_def)
+   apply (clarsimp simp: vcpuBits_def pageBits_def)
+  apply (clarsimp simp: pred_conj_def is_vcpu'_def ko_wp_at'_def obj_at'_real_def projectKOs)
+  done
+
+lemma setVCPU_VTimer_vcpu_live[wp]:
+  "\<lbrace>ko_wp_at' (is_vcpu' and hyp_live') p and ko_at' vcpu v\<rbrace>
+   setObject v (vcpuVTimer_update f vcpu) \<lbrace>\<lambda>_. ko_wp_at' (is_vcpu' and hyp_live') p\<rbrace>"
+  apply (wp setObject_ko_wp_at, simp)
+    apply (simp add: objBits_simps archObjSize_def)
+   apply (clarsimp simp: vcpuBits_def pageBits_def)
+  apply (clarsimp simp: pred_conj_def is_vcpu'_def ko_wp_at'_def obj_at'_real_def projectKOs)
+  done
+
+lemma vgicUpdate_vcpu_live[wp]:
+  "vgicUpdate v f \<lbrace> ko_wp_at' (is_vcpu' and hyp_live') p \<rbrace>"
+  by (wpsimp simp: vgicUpdate_def vcpuUpdate_def wp: setVCPU_vgic_vcpu_live)
+
+lemma setVCPU_regs_vgic_vcpu_live:
+  "\<lbrace>ko_wp_at' (is_vcpu' and hyp_live') p and ko_at' vcpu v\<rbrace>
+   setObject v (vcpuRegs_update f (vcpuVGIC_update f' vcpu)) \<lbrace>\<lambda>_. ko_wp_at' (is_vcpu' and hyp_live') p\<rbrace>"
+  apply (wp setObject_ko_wp_at, simp)
+    apply (simp add: objBits_simps archObjSize_def)
+   apply (clarsimp simp: vcpuBits_def pageBits_def)
+  apply (clarsimp simp: pred_conj_def is_vcpu'_def ko_wp_at'_def obj_at'_real_def projectKOs)
+  done
+
+(* FIXME AARCH64 move found at top of VSpace_R in ARM_HYP *)
+lemma option_case_all_conv:
+  "(case x of None \<Rightarrow> True | Some v \<Rightarrow> P v) = (\<forall>v. x = Some v \<longrightarrow> P v)"
+  by (auto split: option.split)
+
+(* FIXME: move *)
+lemma setVCPU_regs_vgic_valid_arch':
+  "\<lbrace>valid_arch_state' and ko_at' vcpu v\<rbrace> setObject v (vcpuRegs_update f (vcpuVGIC_update f' vcpu)) \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
+  apply (simp add: valid_arch_state'_def valid_asid_table'_def option_case_all_conv)
+    apply (wp hoare_vcg_imp_lift hoare_vcg_all_lift setVCPU_regs_vgic_vcpu_live
+          | rule hoare_lift_Pf[where f=ksArchState])+
+  apply (clarsimp simp: pred_conj_def o_def)
+  done
+
+lemma setVCPU_regs_valid_arch':
+  "\<lbrace>valid_arch_state' and ko_at' vcpu v\<rbrace> setObject v (vcpuRegs_update f vcpu) \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
+  apply (simp add: valid_arch_state'_def valid_asid_table'_def option_case_all_conv)
+    apply (wp hoare_vcg_imp_lift hoare_vcg_all_lift setVCPU_regs_vcpu_live
+           | rule hoare_lift_Pf[where f=ksArchState])
+  apply (clarsimp simp: pred_conj_def o_def)
+  done
+
+lemma setVCPU_vgic_valid_arch':
+  "\<lbrace>valid_arch_state' and ko_at' vcpu v\<rbrace> setObject v (vcpuVGIC_update f vcpu) \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
+  apply (simp add: valid_arch_state'_def valid_asid_table'_def option_case_all_conv)
+    apply (wp hoare_vcg_imp_lift hoare_vcg_all_lift setVCPU_vgic_vcpu_live
+           | rule hoare_lift_Pf[where f=ksArchState])
+  apply (clarsimp simp: pred_conj_def o_def)
+  done
+
+lemma setVCPU_VPPIMasked_valid_arch':
+  "\<lbrace>valid_arch_state' and ko_at' vcpu v\<rbrace> setObject v (vcpuVPPIMasked_update f vcpu) \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
+  apply (simp add: valid_arch_state'_def valid_asid_table'_def option_case_all_conv)
+    apply (wp hoare_vcg_imp_lift hoare_vcg_all_lift setVCPU_vgic_vcpu_live
+           | rule hoare_lift_Pf[where f=ksArchState])
+  apply (clarsimp simp: pred_conj_def o_def)
+  done
+
+lemma setVCPU_VTimer_valid_arch':
+  "\<lbrace>valid_arch_state' and ko_at' vcpu v\<rbrace> setObject v (vcpuVTimer_update f vcpu) \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
+  apply (simp add: valid_arch_state'_def valid_asid_table'_def option_case_all_conv)
+    apply (wp hoare_vcg_imp_lift hoare_vcg_all_lift setVCPU_vgic_vcpu_live
+           | rule hoare_lift_Pf[where f=ksArchState])
+  apply (clarsimp simp: pred_conj_def o_def)
+  done
+
+lemma state_refs_of'_vcpu_empty:
+  "ko_at' (vcpu::vcpu) v s \<Longrightarrow> (state_refs_of' s)(v := {}) = state_refs_of' s"
+    by (rule ext) (clarsimp simp: state_refs_of'_def obj_at'_def projectKOs)
+
+lemma state_hyp_refs_of'_vcpu_absorb:
+  "ko_at' vcpu v s \<Longrightarrow>
+   (state_hyp_refs_of' s)(v := vcpu_tcb_refs' (vcpuTCBPtr vcpu)) = state_hyp_refs_of' s"
+     by (rule ext) (clarsimp simp: state_hyp_refs_of'_def obj_at'_def projectKOs)
+
+lemma setObject_vcpu_valid_objs':
+  "\<lbrace>valid_objs'\<rbrace> setObject v (vcpu::vcpu) \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
+  apply (wp setObject_valid_objs')
+   apply (clarsimp simp: in_monad updateObject_default_def projectKOs valid_obj'_def)
+  apply simp
+  done
+
+lemma setVCPU_valid_arch':
+ "\<lbrace>valid_arch_state' and (\<lambda>s. \<forall>a. armHSCurVCPU (ksArchState s) = Some (v,a) \<longrightarrow> hyp_live' (KOArch (KOVCPU vcpu))) \<rbrace>
+    setObject v (vcpu::vcpu)
+  \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
+  apply (simp add: valid_arch_state'_def valid_asid_table'_def option_case_all_conv pred_conj_def)
+  apply (rule hoare_vcg_conj_lift[rotated])
+   apply (rule hoare_vcg_conj_lift[rotated])
+    apply (subst conj_commute[where P="\<forall>a. _ a \<longrightarrow> _ a"])
+    apply (subst conj_commute[where P="\<forall>a. _ a \<longrightarrow> _ a"])
+    apply (subst conj_assoc)+
+    apply (rule hoare_vcg_conj_lift[rotated])
+    sorry (* FIXME AARCH64
+     apply (rule hoare_vcg_conj_lift[rotated])
+      apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift)
+       apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift  setObject_ko_wp_at)
+        apply (simp add: objBits_simps archObjSize_def vcpu_bits_def pageBits_def)+
+      apply safe
+         apply (clarsimp simp: is_vcpu'_def ko_wp_at'_def)+
+     apply (wp hoare_vcg_all_lift hoare_drop_imp)+
+  done *)
+
+lemma setVCPU_valid_queues [wp]:
+  "\<lbrace>valid_queues\<rbrace> setObject p (v::vcpu) \<lbrace>\<lambda>_. valid_queues\<rbrace>"
+  by (wp valid_queues_lift | simp add: pred_tcb_at'_def)+
+
+crunches
+  vcpuDisable, vcpuRestore, vcpuEnable, vcpuUpdate, vcpuSaveRegRange, vgicUpdateLR
+  for valid_queues[wp]: valid_queues
+  (ignore: doMachineOp wp: mapM_x_wp)
+
+lemma vcpuSave_valid_queues[wp]:
+  "\<lbrace>Invariants_H.valid_queues\<rbrace> vcpuSave param_a \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
+  by (wpsimp simp: vcpuSave_def armvVCPUSave_def wp: mapM_x_wp cong: option.case_cong_weak | simp)+
+
+lemma vcpuSwitch_valid_queues[wp]:
+  "\<lbrace>Invariants_H.valid_queues\<rbrace> vcpuSwitch param_a \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
+  by (wpsimp simp: vcpuSwitch_def modifyArchState_def | simp)+
+
+lemma setObject_vcpu_no_tcb_update:
+  "\<lbrakk> vcpuTCBPtr (f vcpu) = vcpuTCBPtr vcpu \<rbrakk>
+  \<Longrightarrow> \<lbrace> valid_objs' and ko_at' (vcpu :: vcpu) p\<rbrace> setObject p (f vcpu) \<lbrace> \<lambda>_. valid_objs' \<rbrace>"
+  apply (rule_tac Q="valid_objs' and (ko_at' vcpu p and valid_obj' (KOArch (KOVCPU vcpu)))" in hoare_pre_imp)
+   apply (clarsimp)
+   apply (simp add: valid_obj'_def)
+  apply (rule setObject_valid_objs')
+  apply (clarsimp simp add: obj_at'_def projectKOs)
+  apply (frule updateObject_default_result)
+  apply (clarsimp simp add: projectKOs valid_obj'_def)
+  done
+
+lemma vcpuUpdate_valid_objs'[wp]:
+  "\<forall>vcpu. vcpuTCBPtr (f vcpu) = vcpuTCBPtr vcpu \<Longrightarrow>
+   \<lbrace>valid_objs'\<rbrace> vcpuUpdate vr f \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
+  apply (wpsimp simp: vcpuUpdate_def)
+  apply (rule_tac vcpu=vcpu in setObject_vcpu_no_tcb_update)
+  apply wpsimp+
+  done
+
+crunches
+  vgicUpdate, vcpuSaveReg, vgicUpdateLR, vcpuSaveRegRange, vcpuSave,
+  vcpuDisable, vcpuEnable, vcpuRestore, vcpuSwitch
+  for valid_objs'[wp]: valid_objs'
+  and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
+  (wp: mapM_wp_inv simp: mapM_x_mapM)
+
+lemma setVCPU_regs_r_invs_cicd':
+  "\<lbrace>invs_no_cicd' and ko_at' vcpu v\<rbrace>
+   setObject v (vcpuRegs_update (\<lambda>_. (vcpuRegs vcpu)(r:=rval)) vcpu) \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
+  unfolding valid_state'_def valid_pspace'_def valid_mdb'_def invs_no_cicd'_def
+            valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def
+  supply fun_upd_apply[simp del]
+  apply (wpsimp wp: setObject_vcpu_no_tcb_update
+                      [where f="\<lambda>vcpu. vcpuRegs_update (\<lambda>_. (vcpuRegs vcpu)(r:=rval)) vcpu"]
+                    sch_act_wf_lift tcb_in_cur_domain'_lift valid_queues_lift
+                    setObject_state_refs_of' setObject_state_hyp_refs_of' valid_global_refs_lift'
+                    valid_irq_node_lift_asm [where Q=\<top>] valid_irq_handlers_lift'
+                    cteCaps_of_ctes_of_lift irqs_masked_lift ct_idle_or_in_cur_domain'_lift
+                    valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
+                    setObject_typ_at' cur_tcb_lift
+                    setVCPU_regs_valid_arch' setVCPU_regs_vcpu_live
+              simp: objBits_simps archObjSize_def vcpuBits_def pageBits_def
+                    state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb)
+  apply (clarsimp simp: if_live_then_nonz_cap'_def obj_at'_real_def)
+  apply (fastforce simp: ko_wp_at'_def projectKOs)
+  done
+
+lemma setVCPU_vgic_invs_cicd':
+  "\<lbrace>invs_no_cicd' and ko_at' vcpu v\<rbrace>
+   setObject v (vcpuVGIC_update f vcpu)
+   \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
+  unfolding valid_state'_def valid_pspace'_def valid_mdb'_def invs_no_cicd'_def
+            valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def
+  supply fun_upd_apply[simp del]
+  apply (wpsimp wp: setObject_vcpu_no_tcb_update
+                      [where f="\<lambda>vcpu. (vcpuVGIC_update f vcpu)"]
+                    sch_act_wf_lift tcb_in_cur_domain'_lift valid_queues_lift
+                    setObject_state_refs_of' setObject_state_hyp_refs_of' valid_global_refs_lift'
+                    valid_irq_node_lift_asm [where Q=\<top>] valid_irq_handlers_lift'
+                    cteCaps_of_ctes_of_lift irqs_masked_lift ct_idle_or_in_cur_domain'_lift
+                    valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
+                    setObject_typ_at' cur_tcb_lift
+                    setVCPU_vgic_valid_arch'
+              simp: objBits_simps archObjSize_def vcpuBits_def pageBits_def
+                    state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb)
+  apply (clarsimp simp: if_live_then_nonz_cap'_def obj_at'_real_def)
+  apply (fastforce simp: ko_wp_at'_def projectKOs)
+  done
+
+lemma setVCPU_VPPIMasked_invs_cicd':
+  "\<lbrace>invs_no_cicd' and ko_at' vcpu v\<rbrace>
+   setObject v (vcpuVPPIMasked_update f vcpu)
+   \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
+  unfolding valid_state'_def valid_pspace'_def valid_mdb'_def invs_no_cicd'_def
+            valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def
+  supply fun_upd_apply[simp del]
+  apply (wpsimp wp: setObject_vcpu_no_tcb_update
+                      [where f="\<lambda>vcpu. (vcpuVPPIMasked_update f vcpu)"]
+                    sch_act_wf_lift tcb_in_cur_domain'_lift valid_queues_lift
+                    setObject_state_refs_of' setObject_state_hyp_refs_of' valid_global_refs_lift'
+                    valid_irq_node_lift_asm [where Q=\<top>] valid_irq_handlers_lift'
+                    cteCaps_of_ctes_of_lift irqs_masked_lift ct_idle_or_in_cur_domain'_lift
+                    valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
+                    setObject_typ_at' cur_tcb_lift
+                    setVCPU_VPPIMasked_valid_arch'
+              simp: objBits_simps archObjSize_def vcpuBits_def pageBits_def
+                    state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb)
+  apply (clarsimp simp: if_live_then_nonz_cap'_def obj_at'_real_def)
+  apply (fastforce simp: ko_wp_at'_def projectKOs)
+  done
+
+lemma setVCPU_VTimer_invs_cicd':
+  "\<lbrace>invs_no_cicd' and ko_at' vcpu v\<rbrace>
+   setObject v (vcpuVTimer_update f vcpu)
+   \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
+  unfolding valid_state'_def valid_pspace'_def valid_mdb'_def invs_no_cicd'_def
+            valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def
+  supply fun_upd_apply[simp del]
+  apply (wpsimp wp: setObject_vcpu_no_tcb_update
+                      [where f="\<lambda>vcpu. (vcpuVTimer_update f vcpu)"]
+                    sch_act_wf_lift tcb_in_cur_domain'_lift valid_queues_lift
+                    setObject_state_refs_of' setObject_state_hyp_refs_of' valid_global_refs_lift'
+                    valid_irq_node_lift_asm [where Q=\<top>] valid_irq_handlers_lift'
+                    cteCaps_of_ctes_of_lift irqs_masked_lift ct_idle_or_in_cur_domain'_lift
+                    valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
+                    setObject_typ_at' cur_tcb_lift
+                    setVCPU_VTimer_valid_arch'
+              simp: objBits_simps archObjSize_def vcpuBits_def pageBits_def
+                    state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb)
+  apply (clarsimp simp: if_live_then_nonz_cap'_def obj_at'_real_def)
+  apply (fastforce simp: ko_wp_at'_def projectKOs)
+  done
+
+lemma readVCPUHardwareReg_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (readVCPUHardwareReg r) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
+  by (wpsimp wp: dmo_invs_no_cicd' no_irq_readVCPUHardwareReg no_irq
+             simp: readVCPUHardwareReg_def gets_def in_monad)
+
+lemma writeVCPUHardwareReg_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (writeVCPUHardwareReg r v) \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
+  apply (wpsimp wp: dmo_invs_no_cicd' no_irq_writeVCPUHardwareReg no_irq)
+  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid)
+  apply (wpsimp simp: machine_op_lift_def writeVCPUHardwareReg_def
+                        machine_rest_lift_def split_def)+
+  done
+
+lemma vgicUpdate_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> vgicUpdate f v \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
+  by (wpsimp simp: vgicUpdate_def vcpuUpdate_def wp: setVCPU_vgic_invs_cicd')
+
+lemma vcpuRestoreReg_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> vcpuRestoreReg v r \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
+  by (wpsimp simp: vcpuRestoreReg_def | subst doMachineOp_bind | rule empty_fail_bind)+
+
+lemma vcpuReadReg_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> vcpuReadReg v r \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
+  by (wpsimp simp: vcpuReadReg_def | subst doMachineOp_bind | rule empty_fail_bind)+
+
+lemma vcpuSaveReg_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> vcpuSaveReg v r \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
+  by (wpsimp simp: vcpuSaveReg_def vcpuUpdate_def wp: setVCPU_regs_r_invs_cicd'
+     | subst doMachineOp_bind | rule empty_fail_bind)+
+
+lemma vcpuWriteReg_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> vcpuWriteReg vcpu_ptr r v \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
+  by (wpsimp simp: vcpuWriteReg_def vcpuUpdate_def wp: setVCPU_regs_r_invs_cicd'
+     | subst doMachineOp_bind | rule empty_fail_bind)+
+
+crunches vcpuRestoreRegRange, vcpuSaveRegRange, vgicUpdateLR
+  for invs_no_cicd'[wp]: invs_no_cicd'
+  (wp: mapM_x_wp ignore: loadObject)
+
+lemma saveVirtTimer_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> saveVirtTimer vcpu_ptr \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
+  sorry (* FIXME AARCH64
+  by (wpsimp simp: saveVirtTimer_def vcpuUpdate_def read_cntpct_def check_export_arch_timer_def
+             wp: setVCPU_VTimer_invs_cicd' dmo'_gets_wp)+ *)
+
+lemma restoreVirtTimer_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> restoreVirtTimer vcpu_ptr \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
+  by (wpsimp simp: restoreVirtTimer_def vcpuUpdate_def read_cntpct_def if_apply_def2
+                   isIRQActive_def
+             wp: setVCPU_VTimer_invs_cicd' maskInterrupt_invs_no_cicd' getIRQState_wp dmo'_gets_wp)
+
+lemma vcpuEnable_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> vcpuEnable v \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
+  by (wpsimp simp: vcpuEnable_def | subst doMachineOp_bind | rule empty_fail_bind)+
+
+lemma dmo_maskInterrupt_True_invs_no_cicd'[wp]:
+  "doMachineOp (maskInterrupt True irq) \<lbrace>invs_no_cicd'\<rbrace>"
+  apply (wp dmo_maskInterrupt)
+  apply (clarsimp simp: invs_no_cicd'_def valid_state'_def)
+  apply (simp add: valid_irq_masks'_def valid_machine_state'_def
+                   ct_not_inQ_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
+  done
+
+lemma vcpuDisable_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> vcpuDisable v \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
+  unfolding vcpuDisable_def
+  by (wpsimp wp: doMachineOp_typ_ats
+             simp: vcpuDisable_def doMachineOp_typ_at' split: option.splits
+      | subst doMachineOp_bind | rule empty_fail_bind conjI)+
+
+lemma vcpuRestore_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> vcpuRestore v \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
+  including no_pre
+  apply (wpsimp simp: vcpuRestore_def uncurry_def split_def doMachineOp_mapM_x gets_wp
+       | subst doMachineOp_bind | rule empty_fail_bind)+
+       apply (rule_tac S="(\<lambda>i. (of_nat i, vgicLR (vcpuVGIC vcpu) i)) ` {0..<numListRegs+1}" in mapM_x_wp)
+       apply wpsimp
+       apply (auto simp: image_def gicVCPUMaxNumLR_def)[1]
+      apply wpsimp+
+  done
+
+lemma vcpuSave_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd'\<rbrace> vcpuSave v \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
+  by (wpsimp simp: vcpuSave_def armvVCPUSave_def wp: mapM_x_wp cong: option.case_cong_weak
+      | assumption)+
+lemma valid_arch_state'_armHSCurVCPU_update[simp]:
+  "ko_wp_at' (is_vcpu' and hyp_live') v s \<Longrightarrow>
+   valid_arch_state' s \<Longrightarrow> valid_arch_state' (s\<lparr>ksArchState := armHSCurVCPU_update (\<lambda>_. Some (v, b)) (ksArchState s)\<rparr>)"
+  by (clarsimp simp: invs'_def valid_state'_def valid_queues_def valid_queues_no_bitmap_def
+             bitmapQ_defs valid_global_refs'_def valid_arch_state'_def global_refs'_def
+             valid_queues'_def valid_irq_node'_def valid_irq_handlers'_def
+             irq_issued'_def irqs_masked'_def valid_machine_state'_def
+             cur_tcb'_def)
+
+lemma dmo_vcpu_hyp:
+  "\<lbrace>ko_wp_at' (is_vcpu' and hyp_live') v\<rbrace> doMachineOp f \<lbrace>\<lambda>_. ko_wp_at' (is_vcpu' and hyp_live') v\<rbrace>"
+  by (wpsimp simp: doMachineOp_def)
+
+lemma vcpuSaveReg_hyp[wp]:
+  "\<lbrace>ko_wp_at' (is_vcpu' and hyp_live') v \<rbrace> vcpuSaveReg v' r \<lbrace>\<lambda>_. ko_wp_at' (is_vcpu' and hyp_live') v\<rbrace>"
+  by (wpsimp simp: vcpuSaveReg_def vcpuUpdate_def wp: setVCPU_regs_vcpu_live dmo_vcpu_hyp)
+
+lemma vcpuWriteReg_hyp[wp]:
+  "\<lbrace>ko_wp_at' (is_vcpu' and hyp_live') v \<rbrace> vcpuWriteReg v' r val \<lbrace>\<lambda>_. ko_wp_at' (is_vcpu' and hyp_live') v\<rbrace>"
+  by (wpsimp simp: vcpuWriteReg_def vcpuUpdate_def wp: setVCPU_regs_vcpu_live dmo_vcpu_hyp)
+
+crunches
+  vcpuRestoreRegRange, vcpuSaveRegRange, vgicUpdateLR, vcpuReadReg
+  for hyp[wp]: "ko_wp_at' (is_vcpu' and hyp_live') v"
+  (wp: crunch_wps setVCPU_regs_vcpu_live dmo_vcpu_hyp)
+
+lemma saveVirtTimer_hyp[wp]:
+  "saveVirtTimer vcpu_ptr \<lbrace>ko_wp_at' (is_vcpu' and hyp_live') v\<rbrace>"
+  by (wpsimp simp: saveVirtTimer_def vcpuUpdate_def wp: dmo_vcpu_hyp vgicUpdate_vcpu_live)
+
+lemma restoreVirtTimer_hyp[wp]:
+  "restoreVirtTimer vcpu_ptr \<lbrace>ko_wp_at' (is_vcpu' and hyp_live') v\<rbrace>"
+  by (wpsimp simp: restoreVirtTimer_def vcpuUpdate_def isIRQActive_def
+             wp: dmo_vcpu_hyp vgicUpdate_vcpu_live)
+
+lemma vcpuDisable_hyp[wp]:
+  "\<lbrace>ko_wp_at' (is_vcpu' and hyp_live') v\<rbrace> vcpuDisable (Some x) \<lbrace>\<lambda>_. ko_wp_at' (is_vcpu' and hyp_live') v\<rbrace>"
+  by (wpsimp simp: vcpuDisable_def wp: dmo_vcpu_hyp vgicUpdate_vcpu_live | subst doMachineOp_bind | rule empty_fail_bind)+
+
+lemma vcpuEnable_hyp[wp]:
+  "\<lbrace>ko_wp_at' (is_vcpu' and hyp_live') v\<rbrace> vcpuEnable x \<lbrace>\<lambda>_. ko_wp_at' (is_vcpu' and hyp_live') v\<rbrace>"
+  by (wpsimp simp: vcpuEnable_def wp: dmo_vcpu_hyp | subst doMachineOp_bind | rule empty_fail_bind)+
+
+lemma vcpuRestore_hyp[wp]:
+  "\<lbrace>ko_wp_at' (is_vcpu' and hyp_live') v\<rbrace> vcpuRestore x \<lbrace>\<lambda>_. ko_wp_at' (is_vcpu' and hyp_live') v\<rbrace>"
+  by (wpsimp simp: vcpuRestore_def wp: dmo_vcpu_hyp | subst doMachineOp_bind | rule empty_fail_bind)+
+
+lemma getObject_vcpu_ko_at':
+  "(vcpu::vcpu, s') \<in> fst (getObject p s) \<Longrightarrow> s' = s \<and> ko_at' vcpu p s"
+  apply (rule context_conjI)
+   apply (drule use_valid, rule getObject_inv[where P="(=) s"]; simp add: loadObject_default_inv)
+  apply (drule use_valid, rule getObject_ko_at; clarsimp simp: obj_at_simps vcpuBits_def)
+  done
+
+lemma vcpuSave_hyp[wp]:
+  "\<lbrace>ko_wp_at' (is_vcpu' and hyp_live') v\<rbrace> vcpuSave (Some (x, b)) \<lbrace>\<lambda>_. ko_wp_at' (is_vcpu' and hyp_live') v\<rbrace>"
+  apply (wpsimp simp: vcpuSave_def armvVCPUSave_def
+                wp: dmo_vcpu_hyp | subst doMachineOp_bind | rule empty_fail_bind)+
+  apply (rule_tac S="set [0..<numListRegs]" in mapM_x_wp)
+  by (wpsimp wp: dmo_vcpu_hyp | subst doMachineOp_bind | rule empty_fail_bind)+
+
+lemma vcpuUpdate_valid_arch_state'[wp]:
+  "\<forall>vcpu. vcpuTCBPtr (f vcpu) = vcpuTCBPtr vcpu \<Longrightarrow>
+   \<lbrace>valid_arch_state'\<rbrace> vcpuUpdate vr f \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
+  including no_pre
+  apply (wpsimp simp: vcpuUpdate_def
+            wp: setVCPU_valid_arch')
+  by (clarsimp simp: valid_def in_monad hyp_live'_def arch_live'_def valid_arch_state'_def
+                     obj_at'_real_def ko_wp_at'_def projectKOs is_vcpu'_def
+               dest!: getObject_vcpu_ko_at')+
+
+crunches vcpuRestoreReg
+  for valid_arch_state'[wp]: valid_arch_state'
+
+crunches vgicUpdateLR, vcpuSave, vcpuDisable, vcpuEnable, vcpuRestore
+  for valid_arch_state'[wp]: valid_arch_state'
+  (wp: crunch_wps ignore: doMachineOp)
+
+lemma vcpuSwitch_valid_arch_state'[wp]:
+   "\<lbrace>valid_arch_state' and (case v of None \<Rightarrow> \<top> | Some x \<Rightarrow> ko_wp_at' (is_vcpu' and hyp_live') x)\<rbrace>
+       vcpuSwitch v \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
+  apply (wpsimp simp: vcpuSwitch_def modifyArchState_def
+         wp: vcpuDisable_hyp[simplified pred_conj_def] vcpuSave_hyp[unfolded pred_conj_def]
+             dmo_vcpu_hyp vcpuSave_valid_arch_state'
+        | strengthen valid_arch_state'_armHSCurVCPU_update | simp)+
+  apply (auto simp: valid_arch_state'_def pred_conj_def)
+  done
+
+lemma invs_no_cicd'_armHSCurVCPU_update[simp]:
+  "ko_wp_at' (is_vcpu' and hyp_live') v s \<Longrightarrow> invs_no_cicd' s \<Longrightarrow>
+     invs_no_cicd' (s\<lparr>ksArchState := armHSCurVCPU_update (\<lambda>_. Some (v, b)) (ksArchState s)\<rparr>)"
+  by (clarsimp simp: invs_no_cicd'_def valid_state'_def valid_queues_def valid_queues_no_bitmap_def
+             bitmapQ_defs valid_global_refs'_def valid_arch_state'_def global_refs'_def
+             valid_queues'_def valid_irq_node'_def valid_irq_handlers'_def
+             irq_issued'_def irqs_masked'_def valid_machine_state'_def
+             cur_tcb'_def)
+
+lemma invs'_armHSCurVCPU_update[simp]:
+  "ko_wp_at' (is_vcpu' and hyp_live') v s \<Longrightarrow>
+   invs' s \<Longrightarrow> invs' (s\<lparr>ksArchState := armHSCurVCPU_update (\<lambda>_. Some (v, b)) (ksArchState s)\<rparr>)"
+  apply (clarsimp simp: invs'_def valid_state'_def valid_queues_def valid_queues_no_bitmap_def
+             bitmapQ_defs valid_global_refs'_def valid_arch_state'_def global_refs'_def
+             valid_queues'_def valid_irq_node'_def valid_irq_handlers'_def
+             irq_issued'_def irqs_masked'_def valid_machine_state'_def
+             cur_tcb'_def)
+  done
+
+lemma armHSCurVCPU_None_invs'[wp]:
+  "modifyArchState (armHSCurVCPU_update Map.empty) \<lbrace>invs'\<rbrace>"
+  apply (wpsimp simp: modifyArchState_def)
+  by (clarsimp simp: invs'_def valid_state'_def valid_machine_state'_def
+                        ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def
+                        valid_arch_state'_def valid_global_refs'_def global_refs'_def)
+
+lemma setVCPU_vgic_invs':
+  "\<lbrace>invs' and ko_at' vcpu v\<rbrace>
+   setObject v (vcpuVGIC_update f vcpu) \<lbrace>\<lambda>_. invs'\<rbrace>"
+  unfolding invs'_def valid_state'_def valid_pspace'_def valid_mdb'_def
+            valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def
+  supply fun_upd_apply[simp del]
+  apply (wpsimp wp: setObject_vcpu_no_tcb_update
+                      [where f="\<lambda>vcpu. vcpuVGIC_update f vcpu"]
+                    sch_act_wf_lift tcb_in_cur_domain'_lift valid_queues_lift
+                    setObject_state_refs_of' setObject_state_hyp_refs_of' valid_global_refs_lift'
+                    valid_irq_node_lift_asm [where Q=\<top>] valid_irq_handlers_lift'
+                    cteCaps_of_ctes_of_lift irqs_masked_lift ct_idle_or_in_cur_domain'_lift
+                    valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
+                    setObject_typ_at' cur_tcb_lift
+                    setVCPU_vgic_valid_arch'
+              simp: objBits_simps archObjSize_def vcpuBits_def pageBits_def
+                    state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb)
+  apply (clarsimp simp: if_live_then_nonz_cap'_def obj_at'_real_def)
+  apply (fastforce simp: ko_wp_at'_def projectKOs)
+  done
+
+lemma setVCPU_regs_invs':
+  "\<lbrace>invs' and ko_at' vcpu v\<rbrace> setObject v (vcpuRegs_update f vcpu) \<lbrace>\<lambda>_. invs'\<rbrace>"
+  unfolding invs'_def valid_state'_def valid_pspace'_def valid_mdb'_def
+            valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def
+  supply fun_upd_apply[simp del]
+  apply (wpsimp wp: setObject_vcpu_no_tcb_update
+                      [where f="\<lambda>vcpu. vcpuRegs_update f vcpu"]
+                    sch_act_wf_lift tcb_in_cur_domain'_lift valid_queues_lift
+                    setObject_state_refs_of' setObject_state_hyp_refs_of' valid_global_refs_lift'
+                    valid_irq_node_lift_asm [where Q=\<top>] valid_irq_handlers_lift'
+                    cteCaps_of_ctes_of_lift irqs_masked_lift ct_idle_or_in_cur_domain'_lift
+                    valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
+                    setObject_typ_at' cur_tcb_lift
+                    setVCPU_regs_valid_arch'
+              simp: objBits_simps archObjSize_def vcpuBits_def pageBits_def
+                    state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb)
+  apply (clarsimp simp: if_live_then_nonz_cap'_def obj_at'_real_def)
+  apply (fastforce simp: ko_wp_at'_def projectKOs)
+  done
+
+lemma setVCPU_VPPIMasked_invs':
+  "\<lbrace>invs' and ko_at' vcpu v\<rbrace> setObject v (vcpuVPPIMasked_update f vcpu) \<lbrace>\<lambda>_. invs'\<rbrace>"
+  unfolding invs'_def valid_state'_def valid_pspace'_def valid_mdb'_def
+            valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def
+  supply fun_upd_apply[simp del]
+  apply (wpsimp wp: setObject_vcpu_no_tcb_update
+                      [where f="\<lambda>vcpu. vcpuVPPIMasked_update f vcpu"]
+                    sch_act_wf_lift tcb_in_cur_domain'_lift valid_queues_lift
+                    setObject_state_refs_of' setObject_state_hyp_refs_of' valid_global_refs_lift'
+                    valid_irq_node_lift_asm [where Q=\<top>] valid_irq_handlers_lift'
+                    cteCaps_of_ctes_of_lift irqs_masked_lift ct_idle_or_in_cur_domain'_lift
+                    valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
+                    setObject_typ_at' cur_tcb_lift
+                    setVCPU_VPPIMasked_valid_arch'
+              simp: objBits_simps archObjSize_def vcpuBits_def pageBits_def
+                    state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb)
+  apply (clarsimp simp: if_live_then_nonz_cap'_def obj_at'_real_def)
+  apply (fastforce simp: ko_wp_at'_def projectKOs)
+  done
+
+lemma setVCPU_VTimer_invs':
+  "\<lbrace>invs' and ko_at' vcpu v\<rbrace> setObject v (vcpuVTimer_update f vcpu) \<lbrace>\<lambda>_. invs'\<rbrace>"
+  unfolding invs'_def valid_state'_def valid_pspace'_def valid_mdb'_def
+            valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def
+  supply fun_upd_apply[simp del]
+  apply (wpsimp wp: setObject_vcpu_no_tcb_update
+                      [where f="\<lambda>vcpu. vcpuVTimer_update f vcpu"]
+                    sch_act_wf_lift tcb_in_cur_domain'_lift valid_queues_lift
+                    setObject_state_refs_of' setObject_state_hyp_refs_of' valid_global_refs_lift'
+                    valid_irq_node_lift_asm [where Q=\<top>] valid_irq_handlers_lift'
+                    cteCaps_of_ctes_of_lift irqs_masked_lift ct_idle_or_in_cur_domain'_lift
+                    valid_irq_states_lift' hoare_vcg_all_lift hoare_vcg_disj_lift
+                    setObject_typ_at' cur_tcb_lift
+                    setVCPU_VTimer_valid_arch'
+              simp: objBits_simps archObjSize_def vcpuBits_def pageBits_def
+                    state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb)
+  apply (clarsimp simp: if_live_then_nonz_cap'_def obj_at'_real_def)
+  apply (fastforce simp: ko_wp_at'_def projectKOs)
+  done
+
+lemma read_writeVCPUHardwareReg_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> doMachineOp (writeVCPUHardwareReg r v) \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  "\<lbrace>invs'\<rbrace> doMachineOp (readVCPUHardwareReg r) \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  by ((wpsimp wp: dmo_invs' no_irq no_irq_writeVCPUHardwareReg)
+       , drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p" in use_valid
+       , (wpsimp simp: writeVCPUHardwareReg_def readVCPUHardwareReg_def)+)+
+
+lemma vcpuWriteReg_invs'[wp]:
+  "vcpuWriteReg vcpu_ptr r v \<lbrace>invs'\<rbrace>"
+  by (wpsimp simp: vcpuWriteReg_def vcpuUpdate_def wp: setVCPU_regs_invs')
+
+lemma vcpuSaveReg_invs'[wp]:
+  "vcpuSaveReg v r \<lbrace>invs'\<rbrace>"
+  by (wpsimp simp: vcpuSaveReg_def vcpuUpdate_def wp: setVCPU_regs_invs')
+
+lemma saveVirtTimer_invs'[wp]:
+  "saveVirtTimer vcpu_ptr \<lbrace>invs'\<rbrace>"
+  unfolding saveVirtTimer_def
+  by (wpsimp wp: dmo'_gets_wp setVCPU_vgic_invs' setVCPU_regs_invs' dmo_maskInterrupt_True
+                 setVCPU_VTimer_invs'
+             simp: doMachineOp_bind vcpuUpdate_def read_cntpct_def check_export_arch_timer_def)
+
+lemma vcpuDisable_invs'[wp]:
+  "vcpuDisable v \<lbrace>invs'\<rbrace>"
+  unfolding vcpuDisable_def isb_def setHCR_def setSCTLR_def set_gic_vcpu_ctrl_hcr_def
+             getSCTLR_def get_gic_vcpu_ctrl_hcr_def dsb_def vgicUpdate_def vcpuUpdate_def
+             vcpuSaveReg_def enableFpuEL01_def
+  by (wpsimp wp: dmo'_gets_wp setVCPU_vgic_invs' setVCPU_regs_invs' dmo_maskInterrupt_True
+             simp: doMachineOp_bind empty_fail_cond)
+
+lemma vcpuInvalidateActive_invs'[wp]:
+  "vcpuInvalidateActive \<lbrace>invs'\<rbrace>"
+    unfolding vcpuInvalidateActive_def by wpsimp
+
+lemma dmo_set_gic_vcpu_ctrl_hcr_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> doMachineOp (set_gic_vcpu_ctrl_hcr addr) \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (wp dmo_invs' no_irq_set_gic_vcpu_ctrl_hcr no_irq)
+  apply clarsimp
+  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid)
+  apply (wpsimp simp: set_gic_vcpu_ctrl_hcr_def)+
+  done
+
+lemma dmo_set_gic_vcpu_ctrl_apr_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> doMachineOp (set_gic_vcpu_ctrl_apr addr) \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (wp dmo_invs' no_irq_set_gic_vcpu_ctrl_apr no_irq)
+  apply clarsimp
+  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid)
+  apply (wpsimp simp: set_gic_vcpu_ctrl_apr_def)+
+  done
+
+lemma dmo_set_gic_vcpu_ctrl_vmcr_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> doMachineOp (set_gic_vcpu_ctrl_vmcr addr) \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (wp dmo_invs' no_irq_set_gic_vcpu_ctrl_vmcr no_irq)
+  apply clarsimp
+  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid)
+  apply (wpsimp simp: set_gic_vcpu_ctrl_vmcr_def)+
+  done
+
+lemma dmo_set_gic_vcpu_ctrl_lr_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> doMachineOp (set_gic_vcpu_ctrl_lr addr w) \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (wp dmo_invs' no_irq_set_gic_vcpu_ctrl_lr no_irq)
+  apply clarsimp
+  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid)
+  apply (wpsimp simp: set_gic_vcpu_ctrl_lr_def)+
+  done
+
+lemma dmo_get_gic_vcpu_ctrl_lr_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> doMachineOp (get_gic_vcpu_ctrl_lr addr) \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (wp dmo_invs' no_irq_get_gic_vcpu_ctrl_lr no_irq)
+  apply clarsimp
+  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid)
+  apply (wpsimp simp: get_gic_vcpu_ctrl_lr_def)+
+  done
+
+lemma dmo_setSCTLR_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> doMachineOp (setSCTLR addr) \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (wp dmo_invs' no_irq_setSCTLR no_irq)
+  apply clarsimp
+  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid)
+  apply (wpsimp simp: setSCTLR_def)+
+  done
+
+lemma dmo_setHCR_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> doMachineOp (setHCR addr) \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (wp dmo_invs' no_irq_setHCR no_irq)
+  apply clarsimp
+  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid)
+  apply (wpsimp simp: setHCR_def)+
+  done
+
+lemma dmo_isb_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> doMachineOp isb \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (wp dmo_invs' no_irq_isb no_irq)
+  apply clarsimp
+  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid)
+    apply wpsimp+
+  done
+
+lemma dmo_dsb_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> doMachineOp dsb \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (wp dmo_invs' no_irq_dsb no_irq)
+  apply clarsimp
+  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid)
+    apply wpsimp+
+  done
+
+crunches
+  vcpuRestoreReg, vcpuRestoreRegRange, vcpuSaveReg, vcpuSaveRegRange, vgicUpdateLR, vcpuReadReg
+  for invs'[wp]: invs'
+  (wp: crunch_wps setVCPU_regs_invs' setVCPU_vgic_invs' simp: vcpuUpdate_def
+   ignore: doMachineOp vcpuUpdate)
+
+lemma restoreVirtTimer_invs'[wp]:
+  "restoreVirtTimer vcpu_ptr \<lbrace> invs'\<rbrace>"
+  unfolding restoreVirtTimer_def
+  by (wpsimp wp: maskInterrupt_invs' getIRQState_wp dmo'_gets_wp dmo_machine_op_lift_invs'
+             simp: IRQ_def if_apply_def2 read_cntpct_def isIRQActive_def)
+
+lemma vcpuEnable_invs'[wp]:
+  "vcpuEnable v \<lbrace> invs'\<rbrace>"
+  unfolding vcpuEnable_def
+  by (wpsimp | subst doMachineOp_bind | rule empty_fail_bind)+
+
+lemma vcpuRestore_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> vcpuRestore v \<lbrace>\<lambda>_. invs'\<rbrace>"
+  unfolding vcpuRestore_def
+  by (wpsimp simp: vcpuRestore_def uncurry_def split_def doMachineOp_mapM_x
+                wp: mapM_x_wp[OF _ subset_refl]
+     | subst doMachineOp_bind | rule empty_fail_bind)+
+
+lemma vcpuSave_invs':
+  "\<lbrace>invs'\<rbrace> vcpuSave v \<lbrace>\<lambda>_. invs'\<rbrace>"
+  by (wpsimp simp: vcpuSave_def doMachineOp_mapM armvVCPUSave_def
+                   get_gic_vcpu_ctrl_apr_def get_gic_vcpu_ctrl_vmcr_def
+                   get_gic_vcpu_ctrl_hcr_def getSCTLR_def
+             wp: dmo'_gets_wp vgicUpdate_invs' mapM_x_wp[OF _ subset_refl])
+
+lemma vcpuSwitch_invs'[wp]:
+  "\<lbrace>invs' and (case v of None \<Rightarrow> \<top> | Some x \<Rightarrow> ko_wp_at' (is_vcpu' and hyp_live') x)\<rbrace>
+       vcpuSwitch v \<lbrace>\<lambda>_. invs'\<rbrace>"
+  apply (wpsimp simp: vcpuSwitch_def modifyArchState_def
+         wp: vcpuDisable_hyp[simplified pred_conj_def] vcpuSave_hyp[unfolded pred_conj_def]
+             dmo_isb_invs' dmo_vcpu_hyp vcpuSave_invs'
+        | strengthen invs'_armHSCurVCPU_update | simp)+
+  apply (auto simp: invs'_def valid_state'_def valid_arch_state'_def pred_conj_def)
+  done
+
+lemma vcpuSwitch_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd' and (case v of None \<Rightarrow> \<top> | Some x \<Rightarrow> ko_wp_at' (is_vcpu' and hyp_live') x)\<rbrace>
+       vcpuSwitch v \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
+  apply (wpsimp simp: vcpuSwitch_def modifyArchState_def
+                  wp: vcpuDisable_hyp[simplified pred_conj_def] vcpuSave_hyp[unfolded pred_conj_def]
+                       gets_wp vcpuSave_invs_no_cicd'
+                       dmo_isb_invs' dmo_vcpu_hyp
+        | strengthen invs_no_cicd'_armHSCurVCPU_update | simp)+
+  apply (auto simp: invs_no_cicd'_def valid_state'_def valid_arch_state'_def pred_conj_def)
+  done
+
+(* FIXME AARCH64 not clear if this goes in the hyp block *)
+lemma setVMRoot_valid_arch_state'[wp]:
+  "\<lbrace>valid_arch_state' and live_vcpu_at_tcb p\<rbrace>
+     setVMRoot p
+   \<lbrace>\<lambda>rv. valid_arch_state'\<rbrace>"
+  apply (simp add: setVMRoot_def getThreadVSpaceRoot_def)
+  apply ((wpsimp wp: hoare_vcg_ex_lift hoare_drop_imps
+                    getObject_tcb_wp valid_case_option_post_wp'
+               simp: if_apply_def2
+          | wp hoare_vcg_all_lift)+)
+  sorry (* FIXME AARCH64
+  done *)
+
+(* FIXME AARCH64 consolidated VCPU block ends here *)
+
+
+
+lemma setVMRoot_ksQ[wp]:
+  "\<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> setVMRoot param_a \<lbrace>\<lambda>_ s. P (ksReadyQueues s)\<rbrace>"
+  sorry (* FIXME AARCH64: this exists on ARM_HYP only
+  apply (simp add: setVMRoot_def getThreadVSpaceRoot_def)
+  apply (rule hoare_pre)
+   apply (wp hoare_drop_imps | wpcw
+          | simp add: if_apply_def2 split del: if_split)+
+  done *)
 
 lemma handleVMFault_corres:
   "corres (fr \<oplus> dc) (tcb_at thread  and pspace_aligned and pspace_distinct) \<top>
@@ -126,10 +1652,6 @@ lemma handleVMFault_corres:
            apply (wpsimp simp: if_apply_def2)+
   done
 
-lemma no_fail_setVSpaceRoot[intro!, simp]:
-  "no_fail \<top> (setVSpaceRoot v a)"
-  by (simp add: setVSpaceRoot_def)
-
 lemma setVMRoot_corres [corres]:
   assumes "t' = t"
   shows "corres dc (tcb_at t and valid_vspace_objs and valid_asid_table and
@@ -146,12 +1668,10 @@ proof -
             (do global_pt <- gets global_pt;
                 do_machine_op (setVSpaceRoot (AARCH64.addrFromKPPtr global_pt) 0)
              od)
-            (do globalPT <- gets (riscvKSGlobalPT \<circ> ksArchState);
+            (do globalPT <- gets (armKSGlobalUserVSpace \<circ> ksArchState);
                 doMachineOp (setVSpaceRoot (addrFromKPPtr globalPT) 0)
              od)" for P Q
     apply (corressimp corres: corres_gets_global_pt corres_machine_op)
-     apply fastforce
-    apply (simp add: addrFromKPPtr_def)
     done
 
   show ?thesis
@@ -185,6 +1705,7 @@ proof -
          apply (erule disjE; simp?)
          apply (clarsimp simp: is_valid_vtable_root_def split: cap.splits arch_cap.splits option.splits)
          apply (simp add: isValidVTableRoot_def)
+        sorry (* FIXME AARCH64
         apply (rule corres_guard_imp)
           apply (rule_tac P="valid_vspace_objs and valid_asid_table and pspace_aligned and
                              pspace_distinct and valid_objs and valid_global_arch_objs and
@@ -211,10 +1732,10 @@ proof -
           apply (clarsimp simp: valid_cap_def mask_def wellformed_mapdata_def)
          apply (wpsimp wp: get_cap_wp simp: getThreadVSpaceRoot_def)+
    apply (auto dest!: tcb_at_cte_at_1)
-  done
+  done *)
 qed
 
-
+(* FIXME AARCH64: ASIDs
 lemma get_asid_pool_corres_inv':
   assumes "p' = p"
   shows "corres (\<lambda>p. (\<lambda>p'. p = p' o ucast) \<circ> inv ASIDPool)
@@ -223,7 +1744,7 @@ lemma get_asid_pool_corres_inv':
   apply (rule corres_rel_imp)
    apply (rule getObject_ASIDPool_corres[OF assms])
   apply simp
-  done
+  done *)
 
 lemma dMo_no_0_obj'[wp]:
   "doMachineOp f \<lbrace>no_0_obj'\<rbrace>"
@@ -232,7 +1753,7 @@ lemma dMo_no_0_obj'[wp]:
   by (simp add: no_0_obj'_def)
 
 lemma dMo_riscvKSASIDTable_inv[wp]:
-  "doMachineOp f \<lbrace>\<lambda>s. P (riscvKSASIDTable (ksArchState s))\<rbrace>"
+  "doMachineOp f \<lbrace>\<lambda>s. P (armKSASIDTable (ksArchState s))\<rbrace>"
   apply (simp add: doMachineOp_def split_def)
   apply wp
   by (clarsimp)
@@ -243,6 +1764,14 @@ lemma dMo_valid_arch_state'[wp]:
   apply wp
   by (clarsimp)
 
+crunches vcpuDisable, vcpuEnable, vcpuSave, vcpuRestore
+  for no_0_obj'[wp]: no_0_obj'
+  (simp: crunch_simps wp: crunch_wps getObject_inv_vcpu loadObject_default_inv)
+
+lemma [wp]: (* FIXME AARCH64 *)
+  "\<lbrace>no_0_obj'\<rbrace> loadVMID param_a \<lbrace>\<lambda>_. no_0_obj'\<rbrace>"
+  sorry
+
 crunch no_0_obj'[wp]: deleteASID "no_0_obj'"
   (simp: crunch_simps wp: crunch_wps getObject_inv loadObject_default_inv)
 
@@ -250,13 +1779,14 @@ lemma asid_high_bits_of_ucast_ucast[simp]:
   "asid_high_bits_of (ucast (ucast asid :: machine_word)) = asid_high_bits_of asid"
   by (simp add: ucast_down_ucast_id is_down)
 
+(* FIXME AARCH64: what is hwASIDFlush equivalent if any?
 lemma no_fail_hwAIDFlush[intro!, wp, simp]:
   "no_fail \<top> (hwASIDFlush a)"
   by (simp add: hwASIDFlush_def)
 
 lemma hwASIDFlush_corres[corres]:
   "corres dc \<top> \<top> (do_machine_op (hwASIDFlush x)) (doMachineOp (hwASIDFlush x))"
-  by (corressimp corres: corres_machine_op)
+  by (corressimp corres: corres_machine_op) *)
 
 lemma deleteASID_corres [corres]:
   assumes "asid' = ucast asid" "pm' = pm"
@@ -265,6 +1795,7 @@ lemma deleteASID_corres [corres]:
   unfolding delete_asid_def deleteASID_def using assms
   apply simp
   apply (rule corres_guard_imp)
+    sorry (* FIXME AARCH64
     apply (rule corres_split[OF corres_gets_asid])
       apply (case_tac "asid_table (asid_high_bits_of asid)", simp)
       apply clarsimp
@@ -311,16 +1842,30 @@ lemma deleteASID_corres [corres]:
    apply (drule (1) valid_asid_tableD)
    apply (clarsimp simp: invs_distinct)
   apply simp
-  done
+  done *)
 
 lemma valid_arch_state_unmap_strg':
   "valid_arch_state' s \<longrightarrow>
    valid_arch_state' (s\<lparr>ksArchState :=
-                        riscvKSASIDTable_update (\<lambda>_. (riscvKSASIDTable (ksArchState s))(ptr := None))
+                        armKSASIDTable_update (\<lambda>_. (armKSASIDTable (ksArchState s))(ptr := None))
                          (ksArchState s)\<rparr>)"
   apply (simp add: valid_arch_state'_def valid_asid_table'_def)
-  apply (auto simp: ran_def split: if_split_asm)
+  apply (auto simp: ran_def split: if_split_asm option.splits)
   done
+
+lemma [wp]: (* FIXME AARCH64 *)
+  "\<lbrace>\<lambda>s. P (armKSASIDTable (ksArchState s))\<rbrace> loadVMID param_a \<lbrace>\<lambda>_ s. P (armKSASIDTable (ksArchState s))\<rbrace>"
+  sorry
+lemma [wp]: (* FIXME AARCH64 *)
+  "\<lbrace>\<lambda>s. P (armKSASIDTable (ksArchState s))\<rbrace> updateASIDPoolEntry param_a param_b
+   \<lbrace>\<lambda>_ s. P (armKSASIDTable (ksArchState s))\<rbrace>"
+  sorry
+
+crunch armKSASIDTable_inv[wp]: invalidateASIDEntry
+    "\<lambda>s. P (armKSASIDTable (ksArchState s))"
+(* FIXME AARCH64: flushSpace equivalent?
+crunch armKSASIDTable_inv[wp]: flushSpace
+    "\<lambda>s. P (armKSASIDTable (ksArchState s))" *)
 
 lemma is_aligned_asid_low_bits_of_zero:
   "is_aligned asid asid_low_bits \<longleftrightarrow> asid_low_bits_of asid = 0"
@@ -349,6 +1894,7 @@ lemma deleteASIDPool_corres:
       apply (simp add: liftM_def)
       apply (rule corres_split[OF getObject_ASIDPool_corres[OF refl]])
         apply (rule corres_split)
+           sorry (* FIXME AARCH64
            apply (rule corres_modify [where P=\<top> and P'=\<top>])
            apply (simp add: state_relation_def arch_state_relation_def)
            apply (rule ext)
@@ -373,8 +1919,14 @@ lemma deleteASIDPool_corres:
    apply (drule valid_arch_state_asid_table)
    apply (auto simp: valid_asid_table_def ran_def inj_on_def)[1]
   apply clarsimp
-  done
+  done *)
 
+lemma [wp]: (* FIXME AARCH64 *)
+  "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> loadVMID param_a \<lbrace>\<lambda>_ s. P (typ_at' T p s)\<rbrace>"
+  sorry
+lemma [wp]: (* FIXME AARCH64 *)
+  "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> updateASIDPoolEntry param_a param_b \<lbrace>\<lambda>_ s. P (typ_at' T p s)\<rbrace>"
+  sorry
 crunch typ_at' [wp]: setVMRoot "\<lambda>s. P (typ_at' T p s)"
   (simp: crunch_simps wp: crunch_wps)
 
@@ -382,9 +1934,15 @@ lemmas setVMRoot_typ_ats [wp] = typ_at_lifts [OF setVMRoot_typ_at']
 
 lemma getObject_PTE_corres'':
   assumes "p' = p"
-  shows "corres pte_relation' (pte_at p and pspace_aligned and pspace_distinct) \<top>
-                              (get_pte p) (getObject p')"
+  shows "corres pte_relation' (pte_at pt_t p and pspace_aligned and pspace_distinct) \<top>
+                              (get_pte pt_t p) (getObject p')"
   using assms getObject_PTE_corres by simp
+
+lemma [wp]: (* FIXME AARCH64: won't crunch, same as previously *)
+  "\<lbrace>pspace_aligned'\<rbrace> loadVMID param_a \<lbrace>\<lambda>_. pspace_aligned'\<rbrace>"
+  "\<lbrace>pspace_distinct'\<rbrace> loadVMID param_a \<lbrace>\<lambda>_. pspace_distinct'\<rbrace>"
+  "\<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> loadVMID param_a \<lbrace>\<lambda>_ s. P (ctes_of s)\<rbrace>"
+  sorry
 
 crunches unmapPageTable, unmapPage
   for aligned'[wp]: "pspace_aligned'"
@@ -399,10 +1957,6 @@ crunches storePTE
   and valid_arch'[wp]: valid_arch_state'
   and cur_tcb'[wp]: cur_tcb'
 
-lemma no_fail_sfence[intro!,simp,wp]:
-  "no_fail \<top> sfence"
-  by (simp add: sfence_def)
-
 lemma unmapPageTable_corres:
   assumes "asid' = ucast asid" "vptr' = vptr" "pt' = pt"
   shows "corres dc
@@ -414,6 +1968,7 @@ lemma unmapPageTable_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split_catch[where E="\<top>\<top>" and E'="\<top>\<top>", OF _ corres_return_trivial])
       apply (rule corres_split_eqrE[OF findVSpaceForASID_corres[OF refl]])
+        sorry (* FIXME AARCH64
         apply (rule corres_split_eqrE[OF lookupPTFromLevel_corres[OF _ refl]])
            apply simp
           apply (simp add: liftE_bindE)
@@ -429,8 +1984,9 @@ lemma unmapPageTable_corres:
    apply (rule_tac x=0 in exI)
    apply (simp add: vspace_for_asid_vs_lookup)
   apply simp
-  done
+  done *)
 
+(* FIXME AARCH64: move (all arches) *)
 lemma corres_split_strengthen_ftE:
   "\<lbrakk> corres (ftr \<oplus> r') P P' f j;
       \<And>rv rv'. r' rv rv' \<Longrightarrow> corres (ftr' \<oplus> r) (R rv) (R' rv') (g rv) (k rv');
@@ -449,9 +2005,10 @@ lemma checkMappingPPtr_corres:
       (whenE (AARCH64_A.is_PagePTE pte \<longrightarrow> pptr_from_pte pte \<noteq> pptr) (throwError ExceptionTypes_A.InvalidRoot))
       (checkMappingPPtr pptr pte')"
   apply (simp add: liftE_bindE checkMappingPPtr_def)
+  sorry (* FIXME AARCH64
   apply (cases pte; simp add: pptr_from_pte_def addr_from_ppn_def)
   apply (auto simp: whenE_def corres_returnOk)
-  done
+  done *)
 
 crunch inv[wp]: checkMappingPPtr "P"
   (wp: crunch_wps loadObject_default_inv simp: crunch_simps)
@@ -484,6 +2041,7 @@ lemma unmapPage_corres:
                apply (rule corres_split[OF storePTE_corres])
                   apply simp
                  apply simp
+                 sorry (* FIXME AARCH64
                  apply (rule corres_machine_op, rule corres_Id, rule refl; simp)
                 apply wpsimp+
    apply (clarsimp simp: invs_psp_aligned invs_distinct invs_vspace_objs valid_unmap_def
@@ -496,16 +2054,16 @@ lemma unmapPage_corres:
    apply (frule (1) pt_lookup_slot_vs_lookup_slotI)
    apply (fastforce dest!: vs_lookup_slot_pte_at)
   apply simp
-  done
+  done *)
 
 definition
-  "mapping_map \<equiv> \<lambda>(pte, r) (pte', r'). pte_relation' pte pte' \<and> r' = r"
+  "mapping_map \<equiv> \<lambda>(pte, r, level) (pte', r'). pte_relation' pte pte' \<and> r' = r"
 
 definition
   "page_invocation_map pgi pgi' \<equiv> case pgi of
     AARCH64_A.PageMap c slot m \<Rightarrow>
       \<exists>c' m'. pgi' = PageMap c' (cte_map slot) m' \<and>
-              cap_relation (Structures_A.ArchObjectCap c) c' \<and>
+              acap_relation c c' \<and>
               mapping_map m m'
   | AARCH64_A.PageUnmap c ptr \<Rightarrow>
       \<exists>c'. pgi' = PageUnmap c' (cte_map ptr) \<and>
@@ -517,7 +2075,7 @@ definition
   "valid_page_inv' pgi \<equiv>
   case pgi of
     PageMap cap ptr m \<Rightarrow>
-      cte_wp_at' (is_arch_update' cap) ptr and valid_cap' cap
+      cte_wp_at' (is_arch_update' (ArchObjectCap cap)) ptr and valid_cap' (ArchObjectCap cap)
   | PageUnmap cap ptr \<Rightarrow>
       K (isFrameCap cap) and
       cte_wp_at' (is_arch_update' (ArchObjectCap cap)) ptr and valid_cap' (ArchObjectCap cap)
@@ -570,6 +2128,9 @@ lemma set_mrs_invs'[wp]:
          simp add: zipWithM_x_mapM split_def)+
   done
 
+lemma [wp]: (* FIXME AARCH64 *)
+  "\<lbrace>cte_wp_at' (\<lambda>_. True) p\<rbrace> loadVMID param_a \<lbrace>\<lambda>_. cte_wp_at' (\<lambda>_. True) p\<rbrace>"
+  sorry
 crunches unmapPage
   for cte_at'[wp]: "cte_at' p"
   (wp: crunch_wps simp: crunch_simps)
@@ -585,6 +2146,7 @@ lemma performPageInvocation_corres:
   unfolding perform_page_invocation_def performPageInvocation_def page_invocation_map_def
   apply (cases pgi; clarsimp simp: valid_page_inv_def mapping_map_def)
     apply (simp add: bind_assoc[symmetric])
+    sorry (* FIXME AARCH64
     apply (rule corres_underlying_split[where r'=dc, OF _ corres_return_eq_same[OF refl]
                                              hoare_post_taut hoare_post_taut])
     apply (simp add: bind_assoc)
@@ -632,12 +2194,12 @@ lemma performPageInvocation_corres:
                           wellformed_mapdata_def valid_arch_cap_def)
    apply (clarsimp simp: valid_page_inv'_def cte_wp_at_ctes_of)
   apply (clarsimp simp: perform_pg_inv_get_addr_def fromPAddr_def)
-  done
+  done *)
 
 definition
   "page_table_invocation_map pti pti' \<equiv>
   case pti of
-     AARCH64_A.PageTableMap cap ptr pte pt_slot \<Rightarrow>
+     AARCH64_A.PageTableMap cap ptr pte pt_slot level \<Rightarrow>
        \<exists>cap' pte'. pti' = PageTableMap cap' (cte_map ptr) pte' pt_slot \<and>
                    cap_relation (Structures_A.ArchObjectCap cap) cap' \<and>
                    pte_relation' pte pte'
@@ -656,11 +2218,12 @@ definition
 (* extend with arch rules *)
 lemmas store_pte_typ_ats[wp] = store_pte_typ_ats abs_atyp_at_lifts[OF store_pte_typ_at]
 
-lemma clear_page_table_corres:
-  "corres dc (pspace_aligned and pspace_distinct and pt_at p)
+lemma clear_page_table_corres: (* FIXME AARCH64 review *)
+  "corres dc (pspace_aligned and pspace_distinct and pt_at pt_t p)
              \<top>
-    (mapM_x (swp store_pte AARCH64_A.InvalidPTE) [p , p + 2^pte_bits .e. p + 2 ^ pt_bits - 1])
-    (mapM_x (swp storePTE AARCH64_H.InvalidPTE) [p , p + 2^pte_bits .e. p + 2 ^ pt_bits - 1])"
+    (mapM_x (swp (store_pte pt_t) AARCH64_A.InvalidPTE) [p , p + 2^pte_bits .e. p + 2 ^ pt_bits pt_t - 1])
+    (mapM_x (swp storePTE AARCH64_H.InvalidPTE) [p , p + 2^pte_bits .e. p + 2 ^ pt_bits pt_t - 1])"
+  sorry (* FIXME AARCH64
   apply (rule_tac F="is_aligned p ptBits" in corres_req)
    apply (clarsimp simp: obj_at_def a_type_def)
    apply (clarsimp split: Structures_A.kernel_object.split_asm if_split_asm
@@ -684,7 +2247,7 @@ lemma clear_page_table_corres:
   apply (erule page_table_pte_atI[simplified shiftl_t2n mult.commute bit_simps, simplified])
    apply (simp add: bit_simps word_less_nat_alt word_le_nat_alt unat_of_nat)
   apply simp
-  done
+  done *)
 
 lemmas unmapPageTable_typ_ats[wp] = typ_at_lifts[OF unmapPageTable_typ_at']
 
@@ -730,6 +2293,7 @@ lemma performPageTableInvocation_corres:
              apply (clarsimp simp: mdata_map_def)
             apply (clarsimp simp: mdata_map_def)
            apply (rule refl)
+          sorry (* FIXME AARCH64
           apply (rule clear_page_table_corres)
          apply wp+
        apply (rule corres_trivial, simp)
@@ -745,7 +2309,7 @@ lemma performPageTableInvocation_corres:
                          cap_master_cap_simps is_cap_simps update_map_data_def
                          wellformed_mapdata_def)
   apply (clarsimp simp: valid_pti'_def cte_wp_at_ctes_of)
-  done
+  done *)
 
 definition
   "asid_pool_invocation_map ap \<equiv> case ap of
@@ -756,10 +2320,14 @@ definition
     case ap of Assign asid p slot \<Rightarrow>
       cte_wp_at' (isArchCap isPageTableCap o cteCap) slot and K (0 < asid \<and> asid_wf asid)"
 
-crunches copy_global_mappings
-  for aligned[wp]: pspace_aligned
-  and distinct[wp]: pspace_distinct
-  (wp: crunch_wps)
+(* FIXME AARCH64: given we want to cross over vcpu_at', this needs consideration for removal *)
+definition
+  "valid_vcpuinv' vi \<equiv> case vi of
+    VCPUSetTCB v t \<Rightarrow> vcpu_at' v and tcb_at' t and ex_nonz_cap_to' v and ex_nonz_cap_to' t
+  | VCPUInjectIRQ v n q \<Rightarrow> vcpu_at' v
+  | VCPUReadRegister v rg \<Rightarrow> vcpu_at' v
+  | VCPUWriteRegister v _ _ \<Rightarrow> vcpu_at' v
+  | VCPUAckVPPI v _ \<Rightarrow> vcpu_at' v"
 
 lemma performASIDPoolInvocation_corres:
   assumes "ap' = asid_pool_invocation_map ap"
@@ -779,6 +2347,7 @@ lemma performASIDPoolInvocation_corres:
     apply (rule_tac F="is_pt_cap pt_cap" in corres_gen_asm)
     apply (rule corres_split[OF updateCap_same_master])
        apply (clarsimp simp: is_cap_simps update_map_data_def)
+      sorry (* FIXME AARCH64
       apply (rule corres_split[OF copy_global_mappings_corres])
          apply (clarsimp simp: is_cap_simps)
         apply (unfold store_asid_pool_entry_def)[1]
@@ -798,8 +2367,12 @@ lemma performASIDPoolInvocation_corres:
    apply (drule (1) caps_of_state_valid_cap)
    apply (simp add: valid_cap_def obj_at_def)
   apply (clarsimp simp: valid_apinv'_def cte_wp_at_ctes_of)
-  done
+  done *)
 
+lemma [wp]: (* FIXME AARCH64 *)
+  "\<lbrace>\<lambda>s. P (obj_at' P' t s)\<rbrace> loadVMID param_a \<lbrace>\<lambda>_ s. P (obj_at' P' t s)\<rbrace>"
+  "\<lbrace>\<lambda>s. P (obj_at' P' t s)\<rbrace> updateASIDPoolEntry param_a' param_b \<lbrace>\<lambda>_ s. P (obj_at' P' t s)\<rbrace>"
+  sorry
 crunch obj_at[wp]: setVMRoot "\<lambda>s. P (obj_at' P' t s)"
   (simp: crunch_simps wp: crunch_wps)
 
@@ -817,14 +2390,13 @@ crunches doMachineOp
   and ksDomScheduleIdx[wp]: "\<lambda>s. P (ksDomScheduleIdx s)"
   and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
 
-crunches sfence, setVSpaceRoot
-  for irq_masks[wp]: "\<lambda>s. P (irq_masks s)"
+crunches vcpuSave, vcpuDisable, vcpuEnable, vcpuRestore
+  for obj_at'_no_vcpu[wp]: "\<lambda>s. P (obj_at' (P' :: ('a :: no_vcpu) \<Rightarrow> bool) t s)"
+  (simp: crunch_simps wp: crunch_wps)
 
-lemma dmo_sfence_invs'[wp]:
-  "doMachineOp sfence \<lbrace>invs'\<rbrace>"
-  apply (wp dmo_invs')
-  apply (clarsimp simp: in_monad sfence_def machine_op_lift_def machine_rest_lift_def select_f_def)
-  done
+lemma vcpuSwitch_obj_at'_no_vcpu[wp]:
+  "vcpuSwitch param_a \<lbrace>\<lambda>s. P (obj_at' (P' :: ('a :: no_vcpu) \<Rightarrow> bool) t s)\<rbrace>"
+  by (wpsimp simp: vcpuSwitch_def modifyArchState_def | assumption)+
 
 lemma dmo_setVSpaceRoot_invs'[wp]:
   "doMachineOp (setVSpaceRoot r a) \<lbrace>invs'\<rbrace>"
@@ -855,22 +2427,52 @@ lemma dmo_setVSpaceRoot_invs_no_cicd'[wp]:
              simp: o_def
       | wps)+
 
-lemma setVMRoot_invs [wp]:
+lemma getObject_tcb_hyp_sym_refs:
+      "\<lbrace>\<lambda>s. sym_refs (state_hyp_refs_of' s)\<rbrace> getObject p
+       \<lbrace>\<lambda>rv. case atcbVCPUPtr (tcbArch rv) of None \<Rightarrow> \<lambda>_. True
+             | Some x \<Rightarrow> ko_wp_at' (is_vcpu' and hyp_live') x\<rbrace>"
+  apply (wpsimp wp: getObject_tcb_wp)
+  apply (clarsimp simp: typ_at_tcb'[symmetric] typ_at'_def ko_wp_at'_def[of _ p]
+                split: option.splits)
+  apply (case_tac ko; simp)
+  apply (rename_tac tcb)
+  apply (rule_tac x=tcb in exI; rule conjI, clarsimp simp: obj_at'_def)
+  apply (clarsimp, rule context_conjI, clarsimp simp: obj_at'_def)
+  apply (drule ko_at_state_hyp_refs_ofD')
+  apply (simp add: hyp_refs_of'_def sym_refs_def)
+  apply (erule_tac x=p in allE, simp)
+  apply (drule state_hyp_refs_of'_elemD)
+  apply (clarsimp simp: hyp_refs_of_rev')
+  apply (simp add: ko_wp_at'_def, erule exE,
+         clarsimp simp: is_vcpu'_def hyp_live'_def arch_live'_def)
+  done
+
+lemma setVMRoot_invs'[wp]:
   "setVMRoot p \<lbrace>invs'\<rbrace>"
   unfolding setVMRoot_def getThreadVSpaceRoot_def
+  sorry (* FIXME AARCH64 stuck on setGlobalUserVSpace
   by (wpsimp wp: whenE_wp findVSpaceForASID_vs_at_wp hoare_drop_imps hoare_vcg_ex_lift
-                 hoare_vcg_all_lift)
+                 hoare_vcg_all_lift) *)
 
 lemma setVMRoot_invs_no_cicd':
   "\<lbrace>invs_no_cicd'\<rbrace> setVMRoot p \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
   unfolding setVMRoot_def getThreadVSpaceRoot_def
+  sorry (* FIXME AARCH64 stuck on setGlobalUserVSpace
   by (wpsimp wp: whenE_wp findVSpaceForASID_vs_at_wp hoare_drop_imps hoare_vcg_ex_lift
-                 hoare_vcg_all_lift)
+                 hoare_vcg_all_lift) *)
 
+lemma [wp]: (* FIXME AARCH64 *)
+  "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace> loadVMID param_a \<lbrace>\<lambda>_ s. P (ksSchedulerAction s)\<rbrace>"
+  "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace> updateASIDPoolEntry param_a' param_b \<lbrace>\<lambda>_ s. P (ksSchedulerAction s)\<rbrace>"
+  sorry
 crunch nosch [wp]: setVMRoot "\<lambda>s. P (ksSchedulerAction s)"
   (wp: crunch_wps getObject_inv simp: crunch_simps
        loadObject_default_def)
 
+lemma [wp]: (* FIXME AARCH64 *)
+  "\<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace> loadVMID param_a \<lbrace>\<lambda>_ s. P (ksIdleThread s)\<rbrace>"
+  "\<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace> updateASIDPoolEntry param_a' param_b \<lbrace>\<lambda>_ s. P (ksIdleThread s)\<rbrace>"
+  sorry
 crunch it' [wp]: deleteASIDPool "\<lambda>s. P (ksIdleThread s)"
   (simp: crunch_simps loadObject_default_def wp: getObject_inv mapM_wp' crunch_wps)
 
@@ -952,7 +2554,7 @@ lemma storePTE_iflive [wp]:
   apply (rule hoare_pre)
    apply (rule setObject_iflive' [where P=\<top>], simp)
       apply (simp add: objBits_simps)
-     apply (auto simp: updateObject_default_def in_monad)
+     apply (auto simp: updateObject_default_def in_monad live'_def hyp_live'_def arch_live'_def)
   done
 
 lemma setObject_pte_ksInt [wp]:
@@ -1058,7 +2660,6 @@ crunches storePTE
 
 crunches storePTE
   for pspace_canonical'[wp]: "pspace_canonical'"
-  and pspace_in_kernel_mappings'[wp]: "pspace_in_kernel_mappings'"
 
 lemma storePTE_valid_objs[wp]:
   "storePTE p pte \<lbrace>valid_objs'\<rbrace>"
@@ -1071,6 +2672,13 @@ lemma storePTE_valid_objs[wp]:
 lemma storePTE_valid_queues [wp]:
   "\<lbrace>Invariants_H.valid_queues\<rbrace> storePTE p pde \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
   by (wp valid_queues_lift | simp add: pred_tcb_at'_def)+
+
+lemma storePTE_ko_wp_vcpu_at'[wp]:
+  "storePTE p pde \<lbrace>\<lambda>s. P (ko_wp_at' (is_vcpu' and hyp_live') p' s)\<rbrace>"
+  apply (clarsimp simp: storePTE_def)
+  apply (wpsimp wp: hoare_drop_imps setObject_ko_wp_at simp: objBits_simps archObjSize_def)
+   apply (auto simp: bit_simps ko_wp_at'_def obj_at'_def is_vcpu'_def)+
+  done
 
 lemma storePTE_invs[wp]:
   "storePTE p pte \<lbrace>invs'\<rbrace>"
@@ -1136,7 +2744,7 @@ lemma setASIDPool_state_refs' [wp]:
   apply (clarsimp simp: setObject_def valid_def in_monad split_def
                         updateObject_default_def objBits_simps
                         in_magnitude_check state_refs_of'_def ps_clear_upd
-                 elim!: rsubst[where P=P] intro!: ext
+                 elim!: rsubst[where P=P] del: ext intro!: ext
              split del: if_split cong: option.case_cong if_cong)
   apply (simp split: option.split)
   done
@@ -1146,7 +2754,8 @@ lemma setASIDPool_iflive [wp]:
   apply (rule hoare_pre)
    apply (rule setObject_iflive' [where P=\<top>], simp)
       apply (simp add: objBits_simps)
-     apply (auto simp: updateObject_default_def in_monad pageBits_def)
+     apply (auto simp: updateObject_default_def in_monad bit_simps live'_def hyp_live'_def
+                       arch_live'_def)
   done
 
 lemma setASIDPool_ksInt [wp]:
@@ -1249,7 +2858,7 @@ lemma setASIDPool_invs [wp]:
   "setObject p (ap::asidpool) \<lbrace>invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   apply (wp sch_act_wf_lift valid_global_refs_lift' irqs_masked_lift
-            valid_arch_state_lift' valid_irq_node_lift
+            valid_irq_node_lift
             cur_tcb_lift valid_irq_handlers_lift''
             untyped_ranges_zero_lift
             updateObject_default_inv
@@ -1258,15 +2867,30 @@ lemma setASIDPool_invs [wp]:
   apply (clarsimp simp:  o_def)
   done
 
+lemma [wp]: (* FIXME AARCH64 *)
+  "\<lbrace>\<lambda>s. P (cte_wp_at' P' p s)\<rbrace> loadVMID param_a \<lbrace>\<lambda>_ s. P (cte_wp_at' P' p s)\<rbrace>"
+  sorry
 crunch cte_wp_at'[wp]: unmapPageTable "\<lambda>s. P (cte_wp_at' P' p s)"
   (wp: crunch_wps simp: crunch_simps)
 
 lemmas storePTE_Invalid_invs = storePTE_invs[where pte=InvalidPTE, simplified]
 
-crunch invs'[wp]: unmapPageTable "invs'"
+(* FIXME: move *)
+lemma dmo_invs'_simple:
+  "no_irq f \<Longrightarrow>
+   (\<And>p um. \<lbrace>\<lambda>m'. underlying_memory m' p = um\<rbrace> f \<lbrace>\<lambda>_ m'. underlying_memory m' p = um\<rbrace>) \<Longrightarrow>
+   \<lbrace> invs' \<rbrace> doMachineOp f \<lbrace> \<lambda>y. invs' \<rbrace>"
+  by (rule hoare_pre, rule dmo_invs', wp no_irq, simp_all add:valid_def split_def)
+
+lemma [wp]: (* FIXME AARCH64 *)
+  "\<lbrace>invs'\<rbrace> loadVMID param_a \<lbrace>\<lambda>_. invs'\<rbrace>"
+  sorry
+
+crunches unmapPageTable, invalidateTLBByASIDVA
+  for invs'[wp]: "invs'"
   (ignore: doMachineOp
-       wp: storePTE_Invalid_invs mapM_wp' crunch_wps
-     simp: crunch_simps)
+       wp: storePTE_Invalid_invs mapM_wp' crunch_wps dmo_invs'_simple
+     simp: crunch_simps if_apply_def2)
 
 lemma perform_pti_invs [wp]:
   "\<lbrace>invs' and valid_pti' pti\<rbrace> performPageTableInvocation pti \<lbrace>\<lambda>_. invs'\<rbrace>"
@@ -1274,7 +2898,7 @@ lemma perform_pti_invs [wp]:
                  split: page_table_invocation.splits)
   apply (intro conjI allI impI;
            wpsimp wp: arch_update_updateCap_invs getCTE_wp' mapM_x_wp'
-                      hoare_vcg_all_lift hoare_vcg_imp_lift')
+                      hoare_vcg_all_lift hoare_vcg_imp_lift' dmo_invs'_simple)
   apply (auto simp: cte_wp_at_ctes_of is_arch_update'_def isCap_simps valid_cap'_def capAligned_def)
   done
 
@@ -1287,20 +2911,33 @@ lemmas unmapPage_typ_ats [wp] = typ_at_lifts [OF unmapPage_typ_at']
 lemma unmapPage_invs' [wp]:
   "unmapPage sz asid vptr pptr \<lbrace>invs'\<rbrace>"
   unfolding unmapPage_def
-  by (wpsimp wp: lookupPTSlot_inv hoare_drop_imp hoare_vcg_all_lift)
+  by (wpsimp wp: lookupPTSlot_inv hoare_drop_imp hoare_vcg_all_lift dmo_invs'_simple)
+
+lemma dmo_doFlush_invs'[wp]:
+  "doMachineOp (doFlush x41 start end x44) \<lbrace>invs'\<rbrace>"
+  sorry (* FIXME AARCH64: crunch? *)
 
 lemma perform_page_invs [wp]:
   "\<lbrace>invs' and valid_page_inv' pt\<rbrace> performPageInvocation pt \<lbrace>\<lambda>_. invs'\<rbrace>"
+  supply if_split[split del]
   apply (simp add: performPageInvocation_def)
   apply (cases pt)
-     apply clarsimp
-     apply ((wpsimp wp: hoare_vcg_all_lift hoare_vcg_ex_lift hoare_vcg_const_imp_lift
-                       arch_update_updateCap_invs unmapPage_cte_wp_at' getSlotCap_wp
-                  simp: valid_page_inv'_def is_arch_update'_def
-             | (auto simp: is_arch_update'_def)[1])+)[3]
-  apply (clarsimp simp: cte_wp_at_ctes_of valid_page_inv'_def)
-  apply (clarsimp simp: is_arch_update'_def isCap_simps valid_cap'_def capAligned_def
-                  split: option.splits)
+     (* FIXME AARCH64: clean up this proof, not clear why all, fwd_all or solve_emerging don't work *)
+     apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_ex_lift hoare_vcg_const_imp_lift
+                            arch_update_updateCap_invs unmapPage_cte_wp_at' getSlotCap_wp dmo_invs'_simple
+                       simp: valid_page_inv'_def is_arch_update'_def if_apply_def2)
+    apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_ex_lift hoare_vcg_const_imp_lift
+                           arch_update_updateCap_invs unmapPage_cte_wp_at' getSlotCap_wp dmo_invs'_simple
+                      simp: valid_page_inv'_def is_arch_update'_def if_apply_def2)
+   prefer 2
+   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_ex_lift hoare_vcg_const_imp_lift
+                          arch_update_updateCap_invs unmapPage_cte_wp_at' getSlotCap_wp
+                     simp: valid_page_inv'_def is_arch_update'_def if_apply_def2)
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_ex_lift hoare_vcg_const_imp_lift
+                         arch_update_updateCap_invs unmapPage_cte_wp_at' getSlotCap_wp dmo_invs'_simple
+                    simp: valid_page_inv'_def is_arch_update'_def if_apply_def2)
+  apply (clarsimp simp: cte_wp_at_ctes_of valid_page_inv'_def is_arch_update'_def isCap_simps valid_cap'_def capAligned_def
+                  split: option.splits)+
   done
 
 lemma setObject_cte_obj_at_ap':
@@ -1335,11 +2972,6 @@ lemma storePTE_asid_pool_obj_at'[wp]:
   apply (clarsimp simp: updateObject_default_def in_monad)
   done
 
-crunches copyGlobalMappings
-  for asid_pool_obj_at'[wp]: "\<lambda>s. P (obj_at' (P'::asidpool \<Rightarrow> bool) p s)"
-  and invs'[wp]: invs'
-  (ignore: storePTE wp: crunch_wps)
-
 lemma perform_aci_invs [wp]:
   "\<lbrace>invs' and valid_apinv' api\<rbrace> performASIDPoolInvocation api \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (clarsimp simp: performASIDPoolInvocation_def split: asidpool_invocation.splits)
@@ -1353,9 +2985,5 @@ lemma perform_aci_invs [wp]:
   done
 
 end
-
-lemma cteCaps_of_ctes_of_lift:
-  "(\<And>P. \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ctes_of s)\<rbrace>) \<Longrightarrow> \<lbrace>\<lambda>s. P (cteCaps_of s) \<rbrace> f \<lbrace>\<lambda>_ s. P (cteCaps_of s)\<rbrace>"
-  unfolding cteCaps_of_def .
 
 end
