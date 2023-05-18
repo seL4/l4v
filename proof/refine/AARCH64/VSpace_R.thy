@@ -202,6 +202,12 @@ lemma maskInterrupt_irq_states':
   by (wpsimp wp: dmo_maskInterrupt)
      (auto simp add: valid_irq_states_def valid_irq_masks'_def)
 
+crunch ksIdleThread[wp]: storeWordUser "\<lambda>s. P (ksIdleThread s)"
+crunch ksIdleThread[wp]: asUser "\<lambda>s. P (ksIdleThread s)"
+  (wp: crunch_wps simp: crunch_simps)
+crunch ksQ[wp]: asUser "\<lambda>s. P (ksReadyQueues s)"
+  (wp: crunch_wps simp: crunch_simps)
+
 lemma maskInterrupt_invs':
   "\<lbrace>invs'
     and (\<lambda>s. \<not>b \<longrightarrow> intStateIRQTable (ksInterruptState s) irq \<noteq> irqstate.IRQInactive)\<rbrace>

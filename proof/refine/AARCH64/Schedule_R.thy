@@ -1011,6 +1011,12 @@ lemma tcbSchedDequeue_not_tcbQueued:
   apply (simp)
   done
 
+lemma asUser_obj_at[wp]:
+  "asUser t' f \<lbrace>obj_at' (P \<circ> tcbState) t\<rbrace>"
+  apply (wpsimp simp: asUser_def threadGet_stateAssert_gets_asUser)
+  apply (simp add: asUser_fetch_def obj_at'_def)
+  done
+
 lemma asUser_tcbState_inv[wp]:
   "asUser t m \<lbrace>obj_at' (P \<circ> tcbState) t\<rbrace>"
   apply (simp add: asUser_def tcb_in_cur_domain'_def threadGet_def)
