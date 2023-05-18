@@ -1060,7 +1060,7 @@ abbreviation
 
 definition valid_state' :: "kernel_state \<Rightarrow> bool" where
   "valid_state' \<equiv> \<lambda>s. valid_pspace' s \<and> sch_act_wf (ksSchedulerAction s) s
-                      \<and> valid_queues s \<and> sym_refs (state_refs_of' s)
+                      \<and> valid_queues s \<and> sym_refs (state_refs_of' s) \<and> sym_refs (state_hyp_refs_of' s)
                       \<and> if_live_then_nonz_cap' s \<and> if_unsafe_then_cap' s
                       \<and> valid_idle' s
                       \<and> valid_global_refs' s \<and> valid_arch_state' s
@@ -1148,7 +1148,7 @@ abbreviation(input)
 abbreviation(input)
  "all_invs_but_ct_not_inQ'
     \<equiv> \<lambda>s. valid_pspace' s \<and> sch_act_wf (ksSchedulerAction s) s
-           \<and> valid_queues s \<and> sym_refs (state_refs_of' s)
+           \<and> valid_queues s \<and> sym_refs (state_refs_of' s) \<and> sym_refs (state_hyp_refs_of' s)
            \<and> if_live_then_nonz_cap' s \<and> if_unsafe_then_cap' s
            \<and> valid_idle' s \<and> valid_global_refs' s \<and> valid_arch_state' s
            \<and> valid_irq_node' (irq_node' s) s \<and> valid_irq_handlers' s
@@ -1159,7 +1159,7 @@ abbreviation(input)
            \<and> valid_dom_schedule' s \<and> untyped_ranges_zero' s"
 
 lemma all_invs_but_sym_refs_not_ct_inQ_check':
-  "(all_invs_but_sym_refs_ct_not_inQ' and sym_refs \<circ> state_refs_of' and ct_not_inQ) = invs'"
+  "(all_invs_but_sym_refs_ct_not_inQ' and sym_refs \<circ> state_refs_of' and sym_refs \<circ> state_hyp_refs_of' and ct_not_inQ) = invs'"
   by (simp add: pred_conj_def conj_commute conj_left_commute invs'_def valid_state'_def)
 
 lemma all_invs_but_not_ct_inQ_check':
@@ -1169,7 +1169,7 @@ lemma all_invs_but_not_ct_inQ_check':
 definition
   "all_invs_but_ct_idle_or_in_cur_domain'
     \<equiv> \<lambda>s. valid_pspace' s \<and> sch_act_wf (ksSchedulerAction s) s
-           \<and> valid_queues s \<and> sym_refs (state_refs_of' s)
+           \<and> valid_queues s \<and> sym_refs (state_refs_of' s) \<and> sym_refs (state_hyp_refs_of' s)
            \<and> if_live_then_nonz_cap' s \<and> if_unsafe_then_cap' s
            \<and> valid_idle' s \<and> valid_global_refs' s \<and> valid_arch_state' s
            \<and> valid_irq_node' (irq_node' s) s \<and> valid_irq_handlers' s
@@ -1796,6 +1796,10 @@ lemma valid_mdb'_pspaceI:
 lemma state_refs_of'_pspaceI:
   "P (state_refs_of' s) \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> P (state_refs_of' s')"
   unfolding state_refs_of'_def ps_clear_def by (simp cong: option.case_cong)
+
+lemma state_hyp_refs_of'_pspaceI:
+  "P (state_hyp_refs_of' s) \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> P (state_hyp_refs_of' s')"
+  unfolding state_hyp_refs_of'_def ps_clear_def by (simp cong: option.case_cong)
 
 lemma valid_pspace':
   "valid_pspace' s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_pspace' s'"
@@ -2608,6 +2612,10 @@ lemma state_refs_of'_eq[iff]:
   "state_refs_of' (f s) = state_refs_of' s"
   by (rule state_refs_of'_pspaceI [OF _ pspace], rule refl)
 
+lemma state_hyp_refs_of'_eq[iff]:
+  "state_hyp_refs_of' (f s) = state_hyp_refs_of' s"
+  by (rule state_hyp_refs_of'_pspaceI [OF _ pspace], rule refl)
+
 lemma valid_space_update [iff]:
   "valid_pspace' (f s) = valid_pspace' s"
   by (fastforce simp: valid_pspace' pspace)
@@ -3227,6 +3235,10 @@ lemma invs_unsafe_then_cap' [elim!]:
 
 lemma invs_sym' [elim!]:
   "invs' s \<Longrightarrow> sym_refs (state_refs_of' s)"
+  by (simp add: invs'_def valid_state'_def)
+
+lemma invs_sym_hyp' [elim!]:
+  "invs' s \<Longrightarrow> sym_refs (state_hyp_refs_of' s)"
   by (simp add: invs'_def valid_state'_def)
 
 lemma invs_sch_act_wf' [elim!]:

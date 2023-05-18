@@ -2454,10 +2454,15 @@ lemma setVMRoot_invs'[wp]:
   by (wpsimp wp: whenE_wp findVSpaceForASID_vs_at_wp hoare_drop_imps hoare_vcg_ex_lift
                  hoare_vcg_all_lift) *)
 
+lemma setGlobalUserVSpace_invs_no_cicd'[wp]:
+  "setGlobalUserVSpace \<lbrace>invs_no_cicd'\<rbrace>"
+  unfolding setGlobalUserVSpace_def
+  by wpsimp
+
 lemma setVMRoot_invs_no_cicd':
   "\<lbrace>invs_no_cicd'\<rbrace> setVMRoot p \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
   unfolding setVMRoot_def getThreadVSpaceRoot_def
-  sorry (* FIXME AARCH64 stuck on setGlobalUserVSpace
+  sorry (* FIXME AARCH64 stuck on armContextSwitch
   by (wpsimp wp: whenE_wp findVSpaceForASID_vs_at_wp hoare_drop_imps hoare_vcg_ex_lift
                  hoare_vcg_all_lift) *)
 
@@ -2744,6 +2749,16 @@ lemma setASIDPool_state_refs' [wp]:
   apply (clarsimp simp: setObject_def valid_def in_monad split_def
                         updateObject_default_def objBits_simps
                         in_magnitude_check state_refs_of'_def ps_clear_upd
+                 elim!: rsubst[where P=P] del: ext intro!: ext
+             split del: if_split cong: option.case_cong if_cong)
+  apply (simp split: option.split)
+  done
+
+lemma setASIDPool_state_hyp_refs' [wp]:
+  "\<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
+  apply (clarsimp simp: setObject_def valid_def in_monad split_def
+                        updateObject_default_def objBits_simps
+                        in_magnitude_check state_hyp_refs_of'_def ps_clear_upd
                  elim!: rsubst[where P=P] del: ext intro!: ext
              split del: if_split cong: option.case_cong if_cong)
   apply (simp split: option.split)

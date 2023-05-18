@@ -2224,9 +2224,8 @@ lemma doMachineOp_invs_bits[wp]:
      doMachineOp m \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
   "\<lbrace>Invariants_H.valid_queues\<rbrace> doMachineOp m \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"
   "\<lbrace>valid_queues'\<rbrace> doMachineOp m \<lbrace>\<lambda>rv. valid_queues'\<rbrace>"
-  "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace>
-      doMachineOp m
-   \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
+  "\<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace>  doMachineOp m \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
+  "\<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace>  doMachineOp m \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
   "\<lbrace>if_live_then_nonz_cap'\<rbrace> doMachineOp m \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
   "\<lbrace>cur_tcb'\<rbrace> doMachineOp m \<lbrace>\<lambda>rv. cur_tcb'\<rbrace>"
   "\<lbrace>if_unsafe_then_cap'\<rbrace> doMachineOp m \<lbrace>\<lambda>rv. if_unsafe_then_cap'\<rbrace>"

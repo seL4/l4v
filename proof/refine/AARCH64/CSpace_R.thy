@@ -2514,6 +2514,18 @@ qed
 crunch state_refs_of'[wp]: cteInsert "\<lambda>s. P (state_refs_of' s)"
   (wp: crunch_wps)
 
+lemma setCTE_state_hyp_refs_of'[wp]:
+  "\<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace> setCTE p cte \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
+  unfolding setCTE_def
+  apply (rule setObject_state_hyp_refs_of_eq)
+  apply (clarsimp simp: updateObject_cte in_monad typeError_def
+                        in_magnitude_check objBits_simps
+                 split: kernel_object.split_asm if_split_asm)
+  done
+
+crunch state_hyp_refs_of'[wp]: cteInsert "\<lambda>s. P (state_hyp_refs_of' s)"
+  (wp: crunch_wps)
+
 crunch aligned'[wp]: cteInsert pspace_aligned'
   (wp: crunch_wps)
 
@@ -2966,6 +2978,9 @@ crunch irq_states' [wp]: cteInsert valid_irq_states'
   (wp: crunch_wps)
 
 crunch pred_tcb_at'[wp]: cteInsert "pred_tcb_at' proj P t"
+  (wp: crunch_wps)
+
+crunch state_hyp_refs_of'[wp]: setupReplyMaster "\<lambda>s. P (state_hyp_refs_of' s)"
   (wp: crunch_wps)
 
 lemma setCTE_cteCaps_of[wp]:

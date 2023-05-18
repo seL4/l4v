@@ -260,6 +260,13 @@ lemma storePTE_state_refs_of[wp]:
          clarsimp simp: updateObject_default_def in_monad)
   done
 
+lemma storePTE_state_hyp_refs_of[wp]:
+  "\<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace>
+     storePTE ptr val
+   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
+  by (wpsimp wp: hoare_drop_imps setObject_state_hyp_refs_of_eq
+             simp: storePTE_def updateObject_default_def in_monad)
+
 crunch cte_wp_at'[wp]: setIRQState "\<lambda>s. P (cte_wp_at' P' p s)"
 crunch inv[wp]: getIRQSlot "P"
 

@@ -777,7 +777,7 @@ lemma threadSet_state_hyp_refs_of':
   shows      "\<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace> threadSet F t \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
   apply (simp add: threadSet_def)
   apply (wpsimp wp: setObject_state_hyp_refs_of' getObject_tcb_wp
-                simp: objBits_simps' obj_at'_def state_hyp_refs_of'_def)
+    simp: objBits_simps' obj_at'_def state_hyp_refs_of'_def)
   apply (clarsimp simp:objBits_simps' y state_hyp_refs_of'_def
                  elim!: rsubst[where P=P] intro!: ext)+
   done
@@ -1294,6 +1294,7 @@ proof -
               threadSet_sch_actT_P[where P=False, simplified]
               threadSet_valid_queues
               threadSet_state_refs_of'T[where f'=id]
+              threadSet_state_hyp_refs_of'
               threadSet_iflive'T
               threadSet_ifunsafe'T
               threadSet_idle'T
@@ -1518,6 +1519,14 @@ lemma asUser_st_refs_of'[wp]:
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   apply (simp add: asUser_def split_def)
   apply (wp threadSet_state_refs_of' hoare_drop_imps | simp)+
+  done
+
+lemma asUser_st_hyp_refs_of'[wp]:
+  "\<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace>
+     asUser t m
+   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
+  apply (simp add: asUser_def split_def)
+  apply (wp threadSet_state_hyp_refs_of' hoare_drop_imps | simp add: atcbContextSet_def atcbVCPUPtr_atcbContext_update)+
   done
 
 lemma asUser_iflive'[wp]:
@@ -3883,6 +3892,17 @@ lemma setThreadState_state_refs_of'[wp]:
   by (simp add: setThreadState_def fun_upd_def
         | wp threadSet_state_refs_of')+
 
+crunch hyp_refs_of'[wp]: rescheduleRequired "\<lambda>s. P (state_hyp_refs_of' s)"
+  (simp: unless_def crunch_simps wp: threadSet_state_hyp_refs_of' ignore: threadSet)
+
+lemma setThreadState_state_hyp_refs_of'[wp]:
+  "\<lbrace>\<lambda>s. P ((state_hyp_refs_of' s))\<rbrace>
+     setThreadState st t
+   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
+  apply (simp add: setThreadState_def fun_upd_def
+        | wp threadSet_state_hyp_refs_of')+
+  done
+
 lemma setBoundNotification_state_refs_of'[wp]:
   "\<lbrace>\<lambda>s. P ((state_refs_of' s) (t := tcb_bound_refs' ntfn
                                  \<union> {r \<in> state_refs_of' s t. snd r \<noteq> TCBBound}))\<rbrace>
@@ -3890,6 +3910,13 @@ lemma setBoundNotification_state_refs_of'[wp]:
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   by (simp add: setBoundNotification_def Un_commute fun_upd_def
         | wp threadSet_state_refs_of' )+
+
+lemma setBoundNotification_state_hyp_refs_of'[wp]:
+  "\<lbrace>\<lambda>s. P (state_hyp_refs_of' s)\<rbrace>
+     setBoundNotification ntfn t
+   \<lbrace>\<lambda>rv s. P (state_hyp_refs_of' s)\<rbrace>"
+  by (simp add: setBoundNotification_def fun_upd_def
+        | wp threadSet_state_hyp_refs_of')+
 
 lemma sts_cur_tcb'[wp]:
   "\<lbrace>cur_tcb'\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. cur_tcb'\<rbrace>"
