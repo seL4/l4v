@@ -407,7 +407,7 @@ loadVMID asid = do
     maybeEntry <- getASIDPoolEntry asid
     case maybeEntry of
         Just (ASIDPoolVSpace vmID ptr) -> return vmID
-        _ -> error ("loadVMID: no entry for asid")
+        _ -> fail "loadVMID: no entry for asid"
 
 invalidateASID :: ASID -> Kernel ()
 invalidateASID = updateASIDPoolEntry (\entry -> Just $ entry { apVMID = Nothing })
