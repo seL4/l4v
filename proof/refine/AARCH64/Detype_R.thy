@@ -799,7 +799,7 @@ lemma cte_wp_at'[simp]:
   by (fastforce simp:cte_wp_at_delete'[where idx = idx,OF valid_untyped pd ])
 
 (* the bits of caps they need for validity argument are within their capRanges *)
-(* FIXME AARCH64 pt_index is wrong here, switch to word etc. *) 
+(* FIXME AARCH64 pt_index is wrong here, switch to word etc. *)
 lemma valid_cap_ctes_pre:
     "\<And>c. s \<turnstile>' c \<Longrightarrow> case c of CNodeCap ref bits g gs \<Rightarrow>
                       \<forall>x. ref + (x && mask bits) * 2^cteSizeBits \<in> capRange c
@@ -4512,7 +4512,6 @@ lemma createNewObjects_def2:
     valid_arch_state' s;
     range_cover ptr sz (Types_H.getObjectSize ty us) (length dslots);
     ptr \<noteq> 0; sz \<le> maxUntypedSizeBits; canonical_address (ptr && ~~ mask sz);
-    ptr && ~~ mask sz \<in> kernel_mappings;
     ksCurDomain s \<le> maxDomain\<rbrakk>
    \<Longrightarrow> createNewObjects ty parent dslots ptr us d s =
        insertNewCaps ty parent dslots ptr us d s"
@@ -4528,7 +4527,6 @@ lemma createNewObjects_def2:
   assume not_0: "ptr \<noteq> 0"
   assume sz_limit: "sz \<le> maxUntypedSizeBits"
   assume ptr_cn: "canonical_address (ptr && ~~ mask sz)"
-  assume ptr_km: "ptr && ~~ mask sz \<in> kernel_mappings"
   assume kscd: "ksCurDomain s \<le> maxDomain"
   assume valid_psp: "valid_pspace' s"
   assume valid_arch_state: "valid_arch_state' s"
@@ -4544,7 +4542,7 @@ lemma createNewObjects_def2:
             insertNewCap parent slot)
         [0.e.of_nat (length ys)] (y # ys) s =
        (createNewCaps ty ptr (Suc (length ys)) us d >>= zipWithM_x (insertNewCap parent) (y # ys))  s"
-    using le list_nc dist extra range_cover not_0 sz_limit ptr_cn ptr_km caps_reserved
+    using le list_nc dist extra range_cover not_0 sz_limit ptr_cn caps_reserved
   proof (induct ys arbitrary: y rule:rev_induct)
     case Nil
     show ?case
@@ -4639,7 +4637,6 @@ assumes check: "distinct dslots"
   and   not_0: "ptr \<noteq> 0" "length dslots \<noteq> 0"
   and sz_limit: "sz \<le> maxUntypedSizeBits"
   and  ptr_cn: "canonical_address (ptr && ~~ mask sz)"
-  and  ptr_km: "ptr && ~~ mask sz \<in> kernel_mappings"
   and       c: "corres r P P' f (insertNewCaps ty parent dslots ptr us d)"
   and     imp: "\<And>s. P' s \<Longrightarrow> (cte_wp_at' (\<lambda>c. isUntypedCap (cteCap c)) parent s
                    \<and> (\<forall>slot \<in> set dslots. cte_wp_at' (\<lambda>c. cteCap c = capability.NullCap) slot s)
@@ -4649,7 +4646,7 @@ assumes check: "distinct dslots"
                                                           2^ (Types_H.getObjectSize ty us) - 1} s
                    \<and> valid_pspace' s \<and> valid_arch_state' s \<and> ksCurDomain s \<le> maxDomain)"
   shows "corres r P P' f (createNewObjects ty parent dslots ptr us d)"
-  using check cover not_0 sz_limit ptr_cn ptr_km
+  using check cover not_0 sz_limit ptr_cn
   apply (clarsimp simp:corres_underlying_def)
   apply (frule imp)
   apply (frule range_cover.range_cover_le_n_less(1)[where 'a=machine_word_len, folded word_bits_def, OF _ le_refl])
@@ -4667,7 +4664,6 @@ lemma createNewObjects_wp_helper:
   and   not_0: "ptr \<noteq> 0" "length dslots \<noteq> 0"
   and   sz_limit: "sz \<le> maxUntypedSizeBits"
   and   ptr_cn: "canonical_address (ptr && ~~ mask sz)"
-  and   ptr_km: "ptr && ~~ mask sz \<in> kernel_mappings"
   shows "\<lbrace>P\<rbrace> insertNewCaps ty parent dslots ptr us d \<lbrace>Q\<rbrace>
   \<Longrightarrow> \<lbrace>P and (cte_wp_at' (\<lambda>c. isUntypedCap (cteCap c)) parent
   and (\<lambda>s. \<forall>slot \<in> set dslots. cte_wp_at' (\<lambda>c. cteCap c = capability.NullCap) slot s)
