@@ -27,6 +27,7 @@ where
     | Inr LargePageObject \<Rightarrow> ArchObject LargePageObj
     | Inr HugePageObject \<Rightarrow> ArchObject HugePageObj
     | Inr PageTableObject \<Rightarrow> ArchObject PageTableObj
+    | Inr VSpaceObject \<Rightarrow> ArchObject VSpaceObj
     | Inl (KOArch (KOASIDPool _)) \<Rightarrow> ArchObject ASIDPoolObj
     | Inr VCPUObject \<Rightarrow> ArchObject AARCH64_A.VCPUObj
     | _ \<Rightarrow> ArchObject SmallPageObj"
@@ -71,7 +72,8 @@ where
     | SmallPageObject \<Rightarrow> pageBitsForSize ARMSmallPage
     | LargePageObject \<Rightarrow> pageBitsForSize ARMLargePage
     | HugePageObject \<Rightarrow> pageBitsForSize ARMHugePage
-    | PageTableObject \<Rightarrow> pageBits
+    | PageTableObject \<Rightarrow> ptBits NormalPT_T
+    | VSpaceObject \<Rightarrow> ptBits VSRootPT_T
     | VCPUObject \<Rightarrow> vcpuBits"
 
 definition
@@ -87,6 +89,7 @@ where
     | Inr (APIObjectType ArchTypes_H.NotificationObject) \<Rightarrow> Some (KONotification makeObject)
     | Inr (APIObjectType ArchTypes_H.CapTableObject) \<Rightarrow> Some (KOCTE makeObject)
     | Inr PageTableObject \<Rightarrow> Some (KOArch (KOPTE makeObject))
+    | Inr VSpaceObject \<Rightarrow> Some (KOArch (KOPTE makeObject))
     | Inr SmallPageObject \<Rightarrow> Some (if dev then KOUserDataDevice else KOUserData)
     | Inr LargePageObject \<Rightarrow> Some(if dev then KOUserDataDevice else KOUserData)
     | Inr HugePageObject \<Rightarrow> Some (if dev then KOUserDataDevice else KOUserData)
