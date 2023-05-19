@@ -8923,10 +8923,6 @@ crunches
          set_gic_vcpu_ctrl_lr_def
    ignore: saveVirtTimer)
 
-lemma loadVMID_irq_states'[wp]:
-  "loadVMID param_a \<lbrace>valid_irq_states'\<rbrace>"
-  sorry (* FIXME AARCH64 *)
-
 crunch irq_states' [wp]: finaliseCap valid_irq_states'
   (wp: crunch_wps unless_wp getASID_wp no_irq_setVSpaceRoot
    simp: crunch_simps o_def pteAtIndex_def)
