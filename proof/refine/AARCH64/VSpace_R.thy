@@ -757,6 +757,7 @@ lemma aligned_distinct_relation_vcpu_atI'[elim]:
   apply (fastforce simp add: pspace_aligned'_def pspace_distinct'_def dom_def)
   done
 
+(* FIXME AARCH64 these preconditions are causing difficulty in Arch_R, review *)
 lemma vcpuSwitch_corres':
   assumes "vcpu' = vcpu"
   shows
@@ -2085,7 +2086,8 @@ definition
   | PageUnmap cap ptr \<Rightarrow>
       K (isFrameCap cap) and
       cte_wp_at' (is_arch_update' (ArchObjectCap cap)) ptr and valid_cap' (ArchObjectCap cap)
-  | PageGetAddr ptr \<Rightarrow> \<top>"
+  | PageGetAddr ptr \<Rightarrow> \<top>
+  | PageFlush ty start end pstart space asid \<Rightarrow> \<top>"
 
 lemma message_info_to_data_eqv:
   "wordFromMessageInfo (message_info_map mi) = message_info_to_data mi"
