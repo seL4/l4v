@@ -921,9 +921,8 @@ lemma arch_deriveCap_corres:
       apply (clarify?, rule corres_noopE; wpsimp)+
   done
 
-
 definition
-  "vmattributes_map \<equiv> \<lambda>R. VMAttributes (Execute \<notin> R)"
+  "vmattributes_map \<equiv> \<lambda>R. VMAttributes (Execute \<notin> R) (Device \<notin> R)"
 
 lemma pte_relation'_Invalid_inv [simp]:
   "pte_relation' x AARCH64_H.pte.InvalidPTE = (x = AARCH64_A.pte.InvalidPTE)"
