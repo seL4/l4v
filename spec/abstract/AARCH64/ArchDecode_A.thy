@@ -53,7 +53,7 @@ definition arch_decode_irq_control_invocation ::
     else throwError IllegalOperation)"
 
 definition attribs_from_word :: "machine_word \<Rightarrow> vm_attributes" where
-  "attribs_from_word w \<equiv> {attr.  \<not>w!!0 \<and> attr = Execute \<or> \<not>w !! 2 \<and> attr = Device}"
+  "attribs_from_word w \<equiv> {attr.  \<not>w!!0 \<and> attr = Device \<or> \<not>w !! 2 \<and> attr = Execute}"
 
 definition make_user_pte :: "paddr \<Rightarrow> vm_attributes \<Rightarrow> vm_rights \<Rightarrow> vmpage_size \<Rightarrow> pte" where
   "make_user_pte addr attr rights vm_size \<equiv>
