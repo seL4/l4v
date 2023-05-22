@@ -714,7 +714,8 @@ decodeARMASIDPoolInvocation label cap@(ASIDPoolCap {}) extraCaps =
             case vspaceCap of
                 ArchObjectCap (PageTableCap { capPTMappedAddress = Nothing })
                   -> do
-                    when (not (isVTableRoot vspaceCap) || isJust (capPTMappedAddress cap)) $
+                    -- C checks for a mapping here, but our case already checks that
+                    when (not (isVTableRoot vspaceCap)) $
                         throw $ InvalidCapability 1
                     asidTable <- withoutFailure $ gets (armKSASIDTable . ksArchState)
                     let base = capASIDBase cap
