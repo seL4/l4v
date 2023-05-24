@@ -158,6 +158,13 @@ placeNewDataObject regionBase sz isDevice = if isDevice
     then placeNewObject regionBase UserDataDevice sz
     else placeNewObject regionBase UserData sz
 
+updatePTType :: PPtr () -> PT_Type -> Kernel ()
+updatePTType p pt_t = do
+    ptTypes <- gets (gsPTTypes . ksArchState)
+    let funupd = (\f x v y -> if y == x then v else f y)
+    let ptTypes' = funupd ptTypes (fromPPtr p) (Just pt_t)
+    modify (\ks -> ks { ksArchState = (ksArchState ks) { gsPTTypes = ptTypes' } })
+
 createObject :: ObjectType -> PPtr () -> Int -> Bool -> Kernel ArchCapability
 createObject t regionBase _ isDevice =
     let funupd = (\f x v y -> if y == x then v else f y) in
@@ -189,10 +196,12 @@ createObject t regionBase _ isDevice =
         Arch.Types.PageTableObject -> do
             let ptSize = ptBits NormalPT_T - objBits (makeObject :: PTE)
             placeNewObject regionBase (makeObject :: PTE) ptSize
+            updatePTType regionBase NormalPT_T
             return $ PageTableCap (pointerCast regionBase) NormalPT_T Nothing
         Arch.Types.VSpaceObject -> do
             let ptSize = ptBits VSRootPT_T - objBits (makeObject :: PTE)
             placeNewObject regionBase (makeObject :: PTE) ptSize
+            updatePTType regionBase VSRootPT_T
             return $ PageTableCap (pointerCast regionBase) VSRootPT_T Nothing
         Arch.Types.VCPUObject -> do
             placeNewObject regionBase (makeObject :: VCPU) 0

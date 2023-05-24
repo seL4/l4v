@@ -6,6 +6,14 @@
 
 This module contains the data structure and operations for the physical memory model.
 
+\begin{impdetails}
+
+This module uses the C preprocessor to select a target architecture.
+
+> {-# LANGUAGE CPP #-}
+
+\end{impdetails}
+
 > module SEL4.Model.PSpace (
 >         PSpace, newPSpace, initPSpace,
 >         PSpaceStorable,
@@ -21,6 +29,8 @@ This module contains the data structure and operations for the physical memory m
 % {-# BOOT-EXPORTS: PSpace #PRegion newPSpace #-}
 
 > import Prelude hiding (Word)
+> import qualified SEL4.Model.PSpace.TARGET as Arch
+
 > import SEL4.Model.StateData
 > import SEL4.Object.Structures
 
@@ -241,7 +251,7 @@ No type checks are performed when deleting objects; "deleteObjects" simply delet
 >         let ps' = ps { psMap = map' }
 >         modify (\ks -> ks { ksPSpace = ps'})
 
-Clear the ghost state for user pages and cnodes within the deleted range.
+Clear the ghost state for user pages, cnodes, and arch-specific objects within the deleted range.
 
 >         modify (\ks -> ks { gsUserPages = (\x -> if inRange x
 >                                    then Nothing else gsUserPages ks x) })
@@ -249,6 +259,7 @@ Clear the ghost state for user pages and cnodes within the deleted range.
 >             "Object deletion would split CNodes."
 >         modify (\ks -> ks { gsCNodes = (\x -> if inRange x
 >                                    then Nothing else gsCNodes ks x) })
+>         Arch.deleteGhost ptr bits
 >         stateAssert ksASIDMapSafe "Object deletion would leave dangling PD pointers"
 
 In "deleteObjects" above, we assert "deletionIsSafe"; that is, that there are no pointers to these objects remaining elsewhere in the kernel state. Since we cannot easily check this in the Haskell model, we assume that it is always true; the assertion is strengthened during translation into Isabelle.
