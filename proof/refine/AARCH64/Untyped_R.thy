@@ -1494,7 +1494,7 @@ shows
          apply (elim modify_map_casesE)
             apply (clarsimp split: if_split_asm cong: conj_cong
                             simp: cte_map_eq_subst cte_wp_at_cte_at revokable_relation_simp)+
-        apply (clarsimp simp: state_relation_def ghost_relation_of_heap)+
+        apply (clarsimp simp: state_relation_def ghost_relation_of_heap pt_types_of_heap_eq o_def)+
      apply wp+
    apply (rule corres_guard_imp)
      apply (rule corres_underlying_symb_exec_l [OF gets_symb_exec_l])
@@ -4046,6 +4046,8 @@ lemma idx_le_new_offs:
 
 end
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma valid_sched_etcbs[elim!]: "valid_sched_2 queues ekh sa cdom kh ct it \<Longrightarrow> valid_etcbs_2 ekh kh"
   by (simp add: valid_sched_def)
 
@@ -4607,6 +4609,8 @@ lemma whenE_reset_resetUntypedCap_invs_etc:
   done
 
 crunch ksCurDomain[wp]: updateFreeIndex "\<lambda>s. P (ksCurDomain s)"
+
+end
 
 lemma (in range_cover) funky_aligned:
   "is_aligned ((ptr && foo) + v * 2 ^ sbit) sbit"

@@ -325,10 +325,11 @@ definition ready_queues_relation ::
   "ready_queues_relation qs qs' \<equiv> \<forall>d p. (qs d p = qs' (d, p))"
 
 definition ghost_relation ::
-  "Structures_A.kheap \<Rightarrow> (machine_word \<rightharpoonup> vmpage_size) \<Rightarrow> (machine_word \<rightharpoonup> nat) \<Rightarrow> bool" where
-  "ghost_relation h ups cns \<equiv>
+  "Structures_A.kheap \<Rightarrow> (machine_word \<rightharpoonup> vmpage_size) \<Rightarrow> (machine_word \<rightharpoonup> nat) \<Rightarrow> (machine_word \<rightharpoonup> pt_type) \<Rightarrow> bool" where
+  "ghost_relation h ups cns pt_types \<equiv>
      (\<forall>a sz. (\<exists>dev. h a = Some (ArchObj (DataPage dev sz))) \<longleftrightarrow> ups a = Some sz) \<and>
-     (\<forall>a n. (\<exists>cs. h a = Some (CNode n cs) \<and> well_formed_cnode_n n cs) \<longleftrightarrow> cns a = Some n)"
+     (\<forall>a n. (\<exists>cs. h a = Some (CNode n cs) \<and> well_formed_cnode_n n cs) \<longleftrightarrow> cns a = Some n) \<and>
+     (\<forall>a pt_t. (\<exists>pt. h a = Some (ArchObj (PageTable pt)) \<and> pt_t = pt_type pt) \<longleftrightarrow> pt_types a = Some pt_t)"
 
 definition cdt_relation :: "(cslot_ptr \<Rightarrow> bool) \<Rightarrow> cdt \<Rightarrow> cte_heap \<Rightarrow> bool" where
   "cdt_relation \<equiv> \<lambda>cte_at m m'.
@@ -461,7 +462,7 @@ definition state_relation :: "(det_state \<times> kernel_state) set" where
        \<and> ekheap_relation (ekheap s) (ksPSpace s')
        \<and> sched_act_relation (scheduler_action s) (ksSchedulerAction s')
        \<and> ready_queues_relation (ready_queues s) (ksReadyQueues s')
-       \<and> ghost_relation (kheap s) (gsUserPages s') (gsCNodes s')
+       \<and> ghost_relation (kheap s) (gsUserPages s') (gsCNodes s') (gsPTTypes (ksArchState s'))
        \<and> cdt_relation (swp cte_at s) (cdt s) (ctes_of s')
        \<and> cdt_list_relation (cdt_list s) (cdt s) (ctes_of s')
        \<and> revokable_relation (is_original_cap s) (null_filter (caps_of_state s)) (ctes_of s')
@@ -496,7 +497,7 @@ lemma state_relationD:
    ekheap_relation (ekheap s) (ksPSpace s') \<and>
    sched_act_relation (scheduler_action s) (ksSchedulerAction s') \<and>
    ready_queues_relation (ready_queues s) (ksReadyQueues s') \<and>
-   ghost_relation (kheap s) (gsUserPages s') (gsCNodes s') \<and>
+   ghost_relation (kheap s) (gsUserPages s') (gsCNodes s') (gsPTTypes (ksArchState s')) \<and>
    cdt_relation (swp cte_at s) (cdt s) (ctes_of s') \<and>
    cdt_list_relation (cdt_list s) (cdt s) (ctes_of s') \<and>
    revokable_relation (is_original_cap s) (null_filter (caps_of_state s)) (ctes_of s') \<and>
@@ -518,7 +519,7 @@ lemma state_relationE [elim?]:
              ekheap_relation (ekheap s) (ksPSpace s');
              sched_act_relation (scheduler_action s) (ksSchedulerAction s');
              ready_queues_relation (ready_queues s) (ksReadyQueues s');
-             ghost_relation (kheap s) (gsUserPages s') (gsCNodes s');
+             ghost_relation (kheap s) (gsUserPages s') (gsCNodes s') (gsPTTypes (ksArchState s'));
              cdt_relation (swp cte_at s) (cdt s) (ctes_of s') \<and>
              revokable_relation (is_original_cap s) (null_filter (caps_of_state s)) (ctes_of s');
              cdt_list_relation (cdt_list s) (cdt s) (ctes_of s');
@@ -585,13 +586,13 @@ lemma pspace_dom_relatedE:
   done
 
 lemma ghost_relation_typ_at:
-  "ghost_relation (kheap s) ups cns \<equiv>
+  "ghost_relation (kheap s) ups cns pt_types \<equiv>
      (\<forall>a sz. data_at sz a s = (ups a = Some sz)) \<and>
-     (\<forall>a n. typ_at (ACapTable n) a s = (cns a = Some n))"
+     (\<forall>a n. typ_at (ACapTable n) a s = (cns a = Some n)) \<and>
+     (\<forall>a pt_t. pt_at pt_t a s = (pt_types a = Some pt_t))"
   apply (rule eq_reflection)
   apply (clarsimp simp: ghost_relation_def typ_at_eq_kheap_obj data_at_def)
-  apply (intro conjI impI iffI allI; force)
-  done
+  by (intro conjI impI iffI allI; force)
 
 end
 

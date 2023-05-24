@@ -916,7 +916,7 @@ lemma cteMove_corres:
   apply (thin_tac "ekheap_relation t p" for t p)+
   apply (thin_tac "pspace_relation t p" for t p)+
   apply (thin_tac "interrupt_state_relation s t p" for s t p)+
-  apply (thin_tac "ghost_relation s t p" for s t p)+
+  apply (thin_tac "ghost_relation s t p q" for s t p q)+
   apply (thin_tac "sched_act_relation t p" for t p)+
   apply (thin_tac "ready_queues_relation t p" for t p)+
   apply (subst conj_assoc[symmetric])
@@ -3571,9 +3571,21 @@ lemma setCTE_corres:
   apply fastforce
   done
 
+locale_abbrev
+  "pt_types_of s \<equiv> pts_of s ||> pt_type"
+
+(* oldish-style, but still needed for the heap-only form below *)
+definition pt_types_of_heap :: "(obj_ref \<rightharpoonup> Structures_A.kernel_object) \<Rightarrow> obj_ref \<rightharpoonup> pt_type" where
+  "pt_types_of_heap h \<equiv> h |> aobj_of |> pt_of ||> pt_type"
+
+lemma pt_types_of_heap_eq:
+  "pt_types_of_heap (kheap s) = pt_types_of s"
+  by (simp add: pt_types_of_heap_def)
+
 (* FIXME: move to StateRelation *)
 lemma ghost_relation_of_heap:
-  "ghost_relation h ups cns \<longleftrightarrow> ups_of_heap h = ups \<and> cns_of_heap h = cns"
+  "ghost_relation h ups cns pt_types \<longleftrightarrow>
+   ups_of_heap h = ups \<and> cns_of_heap h = cns \<and> pt_types_of_heap h = pt_types"
   apply (rule iffI)
    apply (rule conjI)
     apply (rule ext)
@@ -3582,23 +3594,32 @@ lemma ghost_relation_of_heap:
     apply (auto simp: ghost_relation_def ups_of_heap_def
                 split: option.splits Structures_A.kernel_object.splits
                        arch_kernel_obj.splits)[1]
-    subgoal for x dev sz
+   subgoal for x dev sz
      by (drule_tac x = sz in spec,simp)
+   apply (rule conjI)
+    apply (rule ext)
+    apply (clarsimp simp add: ghost_relation_def cns_of_heap_def)
+    apply (drule_tac x=x in spec)+
+    apply (rule ccontr)
+    apply (simp split: option.splits Structures_A.kernel_object.splits
+                       arch_kernel_obj.splits)[1]
+    apply (simp split: if_split_asm)
+     apply force
+    apply (drule not_sym)
+    apply clarsimp
+    apply (erule_tac x=y in allE)
+    apply simp
    apply (rule ext)
-   apply (clarsimp simp add: ghost_relation_def cns_of_heap_def)
-   apply (drule_tac x=x in spec)+
-   apply (rule ccontr)
-   apply (simp split: option.splits Structures_A.kernel_object.splits
-                      arch_kernel_obj.splits)[1]
-   apply (simp split: if_split_asm)
-    apply force
-   apply (drule not_sym)
-   apply clarsimp
-   apply (erule_tac x=y in allE)
-   apply simp
-  apply (auto simp add: ghost_relation_def ups_of_heap_def cns_of_heap_def
+   apply (clarsimp simp: ghost_relation_def cns_of_heap_def)
+   apply (thin_tac P for P) \<comment> \<open>DataPages\<close>
+   apply (thin_tac P for P) \<comment> \<open>CNodes\<close>
+   apply (simp add: pt_types_of_heap_def)
+   apply (clarsimp simp: opt_map_def split: option.splits)
+   apply (clarsimp?, rule conjI, clarsimp, rule sym, rule ccontr, force)+
+   apply force
+  apply (auto simp: ghost_relation_def ups_of_heap_def cns_of_heap_def pt_types_of_heap_def in_omonad
               split: option.splits Structures_A.kernel_object.splits
-                     arch_kernel_obj.splits if_split_asm)
+                     arch_kernel_obj.splits if_split_asm)[1]
   done
 
 lemma corres_caps_decomposition:
@@ -3625,6 +3646,7 @@ lemma corres_caps_decomposition:
              "\<And>P. \<lbrace>\<lambda>s. P (new_ups' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (gsUserPages s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_cns s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cns_of_heap (kheap s))\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_cns' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (gsCNodes s)\<rbrace>"
+             "\<And>P. \<lbrace>\<lambda>s. P (new_pt_types s)\<rbrace> f \<lbrace>\<lambda>rv s. P (pt_types_of s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_queues s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ready_queues s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_action s)\<rbrace> f \<lbrace>\<lambda>rv s. P (scheduler_action s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_sa' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
@@ -3657,6 +3679,8 @@ lemma corres_caps_decomposition:
                        \<Longrightarrow> new_ups s = new_ups' s'"
              "\<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> state_relation \<rbrakk>
                        \<Longrightarrow> new_cns s = new_cns' s'"
+             "\<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> state_relation \<rbrakk>
+                       \<Longrightarrow> new_pt_types s = gsPTTypes (new_as' s')"
   shows "corres r P P' f g"
 proof -
   have all_ext: "\<And>f f'. (\<forall>p. f p = f' p) = (f = f')"
@@ -3711,7 +3735,7 @@ proof -
     apply (subst pspace_relations_def[symmetric])
     apply (rule corres_underlying_decomposition [OF x])
      apply (simp add: ghost_relation_of_heap)
-     apply (wp hoare_vcg_conj_lift mdb_wp rvk_wp list_wp u abs_irq_together)+
+     apply (wpsimp wp: hoare_vcg_conj_lift mdb_wp rvk_wp list_wp u abs_irq_together simp: pt_types_of_heap_eq)+
     apply (intro z[simplified o_def] conjI | simp add: state_relation_def pspace_relations_def swp_cte_at
           | (clarsimp, drule (1) z(6), simp add: state_relation_def pspace_relations_def swp_cte_at))+
     done
@@ -3764,45 +3788,16 @@ lemma revokable_relation_simp:
       \<Longrightarrow> mdbRevocable node = is_original_cap s p"
   by (cases p, clarsimp simp: state_relation_def revokable_relation_def)
 
-lemma setCTE_gsUserPages[wp]:
-  "\<lbrace>\<lambda>s. P (gsUserPages s)\<rbrace> setCTE p v \<lbrace>\<lambda>rv s. P (gsUserPages s)\<rbrace>"
-  apply (simp add: setCTE_def setObject_def split_def)
-  apply (wp updateObject_cte_inv crunch_wps | simp)+
-  done
-
-lemma setCTE_gsCNodes[wp]:
-  "\<lbrace>\<lambda>s. P (gsCNodes s)\<rbrace> setCTE p v \<lbrace>\<lambda>rv s. P (gsCNodes s)\<rbrace>"
-  apply (simp add: setCTE_def setObject_def split_def)
-  apply (wp updateObject_cte_inv crunch_wps | simp)+
-  done
+crunches setCTE
+  for gsUserPages[wp]: "\<lambda>s. P (gsUserPages s)"
+  and gsCNodes[wp]: "\<lambda>s. P (gsCNodes s)"
+  and domain_time[wp]: "\<lambda>s. P (ksDomainTime s)"
+  and work_units_completed[wp]: "\<lambda>s. P (ksWorkUnitsCompleted s)"
+  (simp: setObject_def wp: updateObject_cte_inv)
 
 lemma set_original_symb_exec_l':
   "corres_underlying {(s, s'). f (ekheap s) (kheap s) s'} False nf' dc P P' (set_original p b) (return x)"
   by (simp add: corres_underlying_def return_def set_original_def in_monad Bex_def)
-
-lemma setCTE_schedule_index[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace> setCTE p v \<lbrace>\<lambda>rv s. P (ksDomScheduleIdx s)\<rbrace>"
-  apply (simp add: setCTE_def setObject_def split_def)
-  apply (wp updateObject_cte_inv crunch_wps | simp)+
-  done
-
-lemma setCTE_schedule[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace> setCTE p v \<lbrace>\<lambda>rv s. P (ksDomSchedule s)\<rbrace>"
-  apply (simp add: setCTE_def setObject_def split_def)
-  apply (wp updateObject_cte_inv crunch_wps | simp)+
-  done
-
-lemma setCTE_domain_time[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomainTime s)\<rbrace> setCTE p v \<lbrace>\<lambda>rv s. P (ksDomainTime s)\<rbrace>"
-  apply (simp add: setCTE_def setObject_def split_def)
-  apply (wp updateObject_cte_inv crunch_wps | simp)+
-  done
-
-lemma setCTE_work_units_completed[wp]:
-  "\<lbrace>\<lambda>s. P (ksWorkUnitsCompleted s)\<rbrace> setCTE p v \<lbrace>\<lambda>_ s. P (ksWorkUnitsCompleted s)\<rbrace>"
-  apply (simp add: setCTE_def setObject_def split_def)
-  apply (wp updateObject_cte_inv crunch_wps | simp)+
-  done
 
 lemma create_reply_master_corres:
   "\<lbrakk> sl' = cte_map sl ; AllowGrant \<in> rights \<rbrakk> \<Longrightarrow>
@@ -3817,56 +3812,56 @@ lemma create_reply_master_corres:
       (setCTE sl' (CTE (capability.ReplyCap thread True True) initMDBNode))"
   apply clarsimp
   apply (rule corres_caps_decomposition)
-                                 defer
-                                 apply (wp|simp)+
-          apply (clarsimp simp: o_def cdt_relation_def cte_wp_at_ctes_of
+                                              defer
+                                              apply (wp|simp)+
+           apply (clarsimp simp: o_def cdt_relation_def cte_wp_at_ctes_of
+                      split del: if_split cong: if_cong simp del: id_apply)
+           apply (case_tac cte, clarsimp)
+           apply (fold fun_upd_def)
+           apply (subst descendants_of_Null_update')
+                apply fastforce
+               apply fastforce
+              apply assumption
+             apply assumption
+            apply (simp add: nullPointer_def)
+           apply (subgoal_tac "cte_at (a, b) s")
+            prefer 2
+            apply (drule not_sym, clarsimp simp: cte_wp_at_caps_of_state
+                                          split: if_split_asm)
+           apply (simp add: state_relation_def cdt_relation_def)
+          apply (clarsimp simp: o_def cdt_list_relation_def cte_wp_at_ctes_of
                      split del: if_split cong: if_cong simp del: id_apply)
           apply (case_tac cte, clarsimp)
-          apply (fold fun_upd_def)
-          apply (subst descendants_of_Null_update')
-               apply fastforce
-              apply fastforce
-             apply assumption
-            apply assumption
-           apply (simp add: nullPointer_def)
-          apply (subgoal_tac "cte_at (a, b) s")
-           prefer 2
-           apply (drule not_sym, clarsimp simp: cte_wp_at_caps_of_state
-                                         split: if_split_asm)
-          apply (simp add: state_relation_def cdt_relation_def)
-         apply (clarsimp simp: o_def cdt_list_relation_def cte_wp_at_ctes_of
-                    split del: if_split cong: if_cong simp del: id_apply)
-         apply (case_tac cte, clarsimp)
-         apply (clarsimp simp: state_relation_def cdt_list_relation_def)
-         apply (simp split: if_split_asm)
-         apply (erule_tac x=a in allE, erule_tac x=b in allE)
-         apply clarsimp
-         apply(case_tac "next_slot (a, b) (cdt_list s) (cdt s)")
+          apply (clarsimp simp: state_relation_def cdt_list_relation_def)
+          apply (simp split: if_split_asm)
+          apply (erule_tac x=a in allE, erule_tac x=b in allE)
+          apply clarsimp
+          apply(case_tac "next_slot (a, b) (cdt_list s) (cdt s)")
+           apply(simp)
           apply(simp)
-         apply(simp)
-         apply(fastforce simp: valid_mdb'_def valid_mdb_ctes_def valid_nullcaps_def)
+          apply(fastforce simp: valid_mdb'_def valid_mdb_ctes_def valid_nullcaps_def)
+         apply (clarsimp simp: state_relation_def)
         apply (clarsimp simp: state_relation_def)
-       apply (clarsimp simp: state_relation_def)
-      apply (clarsimp simp add: revokable_relation_def cte_wp_at_ctes_of
-                     split del: if_split)
-      apply simp
-      apply (rule conjI)
-       apply (clarsimp simp: initMDBNode_def)
-      apply clarsimp
-      apply (subgoal_tac "null_filter (caps_of_state s) (a, b) \<noteq> None")
-       prefer 2
-       apply (clarsimp simp: null_filter_def cte_wp_at_caps_of_state
-                      split: if_split_asm)
-      apply (subgoal_tac "cte_at (a,b) s")
-       prefer 2
+       apply (clarsimp simp add: revokable_relation_def cte_wp_at_ctes_of
+                      split del: if_split)
+       apply simp
+       apply (rule conjI)
+        apply (clarsimp simp: initMDBNode_def)
        apply clarsimp
-       apply (drule null_filter_caps_of_stateD)
-       apply (erule cte_wp_cte_at)
-      apply (clarsimp split: if_split_asm cong: conj_cong
-                       simp: cte_map_eq_subst revokable_relation_simp
-                             cte_wp_at_cte_at valid_pspace_def)
-     apply (clarsimp simp: state_relation_def)
-    apply (clarsimp elim!: state_relationE simp: ghost_relation_of_heap)+
+       apply (subgoal_tac "null_filter (caps_of_state s) (a, b) \<noteq> None")
+        prefer 2
+        apply (clarsimp simp: null_filter_def cte_wp_at_caps_of_state
+                       split: if_split_asm)
+       apply (subgoal_tac "cte_at (a,b) s")
+        prefer 2
+        apply clarsimp
+        apply (drule null_filter_caps_of_stateD)
+        apply (erule cte_wp_cte_at)
+       apply (clarsimp split: if_split_asm cong: conj_cong
+                        simp: cte_map_eq_subst revokable_relation_simp
+                              cte_wp_at_cte_at valid_pspace_def)
+      apply (clarsimp simp: state_relation_def)
+     apply (clarsimp elim!: state_relationE simp: ghost_relation_of_heap pt_types_of_heap_eq o_def)+
   apply (rule corres_guard_imp)
     apply (rule corres_underlying_symb_exec_l [OF set_original_symb_exec_l'])
      apply (rule setCTE_corres)
@@ -6038,6 +6033,9 @@ lemma updateCap_same_master:
           prefer 2
           apply simp+
         apply (frule use_valid[OF _ setCTE_gsCNodes])
+         prefer 2
+         apply simp+
+        apply (rule use_valid[OF _ setCTE_arch])
          prefer 2
          apply simp+
        apply (subst conj_assoc[symmetric])

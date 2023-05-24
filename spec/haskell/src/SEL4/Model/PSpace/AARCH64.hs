@@ -11,7 +11,10 @@ module SEL4.Model.PSpace.AARCH64(deleteGhost) where
 
 import Prelude hiding (Word)
 import SEL4.Model.StateData
+import SEL4.Model.StateData.AARCH64
 import SEL4.Machine.RegisterSet
+
+import Data.Bits
 
 deleteGhost :: PPtr a -> Int -> Kernel ()
 deleteGhost ptr bits = do

@@ -123,10 +123,14 @@ lemma deleteObjects_def2:
                      gsUserPages := \<lambda>x. if x \<in> mask_range ptr bits
                                            then None else gsUserPages s x,
                      gsCNodes := \<lambda>x. if x \<in> mask_range ptr bits
-                                        then None else gsCNodes s x \<rparr>);
+                                        then None else gsCNodes s x,
+                     ksArchState := gsPTTypes_update (\<lambda>_ x. if x && - mask bits - 1 = ptr
+                                                            then Nothing
+                                                            else gsPTTypes (ksArchState s) x)
+                                                     (ksArchState s)\<rparr>);
      stateAssert ksASIDMapSafe []
    od"
-  apply (simp add: deleteObjects_def is_aligned_mask[symmetric] unless_def)
+  apply (simp add: deleteObjects_def is_aligned_mask[symmetric] unless_def deleteGhost_def o_def)
   apply (rule bind_eqI, rule ext)
   apply (rule bind_eqI, rule ext)
   apply (simp add: bind_assoc[symmetric])
@@ -136,13 +140,14 @@ lemma deleteObjects_def2:
                              NOT_eq[symmetric] neg_mask_in_mask_range)
   apply (clarsimp simp: simpler_modify_def)
   apply (simp add: data_map_filterWithKey_def split: if_split_asm)
+  sorry (* FIXME AARCH64
   apply (rule arg_cong2[where f=gsCNodes_update])
    apply (simp add: NOT_eq[symmetric] mask_in_range ext)
   apply (rule arg_cong2[where f=gsUserPages_update])
    apply (simp add: NOT_eq[symmetric] mask_in_range ext)
   apply (rule arg_cong[where f="\<lambda>f. ksPSpace_update f s" for s])
   apply (simp add: NOT_eq[symmetric] mask_in_range ext   split: option.split)
-  done
+  done *)
 
 lemma deleteObjects_def3:
   "deleteObjects ptr bits =
@@ -156,7 +161,11 @@ lemma deleteObjects_def3:
                      gsUserPages := \<lambda>x. if x \<in> mask_range ptr bits
                                            then None else gsUserPages s x,
                      gsCNodes := \<lambda>x. if x \<in> mask_range ptr bits
-                                        then None else gsCNodes s x \<rparr>);
+                                        then None else gsCNodes s x,
+                     ksArchState := gsPTTypes_update (\<lambda>_ x. if x && - mask bits - 1 = ptr
+                                                            then Nothing
+                                                            else gsPTTypes (ksArchState s) x)
+                                                     (ksArchState s) \<rparr>);
      stateAssert ksASIDMapSafe []
    od"
   apply (cases "is_aligned ptr bits")
@@ -648,13 +657,18 @@ lemma deleteObjects_corres:
                            detype_def)
      apply (drule_tac t="gsUserPages s'" in sym)
      apply (drule_tac t="gsCNodes s'" in sym)
-     apply (auto simp add: ups_of_heap_def cns_of_heap_def ext add_mask_fold
+     apply (drule_tac t="gsPTTypes (ksArchState s')" in sym)
+     apply (auto simp add: ups_of_heap_def cns_of_heap_def ext pt_types_of_heap_def add_mask_fold opt_map_def
                  split: option.splits kernel_object.splits)[1]
+     apply (rule ext)
+     apply (auto simp add: ups_of_heap_def cns_of_heap_def ext pt_types_of_heap_def add_mask_fold opt_map_def
+                 split: option.splits kernel_object.splits)[1]
+
     apply (simp add: valid_mdb_def)
    apply (wp hoare_vcg_ex_lift hoare_vcg_ball_lift | wps |
           simp add: invs_def valid_state_def valid_pspace_def
                     descendants_range_def | wp (once) hoare_drop_imps)+
-  done
+  sorry (* FIXME AARCH64: ghost state update in deleteObjects *)
 
 
 text \<open>Invariant preservation across concrete deletion\<close>
@@ -1594,14 +1608,15 @@ proof -
   apply (simp cong: if_cong)
   apply (subgoal_tac "is_aligned ptr bits \<and> 3 \<le> bits \<and> bits < word_bits",simp)
    apply clarsimp
-   apply (frule(2) delete_locale.intro, simp_all)[1]
+   apply (frule(2) delete_locale.intro, simp_all)[1] thm delete_locale.delete_invs'
    apply (rule subst[rotated, where P=invs'], erule delete_locale.delete_invs')
    apply (simp add: field_simps mask_def)
+  sorry (* FIXME AARCH64
   apply clarsimp
   apply (drule invs_valid_objs')
   apply (drule (1) cte_wp_at_valid_objs_valid_cap')
   apply (clarsimp simp add: valid_cap'_def capAligned_def untypedBits_defs)
-  done
+  done *)
 qed
 
 lemma deleteObjects_st_tcb_at':
@@ -1696,9 +1711,10 @@ lemma deleteObject_no_overlap[wp]:
       ksMachineState_update (\<lambda>_. b)
       (s\<lparr>ksPSpace := ksPSpace s |` (- mask_range ptr bits)\<rparr>)", simp)
   apply (case_tac s, simp)
+  sorry (* FIXME AARCH64
   apply (rule ext)
   apply simp
-  done
+  done *)
 
 lemma deleteObjects_cte_wp_at':
   "\<lbrace>\<lambda>s. cte_wp_at' P p s \<and> p \<notin> mask_range ptr bits
@@ -2158,7 +2174,7 @@ lemma createObject_cte_wp_at':
                     unless_def placeNewObject_def2 objBits_simps range_cover_full
                     curDomain_def bit_simps
                     getObjSize_simps apiGetObjectSize_def tcbBlockSizeBits_def
-                    epSizeBits_def ntfnSizeBits_def cteSizeBits_def
+                    epSizeBits_def ntfnSizeBits_def cteSizeBits_def updatePTType_def
         | intro conjI impI | clarsimp dest!: arch_toAPIType_simps)+
   done
 
@@ -3160,7 +3176,7 @@ lemma createObject_gsUntypedZeroRanges_commute:
                  threadSet_gsUntypedZeroRanges_commute'[THEN commute_commute]
           split: option.split prod.split cong: if_cong)+
   apply (simp add: curDomain_def monad_commute_def exec_modify exec_gets)
-  done
+  sorry (* FIXME AARCH64: updatePTTYpes *)
 
 lemma monad_commute_If_rhs:
   "monad_commute P a b \<Longrightarrow> monad_commute Q a c
@@ -3557,6 +3573,7 @@ lemma createNewCaps_pspace_no_overlap':
            | assumption)+
            apply (intro conjI range_cover_le[where n = "Suc n"] | simp)+
             apply ((simp add:objBits_simps pageBits_def range_cover_def word_bits_def)+)[5]
+  sorry (* FIXME AARCH64
        by ((clarsimp simp: apiGetObjectSize_def bit_simps toAPIType_def
                            getObjectSize_def objBits_simps objBits_defs
                            createObjects_def Arch_createNewCaps_def unless_def
@@ -3565,7 +3582,7 @@ lemma createNewCaps_pspace_no_overlap':
                     createObjects'_psp_aligned createObjects'_psp_distinct
                     mapM_x_wp_inv
                | assumption | clarsimp simp: word_bits_def
-               | intro conjI range_cover_le[where n = "Suc n"] range_cover.aligned)+)
+               | intro conjI range_cover_le[where n = "Suc n"] range_cover.aligned)+) *)
 
 lemma objSize_eq_capBits:
   "Types_H.getObjectSize ty us = APIType_capBits ty us"
@@ -4490,13 +4507,14 @@ lemma createObject_def2:
                              placeNewObject_def2 objBits_simps bind_assoc
                              clearMemory_def clearMemoryVM_def fun_upd_def[symmetric]
                               word_size mapM_x_singleton storeWordVM_def)+)[6]
+  sorry (* FIXME AARCH64: needs update in Intermediate_H
   apply (rename_tac apiobject_type)
   apply (case_tac apiobject_type)
       apply (clarsimp simp: Arch_createNewCaps_def createObjects_def shiftL_nat
                             AARCH64_H.createObject_def placeNewObject_def2 objBits_simps bind_assoc
                             clearMemory_def clearMemoryVM_def word_size mapM_x_singleton
                             storeWordVM_def)+
-  done
+  done *)
 
 
 lemma createNewObjects_def2:
@@ -4712,7 +4730,7 @@ lemma ArchCreateObject_pspace_no_overlap':
                      field_simps  split del: if_split
          | clarsimp simp add: add.assoc[symmetric],wp createObjects'_pspace_no_overlap2[where n =0 and sz = sz,simplified]
          | clarsimp simp add: APIType_capBits_def objBits_simps pageBits_def)+
-
+  sorry (* FIXME AARCH64: updatePTType pspace_no_overlap'
   apply (clarsimp simp: conj_comms)
   apply (frule(1) range_cover_no_0[where p = n])
    apply simp
@@ -4742,7 +4760,6 @@ lemma ArchCreateObject_pspace_no_overlap':
       apply (clarsimp simp: field_simps word_bits_conv
                             APIType_capBits_def shiftl_t2n objBits_simps bit_simps
              | rule conjI | erule range_cover_le,simp)+
-  sorry (* FIXME AARCH64 we're getting undefined here for something PT-related
   done *)
 
 lemma to_from_apiTypeD: "toAPIType ty = Some x \<Longrightarrow> ty = fromAPIType x"

@@ -302,70 +302,74 @@ lemma cte_at_next_slot'':
 
 lemma state_relation_null_filterE:
   "\<lbrakk> (s, s') \<in> state_relation; t = kheap_update f (ekheap_update ef s);
-     \<exists>f' g' h'.
+     \<exists>f' g' h' pt_fn'.
      t' = s'\<lparr>ksPSpace := f' (ksPSpace s'), gsUserPages := g' (gsUserPages s'),
-             gsCNodes := h' (gsCNodes s')\<rparr>;
+             gsCNodes := h' (gsCNodes s'),
+             ksArchState := (ksArchState s') \<lparr>gsPTTypes := pt_fn' (gsPTTypes (ksArchState s'))\<rparr>\<rparr>;
      null_filter (caps_of_state t) = null_filter (caps_of_state s);
      null_filter' (ctes_of t') = null_filter' (ctes_of s');
      pspace_relation (kheap t) (ksPSpace t');
      ekheap_relation (ekheap t) (ksPSpace t');
-     ghost_relation (kheap t) (gsUserPages t') (gsCNodes t'); valid_list s;
+     ghost_relation (kheap t) (gsUserPages t') (gsCNodes t') (gsPTTypes (ksArchState t'));
+     valid_list s;
      pspace_aligned' s'; pspace_distinct' s'; valid_objs s; valid_mdb s;
      pspace_aligned' t'; pspace_distinct' t';
      mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s) \<rbrakk>
       \<Longrightarrow> (t, t') \<in> state_relation"
   apply (clarsimp simp: state_relation_def)
   apply (intro conjI)
-    apply (simp add: cdt_relation_def cte_wp_at_caps_of_state)
-    apply (elim allEI)
-    apply clarsimp
-    apply (erule(1) across_null_filter_eq)
+     apply (simp add: cdt_relation_def cte_wp_at_caps_of_state)
+     apply (elim allEI)
+     apply clarsimp
+     apply (erule(1) across_null_filter_eq)
+      apply simp
+      apply (rule null_filter_descendants_of', simp)
      apply simp
-     apply (rule null_filter_descendants_of', simp)
-    apply simp
-    apply (case_tac "cdt s (a, b)")
-     apply (subst mdb_cte_at_no_descendants, assumption)
-      apply (simp add: cte_wp_at_caps_of_state swp_def)
-     apply (cut_tac s="kheap_update f (ekheap_update ef s)"  and
-                    s'="s'\<lparr>ksPSpace := f' (ksPSpace s'),
-                           gsUserPages := g' (gsUserPages s'),
-                           gsCNodes := h' (gsCNodes s')\<rparr>"
-            in pspace_relation_ctes_ofI, simp_all)[1]
-      apply (simp add: trans_state_update[symmetric] del: trans_state_update)
-      apply (erule caps_of_state_cteD)
-     apply (clarsimp simp: descendants_of'_def)
-     apply (case_tac cte)
-     apply (erule Null_not_subtree[rotated])
-     apply simp
-    apply (drule(1) mdb_cte_atD)
-    apply (clarsimp simp: cte_wp_at_caps_of_state)
-   apply(simp add: cdt_list_relation_def cte_wp_at_caps_of_state)
-   apply(elim allEI)
-   apply(clarsimp)
-   apply(case_tac "next_slot (a, b) (cdt_list (s)) (cdt s)")
-    apply(simp)
-   apply(subgoal_tac "cte_wp_at (\<lambda>c. c \<noteq> cap.NullCap) (a, b) s")
-    apply(drule_tac f="\<lambda>cs. cs (a, b)" in arg_cong)
-    apply(clarsimp simp: cte_wp_at_caps_of_state)
-    apply(clarsimp simp: null_filter_def split: if_split_asm)
-    apply(drule_tac f="\<lambda>ctes. ctes (cte_map (a, b))" in arg_cong)
-    apply(simp add: null_filter'_def cte_wp_at_ctes_of split: if_split_asm)
-    apply(frule pspace_relation_cte_wp_at)
-       apply(simp add: cte_wp_at_caps_of_state)
-      apply(simp)
+     apply (case_tac "cdt s (a, b)")
+      apply (subst mdb_cte_at_no_descendants, assumption)
+       apply (simp add: cte_wp_at_caps_of_state swp_def)
+      apply (cut_tac s="kheap_update f (ekheap_update ef s)"  and
+                     s'="s'\<lparr>ksPSpace := f' (ksPSpace s'),
+                            gsUserPages := g' (gsUserPages s'),
+                            gsCNodes := h' (gsCNodes s'),
+                            ksArchState := ksArchState s' \<lparr>gsPTTypes := pt_fn' (gsPTTypes (ksArchState s'))\<rparr>\<rparr>"
+             in pspace_relation_ctes_ofI, simp_all)[1]
+       apply (simp add: trans_state_update[symmetric] del: trans_state_update)
+       apply (erule caps_of_state_cteD)
+      apply (clarsimp simp: descendants_of'_def)
+      apply (case_tac cte)
+      apply (erule Null_not_subtree[rotated])
+      apply simp
+     apply (drule(1) mdb_cte_atD)
+     apply (clarsimp simp: cte_wp_at_caps_of_state)
+    apply(simp add: cdt_list_relation_def cte_wp_at_caps_of_state)
+    apply(elim allEI)
+    apply(clarsimp)
+    apply(case_tac "next_slot (a, b) (cdt_list (s)) (cdt s)")
      apply(simp)
-    apply(simp add: cte_wp_at_ctes_of)
-   apply (simp add: mdb_cte_at_def)
-   apply(frule finite_depth)
-   apply(frule(3) cte_at_next_slot'')
-   apply simp
-  apply (simp add: revokable_relation_def)
-  apply (elim allEI, rule impI, drule(1) mp, elim allEI)
-  apply (clarsimp elim!: null_filterE)
-  apply (drule(3) pspace_relation_cte_wp_at [OF _ caps_of_state_cteD])
-  apply (drule_tac f="\<lambda>ctes. ctes (cte_map (a, b))" in arg_cong)
-  apply (clarsimp simp: null_filter'_def cte_wp_at_ctes_of
-                 split: if_split_asm)
+    apply(subgoal_tac "cte_wp_at (\<lambda>c. c \<noteq> cap.NullCap) (a, b) s")
+     apply(drule_tac f="\<lambda>cs. cs (a, b)" in arg_cong)
+     apply(clarsimp simp: cte_wp_at_caps_of_state)
+     apply(clarsimp simp: null_filter_def split: if_split_asm)
+     apply(drule_tac f="\<lambda>ctes. ctes (cte_map (a, b))" in arg_cong)
+     apply(simp add: null_filter'_def cte_wp_at_ctes_of split: if_split_asm)
+     apply(frule pspace_relation_cte_wp_at)
+        apply(simp add: cte_wp_at_caps_of_state)
+       apply(simp)
+      apply(simp)
+     apply(simp add: cte_wp_at_ctes_of)
+    apply (simp add: mdb_cte_at_def)
+    apply(frule finite_depth)
+    apply(frule(3) cte_at_next_slot'')
+    apply simp
+   apply (simp add: revokable_relation_def)
+   apply (elim allEI, rule impI, drule(1) mp, elim allEI)
+   apply (clarsimp elim!: null_filterE)
+   apply (drule(3) pspace_relation_cte_wp_at [OF _ caps_of_state_cteD])
+   apply (drule_tac f="\<lambda>ctes. ctes (cte_map (a, b))" in arg_cong)
+   apply (clarsimp simp: null_filter'_def cte_wp_at_ctes_of
+                  split: if_split_asm)
+  apply (simp add: arch_state_relation_def)
   done
 
 lemma lookupAround2_pspace_no:
@@ -1154,6 +1158,10 @@ where
       (\<lambda>ups x. if x \<in> ptrs then Some ARMLargePage else ups x)
   | ArchObject HugePageObj \<Rightarrow> gsUserPages_update
       (\<lambda>ups x. if x \<in> ptrs then Some ARMHugePage else ups x)
+  | ArchObject PageTableObj \<Rightarrow> ksArchState_update
+      (\<lambda>as. gsPTTypes_update (\<lambda>pt_types x. if x \<in> ptrs then Some NormalPT_T else pt_types x) as)
+  | ArchObject VSpaceObj \<Rightarrow> ksArchState_update
+      (\<lambda>as. gsPTTypes_update (\<lambda>pt_types x. if x \<in> ptrs then Some VSRootPT_T else pt_types x) as)
   | _ \<Rightarrow> id"
 
 lemma ksPSpace_update_gs_eq[simp]:
@@ -1193,6 +1201,10 @@ lemma update_gs_simps[simp]:
    gsUserPages_update (\<lambda>ups x. if x \<in> ptrs then Some ARMLargePage else ups x)"
   "update_gs (ArchObject HugePageObj) us ptrs =
    gsUserPages_update (\<lambda>ups x. if x \<in> ptrs then Some ARMHugePage else ups x)"
+  "update_gs (ArchObject PageTableObj) us ptrs = ksArchState_update
+      (\<lambda>as. gsPTTypes_update (\<lambda>pt_types x. if x \<in> ptrs then Some NormalPT_T else pt_types x) as)"
+  "update_gs (ArchObject VSpaceObj) us ptrs = ksArchState_update
+      (\<lambda>as. gsPTTypes_update (\<lambda>pt_types x. if x \<in> ptrs then Some VSRootPT_T else pt_types x) as)"
   by (simp_all add: update_gs_def)
 
 lemma retype_state_relation:
@@ -1298,14 +1310,15 @@ lemma retype_state_relation:
   have pn2: "\<forall>a\<in>set ?al. kheap s a = None"
     by (rule ccontr) (clarsimp simp: pspace_no_overlapD1[OF pn _ cover vs(1)])
 
-  from sr have gr: "ghost_relation (kheap s) (gsUserPages s') (gsCNodes s')"
+  from sr
+  have gr: "ghost_relation (kheap s) (gsUserPages s') (gsCNodes s') (gsPTTypes (ksArchState s'))"
     by (rule state_relationE)
 
-  show "ghost_relation ?ps (gsUserPages ?t') (gsCNodes ?t')"
+  show "ghost_relation ?ps (gsUserPages ?t') (gsCNodes ?t') (gsPTTypes (ksArchState ?t'))"
   proof (cases ?tp)
     case Untyped thus ?thesis by (simp add: not_unt)
   next
-  note data_map_insert_def[simp]
+    note data_map_insert_def[simp]
 
     case TCBObject
     from pn2
@@ -1316,6 +1329,8 @@ lemma retype_state_relation:
     have [simp]: "cns_of_heap ?ps = cns_of_heap (kheap s)"
       by - (rule ext, induct (?al),
             simp_all add: cns_of_heap_def default_object_def TCBObject)
+    have [simp]: "pt_types_of_heap ?ps = pt_types_of_heap (kheap s)"
+      sorry (* FIXME AARCH64 *)
    note data_map_insert_def[simp del]
     from gr show ?thesis
       by (simp add: ghost_relation_of_heap, simp add: TCBObject update_gs_def)
@@ -1329,11 +1344,13 @@ lemma retype_state_relation:
     have [simp]: "cns_of_heap ?ps = cns_of_heap (kheap s)"
       by - (rule ext, induct (?al),
             simp_all add: cns_of_heap_def default_object_def data_map_insert_def EndpointObject)
+    have [simp]: "pt_types_of_heap ?ps = pt_types_of_heap (kheap s)"
+      sorry (* FIXME AARCH64 *)
     from gr show ?thesis
       by (simp add: ghost_relation_of_heap,
           simp add: EndpointObject update_gs_def)
   next
-   note data_map_insert_def[simp]
+    note data_map_insert_def[simp]
     case NotificationObject
     from pn2
     have [simp]: "ups_of_heap ?ps = ups_of_heap (kheap s)"
@@ -1343,7 +1360,9 @@ lemma retype_state_relation:
     have [simp]: "cns_of_heap ?ps = cns_of_heap (kheap s)"
       by - (rule ext, induct (?al), simp_all add: cns_of_heap_def
                                       default_object_def NotificationObject)
-   note data_map_insert_def[simp del]
+    have [simp]: "pt_types_of_heap ?ps = pt_types_of_heap (kheap s)"
+      sorry (* FIXME AARCH64 *)
+    note data_map_insert_def[simp del]
     from gr show ?thesis
       by (simp add: ghost_relation_of_heap,
           simp add: NotificationObject update_gs_def)
@@ -1358,6 +1377,8 @@ lemma retype_state_relation:
                                          else cns_of_heap (kheap s) x)"
       by (rule ext, induct (?al),
           simp_all add: cns_of_heap_def wf_empty_bits wf_unique default_object_def CapTableObject)
+    have [simp]: "pt_types_of_heap ?ps = pt_types_of_heap (kheap s)"
+      sorry (* FIXME AARCH64 *)
     note data_map_insert_def[simp del]
     from gr show ?thesis
       by (simp add: ghost_relation_of_heap,
@@ -1370,6 +1391,7 @@ lemma retype_state_relation:
                                       default_object_def ArchObject)
     from pn2 gr show ?thesis
       apply (clarsimp simp add: ghost_relation_of_heap)
+      sorry (* FIXME AARCH64
       apply (rule conjI[rotated])
        apply (simp add: ArchObject update_gs_def split: aobject_type.splits)
       apply (thin_tac "cns_of_heap h = g" for h g)
@@ -1381,14 +1403,16 @@ lemma retype_state_relation:
                        default_arch_object_def ups_of_heap_def
                        data_map_insert_def
                 split: aobject_type.splits)
-      done
+      done *)
   qed
 
-  show "\<exists>f' g' h'. ?t' =
+  show "\<exists>f' g' h' pt_fn'. ?t' =
           s'\<lparr>ksPSpace := f' (ksPSpace s'), gsUserPages := g' (gsUserPages s'),
-             gsCNodes := h' (gsCNodes s')\<rparr>"
+             gsCNodes := h' (gsCNodes s'),
+             ksArchState := (ksArchState s') \<lparr>gsPTTypes := pt_fn' (gsPTTypes (ksArchState s'))\<rparr>\<rparr>"
     apply (clarsimp simp: update_gs_def
                    split: Structures_A.apiobject_type.splits)
+    sorry (* FIXME AARCH64
     apply (intro conjI impI)
          apply (subst ex_comm, rule_tac x=id in exI,
                 subst ex_comm, rule_tac x=id in exI, fastforce)+
@@ -1411,7 +1435,7 @@ lemma retype_state_relation:
         apply (rule_tac x="\<lambda>cns x. if x \<in> set ?al then Some ARMHugePage
                                    else cns x" in exI, simp)
       apply (rule_tac x=id in exI, simp)+
-    done
+    done *)
 qed
 
 lemma new_cap_addrs_fold':
@@ -4068,8 +4092,9 @@ lemma createNewCaps_idle'[wp]:
   sorry (* FIXME AARCH64 issue: range_cover ptr sz 13 n does not imply range_cover ptr sz 12 n ?
   done *)
 
+(* FIXME AARCH64: this is no longer true, createNewCaps does update the ghost state inside the arch state
 crunch ksArch[wp]: createNewCaps "\<lambda>s. P (ksArchState s)"
-  (simp: crunch_simps unless_def wp: crunch_wps)
+  (simp: crunch_simps unless_def wp: crunch_wps) *)
 crunch gsMaxObjectSize[wp]: createNewCaps "\<lambda>s. P (gsMaxObjectSize s)"
   (simp: crunch_simps unless_def wp: crunch_wps updateObject_default_inv)
 
@@ -4087,6 +4112,7 @@ lemma createNewCaps_global_refs':
    apply (auto simp: cte_wp_at_ctes_of linorder_not_less elim!: ranE)[1]
   apply (rule hoare_pre)
    apply (simp add: global_refs'_def)
+  sorry (* FIXME AARCH64: needs new crunch for parts of ksArchState
    apply (rule hoare_use_eq [where f=ksArchState, OF createNewCaps_ksArch])
    apply (rule hoare_use_eq [where f=ksIdleThread, OF createNewCaps_it])
    apply (rule hoare_use_eq [where f=irq_node', OF createNewCaps_ksInterrupt])
@@ -4095,7 +4121,7 @@ lemma createNewCaps_global_refs':
   apply (clarsimp simp: cte_wp_at_ctes_of global_refs'_def
                         makeObject_cte)
   apply (auto simp: linorder_not_less ball_ran_eq)
-  done
+  done *)
 
 lemma koTypeOf_eq_UserDataT:
   "(koTypeOf ko = UserDataT)
@@ -4110,11 +4136,12 @@ lemma createNewCaps_valid_arch_state:
    \<lbrace>\<lambda>rv. valid_arch_state'\<rbrace>"
   unfolding valid_arch_state'_def valid_asid_table'_def vspace_table_at'_defs
   apply (simp add: typ_at_to_obj_at_arches option_case_all_conv)
+  sorry (* FIXME AARCH64: needs new crunch for parts of ksArchState
   apply (wpsimp wp: hoare_vcg_const_Ball_lift createNewCaps_obj_at'
                     createNewCaps_ko_wp_at' hoare_vcg_all_lift
                     hoare_vcg_imp_lift')
   apply (fastforce simp: pred_conj_def valid_pspace'_def o_def is_vcpu'_def)
-  done
+  done *)
 
 lemma valid_irq_node_lift_asm:
   assumes x: "\<And>P. \<lbrace>\<lambda>s. P (irq_node' s)\<rbrace> f \<lbrace>\<lambda>rv s. P (irq_node' s)\<rbrace>"
@@ -4703,6 +4730,7 @@ lemma createObjects_no_cte_valid_global:
    apply (auto simp: cte_wp_at_ctes_of linorder_not_less elim!: ranE)[1]
   apply (rule hoare_pre)
    apply (simp add: global_refs'_def)
+   sorry (* FIXME AARCH64: needs new crunch for parts of ksArchState
    apply (rule hoare_use_eq [where f=ksArchState, OF createObjects_ksArch])
    apply (rule hoare_use_eq [where f=ksIdleThread, OF createObjects_it])
    apply (rule hoare_use_eq [where f=irq_node', OF createObjects_ksInterrupt])
@@ -4713,7 +4741,7 @@ lemma createObjects_no_cte_valid_global:
   apply (simp add: split_def cte_wp_at_ctes_of split: option.splits)
   apply (clarsimp simp: global_refs'_def)
   apply (auto simp: ball_ran_eq linorder_not_less[symmetric])
-  done
+  done *)
 
 lemma createObjects'_typ_at:
   "\<lbrace>\<lambda>s. n \<noteq> 0 \<and>
@@ -4768,8 +4796,9 @@ lemma createObjects_valid_arch:
   apply (wpsimp wp: hoare_vcg_const_Ball_lift createNewCaps_obj_at' createObjects_orig_ko_wp_at2'
                     createNewCaps_ko_wp_at' hoare_vcg_all_lift
                     hoare_vcg_imp_lift')
+  sorry (* FIXME AARCH64: needs new crunch for parts of ksArchState
   apply (fastforce simp: pred_conj_def valid_pspace'_def o_def is_vcpu'_def)
-  done
+  done *)
 
 lemma createObjects_irq_state:
   "\<lbrace>\<lambda>s. pspace_aligned' s \<and> pspace_distinct' s \<and>
