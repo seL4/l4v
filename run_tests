@@ -25,9 +25,9 @@ os.environ["ISABELLE_TIMING_LOG"]="3.0s"
 
 # Enable quick_and_dirty mode for various images
 if "QUICK_AND_DIRTY" in os.environ:
-    os.environ["AINVS_QUICK_AND_DIRTY"]=1
-    os.environ["REFINE_QUICK_AND_DIRTY"]=1
-    os.environ["CREFINE_QUICK_AND_DIRTY"]=1
+    os.environ["AINVS_QUICK_AND_DIRTY"]="1"
+    os.environ["REFINE_QUICK_AND_DIRTY"]="1"
+    os.environ["CREFINE_QUICK_AND_DIRTY"]="1"
     print("Testing with QUICK_AND_DIRTY")
 
 # Lists of excluded tests for different archs
@@ -135,7 +135,7 @@ for arch in archs:
 
     # Permit sorries in AARCH64 Refine during development
     if arch == "AARCH64":
-        os.environ["REFINE_QUICK_AND_DIRTY"]=1
+        os.environ["REFINE_QUICK_AND_DIRTY"]="1"
         print("Testing AARCH64 Refine in quick and dirty mode")
 
     sys.stdout.flush()
