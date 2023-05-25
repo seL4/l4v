@@ -65,7 +65,7 @@ EXCLUDE["AARCH64"]=[
     # To be eliminated/refined as development progresses
     "ASepSpec",
     "CKernel",
-    "Refine",
+    "RefineOrphanage",
     "Access",
 
     # Tools and unrelated content, removed for development
@@ -132,6 +132,11 @@ for arch in archs:
         print("Testing Orphanage for ARM")
     elif "L4V_ARCH_IS_ARM" in os.environ:
         del os.environ["L4V_ARCH_IS_ARM"]
+
+    # Permit sorries in AARCH64 Refine during development
+    if arch == "AARCH64":
+        os.environ["REFINE_QUICK_AND_DIRTY"]=1
+        print("Testing AARCH64 Refine in quick and dirty mode")
 
     sys.stdout.flush()
 
