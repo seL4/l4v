@@ -126,7 +126,7 @@ lemma deleteObjects_def2:
                                         then None else gsCNodes s x \<rparr>);
      stateAssert ksASIDMapSafe []
    od"
-  apply (simp add: deleteObjects_def is_aligned_mask[symmetric] unless_def)
+  apply (simp add: deleteObjects_def is_aligned_mask[symmetric] unless_def deleteGhost_def)
   apply (rule bind_eqI, rule ext)
   apply (rule bind_eqI, rule ext)
   apply (simp add: bind_assoc[symmetric])

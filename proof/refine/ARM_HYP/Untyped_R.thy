@@ -4062,6 +4062,8 @@ lemma idx_le_new_offs:
 
 end
 
+context begin interpretation Arch . (*FIXME: arch_split*)
+
 lemma valid_sched_etcbs[elim!]: "valid_sched_2 queues ekh sa cdom kh ct it \<Longrightarrow> valid_etcbs_2 ekh kh"
   by (simp add: valid_sched_def)
 
@@ -4636,6 +4638,8 @@ lemma whenE_reset_resetUntypedCap_invs_etc:
   done
 
 crunch ksCurDomain[wp]: updateFreeIndex "\<lambda>s. P (ksCurDomain s)"
+
+end
 
 lemma (in range_cover) funky_aligned:
   "is_aligned ((ptr && foo) + v * 2 ^ sbit) sbit"
