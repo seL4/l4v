@@ -20,11 +20,6 @@ lemma foldr_data_map_insert[simp]:
   apply (simp add:data_map_insert_def[abs_def] fun_upd_def)
   done
 
-crunch arch_inv[wp]: resetUntypedCap "\<lambda>s. P (ksArchState s)"
-  (simp: crunch_simps
-     wp: hoare_drop_imps unless_wp mapME_x_inv_wp
-         preemptionPoint_inv)
-
 lemma mapM_x_mapM_valid:
   "\<lbrace> P \<rbrace> mapM_x f xs \<lbrace>\<lambda>r. Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace>mapM f xs \<lbrace>\<lambda>r. Q\<rbrace>"
   apply (simp add: mapM_x_mapM)

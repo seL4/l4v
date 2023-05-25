@@ -83,7 +83,7 @@ definition zeroed_arch_intermediate_state ::
   where
   "zeroed_arch_intermediate_state \<equiv>
     ARMKernelState Map.empty (K ArmVSpaceUserRegion)
-                   Map.empty 0 0 None 0"
+                   Map.empty 0 0 None 0 Map.empty"
 
 definition zeroed_intermediate_state ::
   global.kernel_state
