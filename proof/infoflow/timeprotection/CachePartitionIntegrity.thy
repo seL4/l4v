@@ -692,6 +692,10 @@ lemma get_extra_cptrs_ta_subset_inv:
   "\<lbrace>ta_subset_inv aag\<rbrace> get_extra_cptrs buf mi \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   sorry
 
+lemma get_extra_cptrs_pas_cur_domain:
+  "\<lbrace>pas_cur_domain aag\<rbrace> get_extra_cptrs param_a param_b \<lbrace>\<lambda>_. pas_cur_domain aag\<rbrace>"
+  sorry
+
 (* CSpace_A *)
 
 (* Toby: Consider fixing broken Access proofs enough to repair old reasoning
@@ -856,6 +860,10 @@ lemma lookup_extra_caps_ta_subset_inv:
     simp: lookup_extra_caps_def resolve_address_bits_def)
     (* FIXME: I guess mapME_wp' will demand that all iterations will preserve every one of
        the preconditions, does this mean we have to copy them all to the postcondition too? *)
+  sorry
+
+lemma lookup_extra_caps_pas_cur_domain:
+  "\<lbrace>pas_cur_domain aag\<rbrace> lookup_extra_caps param_a param_b param_c \<lbrace>\<lambda>_. pas_cur_domain aag\<rbrace>"
   sorry
 
 (* KHeap_A *)
@@ -1188,6 +1196,10 @@ lemma decode_read_registers_ta_subset_inv:
   "decode_read_registers data cap \<lbrace>ta_subset_inv aag\<rbrace>"
   sorry
 
+lemma decode_read_registers_pas_cur_domain:
+  "decode_read_registers data cap \<lbrace>pas_cur_domain aag\<rbrace>"
+  sorry
+
 (* FIXME: Prove or improve.
    NB: More Hoare triples targetting undefined here.
 crunch ta_subset_inv: decode_write_registers "ta_subset_inv aag"
@@ -1195,6 +1207,10 @@ crunch ta_subset_inv: decode_write_registers "ta_subset_inv aag"
 *)
 lemma decode_write_registers_ta_subset_inv:
   "decode_write_registers data cap \<lbrace>ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma decode_write_registers_pas_cur_domain:
+  "decode_write_registers data cap \<lbrace>pas_cur_domain aag\<rbrace>"
   sorry
 
 (* FIXME: Prove or improve.
@@ -1205,6 +1221,10 @@ crunch ta_subset_inv: decode_copy_registers "ta_subset_inv aag"
 *)
 lemma decode_copy_registers_ta_subset_inv:
   "decode_copy_registers data cap extra_caps \<lbrace>ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma decode_copy_registers_pas_cur_domain:
+  "decode_copy_registers data cap extra_caps \<lbrace>pas_cur_domain aag\<rbrace>"
   sorry
 
 (* KHeap_A *)
@@ -1251,6 +1271,10 @@ lemma send_fault_ipc_ta_subset_inv:
             Control, pasSubject aag)
            \<in> pasPolicy aag))\<rbrace>
    send_fault_ipc tptr fault \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma send_fault_ipc_pas_cur_domain:
+  "\<lbrace>pas_cur_domain aag\<rbrace> send_fault_ipc param_a param_b \<lbrace>\<lambda>_. pas_cur_domain aag\<rbrace>"
   sorry
 
 (* CSpace_A *)
@@ -1352,6 +1376,10 @@ lemma decode_untyped_invocation_ta_subset_inv:
    \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   sorry
 
+lemma decode_untyped_invocation_pas_cur_domain:
+  "decode_untyped_invocation label args slot cap excaps \<lbrace>pas_cur_domain aag\<rbrace>"
+  sorry
+
 lemma decode_asid_pool_invocation_ta_subset_inv:
   "\<lbrace>ta_subset_inv aag and
     (no_label_straddling_objs aag and
@@ -1359,6 +1387,10 @@ lemma decode_asid_pool_invocation_ta_subset_inv:
            \<in> pas_labels_accessible_to aag (cur_label aag s)))\<rbrace>
    decode_asid_pool_invocation label args cte cap extra_caps
    \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma decode_asid_pool_invocation_pas_cur_domain:
+  "decode_asid_pool_invocation label args cte cap extra_caps \<lbrace>pas_cur_domain aag\<rbrace>"
   sorry
 
 (* IpcCancel_A *)
@@ -1372,6 +1404,10 @@ lemma decode_bind_notification_ta_subset_inv:
    decode_bind_notification cap extra_caps \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
   sorry
 
+lemma decode_bind_notification_pas_cur_domain:
+  "decode_bind_notification cap extra_caps \<lbrace>pas_cur_domain aag\<rbrace>"
+  sorry
+
 (* ArchDecode_A *)
 lemma arch_decode_invocation_ta_subset_inv:
   "\<lbrace>ta_subset_inv aag and no_label_straddling_objs aag and
@@ -1380,6 +1416,10 @@ lemma arch_decode_invocation_ta_subset_inv:
         (\<forall>x\<in>obj_refs_ac (fst (extra_caps ! 1)). is_subject aag x)))\<rbrace>
    arch_decode_invocation label args x_slot cte cap extra_caps
    \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma arch_decode_invocation_pas_cur_domain:
+  "arch_decode_invocation label args x_slot cte cap extra_caps \<lbrace>pas_cur_domain aag\<rbrace>"
   sorry
 
 (* FIXME: Prove or improve.
@@ -1397,6 +1437,10 @@ lemma decode_invocation_ta_subset_inv:
        (\<forall>x\<in>obj_refs_ac (fst (excaps ! 1)). is_subject aag x))\<rbrace>
    decode_invocation label args cap_index slot cap excaps 
    \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma decode_invocation_pas_cur_domain:
+  "decode_invocation label args cap_index slot cap excaps \<lbrace>pas_cur_domain aag\<rbrace>"
   sorry
 
 (* Retype_A *)
@@ -1827,6 +1871,10 @@ lemma check_cap_at_ta_subset_inv:
      (\<lambda>s. pasObjectAbs aag (fst slot)
            \<in> pas_labels_accessible_to aag (cur_label aag s)))\<rbrace>
   check_cap_at cap slot m \<lbrace>\<lambda>_. ta_subset_inv aag\<rbrace>"
+  sorry
+
+lemma check_cap_at_pas_cur_domain:
+  "check_cap_at cap slot m \<lbrace>pas_cur_domain aag\<rbrace>"
   sorry
 
 (* FIXME
@@ -2288,6 +2336,10 @@ lemma syscall_ta_subset_inv:
   "syscall m_fault h_fault m_error h_error m_finalise \<lbrace>ta_subset_inv aag\<rbrace>"
   sorry
 
+lemma syscall_pas_cur_domain:
+  "syscall m_fault h_fault m_error h_error m_finalise \<lbrace>pas_cur_domain aag\<rbrace>"
+  sorry
+
 thm perform_invocation_pas_refined
 lemma perform_invocation_ta_subset_inv:
   "\<lbrace>ta_subset_inv aag and
@@ -2467,7 +2519,21 @@ lemma XXX_tmp2:
 
 crunches kernel_entry_if
   for ta_subset_inv: "ta_subset_inv aag"
-  (wp: crunch_wps XXX_tmp0 XXX_tmp1 XXX_tmp2 simp: crunch_simps)
+  and pas_cur_domain: "pas_cur_domain aag"
+  (wp: crunch_wps XXX_tmp0 XXX_tmp1 XXX_tmp2 touch_object_wp' simp: crunch_simps)
+
+(* FIXME: This is going to be really tedious but basically we have to prove or add the sorries
+   for pushing these invariants through the kernel too.
+crunches kernel_entry_if
+  for pspace_aligned: "pspace_aligned"
+  and valid_vspace_objs: "valid_vspace_objs"
+  and valid_arch_state: "valid_arch_state"
+*)
+
+(* FIXME: Surely we have this from elsewhere?
+crunches kernel_entry_if
+  for pas_refined: "pas_refined aag"
+*)
 
 crunches handle_preemption_if
   for ta_subset_inv: "ta_subset_inv aag"

@@ -1042,81 +1042,104 @@ lemma ta_subset_inv_if_step:
     valid_vspace_objs s;
     valid_arch_state s;
     step_restrict ((uc', s'), m')\<rbrakk>
-   \<Longrightarrow> ta_subset_inv initial_aag s'"
+   \<Longrightarrow> ta_subset_inv initial_aag s' \<and> no_label_straddling_objs initial_aag s' \<and>
+     pas_refined initial_aag s' \<and> pas_cur_domain initial_aag s' \<and> pspace_aligned s' \<and>
+     valid_vspace_objs s' \<and> valid_arch_state s'"
   apply(clarsimp simp:global_automaton_if_def)
   apply(erule disjE)
    apply(clarsimp simp:kernel_call_A_if_def)
+   (* FIXME: Adapt/prove lemmas for propagating the other invariants through, too. *)
+   subgoal sorry (*
    apply(force intro:use_valid[OF _ kernel_entry_if_ta_subset_inv])
+   *)
   apply(erule disjE)
    apply(clarsimp simp:kernel_call_A_if_def)
+   subgoal sorry (*
    apply(force intro:use_valid[OF _ kernel_entry_if_ta_subset_inv])
+   *)
   apply(erule disjE)
    apply(clarsimp simp:kernel_handle_preemption_if_def)
+   subgoal sorry (*
    apply(force intro:use_valid[OF _ handle_preemption_if_ta_subset_inv])
+   *)
   apply(erule disjE)
    apply(clarsimp simp:kernel_schedule_if_def)
+   subgoal sorry (*
    apply(force intro:use_valid[OF _ schedule_if_ta_subset_inv])
+   *)
   apply(erule disjE)
    apply(clarsimp simp:kernel_exit_A_if_def)
+   subgoal sorry (*
    apply(force intro:use_valid[OF _ kernel_exit_if_inv])
+   *)
   apply(erule disjE)
    apply(clarsimp simp:check_active_irq_A_if_def do_user_op_A_if_def)
+   subgoal sorry (*
    apply(force intro:use_valid[OF _ do_user_op_if_ta_subset_inv]
      use_valid[OF _ check_active_irq_if_ta_subset_inv])
+   *)
   apply(erule disjE)
    apply(clarsimp simp:check_active_irq_A_if_def do_user_op_A_if_def)
+   subgoal sorry (*
    apply(force intro:use_valid[OF _ do_user_op_if_ta_subset_inv]
      use_valid[OF _ check_active_irq_if_ta_subset_inv])
+   *)
   apply(erule disjE)
    apply(clarsimp simp:check_active_irq_A_if_def do_user_op_A_if_def)
+   subgoal sorry (*
    apply(force intro:use_valid[OF _ check_active_irq_if_ta_subset_inv])
+   *)
   apply(erule disjE)
    apply(clarsimp simp:check_active_irq_A_if_def do_user_op_A_if_def)
+   subgoal sorry (*
    apply(force intro:use_valid[OF _ check_active_irq_if_ta_subset_inv])
+   *)
   apply(clarsimp simp:check_active_irq_A_if_def do_user_op_A_if_def)
+  subgoal sorry (*
   apply(force intro:use_valid[OF _ check_active_irq_if_ta_subset_inv])
+  *)
   done
 
 thm initial_state_ta_subset_inv
 lemma ta_subset_inv_execution:
   "s \<in> execution (big_step_ADT_A_if utf) s0 js \<Longrightarrow>
    ta_subset_inv initial_aag (internal_state_if s)"
-  (* XXX: doesn't play nicely with the induction
-  apply(subgoal_tac "reachable s")
-   prefer 2
-   using reachable_def apply blast
-  *)
+  apply(rule_tac Q="no_label_straddling_objs initial_aag (internal_state_if s) \<and>
+    pas_refined initial_aag (internal_state_if s) \<and>
+    pas_cur_domain initial_aag (internal_state_if s) \<and>
+    pspace_aligned (internal_state_if s) \<and>
+    valid_vspace_objs (internal_state_if s) \<and> valid_arch_state (internal_state_if s)"
+    in conjunct1)
   apply(induct js arbitrary: s rule: rev_induct)
-   apply(force simp:execution_def steps_def
+   apply(rule conjI)
+    apply(force simp:execution_def steps_def
+      big_step_ADT_A_if_def big_step_adt_def ADT_A_if_def
+      initial_state_ta_subset_inv)
+   apply(clarsimp simp:execution_def steps_def
      big_step_ADT_A_if_def big_step_adt_def ADT_A_if_def
-     initial_state_ta_subset_inv)
-  apply clarsimp
+     full_invs_if_def)
+   apply(rule conjI)
+    (* FIXME: Prove no_label_straddling_objs holds initially. *)
+    subgoal sorry
+   apply(rule conjI)
+    using reachable_s0[THEN pas_refined_if] pas_refined_cur
+    apply blast
+   apply(rule conjI)
+    using cur_domain_subject_s0 internal_state_s0
+    apply force
+   apply force
   apply(clarsimp simp: execution_def steps_def
      big_step_ADT_A_if_def big_step_adt_def ADT_A_if_def)
-  apply(drule big_steps_I_holds[where I="{s'. ta_subset_inv initial_aag (internal_state_if s')}"])
+  apply(drule big_steps_I_holds[where I="{s'. ta_subset_inv initial_aag (internal_state_if s') \<and>
+     no_label_straddling_objs initial_aag (internal_state_if s') \<and>
+     pas_refined initial_aag (internal_state_if s') \<and>
+     pas_cur_domain initial_aag (internal_state_if s') \<and>
+     pspace_aligned (internal_state_if s') \<and>
+     valid_vspace_objs (internal_state_if s') \<and> valid_arch_state (internal_state_if s')}"])
     apply force
    apply(clarsimp simp:inv_holds_def)
-   apply(rename_tac xs aa bb bc a b ba ab bd be)
-   apply(subgoal_tac "reachable ((ab, bd), be)")
-    prefer 2
-    (* XXX: Actually I think this might be a fundamental problem.
-       We don't know that an arbitrary state that can be stepped from to reach a reachable one
-       is itself reachable according to the big-step transition system. -robs *)
-    subgoal sorry
-   (* XXX: Supposing it's reachable, though, we could extract the invariant from it... maybe... or
-      do we just have to demand they all get carried through, and not rely on reachable at all? *)
-   apply(rule ta_subset_inv_if_step)
-           apply force
-          apply force
-         subgoal sorry
-        apply(frule pas_refined_if)
-        apply clarsimp
-        subgoal sorry
-       subgoal sorry
-      subgoal sorry
-     subgoal sorry
-    subgoal sorry
-   apply force
+   using ta_subset_inv_if_step
+   apply presburger
   by force
 
 thm ta_subset_inv_def
