@@ -2179,7 +2179,6 @@ lemma handleRecv_ksCurThread[wp]:
 lemma he_invs'[wp]:
   "\<lbrace>invs' and
       (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running' s) and
-      (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
       (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)\<rbrace>
    handleEvent event
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
