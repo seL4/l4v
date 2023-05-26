@@ -90,22 +90,22 @@ lemma archThreadGet_eq:
   apply simp
   done
 
-lemma get_tsType_ccorres [corres]:
+lemma get_tsType_ccorres[corres]:
   "ccorres (\<lambda>r r'. r' = thread_state_to_tsType r) ret__unsigned_longlong_' (tcb_at' thread)
-           (UNIV \<inter> {s. thread_state_ptr_' s = Ptr &(tcb_ptr_to_ctcb_ptr thread\<rightarrow>[''tcbState_C''])}) []
-  (getThreadState thread) (Call thread_state_ptr_get_tsType_'proc)"
+           (UNIV \<inter> {s. f s = tcb_ptr_to_ctcb_ptr thread} \<inter>
+            {s. cslift s (Ptr &(f s\<rightarrow>[''tcbState_C''])) = Some (thread_state_' s)}) []
+  (getThreadState thread) (Call thread_state_get_tsType_'proc)"
   unfolding getThreadState_def
-  apply (rule ccorres_from_spec_modifies)
-      apply (rule thread_state_ptr_get_tsType_spec)
-     apply (rule thread_state_ptr_get_tsType_modifies)
-    apply simp
-   apply (frule (1) obj_at_cslift_tcb)
-   apply (clarsimp simp: typ_heap_simps)
+  apply (rule ccorres_from_spec_modifies [where P=\<top>, simplified])
+     apply (rule thread_state_get_tsType_spec)
+    apply (rule thread_state_get_tsType_modifies)
+   apply simp
   apply (frule (1) obj_at_cslift_tcb)
   apply (clarsimp simp: typ_heap_simps)
   apply (rule bexI [rotated, OF threadGet_eq], assumption)
   apply simp
-  apply (erule ctcb_relation_thread_state_to_tsType)
+  apply (drule ctcb_relation_thread_state_to_tsType)
+  apply simp
   done
 
 lemma threadGet_obj_at2:

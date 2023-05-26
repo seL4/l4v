@@ -119,24 +119,6 @@ lemma switchToThread_ccorres:
   apply (fastforce simp: ready_qs_runnable_def)
   done
 
-lemma get_tsType_ccorres2:
-  "ccorres (\<lambda>r r'. r' = thread_state_to_tsType r) ret__unsigned_longlong_' (tcb_at' thread)
-           (UNIV \<inter> {s. f s = tcb_ptr_to_ctcb_ptr thread} \<inter>
-            {s. cslift s (Ptr &(f s\<rightarrow>[''tcbState_C''])) = Some (thread_state_' s)}) []
-  (getThreadState thread) (Call thread_state_get_tsType_'proc)"
-  unfolding getThreadState_def
-  apply (rule ccorres_from_spec_modifies [where P=\<top>, simplified])
-     apply (rule thread_state_get_tsType_spec)
-    apply (rule thread_state_get_tsType_modifies)
-   apply simp
-  apply (frule (1) obj_at_cslift_tcb)
-  apply (clarsimp simp: typ_heap_simps)
-  apply (rule bexI [rotated, OF threadGet_eq], assumption)
-  apply simp
-  apply (drule ctcb_relation_thread_state_to_tsType)
-  apply simp
-  done
-
 lemma activateThread_ccorres:
   "ccorres dc xfdc
            (ct_in_state' activatable' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)
@@ -147,7 +129,7 @@ lemma activateThread_ccorres:
   apply (cinit)
 sorry (* FIXME RT: activeThread_ccorres
    apply (rule ccorres_pre_getCurThread)
-   apply (ctac add: get_tsType_ccorres2 [where f="\<lambda>s. ksCurThread_' (globals s)"])
+   apply (ctac add: get_tsType_ccorres [where f="\<lambda>s. ksCurThread_' (globals s)"])
      apply (rule_tac P="activatable' rv" in ccorres_gen_asm)
      apply (wpc)
             apply (rule_tac P=\<top> and P'=UNIV in ccorres_inst, simp)
