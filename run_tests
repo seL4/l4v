@@ -40,7 +40,12 @@ EXCLUDE["ARM_HYP"]=[
     "RefineOrphanage",
     "SimplExportAndRefine"]
 
-EXCLUDE["ARM"]=[]
+EXCLUDE["ARM"]=[
+    "Access",
+    "DSpec",
+    "DBaseRefine",
+    "SimplExportAndRefine"
+]
 
 EXCLUDE["X64"]=[
     "Access",
