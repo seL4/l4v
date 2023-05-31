@@ -31,6 +31,13 @@ GHC_DEV_OPTS=--ghc-options=""
 
 all: build-aarch64 build-riscv build-arm build-arm-hyp-nosmmu build-x64
 
+# build targets by L4V_ARCH:
+ARM: build-arm
+ARM_HYP: build-arm-hyp-nosmmu
+X64: build-x64
+RISCV64: build-riscv
+AARCH64: build-aarch64
+
 sandbox: .stack-work
 
 build-arm: sandbox $(BOOT_FILES)
