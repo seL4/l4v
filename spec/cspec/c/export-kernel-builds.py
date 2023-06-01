@@ -46,29 +46,20 @@ import sys
 
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import List, NamedTuple, Optional
+from typing import NamedTuple, Optional, Sequence
 
 
-class L4vPaths(NamedTuple):
-    kernel_mk: Path
-    c_pp: Path
-    c_functions: Path
-
-
-def get_l4v_paths(l4v_arch: str) -> L4vPaths:
-    l4v_c = Path(__file__).resolve().parent
-    l4v = l4v_c.parent.parent.parent
-    kernel_mk = l4v_c / 'kernel.mk'
-    c_pp = l4v_c / 'build' / l4v_arch / 'kernel_all.c_pp'
-    c_functions = l4v / 'proof' / 'asmrefine' / 'export' / l4v_arch / 'CFunDump.txt'
-    return L4vPaths(kernel_mk=kernel_mk, c_pp=c_pp, c_functions=c_functions)
+source_l4v_c = Path(__file__).resolve().parent
+source_l4v = source_l4v_c.parent.parent.parent
+source_kernel_mk = source_l4v_c / 'kernel.mk'
 
 
 class ExportConfig(NamedTuple):
     export_root: Path
+    c_pp_path: Path
+    c_functions_path: Path
     l4v_arch: str
     l4v_features: Optional[str]
-    l4v_paths: L4vPaths
     manifest: Optional[Path]
 
     def config_name(self, optimisation: str) -> str:
@@ -84,19 +75,19 @@ class ExportConfig(NamedTuple):
 
         print(f'Exporting kernel build for {config_name} to {export_dir}...')
 
-        if not self.l4v_paths.c_pp.is_file():
+        if not self.c_pp_path.is_file():
             print('  Note: No l4v kernel build found.')
-        if not self.l4v_paths.c_functions.is_file():
+        if not self.c_functions_path.is_file():
             print('  Note: No C graph-lang found.')
 
         with TemporaryDirectory() as build_tmp:
-            env = {
+            env: dict[str, Path | str] = {
                 **os.environ,
                 'KERNEL_BUILD_ROOT': Path(build_tmp) / 'build',
                 'KERNEL_EXPORT_DIR': export_dir,
                 'CONFIG_OPTIMISATION': optimisation
             }
-            p = subprocess.run(['make', '-f', self.l4v_paths.kernel_mk, 'kernel_export'],
+            p = subprocess.run(['make', '-f', source_kernel_mk, 'kernel_export'],
                                env=env, stdin=subprocess.DEVNULL)
         if p.returncode != 0:
             print(f'Error: Kernel build for {config_name} failed', file=sys.stderr)
@@ -106,15 +97,15 @@ class ExportConfig(NamedTuple):
         # it to the exported builds if binary verification fails. There's no point
         # comparing here, because there will always be differences due to lines
         # inserted by the preprocessor and config system.
-        if self.l4v_paths.c_pp.is_file():
-            shutil.copyfile(self.l4v_paths.c_pp, export_dir / 'kernel_all.c_pp.l4v')
+        if self.c_pp_path.is_file():
+            shutil.copyfile(self.c_pp_path, export_dir / 'kernel_all.c_pp.l4v')
 
         # Copy the C graph-lang, if it exists. Note that C graph-lang might not
         # have been produced, if SimplExportAndRefine is not enabled for this
         # configuration, or if proofs were cached. It's therefore not an error for
         # it not to be present.
-        if self.l4v_paths.c_functions.is_file():
-            shutil.copyfile(self.l4v_paths.c_functions, export_dir / 'CFunctions.txt')
+        if self.c_functions_path.is_file():
+            shutil.copyfile(self.c_functions_path, export_dir / 'CFunctions.txt')
 
         # If a manifest was given on the command line, copy that to the output.
         if self.manifest is not None:
@@ -129,11 +120,11 @@ class ExportConfig(NamedTuple):
 
 class ExportCommand(NamedTuple):
     config: ExportConfig
-    optimisations: List[str]
+    optimisations: Sequence[str]
     force: bool
 
     def run(self) -> None:
-        if not self.config.l4v_paths.c_functions.is_file() and not self.force:
+        if not self.config.c_functions_path.is_file() and not self.force:
             print('Will not export kernel builds, because no C graph-lang was found.')
             return
         for optimisation in self.optimisations:
@@ -141,8 +132,8 @@ class ExportCommand(NamedTuple):
 
 
 def parse_args() -> ExportCommand:
-    parser = argparse.ArgumentParser(
-        description='Export kernel build artifacts.')
+    parser = argparse.ArgumentParser(description='Export kernel build artifacts.')
+
     parser.add_argument('--export-root', metavar='DIRECTORY', type=Path, required=True,
                         help='Export directory')
     parser.add_argument('--manifest-xml', metavar='FILENAME', type=Path,
@@ -152,7 +143,13 @@ def parse_args() -> ExportCommand:
                         help='Optimisation level')
     parser.add_argument('--force', dest='force', action='store_true',
                         help='Build even when no C graph-lang is found')
-    parser.set_defaults(optimisations=['1', '2'], force=False)
+    parser.add_argument('--l4v-root', metavar='DIRECTORY', type=Path,
+                        help='Root of l4v to search for kernel build artifacts')
+
+    parser.set_defaults(optimisations=['1', '2'],
+                        force=False,
+                        l4v_root=Path(source_l4v))
+
     args = parser.parse_args()
 
     l4v_arch = os.environ.get('L4V_ARCH')
@@ -161,16 +158,21 @@ def parse_args() -> ExportCommand:
         sys.exit(1)
 
     if args.manifest_xml and not args.manifest_xml.is_file():
-        print(f'error: bad manifest: {self.manifest_xml}', file=sys.stderr)
+        print(f'error: bad manifest: {args.manifest_xml}', file=sys.stderr)
         sys.exit(1)
 
+    target_l4v = args.l4v_root.resolve()
+    target_c_pp = target_l4v / 'spec' / 'cspec' / 'c' / 'build' / l4v_arch / 'kernel_all.c_pp'
+    target_c_functions = target_l4v / 'proof' / 'asmrefine' / 'export' / l4v_arch / 'CFunDump.txt'
+
     config = ExportConfig(export_root=args.export_root,
+                          c_pp_path=target_c_pp,
+                          c_functions_path=target_c_functions,
                           l4v_arch=l4v_arch,
                           l4v_features=os.environ.get('L4V_FEATURES'),
-                          l4v_paths=get_l4v_paths(l4v_arch),
                           manifest=args.manifest_xml)
 
-    optimisations = (f'-O{o}' for o in args.optimisations)
+    optimisations = [f'-O{o}' for o in args.optimisations]
     return ExportCommand(config=config,
                          optimisations=optimisations,
                          force=args.force)
