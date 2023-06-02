@@ -26,7 +26,7 @@ ifndef L4V_ARCH
   $(error L4V_ARCH is not set)
 endif
 
-SEL4_CONFIG_NAME := ${L4V_ARCH}$(if ${L4V_FEATURES},_${L4V_FEATURES},)
+SEL4_CONFIG_NAME := ${L4V_ARCH}$(if ${L4V_FEATURES},_${L4V_FEATURES},)$(if ${L4V_PLAT},_${L4V_PLAT},)
 
 ifndef CONFIG
   CONFIG := ${SOURCE_ROOT}/configs/${SEL4_CONFIG_NAME}_verified.cmake
@@ -87,8 +87,14 @@ endif
 # We avoid this by excluding __pycache__ directories from the kernel dependencies.
 KERNEL_DEPS := $(shell find ${SOURCE_ROOT} -name .git -prune -o -name __pycache__ -prune -o -type f -print)
 
+# The kernel build generates a large number of files, so we create a dummy file
+# .cmake_done-${SEL4_CONFIG_NAME} to represent overall completion for make's
+# dependency tracking. The ${SEL4_CONFIG_NAME} part makes sure we rebuild when
+# we switch features or platforms.
+BUILD_DONE = ${KERNEL_BUILD_ROOT}/.cmake_done-${SEL4_CONFIG_NAME}
+
 # Top level rule for rebuilding kernel_all.c_pp
-${KERNEL_BUILD_ROOT}/kernel_all.c_pp: ${KERNEL_BUILD_ROOT}/.cmake_done
+${KERNEL_BUILD_ROOT}/kernel_all.c_pp: ${BUILD_DONE}
 	cd ${KERNEL_BUILD_ROOT} && ninja kernel_all_pp_wrapper
 	cp -a ${KERNEL_BUILD_ROOT}/kernel_all_pp.c $@
 
@@ -105,9 +111,7 @@ endif
 # Initialize the CMake build. We purge the build directory and start again
 # whenever any of the kernel sources change, so that we can reliably pick up
 # changes to the build config.
-# This step also generates a large number of files, so we create a dummy file
-# .cmake_done to represent overall completion for make's dependency tracking.
-${KERNEL_BUILD_ROOT}/.cmake_done: ${KERNEL_DEPS} ${CONFIG_DOMAIN_SCHEDULE} ${OVERLAY}
+${BUILD_DONE}: ${KERNEL_DEPS} ${CONFIG_DOMAIN_SCHEDULE} ${OVERLAY}
 	@rm -rf ${KERNEL_BUILD_ROOT}
 	@mkdir -p ${KERNEL_BUILD_ROOT}
 	cd ${KERNEL_BUILD_ROOT} && \
@@ -119,7 +123,7 @@ ${KERNEL_BUILD_ROOT}/.cmake_done: ${KERNEL_DEPS} ${CONFIG_DOMAIN_SCHEDULE} ${OVE
 		${KERNEL_CMAKE_OPTIMISATION} ${KERNEL_CMAKE_EXTRA_OPTIONS} \
 		${OVERLAY_OPT} \
 		-G Ninja ${SOURCE_ROOT}
-	@touch ${KERNEL_BUILD_ROOT}/.cmake_done
+	@touch ${BUILD_DONE}
 ifneq ($(L4V_ARCH),X64)
 	@if [ "$$(diff -q ${OVERLAY} ${DEFAULT_OVERLAY})" ]; then \
 		echo "++ Used custom overlay for $(L4V_ARCH)"; \
@@ -134,7 +138,8 @@ ${UMM_TYPES}: ${KERNEL_BUILD_ROOT}/kernel_all.c_pp
 # This target generates config files and headers only. It does not invoke
 # the C tool chain or preprocessor. We force CMake to skip tests for these,
 # so that ASpec and ExecSpec can be built with fewer dependencies.
-${KERNEL_CONFIG_ROOT}/.cmake_done: ${KERNEL_DEPS} gen-config-thy.py ${OVERLAY}
+CONFIG_DONE = ${KERNEL_CONFIG_ROOT}/.cmake_done-${SEL4_CONFIG_NAME}
+${CONFIG_DONE}: ${KERNEL_DEPS} gen-config-thy.py ${OVERLAY}
 	@rm -rf ${KERNEL_CONFIG_ROOT}
 	@mkdir -p ${KERNEL_CONFIG_ROOT}
 	cd ${KERNEL_CONFIG_ROOT} && \
@@ -144,7 +149,7 @@ ${KERNEL_CONFIG_ROOT}/.cmake_done: ${KERNEL_DEPS} gen-config-thy.py ${OVERLAY}
 		${OVERLAY_OPT} \
 		-G Ninja ${SOURCE_ROOT}
 	cd ${KERNEL_CONFIG_ROOT} && ninja gen_config/kernel/gen_config.json
-	@touch ${KERNEL_CONFIG_ROOT}/.cmake_done
+	@touch ${CONFIG_DONE}
 ifneq ($(L4V_ARCH),X64)
 	@if [ "$$(diff -q ${OVERLAY} ${DEFAULT_OVERLAY})" ]; then \
 		echo "++ Used custom overlay for $(L4V_ARCH)"; \
