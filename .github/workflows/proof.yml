@@ -5,12 +5,6 @@
 name: Proof PR
 
 on:
-  push:
-    paths-ignore:
-      - '**.md'
-      - '**.txt'
-    branches:
-      - rt
   # this action needs access to secrets.
   # The actual test runs in a no-privilege VM, so it's Ok to run on untrusted PRs.
   pull_request_target:
@@ -31,7 +25,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [ARM, ARM_HYP, AARCH64, RISCV64, X64]
+        arch: [ARM]
+        plat: [imx8mm]
     # test only most recent push to PR:
     concurrency:
       group: l4v-${{ github.workflow }}-${{ github.event.number }}-idx-${{ strategy.job-index }}
@@ -41,6 +36,7 @@ jobs:
       uses: seL4/ci-actions/aws-proofs@master
       with:
         L4V_ARCH: ${{ matrix.arch }}
+        L4V_PLAT: ${{ matrix.plat }}
         NUM_DOMAINS: ${{ inputs.NUM_DOMAINS }}
         skip_dups: true
         session: '-x AutoCorresSEL4' # exclude large AutoCorresSEL4 session for PRs
