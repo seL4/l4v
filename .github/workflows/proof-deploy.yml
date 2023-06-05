@@ -1,26 +1,21 @@
-# Copyright 2021 Proofcraft Pty Ltd
+# Copyright 2023 Proofcraft Pty Ltd
 #
 # SPDX-License-Identifier: BSD-2-Clause
 
-# On push to master only: run proofs and deploy manifest update.
+# Run proofs and rebase plaform branch.
 
-name: Proofs
+name: Platform Proofs IMX8MM
 
 on:
   push:
     branches:
-      - master
-      - rt
-  repository_dispatch:
-    types:
-      - manifest-update
+      - imx8-fpu-ver-rebased
   # for testing:
   workflow_dispatch:
 
 jobs:
   code:
     name: Freeze Code
-    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     outputs:
       xml: ${{ steps.repo.outputs.xml }}
@@ -31,19 +26,6 @@ jobs:
         manifest_repo: verification-manifest
         manifest: devel.xml
 
-  mcs-code:
-    name: Freeze MCS Code
-    if: github.ref == 'refs/heads/rt'
-    runs-on: ubuntu-latest
-    outputs:
-      xml: ${{ steps.repo.outputs.xml }}
-    steps:
-    - id: repo
-      uses: seL4/ci-actions/repo-checkout@master
-      with:
-        manifest_repo: verification-manifest
-        manifest: mcs-devel.xml
-
   proofs:
     name: Proof
     needs: code
@@ -51,18 +33,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [ARM, ARM_HYP, AARCH64, RISCV64, X64]
-        num_domains: ['1', '']
-        plat: ['']
-        include:
-          - arch: ARM_HYP
-            plat: exynos5
-          - arch: AARCH64
-            plat: zynqmp
-          - arch: AARCH64
-            plat: bcm2711
+        arch: [ARM]
+        plat: [imx8mm]
+        num_domains: ['']
     # test only most recent push:
-    concurrency: l4v-regression-${{ github.ref }}-${{ strategy.job-index }}
+    concurrency: l4v-${{ github.ref }}-${{ strategy.job-index }}
     steps:
     - name: Proofs
       uses: seL4/ci-actions/aws-proofs@master
@@ -87,104 +62,19 @@ jobs:
         name: logs-${{ matrix.num_domains }}-${{ matrix.arch }}-${{ matrix.plat }}
         path: logs.tar.xz
 
-  mcs-proofs:
-    name: MCS Proof
-    needs: mcs-code
+  push:
+    name: Push rebased branch
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: [ARM, RISCV64]
-        num_domains: ['1', '']
-        plat: [""]
-    # test only most recent push:
-    concurrency: l4v-mcs-regression-${{ github.ref }}-${{ strategy.job-index }}
-    steps:
-    - name: Proofs
-      uses: seL4/ci-actions/aws-proofs@master
-      with:
-        L4V_ARCH: ${{ matrix.arch }}
-        L4V_PLAT: ${{ matrix.plat }}
-        L4V_FEATURES: MCS
-        xml: ${{ needs.mcs-code.outputs.xml }}
-        NUM_DOMAINS: ${{ matrix.num_domains }}
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_SSH: ${{ secrets.AWS_SSH }}
-    - name: Upload kernel builds
-      uses: actions/upload-artifact@v4
-      with:
-        name: mcs-kernel-builds-${{ matrix.num_domains }}-${{ matrix.arch }}-${{ matrix.plat }}
-        path: artifacts/kernel-builds
-        if-no-files-found: ignore
-    - name: Upload logs
-      uses: actions/upload-artifact@v4
-      with:
-        name: mcs-logs-${{ matrix.num_domains }}-${{ matrix.arch }}-${{ matrix.plat }}
-        path: logs.tar.xz
-
-  deploy:
-    name: Deploy manifest
-    runs-on: ubuntu-latest
-    needs: [code, proofs]
-    steps:
-    - uses: seL4/ci-actions/l4v-deploy@master
-      with:
-        xml: ${{ needs.code.outputs.xml }}
-      env:
-        GH_SSH: ${{ secrets.CI_SSH }}
-    - name: Trigger binary verification
-      uses: seL4/ci-actions/bv-trigger@master
-      with:
-        token: ${{ secrets.PRIV_REPO_TOKEN }}
-        tag: "l4v/proof-deploy/${{ github.event_name }}"
-
-  mcs-deploy:
-    name: Deploy MCS manifest
-    runs-on: ubuntu-latest
-    needs: [mcs-code, mcs-proofs]
-    steps:
-    - uses: seL4/ci-actions/l4v-deploy@master
-      with:
-        xml: ${{ needs.mcs-code.outputs.xml }}
-        manifest: mcs-devel.xml
-      env:
-        GH_SSH: ${{ secrets.CI_SSH }}
-
-# Automatically rebase platform branches on pushes to master.
-# This workflow here on the master branch attempts a git rebase of the platform
-# branches listed in the build matrix below. If the rebase succeeds, the rebased
-# branch is pushed under the name `<branch>-rebased`. This triggers the build
-# workflow on the `<branch>-rebased` branch, which will run the proofs. If the
-# proofs succeed, the `<branch>-rebased` branch is force-pushed over
-# `<branch>`, becoming the new platform branch.
-  rebase:
-    name: Rebase platform branches
-    if: github.ref == 'refs/heads/master'
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        branch: [imx8-fpu-ver]
+    needs: [proofs]
     steps:
     - name: Checkout
       uses: actions/checkout@v4
       with:
-        ref: ${{ matrix.branch }}
-        path: l4v-${{ matrix.branch }}
+        ref: imx8-fpu-ver-rebased
         fetch-depth: 0
-        # needed to trigger push actions on the -rebased branch
-        # (implict GITHUB_TOKEN does not trigger further push actions).
-        token: ${{ secrets.PRIV_REPO_TOKEN }}
-    - name: Rebase
-      run: |
-        cd l4v-${{ matrix.branch }}
-        git config --global user.name "seL4 CI"
-        git config --global user.email "ci@sel4.systems"
-        git rebase origin/master
-        git status
     - name: Push
       run: |
-        cd l4v-${{ matrix.branch }}
-        git push -f origin HEAD:${{ matrix.branch }}-rebased
+        git config --global user.name "seL4 CI"
+        git config --global user.email "ci@sel4.systems"
+        git status
+        git push -f origin HEAD:imx8-fpu-ver
