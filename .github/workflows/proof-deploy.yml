@@ -76,3 +76,29 @@ jobs:
       with:
         token: ${{ secrets.PRIV_REPO_TOKEN }}
         tag: "l4v/proof-deploy/${{ github.event_name }}"
+
+  rebase:
+    name: Rebase platform branches
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        branch: [imx8-fpu-ver, exynos5-ver]
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        ref: ${{ matrix.branch }}
+        path: l4v-${{ matrix.branch }}
+        fetch-depth: 0
+    - name: Rebase
+      run: |
+        cd l4v-${{ matrix.branch }}
+        git config --global user.name "seL4 CI"
+        git config --global user.email "ci@sel4.systems"
+        git rebase origin/master
+        git status
+    - name: Push
+      run: |
+        cd l4v-${{ matrix.branch }}
+        git push -f origin HEAD:${{ matrix.branch }}
