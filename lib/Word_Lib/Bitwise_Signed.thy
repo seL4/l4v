@@ -25,6 +25,6 @@ in
 
 method_setup word_bitwise_signed =
   \<open>Scan.succeed (fn ctxt => Method.SIMPLE_METHOD (bw_tac_signed ctxt 1))\<close>
-  "decomposer for word equalities and inequalities into bit propositions"
+  "decomposer for word equalities and inequalities into bit propositions on concrete word lengths"
 
 end

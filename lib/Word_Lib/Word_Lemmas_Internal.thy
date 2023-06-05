@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: BSD-2-Clause
@@ -717,5 +718,24 @@ lemma mask_alignment_ugliness:
   apply (subst word_plus_and_or_coroll; word_eqI)
    apply (meson linorder_not_le)
   by (auto simp: le_def)
+
+lemma word_and_mask_shift_eq_0:
+  "n \<le> m \<Longrightarrow> x && mask n >> m = 0"
+  by word_eqI
+
+lemma word_mask_and_neg_shift_eq_0:
+  "n < m \<Longrightarrow> - (1 << m) && mask n = 0"
+  by (metis NOT_mask_AND_mask add.inverse_neutral leD less_imp_le mask_AND_NOT_mask mask_eqs(10)
+            shiftl_1 t2n_mask_eq_if)
+
+lemma aligned_mask_plus_bounded:
+  "\<lbrakk> is_aligned x m; m < n; n < LENGTH('a) \<rbrakk> \<Longrightarrow> (x && mask n) + 2^m \<le> 2^n" for x :: "'a::len word"
+  by (metis add_mask_fold and_mask_less' is_aligned_add_step_le is_aligned_after_mask is_aligned_mask
+            leD leI order_less_imp_le t2n_mask_eq_if word_less_sub_1)
+
+lemma aligned_mask_le_mask_minus:
+  "\<lbrakk> is_aligned x m; m \<le> n; n < LENGTH('a)\<rbrakk> \<Longrightarrow> x && mask n \<le> mask n - mask m" for x :: "'a::len word"
+  by (metis and_mask_less' is_aligned_after_mask is_aligned_neg_mask_eq'
+           mask_2pm1 mask_sub neg_mask_mono_le word_less_sub_le)
 
 end

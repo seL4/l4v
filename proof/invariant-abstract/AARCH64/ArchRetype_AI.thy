@@ -32,14 +32,14 @@ lemma slot_bits_def2 [Retype_AI_assms]: "slot_bits = cte_level_bits"
 
 definition
   "no_gs_types \<equiv> UNIV - {CapTableObject,
-                         ArchObject SmallPageObj, ArchObject LargePageObj, ArchObject HugePageObj}"
+                         ArchObject SmallPageObj, ArchObject LargePageObj, ArchObject HugePageObj,
+                         ArchObject PageTableObj, ArchObject VSpaceObj}"
 
 lemma no_gs_types_simps [simp, Retype_AI_assms]:
   "Untyped \<in> no_gs_types"
   "TCBObject \<in> no_gs_types"
   "EndpointObject \<in> no_gs_types"
   "NotificationObject \<in> no_gs_types"
-  "ArchObject PageTableObj \<in> no_gs_types"
   "ArchObject ASIDPoolObj \<in> no_gs_types"
   by (simp_all add: no_gs_types_def)
 

@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -205,7 +206,8 @@ definition "High_pt_ptr = kernel_base + 0xC00"
 
 (* init_globals_frame \<equiv> {kernel_base + 0x5000,... kernel_base + 0x5FFF} *)
 
-definition "shared_page_ptr = kernel_base + 0x6000"
+definition "shared_page_ptr_virt = kernel_base + 0x6000"
+definition "shared_page_ptr_phys = addrFromPPtr shared_page_ptr_virt"
 
 definition "Low_pd_ptr = kernel_base + 0x20000"
 definition "High_pd_ptr = kernel_base + 0x24000"
@@ -233,14 +235,14 @@ lemmas s0_ptr_defs =
   Low_pd_ptr_def High_pd_ptr_def Low_pt_ptr_def High_pt_ptr_def Low_tcb_ptr_def
   High_tcb_ptr_def idle_tcb_ptr_def timer_irq_def Low_prio_def High_prio_def Low_time_slice_def
   Low_domain_def High_domain_def init_irq_node_ptr_def init_globals_frame_def init_global_pd_def
-  kernel_base_def shared_page_ptr_def
+  kernel_base_def shared_page_ptr_virt_def
 
 (* Distinctness proof of kernel pointers. *)
 
 distinct ptrs_distinct [simp]:
   Low_tcb_ptr High_tcb_ptr idle_tcb_ptr
   Low_pt_ptr High_pt_ptr
-  shared_page_ptr ntfn_ptr
+  shared_page_ptr_virt ntfn_ptr
   Low_pd_ptr High_pd_ptr
   Low_cnode_ptr High_cnode_ptr Silc_cnode_ptr irq_cnode_ptr
   init_globals_frame init_global_pd
@@ -507,7 +509,7 @@ definition
   Low_pt' :: "word8 \<Rightarrow> pte "
 where
   "Low_pt' \<equiv> (\<lambda>_. InvalidPTE)
-            (0 := SmallPagePTE shared_page_ptr {} vm_read_write)"
+            (0 := SmallPagePTE shared_page_ptr_phys {} vm_read_write)"
 
 definition
   Low_pt :: kernel_object
@@ -542,7 +544,7 @@ definition
 where
   "High_pt' \<equiv>
     (\<lambda>_. InvalidPTE)
-     (0 := SmallPagePTE shared_page_ptr {} vm_read_only)"
+     (0 := SmallPagePTE shared_page_ptr_phys {} vm_read_only)"
 
 
 definition
@@ -872,7 +874,7 @@ definition
   Sys1AgentMap :: "(auth_graph_label subject_label) agent_map"
 where
   "Sys1AgentMap \<equiv>
-   (\<lambda>p. if ptrFromPAddr shared_page_ptr \<le> p \<and> p < ptrFromPAddr shared_page_ptr + 0x1000
+   (\<lambda>p. if p \<in> ptr_range shared_page_ptr_virt pageBits
           then partition_label Low else partition_label IRQ0)
             \<comment> \<open>set the range of the shared_page to Low, default everything else to IRQ0\<close>
      (Low_cnode_ptr := partition_label Low,
@@ -901,12 +903,11 @@ lemma Sys1AgentMap_simps:
       "Sys1AgentMap Low_tcb_ptr = partition_label Low"
       "Sys1AgentMap High_tcb_ptr = partition_label High"
       "Sys1AgentMap idle_tcb_ptr = partition_label Low"
-      "\<And>p. \<lbrakk>ptrFromPAddr shared_page_ptr \<le> p; p < ptrFromPAddr shared_page_ptr + 0x1000\<rbrakk>
+      "\<And>p. p \<in> ptr_range shared_page_ptr_virt pageBits
           \<Longrightarrow> Sys1AgentMap p = partition_label Low"
   unfolding Sys1AgentMap_def
   apply simp_all
-  by (auto simp: ptrFromPAddr_def pptrBaseOffset_def
-          pptrBase_def Kernel_Config.physBase_def s0_ptr_defs)
+  by (auto simp: s0_ptr_defs ptr_range_def pageBits_def)
 
 definition
   Sys1ASIDMap :: "(auth_graph_label subject_label) agent_asid_map"
@@ -998,8 +999,7 @@ lemma thread_bounds_of_state_s0:
 
 lemma Sys1_wellformed':
   "policy_wellformed (pasPolicy Sys1PAS) False irqs x"
-  apply (clarsimp simp: Sys1PAS_def Sys1AgentMap_simps policy_wellformed_def
-                        Sys1AuthGraph_def)
+  apply (clarsimp simp: Sys1PAS_def policy_wellformed_def Sys1AuthGraph_def)
   done
 
 corollary Sys1_wellformed:
@@ -1009,8 +1009,7 @@ corollary Sys1_wellformed:
 
 lemma Sys1_pas_wellformed:
   "pas_wellformed Sys1PAS"
-  apply (clarsimp simp: Sys1PAS_def Sys1AgentMap_simps policy_wellformed_def
-                        Sys1AuthGraph_def)
+  apply (clarsimp simp: Sys1PAS_def policy_wellformed_def Sys1AuthGraph_def)
   done
 
 lemma domains_of_state_s0[simp]:
@@ -1029,12 +1028,10 @@ lemma Sys1_pas_refined:
   apply (clarsimp simp: pas_refined_def)
   apply (intro conjI)
        apply (simp add: Sys1_pas_wellformed)
-      apply (clarsimp simp: irq_map_wellformed_aux_def s0_internal_def Sys1AgentMap_simps Sys1PAS_def)
+      apply (clarsimp simp: irq_map_wellformed_aux_def s0_internal_def Sys1PAS_def)
       apply (clarsimp simp: Sys1AgentMap_def)
-      apply (clarsimp simp: ptrFromPAddr_def s0_ptr_defs cte_level_bits_def
-                            pptrBaseOffset_def pptrBase_def Kernel_Config.physBase_def)
-      apply (drule le_less_trans[OF irq_node_offs_min[simplified s0_ptr_defs cte_level_bits_def, simplified]])
-      apply simp
+      apply (clarsimp simp: s0_ptr_defs ptr_range_def pageBits_def cte_level_bits_def)
+      apply word_bitwise
      apply (clarsimp simp: tcb_domain_map_wellformed_aux_def
                            Sys1PAS_def Sys1AgentMap_def
                            default_domain_def minBound_word
@@ -1065,18 +1062,10 @@ lemma Sys1_pas_refined:
                      dest!: graph_ofD
                      split: if_splits)
      apply (rule Sys1AgentMap_simps(13))
-      apply simp
-     apply (drule_tac x=ac in plus_one_helper2)
-      apply (simp add: ptrFromPAddr_def pptrBaseOffset_def pptrBase_def Kernel_Config.physBase_def
-                       shared_page_ptr_def kernel_base_def)
-     apply (simp add: add.commute)
+     apply (simp add: ptr_range_def pageBits_def shared_page_ptr_phys_def)
     apply (erule notE)
     apply (rule Sys1AgentMap_simps(13)[symmetric])
-     apply simp
-    apply (drule_tac x=ac in plus_one_helper2)
-     apply (simp add: ptrFromPAddr_def pptrBaseOffset_def pptrBase_def Kernel_Config.physBase_def
-                      s0_ptr_defs)
-    apply (simp add: add.commute)
+    apply (simp add: ptr_range_def pageBits_def shared_page_ptr_phys_def)
 
    apply (rule subsetI, clarsimp)
    apply (erule state_asids_to_policy_aux.cases)
@@ -1261,7 +1250,7 @@ lemma valid_obj_s0[simp]:
           apply (simp add: well_formed_cnode_n_def)
          apply (fastforce simp: Low_pd'_def High_pd'_def Low_pt'_def High_pt'_def
                                 Low_pt_ptr_def High_pt_ptr_def
-                                shared_page_ptr_def
+                                shared_page_ptr_phys_def shared_page_ptr_virt_def
                                 valid_vm_rights_def vm_kernel_only_def
                                 kernel_base_def pageBits_def pt_bits_def vmsz_aligned_def
                                 is_aligned_def[THEN iffD2]
@@ -1611,11 +1600,8 @@ lemma valid_arch_objs_s0[simp]:
   "valid_vspace_objs s0_internal"
   apply (clarsimp simp: valid_vspace_objs_def obj_at_def s0_internal_def)
   apply (drule kh0_SomeD)
-  apply (erule disjE | clarsimp simp:  pageBits_def addrFromPPtr_def
-      pptrBaseOffset_def pptrBase_def Kernel_Config.physBase_def is_aligned_def
-      obj_at_def kh0_def kh0_obj_def kernel_mapping_slots_def
-      High_pt'_def Low_pt'_def High_pd'_def Low_pd'_def ptrFromPAddr_def
-     | erule vs_lookupE, force simp: vs_lookup_def arch_state0_def vs_asid_refs_def)+
+  apply (erule disjE | clarsimp simp: addrFromPPtr_def
+         | erule vs_lookupE, force simp: arch_state0_def vs_asid_refs_def)+
   done
 
 
@@ -1638,11 +1624,10 @@ lemma valid_arch_caps_s0[simp]:
 lemma valid_global_objs_s0[simp]:
   "valid_global_objs s0_internal"
   apply (clarsimp simp: valid_global_objs_def s0_internal_def arch_state0_def)
-  by (force simp: valid_vso_at_def obj_at_def kh0_def kh0_obj_def s0_ptr_defs
-                     addrFromPPtr_def pptrBaseOffset_def pptrBase_def
-                     Kernel_Config.physBase_def is_aligned_def pageBits_def
-                     kernel_mapping_slots_def empty_table_def pde_ref_def
-                     valid_pde_mappings_def)+
+  apply (force simp: valid_vso_at_def obj_at_def kh0_def kh0_obj_def
+                     is_aligned_addrFromPPtr kernel_base_aligned_pageBits
+                     kernel_mapping_slots_def empty_table_def pde_ref_def valid_pde_mappings_def)
+  done
 
 lemma valid_kernel_mappings_s0[simp]:
   "valid_kernel_mappings s0_internal"
@@ -1659,9 +1644,8 @@ lemma equal_kernel_mappings_s0[simp]:
   "equal_kernel_mappings s0_internal"
   apply (clarsimp simp: equal_kernel_mappings_def obj_at_def s0_internal_def)
   apply (drule kh0_SomeD)+
-  by (erule disjE
-     | force simp: kh0_obj_def High_pd'_def Low_pd'_def s0_ptr_defs kernel_mapping_slots_def
-                   addrFromPPtr_def pptrBaseOffset_def pptrBase_def Kernel_Config.physBase_def)+
+  apply (force simp: kh0_obj_def High_pd'_def Low_pd'_def s0_ptr_defs kernel_mapping_slots_def)
+  done
 
 lemma valid_asid_map_s0[simp]:
   "valid_asid_map s0_internal"

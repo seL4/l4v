@@ -698,7 +698,7 @@ definition state_hyp_refs_of :: "'z::state_ext state \<Rightarrow> obj_ref \<Rig
   "state_hyp_refs_of \<equiv> \<lambda>s p. case_option {} (hyp_refs_of) (kheap s p)"
 
 
-(* covered by ASIDPool case of valid_vspace_obj, inv_vmid, and definition of
+(* covered by ASIDPool case of valid_vspace_obj, vmid_inv, and definition of
    vspace_for_asid (asid 0 never mapped) *)
 definition valid_asid_map :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_asid_map \<equiv> \<top>"
@@ -1493,11 +1493,6 @@ lemma user_vtop_ge0[intro!,simp]:
 lemma canonical_user_ge0[intro!,simp]:
   "0 < canonical_user"
   by (simp add: canonical_user_def mask_def ipa_size_def)
-
-lemma pptr_base_kernel_elf_base: (* FIXME MK: candidate for Kernel_Config_Lemmas *)
-  "pptr_base < kernel_elf_base"
-  by (simp add: pptr_base_def pptrBase_def canonical_bit_def kernel_elf_base_def kernelELFBase_def
-                kernelELFPAddrBase_def Kernel_Config.physBase_def mask_def)
 
 lemma pptrTop_le_ipa_size:
   "pptrTop \<le> mask ipa_size"

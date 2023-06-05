@@ -10,6 +10,7 @@ theory PSpaceFuns_H
 imports
   ObjectInstances_H
   FaultMonad_H
+  ArchPSpace_H
   "Lib.DataMap"
 begin
 
@@ -21,6 +22,9 @@ requalify_consts
   storeWord
   loadWord
 end
+
+requalify_consts (in Arch)
+  deleteGhost
 
 definition deleteRange :: "( machine_word , 'a ) DataMap.map \<Rightarrow> machine_word \<Rightarrow> nat \<Rightarrow> ( machine_word , 'a ) DataMap.map"
 where "deleteRange m ptr bits \<equiv>

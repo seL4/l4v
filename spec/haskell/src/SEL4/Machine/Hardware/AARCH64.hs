@@ -336,7 +336,7 @@ data PTE
         pteDevice :: Bool,
         pteRights :: VMRights }
     | PageTablePTE {
-        pteBaseAddress :: PAddr }
+        ptePPN :: PAddr }
     deriving (Show, Eq)
 
 {- Simulator callbacks -}

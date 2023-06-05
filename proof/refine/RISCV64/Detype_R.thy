@@ -125,7 +125,7 @@ lemma deleteObjects_def2:
                                         then None else gsCNodes s x \<rparr>);
      stateAssert ksASIDMapSafe []
    od"
-  apply (simp add: deleteObjects_def is_aligned_mask[symmetric] unless_def)
+  apply (simp add: deleteObjects_def is_aligned_mask[symmetric] unless_def deleteGhost_def)
   apply (rule bind_eqI, rule ext)
   apply (rule bind_eqI, rule ext)
   apply (simp add: bind_assoc[symmetric])
@@ -1900,23 +1900,6 @@ lemma cte_wp_at_top:
                split: option.splits)
    apply (intro conjI impI allI; simp add:not_le)
   apply (simp add: typeError_def fail_def cte_check_def split: Structures_H.kernel_object.splits)
-  done
-
-
-lemma neq_out_intv:
-  "\<lbrakk>a \<noteq> b; b \<notin> {a..a + c - 1} - {a} \<rbrakk> \<Longrightarrow> b \<notin> {a..a + c - 1}"
-  by simp
-
-lemma rule_out_intv:
-  "\<lbrakk> ksPSpace s a = Some obj; ksPSpace s b = Some obj'; pspace_distinct' s; a\<noteq>b \<rbrakk>
-   \<Longrightarrow> b \<notin> mask_range a (objBitsKO obj)"
-  apply (drule(1) pspace_distinctD')
-  apply (subst (asm) ps_clear_def)
-  apply (drule_tac x = b in orthD2)
-   apply fastforce
-  apply (drule neq_out_intv)
-   apply (simp add: mask_def add_diff_eq)
-  apply (simp add: mask_def add_diff_eq)
   done
 
 lemma locateCTE_monad:

@@ -12,6 +12,8 @@ on:
       - rt
       - aarch64
   pull_request:
+  # for testing:
+  workflow_dispatch:
 
 jobs:
   check:

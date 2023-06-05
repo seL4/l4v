@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -18,9 +19,6 @@ crunch sch_act_wf [wp]: replyFromKernel "\<lambda>s. sch_act_wf (ksSchedulerActi
 end
 
 context kernel_m begin
-
-(* FIXME: should do this from the beginning *)
-declare true_def [simp] false_def [simp]
 
 definition
   one_on_true :: "bool \<Rightarrow> nat"
@@ -629,7 +627,7 @@ lemma sendFaultIPC_ccorres:
              apply (clarsimp simp: cap_get_tag_isCap isEndpointCap_def isCap_simps
                                     ccap_relation_ep_helpers)
             apply (frule cap_get_tag_isCap(4)[symmetric])
-            apply (clarsimp simp: cap_get_tag_EndpointCap to_bool_def)
+            apply (clarsimp simp: cap_get_tag_EndpointCap)
             apply (drule cap_get_tag_isCap(4) [symmetric])
             apply (clarsimp simp: isCap_simps cap_endpoint_cap_lift cap_lift_capEPBadge_mask_eq)
            apply (clarsimp simp: case_bool_If)
@@ -1355,8 +1353,8 @@ lemma handleRecv_ccorres:
   apply (frule tcb_aligned'[OF tcb_at_invs'])
   apply clarsimp
   apply (intro conjI impI allI)
-             apply (clarsimp simp: cfault_rel_def seL4_Fault_CapFault_lift
-                              lookup_fault_missing_capability_lift is_cap_fault_def)+
+           apply (clarsimp simp: cfault_rel_def seL4_Fault_CapFault_lift
+                            lookup_fault_missing_capability_lift is_cap_fault_def)+
          apply (clarsimp simp: cap_get_tag_NotificationCap)
          apply (rule cmap_relationE1[OF cmap_relation_ntfn], assumption, erule ko_at_projectKO_opt)
          apply (clarsimp simp: cnotification_relation_def Let_def)

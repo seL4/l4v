@@ -12,7 +12,7 @@ imports
   "Word_Lib.WordSetup"
   "Lib.Defs"
   Setup_Locale
-  Kernel_Config_Lemmas
+  Kernel_Config
 begin
 
 context Arch begin global_naming RISCV64
@@ -109,10 +109,13 @@ definition kernelELFPAddrBase :: machine_word
   where
   "kernelELFPAddrBase = physBase + 0x4000000"
 
+definition pptrTop :: machine_word
+  where
+  "pptrTop \<equiv> - (1 << 31)"
+
 definition kernelELFBase :: machine_word
   where
-  (* note: the - (1 << 31) here is PADDR_TOP in C *)
-  "kernelELFBase = - (1 << 31) + (kernelELFPAddrBase && mask 30)" (* 2^64 - 2 GiB + ... *)
+  "kernelELFBase = pptrTop + (kernelELFPAddrBase && mask 30)" (* 2^64 - 2 GiB + ... *)
 
 definition kernelELFBaseOffset :: machine_word
   where

@@ -248,15 +248,6 @@ lemma idle_thread_in_kernel_window_init_arch_state[simp]:
   apply (rule conjI; unat_arith)
   done
 
-lemma irq_node_pptr_base_kernel_elf_base:
-  "\<lbrakk>x \<le> pptr_base + (m + (mask cte_level_bits + 0x3000)); m \<le> mask (size irq) << cte_level_bits \<rbrakk>
-   \<Longrightarrow> \<not> kernel_elf_base \<le> x" for irq::irq
-  apply (simp add: word_size cte_level_bits_def mask_def pptr_base_def pptrBase_def
-                   Kernel_Config.physBase_def kernel_elf_base_def kernelELFBase_def canonical_bit_def
-                   not_le)
-  apply unat_arith
-  done
-
 lemma irq_node_in_kernel_window_init_arch_state':
   "\<lbrakk> init_irq_node_ptr + m \<le> x; x \<le> init_irq_node_ptr + m + mask cte_level_bits;
      m \<le> mask (size (irq::irq)) << cte_level_bits\<rbrakk>

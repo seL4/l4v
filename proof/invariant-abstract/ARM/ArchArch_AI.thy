@@ -1256,7 +1256,6 @@ lemma aligned_sum_less_kernel_base:
    apply (case_tac sz,simp_all add:kernel_base_def is_aligned_def)+
   done
 
-
 lemma arch_decode_inv_wf[wp]:
   "\<lbrace>invs and valid_cap (cap.ArchObjectCap arch_cap) and
     cte_wp_at ((=) (cap.ArchObjectCap arch_cap)) slot and
@@ -1373,7 +1372,7 @@ lemma arch_decode_inv_wf[wp]:
                               linorder_not_le aligned_sum_less_kernel_base
                         elim: is_aligned_weaken split: vmpage_size.split
                        split: if_splits
-                      intro!: is_aligned_addrFromPPtr is_aligned_addrFromPPtr_n
+                      intro!: is_aligned_addrFromPPtr_n
                               pbfs_atleast_pageBits)[2]
     apply (cases "invocation_type label = ArchInvocationLabel ARMPageUnmap")
      apply simp
