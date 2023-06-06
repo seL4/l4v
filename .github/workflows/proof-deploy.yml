@@ -101,4 +101,4 @@ jobs:
     - name: Push
       run: |
         cd l4v-${{ matrix.branch }}
-        git push -f origin HEAD:${{ matrix.branch }}
+        git push -f origin HEAD:${{ matrix.branch }}-rebased
