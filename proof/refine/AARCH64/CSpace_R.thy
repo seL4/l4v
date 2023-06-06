@@ -2529,9 +2529,6 @@ crunch state_hyp_refs_of'[wp]: cteInsert "\<lambda>s. P (state_hyp_refs_of' s)"
 crunch aligned'[wp]: cteInsert pspace_aligned'
   (wp: crunch_wps)
 
-crunch pspace_canonical'[wp]: cteInsert pspace_canonical'
-  (wp: crunch_wps)
-
 crunch distinct'[wp]: cteInsert pspace_distinct'
   (wp: crunch_wps)
 
@@ -4061,9 +4058,6 @@ lemma setupReplyMaster_wps[wp]:
   done
 
 crunch no_0_obj'[wp]: setupReplyMaster no_0_obj'
-  (wp: crunch_wps simp: crunch_simps)
-
-crunch pspace_canonical'[wp]: setupReplyMaster "pspace_canonical'"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma setupReplyMaster_valid_pspace':
@@ -6224,8 +6218,6 @@ lemma updateFreeIndex_forward_valid_mdb':
   apply (rule usableUntypedRange_mono2,
     auto simp add: isCap_simps valid_cap_simps' capAligned_def)
   done
-
-crunch pspace_canonical'[wp]: updateFreeIndex "pspace_canonical'"
 
 lemma updateFreeIndex_forward_invs':
   "\<lbrace>\<lambda>s. invs' s \<and> cte_wp_at' ((\<lambda>cap. isUntypedCap cap

@@ -1604,10 +1604,6 @@ shows
   apply(erule_tac x=aa in allE, erule_tac x=bb in allE, fastforce)
   done
 
-lemma insertNewCap_more_wps[wp]:
-  "\<lbrace>pspace_canonical'\<rbrace> insertNewCap parent slot cap \<lbrace>\<lambda>rv. pspace_canonical'\<rbrace>"
-  by (wpsimp simp: insertNewCap_def o_def wp: hoare_drop_imps)+
-
 definition apitype_of :: "cap \<Rightarrow> apiobject_type option"
 where
   "apitype_of c \<equiv> case c of
@@ -2906,7 +2902,7 @@ lemma inv_untyped_corres_helper1:
 
 lemma createNewCaps_valid_pspace_extras:
   "\<lbrace>(\<lambda>s.    n \<noteq> 0 \<and> ptr \<noteq> 0 \<and> range_cover ptr sz (APIType_capBits ty us) n
-          \<and> sz \<le> maxUntypedSizeBits \<and> canonical_address (ptr && ~~ mask sz)
+          \<and> sz \<le> maxUntypedSizeBits
           \<and> pspace_no_overlap' ptr sz s
           \<and> valid_pspace' s \<and> caps_no_overlap'' ptr sz s
           \<and> caps_overlap_reserved' {ptr .. ptr + of_nat n * 2 ^ APIType_capBits ty us - 1} s
@@ -2915,16 +2911,7 @@ lemma createNewCaps_valid_pspace_extras:
      createNewCaps ty ptr n us d
    \<lbrace>\<lambda>rv. pspace_aligned'\<rbrace>"
   "\<lbrace>(\<lambda>s.    n \<noteq> 0 \<and> ptr \<noteq> 0 \<and> range_cover ptr sz (APIType_capBits ty us) n
-          \<and> sz \<le> maxUntypedSizeBits \<and> canonical_address (ptr && ~~ mask sz)
-          \<and> pspace_no_overlap' ptr sz s
-          \<and> valid_pspace' s \<and> caps_no_overlap'' ptr sz s
-          \<and> caps_overlap_reserved' {ptr .. ptr + of_nat n * 2 ^ APIType_capBits ty us - 1} s
-          \<and> ksCurDomain s \<le> maxDomain
-   )\<rbrace>
-     createNewCaps ty ptr n us d
-   \<lbrace>\<lambda>rv. pspace_canonical'\<rbrace>"
-  "\<lbrace>(\<lambda>s.    n \<noteq> 0 \<and> ptr \<noteq> 0 \<and> range_cover ptr sz (APIType_capBits ty us) n
-          \<and> sz \<le> maxUntypedSizeBits \<and> canonical_address (ptr && ~~ mask sz)
+          \<and> sz \<le> maxUntypedSizeBits
           \<and> pspace_no_overlap' ptr sz s
           \<and> valid_pspace' s \<and> caps_no_overlap'' ptr sz s
           \<and> caps_overlap_reserved' {ptr .. ptr + of_nat n * 2 ^ APIType_capBits ty us - 1} s
@@ -2933,7 +2920,7 @@ lemma createNewCaps_valid_pspace_extras:
      createNewCaps ty ptr n us d
    \<lbrace>\<lambda>rv. pspace_distinct'\<rbrace>"
   "\<lbrace>(\<lambda>s.    n \<noteq> 0 \<and> ptr \<noteq> 0 \<and> range_cover ptr sz (APIType_capBits ty us) n
-          \<and> sz \<le> maxUntypedSizeBits \<and> canonical_address (ptr && ~~ mask sz)
+          \<and> sz \<le> maxUntypedSizeBits
           \<and> pspace_no_overlap' ptr sz s
           \<and> valid_pspace' s \<and> caps_no_overlap'' ptr sz s
           \<and> caps_overlap_reserved' {ptr .. ptr + of_nat n * 2 ^ APIType_capBits ty us - 1} s
@@ -2942,7 +2929,7 @@ lemma createNewCaps_valid_pspace_extras:
      createNewCaps ty ptr n us d
    \<lbrace>\<lambda>rv. valid_mdb'\<rbrace>"
   "\<lbrace>(\<lambda>s.    n \<noteq> 0 \<and> ptr \<noteq> 0 \<and> range_cover ptr sz (APIType_capBits ty us) n
-          \<and> sz \<le> maxUntypedSizeBits \<and> canonical_address (ptr && ~~ mask sz)
+          \<and> sz \<le> maxUntypedSizeBits
           \<and> pspace_no_overlap' ptr sz s
           \<and> valid_pspace' s \<and> caps_no_overlap'' ptr sz s
           \<and> caps_overlap_reserved' {ptr .. ptr + of_nat n * 2 ^ APIType_capBits ty us - 1} s
@@ -2950,21 +2937,18 @@ lemma createNewCaps_valid_pspace_extras:
    )\<rbrace>
      createNewCaps ty ptr n us d
    \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
-      apply (rule hoare_grab_asm)+
-      apply (rule hoare_pre,rule hoare_strengthen_post[OF createNewCaps_valid_pspace])
-            apply (simp add:valid_pspace'_def)+
      apply (rule hoare_grab_asm)+
      apply (rule hoare_pre,rule hoare_strengthen_post[OF createNewCaps_valid_pspace])
-           apply (simp add:valid_pspace'_def)+
+         apply (simp add:valid_pspace'_def)+
     apply (rule hoare_grab_asm)+
     apply (rule hoare_pre,rule hoare_strengthen_post[OF createNewCaps_valid_pspace])
-          apply (simp add:valid_pspace'_def)+
+        apply (simp add:valid_pspace'_def)+
    apply (rule hoare_grab_asm)+
    apply (rule hoare_pre,rule hoare_strengthen_post[OF createNewCaps_valid_pspace])
-         apply (simp add:valid_pspace'_def)+
+       apply (simp add:valid_pspace'_def)+
   apply (rule hoare_grab_asm)+
   apply (rule hoare_pre,rule hoare_strengthen_post[OF createNewCaps_valid_pspace])
-        apply (simp add:valid_pspace'_def)+
+      apply (simp add:valid_pspace'_def)+
   done
 
 declare map_fst_zip_prefix[simp]
@@ -3191,7 +3175,7 @@ lemma createNewCaps_valid_cap':
         range_cover ptr sz (APIType_capBits ty us) n \<and>
         (ty = APIObjectType ArchTypes_H.CapTableObject \<longrightarrow> 0 < us) \<and>
         (ty = APIObjectType apiobject_type.Untyped \<longrightarrow> minUntypedSizeBits \<le> us \<and> us \<le> maxUntypedSizeBits) \<and>
-        ptr \<noteq> 0 \<and> sz \<le> maxUntypedSizeBits \<and> canonical_address (ptr && ~~ mask sz) \<rbrace>
+        ptr \<noteq> 0 \<and> sz \<le> maxUntypedSizeBits\<rbrace>
     createNewCaps ty ptr n us d
   \<lbrace>\<lambda>r s. \<forall>cap\<in>set r. s \<turnstile>' cap\<rbrace>"
   apply (rule hoare_assume_pre)
@@ -3945,11 +3929,6 @@ lemma vc'[simp] : "s \<turnstile>' capability.UntypedCap dev (ptr && ~~ mask sz)
   apply (simp add: invs_valid_objs')
   done
 
-lemma ptr_cn[simp]:
-  "canonical_address (ptr && ~~ mask sz)"
-  using vc' unfolding valid_cap'_def sorry (* FIXME AARCH64
-  by (clarsimp simp: kernel_mappings_canonical) *)
-
 lemma sz_limit[simp]:
   "sz \<le> maxUntypedSizeBits"
   using vc' unfolding valid_cap'_def by clarsimp
@@ -4622,7 +4601,9 @@ lemma (in range_cover) funky_aligned:
   done
 
 defs canonicalAddressAssert_def:
-  "canonicalAddressAssert p \<equiv> AARCH64.canonical_address p"
+  "canonicalAddressAssert p \<equiv> True" (* FIXME AARCH64: might need this to be either canonical_user
+  or something in the kernel region -- both are liftable from AInvs via valid_vspace_uses, but
+  valid_vspace_uses will first have to be added to the state relation *)
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
@@ -4853,17 +4834,8 @@ lemma inv_untyped_corres':
      apply (clarsimp simp: cte_wp_at_caps_of_state)
      done
 
-    have ptr_cn[simp]: "canonical_address (ptr && ~~ mask sz)"
-      using vc' unfolding valid_cap'_def sorry (* FIXME AARCH64
-      by (clarsimp simp: kernel_mappings_canonical) *)
-
     have sz_limit[simp]: "sz \<le> maxUntypedSizeBits"
       using vc' unfolding valid_cap'_def by clarsimp
-
-    have canonical_ptr[simp]: "canonical_address ptr"
-      using ptr_cn sz_limit
-      unfolding canonical_address_range maxUntypedSizeBits_def canonical_bit_def
-      by word_bitwise (simp add: word_size)
 
     note set_cap_free_index_invs_spec = set_free_index_invs[where cap = "cap.UntypedCap
         dev (ptr && ~~ mask sz) sz (if reset then 0 else idx)"
@@ -5460,7 +5432,6 @@ lemma invokeUntyped_invs'':
     note slots_invD = invokeUntyped_proofs.slots_invD[OF pf]
     note nidx[simp] = add_minus_neg_mask[where ptr = ptr]
     note idx_compare' = invokeUntyped_proofs.idx_compare'[OF pf]
-    note ptr_cn[simp] = invokeUntyped_proofs.ptr_cn[OF pf]
     note sz_limit[simp] = invokeUntyped_proofs.sz_limit[OF pf]
 
     have valid_global_refs': "valid_global_refs' s"

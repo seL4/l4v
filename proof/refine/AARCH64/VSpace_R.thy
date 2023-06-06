@@ -2671,9 +2671,6 @@ crunches storePTE
   and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
   (wp: setObject_ksPSpace_only updateObject_default_inv)
 
-crunches storePTE
-  for pspace_canonical'[wp]: "pspace_canonical'"
-
 lemma storePTE_valid_objs[wp]:
   "storePTE p pte \<lbrace>valid_objs'\<rbrace>"
   apply (simp add: storePTE_def doMachineOp_def split_def)

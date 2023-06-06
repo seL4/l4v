@@ -543,11 +543,6 @@ where
   \<forall>x \<in> dom (ksPSpace s). is_aligned x (objBitsKO (the (ksPSpace s x)))"
 
 definition
-  pspace_canonical' :: "kernel_state \<Rightarrow> bool"
-where
- "pspace_canonical' s \<equiv> \<forall>p \<in> dom (ksPSpace s). canonical_address p"
-
-definition
   pspace_distinct' :: "kernel_state \<Rightarrow> bool"
 where
   "pspace_distinct' s \<equiv>
@@ -815,7 +810,6 @@ definition
 where
   "valid_pspace' \<equiv> valid_objs' and
                    pspace_aligned' and
-                   pspace_canonical' and
                    pspace_distinct' and
                    no_0_obj' and
                    valid_mdb'"
@@ -1688,7 +1682,7 @@ lemmas valid_irq_states'_def = valid_irq_masks'_def
 lemma valid_pspaceE' [elim]:
   "\<lbrakk>valid_pspace' s;
     \<lbrakk> valid_objs' s; pspace_aligned' s; pspace_distinct' s; no_0_obj' s;
-      valid_mdb' s; pspace_canonical' s\<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
+      valid_mdb' s \<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
   unfolding valid_pspace'_def by simp
 
 lemma idle'_no_refs:
@@ -1803,7 +1797,7 @@ lemma state_hyp_refs_of'_pspaceI:
 
 lemma valid_pspace':
   "valid_pspace' s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_pspace' s'"
-  by  (auto simp add: valid_pspace'_def valid_objs'_def pspace_aligned'_def pspace_canonical'_def
+  by  (auto simp add: valid_pspace'_def valid_objs'_def pspace_aligned'_def
                      pspace_distinct'_def ps_clear_def no_0_obj'_def ko_wp_at'_def
                      typ_at'_def
            intro: valid_obj'_pspaceI valid_mdb'_pspaceI)
@@ -2650,10 +2644,6 @@ lemma pspace_aligned_update [iff]:
   "pspace_aligned' (f s) = pspace_aligned' s"
   by (simp add: pspace pspace_aligned'_def)
 
-lemma pspace_canonical_update [iff]:
-  "pspace_canonical' (f s) = pspace_canonical' s"
-  by (simp add: pspace pspace_canonical'_def)
-
 lemma pspace_distinct_update [iff]:
   "pspace_distinct' (f s) = pspace_distinct' s"
   by (simp add: pspace pspace_distinct'_def ps_clear_def)
@@ -3358,36 +3348,6 @@ lemma mask_wordRadix_less_wordBits:
 lemma priority_mask_wordRadix_size:
   "unat ((w::priority) && mask wordRadix) < wordBits"
   by (rule mask_wordRadix_less_wordBits, simp add: wordRadix_def word_size)
-
-(* FIXME AARCH64: needed? the lemmas these depend on got removed, probably because canonical works
-                  differently now
-lemma range_cover_canonical_address:
-  "\<lbrakk> range_cover ptr sz us n ; p < n ;
-     canonical_address (ptr && ~~ mask sz) ; sz \<le> maxUntypedSizeBits \<rbrakk>
-   \<Longrightarrow> canonical_address (ptr + of_nat p * 2 ^ us)"
-  apply (subst word_plus_and_or_coroll2[symmetric, where w = "mask sz"])
-  apply (subst add.commute)
-  apply (subst add.assoc)
-  apply (rule canonical_address_add[where n=sz] ; simp add: untypedBits_defs is_aligned_neg_mask)
-   apply (drule (1) range_cover.range_cover_compare)
-   apply (clarsimp simp: word_less_nat_alt)
-   apply unat_arith
-  apply (simp add: canonical_bit_def)
-  done
-
-lemma canonical_address_neq_mask:
-  "\<lbrakk> canonical_address ptr ; sz \<le> maxUntypedSizeBits \<rbrakk>
-   \<Longrightarrow> canonical_address (ptr && ~~ mask sz)"
-  by (simp add: canonical_address_sign_extended untypedBits_defs sign_extended_neq_mask
-                canonical_bit_def) *)
-
-lemma invs_pspace_canonical'[elim!]:
-  "invs' s \<Longrightarrow> pspace_canonical' s"
-  by (fastforce dest!: invs_valid_pspace' simp: valid_pspace'_def)
-
-lemma valid_pspace_canonical'[elim!]:
-  "valid_pspace' s \<Longrightarrow> pspace_canonical' s"
-  by (clarsimp simp: valid_pspace'_def)
 
 end
 (* The normalise_obj_at' tactic was designed to simplify situations similar to:

@@ -2194,7 +2194,6 @@ crunches rescheduleRequired, tcbSchedDequeue
 
 crunches rescheduleRequired, tcbSchedDequeue
   for no_0_obj'[wp]: "no_0_obj'"
-  and pspace_canonical'[wp]: "pspace_canonical'"
 
 lemma sts'_valid_pspace'_inv[wp]:
   "\<lbrace> valid_pspace' and tcb_at' t and valid_tcb_state' st \<rbrace>

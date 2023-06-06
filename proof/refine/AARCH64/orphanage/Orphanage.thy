@@ -1483,15 +1483,6 @@ lemma createObject_no_orphans:
                   split: object_type.split_asm apiobject_type.split_asm if_splits)
   done
 
-lemma canonical_address_neq_mask:
-  "\<lbrakk> canonical_address ptr ; sz \<le> maxUntypedSizeBits \<rbrakk>
-   \<Longrightarrow> canonical_address (ptr && ~~ mask sz)"
-  apply (simp add: untypedBits_defs sign_extended_neq_mask canonical_address_def
-                   canonical_address_of_def canonical_bit_def)
-  (* FIXME AARCH64 this doesn't have the same impace as on arches with proper canonical addresses,
-     but it's still used in some createNewObjects-related lemmas *)
-  sorry
-
 lemma createNewObjects_no_orphans:
   "\<lbrace>\<lambda>s. no_orphans s \<and> invs' s \<and> pspace_no_overlap' ptr sz s
          \<and> (\<forall>slot\<in>set slots. cte_wp_at' (\<lambda>c. cteCap c = capability.NullCap) slot s)
@@ -1501,14 +1492,14 @@ lemma createNewObjects_no_orphans:
          \<and> (tp = APIObjectType ArchTypes_H.CapTableObject \<longrightarrow> us > 0)
          \<and> caps_overlap_reserved' {ptr..ptr + of_nat (length slots) * 2 ^ APIType_capBits tp us - 1} s
          \<and> slots \<noteq> [] \<and> distinct slots \<and> ptr \<noteq> 0
-         \<and> sz \<le> maxUntypedSizeBits \<and> canonical_address ptr\<rbrace>
+         \<and> sz \<le> maxUntypedSizeBits\<rbrace>
    createNewObjects tp cref slots ptr us d
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   apply (rule hoare_name_pre_state)
   apply clarsimp
   apply (rule hoare_pre)
    apply (rule createNewObjects_wp_helper)
-       apply (simp add: canonical_address_neq_mask)+
+       apply (simp)+
    apply (simp add:insertNewCaps_def)
    apply wp
     apply (rule_tac P = "length caps = length slots" in hoare_gen_asm)

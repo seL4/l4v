@@ -24,7 +24,6 @@ lemma case_Null_If:
 
 crunches emptySlot
   for aligned'[wp]: pspace_aligned'
-  and pspace_canonical'[wp]: pspace_canonical'
   and distinct'[wp]: pspace_distinct'
   (simp: case_Null_If)
 
@@ -2585,9 +2584,6 @@ lemma archThreadSet_tcb_at'[wp]:
   "\<lbrace>\<top>\<rbrace> archThreadSet f t \<lbrace>\<lambda>_. tcb_at' t\<rbrace>"
   unfolding archThreadSet_def
   by (wpsimp wp: getObject_tcb_wp simp: obj_at'_def)
-
-crunches archThreadSet
-  for pspace_canonical'[wp]: pspace_canonical'
 
 lemma dissoc_invs':
   "\<lbrace>invs' and (\<lambda>s. \<forall>p. (\<exists>a. armHSCurVCPU (ksArchState s) = Some (p, a)) \<longrightarrow> p \<noteq> v) and

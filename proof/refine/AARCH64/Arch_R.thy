@@ -203,11 +203,8 @@ lemma performASIDControlInvocation_corres:
           apply (simp cong: conj_cong)
           apply (wp createObjects_valid_pspace'
                     [where sz = pageBits and ty="Inl (KOArch (KOASIDPool undefined))"])
-                apply (simp add: makeObjectKO_def)+
-              apply (simp add:objBits_simps range_cover_full valid_cap'_def pageBits_def)+
-            subgoal sorry (* FIXME AARCH64
-            apply (fastforce intro!: canonical_address_neq_mask simp: kernel_mappings_canonical) *)
-(*           apply (rule in_kernel_mappings_neq_mask, (simp add: valid_cap'_def bit_simps)+)[1] *)
+              apply (simp add: makeObjectKO_def)+
+            apply (simp add:objBits_simps range_cover_full valid_cap'_def pageBits_def)+
           apply (clarsimp simp:valid_cap'_def)
           apply (wp createObject_typ_at'
                     createObjects_orig_cte_wp_at'[where sz = pageBits])
@@ -562,7 +559,7 @@ lemma vmsz_aligned_user_region:
   using pbfs_atleast_pageBits[of sz]
   apply (simp flip: mask_2pm1 add: vmsz_aligned_def)
   apply (simp add: user_region_def canonical_user_def pptrUserTop_def)
-  apply (clarsimp simp add: bit_simps is_aligned_mask canonical_bit_def word_plus_and_or_coroll)
+  apply (clarsimp simp add: bit_simps is_aligned_mask word_plus_and_or_coroll)
   apply (rule conjI; clarsimp)
     apply (word_bitwise, clarsimp simp: word_size)+
   done
@@ -1410,7 +1407,7 @@ lemma decode_page_inv_wf[wp]:
 lemma below_pptrUserTop_in_user_region:
   "p < pptrUserTop \<Longrightarrow> p \<in> user_region"
   apply (simp add: user_region_def canonical_user_def pptrUserTop_def)
-  apply (simp add: bit_simps is_aligned_mask canonical_bit_def)
+  apply (simp add: bit_simps is_aligned_mask)
   done
 
 lemma decode_page_table_inv_wf[wp]:
@@ -1821,7 +1818,7 @@ lemma performASIDControlInvocation_invs' [wp]:
                cong: rev_conj_cong
          |strengthen safe_parent_strg'[where idx = "2^ pageBits"]
          | rule in_kernel_mappings_neq_mask
-         | simp add: bit_simps kernel_mappings_canonical_pt_base[unfolded bit_simps])+
+         | simp add: bit_simps)+
      apply (simp add:asid_pool_typ_at_ext'[symmetric])
      apply (wp createObject_typ_at')
     apply (simp add: objBits_simps valid_cap'_def
@@ -1877,7 +1874,7 @@ lemma performASIDControlInvocation_invs' [wp]:
                     asid_low_bits_def word_bits_def
                     range_cover_full descendants_range'_def2 is_aligned_mask
                     null_filter_descendants_of'[OF null_filter_simp'] bit_simps
-                    valid_cap_simps' mask_def kernel_mappings_canonical) *)
+                    valid_cap_simps' mask_def) *)
 
 
 lemma arch_performInvocation_invs':

@@ -649,7 +649,7 @@ next
     unfolding vref_step_def
     using nlevel1 nlevel
     by (auto intro!: user_region_or vref_for_level_user_region
-             simp: pt_bits_left_def bit_simps canonical_bit_def user_region_def
+             simp: pt_bits_left_def bit_simps user_region_def
                    pt_index_def canonical_user_def word_eqI_simps
              dest!: max_pt_level_enum)
 
@@ -658,7 +658,7 @@ next
      pt_slot_offset level pt (vref_step vref) = pt_slot_offset level pt vptr" for vref
     unfolding vref_step_def using nlevel1 nlevel
     sorry (* FIXME AARCH64
-    by (auto simp: pt_slot_offset_or_def user_region_def canonical_user_def canonical_bit_def
+    by (auto simp: pt_slot_offset_or_def user_region_def canonical_user_def
                    word_eqI_simps pt_index_def bit_simps pt_bits_left_def
              dest!: max_pt_level_enum
              intro!: word_eqI) *)
@@ -780,7 +780,7 @@ next
     unfolding vref_step_def
     using nlevel1 nlevel
     by (auto intro!: user_region_or vref_for_level_user_region
-             simp: pt_bits_left_def bit_simps canonical_bit_def user_region_def
+             simp: pt_bits_left_def bit_simps user_region_def
                    pt_index_def canonical_user_def word_eqI_simps
              dest!: max_pt_level_enum)
 
@@ -789,7 +789,7 @@ next
     pt_slot_offset level pt (vref_step vref) = pt_slot_offset level pt vptr" for vref
     unfolding vref_step_def using nlevel1 nlevel
     sorry (* FIXME AARCH64
-    by (auto simp: pt_slot_offset_or_def user_region_def canonical_user_def canonical_bit_def
+    by (auto simp: pt_slot_offset_or_def user_region_def canonical_user_def
                    word_eqI_simps pt_index_def bit_simps pt_bits_left_def
              dest!: max_pt_level_enum
              intro!: word_eqI) *)
