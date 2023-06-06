@@ -133,11 +133,6 @@ for arch in archs:
     elif "L4V_ARCH_IS_ARM" in os.environ:
         del os.environ["L4V_ARCH_IS_ARM"]
 
-    # Permit sorries in AARCH64 Refine during development
-    if arch == "AARCH64":
-        os.environ["REFINE_QUICK_AND_DIRTY"]="1"
-        print("Testing AARCH64 Refine in quick and dirty mode")
-
     sys.stdout.flush()
 
     # Arguments:
