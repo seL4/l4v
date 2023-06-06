@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: BSD-2-Clause
 
-name: Proofs
+name: Proof PR
 
 on:
   push:
