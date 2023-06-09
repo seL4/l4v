@@ -2685,7 +2685,7 @@ lemma cmap_relation_ep:
   by (simp add: Let_def)
 
 (* FIXME: MOVE *)
-lemma ccorres_pre_getEndpoint [corres_pre]:
+lemma ccorres_pre_getEndpoint [ccorres_pre]:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
            (ep_at' p and (\<lambda>s. \<forall>ep. ko_at' ep p s \<longrightarrow> P ep s))

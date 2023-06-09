@@ -123,7 +123,7 @@ fun ceqv_simpl_seq ctxt = Config.get ctxt (fst ceqv_simpl_sequence_pair)
 val setup =
   Attrib.setup @{binding "corres"} (Attrib.add_del ctac_add ctac_del)
     "correspondence rules"
-  #> Attrib.setup @{binding "corres_pre"}
+  #> Attrib.setup @{binding "ccorres_pre"}
     (Attrib.add_del ctac_pre_add ctac_pre_del)
     "correspondence preprocessing rules"
   #> Attrib.setup @{binding "corres_post"}

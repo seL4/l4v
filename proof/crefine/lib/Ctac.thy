@@ -1876,8 +1876,8 @@ begin
 
 (* Set up ctac proof sets.  These are tried in reverse order (further down is tried first) *)
 
-declare ccorres_Guard [corres_pre]
-declare ccorres_Guard_Seq [corres_pre]
+declare ccorres_Guard [ccorres_pre]
+declare ccorres_Guard_Seq [ccorres_pre]
 
 lemma c_guard_field_abs:
   fixes p :: "'a :: mem_type ptr"

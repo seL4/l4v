@@ -2545,7 +2545,7 @@ lemmas array_assertion_abs_tcb_ctes_add
     = array_assertion_abs_tcb_ctes_add[where
           tcb="\<lambda>s. Ptr (tcb' s)" for tcb', simplified]
 
-lemmas ccorres_move_array_assertion_tcb_ctes [corres_pre]
+lemmas ccorres_move_array_assertion_tcb_ctes [ccorres_pre]
     = ccorres_move_array_assertions [OF array_assertion_abs_tcb_ctes(1)[where
           tcb="\<lambda>s. Ptr (tcb' s)" for tcb', simplified]]
       ccorres_move_array_assertions [OF array_assertion_abs_tcb_ctes(2)]

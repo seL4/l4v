@@ -988,9 +988,6 @@ lemma gets_oapply_liftM_rewrite:
   by (simp add: liftM_def simpler_gets_def bind_def gets_map_def assert_opt_def return_def
            split: option.splits)
 
-(* FIXME AARCH64: move *)
-declare corres_guard_imp[wp_pre]
-
 lemma gets_return_gets_eq:
   "gets f >>= (\<lambda>g. return (h g)) = gets (\<lambda>s. h (f s))"
   by (simp add: simpler_gets_def bind_def return_def)
@@ -999,7 +996,7 @@ lemma getPoolPtr_corres:
   "corres (=) (K (0 < asid)) \<top> (gets (pool_for_asid asid)) (getPoolPtr (ucast asid))"
   unfolding pool_for_asid_def getPoolPtr_def asidRange_def
   apply simp
-  apply wp_pre
+  apply corres_pre
     apply (rule corres_assert_gen_asm)
     apply (rule corres_assert_gen_asm)
     apply (rule corres_trivial)

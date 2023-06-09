@@ -169,7 +169,7 @@ method corresK_pre =
       ((succeeds \<open>rule corresK_my_falseF\<close>, rule corresK_weaken_states) |
        rule corresK_weaken)))
 
-method corres_pre = (corres_raw_pre | corresK_pre)?
+method corres_pre' = (corres_raw_pre | corresK_pre)?
 
 lemma corresK_weakenK:
   "corres_underlyingK sr nf nf' F' r P P' f f' \<Longrightarrow> (F \<Longrightarrow> F') \<Longrightarrow> corres_underlyingK sr nf nf' F r P P' f f'"
@@ -662,7 +662,7 @@ method corres_once declares corres_splits corres corresK corresc_simp =
   (no_schematic_concl,
    (corres_alternate |
      (corres_fold_dc?,
-     (corres_pre,
+     (corres_pre',
       #break "corres",
       ( (check_corresK, determ \<open>rule corresK\<close>)
       | corres_apply
@@ -679,7 +679,7 @@ text \<open>Unconditionally try applying split rules. Useful for determining why
  in a given proof.\<close>
 
 method corres_unsafe_split declares corres_splits corres corresK corresc_simp =
-  ((rule corres_splits | corres_pre | corres_once)+)[1]
+  ((rule corres_splits | corres_pre' | corres_once)+)[1]
 
 end
 
@@ -873,7 +873,7 @@ text \<open>
 
 method corres_search uses search
   declares corres corres_symb_exec_ls corres_symb_exec_rs =
-  (corres_pre,
+  (corres_pre',
    use search[corres del] search[corresK del] search[corres_splits del] in
      \<open>use in \<open>corres_search_frame \<open>corres_search search: search\<close> search: search\<close>\<close>)[1]
 

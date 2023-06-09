@@ -1554,7 +1554,7 @@ lemma handleInterrupt_ccorres:
      apply (rule getIRQSlot_ccorres3)
      apply (rule ccorres_getSlotCap_cte_at)
      apply (rule_tac P="cte_at' rv" in ccorres_cross_over_guard)
-     supply ccorres_move_array_assertion_tcb_ctes [corres_pre del]
+     supply ccorres_move_array_assertion_tcb_ctes [ccorres_pre del]
      apply ctac
        apply csymbr
        apply csymbr
