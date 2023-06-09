@@ -40,7 +40,7 @@ lemma monadic_rewrite_impossible:
   "monadic_rewrite F E \<bottom> f g"
   by (clarsimp simp: monadic_rewrite_def)
 
-lemma monadic_rewrite_guard_imp[wp_pre]:
+lemma monadic_rewrite_guard_imp:
   "\<lbrakk> monadic_rewrite F E Q f g; \<And>s. P s \<Longrightarrow> Q s \<rbrakk> \<Longrightarrow> monadic_rewrite F E P f g"
   by (auto simp add: monadic_rewrite_def)
 
@@ -720,6 +720,10 @@ wpc_setup "\<lambda>m. monadic_rewrite F E Q' (m >>=E c) m'" wpc_helper_monadic_
 
 text \<open>Tactics\<close>
 
+named_theorems monadic_rewrite_pre
+declare monadic_rewrite_guard_imp[monadic_rewrite_pre]
+method monadic_rewrite_pre = (WP_Pre.pre_tac monadic_rewrite_pre)?
+
 method monadic_rewrite_step =
   determ \<open>rule monadic_rewrite_bind_tail monadic_rewrite_bindE_tail\<close>
 
@@ -757,14 +761,14 @@ method monadic_rewrite_single_pass methods start step action finalise =
 
 (* Step over LHS until action applies, then finalise. *)
 method monadic_rewrite_l_method methods action finalise =
-  monadic_rewrite_single_pass \<open>wp_pre, rule monadic_rewrite_trans\<close>
+  monadic_rewrite_single_pass \<open>monadic_rewrite_pre, rule monadic_rewrite_trans\<close>
                               monadic_rewrite_step
                               action
                               finalise
 
 (* Step over RHS until action applies, then finalise. *)
 method monadic_rewrite_r_method methods action finalise =
-  monadic_rewrite_single_pass \<open>wp_pre, rule monadic_rewrite_trans[rotated]\<close>
+  monadic_rewrite_single_pass \<open>monadic_rewrite_pre, rule monadic_rewrite_trans[rotated]\<close>
                               monadic_rewrite_step
                               action
                               finalise
@@ -784,7 +788,7 @@ method monadic_rewrite_symb_exec_resolutions methods m =
    conditions should be solvable by wpsimp, but the _m versions allow specifying a method or
    wpsimp options. *)
 method monadic_rewrite_symb_exec methods r m =
-  (wp_pre, no_name_eta, r; (monadic_rewrite_symb_exec_resolutions m)?)
+  (monadic_rewrite_pre, no_name_eta, r; (monadic_rewrite_symb_exec_resolutions m)?)
 
 ML \<open>
 structure Monadic_Rewrite = struct

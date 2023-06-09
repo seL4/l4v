@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: BSD-2-Clause
@@ -10,8 +11,6 @@ imports
   Eisbach_Tools.Trace_Schematic_Insts
   "HOL-Eisbach.Eisbach_Tools"
 begin
-
-named_theorems wp_pre
 
 ML \<open>
 structure WP_Pre = struct
@@ -51,21 +50,22 @@ fun pre_tac trace ctxt pre_rules used_thms_ref i t = let
     then Seq.empty else Seq.single t2 end
     handle Option => Seq.empty
 
-fun tac trace used_thms_ref ctxt = let
-    val pres = Named_Theorems.get ctxt @{named_theorems wp_pre}
-  in pre_tac trace ctxt pres used_thms_ref end
-
 val method =
   let
     val used_thms_ref = Unsynchronized.ref [] : (string * string * term) list Unsynchronized.ref
   in
-    Args.context >> (fn _ => fn ctxt =>
-      Method.SIMPLE_METHOD' (tac (Config.get ctxt wp_trace) used_thms_ref ctxt))
+    Attrib.thms >> (fn thms => fn ctxt =>
+      Method.SIMPLE_METHOD' (pre_tac (Config.get ctxt wp_trace) ctxt thms used_thms_ref))
   end
 end
 \<close>
 
-method_setup wp_pre0 = \<open>WP_Pre.method\<close>
+(* This method takes a list of theorems as parameter.
+   See wp_pre definition below for an example use. *)
+method_setup pre_tac = \<open>WP_Pre.method\<close>
+
+named_theorems wp_pre
+method wp_pre0 = pre_tac wp_pre
 method wp_pre = wp_pre0?
 
 definition

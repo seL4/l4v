@@ -210,7 +210,10 @@ end
 
 text \<open>The guard weakening rule\<close>
 
-lemma stronger_corres_guard_imp:
+named_theorems corres_pre
+method corres_pre = (WP_Pre.pre_tac corres_pre)?
+
+lemma stronger_corres_guard_imp[corres_pre]:
   assumes x: "corres_underlying sr nf nf' r Q Q' f g"
   assumes y: "\<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> sr \<rbrakk> \<Longrightarrow> Q s"
   assumes z: "\<And>s s'. \<lbrakk> P s; P' s'; (s, s') \<in> sr \<rbrakk> \<Longrightarrow> Q' s'"
@@ -221,12 +224,27 @@ lemma corres_guard_imp:
   assumes x: "corres_underlying sr nf nf' r Q Q' f g"
   assumes y: "\<And>s. P s \<Longrightarrow> Q s" "\<And>s. P' s \<Longrightarrow> Q' s"
   shows      "corres_underlying sr nf nf' r P P' f g"
-  apply (rule stronger_corres_guard_imp)
+  apply corres_pre
     apply (rule x)
    apply (simp add: y)+
   done
 
-lemma corres_rel_imp:
+lemma corres_guard_imp2:
+  "\<lbrakk>corres_underlying sr nf nf' r Q P' f g; \<And>s. P s \<Longrightarrow> Q s\<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
+  by corres_pre
+(* FIXME: names\<dots> (cf. corres_guard2_imp below) *)
+lemmas corres_guard1_imp = corres_guard_imp2
+
+lemma corres_guard2_imp:
+  "\<lbrakk>corres_underlying sr nf nf' r P Q' f g; \<And>s. P' s \<Longrightarrow> Q' s\<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
+  by corres_pre
+
+named_theorems corres_rel_pre
+method corres_rel_pre = WP_Pre.pre_tac corres_rel_pre
+
+lemma corres_rel_imp[corres_rel_pre]:
   assumes x: "corres_underlying sr nf nf' r' P P' f g"
   assumes y: "\<And>x y. r' x y \<Longrightarrow> r x y"
   shows      "corres_underlying sr nf nf' r P P' f g"
@@ -539,24 +557,12 @@ text \<open>Support for dividing correspondence along
 lemma corres_disj_division:
   "\<lbrakk> P \<or> Q; P \<Longrightarrow> corres_underlying sr nf nf' r R S x y; Q \<Longrightarrow> corres_underlying sr nf nf' r T U x y \<rbrakk>
      \<Longrightarrow> corres_underlying sr nf nf' r (\<lambda>s. (P \<longrightarrow> R s) \<and> (Q \<longrightarrow> T s)) (\<lambda>s. (P \<longrightarrow> S s) \<and> (Q \<longrightarrow> U s)) x y"
-  apply safe
-   apply (rule corres_guard_imp)
-     apply simp
-    apply simp
-   apply simp
-  apply (rule corres_guard_imp)
-    apply simp
-   apply simp
-  apply simp
-  done
+  by (safe; corres_pre, simp+)
 
 lemma corres_weaker_disj_division:
   "\<lbrakk> P \<or> Q; P \<Longrightarrow> corres_underlying sr nf nf' r R S x y; Q \<Longrightarrow> corres_underlying sr nf nf' r T U x y \<rbrakk>
      \<Longrightarrow> corres_underlying sr nf nf' r (R and T) (S and U) x y"
-  apply (rule corres_guard_imp)
-    apply (rule corres_disj_division)
-      apply simp+
-  done
+  by (corres_pre, rule corres_disj_division, simp+)
 
 lemma corres_symmetric_bool_cases:
   "\<lbrakk> P = P'; \<lbrakk> P; P' \<rbrakk> \<Longrightarrow> corres_underlying srel nf nf' r Q Q' f g;
@@ -575,7 +581,7 @@ lemma corres_symb_exec_l:
   assumes y: "\<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace>"
   assumes nf: "nf' \<Longrightarrow> no_fail P m"
   shows      "corres_underlying sr nf nf' r P P' (m >>= (\<lambda>rv. x rv)) y"
-  apply (rule corres_guard_imp)
+  apply corres_pre
     apply (subst gets_bind_ign[symmetric], rule corres_split[OF _ z])
       apply (rule corres_noop2)
          apply (erule x)
@@ -593,7 +599,7 @@ lemma corres_symb_exec_r:
   assumes x: "\<And>s. P' s \<Longrightarrow> \<lbrace>(=) s\<rbrace> m \<lbrace>\<lambda>r. (=) s\<rbrace>"
   assumes nf: "nf' \<Longrightarrow> no_fail P' m"
   shows      "corres_underlying sr nf nf' r P P' x (m >>= (\<lambda>rv. y rv))"
-  apply (rule corres_guard_imp)
+  apply corres_pre
     apply (subst gets_bind_ign[symmetric], rule corres_split[OF _ z])
       apply (rule corres_noop2)
          apply (simp add: simpler_gets_def exs_valid_def)
@@ -618,7 +624,7 @@ proof -
     apply (erule nf)
     done
   show ?thesis
-  apply (rule corres_guard_imp)
+  apply corres_pre
     apply (subst return_bind[symmetric],
              rule corres_split [OF P])
       apply (rule z)
@@ -692,24 +698,13 @@ lemma corres_assume_pre:
   apply blast
   done
 
-lemma corres_guard_imp2:
-  "\<lbrakk>corres_underlying sr nf nf' r Q P' f g; \<And>s. P s \<Longrightarrow> Q s\<rbrakk> \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
-  by (blast intro: corres_guard_imp)
-(* FIXME: names\<dots> (cf. corres_guard2_imp below) *)
-lemmas corres_guard1_imp = corres_guard_imp2
-
-lemma corres_guard2_imp:
-  "\<lbrakk>corres_underlying sr nf nf' r P Q' f g; \<And>s. P' s \<Longrightarrow> Q' s\<rbrakk>
-   \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
-  by (drule (1) corres_guard_imp[where P'=P' and Q=P], assumption+)
-
 lemma corres_initial_splitE:
 "\<lbrakk> corres_underlying sr nf nf' (f \<oplus> r') P P' a c;
    \<And>rv rv'. r' rv rv' \<Longrightarrow> corres_underlying sr nf nf' (f \<oplus> r) (Q rv) (Q' rv') (b rv) (d rv');
    \<lbrace>P\<rbrace> a \<lbrace>Q\<rbrace>, \<lbrace>\<lambda>r s. True\<rbrace>;
    \<lbrace>P'\<rbrace> c \<lbrace>Q'\<rbrace>, \<lbrace>\<lambda>r s. True\<rbrace>\<rbrakk>
 \<Longrightarrow> corres_underlying sr nf nf' (f \<oplus> r) P P' (a >>=E b) (c >>=E d)"
-  apply (rule corres_guard_imp)
+  apply corres_pre
     apply (erule corres_splitEE)
       apply fastforce+
   done
@@ -958,7 +953,7 @@ next
   show ?case
     apply (simp add: mapME_x_def sequenceE_x_def)
     apply (fold mapME_x_def sequenceE_x_def dc_def)
-    apply (rule corres_guard_imp)
+    apply corres_pre
       apply (rule corres_splitEE)
          apply (rule x)
         apply (rule IH)
@@ -1160,7 +1155,7 @@ lemma corres_stateAssert_implied2:
   assumes g: "\<lbrace>Q\<rbrace> g \<lbrace>\<lambda>_. R'\<rbrace>"
   shows "corres_underlying sr nf nf' dc P Q f (g >>= (\<lambda>_. stateAssert Q' []))"
   apply (subst bind_return[symmetric])
-  apply (rule corres_guard_imp)
+  apply corres_pre
     apply (rule corres_split)
        apply (rule c)
       apply (clarsimp simp: corres_underlying_def return_def
