@@ -122,6 +122,7 @@ session LibTest (lib) in test = Refine +
     Value_Type_Test
     Named_Eta_Test
     Rules_Tac_Test
+    MonadicRewrite_Test
   (* use virtual memory function as an example, only makes sense on ARM: *)
   theories [condition = "L4V_ARCH_IS_ARM"]
     Corres_Test
