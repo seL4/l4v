@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: BSD-2-Clause
@@ -7,61 +8,64 @@
 theory WPC
 imports "WP_Pre"
 keywords "wpc_setup" :: thy_decl
-
 begin
 
-definition
-  wpc_helper :: "(('a \<Rightarrow> bool) \<times> 'b set)
-                 \<Rightarrow> (('a \<Rightarrow> bool) \<times> 'b set) \<Rightarrow> bool \<Rightarrow> bool" where
- "wpc_helper \<equiv> \<lambda>(P, P') (Q, Q') R. ((\<forall>s. P s \<longrightarrow> Q s) \<and> P' \<subseteq> Q') \<longrightarrow> R"
+(* Case splitting method producing independent guards (preconditions) for each case in a
+   datatype case split. The current setup can handle judgements such as valid, corres, or ccorres
+   with up to two independent predicate guards and one independent set-type guard. Unneeded guards
+   can be ignored in setup.
+
+   The helper predicate unifies the treatment of guards in the proof method. The P guards will be
+   transformed into Q guards in each branch of the case. The R is the judgement (valid, corres, etc).
+
+   The helper predicate encodes that the judgement supports a standard guard weakening rule,
+   from which rules for conjunction-lifting and forall-lifting follow below. These are then used
+   by the tactic to generate assumptions of the form "\<forall>y. x = SomeConstructor y \<longrightarrow> P y".
+
+   If more or other types of guards are needed, add them to the helper predicate and re-prove the
+   processing rules below. *)
+definition wpc_helper ::
+  "('a \<Rightarrow> bool) \<times> ('b \<Rightarrow> bool) \<times> 'c set \<Rightarrow> ('a \<Rightarrow> bool) \<times> ('b \<Rightarrow> bool) \<times> 'c set \<Rightarrow> bool \<Rightarrow> bool"
+  where
+  "wpc_helper \<equiv> \<lambda>(P, P', P'') (Q, Q', Q'') R.
+                  (\<forall>s. P s \<longrightarrow> Q s) \<and> (\<forall>s. P' s \<longrightarrow> Q' s) \<and> P'' \<subseteq> Q'' \<longrightarrow> R"
 
 lemma wpc_conj_process:
-  "\<lbrakk> wpc_helper (P, P') (A, A') C; wpc_helper (P, P') (B, B') D \<rbrakk>
-       \<Longrightarrow> wpc_helper (P, P') (\<lambda>s. A s \<and> B s, A' \<inter> B') (C \<and> D)"
+  "\<lbrakk> wpc_helper (P, P', P'') (A, A', A'') C; wpc_helper (P, P', P'') (B, B', B'') D \<rbrakk>
+   \<Longrightarrow> wpc_helper (P, P', P'') (\<lambda>s. A s \<and> B s, \<lambda>s. A' s \<and> B' s, A'' \<inter> B'') (C \<and> D)"
   by (clarsimp simp add: wpc_helper_def)
 
 lemma wpc_all_process:
-  "\<lbrakk> \<And>x. wpc_helper (P, P') (Q x, Q' x) (R x) \<rbrakk>
-       \<Longrightarrow> wpc_helper (P, P') (\<lambda>s. \<forall>x. Q x s, {s. \<forall>x. s \<in> Q' x}) (\<forall>x. R x)"
+  "\<lbrakk> \<And>x. wpc_helper (P, P', P'') (Q x, Q' x, Q'' x) (R x) \<rbrakk>
+   \<Longrightarrow> wpc_helper (P, P', P'') (\<lambda>s. \<forall>x. Q x s, \<lambda>s. \<forall>x. Q' x s, {s. \<forall>x. s \<in> Q'' x}) (\<forall>x. R x)"
   by (clarsimp simp: wpc_helper_def subset_iff)
 
 lemma wpc_all_process_very_weak:
-  "\<lbrakk> \<And>x. wpc_helper (P, P') (Q, Q') (R x) \<rbrakk> \<Longrightarrow> wpc_helper (P, P') (Q, Q') (\<forall>x. R x)"
+  "\<lbrakk> \<And>x. wpc_helper (P, P', P'') (Q, Q', Q'') (R x) \<rbrakk>
+   \<Longrightarrow> wpc_helper (P, P', P'') (Q, Q', Q'') (\<forall>x. R x)"
   by (clarsimp simp: wpc_helper_def)
 
 lemma wpc_imp_process:
-  "\<lbrakk> Q \<Longrightarrow> wpc_helper (P, P') (R, R') S \<rbrakk>
-        \<Longrightarrow> wpc_helper (P, P') (\<lambda>s. Q \<longrightarrow> R s, {s. Q \<longrightarrow> s \<in> R'}) (Q \<longrightarrow> S)"
+  "\<lbrakk> Q \<Longrightarrow> wpc_helper (P, P', P'') (R, R', R'') S \<rbrakk>
+   \<Longrightarrow> wpc_helper (P, P', P'') (\<lambda>s. Q \<longrightarrow> R s, \<lambda>s. Q \<longrightarrow> R' s, {s. Q \<longrightarrow> s \<in> R''}) (Q \<longrightarrow> S)"
   by (clarsimp simp add: wpc_helper_def subset_iff)
 
 lemma wpc_imp_process_weak:
-  "\<lbrakk> wpc_helper (P, P') (R, R') S \<rbrakk> \<Longrightarrow> wpc_helper (P, P') (R, R') (Q \<longrightarrow> S)"
+  "\<lbrakk> wpc_helper (P, P', P'') (R, R', R'') S \<rbrakk> \<Longrightarrow> wpc_helper (P, P', P'') (R, R', R'') (Q \<longrightarrow> S)"
   by (clarsimp simp add: wpc_helper_def)
 
-lemmas wpc_processors
-  = wpc_conj_process wpc_all_process wpc_imp_process
-lemmas wpc_weak_processors
-  = wpc_conj_process wpc_all_process wpc_imp_process_weak
-lemmas wpc_vweak_processors
-  = wpc_conj_process wpc_all_process_very_weak wpc_imp_process_weak
+lemmas wpc_processors       = wpc_conj_process wpc_all_process wpc_imp_process
+lemmas wpc_weak_processors  = wpc_conj_process wpc_all_process wpc_imp_process_weak
+lemmas wpc_vweak_processors = wpc_conj_process wpc_all_process_very_weak wpc_imp_process_weak
 
 lemma wpc_helperI:
-  "wpc_helper (P, P') (P, P') Q \<Longrightarrow> Q"
+  "wpc_helper (P, P', P'') (P, P', P'') Q \<Longrightarrow> Q"
   by (simp add: wpc_helper_def)
 
 lemma wpc_foo: "\<lbrakk> undefined x; False \<rbrakk> \<Longrightarrow> P x"
   by simp
 
-lemma foo:
-  assumes foo_elim: "\<And>P Q h. \<lbrakk> foo Q h; \<And>s. P s \<Longrightarrow> Q s \<rbrakk> \<Longrightarrow> foo P h"
-  shows
-  "\<lbrakk> \<And>x. foo (Q x) (f x); foo R g \<rbrakk> \<Longrightarrow>
-      foo (\<lambda>s. (\<forall>x. Q x s) \<and> (y = None \<longrightarrow> R s))
-         (case y of Some x \<Rightarrow> f x | None \<Rightarrow> g)"
-  by (auto split: option.split intro: foo_elim)
-
 ML \<open>
-
 signature WPC = sig
   exception WPCFailed of string * term list * thm list;
 
@@ -176,13 +180,9 @@ let
   val subst         = split RS iffd2_thm;
   val subst2        = instantiate_concl_pred ctxt pred subst;
 in
- (resolve_tac ctxt [subst2])
-   THEN'
- (resolve_tac ctxt [wpc_helperI])
-   THEN'
- (REPEAT_ALL_NEW (resolve_tac ctxt processors)
-    THEN_ALL_NEW
-  resolve_single_tac ctxt [fin])
+  resolve_tac ctxt [subst2]
+  THEN' resolve_tac ctxt [wpc_helperI]
+  THEN' (REPEAT_ALL_NEW (resolve_tac ctxt processors) THEN_ALL_NEW resolve_single_tac ctxt [fin])
 end;
 
 (* n.b. need to concretise the lazy sequence via a list to ensure exceptions
@@ -213,67 +213,87 @@ end;
 val _ =
     Outer_Syntax.command
         @{command_keyword "wpc_setup"}
-        "Add wpc stuff"
+        "Add new WPC term and helper rule"
         (P.term -- P.name >> (fn (tm, thm) => Toplevel.local_theory NONE NONE (add_wpc tm thm)))
 
 end;
 end;
-
 \<close>
 
 ML \<open>
-
-val wp_cases_tactic_weak = WeakestPreCases.wp_cases_tac @{thms wpc_weak_processors};
+val wp_cases_tactic_weak   = WeakestPreCases.wp_cases_tac @{thms wpc_weak_processors};
 val wp_cases_method_strong = WeakestPreCases.wp_cases_method @{thms wpc_processors};
 val wp_cases_method_weak   = WeakestPreCases.wp_cases_method @{thms wpc_weak_processors};
 val wp_cases_method_vweak  = WeakestPreCases.wp_cases_method @{thms wpc_vweak_processors};
-
 \<close>
 
+(* Main proof methods: *)
 method_setup wpc0 = \<open>wp_cases_method_strong\<close>
   "case splitter for weakest-precondition proofs"
 
 method_setup wpcw0 = \<open>wp_cases_method_weak\<close>
   "weak-form case splitter for weakest-precondition proofs"
 
+(* Instances specifically for wp (introducing schematic guards automatically): *)
 method wpc = (wp_pre, wpc0)
 method wpcw = (wp_pre, wpcw0)
 
-definition
-  wpc_test :: "'a set \<Rightarrow> ('a \<times> 'b) set \<Rightarrow> 'b set \<Rightarrow> bool"
-  where
- "wpc_test P R S \<equiv> (R `` P) \<subseteq> S"
+(* Test and example *)
+experiment
+begin
 
+(* Assume some kind of judgement wpc_test with a precondition P of type set and a
+   precondition Q of type 'a \<Rightarrow> bool: *)
+definition wpc_test :: "'a set \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> ('a \<times> 'b) set \<Rightarrow> 'b set \<Rightarrow> bool" where
+  "wpc_test P Q R S \<equiv> (R `` P) \<subseteq> S"
+
+(* Weakening rule to introduce schematics for the two guards *)
 lemma wpc_test_weaken:
-  "\<lbrakk> wpc_test Q R S; P \<subseteq> Q \<rbrakk> \<Longrightarrow> wpc_test P R S"
+  "\<lbrakk> wpc_test Q X' R S; P \<subseteq> Q; \<And>s. X s \<Longrightarrow> X' s \<rbrakk> \<Longrightarrow> wpc_test P X R S"
   by (simp add: wpc_test_def, blast)
 
+(* Setup rule, establishes connection between wpc_helper and judgment wpc_test. The precondition has
+   the judgement with transformed (Q) guards, the conclusion has the helper predicate with the
+   judgement applied to the original (P) guards. The guard arguments of wpc_helper must be in the
+   form below (no arguments or patterns) for the method to work properly.
+
+   Note that this example ignores the first predicate guard P, and only uses P'/P''. Use/leave out
+   guards as needed. *)
 lemma wpc_helper_validF:
-  "wpc_test Q' R S \<Longrightarrow> wpc_helper (P, P') (Q, Q') (wpc_test P' R S)"
-  by (simp add: wpc_test_def wpc_helper_def, blast)
+  "wpc_test Q'' Q' R S \<Longrightarrow> wpc_helper (P, P', P'') (Q, Q', Q'') (wpc_test P'' P' R S)"
+  by (simp add: wpc_test_def wpc_helper_def) blast
 
-setup \<open>
-let
-  val tm  = Thm.cterm_of @{context} (Logic.varify_global @{term "\<lambda>R. wpc_test P R S"});
-  val thm = @{thm wpc_helper_validF};
-in
-  WPCPredicateAndFinals.map (fn xs => (tm, thm) :: xs)
-end
-\<close>
+(* Set up the proof method for wpc_test. First parameter is a function that takes the argument
+   position on which the case split happens (here R) and returns the judgement. Second parameter
+   is the setup rule. *)
+wpc_setup "\<lambda>R. wpc_test P X R S" wpc_helper_validF
 
-lemma set_conj_Int_simp:
-  "{s \<in> S. P s} = S \<inter> {s. P s}"
-  by auto
-
+(* Demo for weak form (wpcw), produces a separate guard for each branch, no implications. *)
 lemma case_options_weak_wp:
-  "\<lbrakk> wpc_test P R S; \<And>x. wpc_test P' (R' x) S \<rbrakk>
-    \<Longrightarrow> wpc_test (P \<inter> P') (case opt of None \<Rightarrow> R | Some x \<Rightarrow> R' x) S"
+  "\<lbrakk> wpc_test P X R S; \<And>x. wpc_test P' X' (R' x) S \<rbrakk>
+    \<Longrightarrow> wpc_test (P \<inter> P') (\<lambda>s. X s \<and> X' s) (case opt of None \<Rightarrow> R | Some x \<Rightarrow> R' x) S"
   apply (rule wpc_test_weaken)
-   apply wpcw
+    apply wpcw
+     apply assumption
     apply assumption
-   apply assumption
+   apply simp
   apply simp
   done
 
+(* Demo for strong form (wpc), produces a separate guard for each branch with implications. *)
+lemma
+  "\<lbrakk> wpc_test P X R S; \<And>x. wpc_test (P' x) (X' x) (R' x) S \<rbrakk>
+    \<Longrightarrow> wpc_test (P \<inter> {s. \<forall>x. opt = Some x \<longrightarrow> s \<in> P' x})
+                 (\<lambda>s. X s \<and> (\<forall>x. X' x s))
+                 (case opt of None \<Rightarrow> R | Some x \<Rightarrow> R' x) S"
+  apply (rule wpc_test_weaken)
+    apply wpc
+     apply assumption
+    apply assumption
+   apply fastforce
+  apply clarsimp
+  done
+
+end
 
 end
