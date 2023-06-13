@@ -337,7 +337,7 @@ lemma sts_to_modify':
   apply (monadic_rewrite_l sts_noop \<open>wpsimp wp: get_object_wp\<close>)
    apply (simp add: bind_assoc)
    apply monadic_rewrite_symb_exec_l+
-       apply (rule_tac P="\<lambda>s'. s' = s \<and> x = the (get_tcb tcb s)" in monadic_rewrite_pre_imp_eq)
+       apply (rule_tac P="\<lambda>s'. s' = s \<and> tcba = the (get_tcb tcb s)" in monadic_rewrite_pre_imp_eq)
        apply (clarsimp simp: put_def modify_def get_def bind_def)
       apply (wpsimp wp: get_object_wp)+
   by (clarsimp simp: get_tcb_def tcb_at_def)
