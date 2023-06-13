@@ -1858,11 +1858,10 @@ method_setup ctac_print_xf = \<open>CtacImpl.corres_print_xf\<close>
   "Print out what ctac thinks is the current xf"
 
 (* Set up wpc *)
-lemma
-  wpc_helper_ccorres_final:
-  "ccorres_underlying sr G rv xf arrel axf Q Q' hs f f'
-   \<Longrightarrow> wpc_helper (P, P') (Q, Q')
-                  (ccorres_underlying sr G rv xf arrel axf P P' hs f f')"
+lemma wpc_helper_ccorres_final:
+  "ccorres_underlying sr G rv xf arrel axf Q Q'' hs f f'
+   \<Longrightarrow> wpc_helper (P, P', P'') (Q, Q', Q'')
+                  (ccorres_underlying sr G rv xf arrel axf P P'' hs f f')"
   apply (clarsimp simp: wpc_helper_def)
   apply (erule ccorres_guard_imp)
    apply auto
@@ -1870,6 +1869,7 @@ lemma
 
 wpc_setup "\<lambda>m. ccorres_underlying sr G rv xf arrel axf P P' hs m conc" wpc_helper_ccorres_final
 wpc_setup "\<lambda>m. ccorres_underlying sr G rv xf arrel axf P P' hs (m >>= a) conc" wpc_helper_ccorres_final
+wpc_setup "\<lambda>m. ccorres_underlying sr G rv xf arrel axf P P' hs (m >>=E a) conc" wpc_helper_ccorres_final
 
 context kernel
 begin

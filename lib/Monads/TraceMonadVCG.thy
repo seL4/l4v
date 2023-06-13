@@ -1965,32 +1965,33 @@ lemma hoare_K_bind [wp]:
 text \<open>Setting up the precondition case splitter.\<close>
 
 lemma wpc_helper_valid:
-  "\<lbrace>Q\<rbrace> g \<lbrace>S\<rbrace> \<Longrightarrow> wpc_helper (P, P') (Q, Q') \<lbrace>P\<rbrace> g \<lbrace>S\<rbrace>"
+  "\<lbrace>Q\<rbrace> g \<lbrace>S\<rbrace> \<Longrightarrow> wpc_helper (P, P', P'') (Q, Q', Q'') \<lbrace>P\<rbrace> g \<lbrace>S\<rbrace>"
   by (clarsimp simp: wpc_helper_def elim!: hoare_pre)
 
 lemma wpc_helper_validE:
-  "\<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>,\<lbrace>E\<rbrace> \<Longrightarrow> wpc_helper (P, P') (Q, Q') \<lbrace>P\<rbrace> f \<lbrace>R\<rbrace>,\<lbrace>E\<rbrace>"
+  "\<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>,\<lbrace>E\<rbrace> \<Longrightarrow> wpc_helper (P, P', P'') (Q, Q', Q'') \<lbrace>P\<rbrace> f \<lbrace>R\<rbrace>,\<lbrace>E\<rbrace>"
   by (clarsimp simp: wpc_helper_def elim!: hoare_pre)
 
 lemma wpc_helper_validE_R:
-  "\<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>,- \<Longrightarrow> wpc_helper (P, P') (Q, Q') \<lbrace>P\<rbrace> f \<lbrace>R\<rbrace>,-"
+  "\<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>,- \<Longrightarrow> wpc_helper (P, P', P'') (Q, Q', Q'') \<lbrace>P\<rbrace> f \<lbrace>R\<rbrace>,-"
   by (clarsimp simp: wpc_helper_def elim!: hoare_pre)
 
 lemma wpc_helper_validR_R:
-  "\<lbrace>Q\<rbrace> f -,\<lbrace>E\<rbrace> \<Longrightarrow> wpc_helper (P, P') (Q, Q') \<lbrace>P\<rbrace> f -,\<lbrace>E\<rbrace>"
+  "\<lbrace>Q\<rbrace> f -,\<lbrace>E\<rbrace> \<Longrightarrow> wpc_helper (P, P', P'') (Q, Q', Q'') \<lbrace>P\<rbrace> f -,\<lbrace>E\<rbrace>"
   by (clarsimp simp: wpc_helper_def elim!: hoare_pre)
 
 lemma wpc_helper_no_fail_final:
-  "no_fail Q f \<Longrightarrow> wpc_helper (P, P') (Q, Q') (no_fail P f)"
+  "no_fail Q f \<Longrightarrow> wpc_helper (P, P', P'') (Q, Q', Q'') (no_fail P f)"
   by (clarsimp simp: wpc_helper_def elim!: no_fail_pre)
 
 lemma wpc_helper_validNF:
-  "\<lbrace>Q\<rbrace> g \<lbrace>S\<rbrace>! \<Longrightarrow> wpc_helper (P, P') (Q, Q') \<lbrace>P\<rbrace> g \<lbrace>S\<rbrace>!"
+  "\<lbrace>Q\<rbrace> g \<lbrace>S\<rbrace>! \<Longrightarrow> wpc_helper (P, P', P'') (Q, Q', Q'') \<lbrace>P\<rbrace> g \<lbrace>S\<rbrace>!"
   apply (clarsimp simp: wpc_helper_def)
   by (metis hoare_wp_combs(2) no_fail_pre validNF_def)
 
+(* FIXME: this needs adjustment, case_prod Q is unlikely to unify *)
 lemma wpc_helper_validI:
-  "(\<lbrace>Q\<rbrace>,\<lbrace>R\<rbrace> g \<lbrace>G\<rbrace>,\<lbrace>S\<rbrace>) \<Longrightarrow> wpc_helper (P, P') (case_prod Q, Q') (\<lbrace>curry P\<rbrace>,\<lbrace>R\<rbrace> g \<lbrace>G\<rbrace>,\<lbrace>S\<rbrace>)"
+  "(\<lbrace>Q\<rbrace>,\<lbrace>R\<rbrace> g \<lbrace>G\<rbrace>,\<lbrace>S\<rbrace>) \<Longrightarrow> wpc_helper (P, P', P'') (case_prod Q, Q', Q'') (\<lbrace>curry P\<rbrace>,\<lbrace>R\<rbrace> g \<lbrace>G\<rbrace>,\<lbrace>S\<rbrace>)"
   by (clarsimp simp: wpc_helper_def elim!: validI_weaken_pre)
 
 wpc_setup "\<lambda>m. \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace>" wpc_helper_valid

@@ -32,7 +32,7 @@ lemma no_fail_pre[wp_pre]:
   by (simp add: no_fail_def)
 
 lemma wpc_helper_no_fail_final:
-  "no_fail Q f \<Longrightarrow> wpc_helper (P, P') (Q, Q') (no_fail P f)"
+  "no_fail Q f \<Longrightarrow> wpc_helper (P, P', P'') (Q, Q', Q'') (no_fail P f)"
   by (clarsimp simp: wpc_helper_def elim!: no_fail_pre)
 
 wpc_setup "\<lambda>m. no_fail P m" wpc_helper_no_fail_final

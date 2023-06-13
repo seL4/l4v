@@ -244,7 +244,7 @@ lemma dcorres_gets_the:
 
 lemma wpc_helper_dcorres:
   "dcorres r Q Q' f f'
-   \<Longrightarrow> wpc_helper (P, P') (Q, {s. Q' s}) (dcorres r P (\<lambda>s. s \<in> P') f f')"
+   \<Longrightarrow> wpc_helper (P, P', P'') (Q, Q', Q'') (dcorres r P P' f f')"
   apply (clarsimp simp: wpc_helper_def)
   apply (erule corres_guard_imp)
    apply simp

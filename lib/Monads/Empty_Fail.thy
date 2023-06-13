@@ -27,7 +27,7 @@ definition mk_ef :: "'a set \<times> bool \<Rightarrow> 'a set \<times> bool" wh
 subsection \<open>WPC setup\<close>
 
 lemma wpc_helper_empty_fail_final:
-  "empty_fail f \<Longrightarrow> wpc_helper (P, P') (Q, Q') (empty_fail f)"
+  "empty_fail f \<Longrightarrow> wpc_helper (P, P', P'') (Q, Q', Q'') (empty_fail f)"
   by (clarsimp simp: wpc_helper_def)
 
 wpc_setup "\<lambda>m. empty_fail m" wpc_helper_empty_fail_final

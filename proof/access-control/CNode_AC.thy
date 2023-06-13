@@ -727,7 +727,7 @@ lemmas[monad_commute_wp] =
 
 (* Sort-of VCG for monad_commute goals *)
 lemma wpc_helper_monad_commute:
-  "monad_commute P f g \<Longrightarrow> wpc_helper (P, P') (Q, Q') (monad_commute P f g)"
+  "monad_commute P f g \<Longrightarrow> wpc_helper (P, P', P'') (Q, Q', Q'') (monad_commute P f g)"
   by (clarsimp simp: wpc_helper_def)
 
 wpc_setup "\<lambda>m. monad_commute P f m" wpc_helper_monad_commute

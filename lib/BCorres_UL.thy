@@ -17,12 +17,12 @@ definition bcorres_underlying where
   "bcorres_underlying t f g \<equiv> \<forall>s. s_bcorres_underlying t f g s"
 
 lemma wpc_helper_bcorres:
-  "bcorres_underlying t f g \<Longrightarrow>  wpc_helper (P, P') (Q, Q') (bcorres_underlying t f g)"
-  by (simp add: wpc_helper_def)
+  "bcorres_underlying t f g \<Longrightarrow>  wpc_helper P Q (bcorres_underlying t f g)"
+  by (simp add: wpc_helper_def split: prod.split)
 
 lemma wpc_helper_s_bcorres:
-  "s_bcorres_underlying t f g s \<Longrightarrow>  wpc_helper (P, P') (Q, Q') (s_bcorres_underlying t f g s)"
-  by (simp add: wpc_helper_def)
+  "s_bcorres_underlying t f g s \<Longrightarrow>  wpc_helper P Q (s_bcorres_underlying t f g s)"
+  by (simp add: wpc_helper_def split: prod.split)
 
 wpc_setup "\<lambda>f. bcorres_underlying t f g" wpc_helper_bcorres
 wpc_setup "\<lambda>f. s_bcorres_underlying t f g s" wpc_helper_bcorres

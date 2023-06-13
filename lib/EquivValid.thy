@@ -572,10 +572,10 @@ lemmas pre_ev =
   hoare_pre
   equiv_valid_guard_imp
 
-subsection\<open>Tom instantiates wpc\<close>
+subsection\<open>wpc setup\<close>
 
 lemma wpc_helper_equiv_valid:
-  "equiv_valid D A B Q f \<Longrightarrow> wpc_helper (P, P') (Q, Q') (equiv_valid D A B P f)"
+  "equiv_valid D A B Q f \<Longrightarrow> wpc_helper (P, P', P'') (Q, Q', Q'') (equiv_valid D A B P f)"
   using equiv_valid_guard_imp
   apply (simp add: wpc_helper_def)
   apply (blast)

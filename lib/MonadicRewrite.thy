@@ -710,12 +710,13 @@ lemmas corres_gets_the_bind
 text \<open>Tool integration\<close>
 
 lemma wpc_helper_monadic_rewrite:
-  "monadic_rewrite F E Q' m m'
-   \<Longrightarrow> wpc_helper (P, P') (Q, {s. Q' s}) (monadic_rewrite F E (\<lambda>s. s \<in> P') m m')"
+  "monadic_rewrite F E Q m m'
+   \<Longrightarrow> wpc_helper (P, P', P'') (Q, Q', Q'') (monadic_rewrite F E P m m')"
   by (auto simp: wpc_helper_def elim!: monadic_rewrite_guard_imp)
 
 wpc_setup "\<lambda>m. monadic_rewrite F E Q' m m'" wpc_helper_monadic_rewrite
 wpc_setup "\<lambda>m. monadic_rewrite F E Q' (m >>= c) m'" wpc_helper_monadic_rewrite
+wpc_setup "\<lambda>m. monadic_rewrite F E Q' (m >>=E c) m'" wpc_helper_monadic_rewrite
 
 text \<open>Tactics\<close>
 

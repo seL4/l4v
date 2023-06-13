@@ -40,7 +40,7 @@ lemma validE_NF_alt_def:
 subsection \<open>@{method wpc} setup\<close>
 
 lemma wpc_helper_validNF:
-  "\<lbrace>Q\<rbrace> g \<lbrace>S\<rbrace>! \<Longrightarrow> wpc_helper (P, P') (Q, Q') \<lbrace>P\<rbrace> g \<lbrace>S\<rbrace>!"
+  "\<lbrace>Q\<rbrace> g \<lbrace>S\<rbrace>! \<Longrightarrow> wpc_helper (P, P', P'') (Q, Q', Q'') \<lbrace>P\<rbrace> g \<lbrace>S\<rbrace>!"
   unfolding wpc_helper_def
   by clarsimp (metis hoare_vcg_precond_imp no_fail_pre validNF_def)
 
