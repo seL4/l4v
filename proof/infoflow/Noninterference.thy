@@ -1370,15 +1370,27 @@ lemma ev_add_pre:
   apply simp
   done
 
-lemma check_active_irq_if_invs:
+lemma check_active_irq_if_invs[wp]:
+  "check_active_irq_if a \<lbrace>invs\<rbrace>"
+  sorry (* broken by timeprot -robs *)
+
+lemma check_active_irq_if_valid_list[wp]:
+  "check_active_irq_if a \<lbrace>valid_list\<rbrace>"
+  sorry (* broken by timeprot -robs *)
+
+lemma check_active_irq_if_valid_sched[wp]:
+  "check_active_irq_if a \<lbrace>valid_sched\<rbrace>"
+  sorry (* broken by timeprot -robs *)
+
+lemma check_active_irq_if_einvs:
   "check_active_irq_if a \<lbrace>einvs\<rbrace>"
-  sorry (* broken by timeprot -scottb *)
+  by (wpsimp wp:crunch_wps)
 
 lemma thread_set_schact_is_rct:
   "thread_set a b \<lbrace>schact_is_rct\<rbrace>"
   sorry (* broken by timeprot -scottb *)
 
-crunch invs[wp]: check_active_irq_if "einvs"
+crunch einvs[wp]: check_active_irq_if "einvs"
   (wp: dmo_getActiveIRQ_wp ignore: do_machine_op)
 
 crunch schact_is_rct[wp]: thread_set "schact_is_rct"
