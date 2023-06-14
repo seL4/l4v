@@ -6,7 +6,7 @@
 
 theory CachePartitionIntegrity
 imports InfoFlow.InfoFlow_IF
-  InfoFlow.ADT_IF (* Comment this out when you don't need the InfoFlow ADT definitions *)
+  InfoFlow.Noninterference (* InfoFlow ADT definitions and key invariant lemmas *)
 begin
 
 section \<open> Kernel heap-agnostic subset property definitions \<close>
@@ -2485,7 +2485,7 @@ lemma schedule_ta_subset_inv:
   apply (wpsimp wp: crunch_wps touch_objects_wp touch_object_wp' simp: crunch_simps)
   sorry
 
-(* Need to import InfoFlow.ADT_IF for the following section: *)
+(* Need to import InfoFlow.ADT_IF or later theories for the following section: *)
 
 \<comment> \<open> Instead of @{term\<open>call_kernel\<close>}, prove for monads used for each step of @{term\<open>ADT_A_if\<close>}. \<close>
 
@@ -2530,11 +2530,6 @@ crunches kernel_entry_if
   and valid_arch_state: "valid_arch_state"
 *)
 
-(* FIXME: Surely we have this from elsewhere?
-crunches kernel_entry_if
-  for pas_refined: "pas_refined aag"
-*)
-
 crunches handle_preemption_if
   for ta_subset_inv: "ta_subset_inv aag"
   (wp: crunch_wps simp: crunch_simps ta_subset_inv_def no_label_straddling_objs_def
@@ -2552,10 +2547,6 @@ lemma activate_thread_ta_subset_inv:
 crunches schedule_if
   for ta_subset_inv: "ta_subset_inv aag"
   (wp: crunch_wps schedule_no_label_straddling_objs)
-
-crunches kernel_exit_if
-  for ta_subset_inv: "ta_subset_inv aag"
-  (wp: crunch_wps)
 
 \<comment> \<open> Now that it's true for the monads of @{term\<open>ADT_A_if\<close>}, seems it's true
      for @{term\<open>call_kernel\<close>} as well. \<close>
