@@ -1041,7 +1041,10 @@ thm invs_if_Step_ADT_A_if
   kernel_entry_if_domain_time_sched_action
   hoare_false_imp ct_idle_lift
 
-crunch guarded_pas_domain: check_active_irq_if "guarded_pas_domain aag"
+crunch guarded_pas_domain[wp]: check_active_irq_if "guarded_pas_domain aag"
+crunch ct_running[wp]: check_active_irq_if "ct_running"
+crunch domain_sep_inv[wp]: check_active_irq_if "domain_sep_inv irqs st"
+crunch pas_refined[wp]: check_active_irq_if "pas_refined aag"
 
 lemma ta_subset_inv_if_step:
   "\<lbrakk>(((uc, s), m), (uc', s'), m') \<in> global_automaton_if check_active_irq_A_if (do_user_op_A_if utf)
@@ -1049,18 +1052,15 @@ lemma ta_subset_inv_if_step:
     ta_subset_inv initial_aag s;
     guarded_pas_domain initial_aag s;
     einvs s;
-    \<comment> \<open>schact_is_rct s;\<close>
     domain_sep_inv False s0_internal s;
-    \<comment> \<open>ct_active s \<longrightarrow> is_subject initial_aag (cur_thread s);
-    ct_active s;\<close>
     pas_refined initial_aag s;
     step_restrict ((uc', s'), m')\<rbrakk>
    \<Longrightarrow> ta_subset_inv initial_aag s' \<and> guarded_pas_domain initial_aag s' \<and>
-     einvs s' \<and> \<comment> \<open>schact_is_rct s' \<and>\<close> domain_sep_inv False s0_internal s' \<and>
-     \<comment> \<open>(ct_active s' \<longrightarrow> is_subject initial_aag (cur_thread s')) \<and> ct_active s' \<and>\<close>
+     einvs s' \<and> domain_sep_inv False s0_internal s' \<and>
      pas_refined initial_aag s'"
   apply(clarsimp simp:global_automaton_if_def)
   apply(erule disjE)
+   \<comment> \<open>Case: Kernel entry with preemption during event handling\<close>
    apply(clarsimp simp:kernel_call_A_if_def)
    (* FIXME: Adapt/prove lemmas for propagating the other invariants through, too. *)
    apply(subgoal_tac "ct_active s \<and> (ct_active s \<longrightarrow> is_subject initial_aag (cur_thread s)) \<and> schact_is_rct s")
@@ -1079,43 +1079,12 @@ lemma ta_subset_inv_if_step:
     apply(force intro:use_valid[OF _ kernel_entry_if_valid_list])
    apply(rule context_conjI)
     apply(force intro:use_valid[OF _ kernel_entry_if_valid_sched])
-(*
-   apply(rule context_conjI)
-    apply(clarsimp simp:schact_is_rct_def)
-    (* XXX: Cheatsheet for using wp to find an appropriate lemma *)
-    apply(rule_tac f="kernel_entry_if e uc" in use_valid[OF _])
-      apply force
-     (* FIXME: Doesn't seem to have a lemma. Moreover, not really sure we want this
-        to be a postcondition of every case.
-     apply(wpsimp wp:crunch_wps simp:crunch_simps)
-     find_theorems schact_is_rct kernel_entry_if
-     *)
-     subgoal sorry
-    apply force
-*)
    apply(rule context_conjI)
     apply(force intro:use_valid[OF _ kernel_entry_if_domain_sep_inv])
-(*
-   apply(rule context_conjI)
-    apply(rule_tac f="kernel_entry_if e uc" in use_valid[OF _])
-      apply force
-     apply(wpsimp wp:crunch_wps simp:crunch_simps)
-    apply force
-   apply(rule context_conjI)
-    apply(clarsimp simp:ct_in_state_def pred_tcb_at_def)
-    apply(rule_tac f="kernel_entry_if e uc" in use_valid[OF _])
-      apply force
-     (* FIXME: Doesn't seem to have a lemma. Moreover, not really sure we want this
-        to be a postcondition of every case.
-     apply(wpsimp wp:crunch_wps simp:crunch_simps)
-     find_theorems kernel_entry_if obj_at
-     *)
-     subgoal sorry
-    apply force
-*)
    (* kernel_entry_pas_refined wants schact_is_rct and ct_active *)
    apply(force intro:use_valid[OF _ kernel_entry_pas_refined])
   apply(erule disjE)
+   \<comment> \<open>Case: Kernel entry without preemption during event handling\<close>
    apply(clarsimp simp:kernel_call_A_if_def)
    apply(subgoal_tac "ct_active s \<and> (ct_active s \<longrightarrow> is_subject initial_aag (cur_thread s)) \<and> schact_is_rct s")
     prefer 2
@@ -1131,42 +1100,11 @@ lemma ta_subset_inv_if_step:
     apply(force intro:use_valid[OF _ kernel_entry_if_valid_list])
    apply(rule context_conjI)
     apply(force intro:use_valid[OF _ kernel_entry_if_valid_sched])
-(*
-   apply(rule context_conjI)
-    apply(clarsimp simp:schact_is_rct_def)
-    (* XXX: Cheatsheet for using wp to find an appropriate lemma *)
-    apply(rule_tac f="kernel_entry_if e uc" in use_valid[OF _])
-      apply force
-     (* FIXME: Doesn't seem to have a lemma. Moreover, not really sure we want this
-        to be a postcondition of every case.
-     apply(wpsimp wp:crunch_wps simp:crunch_simps)
-     find_theorems schact_is_rct kernel_entry_if
-     *)
-     subgoal sorry
-    apply force
-*)
    apply(rule context_conjI)
     apply(force intro:use_valid[OF _ kernel_entry_if_domain_sep_inv])
-(*
-   apply(rule context_conjI)
-    apply(rule_tac f="kernel_entry_if e uc" in use_valid[OF _])
-      apply force
-     apply(wpsimp wp:crunch_wps simp:crunch_simps)
-    apply force
-   apply(rule context_conjI)
-    apply(clarsimp simp:ct_in_state_def pred_tcb_at_def)
-    apply(rule_tac f="kernel_entry_if e uc" in use_valid[OF _])
-      apply force
-     (* FIXME: Doesn't seem to have a lemma. Moreover, not really sure we want this
-        to be a postcondition of every case.
-     apply(wpsimp wp:crunch_wps simp:crunch_simps)
-     find_theorems kernel_entry_if obj_at
-     *)
-     subgoal sorry
-    apply force
-*)
    apply(force intro:use_valid[OF _ kernel_entry_pas_refined])
   apply(erule disjE)
+   \<comment> \<open>Case: Handle in-kernel preemption\<close>
    apply(subgoal_tac "ct_active s \<and> (ct_active s \<longrightarrow> is_subject initial_aag (cur_thread s)) \<and> schact_is_rct s")
     prefer 2
     subgoal sorry
@@ -1182,42 +1120,11 @@ lemma ta_subset_inv_if_step:
     apply(force intro:use_valid[OF _ handle_preemption_if_valid_list])
    apply(rule context_conjI)
     apply(force intro:use_valid[OF _ handle_preemption_if_valid_sched])
-(*
-   apply(rule context_conjI)
-    apply(clarsimp simp:schact_is_rct_def)
-    (* XXX: Cheatsheet for using wp to find an appropriate lemma *)
-    apply(rule_tac f="handle_preemption_if uc" in use_valid[OF _])
-      apply force
-     (* FIXME: Doesn't seem to have a lemma. Moreover, not really sure we want this
-        to be a postcondition of every case.
-     apply(wpsimp wp:crunch_wps simp:crunch_simps)
-     find_theorems schact_is_rct handle_preemption_if
-     *)
-     subgoal sorry
-    apply force
-*)
    apply(rule context_conjI)
     apply(force intro:use_valid[OF _ handle_preemption_if_domain_sep_inv])
-(*
-   apply(rule context_conjI)
-    apply(rule_tac f="handle_preemption_if uc" in use_valid[OF _])
-      apply force
-     apply(wpsimp wp:crunch_wps simp:crunch_simps)
-    apply force
-   apply(rule context_conjI)
-    apply(clarsimp simp:ct_in_state_def pred_tcb_at_def)
-    apply(rule_tac f="handle_preemption_if uc" in use_valid[OF _])
-      apply force
-     (* FIXME: Doesn't seem to have a lemma. Moreover, not really sure we want this
-        to be a postcondition of every case.
-     apply(wpsimp wp:crunch_wps simp:crunch_simps)
-     find_theorems handle_preemption_if obj_at
-     *)
-     subgoal sorry
-    apply force
-*)
    apply(force intro:use_valid[OF _ handle_preemption_if_pas_refined])
   apply(erule disjE)
+   \<comment> \<open>Case: Schedule\<close>
    apply(clarsimp simp:kernel_schedule_if_def)
    apply(rule conjI)
     using guarded_active_ct_cur_domain
@@ -1230,46 +1137,15 @@ lemma ta_subset_inv_if_step:
     apply(force intro:use_valid[OF _ schedule_if_valid_list])
    apply(rule context_conjI)
     apply(force intro:use_valid[OF _ schedule_if_valid_sched])
-(*
-   apply(rule context_conjI)
-    apply(clarsimp simp:schact_is_rct_def)
-    (* FIXME: Happens to be true of schedule_if.
-       So is what we need a guard that only asks it to be true of cases like this? *)
-    apply(rule_tac f="schedule_if uc" in use_valid[OF _])
-      apply force
-     (* FIXME: Find the name of, or prove, the wp lemma *)
-     apply(wpsimp wp:crunch_wps simp:crunch_simps)
-    apply force
-*)
    apply(rule context_conjI)
     apply(force intro:use_valid[OF _ schedule_if_domain_sep_inv])
-(*
-   apply(rule context_conjI)
-    apply(rule_tac f="schedule_if uc" in use_valid[OF _])
-      apply force
-     (* FIXME: Happens NOT to be true of schedule_if?
-     apply(wpsimp wp:crunch_wps simp:crunch_simps)
-     find_theorems schedule_if ct_active is_subject *)
-     subgoal sorry
-    apply force
-   apply(rule context_conjI)
-    apply(clarsimp simp:ct_in_state_def pred_tcb_at_def)
-    apply(rule_tac f="schedule_if uc" in use_valid[OF _])
-      apply force
-     (* FIXME: Doesn't seem to have a lemma. Moreover, not really sure we want this
-        to be a postcondition of every case.
-     apply(wpsimp wp:crunch_wps simp:crunch_simps)
-     find_theorems schedule_if obj_at
-     *)
-     subgoal sorry
-    apply force
-*)
    apply(force intro:use_valid[OF _ schedule_if_pas_refined])
   apply(erule disjE)
+   \<comment> \<open>Case: Kernel exit\<close>
    apply(clarsimp simp:kernel_exit_A_if_def)
    apply(force intro:use_valid[OF _ kernel_exit_if_inv])
   apply(erule disjE)
-   (* Case: User causes exception *)
+   \<comment> \<open>Case: User runs, causes exception\<close>
    apply(clarsimp simp:check_active_irq_A_if_def do_user_op_A_if_def)
    apply(rule conjI)
     apply(force intro:use_valid[OF _ do_user_op_if_ta_subset_inv]
@@ -1277,27 +1153,28 @@ lemma ta_subset_inv_if_step:
    apply(rule context_conjI)
     apply(force intro:use_valid[OF _ do_use_op_guarded_pas_domain]
       use_valid[OF _ check_active_irq_if_guarded_pas_domain])
-   apply(rule context_conjI)
-    thm do_user_op_invs check_active_irq_if_invs
-    (* FIXME: These don't seem to be that easily usable
-    apply(force intro:use_valid[OF _ do_user_op_invs]
-      use_valid[OF _ check_active_irq_if_invs])
-    *)
+   apply(subgoal_tac "ct_running s")
+    prefer 2
     subgoal sorry
    apply(rule context_conjI)
-    subgoal sorry
+    apply(force intro:use_valid[OF _ do_user_op_if_invs, simplified, THEN conjunct1]
+      use_valid[OF _ check_active_irq_if_invs]
+      use_valid[OF _ check_active_irq_if_ct_running])
    apply(rule context_conjI)
-    subgoal sorry
+    apply(force intro:use_valid[OF _ do_user_op_if_valid_list]
+      use_valid[OF _ check_active_irq_if_valid_list]
+      use_valid[OF _ check_active_irq_if_ct_running])
    apply(rule context_conjI)
-    subgoal sorry
-   apply(rule use_valid[OF _ do_user_op_pas_refined])
-    apply force
-   apply(rule_tac f="check_active_irq_if uc" in use_valid)
-     apply force
-    apply(clarsimp simp:check_active_irq_if_def)
-    apply(wpsimp wp:crunch_wps simp:crunch_simps)
-   apply force
+    apply(force intro:use_valid[OF _ do_user_op_if_valid_sched]
+      use_valid[OF _ check_active_irq_if_valid_sched]
+      use_valid[OF _ check_active_irq_if_ct_running])
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ do_user_op_if_domain_sep_inv]
+      use_valid[OF _ check_active_irq_if_domain_sep_inv])
+   apply(force intro:use_valid[OF _ do_user_op_pas_refined]
+      use_valid[OF _ check_active_irq_if_pas_refined])
   apply(erule disjE)
+   \<comment> \<open>Case: User runs, no exception happens\<close>
    apply(clarsimp simp:check_active_irq_A_if_def do_user_op_A_if_def)
    apply(rule conjI)
     apply(force intro:use_valid[OF _ do_user_op_if_ta_subset_inv]
@@ -1305,22 +1182,28 @@ lemma ta_subset_inv_if_step:
    apply(rule context_conjI)
     apply(force intro:use_valid[OF _ do_use_op_guarded_pas_domain]
       use_valid[OF _ check_active_irq_if_guarded_pas_domain])
-   apply(rule context_conjI)
+   apply(subgoal_tac "ct_running s")
+    prefer 2
     subgoal sorry
    apply(rule context_conjI)
-    subgoal sorry
+    apply(force intro:use_valid[OF _ do_user_op_if_invs, simplified, THEN conjunct1]
+      use_valid[OF _ check_active_irq_if_invs]
+      use_valid[OF _ check_active_irq_if_ct_running])
    apply(rule context_conjI)
-    subgoal sorry
+    apply(force intro:use_valid[OF _ do_user_op_if_valid_list]
+      use_valid[OF _ check_active_irq_if_valid_list]
+      use_valid[OF _ check_active_irq_if_ct_running])
    apply(rule context_conjI)
-    subgoal sorry
-   apply(rule use_valid[OF _ do_user_op_pas_refined])
-    apply force
-   apply(rule_tac f="check_active_irq_if uc" in use_valid)
-     apply force
-    apply(clarsimp simp:check_active_irq_if_def)
-    apply(wpsimp wp:crunch_wps simp:crunch_simps)
-   apply force
+    apply(force intro:use_valid[OF _ do_user_op_if_valid_sched]
+      use_valid[OF _ check_active_irq_if_valid_sched]
+      use_valid[OF _ check_active_irq_if_ct_running])
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ do_user_op_if_domain_sep_inv]
+      use_valid[OF _ check_active_irq_if_domain_sep_inv])
+   apply(force intro:use_valid[OF _ do_user_op_pas_refined]
+      use_valid[OF _ check_active_irq_if_pas_refined])
   apply(erule disjE)
+   \<comment> \<open>Case: Interrupt while in user mode\<close>
    apply(clarsimp simp:check_active_irq_A_if_def)
    apply(rule conjI)
     apply(force intro:use_valid[OF _ check_active_irq_if_ta_subset_inv])
@@ -1344,6 +1227,7 @@ lemma ta_subset_inv_if_step:
     apply(wpsimp wp:crunch_wps simp:crunch_simps)
    apply force
   apply(erule disjE)
+   \<comment> \<open>Case: Interrupt while in idle mode\<close>
    apply(clarsimp simp:check_active_irq_A_if_def)
    apply(rule conjI)
     apply(force intro:use_valid[OF _ check_active_irq_if_ta_subset_inv])
@@ -1366,6 +1250,7 @@ lemma ta_subset_inv_if_step:
     apply(clarsimp simp:check_active_irq_if_def)
     apply(wpsimp wp:crunch_wps simp:crunch_simps)
    apply force
+  \<comment> \<open>Case: No interrupt while in idle mode\<close>
   apply(clarsimp simp:check_active_irq_A_if_def)
   apply(rule conjI)
    apply(force intro:use_valid[OF _ check_active_irq_if_ta_subset_inv])
@@ -1399,10 +1284,7 @@ lemma ta_subset_inv_execution:
   apply(rule_tac Q="pas_refined initial_aag (internal_state_if s) \<and>
     guarded_pas_domain initial_aag (internal_state_if s) \<and>
     einvs (internal_state_if s) \<and>
-    \<comment> \<open>schact_is_rct (internal_state_if s) \<and>\<close>
-    domain_sep_inv False s0_internal (internal_state_if s) \<comment> \<open> \<and>
-    (ct_active (internal_state_if s) \<longrightarrow> is_subject initial_aag (cur_thread (internal_state_if s))) \<and>
-    ct_active (internal_state_if s)\<close>"
+    domain_sep_inv False s0_internal (internal_state_if s)"
     in conjunct1)
   apply(induct js arbitrary: s rule: rev_induct)
    apply(rule conjI)
@@ -1426,11 +1308,7 @@ lemma ta_subset_inv_execution:
     pas_refined initial_aag (internal_state_if s') \<and>
     guarded_pas_domain initial_aag (internal_state_if s') \<and>
     einvs (internal_state_if s') \<and>
-    \<comment> \<open>schact_is_rct (internal_state_if s') \<and> \<close>
-    domain_sep_inv False s0_internal (internal_state_if s')
-    \<comment> \<open>
-    (ct_active (internal_state_if s') \<longrightarrow> is_subject initial_aag (cur_thread (internal_state_if s'))) \<and>
-    ct_active (internal_state_if s')\<close>}"])
+    domain_sep_inv False s0_internal (internal_state_if s')}"])
     apply force
    apply(clarsimp simp:inv_holds_def)
    using ta_subset_inv_if_step
