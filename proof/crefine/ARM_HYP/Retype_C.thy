@@ -5312,7 +5312,7 @@ lemma monadic_rewrite_setObject_vcpu_as_init:
   supply fun_upd_apply[simp del]
   apply simp
   apply (rule monadic_rewrite_gen_asm)
-  apply wp_pre
+  apply monadic_rewrite_pre
    apply (simp add: vcpuWriteReg_def vgicUpdate_def bind_assoc)
     apply (clarsimp simp: vcpuUpdate_def bind_assoc)
     (* explicitly state the vcpu we are setting for each setObject *)
