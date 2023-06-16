@@ -1148,27 +1148,25 @@ lemma ta_subset_inv_if_step:
     apply(force intro:use_valid[OF _ kernel_entry_if_ta_subset_inv])
    apply(rule context_conjI)
     apply(force intro:use_valid[OF _ kernel_entry_if_guarded_pas_domain])
-   (* FIXME: A bunch of lemmas want to know that we're in ct_active if e \<noteq> Interrupt,
-      but we don't know the status of either of these things.
-      Do we have anything that relates the status of ct_idle and e \<noteq> Interrupt?
-      NB: This is currently leant on by kernel_entry_if_invs, kernel_entry_if_valid_sched,
-      kernel_entry_if_domain_sep_inv, and kernel_entry_pas_refined *)
-   apply(subgoal_tac "e = Interrupt")
+   apply(subgoal_tac "e \<noteq> Interrupt \<longrightarrow> ct_active s")
     prefer 2
-    subgoal sorry
+     apply(subgoal_tac "ct_idle s \<longrightarrow> e = Interrupt")
+      prefer 2
+      using active_from_running ct_active_not_idle' apply blast
+    apply force
    apply(rule context_conjI)
-    apply(force intro:use_valid[OF _ kernel_entry_if_invs])
+    apply(fastforce intro:use_valid[OF _ kernel_entry_if_invs])
    apply(rule context_conjI)
     apply(force intro:use_valid[OF _ kernel_entry_if_valid_list])
    apply(rule context_conjI)
-    apply(force intro:use_valid[OF _ kernel_entry_if_valid_sched])
+    apply(fastforce intro:use_valid[OF _ kernel_entry_if_valid_sched])
    apply(rule context_conjI)
     apply(fastforce intro:use_valid[OF _ kernel_entry_if_domain_sep_inv])
    thm kernel_entry_pas_refined
    apply(subgoal_tac "is_subject initial_aag (cur_thread s)")
     prefer 2
     subgoal sorry
-   apply(force intro:use_valid[OF _ kernel_entry_pas_refined] simp:schact_is_rct_def)
+   apply(fastforce intro:use_valid[OF _ kernel_entry_pas_refined] simp:schact_is_rct_def)
   apply(erule disjE)
    \<comment> \<open>Case: Handle in-kernel preemption\<close>
    apply(clarsimp simp:kernel_handle_preemption_if_def invs_if_trimmed_def)
