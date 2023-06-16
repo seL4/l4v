@@ -926,6 +926,11 @@ definition get_next_domain
     let next_dom = (domain_list ds)!domain_index' in
       Partition (label_of (the_elem ((pasDomainAbs initial_aag) (fst next_dom))))"
 
+lemma get_next_domain_not_Sched:
+  "get_next_domain os \<noteq> PSched"
+  apply (clarsimp simp: get_next_domain_def)
+  by (meson partition.distinct)
+
 (* note: make a version of part that never returns PSched *)
 
 lemma get_next_domain_public:
@@ -1171,31 +1176,23 @@ lemma dirty_step_ta_equiv:
 lemma fourways_properties:
   "\<lbrakk>(s1, s5) \<in> ni.Step (); reachable s1; will_domain_switch s1;
         (s1, s2) \<in> fourways_oldclean; (s2, s3) \<in> fourways_dirty;
-        (s3, s4) \<in> fourways_gadget; (s4, s5) \<in> fourways_newclean\<rbrakk>
+        (s3, s4) \<in> fourways_gadget\<rbrakk>
        \<Longrightarrow> is_uwr_determined s1 \<and>
            snd ` ii.touched_addresses s2
            \<subseteq> {a. addr_domain initial_aag a = userPart s1} \<union>
               kernel_shared_precise \<and>
-           (s3 = s2 \<or>
-            is_publicly_determined s2 \<and>
-            ii.touched_addresses s3
-            \<subseteq> {(v, p) |v p.
-                p \<in> {a. addr_domain initial_aag a = userPart s} \<union>
-                     {a. addr_domain initial_aag a =
-                         get_next_domain s} \<union>
-                     kernel_shared_precise}) \<and>
+           s3 = s2 \<and>
            step_is_only_timeprotection_gadget s3 s4 \<and>
-           is_uwr_determined s4"
+           is_uwr_determined s4
+          \<and> userPart s2 = get_next_domain s1 \<and>
+           userPart s3 = get_next_domain s1 \<and>
+           userPart s4 = get_next_domain s1"
   apply (clarsimp simp: fourways_dirty_def fourways_newclean_def is_uwr_determined_def)
   apply (intro conjI)
    apply (rule oldclean_preserves_subset_inv; simp)
   (* here we need a definition of "step_is_only_timeprotection_gadget" to do something
       useful *)
-  subgoal sorry
-  done
-
-
-method try_solve_all methods m = all \<open>(m; fail)?\<close>
+  sorry
 
 interpretation ma?:time_protection_system PSched fch_lookup fch_read_impact fch_write_impact
   empty_fch fch_flush_cycles fch_flush_WCET pch_lookup pch_read_impact pch_write_impact do_pch_flush
@@ -1209,6 +1206,7 @@ interpretation ma?:time_protection_system PSched fch_lookup fch_read_impact fch_
                            p \<in> all_paddrs_of u \<union> all_paddrs_of u' \<union> kernel_shared_precise}"
   will_domain_switch _ _ _ get_next_domain
   fourways_oldclean fourways_dirty fourways_gadget fourways_newclean
+  _ True
   
   (* separate the locale instantiation obligations from definitions, and
      dispatch the definition subgoals. *)
@@ -1216,38 +1214,41 @@ interpretation ma?:time_protection_system PSched fch_lookup fch_read_impact fch_
   
   (* now we prove the locale assumptions *)
   apply unfold_locales
-                (* external uwr is equivalence *)
-                apply (rule uwr_equiv_rel)                
-               (* external uwr (sched) equalises curdomain *)
-               apply (erule external_uwr_same_domain)
-              (* the policy allows flows from the scheduler to everybody *)
-              apply (rule schedFlowsToAll)
-             (* only the scheduler can flow to the scheduler *)
-             apply (erule schedNotGlobalChannel)
-            (* external uwr (sched) equalises curdomain (again...) *)
-            apply (erule external_uwr_same_domain [OF uwr_sym])
-           (* will_domain_switch_public *)
-           apply (erule will_domain_switch_from_uwr)
-          (* next_latest_domainswitch_in_future *)
-          apply (rule nlds_in_future)
-         (* next_latest_domainswitch_flatsteps *)
-         apply (erule nlds_flatsteps; assumption)
-        (* get_next_domain_public *)
-        apply (erule get_next_domain_public)
-       (* touched addresses inv *)
-       apply (erule subset_inv_proof; assumption)
-      (* simple_steps *)
-      apply (erule simple_steps)
-     (* step_is_uwr_determimed for particular steps tells us that the
-        output touchedaddresses depend only on uwr *)
-     apply (rule uwr_determined_steps_ta_equiv; assumption)
-    (* dirty step TA equivalence *)
-    apply (erule dirty_step_ta_equiv; assumption)
-   (* can_split_four_ways *)
-   apply (rule domainswitch_splits_four_ways)
-  (* fourways_properties - facts about various states
-     within the fourways transitions *)
-  apply (erule fourways_properties; assumption)
+                    (* external uwr is equivalence *)
+                    apply (rule uwr_equiv_rel)                
+                   (* external uwr (sched) equalises curdomain *)
+                   apply (erule external_uwr_same_domain)
+                  (* the policy allows flows from the scheduler to everybody *)
+                  apply (rule schedFlowsToAll)
+                 (* only the scheduler can flow to the scheduler *)
+                 apply (erule schedNotGlobalChannel)
+                (* external uwr (sched) equalises curdomain (again...) *)
+                apply (erule external_uwr_same_domain [OF uwr_sym])
+               (* will_domain_switch_public *)
+               apply (erule will_domain_switch_from_uwr)
+              (* next_latest_domainswitch_in_future *)
+              apply (rule nlds_in_future)
+             (* next_latest_domainswitch_flatsteps *)
+             apply (erule nlds_flatsteps; assumption)
+            (* get_next_domain_not_sched *)
+            apply (rule get_next_domain_not_Sched)
+           (* get_next_domain_public *)
+           apply (erule get_next_domain_public)
+          (* touched addresses inv *)
+          apply (erule subset_inv_proof; assumption)
+         (* simple_steps *)
+         apply (erule simple_steps)
+        (* step_is_uwr_determimed for particular steps tells us that the
+           output touchedaddresses depend only on uwr *)
+        apply (rule uwr_determined_steps_ta_equiv; assumption)
+       (* dirty step TA equivalence *)
+       apply (erule dirty_step_ta_equiv; assumption)
+      (* can_split_four_ways *)
+      apply (rule domainswitch_splits_four_ways)
+     (* fourways_properties - facts about various states
+        within the fourways transitions *)
+     apply (simp only: if_True)
+     apply (erule fourways_properties; assumption)
   done
 end
 
