@@ -1020,7 +1020,6 @@ lemma accessible_vaddr_to_paddr:
   using pasDomainAbs_not_SilcLabel
   by blast
 
-thm ta_subset_inv_def touched_addrs_inv_def
 lemma ta_subset_inv_to_locale_form:
   "separation_kernel_policy initial_aag \<Longrightarrow>
    ta_subset_inv initial_aag (snd $ fst s) \<Longrightarrow>
@@ -1030,16 +1029,6 @@ lemma ta_subset_inv_to_locale_form:
   apply(clarsimp simp: ta_vaddr_to_paddr accessible_vaddr_to_paddr)
   apply(clarsimp simp:image_def)
   by blast
-
-thm invs_if_Step_ADT_A_if
-  (* Lemmas used by invs_if_Step_ADT_A_if *)
-  kernel_entry_if_invs kernel_entry_silc_inv[where st'=s0_internal]
-  kernel_entry_pas_refined[where st=s0_internal]
-  kernel_entry_if_valid_sched kernel_entry_if_only_timer_irq_inv
-  kernel_entry_if_domain_sep_inv kernel_entry_if_guarded_pas_domain
-  kernel_entry_if_domain_fields kernel_entry_if_idle_equiv
-  kernel_entry_if_domain_time_sched_action
-  hoare_false_imp ct_idle_lift
 
 crunch guarded_pas_domain[wp]: check_active_irq_if "guarded_pas_domain aag"
 crunch ct_running[wp]: check_active_irq_if "ct_running"
@@ -1051,11 +1040,6 @@ crunch pas_refined[wp]: check_active_irq_if "pas_refined aag"
 
 definition invs_if_trimmed :: "observable_if \<Rightarrow> bool" where
   "invs_if_trimmed s \<equiv>
-     \<comment> \<open>XXX: Not actually sure we need this. It's not telling us anything about whether we're
-         in ct_*, rather it is conditional on ct_idle.
-     (snd s \<noteq> KernelExit
-      \<longrightarrow> (ct_idle (internal_state_if s)
-      \<longrightarrow> user_context_of s = idle_context (internal_state_if s))) \<and> \<close>
      (case (snd s) of
         KernelEntry e \<Rightarrow> (e \<noteq> Interrupt \<longrightarrow> ct_running (internal_state_if s)) \<and>
                          (ct_running (internal_state_if s) \<or> ct_idle (internal_state_if s)) \<and>
@@ -1073,7 +1057,7 @@ lemma invs_if_trimmed:
   unfolding invs_if_def invs_if_trimmed_def
   by blast
 
-(* TODO: Move this to ADT_IF with the others *)
+(* TODO: Move this to ADT_IF with the others? *)
 thm pasObjectAbs_current_aag
 lemma pasDomainAbs_current_aag:
   "pasDomainAbs (current_aag x) = pasDomainAbs initial_aag"
@@ -1101,9 +1085,11 @@ lemma pas_refined_cur':
     apply blast+
   done
 
-thm pas_refined_current_aag'
-
-thm reachable_invs_if
+(* Note: It's almost surely asking for the wrong thing if we ever using lemmas in such a way as
+   to demand `pas_cur_domain` or `is_subject` about the initial_aag, because they both concern
+   the pasSubject of the given aag, which for the initial_aag is essentially arbitrary.
+   Thus, in situations where this would occur we instead invoke the step lemmas to preserve them
+   for (current_aag s) instead, then convert them back to the initial_aag version afterwards. *)
 lemma ta_subset_inv_if_step:
   "\<lbrakk>(((uc, s), m), (uc', s'), m') \<in> global_automaton_if check_active_irq_A_if (do_user_op_A_if utf)
       kernel_call_A_if kernel_handle_preemption_if kernel_schedule_if kernel_exit_A_if;
@@ -1117,49 +1103,23 @@ lemma ta_subset_inv_if_step:
    \<Longrightarrow> ta_subset_inv initial_aag s' \<and> invs_if_trimmed ((uc', s'), m') \<and>
      guarded_pas_domain initial_aag s' \<and> einvs s' \<and> domain_sep_inv False s0_internal s' \<and>
      pas_refined initial_aag s'"
-   apply(subgoal_tac "ta_subset_inv (current_aag s) s")
-    prefer 2
-    using ta_subset_inv_current_aag
-    apply force
-   apply(subgoal_tac "pas_refined (current_aag s) s")
-    prefer 2
-    using pas_refined_cur
-    apply blast
-   apply(subgoal_tac "guarded_pas_domain (current_aag s) s")
-    prefer 2
-    using guarded_pas_domain_cur
-    apply blast
+   apply(prop_tac "ta_subset_inv (current_aag s) s")
+    apply(force simp:ta_subset_inv_current_aag)
   apply(clarsimp simp:global_automaton_if_def)
   apply(erule disjE)
    \<comment> \<open>Case: Kernel entry with preemption during event handling\<close>
    apply(clarsimp simp:kernel_call_A_if_def invs_if_trimmed_def)
-   apply(subgoal_tac "ct_active s") (* i.e. st = Running \<or> st = Restart *)
-    prefer 2
-    using active_from_running
-    apply blast
-   apply(subgoal_tac "is_subject (current_aag s) (cur_thread s)")
-    (* NB: This is_subject clause is needed:
-       1. to apply guarded_active_ct_cur_domain to make kernel_entry_if_ta_subset_inv usable
-       2. by kernel_entry_pas_refined *)
-    prefer 2
+   apply(prop_tac "ct_active s")
+    apply(force simp:active_from_running)
+   apply(prop_tac "is_subject (current_aag s) (cur_thread s)")
     apply(clarsimp simp:current_aag_def)
-    using guarded_active_ct_cur_domain the_subject_of_aag_domain
+    using guarded_pas_domain_cur guarded_active_ct_cur_domain the_subject_of_aag_domain
     apply fastforce
-   (* Note: It's almost surely asking for the wrong thing if we're ever demanding pas_cur_domain
-      or is_subject about the initial_aag, because they both concern the pasSubject of the
-      given aag, which for the initial_aag is essentially arbitrary.
-      Thus, what we actually want is to invoke the lemmas that preserve them across the step for
-      (current_aag s) instead, then convert them back to the initial_aag version afterwards. *)
-   apply(subgoal_tac "pas_cur_domain (current_aag s) s")
-    prefer 2
-    apply(force dest:guarded_active_ct_cur_domain
-      simp:pasObjectAbs_current_aag pasDomainAbs_current_aag)
    apply(rule conjI)
-    apply(subgoal_tac "ta_subset_inv (current_aag s) s'")
-     prefer 2
-     apply(force intro:use_valid[OF _ kernel_entry_if_ta_subset_inv])
-    using ta_subset_inv_current_aag
-    apply force
+    apply(prop_tac "ta_subset_inv (current_aag s) s'")
+     apply(force intro:use_valid[OF _ kernel_entry_if_ta_subset_inv]
+       simp:pas_refined_cur pas_cur_domain_current_aag)
+    apply(force simp:ta_subset_inv_current_aag)
    apply(rule context_conjI)
     apply(force intro:use_valid[OF _ kernel_entry_if_guarded_pas_domain])
    apply(rule context_conjI)
@@ -1170,40 +1130,25 @@ lemma ta_subset_inv_if_step:
     apply(force intro:use_valid[OF _ kernel_entry_if_valid_sched])
    apply(rule context_conjI)
     apply(force intro:use_valid[OF _ kernel_entry_if_domain_sep_inv])
-   apply(subgoal_tac "pas_refined (current_aag s) s'")
-    prefer 2
-    apply(force intro:use_valid[OF _ kernel_entry_pas_refined] simp:schact_is_rct_def)
-   using pas_refined_cur'
-   apply blast
+   apply(prop_tac "pas_refined (current_aag s) s'")
+    apply(force intro:use_valid[OF _ kernel_entry_pas_refined] simp:schact_is_rct_def
+      pas_refined_cur guarded_pas_domain_cur)
+   apply(force simp:pas_refined_cur')
   apply(erule disjE)
    \<comment> \<open>Case: Kernel entry without preemption during event handling\<close>
    apply(clarsimp simp:kernel_call_A_if_def invs_if_trimmed_def)
-   apply(subgoal_tac "ct_active s \<or> ct_idle s")
-    prefer 2
-    using active_from_running
-    apply blast
-   (* FIXME: We need a way to obtain pas_cur_domain that doesn't rely on ct_active or \<not> ct_idle *)
-   apply(subgoal_tac "pas_cur_domain (current_aag s) s")
-    prefer 2
-    (* XXX: To use this lemma, we need to know we're not in ct_idle. But we don't know that,
-       because we don't know that e \<noteq> Interrupt. *)
-    thm guarded_to_cur_domain
-    (* XXX: Likewise, to use this lemma, we need to know we're in ct_active. *)
-    thm guarded_active_ct_cur_domain
-    subgoal sorry
+   apply(prop_tac "ct_active s \<or> ct_idle s")
+    apply(force simp:active_from_running)
    apply(rule conjI)
-    apply(subgoal_tac "ta_subset_inv (current_aag s) s'")
-     prefer 2
-     apply(force intro:use_valid[OF _ kernel_entry_if_ta_subset_inv])
-    using ta_subset_inv_current_aag
-    apply force
+    apply(prop_tac "ta_subset_inv (current_aag s) s'")
+     apply(force intro:use_valid[OF _ kernel_entry_if_ta_subset_inv]
+       simp:pas_refined_cur pas_cur_domain_current_aag)
+    apply(force simp:ta_subset_inv_current_aag)
    apply(rule context_conjI)
     apply(force intro:use_valid[OF _ kernel_entry_if_guarded_pas_domain])
-   apply(subgoal_tac "e \<noteq> Interrupt \<longrightarrow> ct_active s")
-    prefer 2
-     apply(subgoal_tac "ct_idle s \<longrightarrow> e = Interrupt")
-      prefer 2
-      using active_from_running ct_active_not_idle' apply blast
+   apply(prop_tac "e \<noteq> Interrupt \<longrightarrow> ct_active s")
+     apply(prop_tac "ct_idle s \<longrightarrow> e = Interrupt")
+      apply(force simp:active_from_running ct_active_not_idle')
     apply force
    apply(rule context_conjI)
     apply(fastforce intro:use_valid[OF _ kernel_entry_if_invs])
@@ -1213,27 +1158,22 @@ lemma ta_subset_inv_if_step:
     apply(fastforce intro:use_valid[OF _ kernel_entry_if_valid_sched])
    apply(rule context_conjI)
     apply(fastforce intro:use_valid[OF _ kernel_entry_if_domain_sep_inv])
-   thm kernel_entry_pas_refined
-   apply(subgoal_tac "is_subject (current_aag s) (cur_thread s)")
-    prefer 2
+   apply(prop_tac "ct_active s \<longrightarrow> is_subject (current_aag s) (cur_thread s)")
     apply(clarsimp simp:current_aag_def)
-    using guarded_active_ct_cur_domain the_subject_of_aag_domain
-    (* FIXME: Again, can't use guarded_active_ct_cur_domain without knowing ct_active *)
-    subgoal sorry
-   apply(subgoal_tac "pas_refined (current_aag s) s'")
-    prefer 2
-    apply(force intro:use_valid[OF _ kernel_entry_pas_refined] simp:schact_is_rct_def)
-   using pas_refined_cur'
-   apply blast
+    using guarded_pas_domain_cur guarded_active_ct_cur_domain the_subject_of_aag_domain
+    apply fastforce
+   apply(prop_tac "pas_refined (current_aag s) s'")
+    apply(force intro:use_valid[OF _ kernel_entry_pas_refined] simp:schact_is_rct_def
+      pas_refined_cur guarded_pas_domain_cur)
+   apply(force simp:pas_refined_cur')
   apply(erule disjE)
    \<comment> \<open>Case: Handle in-kernel preemption\<close>
    apply(clarsimp simp:kernel_handle_preemption_if_def invs_if_trimmed_def)
    apply(rule conjI)
-    (* FIXME: We need a way to obtain pas_cur_domain that doesn't rely on ct_active or \<not> ct_idle *)
-    apply(subgoal_tac "pas_cur_domain initial_aag s")
-     prefer 2
-     subgoal sorry
-    apply(force intro:use_valid[OF _ handle_preemption_if_ta_subset_inv])
+    apply(prop_tac "ta_subset_inv (current_aag s) s'")
+     apply(force intro:use_valid[OF _ handle_preemption_if_ta_subset_inv]
+       simp:pas_refined_cur pas_cur_domain_current_aag)
+    apply(force simp: ta_subset_inv_current_aag)
    apply(rule context_conjI)
     apply(force intro:use_valid[OF _ handle_preemption_if_guarded_pas_domain])
    apply(rule context_conjI)
@@ -1427,9 +1367,6 @@ lemma ta_subset_inv_if_step:
   apply(fastforce intro:use_valid[OF _ check_active_irq_if_pas_refined])
   done
 
-thm invs_if_Step_ADT_A_if
-thm invs_if_def
-thm initial_state_ta_subset_inv
 (* Note: changing from initial_aag to current_aag doesn't work here because the locale wants
    something relative to the initial_aag, as that's what it's using for addr_domain.
    So instead we have the per-step lemma ta_subset_inv_if_step invoked by this one convert
@@ -1471,7 +1408,6 @@ lemma ta_subset_inv_execution:
    apply blast
   by force
 
-thm ta_subset_inv_def
 lemma ta_subset_inv_reachable:
   (* According to Scott, initial_aag should be fine here rather than `current_aag (snd $ fst s0)` *)
   "reachable s \<Longrightarrow>
