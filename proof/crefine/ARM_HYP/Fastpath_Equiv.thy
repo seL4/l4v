@@ -966,7 +966,7 @@ lemma tcbSchedDequeue_rewrite_not_queued:
   apply (monadic_rewrite_l monadic_rewrite_if_l_False \<open>wp threadGet_const\<close>)
    apply (monadic_rewrite_symb_exec_l, rule monadic_rewrite_refl)
    apply wp+
-  apply (clarsimp simp: o_def obj_at'_def)
+  apply clarsimp
   done
 
 lemma schedule_known_rewrite:
@@ -1399,8 +1399,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                         capFaultOnFailure_def rethrowFailure_injection
                         injection_handler_catch bind_bindE_assoc
                         getThreadCallerSlot_def bind_assoc
-                        getSlotCap_def
-                        case_bool_If o_def
+                        getSlotCap_def case_bool_If
                         isRight_def[where x="Inr v" for v]
                         isRight_def[where x="Inl v" for v]
                   cong: if_cong)

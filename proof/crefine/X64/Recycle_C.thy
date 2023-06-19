@@ -914,13 +914,13 @@ lemma cancelBadgedSends_ccorres:
                      split: Structures_H.endpoint.split_asm)
      apply ceqv
     apply wpc
-      apply (simp add: dc_def[symmetric] ccorres_cond_iffs)
+      apply (simp add: ccorres_cond_iffs)
       apply (rule ccorres_return_Skip)
-     apply (simp add: dc_def[symmetric] ccorres_cond_iffs)
+     apply (simp add: ccorres_cond_iffs)
      apply (rule ccorres_return_Skip)
     apply (rename_tac list)
     apply (simp add: Collect_True Collect_False endpoint_state_defs
-                     ccorres_cond_iffs dc_def[symmetric]
+                     ccorres_cond_iffs
                 del: Collect_const cong: call_ignore_cong)
     apply (rule ccorres_rhs_assoc)+
     apply (csymbr, csymbr)
@@ -1008,7 +1008,7 @@ lemma cancelBadgedSends_ccorres:
                 subgoal by (simp add: mask_def)
                subgoal by (auto split: if_split)
               subgoal by simp
-             apply (ctac add: rescheduleRequired_ccorres[unfolded dc_def])
+             apply (ctac add: rescheduleRequired_ccorres)
             apply (rule hoare_pre, wp weak_sch_act_wf_lift_linear set_ep_valid_objs')
             apply (clarsimp simp: weak_sch_act_wf_def sch_act_wf_def)
             apply (fastforce simp: valid_ep'_def pred_tcb_at' split: list.splits)
@@ -1018,7 +1018,7 @@ lemma cancelBadgedSends_ccorres:
           apply (rule iffD1 [OF ccorres_expand_while_iff_Seq])
           apply (rule ccorres_init_tmp_lift2, ceqv)
           apply (rule ccorres_guard_imp2)
-           apply (simp add: bind_assoc dc_def[symmetric]
+           apply (simp add: bind_assoc
                        del: Collect_const)
            apply (rule ccorres_cond_true)
            apply (rule ccorres_rhs_assoc)+
@@ -1045,7 +1045,7 @@ lemma cancelBadgedSends_ccorres:
             apply ceqv
            apply (rule_tac P="ret__unsigned_longlong=blockingIPCBadge rva" in ccorres_gen_asm2)
            apply (rule ccorres_if_bind, rule ccorres_if_lhs)
-            apply (simp add: bind_assoc dc_def[symmetric])
+            apply (simp add: bind_assoc)
             apply (rule ccorres_rhs_assoc)+
             apply (ctac add: setThreadState_ccorres)
               apply (ctac add: tcbSchedEnqueue_ccorres)
@@ -1115,9 +1115,9 @@ lemma cancelBadgedSends_ccorres:
              apply (wp hoare_vcg_const_Ball_lift sts_st_tcb_at'_cases
                        sts_sch_act sts_valid_queues setThreadState_oa_queued)
             apply (vcg exspec=setThreadState_cslift_spec)
-           apply (simp add: ccorres_cond_iffs dc_def[symmetric])
+           apply (simp add: ccorres_cond_iffs)
            apply (rule ccorres_symb_exec_r2)
-             apply (drule_tac x="x @ [a]" in spec, simp add: dc_def[symmetric])
+             apply (drule_tac x="x @ [a]" in spec, simp)
             apply vcg
            apply (vcg spec=modifies)
           apply (thin_tac "\<forall>x. P x" for P)

@@ -1383,7 +1383,7 @@ lemma user_fpu_state_C_in_tcb_C_offset:
   "(typ_uinfo_t TYPE(user_fpu_state_C), n) \<in> td_set (typ_uinfo_t TYPE(tcb_C)) 0 \<Longrightarrow> n = 0"
   \<comment> \<open>Examine the fields of tcb_C.\<close>
   apply (simp add: typ_uinfo_t_def tcb_C_typ_info_unfold td_set_export_uinfo_eq td_set_adjust_ti_eq
-                   image_comp image_Un apfst_comp o_def[where f=export_uinfo]
+                   image_comp image_Un apfst_comp
               del: export_uinfo_typdesc_simp)
   apply (elim disjE)
   apply (all \<open>drule td_set_image_field_lookup[rotated]; clarsimp\<close>)

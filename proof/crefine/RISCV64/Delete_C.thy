@@ -856,7 +856,7 @@ lemma finaliseSlot_ccorres:
                                       ccorres_seq_skip)
                     apply (rule rsubst[where P="ccorres r xf' P P' hs a" for r xf' P P' hs a])
                     apply (rule hyps[folded reduceZombie_def[unfolded cteDelete_def finaliseSlot_def],
-                                         unfolded split_def, unfolded K_def],
+                                     unfolded split_def],
                            (simp add: in_monad)+)
                     apply (simp add: from_bool_0)
                    apply simp
@@ -1001,26 +1001,23 @@ lemma cteRevoke_ccorres1:
          apply (rule ccorres_drop_cutMon_bindE)
          apply (rule ccorres_rhs_assoc)+
          apply (ctac(no_vcg) add: cteDelete_ccorres)
-           apply (simp del: Collect_const add: Collect_False ccorres_cond_iffs
-                                               dc_def[symmetric])
+           apply (simp del: Collect_const add: Collect_False ccorres_cond_iffs)
            apply (rule ccorres_cutMon, simp only: cutMon_walk_bindE)
            apply (rule ccorres_drop_cutMon_bindE)
            apply (ctac(no_vcg) add: preemptionPoint_ccorres)
-             apply (simp del: Collect_const add: Collect_False ccorres_cond_iffs
-                                                 dc_def[symmetric])
+             apply (simp del: Collect_const add: Collect_False ccorres_cond_iffs)
              apply (rule ccorres_cutMon)
              apply (rule rsubst[where P="ccorres r xf' P P' hs a" for r xf' P P' hs a])
-              apply (rule hyps[unfolded K_def],
-                     (fastforce simp: in_monad)+)[1]
+              apply (rule hyps; fastforce simp: in_monad)
              apply simp
             apply (simp, rule ccorres_split_throws)
-             apply (rule ccorres_return_C_errorE, simp+)[1]
+             apply (rule ccorres_return_C_errorE; simp)
             apply vcg
            apply (wp preemptionPoint_invR)
             apply simp
            apply simp
           apply (simp, rule ccorres_split_throws)
-           apply (rule ccorres_return_C_errorE, simp+)[1]
+           apply (rule ccorres_return_C_errorE; simp)
           apply vcg
          apply (wp cteDelete_invs' cteDelete_sch_act_simple)
         apply (rule ccorres_cond_false)

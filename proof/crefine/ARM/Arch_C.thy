@@ -50,7 +50,7 @@ lemma performPageTableInvocationUnmap_ccorres:
         apply (ctac add: unmapPageTable_ccorres)
           apply csymbr
           apply (simp add: storePTE_def swp_def)
-          apply (ctac add: clearMemory_PT_setObject_PTE_ccorres[unfolded dc_def])
+          apply (ctac add: clearMemory_PT_setObject_PTE_ccorres)
          apply wp
         apply (simp del: Collect_const)
         apply (vcg exspec=unmapPageTable_modifies)
@@ -532,10 +532,10 @@ shows
                          pageBits_def
                    split: if_split)
   apply (clarsimp simp: ARMSmallPageBits_def word_sle_def is_aligned_mask[symmetric]
-                        ghost_assertion_data_get_gs_clear_region[unfolded o_def])
+                        ghost_assertion_data_get_gs_clear_region)
   apply (subst ghost_assertion_size_logic_flex[unfolded o_def, rotated])
      apply assumption
-    apply (simp add: ghost_assertion_data_get_gs_clear_region[unfolded o_def])
+    apply (simp add: ghost_assertion_data_get_gs_clear_region)
    apply (drule valid_global_refsD_with_objSize, clarsimp)+
    apply (clarsimp simp: isCap_simps dest!: ccte_relation_ccap_relation)
   apply (cut_tac ptr=frame and bits=12
@@ -1133,8 +1133,7 @@ lemma createSafeMappingEntries_PDE_ccorres:
                         vm_attribs_relation_def
                         superSectionPDEOffsets_def pdeBits_def
                         from_bool_mask_simp[unfolded mask_def, simplified]
-                        ptr_range_to_list_def upto_enum_step_def
-                        o_def upto_enum_word
+                        ptr_range_to_list_def upto_enum_step_def upto_enum_word
                   cong: if_cong)
   apply (frule(1) page_directory_at_rf_sr, clarsimp)
   apply (frule array_ptr_valid_array_assertionD[OF h_t_valid_clift])
@@ -1889,8 +1888,6 @@ lemma setMRs_single:
 (* usually when we call setMR directly, we mean to only set a single message register
    which will fit in actual registers *)
 lemma setMR_as_setRegister_ccorres:
-  notes dc_simp[simp del]
-  shows
   "ccorres (\<lambda>rv rv'. rv' = of_nat offset + 1) ret__unsigned_'
       (tcb_at' thread and K (TCB_H.msgRegisters ! offset = reg \<and> offset < length msgRegisters))
       (UNIV \<inter> \<lbrace>\<acute>reg = val\<rbrace>
@@ -1907,7 +1904,7 @@ lemma setMR_as_setRegister_ccorres:
    apply (ctac add: setRegister_ccorres)
      apply (rule ccorres_from_vcg_throws[where P'=UNIV and P=\<top>])
      apply (rule allI, rule conseqPre, vcg)
-     apply (clarsimp simp: dc_def return_def)
+     apply (clarsimp simp: return_def)
     apply (rule hoare_post_taut[of \<top>])
    apply (vcg exspec=setRegister_modifies)
   apply (clarsimp simp: length_msgRegisters n_msgRegisters_def not_le conj_commute)
@@ -1917,7 +1914,7 @@ lemma setMR_as_setRegister_ccorres:
   done
 
 lemma performPageGetAddress_ccorres:
-  notes Collect_const[simp del] dc_simp[simp del]
+  notes Collect_const[simp del]
   shows
   "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
       (invs' and (\<lambda>s. ksCurThread s = thread) and ct_in_state' ((=) Restart))
@@ -1943,7 +1940,7 @@ lemma performPageGetAddress_ccorres:
        apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
        apply clarsimp
        apply (rule conseqPre, vcg)
-       apply (clarsimp simp: return_def dc_simp)
+       apply (clarsimp simp: return_def)
       apply (rule hoare_post_taut[of \<top>])
      apply (rule ccorres_rhs_assoc)+
      apply (clarsimp simp: replyOnRestart_def liftE_def bind_assoc)
@@ -1966,7 +1963,7 @@ lemma performPageGetAddress_ccorres:
                  apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
                  apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
                  apply (rule allI, rule conseqPre, vcg)
-                 apply (clarsimp simp: return_def dc_def)
+                 apply (clarsimp simp: return_def)
                 apply (rule hoare_post_taut[of \<top>])
                apply (vcg exspec=setThreadState_modifies)
               apply wpsimp
@@ -1979,10 +1976,10 @@ lemma performPageGetAddress_ccorres:
                                Kernel_C.msgInfoRegister_def Kernel_C.R1_def)
          apply (vcg exspec=setMR_modifies)
         apply wpsimp
-       apply (clarsimp simp: dc_def)
+       apply clarsimp
        apply (vcg exspec=setRegister_modifies)
       apply wpsimp
-     apply (clarsimp simp: dc_def ThreadState_Running_def)
+     apply (clarsimp simp: ThreadState_Running_def)
      apply (vcg exspec=lookupIPCBuffer_modifies)
     apply clarsimp
     apply vcg
@@ -2173,12 +2170,12 @@ where
 
 lemma resolve_ret_rel_None[simp]:
   "resolve_ret_rel None y = (valid_C y = scast false)"
-  by (clarsimp simp: resolve_ret_rel_def o_def to_option_def to_bool_def split: if_splits)
+  by (clarsimp simp: resolve_ret_rel_def to_option_def to_bool_def split: if_splits)
 
 lemma resolve_ret_rel_Some:
   "\<lbrakk>valid_C y = scast true;  frameSize_C y = framesize_from_H (fst x); snd x = frameBase_C y\<rbrakk>
    \<Longrightarrow> resolve_ret_rel (Some x) y"
-  by (clarsimp simp: resolve_ret_rel_def o_def to_option_def)
+  by (clarsimp simp: resolve_ret_rel_def to_option_def)
 
 lemma resolveVAddr_ccorres:
   "ccorres resolve_ret_rel ret__struct_resolve_ret_C_'
@@ -2605,7 +2602,7 @@ lemma decodeARMFrameInvocation_ccorres:
             apply csymbr
             apply (simp add: ARM.pptrBase_def hd_conv_nth length_ineq_not_Nil)
             apply ccorres_rewrite
-            apply (rule syscall_error_throwError_ccorres_n[unfolded id_def dc_def])
+            apply (rule syscall_error_throwError_ccorres_n)
             apply (simp add: syscall_error_to_H_cases)
            (* Doesn't throw case *)
            apply (drule_tac s="Some y" in sym,
@@ -2632,7 +2629,6 @@ lemma decodeARMFrameInvocation_ccorres:
                         simp add: ARM.pptrBase_def ARM.pptrBase_def
                                   hd_conv_nth length_ineq_not_Nil,
                         ccorres_rewrite)
-                 apply (fold dc_def)
                  apply (rule ccorres_return_Skip, clarsimp)
                apply (subgoal_tac "cap_get_tag cap = SCAST(32 signed \<rightarrow> 32) cap_frame_cap
                                    \<or> cap_get_tag cap = SCAST(32 signed \<rightarrow> 32) cap_small_frame_cap",

@@ -211,7 +211,7 @@ lemma cancelSignal_ccorres_helper:
    apply (drule (2) ntfn_to_ep_queue)
    apply (simp add: tcb_queue_relation'_def)
   apply (clarsimp simp: typ_heap_simps cong: imp_cong split del: if_split)
-  apply (frule null_ep_queue [simplified Fun.comp_def])
+  apply (frule null_ep_queue [simplified comp_def])
   apply (intro impI conjI allI)
    \<comment> \<open>empty case\<close>
    apply clarsimp
@@ -1039,7 +1039,7 @@ proof -
             apply (rule ccorres_split_nothrow_novcg_dc)
                prefer 2
                apply (rule ccorres_move_c_guard_tcb)
-               apply (simp only: dc_def[symmetric])
+               apply simp
                apply ctac
               prefer 2
               apply (wp, clarsimp, wp+)
@@ -1160,7 +1160,7 @@ proof -
          apply simp
          apply (wp threadGet_wp)
         apply vcg
-       apply (rule ccorres_return_Skip[unfolded dc_def])
+       apply (rule ccorres_return_Skip)
       apply simp
       apply (wp threadGet_wp)
      apply vcg
@@ -1397,7 +1397,6 @@ proof -
           apply (rule ccorres_split_nothrow_novcg_dc)
              prefer 2
              apply (rule ccorres_move_c_guard_tcb)
-             apply (simp only: dc_def[symmetric])
              apply ctac
             prefer 2
             apply (wp, clarsimp, wp+)
@@ -1670,7 +1669,7 @@ proof -
        apply simp
        apply (wp threadGet_wp)
       apply vcg
-     apply (rule ccorres_return_Skip[unfolded dc_def])
+     apply (rule ccorres_return_Skip)
     apply simp
     apply (wp threadGet_wp)
    apply vcg
@@ -1802,7 +1801,6 @@ proof -
           apply (rule ccorres_split_nothrow_novcg_dc)
              prefer 2
              apply (rule ccorres_move_c_guard_tcb)
-             apply (simp only: dc_def[symmetric])
              apply ctac
             prefer 2
             apply (wp, clarsimp, wp+)
@@ -1908,7 +1906,7 @@ proof -
        apply simp
        apply (wp threadGet_wp)
       apply vcg
-     apply (rule ccorres_return_Skip[unfolded dc_def])
+     apply (rule ccorres_return_Skip)
     apply simp
     apply (wp threadGet_wp)
    apply vcg
@@ -2266,11 +2264,6 @@ lemma getCurDomain_maxDom_ccorres_dom_':
                         rf_sr_ksCurDomain)
   done
 
-lemma rf_sr_cscheduler_action_relation:
-  "(s, s') \<in> rf_sr
-   \<Longrightarrow> cscheduler_action_relation (ksSchedulerAction s) (ksSchedulerAction_' (globals s'))"
-  by (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
-
 lemma threadGet_get_obj_at'_has_domain:
   "\<lbrace> tcb_at' t \<rbrace> threadGet tcbDomain t \<lbrace>\<lambda>rv. obj_at' (\<lambda>tcb. rv = tcbDomain tcb) t\<rbrace>"
   by (wp threadGet_obj_at') (simp add: obj_at'_def)
@@ -2287,7 +2280,6 @@ lemma possibleSwitchTo_ccorres:
      (Call possibleSwitchTo_'proc)"
   supply if_split [split del]
   supply Collect_const [simp del]
-  supply dc_simp [simp del]
   supply prio_and_dom_limit_helpers[simp]
   (* FIXME: these should likely be in simpset for CRefine, or even in general *)
   supply from_bool_eq_if[simp] from_bool_eq_if'[simp] from_bool_0[simp]
@@ -2312,7 +2304,7 @@ lemma possibleSwitchTo_ccorres:
       apply (ctac add: tcbSchedEnqueue_ccorres)
      apply (rule_tac R="\<lambda>s. sact = ksSchedulerAction s \<and> weak_sch_act_wf (ksSchedulerAction s) s"
                      in ccorres_cond)
-       apply (fastforce dest!: rf_sr_cscheduler_action_relation pred_tcb_at' tcb_at_not_NULL
+       apply (fastforce dest!: rf_sr_sched_action_relation pred_tcb_at' tcb_at_not_NULL
                         simp: cscheduler_action_relation_def weak_sch_act_wf_def
                         split: scheduler_action.splits)
       apply (ctac add: rescheduleRequired_ccorres)
@@ -2901,7 +2893,7 @@ lemma cancelIPC_ccorres_helper:
   apply (rule allI)
   apply (rule conseqPre)
    apply vcg
-  apply (clarsimp split del: if_split simp del: comp_def)
+  apply (clarsimp split del: if_split)
   apply (frule (2) ep_blocked_in_queueD)
   apply (frule (1) ko_at_valid_ep' [OF _ invs_valid_objs'])
   apply (elim conjE)
@@ -2919,7 +2911,7 @@ lemma cancelIPC_ccorres_helper:
        apply assumption+
    apply (drule (2) ep_to_ep_queue)
    apply (simp add: tcb_queue_relation'_def)
-  apply (clarsimp simp: typ_heap_simps cong: imp_cong split del: if_split simp del: comp_def)
+  apply (clarsimp simp: typ_heap_simps cong: imp_cong split del: if_split)
   apply (frule null_ep_queue [simplified comp_def] null_ep_queue)
   apply (intro impI conjI allI)
    \<comment> \<open>empty case\<close>
@@ -3073,7 +3065,6 @@ lemma cancelIPC_ccorres1:
      apply wpc
             \<comment> \<open>BlockedOnReceive\<close>
             apply (simp add: word_sle_def "StrictC'_thread_state_defs" ccorres_cond_iffs cong: call_ignore_cong)
-            apply (fold dc_def)
             apply (rule ccorres_rhs_assoc)+
             apply csymbr
             apply csymbr
@@ -3102,11 +3093,9 @@ lemma cancelIPC_ccorres1:
            apply (simp add: "StrictC'_thread_state_defs" ccorres_cond_iffs
                             Collect_False Collect_True word_sle_def
                       cong: call_ignore_cong del: Collect_const)
-           apply (fold dc_def)
            apply (rule ccorres_rhs_assoc)+
            apply csymbr
            apply csymbr
-           apply (unfold comp_def)[1]
            apply csymbr
            apply (rule ccorres_move_c_guard_tcb)+
            apply (rule ccorres_split_nothrow_novcg)
@@ -3142,14 +3131,12 @@ lemma cancelIPC_ccorres1:
                 apply (rule ccorres_Cond_rhs)
                  apply (simp add: nullPointer_def when_def)
                  apply (rule ccorres_symb_exec_l[OF _ _ _ empty_fail_stateAssert])
-                   apply (simp only: dc_def[symmetric])
                    apply (rule ccorres_symb_exec_r)
                      apply (ctac add: cteDeleteOne_ccorres[where w1="scast cap_reply_cap"])
                     apply vcg
                    apply (rule conseqPre, vcg, clarsimp simp: rf_sr_def
                        gs_set_assn_Delete_cstate_relation[unfolded o_def])
                   apply (wp | simp)+
-                apply (simp add: when_def nullPointer_def dc_def[symmetric])
                 apply (rule ccorres_return_Skip)
                apply (simp add: guard_is_UNIV_def ghost_assertion_data_get_def
                                 ghost_assertion_data_set_def cap_tag_defs)
@@ -3162,7 +3149,8 @@ lemma cancelIPC_ccorres1:
            apply (clarsimp simp add: guard_is_UNIV_def tcbReplySlot_def
                         Kernel_C.tcbReply_def tcbCNodeEntries_def)
           \<comment> \<open>BlockedOnNotification\<close>
-          apply (simp add: word_sle_def "StrictC'_thread_state_defs" ccorres_cond_iffs dc_def [symmetric] cong: call_ignore_cong)
+          apply (simp add: word_sle_def "StrictC'_thread_state_defs" ccorres_cond_iffs
+                     cong: call_ignore_cong)
           apply (rule ccorres_symb_exec_r)
             apply (ctac (no_vcg))
            apply clarsimp
@@ -3171,10 +3159,12 @@ lemma cancelIPC_ccorres1:
           apply (rule conseqPre, vcg)
           apply clarsimp
          \<comment> \<open>Running, Inactive, and Idle\<close>
-         apply (simp add: word_sle_def "StrictC'_thread_state_defs" ccorres_cond_iffs dc_def [symmetric] cong: call_ignore_cong,
+         apply (simp add: word_sle_def "StrictC'_thread_state_defs" ccorres_cond_iffs
+                    cong: call_ignore_cong,
                 rule ccorres_return_Skip)+
       \<comment> \<open>BlockedOnSend\<close>
-      apply (simp add: word_sle_def "StrictC'_thread_state_defs" ccorres_cond_iffs dc_def [symmetric] cong: call_ignore_cong)
+      apply (simp add: word_sle_def "StrictC'_thread_state_defs" ccorres_cond_iffs
+                 cong: call_ignore_cong)
       \<comment> \<open>clag\<close>
       apply (rule ccorres_rhs_assoc)+
       apply csymbr
@@ -3200,7 +3190,8 @@ lemma cancelIPC_ccorres1:
       apply (rule conseqPre, vcg)
       apply clarsimp
   \<comment> \<open>Restart\<close>
-     apply (simp add: word_sle_def "StrictC'_thread_state_defs" ccorres_cond_iffs dc_def [symmetric] cong: call_ignore_cong,
+     apply (simp add: word_sle_def "StrictC'_thread_state_defs" ccorres_cond_iffs
+                cong: call_ignore_cong,
             rule ccorres_return_Skip)
     \<comment> \<open>Post wp proofs\<close>
     apply vcg

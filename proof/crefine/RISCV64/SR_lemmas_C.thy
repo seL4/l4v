@@ -645,7 +645,6 @@ proof (rule cor_map_relI [OF map_option_eq_dom_eq])
 
   hence "tcb_no_ctes_proj tcb = tcb_no_ctes_proj tcb'" using om
     apply -
-    apply (simp add: o_def)
     apply (drule fun_cong [where x = x])
     apply simp
     done

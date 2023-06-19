@@ -296,8 +296,8 @@ lemma ccorres_to_corres_with_termination:
     "\<And>s s'. \<lbrakk> cstate_relation s (globals s'); P s; \<not> snd (dspec_f s); G s' \<rbrakk> \<Longrightarrow>
              \<Gamma> \<turnstile> Call f_'proc \<down> Normal s'"
   shows "corres_underlying {(s, s'). cstate_relation s s'} True True R P Q dspec_f ac_f"
-  using ccorres ret pre unfolding ac_def ccorres_to_corres_pre_def
-  apply (clarsimp simp: corres_underlying_def ccorres_underlying_def rf_sr_def)
+  using ccorres ret pre unfolding ac_def ccorres_to_corres_pre_def rf_sr_def
+  apply (clarsimp simp: corres_underlying_def ccorres_underlying_def)
   apply (rule conjI)
    apply (fastforce simp: unif_rrel_def intro: EHOther dest: in_AC_call_simpl)
   apply (clarsimp simp: AC_call_L1_def L2_call_L1_def L1_call_simpl_def)
@@ -334,8 +334,8 @@ lemma ccorres_to_corres_no_termination:
   assumes pre: "\<And>s'. G s' \<Longrightarrow> ccorres_to_corres_pre Q \<top> Q' s'"
   assumes ret: "\<And>r s'. R r (ret_xf s') \<longleftrightarrow> R' r (ret_xf' s')"
   shows "corres_underlying {(s, s'). cstate_relation s s'} True True R P Q dspec_f ac_f"
-  using ccorres ret pre unfolding ac_def ccorres_to_corres_pre_def
-  apply (clarsimp simp: ac_def corres_underlying_def ccorres_underlying_def rf_sr_def)
+  using ccorres ret pre unfolding ac_def ccorres_to_corres_pre_def rf_sr_def
+  apply (clarsimp simp: ac_def corres_underlying_def ccorres_underlying_def)
   apply (rule conjI)
    apply (fastforce simp: unif_rrel_def intro: EHOther dest: in_AC_call_simpl)
   apply (clarsimp simp: AC_call_L1_def L2_call_L1_def L1_call_simpl_def)

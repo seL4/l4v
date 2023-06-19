@@ -919,7 +919,7 @@ lemma setUntypedCapAsFull_ccorres [corres]:
     apply (rule ccorres_move_c_guard_cte)
     apply (rule ccorres_Guard)
     apply (rule ccorres_call)
-       apply (rule update_freeIndex [unfolded dc_def])
+       apply (rule update_freeIndex)
       apply simp
      apply simp
     apply simp
@@ -945,14 +945,14 @@ lemma setUntypedCapAsFull_ccorres [corres]:
       apply csymbr
       apply (clarsimp simp: cap_get_tag_to_H cap_get_tag_UntypedCap split: if_split_asm)
       apply (rule ccorres_cond_false)
-      apply (rule ccorres_return_Skip [unfolded dc_def])
+      apply (rule ccorres_return_Skip)
      apply (clarsimp simp: cap_get_tag_isCap[symmetric] cap_get_tag_UntypedCap split: if_split_asm)
      apply (rule ccorres_cond_false)
-     apply (rule ccorres_return_Skip [unfolded dc_def])
-    apply (rule ccorres_return_Skip [unfolded dc_def])
+     apply (rule ccorres_return_Skip)
+    apply (rule ccorres_return_Skip)
    apply clarsimp
    apply (rule ccorres_cond_false)
-   apply (rule ccorres_return_Skip [unfolded dc_def])
+   apply (rule ccorres_return_Skip)
   apply (clarsimp simp: cap_get_tag_isCap[symmetric] cap_get_tag_UntypedCap)
   apply (frule(1) cte_wp_at_valid_objs_valid_cap')
   apply (clarsimp simp: untypedBits_defs)
@@ -1071,19 +1071,17 @@ lemma cteInsert_ccorres:
                   apply csymbr
                   apply simp
                   apply (rule ccorres_move_c_guard_cte)
-                  apply (simp add:dc_def[symmetric])
                   apply (ctac ccorres:ccorres_updateMDB_set_mdbPrev)
-                 apply (simp add:dc_def[symmetric])
                  apply (ctac ccorres: ccorres_updateMDB_skip)
                 apply (wp static_imp_wp)+
-              apply (clarsimp simp: Collect_const_mem dc_def split del: if_split)
+              apply (clarsimp simp: Collect_const_mem split del: if_split)
               apply vcg
              apply (wp static_imp_wp)
-            apply (clarsimp simp: Collect_const_mem dc_def split del: if_split)
+            apply (clarsimp simp: Collect_const_mem split del: if_split)
             apply vcg
            apply (clarsimp simp:cmdb_node_relation_mdbNext)
            apply (wp setUntypedCapAsFull_cte_at_wp static_imp_wp)
-          apply (clarsimp simp: Collect_const_mem dc_def split del: if_split)
+          apply (clarsimp simp: Collect_const_mem split del: if_split)
           apply (vcg exspec=setUntypedCapAsFull_modifies)
          apply wp
         apply vcg
@@ -1254,7 +1252,7 @@ lemma cteMove_ccorres:
    apply (intro conjI, simp+)
    apply (erule (2) is_aligned_3_prev)
    apply (erule (2) is_aligned_3_next)
-  apply (clarsimp simp: dc_def split del: if_split)
+  apply (clarsimp split del: if_split)
   apply (simp add: ccap_relation_NullCap_iff)
   apply (clarsimp simp: cmdbnode_relation_def mdb_node_to_H_def nullMDBNode_def)
   done
@@ -1398,7 +1396,6 @@ lemma cteMove_ccorres_verbose:
   \<comment> \<open>***--------------------------***\<close>
   \<comment> \<open>***C generalised precondition***\<close>
   \<comment> \<open>***--------------------------***\<close>
-  apply (unfold dc_def)
   apply (clarsimp simp: ccap_relation_NullCap_iff split del: if_split)
   \<comment> \<open>cmdbnode_relation nullMDBNode va\<close>
   apply (simp add: cmdbnode_relation_def)
@@ -2377,7 +2374,6 @@ lemma postCapDeletion_ccorres:
     apply (rule ccorres_symb_exec_r)
       apply (rule_tac xf'=irq_' in ccorres_abstract, ceqv)
       apply (rule_tac P="rv' = ucast (capIRQ cap)" in ccorres_gen_asm2)
-      apply (fold dc_def)
       apply (frule cap_get_tag_to_H, solves \<open>clarsimp simp: cap_get_tag_isCap_unfolded_H_cap\<close>)
       apply (clarsimp simp: cap_irq_handler_cap_lift)
       apply (ctac(no_vcg) add: deletedIRQHandler_ccorres)
@@ -2388,9 +2384,9 @@ lemma postCapDeletion_ccorres:
    apply (clarsimp simp: cap_get_tag_isCap)
    apply (rule ccorres_Cond_rhs)
     apply (wpc; clarsimp simp: isCap_simps)
-    apply (ctac(no_vcg) add: Arch_postCapDeletion_ccorres[unfolded dc_def])
+    apply (ctac(no_vcg) add: Arch_postCapDeletion_ccorres)
    apply (simp add: not_irq_or_arch_cap_case)
-   apply (rule ccorres_return_Skip[unfolded dc_def])+
+   apply (rule ccorres_return_Skip)
   apply clarsimp
   apply (rule conjI, clarsimp simp: isCap_simps  Kernel_C.maxIRQ_def)
    apply (frule cap_get_tag_isCap_unfolded_H_cap(5))
@@ -2439,7 +2435,7 @@ lemma emptySlot_ccorres:
 
     \<comment> \<open>*** proof for the 'else' branch (return () and SKIP) ***\<close>
      prefer 2
-     apply (ctac add: ccorres_return_Skip[unfolded dc_def])
+     apply (ctac add: ccorres_return_Skip)
 
     \<comment> \<open>*** proof for the 'then' branch ***\<close>
 
@@ -2484,7 +2480,7 @@ lemma emptySlot_ccorres:
 
                   \<comment> \<open>the post_cap_deletion case\<close>
 
-                  apply (ctac(no_vcg) add: postCapDeletion_ccorres [unfolded dc_def])
+                  apply (ctac(no_vcg) add: postCapDeletion_ccorres)
 
                 \<comment> \<open>Haskell pre/post for y \<leftarrow> updateMDB slot (\<lambda>a. nullMDBNode);\<close>
                  apply wp
@@ -2557,7 +2553,7 @@ lemma capSwapForDelete_ccorres:
    apply (simp add:when_def)
    apply (rule ccorres_if_cond_throws2 [where Q = \<top> and Q' = \<top>])
       apply (case_tac "slot1=slot2", simp+)
-     apply (rule ccorres_return_void_C [simplified dc_def])
+     apply (rule ccorres_return_void_C)
 
   \<comment> \<open>***Main goal***\<close>
   \<comment> \<open>--- ccorres goal with 2 affectations (cap1 and cap2) on both on Haskell and C\<close>
@@ -2566,7 +2562,7 @@ lemma capSwapForDelete_ccorres:
     apply (rule ccorres_pre_getCTE)+
     apply (rule ccorres_move_c_guard_cte, rule ccorres_symb_exec_r)+
   \<comment> \<open>***Main goal***\<close>
-        apply (ctac (no_vcg) add: cteSwap_ccorres [unfolded dc_def] )
+        apply (ctac (no_vcg) add: cteSwap_ccorres)
        \<comment> \<open>C Hoare triple for \<acute>cap2 :== \<dots>\<close>
        apply vcg
        \<comment> \<open>C existential Hoare triple for \<acute>cap2 :== \<dots>\<close>

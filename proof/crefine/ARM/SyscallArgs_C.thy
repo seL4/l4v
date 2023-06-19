@@ -289,7 +289,7 @@ lemma ccorres_invocationCatch_Inr:
            if reply = [] then liftE (replyOnRestart thread [] isCall) \<sqinter> returnOk ()
                          else liftE (replyOnRestart thread reply isCall)
        odE od) c"
-  apply (simp add: invocationCatch_def liftE_bindE o_xo_injector)
+  apply (simp add: invocationCatch_def liftE_bindE o_xo_injector cong: ccorres_all_cong)
   apply (subst ccorres_liftM_simp[symmetric])
   apply (simp add: liftM_def bind_assoc bindE_def)
   apply (rule_tac f="\<lambda>f. ccorres rvr xs P P' hs f c" for rvr xs in arg_cong)

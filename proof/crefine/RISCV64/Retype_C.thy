@@ -1097,7 +1097,7 @@ lemma ptr_add_to_new_cap_addrs:
   shows "(CTypesDefs.ptr_add (Ptr ptr :: 'a :: mem_type ptr) \<circ> of_nat) ` {k. k < n}
    = Ptr ` set (new_cap_addrs n ptr ko)"
   unfolding new_cap_addrs_def
-  apply (simp add: comp_def image_image shiftl_t2n size_of_m field_simps)
+  apply (simp add: image_image shiftl_t2n size_of_m field_simps)
   apply (clarsimp simp: atLeastLessThan_def lessThan_def)
   done
 
@@ -3091,8 +3091,7 @@ proof -
       apply (simp add: hrs_mem_def, subst rep0)
       apply (simp only: take_replicate, simp add: cte_C_size objBits_simps')
      apply (simp add: cte_C_size objBits_simps')
-    apply (simp add: fun_eq_iff o_def
-              split: if_split)
+    apply (simp add: fun_eq_iff split: if_split)
     apply (simp add: hrs_comm packed_heap_update_collapse
                      typ_heap_simps)
     apply (subst clift_heap_update_same_td_name', simp_all,
@@ -3768,7 +3767,7 @@ lemma mapM_x_storeWord_step:
   apply (subst if_not_P)
    apply (subst not_less)
    apply (erule is_aligned_no_overflow)
-   apply (simp add: mapM_x_map comp_def upto_enum_word del: upt.simps)
+   apply (simp add: mapM_x_map upto_enum_word del: upt.simps)
    apply (subst div_power_helper_64 [OF sz2, simplified])
     apply assumption
    apply (simp add: word_bits_def unat_minus_one del: upt.simps)
@@ -4342,12 +4341,10 @@ lemma ccorres_placeNewObject_endpoint:
      apply (clarsimp simp: new_cap_addrs_def)
      apply (cut_tac createObjects_ccorres_ep [where ptr=regionBase and n="1" and sz="objBitsKO (KOEndpoint makeObject)"])
      apply (erule_tac x=\<sigma> in allE, erule_tac x=x in allE)
-     apply (clarsimp elim!:is_aligned_weaken simp: objBitsKO_def word_bits_def)+
-     apply (clarsimp simp: split_def Let_def
-         Fun.comp_def rf_sr_def new_cap_addrs_def
-         region_actually_is_bytes ptr_retyps_gen_def
-         objBits_simps
-         elim!: rsubst[where P="cstate_relation s'" for s'])
+     apply (clarsimp elim!: is_aligned_weaken simp: objBitsKO_def word_bits_def)+
+     apply (clarsimp simp: split_def Let_def rf_sr_def new_cap_addrs_def
+                           region_actually_is_bytes ptr_retyps_gen_def objBits_simps
+                    elim!: rsubst[where P="cstate_relation s'" for s'])
     apply (clarsimp simp: word_bits_conv)
    apply (clarsimp simp: range_cover.aligned objBits_simps)
   apply (clarsimp simp: no_fail_def)
@@ -4380,12 +4377,10 @@ lemma ccorres_placeNewObject_notification:
      apply (clarsimp simp: new_cap_addrs_def)
      apply (cut_tac createObjects_ccorres_ntfn [where ptr=regionBase and n="1" and sz="objBitsKO (KONotification makeObject)"])
      apply (erule_tac x=\<sigma> in allE, erule_tac x=x in allE)
-     apply (clarsimp elim!:is_aligned_weaken simp: objBitsKO_def word_bits_def)+
-     apply (clarsimp simp: split_def Let_def
-         Fun.comp_def rf_sr_def new_cap_addrs_def
-         region_actually_is_bytes ptr_retyps_gen_def
-         objBits_simps'
-         elim!: rsubst[where P="cstate_relation s'" for s'])
+     apply (clarsimp elim!: is_aligned_weaken simp: objBitsKO_def word_bits_def)+
+     apply (clarsimp simp: split_def Let_def rf_sr_def new_cap_addrs_def
+                           region_actually_is_bytes ptr_retyps_gen_def objBits_simps'
+                    elim!: rsubst[where P="cstate_relation s'" for s'])
     apply (clarsimp simp: word_bits_conv)
    apply (clarsimp simp: range_cover.aligned objBits_simps)
   apply (clarsimp simp: no_fail_def)
@@ -4444,11 +4439,10 @@ lemma ccorres_placeNewObject_captable:
       apply (clarsimp simp: split_def new_cap_addrs_def)
       apply (cut_tac createObjects_ccorres_cte [where ptr=regionBase and n="2 ^ unat userSize" and sz="unat userSize + objBitsKO (KOCTE makeObject)"])
       apply (erule_tac x=\<sigma> in allE, erule_tac x=x in allE)
-      apply (clarsimp elim!:is_aligned_weaken simp: objBitsKO_def word_bits_def cteSizeBits_def)+
-      apply (clarsimp simp: split_def objBitsKO_def
-          Fun.comp_def rf_sr_def split_def Let_def cteSizeBits_def
-          new_cap_addrs_def field_simps power_add ptr_retyps_gen_def
-                   elim!: rsubst[where P="cstate_relation s'" for s'])
+      apply (clarsimp elim!: is_aligned_weaken simp: objBitsKO_def word_bits_def cteSizeBits_def)+
+      apply (clarsimp simp: split_def objBitsKO_def rf_sr_def split_def Let_def cteSizeBits_def
+                            new_cap_addrs_def field_simps power_add ptr_retyps_gen_def
+                     elim!: rsubst[where P="cstate_relation s'" for s'])
      apply (clarsimp simp: word_bits_conv range_cover_def)
     apply (clarsimp simp: objBitsKO_def objBits_simps' range_cover.aligned)
    apply (clarsimp simp: no_fail_def)
@@ -4505,8 +4499,8 @@ lemma Arch_initContext_spec':
   apply (rule allI, rule conseqPre)
    apply (rule hoarep.Catch[rotated], vcg)
    apply (rule conseqPost[where A'="{}" and Q'=Q and Q=Q for Q, simplified])
-   apply ((vcg ,
-           clarsimp simp: hrs_mem_update_compose h_val_id packed_heap_update_collapse o_def
+   apply ((vcg,
+           clarsimp simp: hrs_mem_update_compose h_val_id packed_heap_update_collapse
                           array_updates_rev_app))+
   apply (auto simp: h_val_heap_same_hrs_mem_update_typ_disj[OF h_t_valid_c_guard_field _ tag_disj_via_td_name]
                     export_tag_adjust_ti typ_uinfo_t_def array_updates_rev
@@ -4554,7 +4548,6 @@ proof -
     apply (rule ptr_retyp_h_t_valid)
     apply simp
    apply (rule tcb_ptr_orth_cte_ptrs')
-  apply (simp add: o_def)
   apply (intro conjI allI impI)
      apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                            kernel_data_refs_domain_eq_rotate)
@@ -4611,11 +4604,11 @@ lemma placeNewObject_pte:
       apply (clarsimp simp: split_def new_cap_addrs_def)
       apply (cut_tac s=\<sigma> in createObjects_ccorres_pte [where ptr=regionBase and sz=pageBits])
       apply (erule_tac x=\<sigma> in allE, erule_tac x=x in allE)
-      apply (clarsimp elim!:is_aligned_weaken simp: objBitsKO_def word_bits_def)+
+      apply (clarsimp elim!: is_aligned_weaken simp: objBitsKO_def word_bits_def)+
       apply (clarsimp simp: split_def objBitsKO_def archObjSize_def
-          Fun.comp_def rf_sr_def split_def Let_def ptr_retyps_gen_def
-          new_cap_addrs_def field_simps power_add
-          cong: globals.unfold_congs)
+                            rf_sr_def split_def Let_def ptr_retyps_gen_def
+                            new_cap_addrs_def field_simps power_add
+                      cong: globals.unfold_congs)
       apply (simp add: Int_ac bit_simps)
      apply (clarsimp simp: word_bits_conv range_cover_def archObjSize_def bit_simps)
     apply (clarsimp simp: objBitsKO_def range_cover.aligned archObjSize_def bit_simps)
@@ -5341,7 +5334,7 @@ proof -
              apply (simp add: obj_at'_real_def)
              apply (wp placeNewObject_ko_wp_at')
             apply (vcg exspec=Arch_initContext_modifies)
-           apply (clarsimp simp: dc_def)
+           apply clarsimp
            apply vcg
           apply (rule conseqPre, vcg, clarsimp)
          apply (clarsimp simp: createObject_hs_preconds_def
@@ -5519,7 +5512,7 @@ lemma ccorres_guard_impR:
 lemma typ_clear_region_dom:
  "dom (clift (hrs_htd_update (typ_clear_region ptr bits) hp) :: 'b :: mem_type typ_heap)
   \<subseteq>  dom ((clift hp) :: 'b :: mem_type typ_heap)"
-   apply (clarsimp simp:lift_t_def lift_typ_heap_def Fun.comp_def)
+   apply (clarsimp simp:lift_t_def lift_typ_heap_def comp_def)
    apply (clarsimp simp:lift_state_def)
    apply (case_tac hp)
    apply (clarsimp simp:)
@@ -7275,7 +7268,7 @@ shows  "ccorres dc xfdc
            apply (rule_tac P="rv' = of_nat n" in ccorres_gen_asm2, simp)
            apply (rule ccorres_rhs_assoc)+
            apply (rule ccorres_add_return)
-           apply (simp only: dc_def[symmetric] hrs_htd_update)
+           apply (simp only: hrs_htd_update)
            apply ((rule ccorres_Guard_Seq[where S=UNIV])+)?
            apply (rule ccorres_split_nothrow,
                 rule_tac S="{ptr .. ptr + of_nat (length destSlots) * 2^ (getObjectSize newType userSize) - 1}"
@@ -7634,7 +7627,7 @@ shows  "ccorres dc xfdc
   apply (simp add: o_def)
   apply (case_tac newType,
          simp_all add: object_type_from_H_def Kernel_C_defs
-                       nAPIObjects_def APIType_capBits_def o_def split:apiobject_type.splits)[1]
+                       nAPIObjects_def APIType_capBits_def split:apiobject_type.splits)[1]
          subgoal by (simp add:unat_eq_def word_unat.Rep_inverse' word_less_nat_alt)
         subgoal by (clarsimp simp:objBits_simps', unat_arith)
        apply (fold_subgoals (prefix))[3]

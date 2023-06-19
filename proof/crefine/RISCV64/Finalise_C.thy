@@ -219,8 +219,7 @@ proof (induct ts)
     apply (rule iffD1 [OF ccorres_expand_while_iff])
     apply (rule ccorres_tmp_lift2[where G'=UNIV and G''="\<lambda>x. UNIV", simplified])
      apply ceqv
-    apply (simp add: ccorres_cond_iffs mapM_x_def sequence_x_def
-                     dc_def[symmetric])
+    apply (simp add: ccorres_cond_iffs mapM_x_def sequence_x_def)
     apply (rule ccorres_guard_imp2, rule ccorres_return_Skip)
     apply simp
     done
@@ -229,7 +228,7 @@ next
   show ?case
     apply (rule iffD1 [OF ccorres_expand_while_iff])
     apply (simp del: Collect_const
-                add: dc_def[symmetric] mapM_x_Cons)
+                add: mapM_x_Cons)
     apply (rule ccorres_guard_imp2)
      apply (rule_tac xf'=thread_' in ccorres_abstract)
       apply ceqv
@@ -344,7 +343,7 @@ lemma cancelAllIPC_ccorres:
              subgoal by (simp add: cendpoint_relation_def endpoint_state_defs)
             subgoal by simp
            apply (rule ceqv_refl)
-          apply (simp only: ccorres_seq_skip dc_def[symmetric])
+          apply (simp only: ccorres_seq_skip)
           apply (rule ccorres_split_nothrow_novcg)
               apply (rule cancel_all_ccorres_helper)
              apply ceqv
@@ -361,12 +360,10 @@ lemma cancelAllIPC_ccorres:
          apply (wp set_ep_valid_objs' hoare_vcg_const_Ball_lift
                    weak_sch_act_wf_lift_linear)
         apply vcg
-       apply (simp add: ccorres_cond_iffs dc_def[symmetric])
+       apply (simp add: ccorres_cond_iffs)
        apply (rule ccorres_return_Skip)
       apply (rename_tac list)
-      apply (simp add: endpoint_state_defs
-                       Collect_False Collect_True
-                       ccorres_cond_iffs dc_def[symmetric]
+      apply (simp add: endpoint_state_defs Collect_False Collect_True ccorres_cond_iffs
                   del: Collect_const)
       apply (rule ccorres_rhs_assoc)+
       apply csymbr
@@ -395,7 +392,7 @@ lemma cancelAllIPC_ccorres:
            subgoal by (simp add: cendpoint_relation_def endpoint_state_defs)
           subgoal by simp
          apply (rule ceqv_refl)
-        apply (simp only: ccorres_seq_skip dc_def[symmetric])
+        apply (simp only: ccorres_seq_skip)
         apply (rule ccorres_split_nothrow_novcg)
             apply (rule cancel_all_ccorres_helper)
            apply ceqv
@@ -443,15 +440,12 @@ lemma cancelAllSignals_ccorres:
      apply (rule_tac A="invs' and ko_at' rv ntfnptr"
                   in ccorres_guard_imp2[where A'=UNIV])
       apply wpc
-        apply (simp add: notification_state_defs ccorres_cond_iffs
-                         dc_def[symmetric])
+        apply (simp add: notification_state_defs ccorres_cond_iffs)
         apply (rule ccorres_return_Skip)
-       apply (simp add: notification_state_defs ccorres_cond_iffs
-                        dc_def[symmetric])
+       apply (simp add: notification_state_defs ccorres_cond_iffs)
        apply (rule ccorres_return_Skip)
       apply (rename_tac list)
-      apply (simp add: notification_state_defs ccorres_cond_iffs
-                       dc_def[symmetric] Collect_True
+      apply (simp add: notification_state_defs ccorres_cond_iffs Collect_True
                   del: Collect_const)
       apply (rule ccorres_rhs_assoc)+
       apply csymbr
@@ -478,7 +472,7 @@ lemma cancelAllSignals_ccorres:
            subgoal by (simp add: cnotification_relation_def notification_state_defs Let_def)
           subgoal by simp
          apply (rule ceqv_refl)
-        apply (simp only: ccorres_seq_skip dc_def[symmetric])
+        apply (simp only: ccorres_seq_skip)
         apply (rule ccorres_split_nothrow_novcg)
             apply (rule cancel_all_ccorres_helper)
            apply ceqv
@@ -735,7 +729,7 @@ lemma doUnbindNotification_ccorres:
       apply (rule ccorres_move_c_guard_tcb)
       apply (simp add: setBoundNotification_def)
       apply (rule_tac P'="\<top>" and P="\<top>"
-                   in threadSet_ccorres_lemma3[unfolded dc_def])
+                   in threadSet_ccorres_lemma3)
        apply vcg
       apply simp
       apply (erule(1) rf_sr_tcb_update_no_queue2)
@@ -785,7 +779,7 @@ lemma doUnbindNotification_ccorres':
       apply (rule ccorres_move_c_guard_tcb)
       apply (simp add: setBoundNotification_def)
       apply (rule_tac P'="\<top>" and P="\<top>"
-                   in threadSet_ccorres_lemma3[unfolded dc_def])
+                   in threadSet_ccorres_lemma3)
        apply vcg
       apply simp
       apply (erule(1) rf_sr_tcb_update_no_queue2)
@@ -819,9 +813,9 @@ lemma unbindNotification_ccorres:
      apply simp
      apply wpc
       apply (rule ccorres_cond_false)
-      apply (rule ccorres_return_Skip[unfolded dc_def])
+      apply (rule ccorres_return_Skip)
      apply (rule ccorres_cond_true)
-     apply (ctac (no_vcg) add: doUnbindNotification_ccorres[unfolded dc_def, simplified])
+     apply (ctac (no_vcg) add: doUnbindNotification_ccorres[simplified])
     apply (wp gbn_wp')
    apply vcg
   apply (clarsimp simp: option_to_ptr_def option_to_0_def pred_tcb_at'_def
@@ -1027,7 +1021,7 @@ lemma deleteASIDPool_ccorres:
   apply (rule ccorres_gen_asm)
   apply (cinit lift: asid_base_' pool_' simp: whileAnno_def)
    apply (rule ccorres_assert)
-   apply (clarsimp simp: liftM_def dc_def[symmetric] when_def)
+   apply (clarsimp simp: liftM_def when_def)
    apply (rule ccorres_Guard)+
    apply (rule ccorres_pre_gets_riscvKSASIDTable_ksArchState)
    apply (rule_tac R="\<lambda>s. rv = riscvKSASIDTable (ksArchState s)" in ccorres_cond2)
@@ -1084,7 +1078,7 @@ lemma deleteASID_ccorres:
       apply (rule ccorres_from_vcg[where P="\<top>" and P'=UNIV])
       apply (rule allI, rule conseqPre, vcg)
       apply (simp add: return_def)
-     apply (clarsimp simp: dc_def[symmetric] when_def liftM_def
+     apply (clarsimp simp: when_def liftM_def
                      cong: conj_cong call_ignore_cong)
      apply (rename_tac asidTable ap)
      apply csymbr
@@ -1354,7 +1348,6 @@ next
           apply (rule ccorres_checkPTAt)
           apply (rule ccorres_symb_exec_r2)
             apply (rule ccorres_symb_exec_r2)
-              apply (fold dc_def)[1]
               apply (rule Suc.hyps[unfolded whileAnno_def])
              using level apply simp
              apply vcg
@@ -1539,7 +1532,7 @@ lemma cteDeleteOne_ccorres:
           erule_tac t="ret__unsigned_longlong = scast cap_null_cap"
                 and s="cteCap cte = NullCap"
                  in ssubst)
-   apply (clarsimp simp only: when_def unless_def dc_def[symmetric])
+   apply (clarsimp simp only: when_def unless_def)
    apply (rule ccorres_cond2[where R=\<top>])
      apply (clarsimp simp: Collect_const_mem)
     apply (rule ccorres_rhs_assoc)+
@@ -1550,12 +1543,12 @@ lemma cteDeleteOne_ccorres:
       apply (ctac(no_vcg) add: isFinalCapability_ccorres[where slot=slot])
        apply (rule_tac A="invs'  and cte_wp_at' ((=) cte) slot"
                      in ccorres_guard_imp2[where A'=UNIV])
-        apply (simp add: split_def dc_def[symmetric]
+        apply (simp add: split_def
                     del: Collect_const)
         apply (rule ccorres_move_c_guard_cte)
         apply (ctac(no_vcg) add: finaliseCap_True_standin_ccorres)
          apply (rule ccorres_assert)
-         apply (simp add: dc_def[symmetric])
+         apply simp
          apply csymbr
          apply (ctac add: emptySlot_ccorres)
         apply (simp add: pred_conj_def finaliseCapTrue_standin_simple_def)
@@ -1591,7 +1584,7 @@ lemma deletingIRQHandler_ccorres:
                    ({s. irq_opt_relation (Some irq) (irq_' s)}) []
    (deletingIRQHandler irq) (Call deletingIRQHandler_'proc)"
   apply (cinit lift: irq_' cong: call_ignore_cong)
-   apply (clarsimp simp: irq_opt_relation_def ptr_add_assertion_def dc_def[symmetric]
+   apply (clarsimp simp: irq_opt_relation_def ptr_add_assertion_def
                    cong: call_ignore_cong )
    apply (rule_tac r'="\<lambda>rv rv'. rv' = Ptr rv"
                 and xf'="slot_'" in ccorres_split_nothrow)
@@ -1748,7 +1741,7 @@ lemma ccap_relation_capFMappedASID_CL_0:
   done
 
 lemma Arch_finaliseCap_ccorres:
-  notes dc_simp[simp del] Collect_const[simp del] if_weak_cong[cong]
+  notes Collect_const[simp del] if_weak_cong[cong]
   shows
   "ccorres (\<lambda>rv rv'. ccap_relation (fst rv) (remainder_C rv') \<and>
                      ccap_relation (snd rv) (finaliseCap_ret_C.cleanupInfo_C rv'))
@@ -1961,7 +1954,6 @@ lemma prepareThreadDelete_ccorres:
      (invs' and tcb_at' thread)
      (UNIV \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr thread}) hs
    (prepareThreadDelete thread) (Call Arch_prepareThreadDelete_'proc)"
-  supply dc_simp[simp del]
   apply (cinit lift: thread_', rename_tac cthread)
    apply (rule ccorres_return_Skip)
   apply fastforce
@@ -2116,18 +2108,18 @@ lemma finaliseCap_ccorres:
     apply (rule ccorres_fail)
    apply (rule ccorres_add_return, rule ccorres_split_nothrow_novcg[where r'=dc and xf'=xfdc])
        apply (rule ccorres_Cond_rhs)
-        apply (simp add: ccorres_cond_iffs dc_def[symmetric])
+        apply (simp add: ccorres_cond_iffs)
         apply (rule ccorres_return_Skip)
        apply (rule ccorres_Cond_rhs)
-        apply (simp add: ccorres_cond_iffs dc_def[symmetric])
+        apply (simp add: ccorres_cond_iffs)
         apply (rule ccorres_return_Skip)
        apply (rule ccorres_Cond_rhs)
         apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
         apply simp
        apply (rule ccorres_Cond_rhs)
-        apply (simp add: ccorres_cond_iffs dc_def[symmetric])
+        apply (simp add: ccorres_cond_iffs)
         apply (rule ccorres_return_Skip)
-       apply (simp add: ccorres_cond_iffs dc_def[symmetric])
+       apply (simp add: ccorres_cond_iffs)
        apply (rule ccorres_return_Skip)
       apply (rule ceqv_refl)
      apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])

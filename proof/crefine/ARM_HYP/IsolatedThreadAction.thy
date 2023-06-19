@@ -412,7 +412,7 @@ lemma modify_isolatable:
                    liftM_def bind_assoc)
   apply (clarsimp simp: monadic_rewrite_def exec_gets
                    getSchedulerAction_def)
-  apply (simp add: simpler_modify_def o_def)
+  apply (simp add: simpler_modify_def)
   apply (subst swap)
    apply (simp add: obj_at_partial_overwrite_If)
   apply (simp add: ksPSpace_update_partial_id o_def)
@@ -646,7 +646,7 @@ lemma setVCPU_isolatable:
   apply (subst setObject_assert_modify;
          simp add: projectKOs objBits_simps archObjSize_def vcpuBits_def vcpu_bits_def pageBits_def)+
   apply (clarsimp simp: select_f_asserts assert_def obj_at_partial_overwrite_id2 split: if_splits)
-  apply (clarsimp simp: select_f_def simpler_modify_def bind_def o_def)
+  apply (clarsimp simp: select_f_def simpler_modify_def bind_def)
   apply (case_tac s)
   apply simp
   apply (rule ext)
@@ -1382,8 +1382,7 @@ lemma setCTE_isolatable:
    apply (erule notE[rotated], erule (3) tcb_ctes_clear[rotated])
   apply (simp add: select_f_returns select_f_asserts split: if_split)
   apply (intro conjI impI)
-    apply (clarsimp simp: simpler_modify_def fun_eq_iff
-                          partial_overwrite_fun_upd2 o_def
+    apply (clarsimp simp: simpler_modify_def fun_eq_iff partial_overwrite_fun_upd2
                   intro!: kernel_state.fold_congs[OF refl refl])
     apply (clarsimp simp: obj_at'_def projectKOs objBits_simps)
     apply (erule notE[rotated], rule tcb_ctes_clear[rotated 2], assumption+)
