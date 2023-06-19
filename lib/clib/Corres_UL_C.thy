@@ -1719,4 +1719,110 @@ lemma ccorres_grab_asm:
    ccorres_underlying sr G rr xf ar ax (P and K Q) P' hs f g"
   by (fastforce simp: ccorres_underlying_def)
 
+
+\<comment> \<open> An experimental cong rule for rewriting everywhere reasonable, with full context.
+    Can cause problems when there are schematic variables or when one of the return relations
+    takes a pair as a parameter. \<close>
+lemma ccorres_context_cong_helper':
+  assumes c: "ccorres_underlying sr \<Gamma> r xf ar axf P Q hs a c"
+  assumes "\<And>s. P s = P' s"
+  \<comment> \<open>Don't use membership equality when rewriting Q, as the LHS can be simplified into something
+     that is unable to unify with the RHS.
+  assumes "\<And>s s'. \<lbrakk> (s,s') \<in> sr; P' s \<rbrakk> \<Longrightarrow> s' \<in> Q = (s' \<in> Q')"\<close>
+  assumes "\<And>s s'. \<lbrakk> (s, s') \<in> sr; P' s \<rbrakk> \<Longrightarrow> Q = Q'"
+  assumes "hs = hs'"
+  assumes "\<And>s s'. \<lbrakk> (s, s') \<in> sr; P' s; s' \<in> Q' \<rbrakk> \<Longrightarrow> a s = a' s"
+  assumes "\<And>s s' s''. \<lbrakk> (s, s') \<in> sr; P' s; s' \<in> Q' \<rbrakk>  \<Longrightarrow> semantic_equiv \<Gamma> s' s'' c c'"
+  assumes "\<And>s s' t'.
+             \<lbrakk> (s, s') \<in> sr; P' s; s' \<in> Q'; \<Gamma> \<turnstile>\<^sub>h \<langle>c' # hs', s'\<rangle> \<Rightarrow> (size hs', Normal t') \<rbrakk> \<Longrightarrow>
+             xf t' = xf' t'"
+  assumes "\<And>x s t s' t'.
+             \<lbrakk> (s, s') \<in> sr; P' s; s' \<in> Q'; (t, t') \<in> sr; (x, t) \<in> fst (a' s);
+               \<Gamma> \<turnstile>\<^sub>h \<langle>c' # hs', s'\<rangle> \<Rightarrow> (size hs', Normal t') \<rbrakk> \<Longrightarrow>
+             r x (xf' t') = r' x (xf' t')"
+  assumes "\<And>s s' t' n.
+             \<lbrakk> (s, s') \<in> sr; P' s; s' \<in> Q'; n \<noteq> size hs'; \<Gamma> \<turnstile>\<^sub>h \<langle>c' # hs', s'\<rangle> \<Rightarrow> (n, Normal t') \<rbrakk> \<Longrightarrow>
+             axf t' = axf' t'"
+  assumes "\<And>x s t s' t' n.
+             \<lbrakk> (s, s') \<in> sr; P' s; s' \<in> Q'; (t, t') \<in> sr; (x, t) \<in> fst (a' s); n \<noteq> size hs';
+               \<Gamma> \<turnstile>\<^sub>h \<langle>c' # hs', s'\<rangle> \<Rightarrow> (n, Normal t') \<rbrakk> \<Longrightarrow>
+             ar x (axf' t') = ar' x (axf' t')"
+  shows   "ccorres_underlying sr \<Gamma> r' xf' ar' axf' P' Q' hs' a' c'"
+  using c
+  apply -
+  apply (rule ccorresI')
+  apply (erule (1) ccorresE)
+      apply (force simp: assms)
+     apply (force simp: assms)
+    apply (force simp: assms)
+   apply (clarsimp simp: assms)
+   apply (erule exec_handlers_semantic_equivD2)
+   apply (force simp: assms)
+  apply (fastforce simp: unif_rrel_def assms)
+  done
+
+lemma ccorres_context_cong_helper:
+  assumes "\<And>s. P s = P' s"
+  assumes "\<And>s s'. \<lbrakk> (s, s') \<in> sr; P' s \<rbrakk> \<Longrightarrow> Q = Q'"
+  assumes "hs = hs'"
+  assumes "\<And>s s'. \<lbrakk> (s, s') \<in> sr; P' s; s' \<in> Q' \<rbrakk> \<Longrightarrow> a s = a' s"
+  assumes "\<And>s s' s''. \<lbrakk> (s, s') \<in> sr; P' s; s' \<in> Q' \<rbrakk>  \<Longrightarrow> semantic_equiv \<Gamma> s' s'' c c'"
+  assumes "\<And>s s' t'.
+             \<lbrakk> (s, s') \<in> sr; P' s; s' \<in> Q'; \<Gamma> \<turnstile>\<^sub>h \<langle>c' # hs', s'\<rangle> \<Rightarrow> (size hs', Normal t') \<rbrakk> \<Longrightarrow>
+             xf t' = xf' t'"
+  assumes "\<And>x s t s' t'.
+             \<lbrakk> (s, s') \<in> sr; P' s; s' \<in> Q'; (t, t') \<in> sr; (x, t) \<in> fst (a' s);
+               \<Gamma> \<turnstile>\<^sub>h \<langle>c' # hs', s'\<rangle> \<Rightarrow> (size hs', Normal t') \<rbrakk> \<Longrightarrow>
+             r x (xf' t') = r' x (xf' t')"
+  assumes "\<And>s s' t' n.
+             \<lbrakk> (s, s') \<in> sr; P' s; s' \<in> Q'; n \<noteq> size hs'; \<Gamma> \<turnstile>\<^sub>h \<langle>c' # hs', s'\<rangle> \<Rightarrow> (n, Normal t') \<rbrakk> \<Longrightarrow>
+             axf t' = axf' t'"
+  assumes "\<And>x s t s' t' n.
+             \<lbrakk> (s, s') \<in> sr; P' s; s' \<in> Q'; (t, t') \<in> sr; (x, t) \<in> fst (a' s); n \<noteq> size hs';
+               \<Gamma> \<turnstile>\<^sub>h \<langle>c' # hs', s'\<rangle> \<Rightarrow> (n, Normal t') \<rbrakk> \<Longrightarrow>
+             ar x (axf' t') = ar' x (axf' t')"
+  shows   "ccorres_underlying sr \<Gamma> r xf ar axf P Q hs a c
+           = ccorres_underlying sr \<Gamma> r' xf' ar' axf' P' Q' hs' a' c'"
+  using assms
+  apply -
+  apply rule
+   apply (erule ccorres_context_cong_helper'; assumption)
+  apply (erule ccorres_context_cong_helper')
+  by (fastforce simp: semantic_equiv_sym exec_handlers_semantic_equiv[where a=c and b=c'])+
+
+lemmas ccorres_context_cong = ccorres_context_cong_helper[OF _ _ _ _ semantic_equivI]
+
+\<comment> \<open> Only rewrite guards, the handler stack and function bodies, with context.
+    This is often more useful, as we generally want the return relations and extraction
+    functions to be stable while working with a ccorres_underlying statement. \<close>
+lemma ccorres_context_weak_cong:
+  assumes "\<And>s. P s = P' s"
+  assumes "\<And>s s'. \<lbrakk> (s, s') \<in> sr; P' s \<rbrakk> \<Longrightarrow> Q = Q'"
+  assumes "\<And>s s'. \<lbrakk> (s, s') \<in> sr; P' s; s' \<in> Q' \<rbrakk> \<Longrightarrow> a s = a' s"
+  assumes "\<And>s s' s''. \<lbrakk> (s, s') \<in> sr; P' s; s' \<in> Q' \<rbrakk>  \<Longrightarrow> \<Gamma>\<turnstile> \<langle>c,Normal s'\<rangle> \<Rightarrow> s'' = \<Gamma>\<turnstile> \<langle>c',Normal s'\<rangle> \<Rightarrow> s''"
+  shows   "ccorres_underlying sr \<Gamma> r xf ar axf P Q hs a c
+           = ccorres_underlying sr \<Gamma> r xf ar axf P' Q' hs a' c'"
+  by (clarsimp simp: assms cong: ccorres_context_cong)
+
+\<comment> \<open> Even more restrictive: only rewrite the abstract monad. \<close>
+lemma ccorres_abstract_cong:
+  "\<lbrakk> \<And>s s'. \<lbrakk> (s, s') \<in> sr; P s ; s' \<in> P' \<rbrakk> \<Longrightarrow> a s = b s \<rbrakk> \<Longrightarrow>
+   ccorres_underlying sr G r xf ar axf P P' hs a c
+   = ccorres_underlying sr G r xf ar axf P P' hs b c"
+  by (clarsimp cong: ccorres_context_weak_cong)
+
+\<comment> \<open> Rewrite almost everywhere, without context. This should behave the same as with normal
+    term rewriting with no cong rule, except it will not rewrite the state relation or function
+    environment. \<close>
+lemma ccorres_all_cong:
+  "\<lbrakk> r=r'; xf=xf'; ar=ar'; axf=axf'; P=P'; Q=Q'; hs=hs'; m=m'; c=c' \<rbrakk> \<Longrightarrow>
+   ccorres_underlying srel \<Gamma> r xf ar axf P Q hs m c
+   = ccorres_underlying srel \<Gamma> r' xf' ar' axf' P' Q' hs' m' c'"
+  by (simp cong: ccorres_context_cong)
+
+\<comment> \<open> Only rewrite guards, the handler stack and function bodies, without context.
+    We make this the default behaviour, so that the the return relations and extraction
+    functions are stable under simplification. \<close>
+lemmas ccorres_weak_cong = ccorres_all_cong[OF refl refl refl refl, cong]
+
 end
