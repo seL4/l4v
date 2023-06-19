@@ -1085,8 +1085,8 @@ lemma pas_refined_cur':
     apply blast+
   done
 
-(* Note: It's almost surely asking for the wrong thing if we ever using lemmas in such a way as
-   to demand `pas_cur_domain` or `is_subject` about the initial_aag, because they both concern
+(* Note: It's almost surely asking for the wrong thing if we're ever using lemmas in such a way
+   as to demand `pas_cur_domain` or `is_subject` about the initial_aag, because they both concern
    the pasSubject of the given aag, which for the initial_aag is essentially arbitrary.
    Thus, in situations where this would occur we instead invoke the step lemmas to preserve them
    for (current_aag s) instead, then convert them back to the initial_aag version afterwards. *)
