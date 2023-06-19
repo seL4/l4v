@@ -732,8 +732,7 @@ lemma switchToThread_fp_ccorres:
         apply (simp add: storeWordUser_def bind_assoc case_option_If2
                          split_def
                     del: Collect_const)
-        apply (simp only: dmo_clearExMonitor_setCurThread_swap
-                             dc_def[symmetric])
+        apply (simp only: dmo_clearExMonitor_setCurThread_swap)
         apply (rule ccorres_split_nothrow_novcg_dc)
            apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
            apply (rule allI, rule conseqPre, vcg)
@@ -985,10 +984,7 @@ lemma ccorres_call_hSkip:
   apply -
   apply (rule ccorres_call_hSkip')
        apply (erule ccorres_guard_imp)
-        apply simp
-       apply clarsimp
-      apply (simp_all add: ggl xfdc_def)
-  apply (clarsimp simp: igl)
+        apply (clarsimp simp: ggl igl xfdc_def)+
   done
 
 lemma bind_case_sum_rethrow:
@@ -1777,7 +1773,6 @@ proof -
        apply (rule ccorres_Cond_rhs_Seq)
           apply (rule ccorres_alternative2)
           apply (rule ccorres_split_throws)
-           apply (fold dc_def)[1]
            apply (rule ccorres_call_hSkip)
              apply (rule slowpath_ccorres)
             apply simp
@@ -1812,7 +1807,7 @@ proof -
           apply (rule ccorres_cond_true_seq)
           apply (rule ccorres_split_throws)
            apply (rule ccorres_call_hSkip)
-             apply (erule disjE; simp flip: dc_def; rule slowpath_ccorres)
+             apply (erule disjE; simp; rule slowpath_ccorres)
             apply simp
            apply simp
           apply (vcg exspec=slowpath_noreturn_spec)
@@ -1827,7 +1822,6 @@ proof -
          apply (rule ccorres_Cond_rhs_Seq)
           apply simp
           apply (rule ccorres_split_throws)
-           apply (fold dc_def)[1]
            apply (rule ccorres_call_hSkip)
              apply (rule slowpath_ccorres, simp+)
           apply (vcg exspec=slowpath_noreturn_spec)
@@ -1864,7 +1858,6 @@ proof -
            apply (rule ccorres_Cond_rhs_Seq)
             apply simp
             apply (rule ccorres_split_throws)
-             apply (fold dc_def)[1]
              apply (rule ccorres_call_hSkip)
                apply (rule slowpath_ccorres, simp+)
             apply (vcg exspec=slowpath_noreturn_spec)
@@ -1887,7 +1880,6 @@ proof -
              apply (rule ccorres_Cond_rhs_Seq)
               apply simp
               apply (rule ccorres_split_throws)
-               apply (fold dc_def)[1]
                apply (rule ccorres_call_hSkip)
                  apply (rule slowpath_ccorres, simp+)
               apply (vcg exspec=slowpath_noreturn_spec)
@@ -1945,29 +1937,25 @@ proof -
                         apply (simp add: ctcb_relation_unat_tcbPriority_C
                                           word_less_nat_alt linorder_not_le)
                         apply ceqv
-                       apply (simp add: Collect_const_mem from_bool_eq_if from_bool_eq_if' from_bool_0 if_1_0_0 ccorres_IF_True del: Collect_const)
-                       apply (simp add: if_1_0_0 ccap_relation_ep_helpers from_bool_0 word_le_not_less
-                                    del: Collect_const cong: call_ignore_cong)
+                       apply (simp add: from_bool_eq_if from_bool_eq_if' from_bool_0 ccorres_IF_True del: Collect_const)
 
                        apply (rule ccorres_Cond_rhs)
-                        apply (simp add: bindE_assoc del: Collect_const)
                         apply (rule ccorres_Guard_Seq)
                         apply (rule ccorres_add_return2)
                         apply (ctac add: isHighestPrio_ccorres)
-                        apply (simp add: Collect_const_mem from_bool_eq_if from_bool_eq_if' from_bool_0 if_1_0_0 ccorres_IF_True del: Collect_const)
+                        apply (simp add: from_bool_eq_if from_bool_eq_if' from_bool_0 ccorres_IF_True del: Collect_const)
                         apply (clarsimp simp: to_bool_def)
                         apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
                         apply clarsimp
                         apply (rule conseqPre, vcg)
-                        apply (clarsimp simp: from_bool_eq_if from_bool_eq_if' from_bool_0 if_1_0_0)
+                        apply (clarsimp simp: from_bool_eq_if' word_le_not_less from_bool_0)
                         apply (clarsimp simp: return_def)
                         apply (rule wp_post_taut)
                         apply (vcg exspec=isHighestPrio_modifies)
-                       apply (simp add: Collect_const_mem from_bool_eq_if from_bool_eq_if' from_bool_0 if_1_0_0 ccorres_IF_True del: Collect_const)
                        apply (rule_tac P=\<top> and P'="{s. ret__int_' s = 0}" in ccorres_from_vcg)
                        apply (clarsimp simp: isHighestPrio_def' simpler_gets_def)
                        apply (rule conseqPre, vcg)
-                       apply clarsimp
+                       apply (clarsimp simp: from_bool_0)
                       apply clarsimp
                       apply vcg
                      apply (simp add: Collect_const_mem from_bool_eq_if from_bool_eq_if' from_bool_0 if_1_0_0 ccorres_IF_True del: Collect_const)
@@ -1981,7 +1969,6 @@ proof -
                    apply (rule ccorres_Cond_rhs_Seq)
                     apply (simp add: bindE_assoc from_bool_0 catch_throwError del: Collect_const)
                     apply (rule ccorres_split_throws)
-                     apply (fold dc_def)[1]
                      apply (rule ccorres_call_hSkip)
                        apply (rule slowpath_ccorres, simp+)
                     apply (vcg exspec=slowpath_noreturn_spec)
@@ -2000,7 +1987,6 @@ proof -
                apply (rule ccorres_Cond_rhs_Seq)
                 apply simp
                 apply (rule ccorres_split_throws)
-                 apply (fold dc_def)[1]
                  apply (rule ccorres_call_hSkip)
                    apply (rule slowpath_ccorres, simp+)
                 apply (vcg exspec=slowpath_noreturn_spec)
@@ -2015,7 +2001,6 @@ proof -
                   apply (rule ccorres_Cond_rhs_Seq)
                    apply (simp add: pde_stored_asid_def asid_map_pd_to_hwasids_def)
                    apply (rule ccorres_split_throws)
-                    apply (fold dc_def)[1]
                     apply (rule ccorres_call_hSkip)
                       apply (rule slowpath_ccorres, simp+)
                    apply (vcg exspec=slowpath_noreturn_spec)
@@ -2044,7 +2029,6 @@ proof -
                     apply (rule ccorres_seq_cond_raise[THEN iffD2])
                     apply (rule_tac R=\<top> in ccorres_cond2', blast)
                      apply (rule ccorres_split_throws)
-                      apply (fold dc_def)[1]
                       apply (rule ccorres_call_hSkip)
                         apply (rule slowpath_ccorres, simp+)
                      apply (vcg exspec=slowpath_noreturn_spec)
@@ -2100,7 +2084,7 @@ proof -
                                       ccorres_move_array_assertion_tcb_ctes
                                       ccorres_move_c_guard_tcb_ctes)+
                           apply csymbr
-                          apply (simp add: cteInsert_def bind_assoc dc_def[symmetric]
+                          apply (simp add: cteInsert_def bind_assoc
                                       del: Collect_const cong: call_ignore_cong)
                           apply (rule ccorres_pre_getCTE2, rename_tac curThreadReplyCTE)
                           apply (simp only: getThreadState_def)
@@ -2223,7 +2207,6 @@ proof -
                                        apply csymbr
                                        apply csymbr
                                        apply (rule ccorres_call_hSkip)
-                                         apply (fold dc_def)[1]
                                          apply (rule fastpath_restore_ccorres)
                                         apply simp
                                        apply simp
@@ -2608,7 +2591,6 @@ lemma fastpath_reply_recv_ccorres:
        apply (rule ccorres_Cond_rhs_Seq)
         apply (rule ccorres_alternative2)
         apply (rule ccorres_split_throws)
-         apply (fold dc_def)[1]
          apply (rule ccorres_call_hSkip)
            apply (rule slowpath_ccorres)
           apply simp
@@ -2642,7 +2624,7 @@ lemma fastpath_reply_recv_ccorres:
           apply (rule ccorres_cond_true_seq)
           apply (rule ccorres_split_throws)
            apply (rule ccorres_call_hSkip)
-             apply (erule disjE; simp flip: dc_def; rule slowpath_ccorres)
+             apply (erule disjE; simp; rule slowpath_ccorres)
             apply simp
            apply simp
           apply (vcg exspec=slowpath_noreturn_spec)
@@ -2657,7 +2639,6 @@ lemma fastpath_reply_recv_ccorres:
          apply (rule ccorres_Cond_rhs_Seq)
           apply simp
           apply (rule ccorres_split_throws)
-           apply (fold dc_def)[1]
            apply (rule ccorres_call_hSkip)
              apply (rule slowpath_ccorres)
             apply simp
@@ -2682,7 +2663,6 @@ lemma fastpath_reply_recv_ccorres:
              apply (rule ccorres_Cond_rhs_Seq)
             apply (rule ccorres_split_throws)
              apply simp
-             apply (fold dc_def)[1]
              apply (rule ccorres_call_hSkip)
                apply (rule slowpath_ccorres, simp+)
             apply (vcg exspec=slowpath_noreturn_spec)
@@ -2712,7 +2692,6 @@ lemma fastpath_reply_recv_ccorres:
                apply (rule ccorres_Cond_rhs_Seq)
                 apply (simp del: Collect_const not_None_eq)
                 apply (rule ccorres_split_throws)
-                 apply (fold dc_def)[1]
                  apply (rule ccorres_call_hSkip)
                    apply (rule slowpath_ccorres, simp+)
                 apply (vcg exspec=slowpath_noreturn_spec)
@@ -2746,7 +2725,6 @@ lemma fastpath_reply_recv_ccorres:
              apply (rule ccorres_Cond_rhs_Seq)
               apply (simp cong: conj_cong)
                 apply (rule ccorres_split_throws)
-                 apply (fold dc_def)[1]
                  apply (rule ccorres_call_hSkip)
                    apply (rule slowpath_ccorres, simp+)
                 apply (vcg exspec=slowpath_noreturn_spec)
@@ -2766,7 +2744,6 @@ lemma fastpath_reply_recv_ccorres:
                  apply (rule ccorres_Cond_rhs_Seq)
                   apply (simp del: Collect_const not_None_eq)
                   apply (rule ccorres_split_throws)
-                   apply (fold dc_def)[1]
                    apply (rule ccorres_call_hSkip)
                      apply (rule slowpath_ccorres, simp+)
                   apply (vcg exspec=slowpath_noreturn_spec)
@@ -2788,7 +2765,6 @@ lemma fastpath_reply_recv_ccorres:
 
                     apply simp
                     apply (rule ccorres_split_throws)
-                     apply (fold dc_def)[1]
                      apply (rule ccorres_call_hSkip)
                        apply (rule slowpath_ccorres, simp+)
                     apply (vcg exspec=slowpath_noreturn_spec)
@@ -2820,7 +2796,6 @@ lemma fastpath_reply_recv_ccorres:
                       apply (rule ccorres_cond2'[where R=\<top>], blast)
 
                       apply (rule ccorres_split_throws)
-                      apply (fold dc_def)[1]
                       apply (rule ccorres_call_hSkip)
                       apply (rule slowpath_ccorres, simp+)
                       apply (vcg exspec=slowpath_noreturn_spec)
@@ -2835,7 +2810,6 @@ lemma fastpath_reply_recv_ccorres:
                       apply (rule ccorres_Cond_rhs_Seq)
                        apply (simp add: pde_stored_asid_def asid_map_pd_to_hwasids_def)
                        apply (rule ccorres_split_throws)
-                        apply (fold dc_def)[1]
                         apply (rule ccorres_call_hSkip)
                           apply (rule slowpath_ccorres, simp+)
                        apply (vcg exspec=slowpath_noreturn_spec)
@@ -2866,7 +2840,6 @@ lemma fastpath_reply_recv_ccorres:
 
                      apply simp
                      apply (rule ccorres_split_throws)
-                      apply (fold dc_def)[1]
                       apply (rule ccorres_call_hSkip)
                         apply (rule slowpath_ccorres, simp+)
                      apply (vcg exspec=slowpath_noreturn_spec)
@@ -2906,7 +2879,7 @@ lemma fastpath_reply_recv_ccorres:
                        apply ceqv
                       apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2)
                       apply (rule_tac xf'=xfdc and r'=dc in ccorres_split_nothrow)
-                          apply (rule fastpath_enqueue_ccorres[unfolded o_def,simplified])
+                          apply (rule fastpath_enqueue_ccorres[simplified])
                           apply simp
                          apply ceqv
                         apply (simp add: liftM_def del: Collect_const cong: call_ignore_cong)
@@ -2995,7 +2968,6 @@ lemma fastpath_reply_recv_ccorres:
                                      apply csymbr
                                      apply csymbr
                                      apply (rule ccorres_call_hSkip)
-                                       apply (fold dc_def)[1]
                                        apply (rule fastpath_restore_ccorres)
                                       apply simp
                                      apply simp
@@ -3020,7 +2992,7 @@ lemma fastpath_reply_recv_ccorres:
                              apply (wp setCTE_cte_wp_at_other)
                             apply (simp del: Collect_const)
                             apply vcg
-                           apply (simp add: o_def)
+                           apply simp
                            apply (wp | simp
                                       | wp (once) updateMDB_weak_cte_wp_at
                                       | wp (once) updateMDB_cte_wp_at_other)+

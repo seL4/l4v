@@ -75,7 +75,7 @@ proof -
      apply (rule ccorres_symb_exec_r)
        apply (ctac(no_vcg) add: cteDeleteOne_ccorres[where w="-1"])
         apply (rule ccorres_call)
-           apply (rule cteInsert_ccorres[simplified dc_def])
+           apply (rule cteInsert_ccorres)
           apply simp
          apply simp
         apply simp
@@ -112,7 +112,7 @@ lemma invokeIRQHandler_ClearIRQHandler_ccorres:
    apply (simp add: ucast_up_ucast is_up)
    apply (ctac(no_vcg) add: getIRQSlot_ccorres[simplified])
      apply (rule ccorres_symb_exec_r)
-       apply (ctac add: cteDeleteOne_ccorres[where w="-1",simplified dc_def])
+       apply (ctac add: cteDeleteOne_ccorres[where w="-1"])
       apply vcg
      apply (rule conseqPre, vcg, clarsimp simp: rf_sr_def
         gs_set_assn_Delete_cstate_relation[unfolded o_def])
@@ -345,7 +345,7 @@ lemma invokeIRQControl_ccorres:
       (performIRQControl (Invocations_H.irqcontrol_invocation.IssueIRQHandler irq slot parent))
       (Call invokeIRQControl_'proc)"
   by (clarsimp simp: performIRQControl_def liftE_def bind_assoc
-               intro!: invokeIRQControl_expanded_ccorres[simplified liftE_def K_def, simplified])
+               intro!: invokeIRQControl_expanded_ccorres[simplified liftE_def, simplified])
 
 lemma isIRQActive_ccorres:
   "ccorres (\<lambda>rv rv'. rv' = from_bool rv) ret__unsigned_long_'
@@ -625,7 +625,7 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
     apply (vcg exspec=getSyscallArg_modifies)
    apply ccorres_rewrite
    apply (auto split: invocation_label.split arch_invocation_label.split
-               intro: syscall_error_throwError_ccorres_n[simplified throwError_def o_def dc_def id_def]
+               intro: syscall_error_throwError_ccorres_n[simplified throwError_def o_def]
                simp: throwError_def invocationCatch_def syscall_error_to_H_cases invocation_eq_use_types)[1]
   apply clarsimp
   apply (clarsimp simp: interpret_excaps_test_null excaps_map_def

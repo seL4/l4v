@@ -1095,7 +1095,7 @@ lemma flushSpace_ccorres:
      apply (rule_tac Q=\<top> and Q'=\<top> in ccorres_if_cond_throws2)
         apply (clarsimp simp: Collect_const_mem pde_stored_asid_def)
         apply (simp add: if_split_eq1 to_bool_def)
-       apply (rule ccorres_return_void_C [unfolded dc_def])
+       apply (rule ccorres_return_void_C)
       apply csymbr
       apply (clarsimp simp: pde_stored_asid_def)
       apply (case_tac "to_bool (stored_asid_valid_CL (pde_pde_invalid_lift stored_hw_asid___struct_pde_C))")
@@ -1107,7 +1107,7 @@ lemma flushSpace_ccorres:
        apply clarsimp
       apply clarsimp
       apply (rule ccorres_call,
-             rule invalidateTranslationASID_ccorres [simplified dc_def xfdc_def],
+             rule invalidateTranslationASID_ccorres,
              simp+)[1]
      apply vcg
     apply wp+
@@ -1405,7 +1405,6 @@ lemma armv_contextSwitch_ccorres:
   apply (cinit lift: cap_pd_' asid_')
    apply simp
    apply (ctac(no_vcg) add: getHWASID_ccorres)
-    apply (fold dc_def)
     apply (ctac (no_vcg)add: armv_contextSwitch_HWASID_ccorres)
    apply wp
   apply clarsimp
@@ -1651,7 +1650,7 @@ lemma vcpu_write_reg_ccorres:
              \<inter> \<lbrace> \<acute>value = v \<rbrace>) hs
      (vcpuWriteReg vcpuptr reg v)
      (Call vcpu_write_reg_'proc)"
-  supply Collect_const[simp del] dc_simp[simp del]
+  supply Collect_const[simp del]
   apply (cinit lift: vcpu_' reg_' value_')
    apply (rule ccorres_assert)
    apply clarsimp
@@ -1666,12 +1665,13 @@ lemma vcpu_write_reg_ccorres:
 lemma vcpu_save_reg_ccorres:
   "ccorres dc xfdc (vcpu_at' vcpuptr) (UNIV \<inter> \<lbrace>unat \<acute>reg = fromEnum r\<rbrace> \<inter> \<lbrace> \<acute>vcpu = vcpu_Ptr vcpuptr \<rbrace>) hs
      (vcpuSaveReg vcpuptr r) (Call vcpu_save_reg_'proc)"
-  supply dc_simp[simp del] Collect_const[simp del]
+  supply Collect_const[simp del]
   apply (cinit lift: reg_' vcpu_')
    apply (rule ccorres_assert2)
    apply (rule ccorres_cond_false_seq, simp)
    apply (ctac add: vcpu_hw_read_reg_ccorres)
-     apply (rule ccorres_move_const_guard ccorres_move_c_guard_vcpu, simp del: fun_upd_apply)+
+     apply (rule ccorres_move_const_guard ccorres_move_c_guard_vcpu)+
+     apply (simp del: fun_upd_apply)
      apply (ctac add: vcpuUpdate_vcpuRegs_ccorres)
     apply wpsimp
    apply (vcg exspec=vcpu_hw_read_reg_modifies)
@@ -1683,11 +1683,11 @@ lemma vcpu_restore_reg_ccorres:
   "ccorres dc xfdc
      (vcpu_at' vcpuptr) (UNIV \<inter> \<lbrace>unat \<acute>reg = fromEnum r\<rbrace> \<inter> \<lbrace> \<acute>vcpu = vcpu_Ptr vcpuptr \<rbrace>) hs
      (vcpuRestoreReg vcpuptr r) (Call vcpu_restore_reg_'proc)"
-  supply dc_simp[simp del] Collect_const[simp del]
+  supply Collect_const[simp del]
   apply (cinit lift: reg_' vcpu_')
    apply (rule ccorres_assert2)
    apply (rule ccorres_cond_false_seq, simp)
-   apply (rule ccorres_move_const_guard ccorres_move_c_guard_vcpu, simp)+
+   apply (rule ccorres_move_const_guard ccorres_move_c_guard_vcpu)+
    apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
    apply (ctac add: vcpu_hw_write_reg_ccorres)
   apply (frule maxBound_is_bound')
@@ -1733,7 +1733,6 @@ lemma vcpu_restore_reg_range_ccorres:
   apply (rule ccorres_grab_asm)
   apply (cinit lift: start_' end_' vcpu_' simp: whileAnno_def)
    apply csymbr
-   apply (clarsimp, fold dc_def)
    apply (rule ccorres_dc_from_rrel)
    (* supplying these as dest/intro/simp to proof tactics has no desired effect *)
    using maxBound_is_bound[of start, simplified fromEnum_maxBound_vcpureg_def]
@@ -1770,7 +1769,6 @@ lemma vcpu_save_reg_range_ccorres:
   apply (rule ccorres_grab_asm)
   apply (cinit lift: start_' end_' vcpu_' simp: whileAnno_def)
    apply csymbr
-   apply (clarsimp, fold dc_def)
    apply (rule ccorres_dc_from_rrel)
    (* supplying these as dest/intro/simp to proof tactics has no desired effect *)
    using maxBound_is_bound[of start, simplified fromEnum_maxBound_vcpureg_def]
@@ -1912,7 +1910,6 @@ lemma restore_virt_timer_ccorres:
                    apply (rule ccorres_call)
                       apply (rule_tac P="obj_at' (\<lambda>vcpu'. vcpuVPPIMasked vcpu' vppievent_irq.VPPIEventIRQ_VTimer
                                                            = vcpuVPPIMasked vcpu vppievent_irq.VPPIEventIRQ_VTimer) vcpuptr" in ccorres_cross_over_guard)
-                      apply (fold dc_def)
                       apply (rule maskInterrupt_ccorres, simp)
                     apply simp
                    apply simp
@@ -1994,7 +1991,6 @@ lemma save_virt_timer_ccorres:
           apply (ctac (no_vcg) add: vcpu_write_reg_ccorres)
            apply (ctac (no_vcg) add: read_cntpct_ccorres)
             apply clarsimp
-            apply (fold dc_def)
             apply (rule vcpuUpdate_vTimer_pcount_ccorres)
            apply wpsimp+
   apply (simp add: vcpureg_eq_use_types[where reg=VCPURegCNTV_CVALhigh, simplified, symmetric]
@@ -2049,10 +2045,9 @@ lemma vcpu_disable_ccorres:
        apply (ctac (no_vcg) add: isb_ccorres)
         apply (ctac (no_vcg) add: setSCTLR_ccorres)
          apply (ctac (no_vcg) add: setHCR_ccorres)
-          apply (ctac (no_vcg) add: isb_ccorres[unfolded dc_def])
+          apply (ctac (no_vcg) add: isb_ccorres)
            apply (wpc; ccorres_rewrite)
-            apply (rule ccorres_return_Skip[simplified dc_def])
-           apply (fold dc_def)
+            apply (rule ccorres_return_Skip)
            apply (rename_tac vcpu_ptr)
            apply (rule_tac P="the v \<noteq> 0" in ccorres_gen_asm)
            apply ccorres_rewrite
@@ -2080,9 +2075,9 @@ lemma vcpu_enable_ccorres:
     apply (ctac (no_vcg) add: setHCR_ccorres)
      apply (ctac  (no_vcg) add: isb_ccorres)
       apply (rule_tac P="ko_at' vcpu v" in ccorres_cross_over_guard)
-      apply (ctac pre: ccorres_move_c_guard_vcpu add: set_gic_vcpu_ctrl_hcr_ccorres[unfolded dc_def])
+      apply (ctac pre: ccorres_move_c_guard_vcpu add: set_gic_vcpu_ctrl_hcr_ccorres)
         apply wpsimp+
-        apply (fold dc_def, ctac (no_vcg) add: restore_virt_timer_ccorres)
+        apply (ctac (no_vcg) add: restore_virt_timer_ccorres)
        apply simp
        apply wpsimp
       apply (vcg exspec=set_gic_vcpu_ctrl_hcr_modifies)
@@ -2126,7 +2121,7 @@ lemma ccorres_abstract_known:
   done
 
 lemma vcpu_restore_ccorres:
-  notes upt_Suc[simp del] dc_simp[simp del] Collect_const[simp del]
+  notes upt_Suc[simp del] Collect_const[simp del]
   shows
   "ccorres dc xfdc
        (pspace_aligned' and pspace_distinct' and valid_objs' and no_0_obj' and valid_arch_state'
@@ -2164,7 +2159,7 @@ lemma vcpu_restore_ccorres:
                  apply (rule_tac P="n \<le> 63" in ccorres_gen_asm)
                  apply (rule ccorres_move_c_guard_vcpu)
                  apply (ctac (no_vcg) add: set_gic_vcpu_ctrl_lr_ccorres)
-                apply (clarsimp simp: virq_to_H_def ko_at_vcpu_at'D dc_def upt_Suc)
+                apply (clarsimp simp: virq_to_H_def ko_at_vcpu_at'D upt_Suc)
                 apply (rule conjI[rotated])
   subgoal (* FIXME extract into separate lemma *)
     by (fastforce simp: word_less_nat_alt unat_of_nat_eq elim: order_less_le_trans)
@@ -2182,7 +2177,7 @@ lemma vcpu_restore_ccorres:
            apply wpsimp
           apply (vcg exspec=vcpu_restore_reg_range_modifies)
          apply (wpsimp wp: crunch_wps)
-        apply (wpsimp simp: guard_is_UNIV_def dc_def upt_Suc ko_at_vcpu_at'D  wp: mapM_x_wp_inv
+        apply (wpsimp simp: guard_is_UNIV_def upt_Suc ko_at_vcpu_at'D  wp: mapM_x_wp_inv
                | rule UNIV_I
                | wp hoare_vcg_imp_lift hoare_vcg_all_lift hoare_vcg_disj_lift)+
         apply (fastforce simp: fromEnum_def enum_vcpureg seL4_VCPUReg_SPSRfiq_def)
@@ -2259,7 +2254,7 @@ lemma vgicUpdateLR_ccorres:
   done
 
 lemma vcpu_save_ccorres:
-  notes dc_simp[simp del] Collect_const[simp del]
+  notes Collect_const[simp del]
   shows
   "ccorres dc xfdc
       (pspace_aligned' and pspace_distinct' and valid_objs' and no_0_obj' and valid_arch_state'
@@ -2325,7 +2320,7 @@ lemma vcpu_save_ccorres:
                  apply ceqv
                 apply (ctac (no_vcg) add: armv_vcpu_save_ccorres)
                apply (wpsimp simp: guard_is_UNIV_def wp: mapM_x_wp_inv)+
-  apply (simp add: invs_no_cicd'_def valid_arch_state'_def max_armKSGICVCPUNumListRegs_def dc_def)
+  apply (simp add: invs_no_cicd'_def valid_arch_state'_def max_armKSGICVCPUNumListRegs_def)
   done
 
 lemma vcpu_switch_ccorres_None:
@@ -2342,7 +2337,7 @@ lemma vcpu_switch_ccorres_None:
    apply wpc
     (* v = None & CurVCPU = None *)
     apply (rule ccorres_cond_false)
-    apply (rule ccorres_return_Skip[unfolded dc_def])
+    apply (rule ccorres_return_Skip)
    (* v = None & CurVCPU \<noteq> None *)
    apply ccorres_rewrite
    apply wpc
@@ -2352,7 +2347,7 @@ lemma vcpu_switch_ccorres_None:
    apply (rule_tac R="\<lambda>s. armHSCurVCPU (ksArchState s) = Some (ccurv, cactive)" in ccorres_cond)
      apply (clarsimp simp: cur_vcpu_relation_def dest!: rf_sr_ksArchState_armHSCurVCPU)
     apply (ctac add: vcpu_disable_ccorres)
-      apply (rule_tac v=x2 in armHSCurVCPU_update_active_ccorres[simplified dc_def])
+      apply (rule_tac v=x2 in armHSCurVCPU_update_active_ccorres)
        apply simp
       apply simp
      apply wp
@@ -2360,7 +2355,7 @@ lemma vcpu_switch_ccorres_None:
      apply assumption
     apply clarsimp
     apply (vcg exspec=vcpu_disable_modifies)
-   apply (rule ccorres_return_Skip[unfolded dc_def])
+   apply (rule ccorres_return_Skip)
   apply (clarsimp, rule conjI)
    apply (fastforce dest: invs_cicd_arch_state' simp: valid_arch_state'_def vcpu_at_is_vcpu' ko_wp_at'_def split: option.splits)
   by (auto dest!: rf_sr_ksArchState_armHSCurVCPU simp: cur_vcpu_relation_def)+
@@ -2384,7 +2379,7 @@ lemma vcpu_switch_ccorres_Some:
     apply (rule ccorres_cond_false_seq)
     apply ccorres_rewrite
     apply (ctac add: vcpu_restore_ccorres)
-      apply (rule_tac curv="Some (v, True)" in armHSCurVCPU_update_ccorres[unfolded dc_def])
+      apply (rule_tac curv="Some (v, True)" in armHSCurVCPU_update_ccorres)
      apply wp
     apply clarsimp
     apply (vcg exspec=vcpu_restore_modifies)
@@ -2401,7 +2396,7 @@ lemma vcpu_switch_ccorres_Some:
     apply (rule ccorres_cond_true_seq)
     apply (ctac add: vcpu_save_ccorres)
       apply (ctac add: vcpu_restore_ccorres)
-        apply (rule_tac curv="Some (v, True)" in armHSCurVCPU_update_ccorres[unfolded dc_def])
+        apply (rule_tac curv="Some (v, True)" in armHSCurVCPU_update_ccorres)
        apply wp
       apply clarsimp
       apply (vcg exspec=vcpu_restore_modifies)
@@ -2419,13 +2414,13 @@ lemma vcpu_switch_ccorres_Some:
     apply (rule ccorres_rhs_assoc)
     apply (ctac (no_vcg) add: isb_ccorres)
      apply (ctac (no_vcg) add: vcpu_enable_ccorres)
-      apply (rule_tac v="(v, cactive)" in armHSCurVCPU_update_active_ccorres[simplified dc_def])
+      apply (rule_tac v="(v, cactive)" in armHSCurVCPU_update_active_ccorres)
        apply simp
       apply simp
      apply wp
     apply (wpsimp wp: hoare_vcg_conj_lift vcpuSave_invs_no_cicd' vcpuSave_typ_at')
    (* ccactive =true *)
-   apply (rule ccorres_return_Skip[unfolded dc_def])
+   apply (rule ccorres_return_Skip)
   (* last goal *)
   apply simp
   apply (rule conjI
@@ -2466,7 +2461,7 @@ lemma setVMRoot_ccorres:
       apply (simp add: cap_case_isPageDirectoryCap cong: if_cong)
       apply (rule ccorres_cond_true_seq)
       apply (rule ccorres_rhs_assoc)
-      apply (simp add: throwError_def catch_def dc_def[symmetric])
+      apply (simp add: throwError_def catch_def)
       apply (rule ccorres_rhs_assoc)+
       apply (rule ccorres_h_t_valid_armUSGlobalPD)
       apply csymbr
@@ -2494,7 +2489,7 @@ lemma setVMRoot_ccorres:
       apply (rule ccorres_add_return2)
       apply (ctac (no_vcg) add: setCurrentPD_ccorres)
        apply (rule ccorres_split_throws)
-        apply (rule ccorres_return_void_C [unfolded dc_def])
+        apply (rule ccorres_return_void_C)
        apply vcg
       apply wp
      apply (simp add: cap_case_isPageDirectoryCap)
@@ -2525,11 +2520,11 @@ lemma setVMRoot_ccorres:
          apply (rule ccorres_add_return2)
          apply (ctac(no_vcg) add: setCurrentPD_ccorres)
           apply (rule ccorres_split_throws)
-           apply (rule ccorres_return_void_C[unfolded dc_def])
+           apply (rule ccorres_return_void_C)
           apply vcg
          apply wp
         apply (simp add: whenE_def returnOk_def)
-        apply (ctac (no_vcg) add: armv_contextSwitch_ccorres[unfolded dc_def])
+        apply (ctac (no_vcg) add: armv_contextSwitch_ccorres)
             apply (rename_tac tcb)
          apply simp
         apply clarsimp
@@ -2542,7 +2537,7 @@ lemma setVMRoot_ccorres:
        apply (rule ccorres_add_return2)
        apply (ctac(no_vcg) add: setCurrentPD_ccorres)
         apply (rule ccorres_split_throws)
-         apply (rule ccorres_return_void_C[unfolded dc_def])
+         apply (rule ccorres_return_void_C)
         apply vcg
        apply wp
       apply simp
@@ -2701,7 +2696,7 @@ lemma doFlush_ccorres:
    apply (rule_tac xf'=invLabel___int_' in ccorres_abstract, ceqv, rename_tac invlabel)
    apply (rule_tac P="flushtype_relation t invlabel" in ccorres_gen_asm2)
    apply (simp only: dmo_flushtype_case Let_def)
-   apply (wpc ; simp add: dc_def[symmetric])
+   apply (wpc ; simp)
       apply (rule ccorres_cond_true)
       apply (ctac (no_vcg) add: cleanCacheRange_RAM_ccorres)
      apply (rule ccorres_cond_false)
@@ -2719,7 +2714,6 @@ lemma doFlush_ccorres:
                     empty_fail_invalidateCacheRange_I empty_fail_branchFlushRange empty_fail_isb
                     doMachineOp_bind empty_fail_cond)
    apply (rule ccorres_rhs_assoc)+
-   apply (fold dc_def)
    apply (ctac (no_vcg) add: cleanCacheRange_PoU_ccorres)
     apply (ctac (no_vcg) add: dsb_ccorres)
      apply (ctac (no_vcg) add: invalidateCacheRange_I_ccorres)
@@ -2777,7 +2771,7 @@ lemma performPageFlush_ccorres:
       apply (rule ccorres_return_Skip)
      apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
      apply (rule allI, rule conseqPre, vcg)
-     apply (clarsimp simp: return_def dc_def)
+     apply (clarsimp simp: return_def)
     apply wpsimp
    apply (simp add: guard_is_UNIV_def)
   apply (clarsimp simp: order_less_imp_le)
@@ -2806,12 +2800,12 @@ lemma setRegister_ccorres:
        (asUser thread (setRegister reg val))
        (Call setRegister_'proc)"
   apply (cinit' lift: thread_' reg_' w_')
-   apply (simp add: asUser_def dc_def[symmetric] split_def split del: if_split)
+   apply (simp add: asUser_def split_def)
    apply (rule ccorres_pre_threadGet)
    apply (rule ccorres_Guard)
    apply (simp add: setRegister_def simpler_modify_def exec_select_f_singleton)
    apply (rule_tac P="\<lambda>tcb. (atcbContextGet o tcbArch) tcb = rv"
-                in threadSet_ccorres_lemma2 [unfolded dc_def])
+                in threadSet_ccorres_lemma2)
     apply vcg
    apply (clarsimp simp: setRegister_def HaskellLib_H.runState_def
                          simpler_modify_def typ_heap_simps)
@@ -2842,8 +2836,6 @@ lemma msgRegisters_ccorres:
 (* usually when we call setMR directly, we mean to only set a registers, which will
    fit in actual registers *)
 lemma setMR_as_setRegister_ccorres:
-  notes dc_simp[simp del]
-  shows
   "ccorres (\<lambda>rv rv'. rv' = of_nat offset + 1) ret__unsigned_'
       (tcb_at' thread and K (TCB_H.msgRegisters ! offset = reg \<and> offset < length msgRegisters))
       (UNIV \<inter> \<lbrace>\<acute>reg = val\<rbrace>
@@ -2860,7 +2852,7 @@ lemma setMR_as_setRegister_ccorres:
    apply (ctac add: setRegister_ccorres)
      apply (rule ccorres_from_vcg_throws[where P'=UNIV and P=\<top>])
      apply (rule allI, rule conseqPre, vcg)
-     apply (clarsimp simp: dc_def return_def)
+     apply (clarsimp simp: return_def)
     apply (rule hoare_post_taut[of \<top>])
    apply (vcg exspec=setRegister_modifies)
   apply (clarsimp simp: n_msgRegisters_def length_of_msgRegisters not_le conj_commute)
@@ -3004,7 +2996,6 @@ lemma flushPage_ccorres:
        apply (rule ccorres_cond2[where R=\<top>])
          apply (simp add: from_bool_0 Collect_const_mem)
         apply (rule ccorres_pre_getCurThread)
-        apply (fold dc_def)
         apply (ctac add: setVMRoot_ccorres)
        apply (rule ccorres_return_Skip)
       apply (wp | simp add: cur_tcb'_def[symmetric])+
@@ -3267,8 +3258,7 @@ lemma unmapPage_ccorres:
       (unmapPage sz asid vptr pptr) (Call unmapPage_'proc)"
   apply (rule ccorres_gen_asm)
   apply (cinit lift: page_size_' asid_' vptr_' pptr_')
-   apply (simp add: ignoreFailure_liftM ptr_add_assertion_positive
-                    Collect_True
+   apply (simp add: ignoreFailure_liftM ptr_add_assertion_positive Collect_True
                del: Collect_const)
    apply ccorres_remove_UNIV_guard
    apply csymbr
@@ -3280,12 +3270,12 @@ lemma unmapPage_ccorres:
       apply (rule ccorres_splitE_novcg[where r'=dc and xf'=xfdc])
           \<comment> \<open>ARMSmallPage\<close>
           apply (rule ccorres_Cond_rhs)
-           apply (simp add: gen_framesize_to_H_def dc_def[symmetric])
+           apply (simp add: gen_framesize_to_H_def)
            apply (rule ccorres_rhs_assoc)+
            apply csymbr
            apply (ctac add: lookupPTSlot_ccorres)
               apply (rename_tac pt_slot pt_slot')
-              apply (simp add: dc_def[symmetric])
+              apply simp
               apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2,
                   rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2,
                   rule ccorres_rhs_assoc2)
@@ -3300,7 +3290,7 @@ lemma unmapPage_ccorres:
                          split: if_split_asm pte.split_asm)
                  apply (rule ceqv_refl)
                 apply (simp add: unfold_checkMapping_return liftE_liftM
-                              Collect_const[symmetric] dc_def[symmetric]
+                              Collect_const[symmetric]
                          del: Collect_const)
                 apply (rule ccorres_handlers_weaken2)
                 apply csymbr
@@ -3308,8 +3298,7 @@ lemma unmapPage_ccorres:
                    apply (rule storePTE_Basic_ccorres)
                    apply (simp add: cpte_relation_def Let_def)
                   apply csymbr
-                  apply simp
-                  apply (ctac add: cleanByVA_PoU_ccorres[unfolded dc_def])
+                  apply (ctac add: cleanByVA_PoU_ccorres)
                  apply wp
                 apply (simp add: guard_is_UNIV_def)
                apply wp
@@ -3323,18 +3312,17 @@ lemma unmapPage_ccorres:
            apply (vcg exspec=lookupPTSlot_modifies)
           \<comment> \<open>ARMLargePage\<close>
           apply (rule ccorres_Cond_rhs)
-           apply (simp add: gen_framesize_to_H_def dc_def[symmetric])
+           apply (simp add: gen_framesize_to_H_def)
            apply (rule ccorres_rhs_assoc)+
            apply csymbr
            apply csymbr
            apply (ctac add: lookupPTSlot_ccorres)
               apply (rename_tac ptSlot lookupPTSlot_ret)
-              apply (simp add: Collect_False dc_def[symmetric] del: Collect_const)
+              apply (simp add: Collect_False del: Collect_const)
               apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2,
                   rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2,
                   rule ccorres_rhs_assoc2)
-              apply (rule ccorres_splitE_novcg, simp only: inl_rrel_inl_rrel,
-                     rule checkMappingPPtr_pte_ccorres)
+              apply (rule ccorres_splitE_novcg, simp, rule checkMappingPPtr_pte_ccorres)
                   apply (rule conseqPre, vcg)
                   apply (clarsimp simp: typ_heap_simps')
                   subgoal by (simp add: cpte_relation_def Let_def pte_lift_def
@@ -3342,7 +3330,7 @@ lemma unmapPage_ccorres:
                                     pte_pte_small_lift_def
                              split: if_split_asm pte.split_asm)
                  apply (rule ceqv_refl)
-                apply (simp add: liftE_liftM dc_def[symmetric]
+                apply (simp add: liftE_liftM
                              mapM_discarded whileAnno_def ARMLargePageBits_def ARMSmallPageBits_def
                              Collect_False unfold_checkMapping_return word_sle_def
                         del: Collect_const)
@@ -3376,7 +3364,7 @@ lemma unmapPage_ccorres:
                   apply csymbr
                   apply (rule ccorres_move_c_guard_pte ccorres_move_array_assertion_pte_16)+
                   apply (rule ccorres_add_return2,
-                    ctac(no_vcg) add: cleanCacheRange_PoU_ccorres[unfolded dc_def])
+                    ctac(no_vcg) add: cleanCacheRange_PoU_ccorres)
                    apply (rule ccorres_move_array_assertion_pte_16, rule ccorres_return_Skip')
                   apply wp
                  apply (rule_tac P="is_aligned ptSlot 7" in hoare_gen_asm)
@@ -3418,16 +3406,17 @@ lemma unmapPage_ccorres:
           \<comment> \<open>ARMSection\<close>
           apply (rule ccorres_Cond_rhs)
            apply (rule ccorres_rhs_assoc)+
-           apply (csymbr, csymbr)
-           apply (simp add: gen_framesize_to_H_def dc_def[symmetric]
-                            liftE_liftM
+           \<comment> \<open>FIXME: The second csymbr rewrites the return relation of the goal.
+                      If this was avoided then folding the dc_def could be removed\<close>
+           apply (csymbr, csymbr, fold dc_def)
+           apply (simp add: gen_framesize_to_H_def liftE_liftM
                        del: Collect_const)
            apply (simp split: if_split, rule conjI[rotated], rule impI,
                   rule ccorres_empty, rule impI)
            apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2,
                   rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2,
                   rule ccorres_rhs_assoc2)
-           apply (rule ccorres_splitE_novcg, simp only: inl_rrel_inl_rrel,
+           apply (rule ccorres_splitE_novcg, simp,
                   rule checkMappingPPtr_pde_ccorres)
                apply (rule conseqPre, vcg)
                apply (clarsimp simp: typ_heap_simps')
@@ -3435,16 +3424,16 @@ lemma unmapPage_ccorres:
                                      Let_def pde_tag_defs isSectionPDE_def
                               split: pde.split_asm if_split_asm)
               apply (rule ceqv_refl)
-             apply (simp add: unfold_checkMapping_return Collect_False dc_def[symmetric]
-                      del: Collect_const)
-             apply (rule ccorres_handlers_weaken2, simp)
+             apply (simp add: unfold_checkMapping_return Collect_False
+                         del: Collect_const)
+             apply (rule ccorres_handlers_weaken2)
              apply csymbr
              apply (rule ccorres_split_nothrow_novcg_dc)
                 apply (rule storePDE_Basic_ccorres)
                 apply (simp add: cpde_relation_def Let_def
                               pde_lift_pde_invalid)
                apply csymbr
-               apply (ctac add: cleanByVA_PoU_ccorres[unfolded dc_def])
+               apply (ctac add: cleanByVA_PoU_ccorres)
               apply wp
              apply (clarsimp simp: guard_is_UNIV_def)
             apply simp
@@ -3453,14 +3442,16 @@ lemma unmapPage_ccorres:
           \<comment> \<open>ARMSuperSection\<close>
           apply (rule ccorres_Cond_rhs)
            apply (rule ccorres_rhs_assoc)+
+           \<comment> \<open>FIXME: The third csymbr rewrites the return relation of the goal.
+                      If this was avoided then folding the dc_def could be removed\<close>
            apply csymbr
            apply csymbr
            apply csymbr
+           apply (fold dc_def)
            apply (case_tac "pd = pde_Ptr (lookup_pd_slot pdPtr vptr)")
             prefer 2
             apply (simp, rule ccorres_empty)
-           apply (simp add: gen_framesize_to_H_def dc_def[symmetric]
-                         liftE_liftM mapM_discarded whileAnno_def
+           apply (simp add: gen_framesize_to_H_def liftE_liftM mapM_discarded whileAnno_def
                     del: Collect_const)
            apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2,
                rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2,
@@ -3510,7 +3501,7 @@ lemma unmapPage_ccorres:
                apply csymbr
                apply (rule ccorres_move_c_guard_pde ccorres_move_array_assertion_pde_16)+
                apply (rule ccorres_add_return2)
-               apply (ctac(no_vcg) add: cleanCacheRange_PoU_ccorres[unfolded dc_def])
+               apply (ctac(no_vcg) add: cleanCacheRange_PoU_ccorres)
                 apply (rule ccorres_move_array_assertion_pde_16, rule ccorres_return_Skip')
                apply wp
               apply (rule_tac P="is_aligned pdPtr pdBits" in hoare_gen_asm)
@@ -3548,14 +3539,14 @@ lemma unmapPage_ccorres:
           apply (rule ccorres_empty[where P=\<top>])
          apply ceqv
         apply (simp add: liftE_liftM)
-        apply (ctac add: flushPage_ccorres[unfolded dc_def])
+        apply (ctac add: flushPage_ccorres)
        apply ((wp lookupPTSlot_inv mapM_storePTE_invs[unfolded swp_def]
                  mapM_storePDE_invs[unfolded swp_def]
               | wpc | simp)+)[1]
       apply (simp add: guard_is_UNIV_def)
      apply (simp add: throwError_def)
      apply (rule ccorres_split_throws)
-      apply (rule ccorres_return_void_C[unfolded dc_def])
+      apply (rule ccorres_return_void_C)
      apply vcg
     apply (simp add: lookup_pd_slot_def Let_def table_bits_defs)
     apply (wp hoare_vcg_const_imp_lift_R findPDForASID_valid_offset'[simplified table_bits_defs]
@@ -4135,7 +4126,7 @@ lemma performASIDPoolInvocation_ccorres:
         apply (wp getASID_wp)
         apply simp
        apply wp
-       apply (simp add: o_def inv_def)
+       apply (simp add: inv_def)
        apply (wp getASID_wp)
       apply simp
       apply (rule empty_fail_getObject)
@@ -4196,14 +4187,14 @@ lemma flushTable_ccorres:
        apply (rule_tac R=\<top> in ccorres_cond2)
          apply (clarsimp simp: from_bool_0 Collect_const_mem)
         apply (rule ccorres_pre_getCurThread)
-        apply (ctac (no_vcg) add: setVMRoot_ccorres [unfolded dc_def])
-       apply (rule ccorres_return_Skip[unfolded dc_def])
+        apply (ctac (no_vcg) add: setVMRoot_ccorres)
+       apply (rule ccorres_return_Skip)
       apply (wp static_imp_wp)
        apply clarsimp
        apply (rule_tac Q="\<lambda>_ s. invs' s \<and> cur_tcb' s" in hoare_post_imp)
         apply (simp add: invs'_invs_no_cicd cur_tcb'_def)
        apply (wp mapM_x_wp_inv getPTE_wp | wpc)+
-     apply (rule ccorres_return_Skip[unfolded dc_def])
+     apply (rule ccorres_return_Skip)
     apply wp
    apply clarsimp
    apply (strengthen invs_valid_pde_mappings')

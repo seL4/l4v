@@ -75,7 +75,7 @@ lemma performPageTableInvocationUnmap_ccorres:
           apply csymbr
           apply (simp add: storePTE_def' swp_def)
           apply clarsimp
-          apply(simp only: dc_def[symmetric] bit_simps_corres[symmetric])
+          apply (simp only: bit_simps_corres[symmetric])
           apply (ctac add: clearMemory_setObject_PTE_ccorres)
          apply wp
         apply (simp del: Collect_const)
@@ -217,7 +217,7 @@ lemma performPageDirectoryInvocationUnmap_ccorres:
           apply csymbr
           apply (simp add: storePDE_def' swp_def)
           apply clarsimp
-          apply(simp only: dc_def[symmetric] bit_simps_corres[symmetric])
+          apply (simp only: bit_simps_corres[symmetric])
           apply (ctac add: clearMemory_setObject_PDE_ccorres)
          apply wp
         apply (simp del: Collect_const)
@@ -359,7 +359,7 @@ lemma performPDPTInvocationUnmap_ccorres:
           apply csymbr
           apply (simp add: storePDPTE_def' swp_def)
           apply clarsimp
-          apply(simp only: dc_def[symmetric] bit_simps_corres[symmetric])
+          apply (simp only: bit_simps_corres[symmetric])
           apply (ctac add: clearMemory_setObject_PDPTE_ccorres)
          apply wp
         apply (simp del: Collect_const)
@@ -887,7 +887,7 @@ shows
                          pageBits_def
                    split: if_split)
   apply (clarsimp simp: X64SmallPageBits_def word_sle_def is_aligned_mask[symmetric]
-                        ghost_assertion_data_get_gs_clear_region[unfolded o_def])
+                        ghost_assertion_data_get_gs_clear_region)
   apply (subst ghost_assertion_size_logic_flex[unfolded o_def, rotated])
      apply assumption
     apply (simp add: ghost_assertion_data_get_gs_clear_region[unfolded o_def])
@@ -1121,10 +1121,10 @@ lemma decodeX64PageTableInvocation_ccorres:
                              isPML4Cap (capCap (fst (extraCaps ! 0)))"
                           in ccorres_cases)
            apply (clarsimp simp: hd_conv_nth throwError_bind invocationCatch_def cong: if_cong)
-           apply (rule syscall_error_throwError_ccorres_n[simplified dc_def id_def o_def])
+           apply (rule syscall_error_throwError_ccorres_n)
            apply (simp add: syscall_error_to_H_cases)
           apply (clarsimp simp: hd_conv_nth throwError_bind invocationCatch_def cong: if_cong)
-          apply (rule syscall_error_throwError_ccorres_n[simplified dc_def id_def o_def])
+          apply (rule syscall_error_throwError_ccorres_n)
           apply (simp add: syscall_error_to_H_cases)
          apply (simp add: hd_conv_nth)
          apply csymbr
@@ -1789,7 +1789,7 @@ lemma performPageInvocationMapPDPTE_ccorres:
   done
 
 lemma performPageGetAddress_ccorres:
-  notes Collect_const[simp del] dc_simp[simp del]
+  notes Collect_const[simp del]
   shows
   "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
       (invs' and (\<lambda>s. ksCurThread s = thread) and ct_in_state' ((=) Restart))
@@ -1815,7 +1815,7 @@ lemma performPageGetAddress_ccorres:
        apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
        apply clarsimp
        apply (rule conseqPre, vcg)
-       apply (clarsimp simp: return_def dc_simp)
+       apply (clarsimp simp: return_def)
       apply (rule hoare_post_taut[of \<top>])
      apply (rule ccorres_rhs_assoc)+
      apply (clarsimp simp: replyOnRestart_def liftE_def bind_assoc)
@@ -1838,7 +1838,7 @@ lemma performPageGetAddress_ccorres:
                  apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
                  apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
                  apply (rule allI, rule conseqPre, vcg)
-                 apply (clarsimp simp: return_def dc_def)
+                 apply (clarsimp simp: return_def)
                 apply (rule hoare_post_taut[of \<top>])
                apply (vcg exspec=setThreadState_modifies)
               apply wpsimp
@@ -1851,10 +1851,10 @@ lemma performPageGetAddress_ccorres:
                                Kernel_C.msgInfoRegister_def)
          apply (vcg exspec=setMR_modifies)
         apply wpsimp
-       apply (clarsimp simp: dc_def)
+       apply clarsimp
        apply (vcg exspec=setRegister_modifies)
       apply wpsimp
-     apply (clarsimp simp: dc_def ThreadState_Running_def)
+     apply (clarsimp simp: ThreadState_Running_def)
      apply (vcg exspec=lookupIPCBuffer_modifies)
     apply clarsimp
     apply vcg
@@ -2218,7 +2218,7 @@ lemma decodeX86ModeMapPage_ccorres:
                     (Inr (invocation.InvokePage (PageMap (ArchObjectCap cap) slot x pml4)))
              odE)
             (Call decodeX86ModeMapPage_'proc)"
-  supply if_cong[cong] tl_drop_1[simp] Collect_const[simp del] dc_simp[simp del]
+  supply if_cong[cong] tl_drop_1[simp] Collect_const[simp del]
   apply (simp add: K_def)
   apply (rule ccorres_gen_asm)
   apply (cinit' lift: label___unsigned_long_' page_size_' vroot_' cap_' paddr_' vm_rights_' vm_attr_'
@@ -2249,7 +2249,7 @@ lemma decodeX86ModeMapPage_ccorres:
    apply (vcg exspec=createSafeMappingEntries_PDPTE_modifies)
   by (clarsimp simp: invs_valid_objs' tcb_at_invs' vmsz_aligned_addrFromPPtr' invs_queues
                      valid_tcb_state'_def invs_sch_act_wf' ThreadState_Restart_def rf_sr_ksCurThread
-                     arch_invocation_label_defs mask_def isCap_simps dc_def)
+                     arch_invocation_label_defs mask_def isCap_simps)
 
 lemma valid_cap'_PageCap_kernel_mappings:
   "\<lbrakk>pspace_in_kernel_mappings' s; isPageCap cap; valid_cap' (ArchObjectCap cap) s\<rbrakk>
@@ -2559,7 +2559,7 @@ lemma decodeX64FrameInvocation_ccorres:
                apply (rule ccorres_Cond_rhs_Seq)
                 apply (clarsimp simp: maptype_from_H_def throwError_bind invocationCatch_def
                                split: vmmap_type.split_asm)
-                apply (rule syscall_error_throwError_ccorres_n[simplified id_def o_def dc_def])
+                apply (rule syscall_error_throwError_ccorres_n)
                 apply (clarsimp simp: syscall_error_to_H_cases)
                (* throw on mismatched vaddr *)
                apply simp
@@ -2571,7 +2571,6 @@ lemma decodeX64FrameInvocation_ccorres:
                               split: vmmap_type.split_asm)
                 apply (clarsimp simp: X86_MappingNone_def X86_MappingVSpace_def)
                apply ccorres_rewrite
-               apply (fold dc_def id_def)
                apply (rule syscall_error_throwError_ccorres_n)
                apply (simp add: syscall_error_to_H_cases)
               (* frame cap not mapped, check mapping *)
@@ -2590,7 +2589,7 @@ lemma decodeX64FrameInvocation_ccorres:
               apply csymbr
               apply (simp add: user_vtop_def X64.pptrUserTop_def hd_conv_nth length_ineq_not_Nil)
               apply ccorres_rewrite
-              apply (rule syscall_error_throwError_ccorres_n[unfolded id_def dc_def])
+              apply (rule syscall_error_throwError_ccorres_n)
               apply (simp add: syscall_error_to_H_cases)
              (* Doesn't throw case *)
              apply (drule_tac s="Some y" in sym,
@@ -2626,7 +2625,6 @@ lemma decodeX64FrameInvocation_ccorres:
                    apply (simp add: word_less_nat_alt user_vtop_def X64.pptrUserTop_def hd_conv_nth
                                     length_ineq_not_Nil)
                    apply (ccorres_rewrite)
-                   apply (fold dc_def)
                    apply (rule ccorres_return_Skip)
                   apply clarsimp
                  apply (clarsimp simp: asidInvalid_def)
@@ -2652,7 +2650,7 @@ lemma decodeX64FrameInvocation_ccorres:
                     apply (clarsimp simp: cap_lift_pml4_cap cap_to_H_def get_capPtr_CL_def
                                           cap_pml4_cap_lift_def
                                    elim!: ccap_relationE split: if_split)
-                   apply (rule syscall_error_throwError_ccorres_n[simplified id_def o_def dc_def])
+                   apply (rule syscall_error_throwError_ccorres_n)
                    apply (simp add: syscall_error_to_H_cases)
                   apply csymbr
                   apply (rule ccorres_symb_exec_r)
@@ -2666,7 +2664,7 @@ lemma decodeX64FrameInvocation_ccorres:
                       apply (clarsimp simp: framesize_from_to_H user_vtop_def X64.pptrUserTop_def)
                      apply (simp add: injection_handler_throwError throwError_bind
                                       invocationCatch_def)
-                     apply (rule syscall_error_throwError_ccorres_n[simplified id_def o_def dc_def])
+                     apply (rule syscall_error_throwError_ccorres_n)
                      apply (simp add: syscall_error_to_H_cases)
                     apply csymbr
                     apply csymbr
@@ -3140,10 +3138,10 @@ lemma decodeX64PageDirectoryInvocation_ccorres:
                              isPML4Cap (capCap (fst (extraCaps ! 0)))"
                           in ccorres_cases)
            apply (clarsimp simp: hd_conv_nth throwError_bind invocationCatch_def from_bool_0 cong: if_cong)
-           apply (rule syscall_error_throwError_ccorres_n[simplified dc_def id_def o_def])
+           apply (rule syscall_error_throwError_ccorres_n)
            apply (simp add: syscall_error_to_H_cases)
           apply (clarsimp simp: hd_conv_nth throwError_bind invocationCatch_def from_bool_0 cong: if_cong)
-          apply (rule syscall_error_throwError_ccorres_n[simplified dc_def id_def o_def])
+          apply (rule syscall_error_throwError_ccorres_n)
           apply (simp add: syscall_error_to_H_cases)
          apply (simp add: hd_conv_nth)
          apply csymbr
@@ -3509,7 +3507,7 @@ lemma decodeX64PDPTInvocation_ccorres:
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeX64PDPTInvocation_'proc)"
      (is "_ \<Longrightarrow> _ \<Longrightarrow> ccorres _ _ ?pre ?cpre _ _ _")
-  supply Collect_const[simp del] if_cong[cong] dc_simp[simp del]
+  supply Collect_const[simp del] if_cong[cong]
          from_bool_eq_if[simp] from_bool_eq_if'[simp] from_bool_0[simp] ccorres_IF_True[simp]
   apply (clarsimp simp only: isCap_simps)
   apply (cinit' lift: label___unsigned_long_' length___unsigned_long_' cte_' current_extra_caps_' cap_' buffer_'
@@ -3614,15 +3612,14 @@ lemma decodeX64PDPTInvocation_ccorres:
          apply clarsimp
          apply (rule ccorres_Cond_rhs_Seq)
           apply ccorres_rewrite
-          apply clarsimp
           apply (rule_tac P="isArchObjectCap (fst (extraCaps ! 0)) \<and>
                              isPML4Cap (capCap (fst (extraCaps ! 0)))"
                           in ccorres_cases)
            apply (clarsimp simp: hd_conv_nth throwError_bind invocationCatch_def cong: if_cong)
-           apply (rule syscall_error_throwError_ccorres_n[simplified id_def o_def])
+           apply (rule syscall_error_throwError_ccorres_n)
            apply (simp add: syscall_error_to_H_cases)
           apply (clarsimp simp: hd_conv_nth throwError_bind invocationCatch_def cong: if_cong)
-          apply (rule syscall_error_throwError_ccorres_n[simplified id_def o_def])
+          apply (rule syscall_error_throwError_ccorres_n)
           apply (simp add: syscall_error_to_H_cases)
          apply (simp add: hd_conv_nth)
          apply csymbr
@@ -3752,8 +3749,7 @@ lemma decodeX64PDPTInvocation_ccorres:
                     simp: neq_Nil_conv valid_cap_simps' isCap_simps
                           get_capMappedASID_CL_def cap_pml4_cap_lift cap_to_H_simps
                     split: if_split_asm)
-  apply (clarsimp simp: dc_simp neq_Nil_conv[where xs=extraCaps]
-                        excaps_in_mem_def slotcap_in_mem_def
+  apply (clarsimp simp: neq_Nil_conv[where xs=extraCaps] excaps_in_mem_def slotcap_in_mem_def
                  dest!: sym[where s="ArchObjectCap cp" for cp])
   apply (clarsimp simp: word_less_nat_alt hd_conv_nth dest!: length_ineq_not_Nil)
   apply (rule conjI, fastforce simp: mask_def)
@@ -3888,7 +3884,7 @@ lemma decodeX64MMUInvocation_ccorres:
                              throwError_bind invocationCatch_def
                       split: invocation_label.split arch_invocation_label.split)
      apply ccorres_rewrite
-     apply (rule syscall_error_throwError_ccorres_n[simplified id_def o_def])
+     apply (rule syscall_error_throwError_ccorres_n)
      apply (fastforce simp: syscall_error_to_H_cases)
     (* X64ASIDControlMakePool *)
     apply (clarsimp simp: decodeX64MMUInvocation_def decodeX64ASIDControlInvocation_def isCap_simps)
@@ -3899,7 +3895,7 @@ lemma decodeX64MMUInvocation_ccorres:
      apply (rule ccorres_cond_true_seq | simp)+
      apply (simp add: throwError_bind invocationCatch_def)
      apply ccorres_rewrite
-     apply (rule syscall_error_throwError_ccorres_n[simplified id_def o_def])
+     apply (rule syscall_error_throwError_ccorres_n)
      apply (fastforce simp: syscall_error_to_H_cases)
     apply (simp add: interpret_excaps_test_null excaps_map_def)
     apply csymbr
@@ -3908,14 +3904,14 @@ lemma decodeX64MMUInvocation_ccorres:
      apply (rule ccorres_cond_true_seq | simp)+
      apply (simp add: throwError_bind invocationCatch_def)
      apply ccorres_rewrite
-     apply (rule syscall_error_throwError_ccorres_n[simplified id_def o_def])
+     apply (rule syscall_error_throwError_ccorres_n)
      apply (fastforce simp: syscall_error_to_H_cases)
     apply csymbr
     apply (simp add: interpret_excaps_test_null[OF Suc_leI])
     apply (rule ccorres_Cond_rhs_Seq)
      apply (simp add: length_ineq_not_Nil throwError_bind invocationCatch_def)
      apply ccorres_rewrite
-     apply (rule syscall_error_throwError_ccorres_n[simplified id_def o_def])
+     apply (rule syscall_error_throwError_ccorres_n)
      apply (simp add: syscall_error_to_H_cases)
     apply (subgoal_tac "1 < length extraCaps")
      prefer 2
@@ -4020,7 +4016,7 @@ lemma decodeX64MMUInvocation_ccorres:
                 apply (clarsimp split: list.split)
                 apply (fastforce dest!: filter_eq_ConsD)
                apply (simp add: throwError_bind invocationCatch_def)
-               apply (rule syscall_error_throwError_ccorres_n[simplified id_def o_def])
+               apply (rule syscall_error_throwError_ccorres_n)
                apply (fastforce simp: syscall_error_to_H_cases)
               apply (rule ccorres_Guard_Seq)+
               apply (simp add: invocationCatch_use_injection_handler
@@ -4045,7 +4041,7 @@ lemma decodeX64MMUInvocation_ccorres:
                   apply (clarsimp simp:  to_bool_if cond_throw_whenE bindE_assoc)
                   apply (rule ccorres_split_when_throwError_cond[where Q = \<top> and Q' = \<top>])
                      apply fastforce
-                    apply (rule syscall_error_throwError_ccorres_n[simplified id_def])
+                    apply (rule syscall_error_throwError_ccorres_n)
                     apply (clarsimp simp: syscall_error_rel_def shiftL_nat syscall_error_to_H_cases)
                    prefer 2
                    apply vcg
@@ -4163,7 +4159,7 @@ lemma decodeX64MMUInvocation_ccorres:
      apply ccorres_rewrite
      apply (clarsimp simp: isCap_simps decodeX64ASIDPoolInvocation_def
                            throwError_bind invocationCatch_def)
-     apply (rule syscall_error_throwError_ccorres_n[simplified dc_def id_def o_def])
+     apply (rule syscall_error_throwError_ccorres_n)
      apply (fastforce simp: syscall_error_to_H_cases)
     apply (clarsimp simp: isCap_simps decodeX64ASIDPoolInvocation_def split: list.split)
     apply csymbr
@@ -4388,7 +4384,7 @@ lemma decodeX64MMUInvocation_ccorres:
     apply (rule_tac t=b and s="snd (extraCaps ! 0)" in subst, fastforce)
     apply vcg
    (* Mode stuff *)
-   apply (rule ccorres_trim_returnE; simp)
+   apply (rule ccorres_trim_returnE; simp?)
    apply (rule ccorres_call,
           rule decodeX64ModeMMUInvocation_ccorres;
           simp)
@@ -4574,7 +4570,7 @@ lemma setMessageInfo_ksCurThread_ccorres:
   done
 
 lemma invokeX86PortIn8_ccorres:
-  notes Collect_const[simp del] dc_simp[simp del]
+  notes Collect_const[simp del]
   shows
   "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (valid_objs' and valid_queues and ct_in_state' ((=) Restart) and
@@ -4608,7 +4604,7 @@ lemma invokeX86PortIn8_ccorres:
          apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
          apply clarsimp
          apply (rule conseqPre, vcg)
-         apply (clarsimp simp: return_def dc_simp)
+         apply (clarsimp simp: return_def)
         apply (rule hoare_post_taut[of \<top>])
        apply (rule ccorres_rhs_assoc)+
        apply (clarsimp simp: replyOnRestart_def liftE_def bind_assoc)
@@ -4631,7 +4627,7 @@ lemma invokeX86PortIn8_ccorres:
                    apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
                    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
                    apply (rule allI, rule conseqPre, vcg)
-                   apply (clarsimp simp: return_def dc_def)
+                   apply (clarsimp simp: return_def)
                   apply (rule hoare_post_taut[of \<top>])
                  apply (vcg exspec=setThreadState_modifies)
                 apply wpsimp
@@ -4644,10 +4640,10 @@ lemma invokeX86PortIn8_ccorres:
                                  Kernel_C.msgInfoRegister_def)
            apply (vcg exspec=setMR_modifies)
           apply wpsimp
-         apply (clarsimp simp: dc_def)
+         apply clarsimp
          apply (vcg exspec=setRegister_modifies)
         apply wpsimp
-       apply (clarsimp simp: dc_def ThreadState_Running_def)
+       apply (clarsimp simp: ThreadState_Running_def)
        apply (vcg exspec=lookupIPCBuffer_modifies)
       apply (wpsimp wp: hoare_vcg_imp_lift hoare_vcg_all_lift)
      apply (vcg exspec=in8_modifies)
@@ -4662,7 +4658,7 @@ lemma invokeX86PortIn8_ccorres:
                                            simplified, symmetric])
 
 lemma invokeX86PortIn16_ccorres:
-  notes Collect_const[simp del] dc_simp[simp del]
+  notes Collect_const[simp del]
   shows
   "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (valid_objs' and valid_queues and ct_in_state' ((=) Restart) and
@@ -4696,7 +4692,7 @@ lemma invokeX86PortIn16_ccorres:
          apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
          apply clarsimp
          apply (rule conseqPre, vcg)
-         apply (clarsimp simp: return_def dc_simp)
+         apply (clarsimp simp: return_def)
         apply (rule hoare_post_taut[of \<top>])
        apply (rule ccorres_rhs_assoc)+
        apply (clarsimp simp: replyOnRestart_def liftE_def bind_assoc)
@@ -4719,7 +4715,7 @@ lemma invokeX86PortIn16_ccorres:
                    apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
                    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
                    apply (rule allI, rule conseqPre, vcg)
-                   apply (clarsimp simp: return_def dc_def)
+                   apply (clarsimp simp: return_def)
                   apply (rule hoare_post_taut[of \<top>])
                  apply (vcg exspec=setThreadState_modifies)
                 apply wpsimp
@@ -4732,10 +4728,10 @@ lemma invokeX86PortIn16_ccorres:
                                  Kernel_C.msgInfoRegister_def)
            apply (vcg exspec=setMR_modifies)
           apply wpsimp
-         apply (clarsimp simp: dc_def)
+         apply clarsimp
          apply (vcg exspec=setRegister_modifies)
         apply wpsimp
-       apply (clarsimp simp: dc_def ThreadState_Running_def)
+       apply (clarsimp simp: ThreadState_Running_def)
        apply (vcg exspec=lookupIPCBuffer_modifies)
       apply (wpsimp wp: hoare_vcg_imp_lift hoare_vcg_all_lift)
      apply (vcg exspec=in16_modifies)
@@ -4750,7 +4746,7 @@ lemma invokeX86PortIn16_ccorres:
                                            simplified, symmetric])
 
 lemma invokeX86PortIn32_ccorres:
-  notes Collect_const[simp del] dc_simp[simp del]
+  notes Collect_const[simp del]
   shows
   "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (valid_objs' and valid_queues and ct_in_state' ((=) Restart) and
@@ -4782,7 +4778,7 @@ lemma invokeX86PortIn32_ccorres:
          apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
          apply clarsimp
          apply (rule conseqPre, vcg)
-         apply (clarsimp simp: return_def dc_simp)
+         apply (clarsimp simp: return_def)
         apply (rule hoare_post_taut[of \<top>])
        apply (rule ccorres_rhs_assoc)+
        apply (clarsimp simp: replyOnRestart_def liftE_def bind_assoc)
@@ -4805,7 +4801,7 @@ lemma invokeX86PortIn32_ccorres:
                    apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
                    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
                    apply (rule allI, rule conseqPre, vcg)
-                   apply (clarsimp simp: return_def dc_def)
+                   apply (clarsimp simp: return_def)
                   apply (rule hoare_post_taut[of \<top>])
                  apply (vcg exspec=setThreadState_modifies)
                 apply wpsimp
@@ -4818,10 +4814,10 @@ lemma invokeX86PortIn32_ccorres:
                                  Kernel_C.msgInfoRegister_def)
            apply (vcg exspec=setMR_modifies)
           apply wpsimp
-         apply (clarsimp simp: dc_def)
+         apply clarsimp
          apply (vcg exspec=setRegister_modifies)
         apply wpsimp
-       apply (clarsimp simp: dc_def ThreadState_Running_def)
+       apply (clarsimp simp: ThreadState_Running_def)
        apply (vcg exspec=lookupIPCBuffer_modifies)
       apply (wpsimp wp: hoare_vcg_imp_lift hoare_vcg_all_lift)
      apply (vcg exspec=in32_modifies)
@@ -4836,7 +4832,7 @@ lemma invokeX86PortIn32_ccorres:
                                            simplified, symmetric])
 
 lemma invokeX86PortOut8_ccorres:
-  notes Collect_const[simp del] dc_simp[simp del]
+  notes Collect_const[simp del]
   shows
   "ccorres (cintr \<currency> (\<lambda>rv rv'. rv = [])) (liftxf errstate id (K ()) ret__unsigned_long_')
        invs'
@@ -4855,7 +4851,7 @@ lemma invokeX86PortOut8_ccorres:
   done
 
 lemma invokeX86PortOut16_ccorres:
-  notes Collect_const[simp del] dc_simp[simp del]
+  notes Collect_const[simp del]
   shows
   "ccorres (cintr \<currency> (\<lambda>rv rv'. rv = [])) (liftxf errstate id (K ()) ret__unsigned_long_')
        invs'
@@ -4874,7 +4870,7 @@ lemma invokeX86PortOut16_ccorres:
   done
 
 lemma invokeX86PortOut32_ccorres:
-  notes Collect_const[simp del] dc_simp[simp del]
+  notes Collect_const[simp del]
   shows
   "ccorres (cintr \<currency> (\<lambda>rv rv'. rv = [])) (liftxf errstate id (K ()) ret__unsigned_long_')
        invs'
@@ -5340,7 +5336,7 @@ proof -
                 apply (rule ccorres_equals_throwError)
                  apply (fastforce simp: whenE_def throwError_bind invocationCatch_def)
                 apply ccorres_rewrite
-                apply (rule syscall_error_throwError_ccorres_n[simplified dc_def id_def o_def])
+                apply (rule syscall_error_throwError_ccorres_n)
                 apply (clarsimp simp: syscall_error_to_H_cases)
                apply (clarsimp simp: ucast_drop_big_mask)
                apply (clarsimp simp: invocationCatch_use_injection_handler injection_bindE[OF refl refl]
@@ -5352,7 +5348,7 @@ proof -
                 apply (rule ccorres_Cond_rhs_Seq)
                  apply (clarsimp simp: from_bool_0 injection_handler_throwError)
                  apply ccorres_rewrite
-                 apply (rule syscall_error_throwError_ccorres_n[simplified dc_def id_def o_def])
+                 apply (rule syscall_error_throwError_ccorres_n)
                  apply (clarsimp simp: syscall_error_to_H_cases)
                 apply (clarsimp simp: from_bool_neq_0 injection_handler_returnOk)
                 apply (ctac add: ccorres_injection_handler_csum1
@@ -5365,8 +5361,7 @@ proof -
                       apply ccorres_rewrite
                       apply (rule_tac P="\<lambda>s. thread = ksCurThread s" in ccorres_cross_over_guard)
                       apply (ctac add: setThreadState_ccorres)
-                        apply (ctac(no_vcg) add: invokeX86PortControl_ccorres
-                                                   [simplified dc_def o_def id_def])
+                        apply (ctac(no_vcg) add: invokeX86PortControl_ccorres)
                         apply clarsimp
                         apply (rule ccorres_alternative2)
                         apply (rule ccorres_return_CE, simp+)[1]
@@ -5422,7 +5417,7 @@ proof -
      apply (clarsimp simp: interpret_excaps_eq rf_sr_ksCurThread ThreadState_Restart_def mask_def)
      apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
     apply clarsimp
-    apply (rule conjI, clarsimp simp: sysargs_rel_to_n o_def dest!: unat_length_4_helper)
+    apply (rule conjI, clarsimp simp: sysargs_rel_to_n dest!: unat_length_4_helper)
     apply (clarsimp simp: o_def)
     done
 qed

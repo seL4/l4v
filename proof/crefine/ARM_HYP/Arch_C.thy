@@ -71,8 +71,7 @@ lemma performPageTableInvocationUnmap_ccorres:
         apply (ctac add: unmapPageTable_ccorres)
           apply csymbr
           apply (simp add: storePTE_def' swp_def)
-          apply (ctac add: clearMemory_PT_setObject_PTE_ccorres[simplified objBits_InvalidPTE,
-                              unfolded dc_def, simplified])
+          apply (ctac add: clearMemory_PT_setObject_PTE_ccorres[unfolded objBits_InvalidPTE, simplified])
          apply wp
         apply (simp del: Collect_const)
         apply (vcg exspec=unmapPageTable_modifies)
@@ -575,10 +574,10 @@ shows
                          pageBits_def
                    split: if_split)
   apply (clarsimp simp: ARMSmallPageBits_def word_sle_def is_aligned_mask[symmetric]
-                        ghost_assertion_data_get_gs_clear_region[unfolded o_def])
+                        ghost_assertion_data_get_gs_clear_region)
   apply (subst ghost_assertion_size_logic_flex[unfolded o_def, rotated])
      apply assumption
-    apply (simp add: ghost_assertion_data_get_gs_clear_region[unfolded o_def])
+    apply (simp add: ghost_assertion_data_get_gs_clear_region)
    apply (drule valid_global_refsD_with_objSize, clarsimp)+
    apply (clarsimp simp: isCap_simps dest!: ccte_relation_ccap_relation)
   apply (cut_tac ptr=frame and bits=12
@@ -1153,8 +1152,7 @@ lemma createSafeMappingEntries_PDE_ccorres:
   apply (clarsimp simp: vmsz_aligned'_def gen_framesize_to_H_def vm_page_size_defs
                         vm_attribs_relation_def
                         from_bool_mask_simp[unfolded mask_def, simplified]
-                        ptr_range_to_list_def upto_enum_step_def
-                        o_def upto_enum_word
+                        ptr_range_to_list_def upto_enum_step_def upto_enum_word
                   cong: if_cong)
   apply (frule(1) page_directory_at_rf_sr, clarsimp)
   apply (frule array_ptr_valid_array_assertionD[OF h_t_valid_clift])
@@ -2158,7 +2156,7 @@ lemma performPageInvocationMapPDE_ccorres:
   done
 
 lemma performPageGetAddress_ccorres:
-  notes Collect_const[simp del] dc_simp[simp del]
+  notes Collect_const[simp del]
   shows
   "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
       (invs' and (\<lambda>s. ksCurThread s = thread) and ct_in_state' ((=) Restart))
@@ -2184,7 +2182,7 @@ lemma performPageGetAddress_ccorres:
        apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
        apply clarsimp
        apply (rule conseqPre, vcg)
-       apply (clarsimp simp: return_def dc_simp)
+       apply (clarsimp simp: return_def)
       apply (rule hoare_post_taut[of \<top>])
      apply (rule ccorres_rhs_assoc)+
      apply (clarsimp simp: replyOnRestart_def liftE_def bind_assoc)
@@ -2207,7 +2205,7 @@ lemma performPageGetAddress_ccorres:
                  apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
                  apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
                  apply (rule allI, rule conseqPre, vcg)
-                 apply (clarsimp simp: return_def dc_def)
+                 apply (clarsimp simp: return_def)
                 apply (rule hoare_post_taut[of \<top>])
                apply (vcg exspec=setThreadState_modifies)
               apply wpsimp
@@ -2220,10 +2218,10 @@ lemma performPageGetAddress_ccorres:
                                Kernel_C.msgInfoRegister_def Kernel_C.R1_def)
          apply (vcg exspec=setMR_modifies)
         apply wpsimp
-       apply (clarsimp simp: dc_def)
+       apply clarsimp
        apply (vcg exspec=setRegister_modifies)
       apply wpsimp
-     apply (clarsimp simp: dc_def ThreadState_Running_def)
+     apply (clarsimp simp: ThreadState_Running_def)
      apply (vcg exspec=lookupIPCBuffer_modifies)
     apply clarsimp
     apply vcg
@@ -2439,12 +2437,12 @@ where
 
 lemma resolve_ret_rel_None[simp]:
   "resolve_ret_rel None y = (valid_C y = scast false)"
-  by (clarsimp simp: resolve_ret_rel_def o_def to_option_def to_bool_def split: if_splits)
+  by (clarsimp simp: resolve_ret_rel_def to_option_def to_bool_def split: if_splits)
 
 lemma resolve_ret_rel_Some:
   "\<lbrakk>valid_C y = scast true;  frameSize_C y = framesize_from_H (fst x); snd x = frameBase_C y\<rbrakk>
    \<Longrightarrow> resolve_ret_rel (Some x) y"
-  by (clarsimp simp: resolve_ret_rel_def o_def to_option_def)
+  by (clarsimp simp: resolve_ret_rel_def to_option_def)
 
 lemma pte_get_tag_exhaust:
   "pte_get_tag pte = 0 \<or> pte_get_tag pte = 1 \<or>  pte_get_tag pte = 2 \<or>  pte_get_tag pte = 3"
@@ -2970,7 +2968,7 @@ lemma decodeARMFrameInvocation_ccorres:
             apply csymbr
             apply (simp add: ARM_HYP.pptrBase_def ARM_HYP.pptrBase_def hd_conv_nth length_ineq_not_Nil)
             apply ccorres_rewrite
-            apply (rule syscall_error_throwError_ccorres_n[unfolded id_def dc_def])
+            apply (rule syscall_error_throwError_ccorres_n)
             apply (simp add: syscall_error_to_H_cases)
            (* Doesn't throw case *)
            apply (drule_tac s="Some y" in sym,
@@ -2996,7 +2994,6 @@ lemma decodeARMFrameInvocation_ccorres:
                         simp add: ARM_HYP.pptrBase_def ARM_HYP.pptrBase_def
                                   hd_conv_nth length_ineq_not_Nil,
                         ccorres_rewrite)
-                 apply (fold dc_def)
                  apply (rule ccorres_return_Skip, clarsimp)
                apply clarsimp
                apply (subgoal_tac "cap_get_tag cap = SCAST(32 signed \<rightarrow> 32) cap_frame_cap
@@ -4326,7 +4323,7 @@ lemma vcpuRegSavedWhenDisabled_spec[simp]:
   by (simp add: vcpuRegSavedWhenDisabled_def split: vcpureg.splits)
 
 lemma writeVCPUReg_ccorres:
-  notes Collect_const[simp del] dc_simp[simp del]
+  notes Collect_const[simp del]
   shows
   "ccorres dc xfdc
       (vcpu_at' vcpuptr and no_0_obj')
@@ -4372,7 +4369,7 @@ lemma writeVCPUReg_ccorres:
   done
 
 lemma readVCPUReg_ccorres:
-  notes Collect_const[simp del] dc_simp[simp del]
+  notes Collect_const[simp del]
   shows
   "ccorres ((=)) ret__unsigned_long_'
       (vcpu_at' vcpuptr and no_0_obj')
@@ -4426,7 +4423,7 @@ lemma readVCPUReg_ccorres:
 
 
 lemma invokeVCPUReadReg_ccorres: (* styled after invokeTCB_ReadRegisters_ccorres *)
-  notes Collect_const[simp del] dc_simp[simp del]
+  notes Collect_const[simp del]
   shows
   "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and (\<lambda>s. ksCurThread s = thread) and ct_in_state' ((=) Restart)
@@ -4460,7 +4457,7 @@ lemma invokeVCPUReadReg_ccorres: (* styled after invokeTCB_ReadRegisters_ccorres
          apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
          apply clarsimp
          apply (rule conseqPre, vcg)
-         apply (clarsimp simp: return_def dc_simp)
+         apply (clarsimp simp: return_def)
         apply (rule hoare_post_taut[of \<top>])
 
        \<comment> \<open>now if we are part of a call\<close>
@@ -4487,7 +4484,7 @@ lemma invokeVCPUReadReg_ccorres: (* styled after invokeTCB_ReadRegisters_ccorres
                    apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
                    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
                    apply (rule allI, rule conseqPre, vcg)
-                   apply (clarsimp simp: return_def dc_def)
+                   apply (clarsimp simp: return_def)
                   apply (rule hoare_post_taut[of \<top>])
                  apply (vcg exspec=setThreadState_modifies)
                 apply wpsimp
@@ -4496,13 +4493,13 @@ lemma invokeVCPUReadReg_ccorres: (* styled after invokeTCB_ReadRegisters_ccorres
              apply clarsimp
              apply (vcg)
             apply wpsimp
-           apply (clarsimp simp: dc_def msgInfoRegister_def  ARM_HYP.msgInfoRegister_def Kernel_C.msgInfoRegister_def Kernel_C.R1_def)
+           apply (clarsimp simp: msgInfoRegister_def  ARM_HYP.msgInfoRegister_def Kernel_C.msgInfoRegister_def Kernel_C.R1_def)
            apply (vcg exspec=setMR_modifies)
           apply wpsimp
-         apply (clarsimp simp: dc_def)
+         apply clarsimp
          apply (vcg exspec=setRegister_modifies)
         apply wpsimp
-       apply (clarsimp simp: dc_def ThreadState_Running_def)
+       apply (clarsimp simp: ThreadState_Running_def)
        apply (vcg exspec=lookupIPCBuffer_modifies)
       apply clarsimp
       apply (wpsimp wp: hoare_vcg_const_imp_lift hoare_vcg_all_lift hoare_vcg_imp_lift)
@@ -4532,7 +4529,7 @@ lemma liftE_invokeVCPUWriteReg_empty_return:
   by (clarsimp simp: liftE_bindE bind_assoc)
 
 lemma invokeVCPUWriteReg_ccorres:
-  notes Collect_const[simp del] dc_simp[simp del]
+  notes Collect_const[simp del]
   shows
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and vcpu_at' vcpuptr)
@@ -4548,7 +4545,7 @@ lemma invokeVCPUWriteReg_ccorres:
    apply (ctac (no_vcg) add: writeVCPUReg_ccorres)
     apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
     apply (rule allI, rule conseqPre, vcg)
-    apply (clarsimp simp: return_def dc_def)
+    apply (clarsimp simp: return_def)
   by (wpsimp simp: invs_no_0_obj')+
 
 lemma decodeVCPUWriteReg_ccorres:
@@ -4627,7 +4624,7 @@ lemma liftE_invokeVCPUInjectIRQ_empty_return:
   by (clarsimp simp: liftE_bindE bind_assoc)
 
 lemma invokeVCPUInjectIRQ_ccorres:
-  notes Collect_const[simp del] dc_simp[simp del]
+  notes Collect_const[simp del]
   shows
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and vcpu_at' vcpuptr and K (idx < 64))
@@ -4655,7 +4652,7 @@ lemma invokeVCPUInjectIRQ_ccorres:
     apply clarsimp
     apply (ctac (no_vcg) add: set_gic_vcpu_ctrl_lr_ccorres)
      apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
-     apply (rule allI, rule conseqPre, vcg, clarsimp simp: dc_def return_def)
+     apply (rule allI, rule conseqPre, vcg, clarsimp simp: return_def)
     apply (rule wp_post_taut)
    apply (simp only:)
    apply (clarsimp simp: bind_assoc)
@@ -4663,7 +4660,7 @@ lemma invokeVCPUInjectIRQ_ccorres:
    apply (rule ccorres_move_c_guard_vcpu)
    apply (ctac (no_vcg) add: vgicUpdateLR_ccorres)
      apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
-     apply (rule allI, rule conseqPre, vcg, clarsimp simp: dc_def return_def)
+     apply (rule allI, rule conseqPre, vcg, clarsimp simp: return_def)
     apply wpsimp+
   apply (clarsimp simp: unat_of_nat_eq word_of_nat_less)
   done
@@ -4836,7 +4833,7 @@ lemma decodeVCPUInjectIRQ_ccorres:
           apply (rule ccorres_return_CE, simp+)[1]
          apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
         apply wp
-       apply (clarsimp simp: dc_def)
+       apply clarsimp
        apply (vcg exspec=invokeVCPUInjectIRQ_modifies)
       apply (wpsimp wp: sts_invs_minor' ct_in_state'_set)+
      apply (vcg exspec=setThreadState_modifies)
@@ -4973,7 +4970,7 @@ lemma decodeVCPUReadReg_ccorres:
   done
 
 lemma invokeVCPUSetTCB_ccorres:
-  notes Collect_const[simp del] dc_simp[simp del]
+  notes Collect_const[simp del]
   shows
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and tcb_at' tptr and vcpu_at' vcpuptr)
@@ -4985,10 +4982,10 @@ lemma invokeVCPUSetTCB_ccorres:
    apply clarsimp
    apply (rule ccorres_add_return2)
    apply (ctac (no_vcg) add: associateVCPUTCB_ccorres)
-    apply (clarsimp simp: return_def dc_def)
+    apply (clarsimp simp: return_def)
     apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
     apply (rule allI, rule conseqPre, vcg)
-    apply (clarsimp simp: return_def dc_def)
+    apply (clarsimp simp: return_def)
   by (wpsimp simp: invs_no_0_obj')+
 
 lemma liftE_associateVCPUTCB_empty_return:
@@ -5081,7 +5078,7 @@ lemma decodeVCPUSetTCB_ccorres:
 done
 
 lemma invokeVCPUAckVPPI_ccorres:
-  notes Collect_const[simp del] dc_simp[simp del]
+  notes Collect_const[simp del]
   shows
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and vcpu_at' vcpuptr)
@@ -5098,7 +5095,7 @@ lemma invokeVCPUAckVPPI_ccorres:
                                where v=False, simplified from_bool_vals])
      apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
      apply (rule allI, rule conseqPre, vcg)
-     apply (clarsimp simp: return_def dc_def)
+     apply (clarsimp simp: return_def)
     apply wpsimp+
   apply (case_tac vppi, simp add: fromEnum_def enum_vppievent_irq flip: word_unat.Rep_inject)
   done
@@ -5178,7 +5175,7 @@ proof -
            apply (simp add: throwError_bind invocationCatch_def whenE_def injection_handler_throwError)
            apply (simp add: throwError_bind invocationCatch_def invocation_eq_use_types
                       cong: StateSpace.state.fold_congs globals.fold_congs)
-           apply (rule syscall_error_throwError_ccorres_n[simplified dc_def id_def])
+           apply (rule syscall_error_throwError_ccorres_n)
            apply (solves \<open>simp add: syscall_error_to_H_cases\<close>)
 
           apply (clarsimp simp: irqVPPIEventIndex_not_invalid; ccorres_rewrite)

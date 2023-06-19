@@ -1755,7 +1755,7 @@ next
     apply (simp add: simpl_sequence_Cons sequenceE_Cons)
     apply (rule ccorres_guard_imp2)
      apply (rule ccorres_splitE)
-         apply (simp add: inl_rrel_inl_rrel)
+         apply simp
          apply (rule Cons.prems(1)[where zs=Nil, simplified])
         apply (rule ceqv_refl)
        apply (simp add: liftME_def[symmetric] liftME_liftM)
@@ -1809,7 +1809,7 @@ lemma mapME_x_simpl_sequence_fun_related:
         clarsimp elim!: inl_inrE)
   apply (erule_tac x="length zs" in meta_allE
        | erule_tac x="xs ! length zs" in meta_allE)+
-  apply (simp add: dc_def)
+  apply (simp add: dc_def cong: ccorres_all_cong)
   done
 
 lemmas mapME_x_simpl_sequence_same

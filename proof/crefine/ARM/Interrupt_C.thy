@@ -74,11 +74,11 @@ proof -
      apply (rule ccorres_symb_exec_r)
        apply (ctac(no_vcg) add: cteDeleteOne_ccorres[where w="-1"])
         apply (rule ccorres_call)
-           apply (rule cteInsert_ccorres[simplified dc_def])
+           apply (rule cteInsert_ccorres)
           apply (simp add: pred_conj_def)+
-       apply (strengthen ntfn_badge_derived_enough_strg[unfolded o_def]
+       apply (strengthen ntfn_badge_derived_enough_strg
                          invs_mdb_strengthen' valid_objs_invs'_strg)
-       apply (wp cteDeleteOne_other_cap[unfolded o_def])[1]
+       apply (wp cteDeleteOne_other_cap[unfolded o_def])
       apply vcg
      apply (rule conseqPre, vcg, clarsimp simp: rf_sr_def
         gs_set_assn_Delete_cstate_relation[unfolded o_def])
@@ -108,7 +108,7 @@ lemma invokeIRQHandler_ClearIRQHandler_ccorres:
    apply simp
    apply (ctac(no_vcg) add: getIRQSlot_ccorres[simplified])
      apply (rule ccorres_symb_exec_r)
-       apply (ctac add: cteDeleteOne_ccorres[where w="-1",simplified dc_def])
+       apply (ctac add: cteDeleteOne_ccorres[where w="-1"])
       apply vcg
      apply (rule conseqPre, vcg,
             clarsimp simp: rf_sr_def gs_set_assn_Delete_cstate_relation[unfolded o_def])

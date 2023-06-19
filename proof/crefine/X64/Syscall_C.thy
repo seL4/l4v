@@ -268,22 +268,22 @@ lemma decodeInvocation_ccorres:
    apply (rule ccorres_Cond_rhs)
     apply (simp add: if_to_top_of_bind)
     apply (rule ccorres_trim_returnE, simp+)
-    apply (simp add: liftME_invocationCatch o_def)
+    apply (simp add: liftME_invocationCatch)
     apply (rule ccorres_call, rule decodeTCBInvocation_ccorres)
        apply assumption
       apply (simp+)[3]
    apply (rule ccorres_Cond_rhs)
     apply (rule ccorres_trim_returnE, simp+)
-    apply (simp add: liftME_invocationCatch o_def)
+    apply (simp add: liftME_invocationCatch)
     apply (rule ccorres_call,
-           erule decodeDomainInvocation_ccorres[unfolded o_def],
+           erule decodeDomainInvocation_ccorres,
            simp+)[1]
    apply (rule ccorres_Cond_rhs)
     apply (simp add: if_to_top_of_bind)
     apply (rule ccorres_trim_returnE, simp+)
-    apply (simp add: liftME_invocationCatch o_def)
+    apply (simp add: liftME_invocationCatch)
     apply (rule ccorres_call,
-           erule decodeCNodeInvocation_ccorres[unfolded o_def],
+           erule decodeCNodeInvocation_ccorres,
            simp+)[1]
    apply (rule ccorres_Cond_rhs)
     apply simp
@@ -717,7 +717,7 @@ lemma handleFault_ccorres:
          apply (rule ccorres_return_Skip')
         apply clarsimp
         apply (rule ccorres_cond_univ)
-        apply (ctac (no_vcg) add: handleDoubleFault_ccorres [unfolded dc_def])
+        apply (ctac (no_vcg) add: handleDoubleFault_ccorres)
        apply (simp add: sendFaultIPC_def)
        apply wp
          apply ((wp hoare_vcg_all_lift_R hoare_drop_impE_R |wpc |simp add: throw_def)+)[1]
@@ -1057,7 +1057,7 @@ lemma handleReply_ccorres:
                  apply (rule ccorres_cond_true)
                  apply simp
                  apply (rule ccorres_return_void_catchbrk)
-                 apply (rule ccorres_return_void_C[unfolded dc_def])
+                 apply (rule ccorres_return_void_C)
                 apply (vcg exspec=doReplyTransfer_modifies)
                apply (rule ccorres_fail)+
           apply (wpc, simp_all)
@@ -1075,7 +1075,6 @@ lemma handleReply_ccorres:
            apply (csymbr, csymbr, csymbr)
            apply simp
            apply (rule ccorres_assert2)
-           apply (fold dc_def)
            apply (rule ccorres_add_return2)
            apply (ctac (no_vcg))
             apply (rule ccorres_return_void_catchbrk)
@@ -1236,7 +1235,7 @@ lemma handleRecv_ccorres:
                apply (rule ccorres_add_return2)
                apply (rule ccorres_split_nothrow_call[where xf'=xfdc and d'="\<lambda>_. break_C"
                                                       and Q="\<lambda>_ _. True" and Q'="\<lambda>_ _. UNIV"])
-                      apply (ctac add: handleFault_ccorres[unfolded dc_def])
+                      apply (ctac add: handleFault_ccorres)
                      apply simp+
                   apply ceqv
                  apply (rule ccorres_break_return)
@@ -1255,7 +1254,7 @@ lemma handleRecv_ccorres:
           apply (simp add: liftE_bind)
           apply (ctac)
             apply (rule_tac P="\<lambda>s. ksCurThread s = rv" in ccorres_cross_over_guard)
-            apply (ctac add: receiveIPC_ccorres[unfolded dc_def])
+            apply (ctac add: receiveIPC_ccorres)
 
            apply (wp deleteCallerCap_ksQ_ct' hoare_vcg_all_lift)
           apply (rule conseqPost[where Q'=UNIV and A'="{}"], vcg exspec=deleteCallerCap_modifies)
@@ -1303,7 +1302,7 @@ lemma handleRecv_ccorres:
                   apply (rule ccorres_add_return2)
                   apply (rule ccorres_split_nothrow_call[where xf'=xfdc and d'="\<lambda>_. break_C"
                                                and Q="\<lambda>_ _. True" and Q'="\<lambda>_ _. UNIV"])
-                         apply (ctac add: handleFault_ccorres[unfolded dc_def])
+                         apply (ctac add: handleFault_ccorres)
                         apply simp+
                      apply ceqv
                     apply (rule ccorres_break_return)
@@ -1320,7 +1319,7 @@ lemma handleRecv_ccorres:
               apply (clarsimp simp: rf_sr_upd_safe)
 
              apply (simp add: liftE_bind)
-             apply (ctac  add: receiveSignal_ccorres[unfolded dc_def])
+             apply (ctac  add: receiveSignal_ccorres)
             apply clarsimp
             apply (vcg exspec=handleFault_modifies)
            apply (rule ccorres_cond_true_seq)
@@ -1333,7 +1332,7 @@ lemma handleRecv_ccorres:
               apply (rule ccorres_cross_over_guard[where P=\<top>])
               apply (rule ccorres_symb_exec_r)
                 apply (rule ccorres_add_return2)
-                apply (ctac add: handleFault_ccorres[unfolded dc_def])
+                apply (ctac add: handleFault_ccorres)
                   apply (rule ccorres_break_return[where P=\<top> and P'=UNIV])
                    apply simp+
                  apply wp
@@ -1354,7 +1353,7 @@ lemma handleRecv_ccorres:
         apply (rule ccorres_symb_exec_r)
           apply (rule ccorres_cross_over_guard[where P=\<top>])
           apply (rule ccorres_symb_exec_r)
-            apply (ctac add: handleFault_ccorres[unfolded dc_def])
+            apply (ctac add: handleFault_ccorres)
            apply vcg
           apply (rule conseqPre, vcg)
           apply (clarsimp simp: rf_sr_upd_safe)
@@ -1367,9 +1366,9 @@ lemma handleRecv_ccorres:
        apply (rule ccorres_rhs_assoc)+
        apply (rule ccorres_cross_over_guard[where P=\<top>])
        apply (rule ccorres_symb_exec_r)
-         apply (ctac add: handleFault_ccorres[unfolded dc_def])
+         apply (ctac add: handleFault_ccorres)
            apply (rule ccorres_split_throws)
-            apply (rule ccorres_return_void_C [unfolded dc_def])
+            apply (rule ccorres_return_void_C)
            apply vcg
           apply wp
          apply (vcg exspec=handleFault_modifies)
@@ -1596,7 +1595,6 @@ lemma ccorres_handleReservedIRQ:
                      (\<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p))))
     (UNIV \<inter> {s. irq_' s = ucast irq}) hs
     (handleReservedIRQ irq) (Call handleReservedIRQ_'proc)"
-  supply dc_simp[simp del]
   apply (cinit lift: irq_')
    apply (rule ccorres_return_Skip)
   apply clarsimp
@@ -1619,11 +1617,11 @@ lemma handleInterrupt_ccorres:
     apply (subst doMachineOp_bind)
       apply (rule maskInterrupt_empty_fail)
      apply (rule ackInterrupt_empty_fail)
-    apply (ctac add: maskInterrupt_ccorres[unfolded dc_def])
+    apply (ctac add: maskInterrupt_ccorres)
       apply (subst bind_return_unit[where f="doMachineOp (ackInterrupt irq)"])
-      apply (ctac add: ackInterrupt_ccorres[unfolded dc_def])
+      apply (ctac add: ackInterrupt_ccorres)
         apply (rule ccorres_split_throws)
-         apply (rule ccorres_return_void_C[unfolded dc_def])
+         apply (rule ccorres_return_void_C)
         apply vcg
        apply wp
       apply (vcg exspec=ackInterrupt_modifies)
@@ -1663,7 +1661,7 @@ lemma handleInterrupt_ccorres:
          apply (ctac (no_vcg) add: sendSignal_ccorres)
           apply (simp add: maskIrqSignal_def)
           apply (ctac (no_vcg) add: maskInterrupt_ccorres)
-           apply (ctac add: ackInterrupt_ccorres [unfolded dc_def])
+           apply (ctac add: ackInterrupt_ccorres)
           apply wp+
         apply (simp del: Collect_const)
         apply (rule ccorres_cond_true_seq)
@@ -1672,7 +1670,7 @@ lemma handleInterrupt_ccorres:
         apply (rule ccorres_cond_false_seq)
         apply (simp add: maskIrqSignal_def)
         apply (ctac (no_vcg) add: maskInterrupt_ccorres)
-         apply (ctac add: ackInterrupt_ccorres [unfolded dc_def])
+         apply (ctac add: ackInterrupt_ccorres)
         apply wp
        apply (rule_tac P=\<top> and P'="{s. ret__int_' s = 0 \<and> cap_get_tag cap \<noteq> scast cap_notification_cap}" in ccorres_inst)
        apply (clarsimp simp: isCap_simps simp del: Collect_const)
@@ -1684,7 +1682,7 @@ lemma handleInterrupt_ccorres:
                         rule ccorres_cond_false_seq, simp,
                         rule ccorres_cond_false_seq, simp,
                         ctac (no_vcg) add: maskInterrupt_ccorres,
-                        ctac (no_vcg) add: ackInterrupt_ccorres [unfolded dc_def],
+                        ctac (no_vcg) add: ackInterrupt_ccorres,
                         wp, simp)+)
       apply (wp getSlotCap_wp)
      apply simp
@@ -1693,7 +1691,6 @@ lemma handleInterrupt_ccorres:
     apply (rule ccorres_move_const_guards)+
     apply (rule ccorres_cond_false_seq)
     apply (rule ccorres_cond_true_seq)
-    apply (fold dc_def)[1]
     apply (rule ccorres_rhs_assoc)+
     apply (ctac (no_vcg) add: timerTick_ccorres)
      apply (ctac (no_vcg) add: resetTimer_ccorres)
@@ -1705,7 +1702,7 @@ lemma handleInterrupt_ccorres:
    apply (rule ccorres_cond_false_seq)
    apply (rule ccorres_cond_true_seq)
    apply (ctac add: ccorres_handleReservedIRQ)
-     apply (ctac (no_vcg) add: ackInterrupt_ccorres [unfolded dc_def])
+     apply (ctac (no_vcg) add: ackInterrupt_ccorres)
     apply wp
    apply (vcg exspec=handleReservedIRQ_modifies)
   apply (simp add: sint_ucast_eq_uint is_down uint_up_ucast is_up )

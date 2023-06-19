@@ -611,9 +611,9 @@ lemma callKernel_withFastpath_corres_C:
    apply (rule ccorres_rhs_assoc)+
    apply (rule ccorres_symb_exec_r)+
        apply (rule ccorres_Cond_rhs)
-        apply (simp add: dc_def[symmetric])
+        apply simp
         apply (ctac add: ccorres_get_registers[OF fastpath_call_ccorres_callKernel])
-       apply (simp add: dc_def[symmetric])
+       apply simp
        apply (ctac add: ccorres_get_registers[OF fastpath_reply_recv_ccorres_callKernel])
       apply vcg
      apply (rule conseqPre, vcg, clarsimp)
@@ -694,13 +694,13 @@ lemma entry_corres_C:
          apply simp
         apply (rule corres_split)
 (* FIXME: fastpath
-           apply (rule corres_cases[where R=fp], simp_all add: dc_def[symmetric])[1]
-            apply (rule callKernel_withFastpath_corres_C, simp)
+           apply (rule corres_cases[where R=fp]; simp)
+            apply (rule callKernel_withFastpath_corres_C)
 *)
-           apply (rule callKernel_corres_C[unfolded dc_def], simp)
+           apply (rule callKernel_corres_C)
           apply (rule corres_split[where P=\<top> and P'=\<top> and r'="\<lambda>t t'. t' = tcb_ptr_to_ctcb_ptr t"])
              apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
-            apply (rule getContext_corres[unfolded o_def], simp)
+            apply (rule getContext_corres, simp)
            apply (wp threadSet_all_invs_triv' callKernel_cur)+
    apply (clarsimp simp: all_invs'_def invs'_def cur_tcb'_def valid_state'_def)
   apply simp
@@ -897,7 +897,7 @@ lemma do_user_op_corres_C:
                apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                cpspace_relation_def)
                apply (drule(1) device_mem_C_relation[symmetric])
-               apply (simp add: comp_def)
+               apply simp
               apply (rule_tac P=valid_state' and P'=\<top> and r'="(=)" in corres_split)
                  apply (clarsimp simp: cstate_relation_def rf_sr_def
                    Let_def cmachine_state_relation_def)

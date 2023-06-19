@@ -190,11 +190,22 @@ lemma ccorres_split_nothrow_novcgE:
   apply (clarsimp simp: guard_is_UNIV_def split: sum.split)
   done
 
-(* Unit would be more appropriate, but the record package will simplify xfdc to () *)
+\<comment> \<open>Unit would be more appropriate, but the record package will rewrite xfdc to ().
+   This can happen even when protected by a cong rule, as seen in the following example.
+definition
+  "xfdc \<equiv> \<lambda>(t :: cstate). ()"
+lemma
+  "\<And>x b. \<lbrakk>snd x = b\<rbrakk>
+   \<Longrightarrow> ccorres_underlying rf_sr \<Gamma>
+         (\<lambda>a b. dc a b) (\<lambda>a. xfdc a) dc xfdc
+         \<top> UNIV [SKIP] a c"
+  supply ccorres_weak_cong[cong]
+  apply clarify
+  oops\<close>
 definition
   "xfdc (t :: cstate) \<equiv> (0 :: nat)"
 
-lemma xfdc_equal [simp]:
+lemma xfdc_equal[simp]:
   "xfdc t = xfdc s"
   unfolding xfdc_def by simp
 
@@ -834,7 +845,7 @@ lemma ccorres_sequence_x_while_genQ':
   apply (rule ccorres_rel_imp)
    apply (rule ccorres_sequence_while_genQ
                    [where xf'=xfdc and r'=dc and xf_update=xf_update, simplified],
-          (simp add: dc_def)+)
+          (simp add: dc_def cong: ccorres_all_cong)+)
   done
 
 lemma ccorres_sequence_x_while_gen':
@@ -853,16 +864,12 @@ lemma ccorres_sequence_x_while_gen':
   apply (rule ccorres_rel_imp)
    apply (rule ccorres_sequence_while_gen'
                    [where xf'=xfdc and r'=dc and xf_update=xf_update, simplified],
-          (simp add: dc_def)+)
+          (simp add: dc_def cong: ccorres_all_cong)+)
   done
 
 lemma i_xf_for_sequence:
   "\<forall>s f. i_' (i_'_update f s) = f (i_' s) \<and> globals (i_'_update f s) = globals s"
   by simp
-
-lemmas ccorres_sequence_x_while'
-    = ccorres_sequence_x_while_gen' [OF _ _ _ _ _ i_xf_for_sequence, folded word_bits_def,
-                                     where j=1, simplified]
 
 lemma ccorres_sequence_x_while_genQ:
   fixes xf :: "globals myvars \<Rightarrow> ('c :: len) word"
@@ -881,8 +888,9 @@ lemma ccorres_sequence_x_while_genQ:
           (While {s. P (xf s)}
               (body ;; Basic (\<lambda>s. xf_update (\<lambda>_. xf s + of_nat j) s))))"
   apply (rule ccorres_symb_exec_r)
-    apply (rule ccorres_sequence_x_while_genQ' [where i=0 and xf_update=xf_update and Q=Q, simplified])
-    apply (simp add: assms hi[simplified])+
+    apply (rule ccorres_rel_imp)
+     apply (rule ccorres_sequence_x_while_genQ' [where i=0 and xf_update=xf_update and Q=Q, simplified])
+           apply (simp add: assms hi[simplified])+
    apply (rule conseqPre, vcg)
    apply (clarsimp simp add: xf)
   apply (rule conseqPre, vcg)
@@ -904,21 +912,14 @@ lemma ccorres_sequence_x_while_gen:
           (While {s. P (xf s)}
               (body ;; Basic (\<lambda>s. xf_update (\<lambda>_. xf s + of_nat j) s))))"
   apply (rule ccorres_symb_exec_r)
-    apply (rule ccorres_sequence_x_while_gen' [where i=0 and xf_update=xf_update, simplified])
-    apply (simp add: assms hi[simplified])+
+    apply (rule ccorres_rel_imp)
+     apply (rule ccorres_sequence_x_while_gen' [where i=0 and xf_update=xf_update, simplified])
+           apply (simp add: assms hi[simplified])+
    apply vcg
    apply (simp add: xf)
   apply vcg
   apply (simp add: xf rf_sr_def)
   done
-
-lemmas ccorres_sequence_x_while
-    = ccorres_sequence_x_while_gen [OF _ _ _ _ _ i_xf_for_sequence, folded word_bits_def,
-                                    where j=1, simplified]
-
-lemmas ccorres_sequence_x_whileQ
-    = ccorres_sequence_x_while_genQ [OF _ _ _ _ _ i_xf_for_sequence, folded word_bits_def,
-                                     where j=1, simplified]
 
 lemma ccorres_mapM_x_while_gen:
   fixes xf :: "globals myvars \<Rightarrow> ('c :: len) word"
@@ -937,12 +938,8 @@ lemma ccorres_mapM_x_while_gen:
   unfolding mapM_x_def
   apply (rule ccorres_rel_imp)
    apply (rule ccorres_sequence_x_while_gen[where xf_update=xf_update])
-        apply (simp add: assms hi[simplified])+
+         apply (simp add: assms hi[simplified])+
   done
-
-lemmas ccorres_mapM_x_while
-    = ccorres_mapM_x_while_gen [OF _ _ _ _ _ i_xf_for_sequence, folded word_bits_def,
-                                where j=1, simplified]
 
 lemma ccorres_mapM_x_while_genQ:
   fixes xf :: "globals myvars \<Rightarrow> ('c :: len) word"
@@ -963,12 +960,8 @@ lemma ccorres_mapM_x_while_genQ:
   unfolding mapM_x_def
   apply (rule ccorres_rel_imp)
    apply (rule ccorres_sequence_x_while_genQ[where xf_update=xf_update])
-        apply (simp add: assms hi[simplified])+
+         apply (simp add: assms hi[simplified])+
   done
-
-lemmas ccorres_mapM_x_whileQ
-    = ccorres_mapM_x_while_genQ [OF _ _ _ _ _ i_xf_for_sequence, folded word_bits_def,
-                                 where j=1, simplified]
 
 lemma ccorres_mapM_x_while_gen':
   fixes xf :: "globals myvars \<Rightarrow> ('c :: len) word"
@@ -988,13 +981,9 @@ lemma ccorres_mapM_x_while_gen':
   unfolding mapM_x_def
   apply (rule ccorres_rel_imp)
    apply (rule ccorres_sequence_x_while_gen'[where xf_update=xf_update])
-        apply (clarsimp simp only: length_map nth_map rl)
-       apply (simp add: assms hi[simplified])+
+         apply (clarsimp simp only: length_map nth_map rl)
+        apply (simp add: assms hi[simplified])+
   done
-
-lemmas ccorres_mapM_x_while'
-    = ccorres_mapM_x_while_gen' [OF _ _ _ _ _ i_xf_for_sequence, folded word_bits_def,
-                                 where j=1, simplified]
 
 lemma ccorres_zipWithM_x_while_genQ:
   fixes xf :: "globals myvars \<Rightarrow> ('c :: len) word"
@@ -1015,21 +1004,53 @@ lemma ccorres_zipWithM_x_while_genQ:
               (body ;; Basic (\<lambda>s. xf_update (\<lambda>_. xf s + of_nat j) s))))"
   unfolding zipWithM_x_def
   apply (rule ccorres_guard_imp)
-    apply (rule ccorres_rel_imp [OF ccorres_sequence_x_while_genQ[where F=F, OF _ _ _ _ _ xf j]],
-      simp_all add: length_zipWith)
-      apply (simp add: length_zipWith zipWith_nth)
-      apply (rule rl)
-     apply (rule guard)
-    apply (rule bodyi)
-   apply (simp add: zipWith_nth hi[simplified])
-  apply (rule wb)
+    apply (rule ccorres_rel_imp [OF ccorres_sequence_x_while_genQ[where F=F, OF _ _ _ _ _ xf j]];
+           simp)
+        apply (simp add: zipWith_nth)
+        apply (rule rl)
+       apply (rule guard)
+      apply (rule bodyi)
+     apply (simp add: zipWith_nth hi[simplified])
+    apply (rule wb)
+   apply simp+
   done
+
+\<comment> \<open>Temporarily remove ccorres_weak_cong, so that the following lemmas can be constructed
+    with simplified return relations.
+    We do not use ccorres_all_cong due to it causing unexpected eta-expansion.\<close>
+context
+notes ccorres_weak_cong[cong del]
+begin
+lemmas ccorres_sequence_x_while'
+    = ccorres_sequence_x_while_gen' [OF _ _ _ _ _ i_xf_for_sequence, folded word_bits_def,
+                                     where j=1, simplified]
+
+lemmas ccorres_sequence_x_while
+    = ccorres_sequence_x_while_gen [OF _ _ _ _ _ i_xf_for_sequence, folded word_bits_def,
+                                    where j=1, simplified]
+
+lemmas ccorres_sequence_x_whileQ
+    = ccorres_sequence_x_while_genQ [OF _ _ _ _ _ i_xf_for_sequence, folded word_bits_def,
+                                     where j=1, simplified]
+
+lemmas ccorres_mapM_x_while
+    = ccorres_mapM_x_while_gen [OF _ _ _ _ _ i_xf_for_sequence, folded word_bits_def,
+                                where j=1, simplified]
+
+lemmas ccorres_mapM_x_whileQ
+    = ccorres_mapM_x_while_genQ [OF _ _ _ _ _ i_xf_for_sequence, folded word_bits_def,
+                                 where j=1, simplified]
+
+lemmas ccorres_mapM_x_while'
+    = ccorres_mapM_x_while_gen' [OF _ _ _ _ _ i_xf_for_sequence, folded word_bits_def,
+                                 where j=1, simplified]
 
 lemmas ccorres_zipWithM_x_while_gen = ccorres_zipWithM_x_while_genQ[where Q=UNIV, simplified]
 
 lemmas ccorres_zipWithM_x_while
     = ccorres_zipWithM_x_while_gen[OF _ _ _ _ _ i_xf_for_sequence, folded word_bits_def,
                                    where j=1, simplified]
+end
 
 end
 
@@ -1114,7 +1135,7 @@ proof -
        apply (rule ccorres_cond_true)
        apply (rule ccorres_rhs_assoc)+
        apply (rule ccorres_splitE)
-           apply (simp add: inl_rrel_inl_rrel)
+           apply simp
            apply (rule_tac ys="zs" in one'')
            apply simp
           apply (rule ceqv_refl)
@@ -1141,7 +1162,8 @@ proof -
   qed
   thus ?thesis
     by (clarsimp simp: init_xs_def dest!: spec[where x=Nil]
-                elim!: ccorres_rel_imp2 inl_inrE)
+                elim!: ccorres_rel_imp2 inl_inrE
+                 cong: ccorres_all_cong)
  qed
 
 lemma ccorres_sequenceE_while_down:
@@ -1223,10 +1245,11 @@ lemma ccorres_sequenceE_while:
              Basic (\<lambda>s. i_'_update (\<lambda>_. i_' s + 1) s)))"
   apply (rule ccorres_guard_imp2)
    apply (rule ccorres_symb_exec_r)
-     apply (rule ccorres_sequenceE_while_gen'[where i=0, simplified, where xf_update=i_'_update],
-            (assumption | simp)+)
-       apply (simp add: word_bits_def)
-      apply simp+
+     apply (rule ccorres_rel_imp2)
+       apply (rule ccorres_sequenceE_while_gen'[where i=0, simplified, where xf_update=i_'_update],
+              (assumption | simp)+)
+         apply (simp add: word_bits_def)
+        apply simp+
     apply vcg
    apply (rule conseqPre, vcg)
    apply clarsimp
