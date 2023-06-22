@@ -5,21 +5,8 @@
  *)
 
 theory Corres_Method
-imports Corres_UL SpecValid_R
+imports Corres_Cases SpecValid_R
 begin
-
-(*TODO move this *)
-
-method_setup repeat_new =
- \<open>Method.text_closure >> (fn m => fn ctxt => fn facts =>
-   let
-     fun tac i st' =
-       Goal.restrict i 1 st'
-       |> method_evaluate m ctxt facts
-       |> Seq.map (Goal.unrestrict i)
-
-   in SIMPLE_METHOD (SUBGOAL (fn (_,i) => REPEAT_ALL_NEW tac i) 1) facts end)
-\<close>
 
 chapter \<open>Corres Methods\<close>
 
@@ -206,51 +193,6 @@ text
  \<open>Based on wpc, corresc examines the split rule for top-level case statements on the left
   and right hand sides, propagating backwards the stateless and left/right preconditions.\<close>
 
-ML \<open>
-
-fun get_split_rule ctxt target =
-let
-  val (hdTarget,args) = strip_comb (Envir.eta_contract target)
-  val (constNm, _)  = dest_Const hdTarget
-  val constNm_fds   = (String.fields (fn c => c = #".") constNm)
-
-  val _ = if String.isPrefix "case_" (List.last constNm_fds) then ()
-          else raise TERM ("Not a case statement",[target])
-
-  val typeNm        = (String.concatWith "." o rev o tl o rev) constNm_fds;
-  val split         = Proof_Context.get_thm ctxt (typeNm ^ ".split");
-  val vars = Term.add_vars (Thm.prop_of split) []
-
-  val datatype_name = List.nth (rev constNm_fds,1)
-
-  fun T_is_datatype (Type (nm,_)) = (Long_Name.base_name nm) = (Long_Name.base_name datatype_name)
-    | T_is_datatype _ = false
-
-  val datatype_var =
-    case (find_first (fn ((_,_),T') => (T_is_datatype T')) vars) of
-      SOME (ix,_) => ix
-    | NONE => error ("Couldn't find datatype in thm: " ^ datatype_name)
-
-  val split' = Drule.infer_instantiate ctxt
-    [(datatype_var, Thm.cterm_of ctxt (List.last args))] split
-
-in
-   SOME split' end
-   handle TERM _ => NONE;
-\<close>
-
-attribute_setup get_split_rule = \<open>Args.term >>
-  (fn t => Thm.rule_attribute [] (fn context => fn _ =>
-      case (get_split_rule (Context.proof_of context) t) of
-        SOME thm => thm
-      | NONE => Drule.free_dummy_thm))\<close>
-
-method apply_split for f :: 'a and R :: "'a \<Rightarrow> bool"=
-    (match [[get_split_rule f]] in U: "(?x :: bool) = ?y" \<Rightarrow>
-      \<open>match U[THEN iffD2] in U': "\<And>H. ?A \<Longrightarrow> H (?z :: 'c)" \<Rightarrow>
-        \<open>match (R) in "R' :: 'c \<Rightarrow> bool" for R' \<Rightarrow>
-          \<open>rule U'[where H=R']\<close>\<close>\<close>)
-
 definition
   wpc2_helper :: "(('a \<Rightarrow> bool) \<times> 'b set)
                  \<Rightarrow> (('a \<Rightarrow> bool) \<times> 'b set) \<Rightarrow> (('a \<Rightarrow> bool) \<times> 'b set)
@@ -287,8 +229,10 @@ text \<open>
  Attempt to discharge resulting contradictions.
 \<close>
 
+context
+begin
 
-method corresc_body for B :: bool uses helper =
+private method corresc_body for B :: bool uses helper =
   determ \<open>(rule wpc2_helperI,
     repeat_new \<open>rule wpc2_conj_process wpc2_all_process wpc2_imp_process[where B=B]\<close> ; (rule helper))\<close>
 
@@ -297,7 +241,7 @@ lemma wpc2_helper_corres_left:
     wpc2_helper (P, P') (Q, Q') (\<lambda>_. PP,PP') (\<lambda>_. QQ,QQ') (corres_underlyingK sr nf nf' PP r P A f f')"
   by (clarsimp simp: wpc2_helper_def  corres_underlyingK_def elim!: corres_guard_imp)
 
-method corresc_left_raw =
+private method corresc_left_raw =
   determ \<open>(match conclusion in "corres_underlyingK sr nf nf' F r P P' f f'" for sr nf nf' F r P P' f f'
     \<Rightarrow> \<open>apply_split f "\<lambda>f. corres_underlyingK sr nf nf' F r P P' f f'"\<close>,
         corresc_body False helper: wpc2_helper_corres_left)\<close>
@@ -307,7 +251,7 @@ lemma wpc2_helper_corres_right:
     wpc2_helper (P, P') (Q, Q') (\<lambda>_. PP,PP') (\<lambda>_. QQ,QQ') (corres_underlyingK sr nf nf' PP r A P f f')"
   by (clarsimp simp: wpc2_helper_def corres_underlyingK_def elim!: corres_guard_imp)
 
-method corresc_right_raw =
+private method corresc_right_raw =
   determ \<open>(match conclusion in "corres_underlyingK sr nf nf' F r P P' f f'" for sr nf nf' F r P P' f f'
     \<Rightarrow> \<open>apply_split f' "\<lambda>f'. corres_underlyingK sr nf nf' F r P P' f f'"\<close>,
         corresc_body True helper: wpc2_helper_corres_right)\<close>
@@ -345,6 +289,8 @@ method corresc declares corresc_simp =
     ((solves \<open>rule corresK_false_guard_instantiate,
      determ \<open>(erule (1) wpc_contr_helper)?\<close>, simp add: corresc_simp\<close>)
     | (drule wpc2_corres_protect[where B=False], drule wpc2_corres_protect[where B=True])))[1]
+
+end
 
 section \<open>Corres_rv\<close>
 
