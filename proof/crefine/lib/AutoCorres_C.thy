@@ -805,18 +805,6 @@ section \<open>Additional infrastructure\<close>
 
 context kernel begin
 
-lemma wpc_helper_corres_final:
-  "corres_underlying sr nf nf' rv Q Q' f f'
-   \<Longrightarrow> wpc_helper (P, P', P'') (Q, Q', Q'') (corres_underlying sr nf nf' rv P P' f f')"
-  apply (clarsimp simp: wpc_helper_def)
-  apply (erule corres_guard_imp)
-   apply auto
-  done
-
-wpc_setup "\<lambda>m. corres_underlying sr nf nf' rv P P' m f'" wpc_helper_corres_final
-wpc_setup "\<lambda>m. corres_underlying sr nf nf' rv P P' (m >>= f) f'" wpc_helper_corres_final
-wpc_setup "\<lambda>m. corres_underlying sr nf nf' rv P P' (m >>=E f) f'" wpc_helper_corres_final
-
 lemma condition_const: "condition (\<lambda>_. P) L R = (if P then L else R)"
   by (simp add: condition_def split: if_splits)
 

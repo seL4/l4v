@@ -288,8 +288,8 @@ lemma handleVMFault_ccorres:
          apply simp
         apply terminates_trivial
        apply (drule sym, clarsimp)
-       apply (wpc; simp add: vm_fault_type_from_H_def X86InstructionFault_def X86DataFault_def
-                             bind_assoc)
+       apply (corres_cases; simp add: vm_fault_type_from_H_def X86InstructionFault_def X86DataFault_def
+                                      bind_assoc)
         apply (rule returnVMFault_corres;
                clarsimp simp: exception_defs mask_twice lift_rv_def)+
       apply wpsimp+
@@ -610,7 +610,7 @@ lemma lookupPDPTSlot_ccorres:
    apply (rule corres_symb_exec_lookupPML4Slot'; rename_tac pml4e_ptr)
    apply (rule corres_symb_exec_unknown_r; rename_tac undefined)
    apply (rule corres_symb_exec_pml4e_ptr_get_present'; rename_tac present)
-   apply wpc
+   apply corres_cases
     apply (rule_tac F="present = 0" in corres_gen_asm2)
     apply (simp add: bind_assoc)
     apply (rule corres_symb_exec_lookup_fault_missing_capability_new'; rename_tac lookup_fault)
