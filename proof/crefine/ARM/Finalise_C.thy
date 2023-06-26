@@ -400,11 +400,6 @@ lemma cancelAllIPC_ccorres:
   apply clarsimp
   done
 
-lemma empty_fail_getNotification:
-  "empty_fail (getNotification ep)"
-  unfolding getNotification_def
-  by (auto intro: empty_fail_getObject)
-
 lemma cancelAllSignals_ccorres:
   "ccorres dc xfdc
    (invs') (UNIV \<inter> {s. ntfnPtr_' s = Ptr ntfnptr}) []
@@ -1786,12 +1781,6 @@ lemma Arch_finaliseCap_ccorres:
                     split: if_split_asm)
    apply (frule cap_get_tag_isCap_unfolded_H_cap, simp)
   done
-
-lemma ccte_relation_ccap_relation:
-  "ccte_relation cte cte' \<Longrightarrow> ccap_relation (cteCap cte) (cte_C.cap_C cte')"
-  by (clarsimp simp: ccte_relation_def ccap_relation_def
-                     cte_to_H_def map_option_Some_eq2
-                     c_valid_cte_def)
 
 lemma isFinalCapability_ccorres:
   "ccorres ((=) \<circ> from_bool) ret__unsigned_long_'
