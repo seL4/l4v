@@ -14,10 +14,6 @@ begin
 type_synonym context_and_state = "user_context \<times> det_ext Structures_A.state"
 type_synonym if_other_state    = "context_and_state \<times> sys_mode"
 
-(* domain-switch monad? *)
-
-
-
 (* note the 64 word it takes is a *physical address*. *)
 definition addr_domain where
   "addr_domain initial_aag pa \<equiv> case pasObjectAbs initial_aag ((inv RISCV64.addrFromKPPtr) pa) of
@@ -35,25 +31,44 @@ definition addr_colour where
 definition colour_userdomain where
   "colour_userdomain \<equiv> Partition"
 
+(* This is how we convert virtual addresses to physical addresses, when dealing with the
+   kernel address space. Note that this will look like it's being applied everywhere, even
+   though it wouldn't make sense to use this for non-kernel addresses. The idea is that we
+   are only "tracking" touched addresses in seL4 for kernel operations -- user steps will
+   have touched-addresses assumed to be any address they have a mapping to. We should make
+   this distinction more clear in the names of these properties -scottb *)
+definition vaddr_to_paddr where
+  "vaddr_to_paddr v \<equiv> case v of VAddr v' \<Rightarrow> (RISCV64.addrFromKPPtr v')"
+
+(* assume we have Arch, and some hardware, and set up some initial properties *)
 locale integration_setup = 
   Arch +
   time_protection_hardware
     gentypes
     PSched
     _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
-    "addr_domain initial_aag" "addr_colour initial_aag" colour_userdomain +
+    "addr_domain initial_aag"
+    "addr_colour initial_aag"
+    colour_userdomain +
   Noninterference_valid_initial_state _ _ _ _ initial_aag
   for gentypes :: "('fch \<times> 'fch_cachedness \<times> 'pch \<times> 'pch_cachedness \<times> 'l partition \<times> 'l) itself"
-  and initial_aag :: "'l subject_label PAS"
-+ fixes time_per_tick :: time
+  and initial_aag :: "'l subject_label PAS" +
+
+  (* seL4's domain scheduler is counted in ticks. Define the amount of time between ticks.
+   This will be used with measured WCETs, so should be at whatever granularity WCETs are
+   measured.*)
+  fixes time_per_tick :: time
+
+  (* Define the minimum length of a slice given by the domain scheduler. *)
   fixes slice_length_min :: time
+
+  (* Define the maximum amount of time by which the timer interrupt might be delayed.
+   This must be less than `slice_length_min`*)
   fixes timer_delay_max :: time
-  fixes vaddr_to_paddr :: "TimeProtection.vaddr \<Rightarrow> TimeProtection.paddr"
-  assumes timer_delay_lt_slice_length:
-    "timer_delay_max < slice_length_min"
+  assumes timer_delay_lt_slice_length: "timer_delay_max < slice_length_min"
 begin
 
-
+(* TA set extractors *)
 definition touched_vaddrs :: "if_other_state \<Rightarrow> vaddr set" where
   "touched_vaddrs s \<equiv>
   VAddr ` (let is = internal_state_if s in (machine_state.touched_addresses (machine_state is)))"
@@ -61,27 +76,30 @@ definition touched_vaddrs :: "if_other_state \<Rightarrow> vaddr set" where
 definition touched_addresses :: "if_other_state \<Rightarrow> vpaddr set" where
   "touched_addresses s \<equiv> (\<lambda>v. (v, vaddr_to_paddr v)) ` (touched_vaddrs s)"
 
-
-(* get the list of (domain, tickcount) from the initial state *)
-(* this system assumes that domain_list_internal won't change *)
+(* get the list of (domain, tickcount) from the initial state.
+   this system assumes that `domain_list_internal` won't change. *)
 definition dom_list_internal where
   "dom_list_internal \<equiv> domain_list_internal $ exst $ snd $ fst s0"
 
-(* map dom_list_internal into a list of (domain, totaltime) by multiplying
+(* convert dom_list_internal into a list of (domain, totaltime) by multiplying
    by time_per_tick *)
 definition schedule_list where
   "schedule_list \<equiv> map (\<lambda>(d, ticks). (data_to_nat ticks * time_per_tick, d)) dom_list_internal"
 
 interpretation sched_o:schedule_oracle_delayed _ schedule_list slice_length_min timer_delay_max
   apply unfold_locales
-    (* we need to know that the domain list has some minimum time *)
+    (* we need to know that the domain list we extract from seL4 has some minimum time.
+     this seems reasonable. *)
     subgoal sorry
-   (* we need to know that the domain list is never empty *)
+   (* we need to know that the domain list we extract from seL4 is never empty.
+    this also seems reasonable. *)
    subgoal sorry
-  (* we need to know something about the timer delay WC *)
-  subgoal sorry
+  (* timer_delay_max \<le> slice_length_min*)
+  using timer_delay_lt_slice_length less_or_eq_imp_le apply presburger
   done
 
+(* "next latest domain-switch start" - this is the point at which the next domain-switch
+  will have started, even if it has been delayed the maximum amount it can be. *)
 definition nlds where
   "nlds \<equiv> sched_o.next_delayed_start"
 
@@ -105,35 +123,18 @@ interpretation tphuwr:time_protection_hardware_uwr gentypes PSched
      pch_lookup pch_read_impact pch_write_impact do_pch_flush pch_flush_cycles pch_flush_WCET
      collides_in_pch read_cycles write_cycles *)
   _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
-  "addr_domain initial_aag" "addr_colour initial_aag" colour_userdomain
-  userPart uwr nlds
+  "addr_domain initial_aag"
+  "addr_colour initial_aag"
+  colour_userdomain
+  userPart
+  uwr
+  nlds
   apply unfold_locales
    apply (clarsimp simp: uwr_def sameFor_def sameFor_scheduler_def domain_fields_equiv_def
                          partition_def userPart_def)
   using uwr_equiv_rel apply blast
   done
-
 abbreviation ma_uwr where "ma_uwr \<equiv> tphuwr.uwr"
-
-(*
-(* the definition used in infoflow *)
-definition if_A where
-  "if_A \<equiv> big_step_ADT_A_if utf"
-
-definition if_s0 where
-  "if_s0 \<equiv> s0"
-
-definition if_current_domain :: "if_other_state \<Rightarrow> 'l partition" where
-  "if_current_domain \<equiv> part"
-
-definition if_uwr :: "'l partition \<Rightarrow> (if_other_state \<times> if_other_state) set" where
-  "if_uwr d \<equiv> uwr d"
-
-(* the definition used in infoflow *)
-definition if_policy :: "('l partition \<times> 'l partition) set" where
-  "if_policy \<equiv> policyFlows (pasPolicy initial_aag)"
- *)
-
 end
 
 
@@ -146,9 +147,11 @@ definition is_uwr_determined :: "if_other_state \<Rightarrow> bool" where
 (* here we actually define the expression that checks whether a step (or substep as in
    the four-way split) starting at `os` will be completely determined by the scheduler
    uwr. For now I think this is always false, as we don't allow any steps to have this
-   property. *)
+   property. This was intended for "dirty steps" that access memory in two domains, and
+   need their paths to be exactly determined to preserve time protection. *)
 definition is_publicly_determined :: "if_other_state \<Rightarrow> bool" where
   "is_publicly_determined os \<equiv> False"
+
 
 locale integration =
   ii?:integration_setup
@@ -163,9 +166,7 @@ locale integration =
     _ _ _ _ _ _ _ _ _
     gentypes
     (* initial_aag time_per_tick slice_length_min timer_delay_max *)
-    _ _ _ _
-    (* vaddr_to_paddr *)
-    "\<lambda>v. case v of VAddr v' \<Rightarrow> (RISCV64.addrFromKPPtr v')" +
+    _ _ _ _ +
   ts?:trace_selector
     "TYPE((if_other_state \<times> ('fch, 'pch) TimeProtection.state) \<times> 'l partition \<times> trace \<times> vpaddr set)"
     "userPart \<circ> fst"
@@ -176,19 +177,7 @@ locale integration =
     select_trace 
   for gentypes :: "('fch \<times> 'fch_cachedness \<times> 'pch \<times> 'pch_cachedness \<times> 'l partition \<times> 'l) itself"
   and select_trace
-  
 begin
-
-(* what do we know
-  we definitely have interrupted_modes of os.
-  but that incluedes both
-  - KernelEntry ev
-  - KernelPreempt
-
-  im not yet sure if i should be including KernelPreempt here. I don't think you can Preempt into a
-  domainswitch, but i'm not certain how preempt works.
-
-*)
 
 (* this tells us, from the state, whether the next irq will be the timer *)
 definition is_timer_irq :: "det_ext Structures_A.state \<Rightarrow> bool" where
@@ -1104,7 +1093,7 @@ lemma non_domainswitch_uwr_determined:
   "(s1, s2) \<in> Step () \<Longrightarrow>
   \<not>will_domain_switch s1 \<Longrightarrow>
   is_uwr_determined s1"
-  sorry
+  by (simp add: is_uwr_determined_def)
 
 lemma external_uwr_same_domain:
   "uwr2 s PSched t \<Longrightarrow>
@@ -1151,12 +1140,14 @@ lemma uwr_and_normal_step_gives_ta_equiv:
   apply (rule sym, rule uwr_equates_touched_addresses, assumption)
   done
 
+(* here we require that the output of oldclean will hold equality on TA *)
 lemma oldclean_preserves_ta_equiv:
-  "\<lbrakk>reachable s; reachable t; uwr2 s PSched t;
-     uwr2 s (userPart s) t; is_uwr_determined s;
-     (s, s') \<in> fourways_oldclean; (t, t') \<in> fourways_oldclean;
-     step = fourways_oldclean; d = userPart s\<rbrakk>
-    \<Longrightarrow> ii.touched_addresses t' = ii.touched_addresses s'"
+  "\<lbrakk>reachable s; reachable t;
+  uwr2 s PSched t;
+  uwr2 s (userPart s) t;
+  is_uwr_determined s;
+  (s, s') \<in> fourways_oldclean; (t, t') \<in> fourways_oldclean\<rbrakk> \<Longrightarrow>
+  ii.touched_addresses t' = ii.touched_addresses s'"
   sorry
 
 lemma uwr_determined_steps_ta_equiv:
@@ -1188,6 +1179,7 @@ lemma ex_publicly_determined_quodlibet:
   "is_publicly_determined s \<Longrightarrow> P"
   by (simp add: is_publicly_determined_def)
 
+(* here we require that the we have the UWR at the start of the dirty step. *)
 lemma running_uwr_available_for_newclean:
   "\<lbrakk>uwr2 s PSched t;
   uwr2 s d t;
@@ -1221,8 +1213,6 @@ lemma fourways_properties:
   (* here we need a definition of "step_is_only_timeprotection_gadget" to do something
       useful *)
   sorry
-
-term time_protection_system
 
 interpretation ma?:time_protection_system PSched fch_lookup fch_read_impact fch_write_impact
   empty_fch fch_flush_cycles fch_flush_WCET pch_lookup pch_read_impact pch_write_impact do_pch_flush
