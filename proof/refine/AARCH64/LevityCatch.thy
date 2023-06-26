@@ -10,6 +10,7 @@ imports
   "Lib.AddUpdSimps"
   "Lib.LemmaBucket"
   "Lib.SimpStrategy"
+  "Lib.Corres_Method"
 begin
 
 no_notation bind_drop (infixl ">>" 60)
