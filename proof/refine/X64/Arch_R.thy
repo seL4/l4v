@@ -1321,7 +1321,7 @@ lemma perform_port_inv_corres:
   apply (clarsimp simp: perform_io_port_invocation_def performX64PortInvocation_def
                         archinv_relation_def ioport_invocation_map_def)
   apply (case_tac x; clarsimp)
-  apply (corressimp corres: port_in_corres simp: ioport_data_relation_def)
+  apply (corresKsimp corres: port_in_corres simp: ioport_data_relation_def)
   by (auto simp: no_fail_in8 no_fail_in16 no_fail_in32
                     no_fail_out8 no_fail_out16 no_fail_out32)
 

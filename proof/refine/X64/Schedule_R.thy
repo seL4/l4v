@@ -715,7 +715,7 @@ lemma arch_switchToIdleThread_corres:
         arch_switch_to_idle_thread Arch.switchToIdleThread"
   apply (simp add: arch_switch_to_idle_thread_def
                 X64_H.switchToIdleThread_def)
-  apply (corressimp corres: getIdleThread_corres setVMRoot_corres)
+  apply (corresKsimp corres: getIdleThread_corres setVMRoot_corres)
   apply (clarsimp simp: valid_idle_def valid_idle'_def pred_tcb_at_def obj_at_def is_tcb obj_at'_def)
   done
 

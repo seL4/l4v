@@ -1457,7 +1457,7 @@ lemma archThreadGet_corres:
   "(\<And>a a'. arch_tcb_relation a a' \<Longrightarrow> f a = f' a') \<Longrightarrow>
    corres (=) (tcb_at t) (tcb_at' t) (arch_thread_get f t) (archThreadGet f' t)"
   unfolding arch_thread_get_def archThreadGet_def
-  apply (corressimp corres: get_tcb_corres)
+  apply (corresKsimp corres: get_tcb_corres)
   apply (clarsimp simp: tcb_relation_def)
   done
 
@@ -1486,7 +1486,7 @@ lemma corres_gets_current_vcpu[corres]:
 lemma vcpuInvalidateActive_corres[corres]:
   "corres dc \<top> no_0_obj' vcpu_invalidate_active vcpuInvalidateActive"
   unfolding vcpuInvalidateActive_def vcpu_invalidate_active_def
-  apply (corressimp  corres: vcpuDisable_corres
+  apply (corresKsimp  corres: vcpuDisable_corres
                     corresK: corresK_modifyT
                        simp: modifyArchState_def)
   apply (clarsimp simp: state_relation_def arch_state_relation_def)
@@ -1500,7 +1500,7 @@ lemma archThreadSet_corres:
   "(\<And>a a'. arch_tcb_relation a a' \<Longrightarrow> arch_tcb_relation (f a) (f' a')) \<Longrightarrow>
   corres dc (tcb_at t) (tcb_at' t) (arch_thread_set f t) (archThreadSet f' t)"
   apply (simp add: arch_thread_set_def archThreadSet_def)
-  apply (corres corres: get_tcb_corres setObject_update_TCB_corres')
+  apply (corresK corres: get_tcb_corres setObject_update_TCB_corres')
   apply wpsimp+
   apply (auto simp add: tcb_relation_def tcb_cap_cases_def tcb_cte_cases_def exst_same_def)+
   done
@@ -1531,7 +1531,7 @@ lemma asUser_sanitiseRegister_corres[corres]:
                           setRegister CPSR (sanitiseRegister b' CPSR cpsr)
                        od))"
   unfolding sanitiseRegister_def sanitise_register_def
-  apply (corressimp corresK: corresK_as_user')
+  apply (corresKsimp corresK: corresK_as_user')
   done
 
 crunch typ_at'[wp]: vcpuInvalidateActive "\<lambda>s. P (typ_at' T p s)"
@@ -1553,13 +1553,13 @@ lemma dissociateVCPUTCB_corres [@lift_corres_args, corres]:
              (dissociate_vcpu_tcb v t) (dissociateVCPUTCB v t)"
   unfolding dissociate_vcpu_tcb_def dissociateVCPUTCB_def
   apply (clarsimp simp:  bind_assoc when_fail_assert opt_case_when)
-  apply (corressimp corres: getObject_vcpu_corres setObject_VCPU_corres get_tcb_corres)
+  apply (corresKsimp corres: getObject_vcpu_corres setObject_VCPU_corres get_tcb_corres)
   apply (wpsimp wp: arch_thread_get_wp
       simp: archThreadSet_def tcb_ko_at' tcb_at_typ_at'
       | strengthen imp_drop_strg[where Q="tcb_at t s" for s]
         imp_drop_strg[where Q="vcpu_at' v s \<and> typ_at' TCBT t s" for s]
-      | corres_rv)+
-  apply (corressimp wp: get_vcpu_wp getVCPU_wp getObject_tcb_wp arch_thread_get_wp corres_rv_wp_left
+      | corresK_rv)+
+  apply (corresKsimp wp: get_vcpu_wp getVCPU_wp getObject_tcb_wp arch_thread_get_wp corres_rv_wp_left
       simp: archThreadGet_def tcb_ko_at')+
   apply (clarsimp simp: typ_at_tcb' typ_at_to_obj_at_arches)
   apply normalise_obj_at'
@@ -1582,7 +1582,7 @@ lemma prepareThreadDelete_corres:
   "corres dc (invs and tcb_at t) (valid_objs' and tcb_at' t and no_0_obj')
         (prepare_thread_delete t) (prepareThreadDelete t)"
   apply (simp add: prepare_thread_delete_def prepareThreadDelete_def)
-  apply (corressimp simp: tcb_vcpu_relation)
+  apply (corresKsimp simp: tcb_vcpu_relation)
     apply (wp arch_thread_get_wp)
    apply (wpsimp wp: getObject_tcb_wp simp: archThreadGet_def)
   apply clarsimp

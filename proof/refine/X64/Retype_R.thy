@@ -5545,7 +5545,7 @@ lemma corres_retype_region_createNewCaps:
                            APIType_map2_def arch_default_cap_def)
     apply fastforce+
   \<comment> \<open>PML4\<close>
-  apply (corressimp corres: corres_retype[where ty="Inr PML4Object" and 'a=pml4e and sz=sz,
+  apply (corresKsimp corres: corres_retype[where ty="Inr PML4Object" and 'a=pml4e and sz=sz,
                                           simplified, folded retype_region2_retype_region_PML4Obj]
                    corresK: corresK_mapM_x_list_all2[where I="\<lambda>xs s. valid_arch_state s \<and> pspace_aligned s
                                                              \<and> valid_etcbs s \<and>

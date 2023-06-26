@@ -681,7 +681,7 @@ lemma lookupPTSlot_corres:
           \<top>
           (gets_the (pt_lookup_slot pt vptr \<circ> ptes_of)) (lookupPTSlot pt vptr)"
   unfolding lookupPTSlot_def pt_lookup_slot_def
-  by (corressimp corres: lookupPTSlotFromLevel_corres)
+  by (corresKsimp corres: lookupPTSlotFromLevel_corres)
 
 lemma lookupPTFromLevel_corres:
   "\<lbrakk> level' = size level; pt' = pt \<rbrakk> \<Longrightarrow>
@@ -756,7 +756,7 @@ next
     apply (simp add: unlessE_whenE not_less)
     apply (rule corres_gen_asm, simp)
     apply (rule corres_initial_splitE[where r'=dc])
-       apply (corressimp simp: lookup_failure_map_def)
+       apply (corresKsimp simp: lookup_failure_map_def)
       apply (rule corres_splitEE[where r'=pte_relation'])
          apply (simp, rule getObject_PTE_corres)
         apply (rule whenE_throwError_corres)
@@ -843,10 +843,10 @@ lemma copy_global_mappings_corres [@lift_corres_args, corres]:
              (copy_global_mappings pt)
              (copyGlobalMappings pt)" (is "corres _ ?apre _ _ _")
   unfolding copy_global_mappings_def copyGlobalMappings_def objBits_simps archObjSize_def pptr_base_def
-  apply corressimp
+  apply corresKsimp
       apply (rule_tac P="pt_at global_pt and ?apre" and P'="\<top>"
                 in corresK_mapM_x[OF order_refl])
-        apply (corressimp simp: objBits_def mask_def wp: get_pte_wp getPTE_wp)+
+        apply (corresKsimp simp: objBits_def mask_def wp: get_pte_wp getPTE_wp)+
   apply (drule valid_global_arch_objs_pt_at)
   apply (clarsimp simp: ptIndex_def ptBitsLeft_def maxPTLevel_def ptTranslationBits_def pageBits_def
                         pt_index_def pt_bits_left_def level_defs)

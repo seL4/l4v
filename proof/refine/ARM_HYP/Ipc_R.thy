@@ -1866,7 +1866,7 @@ lemma arch_getSanitiseRegisterInfo_corres:
       (getSanitiseRegisterInfo t)"
   unfolding arch_get_sanitise_register_info_def getSanitiseRegisterInfo_def
   apply (fold archThreadGet_def)
-  by (corressimp corres: archThreadGet_VCPU_corres)
+  by (corresKsimp corres: archThreadGet_VCPU_corres)
 
 crunch tcb_at'[wp]: getSanitiseRegisterInfo "tcb_at' t"
 

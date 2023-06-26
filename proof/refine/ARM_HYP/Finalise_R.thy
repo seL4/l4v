@@ -1473,13 +1473,13 @@ lemma deletedIRQHandler_corres:
 
 lemma arch_postCapDeletion_corres:
   "acap_relation cap cap' \<Longrightarrow> corres dc \<top> \<top> (arch_post_cap_deletion cap) (ARM_HYP_H.postCapDeletion cap')"
-  by (corressimp simp: arch_post_cap_deletion_def ARM_HYP_H.postCapDeletion_def)
+  by (corresKsimp simp: arch_post_cap_deletion_def ARM_HYP_H.postCapDeletion_def)
 
 lemma postCapDeletion_corres:
   "cap_relation cap cap' \<Longrightarrow> corres dc \<top> \<top> (post_cap_deletion cap) (postCapDeletion cap')"
   apply (cases cap; clarsimp simp: post_cap_deletion_def Retype_H.postCapDeletion_def)
-   apply (corressimp corres: deletedIRQHandler_corres)
-  by (corressimp corres: arch_postCapDeletion_corres)
+   apply (corresKsimp corres: deletedIRQHandler_corres)
+  by (corresKsimp corres: arch_postCapDeletion_corres)
 
 lemma set_cap_trans_state:
   "((),s') \<in> fst (set_cap c p s) \<Longrightarrow> ((),trans_state f s') \<in> fst (set_cap c p (trans_state f s))"
@@ -3844,7 +3844,7 @@ lemma sym_refs_vcpu_tcb:
 lemma vcpuFinalise_corres [corres]:
   "corres dc (invs and vcpu_at vcpu) (invs' and vcpu_at' vcpu) (vcpu_finalise vcpu) (vcpuFinalise vcpu)"
   unfolding vcpuFinalise_def vcpu_finalise_def
-  apply (corressimp corres: getObject_vcpu_corres simp: vcpu_relation_def)
+  apply (corresKsimp corres: getObject_vcpu_corres simp: vcpu_relation_def)
      apply (wpsimp wp: get_vcpu_wp getVCPU_wp)+
   apply (rule conjI)
    apply clarsimp
@@ -3888,7 +3888,7 @@ lemma arch_finaliseCap_corres:
                elim!: is_aligned_weaken invs_valid_asid_map)[2]
   apply (rule corres_guard_imp, rule deleteASID_corres)
    apply (auto elim!: invs_valid_asid_map simp: mask_def valid_cap_def)[2]
-  apply corres
+  apply corresK
   apply (clarsimp simp: valid_cap_def valid_cap'_def)
   done
 

@@ -792,7 +792,7 @@ lemma arch_switchToIdleThread_corres:
           arch_switch_to_idle_thread
           Arch.switchToIdleThread"
   unfolding arch_switch_to_idle_thread_def ARM_HYP_H.switchToIdleThread_def
-  apply (corressimp corres: getIdleThread_corres setVMRoot_corres[@lift_corres_args] vcpuSwitch_corres[where vcpu=None, simplified]
+  apply (corresKsimp corres: getIdleThread_corres setVMRoot_corres[@lift_corres_args] vcpuSwitch_corres[where vcpu=None, simplified]
                         wp: tcb_at_idle_thread_lift tcb_at'_ksIdleThread_lift vcpuSwitch_it')
   apply (clarsimp simp: invs_valid_objs invs_arch_state invs_valid_asid_map invs_valid_vs_lookup
                         invs_psp_aligned invs_distinct invs_unique_refs invs_vspace_objs)

@@ -1513,8 +1513,8 @@ lemma arch_postCapDeletion_corres:
 lemma postCapDeletion_corres:
   "cap_relation cap cap' \<Longrightarrow> corres dc \<top> \<top> (post_cap_deletion cap) (postCapDeletion cap')"
   apply (cases cap; clarsimp simp: post_cap_deletion_def Retype_H.postCapDeletion_def)
-   apply (corressimp corres: deletedIRQHandler_corres)
-  by (corressimp corres: arch_postCapDeletion_corres)
+   apply (corresKsimp corres: deletedIRQHandler_corres)
+  by (corresKsimp corres: arch_postCapDeletion_corres)
 
 lemma set_cap_trans_state:
   "((),s') \<in> fst (set_cap c p s) \<Longrightarrow> ((),trans_state f s') \<in> fst (set_cap c p (trans_state f s))"

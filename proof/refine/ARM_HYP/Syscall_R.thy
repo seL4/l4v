@@ -1979,7 +1979,7 @@ lemma handleHypervisorFault_corres:
           (handle_hypervisor_fault thread fault)
           (handleHypervisorFault thread fault)"
   apply (cases fault; clarsimp simp add: handleHypervisorFault_def returnOk_def2)
-  apply (corres corres: handleFault_corres)
+  apply (corresK corres: handleFault_corres)
    apply (simp add: ucast_id)
   apply (clarsimp simp: valid_fault_def)
   done

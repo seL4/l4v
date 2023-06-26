@@ -1410,7 +1410,7 @@ lemma archThreadGet_corres:
    corres (=) (tcb_at t and pspace_aligned and pspace_distinct) \<top>
               (arch_thread_get f t) (archThreadGet f' t)"
   unfolding arch_thread_get_def archThreadGet_def
-  apply (corressimp corres: getObject_TCB_corres)
+  apply (corresKsimp corres: getObject_TCB_corres)
   apply (clarsimp simp: tcb_relation_def)
   done
 
@@ -1440,7 +1440,7 @@ lemma corres_gets_current_vcpu[corres]:
 lemma vcpuInvalidateActive_corres[corres]:
   "corres dc \<top> no_0_obj' vcpu_invalidate_active vcpuInvalidateActive"
   unfolding vcpuInvalidateActive_def vcpu_invalidate_active_def
-  apply (corressimp  corres: vcpuDisable_corres
+  apply (corresKsimp  corres: vcpuDisable_corres
                     corresK: corresK_modifyT
                        simp: modifyArchState_def)
   apply (clarsimp simp: state_relation_def arch_state_relation_def)
@@ -1455,7 +1455,7 @@ lemma archThreadSet_corres:
   corres dc (tcb_at t and pspace_aligned and pspace_distinct) \<top>
             (arch_thread_set f t) (archThreadSet f' t)"
   apply (simp add: arch_thread_set_def archThreadSet_def)
-  apply (corres corres: getObject_TCB_corres setObject_update_TCB_corres')
+  apply (corresK corres: getObject_TCB_corres setObject_update_TCB_corres')
   apply wpsimp+
   sorry (* FIXME AARCH64
   apply (auto simp add: tcb_relation_def tcb_cap_cases_def tcb_cte_cases_def exst_same_def)+
@@ -1482,7 +1482,7 @@ lemma asUser_sanitiseRegister_corres[corres]:
                           setRegister CPSR (sanitiseRegister b' CPSR cpsr)
                        od))"
   unfolding sanitiseRegister_def sanitise_register_def
-  apply (corressimp corresK: corresK_as_user')
+  apply (corresKsimp corresK: corresK_as_user')
   done *)
 
 crunch typ_at'[wp]: vcpuInvalidateActive "\<lambda>s. P (typ_at' T p s)"
@@ -1504,14 +1504,14 @@ lemma dissociateVCPUTCB_corres [@lift_corres_args, corres]:
              (dissociate_vcpu_tcb v t) (dissociateVCPUTCB v t)"
   unfolding dissociate_vcpu_tcb_def dissociateVCPUTCB_def
   apply (clarsimp simp:  bind_assoc when_fail_assert opt_case_when)
-  apply (corressimp corres: getObject_vcpu_corres setObject_VCPU_corres getObject_TCB_corres)
+  apply (corresKsimp corres: getObject_vcpu_corres setObject_VCPU_corres getObject_TCB_corres)
   sorry (* FIXME AARCH64 also cross tcb_at'
   apply (wpsimp wp: arch_thread_get_wp
       simp: archThreadSet_def tcb_ko_at' tcb_at_typ_at'
       | strengthen imp_drop_strg[where Q="tcb_at t s" for s]
         imp_drop_strg[where Q="vcpu_at' v s \<and> typ_at' TCBT t s" for s]
-      | corres_rv)+
-  apply (corressimp wp: get_vcpu_wp getVCPU_wp getObject_tcb_wp arch_thread_get_wp corres_rv_wp_left
+      | corresK_rv)+
+  apply (corresKsimp wp: get_vcpu_wp getVCPU_wp getObject_tcb_wp arch_thread_get_wp corres_rv_wp_left
       simp: archThreadGet_def tcb_ko_at')+
   apply (clarsimp simp: typ_at_tcb' typ_at_to_obj_at_arches)
   apply normalise_obj_at'
@@ -1545,7 +1545,7 @@ lemma prepareThreadDelete_corres:
         (prepare_thread_delete t) (prepareThreadDelete t)"
   apply (simp add: prepare_thread_delete_def prepareThreadDelete_def)
   sorry (* FIXME AARCH64 this is the ARM_HYP proof, FPU makes it more complicated
-  apply (corressimp simp: tcb_vcpu_relation)
+  apply (corresKsimp simp: tcb_vcpu_relation)
     apply (wp arch_thread_get_wp)
    apply (wpsimp wp: getObject_tcb_wp simp: archThreadGet_def)
   apply clarsimp

@@ -7,12 +7,12 @@
 
 theory CorresK_Lemmas
 imports
-  "Lib.Corres_Method"
+  "Lib.CorresK_Method"
   "ExecSpec.Syscall_H"
   "ASpec.Syscall_A"
 begin
 
-lemma corres_throwError_str [corres_concrete_rER]:
+lemma corres_throwError_str [corresK_concrete_rER]:
   "corres_underlyingK sr nf nf' (r (Inl a) (Inl b)) r \<top> \<top> (throwError a) (throw b)"
   "corres_underlyingK sr nf nf' (r (Inl a) (Inl b)) r \<top> \<top> (throwError a) (throwError b)"
  by (simp add: corres_underlyingK_def)+
@@ -41,7 +41,7 @@ lemma mapME_x_corresK_inv:
     show ?case
       apply (simp add: mapME_x_def sequenceE_x_def)
       apply (fold mapME_x_def sequenceE_x_def dc_def)
-      apply (corressimp corresK: x IH wp: y)
+      apply (corresKsimp corresK: x IH wp: y)
       done
   qed
   done
@@ -141,7 +141,7 @@ lemma corresK_mapM_list_all2:
 lemma corresK_discard_rv:
   assumes A[corresK]: "corres_underlyingK sr nf nf' F r' P P' a c"
   shows "corres_underlyingK sr nf nf' F dc P P' (do x \<leftarrow> a; return () od) (do x \<leftarrow> c; return () od)"
-  by corressimp
+  by corresKsimp
 
 lemma corresK_mapM_mapM_x:
   assumes "corres_underlyingK sr nf nf' F r' P P' (mapM f as) (mapM f' cs)"
@@ -163,12 +163,12 @@ lemma corresK_subst_both: "g' = f' \<Longrightarrow> g = f \<Longrightarrow>
 
 lemma if_fun_true: "(if A then B else (\<lambda>_. True)) = (\<lambda>s. (A  \<longrightarrow> B s))" by simp
 
-lemmas corresK_whenE [corres_splits] =
+lemmas corresK_whenE [corresK_splits] =
   corresK_if[THEN
     corresK_subst_both[OF whenE_def[THEN meta_eq_to_obj_eq] whenE_def[THEN meta_eq_to_obj_eq]],
     OF _ corresK_returnOk[where r="f \<oplus> dc" for f], simplified, simplified if_fun_true]
 
-lemmas corresK_head_splits[corres_splits] =
+lemmas corresK_head_splits[corresK_splits] =
   corresK_split[where d="return", simplified]
   corresK_splitE[where d="returnOk", simplified]
   corresK_split[where b="return", simplified]
@@ -192,7 +192,7 @@ lemmas [corresK] =
   corresK_Id[where nf'=True and r="(=)", simplified]
   corresK_Id[where nf'=True, simplified]
 
-lemma corresK_unit_rv_eq_any[corres_concrete_r]:
+lemma corresK_unit_rv_eq_any[corresK_concrete_r]:
   "corres_underlyingK sr nf nf' F r P P' f f' \<Longrightarrow>
     corres_underlyingK sr nf nf' F
       (\<lambda>(x :: unit) (y :: unit). x = y) P P' f f'"
@@ -201,7 +201,7 @@ lemma corresK_unit_rv_eq_any[corres_concrete_r]:
   apply simp
   done
 
-lemma corresK_unit_rv_dc_any[corres_concrete_r]:
+lemma corresK_unit_rv_dc_any[corresK_concrete_r]:
   "corres_underlyingK sr nf nf' F r P P' f f' \<Longrightarrow>
     corres_underlyingK sr nf nf' F
       (\<lambda>(x :: unit) (y :: unit). dc x y) P P' f f'"

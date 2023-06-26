@@ -85,7 +85,7 @@ proof -
             (do globalPT <- gets (riscvKSGlobalPT \<circ> ksArchState);
                 doMachineOp (setVSpaceRoot (addrFromKPPtr globalPT) 0)
              od)" for P Q
-    apply (corressimp corres: corres_gets_global_pt corres_machine_op)
+    apply (corresKsimp corres: corres_gets_global_pt corres_machine_op)
      apply fastforce
     apply (simp add: addrFromKPPtr_def)
     done
@@ -137,7 +137,7 @@ proof -
               apply (rule corres_split_eqrE[OF findVSpaceForASID_corres[OF refl]])
                 apply (rule whenE_throwError_corres; simp add: lookup_failure_map_def)
                 apply (rule corres_machine_op)
-                apply corressimp
+                apply corresKsimp
                  apply fastforce
                 apply simp
                apply wpsimp+
@@ -192,7 +192,7 @@ lemma no_fail_hwAIDFlush[intro!, wp, simp]:
 
 lemma hwASIDFlush_corres[corres]:
   "corres dc \<top> \<top> (do_machine_op (hwASIDFlush x)) (doMachineOp (hwASIDFlush x))"
-  by (corressimp corres: corres_machine_op)
+  by (corresKsimp corres: corres_machine_op)
 
 lemma deleteASID_corres [corres]:
   assumes "asid' = ucast asid" "pm' = pm"

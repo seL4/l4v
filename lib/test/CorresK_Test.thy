@@ -8,15 +8,15 @@
    Test proofs for corres methods. Builds on AInvs image.
 *)
 
-theory Corres_Test
-imports "Refine.VSpace_R" "Lib.Corres_Method"
+theory CorresK_Test
+imports "Refine.VSpace_R" "Lib.CorresK_Method"
 begin
 
 chapter \<open>The Corres Method\<close>
 
 section \<open>Introduction\<close>
 
-text \<open>The @{method corres} method tries to do for corres-style refinement proofs what
+text \<open>The @{method corresK} method tries to do for corres-style refinement proofs what
 @{method wp} did for hoare logic proofs. The intention is to automate the application
 of corres calculational rules, so that the bulk of the manual proof is now handling
 a verification condition. In general refinement proofs are difficult to automate, so here we
@@ -83,16 +83,16 @@ of the functions. In essence, it states the given functions will establish @{ter
 assuming the given return-value relation @{term r} holds, along with the given stateless precondition
 @{term F} and left/right preconditions @{term P} and @{term P'}.
 
-The assumption in general is that corres_rv rules should never be written, instead corres_rv obligations
+The assumption in general is that corresK_rv rules should never be written, instead corresK_rv obligations
 should be propagated into either the stateless precondition (@{term F} from @{term corres_underlyingK}),
 the left precondition (@{term P}) or the right precondition @{term P'}. This is implicitly handled
-by @{method corres_rv} (called from @{method corres}) by applying one of the following rules to each conjunct:\<close>
+by @{method corresK_rv} (called from @{method corresK}) by applying one of the following rules to each conjunct:\<close>
 
 thm corres_rv_defer
 thm corres_rv_wp_left
 thm corres_rv_wp_right
 
-text \<open>If none of these rules can be safely applied, then @{method corres_rv} will leave the
+text \<open>If none of these rules can be safely applied, then @{method corresK_rv} will leave the
   obligation untouched. The user can manually apply one of them if desired, but this is liable to
   create unsolvable proof obligations. In the worst case, the user may manually solve the goal in-place.\<close>
 
@@ -105,7 +105,7 @@ text \<open>The core algorithm of the corres method is simple:
   2) apply a known @{thm corres} or @{thm corresK} rule (see next section)
   3) if unsuccessful, apply a split rule (i.e. @{thm corresK_split}) and go to 2
 
-Importantly, @{method corres} will not split a goal if it ultimately is not able to apply at least
+Importantly, @{method corresK} will not split a goal if it ultimately is not able to apply at least
 one @{thm corres} or @{thm corresK} rule.
 \<close>
 
@@ -125,45 +125,45 @@ thm corres
 
 subsection \<open>The corresc method\<close>
 
-text \<open>Similar to @{method wpc}, @{method corresc} can handle case statements in @{const corres_underlyingK}
-proof goals. Importantly, however, it is split into two sub-methods @{method corresc_left} and
-@{method corresc_right}, which perform case-splitting on each side respectively. The combined method
-@{method corresc}, however, attempts to discharge the contradictions that arise from the quadratic
+text \<open>Similar to @{method wpc}, @{method corresKc} can handle case statements in @{const corres_underlyingK}
+proof goals. Importantly, however, it is split into two sub-methods @{method corresKc_left} and
+@{method corresKc_right}, which perform case-splitting on each side respectively. The combined method
+@{method corresKc}, however, attempts to discharge the contradictions that arise from the quadratic
 blowup of a case analysis on both the left and right sides.\<close>
 
 subsection \<open>corres_concrete_r, corres_concrete_rE\<close>
 
 text \<open>Some @{thm corresK} rules should only be applied if certain variables are concrete
 (i.e. not schematic) in the goal. These are classified separately with the named_theorems
-@{thm corres_concrete_r} and @{thm corres_concrete_rER}. The first
+@{thm corresK_concrete_r} and @{thm corresK_concrete_rER}. The first
 indicates that the return value relation of the goal must be concrete, the second indicates that
 only the left side of the error relation must be concrete.\<close>
 
-thm corres_concrete_r
-thm corres_concrete_rER
+thm corresK_concrete_r
+thm corresK_concrete_rER
 
-subsection \<open>The corres_search method\<close>
+subsection \<open>The corresK_search method\<close>
 
-text \<open>The purpose of @{method corres_search} is to address cases where there is non-trivial control flow.
+text \<open>The purpose of @{method corresK_search} is to address cases where there is non-trivial control flow.
 In particular: in the case where there is an "if" statement or either side needs to be symbolically
-executed. The core idea is that corres_search should be provided with a "search" rule that acts
+executed. The core idea is that corresK_search should be provided with a "search" rule that acts
 as an anchoring point. Symbolic execution and control flow is decomposed until either the given
 rule is successfully applied or all search branches are exhausted.\<close>
 
 subsubsection \<open>Symbolic Execution\<close>
 
 text \<open>Symbolic execution is handled by two named theorems:
- @{thm corres_symb_exec_ls} and @{thm corres_symb_exec_rs}, which perform symbolic execution on
+ @{thm corresK_symb_exec_ls} and @{thm corresK_symb_exec_rs}, which perform symbolic execution on
 the left and right hand sides of a corres goal.\<close>
 
-thm corres_symb_exec_ls
-thm corres_symb_exec_rs
+thm corresK_symb_exec_ls
+thm corresK_symb_exec_rs
 
 text \<open>A function may be symbolically executed if it does not modify the state, i.e. its only purpose
 is to compute some value and return it. After being symbolically executed,
 this value can only be discussed by the precondition of the associated side or the stateless
 precondition of corresK. The resulting @{const corres_rv} goal has @{const corres_noop} as the
-function on the alternate side. This gives @{method corres_rv} a hint that the resulting obligation
+function on the alternate side. This gives @{method corresK_rv} a hint that the resulting obligation
 should be aggressively re-written into a hoare triple over @{term m} if it can't be propagated
 back statelessly safely.
 \<close>
@@ -198,7 +198,7 @@ lemma invalidateASIDEntry_corres:
   apply (simp add: invalidate_asid_entry_def invalidateASIDEntry_def)
   apply_debug (trace) (* apply_trace between steps *)
    (tags "corres") (* break at breakpoints labelled "corres" *)
-   corres (* weaken precondition *)
+   corresK (* weaken precondition *)
    continue (* split *)
    continue (* solve load_hw_asid *)
    continue (* split *)
@@ -207,7 +207,7 @@ lemma invalidateASIDEntry_corres:
    continue (* invalidate _hw_asid_entry *)
    finish (* invalidate_asid *)
 
-  apply (corressimp wp: load_hw_asid_wp)+
+  apply (corresKsimp wp: load_hw_asid_wp)+
   apply (fastforce simp: pd_at_asid_uniq)
   done
 
@@ -246,7 +246,7 @@ lemma delete_asid_corresb:
   apply (simp add: delete_asid_def deleteASID_def)
   apply_debug (trace) (* apply_trace between steps *)
     (tags "corres") (* break at breakpoints labelled "corres" *)
-    corres (* weaken precondition *)
+    corresK (* weaken precondition *)
    continue (* split *)
        continue (* gets rule *)
       continue (* corresc *)
@@ -278,7 +278,7 @@ lemma delete_asid_corresb:
                       continue (* getCurThread_corres *)
                      continue (* setVMRoot_corres *)
                     finish (* backtracking? *)
-                    apply (corressimp simp: mask_asid_low_bits_ucast_ucast
+                    apply (corresKsimp simp: mask_asid_low_bits_ucast_ucast
       | fold cur_tcb_def | wps)+
   apply (frule arm_asid_table_related,clarsimp)
   apply (rule conjI)
@@ -343,7 +343,7 @@ lemma setVMRootForFlush_corres:
           (setVMRootForFlush pd asid)"
   apply (simp add: set_vm_root_for_flush_def setVMRootForFlush_def getThreadVSpaceRoot_def locateSlot_conv)
   apply corres
-         apply_debug (trace) (tags "corres_search") (corres_search search: armv_contextSwitch_corres)
+         apply_debug (trace) (tags "corresK_search") (corresK_search search: armv_contextSwitch_corres)
   continue (* step left *)
   continue (* if rule *)
   continue (* failed corres on first subgoal, trying next *)
@@ -351,7 +351,7 @@ lemma setVMRootForFlush_corres:
   continue (* can't make corres progress here, trying other goal *)
   finish (* successful goal discharged by corres *)
 
-  apply (corressimp wp: get_cap_wp getSlotCap_wp)+
+  apply (corresKsimp wp: get_cap_wp getSlotCap_wp)+
   apply (rule context_conjI)
   subgoal by (simp add: cte_map_def objBits_simps tcb_cnode_index_def
                         tcbVTableSlot_def to_bl_1 cte_level_bits_def)
@@ -368,7 +368,7 @@ lemma setVMRootForFlush_corres:
   apply (auto elim: cte_wp_at_weakenE' dest!: curthread_relation)
   done
 
-text \<open>Note we can wrap it all up in corressimp\<close>
+text \<open>Note we can wrap it all up in corresKsimp\<close>
 
 lemma setVMRootForFlush_corres':
   notes [corres] = getCurThread_corres getSlotCap_corres
@@ -385,7 +385,7 @@ lemma setVMRootForFlush_corres':
           (set_vm_root_for_flush pd asid)
           (setVMRootForFlush pd asid)"
   apply (simp add: set_vm_root_for_flush_def setVMRootForFlush_def getThreadVSpaceRoot_def locateSlot_conv)
-  apply (corressimp search: armv_contextSwitch_corres
+  apply (corresKsimp search: armv_contextSwitch_corres
                         wp: get_cap_wp getSlotCap_wp
                       simp: isCap_simps)
   apply (rule context_conjI)

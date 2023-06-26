@@ -42,7 +42,7 @@ text \<open>
 section \<open>Helper functions and definitions\<close>
 
 (* The following three definitions are originally by Dan Matichuck from the Eisbach
-   Corres_Method example *)
+   CorresK_Method example *)
 
 (* Retrieve a split rule for a target term that is expected to be a case statement. *)
 ML \<open>

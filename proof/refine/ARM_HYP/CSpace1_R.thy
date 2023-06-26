@@ -325,7 +325,7 @@ lemma getSlotCap_corres:
      (getSlotCap cte_ptr')"
   apply (simp add: getSlotCap_def)
   apply (subst bind_return [symmetric])
-  apply (corressimp)
+  apply (corresKsimp)
   done
 
 lemma maskCapRights [simp]:
@@ -607,7 +607,7 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
         apply (simp add: Let_def unlessE_whenE)
         apply (simp add: caps isCap_defs Let_def whenE_bindE_throwError_to_if)
         apply (subst cnode_cap_case_if)
-        apply (corressimp search: getSlotCap_corres IH
+        apply (corresKsimp search: getSlotCap_corres IH
                               wp: get_cap_wp getSlotCap_valid no_fail_stateAssert
                             simp: locateSlot_conv)
         apply (simp add: drop_postfix_eq)

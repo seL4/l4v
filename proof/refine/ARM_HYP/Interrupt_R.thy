@@ -1040,7 +1040,7 @@ lemma handleInterrupt_corres:
       apply wp+
     apply clarsimp
    apply clarsimp
-  apply corressimp
+  apply corresKsimp
   done
 
 lemma threadSet_ksDomainTime[wp]:

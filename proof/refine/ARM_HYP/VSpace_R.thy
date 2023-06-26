@@ -804,18 +804,18 @@ lemma vcpuUpdate_corres[corres]:
   "\<forall>v1 v2. vcpu_relation v1 v2 \<longrightarrow> vcpu_relation (f v1) (f' v2) \<Longrightarrow>
     corres dc (vcpu_at v) (vcpu_at' v)
            (vcpu_update v f) (vcpuUpdate v f')"
-  by (corressimp corres: getObject_vcpu_corres setObject_VCPU_corres
+  by (corresKsimp corres: getObject_vcpu_corres setObject_VCPU_corres
                  simp: vcpu_update_def vcpuUpdate_def vcpu_relation_def)
 
 lemma vgicUpdate_corres[corres]:
   "\<forall>vgic vgic'. vgic_map vgic = vgic' \<longrightarrow> vgic_map (f vgic) = (f' vgic')
    \<Longrightarrow> corres dc (vcpu_at v) (vcpu_at' v) (vgic_update v f) (vgicUpdate v f')"
-  by (corressimp simp: vgic_update_def vgicUpdate_def vcpu_relation_def)
+  by (corresKsimp simp: vgic_update_def vgicUpdate_def vcpu_relation_def)
 
 lemma vgicUpdateLR_corres[corres]:
   "corres dc (vcpu_at v) (vcpu_at' v)
           (vgic_update_lr v idx val) (vgicUpdateLR v idx val)"
-  by (corressimp simp: vgic_update_lr_def vgicUpdateLR_def vgic_map_def)
+  by (corresKsimp simp: vgic_update_lr_def vgicUpdateLR_def vgic_map_def)
 
 lemma vcpuReadReg_corres[corres]:
   "corres (=) (vcpu_at v) (vcpu_at' v and no_0_obj')

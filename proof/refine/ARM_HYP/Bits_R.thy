@@ -482,7 +482,7 @@ lemma constOnFailure_wp :
   apply (wp|simp)+
   done
 
-lemma corres_throwError_str [corres_concrete_rER]:
+lemma corres_throwError_str [corresK_concrete_rER]:
   "corres_underlyingK sr nf nf' (r (Inl a) (Inl b)) r \<top> \<top> (throwError a) (throw b)"
   "corres_underlyingK sr nf nf' (r (Inl a) (Inl b)) r \<top> \<top> (throwError a) (throwError b)"
  by (simp add: corres_underlyingK_def)+

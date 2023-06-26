@@ -721,7 +721,7 @@ lemma lookupPTSlot_corres:
           \<top>
           (gets_the (pt_lookup_slot pt vptr \<circ> ptes_of)) (lookupPTSlot pt vptr)"
   unfolding lookupPTSlot_def pt_lookup_slot_def
-  by (corressimp corres: lookupPTSlotFromLevel_corres)
+  by (corresKsimp corres: lookupPTSlotFromLevel_corres)
 
 (* FIXME AARCH64: pt_lookup_from_level also returns a level on AARCH64, but lookupPTFromLevel doesn't
                   there is no point fixing this lemma until we see what's needed in
@@ -801,7 +801,7 @@ next
     apply (simp add: unlessE_whenE not_less)
     apply (rule corres_gen_asm, simp)
     apply (rule corres_initial_splitE[where r'=dc])
-       apply (corressimp simp: lookup_failure_map_def)
+       apply (corresKsimp simp: lookup_failure_map_def)
       apply (rule corres_splitEE[where r'=pte_relation'])
          apply (simp, rule getObject_PTE_corres)
         apply (rule whenE_throwError_corres)

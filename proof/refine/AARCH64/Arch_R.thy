@@ -843,14 +843,14 @@ lemma decodeARMVCPUInvocation_corres:
       apply (frule list_all2_Cons)
       apply clarsimp
       apply (case_tac a; clarsimp simp add: cap_relation_def)
-      apply (corres corres: corres_returnOkTT)
+      apply (corresK corres: corres_returnOkTT)
       apply (clarsimp simp: archinv_relation_def vcpu_invocation_map_def)
      (* inject_irq *)
      apply (simp add: decode_vcpu_inject_irq_def decodeVCPUInjectIRQ_def isVCPUCap_def)
      apply (cases args; clarsimp)
      apply (clarsimp simp add: rangeCheck_def range_check_def unlessE_whenE)
      apply (clarsimp simp: shiftL_nat whenE_bindE_throwError_to_if)
-     apply (corressimp wp: get_vcpu_wp)
+     apply (corresKsimp wp: get_vcpu_wp)
      apply (clarsimp simp: archinv_relation_def vcpu_invocation_map_def ucast_id
                         valid_cap'_def valid_cap_def isVIRQActive_def is_virq_active_def
                         virqType_def virq_type_def
@@ -1089,7 +1089,7 @@ lemma invokeVCPUInjectIRQ_corres:
   apply (clarsimp simp: bind_assoc)
   (* FIXME AARCH64 old proof worked with:
 
-  apply (corressimp corres: getObject_vcpu_corres setObject_VCPU_corres wp: get_vcpu_wp)
+  apply (corresKsimp corres: getObject_vcpu_corres setObject_VCPU_corres wp: get_vcpu_wp)
   apply clarsimp
 
   but now it doesn't, and not clear why
@@ -1107,8 +1107,8 @@ lemma invokeVCPUReadReg_corres:
                  (invokeVCPUReadReg v r)"
   unfolding invoke_vcpu_read_register_def invokeVCPUReadReg_def read_vcpu_register_def readVCPUReg_def
   apply (rule corres_discard_r)
-  sorry (* FIXME AARCH64 unclear why corressimp is failing
-  apply (corressimp corres: getObject_vcpu_corres wp: get_vcpu_wp)
+  sorry (* FIXME AARCH64 unclear why corresKsimp is failing
+  apply (corresKsimp corres: getObject_vcpu_corres wp: get_vcpu_wp)
   apply (clarsimp simp: vcpu_relation_def split: option.splits)
   apply (wpsimp simp: getCurThread_def)+
   done *)
@@ -1122,8 +1122,8 @@ lemma invokeVCPUWriteReg_corres:
   unfolding invokeVCPUWriteReg_def invoke_vcpu_write_register_def write_vcpu_register_def
             writeVCPUReg_def
   apply (rule corres_discard_r)
-  sorry (* FIXME AARCH64 unclear why corressimp is failing
-  apply (corressimp corres: setObject_VCPU_corres getObject_vcpu_corres wp: get_vcpu_wp)
+  sorry (* FIXME AARCH64 unclear why corresKsimp is failing
+  apply (corresKsimp corres: setObject_VCPU_corres getObject_vcpu_corres wp: get_vcpu_wp)
   subgoal by (auto simp: vcpu_relation_def split: option.splits)
   apply (wpsimp simp: getCurThread_def)+
   done *)
@@ -1159,8 +1159,8 @@ lemma associateVCPUTCB_corres:
                (associateVCPUTCB v t)"
   unfolding associate_vcpu_tcb_def associateVCPUTCB_def
   apply (clarsimp simp: bind_assoc)
-  sorry (* FIXME AARCH64 unclear why corressimp is failing
-  apply (corressimp search: getObject_vcpu_corres setObject_VCPU_corres vcpuSwitch_corres''
+  sorry (* FIXME AARCH64 unclear why corresKsimp is failing
+  apply (corresKsimp search: getObject_vcpu_corres setObject_VCPU_corres vcpuSwitch_corres''
                         wp: get_vcpu_wp getVCPU_wp hoare_vcg_imp_lift'
                       simp: vcpu_relation_def)
       apply (rule_tac Q="\<lambda>_. invs and tcb_at t" in hoare_strengthen_post)
@@ -1181,7 +1181,7 @@ lemma associateVCPUTCB_corres:
       apply (simp add: valid_vcpu'_def typ_at_tcb')
       apply (clarsimp simp: typ_at_to_obj_at_arches obj_at'_def)
      apply (fastforce simp: typ_at_to_obj_at_arches obj_at'_def)
-    apply (corressimp wp: arch_thread_get_wp getObject_tcb_wp
+    apply (corresKsimp wp: arch_thread_get_wp getObject_tcb_wp
                     simp: archThreadGet_def)+
   apply (simp add: vcpu_relation_def)
   apply (intro allI conjI impI;
@@ -1207,7 +1207,7 @@ lemma invokeVCPUAckVPPI_corres:
         (invokeVCPUAckVPPI vcpu vppi)"
   unfolding invokeVCPUAckVPPI_def invoke_vcpu_ack_vppi_def write_vcpu_register_def
             writeVCPUReg_def
-  by (corressimp corres: setObject_VCPU_corres getObject_vcpu_corres wp: get_vcpu_wp)
+  by (corresKsimp corres: setObject_VCPU_corres getObject_vcpu_corres wp: get_vcpu_wp)
      (auto simp: vcpu_relation_def split: option.splits)
 
 lemma performARMVCPUInvocation_corres:

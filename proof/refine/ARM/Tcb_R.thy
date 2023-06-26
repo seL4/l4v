@@ -2097,7 +2097,7 @@ lemma decodeSetPriority_corres:
          clarsimp simp: decode_set_priority_def decodeSetPriority_def)
   apply (rename_tac auth_cap auth_slot auth_path rest auth_cap' rest')
   apply (rule corres_split_eqrE)
-     apply corressimp
+     apply corresKsimp
     apply (rule corres_splitEE[OF checkPrio_corres])
       apply (rule corres_returnOkTT)
       apply (clarsimp simp: newroot_rel_def elim!: is_thread_cap.elims(2))
@@ -2116,7 +2116,7 @@ lemma decodeSetMCPriority_corres:
          clarsimp simp: decode_set_mcpriority_def decodeSetMCPriority_def)
   apply (rename_tac auth_cap auth_slot auth_path rest auth_cap' rest')
   apply (rule corres_split_eqrE)
-     apply corressimp
+     apply corresKsimp
     apply (rule corres_splitEE[OF checkPrio_corres])
       apply (rule corres_returnOkTT)
       apply (clarsimp simp: newroot_rel_def elim!: is_thread_cap.elims(2))
@@ -2227,7 +2227,7 @@ lemma decodeSetSchedParams_corres:
    apply (clarsimp split: list.split simp: list_all2_Cons2)
   apply (clarsimp simp: list_all2_Cons1 neq_Nil_conv val_le_length_Cons linorder_not_less)
   apply (rule corres_split_eqrE)
-     apply corressimp
+     apply corresKsimp
     apply (rule corres_split_norE[OF checkPrio_corres])
       apply (rule corres_splitEE[OF checkPrio_corres])
         apply (rule corres_returnOkTT)

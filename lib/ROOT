@@ -58,7 +58,7 @@ session Lib (lib) = Word_Lib +
     DataMap
     FastMap
     RangeMap
-    Corres_Method
+    CorresK_Method
     DetWPLib
     Guess_ExI
     GenericTag
@@ -125,7 +125,7 @@ session LibTest (lib) in test = Refine +
     MonadicRewrite_Test
   (* use virtual memory function as an example, only makes sense on ARM: *)
   theories [condition = "L4V_ARCH_IS_ARM"]
-    Corres_Test
+    CorresK_Test
 
 session SepTactics (lib) in Hoare_Sep_Tactics = Sep_Algebra +
   theories
