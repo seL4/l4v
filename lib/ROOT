@@ -34,6 +34,7 @@ session Lib (lib) = Word_Lib +
     Crunch_Instances_Trace
     StateMonad
     Corres_UL
+    Corres_Method
     Find_Names
     LemmaBucket
     Try_Methods

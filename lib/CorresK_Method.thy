@@ -567,8 +567,6 @@ text \<open>Handles structured decomposition of corres goals\<close>
 named_theorems
   corresK_splits and (* rules that, one applied, must
                         eventually yield a successful corres or corresK rule application*)
-  corres_simp_del and (* bad simp rules that break everything *)
-  corres and (* solving terminal corres subgoals *)
   corresK (* calculational rules that are phrased as corresK rules *)
 
 context begin
@@ -611,9 +609,23 @@ private method corresK_apply =
 
 private method corresK_alternate = corresK_inst | corresK_rv
 
-
+(* Corres_Method and CorresK_Method share the [corres] set. Corres_Method is more resilient against
+   unsafe terminal rules that set, so we list those [corres] rules here that might be problematic
+   for corresK. Users shouldn't need to interact with this set, but if you have declared something
+   [corres] and want it to be used by the corres method only (not corresK), then additionally
+   declare it [corres_unsafeK]. *)
+named_theorems corres_unsafeK
+lemmas [corres_unsafeK] =
+  whenE_throwError_corres
+  corres_if2
+  corres_when
+  corres_whenE
+  corres_split_handle
+  corres_split_catch
+  corres_mapM_x
 
 method corresK_once declares corresK_splits corres corresK corresKc_simp =
+  use corres_unsafeK[corres del] in \<open>use in \<open>
   (no_schematic_concl,
    (corresK_alternate |
      (corresK_fold_dc?,
@@ -624,7 +636,7 @@ method corresK_once declares corresK_splits corres corresK corresKc_simp =
       | corresK_concrete_r
       | corresKc
       | (rule corresK_splits, corresK_once)
-      )))))
+      )))))\<close>\<close>
 
 
 method corresK declares corresK_splits corres corresK corresKc_simp =
@@ -1010,10 +1022,8 @@ method corresKsimp uses simp cong search wp
     (corresK corresKc_simp: simp
     | corresKwp wp: wp
     | (rule calculus_True_insts, solves \<open>clarsimp cong: cong simp: simp corres_protect_def\<close>)
-    | clarsimp cong: cong simp: simp simp del: corres_simp_del split del: if_split
+    | clarsimp cong: cong simp: simp simp del: corres_no_simp split del: if_split
     | (match search in _ \<Rightarrow> \<open>corresK_search search: search\<close>)))+)[1]
-
-declare corres_return[corres_simp_del]
 
 section \<open>Normalize corres rule into corresK rule\<close>
 
