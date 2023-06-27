@@ -1451,15 +1451,44 @@ lemma subset_inv_proof:
   using all_paddrs_of_def subset_inv_proof_aux touched_addrs_inv_def
   by blast
 
+lemma ta_subset_inv_to_locale_form':
+  "separation_kernel_policy initial_aag \<Longrightarrow>
+   \<comment> \<open>This is @{term\<open>ta_subset_inv\<close>} but with the TA set required to be a subset
+     of the addresses of the old domain (in s), not the new domain (in s').\<close>
+   machine_state.touched_addresses (machine_state (snd $ fst s')) \<subseteq>
+     pas_addrs_accessible_to initial_aag (cur_label initial_aag (snd $ fst s)) \<Longrightarrow>
+   \<comment> \<open>Similarly for @{term\<open>touched_addrs_inv\<close>}.\<close>
+   snd ` touched_addresses s' \<subseteq> all_paddrs_of (userPart s) \<union> kernel_shared_precise"
+  unfolding touched_addrs_inv_def
+  unfolding ta_subset_inv_def
+  apply(clarsimp simp: ta_vaddr_to_paddr accessible_vaddr_to_paddr)
+  apply(clarsimp simp:image_def)
+  by blast
+
+lemma oldclean_preserves_ta_subset_inv:
+  "reachable s \<Longrightarrow>
+  (s, s') \<in> fourways_oldclean \<Longrightarrow>
+  machine_state.touched_addresses (machine_state (snd $ fst s')) \<subseteq>
+     pas_addrs_accessible_to initial_aag (cur_label initial_aag (snd $ fst s))"
+  apply(frule ta_subset_inv_reachable)
+  apply clarsimp
+  (* If no part of fourways_oldclean touches any kheap objects, this would be enough. -robs *)
+  apply(prop_tac "machine_state.touched_addresses (machine_state (snd $ fst s')) =
+    machine_state.touched_addresses (machine_state (snd $ fst s))")
+   subgoal sorry
+  unfolding ta_subset_inv_def
+  by force
+
 (* note here that we are talking about the TA set being a subset of the
    STARTING state's domain *)
-lemma oldclean_preserves_subset_inv:
-  "\<lbrakk>reachable s;
-  (s, s') \<in> fourways_oldclean\<rbrakk> \<Longrightarrow>
-  snd ` ii.touched_addresses s'
-         \<subseteq> {a. addr_domain initial_aag a = userPart s} \<union>
-            kernel_shared_precise"
-  sorry
+lemma oldclean_preserves_touched_addrs_inv:
+  "reachable s \<Longrightarrow>
+  (s, s') \<in> fourways_oldclean \<Longrightarrow>
+  \<comment> \<open>This is @{term\<open>touched_addrs_inv\<close>} but with the TA set required to be a subset
+    of the addresses of the old domain (in s), not the new domain (in s').\<close>
+  snd ` touched_addresses s' \<subseteq> all_paddrs_of (userPart s) \<union> kernel_shared_precise"
+  using oldclean_preserves_ta_subset_inv ta_subset_inv_to_locale_form' initial_aag_separation_kernel
+  by blast
 
 
 (* I don't think this should be too bad. Can do this with hoare logic stuff I think. *)
@@ -1595,7 +1624,7 @@ lemma fourways_properties:
            userPart s4 = get_next_domain s1"
   apply (clarsimp simp: fourways_dirty_def fourways_newclean_def is_uwr_determined_def)
   apply (intro conjI)
-   apply (rule oldclean_preserves_subset_inv; simp)
+   apply (rule oldclean_preserves_touched_addrs_inv[simplified all_paddrs_of_def]; simp)
   (* here we need a definition of "step_is_only_timeprotection_gadget" to do something
       useful *)
   sorry
