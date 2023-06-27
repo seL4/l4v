@@ -151,6 +151,10 @@ lemma snd_handleE[monad_eq]:
   unfolding handleE_def
   by (rule snd_handleE')
 
+lemma snd_liftM[monad_eq, simp]:
+  "snd (liftM t f s) = snd (f s)"
+  by (auto simp: liftM_def bind_def return_def)
+
 declare in_liftE[monad_eq]
 
 lemma snd_liftE[monad_eq]:

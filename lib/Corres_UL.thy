@@ -72,14 +72,6 @@ lemma corres_underlying_serial:
   apply auto
   done
 
-(* FIXME: duplicated with HOL.iff_allI *)
-lemma All_eqI:
-  assumes ass: "\<And>x. A x = B x"
-  shows "(\<forall>x. A x) = (\<forall>x. B x)"
-  apply (subst ass)
-  apply (rule refl)
-  done
-
 lemma corres_singleton:
  "corres_underlying sr nf nf' r P P' (\<lambda>s. ({(R s, S s)},x)) (\<lambda>s. ({(R' s, S' s)},False))
   = (\<forall>s s'. P s \<and> P' s' \<and> (s, s') \<in> sr \<and> (nf \<longrightarrow> \<not> x)
@@ -104,12 +96,8 @@ lemma corres_return[simp, corres_no_simp]:
   by (simp add: return_def corres_singleton)
 
 lemma corres_get[simp, corres_no_simp]:
- "corres_underlying sr nf nf' r P P' get get =
-  (\<forall> s s'. (s, s') \<in> sr \<and> P s \<and> P' s' \<longrightarrow> r s s')"
-  apply (simp add: get_def corres_singleton)
-  apply (rule All_eqI)+
-  apply safe
-  done
+ "corres_underlying sr nf nf' r P P' get get = (\<forall> s s'. (s, s') \<in> sr \<and> P s \<and> P' s' \<longrightarrow> r s s')"
+  by (fastforce simp: get_def corres_singleton)
 
 lemma corres_gets[simp, corres_no_simp]:
  "corres_underlying sr nf nf' r P P' (gets a) (gets b) =
@@ -484,30 +472,19 @@ lemma corres_if3:
 
 text \<open>Some equivalences about liftM and other useful simps\<close>
 
-lemma snd_liftM [simp]:
-  "snd (liftM t f s) = snd (f s)"
-  by (auto simp: liftM_def bind_def return_def)
-
 lemma corres_liftM_simp[simp]:
-  "(corres_underlying sr nf nf' r P P' (liftM t f) g)
-    = (corres_underlying sr nf nf' (r \<circ> t) P P' f g)"
-  apply (simp add: corres_underlying_def
-           handy_liftM_lemma Ball_def Bex_def)
-  apply (rule All_eqI)+
-  apply blast
-  done
+  "corres_underlying sr nf nf' r P P' (liftM t f) g =
+   corres_underlying sr nf nf' (r \<circ> t) P P' f g"
+  by (fastforce simp add: corres_underlying_def in_liftM)
 
 lemma corres_liftM2_simp[simp]:
- "corres_underlying sr nf nf' r P P' f (liftM t g) =
-  corres_underlying sr nf nf' (\<lambda>x. r x \<circ> t) P P' f g"
-  apply (simp add: corres_underlying_def
-           handy_liftM_lemma Ball_def)
-  apply (rule All_eqI)+
-  apply blast
-  done
+  "corres_underlying sr nf nf' r P P' f (liftM t g) =
+   corres_underlying sr nf nf' (\<lambda>x. r x \<circ> t) P P' f g"
+  by (fastforce simp add: corres_underlying_def in_liftM)
 
 lemma corres_liftE_rel_sum[simp]:
- "corres_underlying sr nf nf' (f \<oplus> r) P P' (liftE m) (liftE m') = corres_underlying sr nf nf' r P P' m m'"
+ "corres_underlying sr nf nf' (f \<oplus> r) P P' (liftE m) (liftE m') =
+  corres_underlying sr nf nf' r P P' m m'"
   by (simp add: liftE_liftM o_def)
 
 text \<open>Support for proving correspondence to noop with hoare triples\<close>

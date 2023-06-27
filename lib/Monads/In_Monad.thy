@@ -106,8 +106,6 @@ lemma in_liftM:
   "((r, s') \<in> fst (liftM t f s)) = (\<exists>r'. (r', s') \<in> fst (f s) \<and> r = t r')"
   by (simp add: liftM_def return_def bind_def Bex_def)
 
-lemmas handy_liftM_lemma = in_liftM (* FIXME lib: eliminate *)
-
 lemma in_bindE:
   "(rv, s') \<in> fst ((f >>=E (\<lambda>rv'. g rv')) s) =
    ((\<exists>ex. rv = Inl ex \<and> (Inl ex, s') \<in> fst (f s)) \<or>

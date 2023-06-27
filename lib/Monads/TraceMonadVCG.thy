@@ -2006,9 +2006,6 @@ lemma in_liftM:
  "((r, s') \<in> mres (liftM t f s)) = (\<exists>r'. (r', s') \<in> mres (f s) \<and> r = t r')"
   by (simp add: liftM_def in_return in_bind)
 
-(* FIXME: eliminate *)
-lemmas handy_liftM_lemma = in_liftM
-
 lemma hoare_fun_app_wp[wp]:
   "\<lbrace>P\<rbrace> f' x \<lbrace>Q'\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f' $ x \<lbrace>Q'\<rbrace>"
   "\<lbrace>P\<rbrace> f x \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f $ x \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
