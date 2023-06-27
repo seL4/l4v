@@ -1465,6 +1465,33 @@ lemma ta_subset_inv_to_locale_form':
   apply(clarsimp simp:image_def)
   by blast
 
+lemma handle_interrupt_IRQTimer_ta:
+  "((), bb) \<in> fst (handle_interrupt_IRQTimer b) \<Longrightarrow>
+   machine_state.touched_addresses (machine_state bb) =
+   machine_state.touched_addresses (machine_state b)"
+  apply(clarsimp simp:bind_def handle_interrupt_IRQTimer_def simpler_modify_def)
+  (* XXX: Whoops. Looks like timer_tick does touch an object - the current thread.
+     If cur_thread didn't change prior to this, then it should belong to the old domain,
+     which shouldn't violate the subset invariant. However, we cannot guarantee that the TA
+     set does not change at all (unless we add a precondition that the current TCB is already
+     in the TA set, which sounds incredibly likely, but might be annoying to require). *)
+  apply(clarsimp simp:timer_tick_def)
+  sorry
+
+lemma arch_mask_interrupts_preserves_ta:
+  "((), be) \<in> fst (arch_mask_interrupts b irqs bd) \<Longrightarrow>
+   machine_state.touched_addresses (machine_state be) =
+   machine_state.touched_addresses (machine_state bd)"
+  apply(clarsimp simp:arch_mask_interrupts_def mapM_x_def sequence_x_def return_def)
+  sorry
+
+lemma arch_switch_domain_kernel_preserves_ta:
+  "((), bf) \<in> fst (arch_switch_domain_kernel d be) \<Longrightarrow>
+   machine_state.touched_addresses (machine_state bf) =
+   machine_state.touched_addresses (machine_state be)"
+  apply(clarsimp simp:arch_switch_domain_kernel_def simpler_gets_def bind_def)
+  sorry
+
 lemma oldclean_preserves_ta_subset_inv:
   "reachable s \<Longrightarrow>
   (s, s') \<in> fourways_oldclean \<Longrightarrow>
@@ -1472,10 +1499,19 @@ lemma oldclean_preserves_ta_subset_inv:
      pas_addrs_accessible_to initial_aag (cur_label initial_aag (snd $ fst s))"
   apply(frule ta_subset_inv_reachable)
   apply clarsimp
-  (* If no part of fourways_oldclean touches any kheap objects, this would be enough. -robs *)
+  (* If no part of fourways_oldclean touches any previously untouched kheap objects,
+     this would be enough. -robs *)
   apply(prop_tac "machine_state.touched_addresses (machine_state (snd $ fst s')) =
     machine_state.touched_addresses (machine_state (snd $ fst s))")
-   subgoal sorry
+   apply(clarsimp simp:fourways_oldclean_def fourways_oldclean_monad_def)
+   apply(clarsimp simp:bind_def simpler_gets_def)
+   apply(drule handle_interrupt_IRQTimer_ta)
+   apply(clarsimp simp:next_domain_def simpler_modify_def assert_def)
+   apply(clarsimp split:if_splits simp:fail_def)
+   apply(drule arch_mask_interrupts_preserves_ta)
+   apply(drule arch_switch_domain_kernel_preserves_ta)
+   apply(drule arch_mask_interrupts_preserves_ta)
+   apply(force simp:return_def Let_def)
   unfolding ta_subset_inv_def
   by force
 
