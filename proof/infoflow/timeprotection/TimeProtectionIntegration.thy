@@ -1500,23 +1500,24 @@ lemma handle_interrupt_IRQTimer_ta:
   by (wpsimp wp:crunch_wps resetTimer_ta_inv timer_tick_ta simp:crunch_simps)
 
 lemma arch_mask_interrupts_preserves_ta:
-  "((), be) \<in> fst (arch_mask_interrupts b irqs bd) \<Longrightarrow>
-   machine_state.touched_addresses (machine_state be) =
-   machine_state.touched_addresses (machine_state bd)"
-  apply(clarsimp simp:arch_mask_interrupts_def mapM_x_def sequence_x_def return_def)
-  sorry
+  "arch_mask_interrupts b irqs
+   \<lbrace>\<lambda>s. machine_state.touched_addresses (machine_state s) = ta\<rbrace>"
+  unfolding arch_mask_interrupts_def do_machine_op_def maskInterrupt_def
+  apply(wpsimp wp:crunch_wps simp:crunch_simps)
+   apply(wpsimp simp:simpler_modify_def)
+  by force
 
 lemma arch_switch_domain_kernel_preserves_ta:
-  "((), bf) \<in> fst (arch_switch_domain_kernel d be) \<Longrightarrow>
-   machine_state.touched_addresses (machine_state bf) =
-   machine_state.touched_addresses (machine_state be)"
-  apply(clarsimp simp:arch_switch_domain_kernel_def simpler_gets_def bind_def)
-  sorry
+  "arch_switch_domain_kernel d
+   \<lbrace>\<lambda>s. machine_state.touched_addresses (machine_state s) = ta\<rbrace>"
+  unfolding arch_switch_domain_kernel_def do_machine_op_def setVSpaceRoot_def
+  by (wpsimp wp:crunch_wps simp:crunch_simps machine_op_lift_def machine_rest_lift_def
+    select_f_def simpler_gets_def simpler_modify_def bind_def return_def)
 
 lemma oldclean_preserves_ta_subset_inv:
   "reachable s \<Longrightarrow>
-  (s, s') \<in> fourways_oldclean \<Longrightarrow>
-  machine_state.touched_addresses (machine_state (snd $ fst s')) \<subseteq>
+   (s, s') \<in> fourways_oldclean \<Longrightarrow>
+   machine_state.touched_addresses (machine_state (snd $ fst s')) \<subseteq>
      pas_addrs_accessible_to initial_aag (cur_label initial_aag (snd $ fst s))"
   apply(frule ta_subset_inv_reachable)
   apply clarsimp
@@ -1526,20 +1527,45 @@ lemma oldclean_preserves_ta_subset_inv:
     obj_range (cur_thread (snd $ fst s)) (the (kheap (snd $ fst s) (cur_thread (snd $ fst s))))")
    apply(clarsimp simp:fourways_oldclean_def fourways_oldclean_monad_def)
    apply(clarsimp simp:bind_def simpler_gets_def)
-   apply(drule use_valid[OF _ handle_interrupt_IRQTimer_ta])
-    apply force
+   apply(drule use_valid[OF _ handle_interrupt_IRQTimer_ta], force)
    apply(clarsimp simp:next_domain_def simpler_modify_def assert_def)
    apply(clarsimp split:if_splits simp:fail_def)
-   apply(drule arch_mask_interrupts_preserves_ta)
-   apply(drule arch_switch_domain_kernel_preserves_ta)
-   apply(drule arch_mask_interrupts_preserves_ta)
+   apply(drule use_valid[OF _ arch_mask_interrupts_preserves_ta], force)
+   apply(drule use_valid[OF _ arch_switch_domain_kernel_preserves_ta], force)
+   apply(drule use_valid[OF _ arch_mask_interrupts_preserves_ta], force)
    apply(clarsimp simp:return_def Let_def)
   (* That the current thread is always accessible to the currently running domain. *)
   apply(prop_tac
     "obj_range (cur_thread (snd $ fst s)) (the (kheap (snd $ fst s) (cur_thread (snd $ fst s)))) \<subseteq>
     pas_addrs_accessible_to initial_aag (cur_label initial_aag (snd $ fst s))")
-   subgoal sorry
-  unfolding ta_subset_inv_def
+   using initial_aag_separation_kernel
+   unfolding pas_addrs_accessible_to_def separation_kernel_policy_def
+   apply clarsimp
+   apply(frule pas_refined_initial_aag_reachable[THEN pas_refined_no_label_straddling_objs])
+   unfolding no_label_straddling_objs_def
+   apply clarsimp
+   apply(erule_tac x="cur_thread (internal_state_if s)" in allE)
+   apply(clarsimp split:option.splits)
+    (* FIXME: That the cur_thread actually exists on the kheap... surely this is true? *)
+    subgoal sorry
+   apply(rename_tac x xa x2)
+   apply(erule_tac x=xa in ballE)
+    prefer 2
+    apply(force simp:obj_range_def)
+   apply clarsimp
+   apply(prop_tac "guarded_pas_domain initial_aag (internal_state_if s)")
+    apply(frule guarded_pas_domain_if)
+    apply(metis guarded_pas_domain_cur)
+   apply(clarsimp simp:guarded_pas_domain_def)
+   apply(erule impE)
+    (* FIXME: I suspect we ought to get this from knowing we're at a domainswitch step. *)
+    subgoal sorry
+   using domains_distinct
+   unfolding pas_domains_distinct_def
+   apply(erule_tac x="cur_domain (internal_state_if s)" in allE)
+   apply force
+  unfolding ta_subset_inv_def pas_addrs_accessible_to_def pas_labels_accessible_to_def
+  apply clarsimp
   by force
 
 (* note here that we are talking about the TA set being a subset of the
