@@ -1465,18 +1465,39 @@ lemma ta_subset_inv_to_locale_form':
   apply(clarsimp simp:image_def)
   by blast
 
-lemma handle_interrupt_IRQTimer_ta:
-  "((), bb) \<in> fst (handle_interrupt_IRQTimer b) \<Longrightarrow>
-   machine_state.touched_addresses (machine_state bb) =
-   machine_state.touched_addresses (machine_state b)"
-  apply(clarsimp simp:bind_def handle_interrupt_IRQTimer_def simpler_modify_def)
-  (* XXX: Whoops. Looks like timer_tick does touch an object - the current thread.
-     If cur_thread didn't change prior to this, then it should belong to the old domain,
-     which shouldn't violate the subset invariant. However, we cannot guarantee that the TA
-     set does not change at all (unless we add a precondition that the current TCB is already
-     in the TA set, which sounds incredibly likely, but might be annoying to require). *)
-  apply(clarsimp simp:timer_tick_def)
+(* TODO: This might be worth moving back to somewhere in AInvs. -robs *)
+lemma resetTimer_ta_inv:
+  "\<lbrace>\<lambda>s. P (machine_state.touched_addresses (machine_state s))\<rbrace>
+     do_machine_op resetTimer
+   \<lbrace>\<lambda>_ s. P (machine_state.touched_addresses (machine_state s))\<rbrace>"
+  unfolding do_machine_op_def resetTimer_def machine_op_lift_def machine_rest_lift_def
+  by (wpsimp wp: crunch_wps simp:crunch_simps simpler_gets_def simpler_modify_def bind_def
+    select_f_def return_def)
+
+(* FIXME: Turns out this sorried lemma is not true because timer_tick adds cur_thread to TA,
+  which is what's leading wp down a bad path. Actually need to fix this all the way back in
+  Deterministic_AI. For now we'll just remove it from the wp set. -robs *)
+thm timer_tick_all_but_exst
+declare timer_tick_all_but_exst[wp del]
+declare timer_tick_extended.all_but_exst[wp del]
+
+(* FIXME: This is something we actually need to prove all the way back in AInvs along with a new
+  version of timer_tick_all_but_exst, but I'm leaving this sorry here as moving it back to AInvs
+  right now might cause an unpredictable number of breakages that we'll just have to deal with
+  when the time comes. I'm moderately confident this is true from inspecting timer_tick. -robs *)
+lemma timer_tick_ta:
+  "\<lbrace>\<lambda>s. machine_state.touched_addresses (machine_state s) = ta \<and> ct = cur_thread s \<and> kh = kheap s\<rbrace>
+     timer_tick
+   \<lbrace>\<lambda>rv s. machine_state.touched_addresses (machine_state s) = ta \<union> obj_range ct (the (kh ct))\<rbrace>"
+  unfolding timer_tick_def
   sorry
+
+lemma handle_interrupt_IRQTimer_ta:
+  "\<lbrace>\<lambda>s. machine_state.touched_addresses (machine_state s) = ta \<and> ct = cur_thread s \<and> kh = kheap s\<rbrace>
+     handle_interrupt_IRQTimer
+   \<lbrace>\<lambda>rv s. machine_state.touched_addresses (machine_state s) = ta \<union> obj_range ct (the (kh ct))\<rbrace>"
+  unfolding handle_interrupt_IRQTimer_def
+  by (wpsimp wp:crunch_wps resetTimer_ta_inv timer_tick_ta simp:crunch_simps)
 
 lemma arch_mask_interrupts_preserves_ta:
   "((), be) \<in> fst (arch_mask_interrupts b irqs bd) \<Longrightarrow>
@@ -1499,19 +1520,25 @@ lemma oldclean_preserves_ta_subset_inv:
      pas_addrs_accessible_to initial_aag (cur_label initial_aag (snd $ fst s))"
   apply(frule ta_subset_inv_reachable)
   apply clarsimp
-  (* If no part of fourways_oldclean touches any previously untouched kheap objects,
-     this would be enough. -robs *)
+  (* That fourways_oldclean only touches the current thread. *)
   apply(prop_tac "machine_state.touched_addresses (machine_state (snd $ fst s')) =
-    machine_state.touched_addresses (machine_state (snd $ fst s))")
+    machine_state.touched_addresses (machine_state (snd $ fst s)) \<union>
+    obj_range (cur_thread (snd $ fst s)) (the (kheap (snd $ fst s) (cur_thread (snd $ fst s))))")
    apply(clarsimp simp:fourways_oldclean_def fourways_oldclean_monad_def)
    apply(clarsimp simp:bind_def simpler_gets_def)
-   apply(drule handle_interrupt_IRQTimer_ta)
+   apply(drule use_valid[OF _ handle_interrupt_IRQTimer_ta])
+    apply force
    apply(clarsimp simp:next_domain_def simpler_modify_def assert_def)
    apply(clarsimp split:if_splits simp:fail_def)
    apply(drule arch_mask_interrupts_preserves_ta)
    apply(drule arch_switch_domain_kernel_preserves_ta)
    apply(drule arch_mask_interrupts_preserves_ta)
-   apply(force simp:return_def Let_def)
+   apply(clarsimp simp:return_def Let_def)
+  (* That the current thread is always accessible to the currently running domain. *)
+  apply(prop_tac
+    "obj_range (cur_thread (snd $ fst s)) (the (kheap (snd $ fst s) (cur_thread (snd $ fst s)))) \<subseteq>
+    pas_addrs_accessible_to initial_aag (cur_label initial_aag (snd $ fst s))")
+   subgoal sorry
   unfolding ta_subset_inv_def
   by force
 
