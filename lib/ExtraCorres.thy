@@ -8,6 +8,15 @@ theory ExtraCorres
 imports Corres_UL
 begin
 
+(* FIXME: the S in this rule is mainly to make the induction work, we don't actually need it in
+   application. This means, this form should be hidden and the main form should be resolving the
+   last assumption with order_refl. *)
+
+(* The lemma looks weaker than in it could be -- the guards P and P' are not allowed to depend on
+   list elements. This is fine, because P/P' are a loop invariants that need to be supplied
+   manually anyway, and we want these to be true for all loop iterations. An instance such as
+   "\<lambda>s. \<forall>x \<in> set xs. P x s" is possible and covers the cases the (not really) stronger formulation
+   would cover. *)
 lemma corres_mapM:
   assumes x: "r [] []"
   assumes y: "\<And>x xs y ys. \<lbrakk> r xs ys; r' x y \<rbrakk> \<Longrightarrow> r (x # xs) (y # ys)"
@@ -69,6 +78,7 @@ next
     done
 qed
 
+(* FIXME: see comment for mapM rule. Same applies for lemma strength *)
 lemma corres_mapM_x:
   assumes x: "\<And>x y. (x, y) \<in> S \<Longrightarrow> corres_underlying sr nf nf' dc P P' (f x) (f' y)"
   assumes y: "\<And>x y. (x, y) \<in> S \<Longrightarrow> \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>rv. P\<rbrace>"
@@ -83,6 +93,7 @@ lemma corres_mapM_x:
            apply (simp | wp)+
   done
 
+(* FIXME: see comment for mapM rule. Same applies for lemma strength *)
 lemma corres_mapME:
   assumes x: "r [] []"
   assumes y: "\<And>x xs y ys. \<lbrakk> r xs ys; r' x y \<rbrakk> \<Longrightarrow> r (x # xs) (y # ys)"
