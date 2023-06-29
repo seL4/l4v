@@ -1538,16 +1538,30 @@ lemma oldclean_preserves_ta_subset_inv:
   apply(prop_tac
     "obj_range (cur_thread (snd $ fst s)) (the (kheap (snd $ fst s) (cur_thread (snd $ fst s)))) \<subseteq>
     pas_addrs_accessible_to initial_aag (cur_label initial_aag (snd $ fst s))")
+   unfolding pas_addrs_accessible_to_def
+   apply(case_tac "ct_idle (internal_state_if s)")
+    (* When the current thread is idle, it's also accessible to the current label. *)
+    unfolding pas_labels_accessible_to_def
+    (* FIXME: Actually I'm pretty sure the problem here is the idle thread is treated specially as
+       a global, not with a label. However, the latest kernel cloning implementation *does* clone
+       the idle thread for each domain. As the impact of this on the ASpec and all current proofs
+       is unknown, I think for now we'll just have to document this as a semi-major TODO. -robs *)
+    apply(frule reachable_invs_if[THEN invs_if_Invs])
+    apply(clarsimp simp:Invs_def)
+    apply(frule cur_thread_idle)
+    apply clarsimp
+    subgoal sorry
    using initial_aag_separation_kernel
-   unfolding pas_addrs_accessible_to_def separation_kernel_policy_def
+   unfolding separation_kernel_policy_def
    apply clarsimp
    apply(frule pas_refined_initial_aag_reachable[THEN pas_refined_no_label_straddling_objs])
    unfolding no_label_straddling_objs_def
    apply clarsimp
    apply(erule_tac x="cur_thread (internal_state_if s)" in allE)
    apply(clarsimp split:option.splits)
-    (* FIXME: That the cur_thread actually exists on the kheap... surely this is true? *)
-    subgoal sorry
+    (* That the cur_thread actually exists on the kheap. *)
+    apply(frule reachable_invs_if[THEN invs_if_Invs])
+    apply(force simp:Invs_def invs_def cur_tcb_def tcb_at_def get_tcb_def)
    apply(rename_tac x xa x2)
    apply(erule_tac x=xa in ballE)
     prefer 2
@@ -1558,8 +1572,11 @@ lemma oldclean_preserves_ta_subset_inv:
     apply(metis guarded_pas_domain_cur)
    apply(clarsimp simp:guarded_pas_domain_def)
    apply(erule impE)
-    (* FIXME: I suspect we ought to get this from knowing we're at a domainswitch step. *)
-    subgoal sorry
+    (* That the current thread isn't the idle thread. *)
+    apply(frule reachable_invs_if[THEN invs_if_Invs, simplified Invs_def])
+    apply clarsimp
+    apply(frule cur_thread_idle)
+    apply blast
    using domains_distinct
    unfolding pas_domains_distinct_def
    apply(erule_tac x="cur_domain (internal_state_if s)" in allE)
