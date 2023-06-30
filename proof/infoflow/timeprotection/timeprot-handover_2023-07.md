@@ -47,6 +47,77 @@ outstanding tasks towards its projected future milestones as of July 2023.
   - This will involve relaxing the existing interrupt oracle and
     phrasing/proving new AInvs.
 
-## Task details and examples
+## Outstanding task details and examples for TP verification of ASpec
+
+### TA equivalence proofs as part of the unwinding relation
+
+The TP integration theory
+(file: proof/infoflow/timeprotection/TimeProtectionIntegration.thy)
+requires that the unwinding relation preserves the equivalence of the
+*touched-addresses* (TA) set.
+
+To that end, this equivalence was added as a new conjunct to the seL4 unwinding
+relation, resulting in new sorried breakages throughout the InfoFlow session.
+
+**These need to be fixed.**
+
+### TA subset invariant proofs
+
+The *TA subset invariant* states that all addresses in the TA set belong to
+labels that are reachable from the label of the currently running domain,
+according to the policy graph. (For a separation kernel policy, this is just
+the very same label as that of the currently running domain.)
+
+The TP integration theory
+(file: proof/infoflow/timeprotection/TimeProtectionIntegration.thy)
+currently leans on `wp` lemmas for preserving the TA subset invariant
+throughout the various monads of the kernel, which are largely sorried
+(file: proof/infoflow/timeprotection/CachePartitionIntegrity.thy).
+
+**These need to be proved.** Some examples of completed such lemmas in
+`CachePartitionIntegrity` include:
+- `set_object_ta_subset_inv`
+- `touch_object_ta_subset_inv`
+- `resolve_address_bits_ta_subset_inv`
+- `lookup_slot_for_thread_ta_subset_inv`
+- `lookup_cap_and_slot_ta_subset_inv`
+
+There may also be some scope for trimming away unneeded preconditions upon
+proving the `wp` lemma stubs, which were obtained from the output of `crunch`
+attempts; some of these potential opportunities are marked with comments.
+
+### "No label-straddling objects" invariant proofs
+
+The TA subset invariant proofs lean on a new invariant
+`no_label_straddling_objs` defined in `CachePartitionIntegrity`. For now, it
+is assumed via a sorried lemma in that file to follow from `pas_refined`
+(lemma `pas_refined_no_label_straddling_objs`).
+
+**This needs to be proved as invariant over the kernel**, which Gerwin expects
+to be possible. We have the choice of either:
+1. adding it as a new conjunct of `pas_refined` (Gerwin's suggestion) and
+   repairing the resulting breakages to `pas_refined`-related proofs (`wp`
+   lemmas that prove it is invariant and others) across Access and InfoFlow.
+2. proving it invariant separately from `pas_refined`.
+
+### Rework ASpec to clone the idle thread for each domain
+
+Proving the TA subset invariant holds at mid-domainswitch point revealed
+something missed in the original ASpec TP update: the ASpec and InfoFlow proofs
+currently assume the idle thread to be global, but the actual C implementation
+of kernel cloning creates copies of these in coloured memory for each domain.
+
+Consequently, the current thread (`cur_thread`) is not actually of the correct
+label when domainswitch happens from an idle state, as in these instances it is
+the global idle thread (`idle_thread`). The resulting sorry is in lemma
+`oldclean_preserves_ta_subset_inv` of `TimeProtectionIntegration`.
+
+**The ASpec needs to be updated to reflect the actual C implementation choice
+to clone the idle thread**; we expect this to cause an unpredictable number of
+proof breakages across AInvs, Access and InfoFlow, **which will need to be
+repaired**. However, this should make the TA subset invariant proof at
+mid-domainswitch easily provable when domainswitch happens from an idle state.
+
+### Refine no-fail proofs
 
 TODO.
