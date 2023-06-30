@@ -47,6 +47,39 @@ outstanding tasks towards its projected future milestones as of July 2023.
   - This will involve relaxing the existing interrupt oracle and
     phrasing/proving new AInvs.
 
+## How to pre-build and open relevant Isabelle sessions
+
+Our target for this verification project is `L4V_ARCH=RISCV64`.
+
+To browse InfoFlow against a pre-built Access session, you'll need to use the
+following `QUICK_AND_DIRTY` options both when pre-building and opening all
+sessions it depends on until the sorries in those sessions have been resolved:
+
+    cd spec
+    L4V_ARCH=RISCV64 AINVS_QUICK_AND_DIRTY=true ACCESS_QUICK_AND_DIRTY=true make -j3 ASpec
+    cd ../proof
+    L4V_ARCH=RISCV64 AINVS_QUICK_AND_DIRTY=true ACCESS_QUICK_AND_DIRTY=true make -j3 Access
+    cd ..
+    L4V_ARCH=RISCV64 AINVS_QUICK_AND_DIRTY=true ACCESS_QUICK_AND_DIRTY=true ./isabelle/bin/isabelle jedit -d . -l Access
+
+To browse Refine to work on the "no-fail" proofs you will need ExecSpec and
+BaseRefine. Even though Access is not strictly needed for this, it is best to
+keep the same `QUICK_AND_DIRTY` options to avoid any unnecessary rebuilds:
+
+    cd spec
+    L4V_ARCH=RISCV64 AINVS_QUICK_AND_DIRTY=true ACCESS_QUICK_AND_DIRTY=true make -j3 ExecSpec
+    cd ../proof
+    L4V_ARCH=RISCV64 AINVS_QUICK_AND_DIRTY=true ACCESS_QUICK_AND_DIRTY=true make -j3 BaseRefine
+    cd ..
+    L4V_ARCH=RISCV64 AINVS_QUICK_AND_DIRTY=true ACCESS_QUICK_AND_DIRTY=true ./isabelle/bin/isabelle jedit -d . -l BaseRefine
+
+More relevant for any future milestones that will depend on InfoFlow, similarly
+there is also an `INFOFLOW_QUICK_AND_DIRTY` option that will be needed if it
+still contains any sorries:
+
+    L4V_ARCH=RISCV64 AINVS_QUICK_AND_DIRTY=true ACCESS_QUICK_AND_DIRTY=true INFOFLOW_QUICK_AND_DIRTY=true make -j3 InfoFlow
+    L4V_ARCH=RISCV64 AINVS_QUICK_AND_DIRTY=true ACCESS_QUICK_AND_DIRTY=true INFOFLOW_QUICK_AND_DIRTY=true ./isabelle/bin/isabelle jedit -d . -l InfoFlow
+
 ## Outstanding task details and examples for TP verification of ASpec
 
 ### TA equivalence proofs as part of the unwinding relation
@@ -118,6 +151,6 @@ proof breakages across AInvs, Access and InfoFlow, **which will need to be
 repaired**. However, this should make the TA subset invariant proof at
 mid-domainswitch easily provable when domainswitch happens from an idle state.
 
-### Refine no-fail proofs
+### Refine "no-fail" proofs
 
 TODO.
