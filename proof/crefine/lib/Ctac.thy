@@ -2031,6 +2031,7 @@ fun tac ctxt =
         ORELSE (resolve_tac ctxt [@{thm xpresI}] THEN' simp_tac (ctxt |> Splitter.del_split @{thm "if_split"})) 1
     ))
   THEN simp_tac (put_simpset HOL_basic_ss ctxt addsimps @{thms com.case}) 1
+  THEN no_name_eta_tac ctxt
 \<close>
 
 end
