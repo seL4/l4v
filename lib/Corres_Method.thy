@@ -52,7 +52,8 @@ method corres_split declares corres_splits = no_name_eta, rule corres_splits
    Despite that, we are still careful with simp etc here, in case the user does provide a corres
    rule that generates a schematic in those side condition goals. *)
 method corres_cleanup methods m uses simp simp_del split split_del cong intro =
-    m
+  #break "corres_cleanup",
+  ( m
   | assumption
   | rule refl TrueI
   | clarsimp simp del: corres_no_simp simp_del simp: simp split: split split del: split_del
@@ -60,7 +61,7 @@ method corres_cleanup methods m uses simp simp_del split split_del cong intro =
   (* enables passing in conjI for terminal goals: *)
   | (rule intro;
      corres_cleanup m simp: simp simp_del: simp_del split: split split_del: split_del
-                      cong: cong intro: intro)
+                      cong: cong intro: intro))
 
 (* Apply a single corres rule and attempt to solve non-corres and non-wp side conditions.
    We don't expect any wp side conditions, but check anyway for safety. If the rule is declared
