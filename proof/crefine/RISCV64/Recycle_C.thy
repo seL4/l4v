@@ -807,8 +807,8 @@ lemma cancelBadgedSends_ccorres:
               cong: list.case_cong Structures_H.endpoint.case_cong call_ignore_cong
                del: Collect_const)
    apply (rule ccorres_pre_getEndpoint)
-   apply (rule_tac R="ko_at' rv ptr" and xf'="ret__unsigned_longlong_'"
-               and val="case rv of RecvEP q \<Rightarrow> scast EPState_Recv | IdleEP \<Rightarrow> scast EPState_Idle
+   apply (rule_tac R="ko_at' ep ptr" and xf'="ret__unsigned_longlong_'"
+               and val="case ep of RecvEP q \<Rightarrow> scast EPState_Recv | IdleEP \<Rightarrow> scast EPState_Idle
                                 | SendEP q \<Rightarrow> scast EPState_Send"
                in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
       apply vcg
@@ -828,12 +828,12 @@ lemma cancelBadgedSends_ccorres:
                 del: Collect_const cong: call_ignore_cong)
     apply (rule ccorres_rhs_assoc)+
     apply (csymbr, csymbr)
-    apply (drule_tac s = rv in sym, simp only:)
-    apply (rule_tac P="ko_at' rv ptr and invs'" in ccorres_cross_over_guard)
+    apply (drule_tac s = ep in sym, simp only:)
+    apply (rule_tac P="ko_at' ep ptr and invs'" in ccorres_cross_over_guard)
     apply (rule ccorres_symb_exec_r)
       apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2)
       apply (rule ccorres_split_nothrow[where r'=dc and xf'=xfdc, OF _ ceqv_refl])
-         apply (rule_tac P="ko_at' rv ptr"
+         apply (rule_tac P="ko_at' ep ptr"
                     in ccorres_from_vcg[where P'=UNIV])
          apply (rule allI, rule conseqPre, vcg)
          apply clarsimp
@@ -944,7 +944,7 @@ lemma cancelBadgedSends_ccorres:
               subgoal by (simp add: rf_sr_def)
              apply simp
             apply ceqv
-           apply (rule_tac P="ret__unsigned_longlong=blockingIPCBadge rva" in ccorres_gen_asm2)
+           apply (rule_tac P="ret__unsigned_longlong=blockingIPCBadge rv" in ccorres_gen_asm2)
            apply (rule ccorres_if_bind, rule ccorres_if_lhs)
             apply (simp add: bind_assoc)
             apply (rule ccorres_rhs_assoc)+

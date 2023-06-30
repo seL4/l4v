@@ -438,7 +438,9 @@ shows
       apply (rule ccorres_rhs_assoc2)
       apply (rule ccorres_abstract_cleanup)
       apply (rule ccorres_symb_exec_l)
-        apply (rule_tac P = "rva = (capability.UntypedCap isdev frame pageBits idx)" in ccorres_gen_asm)
+        apply (rename_tac pcap)
+        apply (rule_tac P = "pcap = (capability.UntypedCap isdev frame pageBits idx)"
+                 in ccorres_gen_asm)
         apply (simp add: hrs_htd_update del:fun_upd_apply)
         apply (rule ccorres_split_nothrow)
 
@@ -1497,13 +1499,13 @@ lemma pdeCheckIfMapped_ccorres:
     (Call pdeCheckIfMapped_'proc)"
   apply (cinit lift: pde___ptr_to_struct_pde_C_')
    apply (rule ccorres_pre_getObject_pde)
-   apply (rule_tac P'="{s. \<exists>pde'. cslift s (pde_Ptr slot) = Some pde' \<and> cpde_relation rv pde'}"
+   apply (rule_tac P'="{s. \<exists>pde'. cslift s (pde_Ptr slot) = Some pde' \<and> cpde_relation pd pde'}"
      in ccorres_from_vcg_throws[where P="\<lambda>s. True"])
    apply simp_all
   apply clarsimp
   apply (rule conseqPre, vcg)
   apply (clarsimp simp: typ_heap_simps' return_def)
-  apply (case_tac rv, simp_all add: cpde_relation_invalid isInvalidPDE_def
+  apply (case_tac pd, simp_all add: cpde_relation_invalid isInvalidPDE_def
                              split: if_split)
   done
 
@@ -2379,9 +2381,9 @@ lemma setVMRootForFlush_ccorres2:
                  del: Collect_const)
      apply (rule ccorres_if_lhs)
       apply (rule_tac P="(capPDIsMapped_CL (cap_page_directory_cap_lift threadRoot) = 0)
-                             = (capPDMappedASID (capCap rva) = None)
+                             = (capPDMappedASID (capCap rv) = None)
                          \<and> capPDBasePtr_CL (cap_page_directory_cap_lift threadRoot)
-                             = capPDBasePtr (capCap rva)" in ccorres_gen_asm2)
+                             = capPDBasePtr (capCap rv)" in ccorres_gen_asm2)
       apply (rule ccorres_rhs_assoc | csymbr | simp add: Collect_True del: Collect_const)+
       apply (rule ccorres_split_throws)
        apply (rule ccorres_return_C, simp+)
@@ -4745,7 +4747,7 @@ lemma decodeVCPUInjectIRQ_ccorres:
                              liftE_liftM[symmetric] liftE_bindE_assoc)
 
        (* symbolically execute the gets on LHS *)
-       apply (rule_tac ccorres_pre_gets_armKSGICVCPUNumListRegs_ksArchState[simplified comp_def],
+       apply (rule_tac ccorres_pre_gets_armKSGICVCPUNumListRegs_ksArchState,
               rename_tac nregs)
 
        (* unfortunately directly looking at \<acute>gic_vcpu_num_list_regs means we need to abstract the IF condition*)

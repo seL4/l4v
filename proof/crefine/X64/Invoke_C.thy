@@ -65,7 +65,7 @@ lemma setDomain_ccorres:
            apply (ctac add: tcbSchedEnqueue_ccorres)
           apply (rule ccorres_return_Skip)
          apply (simp add: when_def)
-         apply (rule_tac R="\<lambda>s. rv = ksCurThread s"
+         apply (rule_tac R="\<lambda>s. curThread = ksCurThread s"
                     in ccorres_cond2)
            apply (clarsimp simp: rf_sr_ksCurThread)
           apply (ctac add: rescheduleRequired_ccorres)
@@ -76,14 +76,16 @@ lemma setDomain_ccorres:
       apply simp
       apply wp
      apply (rule_tac Q="\<lambda>_. all_invs_but_sch_extra and tcb_at' t and sch_act_simple
-                        and (\<lambda>s. rv = ksCurThread s)" in hoare_strengthen_post)
+                            and (\<lambda>s. curThread = ksCurThread s)"
+              in hoare_strengthen_post)
       apply (wp threadSet_all_invs_but_sch_extra)
      apply (clarsimp simp: valid_pspace_valid_objs' st_tcb_at_def[symmetric]
                            sch_act_simple_def st_tcb_at'_def weak_sch_act_wf_def
                     split: if_splits)
     apply (simp add: guard_is_UNIV_def)
    apply (rule_tac Q="\<lambda>_. invs' and tcb_at' t and sch_act_simple
-      and (\<lambda>s. rv = ksCurThread s \<and> (\<forall>p. t \<notin> set (ksReadyQueues s p)))" in hoare_strengthen_post)
+                          and (\<lambda>s. curThread = ksCurThread s \<and> (\<forall>p. t \<notin> set (ksReadyQueues s p)))"
+            in hoare_strengthen_post)
     apply (wp weak_sch_act_wf_lift_linear tcbSchedDequeue_not_queued
               tcbSchedDequeue_not_in_queue hoare_vcg_imp_lift hoare_vcg_all_lift)
    apply (clarsimp simp: invs'_def valid_pspace'_def valid_state'_def)
@@ -627,7 +629,7 @@ lemma decodeCNodeInvocation_ccorres:
                        del: Collect_const cong: call_ignore_cong)
            apply (rule ccorres_split_throws)
             apply (rule ccorres_rhs_assoc | csymbr)+
-            apply (simp add: invocationCatch_use_injection_handler[symmetric, unfolded o_def]
+            apply (simp add: invocationCatch_use_injection_handler[symmetric]
                         del: Collect_const cong: call_ignore_cong)
             apply (rule ccorres_Cond_rhs_Seq)
              apply (simp add:if_P del: Collect_const)
@@ -1097,7 +1099,7 @@ lemma decodeCNodeInvocation_ccorres:
             apply (simp add: throwError_def return_def exception_defs
                              syscall_error_rel_def syscall_error_to_H_cases)
             apply clarsimp
-           apply (simp add: invocationCatch_use_injection_handler[symmetric, unfolded o_def]
+           apply (simp add: invocationCatch_use_injection_handler[symmetric]
                        del: Collect_const)
            apply csymbr
            apply (simp add: interpret_excaps_test_null excaps_map_def

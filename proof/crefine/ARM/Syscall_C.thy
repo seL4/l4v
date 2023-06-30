@@ -1203,7 +1203,7 @@ lemma handleRecv_ccorres:
 
           apply (simp add: liftE_bind)
           apply (ctac)
-            apply (rule_tac P="\<lambda>s. ksCurThread s = rv" in ccorres_cross_over_guard)
+            apply (rule_tac P="\<lambda>s. ksCurThread s = thread" in ccorres_cross_over_guard)
             apply (ctac add: receiveIPC_ccorres)
 
            apply (wp deleteCallerCap_ksQ_ct' hoare_vcg_all_lift)

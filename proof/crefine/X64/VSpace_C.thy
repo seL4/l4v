@@ -654,7 +654,7 @@ lemma lookupPDPTSlot_ccorres':
    apply csymbr
    apply csymbr
    apply (rule ccorres_abstract_cleanup)
-   apply (rule_tac P="(ret__unsigned_longlong = 0) = (rv = X64_H.InvalidPML4E)"
+   apply (rule_tac P="(ret__unsigned_longlong = 0) = (pml4e = X64_H.InvalidPML4E)"
                in ccorres_gen_asm2)
    apply (wpc; ccorres_rewrite)
     apply (rule_tac P=\<top> and P' =UNIV in ccorres_from_vcg_throws)
@@ -666,9 +666,9 @@ lemma lookupPDPTSlot_ccorres':
    apply (thin_tac "_ = PDPointerTablePML4E _ _ _ _ _ _")
    apply (simp add: bind_liftE_distrib liftE_bindE returnOk_liftE[symmetric])
    apply (rule ccorres_stateAssert)
-   apply (rule_tac P="pd_pointer_table_at' (ptrFromPAddr (pml4eTable rv))
-                        and ko_at' rv (lookup_pml4_slot pm vptr)
-                        and K (isPDPointerTablePML4E rv)"
+   apply (rule_tac P="pd_pointer_table_at' (ptrFromPAddr (pml4eTable pml4e))
+                        and ko_at' pml4e (lookup_pml4_slot pm vptr)
+                        and K (isPDPointerTablePML4E pml4e)"
                and P'=UNIV
             in ccorres_from_vcg_throws)
    apply (rule allI, rule conseqPre, vcg)
@@ -1195,7 +1195,7 @@ lemma setVMRoot_ccorres:
       apply (rule ccorres_rhs_assoc)
       apply (rule ccorres_h_t_valid_x64KSSKIMPML4)
       apply csymbr
-      apply (rule ccorres_pre_gets_x64KSSKIMPML4_ksArchState[unfolded comp_def])
+      apply (rule ccorres_pre_gets_x64KSSKIMPML4_ksArchState)
       apply (rule ccorres_add_return2)
       apply (ctac (no_vcg) add: setCurrentUserVSpaceRoot_ccorres)
        apply (rule ccorres_return_void_C)
@@ -1212,7 +1212,7 @@ lemma setVMRoot_ccorres:
       apply (rule ccorres_rhs_assoc)
       apply (rule ccorres_h_t_valid_x64KSSKIMPML4)
       apply csymbr
-      apply (rule ccorres_pre_gets_x64KSSKIMPML4_ksArchState[unfolded comp_def])
+      apply (rule ccorres_pre_gets_x64KSSKIMPML4_ksArchState)
       apply (rule ccorres_add_return2)
       apply (ctac (no_vcg) add: setCurrentUserVSpaceRoot_ccorres)
        apply (rule ccorres_return_void_C)
@@ -1236,7 +1236,7 @@ lemma setVMRoot_ccorres:
          apply (rule ccorres_rhs_assoc)
          apply (rule ccorres_h_t_valid_x64KSSKIMPML4)
          apply csymbr
-         apply (rule ccorres_pre_gets_x64KSSKIMPML4_ksArchState[unfolded comp_def])
+         apply (rule ccorres_pre_gets_x64KSSKIMPML4_ksArchState)
          apply (rule ccorres_add_return2)
          apply (ctac (no_vcg) add: setCurrentUserVSpaceRoot_ccorres)
           apply (rule ccorres_return_void_C)
@@ -1258,7 +1258,7 @@ lemma setVMRoot_ccorres:
        apply (rule ccorres_rhs_assoc)
        apply (rule ccorres_h_t_valid_x64KSSKIMPML4)
        apply csymbr
-       apply (rule ccorres_pre_gets_x64KSSKIMPML4_ksArchState[unfolded comp_def])
+       apply (rule ccorres_pre_gets_x64KSSKIMPML4_ksArchState)
        apply (rule ccorres_add_return2)
        apply (ctac (no_vcg) add: setCurrentUserVSpaceRoot_ccorres)
         apply (rule ccorres_return_void_C)
@@ -1333,7 +1333,7 @@ lemma setRegister_ccorres:
    apply (rule ccorres_pre_threadGet)
    apply (rule ccorres_Guard)
    apply (simp add: setRegister_def simpler_modify_def exec_select_f_singleton)
-   apply (rule_tac P="\<lambda>tcb. (atcbContextGet o tcbArch) tcb = rv"
+   apply (rule_tac P="\<lambda>tcb. (atcbContextGet o tcbArch) tcb = uc"
                 in threadSet_ccorres_lemma2)
     apply vcg
    apply (clarsimp simp: setRegister_def HaskellLib_H.runState_def
@@ -2337,13 +2337,13 @@ lemma performASIDPoolInvocation_ccorres:
       apply (rule ccorres_rhs_assoc2)
       apply (rule_tac ccorres_split_nothrow [where r'=dc and xf'=xfdc])
           apply (simp add: updateCap_def)
-          apply (rule_tac A="cte_wp_at' ((=) rv o cteCap) ctSlot
-                             and K (isPML4Cap' rv \<and> asid \<le> mask asid_bits \<and> asid \<noteq> ucast asidInvalid)"
+          apply (rule_tac A="cte_wp_at' ((=) oldcap o cteCap) ctSlot
+                             and K (isPML4Cap' oldcap \<and> asid \<le> mask asid_bits \<and> asid \<noteq> ucast asidInvalid)"
                       and A'=UNIV in ccorres_guard_imp2)
            apply (rule ccorres_pre_getCTE)
-           apply (rule_tac P="cte_wp_at' ((=) rv o cteCap) ctSlot
-                              and K (isPML4Cap' rv \<and> asid \<le> mask asid_bits \<and> asid \<noteq> ucast asidInvalid)
-                              and cte_wp_at' ((=) rva) ctSlot"
+           apply (rule_tac P="cte_wp_at' ((=) oldcap o cteCap) ctSlot
+                              and K (isPML4Cap' oldcap \<and> asid \<le> mask asid_bits \<and> asid \<noteq> ucast asidInvalid)
+                              and cte_wp_at' ((=) rv) ctSlot"
                        and P'=UNIV in ccorres_from_vcg)
            apply (rule allI, rule conseqPre, vcg)
            apply (clarsimp simp: cte_wp_at_ctes_of)

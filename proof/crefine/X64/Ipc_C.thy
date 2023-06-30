@@ -3182,9 +3182,10 @@ proof -
      apply csymbr
      apply csymbr
      apply (rename_tac "lngth")
-     apply (simp add: mi_from_H_def mapME_def del: Collect_const cong: bind_apply_cong)
+     apply (unfold mapME_def)[1]
+     apply (simp add: mi_from_H_def del: Collect_const)
      apply (rule ccorres_symb_exec_l)
-        apply (rule_tac P="length rv = unat word2" in ccorres_gen_asm)
+        apply (rule_tac P="length xs = unat word2" in ccorres_gen_asm)
         apply (rule ccorres_rhs_assoc2)
         apply (rule ccorres_add_returnOk2,
                rule ccorres_splitE_novcg)
@@ -3193,7 +3194,7 @@ proof -
                        and   Q="UNIV"
                        and   F="\<lambda>n s. valid_pspace' s \<and> tcb_at' thread s \<and>
                                       (case buffer of Some x \<Rightarrow> valid_ipc_buffer_ptr' x | _ \<Rightarrow> \<top>) s \<and>
-                                       (\<forall>m < length rv. user_word_at (rv ! m)
+                                       (\<forall>m < length xs. user_word_at (xs ! m)
                                                      (x2 + (of_nat m + (msgMaxLength + 2)) * 8) s)"
                           in ccorres_sequenceE_while')
                   apply (simp add: split_def)
@@ -3203,7 +3204,7 @@ proof -
                      apply (rule_tac xf'=cptr_' in ccorres_abstract, ceqv)
                      apply (ctac add: capFaultOnFailure_ccorres
                                [OF lookupSlotForThread_ccorres'])
-                        apply (rule_tac P="is_aligned rva 5" in ccorres_gen_asm)
+                        apply (rule_tac P="is_aligned rv 5" in ccorres_gen_asm)
                         apply (simp add: ccorres_cond_iffs liftE_bindE)
                         apply (rule ccorres_symb_exec_l [OF _ _ _ empty_fail_getSlotCap])
                           apply (rule_tac P'="UNIV \<inter> {s. excaps_map ys
@@ -3224,7 +3225,7 @@ proof -
                        apply (clarsimp simp: ccorres_cond_iffs)
                        apply (rule_tac  P= \<top>
                                 and P'="{x. errstate x= lu_ret___struct_lookupSlot_raw_ret_C \<and>
-                                            rv' = (rv ! length ys)}"
+                                            rv' = (xs ! length ys)}"
                                   in ccorres_from_vcg_throws)
                        apply (rule allI, rule conseqPre, vcg)
                        apply (clarsimp simp: throwError_def return_def)
@@ -3265,9 +3266,8 @@ proof -
             apply ceqv
            apply (simp del: Collect_const)
            apply (rule_tac P'="{s. snd rv'=?curr s}"
-                   and P="\<lambda>s. length rva = length rv
-                               \<and> (\<forall>x \<in> set rva. snd x \<noteq> 0)"
-                   in ccorres_from_vcg_throws)
+                       and P="\<lambda>s. length rv = length xs \<and> (\<forall>x \<in> set rv. snd x \<noteq> 0)"
+                    in ccorres_from_vcg_throws)
            apply (rule allI, rule conseqPre, vcg)
            apply (clarsimp simp: returnOk_def return_def
                                  seL4_MsgExtraCapBits_def)
@@ -3603,7 +3603,7 @@ proof -
      apply (rule ccorres_rhs_assoc2)
      apply (simp add: MessageID_Exception_def)
      apply ccorres_rewrite
-     apply (subst bind_return_unit)
+     apply (rule ccorres_add_return2)
      apply (rule ccorres_split_nothrow_novcg)
          apply (rule ccorres_zipWithM_x_while)
              apply clarsimp

@@ -3638,17 +3638,17 @@ lemma copyGlobalMappings_ccorres:
    apply (rule ccorres_pre_gets_armKSGlobalPD_ksArchState)
    apply csymbr
    apply (rule ccorres_rel_imp)
-    apply (rule_tac F="\<lambda>_ s. rv = armKSGlobalPD (ksArchState s)
-                                \<and> is_aligned rv pdBits \<and> valid_pde_mappings' s
+    apply (rule_tac F="\<lambda>_ s. globalPD = armKSGlobalPD (ksArchState s)
+                                \<and> is_aligned globalPD pdBits \<and> valid_pde_mappings' s
                                 \<and> page_directory_at' pd s
                                 \<and> page_directory_at' (armKSGlobalPD (ksArchState s)) s"
-              and i="0xE00"
-               in ccorres_mapM_x_while')
+                and i="0xE00"
+             in ccorres_mapM_x_while')
         apply (clarsimp simp del: Collect_const)
         apply (rule ccorres_guard_imp2)
          apply (rule ccorres_pre_getObject_pde)
          apply (simp add: storePDE_def del: Collect_const)
-         apply (rule_tac P="\<lambda>s. ko_at' rva (armKSGlobalPD (ksArchState s)
+         apply (rule_tac P="\<lambda>s. ko_at' rv (armKSGlobalPD (ksArchState s)
                                               + ((0xE00 + of_nat n) << 2)) s
                                     \<and> page_directory_at' pd s \<and> valid_pde_mappings' s
                                     \<and> page_directory_at' (armKSGlobalPD (ksArchState s)) s"
@@ -3663,7 +3663,7 @@ lemma copyGlobalMappings_ccorres:
            apply (rule cmap_relationE1[OF rf_sr_cpde_relation],
                   assumption, erule_tac ko=ko' in ko_at_projectKO_opt)
            apply (rule cmap_relationE1[OF rf_sr_cpde_relation],
-                  assumption, erule_tac ko=rva in ko_at_projectKO_opt)
+                  assumption, erule_tac ko=rv in ko_at_projectKO_opt)
            apply (clarsimp simp: typ_heap_simps')
            apply (drule(1) page_directory_at_rf_sr)+
            apply clarsimp
