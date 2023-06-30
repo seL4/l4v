@@ -397,7 +397,9 @@ shows
       apply (rule ccorres_rhs_assoc2)
       apply (rule ccorres_abstract_cleanup)
       apply (rule ccorres_symb_exec_l)
-        apply (rule_tac P = "rva = (capability.UntypedCap isdev frame pageBits idx)" in ccorres_gen_asm)
+        apply (rename_tac pcap)
+        apply (rule_tac P = "pcap = (capability.UntypedCap isdev frame pageBits idx)"
+                 in ccorres_gen_asm)
         apply (simp add: hrs_htd_update del:fun_upd_apply)
         apply (rule ccorres_split_nothrow)
 
@@ -1466,13 +1468,13 @@ lemma pdeCheckIfMapped_ccorres:
     (Call pdeCheckIfMapped_'proc)"
   apply (cinit lift: pde___ptr_to_struct_pde_C_')
    apply (rule ccorres_pre_getObject_pde)
-   apply (rule_tac P'="{s. \<exists>pde'. cslift s (pde_Ptr slot) = Some pde' \<and> cpde_relation rv pde'}"
+   apply (rule_tac P'="{s. \<exists>pde'. cslift s (pde_Ptr slot) = Some pde' \<and> cpde_relation pd pde'}"
      in ccorres_from_vcg_throws[where P="\<lambda>s. True"])
    apply simp_all
   apply clarsimp
   apply (rule conseqPre, vcg)
   apply (clarsimp simp: typ_heap_simps' return_def)
-  apply (case_tac rv, simp_all add: cpde_relation_invalid isInvalidPDE_def
+  apply (case_tac pd, simp_all add: cpde_relation_invalid isInvalidPDE_def
                              split: if_split)
   done
 
@@ -1793,7 +1795,7 @@ lemma performPageInvocationMapPDE_ccorres:
              apply (clarsimp simp: pde_range_relation_def ptr_range_to_list_def)
             apply vcg
             apply simp
-           apply (wp valid_pde_slots_lift2)
+           apply (wpsimp wp: valid_pde_slots_lift2)
           apply clarsimp
           apply (clarsimp simp: pde_range_relation_def ptr_range_to_list_def)
           apply (rule order_less_le_trans)

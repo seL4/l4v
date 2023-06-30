@@ -828,7 +828,7 @@ from assms show ?thesis
                                              where g="\<lambda>_. injection_handler P Q >>=E R" for P Q R])
                             apply (clarsimp simp: injection_handler_returnOk)
                             apply (simp only: bindE_K_bind)
-                            apply (ctac add: ioapic_decode_map_pin_to_vector_ccorres[simplified o_def])
+                            apply (ctac add: ioapic_decode_map_pin_to_vector_ccorres)
                                apply ccorres_rewrite
                                apply (simp add: ccorres_invocationCatch_Inr performInvocation_def
                                                 returnOk_bind liftE_bindE bindE_assoc

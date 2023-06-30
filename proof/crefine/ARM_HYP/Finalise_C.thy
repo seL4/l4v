@@ -277,10 +277,10 @@ lemma cancelAllIPC_ccorres:
   apply (cinit lift: epptr_')
    apply (rule ccorres_symb_exec_l [OF _ getEndpoint_inv _ empty_fail_getEndpoint])
     apply (rule_tac xf'=ret__unsigned_'
-                and val="case rv of IdleEP \<Rightarrow> scast EPState_Idle
+                and val="case ep of IdleEP \<Rightarrow> scast EPState_Idle
                             | RecvEP _ \<Rightarrow> scast EPState_Recv | SendEP _ \<Rightarrow> scast EPState_Send"
-                and R="ko_at' rv epptr"
-                 in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
+                and R="ko_at' ep epptr"
+             in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
        apply vcg
        apply clarsimp
        apply (erule cmap_relationE1 [OF cmap_relation_ep])
@@ -289,8 +289,8 @@ lemma cancelAllIPC_ccorres:
        apply (simp add: cendpoint_relation_def Let_def
                  split: endpoint.split_asm)
       apply ceqv
-     apply (rule_tac A="invs' and ko_at' rv epptr"
-                  in ccorres_guard_imp2[where A'=UNIV])
+     apply (rule_tac A="invs' and ko_at' ep epptr"
+              in ccorres_guard_imp2[where A'=UNIV])
       apply wpc
         apply (rename_tac list)
         apply (simp add: endpoint_state_defs
@@ -404,10 +404,10 @@ lemma cancelAllSignals_ccorres:
   apply (cinit lift: ntfnPtr_')
    apply (rule ccorres_symb_exec_l [OF _ get_ntfn_inv' _ empty_fail_getNotification])
     apply (rule_tac xf'=ret__unsigned_'
-                and val="case ntfnObj rv of IdleNtfn \<Rightarrow> scast NtfnState_Idle
+                and val="case ntfnObj ntfn of IdleNtfn \<Rightarrow> scast NtfnState_Idle
                             | ActiveNtfn _ \<Rightarrow> scast NtfnState_Active | WaitingNtfn _ \<Rightarrow> scast NtfnState_Waiting"
-                and R="ko_at' rv ntfnptr"
-                 in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
+                and R="ko_at' ntfn ntfnptr"
+             in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
        apply vcg
        apply clarsimp
        apply (erule cmap_relationE1 [OF cmap_relation_ntfn])
@@ -416,8 +416,8 @@ lemma cancelAllSignals_ccorres:
        apply (simp add: cnotification_relation_def Let_def
                  split: ntfn.split_asm)
       apply ceqv
-     apply (rule_tac A="invs' and ko_at' rv ntfnptr"
-                  in ccorres_guard_imp2[where A'=UNIV])
+     apply (rule_tac A="invs' and ko_at' ntfn ntfnptr"
+              in ccorres_guard_imp2[where A'=UNIV])
       apply wpc
         apply (simp add: notification_state_defs ccorres_cond_iffs)
         apply (rule ccorres_return_Skip)
@@ -432,8 +432,8 @@ lemma cancelAllSignals_ccorres:
       apply csymbr
       apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2)
       apply (rule_tac r'=dc and xf'=xfdc in ccorres_split_nothrow)
-          apply (rule_tac P="ko_at' rv ntfnptr and invs'"
-                    in ccorres_from_vcg[where P'=UNIV])
+          apply (rule_tac P="ko_at' ntfn ntfnptr and invs'"
+                   in ccorres_from_vcg[where P'=UNIV])
           apply (rule allI, rule conseqPre, vcg)
           apply clarsimp
           apply (rule_tac x=ntfnptr in cmap_relationE1 [OF cmap_relation_ntfn], assumption)
@@ -677,8 +677,8 @@ lemma doUnbindNotification_ccorres:
    (Call doUnbindNotification_'proc)"
   apply (cinit' lift: ntfnPtr_' tcbptr_')
    apply (rule ccorres_symb_exec_l [OF _ get_ntfn_inv' _ empty_fail_getNotification])
-    apply (rule_tac P="invs' and ko_at' rv ntfnptr" and P'=UNIV
-                in ccorres_split_nothrow_novcg)
+    apply (rule_tac P="invs' and ko_at' ntfn ntfnptr" and P'=UNIV
+             in ccorres_split_nothrow_novcg)
         apply (rule ccorres_from_vcg[where rrel=dc and xf=xfdc])
         apply (rule allI, rule conseqPre, vcg)
         apply (clarsimp simp: option_to_ptr_def option_to_0_def)
@@ -697,7 +697,7 @@ lemma doUnbindNotification_ccorres:
               apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
                apply (clarsimp simp: cnotification_relation_def Let_def
                                      mask_def [where n=2] NtfnState_Waiting_def)
-               apply (case_tac "ntfnObj rv", ((simp add: option_to_ctcb_ptr_def)+)[4])
+               apply (case_tac "ntfnObj ntfn", ((simp add: option_to_ctcb_ptr_def)+)[4])
              subgoal by (simp add: carch_state_relation_def typ_heap_simps')
             subgoal by (simp add: cmachine_state_relation_def)
            subgoal by (simp add: h_t_valid_clift_Some_iff)
@@ -812,13 +812,13 @@ lemma unbindMaybeNotification_ccorres:
   apply (cinit lift: ntfnPtr_')
    apply (rule ccorres_symb_exec_l [OF _ get_ntfn_inv' _ empty_fail_getNotification])
     apply (rule ccorres_rhs_assoc2)
-    apply (rule_tac P="ntfnBoundTCB rv \<noteq> None \<longrightarrow>
-                             option_to_ctcb_ptr (ntfnBoundTCB rv) \<noteq> NULL"
-                     in ccorres_gen_asm)
+    apply (rule_tac P="ntfnBoundTCB ntfn \<noteq> None \<longrightarrow>
+                         option_to_ctcb_ptr (ntfnBoundTCB ntfn) \<noteq> NULL"
+             in ccorres_gen_asm)
     apply (rule_tac xf'=boundTCB_'
-                           and val="option_to_ctcb_ptr (ntfnBoundTCB rv)"
-                           and R="ko_at' rv ntfnptr and valid_bound_tcb' (ntfnBoundTCB rv)"
-                            in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
+                and val="option_to_ctcb_ptr (ntfnBoundTCB ntfn)"
+                and R="ko_at' ntfn ntfnptr and valid_bound_tcb' (ntfnBoundTCB ntfn)"
+             in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
        apply vcg
        apply clarsimp
        apply (erule cmap_relationE1[OF cmap_relation_ntfn])

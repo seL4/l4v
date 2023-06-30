@@ -895,7 +895,7 @@ lemma setVMRoot_ccorres:
       apply (subst will_throw_and_catch)
        apply (simp split: capability.split arch_capability.split option.split)
        apply (fastforce simp: isCap_simps)
-      apply (rule ccorres_pre_gets_riscvKSGlobalPT_ksArchState[unfolded o_def])
+      apply (rule ccorres_pre_gets_riscvKSGlobalPT_ksArchState)
       apply (rule ccorres_rhs_assoc)+
       apply (rule ccorres_h_t_valid_riscvKSGlobalPT)
       apply csymbr
@@ -928,7 +928,7 @@ lemma setVMRoot_ccorres:
          apply (rule ccorres_rhs_assoc)
          apply (rule ccorres_h_t_valid_riscvKSGlobalPT)
          apply csymbr
-         apply (rule ccorres_pre_gets_riscvKSGlobalPT_ksArchState[unfolded comp_def])
+         apply (rule ccorres_pre_gets_riscvKSGlobalPT_ksArchState)
          apply (rule ccorres_add_return2)
          apply (ctac (no_vcg) add: setVSpaceRoot_ccorres)
           apply (rule ccorres_return_void_C)
@@ -940,7 +940,7 @@ lemma setVMRoot_ccorres:
        apply (rule ccorres_rhs_assoc)
        apply (rule ccorres_h_t_valid_riscvKSGlobalPT)
        apply csymbr
-       apply (rule ccorres_pre_gets_riscvKSGlobalPT_ksArchState[unfolded comp_def])
+       apply (rule ccorres_pre_gets_riscvKSGlobalPT_ksArchState)
        apply (rule ccorres_add_return2)
        apply (ctac (no_vcg) add: setVSpaceRoot_ccorres)
         apply (rule ccorres_return_void_C)
@@ -1007,7 +1007,7 @@ lemma setRegister_ccorres:
    apply (rule ccorres_pre_threadGet)
    apply (rule ccorres_Guard)
    apply (simp add: setRegister_def simpler_modify_def exec_select_f_singleton)
-   apply (rule_tac P="\<lambda>tcb. (atcbContextGet o tcbArch) tcb = rv"
+   apply (rule_tac P="\<lambda>tcb. (atcbContextGet o tcbArch) tcb = uc"
                 in threadSet_ccorres_lemma2)
     apply vcg
    apply (clarsimp simp: setRegister_def HaskellLib_H.runState_def

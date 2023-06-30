@@ -437,7 +437,7 @@ lemma setPriority_ccorres:
   apply (frule (1) valid_objs'_maxDomain[where t=t])
   apply (frule (1) valid_objs'_maxPriority[where t=t])
   apply simp
-done
+  done
 
 lemma setMCPriority_ccorres:
   "ccorres dc xfdc
@@ -1223,7 +1223,7 @@ lemma invokeTCB_CopyRegisters_ccorres:
            apply (rule ccorres_pre_getCurThread)
            apply (ctac add: postModifyRegisters_ccorres)
              apply (rule ccorres_split_nothrow_novcg_dc)
-                apply (rule_tac R="\<lambda>s. rvd = ksCurThread s"
+                apply (rule_tac R="\<lambda>s. rvc = ksCurThread s"
                            in ccorres_when)
                  apply (clarsimp simp: rf_sr_ksCurThread)
                 apply clarsimp
@@ -1504,7 +1504,7 @@ lemma asUser_getMRs_rel:
   apply (erule getMRs_rel_context, simp)
    apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKOs)
   apply simp
-done
+  done
 
 
 lemma asUser_sysargs_rel:
@@ -1643,7 +1643,7 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
                      apply simp
                     apply (rule ceqv_refl)
                    apply (rule ccorres_split_nothrow_novcg_dc)
-                      apply (rule_tac R="\<lambda>s. rv = ksCurThread s"
+                      apply (rule_tac R="\<lambda>s. self = ksCurThread s"
                                   in ccorres_when)
                       apply (clarsimp simp: rf_sr_ksCurThread)
                       apply clarsimp
@@ -2120,7 +2120,7 @@ shows
                         apply (clarsimp simp: min_def iffD2 [OF mask_eq_iff_w2p] word_size
                                               word_less_nat_alt
                                       split: if_split_asm dest!: word_unat.Rep_inverse')
-                       apply simp
+                       apply (simp add: pred_conj_def)
                        apply (wp mapM_x_wp' sch_act_wf_lift valid_queues_lift static_imp_wp
                                  tcb_in_cur_domain'_lift)
                       apply (simp add: n_frameRegisters_def n_msgRegisters_def
@@ -2243,7 +2243,8 @@ lemma decodeReadRegisters_ccorres:
        apply (simp add: liftE_bindE bind_assoc)
        apply (rule ccorres_pre_getCurThread)
        apply (rule ccorres_cond_seq)
-       apply (rule_tac R="\<lambda>s. rv = ksCurThread s \<and> isThreadCap cp" and P="\<lambda>s. capTCBPtr cp = rv" in ccorres_cond_both)
+       apply (rule_tac R="\<lambda>s. self = ksCurThread s \<and> isThreadCap cp" and P="\<lambda>s. capTCBPtr cp = self"
+                in ccorres_cond_both)
          apply clarsimp
          apply (frule rf_sr_ksCurThread)
          apply clarsimp
@@ -2254,13 +2255,13 @@ lemma decodeReadRegisters_ccorres:
           apply (drule_tac t="ksCurThread s" in sym)
           apply simp
          apply simp
-        apply (rule_tac P="capTCBPtr cp = rv" in ccorres_gen_asm)
+        apply (rule_tac P="capTCBPtr cp = self" in ccorres_gen_asm)
         apply simp
         apply (simp add: throwError_bind invocationCatch_def
                     cong: StateSpace.state.fold_congs globals.fold_congs)
         apply (rule syscall_error_throwError_ccorres_n)
         apply (simp add: syscall_error_to_H_cases)
-       apply (rule_tac P="capTCBPtr cp \<noteq> rv" in ccorres_gen_asm)
+       apply (rule_tac P="capTCBPtr cp \<noteq> self" in ccorres_gen_asm)
        apply (simp add: returnOk_bind)
        apply (simp add: ccorres_invocationCatch_Inr del: Collect_const)
        apply (ctac add: setThreadState_ccorres)
@@ -2355,7 +2356,8 @@ lemma decodeWriteRegisters_ccorres:
        apply (simp add: liftE_bindE bind_assoc)
        apply (rule ccorres_pre_getCurThread)
        apply (rule ccorres_cond_seq)
-       apply (rule_tac R="\<lambda>s. rv = ksCurThread s \<and> isThreadCap cp" and P="\<lambda>s. capTCBPtr cp = rv" in ccorres_cond_both)
+       apply (rule_tac R="\<lambda>s. self = ksCurThread s \<and> isThreadCap cp" and P="\<lambda>s. capTCBPtr cp = self"
+                in ccorres_cond_both)
          apply clarsimp
          apply (frule rf_sr_ksCurThread)
          apply clarsimp
@@ -2366,13 +2368,13 @@ lemma decodeWriteRegisters_ccorres:
           apply (drule_tac t="ksCurThread s" in sym)
           apply simp
          apply simp
-        apply (rule_tac P="capTCBPtr cp = rv" in ccorres_gen_asm)
+        apply (rule_tac P="capTCBPtr cp = self" in ccorres_gen_asm)
         apply simp
         apply (simp add: throwError_bind invocationCatch_def
                     cong: StateSpace.state.fold_congs globals.fold_congs)
         apply (rule syscall_error_throwError_ccorres_n)
         apply (simp add: syscall_error_to_H_cases)
-       apply (rule_tac P="capTCBPtr cp \<noteq> rv" in ccorres_gen_asm)
+       apply (rule_tac P="capTCBPtr cp \<noteq> self" in ccorres_gen_asm)
        apply (simp add: returnOk_bind)
        apply (simp add: ccorres_invocationCatch_Inr del: Collect_const)
        apply (ctac add: setThreadState_ccorres)
@@ -2615,7 +2617,7 @@ lemma slotCapLongRunningDelete_ccorres:
    apply (simp add: case_Null_If del: Collect_const)
    apply (rule ccorres_pre_getCTE)
    apply (rule ccorres_move_c_guard_cte)
-   apply (rule_tac P="cte_wp_at' ((=) rv) slot"
+   apply (rule_tac P="cte_wp_at' ((=) cte) slot"
                 in ccorres_cross_over_guard)
    apply (rule ccorres_symb_exec_r)
      apply (rule ccorres_if_lhs)
@@ -2636,7 +2638,7 @@ lemma slotCapLongRunningDelete_ccorres:
         apply vcg
        apply (simp del: Collect_const)
        apply (rule ccorres_move_c_guard_cte)
-       apply (rule_tac P="cte_wp_at' ((=) rv) slot"
+       apply (rule_tac P="cte_wp_at' ((=) cte) slot"
                   in  ccorres_from_vcg_throws[where P'=UNIV])
        apply (rule allI, rule conseqPre, vcg)
        apply (clarsimp simp: cte_wp_at_ctes_of return_def)
@@ -3795,7 +3797,7 @@ lemma bindNotification_ccorres:
    (Call bindNotification_'proc)"
   apply (cinit lift: tcb_' ntfnPtr_' simp: bindNotification_def)
    apply (rule ccorres_symb_exec_l [OF _ get_ntfn_inv' _ empty_fail_getNotification])
-    apply (rule_tac P="invs' and ko_at' rv ntfnptr and tcb_at' tcb" and P'=UNIV
+    apply (rule_tac P="invs' and ko_at' ntfn ntfnptr and tcb_at' tcb" and P'=UNIV
                     in ccorres_split_nothrow_novcg)
         apply (rule ccorres_from_vcg[where rrel=dc and xf=xfdc])
         apply (rule allI, rule conseqPre, vcg)
@@ -3815,7 +3817,7 @@ lemma bindNotification_ccorres:
               apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
                apply (clarsimp simp: cnotification_relation_def Let_def
                                      mask_def [where n=2] NtfnState_Waiting_def)
-               apply (case_tac "ntfnObj rv")
+               apply (case_tac "ntfnObj ntfn")
                  apply ((clarsimp simp: option_to_ctcb_ptr_canonical[OF invs_pspace_canonical'])+)[3]
               apply (auto simp: option_to_ctcb_ptr_def objBits_simps'
                                 bindNTFN_alignment_junk)[1]
@@ -3895,7 +3897,7 @@ lemma decodeUnbindNotification_ccorres:
    apply (rule ccorres_Guard_Seq)
    apply (simp add: liftE_bindE bind_assoc)
    apply (rule ccorres_pre_getBoundNotification)
-   apply (rule_tac P="\<lambda>s. rv \<noteq> Some 0" in ccorres_cross_over_guard)
+   apply (rule_tac P="\<lambda>s. ntfn \<noteq> Some 0" in ccorres_cross_over_guard)
    apply (simp add: bindE_bind_linearise)
    apply wpc
     apply (simp add: bindE_bind_linearise[symmetric]

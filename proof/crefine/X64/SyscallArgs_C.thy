@@ -783,12 +783,12 @@ lemma lookupIPCBuffer_ccorres[corres]:
      apply (rule ccorres_move_array_assertion_tcb_ctes)
      apply (ctac (no_vcg))
        apply csymbr
-       apply (rule_tac b="isArchObjectCap rva \<and> isPageCap (capCap rva)" in ccorres_case_bools')
+       apply (rule_tac b="isArchObjectCap rv \<and> isPageCap (capCap rv)" in ccorres_case_bools')
         apply simp
         apply (rule ccorres_cond_false_seq)
         apply (simp(no_asm))
         apply csymbr
-        apply (rule_tac b="isDeviceCap rva" in ccorres_case_bools')
+        apply (rule_tac b="isDeviceCap rv" in ccorres_case_bools')
          apply (rule ccorres_cond_true_seq)
          apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
           apply vcg

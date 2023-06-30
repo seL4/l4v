@@ -796,7 +796,7 @@ lemma update_freeIndex':
     show ?thesis
       apply (cinit lift: cap_ptr_' v32_')
        apply (rule ccorres_pre_getCTE)
-       apply (rule_tac P="\<lambda>s. ctes_of s srcSlot = Some rv \<and> (\<exists>i. cteCap rv = UntypedCap d p sz i)"
+       apply (rule_tac P="\<lambda>s. ctes_of s srcSlot = Some cte \<and> (\<exists>i. cteCap cte = UntypedCap d p sz i)"
                 in ccorres_from_vcg[where P' = UNIV])
        apply (rule allI)
        apply (rule conseqPre)
@@ -2552,7 +2552,7 @@ lemma capSwapForDelete_ccorres:
   \<comment> \<open>--- instruction: when (slot1 \<noteq> slot2) \<dots> / IF Ptr slot1 = Ptr slot2 THEN \<dots>\<close>
    apply (simp add:when_def)
    apply (rule ccorres_if_cond_throws2 [where Q = \<top> and Q' = \<top>])
-      apply (case_tac "slot1=slot2", simp+)
+      apply (case_tac "slot1=slot2"; simp)
      apply (rule ccorres_return_void_C)
 
   \<comment> \<open>***Main goal***\<close>
