@@ -161,6 +161,10 @@ method corres
 
 section \<open>Corres rule setup\<close>
 
+(* Avoid using equations in the assumptions. subst_all gets around (no_asm_use) in some cases,
+   which we don't want. *)
+lemmas [corres_no_simp] = subst_all
+
 lemmas [corres_splits] =
   corres_split
   corres_splitEE
