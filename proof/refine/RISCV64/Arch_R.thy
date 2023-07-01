@@ -454,12 +454,7 @@ lemma checkSlot_corres:
           (check_slot p test)
           (checkSlot p test')"
   apply (simp add: check_slot_def checkSlot_def unlessE_whenE liftE_bindE)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split[OF getObject_PTE_corres])
-      apply (rule corres_whenE, simp)
-       apply (rule corres_trivial, simp)
-      apply simp
-     apply wpsimp+
+  apply (corres corres: corres_throwErrorTT[of ser])
   done
 
 lemma vmrights_map_vm_kernel_only[simp]:

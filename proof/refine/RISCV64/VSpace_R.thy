@@ -295,18 +295,7 @@ lemma unmapPageTable_corres:
           (unmap_page_table asid vptr pt)
           (unmapPageTable asid' vptr' pt')"
   apply (clarsimp simp: assms unmap_page_table_def unmapPageTable_def ignoreFailure_def const_def)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split_catch[where E="\<top>\<top>" and E'="\<top>\<top>", OF _ corres_return_trivial])
-      apply (rule corres_split_eqrE[OF findVSpaceForASID_corres[OF refl]])
-        apply (rule corres_split_eqrE[OF lookupPTFromLevel_corres[OF _ refl]])
-           apply simp
-          apply (simp add: liftE_bindE)
-          apply (rule corres_split[OF storePTE_corres])
-             apply simp
-            apply simp
-            apply (rule corres_machine_op)
-            apply (rule corres_Id; simp)
-           apply (wpsimp wp: pt_lookup_from_level_wp)+
+  apply (corres corres: lookupPTFromLevel_corres wp: pt_lookup_from_level_wp)
    apply (clarsimp simp: invs_distinct invs_psp_aligned invs_vspace_objs invs_valid_asid_table
                          pte_at_eq)
    apply (rule_tac x=asid in exI)
@@ -361,11 +350,11 @@ lemma unmapPage_corres:
            apply (rule whenE_throwError_corres_initial, simp, simp)
            apply (rule corres_splitEE)
               apply (rule corres_rel_imp)
-               apply (rule liftE_get_pte_corres[@lift_corres_args], simp)
+               apply (rule liftE_get_pte_corres, simp)
               apply fastforce
              apply (rule corres_splitEE[OF checkMappingPPtr_corres]; assumption?)
                apply (simp add: liftE_bindE)
-               apply (rule corres_split[OF storePTE_corres])
+               apply (rule corres_split[OF storePTE_corres], rule refl)
                   apply simp
                  apply simp
                  apply (rule corres_machine_op, rule corres_Id, rule refl; simp)
@@ -474,12 +463,7 @@ lemma performPageInvocation_corres:
     apply (simp add: bind_assoc)
     apply (rule corres_guard_imp)
       apply (simp add: perform_pg_inv_map_def)
-      apply (rule corres_split[OF updateCap_same_master])
-         apply simp
-        apply (rule corres_split[OF storePTE_corres])
-           apply assumption
-          apply (rule corres_machine_op, rule corres_Id; simp)
-         apply wpsimp+
+      apply (corres corres: updateCap_same_master)
      apply (clarsimp simp: invs_valid_objs invs_distinct invs_psp_aligned)
      apply (clarsimp simp: cte_wp_at_caps_of_state is_arch_update_def is_cap_simps)
      apply (clarsimp simp: same_ref_def)
@@ -590,12 +574,7 @@ lemma performPageTableInvocation_corres:
    apply (clarsimp simp: valid_pti_def valid_pti'_def
                   split: arch_cap.splits capability.split_asm arch_capability.split_asm)
    apply (rule corres_guard_imp)
-     apply (rule corres_split[OF updateCap_same_master])
-        apply simp
-       apply (rule corres_split[OF storePTE_corres])
-          apply assumption
-         apply (rule corres_machine_op, rule corres_Id; simp)
-        apply wpsimp+
+     apply (corres corres: updateCap_same_master)
     apply (clarsimp simp: cte_wp_at_caps_of_state is_arch_update_def
                           invs_valid_objs invs_psp_aligned invs_distinct)
     apply (case_tac cap; simp add: is_cap_simps cap_master_cap_simps)
