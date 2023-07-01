@@ -334,8 +334,9 @@ lemma corres_cross_over_pte_at:
   done
 
 lemma getObject_PTE_corres[corres]:
-  "corres pte_relation' (pte_at p and pspace_aligned and pspace_distinct) \<top>
-          (get_pte p) (getObject p)"
+  "p = p' \<Longrightarrow>
+   corres pte_relation' (pte_at p and pspace_aligned and pspace_distinct) \<top>
+          (get_pte p) (getObject p')"
   apply (rule corres_cross_over_pte_at, fastforce)
   apply (simp add: getObject_def gets_map_def split_def bind_assoc)
   apply (rule corres_no_failI)
@@ -451,8 +452,8 @@ lemma setObject_PT_corres:
   done
 
 lemma storePTE_corres[corres]:
-  "pte_relation' pte pte' \<Longrightarrow>
-  corres dc (pte_at p and pspace_aligned and pspace_distinct) \<top> (store_pte p pte) (storePTE p pte')"
+  "\<lbrakk> p = p'; pte_relation' pte pte' \<rbrakk> \<Longrightarrow>
+  corres dc (pte_at p and pspace_aligned and pspace_distinct) \<top> (store_pte p pte) (storePTE p' pte')"
   apply (simp add: store_pte_def storePTE_def)
   apply (rule corres_assume_pre, simp add: pte_at_def)
   apply (rule corres_symb_exec_l)
@@ -577,7 +578,7 @@ lemma pteAtIndex_corres:
      \<top>
      (get_pte (pt_slot_offset level pt vptr))
      (pteAtIndex level' pt vptr)"
-  by (simp add: pteAtIndex_def) (rule getObject_PTE_corres)
+  by (simp add: pteAtIndex_def getObject_PTE_corres)
 
 lemma user_region_or:
   "\<lbrakk> vref \<in> user_region; vref' \<in> user_region \<rbrakk> \<Longrightarrow> vref || vref' \<in> user_region"
