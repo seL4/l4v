@@ -97,13 +97,24 @@ lemma set_vpcu_valid_vs_lookup[wp]:
   apply (simp add: valid_vs_lookup_vcpu_update)
   done
 
+lemma set_vcpu_vmid_inv[wp]:
+  "set_vcpu vcpuPtr vcpu \<lbrace>\<lambda>s. P (vmid_inv s)\<rbrace>"
+  unfolding vmid_inv_def
+  by (wp_pre, wps, wpsimp, simp)
+
 (* FIXME AARCH64 move to ArchVSpace_AI to match ARM_HYP *)
 crunches do_machine_op
   for valid_vs_lookup2[wp]: "\<lambda>s. P (valid_vs_lookup s)"
   (ignore: get_object set_object)
 
+lemma vmid_inv_cur_vcpu[simp]:
+  "vmid_inv (s\<lparr>arch_state := arch_state s\<lparr>arm_current_vcpu := x\<rparr>\<rparr>) = vmid_inv s"
+  by (simp add: vmid_inv_def)
+
 crunches vcpu_switch
   for valid_vs_lookup[wp]: "\<lambda>s. P (valid_vs_lookup s)"
+  and vmid_inv[wp]: vmid_inv
+  and valid_vmid_table[wp]: valid_vmid_table
   (simp: crunch_simps wp: crunch_wps)
 
 (* FIXME AARCH64 won't crunch *)
@@ -717,7 +728,7 @@ lemma Arch_switchToThread_pred_tcb'[wp]:
   "Arch.switchToThread t \<lbrace>\<lambda>s. P (pred_tcb_at' proj P' t' s)\<rbrace>"
 proof -
   have pos: "\<And>P t t'. Arch.switchToThread t \<lbrace>pred_tcb_at' proj P t'\<rbrace>"
-    by (wpsimp wp: setVMRoot_obj_at simp: AARCH64_H.switchToThread_def)
+    by (wpsimp simp: AARCH64_H.switchToThread_def)
   show ?thesis
     apply (rule P_bool_lift [OF pos])
     sorry (* FIXME AARCH64: where does this switchToThread_typ_at' come from? it's not in AInvs on any arch
@@ -972,34 +983,27 @@ lemma Arch_switchToThread_invs[wp]:
   "\<lbrace>invs' and tcb_at' t\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. invs'\<rbrace>"
   unfolding AARCH64_H.switchToThread_def by (wpsimp wp: getObject_tcb_hyp_sym_refs)
 
-lemma [wp]: (* FIXME AARCH64 *)
-  "\<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace> loadVMID param_a \<lbrace>\<lambda>_ s. P (ksCurDomain s)\<rbrace>"
-  sorry
-
-lemma [wp]: (* FIXME AARCH64 *)
-  "\<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace> updateASIDPoolEntry param_a param_b \<lbrace>\<lambda>_ s. P (ksCurDomain s)\<rbrace>"
-  sorry
-
 crunch ksCurDomain[wp]: "Arch.switchToThread" "\<lambda>s. P (ksCurDomain s)"
-  (simp: crunch_simps wp: crunch_wps)
+  (simp: crunch_simps wp: crunch_wps getASID_wp)
 
 lemma Arch_swichToThread_tcbDomain_triv[wp]:
-  "\<lbrace> obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t' \<rbrace> Arch.switchToThread t \<lbrace> \<lambda>_. obj_at'  (\<lambda>tcb. P (tcbDomain tcb)) t' \<rbrace>"
+  "Arch.switchToThread t \<lbrace> obj_at'  (\<lambda>tcb. P (tcbDomain tcb)) t' \<rbrace>"
   apply (clarsimp simp: AARCH64_H.switchToThread_def storeWordUser_def)
   apply (wp hoare_drop_imp | simp)+
-  done
+  sorry (* FIXME AARCH64: needs obj_at_tcb preservation (maybe P (pred_tcb_at)?), which should
+           cover this and all of the below. Full obj_at preservation does not hold. *)
 
 lemma Arch_swichToThread_tcbPriority_triv[wp]:
-  "\<lbrace> obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t' \<rbrace> Arch.switchToThread t \<lbrace> \<lambda>_. obj_at'  (\<lambda>tcb. P (tcbPriority tcb)) t' \<rbrace>"
+  "Arch.switchToThread t \<lbrace> obj_at'  (\<lambda>tcb. P (tcbPriority tcb)) t' \<rbrace>"
   apply (clarsimp simp: AARCH64_H.switchToThread_def storeWordUser_def)
   apply (wp hoare_drop_imp | simp)+
-  done
+  sorry (* FIXME AARCH64 *)
 
 lemma Arch_switchToThread_tcb_in_cur_domain'[wp]:
-  "\<lbrace>tcb_in_cur_domain' t'\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>_. tcb_in_cur_domain' t' \<rbrace>"
+  "Arch.switchToThread t \<lbrace>tcb_in_cur_domain' t'\<rbrace>"
   apply (rule tcb_in_cur_domain'_lift)
    apply wp+
-  done
+  sorry (* FIXME AARCH64 *)
 
 lemma tcbSchedDequeue_not_tcbQueued:
   "\<lbrace> tcb_at' t \<rbrace> tcbSchedDequeue t \<lbrace> \<lambda>_. obj_at' (\<lambda>x. \<not> tcbQueued x) t \<rbrace>"
@@ -1017,13 +1021,11 @@ lemma asUser_obj_at[wp]:
   apply (simp add: asUser_fetch_def obj_at'_def)
   done
 
-lemma asUser_tcbState_inv[wp]:
-  "asUser t m \<lbrace>obj_at' (P \<circ> tcbState) t\<rbrace>"
-  apply (simp add: asUser_def tcb_in_cur_domain'_def threadGet_def)
-  apply (wp threadSet_obj_at'_strongish getObject_tcb_wp | wpc | simp | clarsimp simp: obj_at'_def)+
-  done
+lemma setVMRoot_obj_at_tcb[wp]:
+  "setVMRoot t \<lbrace>obj_at' (P \<circ> tcbState) t\<rbrace>"
+  sorry
 
-lemma Arch_switchToThread_obj_at[wp]:
+lemma Arch_switchToThread_obj_at_tcbState[wp]:
   "Arch.switchToThread t \<lbrace>obj_at' (P \<circ> tcbState) t\<rbrace>"
   by (wpsimp simp: AARCH64_H.switchToThread_def)
 
@@ -1217,7 +1219,7 @@ lemma switchToThread_ct_in_state[wp]:
 proof -
   show ?thesis
     apply (simp add: Thread_H.switchToThread_def tcbSchedEnqueue_def unless_def)
-    apply (wp setCurThread_ct_in_state Arch_switchToThread_obj_at
+    apply (wp setCurThread_ct_in_state Arch_switchToThread_obj_at_tcbState
          | simp add: o_def cong: if_cong)+
     done
 qed

@@ -270,10 +270,10 @@ lemma storePTE_state_hyp_refs_of[wp]:
 crunch cte_wp_at'[wp]: setIRQState "\<lambda>s. P (cte_wp_at' P' p s)"
 crunch inv[wp]: getIRQSlot "P"
 
-lemma setObject_ASIDPool_corres:
-  "a = map_option abs_asid_entry o inv ASIDPool a' o ucast \<Longrightarrow>
+lemma setObject_ASIDPool_corres[corres]:
+  "\<lbrakk> p = p'; a = map_option abs_asid_entry o inv ASIDPool a' o ucast \<rbrakk> \<Longrightarrow>
   corres dc (asid_pool_at p and pspace_aligned and pspace_distinct) \<top>
-            (set_asid_pool p a) (setObject p a')"
+            (set_asid_pool p a) (setObject p' a')"
   apply (simp add: set_asid_pool_def)
   apply (rule corres_underlying_symb_exec_l[where P=P and Q="\<lambda>_. P" for P])
     apply (rule corres_no_failI; clarsimp)
@@ -1011,21 +1011,23 @@ lemma gets_opt_bind_throw_opt:
   apply (simp add: obind_def split: option.splits)
   done
 
-(* FIXME AARCH64: needs review *)
 lemma find_vspace_for_asid_rewite:
-  "(find_vspace_for_asid asid) =
-   (doE
-      entry_opt \<leftarrow> liftE $ gets (entry_for_asid asid);
-      (case entry_opt of
-          Some entry \<Rightarrow> returnOk (ap_vspace entry)
-        | None \<Rightarrow> throwError ExceptionTypes_A.InvalidRoot)
-    odE)"
+  "find_vspace_for_asid asid =
+   doE
+     unlessE (0 < asid) $ throwError ExceptionTypes_A.InvalidRoot;
+     entry_opt \<leftarrow> liftE $ gets (entry_for_asid asid);
+     case entry_opt of
+       Some entry \<Rightarrow> returnOk (ap_vspace entry)
+     | None \<Rightarrow> throwError ExceptionTypes_A.InvalidRoot
+   odE"
   unfolding find_vspace_for_asid_def vspace_for_asid_def
-  apply clarsimp
-  apply (rule ext)
-  apply (simp add: bindE_def throw_opt_def liftE_def simpler_gets_def)
-  apply (simp add: bind_def)
-  apply (simp add: obind_def split: option.splits)
+  apply (cases "0 < asid")
+   apply simp (* rewrite unlessE before unfolding things *)
+   apply (fastforce simp: bindE_def throw_opt_def liftE_def simpler_gets_def bind_def return_def
+                          obind_None_eq
+                    split: option.splits)
+  apply (simp add: liftE_def simpler_gets_def bindE_def bind_def return_def throw_opt_def
+                   throwError_def)
   done
 
 (* FIXME AARCH64: move *)

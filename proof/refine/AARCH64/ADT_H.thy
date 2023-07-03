@@ -1535,11 +1535,11 @@ lemma absInterruptStates_correct:
 definition
   "absArchState s' \<equiv>
    case s' of
-     ARMKernelState asid_tbl kvspace vmid_table next_vmid global_us_vspace current_vcpu
+     ARMKernelState asid_tbl kvspace vmid_tab next_vmid global_us_vspace current_vcpu
                     num_list_regs gs_pt_types \<Rightarrow>
      \<lparr> arm_asid_table = asid_tbl \<circ> ucast,
        arm_kernel_vspace = kvspace,
-       arm_vmid_table = map_option ucast \<circ> vmid_table,
+       arm_vmid_table = map_option ucast \<circ> vmid_tab,
        arm_next_vmid = next_vmid,
        arm_us_global_vspace = global_us_vspace,
        arm_current_vcpu = current_vcpu,
