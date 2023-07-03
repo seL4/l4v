@@ -1039,5 +1039,9 @@ lemma invs_valid_uses[elim!]:
   "invs s \<Longrightarrow> valid_uses s"
   by (simp add: invs_def valid_state_def valid_arch_state_def)
 
+crunches set_object
+  for vmid_table[wp]: "\<lambda>s. P (vmid_table s)"
+  (simp: get_object_def)
+
 end
 end

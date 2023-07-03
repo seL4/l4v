@@ -368,7 +368,7 @@ lemma invs_A:
     apply (clarsimp simp: valid_asid_table_def state_defs)
    apply (simp add: valid_arch_state_def state_defs obj_at_def a_type_def cur_vcpu_2_def
                     vmid_inv_def is_inv_def vmid_for_asid_2_def obind_def
-                    valid_global_tables_2_def empty_pt_def)
+                    valid_global_tables_2_def empty_pt_def valid_vmid_table_def)
   apply (rule conjI)
    apply (clarsimp simp: valid_irq_node_def obj_at_def state_defs
                          is_cap_table_def wf_empty_bits

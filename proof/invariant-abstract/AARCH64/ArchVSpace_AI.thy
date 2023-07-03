@@ -701,8 +701,14 @@ lemma find_free_vmid_vmid_inv[wp]:
                    dest: inj_on_domD)
   done
 
+lemma invalidate_vmid_entry_valid_vmid_table[wp]:
+  "invalidate_vmid_entry vmid \<lbrace>valid_vmid_table\<rbrace>"
+  unfolding invalidate_vmid_entry_def
+  by (wpsimp simp: valid_vmid_table_def)
+
 crunches find_free_vmid
   for valid_global_tables[wp]: "valid_global_tables"
+  and valid_vmid_table[wp]: valid_vmid_table
 
 lemma find_free_vmid_valid_arch [wp]:
   "find_free_vmid \<lbrace>valid_arch_state\<rbrace>"
@@ -826,6 +832,10 @@ lemma update_asid_pool_entry_asid_pools[wp]:
   supply fun_upd_apply[simp del]
   by wpsimp
 
+lemma valid_vmid_table_None_upd:
+  "valid_vmid_table_2 table \<Longrightarrow> valid_vmid_table_2 (table(vmid := None))"
+  by (simp add: valid_vmid_table_2_def)
+
 lemma invalidate_asid_entry_invs[wp]:
   "invalidate_asid_entry asid \<lbrace>invs\<rbrace>"
   unfolding invalidate_asid_entry_def invalidate_asid_def invalidate_vmid_entry_def invs_def
@@ -838,7 +848,8 @@ lemma invalidate_asid_entry_invs[wp]:
          | wps)+
   apply (clarsimp simp: valid_irq_node_def valid_global_refs_def global_refs_def valid_arch_state_def
                         valid_global_objs_def valid_global_arch_objs_def valid_machine_state_def
-                        valid_vspace_objs_def vmid_for_asid_upd_eq comp_upd_simp is_inv_None_upd)
+                        valid_vspace_objs_def vmid_for_asid_upd_eq comp_upd_simp is_inv_None_upd
+                        valid_vmid_table_None_upd)
   done
 
 lemma find_free_vmid_invs[wp]:
@@ -849,18 +860,22 @@ lemma find_free_vmid_invs[wp]:
              simp: valid_kernel_mappings_def equal_kernel_mappings_def valid_asid_map_def
                    valid_global_vspace_mappings_def)
 
+lemma valid_vmid_table_Some_upd:
+  "\<lbrakk> valid_vmid_table_2 table; asid \<noteq> 0 \<rbrakk> \<Longrightarrow> valid_vmid_table_2 (table (vmid \<mapsto> asid))"
+  by (simp add: valid_vmid_table_2_def)
+
 lemma store_hw_asid_valid_arch[wp]:
-  "\<lbrace>valid_arch_state and (\<lambda>s. asid_map s asid = None \<and> arm_vmid_table (arch_state s) vmid = None)\<rbrace>
+  "\<lbrace>valid_arch_state and (\<lambda>s. asid_map s asid = None \<and> arm_vmid_table (arch_state s) vmid = None \<and> asid \<noteq> 0)\<rbrace>
    store_vmid asid vmid
    \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
   unfolding store_vmid_def valid_arch_state_def vmid_inv_def
   supply fun_upd_apply[simp del]
   apply (wpsimp simp: valid_global_arch_objs_upd_eq_lift | wps)+
-  apply (fastforce simp: vmid_for_asid_upd_eq elim: is_inv_Some_upd)
+  apply (fastforce simp: vmid_for_asid_upd_eq elim: is_inv_Some_upd intro: valid_vmid_table_Some_upd)
   done
 
 lemma store_vmid_invs[wp]:
-  "\<lbrace>invs and (\<lambda>s. asid_map s asid = None \<and> arm_vmid_table (arch_state s) vmid = None)\<rbrace>
+  "\<lbrace>invs and (\<lambda>s. asid_map s asid = None \<and> arm_vmid_table (arch_state s) vmid = None \<and> asid \<noteq> 0)\<rbrace>
    store_vmid asid vmid
    \<lbrace>\<lambda>_. invs\<rbrace>"
   unfolding invs_def valid_state_def valid_pspace_def
@@ -902,12 +917,12 @@ lemma find_free_vmid_None_asid_map[wp]:
   by wpsimp
 
 lemma get_hw_asid_valid_arch[wp]:
-  "get_vmid asid \<lbrace>valid_arch_state\<rbrace>"
+  "\<lbrace>valid_arch_state and K (asid \<noteq> 0)\<rbrace> get_vmid asid \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
   unfolding get_vmid_def
   by wpsimp
 
 lemma get_hw_asid_invs[wp]:
-  "get_vmid asid \<lbrace>invs\<rbrace>"
+  "\<lbrace>invs and K (asid \<noteq> 0)\<rbrace> get_vmid asid \<lbrace>\<lambda>_. invs\<rbrace>"
   unfolding get_vmid_def
   by (wpsimp wp: store_vmid_invs load_vmid_wp simp: opt_map_def)
 
@@ -924,7 +939,7 @@ crunches invalidate_tlb_by_asid, invalidate_tlb_by_asid_va
   (ignore: do_machine_op)
 
 lemma arm_context_switch_invs [wp]:
-  "arm_context_switch pt asid \<lbrace>invs\<rbrace>"
+  "\<lbrace>invs and K (asid \<noteq> 0)\<rbrace> arm_context_switch pt asid \<lbrace>\<lambda>_. invs\<rbrace>"
   unfolding arm_context_switch_def by wpsimp
 
 crunches set_vm_root
@@ -935,6 +950,10 @@ lemma set_global_user_vspace_invs[wp]:
   "set_global_user_vspace \<lbrace>invs\<rbrace>"
   unfolding set_global_user_vspace_def
   by wpsimp
+
+lemma vspace_for_asid_0_None[simp]:
+  "vspace_for_asid 0 s = None"
+  by (simp add: vspace_for_asid_def entry_for_asid_def)
 
 lemma set_vm_root_invs[wp]:
   "set_vm_root t \<lbrace>invs\<rbrace>"

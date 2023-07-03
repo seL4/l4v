@@ -621,9 +621,21 @@ lemmas vmid_for_asid_def = vmid_for_asid_2_def
 abbreviation (input) asid_map :: "'z::state_ext state \<Rightarrow> asid \<rightharpoonup> vmid" where
   "asid_map \<equiv> vmid_for_asid"
 
+locale_abbrev
+  "vmid_table s \<equiv> arm_vmid_table (arch_state s)"
+
 (* vmIDs stored in ASID pools form the inverse of the vmid_table *)
 definition vmid_inv :: "'z::state_ext state \<Rightarrow> bool" where
-  "vmid_inv s \<equiv> is_inv (arm_vmid_table (arch_state s)) (vmid_for_asid s)"
+  "vmid_inv s \<equiv> is_inv (vmid_table s) (vmid_for_asid s)"
+
+(* The vmID table never stores ASID 0 *)
+definition valid_vmid_table_2 :: "(vmid \<rightharpoonup> asid) \<Rightarrow> bool" where
+  "valid_vmid_table_2 table \<equiv> \<forall>vmid. table vmid \<noteq> Some 0"
+
+locale_abbrev valid_vmid_table :: "'z::state_ext state \<Rightarrow> bool" where
+  "valid_vmid_table s \<equiv> valid_vmid_table_2 (arm_vmid_table (arch_state s))"
+
+lemmas valid_vmid_table_def = valid_vmid_table_2_def
 
 definition valid_global_arch_objs where
   "valid_global_arch_objs \<equiv> \<lambda>s. vspace_pt_at (global_pt s) s"
@@ -641,8 +653,8 @@ locale_abbrev valid_global_tables :: "'z::state_ext state \<Rightarrow> bool" wh
 lemmas valid_global_tables_def = valid_global_tables_2_def
 
 definition valid_arch_state :: "'z::state_ext state \<Rightarrow> bool" where
-  "valid_arch_state \<equiv> valid_asid_table and valid_uses and vmid_inv and cur_vcpu and
-                      valid_global_arch_objs and valid_global_tables"
+  "valid_arch_state \<equiv> valid_asid_table and valid_uses and vmid_inv and valid_vmid_table and
+                      cur_vcpu and valid_global_arch_objs and valid_global_tables"
 
 (* ---------------------------------------------------------------------------------------------- *)
 
@@ -3040,6 +3052,14 @@ lemma valid_vspace_objs_update [iff]:
 lemma valid_arch_caps_update [iff]:
   "valid_arch_caps (f s) = valid_arch_caps s"
   by (simp add: valid_arch_caps_def asid_table)
+
+end
+
+context Arch_arch_update_eq begin
+
+lemma valid_vmid_table_update[iff]:
+  "valid_vmid_table (f s) = valid_vmid_table s"
+  by (simp add: arch)
 
 end
 
