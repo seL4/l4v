@@ -2065,7 +2065,7 @@ lemma perform_pg_inv_map_invs[wp]:
   unfolding perform_pg_inv_map_def
   supply if_split[split del]
   apply (wpsimp wp: store_pte_invs arch_update_cap_invs_map hoare_vcg_all_lift hoare_vcg_imp_lift'
-                    invalidate_tlb_by_asid_va_invs
+                    invalidate_tlb_by_asid_va_invs dmo_invs_lift
          | strengthen if_pair_imp_strengthen)+
   apply (clarsimp simp: valid_page_inv_def cte_wp_at_caps_of_state is_arch_update_def is_cap_simps
                         cap_master_cap_simps parent_for_refs_def valid_slots_def same_ref_def)
