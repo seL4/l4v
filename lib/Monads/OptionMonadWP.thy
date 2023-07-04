@@ -21,8 +21,10 @@ begin
    TODO: design a sensible syntax for them. *)
 
 (* Partial correctness. *)
-definition ovalid :: "('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 'a option) \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool" where
-  "ovalid P f Q \<equiv> \<forall>s r. P s \<and> f s = Some r \<longrightarrow> Q r s"
+definition ovalid :: "('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 'a option) \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
+  ("\<lblot>_\<rblot>/ _ /\<lblot>_\<rblot>") where
+  "\<lblot>P\<rblot> f \<lblot>Q\<rblot> \<equiv> \<forall>s r. P s \<and> f s = Some r \<longrightarrow> Q r s"
+
 (* Total correctness. *)
 definition ovalidNF :: "('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 'a option) \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool" where
   "ovalidNF P f Q \<equiv> \<forall>s. P s \<longrightarrow> (f s \<noteq> None \<and> (\<forall>r. f s = Some r \<longrightarrow> Q r s))"
@@ -57,6 +59,10 @@ lemmas owhile_add_inv = owhile_inv_def[symmetric]
 
 
 (* WP rules for ovalid. *)
+lemma ovalid_inv[wp]:
+  "ovalid P f (\<lambda>_. P)"
+  by (simp add: ovalid_def)
+
 lemma obind_wp[wp]:
   "\<lbrakk> \<And>r. ovalid (R r) (g r) Q; ovalid P f R \<rbrakk> \<Longrightarrow> ovalid P (obind f g) Q"
   by (simp add: ovalid_def obind_def split: option.splits, fast)

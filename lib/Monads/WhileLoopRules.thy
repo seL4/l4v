@@ -383,6 +383,22 @@ lemma whileLoop_wp:
   \<lbrace> I r \<rbrace> whileLoop C B r \<lbrace> Q \<rbrace>"
   by (rule valid_whileLoop)
 
+lemma whileLoop_valid_inv:
+  "(\<And>r. \<lbrace> \<lambda>s. I r s \<and> C r s \<rbrace> B r \<lbrace> I \<rbrace>) \<Longrightarrow> \<lbrace> I r \<rbrace> whileLoop C B r \<lbrace> I \<rbrace>"
+  apply (fastforce intro: whileLoop_wp)
+  done
+
+lemma valid_whileLoop_cond_fail:
+  assumes pre_implies_post: "\<And>s. P r s \<Longrightarrow> Q r s"
+      and pre_implies_fail: "\<And>s. P r s \<Longrightarrow> \<not> C r s"
+    shows "\<lbrace> P r \<rbrace> whileLoop C B r \<lbrace> Q \<rbrace>"
+  using assms
+  apply (clarsimp simp: valid_def)
+  apply (subst (asm) whileLoop_cond_fail)
+   apply blast
+  apply (clarsimp simp: return_def)
+  done
+
 lemma whileLoop_wp_inv [wp]:
   "\<lbrakk> \<And>r. \<lbrace>\<lambda>s. I r s \<and> C r s\<rbrace> B r \<lbrace>I\<rbrace>; \<And>r s. \<lbrakk>I r s; \<not> C r s\<rbrakk> \<Longrightarrow> Q r s \<rbrakk>
    \<Longrightarrow> \<lbrace> I r \<rbrace> whileLoop_inv C B r I M \<lbrace> Q \<rbrace>"
