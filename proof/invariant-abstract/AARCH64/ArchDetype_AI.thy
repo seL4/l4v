@@ -496,8 +496,15 @@ proof -
   thus ?thesis by (simp add: valid_kernel_mappings_def detype_def ball_ran_eq)
 qed
 
-lemma valid_asid_map_detype[detype_invs_proofs]: "valid_asid_map (detype (untyped_range cap) s)"
-  by (simp add: valid_asid_map_def)
+lemma valid_asid_map_detype[detype_invs_proofs]:
+  "valid_asid_map (detype (untyped_range cap) s)"
+proof -
+  have "valid_asid_map s"
+    using invs by (simp add: invs_def valid_state_def)
+  thus ?thesis
+    by (clarsimp simp: valid_asid_map_def entry_for_asid_def obind_None_eq pool_for_asid_def
+                       entry_for_pool_def)
+qed
 
 lemma equal_kernel_mappings_detype[detype_invs_proofs]:
   "equal_kernel_mappings (detype (untyped_range cap) s)"

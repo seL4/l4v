@@ -739,6 +739,12 @@ lemma valid_arch_caps_lift:
     apply (wpsimp wp: cap archvspace asidtable pts)+
   done
 
+lemma valid_asid_map_lift_strong:
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_table s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_pools_of s)\<rbrace>"
+  shows "f \<lbrace>valid_asid_map\<rbrace>"
+  by (wpsimp simp: valid_asid_map_def wp: entry_for_asid_lift assms)
+
 context
   fixes f :: "'a::state_ext state \<Rightarrow> ('b \<times> 'a state) set \<times> bool"
   assumes arch: "\<And>P. f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>"
@@ -753,6 +759,9 @@ private lemma pred_vspace_objs_of_lift: "f \<lbrace> \<lambda>s. P (vspace_objs_
 
 private lemma pred_pts_of_lift: "f \<lbrace> \<lambda>s. P (pts_of s) \<rbrace>"
   by (intro vspace_objs_of_pts_lift pred_vspace_objs_of_lift)
+
+private lemma pred_asid_pools_of_lift: "f \<lbrace> \<lambda>s. P (asid_pools_of s) \<rbrace>"
+  by (intro vspace_objs_of_aps_lift pred_vspace_objs_of_lift)
 
 lemma valid_global_vspace_mappings_lift:
   "f \<lbrace>valid_global_vspace_mappings\<rbrace>"
@@ -770,8 +779,8 @@ lemma valid_global_objs_lift_weak:
   unfolding valid_global_objs_def by wp
 
 lemma valid_asid_map_lift:
-    "\<lbrace>valid_asid_map\<rbrace> f \<lbrace>\<lambda>rv. valid_asid_map\<rbrace>"
-  by (wpsimp simp: valid_asid_map_def)
+  "f \<lbrace>valid_asid_map\<rbrace>"
+  by (wp valid_asid_map_lift_strong arch pred_asid_pools_of_lift)
 
 lemma valid_kernel_mappings_lift:
     "\<lbrace>valid_kernel_mappings\<rbrace> f \<lbrace>\<lambda>rv. valid_kernel_mappings\<rbrace>"

@@ -50,7 +50,6 @@ definition vspace_for_pool :: "obj_ref \<Rightarrow> asid \<Rightarrow> (obj_ref
 (* this is what asid_map encodes in ARM/ARM_HYP; getASIDPoolEntry in Haskell *)
 definition entry_for_asid :: "asid \<Rightarrow> 'z::state_ext state \<Rightarrow> asid_pool_entry option" where
   "entry_for_asid asid = do {
-     oassert (0 < asid);
      pool_ptr \<leftarrow> pool_for_asid asid;
      entry_for_pool pool_ptr asid \<circ> asid_pools_of
    }"
@@ -68,6 +67,7 @@ definition update_asid_pool_entry ::
 
 definition vspace_for_asid :: "asid \<Rightarrow> 'z::state_ext state \<Rightarrow> obj_ref option" where
   "vspace_for_asid asid = do {
+     oassert (0 < asid);
      entry \<leftarrow> entry_for_asid asid;
      oreturn $ ap_vspace entry
    }"

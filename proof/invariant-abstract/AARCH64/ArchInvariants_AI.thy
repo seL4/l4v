@@ -633,7 +633,7 @@ definition valid_vmid_table_2 :: "(vmid \<rightharpoonup> asid) \<Rightarrow> bo
   "valid_vmid_table_2 table \<equiv> \<forall>vmid. table vmid \<noteq> Some 0"
 
 locale_abbrev valid_vmid_table :: "'z::state_ext state \<Rightarrow> bool" where
-  "valid_vmid_table s \<equiv> valid_vmid_table_2 (arm_vmid_table (arch_state s))"
+  "valid_vmid_table s \<equiv> valid_vmid_table_2 (vmid_table s)"
 
 lemmas valid_vmid_table_def = valid_vmid_table_2_def
 
@@ -710,10 +710,10 @@ definition state_hyp_refs_of :: "'z::state_ext state \<Rightarrow> obj_ref \<Rig
   "state_hyp_refs_of \<equiv> \<lambda>s p. case_option {} (hyp_refs_of) (kheap s p)"
 
 
-(* covered by ASIDPool case of valid_vspace_obj, vmid_inv, and definition of
-   vspace_for_asid (asid 0 never mapped) *)
+(* Mostly covered by ASIDPool case of valid_vspace_obj and vmid_inv, but we still need to make sure
+   that ASID 0 is never mapped. *)
 definition valid_asid_map :: "'z::state_ext state \<Rightarrow> bool" where
-  "valid_asid_map \<equiv> \<top>"
+  "valid_asid_map \<equiv> \<lambda>s. entry_for_asid 0 s = None"
 
 definition valid_global_objs :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_global_objs \<equiv> \<top>"
@@ -2599,7 +2599,7 @@ lemma vspace_for_asid_lift:
   apply (simp add: obind_def pool_for_asid_def o_def split del: if_split)
   apply (rule hoare_lift_Pf[where f=asid_table])
    apply (rule hoare_lift_Pf[where f=asid_pools_of])
-    apply (wpsimp wp: assms entry_for_asid_lift split: option.splits)+
+    apply (wpsimp wp: assms entry_for_asid_lift split: option.splits split_del: if_split)+
   done
 
 lemma valid_global_arch_objs_lift:
@@ -2913,6 +2913,12 @@ lemma hyp_refs_of_rev:
   by (auto simp: hyp_refs_of_def tcb_hyp_refs_def tcb_vcpu_refs_def
                  vcpu_tcb_refs_def refs_of_ao_def
            split: kernel_object.splits arch_kernel_obj.splits option.split)
+
+lemma valid_asid_map_lift_strong:
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_table s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_pools_of s)\<rbrace>"
+  shows "f \<lbrace>valid_asid_map\<rbrace>"
+  by (wpsimp simp: valid_asid_map_def wp: entry_for_asid_lift assms)
 
 end
 

@@ -410,10 +410,8 @@ lemma cap_swap_asid_map[wp, CNodeInv_AI_assms]:
     cte_wp_at (weak_derived c) a and
     cte_wp_at (weak_derived c') b\<rbrace>
      cap_swap c a c' b \<lbrace>\<lambda>rv. valid_asid_map\<rbrace>"
-  apply (simp add: cap_swap_def set_cdt_def valid_asid_map_def vspace_at_asid_def)
-  apply (rule hoare_pre)
-   apply (wp set_cap.vs_lookup|simp
-          |rule hoare_lift_Pf [where f=arch_state])+
+  apply (simp add: cap_swap_def set_cdt_def vspace_at_asid_def)
+  apply (wp set_cap.vs_lookup|simp|rule hoare_lift_Pf [where f=arch_state])+
   done
 
 

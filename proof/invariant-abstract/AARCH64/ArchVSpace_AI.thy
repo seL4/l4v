@@ -13,6 +13,14 @@ theory ArchVSpace_AI
 imports VSpacePre_AI
 begin
 
+context Arch_p_asid_table_update_eq begin (* FIXME AARCh64: move to ArchInvariants_AI *)
+
+lemma valid_asid_map_upd[simp]:
+  "valid_asid_map (f s) = valid_asid_map s"
+  by (simp add: valid_asid_map_def)
+
+end
+
 context Arch begin global_naming AARCH64
 
 sublocale
@@ -182,7 +190,7 @@ lemma asid_high_bits_shl:
 lemma valid_asid_map_unmap:
   "valid_asid_map s \<and> is_aligned base asid_low_bits \<longrightarrow>
    valid_asid_map(s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := (asid_table s)(asid_high_bits_of base := None)\<rparr>\<rparr>)"
-  by (clarsimp simp: valid_asid_map_def)
+  by (clarsimp simp: valid_asid_map_def entry_for_asid_def obind_None_eq pool_for_asid_def)
 
 lemma asid_low_bits_word_bits:
   "asid_low_bits < word_bits"
@@ -715,7 +723,7 @@ lemma find_free_vmid_valid_arch [wp]:
   unfolding valid_arch_state_def by wpsimp
 
 lemma entry_for_asid_Some_vmidD:
-  "entry_for_asid asid s = Some entry \<Longrightarrow> ap_vmid entry = vmid_for_asid s asid \<and> 0 < asid"
+  "entry_for_asid asid s = Some entry \<Longrightarrow> ap_vmid entry = vmid_for_asid s asid"
   unfolding entry_for_asid_def vmid_for_asid_def entry_for_pool_def pool_for_asid_def
   by (auto simp: obind_def opt_map_def if_option split: option.splits)
 
@@ -836,6 +844,22 @@ lemma valid_vmid_table_None_upd:
   "valid_vmid_table_2 table \<Longrightarrow> valid_vmid_table_2 (table(vmid := None))"
   by (simp add: valid_vmid_table_2_def)
 
+lemma valid_vmid_table_Some_upd:
+  "\<lbrakk> valid_vmid_table_2 table; asid \<noteq> 0 \<rbrakk> \<Longrightarrow> valid_vmid_table_2 (table (vmid \<mapsto> asid))"
+  by (simp add: valid_vmid_table_2_def)
+
+crunches update_asid_pool_entry, set_asid_pool
+  for pool_for_asid[wp]: "\<lambda>s. P (pool_for_asid as s)"
+  (simp: pool_for_asid_def)
+
+lemma update_asid_pool_entry_valid_asid_map[wp]:
+  "update_asid_pool_entry f asid \<lbrace>valid_asid_map\<rbrace>"
+  unfolding valid_asid_map_def entry_for_asid_def
+  apply (clarsimp simp: obind_None_eq)
+  apply (wpsimp wp: hoare_vcg_disj_lift hoare_vcg_ex_lift)
+  apply (clarsimp simp: pool_for_asid_def entry_for_pool_def obind_None_eq split: if_split_asm)
+  done
+
 lemma invalidate_asid_entry_invs[wp]:
   "invalidate_asid_entry asid \<lbrace>invs\<rbrace>"
   unfolding invalidate_asid_entry_def invalidate_asid_def invalidate_vmid_entry_def invs_def
@@ -843,7 +867,7 @@ lemma invalidate_asid_entry_invs[wp]:
   supply fun_upd_apply[simp del]
   apply (wpsimp wp: load_vmid_wp valid_irq_handlers_lift valid_irq_node_typ valid_irq_states_triv
                       valid_arch_caps_lift pspace_in_kernel_window_atyp_lift_strong
-                simp: valid_kernel_mappings_def equal_kernel_mappings_def valid_asid_map_def
+                simp: valid_kernel_mappings_def equal_kernel_mappings_def
                       valid_global_vspace_mappings_def
          | wps)+
   apply (clarsimp simp: valid_irq_node_def valid_global_refs_def global_refs_def valid_arch_state_def
@@ -852,17 +876,16 @@ lemma invalidate_asid_entry_invs[wp]:
                         valid_vmid_table_None_upd)
   done
 
+crunches find_free_vmid, store_vmid
+  for valid_asid_map[wp]: valid_asid_map
+
 lemma find_free_vmid_invs[wp]:
   "find_free_vmid \<lbrace>invs\<rbrace>"
   unfolding invs_def valid_state_def valid_pspace_def
   by (wpsimp wp: load_vmid_wp valid_irq_handlers_lift valid_irq_node_typ
                  valid_arch_caps_lift pspace_in_kernel_window_atyp_lift_strong
-             simp: valid_kernel_mappings_def equal_kernel_mappings_def valid_asid_map_def
+             simp: valid_kernel_mappings_def equal_kernel_mappings_def
                    valid_global_vspace_mappings_def)
-
-lemma valid_vmid_table_Some_upd:
-  "\<lbrakk> valid_vmid_table_2 table; asid \<noteq> 0 \<rbrakk> \<Longrightarrow> valid_vmid_table_2 (table (vmid \<mapsto> asid))"
-  by (simp add: valid_vmid_table_2_def)
 
 lemma store_hw_asid_valid_arch[wp]:
   "\<lbrace>valid_arch_state and (\<lambda>s. asid_map s asid = None \<and> arm_vmid_table (arch_state s) vmid = None \<and> asid \<noteq> 0)\<rbrace>
@@ -881,7 +904,7 @@ lemma store_vmid_invs[wp]:
   unfolding invs_def valid_state_def valid_pspace_def
   by (wpsimp wp: valid_irq_node_typ valid_irq_handlers_lift valid_arch_caps_lift
                  pspace_in_kernel_window_atyp_lift_strong
-             simp: valid_kernel_mappings_def equal_kernel_mappings_def valid_asid_map_def
+             simp: valid_kernel_mappings_def equal_kernel_mappings_def
                    valid_global_vspace_mappings_def)
 
 lemma invalidate_vmid_entry_None[wp]:
@@ -2394,6 +2417,20 @@ lemma set_asid_pool_valid_arch_state:
   unfolding valid_arch_state_def
   by (wpsimp wp: set_asid_pool_vmid_inv|wps)+
 
+lemma set_asid_pool_invs_valid_asid_map[wp]:
+  "\<lbrace>valid_asid_map and valid_asid_table and
+    (\<lambda>s. asid_pools_of s ap = Some pool \<and> pool_for_asid asid s = Some ap \<and> asid \<noteq> 0)\<rbrace>
+  set_asid_pool ap (pool(asid_low_bits_of asid \<mapsto> ape))
+  \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
+  unfolding valid_asid_map_def entry_for_asid_def
+  apply (clarsimp simp: obind_None_eq)
+  apply (wp hoare_vcg_disj_lift hoare_vcg_ex_lift)
+  apply (fastforce simp: asid_high_low_inj pool_for_asid_def valid_asid_table_def entry_for_pool_def
+                         obind_None_eq
+                   dest: inj_on_domD
+                   split: if_split_asm)
+  done
+
 lemma set_asid_pool_invs_map:
   "\<lbrace>invs and
     (\<lambda>s. asid_pools_of s ap = Some pool \<and> pool_for_asid asid s = Some ap \<and>
@@ -2403,10 +2440,11 @@ lemma set_asid_pool_invs_map:
     and K (pool (asid_low_bits_of asid) = None \<and> 0 < asid \<and> ap_vmid ape = None)\<rbrace>
   set_asid_pool ap (pool(asid_low_bits_of asid \<mapsto> ape))
   \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (simp add: invs_def valid_state_def valid_pspace_def valid_asid_map_def)
+  apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (wpsimp wp: valid_irq_node_typ set_asid_pool_typ_at set_asid_pool_arch_objs_map
                     valid_irq_handlers_lift set_asid_pool_valid_arch_caps_map
                     set_asid_pool_valid_arch_state)
+  apply (clarsimp simp: valid_arch_state_def)
   done
 
 lemma ako_asid_pools_of:

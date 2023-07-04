@@ -1180,13 +1180,9 @@ lemma set_pt_global_objs [wp]:
 crunch v_ker_map[wp]: set_pt "valid_kernel_mappings"
   (ignore: set_object wp: set_object_v_ker_map crunch_wps)
 
-
-lemma set_pt_asid_map [wp]:
-  "\<lbrace>valid_asid_map\<rbrace> set_pt p pt \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
-  apply (simp add: valid_asid_map_def vspace_at_asid_def)
-  apply (rule hoare_lift_Pf2 [where f="arch_state"])
-   apply wp+
-  done
+lemma set_pt_asid_map[wp]:
+  "set_pt p pt \<lbrace>valid_asid_map\<rbrace>"
+  by (wp valid_asid_map_lift_strong)
 
 crunches store_pte
   for pred_tcb[wp]:  "\<lambda>s. Q (pred_tcb_at proj P t s)"
@@ -1988,6 +1984,16 @@ lemma set_asid_pool_valid_asid_pool_caps[wp]:
   unfolding valid_asid_pool_caps_def
   by (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
 
+lemma set_asid_pool_None_valid_asid_map[wp]:
+  "\<lbrace> valid_asid_map and (\<lambda>s. asid_pools_of s p = Some ap) \<rbrace>
+   set_asid_pool p (ap (asid_low := None))
+   \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
+  unfolding valid_asid_map_def entry_for_asid_def
+  apply (clarsimp simp: obind_None_eq pool_for_asid_def)
+  apply (wp hoare_vcg_disj_lift hoare_vcg_ex_lift get_object_wp)
+  apply (fastforce simp: entry_for_pool_def obind_None_eq in_omonad split: if_split_asm)
+  done
+
 lemma set_asid_pool_invs_unmap:
   "\<lbrace>invs and
     (\<lambda>s. asid_pools_of s p = Some ap) and
@@ -1996,7 +2002,7 @@ lemma set_asid_pool_invs_unmap:
    set_asid_pool p (ap (asid_low := None))
    \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def
-                   valid_arch_caps_def valid_asid_map_def)
+                   valid_arch_caps_def)
   apply (wp valid_irq_node_typ set_asid_pool_typ_at
             set_asid_pool_vspace_objs_unmap
             valid_irq_handlers_lift
