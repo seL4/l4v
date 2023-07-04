@@ -306,6 +306,8 @@ lemma hoare_gen_asm:
   "(P \<Longrightarrow> \<lbrace>P'\<rbrace> f \<lbrace>Q\<rbrace>) \<Longrightarrow> \<lbrace>P' and K P\<rbrace> f \<lbrace>Q\<rbrace>"
   by (fastforce simp add: valid_def)
 
+lemmas hoare_gen_asm_single = hoare_gen_asm[where P'="\<top>", simplified pred_conj_def simp_thms]
+
 lemma hoare_gen_asm_lk:
   "(P \<Longrightarrow> \<lbrace>P'\<rbrace> f \<lbrace>Q\<rbrace>) \<Longrightarrow> \<lbrace>K P and P'\<rbrace> f \<lbrace>Q\<rbrace>"
   by (fastforce simp add: valid_def)
