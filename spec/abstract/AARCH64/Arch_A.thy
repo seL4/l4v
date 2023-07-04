@@ -95,6 +95,7 @@ definition perform_pg_inv_map ::
      old_pte \<leftarrow> get_pte level slot;
      set_cap (ArchObjectCap cap) ct_slot;
      store_pte level slot pte;
+     do_machine_op $ cleanByVA_PoU slot (addrFromPPtr slot);
      when (old_pte \<noteq> InvalidPTE) $ do
         (asid, vaddr) \<leftarrow> assert_opt $ acap_map_data cap;
         invalidate_tlb_by_asid_va asid vaddr
