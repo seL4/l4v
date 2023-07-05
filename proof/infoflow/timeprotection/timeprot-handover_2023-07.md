@@ -176,7 +176,7 @@ proof breakages across AInvs, Access and InfoFlow, **which will need to be
 repaired**. However, this should make the TA subset invariant proof at
 mid-domainswitch easily provable when domainswitch happens from an idle state.
 
-### Refine "no-fail" proofs
+### Prove "no-fail" for ASpec-level TA set coverage assertions in Refine
 
 **Summary**: That the TA set overapproximates the actual addresses touched is
 enforced by the use of `assert` in ASpec; these assertions are enforced by a
@@ -184,21 +184,45 @@ enforced by the use of `assert` in ASpec; these assertions are enforced by a
 that our ASpec-level TA accounting covers all accesses, we need to **update the
 ExecSpec** so we can **repair all `corres` proofs** between ASpec and ExecSpec.
 
-#### Task: Finish updating the ExecSpec to add TA set accounting
+#### Finish updating the ExecSpec to add TA set accounting
 
 For us to be able to prove `corres`, **we need to add TA set accounting to the
 ExecSpec** that we can prove corresponds to the TA set accounting in the ASpec.
 
-This task is partially done; it is recommended to complete this before moving
-to the next task so we do not waste any time trying to prove `corres` for any
-incorrect version of an ExecSpec function.
+So far:
+- We have added `touched_addresses` as a field of the `machine_state` record
+  in `spec/design/m-skel/RISCV64/MachineTypes.thy`.
+- We have defined new, experimental versions of ExecSpec-level `touchObject`,
+  `getObject` and `setObject` in `proof/refine/RISCV64/Invariants_H.thy`, which
+  we specify in `spec/design/skel/PSpaceFuns_H.thy` as overriding their
+  placeholder/original definitions in `spec/haskell/src/SEL4/Model/PSpace.lhs`.
 
-TODO: Examples of WIP.
+Still to do:
+- Add `touchObject` to all remaining ExecSpec locations (`spec/haskell/src`)
+  that correspond to wherever we have `touch_object` in the ASpec.
+- Update more existing ExecSpec functions to reflect changes made to their
+  corresponding versions at ASpec level; in particular, we expect the
+  `kheap`/`ksPSpace`-accessing functions to change in this manner.
 
-#### Task: Prove "no-fail" as part of `corres` between new ASpec and ExecSpec
+This task is partially done; Gerwin has recommended to complete this as much as
+possible -- in particular, **modify or override the actual ExecSpec function**,
+not attempt to do proofs on an experimental copy -- before trying to prove any
+relevant `corres` lemma, so we do not waste any time attempting proofs about
+functions with stale references or missing instances of `touchObject`.
+(Drafting them as overrides is fine; we can try to move them back to the
+ExecSpec if the `corres` proofs succeed.)
+
+#### Prove "no-fail" as part of `corres` between new ASpec and ExecSpec
 
 Assertions in the ASpec are enforced by "no-fail" obligations that are part of
 the `corres` lemmas in Refine that prove correspondence between parts of ASpec
-and their ExecSpec counterparts.
+and their ExecSpec counterparts. Thus, we must **repair all `corres` proofs**.
 
-TODO: Examples of WIP.
+So far, `touchObject_corres_others` proves `corres` for some cases of
+`touchObject`, not including CNode, PageTable and DataPage
+(`proof/refine/RISCV64/KHeap_R.thy`).
+
+Note, an earlier `corres` proof attempt for `resolveAddressBits` is in
+`proof/refine/RISCV64/CSpace1_R.thy`. Before re-attempting this, the
+experimental `resolveAddressBits_copy` for which it was attempted needs to be
+turned into an override or propagated back to ExecSpec.
