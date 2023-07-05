@@ -80,6 +80,31 @@ still contains any sorries:
     L4V_ARCH=RISCV64 AINVS_QUICK_AND_DIRTY=true ACCESS_QUICK_AND_DIRTY=true INFOFLOW_QUICK_AND_DIRTY=true make -j3 InfoFlow
     L4V_ARCH=RISCV64 AINVS_QUICK_AND_DIRTY=true ACCESS_QUICK_AND_DIRTY=true INFOFLOW_QUICK_AND_DIRTY=true ./isabelle/bin/isabelle jedit -d . -l InfoFlow
 
+## Background information
+
+### TA set accounting in ASpec
+
+In the ASpec, we now account for addresses touched by the kernel by adding them
+to the TA set using the ghost functions `touch_object` and `touch_objects`
+*prior* to their actual access via any function that mentions `kheap`, the
+kernel object heap; these functions include `get_object`, `get_tcb` and others.
+
+To enforce that our TA-set accounting is sufficient (covers all actual `kheap`
+accesses), we typically now have `kheap`-accessing functions do the following:
+1. invoke the `f_kheap True` wrapper, which returns the kernel object only if
+   all addresses associated with it lie within the TA set, otherwise `None`.
+2. `assert` that it did not return `None`. Note that it is the `corres` proofs
+   in Refine that will enforce that these ASpec-level assertions hold.
+
+Note that most old `kheap` accesses in the ASpec will now use `f_kheap True`,
+and conversely `f_kheap True` will typically only be seen in ASpec functions.
+However, there are a few instances where we have the ASpec use `f_kheap False`
+to gather objects before adding them to the TA set using `touch_objects`.
+
+Moreover, pre-existing predicate definitions including abstract invariants will
+typically use `f_kheap False` to correspond to their old behaviour referring to
+the state of the `kheap` directly without considering the state of the TA set.
+
 ## Outstanding task details and examples for TP verification of ASpec
 
 ### TA equivalence proofs as part of the unwinding relation
@@ -153,4 +178,27 @@ mid-domainswitch easily provable when domainswitch happens from an idle state.
 
 ### Refine "no-fail" proofs
 
-TODO.
+**Summary**: That the TA set overapproximates the actual addresses touched is
+enforced by the use of `assert` in ASpec; these assertions are enforced by a
+"no-fail" obligation imposed by the `corres` proofs in Refine. Thus, to prove
+that our ASpec-level TA accounting covers all accesses, we need to **update the
+ExecSpec** so we can **repair all `corres` proofs** between ASpec and ExecSpec.
+
+#### Task: Finish updating the ExecSpec to add TA set accounting
+
+For us to be able to prove `corres`, **we need to add TA set accounting to the
+ExecSpec** that we can prove corresponds to the TA set accounting in the ASpec.
+
+This task is partially done; it is recommended to complete this before moving
+to the next task so we do not waste any time trying to prove `corres` for any
+incorrect version of an ExecSpec function.
+
+TODO: Examples of WIP.
+
+#### Task: Prove "no-fail" as part of `corres` between new ASpec and ExecSpec
+
+Assertions in the ASpec are enforced by "no-fail" obligations that are part of
+the `corres` lemmas in Refine that prove correspondence between parts of ASpec
+and their ExecSpec counterparts.
+
+TODO: Examples of WIP.
