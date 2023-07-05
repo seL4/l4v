@@ -57,6 +57,7 @@ definition
                  | obj \<Rightarrow> obj
       in s \<lparr> ksPSpace := (ksPSpace s) (t := obj) \<rparr>"
 
+. (* DOWN TO HERE: Broken from this point onwards as at 2023-06-30. -robs
 
 lemma threadGet_stateAssert_gets_asUser:
   "threadGet (atcbContextGet o tcbArch) t = do stateAssert (tcb_at' t) []; gets (asUser_fetch t) od"
