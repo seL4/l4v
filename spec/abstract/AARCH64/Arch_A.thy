@@ -116,7 +116,7 @@ definition do_flush :: "flush_type \<Rightarrow> vspace_ref \<Rightarrow> vspace
      case type of
        Clean \<Rightarrow> cleanCacheRange_RAM vstart vend pstart
      | Invalidate \<Rightarrow> invalidateCacheRange_RAM vstart vend pstart
-     | CleanInvalidate \<Rightarrow> invalidateCacheRange_RAM vstart vend pstart
+     | CleanInvalidate \<Rightarrow> cleanInvalidateCacheRange_RAM vstart vend pstart
      | Unify \<Rightarrow> do
          cleanCacheRange_PoU vstart vend pstart;
          dsb;
