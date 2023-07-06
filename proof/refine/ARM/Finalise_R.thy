@@ -2798,10 +2798,8 @@ lemma deleteASIDPool_invs[wp]:
   "\<lbrace>invs'\<rbrace> deleteASIDPool asid pool \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: deleteASIDPool_def)
   apply wp
-    apply (simp del: fun_upd_apply)
-    apply (strengthen invs_asid_update_strg')
-  apply (wp mapM_wp' getObject_inv loadObject_default_inv
-              | simp)+
+      apply (strengthen invs_asid_update_strg')
+      apply (wpsimp wp: mapM_wp' getObject_inv)+
   done
 
 lemma invalidateASIDEntry_valid_ap' [wp]:
@@ -2837,9 +2835,8 @@ lemma deleteASID_invs'[wp]:
       apply (drule subsetD, blast)
       apply clarsimp
      apply (auto dest!: ran_del_subset)[1]
-    apply (wp getObject_valid_obj getObject_inv loadObject_default_inv
-             | simp add: objBits_simps archObjSize_def pageBits_def)+
-  apply clarsimp
+    apply (wpsimp wp: getObject_valid_obj getObject_inv
+                simp: objBits_simps archObjSize_def pageBits_def)+
   done
 
 lemma arch_finaliseCap_invs[wp]:
@@ -2879,7 +2876,7 @@ lemma prepares_delete_helper'':
 
 crunches finaliseCapTrue_standin, unbindNotification
   for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
-  (wp: crunch_wps getObject_inv loadObject_default_inv simp: crunch_simps)
+  (wp: crunch_wps getObject_inv simp: crunch_simps)
 
 lemma cteDeleteOne_cteCaps_of:
   "\<lbrace>\<lambda>s. (cte_wp_at' (\<lambda>cte. \<exists>final. finaliseCap (cteCap cte) final True \<noteq> fail) p s \<longrightarrow>
@@ -3679,14 +3676,13 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch cte_wp_at'[wp]: deleteASIDPool "cte_wp_at' P p"
   (simp: crunch_simps assertE_def
-   wp: crunch_wps getObject_inv loadObject_default_inv)
+   wp: crunch_wps getObject_inv)
 
 lemma deleteASID_cte_wp_at'[wp]:
   "\<lbrace>cte_wp_at' P p\<rbrace> deleteASID param_a param_b \<lbrace>\<lambda>_. cte_wp_at' P p\<rbrace>"
   apply (simp add: deleteASID_def invalidateHWASIDEntry_def invalidateASID_def
               cong: option.case_cong)
-  apply (wp setObject_cte_wp_at'[where Q="\<top>"] getObject_inv
-            loadObject_default_inv setVMRoot_cte_wp_at'
+  apply (wp setObject_cte_wp_at'[where Q="\<top>"] getObject_inv setVMRoot_cte_wp_at'
           | clarsimp simp: updateObject_default_def in_monad
                            projectKOs
           | rule equals0I
@@ -3698,7 +3694,7 @@ crunches unmapPageTable, unmapPage, unbindNotification, cancelAllIPC, cancelAllS
          unbindFromSC, schedContextZeroRefillMax, schedContextUnbindYieldFrom,
          schedContextUnbindReply, schedContextUnbindAllTCBs
   for cte_wp_at'[wp]: "cte_wp_at' P p"
-  (simp: crunch_simps wp: crunch_wps getObject_inv loadObject_default_inv)
+  (simp: crunch_simps wp: crunch_wps getObject_inv)
 
 lemma replyClear_standin_cte_preserved[wp]:
   "replyClear rptr tptr \<lbrace>cte_wp_at' (\<lambda>cte. P (cteCap cte)) p\<rbrace>"
@@ -3761,7 +3757,7 @@ lemma replyUnlink_st_tcb_at_simplish:
 
 crunch st_tcb_at_simplish: cteDeleteOne
             "st_tcb_at' (\<lambda>st. P st \<or> simple' st) t"
-  (wp: crunch_wps getObject_inv loadObject_default_inv threadSet_pred_tcb_no_state
+  (wp: crunch_wps getObject_inv threadSet_pred_tcb_no_state
    simp: crunch_simps unless_def)
 
 lemma cteDeleteOne_st_tcb_at[wp]:
@@ -3773,18 +3769,6 @@ lemma cteDeleteOne_st_tcb_at[wp]:
   apply (rule_tac x=P in exI)
   apply (auto)
   done
-
-
-context
-notes option.case_cong_weak[cong]
-begin
-crunches unbindNotification
-  for sch_act_simple[wp]: sch_act_simple
-  (wp: crunch_wps ssa_sch_act_simple sts_sch_act_simple getObject_inv
-       loadObject_default_inv
-   simp: crunch_simps unless_def
-   rule: sch_act_simple_lift)
-end
 
 lemma rescheduleRequired_sch_act_not[wp]:
   "\<lbrace>\<top>\<rbrace> rescheduleRequired \<lbrace>\<lambda>rv. sch_act_not t\<rbrace>"

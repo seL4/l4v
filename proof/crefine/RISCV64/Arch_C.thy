@@ -1224,9 +1224,7 @@ lemma ccorres_pre_getObject_pte:
    apply (rule ccorres_symb_exec_l)
       apply (rule_tac P="ko_at' rv p" in ccorres_cross_over_guard)
       apply assumption
-     apply (wp getObject_inv loadObject_default_inv
-               getPTE_wp empty_fail_getObject | simp)+
-  apply clarsimp
+     apply (wpsimp wp: getObject_inv getPTE_wp empty_fail_getObject)+
   apply (erule cmap_relationE1[OF rf_sr_cpte_relation], erule ko_at_projectKO_opt)
   apply clarsimp
   done

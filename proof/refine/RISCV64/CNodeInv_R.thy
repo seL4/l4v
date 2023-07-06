@@ -6545,7 +6545,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 crunches "Arch.finaliseCap", unbindMaybeNotification, prepareThreadDelete,
          schedContextMaybeUnbindNtfn, cleanReply
   for st_tcb_at'[wp]: "st_tcb_at' P t"
-  (simp: crunch_simps wp: crunch_wps getObject_inv loadObject_default_inv)
+  (simp: crunch_simps wp: crunch_wps getObject_inv)
 
 lemma replyPop_st_tcb_at':
   assumes x[simp]: "\<And>st. simple' st \<Longrightarrow> P st"
@@ -6660,8 +6660,7 @@ notes option.case_cong_weak[cong]
 begin
 crunch rvk_prog': finaliseCap
     "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map capToRPO (cteCaps_of s x))"
-  (wp: crunch_wps emptySlot_rvk_prog' threadSet_ctesCaps_of hoare_vcg_all_lift
-       getObject_inv loadObject_default_inv
+  (wp: crunch_wps emptySlot_rvk_prog' threadSet_ctesCaps_of hoare_vcg_all_lift getObject_inv
    simp: crunch_simps unless_def o_def
    ignore: setCTE threadSet)
 end

@@ -947,7 +947,7 @@ lemma findVSpaceForASID_corres:
       apply clarsimp
       apply (rule page_table_at_cross; assumption?)
       apply fastforce
-     apply (wp getObject_inv loadObject_default_inv | simp)+
+     apply (wpsimp wp: getObject_inv)+
    apply (clarsimp simp: o_def)
    apply (rule conjI)
     apply (rule valid_asid_tableD; simp)
