@@ -774,7 +774,7 @@ lemma ifConfRefillUnblockCheck_ko_at'_tcb[wp]:
   "ifCondRefillUnblockCheck scOpt act ast \<lbrace>\<lambda>s. P (ko_at' (ko :: tcb) tcbPtr s)\<rbrace>"
   unfolding ifCondRefillUnblockCheck_def refillUnblockCheck_def refillHeadOverlappingLoop_def
             mergeRefills_def updateRefillHd_def updateSchedContext_def refillPopHead_def
-  by (wpsimp wp: whileLoop_wp' hoare_drop_imps)
+  by (wpsimp wp: whileLoop_valid_inv hoare_drop_imps)
 
 lemma doReplyTransfer_invs'[wp]:
   "\<lbrace>invs' and tcb_at' sender and reply_at' replyPtr and sch_act_simple\<rbrace>

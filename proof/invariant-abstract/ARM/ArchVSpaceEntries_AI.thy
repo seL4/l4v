@@ -430,14 +430,14 @@ lemma as_user_valid_pdpt_objs[wp]:
 
 crunch valid_pdpt_objs[wp]: send_signal, send_ipc "valid_pdpt_objs"
   (wp: get_sched_context_wp mapM_wp' maybeM_inv hoare_vcg_if_lift2 hoare_drop_imps
-       transfer_caps_loop_pres whileLoop_wp'
+       transfer_caps_loop_pres whileLoop_valid_inv
   simp: zipWithM_x_mapM
   ignore: set_thread_state_act set_object test_reschedule)
 
 crunch valid_pdpt_objs[wp]: cancel_all_ipc, cancel_all_signals, unbind_maybe_notification,
   sched_context_maybe_unbind_ntfn, reply_unlink_tcb,
   sched_context_unbind_all_tcbs, sched_context_unbind_ntfn "valid_pdpt_objs"
-  (wp: maybeM_inv hoare_drop_imp mapM_x_wp' whileLoop_wp' ignore: tcb_release_remove
+  (wp: maybeM_inv hoare_drop_imp mapM_x_wp' whileLoop_valid_inv ignore: tcb_release_remove
    simp: crunch_simps is_round_robin_def)
 
 crunch valid_pdpt_objs[wp]:
@@ -1150,7 +1150,7 @@ crunch valid_pdpt_objs[wp]: end_timeslice "valid_pdpt_objs::det_state \<Rightarr
 
 crunches check_budget_restart, invoke_sched_control_configure_flags
   for valid_pdpt_objs[wp]: "valid_pdpt_objs::det_state \<Rightarrow> _"
-  (wp: hoare_drop_imps hoare_vcg_if_lift2 whileLoop_wp' hoare_vcg_all_lift
+  (wp: hoare_drop_imps hoare_vcg_if_lift2 whileLoop_valid_inv hoare_vcg_all_lift
   simp: Let_def ignore: tcb_release_remove)
 
 lemma perform_invocation_valid_pdpt[wp]:

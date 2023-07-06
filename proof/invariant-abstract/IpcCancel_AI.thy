@@ -2400,7 +2400,7 @@ lemma refill_unblock_check_obj_at_impossible':
    refill_unblock_check sc_opt
    \<lbrace>\<lambda>s. P (obj_at P' p s)\<rbrace>"
   unfolding refill_unblock_check_def
-  by (wpsimp wp: whileLoop_wp' update_sched_context_wp get_refills_wp
+  by (wpsimp wp: whileLoop_valid_inv update_sched_context_wp get_refills_wp
            simp: refill_head_overlapping_loop_def merge_refills_def update_refill_hd_def
                  refill_pop_head_def is_round_robin_def
     | clarsimp elim!: rsubst[where P=P] simp: obj_at_def)+

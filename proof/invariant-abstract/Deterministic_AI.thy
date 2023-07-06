@@ -3956,7 +3956,7 @@ crunches
   sched_context_unbind_ntfn, sched_context_maybe_unbind_ntfn,
   sched_context_unbind_yield_from, cancel_all_ipc, thread_set, reply_remove_tcb
   for valid_list[wp]: valid_list
-  (wp: mapM_x_wp' hoare_drop_imp whileLoop_wp' simp: is_round_robin_def crunch_simps)
+  (wp: mapM_x_wp' hoare_drop_imp whileLoop_valid_inv simp: is_round_robin_def crunch_simps)
 
 crunch all_but_exst[wp]: update_work_units "all_but_exst P"
 
@@ -4063,7 +4063,7 @@ crunch valid_list[wp]: do_fault_transfer valid_list
   (wp: mapM_wp hoare_drop_imp ignore: make_fault_msg)
 
 crunch valid_list[wp]: transfer_caps,do_normal_transfer,do_ipc_transfer,refill_unblock_check valid_list
-  (wp: mapM_wp hoare_drop_imp whileLoop_wp')
+  (wp: mapM_wp hoare_drop_imp whileLoop_valid_inv)
 
 lemma send_ipc_valid_list[wp]:
   "send_ipc block call badge can_grant can_reply_grant can_donate thread epptr \<lbrace>valid_list\<rbrace>"
@@ -4089,7 +4089,7 @@ crunches set_refills,refill_size, schedule_used
 lemma refill_budget_check_valid_list[wp]:
   "refill_budget_check usage \<lbrace>valid_list\<rbrace>"
   unfolding refill_budget_check_defs
-  apply (wpsimp wp: whileLoop_wp' hoare_drop_imps)
+  apply (wpsimp wp: whileLoop_valid_inv hoare_drop_imps)
   done
 
 lemma refill_budget_check_round_robin_valid_list[wp]:

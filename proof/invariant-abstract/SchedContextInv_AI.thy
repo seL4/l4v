@@ -1486,7 +1486,7 @@ lemma set_refills_active_sc_at[wp]:
 lemma refill_unblock_check_active_sc_at[wp]:
   "refill_unblock_check sc_ptr \<lbrace>\<lambda>s. Q (active_sc_at sc_ptr s)\<rbrace>"
   apply (clarsimp simp: refill_unblock_check_defs simp del: update_refill_hd_def)
-  apply (wpsimp wp: set_refills_wp get_refills_wp whileLoop_wp'
+  apply (wpsimp wp: set_refills_wp get_refills_wp whileLoop_valid_inv
               simp: update_refill_hd_rewrite update_sched_context_set_refills_rewrite active_sc_at_def)
   done
 
@@ -1580,7 +1580,7 @@ lemma set_sc_obj_ref_active:
 
 crunches commit_time
   for sc_active: "active_sc_at sc_ptr"
-  (wp: set_sc_obj_ref_active whileLoop_wp' crunch_wps simp: crunch_simps)
+  (wp: set_sc_obj_ref_active whileLoop_valid_inv crunch_wps simp: crunch_simps)
 
 lemma sc_badge_update_active[wp]:
   "set_sc_obj_ref sc_badge_update sc_ptr x \<lbrace>active_sc_at p'\<rbrace>"
