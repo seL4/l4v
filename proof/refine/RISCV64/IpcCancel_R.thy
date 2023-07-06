@@ -136,10 +136,7 @@ lemma cancelSignal_st_tcb_at':
    \<lbrace>\<lambda>_. st_tcb_at' P t\<rbrace>"
   unfolding cancelSignal_def Let_def
   apply (rule hoare_gen_asm_single)
-  supply getNotification_inv[wp del] set_ntfn'.get_inv[wp del]
-  apply (wpsimp wp: setThreadState_st_tcb_at'_cases
-                    hoare_drop_imp[where R="\<lambda>rv _. delete t (f rv) = []" for f]
-                    hoare_drop_imp[where R="\<lambda>rv _. \<exists>a b. delete t (f rv) = a # b" for f])
+  apply (wpsimp wp: setThreadState_st_tcb_at'_cases)
   done
 
 context begin interpretation Arch .

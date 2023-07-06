@@ -3332,7 +3332,7 @@ lemma getObject_valid_pde'[wp]:
     apply (rule hoare_vcg_conj_lift)
      apply (rule getObject_ko_at, simp)
     apply (rule getObject_inv[where P=valid_objs'])
-    apply (simp add: loadObject_default_inv)
+   apply simp
   apply (clarsimp simp: projectKOs valid_obj'_def dest!: obj_at_valid_objs')
   done
 
@@ -4050,7 +4050,7 @@ lemma copyGlobalMappings_ko_wp_at:
      apply (simp add: objBits_simps archObjSize_def)
     apply (simp add: pdeBits_def)
    apply (simp cong: if_cong split del: if_split)
-   apply (wp getObject_inv loadObject_default_inv | simp split del: if_split)+
+   apply (wp getObject_inv | simp split del: if_split)+
    apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs)
   apply (wp | simp)+
   done

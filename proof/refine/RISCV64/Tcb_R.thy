@@ -2410,7 +2410,7 @@ crunches setMCPriority
 
 crunches finaliseCap, capSwapForDelete
   for ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
-  (simp: crunch_simps wp: crunch_wps getObject_inv loadObject_default_inv cteDelete_preservation)
+  (simp: crunch_simps wp: crunch_wps getObject_inv cteDelete_preservation)
 
 lemma updateRefillHd_sc_tcb_sc_at'[wp]:
   "updateRefillHd scp f \<lbrace>\<lambda>s. Q (obj_at' (\<lambda>sc. P (scTCB sc)) p s)\<rbrace>"

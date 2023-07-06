@@ -33,14 +33,6 @@ lemma maskCapRights_allRights [simp]:
 lemma getCTE_inv [wp]: "\<lbrace>P\<rbrace> getCTE addr \<lbrace>\<lambda>rv. P\<rbrace>"
   by (simp add: getCTE_def) wp
 
-lemma getEndpoint_inv [wp]:
-  "\<lbrace>P\<rbrace> getEndpoint ptr \<lbrace>\<lambda>rv. P\<rbrace>"
-  by (simp add: getEndpoint_def getObject_inv loadObject_default_inv)
-
-lemma getNotification_inv [wp]:
-  "\<lbrace>P\<rbrace> getNotification ptr \<lbrace>\<lambda>rv. P\<rbrace>"
-  by (simp add: getNotification_def getObject_inv loadObject_default_inv)
-
 lemma getSlotCap_inv [wp]: "\<lbrace>P\<rbrace> getSlotCap addr \<lbrace>\<lambda>rv. P\<rbrace>"
   by (simp add: getSlotCap_def, wp)
 

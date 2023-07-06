@@ -45,7 +45,7 @@ lemma findVSpaceForASID_vs_at_wp:
 
 crunches findVSpaceForASID, haskell_fail
   for inv[wp]: "P"
-  (simp: const_def crunch_simps wp: loadObject_default_inv crunch_wps ignore_del: getObject)
+  (simp: const_def crunch_simps wp: crunch_wps ignore_del: getObject)
 
 lemma asidBits_asid_bits[simp]:
   "asidBits = asid_bits"
@@ -187,7 +187,7 @@ lemma dMo_valid_arch_state'[wp]:
   by (clarsimp)
 
 crunch no_0_obj'[wp]: deleteASID "no_0_obj'"
-  (simp: crunch_simps wp: crunch_wps getObject_inv loadObject_default_inv)
+  (simp: crunch_simps wp: crunch_wps getObject_inv)
 
 lemma asid_high_bits_of_ucast_ucast[simp]:
   "asid_high_bits_of (ucast (ucast asid :: machine_word)) = asid_high_bits_of asid"
@@ -363,7 +363,7 @@ crunches unmapPageTable, unmapPage
   and distinct'[wp]: "pspace_distinct'"
   and ctes [wp]: "\<lambda>s. P (ctes_of s)"
   (simp: crunch_simps
-   wp: crunch_wps getObject_inv loadObject_default_inv)
+   wp: crunch_wps getObject_inv)
 
 crunches storePTE
   for no_0_obj'[wp]: no_0_obj'
@@ -425,7 +425,7 @@ lemma checkMappingPPtr_corres:
   done
 
 crunch inv[wp]: checkMappingPPtr "P"
-  (wp: crunch_wps loadObject_default_inv simp: crunch_simps)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemmas liftE_get_pte_corres = getObject_PTE_corres[THEN corres_liftE_rel_sum[THEN iffD2]]
 

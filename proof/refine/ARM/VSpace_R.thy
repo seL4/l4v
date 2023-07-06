@@ -62,7 +62,7 @@ lemma findPDForASIDAssert_pd_at_wp:
   done
 
 crunch inv[wp]: findPDForASIDAssert "P"
-  (simp: const_def crunch_simps wp: loadObject_default_inv crunch_wps ignore_del: getObject)
+  (simp: const_def crunch_simps wp: crunch_wps ignore_del: getObject)
 
 lemma pspace_relation_pd:
   assumes p: "pspace_relation (kheap a) (ksPSpace c)"
@@ -823,7 +823,7 @@ lemma invalidateASID_valid_arch_state [wp]:
   done
 
 crunch no_0_obj'[wp]: deleteASID "no_0_obj'"
-  (simp: crunch_simps wp: crunch_wps getObject_inv loadObject_default_inv)
+  (simp: crunch_simps wp: crunch_wps getObject_inv)
 
 lemma deleteASID_corres:
   "corres dc
@@ -1357,7 +1357,7 @@ crunches unmapPageTable
   for aligned'[wp]: "pspace_aligned'"
   and distinct'[wp]: "pspace_distinct'"
   (simp: crunch_simps
-   wp: crunch_wps getObject_inv loadObject_default_inv)
+   wp: crunch_wps getObject_inv)
 
 lemma pageTableMapped_corres:
   "corres (=) (valid_arch_state and valid_vspace_objs and pspace_aligned
@@ -1382,7 +1382,6 @@ lemma pageTableMapped_corres:
   done
 
 crunch inv[wp]: pageTableMapped "P"
-  (wp: loadObject_default_inv)
 
 lemma unmapPageTable_corres:
   "corres dc
@@ -1422,7 +1421,6 @@ crunch valid_objs' [wp]: flushPage "valid_objs'"
   (wp: crunch_wps hoare_drop_imps simp: crunch_simps)
 
 crunch inv: lookupPTSlot "P"
-  (wp: loadObject_default_inv)
 
 crunches unmapPage
   for aligned' [wp]: pspace_aligned'
@@ -1478,7 +1476,7 @@ lemma checkMappingPPtr_corres:
   done
 
 crunch inv[wp]: checkMappingPPtr "P"
-  (wp: crunch_wps loadObject_default_inv simp: crunch_simps)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma store_pte_pd_at_asid[wp]:
   "\<lbrace>vspace_at_asid asid pd\<rbrace>

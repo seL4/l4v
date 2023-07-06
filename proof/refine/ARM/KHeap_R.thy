@@ -96,9 +96,6 @@ lemma obj_at_getObject:
 
 declare projectKO_inv [wp]
 
-lemma loadObject_default_inv:
-  "loadObject_default addr addr' next obj o\<lbrace> P \<rbrace>" by (simp add: ovalid_def)
-
 lemma getObject_inv:
   "\<lbrace>P\<rbrace> getObject p \<lbrace>\<lambda>(rv :: 'a :: pspace_storable). P\<rbrace>"
   unfolding getObject_def by wpsimp
@@ -1958,13 +1955,14 @@ lemma threadRead_tcb_at'':
 lemmas threadRead_tcb_at' = threadRead_tcb_at''[simplified]
 
 lemma ovalid_threadRead:
-  "o\<lbrace>\<lambda>s. tcb_at' t s \<longrightarrow> (\<exists>tcb. ko_at' tcb t s \<and> P (f tcb) s)\<rbrace>
-    threadRead f t \<lbrace>P\<rbrace>"
+  "\<lblot>\<lambda>s. tcb_at' t s \<longrightarrow> (\<exists>tcb. ko_at' tcb t s \<and> P (f tcb) s)\<rblot>
+   threadRead f t
+   \<lblot>P\<rblot>"
   by (clarsimp simp: threadRead_def oliftM_def obind_def obj_at'_def ovalid_def
               dest!: readObject_misc_ko_at' split: option.split_asm)
 
 lemma ovalid_threadRead_sp:
-  "o\<lbrace>P\<rbrace> threadRead f ptr \<lbrace>\<lambda>rv s. \<exists>tcb :: tcb. ko_at' tcb ptr s \<and> f tcb = rv \<and> P s\<rbrace>"
+  "\<lblot>P\<rblot> threadRead f ptr \<lblot>\<lambda>rv s. \<exists>tcb :: tcb. ko_at' tcb ptr s \<and> f tcb = rv \<and> P s\<rblot>"
   by (clarsimp simp: threadRead_def oliftM_def obind_def obj_at'_def ovalid_def
               dest!: readObject_misc_ko_at' split: option.split_asm)
 
@@ -4172,7 +4170,7 @@ lemma no_ofail_readCurTime[simp]:
   unfolding readCurTime_def by clarsimp
 
 lemma ovalid_readCurTime[wp]:
-  "o\<lbrace>\<lambda>s. P (ksCurTime s) s\<rbrace> readCurTime \<lbrace>\<lambda>r s. P r s \<and> r = ksCurTime s\<rbrace>"
+  "\<lblot>\<lambda>s. P (ksCurTime s) s\<rblot> readCurTime \<lblot>\<lambda>r s. P r s \<and> r = ksCurTime s\<rblot>"
   by (simp add: readCurTime_def asks_def obind_def ovalid_def)
 
 lemma ovalid_readRefillReady[rule_format, simp]:

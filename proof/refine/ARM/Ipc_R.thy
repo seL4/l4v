@@ -1805,7 +1805,7 @@ lemma doIPCTransfer_sch_act_simple [wp]:
 crunches isFinalCapability
   for cur' [wp]: "\<lambda>s. P (cur_tcb' s)"
   (simp: crunch_simps unless_when
-     wp: crunch_wps getObject_inv loadObject_default_inv)
+     wp: crunch_wps getObject_inv)
 
 lemma finaliseCapTrue_standin_tcb_at' [wp]:
   "\<lbrace>tcb_at' x\<rbrace> finaliseCapTrue_standin cap v2 \<lbrace>\<lambda>_. tcb_at' x\<rbrace>"
@@ -1950,8 +1950,7 @@ lemma cancelAllSignals_valid_queues':
 crunches cteDeleteOne
   for valid_queues'[wp]: valid_queues'
   (simp: crunch_simps inQ_def
-     wp: crunch_wps sts_st_tcb' getObject_inv loadObject_default_inv
-         threadSet_valid_queues')
+     wp: crunch_wps sts_st_tcb' getObject_inv threadSet_valid_queues')
 
 crunches handleFaultReply
   for valid_objs'[wp]: valid_objs'

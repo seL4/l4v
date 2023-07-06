@@ -1467,7 +1467,7 @@ lemma possibleSwitchTo_sch_act_sane:
   done
 
 crunch sch_act_sane[wp]: cteDeleteOne sch_act_sane
-  (wp: crunch_wps loadObject_default_inv getObject_inv
+  (wp: crunch_wps getObject_inv
    simp: crunch_simps unless_def
    rule: sch_act_sane_lift)
 

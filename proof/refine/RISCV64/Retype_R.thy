@@ -4038,13 +4038,11 @@ lemma copyGlobalMappings_ko_wp_at:
    \<lbrace>\<lambda>rv s. P (ko_wp_at' P' p s)\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (simp add: copyGlobalMappings_def storePTE_def)
-  apply (wp mapM_x_wp' setObject_ko_wp_at)
-     apply simp
-    apply (simp add: objBits_simps)
-   apply (simp cong: if_cong split del: if_split)
-   apply (wp getObject_inv loadObject_default_inv | simp split del: if_split)+
-   apply (clarsimp simp: obj_at'_def ko_wp_at'_def)
-  apply (wp | simp)+
+  apply (wpsimp wp: mapM_x_wp' setObject_ko_wp_at)
+    apply (simp cong: if_cong split del: if_split)
+    apply (wpsimp wp: getObject_inv)
+    apply (clarsimp simp: obj_at'_def ko_wp_at'_def)
+   apply wpsimp+
   done
 
 lemma threadSet_ko_wp_at2':

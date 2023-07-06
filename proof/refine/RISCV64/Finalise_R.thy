@@ -2769,10 +2769,9 @@ lemma deleteASIDPool_invs[wp]:
   "\<lbrace>invs'\<rbrace> deleteASIDPool asid pool \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: deleteASIDPool_def)
   apply wp
-    apply (simp del: fun_upd_apply)
-    apply (strengthen invs_asid_update_strg')
-  apply (wp mapM_wp' getObject_inv loadObject_default_inv
-              | simp)+
+     apply (simp del: fun_upd_apply)
+     apply (strengthen invs_asid_update_strg')
+     apply (wpsimp wp: mapM_wp' getObject_inv)+
   done
 
 crunches hwASIDFlush
@@ -2796,7 +2795,7 @@ lemma arch_finaliseCap_invs[wp]:
 
 crunches setVMRoot, deleteASIDPool
   for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
-  (wp: crunch_wps getObject_inv loadObject_default_inv getASID_wp simp: crunch_simps)
+  (wp: crunch_wps getObject_inv getASID_wp simp: crunch_simps)
 
 lemma deleteASID_ctes_of[wp]:
   "deleteASID a ptr \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace>"
@@ -2831,7 +2830,7 @@ lemma prepares_delete_helper'':
 
 crunches finaliseCapTrue_standin, unbindNotification
   for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
-  (wp: crunch_wps getObject_inv loadObject_default_inv simp: crunch_simps)
+  (wp: crunch_wps getObject_inv simp: crunch_simps)
 
 lemma cteDeleteOne_cteCaps_of:
   "\<lbrace>\<lambda>s. (cte_wp_at' (\<lambda>cte. \<exists>final. finaliseCap (cteCap cte) final True \<noteq> fail) p s \<longrightarrow>
@@ -3034,7 +3033,6 @@ lemma unbindMaybeNotification_obj_at'_no_change:
 crunches unbindNotification, unbindMaybeNotification
   for isFinal[wp]: "\<lambda>s. isFinal cap slot (cteCaps_of s)"
   (wp: sts_bound_tcb_at' threadSet_cteCaps_of crunch_wps getObject_inv
-       loadObject_default_inv
    ignore: threadSet
    simp: setBoundNotification_def)
 
@@ -3042,7 +3040,6 @@ crunches cancelSignal, cancelAllIPC
   for bound_tcb_at'[wp]: "bound_tcb_at' P t"
   and bound_sc_tcb_at'[wp]: "bound_sc_tcb_at' P t"
   (wp: sts_bound_tcb_at' threadSet_cteCaps_of crunch_wps getObject_inv
-       loadObject_default_inv
    ignore: threadSet)
 
 lemma schedContextUnbindTCB_invs'_helper:
@@ -3633,14 +3630,13 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 
 crunch cte_wp_at'[wp]: deleteASIDPool "cte_wp_at' P p"
   (simp: crunch_simps assertE_def
-   wp: crunch_wps getObject_inv loadObject_default_inv)
+   wp: crunch_wps getObject_inv)
 
 lemma deleteASID_cte_wp_at'[wp]:
   "\<lbrace>cte_wp_at' P p\<rbrace> deleteASID param_a param_b \<lbrace>\<lambda>_. cte_wp_at' P p\<rbrace>"
   apply (simp add: deleteASID_def
               cong: option.case_cong)
-  apply (wp setObject_cte_wp_at'[where Q="\<top>"] getObject_inv
-            loadObject_default_inv setVMRoot_cte_wp_at'
+  apply (wp setObject_cte_wp_at'[where Q="\<top>"] getObject_inv setVMRoot_cte_wp_at'
           | clarsimp simp: updateObject_default_def in_monad
           | rule equals0I
           | wpc)+
@@ -3651,7 +3647,7 @@ crunches unmapPageTable, unmapPage, unbindNotification, cancelAllIPC, cancelAllS
          unbindFromSC, schedContextZeroRefillMax, schedContextUnbindYieldFrom,
          schedContextUnbindReply, schedContextUnbindAllTCBs
   for cte_wp_at'[wp]: "cte_wp_at' P p"
-  (simp: crunch_simps wp: crunch_wps getObject_inv loadObject_default_inv)
+  (simp: crunch_simps wp: crunch_wps getObject_inv)
 
 lemma replyClear_standin_cte_preserved[wp]:
   "replyClear rptr tptr \<lbrace>cte_wp_at' (\<lambda>cte. P (cteCap cte)) p\<rbrace>"
@@ -3713,7 +3709,7 @@ lemma replyUnlink_st_tcb_at_simplish:
 
 crunch st_tcb_at_simplish: cteDeleteOne
             "st_tcb_at' (\<lambda>st. P st \<or> simple' st) t"
-  (wp: crunch_wps getObject_inv loadObject_default_inv threadSet_pred_tcb_no_state
+  (wp: crunch_wps getObject_inv threadSet_pred_tcb_no_state
    simp: crunch_simps unless_def ignore: threadSet)
 
 lemma cteDeleteOne_st_tcb_at[wp]:
