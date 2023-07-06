@@ -106,7 +106,7 @@ crunches reply_remove, sched_context_unbind_tcb, sched_context_zero_refill_max
   (wp: hoare_drop_imps get_simple_ko_wp)
 
 crunch domain_list_inv[wp]: cancel_all_ipc, cancel_all_signals "\<lambda>s. P (domain_list s)"
-  (wp: hoare_drop_imps mapM_x_wp' whileLoop_wp')
+  (wp: hoare_drop_imps mapM_x_wp' whileLoop_valid_inv)
 
 crunch domain_list_inv[wp]: finalise_cap "\<lambda>s::det_state. P (domain_list s)"
   (wp: crunch_wps maybeM_inv dxo_wp_weak select_inv simp: crunch_simps)
@@ -204,7 +204,7 @@ crunches
   set_priority, restart, sched_context_bind_tcb,sched_context_bind_ntfn,
   sched_context_unbind_reply, sched_context_yield_to
   for domain_list_inv[wp]: "\<lambda>s. P (domain_list s)"
-  (wp: hoare_drop_imps mapM_wp' maybeM_inv whileLoop_wp' simp: crunch_simps)
+  (wp: hoare_drop_imps mapM_wp' maybeM_inv whileLoop_valid_inv simp: crunch_simps)
 
 context DetSchedDomainTime_AI begin
 

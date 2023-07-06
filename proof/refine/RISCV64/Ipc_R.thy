@@ -5733,7 +5733,7 @@ lemma refillUnblockCheck_sym_heap_tcbSCs[wp]:
    refillUnblockCheck scp
    \<lbrace>\<lambda>_. sym_heap_tcbSCs\<rbrace>"
   unfolding refillUnblockCheck_def refillHeadOverlappingLoop_def mergeRefills_def updateRefillHd_def
-  apply (wpsimp wp: whileLoop_wp' updateSchedContext_wp wp_del: use_corresK
+  apply (wpsimp wp: whileLoop_valid_inv updateSchedContext_wp wp_del: use_corresK
               simp: refillPopHead_def)
         apply (clarsimp simp: sym_heap_def obj_at'_def ps_clear_upd opt_map_red projectKO_opt_tcb)
        apply (wpsimp wp: updateSchedContext_wp getCurTime_wp refillReady_wp isRoundRobin_wp
@@ -5756,7 +5756,7 @@ lemma refillUnblockCheck_sym_heap_scReplies[wp]:
    refillUnblockCheck scp
    \<lbrace>\<lambda>_. sym_heap_scReplies\<rbrace>"
   unfolding refillUnblockCheck_def refillHeadOverlappingLoop_def mergeRefills_def updateRefillHd_def
-  apply (wpsimp wp: whileLoop_wp' updateSchedContext_wp wp_del: use_corresK
+  apply (wpsimp wp: whileLoop_valid_inv updateSchedContext_wp wp_del: use_corresK
               simp: refillPopHead_def)
         apply (clarsimp simp: sym_heap_def obj_at'_def ps_clear_upd opt_map_red projectKO_opt_reply)
         apply (drule_tac x=scp and y=p' in spec2)

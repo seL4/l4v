@@ -3146,7 +3146,7 @@ lemma refillPopHead_valid_pspace'[wp]:
    refillPopHead scp
    \<lbrace>\<lambda>_. valid_pspace'\<rbrace>"
   unfolding refillPopHead_def updateSchedContext_def
-  apply (wpsimp wp: whileLoop_wp')
+  apply (wpsimp wp: whileLoop_valid_inv)
   by (fastforce simp: obj_at'_def  valid_obj'_def refillNextIndex_def MIN_REFILLS_def
                       valid_sched_context'_def valid_sched_context_size'_def scBits_simps objBits_simps
                dest!: opt_predD
@@ -3155,7 +3155,7 @@ lemma refillPopHead_valid_pspace'[wp]:
 lemma refillUnblockCheck_ko_wp_at_not_live[wp]:
   "refillUnblockCheck scp \<lbrace>\<lambda>s. P (ko_wp_at' (Not \<circ> live') p' s)\<rbrace>"
   unfolding refillUnblockCheck_def refillHeadOverlappingLoop_def mergeRefills_def
-  apply (wpsimp wp: whileLoop_wp' updateSchedContext_wp hoare_drop_imps
+  apply (wpsimp wp: whileLoop_valid_inv updateSchedContext_wp hoare_drop_imps
               simp: updateRefillHd_def refillPopHead_def)
         apply (clarsimp simp: ko_wp_at'_def obj_at'_def runReaderT_def
                               opt_map_red refillNextIndex_def
@@ -3181,7 +3181,7 @@ lemma refillUnblockCheck_refs_of'[wp]:
   "refillUnblockCheck sc_ptr \<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace>"
   unfolding refillUnblockCheck_def refillHeadOverlappingLoop_def mergeRefills_def
   apply (wpsimp simp: updateRefillHd_def refillPopHead_def
-                  wp: hoare_drop_imp whileLoop_wp' isRoundRobin_wp updateSchedContext_wp)
+                  wp: hoare_drop_imp whileLoop_valid_inv isRoundRobin_wp updateSchedContext_wp)
         apply (clarsimp simp: runReaderT_def elim!: rsubst[where P=P])
         apply (clarsimp simp: obj_at'_def  opt_map_red refillNextIndex_def)
         apply (fastforce simp: state_refs_of'_def get_refs_def2 ps_clear_upd objBits_simps option.case_eq_if

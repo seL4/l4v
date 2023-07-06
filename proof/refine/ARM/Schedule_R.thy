@@ -2402,7 +2402,7 @@ lemma refillUnblockCheck_valid_machine_state'[wp]:
                         refillHeadOverlappingLoop_def mergeRefills_def updateRefillHd_def
                         refillPopHead_def updateSchedContext_def setReprogramTimer_def
                         valid_machine_state'_def pointerInUserData_def pointerInDeviceData_def)
-  apply (wpsimp wp: whileLoop_wp' hoare_vcg_all_lift hoare_vcg_disj_lift scActive_wp
+  apply (wpsimp wp: whileLoop_valid_inv hoare_vcg_all_lift hoare_vcg_disj_lift scActive_wp
                     hoare_drop_imps getRefillNext_wp)
   apply fastforce
   done
@@ -2412,7 +2412,7 @@ lemma refillUnblockCheck_list_refs_of_replies'[wp]:
   apply (clarsimp simp: refillUnblockCheck_def valid_mdb'_def refillHeadOverlappingLoop_def
                         mergeRefills_def updateRefillHd_def refillPopHead_def updateSchedContext_def
                         setReprogramTimer_def refillReady_def isRoundRobin_def)
-  apply (wpsimp wp: whileLoop_wp' hoare_drop_imps scActive_wp getRefillNext_wp
+  apply (wpsimp wp: whileLoop_valid_inv hoare_drop_imps scActive_wp getRefillNext_wp
               simp: o_def)
   done
 
@@ -2596,7 +2596,7 @@ lemma refillBudgetCheck_valid_mdb'[wp]:
 lemma handleOverrunLoop_list_refs_of_replies'[wp]:
   "handleOverrunLoop usage \<lbrace>\<lambda>s. sym_refs (list_refs_of_replies' s)\<rbrace>"
   apply (clarsimp simp: handleOverrunLoop_def)
-  apply (wpsimp wp: whileLoop_wp' hoare_drop_imps getRefillNext_wp
+  apply (wpsimp wp: whileLoop_valid_inv hoare_drop_imps getRefillNext_wp
                     getRefillSize_wp refillFull_wp refillEmpty_wp
               simp: o_def handleOverrunLoopBody_def refillPopHead_def updateSchedContext_def
                     scheduleUsed_def refillAddTail_def  updateRefillHd_def setRefillTl_def
@@ -2609,7 +2609,7 @@ lemma refillBudgetCheck_list_refs_of_replies'[wp]:
                         setReprogramTimer_def refillReady_def isRoundRobin_def
                         headInsufficientLoop_def nonOverlappingMergeRefills_def)
   apply (rule hoare_seq_ext_skip, solves wpsimp)+
-  apply (wpsimp wp: whileLoop_wp' hoare_drop_imps refillFull_wp refillEmpty_wp getRefillNext_wp
+  apply (wpsimp wp: whileLoop_valid_inv hoare_drop_imps refillFull_wp refillEmpty_wp getRefillNext_wp
                      getRefillSize_wp hoare_vcg_all_lift hoare_vcg_if_lift2
               simp: o_def scheduleUsed_def refillAddTail_def setRefillHd_def updateRefillHd_def
                     setRefillTl_def updateRefillTl_def updateSchedContext_def)
@@ -2633,7 +2633,7 @@ lemma refillBudgetCheck_valid_idle'[wp]:
 lemma handleOverrunLoop_valid_machine_state'[wp]:
   "handleOverrunLoop usage \<lbrace>valid_machine_state'\<rbrace>"
   apply (clarsimp simp: handleOverrunLoop_def)
-  apply (wpsimp wp: whileLoop_wp' hoare_drop_imps getRefillNext_wp
+  apply (wpsimp wp: whileLoop_valid_inv hoare_drop_imps getRefillNext_wp
                     getRefillSize_wp refillFull_wp refillEmpty_wp
               simp: handleOverrunLoopBody_def refillPopHead_def updateSchedContext_def
                     scheduleUsed_def refillAddTail_def  updateRefillHd_def setRefillTl_def
@@ -2646,7 +2646,7 @@ lemma refillBudgetCheck_valid_machine_state'[wp]:
                         setReprogramTimer_def refillReady_def isRoundRobin_def
                         headInsufficientLoop_def nonOverlappingMergeRefills_def)
   apply (rule hoare_seq_ext_skip, solves wpsimp)+
-  apply (wpsimp wp: whileLoop_wp' hoare_vcg_all_lift hoare_vcg_disj_lift scActive_wp hoare_drop_imps
+  apply (wpsimp wp: whileLoop_valid_inv hoare_vcg_all_lift hoare_vcg_disj_lift scActive_wp hoare_drop_imps
                     refillFull_wp refillEmpty_wp getRefillNext_wp  getRefillSize_wp
               simp: scheduleUsed_def refillAddTail_def setRefillTl_def updateRefillTl_def
                     setRefillHd_def updateRefillHd_def updateSchedContext_def)
