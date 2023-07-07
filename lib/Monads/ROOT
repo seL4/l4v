@@ -16,6 +16,9 @@ session Monads (lib) = HOL +
 
   directories
     wp
+    nondet
+    reader_option
+    trace
 
   theories
     WhileLoopRules
