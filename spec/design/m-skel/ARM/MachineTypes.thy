@@ -11,7 +11,7 @@ imports
   Word_Lib.WordSetup
   Monads.Empty_Fail
   Monads.No_Fail
-  Monads.OptionMonadND
+  Monads.Reader_Option_ND
   Setup_Locale
   Platform
 begin

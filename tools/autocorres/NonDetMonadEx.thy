@@ -16,7 +16,7 @@ imports
   "Monads.More_NonDetMonadVCG"
   "Monads.No_Throw"
   "Monads.No_Fail"
-  "Monads.OptionMonadND"
+  "Monads.Reader_Option_ND"
 begin
 
 (*
@@ -276,7 +276,7 @@ lemma whileLoop_to_fold:
            (\<lambda>r. return (Q r))
            i s) = return (if P i \<le> x then fold (\<lambda>i r. (Q r)) [unat (P i) ..< unat x] i else i) s"
     (is "?LHS s = return (?RHS x) s")
-  apply (subst OptionMonadND.gets_the_return [symmetric])
+  apply (subst Reader_Option_ND.gets_the_return [symmetric])
   apply (subst gets_the_whileLoop)
   apply (rule gets_the_to_return)
   apply (subst owhile_to_fold)

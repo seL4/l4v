@@ -14,7 +14,7 @@ imports
   Lib
   More_Numeral_Type
   Monads.NonDetMonadVCG
-  Monads.OptionMonad
+  Monads.Reader_Option_Monad
 begin
 
 abbreviation (input) "flip \<equiv> swp"
