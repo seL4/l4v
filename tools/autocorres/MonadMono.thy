@@ -13,7 +13,7 @@ theory MonadMono
 imports
   NonDetMonadEx
   Monads.WhileLoopRulesCompleteness
-  Monads.OptionMonadWP
+  Monads.Reader_Option_VCG
 begin
 
 (*
