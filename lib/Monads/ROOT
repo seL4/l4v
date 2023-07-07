@@ -20,15 +20,15 @@ session Monads (lib) = HOL +
   theories
     WhileLoopRules
     TraceMonad
-    OptionMonadND
-    OptionMonadWP
+    Reader_Option_ND
+    Reader_Option_VCG
     Strengthen_Demo
     TraceMonadLemmas
     Datatype_Schematic
     WhileLoopRulesCompleteness
     Strengthen
     Strengthen_Setup
-    OptionMonad
+    Reader_Option_Monad
     TraceMonadVCG
     In_Monad
     NonDetMonadVCG

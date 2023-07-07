@@ -11,7 +11,7 @@
  *     Option monad while loop formalisation.
  *)
 
-theory OptionMonad (* FIXME: this is really a Reader_Option_Monad *)
+theory Reader_Option_Monad
   imports
     Monad_Lib
     Fun_Pred_Syntax

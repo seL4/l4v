@@ -4,12 +4,12 @@
  * SPDX-License-Identifier: BSD-2-Clause
  *)
 
-(* Option monad syntax plus the connection between the option monad and the nondet monad *)
+(* Reader option monad syntax plus the connection between the reader option monad and the nondet monad *)
 
-theory OptionMonadND
+theory Reader_Option_ND
 imports
   NonDetMonadLemmas
-  OptionMonad
+  Reader_Option_Monad
 begin
 
 (* FIXME: remove this syntax, standardise on do {..} instead *)

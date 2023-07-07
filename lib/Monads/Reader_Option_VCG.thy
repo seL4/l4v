@@ -5,14 +5,14 @@
  *)
 
 (*
-Hoare reasoning and WP (weakest-precondition) generator rules for the option monad.
+Hoare reasoning and WP (weakest-precondition) generator rules for the reader option monad.
 
 This list is almost certainly incomplete; add rules here as they are needed.
 *)
 
-theory OptionMonadWP
+theory Reader_Option_VCG
 imports
-  OptionMonadND
+  Reader_Option_ND
   WP
   No_Fail
 begin
