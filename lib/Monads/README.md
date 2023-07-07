@@ -34,6 +34,6 @@ in weakest-precondition style.
 
 [l4v]: https://github.com/seL4/l4v/
 [nondet]: ./NonDetMonad.thy
-[option]: ./OptionMonad.thy
+[option]: ./Reader_Option_Monad.thy
 [trace]: ./TraceMonad.thy
 [AutoCorres]: ../../tools/autocorres/
