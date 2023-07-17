@@ -736,22 +736,20 @@ lemma makeObjectKO_Untyped:
   by (clarsimp simp: makeObjectKO_def)
 
 lemma obj_relation_cuts_trivial:
-  "ptr \<in> fst ` obj_relation_cuts x ptr"
-  apply (case_tac x)
+  "ptr \<in> fst ` obj_relation_cuts ty ptr"
+  apply (case_tac ty)
       apply (rename_tac sz cs)
       apply (clarsimp simp:image_def cte_map_def well_formed_cnode_n_def)
       apply (rule_tac x = "replicate sz False" in exI)
       apply clarsimp+
   apply (rename_tac arch_kernel_obj)
-  apply (case_tac arch_kernel_obj)
-     apply clarsimp
-    apply (simp_all add:image_def pageBits_def)
-    sorry (* FIXME AARCH64
-    apply (rule_tac x = 0 in exI, simp)+
+  apply (case_tac arch_kernel_obj; simp add: image_def pageBits_def)
+   apply (rule exI, rule_tac x=0 in bexI, simp, simp)
+  apply (rule_tac x=0 in exI, simp)
   apply (rule p2_gt_0[THEN iffD2])
   apply (rename_tac vmpage_size)
-  by (case_tac vmpage_size;
-      clarsimp simp:pageBitsForSize_def bit_simps) *)
+  apply (case_tac vmpage_size; clarsimp simp:pageBitsForSize_def bit_simps)
+  done
 
 lemma obj_relation_retype_addrs_eq:
   assumes not_unt:"ty \<noteq> Inr (APIObjectType ArchTypes_H.Untyped)"
@@ -1329,8 +1327,10 @@ lemma retype_state_relation:
     have [simp]: "cns_of_heap ?ps = cns_of_heap (kheap s)"
       by - (rule ext, induct (?al),
             simp_all add: cns_of_heap_def default_object_def TCBObject)
+    from pn2
     have [simp]: "pt_types_of_heap ?ps = pt_types_of_heap (kheap s)"
-      sorry (* FIXME AARCH64 *)
+      by - (rule ext, induct (?al),
+            simp_all add: pt_types_of_heap_def default_object_def TCBObject opt_map_def)
    note data_map_insert_def[simp del]
     from gr show ?thesis
       by (simp add: ghost_relation_of_heap, simp add: TCBObject update_gs_def)
@@ -1344,8 +1344,11 @@ lemma retype_state_relation:
     have [simp]: "cns_of_heap ?ps = cns_of_heap (kheap s)"
       by - (rule ext, induct (?al),
             simp_all add: cns_of_heap_def default_object_def data_map_insert_def EndpointObject)
+    from pn2
     have [simp]: "pt_types_of_heap ?ps = pt_types_of_heap (kheap s)"
-      sorry (* FIXME AARCH64 *)
+      by - (rule ext, induct (?al),
+            simp_all add: pt_types_of_heap_def default_object_def data_map_insert_def EndpointObject
+                          opt_map_def)
     from gr show ?thesis
       by (simp add: ghost_relation_of_heap,
           simp add: EndpointObject update_gs_def)
@@ -1360,8 +1363,10 @@ lemma retype_state_relation:
     have [simp]: "cns_of_heap ?ps = cns_of_heap (kheap s)"
       by - (rule ext, induct (?al), simp_all add: cns_of_heap_def
                                       default_object_def NotificationObject)
+    from pn2
     have [simp]: "pt_types_of_heap ?ps = pt_types_of_heap (kheap s)"
-      sorry (* FIXME AARCH64 *)
+      by - (rule ext, induct (?al),
+            simp_all add: pt_types_of_heap_def default_object_def NotificationObject opt_map_def)
     note data_map_insert_def[simp del]
     from gr show ?thesis
       by (simp add: ghost_relation_of_heap,
@@ -1377,8 +1382,10 @@ lemma retype_state_relation:
                                          else cns_of_heap (kheap s) x)"
       by (rule ext, induct (?al),
           simp_all add: cns_of_heap_def wf_empty_bits wf_unique default_object_def CapTableObject)
+    from pn2
     have [simp]: "pt_types_of_heap ?ps = pt_types_of_heap (kheap s)"
-      sorry (* FIXME AARCH64 *)
+      by - (rule ext, induct (?al),
+            simp_all add: pt_types_of_heap_def default_object_def CapTableObject opt_map_def)
     note data_map_insert_def[simp del]
     from gr show ?thesis
       by (simp add: ghost_relation_of_heap,
@@ -1389,9 +1396,21 @@ lemma retype_state_relation:
     have [simp]: "cns_of_heap ?ps = cns_of_heap (kheap s)"
       by - (rule ext, induct (?al), simp_all add: cns_of_heap_def data_map_insert_def
                                       default_object_def ArchObject)
+    from gr
+    have [simp]: "gsPTTypes (ksArchState s') = pt_types_of_heap (kheap s)"
+      by (clarsimp simp add: ghost_relation_of_heap)
+    from pn2 ArchObject
+    have [simp]: "pt_types_of_heap ?ps = gsPTTypes (ksArchState ?t')"
+      apply -
+      apply (rule ext)
+      apply (induct (?al))
+       apply (simp add: update_gs_def ArchObject split: aobject_type.splits)
+      apply (cases ao;
+             simp add: data_map_insert_def pt_types_of_heap_def default_object_def
+                       default_arch_object_def opt_map_def update_gs_def)
+      done
     from pn2 gr show ?thesis
       apply (clarsimp simp add: ghost_relation_of_heap)
-      sorry (* FIXME AARCH64
       apply (rule conjI[rotated])
        apply (simp add: ArchObject update_gs_def split: aobject_type.splits)
       apply (thin_tac "cns_of_heap h = g" for h g)
@@ -1403,8 +1422,11 @@ lemma retype_state_relation:
                        default_arch_object_def ups_of_heap_def
                        data_map_insert_def
                 split: aobject_type.splits)
-      done *)
+      done
   qed
+
+  have [simp]: "\<And>s. gsPTTypes_update (\<lambda>_. gsPTTypes s) s = s"
+    by (case_tac s, simp)
 
   show "\<exists>f' g' h' pt_fn'. ?t' =
           s'\<lparr>ksPSpace := f' (ksPSpace s'), gsUserPages := g' (gsUserPages s'),
@@ -1412,14 +1434,15 @@ lemma retype_state_relation:
              ksArchState := (ksArchState s') \<lparr>gsPTTypes := pt_fn' (gsPTTypes (ksArchState s'))\<rparr>\<rparr>"
     apply (clarsimp simp: update_gs_def
                    split: Structures_A.apiobject_type.splits)
-    sorry (* FIXME AARCH64
     apply (intro conjI impI)
          apply (subst ex_comm, rule_tac x=id in exI,
+                subst ex_comm, rule_tac x=id in exI,
                 subst ex_comm, rule_tac x=id in exI, fastforce)+
      apply (subst ex_comm, rule_tac x=id in exI)
      apply (subst ex_comm)
      apply (rule_tac x="\<lambda>cns x. if x\<in>set ?al then Some us else cns x" in exI,
             simp)
+     apply (subst ex_comm, rule_tac x=id in exI)
      apply (rule_tac x="\<lambda>x. foldr (\<lambda>addr. data_map_insert addr ko)
                                   (new_cap_addrs m ptr ko) x" in exI, simp)
     apply clarsimp
@@ -1428,14 +1451,27 @@ lemma retype_state_relation:
     apply (subst ex_comm, rule_tac x=id in exI)
     apply (simp split: aobject_type.splits)
     apply (intro conjI impI)
+          apply (subst ex_comm, rule_tac x=id in exI)
           apply (rule_tac x="\<lambda>cns x. if x \<in> set ?al then Some ARMSmallPage
                                      else cns x" in exI, simp)
+         apply (subst ex_comm, rule_tac x=id in exI)
          apply (rule_tac x="\<lambda>cns x. if x \<in> set ?al then Some ARMLargePage
                                     else cns x" in exI, simp)
+        apply (subst ex_comm, rule_tac x=id in exI)
         apply (rule_tac x="\<lambda>cns x. if x \<in> set ?al then Some ARMHugePage
                                    else cns x" in exI, simp)
-      apply (rule_tac x=id in exI, simp)+
-    done *)
+       apply (rule_tac x=id in exI)
+       apply (rule_tac x="\<lambda>pt_types x. if x \<in> set ?al then Some NormalPT_T
+                                       else pt_types x" in exI)
+       apply (cases s', rename_tac arch machine, case_tac arch)
+       apply fastforce
+      apply (rule_tac x=id in exI)
+      apply (rule_tac x="\<lambda>pt_types x. if x \<in> set ?al then Some VSRootPT_T
+                                      else pt_types x" in exI)
+      apply (cases s', rename_tac arch machine, case_tac arch)
+      apply fastforce
+     apply (rule_tac x=id in exI, simp)+
+    done
 qed
 
 lemma new_cap_addrs_fold':
