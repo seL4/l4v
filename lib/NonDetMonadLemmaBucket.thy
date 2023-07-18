@@ -8,16 +8,16 @@
 theory NonDetMonadLemmaBucket
 imports
   Lib
-  Monads.More_NonDetMonadVCG
+  Monads.Nondet_More_VCG
   Monad_Lists
-  Monads.Monad_Equations
+  Monads.Nondet_Monad_Equations
   Monad_Commute
-  Monads.No_Fail
-  Monads.No_Throw
+  Monads.Nondet_No_Fail
+  Monads.Nondet_No_Throw
   CutMon
   Oblivious
   Injection_Handler
-  Monads.WhileLoopRulesCompleteness
+  Monads.Nondet_While_Loop_Rules_Completeness
   "Word_Lib.Distinct_Prop" (* for distinct_tuple_helper *)
   Monads.Reader_Option_VCG
 begin

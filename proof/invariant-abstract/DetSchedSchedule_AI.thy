@@ -1350,7 +1350,7 @@ lemma append_thread_queued:
 
 (* having is_highest_prio match gets_wp makes it very hard to stop and drop imps etc. *)
 definition
-  "wrap_is_highest_prio cur_dom target_prio \<equiv> NonDetMonad.gets (is_highest_prio cur_dom target_prio)"
+  "wrap_is_highest_prio cur_dom target_prio \<equiv> Nondet_Monad.gets (is_highest_prio cur_dom target_prio)"
 
 lemma schedule_choose_new_thread_valid_sched:
   "\<lbrace> valid_idle and valid_etcbs and valid_idle_etcb and valid_queues and valid_blocked

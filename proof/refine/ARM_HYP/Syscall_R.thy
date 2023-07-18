@@ -1218,7 +1218,7 @@ crunch valid_duplicates'[wp]: rescheduleRequired "\<lambda>s. vs_valid_duplicate
 
 crunch valid_duplicates'[wp]: setThreadState "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
 
-(*FIXME: move to NonDetMonadVCG.valid_validE_R *)
+(*FIXME: move to Nondet_VCG.valid_validE_R *)
 lemma handleInvocation_corres:
   "c \<longrightarrow> b \<Longrightarrow>
    corres (dc \<oplus> dc)

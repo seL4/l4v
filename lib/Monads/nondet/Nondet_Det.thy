@@ -5,9 +5,9 @@
  * SPDX-License-Identifier: BSD-2-Clause
  *)
 
-theory Det
+theory Nondet_Det
   imports
-    NonDetMonad
+    Nondet_Monad
 begin
 
 subsection "Determinism"

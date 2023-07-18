@@ -12,8 +12,8 @@
 
 theory Oblivious
   imports
-    Monads.In_Monad
-    Monads.NonDetMonadVCG
+    Monads.Nondet_In_Monad
+    Monads.Nondet_VCG
 begin
 
 

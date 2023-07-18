@@ -837,7 +837,7 @@ lemma ccorres_sequence_x_while_genQ':
     \<And>n. Suc n < length xs \<Longrightarrow> \<lbrace>F (n * j)\<rbrace> xs ! n \<lbrace>\<lambda>_. F (Suc n * j)\<rbrace>; i + length xs * j < 2 ^ len_of TYPE('c);
     \<forall>s f. xf (xf_update f s) = f (xf s) \<and> globals (xf_update f s) = globals s; j > 0 \<rbrakk>
     \<Longrightarrow> ccorres (\<lambda>rv i'. i' = of_nat (i + length xs * of_nat j)) xf (\<lambda>s. P 0 \<longrightarrow> F 0 s) ({s. xf s = of_nat i} \<inter> Q) hs
-       (NonDetMonad.sequence_x xs)
+       (Nondet_Monad.sequence_x xs)
        (While {s. P (xf s)} (body;;
                  Basic (\<lambda>s. xf_update (\<lambda>_. xf s + of_nat j) s)))"
   apply (simp add: sequence_x_sequence liftM_def[symmetric]
@@ -856,7 +856,7 @@ lemma ccorres_sequence_x_while_gen':
     \<And>n. Suc n < length xs \<Longrightarrow> \<lbrace>F (n * j)\<rbrace> xs ! n \<lbrace>\<lambda>_. F (Suc n * j)\<rbrace>; i + length xs * j < 2 ^ len_of TYPE('c);
     \<forall>s f. xf (xf_update f s) = f (xf s) \<and> globals (xf_update f s) = globals s; 0 < j \<rbrakk>
     \<Longrightarrow> ccorres (\<lambda>rv i'. i' = of_nat (i + length xs * of_nat j)) xf (F 0) {s. xf s = of_nat i} hs
-       (NonDetMonad.sequence_x xs)
+       (Nondet_Monad.sequence_x xs)
        (While {s. P (xf s)} (body;;
                  Basic (\<lambda>s. xf_update (\<lambda>_. xf s + of_nat j) s)))"
   apply (simp add: sequence_x_sequence liftM_def[symmetric]

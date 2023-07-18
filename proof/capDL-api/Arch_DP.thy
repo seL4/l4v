@@ -25,7 +25,7 @@ lemma cdl_lookup_pt_slot_rv:
   apply (rule validE_validE_R)
   apply (clarsimp simp : cdl_lookup_pt_slot_def)
   apply (clarsimp simp: validE_def valid_def bindE_def
-    bind_def bind_assoc NonDetMonad.lift_def)
+    bind_def bind_assoc Nondet_Monad.lift_def)
   apply (case_tac a)
    apply (clarsimp simp:liftE_def bindE_def bind_def return_def)
   apply (clarsimp simp:liftE_def bindE_def bind_def return_def)

@@ -914,7 +914,7 @@ lemma findPDForASID_ccorres:
 
        apply (rule_tac P=\<top> and P' =UNIV in ccorres_from_vcg_throws)
        apply (rule allI, rule conseqPre, vcg)
-       apply (clarsimp simp: throwError_def return_def bindE_def bind_def NonDetMonad.lift_def)
+       apply (clarsimp simp: throwError_def return_def bindE_def bind_def Nondet_Monad.lift_def)
        apply (clarsimp simp: EXCEPTION_NONE_def EXCEPTION_LOOKUP_FAULT_def)
        apply (simp add: lookup_fault_lift_invalid_root)
 

@@ -11,11 +11,11 @@
 theory NonDetMonadEx
 imports
   "Word_Lib.WordSetup"
-  "Monads.NonDetMonadVCG"
-  "Monads.Monad_Equations"
-  "Monads.More_NonDetMonadVCG"
-  "Monads.No_Throw"
-  "Monads.No_Fail"
+  "Monads.Nondet_VCG"
+  "Monads.Nondet_Monad_Equations"
+  "Monads.Nondet_More_VCG"
+  "Monads.Nondet_No_Throw"
+  "Monads.Nondet_No_Fail"
   "Monads.Reader_Option_ND"
 begin
 

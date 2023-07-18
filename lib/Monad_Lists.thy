@@ -10,10 +10,10 @@
 
 theory Monad_Lists
   imports
-    Monads.In_Monad
-    Monads.Det
-    Monads.Empty_Fail
-    Monads.No_Fail
+    Monads.Nondet_In_Monad
+    Monads.Nondet_Det
+    Monads.Nondet_Empty_Fail
+    Monads.Nondet_No_Fail
 begin
 
 lemma mapME_Cons:

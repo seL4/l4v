@@ -11,10 +11,10 @@
 
    If you are planning to use the monad_eq method, this is the theory you should import.
 
-   See MonadEq.thy for definition and description of the method. *)
+   See Nondet_MonadEq.thy for definition and description of the method. *)
 
-theory MonadEq_Lemmas
-  imports MonadEq
+theory Nondet_MonadEq_Lemmas
+  imports Nondet_MonadEq
 begin
 
 lemma snd_return[monad_eq]:

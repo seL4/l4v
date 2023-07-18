@@ -5,9 +5,9 @@
  * SPDX-License-Identifier: BSD-2-Clause
  *)
 
-theory NonDetMonad_Sat
+theory Nondet_Sat
   imports
-    NonDetMonad
+    Nondet_Monad
     WPSimp
 begin
 

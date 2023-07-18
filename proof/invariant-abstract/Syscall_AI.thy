@@ -898,7 +898,7 @@ lemma lookup_extra_caps_eq [wp]:
   by (wpsimp wp: mapME_set simp: lookup_extra_caps_def)
 
 
-(*FIXME: move to NonDetMonadVCG.valid_validE_R *)
+(*FIXME: move to Nondet_VCG.valid_validE_R *)
 lemma valid_validE_R_gen:
   "\<lbrakk>\<And>rv s. Q' (Inr rv) s \<Longrightarrow> Q rv s; \<lbrace>P\<rbrace> f \<lbrace>Q'\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, -"
   by (fastforce simp: validE_R_def validE_def valid_def split_def)

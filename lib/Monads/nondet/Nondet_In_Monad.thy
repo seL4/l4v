@@ -5,8 +5,8 @@
  * SPDX-License-Identifier: BSD-2-Clause
  *)
 
-theory In_Monad
-  imports NonDetMonadLemmas
+theory Nondet_In_Monad
+  imports Nondet_Lemmas
 begin
 
 section \<open>Reasoning directly about states\<close>

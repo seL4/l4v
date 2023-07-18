@@ -5,9 +5,9 @@
  * SPDX-License-Identifier: BSD-2-Clause
  *)
 
-theory NonDetMonadVCG
+theory Nondet_VCG
 imports
-  NonDetMonadLemmas
+  Nondet_Lemmas
   WPSimp
 begin
 

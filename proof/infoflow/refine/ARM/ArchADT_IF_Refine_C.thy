@@ -118,7 +118,7 @@ lemma corres_dmo_getExMonitor_C:
       apply (rule_tac r'="\<lambda>(r, ms) (r', ms'). r = r' \<and> ms = rv \<and> ms' = rv'"
               in corres_split)
          apply (rule corres_trivial, rule corres_select_f')
-          apply (clarsimp simp: getExMonitor_def machine_rest_lift_def NonDetMonad.bind_def gets_def
+          apply (clarsimp simp: getExMonitor_def machine_rest_lift_def Nondet_Monad.bind_def gets_def
                                 get_def return_def modify_def put_def select_f_def)
          apply (clarsimp simp: getExMonitor_no_fail[simplified no_fail_def])
         apply (clarsimp simp: split_def)
@@ -132,7 +132,7 @@ lemma corres_dmo_getExMonitor_C:
                                  cmachine_state_relation_def Let_def)
           apply (rule corres_trivial, clarsimp)
          apply (wp hoare_TrueI)+
-   apply (rule TrueI conjI | clarsimp simp: getExMonitor_def machine_rest_lift_def NonDetMonad.bind_def
+   apply (rule TrueI conjI | clarsimp simp: getExMonitor_def machine_rest_lift_def Nondet_Monad.bind_def
                                             gets_def get_def return_def modify_def put_def select_f_def)+
   done
 
@@ -150,7 +150,7 @@ lemma corres_dmo_setExMonitor_C:
                                               ms' = rv'\<lparr>exclusive_state := es\<rparr>"
               in corres_split)
          apply (rule corres_trivial, rule corres_select_f')
-          apply (clarsimp simp: setExMonitor_def machine_rest_lift_def NonDetMonad.bind_def gets_def
+          apply (clarsimp simp: setExMonitor_def machine_rest_lift_def Nondet_Monad.bind_def gets_def
                                 get_def return_def modify_def put_def select_f_def)
          apply (clarsimp simp: setExMonitor_no_fail[simplified no_fail_def])
         apply (simp add: split_def)
@@ -162,7 +162,7 @@ lemma corres_dmo_setExMonitor_C:
         apply (clarsimp simp: rf_sr_def cstate_relation_def carch_state_relation_def
                               cmachine_state_relation_def Let_def)
        apply (wp hoare_TrueI)+
-   apply (rule TrueI conjI | clarsimp simp: setExMonitor_def machine_rest_lift_def NonDetMonad.bind_def
+   apply (rule TrueI conjI | clarsimp simp: setExMonitor_def machine_rest_lift_def Nondet_Monad.bind_def
                                             gets_def get_def return_def modify_def put_def select_f_def)+
   done
 

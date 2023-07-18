@@ -19,10 +19,10 @@
  *
  * are added to the "monad_eq" set.
  *)
-theory MonadEq
+theory Nondet_MonadEq
   imports
-    In_Monad
-    NonDetMonadVCG
+    Nondet_In_Monad
+    Nondet_VCG
 begin
 
 (* Setup "monad_eq" attributes. *)

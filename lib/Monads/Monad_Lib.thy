@@ -5,7 +5,7 @@
  *)
 
 (* This theory collects the minimum constant definitions and lemmas for the monad definition
-   theories (NonDetMonad, TraceMonad etc). Only things that are necessary for these and needed
+   theories (Nondet_Monad, TraceMonad etc). Only things that are necessary for these and needed
    by more than one of them should go in here. *)
 
 theory Monad_Lib

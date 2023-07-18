@@ -9,9 +9,9 @@
 
 theory MonadicRewrite
 imports
-  Monads.NonDetMonadVCG
+  Monads.Nondet_VCG
   Corres_UL
-  Monads.Empty_Fail
+  Monads.Nondet_Empty_Fail
   Rules_Tac
 begin
 

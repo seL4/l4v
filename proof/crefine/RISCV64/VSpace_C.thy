@@ -719,7 +719,7 @@ lemma findVSpaceForASID_ccorres:
     apply clarsimp
     apply (rule_tac P="valid_arch_state' and _" and P'=UNIV in ccorres_from_vcg_throws)
     apply (rule allI, rule conseqPre, vcg)
-    apply (clarsimp simp: throwError_def return_def bindE_def NonDetMonad.lift_def
+    apply (clarsimp simp: throwError_def return_def bindE_def Nondet_Monad.lift_def
                           EXCEPTION_NONE_def EXCEPTION_LOOKUP_FAULT_def
                           lookup_fault_lift_invalid_root asid_wf_table_guard)
     apply (frule rf_sr_asidTable_None[where asid=asid, THEN iffD2],

@@ -6,12 +6,12 @@
 
 (*
  * This is a purely theoretical theory containing proofs
- * that the whileLoop rules in "WhileLoopRules" are complete.
+ * that the whileLoop rules in "Nondet_While_Loop_Rules" are complete.
  *
  * You probably don't care about this.
  *)
-theory WhileLoopRulesCompleteness
-imports WhileLoopRules
+theory Nondet_While_Loop_Rules_Completeness
+imports Nondet_While_Loop_Rules
 begin
 
 lemma whileLoop_rule_strong_complete:

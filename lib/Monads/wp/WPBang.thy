@@ -8,7 +8,7 @@ theory WPBang
 imports
   WP
   Eisbach_Tools.ProvePart
-  NonDetMonadVCG
+  Nondet_VCG
 begin
 
 lemma conj_meta_forward:

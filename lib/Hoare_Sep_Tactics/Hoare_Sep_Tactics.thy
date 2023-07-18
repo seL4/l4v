@@ -6,7 +6,7 @@
 
 theory Hoare_Sep_Tactics
 imports
-  Monads.NonDetMonadVCG
+  Monads.Nondet_VCG
   Sep_Algebra.Sep_Algebra_L4v
 begin
 

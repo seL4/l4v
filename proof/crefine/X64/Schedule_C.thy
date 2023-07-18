@@ -536,7 +536,7 @@ lemma schedule_ccorres:
                apply clarsimp
                apply (rule conseqPre, vcg)
                apply (fastforce simp: isHighestPrio_def' gets_def return_def get_def
-                                       NonDetMonad.bind_def
+                                       Nondet_Monad.bind_def
                                 split: prod.split)
               apply ceqv
              apply (clarsimp simp: to_bool_def)

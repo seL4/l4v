@@ -7,10 +7,10 @@
 
 (* Lemmas about the no_fail predicate. *)
 
-theory No_Fail
+theory Nondet_No_Fail
   imports
-    In_Monad
-    NonDetMonadVCG
+    Nondet_In_Monad
+    Nondet_VCG
     WPSimp
 begin
 

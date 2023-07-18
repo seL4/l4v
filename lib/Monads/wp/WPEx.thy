@@ -6,8 +6,8 @@
 
 theory WPEx
 imports
-  In_Monad
-  NonDetMonadVCG
+  Nondet_In_Monad
+  Nondet_VCG
   Strengthen
 begin
 

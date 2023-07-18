@@ -8,12 +8,12 @@
 
 theory Reader_Option_ND
 imports
-  NonDetMonadLemmas
+  Nondet_Lemmas
   Reader_Option_Monad
 begin
 
 (* FIXME: remove this syntax, standardise on do {..} instead *)
-(* Syntax defined here so we can reuse NonDetMonad definitions *)
+(* Syntax defined here so we can reuse Nondet_Monad definitions *)
 syntax
   "_doO" :: "[dobinds, 'a] => 'a"  ("(DO (_);//   (_)//OD)" 100)
 

@@ -5,16 +5,16 @@
  * SPDX-License-Identifier: BSD-2-Clause
  *)
 
-theory Empty_Fail
+theory Nondet_Empty_Fail
   imports
-    NonDetMonad
+    Nondet_Monad
     WPSimp
 begin
 
 section \<open>Monads that are wellformed w.r.t. failure\<close>
 
 text \<open>
-  Usually, well-formed monads constructed from the primitives in NonDetMonad will have the following
+  Usually, well-formed monads constructed from the primitives in Nondet_Monad will have the following
   property: if they return an empty set of results, they will have the failure flag set.\<close>
 definition empty_fail :: "('s,'a) nondet_monad \<Rightarrow> bool" where
   "empty_fail m \<equiv> \<forall>s. fst (m s) = {} \<longrightarrow> snd (m s)"
