@@ -31,8 +31,9 @@ private abbreviation (input)
       addrs \<leftarrow> createObjects regionBase numObjects (injectKO objectProto) tableSize;
       pts \<leftarrow> return (map (PPtr \<circ> fromPPtr) addrs);
       modify (\<lambda>ks. ks \<lparr>ksArchState :=
-                         ksArchState ks \<lparr>gsPTTypes :=
-                                           gsPTTypes (ksArchState ks) (regionBase \<mapsto> ptType)\<rparr>\<rparr>);
+                         ksArchState ks \<lparr>gsPTTypes := (\<lambda>addr.
+                                           if addr `~elem~` map fromPPtr addrs then Just ptType
+                                           else gsPTTypes (ksArchState ks) addr)\<rparr>\<rparr>);
       initialiseMappings pts;
       return $ map (\<lambda>pt. cap pt Nothing) pts
     od)"
