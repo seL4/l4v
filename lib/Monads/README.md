@@ -35,5 +35,5 @@ in weakest-precondition style.
 [l4v]: https://github.com/seL4/l4v/
 [nondet]: ./nondet/Nondet_Monad.thy
 [option]: ./reader_option/Reader_Option_Monad.thy
-[trace]: ./trace/TraceMonad.thy
+[trace]: ./trace/Trace_Monad.thy
 [AutoCorres]: ../../tools/autocorres/

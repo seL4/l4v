@@ -3,7 +3,7 @@
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *)
-theory TraceMonad
+theory Trace_Monad
 imports
   Monad_Lib
   Strengthen
