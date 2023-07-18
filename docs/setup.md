@@ -91,12 +91,13 @@ pip3 install --user sel4-deps
 
 After installing [haskell-stack](https://docs.haskellstack.org/en/stable/)
 (already included in the packages above on Mac and Ubuntu), make sure you've
-adjusted your `PATH` to include `$HOME/.local/bin`, and that you're running an
-up-to-date version:
+adjusted your `PATH` to include `$HOME/.local/bin`, that you're running an
+up-to-date version, and that you have installed cabal:
 
 ```bash
 stack upgrade --binary-only
 which stack # should be $HOME/.local/bin/stack
+stack install cabal-install
 ```
 
 ## Checking out the repository collection
