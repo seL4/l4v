@@ -10,8 +10,8 @@
 
 theory CutMon
   imports
-    Monads.Empty_Fail
-    Monads.NonDetMonadVCG
+    Monads.Nondet_Empty_Fail
+    Monads.Nondet_VCG
 begin
 
 definition

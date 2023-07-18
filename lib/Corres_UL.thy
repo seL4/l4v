@@ -1284,7 +1284,7 @@ lemma corres_underlying_assert_assert:
 lemma corres_underlying_stateAssert_stateAssert:
   assumes "\<And>s s'. \<lbrakk> (s,s') \<in> rf_sr; P s; P' s' \<rbrakk> \<Longrightarrow> Q' s' = Q s"
   shows "corres_underlying rf_sr nf False dc P P' (stateAssert Q []) (stateAssert Q' [])"
-  by (auto simp: stateAssert_def get_def NonDetMonad.bind_def corres_underlying_def
+  by (auto simp: stateAssert_def get_def Nondet_Monad.bind_def corres_underlying_def
                  assert_def return_def fail_def assms)
 
 (* We can ignore a stateAssert in the middle of a computation even if we don't ignore abstract
@@ -1294,7 +1294,7 @@ lemma corres_stateAssert_no_fail:
      corres_underlying S False nf' r P Q (do v \<leftarrow> g; h v od) f \<rbrakk> \<Longrightarrow>
    corres_underlying S False nf' r P Q (do v \<leftarrow> g; _ \<leftarrow> stateAssert X []; h v od) f"
   apply (simp add: corres_underlying_def stateAssert_def get_def assert_def return_def no_fail_def fail_def cong: if_cong)
-  apply (clarsimp simp: split_def NonDetMonad.bind_def split: if_splits)
+  apply (clarsimp simp: split_def Nondet_Monad.bind_def split: if_splits)
   apply (erule allE, erule (1) impE)
   apply (drule (1) bspec, clarsimp)+
   done

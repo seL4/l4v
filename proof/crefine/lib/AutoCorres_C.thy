@@ -69,10 +69,10 @@ FIXME: Move this change into AutoCorres itself, or the underlying VCG library.
 
 lemmas [wp del] =
   NonDetMonadEx.validE_whenE
-  NonDetMonadVCG.whenE_wps
+  Nondet_VCG.whenE_wps
 
 lemmas hoare_whenE_wp2 [wp] =
-  NonDetMonadVCG.whenE_wps[simplified if_apply_def2]
+  Nondet_VCG.whenE_wps[simplified if_apply_def2]
 
 section \<open>Rules for proving @{term ccorres_underlying} goals\<close>
 
@@ -694,7 +694,7 @@ lemma exec_no_fault:
   using valid ce asms
   apply -
   apply (frule hoare_sound)
-  apply (clarsimp simp: NonDetMonad.bind_def cvalid_def split_def HoarePartialDef.valid_def)
+  apply (clarsimp simp: Nondet_Monad.bind_def cvalid_def split_def HoarePartialDef.valid_def)
   apply (drule spec, drule spec, drule (1) mp)
   apply auto
   done
@@ -707,7 +707,7 @@ lemma exec_no_stuck:
   using valid ce asms
   apply -
   apply (frule hoare_sound)
-  apply (clarsimp simp: NonDetMonad.bind_def cvalid_def split_def HoarePartialDef.valid_def)
+  apply (clarsimp simp: Nondet_Monad.bind_def cvalid_def split_def HoarePartialDef.valid_def)
   apply (drule spec, drule spec, drule (1) mp)
   apply auto
   done

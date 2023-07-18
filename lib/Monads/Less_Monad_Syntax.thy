@@ -12,7 +12,7 @@ begin
 no_syntax
   "_thenM" :: "['a, 'b] \<Rightarrow> 'c" (infixl ">>" 54)
 
-(* remove input version of >>= from Monad_Syntax, avoid clash with NonDetMonad *)
+(* remove input version of >>= from Monad_Syntax, avoid clash with Nondet_Monad *)
 no_notation
   Monad_Syntax.bind (infixl ">>=" 54)
 

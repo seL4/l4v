@@ -5,11 +5,11 @@
  * SPDX-License-Identifier: BSD-2-Clause
  *)
 
-theory Strengthen_Setup
+theory Nondet_Strengthen_Setup
   imports
     Strengthen
-    No_Fail
-    NonDetMonadVCG
+    Nondet_No_Fail
+    Nondet_VCG
 begin
 
 section \<open>Strengthen setup.\<close>

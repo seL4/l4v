@@ -48,7 +48,7 @@ lemma exec_handlers_use_hoare_nothrow:
   apply -
   apply (drule hoare_sound)
   apply (clarsimp elim: exec_Normal_elim_cases
-    simp: NonDetMonad.bind_def cvalid_def split_def HoarePartialDef.valid_def)
+    simp: Nondet_Monad.bind_def cvalid_def split_def HoarePartialDef.valid_def)
   apply (erule exec_handlers.cases)
     apply clarsimp
     apply (drule spec, drule spec, drule (1) mp)
@@ -1045,7 +1045,7 @@ lemma ccorres_liftM_simp [simp]:
   apply (rule ccorresI')
   apply simp
   apply (erule (5) ccorresE)
-  apply (simp add: liftM_def NonDetMonad.bind_def return_def)
+  apply (simp add: liftM_def Nondet_Monad.bind_def return_def)
   apply (erule bexI [rotated])
   apply (simp add: unif_rrel_def split: if_split_asm)
   done

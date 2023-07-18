@@ -8,10 +8,10 @@
 (* Lemmas about no_throw. Usually should have a conclusion "no_throw P m".
    Includes some monad equations that have no_throw as a main assumption.  *)
 
-theory No_Throw
+theory Nondet_No_Throw
   imports
-    WhileLoopRules
-    MonadEq_Lemmas
+    Nondet_While_Loop_Rules
+    Nondet_MonadEq_Lemmas
 begin
 
 section "Basic exception reasoning"
@@ -73,7 +73,7 @@ lemma no_throw_fail[simp]:
 lemma bindE_fail_propagates:
   "\<lbrakk> no_throw \<top> A; empty_fail A \<rbrakk> \<Longrightarrow> A >>=E (\<lambda>_. fail) = fail"
   by (fastforce simp: no_throw_def validE_def valid_def bind_def empty_fail_def
-                      bindE_def split_def fail_def NonDetMonad.lift_def throwError_def
+                      bindE_def split_def fail_def Nondet_Monad.lift_def throwError_def
                 split: sum.splits)
 
 lemma whileLoopE_nothrow:

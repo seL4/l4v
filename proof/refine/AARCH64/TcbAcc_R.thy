@@ -51,7 +51,7 @@ lemma isHighestPrio_def':
   "isHighestPrio d p = gets (\<lambda>s. ksReadyQueuesL1Bitmap s d = 0 \<or> lookupBitmapPriority d s \<le> p)"
   unfolding isHighestPrio_def bitmap_fun_defs getHighestPrio_def'
   apply (rule ext)
-  apply (clarsimp simp: gets_def bind_assoc return_def NonDetMonad.bind_def get_def
+  apply (clarsimp simp: gets_def bind_assoc return_def Nondet_Monad.bind_def get_def
                   split: if_splits)
   done
 

@@ -9,7 +9,7 @@ imports
   Lib.Lib
   ArchCrunchSetup_AI
   Monads.Eisbach_WP
-  Monads.Strengthen_Setup
+  Monads.Nondet_Strengthen_Setup
   ASpec.Syscall_A
   Lib.LemmaBucket
   Lib.ListLibLemmas
@@ -25,7 +25,7 @@ unbundle l4v_word_context
 
 (* Clagged from Bits_R *)
 
-crunch_ignore (add: NonDetMonad.bind return "when" get gets fail assert put modify
+crunch_ignore (add: Nondet_Monad.bind return "when" get gets fail assert put modify
   unless select alternative assert_opt gets_the returnOk throwError lift
   bindE liftE whenE unlessE throw_opt assertE liftM liftME sequence_x
   zipWithM_x mapM_x sequence mapM sequenceE_x sequenceE mapME mapME_x

@@ -1182,7 +1182,7 @@ done
 lemmas set_thread_state_active_valid_sched =
   set_thread_state_runnable_valid_sched[simplified runnable_eq_active]
 
-(*FIXME: move to NonDetMonadVCG.valid_validE_R *)
+(*FIXME: move to Nondet_VCG.valid_validE_R *)
 lemma handleInvocation_corres:
   "c \<longrightarrow> b \<Longrightarrow>
    corres (dc \<oplus> dc)

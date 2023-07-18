@@ -5,13 +5,13 @@
  * SPDX-License-Identifier: BSD-2-Clause
  *)
 
-(* Total correctness Hoare logic for the NonDetMonad (= valid + no_fail) *)
+(* Total correctness Hoare logic for the Nondet_Monad (= valid + no_fail) *)
 
-theory NonDetMonad_Total
-  imports No_Fail
+theory Nondet_Total
+  imports Nondet_No_Fail
 begin
 
-section \<open>Total correctness for NonDetMonad and NonDetMonad with exceptions\<close>
+section \<open>Total correctness for Nondet_Monad and Nondet_Monad with exceptions\<close>
 
 subsection Definitions
 

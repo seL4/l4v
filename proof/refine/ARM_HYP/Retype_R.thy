@@ -1527,7 +1527,7 @@ lemma retype_region_ext_modify_kheap_futz:
 done
 
 lemmas retype_region_ext_modify_kheap_futz' =
-  fun_cong[OF arg_cong[where f=NonDetMonad.bind,
+  fun_cong[OF arg_cong[where f=Nondet_Monad.bind,
            OF retype_region_ext_modify_kheap_futz[symmetric]], simplified bind_assoc]
 
 lemma foldr_upd_app_if_eta_futz:

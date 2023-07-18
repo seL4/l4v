@@ -8,9 +8,9 @@
 (* Partial correctness Hoare logic lemmas over the nondet monad. Hoare triples, lifting lemmas, etc.
    If it doesn't contain a Hoare triple it likely doesn't belong in here. *)
 
-theory More_NonDetMonadVCG
+theory Nondet_More_VCG
   imports
-    NonDetMonadVCG
+    Nondet_VCG
 begin
 
 lemma hoare_take_disjunct:

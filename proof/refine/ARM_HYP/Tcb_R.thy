@@ -2131,7 +2131,7 @@ lemma checkPrio_wp:
     checkPrio prio auth
    \<lbrace> \<lambda>rv. P \<rbrace>,-"
   apply (simp add: checkPrio_def)
-  apply (wp NonDetMonadVCG.whenE_throwError_wp getMCP_wp)
+  apply (wp Nondet_VCG.whenE_throwError_wp getMCP_wp)
   by (auto simp add: pred_tcb_at'_def obj_at'_def)
 
 lemma checkPrio_lt_ct:

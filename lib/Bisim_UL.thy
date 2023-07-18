@@ -8,9 +8,9 @@
 
 theory Bisim_UL
 imports
-  Monads.NonDetMonadVCG
+  Monads.Nondet_VCG
   Corres_UL
-  Monads.Empty_Fail
+  Monads.Nondet_Empty_Fail
 begin
 
 (* This still looks a bit wrong to me, although it is more or less what I want \<emdash> we want to be

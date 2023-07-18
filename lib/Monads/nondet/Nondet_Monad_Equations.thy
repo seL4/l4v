@@ -8,11 +8,11 @@
 (* Equations between monads. Conclusions of the form "f = g" where f and g are monads.
    Should not be Hoare triples (those go into a different theory). *)
 
-theory Monad_Equations
+theory Nondet_Monad_Equations
   imports
-    Empty_Fail
-    No_Fail
-    MonadEq_Lemmas
+    Nondet_Empty_Fail
+    Nondet_No_Fail
+    Nondet_MonadEq_Lemmas
 begin
 
 lemmas assertE_assert = assertE_liftE
@@ -146,7 +146,7 @@ lemma unlessE_throw_catch_If:
 lemma whenE_bindE_throwError_to_if:
   "whenE P (throwError e) >>=E (\<lambda>_. b) = (if P then (throwError e) else b)"
   unfolding whenE_def bindE_def
-  by (auto simp: NonDetMonad.lift_def throwError_def returnOk_def)
+  by (auto simp: Nondet_Monad.lift_def throwError_def returnOk_def)
 
 lemma alternative_liftE_returnOk:
   "(liftE m \<sqinter> returnOk v) = liftE (m \<sqinter> return v)"
@@ -431,7 +431,7 @@ lemma liftE_fail[simp]: "liftE fail = fail"
 
 lemma catch_bind_distrib:
   "do _ <- m <catch> h; f od = (doE m; liftE f odE <catch> (\<lambda>x. do h x; f od))"
-  by (force simp: catch_def bindE_def bind_assoc liftE_def NonDetMonad.lift_def bind_def
+  by (force simp: catch_def bindE_def bind_assoc liftE_def Nondet_Monad.lift_def bind_def
                   split_def return_def throwError_def
             split: sum.splits)
 
@@ -451,7 +451,7 @@ lemma catch_is_if:
    od"
   apply (simp add: bindE_def catch_def bind_assoc cong: if_cong)
   apply (rule bind_cong, rule refl)
-  apply (clarsimp simp: NonDetMonad.lift_def throwError_def split: sum.splits)
+  apply (clarsimp simp: Nondet_Monad.lift_def throwError_def split: sum.splits)
   done
 
 lemma liftE_K_bind: "liftE ((K_bind (\<lambda>s. A s)) x) = K_bind (liftE (\<lambda>s. A s)) x"

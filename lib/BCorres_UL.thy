@@ -6,7 +6,7 @@
 
 theory BCorres_UL
 imports
-  Monads.NonDetMonadVCG
+  Monads.Nondet_VCG
   Crunch_Instances_NonDet
 begin
 

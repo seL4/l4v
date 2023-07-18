@@ -1506,7 +1506,7 @@ lemma retype_region_ext_modify_kheap_futz:
    apply (simp add: modify_def[symmetric])
 done
 
-lemmas retype_region_ext_modify_kheap_futz' = fun_cong[OF arg_cong[where f=NonDetMonad.bind, OF retype_region_ext_modify_kheap_futz[symmetric]], simplified bind_assoc]
+lemmas retype_region_ext_modify_kheap_futz' = fun_cong[OF arg_cong[where f=Nondet_Monad.bind, OF retype_region_ext_modify_kheap_futz[symmetric]], simplified bind_assoc]
 
 lemma foldr_upd_app_if_eta_futz:
   "foldr (\<lambda>p ps. ps(p \<mapsto> f p)) as = (\<lambda>g x. if x \<in> set as then Some (f x) else g x)"

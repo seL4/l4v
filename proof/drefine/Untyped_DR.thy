@@ -65,7 +65,7 @@ next
      apply (rule someI2_ex, fastforce+)+
     done
 
-  (* FIXME: For some reason In_Monad.in_fail doesn't fire below. This version would probably
+  (* FIXME: For some reason Nondet_In_Monad.in_fail doesn't fire below. This version would probably
             have been better in the first place. *)
   have [simp]: "\<And>s. fst (fail s) = {}" by (simp add: fail_def)
 

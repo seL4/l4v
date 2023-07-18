@@ -472,7 +472,7 @@ lemma ccorres_corres_u_xf:
   apply (drule (1) bspec)
   apply (clarsimp simp: exec_C_def no_fail_def)
   apply (drule_tac x = a in spec)
-  apply (clarsimp simp:gets_def NonDetMonad.bind_def get_def return_def)
+  apply (clarsimp simp:gets_def Nondet_Monad.bind_def get_def return_def)
   apply (rule conjI)
    apply clarsimp
    apply (erule_tac x=0 in allE)
@@ -836,7 +836,7 @@ lemma user_memory_update_corres_C:
   prefer 2
    apply (clarsimp simp add: doMachineOp_def user_memory_update_def
                              simpler_modify_def simpler_gets_def select_f_def
-                             NonDetMonad.bind_def return_def)
+                             Nondet_Monad.bind_def return_def)
    apply (thin_tac P for P)+
    apply (case_tac a, clarsimp)
    apply (case_tac ksMachineState, clarsimp)
@@ -863,7 +863,7 @@ lemma device_update_corres_C:
     apply (clarsimp simp add: setDeviceState_C_def simpler_modify_def)
   apply (rule ballI)
   apply (clarsimp simp: simpler_modify_def setDeviceState_C_def)
-  apply (clarsimp simp: doMachineOp_def device_memory_update_def NonDetMonad.bind_def in_monad
+  apply (clarsimp simp: doMachineOp_def device_memory_update_def Nondet_Monad.bind_def in_monad
                         gets_def get_def return_def simpler_modify_def select_f_def)
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
                         cmachine_state_relation_def)

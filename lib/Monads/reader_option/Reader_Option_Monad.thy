@@ -241,7 +241,7 @@ abbreviation ogets :: "('s \<Rightarrow> 'a) \<Rightarrow> ('s, 'a) lookup" wher
 
 text \<open>
   Integration with exception monad.
-  Corresponding bindE would be analogous to lifting in NonDetMonad.\<close>
+  Corresponding bindE would be analogous to lifting in Nondet_Monad.\<close>
 
 definition
   "oreturnOk x = K (Some (Inr x))"

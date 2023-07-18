@@ -12,7 +12,7 @@
 theory MonadMono
 imports
   NonDetMonadEx
-  Monads.WhileLoopRulesCompleteness
+  Monads.Nondet_While_Loop_Rules_Completeness
   Monads.Reader_Option_VCG
 begin
 
@@ -152,7 +152,7 @@ lemma monad_mono_step_bindE:
   apply (unfold bindE_def)
   apply (rule monad_mono_step_bind)
    apply simp
-  apply (monad_eq simp: monad_mono_step_def NonDetMonad.lift_def
+  apply (monad_eq simp: monad_mono_step_def Nondet_Monad.lift_def
       split: sum.splits)
   done
 

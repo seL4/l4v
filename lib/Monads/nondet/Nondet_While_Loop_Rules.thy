@@ -4,11 +4,11 @@
  * SPDX-License-Identifier: BSD-2-Clause
  *)
 
-theory WhileLoopRules
+theory Nondet_While_Loop_Rules
   imports
-    Empty_Fail
-    NonDetMonad_Total
-    NonDetMonad_Sat
+    Nondet_Empty_Fail
+    Nondet_Total
+    Nondet_Sat
 begin
 
 section "Well-ordered measures"

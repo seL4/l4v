@@ -679,7 +679,7 @@ lemma asUser_mapM_x:
   apply (rule bind_apply_cong [OF refl])+
   apply (clarsimp simp: in_monad dest!: fst_stateAssertD)
   apply (drule use_valid, rule mapM_wp', rule asUser_typ_ats, assumption)
-  apply (simp add: stateAssert_def get_def NonDetMonad.bind_def)
+  apply (simp add: stateAssert_def get_def Nondet_Monad.bind_def)
   done
 
 lemma asUser_threadGet_tcbFault_comm:
@@ -1204,7 +1204,7 @@ lemma ctes_of_valid_strengthen:
 
 lemma finaliseCap_Reply:
   "\<lbrace>Q (NullCap,NullCap) and K (isReplyCap cap)\<rbrace> finaliseCapTrue_standin cap is_final \<lbrace>Q\<rbrace>"
-  apply (rule NonDetMonadVCG.hoare_gen_asm)
+  apply (rule Nondet_VCG.hoare_gen_asm)
   apply (wpsimp simp: finaliseCapTrue_standin_def isCap_simps)
   done
 

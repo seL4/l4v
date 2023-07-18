@@ -34,11 +34,11 @@
  *
  * Another example (l4v libraries):
  *   > desugar_term "\<lbrace> P and Q \<rbrace> f \<lbrace> \<lambda>r _. r \<in> {0..<5} \<rbrace>!" "\<lbrace>"
- *   NonDetMonad_Total.validNF (P and Q) f (\<lambda>r _. r \<in> {0\<Colon>'b..<5\<Colon>'b})
+ *   Nondet_Total.validNF (P and Q) f (\<lambda>r _. r \<in> {0\<Colon>'b..<5\<Colon>'b})
  *
  * Desugar multiple operators:
  *   > desugar_term "\<lbrace> P and Q \<rbrace> f \<lbrace> \<lambda>r _. r \<in> {0..<5} \<rbrace>!" "\<lbrace>" "and" ".."
- *   NonDetMonad.validNF (Lib.pred_conj P Q) f
+ *   Nondet_Monad.validNF (Lib.pred_conj P Q) f
  *     (\<lambda>r _. r \<in> Set_Interval.ord_class.atLeastLessThan (0\<Colon>'b) (5\<Colon>'b))
  *
  *

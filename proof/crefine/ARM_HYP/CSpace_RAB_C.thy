@@ -54,7 +54,7 @@ lemma ccorres_remove_bind_returnOk_noguard:
   apply clarsimp
   apply (drule not_snd_bindE_I1)
   apply (erule (4) ccorresE[OF ac])
-  apply (clarsimp simp add: bindE_def returnOk_def NonDetMonad.lift_def bind_def return_def
+  apply (clarsimp simp add: bindE_def returnOk_def Nondet_Monad.lift_def bind_def return_def
     split_def)
   apply (rule bexI [rotated], assumption)
   apply (simp add: throwError_def return_def unif_rrel_def

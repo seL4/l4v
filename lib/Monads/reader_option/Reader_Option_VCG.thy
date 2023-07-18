@@ -14,7 +14,7 @@ theory Reader_Option_VCG
 imports
   Reader_Option_ND
   WP
-  No_Fail
+  Nondet_No_Fail
 begin
 
 (* Hoare triples.

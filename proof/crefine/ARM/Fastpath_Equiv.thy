@@ -1515,9 +1515,9 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                            apply wp
                           apply (rule monadic_rewrite_trans)
                            apply (rule_tac rv=rab_ret
-                                    in monadic_rewrite_gets_known[where m="NonDetMonad.lift f"
+                                    in monadic_rewrite_gets_known[where m="Nondet_Monad.lift f"
                                     for f, folded bindE_def])
-                          apply (simp add: NonDetMonad.lift_def isRight_case_sum)
+                          apply (simp add: Nondet_Monad.lift_def isRight_case_sum)
                           apply monadic_rewrite_symb_exec_l
                            apply (rename_tac ep_cap2)
                            apply (rule_tac P="cteCap ep_cap2 = cteCap ep_cap" in monadic_rewrite_gen_asm)

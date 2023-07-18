@@ -5,8 +5,8 @@
  * SPDX-License-Identifier: BSD-2-Clause
  *)
 
-theory NonDetMonadLemmas
-imports NonDetMonad
+theory Nondet_Lemmas
+imports Nondet_Monad
 begin
 
 section \<open>General Lemmas Regarding the Nondeterministic State Monad\<close>

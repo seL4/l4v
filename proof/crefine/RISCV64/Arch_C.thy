@@ -669,7 +669,7 @@ lemma liftME_option_catch_bind:
   apply (rule ext)
   apply (clarsimp simp: return_def)
   apply (case_tac "m s", clarsimp)
-  apply (auto simp: split_def throwError_def return_def NonDetMonad.lift_def
+  apply (auto simp: split_def throwError_def return_def Nondet_Monad.lift_def
               split: prod.splits sum.splits)
   done
 
@@ -1839,7 +1839,7 @@ lemma decodeRISCVFrameInvocation_ccorres:
                     lookup_fault_missing_capability_new_'proc *)
                  apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
                  apply (rule allI, rule conseqPre, vcg)
-                 apply (clarsimp simp: throwError_def return_def bindE_def NonDetMonad.lift_def
+                 apply (clarsimp simp: throwError_def return_def bindE_def Nondet_Monad.lift_def
                                        exception_defs lookup_fault_lift_invalid_root)
                  apply (clarsimp simp: syscall_error_rel_def exception_defs syscall_error_to_H_def
                                        syscall_error_type_defs)
