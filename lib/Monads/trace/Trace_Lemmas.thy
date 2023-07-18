@@ -3,8 +3,8 @@
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *)
-theory TraceMonadLemmas
-imports TraceMonadVCG
+theory Trace_Lemmas
+imports Trace_VCG
 begin
 
 lemma mapM_Cons:

@@ -3,9 +3,9 @@
  *
  * SPDX-License-Identifier: BSD-2-Clause
  *)
-theory TraceMonadVCG
+theory Trace_VCG
 imports
-  TraceMonad
+  Trace_Monad
   Fun_Pred_Syntax
   WPSimp
 begin

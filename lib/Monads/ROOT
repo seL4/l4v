@@ -22,17 +22,17 @@ session Monads (lib) = HOL +
 
   theories
     Nondet_While_Loop_Rules
-    TraceMonad
+    Trace_Monad
     Reader_Option_ND
     Reader_Option_VCG
     Strengthen_Demo
-    TraceMonadLemmas
+    Trace_Lemmas
     Datatype_Schematic
     Nondet_While_Loop_Rules_Completeness
     Strengthen
     Nondet_Strengthen_Setup
     Reader_Option_Monad
-    TraceMonadVCG
+    Trace_VCG
     Nondet_In_Monad
     Nondet_VCG
     Nondet_Sat

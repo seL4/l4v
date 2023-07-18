@@ -7,7 +7,7 @@
 theory Crunch_Instances_Trace
 imports
   Crunch
-  Monads.TraceMonadVCG
+  Monads.Trace_VCG
 begin
 
 lemmas [crunch_param_rules] = Let_def return_bind returnOk_bindE
