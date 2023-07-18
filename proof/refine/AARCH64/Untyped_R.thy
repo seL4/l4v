@@ -199,15 +199,14 @@ next
     apply (simp add: returnOk_def APIType_map2_def toEnum_def
                      enum_apiobject_type enum_object_type)
     apply (intro conjI impI)
-     apply (subgoal_tac "unat v - 5 > 3")
+     apply (subgoal_tac "unat v - 5 > 5")
       apply (simp add: arch_data_to_obj_type_def)
-    sorry (* FIXME AARCH64
      apply simp
     apply (subgoal_tac "\<exists>n. unat v = n + 5")
      apply (clarsimp simp: arch_data_to_obj_type_def returnOk_def)
     apply (rule_tac x="unat v - 5" in exI)
     apply arith
-    done *)
+    done
   have S: "\<And>x (y :: ('g :: len) word) (z :: 'g word) bits. \<lbrakk> bits < len_of TYPE('g); x < 2 ^ bits \<rbrakk> \<Longrightarrow> toEnum x = (of_nat x :: 'g word)"
     apply (rule toEnum_of_nat)
     apply (erule order_less_trans)
@@ -505,27 +504,23 @@ lemma ctes_of_ko:
      apply (case_tac ko, simp_all split: if_splits,
            (simp add: objBitsKO_def archObjSize_def field_simps shiftl_t2n)+)[1]
     \<comment> \<open>PT case\<close>
-    apply (rename_tac word option)
-    apply (clarsimp simp: valid_cap'_def valid_acap'_def valid_arch_cap_ref'_def obj_at'_def bit_simps
+    apply (rename_tac word pt_t option)
+    apply (clarsimp simp: valid_cap'_def valid_acap'_def valid_arch_cap_ref'_def obj_at'_def
                           page_table_at'_def typ_at'_def ko_wp_at'_def)
-   defer (* FIXME AARCH64: VSRoot_PT/Normal_PT
-   apply (frule_tac ptr=ptr and sz=3 in
-                  nasty_range[where 'a=machine_word_len and bz="ptBits", folded word_bits_def,
-                              simplified ptBits_def word_bits_def bit_simps, simplified,
-                              simplified bit_simps, simplified])
-     apply simp
-    apply simp
-   apply clarsimp
-   apply (drule_tac x="ucast idx" in spec)
-   apply clarsimp
-   apply (intro exI conjI,assumption)
-   apply (clarsimp simp: obj_range'_def)
-   apply (case_tac ko; simp)
-   apply (rename_tac arch_kernel_object)
-   apply (case_tac arch_kernel_object; simp)
-   apply (simp add: objBitsKO_def archObjSize_def bit_simps mask_def ucast_ucast_len field_simps
-                    shiftl_t2n) *)
-    \<comment> \<open>VCPU case\<close>
+    apply (cut_tac ptr=ptr and bz="ptBits pt_t" and word=word and sz=pte_bits in
+                   nasty_range[where 'a=machine_word_len]; simp?)
+     apply (simp add: pt_bits_def)
+    apply clarsimp
+    apply (drule_tac x="ucast idx" in spec)
+    apply (clarsimp simp: pt_bits_def table_size_def le_mask_iff_lt_2n[THEN iffD1])
+    apply (intro exI conjI,assumption)
+    apply (clarsimp simp: obj_range'_def)
+    apply (case_tac ko; simp)
+    apply (rename_tac arch_kernel_object)
+    apply (case_tac arch_kernel_object; simp)
+    apply (simp add: objBitsKO_def archObjSize_def bit_simps mask_def ucast_ucast_len field_simps
+                     shiftl_t2n)
+   \<comment> \<open>VCPU case\<close>
    apply (clarsimp simp: valid_cap'_def typ_at'_def ko_wp_at'_def objBits_simps)
    apply (intro exI conjI, assumption)
    apply (clarsimp simp: obj_range'_def archObjSize_def objBitsKO_def)
@@ -541,7 +536,7 @@ lemma ctes_of_ko:
   apply (drule_tac x=idx in spec)
   apply (clarsimp simp: less_mask_eq)
   apply (fastforce simp: obj_range'_def mask_def objBits_simps' field_simps)[1]
-  sorry (* FIXME AARCH64: PT case *)
+  done
 
 lemma untypedCap_descendants_range':
   "\<lbrakk>valid_pspace' s; ctes_of s p = Some cte;
