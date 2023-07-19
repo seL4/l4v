@@ -48,6 +48,7 @@ session Monads (lib) = HOL +
     Trace_Monad
     Trace_Lemmas
     Trace_VCG
+    Trace_Det
     Strengthen
     Nondet_Strengthen_Setup
     Strengthen_Demo

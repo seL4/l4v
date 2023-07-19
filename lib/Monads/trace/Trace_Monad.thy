@@ -202,7 +202,7 @@ lemma bind_def2:
 lemma elem_bindE:
   "\<lbrakk>(tr, res) \<in> bind f g s;
     \<lbrakk>res = Incomplete \<or> res = Failed; (tr, map_tmres undefined undefined res) \<in> f s\<rbrakk> \<Longrightarrow> P;
-    \<And>tr' tr'' x s'. \<lbrakk>(tr', Result (x, s')) \<in> f s \<Longrightarrow> (tr'', res) \<in> g x s'; tr = tr'' @ tr'\<rbrakk> \<Longrightarrow> P\<rbrakk>
+    \<And>tr' tr'' x s'. \<lbrakk>(tr', Result (x, s')) \<in> f s; (tr'', res) \<in> g x s'; tr = tr'' @ tr'\<rbrakk> \<Longrightarrow> P\<rbrakk>
    \<Longrightarrow> P"
   by (auto simp: bind_def2)
 
@@ -687,166 +687,6 @@ definition Await :: "('s \<Rightarrow> bool) \<Rightarrow> ('s,unit) tmonad" whe
   od"
 
 
-section "Hoare Logic"
-
-subsection "Validity"
-
-text \<open>
-  This section defines a Hoare logic for partial correctness for
-  the interference trace monad as well as the exception monad.
-  The logic talks only about the behaviour part of the monad and ignores
-  the failure flag.
-
-  The logic is defined semantically. Rules work directly on the
-  validity predicate.
-
-  In the interference trace monad, validity is a triple of precondition,
-  monad, and postcondition. The precondition is a function from state to
-  bool (a state predicate), the postcondition is a function from return value
-  to state to bool. A triple is valid if for all states that satisfy the
-  precondition, all result values and result states that are returned by
-  the monad satisfy the postcondition. Note that if the computation returns
-  the empty set, the triple is trivially valid. This means @{term "assert P"}
-  does not require us to prove that @{term P} holds, but rather allows us
-  to assume @{term P}! Proving non-failure is done via separate predicate and
-  calculus (see below).\<close>
-
-definition valid :: "('s \<Rightarrow> bool) \<Rightarrow> ('s,'a) tmonad \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
-  ("\<lbrace>_\<rbrace>/ _ /\<lbrace>_\<rbrace>") where
-  "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<equiv> \<forall>s. P s \<longrightarrow> (\<forall>(r,s') \<in> mres (f s). Q r s')"
-
-text \<open>
-  We often reason about invariant predicates. The following provides shorthand syntax
-  that avoids repeating potentially long predicates.\<close>
-abbreviation (input) invariant ::
-  "('s,'a) tmonad \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> bool" ("_ \<lbrace>_\<rbrace>" [59,0] 60) where
-  "invariant f P \<equiv> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>"
-
-text \<open>
-  Validity for the exception monad is similar and build on the standard
-  validity above. Instead of one postcondition, we have two: one for
-  normal and one for exceptional results.\<close>
-definition validE ::
-  "('s \<Rightarrow> bool) \<Rightarrow> ('s, 'a + 'b) tmonad \<Rightarrow> ('b \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
-  ("\<lbrace>_\<rbrace>/ _ /(\<lbrace>_\<rbrace>,/ \<lbrace>_\<rbrace>)" ) where
-  "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> \<equiv> \<lbrace>P\<rbrace> f \<lbrace> \<lambda>v s. case v of Inr r \<Rightarrow> Q r s | Inl e \<Rightarrow> E e s \<rbrace>"
-
-lemma validE_def2:
-  "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> \<equiv> \<forall>s. P s \<longrightarrow> (\<forall>(r,s') \<in> mres (f s). case r of Inr b \<Rightarrow> Q b s' | Inl a \<Rightarrow> E a s')"
-  by (unfold valid_def validE_def)
-(*
-text \<open>Validity for exception monad with interferences. Not as easy to phrase
- as we need to \<close>
-definition validIE :: "('s, 'a + 'b) tmonad \<Rightarrow>
-             's rg_pred \<Rightarrow>
-             's rg_pred \<Rightarrow> 's rg_pred \<Rightarrow>
-             ('b \<Rightarrow> 's rg_pred) \<Rightarrow>
-             ('a \<Rightarrow> 's rg_pred) \<Rightarrow> bool"
- ("_ //PRE _//RELY _//GUAR _//POST _//EXC _" [59,0,0,0,0,0] 60) where
-  "validIE f P R G Q E \<equiv> f SAT [P,R,G,\<lambda>v. case v of Inr r \<Rightarrow> Q r | Inl e \<Rightarrow> E e]"
-
-abbreviation (input)
-  validIEsat :: "('s, 'a + 'b) tmonad \<Rightarrow>
-             's rg_pred \<Rightarrow>
-             's rg_pred \<Rightarrow> 's rg_pred \<Rightarrow>
-             ('b \<Rightarrow> 's rg_pred) \<Rightarrow>
-             ('a \<Rightarrow> 's rg_pred) \<Rightarrow> bool"
-  ("_ //SAT [_, _, _, _, _]" [59,0,0,0,0,0] 60)
-  where
-  "validIEsat f P R G Q E \<equiv> validIE f P R G Q E"
- *)
-text \<open>
-  The following two instantiations are convenient to separate reasoning for exceptional and
-  normal case.\<close>
-(* Narrator: they are in fact not convenient, and are now considered a mistake that should have
-             been an abbreviation instead. *)
-definition validE_R :: (* FIXME lib: this should be an abbreviation *)
-  "('s \<Rightarrow> bool) \<Rightarrow> ('s, 'e + 'a) tmonad \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool" ("\<lbrace>_\<rbrace>/ _ /\<lbrace>_\<rbrace>, -") where
-  "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,- \<equiv> validE P f Q (\<lambda>x y. True)"
-
-definition validE_E :: (* FIXME lib: this should be an abbreviation *)
-  "('s \<Rightarrow> bool) \<Rightarrow>  ('s, 'e + 'a) tmonad \<Rightarrow> ('e \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool" ("\<lbrace>_\<rbrace>/ _ /-, \<lbrace>_\<rbrace>") where
-  "\<lbrace>P\<rbrace> f -,\<lbrace>Q\<rbrace> \<equiv> validE P f (\<lambda>x y. True) Q"
-
-
-text \<open>rg_pred type: Rely-Guaranty predicates (state before => state after => bool)\<close>
-type_synonym 's rg_pred = "'s \<Rightarrow> 's \<Rightarrow> bool"
-
-text \<open>Abbreviations for trivial postconditions (taking three arguments):\<close>
-abbreviation(input)
-  toptoptop :: "'a \<Rightarrow> 'b \<Rightarrow> 'b \<Rightarrow> bool" ("\<top>\<top>\<top>") where
-  "\<top>\<top>\<top> \<equiv> \<lambda>_ _ _. True"
-
-abbreviation(input)
-  botbotbot :: "'a \<Rightarrow> 'b \<Rightarrow> 'b \<Rightarrow> bool" ("\<bottom>\<bottom>\<bottom>") where
-  "\<bottom>\<bottom>\<bottom> \<equiv> \<lambda>_ _ _. False"
-
-
-subsection "Determinism"
-
-text \<open>
-  A monad of type @{text tmonad} is deterministic iff it
-  returns an empty trace, exactly one state and result and does not fail\<close>
-definition det :: "('a,'s) tmonad \<Rightarrow> bool" where
-  "det f \<equiv> \<forall>s. \<exists>r. f s = {([], Result r)}"
-
-text \<open>A deterministic @{text tmonad} can be turned into a normal state monad:\<close>
-definition the_run_state :: "('s,'a) tmonad \<Rightarrow> 's \<Rightarrow> 'a \<times> 's" where
-  "the_run_state M \<equiv> \<lambda>s. THE s'. mres (M s) = {s'}"
-
-
-subsection "Non-Failure"
-
-text \<open>
-  With the failure flag, we can formulate non-failure separately from validity.
-  A monad @{text m} does not fail under precondition @{text P}, if for no start
-  state that satisfies the precondition it sets the failure flag.
-\<close>
-definition no_fail :: "('s \<Rightarrow> bool) \<Rightarrow> ('s,'a) tmonad \<Rightarrow> bool" where
-  "no_fail P m \<equiv> \<forall>s. P s \<longrightarrow> Failed \<notin> snd ` (m s)"
-
-text \<open>
-  It is often desired to prove non-failure and a Hoare triple simultaneously, as the reasoning
-  is often similar. The following definitions allow such reasoning to take place.\<close>
-
-definition validNF ::
-  "('s \<Rightarrow> bool) \<Rightarrow> ('s,'a) tmonad \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool" ("\<lbrace>_\<rbrace>/ _ /\<lbrace>_\<rbrace>!") where
-  "validNF P f Q \<equiv> valid P f Q \<and> no_fail P f"
-
-definition validE_NF ::
-  "('s \<Rightarrow> bool) \<Rightarrow> ('s, 'a + 'b) tmonad \<Rightarrow> ('b \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
-  ("\<lbrace>_\<rbrace>/ _ /(\<lbrace>_\<rbrace>,/ \<lbrace>_\<rbrace>!)") where
-  "validE_NF P f Q E \<equiv> validE P f Q E \<and> no_fail P f"
-
-lemma validE_NF_alt_def:
-  "\<lbrace> P \<rbrace> B \<lbrace> Q \<rbrace>,\<lbrace> E \<rbrace>! = \<lbrace> P \<rbrace> B \<lbrace> \<lambda>v s. case v of Inl e \<Rightarrow> E e s | Inr r \<Rightarrow> Q r s \<rbrace>!"
-  by (clarsimp simp: validE_NF_def validE_def validNF_def)
-
-(* text \<open>
-  Usually, well-formed monads constructed from the primitives
-  above will have the following property: if they return an
-  empty set of results, they will have the failure flag set.\<close>
-definition empty_fail :: "('s,'a) tmonad \<Rightarrow> bool" where
-  "empty_fail m \<equiv> \<forall>s. fst (m s) = {} \<longrightarrow> snd (m s)"
-
-text \<open>
-  Useful in forcing otherwise unknown executions to have
-  the @{const empty_fail} property.\<close>
-definition mk_ef :: "'a set \<times> bool \<Rightarrow> 'a set \<times> bool" where
-  "mk_ef S \<equiv> (fst S, fst S = {} \<or> snd S)"
- *)
-section "Basic exception reasoning"
-
-text \<open>
-  The predicates @{text no_throw} and @{text no_return} allow us to reason about functions in
-  the exception monad that never throw an exception or never return normally.\<close>
-
-definition no_throw :: "('s \<Rightarrow> bool) \<Rightarrow> ('s, 'e + 'a) tmonad \<Rightarrow> bool" where
-  "no_throw P A \<equiv> \<lbrace> P \<rbrace> A \<lbrace> \<lambda>_ _. True \<rbrace>,\<lbrace> \<lambda>_ _. False \<rbrace>"
-
-definition no_return :: "('a \<Rightarrow> bool) \<Rightarrow> ('a, 'b + 'c) tmonad \<Rightarrow> bool" where
-  "no_return P A \<equiv> \<lbrace> P \<rbrace> A \<lbrace>\<lambda>_ _. False\<rbrace>,\<lbrace>\<lambda>_ _. True \<rbrace>"
-
 section "Trace monad Parallel"
 
 definition parallel :: "('s,'a) tmonad \<Rightarrow> ('s,'a) tmonad \<Rightarrow> ('s,'a) tmonad" where
@@ -899,6 +739,18 @@ next
     apply simp
     done
 qed
+
+text \<open>rg_pred type: Rely-Guaranty predicates (state before => state after => bool)\<close>
+type_synonym 's rg_pred = "'s \<Rightarrow> 's \<Rightarrow> bool"
+
+text \<open>Abbreviations for trivial postconditions (taking three arguments):\<close>
+abbreviation(input)
+  toptoptop :: "'a \<Rightarrow> 'b \<Rightarrow> 'b \<Rightarrow> bool" ("\<top>\<top>\<top>") where
+  "\<top>\<top>\<top> \<equiv> \<lambda>_ _ _. True"
+
+abbreviation(input)
+  botbotbot :: "'a \<Rightarrow> 'b \<Rightarrow> 'b \<Rightarrow> bool" ("\<bottom>\<bottom>\<bottom>") where
+  "\<bottom>\<bottom>\<bottom> \<equiv> \<lambda>_ _ _. False"
 
 definition rely_cond :: "'s rg_pred \<Rightarrow> 's \<Rightarrow> (tmid \<times> 's) list \<Rightarrow> bool" where
   "rely_cond R s0s tr = (\<forall>(ident, s0, s) \<in> trace_steps (rev tr) s0s. ident = Env \<longrightarrow> R s0 s)"
