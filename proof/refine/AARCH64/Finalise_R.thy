@@ -2365,9 +2365,10 @@ lemma finaliseCap_True_invs[wp]:
     apply (wp irqs_masked_lift| simp | wpc)+
   done
 
-lemma invalidateASIDEntry_invs'[wp]: (* FIXME AARCH64  *)
+lemma invalidateASIDEntry_invs'[wp]:
   "invalidateASIDEntry asid \<lbrace>invs'\<rbrace>"
-  sorry
+  unfolding invalidateASIDEntry_def
+  by wpsimp
 
 lemma invs_asid_update_strg':
   "invs' s \<and> tab = armKSASIDTable (ksArchState s) \<longrightarrow>
@@ -2382,6 +2383,9 @@ lemma invs_asid_update_strg':
   apply (auto simp add: ran_def split: if_split_asm)
   done
 
+crunches invalidateTLBByASID
+  for asidTable[wp]: "\<lambda>s. P (armKSASIDTable (ksArchState s))"
+
 lemma deleteASIDPool_invs[wp]:
   "\<lbrace>invs'\<rbrace> deleteASIDPool asid pool \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: deleteASIDPool_def)
@@ -2390,13 +2394,12 @@ lemma deleteASIDPool_invs[wp]:
     apply (strengthen invs_asid_update_strg')
   apply (wp mapM_wp' getObject_inv loadObject_default_inv
               | simp)+
-  sorry (* FIXME AARCH64 VMID
-  done *)
+  done
 
 lemma deleteASID_invs'[wp]:
   "deleteASID asid pd \<lbrace>invs'\<rbrace>"
-  sorry (* FIXME AARCH64
-  unfolding deleteASID_def by (wpsimp wp: getASID_wp) *)
+  unfolding deleteASID_def
+  by (wpsimp wp: getASID_wp hoare_drop_imps simp: getPoolPtr_def)
 
 (* FIXME AARCH64 move next to valid_objs_valid_tcb *)
 lemma valid_objs_valid_tcb':
@@ -2491,7 +2494,7 @@ lemma archThreadSet_state_refs_of'[wp]:
   apply normalise_obj_at'
   apply (erule rsubst[where P=P])
   apply (rule ext)
-  apply (auto simp: state_refs_of'_def obj_at'_def projectKOs)
+  apply (auto simp: state_refs_of'_def obj_at'_def)
   done
 
 lemma archThreadSet_state_hyp_refs_of'[wp]:
@@ -2538,7 +2541,7 @@ lemma archThreadSet_ko_wp_at_no_vcpu[wp]:
   unfolding archThreadSet_def
   apply (wpsimp wp: getObject_tcb_wp setObject_ko_wp_at simp: objBits_simps' | rule refl)+
   apply normalise_obj_at'
-  apply (auto simp: ko_wp_at'_def obj_at'_real_def projectKOs is_vcpu'_def)
+  apply (auto simp: ko_wp_at'_def obj_at'_real_def is_vcpu'_def)
   done
 
 lemma archThreadSet_valid_arch_state'[wp]:
@@ -2608,11 +2611,11 @@ lemma dissoc_invs':
                     state_refs_of'_vcpu_empty state_hyp_refs_of'_vcpu_absorb valid_arch_tcb'_def
         | clarsimp simp: live'_def hyp_live'_def arch_live'_def)+
   supply fun_upd_apply[simp]
-  apply (clarsimp simp: state_hyp_refs_of'_def obj_at'_def projectKOs tcb_vcpu_refs'_def
+  apply (clarsimp simp: state_hyp_refs_of'_def obj_at'_def tcb_vcpu_refs'_def
                   split: option.splits if_split_asm)
   apply safe
    apply (rule_tac rfs'="state_hyp_refs_of' s" in delta_sym_refs)
-     apply (clarsimp simp: state_hyp_refs_of'_def obj_at'_def projectKOs tcb_vcpu_refs'_def
+     apply (clarsimp simp: state_hyp_refs_of'_def obj_at'_def tcb_vcpu_refs'_def
                      split: option.splits if_split_asm)+
   done
 
@@ -2696,7 +2699,7 @@ lemma asUser_unlive[wp]:
   apply (case_tac ko; simp)
   apply (rename_tac tcb)
   apply (rule_tac x=tcb in exI)
-  apply (clarsimp simp: obj_at'_def projectKOs)
+  apply (clarsimp simp: obj_at'_def)
   apply (rule_tac x=tcb in exI, rule conjI; clarsimp simp: o_def)
   apply (clarsimp simp: ko_wp_at'_def live'_def hyp_live'_def)
   done
@@ -2716,7 +2719,7 @@ lemma vcpuFinalise_unlive[wp]:
   apply (frule state_hyp_refs_of'_vcpu_absorb)
   apply (auto simp: ko_wp_at'_def)
   apply (rule_tac x="KOArch (KOVCPU ko)" in exI)
-  apply (clarsimp simp: live'_def hyp_live'_def arch_live'_def obj_at'_def projectKOs)
+  apply (clarsimp simp: live'_def hyp_live'_def arch_live'_def obj_at'_def)
   done
 
 crunches setVMRoot, deleteASIDPool, invalidateTLBByASID, invalidateASIDEntry, vcpuFinalise
@@ -2727,19 +2730,17 @@ lemma deleteASID_ctes_of[wp]:
   "deleteASID a ptr \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace>"
   unfolding deleteASID_def by (wpsimp wp: getASID_wp hoare_drop_imps hoare_vcg_all_lift)
 
-
 lemma arch_finaliseCap_removeable[wp]:
   "\<lbrace>\<lambda>s. s \<turnstile>' ArchObjectCap cap \<and> invs' s
-       \<and> (final \<and> final_matters' (ArchObjectCap cap)
-            \<longrightarrow> isFinal (ArchObjectCap cap) slot (cteCaps_of s))\<rbrace>
+       \<and> (final_matters' (ArchObjectCap cap)
+               \<longrightarrow> (final = isFinal (ArchObjectCap cap) slot (cteCaps_of s))) \<rbrace>
      Arch.finaliseCap cap final
-   \<lbrace>\<lambda>rv s. isNullCap (fst rv) \<and> removeable' slot s (ArchObjectCap cap)
-          \<and> (snd rv \<noteq> NullCap \<longrightarrow> snd rv = (ArchObjectCap cap) \<and> cap_has_cleanup' (ArchObjectCap cap)
-                                      \<and> isFinal (ArchObjectCap cap) slot (cteCaps_of s))\<rbrace>"
-  apply (simp add: AARCH64_H.finaliseCap_def removeable'_def)
-  apply (wpsimp wp: cteCaps_of_ctes_of_lift hoare_vcg_disj_lift hoare_vcg_ex_lift)
-  sorry (* FIXME AARCH64 ASID pools etc
-  done *)
+   \<lbrace>\<lambda>rv s. isNullCap (fst rv) \<and> removeable' slot s (ArchObjectCap cap) \<and> isNullCap (snd rv)\<rbrace>"
+  unfolding AARCH64_H.finaliseCap_def
+  apply (wpsimp wp: hoare_vcg_op_lift simp: removeable'_def isCap_simps cte_wp_at_ctes_of)
+  apply (fastforce simp: final_matters'_def isFinal_def cte_wp_at_ctes_of cteCaps_of_def
+                         sameObjectAs_def3)
+  done
 
 lemma isZombie_Null:
   "\<not> isZombie NullCap"
@@ -2818,18 +2819,6 @@ lemma cteDeleteOne_deletes[wp]:
   apply (wp cteDeleteOne_cteCaps_of)
   apply clarsimp
   done
-
-lemma [wp]: (* FIXME AARCH64 *)
-  "\<lbrace>\<lambda>s. P (irq_node' s)\<rbrace> invalidateTLBByASID param_a \<lbrace>\<lambda>_ s. P (irq_node' s)\<rbrace>"
-  sorry
-
-lemma unmapPageTable_irq_node'[wp]:
-  "unmapPageTable asid vaddr pt \<lbrace>\<lambda>s. P (irq_node' s)\<rbrace>"
-  unfolding unmapPageTable_def by wpsimp
-
-lemma [wp]: (* FIXME AARCH64 *)
-  "\<lbrace>\<lambda>s. P (irq_node' s)\<rbrace> loadVMID param_a \<lbrace>\<lambda>_ s. P (irq_node' s)\<rbrace>"
-  sorry
 
 crunch irq_node'[wp]: finaliseCap "\<lambda>s. P (irq_node' s)"
   (wp: crunch_wps getObject_inv loadObject_default_inv
@@ -3028,7 +3017,7 @@ lemma archThreadSet_bound_tcb_at'[wp]:
   "archThreadSet f t \<lbrace>bound_tcb_at' P t'\<rbrace>"
   unfolding archThreadSet_def
   apply (wpsimp wp: setObject_tcb_strongest getObject_tcb_wp simp: pred_tcb_at'_def)
-  by (auto simp: obj_at'_def projectKOs objBits_simps)
+  by (auto simp: obj_at'_def objBits_simps)
 
 lemmas asUser_bound_obj_at'[wp] = asUser_pred_tcb_at' [of itcbBoundNotification]
 
@@ -3083,7 +3072,7 @@ lemma unset_vcpu_hyp_unlive[wp]:
   "\<lbrace>\<top>\<rbrace> archThreadSet (atcbVCPUPtr_update Map.empty) t \<lbrace>\<lambda>_. ko_wp_at' (Not \<circ> hyp_live') t\<rbrace>"
   unfolding archThreadSet_def
   apply (wpsimp wp: setObject_ko_wp_at' getObject_tcb_wp; (simp add: objBits_simps')?)+
-  apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs hyp_live'_def)
+  apply (clarsimp simp: obj_at'_def ko_wp_at'_def hyp_live'_def)
   done
 
  lemma unset_tcb_hyp_unlive[wp]:
@@ -3091,7 +3080,7 @@ lemma unset_vcpu_hyp_unlive[wp]:
   apply (wpsimp wp: setObject_ko_wp_at' getObject_tcb_wp
                 simp: objBits_simps archObjSize_def vcpuBits_def pageBits_def
         | simp)+
-  apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs hyp_live'_def arch_live'_def)
+  apply (clarsimp simp: obj_at'_def ko_wp_at'_def hyp_live'_def arch_live'_def)
   done
 
 lemma setObject_vcpu_hyp_unlive[wp]:
@@ -3109,7 +3098,7 @@ lemma asUser_hyp_unlive[wp]:
   "asUser f t \<lbrace>ko_wp_at' (Not \<circ> hyp_live') t'\<rbrace>"
   unfolding asUser_def
   apply (wpsimp wp: threadSet_ko_wp_at2' threadGet_wp)
-  apply (clarsimp simp: ko_wp_at'_def obj_at'_def projectKOs hyp_live'_def atcbContextSet_def)
+  apply (clarsimp simp: ko_wp_at'_def obj_at'_def hyp_live'_def atcbContextSet_def)
   done
 
 lemma dissociateVCPUTCB_hyp_unlive[wp]:
@@ -3644,7 +3633,7 @@ lemma cteDeleteOne_invs[wp]:
     apply (rule disjI2)
     apply (rule conjI)
      subgoal by auto
-    subgoal by (auto dest!: isCapDs simp: pred_tcb_at'_def obj_at'_def projectKOs
+    subgoal by (auto dest!: isCapDs simp: pred_tcb_at'_def obj_at'_def
                                      live'_def hyp_live'_def ko_wp_at'_def)
    apply (wp isFinalCapability_inv getCTE_wp' static_imp_wp
         | wp (once) isFinal[where x=ptr])+
@@ -3816,6 +3805,46 @@ lemma (in delete_one) deletingIRQHandler_corres:
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
+lemma sym_refs_vcpu_tcb: (* FIXME: move to AInvs *)
+  "\<lbrakk> vcpus_of s v = Some vcpu; vcpu_tcb vcpu = Some t; sym_refs (state_hyp_refs_of s) \<rbrakk> \<Longrightarrow>
+   \<exists>tcb. ko_at (TCB tcb) t s \<and> tcb_vcpu (tcb_arch tcb) = Some v"
+  apply (frule hyp_sym_refs_obj_atD[where p=v and P="(=) (ArchObj (VCPU vcpu))", rotated])
+    apply (fastforce simp: obj_at_def in_omonad)
+  apply (clarsimp simp: obj_at_def hyp_refs_of_def)
+  apply (rename_tac ko)
+  apply (case_tac ko; simp add: tcb_vcpu_refs_def split: option.splits)
+  apply (rename_tac koa)
+  apply (case_tac koa; simp add: refs_of_ao_def vcpu_tcb_refs_def split: option.splits)
+  done
+
+lemma vcpuFinalise_corres[corres]:
+  "vcpu' = vcpu \<Longrightarrow>
+   corres dc (invs and vcpu_at vcpu) no_0_obj' (vcpu_finalise vcpu) (vcpuFinalise vcpu')"
+  apply (simp add: vcpuFinalise_def vcpu_finalise_def)
+  apply (corres corres: getObject_vcpu_corres
+                simp: vcpu_relation_def
+                wp: get_vcpu_wp getVCPU_wp
+         | corres_cases_both)+
+   apply (fastforce simp: obj_at_def in_omonad dest: sym_refs_vcpu_tcb)
+  apply (fastforce elim: vcpu_at_cross)
+  done
+
+lemma return_NullCap_pair_corres[corres]:
+  "corres (\<lambda>r r'. cap_relation (fst r) (fst r') \<and> cap_relation (snd r) (snd r'))
+          \<top> \<top>
+          (return (cap.NullCap, cap.NullCap)) (return (NullCap, NullCap))"
+  by (corres corres: corres_returnTT)
+
+(* FIXME AARCH64: move *)
+lemma vspace_for_asid_not_normal_pt:
+  "\<lbrakk>vspace_for_asid asid s = Some pt; normal_pt_at pt s; valid_vspace_objs s\<rbrakk> \<Longrightarrow> False"
+  apply (drule vspace_for_asid_vs_lookup)
+  apply (clarsimp simp: pt_at_eq)
+  apply (drule (1) valid_vspace_objsD, simp)
+   apply (fastforce simp: in_omonad)
+  apply clarsimp
+  done
+
 lemma arch_finaliseCap_corres:
   "\<lbrakk> final_matters' (ArchObjectCap cap') \<Longrightarrow> final = final'; acap_relation cap cap' \<rbrakk>
      \<Longrightarrow> corres (\<lambda>r r'. cap_relation (fst r) (fst r') \<and> cap_relation (snd r) (snd r'))
@@ -3828,42 +3857,15 @@ lemma arch_finaliseCap_corres:
                  (final_matters' (ArchObjectCap cap') \<longrightarrow>
                       final' = isFinal (ArchObjectCap cap') (cte_map sl) (cteCaps_of s)))
            (arch_finalise_cap cap final) (Arch.finaliseCap cap' final')"
-  apply (cases cap,
-         simp_all add: arch_finalise_cap_def AARCH64_H.finaliseCap_def
-                       final_matters'_def case_bool_If liftM_def[symmetric]
-                       o_def dc_def[symmetric]
-                split: option.split,
-         safe)
-    apply (rule corres_guard_imp, rule deleteASIDPool_corres[OF refl refl])
-     apply (clarsimp simp: valid_cap_def mask_def)
-    apply (clarsimp simp: valid_cap'_def)
-   apply auto[1]
-   sorry (* FIXME AARCH64 the cases are different now, indentation is misleading, etc
-   apply (rule corres_guard_imp, rule unmapPage_corres[OF refl refl refl refl])
-    apply simp
-    apply (clarsimp simp: valid_cap_def valid_unmap_def)
-    apply (auto simp: vmsz_aligned_def pbfs_atleast_pageBits mask_def wellformed_mapdata_def
-                elim: is_aligned_weaken)[2]
-  apply (rule corres_guard_imp)
-    apply (rule corres_split_catch[where f=dc])
-       apply (rule corres_splitEE)
-          apply (rule corres_rel_imp[where r="dc \<oplus> (=)"], rule findVSpaceForASID_corres; simp)
-          apply (case_tac x; simp)
-         apply (simp only: whenE_def)
-         apply (rule corres_if[where Q=\<top> and Q'=\<top>], simp)
-          apply simp
-          apply (rule deleteASID_corres; rule refl)
-         apply simp
-        apply (wpsimp wp: hoare_vcg_if_lift_ER hoare_drop_imps)+
-      apply (rule unmapPageTable_corres; simp)
-     apply (wpsimp wp: hoare_drop_imps)+
-   apply (clarsimp simp: invs_psp_aligned invs_distinct invs_vspace_objs invs_valid_asid_table)
-   apply (clarsimp simp: cte_wp_at_caps_of_state)
-   apply (drule (1) caps_of_state_valid)
-   apply (simp add: valid_cap_def wellformed_mapdata_def)
-  apply (simp add: invs_no_0_obj')
-  done *)
-
+  apply (simp add: arch_finalise_cap_def AARCH64_H.finaliseCap_def)
+  apply (corres_cases_both simp: final_matters'_def acap_relation_def mdata_map_def |
+         corres corres: deleteASIDPool_corres[@lift_corres_args] unmapPageTable_corres)+
+   apply (clarsimp simp: valid_cap_def)
+   apply (rule conjI, clarsimp simp: wellformed_mapdata_def valid_unmap_def vmsz_aligned_def)+
+    apply (fastforce dest: vspace_for_asid_not_normal_pt simp: wellformed_mapdata_def)
+   apply (clarsimp simp: cap_aligned_def cte_wp_at_caps_of_state)
+  apply fastforce
+  done
 
 lemma unbindNotification_corres:
   "corres dc
@@ -4041,7 +4043,7 @@ lemma finaliseCap_corres:
        apply (rule corres_split[OF unbindNotification_corres])
          apply (rule corres_split[OF suspend_corres])
            apply (clarsimp simp: liftM_def[symmetric] o_def dc_def[symmetric] zbits_map_def)
-           apply (rule prepareThreadDelete_corres)
+           apply (rule prepareThreadDelete_corres, simp)
           apply (wp unbind_notification_invs unbind_notification_simple_sched_action
                     delete_one_conc_fr.suspend_objs')+
       apply (clarsimp simp add: valid_cap_def)
