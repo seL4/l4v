@@ -2571,11 +2571,11 @@ definition
 (* FIXME AARCH64: given we want to cross over vcpu_at', this needs consideration for removal *)
 definition
   "valid_vcpuinv' vi \<equiv> case vi of
-    VCPUSetTCB v t \<Rightarrow> vcpu_at' v and tcb_at' t and ex_nonz_cap_to' v and ex_nonz_cap_to' t
-  | VCPUInjectIRQ v n q \<Rightarrow> vcpu_at' v
-  | VCPUReadRegister v rg \<Rightarrow> vcpu_at' v
-  | VCPUWriteRegister v _ _ \<Rightarrow> vcpu_at' v
-  | VCPUAckVPPI v _ \<Rightarrow> vcpu_at' v"
+    VCPUSetTCB v t \<Rightarrow> vcpu_at' v and ex_nonz_cap_to' v and ex_nonz_cap_to' t
+  | VCPUInjectIRQ v n q \<Rightarrow> \<top>
+  | VCPUReadRegister v rg \<Rightarrow> \<top>
+  | VCPUWriteRegister v _ _ \<Rightarrow> \<top>
+  | VCPUAckVPPI v _ \<Rightarrow> \<top>"
 
 lemma performASIDPoolInvocation_corres[corres]:
   "\<lbrakk> ap' = asid_pool_invocation_map ap \<rbrakk> \<Longrightarrow>
