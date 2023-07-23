@@ -247,7 +247,7 @@ definition decode_vs_inv_flush :: "'z::state_ext arch_decoder" where
 
 definition decode_vspace_invocation :: "'z::state_ext arch_decoder" where
   "decode_vspace_invocation label args cte cap extra_caps \<equiv>
-     if isPageFlushLabel (invocation_type label)
+     if isVSpaceFlushLabel (invocation_type label)
      then decode_vs_inv_flush label args cte cap extra_caps
      else throwError IllegalOperation"
 
