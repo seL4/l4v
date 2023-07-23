@@ -1510,7 +1510,7 @@ lemma pptrTop_le_ipa_size:
   "pptrTop \<le> mask ipa_size"
   by (simp add: bit_simps pptrTop_def mask_def)
 
-lemma addrFromPPtr_mask_ipa:
+lemma addrFromPPtr_mask_ipa: (* FIXME AARCH64: check if used; Refine needs this with >> pageBits *)
   "\<lbrakk> pptr_base \<le> pt_ptr; pt_ptr < pptrTop \<rbrakk>
    \<Longrightarrow> addrFromPPtr pt_ptr && mask ipa_size = addrFromPPtr pt_ptr"
   using pptrTop_le_ipa_size
