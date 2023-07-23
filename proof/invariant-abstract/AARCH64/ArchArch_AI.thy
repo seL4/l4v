@@ -1434,6 +1434,11 @@ lemma pageBitsForSize_level_0_eq:
   by (simp add: pageBitsForSize_def pt_bits_left_def ptTranslationBits_def
            split: vmpage_size.splits if_split_asm)
 
+(* FIXME AARCH64: replace user_vtop_canonical_user *)
+lemma user_vtop_leq_canonical_user:
+  "vref \<le> user_vtop \<Longrightarrow> vref \<le> canonical_user"
+  using user_vtop_leq_canonical_user by simp
+
 lemma decode_fr_inv_map_wf[wp]:
   assumes "arch_cap = FrameCap p rights vmpage_size dev option"
   shows
@@ -1451,11 +1456,12 @@ proof -
     apply (clarsimp simp: if_distribR if_bool_simps disj_imp cong: if_cong split del: if_split)
     apply (rule pull_out)
     apply clarsimp
-    apply (prop_tac "\<not> user_vtop \<le> args ! 0 + mask (pageBitsForSize vmpage_size) \<longrightarrow> args!0 \<in> user_region")
+    apply (prop_tac "\<not> user_vtop < args ! 0 + mask (pageBitsForSize vmpage_size) \<longrightarrow> args!0 \<in> user_region")
      apply (clarsimp simp: user_region_def not_le)
-     apply (rule user_vtop_canonical_user)
-     apply (erule aligned_add_mask_lessD)
-     apply (simp add: vmsz_aligned_def)
+     apply (rule user_vtop_leq_canonical_user)
+     apply (simp add: vmsz_aligned_def not_less)
+     apply (drule is_aligned_no_overflow_mask)
+     apply simp
     apply (rename_tac pte_ptr level)
     apply (clarsimp simp: valid_arch_inv_def valid_page_inv_def neq_Nil_conv)
     apply (rename_tac cptr cidx excaps')

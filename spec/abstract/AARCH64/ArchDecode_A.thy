@@ -91,7 +91,7 @@ definition decode_fr_inv_map :: "'z::state_ext arch_decoder" where
              odE
            | None \<Rightarrow> doE
                vtop \<leftarrow> returnOk $ vaddr + mask (pageBitsForSize pgsz);
-               whenE (vtop \<ge> user_vtop) $ throwError $ InvalidArgument 0
+               whenE (vtop > user_vtop) $ throwError $ InvalidArgument 0
              odE;
            (level, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot pt vaddr \<circ> ptes_of;
            unlessE (pt_bits_left level = pg_bits) $
