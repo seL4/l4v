@@ -470,6 +470,7 @@ checkVSpaceRoot :: Capability  -> Int -> KernelF SyscallError (PPtr PTE, ASID)
 checkVSpaceRoot vspaceCap argNo =
     case vspaceCap of
         ArchObjectCap (PageTableCap {
+                capPTType = VSRootPT_T,
                 capPTMappedAddress = Just (asid, _),
                 capPTBasePtr = vspace })
             -> return (vspace, asid)
