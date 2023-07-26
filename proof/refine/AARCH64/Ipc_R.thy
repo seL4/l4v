@@ -1796,12 +1796,12 @@ lemma doIPCTransfer_invs[wp]:
 
 lemma arch_getSanitiseRegisterInfo_corres:
   "corres (=) (tcb_at t and pspace_aligned and pspace_distinct) \<top>
-      (arch_get_sanitise_register_info t)
-      (getSanitiseRegisterInfo t)"
+          (arch_get_sanitise_register_info t)
+          (getSanitiseRegisterInfo t)"
   unfolding arch_get_sanitise_register_info_def getSanitiseRegisterInfo_def
   apply (fold archThreadGet_def)
-  sorry (*
-  by (corresKsimp corres: archThreadGet_VCPU_corres) *)
+  apply corres
+  done
 
 crunch tcb_at'[wp]: getSanitiseRegisterInfo "tcb_at' t"
 
@@ -3974,16 +3974,9 @@ lemma lookupCap_cap_to_refs[wp]:
   apply (wp | simp)+
   done
 
-lemma loadVMID_valid_objs'[wp]:
-  "loadVMID param_a \<lbrace>valid_objs'\<rbrace>"
-  sorry (* FIXME AARCH64: make crunchable *)
-
-lemma updateASIDPoolEntry_valid_objs'[wp]:
-  "updateASIDPoolEntry param_a param_b \<lbrace>valid_objs'\<rbrace>"
-  sorry (* FIXME AARCH64: make crunchable; might need precondition *)
-
-crunch valid_objs'[wp]: setVMRoot valid_objs'
-  (wp: crunch_wps simp: crunch_simps)
+crunches setVMRoot
+  for valid_objs'[wp]: valid_objs'
+  (wp: getASID_wp crunch_wps simp: getPoolPtr_def)
 
 lemma arch_stt_objs' [wp]:
   "\<lbrace>valid_objs'\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
