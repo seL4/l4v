@@ -417,10 +417,19 @@ lemma dmo_plic_complete_claim_invs'[wp]:
   apply (clarsimp simp: in_monad AARCH64.plic_complete_claim_def machine_op_lift_def machine_rest_lift_def select_f_def)
   done
 
+lemma doMachineOp_maskInterrupt_False[wp]:
+  "\<lbrace> \<lambda>s. invs' s \<and> intStateIRQTable (ksInterruptState s) irq \<noteq> irqstate.IRQInactive \<rbrace>
+   doMachineOp (maskInterrupt False irq)
+   \<lbrace>\<lambda>_. invs'\<rbrace>"
+  apply (wp dmo_maskInterrupt)
+  apply (clarsimp simp: invs'_def valid_state'_def)
+  apply (simp add: valid_irq_masks'_def valid_machine_state'_def
+                   ct_not_inQ_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
+  done
+
 lemma invoke_arch_irq_handler_invs'[wp]:
   "\<lbrace>invs' and irq_handler_inv_valid' i\<rbrace> AARCH64_H.invokeIRQHandler i \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  sorry (* FIXME AARCH64: doMachineOp maskInterrupt
-  by (cases i; wpsimp simp: AARCH64_H.invokeIRQHandler_def) *)
+  by (cases i; wpsimp simp: AARCH64_H.invokeIRQHandler_def)
 
 lemma invoke_irq_handler_invs'[wp]:
   "\<lbrace>invs' and irq_handler_inv_valid' i\<rbrace>
@@ -960,11 +969,9 @@ lemma handleInterrupt_corres:
              apply (rule corres_guard_imp, rule sendSignal_corres)
               apply (clarsimp simp: valid_cap_def valid_cap'_def arch_mask_irq_signal_def
                                     maskIrqSignal_def do_machine_op_bind doMachineOp_bind)+
-  sorry (* FIXME AARCH64
-           apply (rule corres_machine_op, rule corres_eq_trivial;
-                   (simp add: no_fail_ackInterrupt)+)+
-          apply ((wp |simp)+)
-    apply clarsimp
+           apply corres
+             apply (rule corres_machine_op, rule corres_eq_trivial; simp)+
+            apply wpsimp+
    apply fastforce
   apply (rule corres_guard_imp)
     apply (rule corres_split)
@@ -972,11 +979,11 @@ lemma handleInterrupt_corres:
        apply (rule corres_split[OF timerTick_corres corres_machine_op])
          apply (rule corres_eq_trivial, wpsimp+)
       apply (rule corres_machine_op)
-      apply (rule corres_eq_trivial, (simp add: no_fail_ackInterrupt)+)
+      apply (rule corres_eq_trivial; simp)
      apply wp+
    apply (clarsimp simp: invs_distinct invs_psp_aligned)
   apply clarsimp
-  done *)
+  done
 
 lemma threadSet_ksDomainTime[wp]:
   "\<lbrace>\<lambda>s. P (ksDomainTime s)\<rbrace> threadSet f ptr \<lbrace>\<lambda>rv s. P (ksDomainTime s)\<rbrace>"
@@ -1103,10 +1110,10 @@ lemma vgicMaintenance_invs'[wp]:
               apply (fastforce elim!: st_tcb_ex_cap'' simp: valid_state'_def valid_pspace'_def)
              apply (clarsimp simp: invs'_def valid_state'_def valid_idle'_def obj_at'_def idle_tcb'_def)
             apply wps
-            apply (wpsimp simp: if_apply_def2 wp: hoare_vcg_const_imp_lift hoare_drop_imps
+            apply (wpsimp simp: if_apply_def2
+                          wp: hoare_vcg_const_imp_lift hoare_drop_imps dmo'_gets_wp
                    | wps)+
   apply (clarsimp cong: conj_cong imp_cong split: if_split)
-  sorry (* FIXME AARCH64
   apply (strengthen st_tcb_ex_cap''[where P=active'])
   apply (strengthen invs_iflive')
   apply (clarsimp cong: conj_cong imp_cong split: if_split)
@@ -1116,7 +1123,7 @@ lemma vgicMaintenance_invs'[wp]:
     apply (fastforce elim!: st_tcb_ex_cap'' simp: valid_state'_def valid_pspace'_def)
    apply (clarsimp simp: invs'_def valid_state'_def valid_idle'_def obj_at'_def idle_tcb'_def)
   apply clarsimp
-  done *)
+  done
 
 lemma vppiEvent_invs'[wp]:
   "\<lbrace>invs' and (\<lambda>s. sch_act_not (ksCurThread s) s \<and> (\<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p)))\<rbrace>
