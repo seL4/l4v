@@ -554,7 +554,7 @@ lemma alternativeE_R_wp:
   unfolding validE_R_def
   by (rule alternativeE_wp)
 
-lemma alternative_R_wp:
+lemma alternativeE_E_wp:
   "\<lbrakk> \<lbrace>P\<rbrace> f -,\<lbrace>Q\<rbrace>; \<lbrace>P'\<rbrace> g -,\<lbrace>Q\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P and P'\<rbrace> f \<sqinter> g -, \<lbrace>Q\<rbrace>"
   unfolding validE_E_def
   by (rule alternativeE_wp)
@@ -1009,6 +1009,11 @@ lemmas [wp] = hoare_vcg_prop
               gets_the_wp
               gets_map_wp'
               liftE_wp
+              alternative_wp
+              alternativeE_R_wp
+              alternativeE_E_wp
+              alternativeE_wp
+              select_wp
               select_f_wp
               state_select_wp
               condition_wp
