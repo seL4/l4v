@@ -1336,7 +1336,7 @@ crunch_ignore (add: select_ext find_vspace_for_asid)
 
 
 crunch inv [wp]: arch_decode_invocation "P"
-  (wp: crunch_wps select_wp select_ext_weak_wp hoare_vcg_all_lift
+  (wp: crunch_wps select_ext_weak_wp hoare_vcg_all_lift
        hoare_vcg_all_lift_R hoare_drop_imps simp: crunch_simps)
 
 
@@ -1641,7 +1641,7 @@ lemma decode_asid_control_invocation_wf[wp]:
            apply (simp add: lookup_target_slot_def)
            apply wp
           apply (clarsimp simp: cte_wp_at_def)
-         apply (wpsimp wp: ensure_no_children_sp select_ext_weak_wp select_wp whenE_throwError_wp)+
+         apply (wpsimp wp: ensure_no_children_sp select_ext_weak_wp whenE_throwError_wp)+
   apply (rule conjI, fastforce)
   apply (cases excaps, simp)
   apply (case_tac list, simp)

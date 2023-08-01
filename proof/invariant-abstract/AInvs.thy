@@ -44,7 +44,7 @@ lemma kernel_entry_invs:
   (kernel_entry e us) :: (user_context,unit) s_monad
   \<lbrace>\<lambda>rv. invs and (\<lambda>s. ct_running s \<or> ct_idle s)\<rbrace>"
   apply (simp add: kernel_entry_def)
-  apply (wp akernel_invs thread_set_invs_trivial thread_set_ct_in_state select_wp
+  apply (wp akernel_invs thread_set_invs_trivial thread_set_ct_in_state
          do_machine_op_ct_in_state static_imp_wp hoare_vcg_disj_lift
       | clarsimp simp add: tcb_cap_cases_def)+
   done
@@ -89,7 +89,7 @@ lemma do_user_op_invs:
    \<lbrace>\<lambda>_. invs and ct_running\<rbrace>"
   apply (simp add: do_user_op_def split_def)
   apply (wp device_update_invs)
-  apply (wp do_machine_op_ct_in_state select_wp dmo_invs | simp add:dom_restrict_plus_eq)+
+  apply (wp do_machine_op_ct_in_state dmo_invs | simp add:dom_restrict_plus_eq)+
   apply (clarsimp simp: user_memory_update_def simpler_modify_def
                         restrict_map_def invs_def cur_tcb_def
                  split: option.splits if_split_asm)

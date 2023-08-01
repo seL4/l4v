@@ -826,8 +826,7 @@ lemma decode_arch_invocation_authorised:
   apply (rule hoare_pre)
    apply (simp add: split_def Let_def split del: if_split
               cong: cap.case_cong arch_cap.case_cong if_cong option.case_cong)
-   apply (wp select_wp whenE_throwError_wp check_vp_wpR
-             find_pd_for_asid_authority2
+   apply (wp whenE_throwError_wp check_vp_wpR find_pd_for_asid_authority2
           | wpc
           | simp add: authorised_asid_control_inv_def authorised_page_inv_def
                       authorised_page_directory_inv_def

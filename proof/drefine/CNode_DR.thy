@@ -756,7 +756,7 @@ lemma cap_revoke_corres_helper:
                  apply (erule cte_wp_at_weakenE, simp)
                 apply (simp,blast)
               apply simp+
-            apply (wp select_wp,(clarsimp simp: select_ext_def in_monad)+)
+            apply (wp, (clarsimp simp: select_ext_def in_monad)+)
            apply (rule dcorres_expand_pfx)
            apply (rule_tac r'="\<lambda>cap cap'. cap = transform_cap cap'"
              and Q ="\<lambda>r. \<top>" and Q'="\<lambda>r s. cte_wp_at (\<lambda>x. x = r) (aa,ba) s \<and> s = sfix" in corres_split_forwards')
@@ -792,7 +792,7 @@ lemma cap_revoke_corres_helper:
              in corres_split_forwards')
               apply (rule corres_guard_imp[OF corres_trivial[OF preemption_corres]])
                apply simp+
-             apply (wp alternative_wp)
+             apply wp
                apply (simp add:valid_def throwError_def return_def)
               apply (simp add:valid_def returnOk_def return_def)
              apply fastforce

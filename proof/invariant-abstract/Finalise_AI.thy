@@ -487,7 +487,7 @@ lemma cancel_ipc_caps_of_state:
    \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
   apply (simp add: cancel_ipc_def reply_cancel_ipc_def
              cong: Structures_A.thread_state.case_cong)
-  apply (wpsimp wp: cap_delete_one_caps_of_state select_wp)
+  apply (wpsimp wp: cap_delete_one_caps_of_state)
      apply (rule_tac Q="\<lambda>_ s. (\<forall>p. cte_wp_at can_fast_finalise p s
                                 \<longrightarrow> P ((caps_of_state s) (p \<mapsto> cap.NullCap)))
                                 \<and> P (caps_of_state s)"
@@ -1019,10 +1019,10 @@ locale Finalise_AI_3 = Finalise_AI_2 a b
 
 crunches suspend, unbind_maybe_notification, unbind_notification
   for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
-  (wp: crunch_wps select_wp simp: crunch_simps)
+  (wp: crunch_wps simp: crunch_simps)
 
 crunch irq_node[wp]: deleting_irq_handler "\<lambda>s. P (interrupt_irq_node s)"
-  (wp: crunch_wps select_wp simp: crunch_simps)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemmas cancel_all_ipc_cte_irq_node[wp]
     = hoare_use_eq_irq_node [OF cancel_all_ipc_irq_node cancel_all_ipc_cte_wp_at]

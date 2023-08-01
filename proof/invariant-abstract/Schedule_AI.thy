@@ -177,8 +177,8 @@ locale Schedule_AI_U = Schedule_AI "TYPE(unit)"
 lemma (in Schedule_AI_U) schedule_invs[wp]:
   "\<lbrace>invs\<rbrace> (Schedule_A.schedule :: (unit,unit) s_monad) \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: Schedule_A.schedule_def allActiveTCBs_def)
-  apply (wp OR_choice_weak_wp alternative_wp dmo_invs thread_get_inv
-            do_machine_op_tcb select_ext_weak_wp select_wp when_def
+  apply (wp OR_choice_weak_wp dmo_invs thread_get_inv
+            do_machine_op_tcb select_ext_weak_wp when_def
           | clarsimp simp: getActiveTCB_def get_tcb_def)+
   done
 
@@ -202,9 +202,8 @@ lemma (in Schedule_AI_U) schedule_ct_activateable[wp]:
     done
   show ?thesis
     apply (simp add: Schedule_A.schedule_def allActiveTCBs_def)
-    apply (wp alternative_wp
-              select_ext_weak_wp select_wp stt_activatable stit_activatable
-               | simp add: P Q)+
+    apply (wp select_ext_weak_wp stt_activatable stit_activatable
+           | simp add: P Q)+
     apply (clarsimp simp: getActiveTCB_def ct_in_state_def)
     apply (rule conjI)
      apply clarsimp

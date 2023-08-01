@@ -1439,9 +1439,7 @@ lemmas get_tcb_ko_atI = get_tcb_ko_at [THEN iffD1]
 
 
 crunch "distinct" [wp]: set_mrs pspace_distinct
-  (wp: select_wp hoare_vcg_split_case_option mapM_wp
-       hoare_drop_imps  refl
-   simp: zipWithM_x_mapM)
+  (wp: mapM_wp simp: zipWithM_x_mapM)
 
 
 crunch "distinct" [wp]: copy_mrs pspace_distinct
@@ -2957,7 +2955,7 @@ crunch cap_to[wp]: receive_signal "ex_nonz_cap_to p"
   (wp: crunch_wps)
 
 crunch mdb[wp]: set_message_info valid_mdb
-  (wp: select_wp crunch_wps mapM_wp')
+  (wp: crunch_wps mapM_wp')
 
 lemma ep_queue_cap_to:
   "\<lbrakk> ko_at (Endpoint ep) p s; invs s;

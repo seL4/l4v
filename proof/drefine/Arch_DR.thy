@@ -363,7 +363,7 @@ proof -
         apply (clarsimp simp add: corres_alternate2 split: ARM_A.pde.split)
         apply (rule corres_alternate1)
         apply (rule corres_from_rdonly, simp_all)[1]
-          apply (wp select_wp | simp)+
+          apply (wp | simp)+
         apply (simp add: returnOk_def in_monad select_def, wp)
         apply (clarsimp simp: transform_pt_slot_ref_def all_pd_pt_slots_def
                               opt_object_page_directory
@@ -409,7 +409,7 @@ proof -
         apply (rename_tac word1 set word2)
         apply (rule corres_alternate1)
         apply (rule corres_from_rdonly, simp_all)[1]
-          apply (wp select_wp | simp)+
+          apply (wp | simp)+
         apply (simp add: returnOk_def in_monad select_def, wp)
         apply (clarsimp simp: pd_aligned obj_at_def lookup_pd_slot_pd
                               a_type_simps)
@@ -458,7 +458,7 @@ proof -
                                      lookup_error_injection dc_def[symmetric])
         apply (rule corres_alternate1)
         apply (rule corres_from_rdonly, simp_all)[1]
-          apply (wp select_wp | simp)+
+          apply (wp | simp)+
         apply (simp add: returnOk_def in_monad select_def, wp)
         apply (clarsimp simp: transform_pde_def obj_at_def
                               opt_object_page_directory
@@ -477,7 +477,7 @@ proof -
                                      lookup_error_injection dc_def[symmetric])
         apply (rule corres_alternate1)
         apply (rule corres_from_rdonly, simp_all)[1]
-          apply (wp select_wp | simp)+
+          apply (wp | simp)+
         apply (simp add: returnOk_def in_monad select_def, wp)
         apply (clarsimp simp: transform_pde_def obj_at_def
                               opt_object_page_directory
@@ -557,7 +557,6 @@ lemma select_ret_or_throw_twiceE:
   done
 
 crunch inv[wp]: select_ret_or_throw "P"
-  (wp: select_wp)
 
 lemma corres_initial_bindE_rdonly_select_ret_or_throw:
   assumes y: "\<And>rv'. corres_underlying sr nf nf' (e \<oplus> r) P P' (select_ret_or_throw S X) (d rv')"
@@ -659,7 +658,7 @@ proof (induct x)
            apply (rule ucast_up_inj[where 'b=32])
             apply (simp add: ucast_ucast_mask is_aligned_mask asid_low_bits_def)
            apply simp
-          apply (wp select_wp | simp add:valid_cap_def split del: if_split)+
+          apply (wp | simp add:valid_cap_def split del: if_split)+
     done
 next
   case ASIDControlCap
@@ -737,7 +736,7 @@ next
               apply (rule less_trans)
                apply simp
               apply simp
-             apply (wp lsfco_not_idle select_inv select_wp | simp)+
+             apply (wp lsfco_not_idle select_inv | simp)+
     apply (simp add: cte_wp_at_caps_of_state neq_Nil_conv invs_mdb_cte mdb_cte_at_rewrite)
     apply auto
     done
@@ -948,7 +947,7 @@ next
              corres_alternate2)
         apply (rule corres_alternate1)
         apply (rule corres_from_rdonly,simp_all)[1]
-          apply (wp select_wp | simp)+
+          apply (wp | simp)+
         apply (simp add: returnOk_def, wp)
         apply (clarsimp simp: in_monad select_def arch_invocation_relation_def
           translate_arch_invocation_def transform_page_table_inv_def
@@ -1105,7 +1104,7 @@ lemma set_cap_opt_cap':
   apply (rule hoare_seq_ext [OF _ dget_object_sp])
   apply (case_tac obj; simp add: KHeap_D.set_object_def has_slots_def update_slots_def object_slots_def
                             split del: if_split cong: if_cong bind_cong;
-                       wpsimp wp: select_wp)
+                       wpsimp)
        by (auto elim!:rsubst[where P=P] simp: opt_cap_def slots_of_def object_slots_def)
 
 lemma set_cap_opt_cap:
@@ -1206,7 +1205,7 @@ lemma invoke_page_table_corres:
        apply clarsimp
        apply (wp store_pte_cte_wp_at)
       apply fastforce
-     apply (wp hoare_post_taut)+
+     apply wpsimp+
     apply (rule_tac Q="\<lambda>rv s. invs s \<and> valid_etcbs s \<and> a \<noteq> idle_thread s \<and> cte_wp_at \<top> (a,b) s \<and>
                               caps_of_state s' = caps_of_state s" in hoare_strengthen_post)
      apply wp

@@ -186,7 +186,7 @@ lemma doUserOp_if_invs'[ADT_IF_Refine_assms, wp]:
   apply (wp device_update_invs' dmo_invs' | simp)+
          apply (clarsimp simp add: no_irq_modify user_memory_update_def)
          apply wpsimp
-        apply (wp select_wp)+
+        apply wp+
   apply (clarsimp simp: user_memory_update_def simpler_modify_def
                         restrict_map_def
                  split: option.splits)
@@ -197,25 +197,25 @@ lemma doUserOp_if_invs'[ADT_IF_Refine_assms, wp]:
 lemma doUserOp_valid_duplicates[ADT_IF_Refine_assms, wp]:
   "doUserOp_if f tc \<lbrace>arch_extras\<rbrace>"
   apply (simp add: doUserOp_if_def split_def)
-  apply (wp dmo_invs' select_wp | simp)+
+  apply (wp dmo_invs' | simp)+
   done
 
 lemma doUserOp_if_schedact[ADT_IF_Refine_assms, wp]:
   "doUserOp_if f tc \<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>"
   apply (simp add: doUserOp_if_def)
-  apply (wp select_wp | wpc | simp)+
+  apply (wp | wpc | simp)+
   done
 
 lemma doUserOp_if_st_tcb_at[ADT_IF_Refine_assms, wp]:
    "doUserOp_if f tc \<lbrace>st_tcb_at' st t\<rbrace>"
   apply (simp add: doUserOp_if_def)
-  apply (wp select_wp | wpc | simp)+
+  apply (wp | wpc | simp)+
   done
 
 lemma doUserOp_if_cur_thread[ADT_IF_Refine_assms, wp]:
   "doUserOp_if f tc \<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace>"
   apply (simp add: doUserOp_if_def)
-  apply (wp select_wp | wpc | simp)+
+  apply (wp | wpc | simp)+
   done
 
 lemma do_user_op_if_corres'[ADT_IF_Refine_assms]:
@@ -348,7 +348,6 @@ lemma handle_preemption_if_corres[ADT_IF_Refine_assms]:
 crunches doUserOp_if
   for ksDomainTime_inv[ADT_IF_Refine_assms, wp]: "\<lambda>s. P (ksDomainTime s)"
   and ksDomSchedule_inv[ADT_IF_Refine_assms, wp]: "\<lambda>s. P (ksDomSchedule s)"
-  (wp: select_wp)
 
 crunches checkActiveIRQ_if
   for arch_extras[ADT_IF_Refine_assms, wp]: arch_extras
@@ -369,7 +368,7 @@ lemma doUserOp_if_no_interrupt[ADT_IF_Refine_assms]:
    doUserOp_if uop tc
    \<lbrace>\<lambda>r s. (fst r) \<noteq> Some Interrupt\<rbrace>"
   apply (simp add: doUserOp_if_def del: split_paired_All)
-  apply (wp select_wp | wpc)+
+  apply (wp | wpc)+
   apply (clarsimp simp: uop_sane_def simp del: split_paired_All)
   done
 

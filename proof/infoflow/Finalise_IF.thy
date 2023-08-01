@@ -994,7 +994,7 @@ lemma reply_cancel_ipc_reads_respects_f:
   unfolding reply_cancel_ipc_def
   apply (rule gen_asm_ev)
   apply (wp cap_delete_one_reads_respects_f_transferable[where st=st]
-            select_singleton_ev select_inv select_wp assert_wp
+            select_singleton_ev select_inv assert_wp
             reads_respects_f[OF get_cap_rev, where st=st]
             reads_respects_f[OF thread_set_reads_respects, where st=st]
             reads_respects_f[OF gets_descendants_of_revrv[folded equiv_valid_def2]]

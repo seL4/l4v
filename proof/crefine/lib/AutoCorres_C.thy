@@ -921,7 +921,7 @@ lemma terminates_spec_no_fail:
       using spec_result_Normal p_spec by simp
     have L1_call_simpl_no_fail:
       "no_fail (\<lambda>s. P s s) (L1_call_simpl check_termination \<Gamma> f_'proc)"
-      apply (wpsimp simp: L1_call_simpl_def wp: no_fail_select select_wp)
+      apply (wpsimp simp: L1_call_simpl_def wp: no_fail_select)
       using terminates normal by auto
     have select_f_L1_call_simpl_no_fail:
       "\<And>s. no_fail (\<lambda>_. P s s) (select_f (L1_call_simpl check_termination \<Gamma> f_'proc s))"
@@ -937,7 +937,7 @@ lemma terminates_spec_no_fail:
       apply (wpsimp wp: select_f_L1_call_simpl_no_fail no_fail_select
                 wp_del: select_f_wp)
       apply (rule hoare_strengthen_post[OF select_f_L1_call_simpl_rv], fastforce)
-      apply (wpsimp wp: select_wp nf_pre)+
+      apply (wpsimp wp: nf_pre)+
       done
   qed
 

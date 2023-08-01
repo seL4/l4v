@@ -794,7 +794,7 @@ lemma not_idle_after_reply_cancel_ipc:
        apply (simp add:cap_delete_one_def unless_def)
        apply wp+
           apply (simp add:IpcCancel_A.empty_slot_def)
-          apply (wp set_cap_idle select_wp | simp add: if_apply_def2 imp_conjR
+          apply (wp set_cap_idle | simp add: if_apply_def2 imp_conjR
             | strengthen imp_consequent[where P="invs s" for s] imp_consequent[where P="valid_idle s" for s])+
    apply (strengthen invs_valid_idle)
    apply (wp thread_set_invs_trivial | simp add: ran_tcb_cap_cases)+

@@ -37,7 +37,7 @@ lemma send_signal_caps_of_state[wp]:
   done
 
 crunch mdb[wp]: blocked_cancel_ipc, update_waiting_ntfn "\<lambda>s. P (cdt (s :: det_ext state))"
-  (wp: crunch_wps unless_wp select_wp dxo_wp_weak simp: crunch_simps)
+  (wp: crunch_wps unless_wp dxo_wp_weak simp: crunch_simps)
 
 lemma cancel_ipc_receive_blocked_mdb:
   "\<lbrace>\<lambda>s :: det_ext state. P (cdt s) \<and> st_tcb_at receive_blocked t s\<rbrace>

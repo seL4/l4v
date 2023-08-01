@@ -952,8 +952,7 @@ lemma handleInvocation_ccorres:
                    apply (rule_tac Q="\<lambda>rv'. invs' and tcb_at' rv"
                                and E="\<lambda>ft. invs' and tcb_at' rv"
                               in hoare_post_impErr)
-                     apply (wp hoare_split_bind_case_sumE
-                               alternative_wp hoare_drop_imps
+                     apply (wp hoare_split_bind_case_sumE hoare_drop_imps
                                setThreadState_nonqueued_state_update
                                ct_in_state'_set setThreadState_st_tcb
                                hoare_vcg_all_lift sts_ksQ'

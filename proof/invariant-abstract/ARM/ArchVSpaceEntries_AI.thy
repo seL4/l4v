@@ -402,7 +402,7 @@ lemma set_simple_ko_valid_pdpt_objs[wp]:
           split: kernel_object.splits)
 
 crunch valid_pdpt_objs[wp]: finalise_cap, cap_swap_for_delete, empty_slot "valid_pdpt_objs"
-  (wp: crunch_wps select_wp preemption_point_inv simp: crunch_simps unless_def ignore:set_object)
+  (wp: crunch_wps preemption_point_inv simp: crunch_simps unless_def ignore:set_object)
 
 lemma preemption_point_valid_pdpt_objs[wp]:
   "\<lbrace>valid_pdpt_objs\<rbrace> preemption_point \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
@@ -1513,15 +1513,14 @@ lemma handle_invocation_valid_pdpt[wp]:
 
 crunch valid_pdpt[wp]: handle_event, activate_thread,switch_to_thread,
        switch_to_idle_thread "valid_pdpt_objs"
-  (simp: crunch_simps wp: crunch_wps alternative_wp select_wp OR_choice_weak_wp select_ext_weak_wp
+  (simp: crunch_simps wp: crunch_wps OR_choice_weak_wp select_ext_weak_wp
       ignore: without_preemption getActiveIRQ resetTimer ackInterrupt
               getFAR getDFSR getIFSR OR_choice set_scheduler_action
               clearExMonitor)
 
 lemma schedule_valid_pdpt[wp]: "\<lbrace>valid_pdpt_objs\<rbrace> schedule :: (unit,unit) s_monad \<lbrace>\<lambda>_. valid_pdpt_objs\<rbrace>"
   apply (simp add: schedule_def allActiveTCBs_def)
-  apply (wp alternative_wp select_wp)
-  apply simp
+  apply wpsimp
   done
 
 lemma call_kernel_valid_pdpt[wp]:

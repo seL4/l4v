@@ -46,7 +46,6 @@ lemma invoke_irq_handler_set_handler_wp:
         invoke_irq_handler (SetIrqHandler irq cap slot)
        \<lbrace>\<lambda>_. < irq \<mapsto>irq obj \<and>* (obj, 0) \<mapsto>c cap \<and>* R> \<rbrace>"
   apply (clarsimp simp: invoke_irq_handler_def, wp)
-     apply (wp alternative_wp)
       apply (wp sep_wp: insert_cap_child_wp insert_cap_sibling_wp)+
     apply (sep_wp delete_cap_simple_format[where cap=cap'])+
   apply (safe)
@@ -71,7 +70,7 @@ lemma decode_invocation_irq_ack_rv':
 decode_irq_handler_invocation cap cap_ref caps (IrqHandlerAckIntent)
 \<lbrace>P\<rbrace>, -"
   apply (clarsimp simp: decode_irq_handler_invocation_def)
-  apply (wp alternativeE_R_wp)
+  apply wp
   apply (clarsimp)
 done
 
@@ -80,7 +79,7 @@ lemma decode_invocation_irq_clear_rv':
 decode_irq_handler_invocation cap cap_ref caps (IrqHandlerClearIntent)
 \<lbrace>P\<rbrace>, -"
   apply (clarsimp simp: decode_irq_handler_invocation_def)
-  apply (wp alternativeE_R_wp)
+  apply wp
   apply (clarsimp)
 done
 
@@ -105,7 +104,7 @@ decode_irq_handler_invocation cap cap_ref caps (IrqHandlerSetEndpointIntent)
 \<lbrace>P\<rbrace>, -"
   apply (rule validE_R_gen_asm_conj)
   apply (clarsimp simp: decode_irq_handler_invocation_def)
-  apply (wp alternativeE_R_wp | wpc)+
+  apply (wp | wpc)+
     apply (clarsimp split: cdl_cap.splits, safe)
      apply ((wp throw_on_none_rv)+, clarsimp simp: get_index_def)
   apply simp
@@ -117,7 +116,7 @@ lemma decode_irq_control_issue_irq_rv:
          <\<box> (r, (unat depth)) : root_cap index \<mapsto>u cap \<and>* R> s\<rbrace>
            decode_irq_control_invocation target target_ref caps (IrqControlIssueIrqHandlerIntent irq index depth) \<lbrace>P\<rbrace>, -"
   apply (clarsimp simp: decode_irq_control_invocation_def)
-  apply (wp alternativeE_R_wp lookup_slot_for_cnode_op_rvu'[where cap=cap and r=r] throw_on_none_rv)
+  apply (wp lookup_slot_for_cnode_op_rvu'[where cap=cap and r=r] throw_on_none_rv)
   apply (clarsimp simp: get_index_def)
   apply (sep_solve)
 done

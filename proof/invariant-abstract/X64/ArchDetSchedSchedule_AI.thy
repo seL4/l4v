@@ -243,7 +243,7 @@ lemma flush_table_simple_sched_action[wp]: "\<lbrace>simple_sched_action\<rbrace
 
 crunch simple_sched_action [wp, DetSchedSchedule_AI_assms]:
   arch_finalise_cap, prepare_thread_delete simple_sched_action
-  (wp: hoare_drop_imps mapM_x_wp mapM_wp select_wp subset_refl crunch_wps
+  (wp: hoare_drop_imps mapM_x_wp mapM_wp subset_refl crunch_wps
    simp: unless_def if_fun_split crunch_simps)
 
 lemma flush_table_valid_sched[wp]: "\<lbrace>valid_sched\<rbrace> flush_table a b c d \<lbrace>\<lambda>rv. valid_sched\<rbrace>"

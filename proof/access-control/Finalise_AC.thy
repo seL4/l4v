@@ -347,7 +347,7 @@ lemma reply_cancel_ipc_pas_refined[wp]:
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (simp add: reply_cancel_ipc_def)
-  apply (wp add: select_wp wp_transferable del: wp_not_transferable)
+  apply (wp add: wp_transferable del: wp_not_transferable)
    apply (rule hoare_strengthen_post[where Q="\<lambda>_. invs and tcb_at t and pas_refined aag"])
     apply (wpsimp wp: hoare_wp_combs thread_set_tcb_fault_reset_invs thread_set_pas_refined)+
    apply (frule(1) reply_cap_descends_from_master0)
@@ -368,7 +368,7 @@ crunches suspend
   for pspace_aligned[wp]: "\<lambda>s :: det_ext state. pspace_aligned s"
   and valid_vspace_objs[wp]: "\<lambda>s :: det_ext state. valid_vspace_objs s"
   and valid_arch_state[wp]: "\<lambda>s :: det_ext state. valid_arch_state s"
-  (wp: dxo_wp_weak select_wp hoare_drop_imps simp: crunch_simps)
+  (wp: dxo_wp_weak hoare_drop_imps simp: crunch_simps)
 
 crunch pas_refined[wp]: suspend "pas_refined aag"
 
@@ -528,7 +528,7 @@ lemma reply_cancel_ipc_respects[wp]:
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: reply_cancel_ipc_def)
   apply (rule hoare_pre)
-   apply (wp add: select_wp wp_transferable del:wp_not_transferable)
+   apply (wp add: wp_transferable del:wp_not_transferable)
    apply simp
    apply (rule hoare_lift_Pf2[where f="cdt"])
     apply (wpsimp wp: hoare_vcg_const_Ball_lift thread_set_integrity_autarch
@@ -1231,7 +1231,7 @@ proof (induct rule: cap_revoke.induct)
     apply (subst cap_revoke.simps)
     apply (unfold P_def)
      apply (wp "1.hyps"[unfolded P_def], simp+)
-           apply (wp preemption_point_inv hoare_drop_imps select_wp
+           apply (wp preemption_point_inv hoare_drop_imps
                      rec_del_preserves_cte_zombie_null_insts[where P=Q]
                   | simp add: Q_Null Q_Zombie)+
     done

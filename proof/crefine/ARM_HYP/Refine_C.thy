@@ -951,7 +951,7 @@ lemma do_user_op_corres_C:
                      apply (rule corres_split[OF user_memory_update_corres_C])
                          apply (rule corres_split[OF device_update_corres_C,
                                          where R="\<top>\<top>" and R'="\<top>\<top>"])
-                        apply (wp select_wp | simp)+
+                        apply (wp | simp)+
    apply (intro conjI allI ballI impI)
      apply ((clarsimp simp add: invs'_def valid_state'_def valid_pspace'_def)+)[5]
     apply (clarsimp simp:  ex_abs_def restrict_map_def

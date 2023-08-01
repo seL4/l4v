@@ -897,12 +897,12 @@ context CNodeInv_AI begin
 lemma preemption_point_not_recursive_cspaces[wp]:
   "preemption_point \<lbrace>\<lambda>s. P (not_recursive_cspaces s)\<rbrace>"
   unfolding preemption_point_def
-  by (wpsimp wp: OR_choiceE_weak_wp alternative_wp hoare_drop_imp)
+  by (wpsimp wp: OR_choiceE_weak_wp hoare_drop_imp)
 
 lemma preemption_point_caps_of_state[wp]:
   "preemption_point \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>"
   unfolding preemption_point_def
-  by (wpsimp wp: OR_choiceE_weak_wp alternative_wp hoare_drop_imp)
+  by (wpsimp wp: OR_choiceE_weak_wp hoare_drop_imp)
 
 lemma rec_del_termination:
   "All (rec_del_dom :: rec_del_call \<times> 'state_ext state \<Rightarrow> bool)"
@@ -1089,7 +1089,7 @@ end
 lemma dom_valid_cap[wp]:
   "\<lbrace>valid_cap c\<rbrace> do_machine_op f \<lbrace>\<lambda>_. valid_cap c\<rbrace>"
   apply (simp add: do_machine_op_def split_def)
-  apply (wp select_wp)
+  apply wp
   apply simp
   done
 
@@ -1097,7 +1097,7 @@ lemma dom_valid_cap[wp]:
 lemma dom_cte_at:
   "\<lbrace>cte_at c\<rbrace> do_machine_op f \<lbrace>\<lambda>_. cte_at c\<rbrace>"
   apply (simp add: do_machine_op_def split_def)
-  apply (wp select_wp)
+  apply wp
   apply (simp add: cte_at_cases)
   done
 
@@ -2394,7 +2394,7 @@ declare thread_set_Pmdb [wp]
 lemma reply_cancel_ipc_emptyable[wp]:
   "\<lbrace>invs and emptyable sl and valid_mdb\<rbrace> reply_cancel_ipc ptr \<lbrace>\<lambda>_. emptyable sl\<rbrace>"
   apply (simp add: reply_cancel_ipc_def)
-  apply (wp select_wp select_inv hoare_drop_imps | simp add: Ball_def)+
+  apply (wp select_inv hoare_drop_imps | simp add: Ball_def)+
     apply (wp hoare_vcg_all_lift hoare_convert_imp thread_set_Pmdb
               thread_set_invs_trivial thread_set_emptyable thread_set_cte_at
          | simp add: tcb_cap_cases_def descendants_of_cte_at)+
@@ -2712,16 +2712,16 @@ lemmas empty_slot_rvk_prog' = empty_slot_rvk_prog[unfolded o_def]
 
 crunch rvk_prog: cancel_ipc "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map cap_to_rpo (caps_of_state s x))"
   (simp: crunch_simps o_def unless_def is_final_cap_def tcb_cap_cases_def
-     wp: hoare_drop_imps empty_slot_rvk_prog' select_wp
+     wp: hoare_drop_imps empty_slot_rvk_prog'
          thread_set_caps_of_state_trivial)
 
 crunch rvk_prog: suspend "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map cap_to_rpo (caps_of_state s x))"
   (simp: crunch_simps o_def unless_def is_final_cap_def
-     wp: crunch_wps empty_slot_rvk_prog' select_wp)
+     wp: crunch_wps empty_slot_rvk_prog')
 
 crunch rvk_prog: deleting_irq_handler "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map cap_to_rpo (caps_of_state s x))"
   (simp: crunch_simps o_def unless_def is_final_cap_def
-     wp: crunch_wps empty_slot_rvk_prog' select_wp)
+     wp: crunch_wps empty_slot_rvk_prog')
 
 locale CNodeInv_AI_3 = CNodeInv_AI_2 state_ext_t
   for state_ext_t :: "'state_ext::state_ext itself" +
@@ -2998,7 +2998,7 @@ proof (induct rule: cap_revoke_induct)
   show ?case
     apply (subst cap_revoke_simps)
     apply (wp "1.hyps")
-           apply (wp x p hoare_drop_imps select_wp)+
+           apply (wp x p hoare_drop_imps)+
      apply simp_all
     done
 qed
@@ -3022,7 +3022,7 @@ proof (induct rule: cap_revoke_induct)
   show ?case
     apply (subst cap_revoke_simps)
     apply (wp "1.hyps")
-           apply (wp x p hoare_drop_imps select_wp)+
+           apply (wp x p hoare_drop_imps)+
      apply (simp_all add: y)
     done
 qed

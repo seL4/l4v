@@ -139,7 +139,7 @@ lemma corrupt_intents_current_thread:
   by (simp add: corrupt_intents_def)
 
 crunch cdl_cur: corrupt_frame "\<lambda>s. cdl_current_thread s = x"
-  (wp: select_wp simp: corrupt_intents_current_thread)
+  (simp: corrupt_intents_current_thread)
 
 (* Switching to the active thread has no effect. *)
 lemma switch_to_thread_idempotent_corres:

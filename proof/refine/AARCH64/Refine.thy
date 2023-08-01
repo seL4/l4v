@@ -291,18 +291,18 @@ definition
 
 lemma do_user_op_valid_list:"\<lbrace>valid_list\<rbrace> do_user_op f tc \<lbrace>\<lambda>_. valid_list\<rbrace>"
   unfolding do_user_op_def
-  apply (wp select_wp | simp add: split_def)+
+  apply (wp | simp add: split_def)+
   done
 
 lemma do_user_op_valid_sched:"\<lbrace>valid_sched\<rbrace> do_user_op f tc \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   unfolding do_user_op_def
-  apply (wp select_wp | simp add: split_def)+
+  apply (wp | simp add: split_def)+
   done
 
 lemma do_user_op_sched_act:
   "\<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> do_user_op f tc \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
   unfolding do_user_op_def
-  apply (wp select_wp | simp add: split_def)+
+  apply (wp | simp add: split_def)+
   done
 
 lemma do_user_op_invs2:
@@ -433,7 +433,7 @@ lemma kernelEntry_invs':
          (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list' \<rbrace>"
   apply (simp add: kernelEntry_def)
   apply (wp ckernel_invs callKernel_domain_time_left
-            threadSet_invs_trivial threadSet_ct_running' select_wp
+            threadSet_invs_trivial threadSet_ct_running'
             TcbAcc_R.dmo_invs' static_imp_wp
             doMachineOp_ct_in_state' doMachineOp_sch_act_simple
             callKernel_domain_time_left
@@ -512,7 +512,7 @@ lemma doUserOp_invs':
         (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_running' and
         (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list'\<rbrace>"
   apply (simp add: doUserOp_def split_def ex_abs_def)
-  apply (wp device_update_invs' doMachineOp_ct_in_state' select_wp
+  apply (wp device_update_invs' doMachineOp_ct_in_state'
     | (wp (once) dmo_invs', wpsimp simp: no_irq_modify device_memory_update_def
                                          user_memory_update_def))+
   apply (clarsimp simp: user_memory_update_def simpler_modify_def
@@ -659,7 +659,7 @@ lemma entry_corres:
         apply (rule hoare_strengthen_post, rule ckernel_invs, simp add: invs'_def cur_tcb'_def)
        apply (wp thread_set_invs_trivial thread_set_ct_running
                  threadSet_invs_trivial threadSet_ct_running'
-                 select_wp thread_set_not_state_valid_sched static_imp_wp
+                 thread_set_not_state_valid_sched static_imp_wp
                  hoare_vcg_disj_lift ct_in_state_thread_state_lift
               | simp add: tcb_cap_cases_def ct_in_state'_def thread_set_no_change_tcb_state
               | (wps, wp threadSet_st_tcb_at2) )+
@@ -827,7 +827,7 @@ lemma domain_list_rel_eq:
   by (clarsimp simp: state_relation_def)
 
 crunch valid_objs': doUserOp, checkActiveIRQ valid_objs'
-  (wp: crunch_wps select_wp)
+  (wp: crunch_wps)
 
 lemma ckernel_invariant:
   "ADT_H uop \<Turnstile> full_invs'"

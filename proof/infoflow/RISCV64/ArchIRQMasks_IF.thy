@@ -30,7 +30,7 @@ crunch irq_masks[IRQMasks_IF_assms, wp]: invoke_untyped "\<lambda>s. P (irq_mask
      simp: crunch_simps no_irq_clearMemory mapM_x_def_bak unless_def)
 
 crunch irq_masks[IRQMasks_IF_assms, wp]: finalise_cap "\<lambda>s. P (irq_masks_of_state s)"
-  (  wp: select_wp crunch_wps dmo_wp no_irq
+  (  wp: crunch_wps dmo_wp no_irq
    simp: crunch_simps no_irq_setVSpaceRoot no_irq_hwASIDFlush)
 
 crunch irq_masks[IRQMasks_IF_assms, wp]: send_signal "\<lambda>s. P (irq_masks_of_state s)"
@@ -77,14 +77,14 @@ lemma dmo_getActiveIRQ_return_axiom[IRQMasks_IF_assms, wp]:
   apply (simp add: getActiveIRQ_def)
   apply (rule hoare_pre, rule dmo_wp)
    apply (insert irq_oracle_max_irq)
-   apply (wp alternative_wp select_wp dmo_getActiveIRQ_irq_masks)
+   apply (wp dmo_getActiveIRQ_irq_masks)
   apply clarsimp
   done
 
 crunch irq_masks[IRQMasks_IF_assms, wp]: activate_thread "\<lambda>s. P (irq_masks_of_state s)"
 
 crunch irq_masks[IRQMasks_IF_assms, wp]: schedule "\<lambda>s. P (irq_masks_of_state s)"
-  (wp: dmo_wp alternative_wp select_wp crunch_wps simp: crunch_simps)
+  (wp: dmo_wp crunch_wps simp: crunch_simps)
 
 end
 

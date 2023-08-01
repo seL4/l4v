@@ -100,7 +100,7 @@ definition "irq_state_independent P \<equiv> \<forall>f s. P s \<longrightarrow>
 lemma getActiveIRQ_inv[wp]:
   "\<lbrakk>irq_state_independent P\<rbrakk> \<Longrightarrow> getActiveIRQ in_kernel \<lbrace>P\<rbrace>"
   apply (simp add: getActiveIRQ_def)
-  apply (wp alternative_wp select_wp)
+  apply wp
   apply (simp add: irq_state_independent_def)
   done
 
@@ -392,7 +392,7 @@ lemma getActiveIRQ_le_maxIRQ':
     getActiveIRQ in_kernel
    \<lbrace>\<lambda>rv s. \<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ\<rbrace>"
   apply (simp add: getActiveIRQ_def)
-  apply (wpsimp wp: alternative_wp select_wp)
+  apply wpsimp
   apply (rule ccontr)
   apply (simp add: linorder_not_le)
   done

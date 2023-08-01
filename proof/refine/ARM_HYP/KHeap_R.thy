@@ -2262,21 +2262,21 @@ lemma valid_globals_cte_wpD':
 lemma dmo_aligned'[wp]:
   "\<lbrace>pspace_aligned'\<rbrace> doMachineOp f \<lbrace>\<lambda>_. pspace_aligned'\<rbrace>"
   apply (simp add: doMachineOp_def split_def)
-  apply (wp select_wp)
+  apply wp
   apply clarsimp
   done
 
 lemma dmo_distinct'[wp]:
   "\<lbrace>pspace_distinct'\<rbrace> doMachineOp f \<lbrace>\<lambda>_. pspace_distinct'\<rbrace>"
   apply (simp add: doMachineOp_def split_def)
-  apply (wp select_wp)
+  apply wp
   apply clarsimp
   done
 
 lemma dmo_valid_objs'[wp]:
   "\<lbrace>valid_objs'\<rbrace> doMachineOp f \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   apply (simp add: doMachineOp_def split_def)
-  apply (wp select_wp)
+  apply wp
   apply clarsimp
   done
 
@@ -2284,7 +2284,7 @@ lemma dmo_inv':
   assumes R: "\<And>P. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>"
   shows "\<lbrace>P\<rbrace> doMachineOp f \<lbrace>\<lambda>_. P\<rbrace>"
   apply (simp add: doMachineOp_def split_def)
-  apply (wp select_wp)
+  apply wp
   apply clarsimp
   apply (drule in_inv_by_hoareD [OF R])
   apply simp

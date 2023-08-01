@@ -2571,7 +2571,7 @@ lemmas setMessageInfo_typ_ats[wp] = typ_at_lifts [OF setMessageInfo_typ_at']
 declare tl_drop_1[simp]
 
 crunch cur[wp]: cancel_ipc "cur_tcb"
-  (wp: select_wp crunch_wps simp: crunch_simps)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma valid_sched_weak_strg:
   "valid_sched s \<longrightarrow> weak_valid_sched_action s"

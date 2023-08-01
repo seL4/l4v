@@ -82,11 +82,10 @@ termination CSpace_D.resolve_address_bits
 
 end
 
-crunch cdl_cdt [wp]: "KHeap_D.set_cap" "\<lambda>s. P (cdl_cdt s)"
- (wp: crunch_wps select_wp simp: crunch_simps)
-
-crunch cdl_cdt [wp]: "PageTableUnmap_D.cancel_all_ipc", "PageTableUnmap_D.unbind_maybe_notification" "\<lambda>s. P (cdl_cdt s)"
- (wp: crunch_wps select_wp simp: crunch_simps)
+crunches
+  "KHeap_D.set_cap", "PageTableUnmap_D.cancel_all_ipc", "PageTableUnmap_D.unbind_maybe_notification"
+  for cdl_cdt [wp]: "\<lambda>s. P (cdl_cdt s)"
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma descendants_cdl_cdt_lift:
   "(\<And>P. \<lbrace>\<lambda>s. P (cdl_cdt s)\<rbrace> f \<lbrace>\<lambda>_ s. P (cdl_cdt s)\<rbrace>) \<Longrightarrow>

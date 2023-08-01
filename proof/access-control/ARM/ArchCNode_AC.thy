@@ -75,7 +75,7 @@ crunches set_cdt
 
 crunches prepare_thread_delete, arch_finalise_cap
   for cur_domain[CNode_AC_assms, wp]:"\<lambda>s. P (cur_domain s)"
-  (wp: crunch_wps select_wp hoare_vcg_if_lift2 simp: unless_def)
+  (wp: crunch_wps hoare_vcg_if_lift2 simp: unless_def)
 
 lemma state_vrefs_tcb_upd[CNode_AC_assms]:
   "tcb_at t s \<Longrightarrow> state_vrefs (s\<lparr>kheap := kheap s(t \<mapsto> TCB tcb)\<rparr>) = state_vrefs s"

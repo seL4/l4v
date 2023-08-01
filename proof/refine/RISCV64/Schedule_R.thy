@@ -41,7 +41,7 @@ proof -
     apply (auto simp add: bind_def alternative_def return_def split_def prod_eq_iff)
     done
   have Q: "\<lbrace>P\<rbrace> (do x \<leftarrow> f; return (Some x) od) \<sqinter> return None \<lbrace>\<lambda>rv. if rv \<noteq> None then \<top> else P\<rbrace>"
-    by (wp alternative_wp | simp)+
+    by (wp | simp)+
   show ?thesis using p
     apply (induct xs)
      apply (simp add: y del: dc_simp)

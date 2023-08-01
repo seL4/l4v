@@ -95,7 +95,8 @@ lemma do_user_op_respects:
            apply (rule dmo_device_update_respects_Write)
           apply (wpsimp wp: dmo_um_upd_machine_state
                             dmo_user_memory_update_respects_Write
-                            hoare_vcg_all_lift hoare_vcg_imp_lift)+
+                            hoare_vcg_all_lift hoare_vcg_imp_lift
+                    wp_del: select_wp)+
           apply (rule hoare_pre_cont)
          apply (wpsimp wp: select_wp)+
   apply (simp add: restrict_map_def split: if_splits)

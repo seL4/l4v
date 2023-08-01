@@ -1034,7 +1034,7 @@ lemma derive_cap_wp:
   "\<lbrace> P (derived_cap cap) \<rbrace> derive_cap slot cap \<lbrace>P\<rbrace>, -"
   apply (clarsimp simp: derive_cap_def derived_cap_def)
   apply (clarsimp simp: validE_R_def derive_cap_def split:cdl_cap.splits)
-  apply (safe, (wp alternative_wp alternativeE_wp whenE_wp |
+  apply (safe, (wp whenE_wp |
                 clarsimp simp: ensure_no_children_def)+ )
   done
 
