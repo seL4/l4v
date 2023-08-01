@@ -67,7 +67,7 @@ lemma do_user_op_if_invs[ADT_IF_assms]:
    do_user_op_if f tc
    \<lbrace>\<lambda>_. invs and ct_running\<rbrace>"
   apply (simp add: do_user_op_if_def split_def)
-  apply (wp do_machine_op_ct_in_state select_wp device_update_invs | wp (once) dmo_invs | simp)+
+  apply (wp do_machine_op_ct_in_state device_update_invs | wp (once) dmo_invs | simp)+
   apply (clarsimp simp: user_mem_def user_memory_update_def simpler_modify_def restrict_map_def
                         invs_def cur_tcb_def ptable_rights_s_def ptable_lift_s_def)
   apply (frule ptable_rights_imp_frame)
@@ -77,31 +77,31 @@ lemma do_user_op_if_invs[ADT_IF_assms]:
   done
 
 crunch domain_sep_inv[ADT_IF_assms, wp]: do_user_op_if "domain_sep_inv irqs st"
-  (ignore: user_memory_update wp: select_wp)
+  (ignore: user_memory_update)
 
 crunch valid_sched[ADT_IF_assms, wp]: do_user_op_if "valid_sched"
-  (ignore: user_memory_update wp: select_wp)
+  (ignore: user_memory_update)
 
 crunch irq_masks[ADT_IF_assms, wp]: do_user_op_if "\<lambda>s. P (irq_masks_of_state s)"
-  (ignore: user_memory_update wp: select_wp dmo_wp no_irq)
+  (ignore: user_memory_update wp: dmo_wp no_irq)
 
 crunch valid_list[ADT_IF_assms, wp]: do_user_op_if "valid_list"
-  (ignore: user_memory_update wp: select_wp)
+  (ignore: user_memory_update)
 
 lemma do_user_op_if_scheduler_action[ADT_IF_assms, wp]:
   "do_user_op_if f tc \<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace>"
-  by (simp add: do_user_op_if_def | wp select_wp | wpc)+
+  by (simp add: do_user_op_if_def | wp | wpc)+
 
 lemma do_user_op_silc_inv[ADT_IF_assms, wp]:
   "do_user_op_if f tc \<lbrace>silc_inv aag st\<rbrace>"
   apply (simp add: do_user_op_if_def)
-  apply (wp select_wp | wpc | simp)+
+  apply (wp | wpc | simp)+
   done
 
 lemma do_user_op_pas_refined[ADT_IF_assms, wp]:
   "do_user_op_if f tc \<lbrace>pas_refined aag\<rbrace>"
   apply (simp add: do_user_op_if_def)
-  apply (wp select_wp | wpc | simp)+
+  apply (wp | wpc | simp)+
   done
 
 crunches do_user_op_if
@@ -109,7 +109,7 @@ crunches do_user_op_if
   and cur_domain[ADT_IF_assms, wp]: "\<lambda>s. P (cur_domain s)"
   and idle_thread[ADT_IF_assms, wp]: "\<lambda>s. P (idle_thread s)"
   and domain_fields[ADT_IF_assms, wp]: "domain_fields P"
-  (wp: select_wp ignore: user_memory_update)
+  (ignore: user_memory_update)
 
 lemma do_use_op_guarded_pas_domain[ADT_IF_assms, wp]:
   "do_user_op_if f tc \<lbrace>guarded_pas_domain aag\<rbrace>"
@@ -235,7 +235,7 @@ lemma do_user_op_if_idle_equiv[ADT_IF_assms, wp]:
    do_user_op_if uop tc
    \<lbrace>\<lambda>_. idle_equiv st\<rbrace>"
   unfolding do_user_op_if_def
-  by (wpsimp wp: dmo_user_memory_update_idle_equiv dmo_device_memory_update_idle_equiv select_wp)
+  by (wpsimp wp: dmo_user_memory_update_idle_equiv dmo_device_memory_update_idle_equiv)
 
 lemma not_in_global_refs_vs_lookup:
   "\<lbrakk> (\<exists>\<unrhd>p) s; valid_vs_lookup s; valid_global_refs s; valid_arch_state s; valid_global_objs s \<rbrakk>
@@ -273,7 +273,7 @@ lemma schedule_if_valid_pdpt_objs[ADT_IF_assms, wp]:
 
 lemma do_user_op_if_valid_pdpt_objs[ADT_IF_assms, wp]:
   "\<lbrace>valid_vspace_objs_if\<rbrace> do_user_op_if a b \<lbrace>\<lambda>rv s. valid_vspace_objs_if s\<rbrace>"
-  by (simp add: do_user_op_if_def | wp select_wp | wpc)+
+  by (simp add: do_user_op_if_def | wp | wpc)+
 
 lemma valid_vspace_objs_if_ms_update[ADT_IF_assms, simp]:
   "valid_vspace_objs_if (machine_state_update f s) = valid_vspace_objs_if s"
@@ -282,20 +282,20 @@ lemma valid_vspace_objs_if_ms_update[ADT_IF_assms, simp]:
 lemma do_user_op_if_irq_state_of_state[ADT_IF_assms]:
   "do_user_op_if utf uc \<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace>"
   apply (rule hoare_pre)
-  apply (simp add: do_user_op_if_def user_memory_update_def | wp dmo_wp select_wp | wpc)+
+  apply (simp add: do_user_op_if_def user_memory_update_def | wp dmo_wp | wpc)+
   done
 
 lemma do_user_op_if_irq_masks_of_state[ADT_IF_assms]:
   "do_user_op_if utf uc \<lbrace>\<lambda>s. P (irq_masks_of_state s)\<rbrace>"
   apply (rule hoare_pre)
-  apply (simp add: do_user_op_if_def user_memory_update_def | wp dmo_wp select_wp | wpc)+
+  apply (simp add: do_user_op_if_def user_memory_update_def | wp dmo_wp | wpc)+
   done
 
 lemma do_user_op_if_irq_measure_if[ADT_IF_assms]:
   "do_user_op_if utf uc \<lbrace>\<lambda>s. P (irq_measure_if s)\<rbrace>"
   apply (rule hoare_pre)
   apply (simp add: do_user_op_if_def user_memory_update_def irq_measure_if_def
-         | wps |wp dmo_wp select_wp | wpc)+
+         | wps |wp dmo_wp | wpc)+
   done
 
 lemma invoke_tcb_irq_state_inv[ADT_IF_assms]:

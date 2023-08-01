@@ -1522,10 +1522,10 @@ lemma post_cap_deletion_cur_domain[wp]:
   by (wpsimp simp: post_cap_deletion_def)
 
 crunch cur_domain[wp]: cap_swap_for_delete, empty_slot "\<lambda>s. P (cur_domain s)"
-  (wp: crunch_wps select_wp hoare_vcg_if_lift2 simp: unless_def)
+  (wp: crunch_wps hoare_vcg_if_lift2 simp: unless_def)
 
 crunch cur_domain[wp]: finalise_cap "\<lambda>s. P (cur_domain s)"
-  (wp: crunch_wps select_wp hoare_vcg_if_lift2 simp: unless_def)
+  (wp: crunch_wps hoare_vcg_if_lift2 simp: unless_def)
 
 lemma rec_del_cur_domain[wp]:
   "rec_del call \<lbrace>\<lambda>s. P (cur_domain s)\<rbrace>"

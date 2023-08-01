@@ -3839,7 +3839,7 @@ crunch valid_list[wp]: thread_set valid_list
 
 lemma reply_cancel_ipc_valid_list[wp]: "\<lbrace>valid_list\<rbrace> reply_cancel_ipc a \<lbrace>\<lambda>_. valid_list\<rbrace>"
   unfolding reply_cancel_ipc_def
-  by (wp select_wp hoare_drop_imps thread_set_mdb | simp)+
+  by (wp hoare_drop_imps thread_set_mdb | simp)+
 
 crunch all_but_exst[wp]: update_work_units "all_but_exst P"
 
@@ -3854,7 +3854,7 @@ global_interpretation reset_work_units_ext_extended: is_extended "reset_work_uni
 lemma preemption_point_inv':
   "\<lbrakk>irq_state_independent_A P; \<And>f s. P (work_units_completed_update f s) = P s\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> preemption_point \<lbrace>\<lambda>_. P\<rbrace>"
   apply (intro impI conjI | simp add: preemption_point_def o_def
-       | wp hoare_post_imp[OF _ getActiveIRQ_wp] OR_choiceE_weak_wp alternative_wp[where P=P]
+       | wp hoare_post_imp[OF _ getActiveIRQ_wp] OR_choiceE_weak_wp
        | wpc | simp add: update_work_units_def reset_work_units_def)+
   done
 

@@ -60,7 +60,7 @@ lemma invoke_cnode_insert_cdl_current_domain[wp]:
    \<lbrace>\<lambda>_ s. P (cdl_current_domain s) \<rbrace>"
   apply (simp add: invoke_cnode_def)
   apply (rule hoare_pre)
-   apply (wp alternative_wp | wpc | clarsimp)+
+   apply (wp | wpc | clarsimp)+
   done
 
 lemma invoke_cnode_move_cdl_current_domain[wp]:

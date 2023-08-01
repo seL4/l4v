@@ -437,7 +437,7 @@ crunch irq_state_of_state[wp]: schedule "\<lambda>s. P (irq_state_of_state s)"
    simp: machine_op_lift_def machine_rest_lift_def crunch_simps)
 
 crunch irq_state_of_state[wp]: finalise_cap "\<lambda>s. P (irq_state_of_state s)"
-  (wp: select_wp modify_wp crunch_wps dmo_wp simp: crunch_simps)
+  (wp: modify_wp crunch_wps dmo_wp simp: crunch_simps)
 
 crunch irq_state_of_state[wp]: send_signal, restart "\<lambda>s. P (irq_state_of_state s)"
 

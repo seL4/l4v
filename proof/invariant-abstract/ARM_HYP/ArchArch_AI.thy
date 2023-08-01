@@ -1281,7 +1281,7 @@ crunch inv[wp]: ensure_safe_mapping, create_mapping_entries "P"
 crunch_ignore (add: select_ext)
 
 crunch inv [wp]: arch_decode_invocation "P"
-  (wp: crunch_wps select_wp select_ext_weak_wp simp: crunch_simps)
+  (wp: crunch_wps select_ext_weak_wp simp: crunch_simps)
 
 
 lemma create_mappings_empty [wp]:
@@ -1596,7 +1596,7 @@ lemma arch_decode_inv_wf[wp]:
        apply (rename_tac word1 word2)
        apply (simp add: arch_decode_invocation_def Let_def decode_mmu_invocation_def split_def cong: if_cong)
        apply (rule hoare_pre)
-        apply ((wp whenE_throwError_wp check_vp_wpR ensure_empty_stronger select_wp select_ext_weak_wp|
+        apply ((wp whenE_throwError_wp check_vp_wpR ensure_empty_stronger select_ext_weak_wp|
                 wpc|
                 simp add: valid_arch_inv_def valid_apinv_def)+)[1]
        apply (simp add: if_apply_def2 valid_apinv_def)
@@ -1657,7 +1657,7 @@ lemma arch_decode_inv_wf[wp]:
                apply (simp add: asid_bits_def asid_low_bits_def)
               apply (simp add: asid_bits_def)
              apply simp
-             apply (wp ensure_no_children_sp select_ext_weak_wp select_wp whenE_throwError_wp|wpc | simp)+
+             apply (wp ensure_no_children_sp select_ext_weak_wp whenE_throwError_wp|wpc | simp)+
       apply clarsimp
       apply (rule conjI, fastforce)
       apply (cases excaps, simp)

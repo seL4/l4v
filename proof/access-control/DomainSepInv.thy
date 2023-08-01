@@ -439,7 +439,7 @@ lemma reply_cancel_ipc_domain_sep_inv[wp]:
    reply_cancel_ipc t
    \<lbrace>\<lambda>_ s. domain_sep_inv irqs  (st :: 'state_ext state) (s :: det_ext state)\<rbrace>"
   apply (simp add: reply_cancel_ipc_def)
-  apply (wp select_wp)
+  apply wp
   apply (rule hoare_strengthen_post[OF thread_set_tcb_fault_update_domain_sep_inv])
   apply auto
   done
@@ -553,7 +553,7 @@ lemma cap_revoke_domain_sep_inv':
            apply (wp drop_spec_validE[OF valid_validE[OF preemption_point_domain_sep_inv]]
                     drop_spec_validE[OF valid_validE[OF cap_delete_domain_sep_inv]]
                     drop_spec_validE[OF assertE_wp] drop_spec_validE[OF returnOk_wp]
-                    drop_spec_validE[OF liftE_wp] select_wp
+                    drop_spec_validE[OF liftE_wp]
                 | simp | wp (once) hoare_drop_imps)+
   done
 qed
@@ -1181,7 +1181,7 @@ lemma handle_event_domain_sep_inv:
 lemma schedule_domain_sep_inv:
   "(schedule :: (unit,det_ext) s_monad) \<lbrace>domain_sep_inv irqs (st :: 'state_ext state)\<rbrace>"
   apply (simp add: schedule_def allActiveTCBs_def)
-  apply (wp add: alternative_wp select_wp  guarded_switch_to_lift hoare_drop_imps
+  apply (wp add: guarded_switch_to_lift hoare_drop_imps
             del: ethread_get_wp
          | wpc | clarsimp simp: get_thread_state_def thread_get_def trans_state_update'[symmetric]
                                 schedule_choose_new_thread_def)+

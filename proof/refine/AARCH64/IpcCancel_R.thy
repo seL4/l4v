@@ -1365,7 +1365,7 @@ interpretation Arch .
 crunches cancel_ipc
   for pspace_aligned[wp]: "pspace_aligned :: det_state \<Rightarrow> _"
   and pspace_distinct[wp]: "pspace_distinct :: det_state \<Rightarrow> _"
-  (simp: crunch_simps wp: crunch_wps select_wp)
+  (simp: crunch_simps wp: crunch_wps)
 
 end
 

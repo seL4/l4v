@@ -247,7 +247,6 @@ end
 section \<open>Preservation of domain time remaining\<close>
 
 crunch domain_time_inv[wp]: do_user_op "(\<lambda>s. P (domain_time s))"
-  (wp: select_wp)
 
 context DetSchedDomainTime_AI begin
 
@@ -262,7 +261,7 @@ crunch domain_time_inv[wp]: choose_thread "\<lambda>s. P (domain_time s)"
 
 
 crunch domain_time_inv[wp]: send_signal "\<lambda>s. P (domain_time s)"
-  (wp: hoare_drop_imps mapM_x_wp_inv select_wp simp: crunch_simps unless_def)
+  (wp: hoare_drop_imps mapM_x_wp_inv simp: crunch_simps unless_def)
 
 crunch domain_time_inv[wp]:
   cap_swap_for_delete, empty_slot, get_object, get_cap, tcb_sched_action

@@ -296,18 +296,18 @@ definition
 
 lemma do_user_op_valid_list:"\<lbrace>valid_list\<rbrace> do_user_op f tc \<lbrace>\<lambda>_. valid_list\<rbrace>"
   unfolding do_user_op_def
-  apply (wp select_wp | simp add: split_def)+
+  apply (wp | simp add: split_def)+
   done
 
 lemma do_user_op_valid_sched:"\<lbrace>valid_sched\<rbrace> do_user_op f tc \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   unfolding do_user_op_def
-  apply (wp select_wp | simp add: split_def)+
+  apply (wp | simp add: split_def)+
   done
 
 lemma do_user_op_sched_act:
   "\<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> do_user_op f tc \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
   unfolding do_user_op_def
-  apply (wp select_wp | simp add: split_def)+
+  apply (wp | simp add: split_def)+
   done
 
 lemma do_user_op_invs2:
@@ -422,7 +422,7 @@ lemma kernelEntry_invs':
          (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list' \<rbrace>"
   apply (simp add: kernelEntry_def)
   apply (wp ckernel_invs callKernel_valid_duplicates' callKernel_domain_time_left
-            threadSet_invs_trivial threadSet_ct_running' select_wp
+            threadSet_invs_trivial threadSet_ct_running'
             TcbAcc_R.dmo_invs' callKernel_domain_time_left
             static_imp_wp
          | clarsimp simp: user_memory_update_def no_irq_def tcb_at_invs' atcbContextSet_def
@@ -504,7 +504,7 @@ lemma doUserOp_invs':
         (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_running' and
         (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list'\<rbrace>"
   apply (simp add: doUserOp_def split_def ex_abs_def)
-  apply (wp device_update_invs' select_wp
+  apply (wp device_update_invs'
     | (wp (once) dmo_invs', wpsimp simp: no_irq_modify device_memory_update_def
                                        user_memory_update_def))+
   apply (clarsimp simp: user_memory_update_def simpler_modify_def
@@ -518,7 +518,7 @@ lemma doUserOp_valid_duplicates':
    doUserOp f tc
    \<lbrace>\<lambda>_ s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (simp add: doUserOp_def split_def)
-  apply (wp dmo_invs' select_wp)
+  apply (wp dmo_invs')
   apply clarsimp
   done
 

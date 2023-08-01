@@ -169,7 +169,7 @@ lemma do_user_op_if_C_corres[ADT_IF_Refine_assms]:
           apply (rule corres_underlying_split4)
           apply (rule corres_split[OF user_memory_update_corres_C])
             apply (rule corres_split[OF device_update_corres_C])
-              apply (wp select_wp | simp)+
+              apply (wp | simp)+
    apply (clarsimp simp:  ex_abs_def restrict_map_def invs_pspace_aligned'
                           invs_pspace_distinct' ptable_lift_s'_def ptable_rights_s'_def
                   split: if_splits)

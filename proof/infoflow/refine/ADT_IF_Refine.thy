@@ -813,7 +813,6 @@ lemma abstract_invs:
 crunches checkActiveIRQ_if
   for ksDomainTime_inv[wp]: "\<lambda>s. P (ksDomainTime s)"
   and ksDomSchedule_inv[wp]: "\<lambda>s. P (ksDomSchedule s)"
-  (wp: select_wp)
 
 lemma kernelEntry_if_valid_domain_time:
   "e \<noteq> Interrupt \<Longrightarrow> \<lbrace>\<top>\<rbrace> kernelEntry_if e tc \<lbrace>\<lambda>_ s. 0 < ksDomainTime s \<and> valid_domain_list' s\<rbrace>"

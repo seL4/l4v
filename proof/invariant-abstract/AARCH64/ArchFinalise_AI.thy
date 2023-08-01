@@ -1598,7 +1598,7 @@ crunches
   (wp: crunch_wps subset_refl)
 
 crunch irq_node[Finalise_AI_asms,wp]: prepare_thread_delete "\<lambda>s. P (interrupt_irq_node s)"
-  (wp: crunch_wps select_wp simp: crunch_simps)
+  (wp: crunch_wps simp: crunch_simps)
 
 crunch irq_node[wp]: arch_finalise_cap "\<lambda>s. P (interrupt_irq_node s)"
   (simp: crunch_simps wp: crunch_wps)
@@ -1830,7 +1830,7 @@ lemma (* replace_cap_invs_arch_update *)[Finalise_AI_asms]:
 lemma dmo_pred_tcb_at[wp]:
   "do_machine_op mop \<lbrace>\<lambda>s. P (pred_tcb_at f Q t s)\<rbrace>"
   apply (simp add: do_machine_op_def split_def)
-  apply (wp select_wp)
+  apply wp
   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   done
 

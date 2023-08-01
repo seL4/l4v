@@ -3232,7 +3232,7 @@ lemma createNewCaps_valid_cap':
 
 lemma dmo_ctes_of[wp]:
   "\<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> doMachineOp mop \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"
-  by (simp add: doMachineOp_def split_def | wp select_wp)+
+  by (simp add: doMachineOp_def split_def | wp)+
 
 lemma createNewCaps_ranges:
   "\<lbrace>\<lambda>s. range_cover ptr sz (APIType_capBits ty us) n \<and> 0<n \<rbrace>

@@ -65,9 +65,9 @@ lemma decode_page_map_intent_rv_20_24:
   \<lbrace>\<lambda>r s. R r\<rbrace>, -"
   apply (simp add: decode_invocation_def get_index_def get_page_intent_def throw_opt_def
                    cap_rights_def decode_page_invocation_def throw_on_none_def get_mapped_asid_def)
-  apply (wp alternativeE_wp select_wp | wpc)+
+  apply (wp | wpc)+
      apply (rule validE_validE_R)
-     apply (wp alternativeE_wp)
+     apply wp
      apply (simp add:cdl_page_mapping_entries_def split del:if_split | wp | wpc)+
   apply auto
   done
@@ -86,9 +86,9 @@ lemma decode_page_map_intent_rv_16_12:
     get_page_intent_def throw_opt_def cap_rights_def
     decode_page_invocation_def throw_on_none_def
     get_mapped_asid_def)
-  apply (wp alternativeE_wp select_wp)
+  apply wp
   apply (rule validE_validE_R)
-   apply (wp alternativeE_wp)
+   apply wp
     apply (simp add:cdl_page_mapping_entries_def)
     apply (wp cdl_lookup_pt_slot_rv | wpc | simp)+
    apply auto
@@ -130,13 +130,13 @@ lemma invoke_page_table_wp:
 done
 
 crunch cdl_cur_thread[wp]: invoke_page "\<lambda>s. P (cdl_current_thread s)"
-(wp: crunch_wps select_wp alternative_wp simp : swp_def )
+  (wp: crunch_wps simp: swp_def)
 
 crunch cdl_cur_thread[wp]: invoke_page_table "\<lambda>s. P (cdl_current_thread s)"
-(wp: crunch_wps select_wp alternative_wp simp : swp_def )
+  (wp: crunch_wps simp: swp_def)
 
 crunch cdl_cur_domain[wp]: invoke_page_table, invoke_page "\<lambda>s. P (cdl_current_domain s)"
-(wp: crunch_wps select_wp alternative_wp simp : swp_def unless_def)
+  (wp: crunch_wps simp: swp_def unless_def)
 
 lemmas cap_asid_simps[simp] = cap_asid_def[split_simps cdl_cap.split]
 lemmas cap_mapped_simps[simp] = cap_mapped_def[split_simps cdl_cap.split]
@@ -153,7 +153,7 @@ lemma decode_page_table_rv:
   apply (simp add:decode_invocation_def get_page_table_intent_def
     throw_opt_def decode_page_table_invocation_def)
   apply (rule hoare_pre)
-   apply (wp alternativeE_wp  throw_on_none_wp | wpc | simp)+
+   apply (wp throw_on_none_wp | wpc | simp)+
   apply (clarsimp split:option.splits simp:get_index_def cap_object_def
     cap_has_object_def get_mapped_asid_def)
   done
@@ -564,7 +564,7 @@ lemma decode_invocation_asid_pool_assign:
      decode_asid_pool_invocation_def get_index_def
      throw_opt_def throw_on_none_def)
    apply (rule validE_validE_R)
-   apply (wp alternativeE_wp select_wp)
+   apply wp
   apply (clarsimp simp:cap_object_def cap_has_object_def)
   done
 

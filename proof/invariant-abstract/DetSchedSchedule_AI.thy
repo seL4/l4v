@@ -1525,7 +1525,7 @@ crunch valid_sched[wp]: cap_swap_for_delete, empty_slot, cap_delete_one valid_sc
 lemma reply_cancel_ipc_valid_sched[wp]:
   "\<lbrace>valid_sched\<rbrace> reply_cancel_ipc tptr \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (simp add: reply_cancel_ipc_def)
-  apply (wp select_wp hoare_drop_imps thread_set_not_state_valid_sched | simp)+
+  apply (wp hoare_drop_imps thread_set_not_state_valid_sched | simp)+
   done
 
 end
@@ -1659,7 +1659,7 @@ crunches update_restart_pc
   (simp: crunch_simps ignore: set_object)
 
 crunch simple_sched_action[wp]: finalise_cap simple_sched_action
-  (wp: hoare_drop_imps mapM_x_wp mapM_wp select_wp subset_refl
+  (wp: hoare_drop_imps mapM_x_wp mapM_wp subset_refl
    simp: unless_def if_fun_split)
 
 lemma suspend_valid_sched[wp]:
@@ -1998,7 +1998,7 @@ crunch not_cur_thread[wp]: empty_slot "not_cur_thread thread"
   (wp: crunch_wps)
 
 crunch not_cur_thread[wp]: setup_reply_master, cancel_ipc "not_cur_thread thread"
-  (wp: hoare_drop_imps select_wp mapM_x_wp simp: unless_def if_fun_split)
+  (wp: hoare_drop_imps mapM_x_wp simp: unless_def if_fun_split)
 
 crunch etcb_at[wp]: setup_reply_master "etcb_at P t"
 
@@ -3461,8 +3461,8 @@ crunch valid_list[wp]: schedule_choose_new_thread valid_list
 
 lemma schedule_valid_list[wp]: "\<lbrace>valid_list\<rbrace> Schedule_A.schedule \<lbrace>\<lambda>_. valid_list\<rbrace>"
   apply (simp add: Schedule_A.schedule_def)
-  apply (wp add: tcb_sched_action_valid_list alternative_wp select_wp gts_wp hoare_drop_imps
-                  del: ethread_get_wp
+  apply (wp add: tcb_sched_action_valid_list gts_wp hoare_drop_imps
+            del: ethread_get_wp
          | wpc | simp)+
   done
 

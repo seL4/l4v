@@ -120,7 +120,7 @@ lemma decode_arch_invocation_authorised_for_globals[Syscall_IF_assms]:
    apply (simp add: split_def Let_def
                cong: cap.case_cong arch_cap.case_cong if_cong option.case_cong
                split del: if_split)
-   apply (wp select_wp select_ext_weak_wp whenE_throwError_wp check_vp_wpR unlessE_wp get_pde_wp
+   apply (wp select_ext_weak_wp whenE_throwError_wp check_vp_wpR unlessE_wp get_pde_wp
              get_master_pde_wp find_pd_for_asid_authority3 create_mapping_entries_parent_for_refs
           | wpc
           | simp add: authorised_for_globals_page_inv_def

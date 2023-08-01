@@ -1011,7 +1011,7 @@ lemma create_mapping_entries_inv [wp]:
 crunch_ignore (add: select_ext)
 
 crunch inv [wp]: arch_decode_invocation "P"
-  (wp: crunch_wps select_wp select_ext_weak_wp simp: crunch_simps)
+  (wp: crunch_wps select_ext_weak_wp simp: crunch_simps)
 
 
 lemma create_mappings_empty [wp]:
@@ -1576,7 +1576,7 @@ lemma arch_decode_inv_wf[wp]:
           apply (simp add: arch_decode_invocation_def Let_def split_def
                      cong: if_cong split del: if_split)
           apply (rule hoare_pre)
-           apply ((wp whenE_throwError_wp check_vp_wpR ensure_empty_stronger select_wp select_ext_weak_wp
+           apply ((wp whenE_throwError_wp check_vp_wpR ensure_empty_stronger select_ext_weak_wp
                   | wpc | simp add: valid_arch_inv_def valid_apinv_def)+)[1]
           apply (simp add: valid_arch_inv_def valid_apinv_def)
           apply (intro allI impI ballI)
@@ -1620,7 +1620,7 @@ lemma arch_decode_inv_wf[wp]:
                   apply (simp add: lookup_target_slot_def)
                   apply wp
                  apply (clarsimp simp: cte_wp_at_def asid_wf_high)
-                apply (wp ensure_no_children_sp select_ext_weak_wp select_wp whenE_throwError_wp | wpc | simp)+
+                apply (wp ensure_no_children_sp select_ext_weak_wp whenE_throwError_wp | wpc | simp)+
          apply clarsimp
          apply (rule conjI, fastforce)
          apply (cases excaps, simp)

@@ -247,7 +247,7 @@ lemma do_user_op_if_C_corres[ADT_IF_Refine_assms]:
               apply (rule corres_split[OF device_update_corres_C])
                 apply (rule corres_split[OF corres_dmo_setExMonitor_C,
                               where R="\<top>\<top>" and R'="\<top>\<top>"])
-                  apply (wp select_wp | simp)+
+                  apply (wp | simp)+
    apply (clarsimp simp:  ex_abs_def restrict_map_def invs_pspace_aligned'
                           invs_pspace_distinct' ptable_lift_s'_def ptable_rights_s'_def
                   split: if_splits)

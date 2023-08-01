@@ -76,7 +76,7 @@ crunch irq_state_of_state[wp]: arch_perform_invocation "\<lambda>s. P (irq_state
 
 crunch irq_state_of_state[Arch_IF_assms, wp]: arch_finalise_cap, prepare_thread_delete
   "\<lambda>s :: det_state. P (irq_state_of_state s)"
-  (wp: select_wp modify_wp crunch_wps dmo_wp
+  (wp: modify_wp crunch_wps dmo_wp
    simp: crunch_simps invalidateLocalTLB_ASID_def dsb_def
          cleanCaches_PoU_def invalidate_I_PoU_def clean_D_PoU_def)
 

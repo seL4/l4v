@@ -920,9 +920,6 @@ lemma (in Tcb_AI) decode_set_tls_base_wf:
   apply wpsimp
   done
 
-declare alternativeE_wp[wp]
-declare alternativeE_R_wp[wp]
-
 (*FIXME Move up*)
 lemma OR_choice_E_weak_wp: "\<lbrace>P\<rbrace> f \<sqinter> g \<lbrace>Q\<rbrace>,- \<Longrightarrow> \<lbrace>P\<rbrace> OR_choice b f g \<lbrace>Q\<rbrace>,-"
   apply (simp add: validE_R_def validE_def OR_choice_weak_wp)

@@ -1208,7 +1208,7 @@ lemma reply_cancel_ipc_silc_inv:
    reply_cancel_ipc t
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding reply_cancel_ipc_def
-  apply (wp cap_delete_one_silc_inv select_wp hoare_vcg_if_lift | simp)+
+  apply (wp cap_delete_one_silc_inv hoare_vcg_if_lift | simp)+
    apply wps
    apply (wp static_imp_wp hoare_vcg_all_lift hoare_vcg_ball_lift)
   apply clarsimp
@@ -1773,7 +1773,7 @@ lemma cap_revoke_silc_inv':
            apply (rule spec_valid_conj_liftE1, (wp | simp)+)
            apply (rule drop_spec_validE[OF valid_validE[OF cap_delete_silc_inv]])
           apply (wp drop_spec_validE[OF assertE_wp] drop_spec_validE[OF without_preemption_wp]
-                    get_cap_wp select_wp drop_spec_validE[OF returnOk_wp])+
+                    get_cap_wp drop_spec_validE[OF returnOk_wp])+
     apply clarsimp
     apply (clarsimp cong: conj_cong simp: conj_comms)
     apply (rule conjI)
@@ -2856,7 +2856,7 @@ lemma handle_event_silc_inv:
 crunch silc_inv[wp]: activate_thread "silc_inv aag st"
 
 crunch silc_inv[wp]: schedule "silc_inv aag st"
-  (    wp: alternative_wp OR_choice_weak_wp select_wp crunch_wps
+  (    wp: OR_choice_weak_wp crunch_wps
    ignore: set_scheduler_action
      simp: crunch_simps)
 

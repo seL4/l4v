@@ -169,7 +169,7 @@ end
 
 
 crunch irq_masks[wp]: cancel_ipc "\<lambda>s. P (irq_masks_of_state s)"
-  (wp: select_wp crunch_wps  simp: crunch_simps)
+  (wp: crunch_wps simp: crunch_simps)
 
 crunch irq_masks[wp]: restart, set_mcpriority "\<lambda>s. P (irq_masks_of_state s)"
 
@@ -212,7 +212,7 @@ proof (induct rule: cap_revoke.induct[where ?a1.0=s])
                       drop_spec_validE[OF valid_validE[OF preemption_point_domain_sep_inv]]
                       cap_delete_domain_sep_inv cap_delete_irq_masks
                       drop_spec_validE[OF assertE_wp] drop_spec_validE[OF returnOk_wp]
-                      drop_spec_validE[OF liftE_wp] select_wp
+                      drop_spec_validE[OF liftE_wp]
                       drop_spec_validE[OF  hoare_vcg_conj_liftE1]
                    | simp | wp (once) hoare_drop_imps)+
     apply fastforce

@@ -316,7 +316,7 @@ lemma set_cap_wp:
   apply (case_tac ptr, rename_tac obj_id slot, clarsimp)
   apply (wp|wpc)+
      apply (rule_tac obj = obj in set_object_slot_wp)
-    apply (wp select_wp |wpc)+
+    apply (wp |wpc)+
   apply clarsimp
   apply (clarsimp simp: update_slots_def has_slots_def
                  split: cdl_object.splits)

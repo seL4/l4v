@@ -255,7 +255,7 @@ lemma schedule_valid_cur_vcpu[wp]:
    (schedule :: (unit, unit) s_monad)
    \<lbrace>\<lambda>_. valid_cur_vcpu\<rbrace>"
   unfolding schedule_def allActiveTCBs_def
-  by (wpsimp wp: alternative_wp select_wp)
+  by wpsimp
 
 crunches cancel_all_ipc, blocked_cancel_ipc, unbind_maybe_notification, cancel_all_signals,
          bind_notification, fast_finalise, deleted_irq_handler, post_cap_deletion, cap_delete_one,
@@ -265,7 +265,7 @@ crunches cancel_all_ipc, blocked_cancel_ipc, unbind_maybe_notification, cancel_a
          restart, reschedule_required, possible_switch_to, thread_set_priority, reply_from_kernel
   for arch_state[wp]: "\<lambda>s. P (arch_state s)"
   and cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
-  (wp: mapM_x_wp_inv thread_set.arch_state select_wp crunch_wps
+  (wp: mapM_x_wp_inv thread_set.arch_state crunch_wps
    simp: crunch_simps possible_switch_to_def reschedule_required_def)
 
 lemma do_unbind_notification_arch_tcb_at[wp]:
@@ -297,7 +297,7 @@ crunches blocked_cancel_ipc, cap_delete_one, cancel_signal
 lemma reply_cancel_ipc_arch_tcb_at[wp]:
   "reply_cancel_ipc ntfnptr \<lbrace>arch_tcb_at P t\<rbrace>"
   unfolding reply_cancel_ipc_def thread_set_def
-  apply (wpsimp wp: set_object_wp select_wp)
+  apply (wpsimp wp: set_object_wp)
   by (clarsimp simp: pred_tcb_at_def obj_at_def get_tcb_def)
 
 crunches cancel_ipc, send_ipc, receive_ipc
@@ -376,7 +376,7 @@ crunches cap_insert, cap_move
 
 crunches suspend, unbind_notification, cap_swap_for_delete
   for state_hyp_refs_of[wp]: "\<lambda>s. P (state_hyp_refs_of s)"
-  (wp: crunch_wps thread_set_hyp_refs_trivial select_wp simp: crunch_simps)
+  (wp: crunch_wps thread_set_hyp_refs_trivial simp: crunch_simps)
 
 lemma prepare_thread_delete_valid_cur_vcpu[wp]:
   "\<lbrace>\<lambda>s. valid_cur_vcpu s \<and> sym_refs (state_hyp_refs_of s)\<rbrace>

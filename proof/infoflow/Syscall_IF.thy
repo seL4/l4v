@@ -174,7 +174,7 @@ proof (induct rule: cap_revoke.induct[where ?a1.0=s])
                                  cap_delete_pas_refined cap_delete_silc_inv[where st=st]
                                  cap_delete_only_timer_irq_inv[where st=st' and irq=irq]
                                  drop_spec_ev[OF assertE_ev] drop_spec_ev[OF liftE_ev]
-                                 get_cap_wp select_wp select_ev drop_spec_ev2_inv[OF liftE_ev2]
+                                 get_cap_wp select_ev drop_spec_ev2_inv[OF liftE_ev2]
                                  reads_respects_f[OF get_cap_rev, where st=st and aag=aag]
                               | simp (no_asm) add: returnOk_def | rule next_revoke_eq'
                               | (simp add: pred_conj_def, erule conjE, assumption)

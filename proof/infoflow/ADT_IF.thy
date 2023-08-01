@@ -2505,7 +2505,7 @@ proof(induct rule: cap_revoke.induct[where ?a1.0=s])
             apply (wp drop_spec_validE[OF preemption_point_irq_state_inv[simplified validE_R_def]]
                       drop_spec_validE[OF preemption_point_irq_state_inv'[where irq=irq]]
                       drop_spec_validE[OF valid_validE[OF preemption_point_domain_sep_inv]]
-                      cap_delete_domain_sep_inv cap_delete_irq_state_inv select_wp
+                      cap_delete_domain_sep_inv cap_delete_irq_state_inv
                       drop_spec_validE[OF assertE_wp] drop_spec_validE[OF returnOk_wp]
                       drop_spec_validE[OF liftE_wp] drop_spec_validE[OF hoare_vcg_conj_liftE1]
                    | simp | wp (once) hoare_drop_imps)+

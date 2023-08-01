@@ -3092,8 +3092,7 @@ lemma real_cte_at_typ_valid:
 lemma dmo_aligned[wp]:
   "do_machine_op f \<lbrace>pspace_aligned\<rbrace>"
   apply (simp add: do_machine_op_def split_def)
-  apply (wp select_wp)
-  apply (clarsimp simp: pspace_aligned_def)
+  apply wpsimp
   done
 
 lemma cte_wp_at_eqD2:
