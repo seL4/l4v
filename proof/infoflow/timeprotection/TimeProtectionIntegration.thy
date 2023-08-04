@@ -65,7 +65,12 @@ locale integration_setup =
   (* Define the maximum amount of time by which the timer interrupt might be delayed.
    This must be less than `slice_length_min`*)
   fixes timer_delay_max :: time
-  assumes timer_delay_lt_slice_length: "timer_delay_max < slice_length_min"
+  assumes timer_delay_lt_slice_length:
+    "timer_delay_max < slice_length_min"
+  assumes initial_aag_separation_kernel:
+    "separation_kernel_policy initial_aag"
+  assumes initial_state_ta_subset_inv:
+    "ta_subset_inv initial_aag (internal_state_if s0)"
 begin
 
 (* TA set extractors *)
@@ -950,10 +955,12 @@ interpretation l2p?: ArchL2Partitioned "TYPE('l subject_label \<times> 'l)"
   "\<lambda>sl. case sl of OrdinaryLabel l \<Rightarrow> l"
   done
 
+\<comment> \<open> Correspondence between "invariant lemmas" and "locale" form of the TA subset invariant. \<close>
+
 lemma ta_vaddr_to_paddr:
   "snd ` ii.touched_addresses s =
    addrFromKPPtr ` machine_state.touched_addresses (machine_state (snd $ fst s))"
-  unfolding touched_addresses_def touched_vaddrs_def image_def
+  unfolding touched_addresses_def touched_vaddrs_def image_def vaddr_to_paddr_def
   apply(clarsimp split:vaddr.splits)
   apply(rule set_eqI)
   apply clarsimp
@@ -975,10 +982,10 @@ lemma addrFromKPPtr_bij:
   using addrFromKPPtr_inj addrFromKPPtr_surj
   by blast
 
-(* FIXME: Finish proving correspondence between "invariant lemmas" and "locale" form
-   of the ta subset invariant. *)
+
 lemma accessible_vaddr_to_paddr:
-  "all_paddrs_of (userPart s) \<union> kernel_shared_precise =
+  "separation_kernel_policy initial_aag \<Longrightarrow>
+   all_paddrs_of (userPart s) \<comment> \<open>\<union> kernel_shared_precise\<close> =
    addrFromKPPtr ` pas_addrs_accessible_to initial_aag (cur_label initial_aag (snd $ fst s))"
   unfolding all_paddrs_of_def kernel_shared_precise_def
   unfolding addr_domain_def
@@ -986,23 +993,23 @@ lemma accessible_vaddr_to_paddr:
   apply(rule set_eqI)
   apply clarsimp
   apply(clarsimp simp:image_def)
-  unfolding pas_addrs_accessible_to_def pas_labels_accessible_to_def
-  apply clarsimp
   apply(rule iffI)
    (* Case: vaddr version of accessibility implies paddr one *)
-   apply(erule disjE)
-    apply(clarsimp split:subject_label.splits)
-    (* XXX: Well all this is useless, makes no difference to the proof state.
-    using inj_transfer[OF addrFromKPPtr_inj]
-    apply -
-    apply(erule_tac x="\<lambda>x. pasObjectAbs initial_aag (inv addrFromKPPtr x) =
-          OrdinaryLabel (partition_if s)" in meta_allE)
-    apply(erule_tac x=x in meta_allE)
-    apply clarsimp
-    *)
-    defer
    apply(clarsimp split:subject_label.splits)
-   defer
+   apply(drule_tac l="cur_label initial_aag (internal_state_if s)"
+     in separation_kernel_only_owned_accessible)
+   apply simp
+   apply(clarsimp simp:pas_addrs_of_def)
+   apply(rename_tac x)
+   apply(rule_tac x="inv addrFromKPPtr x" in exI)
+   apply(rule conjI)
+    prefer 2
+    apply(force simp:addrFromKPPtr_surj surj_f_inv_f)
+   apply(clarsimp simp:partition_def)
+   using domains_distinct
+   unfolding pas_domains_distinct_def
+   apply(erule_tac x="cur_domain (internal_state_if s)" in allE)
+   apply force
   (* Case: paddr version of accessibility implies vaddr one *)
   apply(clarsimp split:subject_label.splits)
   apply(clarsimp simp:partition_def)
@@ -1012,54 +1019,570 @@ lemma accessible_vaddr_to_paddr:
   apply clarsimp
   using addrFromKPPtr_inj
   apply clarsimp
-  apply(erule disjE)
-   apply clarsimp
-   apply(metis label_of.simps)
-  apply(erule disjE)
-   (* XXX: Uh oh. There is a mismatch if one is talking about *accessible* labels, and the other
-      is talking about *just my* labels. I think this is where we need a formal statement about
-      whether we're talking about a separation kernel policy or not. -robs *)
-  sorry
+  apply(rename_tac x l)
+  apply(drule_tac l=l in separation_kernel_only_owned_accessible)
+  apply(clarsimp simp add:pas_addrs_of_def)
+  using pasDomainAbs_not_SilcLabel
+  by blast
 
 lemma ta_subset_inv_to_locale_form:
-  "l2p.ta_subset_inv initial_aag (snd $ fst s) \<Longrightarrow>
-  touched_addrs_inv s"
+  "separation_kernel_policy initial_aag \<Longrightarrow>
+   ta_subset_inv initial_aag (snd $ fst s) \<Longrightarrow>
+   touched_addrs_inv s"
   unfolding touched_addrs_inv_def
   unfolding ta_subset_inv_def
   apply(clarsimp simp: ta_vaddr_to_paddr accessible_vaddr_to_paddr)
   apply(clarsimp simp:image_def)
   by blast
 
+crunch guarded_pas_domain[wp]: check_active_irq_if "guarded_pas_domain aag"
+crunch ct_running[wp]: check_active_irq_if "ct_running"
+crunch ct_idle[wp]: check_active_irq_if "ct_idle"
+crunch schact_is_rct[wp]: check_active_irq_if "schact_is_rct"
+  (simp: schact_is_rct_def)
+crunch domain_sep_inv[wp]: check_active_irq_if "domain_sep_inv irqs st"
+crunch pas_refined[wp]: check_active_irq_if "pas_refined aag"
+
+definition invs_if_trimmed :: "observable_if \<Rightarrow> bool" where
+  "invs_if_trimmed s \<equiv>
+     (case (snd s) of
+        KernelEntry e \<Rightarrow> (e \<noteq> Interrupt \<longrightarrow> ct_running (internal_state_if s)) \<and>
+                         (ct_running (internal_state_if s) \<or> ct_idle (internal_state_if s)) \<and>
+                         scheduler_action (internal_state_if s) = resume_cur_thread
+      | KernelExit \<Rightarrow> (ct_running (internal_state_if s) \<or> ct_idle (internal_state_if s)) \<and>
+                      scheduler_action (internal_state_if s) = resume_cur_thread
+      | InUserMode \<Rightarrow> ct_running (internal_state_if s) \<and>
+                      scheduler_action (internal_state_if s) = resume_cur_thread
+      | InIdleMode \<Rightarrow> ct_idle (internal_state_if s) \<and>
+                      scheduler_action (internal_state_if s) = resume_cur_thread
+      | _ \<Rightarrow> True)"
+
+lemma invs_if_trimmed:
+  "invs_if s \<Longrightarrow> invs_if_trimmed s"
+  unfolding invs_if_def invs_if_trimmed_def
+  by blast
+
+(* TODO: Move this to ADT_IF with the others? *)
+thm pasObjectAbs_current_aag
+lemma pasDomainAbs_current_aag:
+  "pasDomainAbs (current_aag x) = pasDomainAbs initial_aag"
+  by (simp add: current_aag_def)
+
+lemma ta_subset_inv_current_aag:
+  "ta_subset_inv (current_aag x) = ta_subset_inv initial_aag"
+  unfolding ta_subset_inv_def pas_addrs_accessible_to_def pas_labels_accessible_to_def
+  by (clarsimp simp:pasObjectAbs_current_aag pasDomainAbs_current_aag pasPolicy_current_aag)
+
+(* Trivial relaxation to allow it to be the current_aag of a different state *)
+(* TODO: Consider modifying the original? *)
+lemma pas_refined_cur':
+  "pas_refined (current_aag s') s = pas_refined initial_aag s"
+  apply (rule iffI)
+   apply (subst initial_aag_bak[where s=s'])
+   apply (erule pas_refined_pasSubject_update)
+    apply simp
+   apply (simp add: current_aag_def)
+   apply (subst the_subject_of_aag_domain[where l = "pasSubject initial_aag"])
+    apply (rule cur_domain_subject_s0)
+   apply (blast intro: cur_domain_subject_s0)
+  apply (simp add: current_aag_def)
+  apply (rule pas_refined_pasSubject_update)
+    apply blast+
+  done
+
+(* Note: It's almost surely asking for the wrong thing if we're ever using lemmas in such a way
+   as to demand `pas_cur_domain` or `is_subject` about the initial_aag, because they both concern
+   the pasSubject of the given aag, which for the initial_aag is essentially arbitrary.
+   Thus, in situations where this would occur we instead invoke the step lemmas to preserve them
+   for (current_aag s) instead, then convert them back to the initial_aag version afterwards. *)
+lemma ta_subset_inv_if_step:
+  "\<lbrakk>(((uc, s), m), (uc', s'), m') \<in> global_automaton_if check_active_irq_A_if (do_user_op_A_if utf)
+      kernel_call_A_if kernel_handle_preemption_if kernel_schedule_if kernel_exit_A_if;
+    ta_subset_inv initial_aag s;
+    invs_if_trimmed ((uc, s), m);
+    guarded_pas_domain initial_aag s;
+    einvs s;
+    domain_sep_inv False s0_internal s;
+    pas_refined initial_aag s;
+    step_restrict ((uc', s'), m')\<rbrakk>
+   \<Longrightarrow> ta_subset_inv initial_aag s' \<and> invs_if_trimmed ((uc', s'), m') \<and>
+     guarded_pas_domain initial_aag s' \<and> einvs s' \<and> domain_sep_inv False s0_internal s' \<and>
+     pas_refined initial_aag s'"
+   apply(prop_tac "ta_subset_inv (current_aag s) s")
+    apply(force simp:ta_subset_inv_current_aag)
+  apply(clarsimp simp:global_automaton_if_def)
+  apply(erule disjE)
+   \<comment> \<open>Case: Kernel entry with preemption during event handling\<close>
+   apply(clarsimp simp:kernel_call_A_if_def invs_if_trimmed_def)
+   apply(prop_tac "ct_active s")
+    apply(force simp:active_from_running)
+   apply(prop_tac "is_subject (current_aag s) (cur_thread s)")
+    apply(clarsimp simp:current_aag_def)
+    using guarded_pas_domain_cur guarded_active_ct_cur_domain the_subject_of_aag_domain
+    apply fastforce
+   apply(rule conjI)
+    apply(prop_tac "ta_subset_inv (current_aag s) s'")
+     apply(force intro:use_valid[OF _ kernel_entry_if_ta_subset_inv]
+       simp:pas_refined_cur pas_cur_domain_current_aag)
+    apply(force simp:ta_subset_inv_current_aag)
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ kernel_entry_if_guarded_pas_domain])
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ kernel_entry_if_invs])
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ kernel_entry_if_valid_list])
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ kernel_entry_if_valid_sched])
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ kernel_entry_if_domain_sep_inv])
+   apply(prop_tac "pas_refined (current_aag s) s'")
+    apply(force intro:use_valid[OF _ kernel_entry_pas_refined] simp:schact_is_rct_def
+      pas_refined_cur guarded_pas_domain_cur)
+   apply(force simp:pas_refined_cur')
+  apply(erule disjE)
+   \<comment> \<open>Case: Kernel entry without preemption during event handling\<close>
+   apply(clarsimp simp:kernel_call_A_if_def invs_if_trimmed_def)
+   apply(prop_tac "ct_active s \<or> ct_idle s")
+    apply(force simp:active_from_running)
+   apply(rule conjI)
+    apply(prop_tac "ta_subset_inv (current_aag s) s'")
+     apply(force intro:use_valid[OF _ kernel_entry_if_ta_subset_inv]
+       simp:pas_refined_cur pas_cur_domain_current_aag)
+    apply(force simp:ta_subset_inv_current_aag)
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ kernel_entry_if_guarded_pas_domain])
+   apply(prop_tac "e \<noteq> Interrupt \<longrightarrow> ct_active s")
+     apply(prop_tac "ct_idle s \<longrightarrow> e = Interrupt")
+      apply(force simp:active_from_running ct_active_not_idle')
+    apply force
+   apply(rule context_conjI)
+    apply(fastforce intro:use_valid[OF _ kernel_entry_if_invs])
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ kernel_entry_if_valid_list])
+   apply(rule context_conjI)
+    apply(fastforce intro:use_valid[OF _ kernel_entry_if_valid_sched])
+   apply(rule context_conjI)
+    apply(fastforce intro:use_valid[OF _ kernel_entry_if_domain_sep_inv])
+   apply(prop_tac "ct_active s \<longrightarrow> is_subject (current_aag s) (cur_thread s)")
+    apply(clarsimp simp:current_aag_def)
+    using guarded_pas_domain_cur guarded_active_ct_cur_domain the_subject_of_aag_domain
+    apply fastforce
+   apply(prop_tac "pas_refined (current_aag s) s'")
+    apply(force intro:use_valid[OF _ kernel_entry_pas_refined] simp:schact_is_rct_def
+      pas_refined_cur guarded_pas_domain_cur)
+   apply(force simp:pas_refined_cur')
+  apply(erule disjE)
+   \<comment> \<open>Case: Handle in-kernel preemption\<close>
+   apply(clarsimp simp:kernel_handle_preemption_if_def invs_if_trimmed_def)
+   apply(rule conjI)
+    apply(prop_tac "ta_subset_inv (current_aag s) s'")
+     apply(force intro:use_valid[OF _ handle_preemption_if_ta_subset_inv]
+       simp:pas_refined_cur pas_cur_domain_current_aag)
+    apply(force simp: ta_subset_inv_current_aag)
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ handle_preemption_if_guarded_pas_domain])
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ handle_preemption_if_invs])
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ handle_preemption_if_valid_list])
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ handle_preemption_if_valid_sched])
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ handle_preemption_if_domain_sep_inv])
+   apply(force intro:use_valid[OF _ handle_preemption_if_pas_refined])
+  apply(erule disjE)
+   \<comment> \<open>Case: Schedule\<close>
+   apply(clarsimp simp:kernel_schedule_if_def invs_if_trimmed_def)
+   apply(rule conjI)
+    apply(force intro:use_valid[OF _ schedule_if_ta_subset_inv])
+   apply(rule context_conjI)
+    using use_valid[OF _ schedule_if_ct_running_or_ct_idle]
+    apply presburger
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ schedule_if_scheduler_action])
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ schedule_if_guarded_pas_domain])
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ schedule_if_invs])
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ schedule_if_valid_list])
+   apply(rule context_conjI)
+    apply(fastforce intro:use_valid[OF _ schedule_if_valid_sched])
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ schedule_if_domain_sep_inv])
+   apply(force intro:use_valid[OF _ schedule_if_pas_refined])
+  apply(erule disjE)
+   \<comment> \<open>Case: Kernel exit\<close>
+   apply(clarsimp simp:kernel_exit_A_if_def invs_if_trimmed_def)
+   apply(rule conjI)
+    apply(force intro:use_valid[OF _ kernel_exit_if_inv])
+   apply clarsimp
+   apply(rule context_conjI)
+    apply(fastforce intro:use_valid[OF _ kernel_exit_if_inv])
+   apply(rule context_conjI)
+    apply(fastforce intro:use_valid[OF _ kernel_exit_if_inv])
+   apply(rule context_conjI)
+    apply(fastforce intro:use_valid[OF _ kernel_exit_if_inv])
+   apply(rule context_conjI)
+    apply(fastforce intro:use_valid[OF _ kernel_exit_if_inv])
+   apply(rule context_conjI)
+    apply(force simp:use_valid[OF _ kernel_exit_if_inv])
+   apply(rule context_conjI)
+    apply(fastforce intro:use_valid[OF _ kernel_exit_if_inv])
+   apply(rule context_conjI)
+    apply(fastforce intro:use_valid[OF _ kernel_exit_if_inv])
+   apply(rule context_conjI)
+    apply(force simp:use_valid[OF _ kernel_exit_if_inv])
+   apply(force simp:use_valid[OF _ kernel_exit_if_inv])
+  apply(erule disjE)
+   \<comment> \<open>Case: User runs, causes exception\<close>
+   apply(clarsimp simp:check_active_irq_A_if_def do_user_op_A_if_def invs_if_trimmed_def)
+   apply(rule conjI)
+    apply(force intro:use_valid[OF _ do_user_op_if_ta_subset_inv]
+      use_valid[OF _ check_active_irq_if_ta_subset_inv])
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ do_user_op_if_invs, simplified, THEN conjunct2]
+      use_valid[OF _ check_active_irq_if_invs]
+      use_valid[OF _ check_active_irq_if_ct_running])
+   apply clarsimp
+   apply(rule context_conjI)
+    apply(rename_tac uc'' s'' e)
+    apply(rule_tac f="do_user_op_if utf uc''" and P = "\<lambda>s. scheduler_action s = resume_cur_thread"
+      in use_valid)
+      apply force
+     apply(clarsimp simp:check_active_irq_if_def)
+     apply(wpsimp wp:crunch_wps simp:crunch_simps ct_in_state_def st_tcb_at_def obj_at_def)
+    apply(force simp:use_valid[OF _ check_active_irq_if_schact_is_rct, simplified schact_is_rct_def])
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ do_use_op_guarded_pas_domain]
+      use_valid[OF _ check_active_irq_if_guarded_pas_domain])
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ do_user_op_if_invs, simplified, THEN conjunct1]
+      use_valid[OF _ check_active_irq_if_invs]
+      use_valid[OF _ check_active_irq_if_ct_running])
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ do_user_op_if_valid_list]
+      use_valid[OF _ check_active_irq_if_valid_list]
+      use_valid[OF _ check_active_irq_if_ct_running])
+   apply(rule context_conjI)
+    apply(fastforce intro:use_valid[OF _ do_user_op_if_valid_sched]
+      use_valid[OF _ check_active_irq_if_valid_sched]
+      use_valid[OF _ check_active_irq_if_ct_running])
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ do_user_op_if_domain_sep_inv]
+      use_valid[OF _ check_active_irq_if_domain_sep_inv])
+   apply(force intro:use_valid[OF _ do_user_op_pas_refined]
+      use_valid[OF _ check_active_irq_if_pas_refined])
+  apply(erule disjE)
+   \<comment> \<open>Case: User runs, no exception happens\<close>
+   apply(clarsimp simp:check_active_irq_A_if_def do_user_op_A_if_def invs_if_trimmed_def)
+   apply(rule conjI)
+    apply(force intro:use_valid[OF _ do_user_op_if_ta_subset_inv]
+      use_valid[OF _ check_active_irq_if_ta_subset_inv])
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ do_user_op_if_invs, simplified, THEN conjunct2]
+      use_valid[OF _ check_active_irq_if_invs]
+      use_valid[OF _ check_active_irq_if_ct_running])
+   apply(rule context_conjI)
+    apply(rename_tac uc'' s'')
+    apply(rule_tac f="do_user_op_if utf uc''" and P = "\<lambda>s. scheduler_action s = resume_cur_thread"
+      in use_valid)
+      apply force
+     apply(clarsimp simp:check_active_irq_if_def)
+     apply(wpsimp wp:crunch_wps simp:crunch_simps ct_in_state_def st_tcb_at_def obj_at_def)
+    apply(force simp:use_valid[OF _ check_active_irq_if_schact_is_rct, simplified schact_is_rct_def])
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ do_use_op_guarded_pas_domain]
+      use_valid[OF _ check_active_irq_if_guarded_pas_domain])
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ do_user_op_if_invs, simplified, THEN conjunct1]
+      use_valid[OF _ check_active_irq_if_invs]
+      use_valid[OF _ check_active_irq_if_ct_running])
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ do_user_op_if_valid_list]
+      use_valid[OF _ check_active_irq_if_valid_list]
+      use_valid[OF _ check_active_irq_if_ct_running])
+   apply(rule context_conjI)
+    apply(fastforce intro:use_valid[OF _ do_user_op_if_valid_sched]
+      use_valid[OF _ check_active_irq_if_valid_sched]
+      use_valid[OF _ check_active_irq_if_ct_running])
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ do_user_op_if_domain_sep_inv]
+      use_valid[OF _ check_active_irq_if_domain_sep_inv])
+   apply(force intro:use_valid[OF _ do_user_op_pas_refined]
+      use_valid[OF _ check_active_irq_if_pas_refined])
+  apply(erule disjE)
+   \<comment> \<open>Case: Interrupt while in user mode\<close>
+   apply(clarsimp simp:check_active_irq_A_if_def invs_if_trimmed_def)
+   apply(rule conjI)
+    apply(force intro:use_valid[OF _ check_active_irq_if_ta_subset_inv])
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ check_active_irq_if_ct_running])
+   apply(rule context_conjI)
+    apply(force simp:use_valid[OF _ check_active_irq_if_schact_is_rct, simplified schact_is_rct_def])
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ check_active_irq_if_guarded_pas_domain])
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ check_active_irq_if_invs])
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ check_active_irq_if_valid_list])
+   apply(rule context_conjI)
+    apply(fastforce intro:use_valid[OF _ check_active_irq_if_valid_sched])
+   apply(rule context_conjI)
+    apply(fastforce intro:use_valid[OF _ check_active_irq_if_domain_sep_inv])
+   apply(fastforce intro:use_valid[OF _ check_active_irq_if_pas_refined])
+  apply(erule disjE)
+   \<comment> \<open>Case: Interrupt while in idle mode\<close>
+   apply(clarsimp simp:check_active_irq_A_if_def invs_if_trimmed_def)
+   apply(rule conjI)
+    apply(force intro:use_valid[OF _ check_active_irq_if_ta_subset_inv])
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ check_active_irq_if_ct_idle])
+   apply(rule context_conjI)
+    apply(force simp:use_valid[OF _ check_active_irq_if_schact_is_rct, simplified schact_is_rct_def])
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ check_active_irq_if_guarded_pas_domain])
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ check_active_irq_if_invs])
+   apply(rule context_conjI)
+    apply(force intro:use_valid[OF _ check_active_irq_if_valid_list])
+   apply(rule context_conjI)
+    apply(fastforce intro:use_valid[OF _ check_active_irq_if_valid_sched])
+   apply(rule context_conjI)
+    apply(fastforce intro:use_valid[OF _ check_active_irq_if_domain_sep_inv])
+   apply(fastforce intro:use_valid[OF _ check_active_irq_if_pas_refined])
+  \<comment> \<open>Case: No interrupt while in idle mode\<close>
+  apply(clarsimp simp:check_active_irq_A_if_def invs_if_trimmed_def)
+  apply(rule conjI)
+   apply(force intro:use_valid[OF _ check_active_irq_if_ta_subset_inv])
+  apply(rule context_conjI)
+   apply(force intro:use_valid[OF _ check_active_irq_if_ct_idle])
+  apply(rule context_conjI)
+   apply(force simp:use_valid[OF _ check_active_irq_if_schact_is_rct, simplified schact_is_rct_def])
+  apply(rule context_conjI)
+   apply(force intro:use_valid[OF _ check_active_irq_if_guarded_pas_domain])
+  apply(rule context_conjI)
+   apply(force intro:use_valid[OF _ check_active_irq_if_invs])
+  apply(rule context_conjI)
+   apply(force intro:use_valid[OF _ check_active_irq_if_valid_list])
+  apply(rule context_conjI)
+   apply(fastforce intro:use_valid[OF _ check_active_irq_if_valid_sched])
+  apply(rule context_conjI)
+   apply(fastforce intro:use_valid[OF _ check_active_irq_if_domain_sep_inv])
+  apply(fastforce intro:use_valid[OF _ check_active_irq_if_pas_refined])
+  done
+
+(* Note: changing from initial_aag to current_aag doesn't work here because the locale wants
+   something relative to the initial_aag, as that's what it's using for addr_domain.
+   So instead we have the per-step lemma ta_subset_inv_if_step invoked by this one convert
+   to current_aag to use the step lemmas, and convert back to initial_aag afterwards. *)
+lemma ta_subset_inv_execution:
+  "s \<in> execution (big_step_ADT_A_if utf) s0 js \<Longrightarrow>
+   ta_subset_inv initial_aag (internal_state_if s)"
+  apply(rule_tac Q="invs_if_trimmed s \<and> pas_refined initial_aag (internal_state_if s) \<and>
+    guarded_pas_domain initial_aag (internal_state_if s) \<and>
+    einvs (internal_state_if s) \<and>
+    domain_sep_inv False s0_internal (internal_state_if s)"
+    in conjunct1)
+  apply(induct js arbitrary: s rule: rev_induct)
+   apply(rule conjI)
+    apply(force simp:execution_def steps_def
+      big_step_ADT_A_if_def big_step_adt_def ADT_A_if_def
+      initial_state_ta_subset_inv)
+   apply(clarsimp simp:execution_def steps_def
+     big_step_ADT_A_if_def big_step_adt_def ADT_A_if_def
+     full_invs_if_def invs_if_trimmed)
+   apply(rule conjI)
+    using reachable_s0[THEN pas_refined_if] pas_refined_cur
+    apply blast
+   apply(rule conjI)
+    using reachable_s0[THEN guarded_pas_domain_if] internal_state_s0 current_aag_initial
+    apply fastforce
+   using Invs_def Invs_s0_internal internal_state_s0
+   apply presburger
+  apply(clarsimp simp: execution_def steps_def
+     big_step_ADT_A_if_def big_step_adt_def ADT_A_if_def)
+  apply(drule big_steps_I_holds[where I="{s'. ta_subset_inv initial_aag (internal_state_if s') \<and>
+    invs_if_trimmed s' \<and> pas_refined initial_aag (internal_state_if s') \<and>
+    guarded_pas_domain initial_aag (internal_state_if s') \<and>
+    einvs (internal_state_if s') \<and>
+    domain_sep_inv False s0_internal (internal_state_if s')}"])
+    apply force
+   apply(clarsimp simp:inv_holds_def)
+   using ta_subset_inv_if_step
+   apply blast
+  by force
+
 lemma ta_subset_inv_reachable:
   (* According to Scott, initial_aag should be fine here rather than `current_aag (snd $ fst s0)` *)
   "reachable s \<Longrightarrow>
-  l2p.ta_subset_inv initial_aag (snd $ fst s)"
-  subgoal sorry
-  done
+  ta_subset_inv initial_aag (snd $ fst s)"
+  (* `reachable` is defined in Noninterference_Base.thy so it's not used in AInvs/Access.
+     Even though `silc_inv` is of IF session, it doesn't look like it's proved for `reachable`. *)
+  unfolding reachable_def
+  using ta_subset_inv_execution
+  by fastforce
 
 lemma subset_inv_proof_aux:
-  "reachable s \<Longrightarrow>
-  touched_addrs_inv s"
+  "separation_kernel_policy initial_aag \<Longrightarrow>
+   reachable s \<Longrightarrow>
+   touched_addrs_inv s"
   using ta_subset_inv_reachable ta_subset_inv_to_locale_form
   by blast
 
 lemma subset_inv_proof:
-  "reachable s \<Longrightarrow>
+  "separation_kernel_policy initial_aag \<Longrightarrow>
+   reachable s \<Longrightarrow>
          snd ` ii.touched_addresses s
          \<subseteq> {a. addr_domain initial_aag a = userPart s} \<union>
             kernel_shared_precise"
   using all_paddrs_of_def subset_inv_proof_aux touched_addrs_inv_def
   by blast
 
+lemma ta_subset_inv_to_locale_form':
+  "separation_kernel_policy initial_aag \<Longrightarrow>
+   \<comment> \<open>This is @{term\<open>ta_subset_inv\<close>} but with the TA set required to be a subset
+     of the addresses of the old domain (in s), not the new domain (in s').\<close>
+   machine_state.touched_addresses (machine_state (snd $ fst s')) \<subseteq>
+     pas_addrs_accessible_to initial_aag (cur_label initial_aag (snd $ fst s)) \<Longrightarrow>
+   \<comment> \<open>Similarly for @{term\<open>touched_addrs_inv\<close>}.\<close>
+   snd ` touched_addresses s' \<subseteq> all_paddrs_of (userPart s) \<union> kernel_shared_precise"
+  unfolding touched_addrs_inv_def
+  unfolding ta_subset_inv_def
+  apply(clarsimp simp: ta_vaddr_to_paddr accessible_vaddr_to_paddr)
+  apply(clarsimp simp:image_def)
+  by blast
+
+(* TODO: This might be worth moving back to somewhere in AInvs. -robs *)
+lemma resetTimer_ta_inv:
+  "\<lbrace>\<lambda>s. P (machine_state.touched_addresses (machine_state s))\<rbrace>
+     do_machine_op resetTimer
+   \<lbrace>\<lambda>_ s. P (machine_state.touched_addresses (machine_state s))\<rbrace>"
+  unfolding do_machine_op_def resetTimer_def machine_op_lift_def machine_rest_lift_def
+  by (wpsimp wp: crunch_wps simp:crunch_simps simpler_gets_def simpler_modify_def bind_def
+    select_f_def return_def)
+
+(* FIXME: Turns out this sorried lemma is not true because timer_tick adds cur_thread to TA,
+  which is what's leading wp down a bad path. Actually need to fix this all the way back in
+  Deterministic_AI. For now we'll just remove it from the wp set. -robs *)
+thm timer_tick_all_but_exst
+declare timer_tick_all_but_exst[wp del]
+declare timer_tick_extended.all_but_exst[wp del]
+
+(* FIXME: This is something we actually need to prove all the way back in AInvs along with a new
+  version of timer_tick_all_but_exst, but I'm leaving this sorry here as moving it back to AInvs
+  right now might cause an unpredictable number of breakages that we'll just have to deal with
+  when the time comes. I'm moderately confident this is true from inspecting timer_tick. -robs *)
+lemma timer_tick_ta:
+  "\<lbrace>\<lambda>s. machine_state.touched_addresses (machine_state s) = ta \<and> ct = cur_thread s \<and> kh = kheap s\<rbrace>
+     timer_tick
+   \<lbrace>\<lambda>rv s. machine_state.touched_addresses (machine_state s) = ta \<union> obj_range ct (the (kh ct))\<rbrace>"
+  unfolding timer_tick_def
+  sorry
+
+lemma handle_interrupt_IRQTimer_ta:
+  "\<lbrace>\<lambda>s. machine_state.touched_addresses (machine_state s) = ta \<and> ct = cur_thread s \<and> kh = kheap s\<rbrace>
+     handle_interrupt_IRQTimer
+   \<lbrace>\<lambda>rv s. machine_state.touched_addresses (machine_state s) = ta \<union> obj_range ct (the (kh ct))\<rbrace>"
+  unfolding handle_interrupt_IRQTimer_def
+  by (wpsimp wp:crunch_wps resetTimer_ta_inv timer_tick_ta simp:crunch_simps)
+
+lemma arch_mask_interrupts_preserves_ta:
+  "arch_mask_interrupts b irqs
+   \<lbrace>\<lambda>s. machine_state.touched_addresses (machine_state s) = ta\<rbrace>"
+  unfolding arch_mask_interrupts_def do_machine_op_def maskInterrupt_def
+  apply(wpsimp wp:crunch_wps simp:crunch_simps)
+   apply(wpsimp simp:simpler_modify_def)
+  by force
+
+lemma arch_switch_domain_kernel_preserves_ta:
+  "arch_switch_domain_kernel d
+   \<lbrace>\<lambda>s. machine_state.touched_addresses (machine_state s) = ta\<rbrace>"
+  unfolding arch_switch_domain_kernel_def do_machine_op_def setVSpaceRoot_def
+  by (wpsimp wp:crunch_wps simp:crunch_simps machine_op_lift_def machine_rest_lift_def
+    select_f_def simpler_gets_def simpler_modify_def bind_def return_def)
+
+lemma oldclean_preserves_ta_subset_inv:
+  "reachable s \<Longrightarrow>
+   (s, s') \<in> fourways_oldclean \<Longrightarrow>
+   machine_state.touched_addresses (machine_state (snd $ fst s')) \<subseteq>
+     pas_addrs_accessible_to initial_aag (cur_label initial_aag (snd $ fst s))"
+  apply(frule ta_subset_inv_reachable)
+  apply clarsimp
+  (* That fourways_oldclean only touches the current thread. *)
+  apply(prop_tac "machine_state.touched_addresses (machine_state (snd $ fst s')) =
+    machine_state.touched_addresses (machine_state (snd $ fst s)) \<union>
+    obj_range (cur_thread (snd $ fst s)) (the (kheap (snd $ fst s) (cur_thread (snd $ fst s))))")
+   apply(clarsimp simp:fourways_oldclean_def fourways_oldclean_monad_def)
+   apply(clarsimp simp:bind_def simpler_gets_def)
+   apply(drule use_valid[OF _ handle_interrupt_IRQTimer_ta], force)
+   apply(clarsimp simp:next_domain_def simpler_modify_def assert_def)
+   apply(clarsimp split:if_splits simp:fail_def)
+   apply(drule use_valid[OF _ arch_mask_interrupts_preserves_ta], force)
+   apply(drule use_valid[OF _ arch_switch_domain_kernel_preserves_ta], force)
+   apply(drule use_valid[OF _ arch_mask_interrupts_preserves_ta], force)
+   apply(clarsimp simp:return_def Let_def)
+  (* That the current thread is always accessible to the currently running domain. *)
+  apply(prop_tac
+    "obj_range (cur_thread (snd $ fst s)) (the (kheap (snd $ fst s) (cur_thread (snd $ fst s)))) \<subseteq>
+    pas_addrs_accessible_to initial_aag (cur_label initial_aag (snd $ fst s))")
+   unfolding pas_addrs_accessible_to_def
+   apply(case_tac "ct_idle (internal_state_if s)")
+    (* When the current thread is idle, it's also accessible to the current label. *)
+    unfolding pas_labels_accessible_to_def
+    (* FIXME: Actually I'm pretty sure the problem here is the idle thread is treated specially as
+       a global, not with a label. However, the latest kernel cloning implementation *does* clone
+       the idle thread for each domain. As the impact of this on the ASpec and all current proofs
+       is unknown, I think for now we'll just have to document this as a semi-major TODO. -robs *)
+    apply(frule reachable_invs_if[THEN invs_if_Invs])
+    apply(clarsimp simp:Invs_def)
+    apply(frule cur_thread_idle)
+    apply clarsimp
+    subgoal sorry
+   using initial_aag_separation_kernel
+   unfolding separation_kernel_policy_def
+   apply clarsimp
+   apply(frule pas_refined_initial_aag_reachable[THEN pas_refined_no_label_straddling_objs])
+   unfolding no_label_straddling_objs_def
+   apply clarsimp
+   apply(erule_tac x="cur_thread (internal_state_if s)" in allE)
+   apply(clarsimp split:option.splits)
+    (* That the cur_thread actually exists on the kheap. *)
+    apply(frule reachable_invs_if[THEN invs_if_Invs])
+    apply(force simp:Invs_def invs_def cur_tcb_def tcb_at_def get_tcb_def)
+   apply(rename_tac x xa x2)
+   apply(erule_tac x=xa in ballE)
+    prefer 2
+    apply(force simp:obj_range_def)
+   apply clarsimp
+   apply(prop_tac "guarded_pas_domain initial_aag (internal_state_if s)")
+    apply(frule guarded_pas_domain_if)
+    apply(metis guarded_pas_domain_cur)
+   apply(clarsimp simp:guarded_pas_domain_def)
+   apply(erule impE)
+    (* That the current thread isn't the idle thread. *)
+    apply(frule reachable_invs_if[THEN invs_if_Invs, simplified Invs_def])
+    apply clarsimp
+    apply(frule cur_thread_idle)
+    apply blast
+   using domains_distinct
+   unfolding pas_domains_distinct_def
+   apply(erule_tac x="cur_domain (internal_state_if s)" in allE)
+   apply force
+  unfolding ta_subset_inv_def pas_addrs_accessible_to_def pas_labels_accessible_to_def
+  apply clarsimp
+  by force
+
 (* note here that we are talking about the TA set being a subset of the
    STARTING state's domain *)
-lemma oldclean_preserves_subset_inv:
-  "\<lbrakk>reachable s;
-  (s, s') \<in> fourways_oldclean\<rbrakk> \<Longrightarrow>
-  snd ` ii.touched_addresses s'
-         \<subseteq> {a. addr_domain initial_aag a = userPart s} \<union>
-            kernel_shared_precise"
-  sorry
+lemma oldclean_preserves_touched_addrs_inv:
+  "reachable s \<Longrightarrow>
+  (s, s') \<in> fourways_oldclean \<Longrightarrow>
+  \<comment> \<open>This is @{term\<open>touched_addrs_inv\<close>} but with the TA set required to be a subset
+    of the addresses of the old domain (in s), not the new domain (in s').\<close>
+  snd ` touched_addresses s' \<subseteq> all_paddrs_of (userPart s) \<union> kernel_shared_precise"
+  using oldclean_preserves_ta_subset_inv ta_subset_inv_to_locale_form' initial_aag_separation_kernel
+  by blast
 
 
 (* I don't think this should be too bad. Can do this with hoare logic stuff I think. *)
@@ -1195,7 +1718,7 @@ lemma fourways_properties:
            userPart s4 = get_next_domain s1"
   apply (clarsimp simp: fourways_dirty_def fourways_newclean_def is_uwr_determined_def)
   apply (intro conjI)
-   apply (rule oldclean_preserves_subset_inv; simp)
+   apply (rule oldclean_preserves_touched_addrs_inv[simplified all_paddrs_of_def]; simp)
   (* here we need a definition of "step_is_only_timeprotection_gadget" to do something
       useful *)
   sorry
@@ -1243,6 +1766,7 @@ interpretation ma?:time_protection_system PSched fch_lookup fch_read_impact fch_
             (* get_next_domain_public *)
             apply (erule get_next_domain_public)
            (* touched addresses inv *)
+           using initial_aag_separation_kernel
            apply (erule subset_inv_proof; assumption)
           (* simple_steps *)
           apply (erule simple_steps)
