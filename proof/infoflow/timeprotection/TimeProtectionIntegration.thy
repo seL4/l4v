@@ -760,12 +760,6 @@ lemma schedule_if_choose_new_thread:
      apply (rule monadic_rewrite_bind_tail)
   sorry
 
-
-
-thm domainswitch_two_paths
-thm handle_preemption_if_timer_irq
-thm kernel_entry_is_timer_irq
-thm schedule_if_choose_new_thread
 (*
   SPLITS FOUR WAYS
   Let's figure out what the four ways are, precisely.
@@ -779,9 +773,6 @@ thm schedule_if_choose_new_thread
   
 *)
 
-term kernel_entry_if
-term global_automaton_if
-term "Step ()"
 
 definition fourways_oldclean_monad where
   "fourways_oldclean_monad tc \<equiv>
@@ -904,7 +895,6 @@ lemma domainswitch_splits_four_ways:
   apply (clarsimp simp: fourways_newclean_def)
   done
 
-
 (* based on the monad next_domain and the functions part/partition.
   Never returns PSched. *)
 definition get_next_domain
@@ -931,8 +921,6 @@ lemma get_next_domain_public:
   apply (clarsimp simp: uwr_def sameFor_def sameFor_scheduler_def)
   apply (clarsimp simp: domain_fields_equiv_def)
   done
-
-
 
 lemma uwr_equates_touched_addresses:
   "uwr2 s (userPart s) t \<Longrightarrow>
@@ -1033,7 +1021,6 @@ lemma accessible_vaddr_to_paddr:
       whether we're talking about a separation kernel policy or not. -robs *)
   sorry
 
-thm ta_subset_inv_def touched_addrs_inv_def
 lemma ta_subset_inv_to_locale_form:
   "l2p.ta_subset_inv initial_aag (snd $ fst s) \<Longrightarrow>
   touched_addrs_inv s"
@@ -1043,7 +1030,6 @@ lemma ta_subset_inv_to_locale_form:
   apply(clarsimp simp:image_def)
   by blast
 
-thm ta_subset_inv_def
 lemma ta_subset_inv_reachable:
   (* According to Scott, initial_aag should be fine here rather than `current_aag (snd $ fst s0)` *)
   "reachable s \<Longrightarrow>
