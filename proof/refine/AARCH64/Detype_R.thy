@@ -1611,10 +1611,9 @@ proof -
   apply (subgoal_tac "is_aligned ptr bits \<and> 3 \<le> bits \<and> bits < word_bits",simp)
    apply clarsimp
    apply (frule(2) delete_locale.intro, simp_all)[1]
-   apply (simp add: ksASIDMapSafe_def)
-   subgoal sorry (* FIXME AARCH64: needs rules about invs and gsPTTypes_update
+   apply (simp add: ksASIDMapSafe_def invs'_gsTypes_update)
    apply (rule subst[rotated, where P=invs'], erule delete_locale.delete_invs')
-   apply (simp add: field_simps mask_def) *)
+   apply (simp add: field_simps mask_def)
   apply clarsimp
   apply (drule invs_valid_objs')
   apply (drule (1) cte_wp_at_valid_objs_valid_cap')
@@ -2791,7 +2790,6 @@ lemma setCTE_modify_gsUserPages_commute:
                  fail_def simpler_updateObject_def
            split: option.splits if_split_asm)
 
-
 lemma setCTE_updatePTType_commute:
   "monad_commute \<top> (setCTE src cte) (updatePTType p pt_t)"
   unfolding updatePTType_def
@@ -3864,7 +3862,7 @@ lemma createObjects_Cons:
            "\<lambda>r. pspace_no_overlap' (((1::machine_word) + of_nat n << objBitsKO val + us) + ptr)
                                    (objBitsKO val + us) and pspace_aligned'"])
            apply (simp add:shiftl_t2n field_simps)
-          apply (clarsimp simp:unless_True)
+          apply (clarsimp)
           apply (rule sym)
           apply (clarsimp simp:gets_def get_def)
           apply (subst bind_def,simp)
@@ -3930,9 +3928,9 @@ lemma gsCNodes_upd_createObjects'_comm:
   apply (rule ext)
   apply (case_tac x)
   by (auto simp: createObjects'_def split_def bind_assoc return_def unless_def
-          when_def simpler_gets_def alignError_def fail_def assert_def
-          simpler_modify_def bind_def
-        split: option.splits)
+                 when_def simpler_gets_def alignError_def fail_def assert_def
+                 simpler_modify_def bind_def
+           split: option.splits)
 
 lemma gsUserPages_upd_createObjects'_comm:
   "do _ \<leftarrow> modify (gsUserPages_update f);
@@ -3946,9 +3944,25 @@ lemma gsUserPages_upd_createObjects'_comm:
   apply (rule ext)
   apply (case_tac x)
   by (auto simp: createObjects'_def split_def bind_assoc return_def unless_def
-          when_def simpler_gets_def alignError_def fail_def assert_def
-          simpler_modify_def bind_def
-        split: option.splits)
+                 when_def simpler_gets_def alignError_def fail_def assert_def
+                 simpler_modify_def bind_def
+           split: option.splits)
+
+lemma ksArchState_upd_createObjects'_comm:
+  "do _ \<leftarrow> modify (\<lambda>s. ksArchState_update (f (ksArchState s)) s);
+      x \<leftarrow> createObjects' ptr n obj us;
+      m x
+   od =
+   do x \<leftarrow> createObjects' ptr n obj us;
+      _ \<leftarrow> modify (\<lambda>s. ksArchState_update (f (ksArchState s)) s);
+      m x
+   od"
+  apply (rule ext)
+  apply (case_tac x)
+  by (auto simp: createObjects'_def split_def bind_assoc return_def unless_def
+                 when_def simpler_gets_def alignError_def fail_def assert_def
+                 simpler_modify_def bind_def
+           split: option.splits)
 
 (* FIXME: move *)
 lemma ef_dmo':
@@ -4277,6 +4291,9 @@ proof -
   have gsCNodes_update[simp]:
     "\<And>f. (\<lambda>ks. ks \<lparr>gsCNodes := f (gsCNodes ks)\<rparr>) = gsCNodes_update f"
     by (rule ext) simp
+  have ksArchState_update[simp]:
+    "\<And>f. (\<lambda>ks. ks \<lparr>ksArchState := f (ksArchState ks)\<rparr>) = ksArchState_update f"
+    by (rule ext) simp
 
   have if_eq[simp]:
     "!!x a b pgsz. (if a = ptr + (1 + of_nat n << b) then Some pgsz
@@ -4465,7 +4482,27 @@ proof -
                     | simp add: modify_modify_bind o_def)+
 
         apply (in_case "VSpaceObject")
-    subgoal sorry (* FIXME AARCH64: do NormalPT_T first *)
+        apply (simp add: Arch_createNewCaps_def Retype_H.createObject_def createObjects_def
+                         bind_assoc AARCH64_H.toAPIType_def AARCH64_H.createObject_def)
+        apply (subst monad_eq, rule createObjects_Cons)
+              apply ((simp add: field_simps shiftl_t2n
+                                getObjectSize_def bit_simps objBits_simps ptBits_def)+)[6]
+        apply (simp add: bind_assoc placeNewObject_def2)
+        apply (simp add: field_simps updatePTType_def bind_assoc gets_modify_def
+                         getObjectSize_def placeNewObject_def2 objBits_simps append)
+        apply (subst ksArchState_update ksArchState_upd_createObjects'_comm
+               | simp add: modify_modify_bind o_def
+               | simp only: o_def cong: if_cong)+
+        apply (rule bind_apply_cong, simp)
+        apply (rule bind_apply_cong, simp)
+        apply (rule monad_eq_split_tail, simp)
+        apply (rule fun_cong, rule arg_cong[where f=modify])
+        apply (simp flip: if_eq)
+        apply (simp cong: if_cong del: if_eq)
+        apply (rule ext)
+        apply (rename_tac s', case_tac s')
+        apply (rename_tac ksArch ksMachine, case_tac ksArch)
+        apply fastforce
 
        apply (in_case "SmallPageObject")
        apply (simp add: Arch_createNewCaps_def
@@ -4518,17 +4555,27 @@ proof -
              | simp add: modify_modify_bind o_def)+
 
      apply (in_case "PageTableObject")
-     apply (simp add:Arch_createNewCaps_def Retype_H.createObject_def
-             createObjects_def bind_assoc AARCH64_H.toAPIType_def
-             AARCH64_H.createObject_def)
+     apply (simp add: Arch_createNewCaps_def Retype_H.createObject_def createObjects_def bind_assoc
+                      AARCH64_H.toAPIType_def AARCH64_H.createObject_def)
      apply (subst monad_eq, rule createObjects_Cons)
            apply ((simp add: field_simps shiftl_t2n
                              getObjectSize_def bit_simps objBits_simps ptBits_def)+)[6]
-     apply (simp add:bind_assoc placeNewObject_def2)
-     apply (simp add: field_simps bit_simps
+     apply (simp add: bind_assoc placeNewObject_def2)
+     apply (simp add: field_simps updatePTType_def bind_assoc gets_modify_def
                       getObjectSize_def placeNewObject_def2 objBits_simps append)
-    subgoal sorry (* FIXME AARCH64: updatePTTypes; commute with createObjects' *)
-
+     apply (subst ksArchState_update ksArchState_upd_createObjects'_comm
+            | simp add: modify_modify_bind o_def
+            | simp only: o_def cong: if_cong)+
+     apply (rule bind_apply_cong, simp)
+     apply (rule bind_apply_cong, simp)
+     apply (rule monad_eq_split_tail, simp)
+     apply (rule fun_cong, rule arg_cong[where f=modify])
+     apply (simp flip: if_eq)
+     apply (simp cong: if_cong del: if_eq)
+     apply (rule ext)
+     apply (rename_tac s', case_tac s')
+     apply (rename_tac ksArch ksMachine, case_tac ksArch)
+     apply fastforce
     apply (in_case "VCPUObject")
     apply (simp add: Arch_createNewCaps_def Retype_H.createObject_def
                      createObjects_def bind_assoc AARCH64_H.toAPIType_def
