@@ -36,14 +36,6 @@ lemma hoare_pre_addE:
   apply (subst iff_conv_conj_imp)
   by(intro conjI impI; rule hoare_weaken_preE, assumption, clarsimp)
 
-lemma hoare_disjI1:
-  "\<lbrace>R\<rbrace> f \<lbrace>P\<rbrace> \<Longrightarrow> \<lbrace>R\<rbrace> f \<lbrace>\<lambda>r s. P r s \<or> Q r s\<rbrace>"
-  by (erule hoare_post_imp [rotated]) simp
-
-lemma hoare_disjI2:
-  "\<lbrace>R\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>R\<rbrace> f \<lbrace>\<lambda>r s. P r s \<or> Q r s \<rbrace>"
-  by (rule hoare_post_imp [OF _ hoare_disjI1, where P1=Q], auto)
-
 lemma hoare_name_pre_state:
   "\<lbrakk> \<And>s. P s \<Longrightarrow> \<lbrace>(=) s\<rbrace> f \<lbrace>Q\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
   by (clarsimp simp: valid_def)

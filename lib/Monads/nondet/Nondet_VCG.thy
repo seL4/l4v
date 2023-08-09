@@ -31,16 +31,15 @@ text \<open>This section defines a Hoare logic for partial correctness for
   the monad satisfy the postcondition. Note that if the computation returns
   the empty set, the triple is trivially valid. This means @{term "assert P"}
   does not require us to prove that @{term P} holds, but rather allows us
-  to assume @{term P}! Proving non-failure is done via separate predicate and
-  calculus (see below).
-\<close>
+  to assume @{term P}! Proving non-failure is done via a separate predicate and
+  calculus (see Nondet_No_Fail).\<close>
 definition valid ::
   "('s \<Rightarrow> bool) \<Rightarrow> ('s,'a) nondet_monad \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool" ("\<lbrace>_\<rbrace>/ _ /\<lbrace>_\<rbrace>") where
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<equiv> \<forall>s. P s \<longrightarrow> (\<forall>(r,s') \<in> fst (f s). Q r s')"
 
 text \<open>
   We often reason about invariant predicates. The following provides shorthand syntax
-  that avoids repeating potentially long predicates. \<close>
+  that avoids repeating potentially long predicates.\<close>
 abbreviation (input) invariant ::
   "('s,'a) nondet_monad \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> bool" ("_ \<lbrace>_\<rbrace>" [59,0] 60) where
   "invariant f P \<equiv> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>"
@@ -60,7 +59,7 @@ lemma validE_def2:
 
 text \<open>
   The following two instantiations are convenient to separate reasoning for exceptional and
-  normal case. \<close>
+  normal case.\<close>
 (* Narrator: they are in fact not convenient, and are now considered a mistake that should have
              been an abbreviation instead. *)
 definition validE_R :: (* FIXME lib: this should be an abbreviation *)
@@ -96,7 +95,7 @@ lemma hoare_pre_imp:
 lemmas hoare_weaken_pre = hoare_pre_imp[rotated]
 
 lemma hoare_vcg_precond_impE: (* FIXME lib: eliminate in favour of hoare_weaken_preE *)
- "\<lbrakk> \<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>,\<lbrace>E\<rbrace>; \<And>s. P s \<Longrightarrow> Q s \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>R\<rbrace>,\<lbrace>E\<rbrace>"
+  "\<lbrakk> \<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>,\<lbrace>E\<rbrace>; \<And>s. P s \<Longrightarrow> Q s \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>R\<rbrace>,\<lbrace>E\<rbrace>"
   by (fastforce simp add:validE_def2)
 
 lemmas hoare_weaken_preE = hoare_vcg_precond_impE
@@ -420,11 +419,11 @@ lemma validE_R_validE:
   by (simp add: validE_R_def)
 
 lemma validE_validE_E:
-  "\<lbrace>P\<rbrace> f \<lbrace>\<top>\<top>\<rbrace>,\<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f -,\<lbrace>E\<rbrace>"
+  "\<lbrace>P\<rbrace> f \<lbrace>\<top>\<top>\<rbrace>, \<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f -, \<lbrace>E\<rbrace>"
   by (simp add: validE_E_def)
 
 lemma validE_E_validE:
-  "\<lbrace>P\<rbrace> f -,\<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<top>\<top>\<rbrace>,\<lbrace>E\<rbrace>"
+  "\<lbrace>P\<rbrace> f -, \<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<top>\<top>\<rbrace>, \<lbrace>E\<rbrace>"
   by (simp add: validE_E_def)
 
 
@@ -458,7 +457,7 @@ lemma hoare_vcg_if_splitE:
 
 lemma hoare_vcg_split_case_option:
  "\<lbrakk> \<And>x. x = None \<Longrightarrow> \<lbrace>P x\<rbrace> f x \<lbrace>R x\<rbrace>; \<And>x y. x = Some y \<Longrightarrow> \<lbrace>Q x y\<rbrace> g x y \<lbrace>R x\<rbrace> \<rbrakk> \<Longrightarrow>
-  \<lbrace>\<lambda>s. (x = None \<longrightarrow> P x s) \<and>(\<forall>y. x = Some y \<longrightarrow> Q x y s)\<rbrace>
+  \<lbrace>\<lambda>s. (x = None \<longrightarrow> P x s) \<and> (\<forall>y. x = Some y \<longrightarrow> Q x y s)\<rbrace>
   case x of None \<Rightarrow> f x | Some y \<Rightarrow> g x y
   \<lbrace>R x\<rbrace>"
   by (cases x; simp)
@@ -498,8 +497,8 @@ lemma hoare_chain:
   by (wp_pre, rule hoare_post_imp)
 
 lemma validE_weaken: (* FIXME lib: eliminate in favour of hoare_chainE *)
-  "\<lbrakk> \<lbrace>P'\<rbrace> A \<lbrace>Q'\<rbrace>,\<lbrace>E'\<rbrace>; \<And>s. P s \<Longrightarrow> P' s; \<And>rv s. Q' rv s \<Longrightarrow> Q rv s; \<And>rv s. E' rv s \<Longrightarrow> E rv s \<rbrakk> \<Longrightarrow>
-   \<lbrace>P\<rbrace> A \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
+  "\<lbrakk> \<lbrace>P'\<rbrace> A \<lbrace>Q'\<rbrace>,\<lbrace>E'\<rbrace>; \<And>s. P s \<Longrightarrow> P' s; \<And>rv s. Q' rv s \<Longrightarrow> Q rv s; \<And>rv s. E' rv s \<Longrightarrow> E rv s \<rbrakk>
+   \<Longrightarrow> \<lbrace>P\<rbrace> A \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   by wp_pre (rule hoare_post_impErr)
 
 lemmas hoare_chainE = validE_weaken
@@ -708,7 +707,7 @@ lemma returnOKE_R_wp:
 
 lemma liftE_wp:
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> liftE f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
-  by (clarsimp simp:valid_def validE_def2 liftE_def split_def Let_def bind_def return_def)
+  by simp
 
 lemma catch_wp:
   "\<lbrakk> \<And>x. \<lbrace>E x\<rbrace> handler x \<lbrace>Q\<rbrace>; \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> catch f handler \<lbrace>Q\<rbrace>"
@@ -759,8 +758,6 @@ lemma alternative_wp:
   using post_by_hoare[OF x] post_by_hoare[OF y]
   by fastforce
 
-lemmas alternative_valid = alternative_wp[where P=P and P'=P for P, simplified]
-
 lemma alternativeE_wp:
   assumes "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   assumes "\<lbrace>P'\<rbrace> f' \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
@@ -791,7 +788,7 @@ lemma state_select_wp:
   by (clarsimp simp: state_select_def valid_def)
 
 lemma condition_wp:
-  "\<lbrakk> \<lbrace>Q\<rbrace> A \<lbrace>P\<rbrace>;  \<lbrace>R\<rbrace> B \<lbrace>P\<rbrace>  \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. if C s then Q s else R s\<rbrace> condition C A B \<lbrace>P\<rbrace>"
+  "\<lbrakk> \<lbrace>Q\<rbrace> A \<lbrace>P\<rbrace>;  \<lbrace>R\<rbrace> B \<lbrace>P\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. if C s then Q s else R s\<rbrace> condition C A B \<lbrace>P\<rbrace>"
   by (clarsimp simp: condition_def valid_def)
 
 lemma conditionE_wp:
