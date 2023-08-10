@@ -605,32 +605,13 @@ lemma switchToIdleThread_no_orphans' [wp]:
                     st_tcb_at_neg' tcb_at_typ_at')
   done
 
-lemma [wp]: (* FIXME AARCH64 *)
-  "\<lbrace>no_orphans\<rbrace> updateASIDPoolEntry param_a param_b \<lbrace>\<lambda>_. no_orphans\<rbrace>"
-  sorry
-
-lemma [wp]: (* FIXME AARCH64 *)
-  "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> getVMID param_b \<lbrace>\<lambda>vmID s. P (ksCurThread s)\<rbrace>"
-  sorry
-lemma [wp]: (* FIXME AARCH64 *)
-  "\<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> getVMID param_b \<lbrace>\<lambda>vmID s. P (ksReadyQueues s)\<rbrace>"
-  sorry
-
-crunches
-  setGlobalUserVSpace,armContextSwitch,getThreadVSpaceRoot,vcpuRestoreReg,
-  vcpuRestoreRegRange, vcpuSaveRegRange, vcpuSwitch,
-  vcpuEnable, setVMRoot
+crunches getVMID, Arch.switchToThread
   for ksCurThread[wp]: "\<lambda> s. P (ksCurThread s)"
-  (wp: crunch_wps)
+  (wp: crunch_wps getObject_inv loadObject_default_inv)
 
-crunches setGlobalUserVSpace,armContextSwitch,getThreadVSpaceRoot
-  for ksReadyQueues[wp]: "\<lambda> s. P (ksReadyQueues s)"
-
-crunch no_orphans [wp]: "Arch.switchToThread" "no_orphans"
+crunches updateASIDPoolEntry, Arch.switchToThread
+  for no_orphans[wp]: "no_orphans"
   (wp: no_orphans_lift crunch_wps)
-
-crunch ksCurThread [wp]: "Arch.switchToThread" "\<lambda> s. P (ksCurThread s)"
-  (wp: crunch_wps)
 
 lemma ArchThreadDecls_H_switchToThread_all_queued_tcb_ptrs [wp]:
   "\<lbrace> \<lambda>s. P (all_queued_tcb_ptrs s) \<rbrace>
@@ -1435,6 +1416,11 @@ lemma createObjects_no_orphans [wp]:
 crunch no_orphans [wp]: insertNewCap "no_orphans"
 (wp: hoare_drop_imps)
 
+lemma no_orphans_ksArchState_idem[simp]:
+  "no_orphans (s\<lparr>ksArchState := f (ksArchState s)\<rparr>) = no_orphans s"
+  unfolding no_orphans_def all_queued_tcb_ptrs_def all_active_tcb_ptrs_def is_active_tcb_ptr_def
+  by clarsimp
+
 lemma createNewCaps_no_orphans:
   "\<lbrace> (\<lambda>s. no_orphans s
          \<and>  pspace_aligned' s \<and> pspace_distinct' s
@@ -1443,21 +1429,18 @@ lemma createNewCaps_no_orphans:
          and K (range_cover ptr sz (APIType_capBits tp us) n \<and> 0 < n) \<rbrace>
    createNewCaps tp ptr n us d
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  apply (clarsimp simp: createNewCaps_def toAPIType_def
-    split del: if_split cong: option.case_cong)
-  apply (cases tp, simp_all split del: if_split)
+  supply if_split[split del]
+  apply (clarsimp simp: createNewCaps_def toAPIType_def cong: option.case_cong)
+  apply (cases tp; simp)
         apply (rename_tac apiobject_type)
-        apply (case_tac apiobject_type, simp_all)
-  sorry (* FIXME AARCH64 investigate missing wp rules
-            apply (wp mapM_x_wp' threadSet_no_orphans
+        apply (case_tac apiobject_type; simp)
+            apply (wpsimp wp: mapM_x_wp' threadSet_no_orphans
                    | clarsimp simp: is_active_thread_state_def makeObject_tcb
                                     projectKO_opt_tcb isRunning_def isRestart_def
                                     APIType_capBits_def Arch_createNewCaps_def
                                     objBits_if_dev
-                          split del: if_split
-                   | simp add: objBits_simps
-                   | fastforce simp: bit_simps objBits_simps)+
-  done *)
+                   | simp add: objBits_simps mult_2 nat_arith.add1 split: if_split)+
+  done
 
 crunches updatePTType
   for no_orphans[wp]: "no_orphans"
@@ -1710,23 +1693,39 @@ crunch not_pred_tcb_at'[wp]: vgicUpdateLR,doMachineOp "\<lambda>s. \<not> (pred_
 
 crunch valid_queues' [wp]: vgicUpdateLR valid_queues'
 
-(* FIXME AARCH64 this is a guess, but the only interesting function called is handleFault *)
+crunches vcpuUpdate, vgicUpdateLR, doMachineOp
+  for no_orphans[wp]: no_orphans
+  and tcb_in_cur_domain'[wp]: "tcb_in_cur_domain' t"
+  (wp: no_orphans_lift tcb_in_cur_domain'_lift)
+
 lemma vgicMaintenance_no_orphans[wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> valid_queues' s \<and> valid_objs' s \<and> sch_act_wf (ksSchedulerAction s) s \<rbrace>
    vgicMaintenance
    \<lbrace>\<lambda>_. no_orphans\<rbrace>"
   unfolding vgicMaintenance_def Let_def
-  apply (wpsimp wp: hoare_vcg_imp_lift' | wps)+
-  sorry (* FIXME AARCH64 *)
+  by (wpsimp wp: sch_act_wf_lift hoare_drop_imp[where f="vgicUpdateLR v idx virq" for v idx virq]
+                 hoare_drop_imp[where f="return v" for v]
+                 hoare_drop_imp[where f="doMachineOp f" for f])
 
-(* FIXME AARCH64 this is a guess, but the only interesting function called is handleFault *)
 lemma vppiEvent_no_orphans[wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> valid_queues' s \<and> valid_objs' s \<and> sch_act_wf (ksSchedulerAction s) s \<rbrace>
    vppiEvent irq
    \<lbrace>\<lambda>_. no_orphans\<rbrace>"
   unfolding vppiEvent_def Let_def
-  apply (wpsimp wp: hoare_vcg_imp_lift' | wps)+
-  sorry (* FIXME AARCH64 *)
+  by (wpsimp wp: hoare_vcg_imp_lift' sch_act_wf_lift | wps)+
+
+(* FIXME AARCH64: move *)
+lemma irqVPPIEventIndex_irqVGICMaintenance_None[simp]:
+  "irqVPPIEventIndex irqVGICMaintenance = None"
+  unfolding irqVTimerEvent_def irqVGICMaintenance_def IRQ_def irqVPPIEventIndex_def
+  by simp
+
+lemma handleReservedIRQ_no_orphans[wp]:
+  "\<lbrace> \<lambda>s. no_orphans s \<and> valid_queues' s \<and> valid_objs' s \<and> sch_act_wf (ksSchedulerAction s) s \<rbrace>
+   handleReservedIRQ irq
+   \<lbrace>\<lambda>_. no_orphans \<rbrace>"
+  unfolding handleReservedIRQ_def
+  by (case_tac "irq = irqVGICMaintenance"; wpsimp)
 
 lemma handleInterrupt_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<rbrace>
@@ -1734,14 +1733,10 @@ lemma handleInterrupt_no_orphans [wp]:
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding handleInterrupt_def
   supply if_split[split del]
-  apply (rule hoare_pre)
-   apply (wp hoare_drop_imps hoare_vcg_all_lift getIRQState_inv
+  apply (wp hoare_drop_imps hoare_vcg_all_lift getIRQState_inv
          | wpc | clarsimp simp: invs'_def valid_state'_def maskIrqSignal_def
-                                handleReservedIRQ_def if_apply_def2)+
-  sorry
-  (* FIXME AARCH64 missing several wp rules about vgicMaintenance:
-                   valid_queues' s \<and> valid_objs' s \<and> sch_act_wf (ksSchedulerAction s) s
-  done *)
+                                if_apply_def2)+
+  done
 
 lemma updateRestartPC_no_orphans[wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<rbrace>
@@ -1776,12 +1771,9 @@ lemma suspend_no_orphans [wp]:
   apply auto
   done
 
-lemma [wp]: (* FIXME AARCH64 *)
-  "invalidateASIDEntry asid \<lbrace>no_orphans\<rbrace>"
-  sorry
-lemma [wp]: (* FIXME AARCH64 *)
-  "invalidateTLBByASID asid \<lbrace>no_orphans\<rbrace>"
-  sorry
+crunches invalidateASIDEntry, invalidateTLBByASID
+  for no_orphans[wp]: no_orphans
+  (wp: no_orphans_lift)
 
 lemma deleteASIDPool_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<rbrace>
@@ -2455,24 +2447,19 @@ lemma handleEvent_no_orphans [wp]:
   apply (auto simp: activatable_from_running' active_from_running')
   done
 
-theorem callKernel_no_orphans [wp]:
+theorem callKernel_no_orphans[wp]:
   "\<lbrace> \<lambda>s. invs' s \<and>
           (e \<noteq> Interrupt \<longrightarrow> ct_running' s) \<and>
           ksSchedulerAction s = ResumeCurrentThread \<and> no_orphans s \<rbrace>
    callKernel e
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding callKernel_def
-  apply wpsimp
-     apply (rule hoare_drop_imp)
-     apply wpsimp
-    apply (wpsimp wp: schedule_invs')
-   apply clarsimp
-   apply wp
-    apply (clarsimp simp: if_apply_def2)
-  apply (wp (trace) weak_if_wp schedule_invs' hoare_drop_imps | clarsimp)+
-  sorry (* FIXME AARCH64 sch_act_not over handleEvent seems like it's going in the wrong direction
-  original proof on riscv was:
-  by (wpsimp wp: weak_if_wp schedule_invs' hoare_drop_imps) *)
+  apply (wpsimp wp: hoare_drop_imp[where f=activateThread] schedule_invs'
+         (* getActiveIRQ can't return a non-kernel IRQ *)
+         | wp (once) hoare_post_imp[
+                       where a="doMachineOp (getActiveIRQ True)"
+                         and Q="\<lambda>rv s. no_orphans s \<and> invs' s \<and> rv \<notin> Some ` non_kernel_IRQs"])+
+  done
 
 end
 
