@@ -2391,6 +2391,9 @@ lemma ccorres_fail:
   apply (simp add: fail_def)
   done
 
+(* always unfold StrictC'_mode_object_defs together with api_object_defs *)
+lemmas api_object_defs = api_object_defs StrictC'_mode_object_defs
+
 lemma object_type_from_H_toAPIType_simps:
   "(object_type_from_H tp = scast seL4_UntypedObject) = (toAPIType tp = Some ArchTypes_H.apiobject_type.Untyped)"
   "(object_type_from_H tp = scast seL4_TCBObject) = (toAPIType tp = Some ArchTypes_H.apiobject_type.TCBObject)"
