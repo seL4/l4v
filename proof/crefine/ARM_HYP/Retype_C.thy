@@ -2332,6 +2332,9 @@ definition
                             | ARM_HYP_H.PageDirectoryObject \<Rightarrow> scast seL4_ARM_PageDirectoryObject
                             | ARM_HYP_H.VCPUObject \<Rightarrow> scast seL4_ARM_VCPUObject"
 
+(* always unfold StrictC'_mode_object_defs together with api_object_defs *)
+lemmas api_object_defs = api_object_defs StrictC'_mode_object_defs
+
 lemmas nAPIObjects_def = seL4_NonArchObjectTypeCount_def
 
 lemma nAPIOBjects_object_type_from_H:
