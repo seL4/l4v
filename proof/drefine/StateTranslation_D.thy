@@ -53,12 +53,12 @@ where
     else if x = 2  then Some EndpointType
     else if x = 3  then Some NotificationType
     else if x = 4  then Some CNodeType
-    else if x = 5  then Some (FrameType 12)
-    else if x = 6  then Some (FrameType 16)
-    else if x = 7  then Some (FrameType 20)
-    else if x = 8  then Some (FrameType 24)
-    else if x = 9  then Some PageTableType
-    else if x = 10 then Some PageDirectoryType
+    else if x = 5  then Some PageDirectoryType
+    else if x = 6  then Some (FrameType 12)
+    else if x = 7  then Some (FrameType 16)
+    else if x = 8  then Some (FrameType 20)
+    else if x = 9  then Some (FrameType 24)
+    else if x = 10 then Some PageTableType
     else None"
 
 definition
