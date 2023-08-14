@@ -6,8 +6,8 @@
 theory Triv_Refinement
 
 imports
-  "Monads.Trace_VCG"
-  "Monads.Strengthen"
+  "Monads.Trace_RG"
+  "Monads.Trace_Strengthen_Setup"
 
 begin
 

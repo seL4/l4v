@@ -5,8 +5,9 @@
  *)
 theory Atomicity_Lib
 
-imports "Prefix_Refinement"
-
+imports
+  Prefix_Refinement
+  Monads.Trace_Det
 begin
 
 text \<open>This library introduces a number of proofs about the question of
@@ -186,7 +187,7 @@ lemma repeat_n_nothing:
 lemma repeat_nothing:
   "repeat (\<lambda>_. {}) = return ()"
   by (simp add: repeat_def bind_def select_def repeat_n_nothing
-                Sigma_def if_fun_lift UN_If_distrib return_def
+                Sigma_def if_distribR UN_If_distrib return_def
            cong del: image_cong_simp)
 
 lemma detrace_env_steps:
