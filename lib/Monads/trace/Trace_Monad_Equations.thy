@@ -46,38 +46,40 @@ lemma fail_bind[simp]:
   by (simp add: bind_def fail_def)
 
 
+subsection \<open>Alternative env_steps with repeat\<close>
+
 lemma mapM_Cons:
   "mapM f (x # xs) = do
-    y \<leftarrow> f x;
-    ys \<leftarrow> mapM f xs;
-    return (y # ys)
-  od"
+     y \<leftarrow> f x;
+     ys \<leftarrow> mapM f xs;
+     return (y # ys)
+   od"
   and mapM_Nil:
   "mapM f [] = return []"
   by (simp_all add: mapM_def sequence_def)
 
 lemma mapM_x_Cons:
   "mapM_x f (x # xs) = do
-    y \<leftarrow> f x;
-    mapM_x f xs
-  od"
+     y \<leftarrow> f x;
+     mapM_x f xs
+   od"
   and mapM_x_Nil:
   "mapM_x f [] = return ()"
   by (simp_all add: mapM_x_def sequence_x_def)
 
 lemma mapM_append:
   "mapM f (xs @ ys) = (do
-    fxs \<leftarrow> mapM f xs;
-    fys \<leftarrow> mapM f ys;
-    return (fxs @ fys)
-  od)"
+     fxs \<leftarrow> mapM f xs;
+     fys \<leftarrow> mapM f ys;
+     return (fxs @ fys)
+   od)"
   by (induct xs, simp_all add: mapM_Cons mapM_Nil bind_assoc)
 
 lemma mapM_x_append:
   "mapM_x f (xs @ ys) = (do
-    x \<leftarrow> mapM_x f xs;
-    mapM_x f ys
-  od)"
+     x \<leftarrow> mapM_x f xs;
+     mapM_x f ys
+   od)"
   by (induct xs, simp_all add: mapM_x_Cons mapM_x_Nil bind_assoc)
 
 lemma mapM_map:
@@ -88,9 +90,7 @@ lemma mapM_x_map:
   "mapM_x f (map g xs) = mapM_x (f o g) xs"
   by (induct xs; simp add: mapM_x_Nil mapM_x_Cons)
 
-primrec
-  repeat_n :: "nat \<Rightarrow> ('s, unit) tmonad \<Rightarrow> ('s, unit) tmonad"
-where
+primrec repeat_n :: "nat \<Rightarrow> ('s, unit) tmonad \<Rightarrow> ('s, unit) tmonad" where
     "repeat_n 0 f = return ()"
   | "repeat_n (Suc n) f = do f; repeat_n n f od"
 
@@ -98,27 +98,23 @@ lemma repeat_n_mapM_x:
   "repeat_n n f = mapM_x (\<lambda>_. f) (replicate n ())"
   by (induct n, simp_all add: mapM_x_Cons mapM_x_Nil)
 
-definition
-  repeat :: "('s, unit) tmonad \<Rightarrow> ('s, unit) tmonad"
-where
+definition repeat :: "('s, unit) tmonad \<Rightarrow> ('s, unit) tmonad" where
   "repeat f = do n \<leftarrow> select UNIV; repeat_n n f od"
 
-definition
-  env_step :: "('s,unit) tmonad"
-where
+definition env_step :: "('s,unit) tmonad" where
   "env_step =
-  (do
-    s' \<leftarrow> select UNIV;
-    put_trace_elem (Env, s');
-    put s'
-  od)"
+   do
+     s' \<leftarrow> select UNIV;
+     put_trace_elem (Env, s');
+     put s'
+   od"
 
 abbreviation
   "env_n_steps n \<equiv> repeat_n n env_step"
 
 lemma elem_select_bind:
   "(tr, res) \<in> (do x \<leftarrow> select S; f x od) s
-    = (\<exists>x \<in> S. (tr, res) \<in> f x s)"
+   = (\<exists>x \<in> S. (tr, res) \<in> f x s)"
   by (simp add: bind_def select_def)
 
 lemma select_bind_UN:
@@ -127,8 +123,8 @@ lemma select_bind_UN:
 
 lemma select_early:
   "S \<noteq> {}
-    \<Longrightarrow> do x \<leftarrow> f; y \<leftarrow> select S; g x y od
-        = do y \<leftarrow> select S; x \<leftarrow> f; g x y od"
+   \<Longrightarrow> do x \<leftarrow> f; y \<leftarrow> select S; g x y od
+       = do y \<leftarrow> select S; x \<leftarrow> f; g x y od"
   apply (simp add: bind_def select_def Sigma_def)
   apply (rule ext)
   apply (fastforce elim: rev_bexI image_eqI[rotated] split: tmres.split_asm)
@@ -136,8 +132,8 @@ lemma select_early:
 
 lemma repeat_n_choice:
   "S \<noteq> {}
-    \<Longrightarrow> repeat_n n (do x \<leftarrow> select S; f x od)
-        = (do xs \<leftarrow> select {xs. set xs \<subseteq> S \<and> length xs = n}; mapM_x f xs od)"
+   \<Longrightarrow> repeat_n n (do x \<leftarrow> select S; f x od)
+       = (do xs \<leftarrow> select {xs. set xs \<subseteq> S \<and> length xs = n}; mapM_x f xs od)"
   apply (induct n; simp?)
    apply (simp add: select_def bind_def mapM_x_Nil cong: conj_cong)
   apply (simp add: select_early bind_assoc)
@@ -152,8 +148,8 @@ lemma repeat_n_choice:
 
 lemma repeat_choice:
   "S \<noteq> {}
-    \<Longrightarrow> repeat (do x \<leftarrow> select S; f x od)
-        = (do xs \<leftarrow> select {xs. set xs \<subseteq> S}; mapM_x f xs od)"
+   \<Longrightarrow> repeat (do x \<leftarrow> select S; f x od)
+       = (do xs \<leftarrow> select {xs. set xs \<subseteq> S}; mapM_x f xs od)"
   apply (simp add: repeat_def repeat_n_choice)
   apply (simp(no_asm) add: fun_eq_iff set_eq_iff elem_select_bind)
   done
@@ -164,12 +160,12 @@ lemma put_trace_append:
 
 lemma put_trace_elem_put_comm:
   "do y \<leftarrow> put_trace_elem x; put s od
-    = do y \<leftarrow> put s; put_trace_elem x od"
+   = do y \<leftarrow> put s; put_trace_elem x od"
   by (simp add: put_def put_trace_elem_def bind_def insert_commute)
 
 lemma put_trace_put_comm:
   "do y \<leftarrow> put_trace xs; put s od
-    = do y \<leftarrow> put s; put_trace xs od"
+   = do y \<leftarrow> put s; put_trace xs od"
   apply (rule sym; induct xs; simp)
   apply (simp add: bind_assoc put_trace_elem_put_comm)
   apply (simp add: bind_assoc[symmetric])
@@ -177,14 +173,14 @@ lemma put_trace_put_comm:
 
 lemma mapM_x_comm:
   "(\<forall>x \<in> set xs. do y \<leftarrow> g; f x od = do y \<leftarrow> f x; g od)
-    \<Longrightarrow> do y \<leftarrow> g; mapM_x f xs od = do y \<leftarrow> mapM_x f xs; g od"
+   \<Longrightarrow> do y \<leftarrow> g; mapM_x f xs od = do y \<leftarrow> mapM_x f xs; g od"
   apply (induct xs; simp add: mapM_x_Nil mapM_x_Cons)
   apply (simp add: bind_assoc[symmetric], simp add: bind_assoc)
   done
 
 lemma mapM_x_split:
   "(\<forall>x \<in> set xs. \<forall>y \<in> set xs. do z \<leftarrow> g y; f x od = do (z :: unit) \<leftarrow> f x; g y od)
-    \<Longrightarrow> mapM_x (\<lambda>x. do z \<leftarrow> f x; g x od) xs = do y \<leftarrow> mapM_x f xs; mapM_x g xs od"
+   \<Longrightarrow> mapM_x (\<lambda>x. do z \<leftarrow> f x; g x od) xs = do y \<leftarrow> mapM_x f xs; mapM_x g xs od"
   apply (induct xs; simp add: mapM_x_Nil mapM_x_Cons bind_assoc)
   apply (subst bind_assoc[symmetric], subst mapM_x_comm[where f=f and g="g x" for x])
    apply simp
@@ -237,15 +233,15 @@ lemma repeat_eq_twice[simp]:
   apply (rule ext, fastforce intro: exI[where x=0])
   done
 
-lemmas repeat_eq_twice_then[simp]
-    = repeat_eq_twice[THEN bind_then_eq, simplified bind_assoc]
+lemmas repeat_eq_twice_then[simp] =
+  repeat_eq_twice[THEN bind_then_eq, simplified bind_assoc]
 
-lemmas env_steps_eq_twice[simp]
-    = repeat_eq_twice[where f=env_step, folded env_steps_repeat]
-lemmas env_steps_eq_twice_then[simp]
-    = env_steps_eq_twice[THEN bind_then_eq, simplified bind_assoc]
+lemmas env_steps_eq_twice[simp] =
+  repeat_eq_twice[where f=env_step, folded env_steps_repeat]
+lemmas env_steps_eq_twice_then[simp] =
+  env_steps_eq_twice[THEN bind_then_eq, simplified bind_assoc]
 
-lemmas mapM_collapse_append = mapM_append[symmetric, THEN bind_then_eq,
-    simplified bind_assoc, simplified]
+lemmas mapM_collapse_append =
+  mapM_append[symmetric, THEN bind_then_eq, simplified bind_assoc, simplified]
 
 end

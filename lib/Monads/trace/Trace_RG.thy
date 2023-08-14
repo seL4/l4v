@@ -12,10 +12,35 @@ theory Trace_RG
     Trace_No_Trace
 begin
 
-primrec
-  trace_steps :: "(tmid \<times> 's) list \<Rightarrow> 's \<Rightarrow> (tmid \<times> 's \<times> 's) set" where
-  "trace_steps (elem # trace) s0 = {(fst elem, s0, snd elem)} \<union> trace_steps trace (snd elem)"
-| "trace_steps [] s0 = {}"
+section \<open>Rely-Guarantee Logic\<close>
+
+subsection \<open>Validity\<close>
+
+text \<open>
+  This section defines a Rely_Guarantee logic for partial correctness for
+  the interference trace monad.
+
+  The logic is defined semantically. Rules work directly on the
+  validity predicate.
+
+  In the interference trace monad, RG validity is a quintuple of precondition,
+  rely, monad, guarantee, and postcondition. The precondition is a function
+  from initial state to current state to bool (a state predicate), the rely and
+  guarantee are functions from state before to state after to bool, and the
+  postcondition is a function from return value to last state in the trace to
+  final state to bool. A quintuple is valid if for all initial and current
+  states that satisfy the precondition and all traces that satisfy the rely,
+  all of the pssible self steps performed by the monad satisfy the guarantee
+  and all of the result values and result states that are returned by the monad
+  satisfy the postcondition. Note that if the computation returns an empty
+  trace and no successful results then the quintuple is trivially valid. This
+  means @{term "assert P"} does not require us to prove that @{term P} holds,
+  but rather allows us to assume @{term P}! Proving non-failure is done via a
+  separate predicate and calculus (see Trace_No_Fail).\<close>
+
+primrec trace_steps :: "(tmid \<times> 's) list \<Rightarrow> 's \<Rightarrow> (tmid \<times> 's \<times> 's) set" where
+    "trace_steps (elem # trace) s0 = {(fst elem, s0, snd elem)} \<union> trace_steps trace (snd elem)"
+  | "trace_steps [] s0 = {}"
 
 lemma trace_steps_nth:
   "trace_steps xs s0 = (\<lambda>i. (fst (xs ! i), (if i = 0 then s0 else snd (xs ! (i - 1))), snd (xs ! i))) ` {..< length xs}"
@@ -43,9 +68,15 @@ abbreviation(input)
   botbotbot :: "'a \<Rightarrow> 'b \<Rightarrow> 'b \<Rightarrow> bool" ("\<bottom>\<bottom>\<bottom>") where
   "\<bottom>\<bottom>\<bottom> \<equiv> \<lambda>_ _ _. False"
 
+text \<open>
+  Test whether the enironment steps in @{text tr} satisfy the rely condition @{text R},
+  assuming that @{text s0s} was the initial state before the first step in the trace.\<close>
 definition rely_cond :: "'s rg_pred \<Rightarrow> 's \<Rightarrow> (tmid \<times> 's) list \<Rightarrow> bool" where
   "rely_cond R s0s tr = (\<forall>(ident, s0, s) \<in> trace_steps (rev tr) s0s. ident = Env \<longrightarrow> R s0 s)"
 
+text \<open>
+  Test whether the self steps in @{text tr} satisfy the guarantee condition @{text G},
+  assuming that @{text s0s} was the initial state before the first step in the trace.\<close>
 definition guar_cond :: "'s rg_pred \<Rightarrow> 's \<Rightarrow> (tmid \<times> 's) list \<Rightarrow> bool" where
   "guar_cond G s0s tr = (\<forall>(ident, s0, s) \<in> trace_steps (rev tr) s0s. ident = Me \<longrightarrow> G s0 s)"
 
@@ -54,6 +85,10 @@ lemma rg_empty_conds[simp]:
   "guar_cond G s0s []"
   by (simp_all add: rely_cond_def guar_cond_def)
 
+text \<open>
+  @{text "rely f R s0s"} constructs a new function from @{text f}, where the environment
+  steps are constrained by @{text R} and @{text s0s} was the initial state before the first
+  step in the trace.\<close>
 definition rely :: "('s, 'a) tmonad \<Rightarrow> 's rg_pred \<Rightarrow> 's \<Rightarrow> ('s, 'a) tmonad" where
   "rely f R s0s \<equiv> (\<lambda>s. f s \<inter> ({tr. rely_cond R s0s tr} \<times> UNIV))"
 
@@ -63,9 +98,11 @@ definition prefix_closed :: "('s, 'a) tmonad \<Rightarrow> bool" where
 definition validI ::
   "('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> 's rg_pred \<Rightarrow> ('s,'a) tmonad \<Rightarrow> 's rg_pred \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
   ("(\<lbrace>_\<rbrace>,/ \<lbrace>_\<rbrace>)/ _ /(\<lbrace>_\<rbrace>,/ \<lbrace>_\<rbrace>)") where
-  "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace> \<equiv> prefix_closed f \<and> (\<forall>s0 s. P s0 s
-    \<longrightarrow> (\<forall>tr res. (tr, res) \<in> (rely f R s0 s) \<longrightarrow> guar_cond G s0 tr
-        \<and> (\<forall>rv s'. res = Result (rv, s') \<longrightarrow> Q rv (last_st_tr tr s0) s')))"
+  "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace> \<equiv>
+     prefix_closed f
+     \<and> (\<forall>s0 s tr res. P s0 s \<and> (tr, res) \<in> (rely f R s0 s)
+         \<longrightarrow> guar_cond G s0 tr
+           \<and> (\<forall>rv s'. res = Result (rv, s') \<longrightarrow> Q rv (last_st_tr tr s0) s'))"
 
 (*
 text \<open>Validity for exception monad with interferences. Not as easy to phrase
@@ -94,7 +131,8 @@ lemma in_rely:
   by (simp add: rely_def)
 
 lemmas validI_D =
-  validI_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, rule_format, OF _ _ in_rely]
+  validI_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct2, rule_format,
+             OF _ conjI, OF _ _ in_rely]
 lemmas validI_GD = validI_D[THEN conjunct1]
 lemmas validI_rvD = validI_D[THEN conjunct2, rule_format, rotated -1, OF refl]
 lemmas validI_prefix_closed = validI_def[THEN meta_eq_to_obj_eq, THEN iffD1, THEN conjunct1]
@@ -116,9 +154,55 @@ lemma in_fst_snd_image:
 
 lemmas prefix_closedD = prefix_closedD1[OF _ in_fst_snd_image(1)]
 
+
+section \<open>Lemmas\<close>
+
+lemma validI_weaken_pre:
+  "\<lbrakk>\<lbrace>P'\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>; \<And>s0 s. P s0 s \<Longrightarrow> P' s0 s\<rbrakk>
+   \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
+  by (simp add: validI_def, blast)
+
+lemma rely_weaken:
+  "\<lbrakk>\<forall>s0 s. R s0 s \<longrightarrow> R' s0 s; (tr, res) \<in> rely f R s s0\<rbrakk>
+   \<Longrightarrow> (tr, res) \<in> rely f R' s s0"
+  by (simp add: rely_def rely_cond_def, blast)
+
+lemma validI_weaken_rely:
+  "\<lbrakk>\<lbrace>P\<rbrace>,\<lbrace>R'\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>; \<forall>s0 s. R s0 s \<longrightarrow> R' s0 s\<rbrakk>
+   \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
+  apply (simp add: validI_def)
+  by (metis rely_weaken)
+
+lemmas validI_pre[wp_pre] =
+  validI_weaken_pre
+  validI_weaken_rely
+
+lemma validI_strengthen_post:
+  "\<lbrakk>\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q'\<rbrace>; \<forall>v s0 s. Q' v s0 s \<longrightarrow> Q v s0 s\<rbrakk>
+   \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
+  by (simp add: validI_def)
+
+lemma validI_strengthen_guar:
+  "\<lbrakk>\<lbrace>P\<rbrace>, \<lbrace>R\<rbrace> f \<lbrace>G'\<rbrace>, \<lbrace>Q\<rbrace>; \<forall>s0 s. G' s0 s \<longrightarrow> G s0 s\<rbrakk>
+   \<Longrightarrow> \<lbrace>P\<rbrace>, \<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>, \<lbrace>Q\<rbrace>"
+  by (force simp: validI_def guar_cond_def)
+
+
+subsection \<open>Setting up the precondition case splitter.\<close>
+
+(* FIXME: this needs adjustment, case_prod Q is unlikely to unify *)
+lemma wpc_helper_validI:
+  "(\<lbrace>Q\<rbrace>,\<lbrace>R\<rbrace> g \<lbrace>G\<rbrace>,\<lbrace>S\<rbrace>) \<Longrightarrow> wpc_helper (P, P', P'') (case_prod Q, Q', Q'') (\<lbrace>curry P\<rbrace>,\<lbrace>R\<rbrace> g \<lbrace>G\<rbrace>,\<lbrace>S\<rbrace>)"
+  by (clarsimp simp: wpc_helper_def elim!: validI_weaken_pre)
+
+wpc_setup "\<lambda>m. \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> m \<lbrace>G\<rbrace>,\<lbrace>S\<rbrace>" wpc_helper_validI
+
+
+subsection \<open>RG Logic Rules\<close>
+
 lemma trace_steps_append:
   "trace_steps (xs @ ys) s
-    = trace_steps xs s \<union> trace_steps ys (last_st_tr (rev xs) s)"
+   = trace_steps xs s \<union> trace_steps ys (last_st_tr (rev xs) s)"
   by (induct xs arbitrary: s, simp_all add: last_st_tr_def hd_append)
 
 lemma rely_cond_append:
@@ -130,11 +214,11 @@ lemma guar_cond_append:
   by (simp add: guar_cond_def trace_steps_append ball_Un conj_comms)
 
 lemma prefix_closed_bind:
-  "prefix_closed f \<Longrightarrow> (\<forall>x. prefix_closed (g x)) \<Longrightarrow> prefix_closed (f >>= g)"
+  "\<lbrakk>prefix_closed f; \<forall>x. prefix_closed (g x)\<rbrakk> \<Longrightarrow> prefix_closed (f >>= g)"
   apply (subst prefix_closed_def, clarsimp simp: bind_def)
   apply (auto simp: Cons_eq_append_conv split: tmres.split_asm
              dest!: prefix_closedD[rotated];
-    fastforce elim: rev_bexI)
+         fastforce elim: rev_bexI)
   done
 
 lemmas prefix_closed_bind[rule_format, wp_split]
@@ -152,8 +236,8 @@ lemma last_st_tr_Cons[simp]:
   by (simp add: last_st_tr_def)
 
 lemma bind_twp[wp_split]:
-  "\<lbrakk>  \<And>r. \<lbrace>Q' r\<rbrace>,\<lbrace>R\<rbrace> g r \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q'\<rbrace> \<rbrakk>
-    \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f >>= (\<lambda>r. g r) \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
+  "\<lbrakk> \<And>r. \<lbrace>Q' r\<rbrace>,\<lbrace>R\<rbrace> g r \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q'\<rbrace> \<rbrakk>
+   \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f >>= (\<lambda>r. g r) \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
   apply (subst validI_def, rule conjI)
    apply (blast intro: prefix_closed_bind validI_prefix_closed)
   apply (clarsimp simp: bind_def rely_def)
@@ -167,15 +251,15 @@ lemma bind_twp[wp_split]:
 
 lemma trace_steps_rev_drop_nth:
   "trace_steps (rev (drop n tr)) s
-        = (\<lambda>i. (fst (rev tr ! i), (if i = 0 then s else snd (rev tr ! (i - 1))),
-            snd (rev tr ! i))) ` {..< length tr - n}"
+   = (\<lambda>i. (fst (rev tr ! i), (if i = 0 then s else snd (rev tr ! (i - 1))),
+           snd (rev tr ! i))) ` {..< length tr - n}"
   apply (simp add: trace_steps_nth)
   apply (intro image_cong refl)
   apply (simp add: rev_nth)
   done
 
 lemma prefix_closed_drop:
-  "(tr, res) \<in> f s \<Longrightarrow> prefix_closed f \<Longrightarrow> \<exists>res'. (drop n tr, res') \<in> f s"
+  "\<lbrakk>(tr, res) \<in> f s; prefix_closed f\<rbrakk> \<Longrightarrow> \<exists>res'. (drop n tr, res') \<in> f s"
 proof (induct n arbitrary: res)
   case 0 then show ?case by auto
 next
@@ -189,15 +273,15 @@ qed
 
 lemma validI_GD_drop:
   "\<lbrakk> \<lbrace>P\<rbrace>, \<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>, \<lbrace>Q\<rbrace>; P s0 s; (tr, res) \<in> f s;
-        rely_cond R s0 (drop n tr) \<rbrakk>
-    \<Longrightarrow> guar_cond G s0 (drop n tr)"
+     rely_cond R s0 (drop n tr) \<rbrakk>
+   \<Longrightarrow> guar_cond G s0 (drop n tr)"
   apply (drule prefix_closed_drop[where n=n], erule validI_prefix_closed)
   apply (auto dest: validI_GD)
   done
 
 lemma parallel_prefix_closed[wp_split]:
-  "prefix_closed f \<Longrightarrow> prefix_closed g
-    \<Longrightarrow> prefix_closed (parallel f g)"
+  "\<lbrakk>prefix_closed f; prefix_closed g\<rbrakk>
+   \<Longrightarrow> prefix_closed (parallel f g)"
   apply (subst prefix_closed_def, clarsimp simp: parallel_def)
   apply (case_tac f_steps; clarsimp)
   apply (drule(1) prefix_closedD)+
@@ -210,115 +294,110 @@ lemma rely_cond_drop:
   by simp
 
 lemma rely_cond_is_drop:
-  "rely_cond R s0 xs
-    \<Longrightarrow> (ys = drop (length xs - length ys) xs)
-    \<Longrightarrow> rely_cond R s0 ys"
+  "\<lbrakk>rely_cond R s0 xs; (ys = drop (length xs - length ys) xs)\<rbrakk>
+   \<Longrightarrow> rely_cond R s0 ys"
   by (metis rely_cond_drop)
 
 lemma bounded_rev_nat_induct:
-  "(\<And>n. N \<le> n \<Longrightarrow> P n) \<Longrightarrow> (\<And>n. n < N \<Longrightarrow> P (Suc n) \<Longrightarrow> P n)
-    \<Longrightarrow> P n"
+  "\<lbrakk>(\<And>n. N \<le> n \<Longrightarrow> P n); \<And>n. \<lbrakk>n < N; P (Suc n)\<rbrakk> \<Longrightarrow> P n\<rbrakk>
+   \<Longrightarrow> P n"
   by (induct diff\<equiv>"N - n" arbitrary: n; simp)
 
 lemma drop_n_induct:
-  "P [] \<Longrightarrow> (\<And>n. n < length xs \<Longrightarrow> P (drop (Suc n) xs) \<Longrightarrow> P (drop n xs))
-    \<Longrightarrow> P (drop n xs)"
+  "\<lbrakk>P []; \<And>n. \<lbrakk>n < length xs; P (drop (Suc n) xs)\<rbrakk> \<Longrightarrow> P (drop n xs)\<rbrakk>
+   \<Longrightarrow> P (drop n xs)"
   by (induct len\<equiv>"length (drop n xs)" arbitrary: n xs; simp)
 
 lemma guar_cond_Cons_eq:
   "guar_cond R s0 (x # xs)
-        = (guar_cond R s0 xs \<and> (fst x \<noteq> Env \<longrightarrow> R (last_st_tr xs s0) (snd x)))"
+   = (guar_cond R s0 xs \<and> (fst x \<noteq> Env \<longrightarrow> R (last_st_tr xs s0) (snd x)))"
   by (cases "fst x"; simp add: guar_cond_def trace_steps_append conj_comms)
 
 lemma guar_cond_Cons:
-  "guar_cond R s0 xs
-    \<Longrightarrow> fst x \<noteq> Env \<longrightarrow> R (last_st_tr xs s0) (snd x)
-    \<Longrightarrow> guar_cond R s0 (x # xs)"
+  "\<lbrakk>guar_cond R s0 xs; fst x \<noteq> Env \<longrightarrow> R (last_st_tr xs s0) (snd x)\<rbrakk>
+   \<Longrightarrow> guar_cond R s0 (x # xs)"
   by (simp add: guar_cond_Cons_eq)
 
 lemma guar_cond_drop_Suc_eq:
   "n < length xs
-    \<Longrightarrow> guar_cond R s0 (drop n xs) = (guar_cond R s0 (drop (Suc n) xs)
-        \<and> (fst (xs ! n) \<noteq> Env \<longrightarrow> R (last_st_tr (drop (Suc n) xs) s0) (snd (xs ! n))))"
+   \<Longrightarrow> guar_cond R s0 (drop n xs) = (guar_cond R s0 (drop (Suc n) xs)
+       \<and> (fst (xs ! n) \<noteq> Env \<longrightarrow> R (last_st_tr (drop (Suc n) xs) s0) (snd (xs ! n))))"
   apply (rule trans[OF _ guar_cond_Cons_eq])
   apply (simp add: Cons_nth_drop_Suc)
   done
 
 lemma guar_cond_drop_Suc:
-  "guar_cond R s0 (drop (Suc n) xs)
-    \<Longrightarrow> fst (xs ! n) \<noteq> Env \<longrightarrow> R (last_st_tr (drop (Suc n) xs) s0) (snd (xs ! n))
-    \<Longrightarrow> guar_cond R s0 (drop n xs)"
+  "\<lbrakk>guar_cond R s0 (drop (Suc n) xs);
+    fst (xs ! n) \<noteq> Env \<longrightarrow> R (last_st_tr (drop (Suc n) xs) s0) (snd (xs ! n))\<rbrakk>
+   \<Longrightarrow> guar_cond R s0 (drop n xs)"
   by (case_tac "n < length xs"; simp add: guar_cond_drop_Suc_eq)
 
 lemma rely_cond_Cons_eq:
   "rely_cond R s0 (x # xs)
-        = (rely_cond R s0 xs \<and> (fst x = Env \<longrightarrow> R (last_st_tr xs s0) (snd x)))"
+   = (rely_cond R s0 xs \<and> (fst x = Env \<longrightarrow> R (last_st_tr xs s0) (snd x)))"
   by (simp add: rely_cond_def trace_steps_append conj_comms)
 
 lemma rely_cond_Cons:
-  "rely_cond R s0 xs
-    \<Longrightarrow> fst x = Env \<longrightarrow> R (last_st_tr xs s0) (snd x)
-    \<Longrightarrow> rely_cond R s0 (x # xs)"
+  "\<lbrakk>rely_cond R s0 xs; fst x = Env \<longrightarrow> R (last_st_tr xs s0) (snd x)\<rbrakk>
+   \<Longrightarrow> rely_cond R s0 (x # xs)"
   by (simp add: rely_cond_Cons_eq)
 
 lemma rely_cond_drop_Suc_eq:
   "n < length xs
-    \<Longrightarrow> rely_cond R s0 (drop n xs) = (rely_cond R s0 (drop (Suc n) xs)
-        \<and> (fst (xs ! n) = Env \<longrightarrow> R (last_st_tr (drop (Suc n) xs) s0) (snd (xs ! n))))"
+   \<Longrightarrow> rely_cond R s0 (drop n xs) = (rely_cond R s0 (drop (Suc n) xs)
+       \<and> (fst (xs ! n) = Env \<longrightarrow> R (last_st_tr (drop (Suc n) xs) s0) (snd (xs ! n))))"
   apply (rule trans[OF _ rely_cond_Cons_eq])
   apply (simp add: Cons_nth_drop_Suc)
   done
 
 lemma rely_cond_drop_Suc:
-  "rely_cond R s0 (drop (Suc n) xs)
-    \<Longrightarrow> fst (xs ! n) = Env \<longrightarrow> R (last_st_tr (drop (Suc n) xs) s0) (snd (xs ! n))
-    \<Longrightarrow> rely_cond R s0 (drop n xs)"
+  "\<lbrakk>rely_cond R s0 (drop (Suc n) xs);
+    fst (xs ! n) = Env \<longrightarrow> R (last_st_tr (drop (Suc n) xs) s0) (snd (xs ! n))\<rbrakk>
+   \<Longrightarrow> rely_cond R s0 (drop n xs)"
   by (cases "n < length xs"; simp add: rely_cond_drop_Suc_eq)
 
 lemma last_st_tr_map_zip_hd:
-  "length flags = length tr
-    \<Longrightarrow> tr \<noteq> [] \<longrightarrow> snd (f (hd flags, hd tr)) = snd (hd tr)
-    \<Longrightarrow> last_st_tr (map f (zip flags tr)) = last_st_tr tr"
+  "\<lbrakk>length flags = length tr; tr \<noteq> [] \<longrightarrow> snd (f (hd flags, hd tr)) = snd (hd tr)\<rbrakk>
+   \<Longrightarrow> last_st_tr (map f (zip flags tr)) = last_st_tr tr"
   apply (cases tr; simp)
   apply (cases flags; simp)
   apply (simp add: fun_eq_iff)
   done
 
 lemma last_st_tr_drop_map_zip_hd:
-  "length flags = length tr
-    \<Longrightarrow> n < length tr \<longrightarrow> snd (f (flags ! n, tr ! n)) = snd (tr ! n)
-    \<Longrightarrow> last_st_tr (drop n (map f (zip flags tr))) = last_st_tr (drop n tr)"
+  "\<lbrakk>length flags = length tr;
+    n < length tr \<longrightarrow> snd (f (flags ! n, tr ! n)) = snd (tr ! n)\<rbrakk>
+   \<Longrightarrow> last_st_tr (drop n (map f (zip flags tr))) = last_st_tr (drop n tr)"
   apply (simp add: drop_map drop_zip)
   apply (rule last_st_tr_map_zip_hd; clarsimp)
   apply (simp add: hd_drop_conv_nth)
   done
 
 lemma last_st_tr_map_zip:
-  "length flags = length tr
-    \<Longrightarrow> \<forall>fl tmid s. snd (f (fl, (tmid, s))) = s
-    \<Longrightarrow> last_st_tr (map f (zip flags tr)) = last_st_tr tr"
+  "\<lbrakk>length flags = length tr; \<forall>fl tmid s. snd (f (fl, (tmid, s))) = s\<rbrakk>
+   \<Longrightarrow> last_st_tr (map f (zip flags tr)) = last_st_tr tr"
   apply (erule last_st_tr_map_zip_hd)
   apply (clarsimp simp: neq_Nil_conv)
   done
 
 lemma parallel_rely_induct:
   assumes preds: "(tr, v) \<in> parallel f g s" "Pf s0 s" "Pg s0 s"
-  assumes validI: "\<lbrace>Pf\<rbrace>,\<lbrace>Rf\<rbrace> f' \<lbrace>Gf\<rbrace>,\<lbrace>Qf\<rbrace>"
+  and validI: "\<lbrace>Pf\<rbrace>,\<lbrace>Rf\<rbrace> f' \<lbrace>Gf\<rbrace>,\<lbrace>Qf\<rbrace>"
      "\<lbrace>Pg\<rbrace>,\<lbrace>Rg\<rbrace> g' \<lbrace>Gg\<rbrace>,\<lbrace>Qg\<rbrace>"
      "f s \<subseteq> f' s" "g s \<subseteq> g' s"
-  and compat: "R \<le> Rf" "R \<le> Rg" "Gf \<le> G" "Gg \<le> G"
-     "Gf \<le> Rg" "Gg \<le> Rf"
+  and compat: "R \<le> Rf" "R \<le> Rg" "Gf \<le> G" "Gg \<le> G" "Gf \<le> Rg" "Gg \<le> Rf"
   and rely: "rely_cond R s0 (drop n tr)"
-  shows "\<exists>tr_f tr_g. (tr_f, v) \<in> f s \<and> (tr_g, v) \<in> g s
-      \<and> rely_cond Rf s0 (drop n tr_f) \<and> rely_cond Rg s0 (drop n tr_g)
-      \<and> map snd tr_f = map snd tr \<and> map snd tr_g = map snd tr
-      \<and> (\<forall>i \<le> length tr. last_st_tr (drop i tr_g) s0 = last_st_tr (drop i tr_f) s0)
-      \<and> guar_cond G s0 (drop n tr)"
+  shows
+    "\<exists>tr_f tr_g. (tr_f, v) \<in> f s \<and> (tr_g, v) \<in> g s
+       \<and> rely_cond Rf s0 (drop n tr_f) \<and> rely_cond Rg s0 (drop n tr_g)
+       \<and> map snd tr_f = map snd tr \<and> map snd tr_g = map snd tr
+       \<and> (\<forall>i \<le> length tr. last_st_tr (drop i tr_g) s0 = last_st_tr (drop i tr_f) s0)
+       \<and> guar_cond G s0 (drop n tr)"
   (is "\<exists>ys zs. _ \<and> _ \<and> ?concl ys zs")
 proof -
   obtain ys zs where tr: "tr = map parallel_mrg (zip ys zs)"
-      and all2: "list_all2 (\<lambda>y z. (fst y = Env \<or> fst z = Env) \<and> snd y = snd z) ys zs"
-      and ys: "(ys, v) \<in> f s" and zs: "(zs, v) \<in> g s"
+    and all2: "list_all2 (\<lambda>y z. (fst y = Env \<or> fst z = Env) \<and> snd y = snd z) ys zs"
+    and ys: "(ys, v) \<in> f s" and zs: "(zs, v) \<in> g s"
     using preds
     by (clarsimp simp: parallel_def2)
   note len[simp] = list_all2_lengthD[OF all2]
@@ -339,7 +418,7 @@ proof -
      apply (simp add: list_all2_conv_all_nth last_st_tr_def drop_map[symmetric]
                       hd_drop_conv_nth hd_append)
      apply (fastforce simp: split_def intro!: nth_equalityI)
-     apply clarsimp
+    apply clarsimp
     apply (erule_tac x=n in meta_allE)+
     apply (drule meta_mp, erule rely_cond_is_drop, simp)
     apply (subst(asm) rely_cond_drop_Suc_eq[where xs="map f xs" for f xs], simp)
@@ -360,8 +439,7 @@ lemmas parallel_rely_induct0 = parallel_rely_induct[where n=0, simplified]
 lemma rg_validI:
   assumes validI: "\<lbrace>Pf\<rbrace>,\<lbrace>Rf\<rbrace> f \<lbrace>Gf\<rbrace>,\<lbrace>Qf\<rbrace>"
      "\<lbrace>Pg\<rbrace>,\<lbrace>Rg\<rbrace> g \<lbrace>Gg\<rbrace>,\<lbrace>Qg\<rbrace>"
-  and compat: "R \<le> Rf" "R \<le> Rg" "Gf \<le> G" "Gg \<le> G"
-     "Gf \<le> Rg" "Gg \<le> Rf"
+  and compat: "R \<le> Rf" "R \<le> Rg" "Gf \<le> G" "Gg \<le> G" "Gf \<le> Rg" "Gg \<le> Rf"
   shows "\<lbrace>Pf and Pg\<rbrace>,\<lbrace>R\<rbrace> parallel f g \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv. Qf rv and Qg rv\<rbrace>"
   apply (clarsimp simp: validI_def rely_def pred_conj_def
                         parallel_prefix_closed validI[THEN validI_prefix_closed])
@@ -370,36 +448,6 @@ lemma rg_validI:
   apply (drule(2) validI[THEN validI_rvD])+
   apply (simp add: last_st_tr_def)
   done
-
-lemma validI_weaken_pre[wp_pre]:
-  "\<lbrace>P'\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>
-    \<Longrightarrow> (\<And>s0 s. P s0 s \<Longrightarrow> P' s0 s)
-    \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
-  by (simp add: validI_def, blast)
-
-lemma rely_weaken:
-  "(\<forall>s0 s. R s0 s \<longrightarrow> R' s0 s)
-    \<Longrightarrow> (tr, res) \<in> rely f R s s0 \<Longrightarrow> (tr, res) \<in> rely f R' s s0"
-  by (simp add: rely_def rely_cond_def, blast)
-
-lemma validI_weaken_rely[wp_pre]:
-  "\<lbrace>P\<rbrace>,\<lbrace>R'\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>
-    \<Longrightarrow> (\<forall>s0 s. R s0 s \<longrightarrow> R' s0 s)
-    \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
-  apply (simp add: validI_def)
-  by (metis rely_weaken)
-
-lemma validI_strengthen_post:
-  "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q'\<rbrace>
-    \<Longrightarrow> (\<forall>v s0 s. Q' v s0 s \<longrightarrow> Q v s0 s)
-    \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
-  by (simp add: validI_def)
-
-lemma validI_strengthen_guar:
-  "\<lbrace>P\<rbrace>, \<lbrace>R\<rbrace> f \<lbrace>G'\<rbrace>, \<lbrace>Q\<rbrace>
-    \<Longrightarrow> (\<forall>s0 s. G' s0 s \<longrightarrow> G s0 s)
-    \<Longrightarrow> \<lbrace>P\<rbrace>, \<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>, \<lbrace>Q\<rbrace>"
-  by (force simp: validI_def guar_cond_def)
 
 lemma rely_prim[simp]:
   "rely (\<lambda>s. insert (v s) (f s)) R s0 = (\<lambda>s. {x. x = v s \<and> rely_cond R s0 (fst x)} \<union> (rely f R s0 s))"
@@ -420,7 +468,7 @@ lemma prefix_closed_put_trace[iff]:
 
 lemma put_trace_eq_drop:
   "put_trace xs s
-    = ((\<lambda>n. (drop n xs, if n = 0 then Result ((), s) else Incomplete)) ` {.. length xs})"
+   = ((\<lambda>n. (drop n xs, if n = 0 then Result ((), s) else Incomplete)) ` {.. length xs})"
   apply (induct xs)
    apply (clarsimp simp: return_def)
   apply (clarsimp simp: put_trace_elem_def bind_def)
@@ -434,15 +482,17 @@ lemma put_trace_eq_drop:
 
 lemma put_trace_res:
   "(tr, res) \<in> put_trace xs s
-    \<Longrightarrow> \<exists>n. tr = drop n xs \<and> n \<le> length xs
-        \<and> res = (case n of 0 \<Rightarrow> Result ((), s) | _ \<Rightarrow> Incomplete)"
+   \<Longrightarrow> \<exists>n. tr = drop n xs \<and> n \<le> length xs
+         \<and> res = (case n of 0 \<Rightarrow> Result ((), s) | _ \<Rightarrow> Incomplete)"
   apply (clarsimp simp: put_trace_eq_drop)
   apply (case_tac n; auto intro: exI[where x=0])
   done
 
 lemma put_trace_twp[wp]:
   "\<lbrace>\<lambda>s0 s. (\<forall>n. rely_cond R s0 (drop n xs) \<longrightarrow> guar_cond G s0 (drop n xs))
-    \<and> (rely_cond R s0 xs \<longrightarrow> Q () (last_st_tr xs s0) s)\<rbrace>,\<lbrace>R\<rbrace> put_trace xs \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
+     \<and> (rely_cond R s0 xs \<longrightarrow> Q () (last_st_tr xs s0) s)\<rbrace>,\<lbrace>R\<rbrace>
+   put_trace xs
+   \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
   apply (clarsimp simp: validI_def rely_def)
   apply (drule put_trace_res)
   apply (clarsimp; clarsimp split: nat.split_asm)
@@ -464,30 +514,30 @@ lemma rely_cond_rtranclp:
   done
 
 
+subsection \<open>Setting up the @{method wp} method\<close>
 
 (* Attempt to define triple_judgement to use valid_validI_wp as wp_comb rule.
    It doesn't work. It seems that wp_comb rules cannot take more than 1 assumption *)
-lemma validI_is_triple:
-  "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace> =
-     triple_judgement (\<lambda>(s0, s). prefix_closed f \<longrightarrow> P s0 s) f
+lemma validI_is_triple[wp_trip]:
+  "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>
+   = triple_judgement (\<lambda>(s0, s). prefix_closed f \<longrightarrow> P s0 s) f
                       (\<lambda>(s0,s) f. prefix_closed f \<and> (\<forall>tr res. (tr, res) \<in> rely f R s0 s
                           \<longrightarrow> guar_cond G s0 tr
                               \<and> (\<forall>rv s'. res = Result (rv, s') \<longrightarrow> Q rv (last_st_tr tr s0) s')))"
   apply (simp add: triple_judgement_def validI_def )
-  apply (cases "prefix_closed f"; simp)
+  apply (cases "prefix_closed f"; fastforce)
   done
-
-lemmas [wp_trip] = validI_is_triple
 
 lemma no_trace_prefix_closed:
   "no_trace f \<Longrightarrow> prefix_closed f"
   by (auto simp add: prefix_closed_def dest: no_trace_emp)
 
 lemma valid_validI_wp[wp_comb]:
-  "no_trace f \<Longrightarrow> (\<And>s0. \<lbrace>P s0\<rbrace> f \<lbrace>\<lambda>v. Q v s0 \<rbrace>)
-    \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
+  "\<lbrakk>no_trace f; \<And>s0. \<lbrace>P s0\<rbrace> f \<lbrace>\<lambda>v. Q v s0 \<rbrace>\<rbrakk>
+   \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
   by (fastforce simp: rely_def validI_def valid_def mres_def no_trace_prefix_closed dest: no_trace_emp
     elim: image_eqI[rotated])
+
 
 lemma env_steps_twp[wp]:
   "\<lbrace>\<lambda>s0 s. (\<forall>s'. R\<^sup>*\<^sup>* s0 s' \<longrightarrow> Q () s' s') \<and> Q () s0 s\<rbrace>,\<lbrace>R\<rbrace> env_steps \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
@@ -499,7 +549,7 @@ lemma env_steps_twp[wp]:
   done
 
 lemma interference_twp[wp]:
-  "\<lbrace>\<lambda>s0 s. (\<forall>s'. R\<^sup>*\<^sup>* s s' \<longrightarrow> Q () s' s') \<and> G s0 s\<rbrace>,\<lbrace>R\<rbrace>  interference \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
+  "\<lbrace>\<lambda>s0 s. (\<forall>s'. R\<^sup>*\<^sup>* s s' \<longrightarrow> Q () s' s') \<and> G s0 s\<rbrace>,\<lbrace>R\<rbrace> interference \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
   apply (simp add: interference_def commit_step_def del: put_trace.simps)
   apply wp
   apply clarsimp
@@ -520,15 +570,8 @@ lemma Await_sync_twp:
   apply (simp add: o_def)
   done
 
-(* FIXME: this needs adjustment, case_prod Q is unlikely to unify *)
-lemma wpc_helper_validI:
-  "(\<lbrace>Q\<rbrace>,\<lbrace>R\<rbrace> g \<lbrace>G\<rbrace>,\<lbrace>S\<rbrace>) \<Longrightarrow> wpc_helper (P, P', P'') (case_prod Q, Q', Q'') (\<lbrace>curry P\<rbrace>,\<lbrace>R\<rbrace> g \<lbrace>G\<rbrace>,\<lbrace>S\<rbrace>)"
-  by (clarsimp simp: wpc_helper_def elim!: validI_weaken_pre)
-
-wpc_setup "\<lambda>m. \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> m \<lbrace>G\<rbrace>,\<lbrace>S\<rbrace>" wpc_helper_validI
-
 lemma mres_union:
- "mres (a \<union> b) = mres a \<union> mres b"
+  "mres (a \<union> b) = mres a \<union> mres b"
   by (simp add: mres_def image_Un)
 
 lemma mres_Failed_empty:
@@ -554,20 +597,15 @@ lemma validI_name_pre:
   by metis
 
 lemma validI_well_behaved':
-  "prefix_closed f
-    \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R'\<rbrace> f \<lbrace>G'\<rbrace>,\<lbrace>Q\<rbrace>
-    \<Longrightarrow> R \<le> R'
-    \<Longrightarrow> G' \<le> G
-    \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
+  "\<lbrakk>prefix_closed f; \<lbrace>P\<rbrace>,\<lbrace>R'\<rbrace> f \<lbrace>G'\<rbrace>,\<lbrace>Q\<rbrace>; R \<le> R'; G' \<le> G\<rbrakk>
+   \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
   apply (subst validI_def, clarsimp)
   apply (clarsimp simp add: rely_def)
   apply (drule (2)  validI_D)
-  apply (fastforce simp: rely_cond_def guar_cond_def)+
+   apply (fastforce simp: rely_cond_def guar_cond_def)+
   done
 
 lemmas validI_well_behaved = validI_well_behaved'[unfolded le_fun_def, simplified]
-
-
 
 lemma prefix_closed_mapM[rule_format, wp_split]:
   "(\<forall>x \<in> set xs. prefix_closed (f x)) \<Longrightarrow> prefix_closed (mapM f xs)"
@@ -577,36 +615,36 @@ lemma prefix_closed_mapM[rule_format, wp_split]:
   apply (intro prefix_closed_bind allI; clarsimp)
   done
 
-lemmas bind_promote_If
-    = if_distrib[where f="\<lambda>f. bind f g" for g]
-      if_distrib[where f="\<lambda>g. bind f g" for f]
+lemmas bind_promote_If =
+  if_distrib[where f="\<lambda>f. bind f g" for g]
+  if_distrib[where f="\<lambda>g. bind f g" for f]
 
 lemma bind_promote_If2:
   "do x \<leftarrow> f; if P then g x else h x od
-    = (if P then bind f g else bind f h)"
+   = (if P then bind f g else bind f h)"
   by simp
 
 lemma exec_put_trace[unfolded K_bind_def]:
   "(do put_trace xs; f od) s
-    = (\<Union>n \<in> {n. 0 < n \<and> n \<le> length xs}. {(drop n xs, Incomplete)})
-        \<union> ((\<lambda>(a, b). (a @ xs, b)) ` f s)"
+   = (\<Union>n \<in> {n. 0 < n \<and> n \<le> length xs}. {(drop n xs, Incomplete)})
+     \<union> ((\<lambda>(a, b). (a @ xs, b)) ` f s)"
   apply (simp add: put_trace_eq_drop bind_def)
   apply (safe; (clarsimp split: if_split_asm)?;
-      fastforce intro: bexI[where x=0] rev_bexI)
+         fastforce intro: bexI[where x=0] rev_bexI)
   done
 
 lemma UN_If_distrib:
   "(\<Union>x \<in> S. if P x then A x else B x)
-    = ((\<Union>x \<in> S \<inter> {x. P x}. A x) \<union> (\<Union>x \<in> S \<inter> {x. \<not> P x}. B x))"
+   = ((\<Union>x \<in> S \<inter> {x. P x}. A x) \<union> (\<Union>x \<in> S \<inter> {x. \<not> P x}. B x))"
   by (fastforce split: if_split_asm)
 
 lemma Await_redef:
   "Await P = do
-    s1 \<leftarrow> select {s. P s};
-    env_steps;
-    s \<leftarrow> get;
-    select (if P s then {()} else {})
-  od"
+     s1 \<leftarrow> select {s. P s};
+     env_steps;
+     s \<leftarrow> get;
+     select (if P s then {()} else {})
+   od"
   apply (simp add: Await_def env_steps_def bind_assoc)
   apply (cases "{s. P s} = {}")
    apply (simp add: select_def bind_def get_def)
@@ -635,22 +673,22 @@ lemma validI_invariant_imp:
   shows "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>\<lambda>s0 s. I s0 \<and> I s \<and> G s0 s\<rbrace>,\<lbrace>\<lambda>rv s0 s. I s0 \<and> Q rv s0 s\<rbrace>"
 proof -
   { fix tr s0 i
-  assume r: "rely_cond R s0 tr" and g: "guar_cond G s0 tr"
-    and I: "I s0"
-  hence imp: "\<forall>(_, s, s') \<in> trace_steps (rev tr) s0. I s \<longrightarrow> I s'"
-    apply (clarsimp simp: guar_cond_def rely_cond_def)
-    apply (drule(1) bspec)+
-    apply (clarsimp simp: eq_Me_neq_Env)
-    apply (metis R G)
-    done
-  hence "i < length tr \<longrightarrow> I (snd (rev tr ! i))"
-    using I
-    apply (induct i)
-     apply (clarsimp simp: neq_Nil_conv[where xs="rev tr" for tr, simplified])
-    apply clarsimp
-    apply (drule bspec, fastforce simp add: trace_steps_nth)
-    apply simp
-    done
+    assume r: "rely_cond R s0 tr" and g: "guar_cond G s0 tr"
+      and I: "I s0"
+    hence imp: "\<forall>(_, s, s') \<in> trace_steps (rev tr) s0. I s \<longrightarrow> I s'"
+      apply (clarsimp simp: guar_cond_def rely_cond_def)
+      apply (drule(1) bspec)+
+      apply (clarsimp simp: eq_Me_neq_Env)
+      apply (metis R G)
+      done
+    hence "i < length tr \<longrightarrow> I (snd (rev tr ! i))"
+      using I
+      apply (induct i)
+       apply (clarsimp simp: neq_Nil_conv[where xs="rev tr" for tr, simplified])
+      apply clarsimp
+      apply (drule bspec, fastforce simp add: trace_steps_nth)
+      apply simp
+      done
   }
   note I = this
   show ?thesis
@@ -666,9 +704,8 @@ proof -
 qed
 
 lemma validI_guar_post_conj_lift:
-  "\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G1\<rbrace>,\<lbrace>Q1\<rbrace>
-    \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G2\<rbrace>,\<lbrace>Q2\<rbrace>
-    \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>\<lambda>s0 s. G1 s0 s \<and> G2 s0 s\<rbrace>,\<lbrace>\<lambda>rv s0 s. Q1 rv s0 s \<and> Q2 rv s0 s\<rbrace>"
+  "\<lbrakk>\<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G1\<rbrace>,\<lbrace>Q1\<rbrace>; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G2\<rbrace>,\<lbrace>Q2\<rbrace>\<rbrakk>
+   \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>\<lambda>s0 s. G1 s0 s \<and> G2 s0 s\<rbrace>,\<lbrace>\<lambda>rv s0 s. Q1 rv s0 s \<and> Q2 rv s0 s\<rbrace>"
   apply (frule validI_prefix_closed)
   apply (subst validI_def, clarsimp simp: rely_def)
   apply (drule(3) validI_D)+
