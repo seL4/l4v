@@ -17,9 +17,9 @@ begin
 subsection "Non-Failure"
 
 text \<open>
-  With the failure flag, we can formulate non-failure separately from validity.
+  With the failure result, we can formulate non-failure separately from validity.
   A monad @{text m} does not fail under precondition @{text P}, if for no start
-  state that satisfies the precondition it sets the failure flag.
+  state that satisfies the precondition it returns a @{term Failed} result.
 \<close>
 definition no_fail :: "('s \<Rightarrow> bool) \<Rightarrow> ('s,'a) tmonad \<Rightarrow> bool" where
   "no_fail P m \<equiv> \<forall>s. P s \<longrightarrow> Failed \<notin> snd ` (m s)"

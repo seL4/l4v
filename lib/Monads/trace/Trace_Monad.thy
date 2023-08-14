@@ -41,9 +41,9 @@ abbreviation map_tmres_rv :: "('a \<Rightarrow> 'b) \<Rightarrow> ('s, 'a) tmres
 section "The Monad"
 
 text \<open>
-  tmonad returns a set of non-deterministic  computations, including
+  tmonad returns a set of non-deterministic computations, including
   a trace as a list of "thread identifier" \<times> state, and an optional
-  pair result, state when the computation did not fail.\<close>
+  pair of result and state when the computation did not fail.\<close>
 type_synonym ('s, 'a) tmonad = "'s \<Rightarrow> ((tmid \<times> 's) list \<times> ('s, 'a) tmres) set"
 
 text \<open>Returns monad results, ignoring failures and traces.\<close>
@@ -86,10 +86,12 @@ abbreviation(input) bind_rev ::
   "g =<< f \<equiv> f >>= g"
 
 text \<open>
-  The basic accessor functions of the state monad. @{text get} returns
-  the current state as result, does not fail, and does not change the state.
-  @{text "put s"} returns nothing (@{typ unit}), changes the current state
-  to @{text s} and does not fail.\<close>
+  The basic accessor functions of the state monad. @{text get} returns the
+  current state as result, does not change the state, and does not add to the
+  trace. @{text "put s"} returns nothing (@{typ unit}), changes the current
+  state to @{text s}, and does not add to the trace. @{text "put_trace xs"}
+  returns nothing (@{typ unit}), does not change the state, and adds @{text xs}
+  to the trace.\<close>
 definition get :: "('s,'s) tmonad" where
   "get \<equiv> \<lambda>s. {([], Result (s, s))}"
 
@@ -107,10 +109,10 @@ subsection "Nondeterminism"
 
 text \<open>
   Basic nondeterministic functions. @{text "select A"} chooses an element
-  of the set @{text A}, does not change the state, and does not fail
-  (even if the set is empty). @{text "f \<sqinter> g"} executes @{text f} or
-  executes @{text g}. It retuns the union of results of @{text f} and
-  @{text g}, and may have failed if either may have failed.\<close>
+  of the set @{text A} as the result, does not change the state, does not add
+  to the trace, and does not fail (even if the set is empty). @{text "f \<sqinter> g"}
+  executes @{text f} or executes @{text g}. It returns the union of results and
+  traces of @{text f} and @{text g}.\<close>
 definition select :: "'a set \<Rightarrow> ('s, 'a) tmonad" where
   "select A \<equiv> \<lambda>s. (Pair [] ` Result ` (A \<times> {s}))"
 
@@ -119,13 +121,13 @@ definition alternative :: "('s,'a) tmonad \<Rightarrow> ('s,'a) tmonad \<Rightar
   "f \<sqinter> g \<equiv> \<lambda>s. (f s \<union> g s)"
 
 text \<open>
-  The @{text select_f} function was left out here until we figure
+  FIXME: The @{text select_f} function was left out here until we figure
   out what variant we actually need.\<close>
 
 subsection "Failure"
 
 text \<open>
-  The monad function that always fails. Returns an empty set of results and sets the failure flag.\<close>
+  The monad function that always fails. Returns an empty trace with a Failed result.\<close>
 definition fail :: "('s, 'a) tmonad" where
   "fail \<equiv> \<lambda>s. {([], Failed)}"
 
@@ -208,6 +210,7 @@ lemma elem_bindE:
 
 text \<open>Each monad satisfies at least the following three laws.\<close>
 
+\<comment> \<open>FIXME: is this necessary? If it is, move it\<close>
 declare map_option.identity[simp]
 
 text \<open>@{term return} is absorbed at the left of a @{term bind}, applying the return value directly:\<close>
@@ -445,31 +448,36 @@ text \<open>
 definition last_st_tr :: "(tmid * 's) list \<Rightarrow> 's \<Rightarrow> 's" where
   "last_st_tr tr s0 \<equiv> hd (map snd tr @ [s0])"
 
+text \<open>Nondeterministically add all possible environment events to the trace.\<close>
 definition env_steps :: "('s,unit) tmonad" where
   "env_steps \<equiv>
-  do
-    s \<leftarrow> get;
-    \<comment> \<open>Add unfiltered environment events to the trace\<close>
-    xs \<leftarrow> select UNIV;
-    tr \<leftarrow> return (map (Pair Env) xs);
-    put_trace tr;
-    \<comment> \<open>Pick the last event of the trace as the final state\<close>
-    put (last_st_tr tr s)
-  od"
+   do
+     s \<leftarrow> get;
+     \<comment> \<open>Add unfiltered environment events to the trace\<close>
+     xs \<leftarrow> select UNIV;
+     tr \<leftarrow> return (map (Pair Env) xs);
+     put_trace tr;
+     \<comment> \<open>Pick the last event of the trace as the final state\<close>
+     put (last_st_tr tr s)
+   od"
 
+text \<open>Add the current state to the trace, tagged as a self action.\<close>
 definition commit_step :: "('s,unit) tmonad" where
   "commit_step \<equiv>
-  do
-    s \<leftarrow> get;
-    put_trace [(Me,s)]
-  od"
+   do
+     s \<leftarrow> get;
+     put_trace [(Me,s)]
+   od"
 
+text \<open>
+  Record the action taken by the current thread since the last interference point and
+  then add unfiltered environment events.\<close>
 definition interference :: "('s,unit) tmonad" where
   "interference \<equiv>
-  do
-    commit_step;
-    env_steps
-  od"
+   do
+     commit_step;
+     env_steps
+   od"
 
 
 section "Library of additional Monadic Functions and Combinators"
@@ -616,7 +624,8 @@ subsection "Loops"
 text \<open>
   Loops are handled using the following inductive predicate;
   non-termination is represented using the failure flag of the
-  monad.\<close>
+  monad.
+FIXME: update comment about non-termination\<close>
 
 inductive_set whileLoop_results ::
   "('r \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('r \<Rightarrow> ('s, 'r) tmonad) \<Rightarrow> (('r \<times> 's) \<times> ((tmid \<times> 's) list \<times> ('s, 'r) tmres)) set"

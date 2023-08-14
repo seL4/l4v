@@ -11,15 +11,19 @@ theory Trace_No_Trace
     WPSimp
 begin
 
-definition
-  no_trace :: "('s,'a) tmonad  \<Rightarrow> bool"
-where
+subsection "No Trace"
+
+text \<open>
+  A monad of type @{text tmonad} does not have a trace iff for all starting
+  states, all of the potential outcomes have the empty list as a trace and do
+  not return an @{term Incomplete} result.\<close>
+definition no_trace :: "('s,'a) tmonad  \<Rightarrow> bool" where
   "no_trace f = (\<forall>tr res s. (tr, res) \<in> f s \<longrightarrow> tr = [] \<and> res \<noteq> Incomplete)"
 
 lemmas no_traceD = no_trace_def[THEN iffD1, rule_format]
 
 lemma no_trace_emp:
-  "no_trace f \<Longrightarrow> (tr, r) \<in> f s \<Longrightarrow> tr = []"
+  "\<lbrakk>no_trace f; (tr, r) \<in> f s\<rbrakk> \<Longrightarrow> tr = []"
   by (simp add: no_traceD)
 
 lemma no_trace_Incomplete_mem:
@@ -27,16 +31,19 @@ lemma no_trace_Incomplete_mem:
   by (auto dest: no_traceD)
 
 lemma no_trace_Incomplete_eq:
-  "no_trace f \<Longrightarrow> (tr, res) \<in> f s \<Longrightarrow> res \<noteq> Incomplete"
+  "\<lbrakk>no_trace f; (tr, res) \<in> f s\<rbrakk> \<Longrightarrow> res \<noteq> Incomplete"
   by (auto dest: no_traceD)
 
-lemma no_trace_is_triple:
+
+subsection \<open>Set up for @{method wp}\<close>
+
+lemma no_trace_is_triple[wp_trip]:
   "no_trace f = triple_judgement \<top> f (\<lambda>() f. id no_trace f)"
   by (simp add: triple_judgement_def split: unit.split)
 
-lemmas [wp_trip] = no_trace_is_triple
 
-(* Since valid_validI_wp in wp_comb doesn't work, we add the rules directly in the wp set *)
+subsection \<open>Rules\<close>
+
 lemma no_trace_prim:
   "no_trace get"
   "no_trace (put s)"

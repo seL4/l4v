@@ -19,7 +19,7 @@ text \<open>
   This section defines a Hoare logic for partial correctness for
   the interference trace monad as well as the exception monad.
   The logic talks only about the behaviour part of the monad and ignores
-  the failure flag.
+  failures and the trace.
 
   The logic is defined semantically. Rules work directly on the
   validity predicate.
@@ -29,12 +29,11 @@ text \<open>
   bool (a state predicate), the postcondition is a function from return value
   to state to bool. A triple is valid if for all states that satisfy the
   precondition, all result values and result states that are returned by
-  the monad satisfy the postcondition. Note that if the computation returns
-  the empty set, the triple is trivially valid. This means @{term "assert P"}
-  does not require us to prove that @{term P} holds, but rather allows us
-  to assume @{term P}! Proving non-failure is done via a separate predicate and
-  calculus (see Trace_No_Fail).\<close>
-
+  the monad satisfy the postcondition. Note that if the result of the
+  computation is the empty set then the triple is trivially valid. This means
+  @{term "assert P"} does not require us to prove that @{term P} holds, but
+  rather allows us to assume @{term P}! Proving non-failure is done via a
+  separate predicate and calculus (see Trace_No_Fail).\<close>
 definition valid :: "('s \<Rightarrow> bool) \<Rightarrow> ('s,'a) tmonad \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
   ("\<lbrace>_\<rbrace>/ _ /\<lbrace>_\<rbrace>") where
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<equiv> \<forall>s. P s \<longrightarrow> (\<forall>(r,s') \<in> mres (f s). Q r s')"
