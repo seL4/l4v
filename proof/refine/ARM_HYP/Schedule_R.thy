@@ -2279,7 +2279,7 @@ lemma schedule_invs':
     apply (wpsimp wp: scheduleChooseNewThread_invs' ssa_invs'
                       chooseThread_invs_no_cicd' setSchedulerAction_invs' setSchedulerAction_direct
                       switchToThread_tcb_in_cur_domain' switchToThread_ct_not_queued_2
-           | wp hoare_disjI2[where Q="\<lambda>_ s. tcb_in_cur_domain' (ksCurThread s) s"]
+           | wp hoare_disjI2[where R="\<lambda>_ s. tcb_in_cur_domain' (ksCurThread s) s"]
            | wp hoare_drop_imp[where f="isHighestPrio d p" for d p]
            | simp only: obj_at'_activatable_st_tcb_at'[simplified comp_def]
            | strengthen invs'_invs_no_cicd
