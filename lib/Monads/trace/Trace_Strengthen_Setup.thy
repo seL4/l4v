@@ -9,7 +9,7 @@ theory Trace_Strengthen_Setup
   imports
     Strengthen
     Trace_No_Fail
-    Trace_VCG
+    Trace_RG
 begin
 
 section \<open>Strengthen setup.\<close>
