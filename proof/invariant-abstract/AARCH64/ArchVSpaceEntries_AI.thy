@@ -213,7 +213,7 @@ lemma perform_asid_pool_invocation_valid_vspace_objs'[wp]:
 crunch valid_vspace_objs'[wp]: perform_asid_pool_invocation,
      perform_asid_control_invocation "valid_vspace_objs'"
   (ignore: delete_objects set_object
-       wp: static_imp_wp crunch_wps
+       wp: hoare_weak_lift_imp crunch_wps
      simp: crunch_simps unless_def)
 
 lemma perform_page_valid_vspace_objs'[wp]:

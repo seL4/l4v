@@ -254,7 +254,7 @@ lemma kernel_entry_if_valid_pdpt_objs[wp]:
    apply (simp add: kernel_entry_if_def)
    apply (wp | wpc | simp add: kernel_entry_if_def)+
     apply (wpsimp simp: ran_tcb_cap_cases arch_tcb_update_aux2
-                    wp: static_imp_wp thread_set_invs_trivial)+
+                    wp: hoare_weak_lift_imp thread_set_invs_trivial)+
   done
 
 lemma kernel_entry_if_valid_vspace_objs_if[ADT_IF_assms, wp]:

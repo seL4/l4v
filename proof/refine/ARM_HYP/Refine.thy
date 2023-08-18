@@ -280,7 +280,7 @@ lemma kernel_entry_invs:
             thread_set_ct_running thread_set_not_state_valid_sched
             hoare_vcg_disj_lift ct_in_state_thread_state_lift thread_set_no_change_tcb_state
             call_kernel_domain_time_inv_det_ext call_kernel_domain_list_inv_det_ext
-            static_imp_wp
+            hoare_weak_lift_imp
       | clarsimp simp add: tcb_cap_cases_def active_from_running)+
   done
 
@@ -424,7 +424,7 @@ lemma kernelEntry_invs':
   apply (wp ckernel_invs callKernel_valid_duplicates' callKernel_domain_time_left
             threadSet_invs_trivial threadSet_ct_running'
             TcbAcc_R.dmo_invs' callKernel_domain_time_left
-            static_imp_wp
+            hoare_weak_lift_imp
          | clarsimp simp: user_memory_update_def no_irq_def tcb_at_invs' atcbContextSet_def
                           valid_domain_list'_def)+
   done
@@ -656,12 +656,12 @@ lemma entry_corres:
          apply (rule hoare_strengthen_post, rule akernel_invs_det_ext, simp add: invs_def cur_tcb_def)
         apply (rule hoare_strengthen_post, rule ckernel_invs, simp add: invs'_def cur_tcb'_def)
        apply ((wp thread_set_invs_trivial thread_set_ct_running
-                  thread_set_not_state_valid_sched static_imp_wp
+                  thread_set_not_state_valid_sched hoare_weak_lift_imp
                   hoare_vcg_disj_lift ct_in_state_thread_state_lift
                | simp add: tcb_cap_cases_def thread_set_no_change_tcb_state)+)[1]
       apply (simp add: pred_conj_def cong: conj_cong)
       apply (wp threadSet_invs_trivial threadSet_ct_running'
-                 static_imp_wp hoare_vcg_disj_lift
+                 hoare_weak_lift_imp hoare_vcg_disj_lift
               | simp add: ct_in_state'_def atcbContextSet_def
               | (wps, wp threadSet_st_tcb_at2))+
    apply (clarsimp simp: invs_def cur_tcb_def)

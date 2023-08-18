@@ -123,7 +123,7 @@ lemma invoke_tcb_thread_preservation[Tcb_IF_assms]:
                       out_no_cap_to_trivial[OF ball_tcb_cap_casesI] thread_set_ipc_tcb_cap_valid
                       check_cap_inv2[where Q="\<lambda>_. P"] cap_delete_P cap_insert_P
                       thread_set_P thread_set_P' set_mcpriority_P set_mcpriority_idle_thread
-                      dxo_wp_weak static_imp_wp)
+                      dxo_wp_weak hoare_weak_lift_imp)
                 | simp add: ran_tcb_cap_cases dom_tcb_cap_cases[simplified] emptyable_def option_update_thread_def
                        del: hoare_True_E_R
                 | wpc)+) (*slow*)
@@ -140,7 +140,7 @@ lemma invoke_tcb_thread_preservation[Tcb_IF_assms]:
 lemma tc_reads_respects_f[Tcb_IF_assms]:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   and tc[simp]: "ti = ThreadControl x41 x42 x43 x44 x45 x46 x47 x48"
-  notes validE_valid[wp del] static_imp_wp [wp]
+  notes validE_valid[wp del] hoare_weak_lift_imp [wp]
   shows
     "reads_respects_f aag l
        (silc_inv aag st and only_timer_irq_inv irq st' and einvs and simple_sched_action
@@ -217,7 +217,7 @@ lemma tc_reads_respects_f[Tcb_IF_assms]:
                               invs_psp_aligned invs_vspace_objs invs_arch_state
                  | wp (once) hoare_drop_imp)+
     apply (simp add: option_update_thread_def tcb_cap_cases_def
-           | wp static_imp_wp static_imp_conj_wp thread_set_pas_refined
+           | wp hoare_weak_lift_imp hoare_weak_lift_imp_conj thread_set_pas_refined
                 reads_respects_f[OF thread_set_reads_respects, where st=st and Q="\<top>"]
            | wpc)+
    apply (wp hoare_vcg_all_lift thread_set_tcb_fault_handler_update_invs

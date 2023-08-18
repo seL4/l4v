@@ -1137,7 +1137,7 @@ lemma arch_finalise_case_no_lookup:
               | simp add: vs_cap_ref_simps
                           vs_lookup_pages_eq_at[THEN fun_cong, symmetric]
                           vs_lookup_pages_eq_ap[THEN fun_cong, symmetric])+
-     apply (wp hoare_vcg_all_lift unmap_page_unmapped static_imp_wp)
+     apply (wp hoare_vcg_all_lift unmap_page_unmapped hoare_weak_lift_imp)
     apply (wpc|wp unmap_page_table_unmapped3 delete_asid_unmapped
       |simp add:vs_cap_ref_def
       vs_lookup_pages_eq_at[THEN fun_cong,symmetric]

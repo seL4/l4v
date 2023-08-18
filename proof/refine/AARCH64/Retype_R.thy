@@ -2586,7 +2586,6 @@ lemmas object_splits =
 
 declare hoare_in_monad_post[wp del]
 declare univ_get_wp[wp del]
-declare result_in_set_wp[wp del]
 
 lemma nullPointer_0_simp[simp]:
   "(nullPointer = 0) = True"
@@ -4375,7 +4374,7 @@ proof -
     apply (simp add: ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
     apply (rule hoare_pre)
     apply (wps a b c d)
-    apply (wp static_imp_wp e' hoare_vcg_disj_lift)
+    apply (wp hoare_weak_lift_imp e' hoare_vcg_disj_lift)
     apply (auto simp: obj_at'_def ct_in_state'_def st_tcb_at'_def)
     done
 qed

@@ -935,7 +935,7 @@ lemma cap_delete_one_deletes_reply:
                          split: if_split_asm elim!: allEI)
      apply (rule hoare_vcg_all_lift)
      apply simp
-     apply (wp static_imp_wp empty_slot_deletes empty_slot_caps_of_state get_cap_wp)+
+     apply (wp hoare_weak_lift_imp empty_slot_deletes empty_slot_caps_of_state get_cap_wp)+
   apply (fastforce simp: cte_wp_at_caps_of_state valid_reply_caps_def
                         is_cap_simps unique_reply_caps_def is_reply_cap_to_def
               simp del: split_paired_All)

@@ -306,7 +306,7 @@ lemma handle_invocation_irq_masks:
    \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
   apply (simp add: handle_invocation_def ts_Restart_case_helper split_def
                    liftE_liftM_liftME liftME_def bindE_assoc)
-  apply (wp static_imp_wp syscall_valid perform_invocation_irq_masks[where st=st]
+  apply (wp hoare_weak_lift_imp syscall_valid perform_invocation_irq_masks[where st=st]
             hoare_vcg_all_lift hoare_vcg_ex_lift decode_invocation_IRQHandlerCap
          | simp add: invs_valid_objs)+
   done

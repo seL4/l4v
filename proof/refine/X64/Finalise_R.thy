@@ -1707,7 +1707,7 @@ lemma emptySlot_corres:
     defer
     apply wpsimp+
   apply (rule corres_no_failI)
-   apply (rule no_fail_pre, wp static_imp_wp)
+   apply (rule no_fail_pre, wp hoare_weak_lift_imp)
    apply (clarsimp simp: cte_wp_at_ctes_of valid_pspace'_def)
    apply (clarsimp simp: valid_mdb'_def valid_mdb_ctes_def)
    apply (rule conjI, clarsimp)
@@ -3434,7 +3434,7 @@ lemma cteDeleteOne_invs[wp]:
      subgoal by auto
     subgoal by (auto dest!: isCapDs simp: pred_tcb_at'_def obj_at'_def projectKOs
                                      ko_wp_at'_def)
-   apply (wp isFinalCapability_inv getCTE_wp' static_imp_wp
+   apply (wp isFinalCapability_inv getCTE_wp' hoare_weak_lift_imp
         | wp (once) isFinal[where x=ptr])+
   apply (fastforce simp: cte_wp_at_ctes_of)
   done

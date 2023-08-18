@@ -45,7 +45,7 @@ lemma invoke_tcb_tc_respects_aag[Tcb_AC_assms]:
           | wp restart_integrity_autarch set_mcpriority_integrity_autarch
                as_user_integrity_autarch thread_set_integrity_autarch
                option_update_thread_integrity_autarch
-               opt_update_thread_valid_sched static_imp_wp
+               opt_update_thread_valid_sched hoare_weak_lift_imp
                cap_insert_integrity_autarch checked_insert_pas_refined
                cap_delete_respects' cap_delete_pas_refined'
                check_cap_inv2[where Q="\<lambda>_. integrity aag X st"]

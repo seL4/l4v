@@ -699,7 +699,7 @@ lemma invoke_untyped_valid_pdpt[wp]:
 
 crunch valid_pdpt_objs[wp]: perform_asid_pool_invocation,
      perform_asid_control_invocation "valid_pdpt_objs"
-  (ignore: delete_objects wp: delete_objects_valid_pdpt static_imp_wp)
+  (ignore: delete_objects wp: delete_objects_valid_pdpt hoare_weak_lift_imp)
 
 abbreviation (input)
   "safe_pt_range \<equiv> \<lambda>slots s. obj_at (\<lambda>ko. \<exists>pt. ko = ArchObj (PageTable pt)

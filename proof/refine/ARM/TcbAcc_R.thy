@@ -11,7 +11,6 @@ begin
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 declare if_weak_cong [cong]
-declare result_in_set_wp[wp]
 declare hoare_in_monad_post[wp]
 declare trans_state_update'[symmetric,simp]
 declare storeWordUser_typ_at' [wp]
@@ -2318,9 +2317,9 @@ lemma threadSet_queued_sch_act_wf[wp]:
               split: scheduler_action.split)
   apply (wp hoare_vcg_conj_lift)
    apply (simp add: threadSet_def)
-   apply (wp static_imp_wp)
+   apply (wp hoare_weak_lift_imp)
     apply (wps setObject_sa_unchanged)
-    apply (wp static_imp_wp getObject_tcb_wp)+
+    apply (wp hoare_weak_lift_imp getObject_tcb_wp)+
    apply (clarsimp simp: obj_at'_def)
   apply (wp hoare_vcg_all_lift hoare_vcg_conj_lift hoare_convert_imp)+
    apply (simp add: threadSet_def)
@@ -4023,7 +4022,7 @@ lemma possibleSwitchTo_ct_not_inQ:
     possibleSwitchTo t \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
   (is "\<lbrace>?PRE\<rbrace> _ \<lbrace>_\<rbrace>")
   apply (simp add: possibleSwitchTo_def curDomain_def)
-  apply (wpsimp wp: static_imp_wp rescheduleRequired_ct_not_inQ tcbSchedEnqueue_ct_not_inQ
+  apply (wpsimp wp: hoare_weak_lift_imp rescheduleRequired_ct_not_inQ tcbSchedEnqueue_ct_not_inQ
                     threadGet_wp
        | (rule hoare_post_imp[OF _ rescheduleRequired_sa_cnt], fastforce))+
   apply (fastforce simp: obj_at'_def)
@@ -4042,7 +4041,7 @@ lemma threadSet_tcbState_update_ct_not_inQ[wp]:
   apply (clarsimp)
   apply (rule hoare_conjI)
    apply (rule hoare_weaken_pre)
-   apply (wps, wp static_imp_wp)
+   apply (wps, wp hoare_weak_lift_imp)
    apply (wp OMG_getObject_tcb)+
    apply (clarsimp simp: comp_def)
   apply (wp hoare_drop_imp)
@@ -4062,7 +4061,7 @@ lemma threadSet_tcbBoundNotification_update_ct_not_inQ[wp]:
   apply (rule hoare_conjI)
    apply (rule hoare_weaken_pre)
    apply wps
-   apply (wp static_imp_wp)
+   apply (wp hoare_weak_lift_imp)
    apply (wp OMG_getObject_tcb)
    apply (clarsimp simp: comp_def)
   apply (wp hoare_drop_imp)

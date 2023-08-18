@@ -3176,7 +3176,7 @@ proof -
        apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem)
        apply (clarsimp simp: seL4_MessageInfo_lift_def message_info_to_H_def mask_def
                              msgLengthBits_def word_bw_assocs)
-      apply (wp getMessageInfo_le3 getMessageInfo_msgLength[unfolded K_def] static_imp_wp
+      apply (wp getMessageInfo_le3 getMessageInfo_msgLength[unfolded K_def] hoare_weak_lift_imp
                   | simp)+
      apply (simp add: Collect_const_mem)
      apply (auto simp: excaps_in_mem_def valid_ipc_buffer_ptr'_def
@@ -3843,7 +3843,7 @@ lemma cteDeleteOne_tcbFault:
   apply (wp emptySlot_tcbFault cancelAllIPC_tcbFault getCTE_wp'
             cancelAllSignals_tcbFault unbindNotification_tcbFault
             isFinalCapability_inv unbindMaybeNotification_tcbFault
-            static_imp_wp
+            hoare_weak_lift_imp
           | wpc | simp add: Let_def)+
   apply (clarsimp split: if_split)
   done
@@ -4017,7 +4017,7 @@ proof -
               apply (wp sts_running_valid_queues setThreadState_st_tcb | simp)+
              apply (ctac add: setThreadState_ccorres_valid_queues'_simple)
              apply wp
-            apply ((wp threadSet_valid_queues threadSet_sch_act threadSet_valid_queues' static_imp_wp
+            apply ((wp threadSet_valid_queues threadSet_sch_act threadSet_valid_queues' hoare_weak_lift_imp
                        threadSet_valid_objs' threadSet_weak_sch_act_wf
                          | simp add: valid_tcb_state'_def)+)[1]
            apply (clarsimp simp: guard_is_UNIV_def ThreadState_Restart_def

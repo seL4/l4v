@@ -260,7 +260,7 @@ lemma tc_invs[Tcb_AI_asms]:
              checked_insert_no_cap_to
              out_no_cap_to_trivial[OF ball_tcb_cap_casesI]
              thread_set_ipc_tcb_cap_valid
-             static_imp_wp static_imp_conj_wp)[1]
+             hoare_weak_lift_imp hoare_weak_lift_imp_conj)[1]
         | simp add: ran_tcb_cap_cases dom_tcb_cap_cases[simplified]
                     emptyable_def
                del: hoare_True_E_R

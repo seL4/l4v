@@ -218,7 +218,7 @@ lemma insert_cap_sibling_corres:
             apply (rule_tac s=s' in transform_cdt_slot_inj_on_cte_at[where P=\<top>])
             apply (auto simp: swp_def dest: mdb_cte_atD
               elim!: ranE)[1]
-           apply ((wp set_cap_caps_of_state2 get_cap_wp static_imp_wp
+           apply ((wp set_cap_caps_of_state2 get_cap_wp hoare_weak_lift_imp
              | simp add: swp_def cte_wp_at_caps_of_state)+)
          apply (wp set_cap_idle |
             simp add:set_untyped_cap_as_full_def split del: if_split)+
@@ -231,7 +231,7 @@ lemma insert_cap_sibling_corres:
            cte_wp_at_caps_of_state has_parent_cte_at is_physical_def
            dest!:is_untyped_cap_eqD)
           apply fastforce
-         apply (wp get_cap_wp set_cap_idle static_imp_wp
+         apply (wp get_cap_wp set_cap_idle hoare_weak_lift_imp
            | simp add:set_untyped_cap_as_full_def
            split del: if_split)+
          apply (rule_tac Q = "\<lambda>r s. cdt s sibling = None
@@ -303,7 +303,7 @@ lemma insert_cap_child_corres:
             apply (rule_tac s=s' in transform_cdt_slot_inj_on_cte_at[where P=\<top>])
             apply (auto simp: swp_def dest: mdb_cte_atD
                       elim!: ranE)[1]
-           apply (wp set_cap_caps_of_state2 get_cap_wp static_imp_wp
+           apply (wp set_cap_caps_of_state2 get_cap_wp hoare_weak_lift_imp
                     | simp add: swp_def cte_wp_at_caps_of_state)+
          apply (wp set_cap_idle |
           simp add:set_untyped_cap_as_full_def split del:if_split)+
@@ -314,14 +314,14 @@ lemma insert_cap_child_corres:
            apply (wp set_cap_mdb_cte_at | simp add:not_idle_thread_def)+
           apply (clarsimp simp:mdb_cte_at_def cte_wp_at_caps_of_state)
           apply fastforce
-         apply (wp get_cap_wp set_cap_idle static_imp_wp
+         apply (wp get_cap_wp set_cap_idle hoare_weak_lift_imp
            | simp split del:if_split add:set_untyped_cap_as_full_def)+
          apply (rule_tac Q = "\<lambda>r s. not_idle_thread (fst child) s
            \<and> (\<exists>cap. caps_of_state s src = Some cap)
            \<and> should_be_parent_of src_capa (is_original_cap s src) cap (cap_insert_dest_original cap src_capa)
            \<and> mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)"
        in hoare_strengthen_post)
-          apply (wp set_cap_mdb_cte_at static_imp_wp | simp add:not_idle_thread_def)+
+          apply (wp set_cap_mdb_cte_at hoare_weak_lift_imp | simp add:not_idle_thread_def)+
          apply (clarsimp simp:mdb_cte_at_def cte_wp_at_caps_of_state)
          apply fastforce
         apply clarsimp

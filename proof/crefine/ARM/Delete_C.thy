@@ -826,7 +826,7 @@ lemma finaliseSlot_ccorres:
                apply (simp add: guard_is_UNIV_def)
               apply (simp add: conj_comms)
               apply (wp make_zombie_invs' updateCap_cte_wp_at_cases
-                        updateCap_cap_to' hoare_vcg_disj_lift static_imp_wp)+
+                        updateCap_cap_to' hoare_vcg_disj_lift hoare_weak_lift_imp)+
             apply (simp add: guard_is_UNIV_def)
            apply wp
           apply (simp add: guard_is_UNIV_def)
@@ -855,7 +855,7 @@ lemma finaliseSlot_ccorres:
         apply (erule(1) cmap_relationE1 [OF cmap_relation_cte])
         apply (frule valid_global_refsD_with_objSize, clarsimp)
         apply (auto simp: typ_heap_simps dest!: ccte_relation_ccap_relation)[1]
-       apply (wp isFinalCapability_inv static_imp_wp | wp (once) isFinal[where x=slot'])+
+       apply (wp isFinalCapability_inv hoare_weak_lift_imp | wp (once) isFinal[where x=slot'])+
       apply vcg
      apply (rule conseqPre, vcg)
      apply clarsimp
