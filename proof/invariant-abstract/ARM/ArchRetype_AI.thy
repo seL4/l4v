@@ -448,7 +448,7 @@ lemma copy_global_invs_mappings_restricted:
   apply (simp add: valid_pspace_def pred_conj_def)
   apply (rule hoare_conjI, wp copy_global_equal_kernel_mappings_restricted)
    apply (clarsimp simp: global_refs_def)
-  apply (rule valid_prove_more, rule hoare_vcg_conj_lift, rule hoare_TrueI)
+  apply (rule hoare_post_add, rule hoare_vcg_conj_lift, rule hoare_TrueI)
   apply (simp add: copy_global_mappings_def valid_pspace_def)
   apply (rule hoare_seq_ext [OF _ gets_sp])
   apply (rule hoare_strengthen_post)

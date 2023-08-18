@@ -2131,7 +2131,7 @@ lemma valid_blocked_except_lift:
   apply (rule hoare_pre)
    apply (wps c e d)
    apply (simp add: valid_blocked_except_def)
-   apply (wp static_imp_wp hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift a)
+   apply (wp hoare_weak_lift_imp hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift a)
    apply (rule hoare_convert_imp)
     apply (rule typ_at_st_tcb_at_lift)
      apply (wp a t)+
@@ -3192,7 +3192,7 @@ lemma invoke_domain_valid_sched[wp]:
              ethread_set_valid_blocked ethread_set_ssa_valid_sched_action
              ethread_set_not_cur_ct_in_cur_domain ethread_set_not_idle_valid_sched
              ethread_set_not_idle_valid_idle_etcb)
-      apply (wp static_imp_wp static_imp_conj_wp tcb_dequeue_not_queued tcb_sched_action_dequeue_valid_blocked_except)
+      apply (wp hoare_weak_lift_imp hoare_weak_lift_imp_conj tcb_dequeue_not_queued tcb_sched_action_dequeue_valid_blocked_except)
      apply simp
      apply (wp hoare_vcg_disj_lift)
      apply (rule_tac Q="\<lambda>_. valid_sched and not_queued t and valid_idle and (\<lambda>s. t \<noteq> idle_thread s)" in hoare_strengthen_post)

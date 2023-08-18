@@ -1246,7 +1246,7 @@ lemma decodeCNodeInvocation_ccorres:
                                             apply (rule ccorres_return_C_errorE, simp+)[1]
                                            apply wp
                                           apply (vcg exspec=invokeCNodeRotate_modifies)
-                                         apply (wp static_imp_wp)+
+                                         apply (wp hoare_weak_lift_imp)+
                                        apply (simp add: Collect_const_mem)
                                        apply (vcg exspec=setThreadState_modifies)
                                       apply (simp add: Collect_const_mem)
@@ -1310,16 +1310,16 @@ lemma decodeCNodeInvocation_ccorres:
                       apply wp
                      apply simp
                      apply (vcg exspec=getSyscallArg_modifies)
-                    apply (wp static_imp_wp)
+                    apply (wp hoare_weak_lift_imp)
                    apply simp
                    apply (vcg exspec=getSyscallArg_modifies)
                   apply wp
                  apply simp
                  apply (vcg exspec=getSyscallArg_modifies)
-                apply (wp static_imp_wp)
+                apply (wp hoare_weak_lift_imp)
                apply simp
                apply (vcg exspec=getSyscallArg_modifies)
-              apply (wp static_imp_wp)
+              apply (wp hoare_weak_lift_imp)
              apply simp
              apply (vcg exspec=getSyscallArg_modifies)
             apply wp
@@ -1334,7 +1334,7 @@ lemma decodeCNodeInvocation_ccorres:
          apply vcg
         apply simp
         apply (wp injection_wp_E[OF refl] hoare_vcg_const_imp_lift_R
-                  hoare_vcg_all_lift_R lsfco_cte_at' static_imp_wp
+                  hoare_vcg_all_lift_R lsfco_cte_at' hoare_weak_lift_imp
                 | simp add: hasCancelSendRights_not_Null ctes_of_valid_strengthen
                       cong: conj_cong
                 | wp (once) hoare_drop_imps)+

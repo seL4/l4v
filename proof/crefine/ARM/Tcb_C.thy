@@ -606,7 +606,7 @@ lemma invokeTCB_ThreadControl_ccorres:
                             apply (rule ccorres_return_CE, simp+)[1]
                            apply (wp (once))
                           apply (clarsimp simp: guard_is_UNIV_def)
-                         apply (wpsimp wp: when_def static_imp_wp)
+                         apply (wpsimp wp: when_def hoare_weak_lift_imp)
                           apply (strengthen sch_act_wf_weak, wp)
                          apply clarsimp
                          apply wp
@@ -620,7 +620,7 @@ lemma invokeTCB_ThreadControl_ccorres:
                                                    tcb_at' target s \<and> ksCurDomain s \<le> maxDomain \<and>
                                                    valid_queues' s \<and>  fst (the priority) \<le> maxPriority)"])
                         apply (strengthen sch_act_wf_weak)
-                        apply (wp static_imp_wp)
+                        apply (wp hoare_weak_lift_imp)
                        apply (clarsimp split: if_splits)
                       apply (wp empty_fail_stateAssert hoare_case_option_wp | simp del: Collect_const)+
                    apply csymbr
@@ -645,7 +645,7 @@ lemma invokeTCB_ThreadControl_ccorres:
                       apply wp
                      apply (clarsimp simp: guard_is_UNIV_def)
                     apply (simp add: when_def)
-                    apply (wp hoare_vcg_if_lift2(1) static_imp_wp, strengthen sch_act_wf_weak; wp)
+                    apply (wp hoare_vcg_if_lift2(1) hoare_weak_lift_imp, strengthen sch_act_wf_weak; wp)
                    apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem)
                   apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem
                                         tcbBuffer_def size_of_def cte_level_bits_def
@@ -671,7 +671,7 @@ lemma invokeTCB_ThreadControl_ccorres:
                      apply (rule ccorres_return_CE, simp+)
                     apply wp
                    apply (clarsimp simp: guard_is_UNIV_def)
-                  apply (wp hoare_vcg_if_lift2(1) static_imp_wp, strengthen sch_act_wf_weak; wp)
+                  apply (wp hoare_vcg_if_lift2(1) hoare_weak_lift_imp, strengthen sch_act_wf_weak; wp)
                  apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem)
                 apply (simp add: guard_is_UNIV_def Collect_const_mem)
                 apply (clarsimp simp: ccap_relation_def cap_thread_cap_lift cap_to_H_def)
@@ -698,7 +698,7 @@ lemma invokeTCB_ThreadControl_ccorres:
                   apply wp
                  apply (clarsimp simp: guard_is_UNIV_def)
                 apply wpsimp
-                 apply (wp static_imp_wp, strengthen sch_act_wf_weak, wp )
+                 apply (wp hoare_weak_lift_imp, strengthen sch_act_wf_weak, wp )
                 apply wp
                apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem)
               apply (simp cong: conj_cong)
@@ -736,7 +736,7 @@ lemma invokeTCB_ThreadControl_ccorres:
                             simp add: o_def)
               apply (rule_tac P="is_aligned (fst (the buf)) msg_align_bits"
                        in hoare_gen_asm)
-              apply (wp threadSet_ipcbuffer_trivial static_imp_wp
+              apply (wp threadSet_ipcbuffer_trivial hoare_weak_lift_imp
                      | simp
                      | strengthen invs_sch_act_wf' invs_valid_objs' invs_weak_sch_act_wf  invs_queues
                                   invs_valid_queues' | wp hoare_drop_imps)+
@@ -893,13 +893,13 @@ lemma invokeTCB_ThreadControl_ccorres:
       apply (simp add: conj_comms)
       apply (wp hoare_case_option_wp threadSet_invs_trivial setMCPriority_invs'
                 typ_at_lifts[OF setMCPriority_typ_at']
-                threadSet_cap_to' static_imp_wp | simp)+
+                threadSet_cap_to' hoare_weak_lift_imp | simp)+
      apply (clarsimp simp: guard_is_UNIV_def tcbCTableSlot_def Kernel_C.tcbCTable_def
                            cte_level_bits_def size_of_def word_sle_def option_to_0_def
                            cintr_def Collect_const_mem)
     apply (simp add: conj_comms)
     apply (wp hoare_case_option_wp threadSet_invs_trivial
-              threadSet_cap_to' static_imp_wp | simp)+
+              threadSet_cap_to' hoare_weak_lift_imp | simp)+
    apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem)
   apply (clarsimp simp: inQ_def)
   apply (subst is_aligned_neg_mask_eq)
@@ -1439,7 +1439,7 @@ lemma threadSet_same:
   by (wpsimp wp: setObject_tcb_strongest getObject_tcb_wp) fastforce
 
 lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
-  notes static_imp_wp [wp]
+  notes hoare_weak_lift_imp [wp]
   shows
   "ccorres (cintr \<currency> (\<lambda>rv rv'. rv = [])) (liftxf errstate id (K ()) ret__unsigned_long_')
    (invs' and tcb_at' dst and ex_nonz_cap_to' dst and sch_act_simple
@@ -2020,14 +2020,14 @@ shows
                                               word_less_nat_alt
                                       split: if_split_asm dest!: word_unat.Rep_inverse')
                        apply (simp add: pred_conj_def)
-                       apply (wp mapM_x_wp' sch_act_wf_lift valid_queues_lift static_imp_wp
+                       apply (wp mapM_x_wp' sch_act_wf_lift valid_queues_lift hoare_weak_lift_imp
                                  tcb_in_cur_domain'_lift)
                       apply (simp add: n_frameRegisters_def n_msgRegisters_def
                                        guard_is_UNIV_def)
                      apply simp
                      apply (rule mapM_x_wp')
                      apply (rule hoare_pre)
-                      apply (wp asUser_obj_at'[where t'=target] static_imp_wp
+                      apply (wp asUser_obj_at'[where t'=target] hoare_weak_lift_imp
                                 asUser_valid_ipc_buffer_ptr')
                      apply clarsimp
                     apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem
@@ -2036,7 +2036,7 @@ shows
                                           msgMaxLength_def msgLengthBits_def
                                           word_less_nat_alt unat_of_nat)
                    apply (wp (once) hoare_drop_imps)
-                   apply (wp asUser_obj_at'[where t'=target] static_imp_wp
+                   apply (wp asUser_obj_at'[where t'=target] hoare_weak_lift_imp
                              asUser_valid_ipc_buffer_ptr')
                   apply (vcg exspec=setRegister_modifies)
                  apply simp
@@ -2056,12 +2056,12 @@ shows
              apply (simp cong: rev_conj_cong)
              apply wp
              apply (wp asUser_inv mapM_wp' getRegister_inv
-                      asUser_get_registers[simplified] static_imp_wp)+
+                      asUser_get_registers[simplified] hoare_weak_lift_imp)+
             apply (rule hoare_strengthen_post, rule asUser_get_registers)
             apply (clarsimp simp: obj_at'_def genericTake_def
                                   frame_gp_registers_convs)
             apply arith
-           apply (wp static_imp_wp)
+           apply (wp hoare_weak_lift_imp)
           apply simp
          apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
         apply (simp add: performTransfer_def)
@@ -4338,7 +4338,7 @@ lemma decodeSetSpace_ccorres:
   done
 
 lemma invokeTCB_SetTLSBase_ccorres:
-  notes static_imp_wp [wp]
+  notes hoare_weak_lift_imp [wp]
   shows
   "ccorres (cintr \<currency> (\<lambda>rv rv'. rv = [])) (liftxf errstate id (K ()) ret__unsigned_long_')
    (invs')

@@ -92,7 +92,7 @@ crunches perform_asid_control_invocation
   and schedact[wp]: "\<lambda>s. P (scheduler_action s)"
   and ready_queues[wp]: "\<lambda>s. P (ready_queues s)"
   and cur_domain[wp]: "\<lambda>s. P (cur_domain s)"
-  (wp: static_imp_wp)
+  (wp: hoare_weak_lift_imp)
 
 lemma perform_asid_control_invocation_valid_sched:
   "\<lbrace>ct_active and invs and valid_aci aci and valid_sched and valid_idle\<rbrace>

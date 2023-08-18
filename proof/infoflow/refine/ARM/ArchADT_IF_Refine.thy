@@ -24,7 +24,7 @@ lemma kernelEntry_invs'[ADT_IF_Refine_assms, wp]:
    kernelEntry_if e tc
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: kernelEntry_if_def)
-  apply (wp threadSet_invs_trivial threadSet_ct_running' static_imp_wp
+  apply (wp threadSet_invs_trivial threadSet_ct_running' hoare_weak_lift_imp
          | wp (once) hoare_drop_imps
          | clarsimp)+
   done
@@ -36,7 +36,7 @@ lemma kernelEntry_arch_extras[ADT_IF_Refine_assms, wp]:
    kernelEntry_if e tc
    \<lbrace>\<lambda>_. arch_extras\<rbrace>"
   apply (simp add: kernelEntry_if_def)
-  apply (wp handleEvent_valid_duplicates' threadSet_invs_trivial threadSet_ct_running' static_imp_wp
+  apply (wp handleEvent_valid_duplicates' threadSet_invs_trivial threadSet_ct_running' hoare_weak_lift_imp
          | wp (once) hoare_drop_imps
          | clarsimp)+
   done

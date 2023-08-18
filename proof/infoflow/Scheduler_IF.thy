@@ -605,7 +605,7 @@ proof -
     apply (simp add: scheduler_affects_equiv_def[abs_def])
     apply (rule hoare_pre)
      apply (wps c)
-     apply (wp static_imp_wp a silc_dom_equiv_states_equiv_lift d e s w i x hoare_vcg_imp_lift)
+     apply (wp hoare_weak_lift_imp a silc_dom_equiv_states_equiv_lift d e s w i x hoare_vcg_imp_lift)
     apply fastforce
     done
 qed
@@ -671,7 +671,7 @@ proof -
     apply (simp add: asahi_scheduler_affects_equiv_def[abs_def])
     apply (rule hoare_pre)
      apply (wps c)
-     apply (wp static_imp_wp a silc_dom_equiv_states_equiv_lift d w)
+     apply (wp hoare_weak_lift_imp a silc_dom_equiv_states_equiv_lift d w)
     apply clarsimp
     done
 qed
@@ -731,7 +731,7 @@ proof -
     apply (simp add: asahi_ex_scheduler_affects_equiv_def[abs_def])
     apply (rule hoare_pre)
      apply (wps c)
-     apply (wp static_imp_wp a silc_dom_equiv_states_equiv_lift d w x hoare_vcg_imp_lift')
+     apply (wp hoare_weak_lift_imp a silc_dom_equiv_states_equiv_lift d w x hoare_vcg_imp_lift')
     apply clarsimp
     done
 qed

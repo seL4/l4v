@@ -8307,9 +8307,9 @@ shows  "ccorres dc xfdc
        including no_pre
        apply (wp insertNewCap_invs' insertNewCap_valid_pspace' insertNewCap_caps_overlap_reserved'
                  insertNewCap_pspace_no_overlap' insertNewCap_caps_no_overlap'' insertNewCap_descendants_range_in'
-                 insertNewCap_untypedRange hoare_vcg_all_lift insertNewCap_cte_at static_imp_wp)
+                 insertNewCap_untypedRange hoare_vcg_all_lift insertNewCap_cte_at hoare_weak_lift_imp)
          apply (wp insertNewCap_cte_wp_at_other)
-        apply (wp hoare_vcg_all_lift static_imp_wp insertNewCap_cte_at)
+        apply (wp hoare_vcg_all_lift hoare_weak_lift_imp insertNewCap_cte_at)
        apply (clarsimp simp:conj_comms |
          strengthen invs_valid_pspace' invs_pspace_aligned'
          invs_pspace_distinct')+
@@ -8343,7 +8343,7 @@ shows  "ccorres dc xfdc
                   hoare_vcg_prop createObject_gsCNodes_p createObject_cnodes_have_size)
         apply (rule hoare_vcg_conj_lift[OF createObject_capRange_helper])
          apply (wp createObject_cte_wp_at' createObject_ex_cte_cap_wp_to
-                   createObject_no_inter[where sz = sz] hoare_vcg_all_lift static_imp_wp)+
+                   createObject_no_inter[where sz = sz] hoare_vcg_all_lift hoare_weak_lift_imp)+
        apply (clarsimp simp:invs_pspace_aligned' invs_pspace_distinct' invs_valid_pspace'
          field_simps range_cover.sz conj_comms range_cover.aligned range_cover_sz'
          is_aligned_shiftl_self aligned_add_aligned[OF range_cover.aligned])

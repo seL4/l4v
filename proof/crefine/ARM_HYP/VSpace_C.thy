@@ -4185,7 +4185,7 @@ lemma flushTable_ccorres:
         apply (rule ccorres_pre_getCurThread)
         apply (ctac (no_vcg) add: setVMRoot_ccorres)
        apply (rule ccorres_return_Skip)
-      apply (wp static_imp_wp)
+      apply (wp hoare_weak_lift_imp)
        apply clarsimp
        apply (rule_tac Q="\<lambda>_ s. invs' s \<and> cur_tcb' s" in hoare_post_imp)
         apply (simp add: invs'_invs_no_cicd cur_tcb'_def)

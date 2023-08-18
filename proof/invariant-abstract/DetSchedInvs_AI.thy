@@ -317,7 +317,7 @@ lemma valid_blocked_lift:
   apply (rule hoare_pre)
    apply (wps c e d)
    apply (simp add: valid_blocked_def)
-   apply (wp hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift static_imp_wp a)
+   apply (wp hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift hoare_weak_lift_imp a)
    apply (rule hoare_convert_imp)
     apply (rule typ_at_st_tcb_at_lift)
      apply (wp a t)+
@@ -356,7 +356,7 @@ lemma weak_valid_sched_action_lift:
     shows "\<lbrace>weak_valid_sched_action\<rbrace> f \<lbrace>\<lambda>rv. weak_valid_sched_action\<rbrace>"
   apply (rule hoare_lift_Pf[where f="\<lambda>s. scheduler_action s", OF _ c])
   apply (simp add: weak_valid_sched_action_def)
-  apply (wp hoare_vcg_all_lift static_imp_wp a)
+  apply (wp hoare_vcg_all_lift hoare_weak_lift_imp a)
   done
 
 lemma switch_in_cur_domain_lift:
@@ -367,7 +367,7 @@ lemma switch_in_cur_domain_lift:
   apply (rule hoare_lift_Pf[where f="\<lambda>s. scheduler_action s", OF _ b])
   apply (rule hoare_lift_Pf[where f="\<lambda>s. cur_domain s", OF _ c])
   apply (simp add: switch_in_cur_domain_def in_cur_domain_def)
-  apply (wp hoare_vcg_all_lift static_imp_wp a c)
+  apply (wp hoare_vcg_all_lift hoare_weak_lift_imp a c)
   done
 
 lemma valid_sched_action_lift:
@@ -382,7 +382,7 @@ lemma valid_sched_action_lift:
   apply (rule hoare_vcg_conj_lift)
    apply (rule hoare_lift_Pf[where f="\<lambda>s. scheduler_action s", OF _ c])
    apply (simp add: is_activatable_def)
-   apply (wp weak_valid_sched_action_lift switch_in_cur_domain_lift static_imp_wp a b c d e)+
+   apply (wp weak_valid_sched_action_lift switch_in_cur_domain_lift hoare_weak_lift_imp a b c d e)+
   done
 
 lemma valid_sched_lift:

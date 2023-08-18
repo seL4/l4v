@@ -308,7 +308,7 @@ lemma transfer_caps_non_null_cte_wp_at:
   unfolding transfer_caps_def
   apply simp
   apply (rule hoare_pre)
-   apply (wp hoare_vcg_ball_lift transfer_caps_loop_cte_wp_at static_imp_wp
+   apply (wp hoare_vcg_ball_lift transfer_caps_loop_cte_wp_at hoare_weak_lift_imp
      | wpc | clarsimp simp:imp)+
    apply (rule hoare_strengthen_post
             [where Q="\<lambda>rv s'. (cte_wp_at ((\<noteq>) cap.NullCap) ptr) s'
@@ -483,7 +483,7 @@ lemma do_ipc_transfer_respects_device_region[Ipc_AI_cont_assms]:
   apply (wpsimp simp: do_ipc_transfer_def do_normal_transfer_def transfer_caps_def bind_assoc
                 wp: hoare_vcg_all_lift hoare_drop_imps)+
          apply (simp only: ball_conj_distrib[where P="\<lambda>x. real_cte_at x s" for s])
-         apply (wpsimp wp: get_rs_cte_at2 thread_get_wp static_imp_wp grs_distinct
+         apply (wpsimp wp: get_rs_cte_at2 thread_get_wp hoare_weak_lift_imp grs_distinct
                            hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift
                        simp: obj_at_def is_tcb_def)+
    apply (simp split: kernel_object.split_asm)

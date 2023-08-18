@@ -527,7 +527,7 @@ lemma cap_insert_simple_arch_caps_ap:
                  hoare_vcg_disj_lift set_cap_reachable_pg_cap set_cap.vs_lookup_pages
               | clarsimp)+
       apply (wp set_cap_arch_obj set_cap_valid_table_caps hoare_vcg_ball_lift
-                get_cap_wp static_imp_wp)+
+                get_cap_wp hoare_weak_lift_imp)+
   apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps)
   apply (rule conjI)
    apply (clarsimp simp: vs_cap_ref_def)
@@ -1386,7 +1386,7 @@ lemma arch_decode_inv_wf[wp]:
     apply (cases "isPageFlushLabel (invocation_type label)")
      apply (rule hoare_pre)
       apply simp
-      apply (wp whenE_throwError_wp static_imp_wp hoare_drop_imps)
+      apply (wp whenE_throwError_wp hoare_weak_lift_imp hoare_drop_imps)
         apply (simp add: valid_arch_inv_def valid_page_inv_def)
         apply (wp find_pd_for_asid_pd_at_asid | wpc)+
      apply (clarsimp simp: valid_cap_def mask_def)
@@ -1468,7 +1468,7 @@ lemma arch_decode_inv_wf[wp]:
   apply (cases "isPDFlushLabel (invocation_type label)")
    apply simp
    apply (rule hoare_pre)
-    apply (wpsimp wp: whenE_throwError_wp static_imp_wp hoare_drop_imp get_master_pte_wp
+    apply (wpsimp wp: whenE_throwError_wp hoare_weak_lift_imp hoare_drop_imp get_master_pte_wp
                       get_master_pde_wp whenE_throwError_wp
                 simp: resolve_vaddr_def valid_arch_inv_def valid_pdi_def Let_def)
         apply (rule_tac Q'="\<lambda>pd' s. vspace_at_asid x2 pd' s \<and> x2 \<le> mask asid_bits \<and> x2 \<noteq> 0"

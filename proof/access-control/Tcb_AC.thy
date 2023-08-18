@@ -60,7 +60,7 @@ lemmas itr_wps =
   restart_integrity_autarch as_user_integrity_autarch thread_set_integrity_autarch
   option_update_thread_integrity_autarch thread_set_pas_refined
   cap_insert_integrity_autarch cap_insert_pas_refined
-  hoare_vcg_all_liftE wp_throw_const_impE hoare_weak_lift_imp hoare_vcg_all_lift
+  hoare_vcg_all_liftE hoare_weak_lift_impE hoare_weak_lift_imp hoare_vcg_all_lift
   check_cap_inv[where P="valid_cap c" for c]
   check_cap_inv[where P="tcb_cap_valid c p" for c p]
   check_cap_inv[where P="cte_at p0" for p0]
@@ -322,7 +322,7 @@ subsubsection\<open>@{term "pas_refined"}\<close>
 
 lemmas ita_wps = as_user_pas_refined restart_pas_refined cap_insert_pas_refined
                  thread_set_pas_refined cap_delete_pas_refined' check_cap_inv2 hoare_vcg_all_liftE
-                 wp_throw_const_impE hoare_weak_lift_imp hoare_vcg_all_lift
+                 hoare_weak_lift_impE hoare_weak_lift_imp hoare_vcg_all_lift
 
 lemma hoare_st_refl:
   "\<lbrakk> \<And>st. \<lbrace>P st\<rbrace> f \<lbrace>Q st\<rbrace>; \<And>r s st. Q st r s \<Longrightarrow> Q' r s \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. P s s\<rbrace> f \<lbrace>Q'\<rbrace>"

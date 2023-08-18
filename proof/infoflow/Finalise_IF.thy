@@ -601,7 +601,7 @@ lemma possible_switch_to_reads_respects:
                               (possible_switch_to tptr)"
   apply (simp add: possible_switch_to_def ethread_get_def)
   apply (case_tac "aag_can_read aag tptr \<or> aag_can_affect aag l tptr")
-   apply (wp static_imp_wp tcb_sched_action_reads_respects | wpc | simp)+
+   apply (wp hoare_weak_lift_imp tcb_sched_action_reads_respects | wpc | simp)+
    apply (clarsimp simp: get_etcb_def)
    apply ((intro conjI impI allI
           | elim aag_can_read_self reads_equivE affects_equivE equiv_forE conjE disjE
@@ -1208,7 +1208,7 @@ next
             apply (wp drop_spec_ev[OF liftE_ev] set_cap_reads_respects_f[where st=st]
                       set_cap_silc_inv[where st=st] | simp)+
            apply (wp replace_cap_invs set_cap_cte_wp_at set_cap_sets final_cap_same_objrefs
-                     set_cap_cte_cap_wp_to  hoare_vcg_const_Ball_lift static_imp_wp
+                     set_cap_cte_cap_wp_to  hoare_vcg_const_Ball_lift hoare_weak_lift_imp
                      drop_spec_ev[OF liftE_ev] finalise_cap_reads_respects set_cap_silc_inv
                      set_cap_only_timer_irq_inv set_cap_pas_refined_not_transferable
                   | simp add: cte_wp_at_eq_simp

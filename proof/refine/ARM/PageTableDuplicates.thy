@@ -1613,7 +1613,7 @@ lemma unmapPage_valid_duplicates'[wp]:
           in mapM_x_storePDE_update_helper[where sz = 6])
       apply wp+
      apply (clarsimp simp:conj_comms)
-     apply (wp checkMappingPPtr_inv static_imp_wp)+
+     apply (wp checkMappingPPtr_inv hoare_weak_lift_imp)+
    apply (clarsimp simp:conj_comms)
    apply (rule hoare_post_imp_R[where Q'= "\<lambda>r. pspace_aligned' and
      (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
@@ -1981,7 +1981,7 @@ lemma performArchInvocation_valid_duplicates':
    apply (clarsimp simp:cte_wp_at_ctes_of)
    apply (case_tac ctea,clarsimp)
    apply (frule(1) ctes_of_valid_cap'[OF _ invs_valid_objs'])
-   apply (wp static_imp_wp|simp)+
+   apply (wp hoare_weak_lift_imp|simp)+
        apply (simp add:placeNewObject_def)
        apply (wp |simp add:alignError_def unless_def|wpc)+
       apply (wp updateFreeIndex_pspace_no_overlap' hoare_drop_imp
@@ -2033,11 +2033,11 @@ lemma tc_valid_duplicates':
   apply (simp only: eq_commute[where a="a"])
   apply (rule hoare_walk_assmsE)
     apply (clarsimp simp: pred_conj_def option.splits [where P="\<lambda>x. x s" for s])
-    apply ((wp case_option_wp threadSet_invs_trivial static_imp_wp
+    apply ((wp case_option_wp threadSet_invs_trivial hoare_weak_lift_imp
                hoare_vcg_all_lift threadSet_cap_to' | clarsimp simp: inQ_def)+)[2]
   apply (rule hoare_walk_assmsE)
     apply (clarsimp simp: pred_conj_def option.splits [where P="\<lambda>x. x s" for s])
-    apply ((wp case_option_wp threadSet_invs_trivial static_imp_wp setMCPriority_invs'
+    apply ((wp case_option_wp threadSet_invs_trivial hoare_weak_lift_imp setMCPriority_invs'
                typ_at_lifts[OF setMCPriority_typ_at']
                hoare_vcg_all_lift threadSet_cap_to' | clarsimp simp: inQ_def)+)[2]
   apply ((simp only: simp_thms cases_simp cong: conj_cong
@@ -2051,7 +2051,7 @@ lemma tc_valid_duplicates':
               checkCap_inv[where P="\<lambda>s. vs_valid_duplicates' (ksPSpace s)"]
               checkCap_inv[where P=sch_act_simple] cteDelete_valid_duplicates' hoare_vcg_const_imp_lift_R
               typ_at_lifts[OF setPriority_typ_at'] assertDerived_wp threadSet_cte_wp_at'
-              hoare_vcg_all_lift_R hoare_vcg_all_lift static_imp_wp)[1]
+              hoare_vcg_all_lift_R hoare_vcg_all_lift hoare_weak_lift_imp)[1]
           | wpc
           | simp add: inQ_def
           | wp hoare_vcg_conj_liftE1 cteDelete_invs' cteDelete_deletes hoare_vcg_const_imp_lift)+)

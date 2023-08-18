@@ -175,7 +175,7 @@ lemma (in Tcb_AI_1) copyreg_invs:
      invoke_tcb (tcb_invocation.CopyRegisters dest src susp resume frames ints arch)
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: if_apply_def2
-                  wp: mapM_x_wp' suspend_nonz_cap_to_tcb static_imp_wp)
+                  wp: mapM_x_wp' suspend_nonz_cap_to_tcb hoare_weak_lift_imp)
   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def suspend_def
                  dest!: idle_no_ex_cap)
   done

@@ -1033,14 +1033,14 @@ lemma cteInsert_ccorres:
                   apply (rule ccorres_move_c_guard_cte)
                   apply (ctac ccorres:ccorres_updateMDB_set_mdbPrev)
                  apply (ctac ccorres: ccorres_updateMDB_skip)
-                apply (wp static_imp_wp)+
+                apply (wp hoare_weak_lift_imp)+
               apply (clarsimp simp: Collect_const_mem split del: if_split)
               apply vcg
-             apply (wp static_imp_wp)
+             apply (wp hoare_weak_lift_imp)
             apply (clarsimp simp: Collect_const_mem split del: if_split)
             apply vcg
            apply (clarsimp simp:cmdb_node_relation_mdbNext)
-           apply (wp setUntypedCapAsFull_cte_at_wp static_imp_wp)
+           apply (wp setUntypedCapAsFull_cte_at_wp hoare_weak_lift_imp)
           apply (clarsimp simp: Collect_const_mem split del: if_split)
           apply (vcg exspec=setUntypedCapAsFull_modifies)
          apply wp

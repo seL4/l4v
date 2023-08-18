@@ -45,7 +45,7 @@ lemma kernel_entry_invs:
   \<lbrace>\<lambda>rv. invs and (\<lambda>s. ct_running s \<or> ct_idle s)\<rbrace>"
   apply (simp add: kernel_entry_def)
   apply (wp akernel_invs thread_set_invs_trivial thread_set_ct_in_state
-         do_machine_op_ct_in_state static_imp_wp hoare_vcg_disj_lift
+         do_machine_op_ct_in_state hoare_weak_lift_imp hoare_vcg_disj_lift
       | clarsimp simp add: tcb_cap_cases_def)+
   done
 

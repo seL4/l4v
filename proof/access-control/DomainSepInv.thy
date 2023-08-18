@@ -336,7 +336,7 @@ lemma empty_slot_domain_sep_inv:
    \<lbrace>\<lambda>_ s. domain_sep_inv irqs (st :: 'state_ext state) (s :: det_ext state)\<rbrace>"
   unfolding empty_slot_def post_cap_deletion_def
   by (wpsimp wp: get_cap_wp set_cap_domain_sep_inv set_original_wp dxo_wp_weak
-                 static_imp_wp deleted_irq_handler_domain_sep_inv)
+                 hoare_weak_lift_imp deleted_irq_handler_domain_sep_inv)
 
 end
 
@@ -568,7 +568,7 @@ lemma cap_move_cte_wp_at_other:
    cap_move cap src_slot dest_slot
    \<lbrace>\<lambda>_. cte_wp_at P slot\<rbrace>"
   unfolding cap_move_def
-  by (wpsimp wp: set_cdt_cte_wp_at set_cap_cte_wp_at' dxo_wp_weak static_imp_wp set_original_wp)
+  by (wpsimp wp: set_cdt_cte_wp_at set_cap_cte_wp_at' dxo_wp_weak hoare_weak_lift_imp set_original_wp)
 
 lemma cte_wp_at_weak_derived_ReplyCap:
   "cte_wp_at ((=) (ReplyCap x False R)) slot s
@@ -1042,7 +1042,7 @@ lemma invoke_tcb_domain_sep_inv:
     apply (simp add: split_def cong: option.case_cong)
     apply (wp checked_cap_insert_domain_sep_inv hoare_vcg_all_lift_R hoare_vcg_all_lift
               hoare_vcg_const_imp_lift_R cap_delete_domain_sep_inv cap_delete_deletes
-              dxo_wp_weak cap_delete_valid_cap cap_delete_cte_at static_imp_wp
+              dxo_wp_weak cap_delete_valid_cap cap_delete_cte_at hoare_weak_lift_imp
            | wpc | strengthen
            | simp add: option_update_thread_def emptyable_def tcb_cap_cases_def
                        tcb_cap_valid_def tcb_at_st_tcb_at

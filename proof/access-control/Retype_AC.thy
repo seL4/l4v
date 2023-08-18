@@ -970,7 +970,7 @@ lemma reset_untyped_cap_valid_vspace_objs:
    \<lbrace>\<lambda>_. valid_vspace_objs\<rbrace>"
   unfolding reset_untyped_cap_def
   apply (wpsimp wp: mapME_x_inv_wp preemption_point_inv)
-      apply (wp static_imp_wp delete_objects_valid_vspace_objs)
+      apply (wp hoare_weak_lift_imp delete_objects_valid_vspace_objs)
      apply (wpsimp wp: get_cap_wp)+
   apply (cases src_slot)
   apply (auto simp: cte_wp_at_caps_of_state)
@@ -1008,7 +1008,7 @@ lemma reset_untyped_cap_valid_arch_state:
    \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
   unfolding reset_untyped_cap_def
   apply (wpsimp wp: mapME_x_inv_wp preemption_point_inv)
-      apply (wp static_imp_wp delete_objects_valid_arch_state)
+      apply (wp hoare_weak_lift_imp delete_objects_valid_arch_state)
      apply (wpsimp wp: get_cap_wp)+
   apply (cases src_slot)
   apply (auto simp: cte_wp_at_caps_of_state)

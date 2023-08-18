@@ -135,13 +135,13 @@ lemma invoke_tcb_irq_masks[IRQMasks_IF_assms]:
         apply (wp hoare_vcg_conj_liftE1 cap_delete_irq_masks)
        apply fastforce
       apply blast
-     apply (wpsimp wp: static_imp_wp hoare_vcg_all_lift checked_cap_insert_domain_sep_inv)+
+     apply (wpsimp wp: hoare_weak_lift_imp hoare_vcg_all_lift checked_cap_insert_domain_sep_inv)+
      apply (rule_tac Q="\<lambda> r s. domain_sep_inv False st s \<and> P (irq_masks_of_state s)"
                  and E="\<lambda>_ s. P (irq_masks_of_state s)" in hoare_post_impErr)
        apply (wp hoare_vcg_conj_liftE1 cap_delete_irq_masks)
       apply fastforce
      apply blast
-    apply (simp add: option_update_thread_def | wp static_imp_wp hoare_vcg_all_lift | wpc)+
+    apply (simp add: option_update_thread_def | wp hoare_weak_lift_imp hoare_vcg_all_lift | wpc)+
   by fastforce+
 
 lemma init_arch_objects_irq_masks:

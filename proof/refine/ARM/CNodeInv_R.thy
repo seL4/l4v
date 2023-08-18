@@ -4862,7 +4862,7 @@ lemma cteSwap_iflive'[wp]:
           simp only: if_live_then_nonz_cap'_def imp_conv_disj
                      ex_nonz_cap_to'_def)
    apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift
-             hoare_vcg_ex_lift updateCap_cte_wp_at_cases static_imp_wp)+
+             hoare_vcg_ex_lift updateCap_cte_wp_at_cases hoare_weak_lift_imp)+
   apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (drule(1) if_live_then_nonz_capE')
   apply (clarsimp simp: ex_nonz_cap_to'_def cte_wp_at_ctes_of)
@@ -5741,7 +5741,7 @@ lemma cteSwap_cte_wp_cteCap:
        apply simp
        apply (wp hoare_drop_imps)[1]
        apply (wp updateMDB_weak_cte_wp_at updateCap_cte_wp_at_cases
-                 getCTE_wp' hoare_vcg_all_lift static_imp_wp)+
+                 getCTE_wp' hoare_vcg_all_lift hoare_weak_lift_imp)+
     apply simp
   apply (clarsimp simp: o_def)
   done
@@ -5755,7 +5755,7 @@ lemma capSwap_cte_wp_cteCap:
   apply(simp add: capSwapForDelete_def)
   apply(wp)
      apply(rule cteSwap_cte_wp_cteCap)
-    apply(wp getCTE_wp getCTE_cte_wp_at static_imp_wp)+
+    apply(wp getCTE_wp getCTE_cte_wp_at hoare_weak_lift_imp)+
   apply(clarsimp)
   apply(rule conjI)
    apply(simp add: cte_at_cte_wp_atD)
@@ -6233,7 +6233,7 @@ proof (induct arbitrary: P p rule: finalise_spec_induct2)
         apply clarsimp
        apply (case_tac "cteCap rv",
               simp_all add: isCap_simps final_matters'_def)[1]
-      apply (wp isFinalCapability_inv static_imp_wp | simp | wp (once) isFinal[where x=sl])+
+      apply (wp isFinalCapability_inv hoare_weak_lift_imp | simp | wp (once) isFinal[where x=sl])+
      apply (wp getCTE_wp')
     apply (clarsimp simp: cte_wp_at_ctes_of)
     apply (rule conjI, clarsimp simp: removeable'_def)
@@ -7016,18 +7016,18 @@ next
               apply simp
               apply ((wp replace_cap_invs final_cap_same_objrefs
                         set_cap_cte_wp_at set_cap_cte_cap_wp_to
-                        hoare_vcg_const_Ball_lift static_imp_wp
+                        hoare_vcg_const_Ball_lift hoare_weak_lift_imp
                          | simp add: conj_comms
                          | erule finalise_cap_not_reply_master [simplified])+)[1]
                  apply (simp(no_asm_use))
              apply (wp make_zombie_invs' updateCap_cap_to'
                         updateCap_cte_wp_at_cases
-                        static_imp_wp)+
+                        hoare_weak_lift_imp)+
              apply (elim conjE, strengthen  subst[where P="cap_relation cap" for cap, mk_strg I _ E])
              apply simp
              apply (wp make_zombie_invs' updateCap_cap_to'
                         updateCap_cte_wp_at_cases
-                        static_imp_wp)+
+                        hoare_weak_lift_imp)+
             apply clarsimp
             apply (drule_tac cap=a in cap_relation_removables,
                       clarsimp, assumption+)
@@ -7069,7 +7069,7 @@ next
           apply (clarsimp dest!: isCapDs simp: cte_wp_at_ctes_of)
           apply (case_tac "cteCap rv'",
                  auto simp add: isCap_simps is_cap_simps final_matters'_def)[1]
-         apply (wp isFinalCapability_inv static_imp_wp
+         apply (wp isFinalCapability_inv hoare_weak_lift_imp
                  | simp add: is_final_cap_def conj_comms cte_wp_at_eq_simp)+
        apply (rule isFinal[where x="cte_map slot"])
       apply (wp get_cap_wp| simp add: conj_comms)+
@@ -7210,7 +7210,7 @@ next
                 apply (rule updateCap_corres)
                  apply simp
                 apply (simp add: is_cap_simps)
-               apply (rule_tac Q="\<lambda>rv. cte_at' (cte_map ?target)" in valid_prove_more)
+               apply (rule_tac R="\<lambda>rv. cte_at' (cte_map ?target)" in hoare_post_add)
                apply (wp, (wp getCTE_wp)+)
               apply (clarsimp simp: cte_wp_at_ctes_of)
              apply (rule no_fail_pre, wp, simp)
@@ -8345,7 +8345,7 @@ lemma cteMove_iflive'[wp]:
                           ex_nonz_cap_to'_def)
         apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift
                   hoare_vcg_ex_lift updateCap_cte_wp_at_cases
-                  getCTE_wp static_imp_wp)+
+                  getCTE_wp hoare_weak_lift_imp)+
   apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (drule(1) if_live_then_nonz_capE')
   apply (clarsimp simp: ex_nonz_cap_to'_def cte_wp_at_ctes_of)
@@ -8523,7 +8523,7 @@ lemma cteMove_cte_wp_at:
   \<lbrace>\<lambda>_ s. cte_wp_at' (\<lambda>c. Q (cteCap c)) ptr s\<rbrace>"
   unfolding cteMove_def
   apply (fold o_def)
-  apply (wp updateCap_cte_wp_at_cases updateMDB_weak_cte_wp_at getCTE_wp static_imp_wp|simp add: o_def)+
+  apply (wp updateCap_cte_wp_at_cases updateMDB_weak_cte_wp_at getCTE_wp hoare_weak_lift_imp|simp add: o_def)+
   apply (clarsimp simp: cte_wp_at_ctes_of)
   done
 

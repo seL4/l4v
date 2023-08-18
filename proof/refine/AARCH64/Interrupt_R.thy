@@ -673,7 +673,7 @@ lemma timerTick_corres:
              apply wp+
             apply (simp add:decDomainTime_def)
             apply wp
-           apply (wpsimp wp: static_imp_wp threadSet_timeslice_invs threadSet_valid_queues
+           apply (wpsimp wp: hoare_weak_lift_imp threadSet_timeslice_invs threadSet_valid_queues
                              threadSet_valid_queues' tcbSchedAppend_valid_objs'
                              threadSet_pred_tcb_at_state threadSet_weak_sch_act_wf
                              rescheduleRequired_weak_sch_act_wf tcbSchedAppend_valid_queues)+

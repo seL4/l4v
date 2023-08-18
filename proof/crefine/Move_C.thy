@@ -873,7 +873,7 @@ lemma cteDeleteOne_sch_act_wf:
   apply (simp add: finaliseCapTrue_standin_def Let_def)
   apply (rule hoare_pre)
   apply (wp isFinalCapability_inv cancelAllSignals_sch_act_wf
-            cancelAllIPC_sch_act_wf getCTE_wp' static_imp_wp
+            cancelAllIPC_sch_act_wf getCTE_wp' hoare_weak_lift_imp
          | wpc
          | simp add: Let_def split: if_split)+
   done

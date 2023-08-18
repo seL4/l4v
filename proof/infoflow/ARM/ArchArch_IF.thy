@@ -1428,8 +1428,8 @@ lemma set_mrs_globals_equiv:
        apply (clarsimp)
        apply (insert length_msg_lt_msg_max)
        apply (simp)
-      apply (wp set_object_globals_equiv static_imp_wp)
-     apply (wp hoare_vcg_all_lift set_object_globals_equiv static_imp_wp)+
+      apply (wp set_object_globals_equiv hoare_weak_lift_imp)
+     apply (wp hoare_vcg_all_lift set_object_globals_equiv hoare_weak_lift_imp)+
    apply (clarsimp simp:arm_global_pd_not_tcb)+
   done
 
@@ -1444,7 +1444,7 @@ lemma perform_page_invocation_globals_equiv:
   apply (wp mapM_swp_store_pte_globals_equiv hoare_vcg_all_lift dmo_cacheRangeOp_lift
             mapM_swp_store_pde_globals_equiv mapM_x_swp_store_pte_globals_equiv
             mapM_x_swp_store_pde_globals_equiv set_cap_globals_equiv''
-            unmap_page_globals_equiv store_pte_globals_equiv store_pde_globals_equiv static_imp_wp
+            unmap_page_globals_equiv store_pte_globals_equiv store_pde_globals_equiv hoare_weak_lift_imp
             do_flush_globals_equiv set_mrs_globals_equiv set_message_info_globals_equiv
          | wpc | simp add: do_machine_op_bind cleanByVA_PoU_def)+
   by (auto simp: cte_wp_parent_not_global_pd authorised_for_globals_page_inv_def valid_page_inv_def
@@ -1479,7 +1479,7 @@ lemma perform_asid_control_invocation_globals_equiv:
              max_index_upd_invs_simple set_cap_no_overlap
              set_cap_caps_no_overlap max_index_upd_caps_overlap_reserved
              region_in_kernel_window_preserved
-             hoare_vcg_all_lift  get_cap_wp static_imp_wp
+             hoare_vcg_all_lift  get_cap_wp hoare_weak_lift_imp
              set_cap_idx_up_aligned_area[where dev = False,simplified]
           | simp)+
    (* factor out the implication -- we know what the relevant components of the

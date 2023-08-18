@@ -90,7 +90,7 @@ next
                apply (simp add: conj_comms)
               apply (wp set_cap_P set_cap_Q replace_cap_invs
                         final_cap_same_objrefs set_cap_cte_cap_wp_to
-                        set_cap_cte_wp_at hoare_vcg_const_Ball_lift static_imp_wp
+                        set_cap_cte_wp_at hoare_vcg_const_Ball_lift hoare_weak_lift_imp
                      | rule finalise_cap_not_reply_master
                      | simp add: in_monad)+
        apply (rule hoare_strengthen_post)
@@ -486,7 +486,7 @@ context Tcb_IF_2 begin
 
 lemma invoke_tcb_reads_respects_f:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
-  notes validE_valid[wp del] static_imp_wp [wp]
+  notes validE_valid[wp del] hoare_weak_lift_imp [wp]
   shows
     "reads_respects_f aag l
        (silc_inv aag st and only_timer_irq_inv irq st' and einvs

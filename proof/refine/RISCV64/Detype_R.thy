@@ -1891,12 +1891,12 @@ lemma cte_wp_at_top:
                      tcbReplySlot_def tcbCTableSlot_def tcbVTableSlot_def objBits_simps
                      cteSizeBits_def)
     apply (simp add: alignCheck_def bind_def alignError_def fail_def return_def objBits_simps
-                     magnitudeCheck_def in_monad is_aligned_mask when_def
+                     magnitudeCheck_def in_monad is_aligned_mask when_def unless_def
                 split: option.splits)
     apply (intro conjI impI allI; simp add: not_le)
    apply (clarsimp simp:cte_check_def)
    apply (simp add: alignCheck_def bind_def alignError_def fail_def return_def objBits_simps
-                    magnitudeCheck_def in_monad is_aligned_mask when_def
+                    magnitudeCheck_def in_monad is_aligned_mask when_def unless_def
                split: option.splits)
    apply (intro conjI impI allI; simp add:not_le)
   apply (simp add: typeError_def fail_def cte_check_def split: Structures_H.kernel_object.splits)

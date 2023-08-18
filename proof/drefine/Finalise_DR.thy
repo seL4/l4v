@@ -542,7 +542,7 @@ lemma flush_space_dwp[wp]:
      apply (clarsimp split:option.splits)
      apply (rule do_machine_op_wp)
      apply clarsimp
-     apply (wp static_imp_wp)+
+     apply (wp hoare_weak_lift_imp)+
      apply (rule do_machine_op_wp)
      apply clarsimp
      apply wp
@@ -3602,7 +3602,7 @@ next
                                      | simp add: not_idle_thread_def del: gets_to_return)+
             apply (simp add: conj_comms)
             apply (wp replace_cap_invs final_cap_same_objrefs set_cap_cte_wp_at
-                      hoare_vcg_const_Ball_lift set_cap_cte_cap_wp_to static_imp_wp
+                      hoare_vcg_const_Ball_lift set_cap_cte_cap_wp_to hoare_weak_lift_imp
                         | erule finalise_cap_not_reply_master[simplified in_monad, simplified]
                         | simp only: not_idle_thread_def pred_conj_def simp_thms)+
           apply (rule hoare_strengthen_post)
