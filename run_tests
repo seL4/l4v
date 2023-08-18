@@ -64,12 +64,10 @@ EXCLUDE["RISCV64"]=[
 EXCLUDE["AARCH64"]=[
     # To be eliminated/refined as development progresses
     "ASepSpec",
-    "CKernel",
-    "CBaseRefine",
+    "CRefine",
     "Access",
 
     # Tools and unrelated content, removed for development
-    "CParser",
     "AutoCorres",
     "CamkesGlueSpec",
     "Sep_Algebra",
