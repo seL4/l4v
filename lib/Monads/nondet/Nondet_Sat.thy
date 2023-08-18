@@ -139,7 +139,7 @@ lemma gets_exs_valid:
 
 lemma exs_valid_assert_opt[wp]:
   "\<lbrace>\<lambda>s. \<exists>x. G = Some x \<and> Q x s\<rbrace> assert_opt G \<exists>\<lbrace>Q\<rbrace>"
-  by (clarsimp simp: assert_opt_def exs_valid_def get_def assert_def bind_def' return_def)
+  by (clarsimp simp: assert_opt_def exs_valid_def return_def)
 
 lemma gets_the_exs_valid[wp]:
   "\<lbrace>\<lambda>s. \<exists>x. h s = Some x \<and> Q x s\<rbrace> gets_the h \<exists>\<lbrace>Q\<rbrace>"

@@ -52,13 +52,15 @@ subsection \<open>Basic @{const validNF} theorems\<close>
 lemma validNF_make_schematic_post:
   "(\<forall>s0. \<lbrace> \<lambda>s. P s0 s \<rbrace> f \<lbrace> \<lambda>rv s. Q s0 rv s \<rbrace>!) \<Longrightarrow>
    \<lbrace> \<lambda>s. \<exists>s0. P s0 s \<and> (\<forall>rv s'. Q s0 rv s' \<longrightarrow> Q' rv s') \<rbrace> f \<lbrace> Q' \<rbrace>!"
-  by (auto simp add: valid_def validNF_def no_fail_def split: prod.splits)
+  by (auto simp: valid_def validNF_def no_fail_def
+          split: prod.splits)
 
 lemma validE_NF_make_schematic_post:
   "(\<forall>s0. \<lbrace> \<lambda>s. P s0 s \<rbrace> f \<lbrace> \<lambda>rv s. Q s0 rv s \<rbrace>, \<lbrace> \<lambda>rv s. E s0 rv s \<rbrace>!) \<Longrightarrow>
    \<lbrace> \<lambda>s. \<exists>s0. P s0 s \<and> (\<forall>rv s'. Q s0 rv s' \<longrightarrow> Q' rv s')
         \<and> (\<forall>rv s'. E s0 rv s' \<longrightarrow> E' rv s') \<rbrace> f \<lbrace> Q' \<rbrace>, \<lbrace> E' \<rbrace>!"
-  by (auto simp add: validE_NF_def validE_def valid_def no_fail_def split: prod.splits sum.splits)
+  by (auto simp: validE_NF_def validE_def valid_def no_fail_def
+          split: prod.splits sum.splits)
 
 lemma validNF_conjD1:
   "\<lbrace> P \<rbrace> f \<lbrace> \<lambda>rv s. Q rv s \<and> Q' rv s \<rbrace>! \<Longrightarrow> \<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>!"
@@ -84,7 +86,7 @@ lemma validNF_no_fail:
   "\<lbrakk> \<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>! \<rbrakk> \<Longrightarrow> no_fail P f"
   by (erule validNFE)
 
-lemma snd_validNF:
+lemma validNF_not_failed:
   "\<lbrakk> \<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>!; P s \<rbrakk> \<Longrightarrow> \<not> snd (f s)"
   by (clarsimp simp: validNF_def no_fail_def)
 
@@ -214,7 +216,7 @@ lemma validNF_chain:
   by (fastforce simp: validNF_def valid_def no_fail_def Ball_def)
 
 lemma validNF_case_prod[wp]:
-  "(\<And>x y. \<lbrace>P x y\<rbrace> B x y \<lbrace>Q\<rbrace>!) \<Longrightarrow> \<lbrace>case v of (x, y) \<Rightarrow> P x y\<rbrace> case v of (x, y) \<Rightarrow> B x y \<lbrace>Q\<rbrace>!"
+  "\<lbrakk>\<And>x y. \<lbrace>P x y\<rbrace> B x y \<lbrace>Q\<rbrace>!\<rbrakk> \<Longrightarrow> \<lbrace>case v of (x, y) \<Rightarrow> P x y\<rbrace> case v of (x, y) \<Rightarrow> B x y \<lbrace>Q\<rbrace>!"
   by (metis prod.exhaust split_conv)
 
 lemma validE_NF_case_prod[wp]:
@@ -344,6 +346,6 @@ lemma validE_NF_condition[wp]:
 
 lemma hoare_assume_preNF:
   "(\<And>s. P s \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>!) \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>!"
-  by (metis validNF_alt_def)
+  by (simp add: validNF_alt_def)
 
 end

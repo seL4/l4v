@@ -11,11 +11,12 @@
 theory Nondet_More_VCG
   imports
     Nondet_VCG
+    Nondet_In_Monad
 begin
 
 lemma hoare_take_disjunct:
   "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. P' rv s \<and> (False \<or> P'' rv s)\<rbrace>
-    \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>P''\<rbrace>"
+   \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>P''\<rbrace>"
   by (erule hoare_strengthen_post, simp)
 
 lemma hoare_post_add:
@@ -43,10 +44,6 @@ lemma hoare_name_pre_state:
 lemma hoare_name_pre_stateE:
   "\<lbrakk>\<And>s. P s \<Longrightarrow> \<lbrace>(=) s\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>"
   by (clarsimp simp: validE_def2)
-
-lemma valid_prove_more: (* FIXME: duplicate *)
-  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> Q' rv s\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q'\<rbrace>"
-  by (rule hoare_post_add)
 
 lemma hoare_vcg_if_lift_strong:
   "\<lbrakk> \<lbrace>P'\<rbrace> f \<lbrace>P\<rbrace>; \<lbrace>\<lambda>s. \<not> P' s\<rbrace> f \<lbrace>\<lambda>rv s. \<not> P rv s\<rbrace>; \<lbrace>Q'\<rbrace> f \<lbrace>Q\<rbrace>; \<lbrace>R'\<rbrace> f \<lbrace>R\<rbrace> \<rbrakk> \<Longrightarrow>
@@ -89,12 +86,12 @@ lemmas hoare_lift_Pf_pre_conj' = hoare_lift_Pf2_pre_conj[where Q=P and P=P for P
 
 lemma hoare_if_r_and:
   "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>r. if R r then Q r else Q' r\<rbrace>
-  = \<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. (R r \<longrightarrow> Q r s) \<and> (\<not>R r \<longrightarrow> Q' r s)\<rbrace>"
+   = \<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. (R r \<longrightarrow> Q r s) \<and> (\<not>R r \<longrightarrow> Q' r s)\<rbrace>"
   by (fastforce simp: valid_def)
 
 lemma hoare_convert_imp:
-  "\<lbrakk> \<lbrace>\<lambda>s. \<not> P s\<rbrace> f \<lbrace>\<lambda>rv s. \<not> Q s\<rbrace>; \<lbrace>R\<rbrace> f \<lbrace>S\<rbrace> \<rbrakk> \<Longrightarrow>
-    \<lbrace>\<lambda>s. P s \<longrightarrow> R s\<rbrace> f \<lbrace>\<lambda>rv s. Q s \<longrightarrow> S rv s\<rbrace>"
+  "\<lbrakk> \<lbrace>\<lambda>s. \<not> P s\<rbrace> f \<lbrace>\<lambda>rv s. \<not> Q s\<rbrace>; \<lbrace>R\<rbrace> f \<lbrace>S\<rbrace> \<rbrakk>
+   \<Longrightarrow> \<lbrace>\<lambda>s. P s \<longrightarrow> R s\<rbrace> f \<lbrace>\<lambda>rv s. Q s \<longrightarrow> S rv s\<rbrace>"
   apply (simp only: imp_conv_disj)
   apply (erule(1) hoare_vcg_disj_lift)
   done
@@ -107,8 +104,8 @@ lemma hoare_vcg_ex_lift_R:
   done
 
 lemma hoare_case_option_wpR:
-  "\<lbrakk>\<lbrace>P\<rbrace> f None \<lbrace>Q\<rbrace>,-; \<And>x. \<lbrace>P' x\<rbrace> f (Some x) \<lbrace>Q' x\<rbrace>,-\<rbrakk> \<Longrightarrow>
-  \<lbrace>case_option P P' v\<rbrace> f v \<lbrace>\<lambda>rv. case v of None \<Rightarrow> Q rv | Some x \<Rightarrow> Q' x rv\<rbrace>,-"
+  "\<lbrakk>\<lbrace>P\<rbrace> f None \<lbrace>Q\<rbrace>,-; \<And>x. \<lbrace>P' x\<rbrace> f (Some x) \<lbrace>Q' x\<rbrace>,-\<rbrakk>
+   \<Longrightarrow> \<lbrace>case_option P P' v\<rbrace> f v \<lbrace>\<lambda>rv. case v of None \<Rightarrow> Q rv | Some x \<Rightarrow> Q' x rv\<rbrace>,-"
   by (cases v) auto
 
 lemma hoare_vcg_conj_liftE_R:
@@ -120,12 +117,6 @@ lemma hoare_vcg_conj_liftE_R:
 lemma K_valid[wp]:
   "\<lbrace>K P\<rbrace> f \<lbrace>\<lambda>_. K P\<rbrace>"
   by (simp add: valid_def)
-
-lemma hoare_vcg_exI:
-  "\<lbrace>P\<rbrace> f \<lbrace>Q x\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. \<exists>x. Q x rv s\<rbrace>"
-  apply (simp add: valid_def split_def)
-  apply blast
-  done
 
 lemma hoare_exI_tuple:
   "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>(rv,rv') s. Q x rv rv' s\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>(rv,rv') s. \<exists>x. Q x rv rv' s\<rbrace>"
@@ -174,7 +165,7 @@ lemma gets_inv [simp]:
 
 lemma select_inv:
   "\<lbrace> P \<rbrace> select S \<lbrace> \<lambda>r. P \<rbrace>"
-  by (simp add: select_def valid_def)
+  by wpsimp
 
 lemmas return_inv = hoare_return_drop_var
 
@@ -215,9 +206,10 @@ lemma list_cases_weak_wp:
   assumes "\<And>x xs. \<lbrace>P_B\<rbrace> b x xs \<lbrace>Q\<rbrace>"
   shows
   "\<lbrace>P_A and P_B\<rbrace>
-    case ts of
-      [] \<Rightarrow> a
-    | x#xs \<Rightarrow> b x xs \<lbrace>Q\<rbrace>"
+   case ts of
+       [] \<Rightarrow> a
+     | x#xs \<Rightarrow> b x xs
+   \<lbrace>Q\<rbrace>"
   apply (cases ts)
   apply (simp, rule hoare_weaken_pre, rule assms, simp)+
   done
@@ -226,18 +218,18 @@ lemmas hoare_FalseE_R = hoare_FalseE[where E="\<top>\<top>", folded validE_R_def
 
 lemma hoare_vcg_if_lift2:
   "\<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv s. (P rv s \<longrightarrow> X rv s) \<and> (\<not> P rv s \<longrightarrow> Y rv s)\<rbrace> \<Longrightarrow>
-  \<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv s. if P rv s then X rv s else Y rv s\<rbrace>"
+   \<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv s. if P rv s then X rv s else Y rv s\<rbrace>"
 
   "\<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv s. (P' rv \<longrightarrow> X rv s) \<and> (\<not> P' rv \<longrightarrow> Y rv s)\<rbrace> \<Longrightarrow>
-  \<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv. if P' rv then X rv else Y rv\<rbrace>"
+   \<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv. if P' rv then X rv else Y rv\<rbrace>"
   by (auto simp: valid_def split_def)
 
 lemma hoare_vcg_if_lift_ER: (* Required because of lack of rv in lifting rules *)
   "\<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv s. (P rv s \<longrightarrow> X rv s) \<and> (\<not> P rv s \<longrightarrow> Y rv s)\<rbrace>, - \<Longrightarrow>
-  \<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv s. if P rv s then X rv s else Y rv s\<rbrace>, -"
+   \<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv s. if P rv s then X rv s else Y rv s\<rbrace>, -"
 
   "\<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv s. (P' rv \<longrightarrow> X rv s) \<and> (\<not> P' rv \<longrightarrow> Y rv s)\<rbrace>, - \<Longrightarrow>
-  \<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv. if P' rv then X rv else Y rv\<rbrace>, -"
+   \<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv. if P' rv then X rv else Y rv\<rbrace>, -"
   by (auto simp: valid_def validE_R_def validE_def split_def)
 
 lemma hoare_list_all_lift:
@@ -288,7 +280,7 @@ lemma set_shrink_proof:
   assumes x: "\<And>x. \<lbrace>\<lambda>s. x \<notin> S s\<rbrace> f \<lbrace>\<lambda>rv s. x \<notin> S s\<rbrace>"
   shows
   "\<lbrace>\<lambda>s. \<forall>S'. S' \<subseteq> S s \<longrightarrow> P S'\<rbrace>
-     f
+   f
    \<lbrace>\<lambda>rv s. P (S s)\<rbrace>"
   apply (clarsimp simp: valid_def)
   apply (drule spec, erule mp)
@@ -330,8 +322,6 @@ lemma valid_preservation_ex:
   apply simp
   done
 
-lemmas valid_prove_more' = valid_prove_more[where Q="\<lambda>rv. Q" for Q]
-
 lemma whenE_inv:
   assumes a: "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>"
   shows "\<lbrace>P\<rbrace> whenE Q f \<lbrace>\<lambda>_. P\<rbrace>"
@@ -343,9 +333,12 @@ lemma whenE_throwError_wp:
 
 lemma ifM_throwError_returnOk:
   "\<lbrace>Q\<rbrace> test \<lbrace>\<lambda>c s. \<not> c \<longrightarrow> P s\<rbrace> \<Longrightarrow> \<lbrace>Q\<rbrace> ifM test (throwError e) (returnOk ()) \<lbrace>\<lambda>_. P\<rbrace>, -"
-  by (fastforce simp: ifM_def returnOk_def throwError_def return_def validE_R_def valid_def
-                      validE_def bind_def
-               split: if_splits)
+  unfolding ifM_def
+  apply (fold liftE_bindE)
+  apply wpsimp
+   apply assumption
+  apply simp
+  done
 
 lemma ifME_liftE:
   "ifME (liftE test) a b = ifM test a b"
@@ -371,23 +364,13 @@ lemma opt_return_pres_lift:
 
 lemma valid_return_unit:
   "\<lbrace>P\<rbrace> f >>= (\<lambda>_. return ()) \<lbrace>\<lambda>r. Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>r. Q\<rbrace>"
-  apply (rule validI)
-  apply (fastforce simp: valid_def return_def bind_def split_def)
-  done
+  by (auto simp: valid_def in_bind in_return Ball_def)
 
-lemma static_imp_wp:
-  "\<lbrace>Q\<rbrace> m \<lbrace>R\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s. P \<longrightarrow> Q s\<rbrace> m \<lbrace>\<lambda>rv s. P \<longrightarrow> R rv s\<rbrace>"
-  by (cases P, simp_all add: valid_def)
-
-lemma static_imp_wpE :
-  "\<lbrace>Q\<rbrace> m \<lbrace>R\<rbrace>,- \<Longrightarrow> \<lbrace>\<lambda>s. P \<longrightarrow> Q s\<rbrace> m \<lbrace>\<lambda>rv s. P \<longrightarrow> R rv s\<rbrace>,-"
-  by (cases P, simp_all)
-
-lemma static_imp_conj_wp:
+lemma hoare_weak_lift_imp_conj:
   "\<lbrakk> \<lbrace>Q\<rbrace> m \<lbrace>Q'\<rbrace>; \<lbrace>R\<rbrace> m \<lbrace>R'\<rbrace> \<rbrakk>
-    \<Longrightarrow> \<lbrace>\<lambda>s. (P \<longrightarrow> Q s) \<and> R s\<rbrace> m \<lbrace>\<lambda>rv s. (P \<longrightarrow> Q' rv s) \<and> R' rv s\<rbrace>"
+   \<Longrightarrow> \<lbrace>\<lambda>s. (P \<longrightarrow> Q s) \<and> R s\<rbrace> m \<lbrace>\<lambda>rv s. (P \<longrightarrow> Q' rv s) \<and> R' rv s\<rbrace>"
   apply (rule hoare_vcg_conj_lift)
-   apply (rule static_imp_wp)
+   apply (rule hoare_weak_lift_imp)
    apply assumption+
   done
 
@@ -400,16 +383,13 @@ lemma hoare_validE_R_conj:
   "\<lbrakk>\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, -; \<lbrace>P\<rbrace> f \<lbrace>R\<rbrace>, -\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q and R\<rbrace>, -"
   by (simp add: valid_def validE_def validE_R_def Let_def split_def split: sum.splits)
 
-lemma hoare_vcg_const_imp_lift_R:
-  "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,- \<Longrightarrow> \<lbrace>\<lambda>s. F \<longrightarrow> P s\<rbrace> f \<lbrace>\<lambda>rv s. F \<longrightarrow> Q rv s\<rbrace>,-"
-  by (cases F, simp_all)
-
 lemmas throwError_validE_R = throwError_wp [where E="\<top>\<top>", folded validE_R_def]
 
 lemma valid_case_option_post_wp:
-  "(\<And>x. \<lbrace>P x\<rbrace> f \<lbrace>\<lambda>rv. Q x\<rbrace>) \<Longrightarrow>
-    \<lbrace>\<lambda>s. case ep of Some x \<Rightarrow> P x s | _ \<Rightarrow> True\<rbrace>
-       f \<lbrace>\<lambda>rv s. case ep of Some x \<Rightarrow> Q x s | _ \<Rightarrow> True\<rbrace>"
+  "\<lbrakk>\<And>x. \<lbrace>P x\<rbrace> f \<lbrace>\<lambda>rv. Q x\<rbrace>\<rbrakk> \<Longrightarrow>
+   \<lbrace>\<lambda>s. case ep of Some x \<Rightarrow> P x s | _ \<Rightarrow> True\<rbrace>
+   f
+   \<lbrace>\<lambda>rv s. case ep of Some x \<Rightarrow> Q x s | _ \<Rightarrow> True\<rbrace>"
   by (cases ep, simp_all add: hoare_vcg_prop)
 
 lemma P_bool_lift:
@@ -489,17 +469,17 @@ lemma hoare_ex_pre: (* safe, unlike hoare_vcg_ex_lift *)
   by (fastforce simp: valid_def)
 
 lemma hoare_ex_pre_conj:
-  "(\<And>x. \<lbrace>\<lambda>s. P x s \<and> P' s\<rbrace> f \<lbrace>Q\<rbrace>)
-  \<Longrightarrow> \<lbrace>\<lambda>s. (\<exists>x. P x s) \<and> P' s\<rbrace> f \<lbrace>Q\<rbrace>"
+  "\<lbrakk>\<And>x. \<lbrace>\<lambda>s. P x s \<and> P' s\<rbrace> f \<lbrace>Q\<rbrace>\<rbrakk>
+   \<Longrightarrow> \<lbrace>\<lambda>s. (\<exists>x. P x s) \<and> P' s\<rbrace> f \<lbrace>Q\<rbrace>"
   by (fastforce simp: valid_def)
 
 lemma hoare_conj_lift_inv:
   "\<lbrakk>\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>; \<lbrace>\<lambda>s. P' s \<and> I s\<rbrace> f \<lbrace>\<lambda>rv. I\<rbrace>;
-   \<And>s. P s \<Longrightarrow> P' s\<rbrakk>
+    \<And>s. P s \<Longrightarrow> P' s\<rbrakk>
    \<Longrightarrow> \<lbrace>\<lambda>s. P s \<and> I s\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> I s\<rbrace>"
    by (fastforce simp: valid_def)
 
-lemma hoare_in_monad_post :
+lemma hoare_in_monad_post:
   assumes x: "\<And>P. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>x. P\<rbrace>"
   shows      "\<lbrace>\<top>\<rbrace> f \<lbrace>\<lambda>rv s. (rv, s) \<in> fst (f s)\<rbrace>"
   apply (clarsimp simp: valid_def)
@@ -522,7 +502,7 @@ lemma validE_R_sp:
 
 lemma valid_set_take_helper:
   "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>x \<in> set (xs rv s). Q x rv s\<rbrace>
-    \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>x \<in> set (take (n rv s) (xs rv s)). Q x rv s\<rbrace>"
+   \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>x \<in> set (take (n rv s) (xs rv s)). Q x rv s\<rbrace>"
   apply (erule hoare_strengthen_post)
   apply (clarsimp dest!: in_set_takeD)
   done
@@ -554,25 +534,9 @@ lemma wp_split_const_if_R:
   shows "\<lbrace>\<lambda>s. (G \<longrightarrow> P s) \<and> (\<not> G \<longrightarrow> P' s)\<rbrace> f \<lbrace>\<lambda>rv s. (G \<longrightarrow> Q rv s) \<and> (\<not> G \<longrightarrow> Q' rv s)\<rbrace>,-"
   by (case_tac G, simp_all add: x y)
 
-lemma wp_throw_const_imp:
-  assumes x: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
-  shows      "\<lbrace>\<lambda>s. G \<longrightarrow> P s\<rbrace> f \<lbrace>\<lambda>rv s. G \<longrightarrow> Q rv s\<rbrace>"
-  by (case_tac G, simp_all add: x hoare_vcg_prop)
-
-lemma wp_throw_const_impE:
-  assumes x: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
-  shows      "\<lbrace>\<lambda>s. G \<longrightarrow> P s\<rbrace> f \<lbrace>\<lambda>rv s. G \<longrightarrow> Q rv s\<rbrace>,\<lbrace>\<lambda>rv s. G \<longrightarrow> E rv s\<rbrace>"
-  apply (case_tac G, simp_all add: x)
-  apply wp
-  done
-
-lemma hoare_const_imp_R:
-  "\<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>,- \<Longrightarrow> \<lbrace>\<lambda>s. P \<longrightarrow> Q s\<rbrace> f \<lbrace>\<lambda>rv s. P \<longrightarrow> R rv s\<rbrace>,-"
-  by (cases P, simp_all)
-
 lemma hoare_disj_division:
   "\<lbrakk> P \<or> Q; P \<Longrightarrow> \<lbrace>R\<rbrace> f \<lbrace>S\<rbrace>; Q \<Longrightarrow> \<lbrace>T\<rbrace> f \<lbrace>S\<rbrace> \<rbrakk>
-     \<Longrightarrow> \<lbrace>\<lambda>s. (P \<longrightarrow> R s) \<and> (Q \<longrightarrow> T s)\<rbrace> f \<lbrace>S\<rbrace>"
+   \<Longrightarrow> \<lbrace>\<lambda>s. (P \<longrightarrow> R s) \<and> (Q \<longrightarrow> T s)\<rbrace> f \<lbrace>S\<rbrace>"
   apply safe
    apply (rule hoare_pre_imp)
     prefer 2
@@ -589,8 +553,8 @@ lemma hoare_grab_asm:
   by (cases G, simp+)
 
 lemma hoare_grab_asm2:
-  "(P' \<Longrightarrow> \<lbrace>\<lambda>s. P s \<and> R s\<rbrace> f \<lbrace>Q\<rbrace>)
-  \<Longrightarrow> \<lbrace>\<lambda>s. P s \<and> P' \<and> R s\<rbrace> f \<lbrace>Q\<rbrace>"
+  "\<lbrakk>P' \<Longrightarrow> \<lbrace>\<lambda>s. P s \<and> R s\<rbrace> f \<lbrace>Q\<rbrace>\<rbrakk>
+   \<Longrightarrow> \<lbrace>\<lambda>s. P s \<and> P' \<and> R s\<rbrace> f \<lbrace>Q\<rbrace>"
   by (fastforce simp: valid_def)
 
 lemma hoare_grab_exs:
@@ -605,8 +569,8 @@ lemma hoare_prop_E: "\<lbrace>\<lambda>rv. P\<rbrace> f -,\<lbrace>\<lambda>rv s
   by (rule hoare_pre, wp, simp)
 
 lemma hoare_vcg_conj_lift_R:
-  "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,-; \<lbrace>R\<rbrace> f \<lbrace>S\<rbrace>,- \<rbrakk> \<Longrightarrow>
-     \<lbrace>\<lambda>s. P s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> S rv s\<rbrace>,-"
+  "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,-; \<lbrace>R\<rbrace> f \<lbrace>S\<rbrace>,- \<rbrakk>
+   \<Longrightarrow> \<lbrace>\<lambda>s. P s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> S rv s\<rbrace>,-"
   apply (simp add: validE_R_def validE_def)
   apply (drule(1) hoare_vcg_conj_lift)
   apply (erule hoare_strengthen_post)
@@ -636,12 +600,7 @@ lemma univ_get_wp:
   apply (simp add: state_unchanged [OF x])
   done
 
-lemma result_in_set_wp :
-  assumes x: "\<And>P. \<lbrace>P\<rbrace> fn \<lbrace>\<lambda>rv. P\<rbrace>"
-  shows      "\<lbrace>\<lambda>s. True\<rbrace> fn \<lbrace>\<lambda>v s'. (v, s') \<in> fst (fn s')\<rbrace>"
-  by (rule hoare_pre_imp [OF _ univ_get_wp], simp_all add: x split_def) clarsimp
-
-lemma other_result_in_set_wp:
+lemma other_hoare_in_monad_post:
   assumes x: "\<And>P. \<lbrace>P\<rbrace> fn \<lbrace>\<lambda>rv. P\<rbrace>"
   shows "\<lbrace>\<lambda>s. \<forall>(v, s) \<in> fst (fn s). F v = v\<rbrace> fn \<lbrace>\<lambda>v s'. (F v, s') \<in> fst (fn s')\<rbrace>"
   proof -
@@ -653,7 +612,7 @@ lemma other_result_in_set_wp:
   defer
    apply (rule hoare_vcg_conj_lift)
     apply (rule univ_get_wp [OF x])
-   apply (rule result_in_set_wp [OF x])
+   apply (rule hoare_in_monad_post [OF x])
   apply clarsimp
   apply (drule bspec, assumption, simp)
   done
@@ -661,7 +620,7 @@ lemma other_result_in_set_wp:
 
 lemma weak_if_wp:
   "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>; \<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace> \<rbrakk> \<Longrightarrow>
-  \<lbrace>P and P'\<rbrace> f \<lbrace>\<lambda>r. if C r then Q r else Q' r\<rbrace>"
+   \<lbrace>P and P'\<rbrace> f \<lbrace>\<lambda>r. if C r then Q r else Q' r\<rbrace>"
   by (auto simp add: valid_def split_def)
 
 lemma weak_if_wp':
@@ -672,10 +631,10 @@ lemma weak_if_wp':
 lemma bindE_split_recursive_asm:
   assumes x: "\<And>x s'. \<lbrakk> (Inr x, s') \<in> fst (f s) \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. B x s \<and> s = s'\<rbrace> g x \<lbrace>C\<rbrace>, \<lbrace>E\<rbrace>"
   shows      "\<lbrace>A\<rbrace> f \<lbrace>B\<rbrace>, \<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>st. A st \<and> st = s\<rbrace> f >>=E g \<lbrace>C\<rbrace>, \<lbrace>E\<rbrace>"
-  apply (clarsimp simp: validE_def valid_def bindE_def bind_def lift_def)
+  apply (clarsimp simp: validE_def valid_def bindE_def in_bind lift_def)
   apply (erule allE, erule(1) impE)
   apply (drule(1) bspec, simp)
-  apply (case_tac a, simp_all add: throwError_def return_def)
+  apply (case_tac x, simp_all add: in_throwError)
   apply (drule x)
   apply (clarsimp simp: validE_def valid_def)
   apply (drule(1) bspec, simp)
@@ -687,7 +646,7 @@ lemma validE_R_abstract_rv:
 
 lemma validE_cases_valid:
   "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q (Inr rv) s\<rbrace>,\<lbrace>\<lambda>rv s. Q (Inl rv) s\<rbrace>
-      \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
+   \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
   apply (simp add: validE_def)
   apply (erule hoare_strengthen_post)
   apply (simp split: sum.split_asm)
@@ -712,11 +671,9 @@ lemma hoare_gen_asm_conj:
   "(P \<Longrightarrow> \<lbrace>P'\<rbrace> f \<lbrace>Q\<rbrace>) \<Longrightarrow> \<lbrace>\<lambda>s. P' s \<and> P\<rbrace> f \<lbrace>Q\<rbrace>"
   by (fastforce simp: valid_def)
 
-
 lemma hoare_add_K:
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s. P s \<and> I\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> I\<rbrace>"
   by (fastforce simp: valid_def)
-
 
 lemma valid_rv_lift:
   "\<lbrace>P'\<rbrace> f \<lbrace>\<lambda>rv s. rv \<longrightarrow> Q rv s\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s. P \<and> P' s\<rbrace> f \<lbrace>\<lambda>rv s. rv \<longrightarrow> P \<and> Q rv s\<rbrace>"
@@ -728,20 +685,19 @@ lemma valid_imp_ex:
 
 lemma valid_rv_split:
   "\<lbrakk>\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. rv \<longrightarrow> Q s\<rbrace>; \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. \<not>rv \<longrightarrow> Q' s\<rbrace>\<rbrakk>
-  \<Longrightarrow>
-  \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. if rv then Q s else Q' s\<rbrace>"
+   \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. if rv then Q s else Q' s\<rbrace>"
   by (fastforce simp: valid_def)
 
 lemma hoare_rv_split:
   "\<lbrakk>\<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. rv \<longrightarrow> (Q rv s)\<rbrace>; \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. (\<not>rv) \<longrightarrow> (Q rv s)\<rbrace>\<rbrakk>
-  \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
+   \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
   apply (clarsimp simp: valid_def)
   apply (case_tac a, fastforce+)
   done
 
-lemma combine_validE: "\<lbrakk> \<lbrace> P \<rbrace> x \<lbrace> Q \<rbrace>,\<lbrace> E \<rbrace>;
-         \<lbrace> P' \<rbrace> x \<lbrace> Q' \<rbrace>,\<lbrace> E' \<rbrace> \<rbrakk> \<Longrightarrow>
-         \<lbrace> P and P' \<rbrace> x \<lbrace> \<lambda>r. (Q r) and (Q' r) \<rbrace>,\<lbrace>\<lambda>r. (E r) and (E' r) \<rbrace>"
+lemma combine_validE:
+  "\<lbrakk> \<lbrace> P \<rbrace> x \<lbrace> Q \<rbrace>,\<lbrace> E \<rbrace>; \<lbrace> P' \<rbrace> x \<lbrace> Q' \<rbrace>,\<lbrace> E' \<rbrace> \<rbrakk>
+   \<Longrightarrow> \<lbrace> P and P' \<rbrace> x \<lbrace> \<lambda>r. (Q r) and (Q' r) \<rbrace>,\<lbrace>\<lambda>r. (E r) and (E' r) \<rbrace>"
   apply (clarsimp simp: validE_def valid_def split: sum.splits)
   apply (erule allE, erule (1) impE)+
   apply (drule (1) bspec)+
@@ -793,9 +749,9 @@ lemma hoare_name_pre_state2:
   by (auto simp: valid_def intro: hoare_name_pre_state)
 
 lemma returnOk_E': "\<lbrace>P\<rbrace> returnOk r -,\<lbrace>E\<rbrace>"
-  by (clarsimp simp: returnOk_def validE_E_def validE_def valid_def return_def)
+  by wpsimp
 
 lemma throwError_R': "\<lbrace>P\<rbrace> throwError e \<lbrace>Q\<rbrace>,-"
-  by (clarsimp simp:throwError_def validE_R_def validE_def valid_def return_def)
+  by wpsimp
 
 end
