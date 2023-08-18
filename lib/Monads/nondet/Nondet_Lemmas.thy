@@ -6,7 +6,7 @@
  *)
 
 theory Nondet_Lemmas
-imports Nondet_Monad
+  imports Nondet_Monad
 begin
 
 section \<open>General Lemmas Regarding the Nondeterministic State Monad\<close>
@@ -15,12 +15,12 @@ subsection \<open>Congruence Rules for the Function Package\<close>
 
 lemma bind_cong[fundef_cong]:
   "\<lbrakk> f = f'; \<And>v s s'. (v, s') \<in> fst (f' s) \<Longrightarrow> g v s' = g' v s' \<rbrakk> \<Longrightarrow> f >>= g = f' >>= g'"
-  by (auto simp: bind_def Let_def split_def intro: rev_image_eqI)
+  by (auto simp: bind_def split_def)
 
 lemma bind_apply_cong [fundef_cong]:
   "\<lbrakk> f s = f' s'; \<And>rv st. (rv, st) \<in> fst (f' s') \<Longrightarrow> g rv st = g' rv st \<rbrakk>
    \<Longrightarrow> (f >>= g) s = (f' >>= g') s'"
-  by (auto simp: bind_def split_def intro: SUP_cong [OF refl] intro: rev_image_eqI)
+  by (auto simp: bind_def split_def)
 
 lemma bindE_cong[fundef_cong]:
   "\<lbrakk> M = M' ; \<And>v s s'. (Inr v, s') \<in> fst (M' s) \<Longrightarrow> N v s' = N' v s' \<rbrakk> \<Longrightarrow> bindE M N = bindE M' N'"

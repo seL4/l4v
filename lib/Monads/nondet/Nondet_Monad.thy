@@ -110,16 +110,18 @@ definition alternative ::
   "('s, 'a) nondet_monad \<Rightarrow> ('s, 'a) nondet_monad \<Rightarrow> ('s, 'a) nondet_monad" (infixl "\<sqinter>" 20) where
   "f \<sqinter> g \<equiv> \<lambda>s. (fst (f s) \<union> fst (g s), snd (f s) \<or> snd (g s))"
 
-text \<open>A variant of @{text select} that takes a pair. The first component
-  is a set as in normal @{text select}, the second component indicates
-  whether the execution failed. This is useful to lift monads between
-  different state spaces.\<close>
+text \<open>
+  A variant of @{text select} that takes a pair. The first component is a set
+  as in normal @{text select}, the second component indicates whether the
+  execution failed. This is useful to lift monads between different state
+  spaces.\<close>
 definition select_f :: "'a set \<times> bool  \<Rightarrow> ('s,'a) nondet_monad" where
   "select_f S \<equiv> \<lambda>s. (fst S \<times> {s}, snd S)"
 
-text \<open>@{text select_state} takes a relationship between
-  states, and outputs nondeterministically a state
-  related to the input state.\<close>
+text \<open>
+  @{text state_select} takes a relationship between states, and outputs
+  nondeterministically a state related to the input state. Fails if no such
+  state exists.\<close>
 definition state_select :: "('s \<times> 's) set \<Rightarrow> ('s, unit) nondet_monad" where
   "state_select r \<equiv> \<lambda>s. ((\<lambda>x. ((), x)) ` {s'. (s, s') \<in> r}, \<not> (\<exists>s'. (s, s') \<in> r))"
 
@@ -183,7 +185,6 @@ text \<open>
   return @{text v} if it returns @{term "Some v"}.\<close>
 definition gets_the :: "('s \<Rightarrow> 'a option) \<Rightarrow> ('s, 'a) nondet_monad" where
   "gets_the f \<equiv> gets f >>= assert_opt"
-
 
 text \<open>
   Get a map (such as a heap) from the current state and apply an argument to the map.
@@ -499,6 +500,21 @@ primrec filterM :: "('a \<Rightarrow> ('s, bool) nondet_monad) \<Rightarrow> 'a 
      return (if b then (x # ys) else ys)
    od"
 
+text \<open>An alternative definition of @{term state_select}\<close>
+lemma state_select_def2:
+  "state_select r \<equiv> (do
+    s \<leftarrow> get;
+    S \<leftarrow> return {s'. (s, s') \<in> r};
+    assert (S \<noteq> {});
+    s' \<leftarrow> select S;
+    put s'
+  od)"
+  apply (clarsimp simp add: state_select_def get_def return_def assert_def fail_def select_def
+                            put_def bind_def fun_eq_iff
+                    intro!: eq_reflection)
+  apply fastforce
+  done
+
 
 section "Catching and Handling Exceptions"
 
@@ -609,16 +625,16 @@ section "Combinators that have conditions with side effects"
 definition notM :: "('s, bool) nondet_monad \<Rightarrow> ('s, bool) nondet_monad" where
   "notM m = do c \<leftarrow> m; return (\<not> c) od"
 
-definition
-  whileM :: "('s, bool) nondet_monad \<Rightarrow> ('s, 'a) nondet_monad \<Rightarrow> ('s, unit) nondet_monad" where
+definition whileM ::
+  "('s, bool) nondet_monad \<Rightarrow> ('s, 'a) nondet_monad \<Rightarrow> ('s, unit) nondet_monad" where
   "whileM C B \<equiv> do
     c \<leftarrow> C;
     whileLoop (\<lambda>c s. c) (\<lambda>_. do B; C od) c;
     return ()
   od"
 
-definition
-  ifM :: "('s, bool) nondet_monad \<Rightarrow> ('s, 'a) nondet_monad \<Rightarrow> ('s, 'a) nondet_monad \<Rightarrow>
+definition ifM ::
+  "('s, bool) nondet_monad \<Rightarrow> ('s, 'a) nondet_monad \<Rightarrow> ('s, 'a) nondet_monad \<Rightarrow>
           ('s, 'a) nondet_monad" where
   "ifM test t f = do
     c \<leftarrow> test;
@@ -633,16 +649,16 @@ definition ifME ::
     if c then t else f
    odE"
 
-definition
-  whenM :: "('s, bool) nondet_monad \<Rightarrow> ('s, unit) nondet_monad \<Rightarrow> ('s, unit) nondet_monad" where
+definition whenM ::
+  "('s, bool) nondet_monad \<Rightarrow> ('s, unit) nondet_monad \<Rightarrow> ('s, unit) nondet_monad" where
   "whenM t m = ifM t m (return ())"
 
-definition
-  orM :: "('s, bool) nondet_monad \<Rightarrow> ('s, bool) nondet_monad \<Rightarrow> ('s, bool) nondet_monad" where
+definition orM ::
+  "('s, bool) nondet_monad \<Rightarrow> ('s, bool) nondet_monad \<Rightarrow> ('s, bool) nondet_monad" where
   "orM a b = ifM a (return True) b"
 
-definition
-  andM :: "('s, bool) nondet_monad \<Rightarrow> ('s, bool) nondet_monad \<Rightarrow> ('s, bool) nondet_monad" where
+definition andM ::
+  "('s, bool) nondet_monad \<Rightarrow> ('s, bool) nondet_monad \<Rightarrow> ('s, bool) nondet_monad" where
   "andM a b = ifM a b (return False)"
 
 end

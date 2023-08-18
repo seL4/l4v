@@ -59,6 +59,10 @@ lemma bind_detI[simp, intro!]:
   apply clarsimp
   done
 
+lemma det_modify[iff]:
+  "det (modify f)"
+  by (simp add: modify_def)
+
 lemma the_run_stateI:
   "fst (M s) = {s'} \<Longrightarrow> the_run_state M s = s'"
   by (simp add: the_run_state_def)

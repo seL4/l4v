@@ -332,7 +332,7 @@ proof -
       apply (induct arbitrary: r s rule: whileLoop_results.inducts)
         apply simp
        apply simp
-       apply (insert snd_validNF [OF inv_holds])[1]
+       apply (insert validNF_not_failed[OF inv_holds])[1]
        apply blast
       apply (drule use_validNF [OF _ inv_holds])
        apply simp

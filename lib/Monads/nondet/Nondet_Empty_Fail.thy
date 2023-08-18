@@ -63,7 +63,7 @@ subsection \<open>Wellformed monads\<close>
 
 (*
   Collect generic empty_fail lemmas here:
-   - naming convention is emtpy_fail_NAME.
+   - naming convention is empty_fail_NAME.
    - add lemmas with assumptions to [empty_fail_cond] set
    - add lemmas without assumption to [empty_fail_term] set
 *)

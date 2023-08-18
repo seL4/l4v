@@ -11,7 +11,7 @@
  * You probably don't care about this.
  *)
 theory Nondet_While_Loop_Rules_Completeness
-imports Nondet_While_Loop_Rules
+  imports Nondet_While_Loop_Rules
 begin
 
 lemma whileLoop_rule_strong_complete:
