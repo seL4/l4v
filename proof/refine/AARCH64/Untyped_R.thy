@@ -4596,8 +4596,9 @@ lemma (in range_cover) funky_aligned:
   done
 
 defs canonicalAddressAssert_def:
-  "canonicalAddressAssert p \<equiv> True" (* FIXME AARCH64: might need this to be either canonical_user
-  or something in the kernel region -- both are liftable from AInvs via valid_vspace_uses, but
+  "canonicalAddressAssert p \<equiv> True" (* FIXME AARCH64: (for CRefine)
+  might need this to be either canonical_user or something in the kernel region --
+  both are liftable from AInvs via valid_vspace_uses, but
   valid_vspace_uses will first have to be added to the state relation *)
 
 context begin interpretation Arch . (*FIXME: arch_split*)
