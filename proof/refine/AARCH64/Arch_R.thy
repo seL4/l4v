@@ -361,7 +361,7 @@ definition vcpu_invocation_map :: "vcpu_invocation \<Rightarrow> vcpuinvocation"
    |  vcpu_invocation.VCPUWriteRegister obj vreg word \<Rightarrow> VCPUWriteRegister obj vreg word
    |  vcpu_invocation.VCPUAckVPPI obj irq \<Rightarrow> VCPUAckVPPI obj irq"
 
-(* FIXME AARCH64: review and probably move to VSpace_R where page_table_invocation_map is *)
+(* FIXME AARCH64: move to VSpace_R where page_table_invocation_map is *)
 definition
   "vspace_invocation_map vsi vsi' \<equiv>
     case vsi of
@@ -369,7 +369,7 @@ definition
     | AARCH64_A.VSpaceFlush ty start end pstart space asid \<Rightarrow>
         vsi' = VSpaceFlush ty start end pstart space (ucast asid)"
 
-(* FIXME AARCH64: review and probably move to VSpace_R where valid_psi is *)
+(* FIXME AARCH64: move to VSpace_R where valid_psi is *)
 definition
   "valid_vsi' vsi \<equiv>
    case vsi of
@@ -724,7 +724,7 @@ lemma below_pptrTop_ipa_size: (* FIXME AARCH64: move *)
   by simp
 
 (* FIXME AARCH64: move? *)
-lemma pptrTop_ucast_ppn: (* FIXME AARCH64: check vs addrFromPPtr_mask_ipa *)
+lemma pptrTop_ucast_ppn:
   "\<lbrakk> p < AARCH64.pptrTop; is_aligned p pageBits \<rbrakk> \<Longrightarrow>
    ucast (ucast (p >> pageBits)::ppn) = p >> pageBits"
   apply (drule below_pptrTop_ipa_size)
@@ -1616,15 +1616,6 @@ lemma decode_page_inv_wf[wp]:
   apply (drule ctes_of_valid', fastforce)+
   apply clarsimp
   done
-(*
-  apply ((rule conjI; clarsimp)+;
-           (clarsimp simp: cte_wp_at_ctes_of,
-            (drule_tac t="cteCap _" in sym)+,
-            (drule ctes_of_valid', fastforce)+,
-            clarsimp simp: valid_cap'_def ptBits_def pageBits_def
-                           is_arch_update'_def isCap_simps capAligned_def wellformed_mapdata'_def
-                           vmsz_aligned_user_region not_le)) *)
-  (* FIXME AARCH64: too much hoare_drop_imp, missing "vmsz_aligned xa vmpage_size". Add assertion? *)
 
 lemma below_pptrUserTop_in_user_region:
   "p \<le> pptrUserTop \<Longrightarrow> p \<in> user_region"

@@ -1671,19 +1671,6 @@ lemma hv_invs'[wp]: "\<lbrace>invs' and tcb_at' t'\<rbrace> handleVMFault t' vpt
 
 crunch nosch[wp]: handleVMFault "\<lambda>s. P (ksSchedulerAction s)"
 
-(* FIXME AARCH64: not true as long as addressTranslateS1 can have side effects. This lemma doesn't
-                  exist in ARM_HYP, so there is a chance we can get by without it.
-lemma hv_inv_ex':
-  "\<lbrace>P\<rbrace> handleVMFault t vp \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (simp add: AARCH64_H.handleVMFault_def
-             cong: vmfault_type.case_cong)
-  apply (rule hoare_pre)
-   apply (wp dmo_inv' getRestartPC_inv
-             det_getRestartPC asUser_inv
-          | wpcw)+
-  apply simp
-  done *)
-
 lemma active_from_running':
   "ct_running' s' \<Longrightarrow> ct_active' s'"
   by (clarsimp elim!: pred_tcb'_weakenE
@@ -2105,22 +2092,6 @@ crunches handleVMFault
 crunches handleVMFault, handleHypervisorFault
   for ksit[wp]: "\<lambda>s. P (ksIdleThread s)"
   (wp: crunch_wps getSlotCap_wp simp: getThreadReplySlot_def getThreadCallerSlot_def locateSlotTCB_def locateSlotBasic_def)
-
-(* FIXME AARCH64: need to get through without these
-lemma hv_inv':
-  "\<lbrace>P\<rbrace> handleVMFault p t \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (simp add: AARCH64_H.handleVMFault_def)
-  apply (rule hoare_pre)
-   apply (wp dmo_inv' getRestartPC_inv
-             det_getRestartPC asUser_inv
-          |wpc|simp)+
-  done
-
-lemma hh_inv':
-  "\<lbrace>P\<rbrace> handleHypervisorFault p t \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (simp add: AARCH64_H.handleHypervisorFault_def)
-  apply (cases t; clarsimp)
-  done *)
 
 lemma hh_invs'[wp]:
   "\<lbrace>invs' and sch_act_not p and (\<lambda>s. \<forall>a b. p \<notin> set (ksReadyQueues s (a, b))) and

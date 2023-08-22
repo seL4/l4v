@@ -21,11 +21,6 @@ lemma invs_valid_ioc[elim!]: "invs s \<Longrightarrow> valid_ioc s"
 
 context begin interpretation Arch .
 
-(* Move to Arch_Structs_A *)
-(* FIXME AARCH64: is there an equivalent of this?
-definition ppn_len :: nat where
-  "ppn_len \<equiv> LENGTH(pte_ppn_len)" *)
-
 lemma get_pt_mapM_x_lower:
   assumes g: "\<And>P pt x. \<lbrace> \<lambda>s. P (kheap s pt_ptr) \<rbrace> g pt x \<lbrace> \<lambda>_ s. P (kheap s pt_ptr) \<rbrace>"
   assumes y: "ys \<noteq> []"

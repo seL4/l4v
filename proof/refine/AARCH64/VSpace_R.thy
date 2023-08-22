@@ -743,7 +743,6 @@ lemma aligned_distinct_relation_vcpu_atI'[elim]:
   apply (fastforce simp add: pspace_aligned'_def pspace_distinct'_def dom_def)
   done
 
-(* FIXME AARCH64 these preconditions are causing difficulty in Arch_R, review *)
 lemma vcpuSwitch_corres':
   assumes "vcpu' = vcpu"
   shows
@@ -1562,7 +1561,8 @@ lemma updateASIDPoolEntry_valid_arch_state'[wp]:
 crunches armContextSwitch, setGlobalUserVSpace
   for valid_arch_state'[wp]: valid_arch_state'
 
-(* FIXME AARCH64 not clear if this goes in the hyp block *)
+(* FIXME AARCH64 consolidated VCPU block ends here *)
+
 lemma setVMRoot_valid_arch_state'[wp]:
   "\<lbrace>valid_arch_state' and live_vcpu_at_tcb p\<rbrace>
      setVMRoot p
@@ -1573,8 +1573,6 @@ lemma setVMRoot_valid_arch_state'[wp]:
                simp: if_apply_def2
           | wp hoare_vcg_all_lift)+)
   done
-
-(* FIXME AARCH64 consolidated VCPU block ends here *)
 
 crunches setVMRoot
   for ksQ[wp]: "\<lambda>s. P (ksReadyQueues s)"
@@ -2466,7 +2464,7 @@ lemma pt_bits_le_word_len[simplified, simp, intro!]:
   "pt_bits pt_t < LENGTH(machine_word_len)"
   by (simp add: bit_simps)
 
-lemma clear_page_table_corres: (* FIXME AARCH64 review *)
+lemma clear_page_table_corres:
   "corres dc (pspace_aligned and pspace_distinct and pt_at pt_t p)
              \<top>
     (mapM_x (swp (store_pte pt_t) AARCH64_A.InvalidPTE) [p , p + 2^pte_bits .e. p + mask (pt_bits pt_t)])
@@ -2568,7 +2566,6 @@ definition
     case ap of Assign asid p slot \<Rightarrow>
       cte_wp_at' (isArchCap isPageTableCap o cteCap) slot and K (0 < asid \<and> asid_wf asid)"
 
-(* FIXME AARCH64: given we want to cross over vcpu_at', this needs consideration for removal *)
 definition
   "valid_vcpuinv' vi \<equiv> case vi of
     VCPUSetTCB v t \<Rightarrow> vcpu_at' v and ex_nonz_cap_to' v and ex_nonz_cap_to' t

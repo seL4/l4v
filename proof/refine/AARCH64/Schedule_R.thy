@@ -1092,8 +1092,6 @@ lemma asUser_utr[wp]:
   apply (simp add: o_def)
   done
 
-(* FIXME AARCH64 ARM_HYP does not have this, adapted arch tcb parts, but might not be useful now
-   since it involves s, review  *)
 lemma threadSet_invs_no_cicd'_trivialT:
   assumes x: "\<forall>tcb. \<forall>(getF,setF) \<in> ran tcb_cte_cases. getF (F tcb) = getF tcb"
   assumes z: "\<forall>tcb. tcbState (F tcb) = tcbState tcb \<and> tcbDomain (F tcb) = tcbDomain tcb"

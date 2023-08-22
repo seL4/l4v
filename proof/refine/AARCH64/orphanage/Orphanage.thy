@@ -1684,7 +1684,6 @@ lemma sendSignal_no_orphans [wp]:
           | wpc | clarsimp simp: sch_act_wf_weak)+
   done
 
-(* FIXME AARCH64 these are guesses for vgicMaintenance_no_orphans *)
 crunches vgicUpdateLR
   for no_orphans[wp]: "no_orphans"
   (wp: no_orphans_lift crunch_wps)

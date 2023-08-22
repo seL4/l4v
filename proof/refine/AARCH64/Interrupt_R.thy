@@ -743,7 +743,7 @@ lemma virqSetEOIIRQEN_eq[simp]:
   unfolding virqSetEOIIRQEN_def AARCH64_A.virqSetEOIIRQEN_def
   by auto
 
-lemma not_pred_tcb': (* FIXME AARCH64: try to avoid *)
+lemma not_pred_tcb':
   "(\<not>pred_tcb_at' proj P t s) = (\<not>tcb_at' t s \<or> pred_tcb_at' proj (\<lambda>a. \<not>P a) t s)"
   by (auto simp: pred_tcb_at'_def obj_at'_def)
 

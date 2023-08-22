@@ -560,8 +560,6 @@ next
        (wpsimp wp: Suc getPTE_wp simp: pteAtIndex_def)
 qed
 
-(* FIXME AARCH64: this simplification might be in the wrong direction, as we end up with proofs
-                  involving size level = maxPTLevel which needs this rule flipped to proceed *)
 lemma size_maxPTLevel[simp]:
   "size max_pt_level = maxPTLevel"
   by (simp add: maxPTLevel_def level_defs)
@@ -756,10 +754,6 @@ lemma lookupPTSlot_corres:
   unfolding lookupPTSlot_def pt_lookup_slot_def
   by (corresKsimp corres: lookupPTSlotFromLevel_corres)
 
-(* FIXME AARCH64: pt_lookup_from_level also returns a level on AARCH64, but lookupPTFromLevel doesn't
-                  there is no point fixing this lemma until we see what's needed in
-                  unmapPageTable_corres in VSpace_R, which can't use this in the same way as before
-                  (corres_split_eqrE won't apply) *)
 lemma lookupPTFromLevel_corres:
   "\<lbrakk> level' = size level; pt' = pt \<rbrakk> \<Longrightarrow>
    corres (lfr \<oplus> ((=) \<circ> fst))
@@ -997,19 +991,6 @@ lemma asid_le_mask_asidBits[simp]:
 lemma asid_case_zero[simp]:
   "0 < asid \<Longrightarrow> 0 < UCAST(asid_len \<rightarrow> machine_word_len) asid"
   by word_bitwise
-
-(* FIXME AARCH64: this was very specific and used only once directly below *)
-lemma gets_opt_bind_throw_opt:
-  "(gets (do { x \<leftarrow> f; g x }) >>= throw_opt E) =
-   (do x_opt \<leftarrow> gets f;
-       doE x \<leftarrow> throw_opt E x_opt;
-           gets (g x) >>= throw_opt E
-       odE
-    od)"
-  apply (rule ext)
-  apply (simp add: bind_def simpler_gets_def throw_opt_def)
-  apply (simp add: obind_def split: option.splits)
-  done
 
 lemma find_vspace_for_asid_rewite:
   "find_vspace_for_asid asid =

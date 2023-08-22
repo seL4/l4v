@@ -377,13 +377,11 @@ lemma akernel_invariant:
         | drule use_valid[OF _ check_active_irq_invs])+)[1]
   done
 
-(* FIXME AARCH64 originally in PageTableDuplicates *)
 lemma dmo_getActiveIRQ_notin_non_kernel_IRQs[wp]:
   "\<lbrace>\<top>\<rbrace> doMachineOp (getActiveIRQ True) \<lbrace>\<lambda>irq _. irq \<notin> Some ` non_kernel_IRQs\<rbrace>"
   unfolding doMachineOp_def
   by (wpsimp simp: getActiveIRQ_def in_monad split: if_split_asm)
 
-(* FIXME AARCH64 originally in PageTableDuplicates *)
 lemma non_kernel_IRQs_strg:
   "invs' s \<and> irq \<notin> Some ` non_kernel_IRQs \<and> Q \<Longrightarrow>
     (\<exists>y. irq = Some y) \<longrightarrow> invs' s \<and> (the irq \<in> non_kernel_IRQs \<longrightarrow> P) \<and> Q"

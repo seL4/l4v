@@ -200,7 +200,6 @@ where
 primrec pte_relation' :: "AARCH64_A.pte \<Rightarrow> AARCH64_H.pte \<Rightarrow> bool" where
   "pte_relation' AARCH64_A.InvalidPTE x =
      (x = AARCH64_H.InvalidPTE)"
-(* FIXME AARCH64: change Haskell to ppn-style, but use a 36 bit word like in C: *)
 | "pte_relation' (AARCH64_A.PageTablePTE ppn) x =
      (x = AARCH64_H.PageTablePTE (ucast ppn))"
 | "pte_relation' (AARCH64_A.PagePTE page_addr is_small attrs rights) x =

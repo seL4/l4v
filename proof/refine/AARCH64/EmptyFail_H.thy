@@ -87,7 +87,6 @@ lemma empty_fail_getObject_ep [intro!, wp, simp]:
   "empty_fail (getObject p :: endpoint kernel)"
   by (simp add: empty_fail_getObject)
 
-(* FIXME AARCH64 used to be in EmptyFail.thy *)
 lemma empty_fail_getObject_tcb [intro!, wp, simp]:
   shows "empty_fail (getObject x :: tcb kernel)"
   by (auto intro: empty_fail_getObject)

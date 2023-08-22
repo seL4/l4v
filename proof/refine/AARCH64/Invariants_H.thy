@@ -190,7 +190,7 @@ definition state_refs_of' :: "kernel_state \<Rightarrow> obj_ref \<Rightarrow> (
      | Some ko \<Rightarrow> if is_aligned x (objBitsKO ko) \<and> ps_clear x (objBitsKO ko) s
                   then refs_of' ko else {}"
 
-(* FIXME AARCH64: consider the way live' and live0' are phrased, it's not obvious *)
+(* the non-hyp, non-arch part of live' *)
 primrec live0' :: "Structures_H.kernel_object \<Rightarrow> bool" where
   "live0' (KOTCB tcb) =
      (bound (tcbBoundNotification tcb) \<or>
@@ -375,13 +375,6 @@ definition page_table_at' :: "pt_type \<Rightarrow> obj_ref \<Rightarrow> kernel
     is_aligned p (ptBits pt_t) \<and>
     (\<forall>i \<le> mask (ptTranslationBits pt_t). pte_at' (p + (i << pte_bits)) s)"
 
-(* FIXME AARCH64: may come in handy; remove if not *)
-abbreviation
-  "vs_root_at' \<equiv> page_table_at' VSRootPT_T"
-
-lemmas vs_root_at'_def = page_table_at'_def
-
-(* FIXME AARCH64: is this used? *)
 lemmas vspace_table_at'_defs = page_table_at'_def
 
 abbreviation asid_pool_at' :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
@@ -410,7 +403,6 @@ definition frame_at' :: "obj_ref \<Rightarrow> vmpage_size \<Rightarrow> bool \<
      \<forall>p < 2 ^ (pageBitsForSize sz - pageBits).
        typ_at' (if dev then UserDataDeviceT else UserDataT) (r + (p << pageBits)) s"
 
-(* FIXME AARCH64: could we set these all to true and lift from abstract instead? *)
 definition valid_arch_cap_ref' :: "arch_capability \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "valid_arch_cap_ref' ac s \<equiv> case ac of
      ASIDPoolCap r as \<Rightarrow> typ_at' (ArchT ASIDPoolT) r s
@@ -461,7 +453,7 @@ where valid_cap'_def:
                     \<and> (\<forall>addr. real_cte_at' (r + 2^cteSizeBits * (addr && mask n)) s))
   | ArchObjectCap ac \<Rightarrow> valid_arch_cap' ac s)"
 
-(* FIXME AARCH64: should this be syntax instead? *)
+(* Use abbreviation, not syntax, so that it can be input-only *)
 abbreviation (input) valid_cap'_syn ::
   "kernel_state \<Rightarrow> capability \<Rightarrow> bool" ("_ \<turnstile>'' _" [60, 60] 61) where
   "s \<turnstile>' c \<equiv> valid_cap' c s"
@@ -986,23 +978,13 @@ definition valid_asid_table' :: "(asid \<rightharpoonup> machine_word) \<Rightar
 
 definition "is_vcpu' \<equiv> \<lambda>ko. \<exists>vcpu. ko = (KOArch (KOVCPU vcpu))"
 
-(* FIXME AARCH64: move below somewhere? *)
-lemma vcpu_at_is_vcpu': "\<And>v. vcpu_at' v = ko_wp_at' is_vcpu' v"
-  apply (rule all_ext)
-  apply (clarsimp simp: typ_at'_def is_vcpu'_def ko_wp_at'_def)
-  apply (rule; clarsimp?)
-  apply (case_tac ko; simp; rename_tac ako; case_tac ako; simp)
-  done
-
 definition max_armKSGICVCPUNumListRegs :: nat where
   "max_armKSGICVCPUNumListRegs \<equiv> 63"
 
-(* Liftable from AInvs: valid_global_arch_objs *)
-(* FIXME AARCH64: vmid_inv might be liftable point-wise via assertion. If not, may have to add here. *)
 definition valid_arch_state' :: "kernel_state \<Rightarrow> bool" where
   "valid_arch_state' \<equiv> \<lambda>s.
    valid_asid_table' (armKSASIDTable (ksArchState s)) \<and>
-   (case (armHSCurVCPU (ksArchState s)) of
+   (case armHSCurVCPU (ksArchState s) of
       Some (v, b) \<Rightarrow> ko_wp_at' (is_vcpu' and hyp_live') v s
       | _ \<Rightarrow> True) \<and>
    armKSGICVCPUNumListRegs (ksArchState s) \<le> max_armKSGICVCPUNumListRegs"
@@ -1322,6 +1304,13 @@ lemma obj_atI' [intro?]:
   \<Longrightarrow> obj_at' P ptr s"
   unfolding obj_at'_def by (auto)
 
+lemma vcpu_at_is_vcpu':
+  "vcpu_at' v = ko_wp_at' is_vcpu' v"
+  apply (rule ext)
+  apply (clarsimp simp: typ_at'_def is_vcpu'_def ko_wp_at'_def)
+  apply (rule iffI; clarsimp?)
+  apply (case_tac ko; simp; rename_tac ako; case_tac ako; simp)
+  done
 
 lemma cte_at'_def:
   "cte_at' p s \<equiv> \<exists>cte::cte. fst (getObject p s) = {(cte,s)}"

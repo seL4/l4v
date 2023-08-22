@@ -1479,19 +1479,6 @@ lemma archThreadSet_VCPU_None_corres[corres]:
 lemmas corresK_as_user' =
   asUser_corres'[atomized, THEN corresK_lift_rule, THEN mp]
 
-(* FIXME AARCH64 CPSR isn't right here, review
-lemma asUser_sanitiseRegister_corres[corres]:
-  "b=b' \<Longrightarrow> t = t' \<Longrightarrow> corres dc (tcb_at t) (tcb_at' t')
-            (as_user t (do cpsr \<leftarrow> getRegister CPSR;
-                           setRegister CPSR (sanitise_register b CPSR cpsr)
-                        od))
-            (asUser t' (do cpsr \<leftarrow> getRegister CPSR;
-                          setRegister CPSR (sanitiseRegister b' CPSR cpsr)
-                       od))"
-  unfolding sanitiseRegister_def sanitise_register_def
-  apply (corresKsimp corresK: corresK_as_user')
-  done *)
-
 crunch typ_at'[wp]: vcpuInvalidateActive "\<lambda>s. P (typ_at' T p s)"
 
 lemma getVCPU_wp:
@@ -2859,7 +2846,6 @@ lemma archThreadGet_wp:
   unfolding archThreadGet_def
   by (wpsimp wp: getObject_tcb_wp simp: obj_at'_def)
 
-(* FIXME AARCH64 why was this different on RISCV64? it did not match the other unqueued lemmas *)
 crunch unqueued: prepareThreadDelete "obj_at' (Not \<circ> tcbQueued) t"
   (simp: o_def wp: dissociateVCPUTCB_unqueued[simplified o_def] archThreadGet_wp)
 crunch inactive: prepareThreadDelete "st_tcb_at' ((=) Inactive) t'"

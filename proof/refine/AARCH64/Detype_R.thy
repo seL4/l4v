@@ -816,7 +816,6 @@ lemma cte_wp_at'[simp]:
   by (fastforce simp:cte_wp_at_delete'[where idx = idx,OF valid_untyped pd ])
 
 (* the bits of caps they need for validity argument are within their capRanges *)
-(* FIXME AARCH64 pt_index is wrong here, switch to word etc. *)
 lemma valid_cap_ctes_pre:
     "\<And>c. s \<turnstile>' c \<Longrightarrow> case c of CNodeCap ref bits g gs \<Rightarrow>
                       \<forall>x. ref + (x && mask bits) * 2^cteSizeBits \<in> capRange c
