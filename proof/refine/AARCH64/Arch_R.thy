@@ -443,49 +443,29 @@ lemma asidHighBits [simp]:
 
 declare word_unat_power [symmetric, simp del]
 
-lemma decodeVCPUInjectIRQ_inv[wp]: "\<lbrace>P\<rbrace> decodeVCPUInjectIRQ a b \<lbrace>\<lambda>_. P\<rbrace>"
-  by (wpsimp simp: decodeVCPUInjectIRQ_def Let_def wp: whenE_wp getVCPU_wp | rule conjI)+
-
 lemma ARMMMU_improve_cases:
   "(if isFrameCap cap then Q
-    else if isPageTableCap cap then R
-    else if isASIDControlCap cap then S
-    else if isASIDPoolCap cap then T
-    else if isVCPUCap cap then U
+    else if isPageTableCap cap \<and> capPTType cap = NormalPT_T then R
+    else if isPageTableCap cap \<and> capPTType cap = VSRootPT_T then S
+    else if isASIDControlCap cap then T
+    else if isASIDPoolCap cap then U
+    else if isVCPUCap cap then V
     else undefined)
     =
    (if isFrameCap cap then Q
-    else if isPageTableCap cap then R
-    else if isASIDControlCap cap then S
-    else if isASIDPoolCap cap then T
-    else U)"
-  by (cases cap, simp_all add: isCap_simps) (* not sure if this is useful as is *)
-
-
-crunches (* FIXME AARCH64 workaround for decodeARMMMUInvocation not crunching right due to a lack
-            of case exhaustion lemma for the if statements *)
-  decodeARMASIDControlInvocation, decodeARMASIDPoolInvocation, decodeARMFrameInvocation,
-  decodeARMVSpaceInvocation, decodeARMPageTableInvocation
-  for inv[wp]: P
-  (wp: crunch_wps mapME_x_inv_wp getASID_wp hoare_vcg_imp_lift'
-   simp: crunch_simps)
-
-lemma decodeARMMMUInvocation_inv[wp]:
-  "decodeARMMMUInvocation a b c d e f \<lbrace>P\<rbrace>"
-  unfolding decodeARMMMUInvocation_def
-  supply if_split[split del]
-  apply (cases e; clarsimp simp: Let_def isCap_defs cong: if_cong)
-     apply wpsimp+
-   apply (rename_tac pt_t m)
-   apply (case_tac pt_t; simp)
-  apply auto
+    else if isPageTableCap cap \<and> capPTType cap = NormalPT_T then R
+    else if isPageTableCap cap \<and> capPTType cap = VSRootPT_T then S
+    else if isASIDControlCap cap then T
+    else if isASIDPoolCap cap then U
+    else V)"
+  apply (cases cap; simp add: isCap_simps)
+  apply (rename_tac pt_t m)
+  apply (case_tac pt_t; simp)
   done
 
-(* FIXME AARCH64 using decodeARMMMUInvocation crunch workaround above, would be nice to collapse
-   these crunches *)
 crunch inv[wp]: "AARCH64_H.decodeInvocation" "P"
   (wp: crunch_wps mapME_x_inv_wp getASID_wp hoare_vcg_imp_lift'
-   simp: crunch_simps)
+   simp: crunch_simps ARMMMU_improve_cases)
 
 lemma case_option_corresE:
   assumes nonec: "corres r Pn Qn (nc >>=E f) (nc' >>=E g)"
