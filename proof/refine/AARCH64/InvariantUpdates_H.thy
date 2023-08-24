@@ -74,6 +74,11 @@ lemma pspace_no_overlap'_ksSchedulerAction[simp]:
    pspace_no_overlap' a b s"
   by (simp add: pspace_no_overlap'_def)
 
+lemma pspace_no_overlap'_ksArchState_update[simp]:
+  "pspace_no_overlap' p n (ksArchState_update f s) =
+   pspace_no_overlap' p n s"
+  by (simp add: pspace_no_overlap'_def)
+
 lemma ksReadyQueues_update_id[simp]:
   "ksReadyQueues_update id s = s"
   by simp

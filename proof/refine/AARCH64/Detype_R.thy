@@ -1697,12 +1697,6 @@ lemma valid_untyped_no_overlap:
    apply (fastforce simp: mask_def add_diff_eq)+
   done
 
-(* FIXME AARCH64: move to InvariantUpdates_H *)
-lemma pspace_no_overlap'_ksArchState_update[simp]:
-  "pspace_no_overlap' p n (ksArchState_update f s) =
-   pspace_no_overlap' p n s"
-  by (simp add: pspace_no_overlap'_def)
-
 lemma deleteObject_no_overlap[wp]:
   "\<lbrace>valid_cap' (UntypedCap d ptr bits idx) and valid_pspace'\<rbrace>
      deleteObjects ptr bits

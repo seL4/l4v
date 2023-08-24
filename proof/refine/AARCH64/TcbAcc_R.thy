@@ -1356,6 +1356,10 @@ lemma threadSet_valid_objs':
   apply (clarsimp elim!: obj_at'_weakenE)
   done
 
+lemma atcbVCPUPtr_atcbContextSet_id[simp]:
+  "atcbVCPUPtr (atcbContextSet f (tcbArch tcb)) = atcbVCPUPtr (tcbArch tcb)"
+  by (simp add: atcbContextSet_def)
+
 lemma asUser_corres':
   assumes y: "corres_underlying Id False True r \<top> \<top> f g"
   shows      "corres r (tcb_at t and pspace_aligned and pspace_distinct) \<top>
@@ -1462,11 +1466,6 @@ lemma asUser_typ_at' [wp]:
   by (simp add: asUser_def bind_assoc split_def, wp select_f_inv)
 
 lemmas asUser_typ_ats[wp] = typ_at_lifts [OF asUser_typ_at']
-
-(* FIXME AARCH64: move *)
-lemma atcbVCPUPtr_atcbContextSet_id[simp]:
-  "atcbVCPUPtr (atcbContextSet f (tcbArch tcb)) = atcbVCPUPtr (tcbArch tcb)"
-  by (simp add: atcbContextSet_def)
 
 lemma asUser_invs[wp]:
   "\<lbrace>invs' and tcb_at' t\<rbrace> asUser t m \<lbrace>\<lambda>rv. invs'\<rbrace>"
