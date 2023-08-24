@@ -2522,6 +2522,10 @@ lemma if_option_None_eq:
   "((if P then Some x else None) = None) = (\<not>P)"
   by simp+
 
+lemma option_case_all_conv:
+  "(case x of None \<Rightarrow> True | Some v \<Rightarrow> P v) = (\<forall>v. x = Some v \<longrightarrow> P v)"
+  by (auto split: option.split)
+
 lemma lhs_sym_eq:
   "(a = b) = x \<longleftrightarrow> (b = a) = x"
   by auto

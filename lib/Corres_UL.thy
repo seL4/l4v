@@ -494,6 +494,8 @@ lemma corres_liftE_rel_sum[simp]:
   corres_underlying sr nf nf' r P P' m m'"
   by (simp add: liftE_liftM o_def)
 
+lemmas corres_liftE_lift = corres_liftE_rel_sum[THEN iffD2]
+
 text \<open>Support for proving correspondence to noop with hoare triples\<close>
 
 lemma corres_noop:
@@ -855,6 +857,24 @@ lemma corres_assert_opt_assume:
   by (auto simp: bind_def assert_opt_def assert_def fail_def return_def
                  corres_underlying_def split: option.splits)
 
+lemma corres_assert_opt[corres]:
+  "r x x' \<Longrightarrow>
+  corres_underlying sr nf nf' (\<lambda>x x'. r (Some x) x') (\<lambda>s. x \<noteq> None) \<top> (assert_opt x) (return x')"
+  unfolding corres_underlying_def
+  by (clarsimp simp: assert_opt_def return_def split: option.splits)
+
+lemma assert_opt_assert_corres[corres]:
+  "(x = None) = (x' = None) \<Longrightarrow>
+   corres_underlying sr nf nf' (\<lambda>y _. x = Some y) (K (x \<noteq> None)) \<top>
+                     (assert_opt x) (assert (\<exists>y. x' = Some y))"
+  by (simp add: corres_underlying_def assert_opt_def return_def split: option.splits)
+
+lemma corres_assert_opt_l:
+  assumes "\<And>x. P' = Some x \<Longrightarrow> corres_underlying sr nf nf' r (P x) Q (f x) g"
+  shows "corres_underlying sr nf nf' r (\<lambda>s. \<exists>x. P' = Some x \<and> P x s) Q (assert_opt P' >>= f) g"
+  using assms
+  by (auto simp: bind_def assert_opt_def assert_def fail_def return_def corres_underlying_def
+           split: option.splits)
 
 text \<open>Support for proving correspondance by decomposing the state relation\<close>
 

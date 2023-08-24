@@ -93,6 +93,8 @@ lemma corres_mapM_x:
            apply (simp | wp)+
   done
 
+lemmas corres_mapM_x' = corres_mapM_x[OF _ _ _ _ order_refl]
+
 (* FIXME: see comment for mapM rule. Same applies for lemma strength *)
 lemma corres_mapME:
   assumes x: "r [] []"
