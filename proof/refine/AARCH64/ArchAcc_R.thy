@@ -599,10 +599,6 @@ lemma user_region_or:
   "\<lbrakk> vref \<in> user_region; vref' \<in> user_region \<rbrakk> \<Longrightarrow> vref || vref' \<in> user_region"
   by (simp add: user_region_def canonical_user_def le_mask_high_bits word_size)
 
-lemma gets_the_oapply2_comp: (* FIXME AARCH64: move to OptionMonad *)
-  "gets_the (oapply2 y x \<circ> f) = gets_map (swp f y) x"
-  by (clarsimp simp: gets_map_def gets_the_def o_def gets_def)
-
 lemma lookupPTSlotFromLevel_corres:
   "\<lbrakk> level' = size level; pt' = pt; level \<le> max_pt_level \<rbrakk> \<Longrightarrow>
    corres (\<lambda>(level, p) (bits, p'). bits = pt_bits_left level \<and> p' = p)
@@ -1010,24 +1006,6 @@ lemma find_vspace_for_asid_rewite:
   apply (simp add: liftE_def simpler_gets_def bindE_def bind_def return_def throw_opt_def
                    throwError_def)
   done
-
-(* FIXME AARCH64: move *)
-lemma gets_obind_bind_eq:
-  "(gets (f |>> (\<lambda>x. g x))) =
-   (gets f >>= (\<lambda>x. case x of None \<Rightarrow> return None | Some y \<Rightarrow> gets (g y)))"
-  by (auto simp: simpler_gets_def bind_def obind_def return_def split: option.splits)
-
-(* FIXME AARCH64: move *)
-lemma gets_oapply_liftM_rewrite:
-  "monadic_rewrite False True (\<lambda>s. f s p \<noteq> None)
-                   (gets (oapply p \<circ> f)) (liftM Some (gets_map f p))"
-  unfolding monadic_rewrite_def
-  by (simp add: liftM_def simpler_gets_def bind_def gets_map_def assert_opt_def return_def
-           split: option.splits)
-
-lemma gets_return_gets_eq:
-  "gets f >>= (\<lambda>g. return (h g)) = gets (\<lambda>s. h (f s))"
-  by (simp add: simpler_gets_def bind_def return_def)
 
 lemma getPoolPtr_corres:
   "corres (=) (K (0 < asid)) \<top> (gets (pool_for_asid asid)) (getPoolPtr (ucast asid))"
