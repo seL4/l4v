@@ -49,12 +49,6 @@ lemma asidBits_asid_bits[simp]:
   "asidBits = asid_bits"
   by (simp add: bit_simps' asid_bits_def asidBits_def)
 
-(* FIXME AARCH64: move to lib somewhere, on ARM_HYP this is in Ipc_R and features withoutFailure *)
-lemma corres_liftE_lift:
-  "corres r1 P P' m m' \<Longrightarrow>
-  corres (f1 \<oplus> r1) P P' (liftE m) (liftE m')"
-  by simp
-
 (* FIXME AARCH64: where is this added? it should have this name and not crunch_param_rules(8) *)
 lemma liftE_return_bindE:
   "liftE (return x) >>=E f = f x"
@@ -841,11 +835,6 @@ lemma setVCPU_regs_vgic_vcpu_live:
   apply (clarsimp simp: pred_conj_def is_vcpu'_def ko_wp_at'_def obj_at'_real_def)
   done
 
-(* FIXME AARCH64 move found at top of VSpace_R in ARM_HYP *)
-lemma option_case_all_conv:
-  "(case x of None \<Rightarrow> True | Some v \<Rightarrow> P v) = (\<forall>v. x = Some v \<longrightarrow> P v)"
-  by (auto split: option.split)
-
 (* FIXME: move *)
 lemma setVCPU_regs_vgic_valid_arch':
   "\<lbrace>valid_arch_state' and ko_at' vcpu v\<rbrace> setObject v (vcpuRegs_update f (vcpuVGIC_update f' vcpu)) \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
@@ -1492,19 +1481,6 @@ crunches findFreeVMID, loadVMID
   for no_0_obj'[wp]: no_0_obj'
   (wp: crunch_wps getObject_inv simp: o_def loadObject_default_def)
 
-lemma corres_assert_opt[corres]: (* FIXME AARCH64: move to lib/Corres_UL *)
-  "r x x' \<Longrightarrow>
-  corres_underlying sr nf nf' (\<lambda>x x'. r (Some x) x') (\<lambda>s. x \<noteq> None) \<top> (assert_opt x) (return x')"
-  unfolding corres_underlying_def
-  by (clarsimp simp: assert_opt_def return_def split: option.splits)
-
-(* FIXME AARCH64: move *)
-lemma assert_opt_assert_corres[corres]:
-  "(x = None) = (x' = None) \<Longrightarrow>
-   corres_underlying sr nf nf' (\<lambda>y _. x = Some y) (K (x \<noteq> None)) \<top>
-                     (assert_opt x) (assert (\<exists>y. x' = Some y))"
-  by (simp add: corres_underlying_def assert_opt_def return_def split: option.splits)
-
 lemma mask_is_asid_low_bits_of[simp]:
   "(ucast asid :: machine_word) && mask asid_low_bits = ucast (asid_low_bits_of asid)"
   by (word_eqI_solve simp: asid_low_bits_of_def asid_low_bits_def)
@@ -1891,8 +1867,6 @@ lemma is_aligned_asid_low_bits_of_zero:
   apply (intro iffI allI; drule_tac x=n in spec; fastforce)
   done
 
-lemmas corres_mapM_x' = corres_mapM_x[OF _ _ _ _ order_refl] (* FIXME AARCH64: move *)
-
 lemma asid_high_bits_of_0[simp]:
   "asid_high_bits_of 0 = 0"
   by (simp add: asid_high_bits_of_def)
@@ -2212,13 +2186,6 @@ lemma set_mrs_invs'[wp]:
 crunches unmapPage
   for cte_at'[wp]: "cte_at' p"
   (wp: crunch_wps simp: crunch_simps)
-
-lemma corres_assert_opt_l:
-  assumes "\<And>x. P' = Some x \<Longrightarrow> corres_underlying sr nf nf' r (P x) Q (f x) g"
-  shows "corres_underlying sr nf nf' r (\<lambda>s. \<exists>x. P' = Some x \<and> P x s) Q (assert_opt P' >>= f) g"
-  using assms
-  by (auto simp: bind_def assert_opt_def assert_def fail_def return_def corres_underlying_def
-           split: option.splits)
 
 lemma vs_lookup_slot_vspace_for_asidD:
   "\<lbrakk> vs_lookup_slot level asid vref s = Some (level, slot); level \<le> max_pt_level; valid_asid_map s \<rbrakk>
