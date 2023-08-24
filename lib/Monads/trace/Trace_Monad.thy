@@ -46,6 +46,23 @@ text \<open>
   pair of result and state when the computation did not fail.\<close>
 type_synonym ('s, 'a) tmonad = "'s \<Rightarrow> ((tmid \<times> 's) list \<times> ('s, 'a) tmres) set"
 
+text \<open>
+  Print the type @{typ "('s,'a) nondet_monad"} instead of its unwieldy expansion.
+  Needs an AST translation in code, because it needs to check that the state variable
+  @{typ 's} occurs twice. This comparison is not guaranteed to always work as expected
+  (AST instances might have different decoration), but it does seem to work here.\<close>
+print_ast_translation \<open>
+  let
+    fun monad_tr _ [t1, Ast.Appl [Ast.Constant @{type_syntax prod},
+                          Ast.Appl [Ast.Constant @{type_syntax set},
+                            Ast.Appl [Ast.Constant @{type_syntax prod}, t2, t3]],
+                          Ast.Constant @{type_syntax bool}]] =
+      if t3 = t1
+      then Ast.Appl [Ast.Constant @{type_syntax "nondet_monad"}, t1, t2]
+      else raise Match
+  in [(@{type_syntax "fun"}, monad_tr)] end
+\<close>
+
 text \<open>Returns monad results, ignoring failures and traces.\<close>
 definition mres :: "((tmid \<times> 's) list \<times> ('s, 'a) tmres) set \<Rightarrow> ('a \<times> 's) set" where
   "mres r = Result -` (snd ` r)"
@@ -124,6 +141,12 @@ text \<open>
   FIXME: The @{text select_f} function was left out here until we figure
   out what variant we actually need.\<close>
 
+text \<open>@{text select_state} takes a relationship between
+  states, and outputs nondeterministically a state
+  related to the input state.\<close>
+definition state_select :: "('s \<times> 's) set \<Rightarrow> ('s, unit) nondet_monad" where
+  "state_select r \<equiv> \<lambda>s. ((\<lambda>x. ((), x)) ` {s'. (s, s') \<in> r}, \<not> (\<exists>s'. (s, s') \<in> r))"
+
 subsection "Failure"
 
 text \<open>
@@ -184,6 +207,13 @@ text \<open>
   return @{text v} if it returns @{term "Some v"}.\<close>
 definition gets_the :: "('s \<Rightarrow> 'a option) \<Rightarrow> ('s, 'a) tmonad" where
   "gets_the f \<equiv> gets f >>= assert_opt"
+
+text \<open>
+  Get a map (such as a heap) from the current state and apply an argument to the map.
+  Fail if the map returns @{const None}, otherwise return the value.\<close>
+definition
+  gets_map :: "('s \<Rightarrow> 'a \<Rightarrow> 'b option) \<Rightarrow> 'a \<Rightarrow> ('s, 'b) nondet_monad" where
+  "gets_map f p \<equiv> gets f >>= (\<lambda>m. assert_opt (m p))"
 
 
 subsection \<open>The Monad Laws\<close>
@@ -490,6 +520,10 @@ text \<open>The same for the exception monad:\<close>
 definition liftME :: "('a \<Rightarrow> 'b) \<Rightarrow> ('s,'e+'a) tmonad \<Rightarrow> ('s,'e+'b) tmonad" where
   "liftME f m \<equiv> doE x \<leftarrow> m; returnOk (f x) odE"
 
+text \<open> Execute @{term f} for @{term "Some x"}, otherwise do nothing. \<close>
+definition maybeM :: "('a \<Rightarrow> ('s, unit) nondet_monad) \<Rightarrow> 'a option \<Rightarrow> ('s, unit) nondet_monad" where
+  "maybeM f y \<equiv> case y of Some x \<Rightarrow> f x | None \<Rightarrow> return ()"
+
 text \<open>Run a sequence of monads from left to right, ignoring return values.\<close>
 definition sequence_x :: "('s, 'a) tmonad list \<Rightarrow> ('s, unit) tmonad" where
   "sequence_x xs \<equiv> foldr (\<lambda>x y. x >>= (\<lambda>_. y)) xs (return ())"
@@ -677,6 +711,48 @@ definition whileLoopE ::
 
 notation (output)
   whileLoopE  ("(whileLoopE (_)//  (_))" [1000, 1000] 1000)
+
+
+section "Combinators that have conditions with side effects"
+
+definition notM :: "('s, bool) nondet_monad \<Rightarrow> ('s, bool) nondet_monad" where
+  "notM m = do c \<leftarrow> m; return (\<not> c) od"
+
+definition
+  whileM :: "('s, bool) nondet_monad \<Rightarrow> ('s, 'a) nondet_monad \<Rightarrow> ('s, unit) nondet_monad" where
+  "whileM C B \<equiv> do
+    c \<leftarrow> C;
+    whileLoop (\<lambda>c s. c) (\<lambda>_. do B; C od) c;
+    return ()
+  od"
+
+definition
+  ifM :: "('s, bool) nondet_monad \<Rightarrow> ('s, 'a) nondet_monad \<Rightarrow> ('s, 'a) nondet_monad \<Rightarrow>
+          ('s, 'a) nondet_monad" where
+  "ifM test t f = do
+    c \<leftarrow> test;
+    if c then t else f
+   od"
+
+definition ifME ::
+  "('a, 'b + bool) nondet_monad \<Rightarrow> ('a, 'b + 'c) nondet_monad \<Rightarrow> ('a, 'b + 'c) nondet_monad
+   \<Rightarrow> ('a, 'b + 'c) nondet_monad" where
+  "ifME test t f = doE
+    c \<leftarrow> test;
+    if c then t else f
+   odE"
+
+definition
+  whenM :: "('s, bool) nondet_monad \<Rightarrow> ('s, unit) nondet_monad \<Rightarrow> ('s, unit) nondet_monad" where
+  "whenM t m = ifM t m (return ())"
+
+definition
+  orM :: "('s, bool) nondet_monad \<Rightarrow> ('s, bool) nondet_monad \<Rightarrow> ('s, bool) nondet_monad" where
+  "orM a b = ifM a (return True) b"
+
+definition
+  andM :: "('s, bool) nondet_monad \<Rightarrow> ('s, bool) nondet_monad \<Rightarrow> ('s, bool) nondet_monad" where
+  "andM a b = ifM a b (return False)"
 
 subsection "Await command"
 
