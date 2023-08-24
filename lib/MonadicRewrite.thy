@@ -653,6 +653,13 @@ lemma monadic_rewrite_gets_the_gets:
   apply (auto simp: simpler_gets_def return_def)
   done
 
+lemma gets_oapply_liftM_rewrite:
+  "monadic_rewrite False True (\<lambda>s. f s p \<noteq> None)
+                   (gets (oapply p \<circ> f)) (liftM Some (gets_map f p))"
+  unfolding monadic_rewrite_def
+  by (simp add: liftM_def simpler_gets_def bind_def gets_map_def assert_opt_def return_def
+           split: option.splits)
+
 text \<open>Option cases\<close>
 
 lemma monadic_rewrite_case_option:
