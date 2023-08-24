@@ -144,13 +144,14 @@ lemma no_fail_assume_pre:
   "(\<And>s. P s \<Longrightarrow> no_fail P f) \<Longrightarrow> no_fail P f"
   by (simp add: no_fail_def)
 
-lemma no_fail_liftM_eq[simp]:
+\<comment> \<open>lemma no_fail_liftM_eq[simp]:
   "no_fail P (liftM f m) = no_fail P m"
-  by (auto simp: liftM_def no_fail_def bind_def return_def)
+  by (auto simp: liftM_def no_fail_def bind_def return_def)\<close>
 
 lemma no_fail_liftM[wp]:
   "no_fail P m \<Longrightarrow> no_fail P (liftM f m)"
-  by simp
+  unfolding liftM_def
+  by wpsimp
 
 lemma no_fail_pre_and:
   "no_fail P f \<Longrightarrow> no_fail (P and Q) f"

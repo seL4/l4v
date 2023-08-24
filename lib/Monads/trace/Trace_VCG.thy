@@ -139,17 +139,6 @@ wpc_setup "\<lambda>m. \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace>,-" wpc_helper_v
 wpc_setup "\<lambda>m. \<lbrace>P\<rbrace> m -,\<lbrace>E\<rbrace>" wpc_helper_validR_R
 
 
-subsection "Simplification Rules for Lifted And/Or"
-
-lemma bipred_disj_op_eq[simp]:
-  "reflp R \<Longrightarrow> ((=) or R) = R"
-  apply (rule ext, rule ext)
-  apply (auto simp: reflp_def)
-  done
-
-lemma bipred_le_true[simp]: "R \<le> \<top>\<top>"
-  by clarsimp
-
 subsection "Hoare Logic Rules"
 
 lemma bind_wp[wp_split]:
@@ -180,7 +169,7 @@ lemma seq_ext':
 
 lemma seq_ext:
   "\<lbrakk> \<lbrace>A\<rbrace> f \<lbrace>B\<rbrace>; \<And>x. \<lbrace>B x\<rbrace> g x \<lbrace>C\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>A\<rbrace> do x \<leftarrow> f; g x od \<lbrace>C\<rbrace>"
-  by (fastforce simp: valid_def bind_def)
+  by (rule bind_wp)
 
 lemma seqE':
   "\<lbrakk> \<lbrace>A\<rbrace> f \<lbrace>B\<rbrace>,\<lbrace>E\<rbrace>; \<forall>x. \<lbrace>B x\<rbrace> g x \<lbrace>C\<rbrace>,\<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow>
@@ -320,7 +309,7 @@ lemma use_valid:
 lemmas post_by_hoare = use_valid[rotated]
 
 lemma use_valid_inv:
-  assumes step: "(r, s') \<in> fst (f s)"
+  assumes step: "(r, s') \<in> mres (f s)"
   assumes pres: "\<And>N. \<lbrace>\<lambda>s. N (P s) \<and> E s\<rbrace> f \<lbrace>\<lambda>rv s. N (P s)\<rbrace>"
   shows "E s \<Longrightarrow> P s = P s'"
   using use_valid[where f=f, OF step pres[where N="\<lambda>p. p = P s"]] by simp
@@ -418,7 +407,7 @@ lemma hoare_case_option_wp2:
 (* Might be useful for forward reasoning, when P is known. *)
 lemma hoare_when_cases:
   "\<lbrakk>\<And>s. \<lbrakk>\<not>B; P s\<rbrakk> \<Longrightarrow> Q s; B \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. Q\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> when B f \<lbrace>\<lambda>_. Q\<rbrace>"
-  by (cases B; simp add: valid_def return_def)
+  by (cases B; simp add: valid_def return_def mres_def)
 
 lemma hoare_vcg_prop:
   "\<lbrace>\<lambda>s. P\<rbrace> f \<lbrace>\<lambda>rv s. P\<rbrace>"
@@ -624,6 +613,14 @@ lemma hoare_weak_lift_imp:
   "\<lbrace>P'\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s. P \<longrightarrow> P' s\<rbrace> f \<lbrace>\<lambda>rv s. P \<longrightarrow> Q rv s\<rbrace>"
   by (auto simp add: valid_def split_def)
 
+lemma hoare_weak_lift_impE:
+  "\<lbrace>Q\<rbrace> m \<lbrace>R\<rbrace>,\<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s. P \<longrightarrow> Q s\<rbrace> m \<lbrace>\<lambda>rv s. P \<longrightarrow> R rv s\<rbrace>,\<lbrace>\<lambda>rv s. P \<longrightarrow> E rv s\<rbrace>"
+  by (cases P; simp add: validE_def hoare_vcg_prop)
+
+lemma hoare_weak_lift_imp_R:
+  "\<lbrace>Q\<rbrace> m \<lbrace>R\<rbrace>,- \<Longrightarrow> \<lbrace>\<lambda>s. P \<longrightarrow> Q s\<rbrace> m \<lbrace>\<lambda>rv s. P \<longrightarrow> R rv s\<rbrace>,-"
+  by (cases P, simp_all)
+
 lemmas hoare_vcg_weaken_imp = hoare_weaken_imp  (* FIXME lib: eliminate *)
 
 lemma hoare_vcg_ex_lift:
@@ -724,7 +721,7 @@ lemma return_wp:
 
 lemma get_wp:
   "\<lbrace>\<lambda>s. P s s\<rbrace> get \<lbrace>P\<rbrace>"
-  by(simp add: valid_def split_def get_def)
+  by (simp add: valid_def get_def mres_def)
 
 lemma gets_wp:
   "\<lbrace>\<lambda>s. P (f s) s\<rbrace> gets f \<lbrace>P\<rbrace>"
@@ -835,12 +832,9 @@ lemma select_wp:
   by (simp add: select_def valid_def mres_def image_def)
 
 lemma state_select_wp:
-  "\<lbrace> \<lambda>s. \<forall>t. (s, t) \<in> f \<longrightarrow> P () t \<rbrace> state_select f \<lbrace>P\<rbrace>"
-  apply (clarsimp simp: state_select_def assert_def)
-  apply (rule hoare_weaken_pre)
-   apply (wp put_wp select_wp hoare_vcg_if_split return_wp fail_wp get_wp)
-  apply simp
-  done
+  "\<lbrace>\<lambda>s. \<forall>t. (s, t) \<in> f \<longrightarrow> P () t\<rbrace> state_select f \<lbrace>P\<rbrace>"
+  unfolding state_select_def2
+  by (wpsimp wp: put_wp select_wp return_wp get_wp assert_wp)
 
 lemma condition_wp:
   "\<lbrakk> \<lbrace>Q\<rbrace> A \<lbrace>P\<rbrace>;  \<lbrace>R\<rbrace> B \<lbrace>P\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. if C s then Q s else R s\<rbrace> condition C A B \<lbrace>P\<rbrace>"
@@ -875,18 +869,18 @@ lemma unlessE_wp:
 lemma maybeM_wp:
   "(\<And>x. y = Some x \<Longrightarrow> \<lbrace>P x\<rbrace> m x \<lbrace>Q\<rbrace>) \<Longrightarrow>
    \<lbrace>\<lambda>s. (\<forall>x. y = Some x \<longrightarrow> P x s) \<and> (y = None \<longrightarrow> Q () s)\<rbrace> maybeM m y \<lbrace>Q\<rbrace>"
-  unfolding maybeM_def by (cases y; simp add: bind_def return_def valid_def)
+  unfolding maybeM_def by (wpsimp wp: return_wp) auto
 
 lemma notM_wp:
   "\<lbrace>P\<rbrace> m \<lbrace>\<lambda>c. Q (\<not> c)\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> notM m \<lbrace>Q\<rbrace>"
-  unfolding notM_def by (fastforce simp: bind_def return_def valid_def)
+  unfolding notM_def by (wpsimp wp: return_wp)
 
 lemma ifM_wp:
   assumes [wp]: "\<lbrace>Q\<rbrace> f \<lbrace>S\<rbrace>" "\<lbrace>R\<rbrace> g \<lbrace>S\<rbrace>"
   assumes [wp]: "\<lbrace>A\<rbrace> P \<lbrace>\<lambda>c s. c \<longrightarrow> Q s\<rbrace>" "\<lbrace>B\<rbrace> P \<lbrace>\<lambda>c s. \<not>c \<longrightarrow> R s\<rbrace>"
   shows "\<lbrace>A and B\<rbrace> ifM P f g \<lbrace>S\<rbrace>"
-  unfolding ifM_def using assms
-  by (fastforce simp: bind_def valid_def split: if_splits)
+  unfolding ifM_def
+  by (wpsimp wp: hoare_vcg_if_split hoare_vcg_conj_lift)
 
 lemma andM_wp:
   assumes [wp]: "\<lbrace>Q'\<rbrace> B \<lbrace>Q\<rbrace>"

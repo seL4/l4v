@@ -29,7 +29,7 @@ definition ex_exs_validE ::
 text \<open>
   Seen as predicate transformer, @{const exs_valid} is the so-called conjugate wp in the literature,
   i.e. with
-  @{term "wp f Q \<equiv> \<lambda>s. fst (f s) \<subseteq> {(rv,s). Q rv s}"} and
+  @{term "wp f Q \<equiv> \<lambda>s. mres (f s) \<subseteq> {(rv,s). Q rv s}"} and
   @{term "cwp f Q \<equiv> not (wp f (not Q))"}, we get
   @{prop "valid P f Q = (\<forall>s. P s \<longrightarrow> wp f Q s)"} and
   @{prop "exs_valid P f Q = (\<forall>s. P s \<longrightarrow> cwp f Q s)"}.
@@ -39,7 +39,7 @@ experiment
 begin
 
 definition
-  "wp f Q \<equiv> \<lambda>s. fst (f s) \<subseteq> {(rv,s). Q rv s}"
+  "wp f Q \<equiv> \<lambda>s. mres (f s) \<subseteq> {(rv,s). Q rv s}"
 
 definition
   "cwp f Q \<equiv> not (wp f (not Q))"
@@ -100,11 +100,11 @@ lemma exs_valid_return[wp]:
 
 lemma exs_valid_select[wp]:
   "\<lbrace>\<lambda>s. \<exists>r \<in> S. Q r s\<rbrace> select S \<exists>\<lbrace>Q\<rbrace>"
-  by (clarsimp simp: exs_valid_def select_def)
+  by (auto simp: exs_valid_def select_def mres_def image_def)
 
 lemma exs_valid_alt[wp]:
   "\<lbrakk> \<lbrace>P\<rbrace> f \<exists>\<lbrace>Q\<rbrace>; \<lbrace>P'\<rbrace> g \<exists>\<lbrace>Q\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P or P'\<rbrace> f \<sqinter> g \<exists>\<lbrace>Q\<rbrace>"
-  by (fastforce simp: exs_valid_def alternative_def)
+  by (fastforce simp: exs_valid_def alternative_def mres_def image_def)
 
 lemma exs_valid_get[wp]:
   "\<lbrace>\<lambda>s. Q s s\<rbrace> get \<exists>\<lbrace> Q \<rbrace>"
@@ -129,7 +129,7 @@ lemma exs_valid_assert[wp]:
   by (wpsimp | rule conjI)+
 
 lemma exs_valid_state_assert[wp]:
-    "\<lbrace> \<lambda>s. Q () s \<and> G s \<rbrace> state_assert G \<exists>\<lbrace> Q \<rbrace>"
+  "\<lbrace>\<lambda>s. Q () s \<and> G s\<rbrace> state_assert G \<exists>\<lbrace>Q\<rbrace>"
   unfolding state_assert_def
   by wp
 
@@ -145,7 +145,7 @@ lemma gets_exs_valid:
 
 lemma exs_valid_assert_opt[wp]:
   "\<lbrace>\<lambda>s. \<exists>x. G = Some x \<and> Q x s\<rbrace> assert_opt G \<exists>\<lbrace>Q\<rbrace>"
-  by (clarsimp simp: assert_opt_def exs_valid_def get_def assert_def bind_def' return_def)
+  by (clarsimp simp: assert_opt_def exs_valid_def return_def mres_def)
 
 lemma gets_the_exs_valid[wp]:
   "\<lbrace>\<lambda>s. \<exists>x. h s = Some x \<and> Q x s\<rbrace> gets_the h \<exists>\<lbrace>Q\<rbrace>"
