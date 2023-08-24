@@ -20,7 +20,7 @@ ML \<open>
 structure WP_Safe = struct
 
 fun check_has_frees_tac Ps (_ : int) thm = let
-    val fs = Term.add_frees (Thm.prop_of thm) [] |> filter (member (=) Ps)
+    val fs = Term.add_frees (Thm.prop_of thm) [] |> filter (member (op =) Ps)
   in if null fs then Seq.empty else Seq.single thm end
 
 fun wp_bang wp_safe_rules ctxt = let
