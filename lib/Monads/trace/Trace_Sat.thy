@@ -26,6 +26,30 @@ definition ex_exs_validE ::
   ("\<lbrace>_\<rbrace> _ \<exists>\<lbrace>_\<rbrace>, \<lbrace>_\<rbrace>") where
   "\<lbrace>P\<rbrace> f \<exists>\<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace> \<equiv> \<lbrace>P\<rbrace> f  \<exists>\<lbrace>\<lambda>rv. case rv of Inl e \<Rightarrow> E e | Inr v \<Rightarrow> Q v\<rbrace>"
 
+text \<open>
+  Seen as predicate transformer, @{const exs_valid} is the so-called conjugate wp in the literature,
+  i.e. with
+  @{term "wp f Q \<equiv> \<lambda>s. fst (f s) \<subseteq> {(rv,s). Q rv s}"} and
+  @{term "cwp f Q \<equiv> not (wp f (not Q))"}, we get
+  @{prop "valid P f Q = (\<forall>s. P s \<longrightarrow> wp f Q s)"} and
+  @{prop "exs_valid P f Q = (\<forall>s. P s \<longrightarrow> cwp f Q s)"}.
+
+  See also "Predicate Calculus and Program Semantics" by E. W. Dijkstra and C. S. Scholten.\<close>
+experiment
+begin
+
+definition
+  "wp f Q \<equiv> \<lambda>s. fst (f s) \<subseteq> {(rv,s). Q rv s}"
+
+definition
+  "cwp f Q \<equiv> not (wp f (not Q))"
+
+lemma
+  "exs_valid P f Q = (\<forall>s. P s \<longrightarrow> cwp f Q s)"
+  unfolding exs_valid_def cwp_def wp_def by auto
+
+end
+
 
 subsection \<open>Set up for @{method wp}\<close>
 
@@ -76,9 +100,11 @@ lemma exs_valid_return[wp]:
 
 lemma exs_valid_select[wp]:
   "\<lbrace>\<lambda>s. \<exists>r \<in> S. Q r s\<rbrace> select S \<exists>\<lbrace>Q\<rbrace>"
-  apply (clarsimp simp: exs_valid_def select_def mres_def)
-  apply (auto simp add: image_def)
-  done
+  by (clarsimp simp: exs_valid_def select_def)
+
+lemma exs_valid_alt[wp]:
+  "\<lbrakk> \<lbrace>P\<rbrace> f \<exists>\<lbrace>Q\<rbrace>; \<lbrace>P'\<rbrace> g \<exists>\<lbrace>Q\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P or P'\<rbrace> f \<sqinter> g \<exists>\<lbrace>Q\<rbrace>"
+  by (fastforce simp: exs_valid_def alternative_def)
 
 lemma exs_valid_get[wp]:
   "\<lbrace>\<lambda>s. Q s s\<rbrace> get \<exists>\<lbrace> Q \<rbrace>"
@@ -97,15 +123,32 @@ lemma exs_valid_fail[wp]:
   unfolding fail_def exs_valid_def
   by simp
 
+lemma exs_valid_assert[wp]:
+  "\<lbrace>\<lambda>s. Q () s \<and> G\<rbrace> assert G \<exists>\<lbrace>Q\<rbrace>"
+  unfolding assert_def
+  by (wpsimp | rule conjI)+
+
 lemma exs_valid_state_assert[wp]:
     "\<lbrace> \<lambda>s. Q () s \<and> G s \<rbrace> state_assert G \<exists>\<lbrace> Q \<rbrace>"
-  by (clarsimp simp: state_assert_def exs_valid_def get_def
-           assert_def bind_def2 return_def mres_def)
+  unfolding state_assert_def
+  by wp
 
 lemmas exs_valid_guard = exs_valid_state_assert
 
 lemma exs_valid_condition[wp]:
   "\<lbrakk> \<lbrace>P\<rbrace> l \<exists>\<lbrace>Q\<rbrace>; \<lbrace>P'\<rbrace> r \<exists>\<lbrace>Q\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. (C s \<and> P s) \<or> (\<not> C s \<and> P' s)\<rbrace> condition C l r \<exists>\<lbrace>Q\<rbrace>"
   by (clarsimp simp: condition_def exs_valid_def split: sum.splits)
+
+lemma gets_exs_valid:
+  "\<lbrace>(=) s\<rbrace> gets f \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>"
+  by (rule exs_valid_gets)
+
+lemma exs_valid_assert_opt[wp]:
+  "\<lbrace>\<lambda>s. \<exists>x. G = Some x \<and> Q x s\<rbrace> assert_opt G \<exists>\<lbrace>Q\<rbrace>"
+  by (clarsimp simp: assert_opt_def exs_valid_def get_def assert_def bind_def' return_def)
+
+lemma gets_the_exs_valid[wp]:
+  "\<lbrace>\<lambda>s. \<exists>x. h s = Some x \<and> Q x s\<rbrace> gets_the h \<exists>\<lbrace>Q\<rbrace>"
+  by (wpsimp simp: gets_the_def)
 
 end
