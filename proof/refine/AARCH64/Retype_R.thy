@@ -3503,16 +3503,6 @@ lemma createObjects_orig_cte_wp_at':
   apply clarsimp
   done
 
-(* FIXME AARCH64 move to Word_Lib: shifting right by a bigger amount yields a smaller number *)
-lemma le_shiftr_n:
-  fixes w :: "'a::len word"
-  shows "m \<le> n \<Longrightarrow> w >> n \<le> w >> m"
-  apply (unfold shiftr_def)
-  apply transfer
-  apply (simp add: take_bit_drop_bit)
-  apply (simp add: drop_bit_eq_div zdiv_mono2)
-  done
-
 lemma createNewCaps_cte_wp_at':
   "\<lbrace>\<lambda>s. cte_wp_at' P p s
       \<and> range_cover ptr sz (APIType_capBits ty us) n \<and> n \<noteq> 0
