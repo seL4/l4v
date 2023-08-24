@@ -2520,11 +2520,6 @@ lemma captable_relation_retype:
   apply (simp add: less_mask_eq)
   done
 
-(* FIXME AARCH64: move up *)
-lemma ptTranslationBits_le_machine_word[simplified, simp]:
-  "ptTranslationBits pt_t < LENGTH(machine_word_len)"
-  by (simp add: bit_simps)
-
 lemma pagetable_relation_retype:
   "obj_relation_retype (default_object (ArchObject PageTableObj) dev n)
                        (KOArch (KOPTE makeObject))"
@@ -5092,11 +5087,6 @@ lemma data_page_relation_retype:
                    objBits_simps pbfs_atleast_pageBits)
    apply (clarsimp simp: image_def)+
   done
-
-(* FIXME AARCH64: move *)
-lemma pte_bits_leq_table_size[simp]:
-  "pte_bits \<le> table_size pt_t"
-  by (simp add: table_size_def)
 
 lemma corres_retype_region_createNewCaps:
   "corres ((\<lambda>r r'. length r = length r' \<and> list_all2 cap_relation r r')

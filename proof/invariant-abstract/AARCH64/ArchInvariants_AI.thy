@@ -803,6 +803,14 @@ lemma vcpuBits_bounded[simp,intro!]:
   "vcpuBits < word_bits"
   including machine_bit_simps by (simp add: word_bits_def)
 
+lemma ptTranslationBits_le_machine_word[simplified, simp]:
+  "ptTranslationBits pt_t < LENGTH(machine_word_len)"
+  by (simp add: bit_simps)
+
+lemma pte_bits_leq_table_size[simp]:
+  "pte_bits \<le> table_size pt_t"
+  by (simp add: table_size_def)
+
 (* with asid_pool_level normalised to -1, max_pt_level otherwise becomes -2 *)
 lemma max_pt_level_def2: "max_pt_level = (if config_ARM_PA_SIZE_BITS_40 then 2 else 3)"
   by (simp add: max_pt_level_def asid_pool_level_def Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
