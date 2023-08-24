@@ -27,9 +27,11 @@ definition no_return :: "('a \<Rightarrow> bool) \<Rightarrow> ('a, 'b + 'c) tmo
 
 (* Alternative definition of no_throw; easier to work with than unfolding validE. *)
 lemma no_throw_def':
-  "no_throw P A = (\<forall>s. P s \<longrightarrow> (\<forall>(r, t) \<in> fst (A s). (\<exists>x. r = Inr x)))"
+  "no_throw P A = (\<forall>s. P s \<longrightarrow> (\<forall>(r, t) \<in> mres (A s). (\<exists>x. r = Inr x)))"
   by (clarsimp simp: no_throw_def validE_def2 split_def split: sum.splits)
 
+
+subsection \<open>no_throw rules\<close>
 
 lemma no_throw_returnOk[simp]:
   "no_throw P (returnOk a)"
@@ -53,12 +55,14 @@ lemma no_throw_bindE_simple:
 lemma no_throw_handleE_simple:
   "\<lbrakk> \<And>x. no_throw \<top> L \<or> no_throw \<top> (R x) \<rbrakk> \<Longrightarrow> no_throw \<top> (L <handle> R)"
   by (fastforce simp: no_throw_def' handleE_def handleE'_def validE_def valid_def bind_def return_def
-                split: sum.splits)
+                      mres_def image_def
+                split: sum.splits tmres.splits)
 
 lemma no_throw_handle2:
   "\<lbrakk> \<And>a. no_throw Y (B a); \<lbrace> X \<rbrace> A \<lbrace> \<lambda>_ _. True \<rbrace>,\<lbrace> \<lambda>_. Y \<rbrace> \<rbrakk> \<Longrightarrow> no_throw X (A <handle2> B)"
-  by (fastforce simp: no_throw_def' handleE'_def validE_def valid_def bind_def return_def
-                split: sum.splits)
+  by (fastforce simp: no_throw_def' handleE'_def validE_def valid_def bind_def return_def mres_def
+                      image_def
+                split: sum.splits tmres.splits)
 
 lemma no_throw_handle:
   "\<lbrakk> \<And>a. no_throw Y (B a); \<lbrace> X \<rbrace> A \<lbrace> \<lambda>_ _. True \<rbrace>,\<lbrace> \<lambda>_. Y \<rbrace> \<rbrakk> \<Longrightarrow> no_throw X (A <handle> B)"
@@ -92,7 +96,7 @@ lemma condition_nothrow:
   by (clarsimp simp: condition_def no_throw_def validE_def2)
 
 lemma no_throw_Inr:
-  "\<lbrakk> x \<in> fst (A s); no_throw P A; P s \<rbrakk> \<Longrightarrow> \<exists>y. fst x = Inr y"
+  "\<lbrakk> x \<in> mres (A s); no_throw P A; P s \<rbrakk> \<Longrightarrow> \<exists>y. fst x = Inr y"
   by (fastforce simp: no_throw_def' split: sum.splits)
 
 end

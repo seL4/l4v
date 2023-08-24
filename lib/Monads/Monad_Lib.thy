@@ -69,4 +69,8 @@ lemma sum_all_ex[simp]:
   "(\<forall>a. x \<noteq> Inr a) = (\<exists>a. x = Inl a)"
   by (metis Inr_not_Inl sum.exhaust)+
 
+lemma context_disjE:
+  "\<lbrakk>P \<or> Q; P \<Longrightarrow> R; \<lbrakk>\<not>P; Q\<rbrakk> \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
+  by auto
+
 end

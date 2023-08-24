@@ -31,15 +31,15 @@ lemma bind_apply_cong':
 lemmas bind_apply_cong = bind_apply_cong'[rule_format, fundef_cong]
 
 lemma bind_cong[fundef_cong]:
-  "\<lbrakk> f = f'; \<And>v s s'. (v, s') \<in> fst (f' s) \<Longrightarrow> g v s' = g' v s' \<rbrakk> \<Longrightarrow> f >>= g = f' >>= g'"
-  by (auto simp: bind_def Let_def split_def intro: rev_image_eqI)
+  "\<lbrakk> f = f'; \<And>v s s'. (v, s') \<in> mres (f' s) \<Longrightarrow> g v s' = g' v s' \<rbrakk> \<Longrightarrow> f >>= g = f' >>= g'"
+  by (auto intro!: bind_apply_cong)
 
 lemma bindE_cong[fundef_cong]:
-  "\<lbrakk> M = M' ; \<And>v s s'. (Inr v, s') \<in> fst (M' s) \<Longrightarrow> N v s' = N' v s' \<rbrakk> \<Longrightarrow> bindE M N = bindE M' N'"
+  "\<lbrakk> M = M' ; \<And>v s s'. (Inr v, s') \<in> mres (M' s) \<Longrightarrow> N v s' = N' v s' \<rbrakk> \<Longrightarrow> bindE M N = bindE M' N'"
   by (auto simp: bindE_def lift_def split: sum.splits intro!: bind_cong)
 
 lemma bindE_apply_cong[fundef_cong]:
-  "\<lbrakk> f s = f' s'; \<And>rv st. (Inr rv, st) \<in> fst (f' s') \<Longrightarrow> g rv st = g' rv st \<rbrakk>
+  "\<lbrakk> f s = f' s'; \<And>rv st. (Inr rv, st) \<in> mres (f' s') \<Longrightarrow> g rv st = g' rv st \<rbrakk>
   \<Longrightarrow> (f >>=E g) s = (f' >>=E g') s'"
   by (auto simp: bindE_def lift_def split: sum.splits intro!: bind_apply_cong)
 
@@ -63,11 +63,12 @@ lemma unlessE_apply_cong[fundef_cong]:
   "\<lbrakk> C = C'; s = s'; \<not> C' \<Longrightarrow> m s' = m' s' \<rbrakk> \<Longrightarrow> unlessE C m s = unlessE C' m' s'"
   by (simp add: unlessE_def)
 
+
 subsection \<open>Simplifying Monads\<close>
 
 lemma nested_bind[simp]:
   "do x <- do y <- f; return (g y) od; h x od = do y <- f; h (g y) od"
-  by (clarsimp simp: bind_def Let_def split_def return_def)
+  by (fastforce simp: bind_def return_def split: tmres.splits)
 
 lemma bind_dummy_ret_val:
   "do y \<leftarrow> a; b od = do a; b od"

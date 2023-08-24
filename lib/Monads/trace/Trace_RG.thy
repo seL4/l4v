@@ -69,7 +69,7 @@ abbreviation(input)
   "\<bottom>\<bottom>\<bottom> \<equiv> \<lambda>_ _ _. False"
 
 text \<open>
-  Test whether the enironment steps in @{text tr} satisfy the rely condition @{text R},
+  Test whether the environment steps in @{text tr} satisfy the rely condition @{text R},
   assuming that @{text s0s} was the initial state before the first step in the trace.\<close>
 definition rely_cond :: "'s rg_pred \<Rightarrow> 's \<Rightarrow> (tmid \<times> 's) list \<Rightarrow> bool" where
   "rely_cond R s0s tr = (\<forall>(ident, s0, s) \<in> trace_steps (rev tr) s0s. ident = Env \<longrightarrow> R s0 s)"
