@@ -3124,11 +3124,6 @@ lemma create_cap_ex_cap_to[wp]:
   apply (clarsimp elim!: cte_wp_at_weakenE)
   done
 
-(* FIXME: move *)
-lemma hoare_vcg_split_lift[wp]:
-  "\<lbrace>P\<rbrace> f x y \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> case (x, y) of (a, b) \<Rightarrow> f a b \<lbrace>Q\<rbrace>"
-  by simp
-
 lemma create_cap_no_cap[wp]:
   "\<lbrace>\<lambda>s. (\<forall>p'. \<not> cte_wp_at P p' s) \<and> \<not> P (default_cap tp oref sz dev)\<rbrace>
      create_cap tp sz p dev (cref, oref)

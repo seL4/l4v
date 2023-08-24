@@ -1893,31 +1893,6 @@ lemma asid_low_le_mask_asidBits[simp]:
   "UCAST(asid_low_len \<rightarrow> asid_len) asid_low \<le> mask asid_low_bits"
   by (rule ucast_leq_mask, simp add: asid_low_bits_def)
 
-named_theorems hoare_vcg_op_lift (* FIXME AARCH64: move to NonDetMonadVCG *)
-lemmas [hoare_vcg_op_lift] =
-  hoare_vcg_const_imp_lift
-  hoare_vcg_const_imp_lift_E
-  hoare_vcg_const_imp_lift_R
-  (* leaving out hoare_vcg_conj_lift*, because that is built into wp *)
-  hoare_vcg_disj_lift
-  hoare_vcg_disj_lift_R
-  hoare_vcg_ex_lift
-  hoare_vcg_ex_liftE
-  hoare_vcg_ex_liftE_E
-  hoare_vcg_all_lift
-  hoare_vcg_all_liftE
-  hoare_vcg_all_liftE_E
-  hoare_vcg_all_lift_R
-  hoare_vcg_ball_lift
-  hoare_vcg_const_Ball_lift_R
-  hoare_vcg_const_Ball_lift_E_E
-  hoare_vcg_split_lift
-  hoare_vcg_if_lift
-  hoare_vcg_imp_lift'
-  hoare_vcg_imp_liftE
-  hoare_vcg_imp_lift_R
-  hoare_vcg_imp_liftE_E
-
 lemma ucast_eq_from_zip_asid_low_bits:
   "\<lbrakk>(x, y) \<in> set (zip [0 .e. mask asid_low_bits] [0 .e. mask asid_low_bits]);
     is_aligned asid asid_low_bits\<rbrakk>

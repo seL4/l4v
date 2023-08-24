@@ -938,11 +938,8 @@ lemma lcs_ex_cap_to2[wp]:
    apply (wp lsft_ex_cte_cap_to | simp)+
   done
 
-lemma hoare_vcg_const_imp_lift_E[wp]:
-  "\<lbrace>P\<rbrace> f -, \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s. F \<longrightarrow> P s\<rbrace> f -, \<lbrace>\<lambda>rv s. F \<longrightarrow> Q rv s\<rbrace>"
-  apply (cases F) apply auto
-  apply wp
-  done
+(* FIXME AARCH64: this should really not be wp *)
+declare hoare_vcg_const_imp_lift_E[wp]
 
 context Syscall_AI begin
 
