@@ -2505,20 +2505,6 @@ lemma tcb_real_cte_32:
   "\<lbrakk> real_cte_at' (t + 2^cteSizeBits) s; tcb_at' t s \<rbrakk> \<Longrightarrow> False"
   by (clarsimp simp: obj_at'_def objBitsKO_def ps_clear_32)
 
-lemma corres_splitEE':
-  assumes x: "corres_underlying sr nf nf' (f \<oplus> r') P P' a c"
-  assumes y: "\<And>x y x' y'. r' (x, y) (x', y')
-              \<Longrightarrow> corres_underlying sr nf nf' (f \<oplus> r) (R x y) (R' x' y') (b x y) (d x' y')"
-  assumes z: "\<lbrace>Q\<rbrace> a \<lbrace>%(x, y). R x y \<rbrace>,\<lbrace>\<top>\<top>\<rbrace>" "\<lbrace>Q'\<rbrace> c \<lbrace>%(x, y). R' x y\<rbrace>,\<lbrace>\<top>\<top>\<rbrace>"
-  shows      "corres_underlying sr nf nf' (f \<oplus> r) (P and Q) (P' and Q') (a >>=E (\<lambda>(x, y). b x y)) (c >>=E (\<lambda>(x, y). d x y))"
-  using assms
-  apply (unfold bindE_def validE_def split_def)
-  apply (rule corres_split[rotated 2])
-     apply assumption+
-  apply (case_tac rv)
-   apply (clarsimp simp: lift_def y)+
-  done
-
 lemma decodeBindNotification_corres:
 notes if_cong[cong] shows
   "\<lbrakk> list_all2 (\<lambda>x y. cap_relation (fst x) (fst y)) extras extras' \<rbrakk> \<Longrightarrow>
@@ -2539,7 +2525,7 @@ notes if_cong[cong] shows
          apply (rule getBoundNotification_corres)
         apply (rule corres_split_norE)
            apply (rule corres_trivial, simp split: option.splits add: returnOk_def)
-          apply (rule corres_splitEE'[where r'="\<lambda>rv rv'. ((fst rv) = (fst rv')) \<and> ((snd rv') = (AllowRead \<in> (snd rv)))"])
+          apply (rule corres_splitEE_prod[where r'="\<lambda>rv rv'. ((fst rv) = (fst rv')) \<and> ((snd rv') = (AllowRead \<in> (snd rv)))"])
              apply (rule corres_trivial, simp)
              apply (case_tac extras, simp, clarsimp simp: list_all2_Cons1)
              apply (fastforce split: cap.splits capability.splits simp: returnOk_def)

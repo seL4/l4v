@@ -2526,6 +2526,10 @@ lemma option_case_all_conv:
   "(case x of None \<Rightarrow> True | Some v \<Rightarrow> P v) = (\<forall>v. x = Some v \<longrightarrow> P v)"
   by (auto split: option.split)
 
+lemma prod_o_comp:
+  "(case x of (a, b) \<Rightarrow> f a b) \<circ> g = (case x of (a, b) \<Rightarrow> f a b \<circ> g)"
+  by (auto simp: split_def)
+
 lemma lhs_sym_eq:
   "(a = b) = x \<longleftrightarrow> (b = a) = x"
   by auto

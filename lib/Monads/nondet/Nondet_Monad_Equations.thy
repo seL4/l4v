@@ -388,6 +388,10 @@ lemma gets_return_gets_eq:
   "gets f >>= (\<lambda>g. return (h g)) = gets (\<lambda>s. h (f s))"
   by (simp add: simpler_gets_def bind_def return_def)
 
+lemma gets_prod_comp:
+  "gets (case x of (a, b) \<Rightarrow> f a b) = (case x of (a, b) \<Rightarrow> gets (f a b))"
+  by (auto simp: split_def)
+
 lemma bind_assoc2:
   "(do x \<leftarrow> a; _ \<leftarrow> b; c x od) = (do x \<leftarrow> (do x' \<leftarrow> a; _ \<leftarrow> b; return x' od); c x od)"
   by (simp add: bind_assoc)

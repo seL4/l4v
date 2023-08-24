@@ -910,22 +910,6 @@ lemma decodeARMVCPUInvocation_corres:
                    split: if_splits)
   done
 
-(* FIXME this should replace corres_splitEE due to better bound name preservation *)
-lemma corres_splitEE':
-  assumes "corres_underlying sr nf nf' (f \<oplus> r') P P' a c"
-  assumes "\<And>rv rv'. r' rv rv'
-           \<Longrightarrow> corres_underlying sr nf nf' (f \<oplus> r) (R rv) (R' rv') (b rv) (d rv')"
-  assumes "\<lbrace>Q\<rbrace> a \<lbrace>R\<rbrace>,\<lbrace>\<top>\<top>\<rbrace>" "\<lbrace>Q'\<rbrace> c \<lbrace>R'\<rbrace>,\<lbrace>\<top>\<top>\<rbrace>"
-  shows   "corres_underlying sr nf nf' (f \<oplus> r) (P and Q) (P' and Q') (a >>=E (\<lambda>rv. b rv)) (c >>=E (\<lambda>rv'. d rv'))"
-  by (rule corres_splitEE; rule assms)
-
-lemma corres_gets_the_gets: (* FIXME AARCH64: move *)
-  "corres_underlying sr False nf' r P P' (gets_the f) f' \<Longrightarrow>
-   corres_underlying sr nf nf' (\<lambda>x x'. x \<noteq> None \<and> r (the x) x') P P' (gets f) f'"
-  apply (simp add: gets_the_def bind_def simpler_gets_def assert_opt_def)
-  apply (fastforce simp: corres_underlying_def in_monad split: option.splits)
-  done
-
 lemma lookupPTSlot_gets_corres[@lift_corres_args, corres]:
   "corres (\<lambda>fr (bits, b'). case fr of
                              Some (level, b) \<Rightarrow> bits = pt_bits_left level \<and> b' = b
@@ -940,14 +924,6 @@ lemma lookupPTSlot_gets_corres[@lift_corres_args, corres]:
    apply (rule lookupPTSlot_corres)
   apply clarsimp
   done
-
-lemma prod_o_comp: (* FIXME AARCH64: move *)
-  "(case x of (a, b) \<Rightarrow> f a b) \<circ> g = (case x of (a, b) \<Rightarrow> f a b \<circ> g)"
-  by (auto simp: split_def)
-
-lemma gets_prod_comp: (* FIXME AARCH64: move *)
-  "gets (case x of (a, b) \<Rightarrow> f a b) = (case x of (a, b) \<Rightarrow> gets (f a b))"
-  by (auto simp: split_def)
 
 lemma lookupFrame_corres[@lift_corres_args, corres]:
   "corres (\<lambda>fr fr'. case (fr, fr') of

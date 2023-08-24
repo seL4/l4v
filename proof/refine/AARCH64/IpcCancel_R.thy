@@ -1491,17 +1491,6 @@ lemma imp_drop_strg:
   "Q \<Longrightarrow> P \<longrightarrow> Q"
   by simp
 
-(* FIXME AARCh64: move; declare upstream *)
-declare corres_underlying_trivial[corres]
-
-(* FIXME AARCh64: move *)
-(* Instance of corres_underlying_trivial for unit type with dc instead of (=) as return relation,
-   for nicer return relation instantiation. *)
-lemma corres_underlying_trivial_dc[corres]:
-  "(nf' \<Longrightarrow> no_fail P' f) \<Longrightarrow> corres_underlying Id nf nf' dc (\<lambda>_. True) P' f f"
-  for f :: "('s, unit) nondet_monad"
-  by (fastforce intro: corres_underlying_trivial corres_rrel_pre)
-
 lemma dissociateVCPUTCB_corres[corres]:
   "\<lbrakk> v' = v; t' = t \<rbrakk> \<Longrightarrow>
    corres dc (obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> tcb_vcpu (tcb_arch tcb) = Some v) t and
