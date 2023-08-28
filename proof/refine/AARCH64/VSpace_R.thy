@@ -49,7 +49,8 @@ lemma asidBits_asid_bits[simp]:
   "asidBits = asid_bits"
   by (simp add: bit_simps' asid_bits_def asidBits_def)
 
-(* FIXME AARCH64: where is this added? it should have this name and not crunch_param_rules(8) *)
+(* FIXME AARCH64: Added to crunch_param_rules in Crunch_Instances_NonDet as
+   trans[OF liftE_bindE return_bind]; move to monad equations instead and give it the name below *)
 lemma liftE_return_bindE:
   "liftE (return x) >>=E f = f x"
   by (rule Crunch.crunch_param_rules(8))
@@ -1798,16 +1799,6 @@ lemma invalidateASIDEntry_corres[corres]:
          (invalidate_asid_entry asid) (invalidateASIDEntry asid')"
   unfolding invalidate_asid_entry_def invalidateASIDEntry_def
   by (corres simp: vspace_for_asid_def)
-
-lemma invs_vmid_inv[elim!]: (* FIXME AARCH64: move *)
-  "invs s \<Longrightarrow> vmid_inv s"
-  by (auto simp: invs_def valid_state_def valid_arch_state_def)
-
-lemma invs_valid_vmid_table[elim!]: (* FIXME AARCH64: move *)
-  "invs s \<Longrightarrow> valid_vmid_table s"
-  by (auto simp: invs_def valid_state_def valid_arch_state_def)
-
-declare invs_valid_global_arch_objs[elim!] (* FIXME AARCH64: declare at origin *)
 
 lemma deleteASID_corres [corres]:
   assumes "asid' = ucast asid" "pm' = pm"

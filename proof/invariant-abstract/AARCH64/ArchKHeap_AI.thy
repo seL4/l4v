@@ -739,12 +739,6 @@ lemma valid_arch_caps_lift:
     apply (wpsimp wp: cap archvspace asidtable pts)+
   done
 
-lemma valid_asid_map_lift_strong:
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_table s)\<rbrace>"
-  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_pools_of s)\<rbrace>"
-  shows "f \<lbrace>valid_asid_map\<rbrace>"
-  by (wpsimp simp: valid_asid_map_def wp: entry_for_asid_lift assms)
-
 context
   fixes f :: "'a::state_ext state \<Rightarrow> ('b \<times> 'a state) set \<times> bool"
   assumes arch: "\<And>P. f \<lbrace>\<lambda>s. P (arch_state s)\<rbrace>"

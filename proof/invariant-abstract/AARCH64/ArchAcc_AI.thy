@@ -817,10 +817,6 @@ lemma set_asid_pool_valid_objs [wp]:
   unfolding set_asid_pool_def
   by (wpsimp wp: set_object_valid_objs simp: valid_obj_def)
 
-lemma invs_valid_global_arch_objs:
-  "invs s \<Longrightarrow> valid_global_arch_objs s"
-  by (clarsimp simp: invs_def valid_state_def valid_arch_state_def)
-
 lemma is_aligned_pt:
   "\<lbrakk> pt_at pt_t pt s; pspace_aligned s \<rbrakk> \<Longrightarrow> is_aligned pt (pt_bits pt_t)"
   apply (clarsimp simp: obj_at_def)
@@ -2826,7 +2822,7 @@ crunches do_machine_op
   and pspace_in_kernel_window[wp]: pspace_in_kernel_window
   and cap_refs_in_kernel_window[wp]: cap_refs_in_kernel_window
   and vspace_at_asid[wp]: "\<lambda>s. P (vspace_at_asid a pt s)"
-  and valid_vs_lookup[wp]: "valid_vs_lookup"
+  and valid_vs_lookup[wp]: "\<lambda>s. P (valid_vs_lookup s)"
   and valid_obj[wp]: "valid_obj t obj"
   (simp: valid_kernel_mappings_def wp: valid_obj_typ)
 

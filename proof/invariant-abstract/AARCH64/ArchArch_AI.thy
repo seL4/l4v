@@ -1392,6 +1392,16 @@ lemma vs_lookup_slot_pte_at:
   apply (rule is_aligned_add; simp add: is_aligned_shift)
   done
 
+(* used in Refine *)
+lemma pt_lookup_slot_pte_at:
+  "\<lbrakk> vspace_for_asid asid s = Some pt; pt_lookup_slot pt vref (ptes_of s) = Some (level, slot);
+     vref \<in> user_region; invs s\<rbrakk>
+   \<Longrightarrow> pte_at (level_type level) slot s"
+  apply (drule (1) pt_lookup_slot_vs_lookup_slotI)
+  apply clarsimp
+  apply (erule (3) vs_lookup_slot_pte_at)
+  done
+
 lemma vmpage_size_of_level_pt_bits_left:
   "\<lbrakk> pt_bits_left level = pageBitsForSize vmpage_size; level \<le> max_pt_level \<rbrakk> \<Longrightarrow>
    vmsize_of_level level = vmpage_size"

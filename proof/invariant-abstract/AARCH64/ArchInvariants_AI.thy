@@ -587,12 +587,15 @@ definition pspace_in_kernel_window :: "'z::state_ext state \<Rightarrow> bool" w
 definition vspace_at_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "vspace_at_asid asid pt \<equiv> \<lambda>s. vspace_for_asid asid s = Some pt"
 
+definition kernel_window_range :: "obj_ref set" where
+  "kernel_window_range \<equiv> {pptr_base ..< pptrTop}"
+
 definition valid_uses_2 :: "arm_vspace_region_uses \<Rightarrow> bool" where
   "valid_uses_2 uses \<equiv>
      \<forall>p. (\<not>canonical_address p \<longrightarrow> uses p = ArmVSpaceInvalidRegion)
-          \<and> (p \<in> {pptr_base ..< pptrTop}
+          \<and> (p \<in> kernel_window_range
              \<longrightarrow> uses p \<in> {ArmVSpaceKernelWindow, ArmVSpaceInvalidRegion})
-          \<and> (uses p = ArmVSpaceKernelWindow \<longrightarrow> p \<in> {pptr_base ..< pptrTop})
+          \<and> (uses p = ArmVSpaceKernelWindow \<longrightarrow> p \<in> kernel_window_range)
           \<comment> \<open>The kernel device window doesn't occupy the entire region above kdev_base\<close>
           \<and> (kdev_base \<le> p \<longrightarrow> uses p \<in> {ArmVSpaceDeviceWindow, ArmVSpaceInvalidRegion})
           \<comment> \<open>No user window in hyp kernel address space\<close>
@@ -1518,7 +1521,12 @@ lemma pptrTop_le_ipa_size:
   "pptrTop \<le> mask ipa_size"
   by (simp add: bit_simps pptrTop_def mask_def)
 
-lemma addrFromPPtr_mask_ipa: (* FIXME AARCH64: check if used; Refine needs this with >> pageBits *)
+lemma below_pptrTop_ipa_size:
+  "p < pptrTop \<Longrightarrow> p \<le> mask ipa_size"
+  using pptrTop_le_ipa_size
+  by simp
+
+lemma addrFromPPtr_mask_ipa:
   "\<lbrakk> pptr_base \<le> pt_ptr; pt_ptr < pptrTop \<rbrakk>
    \<Longrightarrow> addrFromPPtr pt_ptr && mask ipa_size = addrFromPPtr pt_ptr"
   using pptrTop_le_ipa_size
@@ -1536,7 +1544,24 @@ lemmas window_defs =
 lemma valid_uses_kernel_window:
   "\<lbrakk> valid_uses s; p \<in> kernel_window s \<rbrakk> \<Longrightarrow> p \<in> {pptr_base ..< pptrTop} \<and> canonical_address p"
   unfolding valid_uses_def window_defs
-  by (erule_tac x=p in allE) auto
+  by (erule_tac x=p in allE) (auto simp: kernel_window_range_def)
+
+lemma kernel_window_bounded:
+  "\<lbrakk> p \<in> kernel_window s; valid_uses s \<rbrakk> \<Longrightarrow> p \<in> kernel_window_range"
+  by (fastforce dest: valid_uses_kernel_window simp: kernel_window_range_def)
+
+lemma pspace_in_kw_bounded:
+  "\<lbrakk> kheap s p = Some ko; pspace_in_kernel_window s; valid_uses s; pspace_aligned s \<rbrakk> \<Longrightarrow>
+   p \<in> kernel_window_range"
+  unfolding pspace_aligned_def
+  apply (drule bspec, fastforce)
+  apply (simp add: pspace_in_kernel_window_def)
+  apply (erule allE, erule allE, erule (1) impE)
+  apply (prop_tac "p \<in> kernel_window s")
+   apply (erule set_mp)
+   apply (clarsimp simp: is_aligned_no_overflow)
+  apply (fastforce dest: kernel_window_bounded)
+  done
 
 lemma pt_walk_max_level:
   "pt_walk top_level bot_level pt_ptr vptr ptes = Some (level, p)
@@ -2281,6 +2306,15 @@ lemma valid_vspace_objsD:
    valid_vspace_obj level ao s"
   by (simp add: valid_vspace_objs_def)
 
+lemma vspace_for_asid_not_normal_pt:
+  "\<lbrakk>vspace_for_asid asid s = Some pt; normal_pt_at pt s; valid_vspace_objs s\<rbrakk> \<Longrightarrow> False"
+  apply (drule vspace_for_asid_vs_lookup)
+  apply (clarsimp simp: pt_at_eq)
+  apply (drule (1) valid_vspace_objsD, simp)
+   apply (fastforce simp: in_omonad)
+  apply clarsimp
+  done
+
 (* A static bound on the size of pt_bits. For PA_40 configurations this is 40 (size of the
    PA/IPA address space). For PA_44 configurations, this is 48, because the page tables can
    theoretically translate 48 bits, even though the PA/IPA space is only 44 bits wide *)
@@ -2363,6 +2397,29 @@ lemma is_aligned_addrFromPPtr_n:
 lemma is_aligned_addrFromPPtr[intro!]:
   "is_aligned p pageBits \<Longrightarrow> is_aligned (addrFromPPtr p) pageBits"
   by (simp add: is_aligned_addrFromPPtr_n pageBits_def pptrBaseOffset_alignment_def)
+
+lemma pptrTop_ucast_ppn:
+  "\<lbrakk> p < pptrTop; is_aligned p pageBits \<rbrakk> \<Longrightarrow>
+   ucast (ucast (p >> pageBits)::ppn) = p >> pageBits"
+  apply (drule below_pptrTop_ipa_size)
+  apply word_eqI
+  using ppn_len_def'[unfolded ppn_len_def]
+  by (fastforce dest: bit_imp_le_length)
+
+lemma kernel_window_range_addrFromPPtr:
+  "p \<in> kernel_window_range \<Longrightarrow> addrFromPPtr p < pptrTop"
+  apply (simp add: kernel_window_range_def addrFromPPtr_def pptrBaseOffset_def
+                   paddrBase_def pptr_base_def)
+  apply unat_arith
+  done
+
+lemma kernel_window_addrFromPPtr:
+  "\<lbrakk> p \<in> kernel_window_range; is_aligned p pageBits \<rbrakk> \<Longrightarrow>
+   ucast (ucast (addrFromPPtr p >> pageBits)::ppn) = addrFromPPtr p >> pageBits"
+  apply (rule pptrTop_ucast_ppn)
+   apply (erule kernel_window_range_addrFromPPtr)
+  apply (erule is_aligned_addrFromPPtr)
+  done
 
 lemma is_aligned_ptrFromPAddr_n:
   "\<lbrakk>is_aligned x sz; sz \<le> pptrBaseOffset_alignment\<rbrakk>

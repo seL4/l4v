@@ -2401,7 +2401,6 @@ lemma deleteASID_invs'[wp]:
   unfolding deleteASID_def
   by (wpsimp wp: getASID_wp hoare_drop_imps simp: getPoolPtr_def)
 
-(* FIXME AARCH64 move next to valid_objs_valid_tcb *)
 lemma valid_objs_valid_tcb':
   "\<lbrakk> valid_objs' s ; ko_at' (t :: tcb) p s \<rbrakk> \<Longrightarrow> valid_tcb' t s"
   by (fastforce simp add: obj_at'_def ran_def valid_obj'_def valid_objs'_def)
@@ -3834,16 +3833,6 @@ lemma return_NullCap_pair_corres[corres]:
           \<top> \<top>
           (return (cap.NullCap, cap.NullCap)) (return (NullCap, NullCap))"
   by (corres corres: corres_returnTT)
-
-(* FIXME AARCH64: move *)
-lemma vspace_for_asid_not_normal_pt:
-  "\<lbrakk>vspace_for_asid asid s = Some pt; normal_pt_at pt s; valid_vspace_objs s\<rbrakk> \<Longrightarrow> False"
-  apply (drule vspace_for_asid_vs_lookup)
-  apply (clarsimp simp: pt_at_eq)
-  apply (drule (1) valid_vspace_objsD, simp)
-   apply (fastforce simp: in_omonad)
-  apply clarsimp
-  done
 
 lemma arch_finaliseCap_corres:
   "\<lbrakk> final_matters' (ArchObjectCap cap') \<Longrightarrow> final = final'; acap_relation cap cap' \<rbrakk>

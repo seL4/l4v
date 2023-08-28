@@ -216,7 +216,7 @@ proof -
   ultimately
   show ?thesis
     unfolding valid_uses_2_def init_vspace_uses_def window_defs
-    by auto
+    by (auto simp: kernel_window_range_def)
 qed
 
 lemma valid_global_arch_objs_init_A_st[simp]:

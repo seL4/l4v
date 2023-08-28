@@ -678,76 +678,10 @@ lemma maybeVSpaceForASID_corres:
      apply wpsimp+
   done
 
- (* FIXME AARCH64: move, use in valid_uses *)
-definition kernel_window_range :: "obj_ref set" where
-  "kernel_window_range \<equiv> {pptr_base..<AARCH64.pptrTop}"
-
-lemma kernel_window_bounded: (* FIXME AARCH64: move *)
-  "\<lbrakk> p \<in> kernel_window s; valid_uses s \<rbrakk> \<Longrightarrow> p \<in> kernel_window_range"
-  by (fastforce dest: valid_uses_kernel_window simp: kernel_window_range_def)
-
-lemma pspace_in_kw_bounded: (* FIXME AARCH64: move *)
-  "\<lbrakk> kheap s p = Some ko; pspace_in_kernel_window s; valid_uses s; pspace_aligned s \<rbrakk> \<Longrightarrow>
-   p \<in> kernel_window_range"
-  apply (erule pspace_alignedE, fastforce)
-  apply (simp add: pspace_in_kernel_window_def)
-  apply (erule allE, erule allE, erule (1) impE)
-  apply (prop_tac "p \<in> kernel_window s")
-   apply (erule set_mp)
-   apply (clarsimp simp: is_aligned_no_overflow)
-  apply (fastforce dest: kernel_window_bounded)
-  done
-
-lemma below_pptrTop_ipa_size: (* FIXME AARCH64: move *)
-  "p < AARCH64.pptrTop \<Longrightarrow> p \<le> mask ipa_size"
-  using pptrTop_le_ipa_size
-  by simp
-
-(* FIXME AARCH64: move? *)
-lemma pptrTop_ucast_ppn:
-  "\<lbrakk> p < AARCH64.pptrTop; is_aligned p pageBits \<rbrakk> \<Longrightarrow>
-   ucast (ucast (p >> pageBits)::ppn) = p >> pageBits"
-  apply (drule below_pptrTop_ipa_size)
-  apply word_eqI
-  using ppn_len_def'[unfolded ppn_len_def]
-  by (fastforce dest: bit_imp_le_length)
-
-(* FIXME AARCH64: move? *)
-lemma kernel_window_range_addrFromPPtr:
-  "p \<in> kernel_window_range  \<Longrightarrow> addrFromPPtr p < AARCH64.pptrTop"
-  apply (simp add: kernel_window_range_def addrFromPPtr_def pptrBaseOffset_def
-                   paddrBase_def pptr_base_def)
-  apply unat_arith
-  done
-
-(* FIXME AARCH64: move? *)
-lemma kernel_window_addrFromPPtr:
-  "\<lbrakk> p \<in> kernel_window_range; is_aligned p pageBits \<rbrakk> \<Longrightarrow>
-   ucast (ucast (addrFromPPtr p >> pageBits)::ppn) = addrFromPPtr p >> pageBits"
-  apply (rule pptrTop_ucast_ppn)
-   apply (erule kernel_window_range_addrFromPPtr)
-  apply (erule is_aligned_addrFromPPtr)
-  done
-
 (* FIXME AARCH64: move to ArchAcc_R *)
 lemma pageBits_leq_table_size[simp, intro!]:
   "pageBits \<le> table_size (pt_type pt)"
   by (simp add: bit_simps)
-
-(* FIXME AARCH64: move *)
-lemma invs_pspace_in_kernel_window[elim!]:
-  "invs s \<Longrightarrow> pspace_in_kernel_window s"
-  by (simp add: invs_def valid_state_def)
-
-(* FIXME AARCH64: move *)
-lemma pt_lookup_slot_pte_at:
-  "\<lbrakk> vspace_for_asid asid s = Some pt; pt_lookup_slot pt vref (ptes_of s) = Some (level, slot);
-     vref \<in> user_region; invs s\<rbrakk>
-   \<Longrightarrow> pte_at (level_type level) slot s"
-  apply (drule (1) pt_lookup_slot_vs_lookup_slotI)
-  apply clarsimp
-  apply (erule (3) vs_lookup_slot_pte_at)
-  done
 
 lemma decodeARMPageTableInvocation_corres:
   "\<lbrakk>cap = arch_cap.PageTableCap p pt_t opt; acap_relation cap cap';

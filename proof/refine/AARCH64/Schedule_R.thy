@@ -91,11 +91,6 @@ lemma set_vcpu_vmid_inv[wp]:
   unfolding vmid_inv_def
   by (wp_pre, wps, wpsimp, simp)
 
-(* FIXME AARCH64 move to ArchVSpace_AI to match ARM_HYP *)
-crunches do_machine_op
-  for valid_vs_lookup2[wp]: "\<lambda>s. P (valid_vs_lookup s)"
-  (ignore: get_object set_object)
-
 lemma vmid_inv_cur_vcpu[simp]:
   "vmid_inv (s\<lparr>arch_state := arch_state s\<lparr>arm_current_vcpu := x\<rparr>\<rparr>) = vmid_inv s"
   by (simp add: vmid_inv_def)
