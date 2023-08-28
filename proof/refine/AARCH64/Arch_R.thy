@@ -937,7 +937,7 @@ lemma decodeARMVSpaceInvocation_corres[corres]:
   apply clarsimp
   done
 
-lemma dom_ucast_eq: (* FIXME AARCH64: remove the one in AInvs; doesn't have abs_asid_entry yet *)
+lemma dom_ucast_eq:
   "is_aligned y asid_low_bits \<Longrightarrow>
    (- dom (\<lambda>a::asid_low_index. map_option abs_asid_entry (p (ucast a :: machine_word))) \<inter>
      {x. ucast x + (y::AARCH64_A.asid) \<noteq> 0} = {}) =

@@ -78,55 +78,9 @@ lemma check_vp_inv: "\<lbrace>P\<rbrace> check_vp_alignment sz w \<lbrace>\<lamb
   apply simp
   done
 
-
 lemma p2_low_bits_max:
   "(2 ^ asid_low_bits - 1) = (max_word :: asid_low_index)"
   by (simp add: asid_low_bits_def)
-
-lemma dom_ucast_eq:
-  "is_aligned y asid_low_bits \<Longrightarrow>
-   (- dom (\<lambda>a::asid_low_index. p (ucast a :: machine_word)) \<inter> {x. ucast x + (y::AARCH64_A.asid) \<noteq> 0} = {}) =
-   (- dom p \<inter> {x. x \<le> 2 ^ asid_low_bits - 1 \<and> x + ucast y \<noteq> 0} = {})"
-  apply safe
-   apply clarsimp
-   apply (rule ccontr)
-   apply (erule_tac x="ucast x" in in_emptyE)
-   apply (clarsimp simp: p2_low_bits_max)
-   apply (rule conjI)
-    apply (clarsimp simp: ucast_ucast_mask)
-    apply (subst (asm) less_mask_eq)
-    apply (rule word_less_sub_le [THEN iffD1])
-      apply (simp add: word_bits_def)
-     apply (simp add: asid_low_bits_def)
-    apply simp
-   apply (clarsimp simp: mask_2pm1[symmetric] ucast_ucast_mask2 is_down is_aligned_mask)
-   apply (frule and_mask_eq_iff_le_mask[THEN iffD2])
-   apply (simp add: asid_low_bits_def)
-   apply (erule notE)
-   apply (subst word_plus_and_or_coroll)
-    apply word_eqI_solve
-   apply (subst (asm) word_plus_and_or_coroll; word_bitwise, clarsimp simp: word_size)
-  apply (clarsimp simp: p2_low_bits_max)
-  apply (rule ccontr)
-  apply simp
-  apply (erule_tac x="ucast x" in in_emptyE)
-  apply clarsimp
-  apply (rule conjI, blast)
-  apply (rule conjI)
-   apply (rule word_less_sub_1)
-   apply (rule order_less_le_trans)
-    apply (rule ucast_less, simp)
-   apply (simp add: asid_low_bits_def)
-  apply clarsimp
-  apply (erule notE)
-  apply (simp add: is_aligned_mask asid_low_bits_def)
-  apply (subst word_plus_and_or_coroll)
-   apply word_eqI_solve
-  apply (subst (asm) word_plus_and_or_coroll)
-   apply (word_bitwise, clarsimp simp: word_size)
-  apply (word_bitwise)
-  done
-
 
 lemma asid_high_bits_max_word:
   "(2 ^ asid_high_bits - 1) = (max_word :: asid_high_index)"
