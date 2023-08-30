@@ -104,6 +104,7 @@ session LibTest (lib) in test = Refine +
     ASpec
     ExecSpec
   theories
+    Corres_Test
     Crunch_Test_NonDet
     Crunch_Test_Qualified_NonDet
     Crunch_Test_Qualified_Trace
