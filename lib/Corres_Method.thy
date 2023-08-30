@@ -42,6 +42,9 @@ method is_hoare_schematic_post =
   succeeds \<open>wp_pre, rule hoare_post_False hoareE_post_False\<close>,
   succeeds \<open>wp_pre, rule wp_post_taut wp_post_tautE\<close>
 
+(* Succeed if wpsimp or wp can safely be applied *)
+method is_safe_wp = is_wp, fails \<open>is_hoare_schematic_post\<close>
+
 section \<open>Main corres method\<close>
 
 named_theorems corres_splits
@@ -125,7 +128,7 @@ method corres'
     (* simplify head corres goal, e.g. for things like liftM unfolding if the user provides such
        a rule as "simp". Not clarsimp, because clarsimp will still perform hypsubst on assumptions
        and might through that rewrite guards *)
-    | succeeds \<open>is_corres\<close>,
+    | is_corres,
       simp (no_asm_use) cong: corres_weaker_cong cong split: split split del: if_split split_del
                         add: simp corres_simp del: corres_no_simp simp_del
     (* simplify any remaining side condition head goal (non-corres, non-wp). This is either a side
@@ -143,7 +146,7 @@ method corres'
        otherwise the goal will still have schematic post conditions. Fail if there is a
        free schematic postcondition despite all these measures.
        *)
-    | succeeds \<open>is_wp\<close>, fails \<open>is_hoare_schematic_post\<close>,
+    | is_safe_wp,
       (wpsimp wp: wp wp_del: wp_del simp: simp simp_del: simp_del split: split split_del: split_del
               cong: cong)+
    )+)[1]
