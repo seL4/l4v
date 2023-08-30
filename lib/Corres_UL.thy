@@ -472,6 +472,13 @@ lemma corres_if3:
 
 text \<open>Some equivalences about liftM and other useful simps\<close>
 
+(* These rules are declared [simp], which in hindsight was not a good decision, because they
+   change the return relation which often is schematic when these rules apply in the goal.
+   In those circumstances it is usually safer to unfold liftM_def and proceed with the resulting
+   substituted term.
+
+   (We leave the [simp] attribute here, because too many proofs now depend on it)
+*)
 lemma corres_liftM_simp[simp]:
   "corres_underlying sr nf nf' r P P' (liftM t f) g =
    corres_underlying sr nf nf' (r \<circ> t) P P' f g"
