@@ -131,10 +131,4 @@ notation (input)
 
 lemmas cast_simps = cast_simps ucast_down_bl
 
-(* shadows the slightly weaker Word.nth_ucast *)
-lemma nth_ucast:
-  "(ucast (w::'a::len word)::'b::len word) !! n =
-   (w !! n \<and> n < min LENGTH('a) LENGTH('b))"
-  by (auto simp: not_le dest: bit_imp_le_length)
-
 end

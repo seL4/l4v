@@ -153,8 +153,8 @@ lemma sshiftr_n1: "-1 >>> n = -1"
 
 lemma nth_sshiftr:
   "bit (w >>> m) n = (n < size w \<and> (if n + m \<ge> size w then bit w (size w - 1) else bit w (n + m)))"
-  apply (clarsimp simp add: bit_simps word_size ac_simps not_less)
-  apply (metis add.commute bit_imp_le_length bit_shiftr_word_iff le_diff_conv not_le)
+  apply (auto simp add: bit_simps word_size ac_simps not_less)
+  apply (meson bit_imp_le_length bit_shiftr_word_iff leD)
   done
 
 lemma sshiftr_numeral:
@@ -496,7 +496,7 @@ next
       ultimately show ?thesis
         using \<open>y < LENGTH('a)\<close>
         by (auto simp add: drop_bit_eq_div word_less_nat_alt unat_div unat_word_ariths
-                           shiftr_def shiftl_def)
+          shiftr_def shiftl_def)
     next
       case False
       with \<open>y < n\<close> have *: \<open>unat x \<noteq> 2 ^ n div 2 ^ y\<close>
@@ -716,7 +716,7 @@ lemma word_and_notzeroD:
 lemma shiftr_le_0:
   "unat (w::'a::len word) < 2 ^ n \<Longrightarrow> w >> n = (0::'a::len word)"
   by (auto simp add: take_bit_word_eq_self_iff word_less_nat_alt shiftr_def
-           simp flip: take_bit_eq_self_iff_drop_bit_eq_0 intro: ccontr)
+    simp flip: take_bit_eq_self_iff_drop_bit_eq_0 intro: ccontr)
 
 lemma of_nat_shiftl:
   "(of_nat x << n) = (of_nat (x * 2 ^ n) :: ('a::len) word)"
@@ -1466,8 +1466,11 @@ lemma mask_shift_sum:
   "\<lbrakk> a \<ge> b; unat n = unat (p AND mask b) \<rbrakk>
    \<Longrightarrow> (p AND NOT(mask a)) + (p AND mask a >> b) * (1 << b) + n = (p :: 'a :: len word)"
   apply (simp add: shiftl_def shiftr_def flip: push_bit_eq_mult take_bit_eq_mask word_unat_eq_iff)
-  apply (subst disjunctive_add, clarsimp simp add: bit_simps)+
-  apply (rule bit_word_eqI)
+  apply (subst disjunctive_add)
+   apply (auto simp add: bit_simps)
+  apply (subst disjunctive_add)
+   apply (auto simp add: bit_simps)
+    apply (rule bit_word_eqI)
   apply (auto simp add: bit_simps)
   done
 

@@ -10,6 +10,12 @@ theory Signed_Division_Word
   imports "HOL-Library.Signed_Division" "HOL-Library.Word"
 begin
 
+text \<open>
+  The following specification of division follows ISO C99, which in turn adopted the typical
+  behavior of hardware modern in the beginning of the 1990ies.
+  The underlying integer division is named ``T-division'' in \cite{leijen01}.
+\<close>
+
 instantiation word :: (len) signed_division
 begin
 
