@@ -2237,7 +2237,7 @@ lemma map_of_zip_is_index:
 
 lemma map_of_zip_take_update:
   "\<lbrakk>i < length xs; length xs \<le> length ys; distinct xs\<rbrakk>
-  \<Longrightarrow> map_of (zip (take i xs) ys)(xs ! i \<mapsto> (ys ! i)) = map_of (zip (take (Suc i) xs) ys)"
+  \<Longrightarrow> (map_of (zip (take i xs) ys)) (xs ! i \<mapsto> ys ! i) = map_of (zip (take (Suc i) xs) ys)"
   apply (rule ext, rename_tac x)
   apply (case_tac "x=xs ! i"; clarsimp)
    apply (rule map_of_is_SomeI[symmetric])
