@@ -36,17 +36,15 @@ abbreviation
 abbreviation
   ap_Ptr :: "addr \<Rightarrow> asid_pool_C ptr" where "ap_Ptr == Ptr"
 
-(* FIXME AARCH64 not sure about this, this is dynamic w.r.t. address size *)
-type_synonym vspace_ptr = "(pte_C[512]) ptr"
-(* FIXME AARCH64 not sure about this, check *)
-type_synonym pt_ptr = "(pte_C[512]) ptr"
+type_synonym pt_ptr = "(pte_C[pt_array_len]) ptr"
+type_synonym vs_ptr = "(pte_C[vs_array_len]) ptr"
 
 abbreviation
   pte_Ptr :: "addr \<Rightarrow> pte_C ptr" where "pte_Ptr == Ptr"
 abbreviation
   pt_Ptr :: "machine_word \<Rightarrow> pt_ptr" where "pt_Ptr == Ptr"
 abbreviation
-  vspace_Ptr :: "machine_word \<Rightarrow> vspace_ptr" where "vspace_Ptr == Ptr"
+  vs_Ptr :: "machine_word \<Rightarrow> vs_ptr" where "vs_Ptr == Ptr"
 
 abbreviation
   vgic_lr_C_Ptr :: "addr \<Rightarrow> (virq_C[64]) ptr" where "vgic_lr_C_Ptr \<equiv> Ptr"
@@ -172,34 +170,6 @@ abbreviation
 abbreviation
   "sched_queue_relation \<equiv> tcb_queue_relation tcbSchedNext_C tcbSchedPrev_C"
 
-
-(* FIXME AARCH64: appears unused
-definition
-wordSizeCase :: "'a \<Rightarrow> 'a \<Rightarrow> 'a" where
-"wordSizeCase a b \<equiv> (if bitSize (undefined::machine_word) = 32
-        then  a
-        else if bitSize (undefined::machine_word) = 64
-        then  b
-        else  error []
-        )"
-*)
-
-(* FIXME AARCH64: appears unused
-   it's odd here that we have wordSizeCase and use it instead of cap bits, investigate
-   it's also unclear why there are no arch caps here except for VCPU
-primrec
-  capBits_C :: "cap_CL \<Rightarrow> nat"
-where
-  "capBits_C Cap_null_cap = 0"
-| "capBits_C (Cap_untyped_cap uc) = unat (capBlockSize_CL uc)"
-| "capBits_C (Cap_endpoint_cap ec) = wordSizeCase 4 5"
-| "capBits_C (Cap_notification_cap aec) = wordSizeCase 4 5"
-| "capBits_C (Cap_cnode_cap cnc) =  wordSizeCase 4 5"
-| "capBits_C (Cap_thread_cap tc) = tcbBlockSizeBits"
-| "capBits_C (Cap_zombie_cap zc) =  (wordSizeCase 4 5)"
-| "capBits_C (Cap_vcpu_cap tc) = vcpuBits"  *)
-
-(* FIXME RAF: you're missing vsrootcaps everywhere we have a PT cap *)
 definition
 capUntypedPtr_C :: "cap_CL \<Rightarrow> word64" where
   "capUntypedPtr_C cap \<equiv> case cap of
@@ -240,14 +210,11 @@ abbreviation
   ARMHugePage :: "vmpage_size" where
  "ARMHugePage == AARCH64.ARMHugePage"
 
-definition
-  framesize_to_H :: "machine_word \<Rightarrow> vmpage_size"
-where
+definition framesize_to_H :: "machine_word \<Rightarrow> vmpage_size" where
   "framesize_to_H c \<equiv>
     if c = scast Kernel_C.ARMSmallPage then ARMSmallPage
     else if c = scast Kernel_C.ARMLargePage then ARMLargePage
-    else ARMHugePage" (* for 39-bit address space; 48-bit adds another size *)
-(* FIXME AARCH64 update comment above *)
+    else ARMHugePage"
 
 definition
   framesize_from_H :: "vmpage_size \<Rightarrow> machine_word"

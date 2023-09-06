@@ -90,61 +90,47 @@ locale kernel = kernel_all_substitute + state_rel
 context state_rel
 begin
 
-(* FIXME AARCH64 in AArch64 C we have:
-vspace_root_t armKSGlobalUserVSpace[BIT(seL4_VSpaceIndexBits)] VISIBLE;
-pte_t armKSGlobalKernelPGD[BIT(PT_INDEX_BITS)] VISIBLE;
-pte_t armKSGlobalKernelPUD[BIT(PT_INDEX_BITS)] VISIBLE;
-pte_t armKSGlobalKernelPDs[BIT(PT_INDEX_BITS)][BIT(PT_INDEX_BITS)] VISIBLE;
-pte_t armKSGlobalKernelPT[BIT(PT_INDEX_BITS)] VISIBLE;
-
-with the comment that armKSGlobalUserVSpace is "the temporary userspace page table in kernel.
+(* FIXME AARCH64 change/expand the comment in C for armKSGlobalUserVSpace to include that it's
+"the default page table for when the user does not have a page table" rather than the currently
+confusing
+"the temporary userspace page table in kernel.
 It is required before running user thread to avoid speculative page table walking with the
-wrong page table."
+wrong page table." *)
 
-and in Haskell we only use armKSGlobalUserVSpace
-
-so this appears to no longer be of interest?
-abbreviation armKSGlobalPT_Ptr :: "(pte_C[512]) ptr" where (* FIXME AARCH64 512 needs to change *)
-  "armKSGlobalPT_Ptr \<equiv> pt_Ptr (symbol_table ''armKSGlobalPT'')"
-
-also we appear to not examine second-level tables on AArch64, so no globalPTs_to_H?
-*)
-
-abbreviation armKSGlobalUserVSpace_Ptr :: vspace_ptr where
-  "armKSGlobalUserVSpace_Ptr \<equiv> pt_Ptr (symbol_table ''armKSGlobalUserVSpace'')"
+abbreviation armKSGlobalUserVSpace_Ptr :: vs_ptr where
+  "armKSGlobalUserVSpace_Ptr \<equiv> vs_Ptr (symbol_table ''armKSGlobalUserVSpace'')"
 
 (* relates fixed addresses *)
 definition carch_globals :: "Arch.kernel_state \<Rightarrow> bool" where
   "carch_globals s \<equiv> armKSGlobalUserVSpace s = ptr_val armKSGlobalUserVSpace_Ptr"
 
-lemma carch_globals_riscvKSGlobalPT:
+lemma carch_globals_armKSGlobalUserVSpace:
   "carch_globals s \<Longrightarrow> armKSGlobalUserVSpace s = symbol_table ''armKSGlobalUserVSpace''"
   by (simp add: carch_globals_def armKSGlobalUserVSpace_def)
 
-(* DON'T DELETE yet:
-    keep this for a rainy day, if we find out that leaving the asid map out of the state relation
-    is no longer possible
-    This recreates the asid map from the asid table *)
-(* FIXME AARCH64 review ASIDs and ASID maps and VMIDs *)
-definition asid_map_trace where
-  "asid_map_trace s \<equiv> \<lambda>asid. case (armKSASIDTable (ksArchState s)) (asidHighBitsOf asid) of None \<Rightarrow> None |
-       Some asidpoolptr \<Rightarrow> case (ksPSpace s) asidpoolptr of None \<Rightarrow> None |
-          Some (KOArch (KOASIDPool (ASIDPool pool))) \<Rightarrow> pool (asid && mask asidLowBits)"
-
-(* FIXME AARCH64 is this the right place? MOVE? *)
-definition
-  cur_vcpu_relation :: "(machine_word \<times> bool) option \<Rightarrow> vcpu_C ptr \<Rightarrow> machine_word \<Rightarrow> bool"
-  where
+definition cur_vcpu_relation ::
+  "(machine_word \<times> bool) option \<Rightarrow> vcpu_C ptr \<Rightarrow> machine_word \<Rightarrow> bool" where
   "cur_vcpu_relation akscurvcpu cvcpu cactive \<equiv>
-    case akscurvcpu
-      of Some acurvcpu \<Rightarrow> cvcpu = Ptr (fst acurvcpu) \<and> cvcpu \<noteq> NULL \<and> cactive = from_bool (snd acurvcpu)
-       | None \<Rightarrow> cvcpu = NULL \<and> cactive = 0"
+    case akscurvcpu of
+      Some acurvcpu \<Rightarrow> cvcpu = Ptr (fst acurvcpu) \<and> cvcpu \<noteq> NULL \<and> cactive = from_bool (snd acurvcpu)
+    | None \<Rightarrow> cvcpu = NULL \<and> cactive = 0"
 
-(* FIXME AARCH64 review ASIDs and ASID maps *)
+(* FIXME AARCH64: the naming in C is confusing (do we want to change it to talk about VMIDs instead
+   of HW ASIDs?:
+   armKSNextVMID in Haskell is armKSNextASID in C (note this is a hw_asid_t, so should have "HW" in it
+     at least)
+   armKSVMIDTable in Haskell is  armKSHWASIDTable in C *)
+
+(* FIXME AARCH64 move, add vmid_bits_def to relevant bit defs *)
+value_type vmid_bits = "size (0::vmid)"
+
 definition carch_state_relation :: "Arch.kernel_state \<Rightarrow> globals \<Rightarrow> bool" where
   "carch_state_relation astate cstate \<equiv>
     armKSKernelVSpace astate = armKSKernelVSpace_C \<and>
-    array_relation ((=) \<circ> option_to_ptr) (2^asid_high_bits - 1) (armKSASIDTable astate) (armKSASIDTable_' cstate) \<and>
+    array_relation ((=) \<circ> option_to_ptr) (mask asid_high_bits) (armKSASIDTable astate) (armKSASIDTable_' cstate) \<and>
+    armKSNextVMID astate = armKSNextASID_' cstate \<and>
+    array_relation ((=) \<circ> option_to_0) (mask vmid_bits)
+      (armKSVMIDTable astate) (armKSHWASIDTable_' cstate) \<and>
     carch_globals astate \<and>
     gic_vcpu_num_list_regs_' cstate = of_nat (armKSGICVCPUNumListRegs astate) \<and>
     cur_vcpu_relation (armHSCurVCPU astate) (armHSCurVCPU_' cstate) (armHSVCPUActive_' cstate)"
@@ -439,19 +425,19 @@ lemmas pte_tag_defs =
   pte_pte_4k_page_def
   pte_pte_invalid_def
 
-definition
+definition ap_from_vm_rights :: "vmrights \<Rightarrow> machine_word" where
   "ap_from_vm_rights R \<equiv> case R of
      VMKernelOnly \<Rightarrow> 0
    | VMReadWrite \<Rightarrow> 3
    | VMReadOnly \<Rightarrow> 1" \<comment> \<open>note: hyp vs non-hyp swap VMReadWrite and VMReadOnly AP values\<close>
 
-definition
+definition attridx_from_device :: "bool \<Rightarrow> machine_word" where
   "attridx_from_device device \<equiv>
      if device \<comment> \<open>device implies non-cacheable\<close>
-     then 0 \<comment> \<open>S2_DEVICE_nGnRnE\<close>
-     else 15 \<comment> \<open>S2_NORMAL\<close>"
+     then ucast Kernel_C.S2_DEVICE_nGnRnE
+     else ucast Kernel_C.S2_NORMAL"
 
-(* Invalid PTEs map to invalid PTEs (sanity check?) *)
+(* Invalid PTEs map to invalid PTEs (sanity check) *)
 lemma pte_0:
   "index (pte_C.words_C cpte) 0 = 0 \<Longrightarrow>
    pte_lift cpte = Some (Pte_pte_invalid)"
@@ -467,16 +453,15 @@ definition cpte_relation :: "pte \<Rightarrow> pte_C \<Rightarrow> bool" where
       InvalidPTE \<Rightarrow>
         cpte' = Some Pte_pte_invalid
     | PageTablePTE ppn \<Rightarrow>
-        cpte' = Some (Pte_pte_table \<lparr>pt_base_address_CL = ppn << pageBits\<rparr>)
+        cpte' = Some (Pte_pte_table \<lparr> pt_base_address_CL = ppn << pageBits \<rparr>)
     | PagePTE baseaddr small global xn device vmrights \<Rightarrow>
         \<comment> \<open>Other than their type tag, the fields of page PTEs are identical\<close>
-        \<comment> \<open>FIXME AARCH64: in makeUserPage to create a small page PTE, they construct a normal one
-           and then ``just'' change the tag, which might need to be made safe for lifting\<close>
         if small
         then cpte' = Some (Pte_pte_4k_page
                              \<lparr> pte_pte_4k_page_CL.UXN_CL = of_bool xn,
                                page_base_address_CL = baseaddr,
-                               nG_CL = 0,
+                               nG_CL = from_bool global, \<comment> \<open>flipped in hyp mode
+                                 (* FIXME AARCH64 check manual for what this really means *)\<close>
                                AF_CL = 1,
                                SH_CL = 0,
                                AP_CL = ap_from_vm_rights vmrights,
@@ -484,13 +469,13 @@ definition cpte_relation :: "pte \<Rightarrow> pte_C \<Rightarrow> bool" where
         else cpte' = Some (Pte_pte_page
                              \<lparr> pte_pte_page_CL.UXN_CL = of_bool xn,
                                page_base_address_CL = baseaddr,
-                               nG_CL = 0,
+                               nG_CL = from_bool global, \<comment> \<open>flipped in hyp mode\<close>
                                AF_CL = 1,
                                SH_CL = 0,
                                AP_CL = ap_from_vm_rights vmrights,
                                AttrIndx_CL = attridx_from_device device \<rparr>))"
 
-(* FIXME AARCH64 review, confirm whether this can keep state relation as a function *)
+(* note: asid_map_C is a historical name, on AARCH64 it refers to a single ASID pool entry *)
 definition casid_map_relation :: "asidpool_entry option \<Rightarrow> asid_map_C \<Rightarrow> bool" where
   "casid_map_relation ap_entry_opt c_asid_map \<equiv>
     case asid_map_lift c_asid_map of
@@ -501,14 +486,12 @@ definition casid_map_relation :: "asidpool_entry option \<Rightarrow> asid_map_C
                                              then Some (ucast (stored_hw_vmid_CL vsroot)) else None)
                                             (vspace_root_CL vsroot))"
 
-(* FIXME AARCH64 review dom constraint *)
 definition casid_pool_relation :: "asidpool \<Rightarrow> asid_pool_C \<Rightarrow> bool" where
   "casid_pool_relation asid_pool casid_pool \<equiv>
     case asid_pool of ASIDPool pool \<Rightarrow>
     case casid_pool of asid_pool_C.asid_pool_C cpool \<Rightarrow>
       array_relation casid_map_relation (mask asid_low_bits) pool cpool
-      \<and> dom pool \<subseteq> {0 .. mask asid_low_bits} \<comment> \<open>(* FIXME AARCH64 is this really needed given
-                                                   the array_relation range constraint? *)\<close>"
+      \<and> dom pool \<subseteq> {0 .. mask asid_low_bits}"
 
 definition cvcpu_regs_relation :: "vcpu \<Rightarrow> vcpu_C \<Rightarrow> bool" where
   "cvcpu_regs_relation vcpu cvcpu \<equiv>
@@ -529,7 +512,6 @@ definition cvgic_relation :: "gicvcpuinterface \<Rightarrow> gicVCpuIface_C \<Ri
      \<and> gicVCpuIface_C.apr_C cvgic = vgicAPR vgic
      \<and> (\<forall>i\<le>63. vgicLR vgic i = virq_to_H ((gicVCpuIface_C.lr_C cvgic).[i]))
      \<and> (\<forall>i\<ge>64. vgicLR vgic i = 0)"
-(* FIXME AARCH64 (from ARM_HYP): if we know the range is 64, we should change the index type from nat to 6 word *)
 
 definition cvcpu_relation :: "vcpu \<Rightarrow> vcpu_C \<Rightarrow> bool" where
   "cvcpu_relation vcpu cvcpu \<equiv>
@@ -576,10 +558,10 @@ abbreviation
 abbreviation
   "cpspace_device_data_relation ah bh ch \<equiv> cmap_relation (heap_to_device_data ah bh) (clift ch) Ptr cuser_user_data_device_relation"
 
-(* FIXME AARCH64 this is almost certainly wrong, we need a pt_type here *)
+(* The only array-based declaration and access of PTEs is for the global kernel page table, which
+   is guaranteed to be a vspace root table. We never walk this page table in the non-boot kernel code. *)
 abbreviation
-  "cpspace_pte_array_relation ah ch \<equiv> carray_map_relation (ptBits NormalPT_T) (map_to_ptes ah) (h_t_valid (hrs_htd ch) c_guard) pt_Ptr"
-
+  "cpspace_pte_array_relation ah ch \<equiv> carray_map_relation (ptBits VSRootPT_T) (map_to_ptes ah) (h_t_valid (hrs_htd ch) c_guard) pt_Ptr"
 
 definition
   cpspace_relation :: "(machine_word \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> (machine_word \<Rightarrow> word8) \<Rightarrow> heap_raw_state \<Rightarrow> bool"
@@ -746,7 +728,6 @@ abbreviation intStateIRQNode_array_Ptr :: "(cte_C[64]) ptr" where
 abbreviation intStateIRQNode_Ptr :: "cte_C ptr" where
   "intStateIRQNode_Ptr \<equiv> Ptr (symbol_table ''intStateIRQNode'')"
 
-(* FIXME AARCH64 revise after decision on armKSGlobalUserVSpace_Ptr appropriateness *)
 definition
   cstate_relation :: "KernelStateData_H.kernel_state \<Rightarrow> globals \<Rightarrow> bool"
 where
@@ -775,7 +756,7 @@ where
        h_t_valid (hrs_htd (t_hrs_' cstate)) c_guard intStateIRQNode_array_Ptr \<and>
        ptr_span intStateIRQNode_array_Ptr \<subseteq> kernel_data_refs \<and>
        h_t_valid (hrs_htd (t_hrs_' cstate)) c_guard armKSGlobalUserVSpace_Ptr  \<and>
-       ptr_span armKSGlobalUserVSpace_Ptr  \<subseteq> kernel_data_refs \<and>
+       ptr_span armKSGlobalUserVSpace_Ptr \<subseteq> kernel_data_refs \<and>
        htd_safe domain (hrs_htd (t_hrs_' cstate)) \<and>
        -domain \<subseteq> kernel_data_refs \<and>
        globals_list_distinct (- kernel_data_refs) symbol_table globals_list \<and>
