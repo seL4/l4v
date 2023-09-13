@@ -77,8 +77,8 @@ definition
     tcb_bound_notification = None,
     tcb_mcpriority = minBound,
     tcb_arch = init_arch_tcb
-  \<rparr>)
-  (us_global_pd_ptr \<mapsto> us_global_pd)"
+  \<rparr>,
+  us_global_pd_ptr \<mapsto> us_global_pd)"
 
 definition
   "init_cdt \<equiv> Map.empty"

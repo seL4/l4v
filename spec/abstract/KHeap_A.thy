@@ -35,7 +35,7 @@ where
      kobj <- get_object ptr;
      assert (a_type kobj = a_type obj);
      s \<leftarrow> get;
-     put (s\<lparr>kheap := kheap s(ptr \<mapsto> obj)\<rparr>)
+     put (s\<lparr>kheap := (kheap s)(ptr \<mapsto> obj)\<rparr>)
    od"
 
 
