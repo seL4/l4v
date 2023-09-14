@@ -57,9 +57,13 @@ type_synonym tcb_cnode_array = "cte_C[5]"
 type_synonym registers_count = 37
 type_synonym registers_array = "machine_word[registers_count]"
 
-type_synonym register_idx_len = 8
+(* typedef word_t register_t; *)
+type_synonym register_idx_len = machine_word_len
 type_synonym register_idx = "register_idx_len word"
+
+(* representation of C int literals, the default for any unadorned numeral *)
 type_synonym int_literal_len = "32 signed"
+type_synonym int_word = "int_literal_len word"
 
 abbreviation "user_context_Ptr \<equiv> Ptr :: addr \<Rightarrow> user_context_C ptr"
 abbreviation "machine_word_Ptr \<equiv> Ptr :: addr \<Rightarrow> machine_word ptr"

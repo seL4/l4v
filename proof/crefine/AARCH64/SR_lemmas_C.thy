@@ -2147,7 +2147,7 @@ lemmas seL4_VCPUReg_defs =
 
 (* rewrite a definition from a C enum into a vcpureg enumeration lookup *)
 lemma vcpureg_eq_use_type:
-  fixes value' :: "sword32" (* FIXME AARCH64 equivalent of "signed int" in C, we should have aliases for these *)
+  fixes value' :: int_word
   assumes e[simp]: "value \<equiv> value'"
   assumes len: "unat value' < length (enum :: vcpureg list)"
   shows "(of_nat (fromEnum (reg :: vcpureg)) = (scast value :: machine_word))
