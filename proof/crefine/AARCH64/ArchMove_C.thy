@@ -177,9 +177,6 @@ lemma mask_pageBits_inner_beauty:
   apply arith
   done
 
-lemmas mask_64_id[simp] = mask_len_id[where 'a=64, folded word_bits_def]
-                          mask_len_id[where 'a=64, simplified]
-
 lemma prio_ucast_shiftr_wordRadix_helper: (* FIXME generalise *)
   "(ucast (p::priority) >> wordRadix :: machine_word) < 4"
   unfolding maxPriority_def numPriorities_def wordRadix_def
@@ -402,6 +399,142 @@ crunches insertNewCap, Arch_createNewCaps, threadSet, Arch.createObject, setThre
   (wp: crunch_wps setObject_ksPSpace_only
    simp: unless_def updateObject_default_def crunch_simps
    ignore_del: preemptionPoint)
+
+(* FIXME AARCH64 vcpu-related items adapted from ARM_HYP's ArchMove_C, possibly not all are useful *)
+
+lemma vcpu_at_ko:
+  "vcpu_at' p s \<Longrightarrow> \<exists>vcpu. ko_at' (vcpu::vcpu) p s"
+  apply (clarsimp simp: typ_at'_def obj_at'_def ko_wp_at'_def)
+  apply (case_tac ko; simp)
+  apply (rename_tac arch_kernel_object)
+  apply (case_tac arch_kernel_object, auto)[1]
+  done
+
+lemma vcpu_at_ko'_eq:
+  "(\<exists>vcpu :: vcpu. ko_at' vcpu p s) = vcpu_at' p s"
+  apply (rule iffI)
+   apply (clarsimp simp: typ_at'_def obj_at'_def ko_wp_at'_def)
+  apply (clarsimp simp: typ_at'_def obj_at'_def ko_wp_at'_def)
+  apply (case_tac ko, auto)
+  apply (rename_tac arch_kernel_object)
+  apply (case_tac arch_kernel_object, auto)[1]
+  done
+
+lemmas vcpu_at_ko' = vcpu_at_ko'_eq[THEN iffD2]
+
+lemma sym_refs_tcb_vcpu':
+  "\<lbrakk> ko_at' (tcb::tcb) t s; atcbVCPUPtr (tcbArch tcb) = Some v; sym_refs (state_hyp_refs_of' s) \<rbrakk> \<Longrightarrow>
+  \<exists>vcpu. ko_at' vcpu v s \<and> vcpuTCBPtr vcpu = Some t"
+  apply (drule (1) hyp_sym_refs_obj_atD')
+  apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def)
+  apply (case_tac ko; simp add: tcb_vcpu_refs'_def)
+  apply (rename_tac koa)
+  apply (case_tac koa; clarsimp simp: refs_of_ao_def vcpu_tcb_refs'_def)
+  done
+
+
+lemma ko_at'_tcb_vcpu_not_NULL:
+  "\<lbrakk> ko_at' (tcb::tcb) t s ; valid_objs' s ; no_0_obj' s ; atcbVCPUPtr (tcbArch tcb) = Some p \<rbrakk>
+   \<Longrightarrow> 0 < p"
+  \<comment> \<open>when C pointer is NULL, need this to show atcbVCPUPtr is None\<close>
+  unfolding valid_pspace'_def
+  by (fastforce simp: valid_tcb'_def valid_arch_tcb'_def word_gt_0 typ_at'_no_0_objD
+                dest: valid_objs_valid_tcb')
+
+lemma ko_at_vcpu_at'D:
+  "ko_at' (vcpu :: vcpu) vcpuptr s \<Longrightarrow> vcpu_at' vcpuptr s"
+  by (fastforce simp: typ_at_to_obj_at_arches elim: obj_at'_weakenE)
+
+(* FIXME: change the original to be predicated! *)
+crunch pred_tcb_at'2[wp]: doMachineOp "\<lambda>s. P (pred_tcb_at' a b p s)"
+  (simp: crunch_simps)
+
+crunch valid_queues'[wp]: readVCPUReg "\<lambda>s. valid_queues s"
+
+crunch valid_objs'[wp]: readVCPUReg "\<lambda>s. valid_objs' s"
+
+crunch sch_act_wf'[wp]: readVCPUReg "\<lambda>s. P (sch_act_wf (ksSchedulerAction s) s)"
+
+crunch ko_at'[wp]: readVCPUReg "\<lambda>s. P (ko_at' a p s)"
+
+crunch obj_at'[wp]: readVCPUReg "\<lambda>s. P (obj_at' a p s)"
+
+(* FIXME AARCH64 this might not be needed, but currently proved version doesn't have the P
+crunch pred_tcb_at'[wp]: readVCPUReg "\<lambda>s. P (pred_tcb_at' a b p s)"  *)
+
+crunch ksCurThread[wp]: readVCPUReg "\<lambda>s. P (ksCurThread s)"
+
+lemma fromEnum_maxBound_vcpureg_def:
+  "fromEnum (maxBound :: vcpureg) = 22"
+  by (clarsimp simp: fromEnum_def maxBound_def enum_vcpureg)
+
+lemma unat_of_nat_mword_fromEnum_vcpureg[simp]:
+  "unat ((of_nat (fromEnum e)) :: machine_word) = fromEnum (e :: vcpureg)"
+  apply (subst unat_of_nat_eq, clarsimp)
+   apply (rule order_le_less_trans[OF maxBound_is_bound])
+   apply (clarsimp simp: fromEnum_maxBound_vcpureg_def)+
+  done
+
+lemma unat_of_nat_mword_length_upto_vcpureg[simp]:
+  "unat ((of_nat (length [(start :: vcpureg) .e. end])) :: machine_word) = length [start .e. end]"
+  apply (subst unat_of_nat_eq ; clarsimp)
+  apply (rule order_le_less_trans[OF length_upto_enum_le_maxBound])
+  apply (simp add: fromEnum_maxBound_vcpureg_def)
+  done
+
+lemma fromEnum_maxBound_vppievent_irq_def:
+  "fromEnum (maxBound :: vppievent_irq) = 0"
+  by (clarsimp simp: fromEnum_def maxBound_def enum_vppievent_irq)
+
+(* when creating a new object, the entire slot including starting address should be free *)
+(* FIXME move *)
+lemma ps_clear_entire_slotI:
+  "({p..p + 2 ^ n - 1}) \<inter> dom (ksPSpace s) = {} \<Longrightarrow> ps_clear p n s"
+  by (fastforce simp: ps_clear_def mask_def field_simps)
+
+lemma ps_clear_ksPSpace_upd_same[simp]:
+  "ps_clear p n (s\<lparr>ksPSpace := (ksPSpace s)(p \<mapsto> v)\<rparr>) = ps_clear p n s"
+  by (fastforce simp: ps_clear_def)
+
+lemma getObject_vcpu_prop:
+  "\<lbrace>obj_at' P t\<rbrace> getObject t \<lbrace>\<lambda>(vcpu :: vcpu) s. P vcpu\<rbrace>"
+  apply (rule obj_at_getObject)
+  apply (clarsimp simp: loadObject_default_def in_monad)
+  done
+
+(* FIXME would be interesting to generalise these kinds of lemmas to other KOs *)
+lemma setObject_sets_object_vcpu:
+  "\<lbrace> vcpu_at' v \<rbrace> setObject v (vcpu::vcpu) \<lbrace> \<lambda>_. ko_at' vcpu v \<rbrace>"
+  supply fun_upd_apply[simp del]
+  apply (clarsimp simp: setObject_def updateObject_default_def bind_assoc)
+  apply (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_ex_lift simp: alignError_def)
+  apply (clarsimp simp: obj_at'_def)
+  apply (clarsimp simp: obj_at'_def objBitsKO_def archObjSize_def dest!: vcpu_at_ko')
+  apply (fastforce simp: fun_upd_apply)
+  done
+
+(* FIXME would be interesting to generalise these kinds of lemmas to other KOs *)
+lemma placeNewObject_creates_object_vcpu:
+  "\<lbrace> \<top> \<rbrace> placeNewObject v (vcpu::vcpu) 0 \<lbrace> \<lambda>_. ko_at' vcpu v \<rbrace>"
+  supply fun_upd_apply[simp del] haskell_assert_inv[wp del]
+  apply (clarsimp simp: placeNewObject_def placeNewObject'_def split_def alignError_def)
+  apply (wpsimp wp: assert_wp hoare_vcg_imp_lift' hoare_vcg_ex_lift)
+  apply (clarsimp simp: is_aligned_mask[symmetric] objBitsKO_def archObjSize_def)
+  apply (case_tac "is_aligned v vcpuBits"; clarsimp)
+  apply (rule conjI; clarsimp)
+   apply (subst (asm) lookupAround2_None1)
+   apply (clarsimp simp: obj_at'_def objBitsKO_def archObjSize_def fun_upd_apply)
+   apply (fastforce intro: ps_clear_entire_slotI simp add: field_simps fun_upd_apply)
+  apply (subst (asm) lookupAround2_char1)
+  apply (clarsimp simp: obj_at'_def objBitsKO_def archObjSize_def fun_upd_apply)
+  apply (fastforce intro: ps_clear_entire_slotI simp add: field_simps)
+  done
+
+(* FIXME would be interesting to generalise these kinds of lemmas to other KOs *)
+lemma placeNewObject_object_at_vcpu:
+  "\<lbrace> \<top> \<rbrace> placeNewObject v (vcpu::vcpu) 0 \<lbrace> \<lambda>_. vcpu_at' v \<rbrace>"
+  by (rule hoare_post_imp[OF _ placeNewObject_creates_object_vcpu])
+     (fastforce simp: ko_at_vcpu_at'D)
 
 end
 
