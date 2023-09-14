@@ -1922,7 +1922,7 @@ lemmas ccap_rel_cap_get_tag_cases_generic =
     [OF back_subst[of "\<lambda>cap. ccap_relation cap cap'" for cap']]
 
 lemmas ccap_rel_cap_get_tag_cases_arch =
-  cap_get_tag_isCap_unfolded_H_cap(12-15)
+  cap_get_tag_isCap_unfolded_H_cap(12-17)
     [OF back_subst[of "\<lambda>cap. ccap_relation (ArchObjectCap cap) cap'" for cap'],
      OF back_subst[of "\<lambda>cap. ccap_relation cap cap'" for cap']]
 

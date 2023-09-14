@@ -38,6 +38,11 @@ assumes isIRQPending_ccorres:
 assumes getActiveIRQ_Normal:
   "\<Gamma> \<turnstile> \<langle>Call getActiveIRQ_'proc, Normal s\<rangle> \<Rightarrow> s' \<Longrightarrow> isNormal s'"
 
+assumes maskInterrupt_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>disable = from_bool m\<rbrace> \<inter> \<lbrace>\<acute>irq = ucast irq\<rbrace>) []
+           (doMachineOp (maskInterrupt m irq))
+           (Call maskInterrupt_'proc)"
+
 (* AArch64-specific machine ops (function names don't exist on other platforms) *)
 
 (* FIXME AARCH64 TODO
