@@ -1,4 +1,5 @@
 (*
+ * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2014, General Dynamics C4 Systems
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
@@ -19,12 +20,12 @@ lemma vmRightsToBits_bounded:
   "vmRightsToBits rights < 4"
   by (cases rights; clarsimp simp: vmRightsToBits_def)
 
-lemma vmRightsToBits_not_0:
-  "vmRightsToBits rights \<noteq> 0"
+lemma vmRightsToBits_not_2:
+  "vmRightsToBits rights \<noteq> 2"
   by (cases rights; clarsimp simp: vmRightsToBits_def)
 
 lemma vmRightsToBits_vmrights_to_H:
-  "\<lbrakk> rights < 4; rights \<noteq> 0 \<rbrakk> \<Longrightarrow> vmRightsToBits (vmrights_to_H rights) = rights"
+  "\<lbrakk> rights < 4; rights \<noteq> 2 \<rbrakk> \<Longrightarrow> vmRightsToBits (vmrights_to_H rights) = rights"
   apply (clarsimp simp add: vmrights_to_H_def vm_rights_defs vmRightsToBits_def split: if_splits)
   apply (drule word_less_cases, erule disjE, simp, simp)+
   done
@@ -100,6 +101,7 @@ lemma cap_get_tag_isCap0:
   \<and> (cap_get_tag cap' = scast cap_cnode_cap) = isCNodeCap cap
   \<and> isArchCap_tag (cap_get_tag cap') = isArchCap \<top> cap
   \<and> (cap_get_tag cap' = scast cap_frame_cap) = (isArchFrameCap cap)
+  \<and> (cap_get_tag cap' = scast cap_vcpu_cap) = isArchCap isVCPUCap cap
   \<and> (cap_get_tag cap' = scast cap_domain_cap) = isDomainCap cap"
   using cr
   apply -
@@ -108,8 +110,7 @@ lemma cap_get_tag_isCap0:
   by (clarsimp simp: isCap_simps cap_tag_defs word_le_nat_alt Let_def
               split: if_split_asm) \<comment> \<open>takes a while\<close>
 
-
-
+(* FIXME AARCH64 does anyone remember why there are no page tables or asid pools here? *)
 lemma cap_get_tag_isCap:
   assumes cr: "ccap_relation cap cap'"
   shows "(cap_get_tag cap' = scast cap_thread_cap) = (isThreadCap cap)"
@@ -124,6 +125,7 @@ lemma cap_get_tag_isCap:
   and "(cap_get_tag cap' = scast cap_cnode_cap) = (isCNodeCap cap)"
   and "isArchCap_tag (cap_get_tag cap') = isArchCap \<top> cap"
   and "(cap_get_tag cap' = scast cap_frame_cap) = (isArchFrameCap cap)"
+  and "(cap_get_tag cap' = scast cap_vcpu_cap) = isArchCap isVCPUCap cap"
   and "(cap_get_tag cap' = scast cap_domain_cap) = isDomainCap cap"
   using cap_get_tag_isCap0 [OF cr] by auto
 
@@ -282,6 +284,17 @@ lemma cap_get_tag_DomainCap:
   apply (simp add: cap_get_tag_isCap isCap_simps)
   done
 
+lemma cap_get_tag_VCPUCap:
+  assumes cr: "ccap_relation cap cap'"
+  shows "(cap_get_tag cap' = scast cap_vcpu_cap)
+          = (cap = ArchObjectCap (VCPUCap (capVCPUPtr_CL (cap_vcpu_cap_lift cap'))))"
+  using cr
+  apply -
+  apply (rule iffI)
+   apply (clarsimp elim!: ccap_relationE simp: cap_lifts cap_to_H_def)
+  apply (simp add: cap_get_tag_isCap isCap_simps)
+  done
+
 lemmas cap_get_tag_to_H_iffs =
      cap_get_tag_NullCap
      cap_get_tag_ThreadCap
@@ -293,6 +306,7 @@ lemmas cap_get_tag_to_H_iffs =
      cap_get_tag_ZombieCap
      cap_get_tag_UntypedCap
      cap_get_tag_DomainCap
+     cap_get_tag_VCPUCap
 
 lemmas cap_get_tag_to_H = cap_get_tag_to_H_iffs [THEN iffD1]
 
@@ -449,20 +463,20 @@ proof (rule ctes_of_eq_cte_wp_at')
   qed
 qed
 
-
 lemma fst_setCTE:
   assumes ct: "cte_at' dest s"
   and     rl: "\<And>s'. \<lbrakk> ((), s') \<in> fst (setCTE dest cte s);
-           (s' = s \<lparr> ksPSpace := ksPSpace s' \<rparr>);
-           (ctes_of s' = ctes_of s(dest \<mapsto> cte));
-           (map_to_eps (ksPSpace s) = map_to_eps (ksPSpace s'));
-           (map_to_ntfns (ksPSpace s) = map_to_ntfns (ksPSpace s'));
-           (map_to_ptes (ksPSpace s) = map_to_ptes (ksPSpace s'));
-           (map_to_asidpools (ksPSpace s) = map_to_asidpools (ksPSpace s'));
-           (map_to_user_data (ksPSpace s) = map_to_user_data (ksPSpace s'));
-           (map_to_user_data_device (ksPSpace s) = map_to_user_data_device (ksPSpace s'));
-           (map_option tcb_no_ctes_proj \<circ> map_to_tcbs (ksPSpace s)
-              = map_option tcb_no_ctes_proj \<circ> map_to_tcbs (ksPSpace s'));
+           s' = s \<lparr> ksPSpace := ksPSpace s' \<rparr>;
+           ctes_of s' = (ctes_of s)(dest \<mapsto> cte);
+           map_to_eps (ksPSpace s) = map_to_eps (ksPSpace s');
+           map_to_ntfns (ksPSpace s) = map_to_ntfns (ksPSpace s');
+           map_to_ptes (ksPSpace s) = map_to_ptes (ksPSpace s');
+           map_to_asidpools (ksPSpace s) = map_to_asidpools (ksPSpace s');
+           map_to_user_data (ksPSpace s) = map_to_user_data (ksPSpace s');
+           map_to_user_data_device (ksPSpace s) = map_to_user_data_device (ksPSpace s');
+           map_to_vcpus (ksPSpace s) = map_to_vcpus (ksPSpace s');
+           map_option tcb_no_ctes_proj \<circ> map_to_tcbs (ksPSpace s)
+              = map_option tcb_no_ctes_proj \<circ> map_to_tcbs (ksPSpace s');
            \<forall>T p. typ_at' T p s = typ_at' T p s'\<rbrakk> \<Longrightarrow> P"
   shows   "P"
 proof -
@@ -530,6 +544,18 @@ proof -
       ultimately have "(projectKO_opt ko' :: asidpool option) = projectKO_opt ko" using xin thms(4) ceq
         by - (drule (1) bspec, cases ko, auto simp: projectKO_opt_asidpool)
       thus "(projectKO_opt (the (ksPSpace s' x)) :: asidpool option) = projectKO_opt (the (ksPSpace s x))" using ko ko'
+        by simp
+    qed fact
+
+    show "map_to_vcpus (ksPSpace s) = map_to_vcpus (ksPSpace s')"
+    proof (rule map_comp_eqI)
+      fix x
+      assume xin: "x \<in> dom (ksPSpace s')"
+      then obtain ko where ko: "ksPSpace s x = Some ko" by (clarsimp simp: thms(3)[symmetric])
+      moreover from xin obtain ko' where ko': "ksPSpace s' x = Some ko'" by clarsimp
+      ultimately have "(projectKO_opt ko' :: vcpu option) = projectKO_opt ko" using xin thms(4) ceq
+        by - (drule (1) bspec, cases ko, auto simp: projectKO_opt_vcpu)
+      thus "(projectKO_opt (the (ksPSpace s' x)) :: vcpu option) = projectKO_opt (the (ksPSpace s x))" using ko ko'
         by simp
     qed fact
 
@@ -951,6 +977,11 @@ lemma rf_sr_cpte_relation:
   by (clarsimp simp: rf_sr_def cstate_relation_def
                      Let_def cpspace_relation_def)
 
+lemma cmap_relation_vcpu[intro]:
+  "(s, s') \<in> rf_sr \<Longrightarrow> cpspace_vcpu_relation (ksPSpace s) (t_hrs_' (globals s'))"
+  unfolding rf_sr_def state_relation_def cstate_relation_def cpspace_relation_def
+  by (simp add: Let_def)
+
 lemma rf_sr_cte_relation:
   "\<lbrakk> (s, s') \<in> rf_sr; ctes_of s src = Some cte; cslift s' (Ptr src) = Some cte' \<rbrakk> \<Longrightarrow> ccte_relation cte cte'"
   apply (drule cmap_relation_cte)
@@ -1018,16 +1049,21 @@ lemma cstate_relation_only_t_hrs:
   ksIdleThread_' s = ksIdleThread_' t;
   ksWorkUnitsCompleted_' s = ksWorkUnitsCompleted_' t;
   intStateIRQTable_' s = intStateIRQTable_' t;
-  riscvKSASIDTable_' s = riscvKSASIDTable_' t;
+  armKSASIDTable_' s = armKSASIDTable_' t;
+  armKSNextASID_' s = armKSNextASID_' t;
+  armKSHWASIDTable_' s = armKSHWASIDTable_' t;
   phantom_machine_state_' s = phantom_machine_state_' t;
   ghost'state_' s = ghost'state_' t;
   ksDomScheduleIdx_' s = ksDomScheduleIdx_' t;
   ksCurDomain_' s = ksCurDomain_' t;
-  ksDomainTime_' s = ksDomainTime_' t
+  ksDomainTime_' s = ksDomainTime_' t;
+  gic_vcpu_num_list_regs_' s = gic_vcpu_num_list_regs_' t;
+  armHSCurVCPU_' s = armHSCurVCPU_' t;
+  armHSVCPUActive_' s = armHSVCPUActive_' t
   \<rbrakk>
   \<Longrightarrow> cstate_relation a s = cstate_relation a t"
   unfolding cstate_relation_def
-  by (clarsimp simp add: Let_def carch_state_relation_def cmachine_state_relation_def)
+  by (clarsimp simp: Let_def carch_state_relation_def cmachine_state_relation_def)
 
 lemma rf_sr_upd:
   assumes
@@ -1040,12 +1076,17 @@ lemma rf_sr_upd:
     "(ksIdleThread_' (globals x)) = (ksIdleThread_' (globals y))"
     "(ksWorkUnitsCompleted_' (globals x)) = (ksWorkUnitsCompleted_' (globals y))"
     "intStateIRQTable_'(globals x) = intStateIRQTable_' (globals y)"
-    "riscvKSASIDTable_' (globals x) = riscvKSASIDTable_' (globals y)"
+    "armKSASIDTable_' (globals x) = armKSASIDTable_' (globals y)"
+    "armKSNextASID_' (globals x) = armKSNextASID_' (globals y)"
+    "armKSHWASIDTable_'  (globals x) = armKSHWASIDTable_' (globals y)"
     "phantom_machine_state_' (globals x) = phantom_machine_state_' (globals y)"
     "ghost'state_' (globals x) = ghost'state_' (globals y)"
     "ksDomScheduleIdx_' (globals x) = ksDomScheduleIdx_' (globals y)"
     "ksCurDomain_' (globals x) = ksCurDomain_' (globals y)"
     "ksDomainTime_' (globals x) = ksDomainTime_' (globals y)"
+    "gic_vcpu_num_list_regs_' (globals x) = gic_vcpu_num_list_regs_' (globals y)"
+    "armHSCurVCPU_' (globals x) = armHSCurVCPU_' (globals y)"
+    "armHSVCPUActive_' (globals x) = armHSVCPUActive_' (globals y)"
   shows "((a, x) \<in> rf_sr) = ((a, y) \<in> rf_sr)"
   unfolding rf_sr_def using assms
   by simp (rule cstate_relation_only_t_hrs, auto)
@@ -1063,7 +1104,13 @@ lemma rf_sr_upd_safe[simp]:
   and     cdom: "ksCurDomain_' (globals (g y)) = ksCurDomain_' (globals y)"
   and     dt: "ksDomainTime_' (globals (g y)) = ksDomainTime_' (globals y)"
   and arch:
-    "riscvKSASIDTable_' (globals (g y)) = riscvKSASIDTable_' (globals y)"
+    "armKSASIDTable_' (globals (g y)) = armKSASIDTable_' (globals y)"
+    "armKSNextASID_' (globals (g y)) = armKSNextASID_' (globals y)"
+    "armKSHWASIDTable_'  (globals (g y)) = armKSHWASIDTable_' (globals y)"
+    "phantom_machine_state_' (globals (g y)) = phantom_machine_state_' (globals y)"
+    "gic_vcpu_num_list_regs_' (globals (g y)) = gic_vcpu_num_list_regs_' (globals y)"
+    "armHSCurVCPU_' (globals (g y)) = armHSCurVCPU_' (globals y)"
+    "armHSVCPUActive_' (globals (g y)) = armHSVCPUActive_' (globals y)"
     "phantom_machine_state_' (globals (g y)) = phantom_machine_state_' (globals y)"
   and    gs: "ghost'state_' (globals (g y)) = ghost'state_' (globals y)"
   and     wu:  "(ksWorkUnitsCompleted_' (globals (g y))) = (ksWorkUnitsCompleted_' (globals y))"
@@ -1440,13 +1487,14 @@ lemma map_to_ctes_upd_tcb_no_ctes:
 lemma update_ntfn_map_tos:
   fixes P :: "Structures_H.notification \<Rightarrow> bool"
   assumes at: "obj_at' P p s"
-  shows   "map_to_eps (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_eps (ksPSpace s)"
-  and     "map_to_tcbs (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_tcbs (ksPSpace s)"
-  and     "map_to_ctes (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_ctes (ksPSpace s)"
-  and     "map_to_ptes (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_ptes (ksPSpace s)"
-  and     "map_to_asidpools (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_asidpools (ksPSpace s)"
-  and     "map_to_user_data (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_user_data (ksPSpace s)"
-  and     "map_to_user_data_device (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_user_data_device (ksPSpace s)"
+  shows   "map_to_eps ((ksPSpace s)(p \<mapsto> KONotification ko)) = map_to_eps (ksPSpace s)"
+  and     "map_to_tcbs ((ksPSpace s)(p \<mapsto> KONotification ko)) = map_to_tcbs (ksPSpace s)"
+  and     "map_to_ctes ((ksPSpace s)(p \<mapsto> KONotification ko)) = map_to_ctes (ksPSpace s)"
+  and     "map_to_ptes ((ksPSpace s)(p \<mapsto> KONotification ko)) = map_to_ptes (ksPSpace s)"
+  and     "map_to_asidpools ((ksPSpace s)(p \<mapsto> KONotification ko)) = map_to_asidpools (ksPSpace s)"
+  and     "map_to_vcpus ((ksPSpace s)(p \<mapsto> KONotification ko)) = map_to_vcpus (ksPSpace s)"
+  and     "map_to_user_data ((ksPSpace s)(p \<mapsto> KONotification ko)) = map_to_user_data (ksPSpace s)"
+  and     "map_to_user_data_device ((ksPSpace s)(p \<mapsto> KONotification ko)) = map_to_user_data_device (ksPSpace s)"
   using at
   by (auto elim!: obj_atE' intro!: map_to_ctes_upd_other map_comp_eqI
     simp: projectKOs projectKO_opts_defs split: kernel_object.splits if_split_asm)+
@@ -1454,13 +1502,14 @@ lemma update_ntfn_map_tos:
 lemma update_ep_map_tos:
   fixes P :: "endpoint \<Rightarrow> bool"
   assumes at: "obj_at' P p s"
-  shows   "map_to_ntfns (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_ntfns (ksPSpace s)"
-  and     "map_to_tcbs (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_tcbs (ksPSpace s)"
-  and     "map_to_ctes (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_ctes (ksPSpace s)"
-  and     "map_to_ptes (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_ptes (ksPSpace s)"
-  and     "map_to_asidpools (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_asidpools (ksPSpace s)"
-  and     "map_to_user_data (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_user_data (ksPSpace s)"
-  and     "map_to_user_data_device (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_user_data_device (ksPSpace s)"
+  shows   "map_to_ntfns ((ksPSpace s)(p \<mapsto> KOEndpoint ko)) = map_to_ntfns (ksPSpace s)"
+  and     "map_to_tcbs ((ksPSpace s)(p \<mapsto> KOEndpoint ko)) = map_to_tcbs (ksPSpace s)"
+  and     "map_to_ctes ((ksPSpace s)(p \<mapsto> KOEndpoint ko)) = map_to_ctes (ksPSpace s)"
+  and     "map_to_ptes ((ksPSpace s)(p \<mapsto> KOEndpoint ko)) = map_to_ptes (ksPSpace s)"
+  and     "map_to_asidpools ((ksPSpace s)(p \<mapsto> KOEndpoint ko)) = map_to_asidpools (ksPSpace s)"
+  and     "map_to_vcpus ((ksPSpace s)(p \<mapsto> KOEndpoint ko)) = map_to_vcpus (ksPSpace s)"
+  and     "map_to_user_data ((ksPSpace s)(p \<mapsto> KOEndpoint ko)) = map_to_user_data (ksPSpace s)"
+  and     "map_to_user_data_device ((ksPSpace s)(p \<mapsto> KOEndpoint ko)) = map_to_user_data_device (ksPSpace s)"
   using at
   by (auto elim!: obj_atE' intro!: map_to_ctes_upd_other map_comp_eqI
     simp: projectKOs projectKO_opts_defs split: kernel_object.splits if_split_asm)+
@@ -1468,12 +1517,13 @@ lemma update_ep_map_tos:
 lemma update_tcb_map_tos:
   fixes P :: "tcb \<Rightarrow> bool"
   assumes at: "obj_at' P p s"
-  shows   "map_to_eps (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_eps (ksPSpace s)"
-  and     "map_to_ntfns (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_ntfns (ksPSpace s)"
-  and     "map_to_ptes (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_ptes (ksPSpace s)"
-  and     "map_to_asidpools (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_asidpools (ksPSpace s)"
-  and     "map_to_user_data (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_user_data (ksPSpace s)"
-  and     "map_to_user_data_device (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_user_data_device (ksPSpace s)"
+  shows   "map_to_eps ((ksPSpace s)(p \<mapsto> KOTCB ko)) = map_to_eps (ksPSpace s)"
+  and     "map_to_ntfns ((ksPSpace s)(p \<mapsto> KOTCB ko)) = map_to_ntfns (ksPSpace s)"
+  and     "map_to_ptes ((ksPSpace s)(p \<mapsto> KOTCB ko)) = map_to_ptes (ksPSpace s)"
+  and     "map_to_asidpools ((ksPSpace s)(p \<mapsto> KOTCB ko)) = map_to_asidpools (ksPSpace s)"
+  and     "map_to_vcpus ((ksPSpace s)(p \<mapsto> KOTCB ko)) = map_to_vcpus (ksPSpace s)"
+  and     "map_to_user_data ((ksPSpace s)(p \<mapsto> KOTCB ko)) = map_to_user_data (ksPSpace s)"
+  and     "map_to_user_data_device ((ksPSpace s)(p \<mapsto> KOTCB ko)) = map_to_user_data_device (ksPSpace s)"
   using at
   by (auto elim!: obj_atE' intro!: map_to_ctes_upd_other map_comp_eqI
     simp: projectKOs projectKO_opts_defs split: kernel_object.splits if_split_asm)+
@@ -1481,14 +1531,14 @@ lemma update_tcb_map_tos:
 lemma update_asidpool_map_tos:
   fixes P :: "asidpool \<Rightarrow> bool"
   assumes at: "obj_at' P p s"
-  shows   "map_to_ntfns (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_ntfns (ksPSpace s)"
-  and     "map_to_tcbs (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_tcbs (ksPSpace s)"
-  and     "map_to_ctes (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_ctes (ksPSpace s)"
-  and     "map_to_ptes (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_ptes (ksPSpace s)"
-  and     "map_to_eps  (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_eps (ksPSpace s)"
-  and     "map_to_user_data (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_user_data (ksPSpace s)"
-  and     "map_to_user_data_device (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_user_data_device (ksPSpace s)"
-
+  shows   "map_to_ntfns ((ksPSpace s)(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_ntfns (ksPSpace s)"
+  and     "map_to_tcbs ((ksPSpace s)(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_tcbs (ksPSpace s)"
+  and     "map_to_ctes ((ksPSpace s)(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_ctes (ksPSpace s)"
+  and     "map_to_ptes ((ksPSpace s)(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_ptes (ksPSpace s)"
+  and     "map_to_eps  ((ksPSpace s)(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_eps (ksPSpace s)"
+  and     "map_to_vcpus ((ksPSpace s)(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_vcpus (ksPSpace s)"
+  and     "map_to_user_data ((ksPSpace s)(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_user_data (ksPSpace s)"
+  and     "map_to_user_data_device ((ksPSpace s)(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_user_data_device (ksPSpace s)"
   using at
   by (auto elim!: obj_atE' intro!: map_to_ctes_upd_other map_comp_eqI
       simp: projectKOs projectKO_opts_defs
@@ -1508,18 +1558,35 @@ lemma update_pte_map_to_ptes:
 lemma update_pte_map_tos:
   fixes P :: "pte \<Rightarrow> bool"
   assumes at: "obj_at' P p s"
-  shows   "map_to_ntfns (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_ntfns (ksPSpace s)"
-  and     "map_to_tcbs (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_tcbs (ksPSpace s)"
-  and     "map_to_ctes (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_ctes (ksPSpace s)"
-  and     "map_to_eps  (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_eps (ksPSpace s)"
-  and     "map_to_asidpools (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_asidpools (ksPSpace s)"
-  and     "map_to_user_data (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_user_data (ksPSpace s)"
-  and     "map_to_user_data_device (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_user_data_device (ksPSpace s)"
+  shows   "map_to_ntfns ((ksPSpace s)(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_ntfns (ksPSpace s)"
+  and     "map_to_tcbs ((ksPSpace s)(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_tcbs (ksPSpace s)"
+  and     "map_to_ctes ((ksPSpace s)(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_ctes (ksPSpace s)"
+  and     "map_to_eps  ((ksPSpace s)(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_eps (ksPSpace s)"
+  and     "map_to_asidpools ((ksPSpace s)(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_asidpools (ksPSpace s)"
+  and     "map_to_vcpus ((ksPSpace s)(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_vcpus (ksPSpace s)"
+  and     "map_to_user_data ((ksPSpace s)(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_user_data (ksPSpace s)"
+  and     "map_to_user_data_device ((ksPSpace s)(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_user_data_device (ksPSpace s)"
   using at
   by (auto elim!: obj_atE' intro!: map_comp_eqI map_to_ctes_upd_other
            split: if_split_asm if_split
             simp: projectKOs,
        auto simp: projectKO_opts_defs)
+
+lemma update_vcpu_map_tos:
+  fixes P :: "vcpu \<Rightarrow> bool"
+  assumes at: "obj_at' P p s"
+  shows   "map_to_ntfns ((ksPSpace s)(p \<mapsto> (KOArch (KOVCPU vcpu)))) = map_to_ntfns (ksPSpace s)"
+  and     "map_to_tcbs ((ksPSpace s)(p \<mapsto> (KOArch (KOVCPU vcpu)))) = map_to_tcbs (ksPSpace s)"
+  and     "map_to_ctes ((ksPSpace s)(p \<mapsto> (KOArch (KOVCPU vcpu)))) = map_to_ctes (ksPSpace s)"
+  and     "map_to_ptes ((ksPSpace s)(p \<mapsto> (KOArch (KOVCPU vcpu)))) = map_to_ptes (ksPSpace s)"
+  and     "map_to_eps  ((ksPSpace s)(p \<mapsto> (KOArch (KOVCPU vcpu)))) = map_to_eps (ksPSpace s)"
+  and     "map_to_asidpools ((ksPSpace s)(p \<mapsto> (KOArch (KOVCPU vcpu)))) = map_to_asidpools (ksPSpace s)"
+  and     "map_to_user_data ((ksPSpace s)(p \<mapsto> (KOArch (KOVCPU vcpu)))) = map_to_user_data (ksPSpace s)"
+  and     "map_to_user_data_device ((ksPSpace s)(p \<mapsto> (KOArch (KOVCPU vcpu)))) = map_to_user_data_device (ksPSpace s)"
+  using at
+  by (auto elim!: obj_atE' intro!: map_comp_eqI map_to_ctes_upd_other
+           split: if_split_asm if_split
+            simp: projectKOs)
 
 lemma heap_to_page_data_cong [cong]:
   "\<lbrakk> map_to_user_data ks = map_to_user_data ks'; bhp = bhp' \<rbrakk>
@@ -1765,8 +1832,10 @@ lemma cap_get_tag_isCap_ArchObject0:
   assumes cr: "ccap_relation (capability.ArchObjectCap cap) cap'"
   shows "(cap_get_tag cap' = scast cap_asid_control_cap) = isASIDControlCap cap
   \<and> (cap_get_tag cap' = scast cap_asid_pool_cap) = isASIDPoolCap cap
-  \<and> (cap_get_tag cap' = scast cap_page_table_cap) = isPageTableCap cap
-  \<and> (cap_get_tag cap' = scast cap_frame_cap) = (isFrameCap cap)"
+  \<and> (cap_get_tag cap' = scast cap_vspace_cap) = (isPageTableCap cap \<and> capPTType cap = VSRootPT_T)
+  \<and> (cap_get_tag cap' = scast cap_page_table_cap) = (isPageTableCap cap \<and> capPTType cap = NormalPT_T)
+  \<and> (cap_get_tag cap' = scast cap_frame_cap) = (isFrameCap cap)
+  \<and> (cap_get_tag cap' = scast cap_vcpu_cap) = isVCPUCap cap"
   using cr
   apply -
   apply (erule ccap_relationE)
@@ -1777,8 +1846,10 @@ lemma cap_get_tag_isCap_ArchObject:
   assumes cr: "ccap_relation (capability.ArchObjectCap cap) cap'"
   shows "(cap_get_tag cap' = scast cap_asid_control_cap) = isASIDControlCap cap"
   and "(cap_get_tag cap' = scast cap_asid_pool_cap) = isASIDPoolCap cap"
-  and "(cap_get_tag cap' = scast cap_page_table_cap) = isPageTableCap cap"
+  and "(cap_get_tag cap' = scast cap_vspace_cap) = (isPageTableCap cap \<and> capPTType cap = VSRootPT_T)"
+  and "(cap_get_tag cap' = scast cap_page_table_cap) = (isPageTableCap cap \<and> capPTType cap = NormalPT_T)"
   and "(cap_get_tag cap' = scast cap_frame_cap) = (isFrameCap cap)"
+  and "(cap_get_tag cap' = scast cap_vcpu_cap) = isVCPUCap cap"
   using cap_get_tag_isCap_ArchObject0 [OF cr] by auto
 
 lemma cap_get_tag_isCap_unfolded_H_cap:
@@ -1796,8 +1867,12 @@ lemma cap_get_tag_isCap_unfolded_H_cap:
 
   and "ccap_relation (capability.ArchObjectCap arch_capability.ASIDControlCap) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_asid_control_cap)"
   and "ccap_relation (capability.ArchObjectCap (arch_capability.ASIDPoolCap v28 v29)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_asid_pool_cap)"
-  and "ccap_relation (capability.ArchObjectCap (arch_capability.PageTableCap v30 v31)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_page_table_cap)"
+  and "ccap_relation (capability.ArchObjectCap (arch_capability.PageTableCap v30 VSRootPT_T v31)) cap'
+       \<Longrightarrow> (cap_get_tag cap' = scast cap_vspace_cap)"
+  and "ccap_relation (capability.ArchObjectCap (arch_capability.PageTableCap v30 NormalPT_T v31)) cap'
+       \<Longrightarrow> (cap_get_tag cap' = scast cap_page_table_cap)"
   and "ccap_relation (capability.ArchObjectCap (arch_capability.FrameCap v101 v44 v45 v46 v47)) cap'  \<Longrightarrow> (cap_get_tag cap' = scast cap_frame_cap)"
+  and "ccap_relation (capability.ArchObjectCap (arch_capability.VCPUCap v48)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_vcpu_cap)"
   apply (simp add: cap_get_tag_isCap cap_get_tag_isCap_ArchObject isCap_simps)
   apply (frule cap_get_tag_isCap(2), simp)
   apply (simp add: cap_get_tag_isCap cap_get_tag_isCap_ArchObject isCap_simps)+
@@ -1819,10 +1894,14 @@ lemma cap_get_tag_isCap_ArchObject2:
            = (isArchObjectCap cap \<and> isASIDControlCap (capCap cap))"
   and   "(cap_get_tag cap' = scast cap_asid_pool_cap)
            = (isArchObjectCap cap \<and> isASIDPoolCap (capCap cap))"
+  and   "(cap_get_tag cap' = scast cap_vspace_cap)
+           = (isArchObjectCap cap \<and> isPageTableCap (capCap cap) \<and> capPTType (capCap cap) = VSRootPT_T)"
   and   "(cap_get_tag cap' = scast cap_page_table_cap)
-           = (isArchObjectCap cap \<and> isPageTableCap (capCap cap))"
+           = (isArchObjectCap cap \<and> isPageTableCap (capCap cap) \<and> capPTType (capCap cap) = NormalPT_T)"
   and   "(cap_get_tag cap' = scast cap_frame_cap)
            = (isArchObjectCap cap \<and> isFrameCap (capCap cap))"
+  and   "(cap_get_tag cap' = scast cap_vcpu_cap)
+           = (isArchObjectCap cap \<and> isVCPUCap (capCap cap))"
   by (rule cap_get_tag_isCap_ArchObject2_worker [OF _ cr],
       simp add: cap_get_tag_isCap_ArchObject,
       simp add: isArchCap_tag_def2 cap_tag_defs)+
@@ -1833,9 +1912,9 @@ schematic_goal cap_frame_cap_lift_def':
          \<lparr>capFMappedASID_CL = ?mapped_asid,
           capFBasePtr_CL = ?base_ptr,
           capFSize_CL = ?frame_size,
+          capFMappedAddress_CL = ?mapped_address,
           capFVMRights_CL = ?vm_rights,
-          capFIsDevice_CL = ?is_device,
-          capFMappedAddress_CL = ?mapped_address\<rparr>"
+          capFIsDevice_CL = ?is_device \<rparr>"
   by (simp add: cap_frame_cap_lift_def cap_lift_def cap_tag_defs)
 
 lemmas ccap_rel_cap_get_tag_cases_generic =
@@ -1860,8 +1939,10 @@ lemmas cap_lift_defs =
        cap_irq_handler_cap_lift_def
        cap_zombie_cap_lift_def
        cap_frame_cap_lift_def
+       cap_vspace_cap_lift_def
        cap_page_table_cap_lift_def
        cap_asid_pool_cap_lift_def
+       cap_vcpu_cap_lift_def
 
 lemma cap_lift_Some_CapD:
   "\<And>c'. cap_lift c = Some (Cap_untyped_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_untyped_cap"
@@ -1873,14 +1954,16 @@ lemma cap_lift_Some_CapD:
   "\<And>c'. cap_lift c = Some (Cap_irq_handler_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_irq_handler_cap"
   "\<And>c'. cap_lift c = Some (Cap_zombie_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_zombie_cap"
   "\<And>c'. cap_lift c = Some (Cap_frame_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_frame_cap"
+  "\<And>c'. cap_lift c = Some (Cap_vspace_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_vspace_cap"
   "\<And>c'. cap_lift c = Some (Cap_page_table_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_page_table_cap"
   "\<And>c'. cap_lift c = Some (Cap_asid_pool_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_asid_pool_cap"
+  "\<And>c'. cap_lift c = Some (Cap_vcpu_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_vcpu_cap"
   by (auto simp: cap_lifts cap_lift_defs)
 
-lemma rf_sr_riscvKSGlobalPT:
-  "(s, s') \<in> rf_sr \<Longrightarrow> riscvKSGlobalPT (ksArchState s) = ptr_val riscvKSGlobalPT_Ptr"
+lemma rf_sr_armKSGlobalUserVSpace:
+  "(s, s') \<in> rf_sr \<Longrightarrow> armKSGlobalUserVSpace (ksArchState s) = ptr_val armKSGlobalUserVSpace_Ptr"
   by (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
-                     carch_globals_riscvKSGlobalPT)
+                     carch_globals_armKSGlobalUserVSpace)
 
 lemma ghost_assertion_size_logic':
   "unat (sz :: machine_word) \<le> gsMaxObjectSize s
@@ -1950,23 +2033,23 @@ lemma clift_array_assertion_imp:
   apply simp
   done
 
-lemma page_table_at_carray_map_relation:
-  "\<lbrakk> page_table_at' pt s; cpspace_pte_array_relation (ksPSpace s) hp \<rbrakk>
-    \<Longrightarrow> clift hp (pt_Ptr pt) \<noteq> None"
+lemma vspace_at_carray_map_relation:
+  "\<lbrakk> page_table_at' VSRootPT_T pt s; cpspace_pte_array_relation (ksPSpace s) hp \<rbrakk>
+   \<Longrightarrow> clift hp (vs_Ptr pt) \<noteq> None"
   apply (clarsimp simp: carray_map_relation_def h_t_valid_clift_Some_iff)
   apply (drule spec, erule iffD1)
   apply (clarsimp simp: page_table_at'_def objBits_simps)
-  apply (drule_tac x="ucast (p' && mask ptBits >> pte_bits)" in spec)
-  apply (clarsimp simp: shiftr_shiftl1 mask_pt_bits_inner_beauty)
+  apply (drule_tac x="table_index VSRootPT_T p'" in spec)
+  apply (clarsimp simp: table_index_in_table table_base_index_eq)
   apply (clarsimp simp: typ_at_to_obj_at_arches
                  dest!: obj_at_ko_at' ko_at_projectKO_opt)
   done
 
-lemma page_table_at_rf_sr:
-   "\<lbrakk> page_table_at' pd s; (s, s') \<in> rf_sr \<rbrakk>
-    \<Longrightarrow> cslift s' (Ptr pd :: (pte_C[512]) ptr) \<noteq> None"
+lemma vspace_at_rf_sr:
+   "\<lbrakk> page_table_at' VSRootPT_T pd s; (s, s') \<in> rf_sr \<rbrakk>
+    \<Longrightarrow> cslift s' (Ptr pd :: vs_ptr) \<noteq> None"
   by (clarsimp simp: rf_sr_def cstate_relation_def Let_def
-                     cpspace_relation_def page_table_at_carray_map_relation)
+                     cpspace_relation_def vspace_at_carray_map_relation)
 
 lemma gsUntypedZeroRanges_rf_sr:
   "\<lbrakk> (start, end) \<in> gsUntypedZeroRanges s; (s, s') \<in> rf_sr \<rbrakk>
@@ -2026,6 +2109,117 @@ lemma arch_fault_tag_not_fault_tag_simps [simp]:
   "(arch_fault_to_fault_tag arch_fault = scast seL4_Fault_UnknownSyscall) = False"
   by (cases arch_fault ; simp add: seL4_Faults seL4_Arch_Faults)+
 
+(* FIXME: move *)
+lemma vcpu_at_rf_sr:
+  "\<lbrakk>ko_at' vcpu p s; (s, s') \<in> rf_sr\<rbrakk> \<Longrightarrow>
+  \<exists>vcpu'. cslift s' (vcpu_Ptr p) = Some vcpu' \<and>
+          cvcpu_relation vcpu vcpu'"
+  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def cpspace_relation_def)
+  apply (erule (1) cmap_relation_ko_atE)
+  apply clarsimp
+  done
+
+(* all definitions of seL4_VCPUReg enum - these don't get autogenerated *)
+lemmas seL4_VCPUReg_defs =
+  seL4_VCPUReg_SCTLR_def
+  seL4_VCPUReg_TTBR0_def
+  seL4_VCPUReg_TTBR1_def
+  seL4_VCPUReg_TCR_def
+  seL4_VCPUReg_MAIR_def
+  seL4_VCPUReg_AMAIR_def
+  seL4_VCPUReg_CIDR_def
+  seL4_VCPUReg_ACTLR_def
+  seL4_VCPUReg_CPACR_def
+  seL4_VCPUReg_AFSR0_def
+  seL4_VCPUReg_AFSR1_def
+  seL4_VCPUReg_ESR_def
+  seL4_VCPUReg_FAR_def
+  seL4_VCPUReg_ISR_def
+  seL4_VCPUReg_VBAR_def
+  seL4_VCPUReg_TPIDR_EL1_def
+  seL4_VCPUReg_SP_EL1_def
+  seL4_VCPUReg_ELR_EL1_def
+  seL4_VCPUReg_SPSR_EL1_def
+  seL4_VCPUReg_CNTV_CTL_def
+  seL4_VCPUReg_CNTV_CVAL_def
+  seL4_VCPUReg_CNTVOFF_def
+  seL4_VCPUReg_CNTKCTL_EL1_def
+
+(* rewrite a definition from a C enum into a vcpureg enumeration lookup *)
+lemma vcpureg_eq_use_type:
+  fixes value' :: "sword32" (* FIXME AARCH64 equivalent of "signed int" in C, we should have aliases for these *)
+  assumes e[simp]: "value \<equiv> value'"
+  assumes len: "unat value' < length (enum :: vcpureg list)"
+  shows "(of_nat (fromEnum (reg :: vcpureg)) = (scast value :: machine_word))
+          = (reg = enum ! unat (scast value' :: machine_word))"
+proof -
+
+  note local_simps[simp] = unat_ucast_upcast is_up
+
+  from len have "0 \<le>s value"
+   by (intro word_0_sle_from_less)
+      (clarsimp simp: word_less_nat_alt fromEnum_maxBound_vcpureg_def simp flip: maxBound_less_length)
+
+  then have [simp]: "(scast value' :: machine_word) = (ucast value' :: machine_word)"
+    by (simp add: signed_ge_zero_scast_eq_ucast)
+
+  from len have toEnum: "enum ! unat value' = (toEnum (unat value') :: vcpureg)"
+    by (simp add: toEnum_def)
+
+  have toEnum': "enum ! fromEnum reg = (reg :: vcpureg)"
+    using toEnum_def[symmetric, of "fromEnum reg", where 'a=vcpureg] maxBound_is_bound[of reg]
+    by (simp add: maxBound_is_length nat_le_Suc_less)
+
+  have "unat (of_nat (fromEnum reg) :: machine_word) = fromEnum reg"
+      by (-, subst unat_of_nat_eq, simp_all)
+         (fastforce intro: order_le_less_trans[OF maxBound_is_bound]
+                     simp: maxBound_is_length enum_vcpureg)
+
+  thus ?thesis
+    by (fastforce simp: toEnum' toEnum maxBound_is_length len nat_le_Suc_less ucast_nat_def)
+
+qed
+
+(* e.g. (of_nat (fromEnum reg) = ucast seL4_VCPUReg_SCTLR) = (reg = VCPURegSCTLR) *)
+lemmas vcpureg_eq_use_types =
+  seL4_VCPUReg_defs[THEN vcpureg_eq_use_type, simplified,
+                    unfolded enum_vcpureg, simplified]
+
+(* C parser will generate terms like SCAST(32 signed \<rightarrow> 64) seL4_VCPUReg_SCTLR, which we want to
+   simplify to their Haskell equivalent under word_unat_eq_iff *)
+lemma unat_ucast_seL4_VCPUReg_SCTLR_simp[simp]:
+  "unat (scast seL4_VCPUReg_SCTLR :: machine_word) = fromEnum VCPURegSCTLR"
+  by (simp add: vcpureg_eq_use_types[where reg=VCPURegSCTLR, simplified, symmetric])
+
+lemma unat_scast_seL4_VCPUReg_ACTLR_simp[simp]:
+  "unat (scast seL4_VCPUReg_ACTLR :: machine_word) = fromEnum VCPURegACTLR"
+  by (simp add: vcpureg_eq_use_types[where reg=VCPURegACTLR, simplified, symmetric])
+
+lemmas cvcpu_relation_regs_def =
+          cvcpu_relation_def[simplified cvcpu_regs_relation_def Let_def vcpuSCTLR_def, simplified]
+
+lemmas cvcpu_relation_vppi_def =
+          cvcpu_relation_def[simplified cvcpu_vppi_masked_relation_def, simplified]
+
+lemma capVCPUPtr_eq:
+  "\<lbrakk> ccap_relation (ArchObjectCap cap) cap'; isArchCap isVCPUCap (ArchObjectCap cap) \<rbrakk>
+     \<Longrightarrow> capVCPUPtr_CL (cap_vcpu_cap_lift cap')
+           = capVCPUPtr cap"
+  apply (simp only: cap_get_tag_isCap[symmetric])
+  apply (drule (1) cap_get_tag_to_H)
+  apply clarsimp
+  done
+
+lemma rf_sr_armKSGICVCPUNumListRegs:
+  "(s, s') \<in> rf_sr
+   \<Longrightarrow> gic_vcpu_num_list_regs_' (globals s') = of_nat (armKSGICVCPUNumListRegs (ksArchState s))"
+  by (clarsimp simp: rf_sr_def cstate_relation_def carch_state_relation_def Let_def)
+
+lemma update_vcpu_map_to_vcpu:
+  "map_to_vcpus ((ksPSpace s)(p \<mapsto> KOArch (KOVCPU vcpu)))
+             = (map_to_vcpus (ksPSpace s))(p \<mapsto> vcpu)"
+  by (rule ext, clarsimp simp: map_comp_def split: if_split)
+
 lemma capTCBPtr_eq:
   "\<lbrakk> ccap_relation cap cap'; isThreadCap cap \<rbrakk>
      \<Longrightarrow> cap_thread_cap_CL.capTCBPtr_CL (cap_thread_cap_lift cap')
@@ -2040,6 +2234,7 @@ lemma rf_sr_sched_action_relation:
    \<Longrightarrow> cscheduler_action_relation (ksSchedulerAction s) (ksSchedulerAction_' (globals s'))"
   by (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
 
+(* FIXME AARCH64 do we want this?
 lemma canonical_address_tcb_ptr:
   "\<lbrakk>canonical_address t; is_aligned t tcbBlockSizeBits\<rbrakk> \<Longrightarrow>
      canonical_address (ptr_val (tcb_ptr_to_ctcb_ptr t))"
@@ -2058,31 +2253,7 @@ proof -
     using assms(1)
     by (simp add: ctcb_ptr_to_tcb_ptr_def ctcb_offset_defs)
   thus ?thesis by simp
-qed
-
-lemma tcb_and_not_mask_canonical:
-  "\<lbrakk>pspace_canonical' s; tcb_at' t s; n < tcbBlockSizeBits\<rbrakk> \<Longrightarrow>
-    tcb_Ptr (sign_extend canonical_bit (ptr_val (tcb_ptr_to_ctcb_ptr t) && ~~ mask n)) =
-        tcb_ptr_to_ctcb_ptr t"
-  apply (frule (1) obj_at'_is_canonical)
-  apply (drule canonical_address_tcb_ptr)
-   apply (clarsimp simp: obj_at'_def projectKOs objBits_simps' split: if_splits)
-  apply (clarsimp simp: canonical_address_sign_extended sign_extended_iff_sign_extend)
-  apply (subgoal_tac "ptr_val (tcb_ptr_to_ctcb_ptr t) && ~~ mask n = ptr_val (tcb_ptr_to_ctcb_ptr t)")
-   prefer 2
-   apply (simp add: tcb_ptr_to_ctcb_ptr_def ctcb_offset_defs)
-   apply (rule is_aligned_neg_mask_eq)
-   apply (clarsimp simp: obj_at'_def projectKOs objBits_simps')
-   apply (rule is_aligned_add)
-    apply (erule is_aligned_weaken, simp)
-   apply (rule is_aligned_weaken[where x="tcbBlockSizeBits - 1"])
-    apply (simp add: is_aligned_def objBits_simps')
-   apply (simp add: objBits_simps')
-  apply simp
-  done
-
-lemmas tcb_ptr_sign_extend_canonical =
-      tcb_and_not_mask_canonical[where n=0, simplified mask_def objBits_simps', simplified]
+qed *)
 
 (* FIXME: move up to TypHeap? *)
 lemma lift_t_Some_iff:
@@ -2118,6 +2289,14 @@ lemmas h_t_valid_nested_fields =
 lemmas h_t_valid_fields_clift =
   h_t_valid_nested_fields[OF h_t_valid_clift]
   h_t_valid_clift
+
+(* FIXME move and share with other architectures (note: needs locale from C parse) *)
+abbreviation Basic_heap_update ::
+  "(globals myvars \<Rightarrow> ('a::c_type) ptr) \<Rightarrow> (globals myvars \<Rightarrow> 'a)
+   \<Rightarrow> (globals myvars, int, strictc_errortype) com"
+  where
+  "Basic_heap_update p f \<equiv>
+    (Basic (\<lambda>s. globals_update (t_hrs_'_update (hrs_mem_update (heap_update (p s) (f s)))) s))"
 
 lemma numDomains_sge_1_simp:
   "1 <s Kernel_C.numDomains \<longleftrightarrow> Suc 0 < Kernel_Config.numDomains"
