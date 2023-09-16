@@ -413,7 +413,7 @@ fun modifies_call_tac (callee_modifies: incr_net) ctxt n = DETERM (
 
 (* VCG for trivial state invariants, such as globals modifies specs.
  * Takes vcg rules from "valid_inv". *)
-val valid_invN = Context.theory_name @{theory} ^ ".valid_inv"
+val valid_invN = Context.theory_name { long=true } @{theory} ^ ".valid_inv"
 fun modifies_vcg_tac leaf_tac ctxt n = let
   val vcg_rules = Named_Theorems.get ctxt valid_invN |> Tactic.build_net;
   fun vcg n st = Seq.make (fn () => let

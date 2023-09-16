@@ -1139,7 +1139,7 @@ lemma set_object_caps_of_state:
   done
 
 lemma set_pt_aobjs_of:
-  "\<lbrace>\<lambda>s. aobjs_of s p \<noteq> None \<longrightarrow> P (aobjs_of s(p \<mapsto> PageTable pt)) \<rbrace> set_pt p pt \<lbrace>\<lambda>_ s. P (aobjs_of s)\<rbrace>"
+  "\<lbrace>\<lambda>s. aobjs_of s p \<noteq> None \<longrightarrow> P ((aobjs_of s)(p \<mapsto> PageTable pt)) \<rbrace> set_pt p pt \<lbrace>\<lambda>_ s. P (aobjs_of s)\<rbrace>"
   unfolding set_pt_def
   supply fun_upd_apply[simp del]
   by (wpsimp wp: set_object_wp)
@@ -1267,7 +1267,7 @@ lemma pt_walk_upd_idem:
        \<longrightarrow> pt_walk top_level level' pt_ptr vptr (ptes_of s) = Some (level', pt_ptr')
        \<longrightarrow> pt_ptr' \<noteq> obj_ref;
      is_aligned pt_ptr (pt_bits top_level); top_level \<le> max_pt_level \<rbrakk>
-   \<Longrightarrow> pt_walk top_level level pt_ptr vptr (ptes_of (s\<lparr>kheap := kheap s(obj_ref \<mapsto> ko)\<rparr>))
+   \<Longrightarrow> pt_walk top_level level pt_ptr vptr (ptes_of (s\<lparr>kheap := (kheap s)(obj_ref \<mapsto> ko)\<rparr>))
       = pt_walk top_level level pt_ptr vptr (ptes_of s)"
   by (rule pt_walk_eqI; simp split del: if_split)
      (clarsimp simp: opt_map_def split: option.splits)
@@ -1334,7 +1334,7 @@ lemma vs_lookup_table_upd_idem:
        \<longrightarrow> vs_lookup_table  level' asid vref s = Some (level', p')
        \<longrightarrow> p' \<noteq> obj_ref;
      pspace_aligned s; valid_vspace_objs s; valid_asid_table s \<rbrakk>
-   \<Longrightarrow> vs_lookup_table level asid vref (s\<lparr>kheap := kheap s(obj_ref \<mapsto> ko)\<rparr>)
+   \<Longrightarrow> vs_lookup_table level asid vref (s\<lparr>kheap := (kheap s)(obj_ref \<mapsto> ko)\<rparr>)
       = vs_lookup_table level asid vref s"
   by (rule vs_lookup_table_eqI; simp split del: if_split)
      (clarsimp simp: opt_map_def split: option.splits)
@@ -1343,7 +1343,7 @@ lemma vs_lookup_table_Some_upd_idem:
   "\<lbrakk> vs_lookup_table level asid vref s = Some (level, obj_ref);
      vref \<in> user_region; pspace_aligned s; pspace_distinct s; valid_vspace_objs s;
      valid_asid_table s \<rbrakk>
-   \<Longrightarrow> vs_lookup_table level asid vref (s\<lparr>kheap := kheap s(obj_ref \<mapsto> ko)\<rparr>)
+   \<Longrightarrow> vs_lookup_table level asid vref (s\<lparr>kheap := (kheap s)(obj_ref \<mapsto> ko)\<rparr>)
       = vs_lookup_table level asid vref s"
   by (subst vs_lookup_table_upd_idem; simp?)
      (fastforce dest: no_loop_vs_lookup_table)
@@ -1352,7 +1352,7 @@ lemma ex_vs_lookup_upd_idem:
   "\<lbrakk> \<exists>\<rhd> (level, p) s;
      pspace_aligned s; pspace_distinct s; valid_vspace_objs s; valid_asid_table s;
      unique_table_refs s; valid_vs_lookup s; valid_caps (caps_of_state s) s \<rbrakk>
-   \<Longrightarrow> \<exists>\<rhd> (level, p) (s\<lparr>kheap := kheap s(p \<mapsto> ko)\<rparr>) = \<exists>\<rhd> (level, p) s"
+   \<Longrightarrow> \<exists>\<rhd> (level, p) (s\<lparr>kheap := (kheap s)(p \<mapsto> ko)\<rparr>) = \<exists>\<rhd> (level, p) s"
   apply (rule iffI; clarsimp)
   apply (rule_tac x=asid in exI)
   apply (rule_tac x=vref in exI)
@@ -1430,7 +1430,7 @@ lemma pt_lookup_target_pt_upd_eq:
   by (rule pt_lookup_target_pt_eqI; clarsimp)
 
 lemma kheap_pt_upd_simp[simp]:
-  "(kheap s(p \<mapsto> ArchObj (PageTable pt)) |> aobj_of |> pt_of)
+  "((kheap s)(p \<mapsto> ArchObj (PageTable pt)) |> aobj_of |> pt_of)
    = (kheap s |> aobj_of |> pt_of)(p \<mapsto> pt)"
   unfolding aobj_of_def opt_map_def
   by (auto split: kernel_object.split)
@@ -1510,7 +1510,7 @@ lemma valid_machine_stateE:
 
 lemma in_user_frame_same_type_upd:
   "\<lbrakk>typ_at type p s; type = a_type obj; in_user_frame q s\<rbrakk>
-    \<Longrightarrow> in_user_frame q (s\<lparr>kheap := kheap s(p \<mapsto> obj)\<rparr>)"
+    \<Longrightarrow> in_user_frame q (s\<lparr>kheap := (kheap s)(p \<mapsto> obj)\<rparr>)"
   apply (clarsimp simp: in_user_frame_def obj_at_def)
   apply (rule_tac x=sz in exI)
   apply (auto simp: a_type_simps)
@@ -1518,7 +1518,7 @@ lemma in_user_frame_same_type_upd:
 
 lemma in_device_frame_same_type_upd:
   "\<lbrakk>typ_at type p s; type = a_type obj ; in_device_frame q s\<rbrakk>
-    \<Longrightarrow> in_device_frame q (s\<lparr>kheap := kheap s(p \<mapsto> obj)\<rparr>)"
+    \<Longrightarrow> in_device_frame q (s\<lparr>kheap := (kheap s)(p \<mapsto> obj)\<rparr>)"
   apply (clarsimp simp: in_device_frame_def obj_at_def)
   apply (rule_tac x=sz in exI)
   apply (auto simp: a_type_simps)
@@ -1543,7 +1543,7 @@ lemma load_word_offs_in_user_frame[wp]:
 
 lemma valid_machine_state_heap_updI:
   "\<lbrakk> valid_machine_state s; typ_at type p s; a_type obj = type \<rbrakk>
-   \<Longrightarrow> valid_machine_state (s\<lparr>kheap := kheap s(p \<mapsto> obj)\<rparr>)"
+   \<Longrightarrow> valid_machine_state (s\<lparr>kheap := (kheap s)(p \<mapsto> obj)\<rparr>)"
   by (fastforce simp: valid_machine_state_def
                 intro: in_user_frame_same_type_upd
                 elim: valid_machine_stateE)
@@ -1664,7 +1664,7 @@ lemma set_asid_pool_valid_global [wp]:
 lemma vs_lookup_table_unreachable_upd_idem:
   "\<lbrakk> \<forall>level. vs_lookup_table level asid vref s \<noteq> Some (level, obj_ref);
      vref \<in> user_region; pspace_aligned s; valid_vspace_objs s; valid_asid_table s \<rbrakk>
-   \<Longrightarrow> vs_lookup_table level asid vref (s\<lparr>kheap := kheap s(obj_ref \<mapsto> ko)\<rparr>)
+   \<Longrightarrow> vs_lookup_table level asid vref (s\<lparr>kheap := (kheap s)(obj_ref \<mapsto> ko)\<rparr>)
       = vs_lookup_table level asid vref s"
   apply (subst vs_lookup_table_upd_idem; fastforce)
   done
@@ -1672,14 +1672,14 @@ lemma vs_lookup_table_unreachable_upd_idem:
 lemma vs_lookup_table_unreachable_upd_idem':
   "\<lbrakk> \<not>(\<exists>level. \<exists>\<rhd> (level, obj_ref) s);
      vref \<in> user_region; pspace_aligned s; valid_vspace_objs s; valid_asid_table s \<rbrakk>
-   \<Longrightarrow> vs_lookup_table level asid vref (s\<lparr>kheap := kheap s(obj_ref \<mapsto> ko)\<rparr>)
+   \<Longrightarrow> vs_lookup_table level asid vref (s\<lparr>kheap := (kheap s)(obj_ref \<mapsto> ko)\<rparr>)
       = vs_lookup_table level asid vref s"
   by (rule vs_lookup_table_unreachable_upd_idem; fastforce)
 
 lemma vs_lookup_target_unreachable_upd_idem:
   "\<lbrakk> \<forall>level. vs_lookup_table level asid vref s \<noteq> Some (level, obj_ref);
      vref \<in> user_region; pspace_aligned s; valid_vspace_objs s; valid_asid_table s \<rbrakk>
-   \<Longrightarrow> vs_lookup_target level asid vref (s\<lparr>kheap := kheap s(obj_ref \<mapsto> ko)\<rparr>)
+   \<Longrightarrow> vs_lookup_target level asid vref (s\<lparr>kheap := (kheap s)(obj_ref \<mapsto> ko)\<rparr>)
       = vs_lookup_target level asid vref s"
   supply fun_upd_apply[simp del]
   apply (clarsimp simp: vs_lookup_target_def vs_lookup_slot_def obind_assoc)
@@ -1714,12 +1714,12 @@ lemma vs_lookup_target_unreachable_upd_idem:
 lemma vs_lookup_target_unreachable_upd_idem':
   "\<lbrakk> \<not>(\<exists>level. \<exists>\<rhd> (level, obj_ref) s);
      vref \<in> user_region; pspace_aligned s; valid_vspace_objs s; valid_asid_table s \<rbrakk>
-   \<Longrightarrow> vs_lookup_target level asid vref (s\<lparr>kheap := kheap s(obj_ref \<mapsto> ko)\<rparr>)
+   \<Longrightarrow> vs_lookup_target level asid vref (s\<lparr>kheap := (kheap s)(obj_ref \<mapsto> ko)\<rparr>)
       = vs_lookup_target level asid vref s"
    by (rule vs_lookup_target_unreachable_upd_idem; fastforce)
 
 lemma vs_lookup_table_fun_upd_deep_idem:
-  "\<lbrakk> vs_lookup_table level asid vref (s\<lparr>kheap := kheap s(p \<mapsto> ko)\<rparr>) = Some (level, p');
+  "\<lbrakk> vs_lookup_table level asid vref (s\<lparr>kheap := (kheap s)(p \<mapsto> ko)\<rparr>) = Some (level, p');
      vs_lookup_table level' asid vref s = Some (level', p);
      level' \<le> level; vref \<in> user_region;
      valid_vspace_objs s; valid_asid_table s; pspace_aligned s; pspace_distinct s \<rbrakk>
@@ -1808,8 +1808,8 @@ lemma vs_lookup_target_pt_levelI:
 
 lemma vs_lookup_target_asid_pool_level_upd_helper:
   "\<lbrakk> graph_of ap \<subseteq> graph_of ap'; kheap s p = Some (ArchObj (ASIDPool ap')); vref \<in> user_region;
-     vspace_for_pool pool_ptr asid (asid_pools_of s(p \<mapsto> ap)) = Some pt_ptr;
-     pool_for_asid asid (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (ASIDPool ap))\<rparr>) = Some pool_ptr\<rbrakk>
+     vspace_for_pool pool_ptr asid ((asid_pools_of s)(p \<mapsto> ap)) = Some pt_ptr;
+     pool_for_asid asid (s\<lparr>kheap := (kheap s)(p \<mapsto> ArchObj (ASIDPool ap))\<rparr>) = Some pool_ptr\<rbrakk>
    \<Longrightarrow> vs_lookup_target asid_pool_level asid vref s = Some (asid_pool_level, pt_ptr)"
   apply (clarsimp simp: pool_for_asid_vs_lookup vspace_for_pool_def entry_for_pool_def in_omonad)
   apply (clarsimp split: if_splits)
@@ -1820,7 +1820,7 @@ lemma vs_lookup_target_asid_pool_level_upd_helper:
   done
 
 lemma vs_lookup_target_None_upd_helper:
-  "\<lbrakk> vs_lookup_table level asid vref (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (ASIDPool ap))\<rparr>) =
+  "\<lbrakk> vs_lookup_table level asid vref (s\<lparr>kheap := (kheap s)(p \<mapsto> ArchObj (ASIDPool ap))\<rparr>) =
         Some (level, table_ptr);
      ((\<lambda>pa. level_pte_of (level_type level) pa ((pts_of s)(p := None))) |> pte_ref)
        (pt_slot_offset level table_ptr vref)
@@ -1912,7 +1912,7 @@ lemma set_asid_pool_equal_mappings[wp]:
 lemma translate_address_asid_pool_upd:
   "pts_of s p = None
    \<Longrightarrow> translate_address pt_ptr vref
-        (\<lambda>pt_t pa. level_pte_of pt_t pa (kheap s(p \<mapsto> ArchObj (ASIDPool ap)) |> aobj_of |> pt_of))
+        (\<lambda>pt_t pa. level_pte_of pt_t pa ((kheap s)(p \<mapsto> ArchObj (ASIDPool ap)) |> aobj_of |> pt_of))
       = translate_address pt_ptr vref (ptes_of s)"
   by simp
 
@@ -2253,7 +2253,7 @@ lemma pt_walk_below_pt_upd_idem:
    pt_walk (level' - 1) level (pptr_from_pte (pt_apply (pt_upd pt (table_index
                                                                      (level_type level') p) pte)
                                                        (pt_index level' vref))) vref
-     (\<lambda>pt_t pa. level_pte_of pt_t pa (pts_of s(table_base (level_type level') p \<mapsto>
+     (\<lambda>pt_t pa. level_pte_of pt_t pa ((pts_of s)(table_base (level_type level') p \<mapsto>
                                                pt_upd pt (table_index (level_type level') p) pte)))
    = pt_walk (level' - 1) level (pptr_from_pte (pt_apply (pt_upd pt (table_index
                                                                        (level_type level') p) pte)

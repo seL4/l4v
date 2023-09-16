@@ -332,7 +332,7 @@ lemma sts_noop:
 lemma sts_to_modify':
   "monadic_rewrite True True (tcb_at tcb and (\<lambda>s :: det_state. tcb \<noteq> cur_thread s))
      (set_thread_state tcb st)
-     (modify (\<lambda>s. s\<lparr>kheap := kheap s(tcb \<mapsto> TCB (the (get_tcb tcb s)\<lparr>tcb_state := st\<rparr>))\<rparr>))"
+     (modify (\<lambda>s. s\<lparr>kheap := (kheap s)(tcb \<mapsto> TCB (the (get_tcb tcb s)\<lparr>tcb_state := st\<rparr>))\<rparr>))"
   apply (clarsimp simp: set_thread_state_def set_object_def)
   apply (monadic_rewrite_l sts_noop \<open>wpsimp wp: get_object_wp\<close>)
    apply (simp add: bind_assoc)

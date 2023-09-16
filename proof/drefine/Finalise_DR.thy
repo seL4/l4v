@@ -650,7 +650,7 @@ lemma opt_object_asid_pool:
 
 lemma transform_asid_pool_contents_upd:
   "transform_asid_pool_contents (pool(ucast asid := pd)) =
-   transform_asid_pool_contents pool(snd (transform_asid asid) \<mapsto> transform_asid_pool_entry pd)"
+   (transform_asid_pool_contents pool)(snd (transform_asid asid) \<mapsto> transform_asid_pool_entry pd)"
   apply (clarsimp simp:transform_asid_pool_contents_def transform_asid_def)
   apply (rule ext)
   apply (case_tac x)
@@ -1148,7 +1148,7 @@ lemma dcorres_delete_cap_simple_set_pt:
 
 
 lemma transform_page_table_contents_upd:
-  "transform_page_table_contents fun(unat (y && mask pt_bits >> 2) \<mapsto> transform_pte pte) =
+  "(transform_page_table_contents fun)(unat (y && mask pt_bits >> 2) \<mapsto> transform_pte pte) =
    transform_page_table_contents (fun(ucast ((y::word32) && mask pt_bits >> 2) := pte))"
   apply (rule ext)
   apply (clarsimp simp: transform_page_table_contents_def unat_map_def)
@@ -1167,7 +1167,7 @@ lemma transform_page_table_contents_upd:
 
 lemma transform_page_directory_contents_upd:
   "ucast ((ptr::word32) && mask pd_bits >> 2) \<notin> kernel_mapping_slots
-  \<Longrightarrow> transform_page_directory_contents f(unat (ptr && mask pd_bits >> 2) \<mapsto> transform_pde a_pde)
+  \<Longrightarrow> (transform_page_directory_contents f)(unat (ptr && mask pd_bits >> 2) \<mapsto> transform_pde a_pde)
    =  transform_page_directory_contents (f(ucast (ptr && mask pd_bits >> 2) := a_pde))"
   apply (rule ext)
   apply (simp (no_asm) add: transform_page_directory_contents_def unat_map_def)

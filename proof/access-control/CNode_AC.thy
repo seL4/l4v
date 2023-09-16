@@ -56,11 +56,11 @@ locale CNode_AC_1 =
        \<Longrightarrow> state_asids_to_policy_arch aag (caps(ptr \<mapsto> cap, ptr' \<mapsto> cap')) as vrefs \<subseteq> pasPolicy aag"
   and state_vrefs_tcb_upd:
     "\<lbrakk> pspace_aligned s; valid_vspace_objs s; valid_arch_state s; tcb_at tptr s \<rbrakk>
-       \<Longrightarrow> state_vrefs (s\<lparr>kheap := kheap s(tptr \<mapsto> TCB tcb)\<rparr>) = state_vrefs s"
+       \<Longrightarrow> state_vrefs (s\<lparr>kheap := (kheap s)(tptr \<mapsto> TCB tcb)\<rparr>) = state_vrefs s"
   and state_vrefs_simple_type_upd:
     "\<lbrakk> pspace_aligned s; valid_vspace_objs s; valid_arch_state s;
        ko_at ko p s; is_simple_type ko; a_type ko = a_type (f (val :: 'b)) \<rbrakk>
-       \<Longrightarrow> state_vrefs (s\<lparr>kheap := kheap s(p \<mapsto> f val)\<rparr>) = state_vrefs s"
+       \<Longrightarrow> state_vrefs (s\<lparr>kheap := (kheap s)(p \<mapsto> f val)\<rparr>) = state_vrefs s"
   and a_type_arch_object_not_tcb[simp]:
     "a_type (ArchObj arch_kernel_obj) \<noteq> ATCB"
   and set_cap_state_vrefs:
@@ -969,10 +969,10 @@ lemma set_untyped_cap_as_full_is_transferable[wp]:
   using untyped_not_transferable max_free_index_update_preserve_untyped by simp
 
 lemma set_untyped_cap_as_full_is_transferable':
-  "\<lbrace>\<lambda>s. is_transferable ((caps_of_state s(slot2 \<mapsto> new_cap)) slot3) \<and>
+  "\<lbrace>\<lambda>s. is_transferable (((caps_of_state s)(slot2 \<mapsto> new_cap)) slot3) \<and>
         Some src_cap = (caps_of_state s slot)\<rbrace>
    set_untyped_cap_as_full src_cap new_cap slot
-   \<lbrace>\<lambda>_ s. is_transferable ((caps_of_state s(slot2 \<mapsto> new_cap)) slot3)\<rbrace>"
+   \<lbrace>\<lambda>_ s. is_transferable (((caps_of_state s)(slot2 \<mapsto> new_cap)) slot3)\<rbrace>"
   apply (clarsimp simp: set_untyped_cap_as_full_def)
   apply safe
   apply (wp,fastforce)+

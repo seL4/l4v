@@ -1627,7 +1627,7 @@ lemma update_aobj_not_reachable:
      apply (rule_tac x = "(aa, baa)" in bexI[rotated])
      apply assumption
     apply (simp add: fun_upd_def[symmetric])
-    apply (rule_tac s4 = s in vs_lookup_pages1_is_wellformed_lookup[where s = "s\<lparr>kheap := kheap s(p \<mapsto> ArchObj aobj)\<rparr>" for s
+    apply (rule_tac s4 = s in vs_lookup_pages1_is_wellformed_lookup[where s = "s\<lparr>kheap := (kheap s)(p \<mapsto> ArchObj aobj)\<rparr>" for s
                 ,simplified])
    apply (clarsimp simp: lookup_refs_def vs_lookup_pages1_on_heap_obj_def vs_refs_pages_def image_def obj_at_def
                          graph_of_def pde_ref_pages_def Image_def split: if_split_asm pde.split_asm)
@@ -2838,7 +2838,7 @@ lemma lookup_pages_shrink_store_pdpte:
   apply (simp add: vs_lookup_pages_def)
   apply (drule_tac s1 = s in lookup_bound_estimate[OF vs_lookup_pages1_is_wellformed_lookup, rotated -1])
    apply (simp add: fun_upd_def[symmetric])
-   apply (rule vs_lookup_pages1_is_wellformed_lookup[where s = "s\<lparr>kheap := kheap s(ptr \<mapsto> ArchObj obj)\<rparr>" for s ptr obj
+   apply (rule vs_lookup_pages1_is_wellformed_lookup[where s = "s\<lparr>kheap := (kheap s)(ptr \<mapsto> ArchObj obj)\<rparr>" for s ptr obj
                 ,simplified])
    apply (clarsimp simp: lookup_refs_def vs_lookup_pages1_on_heap_obj_def vs_refs_pages_def image_def obj_at_def
                          graph_of_def pdpte_ref_pages_def split: if_split_asm pde.split_asm)
@@ -2852,7 +2852,7 @@ lemma lookup_pages_shrink_store_pde:
   apply (simp add: vs_lookup_pages_def)
   apply (drule_tac s1 = s in lookup_bound_estimate[OF vs_lookup_pages1_is_wellformed_lookup, rotated -1])
    apply (simp add: fun_upd_def[symmetric])
-   apply (rule vs_lookup_pages1_is_wellformed_lookup[where s = "s\<lparr>kheap := kheap s(ptr \<mapsto> ArchObj obj)\<rparr>" for s ptr obj
+   apply (rule vs_lookup_pages1_is_wellformed_lookup[where s = "s\<lparr>kheap := (kheap s)(ptr \<mapsto> ArchObj obj)\<rparr>" for s ptr obj
                 ,simplified])
    apply (clarsimp simp: lookup_refs_def vs_lookup_pages1_on_heap_obj_def vs_refs_pages_def image_def obj_at_def
                          graph_of_def pde_ref_pages_def split: if_split_asm pde.split_asm)
@@ -2866,7 +2866,7 @@ lemma lookup_pages_shrink_store_pte:
   apply (simp add: vs_lookup_pages_def)
   apply (drule_tac s1 = s in lookup_bound_estimate[OF vs_lookup_pages1_is_wellformed_lookup, rotated -1])
    apply (simp add: fun_upd_def[symmetric])
-   apply (rule vs_lookup_pages1_is_wellformed_lookup[where s = "s\<lparr>kheap := kheap s(ptr \<mapsto> ArchObj obj)\<rparr>" for s ptr obj
+   apply (rule vs_lookup_pages1_is_wellformed_lookup[where s = "s\<lparr>kheap := (kheap s)(ptr \<mapsto> ArchObj obj)\<rparr>" for s ptr obj
                 ,simplified])
    apply (clarsimp simp: lookup_refs_def vs_lookup_pages1_on_heap_obj_def vs_refs_pages_def image_def obj_at_def
                          graph_of_def pde_ref_pages_def split: if_split_asm pde.split_asm)

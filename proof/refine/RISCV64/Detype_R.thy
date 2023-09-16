@@ -2514,7 +2514,7 @@ lemma setCTE_pte_at':
 lemma storePTE_det:
   "ko_wp_at' ((=) (KOArch (KOPTE pte))) ptr s
    \<Longrightarrow> storePTE ptr (new_pte::pte) s =
-       modify (ksPSpace_update (\<lambda>_. ksPSpace s(ptr \<mapsto> KOArch (KOPTE new_pte)))) s"
+       modify (ksPSpace_update (\<lambda>_. (ksPSpace s)(ptr \<mapsto> KOArch (KOPTE new_pte)))) s"
   apply (clarsimp simp:ko_wp_at'_def storePTE_def split_def
                        bind_def gets_def return_def
                        get_def setObject_def

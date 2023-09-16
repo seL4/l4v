@@ -541,7 +541,7 @@ lemma perform_pt_inv_unmap_pas_refined:
 lemma vs_lookup_PageTablePTE:
   "\<lbrakk> vs_lookup_table level asid vref s' = Some (lvl', pt);
      pspace_aligned s; valid_vspace_objs s; valid_asid_table s;
-     invalid_pte_at p s; ptes_of s' = ptes_of s (p \<mapsto> pte); is_PageTablePTE pte;
+     invalid_pte_at p s; ptes_of s' = (ptes_of s)(p \<mapsto> pte); is_PageTablePTE pte;
      asid_pools_of s' = asid_pools_of s; asid_table s' = asid_table s;
      vref \<in> user_region;
      pts_of s (the (pte_ref pte)) = Some empty_pt; pt \<noteq> pptr_from_pte pte \<rbrakk>
@@ -584,7 +584,7 @@ lemma vs_lookup_PageTablePTE:
 lemma vs_lookup_PageTablePTE':
   "\<lbrakk> vs_lookup_table level asid vref s = Some (lvl', pt);
      pspace_aligned s; valid_vspace_objs s; valid_asid_table s;
-     invalid_pte_at p s; ptes_of s' = ptes_of s (p \<mapsto> pte); is_PageTablePTE pte;
+     invalid_pte_at p s; ptes_of s' = (ptes_of s)(p \<mapsto> pte); is_PageTablePTE pte;
      asid_pools_of s' = asid_pools_of s; asid_table s' = asid_table s; vref \<in> user_region  \<rbrakk>
      \<Longrightarrow> \<exists>level' \<ge> level. vs_lookup_table level' asid vref s' = Some (lvl', pt)"
   apply (induct level arbitrary: lvl' pt rule: bit0.from_top_full_induct[where y=max_pt_level])

@@ -72,7 +72,7 @@ lemma (in TcbAcc_AI_arch_tcb_context_set_eq) thread_get_as_user:
   apply (clarsimp simp: gets_the_member set_object_def get_object_def in_monad bind_assoc
                         gets_def put_def bind_def get_def return_def select_f_def
                  dest!: get_tcb_SomeD)
-  apply (subgoal_tac "kheap s(t \<mapsto> TCB v) = kheap s", simp)
+  apply (subgoal_tac "(kheap s)(t \<mapsto> TCB v) = kheap s", simp)
   apply fastforce
   done
 

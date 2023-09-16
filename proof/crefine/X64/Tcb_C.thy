@@ -97,8 +97,8 @@ lemma getMRs_rel_sched:
 lemma getObject_state:
   " \<lbrakk>(x, s') \<in> fst (getObject t' s); ko_at' ko t s\<rbrakk>
   \<Longrightarrow> (if t = t' then tcbState_update (\<lambda>_. st) x else x,
-      s'\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbState_update (\<lambda>_. st) ko))\<rparr>)
-      \<in> fst (getObject t' (s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbState_update (\<lambda>_. st) ko))\<rparr>))"
+      s'\<lparr>ksPSpace := (ksPSpace s)(t \<mapsto> KOTCB (tcbState_update (\<lambda>_. st) ko))\<rparr>)
+      \<in> fst (getObject t' (s\<lparr>ksPSpace := (ksPSpace s)(t \<mapsto> KOTCB (tcbState_update (\<lambda>_. st) ko))\<rparr>))"
   apply (simp split: if_split)
   apply (rule conjI)
    apply clarsimp
@@ -156,8 +156,8 @@ lemma getObject_state:
 
 lemma threadGet_state:
   "\<lbrakk> (uc, s') \<in> fst (threadGet (atcbContextGet o tcbArch) t' s); ko_at' ko t s \<rbrakk> \<Longrightarrow>
-   (uc, s'\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbState_update (\<lambda>_. st) ko))\<rparr>) \<in>
-  fst (threadGet (atcbContextGet o tcbArch) t' (s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbState_update (\<lambda>_. st) ko))\<rparr>))"
+   (uc, s'\<lparr>ksPSpace := (ksPSpace s)(t \<mapsto> KOTCB (tcbState_update (\<lambda>_. st) ko))\<rparr>) \<in>
+  fst (threadGet (atcbContextGet o tcbArch) t' (s\<lparr>ksPSpace := (ksPSpace s)(t \<mapsto> KOTCB (tcbState_update (\<lambda>_. st) ko))\<rparr>))"
   apply (clarsimp simp: threadGet_def liftM_def in_monad)
   apply (drule (1) getObject_state [where st=st])
   apply (rule exI)
@@ -167,8 +167,8 @@ lemma threadGet_state:
 
 lemma asUser_state:
   "\<lbrakk>(x,s) \<in> fst (asUser t' f s); ko_at' ko t s; \<And>s. \<lbrace>(=) s\<rbrace> f \<lbrace>\<lambda>_. (=) s\<rbrace> \<rbrakk> \<Longrightarrow>
-  (x,s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbState_update (\<lambda>_. st) ko))\<rparr>) \<in>
-  fst (asUser t' f (s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbState_update (\<lambda>_. st) ko))\<rparr>))"
+  (x,s\<lparr>ksPSpace := (ksPSpace s)(t \<mapsto> KOTCB (tcbState_update (\<lambda>_. st) ko))\<rparr>) \<in>
+  fst (asUser t' f (s\<lparr>ksPSpace := (ksPSpace s)(t \<mapsto> KOTCB (tcbState_update (\<lambda>_. st) ko))\<rparr>))"
   apply (clarsimp simp: asUser_def in_monad select_f_def)
   apply (frule use_valid, rule threadGet_inv [where P="(=) s"], rule refl)
   apply (frule use_valid, assumption, rule refl)
@@ -265,8 +265,8 @@ lemma asUser_state:
 
 lemma doMachineOp_state:
   "(rv,s') \<in> fst (doMachineOp f s) \<Longrightarrow>
-  (rv,s'\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbState_update (\<lambda>_. st) ko))\<rparr>)
-  \<in> fst (doMachineOp f (s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbState_update (\<lambda>_. st) ko))\<rparr>))"
+  (rv,s'\<lparr>ksPSpace := (ksPSpace s)(t \<mapsto> KOTCB (tcbState_update (\<lambda>_. st) ko))\<rparr>)
+  \<in> fst (doMachineOp f (s\<lparr>ksPSpace := (ksPSpace s)(t \<mapsto> KOTCB (tcbState_update (\<lambda>_. st) ko))\<rparr>))"
   apply (clarsimp simp: doMachineOp_def split_def in_monad select_f_def)
   apply fastforce
   done
@@ -299,7 +299,7 @@ lemma getMRs_rel_state:
   "\<lbrakk>getMRs_rel args buffer s;
     (cur_tcb' and case_option \<top> valid_ipc_buffer_ptr' buffer) s;
     ko_at' ko t s \<rbrakk> \<Longrightarrow>
-  getMRs_rel args buffer (s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbState_update (\<lambda>_. st) ko))\<rparr>)"
+  getMRs_rel args buffer (s\<lparr>ksPSpace := (ksPSpace s)(t \<mapsto> KOTCB (tcbState_update (\<lambda>_. st) ko))\<rparr>)"
   apply (clarsimp simp: getMRs_rel_def)
   apply (rule exI, erule conjI)
   apply (subst (asm) det_wp_use, rule det_wp_getMRs)
@@ -1289,8 +1289,8 @@ lemma invokeTCB_WriteRegisters_ccorres_helper:
 
 lemma doMachineOp_context:
   "(rv,s') \<in> fst (doMachineOp f s) \<Longrightarrow>
-  (rv,s'\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbContext_update (\<lambda>_. st) ko))\<rparr>)
-  \<in> fst (doMachineOp f (s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbContext_update (\<lambda>_. st) ko))\<rparr>))"
+  (rv,s'\<lparr>ksPSpace := (ksPSpace s)(t \<mapsto> KOTCB (tcbContext_update (\<lambda>_. st) ko))\<rparr>)
+  \<in> fst (doMachineOp f (s\<lparr>ksPSpace := (ksPSpace s)(t \<mapsto> KOTCB (tcbContext_update (\<lambda>_. st) ko))\<rparr>))"
   apply (clarsimp simp: doMachineOp_def split_def in_monad select_f_def)
   apply fastforce
   done
@@ -1299,8 +1299,8 @@ lemma doMachineOp_context:
 lemma getObject_context:
   " \<lbrakk>(x, s') \<in> fst (getObject t' s); ko_at' ko t s\<rbrakk>
   \<Longrightarrow> (if t = t' then tcbContext_update (\<lambda>_. st) x else x,
-      s'\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbContext_update (\<lambda>_. st) ko))\<rparr>)
-      \<in> fst (getObject t' (s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbContext_update (\<lambda>_. st) ko))\<rparr>))"
+      s'\<lparr>ksPSpace := (ksPSpace s)(t \<mapsto> KOTCB (tcbContext_update (\<lambda>_. st) ko))\<rparr>)
+      \<in> fst (getObject t' (s\<lparr>ksPSpace := (ksPSpace s)(t \<mapsto> KOTCB (tcbContext_update (\<lambda>_. st) ko))\<rparr>))"
   apply (simp split: if_split)
   apply (rule conjI)
    apply clarsimp
@@ -1359,8 +1359,8 @@ lemma getObject_context:
 lemma threadGet_context:
   "\<lbrakk> (uc, s') \<in> fst (threadGet (atcbContextGet o tcbArch) (ksCurThread s) s); ko_at' ko t s;
       t \<noteq> ksCurThread s \<rbrakk> \<Longrightarrow>
-   (uc, s'\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbArch_update (\<lambda>_. atcbContextSet st (tcbArch ko)) ko))\<rparr>) \<in>
-  fst (threadGet (atcbContextGet o tcbArch) (ksCurThread s) (s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbArch_update (\<lambda>_. atcbContextSet st (tcbArch ko)) ko))\<rparr>))"
+   (uc, s'\<lparr>ksPSpace := (ksPSpace s)(t \<mapsto> KOTCB (tcbArch_update (\<lambda>_. atcbContextSet st (tcbArch ko)) ko))\<rparr>) \<in>
+  fst (threadGet (atcbContextGet o tcbArch) (ksCurThread s) (s\<lparr>ksPSpace := (ksPSpace s)(t \<mapsto> KOTCB (tcbArch_update (\<lambda>_. atcbContextSet st (tcbArch ko)) ko))\<rparr>))"
   apply (clarsimp simp: threadGet_def liftM_def in_monad)
   apply (drule (1) getObject_context [where st=st])
   apply (rule exI)
@@ -1372,8 +1372,8 @@ done
 lemma asUser_context:
   "\<lbrakk>(x,s) \<in> fst (asUser (ksCurThread s) f s); ko_at' ko t s; \<And>s. \<lbrace>(=) s\<rbrace> f \<lbrace>\<lambda>_. (=) s\<rbrace> ;
     t \<noteq> ksCurThread s\<rbrakk> \<Longrightarrow>
-  (x,s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbArch_update (\<lambda>_. atcbContextSet st (tcbArch ko)) ko))\<rparr>) \<in>
-  fst (asUser (ksCurThread s) f (s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbArch_update (\<lambda>_. atcbContextSet st (tcbArch ko)) ko))\<rparr>))"
+  (x,s\<lparr>ksPSpace := (ksPSpace s)(t \<mapsto> KOTCB (tcbArch_update (\<lambda>_. atcbContextSet st (tcbArch ko)) ko))\<rparr>) \<in>
+  fst (asUser (ksCurThread s) f (s\<lparr>ksPSpace := (ksPSpace s)(t \<mapsto> KOTCB (tcbArch_update (\<lambda>_. atcbContextSet st (tcbArch ko)) ko))\<rparr>))"
   apply (clarsimp simp: asUser_def in_monad select_f_def)
   apply (frule use_valid, rule threadGet_inv [where P="(=) s"], rule refl)
   apply (frule use_valid, assumption, rule refl)
@@ -1444,7 +1444,7 @@ lemma getMRs_rel_context:
   "\<lbrakk>getMRs_rel args buffer s;
     (cur_tcb' and case_option \<top> valid_ipc_buffer_ptr' buffer) s;
     ko_at' ko t s ; t \<noteq> ksCurThread s\<rbrakk> \<Longrightarrow>
-  getMRs_rel args buffer (s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbArch_update (\<lambda>_. atcbContextSet st (tcbArch ko)) ko))\<rparr>)"
+  getMRs_rel args buffer (s\<lparr>ksPSpace := (ksPSpace s)(t \<mapsto> KOTCB (tcbArch_update (\<lambda>_. atcbContextSet st (tcbArch ko)) ko))\<rparr>)"
   apply (clarsimp simp: getMRs_rel_def)
   apply (rule exI, erule conjI)
   apply (subst (asm) det_wp_use, rule det_wp_getMRs)

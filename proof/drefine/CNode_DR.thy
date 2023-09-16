@@ -121,7 +121,7 @@ lemma dcorres_opt_parent_set_parent_helper:
   "dcorres dc \<top> P
   (gets (opt_parent (transform_cslot_ptr src)) >>=
   case_option (return ())
-  (\<lambda>parent. modify (\<lambda>s. s\<lparr>cdl_cdt := cdl_cdt s(transform_cslot_ptr child \<mapsto> parent)\<rparr>)))
+  (\<lambda>parent. modify (\<lambda>s. s\<lparr>cdl_cdt := (cdl_cdt s)(transform_cslot_ptr child \<mapsto> parent)\<rparr>)))
   g \<Longrightarrow>
   dcorres dc \<top> (\<lambda>s. cdt s child = None \<and> cte_at child s \<and>
    mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s) \<and> P s)
@@ -143,7 +143,7 @@ lemma dcorres_opt_parent_set_parent_helper:
 
 lemma dcorres_set_parent_helper:
   "dcorres dc \<top> P
-  (modify (\<lambda>s. s\<lparr>cdl_cdt := cdl_cdt s(transform_cslot_ptr child \<mapsto> parent)\<rparr>))
+  (modify (\<lambda>s. s\<lparr>cdl_cdt := (cdl_cdt s)(transform_cslot_ptr child \<mapsto> parent)\<rparr>))
   g \<Longrightarrow>
   dcorres dc \<top> (\<lambda>s. cdt s child = None \<and> cte_at child s \<and>
    mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s) \<and> P s)
@@ -878,21 +878,21 @@ lemma corres_mapM_to_mapM_x:
   by (simp add: mapM_x_mapM liftM_def[symmetric])
 
 lemma ep_waiting_set_recv_upd_kh:
-  "ep_at epptr s \<Longrightarrow> (ep_waiting_set_recv epptr (update_kheap (kheap s(epptr \<mapsto> kernel_object.Endpoint X)) s))
+  "ep_at epptr s \<Longrightarrow> (ep_waiting_set_recv epptr (update_kheap ((kheap s)(epptr \<mapsto> kernel_object.Endpoint X)) s))
     = (ep_waiting_set_recv epptr s)"
   apply (rule set_eqI)
   apply (clarsimp simp:ep_waiting_set_recv_def obj_at_def is_ep_def)
 done
 
 lemma ep_waiting_set_send_upd_kh:
-  "ep_at epptr s \<Longrightarrow> (ep_waiting_set_send epptr (update_kheap (kheap s(epptr \<mapsto> kernel_object.Endpoint X)) s))
+  "ep_at epptr s \<Longrightarrow> (ep_waiting_set_send epptr (update_kheap ((kheap s)(epptr \<mapsto> kernel_object.Endpoint X)) s))
     = (ep_waiting_set_send epptr s)"
   apply (rule set_eqI)
   apply (clarsimp simp:ep_waiting_set_send_def obj_at_def is_ep_def)
 done
 
 lemma ntfn_waiting_set_upd_kh:
-  "ep_at epptr s \<Longrightarrow> (ntfn_waiting_set epptr (update_kheap (kheap s(epptr \<mapsto> kernel_object.Endpoint X)) s))
+  "ep_at epptr s \<Longrightarrow> (ntfn_waiting_set epptr (update_kheap ((kheap s)(epptr \<mapsto> kernel_object.Endpoint X)) s))
     = (ntfn_waiting_set epptr s)"
   apply (rule set_eqI)
   apply (clarsimp simp:ntfn_waiting_set_def obj_at_def is_ep_def)

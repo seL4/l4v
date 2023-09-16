@@ -69,7 +69,7 @@ declare objBitsT_koTypeOf [simp]
 
 lemma vs_lookup_pages_vcpu_update:
   "typ_at (AArch AVCPU) vcpuPtr s \<Longrightarrow>
-   vs_lookup_target level asid vref (s\<lparr>kheap := kheap s(vcpuPtr \<mapsto> ArchObj (VCPU vcpu))\<rparr>) =
+   vs_lookup_target level asid vref (s\<lparr>kheap := (kheap s)(vcpuPtr \<mapsto> ArchObj (VCPU vcpu))\<rparr>) =
    vs_lookup_target level asid vref s"
   unfolding vs_lookup_target_def vs_lookup_slot_def vs_lookup_table_def
   apply (prop_tac "asid_pools_of s vcpuPtr = None", clarsimp simp: opt_map_def obj_at_def)
@@ -79,7 +79,7 @@ lemma vs_lookup_pages_vcpu_update:
 
 lemma valid_vs_lookup_vcpu_update:
   "typ_at (AArch AVCPU) vcpuPtr s \<Longrightarrow>
-   valid_vs_lookup (s\<lparr>kheap := kheap s(vcpuPtr \<mapsto> ArchObj (VCPU vcpu))\<rparr>) = valid_vs_lookup s"
+   valid_vs_lookup (s\<lparr>kheap := (kheap s)(vcpuPtr \<mapsto> ArchObj (VCPU vcpu))\<rparr>) = valid_vs_lookup s"
   by (clarsimp simp: valid_vs_lookup_def caps_of_state_VCPU_update vs_lookup_pages_vcpu_update)
 
 lemma set_vpcu_valid_vs_lookup[wp]:

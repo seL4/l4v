@@ -521,7 +521,7 @@ lemma valid_arch_mdb_cap_swap:
        \<Longrightarrow> valid_arch_mdb
             ((is_original_cap s)
              (a := is_original_cap s b, b := is_original_cap s a))
-            (caps_of_state s(a \<mapsto> c', b \<mapsto> c))"
+            ((caps_of_state s)(a \<mapsto> c', b \<mapsto> c))"
   by auto
 
 end

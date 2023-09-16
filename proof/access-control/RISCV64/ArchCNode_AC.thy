@@ -101,14 +101,14 @@ crunches prepare_thread_delete, arch_finalise_cap
 
 lemma state_vrefs_tcb_upd[CNode_AC_assms]:
   "\<lbrakk> pspace_aligned s; valid_vspace_objs s; valid_arch_state s; tcb_at t s \<rbrakk>
-     \<Longrightarrow> state_vrefs (s\<lparr>kheap := kheap s(t \<mapsto> TCB tcb)\<rparr>) = state_vrefs s"
+     \<Longrightarrow> state_vrefs (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB tcb)\<rparr>) = state_vrefs s"
   apply (rule state_vrefs_eqI)
   by (fastforce simp: opt_map_def obj_at_def is_obj_defs valid_arch_state_def)+
 
 lemma state_vrefs_simple_type_upd[CNode_AC_assms]:
   "\<lbrakk> pspace_aligned s; valid_vspace_objs s; valid_arch_state s;
      ko_at ko ptr s; is_simple_type ko; a_type ko = a_type (f val) \<rbrakk>
-     \<Longrightarrow> state_vrefs (s\<lparr>kheap := kheap s(ptr \<mapsto> f val)\<rparr>) = state_vrefs s"
+     \<Longrightarrow> state_vrefs (s\<lparr>kheap := (kheap s)(ptr \<mapsto> f val)\<rparr>) = state_vrefs s"
   apply (case_tac ko; case_tac "f val"; clarsimp)
   by (fastforce intro!: state_vrefs_eqI simp: opt_map_def obj_at_def is_obj_defs valid_arch_state_def)+
 

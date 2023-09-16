@@ -84,7 +84,7 @@ lemma corres_free_return:
 
 lemma corres_free_set_object:
   "\<lbrakk> \<forall> s s'. s = transform s' \<and> P s \<and> P' s' \<longrightarrow>
-             s = transform ((\<lambda>s. s \<lparr>kheap := kheap s (ptr \<mapsto> obj)\<rparr>) s')\<rbrakk> \<Longrightarrow>
+             s = transform ((\<lambda>s. s \<lparr>kheap := (kheap s)(ptr \<mapsto> obj)\<rparr>) s')\<rbrakk> \<Longrightarrow>
   dcorres dc P P' (return a) (set_object ptr obj )"
   by (clarsimp simp: corres_underlying_def put_def return_def modify_def bind_def get_def
                      set_object_def get_object_def in_monad)

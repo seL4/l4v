@@ -400,10 +400,10 @@ lemma perform_page_invocation_reads_respects:
 lemma equiv_asids_riscv_asid_table_update:
   "\<lbrakk> equiv_asids R s t; kheap s pool_ptr = kheap t pool_ptr \<rbrakk>
      \<Longrightarrow> equiv_asids R
-           (s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := riscv_asid_table (arch_state s)
-                                                            (asid_high_bits_of asid \<mapsto> pool_ptr)\<rparr>\<rparr>)
-           (t\<lparr>arch_state := arch_state t\<lparr>riscv_asid_table := riscv_asid_table (arch_state t)
-                                                            (asid_high_bits_of asid \<mapsto> pool_ptr)\<rparr>\<rparr>)"
+           (s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := (asid_table s)
+                                                             (asid_high_bits_of asid \<mapsto> pool_ptr)\<rparr>\<rparr>)
+           (t\<lparr>arch_state := arch_state t\<lparr>riscv_asid_table := (asid_table t)
+                                                             (asid_high_bits_of asid \<mapsto> pool_ptr)\<rparr>\<rparr>)"
   by (clarsimp simp: equiv_asids_def equiv_asid_def asid_pool_at_kheap opt_map_def)
 
 lemma riscv_asid_table_update_reads_respects:

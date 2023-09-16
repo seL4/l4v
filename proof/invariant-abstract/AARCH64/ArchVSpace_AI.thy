@@ -250,14 +250,14 @@ crunches vgic_update_lr, vcpu_write_reg, vcpu_save_reg, vcpu_disable, vcpu_resto
   (ignore: vcpu_update simp: vcpu_update_def valid_vcpu_def wp: crunch_wps)
 
 lemma set_vcpu_wp:
-  "\<lbrace>\<lambda>s. vcpu_at p s \<longrightarrow> Q (s\<lparr>kheap := kheap s(p \<mapsto> (ArchObj (VCPU vcpu))) \<rparr>) \<rbrace> set_vcpu p vcpu \<lbrace>\<lambda>_. Q\<rbrace>"
+  "\<lbrace>\<lambda>s. vcpu_at p s \<longrightarrow> Q (s\<lparr>kheap := (kheap s)(p \<mapsto> (ArchObj (VCPU vcpu))) \<rparr>) \<rbrace> set_vcpu p vcpu \<lbrace>\<lambda>_. Q\<rbrace>"
   unfolding set_vcpu_def
   apply (wp set_object_wp_strong)
   apply (clarsimp simp: obj_at_def split: kernel_object.splits arch_kernel_obj.splits)
   done
 
 lemma set_vcpu_vcpus_of[wp]:
-  "\<lbrace>\<lambda>s. vcpus_of s p \<noteq> None \<longrightarrow> P (vcpus_of s (p \<mapsto> vcpu)) \<rbrace> set_vcpu p vcpu \<lbrace>\<lambda>_ s. P (vcpus_of s)\<rbrace>"
+  "\<lbrace>\<lambda>s. vcpus_of s p \<noteq> None \<longrightarrow> P ((vcpus_of s)(p \<mapsto> vcpu)) \<rbrace> set_vcpu p vcpu \<lbrace>\<lambda>_ s. P (vcpus_of s)\<rbrace>"
   by (wp set_vcpu_wp) (clarsimp simp: in_omonad obj_at_def)
 
 lemma get_vcpu_wp:
@@ -680,8 +680,8 @@ lemma vmid_for_asid_upd_eq:
    \<Longrightarrow> (\<lambda>asid'. vmid_for_asid_2
                   asid'
                   (asid_table s)
-                  (asid_pools_of s(pool_ptr \<mapsto> ap(asid_low_bits_of asid \<mapsto>
-                                                  ASIDPoolVSpace vmid vsp))))
+                  ((asid_pools_of s)(pool_ptr \<mapsto> ap(asid_low_bits_of asid \<mapsto>
+                                                    ASIDPoolVSpace vmid vsp))))
        = (vmid_for_asid s) (asid := vmid)"
   apply (rule ext)
   apply (clarsimp simp: vmid_for_asid_2_def entry_for_pool_def pool_for_asid_def obind_def
@@ -2147,7 +2147,7 @@ end
 
 locale asid_pool_map = Arch +
   fixes s ap pool asid ptp pt and s' :: "'a::state_ext state"
-  defines "s' \<equiv> s\<lparr>kheap := kheap s(ap \<mapsto> ArchObj (ASIDPool (pool(asid_low_bits_of asid \<mapsto> ptp))))\<rparr>"
+  defines "s' \<equiv> s\<lparr>kheap := (kheap s)(ap \<mapsto> ArchObj (ASIDPool (pool(asid_low_bits_of asid \<mapsto> ptp))))\<rparr>"
   assumes ap:  "asid_pools_of s ap = Some pool"
   assumes new: "pool (asid_low_bits_of asid) = None"
   assumes pt:  "pts_of s (ap_vspace ptp) = Some pt"
@@ -2386,7 +2386,7 @@ lemma vmid_for_asid_map_None:
   "\<lbrakk> asid_pools_of s ap = Some pool; pool_for_asid asid s = Some ap;
      pool (asid_low_bits_of asid) = None; ap_vmid ape = None \<rbrakk> \<Longrightarrow>
    (\<lambda>asid'. vmid_for_asid_2 asid' (asid_table s)
-                                  (asid_pools_of s(ap \<mapsto> pool(asid_low_bits_of asid \<mapsto> ape)))) =
+                                  ((asid_pools_of s)(ap \<mapsto> pool(asid_low_bits_of asid \<mapsto> ape)))) =
    vmid_for_asid s"
   unfolding vmid_for_asid_def
   apply (rule ext)
@@ -2765,12 +2765,12 @@ lemma set_vcpu_sym_refs[wp]:
   apply (clarsimp simp: obj_at_def)
   done
 
-lemma state_hyp_refs_of_simp_neq: "\<lbrakk> a \<noteq> p \<rbrakk> \<Longrightarrow> state_hyp_refs_of (s\<lparr>kheap := kheap s(p \<mapsto> v) \<rparr>) a = state_hyp_refs_of s a "
+lemma state_hyp_refs_of_simp_neq: "\<lbrakk> a \<noteq> p \<rbrakk> \<Longrightarrow> state_hyp_refs_of (s\<lparr>kheap := (kheap s)(p \<mapsto> v) \<rparr>) a = state_hyp_refs_of s a "
   by (simp add: state_hyp_refs_of_def)
 
 lemma state_hyp_refs_of_simp_eq:
   "obj_at (\<lambda>ko'. hyp_refs_of ko' = hyp_refs_of v) p s
-   \<Longrightarrow> state_hyp_refs_of (s\<lparr>kheap := kheap s(p \<mapsto> v) \<rparr>) p = state_hyp_refs_of s p"
+   \<Longrightarrow> state_hyp_refs_of (s\<lparr>kheap := (kheap s)(p \<mapsto> v) \<rparr>) p = state_hyp_refs_of s p"
   by (clarsimp simp: state_hyp_refs_of_def obj_at_def)
 
 lemma set_object_vcpu_sym_refs_hyp:
@@ -2809,11 +2809,11 @@ lemma set_vcpu_valid_pspace:
   done
 
 lemma vmid_inv_set_vcpu:
-  "vcpu_at p s \<Longrightarrow> vmid_inv (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (VCPU v))\<rparr>) = vmid_inv s"
+  "vcpu_at p s \<Longrightarrow> vmid_inv (s\<lparr>kheap := (kheap s)(p \<mapsto> ArchObj (VCPU v))\<rparr>) = vmid_inv s"
   by (simp add: vmid_inv_def asid_pools_of_vcpu_None_upd_idem)
 
 lemma pt_at_eq_set_vcpu:
-  "vcpu_at p s \<Longrightarrow> pt_at pt_t p' (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (VCPU v))\<rparr>) = pt_at pt_t p' s"
+  "vcpu_at p s \<Longrightarrow> pt_at pt_t p' (s\<lparr>kheap := (kheap s)(p \<mapsto> ArchObj (VCPU v))\<rparr>) = pt_at pt_t p' s"
   by (auto simp add: obj_at_def)
 
 lemma set_vcpu_valid_arch_eq_hyp:
@@ -3030,7 +3030,7 @@ crunches save_virt_timer, vcpu_disable, vcpu_invalidate_active, vcpu_restore, vc
 
 lemma obj_at_hyp_live_vcpu_regs:
   "vcpus_of s vcpu_ptr = Some v \<Longrightarrow>
-   obj_at hyp_live p (s\<lparr>kheap := kheap s(vcpu_ptr \<mapsto> ArchObj (VCPU (v\<lparr>vcpu_regs := x\<rparr>)))\<rparr>) =
+   obj_at hyp_live p (s\<lparr>kheap := (kheap s)(vcpu_ptr \<mapsto> ArchObj (VCPU (v\<lparr>vcpu_regs := x\<rparr>)))\<rparr>) =
    obj_at hyp_live p s"
   by (clarsimp simp: in_omonad obj_at_def)
 

@@ -4820,12 +4820,12 @@ lemma sendIPC_enqueue_ccorres_helper:
    apply (simp add: cendpoint_relation_def Let_def)
    apply (case_tac ep, simp_all add: init_def valid_ep'_def)[1]
   apply (subgoal_tac "sym_refs (state_refs_of' (\<sigma>\<lparr>ksPSpace :=
-                          ksPSpace \<sigma>(epptr \<mapsto> KOEndpoint (SendEP queue))\<rparr>))")
+                          (ksPSpace \<sigma>)(epptr \<mapsto> KOEndpoint (SendEP queue))\<rparr>))")
    prefer 2
    apply (clarsimp simp: state_refs_of'_upd ko_wp_at'_def
                          obj_at'_def projectKOs objBitsKO_def)
   apply (subgoal_tac "ko_at' (SendEP queue) epptr (\<sigma>\<lparr>ksPSpace :=
-                          ksPSpace \<sigma>(epptr \<mapsto> KOEndpoint (SendEP queue))\<rparr>)")
+                          (ksPSpace \<sigma>)(epptr \<mapsto> KOEndpoint (SendEP queue))\<rparr>)")
    prefer 2
    apply (clarsimp simp: obj_at'_def projectKOs objBitsKO_def ps_clear_upd)
   apply (intro conjI impI allI)
@@ -5241,12 +5241,12 @@ lemma receiveIPC_enqueue_ccorres_helper:
    apply (simp add: cendpoint_relation_def Let_def)
    apply (case_tac ep, simp_all add: init_def valid_ep'_def)[1]
   apply (subgoal_tac "sym_refs (state_refs_of' (\<sigma>\<lparr>ksPSpace :=
-                          ksPSpace \<sigma>(epptr \<mapsto> KOEndpoint (RecvEP queue))\<rparr>))")
+                          (ksPSpace \<sigma>)(epptr \<mapsto> KOEndpoint (RecvEP queue))\<rparr>))")
    prefer 2
    apply (clarsimp simp: state_refs_of'_upd ko_wp_at'_def
                          obj_at'_def projectKOs objBitsKO_def)
   apply (subgoal_tac "ko_at' (RecvEP queue) epptr (\<sigma>\<lparr>ksPSpace :=
-                          ksPSpace \<sigma>(epptr \<mapsto> KOEndpoint (RecvEP queue))\<rparr>)")
+                          (ksPSpace \<sigma>)(epptr \<mapsto> KOEndpoint (RecvEP queue))\<rparr>)")
    prefer 2
    apply (clarsimp simp: obj_at'_def projectKOs objBitsKO_def ps_clear_upd)
   apply (intro conjI impI allI)
@@ -6291,16 +6291,17 @@ lemma cpspace_relation_ntfn_update_ntfn':
   fixes ntfn :: "Structures_H.notification" and ntfn' :: "Structures_H.notification"
     and ntfnptr :: "machine_word" and s :: "kernel_state"
   defines "qs \<equiv> if isWaitingNtfn (ntfnObj ntfn') then set (ntfnQueue (ntfnObj ntfn')) else {}"
-  defines "s' \<equiv> s\<lparr>ksPSpace := ksPSpace s(ntfnptr \<mapsto> KONotification ntfn')\<rparr>"
+  defines "s' \<equiv> s\<lparr>ksPSpace := (ksPSpace s)(ntfnptr \<mapsto> KONotification ntfn')\<rparr>"
   assumes koat: "ko_at' ntfn ntfnptr s"
   and       vp: "valid_pspace' s"
   and      cp: "cmap_relation (map_to_ntfns (ksPSpace s)) (cslift t) Ptr (cnotification_relation (cslift t))"
   and      srs: "sym_refs (state_refs_of' s')"
   and     rel: "cnotification_relation (cslift t') ntfn' notification"
   and    mpeq: "(cslift t' |` (- (tcb_ptr_to_ctcb_ptr ` qs))) = (cslift t |` (- (tcb_ptr_to_ctcb_ptr ` qs)))"
-  shows "cmap_relation (map_to_ntfns (ksPSpace s(ntfnptr \<mapsto> KONotification ntfn')))
-           (cslift t(Ptr ntfnptr \<mapsto> notification)) Ptr
-            (cnotification_relation (cslift t'))"
+  shows "cmap_relation (map_to_ntfns ((ksPSpace s)(ntfnptr \<mapsto> KONotification ntfn')))
+                       ((cslift t)(Ptr ntfnptr \<mapsto> notification))
+                       Ptr
+                       (cnotification_relation (cslift t'))"
 proof -
   from koat have koat': "ko_at' ntfn' ntfnptr s'"
     by (clarsimp simp: obj_at'_def s'_def objBitsKO_def ps_clear_def projectKOs)
@@ -6376,12 +6377,12 @@ lemma receiveSignal_enqueue_ccorres_helper:
    apply (simp add: cnotification_relation_def Let_def)
    apply (case_tac "ntfnObj ntfn", simp_all add: init_def valid_ntfn'_def)[1]
   apply (subgoal_tac "sym_refs (state_refs_of' (\<sigma>\<lparr>ksPSpace :=
-                          ksPSpace \<sigma>(ntfnptr \<mapsto> KONotification (NTFN (WaitingNtfn queue) (ntfnBoundTCB ntfn)))\<rparr>))")
+                               (ksPSpace \<sigma>)(ntfnptr \<mapsto> KONotification (NTFN (WaitingNtfn queue) (ntfnBoundTCB ntfn)))\<rparr>))")
    prefer 2
    apply (clarsimp simp: state_refs_of'_upd ko_wp_at'_def ntfnBound_state_refs_equivalence
                          obj_at'_def projectKOs objBitsKO_def)
   apply (subgoal_tac "ko_at' (NTFN (WaitingNtfn queue) (ntfnBoundTCB ntfn)) ntfnptr (\<sigma>\<lparr>ksPSpace :=
-                          ksPSpace \<sigma>(ntfnptr \<mapsto> KONotification (NTFN (WaitingNtfn queue) (ntfnBoundTCB ntfn)))\<rparr>)")
+                             (ksPSpace \<sigma>)(ntfnptr \<mapsto> KONotification (NTFN (WaitingNtfn queue) (ntfnBoundTCB ntfn)))\<rparr>)")
    prefer 2
    apply (clarsimp simp: obj_at'_def projectKOs objBitsKO_def ps_clear_upd)
   apply (intro conjI impI allI)

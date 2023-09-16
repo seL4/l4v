@@ -1587,23 +1587,20 @@ lemma valid_etcbs_clear_um_detype:
   by (clarsimp simp: valid_etcbs_def st_tcb_at_def is_etcb_at_def st_tcb_at_kh_def
                      obj_at_kh_def obj_at_def detype_def detype_ext_def clear_um_def)
 
-
 lemma unat_map_upd:
-  "unat_map (Some \<circ> transform_asid_table_entry \<circ> arm_asid_table
-    as (asid_high_bits_of base \<mapsto> frame)) =
-   unat_map (Some \<circ> transform_asid_table_entry \<circ> arm_asid_table as)
-    (unat (asid_high_bits_of base) \<mapsto> AsidPoolCap frame 0)"
+  "unat_map (Some \<circ> transform_asid_table_entry \<circ> (asid_table as)(asid_high_bits_of base \<mapsto> frame)) =
+   (unat_map (Some \<circ> transform_asid_table_entry \<circ> asid_table as))
+     (unat (asid_high_bits_of base) \<mapsto> AsidPoolCap frame 0)"
   apply (rule ext)
-  apply (clarsimp simp:unat_map_def asid_high_bits_of_def
-    transform_asid_table_entry_def)
+  apply (clarsimp simp:unat_map_def asid_high_bits_of_def transform_asid_table_entry_def)
   apply (intro impI conjI)
     apply (subgoal_tac "x<256")
-     apply (clarsimp simp:unat_map_def asid_high_bits_of_def asid_low_bits_def
-       transform_asid_table_entry_def transform_asid_def)
+     apply (clarsimp simp: unat_map_def asid_high_bits_of_def asid_low_bits_def
+                           transform_asid_table_entry_def transform_asid_def)
      apply (drule_tac x="of_nat x" in unat_cong)
      apply (subst (asm) word_unat.Abs_inverse)
       apply (clarsimp simp:unats_def unat_ucast)+
-done
+  done
 
 declare descendants_of_empty[simp]
 

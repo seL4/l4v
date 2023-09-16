@@ -16,7 +16,7 @@ lemma ps_clear_domE[elim?]:
 
 lemma ps_clear_upd:
   "ksPSpace s y = Some v \<Longrightarrow>
-    ps_clear x n (ksPSpace_update (\<lambda>a. ksPSpace s(y \<mapsto> v')) s') = ps_clear x n s"
+    ps_clear x n (ksPSpace_update (\<lambda>a. (ksPSpace s)(y \<mapsto> v')) s') = ps_clear x n s"
   by (rule iffI | clarsimp elim!: ps_clear_domE | fastforce)+
 
 lemmas ps_clear_updE[elim] = iffD2[OF ps_clear_upd, rotated]

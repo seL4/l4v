@@ -60,7 +60,7 @@ locale Scheduler_IF_1 =
     "arch_scheduler_affects_equiv s s' \<Longrightarrow> arch_scheduler_affects_equiv s' s"
   and arch_scheduler_affects_equiv_update:
     "arch_scheduler_affects_equiv st s
-     \<Longrightarrow> arch_scheduler_affects_equiv st (s\<lparr>kheap := kheap s(x \<mapsto> TCB y')\<rparr>)"
+     \<Longrightarrow> arch_scheduler_affects_equiv st (s\<lparr>kheap := (kheap s)(x \<mapsto> TCB y')\<rparr>)"
   and arch_scheduler_affects_equiv_sa_update[simp]:
     "\<And>f. arch_scheduler_affects_equiv (scheduler_action_update f s) s' =
           arch_scheduler_affects_equiv s s'"
@@ -106,7 +106,7 @@ locale Scheduler_IF_1 =
     "\<And>P. arch_switch_to_idle_thread \<lbrace>\<lambda>s. P (work_units_completed s)\<rbrace>"
   and equiv_asid_equiv_update:
     "\<lbrakk> get_tcb x s = Some y; equiv_asid asid st s \<rbrakk>
-       \<Longrightarrow> equiv_asid asid st (s\<lparr>kheap := kheap s(x \<mapsto> TCB y')\<rparr>)"
+       \<Longrightarrow> equiv_asid asid st (s\<lparr>kheap := (kheap s)(x \<mapsto> TCB y')\<rparr>)"
   and equiv_asid_cur_thread_update[simp]:
     "\<And>f. equiv_asid asid (cur_thread_update f s) s' = equiv_asid asid s s'"
     "\<And>f. equiv_asid asid s (cur_thread_update f s') = equiv_asid asid s s'"
@@ -2221,7 +2221,7 @@ context Scheduler_IF_1 begin
 lemma scheduler_affects_equiv_update:
   "\<lbrakk> get_tcb x s = Some y; pasObjectAbs aag x \<notin> reads_scheduler aag l;
      scheduler_affects_equiv aag l st s \<rbrakk>
-     \<Longrightarrow> scheduler_affects_equiv aag l st (s\<lparr>kheap := kheap s(x \<mapsto> TCB y')\<rparr>)"
+     \<Longrightarrow> scheduler_affects_equiv aag l st (s\<lparr>kheap := (kheap s)(x \<mapsto> TCB y')\<rparr>)"
   by (clarsimp simp: scheduler_affects_equiv_def equiv_for_def equiv_asids_def
                      states_equiv_for_def scheduler_globals_frame_equiv_def
                      arch_scheduler_affects_equiv_update equiv_asid_equiv_update)

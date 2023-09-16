@@ -76,17 +76,17 @@ lemma vs_refs_pages_vcpu:
   by (simp add: vs_refs_pages_def)
 
 lemma vs_lookup_pages1_vcpu_update:
-  "typ_at (AArch AVCPU) vcpuPtr s \<Longrightarrow> vs_lookup_pages1 (s\<lparr>kheap := kheap s(vcpuPtr \<mapsto> ArchObj (VCPU vcpu))\<rparr>)
+  "typ_at (AArch AVCPU) vcpuPtr s \<Longrightarrow> vs_lookup_pages1 (s\<lparr>kheap := (kheap s)(vcpuPtr \<mapsto> ArchObj (VCPU vcpu))\<rparr>)
                                       = vs_lookup_pages1 s"
   by (clarsimp intro!: set_eqI simp: vs_lookup_pages1_def vs_refs_pages_vcpu obj_at_def)
 
 lemma vs_lookup_pages_vcpu_update:
-  "typ_at (AArch AVCPU) vcpuPtr s \<Longrightarrow> vs_lookup_pages (s\<lparr>kheap := kheap s(vcpuPtr \<mapsto> ArchObj (VCPU vcpu))\<rparr>)
+  "typ_at (AArch AVCPU) vcpuPtr s \<Longrightarrow> vs_lookup_pages (s\<lparr>kheap := (kheap s)(vcpuPtr \<mapsto> ArchObj (VCPU vcpu))\<rparr>)
                                       = vs_lookup_pages s"
   by (clarsimp simp: vs_lookup_pages_def vs_lookup_pages1_vcpu_update)
 
 lemma valid_vs_lookup_vcpu_update:
-  "typ_at (AArch AVCPU) vcpuPtr s \<Longrightarrow> valid_vs_lookup (s\<lparr>kheap := kheap s(vcpuPtr \<mapsto> ArchObj (VCPU vcpu))\<rparr>)
+  "typ_at (AArch AVCPU) vcpuPtr s \<Longrightarrow> valid_vs_lookup (s\<lparr>kheap := (kheap s)(vcpuPtr \<mapsto> ArchObj (VCPU vcpu))\<rparr>)
                                       = valid_vs_lookup s"
   apply (clarsimp simp: valid_vs_lookup_def caps_of_state_VCPU_update)
   apply (rule all_cong1)
@@ -769,12 +769,12 @@ lemma valid_vs_lookup_arm_current_vcpu_inv[simp]: "valid_vs_lookup (s\<lparr>arc
 
 lemma vs_lookup_pages1_vcpu_update':
   "kheap s p = Some (ArchObj (VCPU x)) \<Longrightarrow>
-    vs_lookup_pages1 (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (VCPU x'))\<rparr>) = vs_lookup_pages1 s"
+    vs_lookup_pages1 (s\<lparr>kheap := (kheap s)(p \<mapsto> ArchObj (VCPU x'))\<rparr>) = vs_lookup_pages1 s"
   by (clarsimp simp: vs_lookup_pages1_def obj_at_def vs_refs_pages_def intro!: set_eqI)
 
 lemma vs_lookup_pages_vcpu_update':
   "kheap s y = Some (ArchObj (VCPU x)) \<Longrightarrow>
-    (ref \<unrhd> p) s = (ref \<unrhd> p) (s\<lparr>kheap := kheap s(y \<mapsto> ArchObj (VCPU x'))\<rparr>)"
+    (ref \<unrhd> p) s = (ref \<unrhd> p) (s\<lparr>kheap := (kheap s)(y \<mapsto> ArchObj (VCPU x'))\<rparr>)"
   by (clarsimp simp: vs_lookup_pages_def vs_lookup_pages1_vcpu_update')
 
 lemma tcb_at'_ksIdleThread_lift:

@@ -417,7 +417,7 @@ context Arch begin global_naming AARCH64
 
 lemma vmid_for_asid_empty_update:
   "\<lbrakk> asid_table s asid_high = None; asid_pools_of s ap = Some Map.empty \<rbrakk> \<Longrightarrow>
-   vmid_for_asid_2 asid (asid_table s(asid_high \<mapsto> ap)) (asid_pools_of s) = vmid_for_asid s asid"
+   vmid_for_asid_2 asid ((asid_table s)(asid_high \<mapsto> ap)) (asid_pools_of s) = vmid_for_asid s asid"
   by (clarsimp simp: vmid_for_asid_2_def obind_def entry_for_pool_def opt_map_def
                split: option.splits)
 
@@ -451,7 +451,7 @@ lemma valid_asid_pool_caps_upd_strg:
    (\<exists>ptr cap. caps_of_state s ptr = Some cap
      \<and> obj_refs cap = {ap} \<and> vs_cap_ref cap = Some (ucast asid << asid_low_bits, 0))
    \<longrightarrow>
-   valid_asid_pool_caps_2 (caps_of_state s) (asid_table s(asid \<mapsto> ap))"
+   valid_asid_pool_caps_2 (caps_of_state s) ((asid_table s)(asid \<mapsto> ap))"
   apply clarsimp
   apply (prop_tac "asid_update ap asid s", (unfold_locales; assumption))
   apply (fastforce dest: asid_update.valid_asid_pool_caps')
@@ -544,7 +544,7 @@ lemma cap_insert_simple_arch_caps_ap:
      and K (cap = ArchObjectCap (ASIDPoolCap ap asid) \<and> is_aligned asid asid_low_bits) \<rbrace>
      cap_insert cap src dest
    \<lbrace>\<lambda>rv s. valid_arch_caps (s\<lparr>arch_state := arch_state s
-                       \<lparr>arm_asid_table := arm_asid_table (arch_state s)(asid_high_bits_of asid \<mapsto> ap)\<rparr>\<rparr>)\<rbrace>"
+                       \<lparr>arm_asid_table := (asid_table s)(asid_high_bits_of asid \<mapsto> ap)\<rparr>\<rparr>)\<rbrace>"
   apply (simp add: cap_insert_def update_cdt_def set_cdt_def valid_arch_caps_def
                    set_untyped_cap_as_full_def bind_assoc)
   apply (strengthen valid_vs_lookup_at_upd_strg valid_asid_pool_caps_upd_strg)
@@ -890,7 +890,8 @@ lemmas aci_invs[wp] =
   aci_invs'[where Q=\<top>,simplified hoare_post_taut, OF refl refl refl TrueI TrueI TrueI,simplified]
 
 lemma obj_at_upd2:
-  "obj_at P t' (s\<lparr>kheap := kheap s(t \<mapsto> v, x \<mapsto> v')\<rparr>) = (if t' = x then P v' else obj_at P t' (s\<lparr>kheap := kheap s(t \<mapsto> v)\<rparr>))"
+  "obj_at P t' (s\<lparr>kheap := (kheap s)(t \<mapsto> v, x \<mapsto> v')\<rparr>) =
+   (if t' = x then P v' else obj_at P t' (s\<lparr>kheap := (kheap s)(t \<mapsto> v)\<rparr>))"
   by (simp add: obj_at_update obj_at_def)
 
 lemma vcpu_invalidate_active_hyp_refs_empty[wp]:
@@ -964,7 +965,7 @@ lemma ex_nonz_cap_to_vcpu_udpate[simp]:
   by (simp add: ex_nonz_cap_to_def)
 
 lemma caps_of_state_VCPU_update:
-  "vcpu_at a s \<Longrightarrow> caps_of_state (s\<lparr>kheap := kheap s(a \<mapsto> ArchObj (VCPU b))\<rparr>) = caps_of_state s"
+  "vcpu_at a s \<Longrightarrow> caps_of_state (s\<lparr>kheap := (kheap s)(a \<mapsto> ArchObj (VCPU b))\<rparr>) = caps_of_state s"
   by (rule ext) (auto simp: caps_of_state_cte_wp_at cte_wp_at_cases obj_at_def)
 
 lemma set_vcpu_ex_nonz_cap_to[wp]:
@@ -974,7 +975,7 @@ lemma set_vcpu_ex_nonz_cap_to[wp]:
   done
 
 lemma caps_of_state_tcb_arch_update:
-  "ko_at (TCB y) t' s \<Longrightarrow> caps_of_state (s\<lparr>kheap := kheap s(t' \<mapsto> TCB (y\<lparr>tcb_arch := f (tcb_arch y)\<rparr>))\<rparr>) = caps_of_state s"
+  "ko_at (TCB y) t' s \<Longrightarrow> caps_of_state (s\<lparr>kheap := (kheap s)(t' \<mapsto> TCB (y\<lparr>tcb_arch := f (tcb_arch y)\<rparr>))\<rparr>) = caps_of_state s"
   by (rule ext) (auto simp: caps_of_state_cte_wp_at cte_wp_at_cases obj_at_def tcb_cap_cases_def)
 
 lemma arch_thread_set_ex_nonz_cap_to[wp]:

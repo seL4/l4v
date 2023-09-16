@@ -427,7 +427,9 @@ lemma dcorres_idempotent_as_user:
   done
 
 lemma transform_full_intent_kheap_update_eq:
-  "\<lbrakk> q \<noteq> u' \<rbrakk> \<Longrightarrow> transform_full_intent (machine_state (s\<lparr>kheap := kheap s(u' \<mapsto> x')\<rparr>)) q = transform_full_intent (machine_state s) q"
+  "q \<noteq> u' \<Longrightarrow>
+   transform_full_intent (machine_state (s\<lparr>kheap := (kheap s)(u' \<mapsto> x')\<rparr>)) q =
+   transform_full_intent (machine_state s) q"
   by simp
 
 (* Suspend functions correspond. *)

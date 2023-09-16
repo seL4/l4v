@@ -178,8 +178,8 @@ lemma send_upd_ctxintegrity:
      integrity aag X st s; st_tcb_at ((=) Running) thread s;
      get_tcb thread st = Some tcb; get_tcb thread s = Some tcb'\<rbrakk>
      \<Longrightarrow> integrity aag X st
-                   (s\<lparr>kheap := kheap s(thread \<mapsto>
-                                       TCB (tcb'\<lparr>tcb_arch := arch_tcb_context_set c' (tcb_arch tcb')\<rparr>))\<rparr>)"
+                   (s\<lparr>kheap := (kheap s)
+                               (thread \<mapsto> TCB (tcb'\<lparr>tcb_arch := arch_tcb_context_set c' (tcb_arch tcb')\<rparr>))\<rparr>)"
   apply (clarsimp simp: integrity_def tcb_states_of_state_preserved st_tcb_def2)
   apply (rule conjI)
    prefer 2
@@ -1742,7 +1742,7 @@ locale Ipc_AC_2 = Ipc_AC_1 +
   and auth_ipc_buffers_kheap_update:
     "\<lbrakk> x \<in> auth_ipc_buffers st thread; kheap st thread = Some (TCB tcb);
        kheap s thread = Some (TCB tcb'); tcb_ipcframe tcb = tcb_ipcframe tcb' \<rbrakk>
-       \<Longrightarrow> x \<in> auth_ipc_buffers (s\<lparr>kheap := kheap s(thread \<mapsto> TCB tcb)\<rparr>) thread"
+       \<Longrightarrow> x \<in> auth_ipc_buffers (s\<lparr>kheap := (kheap s)(thread \<mapsto> TCB tcb)\<rparr>) thread"
   and auth_ipc_buffers_machine_state_update[simp]:
     "auth_ipc_buffers (machine_state_update f s) = auth_ipc_buffers (s :: det_ext state)"
   and empty_slot_extended_list_integ_lift_in_ipc:

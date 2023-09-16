@@ -1278,7 +1278,7 @@ crunch gsMaxObjectSize[wp]: emptySlot "\<lambda>s. P (gsMaxObjectSize s)"
 end
 
 lemma emptySlot_cteCaps_of:
-  "\<lbrace>\<lambda>s. P (cteCaps_of s(p \<mapsto> NullCap))\<rbrace>
+  "\<lbrace>\<lambda>s. P ((cteCaps_of s)(p \<mapsto> NullCap))\<rbrace>
      emptySlot p opt
    \<lbrace>\<lambda>rv s. P (cteCaps_of s)\<rbrace>"
   apply (simp add: emptySlot_def case_Null_If)
@@ -2762,7 +2762,7 @@ crunches finaliseCapTrue_standin, unbindNotification
 
 lemma cteDeleteOne_cteCaps_of:
   "\<lbrace>\<lambda>s. (cte_wp_at' (\<lambda>cte. \<exists>final. finaliseCap (cteCap cte) final True \<noteq> fail) p s \<longrightarrow>
-          P (cteCaps_of s(p \<mapsto> NullCap)))\<rbrace>
+          P ((cteCaps_of s)(p \<mapsto> NullCap)))\<rbrace>
      cteDeleteOne p
    \<lbrace>\<lambda>rv s. P (cteCaps_of s)\<rbrace>"
   apply (simp add: cteDeleteOne_def unless_def split_def)
@@ -3195,7 +3195,7 @@ crunch ctes_of[wp]: cancelSignal "\<lambda>s. P (ctes_of s)"
 
 lemma cancelIPC_cteCaps_of:
   "\<lbrace>\<lambda>s. (\<forall>p. cte_wp_at' (\<lambda>cte. \<exists>final. finaliseCap (cteCap cte) final True \<noteq> fail) p s \<longrightarrow>
-          P (cteCaps_of s(p \<mapsto> NullCap))) \<and>
+          P ((cteCaps_of s)(p \<mapsto> NullCap))) \<and>
      P (cteCaps_of s)\<rbrace>
      cancelIPC t
    \<lbrace>\<lambda>rv s. P (cteCaps_of s)\<rbrace>"
@@ -4117,7 +4117,7 @@ definition set_thread_all :: "obj_ref \<Rightarrow> Structures_A.tcb \<Rightarro
                                 \<Rightarrow> unit det_ext_monad" where
   "set_thread_all ptr tcb etcb \<equiv>
      do s \<leftarrow> get;
-       kh \<leftarrow> return $ kheap s(ptr \<mapsto> (TCB tcb));
+       kh \<leftarrow> return $ (kheap s)(ptr \<mapsto> (TCB tcb));
        ekh \<leftarrow> return $ (ekheap s)(ptr \<mapsto> etcb);
        put (s\<lparr>kheap := kh, ekheap := ekh\<rparr>)
      od"

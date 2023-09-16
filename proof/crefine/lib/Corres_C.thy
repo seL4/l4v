@@ -666,7 +666,7 @@ lemma cte_C_cap_C_update:
   fixes val :: "cap_C" and ptr :: "cte_C ptr"
   assumes  cl: "clift hp ptr = Some z"
   shows "(clift (hrs_mem_update (heap_update (Ptr &(ptr\<rightarrow>[''cap_C''])) val) hp)) =
-  clift hp(ptr \<mapsto> cte_C.cap_C_update (\<lambda>_. val) z)"
+         (clift hp)(ptr \<mapsto> cte_C.cap_C_update (\<lambda>_. val) z)"
   using cl
   by (simp add: clift_field_update)
 

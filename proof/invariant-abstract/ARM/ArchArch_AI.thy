@@ -19,7 +19,7 @@ definition
   cte_wp_at (\<lambda>cap. \<exists>idx. cap = cap.UntypedCap False frame pageBits idx ) parent s \<and>
   descendants_of parent (cdt s) = {} \<and>
   is_aligned base asid_low_bits \<and> base \<le> 2^asid_bits - 1 \<and>
-  arm_asid_table (arch_state s) (asid_high_bits_of base) = None"
+  asid_table s (asid_high_bits_of base) = None"
 
 
 lemma safe_parent_strg:
@@ -270,8 +270,8 @@ end
 locale asid_update = Arch +
   fixes ap asid s s'
   assumes ko: "ko_at (ArchObj (ASIDPool Map.empty)) ap s"
-  assumes empty: "arm_asid_table (arch_state s) asid = None"
-  defines "s' \<equiv> s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table (arch_state s)(asid \<mapsto> ap)\<rparr>\<rparr>"
+  assumes empty: "asid_table s asid = None"
+  defines "s' \<equiv> s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := (asid_table s)(asid \<mapsto> ap)\<rparr>\<rparr>"
 begin
 
 lemma vs_lookup1' [simp]:
@@ -286,7 +286,7 @@ lemma vs_lookup_pages1' [simp]:
 
 lemma vs_asid_refs' [simp]:
   "vs_asid_refs (arm_asid_table (arch_state s')) =
-  vs_asid_refs (arm_asid_table (arch_state s)) \<union> {([VSRef (ucast asid) None], ap)}"
+  vs_asid_refs (asid_table s) \<union> {([VSRef (ucast asid) None], ap)}"
   apply (simp add: s'_def)
   apply (rule set_eqI)
   apply (rule iffI)
@@ -401,8 +401,8 @@ end
 context Arch begin global_naming ARM
 
 lemma valid_arch_state_strg:
-  "valid_arch_state s \<and> ap \<notin> ran (arm_asid_table (arch_state s)) \<and> asid_pool_at ap s \<longrightarrow>
-   valid_arch_state (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table (arch_state s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
+  "valid_arch_state s \<and> ap \<notin> ran (asid_table s) \<and> asid_pool_at ap s \<longrightarrow>
+   valid_arch_state (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := (asid_table s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
   apply (clarsimp simp: valid_arch_state_def)
   apply (clarsimp simp: valid_asid_table_def ran_def)
   apply (fastforce intro!: inj_on_fun_updI)
@@ -412,11 +412,11 @@ lemma valid_arch_state_strg:
 lemma valid_vs_lookup_at_upd_strg:
   "valid_vs_lookup s \<and>
    ko_at (ArchObj (ASIDPool Map.empty)) ap s \<and>
-   arm_asid_table (arch_state s) asid = None \<and>
+   asid_table s asid = None \<and>
    (\<exists>ptr cap. caps_of_state s ptr = Some cap \<and> ap \<in> obj_refs cap \<and>
               vs_cap_ref cap = Some [VSRef (ucast asid) None])
    \<longrightarrow>
-   valid_vs_lookup (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table (arch_state s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
+   valid_vs_lookup (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := (asid_table s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
   apply clarsimp
   apply (subgoal_tac "asid_update ap asid s")
    prefer 2
@@ -489,7 +489,7 @@ lemma valid_table_caps_asid_upd [iff]:
 
 lemma vs_asid_ref_upd:
   "([VSRef (ucast (asid_high_bits_of asid')) None] \<rhd> ap')
-    (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table (arch_state s)(asid_high_bits_of asid \<mapsto> ap)\<rparr>\<rparr>)
+    (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := (asid_table s)(asid_high_bits_of asid \<mapsto> ap)\<rparr>\<rparr>)
   = (if asid_high_bits_of asid' = asid_high_bits_of asid
     then ap' = ap
     else ([VSRef (ucast (asid_high_bits_of asid')) None] \<rhd> ap') s)"
@@ -498,7 +498,7 @@ lemma vs_asid_ref_upd:
 
 lemma vs_asid_ref_eq:
   "([VSRef (ucast asid) None] \<rhd> ap) s
-  = (arm_asid_table (arch_state s) asid = Some ap)"
+  = (asid_table s asid = Some ap)"
   by (fastforce elim: vs_lookup_atE intro: vs_lookup_atI)
 
 
@@ -510,12 +510,12 @@ lemma set_cap_reachable_pg_cap:
 lemma cap_insert_simple_arch_caps_ap:
   "\<lbrace>valid_arch_caps and (\<lambda>s. cte_wp_at (safe_parent_for (cdt s) src cap) src s)
      and no_cap_to_obj_with_diff_ref cap {dest}
-     and (\<lambda>s. arm_asid_table (arch_state s) (asid_high_bits_of asid) = None)
+     and (\<lambda>s. asid_table s (asid_high_bits_of asid) = None)
      and ko_at (ArchObj (ASIDPool Map.empty)) ap
      and K (cap = ArchObjectCap (ASIDPoolCap ap asid)) \<rbrace>
      cap_insert cap src dest
    \<lbrace>\<lambda>rv s. valid_arch_caps (s\<lparr>arch_state := arch_state s
-                       \<lparr>arm_asid_table := arm_asid_table (arch_state s)(asid_high_bits_of asid \<mapsto> ap)\<rparr>\<rparr>)\<rbrace>"
+                       \<lparr>arm_asid_table := (asid_table s)(asid_high_bits_of asid \<mapsto> ap)\<rparr>\<rparr>)\<rbrace>"
   apply (simp add: cap_insert_def update_cdt_def set_cdt_def valid_arch_caps_def
     set_untyped_cap_as_full_def bind_assoc)
   apply (strengthen valid_vs_lookup_at_upd_strg)
@@ -547,8 +547,8 @@ lemma cap_insert_simple_arch_caps_ap:
 lemma valid_asid_map_asid_upd_strg:
   "valid_asid_map s \<and>
    ko_at (ArchObj (ASIDPool Map.empty)) ap s \<and>
-   arm_asid_table (arch_state s) asid = None \<longrightarrow>
-   valid_asid_map (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table (arch_state s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
+   asid_table s asid = None \<longrightarrow>
+   valid_asid_map (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := (asid_table s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
   apply clarsimp
   apply (subgoal_tac "asid_update ap asid s")
    prefer 2
@@ -560,8 +560,8 @@ lemma valid_asid_map_asid_upd_strg:
 lemma valid_vspace_objs_asid_upd_strg:
   "valid_vspace_objs s \<and>
    ko_at (ArchObj (ASIDPool Map.empty)) ap s \<and>
-   arm_asid_table (arch_state s) asid = None \<longrightarrow>
-   valid_vspace_objs (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table (arch_state s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
+   asid_table s asid = None \<longrightarrow>
+   valid_vspace_objs (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := (asid_table s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
   apply clarsimp
   apply (subgoal_tac "asid_update ap asid s")
    prefer 2
@@ -573,8 +573,8 @@ lemma valid_vspace_objs_asid_upd_strg:
 lemma valid_global_objs_asid_upd_strg:
   "valid_global_objs s \<and>
    ko_at (ArchObj (arch_kernel_obj.ASIDPool Map.empty)) ap s \<and>
-   arm_asid_table (arch_state s) asid = None \<longrightarrow>
-   valid_global_objs (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table (arch_state s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
+   asid_table s asid = None \<longrightarrow>
+   valid_global_objs (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := (asid_table s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
   by clarsimp
 
 
@@ -591,11 +591,11 @@ lemma cap_insert_ap_invs:
     K (cap = cap.ArchObjectCap (arch_cap.ASIDPoolCap ap asid)) and
    (\<lambda>s. \<forall>irq \<in> cap_irqs cap. irq_issued irq s) and
    ko_at (ArchObj (arch_kernel_obj.ASIDPool Map.empty)) ap and
-   (\<lambda>s. ap \<notin> ran (arm_asid_table (arch_state s)) \<and>
-        arm_asid_table (arch_state s) (asid_high_bits_of asid) = None)\<rbrace>
+   (\<lambda>s. ap \<notin> ran (asid_table s) \<and>
+        asid_table s (asid_high_bits_of asid) = None)\<rbrace>
   cap_insert cap src dest
   \<lbrace>\<lambda>rv s. invs (s\<lparr>arch_state := arch_state s
-                       \<lparr>arm_asid_table := (arm_asid_table \<circ> arch_state) s(asid_high_bits_of asid \<mapsto> ap)\<rparr>\<rparr>)\<rbrace>"
+                       \<lparr>arm_asid_table := ((arm_asid_table \<circ> arch_state) s)(asid_high_bits_of asid \<mapsto> ap)\<rparr>\<rparr>)\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (strengthen valid_arch_state_strg
                     valid_asid_map_asid_upd_strg valid_vspace_objs_asid_upd_strg )
@@ -742,17 +742,17 @@ proof -
          K (cap = ArchObjectCap (ASIDPoolCap ap asid)) and
          (\<lambda>s. \<forall>irq\<in>cap_irqs cap. irq_issued irq s) and
          ko_at (ArchObj (ASIDPool Map.empty)) ap and
-         (\<lambda>s. ap \<notin> ran (arm_asid_table (arch_state s)) \<and>
-         arm_asid_table (arch_state s) (asid_high_bits_of asid) = None))\<rbrace>
+         (\<lambda>s. ap \<notin> ran (asid_table s) \<and>
+         asid_table s (asid_high_bits_of asid) = None))\<rbrace>
          cap_insert cap src dest
         \<lbrace>\<lambda>rv s.
            invs
              (s\<lparr>arch_state := arch_state s
-                 \<lparr>arm_asid_table := (arm_asid_table \<circ> arch_state) s
+                 \<lparr>arm_asid_table := ((arm_asid_table \<circ> arch_state) s)
                     (asid_high_bits_of asid \<mapsto> ap)\<rparr>\<rparr>) \<and>
            Q
              (s\<lparr>arch_state := arch_state s
-                 \<lparr>arm_asid_table := (arm_asid_table \<circ> arch_state) s
+                 \<lparr>arm_asid_table := ((arm_asid_table \<circ> arch_state) s)
                     (asid_high_bits_of asid \<mapsto> ap)\<rparr>\<rparr>)\<rbrace>"
     apply (wp cap_insert_ap_invs)
      apply simp

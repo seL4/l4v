@@ -736,7 +736,7 @@ lemma init_arch_objects_corres_noop:
   done
 
 lemma monad_commute_set_cap_cdt:
-  "monad_commute \<top> (KHeap_D.set_cap ptr cap) (modify (\<lambda>s. s\<lparr>cdl_cdt := cdl_cdt s(ptr2 \<mapsto> ptr3)\<rparr>))"
+  "monad_commute \<top> (KHeap_D.set_cap ptr cap) (modify (\<lambda>s. s\<lparr>cdl_cdt := (cdl_cdt s)(ptr2 \<mapsto> ptr3)\<rparr>))"
   apply (clarsimp simp:monad_commute_def)
   apply (rule sym)
   apply (subst bind_assoc[symmetric])

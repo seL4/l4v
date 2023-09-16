@@ -409,7 +409,7 @@ lemma valid_vspace_objs_lift_weak:
   by (intro valid_vspace_objs_lift vspace_obj_pred_vspace_objs assms)
 
 lemma set_pt_pts_of:
-  "\<lbrace>\<lambda>s. pts_of s p \<noteq> None \<longrightarrow> P (pts_of s (p \<mapsto> pt)) \<rbrace> set_pt p pt \<lbrace>\<lambda>_ s. P (pts_of s)\<rbrace>"
+  "\<lbrace>\<lambda>s. pts_of s p \<noteq> None \<longrightarrow> P ((pts_of s)(p \<mapsto> pt)) \<rbrace> set_pt p pt \<lbrace>\<lambda>_ s. P (pts_of s)\<rbrace>"
   unfolding set_pt_def
   by (wpsimp wp: set_object_wp)
      (auto elim!: rsubst[where P=P] simp: opt_map_def split: option.splits)
@@ -458,7 +458,7 @@ lemma pt_apply_pt_upd_neq:
 lemma ptes_of_pts_of_upd:
   "\<lbrakk> is_aligned p pte_bits; pts_of s (table_base pt_t p) = Some pt; pt_t = pt_type pt \<rbrakk> \<Longrightarrow>
    (\<lambda>pt_t' p'. level_pte_of pt_t' p'
-                            (pts_of s (table_base pt_t p \<mapsto> pt_upd pt (table_index pt_t p) pte))) =
+                            ((pts_of s)(table_base pt_t p \<mapsto> pt_upd pt (table_index pt_t p) pte))) =
    ptes_of s (pt_t, p \<mapsto> pte)"
   apply (rule ext)+
   apply (clarsimp simp: fun_upd2_def)
@@ -479,7 +479,7 @@ lemma store_pte_ptes_of_full:
   done
 
 lemma store_pte_ptes_of:
-  "\<lbrace>\<lambda>s. ptes_of s pt_t p \<noteq> None \<longrightarrow> P (ptes_of s pt_t (p \<mapsto> pte)) \<rbrace>
+  "\<lbrace>\<lambda>s. ptes_of s pt_t p \<noteq> None \<longrightarrow> P ((ptes_of s pt_t)(p \<mapsto> pte)) \<rbrace>
    store_pte pt_t p pte \<lbrace>\<lambda>_ s. P (ptes_of s pt_t)\<rbrace>"
   by (wpsimp wp: store_pte_ptes_of_full simp: fun_upd2_def simp_del: fun_upd_apply)
 
@@ -670,7 +670,7 @@ lemma store_pte_non_PageTablePTE_vs_lookup:
 
 lemma store_pte_not_ao:
   "\<lbrace>\<lambda>s. \<forall>pt. aobjs_of s (table_base pt_t p) = Some (PageTable pt) \<longrightarrow>
-             P (aobjs_of s (table_base pt_t p \<mapsto> PageTable (pt_upd pt (table_index pt_t p) pte)))\<rbrace>
+             P ((aobjs_of s)(table_base pt_t p \<mapsto> PageTable (pt_upd pt (table_index pt_t p) pte)))\<rbrace>
    store_pte pt_t p pte
    \<lbrace>\<lambda>_ s. P (aobjs_of s)\<rbrace>"
   unfolding store_pte_def set_pt_def
@@ -956,20 +956,20 @@ crunch device_state_inv: storeWord "\<lambda>ms. P (device_state ms)"
 (* some hyp_ref invariants *)
 
 lemma state_hyp_refs_of_ep_update: "\<And>s ep val. typ_at AEndpoint ep s \<Longrightarrow>
-       state_hyp_refs_of (s\<lparr>kheap := kheap s(ep \<mapsto> Endpoint val)\<rparr>) = state_hyp_refs_of s"
+       state_hyp_refs_of (s\<lparr>kheap := (kheap s)(ep \<mapsto> Endpoint val)\<rparr>) = state_hyp_refs_of s"
   apply (rule all_ext)
   apply (clarsimp simp add: state_hyp_refs_of_def obj_at_def hyp_refs_of_def)
   done
 
 lemma state_hyp_refs_of_ntfn_update: "\<And>s ep val. typ_at ANTFN ep s \<Longrightarrow>
-       state_hyp_refs_of (s\<lparr>kheap := kheap s(ep \<mapsto> Notification val)\<rparr>) = state_hyp_refs_of s"
+       state_hyp_refs_of (s\<lparr>kheap := (kheap s)(ep \<mapsto> Notification val)\<rparr>) = state_hyp_refs_of s"
   apply (rule all_ext)
   apply (clarsimp simp add: state_hyp_refs_of_def obj_at_def hyp_refs_of_def)
   done
 
 lemma state_hyp_refs_of_tcb_bound_ntfn_update:
        "kheap s t = Some (TCB tcb) \<Longrightarrow>
-          state_hyp_refs_of (s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb\<lparr>tcb_bound_notification := ntfn\<rparr>))\<rparr>)
+          state_hyp_refs_of (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB (tcb\<lparr>tcb_bound_notification := ntfn\<rparr>))\<rparr>)
             = state_hyp_refs_of s"
   apply (rule all_ext)
   apply (clarsimp simp add: state_hyp_refs_of_def obj_at_def split: option.splits)
@@ -977,7 +977,7 @@ lemma state_hyp_refs_of_tcb_bound_ntfn_update:
 
 lemma state_hyp_refs_of_tcb_state_update:
        "kheap s t = Some (TCB tcb) \<Longrightarrow>
-          state_hyp_refs_of (s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb\<lparr>tcb_state := ts\<rparr>))\<rparr>)
+          state_hyp_refs_of (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB (tcb\<lparr>tcb_state := ts\<rparr>))\<rparr>)
             = state_hyp_refs_of s"
   apply (rule all_ext)
   apply (clarsimp simp add: state_hyp_refs_of_def obj_at_def split: option.splits)
@@ -1001,12 +1001,12 @@ lemma default_tcb_not_live[simp]: "\<not> live (TCB default_tcb)"
 
 lemma valid_vcpu_same_type:
   "\<lbrakk> valid_vcpu v s; kheap s p = Some ko; a_type k = a_type ko \<rbrakk>
-   \<Longrightarrow> valid_vcpu v (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)"
+   \<Longrightarrow> valid_vcpu v (s\<lparr>kheap := (kheap s)(p \<mapsto> k)\<rparr>)"
   by (cases v; case_tac vcpu_tcb; clarsimp simp: valid_vcpu_def typ_at_same_type)
 
 lemma valid_arch_tcb_same_type:
   "\<lbrakk> valid_arch_tcb t s; valid_obj p k s; kheap s p = Some ko; a_type k = a_type ko \<rbrakk>
-   \<Longrightarrow> valid_arch_tcb t (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)"
+   \<Longrightarrow> valid_arch_tcb t (s\<lparr>kheap := (kheap s)(p \<mapsto> k)\<rparr>)"
   by (auto simp: valid_arch_tcb_def obj_at_def)
 
 
@@ -1027,14 +1027,14 @@ lemma valid_arch_mdb_lift:
 (* interface lemma *)
 lemma arch_valid_obj_same_type:
   "\<lbrakk> arch_valid_obj ao s; kheap s p = Some ko; a_type k = a_type ko \<rbrakk>
-   \<Longrightarrow> arch_valid_obj ao (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)"
+   \<Longrightarrow> arch_valid_obj ao (s\<lparr>kheap := (kheap s)(p \<mapsto> k)\<rparr>)"
   apply (cases ao; simp)
   apply (fastforce simp: valid_vcpu_def obj_at_def split: option.splits)
   done
 
 lemma valid_vspace_obj_same_type:
   "\<lbrakk>valid_vspace_obj l ao s;  kheap s p = Some ko; a_type ko' = a_type ko\<rbrakk>
-  \<Longrightarrow> valid_vspace_obj l ao (s\<lparr>kheap := kheap s(p \<mapsto> ko')\<rparr>)"
+  \<Longrightarrow> valid_vspace_obj l ao (s\<lparr>kheap := (kheap s)(p \<mapsto> ko')\<rparr>)"
     apply (rule hoare_to_pure_kheap_upd[OF valid_vspace_obj_typ])
     by (auto simp: obj_at_def)
 

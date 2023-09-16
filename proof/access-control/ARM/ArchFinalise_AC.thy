@@ -93,7 +93,7 @@ proof (induct rule: cap_revoke.induct[where ?a1.0=s])
 qed
 
 lemma finalise_cap_caps_of_state_nullinv[Finalise_AC_assms]:
-  "\<lbrace>\<lambda>s. P (caps_of_state s) \<and> (\<forall>p. P (caps_of_state s(p \<mapsto> NullCap)))\<rbrace>
+  "\<lbrace>\<lambda>s. P (caps_of_state s) \<and> (\<forall>p. P ((caps_of_state s)(p \<mapsto> NullCap)))\<rbrace>
    finalise_cap cap final
    \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
   by (cases cap;

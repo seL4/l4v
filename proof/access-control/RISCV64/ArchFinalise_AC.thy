@@ -172,7 +172,7 @@ crunches set_asid_pool
 lemma set_asid_pool_tcb_states_of_state[wp]:
   "set_asid_pool p pool \<lbrace>\<lambda>s. P (tcb_states_of_state s)\<rbrace>"
   apply (wpsimp wp: set_object_wp_strong simp: obj_at_def  set_asid_pool_def)
-  apply (prop_tac "\<forall>x. get_tcb x (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (ASIDPool pool))\<rparr>) = get_tcb x s")
+  apply (prop_tac "\<forall>x. get_tcb x (s\<lparr>kheap := (kheap s)(p \<mapsto> ArchObj (ASIDPool pool))\<rparr>) = get_tcb x s")
    apply (auto simp: tcb_states_of_state_def get_tcb_def)
   done
 
@@ -266,7 +266,7 @@ proof (induct rule: cap_revoke.induct[where ?a1.0=s])
 qed
 
 lemma finalise_cap_caps_of_state_nullinv[Finalise_AC_assms]:
-  "\<lbrace>\<lambda>s. P (caps_of_state s) \<and> (\<forall>p. P (caps_of_state s(p \<mapsto> NullCap)))\<rbrace>
+  "\<lbrace>\<lambda>s. P (caps_of_state s) \<and> (\<forall>p. P ((caps_of_state s)(p \<mapsto> NullCap)))\<rbrace>
    finalise_cap cap final
    \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
   by (cases cap;

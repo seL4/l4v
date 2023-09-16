@@ -829,7 +829,7 @@ lemma setCTE_tcb_in_cur_domain':
   done
 
 lemma setCTE_ctes_of_wp [wp]:
-  "\<lbrace>\<lambda>s. P (ctes_of s (p \<mapsto> cte))\<rbrace>
+  "\<lbrace>\<lambda>s. P ((ctes_of s) (p \<mapsto> cte))\<rbrace>
   setCTE p cte
   \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"
   by (simp add: setCTE_def ctes_of_setObject_cte)

@@ -486,7 +486,7 @@ lemma ps_clear_entire_slotI:
   by (fastforce simp: ps_clear_def)
 
 lemma ps_clear_ksPSpace_upd_same[simp]:
-  "ps_clear p n (s\<lparr>ksPSpace := ksPSpace s(p \<mapsto> v)\<rparr>) = ps_clear p n s"
+  "ps_clear p n (s\<lparr>ksPSpace := (ksPSpace s)(p \<mapsto> v)\<rparr>) = ps_clear p n s"
   by (fastforce simp: ps_clear_def)
 
 lemma getObject_vcpu_prop:

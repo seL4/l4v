@@ -184,20 +184,20 @@ lemma is_derived_is_cap:
 (* FIXME: move to CSpace_I near lemma vs_lookup1_tcb_update *)
 lemma vs_lookup_pages1_tcb_update:
   "kheap s p = Some (TCB t) \<Longrightarrow>
-   vs_lookup_pages1 (s\<lparr>kheap := kheap s(p \<mapsto> TCB t')\<rparr>) = vs_lookup_pages1 s"
+   vs_lookup_pages1 (s\<lparr>kheap := (kheap s)(p \<mapsto> TCB t')\<rparr>) = vs_lookup_pages1 s"
   by (clarsimp simp: vs_lookup_pages1_def obj_at_def vs_refs_pages_def
              intro!: set_eqI)
 
 (* FIXME: move to CSpace_I near lemma vs_lookup_tcb_update *)
 lemma vs_lookup_pages_tcb_update:
   "kheap s p = Some (TCB t) \<Longrightarrow>
-   vs_lookup_pages (s\<lparr>kheap := kheap s(p \<mapsto> TCB t')\<rparr>) = vs_lookup_pages s"
+   vs_lookup_pages (s\<lparr>kheap := (kheap s)(p \<mapsto> TCB t')\<rparr>) = vs_lookup_pages s"
   by (clarsimp simp add: vs_lookup_pages_def vs_lookup_pages1_tcb_update)
 
 (* FIXME: move to CSpace_I near lemma vs_lookup1_cnode_update *)
 lemma vs_lookup_pages1_cnode_update:
   "kheap s p = Some (CNode n cs) \<Longrightarrow>
-   vs_lookup_pages1 (s\<lparr>kheap := kheap s(p \<mapsto> CNode m cs')\<rparr>) =
+   vs_lookup_pages1 (s\<lparr>kheap := (kheap s)(p \<mapsto> CNode m cs')\<rparr>) =
    vs_lookup_pages1 s"
   by (clarsimp simp: vs_lookup_pages1_def obj_at_def vs_refs_pages_def
              intro!: set_eqI)
@@ -205,7 +205,7 @@ lemma vs_lookup_pages1_cnode_update:
 (* FIXME: move to CSpace_I near lemma vs_lookup_cnode_update *)
 lemma vs_lookup_pages_cnode_update:
   "kheap s p = Some (CNode n cs) \<Longrightarrow>
-   vs_lookup_pages (s\<lparr>kheap := kheap s(p \<mapsto> CNode n cs')\<rparr>) = vs_lookup_pages s"
+   vs_lookup_pages (s\<lparr>kheap := (kheap s)(p \<mapsto> CNode n cs')\<rparr>) = vs_lookup_pages s"
   by (clarsimp simp: vs_lookup_pages_def
               dest!: vs_lookup_pages1_cnode_update[where m=n and cs'=cs'])
 

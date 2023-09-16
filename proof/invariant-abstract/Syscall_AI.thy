@@ -323,7 +323,7 @@ lemma (in Systemcall_AI_Pre) handle_fault_reply_cte_wp_at:
       done
     have NC:
       "\<And>p' s tcb P nc. get_tcb p' s = Some tcb
-      \<Longrightarrow> cte_wp_at P p (s\<lparr>kheap := kheap s(p' \<mapsto> TCB (tcb\<lparr>tcb_arch := arch_tcb_context_set nc (tcb_arch tcb)\<rparr>))\<rparr>)
+      \<Longrightarrow> cte_wp_at P p (s\<lparr>kheap := (kheap s)(p' \<mapsto> TCB (tcb\<lparr>tcb_arch := arch_tcb_context_set nc (tcb_arch tcb)\<rparr>))\<rparr>)
           = cte_wp_at P p s"
       apply (drule_tac nc=nc in SC)
       apply (drule_tac P=P and p=p in cte_wp_at_after_update)

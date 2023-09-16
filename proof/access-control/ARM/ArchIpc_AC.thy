@@ -175,7 +175,7 @@ lemma handle_arch_fault_reply_respects[Ipc_AC_assms]:
 lemma auth_ipc_buffers_kheap_update[Ipc_AC_assms]:
   "\<lbrakk> x \<in> auth_ipc_buffers st thread; kheap st thread = Some (TCB tcb);
      kheap s thread = Some (TCB tcb'); tcb_ipcframe tcb = tcb_ipcframe tcb' \<rbrakk>
-     \<Longrightarrow> x \<in> auth_ipc_buffers (s\<lparr>kheap := kheap s(thread \<mapsto> TCB tcb)\<rparr>) thread"
+     \<Longrightarrow> x \<in> auth_ipc_buffers (s\<lparr>kheap := (kheap s)(thread \<mapsto> TCB tcb)\<rparr>) thread"
   by (clarsimp simp: auth_ipc_buffers_member_def get_tcb_def caps_of_state_tcb)
 
 lemma auth_ipc_buffers_machine_state_update[Ipc_AC_assms, simp]:

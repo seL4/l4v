@@ -1085,7 +1085,7 @@ lemma empty_slot_cte_wp_at:
   by (wpsimp wp: empty_slot_caps_of_state)
 
 lemma deleting_irq_handler_caps_of_state_nullinv:
-  "\<lbrace>\<lambda>s. \<forall>p. P (caps_of_state s(p \<mapsto> NullCap))\<rbrace>
+  "\<lbrace>\<lambda>s. \<forall>p. P ((caps_of_state s)(p \<mapsto> NullCap))\<rbrace>
      deleting_irq_handler irq
    \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
   unfolding deleting_irq_handler_def
@@ -1104,7 +1104,7 @@ locale Finalise_AC_2 = Finalise_AC_1 +
        \<lbrace>\<lambda>_. (\<lambda>s. trp \<longrightarrow> integrity aag X st s) and pas_refined aag\<rbrace>,
        \<lbrace>\<lambda>_. (\<lambda>s. trp \<longrightarrow> integrity aag X st s) and pas_refined aag\<rbrace>"
   and finalise_cap_caps_of_state_nullinv:
-    "\<And>P. \<lbrace>\<lambda>s :: det_ext state. P (caps_of_state s) \<and> (\<forall>p. P (caps_of_state s(p \<mapsto> NullCap)))\<rbrace>
+    "\<And>P. \<lbrace>\<lambda>s :: det_ext state. P (caps_of_state s) \<and> (\<forall>p. P ((caps_of_state s)(p \<mapsto> NullCap)))\<rbrace>
           finalise_cap cap final
           \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
   and finalise_cap_fst_ret:

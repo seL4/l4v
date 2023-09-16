@@ -765,9 +765,9 @@ lemma perform_page_invocation_reads_respects:
 lemma equiv_asids_arm_asid_table_update:
   "\<lbrakk> equiv_asids R s t; kheap s pool_ptr = kheap t pool_ptr \<rbrakk>
      \<Longrightarrow> equiv_asids R
-           (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := arm_asid_table (arch_state s)
+           (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := (asid_table s)
                                                             (asid_high_bits_of asid \<mapsto> pool_ptr)\<rparr>\<rparr>)
-           (t\<lparr>arch_state := arch_state t\<lparr>arm_asid_table := arm_asid_table (arch_state t)
+           (t\<lparr>arch_state := arch_state t\<lparr>arm_asid_table := (asid_table t)
                                                             (asid_high_bits_of asid \<mapsto> pool_ptr)\<rparr>\<rparr>)"
   by (clarsimp simp: equiv_asids_def equiv_asid_def asid_pool_at_kheap)
 

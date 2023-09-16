@@ -647,8 +647,7 @@ lemma set_cap_slots_holding_overlapping_caps_helper:
      obj_refs cap = {} \<longrightarrow> cap_irqs cap \<noteq> {};
      ko_at (TCB tcb) (fst slot) s; tcb_cap_cases (snd slot) = Some (getF, setF, blah) \<rbrakk>
      \<Longrightarrow> x \<in> slots_holding_overlapping_caps cap
-               (s\<lparr>kheap := kheap s(fst slot \<mapsto>
-                    TCB (setF (\<lambda> x. capa) tcb))\<rparr>)"
+               (s\<lparr>kheap := (kheap s)(fst slot \<mapsto> TCB (setF (\<lambda>x. capa) tcb))\<rparr>)"
   apply (clarsimp simp: slots_holding_overlapping_caps_def)
   apply (rule_tac x=cap' in exI)
   apply (clarsimp simp: get_cap_cte_wp_at')

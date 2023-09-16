@@ -383,7 +383,7 @@ proof -
     apply (simp add: return_def thread_set_def gets_the_def assert_def
                      assert_opt_def simpler_gets_def set_object_def get_object_def
                      put_def get_def bind_def)
-    apply (subgoal_tac "kheap s(t \<mapsto> TCB tcb) = kheap s")
+    apply (subgoal_tac "(kheap s)(t \<mapsto> TCB tcb) = kheap s")
      apply (simp add: map_upd_triv get_tcb_SomeD)+
     done
   show ?thesis
