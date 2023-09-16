@@ -211,7 +211,7 @@ lemma Collect_asid_high__eval_helper:
 section \<open>Assorted helpers\<close>
 lemma fun_upds_to_map_of[THEN eq_reflection]:
   "Map.empty = map_of []"
-  "(map_of xs(k \<mapsto> v)) = map_of ((k, v) # xs)"
+  "((map_of xs)(k \<mapsto> v)) = map_of ((k, v) # xs)"
   by auto
 
 lemma subst_eqn_helper:
