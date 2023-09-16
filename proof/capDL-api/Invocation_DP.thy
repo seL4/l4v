@@ -1142,13 +1142,13 @@ lemma sep_map_c_asid_reset:
    apply clarsimp
    apply (case_tac "\<not> has_slots obj")
     apply simp
-   apply (rule_tac x = "update_slots (object_slots obj(snd ptr \<mapsto> cap')) obj"
+   apply (rule_tac x = "update_slots ((object_slots obj)(snd ptr \<mapsto> cap')) obj"
      in exI)
    apply (simp add:sep_map_general_def object_to_sep_state_slot)
   apply clarsimp
   apply (case_tac "\<not> has_slots obj")
    apply simp
-  apply (rule_tac x = "update_slots (object_slots obj(snd ptr \<mapsto> cap)) obj"
+  apply (rule_tac x = "update_slots ((object_slots obj)(snd ptr \<mapsto> cap)) obj"
     in exI)
   apply (simp add:sep_map_general_def object_to_sep_state_slot)
   done
