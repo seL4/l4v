@@ -512,7 +512,7 @@ lemma simple_lift_field_update':
   and   xf_xfu: "fg_cons xf xfu"
   and       cl: "simple_lift hp ptr = Some z"
   shows "(simple_lift (hrs_mem_update (heap_update (Ptr &(ptr\<rightarrow>f)) val) hp)) =
-                simple_lift hp(ptr \<mapsto> xfu val z)"
+                (simple_lift hp)(ptr \<mapsto> xfu val z)"
     (is "?LHS = ?RHS")
 proof (rule ext)
   fix p
@@ -581,7 +581,7 @@ lemma simple_lift_field_update:
   and   xf_xfu: "fg_cons xf (xfu o (\<lambda>x _. x))"
   and       cl: "simple_lift hp ptr = Some z"
   shows "(simple_lift (hrs_mem_update (heap_update (Ptr &(ptr\<rightarrow>f)) val) hp)) =
-                simple_lift hp(ptr \<mapsto> xfu (\<lambda>_. val) z)"
+                (simple_lift hp)(ptr \<mapsto> xfu (\<lambda>_. val) z)"
     (is "?LHS = ?RHS")
   apply (insert fl [unfolded field_ti_def])
   apply (clarsimp split: option.splits)
