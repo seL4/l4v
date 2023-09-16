@@ -518,7 +518,7 @@ lemma lift_t_super_update:
   and    eu: "export_uinfo s = typ_uinfo_t TYPE('b)"
   and    lp: "lift_t g (h, d) p = Some v'"
   shows "lift_t g (heap_update (Ptr &(p\<rightarrow>f)) v h, d)
-  = lift_t g (h, d)(p \<mapsto> field_update (field_desc s) (to_bytes_p v) v')"
+         = (lift_t g (h, d)) (p \<mapsto> field_update (field_desc s) (to_bytes_p v) v')"
   using fl eu lp
   apply -
   apply (rule trans [OF lift_t_super_field_update super_field_update_lookup])
