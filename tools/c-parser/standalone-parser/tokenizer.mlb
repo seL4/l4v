@@ -9,6 +9,8 @@ $(SML_LIB)/basis/mlton.mlb (* for pointer equality *)
 ../Feedback.ML
 ../Binaryset.ML
 basics.sml
+library.ML
+unsynchronized.ML
 ../topo_sort.ML
 ann
   "nonexhaustiveMatch ignore"
