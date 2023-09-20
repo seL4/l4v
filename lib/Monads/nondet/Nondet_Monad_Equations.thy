@@ -177,35 +177,22 @@ lemma gets_the_returns:
   by (simp_all add: returnOk_def throwError_def
                     gets_the_return)
 
-lemma all_rv_choice_fn_eq_pred:
-  "\<lbrakk> \<And>rv. P rv \<Longrightarrow> \<exists>fn. f rv = g fn \<rbrakk> \<Longrightarrow> \<exists>fn. \<forall>rv. P rv \<longrightarrow> f rv = g (fn rv)"
-  apply (rule_tac x="\<lambda>rv. SOME h. f rv = g h" in exI)
-  apply (clarsimp split: if_split)
-  by (meson someI_ex)
-
-lemma all_rv_choice_fn_eq:
-  "\<lbrakk> \<And>rv. \<exists>fn. f rv = g fn \<rbrakk>
-   \<Longrightarrow> \<exists>fn. f = (\<lambda>rv. g (fn rv))"
-  using all_rv_choice_fn_eq_pred[where f=f and g=g and P=\<top>]
-  by (simp add: fun_eq_iff)
-
 lemma gets_the_eq_bind:
-  "\<lbrakk> \<exists>fn. f = gets_the (fn o fn'); \<And>rv. \<exists>fn. g rv = gets_the (fn o fn') \<rbrakk>
+  "\<lbrakk> f = gets_the (fn_f o fn'); \<And>rv. g rv = gets_the (fn_g rv o fn') \<rbrakk>
    \<Longrightarrow> \<exists>fn. (f >>= g) = gets_the (fn o fn')"
-  apply (clarsimp dest!: all_rv_choice_fn_eq)
-  apply (rule_tac x="\<lambda>s. case (fn s) of None \<Rightarrow> None | Some v \<Rightarrow> fna v s" in exI)
+  apply clarsimp
+  apply (rule exI[where x="\<lambda>s. case (fn_f s) of None \<Rightarrow> None | Some v \<Rightarrow> fn_g v s"])
   apply (simp add: gets_the_def bind_assoc exec_gets
                    assert_opt_def fun_eq_iff
             split: option.split)
   done
 
 lemma gets_the_eq_bindE:
-  "\<lbrakk> \<exists>fn. f = gets_the (fn o fn'); \<And>rv. \<exists>fn. g rv = gets_the (fn o fn') \<rbrakk>
+  "\<lbrakk> f = gets_the (fn_f o fn'); \<And>rv. g rv = gets_the (fn_g rv o fn') \<rbrakk>
    \<Longrightarrow> \<exists>fn. (f >>=E g) = gets_the (fn o fn')"
-  apply (simp add: bindE_def)
-  apply (erule gets_the_eq_bind)
+  unfolding bindE_def
+  apply (erule gets_the_eq_bind[where fn_g="\<lambda>rv s. case rv of Inl e \<Rightarrow> Some (Inl e) | Inr v \<Rightarrow> fn_g v s"])
   apply (simp add: lift_def gets_the_returns split: sum.split)
-  apply fastforce
   done
 
 lemma gets_the_fail:
@@ -469,8 +456,8 @@ lemma monad_eq_split:
   shows "(g >>= f) s = (g >>= f') s"
 proof -
   have pre: "\<And>rv s'. \<lbrakk>(rv, s') \<in> fst (g s)\<rbrakk> \<Longrightarrow> f rv s' = f' rv s'"
-    using assms unfolding valid_def
-    by (erule_tac x=s in allE) auto
+    using assms unfolding valid_def apply -
+    by (erule allE[where x=s]) auto
   show ?thesis
     by (simp add: bind_def image_def case_prod_unfold pre)
 qed
@@ -541,16 +528,15 @@ lemma bind_inv_inv_comm:
      empty_fail f; empty_fail g \<rbrakk> \<Longrightarrow>
    do x \<leftarrow> f; y \<leftarrow> g; n x y od = do y \<leftarrow> g; x \<leftarrow> f; n x y od"
   apply (rule ext)
-  apply (rename_tac s)
-  apply (rule_tac s="(do (x, y) \<leftarrow> do x \<leftarrow> f; y \<leftarrow> (\<lambda>_. g s) ; (\<lambda>_. return (x, y) s) od;
-                         n x y od) s" in trans)
+  apply (rule trans[where s="(do (x, y) \<leftarrow> do x \<leftarrow> f; y \<leftarrow> (\<lambda>_. g s) ; (\<lambda>_. return (x, y) s) od;
+                                 n x y od) s" for s])
    apply (simp add: bind_assoc)
    apply (intro bind_apply_cong, simp_all)[1]
     apply (metis in_inv_by_hoareD)
    apply (simp add: return_def bind_def)
    apply (metis in_inv_by_hoareD)
-  apply (rule_tac s="(do (x, y) \<leftarrow> do y \<leftarrow> g; x \<leftarrow> (\<lambda>_. f s) ; (\<lambda>_. return (x, y) s) od;
-                      n x y od) s" in trans[rotated])
+  apply (rule trans[where s="(do (x, y) \<leftarrow> do y \<leftarrow> g; x \<leftarrow> (\<lambda>_. f s) ; (\<lambda>_. return (x, y) s) od;
+                                 n x y od) s" for s, rotated])
    apply (simp add: bind_assoc)
    apply (intro bind_apply_cong, simp_all)[1]
     apply (metis in_inv_by_hoareD)
