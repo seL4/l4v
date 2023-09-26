@@ -10,4 +10,8 @@
 #
 export L4CPP="-DTARGET=ARM -DTARGET_ARM -DPLATFORM=Sabre -DPLATFORM_Sabre"
 
-llvm-gcc -Wno-invalid-pp-token -E -x c $@
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    llvm-gcc -Wno-invalid-pp-token -E -x c $@
+else
+    cpp -Wno-invalid-pp-token -E -x c $@
+fi
