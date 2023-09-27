@@ -369,4 +369,45 @@ lemma invs'_update_cnt[elim!]:
                       tcb_in_cur_domain'_def valid_queues_no_bitmap_def
                       bitmapQ_no_L2_orphans_def bitmapQ_no_L1_orphans_def)
 
+
+context begin interpretation Arch .
+
+lemma valid_arch_state'_vmid_update[simp]:
+  "valid_arch_state' (s\<lparr>ksArchState := armKSVMIDTable_update f (ksArchState s)\<rparr>) =
+   valid_arch_state' s"
+  by (auto simp: valid_arch_state'_def split: option.split)
+
+lemma valid_arch_state'_vmid_next_update[simp]:
+  "valid_arch_state' (s\<lparr>ksArchState := armKSNextVMID_update f (ksArchState s)\<rparr>) =
+   valid_arch_state' s"
+  by (auto simp: valid_arch_state'_def split: option.split)
+
+lemma invs'_armKSVMIDTable_update[simp]:
+  "invs' (s\<lparr>ksArchState := armKSVMIDTable_update f s'\<rparr>) = invs' (s\<lparr>ksArchState := s'\<rparr>)"
+  by (simp add: invs'_def valid_state'_def valid_global_refs'_def global_refs'_def table_refs'_def
+                valid_machine_state'_def valid_arch_state'_def cong: option.case_cong)
+
+lemma invs'_armKSNextVMID_update[simp]:
+  "invs' (s\<lparr>ksArchState := armKSNextVMID_update f s'\<rparr>) = invs' (s\<lparr>ksArchState := s'\<rparr>)"
+  by (simp add: invs'_def valid_state'_def valid_global_refs'_def global_refs'_def table_refs'_def
+                valid_machine_state'_def valid_arch_state'_def cong: option.case_cong)
+
+lemma invs_no_cicd'_armKSVMIDTable_update[simp]:
+  "invs_no_cicd' (s\<lparr>ksArchState := armKSVMIDTable_update f s'\<rparr>) = invs_no_cicd' (s\<lparr>ksArchState := s'\<rparr>)"
+  by (simp add: invs_no_cicd'_def valid_state'_def valid_global_refs'_def global_refs'_def table_refs'_def
+                valid_machine_state'_def valid_arch_state'_def cong: option.case_cong)
+
+lemma invs_no_cicd'_armKSNextVMID_update[simp]:
+  "invs_no_cicd' (s\<lparr>ksArchState := armKSNextVMID_update f s'\<rparr>) = invs_no_cicd' (s\<lparr>ksArchState := s'\<rparr>)"
+  by (simp add: invs_no_cicd'_def valid_state'_def valid_global_refs'_def global_refs'_def table_refs'_def
+                valid_machine_state'_def valid_arch_state'_def cong: option.case_cong)
+
+lemma invs'_gsTypes_update:
+  "ksA' = ksArchState s \<Longrightarrow> invs' (s \<lparr>ksArchState := gsPTTypes_update f ksA'\<rparr>) = invs' s"
+  by (simp add: invs'_def valid_state'_def valid_global_refs'_def global_refs'_def
+                valid_machine_state'_def valid_arch_state'_def
+           cong: option.case_cong)
+
+end
+
 end
