@@ -35,14 +35,16 @@ text \<open>
   to assume @{term P}! Proving non-failure is done via a separate predicate and
   calculus (see Nondet_No_Fail).\<close>
 definition valid ::
-  "('s \<Rightarrow> bool) \<Rightarrow> ('s,'a) nondet_monad \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool" ("\<lbrace>_\<rbrace>/ _ /\<lbrace>_\<rbrace>") where
+  "('s \<Rightarrow> bool) \<Rightarrow> ('s,'a) nondet_monad \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
+  ("\<lbrace>_\<rbrace>/ _ /\<lbrace>_\<rbrace>") where
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<equiv> \<forall>s. P s \<longrightarrow> (\<forall>(r,s') \<in> fst (f s). Q r s')"
 
 text \<open>
   We often reason about invariant predicates. The following provides shorthand syntax
   that avoids repeating potentially long predicates.\<close>
 abbreviation (input) invariant ::
-  "('s,'a) nondet_monad \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> bool" ("_ \<lbrace>_\<rbrace>" [59,0] 60) where
+  "('s,'a) nondet_monad \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> bool"
+  ("_ \<lbrace>_\<rbrace>" [59,0] 60) where
   "invariant f P \<equiv> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>"
 
 text \<open>
@@ -708,7 +710,7 @@ lemma hoare_vcg_if_lift:
   by (auto simp: valid_def split_def)
 
 lemma hoare_vcg_disj_lift_R:
-  assumes x: "\<lbrace>P\<rbrace>  f \<lbrace>Q\<rbrace>,-"
+  assumes x: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,-"
   assumes y: "\<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace>,-"
   shows      "\<lbrace>\<lambda>s. P s \<or> P' s\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<or> Q' rv s\<rbrace>,-"
   using assms

@@ -160,7 +160,7 @@ lemma no_fail_spec:
 
 lemma no_fail_assertE[wp]:
   "no_fail (\<lambda>_. P) (assertE P)"
-  by (simp add: assertE_def split: if_split)
+  by (simp add: assertE_def)
 
 lemma no_fail_spec_pre:
   "\<lbrakk> no_fail (((=) s) and P') f; \<And>s. P s \<Longrightarrow> P' s \<rbrakk> \<Longrightarrow> no_fail (((=) s) and P) f"
@@ -168,7 +168,7 @@ lemma no_fail_spec_pre:
 
 lemma no_fail_whenE[wp]:
   "\<lbrakk> G \<Longrightarrow> no_fail P f \<rbrakk> \<Longrightarrow> no_fail (\<lambda>s. G \<longrightarrow> P s) (whenE G f)"
-  by (simp add: whenE_def split: if_split)
+  by (simp add: whenE_def)
 
 lemma no_fail_unlessE[wp]:
   "\<lbrakk> \<not> G \<Longrightarrow> no_fail P f \<rbrakk> \<Longrightarrow> no_fail (\<lambda>s. \<not> G \<longrightarrow> P s) (unlessE G f)"

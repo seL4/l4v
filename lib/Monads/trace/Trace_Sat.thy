@@ -17,7 +17,8 @@ text \<open>
   The dual to validity: an existential instead of a universal quantifier for the post condition.
   In refinement, it is often sufficient to know that there is one state that satisfies a condition.\<close>
 definition exs_valid ::
-  "('a \<Rightarrow> bool) \<Rightarrow> ('a, 'b) tmonad \<Rightarrow> ('b \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> bool" ("\<lbrace>_\<rbrace> _ \<exists>\<lbrace>_\<rbrace>") where
+  "('a \<Rightarrow> bool) \<Rightarrow> ('a, 'b) tmonad \<Rightarrow> ('b \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> bool"
+  ("\<lbrace>_\<rbrace> _ \<exists>\<lbrace>_\<rbrace>") where
   "\<lbrace>P\<rbrace> f \<exists>\<lbrace>Q\<rbrace> \<equiv> \<forall>s. P s \<longrightarrow> (\<exists>(rv, s') \<in> mres (f s). Q rv s')"
 
 text \<open>The above for the exception monad\<close>
@@ -86,7 +87,7 @@ lemma exs_valid_assume_pre:
 lemma exs_valid_bind[wp_split]:
   "\<lbrakk> \<And>rv. \<lbrace>B rv\<rbrace> g rv \<exists>\<lbrace>C\<rbrace>; \<lbrace>A\<rbrace> f \<exists>\<lbrace>B\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>A\<rbrace> f >>= (\<lambda>rv. g rv) \<exists>\<lbrace>C\<rbrace>"
   apply atomize
-  apply (clarsimp simp: exs_valid_def bind_def2 mres_def)
+  apply (clarsimp simp: exs_valid_def bind_def' mres_def)
   apply (drule spec, drule(1) mp, clarsimp)
   apply (drule spec2, drule(1) mp, clarsimp)
   apply (simp add: image_def bex_Un)
