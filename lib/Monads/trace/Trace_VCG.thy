@@ -34,15 +34,15 @@ text \<open>
   @{term "assert P"} does not require us to prove that @{term P} holds, but
   rather allows us to assume @{term P}! Proving non-failure is done via a
   separate predicate and calculus (see Trace_No_Fail).\<close>
-definition valid :: "('s \<Rightarrow> bool) \<Rightarrow> ('s,'a) tmonad \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
+definition valid ::
+  "('s \<Rightarrow> bool) \<Rightarrow> ('s,'a) tmonad \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
   ("\<lbrace>_\<rbrace>/ _ /\<lbrace>_\<rbrace>") where
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<equiv> \<forall>s. P s \<longrightarrow> (\<forall>(r,s') \<in> mres (f s). Q r s')"
 
 text \<open>
   We often reason about invariant predicates. The following provides shorthand syntax
   that avoids repeating potentially long predicates.\<close>
-abbreviation (input) invariant ::
-  "('s,'a) tmonad \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> bool" ("_ \<lbrace>_\<rbrace>" [59,0] 60) where
+abbreviation (input) invariant :: "('s,'a) tmonad \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> bool" ("_ \<lbrace>_\<rbrace>" [59,0] 60) where
   "invariant f P \<equiv> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>"
 
 text \<open>
@@ -143,7 +143,7 @@ subsection "Hoare Logic Rules"
 
 lemma bind_wp[wp_split]:
   "\<lbrakk> \<And>r. \<lbrace>Q' r\<rbrace> g r \<lbrace>Q\<rbrace>; \<lbrace>P\<rbrace>f \<lbrace>Q'\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f >>= (\<lambda>rv. g rv) \<lbrace>Q\<rbrace>"
-  by (fastforce simp: valid_def bind_def2 mres_def intro: image_eqI[rotated])
+  by (fastforce simp: valid_def bind_def' mres_def intro: image_eqI[rotated])
 
 lemma seq':
   "\<lbrakk> \<lbrace>A\<rbrace> f \<lbrace>B\<rbrace>; \<forall>x. P x \<longrightarrow> \<lbrace>C\<rbrace> g x \<lbrace>D\<rbrace>; \<forall>x s. B x s \<longrightarrow> P x \<and> C s \<rbrakk> \<Longrightarrow>
@@ -467,7 +467,7 @@ lemma in_image_constant:
 
 lemma hoare_liftM_subst:
   "\<lbrace>P\<rbrace> liftM f m \<lbrace>Q\<rbrace> = \<lbrace>P\<rbrace> m \<lbrace>Q \<circ> f\<rbrace>"
-  apply (simp add: liftM_def bind_def2 return_def split_def)
+  apply (simp add: liftM_def bind_def' return_def split_def)
   apply (simp add: valid_def Ball_def mres_def image_Un)
   apply (simp add: image_image in_image_constant)
   apply force
@@ -554,6 +554,15 @@ lemma hoare_vcg_conj_liftE1:
   unfolding valid_def validE_R_def validE_def
   by (fastforce simp: split_def split: sum.splits)
 
+lemma hoare_vcg_conj_liftE_weaker:
+  assumes "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>"
+  assumes "\<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace>, \<lbrace>E\<rbrace>"
+  shows "\<lbrace>\<lambda>s. P s \<and> P' s\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> Q' rv s\<rbrace>, \<lbrace>E\<rbrace>"
+  apply (rule hoare_pre)
+   apply (fastforce intro: assms hoare_vcg_conj_liftE1 validE_validE_R hoare_post_impErr)
+  apply simp
+  done
+
 lemma hoare_vcg_disj_lift:
   "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>; \<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. P s \<or> P' s\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<or> Q' rv s\<rbrace>"
   unfolding valid_def
@@ -585,6 +594,19 @@ lemma hoare_vcg_imp_lift':
   "\<lbrakk> \<lbrace>P'\<rbrace> f \<lbrace>\<lambda>rv s. \<not> P rv s\<rbrace>; \<lbrace>Q'\<rbrace> f \<lbrace>Q\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. \<not> P' s \<longrightarrow> Q' s\<rbrace> f \<lbrace>\<lambda>rv s. P rv s \<longrightarrow> Q rv s\<rbrace>"
   by (wpsimp wp: hoare_vcg_imp_lift)
 
+lemma hoare_vcg_imp_liftE:
+  "\<lbrakk> \<lbrace>P'\<rbrace> f \<lbrace>\<lambda>rv s. \<not> P rv s\<rbrace>, \<lbrace>A\<rbrace>; \<lbrace>Q'\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>A\<rbrace> \<rbrakk>
+   \<Longrightarrow> \<lbrace>\<lambda>s. \<not> P' s \<longrightarrow> Q' s\<rbrace> f \<lbrace>\<lambda>rv s. P rv s \<longrightarrow> Q rv s\<rbrace>, \<lbrace>A\<rbrace>"
+  by (fastforce simp: validE_def valid_def split: sum.splits)
+
+lemma hoare_vcg_imp_lift_R:
+  "\<lbrakk> \<lbrace>P'\<rbrace> f \<lbrace>\<lambda>rv s. \<not> P rv s\<rbrace>, -; \<lbrace>Q'\<rbrace> f \<lbrace>Q\<rbrace>, - \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. P' s \<or> Q' s\<rbrace> f \<lbrace>\<lambda>rv s. P rv s \<longrightarrow> Q rv s\<rbrace>, -"
+  by (auto simp add: valid_def validE_R_def validE_def split_def split: sum.splits)
+
+lemma hoare_vcg_imp_lift_R':
+  "\<lbrakk> \<lbrace>P'\<rbrace> f \<lbrace>\<lambda>rv s. \<not> P rv s\<rbrace>, -; \<lbrace>Q'\<rbrace> f \<lbrace>Q\<rbrace>, - \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. \<not>P' s \<longrightarrow> Q' s\<rbrace> f \<lbrace>\<lambda>rv s. P rv s \<longrightarrow> Q rv s\<rbrace>, -"
+  by (auto simp add: valid_def validE_R_def validE_def split_def split: sum.splits)
+
 lemma hoare_vcg_imp_conj_lift[wp_comb]:
   "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<longrightarrow> Q' rv s\<rbrace>; \<lbrace>P'\<rbrace> f \<lbrace>\<lambda>rv s. (Q rv s \<longrightarrow> Q'' rv s) \<and> Q''' rv s\<rbrace> \<rbrakk> \<Longrightarrow>
    \<lbrace>P and P'\<rbrace> f \<lbrace>\<lambda>rv s. (Q rv s \<longrightarrow> Q' rv s \<and> Q'' rv s) \<and> Q''' rv s\<rbrace>"
@@ -604,6 +626,10 @@ lemma hoare_weaken_imp:
 lemma hoare_vcg_const_imp_lift:
   "\<lbrakk> P \<Longrightarrow> \<lbrace>Q\<rbrace> m \<lbrace>R\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. P \<longrightarrow> Q s\<rbrace> m \<lbrace>\<lambda>rv s. P \<longrightarrow> R rv s\<rbrace>"
   by (cases P, simp_all add: hoare_vcg_prop)
+
+lemma hoare_vcg_const_imp_lift_E:
+  "(P \<Longrightarrow> \<lbrace>Q\<rbrace> f -, \<lbrace>R\<rbrace>) \<Longrightarrow> \<lbrace>\<lambda>s. P \<longrightarrow> Q s\<rbrace> f -, \<lbrace>\<lambda>rv s. P \<longrightarrow> R rv s\<rbrace>"
+  by (fastforce simp: validE_E_def validE_def valid_def split_def split: sum.splits)
 
 lemma hoare_vcg_const_imp_lift_R:
   "(P \<Longrightarrow> \<lbrace>Q\<rbrace> m \<lbrace>R\<rbrace>,-) \<Longrightarrow> \<lbrace>\<lambda>s. P \<longrightarrow> Q s\<rbrace> m \<lbrace>\<lambda>rv s. P \<longrightarrow> R rv s\<rbrace>,-"
@@ -707,6 +733,58 @@ lemma hoare_post_imp_E:
 lemma hoare_post_comb_imp_conj:
   "\<lbrakk> \<lbrace>P'\<rbrace> f \<lbrace>Q\<rbrace>; \<lbrace>P\<rbrace> f \<lbrace>Q'\<rbrace>; \<And>s. P s \<Longrightarrow> P' s \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> Q' rv s\<rbrace>"
   by (wpsimp wp: hoare_vcg_conj_lift)
+
+lemma hoare_vcg_if_lift:
+  "\<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv s. (P \<longrightarrow> X rv s) \<and> (\<not>P \<longrightarrow> Y rv s)\<rbrace> \<Longrightarrow>
+   \<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv s. if P then X rv s else Y rv s\<rbrace>"
+
+  "\<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv s. (P \<longrightarrow> X rv s) \<and> (\<not>P \<longrightarrow> Y rv s)\<rbrace> \<Longrightarrow>
+   \<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv. if P then X rv else Y rv\<rbrace>"
+  by (auto simp: valid_def split_def)
+
+lemma hoare_vcg_disj_lift_R:
+  assumes x: "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,-"
+  assumes y: "\<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace>,-"
+  shows      "\<lbrace>\<lambda>s. P s \<or> P' s\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<or> Q' rv s\<rbrace>,-"
+  using assms
+  by (fastforce simp: validE_R_def validE_def valid_def split: sum.splits)
+
+lemma hoare_vcg_all_liftE:
+  "\<lbrakk> \<And>x. \<lbrace>P x\<rbrace> f \<lbrace>Q x\<rbrace>,\<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. \<forall>x. P x s\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>x. Q x rv s\<rbrace>,\<lbrace>E\<rbrace>"
+  by (fastforce simp: validE_def valid_def split: sum.splits)
+
+lemma hoare_vcg_const_Ball_liftE:
+  "\<lbrakk> \<And>x. x \<in> S \<Longrightarrow> \<lbrace>P x\<rbrace> f \<lbrace>Q x\<rbrace>,\<lbrace>E\<rbrace>; \<lbrace>\<lambda>s. True\<rbrace> f \<lbrace>\<lambda>r s. True\<rbrace>, \<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. \<forall>x\<in>S. P x s\<rbrace> f \<lbrace>\<lambda>rv s. \<forall>x\<in>S. Q x rv s\<rbrace>,\<lbrace>E\<rbrace>"
+  by (fastforce simp: validE_def valid_def split: sum.splits)
+
+lemma hoare_vcg_split_lift[wp]:
+  "\<lbrace>P\<rbrace> f x y \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> case (x, y) of (a, b) \<Rightarrow> f a b \<lbrace>Q\<rbrace>"
+  by simp
+
+named_theorems hoare_vcg_op_lift
+lemmas [hoare_vcg_op_lift] =
+  hoare_vcg_const_imp_lift
+  hoare_vcg_const_imp_lift_E
+  hoare_vcg_const_imp_lift_R
+  (* leaving out hoare_vcg_conj_lift*, because that is built into wp *)
+  hoare_vcg_disj_lift
+  hoare_vcg_disj_lift_R
+  hoare_vcg_ex_lift
+  hoare_vcg_ex_liftE
+  hoare_vcg_ex_liftE_E
+  hoare_vcg_all_lift
+  hoare_vcg_all_liftE
+  hoare_vcg_all_liftE_E
+  hoare_vcg_all_lift_R
+  hoare_vcg_const_Ball_lift
+  hoare_vcg_const_Ball_lift_R
+  hoare_vcg_const_Ball_lift_E_E
+  hoare_vcg_split_lift
+  hoare_vcg_if_lift
+  hoare_vcg_imp_lift'
+  hoare_vcg_imp_liftE
+  hoare_vcg_imp_lift_R
+  hoare_vcg_imp_liftE_E
 
 
 subsection \<open>Weakest Precondition Rules\<close>

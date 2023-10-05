@@ -20,7 +20,8 @@ text \<open>
   is often similar. The following definitions allow such reasoning to take place.\<close>
 
 definition validNF ::
-  "('s \<Rightarrow> bool) \<Rightarrow> ('s,'a) nondet_monad \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool" ("\<lbrace>_\<rbrace>/ _ /\<lbrace>_\<rbrace>!") where
+  "('s \<Rightarrow> bool) \<Rightarrow> ('s,'a) nondet_monad \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
+  ("\<lbrace>_\<rbrace>/ _ /\<lbrace>_\<rbrace>!") where
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>! \<equiv> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<and> no_fail P f"
 
 lemma validNF_alt_def:
@@ -304,7 +305,8 @@ lemma validNF_nobindE[wp]:
 text \<open>
   Set up triple rules for @{term validE_NF} so that we can use @{method wp} combinator rules.\<close>
 definition validE_NF_property ::
-  "('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('c \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> 's \<Rightarrow> ('s, 'c+'a) nondet_monad \<Rightarrow> bool" where
+  "('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('c \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> 's \<Rightarrow> ('s, 'c+'a) nondet_monad \<Rightarrow> bool"
+  where
   "validE_NF_property Q E s b \<equiv>
    \<not> snd (b s) \<and> (\<forall>(r', s') \<in> fst (b s). case r' of Inl x \<Rightarrow> E x s' | Inr x \<Rightarrow> Q x s')"
 

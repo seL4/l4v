@@ -277,7 +277,8 @@ lemma monad_state_eqI [intro]:
 subsection \<open>General @{const whileLoop} reasoning\<close>
 
 definition whileLoop_terminatesE ::
-  "('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> ('s, 'e + 'a) nondet_monad) \<Rightarrow> 'a \<Rightarrow> 's \<Rightarrow> bool" where
+  "('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> ('s, 'e + 'a) nondet_monad) \<Rightarrow> 'a \<Rightarrow> 's \<Rightarrow> bool"
+  where
   "whileLoop_terminatesE C B \<equiv>
      \<lambda>r. whileLoop_terminates (\<lambda>r s. case r of Inr v \<Rightarrow> C v s | _ \<Rightarrow> False) (lift B) (Inr r)"
 

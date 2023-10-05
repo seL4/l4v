@@ -45,14 +45,6 @@ lemma hoare_name_pre_stateE:
   "\<lbrakk>\<And>s. P s \<Longrightarrow> \<lbrace>(=) s\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>"
   by (clarsimp simp: validE_def2)
 
-lemma hoare_vcg_if_lift:
-  "\<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv s. (P \<longrightarrow> X rv s) \<and> (\<not>P \<longrightarrow> Y rv s)\<rbrace> \<Longrightarrow>
-   \<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv s. if P then X rv s else Y rv s\<rbrace>"
-
-  "\<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv s. (P \<longrightarrow> X rv s) \<and> (\<not>P \<longrightarrow> Y rv s)\<rbrace> \<Longrightarrow>
-   \<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv. if P then X rv else Y rv\<rbrace>"
-  by (auto simp: valid_def split_def)
-
 lemma hoare_vcg_if_lift_strong:
   "\<lbrakk> \<lbrace>P'\<rbrace> f \<lbrace>P\<rbrace>; \<lbrace>\<lambda>s. \<not> P' s\<rbrace> f \<lbrace>\<lambda>rv s. \<not> P rv s\<rbrace>; \<lbrace>Q'\<rbrace> f \<lbrace>Q\<rbrace>; \<lbrace>R'\<rbrace> f \<lbrace>R\<rbrace> \<rbrakk> \<Longrightarrow>
    \<lbrace>\<lambda>s. if P' s then Q' s else R' s\<rbrace> f \<lbrace>\<lambda>rv s. if P rv s then Q rv s else R rv s\<rbrace>"
@@ -240,13 +232,6 @@ lemma hoare_vcg_if_lift_ER: (* Required because of lack of rv in lifting rules *
    \<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv. if P' rv then X rv else Y rv\<rbrace>, -"
   by (auto simp: valid_def validE_R_def validE_def split_def)
 
-lemma hoare_vcg_imp_liftE:
-  "\<lbrakk> \<lbrace>P'\<rbrace> f \<lbrace>\<lambda>rv s. \<not> P rv s\<rbrace>, \<lbrace>A\<rbrace>; \<lbrace>Q'\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>A\<rbrace> \<rbrakk>
-   \<Longrightarrow> \<lbrace>\<lambda>s. \<not> P' s \<longrightarrow> Q' s\<rbrace> f \<lbrace>\<lambda>rv s. P rv s \<longrightarrow> Q rv s\<rbrace>, \<lbrace>A\<rbrace>"
-  apply (simp only: imp_conv_disj)
-  apply (clarsimp simp: validE_def valid_def split_def sum.case_eq_if)
-  done
-
 lemma hoare_list_all_lift:
   "(\<And>r. r \<in> set xs \<Longrightarrow> \<lbrace>Q r\<rbrace> f \<lbrace>\<lambda>rv. Q r\<rbrace>)
    \<Longrightarrow> \<lbrace>\<lambda>s. list_all (\<lambda>r. Q r s) xs\<rbrace> f \<lbrace>\<lambda>rv s. list_all (\<lambda>r. Q r s) xs\<rbrace>"
@@ -393,13 +378,6 @@ lemma hoare_eq_P:
 lemma hoare_validE_R_conj:
   "\<lbrakk>\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, -; \<lbrace>P\<rbrace> f \<lbrace>R\<rbrace>, -\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q and R\<rbrace>, -"
   by (simp add: valid_def validE_def validE_R_def Let_def split_def split: sum.splits)
-
-lemma hoare_vcg_disj_lift_R:
-  assumes x: "\<lbrace>P\<rbrace>  f \<lbrace>Q\<rbrace>,-"
-  assumes y: "\<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace>,-"
-  shows      "\<lbrace>\<lambda>s. P s \<or> P' s\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<or> Q' rv s\<rbrace>,-"
-  using assms
-  by (fastforce simp: validE_R_def validE_def valid_def split: sum.splits)
 
 lemmas throwError_validE_R = throwError_wp [where E="\<top>\<top>", folded validE_R_def]
 
@@ -551,10 +529,6 @@ lemma wp_split_const_if_R:
   assumes y: "\<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace>,-"
   shows "\<lbrace>\<lambda>s. (G \<longrightarrow> P s) \<and> (\<not> G \<longrightarrow> P' s)\<rbrace> f \<lbrace>\<lambda>rv s. (G \<longrightarrow> Q rv s) \<and> (\<not> G \<longrightarrow> Q' rv s)\<rbrace>,-"
   by (case_tac G, simp_all add: x y)
-
-lemma hoare_vcg_imp_lift_R:
-  "\<lbrakk> \<lbrace>P'\<rbrace> f \<lbrace>\<lambda>rv s. \<not> P rv s\<rbrace>, -; \<lbrace>Q'\<rbrace> f \<lbrace>Q\<rbrace>, - \<rbrakk> \<Longrightarrow> \<lbrace>\<lambda>s. P' s \<or> Q' s\<rbrace> f \<lbrace>\<lambda>rv s. P rv s \<longrightarrow> Q rv s\<rbrace>, -"
-  by (auto simp add: valid_def validE_R_def validE_def split_def split: sum.splits)
 
 lemma hoare_disj_division:
   "\<lbrakk> P \<or> Q; P \<Longrightarrow> \<lbrace>R\<rbrace> f \<lbrace>S\<rbrace>; Q \<Longrightarrow> \<lbrace>T\<rbrace> f \<lbrace>S\<rbrace> \<rbrakk>

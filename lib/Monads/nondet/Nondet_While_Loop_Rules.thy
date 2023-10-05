@@ -47,12 +47,14 @@ text \<open>
 \<close>
 definition whileLoop_inv ::
   "('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> ('b, 'a) nondet_monad) \<Rightarrow> 'a \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow>
-   (('a \<times> 'b) \<times> 'a \<times> 'b) set \<Rightarrow> ('b, 'a) nondet_monad" where
+   (('a \<times> 'b) \<times> 'a \<times> 'b) set \<Rightarrow> ('b, 'a) nondet_monad"
+  where
   "whileLoop_inv C B x I R \<equiv> whileLoop C B x"
 
 definition whileLoopE_inv ::
   "('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> ('b, 'c + 'a) nondet_monad) \<Rightarrow> 'a \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow>
-   (('a \<times> 'b) \<times> 'a \<times> 'b) set \<Rightarrow> ('b, 'c + 'a) nondet_monad" where
+   (('a \<times> 'b) \<times> 'a \<times> 'b) set \<Rightarrow> ('b, 'c + 'a) nondet_monad"
+  where
   "whileLoopE_inv C B x I R \<equiv> whileLoopE C B x"
 
 lemma whileLoop_add_inv:
@@ -287,7 +289,7 @@ lemma fst_whileLoop_cond_false:
 lemma snd_whileLoop:
   assumes init_I: "I r s"
       and cond_I: "C r s"
-      and non_term:  "\<And>r. \<lbrace> \<lambda>s. I r s \<and> C r s \<and> \<not> snd (B r s) \<rbrace> B r \<exists>\<lbrace> \<lambda>r' s'. C r' s' \<and> I r' s' \<rbrace>"
+      and non_term: "\<And>r. \<lbrace> \<lambda>s. I r s \<and> C r s \<and> \<not> snd (B r s) \<rbrace> B r \<exists>\<lbrace> \<lambda>r' s'. C r' s' \<and> I r' s' \<rbrace>"
   shows "snd (whileLoop C B r s)"
   apply (clarsimp simp: whileLoop_def)
   apply (rotate_tac)

@@ -131,7 +131,7 @@ lemma no_fail_returnOK[simp, wp]:
 
 lemma no_fail_bind[wp]:
   "\<lbrakk> no_fail P f; \<And>x. no_fail (R x) (g x); \<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace> \<rbrakk> \<Longrightarrow> no_fail (P and Q) (f >>= (\<lambda>rv. g rv))"
-  apply (simp add: no_fail_def bind_def2 image_Un image_image
+  apply (simp add: no_fail_def bind_def' image_Un image_image
                    in_image_constant)
   apply (intro allI conjI impI)
    apply (fastforce simp: image_def)
