@@ -5,7 +5,7 @@
  *)
 
 theory CCorresLemmas
-imports CCorres_Rewrite
+imports CCorres_Rewrite MonadicRewrite_C
 begin
 
 lemma ccorres_rel_imp2:
@@ -1176,5 +1176,39 @@ lemma ccorres_inr_rrel_Inr[simp]:
   "ccorres_underlying srel \<Gamma> (inr_rrel r \<circ> Inr) xf ar axf P Q hs m c
    = ccorres_underlying srel \<Gamma> r xf ar axf P Q hs m c"
   by (simp cong: ccorres_context_cong)+
+
+lemma add_remove_return:
+  "getter >>= setter = do (do val \<leftarrow> getter; setter val; return val od); return () od"
+  by (simp add: bind_assoc)
+
+lemma ccorres_call_getter_setter_dc:
+  assumes cul: "ccorresG sr \<Gamma> r' xf' P (i ` P') [] getter (Call f)"
+    and   gsr: "\<And>x x' s t rv.
+                 \<lbrakk> (x, t) \<in> sr; r' rv (xf' t); ((), x') \<in> fst (setter rv x) \<rbrakk>
+                 \<Longrightarrow> (x', g s t (clean s t)) \<in> sr"
+    and   ist: "\<And>x s. (x, s) \<in> sr \<Longrightarrow> (x, i s) \<in> sr"
+    and    ef: "\<And>val. empty_fail (setter val)"
+  shows "ccorresG sr \<Gamma> dc xfdc P P' hs
+           (getter >>= setter)
+           (call i f clean (\<lambda>s t. Basic (g s t)))"
+  apply (rule ccorres_guard_imp)
+    apply (rule monadic_rewrite_ccorres_assemble[rotated])
+     apply (rule monadic_rewrite_is_refl)
+     apply (rule add_remove_return)
+    apply (rule ccorres_seq_skip'[THEN iffD1])
+    apply (rule ccorres_split_nothrow_novcg)
+        apply (rule ccorres_call_getter_setter)
+            apply (fastforce intro: cul)
+           apply (fastforce intro: gsr)
+          apply (simp add: gsr)
+         apply (fastforce intro: ist)
+        apply (fastforce intro: ef)
+       apply (rule ceqv_refl)
+      apply (fastforce intro: ccorres_return_Skip)
+     apply wpsimp
+    apply (clarsimp simp: guard_is_UNIV_def)
+   apply wpsimp
+  apply fastforce
+  done
 
 end
