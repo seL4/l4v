@@ -830,14 +830,14 @@ text \<open>
   between the values set on the concrete and abstract side. The @{thm bind_assoc_return_reverse} rule
   may assist with rewriting statements to add the extra return needed by this rule\<close>
 lemma ccorres_call_getter_setter:
-  assumes cul: "ccorresG sr \<Gamma> (=) xf' P (i ` P') [] getter (Call f)"
+  assumes cul: "ccorresG sr \<Gamma> r' xf' P (i ` P') [] getter (Call f)"
   and     gsr: "\<And>x x' s t rv rv'.
-                  \<lbrakk> (x, t) \<in> sr; rv = xf' t; (rv', x') \<in> fst (setter rv x) \<rbrakk>
+                  \<lbrakk> (x, t) \<in> sr; r' rv (xf' t); (rv', x') \<in> fst (setter rv x) \<rbrakk>
                   \<Longrightarrow> (x', g s t (clean s t)) \<in> sr"
-  and     res: "\<And>s t rv. rv = xf' t \<Longrightarrow> rv = xf (g s t (clean s t))"
+  and     res: "\<And>s t rv. r' rv (xf' t) \<Longrightarrow> r rv (xf (g s t (clean s t)))"
   and     ist: "\<And>x s. (x, s) \<in> sr \<Longrightarrow> (x, i s) \<in> sr"
   and      ef: "\<And>val. empty_fail (setter val)"
-  shows "ccorresG sr \<Gamma> (=) xf P P' hs
+  shows "ccorresG sr \<Gamma> r xf P P' hs
            (do val \<leftarrow> getter; setter val; return val od)
            (call i f clean (\<lambda>s t. Basic (g s t)))"
   apply (rule ccorresI')
