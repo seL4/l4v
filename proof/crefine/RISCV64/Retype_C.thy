@@ -2244,21 +2244,6 @@ next
     done
 qed
 
-(* FIXME: move *)
-lemma ccorres_to_vcg_nf:
-  "\<lbrakk>ccorres rrel xf P P' [] a c; no_fail Q a; \<And>s. P s \<Longrightarrow> Q s\<rbrakk>
-   \<Longrightarrow> \<Gamma>\<turnstile> {s. P \<sigma> \<and> s \<in> P' \<and> (\<sigma>, s) \<in> rf_sr} c
-          {s. \<exists>(rv, \<sigma>')\<in>fst (a \<sigma>). (\<sigma>', s) \<in> rf_sr \<and> rrel rv (xf s)}"
-  apply (rule HoarePartial.conseq_exploit_pre)
-  apply clarsimp
-  apply (rule conseqPre)
-  apply (drule ccorres_to_vcg')
-    prefer 2
-    apply simp
-   apply (simp add: no_fail_def)
-  apply clarsimp
-  done
-
 lemma mdb_node_get_mdbNext_heap_ccorres:
   "ccorres (=) ret__unsigned_longlong_' \<top> UNIV hs
   (liftM (mdbNext \<circ> cteMDBNode) (getCTE parent))
