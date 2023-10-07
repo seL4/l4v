@@ -33,7 +33,7 @@ begin
 
 
 text \<open>
-This is the small-step semantics, which is described and used in my PhD-thesis \cite{Schirmer-PhD}.
+This is the small-step semantics, which is described and used in my PhD-thesis \<^cite>\<open>"Schirmer-PhD"\<close>.
 It decomposes the statement into a list of statements and finally executes the head.
 So the redex is always the head of the list. The equivalence between termination
 (based on the big-step semantics) and the absence of infinite computations in

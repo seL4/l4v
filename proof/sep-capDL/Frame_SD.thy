@@ -85,13 +85,13 @@ lemma disjoint_union_diff:
   by auto
 
 lemma intent_reset_update_slots_single:
-  "intent_reset (update_slots (object_slots obj(slot \<mapsto> cap)) obj)
-  = update_slots (object_slots (intent_reset obj)(slot \<mapsto> cap)) (intent_reset obj)"
+  "intent_reset (update_slots ((object_slots obj)(slot \<mapsto> cap)) obj)
+  = update_slots ((object_slots (intent_reset obj))(slot \<mapsto> cap)) (intent_reset obj)"
   by simp
 
 lemma object_clean_update_slots_single:
-  "object_clean (update_slots (object_slots obj(slot \<mapsto> cap)) obj)
-  = update_slots (object_slots (object_clean obj)(slot \<mapsto> reset_cap_asid cap)) (object_clean obj)"
+  "object_clean (update_slots ((object_slots obj)(slot \<mapsto> cap)) obj)
+  = update_slots ((object_slots (object_clean obj))(slot \<mapsto> reset_cap_asid cap)) (object_clean obj)"
   by (auto simp: object_clean_def intent_reset_def asid_reset_def
                  update_slots_def object_slots_def fun_eq_iff
           split: cdl_object.splits)
@@ -203,7 +203,7 @@ lemma object_clean_has_slots:
 lemma set_object_slot_wp_helper:
  "\<lbrace>\<lambda>s. <(obj_id, slot) \<mapsto>c - \<and>* R> s \<and> cdl_objects s obj_id = Some obj
   \<and> object_clean obj = object_clean obj'\<rbrace>
-  set_object obj_id (update_slots (object_slots obj' (slot \<mapsto> cap)) obj')
+  set_object obj_id (update_slots ((object_slots obj') (slot \<mapsto> cap)) obj')
   \<lbrace>\<lambda>rv. <(obj_id, slot) \<mapsto>c cap \<and>* R>\<rbrace>"
   apply (clarsimp simp: set_object_def sep_any_def)
   apply wp
@@ -230,7 +230,7 @@ lemma set_object_slot_wp:
  "\<lbrace>\<lambda>s. <(obj_id, slot) \<mapsto>c - \<and>* R> s \<and>
        cdl_objects s obj_id = Some obj \<and>
        (\<exists>obj'. object_clean obj = object_clean obj' \<and>
-       nobj = (update_slots (object_slots obj' (slot \<mapsto> cap)) obj'))\<rbrace>
+       nobj = (update_slots ((object_slots obj') (slot \<mapsto> cap)) obj'))\<rbrace>
   set_object obj_id nobj
   \<lbrace>\<lambda>rv. <(obj_id, slot) \<mapsto>c cap \<and>* R>\<rbrace>"
   apply (rule hoare_name_pre_state)

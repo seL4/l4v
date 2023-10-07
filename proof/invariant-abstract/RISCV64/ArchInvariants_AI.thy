@@ -2607,7 +2607,7 @@ lemma vs_lookup_table_eq_lift:
 
 lemma aobjs_of_non_aobj_upd:
   "\<lbrakk> kheap s p = Some ko; \<not> is_ArchObj ko; \<not> is_ArchObj ko' \<rbrakk>
-   \<Longrightarrow> kheap s(p \<mapsto> ko') |> aobj_of = aobjs_of s"
+   \<Longrightarrow> (kheap s)(p \<mapsto> ko') |> aobj_of = aobjs_of s"
   by (rule ext)
      (auto simp: opt_map_def is_ArchObj_def aobj_of_def split: kernel_object.splits if_split_asm)
 

@@ -216,7 +216,7 @@ proof -
   ultimately
   show ?thesis
     unfolding valid_uses_2_def init_vspace_uses_def window_defs
-    by auto
+    by (auto simp: kernel_window_range_def)
 qed
 
 lemma valid_global_arch_objs_init_A_st[simp]:
@@ -368,7 +368,7 @@ lemma invs_A:
     apply (clarsimp simp: valid_asid_table_def state_defs)
    apply (simp add: valid_arch_state_def state_defs obj_at_def a_type_def cur_vcpu_2_def
                     vmid_inv_def is_inv_def vmid_for_asid_2_def obind_def
-                    valid_global_tables_2_def empty_pt_def)
+                    valid_global_tables_2_def empty_pt_def valid_vmid_table_def)
   apply (rule conjI)
    apply (clarsimp simp: valid_irq_node_def obj_at_def state_defs
                          is_cap_table_def wf_empty_bits
@@ -390,9 +390,12 @@ lemma invs_A:
    apply (clarsimp simp: valid_arch_caps_def valid_asid_pool_caps_def unique_table_caps_def
                          caps_of_state_init_A_st_Null valid_table_caps_def unique_table_refs_def)
    apply (clarsimp simp: state_defs)
-  apply (clarsimp simp: valid_global_objs_def valid_kernel_mappings_def valid_asid_map_def)
+  apply (clarsimp simp: valid_global_objs_def valid_kernel_mappings_def)
   apply (rule conjI)
    apply (clarsimp simp: equal_kernel_mappings_def)
+  apply (rule conjI)
+   apply (clarsimp simp: valid_asid_map_def entry_for_asid_def init_A_st_def init_arch_state_def
+                         obind_def pool_for_asid_def)
   apply (simp add: pspace_in_kernel_window_init_A_st cap_refs_in_kernel_window_def
                    caps_of_state_init_A_st_Null valid_refs_def[unfolded cte_wp_at_caps_of_state])
   done

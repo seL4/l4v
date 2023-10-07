@@ -47,12 +47,14 @@ text \<open>
 \<close>
 definition whileLoop_inv ::
   "('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> ('b, 'a) nondet_monad) \<Rightarrow> 'a \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow>
-   (('a \<times> 'b) \<times> 'a \<times> 'b) set \<Rightarrow> ('b, 'a) nondet_monad" where
+   (('a \<times> 'b) \<times> 'a \<times> 'b) set \<Rightarrow> ('b, 'a) nondet_monad"
+  where
   "whileLoop_inv C B x I R \<equiv> whileLoop C B x"
 
 definition whileLoopE_inv ::
   "('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> ('b, 'c + 'a) nondet_monad) \<Rightarrow> 'a \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow>
-   (('a \<times> 'b) \<times> 'a \<times> 'b) set \<Rightarrow> ('b, 'c + 'a) nondet_monad" where
+   (('a \<times> 'b) \<times> 'a \<times> 'b) set \<Rightarrow> ('b, 'c + 'a) nondet_monad"
+  where
   "whileLoopE_inv C B x I R \<equiv> whileLoopE C B x"
 
 lemma whileLoop_add_inv:
@@ -284,22 +286,35 @@ lemma fst_whileLoop_cond_false:
   using loop_result
   by (rule in_whileLoop_induct, auto)
 
+lemma whileLoop_terminates_results:
+  assumes non_term: "\<And>r. \<lbrace> \<lambda>s. I r s \<and> C r s \<and> \<not> snd (B r s) \<rbrace> B r \<exists>\<lbrace> \<lambda>r' s'. C r' s' \<and> I r' s' \<rbrace>"
+  shows
+    "\<lbrakk>whileLoop_terminates C B r s; (Some (r, s), None) \<notin> whileLoop_results C B; I r s; C r s\<rbrakk>
+     \<Longrightarrow> False"
+proof (induct rule: whileLoop_terminates.induct)
+  case (1 r s)
+  then show ?case
+    apply clarsimp
+    done
+next
+  case (2 r s)
+  then show ?case
+    apply (cut_tac non_term[where r=r])
+    apply (clarsimp simp: exs_valid_def)
+    apply (subst (asm) (2) whileLoop_results.simps)
+    apply clarsimp
+    apply (insert whileLoop_results.simps)
+    apply fast
+    done
+qed
+
 lemma snd_whileLoop:
   assumes init_I: "I r s"
-      and cond_I: "C r s"
-      and non_term:  "\<And>r. \<lbrace> \<lambda>s. I r s \<and> C r s \<and> \<not> snd (B r s) \<rbrace> B r \<exists>\<lbrace> \<lambda>r' s'. C r' s' \<and> I r' s' \<rbrace>"
+    and cond_I: "C r s"
+    and non_term: "\<And>r. \<lbrace> \<lambda>s. I r s \<and> C r s \<and> \<not> snd (B r s) \<rbrace> B r \<exists>\<lbrace> \<lambda>r' s'. C r' s' \<and> I r' s' \<rbrace>"
   shows "snd (whileLoop C B r s)"
   apply (clarsimp simp: whileLoop_def)
-  apply (rotate_tac)
-  apply (insert init_I cond_I)
-  apply (induct rule: whileLoop_terminates.induct)
-   apply clarsimp
-  apply (cut_tac r=r in non_term)
-  apply (clarsimp simp: exs_valid_def)
-   apply (subst (asm) (2) whileLoop_results.simps)
-   apply clarsimp
-  apply (insert whileLoop_results.simps)
-  apply fast
+  apply (erule (1) whileLoop_terminates_results[OF non_term _ _ init_I cond_I])
   done
 
 lemma whileLoop_terminates_inv:
@@ -332,7 +347,7 @@ proof -
       apply (induct arbitrary: r s rule: whileLoop_results.inducts)
         apply simp
        apply simp
-       apply (insert snd_validNF [OF inv_holds])[1]
+       apply (insert validNF_not_failed[OF inv_holds])[1]
        apply blast
       apply (drule use_validNF [OF _ inv_holds])
        apply simp
@@ -427,11 +442,11 @@ lemma whileLoopE_wp:
   by (rule validE_whileLoopE)
 
 lemma exs_valid_whileLoop:
- assumes init_T: "\<And>s. P s \<Longrightarrow> T r s"
+  assumes init_T: "\<And>s. P s \<Longrightarrow> T r s"
     and iter_I: "\<And>r s0. \<lbrace>\<lambda>s. T r s \<and> C r s \<and> s = s0\<rbrace> B r \<exists>\<lbrace>\<lambda>r' s'. T r' s' \<and> ((r', s'),(r, s0)) \<in> R\<rbrace>"
     and wf_R: "wf R"
     and final_I: "\<And>r s. \<lbrakk> T r s; \<not> C r s  \<rbrakk> \<Longrightarrow> Q r s"
- shows "\<lbrace> P \<rbrace> whileLoop C B r \<exists>\<lbrace> Q \<rbrace>"
+  shows "\<lbrace> P \<rbrace> whileLoop C B r \<exists>\<lbrace> Q \<rbrace>"
 proof (clarsimp simp: exs_valid_def Bex_def)
   fix s
   assume "P s"
@@ -440,17 +455,21 @@ proof (clarsimp simp: exs_valid_def Bex_def)
     fix x
     have "T (fst x) (snd x) \<Longrightarrow> \<exists>r' s'. (r', s') \<in> fst (whileLoop C B (fst x) (snd x)) \<and> T r' s'"
       using wf_R
-      apply induction
-      apply atomize
-      apply (case_tac "C (fst x) (snd x)")
-       apply (subst whileLoop_unroll)
-       apply (clarsimp simp: condition_def bind_def' split: prod.splits)
-       apply (cut_tac ?s0.0=b and r=a in iter_I)
-       apply (clarsimp simp: exs_valid_def)
-       apply blast
-      apply (subst whileLoop_unroll)
-      apply (clarsimp simp: condition_def bind_def' return_def)
-      done
+    proof induct
+      case (less x)
+      then show ?case
+        apply atomize
+        apply (cases "C (fst x) (snd x)")
+         apply (subst whileLoop_unroll)
+         apply (clarsimp simp: condition_def bind_def')
+         apply (cut_tac iter_I[where ?s0.0="snd x" and r="fst x"])
+         apply (clarsimp simp: exs_valid_def)
+         apply blast
+        apply (subst whileLoop_unroll)
+        apply (cases x)
+        apply (clarsimp simp: condition_def bind_def' return_def)
+        done
+    qed
   }
 
   thus "\<exists>r' s'. (r', s') \<in> fst (whileLoop C B r s) \<and> Q r' s'"
@@ -475,8 +494,7 @@ proof -
         apply fact
        apply (rule cond_true, fact)
       apply (clarsimp simp: exs_valid_def)
-      apply (case_tac "fst (B r s) = {}")
-       apply (metis empty_failD [OF body_empty_fail])
+      apply (drule empty_failD3[OF body_empty_fail])
       apply (subst (asm) whileLoop_unroll)
       apply (fastforce simp: condition_def bind_def split_def cond_true)
       done
@@ -496,33 +514,59 @@ lemma empty_fail_whileM[empty_fail_cond, intro!, wp]:
   unfolding whileM_def
   by (wpsimp wp: empty_fail_whileLoop empty_fail_bind)
 
-lemma whileLoop_results_bisim:
+lemma whileLoop_results_bisim_helper:
   assumes base: "(a, b) \<in> whileLoop_results C B"
-  and vars1: "Q = (case a of Some (r, s) \<Rightarrow> Some (rt r, st s) | _ \<Rightarrow> None)"
-  and vars2: "R = (case b of Some (r, s) \<Rightarrow> Some (rt r, st s) | _ \<Rightarrow> None)"
-  and inv_init: "case a of Some (r, s) \<Rightarrow> I r s | _ \<Rightarrow> True"
-  and inv_step: "\<And>r s r' s'. \<lbrakk> I r s; C r s; (r', s') \<in> fst (B r s) \<rbrakk> \<Longrightarrow> I r' s'"
-  and cond_match: "\<And>r s. I r s \<Longrightarrow> C r s = C' (rt r) (st s)"
-  and fail_step: "\<And>r s. \<lbrakk>C r s; snd (B r s); I r s\<rbrakk>
+    and inv_init: "case a of Some (r, s) \<Rightarrow> I r s | _ \<Rightarrow> True"
+    and inv_step: "\<And>r s r' s'. \<lbrakk> I r s; C r s; (r', s') \<in> fst (B r s) \<rbrakk> \<Longrightarrow> I r' s'"
+    and cond_match: "\<And>r s. I r s \<Longrightarrow> C r s = C' (rt r) (st s)"
+    and fail_step: "\<And>r s. \<lbrakk>C r s; snd (B r s); I r s\<rbrakk>
                          \<Longrightarrow> (Some (rt r, st s), None) \<in> whileLoop_results C' B'"
-  and refine: "\<And>r s r' s'. \<lbrakk> I r s; C r s; (r', s') \<in>  fst (B r s) \<rbrakk>
+    and refine: "\<And>r s r' s'. \<lbrakk> I r s; C r s; (r', s') \<in>  fst (B r s) \<rbrakk>
                             \<Longrightarrow> (rt r', st s') \<in> fst (B' (rt r) (st s))"
-  shows "(Q, R) \<in> whileLoop_results C' B'"
-  apply (subst vars1)
-  apply (subst vars2)
-  apply (insert base inv_init)
-  apply (induct rule: whileLoop_results.induct)
+  defines [simp]: "Q x \<equiv> (case x of Some (r, s) \<Rightarrow> Some (rt r, st s) | _ \<Rightarrow> None)"
+    and [simp]: "R y\<equiv> (case y of Some (r, s) \<Rightarrow> Some (rt r, st s) | _ \<Rightarrow> None)"
+  shows "(Q a, R b) \<in> whileLoop_results C' B'"
+  using base inv_init
+proof (induct rule: whileLoop_results.induct)
+  case (1 r s)
+  then show ?case
     apply clarsimp
     apply (subst (asm) cond_match)
      apply (clarsimp simp: option.splits)
     apply (clarsimp simp: option.splits)
-   apply (clarsimp simp: option.splits)
-   apply (metis fail_step)
-  apply (case_tac z)
-   apply (clarsimp simp: option.splits)
-   apply (metis cond_match inv_step refine whileLoop_results.intros(3))
-  apply (clarsimp simp: option.splits)
-  apply (metis cond_match inv_step refine whileLoop_results.intros(3))
+    done
+next
+  case (2 r s)
+  then show ?case
+    apply (clarsimp simp: option.splits)
+    apply (metis fail_step)
+    done
+next
+  case (3 r s r' s' z)
+  then show ?case
+    apply (cases z)
+     apply (clarsimp simp: option.splits)
+     apply (metis cond_match inv_step refine whileLoop_results.intros(3))
+    apply (clarsimp simp: option.splits)
+    apply (metis cond_match inv_step refine whileLoop_results.intros(3))
+    done
+qed
+
+lemma whileLoop_results_bisim:
+  assumes base: "(a, b) \<in> whileLoop_results C B"
+    and vars1: "Q = (case a of Some (r, s) \<Rightarrow> Some (rt r, st s) | _ \<Rightarrow> None)"
+    and vars2: "R = (case b of Some (r, s) \<Rightarrow> Some (rt r, st s) | _ \<Rightarrow> None)"
+    and inv_init: "case a of Some (r, s) \<Rightarrow> I r s | _ \<Rightarrow> True"
+    and inv_step: "\<And>r s r' s'. \<lbrakk> I r s; C r s; (r', s') \<in> fst (B r s) \<rbrakk> \<Longrightarrow> I r' s'"
+    and cond_match: "\<And>r s. I r s \<Longrightarrow> C r s = C' (rt r) (st s)"
+    and fail_step: "\<And>r s. \<lbrakk>C r s; snd (B r s); I r s\<rbrakk>
+                         \<Longrightarrow> (Some (rt r, st s), None) \<in> whileLoop_results C' B'"
+    and refine: "\<And>r s r' s'. \<lbrakk> I r s; C r s; (r', s') \<in>  fst (B r s) \<rbrakk>
+                            \<Longrightarrow> (rt r', st s') \<in> fst (B' (rt r) (st s))"
+  shows "(Q, R) \<in> whileLoop_results C' B'"
+  apply (subst vars1, subst vars2)
+  apply (rule whileLoop_results_bisim_helper)
+       apply (rule assms; assumption?)+
   done
 
 lemma whileLoop_terminates_liftE:
@@ -562,6 +606,10 @@ lemma snd_X_return[simp]:
   "snd ((A >>= (\<lambda>a. return (X a))) s) = snd (A s)"
   by (clarsimp simp: return_def bind_def split_def)
 
+lemma isr_Inr_projr:
+  "\<not> isl a \<Longrightarrow> (a = Inr b) = (b = projr a)"
+  by auto
+
 lemma whileLoopE_liftE:
   "whileLoopE C (\<lambda>r. liftE (B r)) r = liftE (whileLoop C B r)"
   apply (rule ext)
@@ -569,30 +617,33 @@ lemma whileLoopE_liftE:
   apply (rule prod_eqI)
    apply (rule set_eqI, rule iffI)
     apply clarsimp
-    apply (clarsimp simp: in_bind whileLoop_def liftE_def)
-    apply (rule_tac x="b" in exI)
-    apply (rule_tac x="projr a" in exI)
+    apply (clarsimp simp: in_liftE whileLoop_def)
+    \<comment> \<open>The schematic existential is instantiated by 'subst isr_Inr_proj' ... 'rule refl' in two lines\<close>
+    apply (rule exI)
     apply (rule conjI)
-     apply (erule whileLoop_results_bisim[where rt=projr
-                                            and st="\<lambda>x. x"
-                                            and I="\<lambda>r s. case r of Inr x \<Rightarrow> True | _ \<Rightarrow> False"],
-            auto intro: whileLoop_results.intros simp: bind_def return_def lift_def split: sum.splits)[1]
-    apply (drule whileLoop_results_induct_lemma2[where P="\<lambda>(r, s). case r of Inr x \<Rightarrow> True | _ \<Rightarrow> False"])
+     apply (subst isr_Inr_projr)
+      prefer 2
+      apply (rule refl)
+     apply (drule whileLoop_results_induct_lemma2[where P="\<lambda>(r, s). \<not> isl r"])
+         apply (rule refl)
         apply (rule refl)
-       apply (rule refl)
-      apply clarsimp
-     apply (clarsimp simp: return_def bind_def lift_def split: sum.splits)
-    apply (clarsimp simp: return_def bind_def lift_def split: sum.splits)
-   apply (clarsimp simp: in_bind whileLoop_def liftE_def)
+       apply clarsimp
+      apply (clarsimp simp: return_def bind_def lift_def liftE_def split: sum.splits)
+     apply clarsimp
+    apply (erule whileLoop_results_bisim[where rt=projr
+                                           and st="\<lambda>x. x"
+                                           and I="\<lambda>r s. \<not> isl r"],
+           auto intro: whileLoop_results.intros simp: bind_def return_def lift_def liftE_def split: sum.splits)[1]
+   apply (clarsimp simp: in_liftE whileLoop_def)
    apply (erule whileLoop_results_bisim[where rt=Inr and st="\<lambda>x. x" and I="\<lambda>r s. True"],
-          auto intro: whileLoop_results.intros intro!: bexI simp: bind_def return_def lift_def
-               split: sum.splits)[1]
+          auto intro: whileLoop_results.intros intro!: bexI
+               simp: bind_def return_def lift_def liftE_def split: sum.splits)[1]
   apply (rule iffI)
    apply (clarsimp simp: whileLoop_def liftE_def del: notI)
    apply (erule disjE)
     apply (erule whileLoop_results_bisim[where rt=projr
                                            and st="\<lambda>x. x"
-                                           and I="\<lambda>r s. case r of Inr x \<Rightarrow> True | _ \<Rightarrow> False"],
+                                           and I="\<lambda>r s. \<not> isl r"],
            auto intro: whileLoop_results.intros simp: bind_def return_def lift_def split: sum.splits)[1]
    apply (subst (asm) whileLoop_terminates_liftE [symmetric])
    apply (fastforce simp: whileLoop_def liftE_def whileLoop_terminatesE_def)

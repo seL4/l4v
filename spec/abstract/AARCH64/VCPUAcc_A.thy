@@ -120,7 +120,7 @@ definition vcpu_disable :: "obj_ref option \<Rightarrow> (unit,'z::state_ext) s_
         hcr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_hcr;
         vgic_update vr (\<lambda>vgic. vgic\<lparr> vgic_hcr := hcr \<rparr>);
         vcpu_save_reg vr VCPURegSCTLR;
-        vcpu_save_reg vr VCPURegACTLR; \<comment> \<open>since FPU enabled\<close>
+        vcpu_save_reg vr VCPURegCPACR; \<comment> \<open>since FPU enabled\<close>
         do_machine_op isb
       od
     | _ \<Rightarrow> return ();
@@ -171,6 +171,8 @@ definition vcpu_save :: "(obj_ref \<times> bool) option \<Rightarrow> (unit,'z::
   "vcpu_save vb \<equiv>
      case vb
      of Some (vr, active) \<Rightarrow> do
+          do_machine_op dsb;
+
           when active $ do
             vcpu_save_reg vr VCPURegSCTLR;
             hcr \<leftarrow> do_machine_op get_gic_vcpu_ctrl_hcr;

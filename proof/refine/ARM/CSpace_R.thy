@@ -2227,7 +2227,7 @@ proof -
   let ?c2 = "(CTE capability.NullCap (MDB 0 0 bool1 bool2))"
   let ?C = "(modify_map
              (modify_map
-               (modify_map (ctes_of s(dest \<mapsto> CTE cap (MDB 0 0 bool1 bool2))) dest
+               (modify_map ((ctes_of s)(dest \<mapsto> CTE cap (MDB 0 0 bool1 bool2))) dest
                  (cteMDBNode_update (\<lambda>a. MDB word1 src (revokable' src_cap cap) (revokable' src_cap cap))))
                src (cteMDBNode_update (mdbNext_update (\<lambda>_. dest))))
              word1 (cteMDBNode_update (mdbPrev_update (\<lambda>_. dest))))"

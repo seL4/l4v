@@ -14,7 +14,7 @@ lemmas crunch_simps = split_def whenE_def unlessE_def Let_def if_fun_split
                       assertE_def zipWithM_mapM zipWithM_x_mapM
 
 lemma in_set_object:
-  "(rv, s') \<in> fst (set_object ptr obj s) \<Longrightarrow> s' = s \<lparr> kheap := kheap s (ptr \<mapsto> obj) \<rparr>"
+  "(rv, s') \<in> fst (set_object ptr obj s) \<Longrightarrow> s' = s \<lparr> kheap := (kheap s) (ptr \<mapsto> obj) \<rparr>"
   by (clarsimp simp: set_object_def get_object_def in_monad)
 
 lemma cap_fault_injection:

@@ -44,7 +44,7 @@ lemma invoke_irq_handler_reads_respects_f:
              cap_delete_one_reads_respects_f[where st=st]
              reads_respects_f[OF get_irq_slot_reads_respects, where Q="\<top>"]
              cap_insert_silc_inv'' cap_delete_one_silc_inv_subject
-             cap_delete_one_cte_wp_at_other static_imp_wp
+             cap_delete_one_cte_wp_at_other hoare_weak_lift_imp
              hoare_vcg_ex_lift slots_holding_overlapping_caps_from_silc_inv[where aag=aag and st=st]
           | simp | simp add: get_irq_slot_def)+
    apply (clarsimp simp: pas_refined_def irq_map_wellformed_aux_def)

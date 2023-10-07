@@ -56,7 +56,7 @@ definition vm_rights_of :: "vmrights \<Rightarrow> rights set" where
                     | VMReadWrite \<Rightarrow> vm_read_write"
 
 lemma vm_rights_of_vmrights_map_id[simp]:
-  "rs \<in> valid_vm_rights \<Longrightarrow> vm_rights_of (vmrights_map rs)= rs"
+  "rs \<in> valid_vm_rights \<Longrightarrow> vm_rights_of (vmrights_map rs) = rs"
   by (auto simp: vm_rights_of_def vmrights_map_def valid_vm_rights_def
                  vm_read_write_def vm_read_only_def vm_kernel_only_def)
 
@@ -64,15 +64,13 @@ lemma vm_rights_of_vmrights_map_id[simp]:
 definition absPageTable0 ::
   "(obj_ref \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> obj_ref \<Rightarrow> 'a::len word \<rightharpoonup> AARCH64_A.pte" where
   "absPageTable0 h a \<equiv> \<lambda>offs.
-   case (h (a + (ucast offs << pte_bits))) of
+   case h (a + (ucast offs << pte_bits)) of
      Some (KOArch (KOPTE (InvalidPTE))) \<Rightarrow> Some AARCH64_A.InvalidPTE
    | Some (KOArch (KOPTE (PagePTE p small global execNever dev rights))) \<Rightarrow>
-       if p \<le> mask ppn_len
-       then Some (AARCH64_A.PagePTE (ucast p) small
-                                    {x. global \<and> x=Global \<or> \<not>execNever \<and> x = Execute \<or>
-                                        dev \<and> x = Device}
-                                    (vm_rights_of rights))
-       else None
+       Some (AARCH64_A.PagePTE p small
+                               {x. global \<and> x=Global \<or> \<not>execNever \<and> x = Execute \<or>
+                                   dev \<and> x = Device}
+                               (vm_rights_of rights))
    | Some (KOArch (KOPTE (PageTablePTE p))) \<Rightarrow>
        if p \<le> mask ppn_len
        then Some (AARCH64_A.PageTablePTE (ucast p))
@@ -432,18 +430,6 @@ lemma pte_offset_in_datapage:
   apply (cases sz; simp add: pageBits_def ptTranslationBits_def)
   done
 
-lemma distinct_word_add_inj_ptes_pt:
-  "\<lbrakk> p + (ucast off << pte_bits) = p' + (ucast off' << pte_bits);
-     is_aligned p (pt_bits NormalPT_T); is_aligned p' (pt_bits NormalPT_T) \<rbrakk>
-   \<Longrightarrow> p' = p \<and> off' = off" for off :: pt_index and p :: machine_word
-  by (erule (2) distinct_word_add_ucast_shift_inj; simp add: bit_simps)
-
-lemma distinct_word_add_inj_ptes_vs:
-  "\<lbrakk> p + (ucast off << pte_bits) = p' + (ucast off' << pte_bits);
-     is_aligned p (pt_bits VSRootPT_T); is_aligned p' (pt_bits VSRootPT_T) \<rbrakk>
-   \<Longrightarrow> p' = p \<and> off' = off" for off :: vs_index and p :: machine_word
-  by (erule (2) distinct_word_add_ucast_shift_inj; simp add: bit_simps)
-
 lemma absHeap_correct:
   fixes s' :: kernel_state
   assumes pspace_aligned:  "pspace_aligned s"
@@ -461,6 +447,9 @@ proof -
    and gsCNodes:
     "\<And>a n. (\<exists>cs. kheap s a = Some (CNode n cs) \<and> well_formed_cnode_n n cs) \<longleftrightarrow>
             gsCNodes s' a = Some n"
+   and gsPTs:
+    "\<And>a pt_t. (\<exists>pt. kheap s a = Some (ArchObj (PageTable pt)) \<and> pt_t = pt_type pt) \<longleftrightarrow>
+               gsPTTypes (ksArchState s') a = Some pt_t"
     by (fastforce simp add: ghost_relation_def)+
 
   show "?thesis"
@@ -669,89 +658,177 @@ proof -
     apply (case_tac arch_kernel_object, simp_all add: absHeapArch_def
                                             split: asidpool.splits)
 
-     apply clarsimp
-     apply (case_tac arch_kernel_obj)
+      apply (in_case "KOASIDPool ?pool")
+      apply clarsimp
+      apply (case_tac arch_kernel_obj)
          apply (simp add: other_obj_relation_def asid_pool_relation_def
                           inv_def o_def)
         apply (clarsimp simp add:  pte_relation_def)
        apply (clarsimp split: if_split_asm)+
       apply (simp add: other_obj_relation_def)
 
-    sorry (* FIXME AARCH64: PageTable
-    apply (case_tac arch_kernel_obj)
-      apply (simp add: other_obj_relation_def asid_pool_relation_def inv_def
-                       o_def)
-    using pspace_aligned[simplified pspace_aligned_def Ball_def dom_def]
-     apply (erule_tac x=y in allE)
-     apply (clarsimp simp add: pte_relation_def absPageTable_def absPageTable0_def
-                               bit_simps)
-     apply (rule conjI)
-      prefer 2
+     apply (in_case "KOPTE ?pte")
+     apply (case_tac arch_kernel_obj;
+            simp add: other_obj_relation_def asid_pool_relation_def inv_def o_def)
       apply clarsimp
-      apply (rule sym)
-      apply (rule pspace_aligned_distinct_None'
-                  [OF pspace_aligned pspace_distinct], (simp add: bit_simps)+)
-      apply (cut_tac x=ya and n="2^12" in
-             ucast_less_shiftl_helper'[where 'a=machine_word_len and a=3,simplified word_bits_conv], simp+)
-      apply (clarsimp simp add: word_gt_0)
-      apply (rename_tac p p' pt pte off)
-      apply (prop_tac "pt_at p s", simp add: obj_at_def)
+      apply (rename_tac p pte pt idx)
+      apply (frule pspace_alignedD, rule pspace_aligned)
+      apply (clarsimp simp add: pte_relation_def)
+      apply (prop_tac "pt_at (pt_type pt) p s", simp add: obj_at_def)
       apply (drule page_table_at_cross[OF _ pspace_aligned pspace_distinct pspace_relation])
-      apply (clarsimp simp: page_table_at'_def typ_at'_def ko_wp_at'_def bit_simps)
-      apply (erule_tac x=off in allE)
-      apply (clarsimp dest!: koTypeOf_pte simp: objBits_simps bit_simps)
-      apply (rename_tac pte')
-      apply (erule pspace_dom_relatedE[OF _ pspace_relation])
-      apply (case_tac ko; simp add: other_obj_relation_def)
-       apply (clarsimp simp add: cte_relation_def split: if_split_asm)
-      apply (rename_tac ako' y ko P ako)
-      apply (case_tac ako; clarsimp simp: other_obj_relation_def bit_simps)
-       apply (simp add: pte_relation_def)
-    using pspace_aligned[simplified pspace_aligned_def Ball_def dom_def]
-       apply (erule_tac x=y in allE)
-       apply (clarsimp simp: bit_simps)
-       apply (drule (2) distinct_word_add_inj_ptes[unfolded bit_simps])
-       apply clarsimp
-       apply (rename_tac pt)
-       apply (case_tac "pt off"; simp add: ppn_len_def ucast_leq_mask)
-    using pspace_aligned[simplified pspace_aligned_def Ball_def dom_def]
-      apply (erule_tac x=y in allE)
-      apply clarsimp
-      apply (case_tac "n = 0", simp split: if_split_asm)
-      apply (prop_tac "p = y + ((n << pageBits) - (ucast off << pte_bits))")
-       apply (clarsimp simp: field_simps bit_simps)
-      apply simp
-      apply (case_tac "(n << pageBits) - (ucast off << pte_bits) = 0", simp)
-      apply (drule_tac x=y and y="(n << pageBits) - (ucast off << pte_bits)" in
-                       pspace_aligned_distinct_None'[OF pspace_aligned pspace_distinct])
-       prefer 2
+      apply (clarsimp simp: page_table_at'_def typ_at'_def ko_wp_at'_def)
+      apply (cut_tac a=p and pt_t="pt_type pt" in gsPTs, clarsimp)
+      apply (case_tac "pt_type pt"; clarsimp)
+       apply (in_case "VSRootPT_T")
+       apply (clarsimp simp: absPageTable_def split del: if_split split: option.splits)
+       apply (rule conjI, clarsimp)
+        apply (rule sym)
+        apply (rule pspace_aligned_distinct_None'[OF pspace_aligned pspace_distinct], assumption)
+        apply simp
+        apply (case_tac "idx << pte_bits = 0", simp)
+        apply (clarsimp simp: word_neq_0_conv)
+        apply (rule shiftl_less_t2n)
+         apply (simp add: table_size_def le_mask_iff_lt_2n[THEN iffD1])
+        apply (simp add: table_size_bounded[unfolded word_bits_def, simplified])
+       apply (clarsimp split del: if_split)
+       apply (prop_tac "idx << pte_bits = 0")
+        apply (rename_tac pt_t')
+        apply (cut_tac a="p + (idx << pte_bits)" and pt_t=pt_t' in gsPTs)
+        apply clarsimp
+        apply (rule ccontr)
+        apply (drule_tac y="idx << pte_bits" in pspace_aligned_distinct_None'
+                                                [OF pspace_aligned pspace_distinct])
+         apply (clarsimp simp: word_neq_0_conv table_size_def)
+         apply (rule shiftl_less_t2n, simp)
+          apply (erule order_le_less_trans)
+          apply (simp add: mask_def bit_simps)
+         apply (simp add: bit_simps)
+        apply simp
+       apply (thin_tac "pte_relation' pte pte'" for pte pte')
+       apply (clarsimp simp: pt_bits_def)
+       apply (case_tac pt; clarsimp)
+       apply (rename_tac vs)
+       apply (clarsimp simp: absPageTable0_def)
+       apply (rule conjI, clarsimp)
+        apply (rule ext, rename_tac offs)
+        apply (erule_tac x="ucast offs" in allE, erule impE, rule ucast_leq_mask)
+         apply (simp add: bit_simps)
+        apply (clarsimp dest!: koTypeOf_pte simp: objBits_simps)
+        apply (erule_tac x="ucast offs" in allE)
+        apply clarsimp
+        apply (rename_tac pte y)
+        apply (frule pspace_relation_absD, rule pspace_relation)
+        apply clarsimp
+        apply (drule_tac x="ucast offs" in bspec)
+         apply clarsimp
+         apply (rule ucast_leq_mask)
+         apply (clarsimp simp: bit_simps)
+        apply (clarsimp simp: pte_relation_def ucast_ucast_mask ge_mask_eq vs_index_bits_def)
+        apply (erule pspace_valid_objsE, rule valid_objs)
+        apply (clarsimp simp: valid_obj_def)
+        apply (erule_tac x=offs in allE)
+        apply (clarsimp simp: wellformed_pte_def)
+        apply (case_tac "vs offs"; clarsimp split: if_split_asm)
+         apply (rule set_eqI, simp)
+         apply (rename_tac x, case_tac x; simp)
+        apply (simp add: ucast_ucast_mask ge_mask_eq)
+        apply clarsimp
+        apply (erule_tac x="ucast off" in allE)
+        apply (erule impE)
+         apply (rule ucast_leq_mask)
+         apply (clarsimp simp: bit_simps)
+        apply (clarsimp dest!: koTypeOf_pte simp: objBits_simps)
+        apply (frule pspace_relation_absD, rule pspace_relation)
+        apply clarsimp
+        apply (drule_tac x="ucast off" in bspec)
+         apply clarsimp
+         apply (rule ucast_leq_mask)
+         apply (clarsimp simp: bit_simps)
+        apply (clarsimp simp: pte_relation_def ucast_ucast_mask ge_mask_eq vs_index_bits_def)
+        apply (case_tac "vs off"; simp add: ucast_leq_mask ppn_len_def)
+
+      (* NormalPT_T is an exact duplicate of the VSRootPT_T case, but I don't see any good way
+         to factor out the commonality *)
+      apply (in_case "NormalPT_T")
+      apply (clarsimp simp: absPageTable_def split del: if_split split: option.splits)
+      apply (rule conjI, clarsimp)
+       apply (rule sym)
+       apply (rule pspace_aligned_distinct_None'[OF pspace_aligned pspace_distinct], assumption)
        apply simp
-      apply (clarsimp simp: bit_simps)
-      apply (rule conjI)
-       apply (rule neq_le_trans; clarsimp)
-      apply (erule (1) pte_offset_in_datapage[unfolded bit_simps])
-     apply clarsimp
-     apply (subgoal_tac "ucast ya << 3 = 0")
-      prefer 2
-      apply (rule ccontr)
-      apply (frule_tac x=y in unaligned_helper, assumption)
-       apply (rule ucast_less_shiftl_helper'[where a=3], simp_all)
-     apply (rule ext)
-     apply (frule pspace_relation_absD[OF _ pspace_relation])
-     apply simp
-     apply (erule_tac x=off in allE)+
-     apply (clarsimp simp add: pte_relation_def bit_simps)
-    using valid_objs[simplified valid_objs_def fun_app_def dom_def, simplified]
-     apply (erule_tac x=y in allE)
-     apply (clarsimp simp add: valid_obj_def wellformed_pte_def)
-     apply (erule_tac x=off in allE)
-     apply (case_tac "pt off"; clarsimp simp add: ucast_down_ucast_id is_down split: if_splits)
-      apply (rule set_eqI, clarsimp)
-      apply (case_tac x; simp)
-     apply (rule set_eqI, clarsimp)
-     apply (case_tac x; simp)
-    apply (clarsimp split: if_splits)
-    done *)
+       apply (case_tac "idx << pte_bits = 0", simp)
+       apply (clarsimp simp: word_neq_0_conv)
+       apply (rule shiftl_less_t2n)
+        apply (simp add: table_size_def le_mask_iff_lt_2n[THEN iffD1])
+       apply (simp add: table_size_bounded[unfolded word_bits_def, simplified])
+      apply (clarsimp split del: if_split)
+      apply (prop_tac "idx << pte_bits = 0")
+       apply (rename_tac pt_t')
+       apply (cut_tac a="p + (idx << pte_bits)" and pt_t=pt_t' in gsPTs)
+       apply clarsimp
+       apply (rule ccontr)
+       apply (drule_tac y="idx << pte_bits" in pspace_aligned_distinct_None'
+                                               [OF pspace_aligned pspace_distinct])
+        apply (clarsimp simp: word_neq_0_conv table_size_def)
+        apply (rule shiftl_less_t2n, simp)
+         apply (erule order_le_less_trans)
+         apply (simp add: mask_def bit_simps)
+        apply (simp add: bit_simps)
+       apply simp
+      apply (thin_tac "pte_relation' pte pte'" for pte pte')
+      apply (clarsimp simp: pt_bits_def)
+      apply (case_tac pt; clarsimp)
+      apply (rename_tac vs)
+      apply (clarsimp simp: absPageTable0_def)
+      apply (rule conjI, clarsimp)
+       apply (rule ext, rename_tac offs)
+       apply (erule_tac x="ucast offs" in allE, erule impE, rule ucast_leq_mask)
+        apply (simp add: bit_simps)
+       apply (clarsimp dest!: koTypeOf_pte simp: objBits_simps)
+       apply (erule_tac x="ucast offs" in allE)
+       apply clarsimp
+       apply (rename_tac pte y)
+       apply (frule pspace_relation_absD, rule pspace_relation)
+       apply clarsimp
+       apply (drule_tac x="ucast offs" in bspec)
+        apply clarsimp
+        apply (rule ucast_leq_mask)
+        apply (clarsimp simp: bit_simps)
+       apply (clarsimp simp: pte_relation_def ucast_ucast_mask ge_mask_eq vs_index_bits_def)
+       apply (erule pspace_valid_objsE, rule valid_objs)
+       apply (clarsimp simp: valid_obj_def)
+       apply (erule_tac x=offs in allE)
+       apply (clarsimp simp: wellformed_pte_def)
+       apply (case_tac "vs offs"; clarsimp split: if_split_asm)
+        apply (rule set_eqI, simp)
+        apply (rename_tac x, case_tac x; simp)
+       apply (simp add: ucast_ucast_mask ge_mask_eq)
+      apply clarsimp
+      apply (erule_tac x="ucast off" in allE)
+      apply (erule impE)
+       apply (rule ucast_leq_mask)
+       apply (clarsimp simp: bit_simps)
+      apply (clarsimp dest!: koTypeOf_pte simp: objBits_simps)
+      apply (frule pspace_relation_absD, rule pspace_relation)
+      apply clarsimp
+      apply (drule_tac x="ucast off" in bspec)
+       apply clarsimp
+       apply (rule ucast_leq_mask)
+       apply (clarsimp simp: bit_simps)
+      apply (clarsimp simp: pte_relation_def ucast_ucast_mask ge_mask_eq vs_index_bits_def)
+      apply (case_tac "vs off"; simp add: ucast_leq_mask ppn_len_def)
+
+     apply (in_case "DataPage ?p ?sz")
+     apply (clarsimp split: if_splits)
+
+    apply (in_case "KOVCPU ?vcpu")
+    apply clarsimp
+    apply (rename_tac arch_kernel_obj vcpu)
+    apply (case_tac arch_kernel_obj;
+           clarsimp simp: other_obj_relation_def pte_relation_def split: if_splits)
+    apply (rename_tac vcpu')
+    apply (case_tac vcpu')
+    apply (clarsimp simp: vcpu_relation_def split: vcpu.splits)
+    done
 qed
 
 definition
@@ -1535,11 +1612,11 @@ lemma absInterruptStates_correct:
 definition
   "absArchState s' \<equiv>
    case s' of
-     ARMKernelState asid_tbl kvspace vmid_table next_vmid global_us_vspace current_vcpu
+     ARMKernelState asid_tbl kvspace vmid_tab next_vmid global_us_vspace current_vcpu
                     num_list_regs gs_pt_types \<Rightarrow>
      \<lparr> arm_asid_table = asid_tbl \<circ> ucast,
        arm_kernel_vspace = kvspace,
-       arm_vmid_table = map_option ucast \<circ> vmid_table,
+       arm_vmid_table = map_option ucast \<circ> vmid_tab,
        arm_next_vmid = next_vmid,
        arm_us_global_vspace = global_us_vspace,
        arm_current_vcpu = current_vcpu,

@@ -677,7 +677,7 @@ lemma requiv_wuc_eq[intro]:
   by (simp add: reads_equiv_def2)
 
 lemma update_object_noop:
-  "kheap s ptr = Some obj \<Longrightarrow> s\<lparr>kheap := kheap s(ptr \<mapsto> obj)\<rparr> = s"
+  "kheap s ptr = Some obj \<Longrightarrow> s\<lparr>kheap := (kheap s)(ptr \<mapsto> obj)\<rparr> = s"
   by (clarsimp simp: map_upd_triv)
 
 lemma set_object_rev:

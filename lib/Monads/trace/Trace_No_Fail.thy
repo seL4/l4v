@@ -42,6 +42,11 @@ subsection \<open>Bundles\<close>
 
 bundle no_pre = hoare_pre [wp_pre del] no_fail_pre [wp_pre del]
 
+bundle classic_wp_pre =
+  hoare_pre [wp_pre del]
+  all_classic_wp_combs[wp_comb del]
+  all_classic_wp_combs[wp_comb]
+
 
 subsection \<open>Lemmas\<close>
 
@@ -126,7 +131,7 @@ lemma no_fail_returnOK[simp, wp]:
 
 lemma no_fail_bind[wp]:
   "\<lbrakk> no_fail P f; \<And>x. no_fail (R x) (g x); \<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace> \<rbrakk> \<Longrightarrow> no_fail (P and Q) (f >>= (\<lambda>rv. g rv))"
-  apply (simp add: no_fail_def bind_def2 image_Un image_image
+  apply (simp add: no_fail_def bind_def' image_Un image_image
                    in_image_constant)
   apply (intro allI conjI impI)
    apply (fastforce simp: image_def)
@@ -135,8 +140,92 @@ lemma no_fail_bind[wp]:
   apply (fastforce simp: image_def)
   done
 
+lemma no_fail_assume_pre:
+  "(\<And>s. P s \<Longrightarrow> no_fail P f) \<Longrightarrow> no_fail P f"
+  by (simp add: no_fail_def)
+
+\<comment> \<open>lemma no_fail_liftM_eq[simp]:
+  "no_fail P (liftM f m) = no_fail P m"
+  by (auto simp: liftM_def no_fail_def bind_def return_def)\<close>
+
+lemma no_fail_liftM[wp]:
+  "no_fail P m \<Longrightarrow> no_fail P (liftM f m)"
+  unfolding liftM_def
+  by wpsimp
+
+lemma no_fail_pre_and:
+  "no_fail P f \<Longrightarrow> no_fail (P and Q) f"
+  by (erule no_fail_pre) simp
+
+lemma no_fail_spec:
+  "\<lbrakk> \<And>s. no_fail (((=) s) and P) f \<rbrakk> \<Longrightarrow> no_fail P f"
+  by (simp add: no_fail_def)
+
+lemma no_fail_assertE[wp]:
+  "no_fail (\<lambda>_. P) (assertE P)"
+  by (simp add: assertE_def split: if_split)
+
+lemma no_fail_spec_pre:
+  "\<lbrakk> no_fail (((=) s) and P') f; \<And>s. P s \<Longrightarrow> P' s \<rbrakk> \<Longrightarrow> no_fail (((=) s) and P) f"
+  by (erule no_fail_pre, simp)
+
+lemma no_fail_whenE[wp]:
+  "\<lbrakk> G \<Longrightarrow> no_fail P f \<rbrakk> \<Longrightarrow> no_fail (\<lambda>s. G \<longrightarrow> P s) (whenE G f)"
+  by (simp add: whenE_def split: if_split)
+
+lemma no_fail_unlessE[wp]:
+  "\<lbrakk> \<not> G \<Longrightarrow> no_fail P f \<rbrakk> \<Longrightarrow> no_fail (\<lambda>s. \<not> G \<longrightarrow> P s) (unlessE G f)"
+  by (simp add: unlessE_def split: if_split)
+
+lemma no_fail_throwError[wp]:
+  "no_fail \<top> (throwError e)"
+  by (simp add: throwError_def)
+
+lemma no_fail_liftE[wp]:
+  "no_fail P f \<Longrightarrow> no_fail P (liftE f)"
+  unfolding liftE_def by wpsimp
+
+lemma no_fail_gets_the[wp]:
+  "no_fail (\<lambda>s. f s \<noteq> None) (gets_the f)"
+  unfolding gets_the_def
+  by wpsimp
+
+lemma no_fail_lift:
+  "(\<And>y. x = Inr y \<Longrightarrow> no_fail P (f y)) \<Longrightarrow> no_fail (\<lambda>s. \<not>isl x \<longrightarrow> P s) (lift f x)"
+  unfolding lift_def
+  by (wpsimp wp: no_fail_throwError split: sum.splits | assumption)+
+
+lemma validE_R_valid_eq:
+  "\<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>, - = \<lbrace>Q\<rbrace> f \<lbrace>\<lambda>rv s. \<not> isl rv \<longrightarrow> R (projr rv) s\<rbrace>"
+  unfolding validE_R_def validE_def valid_def
+  by (fastforce split: sum.splits prod.split)
+
+lemma no_fail_bindE[wp]:
+  "\<lbrakk> no_fail P f; \<And>rv. no_fail (R rv) (g rv); \<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>,- \<rbrakk>
+     \<Longrightarrow> no_fail (P and Q) (f >>=E g)"
+  unfolding bindE_def
+  by (wpsimp wp: no_fail_lift simp: validE_R_valid_eq | assumption)+
+
+lemma no_fail_False[simp]:
+  "no_fail (\<lambda>_. False) X"
+  by (clarsimp simp: no_fail_def)
+
+lemma no_fail_gets_map[wp]:
+  "no_fail (\<lambda>s. f s p \<noteq> None) (gets_map f p)"
+  unfolding gets_map_def by wpsimp
+
 lemma no_fail_or:
   "\<lbrakk>no_fail P a; no_fail Q a\<rbrakk> \<Longrightarrow> no_fail (P or Q) a"
   by (clarsimp simp: no_fail_def)
+
+lemma no_fail_state_assert[wp]:
+  "no_fail P (state_assert P)"
+  unfolding state_assert_def
+  by wpsimp
+
+lemma no_fail_condition:
+  "\<lbrakk>no_fail Q A; no_fail R B\<rbrakk> \<Longrightarrow> no_fail (\<lambda>s. (C s \<longrightarrow> Q s) \<and> (\<not> C s \<longrightarrow> R s)) (condition C A B)"
+  unfolding condition_def no_fail_def
+  by clarsimp
 
 end

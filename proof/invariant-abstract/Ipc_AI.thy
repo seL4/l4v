@@ -517,7 +517,7 @@ lemma cap_insert_weak_cte_wp_at2:
    cap_insert cap src dest
    \<lbrace>\<lambda>uu. cte_wp_at P p\<rbrace>"
   unfolding cap_insert_def
-  by (wp set_cap_cte_wp_at get_cap_wp static_imp_wp
+  by (wp set_cap_cte_wp_at get_cap_wp hoare_weak_lift_imp
       | simp add: cap_insert_def
       | unfold set_untyped_cap_as_full_def
       | auto simp: cte_wp_at_def dest!:imp)+
@@ -603,10 +603,10 @@ lemma transfer_caps_loop_presM:
   apply (clarsimp simp add: Let_def split_def whenE_def
                       cong: if_cong list.case_cong split del: if_split)
   apply (rule hoare_pre)
-   apply (wp eb hoare_vcg_const_imp_lift hoare_vcg_const_Ball_lift static_imp_wp
+   apply (wp eb hoare_vcg_const_imp_lift hoare_vcg_const_Ball_lift hoare_weak_lift_imp
            | assumption | simp split del: if_split)+
       apply (rule cap_insert_assume_null)
-      apply (wp x hoare_vcg_const_Ball_lift cap_insert_cte_wp_at static_imp_wp)+
+      apply (wp x hoare_vcg_const_Ball_lift cap_insert_cte_wp_at hoare_weak_lift_imp)+
       apply (rule hoare_vcg_conj_liftE_R)
        apply (rule derive_cap_is_derived_foo)
       apply (rule_tac Q' ="\<lambda>cap' s. (vo \<longrightarrow> cap'\<noteq> cap.NullCap \<longrightarrow>
@@ -1830,7 +1830,7 @@ lemma set_mrs_valid_ioc[wp]:
   apply (simp add: set_mrs_def)
   apply (wp | wpc)+
      apply (simp only: zipWithM_x_mapM_x split_def)
-     apply (wp mapM_x_wp' set_object_valid_ioc_caps static_imp_wp
+     apply (wp mapM_x_wp' set_object_valid_ioc_caps hoare_weak_lift_imp
         | simp)+
   apply (clarsimp simp: obj_at_def get_tcb_def valid_ioc_def
                   split: option.splits Structures_A.kernel_object.splits)
@@ -2270,7 +2270,7 @@ lemma pred_tcb_clear:
 
 
 lemma pred_tcb_upd_apply:
-  "pred_tcb_at proj P t (s\<lparr>kheap := kheap s(r \<mapsto> TCB v)\<rparr>) =
+  "pred_tcb_at proj P t (s\<lparr>kheap := (kheap s)(r \<mapsto> TCB v)\<rparr>) =
   (if t = r then P (proj (tcb_to_itcb v)) else pred_tcb_at proj P t s)"
   by (simp add: pred_tcb_at_def obj_at_def)
 
@@ -2627,7 +2627,7 @@ lemma complete_signal_invs:
                       \<and> (\<exists>T. typ_at T ntfnptr s) \<and> valid_ntfn (ntfn_set_obj ntfn IdleNtfn) s
                       \<and> ((\<exists>y. ntfn_bound_tcb ntfn = Some y) \<longrightarrow> ex_nonz_cap_to ntfnptr s)"
                       in hoare_strengthen_post)
-    apply (wp hoare_vcg_all_lift static_imp_wp hoare_vcg_ex_lift | wpc
+    apply (wp hoare_vcg_all_lift hoare_weak_lift_imp hoare_vcg_ex_lift | wpc
          | simp add: live_def valid_ntfn_def valid_bound_tcb_def split: option.splits)+
     apply ((clarsimp simp: obj_at_def state_refs_of_def)+)[2]
   apply (rule_tac obj_at_valid_objsE[OF _ invs_valid_objs]; clarsimp)
@@ -2818,7 +2818,7 @@ lemma valid_bound_tcb_typ_at:
   "(\<And>p. \<lbrace>\<lambda>s. typ_at ATCB p s\<rbrace> f \<lbrace>\<lambda>_ s. typ_at ATCB p s\<rbrace>)
    \<Longrightarrow> \<lbrace>\<lambda>s. valid_bound_tcb tcb s\<rbrace> f \<lbrace>\<lambda>_ s. valid_bound_tcb tcb s\<rbrace>"
   apply (clarsimp simp: valid_bound_tcb_def split: option.splits)
-  apply (wpsimp wp: hoare_vcg_all_lift tcb_at_typ_at static_imp_wp)
+  apply (wpsimp wp: hoare_vcg_all_lift tcb_at_typ_at hoare_weak_lift_imp)
   done
 
 crunch bound_tcb[wp]: set_thread_state, set_message_info, set_mrs, as_user "valid_bound_tcb t"
@@ -2902,7 +2902,7 @@ lemma rai_invs':
   apply (rule hoare_pre)
    apply (wp set_simple_ko_valid_objs hoare_vcg_const_Ball_lift valid_ioports_lift
              as_user_no_del_ntfn[simplified ntfn_at_def2, simplified]
-             valid_irq_node_typ ball_tcb_cap_casesI static_imp_wp
+             valid_irq_node_typ ball_tcb_cap_casesI hoare_weak_lift_imp
              valid_bound_tcb_typ_at[rule_format]
              | simp add: valid_ntfn_def)+
   apply clarsimp
@@ -3052,7 +3052,7 @@ lemma si_invs':
                | clarsimp simp:is_cap_simps | wpc
                | strengthen reply_cap_doesnt_exist_strg
                             disjI2_strg[where Q="cte_wp_at (\<lambda>cp. is_master_reply_cap cp \<and> R cp) p s"]
-               | (wp hoare_vcg_conj_lift static_imp_wp | wp dxo_wp_weak | simp)+
+               | (wp hoare_vcg_conj_lift hoare_weak_lift_imp | wp dxo_wp_weak | simp)+
                | wp valid_ioports_lift)+
   apply (clarsimp simp: ep_redux_simps conj_ac cong: list.case_cong if_cong)
   apply (frule(1) sym_refs_ko_atD)

@@ -38,13 +38,31 @@ datatype ('s, 'a) tmres = Failed | Incomplete | Result "('a \<times> 's)"
 abbreviation map_tmres_rv :: "('a \<Rightarrow> 'b) \<Rightarrow> ('s, 'a) tmres \<Rightarrow> ('s, 'b) tmres" where
   "map_tmres_rv f \<equiv> map_tmres id f"
 
-section "The Monad"
-
 text \<open>
   tmonad returns a set of non-deterministic computations, including
   a trace as a list of "thread identifier" \<times> state, and an optional
   pair of result and state when the computation did not fail.\<close>
 type_synonym ('s, 'a) tmonad = "'s \<Rightarrow> ((tmid \<times> 's) list \<times> ('s, 'a) tmres) set"
+
+
+text \<open>
+  Print the type @{typ "('s,'a) tmonad"} instead of its unwieldy expansion.
+  Needs an AST translation in code, because it needs to check that the state variable
+  @{typ 's} occurs three times. This comparison is not guaranteed to always work as expected
+  (AST instances might have different decoration), but it does seem to work here.\<close>
+print_ast_translation \<open>
+  let
+    fun tmonad_tr _ [t1, Ast.Appl [Ast.Constant @{type_syntax set},
+                          Ast.Appl [Ast.Constant @{type_syntax prod},
+                            Ast.Appl [Ast.Constant @{type_syntax list},
+                              Ast.Appl [Ast.Constant @{type_syntax prod},
+                                Ast.Constant @{type_syntax tmid}, t2]],
+                            Ast.Appl [Ast.Constant @{type_syntax tmres}, t3, t4]]]] =
+      if t1 = t2 andalso t1 = t3
+      then Ast.Appl [Ast.Constant @{type_syntax "tmonad"}, t1, t4]
+      else raise Match
+  in [(@{type_syntax "fun"}, tmonad_tr)] end\<close>
+
 
 text \<open>Returns monad results, ignoring failures and traces.\<close>
 definition mres :: "((tmid \<times> 's) list \<times> ('s, 'a) tmres) set \<Rightarrow> ('a \<times> 's) set" where
@@ -80,7 +98,7 @@ definition bind ::
     | Result (rv, s) \<Rightarrow> fst_upd (\<lambda>ys. ys @ xs) ` g rv s"
 
 text \<open>Sometimes it is convenient to write @{text bind} in reverse order.\<close>
-abbreviation(input) bind_rev ::
+abbreviation (input) bind_rev ::
   "('c \<Rightarrow> ('a, 'b) tmonad) \<Rightarrow> ('a, 'c) tmonad \<Rightarrow> ('a, 'b) tmonad" (infixl "=<<" 60)
   where
   "g =<< f \<equiv> f >>= g"
@@ -105,6 +123,7 @@ primrec put_trace :: "(tmid \<times> 's) list \<Rightarrow> ('s, unit) tmonad" w
     "put_trace [] = return ()"
   | "put_trace (x # xs) = (put_trace xs >>= (\<lambda>_. put_trace_elem x))"
 
+
 subsection "Nondeterminism"
 
 text \<open>
@@ -116,13 +135,26 @@ text \<open>
 definition select :: "'a set \<Rightarrow> ('s, 'a) tmonad" where
   "select A \<equiv> \<lambda>s. (Pair [] ` Result ` (A \<times> {s}))"
 
-definition alternative :: "('s,'a) tmonad \<Rightarrow> ('s,'a) tmonad \<Rightarrow> ('s,'a) tmonad"
-  (infixl "\<sqinter>" 20) where
+definition alternative ::
+  "('s,'a) tmonad \<Rightarrow> ('s,'a) tmonad \<Rightarrow> ('s,'a) tmonad" (infixl "\<sqinter>" 20)
+  where
   "f \<sqinter> g \<equiv> \<lambda>s. (f s \<union> g s)"
 
 text \<open>
   FIXME: The @{text select_f} function was left out here until we figure
   out what variant we actually need.\<close>
+
+definition
+  "default_elem dflt A \<equiv> if A = {} then {dflt} else A"
+
+text \<open>
+  @{text state_select} takes a relationship between states, and outputs
+  nondeterministically a state related to the input state. Fails if no such
+  state exists.\<close>
+definition state_select :: "('s \<times> 's) set \<Rightarrow> ('s, unit) tmonad" where
+  "state_select r \<equiv>
+     \<lambda>s. (Pair [] ` default_elem Failed (Result ` (\<lambda>x. ((), x)) ` {s'. (s, s') \<in> r}))"
+
 
 subsection "Failure"
 
@@ -173,7 +205,8 @@ text \<open>
   Perform a test on the current state, performing the left monad if
   the result is true or the right monad if the result is false.\<close>
 definition condition ::
-  "('s \<Rightarrow> bool) \<Rightarrow> ('s, 'r) tmonad \<Rightarrow> ('s, 'r) tmonad \<Rightarrow> ('s, 'r) tmonad" where
+  "('s \<Rightarrow> bool) \<Rightarrow> ('s, 'r) tmonad \<Rightarrow> ('s, 'r) tmonad \<Rightarrow> ('s, 'r) tmonad"
+  where
   "condition P L R \<equiv> \<lambda>s. if (P s) then (L s) else (R s)"
 
 notation (output)
@@ -185,11 +218,17 @@ text \<open>
 definition gets_the :: "('s \<Rightarrow> 'a option) \<Rightarrow> ('s, 'a) tmonad" where
   "gets_the f \<equiv> gets f >>= assert_opt"
 
+text \<open>
+  Get a map (such as a heap) from the current state and apply an argument to the map.
+  Fail if the map returns @{const None}, otherwise return the value.\<close>
+definition gets_map :: "('s \<Rightarrow> 'a \<Rightarrow> 'b option) \<Rightarrow> 'a \<Rightarrow> ('s, 'b) tmonad" where
+  "gets_map f p \<equiv> gets f >>= (\<lambda>m. assert_opt (m p))"
+
 
 subsection \<open>The Monad Laws\<close>
 
-text \<open>An alternative definition of bind, sometimes more convenient.\<close>
-lemma bind_def2:
+text \<open>An alternative definition of @{term bind}, sometimes more convenient.\<close>
+lemma bind_def':
   "bind f g \<equiv>
      \<lambda>s. ((\<lambda>xs. (xs, Failed)) ` {xs. (xs, Failed) \<in> f s})
          \<union> ((\<lambda>xs. (xs, Incomplete)) ` {xs. (xs, Incomplete) \<in> f s})
@@ -206,7 +245,7 @@ lemma elem_bindE:
     \<lbrakk>res = Incomplete \<or> res = Failed; (tr, map_tmres undefined undefined res) \<in> f s\<rbrakk> \<Longrightarrow> P;
     \<And>tr' tr'' x s'. \<lbrakk>(tr', Result (x, s')) \<in> f s; (tr'', res) \<in> g x s'; tr = tr'' @ tr'\<rbrakk> \<Longrightarrow> P\<rbrakk>
    \<Longrightarrow> P"
-  by (auto simp: bind_def2)
+  by (auto simp: bind_def')
 
 text \<open>Each monad satisfies at least the following three laws.\<close>
 
@@ -240,6 +279,7 @@ lemma bind_assoc:
   apply (split tmres.split; intro conjI impI; clarsimp)
   apply (simp add: image_image)
   done
+
 
 section \<open>Adding Exceptions\<close>
 
@@ -276,8 +316,8 @@ text \<open>
   the right-hand side is skipped if the left-hand side
   produced an exception.\<close>
 definition bindE ::
-  "('s, 'e + 'a) tmonad \<Rightarrow> ('a \<Rightarrow> ('s, 'e + 'b) tmonad) \<Rightarrow> ('s, 'e + 'b) tmonad"
-  (infixl ">>=E" 60) where
+  "('s, 'e + 'a) tmonad \<Rightarrow> ('a \<Rightarrow> ('s, 'e + 'b) tmonad) \<Rightarrow> ('s, 'e + 'b) tmonad" (infixl ">>=E" 60)
+  where
   "f >>=E g \<equiv> f >>= lift g"
 
 text \<open>
@@ -308,6 +348,7 @@ text \<open>
   instead of @{term return}.\<close>
 definition assertE :: "bool \<Rightarrow> ('a, 'e + unit) tmonad" where
   "assertE P \<equiv> if P then returnOk () else fail"
+
 
 subsection "Monad Laws for the Exception Monad"
 
@@ -490,6 +531,10 @@ text \<open>The same for the exception monad:\<close>
 definition liftME :: "('a \<Rightarrow> 'b) \<Rightarrow> ('s,'e+'a) tmonad \<Rightarrow> ('s,'e+'b) tmonad" where
   "liftME f m \<equiv> doE x \<leftarrow> m; returnOk (f x) odE"
 
+text \<open>Execute @{term f} for @{term "Some x"}, otherwise do nothing.\<close>
+definition maybeM :: "('a \<Rightarrow> ('s, unit) tmonad) \<Rightarrow> 'a option \<Rightarrow> ('s, unit) tmonad" where
+  "maybeM f y \<equiv> case y of Some x \<Rightarrow> f x | None \<Rightarrow> return ()"
+
 text \<open>Run a sequence of monads from left to right, ignoring return values.\<close>
 definition sequence_x :: "('s, 'a) tmonad list \<Rightarrow> ('s, unit) tmonad" where
   "sequence_x xs \<equiv> foldr (\<lambda>x y. x >>= (\<lambda>_. y)) xs (return ())"
@@ -505,7 +550,8 @@ text \<open>
   going through both lists simultaneously, left to right, ignoring
   return values.\<close>
 definition zipWithM_x ::
-  "('a \<Rightarrow> 'b \<Rightarrow> ('s,'c) tmonad) \<Rightarrow> 'a list \<Rightarrow> 'b list \<Rightarrow> ('s, unit) tmonad" where
+  "('a \<Rightarrow> 'b \<Rightarrow> ('s,'c) tmonad) \<Rightarrow> 'a list \<Rightarrow> 'b list \<Rightarrow> ('s, unit) tmonad"
+  where
   "zipWithM_x f xs ys \<equiv> sequence_x (zipWith f xs ys)"
 
 text \<open>
@@ -519,14 +565,16 @@ definition mapM :: "('a \<Rightarrow> ('s,'b) tmonad) \<Rightarrow> 'a list \<Ri
   "mapM f xs \<equiv> sequence (map f xs)"
 
 definition zipWithM ::
-  "('a \<Rightarrow> 'b \<Rightarrow> ('s,'c) tmonad) \<Rightarrow> 'a list \<Rightarrow> 'b list \<Rightarrow> ('s, 'c list) tmonad" where
+  "('a \<Rightarrow> 'b \<Rightarrow> ('s,'c) tmonad) \<Rightarrow> 'a list \<Rightarrow> 'b list \<Rightarrow> ('s, 'c list) tmonad"
+  where
   "zipWithM f xs ys \<equiv> sequence (zipWith f xs ys)"
 
 definition foldM :: "('b \<Rightarrow> 'a \<Rightarrow> ('s, 'a) tmonad) \<Rightarrow> 'b list \<Rightarrow> 'a \<Rightarrow> ('s, 'a) tmonad" where
   "foldM m xs a \<equiv> foldr (\<lambda>p q. q >>= m p) xs (return a) "
 
 definition foldME ::
-  "('b \<Rightarrow> 'a \<Rightarrow> ('s,('e + 'b)) tmonad) \<Rightarrow> 'b \<Rightarrow> 'a list \<Rightarrow> ('s, ('e + 'b)) tmonad" where
+  "('b \<Rightarrow> 'a \<Rightarrow> ('s,('e + 'b)) tmonad) \<Rightarrow> 'b \<Rightarrow> 'a list \<Rightarrow> ('s, ('e + 'b)) tmonad"
+  where
   "foldME m a xs \<equiv> foldr (\<lambda>p q. q >>=E swp m p) xs (returnOk a)"
 
 text \<open>
@@ -545,7 +593,6 @@ definition sequenceE :: "('s, 'e+'a) tmonad list \<Rightarrow> ('s, 'e+'a list) 
 definition mapME :: "('a \<Rightarrow> ('s,'e+'b) tmonad) \<Rightarrow> 'a list \<Rightarrow> ('s,'e+'b list) tmonad" where
   "mapME f xs \<equiv> sequenceE (map f xs)"
 
-
 text \<open>Filtering a list using a monadic function as predicate:\<close>
 primrec filterM :: "('a \<Rightarrow> ('s, bool) tmonad) \<Rightarrow> 'a list \<Rightarrow> ('s, 'a list) tmonad" where
   "filterM P []       = return []"
@@ -555,10 +602,8 @@ primrec filterM :: "('a \<Rightarrow> ('s, bool) tmonad) \<Rightarrow> 'a list \
      return (if b then (x # ys) else ys)
    od"
 
-text \<open>
-  @{text select_state} takes a relationship between states, and outputs
-  nondeterministically a state related to the input state.\<close>
-definition state_select :: "('s \<times> 's) set \<Rightarrow> ('s, unit) tmonad" where
+text \<open>An alternative definition of @{term state_select}\<close>
+lemma state_select_def2:
   "state_select r \<equiv> (do
     s \<leftarrow> get;
     S \<leftarrow> return {s'. (s, s') \<in> r};
@@ -566,6 +611,11 @@ definition state_select :: "('s \<times> 's) set \<Rightarrow> ('s, unit) tmonad
     s' \<leftarrow> select S;
     put s'
   od)"
+  apply (clarsimp simp add: state_select_def get_def return_def assert_def fail_def select_def
+                            put_def bind_def fun_eq_iff default_elem_def
+                    intro!: eq_reflection)
+  apply fastforce
+  done
 
 
 section "Catching and Handling Exceptions"
@@ -574,7 +624,8 @@ text \<open>
   Turning an exception monad into a normal state monad
   by catching and handling any potential exceptions:\<close>
 definition catch ::
-  "('s, 'e + 'a) tmonad \<Rightarrow> ('e \<Rightarrow> ('s, 'a) tmonad) \<Rightarrow> ('s, 'a) tmonad" (infix "<catch>" 10) where
+  "('s, 'e + 'a) tmonad \<Rightarrow> ('e \<Rightarrow> ('s, 'a) tmonad) \<Rightarrow> ('s, 'a) tmonad" (infix "<catch>" 10)
+  where
   "f <catch> handler \<equiv>
      do x \<leftarrow> f;
         case x of
@@ -602,8 +653,8 @@ text \<open>
   practice: the exception handle (potentially) throws exception
   of the same type as the left-hand side.\<close>
 definition handleE ::
-  "('s, 'x + 'a) tmonad \<Rightarrow> ('x \<Rightarrow> ('s, 'x + 'a) tmonad) \<Rightarrow> ('s, 'x + 'a) tmonad"
-  (infix "<handle>" 10) where
+  "('s, 'x + 'a) tmonad \<Rightarrow> ('x \<Rightarrow> ('s, 'x + 'a) tmonad) \<Rightarrow> ('s, 'x + 'a) tmonad" (infix "<handle>" 10)
+  where
   "handleE \<equiv> handleE'"
 
 text \<open>
@@ -611,8 +662,8 @@ text \<open>
   if the left-hand side throws no exception:\<close>
 definition handle_elseE ::
   "('s, 'e + 'a) tmonad \<Rightarrow> ('e \<Rightarrow> ('s, 'ee + 'b) tmonad) \<Rightarrow> ('a \<Rightarrow> ('s, 'ee + 'b) tmonad) \<Rightarrow>
-   ('s, 'ee + 'b) tmonad"
-  ("_ <handle> _ <else> _" 10) where
+   ('s, 'ee + 'b) tmonad" ("_ <handle> _ <else> _" 10)
+  where
   "f <handle> handler <else> continue \<equiv>
    do v \<leftarrow> f;
    case v of Inl e  \<Rightarrow> handler e
@@ -655,7 +706,8 @@ inductive_cases whileLoop_terminates_cases: "whileLoop_terminates C B r s"
 inductive_simps whileLoop_terminates_simps: "whileLoop_terminates C B r s"
 
 definition whileLoop ::
-  "('r \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('r \<Rightarrow> ('s, 'r) tmonad) \<Rightarrow> 'r \<Rightarrow> ('s, 'r) tmonad" where
+  "('r \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('r \<Rightarrow> ('s, 'r) tmonad) \<Rightarrow> 'r \<Rightarrow> ('s, 'r) tmonad"
+  where
   "whileLoop C B \<equiv> (\<lambda>r s. {(ts, res). ((r,s), ts,res) \<in> whileLoop_results C B})"
 
 notation (output)
@@ -663,7 +715,8 @@ notation (output)
 
 \<comment> \<open>FIXME: why does this differ to Nondet_Monad?\<close>
 definition whileLoopT ::
-  "('r \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('r \<Rightarrow> ('s, 'r) tmonad) \<Rightarrow> 'r \<Rightarrow> ('s, 'r) tmonad" where
+  "('r \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('r \<Rightarrow> ('s, 'r) tmonad) \<Rightarrow> 'r \<Rightarrow> ('s, 'r) tmonad"
+  where
   "whileLoopT C B \<equiv> (\<lambda>r s. {(ts, res). ((r,s), ts,res) \<in> whileLoop_results C B
                                          \<and> whileLoop_terminates C B r s})"
 
@@ -671,14 +724,52 @@ notation (output)
   whileLoopT  ("(whileLoopT (_)//  (_))" [1000, 1000] 1000)
 
 definition whileLoopE ::
-  "('r \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('r \<Rightarrow> ('s, 'e + 'r) tmonad) \<Rightarrow> 'r \<Rightarrow> ('s, ('e + 'r)) tmonad" where
+  "('r \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('r \<Rightarrow> ('s, 'e + 'r) tmonad) \<Rightarrow> 'r \<Rightarrow> ('s, ('e + 'r)) tmonad"
+  where
   "whileLoopE C body \<equiv>
       \<lambda>r. whileLoop (\<lambda>r s. (case r of Inr v \<Rightarrow> C v s | _ \<Rightarrow> False)) (lift body) (Inr r)"
 
 notation (output)
   whileLoopE  ("(whileLoopE (_)//  (_))" [1000, 1000] 1000)
 
-subsection "Await command"
+
+section "Combinators that have conditions with side effects"
+
+definition notM :: "('s, bool) tmonad \<Rightarrow> ('s, bool) tmonad" where
+  "notM m = do c \<leftarrow> m; return (\<not> c) od"
+
+definition whileM :: "('s, bool) tmonad \<Rightarrow> ('s, 'a) tmonad \<Rightarrow> ('s, unit) tmonad" where
+  "whileM C B \<equiv> do
+    c \<leftarrow> C;
+    whileLoop (\<lambda>c s. c) (\<lambda>_. do B; C od) c;
+    return ()
+  od"
+
+definition ifM :: "('s, bool) tmonad \<Rightarrow> ('s, 'a) tmonad \<Rightarrow> ('s, 'a) tmonad \<Rightarrow> ('s, 'a) tmonad" where
+  "ifM test t f = do
+    c \<leftarrow> test;
+    if c then t else f
+   od"
+
+definition ifME ::
+  "('a, 'b + bool) tmonad \<Rightarrow> ('a, 'b + 'c) tmonad \<Rightarrow> ('a, 'b + 'c) tmonad \<Rightarrow> ('a, 'b + 'c) tmonad"
+  where
+  "ifME test t f = doE
+    c \<leftarrow> test;
+    if c then t else f
+   odE"
+
+definition whenM :: "('s, bool) tmonad \<Rightarrow> ('s, unit) tmonad \<Rightarrow> ('s, unit) tmonad" where
+  "whenM t m = ifM t m (return ())"
+
+definition orM :: "('s, bool) tmonad \<Rightarrow> ('s, bool) tmonad \<Rightarrow> ('s, bool) tmonad" where
+  "orM a b = ifM a (return True) b"
+
+definition andM :: "('s, bool) tmonad \<Rightarrow> ('s, bool) tmonad \<Rightarrow> ('s, bool) tmonad" where
+  "andM a b = ifM a b (return False)"
+
+
+section "Await command"
 
 text \<open>@{term "Await c f"} blocks the execution until @{term "c"} is true,
       and then atomically executes @{term "f"}.\<close>
@@ -696,7 +787,7 @@ definition Await :: "('s \<Rightarrow> bool) \<Rightarrow> ('s,unit) tmonad" whe
   od"
 
 
-section "Trace monad Parallel"
+section "Parallel combinator"
 
 definition parallel :: "('s,'a) tmonad \<Rightarrow> ('s,'a) tmonad \<Rightarrow> ('s,'a) tmonad" where
   "parallel f g = (\<lambda>s. {(xs, rv). \<exists>f_steps. length f_steps = length xs

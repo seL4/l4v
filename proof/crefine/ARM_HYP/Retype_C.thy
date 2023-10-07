@@ -5365,7 +5365,7 @@ lemma ptr_retyp_fromzeroVCPU:
   assumes cover: "range_cover p vcpu_bits vcpu_bits 1"
   assumes al: "is_aligned p vcpu_bits"
   assumes sr: "(\<sigma>, \<sigma>') \<in> rf_sr"
-  shows "(\<sigma>\<lparr>ksPSpace := ksPSpace \<sigma>(p \<mapsto> ko_vcpu)\<rparr>,
+  shows "(\<sigma>\<lparr>ksPSpace := (ksPSpace \<sigma>)(p \<mapsto> ko_vcpu)\<rparr>,
            globals_update (t_hrs_'_update (hrs_htd_update (ptr_retyp (vcpu_Ptr p)))) \<sigma>')
          \<in> rf_sr"
          (is "(\<sigma>\<lparr>ksPSpace := ?ks\<rparr>, globals_update ?gs' \<sigma>') \<in> rf_sr")
@@ -5436,8 +5436,8 @@ proof -
 
   have map_vcpus:
     "cmap_relation (map_to_vcpus (ksPSpace \<sigma>)) (cslift \<sigma>') vcpu_Ptr cvcpu_relation
-     \<Longrightarrow> cmap_relation (map_to_vcpus (ksPSpace \<sigma>)(p \<mapsto> vcpu0))
-                      (cslift \<sigma>'(vcpu_Ptr p \<mapsto> ?zeros)) vcpu_Ptr cvcpu_relation"
+     \<Longrightarrow> cmap_relation ((map_to_vcpus (ksPSpace \<sigma>))(p \<mapsto> vcpu0))
+                       ((cslift \<sigma>')(vcpu_Ptr p \<mapsto> ?zeros)) vcpu_Ptr cvcpu_relation"
     apply (erule cmap_vcpus)
     apply (simp add: vcpu0_def from_bytes_def)
     apply (simp add: typ_info_simps vcpu_C_tag_def)
@@ -5540,13 +5540,13 @@ proof -
     by (simp add: objBitsKO_def archObjSize_def vcpu_bits_def' vcpuBits_def')
 
   have rl_vcpu:
-    "(projectKO_opt \<circ>\<^sub>m (ksPSpace \<sigma>(p \<mapsto> KOArch (KOVCPU vcpu0))) :: word32 \<Rightarrow> vcpu option)
+    "(projectKO_opt \<circ>\<^sub>m ((ksPSpace \<sigma>)(p \<mapsto> KOArch (KOVCPU vcpu0))) :: word32 \<Rightarrow> vcpu option)
       = (projectKO_opt \<circ>\<^sub>m ksPSpace \<sigma>)(p \<mapsto> vcpu0)"
     by (rule ext)
        (clarsimp simp: projectKOs map_comp_def vcpu0_def split: if_split)
 
   have ctes:
-    "map_to_ctes (ksPSpace \<sigma>(p \<mapsto> KOArch (KOVCPU vcpu0))) = ctes_of \<sigma>"
+    "map_to_ctes ((ksPSpace \<sigma>)(p \<mapsto> KOArch (KOVCPU vcpu0))) = ctes_of \<sigma>"
     using pal pdst al pno
     apply (clarsimp simp: fun_upd_def)
     apply (frule (2) pspace_no_overlap_base')
@@ -5963,7 +5963,7 @@ lemma gsCNodes_update_ccorres:
 
 (* FIXME: move *)
 lemma map_to_tcbs_upd:
-  "map_to_tcbs (ksPSpace s(t \<mapsto> KOTCB tcb')) = map_to_tcbs (ksPSpace s)(t \<mapsto> tcb')"
+  "map_to_tcbs ((ksPSpace s)(t \<mapsto> KOTCB tcb')) = (map_to_tcbs (ksPSpace s))(t \<mapsto> tcb')"
   apply (rule ext)
   apply (clarsimp simp: map_comp_def projectKOs split: option.splits if_splits)
   done
@@ -8307,9 +8307,9 @@ shows  "ccorres dc xfdc
        including no_pre
        apply (wp insertNewCap_invs' insertNewCap_valid_pspace' insertNewCap_caps_overlap_reserved'
                  insertNewCap_pspace_no_overlap' insertNewCap_caps_no_overlap'' insertNewCap_descendants_range_in'
-                 insertNewCap_untypedRange hoare_vcg_all_lift insertNewCap_cte_at static_imp_wp)
+                 insertNewCap_untypedRange hoare_vcg_all_lift insertNewCap_cte_at hoare_weak_lift_imp)
          apply (wp insertNewCap_cte_wp_at_other)
-        apply (wp hoare_vcg_all_lift static_imp_wp insertNewCap_cte_at)
+        apply (wp hoare_vcg_all_lift hoare_weak_lift_imp insertNewCap_cte_at)
        apply (clarsimp simp:conj_comms |
          strengthen invs_valid_pspace' invs_pspace_aligned'
          invs_pspace_distinct')+
@@ -8343,7 +8343,7 @@ shows  "ccorres dc xfdc
                   hoare_vcg_prop createObject_gsCNodes_p createObject_cnodes_have_size)
         apply (rule hoare_vcg_conj_lift[OF createObject_capRange_helper])
          apply (wp createObject_cte_wp_at' createObject_ex_cte_cap_wp_to
-                   createObject_no_inter[where sz = sz] hoare_vcg_all_lift static_imp_wp)+
+                   createObject_no_inter[where sz = sz] hoare_vcg_all_lift hoare_weak_lift_imp)+
        apply (clarsimp simp:invs_pspace_aligned' invs_pspace_distinct' invs_valid_pspace'
          field_simps range_cover.sz conj_comms range_cover.aligned range_cover_sz'
          is_aligned_shiftl_self aligned_add_aligned[OF range_cover.aligned])

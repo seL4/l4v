@@ -470,6 +470,7 @@ checkVSpaceRoot :: Capability  -> Int -> KernelF SyscallError (PPtr PTE, ASID)
 checkVSpaceRoot vspaceCap argNo =
     case vspaceCap of
         ArchObjectCap (PageTableCap {
+                capPTType = VSRootPT_T,
                 capPTMappedAddress = Just (asid, _),
                 capPTBasePtr = vspace })
             -> return (vspace, asid)
@@ -542,8 +543,8 @@ decodeARMFrameInvocationMap cte cap vptr rightsMask attr vspaceCap = do
     let pgBits = pageBitsForSize frameSize
     case capFMappedAddress cap of
         Just (asid', vaddr') -> do
-            when (asid' /= asid) $ throw $ InvalidCapability 0
-            when (vaddr' /= vptr) $ throw $ InvalidArgument 2
+            when (asid' /= asid) $ throw $ InvalidCapability 1
+            when (vaddr' /= vptr) $ throw $ InvalidArgument 0
         Nothing -> do
             let vtop = vptr + (bit pgBits - 1)
             when (vtop > pptrUserTop) $ throw $ InvalidArgument 0

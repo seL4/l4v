@@ -160,7 +160,7 @@ lemma no_fail_spec:
 
 lemma no_fail_assertE[wp]:
   "no_fail (\<lambda>_. P) (assertE P)"
-  by (simp add: assertE_def split: if_split)
+  by (simp add: assertE_def)
 
 lemma no_fail_spec_pre:
   "\<lbrakk> no_fail (((=) s) and P') f; \<And>s. P s \<Longrightarrow> P' s \<rbrakk> \<Longrightarrow> no_fail (((=) s) and P) f"
@@ -168,7 +168,7 @@ lemma no_fail_spec_pre:
 
 lemma no_fail_whenE[wp]:
   "\<lbrakk> G \<Longrightarrow> no_fail P f \<rbrakk> \<Longrightarrow> no_fail (\<lambda>s. G \<longrightarrow> P s) (whenE G f)"
-  by (simp add: whenE_def split: if_split)
+  by (simp add: whenE_def)
 
 lemma no_fail_unlessE[wp]:
   "\<lbrakk> \<not> G \<Longrightarrow> no_fail P f \<rbrakk> \<Longrightarrow> no_fail (\<lambda>s. \<not> G \<longrightarrow> P s) (unlessE G f)"
@@ -224,5 +224,13 @@ lemma no_fail_condition:
   "\<lbrakk>no_fail Q A; no_fail R B\<rbrakk> \<Longrightarrow> no_fail (\<lambda>s. (C s \<longrightarrow> Q s) \<and> (\<not> C s \<longrightarrow> R s)) (condition C A B)"
   unfolding condition_def no_fail_def
   by clarsimp
+
+lemma no_fail_ex_lift:
+  "(\<And>x. no_fail (P x) f) \<Longrightarrow> no_fail (\<lambda>s. \<exists>x. P x s) f"
+  by (clarsimp simp: no_fail_def)
+
+lemma no_fail_grab_asm:
+  "(G \<Longrightarrow> no_fail P f) \<Longrightarrow> no_fail (\<lambda>s. G \<and> P s) f"
+  by (cases G, simp+)
 
 end

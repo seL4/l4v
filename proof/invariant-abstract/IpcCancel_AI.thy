@@ -154,7 +154,7 @@ lemma blocked_ipc_st_tcb_at_general:
      blocked_cancel_ipc st t
    \<lbrace>\<lambda>rv. st_tcb_at P t'\<rbrace>"
   apply (simp add: blocked_cancel_ipc_def)
-  apply (wp sts_st_tcb_at_cases static_imp_wp, simp+)
+  apply (wp sts_st_tcb_at_cases hoare_weak_lift_imp, simp+)
   done
 
 
@@ -163,7 +163,7 @@ lemma cancel_signal_st_tcb_at_general:
      cancel_signal t ntfn
    \<lbrace>\<lambda>rv. st_tcb_at P t'\<rbrace>"
   apply (simp add: cancel_signal_def)
-  apply (wp sts_st_tcb_at_cases ntfn_cases_weak_wp static_imp_wp)
+  apply (wp sts_st_tcb_at_cases ntfn_cases_weak_wp hoare_weak_lift_imp)
   apply simp
   done
 

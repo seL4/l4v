@@ -11,7 +11,7 @@
  * You probably don't care about this.
  *)
 theory Nondet_While_Loop_Rules_Completeness
-imports Nondet_While_Loop_Rules
+  imports Nondet_While_Loop_Rules
 begin
 
 lemma whileLoop_rule_strong_complete:
@@ -34,12 +34,14 @@ lemma valid_whileLoop_complete:
     = \<lbrace> P r \<rbrace> whileLoop C B r \<lbrace> Q \<rbrace>"
   apply (rule iffI)
    apply clarsimp
+   apply (rename_tac I)
    apply (rule_tac I=I in valid_whileLoop, auto)[1]
   apply (rule exI [where x="\<lambda>r s. \<lbrace> \<lambda>s'. s' = s \<rbrace> whileLoop C B r \<lbrace> Q \<rbrace>"])
   apply (intro conjI)
     apply (clarsimp simp: valid_def)
    apply (subst (2) valid_def)
    apply clarsimp
+   apply (rename_tac a b)
    apply (subst (asm) (2) whileLoop_unroll)
    apply (case_tac "C a b")
     apply (clarsimp simp: valid_def bind_def' Bex_def condition_def split: if_split_asm)
@@ -66,7 +68,7 @@ proof (rule iffI)
     by auto
 
   thus ?RHS
-    by (rule_tac validNF_whileLoop [where I=I and R=R], auto)
+    by - (rule validNF_whileLoop[where I=I and R=R], auto)
 next
   assume loop: "?RHS"
 
@@ -225,6 +227,10 @@ where
   | "valid_path C B [x] = (\<not> C (fst x) (snd x))"
   | "valid_path C B (x#y#xs) = ((C (fst x) (snd x) \<and> y \<in> fst (B (fst x) (snd x)) \<and> valid_path C B (y#xs)))"
 
+lemma valid_path_not_empty:
+  "valid_path C B xs \<Longrightarrow> xs \<noteq> []"
+  by clarsimp
+
 definition "shortest_path_length C B x Q \<equiv>
         (LEAST n. \<exists>l. valid_path C B l \<and> hd l = x \<and> Q (fst (last l)) (snd (last l)) \<and> length l = n)"
 
@@ -234,8 +240,7 @@ lemma shortest_path_length_same [simp]:
   apply (rule Least_equality)
    apply (rule exI [where x="[a]"])
    apply clarsimp
-  apply (case_tac "y = 0")
-   apply clarsimp
+  apply (rule Suc_leI)
   apply clarsimp
   done
 
@@ -243,9 +248,8 @@ lemma valid_path_simp:
   "valid_path C B l =
         (((\<exists>r s. l = [(r, s)] \<and> \<not> C r s) \<or>
               (\<exists>r s r' s' xs. l = (r, s)#(r', s')#xs \<and> C r s \<and> (r', s') \<in> fst (B r s) \<and> valid_path C B ((r', s')#xs))))"
-  apply (case_tac l)
-   apply clarsimp
-  apply (case_tac list)
+  apply (cases l rule: remdups_adj.cases)
+    apply clarsimp
    apply clarsimp
   apply clarsimp
   done
@@ -260,15 +264,23 @@ proof -
     assume y: "Q r' s'"
     have ?thesis
       using x y
-      apply (induct rule: in_whileLoop_induct)
-       apply (rule_tac x="[(r,s)]" in exI)
-       apply clarsimp
-      apply clarsimp
-      apply (case_tac l)
-       apply clarsimp
-      apply (rule_tac x="(r, s)#l" in exI)
-      apply clarsimp
-      done
+    proof (induct rule: in_whileLoop_induct)
+      case (1 r s)
+      then show ?case
+        apply -
+        apply (rule exI[where x="[(r,s)]"])
+        apply clarsimp
+        done
+    next
+      case (2 r s r' s' r'' s'')
+      then show ?case
+        apply clarsimp
+        apply (frule valid_path_not_empty)
+        apply (rename_tac l)
+        apply (rule_tac x="(r, s)#l" in exI)
+        apply (clarsimp simp: neq_Nil_conv)
+        done
+    qed
   }
 
   thus ?thesis
@@ -297,27 +309,33 @@ lemma shortest_path_is_shortest:
   done
 
 lemma valid_path_implies_exs_valid_whileLoop:
-    "valid_path C B l \<Longrightarrow> \<lbrace> \<lambda>s. s = snd (hd l) \<rbrace> whileLoop C B (fst (hd l)) \<exists>\<lbrace> \<lambda>r s. (r, s) = last l  \<rbrace>"
-  apply (induct l)
-   apply clarsimp
-  apply clarsimp
-  apply rule
-   apply clarsimp
-   apply (subst whileLoop_unroll)
-   apply (clarsimp simp: condition_def bind_def' exs_valid_def return_def)
-  apply clarsimp
-  apply (subst whileLoop_unroll)
-  apply (clarsimp simp: condition_def bind_def' exs_valid_def return_def)
-  apply rule
-   apply (clarsimp split: prod.splits)
-   apply (case_tac l)
+  "valid_path C B l \<Longrightarrow> \<lbrace> \<lambda>s. s = snd (hd l) \<rbrace> whileLoop C B (fst (hd l)) \<exists>\<lbrace> \<lambda>r s. (r, s) = last l  \<rbrace>"
+proof (induct l)
+  case Nil
+  then show ?case
+    by clarsimp
+next
+  case (Cons a l)
+  then show ?case
     apply clarsimp
-   apply (clarsimp split del: if_split)
-   apply (erule bexI [rotated])
-   apply clarsimp
-  apply clarsimp
-  apply (case_tac l, auto)
-  done
+    apply rule
+     apply clarsimp
+     apply (subst whileLoop_unroll)
+     apply (clarsimp simp: condition_def bind_def' exs_valid_def return_def)
+    apply clarsimp
+    apply (subst whileLoop_unroll)
+    apply (clarsimp simp: condition_def bind_def' exs_valid_def return_def)
+    apply rule
+     apply (clarsimp split: prod.splits)
+     apply (cases l)
+      apply clarsimp
+     apply (clarsimp split del: if_split)
+     apply (erule bexI[rotated])
+     apply clarsimp
+    apply clarsimp
+    apply (cases l; clarsimp)
+    done
+qed
 
 lemma shortest_path_gets_shorter:
   "\<lbrakk> \<lbrace> \<lambda>s'. s' = s \<rbrace> whileLoop C B r \<exists>\<lbrace> Q \<rbrace>;
@@ -327,21 +345,22 @@ lemma shortest_path_gets_shorter:
                  \<and> \<lbrace> \<lambda>s. s = s' \<rbrace> whileLoop C B r' \<exists>\<lbrace> Q \<rbrace>"
   apply (drule shortest_path_exists)
   apply clarsimp
-  apply (case_tac l)
+  apply (rename_tac l)
+  apply (case_tac l rule: remdups_adj.cases)
+    apply clarsimp
    apply clarsimp
-  apply (case_tac list)
+  apply (rule bexI[rotated])
    apply clarsimp
-  apply (rule_tac x="aa" in bexI)
-   apply clarify
-   apply (simp only: valid_path.simps, clarify)
-   apply (frule shortest_path_is_shortest [where Q=Q])
-    apply simp
-   apply clarsimp
-   apply (drule valid_path_implies_exs_valid_whileLoop)
-   apply (clarsimp simp: exs_valid_def)
-   apply (erule bexI [rotated])
-   apply (clarsimp split: if_split_asm)
+   apply assumption
+  apply clarify
+  apply (simp only: valid_path.simps, clarify)
+  apply (frule shortest_path_is_shortest [where Q=Q])
+   apply simp
   apply clarsimp
+  apply (drule valid_path_implies_exs_valid_whileLoop)
+  apply (clarsimp simp: exs_valid_def)
+  apply (erule bexI [rotated])
+  apply (clarsimp split: if_split_asm)
   done
 
 lemma exs_valid_whileLoop_complete:

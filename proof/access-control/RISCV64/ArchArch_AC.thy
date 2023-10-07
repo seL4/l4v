@@ -541,7 +541,7 @@ lemma perform_pt_inv_unmap_pas_refined:
 lemma vs_lookup_PageTablePTE:
   "\<lbrakk> vs_lookup_table level asid vref s' = Some (lvl', pt);
      pspace_aligned s; valid_vspace_objs s; valid_asid_table s;
-     invalid_pte_at p s; ptes_of s' = ptes_of s (p \<mapsto> pte); is_PageTablePTE pte;
+     invalid_pte_at p s; ptes_of s' = (ptes_of s)(p \<mapsto> pte); is_PageTablePTE pte;
      asid_pools_of s' = asid_pools_of s; asid_table s' = asid_table s;
      vref \<in> user_region;
      pts_of s (the (pte_ref pte)) = Some empty_pt; pt \<noteq> pptr_from_pte pte \<rbrakk>
@@ -584,7 +584,7 @@ lemma vs_lookup_PageTablePTE:
 lemma vs_lookup_PageTablePTE':
   "\<lbrakk> vs_lookup_table level asid vref s = Some (lvl', pt);
      pspace_aligned s; valid_vspace_objs s; valid_asid_table s;
-     invalid_pte_at p s; ptes_of s' = ptes_of s (p \<mapsto> pte); is_PageTablePTE pte;
+     invalid_pte_at p s; ptes_of s' = (ptes_of s)(p \<mapsto> pte); is_PageTablePTE pte;
      asid_pools_of s' = asid_pools_of s; asid_table s' = asid_table s; vref \<in> user_region  \<rbrakk>
      \<Longrightarrow> \<exists>level' \<ge> level. vs_lookup_table level' asid vref s' = Some (lvl', pt)"
   apply (induct level arbitrary: lvl' pt rule: bit0.from_top_full_induct[where y=max_pt_level])
@@ -915,7 +915,7 @@ lemma unmap_page_table_respects:
    unmap_page_table asid vaddr pt
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: unmap_page_table_def sfence_def)
-  apply (wpsimp wp: pt_lookup_from_level_is_subject dmo_mol_respects hoare_vcg_conj_liftE
+  apply (wpsimp wp: pt_lookup_from_level_is_subject dmo_mol_respects hoare_vcg_conj_liftE_weaker
                     store_pte_respects pt_lookup_from_level_wrp[where Q="\<lambda>_. integrity aag X st"]
          | wp (once) hoare_drop_imps hoare_vcg_E_elim)+
   apply (intro conjI; clarsimp)
@@ -1237,7 +1237,7 @@ lemma perform_asid_control_invocation_respects:
   apply (wpc, simp)
    apply (wpsimp wp: set_cap_integrity_autarch cap_insert_integrity_autarch
                      asid_table_entry_update_integrity retype_region_integrity[where sz=12]
-                     static_imp_wp delete_objects_valid_vspace_objs delete_objects_valid_arch_state)
+                     hoare_weak_lift_imp delete_objects_valid_vspace_objs delete_objects_valid_arch_state)
   apply (clarsimp simp: authorised_asid_control_inv_def ptr_range_def add.commute range_cover_def
                         obj_bits_api_def default_arch_object_def pageBits_def word_bits_def)
   apply (subst is_aligned_neg_mask_eq[THEN sym], assumption)
@@ -1318,9 +1318,9 @@ lemma perform_asid_control_invocation_pas_refined:
   apply (simp add: perform_asid_control_invocation_def )
   apply wpc
    apply (rule pas_refined_asid_control_helper hoare_seq_ext hoare_K_bind)+
-         apply (wp cap_insert_pas_refined' static_imp_wp | simp)+
+         apply (wp cap_insert_pas_refined' hoare_weak_lift_imp | simp)+
       apply ((wp retype_region_pas_refined'[where sz=pageBits]
-                 hoare_vcg_ex_lift hoare_vcg_all_lift static_imp_wp hoare_wp_combs hoare_drop_imp
+                 hoare_vcg_ex_lift hoare_vcg_all_lift hoare_weak_lift_imp hoare_wp_combs hoare_drop_imp
                  retype_region_invs_extras(1)[where sz = pageBits]
                  retype_region_invs_extras(4)[where sz = pageBits]
                  retype_region_invs_extras(6)[where sz = pageBits]
@@ -1329,7 +1329,7 @@ lemma perform_asid_control_invocation_pas_refined:
                  max_index_upd_invs_simple max_index_upd_caps_overlap_reserved
                  hoare_vcg_ex_lift set_cap_cte_wp_at hoare_vcg_disj_lift set_free_index_valid_pspace
                  set_cap_descendants_range_in set_cap_no_overlap get_cap_wp set_cap_caps_no_overlap
-                 hoare_vcg_all_lift static_imp_wp retype_region_invs_extras
+                 hoare_vcg_all_lift hoare_weak_lift_imp retype_region_invs_extras
                  set_cap_pas_refined_not_transferable arch_update_cap_valid_mdb
              | simp add: do_machine_op_def region_in_kernel_window_def cte_wp_at_neg2)+)[3]
    apply (rename_tac frame slot parent base )

@@ -1799,7 +1799,7 @@ lemma field_names_same:
 
 lemma lift_t_heap_update:
   "d,g \<Turnstile>\<^sub>t p \<Longrightarrow> lift_t g (heap_update p v h,d) =
-      (lift_t g (h,d) (p \<mapsto> (v::'a::mem_type)))"
+      ((lift_t g (h,d)) (p \<mapsto> (v::'a::mem_type)))"
   apply(subst lift_t_sub_field_update)
     apply fast
    apply(simp add: sub_typ_proper_def)

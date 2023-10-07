@@ -376,7 +376,7 @@ lemma dmo_getActive_IRQ_reads_respect_scheduler[Noninterference_assms]:
 
 lemma integrity_asids_update_reference_state[Noninterference_assms]:
   "is_subject aag t
-   \<Longrightarrow> integrity_asids aag {pasSubject aag} x asid s (s\<lparr>kheap := kheap s(t \<mapsto> blah)\<rparr>)"
+   \<Longrightarrow> integrity_asids aag {pasSubject aag} x asid s (s\<lparr>kheap := (kheap s)(t \<mapsto> blah)\<rparr>)"
   by clarsimp
 
 lemma getActiveIRQ_no_non_kernel_IRQs[Noninterference_assms]:

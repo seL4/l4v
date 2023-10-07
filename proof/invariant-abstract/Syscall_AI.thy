@@ -323,7 +323,7 @@ lemma (in Systemcall_AI_Pre) handle_fault_reply_cte_wp_at:
       done
     have NC:
       "\<And>p' s tcb P nc. get_tcb p' s = Some tcb
-      \<Longrightarrow> cte_wp_at P p (s\<lparr>kheap := kheap s(p' \<mapsto> TCB (tcb\<lparr>tcb_arch := arch_tcb_context_set nc (tcb_arch tcb)\<rparr>))\<rparr>)
+      \<Longrightarrow> cte_wp_at P p (s\<lparr>kheap := (kheap s)(p' \<mapsto> TCB (tcb\<lparr>tcb_arch := arch_tcb_context_set nc (tcb_arch tcb)\<rparr>))\<rparr>)
           = cte_wp_at P p s"
       apply (drule_tac nc=nc in SC)
       apply (drule_tac P=P and p=p in cte_wp_at_after_update)
@@ -938,11 +938,8 @@ lemma lcs_ex_cap_to2[wp]:
    apply (wp lsft_ex_cte_cap_to | simp)+
   done
 
-lemma hoare_vcg_const_imp_lift_E[wp]:
-  "\<lbrace>P\<rbrace> f -, \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s. F \<longrightarrow> P s\<rbrace> f -, \<lbrace>\<lambda>rv s. F \<longrightarrow> Q rv s\<rbrace>"
-  apply (cases F) apply auto
-  apply wp
-  done
+(* FIXME AARCH64: this should really not be wp *)
+declare hoare_vcg_const_imp_lift_E[wp]
 
 context Syscall_AI begin
 

@@ -1295,7 +1295,7 @@ lemma deleteASID_ccorres:
 
 lemma setObject_ccorres_lemma:
   fixes val :: "'a :: pspace_storable" shows
-  "\<lbrakk> \<And>s. \<Gamma> \<turnstile> (Q s) c {s'. (s \<lparr> ksPSpace := ksPSpace s (ptr \<mapsto> injectKO val) \<rparr>, s') \<in> rf_sr},{};
+  "\<lbrakk> \<And>s. \<Gamma> \<turnstile> (Q s) c {s'. (s \<lparr> ksPSpace := (ksPSpace s)(ptr \<mapsto> injectKO val) \<rparr>, s') \<in> rf_sr},{};
      \<And>s s' val (val' :: 'a). \<lbrakk> ko_at' val' ptr s; (s, s') \<in> rf_sr \<rbrakk>
            \<Longrightarrow> s' \<in> Q s;
      \<And>val :: 'a. updateObject val = updateObject_default val;
@@ -1707,7 +1707,7 @@ lemma option_to_ctcb_ptr_not_0:
   done
 
 lemma update_tcb_map_to_tcb:
-  "map_to_tcbs (ksPSpace s(p \<mapsto> KOTCB tcb))
+  "map_to_tcbs ((ksPSpace s)(p \<mapsto> KOTCB tcb))
              = (map_to_tcbs (ksPSpace s))(p \<mapsto> tcb)"
   by (rule ext, clarsimp simp: projectKOs map_comp_def split: if_split)
 
@@ -1747,7 +1747,7 @@ lemma sched_queue_relation_shift:
 
 lemma cendpoint_relation_udpate_arch:
   "\<lbrakk> cslift x p = Some tcb ; cendpoint_relation (cslift x) v v' \<rbrakk>
-    \<Longrightarrow> cendpoint_relation (cslift x(p \<mapsto> tcbArch_C_update f tcb)) v v'"
+    \<Longrightarrow> cendpoint_relation ((cslift x)(p \<mapsto> tcbArch_C_update f tcb)) v v'"
   apply (clarsimp simp: cendpoint_relation_def Let_def tcb_queue_relation'_def
                   split: endpoint.splits)
    apply (subst ep_queue_relation_shift2; simp add: fun_eq_iff)
@@ -1758,7 +1758,7 @@ lemma cendpoint_relation_udpate_arch:
 
 lemma cnotification_relation_udpate_arch:
   "\<lbrakk> cslift x p = Some tcb ;  cnotification_relation (cslift x) v v' \<rbrakk>
-    \<Longrightarrow>  cnotification_relation (cslift x(p \<mapsto> tcbArch_C_update f tcb)) v v'"
+    \<Longrightarrow>  cnotification_relation ((cslift x)(p \<mapsto> tcbArch_C_update f tcb)) v v'"
   apply (clarsimp simp: cnotification_relation_def Let_def tcb_queue_relation'_def
                   split: notification.splits ntfn.splits)
   apply (subst ep_queue_relation_shift2; simp add: fun_eq_iff)
@@ -1799,7 +1799,7 @@ lemma archThreadSet_tcbVCPU_Basic_ccorres:
 
 (* MOVE *)
 lemma update_vcpu_map_to_vcpu:
-  "map_to_vcpus (ksPSpace s(p \<mapsto> KOArch (KOVCPU vcpu)))
+  "map_to_vcpus ((ksPSpace s)(p \<mapsto> KOArch (KOVCPU vcpu)))
              = (map_to_vcpus (ksPSpace s))(p \<mapsto> vcpu)"
   by (rule ext, clarsimp simp: projectKOs map_comp_def split: if_split)
 

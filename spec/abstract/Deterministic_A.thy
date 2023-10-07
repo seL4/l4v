@@ -244,7 +244,7 @@ definition set_eobject :: "obj_ref \<Rightarrow> etcb \<Rightarrow> unit det_ext
   where
  "set_eobject ptr obj \<equiv>
   do es \<leftarrow> get;
-    ekh \<leftarrow> return $ ekheap es(ptr \<mapsto> obj);
+    ekh \<leftarrow> return $ (ekheap es)(ptr \<mapsto> obj);
     put (es\<lparr>ekheap := ekh\<rparr>)
   od"
 

@@ -31,7 +31,7 @@ lemma send_signal_caps_of_state[wp]:
   "send_signal ntfnptr badge \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>"
   apply (clarsimp simp: send_signal_def)
   apply (rule hoare_seq_ext[OF _ get_simple_ko_sp])
-   apply (wpsimp wp: dxo_wp_weak cancel_ipc_receive_blocked_caps_of_state gts_wp static_imp_wp
+   apply (wpsimp wp: dxo_wp_weak cancel_ipc_receive_blocked_caps_of_state gts_wp hoare_weak_lift_imp
                simp: update_waiting_ntfn_def)
   apply (clarsimp simp: fun_upd_def[symmetric] st_tcb_def2)
   done
@@ -178,8 +178,8 @@ lemma send_upd_ctxintegrity:
      integrity aag X st s; st_tcb_at ((=) Running) thread s;
      get_tcb thread st = Some tcb; get_tcb thread s = Some tcb'\<rbrakk>
      \<Longrightarrow> integrity aag X st
-                   (s\<lparr>kheap := kheap s(thread \<mapsto>
-                                       TCB (tcb'\<lparr>tcb_arch := arch_tcb_context_set c' (tcb_arch tcb')\<rparr>))\<rparr>)"
+                   (s\<lparr>kheap := (kheap s)
+                               (thread \<mapsto> TCB (tcb'\<lparr>tcb_arch := arch_tcb_context_set c' (tcb_arch tcb')\<rparr>))\<rparr>)"
   apply (clarsimp simp: integrity_def tcb_states_of_state_preserved st_tcb_def2)
   apply (rule conjI)
    prefer 2
@@ -423,7 +423,7 @@ lemma send_signal_respects:
    apply (rule hoare_pre)
     apply (wp set_notification_respects[where auth=Notify]
                  as_user_set_register_respects_indirect[where ntfnptr=ntfnptr]
-                 set_thread_state_integrity' sts_st_tcb_at' static_imp_wp
+                 set_thread_state_integrity' sts_st_tcb_at' hoare_weak_lift_imp
                  cancel_ipc_receive_blocked_respects[where ntfnptr=ntfnptr]
                  gts_wp
                | wpc | simp)+
@@ -451,7 +451,7 @@ lemma send_signal_respects:
                sts_st_tcb_at' as_user_set_register_respects
                set_thread_state_pas_refined set_simple_ko_pas_refined
                set_thread_state_respects_in_signalling [where ntfnptr = ntfnptr]
-               set_ntfn_valid_objs_at hoare_vcg_disj_lift static_imp_wp
+               set_ntfn_valid_objs_at hoare_vcg_disj_lift hoare_weak_lift_imp
           | wpc
           | simp add: update_waiting_ntfn_def)+
   apply clarsimp
@@ -756,10 +756,10 @@ lemma transfer_caps_loop_presM_extended:
   apply (clarsimp simp add: Let_def split_def whenE_def
                       cong: if_cong list.case_cong split del: if_split)
   apply (rule hoare_pre)
-   apply (wp eb hoare_vcg_const_imp_lift hoare_vcg_const_Ball_lift static_imp_wp
+   apply (wp eb hoare_vcg_const_imp_lift hoare_vcg_const_Ball_lift hoare_weak_lift_imp
           | assumption | simp split del: if_split)+
       apply (rule cap_insert_assume_null)
-      apply (wp x hoare_vcg_const_Ball_lift cap_insert_cte_wp_at static_imp_wp)+
+      apply (wp x hoare_vcg_const_Ball_lift cap_insert_cte_wp_at hoare_weak_lift_imp)+
     apply (rule hoare_vcg_conj_liftE_R)
      apply (rule derive_cap_is_derived_foo')
     apply (rule_tac Q' ="\<lambda>cap' s. (vo \<longrightarrow> cap'\<noteq> NullCap \<longrightarrow>
@@ -1061,7 +1061,7 @@ lemma send_ipc_pas_refined:
                                       (pasObjectAbs aag x21, Reply, pasSubject aag) \<in> pasPolicy aag)"
                     in hoare_strengthen_post[rotated])
         apply simp
-       apply (wp set_thread_state_pas_refined do_ipc_transfer_pas_refined static_imp_wp gts_wp
+       apply (wp set_thread_state_pas_refined do_ipc_transfer_pas_refined hoare_weak_lift_imp gts_wp
               | wpc
               | simp add: hoare_if_r_and)+
    apply (wp hoare_vcg_all_lift hoare_imp_lift_something | simp add: st_tcb_at_tcb_states_of_state_eq)+
@@ -1206,7 +1206,7 @@ lemma receive_ipc_base_pas_refined:
                                   aag_has_auth_to aag Reply (hd list))"
                      in hoare_strengthen_post[rotated])
          apply (fastforce simp: pas_refined_refl)
-        apply (wp static_imp_wp do_ipc_transfer_pas_refined set_simple_ko_pas_refined
+        apply (wp hoare_weak_lift_imp do_ipc_transfer_pas_refined set_simple_ko_pas_refined
                   set_thread_state_pas_refined get_simple_ko_wp hoare_vcg_all_lift
                   hoare_vcg_imp_lift [OF set_simple_ko_get_tcb, unfolded disj_not1]
                | wpc
@@ -1365,7 +1365,7 @@ lemma do_normal_transfer_send_integrity_autarch:
   by (wpsimp wp: as_user_integrity_autarch set_message_info_integrity_autarch
                  copy_mrs_pas_refined copy_mrs_integrity_autarch transfer_caps_integrity_autarch
                  lookup_extra_caps_authorised lookup_extra_caps_length get_mi_length get_mi_valid'
-                 static_imp_wp hoare_vcg_conj_lift hoare_vcg_ball_lift lec_valid_cap')
+                 hoare_weak_lift_imp hoare_vcg_conj_lift hoare_vcg_ball_lift lec_valid_cap')
 
 
 crunch integrity_autarch: setup_caller_cap "integrity aag X st"
@@ -1742,7 +1742,7 @@ locale Ipc_AC_2 = Ipc_AC_1 +
   and auth_ipc_buffers_kheap_update:
     "\<lbrakk> x \<in> auth_ipc_buffers st thread; kheap st thread = Some (TCB tcb);
        kheap s thread = Some (TCB tcb'); tcb_ipcframe tcb = tcb_ipcframe tcb' \<rbrakk>
-       \<Longrightarrow> x \<in> auth_ipc_buffers (s\<lparr>kheap := kheap s(thread \<mapsto> TCB tcb)\<rparr>) thread"
+       \<Longrightarrow> x \<in> auth_ipc_buffers (s\<lparr>kheap := (kheap s)(thread \<mapsto> TCB tcb)\<rparr>) thread"
   and auth_ipc_buffers_machine_state_update[simp]:
     "auth_ipc_buffers (machine_state_update f s) = auth_ipc_buffers (s :: det_ext state)"
   and empty_slot_extended_list_integ_lift_in_ipc:
@@ -2365,7 +2365,7 @@ lemma send_ipc_integrity_autarch:
     apply (fastforce dest!: integrity_tcb_in_ipc_final elim!: integrity_trans)
    apply (wp setup_caller_cap_respects_in_ipc_reply
              set_thread_state_respects_in_ipc_autarch[where param_b = Inactive]
-             hoare_vcg_if_lift static_imp_wp possible_switch_to_respects_in_ipc_autarch
+             hoare_vcg_if_lift hoare_weak_lift_imp possible_switch_to_respects_in_ipc_autarch
              set_thread_state_running_respects_in_ipc do_ipc_transfer_respects_in_ipc thread_get_inv
              set_endpoint_integrity_in_ipc
           | wpc

@@ -69,7 +69,7 @@ abbreviation(input)
   "\<bottom>\<bottom>\<bottom> \<equiv> \<lambda>_ _ _. False"
 
 text \<open>
-  Test whether the enironment steps in @{text tr} satisfy the rely condition @{text R},
+  Test whether the environment steps in @{text tr} satisfy the rely condition @{text R},
   assuming that @{text s0s} was the initial state before the first step in the trace.\<close>
 definition rely_cond :: "'s rg_pred \<Rightarrow> 's \<Rightarrow> (tmid \<times> 's) list \<Rightarrow> bool" where
   "rely_cond R s0s tr = (\<forall>(ident, s0, s) \<in> trace_steps (rev tr) s0s. ident = Env \<longrightarrow> R s0 s)"
@@ -234,6 +234,14 @@ lemma last_st_tr_Nil[simp]:
 lemma last_st_tr_Cons[simp]:
   "last_st_tr (x # xs) s = snd x"
   by (simp add: last_st_tr_def)
+
+lemma no_trace_last_st_tr:
+  "\<lbrakk>no_trace f; (tr, res) \<in> f s\<rbrakk> \<Longrightarrow> last_st_tr tr s0 = s0"
+  by (fastforce simp: no_trace_def)
+
+lemma no_trace_rely_cond:
+  "\<lbrakk>no_trace f; (tr, res) \<in> f s\<rbrakk> \<Longrightarrow> rely_cond R s0 tr"
+  by (fastforce simp: no_trace_def rely_cond_def)
 
 lemma bind_twp[wp_split]:
   "\<lbrakk> \<And>r. \<lbrace>Q' r\<rbrace>,\<lbrace>R\<rbrace> g r \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q'\<rbrace> \<rbrakk>
@@ -532,11 +540,19 @@ lemma no_trace_prefix_closed:
   "no_trace f \<Longrightarrow> prefix_closed f"
   by (auto simp add: prefix_closed_def dest: no_trace_emp)
 
+lemma validI_valid_no_trace_eq:
+  "no_trace f \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace> = (\<forall>s0. \<lbrace>P s0\<rbrace> f \<lbrace>\<lambda>v. Q v s0\<rbrace>)"
+  apply (rule iffI)
+   apply (fastforce simp: rely_def validI_def valid_def mres_def
+                    dest: no_trace_emp)
+  apply (clarsimp simp: rely_def validI_def valid_def mres_def no_trace_prefix_closed)
+  apply (fastforce simp: eq_snd_iff dest: no_trace_emp)
+  done
+
 lemma valid_validI_wp[wp_comb]:
   "\<lbrakk>no_trace f; \<And>s0. \<lbrace>P s0\<rbrace> f \<lbrace>\<lambda>v. Q v s0 \<rbrace>\<rbrakk>
    \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
-  by (fastforce simp: rely_def validI_def valid_def mres_def no_trace_prefix_closed dest: no_trace_emp
-    elim: image_eqI[rotated])
+  by (clarsimp simp: validI_valid_no_trace_eq)
 
 
 lemma env_steps_twp[wp]:
@@ -724,5 +740,22 @@ lemma repeat_prefix_closed[intro!]:
   apply (induct_tac n; simp)
   apply (auto intro: prefix_closed_bind)
   done
+
+lemma rely_cond_True[simp]:
+  "rely_cond \<top>\<top> s0 tr = True"
+  by (clarsimp simp: rely_cond_def)
+
+lemma guar_cond_True[simp]:
+  "guar_cond \<top>\<top> s0 tr = True"
+  by (clarsimp simp: guar_cond_def)
+
+lemma validI_valid_wp:
+  "\<lbrakk>\<lbrace>P\<rbrace>,\<lbrace>\<top>\<top>\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv _ s. Q rv s\<rbrace>\<rbrakk>
+   \<Longrightarrow> \<lbrace>P s0\<rbrace> f \<lbrace>Q\<rbrace>"
+  by (auto simp: rely_def validI_def valid_def mres_def)
+
+lemma validI_triv_valid_eq:
+  "prefix_closed f \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>\<top>\<top>\<rbrace> f \<lbrace>\<top>\<top>\<rbrace>,\<lbrace>\<lambda>rv _ s. Q rv s\<rbrace> = (\<forall>s0. \<lbrace>\<lambda>s. P s0 s\<rbrace> f \<lbrace>Q\<rbrace>)"
+  by (fastforce simp: rely_def validI_def valid_def mres_def image_def)
 
 end

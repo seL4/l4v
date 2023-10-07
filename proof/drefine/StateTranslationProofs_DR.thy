@@ -66,7 +66,7 @@ abbreviation
 "update_tcb_boundntfn ntfn_opt tcb \<equiv> tcb \<lparr>tcb_bound_notification := ntfn_opt\<rparr>"
 
 abbreviation
-"dupdate_cdl_object ptr obj s \<equiv>  cdl_objects_update (\<lambda>_. cdl_objects s(ptr \<mapsto> obj)) s"
+"dupdate_cdl_object ptr obj s \<equiv>  cdl_objects_update (\<lambda>_. (cdl_objects s)(ptr \<mapsto> obj)) s"
 
 abbreviation
 "dupdate_tcb_intent intent tcb\<equiv> tcb \<lparr>cdl_tcb_intent := intent\<rparr>"

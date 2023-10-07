@@ -2770,8 +2770,8 @@ lemma cpspace_relation_ep_update_an_ep:
   and     pal: "pspace_aligned' s" "pspace_distinct' s"
   and  others: "\<And>epptr' ep'. \<lbrakk> ko_at' ep' epptr' s; epptr' \<noteq> epptr; ep' \<noteq> IdleEP \<rbrakk>
                                  \<Longrightarrow> set (epQueue ep') \<inter> (ctcb_ptr_to_tcb_ptr ` S) = {}"
-  shows "cmap_relation (map_to_eps (ksPSpace s(epptr \<mapsto> KOEndpoint ep')))
-           (cslift t(Ptr epptr \<mapsto> endpoint)) Ptr (cendpoint_relation mp')"
+  shows "cmap_relation (map_to_eps ((ksPSpace s)(epptr \<mapsto> KOEndpoint ep')))
+           ((cslift t)(Ptr epptr \<mapsto> endpoint)) Ptr (cendpoint_relation mp')"
   using cp koat pal rel unfolding cmap_relation_def
   apply -
   apply (clarsimp elim!: obj_atE' simp: map_comp_update projectKO_opts_defs)
@@ -2793,8 +2793,8 @@ lemma cpspace_relation_ep_update_ep:
   and      cp: "cmap_relation (map_to_eps (ksPSpace s)) (cslift t) Ptr (cendpoint_relation mp)"
   and     rel: "cendpoint_relation mp' ep' endpoint"
   and    mpeq: "(mp' |` (- (tcb_ptr_to_ctcb_ptr ` qs))) = (mp |` (- (tcb_ptr_to_ctcb_ptr ` qs)))"
-  shows "cmap_relation (map_to_eps (ksPSpace s(epptr \<mapsto> KOEndpoint ep')))
-           (cslift t(Ptr epptr \<mapsto> endpoint)) Ptr (cendpoint_relation mp')"
+  shows "cmap_relation (map_to_eps ((ksPSpace s)(epptr \<mapsto> KOEndpoint ep')))
+           ((cslift t)(Ptr epptr \<mapsto> endpoint)) Ptr (cendpoint_relation mp')"
   using invs
   apply (intro cpspace_relation_ep_update_an_ep[OF koat cp rel mpeq])
     apply clarsimp+
@@ -2806,15 +2806,15 @@ lemma cpspace_relation_ep_update_ep':
   fixes ep :: "endpoint" and ep' :: "endpoint"
     and epptr :: "machine_word" and s :: "kernel_state"
   defines "qs \<equiv> if (isSendEP ep' \<or> isRecvEP ep') then set (epQueue ep') else {}"
-  defines "s' \<equiv> s\<lparr>ksPSpace := ksPSpace s(epptr \<mapsto> KOEndpoint ep')\<rparr>"
+  defines "s' \<equiv> s\<lparr>ksPSpace := (ksPSpace s)(epptr \<mapsto> KOEndpoint ep')\<rparr>"
   assumes koat: "ko_at' ep epptr s"
   and       vp: "valid_pspace' s"
   and      cp: "cmap_relation (map_to_eps (ksPSpace s)) (cslift t) Ptr (cendpoint_relation mp)"
   and      srs: "sym_refs (state_refs_of' s')"
   and     rel: "cendpoint_relation mp' ep' endpoint"
   and    mpeq: "(mp' |` (- (tcb_ptr_to_ctcb_ptr ` qs))) = (mp |` (- (tcb_ptr_to_ctcb_ptr ` qs)))"
-  shows "cmap_relation (map_to_eps (ksPSpace s(epptr \<mapsto> KOEndpoint ep')))
-           (cslift t(Ptr epptr \<mapsto> endpoint)) Ptr (cendpoint_relation mp')"
+  shows "cmap_relation (map_to_eps ((ksPSpace s)(epptr \<mapsto> KOEndpoint ep')))
+           ((cslift t)(Ptr epptr \<mapsto> endpoint)) Ptr (cendpoint_relation mp')"
 proof -
   from koat have koat': "ko_at' ep' epptr s'"
     by (clarsimp simp: obj_at'_def s'_def objBitsKO_def ps_clear_def projectKOs)

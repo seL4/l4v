@@ -13,6 +13,14 @@ theory ArchVSpace_AI
 imports VSpacePre_AI
 begin
 
+context Arch_p_asid_table_update_eq begin (* FIXME AARCh64: move to ArchInvariants_AI *)
+
+lemma valid_asid_map_upd[simp]:
+  "valid_asid_map (f s) = valid_asid_map s"
+  by (simp add: valid_asid_map_def)
+
+end
+
 context Arch begin global_naming AARCH64
 
 sublocale
@@ -182,7 +190,7 @@ lemma asid_high_bits_shl:
 lemma valid_asid_map_unmap:
   "valid_asid_map s \<and> is_aligned base asid_low_bits \<longrightarrow>
    valid_asid_map(s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := (asid_table s)(asid_high_bits_of base := None)\<rparr>\<rparr>)"
-  by (clarsimp simp: valid_asid_map_def)
+  by (clarsimp simp: valid_asid_map_def entry_for_asid_def obind_None_eq pool_for_asid_def)
 
 lemma asid_low_bits_word_bits:
   "asid_low_bits < word_bits"
@@ -242,14 +250,14 @@ crunches vgic_update_lr, vcpu_write_reg, vcpu_save_reg, vcpu_disable, vcpu_resto
   (ignore: vcpu_update simp: vcpu_update_def valid_vcpu_def wp: crunch_wps)
 
 lemma set_vcpu_wp:
-  "\<lbrace>\<lambda>s. vcpu_at p s \<longrightarrow> Q (s\<lparr>kheap := kheap s(p \<mapsto> (ArchObj (VCPU vcpu))) \<rparr>) \<rbrace> set_vcpu p vcpu \<lbrace>\<lambda>_. Q\<rbrace>"
+  "\<lbrace>\<lambda>s. vcpu_at p s \<longrightarrow> Q (s\<lparr>kheap := (kheap s)(p \<mapsto> (ArchObj (VCPU vcpu))) \<rparr>) \<rbrace> set_vcpu p vcpu \<lbrace>\<lambda>_. Q\<rbrace>"
   unfolding set_vcpu_def
   apply (wp set_object_wp_strong)
   apply (clarsimp simp: obj_at_def split: kernel_object.splits arch_kernel_obj.splits)
   done
 
 lemma set_vcpu_vcpus_of[wp]:
-  "\<lbrace>\<lambda>s. vcpus_of s p \<noteq> None \<longrightarrow> P (vcpus_of s (p \<mapsto> vcpu)) \<rbrace> set_vcpu p vcpu \<lbrace>\<lambda>_ s. P (vcpus_of s)\<rbrace>"
+  "\<lbrace>\<lambda>s. vcpus_of s p \<noteq> None \<longrightarrow> P ((vcpus_of s)(p \<mapsto> vcpu)) \<rbrace> set_vcpu p vcpu \<lbrace>\<lambda>_ s. P (vcpus_of s)\<rbrace>"
   by (wp set_vcpu_wp) (clarsimp simp: in_omonad obj_at_def)
 
 lemma get_vcpu_wp:
@@ -672,8 +680,8 @@ lemma vmid_for_asid_upd_eq:
    \<Longrightarrow> (\<lambda>asid'. vmid_for_asid_2
                   asid'
                   (asid_table s)
-                  (asid_pools_of s(pool_ptr \<mapsto> ap(asid_low_bits_of asid \<mapsto>
-                                                  ASIDPoolVSpace vmid vsp))))
+                  ((asid_pools_of s)(pool_ptr \<mapsto> ap(asid_low_bits_of asid \<mapsto>
+                                                    ASIDPoolVSpace vmid vsp))))
        = (vmid_for_asid s) (asid := vmid)"
   apply (rule ext)
   apply (clarsimp simp: vmid_for_asid_2_def entry_for_pool_def pool_for_asid_def obind_def
@@ -701,15 +709,21 @@ lemma find_free_vmid_vmid_inv[wp]:
                    dest: inj_on_domD)
   done
 
+lemma invalidate_vmid_entry_valid_vmid_table[wp]:
+  "invalidate_vmid_entry vmid \<lbrace>valid_vmid_table\<rbrace>"
+  unfolding invalidate_vmid_entry_def
+  by (wpsimp simp: valid_vmid_table_def)
+
 crunches find_free_vmid
   for valid_global_tables[wp]: "valid_global_tables"
+  and valid_vmid_table[wp]: valid_vmid_table
 
 lemma find_free_vmid_valid_arch [wp]:
   "find_free_vmid \<lbrace>valid_arch_state\<rbrace>"
   unfolding valid_arch_state_def by wpsimp
 
 lemma entry_for_asid_Some_vmidD:
-  "entry_for_asid asid s = Some entry \<Longrightarrow> ap_vmid entry = vmid_for_asid s asid \<and> 0 < asid"
+  "entry_for_asid asid s = Some entry \<Longrightarrow> ap_vmid entry = vmid_for_asid s asid"
   unfolding entry_for_asid_def vmid_for_asid_def entry_for_pool_def pool_for_asid_def
   by (auto simp: obind_def opt_map_def if_option split: option.splits)
 
@@ -826,6 +840,26 @@ lemma update_asid_pool_entry_asid_pools[wp]:
   supply fun_upd_apply[simp del]
   by wpsimp
 
+lemma valid_vmid_table_None_upd:
+  "valid_vmid_table_2 table \<Longrightarrow> valid_vmid_table_2 (table(vmid := None))"
+  by (simp add: valid_vmid_table_2_def)
+
+lemma valid_vmid_table_Some_upd:
+  "\<lbrakk> valid_vmid_table_2 table; asid \<noteq> 0 \<rbrakk> \<Longrightarrow> valid_vmid_table_2 (table (vmid \<mapsto> asid))"
+  by (simp add: valid_vmid_table_2_def)
+
+crunches update_asid_pool_entry, set_asid_pool
+  for pool_for_asid[wp]: "\<lambda>s. P (pool_for_asid as s)"
+  (simp: pool_for_asid_def)
+
+lemma update_asid_pool_entry_valid_asid_map[wp]:
+  "update_asid_pool_entry f asid \<lbrace>valid_asid_map\<rbrace>"
+  unfolding valid_asid_map_def entry_for_asid_def
+  apply (clarsimp simp: obind_None_eq)
+  apply (wpsimp wp: hoare_vcg_disj_lift hoare_vcg_ex_lift)
+  apply (clarsimp simp: pool_for_asid_def entry_for_pool_def obind_None_eq split: if_split_asm)
+  done
+
 lemma invalidate_asid_entry_invs[wp]:
   "invalidate_asid_entry asid \<lbrace>invs\<rbrace>"
   unfolding invalidate_asid_entry_def invalidate_asid_def invalidate_vmid_entry_def invs_def
@@ -833,40 +867,44 @@ lemma invalidate_asid_entry_invs[wp]:
   supply fun_upd_apply[simp del]
   apply (wpsimp wp: load_vmid_wp valid_irq_handlers_lift valid_irq_node_typ valid_irq_states_triv
                       valid_arch_caps_lift pspace_in_kernel_window_atyp_lift_strong
-                simp: valid_kernel_mappings_def equal_kernel_mappings_def valid_asid_map_def
+                simp: valid_kernel_mappings_def equal_kernel_mappings_def
                       valid_global_vspace_mappings_def
          | wps)+
   apply (clarsimp simp: valid_irq_node_def valid_global_refs_def global_refs_def valid_arch_state_def
                         valid_global_objs_def valid_global_arch_objs_def valid_machine_state_def
-                        valid_vspace_objs_def vmid_for_asid_upd_eq comp_upd_simp is_inv_None_upd)
+                        valid_vspace_objs_def vmid_for_asid_upd_eq comp_upd_simp is_inv_None_upd
+                        valid_vmid_table_None_upd)
   done
+
+crunches find_free_vmid, store_vmid
+  for valid_asid_map[wp]: valid_asid_map
 
 lemma find_free_vmid_invs[wp]:
   "find_free_vmid \<lbrace>invs\<rbrace>"
   unfolding invs_def valid_state_def valid_pspace_def
   by (wpsimp wp: load_vmid_wp valid_irq_handlers_lift valid_irq_node_typ
                  valid_arch_caps_lift pspace_in_kernel_window_atyp_lift_strong
-             simp: valid_kernel_mappings_def equal_kernel_mappings_def valid_asid_map_def
+             simp: valid_kernel_mappings_def equal_kernel_mappings_def
                    valid_global_vspace_mappings_def)
 
 lemma store_hw_asid_valid_arch[wp]:
-  "\<lbrace>valid_arch_state and (\<lambda>s. asid_map s asid = None \<and> arm_vmid_table (arch_state s) vmid = None)\<rbrace>
+  "\<lbrace>valid_arch_state and (\<lambda>s. asid_map s asid = None \<and> arm_vmid_table (arch_state s) vmid = None \<and> asid \<noteq> 0)\<rbrace>
    store_vmid asid vmid
    \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
   unfolding store_vmid_def valid_arch_state_def vmid_inv_def
   supply fun_upd_apply[simp del]
   apply (wpsimp simp: valid_global_arch_objs_upd_eq_lift | wps)+
-  apply (fastforce simp: vmid_for_asid_upd_eq elim: is_inv_Some_upd)
+  apply (fastforce simp: vmid_for_asid_upd_eq elim: is_inv_Some_upd intro: valid_vmid_table_Some_upd)
   done
 
 lemma store_vmid_invs[wp]:
-  "\<lbrace>invs and (\<lambda>s. asid_map s asid = None \<and> arm_vmid_table (arch_state s) vmid = None)\<rbrace>
+  "\<lbrace>invs and (\<lambda>s. asid_map s asid = None \<and> arm_vmid_table (arch_state s) vmid = None \<and> asid \<noteq> 0)\<rbrace>
    store_vmid asid vmid
    \<lbrace>\<lambda>_. invs\<rbrace>"
   unfolding invs_def valid_state_def valid_pspace_def
   by (wpsimp wp: valid_irq_node_typ valid_irq_handlers_lift valid_arch_caps_lift
                  pspace_in_kernel_window_atyp_lift_strong
-             simp: valid_kernel_mappings_def equal_kernel_mappings_def valid_asid_map_def
+             simp: valid_kernel_mappings_def equal_kernel_mappings_def
                    valid_global_vspace_mappings_def)
 
 lemma invalidate_vmid_entry_None[wp]:
@@ -902,12 +940,12 @@ lemma find_free_vmid_None_asid_map[wp]:
   by wpsimp
 
 lemma get_hw_asid_valid_arch[wp]:
-  "get_vmid asid \<lbrace>valid_arch_state\<rbrace>"
+  "\<lbrace>valid_arch_state and K (asid \<noteq> 0)\<rbrace> get_vmid asid \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
   unfolding get_vmid_def
   by wpsimp
 
 lemma get_hw_asid_invs[wp]:
-  "get_vmid asid \<lbrace>invs\<rbrace>"
+  "\<lbrace>invs and K (asid \<noteq> 0)\<rbrace> get_vmid asid \<lbrace>\<lambda>_. invs\<rbrace>"
   unfolding get_vmid_def
   by (wpsimp wp: store_vmid_invs load_vmid_wp simp: opt_map_def)
 
@@ -924,7 +962,7 @@ crunches invalidate_tlb_by_asid, invalidate_tlb_by_asid_va
   (ignore: do_machine_op)
 
 lemma arm_context_switch_invs [wp]:
-  "arm_context_switch pt asid \<lbrace>invs\<rbrace>"
+  "\<lbrace>invs and K (asid \<noteq> 0)\<rbrace> arm_context_switch pt asid \<lbrace>\<lambda>_. invs\<rbrace>"
   unfolding arm_context_switch_def by wpsimp
 
 crunches set_vm_root
@@ -935,6 +973,10 @@ lemma set_global_user_vspace_invs[wp]:
   "set_global_user_vspace \<lbrace>invs\<rbrace>"
   unfolding set_global_user_vspace_def
   by wpsimp
+
+lemma vspace_for_asid_0_None[simp]:
+  "vspace_for_asid 0 s = None"
+  by (simp add: vspace_for_asid_def entry_for_asid_def)
 
 lemma set_vm_root_invs[wp]:
   "set_vm_root t \<lbrace>invs\<rbrace>"
@@ -2046,7 +2088,7 @@ lemma perform_pg_inv_map_invs[wp]:
   unfolding perform_pg_inv_map_def
   supply if_split[split del]
   apply (wpsimp wp: store_pte_invs arch_update_cap_invs_map hoare_vcg_all_lift hoare_vcg_imp_lift'
-                    invalidate_tlb_by_asid_va_invs
+                    invalidate_tlb_by_asid_va_invs dmo_invs_lift
          | strengthen if_pair_imp_strengthen)+
   apply (clarsimp simp: valid_page_inv_def cte_wp_at_caps_of_state is_arch_update_def is_cap_simps
                         cap_master_cap_simps parent_for_refs_def valid_slots_def same_ref_def)
@@ -2105,7 +2147,7 @@ end
 
 locale asid_pool_map = Arch +
   fixes s ap pool asid ptp pt and s' :: "'a::state_ext state"
-  defines "s' \<equiv> s\<lparr>kheap := kheap s(ap \<mapsto> ArchObj (ASIDPool (pool(asid_low_bits_of asid \<mapsto> ptp))))\<rparr>"
+  defines "s' \<equiv> s\<lparr>kheap := (kheap s)(ap \<mapsto> ArchObj (ASIDPool (pool(asid_low_bits_of asid \<mapsto> ptp))))\<rparr>"
   assumes ap:  "asid_pools_of s ap = Some pool"
   assumes new: "pool (asid_low_bits_of asid) = None"
   assumes pt:  "pts_of s (ap_vspace ptp) = Some pt"
@@ -2344,7 +2386,7 @@ lemma vmid_for_asid_map_None:
   "\<lbrakk> asid_pools_of s ap = Some pool; pool_for_asid asid s = Some ap;
      pool (asid_low_bits_of asid) = None; ap_vmid ape = None \<rbrakk> \<Longrightarrow>
    (\<lambda>asid'. vmid_for_asid_2 asid' (asid_table s)
-                                  (asid_pools_of s(ap \<mapsto> pool(asid_low_bits_of asid \<mapsto> ape)))) =
+                                  ((asid_pools_of s)(ap \<mapsto> pool(asid_low_bits_of asid \<mapsto> ape)))) =
    vmid_for_asid s"
   unfolding vmid_for_asid_def
   apply (rule ext)
@@ -2375,6 +2417,20 @@ lemma set_asid_pool_valid_arch_state:
   unfolding valid_arch_state_def
   by (wpsimp wp: set_asid_pool_vmid_inv|wps)+
 
+lemma set_asid_pool_invs_valid_asid_map[wp]:
+  "\<lbrace>valid_asid_map and valid_asid_table and
+    (\<lambda>s. asid_pools_of s ap = Some pool \<and> pool_for_asid asid s = Some ap \<and> asid \<noteq> 0)\<rbrace>
+  set_asid_pool ap (pool(asid_low_bits_of asid \<mapsto> ape))
+  \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
+  unfolding valid_asid_map_def entry_for_asid_def
+  apply (clarsimp simp: obind_None_eq)
+  apply (wp hoare_vcg_disj_lift hoare_vcg_ex_lift)
+  apply (fastforce simp: asid_high_low_inj pool_for_asid_def valid_asid_table_def entry_for_pool_def
+                         obind_None_eq
+                   dest: inj_on_domD
+                   split: if_split_asm)
+  done
+
 lemma set_asid_pool_invs_map:
   "\<lbrace>invs and
     (\<lambda>s. asid_pools_of s ap = Some pool \<and> pool_for_asid asid s = Some ap \<and>
@@ -2384,10 +2440,11 @@ lemma set_asid_pool_invs_map:
     and K (pool (asid_low_bits_of asid) = None \<and> 0 < asid \<and> ap_vmid ape = None)\<rbrace>
   set_asid_pool ap (pool(asid_low_bits_of asid \<mapsto> ape))
   \<lbrace>\<lambda>rv. invs\<rbrace>"
-  apply (simp add: invs_def valid_state_def valid_pspace_def valid_asid_map_def)
+  apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (wpsimp wp: valid_irq_node_typ set_asid_pool_typ_at set_asid_pool_arch_objs_map
                     valid_irq_handlers_lift set_asid_pool_valid_arch_caps_map
                     set_asid_pool_valid_arch_state)
+  apply (clarsimp simp: valid_arch_state_def)
   done
 
 lemma ako_asid_pools_of:
@@ -2708,12 +2765,12 @@ lemma set_vcpu_sym_refs[wp]:
   apply (clarsimp simp: obj_at_def)
   done
 
-lemma state_hyp_refs_of_simp_neq: "\<lbrakk> a \<noteq> p \<rbrakk> \<Longrightarrow> state_hyp_refs_of (s\<lparr>kheap := kheap s(p \<mapsto> v) \<rparr>) a = state_hyp_refs_of s a "
+lemma state_hyp_refs_of_simp_neq: "\<lbrakk> a \<noteq> p \<rbrakk> \<Longrightarrow> state_hyp_refs_of (s\<lparr>kheap := (kheap s)(p \<mapsto> v) \<rparr>) a = state_hyp_refs_of s a "
   by (simp add: state_hyp_refs_of_def)
 
 lemma state_hyp_refs_of_simp_eq:
   "obj_at (\<lambda>ko'. hyp_refs_of ko' = hyp_refs_of v) p s
-   \<Longrightarrow> state_hyp_refs_of (s\<lparr>kheap := kheap s(p \<mapsto> v) \<rparr>) p = state_hyp_refs_of s p"
+   \<Longrightarrow> state_hyp_refs_of (s\<lparr>kheap := (kheap s)(p \<mapsto> v) \<rparr>) p = state_hyp_refs_of s p"
   by (clarsimp simp: state_hyp_refs_of_def obj_at_def)
 
 lemma set_object_vcpu_sym_refs_hyp:
@@ -2752,11 +2809,11 @@ lemma set_vcpu_valid_pspace:
   done
 
 lemma vmid_inv_set_vcpu:
-  "vcpu_at p s \<Longrightarrow> vmid_inv (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (VCPU v))\<rparr>) = vmid_inv s"
+  "vcpu_at p s \<Longrightarrow> vmid_inv (s\<lparr>kheap := (kheap s)(p \<mapsto> ArchObj (VCPU v))\<rparr>) = vmid_inv s"
   by (simp add: vmid_inv_def asid_pools_of_vcpu_None_upd_idem)
 
 lemma pt_at_eq_set_vcpu:
-  "vcpu_at p s \<Longrightarrow> pt_at pt_t p' (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (VCPU v))\<rparr>) = pt_at pt_t p' s"
+  "vcpu_at p s \<Longrightarrow> pt_at pt_t p' (s\<lparr>kheap := (kheap s)(p \<mapsto> ArchObj (VCPU v))\<rparr>) = pt_at pt_t p' s"
   by (auto simp add: obj_at_def)
 
 lemma set_vcpu_valid_arch_eq_hyp:
@@ -2973,7 +3030,7 @@ crunches save_virt_timer, vcpu_disable, vcpu_invalidate_active, vcpu_restore, vc
 
 lemma obj_at_hyp_live_vcpu_regs:
   "vcpus_of s vcpu_ptr = Some v \<Longrightarrow>
-   obj_at hyp_live p (s\<lparr>kheap := kheap s(vcpu_ptr \<mapsto> ArchObj (VCPU (v\<lparr>vcpu_regs := x\<rparr>)))\<rparr>) =
+   obj_at hyp_live p (s\<lparr>kheap := (kheap s)(vcpu_ptr \<mapsto> ArchObj (VCPU (v\<lparr>vcpu_regs := x\<rparr>)))\<rparr>) =
    obj_at hyp_live p s"
   by (clarsimp simp: in_omonad obj_at_def)
 

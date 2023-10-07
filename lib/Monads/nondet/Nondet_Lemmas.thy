@@ -6,7 +6,7 @@
  *)
 
 theory Nondet_Lemmas
-imports Nondet_Monad
+  imports Nondet_Monad
 begin
 
 section \<open>General Lemmas Regarding the Nondeterministic State Monad\<close>
@@ -15,12 +15,12 @@ subsection \<open>Congruence Rules for the Function Package\<close>
 
 lemma bind_cong[fundef_cong]:
   "\<lbrakk> f = f'; \<And>v s s'. (v, s') \<in> fst (f' s) \<Longrightarrow> g v s' = g' v s' \<rbrakk> \<Longrightarrow> f >>= g = f' >>= g'"
-  by (auto simp: bind_def Let_def split_def intro: rev_image_eqI)
+  by (auto simp: bind_def split_def)
 
 lemma bind_apply_cong [fundef_cong]:
   "\<lbrakk> f s = f' s'; \<And>rv st. (rv, st) \<in> fst (f' s') \<Longrightarrow> g rv st = g' rv st \<rbrakk>
    \<Longrightarrow> (f >>= g) s = (f' >>= g') s'"
-  by (auto simp: bind_def split_def intro: SUP_cong [OF refl] intro: rev_image_eqI)
+  by (auto simp: bind_def split_def)
 
 lemma bindE_cong[fundef_cong]:
   "\<lbrakk> M = M' ; \<And>v s s'. (Inr v, s') \<in> fst (M' s) \<Longrightarrow> N v s' = N' v s' \<rbrakk> \<Longrightarrow> bindE M N = bindE M' N'"
@@ -192,8 +192,8 @@ lemma liftE_liftM:
 lemma liftME_liftM:
   "liftME f = liftM (case_sum Inl (Inr \<circ> f))"
   unfolding liftME_def liftM_def bindE_def returnOk_def lift_def
-  apply (rule ext, rename_tac x)
-  apply (rule_tac f="bind x" in arg_cong)
+  apply (rule ext)
+  apply (rule arg_cong[where f="bind m" for m])
   apply (fastforce simp: throwError_def split: sum.splits)
   done
 
@@ -277,7 +277,8 @@ lemma monad_state_eqI [intro]:
 subsection \<open>General @{const whileLoop} reasoning\<close>
 
 definition whileLoop_terminatesE ::
-  "('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> ('s, 'e + 'a) nondet_monad) \<Rightarrow> 'a \<Rightarrow> 's \<Rightarrow> bool" where
+  "('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> ('s, 'e + 'a) nondet_monad) \<Rightarrow> 'a \<Rightarrow> 's \<Rightarrow> bool"
+  where
   "whileLoop_terminatesE C B \<equiv>
      \<lambda>r. whileLoop_terminates (\<lambda>r s. case r of Inr v \<Rightarrow> C v s | _ \<Rightarrow> False) (lift B) (Inr r)"
 
@@ -340,10 +341,10 @@ lemma whileLoop_unroll':
 lemma whileLoopE_unroll:
   "whileLoopE C B r = condition (C r) (B r >>=E whileLoopE C B) (returnOk r)"
   unfolding whileLoopE_def
-  apply (rule ext, rename_tac x)
+  apply (rule ext)
   apply (subst whileLoop_unroll)
   apply (clarsimp simp: bindE_def returnOk_def lift_def split: condition_splits)
-  apply (rule_tac f="\<lambda>a. (B r >>= a) x" in arg_cong)
+  apply (rule arg_cong[where f="\<lambda>a. (B r >>= a) x" for x])
   apply (rule ext)+
   apply (clarsimp simp: lift_def split: sum.splits)
   apply (subst whileLoop_unroll)

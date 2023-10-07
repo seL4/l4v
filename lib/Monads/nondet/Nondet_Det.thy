@@ -51,13 +51,13 @@ lemma det_UN:
 lemma bind_detI[simp, intro!]:
   "\<lbrakk> det f; \<forall>x. det (g x) \<rbrakk> \<Longrightarrow> det (f >>= g)"
   unfolding bind_def det_def
+  apply (erule all_reg[rotated])
   apply clarsimp
-  apply (erule_tac x=s in allE)
-  apply clarsimp
-  apply (erule_tac x="a" in allE)
-  apply (erule_tac x="b" in allE)
-  apply clarsimp
-  done
+  by (metis fst_conv snd_conv)
+
+lemma det_modify[iff]:
+  "det (modify f)"
+  by (simp add: modify_def)
 
 lemma the_run_stateI:
   "fst (M s) = {s'} \<Longrightarrow> the_run_state M s = s'"

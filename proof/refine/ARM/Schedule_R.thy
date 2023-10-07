@@ -10,7 +10,7 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-declare static_imp_wp[wp_split del]
+declare hoare_weak_lift_imp[wp_split del]
 
 (* Levity: added (20090713 10:04:12) *)
 declare sts_rel_idle [simp]
@@ -466,7 +466,7 @@ lemma ct_idle_or_in_cur_domain'_lift2:
   apply (unfold ct_idle_or_in_cur_domain'_def)
   apply (rule hoare_lift_Pf2[where f=ksCurThread])
   apply (rule hoare_lift_Pf2[where f=ksSchedulerAction])
-  apply (wp static_imp_wp hoare_vcg_disj_lift | assumption)+
+  apply (wp hoare_weak_lift_imp hoare_vcg_disj_lift | assumption)+
   done
 
 lemma tcbSchedEnqueue_invs'[wp]:
@@ -1395,7 +1395,7 @@ lemma switchToIdleThread_invs_no_cicd':
 crunch obj_at'[wp]: "Arch.switchToIdleThread" "\<lambda>s. obj_at' P t s"
 
 
-declare static_imp_conj_wp[wp_split del]
+declare hoare_weak_lift_imp_conj[wp_split del]
 
 lemma setCurThread_const:
   "\<lbrace>\<lambda>_. P t \<rbrace> setCurThread t \<lbrace>\<lambda>_ s. P (ksCurThread s) \<rbrace>"

@@ -95,6 +95,7 @@ definition perform_pg_inv_map ::
      old_pte \<leftarrow> get_pte level slot;
      set_cap (ArchObjectCap cap) ct_slot;
      store_pte level slot pte;
+     do_machine_op $ cleanByVA_PoU slot (addrFromPPtr slot);
      when (old_pte \<noteq> InvalidPTE) $ do
         (asid, vaddr) \<leftarrow> assert_opt $ acap_map_data cap;
         invalidate_tlb_by_asid_va asid vaddr
@@ -115,7 +116,7 @@ definition do_flush :: "flush_type \<Rightarrow> vspace_ref \<Rightarrow> vspace
      case type of
        Clean \<Rightarrow> cleanCacheRange_RAM vstart vend pstart
      | Invalidate \<Rightarrow> invalidateCacheRange_RAM vstart vend pstart
-     | CleanInvalidate \<Rightarrow> invalidateCacheRange_RAM vstart vend pstart
+     | CleanInvalidate \<Rightarrow> cleanInvalidateCacheRange_RAM vstart vend pstart
      | Unify \<Rightarrow> do
          cleanCacheRange_PoU vstart vend pstart;
          dsb;

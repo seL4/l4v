@@ -449,7 +449,7 @@ lemma rescheduleRequired_no_orphans [wp]:
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding rescheduleRequired_def
   apply (wp tcbSchedEnqueue_no_orphans hoare_vcg_all_lift ssa_no_orphans | wpc | clarsimp)+
-   apply (wps tcbSchedEnqueue_nosch, wp static_imp_wp)
+   apply (wps tcbSchedEnqueue_nosch, wp hoare_weak_lift_imp)
    apply (rename_tac word t p)
    apply (rule_tac P="word = t" in hoare_gen_asm)
    apply (wp hoare_disjI1 | clarsimp)+
@@ -461,7 +461,7 @@ lemma rescheduleRequired_almost_no_orphans [wp]:
    \<lbrace> \<lambda>rv s. almost_no_orphans tcb_ptr s \<rbrace>"
   unfolding rescheduleRequired_def
   apply (wp tcbSchedEnqueue_almost_no_orphans_lift hoare_vcg_all_lift | wpc | clarsimp)+
-   apply (wps tcbSchedEnqueue_nosch, wp static_imp_wp)
+   apply (wps tcbSchedEnqueue_nosch, wp hoare_weak_lift_imp)
    apply (rename_tac word t p)
    apply (rule_tac P="word = t" in hoare_gen_asm)
    apply (wp hoare_disjI1 | clarsimp)+
@@ -1078,7 +1078,7 @@ proof -
      apply (rule_tac Q="\<lambda>_ s. (t = candidate \<longrightarrow> ksCurThread s = candidate) \<and>
                                (t \<noteq> candidate \<longrightarrow> sch_act_not t s)"
               in hoare_post_imp)
-      apply (wpsimp wp: stt_nosch static_imp_wp)+
+      apply (wpsimp wp: stt_nosch hoare_weak_lift_imp)+
     apply (fastforce dest!: in_all_active_tcb_ptrsD simp: all_queued_tcb_ptrs_def comp_def)
     done
 
@@ -1207,7 +1207,7 @@ lemma possibleSwitchTo_almost_no_orphans [wp]:
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding possibleSwitchTo_def
   by (wp rescheduleRequired_valid_queues'_weak tcbSchedEnqueue_almost_no_orphans
-         ssa_almost_no_orphans static_imp_wp
+         ssa_almost_no_orphans hoare_weak_lift_imp
      | wpc | clarsimp
      | wp (once) hoare_drop_imp)+
 
@@ -1920,7 +1920,7 @@ lemma writereg_no_orphans:
   unfolding invokeTCB_def performTransfer_def postModifyRegisters_def
   apply simp
   apply (rule hoare_pre)
-  by (wp hoare_vcg_if_lift hoare_vcg_conj_lift restart_invs' static_imp_wp
+  by (wp hoare_vcg_if_lift hoare_vcg_conj_lift restart_invs' hoare_weak_lift_imp
        | strengthen invs_valid_queues'  | clarsimp  simp: invs'_def valid_state'_def dest!: global'_no_ex_cap )+
 
 lemma copyreg_no_orphans:
@@ -1930,8 +1930,8 @@ lemma copyreg_no_orphans:
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding invokeTCB_def performTransfer_def postModifyRegisters_def
   apply simp
-  apply (wp hoare_vcg_if_lift static_imp_wp)
-      apply (wp static_imp_wp hoare_vcg_conj_lift hoare_drop_imp mapM_x_wp' restart_invs'
+  apply (wp hoare_vcg_if_lift hoare_weak_lift_imp)
+      apply (wp hoare_weak_lift_imp hoare_vcg_conj_lift hoare_drop_imp mapM_x_wp' restart_invs'
              restart_no_orphans asUser_no_orphans suspend_nonz_cap_to_tcb
              | strengthen invs_valid_queues' | wpc | simp add: if_apply_def2)+
   apply (fastforce simp: invs'_def valid_state'_def dest!: global'_no_ex_cap)
@@ -1943,7 +1943,7 @@ lemma settlsbase_no_orphans:
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding invokeTCB_def performTransfer_def
   apply simp
-  apply (wp hoare_vcg_if_lift static_imp_wp)
+  apply (wp hoare_vcg_if_lift hoare_weak_lift_imp)
    apply (wpsimp wp: hoare_vcg_imp_lift' mapM_x_wp' asUser_no_orphans)+
   done
 
@@ -2009,19 +2009,19 @@ lemma tc_no_orphans:
   apply (rule hoare_walk_assmsE)
     apply (clarsimp simp: pred_conj_def option.splits[where P="\<lambda>x. x s" for s])
     apply ((wp case_option_wp threadSet_no_orphans threadSet_invs_trivial
-               threadSet_cap_to' hoare_vcg_all_lift static_imp_wp | clarsimp simp: inQ_def)+)[2]
+               threadSet_cap_to' hoare_vcg_all_lift hoare_weak_lift_imp | clarsimp simp: inQ_def)+)[2]
   apply (rule hoare_walk_assmsE)
     apply (cases mcp; clarsimp simp: pred_conj_def option.splits[where P="\<lambda>x. x s" for s])
      apply ((wp case_option_wp threadSet_no_orphans threadSet_invs_trivial setMCPriority_invs'
                 typ_at_lifts[OF setMCPriority_typ_at']
-                threadSet_cap_to' hoare_vcg_all_lift static_imp_wp | clarsimp simp: inQ_def)+)[3]
+                threadSet_cap_to' hoare_vcg_all_lift hoare_weak_lift_imp | clarsimp simp: inQ_def)+)[3]
   apply ((simp only: simp_thms cong: conj_cong
           | wp cteDelete_deletes cteDelete_invs' cteDelete_sch_act_simple
                case_option_wp[where m'="return ()", OF setPriority_no_orphans return_inv,simplified]
                checkCap_inv[where P="valid_cap' c" for c] checkCap_inv[where P=sch_act_simple]
                checkCap_inv[where P=no_orphans] checkCap_inv[where P="tcb_at' a"]
                threadSet_cte_wp_at' hoare_vcg_all_lift_R hoare_vcg_all_lift threadSet_no_orphans
-               hoare_vcg_const_imp_lift_R static_imp_wp hoare_drop_imp threadSet_ipcbuffer_invs
+               hoare_vcg_const_imp_lift_R hoare_weak_lift_imp hoare_drop_imp threadSet_ipcbuffer_invs
           | strengthen invs_valid_queues'
           | (simp add: locateSlotTCB_def locateSlotBasic_def objBits_def
                      objBitsKO_def tcbIPCBufferSlot_def tcb_cte_cases_def,
@@ -2096,7 +2096,7 @@ lemma performPageInvocation_no_orphans [wp]:
   apply (simp add: performPageInvocation_def
               cong: page_invocation.case_cong)
   apply (rule hoare_pre)
-   apply (wp mapM_x_wp' mapM_wp' static_imp_wp | wpc | clarsimp)+
+   apply (wp mapM_x_wp' mapM_wp' hoare_weak_lift_imp | wpc | clarsimp)+
   done
 
 lemma performASIDControlInvocation_no_orphans [wp]:
@@ -2150,13 +2150,13 @@ lemma performASIDControlInvocation_no_orphans [wp]:
        \<lbrace>\<lambda>reply. no_orphans\<rbrace>"
   apply (clarsimp simp: performASIDControlInvocation_def
                   split: asidcontrol_invocation.splits)
-  apply (wp static_imp_wp | clarsimp)+
+  apply (wp hoare_weak_lift_imp | clarsimp)+
     apply (rule_tac Q="\<lambda>rv s. no_orphans s" in hoare_post_imp)
      apply (clarsimp simp: no_orphans_def all_active_tcb_ptrs_def
                            is_active_tcb_ptr_def all_queued_tcb_ptrs_def)
     apply (wp | clarsimp simp:placeNewObject_def2)+
      apply (wp createObjects'_wp_subst)+
-     apply (wp static_imp_wp updateFreeIndex_pspace_no_overlap'[where sz= pageBits] getSlotCap_wp | simp)+
+     apply (wp hoare_weak_lift_imp updateFreeIndex_pspace_no_overlap'[where sz= pageBits] getSlotCap_wp | simp)+
   apply (strengthen invs_pspace_aligned' invs_pspace_distinct' invs_valid_pspace')
   apply (clarsimp simp:conj_comms)
      apply (wp deleteObjects_invs'[where idx = idx and d=False]

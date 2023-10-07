@@ -76,7 +76,7 @@ crunches do_machine_op
   (wp: valid_cur_vcpu_lift_cur_thread_update valid_cur_vcpu_lift crunch_wps)
 
 lemma valid_cur_vcpu_vcpu_update[simp]:
-  "vcpu_at v s \<Longrightarrow> valid_cur_vcpu (s\<lparr>kheap := kheap s(v \<mapsto> ArchObj (VCPU vcpu))\<rparr>) = valid_cur_vcpu s"
+  "vcpu_at v s \<Longrightarrow> valid_cur_vcpu (s\<lparr>kheap := (kheap s)(v \<mapsto> ArchObj (VCPU vcpu))\<rparr>) = valid_cur_vcpu s"
   by (clarsimp simp: valid_cur_vcpu_def active_cur_vcpu_of_def pred_tcb_at_def obj_at_def)
 
 crunches vcpu_save_reg, vcpu_write_reg, save_virt_timer, vgic_update, vcpu_disable

@@ -410,10 +410,8 @@ lemma cap_swap_asid_map[wp, CNodeInv_AI_assms]:
     cte_wp_at (weak_derived c) a and
     cte_wp_at (weak_derived c') b\<rbrace>
      cap_swap c a c' b \<lbrace>\<lambda>rv. valid_asid_map\<rbrace>"
-  apply (simp add: cap_swap_def set_cdt_def valid_asid_map_def vspace_at_asid_def)
-  apply (rule hoare_pre)
-   apply (wp set_cap.vs_lookup|simp
-          |rule hoare_lift_Pf [where f=arch_state])+
+  apply (simp add: cap_swap_def set_cdt_def vspace_at_asid_def)
+  apply (wp set_cap.vs_lookup|simp|rule hoare_lift_Pf [where f=arch_state])+
   done
 
 
@@ -542,7 +540,7 @@ context Arch begin global_naming AARCH64
 
 lemma post_cap_delete_pre_is_final_cap':
   "\<lbrakk>valid_ioports s; caps_of_state s slot = Some cap; is_final_cap' cap s; cap_cleanup_opt cap \<noteq> NullCap\<rbrakk>
-   \<Longrightarrow> post_cap_delete_pre (cap_cleanup_opt cap) (caps_of_state s(slot \<mapsto> NullCap))"
+   \<Longrightarrow> post_cap_delete_pre (cap_cleanup_opt cap) ((caps_of_state s)(slot \<mapsto> NullCap))"
   apply (clarsimp simp: cap_cleanup_opt_def cte_wp_at_def post_cap_delete_pre_def
                       split: cap.split_asm if_split_asm
                       elim!: ranE dest!: caps_of_state_cteD)
@@ -619,7 +617,7 @@ next
         apply (rule "2.hyps"[simplified rec_del_call.simps slot_rdcall.simps conj_assoc], assumption+)
        apply (simp add: cte_wp_at_eq_simp
                 | wp replace_cap_invs set_cap_sets final_cap_same_objrefs
-                     set_cap_cte_cap_wp_to static_imp_wp
+                     set_cap_cte_cap_wp_to hoare_weak_lift_imp
                 | erule finalise_cap_not_reply_master)+
        apply (wp hoare_vcg_const_Ball_lift)+
       apply (rule hoare_strengthen_post)

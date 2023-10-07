@@ -11,7 +11,7 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-declare static_imp_wp[wp_split del]
+declare hoare_weak_lift_imp[wp_split del]
 
 (* Levity: added (20090713 10:04:12) *)
 declare sts_rel_idle [simp]
@@ -67,113 +67,127 @@ lemmas findM_awesome = findM_awesome' [OF _ _ _ suffix_order.refl]
 (* Levity: added (20090721 10:56:29) *)
 declare objBitsT_koTypeOf [simp]
 
-(* FIXME AARCH64: ARM_HYP has a number of rules for idempotence of VM lookup functions over
-   heap updates at a VCPU ptr, culminating in:
-   valid_vs_lookup (s\<lparr>kheap := kheap s(vcpuPtr \<mapsto> ArchObj (VCPU vcpu))\<rparr>) = valid_vs_lookup s
-   most of these have not been adapted from ARM_HYP since the VM lookup functions are very different
-*)
-
 lemma vs_lookup_pages_vcpu_update:
-  "typ_at (AArch AVCPU) vcpuPtr s \<Longrightarrow> vs_lookup_pages (s\<lparr>kheap := kheap s(vcpuPtr \<mapsto> ArchObj (VCPU vcpu))\<rparr>)
-                                      = vs_lookup_pages s"
-  sorry (* FIXME AARCH64
-  by (clarsimp simp: vs_lookup_pages_def vs_lookup_pages1_vcpu_update) *)
+  "typ_at (AArch AVCPU) vcpuPtr s \<Longrightarrow>
+   vs_lookup_target level asid vref (s\<lparr>kheap := (kheap s)(vcpuPtr \<mapsto> ArchObj (VCPU vcpu))\<rparr>) =
+   vs_lookup_target level asid vref s"
+  unfolding vs_lookup_target_def vs_lookup_slot_def vs_lookup_table_def
+  apply (prop_tac "asid_pools_of s vcpuPtr = None", clarsimp simp: opt_map_def obj_at_def)
+  apply (prop_tac "pts_of s vcpuPtr = None", clarsimp simp: opt_map_def obj_at_def)
+  apply (fastforce simp: obind_assoc intro!: obind_eqI)
+  done
 
 lemma valid_vs_lookup_vcpu_update:
-  "typ_at (AArch AVCPU) vcpuPtr s \<Longrightarrow> valid_vs_lookup (s\<lparr>kheap := kheap s(vcpuPtr \<mapsto> ArchObj (VCPU vcpu))\<rparr>)
-                                      = valid_vs_lookup s"
-  apply (clarsimp simp: valid_vs_lookup_def caps_of_state_VCPU_update)
-  apply (rule all_cong1)
-  apply (rule all_cong1)
-  sorry (* FIXME AARCH64
-  apply (rule imp_cong)
-   apply (simp add: vs_lookup_pages_vcpu_update)
-  apply simp
-  done *)
+  "typ_at (AArch AVCPU) vcpuPtr s \<Longrightarrow>
+   valid_vs_lookup (s\<lparr>kheap := (kheap s)(vcpuPtr \<mapsto> ArchObj (VCPU vcpu))\<rparr>) = valid_vs_lookup s"
+  by (clarsimp simp: valid_vs_lookup_def caps_of_state_VCPU_update vs_lookup_pages_vcpu_update)
 
 lemma set_vpcu_valid_vs_lookup[wp]:
   "set_vcpu vcpuPtr vcpu \<lbrace>\<lambda>s. P (valid_vs_lookup s)\<rbrace>"
-  apply (rule hoare_pre, rule set_vcpu_wp)
-  apply (simp add: valid_vs_lookup_vcpu_update)
-  done
+  by (wpsimp wp: set_vcpu_wp simp: valid_vs_lookup_vcpu_update)
 
-(* FIXME AARCH64 move to ArchVSpace_AI to match ARM_HYP *)
-crunches do_machine_op
-  for valid_vs_lookup2[wp]: "\<lambda>s. P (valid_vs_lookup s)"
-  (ignore: get_object set_object)
+lemma set_vcpu_vmid_inv[wp]:
+  "set_vcpu vcpuPtr vcpu \<lbrace>\<lambda>s. P (vmid_inv s)\<rbrace>"
+  unfolding vmid_inv_def
+  by (wp_pre, wps, wpsimp, simp)
+
+lemma vmid_inv_cur_vcpu[simp]:
+  "vmid_inv (s\<lparr>arch_state := arch_state s\<lparr>arm_current_vcpu := x\<rparr>\<rparr>) = vmid_inv s"
+  by (simp add: vmid_inv_def)
+
+lemma set_vcpu_valid_asid_table[wp]:
+  "set_vcpu ptr vcpu \<lbrace>valid_asid_table\<rbrace>"
+  apply (wpsimp wp: set_vcpu_wp)
+  apply (prop_tac "asid_pools_of s ptr = None")
+   apply (clarsimp simp: obj_at_def opt_map_def)
+  apply simp
+  done
 
 crunches vcpu_switch
   for valid_vs_lookup[wp]: "\<lambda>s. P (valid_vs_lookup s)"
+  and vmid_inv[wp]: vmid_inv
+  and valid_vmid_table[wp]: valid_vmid_table
+  and valid_asid_table[wp]: valid_asid_table
+  and global_pt[wp]: "\<lambda>s. P (global_pt s)"
   (simp: crunch_simps wp: crunch_wps)
-
-(* FIXME AARCH64 won't crunch *)
-lemma vcpu_switch_valid_asid_table[wp]:
-  "vcpu_switch v \<lbrace>valid_asid_table\<rbrace>"
-  sorry
 
 lemma vcpu_switch_valid_global_arch_objs[wp]:
   "vcpu_switch v \<lbrace>valid_global_arch_objs\<rbrace>"
-  sorry (* FIXME AARCH64: crunchable? *)
+  by (wp valid_global_arch_objs_lift)
 
 crunches set_vm_root
-  for pspace_aligned[wp]: pspace_aligned
-  and pspace_distinct[wp]: pspace_distinct
+  for pspace_distinct[wp]: pspace_distinct
   (simp: crunch_simps)
 
-(* FIXME AARCH64: re-examine sym_refs assumption *)
+(* FIXME AARCH64: move to TcbAcc_R *)
+lemma ko_tcb_cross:
+  "\<lbrakk> ko_at (TCB tcb) t s; pspace_aligned s; pspace_distinct s; (s, s') \<in> state_relation \<rbrakk>
+  \<Longrightarrow> \<exists>tcb'. ko_at' tcb' t s' \<and> tcb_relation tcb tcb'"
+  apply (frule (1) pspace_distinct_cross, fastforce simp: state_relation_def)
+  apply (frule pspace_aligned_cross, fastforce simp: state_relation_def)
+  apply (prop_tac "tcb_at t s", clarsimp simp: st_tcb_at_def obj_at_def is_tcb)
+  apply (drule (2) tcb_at_cross, fastforce simp: state_relation_def)
+  apply normalise_obj_at'
+  apply (clarsimp simp: state_relation_def pspace_relation_def obj_at_def)
+  apply (drule bspec, fastforce)
+  apply (clarsimp simp: other_obj_relation_def obj_at'_def)
+  done
+
+(* FIXME AARCH64: move *)
+lemma ko_vcpu_cross:
+  "\<lbrakk> ko_at (ArchObj (VCPU vcpu)) p s; pspace_aligned s; pspace_distinct s; (s, s') \<in> state_relation \<rbrakk>
+  \<Longrightarrow> \<exists>vcpu'. ko_at' vcpu' p s' \<and> vcpu_relation vcpu vcpu'"
+  apply (frule (1) pspace_distinct_cross, fastforce simp: state_relation_def)
+  apply (frule pspace_aligned_cross, fastforce simp: state_relation_def)
+  apply (clarsimp simp: obj_at_def)
+  apply (clarsimp simp: state_relation_def pspace_relation_def obj_at_def)
+  apply (drule bspec, fastforce)
+  apply (clarsimp simp: other_obj_relation_def
+                  split: kernel_object.splits arch_kernel_object.splits)
+  apply (prop_tac "ksPSpace s' p \<noteq> None")
+   apply (prop_tac "p \<in> pspace_dom (kheap s)")
+    apply (fastforce intro!: set_mp[OF pspace_dom_dom])
+   apply fastforce
+  apply (fastforce simp: obj_at'_def objBits_simps dest: pspace_alignedD pspace_distinctD')
+  done
+
+(* FIXME AARCH64: move *)
+lemma vcpu_at_cross:
+  "\<lbrakk> vcpu_at p s; pspace_aligned s; pspace_distinct s; (s, s') \<in> state_relation \<rbrakk>
+  \<Longrightarrow> vcpu_at' p s'"
+  apply (drule vcpu_at_ko, clarsimp)
+  apply (drule (3) ko_vcpu_cross)
+  apply (clarsimp simp: typ_at'_def obj_at'_def ko_wp_at'_def)
+  done
+
 lemma arch_switchToThread_corres:
   "corres dc (valid_arch_state and valid_objs and pspace_aligned and pspace_distinct
-              and valid_vspace_objs and st_tcb_at runnable t and (\<lambda>s. sym_refs (state_hyp_refs_of s)))
+              and valid_vspace_objs and tcb_at t)
              (no_0_obj')
              (arch_switch_to_thread t) (Arch.switchToThread t)"
-  apply (simp add: arch_switch_to_thread_def AARCH64_H.switchToThread_def)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split[OF getObject_TCB_corres])
-      apply (rule corres_split[OF vcpuSwitch_corres])
-         apply (simp add: tcb_relation_def arch_tcb_relation_def)
-        apply (rule setVMRoot_corres[OF refl])
-       apply (wpsimp simp: tcb_at_typ wp: hoare_vcg_imp_lift' getObject_tcb_wp)+
-   subgoal
-     apply (auto simp: obj_at_def pred_tcb_at_def)
-     (* FIXME AARCH64 this should be provable via symrefs *)
-     sorry
-  apply  normalise_obj_at'
-  (* FIXME AARCH64 this needs extra info (cross over from abstract?), as we don't have symrefs
-     on the haskell side
-
-  for completeness, here is the ARM_HYP version of this proof:
-
-  apply (simp add: arch_switch_to_thread_def ARM_HYP_H.switchToThread_def)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split[OF get_tcb_corres])
-      apply (rule corres_split[OF vcpuSwitch_corres'])
-         apply (clarsimp simp: tcb_relation_def arch_tcb_relation_def)
-        apply (rule corres_split[OF setVMRoot_corres])
-          apply (rule corres_machine_op[OF corres_rel_imp])
-           apply (rule corres_underlying_trivial)
-           apply wpsimp
-           apply (clarsimp simp: ARM_HYP.clearExMonitor_def)+
-         apply wpsimp
-        apply wpsimp
-       apply (wpsimp wp: tcb_at_typ_at simp:)
-      apply (wpsimp simp: ARM_HYP.clearExMonitor_def wp: tcb_at_typ_at)+
-    apply (wp getObject_tcb_hyp_sym_refs)
-   apply (clarsimp simp: st_tcb_at_tcb_at)
-   apply (clarsimp simp: get_tcb_ko_at[unfolded obj_at_def])
+  unfolding arch_switch_to_thread_def AARCH64_H.switchToThread_def
+  apply (corres corres: getObject_TCB_corres vcpuSwitch_corres
+                term_simp: tcb_relation_def arch_tcb_relation_def)
+       apply (wpsimp wp: vcpu_switch_pred_tcb_at getObject_tcb_wp simp: tcb_at_st_tcb_at)+
+   apply (clarsimp simp: valid_arch_state_def  st_tcb_at_def obj_at_def get_tcb_def)
    apply (rule conjI)
-    apply (erule (1) pspace_valid_objsE)
-    apply (clarsimp simp: valid_obj_def valid_tcb_def valid_arch_tcb_def)
-   apply (rule conjI)
-    apply (clarsimp simp: valid_arch_state_def obj_at_def is_vcpu_def)
-   apply (clarsimp simp: )
-   apply (rename_tac tcb vcpuPtr)
-   apply (drule_tac y=vcpuPtr and x=t and tp=HypTCBRef in sym_refsE
-          ; clarsimp simp: in_state_hyp_refs_of hyp_refs_of_rev obj_at_def hyp_live_def arch_live_def)
-  apply fastforce
-
-
-  *)
-  sorry
+    apply clarsimp
+    apply (erule (1) valid_objsE)
+    apply (clarsimp simp: valid_obj_def valid_tcb_def valid_arch_tcb_def obj_at_def)
+   apply (clarsimp simp: cur_vcpu_def in_omonad)
+  apply normalise_obj_at'
+  apply (clarsimp simp: st_tcb_at_def obj_at_def is_tcb)
+  apply (frule (2) ko_tcb_cross[rotated], simp add: obj_at_def)
+  apply normalise_obj_at'
+  apply (rule conjI; clarsimp)
+   apply (rule vcpu_at_cross; assumption?)
+   apply (erule (1) valid_objsE)
+   apply (clarsimp simp: valid_obj_def valid_tcb_def valid_arch_tcb_def  tcb_relation_def
+                         arch_tcb_relation_def)
+  apply (rule vcpu_at_cross; assumption?)
+  apply (prop_tac "cur_vcpu s", clarsimp simp: valid_arch_state_def)
+  apply (clarsimp simp: state_relation_def arch_state_relation_def cur_vcpu_def in_omonad obj_at_def)
+  done
 
 lemma schedule_choose_new_thread_sched_act_rct[wp]:
   "\<lbrace>\<top>\<rbrace> schedule_choose_new_thread \<lbrace>\<lambda>rs s. scheduler_action s = resume_cur_thread\<rbrace>"
@@ -491,7 +505,7 @@ lemma ct_idle_or_in_cur_domain'_lift2:
   apply (rule hoare_lift_Pf2[where f=ksCurThread])
   apply (rule hoare_lift_Pf2[where f=ksSchedulerAction])
   including no_pre
-  apply (wp static_imp_wp hoare_vcg_disj_lift)
+  apply (wp hoare_weak_lift_imp hoare_vcg_disj_lift)
   apply simp+
   done
 
@@ -689,21 +703,15 @@ lemma arch_switch_thread_tcb_at'[wp]:
   "\<lbrace>tcb_at' t\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>_. tcb_at' t\<rbrace>"
   by (unfold AARCH64_H.switchToThread_def, wp typ_at_lift_tcb')
 
-lemma [wp]: (* FIXME AARCH64 *)
-  "\<lbrace>pred_tcb_at' proj P t'\<rbrace> updateASIDPoolEntry param_a param_b \<lbrace>\<lambda>_. pred_tcb_at' proj P t'\<rbrace>"
-  sorry
+lemma updateASIDPoolEntry_pred_tcb_at'[wp]:
+  "updateASIDPoolEntry f asid \<lbrace>pred_tcb_at' proj P t'\<rbrace>"
+  unfolding updateASIDPoolEntry_def getPoolPtr_def
+  by (wpsimp wp: setASIDPool_pred_tcb_at' getASID_wp)
 
-lemma [wp]: (* FIXME AARCH64 *)
-  "\<lbrace>pred_tcb_at' proj P t'\<rbrace> loadVMID param_a \<lbrace>\<lambda>_. pred_tcb_at' proj P t'\<rbrace>"
-  sorry
-
-lemma [wp]: (* FIXME AARCH64 *)
-  "\<lbrace>Invariants_H.valid_queues\<rbrace> updateASIDPoolEntry param_a param_b \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
-  sorry
-
-lemma [wp]: (* FIXME AARCH64 *)
-  "\<lbrace>Invariants_H.valid_queues\<rbrace> loadVMID param_a \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
-  sorry
+lemma updateASIDPoolEntry_valid_queues[wp]:
+  "updateASIDPoolEntry g asid \<lbrace>Invariants_H.valid_queues\<rbrace>"
+  unfolding updateASIDPoolEntry_def getPoolPtr_def
+  by (wpsimp wp: getASID_wp)
 
 crunches setVMRoot
   for pred_tcb_at'[wp]: "pred_tcb_at' proj P t'"
@@ -713,15 +721,17 @@ crunches vcpuSwitch
   for pred_tcb_at'[wp]: "pred_tcb_at' proj P t'"
   (simp: crunch_simps wp: crunch_wps)
 
+crunches Arch.switchToThread
+  for typ_at'[wp]: "\<lambda>s. P (typ_at' T p s)"
+
 lemma Arch_switchToThread_pred_tcb'[wp]:
   "Arch.switchToThread t \<lbrace>\<lambda>s. P (pred_tcb_at' proj P' t' s)\<rbrace>"
 proof -
   have pos: "\<And>P t t'. Arch.switchToThread t \<lbrace>pred_tcb_at' proj P t'\<rbrace>"
-    by (wpsimp wp: setVMRoot_obj_at simp: AARCH64_H.switchToThread_def)
+    by (wpsimp simp: AARCH64_H.switchToThread_def)
   show ?thesis
     apply (rule P_bool_lift [OF pos])
-    sorry (* FIXME AARCH64: where does this switchToThread_typ_at' come from? it's not in AInvs on any arch
-    by (rule lift_neg_pred_tcb_at' [OF ArchThreadDecls_H_AARCH64_H_switchToThread_typ_at' pos]) *)
+    by (rule lift_neg_pred_tcb_at' [OF ArchThreadDecls_H_AARCH64_H_switchToThread_typ_at' pos])
 qed
 
 crunches storeWordUser, setVMRoot, asUser, storeWordUser, Arch.switchToThread
@@ -791,20 +801,26 @@ crunches vcpu_update, vgic_update, vcpu_disable, vcpu_restore, vcpu_enable
   for valid_asid_map[wp]: valid_asid_map
   (simp: crunch_simps wp: crunch_wps)
 
+lemma setGlobalUserVSpace_corres[corres]:
+  "corres dc valid_global_arch_objs \<top> set_global_user_vspace setGlobalUserVSpace"
+  unfolding set_global_user_vspace_def setGlobalUserVSpace_def
+  apply (subst o_def) (* unfold fun_comp on abstract side only to get global_pt abbrev *)
+  apply corres
+  done
+
 lemma arch_switchToIdleThread_corres:
   "corres dc
-        (valid_arch_state and valid_objs and pspace_aligned and pspace_distinct
-           and valid_vspace_objs and valid_idle)
-        (no_0_obj')
-        arch_switch_to_idle_thread Arch.switchToIdleThread"
-  apply (simp add: arch_switch_to_idle_thread_def
-                AARCH64_H.switchToIdleThread_def)
-  apply (corresKsimp corres: getIdleThread_corres setVMRoot_corres
-                            vcpuSwitch_corres[where vcpu=None, simplified])
-  sorry (* FIXME AARCH64 need to deal with setGlobalUserVSpace_corres
-  apply (clarsimp simp: valid_idle_def valid_idle'_def pred_tcb_at_def obj_at_def is_tcb
-                        valid_arch_state_asid_table valid_arch_state_global_arch_objs)
-  done *)
+          (valid_arch_state and pspace_aligned and pspace_distinct)
+          (no_0_obj')
+          arch_switch_to_idle_thread Arch.switchToIdleThread"
+  unfolding arch_switch_to_idle_thread_def switchToIdleThread_def
+  apply (corres corres: vcpuSwitch_corres)
+   apply (clarsimp simp: valid_arch_state_def cur_vcpu_def in_omonad obj_at_def)
+  apply clarsimp
+  apply (rule vcpu_at_cross; assumption?)
+  apply (clarsimp simp: valid_arch_state_def cur_vcpu_def in_omonad obj_at_def state_relation_def
+                        arch_state_relation_def)
+  done
 
 lemma switchToIdleThread_corres:
   "corres dc invs invs_no_cicd' switch_to_idle_thread switchToIdleThread"
@@ -972,34 +988,16 @@ lemma Arch_switchToThread_invs[wp]:
   "\<lbrace>invs' and tcb_at' t\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. invs'\<rbrace>"
   unfolding AARCH64_H.switchToThread_def by (wpsimp wp: getObject_tcb_hyp_sym_refs)
 
-lemma [wp]: (* FIXME AARCH64 *)
-  "\<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace> loadVMID param_a \<lbrace>\<lambda>_ s. P (ksCurDomain s)\<rbrace>"
-  sorry
-
-lemma [wp]: (* FIXME AARCH64 *)
-  "\<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace> updateASIDPoolEntry param_a param_b \<lbrace>\<lambda>_ s. P (ksCurDomain s)\<rbrace>"
-  sorry
-
 crunch ksCurDomain[wp]: "Arch.switchToThread" "\<lambda>s. P (ksCurDomain s)"
-  (simp: crunch_simps wp: crunch_wps)
+  (simp: crunch_simps wp: crunch_wps getASID_wp)
 
-lemma Arch_swichToThread_tcbDomain_triv[wp]:
-  "\<lbrace> obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t' \<rbrace> Arch.switchToThread t \<lbrace> \<lambda>_. obj_at'  (\<lambda>tcb. P (tcbDomain tcb)) t' \<rbrace>"
-  apply (clarsimp simp: AARCH64_H.switchToThread_def storeWordUser_def)
-  apply (wp hoare_drop_imp | simp)+
-  done
-
-lemma Arch_swichToThread_tcbPriority_triv[wp]:
-  "\<lbrace> obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t' \<rbrace> Arch.switchToThread t \<lbrace> \<lambda>_. obj_at'  (\<lambda>tcb. P (tcbPriority tcb)) t' \<rbrace>"
-  apply (clarsimp simp: AARCH64_H.switchToThread_def storeWordUser_def)
-  apply (wp hoare_drop_imp | simp)+
-  done
+crunches Arch.switchToThread
+  for obj_at_tcb'[wp]: "obj_at' (\<lambda>tcb::tcb. P tcb) t"
+  (wp: crunch_wps getASID_wp simp: crunch_simps)
 
 lemma Arch_switchToThread_tcb_in_cur_domain'[wp]:
-  "\<lbrace>tcb_in_cur_domain' t'\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>_. tcb_in_cur_domain' t' \<rbrace>"
-  apply (rule tcb_in_cur_domain'_lift)
-   apply wp+
-  done
+  "Arch.switchToThread t \<lbrace>tcb_in_cur_domain' t'\<rbrace>"
+  by (wp tcb_in_cur_domain'_lift)
 
 lemma tcbSchedDequeue_not_tcbQueued:
   "\<lbrace> tcb_at' t \<rbrace> tcbSchedDequeue t \<lbrace> \<lambda>_. obj_at' (\<lambda>x. \<not> tcbQueued x) t \<rbrace>"
@@ -1017,16 +1015,6 @@ lemma asUser_obj_at[wp]:
   apply (simp add: asUser_fetch_def obj_at'_def)
   done
 
-lemma asUser_tcbState_inv[wp]:
-  "asUser t m \<lbrace>obj_at' (P \<circ> tcbState) t\<rbrace>"
-  apply (simp add: asUser_def tcb_in_cur_domain'_def threadGet_def)
-  apply (wp threadSet_obj_at'_strongish getObject_tcb_wp | wpc | simp | clarsimp simp: obj_at'_def)+
-  done
-
-lemma Arch_switchToThread_obj_at[wp]:
-  "Arch.switchToThread t \<lbrace>obj_at' (P \<circ> tcbState) t\<rbrace>"
-  by (wpsimp simp: AARCH64_H.switchToThread_def)
-
 declare doMachineOp_obj_at[wp]
 
 crunch valid_arch_state'[wp]: asUser "valid_arch_state'"
@@ -1043,8 +1031,7 @@ crunch valid_queues'[wp]: asUser "valid_queues'"
 
 
 lemma asUser_valid_irq_node'[wp]:
-  "\<lbrace>\<lambda>s. valid_irq_node' (irq_node' s) s\<rbrace> asUser t (setRegister f r)
-          \<lbrace>\<lambda>_ s. valid_irq_node' (irq_node' s) s\<rbrace>"
+  "asUser t (setRegister f r) \<lbrace>\<lambda>s. valid_irq_node' (irq_node' s) s\<rbrace>"
   apply (rule_tac valid_irq_node_lift)
    apply (simp add: asUser_def)
    apply (wpsimp wp: crunch_wps)+
@@ -1100,8 +1087,6 @@ lemma asUser_utr[wp]:
   apply (simp add: o_def)
   done
 
-(* FIXME AARCH64 ARM_HYP does not have this, adapted arch tcb parts, but might not be useful now
-   since it involves s, review  *)
 lemma threadSet_invs_no_cicd'_trivialT:
   assumes x: "\<forall>tcb. \<forall>(getF,setF) \<in> ran tcb_cte_cases. getF (F tcb) = getF tcb"
   assumes z: "\<forall>tcb. tcbState (F tcb) = tcbState tcb \<and> tcbDomain (F tcb) = tcbDomain tcb"
@@ -1217,7 +1202,7 @@ lemma switchToThread_ct_in_state[wp]:
 proof -
   show ?thesis
     apply (simp add: Thread_H.switchToThread_def tcbSchedEnqueue_def unless_def)
-    apply (wp setCurThread_ct_in_state Arch_switchToThread_obj_at
+    apply (wp setCurThread_ct_in_state
          | simp add: o_def cong: if_cong)+
     done
 qed
@@ -1251,12 +1236,10 @@ crunches
   for cap_to'[wp]: "ex_nonz_cap_to' p"
   (ignore: doMachineOp wp: crunch_wps)
 
-lemma [wp]: (* FIXME AARCH64 *)
-  "\<lbrace>ex_nonz_cap_to' p\<rbrace> updateASIDPoolEntry param_a param_b \<lbrace>\<lambda>_. ex_nonz_cap_to' p\<rbrace>"
-  sorry
-lemma [wp]: (* FIXME AARCH64 *)
-  "\<lbrace>ex_nonz_cap_to' p\<rbrace> loadVMID param_a \<lbrace>\<lambda>_. ex_nonz_cap_to' p\<rbrace>"
-  sorry
+crunches updateASIDPoolEntry
+  for cap_to'[wp]: "ex_nonz_cap_to' p"
+  (wp: crunch_wps ex_nonz_cap_to_pres' getASID_wp)
+
 crunch cap_to'[wp]: "Arch.switchToThread" "ex_nonz_cap_to' p"
   (simp: crunch_simps wp: crunch_wps)
 
@@ -1534,7 +1517,7 @@ lemma switchToIdleThread_invs_no_cicd':
 crunch obj_at'[wp]: "Arch.switchToIdleThread" "obj_at' (P :: ('a :: no_vcpu) \<Rightarrow> bool) t"
 
 
-declare static_imp_conj_wp[wp_split del]
+declare hoare_weak_lift_imp_conj[wp_split del]
 
 lemma setCurThread_const:
   "\<lbrace>\<lambda>_. P t \<rbrace> setCurThread t \<lbrace>\<lambda>_ s. P (ksCurThread s) \<rbrace>"

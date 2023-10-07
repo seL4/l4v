@@ -339,6 +339,18 @@ lemma corres_splitEE:
    apply (clarsimp simp: lift_def y)+
   done
 
+lemma corres_splitEE_prod:
+  assumes x: "corres_underlying sr nf nf' (f \<oplus> r') P P' a c"
+  assumes y: "\<And>x y x' y'. r' (x, y) (x', y')
+              \<Longrightarrow> corres_underlying sr nf nf' (f \<oplus> r) (R x y) (R' x' y') (b x y) (d x' y')"
+  assumes z: "\<lbrace>Q\<rbrace> a \<lbrace>\<lambda>(x, y). R x y \<rbrace>,\<lbrace>\<top>\<top>\<rbrace>" "\<lbrace>Q'\<rbrace> c \<lbrace>\<lambda>(x, y). R' x y\<rbrace>,\<lbrace>\<top>\<top>\<rbrace>"
+  shows      "corres_underlying sr nf nf' (f \<oplus> r) (P and Q) (P' and Q') (a >>=E (\<lambda>(x, y). b x y)) (c >>=E (\<lambda>(x, y). d x y))"
+  using assms
+  apply (unfold bindE_def validE_def)
+  apply (rule corres_split[rotated 2], assumption+)
+  apply (fastforce simp: lift_def y split: sum.splits)
+  done
+
 lemma corres_split_handle:
   assumes    "corres_underlying sr nf nf' (f' \<oplus> r) P P' a c"
   assumes y: "\<And>ft ft'. f' ft ft'
@@ -493,6 +505,8 @@ lemma corres_liftE_rel_sum[simp]:
  "corres_underlying sr nf nf' (f \<oplus> r) P P' (liftE m) (liftE m') =
   corres_underlying sr nf nf' r P P' m m'"
   by (simp add: liftE_liftM o_def)
+
+lemmas corres_liftE_lift = corres_liftE_rel_sum[THEN iffD2]
 
 text \<open>Support for proving correspondence to noop with hoare triples\<close>
 
@@ -689,6 +703,17 @@ lemma corres_trivial:
  "corres_underlying sr nf nf' r \<top> \<top> f g \<Longrightarrow> corres_underlying sr nf nf' r \<top> \<top> f g"
   by assumption
 
+lemma corres_underlying_trivial[corres]:
+  "\<lbrakk> nf' \<Longrightarrow> no_fail P' f \<rbrakk> \<Longrightarrow> corres_underlying Id nf nf' (=) \<top> P' f f"
+  by (auto simp add: corres_underlying_def Id_def no_fail_def)
+
+(* Instance of corres_underlying_trivial for unit type with dc instead of (=) as return relation,
+   for nicer return relation instantiation. *)
+lemma corres_underlying_trivial_dc[corres]:
+  "(nf' \<Longrightarrow> no_fail P' f) \<Longrightarrow> corres_underlying Id nf nf' dc (\<lambda>_. True) P' f f"
+  for f :: "('s, unit) nondet_monad"
+  by (fastforce intro: corres_underlying_trivial corres_rrel_pre)
+
 lemma corres_assume_pre:
   assumes R: "\<And>s s'. \<lbrakk> P s; Q s'; (s,s') \<in> sr \<rbrakk> \<Longrightarrow> corres_underlying sr nf nf' r P Q f g"
   shows "corres_underlying sr nf nf' r P Q f g"
@@ -855,6 +880,31 @@ lemma corres_assert_opt_assume:
   by (auto simp: bind_def assert_opt_def assert_def fail_def return_def
                  corres_underlying_def split: option.splits)
 
+lemma corres_assert_opt[corres]:
+  "r x x' \<Longrightarrow>
+  corres_underlying sr nf nf' (\<lambda>x x'. r (Some x) x') (\<lambda>s. x \<noteq> None) \<top> (assert_opt x) (return x')"
+  unfolding corres_underlying_def
+  by (clarsimp simp: assert_opt_def return_def split: option.splits)
+
+lemma assert_opt_assert_corres[corres]:
+  "(x = None) = (x' = None) \<Longrightarrow>
+   corres_underlying sr nf nf' (\<lambda>y _. x = Some y) (K (x \<noteq> None)) \<top>
+                     (assert_opt x) (assert (\<exists>y. x' = Some y))"
+  by (simp add: corres_underlying_def assert_opt_def return_def split: option.splits)
+
+lemma corres_assert_opt_l:
+  assumes "\<And>x. P' = Some x \<Longrightarrow> corres_underlying sr nf nf' r (P x) Q (f x) g"
+  shows "corres_underlying sr nf nf' r (\<lambda>s. \<exists>x. P' = Some x \<and> P x s) Q (assert_opt P' >>= f) g"
+  using assms
+  by (auto simp: bind_def assert_opt_def assert_def fail_def return_def corres_underlying_def
+           split: option.splits)
+
+lemma corres_gets_the_gets:
+  "corres_underlying sr False nf' r P P' (gets_the f) f' \<Longrightarrow>
+   corres_underlying sr nf nf' (\<lambda>x x'. x \<noteq> None \<and> r (the x) x') P P' (gets f) f'"
+  apply (simp add: gets_the_def bind_def simpler_gets_def assert_opt_def)
+  apply (fastforce simp: corres_underlying_def in_monad split: option.splits)
+  done
 
 text \<open>Support for proving correspondance by decomposing the state relation\<close>
 

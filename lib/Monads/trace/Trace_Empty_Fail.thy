@@ -5,23 +5,25 @@
  * SPDX-License-Identifier: BSD-2-Clause
  *)
 
-theory Nondet_Empty_Fail
+theory Trace_Empty_Fail
   imports
-    Nondet_Monad
+    Trace_Monad
     WPSimp
 begin
 
 section \<open>Monads that are wellformed w.r.t. failure\<close>
 
 text \<open>
-  Usually, well-formed monads constructed from the primitives in Nondet_Monad will have the following
-  property: if they return an empty set of results, they will have the failure flag set.\<close>
-definition empty_fail :: "('s,'a) nondet_monad \<Rightarrow> bool" where
-  "empty_fail m \<equiv> \<forall>s. fst (m s) = {} \<longrightarrow> snd (m s)"
+  Usually, well-formed monads constructed from the primitives in Trace_Monad will have the following
+  property: if they return an empty set of completed results, there exists a trace corresponding to
+  a failed result.\<close>
+definition empty_fail :: "('s,'a) tmonad \<Rightarrow> bool" where
+  "empty_fail m \<equiv> \<forall>s. mres (m s) = {} \<longrightarrow> Failed \<in> snd ` (m s)"
 
 text \<open>Useful in forcing otherwise unknown executions to have the @{const empty_fail} property.\<close>
-definition mk_ef :: "'a set \<times> bool \<Rightarrow> 'a set \<times> bool" where
-  "mk_ef S \<equiv> (fst S, fst S = {} \<or> snd S)"
+definition mk_ef ::
+  "((tmid \<times> 's) list \<times> ('s, 'a) tmres) set \<Rightarrow> ((tmid \<times> 's) list \<times> ('s, 'a) tmres) set" where
+  "mk_ef S \<equiv> if mres S = {} then S \<union> {([], Failed)} else S"
 
 
 subsection \<open>WPC setup\<close>
@@ -36,27 +38,29 @@ wpc_setup "\<lambda>m. empty_fail m" wpc_helper_empty_fail_final
 subsection \<open>@{const empty_fail} intro/dest rules\<close>
 
 lemma empty_failI:
-  "(\<And>s. fst (m s) = {} \<Longrightarrow> snd (m s)) \<Longrightarrow> empty_fail m"
+  "(\<And>s. mres (m s) = {} \<Longrightarrow> Failed \<in> snd ` (m s)) \<Longrightarrow> empty_fail m"
   by (simp add: empty_fail_def)
 
 lemma empty_failD:
-  "\<lbrakk> empty_fail m; fst (m s) = {} \<rbrakk> \<Longrightarrow> snd (m s)"
+  "\<lbrakk> empty_fail m; mres (m s) = {} \<rbrakk> \<Longrightarrow> Failed \<in> snd ` (m s)"
   by (simp add: empty_fail_def)
 
 lemma empty_fail_not_snd:
-  "\<lbrakk> \<not> snd (m s); empty_fail m \<rbrakk> \<Longrightarrow> \<exists>v. v \<in> fst (m s)"
+  "\<lbrakk> Failed \<notin> snd ` (m s); empty_fail m \<rbrakk> \<Longrightarrow> \<exists>v. v \<in> mres (m s)"
   by (fastforce simp: empty_fail_def)
 
 lemmas empty_failD2 = empty_fail_not_snd[rotated]
 
 lemma empty_failD3:
-  "\<lbrakk> empty_fail f; \<not> snd (f s) \<rbrakk> \<Longrightarrow> fst (f s) \<noteq> {}"
+  "\<lbrakk> empty_fail f; Failed \<notin> snd ` (f s) \<rbrakk> \<Longrightarrow> mres (f s) \<noteq> {}"
   by (drule(1) empty_failD2, clarsimp)
 
 lemma empty_fail_bindD1:
   "empty_fail (a >>= b) \<Longrightarrow> empty_fail a"
   unfolding empty_fail_def bind_def
-  by (fastforce simp: split_def image_image)
+  apply clarsimp
+  apply (drule_tac x=s in spec)
+  by (force simp: split_def mres_def vimage_def split: tmres.splits)
 
 
 subsection \<open>Wellformed monads\<close>
@@ -91,32 +95,53 @@ lemma empty_fail_If_applied[empty_fail_cond]:
 
 lemma empty_fail_put[empty_fail_term]:
   "empty_fail (put f)"
-  by (simp add: put_def empty_fail_def)
+  by (simp add: put_def empty_fail_def mres_def vimage_def)
 
 lemma empty_fail_modify[empty_fail_term]:
   "empty_fail (modify f)"
-  by (simp add: empty_fail_def simpler_modify_def)
+  by (simp add: empty_fail_def simpler_modify_def mres_def vimage_def)
 
 lemma empty_fail_gets[empty_fail_term]:
   "empty_fail (gets f)"
-  by (simp add: empty_fail_def simpler_gets_def)
+  by (simp add: empty_fail_def simpler_gets_def mres_def vimage_def)
 
 lemma empty_fail_select[empty_fail_cond]:
   "S \<noteq> {} \<Longrightarrow> empty_fail (select S)"
-  by (simp add: empty_fail_def select_def)
+  by (simp add: empty_fail_def select_def mres_def image_def)
 
-lemma empty_fail_select_f[empty_fail_cond]:
-  assumes ef: "fst S = {} \<Longrightarrow> snd S"
-  shows "empty_fail (select_f S)"
-  by (fastforce simp add: empty_fail_def select_f_def intro: ef)
+lemma mres_bind_empty:
+  "mres ((f >>= g) s) = {}
+   \<Longrightarrow> mres (f s) = {} \<or> (\<forall>res\<in>mres (f s). mres (g (fst res) (snd res)) = {})"
+  apply clarsimp
+  apply (clarsimp simp: mres_def split_def vimage_def bind_def)
+  apply (rename_tac rv s' trace)
+  apply (drule_tac x=rv in spec, drule_tac x=s' in spec)
+  apply (clarsimp simp: image_def)
+  apply fastforce
+  done
+
+lemma bind_FailedI1:
+  "Failed \<in> snd ` f s \<Longrightarrow> Failed \<in> snd ` (f >>= g) s"
+  by (force simp: bind_def vimage_def)
+
+lemma bind_FailedI2:
+  "\<lbrakk>\<forall>res\<in>mres (f s). Failed \<in> snd ` (g (fst res) (snd res)); mres (f s) \<noteq> {}\<rbrakk>
+   \<Longrightarrow> Failed \<in> snd ` (f >>= g) s"
+  by (force simp: bind_def mres_def image_def split_def)
 
 lemma empty_fail_bind[empty_fail_cond]:
   "\<lbrakk> empty_fail a; \<And>x. empty_fail (b x) \<rbrakk> \<Longrightarrow> empty_fail (a >>= b)"
-  by (fastforce simp: bind_def empty_fail_def split_def)
+  unfolding empty_fail_def
+  apply clarsimp
+  apply (drule mres_bind_empty)
+  apply (erule context_disjE)
+   apply (fastforce intro: bind_FailedI1)
+  apply (fastforce intro!: bind_FailedI2)
+  done
 
 lemma empty_fail_return[empty_fail_term]:
   "empty_fail (return x)"
-  by (simp add: empty_fail_def return_def)
+  by (simp add: empty_fail_def return_def mres_def vimage_def)
 
 lemma empty_fail_returnOk[empty_fail_term]:
   "empty_fail (returnOk v)"
@@ -191,7 +216,7 @@ lemma empty_fail_assertE[empty_fail_term]:
 
 lemma empty_fail_get[empty_fail_term]:
   "empty_fail get"
-  by (simp add: empty_fail_def get_def)
+  by (simp add: empty_fail_def get_def mres_def vimage_def)
 
 lemma empty_fail_catch[empty_fail_cond]:
   "\<lbrakk> empty_fail f; \<And>x. empty_fail (g x) \<rbrakk> \<Longrightarrow> empty_fail (catch f g)"
@@ -203,7 +228,7 @@ lemma empty_fail_guard[empty_fail_term]:
 
 lemma empty_fail_spec[empty_fail_term]:
   "empty_fail (state_select F)"
-  by (clarsimp simp: state_select_def empty_fail_def)
+  by (clarsimp simp: state_select_def empty_fail_def default_elem_def mres_def image_def)
 
 lemma empty_fail_when[empty_fail_cond]:
   "(P \<Longrightarrow> empty_fail x) \<Longrightarrow> empty_fail (when P x)"
@@ -321,7 +346,7 @@ subsection \<open>Equations and legacy names\<close>
 
 lemma empty_fail_select_eq[simp]:
   "empty_fail (select V) = (V \<noteq> {})"
-  by (clarsimp simp: select_def empty_fail_def)
+  by (clarsimp simp: select_def empty_fail_def mres_def image_def)
 
 lemma empty_fail_liftM_eq[simp]:
   "empty_fail (liftM f m) = empty_fail m"
@@ -330,7 +355,7 @@ lemma empty_fail_liftM_eq[simp]:
 
 lemma empty_fail_liftE_eq[simp]:
   "empty_fail (liftE f) = empty_fail f"
-  by (fastforce simp: liftE_def empty_fail_def bind_def)
+  by (auto simp: liftE_def empty_fail_bindD1)
 
 lemma liftME_empty_fail_eq[simp]:
   "empty_fail (liftME f m) = empty_fail m"

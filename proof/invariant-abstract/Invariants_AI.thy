@@ -3463,6 +3463,10 @@ lemma valid_mask_vm_rights[simp]:
   "mask_vm_rights V R \<in> valid_vm_rights"
   by (simp add: mask_vm_rights_def)
 
+lemma invs_pspace_in_kernel_window[elim!]:
+  "invs s \<Longrightarrow> pspace_in_kernel_window s"
+  by (simp add: invs_def valid_state_def)
+
 lemmas invs_implies =
   invs_equal_kernel_mappings
   invs_arch_state
@@ -3488,6 +3492,7 @@ lemmas invs_implies =
   invs_hyp_sym_refs
   invs_sym_refs
   tcb_at_invs
+  invs_pspace_in_kernel_window
 
 (* Pull invs out of a complex goal and prove it only once. Use as (strengthen invs_strengthen)+,
    best in combination with simp and potentially conj_cong. *)

@@ -118,6 +118,15 @@ lemma gets_the_Some:
   "gets_the (\<lambda>_. Some x) = return x"
   by (simp add: gets_the_def assert_opt_Some)
 
+lemma gets_the_oapply2_comp:
+  "gets_the (oapply2 y x \<circ> f) = gets_map (swp f y) x"
+  by (clarsimp simp: gets_map_def gets_the_def o_def gets_def)
+
+lemma gets_obind_bind_eq:
+  "(gets (f |>> (\<lambda>x. g x))) =
+   (gets f >>= (\<lambda>x. case x of None \<Rightarrow> return None | Some y \<Rightarrow> gets (g y)))"
+  by (auto simp: simpler_gets_def bind_def obind_def return_def split: option.splits)
+
 lemma fst_assert_opt:
   "fst (assert_opt opt s) = (if opt = None then {} else {(the opt,s)})"
   by (clarsimp simp: assert_opt_def fail_def return_def split: option.split)

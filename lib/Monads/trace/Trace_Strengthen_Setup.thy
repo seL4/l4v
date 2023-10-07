@@ -41,6 +41,42 @@ lemma strengthen_validI[strg]:
    \<Longrightarrow> st F (\<longrightarrow>) (\<lbrace>P\<rbrace>,\<lbrace>G\<rbrace> f \<lbrace>R\<rbrace>,\<lbrace>Q\<rbrace>) (\<lbrace>P\<rbrace>,\<lbrace>G\<rbrace> f \<lbrace>R\<rbrace>,\<lbrace>Q'\<rbrace>)"
   by (cases F, auto elim: validI_strengthen_post)
 
+lemma wpfix_strengthen_hoare:
+  "\<lbrakk>\<And>s. st (\<not> F) (\<longrightarrow>) (P s) (P' s); \<And>r s. st F (\<longrightarrow>) (Q r s) (Q' r s)\<rbrakk>
+   \<Longrightarrow> st F (\<longrightarrow>) (\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>) (\<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace>)"
+  by (cases F, auto elim: hoare_chain)
+
+lemma wpfix_strengthen_validE_R_cong:
+  "\<lbrakk>\<And>s. st (\<not> F) (\<longrightarrow>) (P s) (P' s); \<And>r s. st F (\<longrightarrow>) (Q r s) (Q' r s)\<rbrakk>
+   \<Longrightarrow> st F (\<longrightarrow>) (\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, -) (\<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace>, -)"
+  by (cases F, auto elim: hoare_chainE simp: validE_R_def)
+
+lemma wpfix_strengthen_validE_cong:
+  "\<lbrakk>\<And>s. st (\<not> F) (\<longrightarrow>) (P s) (P' s); \<And>r s. st F (\<longrightarrow>) (Q r s) (R r s);
+    \<And>r s. st F (\<longrightarrow>) (S r s) (T r s)\<rbrakk>
+   \<Longrightarrow> st F (\<longrightarrow>) (\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>S\<rbrace>) (\<lbrace>P'\<rbrace> f \<lbrace>R\<rbrace>, \<lbrace>T\<rbrace>)"
+  by (cases F, auto elim: hoare_chainE)
+
+lemma wpfix_strengthen_validE_E_cong:
+  "\<lbrakk>\<And>s. st (\<not> F) (\<longrightarrow>) (P s) (P' s); \<And>r s. st F (\<longrightarrow>) (S r s) (T r s)\<rbrakk>
+   \<Longrightarrow> st F (\<longrightarrow>) (\<lbrace>P\<rbrace> f -, \<lbrace>S\<rbrace>) (\<lbrace>P'\<rbrace> f -, \<lbrace>T\<rbrace>)"
+  by (cases F, auto elim: hoare_chainE simp: validE_E_def)
+
+lemma wpfix_no_fail_cong:
+  "\<lbrakk>\<And>s. st (\<not> F) (\<longrightarrow>) (P s) (P' s)\<rbrakk>
+   \<Longrightarrow> st F (\<longrightarrow>) (no_fail P f) (no_fail P' f)"
+  by (cases F, auto elim: no_fail_pre)
+
+lemmas nondet_wpfix_strgs =
+    wpfix_strengthen_validE_R_cong
+    wpfix_strengthen_validE_E_cong
+    wpfix_strengthen_validE_cong
+    wpfix_strengthen_hoare
+    wpfix_no_fail_cong
+
 end
+
+lemmas nondet_wpfix_strgs[wp_fix_strgs]
+    = strengthen_implementation.nondet_wpfix_strgs
 
 end

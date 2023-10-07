@@ -2371,10 +2371,10 @@ lemma empty_slot_emptyable[wp]:
 
 
 crunch emptyable[wp]: blocked_cancel_ipc "emptyable sl"
-  (ignore: set_thread_state wp: emptyable_lift sts_st_tcb_at_cases static_imp_wp)
+  (ignore: set_thread_state wp: emptyable_lift sts_st_tcb_at_cases hoare_weak_lift_imp)
 
 crunch emptyable[wp]: cancel_signal "emptyable sl"
-  (ignore: set_thread_state wp: emptyable_lift sts_st_tcb_at_cases static_imp_wp)
+  (ignore: set_thread_state wp: emptyable_lift sts_st_tcb_at_cases hoare_weak_lift_imp)
 
 
 lemma cap_delete_one_emptyable[wp]:

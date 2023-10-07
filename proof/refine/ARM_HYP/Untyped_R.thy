@@ -3556,7 +3556,7 @@ lemma updateFreeIndex_mdb_simple':
   and    cte_wp_at' :"ctes_of s src = Some cte" "cteCap cte = capability.UntypedCap d ptr sz idx'"
   and      unt_inc' :"untyped_inc' (ctes_of s)"
   and   valid_objs' :"valid_objs' s"
-  and invp: "mdb_inv_preserve (ctes_of s) (ctes_of s(src \<mapsto> cteCap_update (\<lambda>_. capability.UntypedCap d ptr sz idx) cte))"
+  and invp: "mdb_inv_preserve (ctes_of s) ((ctes_of s)(src \<mapsto> cteCap_update (\<lambda>_. UntypedCap d ptr sz idx) cte))"
     (is "mdb_inv_preserve (ctes_of s) ?ctes")
 
   show "untyped_inc' ?ctes"

@@ -446,7 +446,7 @@ lemma rescheduleRequired_no_orphans [wp]:
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding rescheduleRequired_def
   apply (wp tcbSchedEnqueue_no_orphans hoare_vcg_all_lift ssa_no_orphans | wpc | clarsimp)+
-   apply (wps tcbSchedEnqueue_nosch, wp static_imp_wp)
+   apply (wps tcbSchedEnqueue_nosch, wp hoare_weak_lift_imp)
    apply (rename_tac word t p)
    apply (rule_tac P="word = t" in hoare_gen_asm)
    apply (wp hoare_disjI1 | clarsimp)+
@@ -458,7 +458,7 @@ lemma rescheduleRequired_almost_no_orphans [wp]:
    \<lbrace> \<lambda>rv s. almost_no_orphans tcb_ptr s \<rbrace>"
   unfolding rescheduleRequired_def
   apply (wp tcbSchedEnqueue_almost_no_orphans_lift hoare_vcg_all_lift | wpc | clarsimp)+
-   apply (wps tcbSchedEnqueue_nosch, wp static_imp_wp)
+   apply (wps tcbSchedEnqueue_nosch, wp hoare_weak_lift_imp)
    apply (rename_tac word t p)
    apply (rule_tac P="word = t" in hoare_gen_asm)
    apply (wp hoare_disjI1 | clarsimp)+
@@ -605,32 +605,13 @@ lemma switchToIdleThread_no_orphans' [wp]:
                     st_tcb_at_neg' tcb_at_typ_at')
   done
 
-lemma [wp]: (* FIXME AARCH64 *)
-  "\<lbrace>no_orphans\<rbrace> updateASIDPoolEntry param_a param_b \<lbrace>\<lambda>_. no_orphans\<rbrace>"
-  sorry
-
-lemma [wp]: (* FIXME AARCH64 *)
-  "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> getVMID param_b \<lbrace>\<lambda>vmID s. P (ksCurThread s)\<rbrace>"
-  sorry
-lemma [wp]: (* FIXME AARCH64 *)
-  "\<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> getVMID param_b \<lbrace>\<lambda>vmID s. P (ksReadyQueues s)\<rbrace>"
-  sorry
-
-crunches
-  setGlobalUserVSpace,armContextSwitch,getThreadVSpaceRoot,vcpuRestoreReg,
-  vcpuRestoreRegRange, vcpuSaveRegRange, vcpuSwitch,
-  vcpuEnable, setVMRoot
+crunches getVMID, Arch.switchToThread
   for ksCurThread[wp]: "\<lambda> s. P (ksCurThread s)"
-  (wp: crunch_wps)
+  (wp: crunch_wps getObject_inv loadObject_default_inv)
 
-crunches setGlobalUserVSpace,armContextSwitch,getThreadVSpaceRoot
-  for ksReadyQueues[wp]: "\<lambda> s. P (ksReadyQueues s)"
-
-crunch no_orphans [wp]: "Arch.switchToThread" "no_orphans"
+crunches updateASIDPoolEntry, Arch.switchToThread
+  for no_orphans[wp]: "no_orphans"
   (wp: no_orphans_lift crunch_wps)
-
-crunch ksCurThread [wp]: "Arch.switchToThread" "\<lambda> s. P (ksCurThread s)"
-  (wp: crunch_wps)
 
 lemma ArchThreadDecls_H_switchToThread_all_queued_tcb_ptrs [wp]:
   "\<lbrace> \<lambda>s. P (all_queued_tcb_ptrs s) \<rbrace>
@@ -1097,7 +1078,7 @@ proof -
      apply (rule_tac Q="\<lambda>_ s. (t = candidate \<longrightarrow> ksCurThread s = candidate) \<and>
                                (t \<noteq> candidate \<longrightarrow> sch_act_not t s)"
               in hoare_post_imp)
-      apply (wpsimp wp: stt_nosch static_imp_wp)+
+      apply (wpsimp wp: stt_nosch hoare_weak_lift_imp)+
     apply (fastforce dest!: in_all_active_tcb_ptrsD simp: all_queued_tcb_ptrs_def comp_def)
     done
 
@@ -1226,7 +1207,7 @@ lemma possibleSwitchTo_almost_no_orphans [wp]:
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding possibleSwitchTo_def
   by (wp rescheduleRequired_valid_queues'_weak tcbSchedEnqueue_almost_no_orphans
-         ssa_almost_no_orphans static_imp_wp
+         ssa_almost_no_orphans hoare_weak_lift_imp
      | wpc | clarsimp
      | wp (once) hoare_drop_imp)+
 
@@ -1435,6 +1416,11 @@ lemma createObjects_no_orphans [wp]:
 crunch no_orphans [wp]: insertNewCap "no_orphans"
 (wp: hoare_drop_imps)
 
+lemma no_orphans_ksArchState_idem[simp]:
+  "no_orphans (s\<lparr>ksArchState := f (ksArchState s)\<rparr>) = no_orphans s"
+  unfolding no_orphans_def all_queued_tcb_ptrs_def all_active_tcb_ptrs_def is_active_tcb_ptr_def
+  by clarsimp
+
 lemma createNewCaps_no_orphans:
   "\<lbrace> (\<lambda>s. no_orphans s
          \<and>  pspace_aligned' s \<and> pspace_distinct' s
@@ -1443,21 +1429,18 @@ lemma createNewCaps_no_orphans:
          and K (range_cover ptr sz (APIType_capBits tp us) n \<and> 0 < n) \<rbrace>
    createNewCaps tp ptr n us d
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  apply (clarsimp simp: createNewCaps_def toAPIType_def
-    split del: if_split cong: option.case_cong)
-  apply (cases tp, simp_all split del: if_split)
+  supply if_split[split del]
+  apply (clarsimp simp: createNewCaps_def toAPIType_def cong: option.case_cong)
+  apply (cases tp; simp)
         apply (rename_tac apiobject_type)
-        apply (case_tac apiobject_type, simp_all)
-  sorry (* FIXME AARCH64 investigate missing wp rules
-            apply (wp mapM_x_wp' threadSet_no_orphans
+        apply (case_tac apiobject_type; simp)
+            apply (wpsimp wp: mapM_x_wp' threadSet_no_orphans
                    | clarsimp simp: is_active_thread_state_def makeObject_tcb
                                     projectKO_opt_tcb isRunning_def isRestart_def
                                     APIType_capBits_def Arch_createNewCaps_def
                                     objBits_if_dev
-                          split del: if_split
-                   | simp add: objBits_simps
-                   | fastforce simp: bit_simps objBits_simps)+
-  done *)
+                   | simp add: objBits_simps mult_2 nat_arith.add1 split: if_split)+
+  done
 
 crunches updatePTType
   for no_orphans[wp]: "no_orphans"
@@ -1483,15 +1466,6 @@ lemma createObject_no_orphans:
                   split: object_type.split_asm apiobject_type.split_asm if_splits)
   done
 
-lemma canonical_address_neq_mask:
-  "\<lbrakk> canonical_address ptr ; sz \<le> maxUntypedSizeBits \<rbrakk>
-   \<Longrightarrow> canonical_address (ptr && ~~ mask sz)"
-  apply (simp add: untypedBits_defs sign_extended_neq_mask canonical_address_def
-                   canonical_address_of_def canonical_bit_def)
-  (* FIXME AARCH64 this doesn't have the same impace as on arches with proper canonical addresses,
-     but it's still used in some createNewObjects-related lemmas *)
-  sorry
-
 lemma createNewObjects_no_orphans:
   "\<lbrace>\<lambda>s. no_orphans s \<and> invs' s \<and> pspace_no_overlap' ptr sz s
          \<and> (\<forall>slot\<in>set slots. cte_wp_at' (\<lambda>c. cteCap c = capability.NullCap) slot s)
@@ -1501,14 +1475,14 @@ lemma createNewObjects_no_orphans:
          \<and> (tp = APIObjectType ArchTypes_H.CapTableObject \<longrightarrow> us > 0)
          \<and> caps_overlap_reserved' {ptr..ptr + of_nat (length slots) * 2 ^ APIType_capBits tp us - 1} s
          \<and> slots \<noteq> [] \<and> distinct slots \<and> ptr \<noteq> 0
-         \<and> sz \<le> maxUntypedSizeBits \<and> canonical_address ptr\<rbrace>
+         \<and> sz \<le> maxUntypedSizeBits\<rbrace>
    createNewObjects tp cref slots ptr us d
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   apply (rule hoare_name_pre_state)
   apply clarsimp
   apply (rule hoare_pre)
    apply (rule createNewObjects_wp_helper)
-       apply (simp add: canonical_address_neq_mask)+
+       apply (simp)+
    apply (simp add:insertNewCaps_def)
    apply wp
     apply (rule_tac P = "length caps = length slots" in hoare_gen_asm)
@@ -1710,7 +1684,6 @@ lemma sendSignal_no_orphans [wp]:
           | wpc | clarsimp simp: sch_act_wf_weak)+
   done
 
-(* FIXME AARCH64 these are guesses for vgicMaintenance_no_orphans *)
 crunches vgicUpdateLR
   for no_orphans[wp]: "no_orphans"
   (wp: no_orphans_lift crunch_wps)
@@ -1719,23 +1692,39 @@ crunch not_pred_tcb_at'[wp]: vgicUpdateLR,doMachineOp "\<lambda>s. \<not> (pred_
 
 crunch valid_queues' [wp]: vgicUpdateLR valid_queues'
 
-(* FIXME AARCH64 this is a guess, but the only interesting function called is handleFault *)
+crunches vcpuUpdate, vgicUpdateLR, doMachineOp
+  for no_orphans[wp]: no_orphans
+  and tcb_in_cur_domain'[wp]: "tcb_in_cur_domain' t"
+  (wp: no_orphans_lift tcb_in_cur_domain'_lift)
+
 lemma vgicMaintenance_no_orphans[wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> valid_queues' s \<and> valid_objs' s \<and> sch_act_wf (ksSchedulerAction s) s \<rbrace>
    vgicMaintenance
    \<lbrace>\<lambda>_. no_orphans\<rbrace>"
   unfolding vgicMaintenance_def Let_def
-  apply (wpsimp wp: hoare_vcg_imp_lift' | wps)+
-  sorry (* FIXME AARCH64 *)
+  by (wpsimp wp: sch_act_wf_lift hoare_drop_imp[where f="vgicUpdateLR v idx virq" for v idx virq]
+                 hoare_drop_imp[where f="return v" for v]
+                 hoare_drop_imp[where f="doMachineOp f" for f])
 
-(* FIXME AARCH64 this is a guess, but the only interesting function called is handleFault *)
 lemma vppiEvent_no_orphans[wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> valid_queues' s \<and> valid_objs' s \<and> sch_act_wf (ksSchedulerAction s) s \<rbrace>
    vppiEvent irq
    \<lbrace>\<lambda>_. no_orphans\<rbrace>"
   unfolding vppiEvent_def Let_def
-  apply (wpsimp wp: hoare_vcg_imp_lift' | wps)+
-  sorry (* FIXME AARCH64 *)
+  by (wpsimp wp: hoare_vcg_imp_lift' sch_act_wf_lift | wps)+
+
+(* FIXME AARCH64: move *)
+lemma irqVPPIEventIndex_irqVGICMaintenance_None[simp]:
+  "irqVPPIEventIndex irqVGICMaintenance = None"
+  unfolding irqVTimerEvent_def irqVGICMaintenance_def IRQ_def irqVPPIEventIndex_def
+  by simp
+
+lemma handleReservedIRQ_no_orphans[wp]:
+  "\<lbrace> \<lambda>s. no_orphans s \<and> valid_queues' s \<and> valid_objs' s \<and> sch_act_wf (ksSchedulerAction s) s \<rbrace>
+   handleReservedIRQ irq
+   \<lbrace>\<lambda>_. no_orphans \<rbrace>"
+  unfolding handleReservedIRQ_def
+  by (case_tac "irq = irqVGICMaintenance"; wpsimp)
 
 lemma handleInterrupt_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<rbrace>
@@ -1743,14 +1732,10 @@ lemma handleInterrupt_no_orphans [wp]:
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding handleInterrupt_def
   supply if_split[split del]
-  apply (rule hoare_pre)
-   apply (wp hoare_drop_imps hoare_vcg_all_lift getIRQState_inv
+  apply (wp hoare_drop_imps hoare_vcg_all_lift getIRQState_inv
          | wpc | clarsimp simp: invs'_def valid_state'_def maskIrqSignal_def
-                                handleReservedIRQ_def if_apply_def2)+
-  sorry
-  (* FIXME AARCH64 missing several wp rules about vgicMaintenance:
-                   valid_queues' s \<and> valid_objs' s \<and> sch_act_wf (ksSchedulerAction s) s
-  done *)
+                                if_apply_def2)+
+  done
 
 lemma updateRestartPC_no_orphans[wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<rbrace>
@@ -1785,12 +1770,9 @@ lemma suspend_no_orphans [wp]:
   apply auto
   done
 
-lemma [wp]: (* FIXME AARCH64 *)
-  "invalidateASIDEntry asid \<lbrace>no_orphans\<rbrace>"
-  sorry
-lemma [wp]: (* FIXME AARCH64 *)
-  "invalidateTLBByASID asid \<lbrace>no_orphans\<rbrace>"
-  sorry
+crunches invalidateASIDEntry, invalidateTLBByASID
+  for no_orphans[wp]: no_orphans
+  (wp: no_orphans_lift)
 
 lemma deleteASIDPool_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<rbrace>
@@ -1985,7 +1967,7 @@ lemma writereg_no_orphans:
   unfolding invokeTCB_def performTransfer_def postModifyRegisters_def
   apply simp
   apply (rule hoare_pre)
-  by (wp hoare_vcg_if_lift hoare_vcg_conj_lift restart_invs' static_imp_wp
+  by (wp hoare_vcg_if_lift hoare_vcg_conj_lift restart_invs' hoare_weak_lift_imp
        | strengthen invs_valid_queues'  | clarsimp  simp: invs'_def valid_state'_def dest!: global'_no_ex_cap )+
 
 lemma copyreg_no_orphans:
@@ -1995,8 +1977,8 @@ lemma copyreg_no_orphans:
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding invokeTCB_def performTransfer_def postModifyRegisters_def
   apply simp
-  apply (wp hoare_vcg_if_lift static_imp_wp)
-      apply (wp static_imp_wp hoare_vcg_conj_lift hoare_drop_imp mapM_x_wp' restart_invs'
+  apply (wp hoare_vcg_if_lift hoare_weak_lift_imp)
+      apply (wp hoare_weak_lift_imp hoare_vcg_conj_lift hoare_drop_imp mapM_x_wp' restart_invs'
              restart_no_orphans asUser_no_orphans suspend_nonz_cap_to_tcb
              | strengthen invs_valid_queues' | wpc | simp add: if_apply_def2)+
   apply (fastforce simp: invs'_def valid_state'_def dest!: global'_no_ex_cap)
@@ -2008,7 +1990,7 @@ lemma settlsbase_no_orphans:
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding invokeTCB_def performTransfer_def
   apply simp
-  apply (wp hoare_vcg_if_lift static_imp_wp)
+  apply (wp hoare_vcg_if_lift hoare_weak_lift_imp)
    apply (wpsimp wp: hoare_vcg_imp_lift' mapM_x_wp' asUser_no_orphans)+
   done
 
@@ -2074,19 +2056,19 @@ lemma tc_no_orphans:
   apply (rule hoare_walk_assmsE)
     apply (clarsimp simp: pred_conj_def option.splits[where P="\<lambda>x. x s" for s])
     apply ((wp case_option_wp threadSet_no_orphans threadSet_invs_trivial
-               threadSet_cap_to' hoare_vcg_all_lift static_imp_wp | clarsimp simp: inQ_def)+)[2]
+               threadSet_cap_to' hoare_vcg_all_lift hoare_weak_lift_imp | clarsimp simp: inQ_def)+)[2]
   apply (rule hoare_walk_assmsE)
     apply (cases mcp; clarsimp simp: pred_conj_def option.splits[where P="\<lambda>x. x s" for s])
      apply ((wp case_option_wp threadSet_no_orphans threadSet_invs_trivial setMCPriority_invs'
                 typ_at_lifts[OF setMCPriority_typ_at']
-                threadSet_cap_to' hoare_vcg_all_lift static_imp_wp | clarsimp simp: inQ_def)+)[3]
+                threadSet_cap_to' hoare_vcg_all_lift hoare_weak_lift_imp | clarsimp simp: inQ_def)+)[3]
   apply ((simp only: simp_thms cong: conj_cong
           | wp cteDelete_deletes cteDelete_invs' cteDelete_sch_act_simple
                case_option_wp[where m'="return ()", OF setPriority_no_orphans return_inv,simplified]
                checkCap_inv[where P="valid_cap' c" for c] checkCap_inv[where P=sch_act_simple]
                checkCap_inv[where P=no_orphans] checkCap_inv[where P="tcb_at' a"]
                threadSet_cte_wp_at' hoare_vcg_all_lift_R hoare_vcg_all_lift threadSet_no_orphans
-               hoare_vcg_const_imp_lift_R static_imp_wp hoare_drop_imp threadSet_ipcbuffer_invs
+               hoare_vcg_const_imp_lift_R hoare_weak_lift_imp hoare_drop_imp threadSet_ipcbuffer_invs
           | strengthen invs_valid_queues'
           | (simp add: locateSlotTCB_def locateSlotBasic_def objBits_def
                      objBitsKO_def tcbIPCBufferSlot_def tcb_cte_cases_def,
@@ -2170,7 +2152,7 @@ lemma performPageInvocation_no_orphans [wp]:
   apply (simp add: performPageInvocation_def
               cong: page_invocation.case_cong)
   apply (rule hoare_pre)
-   apply (wp mapM_x_wp' mapM_wp' static_imp_wp | wpc | clarsimp)+
+   apply (wp mapM_x_wp' mapM_wp' hoare_weak_lift_imp | wpc | clarsimp)+
   done
 
 crunch no_orphans [wp]: handleVMFault "no_orphans"
@@ -2196,7 +2178,7 @@ lemma performARMVCPUInvocation_no_orphans [wp]:
   apply (simp add: performARMVCPUInvocation_def
               cong: page_invocation.case_cong)
   apply (rule hoare_pre)
-   apply (wp mapM_x_wp' mapM_wp' static_imp_wp | wpc | clarsimp)+
+   apply (wp mapM_x_wp' mapM_wp' hoare_weak_lift_imp | wpc | clarsimp)+
   done
 
 lemma performASIDControlInvocation_no_orphans [wp]:
@@ -2250,13 +2232,13 @@ lemma performASIDControlInvocation_no_orphans [wp]:
        \<lbrace>\<lambda>reply. no_orphans\<rbrace>"
   apply (clarsimp simp: performASIDControlInvocation_def
                   split: asidcontrol_invocation.splits)
-  apply (wp static_imp_wp | clarsimp)+
+  apply (wp hoare_weak_lift_imp | clarsimp)+
     apply (rule_tac Q="\<lambda>rv s. no_orphans s" in hoare_post_imp)
      apply (clarsimp simp: no_orphans_def all_active_tcb_ptrs_def
                            is_active_tcb_ptr_def all_queued_tcb_ptrs_def)
     apply (wp | clarsimp simp:placeNewObject_def2)+
      apply (wp createObjects'_wp_subst)+
-     apply (wp static_imp_wp updateFreeIndex_pspace_no_overlap'[where sz= pageBits] getSlotCap_wp | simp)+
+     apply (wp hoare_weak_lift_imp updateFreeIndex_pspace_no_overlap'[where sz= pageBits] getSlotCap_wp | simp)+
   apply (strengthen invs_pspace_aligned' invs_pspace_distinct' invs_valid_pspace')
   apply (clarsimp simp:conj_comms)
      apply (wp deleteObjects_invs'[where idx = idx and d=False]
@@ -2464,24 +2446,19 @@ lemma handleEvent_no_orphans [wp]:
   apply (auto simp: activatable_from_running' active_from_running')
   done
 
-theorem callKernel_no_orphans [wp]:
+theorem callKernel_no_orphans[wp]:
   "\<lbrace> \<lambda>s. invs' s \<and>
           (e \<noteq> Interrupt \<longrightarrow> ct_running' s) \<and>
           ksSchedulerAction s = ResumeCurrentThread \<and> no_orphans s \<rbrace>
    callKernel e
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding callKernel_def
-  apply wpsimp
-     apply (rule hoare_drop_imp)
-     apply wpsimp
-    apply (wpsimp wp: schedule_invs')
-   apply clarsimp
-   apply wp
-    apply (clarsimp simp: if_apply_def2)
-  apply (wp (trace) weak_if_wp schedule_invs' hoare_drop_imps | clarsimp)+
-  sorry (* FIXME AARCH64 sch_act_not over handleEvent seems like it's going in the wrong direction
-  original proof on riscv was:
-  by (wpsimp wp: weak_if_wp schedule_invs' hoare_drop_imps) *)
+  apply (wpsimp wp: hoare_drop_imp[where f=activateThread] schedule_invs'
+         (* getActiveIRQ can't return a non-kernel IRQ *)
+         | wp (once) hoare_post_imp[
+                       where a="doMachineOp (getActiveIRQ True)"
+                         and Q="\<lambda>rv s. no_orphans s \<and> invs' s \<and> rv \<notin> Some ` non_kernel_IRQs"])+
+  done
 
 end
 

@@ -17,7 +17,8 @@ text \<open>
   The dual to validity: an existential instead of a universal quantifier for the post condition.
   In refinement, it is often sufficient to know that there is one state that satisfies a condition.\<close>
 definition exs_valid ::
-  "('a \<Rightarrow> bool) \<Rightarrow> ('a, 'b) nondet_monad \<Rightarrow> ('b \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> bool" ("\<lbrace>_\<rbrace> _ \<exists>\<lbrace>_\<rbrace>") where
+  "('a \<Rightarrow> bool) \<Rightarrow> ('a, 'b) nondet_monad \<Rightarrow> ('b \<Rightarrow> 'a \<Rightarrow> bool) \<Rightarrow> bool"
+  ("\<lbrace>_\<rbrace> _ \<exists>\<lbrace>_\<rbrace>") where
   "\<lbrace>P\<rbrace> f \<exists>\<lbrace>Q\<rbrace> \<equiv> \<forall>s. P s \<longrightarrow> (\<exists>(rv, s') \<in> fst (f s). Q rv s')"
 
 text \<open>The above for the exception monad\<close>
@@ -139,7 +140,7 @@ lemma gets_exs_valid:
 
 lemma exs_valid_assert_opt[wp]:
   "\<lbrace>\<lambda>s. \<exists>x. G = Some x \<and> Q x s\<rbrace> assert_opt G \<exists>\<lbrace>Q\<rbrace>"
-  by (clarsimp simp: assert_opt_def exs_valid_def get_def assert_def bind_def' return_def)
+  by (clarsimp simp: assert_opt_def exs_valid_def return_def)
 
 lemma gets_the_exs_valid[wp]:
   "\<lbrace>\<lambda>s. \<exists>x. h s = Some x \<and> Q x s\<rbrace> gets_the h \<exists>\<lbrace>Q\<rbrace>"

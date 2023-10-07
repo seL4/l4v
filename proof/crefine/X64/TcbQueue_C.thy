@@ -1090,8 +1090,8 @@ lemma cpspace_relation_ntfn_update_ntfn:
   and      cp: "cpspace_ntfn_relation (ksPSpace s) (t_hrs_' (globals t))"
   and     rel: "cnotification_relation (cslift t') ntfn' notification"
   and    mpeq: "(cslift t' |` (- (tcb_ptr_to_ctcb_ptr ` qs))) = (cslift t |` (- (tcb_ptr_to_ctcb_ptr ` qs)))"
-  shows "cmap_relation (map_to_ntfns (ksPSpace s(ntfnptr \<mapsto> KONotification ntfn')))
-           (cslift t(Ptr ntfnptr \<mapsto> notification)) Ptr (cnotification_relation (cslift t'))"
+  shows "cmap_relation (map_to_ntfns ((ksPSpace s)(ntfnptr \<mapsto> KONotification ntfn')))
+           ((cslift t)(Ptr ntfnptr \<mapsto> notification)) Ptr (cnotification_relation (cslift t'))"
   using koat invs cp rel
   apply -
   apply (subst map_comp_update)
@@ -1462,7 +1462,7 @@ lemma rf_sr_tcb_update_no_queue:
      (\<forall>x\<in>ran tcb_cte_cases. (\<lambda>(getF, setF). getF tcb' = getF tcb) x);
      ctcb_relation tcb' ctcb
    \<rbrakk>
-  \<Longrightarrow> (s\<lparr>ksPSpace := ksPSpace s(thread \<mapsto> KOTCB tcb')\<rparr>,
+  \<Longrightarrow> (s\<lparr>ksPSpace := (ksPSpace s)(thread \<mapsto> KOTCB tcb')\<rparr>,
        x\<lparr>globals := globals s'\<lparr>t_hrs_' := t_hrs_' (globals t)\<rparr>\<rparr>) \<in> rf_sr"
   unfolding rf_sr_def state_relation_def cstate_relation_def cpspace_relation_def
   apply (clarsimp simp: Let_def update_tcb_map_tos map_to_ctes_upd_tcb_no_ctes
@@ -1512,7 +1512,7 @@ lemma rf_sr_tcb_update_not_in_queue:
     \<not> live' (KOTCB tcb); invs' s;
     (\<forall>x\<in>ran tcb_cte_cases. (\<lambda>(getF, setF). getF tcb' = getF tcb) x);
     ctcb_relation tcb' ctcb \<rbrakk>
-     \<Longrightarrow> (s\<lparr>ksPSpace := ksPSpace s(thread \<mapsto> KOTCB tcb')\<rparr>,
+     \<Longrightarrow> (s\<lparr>ksPSpace := (ksPSpace s)(thread \<mapsto> KOTCB tcb')\<rparr>,
            x\<lparr>globals := globals s'\<lparr>t_hrs_' := t_hrs_' (globals t)\<rparr>\<rparr>) \<in> rf_sr"
   unfolding rf_sr_def state_relation_def cstate_relation_def cpspace_relation_def
   apply (clarsimp simp: Let_def update_tcb_map_tos map_to_ctes_upd_tcb_no_ctes

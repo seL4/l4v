@@ -677,7 +677,7 @@ lemma threadSet_all_invs_triv':
       apply (simp add: tcb_cte_cases_def)
      apply (simp add: exst_same_def)
     apply (wp thread_set_invs_trivial thread_set_ct_running thread_set_not_state_valid_sched
-              threadSet_invs_trivial threadSet_ct_running' static_imp_wp
+              threadSet_invs_trivial threadSet_ct_running' hoare_weak_lift_imp
               thread_set_ct_in_state
            | simp add: tcb_cap_cases_def
            | rule threadSet_ct_in_state'

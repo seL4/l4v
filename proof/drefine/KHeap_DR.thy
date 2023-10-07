@@ -601,7 +601,7 @@ lemma xf_cnode_contents:
 
 lemma transform_cnode_contents_upd:
   "\<lbrakk>well_formed_cnode_n sz cn; cn sl' = Some ocap'\<rbrakk> \<Longrightarrow>
-    transform_cnode_contents sz cn(nat (bl_to_bin sl') \<mapsto> transform_cap cap') =
+    (transform_cnode_contents sz cn)(nat (bl_to_bin sl') \<mapsto> transform_cap cap') =
     transform_cnode_contents sz (cn(sl' \<mapsto> cap'))"
   apply (rule ext)
   apply clarsimp
@@ -620,7 +620,7 @@ lemma transform_cnode_contents_upd:
 lemma caps_of_state_cnode_upd:
   "\<lbrakk> kheap s p' = Some (CNode sz cn); well_formed_cnode_n sz cn;
      cn sl' = Some ocap' \<rbrakk> \<Longrightarrow>
-  caps_of_state (update_kheap (kheap s(p' \<mapsto> CNode sz (cn(sl' \<mapsto> cap')))) s) =
+  caps_of_state (update_kheap ((kheap s)(p' \<mapsto> CNode sz (cn(sl' \<mapsto> cap')))) s) =
    (caps_of_state s) ((p',sl') \<mapsto> cap')"
   apply (rule ext)
   apply (auto simp: caps_of_state_cte_wp_at cte_wp_at_cases wf_cs_upd)
@@ -2714,7 +2714,7 @@ lemma set_parent_corres:
     get_def set_cdt_def return_def bind_def)
   apply (simp add:transform_current_thread_def weak_valid_mdb_def)
   apply (rename_tac s')
-  apply (subgoal_tac "transform s'\<lparr>cdl_cdt:=cdl_cdt(transform s')
+  apply (subgoal_tac "transform s'\<lparr>cdl_cdt:=(cdl_cdt(transform s'))
     (transform_cslot_ptr slot' \<mapsto> transform_cslot_ptr pslot')\<rparr>
     = cdl_cdt_single_update (transform s') (transform_cslot_ptr slot') (transform_cslot_ptr pslot')")
    apply (clarsimp simp:cdl_cdt_transform)
@@ -2819,7 +2819,7 @@ done
 
 lemma transform_objects_update_kheap_simp:
   "\<lbrakk>kheap s ptr = Some ko; ekheap s ptr = opt_etcb\<rbrakk>
-    \<Longrightarrow> transform_objects (update_kheap (kheap s(ptr \<mapsto> obj)) s) =
+    \<Longrightarrow> transform_objects (update_kheap ((kheap s)(ptr \<mapsto> obj)) s) =
     (\<lambda>x. if x \<noteq> ptr then transform_objects s x else
     (if ptr = idle_thread s then None else
            Some (transform_object (machine_state s) ptr opt_etcb obj)))"

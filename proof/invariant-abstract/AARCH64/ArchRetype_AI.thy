@@ -309,6 +309,14 @@ lemma asid_pools:
   by (clarsimp simp: in_opt_map_eq s'_def ps_def)
      (erule pspace_no_overlapC [OF orth _ _ cover vp])
 
+lemma asid_pools_of':
+  "asid_pools_of s' p = Some ap \<Longrightarrow>
+   asid_pools_of s p = Some ap \<or> ap = Map.empty \<and> p \<in> set (retype_addrs ptr ty n us)"
+  apply (clarsimp simp: in_opt_map_eq s'_def ps_def split: if_split_asm)
+  apply (auto simp: default_object_def default_arch_object_def empty_pt_def tyunt
+              split: apiobject_type.splits aobject_type.splits)
+  done
+
 lemma pts_of:
   "pts_of s p = Some pt \<Longrightarrow> pts_of s' p = Some pt"
   by (clarsimp simp: in_opt_map_eq s'_def ps_def)
@@ -716,7 +724,10 @@ lemma valid_kernel_mappings:
 
 lemma valid_asid_map:
   "valid_asid_map s \<Longrightarrow> valid_asid_map s'"
-  by (clarsimp simp: valid_asid_map_def)
+  apply (clarsimp simp: valid_asid_map_def entry_for_asid_def obind_None_eq pool_for_asid_def
+                        entry_for_pool_def)
+  apply (fastforce dest!: asid_pools_of')
+  done
 
 lemma vspace_for_asid:
   "vspace_for_asid asid s' = Some pt \<Longrightarrow> vspace_for_asid asid s = Some pt"

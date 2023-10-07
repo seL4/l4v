@@ -2227,7 +2227,7 @@ proof -
   let ?c2 = "(CTE capability.NullCap (MDB 0 0 bool1 bool2))"
   let ?C = "(modify_map
              (modify_map
-               (modify_map (ctes_of s(dest \<mapsto> CTE cap (MDB 0 0 bool1 bool2))) dest
+               (modify_map ((ctes_of s)(dest \<mapsto> CTE cap (MDB 0 0 bool1 bool2))) dest
                  (cteMDBNode_update (\<lambda>a. MDB word1 src (isCapRevocable cap src_cap) (isCapRevocable cap src_cap))))
                src (cteMDBNode_update (mdbNext_update (\<lambda>_. dest))))
              word1 (cteMDBNode_update (mdbPrev_update (\<lambda>_. dest))))"
@@ -2527,9 +2527,6 @@ crunch state_hyp_refs_of'[wp]: cteInsert "\<lambda>s. P (state_hyp_refs_of' s)"
   (wp: crunch_wps)
 
 crunch aligned'[wp]: cteInsert pspace_aligned'
-  (wp: crunch_wps)
-
-crunch pspace_canonical'[wp]: cteInsert pspace_canonical'
   (wp: crunch_wps)
 
 crunch distinct'[wp]: cteInsert pspace_distinct'
@@ -2940,7 +2937,7 @@ lemma cteInsert_valid_irq_handlers'[wp]:
   done
 
 lemma setCTE_arch_ctes_of_wp [wp]:
-  "\<lbrace>\<lambda>s. P (ksArchState s) (ctes_of s (p \<mapsto> cte))\<rbrace>
+  "\<lbrace>\<lambda>s. P (ksArchState s) ((ctes_of s)(p \<mapsto> cte))\<rbrace>
   setCTE p cte
   \<lbrace>\<lambda>rv s. P (ksArchState s) (ctes_of s)\<rbrace>"
   apply (simp add: setCTE_def ctes_of_setObject_cte)
@@ -4061,9 +4058,6 @@ lemma setupReplyMaster_wps[wp]:
   done
 
 crunch no_0_obj'[wp]: setupReplyMaster no_0_obj'
-  (wp: crunch_wps simp: crunch_simps)
-
-crunch pspace_canonical'[wp]: setupReplyMaster "pspace_canonical'"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma setupReplyMaster_valid_pspace':
@@ -6224,8 +6218,6 @@ lemma updateFreeIndex_forward_valid_mdb':
   apply (rule usableUntypedRange_mono2,
     auto simp add: isCap_simps valid_cap_simps' capAligned_def)
   done
-
-crunch pspace_canonical'[wp]: updateFreeIndex "pspace_canonical'"
 
 lemma updateFreeIndex_forward_invs':
   "\<lbrace>\<lambda>s. invs' s \<and> cte_wp_at' ((\<lambda>cap. isUntypedCap cap

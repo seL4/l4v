@@ -148,7 +148,10 @@ lemma lookupAround2_same1[simp]:
   apply (simp add: lookupAround2_known1)
   done
 
-lemma getObject_vcpu_corres: (* FIXME AARCH64: lift Haskell precondition *)
+ (* If we ever copy this: consider lifting Haskell precondition to \<top> here first. Not strictly
+    necessary since the rest of the proofs manage to lift later, but might be more convenient
+    for new proofs. *)
+lemma getObject_vcpu_corres:
   "corres vcpu_relation (vcpu_at vcpu) (vcpu_at' vcpu)
                         (get_vcpu vcpu) (getObject vcpu)"
   apply (simp add: getObject_def get_vcpu_def get_object_def split_def)
@@ -556,16 +559,6 @@ lemma setObject_aligned[wp]:
   apply (fastforce dest: bspec[OF _ domI])
   done
 
-lemma setObject_canonical[wp]:
-  shows     "\<lbrace>pspace_canonical'\<rbrace> setObject p val \<lbrace>\<lambda>rv. pspace_canonical'\<rbrace>"
-  apply (clarsimp simp: setObject_def split_def valid_def in_monad lookupAround2_char1
-                        pspace_canonical'_def ps_clear_upd objBits_def[symmetric]
-                 split: if_split_asm
-                 dest!: updateObject_objBitsKO)
-   apply (fastforce dest: bspec[OF _ domI])
-  apply (fastforce dest: bspec[OF _ domI])
-  done
-
 lemma set_ep_aligned' [wp]:
   "\<lbrace>pspace_aligned'\<rbrace> setEndpoint ep v  \<lbrace>\<lambda>rv. pspace_aligned'\<rbrace>"
   unfolding setEndpoint_def by wp
@@ -573,9 +566,6 @@ lemma set_ep_aligned' [wp]:
 lemma set_ep_distinct' [wp]:
   "\<lbrace>pspace_distinct'\<rbrace> setEndpoint ep v  \<lbrace>\<lambda>rv. pspace_distinct'\<rbrace>"
   unfolding setEndpoint_def by wp
-
-crunches setEndpoint, getEndpoint
-  for pspace_canonical'[wp]: "pspace_canonical'"
 
 lemma setEndpoint_cte_wp_at':
   "\<lbrace>cte_wp_at' P p\<rbrace> setEndpoint ptr v \<lbrace>\<lambda>rv. cte_wp_at' P p\<rbrace>"
@@ -672,20 +662,6 @@ lemma cte_wp_at_ctes_of:
   apply (clarsimp simp: ps_clear_def3[where na=tcb_bits] is_aligned_mask add_ac
                         word_bw_assocs)
   done
-
-lemma ctes_of_canonical:
-  assumes canonical: "pspace_canonical' s"
-  assumes ctes_of: "ctes_of s p = Some cte"
-  shows "canonical_address p"
-proof -
-  from ctes_of have "cte_wp_at' ((=) cte) p s"
-    by (simp add: cte_wp_at_ctes_of)
-  thus ?thesis using canonical canonical_bit_def
-    sorry (* FIXME AARCH64: do we actually need pspace_canonical?; if yes, liftable?
-    by (fastforce simp: pspace_canonical'_def tcb_cte_cases_def field_simps objBits_defs take_bit_Suc
-                 split: if_splits
-                  elim: cte_wp_atE' canonical_address_add)  *)
-qed
 
 lemma tcb_cte_cases_small:
   "\<lbrakk> tcb_cte_cases v = Some (getF, setF) \<rbrakk>
@@ -2256,10 +2232,6 @@ lemma setEndpoint_ct':
 lemmas setEndpoint_valid_globals[wp]
     = valid_global_refs_lift' [OF set_ep_ctes_of set_ep_arch'
                                   setEndpoint_it setEndpoint_ksInterruptState]
-lemma obj_at'_is_canonical:
-  "\<lbrakk>pspace_canonical' s; obj_at' P t s\<rbrakk> \<Longrightarrow> canonical_address t"
-  apply (clarsimp simp: obj_at'_def pspace_canonical'_def)
-  by (drule_tac x=t in bspec) clarsimp+
 
 end
 end

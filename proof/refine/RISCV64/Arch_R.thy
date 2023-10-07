@@ -970,13 +970,13 @@ lemma performASIDControlInvocation_tcb_at':
   apply (rule hoare_name_pre_state)
   apply (clarsimp simp: performASIDControlInvocation_def split: asidcontrol_invocation.splits)
   apply (clarsimp simp: valid_aci'_def cte_wp_at_ctes_of cong: conj_cong)
-  apply (wp static_imp_wp  |simp add:placeNewObject_def2)+
-      apply (wp createObjects_orig_obj_at2' updateFreeIndex_pspace_no_overlap' getSlotCap_wp static_imp_wp)+
+  apply (wp hoare_weak_lift_imp  |simp add:placeNewObject_def2)+
+      apply (wp createObjects_orig_obj_at2' updateFreeIndex_pspace_no_overlap' getSlotCap_wp hoare_weak_lift_imp)+
    apply (clarsimp simp: projectKO_opts_defs)
    apply (strengthen st_tcb_strg' [where P=\<top>])
    apply (wp deleteObjects_invs_derivatives[where p="makePoolParent aci"]
      hoare_vcg_ex_lift deleteObjects_cte_wp_at'[where d=False]
-     deleteObjects_st_tcb_at'[where p="makePoolParent aci"] static_imp_wp
+     deleteObjects_st_tcb_at'[where p="makePoolParent aci"] hoare_weak_lift_imp
      updateFreeIndex_pspace_no_overlap' deleteObject_no_overlap[where d=False])+
   apply (case_tac ctea)
   apply (clarsimp)
@@ -1216,7 +1216,7 @@ lemma performASIDControlInvocation_st_tcb_at':
              hoare_vcg_ex_lift
              deleteObjects_cte_wp_at' deleteObjects_invs_derivatives
              deleteObjects_st_tcb_at'
-             static_imp_wp
+             hoare_weak_lift_imp
         | simp add: placeNewObject_def2)+
   apply (case_tac ctea)
   apply (clarsimp)
@@ -1256,7 +1256,7 @@ crunch st_tcb_at' [wp]: "Arch.finaliseCap" "st_tcb_at' P t"
 lemma invs_asid_table_strengthen':
   "invs' s \<and> asid_pool_at' ap s \<and> asid \<le> 2 ^ asid_high_bits - 1 \<longrightarrow>
    invs' (s\<lparr>ksArchState :=
-            riscvKSASIDTable_update (\<lambda>_. (riscvKSASIDTable \<circ> ksArchState) s(asid \<mapsto> ap)) (ksArchState s)\<rparr>)"
+            riscvKSASIDTable_update (\<lambda>_. ((riscvKSASIDTable \<circ> ksArchState) s)(asid \<mapsto> ap)) (ksArchState s)\<rparr>)"
   apply (clarsimp simp: invs'_def valid_state'_def)
   apply (rule conjI)
    apply (clarsimp simp: valid_global_refs'_def global_refs'_def)
@@ -1342,7 +1342,7 @@ lemma performASIDControlInvocation_invs' [wp]:
            updateFreeIndex_caps_no_overlap''
            updateFreeIndex_descendants_of2
            updateFreeIndex_caps_overlap_reserved
-           updateCap_cte_wp_at_cases static_imp_wp
+           updateCap_cte_wp_at_cases hoare_weak_lift_imp
            getSlotCap_wp)+
   apply (clarsimp simp:conj_comms ex_disj_distrib is_aligned_mask
            | strengthen invs_valid_pspace' invs_pspace_aligned'

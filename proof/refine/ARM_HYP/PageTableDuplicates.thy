@@ -1898,7 +1898,7 @@ lemma performArchInvocation_valid_duplicates':
     apply (clarsimp simp:cte_wp_at_ctes_of)
     apply (case_tac ctea,clarsimp)
     apply (frule(1) ctes_of_valid_cap'[OF _ invs_valid_objs'])
-    apply (wp static_imp_wp|simp)+
+    apply (wp hoare_weak_lift_imp|simp)+
         apply (simp add:placeNewObject_def)
         apply (wp |simp add:alignError_def unless_def|wpc)+
        apply (wp updateFreeIndex_pspace_no_overlap' hoare_drop_imp
@@ -1948,10 +1948,10 @@ lemma tc_valid_duplicates':
   apply (rule hoare_walk_assmsE)
     apply (clarsimp simp: pred_conj_def option.splits [where P="\<lambda>x. x s" for s])
     apply ((wp case_option_wp threadSet_invs_trivial
-               hoare_vcg_all_lift threadSet_cap_to' static_imp_wp | simp add: inQ_def | fastforce)+)[2]
+               hoare_vcg_all_lift threadSet_cap_to' hoare_weak_lift_imp | simp add: inQ_def | fastforce)+)[2]
   apply (rule hoare_walk_assmsE)
     apply (clarsimp simp: pred_conj_def option.splits [where P="\<lambda>x. x s" for s])
-    apply ((wp case_option_wp  setMCPriority_invs' static_imp_wp
+    apply ((wp case_option_wp  setMCPriority_invs' hoare_weak_lift_imp
                typ_at_lifts[OF setMCPriority_typ_at']
                hoare_vcg_all_lift threadSet_cap_to' | simp add: inQ_def  | fastforce)+)[2]
    apply ((simp only: simp_thms cases_simp cong: conj_cong
@@ -1970,7 +1970,7 @@ lemma tc_valid_duplicates':
                threadSet_cte_wp_at'
                hoare_vcg_all_lift_R
                hoare_vcg_all_lift
-               static_imp_wp
+               hoare_weak_lift_imp
                )[1]
          | wpc
          | simp add: inQ_def

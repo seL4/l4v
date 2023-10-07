@@ -823,7 +823,7 @@ lemma tcbVTable_upd_simp [simp]:
   by (cases tcb) simp
 
 lemma setCTE_ctes_of_wp [wp]:
-  "\<lbrace>\<lambda>s. P (ctes_of s (p \<mapsto> cte))\<rbrace>
+  "\<lbrace>\<lambda>s. P ((ctes_of s) (p \<mapsto> cte))\<rbrace>
   setCTE p cte
   \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"
   by (simp add: setCTE_def ctes_of_setObject_cte)
@@ -928,7 +928,7 @@ lemma cteInsert_weak_cte_wp_at:
    \<lbrace>\<lambda>uu. cte_wp_at'(\<lambda>c. P (cteCap c)) p\<rbrace>"
   unfolding cteInsert_def error_def updateCap_def setUntypedCapAsFull_def
   apply (simp add: bind_assoc split del: if_split)
-  apply (wp setCTE_weak_cte_wp_at updateMDB_weak_cte_wp_at static_imp_wp | simp)+
+  apply (wp setCTE_weak_cte_wp_at updateMDB_weak_cte_wp_at hoare_weak_lift_imp | simp)+
    apply (wp getCTE_ctes_wp)+
    apply (clarsimp simp: isCap_simps split:if_split_asm| rule conjI)+
 done

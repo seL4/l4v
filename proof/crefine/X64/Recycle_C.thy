@@ -454,7 +454,7 @@ lemma mapM_x_store_memset_ccorres_assist:
               "\<And>ko :: 'a. (1 :: machine_word) < 2 ^ objBits ko"
   assumes restr: "set slots \<subseteq> S"
   assumes worker: "\<And>ptr s s' (ko :: 'a). \<lbrakk> (s, s') \<in> rf_sr; ko_at' ko ptr s; ptr \<in> S \<rbrakk>
-                                \<Longrightarrow> (s \<lparr> ksPSpace := ksPSpace s (ptr \<mapsto> injectKO val)\<rparr>,
+                                \<Longrightarrow> (s \<lparr> ksPSpace := (ksPSpace s)(ptr \<mapsto> injectKO val)\<rparr>,
                                      globals_update (t_hrs_'_update (hrs_mem_update
                                                     (heap_update_list ptr
                                                     (replicateHider (2 ^ objBits val) (ucast c))))) s') \<in> rf_sr"
@@ -793,8 +793,8 @@ lemma cpspace_relation_ep_update_ep2:
            (cslift t) ep_Ptr (cendpoint_relation (cslift t));
       cendpoint_relation (cslift t') ep' endpoint;
       (cslift t' :: tcb_C ptr \<rightharpoonup> tcb_C) = cslift t \<rbrakk>
-     \<Longrightarrow> cmap_relation (map_to_eps (ksPSpace s(epptr \<mapsto> KOEndpoint ep')))
-          (cslift t(ep_Ptr epptr \<mapsto> endpoint))
+     \<Longrightarrow> cmap_relation (map_to_eps ((ksPSpace s)(epptr \<mapsto> KOEndpoint ep')))
+          ((cslift t)(ep_Ptr epptr \<mapsto> endpoint))
           ep_Ptr (cendpoint_relation (cslift t'))"
   apply (rule cmap_relationE1, assumption, erule ko_at_projectKO_opt)
   apply (rule_tac P="\<lambda>a. cmap_relation a b c d" for b c d in rsubst,

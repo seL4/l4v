@@ -1379,7 +1379,7 @@ lemma set_asid_pool_obj_at_ptr:
 lemma valid_arch_state_table_strg:
   "valid_arch_state s \<and> asid_pool_at p s \<and>
    Some p \<notin> x64_asid_table (arch_state s) ` (dom (x64_asid_table (arch_state s)) - {x}) \<longrightarrow>
-   valid_arch_state (s\<lparr>arch_state := arch_state s\<lparr>x64_asid_table := x64_asid_table (arch_state s)(x \<mapsto> p)\<rparr>\<rparr>)"
+   valid_arch_state (s\<lparr>arch_state := arch_state s\<lparr>x64_asid_table := (x64_asid_table (arch_state s))(x \<mapsto> p)\<rparr>\<rparr>)"
   apply (clarsimp simp: valid_arch_state_def valid_asid_table_def ran_def)
   apply (rule conjI, fastforce)
   apply (erule inj_on_fun_upd_strongerI)
@@ -1412,8 +1412,8 @@ lemma vs_lookup1_arch [simp]:
 
 lemma vs_lookup_empty_table:
   "(rs \<rhd> q)
-  (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (ASIDPool Map.empty)),
-     arch_state := arch_state s\<lparr>x64_asid_table := x64_asid_table (arch_state s)(x \<mapsto> p)\<rparr>\<rparr>) \<Longrightarrow>
+  (s\<lparr>kheap := (kheap s)(p \<mapsto> ArchObj (ASIDPool Map.empty)),
+     arch_state := arch_state s\<lparr>x64_asid_table := (x64_asid_table (arch_state s))(x \<mapsto> p)\<rparr>\<rparr>) \<Longrightarrow>
    (rs \<rhd> q) s \<or> (rs = [VSRef (ucast x) None] \<and> q = p)"
   apply (erule vs_lookupE)
   apply clarsimp
@@ -1445,8 +1445,8 @@ lemma vs_lookup_empty_table:
 
 lemma vs_lookup_pages_empty_table:
   "(rs \<unrhd> q)
-  (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (ASIDPool Map.empty)),
-     arch_state := arch_state s\<lparr>x64_asid_table := x64_asid_table (arch_state s)(x \<mapsto> p)\<rparr>\<rparr>) \<Longrightarrow>
+  (s\<lparr>kheap := (kheap s)(p \<mapsto> ArchObj (ASIDPool Map.empty)),
+     arch_state := arch_state s\<lparr>x64_asid_table := (x64_asid_table (arch_state s))(x \<mapsto> p)\<rparr>\<rparr>) \<Longrightarrow>
    (rs \<unrhd> q) s \<or> (rs = [VSRef (ucast x) None] \<and> q = p)"
   apply (subst (asm) vs_lookup_pages_def)
   apply (clarsimp simp: Image_def)
@@ -1481,7 +1481,7 @@ lemma set_asid_pool_empty_table_objs:
   set_asid_pool p Map.empty
    \<lbrace>\<lambda>rv s. valid_vspace_objs
              (s\<lparr>arch_state := arch_state s\<lparr>x64_asid_table :=
-                x64_asid_table (arch_state s)(asid_high_bits_of word2 \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
+                (x64_asid_table (arch_state s))(asid_high_bits_of word2 \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
   apply (simp add: set_asid_pool_def set_object_def)
   apply (wp get_object_wp)
   apply (clarsimp simp: obj_at_def valid_vspace_objs_def
@@ -1506,7 +1506,7 @@ lemma set_asid_pool_empty_table_lookup:
   set_asid_pool p Map.empty
    \<lbrace>\<lambda>rv s. valid_vs_lookup
              (s\<lparr>arch_state := arch_state s\<lparr>x64_asid_table :=
-                x64_asid_table (arch_state s)(asid_high_bits_of base \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
+                (x64_asid_table (arch_state s))(asid_high_bits_of base \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
   apply (simp add: set_asid_pool_def set_object_def)
   apply (wp get_object_wp)
   apply (clarsimp simp: obj_at_def valid_vs_lookup_def
@@ -1525,7 +1525,7 @@ lemma set_asid_pool_empty_table_lookup:
 lemma valid_ioports_asid_table_upd[iff]:
   "valid_ioports
          (s\<lparr>arch_state := arch_state s
-              \<lparr>x64_asid_table := x64_asid_table (arch_state s)
+              \<lparr>x64_asid_table := (x64_asid_table (arch_state s))
                  (asid_high_bits_of base \<mapsto> p)\<rparr>\<rparr>) = valid_ioports s"
   by (clarsimp simp: valid_ioports_def all_ioports_issued_def issued_ioports_def)
 
@@ -1536,7 +1536,7 @@ lemma set_asid_pool_invs_table:
        \<and> (\<forall>p'. \<not> ([VSRef (ucast (asid_high_bits_of base)) None] \<rhd> p') s)\<rbrace>
        set_asid_pool p Map.empty
   \<lbrace>\<lambda>x s. invs (s\<lparr>arch_state := arch_state s\<lparr>x64_asid_table :=
-                 x64_asid_table (arch_state s)(asid_high_bits_of base \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
+                 (x64_asid_table (arch_state s))(asid_high_bits_of base \<mapsto> p)\<rparr>\<rparr>)\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def valid_arch_caps_def valid_asid_map_def)
   apply (wp valid_irq_node_typ set_asid_pool_typ_at
             set_asid_pool_empty_table_objs valid_ioports_lift

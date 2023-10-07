@@ -736,7 +736,7 @@ lemma init_arch_objects_corres_noop:
   done
 
 lemma monad_commute_set_cap_cdt:
-  "monad_commute \<top> (KHeap_D.set_cap ptr cap) (modify (\<lambda>s. s\<lparr>cdl_cdt := cdl_cdt s(ptr2 \<mapsto> ptr3)\<rparr>))"
+  "monad_commute \<top> (KHeap_D.set_cap ptr cap) (modify (\<lambda>s. s\<lparr>cdl_cdt := (cdl_cdt s)(ptr2 \<mapsto> ptr3)\<rparr>))"
   apply (clarsimp simp:monad_commute_def)
   apply (rule sym)
   apply (subst bind_assoc[symmetric])
@@ -865,7 +865,7 @@ lemma create_cap_mdb_cte_at:
   \<and> cte_wp_at ((\<noteq>)cap.NullCap) parent s \<and> cte_at (fst tup) s\<rbrace>
       create_cap type sz parent dev tup \<lbrace>\<lambda>rv s. mdb_cte_at (swp (cte_wp_at ((\<noteq>)cap.NullCap)) s) (cdt s)\<rbrace>"
   apply (simp add: create_cap_def split_def mdb_cte_at_def)
-  apply (wp hoare_vcg_all_lift set_cap_default_not_none set_cdt_cte_wp_at static_imp_wp dxo_wp_weak
+  apply (wp hoare_vcg_all_lift set_cap_default_not_none set_cdt_cte_wp_at hoare_weak_lift_imp dxo_wp_weak
           | simp | wps)+
   apply (fastforce simp: cte_wp_at_caps_of_state)
   done

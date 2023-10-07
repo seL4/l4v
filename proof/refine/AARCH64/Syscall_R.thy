@@ -338,7 +338,7 @@ lemma threadSet_tcbDomain_update_sch_act_wf[wp]:
     apply (simp add: threadSet_def)
     apply wp
      apply (wps setObject_sa_unchanged)
-     apply (wp static_imp_wp getObject_tcb_wp hoare_vcg_all_lift)+
+     apply (wp hoare_weak_lift_imp getObject_tcb_wp hoare_vcg_all_lift)+
    apply (rename_tac word)
    apply (rule_tac Q="\<lambda>_ s. ksSchedulerAction s = SwitchToThread word \<longrightarrow>
                             st_tcb_at' runnable' word s \<and> tcb_in_cur_domain' word s \<and> word \<noteq> t"
@@ -683,7 +683,7 @@ proof -
          apply (rule hoare_weaken_pre [OF cteInsert_weak_cte_wp_at3])
          apply (rule PUC,simp)
          apply (clarsimp simp: cte_wp_at_ctes_of)
-        apply (wp hoare_vcg_all_lift static_imp_wp | simp add:ball_conj_distrib)+
+        apply (wp hoare_vcg_all_lift hoare_weak_lift_imp | simp add:ball_conj_distrib)+
     done
 qed
 
@@ -802,7 +802,7 @@ lemma doReply_invs[wp]:
          apply assumption
         apply (erule cte_wp_at_weakenE')
         apply (fastforce)
-       apply (wp sts_invs_minor'' sts_st_tcb' static_imp_wp)
+       apply (wp sts_invs_minor'' sts_st_tcb' hoare_weak_lift_imp)
              apply (rule_tac Q="\<lambda>rv s. invs' s \<and> sch_act_simple s
                                    \<and> st_tcb_at' awaiting_reply' t s
                                    \<and> t \<noteq> ksIdleThread s"
@@ -820,7 +820,7 @@ lemma doReply_invs[wp]:
               apply (erule_tac P="\<lambda>st. awaiting_reply' st \<and> activatable' st"
                       in pred_tcb'_weakenE)
               apply (case_tac st, clarsimp+)
-             apply (wp threadSet_invs_trivial threadSet_st_tcb_at2 static_imp_wp
+             apply (wp threadSet_invs_trivial threadSet_st_tcb_at2 hoare_weak_lift_imp
                     | clarsimp simp add: inQ_def)+
            apply (rule_tac Q="\<lambda>_. invs' and tcb_at' t
                                  and sch_act_simple and st_tcb_at' awaiting_reply' t"
@@ -976,7 +976,7 @@ lemma setDomain_invs':
   (\<lambda>y. domain \<le> maxDomain))\<rbrace>
   setDomain ptr domain \<lbrace>\<lambda>y. invs'\<rbrace>"
   apply (simp add:setDomain_def )
-  apply (wp add: when_wp static_imp_wp static_imp_conj_wp rescheduleRequired_all_invs_but_extra
+  apply (wp add: when_wp hoare_weak_lift_imp hoare_weak_lift_imp_conj rescheduleRequired_all_invs_but_extra
                  tcbSchedEnqueue_valid_action hoare_vcg_if_lift2)
      apply (rule_tac Q = "\<lambda>r s. all_invs_but_sch_extra s \<and> curThread = ksCurThread s
       \<and> (ptr \<noteq> curThread \<longrightarrow> ct_not_inQ s \<and> sch_act_wf (ksSchedulerAction s) s \<and> ct_idle_or_in_cur_domain' s)"
@@ -990,7 +990,7 @@ lemma setDomain_invs':
       prefer 2
       apply clarsimp
       apply assumption
-     apply (wp static_imp_wp threadSet_pred_tcb_no_state threadSet_not_curthread_ct_domain
+     apply (wp hoare_weak_lift_imp threadSet_pred_tcb_no_state threadSet_not_curthread_ct_domain
                threadSet_tcbDomain_update_ct_not_inQ | simp)+
     apply (rule_tac Q = "\<lambda>r s. invs' s \<and> curThread = ksCurThread s \<and> sch_act_simple s
                              \<and> domain \<le> maxDomain
@@ -1302,7 +1302,7 @@ lemma hinv_invs'[wp]:
   apply (simp add: handleInvocation_def split_def
                    ts_Restart_case_helper')
   apply (wp syscall_valid' setThreadState_nonqueued_state_update rfk_invs'
-            hoare_vcg_all_lift static_imp_wp)
+            hoare_vcg_all_lift hoare_weak_lift_imp)
          apply simp
          apply (intro conjI impI)
           apply (wp gts_imp' | simp)+
@@ -1670,19 +1670,6 @@ lemma hv_invs'[wp]: "\<lbrace>invs' and tcb_at' t'\<rbrace> handleVMFault t' vpt
   done
 
 crunch nosch[wp]: handleVMFault "\<lambda>s. P (ksSchedulerAction s)"
-
-(* FIXME AARCH64: not true as long as addressTranslateS1 can have side effects. This lemma doesn't
-                  exist in ARM_HYP, so there is a chance we can get by without it.
-lemma hv_inv_ex':
-  "\<lbrace>P\<rbrace> handleVMFault t vp \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (simp add: AARCH64_H.handleVMFault_def
-             cong: vmfault_type.case_cong)
-  apply (rule hoare_pre)
-   apply (wp dmo_inv' getRestartPC_inv
-             det_getRestartPC asUser_inv
-          | wpcw)+
-  apply simp
-  done *)
 
 lemma active_from_running':
   "ct_running' s' \<Longrightarrow> ct_active' s'"
@@ -2105,22 +2092,6 @@ crunches handleVMFault
 crunches handleVMFault, handleHypervisorFault
   for ksit[wp]: "\<lambda>s. P (ksIdleThread s)"
   (wp: crunch_wps getSlotCap_wp simp: getThreadReplySlot_def getThreadCallerSlot_def locateSlotTCB_def locateSlotBasic_def)
-
-(* FIXME AARCH64: need to get through without these
-lemma hv_inv':
-  "\<lbrace>P\<rbrace> handleVMFault p t \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (simp add: AARCH64_H.handleVMFault_def)
-  apply (rule hoare_pre)
-   apply (wp dmo_inv' getRestartPC_inv
-             det_getRestartPC asUser_inv
-          |wpc|simp)+
-  done
-
-lemma hh_inv':
-  "\<lbrace>P\<rbrace> handleHypervisorFault p t \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (simp add: AARCH64_H.handleHypervisorFault_def)
-  apply (cases t; clarsimp)
-  done *)
 
 lemma hh_invs'[wp]:
   "\<lbrace>invs' and sch_act_not p and (\<lambda>s. \<forall>a b. p \<notin> set (ksReadyQueues s (a, b))) and

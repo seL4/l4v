@@ -121,7 +121,7 @@ lemma dcorres_opt_parent_set_parent_helper:
   "dcorres dc \<top> P
   (gets (opt_parent (transform_cslot_ptr src)) >>=
   case_option (return ())
-  (\<lambda>parent. modify (\<lambda>s. s\<lparr>cdl_cdt := cdl_cdt s(transform_cslot_ptr child \<mapsto> parent)\<rparr>)))
+  (\<lambda>parent. modify (\<lambda>s. s\<lparr>cdl_cdt := (cdl_cdt s)(transform_cslot_ptr child \<mapsto> parent)\<rparr>)))
   g \<Longrightarrow>
   dcorres dc \<top> (\<lambda>s. cdt s child = None \<and> cte_at child s \<and>
    mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s) \<and> P s)
@@ -143,7 +143,7 @@ lemma dcorres_opt_parent_set_parent_helper:
 
 lemma dcorres_set_parent_helper:
   "dcorres dc \<top> P
-  (modify (\<lambda>s. s\<lparr>cdl_cdt := cdl_cdt s(transform_cslot_ptr child \<mapsto> parent)\<rparr>))
+  (modify (\<lambda>s. s\<lparr>cdl_cdt := (cdl_cdt s)(transform_cslot_ptr child \<mapsto> parent)\<rparr>))
   g \<Longrightarrow>
   dcorres dc \<top> (\<lambda>s. cdt s child = None \<and> cte_at child s \<and>
    mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s) \<and> P s)
@@ -218,7 +218,7 @@ lemma insert_cap_sibling_corres:
             apply (rule_tac s=s' in transform_cdt_slot_inj_on_cte_at[where P=\<top>])
             apply (auto simp: swp_def dest: mdb_cte_atD
               elim!: ranE)[1]
-           apply ((wp set_cap_caps_of_state2 get_cap_wp static_imp_wp
+           apply ((wp set_cap_caps_of_state2 get_cap_wp hoare_weak_lift_imp
              | simp add: swp_def cte_wp_at_caps_of_state)+)
          apply (wp set_cap_idle |
             simp add:set_untyped_cap_as_full_def split del: if_split)+
@@ -231,7 +231,7 @@ lemma insert_cap_sibling_corres:
            cte_wp_at_caps_of_state has_parent_cte_at is_physical_def
            dest!:is_untyped_cap_eqD)
           apply fastforce
-         apply (wp get_cap_wp set_cap_idle static_imp_wp
+         apply (wp get_cap_wp set_cap_idle hoare_weak_lift_imp
            | simp add:set_untyped_cap_as_full_def
            split del: if_split)+
          apply (rule_tac Q = "\<lambda>r s. cdt s sibling = None
@@ -303,7 +303,7 @@ lemma insert_cap_child_corres:
             apply (rule_tac s=s' in transform_cdt_slot_inj_on_cte_at[where P=\<top>])
             apply (auto simp: swp_def dest: mdb_cte_atD
                       elim!: ranE)[1]
-           apply (wp set_cap_caps_of_state2 get_cap_wp static_imp_wp
+           apply (wp set_cap_caps_of_state2 get_cap_wp hoare_weak_lift_imp
                     | simp add: swp_def cte_wp_at_caps_of_state)+
          apply (wp set_cap_idle |
           simp add:set_untyped_cap_as_full_def split del:if_split)+
@@ -314,14 +314,14 @@ lemma insert_cap_child_corres:
            apply (wp set_cap_mdb_cte_at | simp add:not_idle_thread_def)+
           apply (clarsimp simp:mdb_cte_at_def cte_wp_at_caps_of_state)
           apply fastforce
-         apply (wp get_cap_wp set_cap_idle static_imp_wp
+         apply (wp get_cap_wp set_cap_idle hoare_weak_lift_imp
            | simp split del:if_split add:set_untyped_cap_as_full_def)+
          apply (rule_tac Q = "\<lambda>r s. not_idle_thread (fst child) s
            \<and> (\<exists>cap. caps_of_state s src = Some cap)
            \<and> should_be_parent_of src_capa (is_original_cap s src) cap (cap_insert_dest_original cap src_capa)
            \<and> mdb_cte_at (swp (cte_wp_at ((\<noteq>) cap.NullCap)) s) (cdt s)"
        in hoare_strengthen_post)
-          apply (wp set_cap_mdb_cte_at static_imp_wp | simp add:not_idle_thread_def)+
+          apply (wp set_cap_mdb_cte_at hoare_weak_lift_imp | simp add:not_idle_thread_def)+
          apply (clarsimp simp:mdb_cte_at_def cte_wp_at_caps_of_state)
          apply fastforce
         apply clarsimp
@@ -878,21 +878,21 @@ lemma corres_mapM_to_mapM_x:
   by (simp add: mapM_x_mapM liftM_def[symmetric])
 
 lemma ep_waiting_set_recv_upd_kh:
-  "ep_at epptr s \<Longrightarrow> (ep_waiting_set_recv epptr (update_kheap (kheap s(epptr \<mapsto> kernel_object.Endpoint X)) s))
+  "ep_at epptr s \<Longrightarrow> (ep_waiting_set_recv epptr (update_kheap ((kheap s)(epptr \<mapsto> kernel_object.Endpoint X)) s))
     = (ep_waiting_set_recv epptr s)"
   apply (rule set_eqI)
   apply (clarsimp simp:ep_waiting_set_recv_def obj_at_def is_ep_def)
 done
 
 lemma ep_waiting_set_send_upd_kh:
-  "ep_at epptr s \<Longrightarrow> (ep_waiting_set_send epptr (update_kheap (kheap s(epptr \<mapsto> kernel_object.Endpoint X)) s))
+  "ep_at epptr s \<Longrightarrow> (ep_waiting_set_send epptr (update_kheap ((kheap s)(epptr \<mapsto> kernel_object.Endpoint X)) s))
     = (ep_waiting_set_send epptr s)"
   apply (rule set_eqI)
   apply (clarsimp simp:ep_waiting_set_send_def obj_at_def is_ep_def)
 done
 
 lemma ntfn_waiting_set_upd_kh:
-  "ep_at epptr s \<Longrightarrow> (ntfn_waiting_set epptr (update_kheap (kheap s(epptr \<mapsto> kernel_object.Endpoint X)) s))
+  "ep_at epptr s \<Longrightarrow> (ntfn_waiting_set epptr (update_kheap ((kheap s)(epptr \<mapsto> kernel_object.Endpoint X)) s))
     = (ntfn_waiting_set epptr s)"
   apply (rule set_eqI)
   apply (clarsimp simp:ntfn_waiting_set_def obj_at_def is_ep_def)

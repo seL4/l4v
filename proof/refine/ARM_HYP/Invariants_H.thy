@@ -1529,7 +1529,7 @@ lemmas valid_duplicates'_D = valid_duplicates'_pdeD valid_duplicates'_pteD
 lemma valid_duplicates'_non_pd_pt_I:
   "\<lbrakk>koTypeOf ko \<noteq> ArchT PDET; koTypeOf ko \<noteq> ArchT PTET;
    vs_valid_duplicates' (ksPSpace s) ; ksPSpace s p = Some ko; koTypeOf ko = koTypeOf m\<rbrakk>
-       \<Longrightarrow> vs_valid_duplicates' (ksPSpace s(p \<mapsto> m))"
+       \<Longrightarrow> vs_valid_duplicates' ((ksPSpace s)(p \<mapsto> m))"
   apply (subst vs_valid_duplicates'_def)
   apply (rule allI)
   apply (clarsimp simp: option.splits kernel_object.splits arch_kernel_object.splits)

@@ -103,7 +103,7 @@ lemma pspace_aligned_obj_update:
   assumes obj: "obj_at P t s"
   assumes pa: "pspace_aligned s"
   assumes R: "\<And>k. P k \<Longrightarrow> a_type k = a_type k'"
-  shows "pspace_aligned (s\<lparr>kheap := kheap s(t \<mapsto> k')\<rparr>)"
+  shows "pspace_aligned (s\<lparr>kheap := (kheap s)(t \<mapsto> k')\<rparr>)"
   using pa obj
   apply (simp add: pspace_aligned_def cong: conj_cong)
   apply (clarsimp simp: obj_at_def obj_bits_T dest!: R)
@@ -113,7 +113,7 @@ lemma pspace_aligned_obj_update:
 
 lemma cte_at_same_type:
   "\<lbrakk>cte_at t s; a_type k = a_type ko; kheap s p = Some ko\<rbrakk>
-  \<Longrightarrow> cte_at t (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)"
+  \<Longrightarrow> cte_at t (s\<lparr>kheap := (kheap s)(p \<mapsto> k)\<rparr>)"
   apply (clarsimp simp: cte_at_cases del: disjCI)
   apply (elim exE disjE)
    apply (clarsimp simp: a_type_def well_formed_cnode_n_def length_set_helper
@@ -125,13 +125,13 @@ lemma cte_at_same_type:
 
 lemma untyped_same_type:
   "\<lbrakk>valid_untyped (cap.UntypedCap dev r n f) s; a_type k = a_type ko; kheap s p = Some ko\<rbrakk>
-  \<Longrightarrow> valid_untyped (cap.UntypedCap dev r n f) (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)"
+  \<Longrightarrow> valid_untyped (cap.UntypedCap dev r n f) (s\<lparr>kheap := (kheap s)(p \<mapsto> k)\<rparr>)"
   unfolding valid_untyped_def
   by (clarsimp simp: obj_range_def obj_bits_T)
 
 lemma valid_cap_same_type:
   "\<lbrakk> s \<turnstile> cap; a_type k = a_type ko; kheap s p = Some ko \<rbrakk>
-  \<Longrightarrow> s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr> \<turnstile> cap"
+  \<Longrightarrow> s\<lparr>kheap := (kheap s)(p \<mapsto> k)\<rparr> \<turnstile> cap"
   apply (simp add: valid_cap_def split: cap.split)
   apply (auto elim!: typ_at_same_type untyped_same_type
                simp: ntfn_at_typ ep_at_typ tcb_at_typ cap_table_at_typ
@@ -141,7 +141,7 @@ lemma valid_cap_same_type:
 
 lemma valid_obj_same_type:
   "\<lbrakk> valid_obj p' obj s; valid_obj p k s; kheap s p = Some ko; a_type k = a_type ko \<rbrakk>
-   \<Longrightarrow> valid_obj p' obj (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)"
+   \<Longrightarrow> valid_obj p' obj (s\<lparr>kheap := (kheap s)(p \<mapsto> k)\<rparr>)"
   apply (cases obj; simp)
       apply (clarsimp simp add: valid_obj_def valid_cs_def)
       apply (drule (1) bspec)
@@ -460,7 +460,7 @@ lemma set_ntfn_refs_of[wp]:
 
 lemma pspace_distinct_same_type:
   "\<lbrakk> kheap s t = Some ko; a_type ko = a_type ko';  pspace_distinct s\<rbrakk>
-    \<Longrightarrow> pspace_distinct (s\<lparr>kheap := kheap s(t \<mapsto> ko')\<rparr>)"
+    \<Longrightarrow> pspace_distinct (s\<lparr>kheap := (kheap s)(t \<mapsto> ko')\<rparr>)"
   apply (clarsimp simp add: pspace_distinct_def obj_bits_T)
   apply fastforce
   done
@@ -573,7 +573,7 @@ lemma cte_wp_at_after_update:
 
 lemma cte_wp_at_after_update':
   "\<lbrakk> obj_at (same_caps val) p' s \<rbrakk>
-    \<Longrightarrow> cte_wp_at P p (s\<lparr>kheap := kheap s(p' \<mapsto> val)\<rparr>)
+    \<Longrightarrow> cte_wp_at P p (s\<lparr>kheap := (kheap s)(p' \<mapsto> val)\<rparr>)
          = cte_wp_at P p s"
   by (fastforce simp: obj_at_def cte_wp_at_cases split: if_split_asm dest: bspec [OF _ ranI])
 
@@ -584,7 +584,7 @@ lemma ex_cap_to_after_update:
 
 lemma ex_cap_to_after_update':
   "\<lbrakk> ex_nonz_cap_to p s; obj_at (same_caps val) p' s \<rbrakk>
-     \<Longrightarrow> ex_nonz_cap_to p (s\<lparr>kheap := kheap s(p' \<mapsto> val)\<rparr>)"
+     \<Longrightarrow> ex_nonz_cap_to p (s\<lparr>kheap := (kheap s)(p' \<mapsto> val)\<rparr>)"
   by (clarsimp simp: ex_nonz_cap_to_def cte_wp_at_after_update')
 
 lemma ex_cte_cap_to_after_update:
@@ -772,7 +772,7 @@ lemma as_user_bind[wp]:
     apply clarsimp
     apply (rename_tac value_g s tcb fail_g value_f fail_f)
     apply (rule_tac x="value_f" in exI)
-    apply (rule_tac x="s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb\<lparr>tcb_arch := arch_tcb_context_set fail_f (tcb_arch tcb)\<rparr>))\<rparr>" in exI)
+    apply (rule_tac x="s\<lparr>kheap := (kheap s)(t \<mapsto> TCB (tcb\<lparr>tcb_arch := arch_tcb_context_set fail_f (tcb_arch tcb)\<rparr>))\<rparr>" in exI)
     apply fastforce
    apply clarsimp
    apply (rename_tac value_g ta s tcb value_f fail_g ko)

@@ -1474,7 +1474,7 @@ end
 crunch exst[wp]: set_cap "(\<lambda>s. P (exst s))" (wp: crunch_wps simp: crunch_simps)
 
 lemma set_cap_caps_of_state3:
-  "\<lbrace>\<lambda>s. P (caps_of_state s (p \<mapsto> cap)) (cdt s)  (exst s) (is_original_cap s)\<rbrace>
+  "\<lbrace>\<lambda>s. P ((caps_of_state s) (p \<mapsto> cap)) (cdt s)  (exst s) (is_original_cap s)\<rbrace>
   set_cap cap p
   \<lbrace>\<lambda>rv s. P (caps_of_state s) (cdt s) (exst s) (is_original_cap s)\<rbrace>"
   apply (rule_tac Q="\<lambda>rv s. \<exists>m mr t. P (caps_of_state s) m t mr
@@ -3122,7 +3122,7 @@ lemma empty_slot_valid_list[wp]:
   apply (simp add: empty_slot_def)
   apply (simp add: set_cdt_def update_cdt_list_def set_cdt_list_def
                    empty_slot_ext_def bind_assoc cong: if_cong)
-  apply (wp get_cap_wp static_imp_wp | wpc | wp (once) hoare_vcg_all_lift)+
+  apply (wp get_cap_wp hoare_weak_lift_imp | wpc | wp (once) hoare_vcg_all_lift)+
   apply (clarsimp simp del: fun_upd_apply)
   apply (frule mdb_empty_abs_simple.intro)
   apply(case_tac "cdt s sl")

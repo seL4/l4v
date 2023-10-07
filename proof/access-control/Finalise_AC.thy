@@ -533,7 +533,7 @@ lemma reply_cancel_ipc_respects[wp]:
    apply (rule hoare_lift_Pf2[where f="cdt"])
     apply (wpsimp wp: hoare_vcg_const_Ball_lift thread_set_integrity_autarch
                       thread_set_invs_trivial[OF ball_tcb_cap_casesI] thread_set_tcb_state_trivial
-                      thread_set_not_state_valid_sched static_imp_wp thread_set_cte_wp_at_trivial
+                      thread_set_not_state_valid_sched hoare_weak_lift_imp thread_set_cte_wp_at_trivial
                       thread_set_pas_refined
                 simp: ran_tcb_cap_cases)+
   apply (strengthen invs_psp_aligned invs_vspace_objs invs_arch_state, clarsimp)
@@ -799,7 +799,7 @@ proof (induct arbitrary: st rule: rec_del.induct, simp_all only: rec_del_fails)
     apply (simp only: split_def)
     apply (rule hoare_pre_spec_validE)
      apply (rule split_spec_bindE)
-      apply (wp static_imp_wp)
+      apply (wp hoare_weak_lift_imp)
      apply (rule spec_strengthen_postE)
       apply (rule spec_valid_conj_liftE1)
        apply (rule valid_validE_R, rule rec_del_valid_list, rule preemption_point_inv';
@@ -816,7 +816,7 @@ next
     apply (subst rec_del.simps)
     apply (simp only: split_def)
     apply (rule hoare_pre_spec_validE)
-     apply (wp set_cap_integrity_autarch set_cap_pas_refined_not_transferable "2.hyps" static_imp_wp)
+     apply (wp set_cap_integrity_autarch set_cap_pas_refined_not_transferable "2.hyps" hoare_weak_lift_imp)
           apply ((wp preemption_point_inv' | simp add: integrity_subjects_def pas_refined_def)+)[1]
          apply (simp(no_asm))
          apply (rule spec_strengthen_postE)
@@ -833,7 +833,7 @@ next
         apply (simp add: conj_comms)
         apply (wp set_cap_integrity_autarch  set_cap_pas_refined_not_transferable replace_cap_invs
                   final_cap_same_objrefs set_cap_cte_cap_wp_to
-                  set_cap_cte_wp_at hoare_vcg_const_Ball_lift static_imp_wp
+                  set_cap_cte_wp_at hoare_vcg_const_Ball_lift hoare_weak_lift_imp
                        | rule finalise_cap_not_reply_master
                        | simp add: in_monad)+
        apply (rule hoare_strengthen_post)
@@ -848,7 +848,7 @@ next
          apply (wp finalise_cap_invs[where slot=slot]
                    finalise_cap_replaceable[where sl=slot]
                    finalise_cap_makes_halted[where slot=slot]
-                   finalise_cap_auth' static_imp_wp)[1]
+                   finalise_cap_auth' hoare_weak_lift_imp)[1]
         apply (rule finalise_cap_cases[where slot=slot])
        apply (clarsimp simp: cte_wp_at_caps_of_state)
        apply (erule disjE)
@@ -871,7 +871,7 @@ next
   case (3 ptr bits n slot s)
   show ?case
     apply (simp add: spec_validE_def)
-    apply (wp static_imp_wp)
+    apply (wp hoare_weak_lift_imp)
     apply clarsimp
     done
 next
@@ -889,7 +889,7 @@ next
         apply (wpsimp wp: rec_del_invs)
        apply (rule "4.hyps", assumption+)
       apply (wpsimp wp: set_cap_integrity_autarch set_cap_pas_refined_not_transferable
-                        get_cap_wp static_imp_wp)+
+                        get_cap_wp hoare_weak_lift_imp)+
       apply (clarsimp simp: invs_psp_aligned invs_vspace_objs invs_arch_state
                             cte_wp_at_caps_of_state clas_no_asid cli_no_irqs aag_cap_auth_def)
       apply (drule_tac auth=auth in sta_caps, simp+)
@@ -958,13 +958,13 @@ lemma rec_del_respects_CTEDelete_transferable':
    apply (wp rec_del_respects'')
    apply (solves \<open>simp\<close>)
   apply (subst rec_del.simps[abs_def])
-  apply (wp add: hoare_K_bind without_preemption_wp static_imp_wp wp_transferable
+  apply (wp add: hoare_K_bind without_preemption_wp hoare_weak_lift_imp wp_transferable
                  rec_del_Finalise_transferable
             del: wp_not_transferable
          | wpc)+
     apply (rule hoare_post_impErr,rule rec_del_Finalise_transferable)
      apply simp apply (elim conjE) apply simp apply simp
-   apply (wp add: hoare_K_bind without_preemption_wp static_imp_wp wp_transferable
+   apply (wp add: hoare_K_bind without_preemption_wp hoare_weak_lift_imp wp_transferable
                   rec_del_Finalise_transferable
              del: wp_not_transferable
           | wpc)+
@@ -1085,7 +1085,7 @@ lemma empty_slot_cte_wp_at:
   by (wpsimp wp: empty_slot_caps_of_state)
 
 lemma deleting_irq_handler_caps_of_state_nullinv:
-  "\<lbrace>\<lambda>s. \<forall>p. P (caps_of_state s(p \<mapsto> NullCap))\<rbrace>
+  "\<lbrace>\<lambda>s. \<forall>p. P ((caps_of_state s)(p \<mapsto> NullCap))\<rbrace>
      deleting_irq_handler irq
    \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
   unfolding deleting_irq_handler_def
@@ -1104,7 +1104,7 @@ locale Finalise_AC_2 = Finalise_AC_1 +
        \<lbrace>\<lambda>_. (\<lambda>s. trp \<longrightarrow> integrity aag X st s) and pas_refined aag\<rbrace>,
        \<lbrace>\<lambda>_. (\<lambda>s. trp \<longrightarrow> integrity aag X st s) and pas_refined aag\<rbrace>"
   and finalise_cap_caps_of_state_nullinv:
-    "\<And>P. \<lbrace>\<lambda>s :: det_ext state. P (caps_of_state s) \<and> (\<forall>p. P (caps_of_state s(p \<mapsto> NullCap)))\<rbrace>
+    "\<And>P. \<lbrace>\<lambda>s :: det_ext state. P (caps_of_state s) \<and> (\<forall>p. P ((caps_of_state s)(p \<mapsto> NullCap)))\<rbrace>
           finalise_cap cap final
           \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
   and finalise_cap_fst_ret:
@@ -1144,7 +1144,7 @@ proof (induct rule: rec_del.induct, simp_all only: rec_del_fails)
     apply (insert P_Null)
     apply (subst rec_del.simps)
     apply (simp only: split_def)
-    apply (wp static_imp_wp | simp)+
+    apply (wp hoare_weak_lift_imp | simp)+
     apply (wp empty_slot_cte_wp_at)[1]
     apply (rule spec_strengthen_postE)
     apply (rule hoare_pre_spec_validE)
@@ -1160,7 +1160,7 @@ next
     apply (subst rec_del.simps)
     apply (simp only: split_def without_preemption_def
                       rec_del_call.simps)
-    apply (wp static_imp_wp)
+    apply (wp hoare_weak_lift_imp)
     apply (wp set_cap_cte_wp_at')[1]
     apply (wp "2.hyps"[simplified without_preemption_def rec_del_call.simps])
          apply ((wp preemption_point_inv | simp)+)[1]
@@ -1172,7 +1172,7 @@ next
       apply (rule_tac Q = "\<lambda>rv' s. (slot \<noteq> p \<or> exposed \<longrightarrow> cte_wp_at P p s) \<and> P (fst rv')
                              \<and> cte_at slot s" in hoare_post_imp)
        apply (clarsimp simp: cte_wp_at_caps_of_state)
-      apply (wp static_imp_wp set_cap_cte_wp_at' finalise_cap_cte_wp_at_nullinv
+      apply (wp hoare_weak_lift_imp set_cap_cte_wp_at' finalise_cap_cte_wp_at_nullinv
                 finalise_cap_fst_ret get_cap_wp
              | simp add: is_final_cap_def)+
     apply (clarsimp simp add: P_Zombie is_cap_simps cte_wp_at_caps_of_state)+

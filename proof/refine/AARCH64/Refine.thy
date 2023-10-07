@@ -275,7 +275,7 @@ lemma kernel_entry_invs:
             thread_set_ct_running thread_set_not_state_valid_sched
             hoare_vcg_disj_lift ct_in_state_thread_state_lift thread_set_no_change_tcb_state
             call_kernel_domain_time_inv_det_ext call_kernel_domain_list_inv_det_ext
-            static_imp_wp
+            hoare_weak_lift_imp
       | clarsimp simp add: tcb_cap_cases_def active_from_running)+
   done
 
@@ -377,13 +377,11 @@ lemma akernel_invariant:
         | drule use_valid[OF _ check_active_irq_invs])+)[1]
   done
 
-(* FIXME AARCH64 originally in PageTableDuplicates *)
 lemma dmo_getActiveIRQ_notin_non_kernel_IRQs[wp]:
   "\<lbrace>\<top>\<rbrace> doMachineOp (getActiveIRQ True) \<lbrace>\<lambda>irq _. irq \<notin> Some ` non_kernel_IRQs\<rbrace>"
   unfolding doMachineOp_def
   by (wpsimp simp: getActiveIRQ_def in_monad split: if_split_asm)
 
-(* FIXME AARCH64 originally in PageTableDuplicates *)
 lemma non_kernel_IRQs_strg:
   "invs' s \<and> irq \<notin> Some ` non_kernel_IRQs \<and> Q \<Longrightarrow>
     (\<exists>y. irq = Some y) \<longrightarrow> invs' s \<and> (the irq \<in> non_kernel_IRQs \<longrightarrow> P) \<and> Q"
@@ -434,7 +432,7 @@ lemma kernelEntry_invs':
   apply (simp add: kernelEntry_def)
   apply (wp ckernel_invs callKernel_domain_time_left
             threadSet_invs_trivial threadSet_ct_running'
-            TcbAcc_R.dmo_invs' static_imp_wp
+            TcbAcc_R.dmo_invs' hoare_weak_lift_imp
             doMachineOp_ct_in_state' doMachineOp_sch_act_simple
             callKernel_domain_time_left
          | clarsimp simp: user_memory_update_def no_irq_def tcb_at_invs'
@@ -659,7 +657,7 @@ lemma entry_corres:
         apply (rule hoare_strengthen_post, rule ckernel_invs, simp add: invs'_def cur_tcb'_def)
        apply (wp thread_set_invs_trivial thread_set_ct_running
                  threadSet_invs_trivial threadSet_ct_running'
-                 thread_set_not_state_valid_sched static_imp_wp
+                 thread_set_not_state_valid_sched hoare_weak_lift_imp
                  hoare_vcg_disj_lift ct_in_state_thread_state_lift
               | simp add: tcb_cap_cases_def ct_in_state'_def thread_set_no_change_tcb_state
               | (wps, wp threadSet_st_tcb_at2) )+

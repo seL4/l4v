@@ -54,6 +54,10 @@ lemma inl_whenE:
   "((Inl x, s') \<in> mres (whenE P f s)) = (P \<and> (Inl x, s') \<in> mres (f s))"
   by (auto simp add: in_whenE)
 
+lemma inr_in_unlessE_throwError[termination_simp]:
+  "(Inr (), s') \<in> mres (unlessE P (throwError E) s) = (P \<and> s'=s)"
+  by (simp add: unlessE_def returnOk_def throwError_def in_return)
+
 lemma in_fail:
   "r \<in> mres (fail s) = False"
   by (simp add: fail_def mres_def)
@@ -86,6 +90,18 @@ lemma in_when:
   "(v, s') \<in> mres (when P f s) = ((P \<longrightarrow> (v, s') \<in> mres (f s)) \<and> (\<not>P \<longrightarrow> v = () \<and> s' = s))"
   by (simp add: when_def in_return)
 
+lemma in_unless:
+  "(v, s') \<in> mres (unless P f s) = ((\<not> P \<longrightarrow> (v, s') \<in> mres (f s)) \<and> (P \<longrightarrow> v = () \<and> s' = s))"
+  by (simp add: unless_def in_when)
+
+lemma in_unlessE:
+  "(v, s') \<in> mres (unlessE P f s) = ((\<not> P \<longrightarrow> (v, s') \<in> mres (f s)) \<and> (P \<longrightarrow> v = Inr () \<and> s' = s))"
+  by (simp add: unlessE_def in_returnOk)
+
+lemma inl_unlessE:
+  "((Inl x, s') \<in> mres (unlessE P f s)) = (\<not> P \<and> (Inl x, s') \<in> mres (f s))"
+  by (auto simp add: in_unlessE)
+
 lemma in_modify:
   "(v, s') \<in> mres (modify f s) = (s'=f s \<and> v = ())"
   by (auto simp add: modify_def bind_def get_def put_def mres_def)
@@ -114,8 +130,8 @@ lemma in_bindE:
 lemmas in_monad = inl_whenE in_whenE in_liftE in_bind in_bindE_L
                   in_bindE_R in_returnOk in_throwError in_fail
                   in_assertE in_assert in_return in_assert_opt
-                  in_get in_gets in_put in_when (* unlessE_whenE *)
-                  (* unless_when *) in_modify gets_the_in_monad
+                  in_get in_gets in_put in_when inl_unlessE in_unlessE
+                  in_unless in_modify gets_the_in_monad
                   in_alternative in_liftM
 
 lemma bind_det_exec:

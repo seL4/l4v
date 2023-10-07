@@ -1218,7 +1218,7 @@ lemma arch_thread_set_caps_of_state [wp]:
   by (wpsimp wp: thread_set_caps_of_state_trivial2 simp: arch_thread_set_is_thread_set)
 
 lemma arch_thread_set_wp:
-  "\<lbrace>\<lambda>s. get_tcb p s \<noteq> None \<longrightarrow> Q (s\<lparr>kheap := kheap s(p \<mapsto> TCB (the (get_tcb p s)\<lparr>tcb_arch := f (tcb_arch (the (get_tcb p s)))\<rparr>))\<rparr>) \<rbrace>
+  "\<lbrace>\<lambda>s. get_tcb p s \<noteq> None \<longrightarrow> Q (s\<lparr>kheap := (kheap s)(p \<mapsto> TCB (the (get_tcb p s)\<lparr>tcb_arch := f (tcb_arch (the (get_tcb p s)))\<rparr>))\<rparr>) \<rbrace>
     arch_thread_set f p
    \<lbrace>\<lambda>_. Q\<rbrace>"
   apply (simp add: arch_thread_set_def)
@@ -1231,7 +1231,7 @@ lemma a_type_VCPU [simp]:
   by (simp add: a_type_def)
 
 lemma set_vcpu_wp:
-  "\<lbrace>\<lambda>s. vcpu_at p s \<longrightarrow> Q (s\<lparr>kheap := kheap s(p \<mapsto> (ArchObj (VCPU vcpu))) \<rparr>) \<rbrace> set_vcpu p vcpu \<lbrace>\<lambda>_. Q\<rbrace>"
+  "\<lbrace>\<lambda>s. vcpu_at p s \<longrightarrow> Q (s\<lparr>kheap := (kheap s)(p \<mapsto> (ArchObj (VCPU vcpu))) \<rparr>) \<rbrace> set_vcpu p vcpu \<lbrace>\<lambda>_. Q\<rbrace>"
   unfolding set_vcpu_def
   apply (wp set_object_wp_strong)
   apply (clarsimp simp: obj_at_def split: kernel_object.splits arch_kernel_obj.splits)
@@ -2337,7 +2337,7 @@ lemma set_vcpu_if_live_then_nonz_cap_Some[wp]:
 
 (* FIXME: kind of ugly but hey! it works!! *)
 
-lemma state_refs_of_simp: "\<lbrakk> a \<noteq> p \<rbrakk> \<Longrightarrow> state_refs_of (s\<lparr>kheap := kheap s(p \<mapsto> v) \<rparr>) a = state_refs_of s a "
+lemma state_refs_of_simp: "\<lbrakk> a \<noteq> p \<rbrakk> \<Longrightarrow> state_refs_of (s\<lparr>kheap := (kheap s)(p \<mapsto> v) \<rparr>) a = state_refs_of s a "
   by (simp add: state_refs_of_def)
 
 lemma state_refs_of_vcpu_simp: "typ_at (AArch AVCPU) p s \<Longrightarrow> state_refs_of s p = {}"
@@ -2363,12 +2363,12 @@ lemma set_vcpu_sym_refs[wp]:
   apply (clarsimp simp: obj_at_def)
   done
 
-lemma state_hyp_refs_of_simp_neq: "\<lbrakk> a \<noteq> p \<rbrakk> \<Longrightarrow> state_hyp_refs_of (s\<lparr>kheap := kheap s(p \<mapsto> v) \<rparr>) a = state_hyp_refs_of s a "
+lemma state_hyp_refs_of_simp_neq: "\<lbrakk> a \<noteq> p \<rbrakk> \<Longrightarrow> state_hyp_refs_of (s\<lparr>kheap := (kheap s)(p \<mapsto> v) \<rparr>) a = state_hyp_refs_of s a "
   by (simp add: state_hyp_refs_of_def)
 
 lemma state_hyp_refs_of_simp_eq:
   "obj_at (\<lambda>ko'. hyp_refs_of ko' = hyp_refs_of v) p s
-   \<Longrightarrow> state_hyp_refs_of (s\<lparr>kheap := kheap s(p \<mapsto> v) \<rparr>) p = state_hyp_refs_of s p"
+   \<Longrightarrow> state_hyp_refs_of (s\<lparr>kheap := (kheap s)(p \<mapsto> v) \<rparr>) p = state_hyp_refs_of s p"
   by (clarsimp simp: state_hyp_refs_of_def obj_at_def)
 
 lemma set_object_vcpu_sym_refs_hyp:
@@ -2729,7 +2729,7 @@ end
 
 locale vs_lookup_map_some_pdes = Arch +
   fixes pd pdp s s' S T pd'
-  defines "s' \<equiv> s\<lparr>kheap := kheap s(pdp \<mapsto> ArchObj (PageDirectory pd'))\<rparr>"
+  defines "s' \<equiv> s\<lparr>kheap := (kheap s)(pdp \<mapsto> ArchObj (PageDirectory pd'))\<rparr>"
   assumes refs: "vs_refs (ArchObj (PageDirectory pd')) =
                  (vs_refs (ArchObj (PageDirectory pd)) - T) \<union> S"
   assumes old: "kheap s pdp = Some (ArchObj (PageDirectory pd))"
@@ -2843,7 +2843,7 @@ lemma set_pd_vspace_objs_map: (* ARMHYP *)
 lemma simpler_set_pd_def:
   "set_pd p pd =
    (\<lambda>s. if \<exists>pd. kheap s p = Some (ArchObj (PageDirectory pd))
-        then ({((), s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (PageDirectory pd))\<rparr>)},
+        then ({((), s\<lparr>kheap := (kheap s)(p \<mapsto> ArchObj (PageDirectory pd))\<rparr>)},
               False)
         else ({}, True))"
   apply (rule ext)
@@ -2899,7 +2899,7 @@ lemma set_pd_valid_vs_lookup_map: (* ARMHYP *)
     apply (drule vs_lookup_pages_apI)
       apply (simp split: if_split_asm)
      apply (simp+)[2]
-   apply (frule_tac s="s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (PageDirectory pd))\<rparr>"
+   apply (frule_tac s="s\<lparr>kheap := (kheap s)(p \<mapsto> ArchObj (PageDirectory pd))\<rparr>"
                  in vs_lookup_pages_pdI[rotated -1])
         apply (simp del: fun_upd_apply)+
    apply (frule vs_lookup_pages_apI)
@@ -3780,8 +3780,8 @@ lemma simpler_store_pde_def:
   "store_pde p pde s =
     (case kheap s (p && ~~ mask pd_bits) of
           Some (ArchObj (PageDirectory pd)) =>
-            ({((), s\<lparr>kheap := (kheap s((p && ~~ mask pd_bits) \<mapsto>
-                                       (ArchObj (PageDirectory (pd(ucast (p && mask pd_bits >> 3) := pde))))))\<rparr>)}, False)
+            ({((), s\<lparr>kheap := (kheap s)(p && ~~ mask pd_bits \<mapsto>
+                                       (ArchObj (PageDirectory (pd(ucast (p && mask pd_bits >> 3) := pde)))))\<rparr>)}, False)
         | _ => ({}, True))"
   by (auto simp: store_pde_def simpler_set_pd_def get_object_def simpler_gets_def assert_def
                  return_def fail_def set_object_def get_def put_def bind_def get_pd_def vspace_bits_defs
@@ -3791,7 +3791,7 @@ lemma pde_update_valid_vspace_objs:
   "[|valid_vspace_objs s; valid_pde pde s; pde_ref pde = None;
     kheap s (p && ~~ mask pd_bits) = Some (ArchObj (PageDirectory pd))|]
    ==> valid_vspace_objs
-         (s\<lparr>kheap := kheap s(p && ~~ mask pd_bits \<mapsto> ArchObj (PageDirectory (pd(ucast (p && mask pd_bits >> 3) := pde))))\<rparr>)"
+         (s\<lparr>kheap := (kheap s)(p && ~~ mask pd_bits \<mapsto> ArchObj (PageDirectory (pd(ucast (p && mask pd_bits >> 3) := pde))))\<rparr>)"
   apply (cut_tac pde=pde and p=p in store_pde_arch_objs_unmap)
   apply (clarsimp simp: valid_def)
   apply (erule allE[where x=s])
@@ -5603,8 +5603,7 @@ end
 locale asid_pool_map = Arch +
   fixes s ap pool asid pdp pd s'
   defines "(s' :: ('a::state_ext) state) \<equiv>
-           s\<lparr>kheap := kheap s(ap \<mapsto> ArchObj (ASIDPool
-                                               (pool(asid \<mapsto> pdp))))\<rparr>"
+           s\<lparr>kheap := (kheap s)(ap \<mapsto> ArchObj (ASIDPool (pool(asid \<mapsto> pdp))))\<rparr>"
   assumes ap:  "kheap s ap = Some (ArchObj (ASIDPool pool))"
   assumes new: "pool asid = None"
   assumes pd:  "kheap s pdp = Some (ArchObj (PageDirectory pd))"

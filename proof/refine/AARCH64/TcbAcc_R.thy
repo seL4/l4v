@@ -12,7 +12,6 @@ begin
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 declare if_weak_cong [cong]
-declare result_in_set_wp[wp]
 declare hoare_in_monad_post[wp]
 declare trans_state_update'[symmetric,simp]
 declare storeWordUser_typ_at' [wp]
@@ -424,7 +423,7 @@ proof -
     apply (simp add: return_def thread_set_def gets_the_def assert_def
                      assert_opt_def simpler_gets_def set_object_def get_object_def
                      put_def get_def bind_def)
-    apply (subgoal_tac "kheap s(t \<mapsto> TCB tcb) = kheap s", simp)
+    apply (subgoal_tac "(kheap s)(t \<mapsto> TCB tcb) = kheap s", simp)
      apply (simp add: map_upd_triv get_tcb_SomeD)+
     done
   show ?thesis
@@ -1356,6 +1355,10 @@ lemma threadSet_valid_objs':
   apply (clarsimp elim!: obj_at'_weakenE)
   done
 
+lemma atcbVCPUPtr_atcbContextSet_id[simp]:
+  "atcbVCPUPtr (atcbContextSet f (tcbArch tcb)) = atcbVCPUPtr (tcbArch tcb)"
+  by (simp add: atcbContextSet_def)
+
 lemma asUser_corres':
   assumes y: "corres_underlying Id False True r \<top> \<top> f g"
   shows      "corres r (tcb_at t and pspace_aligned and pspace_distinct) \<top>
@@ -1462,11 +1465,6 @@ lemma asUser_typ_at' [wp]:
   by (simp add: asUser_def bind_assoc split_def, wp select_f_inv)
 
 lemmas asUser_typ_ats[wp] = typ_at_lifts [OF asUser_typ_at']
-
-(* FIXME AARCH64: move *)
-lemma atcbVCPUPtr_atcbContextSet_id[simp]:
-  "atcbVCPUPtr (atcbContextSet f (tcbArch tcb)) = atcbVCPUPtr (tcbArch tcb)"
-  by (simp add: atcbContextSet_def)
 
 lemma asUser_invs[wp]:
   "\<lbrace>invs' and tcb_at' t\<rbrace> asUser t m \<lbrace>\<lambda>rv. invs'\<rbrace>"
@@ -2194,7 +2192,6 @@ crunches rescheduleRequired, tcbSchedDequeue
 
 crunches rescheduleRequired, tcbSchedDequeue
   for no_0_obj'[wp]: "no_0_obj'"
-  and pspace_canonical'[wp]: "pspace_canonical'"
 
 lemma sts'_valid_pspace'_inv[wp]:
   "\<lbrace> valid_pspace' and tcb_at' t and valid_tcb_state' st \<rbrace>
@@ -2396,9 +2393,9 @@ lemma threadSet_queued_sch_act_wf[wp]:
               split: scheduler_action.split)
   apply (wp hoare_vcg_conj_lift)
    apply (simp add: threadSet_def)
-   apply (wp static_imp_wp)
+   apply (wp hoare_weak_lift_imp)
     apply (wps setObject_sa_unchanged)
-    apply (wp static_imp_wp getObject_tcb_wp)+
+    apply (wp hoare_weak_lift_imp getObject_tcb_wp)+
    apply (clarsimp simp: obj_at'_def)
   apply (wp hoare_vcg_all_lift hoare_vcg_conj_lift hoare_convert_imp)+
    apply (simp add: threadSet_def)
@@ -4175,7 +4172,7 @@ lemma possibleSwitchTo_ct_not_inQ:
     possibleSwitchTo t \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
   (is "\<lbrace>?PRE\<rbrace> _ \<lbrace>_\<rbrace>")
   apply (simp add: possibleSwitchTo_def curDomain_def)
-  apply (wpsimp wp: static_imp_wp rescheduleRequired_ct_not_inQ tcbSchedEnqueue_ct_not_inQ
+  apply (wpsimp wp: hoare_weak_lift_imp rescheduleRequired_ct_not_inQ tcbSchedEnqueue_ct_not_inQ
                     threadGet_wp
        | (rule hoare_post_imp[OF _ rescheduleRequired_sa_cnt], fastforce))+
   apply (fastforce simp: obj_at'_def)
@@ -4194,7 +4191,7 @@ lemma threadSet_tcbState_update_ct_not_inQ[wp]:
   apply (clarsimp)
   apply (rule hoare_conjI)
    apply (rule hoare_weaken_pre)
-   apply (wps, wp static_imp_wp)
+   apply (wps, wp hoare_weak_lift_imp)
    apply (wp OMG_getObject_tcb)+
    apply (clarsimp simp: comp_def)
   apply (wp hoare_drop_imp)
@@ -4214,7 +4211,7 @@ lemma threadSet_tcbBoundNotification_update_ct_not_inQ[wp]:
   apply (rule hoare_conjI)
    apply (rule hoare_weaken_pre)
    apply wps
-   apply (wp static_imp_wp)
+   apply (wp hoare_weak_lift_imp)
    apply (wp OMG_getObject_tcb)
    apply (clarsimp simp: comp_def)
   apply (wp hoare_drop_imp)
