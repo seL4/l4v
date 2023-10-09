@@ -1040,76 +1040,197 @@ lemma ccorres_Guard_True_Seq:
    \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf A C hs a (Guard F \<lbrace>True\<rbrace> c ;; d)"
    by (simp, ccorres_rewrite, assumption)
 
+lemma ccorres_While_Normal_helper:
+  assumes setter_inv:
+    "\<Gamma> \<turnstile> {s'. \<exists>rv s. G rv s s'} setter {s'. \<exists>rv s. G rv s s' \<and> (cond_xf s' \<noteq> 0 \<longrightarrow> Cnd rv s s')}"
+  assumes body_inv: "\<Gamma> \<turnstile> {s'. \<exists>rv s. G rv s s' \<and> Cnd rv s s'} B {s'. \<exists>rv s. G rv s s'}"
+  shows "\<Gamma> \<turnstile> ({s'. \<exists>rv s. G rv s s' \<and> (cond_xf s' \<noteq> 0 \<longrightarrow> Cnd rv s s')})
+             While {s'. cond_xf s' \<noteq> 0} (Seq B setter)
+             {s'. \<exists>rv s. G rv s s'}"
+  apply (insert assms)
+  apply (rule hoare_complete)
+  apply (simp add: cvalid_def HoarePartialDef.valid_def)
+  apply (intro allI)
+  apply (rename_tac xstate xstate')
+  apply (rule impI)
+  apply (case_tac "\<not> isNormal xstate")
+   apply fastforce
+  apply (simp add: isNormal_def)
+  apply (elim exE)
+  apply (simp add: image_def)
+  apply (erule exec_While_final_inv''[where C="{s'. cond_xf s' \<noteq> 0}" and B="B;; setter"]; clarsimp)
+     apply (frule intermediate_Normal_state[OF _ _ body_inv])
+      apply fastforce
+     apply clarsimp
+     apply (rename_tac inter_t)
+     apply (frule hoarep_exec[OF _ _ body_inv, rotated], fastforce)
+     apply (frule_tac s=inter_t in hoarep_exec[rotated 2], fastforce+)[1]
+    apply (metis (mono_tags, lifting) HoarePartial.SeqSwap empty_iff exec_abrupt mem_Collect_eq)
+   apply (metis (mono_tags, lifting) HoarePartial.SeqSwap exec_stuck mem_Collect_eq)
+  apply (metis (mono_tags, lifting) HoarePartial.SeqSwap empty_iff exec_fault mem_Collect_eq)
+  done
+
 lemma ccorres_While:
   assumes body_ccorres:
-    "\<And>r. ccorresG srel \<Gamma> (=) xf (G and (\<lambda>s. the (C r s))) (G' \<inter> C') hs (B r) B'"
-  and cond_ccorres:
-    "\<And>r. ccorresG srel \<Gamma> (\<lambda>rv rv'. rv = to_bool rv') cond_xf G G' hs (gets_the (C r)) setter"
-  and nf: "\<And>r. no_fail (G and (\<lambda>s. the (C r s))) (B r)"
-  and no_ofail: "\<And>r. no_ofail G (C r)"
-  and body_inv: "\<And>r. \<lbrace>G and (\<lambda>s. the (C r s))\<rbrace> B r \<lbrace>\<lambda>_. G\<rbrace>"
-                "\<Gamma> \<turnstile> (G' \<inter> C') B' G'"
-  and setter_inv_cond: "\<Gamma> \<turnstile> G' setter (G' \<inter> {s'. cond_xf s' \<noteq> 0 \<longrightarrow> s' \<in> C'})"
-  and setter_xf_inv: "\<And>val. \<Gamma> \<turnstile> {s'. xf s' = val} setter {s'. xf s' = val}"
-  shows "ccorresG srel \<Gamma> (=) xf G (G' \<inter> {s'. xf s' = r}) hs
-           (whileLoop (\<lambda>r s. the (C r s)) B r)
-           (Seq setter (While {s'. cond_xf s' \<noteq> 0} (Seq B' setter)))"
+    "\<And>r. ccorresG srel \<Gamma> rrel xf (\<lambda>s. G r s \<and> C r s = Some True) (G' \<inter> C') [] (B r) B'"
+  assumes setter_ccorres:
+    "\<And>r. ccorresG srel \<Gamma> (\<lambda>rv rv'. rv = to_bool rv') cond_xf (G r) G' [] (gets_the (C r)) setter"
+  assumes nf: "\<And>r. no_fail (\<lambda>s. G r s \<and> C r s = Some True) (B r)"
+  assumes no_ofail: "\<And>r. no_ofail (G r) (C r)"
+  assumes body_inv:
+    "\<And>r. \<lbrace>\<lambda>s. G r s \<and> C r s = Some True\<rbrace> B r \<lbrace>G\<rbrace>"
+    "\<And>r s. \<Gamma> \<turnstile> {s'. s' \<in> G' \<and> (s, s') \<in> srel \<and> G r s \<and> rrel r (xf s')
+                    \<and> s' \<in> C' \<and> C r s = Some True}
+                B' G'"
+  assumes setter_inv_cond:
+    "\<And>r s. \<Gamma> \<turnstile> {s'. s' \<in> G' \<and> (s, s') \<in> srel \<and> G r s \<and> rrel r (xf s')}
+                setter
+                {s'. s' \<in> G' \<and> (cond_xf s' \<noteq> 0 \<longrightarrow> s' \<in> C')}"
+  assumes setter_rrel:
+    "\<And>r s. \<Gamma> \<turnstile> {s'. s' \<in> G' \<and> (s, s') \<in> srel \<and> G r s \<and> rrel r (xf s')}
+                setter
+                {s'. rrel r (xf s')}"
+  shows
+    "ccorresG srel \<Gamma> rrel xf (G r) (G' \<inter> {s'. rrel r (xf s')}) hs
+       (whileLoop (\<lambda>r s. the (C r s)) B r)
+       (setter;; (While {s'. cond_xf s' \<noteq> 0} (B';; setter)))"
 proof -
   note unif_rrel_def[simp add] to_bool_def[simp add]
   have helper:
     "\<And>state xstate'.
        \<Gamma> \<turnstile> \<langle>While {s'. cond_xf s' \<noteq> 0} (Seq B' setter), Normal state\<rangle> \<Rightarrow> xstate' \<Longrightarrow>
        \<forall>st r s. Normal st = xstate' \<and> (s, state) \<in> srel
-                 \<and> (cond_xf state \<noteq> 0) = the (C r s) \<and> xf state = r \<and> G s
-                 \<and> state \<in> G' \<and>  (cond_xf state \<noteq> 0 \<longrightarrow> state \<in> C')
+                 \<and> (C r s \<noteq> None) \<and> (cond_xf state \<noteq> 0) = the (C r s)
+                 \<and> rrel r (xf state) \<and> G r s \<and> state \<in> G' \<and> (cond_xf state \<noteq> 0 \<longrightarrow> state \<in> C')
                 \<longrightarrow> (\<exists>rv s'. (rv, s') \<in> fst (whileLoop (\<lambda>r s. the (C r s)) B r s)
-                             \<and> (s', st) \<in> srel \<and> rv = xf st)"
-    apply (erule exec_While_final_inv''; simp)
+                             \<and> (s', st) \<in> srel \<and> rrel rv (xf st))"
+    apply (erule_tac C="{s'. cond_xf s' \<noteq> 0}" in exec_While_final_inv''; simp)
      apply (fastforce simp: whileLoop_cond_fail return_def)
     apply clarsimp
-    apply (rename_tac t t' t'' s)
-    apply (frule intermediate_Normal_state[where P="G' \<inter> C'"])
+    apply (rename_tac t t' t'' r s y)
+    apply (frule_tac P="{s'. s' \<in> G' \<and> (s, s') \<in> srel \<and> G r s \<and> rrel r (xf s')
+                             \<and> s' \<in> C' \<and> (C r s \<noteq> None) \<and> the (C r s)}"
+                  in intermediate_Normal_state)
       apply fastforce
-     apply (fastforce intro: body_inv)
+     apply (fastforce intro: body_inv conseqPre)
     apply clarsimp
     apply (rename_tac inter_t)
-    apply (prop_tac "\<exists>s'. (xf inter_t, s') \<in> fst (B (xf t) s) \<and> (s', inter_t) \<in> srel")
-     subgoal by (erule ccorresE[OF body_ccorres])
-                (fastforce simp: no_fail_def nf[simplified no_fail_def] dest: EHOther)+
+    apply (prop_tac "\<exists>rv' s'. rrel rv' (xf inter_t) \<and> (rv', s') \<in> fst (B r s)
+                              \<and> (s', inter_t) \<in> srel")
+     apply (insert body_ccorres)[1]
+     apply (drule_tac x=r in meta_spec)
+     apply (erule (1) ccorresE)
+         apply fastforce
+        apply fastforce
+       using nf apply (fastforce simp: no_fail_def)
+      apply (fastforce dest!: EHOther)
+     apply fastforce
     apply clarsimp
-    apply (prop_tac "G s'")
+    apply (prop_tac "G rv' s'")
      apply (fastforce dest: use_valid intro: body_inv)
     apply (prop_tac "inter_t \<in> G'")
      apply (fastforce dest: hoarep_exec[rotated] intro: body_inv)
+    apply (drule_tac x=rv' in spec)
     apply (drule_tac x=s' in spec)
+    apply (prop_tac "rrel rv' (xf inter_t)")
+     apply (fastforce dest: hoarep_exec[OF _ _ setter_rrel, rotated])
     apply (elim impE)
-     apply (drule_tac s'=inter_t and r1="xf t'" in ccorresE_gets_the[OF cond_ccorres]; assumption?)
+     apply (frule_tac s'=inter_t and r1=rv' in ccorresE_gets_the[OF setter_ccorres]; assumption?)
        apply (fastforce intro: no_ofail)
       apply (fastforce dest: EHOther)
-     subgoal by (fastforce dest: hoarep_exec intro: setter_inv_cond)
-    apply (prop_tac "xf inter_t = xf t'")
-     apply (fastforce dest: hoarep_exec[rotated] intro: setter_xf_inv)
+     apply (intro conjI)
+           apply fastforce
+          using no_ofail apply (fastforce elim!: no_ofailD)
+         apply fastforce
+        apply (fastforce dest: hoarep_exec[OF _ _ setter_rrel, rotated])
+       apply (fastforce dest: hoarep_exec[OF _ _ setter_inv_cond, rotated])
+      apply (fastforce dest: hoarep_exec[OF _ _ setter_inv_cond, rotated])
+     apply (fastforce dest: hoarep_exec[OF _ _ setter_inv_cond, rotated])
     apply (fastforce simp: whileLoop_def intro: whileLoop_results.intros(3))
+    done
+
+  have setter_hoarep:
+    "\<And>r s s' n xstate.
+       \<Gamma>\<turnstile>\<^sub>h \<langle>(setter;; While {s'. cond_xf s' \<noteq> 0} (B';; setter)) # hs,s'\<rangle> \<Rightarrow> (n, xstate)
+       \<Longrightarrow> \<Gamma>\<turnstile> {s' \<in> G'. (s, s') \<in> srel \<and> G r s \<and> rrel r (xf s')}
+              setter
+              {s'. (s' \<in> G' \<and> (s, s') \<in> srel \<and> G r s \<and> rrel r (xf s'))
+                   \<and> (cond_xf s' \<noteq> 0 \<longrightarrow> (s' \<in> C' \<and> C r s = Some True))}"
+    apply (insert setter_ccorres)
+    apply (drule_tac x=r in meta_spec)
+    apply (frule_tac s=s in ccorres_to_vcg_gets_the)
+     apply (fastforce intro: no_ofail)
+    apply (insert setter_rrel)
+    apply (drule_tac x=s in meta_spec)
+    apply (drule_tac x=r in meta_spec)
+    apply (rule hoarep_conj_lift_pre_fix)
+     apply (rule hoarep_conj_lift_pre_fix)
+      apply (insert setter_inv_cond)[1]
+      apply (drule_tac x=s in meta_spec)
+      apply (drule_tac x=r in meta_spec)
+      apply (rule_tac Q'="{s' \<in> G'. cond_xf s' \<noteq> 0 \<longrightarrow> s' \<in> C'}" in conseqPost; fastforce)
+     apply (fastforce intro!: hoarep_conj_lift_pre_fix simp: Collect_mono conseq_under_new_pre)
+    apply (insert setter_inv_cond)
+    apply (drule_tac x=s in meta_spec)
+    apply (drule_tac x=r in meta_spec)
+    apply (simp add: imp_conjR)
+    apply (rule hoarep_conj_lift_pre_fix)
+     apply (simp add: Collect_mono conseq_under_new_pre)
+    apply (rule_tac Q'="{s'. C r s \<noteq> None \<and> the (C r s) = (cond_xf s' \<noteq> 0)}"
+                 in conseqPost[rotated])
+      apply fastforce
+     apply fastforce
+    apply (simp add: Collect_mono conseq_under_new_pre)
     done
 
   show ?thesis
     apply (clarsimp simp: ccorres_underlying_def)
     apply (rename_tac s s' n xstate)
-    apply (frule (1) exec_handlers_use_hoare_nothrow_hoarep)
-     apply (rule_tac R="G' \<inter> {s'. s' \<in> {t. cond_xf t \<noteq> 0} \<longrightarrow> s' \<in> C'}" in HoarePartial.Seq)
-      apply (fastforce intro: setter_inv_cond)
-     apply (fastforce intro: While_inv_from_body_setter setter_inv_cond body_inv)
-    apply clarsimp
-    apply (frule (1) intermediate_Normal_state)
-     apply (fastforce intro: setter_inv_cond)
+    apply (frule_tac R'="{s'. s' \<in> G' \<and> (s, s') \<in> srel \<and> G r s \<and> rrel r (xf s')}"
+                 and Q'="{s'. \<exists>rv s. s' \<in> G' \<and> (s, s') \<in> srel \<and> G rv s \<and> rrel rv (xf s')}"
+                  in exec_handlers_use_hoare_nothrow_hoarep)
+      apply fastforce
+     apply (rule HoarePartial.Seq)
+      apply (erule setter_hoarep)
+     apply (rule conseqPre)
+      apply (rule ccorres_While_Normal_helper)
+       apply (fastforce intro!: setter_hoarep hoarep_ex_lift)
+      apply (intro hoarep_ex_pre, rename_tac rv new_s)
+      apply (insert setter_inv_cond)[1]
+      apply (drule_tac x=new_s in meta_spec)
+      apply (drule_tac x=rv in meta_spec)
+      apply (insert body_ccorres)[1]
+      apply (drule_tac x=rv in meta_spec)
+      apply (insert body_inv(2))[1]
+      apply (drule_tac x=new_s in meta_spec)
+      apply (drule_tac x=rv in meta_spec)
+      apply (frule_tac s=new_s in ccorres_to_vcg_with_prop)
+        using nf apply fastforce
+       using body_inv apply fastforce
+      apply (rule_tac Q'="{s'. s' \<in> G'
+                               \<and> (\<exists>(rv, s) \<in>fst (B rv new_s). (s, s') \<in> srel \<and> rrel rv (xf s')
+                                                               \<and> G rv s)}"
+                   in conseqPost;
+             fastforce?)
+      apply (rule hoarep_conj_lift_pre_fix;
+             fastforce simp: Collect_mono conseq_under_new_pre)
+     apply fastforce
+    apply (case_tac xstate; clarsimp)
+    apply (frule intermediate_Normal_state[OF _ _ setter_hoarep]; assumption?)
+     apply fastforce
     apply clarsimp
     apply (rename_tac inter_t)
-    apply (drule (2) ccorresE_gets_the[OF cond_ccorres _ _ _ no_ofail])
+    apply (insert setter_ccorres)
+    apply (drule_tac x=r in meta_spec)
+    apply (drule (3) ccorresE_gets_the)
+      apply (fastforce intro: no_ofail)
      apply (fastforce dest: EHOther)
-    apply (prop_tac "xf inter_t = xf s'")
-     apply (fastforce dest: hoarep_exec[rotated] intro: setter_xf_inv)
-    apply (clarsimp simp: isNormal_def)
-    apply (auto dest: hoarep_exec dest!: helper spec intro: setter_inv_cond)
+    apply (prop_tac "rrel r (xf inter_t)")
+     apply (fastforce dest: hoarep_exec[rotated] intro: setter_rrel)
+    apply (case_tac "\<not> the (C r s)")
+     apply (fastforce elim: exec_Normal_elim_cases simp: whileLoop_cond_fail return_def)
+    apply (insert no_ofail)
+    apply (fastforce dest!: helper hoarep_exec[OF _ _ setter_inv_cond, rotated] no_ofailD)
     done
 qed
 
