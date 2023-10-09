@@ -1040,49 +1040,6 @@ lemma ccorres_Guard_True_Seq:
    \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf A C hs a (Guard F \<lbrace>True\<rbrace> c ;; d)"
    by (simp, ccorres_rewrite, assumption)
 
-lemma exec_While_final_inv'':
-  "\<lbrakk> \<Gamma> \<turnstile> \<langle>b, x\<rangle> \<Rightarrow> s'; b = While C B; x = Normal s;
-    \<And>s. s \<notin> C \<Longrightarrow> I s (Normal s);
-    \<And>t t' t''. \<lbrakk> t \<in> C; \<Gamma>\<turnstile> \<langle>B, Normal t\<rangle> \<Rightarrow> Normal t'; \<Gamma>\<turnstile> \<langle>While C B, Normal t'\<rangle> \<Rightarrow> t'';
-                 I t' t'' \<rbrakk> \<Longrightarrow> I t t'';
-    \<And>t t'. \<lbrakk> t \<in> C; \<Gamma>\<turnstile> \<langle>B, Normal t\<rangle> \<Rightarrow> Abrupt t' \<rbrakk> \<Longrightarrow> I t (Abrupt t');
-    \<And>t. \<lbrakk> t \<in> C; \<Gamma> \<turnstile> \<langle>B, Normal t\<rangle> \<Rightarrow> Stuck \<rbrakk> \<Longrightarrow> I t Stuck;
-    \<And>t f. \<lbrakk> t \<in> C; \<Gamma>\<turnstile> \<langle>B, Normal t\<rangle> \<Rightarrow> Fault f \<rbrakk> \<Longrightarrow> I t (Fault f) \<rbrakk>
-   \<Longrightarrow> I s s'"
-  apply (induct arbitrary: s rule: exec.induct; simp)
-  apply (erule exec_elim_cases; fastforce simp: exec.WhileTrue exec.WhileFalse)
-  done
-
-lemma intermediate_Normal_state:
-  "\<lbrakk>\<Gamma> \<turnstile> \<langle>Seq c\<^sub>1 c\<^sub>2, Normal t\<rangle> \<Rightarrow> t''; t \<in> P; \<Gamma> \<turnstile> P c\<^sub>1 Q\<rbrakk>
-   \<Longrightarrow> \<exists>t'. \<Gamma> \<turnstile> \<langle>c\<^sub>1, Normal t\<rangle> \<Rightarrow> Normal t' \<and> \<Gamma> \<turnstile> \<langle>c\<^sub>2, Normal t'\<rangle> \<Rightarrow> t''"
-  apply (erule exec_Normal_elim_cases(8))
-  apply (insert hoarep_exec)
-  apply fastforce
-  done
-
-lemma While_inv_from_body:
-  "\<Gamma> \<turnstile> (G \<inter> C) B G \<Longrightarrow> \<Gamma> \<turnstile> G While C B G"
-  apply (drule hoare_sound)+
-  apply (rule hoare_complete)
-  apply (clarsimp simp: cvalid_def HoarePartialDef.valid_def)
-  by (erule exec_While_final_inv''[where I="\<lambda>s s'. s \<in> G \<longrightarrow> s' \<in> Normal ` G", THEN impE],
-      fastforce+)
-
-lemma While_inv_from_body_setter:
-  "\<lbrakk>\<Gamma> \<turnstile> G setter (G \<inter> {s. s \<in> C \<longrightarrow> s \<in> Cnd}); \<Gamma> \<turnstile> (G \<inter> Cnd) B G\<rbrakk>
-   \<Longrightarrow> \<Gamma> \<turnstile> (G \<inter> {s. s \<in> C \<longrightarrow> s \<in> Cnd}) While C (Seq B setter) G"
-  apply (drule hoare_sound)+
-  apply (rule hoare_complete)
-  apply (clarsimp simp: cvalid_def HoarePartialDef.valid_def)
-  by (rule exec_While_final_inv''
-            [where I="\<lambda>s s'. s \<in> G \<and> (s \<in> C \<longrightarrow> s \<in> Cnd) \<longrightarrow> s' \<in> Normal ` G", THEN impE],
-      (fastforce dest!: intermediate_Normal_state[where c\<^sub>1=B and P="G \<inter> Cnd" and Q=G]
-                 intro: hoare_complete
-                  simp: cvalid_def HoarePartialDef.valid_def)+)
-
-lemmas hoarep_Int_pre_fix = hoarep_Int[where P=P and P'=P for P, simplified]
-
 lemma ccorres_While:
   assumes body_ccorres:
     "\<And>r. ccorresG srel \<Gamma> (=) xf (G and (\<lambda>s. the (C r s))) (G' \<inter> C') hs (B r) B'"
