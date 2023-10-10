@@ -81,7 +81,8 @@ EXCLUDE["AARCH64"]=[
     "DSpec",
     "DBaseRefine",
     "CamkesGlueProofs",
-    "AsmRefine"
+    "AsmRefine",
+    "SimplExportAndRefine"
 ]
 
 # Check EXCLUDE is exhaustive over the available architectures
