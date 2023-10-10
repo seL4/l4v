@@ -10,9 +10,9 @@ default: images test
 test:
 all: images test
 
-# Allow sorry command in AARCH64 Refine during development:
+# Allow sorry command in AARCH64 CRefine during development:
 ifeq "$(L4V_ARCH)" "AARCH64"
-  export REFINE_QUICK_AND_DIRTY=1
+  export CREFINE_QUICK_AND_DIRTY=1
 endif
 
 #
