@@ -794,7 +794,7 @@ lemma not_idle_after_reply_cancel_ipc:
        apply (simp add:cap_delete_one_def unless_def)
        apply wp+
           apply (simp add:IpcCancel_A.empty_slot_def)
-          apply (wp set_cap_idle select_wp | simp add: if_apply_def2 imp_conjR
+          apply (wp set_cap_idle | simp add: if_apply_def2 imp_conjR
             | strengthen imp_consequent[where P="invs s" for s] imp_consequent[where P="valid_idle s" for s])+
    apply (strengthen invs_valid_idle)
    apply (wp thread_set_invs_trivial | simp add: ran_tcb_cap_cases)+
@@ -1233,7 +1233,7 @@ lemma cap_insert_cte_wp_at_masked_as_full:
   shows "\<lbrace>\<lambda>s. if slot = dest then P cap else cte_wp_at P slot s\<rbrace>
    cap_insert cap src dest \<lbrace>\<lambda>uu. cte_wp_at P slot\<rbrace>"
   apply (simp add:cap_insert_def set_untyped_cap_as_full_def)
-  apply (wp set_cap_cte_wp_at hoare_vcg_if_lift get_cap_wp static_imp_wp dxo_wp_weak
+  apply (wp set_cap_cte_wp_at hoare_vcg_if_lift get_cap_wp hoare_weak_lift_imp dxo_wp_weak
        | simp split del:if_split)+
   apply (intro conjI impI allI |
     clarsimp simp:cte_wp_at_caps_of_state)+

@@ -463,7 +463,7 @@ crunches
 
 crunches delete_asid_pool, arch_finalise_cap
   for valid_pdpt_objs[wp]: "valid_pdpt_objs"
-  (wp: crunch_wps select_wp preemption_point_inv simp: crunch_simps unless_def ignore:set_object)
+  (wp: crunch_wps preemption_point_inv simp: crunch_simps unless_def ignore:set_object)
 
 lemma finalise_cap_valid_pdpt_objs[wp]:
   "\<lbrace>valid_pdpt_objs\<rbrace> finalise_cap c b \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
@@ -771,10 +771,10 @@ lemma invoke_untyped_valid_pdpt[wp]:
   done
 
 crunch valid_pdpt_objs[wp]: perform_asid_control_invocation "valid_pdpt_objs"
-  (ignore: delete_objects set_object wp: delete_objects_valid_pdpt static_imp_wp)
+  (ignore: delete_objects set_object wp: delete_objects_valid_pdpt hoare_weak_lift_imp)
 
 crunch valid_pdpt_objs[wp]: perform_asid_pool_invocation "valid_pdpt_objs"
-  (ignore: delete_objects set_object wp: delete_objects_valid_pdpt static_imp_wp get_object_wp)
+  (ignore: delete_objects set_object wp: delete_objects_valid_pdpt hoare_weak_lift_imp get_object_wp)
 
 abbreviation (input)
   "safe_pt_range \<equiv> \<lambda>slots s. obj_at (\<lambda>ko. \<exists>pt. ko = ArchObj (PageTable pt)

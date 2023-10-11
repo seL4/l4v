@@ -1004,7 +1004,7 @@ lemma non_disjoing_subset: "\<lbrakk>A \<subseteq> B; A \<inter> C \<noteq> {}\<
 
 lemma pspace_no_overlap_same_type:
   "\<lbrakk>pspace_no_overlap S s; ko_at k p s; a_type ko = a_type k\<rbrakk>
-    \<Longrightarrow> pspace_no_overlap S (kheap_update (\<lambda>_. (kheap s(p \<mapsto> ko))) s)"
+    \<Longrightarrow> pspace_no_overlap S (kheap_update (\<lambda>_. (kheap s)(p \<mapsto> ko)) s)"
   unfolding pspace_no_overlap_def
   by (clarsimp simp: obj_at_def obj_bits_T)
 

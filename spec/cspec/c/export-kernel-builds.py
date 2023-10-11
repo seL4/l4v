@@ -64,16 +64,22 @@ def get_l4v_paths(l4v_arch: str) -> L4vPaths:
     return L4vPaths(kernel_mk=kernel_mk, c_pp=c_pp, c_functions=c_functions)
 
 
+def path_suffix(opt_suffix: Optional[str]) -> str:
+    return f'-{opt_suffix}' if opt_suffix else ''
+
+
 class ExportConfig(NamedTuple):
     export_root: Path
     l4v_arch: str
     l4v_features: Optional[str]
+    l4v_plat: Optional[str]
     l4v_paths: L4vPaths
     manifest: Optional[Path]
 
     def config_name(self, optimisation: str) -> str:
-        features = f'-{self.l4v_features}' if self.l4v_features else ''
-        return f'{self.l4v_arch}{features}{optimisation}'
+        features = path_suffix(self.l4v_features)
+        plat = path_suffix(self.l4v_plat)
+        return f'{self.l4v_arch}{features}{plat}{optimisation}'
 
     def export_path(self, optimisation: str) -> Path:
         return self.export_root / self.config_name(optimisation)
@@ -124,6 +130,7 @@ class ExportConfig(NamedTuple):
         with open(export_dir / 'config.env', 'w') as config_env:
             config_env.write(f'L4V_ARCH={self.l4v_arch}\n')
             config_env.write(f'L4V_FEATURES={self.l4v_features or ""}\n')
+            config_env.write(f'L4V_PLAT={self.l4v_plat or ""}\n')
             config_env.write(f'CONFIG_OPTIMISATION={optimisation}\n')
 
 
@@ -167,6 +174,7 @@ def parse_args() -> ExportCommand:
     config = ExportConfig(export_root=args.export_root,
                           l4v_arch=l4v_arch,
                           l4v_features=os.environ.get('L4V_FEATURES'),
+                          l4v_plat=os.environ.get('L4V_PLAT'),
                           l4v_paths=get_l4v_paths(l4v_arch),
                           manifest=args.manifest_xml)
 

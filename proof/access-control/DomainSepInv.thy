@@ -133,7 +133,7 @@ crunch domain_sep_inv[wp]: set_extra_badge "domain_sep_inv irqs st"
 lemma set_cap_neg_cte_wp_at_other_helper':
   "\<lbrakk> oslot \<noteq> slot; ko_at (TCB x) (fst oslot) s;
      tcb_cap_cases (snd oslot) = Some (ogetF, osetF, orestr);
-     kheap (s\<lparr>kheap := kheap s(fst oslot \<mapsto> TCB (osetF (\<lambda> x. cap) x))\<rparr>) (fst slot) = Some (TCB tcb);
+     kheap (s\<lparr>kheap := (kheap s)(fst oslot \<mapsto> TCB (osetF (\<lambda> x. cap) x))\<rparr>) (fst slot) = Some (TCB tcb);
      tcb_cap_cases (snd slot) = Some (getF, setF, restr); P (getF tcb) \<rbrakk>
      \<Longrightarrow> cte_wp_at P slot s"
   apply (case_tac "fst oslot = fst slot")
@@ -150,7 +150,7 @@ lemma set_cap_neg_cte_wp_at_other_helper':
 lemma set_cap_neg_cte_wp_at_other_helper:
   "\<lbrakk> \<not> cte_wp_at P slot s; oslot \<noteq> slot; ko_at (TCB x) (fst oslot) s;
      tcb_cap_cases (snd oslot) = Some (getF, setF, restr) \<rbrakk>
-     \<Longrightarrow> \<not> cte_wp_at P slot (s\<lparr>kheap := kheap s(fst oslot \<mapsto> TCB (setF (\<lambda> x. cap) x))\<rparr>)"
+     \<Longrightarrow> \<not> cte_wp_at P slot (s\<lparr>kheap := (kheap s)(fst oslot \<mapsto> TCB (setF (\<lambda> x. cap) x))\<rparr>)"
   apply (rule notI)
   apply (erule cte_wp_atE)
    apply (fastforce elim: notE intro: cte_wp_at_cteI split: if_splits)
@@ -336,7 +336,7 @@ lemma empty_slot_domain_sep_inv:
    \<lbrace>\<lambda>_ s. domain_sep_inv irqs (st :: 'state_ext state) (s :: det_ext state)\<rbrace>"
   unfolding empty_slot_def post_cap_deletion_def
   by (wpsimp wp: get_cap_wp set_cap_domain_sep_inv set_original_wp dxo_wp_weak
-                 static_imp_wp deleted_irq_handler_domain_sep_inv)
+                 hoare_weak_lift_imp deleted_irq_handler_domain_sep_inv)
 
 end
 
@@ -439,7 +439,7 @@ lemma reply_cancel_ipc_domain_sep_inv[wp]:
    reply_cancel_ipc t
    \<lbrace>\<lambda>_ s. domain_sep_inv irqs  (st :: 'state_ext state) (s :: det_ext state)\<rbrace>"
   apply (simp add: reply_cancel_ipc_def)
-  apply (wp select_wp)
+  apply wp
   apply (rule hoare_strengthen_post[OF thread_set_tcb_fault_update_domain_sep_inv])
   apply auto
   done
@@ -553,7 +553,7 @@ lemma cap_revoke_domain_sep_inv':
            apply (wp drop_spec_validE[OF valid_validE[OF preemption_point_domain_sep_inv]]
                     drop_spec_validE[OF valid_validE[OF cap_delete_domain_sep_inv]]
                     drop_spec_validE[OF assertE_wp] drop_spec_validE[OF returnOk_wp]
-                    drop_spec_validE[OF liftE_wp] select_wp
+                    drop_spec_validE[OF liftE_wp]
                 | simp | wp (once) hoare_drop_imps)+
   done
 qed
@@ -568,7 +568,7 @@ lemma cap_move_cte_wp_at_other:
    cap_move cap src_slot dest_slot
    \<lbrace>\<lambda>_. cte_wp_at P slot\<rbrace>"
   unfolding cap_move_def
-  by (wpsimp wp: set_cdt_cte_wp_at set_cap_cte_wp_at' dxo_wp_weak static_imp_wp set_original_wp)
+  by (wpsimp wp: set_cdt_cte_wp_at set_cap_cte_wp_at' dxo_wp_weak hoare_weak_lift_imp set_original_wp)
 
 lemma cte_wp_at_weak_derived_ReplyCap:
   "cte_wp_at ((=) (ReplyCap x False R)) slot s
@@ -1042,7 +1042,7 @@ lemma invoke_tcb_domain_sep_inv:
     apply (simp add: split_def cong: option.case_cong)
     apply (wp checked_cap_insert_domain_sep_inv hoare_vcg_all_lift_R hoare_vcg_all_lift
               hoare_vcg_const_imp_lift_R cap_delete_domain_sep_inv cap_delete_deletes
-              dxo_wp_weak cap_delete_valid_cap cap_delete_cte_at static_imp_wp
+              dxo_wp_weak cap_delete_valid_cap cap_delete_cte_at hoare_weak_lift_imp
            | wpc | strengthen
            | simp add: option_update_thread_def emptyable_def tcb_cap_cases_def
                        tcb_cap_valid_def tcb_at_st_tcb_at
@@ -1181,7 +1181,7 @@ lemma handle_event_domain_sep_inv:
 lemma schedule_domain_sep_inv:
   "(schedule :: (unit,det_ext) s_monad) \<lbrace>domain_sep_inv irqs (st :: 'state_ext state)\<rbrace>"
   apply (simp add: schedule_def allActiveTCBs_def)
-  apply (wp add: alternative_wp select_wp  guarded_switch_to_lift hoare_drop_imps
+  apply (wp add: guarded_switch_to_lift hoare_drop_imps
             del: ethread_get_wp
          | wpc | clarsimp simp: get_thread_state_def thread_get_def trans_state_update'[symmetric]
                                 schedule_choose_new_thread_def)+

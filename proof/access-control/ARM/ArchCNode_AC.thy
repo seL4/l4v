@@ -75,17 +75,17 @@ crunches set_cdt
 
 crunches prepare_thread_delete, arch_finalise_cap
   for cur_domain[CNode_AC_assms, wp]:"\<lambda>s. P (cur_domain s)"
-  (wp: crunch_wps select_wp hoare_vcg_if_lift2 simp: unless_def)
+  (wp: crunch_wps hoare_vcg_if_lift2 simp: unless_def)
 
 lemma state_vrefs_tcb_upd[CNode_AC_assms]:
-  "tcb_at t s \<Longrightarrow> state_vrefs (s\<lparr>kheap := kheap s(t \<mapsto> TCB tcb)\<rparr>) = state_vrefs s"
+  "tcb_at t s \<Longrightarrow> state_vrefs (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB tcb)\<rparr>) = state_vrefs s"
   apply (rule ext)
   apply (auto simp: state_vrefs_def vs_refs_no_global_pts_def tcb_at_def dest!: get_tcb_SomeD)
   done
 
 lemma state_vrefs_simple_type_upd[CNode_AC_assms]:
   "\<lbrakk> ko_at ko ptr s; is_simple_type ko; a_type ko = a_type (f val) \<rbrakk>
-     \<Longrightarrow> state_vrefs (s\<lparr>kheap := kheap s(ptr \<mapsto> f val)\<rparr>) = state_vrefs s"
+     \<Longrightarrow> state_vrefs (s\<lparr>kheap := (kheap s)(ptr \<mapsto> f val)\<rparr>) = state_vrefs s"
   apply (rule ext)
   apply (auto simp: state_vrefs_def vs_refs_no_global_pts_def obj_at_def partial_inv_def a_type_def
              split: kernel_object.splits arch_kernel_obj.splits if_splits)

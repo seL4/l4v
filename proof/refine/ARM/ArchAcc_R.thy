@@ -394,7 +394,7 @@ lemma setObject_ASIDPool_corres [corres]:
   corres dc (asid_pool_at p) (asid_pool_at' p')
             (set_asid_pool p a) (setObject p' a')"
   apply (simp add: set_asid_pool_def)
-  apply (corressimp search: setObject_other_corres[where P="\<lambda>_. True"]
+  apply (corresKsimp search: setObject_other_corres[where P="\<lambda>_. True"]
                         wp: get_object_ret get_object_wp)
   apply (simp add: other_obj_relation_def asid_pool_relation_def)
   apply (clarsimp simp: obj_at_simps )
@@ -1164,7 +1164,7 @@ lemma lookupPTSlot_corres [@lift_corres_args, corres]:
           (pspace_aligned' and pspace_distinct')
           (lookup_pt_slot pd vptr) (lookupPTSlot pd vptr)"
   unfolding lookup_pt_slot_def lookupPTSlot_def lookupPTSlotFromPT_def
-  apply (corressimp simp: pde_relation_aligned_def lookup_failure_map_def
+  apply (corresKsimp simp: pde_relation_aligned_def lookup_failure_map_def
                           ptBits_def pdeBits_def pageBits_def pteBits_def mask_def
                       wp: get_pde_wp_valid getPDE_wp)
   by (auto simp: lookup_failure_map_def obj_at_def)
@@ -1246,7 +1246,7 @@ lemma createMappingEntries_corres [corres]:
           (create_mapping_entries base vptr pgsz vm_rights attrib pd)
           (createMappingEntries base' vptr' pgsz' vm_rights' attrib' pd')"
   unfolding createMappingEntries_def mapping_map_def
-  by (cases pgsz; corressimp simp: vmattributes_map_def less_kernel_base_mapping_slots
+  by (cases pgsz; corresKsimp simp: vmattributes_map_def less_kernel_base_mapping_slots
                                    largePagePTEOffsets_def
                                    largePagePTE_offsets_def
                                    superSectionPDEOffsets_def
@@ -1283,7 +1283,7 @@ lemma ensureSafeMapping_corres [corres]:
   unfolding mapping_map_def ensureSafeMapping_def
   apply (cases m; cases m'; simp;
          match premises in "(_ \<otimes> (=)) p p'" for p p' \<Rightarrow> \<open>cases "fst p"; cases "fst p'"\<close>; clarsimp)
-        by (corressimp corresK: mapME_x_corresK_inv
+        by (corresKsimp corresK: mapME_x_corresK_inv
                            wp: get_master_pte_wp get_master_pde_wp getPTE_wp getPDE_wp;
             auto simp add: valid_mapping_entries_def)+
 
@@ -1310,7 +1310,7 @@ lemma find_pd_for_asid_corres [corres]:
                        (pspace_aligned' and pspace_distinct' and no_0_obj')
                        (find_pd_for_asid asid) (findPDForASID asid')"
   apply (simp add: find_pd_for_asid_def findPDForASID_def liftME_def bindE_assoc)
-  apply (corressimp simp: liftE_bindE assertE_assert mask_asid_low_bits_ucast_ucast
+  apply (corresKsimp simp: liftE_bindE assertE_assert mask_asid_low_bits_ucast_ucast
                           lookup_failure_map_def
                       wp: getPDE_wp getASID_wp
                   search: checkPDAt_corres corres_gets_asid)

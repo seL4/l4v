@@ -287,7 +287,9 @@ let
   val trace' = trace orelse Config.get ctxt WP_Pre.wp_trace
   val used_thms_ref = Unsynchronized.ref [] : (string * string * term) list Unsynchronized.ref
   val rules = get_rules ctxt extras
-  val wp_pre_tac = TRY (WP_Pre.tac trace' used_thms_ref ctxt 1)
+  val wp_pre_tac = TRY (WP_Pre.pre_tac trace' ctxt
+                                       (Named_Theorems.get ctxt \<^named_theorems>\<open>wp_pre\<close>)
+                                       used_thms_ref 1)
   val wp_fix_tac = TRY (WPFix.both_tac ctxt 1)
   val cleanup_tac = TRY (REPEAT
                       (resolve_tac ctxt [@{thm TrueI}, @{thm conj_TrueI}, @{thm conj_TrueI2}] 1

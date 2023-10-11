@@ -32,14 +32,14 @@ lemma slot_bits_def2 [Retype_AI_assms]: "slot_bits = cte_level_bits"
 
 definition
   "no_gs_types \<equiv> UNIV - {CapTableObject,
-                         ArchObject SmallPageObj, ArchObject LargePageObj, ArchObject HugePageObj}"
+                         ArchObject SmallPageObj, ArchObject LargePageObj, ArchObject HugePageObj,
+                         ArchObject PageTableObj, ArchObject VSpaceObj}"
 
 lemma no_gs_types_simps [simp, Retype_AI_assms]:
   "Untyped \<in> no_gs_types"
   "TCBObject \<in> no_gs_types"
   "EndpointObject \<in> no_gs_types"
   "NotificationObject \<in> no_gs_types"
-  "ArchObject PageTableObj \<in> no_gs_types"
   "ArchObject ASIDPoolObj \<in> no_gs_types"
   by (simp_all add: no_gs_types_def)
 
@@ -308,6 +308,14 @@ lemma asid_pools:
   "asid_pools_of s p = Some pool \<Longrightarrow> asid_pools_of s' p = Some pool"
   by (clarsimp simp: in_opt_map_eq s'_def ps_def)
      (erule pspace_no_overlapC [OF orth _ _ cover vp])
+
+lemma asid_pools_of':
+  "asid_pools_of s' p = Some ap \<Longrightarrow>
+   asid_pools_of s p = Some ap \<or> ap = Map.empty \<and> p \<in> set (retype_addrs ptr ty n us)"
+  apply (clarsimp simp: in_opt_map_eq s'_def ps_def split: if_split_asm)
+  apply (auto simp: default_object_def default_arch_object_def empty_pt_def tyunt
+              split: apiobject_type.splits aobject_type.splits)
+  done
 
 lemma pts_of:
   "pts_of s p = Some pt \<Longrightarrow> pts_of s' p = Some pt"
@@ -716,7 +724,10 @@ lemma valid_kernel_mappings:
 
 lemma valid_asid_map:
   "valid_asid_map s \<Longrightarrow> valid_asid_map s'"
-  by (clarsimp simp: valid_asid_map_def)
+  apply (clarsimp simp: valid_asid_map_def entry_for_asid_def obind_None_eq pool_for_asid_def
+                        entry_for_pool_def)
+  apply (fastforce dest!: asid_pools_of')
+  done
 
 lemma vspace_for_asid:
   "vspace_for_asid asid s' = Some pt \<Longrightarrow> vspace_for_asid asid s = Some pt"

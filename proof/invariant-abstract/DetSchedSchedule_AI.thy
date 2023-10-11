@@ -20538,7 +20538,7 @@ crunches activate_thread, schedule_choose_new_thread, awaken
 
 lemma schedule_valid_list[wp]: "\<lbrace>valid_list\<rbrace> Schedule_A.schedule \<lbrace>\<lambda>_. valid_list\<rbrace>"
   apply (simp add: Schedule_A.schedule_def)
-  apply (wp add: tcb_sched_action_valid_list alternative_wp select_wp gts_wp hoare_drop_imps
+  apply (wp add: tcb_sched_action_valid_list gts_wp hoare_drop_imps
                  is_schedulable_wp hoare_vcg_all_lift
          | wpc | simp)+
   done

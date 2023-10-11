@@ -302,13 +302,21 @@ lemma alignUp_not_aligned_eq:
   and     sz: "n < LENGTH('a)"
   shows   "alignUp a n = (a div 2 ^ n + 1) * 2 ^ n"
 proof -
+  from \<open>n < LENGTH('a)\<close> have \<open>(2::int) ^ n < 2 ^ LENGTH('a)\<close>
+    by simp
+  with take_bit_int_less_exp [of n]
+    have *: \<open>take_bit n k < 2 ^ LENGTH('a)\<close> for k :: int
+    by (rule less_trans)
   have anz: "a mod 2 ^ n \<noteq> 0"
     by (rule not_aligned_mod_nz) fact+
-
-  then have um: "unat (a mod 2 ^ n - 1) div 2 ^ n = 0" using sz
-    by (meson Euclidean_Division.div_eq_0_iff le_m1_iff_lt measure_unat order_less_trans
-              unat_less_power word_less_sub_le word_mod_less_divisor)
-
+  then have um: "unat (a mod 2 ^ n - 1) div 2 ^ n = 0"
+    apply (transfer fixing: n) using sz
+    apply (simp flip: take_bit_eq_mod add: div_eq_0_iff)
+    apply (subst take_bit_int_eq_self)
+    using *
+     apply (auto simp add: diff_less_eq intro: less_imp_le)
+    apply (simp add: less_le)
+    done
   have "a + 2 ^ n - 1 = (a div 2 ^ n) * 2 ^ n + (a mod 2 ^ n) + 2 ^ n - 1"
     by (simp add: word_mod_div_equality)
   also have "\<dots> = (a mod 2 ^ n - 1) + (a div 2 ^ n + 1) * 2 ^ n"

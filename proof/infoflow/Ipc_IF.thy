@@ -218,7 +218,7 @@ lemma update_waiting_ntfn_equiv_but_for_labels:
    update_waiting_ntfn nptr list boundtcb badge
    \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
   unfolding update_waiting_ntfn_def
-  apply (wp static_imp_wp as_user_equiv_but_for_labels set_thread_state_runnable_equiv_but_for_labels
+  apply (wp hoare_weak_lift_imp as_user_equiv_but_for_labels set_thread_state_runnable_equiv_but_for_labels
             set_thread_state_pas_refined set_notification_equiv_but_for_labels
             set_simple_ko_pred_tcb_at set_simple_ko_pas_refined
             hoare_vcg_disj_lift possible_switch_to_equiv_but_for_labels
@@ -332,12 +332,12 @@ lemma sts_noop:
 lemma sts_to_modify':
   "monadic_rewrite True True (tcb_at tcb and (\<lambda>s :: det_state. tcb \<noteq> cur_thread s))
      (set_thread_state tcb st)
-     (modify (\<lambda>s. s\<lparr>kheap := kheap s(tcb \<mapsto> TCB (the (get_tcb tcb s)\<lparr>tcb_state := st\<rparr>))\<rparr>))"
+     (modify (\<lambda>s. s\<lparr>kheap := (kheap s)(tcb \<mapsto> TCB (the (get_tcb tcb s)\<lparr>tcb_state := st\<rparr>))\<rparr>))"
   apply (clarsimp simp: set_thread_state_def set_object_def)
   apply (monadic_rewrite_l sts_noop \<open>wpsimp wp: get_object_wp\<close>)
    apply (simp add: bind_assoc)
    apply monadic_rewrite_symb_exec_l+
-       apply (rule_tac P="\<lambda>s'. s' = s \<and> x = the (get_tcb tcb s)" in monadic_rewrite_pre_imp_eq)
+       apply (rule_tac P="\<lambda>s'. s' = s \<and> tcba = the (get_tcb tcb s)" in monadic_rewrite_pre_imp_eq)
        apply (clarsimp simp: put_def modify_def get_def bind_def)
       apply (wpsimp wp: get_object_wp)+
   by (clarsimp simp: get_tcb_def tcb_at_def)
@@ -1136,7 +1136,7 @@ lemma transfer_caps_reads_respects:
      (transfer_caps mi caps endpoint receiver receive_buffer)"
   unfolding transfer_caps_def fun_app_def
   by (wp transfer_caps_loop_reads_respects get_receive_slots_rev
-         get_receive_slots_authorised hoare_vcg_all_lift static_imp_wp
+         get_receive_slots_authorised hoare_vcg_all_lift hoare_weak_lift_imp
       | wpc | simp add: ball_conj_distrib)+
 
 lemma aag_has_auth_to_read_mrs:
@@ -1360,7 +1360,7 @@ lemma receive_ipc_base_reads_respects:
                as_user_set_register_reads_respects'
         | simp | intro allI impI | rule pre_ev, wpc)+)[2]
   apply (intro allI impI)
-  apply (wp static_imp_wp set_simple_ko_reads_respects set_thread_state_reads_respects
+  apply (wp hoare_weak_lift_imp set_simple_ko_reads_respects set_thread_state_reads_respects
             setup_caller_cap_reads_respects do_ipc_transfer_reads_respects
             possible_switch_to_reads_respects gets_cur_thread_ev set_thread_state_pas_refined
             set_simple_ko_reads_respects hoare_vcg_all_lift
@@ -1398,7 +1398,7 @@ lemma receive_ipc_reads_respects:
   apply (rename_tac epptr badge rights)
   apply (wp receive_ipc_base_reads_respects
             complete_signal_reads_respects
-            static_imp_wp set_simple_ko_reads_respects set_thread_state_reads_respects
+            hoare_weak_lift_imp set_simple_ko_reads_respects set_thread_state_reads_respects
             setup_caller_cap_reads_respects
             complete_signal_reads_respects thread_get_reads_respects
             get_thread_state_reads_respects

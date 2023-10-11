@@ -1872,14 +1872,14 @@ lemma nth_0: "\<not> bit (0 :: 'a::len word) n"
 lemma nth_minus1: "bit (-1 :: 'a::len word) n \<longleftrightarrow> n < LENGTH('a)"
   by transfer simp
 
-lemma nth_ucast:
+lemma nth_ucast_weak:
   "bit (ucast w::'a::len word) n = (bit w n \<and> n < LENGTH('a))"
   by transfer (simp add: bit_take_bit_iff ac_simps)
 
-lemma drop_bit_numeral_bit0_1 [simp]:
-  \<open>drop_bit (Suc 0) (numeral k) =
-    (word_of_int (drop_bit (Suc 0) (take_bit LENGTH('a) (numeral k))) :: 'a::len word)\<close>
-  by (metis Word_eq_word_of_int drop_bit_word.abs_eq of_int_numeral)
+lemma nth_ucast:
+  "bit (ucast (w::'a::len word)::'b::len word) n =
+   (bit w n \<and> n < min LENGTH('a) LENGTH('b))"
+  by (auto simp: not_le nth_ucast_weak dest: bit_imp_le_length)
 
 lemma nth_mask:
   \<open>bit (mask n :: 'a::len word) i \<longleftrightarrow> i < n \<and> i < size (mask n :: 'a word)\<close>

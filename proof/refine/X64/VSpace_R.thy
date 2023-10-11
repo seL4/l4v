@@ -546,7 +546,7 @@ lemma invalidatePageStructureCacheASID_corres' [corres]:
   "corres dc \<top> \<top>
      (invalidate_page_structure_cache_asid vspace asid)
      (X64_H.invalidatePageStructureCacheASID vspace' asid')"
-  by (corressimp simp: invalidate_page_structure_cache_asid_def
+  by (corresKsimp simp: invalidate_page_structure_cache_asid_def
                        X64_H.invalidatePageStructureCacheASID_def
                        invalidateLocalPageStructureCacheASID_def
                        assms ucast_id

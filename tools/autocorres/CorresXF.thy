@@ -247,9 +247,9 @@ lemma corresXF_join:
   apply (unfold bindE_def)
   apply (erule corresXF_simple_join [where P'="\<lambda>a b s. (case b of Inl r \<Rightarrow> a = Inl (E r s) | Inr r \<Rightarrow> a = Inr (V r s) \<and> P' (projr a) r s)"])
     apply (simp add: corresXF_simple_def split: sum.splits unit.splits)
-    apply (clarsimp simp: NonDetMonad.lift_def throwError_def return_def)
+    apply (clarsimp simp: Nondet_Monad.lift_def throwError_def return_def)
     apply fastforce
-   apply (fastforce simp: NonDetMonadVCG.validE_def split: sum.splits cong del: unit.case_cong)
+   apply (fastforce simp: Nondet_VCG.validE_def split: sum.splits cong del: unit.case_cong)
   apply simp
   done
 
@@ -261,9 +261,9 @@ lemma corresXF_except:
   apply (unfold handleE'_def)
   apply (erule corresXF_simple_join [where P'="\<lambda>a b s. (case b of Inr r \<Rightarrow> a = Inr (V r s) | Inl r \<Rightarrow> a = Inl (E r s) \<and> P' (projl a) r s)"])
     apply (simp add: corresXF_simple_def split: sum.splits unit.splits)
-    apply (clarsimp simp: NonDetMonad.lift_def throwError_def return_def)
+    apply (clarsimp simp: Nondet_Monad.lift_def throwError_def return_def)
     apply fastforce
-   apply (clarsimp simp: NonDetMonadVCG.validE_def split: sum.splits cong del: unit.case_cong)
+   apply (clarsimp simp: Nondet_VCG.validE_def split: sum.splits cong del: unit.case_cong)
   apply simp
   done
 
@@ -566,13 +566,13 @@ lemma corresXF_while:
        apply (subst (asm) corresXF_simple_corresXF[symmetric])
        apply atomize
        apply (erule_tac x="projr x" in allE)
-       apply (clarsimp simp: corresXF_simple_def NonDetMonad.lift_def throwError_def return_def
+       apply (clarsimp simp: corresXF_simple_def Nondet_Monad.lift_def throwError_def return_def
                        split: sum.splits)
       apply (clarsimp simp: cond_match split: sum.splits)
      apply (clarsimp simp: lift_def split: sum.splits)
      apply (cut_tac  pred_inv [unfolded validE_def, simplified lift_def])
      apply (erule hoare_chain)
-      apply (monad_eq simp: NonDetMonad.lift_def whileLoopE_def split: sum.splits)
+      apply (monad_eq simp: Nondet_Monad.lift_def whileLoopE_def split: sum.splits)
      apply monad_eq
     apply (clarsimp simp: pred_imply split: sum.splits)
    apply (clarsimp simp: init_match pred_imply)

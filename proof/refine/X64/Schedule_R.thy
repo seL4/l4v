@@ -10,7 +10,7 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-declare static_imp_wp[wp_split del]
+declare hoare_weak_lift_imp[wp_split del]
 
 (* Levity: added (20090713 10:04:12) *)
 declare sts_rel_idle [simp]
@@ -41,7 +41,7 @@ proof -
     apply (auto simp add: bind_def alternative_def return_def split_def prod_eq_iff)
     done
   have Q: "\<lbrace>P\<rbrace> (do x \<leftarrow> f; return (Some x) od) \<sqinter> return None \<lbrace>\<lambda>rv. if rv \<noteq> None then \<top> else P\<rbrace>"
-    by (wp alternative_wp | simp)+
+    by (wp | simp)+
   show ?thesis using p
     apply (induct xs)
      apply (simp add: y del: dc_simp)
@@ -448,7 +448,7 @@ lemma ct_idle_or_in_cur_domain'_lift2:
   apply (rule hoare_lift_Pf2[where f=ksCurThread])
   apply (rule hoare_lift_Pf2[where f=ksSchedulerAction])
   including no_pre
-  apply (wp static_imp_wp hoare_vcg_disj_lift)
+  apply (wp hoare_weak_lift_imp hoare_vcg_disj_lift)
   apply simp+
   done
 
@@ -715,7 +715,7 @@ lemma arch_switchToIdleThread_corres:
         arch_switch_to_idle_thread Arch.switchToIdleThread"
   apply (simp add: arch_switch_to_idle_thread_def
                 X64_H.switchToIdleThread_def)
-  apply (corressimp corres: getIdleThread_corres setVMRoot_corres)
+  apply (corresKsimp corres: getIdleThread_corres setVMRoot_corres)
   apply (clarsimp simp: valid_idle_def valid_idle'_def pred_tcb_at_def obj_at_def is_tcb obj_at'_def)
   done
 
@@ -1360,7 +1360,7 @@ lemma switchToIdleThread_invs_no_cicd':
 crunch obj_at'[wp]: "Arch.switchToIdleThread" "\<lambda>s. obj_at' P t s"
 
 
-declare static_imp_conj_wp[wp_split del]
+declare hoare_weak_lift_imp_conj[wp_split del]
 
 lemma setCurThread_const:
   "\<lbrace>\<lambda>_. P t \<rbrace> setCurThread t \<lbrace>\<lambda>_ s. P (ksCurThread s) \<rbrace>"
@@ -2144,7 +2144,7 @@ lemma schedule_invs':
     apply (wpsimp wp: scheduleChooseNewThread_invs' ssa_invs'
                       chooseThread_invs_no_cicd' setSchedulerAction_invs' setSchedulerAction_direct
                       switchToThread_tcb_in_cur_domain' switchToThread_ct_not_queued_2
-           | wp hoare_disjI2[where Q="\<lambda>_ s. tcb_in_cur_domain' (ksCurThread s) s"]
+           | wp hoare_disjI2[where R="\<lambda>_ s. tcb_in_cur_domain' (ksCurThread s) s"]
            | wp hoare_drop_imp[where f="isHighestPrio d p" for d p]
            | simp only: obj_at'_activatable_st_tcb_at'[simplified comp_def]
            | strengthen invs'_invs_no_cicd

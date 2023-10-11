@@ -74,7 +74,7 @@ crunch irq_state_of_state[wp]: arch_perform_invocation "\<lambda>s. P (irq_state
 
 crunch irq_state_of_state[Arch_IF_assms, wp]: arch_finalise_cap, prepare_thread_delete
   "\<lambda>s :: det_state. P (irq_state_of_state s)"
-  (wp: select_wp modify_wp crunch_wps dmo_wp
+  (wp: modify_wp crunch_wps dmo_wp
    simp: crunch_simps hwASIDFlush_def)
 
 lemma equiv_asid_machine_state_update[Arch_IF_assms, simp]:
@@ -400,10 +400,10 @@ lemma perform_page_invocation_reads_respects:
 lemma equiv_asids_riscv_asid_table_update:
   "\<lbrakk> equiv_asids R s t; kheap s pool_ptr = kheap t pool_ptr \<rbrakk>
      \<Longrightarrow> equiv_asids R
-           (s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := riscv_asid_table (arch_state s)
-                                                            (asid_high_bits_of asid \<mapsto> pool_ptr)\<rparr>\<rparr>)
-           (t\<lparr>arch_state := arch_state t\<lparr>riscv_asid_table := riscv_asid_table (arch_state t)
-                                                            (asid_high_bits_of asid \<mapsto> pool_ptr)\<rparr>\<rparr>)"
+           (s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := (asid_table s)
+                                                             (asid_high_bits_of asid \<mapsto> pool_ptr)\<rparr>\<rparr>)
+           (t\<lparr>arch_state := arch_state t\<lparr>riscv_asid_table := (asid_table t)
+                                                             (asid_high_bits_of asid \<mapsto> pool_ptr)\<rparr>\<rparr>)"
   by (clarsimp simp: equiv_asids_def equiv_asid_def asid_pool_at_kheap opt_map_def)
 
 lemma riscv_asid_table_update_reads_respects:
@@ -943,8 +943,8 @@ lemma set_mrs_globals_equiv:
         apply (clarsimp)
         apply (insert length_msg_lt_msg_max)
         apply (simp)
-       apply (wp set_object_globals_equiv static_imp_wp)
-      apply (wp hoare_vcg_all_lift set_object_globals_equiv static_imp_wp)+
+       apply (wp set_object_globals_equiv hoare_weak_lift_imp)
+      apply (wp hoare_vcg_all_lift set_object_globals_equiv hoare_weak_lift_imp)+
   apply (fastforce simp: valid_arch_state_def obj_at_def get_tcb_def
                    dest: valid_global_arch_objs_pt_at)
   done
@@ -981,7 +981,7 @@ lemma perform_pg_inv_unmap_globals_equiv:
   apply (rule hoare_weaken_pre)
    apply (wp mapM_swp_store_pte_globals_equiv hoare_vcg_all_lift mapM_x_swp_store_pte_globals_equiv
              set_cap_globals_equiv'' unmap_page_globals_equiv store_pte_globals_equiv
-             store_pte_globals_equiv static_imp_wp set_message_info_globals_equiv
+             store_pte_globals_equiv hoare_weak_lift_imp set_message_info_globals_equiv
              unmap_page_valid_arch_state perform_pg_inv_get_addr_globals_equiv
           | wpc | simp add: do_machine_op_bind sfence_def)+
   apply (clarsimp simp: acap_map_data_def)
@@ -998,7 +998,7 @@ lemma perform_pg_inv_map_globals_equiv:
   unfolding perform_pg_inv_map_def
   by (wp mapM_swp_store_pte_globals_equiv hoare_vcg_all_lift mapM_x_swp_store_pte_globals_equiv
          set_cap_globals_equiv'' unmap_page_globals_equiv store_pte_globals_equiv
-         store_pte_globals_equiv static_imp_wp set_message_info_globals_equiv
+         store_pte_globals_equiv hoare_weak_lift_imp set_message_info_globals_equiv
          unmap_page_valid_arch_state perform_pg_inv_get_addr_globals_equiv
       | wpc | simp add: do_machine_op_bind sfence_def | fastforce)+
 
@@ -1049,7 +1049,7 @@ lemma perform_asid_control_invocation_globals_equiv:
              max_index_upd_invs_simple set_cap_no_overlap
              set_cap_caps_no_overlap max_index_upd_caps_overlap_reserved
              region_in_kernel_window_preserved
-             hoare_vcg_all_lift  get_cap_wp static_imp_wp
+             hoare_vcg_all_lift  get_cap_wp hoare_weak_lift_imp
              set_cap_idx_up_aligned_area[where dev = False,simplified]
           | simp)+
    (* factor out the implication -- we know what the relevant components of the

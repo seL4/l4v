@@ -1688,7 +1688,7 @@ end
 
 locale vs_lookup_map_some_pdes = Arch +
   fixes pd pdp s s' S T pd'
-  defines "s' \<equiv> s\<lparr>kheap := kheap s(pdp \<mapsto> ArchObj (PageDirectory pd'))\<rparr>"
+  defines "s' \<equiv> s\<lparr>kheap := (kheap s)(pdp \<mapsto> ArchObj (PageDirectory pd'))\<rparr>"
   assumes refs: "vs_refs (ArchObj (PageDirectory pd')) =
                  (vs_refs (ArchObj (PageDirectory pd)) - T) \<union> S"
   assumes old: "kheap s pdp = Some (ArchObj (PageDirectory pd))"
@@ -1801,7 +1801,7 @@ lemma set_pd_vspace_objs_map:
 lemma simpler_set_pd_def:
   "set_pd p pd =
    (\<lambda>s. if \<exists>pd. kheap s p = Some (ArchObj (PageDirectory pd))
-        then ({((), s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (PageDirectory pd))\<rparr>)},
+        then ({((), s\<lparr>kheap := (kheap s)(p \<mapsto> ArchObj (PageDirectory pd))\<rparr>)},
               False)
         else ({}, True))"
   apply (rule ext)
@@ -1858,7 +1858,7 @@ lemma set_pd_valid_vs_lookup_map:
     apply (drule vs_lookup_pages_apI)
       apply (simp split: if_split_asm)
      apply (simp+)[2]
-   apply (frule_tac s="s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (PageDirectory pd))\<rparr>"
+   apply (frule_tac s="s\<lparr>kheap := (kheap s)(p \<mapsto> ArchObj (PageDirectory pd))\<rparr>"
                  in vs_lookup_pages_pdI[rotated -1])
         apply (simp del: fun_upd_apply)+
    apply (frule vs_lookup_pages_apI)
@@ -2773,8 +2773,8 @@ lemma simpler_store_pde_def:
   "store_pde p pde s =
     (case kheap s (p && ~~ mask pd_bits) of
           Some (ArchObj (PageDirectory pd)) =>
-            ({((), s\<lparr>kheap := (kheap s((p && ~~ mask pd_bits) \<mapsto>
-                                       (ArchObj (PageDirectory (pd(ucast (p && mask pd_bits >> 2) := pde))))))\<rparr>)}, False)
+            ({((), s\<lparr>kheap := (kheap s)(p && ~~ mask pd_bits \<mapsto>
+                                        ArchObj (PageDirectory (pd(ucast (p && mask pd_bits >> 2) := pde))))\<rparr>)}, False)
         | _ => ({}, True))"
   by (auto simp: store_pde_def simpler_set_pd_def get_object_def simpler_gets_def assert_def
                         return_def fail_def set_object_def get_def put_def bind_def get_pd_def
@@ -2784,7 +2784,7 @@ lemma simpler_store_pde_def:
 lemma pde_update_valid_vspace_objs:
   "[|valid_vspace_objs s; valid_pde pde s; pde_ref pde = None; kheap s (p && ~~ mask pd_bits) = Some (ArchObj (PageDirectory pd))|]
    ==> valid_vspace_objs
-         (s\<lparr>kheap := kheap s(p && ~~ mask pd_bits \<mapsto> ArchObj (PageDirectory (pd(ucast (p && mask pd_bits >> 2) := pde))))\<rparr>)"
+         (s\<lparr>kheap := (kheap s)(p && ~~ mask pd_bits \<mapsto> ArchObj (PageDirectory (pd(ucast (p && mask pd_bits >> 2) := pde))))\<rparr>)"
   apply (cut_tac pde=pde and p=p in store_pde_vspace_objs_unmap)
   apply (clarsimp simp: valid_def)
   apply (erule allE[where x=s])
@@ -4556,8 +4556,7 @@ end
 locale asid_pool_map = Arch +
   fixes s ap pool asid pdp pd s'
   defines "(s' :: ('a::state_ext) state) \<equiv>
-           s\<lparr>kheap := kheap s(ap \<mapsto> ArchObj (ASIDPool
-                                               (pool(asid \<mapsto> pdp))))\<rparr>"
+           s\<lparr>kheap := (kheap s)(ap \<mapsto> ArchObj (ASIDPool (pool(asid \<mapsto> pdp))))\<rparr>"
   assumes ap:  "kheap s ap = Some (ArchObj (ASIDPool pool))"
   assumes new: "pool asid = None"
   assumes pd:  "kheap s pdp = Some (ArchObj (PageDirectory pd))"

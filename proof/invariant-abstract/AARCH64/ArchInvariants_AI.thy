@@ -587,12 +587,15 @@ definition pspace_in_kernel_window :: "'z::state_ext state \<Rightarrow> bool" w
 definition vspace_at_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
   "vspace_at_asid asid pt \<equiv> \<lambda>s. vspace_for_asid asid s = Some pt"
 
+definition kernel_window_range :: "obj_ref set" where
+  "kernel_window_range \<equiv> {pptr_base ..< pptrTop}"
+
 definition valid_uses_2 :: "arm_vspace_region_uses \<Rightarrow> bool" where
   "valid_uses_2 uses \<equiv>
      \<forall>p. (\<not>canonical_address p \<longrightarrow> uses p = ArmVSpaceInvalidRegion)
-          \<and> (p \<in> {pptr_base ..< pptrTop}
+          \<and> (p \<in> kernel_window_range
              \<longrightarrow> uses p \<in> {ArmVSpaceKernelWindow, ArmVSpaceInvalidRegion})
-          \<and> (uses p = ArmVSpaceKernelWindow \<longrightarrow> p \<in> {pptr_base ..< pptrTop})
+          \<and> (uses p = ArmVSpaceKernelWindow \<longrightarrow> p \<in> kernel_window_range)
           \<comment> \<open>The kernel device window doesn't occupy the entire region above kdev_base\<close>
           \<and> (kdev_base \<le> p \<longrightarrow> uses p \<in> {ArmVSpaceDeviceWindow, ArmVSpaceInvalidRegion})
           \<comment> \<open>No user window in hyp kernel address space\<close>
@@ -621,9 +624,21 @@ lemmas vmid_for_asid_def = vmid_for_asid_2_def
 abbreviation (input) asid_map :: "'z::state_ext state \<Rightarrow> asid \<rightharpoonup> vmid" where
   "asid_map \<equiv> vmid_for_asid"
 
+locale_abbrev
+  "vmid_table s \<equiv> arm_vmid_table (arch_state s)"
+
 (* vmIDs stored in ASID pools form the inverse of the vmid_table *)
 definition vmid_inv :: "'z::state_ext state \<Rightarrow> bool" where
-  "vmid_inv s \<equiv> is_inv (arm_vmid_table (arch_state s)) (vmid_for_asid s)"
+  "vmid_inv s \<equiv> is_inv (vmid_table s) (vmid_for_asid s)"
+
+(* The vmID table never stores ASID 0 *)
+definition valid_vmid_table_2 :: "(vmid \<rightharpoonup> asid) \<Rightarrow> bool" where
+  "valid_vmid_table_2 table \<equiv> \<forall>vmid. table vmid \<noteq> Some 0"
+
+locale_abbrev valid_vmid_table :: "'z::state_ext state \<Rightarrow> bool" where
+  "valid_vmid_table s \<equiv> valid_vmid_table_2 (vmid_table s)"
+
+lemmas valid_vmid_table_def = valid_vmid_table_2_def
 
 definition valid_global_arch_objs where
   "valid_global_arch_objs \<equiv> \<lambda>s. vspace_pt_at (global_pt s) s"
@@ -641,8 +656,8 @@ locale_abbrev valid_global_tables :: "'z::state_ext state \<Rightarrow> bool" wh
 lemmas valid_global_tables_def = valid_global_tables_2_def
 
 definition valid_arch_state :: "'z::state_ext state \<Rightarrow> bool" where
-  "valid_arch_state \<equiv> valid_asid_table and valid_uses and vmid_inv and cur_vcpu and
-                      valid_global_arch_objs and valid_global_tables"
+  "valid_arch_state \<equiv> valid_asid_table and valid_uses and vmid_inv and valid_vmid_table and
+                      cur_vcpu and valid_global_arch_objs and valid_global_tables"
 
 (* ---------------------------------------------------------------------------------------------- *)
 
@@ -698,10 +713,10 @@ definition state_hyp_refs_of :: "'z::state_ext state \<Rightarrow> obj_ref \<Rig
   "state_hyp_refs_of \<equiv> \<lambda>s p. case_option {} (hyp_refs_of) (kheap s p)"
 
 
-(* covered by ASIDPool case of valid_vspace_obj, inv_vmid, and definition of
-   vspace_for_asid (asid 0 never mapped) *)
+(* Mostly covered by ASIDPool case of valid_vspace_obj and vmid_inv, but we still need to make sure
+   that ASID 0 is never mapped. *)
 definition valid_asid_map :: "'z::state_ext state \<Rightarrow> bool" where
-  "valid_asid_map \<equiv> \<top>"
+  "valid_asid_map \<equiv> \<lambda>s. entry_for_asid 0 s = None"
 
 definition valid_global_objs :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_global_objs \<equiv> \<top>"
@@ -790,6 +805,14 @@ lemma table_size_bounded[simp,intro!]:
 lemma vcpuBits_bounded[simp,intro!]:
   "vcpuBits < word_bits"
   including machine_bit_simps by (simp add: word_bits_def)
+
+lemma ptTranslationBits_le_machine_word[simplified, simp]:
+  "ptTranslationBits pt_t < LENGTH(machine_word_len)"
+  by (simp add: bit_simps)
+
+lemma pte_bits_leq_table_size[simp]:
+  "pte_bits \<le> table_size pt_t"
+  by (simp add: table_size_def)
 
 (* with asid_pool_level normalised to -1, max_pt_level otherwise becomes -2 *)
 lemma max_pt_level_def2: "max_pt_level = (if config_ARM_PA_SIZE_BITS_40 then 2 else 3)"
@@ -1498,6 +1521,11 @@ lemma pptrTop_le_ipa_size:
   "pptrTop \<le> mask ipa_size"
   by (simp add: bit_simps pptrTop_def mask_def)
 
+lemma below_pptrTop_ipa_size:
+  "p < pptrTop \<Longrightarrow> p \<le> mask ipa_size"
+  using pptrTop_le_ipa_size
+  by simp
+
 lemma addrFromPPtr_mask_ipa:
   "\<lbrakk> pptr_base \<le> pt_ptr; pt_ptr < pptrTop \<rbrakk>
    \<Longrightarrow> addrFromPPtr pt_ptr && mask ipa_size = addrFromPPtr pt_ptr"
@@ -1516,7 +1544,24 @@ lemmas window_defs =
 lemma valid_uses_kernel_window:
   "\<lbrakk> valid_uses s; p \<in> kernel_window s \<rbrakk> \<Longrightarrow> p \<in> {pptr_base ..< pptrTop} \<and> canonical_address p"
   unfolding valid_uses_def window_defs
-  by (erule_tac x=p in allE) auto
+  by (erule_tac x=p in allE) (auto simp: kernel_window_range_def)
+
+lemma kernel_window_bounded:
+  "\<lbrakk> p \<in> kernel_window s; valid_uses s \<rbrakk> \<Longrightarrow> p \<in> kernel_window_range"
+  by (fastforce dest: valid_uses_kernel_window simp: kernel_window_range_def)
+
+lemma pspace_in_kw_bounded:
+  "\<lbrakk> kheap s p = Some ko; pspace_in_kernel_window s; valid_uses s; pspace_aligned s \<rbrakk> \<Longrightarrow>
+   p \<in> kernel_window_range"
+  unfolding pspace_aligned_def
+  apply (drule bspec, fastforce)
+  apply (simp add: pspace_in_kernel_window_def)
+  apply (erule allE, erule allE, erule (1) impE)
+  apply (prop_tac "p \<in> kernel_window s")
+   apply (erule set_mp)
+   apply (clarsimp simp: is_aligned_no_overflow)
+  apply (fastforce dest: kernel_window_bounded)
+  done
 
 lemma pt_walk_max_level:
   "pt_walk top_level bot_level pt_ptr vptr ptes = Some (level, p)
@@ -2261,6 +2306,15 @@ lemma valid_vspace_objsD:
    valid_vspace_obj level ao s"
   by (simp add: valid_vspace_objs_def)
 
+lemma vspace_for_asid_not_normal_pt:
+  "\<lbrakk>vspace_for_asid asid s = Some pt; normal_pt_at pt s; valid_vspace_objs s\<rbrakk> \<Longrightarrow> False"
+  apply (drule vspace_for_asid_vs_lookup)
+  apply (clarsimp simp: pt_at_eq)
+  apply (drule (1) valid_vspace_objsD, simp)
+   apply (fastforce simp: in_omonad)
+  apply clarsimp
+  done
+
 (* A static bound on the size of pt_bits. For PA_40 configurations this is 40 (size of the
    PA/IPA address space). For PA_44 configurations, this is 48, because the page tables can
    theoretically translate 48 bits, even though the PA/IPA space is only 44 bits wide *)
@@ -2343,6 +2397,29 @@ lemma is_aligned_addrFromPPtr_n:
 lemma is_aligned_addrFromPPtr[intro!]:
   "is_aligned p pageBits \<Longrightarrow> is_aligned (addrFromPPtr p) pageBits"
   by (simp add: is_aligned_addrFromPPtr_n pageBits_def pptrBaseOffset_alignment_def)
+
+lemma pptrTop_ucast_ppn:
+  "\<lbrakk> p < pptrTop; is_aligned p pageBits \<rbrakk> \<Longrightarrow>
+   ucast (ucast (p >> pageBits)::ppn) = p >> pageBits"
+  apply (drule below_pptrTop_ipa_size)
+  apply word_eqI
+  using ppn_len_def'[unfolded ppn_len_def]
+  by (fastforce dest: bit_imp_le_length)
+
+lemma kernel_window_range_addrFromPPtr:
+  "p \<in> kernel_window_range \<Longrightarrow> addrFromPPtr p < pptrTop"
+  apply (simp add: kernel_window_range_def addrFromPPtr_def pptrBaseOffset_def
+                   paddrBase_def pptr_base_def)
+  apply unat_arith
+  done
+
+lemma kernel_window_addrFromPPtr:
+  "\<lbrakk> p \<in> kernel_window_range; is_aligned p pageBits \<rbrakk> \<Longrightarrow>
+   ucast (ucast (addrFromPPtr p >> pageBits)::ppn) = addrFromPPtr p >> pageBits"
+  apply (rule pptrTop_ucast_ppn)
+   apply (erule kernel_window_range_addrFromPPtr)
+  apply (erule is_aligned_addrFromPPtr)
+  done
 
 lemma is_aligned_ptrFromPAddr_n:
   "\<lbrakk>is_aligned x sz; sz \<le> pptrBaseOffset_alignment\<rbrakk>
@@ -2587,7 +2664,7 @@ lemma vspace_for_asid_lift:
   apply (simp add: obind_def pool_for_asid_def o_def split del: if_split)
   apply (rule hoare_lift_Pf[where f=asid_table])
    apply (rule hoare_lift_Pf[where f=asid_pools_of])
-    apply (wpsimp wp: assms entry_for_asid_lift split: option.splits)+
+    apply (wpsimp wp: assms entry_for_asid_lift split: option.splits split_del: if_split)+
   done
 
 lemma valid_global_arch_objs_lift:
@@ -2819,7 +2896,7 @@ lemma vs_lookup_table_eq_lift:
 
 lemma aobjs_of_non_aobj_upd:
   "\<lbrakk> kheap s p = Some ko; \<not> is_ArchObj ko; \<not> is_ArchObj ko' \<rbrakk>
-   \<Longrightarrow> kheap s(p \<mapsto> ko') |> aobj_of = aobjs_of s"
+   \<Longrightarrow> (kheap s)(p \<mapsto> ko') |> aobj_of = aobjs_of s"
   by (rule ext)
      (auto simp: opt_map_def is_ArchObj_def aobj_of_def split: kernel_object.splits if_split_asm)
 
@@ -2901,6 +2978,12 @@ lemma hyp_refs_of_rev:
   by (auto simp: hyp_refs_of_def tcb_hyp_refs_def tcb_vcpu_refs_def
                  vcpu_tcb_refs_def refs_of_ao_def
            split: kernel_object.splits arch_kernel_obj.splits option.split)
+
+lemma valid_asid_map_lift_strong:
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_table s)\<rbrace>"
+  assumes "\<And>P. f \<lbrace>\<lambda>s. P (asid_pools_of s)\<rbrace>"
+  shows "f \<lbrace>valid_asid_map\<rbrace>"
+  by (wpsimp simp: valid_asid_map_def wp: entry_for_asid_lift assms)
 
 end
 
@@ -3040,6 +3123,14 @@ lemma valid_vspace_objs_update [iff]:
 lemma valid_arch_caps_update [iff]:
   "valid_arch_caps (f s) = valid_arch_caps s"
   by (simp add: valid_arch_caps_def asid_table)
+
+end
+
+context Arch_arch_update_eq begin
+
+lemma valid_vmid_table_update[iff]:
+  "valid_vmid_table (f s) = valid_vmid_table s"
+  by (simp add: arch)
 
 end
 

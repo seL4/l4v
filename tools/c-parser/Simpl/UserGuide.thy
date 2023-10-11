@@ -222,7 +222,7 @@ for procedure calls (that creates the proper @{term init}, @{term return} and
 @{term result} functions on the fly) and creates locales and statespaces to
 reason about the procedure. The purpose of locales is to set up logical contexts
 to support modular reasoning. Locales can be seen as freeze-dried proof contexts that
-get alive as you setup a new lemma or theorem (\cite{Ballarin-04-locales}).
+get alive as you setup a new lemma or theorem (\<^cite>\<open>"Ballarin-04-locales"\<close>).
 The locale the user deals with is named \<open>Square_impl\<close>.
  It defines the procedure name (internally   @{term "Square_'proc"}), the procedure body
 (named \<open>Square_body\<close>) and the statespaces for parameters and local and
@@ -537,7 +537,7 @@ the lookup of variable \<open>x\<close> in the state
 \<open>\<sigma>\<close>.
 
 The approach to specify procedures on lists
-basically follows \cite{MehtaN-CADE03}. From the pointer structure
+basically follows \<^cite>\<open>"MehtaN-CADE03"\<close>. From the pointer structure
 in the heap we (relationally) abstract to HOL lists of references. Then
 we can specify further properties on the level of HOL lists, rather then
 on the heap. The basic abstractions are:
@@ -795,7 +795,7 @@ since the lists are already uniquely determined by the relational abstraction:
 \<close>
 
 text \<open>
-The next contrived example is taken from \cite{Homeier-95-vcg}, to illustrate
+The next contrived example is taken from \<^cite>\<open>"Homeier-95-vcg"\<close>, to illustrate
 a more complex termination criterion for mutually recursive procedures. The procedures
 do not calculate anything useful.
 
@@ -1534,7 +1534,7 @@ procedures init' (|p) =
 subsubsection \<open>Extending State Spaces\<close>
 text \<open>
 The records in Isabelle are
-extensible \cite{Nipkow-02-hol,NaraschewskiW-TPHOLs98}. In principle this can be exploited
+extensible \<^cite>\<open>"Nipkow-02-hol" and "NaraschewskiW-TPHOLs98"\<close>. In principle this can be exploited
 during verification. The state space can be extended while we we add procedures.
 But there is one major drawback:
 \begin{itemize}

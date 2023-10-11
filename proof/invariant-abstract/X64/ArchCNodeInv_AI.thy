@@ -556,7 +556,7 @@ context Arch begin global_naming X64
 lemma post_cap_delete_pre_is_final_cap':
   "\<And>rv s'' rva s''a s.
        \<lbrakk>valid_ioports s; caps_of_state s slot = Some cap; is_final_cap' cap s; cap_cleanup_opt cap \<noteq> NullCap\<rbrakk>
-       \<Longrightarrow> post_cap_delete_pre (cap_cleanup_opt cap) (caps_of_state s(slot \<mapsto> NullCap))"
+       \<Longrightarrow> post_cap_delete_pre (cap_cleanup_opt cap) ((caps_of_state s)(slot \<mapsto> NullCap))"
   apply (clarsimp simp: cap_cleanup_opt_def cte_wp_at_def post_cap_delete_pre_def
                       split: cap.split_asm if_split_asm
                       elim!: ranE dest!: caps_of_state_cteD)
@@ -646,7 +646,7 @@ next
         apply (rule "2.hyps"[simplified rec_del_call.simps slot_rdcall.simps conj_assoc], assumption+)
        apply (simp add: cte_wp_at_eq_simp
                 | wp replace_cap_invs set_cap_sets final_cap_same_objrefs
-                     set_cap_cte_cap_wp_to static_imp_wp
+                     set_cap_cte_cap_wp_to hoare_weak_lift_imp
                 | erule finalise_cap_not_reply_master)+
        apply (wp hoare_vcg_const_Ball_lift)+
       apply (rule hoare_strengthen_post)

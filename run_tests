@@ -96,7 +96,7 @@ EXCLUDE["AARCH64"]=[
     # To be eliminated/refined as development progresses
     "ASepSpec",
     "CKernel",
-    "BaseRefine",
+    "CBaseRefine",
     "Access",
 
     # Tools and unrelated content, removed for development
@@ -152,15 +152,15 @@ if args.help:
 
 returncode = 0
 for arch in archs:
-    print("Testing for L4V_ARCH=%s:" % arch)
+    features = os.environ.get("L4V_FEATURES", "")
+    plat = os.environ.get("L4V_PLAT", "")
+    print(f"Testing for L4V_ARCH='{arch}', L4V_FEATURES='{features}', L4V_PLAT='{plat}':")
 
     os.environ["L4V_ARCH"] = arch
-    # Test Orphanage when L4V_ARCH=ARM;
-    # we need to set this flag here to test the above equality in the ROOT file.
-    # To be removed when we finish proving Orphanage for ARM_HYP and X64
+    # Provide L4V_ARCH_IS_ARM for Corres_Test in lib/ROOT
     if arch == "ARM":
         os.environ["L4V_ARCH_IS_ARM"] = arch
-        print("Testing Orphanage for ARM")
+        print("Setting L4V_ARCH_IS_ARM")
     elif "L4V_ARCH_IS_ARM" in os.environ:
         del os.environ["L4V_ARCH_IS_ARM"]
 

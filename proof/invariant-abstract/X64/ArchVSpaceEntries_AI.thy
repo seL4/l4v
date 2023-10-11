@@ -318,7 +318,7 @@ crunch valid_vspace_objs'[wp]: set_simple_ko "valid_vspace_objs'"
   (wp: crunch_wps)
 
 crunch valid_vspace_objs'[wp]: finalise_cap, cap_swap_for_delete, empty_slot "valid_vspace_objs'"
-  (wp: crunch_wps select_wp preemption_point_inv simp: crunch_simps unless_def ignore:set_object)
+  (wp: crunch_wps preemption_point_inv simp: crunch_simps unless_def ignore:set_object)
 
 lemma preemption_point_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs'\<rbrace> preemption_point \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
@@ -556,7 +556,7 @@ lemma invoke_untyped_valid_vspace_objs'[wp]:
 crunch valid_vspace_objs'[wp]: perform_asid_pool_invocation,
      perform_asid_control_invocation "valid_vspace_objs'"
   (ignore: delete_objects set_object
-       wp: static_imp_wp select_wp crunch_wps
+       wp: hoare_weak_lift_imp crunch_wps
      simp: crunch_simps unless_def)
 
 lemma pte_range_interD:
@@ -703,7 +703,7 @@ lemma handle_invocation_valid_vspace_objs'[wp]:
 crunch valid_vspace_objs'[wp]: activate_thread,switch_to_thread, handle_hypervisor_fault,
        switch_to_idle_thread, handle_call, handle_recv, handle_reply,
        handle_send, handle_yield, handle_interrupt "valid_vspace_objs'"
-  (simp: crunch_simps wp: crunch_wps alternative_wp select_wp OR_choice_weak_wp select_ext_weak_wp
+  (simp: crunch_simps wp: crunch_wps OR_choice_weak_wp select_ext_weak_wp
       ignore: without_preemption getActiveIRQ resetTimer ackInterrupt
               getFaultAddress OR_choice set_scheduler_action)
 
@@ -714,8 +714,7 @@ lemma handle_event_valid_vspace_objs'[wp]:
 
 lemma schedule_valid_vspace_objs'[wp]: "\<lbrace>valid_vspace_objs'\<rbrace> schedule :: (unit,unit) s_monad \<lbrace>\<lambda>_. valid_vspace_objs'\<rbrace>"
   apply (simp add: schedule_def allActiveTCBs_def)
-  apply (wp alternative_wp select_wp)
-  apply simp
+  apply wpsimp
   done
 
 lemma call_kernel_valid_vspace_objs'[wp]:

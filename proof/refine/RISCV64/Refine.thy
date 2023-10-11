@@ -280,7 +280,7 @@ lemma kernel_entry_invs:
    apply (clarsimp simp: kernel_entry_def)
    apply (wp thread_set_invs_trivial thread_set_not_state_valid_sched hoare_vcg_disj_lift
              ct_in_state_thread_state_lift thread_set_no_change_tcb_state
-             static_imp_wp call_kernel_cur_sc_offset_ready_and_sufficient
+             hoare_weak_lift_imp call_kernel_cur_sc_offset_ready_and_sufficient
           | clarsimp simp: tcb_cap_cases_def)+
   apply (rule hoare_vcg_conj_lift_pre_fix)
    apply (wpsimp wp: kernel_entry_valid_sched)
@@ -293,20 +293,20 @@ lemma kernel_entry_invs:
   apply (rule hoare_vcg_conj_lift_pre_fix)
    apply (clarsimp simp: kernel_entry_def)
    apply (wp thread_set_invs_trivial thread_set_not_state_valid_sched hoare_vcg_disj_lift
-             ct_in_state_thread_state_lift thread_set_no_change_tcb_state static_imp_wp
+             ct_in_state_thread_state_lift thread_set_no_change_tcb_state hoare_weak_lift_imp
              call_kernel_schact_is_rct[unfolded schact_is_rct_def]
           | clarsimp simp: tcb_cap_cases_def)+
   apply (rule hoare_vcg_conj_lift_pre_fix)
    apply (clarsimp simp: kernel_entry_def)
    apply (wp thread_set_invs_trivial thread_set_not_state_valid_sched hoare_vcg_disj_lift
-             ct_in_state_thread_state_lift thread_set_no_change_tcb_state static_imp_wp
+             ct_in_state_thread_state_lift thread_set_no_change_tcb_state hoare_weak_lift_imp
              call_kernel_cur_sc_active
           | clarsimp simp: tcb_cap_cases_def)+
   apply (rule hoare_vcg_conj_lift_pre_fix)
    apply (clarsimp simp: kernel_entry_def)
    apply (wp thread_set_invs_trivial thread_set_not_state_valid_sched hoare_vcg_disj_lift
              ct_in_state_thread_state_lift thread_set_no_change_tcb_state
-             static_imp_wp call_kernel_ct_not_in_release_q
+             hoare_weak_lift_imp call_kernel_ct_not_in_release_q
           | clarsimp simp: tcb_cap_cases_def)+
   apply (rule hoare_vcg_conj_lift_pre_fix)
    apply (clarsimp simp: kernel_entry_def)
@@ -338,7 +338,6 @@ crunches do_user_op, check_active_irq
   and cur_sc_offset_ready[wp]: "\<lambda>s. cur_sc_offset_ready (consumed_time s) s"
   and cur_sc_offset_sufficient[wp]: "\<lambda>s. cur_sc_offset_sufficient (consumed_time s) s"
   and consumed_time_bounded[wp]: consumed_time_bounded
-  (wp: select_wp)
 
 lemma device_update_valid_machine_time[wp]:
   "do_machine_op (device_memory_update ds) \<lbrace>valid_machine_time\<rbrace>"
@@ -355,7 +354,7 @@ lemma user_memory_update_valid_machine_time[wp]:
 lemma do_user_op_valid_machine_time[wp]:
   "do_user_op f tc \<lbrace>valid_machine_time\<rbrace>"
   apply (simp add: do_user_op_def)
-  apply (wpsimp wp: select_wp)
+  apply wpsimp
   done
 
 lemma check_active_irq_valid_machine_time[wp]:
@@ -560,13 +559,13 @@ lemma kernelEntry_invs':
    apply (clarsimp simp: obj_at'_tcb_scs_of_equiv obj_at'_sc_tcbs_of_equiv sym_heap_def)
    apply (fastforce simp: ct_in_state'_def pred_tcb_at'_def obj_at'_def)
   apply (simp add: kernelEntry_def)
-  apply (wpsimp wp: ckernel_invs threadSet_invs_trivial
-                    threadSet_ct_in_state' static_imp_wp hoare_vcg_disj_lift threadSet_sym_heap_tcbSCs
+  apply (wpsimp wp: ckernel_invs threadSet_invs_trivial threadSet_ct_in_state'
+                    hoare_weak_lift_imp hoare_vcg_disj_lift threadSet_sym_heap_tcbSCs
          | wps)+
     apply (rule hoare_vcg_conj_lift)
      apply (wpsimp wp: threadSet_wp)
     apply (wpsimp wp: threadSet_invs_trivial; simp?)
-    apply (wpsimp wp: threadSet_ct_running' static_imp_wp)+
+    apply (wpsimp wp: threadSet_ct_running' hoare_weak_lift_imp)+
   apply (fastforce simp: obj_at'_def  pred_map_def opt_map_red)
   done
 
@@ -624,7 +623,7 @@ lemma doUserOp_invs':
         (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_running' and
         valid_domain_list'\<rbrace>"
   apply (simp add: doUserOp_def split_def ex_abs_def)
-  apply (wp device_update_invs' doMachineOp_ct_in_state' select_wp
+  apply (wp device_update_invs' doMachineOp_ct_in_state'
     | (wp (once) dmo_invs', wpsimp simp: no_irq_modify device_memory_update_def
                                          user_memory_update_def))+
   apply (clarsimp simp: user_memory_update_def simpler_modify_def
@@ -1007,7 +1006,7 @@ lemma entry_corres:
         apply wpsimp
        apply (wp thread_set_invs_trivial
                  threadSet_invs_trivial threadSet_ct_running'
-                 select_wp thread_set_not_state_valid_sched static_imp_wp
+                 thread_set_not_state_valid_sched hoare_weak_lift_imp
                  hoare_vcg_disj_lift ct_in_state_thread_state_lift
               | simp add: tcb_cap_cases_def ct_in_state'_def thread_set_no_change_tcb_state
               | (wps, wp threadSet_st_tcb_at2) )+
@@ -1172,7 +1171,7 @@ lemma domain_list_rel_eq:
   by (clarsimp simp: state_relation_def)
 
 crunch valid_objs': doUserOp, checkActiveIRQ valid_objs'
-  (wp: crunch_wps select_wp)
+  (wp: crunch_wps)
 
 lemma ct_running_cross:
   "\<lbrakk>(a,c) \<in> state_relation; ct_running a; pspace_aligned a; pspace_distinct a\<rbrakk> \<Longrightarrow> ct_running' c"

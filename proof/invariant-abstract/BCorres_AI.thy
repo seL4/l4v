@@ -58,7 +58,7 @@ lemma OR_choiceE_bcorres[wp]:
   done
 
 crunch_ignore (bcorres)
-  (add: NonDetMonad.bind gets modify get put do_extended_op empty_slot_ext mapM_x "when"
+  (add: Nondet_Monad.bind gets modify get put do_extended_op empty_slot_ext mapM_x "when"
         select unless mapM catch bindE liftE whenE alternative cap_swap_ext
         cap_insert_ext cap_move_ext liftM create_cap_ext
         lookup_error_on_failure getActiveIRQ maybeM

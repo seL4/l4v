@@ -9,7 +9,7 @@
 theory Eisbach_WP
 imports
   Eisbach_Tools.Eisbach_Methods
-  NonDetMonadVCG
+  Nondet_VCG
   Eisbach_Tools.Conjuncts
   Eisbach_Tools.Rule_By_Method
   WPI

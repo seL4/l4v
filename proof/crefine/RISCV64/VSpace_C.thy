@@ -254,7 +254,7 @@ lemma handleVMFault_ccorres:
    apply (rule corres_split[OF read_stval_ccorres[ac]])
       apply terminates_trivial
      apply (drule sym, clarsimp)
-     apply (wpc; simp add: vm_fault_type_from_H_def vm_fault_defs_C bind_assoc)
+     apply (corres_cases; simp add: vm_fault_type_from_H_def vm_fault_defs_C bind_assoc)
           apply (rule returnVMFault_corres;
                  clarsimp simp: exception_defs mask_twice lift_rv_def mask_def vmFaultTypeFSR_def)+
      apply wpsimp+
@@ -719,7 +719,7 @@ lemma findVSpaceForASID_ccorres:
     apply clarsimp
     apply (rule_tac P="valid_arch_state' and _" and P'=UNIV in ccorres_from_vcg_throws)
     apply (rule allI, rule conseqPre, vcg)
-    apply (clarsimp simp: throwError_def return_def bindE_def NonDetMonad.lift_def
+    apply (clarsimp simp: throwError_def return_def bindE_def Nondet_Monad.lift_def
                           EXCEPTION_NONE_def EXCEPTION_LOOKUP_FAULT_def
                           lookup_fault_lift_invalid_root asid_wf_table_guard)
     apply (frule rf_sr_asidTable_None[where asid=asid, THEN iffD2],
@@ -895,14 +895,13 @@ lemma setVMRoot_ccorres:
       apply (subst will_throw_and_catch)
        apply (simp split: capability.split arch_capability.split option.split)
        apply (fastforce simp: isCap_simps)
-      apply (rule ccorres_pre_gets_riscvKSGlobalPT_ksArchState[unfolded o_def])
+      apply (rule ccorres_pre_gets_riscvKSGlobalPT_ksArchState)
       apply (rule ccorres_rhs_assoc)+
       apply (rule ccorres_h_t_valid_riscvKSGlobalPT)
       apply csymbr
       apply ccorres_rewrite
       apply (subst bind_return_unit)
       apply (ctac (no_vcg) add: setVSpaceRoot_ccorres)
-       apply (simp flip: dc_def)
        apply (rule ccorres_return_void_C)
       apply (rule hoare_post_taut[where P=\<top>])
      apply (simp add: catch_def bindE_bind_linearise bind_assoc liftE_def)
@@ -925,23 +924,23 @@ lemma setVMRoot_ccorres:
                      in ccorres_gen_asm2)
         apply simp
         apply (rule ccorres_Cond_rhs_Seq)
-         apply (simp add: whenE_def throwError_def dc_def[symmetric], ccorres_rewrite)
+         apply (simp add: whenE_def throwError_def, ccorres_rewrite)
          apply (rule ccorres_rhs_assoc)
          apply (rule ccorres_h_t_valid_riscvKSGlobalPT)
          apply csymbr
-         apply (rule ccorres_pre_gets_riscvKSGlobalPT_ksArchState[unfolded comp_def])
+         apply (rule ccorres_pre_gets_riscvKSGlobalPT_ksArchState)
          apply (rule ccorres_add_return2)
          apply (ctac (no_vcg) add: setVSpaceRoot_ccorres)
           apply (rule ccorres_return_void_C)
          apply (rule hoare_post_taut[where P=\<top>])
-        apply (simp add: whenE_def returnOk_def flip: dc_def)
+        apply (simp add: whenE_def returnOk_def)
         apply (csymbr)
         apply (ctac (no_vcg) add: setVSpaceRoot_ccorres)
-       apply (rule ccorres_cond_true_seq, simp add: dc_def[symmetric], ccorres_rewrite)
+       apply (rule ccorres_cond_true_seq, simp, ccorres_rewrite)
        apply (rule ccorres_rhs_assoc)
        apply (rule ccorres_h_t_valid_riscvKSGlobalPT)
        apply csymbr
-       apply (rule ccorres_pre_gets_riscvKSGlobalPT_ksArchState[unfolded comp_def])
+       apply (rule ccorres_pre_gets_riscvKSGlobalPT_ksArchState)
        apply (rule ccorres_add_return2)
        apply (ctac (no_vcg) add: setVSpaceRoot_ccorres)
         apply (rule ccorres_return_void_C)
@@ -1004,12 +1003,12 @@ lemma setRegister_ccorres:
        (asUser thread (setRegister reg val))
        (Call setRegister_'proc)"
   apply (cinit' lift: thread_' reg_' w_')
-   apply (simp add: asUser_def dc_def[symmetric] split_def split del: if_split)
+   apply (simp add: asUser_def split_def)
    apply (rule ccorres_pre_threadGet)
    apply (rule ccorres_Guard)
    apply (simp add: setRegister_def simpler_modify_def exec_select_f_singleton)
-   apply (rule_tac P="\<lambda>tcb. (atcbContextGet o tcbArch) tcb = rv"
-                in threadSet_ccorres_lemma2 [unfolded dc_def])
+   apply (rule_tac P="\<lambda>tcb. (atcbContextGet o tcbArch) tcb = uc"
+                in threadSet_ccorres_lemma2)
     apply vcg
    apply (clarsimp simp: setRegister_def HaskellLib_H.runState_def
                          simpler_modify_def typ_heap_simps)
@@ -1040,8 +1039,6 @@ lemma msgRegisters_ccorres:
 (* usually when we call setMR directly, we mean to only set a registers, which will
    fit in actual registers *)
 lemma setMR_as_setRegister_ccorres:
-  notes dc_simp[simp del]
-  shows
   "ccorres (\<lambda>rv rv'. rv' = of_nat offset + 1) ret__unsigned_'
       (tcb_at' thread and K (TCB_H.msgRegisters ! offset = reg \<and> offset < length msgRegisters))
       (UNIV \<inter> \<lbrace>\<acute>reg___unsigned_long = val\<rbrace>
@@ -1058,7 +1055,7 @@ lemma setMR_as_setRegister_ccorres:
    apply (ctac add: setRegister_ccorres)
      apply (rule ccorres_from_vcg_throws[where P'=UNIV and P=\<top>])
      apply (rule allI, rule conseqPre, vcg)
-     apply (clarsimp simp: dc_def return_def)
+     apply (clarsimp simp: return_def)
     apply (rule hoare_post_taut[of \<top>])
    apply (vcg exspec=setRegister_modifies)
   apply (clarsimp simp: n_msgRegisters_def length_msgRegisters not_le conj_commute)
@@ -1245,7 +1242,6 @@ lemma unmapPage_ccorres:
   apply (rule ccorres_gen_asm)
   apply (cinit lift: page_size_' asid___unsigned_long_' vptr_' pptr___unsigned_long_')
    apply (simp add: ignoreFailure_liftM)
-   apply (fold dc_def)
    apply (ctac add: findVSpaceForASID_ccorres)
       apply (rename_tac vspace find_ret)
       apply (rule ccorres_liftE_Seq)
@@ -1255,9 +1251,9 @@ lemma unmapPage_ccorres:
         apply (simp (no_asm) add: split_def del: Collect_const)
         apply (rule ccorres_split_unless_throwError_cond[where Q=\<top> and Q'=\<top>])
            apply (clarsimp simp: of_nat_pageBitsForSize split: if_split)
-          apply (simp add: throwError_def flip: dc_def)
+          apply (simp add: throwError_def)
           apply (rule ccorres_return_void_C)
-         apply (simp add: dc_def[symmetric])
+         apply simp
          apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2,
                 rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2)
          apply (subst bindE_assoc[symmetric])
@@ -1270,11 +1266,10 @@ lemma unmapPage_ccorres:
                             split: if_split_asm pte.split_asm)
             apply (rule ceqv_refl)
            apply (simp add: unfold_checkMapping_return liftE_bindE
-                            Collect_const[symmetric] dc_def[symmetric]
                        del: Collect_const)
            apply csymbr
            apply (rule ccorres_split_nothrow_novcg)
-               apply (simp add: dc_def[symmetric] ptr_add_assertion_def split_def)
+               apply (simp add: ptr_add_assertion_def split_def)
                apply ccorres_rewrite
                apply (rule storePTE_Basic_ccorres)
                apply (simp add: cpte_relation_def Let_def)
@@ -1293,7 +1288,7 @@ lemma unmapPage_ccorres:
        apply wpsimp
       apply (vcg exspec=lookupPTSlot_modifies)
      apply ccorres_rewrite
-     apply (simp add: throwError_def flip: dc_def)
+     apply (simp add: throwError_def)
      apply (rule ccorres_return_void_C)
     apply wp
    apply (vcg exspec=findVSpaceForASID_modifies)
@@ -1373,7 +1368,7 @@ lemma performPageInvocationUnmap_ccorres:
           apply simp
          apply simp
         apply simp
-       apply (simp add: asidInvalid_def flip: dc_def)
+       apply (simp add: asidInvalid_def)
        apply (rule ccorres_return_Skip)
       apply ceqv
      apply (simp add: liftM_def)
@@ -1655,7 +1650,7 @@ proof -
   show ?thesis
     apply (cinit lift: newLvl1pt_' simp: ptIndex_maxPTLevel_pptrBase ptTranslationBits_def)
      apply (rule ccorres_pre_gets_riscvKSGlobalPT_ksArchState, rename_tac globalPT)
-     apply (rule ccorres_rel_imp[where r=dc, OF _ dc_simp])
+     apply (rule ccorres_rel_imp[where r=dc, simplified])
      apply (clarsimp simp: whileAnno_def objBits_simps bit_simps RISCV64.pptrBase_def mask_def)
      apply (rule ccorres_h_t_valid_riscvKSGlobalPT)
      apply csymbr

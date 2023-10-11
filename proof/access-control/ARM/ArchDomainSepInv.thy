@@ -49,7 +49,7 @@ lemma perform_page_invocation_domain_sep_inv:
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   apply (rule hoare_pre)
    apply (wp mapM_wp[OF _ subset_refl] set_cap_domain_sep_inv mapM_x_wp[OF _ subset_refl]
-             perform_page_invocation_domain_sep_inv_get_cap_helper static_imp_wp
+             perform_page_invocation_domain_sep_inv_get_cap_helper hoare_weak_lift_imp
           | simp add: perform_page_invocation_def o_def | wpc)+
   apply (clarsimp simp: valid_page_inv_def)
   apply (case_tac xa, simp_all add: domain_sep_inv_cap_def is_pg_cap_def)
@@ -79,7 +79,7 @@ lemma perform_asid_control_invocation_domain_sep_inv:
   unfolding perform_asid_control_invocation_def
   apply (rule hoare_pre)
   apply (wp modify_wp cap_insert_domain_sep_inv' set_cap_domain_sep_inv
-            get_cap_domain_sep_inv_cap[where st=st] static_imp_wp
+            get_cap_domain_sep_inv_cap[where st=st] hoare_weak_lift_imp
          | wpc | simp )+
   done
 

@@ -19,7 +19,7 @@ definition
   "no_irq f \<equiv> \<forall>P. \<lbrace>\<lambda>s. P (irq_masks s)\<rbrace> f \<lbrace>\<lambda>_ s. P (irq_masks s)\<rbrace>"
 
 lemma wpc_helper_no_irq:
-  "no_irq f \<Longrightarrow>  wpc_helper (P, P') (Q, Q') (no_irq f)"
+  "no_irq f \<Longrightarrow> wpc_helper (P, P', P'') (Q, Q', Q'') (no_irq f)"
   by (simp add: wpc_helper_def)
 
 wpc_setup "\<lambda>m. no_irq m" wpc_helper_no_irq
@@ -58,7 +58,7 @@ setup \<open>
 \<close>
 
 crunch_ignore (no_irq) (add:
-  NonDetMonad.bind return "when" get gets fail
+  Nondet_Monad.bind return "when" get gets fail
   assert put modify unless select
   alternative assert_opt gets_the
   returnOk throwError lift bindE
@@ -89,7 +89,7 @@ text \<open>Failure on empty result\<close>
 
 crunches loadWord, storeWord, machine_op_lift, clearMemory
   for (empty_fail) empty_fail[intro!, wp, simp]
-  (ignore: NonDetMonad.bind mapM_x simp: machine_op_lift_def empty_fail_cond)
+  (ignore: Nondet_Monad.bind mapM_x simp: machine_op_lift_def empty_fail_cond)
 
 lemmas ef_machine_op_lift = machine_op_lift_empty_fail \<comment> \<open>required for generic interface\<close>
 
@@ -100,7 +100,7 @@ definition "irq_state_independent P \<equiv> \<forall>f s. P s \<longrightarrow>
 lemma getActiveIRQ_inv[wp]:
   "\<lbrakk>irq_state_independent P\<rbrakk> \<Longrightarrow> getActiveIRQ in_kernel \<lbrace>P\<rbrace>"
   apply (simp add: getActiveIRQ_def)
-  apply (wp alternative_wp select_wp)
+  apply wp
   apply (simp add: irq_state_independent_def)
   done
 
@@ -352,7 +352,7 @@ crunches
   and device_state_inv[wp]: "\<lambda>ms. P (device_state ms)"
   and irq_masks[wp]: "\<lambda>s. P (irq_masks s)"
   and underlying_memory_inv[wp]: "\<lambda>s. P (underlying_memory s)"
-  (wp: no_irq_bind ignore: empty_fail NonDetMonad.bind)
+  (wp: no_irq_bind ignore: empty_fail Nondet_Monad.bind)
 
 crunches getFPUState, getRegister, getRestartPC, setNextPC, ackInterrupt, maskInterrupt
   for (no_fail) no_fail[intro!, wp, simp]
@@ -392,7 +392,7 @@ lemma getActiveIRQ_le_maxIRQ':
     getActiveIRQ in_kernel
    \<lbrace>\<lambda>rv s. \<forall>x. rv = Some x \<longrightarrow> x \<le> maxIRQ\<rbrace>"
   apply (simp add: getActiveIRQ_def)
-  apply (wpsimp wp: alternative_wp select_wp)
+  apply wpsimp
   apply (rule ccontr)
   apply (simp add: linorder_not_le)
   done

@@ -325,7 +325,7 @@ lemma prop_of_two_valid:
   by (rule hoare_pre, wps f g, wp, simp)
 
 lemma thread_set_tcb_context_update_wp:
-  "\<lbrace>\<lambda>s. P (s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb_arch_update f (the (get_tcb t s))))\<rparr>)\<rbrace>
+  "\<lbrace>\<lambda>s. P (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB (tcb_arch_update f (the (get_tcb t s))))\<rparr>)\<rbrace>
    thread_set (tcb_arch_update f) t
    \<lbrace>\<lambda>_. P\<rbrace>"
   apply (simp add: thread_set_def)
@@ -631,7 +631,7 @@ locale Noninterference_1 =
     "reads_respects_g aag l \<top> (do_machine_op (storeWord ptr w))"
   and integrity_asids_update_reference_state:
    "is_subject aag t
-    \<Longrightarrow> integrity_asids aag {pasSubject aag} x asid s (s\<lparr>kheap := kheap s(t \<mapsto> blah)\<rparr>)"
+    \<Longrightarrow> integrity_asids aag {pasSubject aag} x asid s (s\<lparr>kheap := (kheap s)(t \<mapsto> blah)\<rparr>)"
   and partitionIntegrity_subjectAffects_aobj:
     "\<lbrakk> partitionIntegrity aag s s'; kheap s x = Some (ArchObj ao); kheap s x \<noteq> kheap s' x;
        silc_inv aag st s; pas_refined aag s; pas_wellformed_noninterference aag \<rbrakk>
@@ -685,7 +685,7 @@ locale Noninterference_1 =
 begin
 
 lemma integrity_update_reference_state:
-  "\<lbrakk> is_subject aag t; integrity aag X st s; st = st'\<lparr>kheap := kheap st'(t \<mapsto> blah)\<rparr> \<rbrakk>
+  "\<lbrakk> is_subject aag t; integrity aag X st s; st = st'\<lparr>kheap := (kheap st')(t \<mapsto> blah)\<rparr> \<rbrakk>
      \<Longrightarrow> integrity (aag :: 'a subject_label PAS) X st' s"
   apply (erule integrity_trans[rotated])
   apply (clarsimp simp: integrity_def opt_map_def integrity_asids_update_reference_state)

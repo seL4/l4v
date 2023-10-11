@@ -9,9 +9,9 @@
 
 theory MonadicRewrite
 imports
-  Monads.NonDetMonadVCG
+  Monads.Nondet_VCG
   Corres_UL
-  Monads.Empty_Fail
+  Monads.Nondet_Empty_Fail
   Rules_Tac
 begin
 
@@ -40,7 +40,7 @@ lemma monadic_rewrite_impossible:
   "monadic_rewrite F E \<bottom> f g"
   by (clarsimp simp: monadic_rewrite_def)
 
-lemma monadic_rewrite_guard_imp[wp_pre]:
+lemma monadic_rewrite_guard_imp:
   "\<lbrakk> monadic_rewrite F E Q f g; \<And>s. P s \<Longrightarrow> Q s \<rbrakk> \<Longrightarrow> monadic_rewrite F E P f g"
   by (auto simp add: monadic_rewrite_def)
 
@@ -146,17 +146,22 @@ lemma monadic_rewrite_bindE:
   apply (case_tac x; simp add: lift_def monadic_rewrite_refl)
   done
 
+(* in order to preserve bound names in the tail, bind_head must avoid eta on both sides *)
+lemma monadic_rewrite_bind_head:
+  "monadic_rewrite F E P f g \<Longrightarrow> monadic_rewrite F E P (f >>= h) (g >>= h)"
+  by (rule monadic_rewrite_bind[OF _ monadic_rewrite_refl hoare_vcg_prop,
+                                simplified pred_top_right_neutral])
+
+(* in order to preserve bound names in the tail, bindE_head must avoid eta on both sides *)
+lemma monadic_rewrite_bindE_head:
+  "monadic_rewrite F E P f g \<Longrightarrow> monadic_rewrite F E (P and (\<lambda>s. True)) (f >>=E h) (g >>=E h)"
+  by (rule monadic_rewrite_bindE[OF _ monadic_rewrite_refl hoare_vcg_propE_R])
+
 lemmas monadic_rewrite_bind_tail
   = monadic_rewrite_bind[OF monadic_rewrite_refl, simplified pred_top_left_neutral]
 
-lemmas monadic_rewrite_bind_head
-  = monadic_rewrite_bind[OF _ monadic_rewrite_refl hoare_vcg_prop, simplified pred_top_right_neutral]
-
 lemmas monadic_rewrite_bindE_tail
   = monadic_rewrite_bindE[OF monadic_rewrite_refl, simplified pred_top_left_neutral]
-
-lemmas monadic_rewrite_bindE_head
-    = monadic_rewrite_bindE[OF _ monadic_rewrite_refl hoare_vcg_propE_R]
 
 (* Same as monadic_rewrite_bind, but prove hoare triple over head of LHS instead of RHS. *)
 lemma monadic_rewrite_bind_l:
@@ -193,6 +198,36 @@ lemma monadic_rewrite_do_flip:
   apply (drule_tac h="\<lambda>(a, b). h a b" in monadic_rewrite_bind_head)
   apply (simp add: bind_assoc)
   done
+
+text \<open>control of lambda abstractions, bound variables and eta form\<close>
+
+(* Preserving bound names while iterating using bind*_tail-style rules is more complicated than
+   for a head-style binding:
+   we need an eta on the non-schematic side, and must not have an eta on the schematic side,
+   otherwise unification can't pick a side for name preservation automatically.
+   It therefore appears a generic name-preserving tail rule is not possible.
+   The following rules can eliminate an eta from either the LHS or RHS of a monadic_rewrite,
+   e.g. monadic_rewrite_bind_tail[THEN monadic_rewrite_bind_eta_r] will remove the RHS eta *)
+
+lemma monadic_rewrite_bind_eta_r:
+  "monadic_rewrite F E P f (do x <- g; h x od)
+   \<Longrightarrow> monadic_rewrite F E P f (g >>= h)"
+  by simp
+
+lemma monadic_rewrite_bind_eta_l:
+  "monadic_rewrite F E P (do x <- f; h x od) g
+   \<Longrightarrow> monadic_rewrite F E P (f >>= h) g"
+  by simp
+
+lemma monadic_rewrite_bindE_eta_r:
+  "monadic_rewrite F E P f (doE x <- g; h x odE)
+   \<Longrightarrow> monadic_rewrite F E P f (g >>=E h)"
+  by simp
+
+lemma monadic_rewrite_bindE_eta_l:
+  "monadic_rewrite F E P (doE x <- f; h x odE) g
+   \<Longrightarrow> monadic_rewrite F E P (f >>=E h) g"
+  by simp
 
 text \<open>catch\<close>
 
@@ -618,6 +653,13 @@ lemma monadic_rewrite_gets_the_gets:
   apply (auto simp: simpler_gets_def return_def)
   done
 
+lemma gets_oapply_liftM_rewrite:
+  "monadic_rewrite False True (\<lambda>s. f s p \<noteq> None)
+                   (gets (oapply p \<circ> f)) (liftM Some (gets_map f p))"
+  unfolding monadic_rewrite_def
+  by (simp add: liftM_def simpler_gets_def bind_def gets_map_def assert_opt_def return_def
+           split: option.splits)
+
 text \<open>Option cases\<close>
 
 lemma monadic_rewrite_case_option:
@@ -710,17 +752,27 @@ lemmas corres_gets_the_bind
 text \<open>Tool integration\<close>
 
 lemma wpc_helper_monadic_rewrite:
-  "monadic_rewrite F E Q' m m'
-   \<Longrightarrow> wpc_helper (P, P') (Q, {s. Q' s}) (monadic_rewrite F E (\<lambda>s. s \<in> P') m m')"
+  "monadic_rewrite F E Q m m'
+   \<Longrightarrow> wpc_helper (P, P', P'') (Q, Q', Q'') (monadic_rewrite F E P m m')"
   by (auto simp: wpc_helper_def elim!: monadic_rewrite_guard_imp)
 
 wpc_setup "\<lambda>m. monadic_rewrite F E Q' m m'" wpc_helper_monadic_rewrite
 wpc_setup "\<lambda>m. monadic_rewrite F E Q' (m >>= c) m'" wpc_helper_monadic_rewrite
+wpc_setup "\<lambda>m. monadic_rewrite F E Q' (m >>=E c) m'" wpc_helper_monadic_rewrite
 
 text \<open>Tactics\<close>
 
-method monadic_rewrite_step =
-  determ \<open>rule monadic_rewrite_bind_tail monadic_rewrite_bindE_tail\<close>
+named_theorems monadic_rewrite_pre
+declare monadic_rewrite_guard_imp[monadic_rewrite_pre]
+method monadic_rewrite_pre = (WP_Pre.pre_tac monadic_rewrite_pre)?
+
+lemmas monadic_rewrite_step_l =
+  monadic_rewrite_bind_tail[THEN monadic_rewrite_bind_eta_r]
+  monadic_rewrite_bindE_tail[THEN monadic_rewrite_bindE_eta_r]
+
+lemmas monadic_rewrite_step_r =
+  monadic_rewrite_bind_tail[THEN monadic_rewrite_bind_eta_l]
+  monadic_rewrite_bindE_tail[THEN monadic_rewrite_bindE_eta_l]
 
 method monadic_rewrite_solve_head methods m =
   (rule monadic_rewrite_bind_head monadic_rewrite_bindE_head)?,
@@ -756,15 +808,15 @@ method monadic_rewrite_single_pass methods start step action finalise =
 
 (* Step over LHS until action applies, then finalise. *)
 method monadic_rewrite_l_method methods action finalise =
-  monadic_rewrite_single_pass \<open>wp_pre, rule monadic_rewrite_trans\<close>
-                              monadic_rewrite_step
+  monadic_rewrite_single_pass \<open>monadic_rewrite_pre, rule monadic_rewrite_trans\<close>
+                              \<open>determ \<open>rule monadic_rewrite_step_l\<close>\<close>
                               action
                               finalise
 
 (* Step over RHS until action applies, then finalise. *)
 method monadic_rewrite_r_method methods action finalise =
-  monadic_rewrite_single_pass \<open>wp_pre, rule monadic_rewrite_trans[rotated]\<close>
-                              monadic_rewrite_step
+  monadic_rewrite_single_pass \<open>monadic_rewrite_pre, rule monadic_rewrite_trans[rotated]\<close>
+                              \<open>determ \<open>rule monadic_rewrite_step_r\<close>\<close>
                               action
                               finalise
 
@@ -783,7 +835,7 @@ method monadic_rewrite_symb_exec_resolutions methods m =
    conditions should be solvable by wpsimp, but the _m versions allow specifying a method or
    wpsimp options. *)
 method monadic_rewrite_symb_exec methods r m =
-  (wp_pre, no_name_eta, r; (monadic_rewrite_symb_exec_resolutions m)?)
+  (monadic_rewrite_pre, no_name_eta, r; (monadic_rewrite_symb_exec_resolutions m)?)
 
 ML \<open>
 structure Monadic_Rewrite = struct

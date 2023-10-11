@@ -566,7 +566,7 @@ lemma map_to_ko_at_updI':
    \<lbrakk> (projectKO_opt \<circ>\<^sub>m (ksPSpace s)) x = Some y;
      valid_pspace' s; ko_at' y' x' s;
      objBitsKO (injectKO y') = objBitsKO y''; x \<noteq> x' \<rbrakk> \<Longrightarrow>
-   ko_at' y x (s\<lparr>ksPSpace := ksPSpace s(x' \<mapsto> y'')\<rparr>)"
+   ko_at' y x (s\<lparr>ksPSpace := (ksPSpace s)(x' \<mapsto> y'')\<rparr>)"
   by (fastforce simp: obj_at'_def projectKOs objBitsKO_def ps_clear_upd
                dest: map_to_ko_atI)
 
@@ -677,7 +677,7 @@ lemma asUser_mapM_x:
   apply (rule bind_apply_cong [OF refl])+
   apply (clarsimp simp: in_monad dest!: fst_stateAssertD)
   apply (drule use_valid, rule mapM_wp', rule asUser.typ_at_lifts_all', assumption)
-  apply (simp add: stateAssert_def get_def NonDetMonad.bind_def)
+  apply (simp add: stateAssert_def get_def Nondet_Monad.bind_def)
   done
 
 lemma asUser_threadGet_tcbFault_comm:
@@ -877,7 +877,7 @@ lemma cteDeleteOne_sch_act_wf:
   apply (simp add: cteDeleteOne_def unless_when split_def)
   apply (simp add: finaliseCapTrue_standin_def Let_def)
   apply (wpsimp wp: isFinalCapability_inv cancelAllSignals_sch_act_wf
-                    cancelAllIPC_sch_act_wf getCTE_wp' static_imp_wp weak_if_wp'
+                    cancelAllIPC_sch_act_wf getCTE_wp' hoare_weak_lift_imp weak_if_wp'
               simp: Let_def)
   done
 
@@ -899,7 +899,7 @@ lemmas setNotification_tcb = set_ntfn'.obj_at_tcb'
 
 lemma state_refs_of'_upd:
   "\<lbrakk> valid_pspace' s; ko_wp_at' (\<lambda>ko. objBitsKO ko = objBitsKO ko') ptr s \<rbrakk> \<Longrightarrow>
-   state_refs_of' (s\<lparr>ksPSpace := ksPSpace s(ptr \<mapsto> ko')\<rparr>) =
+   state_refs_of' (s\<lparr>ksPSpace := (ksPSpace s)(ptr \<mapsto> ko')\<rparr>) =
    (state_refs_of' s)(ptr := refs_of' ko')"
   apply (rule ext)
   apply (clarsimp simp: ps_clear_upd valid_pspace'_def pspace_aligned'_def
@@ -1372,7 +1372,7 @@ lemma asUser_obj_at':
 lemma update_ep_map_to_ctes:
   fixes P :: "endpoint \<Rightarrow> bool"
   assumes at: "obj_at' P p s"
-  shows     "map_to_ctes (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_ctes (ksPSpace s)"
+  shows     "map_to_ctes ((ksPSpace s)(p \<mapsto> KOEndpoint ko)) = map_to_ctes (ksPSpace s)"
   using at
   by (auto elim!: obj_atE' intro!: map_to_ctes_upd_other map_comp_eqI
     simp: projectKOs projectKO_opts_defs split: kernel_object.splits if_split_asm)

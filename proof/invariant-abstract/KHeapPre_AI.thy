@@ -151,7 +151,7 @@ lemma get_tcb_at: "tcb_at t s \<Longrightarrow> (\<exists>tcb. get_tcb t s = Som
 
 lemma typ_at_same_type:
   assumes "typ_at T p s" "a_type k = a_type ko" "kheap s p' = Some ko"
-  shows "typ_at T p (s\<lparr>kheap := kheap s(p' \<mapsto> k)\<rparr>)"
+  shows "typ_at T p (s\<lparr>kheap := (kheap s)(p' \<mapsto> k)\<rparr>)"
   using assms
   by (clarsimp simp: obj_at_def)
 
@@ -163,12 +163,12 @@ lemma hoare_to_pure_kheap_upd:
   assumes typ_eq: "a_type k = a_type ko"
   assumes valid: "P (s :: ('z :: state_ext) state)"
   assumes at: "ko_at ko p s"
-  shows "P (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)"
+  shows "P (s\<lparr>kheap := (kheap s)(p \<mapsto> k)\<rparr>)"
   apply (rule use_valid[where f="
       do
         s' <- get;
         assert (s' = s);
-        (modify (\<lambda>s. s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>));
+        (modify (\<lambda>s. s\<lparr>kheap := (kheap s)(p \<mapsto> k)\<rparr>));
         return undefined
       od", OF _ hoare valid])
   apply (fastforce simp add: simpler_modify_def get_def bind_def
@@ -180,7 +180,7 @@ lemma hoare_to_pure_kheap_upd:
   by (auto simp add: obj_at_def a_type_def split: kernel_object.splits if_splits)
 
 lemma set_object_wp:
-  "\<lbrace>\<lambda>s. Q (s\<lparr> kheap := kheap s (p \<mapsto> v)\<rparr>) \<rbrace> set_object p v \<lbrace>\<lambda>_. Q\<rbrace>"
+  "\<lbrace>\<lambda>s. Q (s\<lparr> kheap := (kheap s) (p \<mapsto> v)\<rparr>) \<rbrace> set_object p v \<lbrace>\<lambda>_. Q\<rbrace>"
   apply (simp add: set_object_def get_object_def)
   apply wp
   apply blast

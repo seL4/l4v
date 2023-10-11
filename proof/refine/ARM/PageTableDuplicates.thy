@@ -1644,7 +1644,7 @@ lemma unmapPage_valid_duplicates'[wp]:
           in mapM_x_storePDE_update_helper[where sz = 6])
       apply wp+
      apply (clarsimp simp:conj_comms)
-     apply (wp checkMappingPPtr_inv static_imp_wp)+
+     apply (wp checkMappingPPtr_inv hoare_weak_lift_imp)+
    apply (clarsimp simp:conj_comms)
    apply (rule hoare_post_imp_R[where Q'= "\<lambda>r. pspace_aligned' and
      (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
@@ -2003,7 +2003,7 @@ lemma performArchInvocation_valid_duplicates':
    apply (clarsimp simp:cte_wp_at_ctes_of)
    apply (case_tac ctea,clarsimp)
    apply (frule(1) ctes_of_valid_cap'[OF _ invs_valid_objs'])
-   apply (wp static_imp_wp|simp)+
+   apply (wp hoare_weak_lift_imp|simp)+
        apply (simp add:placeNewObject_def)
        apply (wp |simp add:alignError_def unless_def|wpc)+
       apply (wp updateFreeIndex_pspace_no_overlap' hoare_drop_imp

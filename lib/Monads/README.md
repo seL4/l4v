@@ -33,7 +33,7 @@ The directory [`wp/`](./wp/) contains proof methods to reason about these monads
 in weakest-precondition style.
 
 [l4v]: https://github.com/seL4/l4v/
-[nondet]: ./NonDetMonad.thy
-[option]: ./OptionMonad.thy
-[trace]: ./TraceMonad.thy
+[nondet]: ./nondet/Nondet_Monad.thy
+[option]: ./reader_option/Reader_Option_Monad.thy
+[trace]: ./trace/Trace_Monad.thy
 [AutoCorres]: ../../tools/autocorres/

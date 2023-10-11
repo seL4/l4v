@@ -25,9 +25,9 @@ abbreviation
 
 (* FIXME: move *)
 lemma ccorres_return_into_rel:
-  "ccorres (\<lambda>rv rv'. r (f rv) rv') xf G G' hs a c
+  "ccorres (r \<circ> f) xf G G' hs a c
   \<Longrightarrow> ccorres r xf G G' hs (a >>= (\<lambda>rv. return (f rv))) c"
-  by (simp add: liftM_def[symmetric] o_def)
+  by (simp add: liftM_def[symmetric])
 
 lemma lookupCap_ccorres':
   "ccorres (lookup_failure_rel \<currency> ccap_relation) lookupCap_xf

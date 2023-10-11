@@ -47,7 +47,7 @@ lemma replyOnRestart_invs'[wp]:
   "\<lbrace>invs'\<rbrace> replyOnRestart thread reply isCall \<lbrace>\<lambda>rv. invs'\<rbrace>"
   including no_pre
   apply (simp add: replyOnRestart_def)
-  apply (wp setThreadState_nonqueued_state_update rfk_invs' static_imp_wp)
+  apply (wp setThreadState_nonqueued_state_update rfk_invs' hoare_weak_lift_imp)
   apply (rule hoare_vcg_all_lift)
   apply (wp setThreadState_nonqueued_state_update rfk_invs' hoare_vcg_all_lift rfk_ksQ)
    apply (rule hoare_strengthen_post, rule gts_sp')
@@ -289,7 +289,7 @@ lemma ccorres_invocationCatch_Inr:
            if reply = [] then liftE (replyOnRestart thread [] isCall) \<sqinter> returnOk ()
                          else liftE (replyOnRestart thread reply isCall)
        odE od) c"
-  apply (simp add: invocationCatch_def liftE_bindE o_xo_injector)
+  apply (simp add: invocationCatch_def liftE_bindE o_xo_injector cong: ccorres_all_cong)
   apply (subst ccorres_liftM_simp[symmetric])
   apply (simp add: liftM_def bind_assoc bindE_def)
   apply (rule_tac f="\<lambda>f. ccorres rvr xs P P' hs f c" for rvr xs in arg_cong)
@@ -631,7 +631,7 @@ lemma getMRs_tcbContext:
   apply (wp|wpc)+
     apply (rule_tac P="n < length x" in hoare_gen_asm)
     apply (clarsimp simp: nth_append)
-    apply (wp mapM_wp' static_imp_wp)+
+    apply (wp mapM_wp' hoare_weak_lift_imp)+
     apply simp
     apply (rule asUser_cur_obj_at')
     apply (simp add: getRegister_def msgRegisters_unfold)
@@ -755,11 +755,13 @@ lemma lookupIPCBuffer_ccorres[corres]:
      apply (rule ccorres_move_array_assertion_tcb_ctes
                  ccorres_move_c_guard_tcb_ctes)+
      apply (ctac (no_vcg))
+       apply (rename_tac bufferCap bufferCap')
        apply csymbr
-       apply (rule_tac b="isArchObjectCap rva \<and> isPageCap (capCap rva)" in ccorres_case_bools')
+       apply (rule_tac b="isArchObjectCap bufferCap \<and> isPageCap (capCap bufferCap)"
+                in ccorres_case_bools')
         apply simp
         apply (rule ccorres_symb_exec_r)
-          apply (rule_tac b="capVPSize (capCap rva) \<noteq> ARMSmallPage" in ccorres_case_bools')
+          apply (rule_tac b="capVPSize (capCap bufferCap) \<noteq> ARMSmallPage" in ccorres_case_bools')
            apply (rule ccorres_cond_true_seq)
            apply (rule ccorres_rhs_assoc)+
            apply csymbr
@@ -767,7 +769,7 @@ lemma lookupIPCBuffer_ccorres[corres]:
            apply (rule ccorres_cond_false_seq)
            apply (simp(no_asm))
            apply csymbr
-           apply (rule_tac b="isDeviceCap rva" in ccorres_case_bools')
+           apply (rule_tac b="isDeviceCap bufferCap" in ccorres_case_bools')
             apply (rule ccorres_cond_true_seq)
             apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
              apply vcg
@@ -821,7 +823,7 @@ lemma lookupIPCBuffer_ccorres[corres]:
           apply (rule ccorres_cond_false_seq)
           apply (simp(no_asm))
           apply csymbr
-            apply (rule_tac b="isDeviceCap rva" in ccorres_case_bools')
+            apply (rule_tac b="isDeviceCap bufferCap" in ccorres_case_bools')
              apply (rule ccorres_cond_true_seq)
              apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
               apply vcg
@@ -1049,7 +1051,7 @@ lemma getMRs_rel:
   getMRs thread buffer mi \<lbrace>\<lambda>args. getMRs_rel args buffer\<rbrace>"
   apply (simp add: getMRs_rel_def)
   apply (rule hoare_pre)
-   apply (rule_tac x=mi in hoare_vcg_exI)
+   apply (rule_tac x=mi in hoare_exI)
    apply wp
    apply (rule_tac Q="\<lambda>rv s. thread = ksCurThread s \<and> fst (getMRs thread buffer mi s) = {(rv,s)}" in hoare_strengthen_post)
     apply (wp det_result det_wp_getMRs)

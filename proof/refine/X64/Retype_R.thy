@@ -1520,7 +1520,7 @@ lemma retype_region_ext_modify_kheap_futz:
    apply (simp add: modify_def[symmetric])
 done
 
-lemmas retype_region_ext_modify_kheap_futz' = fun_cong[OF arg_cong[where f=NonDetMonad.bind, OF retype_region_ext_modify_kheap_futz[symmetric]], simplified bind_assoc]
+lemmas retype_region_ext_modify_kheap_futz' = fun_cong[OF arg_cong[where f=Nondet_Monad.bind, OF retype_region_ext_modify_kheap_futz[symmetric]], simplified bind_assoc]
 
 lemma foldr_upd_app_if_eta_futz:
   "foldr (\<lambda>p ps. ps(p \<mapsto> f p)) as = (\<lambda>g x. if x \<in> set as then Some (f x) else g x)"
@@ -2603,7 +2603,6 @@ lemma update_gs_ksMachineState_update_swap:
 
 declare hoare_in_monad_post[wp del]
 declare univ_get_wp[wp del]
-declare result_in_set_wp[wp del]
 
 crunch valid_arch_state'[wp]: copyGlobalMappings "valid_arch_state'"
   (wp: crunch_wps)
@@ -4555,7 +4554,7 @@ proof -
     apply (simp add: ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
     apply (rule hoare_pre)
     apply (wps a b c d)
-    apply (wp static_imp_wp e' hoare_vcg_disj_lift)
+    apply (wp hoare_weak_lift_imp e' hoare_vcg_disj_lift)
     apply (auto simp: obj_at'_def ct_in_state'_def projectKOs st_tcb_at'_def)
     done
 qed
@@ -5545,7 +5544,7 @@ lemma corres_retype_region_createNewCaps:
                            APIType_map2_def arch_default_cap_def)
     apply fastforce+
   \<comment> \<open>PML4\<close>
-  apply (corressimp corres: corres_retype[where ty="Inr PML4Object" and 'a=pml4e and sz=sz,
+  apply (corresKsimp corres: corres_retype[where ty="Inr PML4Object" and 'a=pml4e and sz=sz,
                                           simplified, folded retype_region2_retype_region_PML4Obj]
                    corresK: corresK_mapM_x_list_all2[where I="\<lambda>xs s. valid_arch_state s \<and> pspace_aligned s
                                                              \<and> valid_etcbs s \<and>

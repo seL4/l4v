@@ -312,7 +312,7 @@ lemma cteInsert_cte_wp_at:
     cteInsert cap src dest
    \<lbrace>\<lambda>uu. cte_wp_at' (\<lambda>c. P (cteCap c)) p\<rbrace>"
   apply (simp add: cteInsert_def)
-  apply (wp updateMDB_weak_cte_wp_at updateCap_cte_wp_at_cases getCTE_wp static_imp_wp
+  apply (wp updateMDB_weak_cte_wp_at updateCap_cte_wp_at_cases getCTE_wp hoare_weak_lift_imp
          | clarsimp simp: comp_def
          | unfold setUntypedCapAsFull_def)+
   apply (drule cte_at_cte_wp_atD)
@@ -356,7 +356,7 @@ lemma cteInsert_weak_cte_wp_at3:
             else cte_wp_at' (\<lambda>c. P (cteCap c)) p s\<rbrace>
     cteInsert cap src dest
    \<lbrace>\<lambda>uu. cte_wp_at' (\<lambda>c. P (cteCap c)) p\<rbrace>"
-  by (wp updateMDB_weak_cte_wp_at updateCap_cte_wp_at_cases getCTE_wp' static_imp_wp
+  by (wp updateMDB_weak_cte_wp_at updateCap_cte_wp_at_cases getCTE_wp' hoare_weak_lift_imp
          | clarsimp simp: comp_def cteInsert_def
          | unfold setUntypedCapAsFull_def
          | auto simp: cte_wp_at'_def dest!: imp)+
@@ -577,7 +577,7 @@ lemma cteInsert_cte_cap_to':
    apply (rule hoare_use_eq_irq_node' [OF cteInsert_ksInterruptState])
    apply (clarsimp simp:cteInsert_def)
     apply (wp hoare_vcg_ex_lift  updateMDB_weak_cte_wp_at updateCap_cte_wp_at_cases
-      setUntypedCapAsFull_cte_wp_at getCTE_wp static_imp_wp)
+      setUntypedCapAsFull_cte_wp_at getCTE_wp hoare_weak_lift_imp)
    apply (clarsimp simp:cte_wp_at_ctes_of)
    apply (rule_tac x = "cref" in exI)
      apply (rule conjI)
@@ -620,7 +620,7 @@ lemma cteInsert_weak_cte_wp_at2:
    apply (rule hoare_use_eq_irq_node' [OF cteInsert_ksInterruptState])
    apply (clarsimp simp:cteInsert_def)
     apply (wp hoare_vcg_ex_lift  updateMDB_weak_cte_wp_at updateCap_cte_wp_at_cases
-      setUntypedCapAsFull_cte_wp_at getCTE_wp static_imp_wp)
+      setUntypedCapAsFull_cte_wp_at getCTE_wp hoare_weak_lift_imp)
    apply (clarsimp simp:cte_wp_at_ctes_of weak)
    apply auto
   done
@@ -653,11 +653,11 @@ lemma transferCapsToSlots_presM:
    apply (wp eb hoare_vcg_const_Ball_lift hoare_vcg_const_imp_lift
            | assumption | wpc)+
      apply (rule cteInsert_assume_Null)
-     apply (wp x hoare_vcg_const_Ball_lift cteInsert_cte_cap_to' static_imp_wp)
+     apply (wp x hoare_vcg_const_Ball_lift cteInsert_cte_cap_to' hoare_weak_lift_imp)
        apply (rule cteInsert_weak_cte_wp_at2,clarsimp)
-      apply (wp hoare_vcg_const_Ball_lift static_imp_wp)+
+      apply (wp hoare_vcg_const_Ball_lift hoare_weak_lift_imp)+
        apply (rule cteInsert_weak_cte_wp_at2,clarsimp)
-      apply (wp hoare_vcg_const_Ball_lift cteInsert_cte_wp_at static_imp_wp
+      apply (wp hoare_vcg_const_Ball_lift cteInsert_cte_wp_at hoare_weak_lift_imp
           deriveCap_derived_foo)+
   apply (thin_tac "\<And>slots. PROP P slots" for P)
   apply (clarsimp simp: cte_wp_at_ctes_of remove_rights_def
@@ -1045,7 +1045,7 @@ lemma transferCaps_corres:
       apply (rule corres_rel_imp, rule transferCapsToSlots_corres,
              simp_all add: split_def)[1]
       apply (case_tac info, simp)
-     apply (wp hoare_vcg_all_lift get_rs_cte_at static_imp_wp
+     apply (wp hoare_vcg_all_lift get_rs_cte_at hoare_weak_lift_imp
                 | simp only: ball_conj_distrib)+
    apply (simp add: cte_map_def tcb_cnode_index_def split_def)
    apply (clarsimp simp: valid_pspace'_def valid_ipc_buffer_ptr'_def2
@@ -1416,7 +1416,7 @@ lemma doNormalTransfer_corres:
                       hoare_valid_ipc_buffer_ptr_typ_at' copyMRs_typ_at'
                       hoare_vcg_const_Ball_lift lookupExtraCaps_length
                     | simp add: if_apply_def2)+)
-     apply (wp static_imp_wp | strengthen valid_msg_length_strengthen)+
+     apply (wp hoare_weak_lift_imp | strengthen valid_msg_length_strengthen)+
    apply clarsimp
   apply auto
   done
@@ -2739,7 +2739,7 @@ context begin interpretation Arch . (*FIXME: arch_split*)
 crunches cancel_ipc
   for cur[wp]: "cur_tcb"
   and ntfn_at[wp]: "ntfn_at t"
-  (wp: select_wp crunch_wps simp: crunch_simps ignore: set_object)
+  (wp: crunch_wps simp: crunch_simps ignore: set_object)
 
 lemma valid_sched_weak_strg:
   "valid_sched s \<longrightarrow> weak_valid_sched_action s"
@@ -3592,7 +3592,7 @@ lemma possibleSwitchTo_ksQ':
      possibleSwitchTo t
    \<lbrace>\<lambda>_ s. t' \<notin> set (ksReadyQueues s p)\<rbrace>"
   apply (simp add: possibleSwitchTo_def curDomain_def bitmap_fun_defs inReleaseQueue_def)
-  apply (wp static_imp_wp rescheduleRequired_ksQ' tcbSchedEnqueue_ksQ threadGet_wp
+  apply (wp hoare_weak_lift_imp rescheduleRequired_ksQ' tcbSchedEnqueue_ksQ threadGet_wp
          | wpc
          | simp split del: if_split)+
   apply (auto simp: obj_at'_def)
@@ -5174,7 +5174,7 @@ lemma completeSignal_invs':
        apply (wpsimp wp: maybeDonateSc_invs')
       apply (clarsimp simp: obj_at'_def)
      apply (wpsimp wp: set_ntfn_minor_invs')
-    apply (wpsimp wp: hoare_vcg_ex_lift static_imp_wp simp: valid_ntfn'_def)
+    apply (wpsimp wp: hoare_vcg_ex_lift hoare_weak_lift_imp simp: valid_ntfn'_def)
    apply wpsimp
   apply clarsimp
   apply (intro conjI impI)

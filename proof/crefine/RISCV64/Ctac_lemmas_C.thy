@@ -23,7 +23,7 @@ lemma c_guard_abs_cte:
   apply (simp add: typ_heap_simps')
   done
 
-lemmas ccorres_move_c_guard_cte [corres_pre] = ccorres_move_c_guards  [OF c_guard_abs_cte]
+lemmas ccorres_move_c_guard_cte [ccorres_pre] = ccorres_move_c_guards  [OF c_guard_abs_cte]
 
 lemma c_guard_abs_tcb:
   fixes p :: "tcb_C ptr"
@@ -33,7 +33,7 @@ lemma c_guard_abs_tcb:
   apply simp
   done
 
-lemmas ccorres_move_c_guard_tcb [corres_pre] = ccorres_move_c_guards [OF c_guard_abs_tcb]
+lemmas ccorres_move_c_guard_tcb [ccorres_pre] = ccorres_move_c_guards [OF c_guard_abs_tcb]
 
 lemma cte_array_relation_array_assertion:
   "gsCNodes s p = Some n \<Longrightarrow> cte_array_relation s cstate
@@ -95,7 +95,7 @@ lemma array_assertion_abs_tcb_ctes_add':
 lemmas array_assertion_abs_tcb_ctes_add
   = array_assertion_abs_tcb_ctes_add'[simplified objBits_defs mask_def, simplified]
 
-lemmas ccorres_move_array_assertion_tcb_ctes [corres_pre]
+lemmas ccorres_move_array_assertion_tcb_ctes [ccorres_pre]
     = ccorres_move_array_assertions [OF array_assertion_abs_tcb_ctes(1)]
       ccorres_move_array_assertions [OF array_assertion_abs_tcb_ctes(2)]
       ccorres_move_Guard_Seq[OF array_assertion_abs_tcb_ctes_add]
@@ -118,7 +118,7 @@ lemma c_guard_abs_tcb_ctes':
   done
 
 lemmas c_guard_abs_tcb_ctes = c_guard_abs_tcb_ctes'[simplified objBits_defs mask_def, simplified]
-lemmas ccorres_move_c_guard_tcb_ctes [corres_pre] = ccorres_move_c_guards  [OF c_guard_abs_tcb_ctes]
+lemmas ccorres_move_c_guard_tcb_ctes [ccorres_pre] = ccorres_move_c_guards  [OF c_guard_abs_tcb_ctes]
 
 lemma c_guard_abs_pte:
   "\<forall>s s'. (s, s') \<in> rf_sr \<and> pte_at' (ptr_val p) s \<and> True

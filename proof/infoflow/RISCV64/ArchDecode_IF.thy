@@ -144,7 +144,7 @@ lemma decode_asid_control_invocation_reads_respects_f:
    apply (wp check_vp_wpR  reads_respects_f_inv'[OF get_asid_pool_rev]
              reads_respects_f_inv'[OF ensure_empty_rev]
              reads_respects_f_inv'[OF lookup_slot_for_cnode_op_rev]
-             reads_respects_f_inv'[OF ensure_no_children_rev] select_wp
+             reads_respects_f_inv'[OF ensure_no_children_rev]
              reads_respects_f_inv'[OF lookup_error_on_failure_rev]
               gets_apply_ev
              is_final_cap_reads_respects
@@ -193,7 +193,7 @@ lemma decode_frame_invocation_reads_respects_f:
               reads_respects_f_inv'[OF ensure_empty_rev]
               reads_respects_f_inv'[OF get_pte_rev]
               reads_respects_f_inv'[OF lookup_slot_for_cnode_op_rev]
-              reads_respects_f_inv'[OF ensure_no_children_rev] select_wp
+              reads_respects_f_inv'[OF ensure_no_children_rev]
               reads_respects_f_inv'[OF lookup_error_on_failure_rev]
               find_vspace_for_asid_reads_respects
               is_final_cap_reads_respects
@@ -254,7 +254,7 @@ lemma decode_page_table_invocation_reads_respects_f:
               reads_respects_f_inv'[OF ensure_empty_rev]
               reads_respects_f_inv'[OF get_pte_rev]
               reads_respects_f_inv'[OF lookup_slot_for_cnode_op_rev]
-              reads_respects_f_inv'[OF ensure_no_children_rev] select_wp
+              reads_respects_f_inv'[OF ensure_no_children_rev]
               reads_respects_f_inv'[OF lookup_error_on_failure_rev]
               find_vspace_for_asid_reads_respects
               is_final_cap_reads_respects

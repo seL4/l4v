@@ -39,7 +39,7 @@
 
     <set>
         <!-- Build Haskell kernel code. -->
-        <test name="HaskellKernel" cwd="haskell" cpu-timeout="3600">make</test>
+        <test name="HaskellKernel" cwd="haskell" cpu-timeout="3600">make $L4V_ARCH</test>
     </set>
 
 </testsuite>

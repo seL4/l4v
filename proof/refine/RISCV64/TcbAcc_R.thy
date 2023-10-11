@@ -11,7 +11,6 @@ begin
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 declare if_weak_cong [cong]
-declare result_in_set_wp[wp]
 declare hoare_in_monad_post[wp]
 declare trans_state_update'[symmetric,simp]
 declare storeWordUser_typ_at' [wp]
@@ -54,7 +53,7 @@ lemma isHighestPrio_def':
   "isHighestPrio d p = gets (\<lambda>s. ksReadyQueuesL1Bitmap s d = 0 \<or> lookupBitmapPriority d s \<le> p)"
   unfolding isHighestPrio_def bitmap_fun_defs getHighestPrio_def'
   apply (rule ext)
-  apply (clarsimp simp: gets_def bind_assoc return_def NonDetMonad.bind_def get_def
+  apply (clarsimp simp: gets_def bind_assoc return_def Nondet_Monad.bind_def get_def
                   split: if_splits)
   done
 
@@ -398,7 +397,7 @@ proof -
                           assert_opt_def simpler_gets_def set_object_def get_object_def
                           put_def get_def bind_def assert_def a_type_def[split_simps kernel_object.split arch_kernel_obj.split]
                    dest!: get_tcb_SomeD)
-    apply (subgoal_tac "kheap s(t \<mapsto> TCB tcb) = kheap s", simp)
+    apply (subgoal_tac "(kheap s)(t \<mapsto> TCB tcb) = kheap s", simp)
      apply (simp add: map_upd_triv get_tcb_SomeD)+
     done
   show ?thesis
@@ -2993,9 +2992,9 @@ lemma threadSet_queued_sch_act_wf[wp]:
               split: scheduler_action.split)
   apply (wp hoare_vcg_conj_lift)
    apply (simp add: threadSet_def)
-   apply (wp static_imp_wp)
+   apply (wp hoare_weak_lift_imp)
     apply wps
-    apply (wp static_imp_wp getObject_tcb_wp)+
+    apply (wp hoare_weak_lift_imp getObject_tcb_wp)+
    apply (clarsimp simp: obj_at'_def)
   apply (wp hoare_vcg_all_lift hoare_vcg_conj_lift hoare_convert_imp)+
    apply (simp add: threadSet_def)
@@ -4953,7 +4952,7 @@ lemma threadSet_tcbState_update_ct_not_inQ[wp]:
   apply (clarsimp)
   apply (rule hoare_conjI)
    apply (rule hoare_weaken_pre)
-   apply (wps, wp static_imp_wp)
+   apply (wps, wp hoare_weak_lift_imp)
    apply (wp OMG_getObject_tcb)+
    apply (clarsimp simp: comp_def)
   apply (wp hoare_drop_imp)
@@ -4973,7 +4972,7 @@ lemma threadSet_tcbBoundNotification_update_ct_not_inQ[wp]:
   apply (rule hoare_conjI)
    apply (rule hoare_weaken_pre)
    apply wps
-   apply (wp static_imp_wp)
+   apply (wp hoare_weak_lift_imp)
    apply (wp OMG_getObject_tcb)
    apply (clarsimp simp: comp_def)
   apply (wp hoare_drop_imp)

@@ -880,7 +880,7 @@ fun mk_call_tr ctxt grd Call formals pn pt actuals has_args cont =
           (lookup_comp ctxt [] name (Bound 1)) arg
       end;
 
-    val _ = if not (StateSpace.get_silent (Context.Proof ctxt)) andalso
+    val _ = if not (Config.get ctxt StateSpace.silent) andalso
                ((not fcall andalso length formals <> length actuals)
                  orelse
                 (fcall andalso length formals <> length actuals + 1))
@@ -932,7 +932,7 @@ fun mk_call_tr ctxt grd Call formals pn pt actuals has_args cont =
                 (case res_formals of
                   [(_, n)] => Abs ("s", dummyT, lookup_comp ctxt [] n (Bound 0))
                 | _ =>
-                    if StateSpace.get_silent (Context.Proof ctxt)
+                    if Config.get ctxt StateSpace.silent
                     then Abs ("s", dummyT, lookup_comp ctxt [] "dummy" (Bound 0))
                     else raise TERM ("call_tr: function " ^ pn ^ "may only have one result parameter", []));
             in Call $ init $ pt $ ret $ res $ c end)
@@ -999,7 +999,7 @@ fun gen_call_tr prfx dyn grd ctxt p actuals has_args cont =
       SOME formals =>
         mk_call_tr ctxt grd (Call dyn has_args cont) formals pn pt actuals has_args cont
     | NONE =>
-        if StateSpace.get_silent (Context.Proof ctxt)
+        if Config.get ctxt StateSpace.silent
         then mk_call_tr ctxt grd (Call dyn has_args cont) [] pn pt [] has_args cont
         else raise TERM ("gen_call_tr: procedure " ^ quote pn ^ " not defined", []))
   end;

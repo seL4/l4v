@@ -339,8 +339,7 @@ lemma asid_shiftr_low_bits_less[simplified]:
 lemma getActiveIRQ_neq_Some0x3FF':
   "\<lbrace>\<top>\<rbrace> getActiveIRQ in_kernel \<lbrace>\<lambda>rv s. rv \<noteq> Some 0x3FF\<rbrace>"
   apply (simp add: getActiveIRQ_def)
-  apply (wp alternative_wp select_wp)
-  apply simp
+  apply wpsimp
   done
 
 lemma getActiveIRQ_neq_Some0x3FF:

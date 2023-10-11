@@ -19,9 +19,10 @@ lemma do_user_op_if_integrity[Noninterference_assms]:
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: do_user_op_if_def)
   apply (wpsimp wp: dmo_user_memory_update_respects_Write dmo_device_update_respects_Write
-                    hoare_vcg_all_lift hoare_vcg_imp_lift)
+                    hoare_vcg_all_lift hoare_vcg_imp_lift
+            wp_del: select_wp)
              apply (rule hoare_pre_cont)
-            apply (wp select_wp | wpc | clarsimp)+
+            apply (wp | wpc | clarsimp)+
   apply (rule conjI)
    apply clarsimp
    apply (simp add: restrict_map_def ptable_lift_s_def ptable_rights_s_def split: if_splits)
@@ -39,12 +40,12 @@ lemma do_user_op_if_globals_equiv_scheduler[Noninterference_assms]:
    \<lbrace>\<lambda>_. globals_equiv_scheduler st\<rbrace>"
   apply (simp add: do_user_op_if_def)
   apply (wpsimp wp: dmo_user_memory_update_globals_equiv_scheduler
-                    dmo_device_memory_update_globals_equiv_scheduler select_wp)+
+                    dmo_device_memory_update_globals_equiv_scheduler)+
   apply (auto simp: ptable_lift_s_def ptable_rights_s_def)
   done
 
 crunch silc_dom_equiv[Noninterference_assms, wp]: do_user_op_if "silc_dom_equiv aag st"
-  (ignore: do_machine_op user_memory_update wp: crunch_wps select_wp)
+  (ignore: do_machine_op user_memory_update wp: crunch_wps)
 
 lemma sameFor_scheduler_affects_equiv[Noninterference_assms]:
   "\<lbrakk> (s,s') \<in> same_for aag PSched; (s,s') \<in> same_for aag (Partition l);
@@ -93,7 +94,7 @@ lemma arch_globals_equiv_strengthener_thread_independent[Noninterference_assms]:
 
 lemma integrity_asids_update_reference_state[Noninterference_assms]:
    "is_subject aag t
-    \<Longrightarrow> integrity_asids aag {pasSubject aag} x a s (s\<lparr>kheap := kheap s(t \<mapsto> blah)\<rparr>)"
+    \<Longrightarrow> integrity_asids aag {pasSubject aag} x a s (s\<lparr>kheap := (kheap s)(t \<mapsto> blah)\<rparr>)"
   by (clarsimp simp: opt_map_def)
 
 lemma inte_obj_arch:
@@ -352,7 +353,7 @@ lemma getActiveIRQ_ret_no_dmo[Noninterference_assms, wp]:
   apply (simp add: getActiveIRQ_def)
   apply (rule hoare_pre)
    apply (insert irq_oracle_max_irq)
-   apply (wp alternative_wp select_wp dmo_getActiveIRQ_irq_masks)
+   apply (wp dmo_getActiveIRQ_irq_masks)
   apply clarsimp
   done
 

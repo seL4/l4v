@@ -1061,8 +1061,8 @@ lemma setEndpoint_corres [corres]:
   corres dc (ep_at ptr) (ep_at' ptr)
             (set_endpoint ptr e) (setEndpoint ptr e')"
   apply (simp add: set_simple_ko_def setEndpoint_def is_ep_def[symmetric])
-    apply (corres_search search: setObject_other_corres[where P="\<lambda>_. True"])
-  apply (corressimp wp: get_object_ret get_object_wp)+
+    apply (corresK_search search: setObject_other_corres[where P="\<lambda>_. True"])
+  apply (corresKsimp wp: get_object_ret get_object_wp)+
   by (fastforce simp: is_ep obj_at_simps objBits_defs partial_inv_def)
 
 lemma setNotification_corres [corres]:
@@ -1070,8 +1070,8 @@ lemma setNotification_corres [corres]:
   corres dc (ntfn_at ptr) (ntfn_at' ptr)
             (set_notification ptr ae) (setNotification ptr ae')"
   apply (simp add: set_simple_ko_def setNotification_def is_ntfn_def[symmetric])
-       apply (corres_search search: setObject_other_corres[where P="\<lambda>_. True"])
-  apply (corressimp wp: get_object_ret get_object_wp)+
+       apply (corresK_search search: setObject_other_corres[where P="\<lambda>_. True"])
+  apply (corresKsimp wp: get_object_ret get_object_wp)+
   by (fastforce simp: is_ntfn obj_at_simps objBits_defs partial_inv_def)
 
 lemma no_fail_getNotification [wp]:
@@ -2262,21 +2262,21 @@ lemma valid_globals_cte_wpD':
 lemma dmo_aligned'[wp]:
   "\<lbrace>pspace_aligned'\<rbrace> doMachineOp f \<lbrace>\<lambda>_. pspace_aligned'\<rbrace>"
   apply (simp add: doMachineOp_def split_def)
-  apply (wp select_wp)
+  apply wp
   apply clarsimp
   done
 
 lemma dmo_distinct'[wp]:
   "\<lbrace>pspace_distinct'\<rbrace> doMachineOp f \<lbrace>\<lambda>_. pspace_distinct'\<rbrace>"
   apply (simp add: doMachineOp_def split_def)
-  apply (wp select_wp)
+  apply wp
   apply clarsimp
   done
 
 lemma dmo_valid_objs'[wp]:
   "\<lbrace>valid_objs'\<rbrace> doMachineOp f \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   apply (simp add: doMachineOp_def split_def)
-  apply (wp select_wp)
+  apply wp
   apply clarsimp
   done
 
@@ -2284,7 +2284,7 @@ lemma dmo_inv':
   assumes R: "\<And>P. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>"
   shows "\<lbrace>P\<rbrace> doMachineOp f \<lbrace>\<lambda>_. P\<rbrace>"
   apply (simp add: doMachineOp_def split_def)
-  apply (wp select_wp)
+  apply wp
   apply clarsimp
   apply (drule in_inv_by_hoareD [OF R])
   apply simp

@@ -647,8 +647,7 @@ lemma set_cap_slots_holding_overlapping_caps_helper:
      obj_refs cap = {} \<longrightarrow> cap_irqs cap \<noteq> {};
      ko_at (TCB tcb) (fst slot) s; tcb_cap_cases (snd slot) = Some (getF, setF, blah) \<rbrakk>
      \<Longrightarrow> x \<in> slots_holding_overlapping_caps cap
-               (s\<lparr>kheap := kheap s(fst slot \<mapsto>
-                    TCB (setF (\<lambda> x. capa) tcb))\<rparr>)"
+               (s\<lparr>kheap := (kheap s)(fst slot \<mapsto> TCB (setF (\<lambda>x. capa) tcb))\<rparr>)"
   apply (clarsimp simp: slots_holding_overlapping_caps_def)
   apply (rule_tac x=cap' in exI)
   apply (clarsimp simp: get_cap_cte_wp_at')
@@ -741,7 +740,7 @@ lemma set_cap_silc_inv:
   apply (rule equiv_forI)
   apply (erule use_valid)
   unfolding set_cap_def
-  apply (wp set_object_wp get_object_wp static_imp_wp | simp add: split_def | wpc)+
+  apply (wp set_object_wp get_object_wp hoare_weak_lift_imp | simp add: split_def | wpc)+
   apply clarsimp
   apply (rule conjI)
    apply fastforce
@@ -919,7 +918,7 @@ lemma cap_swap_silc_inv:
   apply (rule hoare_gen_asm)
   unfolding cap_swap_def
   apply (rule hoare_pre)
-  apply (wp set_cap_silc_inv hoare_vcg_ex_lift static_imp_wp
+  apply (wp set_cap_silc_inv hoare_vcg_ex_lift hoare_weak_lift_imp
             set_cap_slots_holding_overlapping_caps_other[where aag=aag] set_cdt_silc_inv
         | simp  split del: if_split)+
   apply (rule conjI)
@@ -955,7 +954,7 @@ lemma cap_move_silc_inv:
   apply (rule hoare_pre)
   apply (wp set_cap_silc_inv hoare_vcg_ex_lift
             set_cap_slots_holding_overlapping_caps_other[where aag=aag]
-            set_cdt_silc_inv static_imp_wp
+            set_cdt_silc_inv hoare_weak_lift_imp
         | simp)+
   apply (rule conjI)
    apply (fastforce simp: cap_points_to_label_def)
@@ -985,7 +984,7 @@ lemma cap_insert_silc_inv:
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding cap_insert_def
   (* The order here matters. The first two need to be first. *)
-  apply (wp assert_wp static_imp_conj_wp set_cap_silc_inv hoare_vcg_ex_lift
+  apply (wp assert_wp hoare_weak_lift_imp_conj set_cap_silc_inv hoare_vcg_ex_lift
             set_untyped_cap_as_full_slots_holding_overlapping_caps_other[where aag=aag]
             get_cap_wp update_cdt_silc_inv | simp | wp (once) hoare_drop_imps)+
   apply clarsimp
@@ -1208,9 +1207,9 @@ lemma reply_cancel_ipc_silc_inv:
    reply_cancel_ipc t
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding reply_cancel_ipc_def
-  apply (wp cap_delete_one_silc_inv select_wp hoare_vcg_if_lift | simp)+
+  apply (wp cap_delete_one_silc_inv hoare_vcg_if_lift | simp)+
    apply wps
-   apply (wp static_imp_wp hoare_vcg_all_lift hoare_vcg_ball_lift)
+   apply (wp hoare_weak_lift_imp hoare_vcg_all_lift hoare_vcg_ball_lift)
   apply clarsimp
   apply (rename_tac b a)
   apply (frule(1) descendants_of_owned_or_transferable, force, force, elim disjE)
@@ -1569,7 +1568,7 @@ lemma rec_del_silc_inv':
                     valid_validE_R[OF rec_del_respects(2)[simplified]] "2.hyps"
                     drop_spec_validE[OF liftE_wp] set_cap_silc_inv
                     set_cap_pas_refined replace_cap_invs  final_cap_same_objrefs set_cap_cte_cap_wp_to
-                    set_cap_cte_wp_at static_imp_wp hoare_vcg_ball_lift
+                    set_cap_cte_wp_at hoare_weak_lift_imp hoare_vcg_ball_lift
                  | simp add: finalise_cap_not_reply_master_unlifted split del: if_split)+
        (* where the action is *)
        apply (simp cong: conj_cong add: conj_comms)
@@ -1608,7 +1607,7 @@ lemma rec_del_silc_inv':
                  finalise_cap_invs[where slot=slot]
                  finalise_cap_replaceable[where sl=slot]
                  finalise_cap_makes_halted[where slot=slot]
-                 finalise_cap_auth' static_imp_wp)
+                 finalise_cap_auth' hoare_weak_lift_imp)
 
       apply (wp drop_spec_validE[OF liftE_wp] get_cap_auth_wp[where aag=aag]
              | simp add: is_final_cap_def)+
@@ -1719,7 +1718,7 @@ lemma rec_del_silc_inv_CTEDelete_transferable':
    apply (wp rec_del_silc_inv_not_transferable)
    apply simp
   apply (subst rec_del.simps[abs_def])
-  apply (wp add: hoare_K_bind without_preemption_wp empty_slot_silc_inv static_imp_wp wp_transferable
+  apply (wp add: hoare_K_bind without_preemption_wp empty_slot_silc_inv hoare_weak_lift_imp wp_transferable
                  rec_del_Finalise_transferable
             del: wp_not_transferable
          | wpc)+
@@ -1773,7 +1772,7 @@ lemma cap_revoke_silc_inv':
            apply (rule spec_valid_conj_liftE1, (wp | simp)+)
            apply (rule drop_spec_validE[OF valid_validE[OF cap_delete_silc_inv]])
           apply (wp drop_spec_validE[OF assertE_wp] drop_spec_validE[OF without_preemption_wp]
-                    get_cap_wp select_wp drop_spec_validE[OF returnOk_wp])+
+                    get_cap_wp drop_spec_validE[OF returnOk_wp])+
     apply clarsimp
     apply (clarsimp cong: conj_cong simp: conj_comms)
     apply (rule conjI)
@@ -2161,7 +2160,7 @@ lemma cap_insert_silc_inv':
   apply (wp set_cap_silc_inv hoare_vcg_ex_lift
             set_untyped_cap_as_full_slots_holding_overlapping_caps_other[where aag=aag]
             get_cap_wp update_cdt_silc_inv set_cap_caps_of_state2
-            set_untyped_cap_as_full_cdt_is_original_cap static_imp_wp
+            set_untyped_cap_as_full_cdt_is_original_cap hoare_weak_lift_imp
          | simp split del: if_split)+
   apply (intro allI impI conjI)
     apply clarsimp
@@ -2284,7 +2283,7 @@ lemma cap_insert_silc_inv''':
   apply (wp set_cap_silc_inv hoare_vcg_ex_lift
             set_untyped_cap_as_full_slots_holding_overlapping_caps_other[where aag=aag]
             get_cap_wp update_cdt_silc_inv set_cap_caps_of_state2
-            set_untyped_cap_as_full_cdt_is_original_cap static_imp_wp
+            set_untyped_cap_as_full_cdt_is_original_cap hoare_weak_lift_imp
          | simp split del: if_split)+
   apply (intro impI conjI allI)
     apply clarsimp
@@ -2321,7 +2320,7 @@ lemma invoke_irq_handler_silc_inv:
   apply (rule hoare_gen_asm)
   apply (case_tac hi)
     apply (wp cap_insert_silc_inv'' cap_delete_one_silc_inv_subject cap_delete_one_cte_wp_at_other
-              static_imp_wp hoare_vcg_ex_lift
+              hoare_weak_lift_imp hoare_vcg_ex_lift
               slots_holding_overlapping_caps_from_silc_inv[where aag=aag and st=st]
            | simp add: authorised_irq_hdl_inv_def get_irq_slot_def conj_comms)+
    apply (clarsimp simp: pas_refined_def irq_map_wellformed_aux_def)
@@ -2489,7 +2488,7 @@ lemma send_ipc_silc_inv:
      send_ipc block call badge can_grant can_grant_reply thread epptr
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding send_ipc_def
-  apply (wp setup_caller_cap_silc_inv static_imp_wp do_ipc_transfer_silc_inv gts_wp
+  apply (wp setup_caller_cap_silc_inv hoare_weak_lift_imp do_ipc_transfer_silc_inv gts_wp
         | wpc
         | simp add:st_tcb_at_tcb_states_of_state_eq
         | rule conjI impI
@@ -2544,7 +2543,7 @@ lemma receive_ipc_base_silc_inv:
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   apply (clarsimp simp: thread_get_def get_thread_state_def cong: endpoint.case_cong)
   apply (rule hoare_pre)
-   apply (wp setup_caller_cap_silc_inv static_imp_wp do_ipc_transfer_silc_inv
+   apply (wp setup_caller_cap_silc_inv hoare_weak_lift_imp do_ipc_transfer_silc_inv
          | wpc | simp split del: if_split)+
      apply (wp  hoare_vcg_all_lift hoare_vcg_imp_lift  set_simple_ko_get_tcb
            | wpc | simp split del: if_split)+
@@ -2632,7 +2631,7 @@ lemma setup_reply_master_silc_inv:
   unfolding setup_reply_master_def
   apply (wp set_cap_silc_inv hoare_vcg_ex_lift
             slots_holding_overlapping_caps_from_silc_inv[where aag=aag and st=st and P="\<top>"]
-            get_cap_wp static_imp_wp
+            get_cap_wp hoare_weak_lift_imp
          | simp)+
   apply (clarsimp simp: cap_points_to_label_def silc_inv_def)
   done
@@ -2856,7 +2855,7 @@ lemma handle_event_silc_inv:
 crunch silc_inv[wp]: activate_thread "silc_inv aag st"
 
 crunch silc_inv[wp]: schedule "silc_inv aag st"
-  (    wp: alternative_wp OR_choice_weak_wp select_wp crunch_wps
+  (    wp: OR_choice_weak_wp crunch_wps
    ignore: set_scheduler_action
      simp: crunch_simps)
 

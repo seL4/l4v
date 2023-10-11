@@ -1755,7 +1755,7 @@ next
     apply (simp add: simpl_sequence_Cons sequenceE_Cons)
     apply (rule ccorres_guard_imp2)
      apply (rule ccorres_splitE)
-         apply (simp add: inl_rrel_inl_rrel)
+         apply simp
          apply (rule Cons.prems(1)[where zs=Nil, simplified])
         apply (rule ceqv_refl)
        apply (simp add: liftME_def[symmetric] liftME_liftM)
@@ -1809,7 +1809,7 @@ lemma mapME_x_simpl_sequence_fun_related:
         clarsimp elim!: inl_inrE)
   apply (erule_tac x="length zs" in meta_allE
        | erule_tac x="xs ! length zs" in meta_allE)+
-  apply (simp add: dc_def)
+  apply (simp add: dc_def cong: ccorres_all_cong)
   done
 
 lemmas mapME_x_simpl_sequence_same
@@ -1818,8 +1818,8 @@ lemmas mapME_x_simpl_sequence_same
 lemmas call_ignore_cong = refl[of "call i f g r" for i f g r]
 
 (* These could be done with ML patterns, but this fits in better with tactics *)
-lemmas match_valid = trivial[of "NonDetMonadVCG.valid P a P'" for P a P']
-lemmas match_validE = trivial[of "NonDetMonadVCG.validE P a P' P''" for P a P' P'']
+lemmas match_valid = trivial[of "Nondet_VCG.valid P a P'" for P a P']
+lemmas match_validE = trivial[of "Nondet_VCG.validE P a P' P''" for P a P' P'']
 lemmas match_hoare = trivial[of "HoarePartialDef.hoarep G T F P C P' A" for G T F P C P' A]
 lemmas match_all_hoare = trivial[of "\<forall>x. HoarePartialDef.hoarep G T F (P x) C (P' x) (A x)" for G T F P C P' A]
 lemmas match_xpres = trivial[of "xpres xf v \<Gamma> c" for xf v \<Gamma> c]
@@ -1858,11 +1858,10 @@ method_setup ctac_print_xf = \<open>CtacImpl.corres_print_xf\<close>
   "Print out what ctac thinks is the current xf"
 
 (* Set up wpc *)
-lemma
-  wpc_helper_ccorres_final:
-  "ccorres_underlying sr G rv xf arrel axf Q Q' hs f f'
-   \<Longrightarrow> wpc_helper (P, P') (Q, Q')
-                  (ccorres_underlying sr G rv xf arrel axf P P' hs f f')"
+lemma wpc_helper_ccorres_final:
+  "ccorres_underlying sr G rv xf arrel axf Q Q'' hs f f'
+   \<Longrightarrow> wpc_helper (P, P', P'') (Q, Q', Q'')
+                  (ccorres_underlying sr G rv xf arrel axf P P'' hs f f')"
   apply (clarsimp simp: wpc_helper_def)
   apply (erule ccorres_guard_imp)
    apply auto
@@ -1870,14 +1869,15 @@ lemma
 
 wpc_setup "\<lambda>m. ccorres_underlying sr G rv xf arrel axf P P' hs m conc" wpc_helper_ccorres_final
 wpc_setup "\<lambda>m. ccorres_underlying sr G rv xf arrel axf P P' hs (m >>= a) conc" wpc_helper_ccorres_final
+wpc_setup "\<lambda>m. ccorres_underlying sr G rv xf arrel axf P P' hs (m >>=E a) conc" wpc_helper_ccorres_final
 
 context kernel
 begin
 
 (* Set up ctac proof sets.  These are tried in reverse order (further down is tried first) *)
 
-declare ccorres_Guard [corres_pre]
-declare ccorres_Guard_Seq [corres_pre]
+declare ccorres_Guard [ccorres_pre]
+declare ccorres_Guard_Seq [ccorres_pre]
 
 lemma c_guard_field_abs:
   fixes p :: "'a :: mem_type ptr"
@@ -2031,6 +2031,7 @@ fun tac ctxt =
         ORELSE (resolve_tac ctxt [@{thm xpresI}] THEN' simp_tac (ctxt |> Splitter.del_split @{thm "if_split"})) 1
     ))
   THEN simp_tac (put_simpset HOL_basic_ss ctxt addsimps @{thms com.case}) 1
+  THEN no_name_eta_tac ctxt
 \<close>
 
 end

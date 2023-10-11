@@ -201,7 +201,7 @@ lemma is_derived_is_cap:
 
 lemma vs_lookup_pages_non_aobj_upd:
   "\<lbrakk> kheap s p = Some ko; \<not> is_ArchObj ko; \<not> is_ArchObj ko' \<rbrakk>
-   \<Longrightarrow> vs_lookup_pages (s\<lparr>kheap := kheap s(p \<mapsto> ko')\<rparr>) = vs_lookup_pages s"
+   \<Longrightarrow> vs_lookup_pages (s\<lparr>kheap := (kheap s)(p \<mapsto> ko')\<rparr>) = vs_lookup_pages s"
   unfolding vs_lookup_target_def vs_lookup_slot_def
   apply (frule aobjs_of_non_aobj_upd[where ko'=ko'], simp+)
   apply (rule ext)+
@@ -216,7 +216,7 @@ lemma vs_lookup_pages_non_aobj_upd:
 
 lemma vs_lookup_target_non_aobj_upd:
   "\<lbrakk> kheap s p = Some ko; \<not> is_ArchObj ko; \<not> is_ArchObj ko' \<rbrakk>
-   \<Longrightarrow> vs_lookup_target level asid vref (s\<lparr>kheap := kheap s(p \<mapsto> ko')\<rparr>)
+   \<Longrightarrow> vs_lookup_target level asid vref (s\<lparr>kheap := (kheap s)(p \<mapsto> ko')\<rparr>)
       = vs_lookup_target level asid vref s"
   by (drule vs_lookup_pages_non_aobj_upd[where ko'=ko'], auto dest: fun_cong)
 

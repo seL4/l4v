@@ -3741,8 +3741,7 @@ lemma real_cte_at_typ_valid:
 lemma dmo_aligned[wp]:
   "do_machine_op f \<lbrace>pspace_aligned\<rbrace>"
   apply (simp add: do_machine_op_def split_def)
-  apply (wp select_wp)
-  apply (clarsimp simp: pspace_aligned_def)
+  apply wpsimp
   done
 
 lemma cte_wp_at_eqD2:
@@ -4671,6 +4670,10 @@ lemma cur_sc_tcb_sc_at_cur_sc:
                     simp: cur_sc_tcb_def sc_at_pred_n_def obj_at_def is_sc_obj_def)
   done
 
+lemma invs_pspace_in_kernel_window[elim!]:
+  "invs s \<Longrightarrow> pspace_in_kernel_window s"
+  by (simp add: invs_def valid_state_def)
+
 lemmas invs_implies =
   invs_equal_kernel_mappings
   invs_arch_state
@@ -4694,6 +4697,7 @@ lemmas invs_implies =
   invs_hyp_sym_refs
   invs_sym_refs
   tcb_at_invs
+  invs_pspace_in_kernel_window
 
 (* Pull invs out of a complex goal and prove it only once. Use as (strengthen invs_strengthen)+,
    best in combination with simp and potentially conj_cong. *)

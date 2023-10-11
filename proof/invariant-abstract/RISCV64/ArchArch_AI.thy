@@ -442,7 +442,7 @@ context Arch begin global_naming RISCV64
 
 lemma valid_arch_state_strg:
   "valid_arch_state s \<and> ap \<notin> ran (asid_table s) \<and> asid_pool_at ap s \<longrightarrow>
-   valid_arch_state (s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := riscv_asid_table (arch_state s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
+   valid_arch_state (s\<lparr>arch_state := arch_state s\<lparr>riscv_asid_table := (asid_table s)(asid \<mapsto> ap)\<rparr>\<rparr>)"
   apply (clarsimp simp: valid_arch_state_def)
   apply (clarsimp simp: valid_asid_table_def ran_def)
   apply (fastforce intro!: inj_on_fun_updI simp: asid_pools_at_eq)
@@ -467,7 +467,7 @@ lemma valid_asid_pool_caps_upd_strg:
    (\<exists>ptr cap. caps_of_state s ptr = Some cap
      \<and> obj_refs cap = {ap} \<and> vs_cap_ref cap = Some (ucast asid << asid_low_bits, 0))
    \<longrightarrow>
-   valid_asid_pool_caps_2 (caps_of_state s) (asid_table s(asid \<mapsto> ap))"
+   valid_asid_pool_caps_2 (caps_of_state s) ((asid_table s)(asid \<mapsto> ap))"
   apply clarsimp
   apply (prop_tac "asid_update ap asid s", (unfold_locales; assumption))
   apply (fastforce dest: asid_update.valid_asid_pool_caps')
@@ -561,7 +561,7 @@ lemma cap_insert_simple_arch_caps_ap:
      and K (cap = ArchObjectCap (ASIDPoolCap ap asid) \<and> is_aligned asid asid_low_bits) \<rbrace>
      cap_insert cap src dest
    \<lbrace>\<lambda>rv s. valid_arch_caps (s\<lparr>arch_state := arch_state s
-                       \<lparr>riscv_asid_table := riscv_asid_table (arch_state s)(asid_high_bits_of asid \<mapsto> ap)\<rparr>\<rparr>)\<rbrace>"
+                       \<lparr>riscv_asid_table := (asid_table s)(asid_high_bits_of asid \<mapsto> ap)\<rparr>\<rparr>)\<rbrace>"
   apply (simp add: cap_insert_def update_cdt_def set_cdt_def valid_arch_caps_def
                    set_untyped_cap_as_full_def bind_assoc)
   apply (strengthen valid_vs_lookup_at_upd_strg valid_asid_pool_caps_upd_strg)
@@ -574,7 +574,7 @@ lemma cap_insert_simple_arch_caps_ap:
                  hoare_vcg_disj_lift set_cap_reachable_pg_cap set_cap.vs_lookup_pages
               | clarsimp)+
       apply (wp set_cap_arch_obj set_cap_valid_table_caps hoare_vcg_ball_lift
-                get_cap_wp static_imp_wp)+
+                get_cap_wp hoare_weak_lift_imp)+
   apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps)
   apply (rule conjI)
    apply (clarsimp simp: vs_cap_ref_def)
@@ -653,7 +653,7 @@ lemma cap_insert_ap_invs:
         asid_table s (asid_high_bits_of asid) = None)\<rbrace>
   cap_insert cap src dest
   \<lbrace>\<lambda>rv s. invs (s\<lparr>arch_state := arch_state s
-                       \<lparr>riscv_asid_table := (riscv_asid_table \<circ> arch_state) s(asid_high_bits_of asid \<mapsto> ap)\<rparr>\<rparr>)\<rbrace>"
+                       \<lparr>riscv_asid_table := ((riscv_asid_table \<circ> arch_state) s)(asid_high_bits_of asid \<mapsto> ap)\<rparr>\<rparr>)\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (strengthen valid_arch_state_strg valid_vspace_objs_asid_upd_strg
                     equal_kernel_mappings_asid_upd_strg valid_asid_map_asid_upd_strg
@@ -813,11 +813,11 @@ proof -
         \<lbrace>\<lambda>rv s.
            invs
              (s\<lparr>arch_state := arch_state s
-                 \<lparr>riscv_asid_table := (riscv_asid_table \<circ> arch_state) s
+                 \<lparr>riscv_asid_table := ((riscv_asid_table \<circ> arch_state) s)
                     (asid_high_bits_of asid \<mapsto> ap)\<rparr>\<rparr>) \<and>
            Q
              (s\<lparr>arch_state := arch_state s
-                 \<lparr>riscv_asid_table := (riscv_asid_table \<circ> arch_state) s
+                 \<lparr>riscv_asid_table := ((riscv_asid_table \<circ> arch_state) s)
                     (asid_high_bits_of asid \<mapsto> ap)\<rparr>\<rparr>)\<rbrace>"
     apply (wp cap_insert_ap_invs)
      apply simp
@@ -1012,7 +1012,7 @@ crunch_ignore (add: select_ext find_vspace_for_asid)
 
 
 crunch inv [wp]: arch_decode_invocation "P"
-  (wp: crunch_wps select_wp select_ext_weak_wp simp: crunch_simps)
+  (wp: crunch_wps select_ext_weak_wp simp: crunch_simps)
 
 
 declare lookup_slot_for_cnode_op_cap_to [wp]
@@ -1285,7 +1285,7 @@ lemma decode_asid_control_invocation_wf[wp]:
            apply (simp add: lookup_target_slot_def)
            apply wp
           apply (clarsimp simp: cte_wp_at_def)
-         apply (wpsimp wp: ensure_no_children_sp select_ext_weak_wp select_wp whenE_throwError_wp)+
+         apply (wpsimp wp: ensure_no_children_sp select_ext_weak_wp whenE_throwError_wp)+
   apply (rule conjI, fastforce)
   apply (cases excaps, simp)
   apply (case_tac list, simp)

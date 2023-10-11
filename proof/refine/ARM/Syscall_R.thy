@@ -339,7 +339,7 @@ lemma threadSet_tcbDomain_update_sch_act_wf[wp]:
     apply (simp add: threadSet_def)
     apply wp
      apply (wps set_tcb'.ksSchedulerAction)
-     apply (wp static_imp_wp getObject_tcb_wp hoare_vcg_all_lift)+
+     apply (wp hoare_weak_lift_imp getObject_tcb_wp hoare_vcg_all_lift)+
    apply (rename_tac word)
    apply (rule_tac Q="\<lambda>_ s. ksSchedulerAction s = SwitchToThread word \<longrightarrow>
                             st_tcb_at' runnable' word s \<and> tcb_in_cur_domain' word s \<and> word \<noteq> t"
@@ -674,7 +674,7 @@ proof -
          apply (rule hoare_weaken_pre [OF cteInsert_weak_cte_wp_at3])
          apply (rule PUC,simp)
          apply (clarsimp simp: cte_wp_at_ctes_of)
-        apply (wp hoare_vcg_all_lift static_imp_wp | simp add:ball_conj_distrib)+
+        apply (wp hoare_vcg_all_lift hoare_weak_lift_imp | simp add:ball_conj_distrib)+
     done
 qed
 
@@ -1429,7 +1429,7 @@ lemma hinv_invs'[wp]:
   apply (rule validE_valid)
   apply (intro hoare_vcg_seqE[OF _ stateAssertE_sp])
   apply (wp syscall_valid' setThreadState_nonqueued_state_update rfk_invs'
-            hoare_vcg_all_lift static_imp_wp)
+            hoare_vcg_all_lift hoare_weak_lift_imp)
          apply simp
          apply (intro conjI impI)
           apply (wp gts_imp' | simp)+

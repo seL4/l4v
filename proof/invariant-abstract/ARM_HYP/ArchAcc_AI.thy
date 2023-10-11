@@ -1259,7 +1259,7 @@ lemma valid_objs_caps:
 lemma simpler_set_pt_def:
   "set_pt p pt =
    (\<lambda>s. if \<exists>pt. kheap s p = Some (ArchObj (PageTable pt)) then
-           ({((), s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (PageTable pt))\<rparr>)}, False)
+           ({((), s\<lparr>kheap := (kheap s)(p \<mapsto> ArchObj (PageTable pt))\<rparr>)}, False)
         else ({}, True))"
   apply (rule ext)
   apply (clarsimp simp: set_pt_def set_object_def get_object_def assert_def
@@ -1275,7 +1275,7 @@ lemma simpler_set_pt_def:
 
 lemma valid_set_ptI:
   "(!!s opt. \<lbrakk>P s; kheap s p = Some (ArchObj (PageTable opt))\<rbrakk>
-         \<Longrightarrow> Q () (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (PageTable pt))\<rparr>))
+         \<Longrightarrow> Q () (s\<lparr>kheap := (kheap s)(p \<mapsto> ArchObj (PageTable pt))\<rparr>))
    \<Longrightarrow> \<lbrace>P\<rbrace> set_pt p pt \<lbrace>Q\<rbrace>"
   by (rule validI) (clarsimp simp: simpler_set_pt_def split: if_split_asm)
 
@@ -1582,7 +1582,7 @@ lemma valid_machine_stateE:
 
 lemma in_user_frame_same_type_upd:
   "\<lbrakk>typ_at type p s; type = a_type obj; in_user_frame q s\<rbrakk>
-    \<Longrightarrow> in_user_frame q (s\<lparr>kheap := kheap s(p \<mapsto> obj)\<rparr>)"
+    \<Longrightarrow> in_user_frame q (s\<lparr>kheap := (kheap s)(p \<mapsto> obj)\<rparr>)"
   apply (clarsimp simp: in_user_frame_def obj_at_def)
   apply (rule_tac x=sz in exI)
   apply (auto simp: a_type_simps)
@@ -1590,7 +1590,7 @@ lemma in_user_frame_same_type_upd:
 
 lemma in_device_frame_same_type_upd:
   "\<lbrakk>typ_at type p s; type = a_type obj ; in_device_frame q s\<rbrakk>
-    \<Longrightarrow> in_device_frame q (s\<lparr>kheap := kheap s(p \<mapsto> obj)\<rparr>)"
+    \<Longrightarrow> in_device_frame q (s\<lparr>kheap := (kheap s)(p \<mapsto> obj)\<rparr>)"
   apply (clarsimp simp: in_device_frame_def obj_at_def)
   apply (rule_tac x=sz in exI)
   apply (auto simp: a_type_simps)
@@ -1628,7 +1628,7 @@ lemma valid_machine_state_heap_updI:
 assumes vm : "valid_machine_state s"
 assumes tyat : "typ_at type p s"
 shows
-  " a_type obj = type \<Longrightarrow> valid_machine_state (s\<lparr>kheap := kheap s(p \<mapsto> obj)\<rparr>)"
+  " a_type obj = type \<Longrightarrow> valid_machine_state (s\<lparr>kheap := (kheap s)(p \<mapsto> obj)\<rparr>)"
   apply (clarsimp simp: valid_machine_state_def)
   subgoal for p
    apply (rule valid_machine_stateE[OF vm,where p = p])
@@ -1933,7 +1933,7 @@ lemma set_asid_pool_vspace_objs_unmap':
 
 lemma valid_vspace_obj_same_type:
   "\<lbrakk>valid_vspace_obj ao s;  kheap s p = Some ko; a_type ko' = a_type ko\<rbrakk>
-  \<Longrightarrow> valid_vspace_obj ao (s\<lparr>kheap := kheap s(p \<mapsto> ko')\<rparr>)"
+  \<Longrightarrow> valid_vspace_obj ao (s\<lparr>kheap := (kheap s)(p \<mapsto> ko')\<rparr>)"
     apply (rule hoare_to_pure_kheap_upd[OF valid_vspace_obj_typ])
     by (auto simp: obj_at_def)
 
@@ -3134,7 +3134,7 @@ lemma cap_refs_respects_device_region_dmo:
 
 lemma machine_op_lift_device_state[wp]:
   "\<lbrace>\<lambda>ms. P (device_state ms)\<rbrace> machine_op_lift f \<lbrace>\<lambda>_ ms. P (device_state ms)\<rbrace>"
-  by (clarsimp simp: machine_op_lift_def NonDetMonadVCG.valid_def bind_def
+  by (clarsimp simp: machine_op_lift_def Nondet_VCG.valid_def bind_def
                      machine_rest_lift_def gets_def simpler_modify_def get_def return_def
                      select_def ignore_failure_def select_f_def
               split: if_splits)

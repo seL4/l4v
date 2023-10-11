@@ -845,7 +845,7 @@ lemma finaliseSlot_ccorres:
                                       ccorres_seq_skip)
                     apply (rule rsubst[where P="ccorres r xf' P P' hs a" for r xf' P P' hs a])
                     apply (rule hyps[folded reduceZombie_def[unfolded cteDelete_def finaliseSlot_def],
-                                         unfolded split_def, unfolded K_def],
+                                     unfolded split_def],
                            (simp add: in_monad)+)
                     apply (simp add: from_bool_0)
                    apply simp
@@ -867,7 +867,7 @@ lemma finaliseSlot_ccorres:
                apply (simp add: guard_is_UNIV_def)
               apply (simp add: conj_comms)
               apply (wp make_zombie_invs' updateCap_cte_wp_at_cases
-                        updateCap_cap_to' hoare_vcg_disj_lift static_imp_wp)+
+                        updateCap_cap_to' hoare_vcg_disj_lift hoare_weak_lift_imp)+
             apply (simp add: guard_is_UNIV_def)
            apply wp
           apply (simp add: guard_is_UNIV_def)
@@ -896,7 +896,7 @@ lemma finaliseSlot_ccorres:
         apply (erule(1) cmap_relationE1 [OF cmap_relation_cte])
         apply (frule valid_global_refsD_with_objSize, clarsimp)
         apply (auto simp: typ_heap_simps dest!: ccte_relation_ccap_relation)[1]
-       apply (wp isFinalCapability_inv static_imp_wp | wp (once) isFinal[where x=slot'])+
+       apply (wp isFinalCapability_inv hoare_weak_lift_imp | wp (once) isFinal[where x=slot'])+
       apply vcg
      apply (rule conseqPre, vcg)
      apply clarsimp
@@ -991,26 +991,23 @@ lemma cteRevoke_ccorres1:
          apply (rule ccorres_drop_cutMon_bindE)
          apply (rule ccorres_rhs_assoc)+
          apply (ctac(no_vcg) add: cteDelete_ccorres)
-           apply (simp del: Collect_const add: Collect_False ccorres_cond_iffs
-                                               dc_def[symmetric])
+           apply (simp del: Collect_const add: Collect_False ccorres_cond_iffs)
            apply (rule ccorres_cutMon, simp only: cutMon_walk_bindE)
            apply (rule ccorres_drop_cutMon_bindE)
            apply (ctac(no_vcg) add: preemptionPoint_ccorres)
-             apply (simp del: Collect_const add: Collect_False ccorres_cond_iffs
-                                                 dc_def[symmetric])
+             apply (simp del: Collect_const add: Collect_False ccorres_cond_iffs)
              apply (rule ccorres_cutMon)
              apply (rule rsubst[where P="ccorres r xf' P P' hs a" for r xf' P P' hs a])
-              apply (rule hyps[unfolded K_def],
-                     (fastforce simp: in_monad)+)[1]
+              apply (rule hyps; fastforce simp: in_monad)
              apply simp
             apply (simp, rule ccorres_split_throws)
-             apply (rule ccorres_return_C_errorE, simp+)[1]
+             apply (rule ccorres_return_C_errorE; simp)
             apply vcg
            apply (wp preemptionPoint_invR)
             apply simp
            apply simp
           apply (simp, rule ccorres_split_throws)
-           apply (rule ccorres_return_C_errorE, simp+)[1]
+           apply (rule ccorres_return_C_errorE; simp)
           apply vcg
          apply (wp cteDelete_invs' cteDelete_sch_act_simple)
         apply (rule ccorres_cond_false)

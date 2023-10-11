@@ -33,7 +33,7 @@
 theory WPI
 imports
   Eisbach_Tools.Eisbach_Methods
-  NonDetMonadLemmas
+  Nondet_Lemmas
   WPEx
 begin
 

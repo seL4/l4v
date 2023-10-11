@@ -835,20 +835,20 @@ crunch device_state_inv: storeWord "\<lambda>ms. P (device_state ms)"
 (* some hyp_ref invariants *)
 
 lemma state_hyp_refs_of_ep_update: "\<And>s ep val. typ_at AEndpoint ep s \<Longrightarrow>
-       state_hyp_refs_of (s\<lparr>kheap := kheap s(ep \<mapsto> Endpoint val)\<rparr>) = state_hyp_refs_of s"
+       state_hyp_refs_of (s\<lparr>kheap := (kheap s)(ep \<mapsto> Endpoint val)\<rparr>) = state_hyp_refs_of s"
   apply (rule all_ext)
   apply (clarsimp simp add: state_hyp_refs_of_def obj_at_def hyp_refs_of_def)
   done
 
 lemma state_hyp_refs_of_ntfn_update: "\<And>s ep val. typ_at ANTFN ep s \<Longrightarrow>
-       state_hyp_refs_of (s\<lparr>kheap := kheap s(ep \<mapsto> Notification val)\<rparr>) = state_hyp_refs_of s"
+       state_hyp_refs_of (s\<lparr>kheap := (kheap s)(ep \<mapsto> Notification val)\<rparr>) = state_hyp_refs_of s"
   apply (rule all_ext)
   apply (clarsimp simp add: state_hyp_refs_of_def obj_at_def hyp_refs_of_def)
   done
 
 lemma state_hyp_refs_of_tcb_bound_ntfn_update:
        "kheap s t = Some (TCB tcb) \<Longrightarrow>
-          state_hyp_refs_of (s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb\<lparr>tcb_bound_notification := ntfn\<rparr>))\<rparr>)
+          state_hyp_refs_of (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB (tcb\<lparr>tcb_bound_notification := ntfn\<rparr>))\<rparr>)
             = state_hyp_refs_of s"
   apply (rule all_ext)
   apply (clarsimp simp add: state_hyp_refs_of_def obj_at_def split: option.splits)
@@ -856,7 +856,7 @@ lemma state_hyp_refs_of_tcb_bound_ntfn_update:
 
 lemma state_hyp_refs_of_tcb_state_update:
        "kheap s t = Some (TCB tcb) \<Longrightarrow>
-          state_hyp_refs_of (s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb\<lparr>tcb_state := ts\<rparr>))\<rparr>)
+          state_hyp_refs_of (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB (tcb\<lparr>tcb_state := ts\<rparr>))\<rparr>)
             = state_hyp_refs_of s"
   apply (rule all_ext)
   apply (clarsimp simp add: state_hyp_refs_of_def obj_at_def split: option.splits)
@@ -864,7 +864,7 @@ lemma state_hyp_refs_of_tcb_state_update:
 
 lemma arch_valid_obj_same_type:
   "\<lbrakk> arch_valid_obj ao s; kheap s p = Some ko; a_type k = a_type ko \<rbrakk>
-   \<Longrightarrow> arch_valid_obj ao (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)"
+   \<Longrightarrow> arch_valid_obj ao (s\<lparr>kheap := (kheap s)(p \<mapsto> k)\<rparr>)"
   by (induction ao rule: arch_kernel_obj.induct;
          clarsimp simp: typ_at_same_type)
 
@@ -878,7 +878,7 @@ lemma default_tcb_not_live: "\<not> live (TCB default_tcb)"
 
 lemma valid_arch_tcb_same_type:
   "\<lbrakk> valid_arch_tcb t s; valid_obj p k s; kheap s p = Some ko; a_type k = a_type ko \<rbrakk>
-   \<Longrightarrow> valid_arch_tcb t (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)"
+   \<Longrightarrow> valid_arch_tcb t (s\<lparr>kheap := (kheap s)(p \<mapsto> k)\<rparr>)"
   by (auto simp: valid_arch_tcb_def obj_at_def)
 
 lemma valid_ioports_lift:

@@ -49,7 +49,7 @@ in
 end
 
 fun syntax_alias global_alias local_alias b (name : string) =
-  Local_Theory.declaration {syntax = false, pervasive = true} (fn phi =>
+  Local_Theory.declaration {syntax = false, pos = Position.none, pervasive = true} (fn phi =>
     let val b' = Morphism.binding phi b
     in Context.mapping (global_alias b' name) (local_alias b' name) end);
 

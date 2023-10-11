@@ -365,7 +365,7 @@ lemma upt_eq_list_intros:
   by (simp_all add: upt_eq_Cons_conv)
 
 
-subsection \<open>Tactic definition\<close>
+text \<open>Tactic definition\<close>
 
 lemma if_bool_simps:
   "If p True y = (p \<or> y) \<and> If p False y = (\<not> p \<and> y) \<and>

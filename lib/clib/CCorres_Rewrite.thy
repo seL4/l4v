@@ -17,7 +17,7 @@ lemma ccorres_com_eq_hom:
            elim: ccorres_semantic_equivD2)
 
 method ccorres_rewrite declares C_simp C_simp_pre C_simp_simps C_simp_throws
-  = simpl_rewrite hom: ccorres_com_eq_hom
+  = (simpl_rewrite hom: ccorres_com_eq_hom, no_name_eta)
 
 lemma hoarep_com_eq_hom:
   "com_eq_hom \<Gamma> (\<lambda>c. hoarep \<Gamma> {} F P c Q A)"

@@ -256,7 +256,7 @@ lemma distinct_card':
 (* FIXME, move higher *)
 lemma distinct_length_filter':
   "distinct xs \<Longrightarrow> length [x\<leftarrow>xs. P x] = card {x \<in> set xs. P x}"
-  by (metis distinct_length_filter set_conj_Int_simp inf_commute)
+  by (metis distinct_card' distinct_filter set_filter)
 
 lemma duplicate_caps_sep_no_rv:
   "\<lbrace>\<guillemotleft>si_caps_at t orig_caps spec dev {obj_id. real_object_at obj_id spec} \<and>*

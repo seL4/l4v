@@ -177,7 +177,7 @@ lemma (in Tcb_AI_1) copyreg_invs:
      invoke_tcb (tcb_invocation.CopyRegisters dest src susp resume frames ints arch)
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (wpsimp simp: if_apply_def2
-                  wp: mapM_x_wp' suspend_invs suspend_nonz_cap_to_tcb static_imp_wp)
+                  wp: mapM_x_wp' suspend_invs suspend_nonz_cap_to_tcb hoare_weak_lift_imp)
   apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_idle_def suspend_def
                  dest!: idle_no_ex_cap)
   done
@@ -1158,9 +1158,6 @@ lemma (in Tcb_AI) decode_set_tls_base_wf:
              cong: list.case_cong split del: if_split)
   apply wpsimp
   done
-
-declare alternativeE_wp[wp]
-declare alternativeE_R_wp[wp]
 
 (*FIXME Move up*)
 lemma OR_choice_E_weak_wp: "\<lbrace>P\<rbrace> f \<sqinter> g \<lbrace>Q\<rbrace>,- \<Longrightarrow> \<lbrace>P\<rbrace> OR_choice b f g \<lbrace>Q\<rbrace>,-"

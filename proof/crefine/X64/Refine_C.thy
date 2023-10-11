@@ -458,7 +458,7 @@ lemma ccorres_corres_u_xf:
   apply (drule (1) bspec)
   apply (clarsimp simp: exec_C_def no_fail_def)
   apply (drule_tac x = a in spec)
-  apply (clarsimp simp:gets_def NonDetMonad.bind_def get_def return_def)
+  apply (clarsimp simp:gets_def Nondet_Monad.bind_def get_def return_def)
   apply (rule conjI)
    apply clarsimp
    apply (erule_tac x=0 in allE)
@@ -611,9 +611,9 @@ lemma callKernel_withFastpath_corres_C:
    apply (rule ccorres_rhs_assoc)+
    apply (rule ccorres_symb_exec_r)+
        apply (rule ccorres_Cond_rhs)
-        apply (simp add: dc_def[symmetric])
+        apply simp
         apply (ctac add: ccorres_get_registers[OF fastpath_call_ccorres_callKernel])
-       apply (simp add: dc_def[symmetric])
+       apply simp
        apply (ctac add: ccorres_get_registers[OF fastpath_reply_recv_ccorres_callKernel])
       apply vcg
      apply (rule conseqPre, vcg, clarsimp)
@@ -642,7 +642,7 @@ lemma threadSet_all_invs_triv':
       apply (simp add: tcb_cte_cases_def)
      apply (simp add: exst_same_def)
     apply (wp thread_set_invs_trivial thread_set_ct_running thread_set_not_state_valid_sched
-              threadSet_invs_trivial threadSet_ct_running' static_imp_wp
+              threadSet_invs_trivial threadSet_ct_running' hoare_weak_lift_imp
               thread_set_ct_in_state
            | simp add: tcb_cap_cases_def tcb_arch_ref_def
            | rule threadSet_ct_in_state'
@@ -694,13 +694,13 @@ lemma entry_corres_C:
          apply simp
         apply (rule corres_split)
 (* FIXME: fastpath
-           apply (rule corres_cases[where R=fp], simp_all add: dc_def[symmetric])[1]
-            apply (rule callKernel_withFastpath_corres_C, simp)
+           apply (rule corres_cases[where R=fp]; simp)
+            apply (rule callKernel_withFastpath_corres_C)
 *)
-           apply (rule callKernel_corres_C[unfolded dc_def], simp)
+           apply (rule callKernel_corres_C)
           apply (rule corres_split[where P=\<top> and P'=\<top> and r'="\<lambda>t t'. t' = tcb_ptr_to_ctcb_ptr t"])
              apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
-            apply (rule getContext_corres[unfolded o_def], simp)
+            apply (rule getContext_corres, simp)
            apply (wp threadSet_all_invs_triv' callKernel_cur)+
    apply (clarsimp simp: all_invs'_def invs'_def cur_tcb'_def valid_state'_def)
   apply simp
@@ -802,7 +802,7 @@ lemma user_memory_update_corres_C:
   prefer 2
    apply (clarsimp simp add: doMachineOp_def user_memory_update_def
                              simpler_modify_def simpler_gets_def select_f_def
-                             NonDetMonad.bind_def return_def)
+                             Nondet_Monad.bind_def return_def)
    apply (thin_tac P for P)+
    apply (case_tac a, clarsimp)
    apply (case_tac ksMachineState, clarsimp)
@@ -829,7 +829,7 @@ lemma device_update_corres_C:
     apply (clarsimp simp add: setDeviceState_C_def simpler_modify_def)
   apply (rule ballI)
   apply (clarsimp simp: simpler_modify_def setDeviceState_C_def)
-  apply (clarsimp simp: doMachineOp_def device_memory_update_def NonDetMonad.bind_def in_monad
+  apply (clarsimp simp: doMachineOp_def device_memory_update_def Nondet_Monad.bind_def in_monad
                         gets_def get_def return_def simpler_modify_def select_f_def)
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
                         cmachine_state_relation_def)
@@ -897,7 +897,7 @@ lemma do_user_op_corres_C:
                apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                cpspace_relation_def)
                apply (drule(1) device_mem_C_relation[symmetric])
-               apply (simp add: comp_def)
+               apply simp
               apply (rule_tac P=valid_state' and P'=\<top> and r'="(=)" in corres_split)
                  apply (clarsimp simp: cstate_relation_def rf_sr_def
                    Let_def cmachine_state_relation_def)
@@ -917,7 +917,7 @@ lemma do_user_op_corres_C:
                      apply (rule corres_split[OF user_memory_update_corres_C])
                          apply (rule corres_split[OF device_update_corres_C,
                                          where R="\<top>\<top>" and R'="\<top>\<top>"])
-                        apply (wp select_wp | simp)+
+                        apply (wp | simp)+
    apply (intro conjI allI ballI impI)
      apply ((clarsimp simp add: invs'_def valid_state'_def valid_pspace'_def)+)[5]
     apply (clarsimp simp:  ex_abs_def restrict_map_def

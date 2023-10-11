@@ -72,6 +72,9 @@ struct
   fun K x y = x
   fun I x = x
 
+  fun the_default x (SOME y) = y
+    | the_default x NONE = x;
+
 end
 
 open Basics
@@ -145,9 +148,6 @@ struct
 
   fun uncurry f (x,y) = f x y
 
-  (*union of sets represented as lists: no repetitions*)
-  fun union eq = List.foldl (uncurry (insert eq))
-
   fun single x = [x]
 
   fun get_first f l =
@@ -163,7 +163,5 @@ struct
 
 
 end
-
-infix union
 
 open Library

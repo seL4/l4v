@@ -3226,7 +3226,7 @@ lemma createNewCaps_valid_cap':
 
 lemma dmo_ctes_of[wp]:
   "\<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> doMachineOp mop \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"
-  by (simp add: doMachineOp_def split_def | wp select_wp)+
+  by (simp add: doMachineOp_def split_def | wp)+
 
 lemma createNewCaps_ranges:
   "\<lbrace>\<lambda>s. range_cover ptr sz (APIType_capBits ty us) n \<and> 0<n
@@ -3557,7 +3557,7 @@ lemma updateFreeIndex_mdb_simple':
   and    cte_wp_at' :"ctes_of s src = Some cte" "cteCap cte = capability.UntypedCap d ptr sz idx'"
   and      unt_inc' :"untyped_inc' (ctes_of s)"
   and   valid_objs' :"valid_objs' s"
-  and invp: "mdb_inv_preserve (ctes_of s) (ctes_of s(src \<mapsto> cteCap_update (\<lambda>_. capability.UntypedCap d ptr sz idx) cte))"
+  and invp: "mdb_inv_preserve (ctes_of s) ((ctes_of s)(src \<mapsto> cteCap_update (\<lambda>_. UntypedCap d ptr sz idx) cte))"
     (is "mdb_inv_preserve (ctes_of s) ?ctes")
 
   show "untyped_inc' ?ctes"
@@ -4659,6 +4659,8 @@ lemma whenE_reset_resetUntypedCap_invs_etc:
   done
 
 crunch ksCurDomain[wp]: updateFreeIndex "\<lambda>s. P (ksCurDomain s)"
+
+end
 
 lemma (in range_cover) funky_aligned:
   "is_aligned ((ptr && foo) + v * 2 ^ sbit) sbit"

@@ -56,6 +56,8 @@ session Refine in "refine" = BaseRefine +
  *)
 session RefineOrphanage in "refine/$L4V_ARCH/orphanage" = Refine +
   description \<open>Proof that the kernel does not orphan threads.\<close>
+  theories [condition = "REFINE_QUICK_AND_DIRTY", quick_and_dirty]
+    "Orphanage"
   theories
     "Orphanage"
 

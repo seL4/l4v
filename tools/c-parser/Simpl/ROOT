@@ -1,6 +1,6 @@
 chapter AFP
 
-session Simpl (AFP) = HOL +
+session Simpl = HOL +
   options [timeout = 600]
   sessions
     "HOL-Library"

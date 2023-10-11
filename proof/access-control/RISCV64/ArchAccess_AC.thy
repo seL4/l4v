@@ -82,7 +82,7 @@ lemma integrity_asids_refl[Access_AC_assms, simp]:
 
 lemma integrity_asids_update_autarch[Access_AC_assms]:
   "\<lbrakk> \<forall>x a. integrity_asids aag {pasSubject aag} x a st s; is_subject aag ptr \<rbrakk>
-     \<Longrightarrow> \<forall>x a. integrity_asids aag {pasSubject aag} x a st (s\<lparr>kheap := kheap s(ptr \<mapsto> obj)\<rparr>)"
+     \<Longrightarrow> \<forall>x a. integrity_asids aag {pasSubject aag} x a st (s\<lparr>kheap := (kheap s)(ptr \<mapsto> obj)\<rparr>)"
   by (auto simp: opt_map_def)
 
 end

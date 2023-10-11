@@ -843,14 +843,14 @@ lemma decodeARMVCPUInvocation_corres:
       apply (frule list_all2_Cons)
       apply clarsimp
       apply (case_tac a; clarsimp simp add: cap_relation_def)
-      apply (corres corres: corres_returnOkTT)
+      apply (corresK corres: corres_returnOkTT)
       apply (clarsimp simp: archinv_relation_def vcpu_invocation_map_def)
      (* inject_irq *)
      apply (simp add: decode_vcpu_inject_irq_def decodeVCPUInjectIRQ_def isVCPUCap_def)
      apply (cases args; clarsimp)
      apply (case_tac list; clarsimp simp add: rangeCheck_def range_check_def unlessE_whenE)
      apply (clarsimp simp: shiftL_nat whenE_bindE_throwError_to_if)
-     apply (corressimp wp: get_vcpu_wp)
+     apply (corresKsimp wp: get_vcpu_wp)
      apply (clarsimp simp: archinv_relation_def vcpu_invocation_map_def ucast_id
                         valid_cap'_def valid_cap_def
                         make_virq_def makeVIRQ_def split:if_split)
@@ -1251,7 +1251,7 @@ lemma invokeVCPUInjectIRQ_corres:
         (invokeVCPUInjectIRQ v index virq)"
   unfolding invokeVCPUInjectIRQ_def invoke_vcpu_inject_irq_def
   apply (clarsimp simp: bind_assoc)
-  apply (corressimp corres: getObject_vcpu_corres setObject_VCPU_corres wp: get_vcpu_wp)
+  apply (corresKsimp corres: getObject_vcpu_corres setObject_VCPU_corres wp: get_vcpu_wp)
   apply clarsimp
   done
 
@@ -1264,7 +1264,7 @@ lemma invokeVCPUReadReg_corres:
                  (invokeVCPUReadReg v r)"
   unfolding invoke_vcpu_read_register_def invokeVCPUReadReg_def read_vcpu_register_def readVCPUReg_def
   apply (rule corres_discard_r)
-  apply (corressimp corres: getObject_vcpu_corres wp: get_vcpu_wp)
+  apply (corresKsimp corres: getObject_vcpu_corres wp: get_vcpu_wp)
   apply (clarsimp simp: vcpu_relation_def split: option.splits)
   apply (wpsimp simp: getCurThread_def)+
   done
@@ -1279,7 +1279,7 @@ lemma invokeVCPUWriteReg_corres:
   unfolding invokeVCPUWriteReg_def invoke_vcpu_write_register_def write_vcpu_register_def
             writeVCPUReg_def
   apply (rule corres_discard_r)
-  apply (corressimp corres: setObject_VCPU_corres getObject_vcpu_corres wp: get_vcpu_wp)
+  apply (corresKsimp corres: setObject_VCPU_corres getObject_vcpu_corres wp: get_vcpu_wp)
   subgoal by (auto simp: vcpu_relation_def split: option.splits)
   apply (wpsimp simp: getCurThread_def)+
   done
@@ -1314,7 +1314,7 @@ lemma associateVCPUTCB_corres:
                (associateVCPUTCB v t)"
   unfolding associate_vcpu_tcb_def associateVCPUTCB_def
   apply (clarsimp simp: bind_assoc)
-  apply (corressimp search: getObject_vcpu_corres setObject_VCPU_corres vcpuSwitch_corres''
+  apply (corresKsimp search: getObject_vcpu_corres setObject_VCPU_corres vcpuSwitch_corres''
                         wp: get_vcpu_wp getVCPU_wp hoare_vcg_imp_lift'
                       simp: vcpu_relation_def)
       apply (rule_tac Q="\<lambda>_. invs and tcb_at t" in hoare_strengthen_post)
@@ -1335,7 +1335,7 @@ lemma associateVCPUTCB_corres:
       apply (simp add: valid_vcpu'_def typ_at_tcb')
       apply (clarsimp simp: typ_at_to_obj_at_arches obj_at'_def)
      apply (fastforce simp: typ_at_to_obj_at_arches obj_at'_def)
-    apply (corressimp wp: arch_thread_get_wp getObject_tcb_wp
+    apply (corresKsimp wp: arch_thread_get_wp getObject_tcb_wp
                     simp: archThreadGet_def)+
   apply (simp add: vcpu_relation_def)
   apply (intro allI conjI impI;
@@ -1361,7 +1361,7 @@ lemma invokeVCPUAckVPPI_corres:
         (invokeVCPUAckVPPI vcpu vppi)"
   unfolding invokeVCPUAckVPPI_def invoke_vcpu_ack_vppi_def write_vcpu_register_def
             writeVCPUReg_def
-  by (corressimp corres: setObject_VCPU_corres getObject_vcpu_corres wp: get_vcpu_wp)
+  by (corresKsimp corres: setObject_VCPU_corres getObject_vcpu_corres wp: get_vcpu_wp)
      (auto simp: vcpu_relation_def split: option.splits)
 
 lemma performARMVCPUInvocation_corres:
@@ -1413,13 +1413,13 @@ lemma performASIDControlInvocation_tcb_at':
   apply (rule hoare_name_pre_state)
   apply (clarsimp simp: performASIDControlInvocation_def split: asidcontrol_invocation.splits)
   apply (clarsimp simp: valid_aci'_def cte_wp_at_ctes_of cong: conj_cong)
-  apply (wp static_imp_wp  |simp add:placeNewObject_def2)+
-      apply (wp createObjects_orig_obj_at2' updateFreeIndex_pspace_no_overlap' getSlotCap_wp static_imp_wp)+
+  apply (wp hoare_weak_lift_imp  |simp add:placeNewObject_def2)+
+      apply (wp createObjects_orig_obj_at2' updateFreeIndex_pspace_no_overlap' getSlotCap_wp hoare_weak_lift_imp)+
    apply (clarsimp simp: projectKO_opts_defs)
    apply (strengthen st_tcb_strg' [where P=\<top>])
    apply (wp deleteObjects_invs_derivatives[where p="makePoolParent aci"]
      hoare_vcg_ex_lift deleteObjects_cte_wp_at'[where d=False]
-     deleteObjects_st_tcb_at'[where p="makePoolParent aci"] static_imp_wp
+     deleteObjects_st_tcb_at'[where p="makePoolParent aci"] hoare_weak_lift_imp
      updateFreeIndex_pspace_no_overlap' deleteObject_no_overlap[where d=False])+
   apply (case_tac ctea)
   apply (clarsimp)
@@ -2038,7 +2038,7 @@ lemma performASIDControlInvocation_st_tcb_at':
              hoare_vcg_ex_lift
              deleteObjects_cte_wp_at' deleteObjects_invs_derivatives
              deleteObjects_st_tcb_at'
-             static_imp_wp
+             hoare_weak_lift_imp
         | simp add: placeNewObject_def2)+
   apply (case_tac ctea)
   apply (clarsimp)
@@ -2093,7 +2093,7 @@ crunch cte_wp_at':  "Arch.finaliseCap" "cte_wp_at' P p"
 lemma invs_asid_table_strengthen':
   "invs' s \<and> asid_pool_at' ap s \<and> asid \<le> 2 ^ asid_high_bits - 1 \<longrightarrow>
    invs' (s\<lparr>ksArchState :=
-            armKSASIDTable_update (\<lambda>_. (armKSASIDTable \<circ> ksArchState) s(asid \<mapsto> ap)) (ksArchState s)\<rparr>)"
+            armKSASIDTable_update (\<lambda>_. ((armKSASIDTable \<circ> ksArchState) s)(asid \<mapsto> ap)) (ksArchState s)\<rparr>)"
   apply (clarsimp simp: invs'_def valid_state'_def)
   apply (rule conjI)
    apply (clarsimp simp: valid_global_refs'_def global_refs'_def)
@@ -2168,7 +2168,7 @@ lemma performASIDControlInvocation_invs' [wp]:
            updateFreeIndex_caps_no_overlap''
            updateFreeIndex_descendants_of2
            updateFreeIndex_caps_overlap_reserved
-           updateCap_cte_wp_at_cases static_imp_wp
+           updateCap_cte_wp_at_cases hoare_weak_lift_imp
            getSlotCap_wp)+
   apply (clarsimp simp:conj_comms ex_disj_distrib is_aligned_mask
            | strengthen invs_valid_pspace' invs_pspace_aligned'

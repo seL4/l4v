@@ -353,7 +353,7 @@ lemma invokeTCB_WriteRegisters_corres:
               apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
               apply simp
              apply (wp+)[2]
-           apply ((wp static_imp_wp restart_invs'
+           apply ((wp hoare_weak_lift_imp restart_invs'
                | strengthen valid_sched_weak_strg einvs_valid_etcbs invs_valid_queues' invs_queues
                             invs_weak_sch_act_wf
                | clarsimp simp: invs_def valid_state_def valid_sched_def invs'_def valid_state'_def
@@ -452,7 +452,7 @@ proof -
                 apply (simp add: frame_registers_def frameRegisters_def)
                apply (simp add: getRestartPC_def setNextPC_def dc_def[symmetric])
                apply (rule Q[OF refl refl])
-              apply (wpsimp wp: mapM_x_wp' static_imp_wp)+
+              apply (wpsimp wp: mapM_x_wp' hoare_weak_lift_imp)+
             apply (rule corres_split_nor)
                apply (rule corres_when[OF refl])
                apply (rule R[OF refl refl])
@@ -462,15 +462,15 @@ proof -
                   apply (rule corres_split[OF corres_when[OF refl rescheduleRequired_corres]])
                     apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
                     apply simp
-                   apply ((solves \<open>wp static_imp_wp\<close>)+)
+                   apply ((solves \<open>wp hoare_weak_lift_imp\<close>)+)
              apply (rule_tac Q="\<lambda>_. einvs and tcb_at dest" in hoare_post_imp)
               apply (clarsimp simp: invs_def valid_sched_weak_strg valid_sched_def)
              prefer 2
              apply (rule_tac Q="\<lambda>_. invs' and tcb_at' dest" in hoare_post_imp)
               apply (clarsimp simp: invs'_def valid_state'_def invs_weak_sch_act_wf cur_tcb'_def)
-             apply (wp mapM_x_wp' static_imp_wp | simp)+
-         apply ((wp static_imp_wp restart_invs' | wpc | clarsimp simp: if_apply_def2)+)[2]
-       apply (wp suspend_nonz_cap_to_tcb static_imp_wp | simp add: if_apply_def2)+
+             apply (wp mapM_x_wp' hoare_weak_lift_imp | simp)+
+         apply ((wp hoare_weak_lift_imp restart_invs' | wpc | clarsimp simp: if_apply_def2)+)[2]
+       apply (wp suspend_nonz_cap_to_tcb hoare_weak_lift_imp | simp add: if_apply_def2)+
      apply (fastforce simp: invs_def valid_state_def valid_pspace_def
                      dest!: idle_no_ex_cap)
     apply (fastforce simp: invs'_def valid_state'_def dest!: global'_no_ex_cap)
@@ -640,7 +640,7 @@ lemma sp_corres2:
              apply (rule rescheduleRequired_corres)
             apply (rule possibleSwitchTo_corres)
            apply ((clarsimp
-                   | wp static_imp_wp hoare_vcg_if_lift hoare_wp_combs gts_wp
+                   | wp hoare_weak_lift_imp hoare_vcg_if_lift hoare_wp_combs gts_wp
                         isRunnable_wp)+)[4]
        apply (wp hoare_vcg_imp_lift' hoare_vcg_if_lift hoare_vcg_all_lift)
       apply clarsimp
@@ -1635,30 +1635,30 @@ lemma tc_invs':
   apply (simp only: eq_commute[where a="a"])
   apply (rule hoare_walk_assmsE)
     apply (clarsimp simp: pred_conj_def option.splits [where P="\<lambda>x. x s" for s])
-    apply ((wp case_option_wp threadSet_invs_trivial static_imp_wp
+    apply ((wp case_option_wp threadSet_invs_trivial hoare_weak_lift_imp
                hoare_vcg_all_lift threadSet_cap_to' | clarsimp simp: inQ_def)+)[2]
   apply (rule hoare_walk_assmsE)
     apply (clarsimp simp: pred_conj_def option.splits [where P="\<lambda>x. x s" for s])
-    apply ((wp case_option_wp threadSet_invs_trivial static_imp_wp setMCPriority_invs'
+    apply ((wp case_option_wp threadSet_invs_trivial hoare_weak_lift_imp setMCPriority_invs'
                typ_at_lifts[OF setMCPriority_typ_at']
                hoare_vcg_all_lift threadSet_cap_to' | clarsimp simp: inQ_def)+)[2]
-  apply (wp add: setP_invs' static_imp_wp hoare_vcg_all_lift)+
+  apply (wp add: setP_invs' hoare_weak_lift_imp hoare_vcg_all_lift)+
       apply (rule case_option_wp_None_return[OF setP_invs'[simplified pred_conj_assoc]])
       apply clarsimp
       apply wpfix
       apply assumption
      apply (rule case_option_wp_None_returnOk)
-      apply (wpsimp wp: static_imp_wp hoare_vcg_all_lift
+      apply (wpsimp wp: hoare_weak_lift_imp hoare_vcg_all_lift
                         checkCap_inv[where P="tcb_at' t" for t] assertDerived_wp_weak
                         threadSet_invs_trivial2 threadSet_tcb'  hoare_vcg_all_lift threadSet_cte_wp_at')+
-       apply (wpsimp wp: static_imp_wpE cteDelete_deletes
+       apply (wpsimp wp: hoare_weak_lift_imp_R cteDelete_deletes
                          hoare_vcg_all_lift_R hoare_vcg_conj_liftE1 hoare_vcg_const_imp_lift_R hoare_vcg_propE_R
                          cteDelete_invs' cteDelete_invs' cteDelete_typ_at'_lifts)+
      apply (assumption | clarsimp cong: conj_cong imp_cong | (rule case_option_wp_None_returnOk)
-            | wpsimp wp: static_imp_wp hoare_vcg_all_lift checkCap_inv[where P="tcb_at' t" for t] assertDerived_wp_weak
+            | wpsimp wp: hoare_weak_lift_imp hoare_vcg_all_lift checkCap_inv[where P="tcb_at' t" for t] assertDerived_wp_weak
                          hoare_vcg_imp_lift' hoare_vcg_all_lift checkCap_inv[where P="tcb_at' t" for t]
                          checkCap_inv[where P="valid_cap' c" for c] checkCap_inv[where P=sch_act_simple]
-                         hoare_vcg_const_imp_lift_R assertDerived_wp_weak static_imp_wpE cteDelete_deletes
+                         hoare_vcg_const_imp_lift_R assertDerived_wp_weak hoare_weak_lift_imp_R cteDelete_deletes
                          hoare_vcg_all_lift_R hoare_vcg_conj_liftE1 hoare_vcg_const_imp_lift_R hoare_vcg_propE_R
                          cteDelete_invs' cteDelete_typ_at'_lifts cteDelete_sch_act_simple)+
   apply (clarsimp simp: tcb_cte_cases_def cte_level_bits_def objBits_defs tcbIPCBufferSlot_def)
@@ -2035,7 +2035,7 @@ lemma decodeSetPriority_corres:
          clarsimp simp: decode_set_priority_def decodeSetPriority_def)
   apply (rename_tac auth_cap auth_slot auth_path rest auth_cap' rest')
   apply (rule corres_split_eqrE)
-     apply corressimp
+     apply corresKsimp
     apply (rule corres_splitEE[OF checkPrio_corres])
       apply (rule corres_returnOkTT)
       apply (clarsimp simp: newroot_rel_def elim!: is_thread_cap.elims(2))
@@ -2054,7 +2054,7 @@ lemma decodeSetMCPriority_corres:
          clarsimp simp: decode_set_mcpriority_def decodeSetMCPriority_def)
   apply (rename_tac auth_cap auth_slot auth_path rest auth_cap' rest')
   apply (rule corres_split_eqrE)
-     apply corressimp
+     apply corresKsimp
     apply (rule corres_splitEE[OF checkPrio_corres])
       apply (rule corres_returnOkTT)
       apply (clarsimp simp: newroot_rel_def elim!: is_thread_cap.elims(2))
@@ -2091,7 +2091,7 @@ lemma checkPrio_wp:
     checkPrio prio auth
    \<lbrace> \<lambda>rv. P \<rbrace>,-"
   apply (simp add: checkPrio_def)
-  apply (wp NonDetMonadVCG.whenE_throwError_wp getMCP_wp)
+  apply (wp Nondet_VCG.whenE_throwError_wp getMCP_wp)
   by (auto simp add: pred_tcb_at'_def obj_at'_def)
 
 lemma checkPrio_lt_ct:
@@ -2171,7 +2171,7 @@ lemma decodeSetSchedParams_corres:
    apply (clarsimp split: list.split simp: list_all2_Cons2)
   apply (clarsimp simp: list_all2_Cons1 neq_Nil_conv val_le_length_Cons linorder_not_less)
   apply (rule corres_split_eqrE)
-     apply corressimp
+     apply corresKsimp
     apply (rule corres_split_norE[OF checkPrio_corres])
       apply (rule corres_splitEE[OF checkPrio_corres])
         apply (rule corres_returnOkTT)
@@ -2705,7 +2705,7 @@ lemma restart_makes_simple':
    \<lbrace>\<lambda>rv. st_tcb_at' simple' t\<rbrace>"
   apply (simp add: restart_def)
   apply (wp sts_st_tcb_at'_cases cancelIPC_simple
-            cancelIPC_st_tcb_at static_imp_wp | simp)+
+            cancelIPC_st_tcb_at hoare_weak_lift_imp | simp)+
    apply (rule hoare_strengthen_post [OF isStopped_inv])
    prefer 2
    apply assumption

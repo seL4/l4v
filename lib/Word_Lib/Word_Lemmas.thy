@@ -153,8 +153,8 @@ lemma sshiftr_n1: "-1 >>> n = -1"
 
 lemma nth_sshiftr:
   "bit (w >>> m) n = (n < size w \<and> (if n + m \<ge> size w then bit w (size w - 1) else bit w (n + m)))"
-  apply (clarsimp simp add: bit_simps word_size ac_simps not_less)
-  apply (metis add.commute bit_imp_le_length bit_shiftr_word_iff le_diff_conv not_le)
+  apply (auto simp add: bit_simps word_size ac_simps not_less)
+  apply (meson bit_imp_le_length bit_shiftr_word_iff leD)
   done
 
 lemma sshiftr_numeral:
@@ -508,8 +508,9 @@ next
       also have \<open>\<dots> \<longleftrightarrow> unat x < 2 ^ n div 2 ^ y\<close>
         using * by (simp add: less_le)
       finally show ?thesis
-      using that \<open>x \<noteq> 0\<close> by (simp flip: push_bit_eq_mult drop_bit_eq_div
-        add: shiftr_def shiftl_def unat_drop_bit_eq word_less_iff_unsigned [where ?'a = nat])
+        using that \<open>x \<noteq> 0\<close>
+        by (simp flip: push_bit_eq_mult drop_bit_eq_div
+                 add: shiftr_def shiftl_def unat_drop_bit_eq word_less_iff_unsigned [where ?'a = nat])
     qed
   qed
 qed
@@ -716,7 +717,8 @@ lemma word_and_notzeroD:
 lemma shiftr_le_0:
   "unat (w::'a::len word) < 2 ^ n \<Longrightarrow> w >> n = (0::'a::len word)"
   by (auto simp add: take_bit_word_eq_self_iff word_less_nat_alt shiftr_def
-           simp flip: take_bit_eq_self_iff_drop_bit_eq_0 intro: ccontr)
+           simp flip: take_bit_eq_self_iff_drop_bit_eq_0
+           intro: ccontr)
 
 lemma of_nat_shiftl:
   "(of_nat x << n) = (of_nat (x * 2 ^ n) :: ('a::len) word)"
@@ -1466,9 +1468,9 @@ lemma mask_shift_sum:
   "\<lbrakk> a \<ge> b; unat n = unat (p AND mask b) \<rbrakk>
    \<Longrightarrow> (p AND NOT(mask a)) + (p AND mask a >> b) * (1 << b) + n = (p :: 'a :: len word)"
   apply (simp add: shiftl_def shiftr_def flip: push_bit_eq_mult take_bit_eq_mask word_unat_eq_iff)
-  apply (subst disjunctive_add, clarsimp simp add: bit_simps)+
+  apply (subst disjunctive_add, fastforce simp: bit_simps)+
   apply (rule bit_word_eqI)
-  apply (auto simp add: bit_simps)
+  apply (fastforce simp: bit_simps)[1]
   done
 
 lemma is_up_compose:
@@ -1583,10 +1585,7 @@ next
     apply (rule impI)
     apply (subst bit_eq_iff)
     apply (simp add: bit_take_bit_iff bit_signed_take_bit_iff min_def)
-    apply (auto simp add: Suc_le_eq)
-    using less_imp_le_nat apply blast
-    using less_imp_le_nat apply blast
-  done
+    by (auto simp add: Suc_le_eq) (meson dual_order.strict_iff_not)+
 qed
 
 lemma scast_ucast_mask_compare:
@@ -1820,11 +1819,7 @@ proof (rule classical)
      apply (insert sdiv_int_range [where a="sint a" and b="sint b"])[1]
      apply (clarsimp simp: word_size)
     apply (insert sdiv_int_range [where a="sint a" and b="sint b"])[1]
-    apply auto
-    apply (cases \<open>size a\<close>)
-     apply simp_all
-    apply (smt (z3) One_nat_def diff_Suc_1 signed_word_eqI sint_int_min sint_range_size wsst_TYs(3))
-    done
+    by (smt (verit, best) One_nat_def signed_word_eqI sint_greater_eq sint_int_min sint_less wsst_TYs(3))
 
   have result_range_simple: "(sint a sdiv sint b \<in> ?range) \<Longrightarrow> ?thesis"
     apply (insert sdiv_int_range [where a="sint a" and b="sint b"])

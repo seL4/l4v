@@ -1191,7 +1191,7 @@ crunches
   sched_context_unbind_all_tcbs, sched_context_unbind_yield_from,
   sched_context_unbind_reply, sched_context_unbind_ntfn, sched_context_zero_refill_max
   for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
-  (wp: crunch_wps select_wp maybeM_inv simp: crunch_simps)
+  (wp: crunch_wps maybeM_inv simp: crunch_simps)
 
 lemmas cancel_all_ipc_cte_irq_node[wp]
     = hoare_use_eq_irq_node [OF cancel_all_ipc_irq_node cancel_all_ipc_cte_wp_at]

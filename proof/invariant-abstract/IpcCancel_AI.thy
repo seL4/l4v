@@ -171,7 +171,7 @@ lemma blocked_ipc_st_tcb_at_general:
   apply (rule hoare_seq_ext[OF _ get_simple_ko_inv])
   apply (rule hoare_seq_ext[OF _ get_ep_queue_inv])
   apply (wpsimp simp: blocked_cancel_ipc_def
-                  wp: sts_st_tcb_at_cases_strong reply_unlink_tcb_st_tcb_at static_imp_wp
+                  wp: sts_st_tcb_at_cases_strong reply_unlink_tcb_st_tcb_at hoare_weak_lift_imp
                       hoare_vcg_all_lift get_ep_queue_inv get_simple_ko_wp set_simple_ko_wps
                       hoare_drop_imp[where R="\<lambda>rv. tcb_at t"])
   apply (rule conjI; clarsimp simp: obj_at_def pred_tcb_at_def is_ep elim: bool_to_boolE)
@@ -179,10 +179,10 @@ lemma blocked_ipc_st_tcb_at_general:
 
 lemma cancel_signal_st_tcb_at_general:
   "\<lbrace>\<lambda>s. if t'=t then P (P' Inactive) else P (st_tcb_at P' t' s) \<rbrace>
-     cancel_signal t ntfn
+   cancel_signal t ntfn
    \<lbrace>\<lambda>rv s. P (st_tcb_at P' t' s)\<rbrace>"
   by (wpsimp simp: cancel_signal_def
-               wp: sts_st_tcb_at_cases_strong ntfn_cases_weak_wp static_imp_wp
+               wp: sts_st_tcb_at_cases_strong ntfn_cases_weak_wp hoare_weak_lift_imp
                    set_simple_ko_pred_tcb_at hoare_drop_imp[where R="\<lambda>rv. tcb_at t"])
 
 lemma sched_context_maybe_unbind_ntfn_st_tcb_at[wp]:
@@ -654,9 +654,8 @@ lemma reply_unlink_sc_sc_tcb_sc_at [wp]:
 
 lemma reply_unlink_tcb_reply_at [wp]:
   "\<lbrace>reply_at rp'\<rbrace> reply_unlink_tcb t rp \<lbrace>\<lambda>_. reply_at rp'\<rbrace>"
-  by (wpsimp simp: reply_unlink_tcb_def update_sk_obj_ref_def get_thread_state_def
-                      thread_get_def
-                  wp: get_simple_ko_wp)
+  by (wpsimp simp: reply_unlink_tcb_def update_sk_obj_ref_def get_thread_state_def thread_get_def
+               wp: get_simple_ko_wp)
 
 lemma reply_unlink_sc_hyp_refs_of [wp]:
   "\<lbrace>\<lambda>s. P (state_hyp_refs_of s)\<rbrace> reply_unlink_sc scp rp \<lbrace>\<lambda>_ s. P (state_hyp_refs_of s)\<rbrace>"
@@ -1458,19 +1457,21 @@ lemma cancel_all_ipc_it[wp]:
                wp: mapM_x_wp' hoare_drop_imp)
 
 lemma cancel_signal_it[wp]:
-  "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> cancel_signal tcb_ptr ntfnptr
-      \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
+  "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace>
+   cancel_signal tcb_ptr ntfnptr
+   \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
   by (wpsimp simp: cancel_signal_def set_thread_state_def set_simple_ko_def set_object_def
                    get_object_def get_simple_ko_def)
 
 lemma cancel_all_signals_it[wp]:
-  "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> cancel_all_signals tcb_ptr
-      \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
+  "\<lbrace>\<lambda>s. P (idle_thread s)\<rbrace>
+   cancel_all_signals tcb_ptr
+   \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
   by (wpsimp simp: cancel_all_signals_def set_thread_state_def get_simple_ko_def get_object_def
                wp: mapM_x_wp')
 
 crunch it[wp]: unbind_notification "\<lambda>s. P (idle_thread s)"
-  (wp: crunch_wps select_wp maybeM_inv simp: unless_def crunch_simps)
+  (wp: crunch_wps maybeM_inv simp: unless_def crunch_simps)
 
 crunches
   unbind_notification, fast_finalise, sched_context_unbind_all_tcbs,

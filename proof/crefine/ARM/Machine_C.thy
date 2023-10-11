@@ -413,13 +413,13 @@ lemma cleanCacheRange_PoC_ccorres:
    apply (clarsimp simp: cleanCacheRange_PoC_def word_sle_def whileAnno_def)
    apply (ccorres_remove_UNIV_guard)
    apply csymbr
-   apply (rule cacheRangeOp_ccorres[simplified dc_def])
+   apply (rule cacheRangeOp_ccorres)
      apply (rule empty_fail_cleanByVA)
     apply clarsimp
   apply (cinitlift index_')
     apply (rule ccorres_guard_imp2)
      apply csymbr
-     apply (ctac add: cleanByVA_ccorres[unfolded dc_def])
+     apply (ctac add: cleanByVA_ccorres)
     apply (clarsimp simp: lineStart_def cacheLineBits_def shiftr_shiftl1
                           mask_out_sub_mask)
     apply (drule_tac s="w1 && mask 5" in sym, simp add: cache_range_lineIndex_helper)
@@ -460,8 +460,8 @@ lemma cleanInvalidateCacheRange_RAM_ccorres:
              apply (drule_tac s="w1 && mask 5" in sym, simp add: cache_range_lineIndex_helper)
             apply (vcg exspec=cleanInvalByVA_modifies)
            apply (rule ceqv_refl)
-          apply (ctac (no_vcg) add: dsb_ccorres[simplified dc_def])
-       apply (wp | clarsimp simp: guard_is_UNIVI o_def)+
+          apply (ctac (no_vcg) add: dsb_ccorres)
+       apply (wp | clarsimp simp: guard_is_UNIVI)+
   apply (frule(1) ghost_assertion_size_logic)
   apply (clarsimp simp: o_def)
   done
@@ -484,7 +484,7 @@ lemma cleanCacheRange_RAM_ccorres:
         in ccorres_cross_over_guard)
      apply (rule ccorres_Guard_Seq)
      apply (rule ccorres_basic_srnoop2, simp)
-     apply (ctac (no_vcg) add: cleanL2Range_ccorres[unfolded dc_def])
+     apply (ctac (no_vcg) add: cleanL2Range_ccorres)
     apply wp+
   apply clarsimp
   apply (auto dest: ghost_assertion_size_logic simp: o_def)
@@ -505,13 +505,13 @@ lemma cleanCacheRange_PoU_ccorres:
    apply (rule ccorres_basic_srnoop2, simp)
    apply (simp add: cleanCacheRange_PoU_def)
    apply csymbr
-   apply (rule cacheRangeOp_ccorres[simplified dc_def])
+   apply (rule cacheRangeOp_ccorres)
      apply (rule empty_fail_cleanByVA_PoU)
     apply clarsimp
     apply (cinitlift index_')
     apply (rule ccorres_guard_imp2)
      apply csymbr
-     apply (ctac add: cleanByVA_PoU_ccorres[unfolded dc_def])
+     apply (ctac add: cleanByVA_PoU_ccorres)
     apply (clarsimp simp: lineStart_def cacheLineBits_def shiftr_shiftl1
                           mask_out_sub_mask)
     apply (drule_tac s="w1 && mask 5" in sym, simp add: cache_range_lineIndex_helper)
@@ -544,14 +544,14 @@ lemma invalidateCacheRange_RAM_ccorres:
        apply (rule ccorres_cond[where R=\<top>])
          apply (clarsimp simp: lineStart_def cacheLineBits_def)
         apply (rule ccorres_call[OF cleanCacheRange_RAM_ccorres, where xf'=xfdc], (clarsimp)+)
-       apply (rule ccorres_return_Skip[unfolded dc_def])
+       apply (rule ccorres_return_Skip)
       apply ceqv
      apply (rule ccorres_split_nothrow_novcg)
          apply (rule ccorres_cond[where R=\<top>])
            apply (clarsimp simp: lineStart_def cacheLineBits_def)
           apply csymbr
           apply (rule ccorres_call[OF cleanCacheRange_RAM_ccorres, where xf'=xfdc], (clarsimp)+)
-         apply (rule ccorres_return_Skip[unfolded dc_def])
+         apply (rule ccorres_return_Skip)
         apply ceqv
        apply (rule_tac P="\<lambda>s. unat (w2 - w1) \<le> gsMaxObjectSize s"
           in ccorres_cross_over_guard)
@@ -574,7 +574,7 @@ lemma invalidateCacheRange_RAM_ccorres:
               apply (drule_tac s="w1 && mask 5" in sym, simp add: cache_range_lineIndex_helper)
              apply (vcg exspec=invalidateByVA_modifies)
             apply ceqv
-           apply (ctac add: dsb_ccorres[unfolded dc_def])
+           apply (ctac add: dsb_ccorres)
           apply wp
          apply (simp add: guard_is_UNIV_def)
         apply wp
@@ -602,13 +602,13 @@ lemma invalidateCacheRange_I_ccorres:
    apply (ccorres_remove_UNIV_guard)
    apply (simp add: invalidateCacheRange_I_def)
    apply csymbr
-   apply (rule cacheRangeOp_ccorres[simplified dc_def])
+   apply (rule cacheRangeOp_ccorres)
      apply (rule empty_fail_invalidateByVA_I)
     apply clarsimp
     apply (cinitlift index_')
     apply (rule ccorres_guard_imp2)
      apply csymbr
-     apply (ctac add: invalidateByVA_I_ccorres[unfolded dc_def])
+     apply (ctac add: invalidateByVA_I_ccorres)
     apply (clarsimp simp: lineStart_def cacheLineBits_def shiftr_shiftl1
                           mask_out_sub_mask)
     apply (drule_tac s="w1 && mask 5" in sym, simp add: cache_range_lineIndex_helper)
@@ -628,13 +628,13 @@ lemma branchFlushRange_ccorres:
    apply (ccorres_remove_UNIV_guard)
    apply (simp add: branchFlushRange_def)
    apply csymbr
-   apply (rule cacheRangeOp_ccorres[simplified dc_def])
+   apply (rule cacheRangeOp_ccorres)
      apply (rule empty_fail_branchFlush)
     apply clarsimp
     apply (cinitlift index_')
     apply (rule ccorres_guard_imp2)
      apply csymbr
-     apply (ctac add: branchFlush_ccorres[unfolded dc_def])
+     apply (ctac add: branchFlush_ccorres)
     apply (clarsimp simp: lineStart_def cacheLineBits_def shiftr_shiftl1
                           mask_out_sub_mask)
     apply (drule_tac s="w1 && mask 5" in sym, simp add: cache_range_lineIndex_helper)

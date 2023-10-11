@@ -13,15 +13,15 @@ theory HaskellLib_H
 imports
   Lib
   More_Numeral_Type
-  Monads.NonDetMonadVCG
-  Monads.OptionMonad
+  Monads.Nondet_VCG
+  Monads.Reader_Option_Monad
 begin
 
 abbreviation (input) "flip \<equiv> swp"
 
 abbreviation(input) bind_drop :: "('a, 'c) nondet_monad \<Rightarrow> ('a, 'b) nondet_monad
                       \<Rightarrow> ('a, 'b) nondet_monad" (infixl ">>'_" 60)
-  where "bind_drop \<equiv> (\<lambda>x y. NonDetMonad.bind x (K_bind y))"
+  where "bind_drop \<equiv> (\<lambda>x y. Nondet_Monad.bind x (K_bind y))"
 
 lemma bind_drop_test:
   "foldr bind_drop x (return ()) = sequence_x x"

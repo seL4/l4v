@@ -772,4 +772,11 @@ lemma aligned_mask_le_mask_minus:
   by (metis and_mask_less' is_aligned_after_mask is_aligned_neg_mask_eq'
            mask_2pm1 mask_sub neg_mask_mono_le word_less_sub_le)
 
+lemma shiftr_anti_mono:
+  "m \<le> n \<Longrightarrow> w >> n \<le> w >> m" for w :: "'a::len word"
+  apply transfer
+  apply (simp add: take_bit_drop_bit)
+  apply (simp add: drop_bit_eq_div zdiv_mono2)
+  done
+
 end

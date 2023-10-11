@@ -114,7 +114,7 @@ lemma set_ntfn_obj_ref_valid_vspace_objs'[wp]:
   by (wpsimp simp: update_sk_obj_ref_def)
 
 crunch valid_vspace_objs'[wp]: finalise_cap, cap_swap_for_delete, empty_slot "valid_vspace_objs'"
-  (wp: crunch_wps select_wp preemption_point_inv hoare_vcg_all_lift
+  (wp: crunch_wps preemption_point_inv hoare_vcg_all_lift
    simp: crunch_simps unless_def ignore:set_object set_thread_state_act update_sk_obj_ref)
 
 lemma preemption_point_valid_vspace_objs'[wp]:
@@ -241,7 +241,7 @@ lemma perform_asid_pool_invocation_valid_vspace_objs'[wp]:
 crunch valid_vspace_objs'[wp]: perform_asid_pool_invocation,
      perform_asid_control_invocation "valid_vspace_objs'"
   (ignore: delete_objects set_object
-       wp: static_imp_wp select_wp crunch_wps
+       wp: hoare_weak_lift_imp crunch_wps
      simp: crunch_simps unless_def)
 
 lemma pte_range_interD:
@@ -341,7 +341,7 @@ crunches awaken, sc_and_timer
 
 lemma schedule_valid_vspace_objs'[wp]:
   "\<lbrace>valid_vspace_objs'\<rbrace> schedule :: (unit,unit) s_monad \<lbrace>\<lambda>_. valid_vspace_objs'\<rbrace>"
-  unfolding schedule_def by (wpsimp wp: alternative_wp select_wp hoare_drop_imps)
+  unfolding schedule_def by (wpsimp wp: hoare_drop_imps)
 
 (* FIXME RT: clean up the duplication here (also in ARM); factor out handle_event? *)
 lemma call_kernel_valid_vspace_objs'[wp]:

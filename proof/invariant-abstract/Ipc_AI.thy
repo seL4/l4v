@@ -475,7 +475,7 @@ lemma cap_insert_weak_cte_wp_at2:
    cap_insert cap src dest
    \<lbrace>\<lambda>uu. cte_wp_at P p\<rbrace>"
   unfolding cap_insert_def
-  by (wp set_cap_cte_wp_at get_cap_wp static_imp_wp
+  by (wp set_cap_cte_wp_at get_cap_wp hoare_weak_lift_imp
       | simp add: cap_insert_def
       | unfold set_untyped_cap_as_full_def
       | auto simp: cte_wp_at_def dest!:imp)+
@@ -562,10 +562,10 @@ lemma transfer_caps_loop_presM:
   apply (clarsimp simp add: Let_def split_def whenE_def
                       cong: if_cong list.case_cong split del: if_split)
   apply (rule hoare_pre)
-   apply (wp eb hoare_vcg_const_imp_lift hoare_vcg_const_Ball_lift static_imp_wp
+   apply (wp eb hoare_vcg_const_imp_lift hoare_vcg_const_Ball_lift hoare_weak_lift_imp
            | assumption | simp split del: if_split)+
       apply (rule cap_insert_assume_null)
-      apply (wp x hoare_vcg_const_Ball_lift cap_insert_cte_wp_at static_imp_wp)+
+      apply (wp x hoare_vcg_const_Ball_lift cap_insert_cte_wp_at hoare_weak_lift_imp)+
       apply (rule hoare_vcg_conj_liftE_R)
        apply (rule derive_cap_is_derived_foo)
       apply (rule_tac Q' ="\<lambda>cap' s. (vo \<longrightarrow> cap'\<noteq> cap.NullCap \<longrightarrow>
@@ -1410,9 +1410,7 @@ lemmas get_tcb_ko_atI = get_tcb_ko_at [THEN iffD1]
 
 
 crunch "distinct" [wp]: set_mrs pspace_distinct
-  (wp: select_wp hoare_vcg_split_case_option mapM_wp
-       hoare_drop_imps  refl
-   simp: zipWithM_x_mapM)
+  (wp: mapM_wp simp: zipWithM_x_mapM)
 
 
 crunch "distinct" [wp]: copy_mrs pspace_distinct
@@ -1766,7 +1764,7 @@ lemma set_mrs_valid_ioc[wp]:
   apply (simp add: set_mrs_def)
   apply (wp | wpc)+
      apply (simp only: zipWithM_x_mapM_x split_def)
-     apply (wp mapM_x_wp' set_object_valid_ioc_caps static_imp_wp
+     apply (wp mapM_x_wp' set_object_valid_ioc_caps hoare_weak_lift_imp
         | simp)+
   apply (clarsimp simp: obj_at_def get_tcb_def valid_ioc_def
                   split: option.splits Structures_A.kernel_object.splits)
@@ -2554,7 +2552,7 @@ lemma pred_tcb_clear:
   by (simp add: pred_tcb_at_def obj_at_def pspace_clear_def)
 
 lemma pred_tcb_upd_apply:
-  "pred_tcb_at proj P t (s\<lparr>kheap := kheap s(r \<mapsto> TCB v)\<rparr>) =
+  "pred_tcb_at proj P t (s\<lparr>kheap := (kheap s)(r \<mapsto> TCB v)\<rparr>) =
   (if t = r then P (proj (tcb_to_itcb v)) else pred_tcb_at proj P t s)"
   by (simp add: pred_tcb_at_def obj_at_def)
 
@@ -2711,8 +2709,8 @@ lemma valid_bound_tcb_exst[iff]:
   by (auto simp: valid_bound_obj_def split:option.splits)
 
 crunch bound_tcb[wp]: set_message_info, set_mrs "valid_bound_tcb t"
-(wp: valid_bound_tcb_typ_at set_object_typ_at mapM_wp ignore: set_object
- simp: zipWithM_x_mapM)
+  (wp: valid_bound_tcb_typ_at set_object_typ_at mapM_wp ignore: set_object
+   simp: zipWithM_x_mapM)
 
 lemma pspace_clear_update1:
   "t \<noteq> t' \<Longrightarrow>
@@ -2779,7 +2777,7 @@ crunch ex_nonz_cap_to[wp]: set_message_info "ex_nonz_cap_to p"
 lemmas is_derived_not_Null = derived_not_Null(1)
 
 crunch mdb[wp]: set_message_info valid_mdb
-  (wp: select_wp crunch_wps mapM_wp')
+  (wp: crunch_wps mapM_wp')
 
 lemma ep_queue_cap_to:
   "\<lbrakk> ko_at (Endpoint ep) p s; invs s;

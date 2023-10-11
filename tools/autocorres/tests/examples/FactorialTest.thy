@@ -10,7 +10,7 @@ Termination for recursive functions.
 theory FactorialTest
 imports
   "AutoCorres.AutoCorres"
-  "Monads.OptionMonadWP"
+  "Monads.Reader_Option_VCG"
 begin
 
 external_file "factorial.c"

@@ -463,7 +463,7 @@ proof -
                 apply (simp add: frame_registers_def frameRegisters_def)
                apply (simp add: getRestartPC_def setNextPC_def dc_def[symmetric])
                apply (rule Q[OF refl refl])
-              apply ((wp mapM_x_wp' static_imp_wp | simp)+)[2]
+              apply ((wp mapM_x_wp' hoare_weak_lift_imp | simp)+)[2]
             apply (rule corres_split_nor)
                apply (rule corres_when[OF refl])
                apply (rule R[OF refl refl])
@@ -473,15 +473,15 @@ proof -
                   apply (rule corres_split[OF corres_when[OF refl rescheduleRequired_corres]])
                     apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
                     apply simp
-                   apply (solves \<open>wp static_imp_wp\<close>)+
+                   apply (solves \<open>wp hoare_weak_lift_imp\<close>)+
              apply (rule_tac Q="\<lambda>_. einvs and tcb_at dest" in hoare_strengthen_post[rotated])
               apply (clarsimp simp: invs_def valid_sched_weak_strg valid_sched_def valid_state_def
                                     valid_pspace_def)
              prefer 2
              apply (rule_tac Q="\<lambda>_. invs' and tcb_at' dest" in hoare_strengthen_post[rotated])
               apply (clarsimp simp: invs'_def valid_pspace'_def)
-             apply ((wp mapM_x_wp' static_imp_wp | simp)+)[4]
-         apply ((wp static_imp_wp restart_invs' restart_valid_sched | wpc | clarsimp simp: if_apply_def2)+)[2]
+             apply ((wp mapM_x_wp' hoare_weak_lift_imp | simp)+)[4]
+         apply ((wp hoare_weak_lift_imp restart_invs' restart_valid_sched | wpc | clarsimp simp: if_apply_def2)+)[2]
        apply (rule_tac Q="\<lambda>_. einvs and tcb_at dest and tcb_at src and ex_nonz_cap_to dest
                               and simple_sched_action and current_time_bounded"
               in hoare_strengthen_post[rotated])
@@ -1482,7 +1482,6 @@ lemma valid_tcb_ipc_buffer_update:
   "\<And>buf s. is_aligned buf msg_align_bits
    \<Longrightarrow> (\<forall>tcb. valid_tcb' tcb s \<longrightarrow> valid_tcb' (tcbIPCBuffer_update (\<lambda>_. buf) tcb) s)"
   by (simp add: valid_tcb'_def tcb_cte_cases_def)
-
 
 end
 
@@ -2789,7 +2788,7 @@ lemma checkPrio_wp:
     checkPrio prio auth
    \<lbrace> \<lambda>rv. P \<rbrace>,-"
   apply (simp add: checkPrio_def)
-  apply (wp NonDetMonadVCG.whenE_throwError_wp getMCP_wp)
+  apply (wp Nondet_VCG.whenE_throwError_wp getMCP_wp)
   by (auto simp add: pred_tcb_at'_def obj_at'_def)
 
 lemma checkPrio_lt_ct:

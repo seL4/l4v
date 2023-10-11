@@ -116,7 +116,7 @@ lemma (in TcbAcc_AI_arch_tcb_context_set_eq) thread_get_as_user:
                         gets_def put_def bind_def get_def return_def select_f_def
                         gets_the_def assert_opt_def get_tcb_def
                  split: option.split_asm kernel_object.split_asm)
-  apply (rename_tac v s; subgoal_tac "kheap s(t \<mapsto> TCB v) = kheap s", simp)
+  apply (rename_tac v s; subgoal_tac "(kheap s)(t \<mapsto> TCB v) = kheap s", simp)
   apply fastforce
   done
 

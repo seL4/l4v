@@ -8,6 +8,7 @@ theory LevityCatch
 imports
   "BaseRefine.Include"
   "Lib.LemmaBucket"
+  "Lib.Corres_Method"
 begin
 
 (* Try again, clagged from Include *)

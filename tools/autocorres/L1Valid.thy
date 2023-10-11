@@ -29,7 +29,7 @@ lemma L1_spec_wp [wp]: "\<lbrace> \<lambda>s. \<forall>t. (s, t) \<in> f \<longr
 
 lemma L1_init_wp [wp]: "\<lbrace> \<lambda>s. \<forall>x. P () (f (\<lambda>_. x) s) \<rbrace> L1_init f \<lbrace> P \<rbrace>, \<lbrace> Q \<rbrace>"
   apply (unfold L1_init_def)
-  apply (wp select_wp)
+  apply wp
   apply fastforce
   done
 

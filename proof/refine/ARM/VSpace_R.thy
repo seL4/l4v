@@ -457,13 +457,11 @@ lemma getHWASID_corres:
   apply (simp add: get_hw_asid_def getHWASID_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr[OF loadHWASID_corres[where pd=pd]])
-      apply (case_tac maybe_hw_asid; simp)
+      apply (corres_cases; simp)
       apply (rule corres_split_eqr[OF findFreeHWASID_corres])
          apply (rule corres_split[OF storeHWASID_corres[where pd=pd]])
-           apply (rule corres_trivial, simp )
-          apply (wpsimp wp: load_hw_asid_wp)+
-   apply (simp add: pd_at_asid_uniq)
-  apply simp
+           apply (rule corres_trivial, simp)
+          apply (wpsimp wp: load_hw_asid_wp hoare_drop_imp simp: pd_at_asid_uniq)+
   done
 
 lemma setCurrentPD_to_abs:
@@ -497,9 +495,8 @@ lemma handleVMFault_corres:
   "corres (fr \<oplus> dc) (tcb_at thread) (tcb_at' thread)
           (handle_vm_fault thread fault) (handleVMFault thread fault)"
   apply (simp add: ARM_H.handleVMFault_def)
-  apply (cases fault)
-   apply simp
-   apply (rule corres_guard_imp)
+  apply corres_cases
+     apply simp
      apply (rule corres_splitEE)
         apply simp
         apply (rule corres_machine_op [where r="(=)"])
@@ -511,9 +508,7 @@ lemma handleVMFault_corres:
           apply (rule corres_Id, rule refl, simp)
           apply (rule no_fail_getDFSR)
          apply (rule corres_trivial, simp add: arch_fault_map_def)
-        apply wp+
-    apply simp+
-  apply (rule corres_guard_imp)
+        apply wpsimp+
     apply (rule corres_splitEE)
        apply simp
        apply (rule asUser_corres')
@@ -526,8 +521,7 @@ lemma handleVMFault_corres:
          apply (rule corres_Id, rule refl, simp)
          apply (rule no_fail_getIFSR)
         apply (rule corres_trivial, simp add: arch_fault_map_def)
-       apply wp+
-   apply simp+
+       apply wpsimp+
   done
 
 lemma flushSpace_corres:
@@ -544,18 +538,15 @@ lemma flushSpace_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split)
        apply (rule loadHWASID_corres[where pd=pd])
-      apply (rule corres_split[where R="\<lambda>_. \<top>" and R'="\<lambda>_. \<top>"])
+      apply (rule corres_split)
          apply (rule corres_machine_op [where r=dc])
          apply (rule corres_Id, rule refl, simp)
          apply (rule no_fail_cleanCaches_PoU)
-        apply (case_tac maybe_hw_asid)
-         apply simp
-        apply clarsimp
+        apply (corres_cases; clarsimp)
         apply (rule corres_machine_op)
         apply (rule corres_Id, rule refl, simp)
         apply (rule no_fail_invalidateLocalTLB_ASID)
-       apply wp+
-   apply clarsimp
+       apply wpsimp+
    apply (simp add: pd_at_asid_uniq)
   apply simp
   done
@@ -572,16 +563,13 @@ lemma invalidateTLBByASID_corres:
           (invalidate_tlb_by_asid asid) (invalidateTLBByASID asid)"
   apply (simp add: invalidate_tlb_by_asid_def invalidateTLBByASID_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[where R="\<lambda>_. \<top>" and R'="\<lambda>_. \<top>"])
+    apply (rule corres_split)
        apply (rule loadHWASID_corres[where pd=pd])
-      apply (case_tac maybe_hw_asid)
-       apply simp
-      apply clarsimp
+      apply (corres_cases; clarsimp)
       apply (rule corres_machine_op)
       apply (rule corres_Id, rule refl, simp)
       apply (rule no_fail_invalidateLocalTLB_ASID)
-     apply wp+
-   apply clarsimp
+     apply wpsimp+
    apply (simp add: pd_at_asid_uniq)
   apply simp
   done
@@ -834,8 +822,7 @@ lemma deleteASID_corres:
   apply (simp add: delete_asid_def deleteASID_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF corres_gets_asid])
-      apply (case_tac "asid_table (asid_high_bits_of asid)", simp)
-      apply clarsimp
+      apply (corres_cases; clarsimp)
       apply (rule_tac P="\<lambda>s. asid_high_bits_of asid \<in> dom (asidTable o ucast) \<longrightarrow>
                              asid_pool_at (the ((asidTable o ucast) (asid_high_bits_of asid))) s" and
                       P'="pspace_aligned' and pspace_distinct'" and
@@ -1067,10 +1054,10 @@ proof -
                           and valid_arch_state
                           and pspace_aligned and pspace_distinct)
                        (pspace_aligned' and pspace_distinct' and no_0_obj')
-           (do arm_context_switch pd asid;
+           (do _ \<leftarrow> arm_context_switch pd asid;
                return True
             od)
-           (do armv_contextSwitch pd asid;
+           (do _ \<leftarrow> armv_contextSwitch pd asid;
                return True
             od)"
     apply (rule corres_guard_imp)
@@ -1079,34 +1066,20 @@ proof -
         apply (wp | simp)+
     done
   show ?thesis
-  apply (simp add: set_vm_root_for_flush_def setVMRootForFlush_def getThreadVSpaceRoot_def locateSlot_conv)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split[OF getCurThread_corres])
-      apply (rule corres_split[where R="\<lambda>_. vspace_at_asid asid pd and K (asid \<noteq> 0 \<and> asid \<le> mask asid_bits)
-                                               and valid_asid_map and valid_vs_lookup
-                                               and valid_vspace_objs and valid_global_objs
-                                               and unique_table_refs o caps_of_state
-                                               and valid_arch_state
-                                               and pspace_aligned and pspace_distinct"
-                                  and R'="\<lambda>_. pspace_aligned' and pspace_distinct' and no_0_obj'"])
-         apply (rule getSlotCap_corres)
-         apply (simp add: cte_map_def tcb_cnode_index_def tcbVTableSlot_def to_bl_1)
-        apply (case_tac "isArchObjectCap rv' \<and>
-                         isPageDirectoryCap (capCap rv') \<and>
-                         capPDMappedASID (capCap rv') \<noteq> None \<and>
-                         capPDBasePtr (capCap rv') = pd")
-         apply (case_tac rv, simp_all add: isCap_simps)[1]
-         apply (rename_tac arch_cap)
-         apply (case_tac arch_cap, auto)[1]
-        apply (case_tac rv, simp_all add: isCap_simps[simplified] X[simplified])[1]
-        apply (rename_tac arch_cap)
-        apply (case_tac arch_cap, auto simp: X[simplified] split: option.splits)[1]
-       apply wp+
-   apply (clarsimp simp: cur_tcb_def)
-   apply (erule tcb_at_cte_at)
-   apply (simp add: tcb_cap_cases_def)
-  apply clarsimp
-  done
+    apply (simp add: set_vm_root_for_flush_def setVMRootForFlush_def getThreadVSpaceRoot_def locateSlot_conv)
+    apply (rule corres_guard_imp)
+      apply (rule corres_split[OF getCurThread_corres])
+        apply (rule corres_split)
+           apply (rule getSlotCap_corres)
+           apply (simp add: cte_map_def tcb_cnode_index_def tcbVTableSlot_def to_bl_1)
+          apply (corres_cases; (simp add: isCap_simps, rule X)?)+
+          apply (clarsimp simp: isCap_simps, rule X)
+         apply (wpsimp wp: hoare_drop_imp hoare_vcg_all_lift)+
+     apply (clarsimp simp: cur_tcb_def)
+     apply (erule tcb_at_cte_at)
+     apply (simp add: tcb_cap_cases_def)
+    apply clarsimp
+    done
 qed
 
 crunches armv_contextSwitch, setVMRoot, setVMRootForFlush
@@ -1372,13 +1345,11 @@ lemma pageTableMapped_corres:
           apply simp
          apply (simp add: liftE_bindE)
          apply (rule corres_split[OF getObject_PDE_corres'])
-           apply (rule corres_trivial)
-           apply (case_tac rv,
-             simp_all add: returnOk_def pde_relation_aligned_def
-             split:if_splits ARM_H.pde.splits)[1]
-          apply (wp | simp add: lookup_pd_slot_def Let_def)+
-   apply (simp add: word_neq_0_conv)
-  apply simp
+           apply (corres_cases_both simp: pde_relation_aligned_def;
+                  fastforce intro!: corres_returnOkTT
+                            simp: pde_relation_aligned_def
+                            split: if_split_asm)
+          apply (wpsimp simp: lookup_pd_slot_def word_neq_0_conv)+
   done
 
 crunch inv[wp]: pageTableMapped "P"
@@ -1643,17 +1614,11 @@ lemma doFlush_corres:
   "corres_underlying Id nf nf' dc \<top> \<top>
              (do_flush typ start end pstart) (doFlush (flush_type_map typ) start end pstart)"
   apply (simp add: do_flush_def doFlush_def)
-  apply (cases "typ", simp_all add: flush_type_map_def)
-     apply (rule corres_Id [where r=dc], rule refl, simp)
-     apply (wp no_fail_cleanCacheRange_RAM)
-    apply (rule corres_Id [where r=dc], rule refl, simp)
-    apply (wp no_fail_invalidateCacheRange_RAM)
-   apply (rule corres_Id [where r=dc], rule refl, simp)
-   apply (wp no_fail_cleanInvalidateCacheRange_RAM)
-  apply (rule corres_Id [where r=dc], rule refl, simp)
-  apply (rule no_fail_pre, wp add: no_fail_cleanCacheRange_PoU no_fail_invalidateCacheRange_I
-                              no_fail_dsb no_fail_isb del: no_irq)
-  apply clarsimp
+  apply corres_pre
+    apply (corres_cases_both simp: flush_type_map_def;
+           (rule corres_Id[OF refl], simp, wpsimp wp: no_fail_dsb no_fail_isb))
+   apply simp
+  apply simp
   done
 
 definition
@@ -1669,25 +1634,22 @@ lemma performPageDirectoryInvocation_corres:
                and cur_tcb' and valid_arch_state')
              (perform_page_directory_invocation pdi) (performPageDirectoryInvocation pdi')"
   apply (simp add: perform_page_directory_invocation_def performPageDirectoryInvocation_def)
-  apply (cases pdi)
-   apply (clarsimp simp: page_directory_invocation_map_def)
-   apply (rule corres_guard_imp)
-     apply (rule corres_when, simp)
-     apply (rule corres_split[OF setVMRootForFlush_corres])
-       apply (rule corres_split[OF corres_machine_op])
-          apply (rule doFlush_corres)
-         apply (rule corres_when, simp)
-         apply (rule corres_split[OF getCurThread_corres])
-           apply clarsimp
-           apply (rule setVMRoot_corres)
-          apply wp+
-        apply (simp add: cur_tcb_def[symmetric])
-        apply (wp hoare_drop_imps)
-       apply (simp add: cur_tcb'_def[symmetric])
-       apply (wp hoare_drop_imps)+
-    apply clarsimp
-    apply (auto simp: valid_pdi_def invs_vspace_objs[simplified])[2]
-  apply (clarsimp simp: page_directory_invocation_map_def)
+  apply (corres_cases_both simp: page_directory_invocation_map_def)
+    apply (clarsimp simp: page_directory_invocation_map_def)
+    apply (rule corres_when, simp)
+    apply (rule corres_split[OF setVMRootForFlush_corres])
+      apply (rule corres_split[OF corres_machine_op])
+         apply (rule doFlush_corres)
+        apply (rule corres_when, simp)
+        apply (rule corres_split[OF getCurThread_corres])
+          apply clarsimp
+          apply (rule setVMRoot_corres)
+         apply wp+
+       apply (simp flip: cur_tcb_def)
+       apply (wp hoare_drop_imps)
+      apply (simp flip: cur_tcb'_def)
+      apply (wp hoare_drop_imps)+
+   apply (auto simp: valid_pdi_def invs_vspace_objs[simplified] page_directory_invocation_map_def)
   done
 
 definition
@@ -2001,7 +1963,7 @@ lemma duplicate_address_set_simp:
 lemma valid_duplicates'_non_pd_pt_I:
   "\<lbrakk>koTypeOf ko \<noteq> ArchT PDET; koTypeOf ko \<noteq> ArchT PTET;
    vs_valid_duplicates' (ksPSpace s) ; ksPSpace s p = Some ko; koTypeOf ko = koTypeOf m\<rbrakk>
-       \<Longrightarrow> vs_valid_duplicates' (ksPSpace s(p \<mapsto> m))"
+       \<Longrightarrow> vs_valid_duplicates' ((ksPSpace s)(p \<mapsto> m))"
   apply (subst vs_valid_duplicates'_def)
   apply (intro allI impI)
   apply (clarsimp split:if_splits simp:duplicate_address_set_simp option.splits)

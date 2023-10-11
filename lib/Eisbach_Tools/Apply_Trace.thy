@@ -225,7 +225,7 @@ let
 
   val deps = case query of SOME (raw_query,pos) =>
     let
-      val pos' = perhaps (try (Position.advance_offsets 1)) pos;
+      val pos' = perhaps (try (Position.shift_offsets {remove_id = false} 1)) pos;
       val q = Find_Theorems.read_query pos' raw_query;
       val results = Find_Theorems.find_theorems_cmd ctxt (SOME thm) (SOME 1000000000) false q
                     |> snd

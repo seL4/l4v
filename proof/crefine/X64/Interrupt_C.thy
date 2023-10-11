@@ -75,7 +75,7 @@ proof -
      apply (rule ccorres_symb_exec_r)
        apply (ctac(no_vcg) add: cteDeleteOne_ccorres[where w="-1"])
         apply (rule ccorres_call)
-           apply (rule cteInsert_ccorres[simplified dc_def])
+           apply (rule cteInsert_ccorres)
           apply simp
          apply simp
         apply simp
@@ -112,7 +112,7 @@ lemma invokeIRQHandler_ClearIRQHandler_ccorres:
    apply (simp add: ucast_up_ucast is_up)
    apply (ctac(no_vcg) add: getIRQSlot_ccorres[simplified])
      apply (rule ccorres_symb_exec_r)
-       apply (ctac add: cteDeleteOne_ccorres[where w="-1",simplified dc_def])
+       apply (ctac add: cteDeleteOne_ccorres[where w="-1"])
       apply vcg
      apply (rule conseqPre, vcg, clarsimp simp: rf_sr_def
         gs_set_assn_Delete_cstate_relation[unfolded o_def])
@@ -349,7 +349,7 @@ lemma invokeIRQControl_ccorres:
       (performIRQControl (IssueIRQHandler irq slot parent))
       (Call invokeIRQControl_'proc)"
   by (clarsimp simp: performIRQControl_def liftE_def bind_assoc
-               intro!: invokeIRQControl_expanded_ccorres[simplified liftE_def K_def, simplified])
+               intro!: invokeIRQControl_expanded_ccorres[simplified liftE_def, simplified])
 
 lemma isIRQActive_ccorres:
   "ccorres (\<lambda>rv rv'. rv' = from_bool rv) ret__unsigned_long_'
@@ -719,7 +719,7 @@ from assms show ?thesis
    apply (rule ccorres_Cond_rhs_Seq)
     apply ccorres_rewrite
     apply (auto split: invocation_label.split arch_invocation_label.split
-                intro: syscall_error_throwError_ccorres_n[simplified throwError_def o_def dc_def id_def]
+                intro: syscall_error_throwError_ccorres_n[simplified throwError_def o_def]
                 simp: throwError_def invocationCatch_def syscall_error_to_H_cases invocation_eq_use_types)[1]
    apply clarsimp
    apply (rule ccorres_rhs_assoc2)
@@ -739,13 +739,13 @@ from assms show ?thesis
       apply (erule ccorres_disj_division;
              clarsimp split: invocation_label.split simp: invocation_eq_use_types)
        apply (auto split: list.split
-                   intro: syscall_error_throwError_ccorres_n[simplified throwError_def o_def dc_def id_def]
+                   intro: syscall_error_throwError_ccorres_n[simplified throwError_def o_def]
                    simp: throwError_def invocationCatch_def syscall_error_to_H_cases)[2]
      (* Insufficient extra caps *)
      apply (erule ccorres_disj_division;
             clarsimp split: invocation_label.split simp: invocation_eq_use_types)
       apply (auto split: list.split
-                  intro: syscall_error_throwError_ccorres_n[simplified throwError_def o_def dc_def id_def]
+                  intro: syscall_error_throwError_ccorres_n[simplified throwError_def o_def]
                   simp: throwError_def invocationCatch_def syscall_error_to_H_cases)[2]
     (* Arguments OK *)
     apply ccorres_rewrite
@@ -772,7 +772,7 @@ from assms show ?thesis
                                   word_sless_alt is_down sint_ucast_eq_uint word_le_not_less
                                   invocationCatch_use_injection_handler injection_handler_throwError
                                   syscall_error_to_H_cases
-                            intro: syscall_error_throwError_ccorres_n[simplified id_def dc_def]) |
+                            intro: syscall_error_throwError_ccorres_n) |
                        ccorres_rewrite)+)[2]
             apply (erule ccorres_disj_division; clarsimp simp: invocation_eq_use_types)
              (* X64IRQIssueIRQHandlerIOAPIC *)
@@ -792,7 +792,7 @@ from assms show ?thesis
                apply (simp add: injection_handler_whenE injection_handler_throwError)
                apply (rule ccorres_split_when_throwError_cond[where Q=\<top> and Q'=\<top>])
                   apply clarsimp
-                 apply (rule syscall_error_throwError_ccorres_n[simplified id_def dc_def])
+                 apply (rule syscall_error_throwError_ccorres_n)
                  apply (fastforce simp: syscall_error_to_H_cases)
                 apply csymbr
                 apply (ctac add: ccorres_injection_handler_csum1
@@ -828,8 +828,7 @@ from assms show ?thesis
                                              where g="\<lambda>_. injection_handler P Q >>=E R" for P Q R])
                             apply (clarsimp simp: injection_handler_returnOk)
                             apply (simp only: bindE_K_bind)
-                            apply (ctac add: ioapic_decode_map_pin_to_vector_ccorres
-                                               [simplified o_def id_def dc_def K_def])
+                            apply (ctac add: ioapic_decode_map_pin_to_vector_ccorres)
                                apply ccorres_rewrite
                                apply (simp add: ccorres_invocationCatch_Inr performInvocation_def
                                                 returnOk_bind liftE_bindE bindE_assoc
@@ -895,7 +894,7 @@ from assms show ?thesis
               apply (simp add: injection_handler_whenE injection_handler_throwError)
               apply (rule ccorres_split_when_throwError_cond[where Q=\<top> and Q'=\<top>])
                  apply clarsimp
-                apply (rule syscall_error_throwError_ccorres_n[simplified id_def dc_def])
+                apply (rule syscall_error_throwError_ccorres_n)
                 apply (fastforce simp: syscall_error_to_H_cases)
                apply csymbr
                apply (ctac add: ccorres_injection_handler_csum1
@@ -931,7 +930,7 @@ from assms show ?thesis
                            (* Handle the conditional checks on PCI bus/dev/func *)
                            apply ((rule_tac Q=\<top> and Q'=\<top> in ccorres_split_when_throwError_cond,
                                    fastforce,
-                                   rule syscall_error_throwError_ccorres_n[simplified id_def dc_def],
+                                   rule syscall_error_throwError_ccorres_n,
                                    fastforce simp: syscall_error_to_H_cases)+)[3]
                               apply ccorres_rewrite
                               apply csymbr

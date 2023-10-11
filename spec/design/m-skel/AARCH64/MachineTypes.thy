@@ -8,9 +8,9 @@ chapter "AARCH64 Machine Types"
 theory MachineTypes
 imports
   Word_Lib.WordSetup
-  Monads.Empty_Fail
-  Monads.No_Fail
-  Monads.OptionMonadND
+  Monads.Nondet_Empty_Fail
+  Monads.Nondet_No_Fail
+  Monads.Reader_Option_ND
   Lib.HaskellLib_H
   Platform
 begin

@@ -966,7 +966,7 @@ lemma tcbSchedDequeue_rewrite_not_queued:
   apply (monadic_rewrite_l monadic_rewrite_if_l_False \<open>wp threadGet_const\<close>)
    apply (monadic_rewrite_symb_exec_l, rule monadic_rewrite_refl)
    apply wp+
-  apply (clarsimp simp: o_def obj_at'_def)
+  apply clarsimp
   done
 
 lemma schedule_known_rewrite:
@@ -1399,8 +1399,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                         capFaultOnFailure_def rethrowFailure_injection
                         injection_handler_catch bind_bindE_assoc
                         getThreadCallerSlot_def bind_assoc
-                        getSlotCap_def
-                        case_bool_If o_def
+                        getSlotCap_def case_bool_If
                         isRight_def[where x="Inr v" for v]
                         isRight_def[where x="Inl v" for v]
                   cong: if_cong)
@@ -1519,9 +1518,9 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                            apply wp
                           apply (rule monadic_rewrite_trans)
                            apply (rule_tac rv=rab_ret
-                                    in monadic_rewrite_gets_known[where m="NonDetMonad.lift f"
+                                    in monadic_rewrite_gets_known[where m="Nondet_Monad.lift f"
                                     for f, folded bindE_def])
-                          apply (simp add: NonDetMonad.lift_def isRight_case_sum)
+                          apply (simp add: Nondet_Monad.lift_def isRight_case_sum)
                           apply monadic_rewrite_symb_exec_l
                            apply (rename_tac ep_cap2)
                            apply (rule_tac P="cteCap ep_cap2 = cteCap ep_cap" in monadic_rewrite_gen_asm)
@@ -1563,8 +1562,8 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                                       setThreadState_no_sch_change setThreadState_obj_at_unchanged
                                       sts_st_tcb_at'_cases sts_bound_tcb_at'
                                       fastpathBestSwitchCandidate_lift[where f="setThreadState s t" for s t]
-                                      static_imp_wp hoare_vcg_all_lift hoare_vcg_imp_lift
-                                      static_imp_wp cnode_caps_gsCNodes_lift
+                                      hoare_weak_lift_imp hoare_vcg_all_lift hoare_vcg_imp_lift
+                                      hoare_weak_lift_imp cnode_caps_gsCNodes_lift
                                       hoare_vcg_ex_lift
                           | wps)+
                            apply (strengthen imp_consequent[where Q="tcb_at' t s" for t s])
@@ -1577,8 +1576,8 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                                       emptySlot_cnode_caps
                                       user_getreg_inv asUser_typ_ats
                                       asUser_obj_at_not_queued asUser_obj_at' mapM_x_wp'
-                                      static_imp_wp hoare_vcg_all_lift hoare_vcg_imp_lift
-                                      static_imp_wp cnode_caps_gsCNodes_lift
+                                      hoare_weak_lift_imp hoare_vcg_all_lift hoare_vcg_imp_lift
+                                      hoare_weak_lift_imp cnode_caps_gsCNodes_lift
                                       hoare_vcg_ex_lift
                                       fastpathBestSwitchCandidate_lift[where f="emptySlot a b" for a b]
                                    | simp del: comp_apply
@@ -1589,8 +1588,8 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                            apply (clarsimp cong: conj_cong)
                            apply ((wp user_getreg_inv asUser_typ_ats
                                       asUser_obj_at_not_queued asUser_obj_at' mapM_x_wp'
-                                      static_imp_wp hoare_vcg_all_lift hoare_vcg_imp_lift
-                                      static_imp_wp cnode_caps_gsCNodes_lift
+                                      hoare_weak_lift_imp hoare_vcg_all_lift hoare_vcg_imp_lift
+                                      hoare_weak_lift_imp cnode_caps_gsCNodes_lift
                                       hoare_vcg_ex_lift
                                    | clarsimp simp: obj_at'_weakenE[OF _ TrueI]
                                    | solves \<open>

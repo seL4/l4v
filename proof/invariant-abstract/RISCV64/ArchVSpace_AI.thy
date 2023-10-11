@@ -1441,7 +1441,7 @@ end
 
 locale asid_pool_map = Arch +
   fixes s ap pool asid ptp pt and s' :: "'a::state_ext state"
-  defines "s' \<equiv> s\<lparr>kheap := kheap s(ap \<mapsto> ArchObj (ASIDPool (pool(asid_low_bits_of asid \<mapsto> ptp))))\<rparr>"
+  defines "s' \<equiv> s\<lparr>kheap := (kheap s)(ap \<mapsto> ArchObj (ASIDPool (pool(asid_low_bits_of asid \<mapsto> ptp))))\<rparr>"
   assumes ap:  "asid_pools_of s ap = Some pool"
   assumes new: "pool (asid_low_bits_of asid) = None"
   assumes pt:  "pts_of s ptp = Some pt"

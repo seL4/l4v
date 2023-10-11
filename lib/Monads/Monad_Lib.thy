@@ -5,7 +5,7 @@
  *)
 
 (* This theory collects the minimum constant definitions and lemmas for the monad definition
-   theories (NonDetMonad, TraceMonad etc). Only things that are necessary for these and needed
+   theories (Nondet_Monad, Trace_Monad etc). Only things that are necessary for these and needed
    by more than one of them should go in here. *)
 
 theory Monad_Lib
@@ -68,5 +68,9 @@ lemma sum_all_ex[simp]:
   "(\<forall>a. x \<noteq> Inl a) = (\<exists>a. x = Inr a)"
   "(\<forall>a. x \<noteq> Inr a) = (\<exists>a. x = Inl a)"
   by (metis Inr_not_Inl sum.exhaust)+
+
+lemma context_disjE:
+  "\<lbrakk>P \<or> Q; P \<Longrightarrow> R; \<lbrakk>\<not>P; Q\<rbrakk> \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
+  by auto
 
 end

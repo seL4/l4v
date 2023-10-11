@@ -338,7 +338,7 @@ lemma threadSet_tcbDomain_update_sch_act_wf[wp]:
     apply (simp add: threadSet_def)
     apply wp
      apply (wps setObject_sa_unchanged)
-     apply (wp static_imp_wp getObject_tcb_wp hoare_vcg_all_lift)+
+     apply (wp hoare_weak_lift_imp getObject_tcb_wp hoare_vcg_all_lift)+
    apply (rename_tac word)
    apply (rule_tac Q="\<lambda>_ s. ksSchedulerAction s = SwitchToThread word \<longrightarrow>
                             st_tcb_at' runnable' word s \<and> tcb_in_cur_domain' word s \<and> word \<noteq> t"
@@ -689,7 +689,7 @@ proof -
          apply (rule hoare_weaken_pre [OF cteInsert_weak_cte_wp_at3])
          apply (rule PUC,simp)
          apply (clarsimp simp: cte_wp_at_ctes_of)
-        apply (wp hoare_vcg_all_lift static_imp_wp | simp add:ball_conj_distrib)+
+        apply (wp hoare_vcg_all_lift hoare_weak_lift_imp | simp add:ball_conj_distrib)+
     done
 qed
 
@@ -811,7 +811,7 @@ lemma doReply_invs[wp]:
          apply assumption
         apply (erule cte_wp_at_weakenE')
         apply (fastforce)
-       apply (wp sts_invs_minor'' sts_st_tcb' static_imp_wp)
+       apply (wp sts_invs_minor'' sts_st_tcb' hoare_weak_lift_imp)
              apply (rule_tac Q="\<lambda>rv s. invs' s \<and> sch_act_simple s
                                    \<and> st_tcb_at' awaiting_reply' t s
                                    \<and> t \<noteq> ksIdleThread s"
@@ -829,7 +829,7 @@ lemma doReply_invs[wp]:
               apply (erule_tac P="\<lambda>st. awaiting_reply' st \<and> activatable' st"
                       in pred_tcb'_weakenE)
               apply (case_tac st, clarsimp+)
-             apply (wp threadSet_invs_trivial threadSet_st_tcb_at2 static_imp_wp
+             apply (wp threadSet_invs_trivial threadSet_st_tcb_at2 hoare_weak_lift_imp
                     | clarsimp simp add: inQ_def)+
            apply (rule_tac Q="\<lambda>_. invs' and tcb_at' t
                                  and sch_act_simple and st_tcb_at' awaiting_reply' t"
@@ -987,7 +987,7 @@ lemma setDomain_invs':
   (\<lambda>y. domain \<le> maxDomain))\<rbrace>
   setDomain ptr domain \<lbrace>\<lambda>y. invs'\<rbrace>"
   apply (simp add:setDomain_def )
-  apply (wp add: when_wp static_imp_wp static_imp_conj_wp rescheduleRequired_all_invs_but_extra
+  apply (wp add: when_wp hoare_weak_lift_imp hoare_weak_lift_imp_conj rescheduleRequired_all_invs_but_extra
     tcbSchedEnqueue_valid_action hoare_vcg_if_lift2)
      apply (rule_tac Q = "\<lambda>r s. all_invs_but_sch_extra s \<and> curThread = ksCurThread s
       \<and> (ptr \<noteq> curThread \<longrightarrow> ct_not_inQ s \<and> sch_act_wf (ksSchedulerAction s) s \<and> ct_idle_or_in_cur_domain' s)"
@@ -1001,7 +1001,7 @@ lemma setDomain_invs':
       prefer 2
       apply clarsimp
       apply assumption
-     apply (wp static_imp_wp threadSet_pred_tcb_no_state threadSet_not_curthread_ct_domain
+     apply (wp hoare_weak_lift_imp threadSet_pred_tcb_no_state threadSet_not_curthread_ct_domain
                threadSet_tcbDomain_update_ct_not_inQ | simp)+
     apply (rule_tac Q = "\<lambda>r s. invs' s \<and> curThread = ksCurThread s \<and> sch_act_simple s
                              \<and> domain \<le> maxDomain
@@ -1218,7 +1218,7 @@ crunch valid_duplicates'[wp]: rescheduleRequired "\<lambda>s. vs_valid_duplicate
 
 crunch valid_duplicates'[wp]: setThreadState "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
 
-(*FIXME: move to NonDetMonadVCG.valid_validE_R *)
+(*FIXME: move to Nondet_VCG.valid_validE_R *)
 lemma handleInvocation_corres:
   "c \<longrightarrow> b \<Longrightarrow>
    corres (dc \<oplus> dc)
@@ -1349,7 +1349,7 @@ lemma hinv_invs'[wp]:
   apply (simp add: handleInvocation_def split_def
                    ts_Restart_case_helper')
   apply (wp syscall_valid' setThreadState_nonqueued_state_update rfk_invs'
-            hoare_vcg_all_lift static_imp_wp)
+            hoare_vcg_all_lift hoare_weak_lift_imp)
          apply (simp add: if_apply_def2)
          apply (wp gts_imp' | simp)+
         apply (rule_tac Q'="\<lambda>rv. invs'" in hoare_post_imp_R[rotated])
@@ -1979,7 +1979,7 @@ lemma handleHypervisorFault_corres:
           (handle_hypervisor_fault thread fault)
           (handleHypervisorFault thread fault)"
   apply (cases fault; clarsimp simp add: handleHypervisorFault_def returnOk_def2)
-  apply (corres corres: handleFault_corres)
+  apply (corresK corres: handleFault_corres)
    apply (simp add: ucast_id)
   apply (clarsimp simp: valid_fault_def)
   done

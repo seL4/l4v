@@ -60,7 +60,7 @@ locale Scheduler_IF_1 =
     "arch_scheduler_affects_equiv s s' \<Longrightarrow> arch_scheduler_affects_equiv s' s"
   and arch_scheduler_affects_equiv_update:
     "arch_scheduler_affects_equiv st s
-     \<Longrightarrow> arch_scheduler_affects_equiv st (s\<lparr>kheap := kheap s(x \<mapsto> TCB y')\<rparr>)"
+     \<Longrightarrow> arch_scheduler_affects_equiv st (s\<lparr>kheap := (kheap s)(x \<mapsto> TCB y')\<rparr>)"
   and arch_scheduler_affects_equiv_sa_update[simp]:
     "\<And>f. arch_scheduler_affects_equiv (scheduler_action_update f s) s' =
           arch_scheduler_affects_equiv s s'"
@@ -106,7 +106,7 @@ locale Scheduler_IF_1 =
     "\<And>P. arch_switch_to_idle_thread \<lbrace>\<lambda>s. P (work_units_completed s)\<rbrace>"
   and equiv_asid_equiv_update:
     "\<lbrakk> get_tcb x s = Some y; equiv_asid asid st s \<rbrakk>
-       \<Longrightarrow> equiv_asid asid st (s\<lparr>kheap := kheap s(x \<mapsto> TCB y')\<rparr>)"
+       \<Longrightarrow> equiv_asid asid st (s\<lparr>kheap := (kheap s)(x \<mapsto> TCB y')\<rparr>)"
   and equiv_asid_cur_thread_update[simp]:
     "\<And>f. equiv_asid asid (cur_thread_update f s) s' = equiv_asid asid s s'"
     "\<And>f. equiv_asid asid s (cur_thread_update f s') = equiv_asid asid s s'"
@@ -605,7 +605,7 @@ proof -
     apply (simp add: scheduler_affects_equiv_def[abs_def])
     apply (rule hoare_pre)
      apply (wps c)
-     apply (wp static_imp_wp a silc_dom_equiv_states_equiv_lift d e s w i x hoare_vcg_imp_lift)
+     apply (wp hoare_weak_lift_imp a silc_dom_equiv_states_equiv_lift d e s w i x hoare_vcg_imp_lift)
     apply fastforce
     done
 qed
@@ -671,7 +671,7 @@ proof -
     apply (simp add: asahi_scheduler_affects_equiv_def[abs_def])
     apply (rule hoare_pre)
      apply (wps c)
-     apply (wp static_imp_wp a silc_dom_equiv_states_equiv_lift d w)
+     apply (wp hoare_weak_lift_imp a silc_dom_equiv_states_equiv_lift d w)
     apply clarsimp
     done
 qed
@@ -731,7 +731,7 @@ proof -
     apply (simp add: asahi_ex_scheduler_affects_equiv_def[abs_def])
     apply (rule hoare_pre)
      apply (wps c)
-     apply (wp static_imp_wp a silc_dom_equiv_states_equiv_lift d w x hoare_vcg_imp_lift')
+     apply (wp hoare_weak_lift_imp a silc_dom_equiv_states_equiv_lift d w x hoare_vcg_imp_lift')
     apply clarsimp
     done
 qed
@@ -2221,7 +2221,7 @@ context Scheduler_IF_1 begin
 lemma scheduler_affects_equiv_update:
   "\<lbrakk> get_tcb x s = Some y; pasObjectAbs aag x \<notin> reads_scheduler aag l;
      scheduler_affects_equiv aag l st s \<rbrakk>
-     \<Longrightarrow> scheduler_affects_equiv aag l st (s\<lparr>kheap := kheap s(x \<mapsto> TCB y')\<rparr>)"
+     \<Longrightarrow> scheduler_affects_equiv aag l st (s\<lparr>kheap := (kheap s)(x \<mapsto> TCB y')\<rparr>)"
   by (clarsimp simp: scheduler_affects_equiv_def equiv_for_def equiv_asids_def
                      states_equiv_for_def scheduler_globals_frame_equiv_def
                      arch_scheduler_affects_equiv_update equiv_asid_equiv_update)

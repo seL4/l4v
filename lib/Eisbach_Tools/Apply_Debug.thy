@@ -484,14 +484,14 @@ fun maybe_bind st (_,[tok]) ctxt =
 
       val local_facts = Facts.dest_static true [(Proof_Context.facts_of target)] local_facts;
 
-      val _ = Token.assign (SOME (Token.Declaration (fn phi =>
-      Data.put (SOME (phi,ctxt, {private_dyn_facts = private_dyns, local_facts = local_facts}))))) tok;
+      val _ = Token.assign (SOME (Token.Declaration (Morphism.entity (fn phi =>
+      Data.put (SOME (phi,ctxt, {private_dyn_facts = private_dyns, local_facts = local_facts})))))) tok;
 
    in ctxt end
   else
     let
       val SOME (Token.Declaration decl) = Token.get_value tok;
-      val dummy_ctxt = decl Morphism.identity (Context.Proof ctxt);
+      val dummy_ctxt = Morphism.form decl (Context.Proof ctxt);
       val SOME (phi,static_ctxt,{private_dyn_facts, local_facts}) = Data.get dummy_ctxt;
 
       val old_facts = Proof_Context.facts_of static_ctxt;

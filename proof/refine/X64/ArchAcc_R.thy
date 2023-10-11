@@ -1411,11 +1411,11 @@ lemma copy_global_mappings_corres [@lift_corres_args, corres]:
                 (copyGlobalMappings pm)" (is "corres _ ?apre _ _ _")
   unfolding copy_global_mappings_def copyGlobalMappings_def objBits_simps archObjSize_def pptr_base_def
   apply (fold word_size_bits_def)
-  apply corressimp
+  apply corresKsimp
       apply (rule_tac P="page_map_l4_at global_pm and ?apre" and
                      P'="page_map_l4_at' skimPM and page_map_l4_at' pm"
                 in corresK_mapM_x[OF order_refl])
-        apply (corressimp simp: objBits_def mask_def wp: get_pde_wp getPDE_wp)+
+        apply (corresKsimp simp: objBits_def mask_def wp: get_pde_wp getPDE_wp)+
   apply(rule conjI)
    subgoal by (auto intro!: page_map_l4_pml4e_atI page_map_l4_pml4e_atI'
                      simp: page_bits_def le_less_trans ptTranslationBits_def)

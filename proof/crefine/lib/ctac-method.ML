@@ -123,7 +123,7 @@ fun ceqv_simpl_seq ctxt = Config.get ctxt (fst ceqv_simpl_sequence_pair)
 val setup =
   Attrib.setup @{binding "corres"} (Attrib.add_del ctac_add ctac_del)
     "correspondence rules"
-  #> Attrib.setup @{binding "corres_pre"}
+  #> Attrib.setup @{binding "ccorres_pre"}
     (Attrib.add_del ctac_pre_add ctac_pre_del)
     "correspondence preprocessing rules"
   #> Attrib.setup @{binding "corres_post"}
@@ -1107,7 +1107,9 @@ fun shorten_names mp =
     mp -- Shorten_Names.shorten_names_preserve_new >> MethodExtras.then_all_new
 
 val corres_ctac_tactic = let
-    fun tac upds ctxt = Method.SIMPLE_METHOD' (corres_ctac (apply upds default_ctac_opts) ctxt);
+    fun tac upds ctxt
+      = Method.SIMPLE_METHOD' (corres_ctac (apply upds default_ctac_opts) ctxt
+                               THEN_ALL_NEW (fn _ => no_name_eta_tac ctxt));
 
     val option_args = Args.parens (P.list (Scan.first ctac_options))
     val opt_option_args = Scan.lift (Scan.optional option_args [])
@@ -1133,7 +1135,9 @@ val corres_abstract_args = corres_pre_abstract_args corres_pre_lift_tac_clift;
 val corres_abstract_init_args = corres_pre_abstract_args corres_pre_lift_tac_cinit;
 
 val corres_symb_rhs = let
-    fun tac upds ctxt = Method.SIMPLE_METHOD' (corres_symb_rhs_tac (apply upds default_csymbr_opts) ctxt);
+    fun tac upds ctxt
+      = Method.SIMPLE_METHOD' (corres_symb_rhs_tac (apply upds default_csymbr_opts) ctxt
+                               THEN_ALL_NEW (fn _ => no_name_eta_tac ctxt));
 
     val option_args = Args.parens (P.list (Scan.first csymbr_options))
     val opt_option_args = Scan.lift (Scan.optional option_args [])
@@ -1143,7 +1147,8 @@ in
 end;
 
 val corres_ceqv = let
-    fun tac upds ctxt = Method.SIMPLE_METHOD' (corres_solve_ceqv (#trace (apply upds default_ceqv_opts)) 0 ctxt);
+    fun tac upds ctxt
+      = Method.SIMPLE_METHOD' (corres_solve_ceqv (#trace (apply upds default_ceqv_opts)) 0 ctxt);
 
     val option_args = Args.parens (P.list (Scan.first ceqv_options))
     val opt_option_args = Scan.lift (Scan.optional option_args [])
@@ -1156,7 +1161,8 @@ end;
  * We should be able to get the xfs from the goal ... *)
 fun corres_boilerplate unfold_haskell_p = let
     fun tac (upds, xfs : string list) ctxt
-      = Method.SIMPLE_METHOD' (corres_boilerplate_tac (apply upds default_cinit_opts) unfold_haskell_p xfs ctxt)
+      = Method.SIMPLE_METHOD' (corres_boilerplate_tac (apply upds default_cinit_opts) unfold_haskell_p xfs ctxt
+                               THEN_ALL_NEW (fn _ => no_name_eta_tac ctxt))
 
     val var_lift_args = Args.$$$ liftoptN |-- Args.colon |--
                              Scan.repeat (Scan.unless (Scan.first boilerplate_modifiers) Args.name)

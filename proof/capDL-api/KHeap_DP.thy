@@ -343,7 +343,7 @@ lemma decode_tcb_invocation:
   "\<lbrace>P\<rbrace>decode_tcb_invocation cap cap_ref caps (TcbWriteRegistersIntent resume flags count regs)
   \<lbrace>\<lambda>_. P\<rbrace>"
 apply (clarsimp simp: decode_tcb_invocation_def)
-apply (wp alternative_wp)
+apply wp
 apply (clarsimp)
 done
 
@@ -373,7 +373,7 @@ lemma invoke_cnode_insert_wp:
    \<lbrace>\<lambda>_. <dest \<mapsto>c cap \<and>* R>\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (clarsimp simp: invoke_cnode_def)
-  apply (wp insert_cap_sibling_wp insert_cap_child_wp alternative_wp)
+  apply (wp insert_cap_sibling_wp insert_cap_child_wp)
   apply (clarsimp)
   done
 
@@ -580,21 +580,21 @@ lemma derive_cap_rv:
      derive_cap slot cap
  \<lbrace>\<lambda>rv s. P s \<and> ( rv = cap \<or> rv = NullCap )\<rbrace>, \<lbrace>\<lambda>_ _. True\<rbrace>"
   apply (clarsimp simp: derive_cap_def returnOk_def split: cdl_cap.splits,safe)
-                        apply (wp return_rv whenE_wp alternativeE_wp | clarsimp simp: ensure_no_children_def)+
+                        apply (wp return_rv whenE_wp | clarsimp simp: ensure_no_children_def)+
 done
 
 lemma derive_cap_wp [wp]:
 "\<lbrace>P\<rbrace> derive_cap slot cap  \<lbrace>\<lambda>_. P\<rbrace>"
   apply (clarsimp simp: derive_cap_def returnOk_def split: cdl_cap.splits)
   apply (safe)
-    apply ((wp alternative_wp whenE_wp)|(clarsimp simp: ensure_no_children_def))+
+    apply ((wp whenE_wp)|(clarsimp simp: ensure_no_children_def))+
       done
 
 
 lemma derive_cap_wpE:
 "\<lbrace>P\<rbrace> derive_cap slot cap \<lbrace>\<lambda>_.P\<rbrace>,\<lbrace>\<lambda>_.P\<rbrace>"
   apply (clarsimp simp: derive_cap_def)
-  apply (case_tac cap, (wp whenE_wp alternative_wp |
+  apply (case_tac cap, (wp whenE_wp |
                         simp add: ensure_no_children_def)+)
   done
 
@@ -710,7 +710,7 @@ lemma derive_cap_invE:
   "\<lbrace>P (derived_cap cap) and Q\<rbrace> derive_cap slot cap \<lbrace>P\<rbrace>, \<lbrace>\<lambda>r. Q\<rbrace>"
   apply (simp add:derive_cap_def)
   apply (rule hoare_pre)
-   apply (wp alternative_wp alternativeE_wp|wpc|simp)+
+   apply (wp|wpc|simp)+
   apply (auto simp:derived_cap_def)
   done
 
@@ -759,7 +759,7 @@ lemma decode_cnode_move_rvu:
 
 
 crunch preserve [wp]:  decode_cnode_invocation "P"
-(wp: derive_cap_wpE unlessE_wp whenE_wp select_wp hoare_drop_imps simp: if_apply_def2 throw_on_none_def)
+  (wp: derive_cap_wpE unlessE_wp whenE_wp hoare_drop_imps simp: if_apply_def2 throw_on_none_def)
 
 lemma decode_invocation_wp:
   "\<lbrace>P\<rbrace> decode_invocation (CNodeCap x y z sz) ref caps (CNodeIntent intent) \<lbrace>\<lambda>_. P\<rbrace>, -"
@@ -1151,14 +1151,14 @@ lemma has_restart_cap_sep_wp:
 lemma lift_do_kernel_op':
   "\<lbrace>\<lambda>s'. P s'\<rbrace> f \<lbrace>\<lambda>_ s'. Q s'\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s. P (kernel_state s)\<rbrace> do_kernel_op f \<lbrace>\<lambda>_ s. Q (kernel_state s)\<rbrace>"
   apply (simp add: do_kernel_op_def split_def)
-  apply (wp select_wp)
+  apply wp
   apply (simp add: valid_def split_def)
   done
 
 lemma lift_do_kernel_op:
   "\<lbrace>\<lambda>s. s = s'\<rbrace> f \<lbrace>\<lambda>_ s. s = s'\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s. (kernel_state s) = s'\<rbrace> do_kernel_op f \<lbrace>\<lambda>_ s. (kernel_state s) = s'\<rbrace>"
   apply (simp add: do_kernel_op_def split_def)
-  apply (wp select_wp)
+  apply wp
   apply (simp add: valid_def split_def)
   done
 
@@ -1179,7 +1179,7 @@ lemma schedule_no_choice_wp:
     schedule
   \<lbrace>\<lambda>r s. cdl_current_thread s = Some current_thread \<and> cdl_current_domain s = current_domain \<longrightarrow>  P s\<rbrace>"
   apply (simp add:schedule_def  switch_to_thread_def change_current_domain_def)
-  apply (wp alternative_wp select_wp)
+  apply wp
   apply (case_tac s,clarsimp)
   done
 

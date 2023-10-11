@@ -472,22 +472,23 @@ proof -
                   apply (rule corres_split[OF corres_when[OF refl rescheduleRequired_corres]])
                     apply (rule_tac P=\<top> and P'=\<top> in corres_inst)
                     apply simp
-                   apply (solves \<open>wp static_imp_wp\<close>)+
+                   apply (solves \<open>wp hoare_weak_lift_imp\<close>)+
              apply (rule_tac Q="\<lambda>_. einvs and tcb_at dest" in hoare_strengthen_post[rotated])
               apply (clarsimp simp: invs_def valid_sched_weak_strg valid_sched_def valid_state_def
                                     valid_pspace_def)
              prefer 2
              apply (rule_tac Q="\<lambda>_. invs' and tcb_at' dest" in hoare_strengthen_post[rotated])
               apply (clarsimp simp: invs'_def valid_pspace'_def)
-             apply ((wp mapM_x_wp' static_imp_wp | simp)+)[4]
-         apply ((wp static_imp_wp restart_invs' restart_valid_sched | wpc | clarsimp simp: if_apply_def2)+)[2]
+             apply ((wp mapM_x_wp' hoare_weak_lift_imp | simp)+)[4]
+         apply ((wp hoare_weak_lift_imp restart_invs' restart_valid_sched | wpc
+                 | clarsimp simp: if_apply_def2)+)[2]
        apply (rule_tac Q="\<lambda>_. einvs and tcb_at dest and tcb_at src and ex_nonz_cap_to dest
                               and simple_sched_action and current_time_bounded"
               in hoare_strengthen_post[rotated])
         apply (clarsimp simp: invs_def valid_sched_weak_strg valid_sched_def valid_state_def
                               valid_pspace_def valid_idle_def
                        dest!: idle_no_ex_cap )
-       apply (wp suspend_nonz_cap_to_tcb static_imp_wp suspend_invs suspend_cap_to'
+       apply (wp suspend_nonz_cap_to_tcb hoare_weak_lift_imp suspend_invs suspend_cap_to'
                  suspend_valid_sched
               | simp add: if_apply_def2)+
      apply (fastforce simp: invs_def valid_state_def valid_pspace_def valid_idle_def
@@ -2795,7 +2796,7 @@ lemma checkPrio_wp:
     checkPrio prio auth
    \<lbrace> \<lambda>rv. P \<rbrace>,-"
   apply (simp add: checkPrio_def)
-  apply (wp NonDetMonadVCG.whenE_throwError_wp getMCP_wp)
+  apply (wp Nondet_VCG.whenE_throwError_wp getMCP_wp)
   by (auto simp add: pred_tcb_at'_def obj_at'_def)
 
 lemma checkPrio_lt_ct:

@@ -126,7 +126,7 @@ lemma deleteObjects_def2:
                                         then None else gsCNodes s x \<rparr>);
      stateAssert ksASIDMapSafe []
    od"
-  apply (simp add: deleteObjects_def is_aligned_mask[symmetric] unless_def)
+  apply (simp add: deleteObjects_def is_aligned_mask[symmetric] unless_def deleteGhost_def)
   apply (rule bind_eqI, rule ext)
   apply (rule bind_eqI, rule ext)
   apply (simp add: bind_assoc[symmetric])
@@ -2044,13 +2044,13 @@ lemma cte_wp_at_top:
     apply (simp add:alignCheck_def bind_def
       alignError_def fail_def return_def objBits_simps
       magnitudeCheck_def in_monad is_aligned_mask
-      when_def split:option.splits)
+      when_def unless_def split:option.splits)
     apply (intro conjI impI allI,simp_all add:not_le)
    apply (clarsimp simp:cte_check_def)
    apply (simp add:alignCheck_def bind_def
      alignError_def fail_def return_def objBits_simps
      magnitudeCheck_def in_monad is_aligned_mask
-     when_def split:option.splits)
+     when_def unless_def split:option.splits)
     apply (intro conjI impI allI,simp_all add:not_le)
   apply (simp add:typeError_def fail_def
          cte_check_def split:Structures_H.kernel_object.splits)+
@@ -2740,7 +2740,7 @@ lemma storePDE_det:
   "ko_wp_at' ((=) (KOArch (KOPDE pde))) ptr s
    \<Longrightarrow> storePDE ptr (new_pde::ARM_HYP_H.pde) s =
        modify
-         (ksPSpace_update (\<lambda>_. ksPSpace s(ptr \<mapsto> KOArch (KOPDE new_pde)))) s"
+         (ksPSpace_update (\<lambda>_. (ksPSpace s)(ptr \<mapsto> KOArch (KOPDE new_pde)))) s"
   apply (clarsimp simp:ko_wp_at'_def storePDE_def split_def
                        bind_def gets_def return_def wordsFromPDE_def
                        get_def setObject_def headM_def tailM_def
@@ -2988,7 +2988,7 @@ lemma cte_wp_at_modify_pde:
           atLeastAtMost_iff
   shows
   "\<lbrakk>ksPSpace s ptr' = Some (KOArch (KOPDE pde)); pspace_aligned' s;cte_wp_at' \<top> ptr s\<rbrakk>
-       \<Longrightarrow> cte_wp_at' \<top> ptr (s\<lparr>ksPSpace := ksPSpace s(ptr' \<mapsto> (KOArch (KOPDE pde')))\<rparr>)"
+       \<Longrightarrow> cte_wp_at' \<top> ptr (s\<lparr>ksPSpace := (ksPSpace s)(ptr' \<mapsto> (KOArch (KOPDE pde')))\<rparr>)"
   apply (simp add:cte_wp_at_obj_cases_mask obj_at'_real_def)
   apply (frule(1) pspace_alignedD')
   apply (elim disjE)

@@ -540,7 +540,7 @@ fun dest_Guard (Const (@{const_name Language.com.Guard},_)$f$g$c) = (f,g,c,false
 fun add_declaration name decl thy =
   thy
   |> Named_Target.init [] name
-  |> Local_Theory.declaration {syntax = false, pervasive = false} decl
+  |> Local_Theory.declaration {syntax = false, pervasive = false, pos = \<^here>} decl
   |> Local_Theory.exit
   |> Proof_Context.theory_of;
 
@@ -939,7 +939,7 @@ fun procedures_definition locname procs thy =
         val context =
           Context.Theory thy
           |> fold (add_parameter_info  Morphism.identity (unsuffix proc_deco)) name_pars
-          |> StateSpace.set_silent true
+          |> Config.put_generic StateSpace.silent true
 
         fun read_body (_, body) =
           Syntax.read_term (Context.proof_of context) body;
@@ -1058,7 +1058,7 @@ fun procedures_definition locname procs thy =
             ctxt
             |> Proof_Context.theory_of
             |> Named_Target.init [] lname
-            |> Local_Theory.declaration {syntax = false, pervasive = false} parameter_info_decl
+            |> Local_Theory.declaration {syntax = false, pervasive = false, pos = \<^here>} parameter_info_decl
             |> (fn lthy => if has_body name
                            then snd (Local_Theory.define (def lthy) lthy)
                            else lthy)

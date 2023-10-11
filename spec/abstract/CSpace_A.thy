@@ -15,7 +15,7 @@ imports
   SchedContext_A
   IpcCancel_A
   ArchCSpace_A
-  "Monads.NonDetMonadLemmas"
+  "Monads.Nondet_Lemmas"
   "HOL-Library.Prefix_Order"
 begin
 

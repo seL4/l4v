@@ -25,8 +25,8 @@ import isabelle.jedit.*;
 msg(s) { Macros.message(view, s); }
 
 // isabelle setup
-model = Document_Model.get(textArea.getBuffer());
-snapshot = model.get().snapshot();
+model = Document_Model.get_model(textArea.getBuffer());
+snapshot = Document_Model.snapshot(model.get());
 
 class FirstError {
     public int first_error_pos = -1;

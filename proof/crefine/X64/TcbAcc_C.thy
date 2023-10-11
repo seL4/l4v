@@ -177,7 +177,7 @@ lemma threadSet_corres_lemma:
   assumes spec: "\<forall>s. \<Gamma>\<turnstile> \<lbrace>s. P s\<rbrace> Call f {t. Q s t}"
   and      mod: "modifies_heap_spec f"
   and  rl: "\<And>\<sigma> x t ko. \<lbrakk>(\<sigma>, x) \<in> rf_sr; Q x t; x \<in> P'; ko_at' ko thread \<sigma>\<rbrakk>
-             \<Longrightarrow> (\<sigma>\<lparr>ksPSpace := ksPSpace \<sigma>(thread \<mapsto> KOTCB (g ko))\<rparr>,
+             \<Longrightarrow> (\<sigma>\<lparr>ksPSpace := (ksPSpace \<sigma>)(thread \<mapsto> KOTCB (g ko))\<rparr>,
                   t\<lparr>globals := globals x\<lparr>t_hrs_' := t_hrs_' (globals t)\<rparr>\<rparr>) \<in> rf_sr"
   and  g:  "\<And>s x. \<lbrakk>tcb_at' thread s; x \<in> P'; (s, x) \<in> rf_sr\<rbrakk> \<Longrightarrow> P x"
   shows "ccorres dc xfdc (tcb_at' thread) P' [] (threadSet g thread) (Call f)"
@@ -206,7 +206,7 @@ lemma threadSet_corres_lemma:
 
 
 lemma threadSet_ccorres_lemma4:
-  "\<lbrakk> \<And>s tcb. \<Gamma> \<turnstile> (Q s tcb) c {s'. (s \<lparr>ksPSpace := ksPSpace s(thread \<mapsto> injectKOS (F tcb))\<rparr>, s') \<in> rf_sr};
+  "\<lbrakk> \<And>s tcb. \<Gamma> \<turnstile> (Q s tcb) c {s'. (s \<lparr>ksPSpace := (ksPSpace s)(thread \<mapsto> injectKOS (F tcb))\<rparr>, s') \<in> rf_sr};
           \<And>s s' tcb tcb'. \<lbrakk> (s, s') \<in> rf_sr; P tcb; ko_at' tcb thread s;
                              cslift s' (tcb_ptr_to_ctcb_ptr thread) = Some tcb';
                              ctcb_relation tcb tcb'; P' s ; s' \<in> R\<rbrakk> \<Longrightarrow> s' \<in> Q s tcb \<rbrakk>

@@ -699,7 +699,7 @@ lemma handle_event_integrity:
                   handle_reply_respects handle_fault_integrity_autarch
                   handle_interrupt_integrity handle_vm_fault_integrity
                   handle_reply_pas_refined handle_vm_fault_valid_fault
-                  handle_reply_valid_sched alternative_wp select_wp
+                  handle_reply_valid_sched
                   hoare_vcg_conj_lift hoare_vcg_all_lift hoare_drop_imps
             simp: domain_sep_inv_def
       | rule dmo_wp hoare_vcg_E_elim
@@ -899,7 +899,7 @@ lemma schedule_integrity:
    schedule
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (simp add: schedule_def)
-  apply (wpsimp wp: alternative_wp switch_to_thread_respects' select_wp guarded_switch_to_lift
+  apply (wpsimp wp: switch_to_thread_respects' guarded_switch_to_lift
                     switch_to_idle_thread_respects choose_thread_respects gts_wp hoare_drop_imps
                     set_scheduler_action_cnt_valid_sched append_thread_queued enqueue_thread_queued
                     tcb_sched_action_enqueue_valid_blocked_except tcb_sched_action_append_integrity'
@@ -949,14 +949,14 @@ crunch pas_refined[wp]: choose_thread "pas_refined aag"
 lemma schedule_pas_refined:
   "schedule \<lbrace>pas_refined aag\<rbrace>"
   apply (simp add: schedule_def allActiveTCBs_def)
-  apply (wp add: alternative_wp guarded_switch_to_lift switch_to_thread_pas_refined select_wp
-                  switch_to_idle_thread_pas_refined gts_wp
-                  guarded_switch_to_lift switch_to_thread_respects_pasMayEditReadyQueues
-                  choose_thread_respects_pasMayEditReadyQueues
-                  next_domain_valid_sched next_domain_valid_queues gts_wp hoare_drop_imps
-                  set_scheduler_action_cnt_valid_sched enqueue_thread_queued
-                  tcb_sched_action_enqueue_valid_blocked_except
-             del: ethread_get_wp
+  apply (wp add: guarded_switch_to_lift switch_to_thread_pas_refined
+                 switch_to_idle_thread_pas_refined gts_wp
+                 guarded_switch_to_lift switch_to_thread_respects_pasMayEditReadyQueues
+                 choose_thread_respects_pasMayEditReadyQueues
+                 next_domain_valid_sched next_domain_valid_queues gts_wp hoare_drop_imps
+                 set_scheduler_action_cnt_valid_sched enqueue_thread_queued
+                 tcb_sched_action_enqueue_valid_blocked_except
+            del: ethread_get_wp
          | wpc | simp add: schedule_choose_new_thread_def)+
   done
 
@@ -983,7 +983,7 @@ lemma ct_active_update[simp]:
 lemma set_cap_ct_active[wp]:
   "set_cap ptr c \<lbrace>ct_active \<rbrace>"
   apply (rule hoare_pre)
-  apply (wps | wpsimp wp: select_wp sts_st_tcb_at_cases thread_set_no_change_tcb_state
+  apply (wps | wpsimp wp: sts_st_tcb_at_cases thread_set_no_change_tcb_state
                     simp: crunch_simps ct_in_state_def)+
   done
 
@@ -1034,7 +1034,7 @@ crunch ct_active[wp]: post_cap_deletion, empty_slot "\<lambda>s :: det_ext state
      wp: crunch_wps filterM_preserved unless_wp)
 
 crunch cur_thread[wp]: cap_swap_for_delete, finalise_cap "\<lambda>s :: det_ext state. P (cur_thread s)"
-  (wp: select_wp dxo_wp_weak crunch_wps simp: crunch_simps)
+  (wp: dxo_wp_weak crunch_wps simp: crunch_simps)
 
 lemma rec_del_cur_thread[wp]:
   "rec_del a \<lbrace>\<lambda>s :: det_ext state. P (cur_thread s)\<rbrace>"
@@ -1139,8 +1139,7 @@ lemma call_kernel_integrity':
   apply (simp add: call_kernel_def)
   apply (simp only: spec_valid_def)
   apply (wpsimp wp: activate_thread_respects schedule_integrity_pasMayEditReadyQueues
-                    handle_interrupt_integrity dmo_wp alternative_wp
-                    select_wp handle_interrupt_pas_refined)
+                    handle_interrupt_integrity dmo_wp handle_interrupt_pas_refined)
     apply (clarsimp simp: if_fun_split)
     apply (rule_tac Q="\<lambda>rv ms. (rv \<noteq> None \<longrightarrow> the rv \<notin> non_kernel_IRQs) \<and>
                                 R True (domain_sep_inv (pasMaySendIrqs aag) st' s) rv ms"
@@ -1182,7 +1181,7 @@ lemma call_kernel_pas_refined:
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   apply (simp add: call_kernel_def )
   apply (wp activate_thread_pas_refined schedule_pas_refined handle_interrupt_pas_refined
-            do_machine_op_pas_refined dmo_wp alternative_wp select_wp hoare_drop_imps getActiveIRQ_inv
+            do_machine_op_pas_refined dmo_wp hoare_drop_imps getActiveIRQ_inv
          | simp add: if_fun_split
          | strengthen invs_psp_aligned invs_vspace_objs invs_arch_state)+
    apply (wp he_invs handle_event_pas_refined)

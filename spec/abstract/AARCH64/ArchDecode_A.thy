@@ -53,7 +53,7 @@ definition arch_decode_irq_control_invocation ::
     else throwError IllegalOperation)"
 
 definition attribs_from_word :: "machine_word \<Rightarrow> vm_attributes" where
-  "attribs_from_word w \<equiv> {attr.  \<not>w!!0 \<and> attr = Execute \<or> \<not>w !! 2 \<and> attr = Device}"
+  "attribs_from_word w \<equiv> {attr.  \<not>w!!0 \<and> attr = Device \<or> \<not>w !! 2 \<and> attr = Execute}"
 
 definition make_user_pte :: "paddr \<Rightarrow> vm_attributes \<Rightarrow> vm_rights \<Rightarrow> vmpage_size \<Rightarrow> pte" where
   "make_user_pte addr attr rights vm_size \<equiv>
@@ -91,7 +91,7 @@ definition decode_fr_inv_map :: "'z::state_ext arch_decoder" where
              odE
            | None \<Rightarrow> doE
                vtop \<leftarrow> returnOk $ vaddr + mask (pageBitsForSize pgsz);
-               whenE (vtop \<ge> user_vtop) $ throwError $ InvalidArgument 0
+               whenE (vtop > user_vtop) $ throwError $ InvalidArgument 0
              odE;
            (level, slot) \<leftarrow> liftE $ gets_the $ pt_lookup_slot pt vaddr \<circ> ptes_of;
            unlessE (pt_bits_left level = pg_bits) $
@@ -247,7 +247,7 @@ definition decode_vs_inv_flush :: "'z::state_ext arch_decoder" where
 
 definition decode_vspace_invocation :: "'z::state_ext arch_decoder" where
   "decode_vspace_invocation label args cte cap extra_caps \<equiv>
-     if isPageFlushLabel (invocation_type label)
+     if isVSpaceFlushLabel (invocation_type label)
      then decode_vs_inv_flush label args cte cap extra_caps
      else throwError IllegalOperation"
 

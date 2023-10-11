@@ -518,7 +518,7 @@ lemma lift_t_super_update:
   and    eu: "export_uinfo s = typ_uinfo_t TYPE('b)"
   and    lp: "lift_t g (h, d) p = Some v'"
   shows "lift_t g (heap_update (Ptr &(p\<rightarrow>f)) v h, d)
-  = lift_t g (h, d)(p \<mapsto> field_update (field_desc s) (to_bytes_p v) v')"
+         = (lift_t g (h, d)) (p \<mapsto> field_update (field_desc s) (to_bytes_p v) v')"
   using fl eu lp
   apply -
   apply (rule trans [OF lift_t_super_field_update super_field_update_lookup])
@@ -629,6 +629,13 @@ lemma ccorres_liftE:
   using cc
   by (fastforce split: xstate.splits
                 simp: liftE_def ccorres_underlying_def bind_def' return_def unif_rrel_def)
+
+lemma ccorres_liftE':
+  fixes \<Gamma>
+  assumes cc: "ccorresG sr \<Gamma> (r \<circ> Inr) xf P P' hs a c"
+  shows   "ccorresG sr \<Gamma> r xf P P' hs (liftE a) c"
+  using cc
+  by (auto intro!: ccorres_liftE cong: ccorres_context_cong)
 
 lemma ccorres_if_bind:
   "ccorres_underlying sr Gamm r xf arrel axf G G' hs (if a then (b >>= f) else (c >>= f)) d
@@ -871,9 +878,9 @@ proof -
   qed
   thus ?thesis using lxs j pn
     apply (auto simp: init_xs_def word_less_nat_alt neq_Nil_conv unat_word_ariths unat_of_nat push_mods
-                simp del: unsigned_of_nat
                 elim!: ccorres_guard_imp2
-                dest!: spec[where x=Nil])
+                dest!: spec[where x=Nil]
+                cong: ccorres_all_cong)
     done
 qed
 
@@ -1150,5 +1157,24 @@ proof -
 qed
 
 lemmas ccorres_While' = ccorres_While[where C'=UNIV, simplified]
+
+
+\<comment> \<open>simp rules for rewriting common patterns in the return relations\<close>
+lemma ccorres_dc_o_simp[simp]:
+  "ccorres_underlying srel \<Gamma> (dc \<circ> f) xf ar axf P Q hs m c
+   = ccorres_underlying srel \<Gamma> dc xf ar axf P Q hs m c"
+  "ccorres_underlying srel \<Gamma> r xf (dc \<circ> f) axf P Q hs m c
+   = ccorres_underlying srel \<Gamma> r xf dc axf P Q hs m c"
+  by (simp cong: ccorres_all_cong)+
+
+lemma ccorres_inl_rrel_inl_rrel[simp]:
+  "ccorres_underlying srel \<Gamma> r xf (inl_rrel (inl_rrel ar)) axf P Q hs m c
+   = ccorres_underlying srel \<Gamma> r xf (inl_rrel ar) axf P Q hs m c"
+  by (simp add: inl_rrel_inl_rrel cong: ccorres_all_cong)+
+
+lemma ccorres_inr_rrel_Inr[simp]:
+  "ccorres_underlying srel \<Gamma> (inr_rrel r \<circ> Inr) xf ar axf P Q hs m c
+   = ccorres_underlying srel \<Gamma> r xf ar axf P Q hs m c"
+  by (simp cong: ccorres_context_cong)+
 
 end

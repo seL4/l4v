@@ -6,8 +6,8 @@
 theory Triv_Refinement
 
 imports
-  "Monads.TraceMonadVCG"
-  "Monads.Strengthen"
+  "Monads.Trace_RG"
+  "Monads.Trace_Strengthen_Setup"
 
 begin
 
@@ -23,7 +23,7 @@ lemma triv_refinement_mono_bind:
   "(\<forall>x. triv_refinement (b x) (d x)) \<Longrightarrow> triv_refinement (a >>= b) (a >>= d)"
    apply (simp add: triv_refinement_def bind_def)
    apply (intro allI UN_mono; simp)
-  apply (simp only: triv_refinement_def bind_def2 split_def)
+  apply (simp only: triv_refinement_def bind_def' split_def)
   apply (intro Un_mono allI order_refl UN_mono image_mono)
   apply simp
   done

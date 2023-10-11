@@ -816,7 +816,7 @@ lemma ptr_add_to_new_cap_addrs:
   shows "(CTypesDefs.ptr_add (Ptr ptr :: 'a :: mem_type ptr) \<circ> of_nat) ` {k. k < n}
    = Ptr ` set (new_cap_addrs n ptr ko)"
   unfolding new_cap_addrs_def
-  apply (simp add: comp_def image_image shiftl_t2n size_of_m field_simps)
+  apply (simp add: image_image shiftl_t2n size_of_m field_simps)
   apply (clarsimp simp: atLeastLessThan_def lessThan_def)
   done
 
@@ -2391,6 +2391,9 @@ lemma ccorres_fail:
   apply (simp add: fail_def)
   done
 
+(* always unfold StrictC'_mode_object_defs together with api_object_defs *)
+lemmas api_object_defs = api_object_defs StrictC'_mode_object_defs
+
 lemma object_type_from_H_toAPIType_simps:
   "(object_type_from_H tp = scast seL4_UntypedObject) = (toAPIType tp = Some ArchTypes_H.apiobject_type.Untyped)"
   "(object_type_from_H tp = scast seL4_TCBObject) = (toAPIType tp = Some ArchTypes_H.apiobject_type.TCBObject)"
@@ -3638,17 +3641,17 @@ lemma copyGlobalMappings_ccorres:
    apply (rule ccorres_pre_gets_armKSGlobalPD_ksArchState)
    apply csymbr
    apply (rule ccorres_rel_imp)
-    apply (rule_tac F="\<lambda>_ s. rv = armKSGlobalPD (ksArchState s)
-                                \<and> is_aligned rv pdBits \<and> valid_pde_mappings' s
+    apply (rule_tac F="\<lambda>_ s. globalPD = armKSGlobalPD (ksArchState s)
+                                \<and> is_aligned globalPD pdBits \<and> valid_pde_mappings' s
                                 \<and> page_directory_at' pd s
                                 \<and> page_directory_at' (armKSGlobalPD (ksArchState s)) s"
-              and i="0xE00"
-               in ccorres_mapM_x_while')
+                and i="0xE00"
+             in ccorres_mapM_x_while')
         apply (clarsimp simp del: Collect_const)
         apply (rule ccorres_guard_imp2)
          apply (rule ccorres_pre_getObject_pde)
          apply (simp add: storePDE_def del: Collect_const)
-         apply (rule_tac P="\<lambda>s. ko_at' rva (armKSGlobalPD (ksArchState s)
+         apply (rule_tac P="\<lambda>s. ko_at' rv (armKSGlobalPD (ksArchState s)
                                               + ((0xE00 + of_nat n) << 2)) s
                                     \<and> page_directory_at' pd s \<and> valid_pde_mappings' s
                                     \<and> page_directory_at' (armKSGlobalPD (ksArchState s)) s"
@@ -3663,7 +3666,7 @@ lemma copyGlobalMappings_ccorres:
            apply (rule cmap_relationE1[OF rf_sr_cpde_relation],
                   assumption, erule_tac ko=ko' in ko_at_projectKO_opt)
            apply (rule cmap_relationE1[OF rf_sr_cpde_relation],
-                  assumption, erule_tac ko=rva in ko_at_projectKO_opt)
+                  assumption, erule_tac ko=rv in ko_at_projectKO_opt)
            apply (clarsimp simp: typ_heap_simps')
            apply (drule(1) page_directory_at_rf_sr)+
            apply clarsimp
@@ -3859,12 +3862,10 @@ lemma ccorres_placeNewObject_endpoint:
      apply (clarsimp simp: new_cap_addrs_def)
      apply (cut_tac createObjects_ccorres_ep [where ptr=regionBase and n="1" and sz="objBitsKO (KOEndpoint makeObject)"])
      apply (erule_tac x=\<sigma> in allE, erule_tac x=x in allE)
-     apply (clarsimp elim!:is_aligned_weaken simp: objBitsKO_def word_bits_def)+
-     apply (clarsimp simp: split_def Let_def
-         Fun.comp_def rf_sr_def new_cap_addrs_def
-         region_actually_is_bytes ptr_retyps_gen_def
-         objBits_simps
-         elim!: rsubst[where P="cstate_relation s'" for s'])
+     apply (clarsimp elim!: is_aligned_weaken simp: objBitsKO_def word_bits_def)+
+     apply (clarsimp simp: split_def Let_def rf_sr_def new_cap_addrs_def
+                           region_actually_is_bytes ptr_retyps_gen_def objBits_simps
+                    elim!: rsubst[where P="cstate_relation s'" for s'])
     apply (clarsimp simp: word_bits_conv)
    apply (clarsimp simp: range_cover.aligned objBits_simps)
   apply (clarsimp simp: no_fail_def)
@@ -4776,7 +4777,7 @@ lemma gsCNodes_update_ccorres:
 
 (* FIXME: move *)
 lemma map_to_tcbs_upd:
-  "map_to_tcbs (ksPSpace s(t \<mapsto> KOTCB tcb')) = map_to_tcbs (ksPSpace s)(t \<mapsto> tcb')"
+  "map_to_tcbs ((ksPSpace s)(t \<mapsto> KOTCB tcb')) = (map_to_tcbs (ksPSpace s))(t \<mapsto> tcb')"
   apply (rule ext)
   apply (clarsimp simp: map_comp_def projectKOs split: option.splits if_splits)
   done
@@ -4947,7 +4948,7 @@ proof -
              apply (simp add: obj_at'_real_def)
              apply (wp placeNewObject_ko_wp_at')
             apply vcg
-           apply (clarsimp simp: dc_def)
+           apply clarsimp
            apply vcg
           apply (clarsimp simp: CPSR_def)
           apply (rule conseqPre, vcg, clarsimp)
@@ -6775,7 +6776,7 @@ shows  "ccorres dc xfdc
            apply (rule_tac P="rv' = of_nat n" in ccorres_gen_asm2, simp)
            apply (rule ccorres_rhs_assoc)+
            apply (rule ccorres_add_return)
-           apply (simp only: dc_def[symmetric] hrs_htd_update)
+           apply (simp only: hrs_htd_update)
            apply ((rule ccorres_Guard_Seq[where S=UNIV])+)?
            apply (rule ccorres_split_nothrow,
                 rule_tac S="{ptr .. ptr + of_nat (length destSlots) * 2^ (getObjectSize newType userSize) - 1}"
@@ -6946,9 +6947,9 @@ shows  "ccorres dc xfdc
        including no_pre
        apply (wp insertNewCap_invs' insertNewCap_valid_pspace' insertNewCap_caps_overlap_reserved'
                  insertNewCap_pspace_no_overlap' insertNewCap_caps_no_overlap'' insertNewCap_descendants_range_in'
-                 insertNewCap_untypedRange hoare_vcg_all_lift insertNewCap_cte_at static_imp_wp)
+                 insertNewCap_untypedRange hoare_vcg_all_lift insertNewCap_cte_at hoare_weak_lift_imp)
          apply (wp insertNewCap_cte_wp_at_other)
-        apply (wp hoare_vcg_all_lift static_imp_wp insertNewCap_cte_at)
+        apply (wp hoare_vcg_all_lift hoare_weak_lift_imp insertNewCap_cte_at)
        apply (clarsimp simp:conj_comms |
          strengthen invs_valid_pspace' invs_pspace_aligned'
          invs_pspace_distinct')+
@@ -6982,7 +6983,7 @@ shows  "ccorres dc xfdc
                   hoare_vcg_prop createObject_gsCNodes_p createObject_cnodes_have_size)
         apply (rule hoare_vcg_conj_lift[OF createObject_capRange_helper])
          apply (wp createObject_cte_wp_at' createObject_ex_cte_cap_wp_to
-                   createObject_no_inter[where sz = sz] hoare_vcg_all_lift static_imp_wp)+
+                   createObject_no_inter[where sz = sz] hoare_vcg_all_lift hoare_weak_lift_imp)+
        apply (clarsimp simp:invs_pspace_aligned' invs_pspace_distinct' invs_valid_pspace'
          field_simps range_cover.sz conj_comms range_cover.aligned range_cover_sz'
          is_aligned_shiftl_self aligned_add_aligned[OF range_cover.aligned])
@@ -7129,9 +7130,9 @@ shows  "ccorres dc xfdc
   apply (frule(1) range_cover_gsMaxObjectSize, fastforce, assumption)
   apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (drule(1) ghost_assertion_size_logic)+
-  apply (simp add: o_def)
-  apply (case_tac newType,simp_all add:object_type_from_H_def Kernel_C_defs
-             nAPIObjects_def APIType_capBits_def o_def split:apiobject_type.splits)[1]
+  apply (case_tac newType,
+         simp_all add: object_type_from_H_def Kernel_C_defs nAPIObjects_def APIType_capBits_def o_def
+                split: apiobject_type.splits)[1]
           subgoal by (simp add:unat_eq_def word_unat.Rep_inverse' word_less_nat_alt)
          subgoal by (clarsimp simp: objBits_simps', unat_arith)
         apply (fold_subgoals (prefix))[3]

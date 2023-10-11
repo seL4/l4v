@@ -851,7 +851,7 @@ begin
 
 (* FIXME: move *)
 lemma ccorres_merge_return:
-  "ccorres (\<lambda>a c. r (f a) c) xf P P' hs H C \<Longrightarrow>
+  "ccorres (r \<circ> f) xf P P' hs H C \<Longrightarrow>
    ccorres r xf P P' hs (do x \<leftarrow> H; return (f x) od) C"
   by (rule ccorres_return_into_rel)
 
@@ -1708,7 +1708,7 @@ proof -
       apply ceqv
      apply (rule ccorres_Cond_rhs)
       apply (simp del: Collect_const)
-      apply (rule ccorres_rel_imp[where r = "\<lambda>rv rv'. True", simplified])
+      apply (rule ccorres_rel_imp[where r = dc, simplified])
       apply (rule_tac F="\<lambda>_. obj_at' (\<lambda>tcb. map ((user_regs o atcbContext o tcbArch) tcb) RISCV64_H.syscallMessage = msg)
                                        sender and valid_pspace'
                                        and (case recvBuffer of Some x \<Rightarrow> valid_ipc_buffer_ptr' x | None \<Rightarrow> \<top>)"
@@ -1762,7 +1762,7 @@ proof -
      apply (clarsimp simp:  n_msgRegisters_def numeral_eqs
                             mapM_cong[OF msg_aux, simplified numeral_eqs])
      apply (subst mapM_x_return_gen[where w2="()"])
-     apply (rule ccorres_return_Skip[simplified dc_def])
+     apply (rule ccorres_return_Skip)
     apply (clarsimp)
     apply (rule hoare_impI)
     apply (wp mapM_x_wp_inv setMR_atcbContext_obj_at[simplified atcbContextGet_def, simplified]
@@ -1851,7 +1851,7 @@ proof -
                         split: list.split_asm)
            apply (simp split: list.split)
           apply (wp setMR_tcbFault_obj_at asUser_inv[OF getRestartPC_inv]
-                       hoare_case_option_wp static_imp_wp
+                       hoare_case_option_wp hoare_weak_lift_imp
                      | simp add: option_to_ptr_def guard_is_UNIVI
                                  seL4_VMFault_PrefetchFault_def
                                  seL4_VMFault_Addr_def
@@ -2169,7 +2169,7 @@ lemma doFaultTransfer_ccorres [corres]:
       apply ceqv
      apply csymbr
      apply (ctac (no_vcg, c_lines 2) add: setMessageInfo_ccorres)
-       apply (ctac add: setRegister_ccorres[unfolded dc_def])
+       apply (ctac add: setRegister_ccorres)
       apply wp
      apply (simp add: badgeRegister_def RISCV64.badgeRegister_def RISCV64.capRegister_def
                       Kernel_C.badgeRegister_def "StrictC'_register_defs")
@@ -2207,7 +2207,7 @@ lemma unifyFailure_ccorres:
   assumes corr_ac: "ccorres (f \<currency> r) xf P P' hs a c"
   shows "ccorres ((\<lambda>_. dc) \<currency> r) xf P P' hs (unifyFailure a) c"
   using corr_ac
-  apply (simp add: unifyFailure_def rethrowFailure_def const_def o_def
+  apply (simp add: unifyFailure_def rethrowFailure_def const_def
                    handleE'_def throwError_def)
   apply (clarsimp simp: ccorres_underlying_def bind_def split_def return_def
                   split: xstate.splits sum.splits)
@@ -3260,10 +3260,11 @@ lemma ccorres_sequenceE_while':
              Basic (\<lambda>s. i_'_update (\<lambda>_. i_' s + 1) s)))"
   apply (rule ccorres_guard_imp2)
    apply (rule ccorres_symb_exec_r)
-     apply (rule ccorres_sequenceE_while_gen'[where i=0, simplified, where xf_update=i_'_update],
-            (assumption | simp)+)
-       apply (simp add: word_bits_def)
-      apply simp+
+     apply (rule ccorres_rel_imp2)
+       apply (rule ccorres_sequenceE_while_gen'[where i=0, simplified, where xf_update=i_'_update],
+              (assumption | simp)+)
+         apply (simp add: word_bits_def)
+        apply simp+
     apply vcg
    apply (rule conseqPre, vcg)
    apply clarsimp
@@ -3317,9 +3318,10 @@ proof -
      apply csymbr
      apply csymbr
      apply (rename_tac "lngth")
-     apply (simp add: mi_from_H_def mapME_def del: Collect_const cong: bind_apply_cong)
+     apply (unfold mapME_def)[1]
+     apply (simp add: mi_from_H_def del: Collect_const)
      apply (rule ccorres_symb_exec_l)
-        apply (rule_tac P="length rv = unat word2" in ccorres_gen_asm)
+        apply (rule_tac P="length xs = unat word2" in ccorres_gen_asm)
         apply (rule ccorres_rhs_assoc2)
         apply (rule ccorres_add_returnOk2,
                rule ccorres_splitE_novcg)
@@ -3328,7 +3330,7 @@ proof -
                        and   Q="UNIV"
                        and   F="\<lambda>n s. valid_pspace' s \<and> tcb_at' thread s \<and>
                                       (case buffer of Some x \<Rightarrow> valid_ipc_buffer_ptr' x | _ \<Rightarrow> \<top>) s \<and>
-                                       (\<forall>m < length rv. user_word_at (rv ! m)
+                                       (\<forall>m < length xs. user_word_at (xs ! m)
                                                      (x2 + (of_nat m + (msgMaxLength + 2)) * 8) s)"
                           in ccorres_sequenceE_while')
                   apply (simp add: split_def)
@@ -3338,7 +3340,7 @@ proof -
                      apply (rule_tac xf'=cptr_' in ccorres_abstract, ceqv)
                      apply (ctac add: capFaultOnFailure_ccorres
                                [OF lookupSlotForThread_ccorres'])
-                        apply (rule_tac P="is_aligned rva 5" in ccorres_gen_asm)
+                        apply (rule_tac P="is_aligned rv 5" in ccorres_gen_asm)
                         apply (simp add: ccorres_cond_iffs liftE_bindE)
                         apply (rule ccorres_symb_exec_l [OF _ _ _ empty_fail_getSlotCap])
                           apply (rule_tac P'="UNIV \<inter> {s. excaps_map ys
@@ -3359,7 +3361,7 @@ proof -
                        apply (clarsimp simp: ccorres_cond_iffs)
                        apply (rule_tac  P= \<top>
                                 and P'="{x. errstate x= lu_ret___struct_lookupSlot_raw_ret_C \<and>
-                                            rv' = (rv ! length ys)}"
+                                            rv' = (xs ! length ys)}"
                                   in ccorres_from_vcg_throws)
                        apply (rule allI, rule conseqPre, vcg)
                        apply (clarsimp simp: throwError_def return_def)
@@ -3400,9 +3402,8 @@ proof -
             apply ceqv
            apply (simp del: Collect_const)
            apply (rule_tac P'="{s. snd rv'=?curr s}"
-                   and P="\<lambda>s. length rva = length rv
-                               \<and> (\<forall>x \<in> set rva. snd x \<noteq> 0)"
-                   in ccorres_from_vcg_throws)
+                       and P="\<lambda>s. length rv = length xs \<and> (\<forall>x \<in> set rv. snd x \<noteq> 0)"
+                    in ccorres_from_vcg_throws)
            apply (rule allI, rule conseqPre, vcg)
            apply (clarsimp simp: returnOk_def return_def
                                  seL4_MsgExtraCapBits_def)
@@ -3496,7 +3497,7 @@ proof -
     apply (cinit lift: sender_' receiver_' sendBuffer_' receiveBuffer_'
                        canGrant_' badge___unsigned_long_' endpoint_'
                  cong: call_ignore_cong)
-     apply (clarsimp cong: call_ignore_cong simp del: dc_simp)
+     apply (clarsimp cong: call_ignore_cong)
      apply (ctac(c_lines 2, no_vcg) add: getMessageInfo_ccorres')
        apply (rule_tac xf'="\<lambda>s. current_extra_caps_' (globals s)"
                    and r'="\<lambda>c c'. interpret_excaps c' = excaps_map c"
@@ -3541,7 +3542,7 @@ proof -
        apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem)
        apply (clarsimp simp: seL4_MessageInfo_lift_def message_info_to_H_def mask_def
                              msgLengthBits_def word_bw_assocs)
-      apply (wp getMessageInfo_le3 getMessageInfo_msgLength[unfolded K_def] static_imp_wp
+      apply (wp getMessageInfo_le3 getMessageInfo_msgLength[unfolded K_def] hoare_weak_lift_imp
                   | simp)+
      apply (auto simp: excaps_in_mem_def valid_ipc_buffer_ptr'_def
                        option_to_0_def option_to_ptr_def
@@ -3605,7 +3606,6 @@ lemma replyFromKernel_error_ccorres [corres]:
          apply ((rule ccorres_Guard_Seq)+)?
          apply csymbr
          apply (rule ccorres_abstract_cleanup)
-         apply (fold dc_def)[1]
          apply (rule setMessageInfo_ccorres)
         apply wp
        apply (simp add: Collect_const_mem)
@@ -3674,12 +3674,10 @@ lemma doIPCTransfer_ccorres [corres]:
            apply simp_all[3]
         apply ceqv
        apply csymbr
-       apply (fold dc_def)[1]
        apply ctac
       apply (wp lookupIPCBuffer_not_Some_0 lookupIPCBuffer_aligned)
      apply (clarsimp simp: seL4_Fault_NullFault_def ccorres_cond_iffs
                            fault_to_fault_tag_nonzero)
-     apply (fold dc_def)[1]
      apply ctac
     apply (clarsimp simp: guard_is_UNIV_def option_to_ptr_def split: option.splits)
    apply (rule_tac Q="\<lambda>rv. valid_pspace' and cur_tcb' and tcb_at' sender
@@ -3741,7 +3739,7 @@ proof -
      apply (rule ccorres_rhs_assoc2)
      apply (simp add: MessageID_Exception_def)
      apply ccorres_rewrite
-     apply (subst bind_return_unit)
+     apply (rule ccorres_add_return2)
      apply (rule ccorres_split_nothrow_novcg)
          apply (rule ccorres_zipWithM_x_while)
              apply clarsimp
@@ -3794,7 +3792,7 @@ proof -
                         n_msgRegisters_def
                         of_nat_less_iff)
        apply ccorres_rewrite
-       apply (rule ccorres_return_Skip[simplified dc_def])
+       apply (rule ccorres_return_Skip)
       apply (wp mapM_wp')
      apply clarsimp+
      apply (clarsimp simp: guard_is_UNIV_def message_info_to_H_def
@@ -3950,7 +3948,6 @@ lemma copyMRsFaultReply_ccorres_syscall:
                  apply (subst aligned_add_aligned, assumption)
                    apply (rule is_aligned_mult_triv2[where n=3, simplified])
                   apply (simp add: msg_align_bits)
-                 apply (simp add: of_nat_unat[simplified comp_def])
                  apply (simp only: n_msgRegisters_def)
                  apply (clarsimp simp: n_syscallMessage_def n_msgRegisters_def
                                        word_unat.Rep_inverse[of "scast _ :: 'a word"]
@@ -3989,8 +3986,8 @@ lemma copyMRsFaultReply_ccorres_syscall:
             apply simp
         apply (subst option.split[symmetric,where P=id, simplified])
         apply (rule valid_drop_case)
-        apply (wp hoare_drop_imps hoare_vcg_all_lift lookupIPCBuffer_aligned[simplified K_def]
-                  lookupIPCBuffer_not_Some_0[simplified K_def])
+        apply (wp hoare_drop_imps hoare_vcg_all_lift lookupIPCBuffer_aligned[simplified]
+                  lookupIPCBuffer_not_Some_0[simplified])
        apply (simp add: length_syscallMessage
                         length_msgRegisters
                         n_syscallMessage_def
@@ -4002,7 +3999,7 @@ lemma copyMRsFaultReply_ccorres_syscall:
        apply (rule ccorres_guard_imp)
          apply (rule ccorres_symb_exec_l)
             apply (case_tac rva ; clarsimp)
-             apply (rule ccorres_return_Skip[simplified dc_def])+
+             apply (rule ccorres_return_Skip)+
                 apply (wp mapM_x_wp_inv user_getreg_inv'
                        | clarsimp simp: zipWithM_x_mapM_x split: prod.split)+
      apply (cases  "4 < len")
@@ -4092,7 +4089,7 @@ lemma handleFaultReply_ccorres [corres]:
   apply (unfold K_def, rule ccorres_gen_asm)
   apply (rule monadic_rewrite_ccorres_assemble_nodrop[OF _ handleFaultReply',rotated], simp)
   apply (cinit lift: sender_' receiver_' simp: whileAnno_def)
-   apply (clarsimp simp del: dc_simp)
+   apply clarsimp
    apply (ctac(c_lines 2) add: getMessageInfo_ccorres')
      apply (rename_tac tag tag')
      apply csymbr
@@ -4138,7 +4135,7 @@ lemma handleFaultReply_ccorres [corres]:
                          split del: if_split)
             apply (subst take_min_len[symmetric,where n="unat (msgLength _)"])
             apply (subst take_min_len[symmetric,where n="unat (msgLength _)"])
-            apply (fold bind_assoc id_def)
+            apply (fold bind_assoc)
             apply (ctac add: copyMRsFaultReply_ccorres_syscall[simplified bind_assoc[symmetric]])
               apply (ctac add: ccorres_return_C)
              apply wp
@@ -4233,7 +4230,7 @@ lemma cteDeleteOne_tcbFault:
   apply (wp emptySlot_tcbFault cancelAllIPC_tcbFault getCTE_wp'
             cancelAllSignals_tcbFault unbindNotification_tcbFault
             isFinalCapability_inv unbindMaybeNotification_tcbFault
-            static_imp_wp
+            hoare_weak_lift_imp
           | wpc | simp add: Let_def)+
 sorry (* FIXME RT: cteDeleteOne_tcbFault. Now unused?*) (*
   apply (clarsimp split: if_split)
@@ -4366,7 +4363,6 @@ proof -
     apply csymbr
     apply wpc
      apply (clarsimp simp: ccorres_cond_iffs split del: if_split)
-     apply (fold dc_def)[1]
      apply (rule ccorres_rhs_assoc)+
      apply (ctac(no_vcg))
       apply (rule ccorres_symb_exec_r)
@@ -4390,7 +4386,6 @@ proof -
                           fault_to_fault_tag_nonzero
                split del: if_split)
     apply (rule ccorres_rhs_assoc)+
-    apply (fold dc_def)[1]
     apply (rule ccorres_symb_exec_r)
       apply (ctac (no_vcg) add: cteDeleteOne_ccorres[where w="scast cap_reply_cap"])
        apply (rule_tac A'=UNIV in stronger_ccorres_guard_imp)
@@ -4420,10 +4415,9 @@ proof -
                apply (simp only: K_bind_def)
                apply (ctac add: possibleSwitchTo_ccorres)
               apply (wp sts_running_valid_queues setThreadState_st_tcb | simp)+
-            apply (fold dc_def)[1]
              apply (ctac add: setThreadState_ccorres_valid_queues'_simple)
              apply wp
-            apply ((wp threadSet_valid_queues threadSet_sch_act threadSet_valid_queues' static_imp_wp
+            apply ((wp threadSet_valid_queues threadSet_sch_act threadSet_valid_queues' hoare_weak_lift_imp
                        threadSet_valid_objs' threadSet_weak_sch_act_wf
                          | simp add: valid_tcb_state'_def)+)[1]
            apply (clarsimp simp: guard_is_UNIV_def ThreadState_Restart_def
@@ -4497,7 +4491,7 @@ lemma sendIPC_dequeue_ccorres_helper:
   apply (rule ccorres_from_vcg)
   apply (rule allI)
   apply (rule conseqPre, vcg)
-  apply (clarsimp split del: if_split simp del: comp_def)
+  apply (clarsimp split del: if_split)
   apply (frule ep_blocked_in_queueD [OF pred_tcb'_weakenE])
      apply simp
     apply assumption+
@@ -4518,7 +4512,7 @@ lemma sendIPC_dequeue_ccorres_helper:
     apply (drule (2) ep_to_ep_queue)
     apply (simp add: tcb_queue_relation'_def)
    apply (clarsimp simp: typ_heap_simps cendpoint_relation_def Let_def
-              cong: imp_cong split del: if_split simp del: comp_def)
+                   cong: imp_cong split del: if_split)
   apply (intro conjI impI allI)
       apply (fastforce simp: h_t_valid_clift)
      apply (fastforce simp: h_t_valid_clift)
@@ -4881,7 +4875,7 @@ lemma sendIPC_enqueue_ccorres_helper:
   apply (rule ccorres_gen_asm)
   apply (rule ccorres_from_vcg)
   apply (rule allI, rule conseqPre, vcg)
-  apply (clarsimp split del: if_split simp del: comp_def)
+  apply (clarsimp split del: if_split)
   apply (frule cmap_relation_ep)
   apply (erule (1) cmap_relation_ko_atE)
   apply (rule conjI)
@@ -4897,12 +4891,12 @@ lemma sendIPC_enqueue_ccorres_helper:
    apply (simp add: cendpoint_relation_def Let_def)
    apply (case_tac ep, simp_all add: init_def valid_ep'_def)[1]
   apply (subgoal_tac "sym_refs (state_refs_of' (\<sigma>\<lparr>ksPSpace :=
-                          ksPSpace \<sigma>(epptr \<mapsto> KOEndpoint (SendEP queue))\<rparr>))")
+                          (ksPSpace \<sigma>)(epptr \<mapsto> KOEndpoint (SendEP queue))\<rparr>))")
    prefer 2
    apply (clarsimp simp: state_refs_of'_upd ko_wp_at'_def
                          obj_at'_def projectKOs objBitsKO_def)
   apply (subgoal_tac "ko_at' (SendEP queue) epptr (\<sigma>\<lparr>ksPSpace :=
-                          ksPSpace \<sigma>(epptr \<mapsto> KOEndpoint (SendEP queue))\<rparr>)")
+                          (ksPSpace \<sigma>)(epptr \<mapsto> KOEndpoint (SendEP queue))\<rparr>)")
    prefer 2
    apply (clarsimp simp: obj_at'_def projectKOs objBitsKO_def ps_clear_upd)
   apply (intro conjI impI allI)
@@ -5129,12 +5123,9 @@ sorry (* FIXME RT: sendIPC_ccorres *) (*
               apply (clarsimp simp: disj_imp[symmetric] split del: if_split)
               apply (wpc ; clarsimp)
                apply ccorres_rewrite
-               apply (fold dc_def)[1]
                apply (ctac add: setupCallerCap_ccorres)
               apply ccorres_rewrite
-              apply (fold dc_def)[1]
               apply (ctac add: setThreadState_ccorres)
-             apply (fold dc_def)[1]
              apply (rule ccorres_return_Skip)
             apply (wpsimp wp: hoare_drop_imps hoare_vcg_all_lift possibleSwitchTo_sch_act_not
                               possibleSwitchTo_sch_act_not sts_st_tcb'
@@ -5338,7 +5329,7 @@ lemma receiveIPC_enqueue_ccorres_helper:
   apply (rule ccorres_gen_asm)
   apply (rule ccorres_from_vcg)
   apply (rule allI, rule conseqPre, vcg)
-  apply (clarsimp split del: if_split simp del: comp_def)
+  apply (clarsimp split del: if_split)
   apply (frule cmap_relation_ep)
   apply (erule (1) cmap_relation_ko_atE)
   apply (rule conjI)
@@ -5354,12 +5345,12 @@ lemma receiveIPC_enqueue_ccorres_helper:
    apply (simp add: cendpoint_relation_def Let_def)
    apply (case_tac ep, simp_all add: init_def valid_ep'_def)[1]
   apply (subgoal_tac "sym_refs (state_refs_of' (\<sigma>\<lparr>ksPSpace :=
-                          ksPSpace \<sigma>(epptr \<mapsto> KOEndpoint (RecvEP queue))\<rparr>))")
+                          (ksPSpace \<sigma>)(epptr \<mapsto> KOEndpoint (RecvEP queue))\<rparr>))")
    prefer 2
    apply (clarsimp simp: state_refs_of'_upd ko_wp_at'_def
                          obj_at'_def projectKOs objBitsKO_def)
   apply (subgoal_tac "ko_at' (RecvEP queue) epptr (\<sigma>\<lparr>ksPSpace :=
-                          ksPSpace \<sigma>(epptr \<mapsto> KOEndpoint (RecvEP queue))\<rparr>)")
+                          (ksPSpace \<sigma>)(epptr \<mapsto> KOEndpoint (RecvEP queue))\<rparr>)")
    prefer 2
    apply (clarsimp simp: obj_at'_def projectKOs objBitsKO_def ps_clear_upd)
   apply (intro conjI impI allI)
@@ -5487,7 +5478,7 @@ lemma receiveIPC_dequeue_ccorres_helper:
   apply (rule ccorres_from_vcg)
   apply (rule allI)
   apply (rule conseqPre, vcg)
-  apply (clarsimp split del: if_split simp del: comp_def)
+  apply (clarsimp split del: if_split)
   apply (frule ep_blocked_in_queueD [OF pred_tcb'_weakenE])
      apply simp
     apply assumption+
@@ -5508,7 +5499,7 @@ lemma receiveIPC_dequeue_ccorres_helper:
     apply (drule (2) ep_to_ep_queue)
     apply (simp add: tcb_queue_relation'_def)
    apply (clarsimp simp: typ_heap_simps cendpoint_relation_def Let_def
-              cong: imp_cong split del: if_split simp del: comp_def)
+                   cong: imp_cong split del: if_split)
   apply (intro conjI impI allI)
       apply (fastforce simp: h_t_valid_clift)
      apply (fastforce simp: h_t_valid_clift)
@@ -5677,7 +5668,7 @@ lemma completeSignal_ccorres:
         apply (erule(1) cmap_relation_ko_atE[OF cmap_relation_ntfn])
         apply (clarsimp simp: cnotification_relation_def Let_def typ_heap_simps)
        apply ceqv
-      apply (fold dc_def, ctac(no_vcg))
+      apply (ctac(no_vcg))
 sorry (* FIXME RT: completeSignal_ccorres *) (*
        apply (rule_tac P="invs' and ko_at' ntfn ntfnptr" and P'=UNIV in ccorres_from_vcg)
        apply (rule allI, rule conseqPre, vcg)
@@ -5800,7 +5791,7 @@ sorry (* FIXME RT: receiveIPC_ccorres *) (*
          apply ceqv
         apply (rule ccorres_cond[where R=\<top>])
           apply (simp add: Collect_const_mem)
-         apply (ctac add: completeSignal_ccorres[unfolded dc_def])
+         apply (ctac add: completeSignal_ccorres)
         apply (rule_tac xf'=ret__unsigned_longlong_'
                     and val="case ep of IdleEP \<Rightarrow> scast EPState_Idle
                             | RecvEP _ \<Rightarrow> scast EPState_Recv
@@ -5830,20 +5821,18 @@ sorry (* FIXME RT: receiveIPC_ccorres *) (*
              apply (rule ccorres_rhs_assoc2)
              apply (rule ccorres_rhs_assoc2)
              apply (rule ccorres_split_nothrow_novcg)
-                 apply (simp split del: if_split)
                  apply (rule receiveIPC_block_ccorres_helper[unfolded ptr_val_def, simplified])
                 apply ceqv
                apply simp
                apply (rename_tac list NOo)
-               apply (rule_tac ep="RecvEP list"
-                               in receiveIPC_enqueue_ccorres_helper[simplified, unfolded dc_def])
+               apply (rule_tac ep="RecvEP list" in receiveIPC_enqueue_ccorres_helper[simplified])
               apply (simp add: valid_ep'_def)
               apply (wp sts_st_tcb')
              apply (rename_tac list)
              apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs)
              apply (clarsimp simp: guard_is_UNIV_def)
             apply simp
-             apply (ctac add: doNBRecvFailedTransfer_ccorres[unfolded dc_def])
+             apply (ctac add: doNBRecvFailedTransfer_ccorres)
            \<comment> \<open>IdleEP case\<close>
            apply (rule ccorres_cond_true)
            apply csymbr
@@ -5855,18 +5844,16 @@ sorry (* FIXME RT: receiveIPC_ccorres *) (*
             apply (rule ccorres_rhs_assoc2)
             apply (rule ccorres_rhs_assoc2)
             apply (rule ccorres_split_nothrow_novcg)
-                apply (simp split del: if_split)
                 apply (rule receiveIPC_block_ccorres_helper[unfolded ptr_val_def, simplified])
                apply ceqv
               apply simp
-              apply (rule_tac ep=IdleEP
-                        in receiveIPC_enqueue_ccorres_helper[simplified, unfolded dc_def])
+              apply (rule_tac ep=IdleEP in receiveIPC_enqueue_ccorres_helper[simplified])
              apply (simp add: valid_ep'_def)
              apply (wp sts_st_tcb')
             apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs)
             apply (clarsimp simp: guard_is_UNIV_def)
            apply simp
-            apply (ctac add: doNBRecvFailedTransfer_ccorres[unfolded dc_def])
+            apply (ctac add: doNBRecvFailedTransfer_ccorres)
            \<comment> \<open>SendEP case\<close>
           apply (thin_tac "isBlockinga = from_bool P" for P)
           apply (rule ccorres_cond_false)
@@ -5944,8 +5931,6 @@ sorry (* FIXME RT: receiveIPC_ccorres *) (*
                                   split: Structures_H.thread_state.splits)
                   apply ceqv
 
-                 apply (fold dc_def)
-                 supply dc_simp[simp del]
                  apply (clarsimp simp:  from_bool_0 disj_imp[symmetric] simp del: Collect_const)
                  apply wpc
                   (* blocking ipc call *)
@@ -6025,12 +6010,12 @@ sorry (* FIXME RT: receiveIPC_ccorres *) (*
            apply (clarsimp simp:st_tcb_at_refs_of_rev')
            apply (erule_tac x=x and P="\<lambda>x. st_tcb_at' P x s" for P in ballE)
             apply (drule_tac t=x in valid_queues_not_runnable'_not_ksQ)
-             apply (clarsimp simp: st_tcb_at'_def obj_at'_def o_def)
+             apply (clarsimp simp: st_tcb_at'_def obj_at'_def)
             apply (subgoal_tac "sch_act_not x s")
              prefer 2
              apply (frule invs_sch_act_wf')
              apply (clarsimp simp:sch_act_wf_def)
-             apply (clarsimp simp: st_tcb_at'_def obj_at'_def o_def)
+             apply (clarsimp simp: st_tcb_at'_def obj_at'_def)
             apply (clarsimp simp: obj_at'_def st_tcb_at'_def
                                   projectKOs isBlockedOnSend_def
                             split: list.split | rule conjI)+
@@ -6059,11 +6044,10 @@ lemma sendSignal_dequeue_ccorres_helper:
          IF head_C \<acute>ntfn_queue = Ptr 0 THEN
              CALL notification_ptr_set_state(Ptr ntfn,scast NtfnState_Idle)
          FI)"
-
   apply (rule ccorres_from_vcg)
   apply (rule allI)
   apply (rule conseqPre, vcg)
-  apply (clarsimp split del: if_split simp del: comp_def)
+  apply (clarsimp split del: if_split)
   apply (frule (3) ntfn_blocked_in_queueD)
   apply (frule (1) ntfn_ko_at_valid_objs_valid_ntfn'[OF _ invs_valid_objs'])
   apply (elim conjE)
@@ -6083,7 +6067,7 @@ lemma sendSignal_dequeue_ccorres_helper:
     apply (drule ntfn_to_ep_queue, (simp add: isWaitingNtfn_def)+)
     apply (simp add: tcb_queue_relation'_def)
    apply (clarsimp simp: typ_heap_simps cnotification_relation_def Let_def
-              cong: imp_cong split del: if_split simp del: comp_def)
+                   cong: imp_cong split del: if_split)
   apply (intro conjI impI allI)
      apply (fastforce simp: h_t_valid_clift)
     apply (fastforce simp: h_t_valid_clift)
@@ -6268,7 +6252,7 @@ lemma sendSignal_ccorres [corres]:
        apply wpc
         apply (simp add: option_to_ctcb_ptr_def split del: if_split)
         apply (rule ccorres_cond_false)
-        apply (ctac add: ntfn_set_active_ccorres[unfolded dc_def])
+        apply (ctac add: ntfn_set_active_ccorres)
        apply (rule ccorres_cond_true)
        apply (rule getThreadState_ccorres_foo)
        apply (rule ccorres_Guard_Seq)
@@ -6284,7 +6268,7 @@ lemma sendSignal_ccorres [corres]:
          apply (ctac(no_vcg) add: setThreadState_ccorres)
           apply (ctac(no_vcg) add: setRegister_ccorres)
 sorry (* FIXME RT: sendSignal_ccorres *) (*
-           apply (ctac add: possibleSwitchTo_ccorres[unfolded dc_def])
+           apply (ctac add: possibleSwitchTo_ccorres)
           apply (wp sts_running_valid_queues sts_st_tcb_at'_cases
                  | simp add: option_to_ctcb_ptr_def split del: if_split)+
         apply (rule_tac Q="\<lambda>_. tcb_at' (the (ntfnBoundTCB ntfn)) and invs'"
@@ -6292,7 +6276,7 @@ sorry (* FIXME RT: sendSignal_ccorres *) (*
          apply auto[1]
         apply wp
        apply simp
-       apply (ctac add: ntfn_set_active_ccorres[unfolded dc_def])
+       apply (ctac add: ntfn_set_active_ccorres)
       apply (clarsimp simp: guard_is_UNIV_def option_to_ctcb_ptr_def
                             RISCV64_H.badgeRegister_def C_register_defs
                             RISCV64.badgeRegister_def RISCV64.capRegister_def
@@ -6348,7 +6332,7 @@ sorry (* FIXME RT: sendSignal_ccorres *) (*
        apply ceqv
       apply (simp only: K_bind_def)
       apply (ctac (no_vcg))
-       apply (simp, fold dc_def)
+       apply simp
        apply (ctac (no_vcg))
         apply (ctac add: possibleSwitchTo_ccorres)
        apply (simp)
@@ -6430,16 +6414,17 @@ lemma cpspace_relation_ntfn_update_ntfn':
   fixes ntfn :: "Structures_H.notification" and ntfn' :: "Structures_H.notification"
     and ntfnptr :: "machine_word" and s :: "kernel_state"
   defines "qs \<equiv> if isWaitingNtfn (ntfnObj ntfn') then set (ntfnQueue (ntfnObj ntfn')) else {}"
-  defines "s' \<equiv> s\<lparr>ksPSpace := ksPSpace s(ntfnptr \<mapsto> KONotification ntfn')\<rparr>"
+  defines "s' \<equiv> s\<lparr>ksPSpace := (ksPSpace s)(ntfnptr \<mapsto> KONotification ntfn')\<rparr>"
   assumes koat: "ko_at' ntfn ntfnptr s"
   and       vp: "valid_pspace' s"
   and      cp: "cmap_relation (map_to_ntfns (ksPSpace s)) (cslift t) Ptr (cnotification_relation (cslift t))"
   and      srs: "sym_refs (state_refs_of' s')"
   and     rel: "cnotification_relation (cslift t') ntfn' notification"
   and    mpeq: "(cslift t' |` (- (tcb_ptr_to_ctcb_ptr ` qs))) = (cslift t |` (- (tcb_ptr_to_ctcb_ptr ` qs)))"
-  shows "cmap_relation (map_to_ntfns (ksPSpace s(ntfnptr \<mapsto> KONotification ntfn')))
-           (cslift t(Ptr ntfnptr \<mapsto> notification)) Ptr
-            (cnotification_relation (cslift t'))"
+  shows "cmap_relation (map_to_ntfns ((ksPSpace s)(ntfnptr \<mapsto> KONotification ntfn')))
+                       ((cslift t)(Ptr ntfnptr \<mapsto> notification))
+                       Ptr
+                       (cnotification_relation (cslift t'))"
 proof -
   from koat have koat': "ko_at' ntfn' ntfnptr s'"
     by (clarsimp simp: obj_at'_def s'_def objBitsKO_def ps_clear_def projectKOs)
@@ -6499,7 +6484,7 @@ lemma receiveSignal_enqueue_ccorres_helper:
   apply (rule ccorres_gen_asm)
   apply (rule ccorres_from_vcg)
   apply (rule allI, rule conseqPre, vcg)
-  apply (clarsimp split del: if_split simp del: comp_def)
+  apply (clarsimp split del: if_split)
   apply (frule cmap_relation_ntfn)
   apply (erule (1) cmap_relation_ko_atE)
   apply (rule conjI)
@@ -6515,13 +6500,14 @@ lemma receiveSignal_enqueue_ccorres_helper:
    apply (simp add: cnotification_relation_def Let_def)
    apply (case_tac "ntfnObj ntfn", simp_all add: init_def valid_ntfn'_def)[1]
   apply (subgoal_tac "sym_refs (state_refs_of' (\<sigma>\<lparr>ksPSpace :=
-                          ksPSpace \<sigma>(ntfnptr \<mapsto> KONotification (NTFN (WaitingNtfn queue) (ntfnBoundTCB ntfn) (ntfnSc ntfn)))\<rparr>))")
+                               (ksPSpace \<sigma>)(ntfnptr \<mapsto> KONotification (NTFN (WaitingNtfn queue) (ntfnBoundTCB ntfn) (ntfnSc ntfn)))\<rparr>))")
    prefer 2
    apply (clarsimp simp: state_refs_of'_upd ko_wp_at'_def ntfnBound_state_refs_equivalence
                          obj_at'_def projectKOs objBitsKO_def)
   subgoal sorry (* FIXME RT: sym_refs argument *)
   apply (subgoal_tac "ko_at' (NTFN (WaitingNtfn queue) (ntfnBoundTCB ntfn) (ntfnSc ntfn)) ntfnptr (\<sigma>\<lparr>ksPSpace :=
-                          ksPSpace \<sigma>(ntfnptr \<mapsto> KONotification (NTFN (WaitingNtfn queue) (ntfnBoundTCB ntfn) (ntfnSc ntfn)))\<rparr>)")
+                             (ksPSpace \<sigma>)(ntfnptr \<mapsto> KONotification (NTFN (WaitingNtfn queue) (ntfnBoundTCB ntfn) (ntfnSc ntfn)))\<rparr>)")
+                             (ksPSpace \<sigma>)(ntfnptr \<mapsto> KONotification (NTFN (WaitingNtfn queue) (ntfnBoundTCB ntfn)))\<rparr>)")
    prefer 2
    apply (clarsimp simp: obj_at'_def projectKOs objBitsKO_def ps_clear_upd)
   apply (intro conjI impI allI)
@@ -6688,12 +6674,11 @@ lemma receiveSignal_ccorres [corres]:
         apply (rule ccorres_rhs_assoc2)
         apply (rule ccorres_rhs_assoc2)
         apply (rule ccorres_split_nothrow_novcg)
-            apply (simp)
             apply (rule receiveSignal_block_ccorres_helper[simplified])
            apply ceqv
           apply (simp only: K_bind_def)
 sorry (* FIXME RT: receiveSignal_ccorres *) (*
-          apply (rule receiveSignal_enqueue_ccorres_helper[unfolded dc_def, simplified])
+          apply (rule receiveSignal_enqueue_ccorres_helper[simplified])
          apply (simp add: valid_ntfn'_def)
          apply (wp sts_st_tcb')
          apply (rule_tac Q="\<lambda>rv. ko_wp_at' (\<lambda>x. projectKO_opt x = Some ntfn
@@ -6704,7 +6689,7 @@ sorry (* FIXME RT: receiveSignal_ccorres *) (*
          apply wp
         apply (clarsimp simp: guard_is_UNIV_def)
        apply simp
-       apply (ctac add: doNBRecvFailedTransfer_ccorres[unfolded dc_def])
+       apply (ctac add: doNBRecvFailedTransfer_ccorres)
       \<comment> \<open>ActiveNtfn case\<close>
       apply (rename_tac badge)
       apply (rule ccorres_cond_false)
@@ -6760,8 +6745,7 @@ sorry (* FIXME RT: receiveSignal_ccorres *) (*
           apply (rule receiveSignal_block_ccorres_helper[simplified])
          apply ceqv
         apply (simp only: K_bind_def)
-        apply (rule_tac ntfn="ntfn"
-                           in receiveSignal_enqueue_ccorres_helper[unfolded dc_def, simplified])
+        apply (rule_tac ntfn="ntfn" in receiveSignal_enqueue_ccorres_helper[simplified])
        apply (simp add: valid_ntfn'_def)
        apply (wp sts_st_tcb')
        apply (rule_tac Q="\<lambda>rv. ko_wp_at' (\<lambda>x. projectKO_opt x = Some ntfn
@@ -6773,7 +6757,7 @@ sorry (* FIXME RT: receiveSignal_ccorres *) (*
        apply wp
       apply (clarsimp simp: guard_is_UNIV_def)
      apply simp
-     apply (ctac add: doNBRecvFailedTransfer_ccorres[unfolded dc_def])
+     apply (ctac add: doNBRecvFailedTransfer_ccorres)
     apply (clarsimp simp: guard_is_UNIV_def NtfnState_Active_def
                           NtfnState_Waiting_def NtfnState_Idle_def)
    apply (clarsimp simp: guard_is_UNIV_def)

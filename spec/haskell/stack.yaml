@@ -7,8 +7,8 @@
 # We use `stack` only to install GHC and cabal-install, not to build the project.
 # The rest of the build works via cabal
 
-# Stackage LTS Haskell 19.12 (ghc-9.0.2)
-resolver: lts-19.12
+# Stackage LTS Haskell 20.25 (ghc-9.2.8)
+resolver: lts-20.25
 
 packages: []
 extra-deps: []

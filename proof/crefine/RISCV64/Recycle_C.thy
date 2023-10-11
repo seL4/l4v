@@ -414,7 +414,7 @@ lemma mapM_x_store_memset_ccorres_assist:
   assumes constsize: "\<And>v :: 'a. objBits v = objBitsT (koType TYPE('a))"
   assumes restr: "set slots \<subseteq> S"
   assumes worker: "\<And>ptr s s' (ko :: 'a). \<lbrakk> (s, s') \<in> rf_sr; ko_at' ko ptr s; ptr \<in> S \<rbrakk>
-                                \<Longrightarrow> (s \<lparr> ksPSpace := ksPSpace s (ptr \<mapsto> injectKO val)\<rparr>,
+                                \<Longrightarrow> (s \<lparr> ksPSpace := (ksPSpace s)(ptr \<mapsto> injectKO val)\<rparr>,
                                      globals_update (t_hrs_'_update (hrs_mem_update
                                                     (heap_update_list ptr
                                                     (replicateHider (2 ^ objBits val) (ucast c))))) s') \<in> rf_sr"
@@ -695,8 +695,8 @@ lemma cpspace_relation_ep_update_ep2:
            (cslift t) ep_Ptr (cendpoint_relation (cslift t));
       cendpoint_relation (cslift t') ep' endpoint;
       (cslift t' :: tcb_C ptr \<rightharpoonup> tcb_C) = cslift t \<rbrakk>
-     \<Longrightarrow> cmap_relation (map_to_eps (ksPSpace s(epptr \<mapsto> KOEndpoint ep')))
-          (cslift t(ep_Ptr epptr \<mapsto> endpoint))
+     \<Longrightarrow> cmap_relation (map_to_eps ((ksPSpace s)(epptr \<mapsto> KOEndpoint ep')))
+          ((cslift t)(ep_Ptr epptr \<mapsto> endpoint))
           ep_Ptr (cendpoint_relation (cslift t'))"
   apply (rule cmap_relationE1, assumption, erule ko_at_projectKO_opt)
   apply (rule_tac P="\<lambda>a. cmap_relation a b c d" for b c d in rsubst,
@@ -806,8 +806,8 @@ lemma cancelBadgedSends_ccorres:
                del: Collect_const)
 sorry (* FIXME RT: cancelBadgedSends_ccorres *) (*
    apply (rule ccorres_pre_getEndpoint)
-   apply (rule_tac R="ko_at' rv ptr" and xf'="ret__unsigned_longlong_'"
-               and val="case rv of RecvEP q \<Rightarrow> scast EPState_Recv | IdleEP \<Rightarrow> scast EPState_Idle
+   apply (rule_tac R="ko_at' ep ptr" and xf'="ret__unsigned_longlong_'"
+               and val="case ep of RecvEP q \<Rightarrow> scast EPState_Recv | IdleEP \<Rightarrow> scast EPState_Idle
                                 | SendEP q \<Rightarrow> scast EPState_Send"
                in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
       apply vcg
@@ -817,22 +817,22 @@ sorry (* FIXME RT: cancelBadgedSends_ccorres *) (*
                      split: Structures_H.endpoint.split_asm)
      apply ceqv
     apply wpc
-      apply (simp add: dc_def[symmetric] ccorres_cond_iffs)
+      apply (simp add: ccorres_cond_iffs)
       apply (rule ccorres_return_Skip)
-     apply (simp add: dc_def[symmetric] ccorres_cond_iffs)
+     apply (simp add: ccorres_cond_iffs)
      apply (rule ccorres_return_Skip)
     apply (rename_tac list)
     apply (simp add: Collect_True Collect_False endpoint_state_defs
-                     ccorres_cond_iffs dc_def[symmetric]
+                     ccorres_cond_iffs
                 del: Collect_const cong: call_ignore_cong)
     apply (rule ccorres_rhs_assoc)+
     apply (csymbr, csymbr)
-    apply (drule_tac s = rv in sym, simp only:)
-    apply (rule_tac P="ko_at' rv ptr and invs'" in ccorres_cross_over_guard)
+    apply (drule_tac s = ep in sym, simp only:)
+    apply (rule_tac P="ko_at' ep ptr and invs'" in ccorres_cross_over_guard)
     apply (rule ccorres_symb_exec_r)
       apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2)
       apply (rule ccorres_split_nothrow[where r'=dc and xf'=xfdc, OF _ ceqv_refl])
-         apply (rule_tac P="ko_at' rv ptr"
+         apply (rule_tac P="ko_at' ep ptr"
                     in ccorres_from_vcg[where P'=UNIV])
          apply (rule allI, rule conseqPre, vcg)
          apply clarsimp
@@ -908,7 +908,7 @@ sorry (* FIXME RT: cancelBadgedSends_ccorres *) (*
                 subgoal by (simp add: mask_def canonical_bit_def)
                subgoal by (auto split: if_split)
               subgoal by simp
-             apply (ctac add: rescheduleRequired_ccorres[unfolded dc_def])
+             apply (ctac add: rescheduleRequired_ccorres)
             apply (rule hoare_pre, wp weak_sch_act_wf_lift_linear set_ep_valid_objs')
             apply (clarsimp simp: weak_sch_act_wf_def sch_act_wf_def)
             apply (fastforce simp: valid_ep'_def pred_tcb_at' split: list.splits)
@@ -918,7 +918,7 @@ sorry (* FIXME RT: cancelBadgedSends_ccorres *) (*
           apply (rule iffD1 [OF ccorres_expand_while_iff_Seq])
           apply (rule ccorres_init_tmp_lift2, ceqv)
           apply (rule ccorres_guard_imp2)
-           apply (simp add: bind_assoc dc_def[symmetric]
+           apply (simp add: bind_assoc
                        del: Collect_const)
            apply (rule ccorres_cond_true)
            apply (rule ccorres_rhs_assoc)+
@@ -943,9 +943,9 @@ sorry (* FIXME RT: cancelBadgedSends_ccorres *) (*
               subgoal by (simp add: rf_sr_def)
              apply simp
             apply ceqv
-           apply (rule_tac P="ret__unsigned_longlong=blockingIPCBadge rva" in ccorres_gen_asm2)
+           apply (rule_tac P="ret__unsigned_longlong=blockingIPCBadge rv" in ccorres_gen_asm2)
            apply (rule ccorres_if_bind, rule ccorres_if_lhs)
-            apply (simp add: bind_assoc dc_def[symmetric])
+            apply (simp add: bind_assoc)
             apply (rule ccorres_rhs_assoc)+
             apply (ctac add: setThreadState_ccorres)
               apply (ctac add: tcbSchedEnqueue_ccorres)
@@ -1014,9 +1014,9 @@ sorry (* FIXME RT: cancelBadgedSends_ccorres *) (*
              apply (wp hoare_vcg_const_Ball_lift sts_st_tcb_at'_cases
                        sts_sch_act sts_valid_queues setThreadState_oa_queued)
             apply (vcg exspec=setThreadState_cslift_spec)
-           apply (simp add: ccorres_cond_iffs dc_def[symmetric])
+           apply (simp add: ccorres_cond_iffs)
            apply (rule ccorres_symb_exec_r2)
-             apply (drule_tac x="x @ [a]" in spec, simp add: dc_def[symmetric])
+             apply (drule_tac x="x @ [a]" in spec, simp)
             apply vcg
            apply (vcg spec=modifies)
           apply (thin_tac "\<forall>x. P x" for P)

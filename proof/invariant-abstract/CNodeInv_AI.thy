@@ -875,7 +875,7 @@ crunches update_time_stamp
 crunches preemption_point
   for not_recursive_cspaces[wp]: "\<lambda>s. P (not_recursive_cspaces s)"
   and caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
-  (wp: OR_choiceE_weak_wp alternative_valid hoare_drop_imp simp: preemption_point_def)
+  (wp: OR_choiceE_weak_wp hoare_drop_imp simp: preemption_point_def)
 
 lemma rec_del_termination:
   "All (rec_del_dom :: rec_del_call \<times> 'state_ext state \<Rightarrow> bool)"
@@ -2293,16 +2293,16 @@ lemmas empty_slot_rvk_prog' = empty_slot_rvk_prog[unfolded o_def]
 
 crunch rvk_prog: cancel_ipc "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map cap_to_rpo (caps_of_state s x))"
   (simp: crunch_simps o_def unless_def is_final_cap_def tcb_cap_cases_def
-     wp: hoare_drop_imps empty_slot_rvk_prog' select_wp
+     wp: hoare_drop_imps empty_slot_rvk_prog'
          thread_set_caps_of_state_trivial)
 
 crunch rvk_prog: suspend "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map cap_to_rpo (caps_of_state s x))"
   (simp: crunch_simps o_def unless_def is_final_cap_def
-     wp: crunch_wps empty_slot_rvk_prog' select_wp maybeM_inv ignore: set_tcb_obj_ref)
+     wp: crunch_wps empty_slot_rvk_prog' maybeM_inv ignore: set_tcb_obj_ref)
 
 crunch rvk_prog: deleting_irq_handler "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map cap_to_rpo (caps_of_state s x))"
   (simp: crunch_simps o_def unless_def is_final_cap_def
-     wp: crunch_wps empty_slot_rvk_prog' select_wp)
+     wp: crunch_wps empty_slot_rvk_prog')
 
 locale CNodeInv_AI_3 = CNodeInv_AI_2 state_ext_t
   for state_ext_t :: "'state_ext::state_ext itself" +
@@ -2539,7 +2539,7 @@ proof (induct rule: cap_revoke_induct)
   show ?case
     apply (subst cap_revoke_simps)
     apply (wp "1.hyps")
-           apply (wp x p hoare_drop_imps select_wp)+
+           apply (wp x p hoare_drop_imps)+
      apply simp_all
     done
 qed
@@ -2569,7 +2569,7 @@ proof (induct rule: cap_revoke_induct)
   show ?case
     apply (subst cap_revoke_simps)
     apply (wp "1.hyps")
-           apply (wp x p hoare_drop_imps select_wp)+
+           apply (wp x p hoare_drop_imps)+
      apply (simp_all add: y)
     done
 qed

@@ -173,6 +173,17 @@ lemmas pred_neg_bot_eq[simp] =
    entirely in the future *)
 
 
+subsection "Simplification Rules for Lifted And/Or"
+
+lemma bipred_disj_op_eq[simp]:
+  "reflp R \<Longrightarrow> ((=) or R) = R"
+  "reflp R \<Longrightarrow> (R or (=)) = R"
+  by (auto simp: reflp_def)
+
+lemma bipred_le_true[simp]: "R \<le> \<top>\<top>"
+  by clarsimp
+
+
 section \<open>Examples\<close>
 
 experiment

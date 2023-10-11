@@ -10,7 +10,7 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-declare static_imp_wp[wp_split del]
+declare hoare_weak_lift_imp[wp_split del]
 
 (* Levity: added (20090713 10:04:12) *)
 declare sts_rel_idle [simp]
@@ -41,7 +41,7 @@ proof -
     apply (auto simp add: bind_def alternative_def return_def split_def prod_eq_iff)
     done
   have Q: "\<lbrace>P\<rbrace> (do x \<leftarrow> f; return (Some x) od) \<sqinter> return None \<lbrace>\<lambda>rv. if rv \<noteq> None then \<top> else P\<rbrace>"
-    by (wp alternative_wp | simp)+
+    by (wp | simp)+
   show ?thesis using p
     apply (induct xs)
      apply (simp add: y del: dc_simp)
@@ -76,17 +76,17 @@ lemma vs_refs_pages_vcpu:
   by (simp add: vs_refs_pages_def)
 
 lemma vs_lookup_pages1_vcpu_update:
-  "typ_at (AArch AVCPU) vcpuPtr s \<Longrightarrow> vs_lookup_pages1 (s\<lparr>kheap := kheap s(vcpuPtr \<mapsto> ArchObj (VCPU vcpu))\<rparr>)
+  "typ_at (AArch AVCPU) vcpuPtr s \<Longrightarrow> vs_lookup_pages1 (s\<lparr>kheap := (kheap s)(vcpuPtr \<mapsto> ArchObj (VCPU vcpu))\<rparr>)
                                       = vs_lookup_pages1 s"
   by (clarsimp intro!: set_eqI simp: vs_lookup_pages1_def vs_refs_pages_vcpu obj_at_def)
 
 lemma vs_lookup_pages_vcpu_update:
-  "typ_at (AArch AVCPU) vcpuPtr s \<Longrightarrow> vs_lookup_pages (s\<lparr>kheap := kheap s(vcpuPtr \<mapsto> ArchObj (VCPU vcpu))\<rparr>)
+  "typ_at (AArch AVCPU) vcpuPtr s \<Longrightarrow> vs_lookup_pages (s\<lparr>kheap := (kheap s)(vcpuPtr \<mapsto> ArchObj (VCPU vcpu))\<rparr>)
                                       = vs_lookup_pages s"
   by (clarsimp simp: vs_lookup_pages_def vs_lookup_pages1_vcpu_update)
 
 lemma valid_vs_lookup_vcpu_update:
-  "typ_at (AArch AVCPU) vcpuPtr s \<Longrightarrow> valid_vs_lookup (s\<lparr>kheap := kheap s(vcpuPtr \<mapsto> ArchObj (VCPU vcpu))\<rparr>)
+  "typ_at (AArch AVCPU) vcpuPtr s \<Longrightarrow> valid_vs_lookup (s\<lparr>kheap := (kheap s)(vcpuPtr \<mapsto> ArchObj (VCPU vcpu))\<rparr>)
                                       = valid_vs_lookup s"
   apply (clarsimp simp: valid_vs_lookup_def caps_of_state_VCPU_update)
   apply (rule all_cong1)
@@ -516,7 +516,7 @@ lemma ct_idle_or_in_cur_domain'_lift2:
   apply (rule hoare_lift_Pf2[where f=ksCurThread])
   apply (rule hoare_lift_Pf2[where f=ksSchedulerAction])
   including no_pre
-  apply (wp static_imp_wp hoare_vcg_disj_lift)
+  apply (wp hoare_weak_lift_imp hoare_vcg_disj_lift)
   apply simp+
   done
 
@@ -769,12 +769,12 @@ lemma valid_vs_lookup_arm_current_vcpu_inv[simp]: "valid_vs_lookup (s\<lparr>arc
 
 lemma vs_lookup_pages1_vcpu_update':
   "kheap s p = Some (ArchObj (VCPU x)) \<Longrightarrow>
-    vs_lookup_pages1 (s\<lparr>kheap := kheap s(p \<mapsto> ArchObj (VCPU x'))\<rparr>) = vs_lookup_pages1 s"
+    vs_lookup_pages1 (s\<lparr>kheap := (kheap s)(p \<mapsto> ArchObj (VCPU x'))\<rparr>) = vs_lookup_pages1 s"
   by (clarsimp simp: vs_lookup_pages1_def obj_at_def vs_refs_pages_def intro!: set_eqI)
 
 lemma vs_lookup_pages_vcpu_update':
   "kheap s y = Some (ArchObj (VCPU x)) \<Longrightarrow>
-    (ref \<unrhd> p) s = (ref \<unrhd> p) (s\<lparr>kheap := kheap s(y \<mapsto> ArchObj (VCPU x'))\<rparr>)"
+    (ref \<unrhd> p) s = (ref \<unrhd> p) (s\<lparr>kheap := (kheap s)(y \<mapsto> ArchObj (VCPU x'))\<rparr>)"
   by (clarsimp simp: vs_lookup_pages_def vs_lookup_pages1_vcpu_update')
 
 lemma tcb_at'_ksIdleThread_lift:
@@ -792,7 +792,7 @@ lemma arch_switchToIdleThread_corres:
           arch_switch_to_idle_thread
           Arch.switchToIdleThread"
   unfolding arch_switch_to_idle_thread_def ARM_HYP_H.switchToIdleThread_def
-  apply (corressimp corres: getIdleThread_corres setVMRoot_corres[@lift_corres_args] vcpuSwitch_corres[where vcpu=None, simplified]
+  apply (corresKsimp corres: getIdleThread_corres setVMRoot_corres[@lift_corres_args] vcpuSwitch_corres[where vcpu=None, simplified]
                         wp: tcb_at_idle_thread_lift tcb_at'_ksIdleThread_lift vcpuSwitch_it')
   apply (clarsimp simp: invs_valid_objs invs_arch_state invs_valid_asid_map invs_valid_vs_lookup
                         invs_psp_aligned invs_distinct invs_unique_refs invs_vspace_objs)
@@ -1490,7 +1490,7 @@ lemma switchToIdleThread_invs_no_cicd':
 crunch obj_at'[wp]: "Arch.switchToIdleThread" "obj_at' (P :: ('a :: no_vcpu) \<Rightarrow> bool) t"
 
 
-declare static_imp_conj_wp[wp_split del]
+declare hoare_weak_lift_imp_conj[wp_split del]
 
 lemma setCurThread_const:
   "\<lbrace>\<lambda>_. P t \<rbrace> setCurThread t \<lbrace>\<lambda>_ s. P (ksCurThread s) \<rbrace>"
@@ -2279,7 +2279,7 @@ lemma schedule_invs':
     apply (wpsimp wp: scheduleChooseNewThread_invs' ssa_invs'
                       chooseThread_invs_no_cicd' setSchedulerAction_invs' setSchedulerAction_direct
                       switchToThread_tcb_in_cur_domain' switchToThread_ct_not_queued_2
-           | wp hoare_disjI2[where Q="\<lambda>_ s. tcb_in_cur_domain' (ksCurThread s) s"]
+           | wp hoare_disjI2[where R="\<lambda>_ s. tcb_in_cur_domain' (ksCurThread s) s"]
            | wp hoare_drop_imp[where f="isHighestPrio d p" for d p]
            | simp only: obj_at'_activatable_st_tcb_at'[simplified comp_def]
            | strengthen invs'_invs_no_cicd

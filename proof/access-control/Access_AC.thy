@@ -208,17 +208,17 @@ lemmas state_objs_to_policy_cases
 
 lemma tcb_states_of_state_preserved:
   "\<lbrakk> get_tcb thread s = Some tcb; tcb_state tcb' = tcb_state tcb \<rbrakk>
-     \<Longrightarrow> tcb_states_of_state (s\<lparr>kheap := kheap s(thread \<mapsto> TCB tcb')\<rparr>) = tcb_states_of_state s"
+     \<Longrightarrow> tcb_states_of_state (s\<lparr>kheap := (kheap s)(thread \<mapsto> TCB tcb')\<rparr>) = tcb_states_of_state s"
   by (auto split: option.splits simp: tcb_states_of_state_def get_tcb_def)
 
 lemma thread_st_auth_preserved:
   "\<lbrakk> get_tcb thread s = Some tcb; tcb_state tcb' = tcb_state tcb \<rbrakk>
-     \<Longrightarrow> thread_st_auth (s\<lparr>kheap := kheap s(thread \<mapsto> TCB tcb')\<rparr>) = thread_st_auth s"
+     \<Longrightarrow> thread_st_auth (s\<lparr>kheap := (kheap s)(thread \<mapsto> TCB tcb')\<rparr>) = thread_st_auth s"
   by (simp add: tcb_states_of_state_preserved thread_st_auth_def)
 
 lemma thread_bound_ntfns_preserved:
   "\<lbrakk> get_tcb thread s = Some tcb; tcb_bound_notification tcb' = tcb_bound_notification tcb \<rbrakk>
-     \<Longrightarrow> thread_bound_ntfns (s\<lparr>kheap := kheap s(thread \<mapsto> TCB tcb')\<rparr>) = thread_bound_ntfns s"
+     \<Longrightarrow> thread_bound_ntfns (s\<lparr>kheap := (kheap s)(thread \<mapsto> TCB tcb')\<rparr>) = thread_bound_ntfns s"
   by (auto simp: thread_bound_ntfns_def get_tcb_def split: option.splits)
 
 lemma is_transferable_null_filter[simp]:
@@ -865,7 +865,7 @@ locale Access_AC_2 = Access_AC_1 +
        \<Longrightarrow> (\<forall>x a. integrity_asids aag subjects x a s s'')"
   and integrity_asids_update_autarch:
     "\<lbrakk> \<forall>x a. integrity_asids aag {pasSubject aag} x a s s'; is_subject aag ptr \<rbrakk>
-       \<Longrightarrow> \<forall>x a. integrity_asids aag {pasSubject aag} x a s (s'\<lparr>kheap := kheap s'(ptr \<mapsto> obj)\<rparr>)"
+       \<Longrightarrow> \<forall>x a. integrity_asids aag {pasSubject aag} x a s (s'\<lparr>kheap := (kheap s')(ptr \<mapsto> obj)\<rparr>)"
 begin
 
 section \<open>Generic AC stuff\<close>
@@ -980,7 +980,7 @@ lemma integrity_refl [simp]:
 
 lemma integrity_update_autarch:
   "\<lbrakk> integrity aag X st s; is_subject aag ptr \<rbrakk>
-     \<Longrightarrow> integrity aag X st (s\<lparr>kheap := kheap s(ptr \<mapsto> obj)\<rparr>)"
+     \<Longrightarrow> integrity aag X st (s\<lparr>kheap := (kheap s)(ptr \<mapsto> obj)\<rparr>)"
   unfolding integrity_subjects_def
   apply (intro conjI,simp_all)
     apply clarsimp

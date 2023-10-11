@@ -58,7 +58,7 @@ lemma without_preemption_empty_fail[wp]:
   by simp
 
 crunch_ignore (empty_fail)
-  (add: NonDetMonad.bind bindE lift liftE liftM "when" whenE unless unlessE return fail
+  (add: Nondet_Monad.bind bindE lift liftE liftM "when" whenE unless unlessE return fail
         assert_opt mapM mapM_x sequence_x catch handleE do_extended_op returnOk throwError
         cap_insert_ext empty_slot_ext create_cap_ext cap_swap_ext cap_move_ext
         OR_choice OR_choiceE getRegister lookup_error_on_failure

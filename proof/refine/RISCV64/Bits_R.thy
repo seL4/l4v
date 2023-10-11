@@ -275,6 +275,8 @@ where
   lfr_def[simp]:
  "lfr x y \<equiv> (y = lookup_failure_map x)"
 
+lemmas corres_throwError_lfr[corres_term] = corres_throwErrorTT[of lfr]
+
 text \<open>Correspondence and weakest precondition
         rules for the "on failure" transformers\<close>
 

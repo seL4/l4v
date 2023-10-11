@@ -1283,7 +1283,7 @@ crunch gsMaxObjectSize[wp]: emptySlot "\<lambda>s. P (gsMaxObjectSize s)"
 end
 
 lemma emptySlot_cteCaps_of:
-  "\<lbrace>\<lambda>s. P (cteCaps_of s(p \<mapsto> NullCap))\<rbrace>
+  "\<lbrace>\<lambda>s. P ((cteCaps_of s)(p \<mapsto> NullCap))\<rbrace>
      emptySlot p opt
    \<lbrace>\<lambda>rv s. P (cteCaps_of s)\<rbrace>"
   apply (simp add: emptySlot_def case_Null_If)
@@ -1473,13 +1473,13 @@ lemma deletedIRQHandler_corres:
 
 lemma arch_postCapDeletion_corres:
   "acap_relation cap cap' \<Longrightarrow> corres dc \<top> \<top> (arch_post_cap_deletion cap) (ARM_HYP_H.postCapDeletion cap')"
-  by (corressimp simp: arch_post_cap_deletion_def ARM_HYP_H.postCapDeletion_def)
+  by (corresKsimp simp: arch_post_cap_deletion_def ARM_HYP_H.postCapDeletion_def)
 
 lemma postCapDeletion_corres:
   "cap_relation cap cap' \<Longrightarrow> corres dc \<top> \<top> (post_cap_deletion cap) (postCapDeletion cap')"
   apply (cases cap; clarsimp simp: post_cap_deletion_def Retype_H.postCapDeletion_def)
-   apply (corressimp corres: deletedIRQHandler_corres)
-  by (corressimp corres: arch_postCapDeletion_corres)
+   apply (corresKsimp corres: deletedIRQHandler_corres)
+  by (corresKsimp corres: arch_postCapDeletion_corres)
 
 lemma set_cap_trans_state:
   "((),s') \<in> fst (set_cap c p s) \<Longrightarrow> ((),trans_state f s') \<in> fst (set_cap c p (trans_state f s))"
@@ -1539,7 +1539,7 @@ lemma emptySlot_corres:
     defer
     apply wpsimp+
   apply (rule corres_no_failI)
-   apply (rule no_fail_pre, wp static_imp_wp)
+   apply (rule no_fail_pre, wp hoare_weak_lift_imp)
    apply (clarsimp simp: cte_wp_at_ctes_of valid_pspace'_def)
    apply (clarsimp simp: valid_mdb'_def valid_mdb_ctes_def)
    apply (rule conjI, clarsimp)
@@ -2769,10 +2769,7 @@ lemma prepares_delete_helper'':
   apply (clarsimp simp: removeable'_def)
   done
 
-lemma ctes_of_cteCaps_of_lift:
-  "\<lbrakk> \<And>P. \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace> \<rbrakk>
-     \<Longrightarrow> \<lbrace>\<lambda>s. P (cteCaps_of s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cteCaps_of s)\<rbrace>"
-  by (wp | simp add: cteCaps_of_def)+
+lemmas ctes_of_cteCaps_of_lift = cteCaps_of_ctes_of_lift
 
 crunches finaliseCapTrue_standin, unbindNotification
   for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
@@ -2780,7 +2777,7 @@ crunches finaliseCapTrue_standin, unbindNotification
 
 lemma cteDeleteOne_cteCaps_of:
   "\<lbrace>\<lambda>s. (cte_wp_at' (\<lambda>cte. \<exists>final. finaliseCap (cteCap cte) final True \<noteq> fail) p s \<longrightarrow>
-          P (cteCaps_of s(p \<mapsto> NullCap)))\<rbrace>
+          P ((cteCaps_of s)(p \<mapsto> NullCap)))\<rbrace>
      cteDeleteOne p
    \<lbrace>\<lambda>rv s. P (cteCaps_of s)\<rbrace>"
   apply (simp add: cteDeleteOne_def unless_def split_def)
@@ -3225,7 +3222,7 @@ crunch ctes_of[wp]: cancelSignal "\<lambda>s. P (ctes_of s)"
 
 lemma cancelIPC_cteCaps_of:
   "\<lbrace>\<lambda>s. (\<forall>p. cte_wp_at' (\<lambda>cte. \<exists>final. finaliseCap (cteCap cte) final True \<noteq> fail) p s \<longrightarrow>
-          P (cteCaps_of s(p \<mapsto> NullCap))) \<and>
+          P ((cteCaps_of s)(p \<mapsto> NullCap))) \<and>
      P (cteCaps_of s)\<rbrace>
      cancelIPC t
    \<lbrace>\<lambda>rv s. P (cteCaps_of s)\<rbrace>"
@@ -3667,7 +3664,7 @@ lemma cteDeleteOne_invs[wp]:
      subgoal by auto
     subgoal by (auto dest!: isCapDs simp: pred_tcb_at'_def obj_at'_def projectKOs
                                       live'_def hyp_live'_def ko_wp_at'_def)
-   apply (wp isFinalCapability_inv getCTE_wp' static_imp_wp
+   apply (wp isFinalCapability_inv getCTE_wp' hoare_weak_lift_imp
         | wp (once) isFinal[where x=ptr])+
   apply (fastforce simp: cte_wp_at_ctes_of)
   done
@@ -3844,7 +3841,7 @@ lemma sym_refs_vcpu_tcb:
 lemma vcpuFinalise_corres [corres]:
   "corres dc (invs and vcpu_at vcpu) (invs' and vcpu_at' vcpu) (vcpu_finalise vcpu) (vcpuFinalise vcpu)"
   unfolding vcpuFinalise_def vcpu_finalise_def
-  apply (corressimp corres: getObject_vcpu_corres simp: vcpu_relation_def)
+  apply (corresKsimp corres: getObject_vcpu_corres simp: vcpu_relation_def)
      apply (wpsimp wp: get_vcpu_wp getVCPU_wp)+
   apply (rule conjI)
    apply clarsimp
@@ -3888,7 +3885,7 @@ lemma arch_finaliseCap_corres:
                elim!: is_aligned_weaken invs_valid_asid_map)[2]
   apply (rule corres_guard_imp, rule deleteASID_corres)
    apply (auto elim!: invs_valid_asid_map simp: mask_def valid_cap_def)[2]
-  apply corres
+  apply corresK
   apply (clarsimp simp: valid_cap_def valid_cap'_def)
   done
 
@@ -4217,7 +4214,7 @@ definition set_thread_all :: "obj_ref \<Rightarrow> Structures_A.tcb \<Rightarro
                                 \<Rightarrow> unit det_ext_monad" where
   "set_thread_all ptr tcb etcb \<equiv>
      do s \<leftarrow> get;
-       kh \<leftarrow> return $ kheap s(ptr \<mapsto> (TCB tcb));
+       kh \<leftarrow> return $ (kheap s)(ptr \<mapsto> (TCB tcb));
        ekh \<leftarrow> return $ (ekheap s)(ptr \<mapsto> etcb);
        put (s\<lparr>kheap := kh, ekheap := ekh\<rparr>)
      od"

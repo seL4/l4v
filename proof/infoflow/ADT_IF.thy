@@ -787,7 +787,7 @@ lemma kernel_entry_if_invs:
    kernel_entry_if e tc
    \<lbrace>\<lambda>_. invs\<rbrace>"
   unfolding kernel_entry_if_def
-  by (wpsimp wp: thread_set_invs_trivial static_imp_wp
+  by (wpsimp wp: thread_set_invs_trivial hoare_weak_lift_imp
            simp: arch_tcb_update_aux2 ran_tcb_cap_cases)+
 
 lemma kernel_entry_if_globals_equiv:
@@ -796,7 +796,7 @@ lemma kernel_entry_if_globals_equiv:
    kernel_entry_if e tc
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply (simp add: kernel_entry_if_def)
-  apply (wp static_imp_wp handle_event_globals_equiv
+  apply (wp hoare_weak_lift_imp handle_event_globals_equiv
             thread_set_invs_trivial thread_set_context_globals_equiv
          | simp add: ran_tcb_cap_cases arch_tcb_update_aux2)+
   apply (clarsimp simp: cur_thread_idle)
@@ -831,7 +831,7 @@ lemma kernel_entry_silc_inv[wp]:
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding kernel_entry_if_def
   by (wpsimp simp: ran_tcb_cap_cases arch_tcb_update_aux2
-               wp: static_imp_wp handle_event_silc_inv thread_set_silc_inv thread_set_invs_trivial
+               wp: hoare_weak_lift_imp handle_event_silc_inv thread_set_silc_inv thread_set_invs_trivial
                    thread_set_not_state_valid_sched thread_set_pas_refined
       | wp (once) hoare_vcg_imp_lift | force)+
 
@@ -1016,7 +1016,7 @@ lemma kernel_entry_pas_refined[wp]:
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
   unfolding kernel_entry_if_def
   by (wpsimp simp: ran_tcb_cap_cases schact_is_rct_def arch_tcb_update_aux2
-               wp: static_imp_wp handle_event_pas_refined thread_set_pas_refined
+               wp: hoare_weak_lift_imp handle_event_pas_refined thread_set_pas_refined
                    guarded_pas_domain_lift thread_set_invs_trivial thread_set_not_state_valid_sched
       | force)+
 
@@ -1026,7 +1026,7 @@ lemma kernel_entry_if_domain_sep_inv:
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   unfolding kernel_entry_if_def
   by (wpsimp simp: ran_tcb_cap_cases arch_tcb_update_aux2
-               wp: handle_event_domain_sep_inv static_imp_wp
+               wp: handle_event_domain_sep_inv hoare_weak_lift_imp
                    thread_set_invs_trivial thread_set_not_state_valid_sched)+
 
 lemma kernel_entry_if_valid_sched:
@@ -1037,7 +1037,7 @@ lemma kernel_entry_if_valid_sched:
   by (wpsimp simp: kernel_entry_if_def ran_tcb_cap_cases arch_tcb_update_aux2
                wp: handle_event_valid_sched thread_set_invs_trivial hoare_vcg_disj_lift
                    thread_set_no_change_tcb_state ct_in_state_thread_state_lift
-                   thread_set_not_state_valid_sched static_imp_wp)+
+                   thread_set_not_state_valid_sched hoare_weak_lift_imp)+
 
 lemma kernel_entry_if_irq_masks:
   "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and invs\<rbrace>
@@ -2505,7 +2505,7 @@ proof(induct rule: cap_revoke.induct[where ?a1.0=s])
             apply (wp drop_spec_validE[OF preemption_point_irq_state_inv[simplified validE_R_def]]
                       drop_spec_validE[OF preemption_point_irq_state_inv'[where irq=irq]]
                       drop_spec_validE[OF valid_validE[OF preemption_point_domain_sep_inv]]
-                      cap_delete_domain_sep_inv cap_delete_irq_state_inv select_wp
+                      cap_delete_domain_sep_inv cap_delete_irq_state_inv
                       drop_spec_validE[OF assertE_wp] drop_spec_validE[OF returnOk_wp]
                       drop_spec_validE[OF liftE_wp] drop_spec_validE[OF hoare_vcg_conj_liftE1]
                    | simp | wp (once) hoare_drop_imps)+
@@ -2643,7 +2643,7 @@ lemma handle_invocation_irq_state_inv:
               split del: if_split)
   apply (wp syscall_valid)
           apply ((wp irq_state_inv_triv | wpc | simp)+)[2]
-        apply (wp static_imp_wp perform_invocation_irq_state_inv hoare_vcg_all_lift
+        apply (wp hoare_weak_lift_imp perform_invocation_irq_state_inv hoare_vcg_all_lift
                   hoare_vcg_ex_lift decode_invocation_IRQHandlerCap
                | wpc
                | wp (once) hoare_drop_imps

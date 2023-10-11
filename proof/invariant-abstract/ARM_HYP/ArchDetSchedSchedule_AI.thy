@@ -299,7 +299,7 @@ crunch valid_etcbs [wp, DetSchedSchedule_AI_assms]:
 
 crunch simple_sched_action [wp, DetSchedSchedule_AI_assms]:
   arch_finalise_cap, prepare_thread_delete simple_sched_action
-  (wp: hoare_drop_imps mapM_x_wp mapM_wp select_wp subset_refl
+  (wp: hoare_drop_imps mapM_x_wp mapM_wp subset_refl
    simp: unless_def if_fun_split)
 
 crunches arch_finalise_cap, prepare_thread_delete, arch_invoke_irq_handler

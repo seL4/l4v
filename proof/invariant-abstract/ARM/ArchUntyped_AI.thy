@@ -434,7 +434,7 @@ proof -
               Some (ArchObj (PageDirectory pd))"
   let ?ko' = "ArchObj (PageDirectory
                          (pd(ucast (pde_ptr && mask pd_bits >> 2) := pde)))"
-  let ?s' = "s\<lparr>kheap := kheap s(pde_ptr && ~~ mask pd_bits \<mapsto> ?ko')\<rparr>"
+  let ?s' = "s\<lparr>kheap := (kheap s)(pde_ptr && ~~ mask pd_bits \<mapsto> ?ko')\<rparr>"
   have typ_at: "\<And>T p. typ_at T p s \<Longrightarrow> typ_at T p ?s'"
     using pd
     by (clarsimp simp: obj_at_def a_type_def)

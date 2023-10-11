@@ -459,7 +459,7 @@ fun term_fold_map_top f x =
  *)
 fun simp_map f =
   Context.map_proof (
-    Local_Theory.declaration {syntax = false, pervasive = false} (
+    Local_Theory.declaration {syntax = false, pervasive = false, pos = @{here}} (
       K (Simplifier.map_ss f)))
   |> Context.proof_map
 

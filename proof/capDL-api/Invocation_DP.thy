@@ -12,10 +12,10 @@ crunch cdl_current_domain[wp]: update_available_range, generate_object_ids, upda
                                mark_tcb_intent_error, corrupt_ipc_buffer, insert_cap_sibling,
                                insert_cap_child, move_cap, invoke_irq_control, invoke_irq_handler
                                                     "\<lambda>s. P (cdl_current_domain s)"
-(wp: crunch_wps select_wp alternative_wp alternativeE_wp unless_wp simp: split_def corrupt_intents_def)
+(wp: crunch_wps unless_wp simp: split_def corrupt_intents_def)
 
 crunch cdl_irq_node [wp]:  corrupt_ipc_buffer "\<lambda>s. P (cdl_irq_node s)"
-(wp: crunch_wps select_wp simp: corrupt_intents_def)
+(wp: crunch_wps simp: corrupt_intents_def)
 crunch cdl_irq_node [wp]:  mark_tcb_intent_error "\<lambda>s. P (cdl_irq_node s)"
 (wp: crunch_wps)
 
@@ -124,7 +124,7 @@ lemma corrupt_tcb_intent_sep_helper[wp]:
   \<lbrace>\<lambda>rv s. A (object_at (\<lambda>obj. P (object_clean obj)) ptr s)\<rbrace>"
    apply (simp add:corrupt_tcb_intent_def update_thread_def
      set_object_def)
-   apply (wp select_wp | wpc | simp add:set_object_def)+
+   apply (wp | wpc | simp add:set_object_def)+
    apply (clarsimp simp:object_at_def)
    apply (simp add:object_clean_def intent_reset_def
      object_slots_def asid_reset_def update_slots_def)
@@ -141,7 +141,7 @@ lemma corrupt_frame_sep_helper[wp]:
   "\<lbrace>\<lambda>s. A (object_at (\<lambda>obj. P (object_clean obj)) ptr s)\<rbrace>
   corrupt_frame a \<lbrace>\<lambda>rv s. A (object_at (\<lambda>obj. P (object_clean obj)) ptr s)\<rbrace>"
   apply (simp add:corrupt_frame_def)
-  apply (wp select_wp)
+  apply wp
   apply (clarsimp simp:corrupt_intents_def object_at_def
     map_add_def split:option.splits cdl_object.splits)
   apply (simp add:object_clean_def intent_reset_def
@@ -157,7 +157,7 @@ lemma corrupt_ipc_buffer_sep_inv[wp]:
    \<lbrace>\<lambda>rv s. < P > s\<rbrace>"
   apply (rule sep_nonimpact_valid_lift)
    apply (simp add:corrupt_ipc_buffer_def)
-   apply (wp select_wp hoare_drop_imps | wpc | simp)+
+   apply (wp hoare_drop_imps | wpc | simp)+
   done
 
 lemma update_thread_intent_update:
@@ -231,55 +231,48 @@ lemma no_exception_conj':
   done
 
 crunch inv[wp]: decode_untyped_invocation P
-  (wp:crunch_wps alternativeE_wp mapME_x_inv_wp
-    unlessE_wp simp:crunch_simps throw_on_none_def)
+  (wp: crunch_wps mapME_x_inv_wp unlessE_wp simp: crunch_simps throw_on_none_def)
 
 crunch inv[wp]: decode_irq_handler_invocation P
-  (wp:crunch_wps alternativeE_wp
-    simp:liftE_bindE throw_on_none_def)
+  (wp: crunch_wps simp: liftE_bindE throw_on_none_def)
 
 crunch inv[wp]: decode_tcb_invocation P
-  (wp:crunch_wps alternativeE_wp
-    simp:liftE_bindE throw_on_none_def)
+  (wp: crunch_wps simp: liftE_bindE throw_on_none_def)
 
 crunch inv[wp]: decode_domain_invocation P
-  (wp:crunch_wps alternativeE_wp
-    simp:liftE_bindE throw_on_none_def)
+  (wp:crunch_wps simp: liftE_bindE throw_on_none_def)
 
 crunch inv[wp]: decode_irq_control_invocation P
-  (wp:crunch_wps alternativeE_wp select_wp
-    simp:liftE_bindE throw_on_none_def)
+  (wp: crunch_wps simp: liftE_bindE throw_on_none_def)
 
 crunch inv[wp]: decode_asid_control_invocation P
-  (wp:crunch_wps alternativeE_wp select_wp ignore:returnOk
-    simp:liftE_bindE throw_on_none_def)
+  (wp: crunch_wps ignore: returnOk simp: liftE_bindE throw_on_none_def)
 
 crunch inv[wp]: lookup_cap_and_slot P
   (wp:crunch_wps resolve_address_bits_wp)
 
 crunch inv[wp]: decode_page_invocation P
-  (wp:crunch_wps alternativeE_wp select_wp resolve_address_bits_wp
-    simp:throw_on_none_def)
+  (wp: crunch_wps resolve_address_bits_wp simp: throw_on_none_def)
 
 lemma decode_page_table_invocation_inv[wp]:
   "\<lbrace>P\<rbrace> decode_page_table_invocation a b c d \<lbrace>\<lambda>_. P\<rbrace>"
   apply (simp add:decode_page_table_invocation_def)
   apply (rule hoare_pre)
-   apply (wpc|wp alternativeE_wp select_wp |simp add:throw_on_none_def)+
+   apply (wpc|wp |simp add:throw_on_none_def)+
   done
 
 lemma decode_page_directory_invocation_inv[wp]:
   "\<lbrace>P\<rbrace> decode_page_directory_invocation a b c d \<lbrace>\<lambda>_. P\<rbrace>"
   apply (simp add:decode_page_directory_invocation_def)
   apply (rule hoare_pre)
-   apply (wpc|wp alternativeE_wp select_wp |simp add:throw_on_none_def)+
+   apply (wpc|wp |simp add:throw_on_none_def)+
   done
 
 lemma decode_asid_pool_invocation_inv[wp]:
   "\<lbrace>P\<rbrace> decode_asid_pool_invocation a b c d \<lbrace>\<lambda>_. P\<rbrace>"
   apply (simp add:decode_asid_pool_invocation_def)
   apply (rule hoare_pre)
-   apply (wpc|wp alternativeE_wp select_wp |simp add:throw_on_none_def)+
+   apply (wpc|wp |simp add:throw_on_none_def)+
   done
 
 lemma decode_invocation_inv[wp]:
@@ -427,16 +420,15 @@ lemma handle_event_syscall_no_decode_exception:
   done
 
 crunch cdl_current_thread [wp]:  delete_cap_simple "\<lambda>s. P (cdl_current_thread s)"
-(wp:crunch_wps select_wp  simp:split_def unless_def)
+  (wp: crunch_wps simp: split_def unless_def)
 
 crunch cdl_current_thread [wp]:  mark_tcb_intent_error "\<lambda>s. P (cdl_current_thread s)"
-(wp:crunch_wps select_wp  simp:split_def unless_def)
+  (wp: crunch_wps simp: split_def unless_def)
 
 crunch cdl_current_thread [wp]:  corrupt_ipc_buffer "\<lambda>s. P (cdl_current_thread s)"
-(wp:crunch_wps select_wp simp:split_def unless_def corrupt_frame_def corrupt_intents_def)
+  (wp: crunch_wps simp: split_def unless_def corrupt_frame_def corrupt_intents_def)
 
 crunch cdl_current_thread [wp]:  invoke_irq_control, invoke_irq_handler "\<lambda>s. P (cdl_current_thread s)"
-(wp:alternative_wp)
 
 
 lemma corrupt_tcb_intent_all_active_tcbs[wp]:
@@ -478,7 +470,7 @@ lemma send_signal_no_pending:
   \<lbrace>\<lambda>r. P\<rbrace>"
   apply (simp add: send_signal_def send_signal_bound_def)
   apply (rule hoare_pre)
-  apply (wp alternative_wp | wpc)+
+  apply (wp | wpc)+
      apply (rule hoare_pre_cont)
     apply (rule_tac P = "waiters = {}" in hoare_gen_asm)
     apply (clarsimp simp: option_select_def)
@@ -495,7 +487,7 @@ lemma send_signal_no_pending:
   done
 
 crunch invs[wp]: get_active_irq P
-  (wp: crunch_wps alternative_wp select_wp)
+  (wp: crunch_wps)
 
 lemma handle_pending_interrupts_no_ntf_cap:
   "\<lbrace>P and no_pending\<rbrace>
@@ -506,7 +498,7 @@ lemma handle_pending_interrupts_no_ntf_cap:
    apply (wp send_signal_no_pending
            | wpc
            | simp add: option_select_def handle_interrupt_def split del: if_split)+
-   apply (wp alternative_wp select_wp hoare_drop_imps hoare_vcg_all_lift)
+   apply (wp hoare_drop_imps hoare_vcg_all_lift)
   apply simp
   done
 
@@ -622,7 +614,7 @@ lemma invoke_cnode_insert_cap:
   apply (simp add:validE_def)
   apply (rule hoare_name_pre_state)
   apply (clarsimp simp:invoke_cnode_def liftE_bindE validE_def[symmetric])
-  apply (wpsimp wp: alternative_wp insert_cap_sibling_wp insert_cap_child_wp)
+  apply (wpsimp wp: insert_cap_sibling_wp insert_cap_child_wp)
   done
 
 lemma invoke_cnode_move_wp:
@@ -676,19 +668,17 @@ lemma cdl_cur_thread_detype:
   by (simp add:detype_def)
 
 crunch cdl_current_thread[wp]: reset_untyped_cap "\<lambda>s. P (cdl_current_thread s)"
-  (wp: select_wp alternativeE_wp mapME_x_inv_wp whenE_wp
-    simp: cdl_cur_thread_detype crunch_simps)
+  (wp: mapME_x_inv_wp whenE_wp simp: cdl_cur_thread_detype crunch_simps)
 
 lemmas helper = valid_validE_E[OF reset_untyped_cap_cdl_current_thread]
 
 crunch cdl_current_thread[wp]: invoke_untyped "\<lambda>s. P (cdl_current_thread s)"
-(wp:select_wp mapM_x_wp' crunch_wps unless_wp alternativeE_wp
-    helper
-  simp:cdl_cur_thread_detype crunch_simps)
+  (wp: mapM_x_wp' crunch_wps unless_wp helper
+       simp:cdl_cur_thread_detype crunch_simps)
 
 crunch cdl_current_thread[wp]: move_cap "\<lambda>s. P (cdl_current_thread s)"
-(wp:select_wp mapM_x_wp' crunch_wps unless_wp
-  simp:crunch_simps)
+  (wp: mapM_x_wp' crunch_wps unless_wp
+   simp:crunch_simps)
 
 lemma cnode_insert_cap_cdl_current_thread:
   "\<lbrace>\<lambda>s. P (cdl_current_thread s)  \<rbrace>
@@ -698,7 +688,7 @@ lemma cnode_insert_cap_cdl_current_thread:
   apply (clarsimp simp:
     invoke_cnode_def liftE_bindE validE_def[symmetric])
   apply (rule hoare_pre)
-  apply (wp alternative_wp | simp | wpc)+
+  apply (wp | simp | wpc)+
   done
 
 lemma cnode_move_cap_cdl_current_thread:
@@ -709,7 +699,7 @@ lemma cnode_move_cap_cdl_current_thread:
   apply (clarsimp simp:
     invoke_cnode_def liftE_bindE validE_def[symmetric])
   apply (rule hoare_pre)
-  apply (wp alternative_wp | simp | wpc)+
+  apply (wp | simp | wpc)+
   done
 
 lemma sep_any_imp_c'_conj:
@@ -865,7 +855,7 @@ lemma tcb_has_error_set_cap:
   apply (simp add:set_cap_def
     gets_the_def set_object_def
     split_def)
-  apply (wp select_wp|wpc|simp)+
+  apply (wp|wpc|simp)+
   apply (clarsimp simp:tcb_has_error_def
     object_at_def,simp split:cdl_object.split_asm)
   apply (intro conjI impI)
@@ -1130,7 +1120,7 @@ lemma invoke_cnode_insert_cap':
   apply (simp add:validE_def)
   apply (rule hoare_name_pre_state)
   apply (clarsimp simp:invoke_cnode_def liftE_bindE validE_def[symmetric])
-  apply (wpsimp wp: alternative_wp insert_cap_sibling_wp insert_cap_child_wp
+  apply (wpsimp wp: insert_cap_sibling_wp insert_cap_child_wp
                 simp: cap_of_insert_call_def)
   done
 
@@ -1152,13 +1142,13 @@ lemma sep_map_c_asid_reset:
    apply clarsimp
    apply (case_tac "\<not> has_slots obj")
     apply simp
-   apply (rule_tac x = "update_slots (object_slots obj(snd ptr \<mapsto> cap')) obj"
+   apply (rule_tac x = "update_slots ((object_slots obj)(snd ptr \<mapsto> cap')) obj"
      in exI)
    apply (simp add:sep_map_general_def object_to_sep_state_slot)
   apply clarsimp
   apply (case_tac "\<not> has_slots obj")
    apply simp
-  apply (rule_tac x = "update_slots (object_slots obj(snd ptr \<mapsto> cap)) obj"
+  apply (rule_tac x = "update_slots ((object_slots obj)(snd ptr \<mapsto> cap)) obj"
     in exI)
   apply (simp add:sep_map_general_def object_to_sep_state_slot)
   done

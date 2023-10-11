@@ -128,7 +128,8 @@ isPagePTE (PagePTE {}) = True
 isPagePTE _ = False
 
 getPPtrFromPTE :: PTE -> PPtr PTE
-getPPtrFromPTE pte = ptrFromPAddr $ pteBaseAddress pte
+getPPtrFromPTE pte =
+    ptrFromPAddr (if isPagePTE pte then pteBaseAddress pte else ptePPN pte `shiftL` pageBits)
 
 -- how many bits there are left to be translated at a given level (0 = bottom
 -- level). This counts the bits being translated by the levels below the current one, so
@@ -406,7 +407,7 @@ loadVMID asid = do
     maybeEntry <- getASIDPoolEntry asid
     case maybeEntry of
         Just (ASIDPoolVSpace vmID ptr) -> return vmID
-        _ -> error ("loadVMID: no entry for asid")
+        _ -> fail "loadVMID: no entry for asid"
 
 invalidateASID :: ASID -> Kernel ()
 invalidateASID = updateASIDPoolEntry (\entry -> Just $ entry { apVMID = Nothing })
@@ -469,6 +470,7 @@ checkVSpaceRoot :: Capability  -> Int -> KernelF SyscallError (PPtr PTE, ASID)
 checkVSpaceRoot vspaceCap argNo =
     case vspaceCap of
         ArchObjectCap (PageTableCap {
+                capPTType = VSRootPT_T,
                 capPTMappedAddress = Just (asid, _),
                 capPTBasePtr = vspace })
             -> return (vspace, asid)
@@ -541,8 +543,8 @@ decodeARMFrameInvocationMap cte cap vptr rightsMask attr vspaceCap = do
     let pgBits = pageBitsForSize frameSize
     case capFMappedAddress cap of
         Just (asid', vaddr') -> do
-            when (asid' /= asid) $ throw $ InvalidCapability 0
-            when (vaddr' /= vptr) $ throw $ InvalidArgument 2
+            when (asid' /= asid) $ throw $ InvalidCapability 1
+            when (vaddr' /= vptr) $ throw $ InvalidArgument 0
         Nothing -> do
             let vtop = vptr + (bit pgBits - 1)
             when (vtop > pptrUserTop) $ throw $ InvalidArgument 0
@@ -614,7 +616,7 @@ decodeARMPageTableInvocationMap cte cap vptr attr vspaceCap = do
     oldPTE <- withoutFailure $ getObject slot
     when (bitsLeft == pageBits || oldPTE /= InvalidPTE) $ throw DeleteFirst
     let pte = PageTablePTE {
-            pteBaseAddress = addrFromPPtr (capPTBasePtr cap) }
+            ptePPN = addrFromPPtr (capPTBasePtr cap) `shiftR` pageBits }
     let vptr = vptr .&. complement (mask bitsLeft)
     return $ InvokePageTable $ PageTableMap {
         ptMapCap = ArchObjectCap $ cap { capPTMappedAddress = Just (asid, vptr) },
@@ -713,7 +715,8 @@ decodeARMASIDPoolInvocation label cap@(ASIDPoolCap {}) extraCaps =
             case vspaceCap of
                 ArchObjectCap (PageTableCap { capPTMappedAddress = Nothing })
                   -> do
-                    when (not (isVTableRoot vspaceCap) || isJust (capPTMappedAddress cap)) $
+                    -- C checks for a mapping here, but our case already checks that
+                    when (not (isVTableRoot vspaceCap)) $
                         throw $ InvalidCapability 1
                     asidTable <- withoutFailure $ gets (armKSASIDTable . ksArchState)
                     let base = capASIDBase cap

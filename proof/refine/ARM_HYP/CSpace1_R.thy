@@ -325,7 +325,7 @@ lemma getSlotCap_corres:
      (getSlotCap cte_ptr')"
   apply (simp add: getSlotCap_def)
   apply (subst bind_return [symmetric])
-  apply (corressimp)
+  apply (corresKsimp)
   done
 
 lemma maskCapRights [simp]:
@@ -607,7 +607,7 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
         apply (simp add: Let_def unlessE_whenE)
         apply (simp add: caps isCap_defs Let_def whenE_bindE_throwError_to_if)
         apply (subst cnode_cap_case_if)
-        apply (corressimp search: getSlotCap_corres IH
+        apply (corresKsimp search: getSlotCap_corres IH
                               wp: get_cap_wp getSlotCap_valid no_fail_stateAssert
                             simp: locateSlot_conv)
         apply (simp add: drop_postfix_eq)
@@ -823,7 +823,7 @@ lemma tcbVTable_upd_simp [simp]:
   by (cases tcb) simp
 
 lemma setCTE_ctes_of_wp [wp]:
-  "\<lbrace>\<lambda>s. P (ctes_of s (p \<mapsto> cte))\<rbrace>
+  "\<lbrace>\<lambda>s. P ((ctes_of s) (p \<mapsto> cte))\<rbrace>
   setCTE p cte
   \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"
   by (simp add: setCTE_def ctes_of_setObject_cte)
@@ -928,7 +928,7 @@ lemma cteInsert_weak_cte_wp_at:
    \<lbrace>\<lambda>uu. cte_wp_at'(\<lambda>c. P (cteCap c)) p\<rbrace>"
   unfolding cteInsert_def error_def updateCap_def setUntypedCapAsFull_def
   apply (simp add: bind_assoc split del: if_split)
-  apply (wp setCTE_weak_cte_wp_at updateMDB_weak_cte_wp_at static_imp_wp | simp)+
+  apply (wp setCTE_weak_cte_wp_at updateMDB_weak_cte_wp_at hoare_weak_lift_imp | simp)+
    apply (wp getCTE_ctes_wp)+
    apply (clarsimp simp: isCap_simps split:if_split_asm| rule conjI)+
 done

@@ -6,7 +6,7 @@
 
 theory SubMonadLib
 imports
-  Monads.Empty_Fail
+  Monads.Nondet_Empty_Fail
   Corres_UL
 begin
 

@@ -389,10 +389,10 @@ lemma create_cap_ioports[wp, Untyped_AI_assms]:
 (* FIXME: move *)
 lemma simpler_store_pml4e_def:
   "store_pml4e p pde s =
-    (case kheap s (p && ~~ mask pml4_bits) of
+    (case (kheap s)(p && ~~ mask pml4_bits) of
           Some (ArchObj (PageMapL4 pml4)) =>
-            ({((), s\<lparr>kheap := (kheap s((p && ~~ mask pml4_bits) \<mapsto>
-                                       (ArchObj (PageMapL4 (pml4(ucast (p && mask pml4_bits >> word_size_bits) := pde))))))\<rparr>)}, False)
+            ({((), s\<lparr>kheap := (kheap s)(p && ~~ mask pml4_bits \<mapsto>
+                                       (ArchObj (PageMapL4 (pml4(ucast (p && mask pml4_bits >> word_size_bits) := pde)))))\<rparr>)}, False)
         | _ => ({}, True))"
   apply     (auto simp: store_pml4e_def set_object_def get_object_def simpler_gets_def assert_def a_type_simps
                         return_def fail_def set_object_def get_def put_def bind_def get_pml4_def aa_type_simps

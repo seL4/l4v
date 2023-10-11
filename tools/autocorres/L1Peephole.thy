@@ -58,7 +58,7 @@ lemma L1_fail_propagate_catch [L1opt]:
   "(L1_seq (L1_catch L R) L1_fail) = (L1_catch (L1_seq L L1_fail) (L1_seq R L1_fail))"
   unfolding L1_defs
   apply (clarsimp simp: bindE_def handleE'_def handleE_def bind_assoc)
-  apply (rule arg_cong [where f="NonDetMonad.bind L"])
+  apply (rule arg_cong [where f="Nondet_Monad.bind L"])
   apply (fastforce split: sum.splits simp: throwError_def)
   done
 

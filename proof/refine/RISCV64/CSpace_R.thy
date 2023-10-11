@@ -2237,7 +2237,7 @@ proof -
   let ?c2 = "(CTE capability.NullCap (MDB 0 0 bool1 bool2))"
   let ?C = "(modify_map
              (modify_map
-               (modify_map (ctes_of s(dest \<mapsto> CTE cap (MDB 0 0 bool1 bool2))) dest
+               (modify_map ((ctes_of s)(dest \<mapsto> CTE cap (MDB 0 0 bool1 bool2))) dest
                  (cteMDBNode_update (\<lambda>a. MDB word1 src (isCapRevocable cap src_cap) (isCapRevocable cap src_cap))))
                src (cteMDBNode_update (mdbNext_update (\<lambda>_. dest))))
              word1 (cteMDBNode_update (mdbPrev_update (\<lambda>_. dest))))"
@@ -2945,7 +2945,7 @@ lemma cteInsert_valid_irq_handlers'[wp]:
   done
 
 lemma setCTE_arch_ctes_of_wp [wp]:
-  "\<lbrace>\<lambda>s. P (ksArchState s) (ctes_of s (p \<mapsto> cte))\<rbrace>
+  "\<lbrace>\<lambda>s. P (ksArchState s) ((ctes_of s)(p \<mapsto> cte))\<rbrace>
   setCTE p cte
   \<lbrace>\<lambda>rv s. P (ksArchState s) (ctes_of s)\<rbrace>"
   apply (simp add: setCTE_def ctes_of_setObject_cte)

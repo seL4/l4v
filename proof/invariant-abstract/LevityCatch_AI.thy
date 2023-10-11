@@ -70,12 +70,12 @@ lemma const_on_failure_wp:
    happen in goals that are stated by crunch. *)
 lemma select_ext_weak_wp[wp]:
   "\<lbrace>\<lambda>s. \<forall>x\<in>S. Q x s\<rbrace> select_ext a S \<lbrace>Q\<rbrace>"
-  by (wpsimp simp: select_ext_def wp: select_wp)
+  by (wpsimp simp: select_ext_def)
 
 (* The "real" wp rule for select_ext, requires det_ext state: *)
 lemma select_ext_wp[wp]:
   "\<lbrace>\<lambda>s. a s \<in> S \<longrightarrow> Q (a s) s\<rbrace> select_ext a S \<lbrace>Q\<rbrace>"
   unfolding select_ext_def unwrap_ext_det_ext_ext_def
-  by (wpsimp simp: select_switch_det_ext_ext_def wp: select_wp)
+  by (wpsimp simp: select_switch_det_ext_ext_def)
 
 end

@@ -50,7 +50,7 @@ lemma create_objects_mapM_x':
 qed
 
 crunch inv[wp]: generate_object_ids P
-(wp:crunch_wps select_wp)
+  (wp: crunch_wps)
 
 lemma pick_rev:
   assumes "target_object_ids = map (\<lambda>x. {x}) ids"
@@ -111,7 +111,7 @@ lemma generate_object_ids_rv:
   \<lbrace>\<lambda>r s.  r = map (\<lambda>x. {x}) (map pick r) \<and> length r = n \<and> set (map pick r) \<subseteq> obj_range
   \<and> distinct (map pick r) \<rbrace>"
   apply (clarsimp simp:generate_object_ids_def)
-  apply (wp select_wp)
+  apply wp
   apply clarsimp
   apply (simp add: distinct_map)
   apply (intro conjI)
@@ -185,7 +185,7 @@ lemma update_available_range_wp:
     apply (rule_tac x = new_range in exI)
     apply (intro conjI,assumption+)
     apply (sep_select 2,assumption)
-   apply (wp select_wp)
+   apply wp
    apply clarsimp+
   done
 
@@ -254,10 +254,10 @@ lemma reset_untyped_cap_wp:
       apply (rule_tac P = "\<exists>fr. cap = UntypedCap dev obj_range fr
           \<and> (\<forall>fr\<in> set x. free_range \<subseteq> fr \<and> fr \<subseteq> obj_range)" in hoare_gen_asmE)
       apply clarsimp
-      apply (wp whenE_wp mapME_x_wp alternativeE_wp)
+      apply (wp whenE_wp mapME_x_wp)
       apply (rule ballI)
        apply (rule hoare_pre)
-       apply (wp alternative_wp)
+       apply wp
        apply simp
        apply (rule hoare_post_imp[OF _ set_cap_wp])
        apply clarsimp
@@ -265,7 +265,7 @@ lemma reset_untyped_cap_wp:
         apply ((rule conjI, fastforce)+, sep_solve)
       apply clarsimp
       apply sep_solve
-     apply (wp select_wp | clarsimp)+
+     apply (wp | clarsimp)+
   apply (subst dummy_detype_if_untyped)
     apply simp
    apply (sep_select_asm 2)
@@ -292,12 +292,12 @@ lemma reset_untyped_cap_wp:
   done
 
 crunch cdl_current_domain[wp]: reset_untyped_cap "\<lambda>s. P (cdl_current_domain s)"
-(wp:select_wp mapM_x_wp' mapME_x_inv_wp alternativeE_wp crunch_wps unless_wp
-  simp: detype_def crunch_simps)
+  (wp: mapM_x_wp' mapME_x_inv_wp crunch_wps unless_wp
+   simp: detype_def crunch_simps)
 
 crunch cdl_current_domain[wp]: invoke_untyped "\<lambda>s. P (cdl_current_domain s)"
-(wp: select_wp mapM_x_wp' mapME_x_inv_wp alternativeE_wp crunch_wps unless_wp
-  simp: detype_def crunch_simps validE_E_def)
+  (wp: mapM_x_wp' mapME_x_inv_wp crunch_wps unless_wp
+   simp: detype_def crunch_simps validE_E_def)
 
 lemma invoke_untyped_wp:
   "\<lbrace> K (default_object nt ts minBound = Some obj \<and> nt \<noteq> UntypedType
@@ -416,7 +416,7 @@ lemma decode_untyped_invocation_rvu:
     get_index_def throw_on_none_def
     decode_untyped_invocation_def mapME_x_singleton)
   apply (rule hoare_pre)
-  apply (wp alternativeE_wp unlessE_wp
+  apply (wp unlessE_wp
     lookup_slot_for_cnode_op_rvu' | wpc | clarsimp)+
   done
 
@@ -439,17 +439,13 @@ abbreviation (input) "retype_with_kids uinv
   \<equiv> (case uinv of (InvokeUntyped (Retype uref nt ts dest has_kids n)) \<Rightarrow> has_kids)"
 
 
-crunch cdt[wp]: retype_region "\<lambda>s. P (cdl_cdt s)"
-(wp:select_wp simp:crunch_simps corrupt_intents_def)
+crunches retype_region, update_available_range
+  for cdt[wp]: "\<lambda>s. P (cdl_cdt s)"
+  (simp: crunch_simps corrupt_intents_def)
 
-crunch has_children[wp]: retype_region "has_children slot"
-(wp:select_wp simp:crunch_simps corrupt_intents_def simp:has_children_def is_cdt_parent_def)
-
-crunch cdt[wp]: update_available_range "\<lambda>s. P (cdl_cdt s)"
-(wp:select_wp simp:crunch_simps corrupt_intents_def)
-
-crunch has_children[wp]: update_available_range "has_children slot"
-(wp:select_wp simp:crunch_simps corrupt_intents_def simp:has_children_def is_cdt_parent_def)
+crunches retype_region, update_available_range
+  for has_children[wp]: "has_children slot"
+  (simp: crunch_simps corrupt_intents_def has_children_def is_cdt_parent_def)
 
 lemma invoke_untyped_one_has_children:
   "uinv = (Retype uref nt ts [slot] has_kids (Suc 0))
@@ -484,7 +480,7 @@ lemma invoke_untyped_exception:
   apply (rule hoare_name_pre_stateE)
   apply (cases uinv)
   apply clarsimp
-  apply (wp unlessE_wp  alternative_wp
+  apply (wp unlessE_wp
           | wpc | simp add: reset_untyped_cap_def)+
     apply (rule_tac P = "available_range cap = cap_objects cap" in hoare_gen_asmEx)
     apply (simp add: whenE_def)
@@ -537,14 +533,9 @@ lemma mark_tcb_intent_error_has_children[wp]:
   by (wpsimp simp: has_children_def is_cdt_parent_def mark_tcb_intent_error_def update_thread_def
                    set_object_def)
 
-crunch cdt[wp]: corrupt_frame "\<lambda>s. P (cdl_cdt s)"
-(wp:select_wp simp:crunch_simps corrupt_intents_def)
-
-crunch cdt[wp]: corrupt_tcb_intent "\<lambda>s. P (cdl_cdt s)"
-(wp:select_wp simp:crunch_simps corrupt_intents_def)
-
-crunch cdt[wp]: corrupt_ipc_buffer "\<lambda>s. P (cdl_cdt s)"
-(wp:select_wp simp:crunch_simps corrupt_intents_def)
+crunches corrupt_frame, corrupt_tcb_intent, corrupt_ipc_buffer
+  for cdt[wp]: "\<lambda>s. P (cdl_cdt s)"
+  (simp: crunch_simps corrupt_intents_def)
 
 lemma corrupt_ipc_buffer_has_children[wp]:
   "\<lbrace>\<lambda>s. P (has_children ptr s)\<rbrace>
@@ -703,10 +694,10 @@ lemma seL4_Untyped_Retype_sep:
  **********************************************************************)
 
 crunch cdt_inc[wp]: schedule "\<lambda>s. cdl_cdt s child = parent"
-(wp:select_wp alternative_wp crunch_wps simp:crunch_simps)
+  (wp: crunch_wps simp: crunch_simps)
 
 crunch cdt_inc[wp]: handle_pending_interrupts "\<lambda>s. cdl_cdt s child = parent"
-(wp:select_wp alternative_wp simp:crunch_simps)
+  (wp: simp: crunch_simps)
 
 lemmas gets_the_resolve_cap_sym = gets_the_resolve_cap[symmetric]
 
@@ -795,7 +786,7 @@ lemma invoke_untyped_cdt_inc[wp]:
    apply (simp add: reset_untyped_cap_def validE_def sum.case_eq_if)
    apply (rule_tac Q = "\<lambda>r s. cdl_cdt s child = Some parent" in hoare_post_imp)
     apply simp
-   apply (wp whenE_wp alternativeE_wp mapME_x_inv_wp select_wp | simp)+
+   apply (wp whenE_wp mapME_x_inv_wp | simp)+
   apply (clarsimp simp:detype_def)
   done
 
@@ -839,10 +830,9 @@ lemma lookup_cap_rvu':
   done
 
 crunch cdl_current_thread [wp]:  handle_pending_interrupts "\<lambda>s. P (cdl_current_thread s)"
-(wp: alternative_wp select_wp)
 
 crunch cdl_current_thread [wp]:  lookup_cap "\<lambda>s. P (cdl_current_thread s)"
-(wp: alternative_wp select_wp hoare_drop_imps)
+  (wp: hoare_drop_imps)
 
 lemma throw_opt_wp_valid:
   "\<lbrace>P\<rbrace> throw_opt err x \<lbrace>\<lambda>r. P\<rbrace>"
@@ -891,10 +881,10 @@ lemma corrupt_intents_no_pending:
   done
 
 crunch no_pending[wp]: corrupt_ipc_buffer no_pending
-  (wp: crunch_wps select_wp update_thread_no_pending corrupt_intents_no_pending)
+  (wp: crunch_wps update_thread_no_pending corrupt_intents_no_pending)
 
 crunch no_pending[wp]: mark_tcb_intent_error no_pending
-  (wp: crunch_wps select_wp update_thread_no_pending corrupt_intents_no_pending)
+  (wp: crunch_wps update_thread_no_pending corrupt_intents_no_pending)
 
 lemma detype_one_wp:
   "<obj_id \<mapsto>o - \<and>* R> s
@@ -955,11 +945,11 @@ lemma invoke_untyped_preempt:
          sep_map_set_conj sep_any_map_o obj_range \<and>* Q) s\<rbrace>"
   apply (simp add: invoke_untyped_def)
   apply (wp unlessE_wp)
-   apply (simp add: reset_untyped_cap_def whenE_liftE | wp whenE_wp alternative_wp)+
+   apply (simp add: reset_untyped_cap_def whenE_liftE | wp whenE_wp)+
       apply (rule_tac P = "\<exists>a. cap = UntypedCap dev obj_range a" in hoare_gen_asmEx)
       apply (rule hoare_post_impErr[where E = E and F = E for E])
         apply (rule mapME_x_inv_wp[where P = P and E = "\<lambda>r. P" for P])
-        apply (wp alternative_wp)
+        apply wp
          apply simp
          apply (wp hoare_vcg_ex_lift)
           apply (rule hoare_post_imp[OF _ set_cap_wp])
@@ -969,7 +959,7 @@ lemma invoke_untyped_preempt:
         apply sep_solve
        apply simp
       apply simp
-    apply (wp select_wp)+
+    apply wp+
   apply clarsimp
   apply (frule opt_cap_sep_imp)
   apply (clarsimp dest!: reset_cap_asid_untyped_cap_eqD)
@@ -1004,14 +994,13 @@ lemma set_parent_cdl_parent:
    done
 
 crunch cdl_parent[wp]: reset_untyped_cap "\<lambda>s. cdl_cdt s slot = Some parent"
-   (wp: assert_inv crunch_wps select_wp mapME_x_inv_wp alternative_wp
-simp: crunch_simps detype_def)
+   (wp: assert_inv crunch_wps mapME_x_inv_wp
+    simp: crunch_simps detype_def)
 
 crunch cdl_parent[wp]: insert_cap_child, corrupt_ipc_buffer,
           corrupt_tcb_intent, update_thread, derive_cap, insert_cap_sibling
       "\<lambda>s. cdl_cdt s slot = Some parent"
-   (wp: crunch_wps select_wp set_parent_cdl_parent simp: crunch_simps
-corrupt_intents_def)
+   (wp: crunch_wps set_parent_cdl_parent simp: crunch_simps corrupt_intents_def)
 
 lemma transfer_caps_loop_cdl_parent:
    "\<lbrace>\<lambda>s. cdl_cdt s slot = Some parent\<rbrace>
@@ -1019,7 +1008,7 @@ lemma transfer_caps_loop_cdl_parent:
    \<lbrace>\<lambda>_ s. cdl_cdt s slot = Some parent\<rbrace>"
    apply (induct caps arbitrary: dest; clarsimp split del: if_split)
    apply (rule hoare_pre)
-    apply (wp alternative_wp crunch_wps | assumption
+    apply (wp crunch_wps | assumption
       | simp add: crunch_simps split del: if_split)+
    done
 
@@ -1053,7 +1042,7 @@ lemma set_cap_no_pending[wp]:
   \<lbrace>no_pending\<rbrace> set_cap slot cap \<lbrace>\<lambda>rv s. no_pending s\<rbrace>"
   apply (simp add: set_cap_def)
   apply (cases slot, simp)
-  apply (wp set_object_no_pending select_wp | wpc | simp add: no_pending_def)+
+  apply (wp set_object_no_pending | wpc | simp add: no_pending_def)+
   apply (drule_tac x = a in spec)
   apply (rule conjI)
     apply (clarsimp simp: tcb_pending_op_slot_def tcb_ipcbuffer_slot_def)
@@ -1103,9 +1092,8 @@ lemma reset_untyped_cap_no_pending[wp]:
   "\<lbrace>no_pending \<rbrace> reset_untyped_cap cref \<lbrace>\<lambda>rv. no_pending\<rbrace>"
   apply (simp add: reset_untyped_cap_def)
   apply (wp whenE_wp)
-     apply (rule_tac P = "snd cref = tcb_pending_op_slot \<longrightarrow> \<not> is_pending_cap cap" in hoare_gen_asmEx)
-     apply (wp mapME_x_inv_wp alternativeE_wp | simp)+
-    apply (wp select_wp)+
+      apply (rule_tac P = "snd cref = tcb_pending_op_slot \<longrightarrow> \<not> is_pending_cap cap" in hoare_gen_asmEx)
+      apply (wp mapME_x_inv_wp | simp)+
   apply (clarsimp simp: detype_no_pending)
   apply (cases cref, clarsimp simp: no_pending_def)
   done
@@ -1158,9 +1146,9 @@ lemma reset_untyped_cap_not_pending_cap[wp]:
   apply (simp add: reset_untyped_cap_def)
   apply (wp whenE_wp)
      apply (rule_tac P = " \<not> is_pending_cap cap" in hoare_gen_asmEx)
-     apply (wp mapME_x_inv_wp alternativeE_wp set_cap_opt_cap)+
+     apply (wp mapME_x_inv_wp set_cap_opt_cap)+
      apply simp
-    apply (wp select_wp)+
+    apply wp+
   apply (clarsimp simp: detype_no_pending)
   apply (cases cref)
   apply (clarsimp simp: detype_def opt_cap_def slots_of_def object_slots_def
@@ -1172,11 +1160,10 @@ lemma invoke_untyped_no_pending[wp]:
   invoke_untyped (Retype ref a b c d e)
   \<lbrace>\<lambda>rv. no_pending\<rbrace>"
   apply (simp add: invoke_untyped_def create_cap_def)
-  apply (wpsimp wp: mapM_x_wp' set_cap_no_pending_asm_in_pre get_cap_wp select_wp
-        simp: update_available_range_def
-    )+
+  apply (wpsimp wp: mapM_x_wp' set_cap_no_pending_asm_in_pre get_cap_wp
+              simp: update_available_range_def)
      apply (wp (once) hoare_drop_imps)
-     apply (wpsimp  split_del: if_split)+
+     apply (wpsimp split_del: if_split)+
    apply (rule_tac Q' = "\<lambda>r s. no_pending s \<and> ((\<exists>y. opt_cap ref s = Some y) \<longrightarrow>
                         \<not> is_pending_cap (the (opt_cap ref s)))" in hoare_post_imp_R)
     apply (wp reset_untyped_cap_no_pending)

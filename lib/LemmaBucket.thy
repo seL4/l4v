@@ -11,15 +11,6 @@ imports
   SubMonadLib
 begin
 
-lemma corres_underlying_trivial_gen:
-  "\<lbrakk> nf' \<Longrightarrow> no_fail P' f; \<forall>x. rr x x \<rbrakk> \<Longrightarrow>
-  corres_underlying Id nf nf' rr P P' f f"
-  by (auto simp add: corres_underlying_def Id_def no_fail_def)
-
-lemma corres_underlying_trivial:
-  "\<lbrakk> nf' \<Longrightarrow> no_fail P' f \<rbrakk> \<Longrightarrow> corres_underlying Id nf nf' (=) \<top> P' f f"
-  by (erule corres_underlying_trivial_gen, simp)
-
 lemma hoare_spec_gen_asm:
   "\<lbrakk> F \<Longrightarrow> s \<turnstile> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<rbrakk> \<Longrightarrow> s \<turnstile> \<lbrace>P and K F\<rbrace> f \<lbrace>Q\<rbrace>"
   "\<lbrakk> F \<Longrightarrow> s \<turnstile> \<lbrace>P\<rbrace> f' \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow> s \<turnstile> \<lbrace>P and K F\<rbrace> f' \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"

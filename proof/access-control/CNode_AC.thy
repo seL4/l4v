@@ -56,11 +56,11 @@ locale CNode_AC_1 =
        \<Longrightarrow> state_asids_to_policy_arch aag (caps(ptr \<mapsto> cap, ptr' \<mapsto> cap')) as vrefs \<subseteq> pasPolicy aag"
   and state_vrefs_tcb_upd:
     "\<lbrakk> pspace_aligned s; valid_vspace_objs s; valid_arch_state s; tcb_at tptr s \<rbrakk>
-       \<Longrightarrow> state_vrefs (s\<lparr>kheap := kheap s(tptr \<mapsto> TCB tcb)\<rparr>) = state_vrefs s"
+       \<Longrightarrow> state_vrefs (s\<lparr>kheap := (kheap s)(tptr \<mapsto> TCB tcb)\<rparr>) = state_vrefs s"
   and state_vrefs_simple_type_upd:
     "\<lbrakk> pspace_aligned s; valid_vspace_objs s; valid_arch_state s;
        ko_at ko p s; is_simple_type ko; a_type ko = a_type (f (val :: 'b)) \<rbrakk>
-       \<Longrightarrow> state_vrefs (s\<lparr>kheap := kheap s(p \<mapsto> f val)\<rparr>) = state_vrefs s"
+       \<Longrightarrow> state_vrefs (s\<lparr>kheap := (kheap s)(p \<mapsto> f val)\<rparr>) = state_vrefs s"
   and a_type_arch_object_not_tcb[simp]:
     "a_type (ArchObj arch_kernel_obj) \<noteq> ATCB"
   and set_cap_state_vrefs:
@@ -727,7 +727,7 @@ lemmas[monad_commute_wp] =
 
 (* Sort-of VCG for monad_commute goals *)
 lemma wpc_helper_monad_commute:
-  "monad_commute P f g \<Longrightarrow> wpc_helper (P, P') (Q, Q') (monad_commute P f g)"
+  "monad_commute P f g \<Longrightarrow> wpc_helper (P, P', P'') (Q, Q', Q'') (monad_commute P f g)"
   by (clarsimp simp: wpc_helper_def)
 
 wpc_setup "\<lambda>m. monad_commute P f m" wpc_helper_monad_commute
@@ -969,10 +969,10 @@ lemma set_untyped_cap_as_full_is_transferable[wp]:
   using untyped_not_transferable max_free_index_update_preserve_untyped by simp
 
 lemma set_untyped_cap_as_full_is_transferable':
-  "\<lbrace>\<lambda>s. is_transferable ((caps_of_state s(slot2 \<mapsto> new_cap)) slot3) \<and>
+  "\<lbrace>\<lambda>s. is_transferable (((caps_of_state s)(slot2 \<mapsto> new_cap)) slot3) \<and>
         Some src_cap = (caps_of_state s slot)\<rbrace>
    set_untyped_cap_as_full src_cap new_cap slot
-   \<lbrace>\<lambda>_ s. is_transferable ((caps_of_state s(slot2 \<mapsto> new_cap)) slot3)\<rbrace>"
+   \<lbrace>\<lambda>_ s. is_transferable (((caps_of_state s)(slot2 \<mapsto> new_cap)) slot3)\<rbrace>"
   apply (clarsimp simp: set_untyped_cap_as_full_def)
   apply safe
   apply (wp,fastforce)+
@@ -1522,10 +1522,10 @@ lemma post_cap_deletion_cur_domain[wp]:
   by (wpsimp simp: post_cap_deletion_def)
 
 crunch cur_domain[wp]: cap_swap_for_delete, empty_slot "\<lambda>s. P (cur_domain s)"
-  (wp: crunch_wps select_wp hoare_vcg_if_lift2 simp: unless_def)
+  (wp: crunch_wps hoare_vcg_if_lift2 simp: unless_def)
 
 crunch cur_domain[wp]: finalise_cap "\<lambda>s. P (cur_domain s)"
-  (wp: crunch_wps select_wp hoare_vcg_if_lift2 simp: unless_def)
+  (wp: crunch_wps hoare_vcg_if_lift2 simp: unless_def)
 
 lemma rec_del_cur_domain[wp]:
   "rec_del call \<lbrace>\<lambda>s. P (cur_domain s)\<rbrace>"

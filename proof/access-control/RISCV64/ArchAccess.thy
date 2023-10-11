@@ -186,10 +186,10 @@ lemmas integrity_asids_kh_upds =
 declare integrity_asids_def[simp]
 
 lemma integrity_asids_kh_upds':
-  "integrity_asids aag subjects x a (s\<lparr>kheap := kheap s(p \<mapsto> CNode sz cs)\<rparr>) s"
-  "integrity_asids aag subjects x a (s\<lparr>kheap := kheap s(p \<mapsto> TCB tcb)\<rparr>) s"
-  "integrity_asids aag subjects x a (s\<lparr>kheap := kheap s(p \<mapsto> Endpoint ep)\<rparr>) s"
-  "integrity_asids aag subjects x a (s\<lparr>kheap := kheap s(p \<mapsto> Notification ntfn)\<rparr>) s"
+  "integrity_asids aag subjects x a (s\<lparr>kheap := (kheap s)(p \<mapsto> CNode sz cs)\<rparr>) s"
+  "integrity_asids aag subjects x a (s\<lparr>kheap := (kheap s)(p \<mapsto> TCB tcb)\<rparr>) s"
+  "integrity_asids aag subjects x a (s\<lparr>kheap := (kheap s)(p \<mapsto> Endpoint ep)\<rparr>) s"
+  "integrity_asids aag subjects x a (s\<lparr>kheap := (kheap s)(p \<mapsto> Notification ntfn)\<rparr>) s"
   by (auto simp: opt_map_def split: option.splits)
 
 lemma integrity_asids_kh_update:

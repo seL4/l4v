@@ -7,8 +7,6 @@ theory Prefix_Refinement
 
 imports
   Triv_Refinement
-  "Monads.TraceMonadLemmas"
-
 begin
 
 section \<open>Definition of prefix fragment refinement.\<close>
@@ -1242,7 +1240,7 @@ lemma prefix_refinement_repeat:
       apply simp
       apply (rule prefix_refinement_repeat_n, assumption+)
       apply (rule validI_weaken_pre, assumption, simp)
-     apply (wp select_wp)
+     apply wp
     apply wp
    apply clarsimp
   apply clarsimp

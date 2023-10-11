@@ -25,10 +25,15 @@ private abbreviation (input)
      od)"
 
 private abbreviation (input)
-  "createNewTableCaps regionBase numObjects tableBits objectProto cap initialiseMappings \<equiv> (do
+  "createNewTableCaps regionBase numObjects ptType objectProto cap initialiseMappings \<equiv> (do
+      tableBits \<leftarrow> return (ptBits ptType);
       tableSize \<leftarrow> return (tableBits - objBits objectProto);
       addrs \<leftarrow> createObjects regionBase numObjects (injectKO objectProto) tableSize;
       pts \<leftarrow> return (map (PPtr \<circ> fromPPtr) addrs);
+      modify (\<lambda>ks. ks \<lparr>ksArchState :=
+                         ksArchState ks \<lparr>gsPTTypes := (\<lambda>addr.
+                                           if addr `~elem~` map fromPPtr addrs then Just ptType
+                                           else gsPTTypes (ksArchState ks) addr)\<rparr>\<rparr>);
       initialiseMappings pts;
       return $ map (\<lambda>pt. cap pt Nothing) pts
     od)"
@@ -45,11 +50,11 @@ defs Arch_createNewCaps_def:
         | HugePageObject \<Rightarrow>
             createNewFrameCaps regionBase numObjects dev (2 * ptTranslationBits NormalPT_T) ARMHugePage
         | VSpaceObject \<Rightarrow>
-            createNewTableCaps regionBase numObjects (ptBits VSRootPT_T) (makeObject::pte)
+            createNewTableCaps regionBase numObjects VSRootPT_T (makeObject::pte)
               (\<lambda>base addr. PageTableCap base VSRootPT_T addr)
               (\<lambda>pts. return ())
         | PageTableObject \<Rightarrow>
-            createNewTableCaps regionBase numObjects (ptBits NormalPT_T) (makeObject::pte)
+            createNewTableCaps regionBase numObjects NormalPT_T (makeObject::pte)
               (\<lambda>base addr. PageTableCap base NormalPT_T addr)
               (\<lambda>pts. return ())
         | VCPUObject \<Rightarrow> (do

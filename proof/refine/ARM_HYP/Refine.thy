@@ -280,7 +280,7 @@ lemma kernel_entry_invs:
             thread_set_ct_running thread_set_not_state_valid_sched
             hoare_vcg_disj_lift ct_in_state_thread_state_lift thread_set_no_change_tcb_state
             call_kernel_domain_time_inv_det_ext call_kernel_domain_list_inv_det_ext
-            static_imp_wp
+            hoare_weak_lift_imp
       | clarsimp simp add: tcb_cap_cases_def active_from_running)+
   done
 
@@ -296,18 +296,18 @@ definition
 
 lemma do_user_op_valid_list:"\<lbrace>valid_list\<rbrace> do_user_op f tc \<lbrace>\<lambda>_. valid_list\<rbrace>"
   unfolding do_user_op_def
-  apply (wp select_wp | simp add: split_def)+
+  apply (wp | simp add: split_def)+
   done
 
 lemma do_user_op_valid_sched:"\<lbrace>valid_sched\<rbrace> do_user_op f tc \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   unfolding do_user_op_def
-  apply (wp select_wp | simp add: split_def)+
+  apply (wp | simp add: split_def)+
   done
 
 lemma do_user_op_sched_act:
   "\<lbrace>\<lambda>s. P (scheduler_action s)\<rbrace> do_user_op f tc \<lbrace>\<lambda>_ s. P (scheduler_action s)\<rbrace>"
   unfolding do_user_op_def
-  apply (wp select_wp | simp add: split_def)+
+  apply (wp | simp add: split_def)+
   done
 
 lemma do_user_op_invs2:
@@ -422,9 +422,9 @@ lemma kernelEntry_invs':
          (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list' \<rbrace>"
   apply (simp add: kernelEntry_def)
   apply (wp ckernel_invs callKernel_valid_duplicates' callKernel_domain_time_left
-            threadSet_invs_trivial threadSet_ct_running' select_wp
+            threadSet_invs_trivial threadSet_ct_running'
             TcbAcc_R.dmo_invs' callKernel_domain_time_left
-            static_imp_wp
+            hoare_weak_lift_imp
          | clarsimp simp: user_memory_update_def no_irq_def tcb_at_invs' atcbContextSet_def
                           valid_domain_list'_def)+
   done
@@ -504,7 +504,7 @@ lemma doUserOp_invs':
         (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and ct_running' and
         (\<lambda>s. 0 < ksDomainTime s) and valid_domain_list'\<rbrace>"
   apply (simp add: doUserOp_def split_def ex_abs_def)
-  apply (wp device_update_invs' select_wp
+  apply (wp device_update_invs'
     | (wp (once) dmo_invs', wpsimp simp: no_irq_modify device_memory_update_def
                                        user_memory_update_def))+
   apply (clarsimp simp: user_memory_update_def simpler_modify_def
@@ -518,7 +518,7 @@ lemma doUserOp_valid_duplicates':
    doUserOp f tc
    \<lbrace>\<lambda>_ s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (simp add: doUserOp_def split_def)
-  apply (wp dmo_invs' select_wp)
+  apply (wp dmo_invs')
   apply clarsimp
   done
 
@@ -656,12 +656,12 @@ lemma entry_corres:
          apply (rule hoare_strengthen_post, rule akernel_invs_det_ext, simp add: invs_def cur_tcb_def)
         apply (rule hoare_strengthen_post, rule ckernel_invs, simp add: invs'_def cur_tcb'_def)
        apply ((wp thread_set_invs_trivial thread_set_ct_running
-                  thread_set_not_state_valid_sched static_imp_wp
+                  thread_set_not_state_valid_sched hoare_weak_lift_imp
                   hoare_vcg_disj_lift ct_in_state_thread_state_lift
                | simp add: tcb_cap_cases_def thread_set_no_change_tcb_state)+)[1]
       apply (simp add: pred_conj_def cong: conj_cong)
       apply (wp threadSet_invs_trivial threadSet_ct_running'
-                 static_imp_wp hoare_vcg_disj_lift
+                 hoare_weak_lift_imp hoare_vcg_disj_lift
               | simp add: ct_in_state'_def atcbContextSet_def
               | (wps, wp threadSet_st_tcb_at2))+
    apply (clarsimp simp: invs_def cur_tcb_def)
