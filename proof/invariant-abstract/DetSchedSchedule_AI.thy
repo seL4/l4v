@@ -1005,7 +1005,7 @@ lemma set_thread_state_only_wp:
 
 lemma set_thread_state_only_tcb_st_heap:
   "\<lbrace>\<lambda>s. pred_map \<top> (tcbs_of s) t \<longrightarrow>
-        P (tcb_sts_of s(t \<mapsto> st))
+        P ((tcb_sts_of s)(t \<mapsto> st))
           (tcb_scps_of s) (tcb_faults_of s) (scs_of s)
           (cur_thread s) (scheduler_action s) (release_queue s)\<rbrace>
    set_thread_state_only t st
@@ -1015,7 +1015,7 @@ lemma set_thread_state_only_tcb_st_heap:
 
 lemma set_thread_state_scheduler_action_tcb_st_heap:
   "\<lbrace>\<lambda>s. pred_map \<top> (tcbs_of s) t \<longrightarrow>
-        P (tcb_sts_of s(t \<mapsto> st))
+        P ((tcb_sts_of s)(t \<mapsto> st))
           (if t = cur_thread s
               \<and> scheduler_action s = resume_cur_thread
               \<and> (runnable st \<longrightarrow> active_sc_tcb_at t s \<longrightarrow> in_release_q t s)
@@ -1037,7 +1037,7 @@ lemma set_thread_state_valid_sched_pred_strong':
               \<and> (runnable st \<longrightarrow> active_sc_tcb_at t s \<longrightarrow> in_release_q t s)
            then choose_new_thread else scheduler_action s)
           (etcbs_of s)
-          (tcb_sts_of s(t \<mapsto> st))
+          ((tcb_sts_of s)(t \<mapsto> st))
           (tcb_scps_of s) (tcb_faults_of s) (sc_refill_cfgs_of s) (sc_replies_of s)\<rbrace>
    set_thread_state t st
    \<lbrace>\<lambda>rv. valid_sched_pred_strong P\<rbrace>"
@@ -1458,7 +1458,7 @@ lemma set_tcb_sched_context_valid_sched_pred':
         \<longrightarrow> P (consumed_time s) (cur_sc s) (ep_send_qs_of s) (ep_recv_qs_of s) (sc_tcbs_of s) (last_machine_time_of s) (time_state_of s)
               (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s) (ready_queues s) (release_queue s)
               (scheduler_action s) (etcbs_of s) (tcb_sts_of s)
-              (tcb_scps_of s(ref \<mapsto> scpo)) (tcb_faults_of s) (sc_refill_cfgs_of s) (sc_replies_of s)\<rbrace>
+              ((tcb_scps_of s)(ref \<mapsto> scpo)) (tcb_faults_of s) (sc_refill_cfgs_of s) (sc_replies_of s)\<rbrace>
    set_tcb_obj_ref tcb_sched_context_update ref scpo
    \<lbrace>\<lambda>rv. valid_sched_pred_strong P\<rbrace>"
   by (wpsimp wp: set_tcb_obj_ref_wp simp: fun_upd_def obj_at_kh_kheap_simps vs_all_heap_simps)
@@ -1763,7 +1763,7 @@ lemma sc_heap_proj_known_sc:
   by (rule arg_cong[where f=P] arg_cong[where f=Q] arg_cong[where f=R], simp add: vs_all_heap_simps assms)+
 
 lemma update_sched_context_sc_heap:
-  "\<lbrace>\<lambda>s. \<forall>sc. scs_of s scp = Some sc \<longrightarrow> P (scs_of s(scp \<mapsto> f sc))\<rbrace>
+  "\<lbrace>\<lambda>s. \<forall>sc. scs_of s scp = Some sc \<longrightarrow> P ((scs_of s)(scp \<mapsto> f sc))\<rbrace>
    update_sched_context scp f
    \<lbrace>\<lambda>rv s. P (scs_of s)\<rbrace>"
   by (wpsimp wp: update_sched_context_wp
@@ -3501,7 +3501,7 @@ lemma reply_unlink_tcb_valid_sched_pred[valid_sched_wp]:
         P (consumed_time s) (cur_sc s) (ep_send_qs_of s) (ep_recv_qs_of s) (sc_tcbs_of s) (last_machine_time_of s) (time_state_of s)
           (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s) (ready_queues s) (release_queue s)
           (if t = cur_thread s \<and> scheduler_action s = resume_cur_thread then choose_new_thread else scheduler_action s)
-          (etcbs_of s) (tcb_sts_of s(t \<mapsto> Inactive)) (tcb_scps_of s) (tcb_faults_of s)
+          (etcbs_of s) ((tcb_sts_of s)(t \<mapsto> Inactive)) (tcb_scps_of s) (tcb_faults_of s)
           (sc_refill_cfgs_of s) (sc_replies_of s)\<rbrace>
    reply_unlink_tcb t r
    \<lbrace>\<lambda>_. valid_sched_pred_strong P\<rbrace>"
@@ -4693,7 +4693,7 @@ crunches cancel_all_ipc, cancel_all_signals
 
 lemma sc_at_tcb_update[iff]:
   "tcb_at epptr s \<Longrightarrow>
-   scs_of_kh (kheap s(epptr \<mapsto> TCB ko)) = scs_of s"
+   scs_of_kh ((kheap s)(epptr \<mapsto> TCB ko)) = scs_of s"
   by (rule map_eqI, auto simp add: vs_heap_simps obj_at_def is_tcb)
 
 lemma thread_set_valid_sched_misc[wp]:
@@ -4944,7 +4944,7 @@ lemma set_thread_state_possible_switch_to_valid_sched_strong:
     and ct_in_cur_domain
     and valid_blocked_except t
     and valid_idle_etcb
-    and (\<lambda>s. released_ipc_queues_2 (cur_time s) (tcb_sts_of s(t \<mapsto> st)) (tcb_scps_of s) (tcb_faults_of s)
+    and (\<lambda>s. released_ipc_queues_2 (cur_time s) ((tcb_sts_of s)(t \<mapsto> st)) (tcb_scps_of s) (tcb_faults_of s)
                                    (sc_refill_cfgs_of s))
     and active_reply_scs
     and active_sc_valid_refills
@@ -5367,7 +5367,7 @@ lemma released_ipc_queues_except_strengthen:
 lemma reply_remove_sched_context_donate_released_ipc_queues:
   "\<lbrace>released_ipc_queues\<rbrace>
    sched_context_donate scp t
-   \<lbrace>\<lambda>rv s. released_ipc_queues_2 (cur_time s) (tcb_sts_of s(t \<mapsto> Inactive))
+   \<lbrace>\<lambda>rv s. released_ipc_queues_2 (cur_time s) ((tcb_sts_of s)(t \<mapsto> Inactive))
                                     (tcb_scps_of s) (tcb_faults_of s) (sc_refill_cfgs_of s)\<rbrace>"
   unfolding sched_context_donate_def
   apply (wpsimp wp: set_tcb_sched_context_valid_sched_pred get_sc_obj_ref_wp)
@@ -5647,7 +5647,7 @@ lemma valid_sched_not_schedulable_sc_not_queued:
                split: option.splits)
 
 lemma reply_unlink_tcb_released_ipc_queues:
-  "\<lbrace>\<lambda>s. released_ipc_queues_2 (cur_time s) (tcb_sts_of s(t \<mapsto> Inactive))
+  "\<lbrace>\<lambda>s. released_ipc_queues_2 (cur_time s) ((tcb_sts_of s)(t \<mapsto> Inactive))
                               (tcb_scps_of s) (tcb_faults_of s) (sc_refill_cfgs_of s)\<rbrace>
    reply_unlink_tcb t rptr
    \<lbrace>\<lambda>_. released_ipc_queues\<rbrace>"
@@ -5711,7 +5711,7 @@ locale set_thread_state_Inactive_valid_sched_pred_equiv =
              P (consumed_time s) (cur_sc s) (sc_tcbs_of s)
                (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s) (ready_queues s) (release_queue s)
                (if tptr = cur_thread s \<and> scheduler_action s = resume_cur_thread then choose_new_thread else scheduler_action s)
-               (etcbs_of s) (tcb_sts_of s(tptr \<mapsto> Inactive)) (tcb_scps_of s)
+               (etcbs_of s) ((tcb_sts_of s)(tptr \<mapsto> Inactive)) (tcb_scps_of s)
                (tcb_faults_of s) (sc_refill_cfgs_of s)\<rbrace>
           f tptr
           \<lbrace>\<lambda>rv s. P (consumed_time s) (cur_sc s) (sc_tcbs_of s)
@@ -5794,7 +5794,7 @@ lemma valid_sched:
         \<and> ct_in_cur_domain s
         \<and> valid_blocked_except tptr s
         \<and> valid_idle_etcb s
-        \<and> released_ipc_queues_2 (cur_time s) (tcb_sts_of s(tptr \<mapsto> Inactive)) (tcb_scps_of s)
+        \<and> released_ipc_queues_2 (cur_time s) ((tcb_sts_of s)(tptr \<mapsto> Inactive)) (tcb_scps_of s)
                                    (tcb_faults_of s) (sc_refill_cfgs_of s)
         \<and> active_reply_scs s
         \<and> active_sc_valid_refills s
@@ -5812,7 +5812,7 @@ lemma valid_sched_except_blocked:
         \<and> valid_sched_action s
         \<and> ct_in_cur_domain s
         \<and> valid_idle_etcb s
-        \<and> released_ipc_queues_2 (cur_time s) (tcb_sts_of s(tptr \<mapsto> Inactive)) (tcb_scps_of s)
+        \<and> released_ipc_queues_2 (cur_time s) ((tcb_sts_of s)(tptr \<mapsto> Inactive)) (tcb_scps_of s)
                                    (tcb_faults_of s) (sc_refill_cfgs_of s)
         \<and> active_reply_scs s
         \<and> active_sc_valid_refills s
@@ -5861,7 +5861,7 @@ global_interpretation cancel_signal: set_thread_state_Inactive_valid_sched_pred_
   by (wpsimp wp: set_thread_state_Inactive.valid_sched_pred get_simple_ko_wp simp: fun_upd_def)+
 
 crunch st_tcb_at_not_runnable[wp]: reply_remove_tcb "st_tcb_at (\<lambda>st. \<not>runnable st) t"
-  (wp: crunch_wps select_wp sts_st_tcb_at_cases thread_set_no_change_tcb_state maybeM_inv
+  (wp: crunch_wps sts_st_tcb_at_cases thread_set_no_change_tcb_state maybeM_inv
    simp: crunch_simps unless_def wp_del: reply_remove_st_tcb_at)
 
 lemma reply_remove_tcb_not_runnable[wp]:
@@ -5987,7 +5987,7 @@ lemma cancel_ipc_valid_sched[wp]:
                             \<and> ct_in_cur_domain s
                             \<and> valid_blocked s
                             \<and> valid_idle_etcb s
-                            \<and> released_ipc_queues_2 (cur_time s) (tcb_sts_of s(tptr \<mapsto> Inactive)) (tcb_scps_of s)
+                            \<and> released_ipc_queues_2 (cur_time s) ((tcb_sts_of s)(tptr \<mapsto> Inactive)) (tcb_scps_of s)
                                                        (tcb_faults_of s) (sc_refill_cfgs_of s)
                             \<and> active_reply_scs s
                             \<and> active_sc_valid_refills s" in hoare_seq_ext)
@@ -7720,7 +7720,7 @@ method invoke_tcb_install_tcb_cap_helper uses wp =
    (clarsimp cong: conj_cong)?,
    (rule hoare_vcg_E_elim, wp)?,
    ((wpsimp wp: hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R hoare_vcg_all_lift
-                install_tcb_cap_invs static_imp_wp static_imp_conj_wp wp
+                install_tcb_cap_invs hoare_weak_lift_imp hoare_weak_lift_imp_conj wp
      | strengthen tcb_cap_always_valid_strg
      | wp install_tcb_cap_cte_wp_at_ep)+)[1])
 
@@ -8123,7 +8123,7 @@ lemma valid_refills_release_queue_update[iff]:
   by simp
 
 lemma valid_refills_kheap_tcb_update[iff]:
-  "tcb_at t s \<Longrightarrow> valid_refills p (s\<lparr>kheap := kheap s(t \<mapsto> TCB tcb)\<rparr>) = valid_refills p s"
+  "tcb_at t s \<Longrightarrow> valid_refills p (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB tcb)\<rparr>) = valid_refills p s"
   by (clarsimp simp: vs_all_heap_simps obj_at_kh_kheap_simps is_tcb)
 
 lemma valid_refills_exst [iff]:
@@ -10621,7 +10621,7 @@ lemma refill_budget_check_valid_refills[wp]:
   done
 
 lemma valid_refills_sc_update:
-  "valid_refills p (s\<lparr>kheap := kheap s(p \<mapsto> SchedContext sc n)\<rparr>) = sc_valid_refills sc"
+  "valid_refills p (s\<lparr>kheap := (kheap s)(p \<mapsto> SchedContext sc n)\<rparr>) = sc_valid_refills sc"
   by (clarsimp simp: obj_at_def vs_all_heap_simps)
 
 lemma update_sc_consumed_valid_refills[wp]:
@@ -10633,8 +10633,8 @@ lemma update_sc_consumed_valid_refills[wp]:
                   wp: set_object_wp get_object_wp )
 
 lemma valid_refills_sc_consumed_update[iff]:
-    "valid_refills p (s\<lparr>kheap := kheap s(p' \<mapsto> SchedContext (sc\<lparr>sc_consumed:=x\<rparr>) n)\<rparr>)
-         = valid_refills p (s\<lparr>kheap := kheap s(p' \<mapsto> SchedContext sc n)\<rparr>)"
+    "valid_refills p (s\<lparr>kheap := (kheap s)(p' \<mapsto> SchedContext (sc\<lparr>sc_consumed:=x\<rparr>) n)\<rparr>)
+         = valid_refills p (s\<lparr>kheap := (kheap s)(p' \<mapsto> SchedContext sc n)\<rparr>)"
   by (clarsimp simp: obj_at_def vs_all_heap_simps window_def)
 
 lemma valid_refills_domain_time_update[simp]:
@@ -11425,7 +11425,7 @@ crunches head_insufficient_loop, handle_overrun_loop
 lemma sorted_release_q_sc_not_in_sc_update:
   "\<lbrakk>sc_not_in_release_q scp s;  \<forall>t\<in> set (release_queue s). tcb_at t s;
     kheap s scp = Some (SchedContext sc' n)\<rbrakk> \<Longrightarrow>
-   sorted_release_q (s\<lparr> kheap := (kheap s(scp \<mapsto> SchedContext sc n)) \<rparr>) = sorted_release_q s"
+   sorted_release_q (s\<lparr> kheap := ((kheap s)(scp \<mapsto> SchedContext sc n)) \<rparr>) = sorted_release_q s"
   apply (clarsimp simp: sorted_release_q_def not_in_release_q_def obj_at_def is_tcb)
   apply (rule sorted_wrt_img_ord_eq_lift; simp?)
   apply (rename_tac tp; drule_tac x=tp in bspec, simp)
@@ -11436,7 +11436,7 @@ lemma sorted_release_q_sc_not_in_sc_update:
 lemma valid_release_q_sc_not_in_sc_update:
   "\<lbrakk>valid_release_q (s::('a::state_ext state)); sc_not_in_release_q scp s;
     kheap s scp = Some (SchedContext sc' n)\<rbrakk> \<Longrightarrow>
-   valid_release_q (s\<lparr> kheap := (kheap s(scp \<mapsto> SchedContext sc n)) \<rparr>) "
+   valid_release_q (s\<lparr> kheap := ((kheap s)(scp \<mapsto> SchedContext sc n)) \<rparr>) "
   apply (clarsimp simp: valid_release_q_def sorted_release_q_sc_not_in_sc_update)
   apply (rule conjI)
    apply (fastforce simp: not_in_release_q_def vs_all_heap_simps)
@@ -12628,7 +12628,7 @@ lemma schedule_valid_sched:
 
 crunches cancel_ipc
 for not_cur_thread[wp]: "not_cur_thread thread"
-  (wp: hoare_drop_imps select_wp mapM_x_wp simp: unless_def if_fun_split)
+  (wp: hoare_drop_imps mapM_x_wp simp: unless_def if_fun_split)
 
 lemma cancel_ipc_sc_tcb_sc_at_eq[wp]:
   "cancel_ipc thread \<lbrace>sc_tcb_sc_at ((=) tcb_opt) x\<rbrace>"
@@ -13521,7 +13521,7 @@ lemma refill_unblock_check_released_if_bound[wp]:
   by (wpsimp wp: hoare_vcg_disj_lift)
 
 lemma set_simple_ko_pred_tcb_at_state:
-  "\<lbrace> \<lambda>s. P (pred_tcb_at proj (f s) t s) \<and> (\<forall>new. f s = f (s\<lparr>kheap := kheap s(ep \<mapsto> new)\<rparr>))\<rbrace>
+  "\<lbrace> \<lambda>s. P (pred_tcb_at proj (f s) t s) \<and> (\<forall>new. f s = f (s\<lparr>kheap := (kheap s)(ep \<mapsto> new)\<rparr>))\<rbrace>
    set_simple_ko g ep v
    \<lbrace> \<lambda>_ s. P (pred_tcb_at proj (f s) t s) \<rbrace>"
   unfolding set_simple_ko_def
@@ -15092,7 +15092,7 @@ lemma valid_ep_remove1_RecvEP:
   done
 
 lemma valid_objs_ep_update:
-  "\<lbrakk>ep_at epptr s; valid_ep ep s; valid_objs s\<rbrakk> \<Longrightarrow> valid_objs (s\<lparr>kheap := kheap s(epptr \<mapsto> Endpoint ep)\<rparr>)"
+  "\<lbrakk>ep_at epptr s; valid_ep ep s; valid_objs s\<rbrakk> \<Longrightarrow> valid_objs (s\<lparr>kheap := (kheap s)(epptr \<mapsto> Endpoint ep)\<rparr>)"
   apply (clarsimp simp: valid_objs_def dom_def
                  elim!: obj_atE)
   apply (intro conjI impI)
@@ -21776,7 +21776,7 @@ lemma preemption_point_cur_sc_offset_ready[wp]:
   apply (rule hoare_seq_ext_skipE, wpsimp)
   apply (rule valid_validE)
   apply (rule OR_choiceE_weak_wp)
-  apply (rule alternative_valid; (solves wpsimp)?)
+  apply (rule alternative_wp[where P=P and P'=P for P, simplified]; (solves wpsimp)?)
   apply (rule validE_valid)
   apply (rule hoare_seq_ext_skipE, wpsimp)+
   apply wpsimp
@@ -24755,7 +24755,7 @@ lemma reply_push_cur_sc_in_release_q_imp_zero_consumed[wp]:
 lemma sorted_release_q_not_in_release_q_update:
   "\<lbrakk>tcb_at t s; not_in_release_q t s; valid_release_q s\<rbrakk>
     \<Longrightarrow>
-     sorted_release_q (s\<lparr> kheap := (kheap s(t \<mapsto> TCB tcb)) \<rparr>) = sorted_release_q s"
+     sorted_release_q (s\<lparr> kheap := ((kheap s)(t \<mapsto> TCB tcb)) \<rparr>) = sorted_release_q s"
   apply (unfold not_in_release_q_def sorted_release_q_2_def)
   apply (prop_tac "release_queue (s\<lparr>kheap := (\<lambda>x. if x = t then Some (TCB tcb) else kheap s x)\<rparr>) = release_queue s")
    apply simp
@@ -24770,7 +24770,7 @@ lemma sorted_release_q_not_in_release_q_update:
 
 lemma valid_release_q_not_in_release_q_update:
   "\<lbrakk>valid_release_q s; not_in_release_q t s; tcb_at t s\<rbrakk> \<Longrightarrow>
-   valid_release_q (s\<lparr> kheap := (kheap s(t \<mapsto> TCB tcb)) \<rparr>) "
+   valid_release_q (s\<lparr> kheap := ((kheap s)(t \<mapsto> TCB tcb)) \<rparr>) "
   apply (frule (2) sorted_release_q_not_in_release_q_update[where tcb=tcb])
   apply (clarsimp simp add: valid_release_q_def)
    by (fastforce simp: not_in_release_q_def vs_all_heap_simps)
@@ -26038,7 +26038,7 @@ lemma sched_context_donate_heap_refs_inv[wp]:
      apply (rule valid_sched_wp)
     apply (rule valid_sched_wp)
    apply (rule_tac Q="\<lambda>_ s. heap_refs_inv (heap_upd (\<lambda>a. Some tptr) scp (sc_tcbs_of s))
-              (tcb_scps_of s(tptr \<mapsto> Some scp))" in hoare_post_imp)
+              ((tcb_scps_of s)(tptr \<mapsto> Some scp))" in hoare_post_imp)
     apply (clarsimp simp: fun_upd_def)
    apply (rule valid_sched_wp)
   apply (clarsimp simp: sc_at_kh_simps tcb_at_kh_simps pred_map_eq_normalise)

@@ -195,8 +195,8 @@ lemma schedule_used_non_nil:
 
 lemma set_refills_wp:
   "\<lbrace>\<lambda>s. \<forall>sc n. obj_at ((=) (SchedContext sc n)) sc_ptr s
-               \<longrightarrow> P (s\<lparr>kheap := kheap s(sc_ptr \<mapsto> SchedContext (sc\<lparr>sc_refills := refills\<rparr>) n)\<rparr>)\<rbrace>
-     set_refills sc_ptr refills
+               \<longrightarrow> P (s\<lparr>kheap := (kheap s)(sc_ptr \<mapsto> SchedContext (sc\<lparr>sc_refills := refills\<rparr>) n)\<rparr>)\<rbrace>
+   set_refills sc_ptr refills
    \<lbrace>\<lambda>r. P\<rbrace>"
   unfolding set_refills_def
   by (wpsimp wp: update_sched_context_wp)
@@ -405,7 +405,7 @@ definition replies_with_sc_upd_replies ::
     {p. if snd p = sc then fst p \<in> set rs else p \<in> rs_with_sc}"
 
 lemma replies_with_sc_replies_upd:
-  "replies_with_sc (s\<lparr>kheap := kheap s(sc_ptr \<mapsto> SchedContext sc n)\<rparr>)
+  "replies_with_sc (s\<lparr>kheap := (kheap s)(sc_ptr \<mapsto> SchedContext sc n)\<rparr>)
      = replies_with_sc_upd_replies (sc_replies sc) sc_ptr (replies_with_sc s)"
   by (auto simp: replies_with_sc_upd_replies_def replies_with_sc_def
                  sc_replies_sc_at_def obj_at_def)
@@ -622,7 +622,7 @@ lemma update_sched_context_valid_irq_node [wp]:
 
 lemma valid_sc_kheap_update':
   "sc_at p s \<Longrightarrow> a_type ko = ASchedContext n \<Longrightarrow>
-   valid_sched_context sc (s\<lparr>kheap := kheap s(p \<mapsto> ko)\<rparr>)
+   valid_sched_context sc (s\<lparr>kheap := (kheap s)(p \<mapsto> ko)\<rparr>)
          = valid_sched_context sc s"
   apply (clarsimp simp: valid_sched_context_def valid_bound_obj_def obj_at_def is_obj_defs
       split: if_split_asm option.splits kernel_object.splits)
@@ -632,7 +632,7 @@ lemma valid_sc_kheap_update':
 
 lemma valid_sc_kheap_update[simp]:
   "sc_at p s \<Longrightarrow>
-   valid_sched_context sc (s\<lparr>kheap := kheap s(p \<mapsto> SchedContext sc' n)\<rparr>)
+   valid_sched_context sc (s\<lparr>kheap := (kheap s)(p \<mapsto> SchedContext sc' n)\<rparr>)
          = valid_sched_context sc s"
   apply (clarsimp simp: valid_sched_context_def valid_bound_obj_def obj_at_def is_obj_defs
       split: if_split_asm option.splits kernel_object.splits)
@@ -1127,7 +1127,7 @@ lemma ssc_refs_of_None[wp]:
 
 lemma zombies_kheap_update:
   "\<lbrakk> zombies_final s; obj_at (same_caps ko) t s \<rbrakk>
-   \<Longrightarrow> zombies_final (s\<lparr>kheap := kheap s(t \<mapsto> ko)\<rparr>)"
+   \<Longrightarrow> zombies_final (s\<lparr>kheap := (kheap s)(t \<mapsto> ko)\<rparr>)"
   apply (simp add: zombies_final_def is_final_cap'_def2, elim allEI)
   apply (clarsimp simp: cte_wp_at_after_update fun_upd_def)
   done

@@ -171,7 +171,7 @@ lemma schedContextUpdateConsumed_corres:
   apply (clarsimp simp: sched_context_update_consumed_def schedContextUpdateConsumed_def)
   apply (simp add: maxTicksToUs_def ticksToUs_def)
   apply (rule corres_underlying_split[rotated 2, OF get_sched_context_sp get_sc_sp'])
-   apply (corressimp corres: get_sc_corres)
+   apply (corresKsimp corres: get_sc_corres)
   apply (rename_tac abs_sc conc_sc)
   apply (rule corres_if_split)
     apply (clarsimp simp: sc_relation_def)
@@ -837,7 +837,7 @@ lemma get_sc_released_corres:
           (get_sc_released sc_ptr) (scReleased sc_ptr)"
   apply (simp add: get_sc_released_def scReleased_def scActive_def refillReady_def)
   apply (rule corres_underlying_split[rotated 2, OF get_sched_context_sp get_sc_sp'])
-   apply (corressimp corres: get_sc_corres)
+   apply (corresKsimp corres: get_sc_corres)
   apply (rename_tac sc')
   apply (rule corres_symb_exec_l[rotated 2, OF gets_sp]; (solves wpsimp)?)
   apply (rule corres_symb_exec_r[rotated, OF gets_the_sp]; (solves wpsimp)?)

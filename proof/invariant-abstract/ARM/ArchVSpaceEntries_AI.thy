@@ -1623,7 +1623,7 @@ crunch valid_pdpt[wp]: schedule_choose_new_thread "valid_pdpt_objs"
 crunch valid_pdpt[wp]: activate_thread, switch_to_thread, switch_to_idle_thread,
                        awaken "valid_pdpt_objs"
   (simp: crunch_simps
-   wp: crunch_wps alternative_valid select_wp OR_choice_weak_wp select_ext_weak_wp)
+   wp: crunch_wps OR_choice_weak_wp select_ext_weak_wp)
 
 crunch valid_pdpt[wp]: handle_call, handle_recv, handle_send, handle_yield,
  handle_interrupt, handle_vm_fault, handle_hypervisor_fault
@@ -1634,7 +1634,7 @@ crunch valid_pdpt[wp]: handle_call, handle_recv, handle_send, handle_yield,
 
 lemma schedule_valid_pdpt[wp]: "\<lbrace>valid_pdpt_objs\<rbrace> schedule :: (unit,det_ext) s_monad \<lbrace>\<lambda>_. valid_pdpt_objs\<rbrace>"
   apply (simp add: schedule_def)
-  apply (wpsimp wp: alternative_wp select_wp hoare_drop_imps)
+  apply (wpsimp wp: hoare_drop_imps)
   done
 
 crunches check_domain_time

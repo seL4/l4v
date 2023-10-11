@@ -860,7 +860,7 @@ lemma updateReply_obj_at'_inv:
   "\<forall>x. P (f x) = P x \<Longrightarrow>
    updateReply rPtr f \<lbrace>\<lambda>s. Q (obj_at' (P :: reply \<Rightarrow> bool) rp s)\<rbrace>"
   apply (wpsimp wp: updateReply_wp_all)
-  apply (subgoal_tac "obj_at' P rp s = (obj_at' P rp (s\<lparr>ksPSpace := ksPSpace s(rPtr \<mapsto> KOReply (f ko))\<rparr>))")
+  apply (subgoal_tac "obj_at' P rp s = (obj_at' P rp (s\<lparr>ksPSpace := (ksPSpace s)(rPtr \<mapsto> KOReply (f ko))\<rparr>))")
    apply simp
   by (force simp: obj_at'_real_def ko_wp_at'_def objBitsKO_def ps_clear_def)
 
@@ -1037,7 +1037,7 @@ end
 
 lemma replyPrevs_of_replyNext_update:
   "ko_at' reply' rp s' \<Longrightarrow>
-      replyPrevs_of (s'\<lparr>ksPSpace := ksPSpace s'(rp \<mapsto>
+      replyPrevs_of (s'\<lparr>ksPSpace := (ksPSpace s')(rp \<mapsto>
                             KOReply (reply' \<lparr> replyNext := v \<rparr>))\<rparr>) = replyPrevs_of s'"
   apply (clarsimp simp: obj_at'_def isNext_def
                  split: option.split_asm reply_next.split_asm)
@@ -1045,7 +1045,7 @@ lemma replyPrevs_of_replyNext_update:
 
 lemma scs_of'_reply_update:
   "reply_at' rp s' \<Longrightarrow>
-      scs_of' (s'\<lparr>ksPSpace := ksPSpace s'(rp \<mapsto> KOReply reply)\<rparr>) = scs_of' s'"
+      scs_of' (s'\<lparr>ksPSpace := (ksPSpace s')(rp \<mapsto> KOReply reply)\<rparr>) = scs_of' s'"
   apply (clarsimp simp: obj_at'_def isNext_def
                  split: option.split_asm reply_next.split_asm)
   by (fastforce simp: projectKO_opt_sc opt_map_def)

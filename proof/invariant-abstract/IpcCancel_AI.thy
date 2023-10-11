@@ -428,7 +428,7 @@ lemma tcb_at_no_sc_reply:
 
 lemma endpoint_state_refs_of_subset:
   "kheap s epptr = Some (Endpoint (RecvEP queue)) \<Longrightarrow>
-   (y, tp) \<in> state_refs_of (s\<lparr>kheap := kheap s(epptr \<mapsto> Endpoint (
+   (y, tp) \<in> state_refs_of (s\<lparr>kheap := (kheap s)(epptr \<mapsto> Endpoint (
      case remove1 t queue of [] \<Rightarrow> IdleEP
                      | a # list \<Rightarrow> update_ep_queue (RecvEP queue) (remove1 t queue)))\<rparr>) x \<Longrightarrow>
    (y, tp) \<notin> state_refs_of s x \<Longrightarrow> False"
@@ -1261,7 +1261,7 @@ lemma sc_replies_update_valid_replies_cons:
 lemma replies_with_sc_takeWhile_subset:
   "(sc_replies_sc_at (\<lambda>rs. rs = replies) sc_ptr s) \<Longrightarrow> r' \<in> set replies \<Longrightarrow>
   replies_with_sc
-             (s\<lparr>kheap := kheap s(sc_ptr \<mapsto>
+             (s\<lparr>kheap := (kheap s)(sc_ptr \<mapsto>
                   SchedContext (x\<lparr>sc_replies := takeWhile (\<lambda>r. r \<noteq> r') replies\<rparr>) xa)\<rparr>) \<subseteq> replies_with_sc s"
    apply (clarsimp simp: image_def replies_with_sc_def sc_replies_sc_at_def obj_at_def
                          replies_blocked_def st_tcb_at_def)
@@ -1270,7 +1270,7 @@ lemma replies_with_sc_takeWhile_subset:
 lemma replies_blocked_takeWhile_eq:
   "(sc_replies_sc_at (\<lambda>rs. rs = replies) sc_ptr s) \<Longrightarrow>  r' \<in> set replies \<Longrightarrow>
   replies_blocked
-             (s\<lparr>kheap := kheap s(sc_ptr \<mapsto>
+             (s\<lparr>kheap := (kheap s)(sc_ptr \<mapsto>
                   SchedContext (x\<lparr>sc_replies := takeWhile (\<lambda>r. r \<noteq> r') replies\<rparr>) xa)\<rparr>) = replies_blocked s"
    apply (clarsimp simp: image_def replies_blocked_def st_tcb_at_def obj_at_def)
    by (fastforce simp: sc_replies_sc_at_def obj_at_def)
@@ -1278,7 +1278,7 @@ lemma replies_blocked_takeWhile_eq:
 lemma sc_replies_update_replies_blocked:
   "ko_at (SchedContext sc n) scp s
    \<Longrightarrow> {(r, t). st_tcb_at (\<lambda>st. st = BlockedOnReply r) t
-                          (s\<lparr>kheap := kheap s(scp \<mapsto> SchedContext (sc_replies_update f sc) n)\<rparr>)}
+                          (s\<lparr>kheap := (kheap s)(scp \<mapsto> SchedContext (sc_replies_update f sc) n)\<rparr>)}
        = replies_blocked s"
   apply (clarsimp simp: replies_blocked_def pred_tcb_at_def obj_at_def)
   apply fastforce
@@ -1287,7 +1287,7 @@ lemma sc_replies_update_replies_blocked:
 lemma replies_with_sc_subset:
   "\<lbrakk>ko_at (SchedContext sc n) scp s; \<forall>list. set (f list) \<subseteq> set list\<rbrakk>
    \<Longrightarrow> {(r, sc'). sc_replies_sc_at (\<lambda>rs. r \<in> set rs) sc'
-                                   (s\<lparr>kheap := kheap s(scp \<mapsto> SchedContext (sc_replies_update f sc) n)\<rparr>)}
+                                   (s\<lparr>kheap := (kheap s)(scp \<mapsto> SchedContext (sc_replies_update f sc) n)\<rparr>)}
        \<subseteq> replies_with_sc s"
   apply (clarsimp simp: sc_at_ppred_def obj_at_def replies_with_sc_def)
   apply blast

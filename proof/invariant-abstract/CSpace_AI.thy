@@ -233,7 +233,7 @@ lemma preemption_point_inv:
   apply (rule hoare_seq_ext_skipE, wpsimp)
   apply (rule valid_validE)
   apply (rule OR_choiceE_weak_wp)
-  apply (rule alternative_valid; (solves wpsimp)?)
+  apply (rule alternative_wp[where P=P and P'=P for P, simplified]; (solves wpsimp)?)
   apply (rule validE_valid)
   apply (rule hoare_seq_ext_skipE, solves \<open>wpsimp wp: update_time_stamp_wp\<close>)+
   apply wpsimp

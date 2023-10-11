@@ -1846,7 +1846,7 @@ crunches sched_context_update_consumed, set_message_info, store_word_offs
 lemma state_refs_of_tcb_arch_update[simp]:
   "kheap s thread = Some (TCB tcb) \<Longrightarrow>
       state_refs_of
-              (s\<lparr>kheap := kheap s(thread \<mapsto>
+              (s\<lparr>kheap := (kheap s)(thread \<mapsto>
                    TCB (tcb_arch_update f tcb))\<rparr>) = state_refs_of s"
   by (clarsimp simp: state_refs_of_def get_refs_def2 refs_of_def obj_at_def is_tcb
               split: option.split intro!: ext)

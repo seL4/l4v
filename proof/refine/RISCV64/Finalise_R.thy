@@ -3623,7 +3623,7 @@ crunches schedContextCancelYieldTo, tcbReleaseRemove
 lemma suspend_cte_wp_at':
   "suspend t \<lbrace>cte_wp_at' (\<lambda>cte. P (cteCap cte)) p\<rbrace>"
   unfolding updateRestartPC_def suspend_def
-  apply (wpsimp wp: hoare_vcg_imp_lift hoare_disjI2[where Q="\<lambda>_. cte_wp_at' a b" for a b])
+  apply (wpsimp wp: hoare_vcg_imp_lift hoare_disjI2[where R="\<lambda>_. cte_wp_at' a b" for a b])
   done
 
 context begin interpretation Arch . (*FIXME: arch_split*)

@@ -350,20 +350,20 @@ lemma invokeTCB_WriteRegisters_corres:
                    frameRegisters_def gpRegisters_def getSanitiseRegisterInfo_def
                    sanitiseRegister_def sanitise_register_def)
   apply (rule corres_underlying_split[rotated 2, OF gets_sp getCurThread_sp])
-   apply (corressimp corres: getCurThread_corres)
+   apply (corresKsimp corres: getCurThread_corres)
   apply (rule corres_split_skip; (solves wpsimp)?)
-   apply (corressimp corres: asUser_corres
+   apply (corresKsimp corres: asUser_corres
                        simp: zipWithM_mapM getRestartPC_def setNextPC_def
                          wp: no_fail_mapM no_fail_setRegister)
   apply (rule corres_split_skip; (solves wpsimp)?)
-   apply (corressimp corres: asUser_postModifyRegisters_corres[simplified])
+   apply (corresKsimp corres: asUser_postModifyRegisters_corres[simplified])
   apply (rule_tac Q="\<lambda>_. einvs" and Q'="\<lambda>_. invs'" in corres_underlying_split[rotated 2])
      apply (wpsimp wp: restart_valid_sched)
      using idle_no_ex_cap apply fastforce
     apply (wpsimp wp: restart_invs')
     using global'_no_ex_cap apply fastforce
-   apply (corressimp corres: restart_corres)
-  apply (corressimp corres: rescheduleRequired_corres)
+   apply (corresKsimp corres: restart_corres)
+  apply (corresKsimp corres: rescheduleRequired_corres)
   apply fastforce
   done
 
@@ -488,7 +488,7 @@ proof -
         apply (clarsimp simp: invs_def valid_sched_weak_strg valid_sched_def valid_state_def
                               valid_pspace_def valid_idle_def
                        dest!: idle_no_ex_cap )
-       apply (wp suspend_nonz_cap_to_tcb static_imp_wp suspend_invs suspend_cap_to'
+       apply (wp suspend_nonz_cap_to_tcb hoare_weak_lift_imp suspend_invs suspend_cap_to'
                  suspend_valid_sched
               | simp add: if_apply_def2)+
      apply (fastforce simp: invs_def valid_state_def valid_pspace_def valid_idle_def

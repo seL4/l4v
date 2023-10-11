@@ -148,7 +148,7 @@ lemma valid_idle_sc_update:
      sc_badge sc = sc_badge sc';
      sc_yield_from sc = sc_yield_from sc';
      sc_replies sc = sc_replies sc' \<rbrakk>
-   \<Longrightarrow> valid_idle (s\<lparr>kheap := kheap s(p \<mapsto> SchedContext sc' n)\<rparr>)"
+   \<Longrightarrow> valid_idle (s\<lparr>kheap := (kheap s)(p \<mapsto> SchedContext sc' n)\<rparr>)"
   by (fastforce simp: valid_idle_def pred_tcb_at_def obj_at_def)
 
 lemma sched_context_cancel_yield_to_valid_idle[wp]:

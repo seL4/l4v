@@ -1550,7 +1550,7 @@ lemma makeFaultMessage_corres:
            apply (wpsimp simp: sched_context_update_consumed_def setTimeArg_def)+
     apply (fastforce dest!: valid_tcb_objs simp: valid_tcb_def valid_bound_obj_def obj_at_def)
    apply clarsimp
-  apply (corressimp corres: makeArchFaultMessage_corres)
+  apply (corresKsimp corres: makeArchFaultMessage_corres)
   done
 
 crunches makeFaultMessage
@@ -4929,7 +4929,7 @@ lemma receiveSignal_corres:
                              and tcb_at' thread and ntfn_at' cap_ntfn_ptr
                              and valid_ntfn' rv' and ko_at' rv' cap_ntfn_ptr"
                 in corres_underlying_split)
-      apply (corressimp corres: getNotification_corres
+      apply (corresKsimp corres: getNotification_corres
                           simp: ntfn_at_def2 valid_cap_def st_tcb_at_tcb_at valid_cap'_def)
      defer
      apply (wpsimp wp: get_simple_ko_wp)
@@ -4959,7 +4959,7 @@ lemma receiveSignal_corres:
                                pred_tcb_at_def obj_at_def is_obj_defs
                         split: if_split_asm option.splits)+
      apply (fastforce simp: valid_tcb_state'_def)
-    apply (corressimp corres: doNBRecvFailedTransfer_corres)
+    apply (corresKsimp corres: doNBRecvFailedTransfer_corres)
     apply fastforce
    \<comment> \<open>WaitingNtfn\<close>
    apply (case_tac isBlocking; simp)
@@ -4983,7 +4983,7 @@ lemma receiveSignal_corres:
                               pred_tcb_at_def obj_at_def is_obj_defs
                        split: if_split_asm option.splits)+
     apply (fastforce simp: valid_tcb_state'_def valid_ntfn'_def)
-   apply (corressimp corres: doNBRecvFailedTransfer_corres)
+   apply (corresKsimp corres: doNBRecvFailedTransfer_corres)
    apply fastforce
   \<comment> \<open>ActiveNtfn\<close>
   apply (rule corres_guard_imp)

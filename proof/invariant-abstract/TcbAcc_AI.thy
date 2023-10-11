@@ -328,7 +328,7 @@ lemma thread_set_obj_at_impossible:
   done
 
 lemma thread_set_wp:
-  "\<lbrace> \<lambda>s. \<forall>tcb. get_tcb t s = Some tcb \<longrightarrow> Q (s\<lparr>kheap := kheap s(t \<mapsto> TCB (f tcb))\<rparr>) \<rbrace>
+  "\<lbrace> \<lambda>s. \<forall>tcb. get_tcb t s = Some tcb \<longrightarrow> Q (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB (f tcb))\<rparr>) \<rbrace>
     thread_set f t
    \<lbrace> \<lambda>_. Q \<rbrace>"
   by (wpsimp simp: thread_set_def wp: set_object_wp)
@@ -1896,7 +1896,7 @@ definition replies_blocked_upd_tcb_st ::
     {(r,t'). if t' = t then st = BlockedOnReply r else (r,t') \<in> rs_blocked}"
 
 lemma replies_blocked_upd_tcb_st:
-  "replies_blocked (s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb\<lparr>tcb_state := st\<rparr>))\<rparr>)
+  "replies_blocked (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB (tcb\<lparr>tcb_state := st\<rparr>))\<rparr>)
     = replies_blocked_upd_tcb_st st t (replies_blocked s)"
   by (fastforce simp: replies_blocked_upd_tcb_st_def replies_blocked_def st_tcb_at_def obj_at_def)
 

@@ -4080,11 +4080,12 @@ lemma idx_le_new_offs:
 
 end
 
-crunch ksIdleThread[wp]: deleteObjects "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps wp: hoare_drop_imps unless_wp)
-crunch ksCurDomain[wp]: deleteObjects "\<lambda>s. P (ksCurDomain s)"
-  (simp: crunch_simps wp: hoare_drop_imps unless_wp)
-crunch irq_node[wp]: deleteObjects "\<lambda>s. P (irq_node' s)"
+context begin interpretation Arch . (*FIXME: arch_split*)
+
+crunches deleteObjects
+  for ksIdleThread[wp]: "\<lambda>s. P (ksIdleThread s)"
+  and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
+  and irq_node[wp]: "\<lambda>s. P (irq_node' s)"
   (simp: crunch_simps wp: hoare_drop_imps unless_wp)
 
 lemma deleteObjects_ksCurThread[wp]:
@@ -4404,8 +4405,6 @@ lemma resetUntypedCap_corres:
   apply (auto simp: descendants_range_in'_def valid_untyped'_def)
   done
 
-end
-
 lemma deleteObjects_ex_cte_cap_wp_to':
   "\<lbrace>invs' and ex_cte_cap_wp_to' P slot and (\<lambda>s. descendants_of' p (ctes_of s) = {})
       and cte_wp_at' (\<lambda>cte. \<exists>idx d. cteCap cte = UntypedCap d ptr sz idx) p\<rbrace>
@@ -4428,6 +4427,8 @@ lemma deleteObjects_ex_cte_cap_wp_to':
          (simp add: isCap_simps empty_descendants_range_in')+)
   apply (auto simp: add_mask_fold)
   done
+
+end
 
 lemma updateCap_cte_cap_wp_to':
   "\<lbrace>\<lambda>s. cte_wp_at' (\<lambda>cte. p' \<in> cte_refs' (cteCap cte) (irq_node' s) \<and> P (cteCap cte)

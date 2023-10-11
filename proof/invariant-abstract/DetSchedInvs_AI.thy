@@ -3292,17 +3292,17 @@ lemmas tcb_ready_times_of_kh_update_indep'[simp]
 
 lemma tcb_ready_time_ep_update:
   "\<lbrakk> ep_at ref s; a_type new = AEndpoint\<rbrakk> \<Longrightarrow>
-   tcb_ready_times_of_kh (kheap s(ref \<mapsto> new)) = tcb_ready_times_of s"
+   tcb_ready_times_of_kh ((kheap s)(ref \<mapsto> new)) = tcb_ready_times_of s"
   by (clarsimp simp: obj_at_def is_ep)
 
 lemma tcb_ready_time_reply_update:
   "\<lbrakk> reply_at ref s; a_type new = AReply\<rbrakk> \<Longrightarrow>
-   tcb_ready_times_of_kh (kheap s(ref \<mapsto> new)) = tcb_ready_times_of s"
+   tcb_ready_times_of_kh ((kheap s)(ref \<mapsto> new)) = tcb_ready_times_of s"
   by (clarsimp simp: obj_at_def is_reply)
 
 lemma tcb_ready_time_ntfn_update:
   "\<lbrakk> ntfn_at ref s; a_type new = ANTFN\<rbrakk> \<Longrightarrow>
-   tcb_ready_times_of_kh (kheap s(ref \<mapsto> new)) = tcb_ready_times_of s"
+   tcb_ready_times_of_kh ((kheap s)(ref \<mapsto> new)) = tcb_ready_times_of s"
   by (clarsimp simp: obj_at_def is_ntfn)
 
 lemmas tcb_ready_time_update_indeps[simp]
@@ -3314,7 +3314,7 @@ lemmas tcb_ready_time_update_indeps'[simp]
 lemma tcb_ready_time_thread_state_update[simp]:
   assumes "kheap s tp = Some (TCB tcb)"
   assumes "tcb_sched_context tcb' = tcb_sched_context tcb"
-  shows "tcb_ready_times_of_kh (kheap s(tp \<mapsto> TCB tcb')) = tcb_ready_times_of s"
+  shows "tcb_ready_times_of_kh ((kheap s)(tp \<mapsto> TCB tcb')) = tcb_ready_times_of s"
   using assms by (simp add: fun_upd_def vs_all_heap_simps)
 
 lemmas tcb_ready_time_thread_state_update'[simp]
@@ -3326,7 +3326,7 @@ lemma tcb_ready_time_kh_tcb_sc_update:
     scopt = Some scp'; kheap s scp' = Some (SchedContext sc' n');
     r_time (refill_hd sc) = r_time (refill_hd sc') \<rbrakk> \<Longrightarrow>
    tcb_ready_times_of_kh
-            (kheap s(tp \<mapsto> TCB (tcb\<lparr>tcb_sched_context := scopt\<rparr>)))
+            ((kheap s)(tp \<mapsto> TCB (tcb\<lparr>tcb_sched_context := scopt\<rparr>)))
         = tcb_ready_times_of s"
   by (auto intro!: map_eqI
              simp: fun_upd_def vs_all_heap_simps tcb_ready_times_defs
@@ -3335,12 +3335,12 @@ lemma tcb_ready_time_kh_tcb_sc_update:
 
 lemma tcb_at_simple_type_update[iff]:
   "\<lbrakk>obj_at is_simple_type epptr s; is_simple_type ko\<rbrakk> \<Longrightarrow>
-      tcbs_of_kh (kheap s(epptr \<mapsto> ko)) = tcbs_of s"
+      tcbs_of_kh ((kheap s)(epptr \<mapsto> ko)) = tcbs_of s"
   by (rule map_eqI, auto simp add: vs_heap_simps obj_at_def)
 
 lemma sc_at_simple_type_update[iff]:
   "\<lbrakk>obj_at is_simple_type epptr s; is_simple_type ko\<rbrakk> \<Longrightarrow>
-      scs_of_kh (kheap s(epptr \<mapsto> ko)) = scs_of s"
+      scs_of_kh ((kheap s)(epptr \<mapsto> ko)) = scs_of s"
   by (rule map_eqI, auto simp add: vs_heap_simps obj_at_def)
 
 (* lifting lemmas *)
@@ -3507,7 +3507,7 @@ lemma switch_in_cur_domain_lift_pre_conj:
   apply wp_pre
    apply (rule hoare_lift_Pf_pre_conj[where f=scheduler_action, OF _ b])
    apply (rule hoare_lift_Pf_pre_conj[where f=cur_domain, OF _ c])
-   by (wpsimp simp: switch_in_cur_domain_def in_cur_domain_def wp: hoare_vcg_all_lift static_imp_wp a)+
+   by (wpsimp simp: switch_in_cur_domain_def in_cur_domain_def wp: hoare_vcg_all_lift hoare_weak_lift_imp a)+
 
 lemmas switch_in_cur_domain_lift = switch_in_cur_domain_lift_pre_conj[where R = \<top>, simplified]
 

@@ -800,75 +800,79 @@ crunch device_state_inv: storeWord "\<lambda>ms. P (device_state ms)"
 
 (* some hyp_ref invariants *)
 
-lemma state_hyp_refs_of_ep_update: "\<And>s ep val. typ_at AEndpoint ep s \<Longrightarrow>
-       state_hyp_refs_of (s\<lparr>kheap := (kheap s)(ep \<mapsto> Endpoint val)\<rparr>) = state_hyp_refs_of s"
+lemma state_hyp_refs_of_ep_update:
+  "typ_at AEndpoint ep s \<Longrightarrow>
+   state_hyp_refs_of (s\<lparr>kheap := (kheap s)(ep \<mapsto> Endpoint val)\<rparr>) = state_hyp_refs_of s"
   apply (rule all_ext)
   apply (clarsimp simp add: ARM.state_hyp_refs_of_def obj_at_def ARM.hyp_refs_of_def)
   done
 
-lemma state_hyp_refs_of_ntfn_update: "\<And>s ep val. typ_at ANTFN ep s \<Longrightarrow>
-       state_hyp_refs_of (s\<lparr>kheap := (kheap s)(ep \<mapsto> Notification val)\<rparr>) = state_hyp_refs_of s"
+lemma state_hyp_refs_of_ntfn_update:
+  "typ_at ANTFN ep s \<Longrightarrow>
+   state_hyp_refs_of (s\<lparr>kheap := (kheap s)(ep \<mapsto> Notification val)\<rparr>) = state_hyp_refs_of s"
   apply (rule all_ext)
   apply (clarsimp simp add: ARM.state_hyp_refs_of_def obj_at_def ARM.hyp_refs_of_def)
   done
 
-lemma state_hyp_refs_of_sc_update: "\<And>s sc val n. typ_at (ASchedContext n) sc s \<Longrightarrow>
-       state_hyp_refs_of (s\<lparr>kheap := kheap s(sc \<mapsto> SchedContext val n)\<rparr>) = state_hyp_refs_of s"
+lemma state_hyp_refs_of_sc_update:
+  "typ_at (ASchedContext n) sc s \<Longrightarrow>
+   state_hyp_refs_of (s\<lparr>kheap := (kheap s)(sc \<mapsto> SchedContext val n)\<rparr>) = state_hyp_refs_of s"
   apply (rule all_ext)
   apply (clarsimp simp: ARM.state_hyp_refs_of_def obj_at_def ARM.hyp_refs_of_def
                  split: kernel_object.splits)
   done
 
-lemma state_hyp_refs_of_reply_update: "\<And>s r val. typ_at AReply r s \<Longrightarrow>
-       state_hyp_refs_of (s\<lparr>kheap := kheap s(r \<mapsto> Reply val)\<rparr>) = state_hyp_refs_of s"
+lemma state_hyp_refs_of_reply_update:
+  "typ_at AReply r s \<Longrightarrow>
+   state_hyp_refs_of (s\<lparr>kheap := (kheap s)(r \<mapsto> Reply val)\<rparr>) = state_hyp_refs_of s"
   apply (rule all_ext)
   apply (clarsimp simp add: ARM.state_hyp_refs_of_def obj_at_def ARM.hyp_refs_of_def)
   done
 
 lemma state_hyp_refs_of_tcb_bound_ntfn_update:
-       "kheap s t = Some (TCB tcb) \<Longrightarrow>
-          state_hyp_refs_of (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB (tcb\<lparr>tcb_bound_notification := ntfn\<rparr>))\<rparr>)
-            = state_hyp_refs_of s"
+  "kheap s t = Some (TCB tcb) \<Longrightarrow>
+   state_hyp_refs_of (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB (tcb\<lparr>tcb_bound_notification := ntfn\<rparr>))\<rparr>)
+     = state_hyp_refs_of s"
   apply (rule all_ext)
   apply (clarsimp simp add: ARM.state_hyp_refs_of_def obj_at_def split: option.splits)
   done
 
 lemma state_hyp_refs_of_tcb_sched_context_update:
-       "kheap s t = Some (TCB tcb) \<Longrightarrow>
-          state_hyp_refs_of (s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb\<lparr>tcb_sched_context := sc\<rparr>))\<rparr>)
-            = state_hyp_refs_of s"
+  "kheap s t = Some (TCB tcb) \<Longrightarrow>
+   state_hyp_refs_of (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB (tcb\<lparr>tcb_sched_context := sc\<rparr>))\<rparr>)
+     = state_hyp_refs_of s"
   apply (rule all_ext)
   apply (clarsimp simp add: ARM.state_hyp_refs_of_def obj_at_def split: option.splits)
   done
 
 lemma state_hyp_refs_of_tcb_yield_to_update:
-       "kheap s t = Some (TCB tcb) \<Longrightarrow>
-          state_hyp_refs_of (s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb\<lparr>tcb_yield_to := sc\<rparr>))\<rparr>)
-            = state_hyp_refs_of s"
+  "kheap s t = Some (TCB tcb) \<Longrightarrow>
+   state_hyp_refs_of (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB (tcb\<lparr>tcb_yield_to := sc\<rparr>))\<rparr>)
+     = state_hyp_refs_of s"
   apply (rule all_ext)
   apply (clarsimp simp add: ARM.state_hyp_refs_of_def obj_at_def split: option.splits)
   done
 
 lemma state_hyp_refs_of_tcb_state_update:
-       "kheap s t = Some (TCB tcb) \<Longrightarrow>
-          state_hyp_refs_of (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB (tcb\<lparr>tcb_state := ts\<rparr>))\<rparr>)
-            = state_hyp_refs_of s"
+  "kheap s t = Some (TCB tcb) \<Longrightarrow>
+   state_hyp_refs_of (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB (tcb\<lparr>tcb_state := ts\<rparr>))\<rparr>)
+     = state_hyp_refs_of s"
   apply (rule all_ext)
   apply (clarsimp simp add: ARM.state_hyp_refs_of_def obj_at_def split: option.splits)
   done
 
 lemma state_hyp_refs_of_tcb_domain_update:
-       "kheap s t = Some (TCB tcb) \<Longrightarrow>
-          state_hyp_refs_of (s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb\<lparr>tcb_domain := d\<rparr>))\<rparr>)
-            = state_hyp_refs_of s"
+  "kheap s t = Some (TCB tcb) \<Longrightarrow>
+   state_hyp_refs_of (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB (tcb\<lparr>tcb_domain := d\<rparr>))\<rparr>)
+     = state_hyp_refs_of s"
   apply (rule all_ext)
   apply (clarsimp simp add: state_hyp_refs_of_def obj_at_def split: option.splits)
   done
 
 lemma state_hyp_refs_of_tcb_priority_update:
-       "kheap s t = Some (TCB tcb) \<Longrightarrow>
-          state_hyp_refs_of (s\<lparr>kheap := kheap s(t \<mapsto> TCB (tcb\<lparr>tcb_priority := d\<rparr>))\<rparr>)
-            = state_hyp_refs_of s"
+  "kheap s t = Some (TCB tcb) \<Longrightarrow>
+   state_hyp_refs_of (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB (tcb\<lparr>tcb_priority := d\<rparr>))\<rparr>)
+     = state_hyp_refs_of s"
   apply (rule all_ext)
   apply (clarsimp simp add: state_hyp_refs_of_def obj_at_def split: option.splits)
   done

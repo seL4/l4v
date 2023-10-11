@@ -23,27 +23,27 @@ end
 
 lemma replies_with_sc_kh_update_sc:
   "sc_replies (f sc v) = sc_replies sc
-   \<Longrightarrow> replies_with_sc (s\<lparr>kheap := kheap s(p \<mapsto> SchedContext (f sc v) n)\<rparr>)
-       = replies_with_sc (s\<lparr>kheap := kheap s(p \<mapsto> SchedContext sc n)\<rparr>)"
+   \<Longrightarrow> replies_with_sc (s\<lparr>kheap := (kheap s)(p \<mapsto> SchedContext (f sc v) n)\<rparr>)
+       = replies_with_sc (s\<lparr>kheap := (kheap s)(p \<mapsto> SchedContext sc n)\<rparr>)"
    by (clarsimp simp: replies_with_sc_def sc_replies_sc_at_def obj_at_def,
        fastforce?)
 
 lemma replies_blocked_kh_update_sc:
-  "replies_blocked (s\<lparr>kheap := kheap s(p \<mapsto> SchedContext (f sc v) n)\<rparr>)
-   = replies_blocked (s\<lparr>kheap := kheap s(p \<mapsto> SchedContext sc n)\<rparr>)"
+  "replies_blocked (s\<lparr>kheap := (kheap s)(p \<mapsto> SchedContext (f sc v) n)\<rparr>)
+   = replies_blocked (s\<lparr>kheap := (kheap s)(p \<mapsto> SchedContext sc n)\<rparr>)"
    by (clarsimp simp: replies_blocked_def st_tcb_at_def obj_at_def,
        fastforce?)
 
 lemma replies_with_sc_kh_update_tcb:
-  "replies_with_sc (s\<lparr>kheap := kheap s(p \<mapsto> TCB (f tcb v))\<rparr>)
-   = replies_with_sc (s\<lparr>kheap := kheap s(p \<mapsto> TCB tcb)\<rparr>)"
+  "replies_with_sc (s\<lparr>kheap := (kheap s)(p \<mapsto> TCB (f tcb v))\<rparr>)
+   = replies_with_sc (s\<lparr>kheap := (kheap s)(p \<mapsto> TCB tcb)\<rparr>)"
    by (clarsimp simp: replies_with_sc_def sc_replies_sc_at_def obj_at_def,
        fastforce?)
 
 lemma replies_blocked_kh_update_tcb:
   "tcb_state (f tcb v) = tcb_state tcb
-   \<Longrightarrow> replies_blocked (s\<lparr>kheap := kheap s(p \<mapsto> TCB (f tcb v))\<rparr>)
-       = replies_blocked (s\<lparr>kheap := kheap s(p \<mapsto> TCB tcb)\<rparr>)"
+   \<Longrightarrow> replies_blocked (s\<lparr>kheap := (kheap s)(p \<mapsto> TCB (f tcb v))\<rparr>)
+       = replies_blocked (s\<lparr>kheap := (kheap s)(p \<mapsto> TCB tcb)\<rparr>)"
    by (clarsimp simp: replies_blocked_def st_tcb_at_def obj_at_def,
        fastforce?)
 
@@ -68,7 +68,7 @@ lemmas replies_blocked_safe_kheap_updates[simp] =
        replies_blocked_kh_update_tcb[where f="\<lambda>sc v. sc\<lparr>tcb_arch := v\<rparr>", simplified]
 
 lemma ko_at_kheap_upd_id[simp]:
-  "ko_at ko p s \<Longrightarrow> (s\<lparr>kheap := kheap s(p \<mapsto> ko)\<rparr> = s)"
+  "ko_at ko p s \<Longrightarrow> (s\<lparr>kheap := (kheap s)(p \<mapsto> ko)\<rparr> = s)"
   unfolding obj_at_def fun_upd_def
   by (rule abstract_state.equality, rule ext; simp)
 
@@ -280,12 +280,12 @@ lemma get_blocking_object_wp:
   by (cases st; wpsimp simp: get_blocking_object_def ep_blocked_def)
 
 lemma reply_tcb_reply_at_kheap_update:
-  "reply_tcb_reply_at P r (s\<lparr>kheap := kheap s(p \<mapsto> v)\<rparr>) =
+  "reply_tcb_reply_at P r (s\<lparr>kheap := (kheap s)(p \<mapsto> v)\<rparr>) =
     (if p = r then \<exists>r. v = Reply r \<and> P (reply_tcb r) else reply_tcb_reply_at P r s)"
   by (simp add: reply_tcb_reply_at_def obj_at_update)
 
 lemma reply_tcb_reply_at_kheap_update':
-  "p \<noteq> q \<Longrightarrow> reply_tcb_reply_at P r (s\<lparr>kheap := kheap s(p \<mapsto> v, q \<mapsto> w)\<rparr>) =
+  "p \<noteq> q \<Longrightarrow> reply_tcb_reply_at P r (s\<lparr>kheap := (kheap s)(p \<mapsto> v, q \<mapsto> w)\<rparr>) =
     (if p = r then \<exists>r. v = Reply r \<and> P (reply_tcb r)
      else if q = r then \<exists>r. w = Reply r \<and> P (reply_tcb r)
      else reply_tcb_reply_at P r s)"
@@ -2441,7 +2441,7 @@ lemma valid_bound_sc_typ_at:
   "\<forall>p. \<lbrace>\<lambda>s. sc_at p s\<rbrace> f \<lbrace>\<lambda>_ s. sc_at p s\<rbrace>
     \<Longrightarrow> \<lbrace>\<lambda>s. valid_bound_sc sc s\<rbrace> f \<lbrace>\<lambda>_ s. valid_bound_sc sc s\<rbrace>"
   apply (clarsimp simp: valid_bound_obj_def split: option.splits)
-  apply (wpsimp wp: hoare_vcg_all_lift static_imp_wp)
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_weak_lift_imp)
    defer
    apply assumption
   apply fastforce
@@ -2622,7 +2622,7 @@ lemma rai_invs':
    apply (wpsimp simp: do_nbrecv_failed_transfer_def wp: valid_irq_node_typ)
   apply (wpsimp simp: if_cond_refill_unblock_check_def wp: hoare_vcg_all_lift hoare_drop_imp)
     apply (wpsimp simp: invs_def valid_state_def valid_pspace_def wp: valid_ioports_lift)
-   apply (wpsimp simp: valid_ntfn_def tcb_at_typ wp: static_imp_wp valid_irq_node_typ valid_ioports_lift)
+   apply (wpsimp simp: valid_ntfn_def tcb_at_typ wp: hoare_weak_lift_imp valid_irq_node_typ valid_ioports_lift)
   apply (fastforce simp: invs_def valid_state_def valid_pspace_def state_refs_of_def valid_obj_def
                          valid_ntfn_def tcb_at_typ
                   elim!: obj_at_valid_objsE delta_sym_refs

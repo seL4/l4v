@@ -2845,8 +2845,7 @@ lemma modify_obj_commute':
 lemma dmo_bounded'[wp]:
   "doMachineOp f \<lbrace>pspace_bounded'\<rbrace>"
   apply (simp add: doMachineOp_def split_def)
-  apply (wp select_wp)
-  apply clarsimp
+  apply wpsimp
   done
 
 lemma setCTE_doMachineOp_commute:

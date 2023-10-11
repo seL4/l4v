@@ -3250,7 +3250,7 @@ lemma tcbReleaseDequeue_corres:
   apply (rename_tac rq)
   apply (simp add: bind_assoc)
   apply (rule corres_underlying_split[rotated 2, OF gets_sp getReleaseQueue_sp])
-   apply (corressimp corres: getReleaseQueue_corres)
+   apply (corresKsimp corres: getReleaseQueue_corres)
 
   apply clarsimp
   apply (rename_tac rq')
@@ -3336,13 +3336,13 @@ lemma awakenBody_corres:
      apply (wpsimp simp: tcb_release_dequeue_def)
      apply (force simp: valid_release_q_def vs_all_heap_simps obj_at_def is_tcb_def)
     apply wpsimp
-   apply (corressimp corres: tcbReleaseDequeue_corres)
+   apply (corresKsimp corres: tcbReleaseDequeue_corres)
   apply (rule corres_symb_exec_r[OF _ isRunnable_sp, rotated]; (solves wpsimp)?)
   apply (rule corres_symb_exec_r[OF _ assert_sp, rotated]; (solves wpsimp)?)
    apply wpsimp
    apply (clarsimp simp: st_tcb_at'_def obj_at'_def objBitsKO_def)
    apply (case_tac "tcbState tcb'"; clarsimp)
-  apply (corressimp corres: possibleSwitchTo_corres)
+  apply (corresKsimp corres: possibleSwitchTo_corres)
   done
 
 lemma tcbReleaseDequeue_no_fail:
@@ -3559,7 +3559,7 @@ lemma isRoundRobin_corres:
   "corres (=) (sc_at sc_ptr) (sc_at' sc_ptr)
               (is_round_robin sc_ptr) (isRoundRobin sc_ptr)"
   apply (clarsimp simp: is_round_robin_def isRoundRobin_def)
-  apply (corressimp corres: get_sc_corres
+  apply (corresKsimp corres: get_sc_corres
                       simp: sc_relation_def)
   done
 
@@ -3657,7 +3657,7 @@ lemma refillHeadOverlapping_corres_eq:
   by linarith+
 
 lemma refillPopHead_scs_of'[wp]:
-  "\<lbrace>\<lambda>s'. P (scs_of' s'(scp \<mapsto> (\<lambda>sc'. scRefillCount_update (\<lambda>_. scRefillCount sc' - Suc 0)
+  "\<lbrace>\<lambda>s'. P ((scs_of' s')(scp \<mapsto> (\<lambda>sc'. scRefillCount_update (\<lambda>_. scRefillCount sc' - Suc 0)
                                       (scRefillHead_update
                                           (\<lambda>_. refillNextIndex (scRefillHead sc') sc') sc'))
                                         (the (scs_of' s' scp))))\<rbrace>
@@ -3672,7 +3672,7 @@ crunches update_refill_hd, refill_pop_head, merge_refills, schedule_used, handle
    simp: crunch_simps update_refill_hd_rewrite update_sched_context_set_refills_rewrite)
 
 lemma merge_refills_scs_of2[wp]:
-  "\<lbrace>\<lambda>s. P (scs_of2 s(scp \<mapsto> (\<lambda>sc. sc_refills_update
+  "\<lbrace>\<lambda>s. P ((scs_of2 s)(scp \<mapsto> (\<lambda>sc. sc_refills_update
             (\<lambda>_. merge_refill (refill_hd sc) (hd (tl (sc_refills sc))) # tl (tl (sc_refills sc))) sc)
                           (the (scs_of2 s scp)))) \<rbrace>
    merge_refills scp
@@ -3949,15 +3949,15 @@ lemma maybeAddEmptyTail_corres:
    apply (fastforce dest!: sc_at'_cross[OF state_relation_pspace_relation])
   apply (clarsimp simp: maybe_add_empty_tail_def maybeAddEmptyTail_def get_refills_def)
   apply (rule corres_underlying_split[rotated 2, OF is_round_robin_sp isRoundRobin_sp])
-   apply (corressimp corres: isRoundRobin_corres)
+   apply (corresKsimp corres: isRoundRobin_corres)
   apply (clarsimp simp: obj_at_def is_sc_obj)
   apply (clarsimp simp: when_def)
   apply (rule corres_underlying_split[rotated 2, OF get_sched_context_sp get_sc_sp'])
-   apply (corressimp corres: get_sc_corres)
+   apply (corresKsimp corres: get_sc_corres)
    apply (fastforce intro: valid_objs_valid_sched_context_size
                      simp: obj_at_def is_sc_obj_def)
   apply (rename_tac sc')
-  apply (corressimp corres: refillAddTail_corres)
+  apply (corresKsimp corres: refillAddTail_corres)
   apply (frule refill_hd_relation; clarsimp simp: obj_at'_def opt_map_red opt_pred_def)
   apply (fastforce dest: valid_objs_valid_sched_context_size
                    simp: obj_at_def is_sc_obj_def refill_map_def)
@@ -3991,7 +3991,7 @@ lemma refillBudgetCheckRoundRobin_corres:
   apply (subst is_active_sc_rewrite)
   apply (clarsimp simp: refill_budget_check_round_robin_def refillBudgetCheckRoundRobin_def)
   apply (rule corres_underlying_split[rotated 2, OF gets_sp getCurSc_sp])
-   apply (corressimp corres: getCurSc_corres)
+   apply (corresKsimp corres: getCurSc_corres)
   apply (rule_tac Q="\<lambda>s. is_active_sc' (ksCurSc s) s" in corres_cross_add_guard)
    apply (rule_tac ptr="ksCurSc s'" in is_active_sc'_cross[OF state_relation_pspace_relation]; simp)
    apply clarsimp
@@ -4111,7 +4111,7 @@ lemma nonOverlappingMergeRefills_corres:
               and Q'="\<lambda>_. valid_refills' scPtr and sc_at' scPtr"
                in corres_underlying_split
          ; (solves wpsimp)?)
-   apply (corressimp corres: refillPopHead_corres
+   apply (corresKsimp corres: refillPopHead_corres
                        simp: obj_at_def vs_all_heap_simps pred_map_simps sc_at_ppred_def)
   apply (subst update_refill_hd_comp)
   apply (rule corres_guard_imp)
@@ -4250,15 +4250,13 @@ lemma headInsufficientLoop_corres:
   apply (rule_tac Q="active_sc_at' scPtr" in corres_cross_add_guard)
    apply (fastforce dest: active_sc_at'_cross)
   apply (rule corres_whileLoop_abs; simp?)
-       apply (frule head_insufficient_equiv[where scPtr=scPtr]; simp?)
-       apply (fastforce intro: refills_unat_sum_MIN_BUDGET_implies_non_empty_refills)
-      apply (corressimp corres: nonOverlappingMergeRefills_corres)
-      apply (fastforce dest: head_insufficient_length_at_least_two)
-     apply (wpsimp wp: non_overlapping_merge_refills_no_fail)
-     apply (fastforce intro!: refills_unat_sum_MIN_BUDGET_implies_non_empty_refills sc_atD1
-                        simp: obj_at_def)
-    apply (wpsimp wp: non_overlapping_merge_refills_refills_unat_sum_lower_bound
-                      non_overlapping_merge_refills_refills_unat_sum)
+      apply (frule head_insufficient_equiv[where scPtr=scPtr]; simp?)
+      apply (fastforce intro: refills_unat_sum_MIN_BUDGET_implies_non_empty_refills)
+     apply (corresKsimp corres: nonOverlappingMergeRefills_corres)
+     apply (fastforce dest: head_insufficient_length_at_least_two)
+    apply (wpsimp wp: non_overlapping_merge_refills_no_fail)
+     apply (wpsimp wp: non_overlapping_merge_refills_refills_unat_sum_lower_bound
+                       non_overlapping_merge_refills_refills_unat_sum)
     apply (fastforce dest: head_insufficient_length_greater_than_one)
    apply (wpsimp wp: nonOverlappingMergeRefills_valid_objs')
   apply (fastforce intro!: non_overlapping_merge_refills_terminates)
@@ -4286,8 +4284,8 @@ lemma refillFull_corres:
    apply (fastforce intro: sc_at_cross)
   apply (clarsimp simp: refill_full_def refillFull_def)
   apply (rule corres_underlying_split[rotated 2, OF get_sched_context_sp get_sc_sp'])
-   apply (corressimp corres: get_sc_corres)
-  apply (corressimp corres: corres_return_eq_same)
+   apply (corresKsimp corres: get_sc_corres)
+  apply (corresKsimp corres: corres_return_eq_same)
   apply (fastforce simp: sc_relation_def obj_at_simps valid_refills'_def opt_map_red opt_pred_def)
   done
 
@@ -4303,7 +4301,7 @@ lemma scheduleUsed_corres:
   apply (rule_tac Q="is_active_sc' scPtr" in corres_cross_add_guard)
    apply (fastforce intro: is_active_sc'_cross)
   apply (rule corres_underlying_split[rotated 2, OF get_sched_context_sp get_sc_sp'])
-   apply (corressimp corres: get_sc_corres)
+   apply (corresKsimp corres: get_sc_corres)
   apply (rename_tac sc sc')
   apply (rule corres_symb_exec_r[rotated, OF assert_sp]; (solves wpsimp)?)
    apply wpsimp
@@ -4314,21 +4312,21 @@ lemma scheduleUsed_corres:
    apply (fastforce dest: length_sc_refills_cross[where P="\<lambda>l. 0 = l"]
                     simp: valid_refills'_def obj_at_simps opt_map_red opt_pred_def)
   apply (rule corres_if_split; (solves simp)?)
-   apply (corressimp corres: refillAddTail_corres simp: refill_map_def)
+   apply (corresKsimp corres: refillAddTail_corres simp: refill_map_def)
    apply (clarsimp simp: valid_refills'_def obj_at_simps opt_map_red opt_pred_def)
   apply (rule_tac F="sc_valid_refills' sc'" in corres_req)
    apply (clarsimp simp: valid_refills'_def obj_at_simps opt_map_red opt_pred_def)
   apply (rule corres_if_split; (solves simp)?)
     apply (fastforce dest: refills_tl_equal
                      simp: refill_map_def can_merge_refill_def)
-   apply (corressimp corres: updateRefillTl_corres
+   apply (corresKsimp corres: updateRefillTl_corres
                        simp: refill_map_def)
   apply (rule corres_underlying_split[rotated 2, OF refill_full_sp refillFull_sp])
-   apply (corressimp corres: refillFull_corres)
+   apply (corresKsimp corres: refillFull_corres)
   apply (rule corres_if_split; (solves simp)?)
-   apply (corressimp corres: refillAddTail_corres)
+   apply (corresKsimp corres: refillAddTail_corres)
    apply (clarsimp simp: refill_map_def obj_at_simps opt_map_red opt_pred_def)
-  apply (corressimp corres: updateRefillTl_corres simp: refill_map_def)
+  apply (corresKsimp corres: updateRefillTl_corres simp: refill_map_def)
   done
 
 lemma head_time_buffer_simp:
@@ -4403,18 +4401,18 @@ lemma handleOverrunLoopBody_corres:
    apply (fastforce intro: is_active_sc'_cross simp: state_relation_def)
   apply (clarsimp simp: handle_overrun_loop_body_def handleOverrunLoopBody_def)
   apply (rule corres_underlying_split[rotated 2, OF gets_sp getCurSc_sp])
-   apply (corressimp corres: getCurSc_corres)
+   apply (corresKsimp corres: getCurSc_corres)
   apply (rule corres_underlying_split[rotated 2, OF refill_single_sp refillSingle_sp])
-   apply (corressimp corres: refillSingle_corres)
+   apply (corresKsimp corres: refillSingle_corres)
    apply (fastforce simp: obj_at_simps valid_refills'_def opt_map_red opt_pred_def)
   apply (rule corres_underlying_split[rotated 2, OF get_sched_context_sp get_sc_sp'])
-   apply (corressimp corres: get_sc_corres)
+   apply (corresKsimp corres: get_sc_corres)
   apply (rename_tac sc sc')
   apply (rule_tac Q="\<lambda>_ s. sc_refills sc \<noteq> []"
               and Q'="\<lambda>_ _. sc_valid_refills' sc'"
               and r'=dc
                in corres_underlying_split[rotated])
-     apply corressimp
+     apply corresKsimp
      apply (fastforce dest: refill_hd_relation simp: refill_map_def)
     apply (wpsimp simp: update_refill_hd_def
                     wp: update_sched_context_wp)
@@ -4422,7 +4420,7 @@ lemma handleOverrunLoopBody_corres:
    apply wpsimp
    apply (clarsimp simp: valid_refills'_def obj_at_simps opt_map_red opt_pred_def)
   apply (rule corres_if_split; simp?)
-   apply (corressimp corres: updateRefillHd_corres)
+   apply (corresKsimp corres: updateRefillHd_corres)
    apply (fastforce simp: refill_map_def sc_relation_def)
   apply (rule_tac F="1 < scRefillCount sc'" in corres_req)
    apply (frule_tac scp="scPtr" and P="\<lambda>l. 1 < l" in length_sc_refills_cross)
@@ -4592,11 +4590,9 @@ lemma handleOverrunLoop_corres:
    apply (fastforce intro: is_active_sc'_cross simp: state_relation_def)
   apply (clarsimp simp: handle_overrun_loop_def handleOverrunLoop_def runReaderT_def)
   apply (rule corres_whileLoop_abs; simp?)
-       apply (frule_tac usage=r' in head_time_buffer_equiv; simp?)
-       apply fastforce
-      apply (corressimp corres: handleOverrunLoopBody_corres)
-     apply (wpsimp wp: handle_overrun_loop_body_no_fail)
-     apply (clarsimp simp: vs_all_heap_simps)
+      apply (frule_tac usage=r' in head_time_buffer_equiv; simp?)
+      apply fastforce
+     apply (corresKsimp corres: handleOverrunLoopBody_corres)
     apply (wps_conj_solves wp: handle_overrun_loop_body_non_zero_refills
                                 handle_overrun_loop_body_refills_unat_sum_equals_budget)
    apply wps_conj_solves
@@ -4637,13 +4633,13 @@ lemma refillBudgetCheck_corres:
 
   apply (clarsimp simp: refill_budget_check_def refillBudgetCheck_def)
   apply (rule corres_underlying_split[rotated 2, OF gets_sp getCurSc_sp])
-   apply (corressimp corres: getCurSc_corres)
+   apply (corresKsimp corres: getCurSc_corres)
   apply (rule corres_symb_exec_r[rotated, OF scActive_sp]; (solves \<open>wpsimp simp: scActive_def\<close>)?)
   apply (rule corres_symb_exec_r[rotated, OF assert_sp]; (solves wpsimp)?)
    apply (wpsimp wp: no_fail_assert
                simp: is_active_sc'_def opt_map_red opt_pred_def obj_at_simps)
   apply (rule corres_underlying_split[rotated 2, OF is_round_robin_sp isRoundRobin_sp])
-   apply (corressimp corres: isRoundRobin_corres)
+   apply (corresKsimp corres: isRoundRobin_corres)
   apply (rule corres_symb_exec_l[rotated, OF _  assert_sp]; (solves wpsimp)?)
   apply (rule_tac F="\<not>roundRobin" in corres_req)
    apply clarsimp
@@ -4664,7 +4660,7 @@ lemma refillBudgetCheck_corres:
                                             (sc_refill_cfgs_of s) sc_ptr"
                and Q'="\<lambda>_ s'. valid_refills' scPtr s' \<and> active_sc_at' scPtr s' \<and> scPtr = ksCurSc s'"
                in corres_underlying_split)
-     apply (corressimp corres: handleOverrunLoop_corres)
+     apply (corresKsimp corres: handleOverrunLoop_corres)
      apply (fastforce intro: valid_refills_refills_unat_sum_equals_budget
                        simp: vs_all_heap_simps cfg_valid_refills_def round_robin_def
                              sp_valid_refills_def is_active_sc_rewrite[symmetric])
@@ -4687,7 +4683,7 @@ lemma refillBudgetCheck_corres:
 
   apply (clarsimp simp: get_refills_def)
   apply (rule corres_underlying_split[rotated 2, OF get_sched_context_sp get_sc_sp'])
-   apply (corressimp corres: get_sc_corres
+   apply (corresKsimp corres: get_sc_corres
                        simp: state_relation_def active_sc_at'_def obj_at_simps)
   apply (rename_tac sc sc')
   apply (rule_tac Q="\<lambda>_ s. ?P s
@@ -4700,7 +4696,7 @@ lemma refillBudgetCheck_corres:
               and Q'="\<lambda>_ s'. valid_refills' scPtr s' \<and> active_sc_at' scPtr s' \<and> scPtr = ksCurSc s'"
               and r'=dc
                in corres_underlying_split[rotated])
-     apply (corressimp corres: headInsufficientLoop_corres)
+     apply (corresKsimp corres: headInsufficientLoop_corres)
      apply (fastforce simp: vs_all_heap_simps word_le_nat_alt)
     apply (intro hoare_vcg_conj_lift_pre_fix; (solves wpsimp)?)
        apply schedule_used_simple
@@ -4801,10 +4797,10 @@ lemma commitTime_corres:
    apply (fastforce intro: sc_at_cross simp: state_relation_def)
   apply (clarsimp simp: commit_time_def commitTime_def liftM_def)
   apply (rule corres_underlying_split[rotated 2, OF gets_sp getCurSc_sp])
-   apply (corressimp corres: getCurSc_corres)
+   apply (corresKsimp corres: getCurSc_corres)
   apply clarsimp
   apply (rule corres_underlying_split[rotated 2, OF get_sched_context_sp get_sc_sp'])
-   apply (corressimp corres: get_sc_corres)
+   apply (corresKsimp corres: get_sc_corres)
   apply (rule corres_symb_exec_r[rotated, OF getIdleSC_sp])
     apply wpsimp
    apply (wpsimp simp: getIdleSC_def)
@@ -4820,7 +4816,7 @@ lemma commitTime_corres:
   apply (rule corres_if_split; fastforce?)
    apply (fastforce simp: sc_relation_def active_sc_def)
   apply (rule corres_underlying_split[rotated 2, OF gets_sp getConsumedTime_sp])
-   apply corressimp
+   apply corresKsimp
   apply clarsimp
   apply (rename_tac consumed)
   apply (rule_tac Q="\<lambda>_ s. sc_at (cur_sc s) s \<and> csc = cur_sc s"
@@ -4851,8 +4847,8 @@ lemma commitTime_corres:
        apply (wpsimp simp: isRoundRobin_def | wps)+
   apply (clarsimp simp: ifM_def split: if_split)
   apply (rule corres_underlying_split[rotated 2, OF is_round_robin_sp isRoundRobin_sp])
-   apply (corressimp corres: isRoundRobin_corres)
-  apply (corressimp corres: refillBudgetCheckRoundRobin_corres refillBudgetCheck_corres)
+   apply (corresKsimp corres: isRoundRobin_corres)
+  apply (corresKsimp corres: refillBudgetCheckRoundRobin_corres refillBudgetCheck_corres)
   apply (fastforce simp: vs_all_heap_simps is_sc_obj_def obj_at_simps sc_relation_def
                          is_active_sc'_def opt_map_red opt_pred_def active_sc_def)
   done
@@ -4871,10 +4867,10 @@ lemma switchSchedContext_corres:
   apply add_cur_tcb'
   apply (clarsimp simp: switch_sched_context_def switchSchedContext_def)
   apply (rule corres_underlying_split[rotated 2, OF gets_sp getCurSc_sp])
-   apply (corressimp corres: getCurSc_corres)
+   apply (corresKsimp corres: getCurSc_corres)
   apply (clarsimp, rename_tac curScPtr)
   apply (rule corres_underlying_split[rotated 2, OF gets_sp getCurThread_sp])
-   apply corressimp
+   apply corresKsimp
   apply (clarsimp, rename_tac ct)
   apply (rule corres_underlying_split[rotated 2, OF gsc_sp threadGet_sp, where r'="(=)"])
    apply (rule corres_guard_imp)
@@ -4905,19 +4901,19 @@ lemma switchSchedContext_corres:
          (solves wpsimp)?)
     apply (clarsimp simp: when_def)
     apply (rule corres_split_skip; (solves \<open>wpsimp wp: hoare_vcg_ex_lift\<close>)?)
-     apply (corressimp corres: setReprogramTimer_corres)
-    apply (corressimp corres: ifCondRefillUnblockCheck_corres)
+     apply (corresKsimp corres: setReprogramTimer_corres)
+    apply (corresKsimp corres: ifCondRefillUnblockCheck_corres)
     apply (fastforce intro: valid_objs'_valid_refills' sc_at_cross is_active_sc'2_cross
                             valid_sched_context_size_objsI
                       simp: obj_at_def pred_tcb_at_def vs_all_heap_simps is_sc_obj_def opt_map_red
                             opt_pred_def)
    apply (rule corres_split_skip; (solves wpsimp)?)
-    apply (corressimp corres: getReprogramTimer_corres)
+    apply (corresKsimp corres: getReprogramTimer_corres)
    apply (rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and r'=dc in corres_underlying_split; (solves wpsimp)?)
-    apply (corressimp corres: commitTime_corres)
+    apply (corresKsimp corres: commitTime_corres)
     apply (fastforce intro!: valid_objs'_valid_refills' sc_at_cross
                        simp: state_relation_def)
-   apply (corressimp corres: setCurSc_corres)
+   apply (corresKsimp corres: setCurSc_corres)
   apply (wpsimp wp: hoare_vcg_imp_lift' | wps)+
   apply (fastforce intro: valid_sched_context_size_objsI active_sc_valid_refillsE
                     simp: obj_at_def is_sc_obj_def)
@@ -5014,26 +5010,26 @@ lemma schedule_corres:
      apply (wpsimp wp: awaken_valid_sched hoare_vcg_imp_lift')
      apply fastforce
     apply (wpsimp wp: awaken_invs')
-   apply (corressimp corres: awaken_corres)
+   apply (corresKsimp corres: awaken_corres)
    apply (fastforce intro: weak_sch_act_wf_at_cross
                      simp: invs_def valid_state_def)
   apply (rule corres_split_skip)
      apply (wpsimp wp: hoare_vcg_imp_lift' cur_sc_active_lift)
     apply wpsimp
-   apply (corressimp corres: checkDomainTime_corres)
+   apply (corresKsimp corres: checkDomainTime_corres)
    apply (fastforce intro: weak_sch_act_wf_at_cross
                      simp: invs_def valid_state_def)
   apply (rule corres_underlying_split[rotated 2, OF gets_sp getCurThread_sp])
-   apply corressimp
+   apply corresKsimp
   apply (rule corres_underlying_split[rotated 2, OF is_schedulable_sp' isSchedulable_sp])
-   apply (corressimp corres: isSchedulable_corres)
+   apply (corresKsimp corres: isSchedulable_corres)
    apply (fastforce intro: weak_sch_act_wf_at_cross
                      simp: invs_def valid_state_def state_relation_def cur_tcb_def)
   apply (rule corres_underlying_split[rotated 2, OF gets_sp getSchedulerAction_sp])
-   apply (corressimp corres: getSchedulerAction_corres)
+   apply (corresKsimp corres: getSchedulerAction_corres)
 
   apply (case_tac "action = resume_cur_thread"; clarsimp)
-   apply (corressimp corres: scAndTimer_corres)
+   apply (corresKsimp corres: scAndTimer_corres)
    subgoal by (fastforce intro: valid_sched_context_size_objsI
                           dest: schact_is_rct_ct_active_sc
                           simp: invs_def cur_sc_tcb_def sc_at_pred_n_def obj_at_def is_sc_obj_def
@@ -5101,12 +5097,12 @@ lemma schedule_corres:
     apply (clarsimp simp: invs'_def isSchedulable_bool_def st_tcb_at'_def pred_map_simps
                           obj_at_simps vs_all_heap_simps cur_tcb'_def
                    elim!: opt_mapE)
-   apply (corressimp corres: tcbSchedEnqueue_corres)
+   apply (corresKsimp corres: tcbSchedEnqueue_corres)
    apply (fastforce dest: invs_cur
                     simp: cur_tcb_def)
 
   apply (rule corres_underlying_split[rotated 2, OF gets_sp getIdleThread_sp])
-   apply corressimp
+   apply corresKsimp
   apply (rule corres_underlying_split[rotated 2, OF thread_get_sp threadGet_sp, where r'="(=)"])
    apply (rule corres_guard_imp)
      apply (rule threadGet_corres)
@@ -5142,15 +5138,15 @@ lemma schedule_corres:
 
   apply (rule corres_underlying_split[rotated 2, OF schedule_switch_thread_fastfail_inv
                                           scheduleSwitchThreadFastfail_inv])
-   apply (corressimp corres: scheduleSwitchThreadFastfail_corres)
+   apply (corresKsimp corres: scheduleSwitchThreadFastfail_corres)
    apply (fastforce dest: invs_cur
                     simp: cur_tcb_def obj_at_def is_tcb_def state_relation_def cur_tcb'_def)
   apply (rule corres_underlying_split[rotated 2, OF gets_sp curDomain_sp])
-   apply (corressimp corres: curDomain_corres)
+   apply (corresKsimp corres: curDomain_corres)
   apply (clarsimp simp: isHighestPrio_def' split del: if_split)
 
   apply (rule corres_underlying_split[rotated 2, OF gets_sp gets_sp, where r'="(=)"])
-   apply (corressimp corres: isHighestPrio_corres)
+   apply (corresKsimp corres: isHighestPrio_corres)
    apply (clarsimp simp: is_highest_prio_def)
    apply (subst bitmapL1_zero_ksReadyQueues)
      apply (fastforce dest: invs_queues simp: valid_queues_def)

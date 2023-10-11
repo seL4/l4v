@@ -298,13 +298,13 @@ lemma install_tcb_frame_cap_invs:
    \<comment> \<open>non-exception case\<close>
    apply wpsimp
      apply (wpsimp wp: checked_insert_tcb_invs[where ref="tcb_cnode_index 2"])
-    apply (wpsimp wp: hoare_vcg_all_lift static_imp_wp
+    apply (wpsimp wp: hoare_vcg_all_lift hoare_weak_lift_imp
                       thread_set_tcb_ipc_buffer_cap_cleared_invs
                       thread_set_cte_wp_at_trivial[where Q="\<lambda>x. x", OF ball_tcb_cap_casesI]
                       thread_set_ipc_tcb_cap_valid)
    apply((wpsimp wp: cap_delete_deletes
              hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R hoare_vcg_all_lift
-             static_imp_wp static_imp_conj_wp
+             hoare_weak_lift_imp hoare_weak_lift_imp_conj
            | strengthen use_no_cap_to_obj_asid_strg
            | wp cap_delete_ep)+)[1]
   by (clarsimp simp: is_cap_simps' valid_fault_handler_def is_cnode_or_valid_arch_def)

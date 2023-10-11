@@ -169,7 +169,7 @@ lemma perform_asid_control_invocation_bound_sc_obj_tcb_at[wp]:
 crunches perform_asid_control_invocation
   for idle_thread[wp]: "\<lambda>s. P (idle_thread s)"
   and valid_blocked[wp]: "valid_blocked"
-  (wp: static_imp_wp)
+  (wp: hoare_weak_lift_imp)
 
 crunches perform_asid_control_invocation
   for rqueues[wp]: "\<lambda>s. P (ready_queues s)"

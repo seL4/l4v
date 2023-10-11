@@ -1260,7 +1260,7 @@ lemma replyPop_corres:
                                                         loadObject_default_def RISCV64_H.fromPPtr_def
                                                  split: if_split_asm option.split_asm
                                                  dest!: readObject_misc_ko_at')
-                                  apply (prop_tac "ksPSpace s'(rp \<mapsto>
+                                  apply (prop_tac "(ksPSpace s')(rp \<mapsto>
                                                           KOReply (replyNext_update Map.empty reply))
                                                    = ksPSpace s'")
                                    apply (rule ext)
@@ -2474,7 +2474,7 @@ crunches cancelSignal, cleanReply
 
 lemma tcbFault_update_valid_queues:
   "\<lbrakk>ko_at' tcb t s; valid_queues s\<rbrakk>
-   \<Longrightarrow> valid_queues (s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbFault_update Map.empty tcb))\<rparr>)"
+   \<Longrightarrow> valid_queues (s\<lparr>ksPSpace := (ksPSpace s)(t \<mapsto> KOTCB (tcbFault_update Map.empty tcb))\<rparr>)"
    by (fastforce simp: valid_queues_def valid_queues_no_bitmap_def valid_bitmapQ_def bitmapQ_def
                        bitmapQ_no_L2_orphans_def bitmapQ_no_L1_orphans_def obj_at'_def
                         inQ_def objBitsKO_def)
@@ -2547,7 +2547,7 @@ lemma (in delete_one_conc_pre) suspend_nonq:
   apply (simp add: suspend_def unless_def)
   unfolding updateRestartPC_def
   apply (wpsimp wp: hoare_allI tcbSchedDequeue_t_notksQ sts_ksQ_oaQ hoare_vcg_imp_lift
-                    hoare_disjI2[where Q="\<lambda>_. valid_queues"])
+                    hoare_disjI2[where R="\<lambda>_. valid_queues"])
   done
 
 lemma suspend_makes_inactive:
@@ -2585,7 +2585,7 @@ lemma updateSchedContext_valid_tcbs'[wp]:
 lemma valid_refills'_tcbQueued_update[simp]:
   "scp \<noteq> t \<Longrightarrow>
    valid_refills' scp
-            (s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbQueued_update (\<lambda>_. True) tcb))\<rparr>)
+            (s\<lparr>ksPSpace := (ksPSpace s)(t \<mapsto> KOTCB (tcbQueued_update (\<lambda>_. True) tcb))\<rparr>)
    = valid_refills' scp s"
   by (clarsimp simp: valid_refills'_def opt_pred_def)
 
@@ -2740,7 +2740,7 @@ lemma cancelAllIPC_corres_helper:
                                 st = Structures_A.thread_state.BlockedOnReceive ep r_opt pl")
                apply (clarsimp simp: when_def split: option.splits)
                apply (intro conjI impI allI; clarsimp simp: isReceive_def)
-                apply (corressimp corres: restart_thread_if_no_fault_corres)
+                apply (corresKsimp corres: restart_thread_if_no_fault_corres)
                 apply (clarsimp simp: pred_tcb_at_def obj_at_def is_tcb valid_sched_def)
                apply (rule corres_guard_imp)
                  apply (rule corres_split[OF replyUnlinkTcb_corres])
@@ -2757,7 +2757,7 @@ lemma cancelAllIPC_corres_helper:
                apply (case_tac st; clarsimp simp: isReceive_def)
               apply (case_tac st;
                      clarsimp simp: isReceive_def;
-                     (corressimp corres: restart_thread_if_no_fault_corres,
+                     (corresKsimp corres: restart_thread_if_no_fault_corres,
                       fastforce simp: obj_at_def))
              apply (wpsimp wp: gts_wp)
             apply (wpsimp wp: gts_wp')

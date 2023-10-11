@@ -369,7 +369,7 @@ lemma getObject_ASIDPool_corres':
   "corres (\<lambda>p p'. p = inv ASIDPool p' o ucast)
           (asid_pool_at p) (pspace_aligned' and pspace_distinct')
           (get_asid_pool p) (getObject p)"
-  by (corressimp search: getObject_ASIDPool_corres) fastforce
+  by (corresKsimp search: getObject_ASIDPool_corres) fastforce
 
 lemma setObject_asidpool_replies_of'[wp]:
   "setObject c (asidpool::asidpool) \<lbrace>\<lambda>s. P' (replies_of' s)\<rbrace>"

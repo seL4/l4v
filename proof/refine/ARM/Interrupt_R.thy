@@ -676,7 +676,7 @@ lemma handleInterrupt_corres:
             apply ((wp | simp)+)
     apply clarsimp
    apply fastforce
-  apply (corressimp corres: corres_machine_op reprogram_timer_corres
+  apply (corresKsimp corres: corres_machine_op reprogram_timer_corres
                       simp: ackDeadlineIRQ_def)
   done
 

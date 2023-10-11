@@ -3619,7 +3619,7 @@ lemma valid_bound_tcb_typ_at:
   "\<forall>p. \<lbrace>\<lambda>s. typ_at ATCB p s\<rbrace> f \<lbrace>\<lambda>_ s. typ_at ATCB p s\<rbrace>
    \<Longrightarrow> \<lbrace>\<lambda>s. valid_bound_tcb tcb s\<rbrace> f \<lbrace>\<lambda>_ s. valid_bound_tcb tcb s\<rbrace>"
   apply (clarsimp simp: valid_bound_obj_def split: option.splits)
-  apply (wpsimp wp: hoare_vcg_all_lift tcb_at_typ_at static_imp_wp)
+  apply (wpsimp wp: hoare_vcg_all_lift tcb_at_typ_at hoare_weak_lift_imp)
   done
 
 lemma valid_idle_lift:

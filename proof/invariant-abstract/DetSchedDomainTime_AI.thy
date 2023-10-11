@@ -253,7 +253,7 @@ crunch domain_list[wp]: maybe_donate_sc "\<lambda>s :: det_state. P (domain_list
   (wp: crunch_wps)
 
 crunch domain_list_inv[wp]: send_signal "\<lambda>s::det_state. P (domain_list s)"
-  (wp: hoare_drop_imps mapM_x_wp_inv select_wp maybeM_inv simp: crunch_simps unless_def)
+  (wp: hoare_drop_imps mapM_x_wp_inv maybeM_inv simp: crunch_simps unless_def)
 
 crunch domain_list_inv[wp]: lookup_reply,lookup_cap "\<lambda>s::det_state. P (domain_list s)"
 

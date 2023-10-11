@@ -139,7 +139,7 @@ lemma valid_cap_same_type:
 lemma typ_at_foldl:
   "foldl (\<and>) True (map (\<lambda>r. typ_at T r s) xs) \<Longrightarrow>
    a_type k = a_type ko \<Longrightarrow> kheap s p = Some ko \<Longrightarrow>
-   foldl (\<and>) True (map (\<lambda>r. typ_at T r (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)) xs)"
+   foldl (\<and>) True (map (\<lambda>r. typ_at T r (s\<lparr>kheap := (kheap s)(p \<mapsto> k)\<rparr>)) xs)"
   apply (induct xs)
    apply (auto simp: foldl_conj_Cons typ_at_same_type
            simp del: foldl_Cons)
@@ -176,7 +176,7 @@ lemma valid_obj_same_type:
 
 lemma valid_objs_same_type:
   "\<lbrakk>valid_objs s; obj_at (\<lambda>ko'. a_type ko' = a_type ko) ptr s; valid_obj ptr ko s\<rbrakk>
-      \<Longrightarrow> valid_objs (s\<lparr>kheap := kheap s(ptr \<mapsto> ko)\<rparr>)"
+      \<Longrightarrow> valid_objs (s\<lparr>kheap := (kheap s)(ptr \<mapsto> ko)\<rparr>)"
   apply (clarsimp simp: valid_objs_def dom_def elim!: obj_atE)
   apply (intro conjI impI)
    apply (rule valid_obj_same_type)
@@ -342,12 +342,12 @@ lemma set_object_cte_at:
   by (wpsimp wp: set_object_wp_strong simp: obj_at_def cte_at_same_type)
 
 lemma obj_at_update:
-  "obj_at P t' (s \<lparr>kheap := kheap s (t \<mapsto> v)\<rparr>) =
+  "obj_at P t' (s \<lparr>kheap := (kheap s)(t \<mapsto> v)\<rparr>) =
   (if t = t' then P v else obj_at P t' s)"
   by (simp add: obj_at_def)
 
 lemma obj_at_update':
-  "p \<noteq> q \<Longrightarrow> obj_at P t (s \<lparr>kheap := kheap s (p \<mapsto> v, q \<mapsto> w)\<rparr>) =
+  "p \<noteq> q \<Longrightarrow> obj_at P t (s \<lparr>kheap := (kheap s)(p \<mapsto> v, q \<mapsto> w)\<rparr>) =
   (if p = t then P v
    else if q = t then P w
    else obj_at P t s)"
@@ -381,7 +381,7 @@ lemmas inj_simple_kos[simp, intro!] =
   inj_Endpoint inj_Notification inj_Reply
 
 lemma set_simple_ko_wp:
-  "\<lbrace> \<lambda>s. inj C \<and> (simple_obj_at C \<top> p s \<longrightarrow> Q (s\<lparr>kheap := kheap s(p \<mapsto> C r)\<rparr>)) \<rbrace>
+  "\<lbrace> \<lambda>s. inj C \<and> (simple_obj_at C \<top> p s \<longrightarrow> Q (s\<lparr>kheap := (kheap s)(p \<mapsto> C r)\<rparr>)) \<rbrace>
     set_simple_ko C p r
    \<lbrace> \<lambda>rv. Q \<rbrace>"
   apply (wpsimp simp: simple_obj_at_def set_simple_ko_def wp: set_object_wp get_object_wp)
@@ -405,7 +405,7 @@ lemma get_sk_obj_ref_sp:
   by (wpsimp wp: get_sk_obj_ref_wp simp: obj_at_def sk_obj_at_pred_def) blast
 
 lemma update_sk_obj_ref_wp:
-  "\<lbrace> \<lambda>s. inj C \<and> (\<forall>obj. ko_at (C obj) p s \<longrightarrow> Q (s\<lparr>kheap := kheap s(p \<mapsto> C (f (K v) obj))\<rparr>)) \<rbrace>
+  "\<lbrace> \<lambda>s. inj C \<and> (\<forall>obj. ko_at (C obj) p s \<longrightarrow> Q (s\<lparr>kheap := (kheap s)(p \<mapsto> C (f (K v) obj))\<rparr>)) \<rbrace>
     update_sk_obj_ref C f p v
    \<lbrace> \<lambda>rv. Q \<rbrace>"
   by (wpsimp simp: update_sk_obj_ref_def wp: set_simple_ko_wp get_simple_ko_wp)
@@ -1032,7 +1032,7 @@ lemma set_simple_ko_tcb[wp]:
   by (simp add: tcb_at_typ) wp
 
 lemma set_simple_ko_wp':
-  "\<lbrace> \<lambda>s. Q (s\<lparr>kheap := kheap s(p \<mapsto> C r)\<rparr>) \<rbrace>
+  "\<lbrace> \<lambda>s. Q (s\<lparr>kheap := (kheap s)(p \<mapsto> C r)\<rparr>) \<rbrace>
     set_simple_ko C p r
    \<lbrace> \<lambda>rv. Q \<rbrace>"
   by (wpsimp simp: simple_obj_at_def set_simple_ko_def wp: set_object_wp get_object_wp)
@@ -2310,7 +2310,7 @@ lemma get_sc_obj_ref_wp:
 
 lemma update_sched_context_wp:
   "\<lbrace> \<lambda>s. \<forall>sc n. ko_at (SchedContext sc n) sc_ptr s
-                \<longrightarrow> Q (s\<lparr>kheap := kheap s(sc_ptr \<mapsto> SchedContext (f sc) n)\<rparr>) \<rbrace>
+                \<longrightarrow> Q (s\<lparr>kheap := (kheap s)(sc_ptr \<mapsto> SchedContext (f sc) n)\<rparr>) \<rbrace>
    update_sched_context sc_ptr f
    \<lbrace> \<lambda>rv. Q \<rbrace>"
   by (wpsimp simp: update_sched_context_def wp: set_object_wp get_object_wp)
@@ -2324,7 +2324,7 @@ lemma update_sched_context_obj_at_trivial:
 
 lemma set_tcb_obj_ref_wp:
   "\<lbrace>\<lambda>s. \<forall>tcb. ko_at (TCB tcb) t s
-                \<longrightarrow> Q (s\<lparr>kheap := kheap s(t \<mapsto> TCB (f (K v) tcb))\<rparr>)\<rbrace>
+                \<longrightarrow> Q (s\<lparr>kheap := (kheap s)(t \<mapsto> TCB (f (K v) tcb))\<rparr>)\<rbrace>
     set_tcb_obj_ref f t v
    \<lbrace>\<lambda>rv. Q\<rbrace>"
   by (wpsimp simp: set_tcb_obj_ref_def wp: set_object_wp)
@@ -2503,7 +2503,7 @@ lemma set_aobject_valid_idle[wp]:
 lemma state_refs_of_tcb_fault_update:
   "ko_at (TCB tcb) thread s \<Longrightarrow>
       state_refs_of
-              (s\<lparr>kheap := kheap s(thread \<mapsto>
+              (s\<lparr>kheap := (kheap s)(thread \<mapsto>
                    TCB (tcb_fault_update Map.empty tcb))\<rparr>) = state_refs_of s"
   by (clarsimp simp: state_refs_of_def get_refs_def2 refs_of_def obj_at_def is_tcb
               split: option.split intro!: ext)
@@ -2511,21 +2511,21 @@ lemma state_refs_of_tcb_fault_update:
 lemma replies_with_sc_tcb_fault_update:
   "ko_at (TCB tcb) thread s \<Longrightarrow>
       replies_with_sc
-              (s\<lparr>kheap := kheap s(thread \<mapsto>
+              (s\<lparr>kheap := (kheap s)(thread \<mapsto>
                    TCB (tcb_fault_update Map.empty tcb))\<rparr>) = replies_with_sc s"
   by (auto simp: replies_with_sc_def get_refs_def2 refs_of_def obj_at_def sc_replies_sc_at_def)
 
 lemma replies_blocked_tcb_fault_update:
   "ko_at (TCB tcb) thread s \<Longrightarrow>
       replies_blocked
-              (s\<lparr>kheap := kheap s(thread \<mapsto>
+              (s\<lparr>kheap := (kheap s)(thread \<mapsto>
                    TCB (tcb_fault_update Map.empty tcb))\<rparr>) = replies_blocked s"
   by (auto simp: replies_blocked_def get_refs_def2 refs_of_def obj_at_def st_tcb_at_def)
 
 lemma valid_replies_tcb_fault_update:
   "ko_at (TCB tcb) thread s \<Longrightarrow>
       valid_replies
-              (s\<lparr>kheap := kheap s(thread \<mapsto>
+              (s\<lparr>kheap := (kheap s)(thread \<mapsto>
                    TCB (tcb_fault_update Map.empty tcb))\<rparr>) = valid_replies s"
   by (auto simp: get_refs_def2 refs_of_def obj_at_def sc_replies_sc_at_def
                  replies_with_sc_tcb_fault_update

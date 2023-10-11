@@ -7105,7 +7105,7 @@ next
              apply simp
              apply (wp make_zombie_invs' updateCap_cap_to'
                         updateCap_cte_wp_at_cases
-                        static_imp_wp)+
+                        hoare_weak_lift_imp)+
             apply clarsimp
             apply (drule_tac cap=a in cap_relation_removables,
                       clarsimp, assumption+)

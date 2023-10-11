@@ -1681,7 +1681,6 @@ lemma hw_invs'[wp]:
    apply (rename_tac readright; case_tac readright; (wp getNotification_wp |simp)+)
    apply (clarsimp simp: obj_at_simps isNotificationCap_def)
   by (wpsimp simp: lookupReply_def getCapReg_def
-               wp: hoare_vcg_conj_liftE
       | wp (once) hoare_drop_imps)+
      (clarsimp simp: obj_at_simps ct_in_state'_def pred_tcb_at'_def)
 
@@ -1955,7 +1954,7 @@ lemma chargeBudget_corres:
    apply (fastforce intro: cur_sc_tcb_sc_at_cur_sc)
   apply add_cur_tcb'
   apply (rule corres_underlying_split[rotated 2, OF gets_sp getCurSc_sp])
-   apply (corressimp corres: getCurSc_corres)
+   apply (corresKsimp corres: getCurSc_corres)
   apply (rule corres_symb_exec_r[rotated, OF getIdleSC_sp]; wpsimp simp: getIdleSC_def)
   apply (rule_tac F="idle_sc_ptr = idleSCPtr" in corres_req)
    apply (clarsimp simp: state_relation_def)
@@ -1963,7 +1962,7 @@ lemma chargeBudget_corres:
               and Q'="\<lambda>_. invs' and cur_tcb'"
                in corres_underlying_split)
      apply (clarsimp simp: when_def split del: if_split)
-     apply (rule corres_if_split; (solves corressimp)?)
+     apply (rule corres_if_split; (solves corresKsimp)?)
      apply (rule corres_guard_imp)
        apply (rule corres_split_eqr[OF isRoundRobin_corres])
          apply (rule corres_split[OF corres_if2], simp)

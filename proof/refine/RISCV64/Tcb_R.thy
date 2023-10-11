@@ -348,21 +348,21 @@ lemma invokeTCB_WriteRegisters_corres:
                    frameRegisters_def gpRegisters_def getSanitiseRegisterInfo_def
                    sanitiseRegister_def sanitise_register_def)
   apply (rule corres_underlying_split[rotated 2, OF gets_sp getCurThread_sp])
-   apply (corressimp corres: getCurThread_corres)
+   apply (corresKsimp corres: getCurThread_corres)
   apply (rule corres_split_skip; (solves wpsimp)?)
-   apply (corressimp corres: asUser_corres
+   apply (corresKsimp corres: asUser_corres
                        simp: zipWithM_mapM getRestartPC_def setNextPC_def
                          wp: no_fail_mapM no_fail_setRegister)
   apply (rule corres_split_skip; (solves wpsimp)?)
-   apply (corressimp corres: asUser_postModifyRegisters_corres[simplified])
+   apply (corresKsimp corres: asUser_postModifyRegisters_corres[simplified])
    apply fastforce
   apply (rule_tac Q="\<lambda>_. einvs" and Q'="\<lambda>_. invs'" in corres_underlying_split[rotated 2])
      apply (wpsimp wp: restart_valid_sched)
      using idle_no_ex_cap apply fastforce
     apply (wpsimp wp: restart_invs')
     using global'_no_ex_cap apply fastforce
-   apply (corressimp corres: restart_corres)
-  apply (corressimp corres: rescheduleRequired_corres)
+   apply (corresKsimp corres: restart_corres)
+  apply (corresKsimp corres: rescheduleRequired_corres)
   apply fastforce
   done
 

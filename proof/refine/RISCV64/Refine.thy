@@ -230,8 +230,8 @@ lemma kernel_entry_invs_det_ext:
    kernel_entry e us
    \<lbrace>\<lambda>_ s :: det_state. invs s \<and> (ct_running s \<or> ct_idle s)\<rbrace>"
   apply (simp add: kernel_entry_def)
-  apply (wp akernel_invs_det_ext thread_set_invs_trivial thread_set_ct_in_state select_wp
-            static_imp_wp hoare_vcg_disj_lift hoare_vcg_imp_lift'
+  apply (wp akernel_invs_det_ext thread_set_invs_trivial thread_set_ct_in_state
+            hoare_weak_lift_imp hoare_vcg_disj_lift hoare_vcg_imp_lift'
          | clarsimp simp add: tcb_cap_cases_def)+
   done
 
@@ -246,7 +246,7 @@ lemma kernel_entry_valid_sched:
    \<lbrace>\<lambda>_. valid_sched :: det_state \<Rightarrow> _\<rbrace>"
   apply (simp add: kernel_entry_def)
   apply (wp call_kernel_valid_sched thread_set_invs_trivial thread_set_ct_in_state
-            static_imp_wp hoare_vcg_disj_lift thread_set_not_state_valid_sched
+            hoare_weak_lift_imp hoare_vcg_disj_lift thread_set_not_state_valid_sched
          | clarsimp simp add: tcb_cap_cases_def)+
   done
 

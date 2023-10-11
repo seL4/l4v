@@ -968,7 +968,7 @@ lemma max_word_minus_1[simp]: "0xFFFFFFFF + 2^x = (2^x - 1::32 word)"
   by simp
 
 lemma ctes_of'_after_update:
-  "ko_wp_at' (same_caps' val) p s \<Longrightarrow> ctes_of (s\<lparr>ksPSpace := ksPSpace s(p \<mapsto> val)\<rparr>) x = ctes_of s x"
+  "ko_wp_at' (same_caps' val) p s \<Longrightarrow> ctes_of (s\<lparr>ksPSpace := (ksPSpace s)(p \<mapsto> val)\<rparr>) x = ctes_of s x"
   apply (clarsimp simp only: ko_wp_at'_def map_to_ctes_def Let_def)
   apply (rule if_cong)
     apply (cases val; fastforce split: if_splits)
@@ -981,7 +981,7 @@ lemma ctes_of'_after_update:
 
 lemma ex_cap_to'_after_update:
   "\<lbrakk> ex_nonz_cap_to' p s; ko_wp_at' (same_caps' val) p' s \<rbrakk>
-     \<Longrightarrow> ex_nonz_cap_to' p (s\<lparr>ksPSpace := ksPSpace s(p' \<mapsto> val)\<rparr>)"
+     \<Longrightarrow> ex_nonz_cap_to' p (s\<lparr>ksPSpace := (ksPSpace s)(p' \<mapsto> val)\<rparr>)"
   unfolding ex_nonz_cap_to'_def cte_wp_at_ctes_of
   using ctes_of'_after_update
   by fastforce
@@ -1247,7 +1247,7 @@ lemma obj_relation_cut_same_type:
 lemma replyNexts_of_non_reply_update:
   "\<And>s'. \<lbrakk>typ_at' (koTypeOf ko) ptr s';
    koTypeOf ko \<noteq> ReplyT \<rbrakk>
-     \<Longrightarrow> replyNexts_of (s'\<lparr>ksPSpace := ksPSpace s'(ptr \<mapsto> ko)\<rparr>) = replyNexts_of s'"
+     \<Longrightarrow> replyNexts_of (s'\<lparr>ksPSpace := (ksPSpace s')(ptr \<mapsto> ko)\<rparr>) = replyNexts_of s'"
   by (fastforce simp: typ_at'_def ko_wp_at'_def opt_map_def projectKO_opts_defs
                split: kernel_object.splits)
 
@@ -1261,14 +1261,14 @@ lemma replyNexts_of_replyNext_same_update:
   "\<And>s'. \<lbrakk>typ_at' ReplyT ptr s'; ksPSpace s' ptr = Some ko;
    koTypeOf (injectKO (ob':: 'a :: pspace_storable)) = ReplyT;
    projectKO_opt ko = Some ab; replyNext_same (ob':: 'a) ab\<rbrakk>
-     \<Longrightarrow> replyNexts_of (s'\<lparr>ksPSpace := ksPSpace s'(ptr \<mapsto> injectKO ob')\<rparr>) = replyNexts_of s'"
+     \<Longrightarrow> replyNexts_of (s'\<lparr>ksPSpace := (ksPSpace s')(ptr \<mapsto> injectKO ob')\<rparr>) = replyNexts_of s'"
   apply (cases "injectKO ob'"; clarsimp simp: typ_at'_def ko_wp_at'_def)
   by (cases ko; fastforce simp add: replyNext_same_def project_inject projectKO_opts_defs opt_map_def)
 
 lemma replyPrevs_of_non_reply_update:
   "\<And>s'. \<lbrakk>typ_at' (koTypeOf ko) ptr s';
    koTypeOf ko \<noteq> ReplyT \<rbrakk>
-     \<Longrightarrow> replyPrevs_of (s'\<lparr>ksPSpace := ksPSpace s'(ptr \<mapsto> ko)\<rparr>) = replyPrevs_of s'"
+     \<Longrightarrow> replyPrevs_of (s'\<lparr>ksPSpace := (ksPSpace s')(ptr \<mapsto> ko)\<rparr>) = replyPrevs_of s'"
   by (fastforce simp: typ_at'_def ko_wp_at'_def opt_map_def projectKO_opts_defs
                split: kernel_object.splits)
 
@@ -1282,7 +1282,7 @@ lemma replyPrevs_of_replyPrev_same_update:
   "\<And>s'. \<lbrakk>typ_at' ReplyT ptr s'; ksPSpace s' ptr = Some ko;
    koTypeOf (injectKO (ob':: 'a :: pspace_storable)) = ReplyT;
    projectKO_opt ko = Some ab; replyPrev_same (ob':: 'a) ab\<rbrakk>
-     \<Longrightarrow> replyPrevs_of (s'\<lparr>ksPSpace := ksPSpace s'(ptr \<mapsto> injectKO ob')\<rparr>) = replyPrevs_of s'"
+     \<Longrightarrow> replyPrevs_of (s'\<lparr>ksPSpace := (ksPSpace s')(ptr \<mapsto> injectKO ob')\<rparr>) = replyPrevs_of s'"
   apply (cases "injectKO ob'"; clarsimp simp: typ_at'_def ko_wp_at'_def)
   by (cases ko; fastforce simp add: replyPrev_same_def project_inject projectKO_opts_defs opt_map_def)
 
@@ -3208,14 +3208,14 @@ lemma obj_relation_cuts_obj_bits:
 
 lemma typ_at'_same_type:
   assumes "typ_at' T p s" "koTypeOf k = koTypeOf ko" "objBitsKO k = objBitsKO ko" "ksPSpace s p' = Some ko"
-  shows "typ_at' T p (s\<lparr>ksPSpace :=ksPSpace s(p' \<mapsto> k)\<rparr>)"
+  shows "typ_at' T p (s\<lparr>ksPSpace :=(ksPSpace s)(p' \<mapsto> k)\<rparr>)"
   using assms
   by (clarsimp simp: typ_at'_def ko_wp_at'_def ps_clear_upd)
 
 lemma cte_at'_same_type:
   "\<lbrakk>cte_wp_at' \<top> t s; koTypeOf k = koTypeOf ko;objBitsKO k = objBitsKO ko;
     ksPSpace s p = Some ko\<rbrakk>
-      \<Longrightarrow> cte_wp_at' \<top> t (s\<lparr>ksPSpace := ksPSpace s(p \<mapsto> k)\<rparr>)"
+      \<Longrightarrow> cte_wp_at' \<top> t (s\<lparr>ksPSpace := (ksPSpace s)(p \<mapsto> k)\<rparr>)"
   apply (simp add: cte_at_typ' typ_at'_same_type)
   apply (elim exE disjE)
    apply (rule disjI1, clarsimp simp: typ_at'_same_type)
@@ -3224,7 +3224,7 @@ lemma cte_at'_same_type:
 
 lemma valid_ep'_ep_update:
   "\<lbrakk> valid_objs' s; valid_ep' ep s; ep_at' epPtr s; ksPSpace s x = Some (KOEndpoint obj) \<rbrakk>
-     \<Longrightarrow> valid_ep' obj (s\<lparr>ksPSpace := ksPSpace s(epPtr \<mapsto> KOEndpoint ep)\<rparr>)"
+     \<Longrightarrow> valid_ep' obj (s\<lparr>ksPSpace := (ksPSpace s)(epPtr \<mapsto> KOEndpoint ep)\<rparr>)"
   apply (erule (1) valid_objsE')
   apply (fastforce simp: valid_objs'_def valid_obj'_def obj_at'_def projectKOs valid_ep'_def
                   split: endpoint.splits)
@@ -3232,7 +3232,7 @@ lemma valid_ep'_ep_update:
 
 lemma valid_cap'_ep_update:
   "\<lbrakk> valid_cap' cap s; valid_objs' s; valid_ep' ep s; ep_at' epPtr s \<rbrakk>
-     \<Longrightarrow> valid_cap' cap (s\<lparr>ksPSpace := ksPSpace s(epPtr \<mapsto> KOEndpoint ep)\<rparr>)"
+     \<Longrightarrow> valid_cap' cap (s\<lparr>ksPSpace := (ksPSpace s)(epPtr \<mapsto> KOEndpoint ep)\<rparr>)"
   supply ps_clear_upd[simp]
   apply (clarsimp simp: typ_at'_same_type ko_wp_at'_def cte_at'_same_type
                         valid_cap'_def obj_at'_def projectKOs objBits_simps
@@ -3257,7 +3257,7 @@ lemma valid_cap'_ep_update:
 
 lemma valid_cap'_reply_update:
   "\<lbrakk> valid_cap' cap s; valid_objs' s; valid_reply' reply s; reply_at' rptr s \<rbrakk>
-     \<Longrightarrow> valid_cap' cap (s\<lparr>ksPSpace := ksPSpace s(rptr \<mapsto> KOReply reply)\<rparr>)"
+     \<Longrightarrow> valid_cap' cap (s\<lparr>ksPSpace := (ksPSpace s)(rptr \<mapsto> KOReply reply)\<rparr>)"
   supply ps_clear_upd[simp]
   apply (clarsimp simp: typ_at'_same_type ko_wp_at'_def cte_at'_same_type
                         valid_cap'_def obj_at'_def projectKOs objBits_simps
@@ -3279,7 +3279,7 @@ lemma valid_cap'_reply_update:
 
 lemma valid_tcb_state'_ep_update:
   "\<lbrakk> valid_objs' s; valid_ep' ep s; ep_at' epPtr s;  ksPSpace s x = Some (KOTCB obj) \<rbrakk>
-     \<Longrightarrow> valid_tcb_state' (tcbState obj) (s\<lparr>ksPSpace := ksPSpace s(epPtr \<mapsto> KOEndpoint ep)\<rparr>)"
+     \<Longrightarrow> valid_tcb_state' (tcbState obj) (s\<lparr>ksPSpace := (ksPSpace s)(epPtr \<mapsto> KOEndpoint ep)\<rparr>)"
   apply (rule valid_objsE', simp, simp)
   by (fastforce simp: typ_at'_same_type ps_clear_upd objBits_simps valid_obj'_def projectKOs
                       valid_tcb_state'_def valid_bound_obj'_def valid_tcb'_def obj_at'_def
@@ -3287,7 +3287,7 @@ lemma valid_tcb_state'_ep_update:
 
 lemma valid_tcb_state'_reply_update:
   "\<lbrakk> valid_objs' s; valid_reply' reply s; reply_at' rptr s; ksPSpace s x = Some (KOTCB obj) \<rbrakk>
-     \<Longrightarrow> valid_tcb_state' (tcbState obj) (s\<lparr>ksPSpace := ksPSpace s(rptr \<mapsto> KOReply reply)\<rparr>)"
+     \<Longrightarrow> valid_tcb_state' (tcbState obj) (s\<lparr>ksPSpace := (ksPSpace s)(rptr \<mapsto> KOReply reply)\<rparr>)"
   apply (rule valid_objsE', simp, simp)
   by (fastforce simp: typ_at'_same_type ps_clear_upd objBits_simps valid_obj'_def projectKOs
                       valid_bound_obj'_def valid_tcb'_def valid_tcb_state'_def obj_at'_def
@@ -3295,7 +3295,7 @@ lemma valid_tcb_state'_reply_update:
 
 lemma valid_tcb'_ep_update:
   "\<lbrakk> valid_objs' s; valid_ep' ep s; ep_at' epPtr s; ksPSpace s x = Some (KOTCB obj) \<rbrakk>
-     \<Longrightarrow> valid_tcb' obj (s\<lparr>ksPSpace := ksPSpace s(epPtr \<mapsto> KOEndpoint ep)\<rparr>)"
+     \<Longrightarrow> valid_tcb' obj (s\<lparr>ksPSpace := (ksPSpace s)(epPtr \<mapsto> KOEndpoint ep)\<rparr>)"
   apply (rule valid_objsE', simp, simp)
   by (fastforce simp: typ_at'_same_type ps_clear_upd objBits_simps valid_obj'_def projectKOs
                       valid_bound_obj'_def valid_tcb'_def obj_at'_def valid_tcb_state'_ep_update
@@ -3304,7 +3304,7 @@ lemma valid_tcb'_ep_update:
 
 lemma valid_arch_obj'_ep_update:
   "\<lbrakk> valid_objs' s; valid_ep' ep s; ep_at' epPtr s; ksPSpace s x = Some (KOArch obj) \<rbrakk>
-     \<Longrightarrow> valid_arch_obj' obj (s\<lparr>ksPSpace := ksPSpace s(epPtr \<mapsto> KOEndpoint ep)\<rparr>)"
+     \<Longrightarrow> valid_arch_obj' obj (s\<lparr>ksPSpace := (ksPSpace s)(epPtr \<mapsto> KOEndpoint ep)\<rparr>)"
   apply (rule valid_objsE', simp, simp)
   apply (cases obj; clarsimp simp: valid_arch_obj'_def valid_obj'_def obj_at'_def projectKOs
                             split: arch_kernel_object.splits)
@@ -3315,7 +3315,7 @@ lemma valid_arch_obj'_ep_update:
 
 lemma valid_arch_obj'_reply_update:
   "\<lbrakk> valid_objs' s; valid_reply' reply s; reply_at' rptr s; ksPSpace s x = Some (KOArch obj) \<rbrakk>
-     \<Longrightarrow> valid_arch_obj' obj (s\<lparr>ksPSpace := ksPSpace s(rptr \<mapsto> KOReply reply)\<rparr>)"
+     \<Longrightarrow> valid_arch_obj' obj (s\<lparr>ksPSpace := (ksPSpace s)(rptr \<mapsto> KOReply reply)\<rparr>)"
   supply ps_clear_upd[simp]
   apply (rule valid_objsE', simp, simp)
   apply (cases obj; clarsimp simp: valid_arch_obj'_def valid_obj'_def obj_at'_def projectKOs
@@ -3329,7 +3329,7 @@ end
 
 lemma valid_obj'_ep_update:
   "\<lbrakk> valid_objs' s; valid_ep' ep s; ep_at' epPtr s; ksPSpace s x = Some obj\<rbrakk>
-       \<Longrightarrow> valid_obj' obj (s\<lparr>ksPSpace := ksPSpace s(epPtr \<mapsto> KOEndpoint ep)\<rparr>)"
+       \<Longrightarrow> valid_obj' obj (s\<lparr>ksPSpace := (ksPSpace s)(epPtr \<mapsto> KOEndpoint ep)\<rparr>)"
   apply (rule valid_objsE', simp, simp)
   by (cases obj;
       clarsimp simp: typ_at'_same_type valid_obj'_def obj_at'_def ps_clear_upd
@@ -3341,7 +3341,7 @@ lemma valid_obj'_ep_update:
 
 lemma valid_obj'_reply_update:
   "\<lbrakk> valid_objs' s; valid_reply' reply s; reply_at' rptr s; ksPSpace s x = Some obj \<rbrakk>
-     \<Longrightarrow> valid_obj' obj (s\<lparr>ksPSpace := ksPSpace s(rptr \<mapsto> KOReply reply)\<rparr>)"
+     \<Longrightarrow> valid_obj' obj (s\<lparr>ksPSpace := (ksPSpace s)(rptr \<mapsto> KOReply reply)\<rparr>)"
   apply (rule valid_objsE', simp, simp)
   apply (cases obj; clarsimp simp: valid_obj'_def)
         apply (fastforce simp: valid_ep'_def obj_at'_def projectKOs split: endpoint.split)
@@ -3361,7 +3361,7 @@ lemma valid_obj'_reply_update:
 
 lemma valid_objs'_ep_update:
   "\<lbrakk> valid_objs' s; valid_ep' ep s; ep_at' epPtr s \<rbrakk>
-     \<Longrightarrow> valid_objs' (s\<lparr>ksPSpace := ksPSpace s(epPtr \<mapsto> KOEndpoint ep)\<rparr>)"
+     \<Longrightarrow> valid_objs' (s\<lparr>ksPSpace := (ksPSpace s)(epPtr \<mapsto> KOEndpoint ep)\<rparr>)"
   apply (clarsimp simp: valid_objs'_def obj_at'_def projectKOs)
   apply (erule ranE)
   apply (clarsimp simp: ps_clear_upd split: if_split_asm)
@@ -3373,7 +3373,7 @@ lemma valid_objs'_ep_update:
 
 lemma valid_objs'_reply_update:
   "\<lbrakk> valid_objs' s; valid_reply' reply s; reply_at' rptr s \<rbrakk>
-     \<Longrightarrow> valid_objs' (s\<lparr>ksPSpace := ksPSpace s(rptr \<mapsto> KOReply reply)\<rparr>)"
+     \<Longrightarrow> valid_objs' (s\<lparr>ksPSpace := (ksPSpace s)(rptr \<mapsto> KOReply reply)\<rparr>)"
   apply (clarsimp simp: valid_objs'_def obj_at'_def projectKOs)
   apply (erule ranE)
   apply (clarsimp split: if_split_asm)
@@ -3387,14 +3387,14 @@ lemma valid_release_queue_ksPSpace_update:
   "\<lbrakk>valid_release_queue s;
     ko_wp_at' (\<lambda>ko'. koTypeOf ko' = koTypeOf ko \<and> objBitsKO ko' = objBitsKO ko) ptr s;
     koTypeOf ko \<noteq> TCBT\<rbrakk> \<Longrightarrow>
-    valid_release_queue (s\<lparr>ksPSpace := ksPSpace s(ptr \<mapsto> ko)\<rparr>)"
+    valid_release_queue (s\<lparr>ksPSpace := (ksPSpace s)(ptr \<mapsto> ko)\<rparr>)"
   by (fastforce simp: valid_release_queue_def ko_wp_at'_def obj_at'_def projectKOs ps_clear_upd)
 
 lemma valid_release_queue'_ksPSpace_update:
   "\<lbrakk>valid_release_queue' s;
     ko_wp_at' (\<lambda>ko'. koTypeOf ko' = koTypeOf ko \<and> objBitsKO ko' = objBitsKO ko) ptr s;
     koTypeOf ko \<noteq> TCBT\<rbrakk> \<Longrightarrow>
-    valid_release_queue' (s\<lparr>ksPSpace := ksPSpace s(ptr \<mapsto> ko)\<rparr>)"
+    valid_release_queue' (s\<lparr>ksPSpace := (ksPSpace s)(ptr \<mapsto> ko)\<rparr>)"
   by (fastforce simp: valid_release_queue'_def ko_wp_at'_def obj_at'_def projectKOs ps_clear_upd)
 
 lemma sym_ref_Receive_or_Reply_replyTCB':
@@ -4352,7 +4352,7 @@ lemma state_relation_sc_update:
                             | _ \<Rightarrow> hp' ptr else hp' p) (ksPSpace s)) = map_to_ctes (ksPSpace s)"
     by (clarsimp simp: obj_at_simps fun_upd_def[symmetric])
   have z: "\<And>s sc'::sched_context. ko_at' sc' ptr s
-               \<Longrightarrow> map_to_ctes (ksPSpace s(ptr \<mapsto> KOSchedContext (f' sc'))) = map_to_ctes (ksPSpace s)"
+               \<Longrightarrow> map_to_ctes ((ksPSpace s)(ptr \<mapsto> KOSchedContext (f' sc'))) = map_to_ctes (ksPSpace s)"
     by (clarsimp simp: obj_at_simps)
   assume H: "(s, s') \<in> state_relation" "P s" "P' s'" "sc_at ptr s" "sc_at' ptr s'"
   show ?thesis
@@ -4420,7 +4420,7 @@ qed
 (* update wp rules without ko_at' *)
 lemma updateSchedContext_wp:
   "\<lbrace> \<lambda>s. sc_at' sc_ptr s \<longrightarrow>
-       Q (s\<lparr>ksPSpace := ksPSpace s(sc_ptr \<mapsto> KOSchedContext (f' (the (scs_of' s sc_ptr))))\<rparr>) \<rbrace>
+       Q (s\<lparr>ksPSpace := (ksPSpace s)(sc_ptr \<mapsto> KOSchedContext (f' (the (scs_of' s sc_ptr))))\<rparr>) \<rbrace>
    updateSchedContext sc_ptr f'
    \<lbrace> \<lambda>rv. Q \<rbrace>"
   by (wpsimp simp: updateSchedContext_def wp: set_sc'.set_wp)
@@ -4548,26 +4548,26 @@ lemma getSchedContext_setSchedContext_decompose:
     apply simp+
 
   apply (rename_tac s'; erule disjE; clarsimp?)
-   apply (drule_tac Q2="\<lambda>s'. s' = (s\<lparr>ksPSpace := ksPSpace s(scPtr \<mapsto> injectKO (f sc))\<rparr>)"
+   apply (drule_tac Q2="\<lambda>s'. s' = (s\<lparr>ksPSpace := (ksPSpace s)(scPtr \<mapsto> injectKO (f sc))\<rparr>)"
                  in use_valid[OF _ setObject_sc_wp])
     apply simp+
 
-   apply (prop_tac "sc_at' scPtr (s\<lparr>ksPSpace := ksPSpace s(scPtr \<mapsto> KOSchedContext (f sc))\<rparr>)")
+   apply (prop_tac "sc_at' scPtr (s\<lparr>ksPSpace := (ksPSpace s)(scPtr \<mapsto> KOSchedContext (f sc))\<rparr>)")
     apply (clarsimp simp: obj_at'_def projectKOs objBits_simps' ps_clear_upd)
-   apply (frule_tac s="s\<lparr>ksPSpace := ksPSpace s(scPtr \<mapsto> KOSchedContext (f sc))\<rparr>"
+   apply (frule_tac s="s\<lparr>ksPSpace := (ksPSpace s)(scPtr \<mapsto> KOSchedContext (f sc))\<rparr>"
                  in no_failD[OF no_fail_getMiscObject(4)])
    apply clarsimp
 
- apply (rename_tac s')
-   apply (drule_tac Q2="\<lambda>s'. s' = (s\<lparr>ksPSpace := ksPSpace s(scPtr \<mapsto> injectKO (f sc))\<rparr>)"
-                 in use_valid[OF _ setObject_sc_wp])
-    apply simp+
+  apply (rename_tac s')
+  apply (drule_tac Q2="\<lambda>s'. s' = (s\<lparr>ksPSpace := (ksPSpace s)(scPtr \<mapsto> injectKO (f sc))\<rparr>)"
+                in use_valid[OF _ setObject_sc_wp])
+   apply simp+
 
   apply (frule sc_inv_state_eq, simp)
   apply (drule use_valid[OF _ get_sc_ko'], simp)
   apply (clarsimp simp: obj_at'_def projectKOs)
   apply (prop_tac "obj_at' (\<lambda>k. objBits k = objBits (g (f sc))) scPtr
-                           (s\<lparr>ksPSpace := ksPSpace s(scPtr \<mapsto> KOSchedContext (f sc))\<rparr>)")
+                           (s\<lparr>ksPSpace := (ksPSpace s)(scPtr \<mapsto> KOSchedContext (f sc))\<rparr>)")
    apply (clarsimp simp: obj_at'_def projectKOs projectKO_opt_sc)
    apply (rule_tac x="f sc" in exI, clarsimp simp: projectKO_opt_sc)
   apply (drule_tac ob1="g (f sc)" in no_failD[OF no_fail_setObject_other, rotated])
@@ -4649,7 +4649,7 @@ lemma updateSchedContext_corres_gen:
   apply (rule conjI, clarsimp)
    apply (erule use_valid[OF _ updateSchedContext_wp])
    apply clarsimp
-   apply (rule_tac x="((), s\<lparr>kheap := kheap s(ptr \<mapsto>
+   apply (rule_tac x="((), s\<lparr>kheap := (kheap s)(ptr \<mapsto>
                   kernel_object.SchedContext (f sc) n)\<rparr>)" in bexI)
     apply clarsimp
     apply (drule state_relation_sc_update[OF R1 R2 sz, simplified])

@@ -2227,13 +2227,13 @@ lemma rescheduleRequired_corres_weak:
   apply (rule corres_underlying_split[OF _ _ gets_sp, rotated 2])
     apply (clarsimp simp: getSchedulerAction_def)
     apply (rule gets_sp)
-   apply (corressimp corres: getSchedulerAction_corres)
+   apply (corresKsimp corres: getSchedulerAction_corres)
   apply (rule corres_underlying_split[where r'=dc, rotated]; (solves \<open>wpsimp\<close>)?)
-   apply (corressimp corres: setSchedulerAction_corres)
+   apply (corresKsimp corres: setSchedulerAction_corres)
   apply (case_tac action; clarsimp?)
   apply (rename_tac tp)
   apply (rule corres_underlying_split[OF _ _ is_schedulable_sp isSchedulable_inv, rotated 2])
-   apply (corressimp corres: isSchedulable_corres)
+   apply (corresKsimp corres: isSchedulable_corres)
    apply (clarsimp simp: weaker_valid_sched_action_def obj_at_def vs_all_heap_simps is_tcb_def)
   apply (clarsimp simp: when_def)
 
@@ -2276,7 +2276,7 @@ lemma rescheduleRequired_corres_weak:
                           obj_at_def pred_tcb_at_def weaker_valid_sched_action_def)
    apply (clarsimp simp: no_fail_def return_def vs_all_heap_simps
                          obj_at_def pred_tcb_at_def weaker_valid_sched_action_def)
-  apply (corressimp corres: tcbSchedEnqueue_corres
+  apply (corresKsimp corres: tcbSchedEnqueue_corres
                       simp: obj_at_def is_tcb_def weak_sch_act_wf_def)
   done
 

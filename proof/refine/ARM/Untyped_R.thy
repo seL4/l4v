@@ -4035,12 +4035,13 @@ lemma idx_le_new_offs:
 
 end
 
-crunch ksIdleThread[wp]: deleteObjects "\<lambda>s. P (ksIdleThread s)"
-  (simp: crunch_simps wp: hoare_drop_imps unless_wp ignore: freeMemory)
-crunch ksCurDomain[wp]: deleteObjects "\<lambda>s. P (ksCurDomain s)"
-  (simp: crunch_simps wp: hoare_drop_imps unless_wp ignore: freeMemory)
-crunch irq_node[wp]: deleteObjects "\<lambda>s. P (irq_node' s)"
-  (simp: crunch_simps wp: hoare_drop_imps unless_wp ignore: freeMemory)
+context begin interpretation Arch . (*FIXME: arch_split*)
+
+crunches deleteObjects
+  for ksIdleThread[wp]: "\<lambda>s. P (ksIdleThread s)"
+  and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
+  and irq_node[wp]: "\<lambda>s. P (irq_node' s)"
+  (simp: crunch_simps wp: hoare_drop_imps unless_wp)
 
 lemma deleteObjects_ksCurThread[wp]:
   "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> deleteObjects ptr sz \<lbrace>\<lambda>_ s. P (ksCurThread s)\<rbrace>"

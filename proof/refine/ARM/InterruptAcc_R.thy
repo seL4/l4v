@@ -117,11 +117,11 @@ lemma updateTimeStamp_corres[corres]:
   apply (prop_tac "minBudget = MIN_BUDGET")
    apply (clarsimp simp: minBudget_def MIN_BUDGET_def kernelWCETTicks_def)
   apply (rule corres_underlying_split[rotated 2, OF gets_sp getCurTime_sp])
-   apply corressimp
+   apply corresKsimp
   apply (rule corres_underlying_split[where r'="(=)"])
      apply (rule corres_guard_imp)
        apply (rule corres_machine_op)
-       apply corressimp
+       apply corresKsimp
         apply (wpsimp simp: getCurrentTime_def)
        apply simp
       apply simp
@@ -207,7 +207,7 @@ lemma scActive_corres:
           (scActive scPtr)"
   apply (rule corres_cross[where Q' = "sc_at' scPtr", OF sc_at'_cross_rel])
    apply (fastforce simp: obj_at_def is_sc_obj_def valid_obj_def valid_pspace_def sc_at_pred_n_def)
-  apply (corressimp corres: get_sc_corres
+  apply (corresKsimp corres: get_sc_corres
                       simp: sc_relation_def get_sc_active_def scActive_def active_sc_def)
   done
 
@@ -256,7 +256,7 @@ lemma preemptionPoint_corres:
   supply if_split[split del]
   apply (simp add: preemption_point_def preemptionPoint_def)
   apply (rule corres_splitEE_skip
-         ; corressimp corres: update_work_units_corres
+         ; corresKsimp corres: update_work_units_corres
                         simp: update_work_units_def)
   apply (clarsimp simp: bindE_def liftE_def)
   apply (rule_tac Q'="\<lambda>rv s. rv = ksWorkUnitsCompleted s \<and> ?conc s" in corres_symb_exec_r[rotated])
@@ -292,22 +292,22 @@ lemma preemptionPoint_corres:
      apply (rule corres_split_skip)
         apply (wpsimp simp: reset_work_units_def)
        apply (wpsimp simp: setWorkUnits_def)
-      apply (corressimp corres: setWorkUnits_corres)
+      apply (corresKsimp corres: setWorkUnits_corres)
      apply (rule corres_split_skip)
         apply wpsimp
        apply wpsimp
-      apply (corressimp corres: updateTimeStamp_corres)
+      apply (corresKsimp corres: updateTimeStamp_corres)
      apply (rule corres_split_skip)
         apply (wpsimp simp: cur_sc_tcb_def)
        apply wpsimp
-      apply (corressimp corres: corres_machine_op)
+      apply (corresKsimp corres: corres_machine_op)
      apply (rule corres_underlying_split[rotated 2, OF gets_sp getCurSc_sp])
-      apply (corressimp corres: getCurSc_corres)
+      apply (corresKsimp corres: getCurSc_corres)
      apply (rule corres_underlying_split[rotated 2, OF gets_sp getConsumedTime_sp])
-      apply (corressimp corres: getConsumedTime_corres)
+      apply (corresKsimp corres: getConsumedTime_corres)
      apply (clarsimp simp: andM_def ifM_def bind_assoc)
      apply (rule corres_underlying_split[rotated 2, OF get_sc_active_sp scActive_sp])
-      apply (corressimp corres: scActive_corres)
+      apply (corresKsimp corres: scActive_corres)
       apply (fastforce dest: valid_objs_valid_sched_context_size
                        simp: cur_sc_tcb_def obj_at_def is_sc_obj_def sc_at_pred_n_def)
      apply (clarsimp split: if_split)
@@ -326,7 +326,7 @@ lemma preemptionPoint_corres:
                              active_sc_def sc_valid_refills_def rr_valid_refills_def
                       split: if_splits)
       apply simp
-     apply corressimp
+     apply corresKsimp
     apply (fastforce intro: corres_returnOkTT)
    apply (clarsimp split: if_split)
   apply (clarsimp split: if_split)
