@@ -7,6 +7,8 @@
 (* Syntax for using multi-argument functions as predicates, e.g "P and Q" where P and Q are
    functions to bool, taking one or more parameters. *)
 
+chapter \<open>Function Predicate Syntax\<close>
+
 theory Fun_Pred_Syntax
 imports Main
 begin

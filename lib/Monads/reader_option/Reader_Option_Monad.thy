@@ -11,6 +11,8 @@
  *     Option monad while loop formalisation.
  *)
 
+chapter \<open>State Projections and Reader Option Monad\<close>
+
 theory Reader_Option_Monad
   imports
     Monad_Lib

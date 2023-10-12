@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: BSD-2-Clause
  *)
 
+section \<open>Weakest Preconditions\<close>
+
 theory WP
 imports
   WP_Pre

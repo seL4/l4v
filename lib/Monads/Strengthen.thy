@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: BSD-2-Clause
  *)
 
+section \<open>Manipulating Hoare Logic Assertions\<close>
+
 theory Strengthen
 imports Main
 begin

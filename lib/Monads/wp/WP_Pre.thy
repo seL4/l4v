@@ -12,6 +12,8 @@ imports
   "HOL-Eisbach.Eisbach_Tools"
 begin
 
+section \<open>Creating Schematic Preconditions\<close>
+
 ML \<open>
 structure WP_Pre = struct
 

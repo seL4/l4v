@@ -22,14 +22,7 @@ session Monads (lib) = HOL +
     trace
 
   theories
-    WPBang
-    WPFix
-    Eisbach_WP
-    WPI
-    WPC
-    WP_Pre
-    WP
-    Datatype_Schematic
+    Fun_Pred_Syntax
     Nondet_Monad
     Nondet_Lemmas
     Nondet_VCG
@@ -53,6 +46,14 @@ session Monads (lib) = HOL +
     Strengthen
     Nondet_Strengthen_Setup
     Strengthen_Demo
+    WPBang
+    WPFix
+    Eisbach_WP
+    WPI
+    WPC
+    WP_Pre
+    WP
+    Datatype_Schematic
 
   document_files
     "root.tex"
