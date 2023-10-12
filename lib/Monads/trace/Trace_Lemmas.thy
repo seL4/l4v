@@ -204,8 +204,8 @@ lemma liftE_liftM:
 lemma liftME_liftM:
   "liftME f = liftM (case_sum Inl (Inr \<circ> f))"
   unfolding liftME_def liftM_def bindE_def returnOk_def lift_def
-  apply (rule ext, rename_tac x)
-  apply (rule_tac f="bind x" in arg_cong)
+  apply (rule ext)
+  apply (rule arg_cong[where f="bind m" for m])
   apply (fastforce simp: throwError_def split: sum.splits)
   done
 

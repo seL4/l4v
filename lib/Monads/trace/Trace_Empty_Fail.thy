@@ -58,8 +58,7 @@ lemma empty_failD3:
 lemma empty_fail_bindD1:
   "empty_fail (a >>= b) \<Longrightarrow> empty_fail a"
   unfolding empty_fail_def bind_def
-  apply clarsimp
-  apply (drule_tac x=s in spec)
+  apply (erule all_reg[rotated])
   by (force simp: split_def mres_def vimage_def split: tmres.splits)
 
 
@@ -112,10 +111,7 @@ lemma empty_fail_select[empty_fail_cond]:
 lemma mres_bind_empty:
   "mres ((f >>= g) s) = {}
    \<Longrightarrow> mres (f s) = {} \<or> (\<forall>res\<in>mres (f s). mres (g (fst res) (snd res)) = {})"
-  apply clarsimp
-  apply (clarsimp simp: mres_def split_def vimage_def bind_def)
-  apply (rename_tac rv s' trace)
-  apply (drule_tac x=rv in spec, drule_tac x=s' in spec)
+  apply (clarsimp simp: bind_def mres_def split_def)
   apply (clarsimp simp: image_def)
   apply fastforce
   done

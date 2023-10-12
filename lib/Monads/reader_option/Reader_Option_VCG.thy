@@ -116,8 +116,8 @@ lemma owhile_ovalid[wp]:
    \<Longrightarrow> ovalid (I a) (owhile_inv C B a I M) Q"
   unfolding owhile_inv_def owhile_def ovalid_def
   apply clarify
-  apply (frule_tac I = "\<lambda>a. I a s" in option_while_rule)
-  apply auto
+  apply (frule (1) option_while_rule[where I = "\<lambda>a. I a s" for s])
+   apply auto
   done
 
 definition ovalid_property where "ovalid_property P x = (\<lambda>s f. (\<forall>r. Some r = x s f \<longrightarrow> P r s))"
@@ -187,7 +187,7 @@ lemma owhile_NF[wp]:
    \<Longrightarrow> ovalidNF (I a) (owhile_inv C B a I M) Q"
   unfolding owhile_inv_def ovalidNF_def ovalid_def
   apply clarify
-  apply (rule_tac I = I and M = "measure (\<lambda>r. M r s)" in owhile_rule)
+  apply (rule owhile_rule[where I = I and M = "measure (\<lambda>r. M r s)" and s = s for s])
        apply fastforce
       apply fastforce
      apply fastforce

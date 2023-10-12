@@ -1016,7 +1016,7 @@ lemmas liftME_E_E_wp[wp_split] = validE_validE_E [OF liftME_wp, simplified, OF v
 lemma assert_opt_wp:
   "\<lbrace>\<lambda>s. x \<noteq> None \<longrightarrow> Q (the x) s\<rbrace> assert_opt x \<lbrace>Q\<rbrace>"
   unfolding assert_opt_def
-  by (case_tac x; wpsimp wp: fail_wp return_wp)
+  by (cases x; wpsimp wp: fail_wp return_wp)
 
 lemma gets_the_wp:
   "\<lbrace>\<lambda>s. (f s \<noteq> None) \<longrightarrow> Q (the (f s)) s\<rbrace> gets_the f \<lbrace>Q\<rbrace>"
