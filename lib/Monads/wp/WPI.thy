@@ -116,6 +116,7 @@ private lemma
   (atomic f (\<lambda>s. A' s \<and> Pres' s) (\<lambda>r s. A r s \<and> Pres r s) B Q' \<Longrightarrow> trip Ts) \<Longrightarrow> trip Ts"
   apply (erule meta_mp)
   apply (clarsimp simp: valid_def atomic_def)
+  apply (rename_tac P s r s')
   apply (drule_tac x=P in spec)
   apply (drule_tac x=P in meta_spec)
   apply (drule_tac x=s in spec)+

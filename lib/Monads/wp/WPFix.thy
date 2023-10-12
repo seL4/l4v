@@ -242,11 +242,13 @@ lemma demo2:
     \<and> (\<forall>x. I x \<longrightarrow> (case x of None \<Rightarrow> R (Inl 8) | Some y \<Rightarrow> R (Inr y)))
     \<and> (\<forall>x. I x \<longrightarrow> (case x of None \<Rightarrow> R (Inr 9) | Some y \<Rightarrow> R (Inl (y - 1))))"
   apply (intro exI conjI[rotated] allI)
+    apply (rename_tac x)
     apply (case_tac x; simp)
      apply wpfix
      apply (rule P)
     apply wpfix
     apply (rule P)
+   apply (rename_tac x)
    apply (case_tac x; simp)
     apply wpfix
     apply (rule P)

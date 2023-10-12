@@ -272,8 +272,8 @@ proof (induct n arbitrary: res)
   case 0 then show ?case by auto
 next
   case (Suc n)
-  have drop_1: "\<And>tr res. (tr, res) \<in> f s \<Longrightarrow> \<exists>res'. (drop 1 tr, res') \<in> f s"
-    by (case_tac tr; fastforce dest: prefix_closedD[rotated] intro: Suc)
+  have drop_1: "(tr, res) \<in> f s \<Longrightarrow> \<exists>res'. (drop 1 tr, res') \<in> f s" for tr res
+    by (cases tr; fastforce dest: prefix_closedD[rotated] intro: Suc)
   show ?case
     using Suc.hyps[OF Suc.prems]
     by (metis drop_1[simplified] drop_drop add_0 add_Suc)
@@ -291,7 +291,8 @@ lemma parallel_prefix_closed[wp_split]:
   "\<lbrakk>prefix_closed f; prefix_closed g\<rbrakk>
    \<Longrightarrow> prefix_closed (parallel f g)"
   apply (subst prefix_closed_def, clarsimp simp: parallel_def)
-  apply (case_tac f_steps; clarsimp)
+  apply (subst (asm) zip.zip_Cons)
+  apply (clarsimp split: list.splits)
   apply (drule(1) prefix_closedD)+
   apply fastforce
   done
@@ -338,7 +339,7 @@ lemma guar_cond_drop_Suc:
   "\<lbrakk>guar_cond R s0 (drop (Suc n) xs);
     fst (xs ! n) \<noteq> Env \<longrightarrow> R (last_st_tr (drop (Suc n) xs) s0) (snd (xs ! n))\<rbrakk>
    \<Longrightarrow> guar_cond R s0 (drop n xs)"
-  by (case_tac "n < length xs"; simp add: guar_cond_drop_Suc_eq)
+  by (cases "n < length xs"; simp add: guar_cond_drop_Suc_eq)
 
 lemma rely_cond_Cons_eq:
   "rely_cond R s0 (x # xs)
@@ -427,8 +428,9 @@ proof -
                       hd_drop_conv_nth hd_append)
      apply (fastforce simp: split_def intro!: nth_equalityI)
     apply clarsimp
-    apply (erule_tac x=n in meta_allE)+
     apply (drule meta_mp, erule rely_cond_is_drop, simp)
+    apply clarsimp
+    apply (erule meta_allE, drule meta_mp, assumption)+
     apply (subst(asm) rely_cond_drop_Suc_eq[where xs="map f xs" for f xs], simp)
     apply (clarsimp simp: last_st_tr_drop_map_zip_hd if_split[where P="\<lambda>x. x = Env"]
                           split_def)
@@ -493,7 +495,7 @@ lemma put_trace_res:
    \<Longrightarrow> \<exists>n. tr = drop n xs \<and> n \<le> length xs
          \<and> res = (case n of 0 \<Rightarrow> Result ((), s) | _ \<Rightarrow> Incomplete)"
   apply (clarsimp simp: put_trace_eq_drop)
-  apply (case_tac n; auto intro: exI[where x=0])
+  apply (auto simp: gr0_conv_Suc intro: exI[where x=0])
   done
 
 lemma put_trace_twp[wp]:
@@ -732,13 +734,16 @@ lemmas modify_prefix_closed[simp] =
   modify_wp[THEN valid_validI_wp[OF no_trace_all(3)], THEN validI_prefix_closed]
 lemmas await_prefix_closed[simp] = Await_sync_twp[THEN validI_prefix_closed]
 
+lemma repeat_n_prefix_closed[intro!]:
+  "prefix_closed f \<Longrightarrow> prefix_closed (repeat_n n f)"
+  apply (induct n; simp)
+  apply (auto intro: prefix_closed_bind)
+  done
+
 lemma repeat_prefix_closed[intro!]:
   "prefix_closed f \<Longrightarrow> prefix_closed (repeat f)"
   apply (simp add: repeat_def)
   apply (rule prefix_closed_bind; clarsimp)
-  apply (rename_tac n)
-  apply (induct_tac n; simp)
-  apply (auto intro: prefix_closed_bind)
   done
 
 lemma rely_cond_True[simp]:

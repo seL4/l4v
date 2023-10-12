@@ -806,6 +806,7 @@ lemma parallel_def2:
    apply (rule exI, rule conjI, assumption)+
    apply (simp add: list_all2_conv_all_nth list_eq_iff_nth_eq split_def prod_eq_iff)
    apply clarsimp
+  apply (rename_tac ys zs)
   apply (rule_tac x="map (((\<noteq>) Env) o fst) ys" in exI)
   apply (simp add: zip_map1 o_def split_def)
   apply (strengthen subst[where P="\<lambda>xs. (xs, v) \<in> S" for v S, mk_strg I _ E])
