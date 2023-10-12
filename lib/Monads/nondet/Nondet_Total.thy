@@ -11,7 +11,7 @@ theory Nondet_Total
   imports Nondet_No_Fail
 begin
 
-section \<open>Total correctness for Nondet_Monad and Nondet_Monad with exceptions\<close>
+section \<open>Total correctness for @{text Nondet_Monad} and @{text Nondet_Monad} with exceptions\<close>
 
 subsection Definitions
 

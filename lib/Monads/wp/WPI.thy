@@ -43,7 +43,7 @@ lemma bool_function_four_cases:
   by (auto simp add: fun_eq_iff all_bool_eq)
 
 
-text \<open>The ML version of repeat_new is slightly faster than the Eisbach one.\<close>
+text \<open>The ML version of @{text repeat_new} is slightly faster than the Eisbach one.\<close>
 
 method_setup repeat_new =
  \<open>Method.text_closure >> (fn m => fn ctxt => fn facts =>
@@ -142,7 +142,7 @@ private lemma
   by (simp add: atomic_def )
 
 text \<open>Decomposing a static term is a waste of time as we know we can lift it
-      out all in one go. Additionally this stops wp_drop_imp from uselessly taking it apart.\<close>
+      out all in one go. Additionally this stops @{text wp_drop_imp} from uselessly taking it apart.\<close>
 
 
 private definition "static Q = (\<lambda>r s. Q)"
@@ -186,7 +186,7 @@ private lemma
 private lemma trips_True: "trip True" by (simp add: trip_def)
 
 
-text \<open>We need to push the quantifiers into the hoare triples.
+text \<open>We need to push the quantifiers into the Hoare triples.
       This is an unfortunate bit of manual work, but anything more than 2 levels
       of nesting is unlikely.\<close>
 
@@ -209,7 +209,7 @@ text \<open>Existentials are hard, and we don't see them often
       we fail to process the triple and it won't be lifted.
 
       Some more work here to allow the heuristics to drop any added implications
-      if they're deemed unecessary.\<close>
+      if they're deemed unnecessary.\<close>
 
 private lemma trips_push_ex1:
   "trip (\<exists>x. \<lbrace>\<lambda>s. Q s\<rbrace> f \<lbrace>\<lambda>r s. Q' x r s\<rbrace>) \<Longrightarrow>
@@ -269,7 +269,7 @@ private method uses_arg for C :: "'a \<Rightarrow> 'b \<Rightarrow> bool" =
   determ \<open>(match (C) in "\<lambda>r s. ?discard_r s" (cut) \<Rightarrow> \<open>fail\<close> \<bar> _ \<Rightarrow> \<open>-\<close>)\<close>
 
 text \<open>Here the "test" constant holds information about the logical context of the atomic postcondition
-      in the original hoare triple. "f" is the function with its arguments, "C" is all the collected
+      in the original Hoare triple. "f" is the function with its arguments, "C" is all the collected
       premises and "Q" is the atomic postcondition that we want to solve in isolation.
 
       The method succeeds if the atomic postcondition seems to not depend on its context, i.e.
@@ -305,7 +305,7 @@ private method make_goals methods wp_weak wp_strong tests  =
 
 text \<open>Once all the triples exist we simplify them all in one go to
       find trivial or self-contradictory rules. This avoids invoking the simplifier
-      once per postcondition. imp_conjL is used to curry our generated implications.
+      once per postcondition. @{thm imp_conjL} is used to curry our generated implications.
 
       If all the postconditions together are contradictory, the simplifier won't use it to strengthen
       the postcondition. As an optimization we simply bail out in that case, rather than
@@ -324,7 +324,7 @@ method post_strengthen methods wp_weak wp_strong simp' tests =
     rule trip_drop,
     (rule hoare_vcg_prop)?)
 
-text \<open>The "wpi" named theorem is used to avoid the safety heuristics, effectively
+text \<open>The @{text wpi} named theorem is used to avoid the safety heuristics, effectively
       saying that the presence of that postcondition indicates that it should always be lifted.\<close>
 
 named_theorems wpi

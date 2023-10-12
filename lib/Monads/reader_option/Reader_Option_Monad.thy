@@ -22,7 +22,7 @@ section \<open>Projections\<close>
 
 type_synonym ('s,'a) lookup = "'s \<Rightarrow> 'a option"
 
-text \<open>Similar to map_option but the second function returns option as well\<close>
+text \<open>Similar to @{const map_option} but the second function returns @{text option} as well\<close>
 definition opt_map :: "('s,'a) lookup \<Rightarrow> ('a \<Rightarrow> 'b option) \<Rightarrow> ('s,'b) lookup" (infixl "|>" 54) where
   "f |> g \<equiv> \<lambda>s. case f s of None \<Rightarrow> None | Some x \<Rightarrow> g x"
 
@@ -241,7 +241,7 @@ abbreviation ogets :: "('s \<Rightarrow> 'a) \<Rightarrow> ('s, 'a) lookup" wher
 
 text \<open>
   Integration with exception monad.
-  Corresponding bindE would be analogous to lifting in Nondet_Monad.\<close>
+  Corresponding bindE would be analogous to lifting in @{text Nondet_Monad}.\<close>
 
 definition
   "oreturnOk x = K (Some (Inr x))"

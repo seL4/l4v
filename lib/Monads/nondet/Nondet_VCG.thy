@@ -33,7 +33,7 @@ text \<open>
   the empty set, the triple is trivially valid. This means @{term "assert P"}
   does not require us to prove that @{term P} holds, but rather allows us
   to assume @{term P}! Proving non-failure is done via a separate predicate and
-  calculus (see Nondet_No_Fail).\<close>
+  calculus (see theory @{text Nondet_No_Fail}).\<close>
 definition valid ::
   "('s \<Rightarrow> bool) \<Rightarrow> ('s,'a) nondet_monad \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
   ("\<lbrace>_\<rbrace>/ _ /\<lbrace>_\<rbrace>") where

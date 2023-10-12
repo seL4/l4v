@@ -40,7 +40,7 @@ abbreviation map_tmres_rv :: "('a \<Rightarrow> 'b) \<Rightarrow> ('s, 'a) tmres
 
 text \<open>
   tmonad returns a set of non-deterministic computations, including
-  a trace as a list of "thread identifier" \<times> state, and an optional
+  a trace as a list of @{text "thread identifier \<times> state"}, and an optional
   pair of result and state when the computation did not fail.\<close>
 type_synonym ('s, 'a) tmonad = "'s \<Rightarrow> ((tmid \<times> 's) list \<times> ('s, 'a) tmres) set"
 
@@ -713,7 +713,7 @@ definition whileLoop ::
 notation (output)
   whileLoop  ("(whileLoop (_)//  (_))" [1000, 1000] 1000)
 
-\<comment> \<open>FIXME: why does this differ to Nondet_Monad?\<close>
+\<comment> \<open>FIXME: why does this differ to @{text Nondet_Monad}?\<close>
 definition whileLoopT ::
   "('r \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('r \<Rightarrow> ('s, 'r) tmonad) \<Rightarrow> 'r \<Rightarrow> ('s, 'r) tmonad"
   where

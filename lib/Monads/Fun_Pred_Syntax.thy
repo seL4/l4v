@@ -137,7 +137,9 @@ lemma pred_bot_comp[simp]:
   by (simp add: comp_def)
 
 
-text \<open>We would get these for free if we could instantiate pred_top/pred_bot to top/bot directly:\<close>
+text \<open>
+  We would get these for free if we could instantiate @{const pred_top}/@{const pred_bot} to
+  @{const top}/@{const bot} directly:\<close>
 
 lemmas pred_top_left_neutral[simp] =
   inf_top.left_neutral[where 'a="'a \<Rightarrow> bool", unfolded pred_top_def]
