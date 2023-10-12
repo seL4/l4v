@@ -11,7 +11,7 @@ theory Trace_Total
   imports Trace_No_Fail
 begin
 
-section \<open>Total correctness for Trace_Monad and Trace_Monad with exceptions\<close>
+section \<open>Total correctness for @{text Trace_Monad} and @{text Trace_Monad} with exceptions\<close>
 
 subsection Definitions
 

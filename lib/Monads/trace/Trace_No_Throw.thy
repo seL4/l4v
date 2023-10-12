@@ -31,7 +31,7 @@ lemma no_throw_def':
   by (clarsimp simp: no_throw_def validE_def2 split_def split: sum.splits)
 
 
-subsection \<open>no_throw rules\<close>
+subsection \<open>@{const no_throw} rules\<close>
 
 lemma no_throw_returnOk[simp]:
   "no_throw P (returnOk a)"

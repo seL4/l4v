@@ -144,7 +144,7 @@ lemma no_fail_assume_pre:
   "(\<And>s. P s \<Longrightarrow> no_fail P f) \<Longrightarrow> no_fail P f"
   by (simp add: no_fail_def)
 
-\<comment> \<open>lemma no_fail_liftM_eq[simp]:
+\<^cancel>\<open>lemma no_fail_liftM_eq[simp]:
   "no_fail P (liftM f m) = no_fail P m"
   by (auto simp: liftM_def no_fail_def bind_def return_def)\<close>
 

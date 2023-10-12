@@ -14,9 +14,9 @@ begin
 section \<open>Monads that are wellformed w.r.t. failure\<close>
 
 text \<open>
-  Usually, well-formed monads constructed from the primitives in Trace_Monad will have the following
-  property: if they return an empty set of completed results, there exists a trace corresponding to
-  a failed result.\<close>
+  Usually, well-formed monads constructed from the primitives in @{text Trace_Monad} will have the
+  following property: if they return an empty set of completed results, there exists a trace
+  corresponding to a failed result.\<close>
 definition empty_fail :: "('s,'a) tmonad \<Rightarrow> bool" where
   "empty_fail m \<equiv> \<forall>s. mres (m s) = {} \<longrightarrow> Failed \<in> snd ` (m s)"
 

@@ -17,7 +17,7 @@ section \<open>Rely-Guarantee Logic\<close>
 subsection \<open>Validity\<close>
 
 text \<open>
-  This section defines a Rely_Guarantee logic for partial correctness for
+  This section defines a Rely-Guarantee logic for partial correctness for
   the interference trace monad.
 
   The logic is defined semantically. Rules work directly on the
@@ -36,7 +36,7 @@ text \<open>
   trace and no successful results then the quintuple is trivially valid. This
   means @{term "assert P"} does not require us to prove that @{term P} holds,
   but rather allows us to assume @{term P}! Proving non-failure is done via a
-  separate predicate and calculus (see Trace_No_Fail).\<close>
+  separate predicate and calculus (see @{text Trace_No_Fail}).\<close>
 
 primrec trace_steps :: "(tmid \<times> 's) list \<Rightarrow> 's \<Rightarrow> (tmid \<times> 's \<times> 's) set" where
     "trace_steps (elem # trace) s0 = {(fst elem, s0, snd elem)} \<union> trace_steps trace (snd elem)"
@@ -56,7 +56,7 @@ next
     done
 qed
 
-text \<open>rg_pred type: Rely-Guaranty predicates (state before => state after => bool)\<close>
+text \<open>@{text rg_pred} type: Rely-Guaranty predicates (@{text "state before => state after => bool"})\<close>
 type_synonym 's rg_pred = "'s \<Rightarrow> 's \<Rightarrow> bool"
 
 text \<open>Abbreviations for trivial postconditions (taking three arguments):\<close>

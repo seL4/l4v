@@ -376,7 +376,7 @@ lemma select_empty_bind[simp]:
   by (simp add: select_def bind_def)
 
 
-subsection \<open>Alternative env_steps with repeat\<close>
+subsection \<open>Alternative @{text env_steps} with repeat\<close>
 
 lemma mapM_Cons:
   "mapM f (x # xs) = do
