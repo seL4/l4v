@@ -43,6 +43,17 @@ session Monads (lib) = HOL +
     Trace_Lemmas
     Trace_VCG
     Trace_Det
+    Trace_No_Throw
+    Trace_Empty_Fail
+    Trace_No_Trace
+    Trace_Total
+    Trace_Strengthen_Setup
+    Trace_Monad_Equations
+    Trace_RG
+    Trace_In_Monad
+    Trace_More_VCG
+    Trace_No_Fail
+    Trace_Sat
     Strengthen
     Nondet_Strengthen_Setup
     Strengthen_Demo
