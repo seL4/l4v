@@ -795,7 +795,7 @@ definition parallel :: "('s,'a) tmonad \<Rightarrow> ('s,'a) tmonad \<Rightarrow
     \<and> (map (\<lambda>(f_step, (id, s)). (if f_step then Env else id, s)) (zip f_steps xs), rv) \<in> g s})"
 
 abbreviation(input)
-  "parallel_mrg \<equiv> ((\<lambda>((idn, s), (idn', _)). (if idn = Env then idn' else idn, s)))"
+  "parallel_mrg \<equiv> \<lambda>((idn, s), (idn', _)). (if idn = Env then idn' else idn, s)"
 
 lemma parallel_def2:
   "parallel f g = (\<lambda>s. {(xs, rv). \<exists>ys zs. (ys, rv) \<in> f s \<and> (zs, rv) \<in> g s
