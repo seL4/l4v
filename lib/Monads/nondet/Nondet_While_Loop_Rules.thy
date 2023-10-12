@@ -447,33 +447,36 @@ lemma exs_valid_whileLoop:
     and wf_R: "wf R"
     and final_I: "\<And>r s. \<lbrakk> T r s; \<not> C r s  \<rbrakk> \<Longrightarrow> Q r s"
   shows "\<lbrace> P \<rbrace> whileLoop C B r \<exists>\<lbrace> Q \<rbrace>"
-proof (clarsimp simp: exs_valid_def Bex_def)
-  fix s
-  assume "P s"
-
+proof -
   {
-    fix x
-    have "T (fst x) (snd x) \<Longrightarrow> \<exists>r' s'. (r', s') \<in> fst (whileLoop C B (fst x) (snd x)) \<and> T r' s'"
-      using wf_R
-    proof induct
-      case (less x)
-      then show ?case
-        apply atomize
-        apply (cases "C (fst x) (snd x)")
-         apply (subst whileLoop_unroll)
-         apply (clarsimp simp: condition_def bind_def')
-         apply (cut_tac iter_I[where ?s0.0="snd x" and r="fst x"])
-         apply (clarsimp simp: exs_valid_def)
-         apply blast
-        apply (subst whileLoop_unroll)
-        apply (cases x)
-        apply (clarsimp simp: condition_def bind_def' return_def)
-        done
-    qed
-  }
+    fix s
+    assume "P s"
 
-  thus "\<exists>r' s'. (r', s') \<in> fst (whileLoop C B r s) \<and> Q r' s'"
-    by (metis \<open>P s\<close> fst_conv init_T snd_conv final_I fst_whileLoop_cond_false)
+    {
+      fix x
+      have "T (fst x) (snd x) \<Longrightarrow> \<exists>r' s'. (r', s') \<in> fst (whileLoop C B (fst x) (snd x)) \<and> T r' s'"
+        using wf_R
+      proof induct
+        case (less x)
+        then show ?case
+          apply atomize
+          apply (cases "C (fst x) (snd x)")
+           apply (subst whileLoop_unroll)
+           apply (clarsimp simp: condition_def bind_def')
+           apply (cut_tac iter_I[where ?s0.0="snd x" and r="fst x"])
+           apply (clarsimp simp: exs_valid_def)
+           apply blast
+          apply (subst whileLoop_unroll)
+          apply (cases x)
+          apply (clarsimp simp: condition_def bind_def' return_def)
+          done
+      qed
+    }
+
+    then have "\<exists>r' s'. (r', s') \<in> fst (whileLoop C B r s) \<and> Q r' s'"
+      by (metis \<open>P s\<close> fst_conv init_T snd_conv final_I fst_whileLoop_cond_false)
+  }
+  thus ?thesis by (clarsimp simp: exs_valid_def Bex_def)
 qed
 
 lemma empty_fail_whileLoop[empty_fail_cond, intro!, wp]:
