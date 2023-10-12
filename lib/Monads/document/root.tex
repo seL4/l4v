@@ -1,0 +1,81 @@
+%
+% Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
+%
+% SPDX-License-Identifier: CC-BY-SA-4.0
+%
+
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage{isabelle,isabellesym}
+
+% this should be the last package used
+\usepackage{pdfsetup}
+
+% urls in roman style, theory text in math-similar italics
+\urlstyle{rm}
+\isabellestyle{tt}
+
+
+\begin{document}
+
+\title{State Monad Library}
+\author{David Greenaway,
+  Gerwin Klein,
+  Corey Lewis,
+  Daniel Matichuk,
+  Thomas Sewell}
+\maketitle
+
+\begin{abstract}
+  This entry contains a library of different state monads with a large set of
+  operators, laws, Hoare Logic, weakest precondition rules, and corresponding
+  automation. The formalisation is designed for reasoning about total and
+  partial correctness, as well as for reasoning about failure separately from
+  normal behaviour. Partial correctness in this context ignores program failure.
+  Total correctness implies the absence of program failure.
+
+  The main monads formalised in this entry are a non-deterministic state monad
+  with failure, and a state-based trace monad for modelling concurrent executions.
+  Both support roughly the same set of operators. They come with a standard
+  Hoare Logic and Rely-Guarantee logic respectively. The entry also contains an
+  option reader monad that combines well with the non-deterministic state monad.
+  The option reader monad provides additional operators useful for building
+  state projections that can be used both in monadic functions and Hoare-Logic
+  assertions, enhancing specification re-use in proofs.
+
+  This monad library is used in the verification of the seL4 microkernel and
+  predates some of the monad developments in the Isabelle library. In
+  particular, it defines its own syntax for do-notation, which can be overridden
+  with the generic monad syntax in the Isabelle library. We have opted not to do
+  so by default, because the overloading-based syntax from the Isabelle library
+  often necessitates additional type annotations when mixing different monad
+  types within one specification. For similar reasons, no attempt is made to
+  state generic state monad laws in a type class or locale and then instantiate
+  them for the two main monad instances. The resulting duplication from two
+  instances is still easy to handle, but if more instances are added to this
+  library, additional work on genericity would be useful.
+
+  This library has grown over more than a decade with many substantial
+  contributions. We would specifically like to acknowledge the contributions by
+  Nelson Billing, Andrew Boyton, Matthew Brecknell, David Cock, Matthias Daum,
+  Alejandro Gomez-Londono, Rafal Kolanski, Japheth Lim, Michael McInerney, Toby
+  Murray, Lars Noschinski, Edward Pierzchalski, Sean Seefried, Miki Tanaka, Vernon
+  Tang, and Simon Windwood.
+\end{abstract}
+
+\tableofcontents
+
+\parindent 0pt\parskip 0.5ex
+
+% generated text of all theories
+\input{session}
+
+\bibliographystyle{abbrv}
+\bibliography{root}
+
+\end{document}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:
