@@ -198,7 +198,7 @@ lookupFrame vspaceRoot vPtr = do
 handleVMFault :: PPtr TCB -> VMFaultType -> KernelF Fault ()
 handleVMFault _ ARMDataAbort = do
     addr <- withoutFailure $ doMachineOp getFAR
-    fault <- withoutFailure $ doMachineOp getDFSR
+    fault <- withoutFailure $ doMachineOp getESR
     active <- withoutFailure $ curVCPUActive
     addr <- if active
             then do
@@ -213,7 +213,7 @@ handleVMFault _ ARMDataAbort = do
 
 handleVMFault thread ARMPrefetchAbort = do
     pc <- withoutFailure $ asUser thread $ getRestartPC
-    fault <- withoutFailure $ doMachineOp getIFSR
+    fault <- withoutFailure $ doMachineOp getESR
     active <- withoutFailure $ curVCPUActive
     pc <- if active
           then do

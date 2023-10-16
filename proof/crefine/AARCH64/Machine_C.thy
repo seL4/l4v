@@ -50,7 +50,7 @@ assumes getFAR_ccorres:
            (doMachineOp getFAR)
            (Call getFAR_'proc)"
 
-assumes getDFSR_ccorres:
+assumes getESR_ccorres:
   "ccorres (=) ret__unsigned_long_' \<top> UNIV []
            (doMachineOp getESR)
            (Call getESR_'proc)"

@@ -243,13 +243,6 @@ enableFpuEL01 = error "Unimplemented - machine op"
 getFAR :: MachineMonad VPtr
 getFAR = error "Unimplemented - machine op"
 
-getDFSR :: MachineMonad Word
-getDFSR =  error "Unimplemented - machine op"
-
-getIFSR :: MachineMonad Word
-getIFSR =  error "Unimplemented - machine op"
-
-
 {- Hypervisor-specific status/control registers -}
 
 setHCR :: Word -> MachineMonad ()

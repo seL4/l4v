@@ -1650,17 +1650,13 @@ lemma getHSR_invs'[wp]:
   "doMachineOp getHSR \<lbrace>invs'\<rbrace>"
   by (simp add: getHSR_def doMachineOp_def split_def select_f_returns | wp)+
 
-lemma getDFSR_invs'[wp]:
-  "doMachineOp getDFSR \<lbrace>invs'\<rbrace>"
-  by (simp add: getDFSR_def doMachineOp_def split_def select_f_returns | wp)+
+lemma getESR_invs'[wp]:
+  "doMachineOp getESR \<lbrace>invs'\<rbrace>"
+  by (simp add: getESR_def doMachineOp_def split_def select_f_returns | wp)+
 
 lemma getFAR_invs'[wp]:
   "doMachineOp getFAR \<lbrace>invs'\<rbrace>"
   by (simp add: getFAR_def doMachineOp_def split_def select_f_returns | wp)+
-
-lemma getIFSR_invs'[wp]:
-  "doMachineOp getIFSR \<lbrace>invs'\<rbrace>"
-  by (simp add: getIFSR_def doMachineOp_def split_def select_f_returns | wp)+
 
 lemma hv_invs'[wp]: "\<lbrace>invs' and tcb_at' t'\<rbrace> handleVMFault t' vptr \<lbrace>\<lambda>r. invs'\<rbrace>"
   apply (simp add: AARCH64_H.handleVMFault_def
@@ -1966,7 +1962,7 @@ lemma hvmf_invs_lift:
    \<lbrace>P\<rbrace> handleVMFault t flt \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
   unfolding handleVMFault_def
   by (wpsimp wp: dmo_machine_rest_lift asUser_inv dmo'_gets_wp
-           simp: getHSR_def addressTranslateS1_def getDFSR_def getFAR_def getIFSR_def
+           simp: getHSR_def addressTranslateS1_def getESR_def getFAR_def
                  curVCPUActive_def doMachineOp_bind getRestartPC_def getRegister_def)
 
 lemma hvmf_invs_etc:

@@ -50,19 +50,15 @@ lemma eq_no_cap_to_obj_with_diff_ref [Syscall_AI_assms]:
                             table_cap_ref_mask_cap Ball_def)
   done
 
-crunches getDFSR, getFAR, getIFSR
+crunches getESR, getFAR
   for inv[wp]: "P"
 
-lemma do_machine_op_getDFSR_inv[wp]:
-  "do_machine_op getDFSR \<lbrace>P\<rbrace>"
+lemma do_machine_op_geESR_inv[wp]:
+  "do_machine_op getESR \<lbrace>P\<rbrace>"
   by (rule dmo_inv) wp
 
 lemma do_machine_op_getFAR_inv[wp]:
   "do_machine_op getFAR \<lbrace>P\<rbrace>"
-  by (rule dmo_inv) wp
-
-lemma do_machine_op_getIFSR_inv[wp]:
-  "do_machine_op getIFSR \<lbrace>P\<rbrace>"
   by (rule dmo_inv) wp
 
 lemma hv_invs[wp, Syscall_AI_assms]: "\<lbrace>invs\<rbrace> handle_vm_fault t' flt \<lbrace>\<lambda>r. invs\<rbrace>"
