@@ -43,13 +43,122 @@ assumes maskInterrupt_ccorres:
            (doMachineOp (maskInterrupt m irq))
            (Call maskInterrupt_'proc)"
 
-(* AArch64-specific machine ops (function names don't exist on other platforms) *)
+(* AArch64-specific machine ops (function names don't exist on other architectures) *)
+
+assumes getFAR_ccorres:
+  "ccorres (=) ret__unsigned_long_' \<top> UNIV []
+           (doMachineOp getFAR)
+           (Call getFAR_'proc)"
+
+assumes getDFSR_ccorres:
+  "ccorres (=) ret__unsigned_long_' \<top> UNIV []
+           (doMachineOp getESR)
+           (Call getESR_'proc)"
+
+(* FIXME AARCH64 getHSR doesn't exist in C, remove from Haskell spec *)
+
+assumes setHCR_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>reg = r \<rbrace>) []
+           (doMachineOp (setHCR r))
+           (Call setHCR_'proc)"
+
+assumes getSCTLR_ccorres:
+  "ccorres (=) ret__unsigned_long_' \<top> UNIV []
+           (doMachineOp getSCTLR)
+           (Call getSCTLR_'proc)"
+
+assumes setSCTLR_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>sctlr = sctlr \<rbrace>) []
+           (doMachineOp (setSCTLR scltr))
+           (Call setSCTLR_'proc)"
+
+assumes isb_ccorres:
+  "ccorres dc xfdc \<top> UNIV []
+           (doMachineOp isb)
+           (Call isb_'proc)"
+
+assumes dsb_ccorres:
+  "ccorres dc xfdc \<top> UNIV []
+           (doMachineOp dsb)
+           (Call dsb_'proc)"
+
+assumes enableFpuEL01_ccorres:
+  "ccorres dc xfdc \<top> UNIV []
+           (doMachineOp enableFpuEL01)
+           (Call enableFpuEL01_'proc)"
+
+assumes check_export_arch_timer_ccorres:
+    "ccorres dc xfdc \<top> UNIV []
+           (doMachineOp check_export_arch_timer)
+           (Call check_export_arch_timer_'proc)"
+
+assumes read_cntpct_ccorres:
+    "ccorres (=) ret__unsigned_longlong_' \<top> UNIV []
+           (doMachineOp read_cntpct)
+           (Call read_cntpct_'proc)"
 
 (* FIXME AARCH64 TODO
    cache ops might need to go here
 *)
 
 (* Hypervisor-related machine ops *)
+
+(* ARM Hypervisor hardware register getters and setters *)
+
+assumes get_gic_vcpu_ctrl_hcr_ccorres:
+  "ccorres (=) ret__unsigned_' \<top> UNIV []
+           (doMachineOp get_gic_vcpu_ctrl_hcr) (Call get_gic_vcpu_ctrl_hcr_'proc)"
+assumes get_gic_vcpu_ctrl_vmcr_ccorres:
+  "ccorres (=) ret__unsigned_' \<top> UNIV []
+           (doMachineOp get_gic_vcpu_ctrl_vmcr) (Call get_gic_vcpu_ctrl_vmcr_'proc)"
+assumes get_gic_vcpu_ctrl_apr_ccorres:
+  "ccorres (=) ret__unsigned_' \<top> UNIV []
+           (doMachineOp get_gic_vcpu_ctrl_apr) (Call get_gic_vcpu_ctrl_apr_'proc)"
+assumes get_gic_vcpu_ctrl_vtr_ccorres:
+  "ccorres (=) ret__unsigned_' \<top> UNIV []
+           (doMachineOp get_gic_vcpu_ctrl_vtr) (Call get_gic_vcpu_ctrl_vtr_'proc)"
+assumes get_gic_vcpu_ctrl_eisr0_ccorres:
+  "ccorres (=) ret__unsigned_' \<top> UNIV []
+           (doMachineOp get_gic_vcpu_ctrl_eisr0) (Call get_gic_vcpu_ctrl_eisr0_'proc)"
+assumes get_gic_vcpu_ctrl_eisr1_ccorres:
+  "ccorres (=) ret__unsigned_' \<top> UNIV []
+           (doMachineOp get_gic_vcpu_ctrl_eisr1) (Call get_gic_vcpu_ctrl_eisr1_'proc)"
+assumes get_gic_vcpu_ctrl_misr_ccorres:
+  "ccorres (=) ret__unsigned_' \<top> UNIV []
+           (doMachineOp get_gic_vcpu_ctrl_misr) (Call get_gic_vcpu_ctrl_misr_'proc)"
+
+assumes set_gic_vcpu_ctrl_hcr_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>hcr = v \<rbrace>) []
+     (doMachineOp (set_gic_vcpu_ctrl_hcr v)) (Call set_gic_vcpu_ctrl_hcr_'proc)"
+assumes set_gic_vcpu_ctrl_vmcr_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>vmcr = v \<rbrace>) []
+     (doMachineOp (set_gic_vcpu_ctrl_vmcr v)) (Call set_gic_vcpu_ctrl_vmcr_'proc)"
+assumes set_gic_vcpu_ctrl_apr_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>apr = v \<rbrace>) []
+     (doMachineOp (set_gic_vcpu_ctrl_apr v)) (Call set_gic_vcpu_ctrl_apr_'proc)"
+
+assumes set_gic_vcpu_ctrl_lr_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>num = scast n \<rbrace> \<inter> \<lbrace>virq_to_H \<acute>lr = lr \<rbrace>) []
+     (doMachineOp (set_gic_vcpu_ctrl_lr n lr)) (Call set_gic_vcpu_ctrl_lr_'proc)"
+
+assumes get_gic_vcpu_ctrl_lr_ccorres:
+  "ccorres (\<lambda>v virq. virq = virq_C (FCP (\<lambda>_. v))) ret__struct_virq_C_' \<top> (\<lbrace>\<acute>num = scast n \<rbrace>) hs
+           (doMachineOp (get_gic_vcpu_ctrl_lr n)) (Call get_gic_vcpu_ctrl_lr_'proc)"
+
+
+(* ARM Hypervisor banked register save/restoring *)
+
+assumes vcpu_hw_read_reg_ccorres:
+  "\<And>r. ccorres (=) ret__unsigned_long_'
+         \<top> (\<lbrace> unat \<acute>reg_index = fromEnum r \<rbrace>) hs
+         (doMachineOp (readVCPUHardwareReg r))
+         (Call vcpu_hw_read_reg_'proc)"
+
+assumes vcpu_hw_write_reg_ccorres:
+  "\<And>r v. ccorres dc xfdc
+           \<top> (\<lbrace> unat \<acute>reg_index = fromEnum r \<rbrace> \<inter> \<lbrace> \<acute>reg = v \<rbrace>) hs
+           (doMachineOp (writeVCPUHardwareReg r v))
+           (Call vcpu_hw_write_reg_'proc)"
 
 (* FIXME AARCH64 TODO *)
 
