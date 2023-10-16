@@ -134,17 +134,16 @@ lemma c_guard_abs_pte:
 
 lemmas ccorres_move_c_guard_pte = ccorres_move_c_guards [OF c_guard_abs_pte]
 
+(* FIXME AARCH64: (ptBits VSRootPT_T - 3) below should be "ptTranslationsBits VSRootPT_T" instead *)
 lemma array_assertion_abs_vspace:
   "\<forall>s s'. (s, s') \<in> rf_sr \<and> (page_table_at' VSRootPT_T pd s)
         \<and> (n s' \<le> 2 ^ (ptBits VSRootPT_T - 3) \<and> (x s' \<noteq> 0 \<longrightarrow> n s' \<noteq> 0))
     \<longrightarrow> (x s' = 0 \<or> array_assertion (pte_Ptr pd) (n s') (hrs_htd (t_hrs_' (globals s'))))"
   apply (intro allI impI disjCI2, clarsimp)
   apply (drule(1) vspace_at_rf_sr, clarsimp)
-  apply (erule clift_array_assertion_imp,
-         simp_all add: bit_simps)
-  (* FIXME AARCH64 unfolding abstraction! is avoiding this possible in CRefine? *)
-  apply (simp add: Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
-  apply (rule_tac x=0 in exI, simp)
+  apply (erule clift_array_assertion_imp; simp)
+  apply (simp add: pt_bits_def table_size_def pte_bits_def word_size_bits_def)
+  apply (rule_tac x=0 in exI, simp add: ptTranslationBits_vs_array_len)
   done
 
 lemmas ccorres_move_array_assertion_vspace
