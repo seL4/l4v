@@ -1933,33 +1933,70 @@ lemma performPageTableInvocationMap_ccorres:
 abbreviation
   regs_C_Ptr :: "addr \<Rightarrow> (machine_word[23]) ptr" where "regs_C_Ptr \<equiv> Ptr"
 
-lemma setObject_vcpuRegs_update_ccorres:
-  "ccorres dc xfdc (ko_at' vcpu vcpuptr) UNIV hs
-     (setObject vcpuptr (vcpuRegs_update (\<lambda>_ a. if a = r then v else vcpuRegs vcpu a) vcpu))
-     ((Basic_heap_update
-       (\<lambda>s. regs_C_Ptr &(vcpu_Ptr vcpuptr\<rightarrow>[''regs_C'']))
-       (\<lambda>s. Arrays.update (h_val (hrs_mem (t_hrs_' (globals s)))
-                          (regs_C_Ptr &(vcpu_Ptr vcpuptr\<rightarrow>[''regs_C'']))) (fromEnum r) v)))"
-  apply (rule ccorres_guard_imp)
-    apply (rule_tac P="ko_at' vcpu vcpuptr" in setObject_ccorres_helper[where P'=UNIV]
-           , rule conseqPre, vcg)
-      apply clarsimp
-      apply (rule cmap_relationE1[OF cmap_relation_vcpu]
-             ; (clarsimp simp: objBits_simps archObjSize_def)?)
-        apply (assumption, erule ko_at_projectKO_opt)
-      apply (frule h_t_valid_clift)
-      apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
-                            cmachine_state_relation_def update_vcpu_map_to_vcpu
-                            typ_heap_simps' cpspace_relation_def update_vcpu_map_tos)
-      apply (erule (1) cmap_relation_updI
-             ; clarsimp simp: cvcpu_relation_regs_def cvgic_relation_def
-                              cvcpu_vppi_masked_relation_def
-             ; (rule refl)?)
-  using maxBound_is_bound[where 'a=vcpureg, simplified fromEnum_maxBound_vcpureg_def]
-      apply -
-      apply (clarsimp simp: fromEnum_eq_iff less_eq_Suc_le fromEnum_eq_iff split: if_split)
-  apply (simp add: objBits_simps archObjSize_def vcpuBits_def)+
+
+(* FIXME AARCH64 show and move *)
+(* When updating fields (or fields of fields) inside VCPUs, typ_heap_simps can resolve the
+   hrs_mem_update of a field into a specific C vcpu update when on its own. Then if we can
+   show that specific C vcpu is related to the Haskell one, there is no need to unfold
+   rf_sr anymore. *)
+lemma vcpu_hrs_mem_update_helper:
+  "\<lbrakk> (s, s') \<in> rf_sr; ko_at' (vcpu'::vcpu) vcpuptr s;
+     hrs_mem_update (f s') (t_hrs_' (globals s'))
+     = hrs_mem_update (heap_update (vcpu_Ptr vcpuptr) cvcpu) (t_hrs_' (globals s'));
+     cvcpu_relation vcpu cvcpu \<rbrakk>
+   \<Longrightarrow> (s\<lparr>ksPSpace := (ksPSpace s)(vcpuptr \<mapsto> KOArch (KOVCPU vcpu))\<rparr>,
+       globals_update (t_hrs_'_update (hrs_mem_update (f s'))) s') \<in> rf_sr"
+  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
+                        cmachine_state_relation_def update_vcpu_map_to_vcpu
+                        cpspace_relation_def update_vcpu_map_tos)
+  apply (frule (1) cmap_relation_ko_atD)
+  apply (clarsimp simp: typ_heap_simps')
+  apply (erule cmap_relation_upd_relI)
+      apply (erule (3) ko_at_projectKO_opt)
+  apply simp
   done
+
+lemmas setObject_ccorres_helper_vcpu =
+         setObject_ccorres_helper[where 'a=vcpu, simplified objBits_simps vcpuBits_def, simplified]
+
+(* FIXME AARCH64 review, much learning potential *)
+lemma vcpuUpdate_ccorres:
+  (* We depend on the simplifier and typ_heap_simps to resolve what the updated VCPU on the C side
+     looks like for specific updates f and heap_upd, and need to ensure they maintain the VCPU
+     relation. *)
+  assumes update_rel:
+    "\<And>s s' vcpu cvcpu.
+     \<lbrakk> (s, s') \<in> rf_sr; ko_at' vcpu vcpuptr s; cslift s' (vcpu_Ptr vcpuptr) = Some cvcpu;
+       cvcpu_relation vcpu cvcpu \<rbrakk>
+     \<Longrightarrow> \<exists>cvcpu'.
+          hrs_mem_update (heap_upd s') (t_hrs_' (globals s'))
+          = hrs_mem_update (heap_update (vcpu_Ptr vcpuptr) cvcpu') (t_hrs_' (globals s'))
+          \<and> cvcpu_relation (f vcpu) cvcpu'"
+  shows "ccorres dc xfdc \<top> UNIV hs
+                 (vcpuUpdate vcpuptr f)
+                 (Basic (\<lambda>s. globals_update (t_hrs_'_update (hrs_mem_update (heap_upd s))) s))"
+  apply (rule ccorres_guard_imp)
+    apply (simp add: vcpuUpdate_def)
+    apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
+    apply (rule_tac P="ko_at' vcpu vcpuptr" in setObject_ccorres_helper_vcpu[where P'=UNIV])
+    apply (rule conseqPre, vcg)
+    apply clarsimp
+    apply (frule (1) cmap_relation_ko_atD[OF cmap_relation_vcpu])
+    apply clarsimp
+    apply (frule (3) update_rel)
+    apply clarsimp
+    apply (rule vcpu_hrs_mem_update_helper)
+       apply (fastforce dest!: vcpu_at_ko simp: obj_at'_ko_at'_prop)+
+  done
+
+method vcpuUpdate_ccorres
+  \<open>ccorres of vcpuUpdate and a Basic heap update on vcpu fields\<close> =
+  rule vcpuUpdate_ccorres,
+  rule exI,
+  rule conjI, \<comment> \<open>need to resolve schematic cvcpu before showing it's in the relation\<close>
+  solves \<open>simp add: typ_heap_simps'\<close>, \<comment> \<open>calculate updated vcpu object\<close>
+  \<comment> \<open>unfold VCPU and VGIC relations (will solve for simple relations)\<close>
+  simp add: cvcpu_relation_regs_def cvgic_relation_def cvcpu_vppi_masked_relation_def
 
 lemma vcpuUpdate_vcpuRegs_ccorres:
   "ccorres dc xfdc \<top> UNIV hs
@@ -1968,111 +2005,46 @@ lemma vcpuUpdate_vcpuRegs_ccorres:
        (\<lambda>_. regs_C_Ptr &(vcpu_Ptr vcpuptr\<rightarrow>[''regs_C'']))
        (\<lambda>s. Arrays.update (h_val (hrs_mem (t_hrs_' (globals s)))
                           (regs_C_Ptr &(vcpu_Ptr vcpuptr\<rightarrow>[''regs_C'']))) (fromEnum r) v))"
-  unfolding vcpuUpdate_def
-  apply (rule ccorres_guard_imp)
-    apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
-    apply (clarsimp simp: fun_upd_def)
-    apply (ctac add: setObject_vcpuRegs_update_ccorres)
-   apply simp+
+  apply vcpuUpdate_ccorres
+      using maxBound_is_bound[where 'a=vcpureg, simplified fromEnum_maxBound_vcpureg_def]
+      apply (clarsimp simp: fromEnum_eq_iff less_eq_Suc_le split: if_split)
   done
 
+(* FIXME AARCH64 consider moving this inline *)
 lemma vgicUpdate_HCR_ccorres:
   "ccorres dc xfdc \<top> UNIV hs
-        (vgicUpdate vcpuptr (vgicHCR_update (\<lambda>_. hcr)))
-        (Basic_heap_update
-          (\<lambda>_. PTR(32 word) &(vgic_C_Ptr &(vcpu_Ptr vcpuptr\<rightarrow>[''vgic_C''])\<rightarrow>[''hcr_C''])) (\<lambda>_. hcr))"
-  apply (rule ccorres_guard_imp)
-  apply (simp add: vgicUpdate_def vcpuUpdate_def)
-  apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
-    apply (rule_tac P="ko_at' vcpu vcpuptr" in setObject_ccorres_helper[where P'=UNIV]
-           , rule conseqPre, vcg)
-      apply clarsimp
-      apply (rule cmap_relationE1[OF cmap_relation_vcpu]
-             ; (clarsimp simp: objBits_simps archObjSize_def)?)
-        apply (assumption, erule ko_at_projectKO_opt)
-      apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
-                            cmachine_state_relation_def update_vcpu_map_to_vcpu
-                            typ_heap_simps' cpspace_relation_def update_vcpu_map_tos)
-      apply (erule (1) cmap_relation_updI
-             ; clarsimp simp: cvcpu_relation_regs_def cvgic_relation_def cvcpu_vppi_masked_relation_def
-             ; (rule refl)?)
-  apply (simp add: objBits_simps archObjSize_def vcpuBits_def)+
-  done
+     (vgicUpdate vcpuptr (vgicHCR_update (\<lambda>_. hcr)))
+     (Basic_heap_update
+        (\<lambda>_. PTR(32 word) &(vgic_C_Ptr &(vcpu_Ptr vcpuptr\<rightarrow>[''vgic_C''])\<rightarrow>[''hcr_C''])) (\<lambda>_. hcr))"
+  by (simp add: vgicUpdate_def)
+     vcpuUpdate_ccorres
 
-(* FIXME generalise if possible, proof is copied from vgicUpdate_HCR_ccorres *)
+(* FIXME AARCH64 consider moving this inline *)
 lemma vgicUpdate_virtTimer_pcount_ccorres:
   "ccorres dc xfdc \<top> UNIV hs
         (vcpuUpdate vcpuptr (vcpuVTimer_update (\<lambda>_. VirtTimer pcount)))
         (Basic_heap_update
           (\<lambda>_. PTR(64 word) &(PTR(vTimer_C) &(vcpu_Ptr vcpuptr\<rightarrow>[''virtTimer_C''])\<rightarrow>[''last_pcount_C'']))
           (\<lambda>_. pcount))"
-  apply (rule ccorres_guard_imp)
-  apply (simp add: vcpuUpdate_def)
-  apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
-    apply (rule_tac P="ko_at' vcpu vcpuptr" in setObject_ccorres_helper[where P'=UNIV]
-           , rule conseqPre, vcg)
-      apply clarsimp
-      apply (rule cmap_relationE1[OF cmap_relation_vcpu]
-             ; (clarsimp simp: objBits_simps archObjSize_def)?)
-        apply (assumption, erule ko_at_projectKO_opt)
-      apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
-                            cmachine_state_relation_def update_vcpu_map_to_vcpu
-                            typ_heap_simps' cpspace_relation_def update_vcpu_map_tos)
-      apply (erule (1) cmap_relation_updI
-             ; clarsimp simp: cvcpu_relation_regs_def cvgic_relation_def cvcpu_vppi_masked_relation_def
-             ; (rule refl)?)
-  apply (simp add: objBits_simps archObjSize_def vcpuBits_def)+
-  done
+  by vcpuUpdate_ccorres
 
-(* FIXME generalise if possible, proof is copied from vgicUpdate_HCR_ccorres *)
+(* FIXME AARCH64 consider moving this inline *)
 lemma vgicUpdate_APR_ccorres:
   "ccorres dc xfdc \<top> UNIV hs
         (vgicUpdate vcpuptr (vgicAPR_update (\<lambda>_. hcr)))
         (Basic_heap_update
           (\<lambda>_. PTR(32 word) &(vgic_C_Ptr &(vcpu_Ptr vcpuptr\<rightarrow>[''vgic_C''])\<rightarrow>[''apr_C''])) (\<lambda>_. hcr))"
-  apply (rule ccorres_guard_imp)
-  apply (simp add: vgicUpdate_def vcpuUpdate_def)
-  apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
-    apply (rule_tac P="ko_at' vcpu vcpuptr" in setObject_ccorres_helper[where P'=UNIV]
-           , rule conseqPre, vcg)
-      apply clarsimp
-      apply (rule cmap_relationE1[OF cmap_relation_vcpu]
-             ; (clarsimp simp: objBits_simps archObjSize_def)?)
-        apply (assumption, erule ko_at_projectKO_opt)
-      apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
-                            cmachine_state_relation_def update_vcpu_map_to_vcpu
-                            typ_heap_simps' cpspace_relation_def update_vcpu_map_tos)
-      apply (erule (1) cmap_relation_updI
-             ; clarsimp simp: cvcpu_relation_regs_def cvgic_relation_def
-                              cvcpu_vppi_masked_relation_def
-             ; (rule refl)?)
-  apply (simp add: objBits_simps archObjSize_def vcpuBits_def)+
-  done
+  by (simp add: vgicUpdate_def)
+     vcpuUpdate_ccorres
 
-(* FIXME generalise if possible, proof is copied from vgicUpdate_HCR_ccorres *)
+(* FIXME AARCH64 consider moving this inline *)
 lemma vgicUpdate_VMCR_ccorres:
   "ccorres dc xfdc \<top> UNIV hs
         (vgicUpdate vcpuptr (vgicVMCR_update (\<lambda>_. hcr)))
         (Basic_heap_update
           (\<lambda>_. PTR(32 word) &(vgic_C_Ptr &(vcpu_Ptr vcpuptr\<rightarrow>[''vgic_C''])\<rightarrow>[''vmcr_C''])) (\<lambda>_. hcr))"
-  apply (rule ccorres_guard_imp)
-  apply (simp add: vgicUpdate_def vcpuUpdate_def)
-  apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
-    apply (rule_tac P="ko_at' vcpu vcpuptr" in setObject_ccorres_helper[where P'=UNIV]
-           , rule conseqPre, vcg)
-      apply clarsimp
-      apply (rule cmap_relationE1[OF cmap_relation_vcpu]
-             ; (clarsimp simp: objBits_simps archObjSize_def)?)
-        apply (assumption, erule ko_at_projectKO_opt)
-      apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
-                            cmachine_state_relation_def update_vcpu_map_to_vcpu
-                            typ_heap_simps' cpspace_relation_def update_vcpu_map_tos)
-      apply (erule (1) cmap_relation_updI
-             ; clarsimp simp: cvcpu_relation_regs_def cvgic_relation_def
-                              cvcpu_vppi_masked_relation_def
-             ; (rule refl)?)
-  apply (simp add: objBits_simps archObjSize_def vcpuBits_def)+
-  done
+  by (simp add: vgicUpdate_def)
+     vcpuUpdate_ccorres
 
 lemma vppievent_irq_noteq_fromEnum_mono:
   "vppi \<noteq> (k :: vppievent_irq) \<Longrightarrow> fromEnum vppi \<noteq> fromEnum k"
@@ -2080,57 +2052,28 @@ lemma vppievent_irq_noteq_fromEnum_mono:
   apply (cases k, clarsimp)
   done
 
-lemma setObject_vcpuVPPIMasked_update_ccorres:
-  "ccorres dc xfdc (ko_at' vcpu vcpuptr) UNIV hs
-     (setObject vcpuptr (vcpuVPPIMasked_update (\<lambda>_ a. if a = k then v else vcpuVPPIMasked vcpu a) vcpu))
-     ((Basic_heap_update
-       (\<lambda>s. vcpu_vppi_masked_C_Ptr &(vcpu_Ptr vcpuptr\<rightarrow>[''vppi_masked_C'']))
-       (\<lambda>s. Arrays.update (h_val (hrs_mem (t_hrs_' (globals s)))
-                          (vcpu_vppi_masked_C_Ptr &(vcpu_Ptr vcpuptr\<rightarrow>[''vppi_masked_C''])))
-                          (fromEnum k) (from_bool v))))"
-  apply (rule ccorres_guard_imp)
-    apply (rule_tac P="ko_at' vcpu vcpuptr" in setObject_ccorres_helper[where P'=UNIV]
-           , rule conseqPre, vcg)
-      apply clarsimp
-      apply (rule cmap_relationE1[OF cmap_relation_vcpu]
-             ; (clarsimp simp: objBits_simps archObjSize_def)?)
-        apply (assumption, erule ko_at_projectKO_opt)
-      apply (frule h_t_valid_clift)
-      apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
-                            cmachine_state_relation_def update_vcpu_map_to_vcpu
-                            typ_heap_simps' cpspace_relation_def update_vcpu_map_tos)
-      apply (erule (1) cmap_relation_updI
-             ; clarsimp simp: cvcpu_relation_regs_def
-                              cvcpu_vppi_masked_relation_def
-             ; (rule refl)?)
-
-      apply (split if_split)
-      apply (rule conjI)
-       apply clarsimp
-       using maxBound_is_bound[where 'a=vppievent_irq, simplified fromEnum_maxBound_vppievent_irq_def]
-       apply -
-       apply (clarsimp simp: fromEnum_eq_iff less_eq_Suc_le fromEnum_eq_iff split: if_split)
-      apply (rule impI)
-      apply (subst Arrays.index_update2, simp)
-       apply (rule vppievent_irq_noteq_fromEnum_mono)
-       apply simp
-      apply blast
-     apply (simp add: objBits_simps archObjSize_def vcpuBits_def)+
-  done
-
 lemma vcpuVPPIMasked_update_ccorres:
-  "ccorres dc xfdc (vcpu_at' vcpuptr) UNIV hs
+  "ccorres dc xfdc \<top> UNIV hs
      (vcpuUpdate vcpuptr (\<lambda>vcpu. vcpuVPPIMasked_update (\<lambda>_. (vcpuVPPIMasked vcpu)(k := v)) vcpu))
      ((Basic_heap_update
        (\<lambda>s. vcpu_vppi_masked_C_Ptr &(vcpu_Ptr vcpuptr\<rightarrow>[''vppi_masked_C'']))
        (\<lambda>s. Arrays.update (h_val (hrs_mem (t_hrs_' (globals s)))
                           (vcpu_vppi_masked_C_Ptr &(vcpu_Ptr vcpuptr\<rightarrow>[''vppi_masked_C''])))
                           (fromEnum k) (from_bool v))))"
-  apply (simp add: vcpuUpdate_def fun_upd_def)
-  apply (rule ccorres_guard_imp)
-    apply (rule ccorres_pre_getObject_vcpu)
-    apply (rule setObject_vcpuVPPIMasked_update_ccorres)
-   apply auto
+  apply vcpuUpdate_ccorres
+  using maxBound_is_bound[where 'a=vppievent_irq, simplified fromEnum_maxBound_vppievent_irq_def]
+  apply (split if_split)
+  apply (rule allI)
+  apply (rule conjI)
+   apply clarsimp
+   using maxBound_is_bound[where 'a=vppievent_irq, simplified fromEnum_maxBound_vppievent_irq_def]
+   apply -
+   apply (clarsimp simp: fromEnum_eq_iff less_eq_Suc_le split: if_split)
+  apply (rule impI)
+  apply (subst Arrays.index_update2, simp)
+   apply (rule vppievent_irq_noteq_fromEnum_mono)
+   apply simp
+  apply blast
   done
 
 lemma vcpu_write_reg_ccorres:
@@ -2423,27 +2366,16 @@ lemma restore_virt_timer_ccorres:
   done *)
 
 lemma vcpuUpdate_vTimer_pcount_ccorres:
-  "ccorres dc xfdc \<top> UNIV hs
+  "ccorres dc xfdc (vcpu_at' vcpuptr) UNIV hs
         (vcpuUpdate vcpuptr (vcpuVTimer_update (\<lambda>_. VirtTimer v)))
         (Guard C_Guard {s. s \<Turnstile>\<^sub>c vcpu_Ptr vcpuptr}
           (Basic_heap_update
             (\<lambda>_. PTR(64 word) &(PTR(vTimer_C) &(vcpu_Ptr vcpuptr\<rightarrow>[''virtTimer_C''])\<rightarrow>[''last_pcount_C''])) (\<lambda>_. v)))"
+  (* FIXME AARCH64 nicer proof at the cost of assuming vcpu_at' which is ensured by getObject *)
   apply (rule ccorres_guard_imp)
-  apply (simp add: vgicUpdate_def vcpuUpdate_def)
-  apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
-    apply (rule_tac P="ko_at' vcpu vcpuptr" in setObject_ccorres_helper[where P'=UNIV]
-           , rule conseqPre, vcg)
-      apply clarsimp
-      apply (rule cmap_relationE1[OF cmap_relation_vcpu]
-             ; (clarsimp simp: objBits_simps archObjSize_def)?)
-        apply (assumption, erule ko_at_projectKO_opt)
-      apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
-                            cmachine_state_relation_def update_vcpu_map_to_vcpu
-                            typ_heap_simps' cpspace_relation_def update_vcpu_map_tos)
-      apply (erule (1) cmap_relation_updI
-             ; clarsimp simp: cvcpu_relation_regs_def cvgic_relation_def cvcpu_vppi_masked_relation_def
-             ; (rule refl)?)
-  apply (simp add: objBits_simps archObjSize_def vcpuBits_def)+
+    apply (rule ccorres_move_c_guard_vcpu)
+    apply vcpuUpdate_ccorres
+    apply simp+
   done
 
 lemma save_virt_timer_ccorres:
@@ -2686,23 +2618,10 @@ lemma vgicUpdateLR_ccorres:
               (vgic_lr_C_Ptr &(vgic_C_Ptr &(vcpu_Ptr vcpuptr\<rightarrow>[''vgic_C''])\<rightarrow>[''lr_C''])))
               n' v'))"
   apply (rule ccorres_grab_asm)
+  apply (simp add: vgicUpdateLR_def vgicUpdate_def)
+  apply vcpuUpdate_ccorres
   supply from_bool_eq_if[simp] from_bool_eq_if'[simp] from_bool_0[simp]
-  apply (rule ccorres_guard_imp)
-  apply (simp add: vgicUpdate_def vcpuUpdate_def vgicUpdateLR_def)
-  apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
-    apply (rule_tac P="ko_at' vcpu vcpuptr" in setObject_ccorres_helper[where P'=UNIV]
-           , rule conseqPre, vcg)
-      apply clarsimp
-      apply (rule cmap_relationE1[OF cmap_relation_vcpu]
-             ; (clarsimp simp: objBits_simps archObjSize_def)?)
-        apply (assumption, erule ko_at_projectKO_opt)
-      apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
-                            cmachine_state_relation_def update_vcpu_map_to_vcpu
-                            typ_heap_simps' cpspace_relation_def update_vcpu_map_tos)
-      apply (erule (1) cmap_relation_updI
-             ; clarsimp simp: cvcpu_relation_regs_def cvgic_relation_def ; (rule refl)?)
-      apply (fastforce simp: virq_to_H_def cvcpu_vppi_masked_relation_def split: if_split)
-     apply (simp add: objBits_simps archObjSize_def vcpuBits_def)+
+  apply (fastforce simp: virq_to_H_def cvcpu_vppi_masked_relation_def split: if_split)
   done
 
 lemma vcpu_save_ccorres:
