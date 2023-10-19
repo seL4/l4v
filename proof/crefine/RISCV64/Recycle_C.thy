@@ -1113,7 +1113,7 @@ lemma coerce_memset_to_heap_update:
                           (NULL)
                           (seL4_Fault_C (FCP (\<lambda>x. 0)))
                           (lookup_fault_C (FCP (\<lambda>x. 0)))
-                            0 0 0 NULL NULL 0 NULL NULL NULL NULL NULL)"
+                            0 0 0 NULL NULL 0 NULL NULL NULL NULL)"
   apply (intro ext, simp add: heap_update_def)
   apply (rule_tac f="\<lambda>xs. heap_update_list x xs a b" for a b in arg_cong)
   apply (simp add: to_bytes_def size_of_def typ_info_simps tcb_C_tag_def)
