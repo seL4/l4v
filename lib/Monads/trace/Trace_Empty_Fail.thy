@@ -333,6 +333,31 @@ lemma empty_fail_notM[empty_fail_cond]:
   "empty_fail A \<Longrightarrow> empty_fail (notM A)"
   by (simp add: notM_def empty_fail_term empty_fail_cond)
 
+lemma empty_fail_put_trace_elem[empty_fail_term]:
+  "empty_fail (put_trace_elem x)"
+  by (clarsimp simp: put_trace_elem_def empty_fail_def mres_def vimage_def)
+
+lemma empty_fail_put_trace[empty_fail_term]:
+  "empty_fail (put_trace xs)"
+  apply (induct xs)
+   apply (clarsimp simp: empty_fail_term)
+  apply (clarsimp simp: empty_fail_term empty_fail_cond)
+  done
+
+lemma empty_fail_interference[empty_fail_term]:
+  "empty_fail interference"
+  by (simp add: interference_def commit_step_def env_steps_def empty_fail_term empty_fail_cond)
+
+lemma last_st_tr_not_empty:
+  "P s \<Longrightarrow> \<exists>xs. P (last_st_tr (map (Pair Env) xs) s')"
+  apply (rule exI[where x="[s]"])
+  apply (auto simp: last_st_tr_def)
+  done
+
+lemma empty_fail_Await[empty_fail_term]:
+  "\<exists>s. c s \<Longrightarrow> empty_fail (Await c)"
+  by (clarsimp simp: Await_def last_st_tr_not_empty empty_fail_term empty_fail_cond)
+
 (* not everything [simp] by default, because side conditions can slow down simp a lot *)
 lemmas empty_fail[wp, intro!] = empty_fail_term empty_fail_cond
 lemmas [simp] = empty_fail_term
