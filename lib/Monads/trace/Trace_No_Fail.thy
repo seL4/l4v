@@ -235,4 +235,28 @@ lemma no_fail_grab_asm:
   "(G \<Longrightarrow> no_fail P f) \<Longrightarrow> no_fail (\<lambda>s. G \<and> P s) f"
   by (cases G; clarsimp)
 
+lemma no_fail_put_trace_elem[wp]:
+  "no_fail \<top> (put_trace_elem x)"
+  by (clarsimp simp: put_trace_elem_def no_fail_def failed_def)
+
+lemma no_fail_put_trace[wp]:
+  "no_fail \<top> (put_trace xs)"
+  by (induct xs; wpsimp)
+
+lemma no_fail_interference[wp]:
+  "no_fail \<top> interference"
+  by (wpsimp simp: interference_def commit_step_def env_steps_def)
+
+lemma no_fail_Await[wp]:
+  "\<exists>s. c s \<Longrightarrow> no_fail \<top> (Await c)"
+  by (wpsimp simp: Await_def)
+
+lemma parallel_failed:
+  "failed (parallel f g s) \<Longrightarrow> failed (f s) \<and> failed (g s)"
+  by (auto simp: parallel_def2 failed_def image_def intro!: bexI)
+
+lemma no_fail_parallel[wp]:
+  "\<lbrakk> no_fail P f \<or> no_fail Q g \<rbrakk> \<Longrightarrow> no_fail (P and Q) (parallel f g)"
+  by (auto simp: no_fail_def dest!: parallel_failed)
+
 end
