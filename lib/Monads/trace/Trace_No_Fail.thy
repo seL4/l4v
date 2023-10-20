@@ -22,7 +22,7 @@ text \<open>
   state that satisfies the precondition it returns a @{term Failed} result.
 \<close>
 definition no_fail :: "('s \<Rightarrow> bool) \<Rightarrow> ('s,'a) tmonad \<Rightarrow> bool" where
-  "no_fail P m \<equiv> \<forall>s. P s \<longrightarrow> Failed \<notin> snd ` (m s)"
+  "no_fail P m \<equiv> \<forall>s. P s \<longrightarrow> \<not> failed (m s)"
 
 
 subsection \<open>@{method wpc} setup\<close>
@@ -51,7 +51,7 @@ bundle classic_wp_pre =
 subsection \<open>Lemmas\<close>
 
 lemma no_failD:
-  "\<lbrakk> no_fail P m; P s \<rbrakk> \<Longrightarrow> Failed \<notin> snd ` m s"
+  "\<lbrakk> no_fail P m; P s \<rbrakk> \<Longrightarrow> \<not> failed (m s)"
   by (simp add: no_fail_def)
 
 lemma no_fail_return[simp, wp]:
@@ -61,7 +61,7 @@ lemma no_fail_return[simp, wp]:
 lemma no_fail_bind[wp]:
   "\<lbrakk> no_fail P f; \<And>x. no_fail (R x) (g x); \<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace> \<rbrakk> \<Longrightarrow> no_fail (P and Q) (f >>= (\<lambda>rv. g rv))"
   apply (simp add: no_fail_def bind_def' image_Un image_image
-                   in_image_constant)
+                   in_image_constant failed_def)
   apply (intro allI conjI impI)
    apply (fastforce simp: image_def)
   apply clarsimp
@@ -91,7 +91,7 @@ lemma no_fail_gets[wp]:
 
 lemma no_fail_select[wp,simp]:
   "no_fail \<top> (select S)"
-  by (simp add: no_fail_def select_def image_def)
+  by (simp add: no_fail_def select_def image_def failed_def)
 
 lemma no_fail_alt[wp]:
   "\<lbrakk> no_fail P f; no_fail Q g \<rbrakk> \<Longrightarrow> no_fail (P and Q) (f \<sqinter> g)"

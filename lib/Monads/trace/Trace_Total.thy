@@ -25,7 +25,7 @@ definition validNF ::
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>! \<equiv> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<and> no_fail P f"
 
 lemma validNF_alt_def:
-  "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>! = (\<forall>s. P s \<longrightarrow> ((\<forall>(r', s') \<in> mres (f s). Q r' s') \<and> Failed \<notin> snd ` (f s)))"
+  "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>! = (\<forall>s. P s \<longrightarrow> ((\<forall>(r', s') \<in> mres (f s). Q r' s') \<and> \<not> failed (f s)))"
   by (auto simp: validNF_def valid_def no_fail_def)
 
 definition validE_NF ::
@@ -88,7 +88,7 @@ lemma validNF_no_fail:
   by (erule validNFE)
 
 lemma validNF_not_failed:
-  "\<lbrakk> \<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>!; P s \<rbrakk> \<Longrightarrow> Failed \<notin> snd ` (f s)"
+  "\<lbrakk> \<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>!; P s \<rbrakk> \<Longrightarrow> \<not> failed (f s)"
   by (clarsimp simp: validNF_def no_fail_def)
 
 lemma use_validNF:
@@ -134,7 +134,7 @@ text \<open>
   Set up combination rules for @{method wp}, which also requires a @{text wp_trip} rule for
   @{const validNF}.\<close>
 definition validNF_property :: "('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> 's \<Rightarrow> ('s,'a) tmonad \<Rightarrow> bool" where
-  "validNF_property Q s b \<equiv> Failed \<notin> snd ` (b s) \<and> (\<forall>(r', s') \<in> mres (b s). Q r' s')"
+  "validNF_property Q s b \<equiv> \<not> failed (b s) \<and> (\<forall>(r', s') \<in> mres (b s). Q r' s')"
 
 lemma validNF_is_triple[wp_trip]:
   "validNF P f Q = triple_judgement P f (validNF_property Q)"
@@ -308,7 +308,7 @@ definition validE_NF_property ::
   "('a \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('c \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> 's \<Rightarrow> ('s, 'c+'a) tmonad \<Rightarrow> bool"
   where
   "validE_NF_property Q E s b \<equiv>
-   Failed \<notin> snd ` (b s) \<and> (\<forall>(r', s') \<in> mres (b s). case r' of Inl x \<Rightarrow> E x s' | Inr x \<Rightarrow> Q x s')"
+   \<not> failed (b s) \<and> (\<forall>(r', s') \<in> mres (b s). case r' of Inl x \<Rightarrow> E x s' | Inr x \<Rightarrow> Q x s')"
 
 lemma validE_NF_is_triple[wp_trip]:
   "validE_NF P f Q E = triple_judgement P f (validE_NF_property Q E)"
