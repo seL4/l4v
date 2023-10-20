@@ -44,7 +44,6 @@ text \<open>
   pair of result and state when the computation did not fail.\<close>
 type_synonym ('s, 'a) tmonad = "'s \<Rightarrow> ((tmid \<times> 's) list \<times> ('s, 'a) tmres) set"
 
-
 text \<open>
   Print the type @{typ "('s,'a) tmonad"} instead of its unwieldy expansion.
   Needs an AST translation in code, because it needs to check that the state variable
@@ -67,6 +66,17 @@ print_ast_translation \<open>
 text \<open>Returns monad results, ignoring failures and traces.\<close>
 definition mres :: "((tmid \<times> 's) list \<times> ('s, 'a) tmres) set \<Rightarrow> ('a \<times> 's) set" where
   "mres r = Result -` (snd ` r)"
+
+text \<open>True if the monad has a computation resulting in Failed.\<close>
+definition failed :: "((tmid \<times> 's) list \<times> ('s, 'a) tmres) set \<Rightarrow> bool" where
+  "failed r \<equiv> Failed \<in> snd ` r"
+
+lemma failed_simps[simp]:
+  "failed {(x, y)} = (y = Failed)"
+  "failed (r \<union> r') = (failed r \<or> failed r')"
+  "\<not> failed {}"
+  by (auto simp: failed_def)
+
 
 text \<open>
   The definition of fundamental monad functions @{text return} and

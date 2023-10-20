@@ -18,7 +18,7 @@ text \<open>
   following property: if they return an empty set of completed results, there exists a trace
   corresponding to a failed result.\<close>
 definition empty_fail :: "('s,'a) tmonad \<Rightarrow> bool" where
-  "empty_fail m \<equiv> \<forall>s. mres (m s) = {} \<longrightarrow> Failed \<in> snd ` (m s)"
+  "empty_fail m \<equiv> \<forall>s. mres (m s) = {} \<longrightarrow> failed (m s)"
 
 text \<open>Useful in forcing otherwise unknown executions to have the @{const empty_fail} property.\<close>
 definition mk_ef ::
@@ -38,28 +38,28 @@ wpc_setup "\<lambda>m. empty_fail m" wpc_helper_empty_fail_final
 subsection \<open>@{const empty_fail} intro/dest rules\<close>
 
 lemma empty_failI:
-  "(\<And>s. mres (m s) = {} \<Longrightarrow> Failed \<in> snd ` (m s)) \<Longrightarrow> empty_fail m"
+  "(\<And>s. mres (m s) = {} \<Longrightarrow> failed (m s)) \<Longrightarrow> empty_fail m"
   by (simp add: empty_fail_def)
 
 lemma empty_failD:
-  "\<lbrakk> empty_fail m; mres (m s) = {} \<rbrakk> \<Longrightarrow> Failed \<in> snd ` (m s)"
+  "\<lbrakk> empty_fail m; mres (m s) = {} \<rbrakk> \<Longrightarrow> failed (m s)"
   by (simp add: empty_fail_def)
 
 lemma empty_fail_not_snd:
-  "\<lbrakk> Failed \<notin> snd ` (m s); empty_fail m \<rbrakk> \<Longrightarrow> \<exists>v. v \<in> mres (m s)"
+  "\<lbrakk> \<not> failed (m s); empty_fail m \<rbrakk> \<Longrightarrow> \<exists>v. v \<in> mres (m s)"
   by (fastforce simp: empty_fail_def)
 
 lemmas empty_failD2 = empty_fail_not_snd[rotated]
 
 lemma empty_failD3:
-  "\<lbrakk> empty_fail f; Failed \<notin> snd ` (f s) \<rbrakk> \<Longrightarrow> mres (f s) \<noteq> {}"
+  "\<lbrakk> empty_fail f; \<not> failed (f s) \<rbrakk> \<Longrightarrow> mres (f s) \<noteq> {}"
   by (drule(1) empty_failD2, clarsimp)
 
 lemma empty_fail_bindD1:
   "empty_fail (a >>= b) \<Longrightarrow> empty_fail a"
   unfolding empty_fail_def bind_def
   apply (erule all_reg[rotated])
-  by (force simp: split_def mres_def vimage_def split: tmres.splits)
+  by (force simp: split_def mres_def vimage_def failed_def split: tmres.splits)
 
 
 subsection \<open>Wellformed monads\<close>
@@ -116,14 +116,14 @@ lemma mres_bind_empty:
   apply fastforce
   done
 
-lemma bind_FailedI1:
-  "Failed \<in> snd ` f s \<Longrightarrow> Failed \<in> snd ` (f >>= g) s"
-  by (force simp: bind_def vimage_def)
+lemma bind_failedI1:
+  "failed (f s) \<Longrightarrow> failed ((f >>= g) s)"
+  by (force simp: bind_def vimage_def failed_def)
 
-lemma bind_FailedI2:
-  "\<lbrakk>\<forall>res\<in>mres (f s). Failed \<in> snd ` (g (fst res) (snd res)); mres (f s) \<noteq> {}\<rbrakk>
-   \<Longrightarrow> Failed \<in> snd ` (f >>= g) s"
-  by (force simp: bind_def mres_def image_def split_def)
+lemma bind_failedI2:
+  "\<lbrakk>\<forall>res\<in>mres (f s). failed (g (fst res) (snd res)); mres (f s) \<noteq> {}\<rbrakk>
+   \<Longrightarrow> failed ((f >>= g) s)"
+  by (force simp: bind_def mres_def image_def split_def failed_def)
 
 lemma empty_fail_bind[empty_fail_cond]:
   "\<lbrakk> empty_fail a; \<And>x. empty_fail (b x) \<rbrakk> \<Longrightarrow> empty_fail (a >>= b)"
@@ -131,8 +131,8 @@ lemma empty_fail_bind[empty_fail_cond]:
   apply clarsimp
   apply (drule mres_bind_empty)
   apply (erule context_disjE)
-   apply (fastforce intro: bind_FailedI1)
-  apply (fastforce intro!: bind_FailedI2)
+   apply (fastforce intro: bind_failedI1)
+  apply (fastforce intro!: bind_failedI2)
   done
 
 lemma empty_fail_return[empty_fail_term]:
@@ -189,7 +189,7 @@ lemma empty_fail_assert_opt[empty_fail_term]:
 
 lemma empty_fail_mk_ef[empty_fail_term]:
   "empty_fail (mk_ef o m)"
-  by (simp add: empty_fail_def mk_ef_def)
+  by (simp add: empty_fail_def mk_ef_def failed_def)
 
 lemma empty_fail_gets_the[empty_fail_term]:
   "empty_fail (gets_the f)"
@@ -224,7 +224,7 @@ lemma empty_fail_guard[empty_fail_term]:
 
 lemma empty_fail_spec[empty_fail_term]:
   "empty_fail (state_select F)"
-  by (clarsimp simp: state_select_def empty_fail_def default_elem_def mres_def image_def)
+  by (clarsimp simp: state_select_def empty_fail_def default_elem_def mres_def image_def failed_def)
 
 lemma empty_fail_when[empty_fail_cond]:
   "(P \<Longrightarrow> empty_fail x) \<Longrightarrow> empty_fail (when P x)"
