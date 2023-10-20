@@ -227,4 +227,12 @@ lemma no_fail_condition:
   unfolding condition_def no_fail_def
   by clarsimp
 
+lemma no_fail_ex_lift:
+  "(\<And>x. no_fail (P x) f) \<Longrightarrow> no_fail (\<lambda>s. \<exists>x. P x s) f"
+  by (fastforce simp: no_fail_def)
+
+lemma no_fail_grab_asm:
+  "(G \<Longrightarrow> no_fail P f) \<Longrightarrow> no_fail (\<lambda>s. G \<and> P s) f"
+  by (cases G, simp+)
+
 end
