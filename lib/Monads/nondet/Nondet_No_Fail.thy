@@ -54,14 +54,30 @@ lemma no_failD:
   "\<lbrakk> no_fail P m; P s \<rbrakk> \<Longrightarrow> \<not>(snd (m s))"
   by (simp add: no_fail_def)
 
+lemma no_fail_return[simp, wp]:
+  "no_fail \<top> (return x)"
+  by (simp add: return_def no_fail_def)
+
+lemma no_fail_bind[wp]:
+  "\<lbrakk> \<And>rv. no_fail (R rv) (g rv); \<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>; no_fail P f \<rbrakk> \<Longrightarrow> no_fail (P and Q) (f >>= (\<lambda>rv. g rv))"
+  unfolding no_fail_def bind_def
+  using post_by_hoare by fastforce
+
+lemma no_fail_get[simp, wp]:
+  "no_fail \<top> get"
+  by (simp add: get_def no_fail_def)
+
+lemma no_fail_put[simp, wp]:
+  "no_fail \<top> (put s)"
+  by (simp add: put_def no_fail_def)
+
 lemma no_fail_modify[wp,simp]:
   "no_fail \<top> (modify f)"
-  by (simp add: no_fail_def modify_def get_def put_def bind_def)
+  by (wpsimp simp: modify_def)
 
 lemma no_fail_gets_simp[simp]:
   "no_fail P (gets f)"
-  unfolding no_fail_def gets_def get_def return_def bind_def
-  by simp
+  by (wpsimp simp: gets_def)
 
 lemma no_fail_gets[wp]:
   "no_fail \<top> (gets f)"
@@ -74,18 +90,6 @@ lemma no_fail_select[simp]:
 lemma no_fail_alt[wp]:
   "\<lbrakk> no_fail P f; no_fail Q g \<rbrakk> \<Longrightarrow> no_fail (P and Q) (f \<sqinter> g)"
   by (simp add: no_fail_def alternative_def)
-
-lemma no_fail_return[simp, wp]:
-  "no_fail \<top> (return x)"
-  by (simp add: return_def no_fail_def)
-
-lemma no_fail_get[simp, wp]:
-  "no_fail \<top> get"
-  by (simp add: get_def no_fail_def)
-
-lemma no_fail_put[simp, wp]:
-  "no_fail \<top> (put s)"
-  by (simp add: put_def no_fail_def)
 
 lemma no_fail_when[wp]:
   "(P \<Longrightarrow> no_fail Q f) \<Longrightarrow> no_fail (if P then Q else \<top>) (when P f)"
@@ -128,11 +132,6 @@ lemma no_fail_undefined[simp, wp]:
 lemma no_fail_returnOK[simp, wp]:
   "no_fail \<top> (returnOk x)"
   by (simp add: returnOk_def)
-
-lemma no_fail_bind[wp]:
-  "\<lbrakk> \<And>rv. no_fail (R rv) (g rv); \<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>; no_fail P f \<rbrakk> \<Longrightarrow> no_fail (P and Q) (f >>= (\<lambda>rv. g rv))"
-  unfolding no_fail_def bind_def
-  using post_by_hoare by fastforce
 
 lemma no_fail_assume_pre:
   "(\<And>s. P s \<Longrightarrow> no_fail P f) \<Longrightarrow> no_fail P f"
