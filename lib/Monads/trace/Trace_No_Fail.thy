@@ -89,7 +89,7 @@ lemma no_fail_gets[wp]:
   "no_fail \<top> (gets f)"
   by simp
 
-lemma no_fail_select[simp]:
+lemma no_fail_select[wp,simp]:
   "no_fail \<top> (select S)"
   by (simp add: no_fail_def select_def image_def)
 
@@ -222,7 +222,7 @@ lemma no_fail_state_assert[wp]:
   unfolding state_assert_def
   by wpsimp
 
-lemma no_fail_condition:
+lemma no_fail_condition[wp]:
   "\<lbrakk>no_fail Q A; no_fail R B\<rbrakk> \<Longrightarrow> no_fail (\<lambda>s. (C s \<longrightarrow> Q s) \<and> (\<not> C s \<longrightarrow> R s)) (condition C A B)"
   unfolding condition_def no_fail_def
   by clarsimp
@@ -233,6 +233,6 @@ lemma no_fail_ex_lift:
 
 lemma no_fail_grab_asm:
   "(G \<Longrightarrow> no_fail P f) \<Longrightarrow> no_fail (\<lambda>s. G \<and> P s) f"
-  by (cases G, simp+)
+  by (cases G; clarsimp)
 
 end
