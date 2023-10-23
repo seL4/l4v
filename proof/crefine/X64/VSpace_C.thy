@@ -448,7 +448,7 @@ lemma corres_symb_exec_unknown_r:
   assumes "\<And>rv. corres_underlying sr nf nf' r P P' a (c rv)"
   shows "corres_underlying sr nf nf' r P P' a (unknown >>= c)"
   apply (simp add: unknown_def)
-  apply (rule corres_symb_exec_r[OF assms]; wp select_inv no_fail_select)
+  apply (rule corres_symb_exec_r[OF assms]; wp select_inv)
   done
 
 lemma lookupPML4Slot'_spec:
