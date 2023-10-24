@@ -9,7 +9,7 @@ theory Trace_RG
   imports
     Trace_VCG
     Trace_Monad_Equations
-    Trace_No_Trace
+    Trace_Prefix_Closed
 begin
 
 section \<open>Rely-Guarantee Logic\<close>
@@ -92,9 +92,6 @@ text \<open>
 definition rely :: "('s, 'a) tmonad \<Rightarrow> 's rg_pred \<Rightarrow> 's \<Rightarrow> ('s, 'a) tmonad" where
   "rely f R s0s \<equiv> (\<lambda>s. f s \<inter> ({tr. rely_cond R s0s tr} \<times> UNIV))"
 
-definition prefix_closed :: "('s, 'a) tmonad \<Rightarrow> bool" where
-  "prefix_closed f = (\<forall>s. \<forall>x xs. (x # xs) \<in> fst ` f s \<longrightarrow> (xs, Incomplete) \<in> f s)"
-
 definition validI ::
   "('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> 's rg_pred \<Rightarrow> ('s,'a) tmonad \<Rightarrow> 's rg_pred \<Rightarrow> ('a \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
   ("(\<lbrace>_\<rbrace>,/ \<lbrace>_\<rbrace>)/ _ /(\<lbrace>_\<rbrace>,/ \<lbrace>_\<rbrace>)") where
@@ -139,20 +136,6 @@ lemmas validI_prefix_closed = validI_def[THEN meta_eq_to_obj_eq, THEN iffD1, THE
 lemmas validI_prefix_closed_T =
   validI_prefix_closed[where P="\<lambda>_ _. False" and R="\<lambda>_ _. False" and G="\<lambda>_ _. True"
                          and Q="\<lambda>_ _ _. True"]
-
-lemmas prefix_closedD1 = prefix_closed_def[THEN iffD1, rule_format]
-
-lemma in_fst_snd_image_eq:
-  "x \<in> fst ` S = (\<exists>y. (x, y) \<in> S)"
-  "y \<in> snd ` S = (\<exists>x. (x, y) \<in> S)"
-  by (auto elim: image_eqI[rotated])
-
-lemma in_fst_snd_image:
-  "(x, y) \<in> S \<Longrightarrow> x \<in> fst ` S"
-  "(x, y) \<in> S \<Longrightarrow> y \<in> snd ` S"
-  by (auto simp: in_fst_snd_image_eq)
-
-lemmas prefix_closedD = prefix_closedD1[OF _ in_fst_snd_image(1)]
 
 
 section \<open>Lemmas\<close>
@@ -212,16 +195,6 @@ lemma rely_cond_append:
 lemma guar_cond_append:
   "guar_cond G s (xs @ ys) = (guar_cond G s ys \<and> guar_cond G (last_st_tr ys s) xs)"
   by (simp add: guar_cond_def trace_steps_append ball_Un conj_comms)
-
-lemma prefix_closed_bind:
-  "\<lbrakk>prefix_closed f; \<forall>x. prefix_closed (g x)\<rbrakk> \<Longrightarrow> prefix_closed (f >>= g)"
-  apply (subst prefix_closed_def, clarsimp simp: bind_def)
-  apply (auto simp: Cons_eq_append_conv split: tmres.split_asm
-             dest!: prefix_closedD[rotated];
-         fastforce elim: rev_bexI)
-  done
-
-lemmas prefix_closed_bind[rule_format, wp_split]
 
 lemma last_st_tr_append[simp]:
   "last_st_tr (tr @ tr') s = last_st_tr tr (last_st_tr tr' s)"
@@ -285,16 +258,6 @@ lemma validI_GD_drop:
    \<Longrightarrow> guar_cond G s0 (drop n tr)"
   apply (drule prefix_closed_drop[where n=n], erule validI_prefix_closed)
   apply (auto dest: validI_GD)
-  done
-
-lemma parallel_prefix_closed[wp_split]:
-  "\<lbrakk>prefix_closed f; prefix_closed g\<rbrakk>
-   \<Longrightarrow> prefix_closed (parallel f g)"
-  apply (subst prefix_closed_def, clarsimp simp: parallel_def)
-  apply (subst (asm) zip.zip_Cons)
-  apply (clarsimp split: list.splits)
-  apply (drule(1) prefix_closedD)+
-  apply fastforce
   done
 
 lemma rely_cond_drop:
@@ -464,18 +427,6 @@ lemma rely_prim[simp]:
   "rely (\<lambda>s. {}) R s0 = (\<lambda>_. {})"
   by (auto simp: rely_def prod_eq_iff)
 
-lemma prefix_closed_put_trace_elem[iff]:
-  "prefix_closed (put_trace_elem x)"
-  by (clarsimp simp: prefix_closed_def put_trace_elem_def)
-
-lemma prefix_closed_return[iff]:
-  "prefix_closed (return x)"
-  by (simp add: prefix_closed_def return_def)
-
-lemma prefix_closed_put_trace[iff]:
-  "prefix_closed (put_trace tr)"
-  by (induct tr; clarsimp simp: prefix_closed_bind)
-
 lemma put_trace_eq_drop:
   "put_trace xs s
    = ((\<lambda>n. (drop n xs, if n = 0 then Result ((), s) else Incomplete)) ` {.. length xs})"
@@ -510,10 +461,6 @@ lemma put_trace_twp[wp]:
 
 lemmas put_trace_elem_twp = put_trace_twp[where xs="[x]" for x, simplified]
 
-lemma prefix_closed_select[iff]:
-  "prefix_closed (select S)"
-  by (simp add: prefix_closed_def select_def image_def)
-
 lemma rely_cond_rtranclp:
   "rely_cond R s (map (Pair Env) xs) \<Longrightarrow> rtranclp R s (last_st_tr (map (Pair Env) xs) s)"
   apply (induct xs arbitrary: s rule: rev_induct)
@@ -537,10 +484,6 @@ lemma validI_is_triple[wp_trip]:
   apply (simp add: triple_judgement_def validI_def )
   apply (cases "prefix_closed f"; fastforce)
   done
-
-lemma no_trace_prefix_closed:
-  "no_trace f \<Longrightarrow> prefix_closed f"
-  by (auto simp add: prefix_closed_def dest: no_trace_emp)
 
 lemma validI_valid_no_trace_eq:
   "no_trace f \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace> = (\<forall>s0. \<lbrace>P s0\<rbrace> f \<lbrace>\<lambda>v. Q v s0\<rbrace>)"
@@ -624,14 +567,6 @@ lemma validI_well_behaved':
   done
 
 lemmas validI_well_behaved = validI_well_behaved'[unfolded le_fun_def, simplified]
-
-lemma prefix_closed_mapM[rule_format, wp_split]:
-  "(\<forall>x \<in> set xs. prefix_closed (f x)) \<Longrightarrow> prefix_closed (mapM f xs)"
-  apply (induct xs)
-   apply (simp add: mapM_def sequence_def)
-  apply (clarsimp simp: mapM_Cons)
-  apply (intro prefix_closed_bind allI; clarsimp)
-  done
 
 lemmas bind_promote_If =
   if_distrib[where f="\<lambda>f. bind f g" for g]
@@ -728,22 +663,6 @@ lemma validI_guar_post_conj_lift:
   apply (subst validI_def, clarsimp simp: rely_def)
   apply (drule(3) validI_D)+
   apply (auto simp: guar_cond_def)
-  done
-
-lemmas modify_prefix_closed[simp] =
-  modify_wp[THEN valid_validI_wp[OF no_trace_all(3)], THEN validI_prefix_closed]
-lemmas await_prefix_closed[simp] = Await_sync_twp[THEN validI_prefix_closed]
-
-lemma repeat_n_prefix_closed[intro!]:
-  "prefix_closed f \<Longrightarrow> prefix_closed (repeat_n n f)"
-  apply (induct n; simp)
-  apply (auto intro: prefix_closed_bind)
-  done
-
-lemma repeat_prefix_closed[intro!]:
-  "prefix_closed f \<Longrightarrow> prefix_closed (repeat f)"
-  apply (simp add: repeat_def)
-  apply (rule prefix_closed_bind; clarsimp)
   done
 
 lemma rely_cond_True[simp]:
