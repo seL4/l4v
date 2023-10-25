@@ -53,8 +53,18 @@ abbreviation
 abbreviation
   vcpu_vppi_masked_C_Ptr :: "addr \<Rightarrow> (machine_word[1]) ptr" where "vcpu_vppi_masked_C_Ptr \<equiv> Ptr"
 
+(* FIXME AARCH64 can't do this for either register or vcpureg due to missing code equations
+value_type vcpuregs_count = "length enum_vcpureg"
+if the above works, we could move it to the machine spec, at which point probably doing a rename
+to register_count and vcpureg_count (singular) would make sense across the platforms *)
+
+type_synonym vcpuregs_count = 23 (* length enum_vcpureg *)
+
+abbreviation
+  vcpuregs_C_Ptr :: "addr \<Rightarrow> (machine_word[vcpuregs_count]) ptr" where "vcpuregs_C_Ptr \<equiv> Ptr"
+
 type_synonym tcb_cnode_array = "cte_C[5]"
-type_synonym registers_count = 37
+type_synonym registers_count = 37 (* length enum_register *)
 type_synonym registers_array = "machine_word[registers_count]"
 
 (* typedef word_t register_t; *)
@@ -196,12 +206,30 @@ definition
   isZombieTCB_C :: "word64 \<Rightarrow> bool" where
  "isZombieTCB_C v \<equiv> v = ZombieTCB_C"
 
+(* FIXME AARCH64 vmrights_to_H should be renamed vm_rights_to_H on all platforms, as there is no
+   "vmrights" anywhere, and follow that up with renaming "vmrights" lemmas *)
+
 definition
 vmrights_to_H :: "word64 \<Rightarrow> vmrights" where
 "vmrights_to_H c \<equiv>
   if c = scast Kernel_C.VMReadWrite then VMReadWrite
   else if c = scast Kernel_C.VMReadOnly then VMReadOnly
   else VMKernelOnly"
+
+definition vm_attributes_to_H :: "vm_attributes_C \<Rightarrow> vmattributes" where
+  "vm_attributes_to_H attrs_raw \<equiv>
+    let attrs = vm_attributes_lift attrs_raw in
+    VMAttributes (to_bool (armExecuteNever_CL attrs))
+                 (to_bool (armPageCacheable_CL attrs))"
+
+definition attridx_from_vmattributes :: "vmattributes \<Rightarrow> machine_word" where
+  "attridx_from_vmattributes attrs \<equiv>
+     if armPageCacheable attrs
+     then ucast Kernel_C.S2_NORMAL
+     else ucast Kernel_C.S2_DEVICE_nGnRnE"
+
+definition uxn_from_vmattributes :: "vmattributes \<Rightarrow> machine_word" where
+  "uxn_from_vmattributes attrs \<equiv> from_bool (armExecuteNever attrs)"
 
 (* Force clarity over name collisions *)
 abbreviation

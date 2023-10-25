@@ -438,12 +438,6 @@ definition ap_from_vm_rights :: "vmrights \<Rightarrow> machine_word" where
    | VMReadWrite \<Rightarrow> 3
    | VMReadOnly \<Rightarrow> 1" \<comment> \<open>note: hyp vs non-hyp swap VMReadWrite and VMReadOnly AP values\<close>
 
-definition attridx_from_device :: "bool \<Rightarrow> machine_word" where
-  "attridx_from_device device \<equiv>
-     if device \<comment> \<open>device implies non-cacheable\<close>
-     then ucast Kernel_C.S2_DEVICE_nGnRnE
-     else ucast Kernel_C.S2_NORMAL"
-
 (* Invalid PTEs map to invalid PTEs (sanity check) *)
 lemma pte_0:
   "index (pte_C.words_C cpte) 0 = 0 \<Longrightarrow>
@@ -472,7 +466,9 @@ definition cpte_relation :: "pte \<Rightarrow> pte_C \<Rightarrow> bool" where
                                AF_CL = 1,
                                SH_CL = 0,
                                AP_CL = ap_from_vm_rights vmrights,
-                               AttrIndx_CL = attridx_from_device device \<rparr>)
+                               AttrIndx_CL = attridx_from_vmattributes (VMAttributes xn (\<not>device))
+                                 \<comment> \<open>device means non-cacheable\<close>
+                             \<rparr>)
         else cpte' = Some (Pte_pte_page
                              \<lparr> pte_pte_page_CL.UXN_CL = of_bool xn,
                                page_base_address_CL = baseaddr,
@@ -480,7 +476,9 @@ definition cpte_relation :: "pte \<Rightarrow> pte_C \<Rightarrow> bool" where
                                AF_CL = 1,
                                SH_CL = 0,
                                AP_CL = ap_from_vm_rights vmrights,
-                               AttrIndx_CL = attridx_from_device device \<rparr>))"
+                               AttrIndx_CL = attridx_from_vmattributes (VMAttributes xn (\<not>device))
+                                 \<comment> \<open>device means non-cacheable\<close>
+                             \<rparr>))"
 
 (* note: asid_map_C is a historical name, on AARCH64 it refers to a single ASID pool entry *)
 definition casid_map_relation :: "asidpool_entry option \<Rightarrow> asid_map_C \<Rightarrow> bool" where

@@ -1468,4 +1468,29 @@ lemma update_ep_map_to_ctes:
   by (auto elim!: obj_atE' intro!: map_to_ctes_upd_other map_comp_eqI
     simp: projectKOs projectKO_opts_defs split: kernel_object.splits if_split_asm)
 
+(* FIXME AARCH64 move *)
+lemma multiple_add_less_nat:
+  "\<lbrakk> a < (c :: nat); x dvd a; x dvd c; b < x \<rbrakk>
+   \<Longrightarrow> a + b < c"
+  apply (subgoal_tac "b < c - a")
+   apply simp
+  apply (erule order_less_le_trans)
+  apply (rule dvd_imp_le)
+   apply simp
+  apply simp
+  done
+
+(* FIXME AARCH64 move to wherever we keep the from_bool/to_bool lemmas *)
+lemma word_le_1_and_idem:
+  "w \<le> 1 \<Longrightarrow> w AND 1 = w" for w :: "_ word"
+  by (metis word_bw_same(1) word_le_1 word_log_esimps(7))
+
+(* FIXME AARCH64 move to wherever we keep the from_bool/to_bool lemmas *)
+lemma from_to_bool_le_1_idem:
+  "w \<le> 1 \<Longrightarrow> from_bool (to_bool w) = w"
+  apply (subst word_le_1_and_idem[symmetric], assumption)
+  apply (simp add: from_to_bool_last_bit)
+  apply (simp add: word_le_1_and_idem)
+  done
+
 end

@@ -67,9 +67,10 @@ assumes getSCTLR_ccorres:
            (doMachineOp getSCTLR)
            (Call getSCTLR_'proc)"
 
+(* FIXME AARCH64 note: there is a typo on ARM_HYP *)
 assumes setSCTLR_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>sctlr = sctlr \<rbrace>) []
-           (doMachineOp (setSCTLR scltr))
+           (doMachineOp (setSCTLR sctlr))
            (Call setSCTLR_'proc)"
 
 assumes isb_ccorres:

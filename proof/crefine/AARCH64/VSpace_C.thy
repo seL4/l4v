@@ -65,8 +65,8 @@ lemma unat_of_nat_pageBitsForSize[simp]:
 
 (* FIXME AARCH64 checkVPAlignment has gone missing in C, it is used in decodeRISCVFrameInvocation
    for RISCVPageMap, and on ARM_HYP for decodeARMFrameInvocation/ARMPageMap
-   For AARCH64 it does the calculation inline via a macro, which we might want to wrap in a function:
-   IS_PAGE_ALIGNED(vaddr, frameSize)
+   For AARCH64 it does the calculation inline via a macro: IS_PAGE_ALIGNED(vaddr, frameSize)
+   TODO: re-introduce checkVPAlignment in C
 lemma checkVPAlignment_ccorres:
   "ccorres (\<lambda>a c. if to_bool c then a = Inr () else a = Inl AlignmentError) ret__unsigned_long_'
            \<top>
@@ -179,8 +179,6 @@ lemmas vm_fault_defs_C =
          Kernel_C.ARMDataAbort_def
          Kernel_C.ARMPrefetchAbort_def
 
-(* FIXME AARCH64 the "mask 32" is a fix looking at thm seL4_Fault_VMFault_new_body_def, I'm not sure
-   what this is trying to do or how it would be improved *)
 (* FIXME: automate this *)
 lemma seL4_Fault_VMFault_new'_spec:
   "\<lbrace> \<lambda>s. s = \<sigma> \<rbrace> seL4_Fault_VMFault_new' addr FSR i
@@ -444,14 +442,11 @@ lemma unat_of_nat_ptBitsLeft[simp]:
   apply simp
   done
 
-(* FIXME AARCH64 this is a helper for lookupPTSlotFromLevel_ccorres, it's probably not true in
-   this current form, likely needing something like levelType level = pt_t,
-   and we need to figure out that (vptr >> ptBitsLeft level) && mask 10 = (vptr >> ptBitsLeft level)
-   (or 9, depending on config_ARM_PA_SIZE_BITS_40) *)
+(* FIXME AARCH64 this is a helper for lookupPTSlotFromLevel_ccorres, should be true, but ensure it
+   actually helps *)
 lemma pte_at'_ptSlotIndex:
-  "page_table_at' pt_t pt s \<Longrightarrow> pte_at' (ptSlotIndex level pt vptr) s"
+  "\<lbrakk> page_table_at' pt_t pt s; levelType level = pt_t \<rbrakk> \<Longrightarrow> pte_at' (ptSlotIndex level pt vptr) s"
   apply (simp add: ptSlotIndex_def ptIndex_def)
-  apply (prop_tac "levelType level = pt_t") subgoal sorry
   apply (drule page_table_pte_atI'[where i="ucast (vptr >> ptBitsLeft level)"])
   (* proving the first subgoal looks like it would enable proving the second *)
   prefer 2
@@ -464,11 +459,7 @@ lemma pte_at'_ptSlotIndex:
    subgoal sorry (* FIXME AARCH64 *)
   done
 
-lemma ptTranslationBits_word_bits:
-  "ptTranslationBits pt_t < LENGTH(machine_word_len)"
-  by (cases pt_t; simp add: bit_simps split: if_splits)
-
-lemmas unat_and_mask_le_ptTrans = unat_and_mask_le[OF ptTranslationBits_word_bits]
+lemmas unat_and_mask_le_ptTrans = unat_and_mask_le[OF AARCH64.ptTranslationBits_le_machine_word]
 
 lemma lookupPTSlotFromLevel_ccorres:
   (* these are copied out of lookupPTSlot_ccorres with "_'proc" removed, and schematic preconditions
@@ -709,7 +700,9 @@ lemma lookupPTSlot_ccorres:
     apply vcg
    apply (vcg spec=modifies)
   apply (simp add: bit_simps maxPTLevel_def ptBitsLeft_def split: if_split)
-  (* FIXME AARCH64 abstraction violation, we need to know \<not>config_ARM_PA_SIZE_BITS_40 here: *)
+  (* FIXME AARCH64 abstraction violation, we need to know \<not>config_ARM_PA_SIZE_BITS_40 here.
+     Make a lemma similar to the one for numDomains where maxPTLevel is some automatically
+     generated numeral, since the number of PT levels in C is a #define, hence a numeral *)
   apply (simp add: Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
   done
 
@@ -827,7 +820,7 @@ lemma findVSpaceForASID_ccorres:
     apply simp+
   done *)
 
-lemma ccorres_pre_gets_riscvKSGlobalPT_ksArchState:
+lemma ccorres_pre_gets_armKSGlobalUserVSpace_ksArchState:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
                   (\<lambda>s. (\<forall>rv. armKSGlobalUserVSpace (ksArchState s) = rv  \<longrightarrow> P rv s))
@@ -1189,7 +1182,7 @@ lemmas unfold_checkMapping_return
     = from_bool_0[where 'a=machine_word_len, folded exception_defs]
       to_bool_def
 
-(* FIXME AARCH64 this rule was a helper for unmapPage_ccorres, but now doesn't match, need to 
+(* FIXME AARCH64 this rule was a helper for unmapPage_ccorres, but now doesn't match, need to
      understand the changed conditions in the unmapPage_ccorres proof to re-state this lemma
 lemma checkMappingPPtr_pte_ccorres:
   assumes pre:
@@ -1233,25 +1226,13 @@ lemma ccorres_return_void_C':
   apply auto
   done
 
-(* FIXME AARCH64 move *)
-lemma multiple_add_less_nat:
-  "a < (c :: nat) \<Longrightarrow> x dvd a \<Longrightarrow> x dvd c \<Longrightarrow> b < x
-    \<Longrightarrow> a + b < c"
-  apply (subgoal_tac "b < c - a")
-   apply simp
-  apply (erule order_less_le_trans)
-  apply (rule dvd_imp_le)
-   apply simp
-  apply simp
-  done
-
-(* FIXME AARCH64 the \<exists>pt_t added here might make this not very useful *)
 lemma findVSpaceForASID_page_table_at'_simple[wp]:
   notes checkPTAt_inv[wp del]
-  shows "\<lbrace>\<top>\<rbrace> findVSpaceForASID asid \<lbrace>\<lambda>rv s. \<exists>pt_t. page_table_at' pt_t rv s\<rbrace>,-"
+  shows "\<lbrace>\<top>\<rbrace> findVSpaceForASID asid \<lbrace> page_table_at' VSRootPT_T \<rbrace>,-"
   apply (simp add: findVSpaceForASID_def)
    apply (wpsimp wp: getASID_wp simp: checkPTAt_def)
-  done
+  sorry (* FIXME AARCH64 the wp rule is probably too weak (only gives us existence of pt_t
+  done *)
 
 lemmas ccorres_name_ksCurThread = ccorres_pre_getCurThread[where f="\<lambda>_. f'" for f',
     unfolded getCurThread_def, simplified gets_bind_ign]
@@ -1262,13 +1243,13 @@ lemma of_nat_pageBitsForSize:
 
 lemma checkMappingPPtr_def2:
   "checkMappingPPtr p pte =
-   (if isPagePTE pte \<and> ptrFromPAddr (ptePPN pte << ptBits pt_t) = p
+   (if isPagePTE pte \<and> ptrFromPAddr (pteBaseAddress pte) = p
     then returnOk()
     else throw InvalidRoot)"
   unfolding checkMappingPPtr_def
   apply (cases pte; simp add: isPagePTE_def unlessE_def cong: if_cong split: if_splits)
   apply auto
-  oops (* FIXME AARCH64 this doesn't seem to make sense *)
+  done
 
 (* FIXME AARCH64 is this necessary, or can we work with the bitfield gen spec rule that only gives
    the tag? *)
@@ -1384,6 +1365,8 @@ lemma cap_to_H_Frame_unfold:
   apply (rename_tac fcap, case_tac fcap, simp)
   done
 
+(* FIXME AARCH64 change C code in this function to use a get/set pattern for the cap instead of
+   going via cap_frame_cap_ptr_set_capFMappedASID etc *)
 lemma performPageInvocationUnmap_ccorres:
   notes Collect_const[simp del]
   shows
@@ -1471,6 +1454,7 @@ lemma performPageInvocationUnmap_ccorres:
   done *)
 
 (* FIXME AARCH64 incorporate whichever of these are needed (from RISCV64 and ARM_HYP), remove rest
+
 lemma RISCVGetWriteFromVMRights_spec:
   "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. \<acute>vm_rights < 4 \<and> \<acute>vm_rights \<noteq> 0\<rbrace> Call ArmGetWriteFromVMRights_'proc
   \<lbrace> \<acute>ret__unsigned_long = writable_from_vm_rights (vmrights_to_H \<^bsup>s\<^esup>vm_rights) \<rbrace>"
@@ -1514,20 +1498,9 @@ lemma HAPFromVMRights_spec:
   apply (drule word_less_cases, auto)+
   done
 
-
 lemma hap_from_vm_rights_mask:
   "hap_from_vm_rights R && 3 = (hap_from_vm_rights R :: word32)"
   by (simp add: hap_from_vm_rights_def split: vmrights.splits)
-
-
-definition
-  "shared_bit_from_cacheable cacheable \<equiv> if cacheable = 0x1 then 0 else 1"
-
-definition
-  "tex_bits_from_cacheable cacheable \<equiv> if cacheable = 0x1 then 5 else 0"
-
-definition
-  "iwb_from_cacheable cacheable \<equiv> if cacheable = 0x1 then 1 else 0"
 
 *)
 
@@ -1542,58 +1515,28 @@ lemma APFromVMRights_spec:
   apply (drule word_less_cases, auto)+
   done
 
-(* FIXME AARCH64 vmrights_to_H should be renamed vm_rights_to_H on all platforms, as there is no
-   "vmrights" anywhere, and follow that up with renaming "vmrights" lemmas *)
-
-(* FIXME AARCH64 this is a struct containing a single word, but if the bitfield generator already
-   provides all the lifting/extracting functions, it might make sense to use that rather than going
-   from a word. Note that this is different from vm_rights which is an enum. *)
-definition vm_attributes_to_H :: "vm_attributes_C \<Rightarrow> vmattributes" where
-  "vm_attributes_to_H attrs_raw \<equiv>
-    let attrs = vm_attributes_lift attrs_raw in
-    VMAttributes (to_bool (armExecuteNever_CL attrs))
-                 (to_bool (armPageCacheable_CL attrs))"
-
-(* FIXME AARCH64 attridx_from_device is kinda useless then, replace with this *)
-definition attridx_from_vmattributes :: "vmattributes \<Rightarrow> machine_word" where
-  "attridx_from_vmattributes attrs \<equiv>
-     if armPageCacheable attrs
-     then ucast Kernel_C.S2_NORMAL
-     else ucast Kernel_C.S2_DEVICE_nGnRnE"
-(* FIXME AARCH64 this might be easier unfolded *)
-definition uxn_from_vmattributes :: "vmattributes \<Rightarrow> machine_word" where
-  "uxn_from_vmattributes attrs \<equiv> from_bool (armExecuteNever attrs)"
-
 lemma armExecuteNever_CL_limit:
   "armExecuteNever_CL (vm_attributes_lift attrs) \<le> 1"
   by (simp add: vm_attributes_lift_def word_and_le1)
 
-lemma word_le_1_and_idem:
-  "w \<le> 1 \<Longrightarrow> w AND 1 = w" for w :: "_ word"
-  by (metis word_bw_same(1) word_le_1 word_log_esimps(7))
-
-lemma from_to_bool_le_1_idem:
-  "w \<le> 1 \<Longrightarrow> from_bool (to_bool w) = w"
-  apply (subst word_le_1_and_idem[symmetric], assumption)
-  apply (simp add: from_to_bool_last_bit)
-  apply (simp add: word_le_1_and_idem)
-  done
-
 lemmas vm_attributes_helpers =
   armExecuteNever_CL_limit word_le_1_and_idem from_to_bool_le_1_idem
 
-(* FIXME AARCH64 rename/cleanup/generalise *)
-lemma makeUserPage_spec_helper:
+(* FIXME AARCH64 rename/cleanup/generalise to not mention 12, maybe also not 36 (these are from
+   the bitfield generator *)
+lemma makeUserPagePTE_spec_helper:
   "\<lbrakk> canonical_address p; is_aligned p pageBits \<rbrakk> \<Longrightarrow> p && (mask 36 << 12) = p"
-  apply (simp add: word_and_mask_shiftl pageBits_def)
-  sorry (* this should be true, as we are constrained to 48 bits of which the lowest 12 are zero *)
+  apply (simp add: word_and_mask_shiftl pageBits_def canonical_address_range canonical_bit_def)
+  apply word_eqI
+  apply (clarsimp simp: le_def)
+  apply (rule iffI, clarsimp)
+  apply (subst add_diff_inverse_nat; fastforce)
+  done
 
-(* FIXME AARCH64 does it make sense to go through the vmattributes route, rather than via
-     UXN_CL = armExecuteNever_CL (vm_attributes_lift \<^bsup>s\<^esup>attributes) ? *)
-lemma makeUserPage_spec:
+lemma makeUserPagePTE_spec:
   "\<forall>s. \<Gamma> \<turnstile>
    \<lbrace>s. \<acute>vm_rights < 4 \<and> \<acute>vm_rights \<noteq> 2 \<and> canonical_address \<acute>paddr \<and> is_aligned \<acute>paddr pageBits \<rbrace>
-   Call makeUserPage_'proc
+   Call makeUserPagePTE_'proc
    \<lbrace> let uxn = uxn_from_vmattributes (vm_attributes_to_H \<^bsup>s\<^esup>attributes);
          ap = ap_from_vm_rights (vmrights_to_H \<^bsup>s\<^esup>vm_rights);
          attridx = attridx_from_vmattributes (vm_attributes_to_H \<^bsup>s\<^esup>attributes);
@@ -1623,7 +1566,7 @@ lemma makeUserPage_spec:
   apply (rule allI, rule conseqPre, vcg)
   apply (clarsimp simp: Let_def)
   (* these simps don't want to be combined *)
-  apply (clarsimp simp: pte_pte_page_lift pte_pte_4k_page_lift makeUserPage_spec_helper)
+  apply (clarsimp simp: pte_pte_page_lift pte_pte_4k_page_lift makeUserPagePTE_spec_helper)
   apply (clarsimp simp: uxn_from_vmattributes_def vm_attributes_to_H_def Let_def vm_attributes_helpers
                          attridx_from_vmattributes_def S2_NORMAL_def S2_DEVICE_nGnRnE_def mask_def
                          ap_from_vm_rights_def vmrights_to_H_def
@@ -1754,7 +1697,8 @@ lemma canonical_address_page_table_at':
   apply (erule (1) obj_at'_is_canonical)
   done  *)
 
-(* FIXME AARCH64 assuming the only array use of page tables are root PTs (vspace) *)
+(* FIXME AARCH64 assuming the only array use of page tables are root PTs (vspace)
+   these might need to be renamed or gain comments to explain why it's only root PTs *)
 lemma page_table_at'_array_assertion:
   assumes "(s,s') \<in> rf_sr"
   assumes "page_table_at' VSRootPT_T pt s"
@@ -1764,6 +1708,7 @@ lemma page_table_at'_array_assertion:
   by (fastforce simp: bit_simps
                 intro: array_assertion_abs_vspace[where x="\<lambda>_. (1::nat)", simplified, rule_format])
 
+(* FIXME AARCH64 probably not needed for this arch, because no copy global mappings *)
 lemma page_table_at'_array_assertion_weak[unfolded ptTranslationBits_def, simplified]:
   assumes "(s,s') \<in> rf_sr"
   assumes "page_table_at' VSRootPT_T pt s"
@@ -1775,6 +1720,7 @@ lemma page_table_at'_array_assertion_weak[unfolded ptTranslationBits_def, simpli
   by (fastforce intro: page_table_at'_array_assertion
                 simp: unat_add_simple ptTranslationBits_def word_bits_def unat_of_nat) *)
 
+(* FIXME AARCH64 probably not needed for this arch, because no copy global mappings *)
 lemma page_table_at'_array_assertion_strong[unfolded ptTranslationBits_def, simplified]:
   assumes "(s,s') \<in> rf_sr"
   assumes "page_table_at' VSRootPT_T pt s"
@@ -1786,7 +1732,10 @@ lemma page_table_at'_array_assertion_strong[unfolded ptTranslationBits_def, simp
   by (fastforce intro: page_table_at'_array_assertion
                 simp: unat_add_simple ptTranslationBits_def word_bits_def unat_of_nat) *)
 
-(* FIXME AARCH64 cte arg is named vspaceCapSlot on all other arches *)
+(* FIXME AARCH64 cte arg is named vspaceCapSlot on all other arches
+   TODO: rename in the C, it's not a cte it's a slot
+   TODO: change the C to use get/set pattern instead of cap_vspace_cap_ptr_set_capMappedASID etc
+   see also performPageInvocationUnmap *)
 lemma performASIDPoolInvocation_ccorres:
   notes option.case_cong_weak[cong]
   shows
@@ -1881,12 +1830,18 @@ lemma pte_case_isInvalidPTE:
    = (if isInvalidPTE pte then P else Q)"
   by (cases pte, simp_all add: isInvalidPTE_def)
 
-(* FIXME AARCH64 assuming vspace version is the one we need for ASIDs, else we'll need a PT version *)
 lemma ccap_relation_vspace_mapped_asid:
   "ccap_relation (ArchObjectCap (PageTableCap p VSRootPT_T (Some (asid, vspace)))) cap
     \<Longrightarrow> asid = capVSMappedASID_CL (cap_vspace_cap_lift cap)"
   by (frule cap_get_tag_isCap_unfolded_H_cap)
      (clarsimp simp: cap_vspace_cap_lift ccap_relation_def cap_to_H_def split: if_splits)
+
+(* FIXME AARCH64 potentially unused *)
+lemma ccap_relation_page_table_mapped_asid:
+  "ccap_relation (ArchObjectCap (PageTableCap p NormalPT_T (Some (asid, vspace)))) cap
+    \<Longrightarrow> asid = capPTMappedASID_CL (cap_page_table_cap_lift cap)"
+  by (frule cap_get_tag_isCap_unfolded_H_cap)
+     (clarsimp simp: cap_page_table_cap_lift ccap_relation_def cap_to_H_def split: if_splits)
 
 lemma performPageTableInvocationMap_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
@@ -1927,14 +1882,10 @@ lemma performPageTableInvocationMap_ccorres:
 (* FIXME AARCH64 VCPU/HYP related block (everything from VSpace_C on ARM_HYP) adapted to AARCH64
    some of these might be needed earlier *)
 
-(* FIXME AARCH64 move to Wellformed_C *)
-(* FIXME AARCH64 these are not machine registers, they're VCPU registers, so registers_count doesn't
-   work here and it is also a bad name *)
-abbreviation
-  regs_C_Ptr :: "addr \<Rightarrow> (machine_word[23]) ptr" where "regs_C_Ptr \<equiv> Ptr"
-
-
-(* FIXME AARCH64 show and move *)
+(* FIXME AARCH64 move, potentially to a VCPU theory
+   if we try move most of the VCPU lemmas into a VCPU theory, some might need items in this or later
+   theories, meaning we'd need a VCPU low (maybe put into ArchAcc?) and VCPU high theory
+ *)
 (* When updating fields (or fields of fields) inside VCPUs, typ_heap_simps can resolve the
    hrs_mem_update of a field into a specific C vcpu update when on its own. Then if we can
    show that specific C vcpu is related to the Haskell one, there is no need to unfold
@@ -1956,10 +1907,10 @@ lemma vcpu_hrs_mem_update_helper:
   apply simp
   done
 
+(* FIXME AARCH64 move *)
 lemmas setObject_ccorres_helper_vcpu =
          setObject_ccorres_helper[where 'a=vcpu, simplified objBits_simps vcpuBits_def, simplified]
 
-(* FIXME AARCH64 review, much learning potential *)
 lemma vcpuUpdate_ccorres:
   (* We depend on the simplifier and typ_heap_simps to resolve what the updated VCPU on the C side
      looks like for specific updates f and heap_upd, and need to ensure they maintain the VCPU
@@ -2002,9 +1953,9 @@ lemma vcpuUpdate_vcpuRegs_ccorres:
   "ccorres dc xfdc \<top> UNIV hs
      (vcpuUpdate vcpuptr (\<lambda>vcpu. vcpuRegs_update (\<lambda>_. (vcpuRegs vcpu)(r := v)) vcpu))
      (Basic_heap_update
-       (\<lambda>_. regs_C_Ptr &(vcpu_Ptr vcpuptr\<rightarrow>[''regs_C'']))
+       (\<lambda>_. vcpuregs_C_Ptr &(vcpu_Ptr vcpuptr\<rightarrow>[''regs_C'']))
        (\<lambda>s. Arrays.update (h_val (hrs_mem (t_hrs_' (globals s)))
-                          (regs_C_Ptr &(vcpu_Ptr vcpuptr\<rightarrow>[''regs_C'']))) (fromEnum r) v))"
+                          (vcpuregs_C_Ptr &(vcpu_Ptr vcpuptr\<rightarrow>[''regs_C'']))) (fromEnum r) v))"
   apply vcpuUpdate_ccorres
       using maxBound_is_bound[where 'a=vcpureg, simplified fromEnum_maxBound_vcpureg_def]
       apply (clarsimp simp: fromEnum_eq_iff less_eq_Suc_le split: if_split)
@@ -2066,9 +2017,6 @@ lemma vcpuVPPIMasked_update_ccorres:
   apply (rule allI)
   apply (rule conjI)
    apply clarsimp
-   using maxBound_is_bound[where 'a=vppievent_irq, simplified fromEnum_maxBound_vppievent_irq_def]
-   apply -
-   apply (clarsimp simp: fromEnum_eq_iff less_eq_Suc_le split: if_split)
   apply (rule impI)
   apply (subst Arrays.index_update2, simp)
    apply (rule vppievent_irq_noteq_fromEnum_mono)
@@ -2079,8 +2027,7 @@ lemma vcpuVPPIMasked_update_ccorres:
 lemma vcpu_write_reg_ccorres:
   "ccorres dc xfdc
        (vcpu_at' vcpuptr)
-       (\<lbrace> \<acute>vcpu = vcpu_Ptr vcpuptr \<rbrace> \<inter> \<lbrace> \<acute>reg = of_nat (fromEnum reg) \<rbrace>
-        \<inter> \<lbrace> \<acute>value = v \<rbrace>) hs
+       (\<lbrace> \<acute>vcpu = vcpu_Ptr vcpuptr \<rbrace> \<inter> \<lbrace> \<acute>reg = of_nat (fromEnum reg) \<rbrace> \<inter> \<lbrace> \<acute>value = v \<rbrace>) hs
      (vcpuWriteReg vcpuptr reg v)
      (Call vcpu_write_reg_'proc)"
   supply Collect_const[simp del]
@@ -2137,20 +2084,18 @@ lemma ccorres_dc_from_rrel:
 
 lemma vcpu_restore_reg_range_ccorres:
   "ccorres dc xfdc
-     (vcpu_at' vcpuptr and K (fromEnum start \<le> fromEnum end))
+     (vcpu_at' vcpuptr and K (fromEnum (start::vcpureg) \<le> fromEnum end))
      (\<lbrace>unat \<acute>start = fromEnum start\<rbrace> \<inter> \<lbrace>unat \<acute>end = fromEnum end\<rbrace>
        \<inter> \<lbrace> \<acute>vcpu = vcpu_Ptr vcpuptr \<rbrace>) hs
      (vcpuRestoreRegRange vcpuptr start end) (Call vcpu_restore_reg_range_'proc)"
+  using maxBound_is_bound[of start, simplified fromEnum_maxBound_vcpureg_def]
+        length_upto_enum_le_maxBound[of start "end", simplified fromEnum_maxBound_vcpureg_def]
+  apply -
   apply (rule ccorres_grab_asm)
   apply (cinit lift: start_' end_' vcpu_' simp: whileAnno_def)
    apply csymbr
    apply (rule ccorres_dc_from_rrel)
-   (* supplying these as dest/intro/simp to proof tactics has no desired effect *)
-   using maxBound_is_bound[of start, simplified fromEnum_maxBound_vcpureg_def]
-         length_upto_enum_le_maxBound[of start "end", simplified fromEnum_maxBound_vcpureg_def]
-   apply -
-   apply (rule ccorres_mapM_x_while'[where i="fromEnum start"
-                                        and F="\<lambda>n s. vcpu_at' vcpuptr s"])
+   apply (rule ccorres_mapM_x_while'[where i="fromEnum start" and F="\<lambda>n s. vcpu_at' vcpuptr s"])
        apply clarsimp
        apply (rule ccorres_guard_imp)
          apply (ctac add: vcpu_restore_reg_ccorres)
@@ -2166,7 +2111,7 @@ lemma vcpu_restore_reg_range_ccorres:
      apply (rule allI, rule conseqPre, vcg exspec=vcpu_restore_reg_modifies)
      apply fastforce
     apply wpsimp
-    apply (fastforce simp: word_bits_def)
+   apply (fastforce simp: word_bits_def)
   apply (clarsimp simp: Collect_const_mem)
   apply (subst unat_eq_of_nat[symmetric]; clarsimp)
   done
@@ -2177,16 +2122,14 @@ lemma vcpu_save_reg_range_ccorres:
      (\<lbrace>unat \<acute>start = fromEnum start\<rbrace> \<inter> \<lbrace>unat \<acute>end = fromEnum end\<rbrace>
        \<inter> \<lbrace> \<acute>vcpu = vcpu_Ptr vcpuptr \<rbrace>) hs
      (vcpuSaveRegRange vcpuptr start end) (Call vcpu_save_reg_range_'proc)"
+  using maxBound_is_bound[of start, simplified fromEnum_maxBound_vcpureg_def]
+        length_upto_enum_le_maxBound[of start "end", simplified fromEnum_maxBound_vcpureg_def]
+  apply -
   apply (rule ccorres_grab_asm)
   apply (cinit lift: start_' end_' vcpu_' simp: whileAnno_def)
    apply csymbr
    apply (rule ccorres_dc_from_rrel)
-   (* supplying these as dest/intro/simp to proof tactics has no desired effect *)
-   using maxBound_is_bound[of start, simplified fromEnum_maxBound_vcpureg_def]
-         length_upto_enum_le_maxBound[of start "end", simplified fromEnum_maxBound_vcpureg_def]
-   apply -
-   apply (rule ccorres_mapM_x_while'[where i="fromEnum start"
-                                        and F="\<lambda>n s. vcpu_at' vcpuptr s"])
+   apply (rule ccorres_mapM_x_while'[where i="fromEnum start" and F="\<lambda>n s. vcpu_at' vcpuptr s"])
        apply clarsimp
        apply (rule ccorres_guard_imp)
          apply (ctac add: vcpu_save_reg_ccorres)
@@ -2230,9 +2173,8 @@ lemma vcpu_read_reg_ccorres:
                    simp: cvcpu_relation_def cvcpu_regs_relation_def typ_heap_simps' )
   done
 
-(* FIXME AARCH64 magic number 9 *)
 lemma irqVPPIEventIndex_spec:
-  "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. \<acute>irq && mask 9 = \<acute>irq \<rbrace>
+  "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. \<acute>irq && mask LENGTH(irq_len) = \<acute>irq \<rbrace>
        Call irqVPPIEventIndex_'proc
        \<lbrace> \<acute>ret__unsigned_long
          = case_option (ucast VPPIEventIRQ_invalid) (of_nat \<circ> fromEnum) (irqVPPIEventIndex (ucast \<^bsup>s\<^esup>irq)) \<rbrace>"
@@ -2251,9 +2193,9 @@ lemma vcpuWriteReg_obj_at'_vcpuVPPIMasked:
    \<lbrace>\<lambda>s. obj_at' (\<lambda>vcpu. P (vcpuVPPIMasked vcpu))  vcpuptr s \<rbrace>"
   apply (simp add: vcpuWriteReg_def vcpuUpdate_def obj_at'_real_def)
   apply (wp setObject_ko_wp_at[where n="objBits (undefined :: vcpu)"], simp)
-      apply (simp add: objBits_simps archObjSize_def vcpuBits_def)+
+      apply (simp add: objBits_simps vcpuBits_def)+
     apply (wpsimp wp: getVCPU_wp)+
-  apply (clarsimp simp: pred_conj_def is_vcpu'_def ko_wp_at'_def obj_at'_real_def projectKOs)
+  apply (clarsimp simp: pred_conj_def is_vcpu'_def ko_wp_at'_def obj_at'_real_def)
   done
 
 lemma isIRQActive_ccorres:
@@ -2371,7 +2313,6 @@ lemma vcpuUpdate_vTimer_pcount_ccorres:
         (Guard C_Guard {s. s \<Turnstile>\<^sub>c vcpu_Ptr vcpuptr}
           (Basic_heap_update
             (\<lambda>_. PTR(64 word) &(PTR(vTimer_C) &(vcpu_Ptr vcpuptr\<rightarrow>[''virtTimer_C''])\<rightarrow>[''last_pcount_C''])) (\<lambda>_. v)))"
-  (* FIXME AARCH64 nicer proof at the cost of assuming vcpu_at' which is ensured by getObject *)
   apply (rule ccorres_guard_imp)
     apply (rule ccorres_move_c_guard_vcpu)
     apply vcpuUpdate_ccorres
@@ -2410,6 +2351,13 @@ lemma armv_vcpu_save_ccorres:
   apply wpsimp
   apply (clarsimp split: if_splits simp: seL4_VCPUReg_defs fromEnum_def enum_vcpureg)
   done
+
+(* FIXME AARCH64 this has a typo, also on ARM_HYP! *)
+lemma setSCTLR_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>sctlr = sctlr \<rbrace>) []
+           (doMachineOp (setSCTLR sctlr))
+           (Call setSCTLR_'proc)"
+  sorry
 
 lemma vcpu_disable_ccorres:
   "ccorres dc xfdc
@@ -2458,9 +2406,8 @@ lemma vcpu_disable_ccorres:
              apply (ctac (no_vcg) add: save_virt_timer_ccorres)
               apply (ctac (no_vcg) add: maskInterrupt_ccorres)
              apply (wpsimp wp: hoare_vcg_all_lift)+
-    apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem hcrNative_def
+    apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem hcrNative_def sctlrDefault_def
                           irqVTimerEvent_def IRQ_def)
-    apply (rule refl (* stray ?sctlr *))
    apply (wpsimp wp: hoare_vcg_all_lift)+
   apply (clarsimp simp: Collect_const_mem ko_at'_not_NULL dest!: vcpu_at_ko split: option.splits)
   done
@@ -2573,7 +2520,7 @@ lemma vcpu_restore_ccorres:
                    simp: typ_heap_simps' cvcpu_relation_def cvgic_relation_def)
   done
 
-(* FIXME AARCH64 unused? *)
+(* FIXME AARCH64 unused
 lemma ccorres_pre_getsNumListRegs:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf
@@ -2595,9 +2542,8 @@ lemma ccorres_pre_getsNumListRegs:
     apply clarsimp
    apply assumption
   apply (clarsimp simp: rf_sr_ksArchState_armHSCurVCPU)
-  done
+  done  *)
 
-(* FIXME AARCH64 unused? *)
 lemma ccorres_gets_armKSGICVCPUNumListRegs:
   "ccorres ((=) \<circ> of_nat) lr_num_' \<top> UNIV hs
            (gets (armKSGICVCPUNumListRegs \<circ> ksArchState)) (\<acute>lr_num :== \<acute>gic_vcpu_num_list_regs)"
@@ -2813,11 +2759,11 @@ lemma vcpu_switch_ccorres:
   by (cases v; clarsimp simp: vcpu_switch_ccorres_None[simplified] vcpu_switch_ccorres_Some[simplified])
 
 
-lemma invs_no_cicd_sym_hyp' [elim!]:
+lemma invs_no_cicd_sym_hyp'[elim!]:
   "invs_no_cicd' s \<Longrightarrow> sym_refs (state_hyp_refs_of' s)"
   by (simp add: invs_no_cicd'_def valid_state'_def)
 
-(* FIXME AARCH64 the above was above setVMRoot_corres on ARM_HYP, so things might be needed earlier *)
+(* FIXME AARCH64 the above was above setVMRoot_ccorres on ARM_HYP, so things might be needed earlier *)
 
 end
 
