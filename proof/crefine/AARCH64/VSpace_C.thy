@@ -2468,18 +2468,12 @@ lemma save_virt_timer_ccorres:
                    vcpureg_eq_use_types[where reg=VCPURegCNTKCTL_EL1, simplified, symmetric])
   done
 
-(* FIXME AARCH64 fix specs, no isb *)
-lemma armvVCPUSave_def_FIXME:
-  "armvVCPUSave vcpuptr act = vcpuSaveRegRange vcpuptr VCPURegTTBR0 VCPURegSPSR_EL1"
-  sorry
-
 lemma armv_vcpu_save_ccorres:
   "ccorres dc xfdc
      (vcpu_at' vcpuptr)
      (\<lbrace> \<acute>vcpu = vcpu_Ptr vcpuptr \<rbrace> \<inter> \<lbrace> \<acute>active = from_bool act \<rbrace>) hs
      (armvVCPUSave vcpuptr act) (Call armv_vcpu_save_'proc)"
-  (* FIXME AARCH64 *)
-  apply (cinit' lift: vcpu_' active_') apply (simp add: armvVCPUSave_def_FIXME)
+  apply (cinit lift: vcpu_' active_')
    apply (ctac (no_vcg) add: vcpu_save_reg_range_ccorres)
   apply wpsimp
   apply (clarsimp split: if_splits simp: seL4_VCPUReg_defs fromEnum_def enum_vcpureg)

@@ -196,8 +196,7 @@ definition vcpu_save :: "(obj_ref \<times> bool) option \<Rightarrow> (unit,'z::
             gicIndices;
 
           \<comment> \<open>armvVCPUSave\<close>
-          vcpu_save_reg_range vr VCPURegTTBR0 VCPURegSPSR_EL1;
-          do_machine_op isb
+          vcpu_save_reg_range vr VCPURegTTBR0 VCPURegSPSR_EL1
        od
      | _ \<Rightarrow> fail"
 
