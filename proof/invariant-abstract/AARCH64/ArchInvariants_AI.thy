@@ -2403,7 +2403,7 @@ lemma pptrTop_ucast_ppn:
    ucast (ucast (p >> pageBits)::ppn) = p >> pageBits"
   apply (drule below_pptrTop_ipa_size)
   apply word_eqI
-  using ppn_len_def'[unfolded ppn_len_def]
+  using ppn_len_def'[unfolded ppn_len_val]
   by (fastforce dest: bit_imp_le_length)
 
 lemma kernel_window_range_addrFromPPtr:
@@ -2470,7 +2470,7 @@ lemma pt_slot_offset_pt_range:
 
 lemma ucast_ucast_ppn:
   "ucast (ucast ptr::ppn) = ptr && mask ppn_len" for ptr::obj_ref
-  by (simp add: ucast_ucast_mask ppn_len_def)
+  by (simp add: ucast_ucast_mask ppn_len_val)
 
 lemma pte_base_addr_PageTablePTE[simp]:
   "pte_base_addr (PageTablePTE ppn) = paddr_from_ppn ppn"

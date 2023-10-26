@@ -28,7 +28,7 @@ proof -
 qed
 
 lemmas cready_queues_index_to_C_in_range =
-  cready_queues_index_to_C_in_range'[simplified num_tcb_queues_def]
+  cready_queues_index_to_C_in_range'[simplified num_tcb_queues_val]
 
 lemma cready_queues_index_to_C_inj:
   "\<lbrakk> cready_queues_index_to_C qdom prio = cready_queues_index_to_C qdom' prio';
