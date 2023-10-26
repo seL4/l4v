@@ -1155,7 +1155,7 @@ lemma invalidateASIDEntry_ccorres:
           apply (erule array_relation_update)
             apply word_eqI_solve
            apply (clarsimp simp: asidInvalid_def)
-          apply (simp add: mask_def vmid_bits_def unat_max_word)
+          apply (simp add: mask_def vmid_bits_val unat_max_word)
          apply (rule ccorres_return_Skip)
         apply ceqv
        apply (ctac add: invalidateASID_ccorres)
@@ -1185,7 +1185,7 @@ lemma invalidateVMIDEntry_ccorres:
   apply (simp flip: fun_upd_apply)
   apply (erule array_relation_update, rule refl)
    apply (simp (no_asm) add: asidInvalid_def)
-  apply (simp (no_asm) add: mask_def vmid_bits_def unat_max_word)
+  apply (simp (no_asm) add: mask_def vmid_bits_val unat_max_word)
   done
 
 crunches invalidateVMIDEntry, invalidateASID
@@ -1233,7 +1233,7 @@ lemma findFreeHWASID_ccorres:
               apply (simp add: throwError_def return_def split: if_split)
               apply (clarsimp simp: returnOk_def return_def inr_rrel_def rf_sr_armKSNextVMID)
               apply (drule rf_sr_armKSVMIDTable_rel')
-              apply (clarsimp simp: array_relation_def vmid_bits_def mask_def)
+              apply (clarsimp simp: array_relation_def vmid_bits_val mask_def)
               apply (erule_tac x="armKSNextASID_' (globals s) + word_of_nat (length ys)" in allE)
               apply (clarsimp simp: valid_arch_state'_def ran_def)
               apply ((rule conjI, uint_arith, simp add: take_bit_nat_def unsigned_of_nat, clarsimp)+)[1]
@@ -1316,7 +1316,7 @@ lemma findFreeHWASID_ccorres:
      apply (drule rf_sr_armKSVMIDTable_rel')
      apply (clarsimp simp: array_relation_def)
      apply (erule_tac x="armKSNextASID_' (globals s')" in allE, erule impE)
-      apply (simp add: vmid_bits_def mask_def)
+      apply (simp add: vmid_bits_val mask_def)
      apply simp
     apply (fold mapME_def)
     apply (wp mapME_wp')
@@ -1357,7 +1357,7 @@ lemma storeHWASID_ccorres:
                               cmachine_state_relation_def carch_state_relation_def carch_globals_def
                         simp del: fun_upd_apply)
         apply (erule array_relation_update, rule refl, simp)
-        apply (simp add: mask_def vmid_bits_def unat_max_word)
+        apply (simp add: mask_def vmid_bits_val unat_max_word)
        apply wp
       apply (clarsimp simp: guard_is_UNIV_def split: if_splits)
       apply (clarsimp simp: zero_sle_ucast_up is_down word_sless_alt sint_ucast_eq_uint)

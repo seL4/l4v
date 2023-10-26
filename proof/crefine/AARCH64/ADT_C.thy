@@ -613,7 +613,7 @@ lemma carch_state_to_H_correct:
     using valid
     apply (simp add: valid_arch_state'_def)
     apply fastforce
-   apply (clarsimp simp: mask_def vmid_bits_def)
+   apply (clarsimp simp: mask_def vmid_bits_val)
   apply (rule conjI)
   using valid rel
    apply (simp add: ccur_vcpu_to_H_correct)

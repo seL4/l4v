@@ -745,7 +745,7 @@ proof -
          apply (rule ucast_leq_mask)
          apply (clarsimp simp: bit_simps)
         apply (clarsimp simp: pte_relation_def ucast_ucast_mask ge_mask_eq vs_index_bits_def)
-        apply (case_tac "vs off"; simp add: ucast_leq_mask ppn_len_def)
+        apply (case_tac "vs off"; simp add: ucast_leq_mask ppn_len_val)
 
       (* NormalPT_T is an exact duplicate of the VSRootPT_T case, but I don't see any good way
          to factor out the commonality *)
@@ -815,7 +815,7 @@ proof -
        apply (rule ucast_leq_mask)
        apply (clarsimp simp: bit_simps)
       apply (clarsimp simp: pte_relation_def ucast_ucast_mask ge_mask_eq vs_index_bits_def)
-      apply (case_tac "vs off"; simp add: ucast_leq_mask ppn_len_def)
+      apply (case_tac "vs off"; simp add: ucast_leq_mask ppn_len_val)
 
      apply (in_case "DataPage ?p ?sz")
      apply (clarsimp split: if_splits)
