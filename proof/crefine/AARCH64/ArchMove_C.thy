@@ -715,7 +715,7 @@ lemma asid_pool_at_ko':
   apply (case_tac asidpool, auto)[1]
   done
 
-(* FIXME AARCH64: move; also add vmid_bits_def to relevant bit defs *)
+(* FIXME AARCH64: move; also add vmid_bits_val to relevant bit defs *)
 value_type vmid_bits = "size (0::vmid)"
 
 (* end of move to Refine/AInvs *)

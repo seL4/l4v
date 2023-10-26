@@ -1961,7 +1961,7 @@ lemma createObjects_ccorres_pte_pt:
     (\<sigma>\<lparr>ksPSpace := ?ks \<sigma>\<rparr>, x\<lparr>globals := globals x\<lparr>t_hrs_' := ?ks' x\<rparr>\<rparr>) \<in> rf_sr")
 proof (intro impI allI)
   define array_len where "array_len \<equiv> pt_array_len"
-  note array_len_def = pt_array_len_def array_len_def
+  note array_len_def = pt_array_len_val array_len_def
 
   fix \<sigma> x
   let ?thesis = "(\<sigma>\<lparr>ksPSpace := ?ks \<sigma>\<rparr>, x\<lparr>globals := globals x\<lparr>t_hrs_' := ?ks' x\<rparr>\<rparr>) \<in> rf_sr"
@@ -2130,7 +2130,7 @@ lemma createObjects_ccorres_pte_vs:
     (\<sigma>\<lparr>ksPSpace := ?ks \<sigma>\<rparr>, x\<lparr>globals := globals x\<lparr>t_hrs_' := ?ks' x\<rparr>\<rparr>) \<in> rf_sr")
 proof (intro impI allI)
   define array_len where "array_len \<equiv> vs_array_len"
-  note array_len_def = vs_array_len_def array_len_def
+  note array_len_def = vs_array_len_val array_len_def
 
   fix \<sigma> x
   let ?thesis = "(\<sigma>\<lparr>ksPSpace := ?ks \<sigma>\<rparr>, x\<lparr>globals := globals x\<lparr>t_hrs_' := ?ks' x\<rparr>\<rparr>) \<in> rf_sr"
