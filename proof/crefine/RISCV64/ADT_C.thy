@@ -1166,7 +1166,7 @@ lemma cpspace_sched_context_relation_unique:
                 in scSize_unique,
          fastforce+)
   apply (case_tac sc, case_tac sc', case_tac "the (clift ch (sched_context_Ptr x))")
-  by (auto simp: csched_context_relation_def option_to_ptr_def option_to_0_def crefill_size_def
+  by (auto simp: csched_context_relation_def option_to_ptr_def option_to_0_def
           split: if_splits option.splits) \<comment> \<open>takes ~ a minute\<close>
 
 lemma ksPSpace_valid_pspace_replyRefs_nonzero:

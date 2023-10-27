@@ -512,82 +512,71 @@ lemma isRoundRobin_ccorres:
                   split: if_splits)
   done
 
-definition refillSize :: "machine_word \<Rightarrow> (kernel_state, nat) nondet_monad" where
-  "refillSize scPtr \<equiv>
-     do sc \<leftarrow> getSchedContext scPtr;
-        return (scRefillCount sc)
-     od"
-
-(* FIXME RT: use automation here *)
-lemma refillFull_refill_size:
-  "monadic_rewrite True False (sc_at' scPtr)
-     (refillFull scPtr)
-     (do count \<leftarrow> refillSize scPtr;
-         sc \<leftarrow> getSchedContext scPtr;
-         return $ count = scRefillMax sc
-      od)"
-  apply (clarsimp simp: refillFull_def refillSize_def)
-  apply (rule monadic_rewrite_guard_imp)
-   apply (rule monadic_rewrite_symb_exec_r)
-      apply (rule monadic_rewrite_bind_tail)
-       apply (rename_tac sc')
-       apply (rule_tac Q="\<lambda>_. sc' = sc" in monadic_rewrite_guard_imp)
-        apply (rule monadic_rewrite_from_simple)
-        apply fastforce
-       apply simp
-      apply wpsimp
-     apply wpsimp
-    apply wpsimp+
-  apply (clarsimp simp: obj_at_simps)
+lemma refill_size_length_scRefills_helper:
+  "\<lbrakk>valid_sched_context' sc s; valid_sched_context_size' sc\<rbrakk>
+   \<Longrightarrow> Suc (2 * length (scRefills sc)) < 2 ^ word_bits"
+  apply (fastforce dest: length_scRefills_bounded
+                   simp: refillSizeBytes_def word_bits_def)
   done
 
 lemma refill_size_ccorres:
   "ccorres (\<lambda>rv rv'. rv = unat rv') ret__unsigned_long_'
-     (sc_at' scPtr and valid_refills' scPtr) \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
-     (refillSize scPtr)
-     (Call refill_size_'proc)"
-  apply (cinit lift: sc_', rename_tac sc')
-   apply (rule ccorres_pre_getObject_sc, rename_tac sc)
-   apply (rule ccorres_Guard_Seq)+
-   apply (rule ccorres_cond_seq)
-   apply ccorres_rewrite
-   apply (rule_tac R="ko_at' sc scPtr and K (sc_valid_refills' sc)"
-               and P="\<lambda>s. ko_at' sc scPtr s \<and> scRefillHead sc \<le> refillTailIndex sc"
-                in ccorres_cond_both)
-     apply clarsimp
-     apply (drule obj_at_cslift_sc)
-      apply fastforce
-     apply (clarsimp simp: csched_context_relation_def word_le_nat_alt typ_heap_simps)
-    apply (rule ccorres_Guard)+
-    apply (ctac add: ccorres_return_C)
-   apply (rule ccorres_Guard)+
-   apply (ctac add: ccorres_return_C)
-  apply (fastforce dest: obj_at_cslift_sc
-                   simp: active_sc_at'_def csched_context_relation_def typ_heap_simps obj_at_simps
-                         valid_refills'_def in_omonad crefill_size_def
-                  split: if_splits)
+     (sc_at' scPtr and valid_objs' and valid_refills' scPtr) \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
+     (getRefillSize scPtr) (Call refill_size_'proc)"
+  supply len_bit0[simp del]
+  apply (cinit lift: sc_', rename_tac sc)
+   apply (clarsimp simp: readRefillSize_def readSchedContext_def getObject_def[symmetric]
+                         getSchedContext_def[symmetric] refillSize_def)
+   apply (rule ccorres_symb_exec_l, rename_tac sc)
+      apply (rule ccorres_move_c_guard_sc)+
+      apply (rule ccorres_cond_seq)
+      apply ccorres_rewrite
+      apply (simp add: if_distrib[where f=return])
+      apply (rule_tac R="ko_at' sc scPtr and valid_objs' and K (sc_valid_refills' sc)"
+                   in ccorres_cond)
+        apply (fastforce dest: obj_at_cslift_sc
+                         simp: csched_context_relation_def typ_heap_simps word_le_nat_alt)
+       apply (ctac add: ccorres_return_C)
+      apply (ctac add: ccorres_return_C)
+     apply wpsimp
+    apply wpsimp
+   apply wpsimp
+  apply (rule conjI)
+   apply (fastforce simp: obj_at_simps valid_refills'_def in_omonad)
+  apply clarsimp
+  apply (rename_tac sc abs_state)
+  apply (drule_tac s=abs_state in obj_at_cslift_sc)
+   apply fastforce
+  apply normalise_obj_at'
+  apply (clarsimp simp: csched_context_relation_def typ_heap_simps')
+  apply (elim impE)
+   apply (subst unat_add_lem')+
+     apply (fastforce simp: less_trans_Suc)
+    apply (subst unat_sub)
+     apply (clarsimp simp: word_le_nat_alt)
+    apply (frule_tac k=sc in sc_ko_at_valid_objs_valid_sc')
+     apply assumption
+    apply (fastforce dest: refill_size_length_scRefills_helper simp: word_bits_len_of)
+   apply (fastforce simp: less_trans_Suc unat_add_lem' unat_sub word_le_nat_alt)
+  apply (subst unat_add_lem'')
+   apply (subst unat_sub)
+    apply (clarsimp simp: word_le_nat_alt)
+   apply (rule_tac y="unat (scRefillMax_C ko')" in order_trans; fastforce)
+  apply (fastforce simp: unat_sub word_le_nat_alt)
   done
 
 lemma refill_full_ccorres:
   "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_'
-     (sc_at' scPtr and valid_refills' scPtr) \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
-     (refillFull scPtr) (Call refill_full_'proc)"
-  apply (rule monadic_rewrite_ccorres_assemble[where P=P and Q=P for P,
-                                               unfolded pred_conj_def, simplified, rotated])
-   apply (rule monadic_rewrite_guard_imp)
-    apply (rule refillFull_refill_size)
-   apply fastforce
-  apply cinit'
-   apply (ctac (no_vcg) add: refill_size_ccorres)
-    apply (rule ccorres_pre_getObject_sc)
-    apply (rule ccorres_Guard)
-    apply (rule ccorres_return_C)
-      apply wpsimp
-     apply simp
-    apply simp
-   apply wpsimp
-  apply (fastforce dest: obj_at_cslift_sc
-                   simp: csched_context_relation_def typ_heap_simps split: if_splits)
+     (sc_at' scPtr and valid_objs' and valid_refills' scPtr) \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
+     (getRefillFull scPtr) (Call refill_full_'proc)"
+  apply (cinit simp: readRefillFull_def readSchedContext_def getObject_def[symmetric]
+                     getSchedContext_def[symmetric] getRefillSize_def[symmetric])
+   apply (rule ccorres_pre_getObject_sc)
+   apply (ctac add: refill_size_ccorres)
+     apply (ctac add: ccorres_return_C)
+    apply (wpsimp wp: getRefillSize_wp)
+   apply (vcg exspec=refill_size_modifies)
+  apply (fastforce simp: csched_context_relation_def typ_heap_simps split: if_splits)
   done
 
 lemma refill_single_ccorres:
@@ -599,48 +588,6 @@ lemma refill_single_ccorres:
    apply (ctac add: ccorres_return_C)
   by (clarsimp simp: csched_context_relation_def typ_heap_simps
               split: if_splits)
-
-definition refillsCapacity' :: "64 word \<Rightarrow> refill \<Rightarrow> 64 word" where
-  "refillsCapacity' usage refill \<equiv> if rAmount refill < usage then 0 else rAmount refill - usage"
-
-definition refillIndex' :: "machine_word \<Rightarrow> nat \<Rightarrow> refill kernel" where
-  "refillIndex' scPtr idx \<equiv> do sc \<leftarrow> getSchedContext scPtr; return (scRefills sc ! idx) od"
-
-definition refillHead' :: "machine_word \<Rightarrow> refill kernel" where
-  "refillHead' scPtr \<equiv>
-     do sc \<leftarrow> getSchedContext scPtr;
-        rfhd \<leftarrow> return (scRefillHead sc);
-        refillIndex' scPtr rfhd
-     od"
-
-definition refillCapacity' :: "machine_word \<Rightarrow> ticks \<Rightarrow> ticks kernel" where
-  "refillCapacity' scPtr usage \<equiv>
-     do head \<leftarrow> refillHead' scPtr;
-        if (usage > rAmount head)
-           then return 0
-        else return (rAmount head - usage)
-     od"
-
-lemma sc_at_array_assertion':
-  "\<lbrakk>refill_buffer_relation (ksPSpace s) (t_hrs_' (globals s')) (ghost'state_' (globals s'));
-    ko_at' sc scPtr s; 0 < length (scRefills sc)\<rbrakk>
-   \<Longrightarrow> array_assertion
-        (PTR(refill_C)
-          (scPtr +
-           UCAST(32 \<rightarrow> 64) (word_of_nat (size_of TYPE(sched_context_C)))))
-        (length (scRefills sc)) (hrs_htd (t_hrs_' (globals s')))"
-  supply sched_context_C_size[simp del]
-  apply (drule refill_buffer_relation_cvariable_array_map_relation)
-  apply (rule h_t_array_valid_array_assertion)
-   apply (clarsimp simp: cvariable_array_map_relation_def)
-   apply (drule obj_at_ko_at', clarsimp)
-   apply (drule_tac x=scPtr in spec)
-   apply (drule_tac x=sc in spec)
-   apply (elim impE)
-    apply (erule ko_at_projectKO_opt)
-   apply (clarsimp simp: sc_ptr_to_crefill_ptr_def)
-  apply assumption
-  done
 
 (* FIXME RT: move to Refine *)
 lemma length_scRefills_bounded:
@@ -656,135 +603,6 @@ lemma length_scRefills_bounded:
    apply (clarsimp simp: refillSizeBytes_def)
   apply simp
   apply (clarsimp simp: word_bits_def untypedBits_defs)
-  done
-
-lemma refill_index_ccorres:
-  "ccorres
-     crefill_relation (\<lambda>s. h_val (hrs_mem (t_hrs_' (globals s))) (ret__ptr_to_struct_refill_C_' s))
-     (sc_at' scPtr and (\<lambda>s. ((\<lambda>sc. idx < length (scRefills sc)) |< scs_of' s) scPtr) and valid_objs')
-     (\<lbrace>\<acute>sc = Ptr scPtr\<rbrace> \<inter> \<lbrace>\<acute>index = of_nat idx\<rbrace>) []
-     (refillIndex' scPtr idx) (Call refill_index_'proc)"
-  supply sched_context_C_size[simp del]
-  apply (rule ccorres_from_vcg)
-  apply (rule allI, rule conseqPre, vcg)
-  apply clarsimp
-  apply (rule conjI)
-   apply (rule disjCI2)
-   apply (normalise_obj_at', rename_tac sc)
-   apply (frule (1) sc_ko_at_valid_objs_valid_sc')
-   apply (rule_tac n="length (scRefills sc)" in array_assertion_shrink_right)
-    apply (rule sc_at_array_assertion')
-      apply fastforce
-     apply fastforce
-    apply (clarsimp simp: obj_at_simps in_omonad)
-   apply (clarsimp simp: obj_at_simps in_omonad)
-   apply (subst unat_of_nat64')
-    apply (rule_tac y="length (scRefills sc)" in le_less_trans)
-     apply fastforce
-    apply (frule (1) length_scRefills_bounded)
-    apply (clarsimp simp: word_bits_def)
-   apply fastforce
-  apply (rename_tac s s')
-  apply (normalise_obj_at', rename_tac sc)
-  apply (clarsimp simp: refillIndex'_def getSchedContext_def bind_def return_def)
-  apply (rule_tac x="(sc, s)" in bexI[rotated])
-   apply (fastforce intro: getObject_eq)
-  apply (clarsimp simp: crefill_relation_def)
-  apply (drule rf_sr_refill_buffer_relation)
-  apply (drule refill_buffer_relation_crefill_relation)
-  apply (clarsimp simp: Let_def)
-  apply (drule_tac x=scPtr in spec)
-  by (fastforce simp: dyn_array_list_rel_pointwise in_omonad obj_at_simps crefill_relation_def
-                      typ_heap_simps' sc_ptr_to_crefill_ptr_def)
-
-lemma refill_head_ccorres:
-  "ccorres
-     crefill_relation (\<lambda>s. h_val (hrs_mem (t_hrs_' (globals s))) (ret__ptr_to_struct_refill_C_' s))
-     (active_sc_at' scPtr and valid_objs') (\<lbrace>\<acute>sc = Ptr scPtr\<rbrace>) []
-     (refillHead' scPtr) (Call refill_head_'proc)"
-  apply cinit
-   apply (rule ccorres_pre_getObject_sc)
-   apply (rule ccorres_Guard_Seq)
-   apply (rule ccorres_add_return2)
-   apply (rule_tac xf'="\<lambda>s. h_val (hrs_mem (t_hrs_' (globals s))) (ret__ptr_to_struct_refill_C_' s)"
-               and R=\<top>
-                in ccorres_split_nothrow_call)
-          apply (rule refill_index_ccorres, simp+)
-      apply ceqv
-     apply (rename_tac refill refill')
-     apply (rule_tac P'="\<lbrace>h_val (hrs_mem \<acute>t_hrs) \<acute>ret__ptr_to_struct_refill_C = refill'\<rbrace>"
-                  in ccorres_inst)
-     apply (rule ccorres_from_vcg_throws)
-     apply (rule allI, rule conseqPre, vcg)
-     apply (clarsimp simp: return_def)
-    apply (rule hoare_post_taut)
-   apply (rule conseqPre, vcg)
-   apply (rule subset_refl)
-  apply clarsimp
-  apply (rule conjI)
-   apply normalise_obj_at'
-   apply (frule (1) sc_ko_at_valid_objs_valid_sc')
-   apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at_simps in_omonad)
-  apply (clarsimp simp: typ_heap_simps csched_context_relation_def)
-  done
-
-crunches refillHead'
-  for sc_at'[wp]: "sc_at' scPtr"
-
-lemma refill_capacity_ccorres:
-  "ccorres (=) ret__unsigned_longlong_'
-     (active_sc_at' scPtr and valid_objs' and no_0_obj') (\<lbrace>\<acute>sc = Ptr scPtr\<rbrace> \<inter> \<lbrace>\<acute>usage = usage\<rbrace>) []
-     (refillCapacity' scPtr usage) (Call refill_capacity_'proc)"
-  apply (cinit lift: usage_')
-   apply (rule_tac xf'="\<lambda>s. h_val (hrs_mem (t_hrs_' (globals s))) (ret__ptr_to_struct_refill_C_' s)"
-                in ccorres_split_nothrow_call)
-          apply (rule ccorres_nohs)
-          apply (rule refill_head_ccorres)
-         apply fastforce
-        apply (clarsimp simp: typ_heap_simps)
-       apply fastforce
-      apply ceqv
-     apply (rename_tac refill refill')
-     apply (rule ccorres_Guard_Seq)
-     apply (rule_tac val="rAmount refill"
-                 and xf'=head_amount_'
-                 and R'="{s'. cslift s' (ret__ptr_to_struct_refill_C_' s') = Some refill'}"
-                  in ccorres_symb_exec_r_known_rv)
-        apply (rule conseqPre, vcg)
-        apply (clarsimp simp: crefill_relation_def typ_heap_simps')
-       apply ceqv
-      apply (rule ccorres_cond_seq)
-      apply ccorres_rewrite
-      apply (rule_tac R="sc_at' scPtr"
-                  and R'="\<lbrace>h_val (hrs_mem \<acute>t_hrs) \<acute>ret__ptr_to_struct_refill_C = refill'\<rbrace>"
-                   in ccorres_cond_strong)
-        apply (simp add: crefill_relation_def typ_heap_simps' clift_Some_eq_valid split: if_splits)
-       apply (rule ccorres_return_C)
-         apply fastforce
-        apply fastforce
-       apply fastforce
-      apply (rule ccorres_return_C)
-        apply (clarsimp simp: crefill_relation_def)
-       apply simp
-      apply simp
-     apply vcg
-    apply wpsimp
-   apply vcg
-  apply (clarsimp simp: active_sc_at'_def)
-  apply (normalise_obj_at', rename_tac sc)
-  apply (frule rf_sr_refill_buffer_relation)
-  apply (frule (1) obj_at_cslift_sc)
-  apply clarsimp
-  apply (frule (1) sc_ko_at_valid_objs_valid_sc')
-  apply (frule_tac n="scRefillHead sc" in h_t_valid_refill)
-       apply fastforce
-      apply fastforce
-     apply fastforce
-    apply (clarsimp simp: valid_sched_context'_def)
-   apply (fastforce intro: ko_at'_not_NULL)
-  apply (clarsimp simp: typ_heap_simps' csched_context_relation_def sc_ptr_to_crefill_ptr_def)
-  apply (drule clift_Some_eq_valid[THEN iffD2])
-  apply (fastforce simp : typ_heap_simps')
   done
 
 lemma refill_ready_ccorres:

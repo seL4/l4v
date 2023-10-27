@@ -2392,8 +2392,7 @@ lemma cheap_dom_eq:
 lemma refill_buffer_relation_sc_no_refills_update:
   "\<lbrakk>refill_buffer_relation (ksPSpace s) (t_hrs_' (globals s')) (ghost'state_' (globals s'));
     ko_at' sc scPtr s; scSize (g sc) = scSize sc; scRefills (g sc) = scRefills sc;
-    \<exists>old_sc' :: sched_context_C. cslift s' (Ptr scPtr) = Some old_sc';
-    lift_t c_guard (t_hrs_' (globals s')) (PTR(sched_context_C) scPtr) = Some sc'\<rbrakk>
+    cslift s' (Ptr scPtr) = Some (old_sc' :: sched_context_C)\<rbrakk>
    \<Longrightarrow> refill_buffer_relation
          ((ksPSpace s)(scPtr \<mapsto> KOSchedContext (g sc)))
          (hrs_mem_update (heap_update (PTR(sched_context_C) scPtr) (f sc')) (t_hrs_' (globals s')))
@@ -2422,7 +2421,7 @@ lemma refill_buffer_relation_sc_no_refills_update:
    apply (drule refill_buffer_relation_gs_dom)
    apply (subst dom_eq; force)
   apply (frule refill_buffer_relation_size_eq)
-  apply (clarsimp simp: obj_at'_def map_comp_def)
+  apply (clarsimp simp: obj_at'_def map_comp_def split: option.splits if_splits)
   done
 
 lemma refillSizeBytes_sizeof:
@@ -2524,8 +2523,9 @@ lemma refill_buffer_within_sc_size:
 
 lemma refill_within_sc_size:
   "\<lbrakk>ksPSpace s p = Some (KOSchedContext sc); valid_sched_context' sc s; pspace_bounded' s;
-    sc_ptr_to_crefill_ptr p +\<^sub>p int n = PTR(refill_C) x; n < length (scRefills sc) \<rbrakk>
-   \<Longrightarrow> {x..+size_of TYPE(refill_C)} \<subseteq> {p..+2 ^ objBits sc}"
+    n < length (scRefills sc)\<rbrakk>
+   \<Longrightarrow> {(ptr_val (sc_ptr_to_crefill_ptr p +\<^sub>p int n))..+size_of TYPE(refill_C)}
+       \<subseteq> {p..+2 ^ objBits sc}"
   supply refill_C_size[simp del]
   apply (drule pspace_boundedD'[rotated])
     apply fastforce
@@ -2569,7 +2569,205 @@ lemma sc_from_refill:
    apply (fastforce intro: map_to_ko_atI)
   apply (clarsimp simp: map_comp_def split: option.splits)
   apply (frule (1) sc_ko_at_valid_objs_valid_sc')
-  apply (frule_tac x="ptr_val x" in refill_within_sc_size, fastforce+)
+  apply (frule refill_within_sc_size, fastforce+)
+  done
+
+lemma sc_at_array_assertion':
+  "\<lbrakk>refill_buffer_relation (ksPSpace s) (t_hrs_' (globals s')) (ghost'state_' (globals s'));
+    ko_at' sc scPtr s; 0 < length (scRefills sc)\<rbrakk>
+   \<Longrightarrow> array_assertion
+        (PTR(refill_C)
+          (scPtr +
+           UCAST(32 \<rightarrow> 64) (word_of_nat (size_of TYPE(sched_context_C)))))
+        (length (scRefills sc)) (hrs_htd (t_hrs_' (globals s')))"
+  supply sched_context_C_size[simp del]
+  apply (drule refill_buffer_relation_cvariable_array_map_relation)
+  apply (rule h_t_array_valid_array_assertion)
+   apply (clarsimp simp: cvariable_array_map_relation_def)
+   apply (drule obj_at_ko_at', clarsimp)
+   apply (drule_tac x=scPtr in spec)
+   apply (drule_tac x=sc in spec)
+   apply (elim impE)
+    apply (erule ko_at_projectKO_opt)
+   apply (clarsimp simp: sc_ptr_to_crefill_ptr_def)
+  apply assumption
+  done
+
+lemma obj_range'_intvl:
+  "is_aligned ptr (objBitsKO obj) \<Longrightarrow> obj_range' ptr obj = {ptr..+2 ^ objBitsKO obj}"
+  apply (clarsimp simp: obj_range'_def)
+  apply (frule upto_intvl_eq[symmetric])
+  apply (clarsimp simp: mask_def p_assoc_help)
+  done
+
+lemma sc_ptr_to_crefill_ptr_inj:
+  "\<lbrakk>ksPSpace s scPtr = Some (KOSchedContext sc); valid_sched_context' sc s;
+    valid_sched_context_size' sc; n < length (scRefills sc); m < length (scRefills sc)\<rbrakk>
+   \<Longrightarrow> (sc_ptr_to_crefill_ptr scPtr +\<^sub>p int n = sc_ptr_to_crefill_ptr scPtr +\<^sub>p int m)
+       = (n = m)"
+  supply len_bit0[simp del] refill_C_size[simp del]
+         word_bits_len_of[simp add]
+  apply (intro iffI; simp?)
+  apply (frule (1) length_scRefills_bounded)
+  apply (clarsimp simp: sc_ptr_to_crefill_ptr_def)
+  apply (drule word_unat_eq_iff[THEN iffD1])
+  apply (subst (asm) unat_mult_lem[THEN iffD1])
+   apply (subst unat_of_nat_eq)
+    apply (simp add: refillSizeBytes_def)
+   apply (subst unat_of_nat_eq)
+    apply (clarsimp simp: refill_C_size refillSizeBytes_def)
+   apply (simp add: refillSizeBytes_sizeof)
+   apply (rule_tac y="size_of TYPE(refill_C) * length (scRefills sc)" in le_less_trans)
+    apply fastforce
+   apply fastforce
+  apply (subst (asm) unat_mult_lem[THEN iffD1])
+   apply (subst (asm) unat_of_nat_eq
+          | subst unat_of_nat_eq
+          | clarsimp simp: refill_C_size refillSizeBytes_def)+
+  done
+
+lemma rf_sr_refill_update:
+  "\<lbrakk>(s, s') \<in> rf_sr; ko_at' (old_sc :: sched_context) scPtr s; invs' s; no_0_obj' s;
+    n < length (scRefills old_sc);
+    sc = scRefills_update (\<lambda>ls. updateAt n ls f) old_sc;
+    cslift s' (sched_context_Ptr scPtr) = Some sc';
+    t_hrs_' (globals t) =
+    hrs_mem_update (heap_update (sc_ptr_to_crefill_ptr scPtr +\<^sub>p int n) refill')
+                   (t_hrs_' (globals s'));
+    csched_context_relation sc sc';
+    refill = f (scRefills old_sc ! n); crefill_relation refill refill'\<rbrakk>
+   \<Longrightarrow> (s\<lparr>ksPSpace := (ksPSpace s)(scPtr \<mapsto> KOSchedContext sc)\<rparr>,
+        t'\<lparr>globals := globals s'\<lparr>t_hrs_' := t_hrs_' (globals t)\<rparr>\<rparr>) \<in> rf_sr"
+  supply sched_context_C_size[simp del] refill_C_size[simp del]
+
+  apply (frule invs_valid_objs')
+  apply (frule_tac k=old_sc in sc_ko_at_valid_objs_valid_sc', assumption)
+  apply (frule rf_sr_refill_buffer_relation)
+  apply (frule_tac sc=old_sc and scPtr=scPtr and n=n in h_t_valid_refill; fastforce?)
+
+  unfolding rf_sr_def state_relation_def cstate_relation_def cpspace_relation_def
+  apply (clarsimp simp: Let_def update_scs_map_tos)
+  apply (frule_tac ptr=scPtr in cmap_relation_ko_atD[rotated])
+   apply fastforce
+  apply (erule obj_atE')
+  apply clarsimp
+  apply (clarsimp simp: map_comp_update projectKO_opt_sc typ_heap_simps')
+  apply (intro conjI)
+     subgoal by (clarsimp simp: cmap_relation_def split: if_splits)
+
+    subgoal \<comment> \<open>refill_buffer_relation\<close>
+      apply (prop_tac "length (scRefills sc) = length (scRefills old_sc)", simp)
+      apply (prop_tac "scRefills old_sc \<noteq> []")
+       apply (clarsimp simp: valid_sched_context'_def)
+
+      apply (simp (no_asm) add: refill_buffer_relation_def Let_def)
+
+      apply (rule conjI)
+       apply (drule refill_buffer_relation_cvariable_array_map_relation)
+       apply (clarsimp simp: cvariable_array_map_relation_def map_comp_def
+                      split: if_splits)
+
+      apply (rule conjI)
+       apply (drule refill_buffer_relation_refill_to_sc)
+       apply (subst dom_lift_t_heap_update)
+       apply (subst dom_eq)
+        subgoal by (fastforce simp: obj_at'_def)
+       apply (clarsimp simp only: Let_def subset_eq)
+       apply (rename_tac refillPtr refill'')
+       apply (drule_tac x=refillPtr in bspec, blast)
+       apply clarsimp
+       apply (rename_tac scPtr' n' sc'')
+       apply (rule_tac x=scPtr' in bexI)
+        subgoal by (clarsimp simp: map_comp_def split: option.splits if_splits)
+       apply blast
+
+      apply (rule conjI)
+       apply (drule refill_buffer_relation_crefill_relation)
+       apply (clarsimp simp: Let_def)
+       apply (rename_tac p sc'')
+       apply (case_tac "p \<noteq> scPtr")
+        apply (clarsimp simp: map_comp_def split: option.splits if_splits)
+        apply (frule invs_pspace_aligned')
+        apply (frule invs_pspace_distinct')
+        apply (frule invs_pspace_bounded')
+        apply (drule_tac x=p in spec)
+        apply (drule_tac x="KOSchedContext sc''" in spec)
+        apply (clarsimp simp: Let_def dyn_array_list_rel_pointwise typ_heap_simps split: if_splits)
+        apply (rename_tac n')
+        apply (drule_tac x=n' in spec)
+        apply (elim impE)
+         apply assumption
+        apply (elim exE)
+        apply (frule_tac scPtr=p in ksPSpace_valid_sched_context')
+         apply fastforce
+        apply (elim conjE)
+        apply (frule_tac p=p and  n=n' and sc=sc'' in refill_within_sc_size; assumption?)
+        apply (frule_tac p=scPtr and n=n and sc=old_sc in refill_within_sc_size; assumption?)
+        apply (frule_tac a=scPtr and b=p in obj_range'_disjoint; assumption?)
+         apply fastforce
+        apply (rule FalseE)
+        apply (rule_tac A="obj_range' scPtr (KOSchedContext old_sc)"
+                    and B="obj_range' p (KOSchedContext sc'')"
+                    and x="ptr_val (sc_ptr_to_crefill_ptr scPtr +\<^sub>p int n)"
+                     in in_empty_interE)
+          apply (simp only: obj_range'_def)
+         apply (frule_tac x=scPtr in pspace_alignedD', fastforce)
+         apply (frule obj_range'_intvl)
+         subgoal by (fastforce simp: objBits_simps)
+        apply (frule_tac x=p in pspace_alignedD', fastforce)
+        apply (frule_tac ptr=p in obj_range'_intvl)
+        subgoal by (fastforce simp: objBits_simps)
+       apply (drule_tac x=scPtr in spec)
+       apply (clarsimp simp: dyn_array_list_rel_pointwise)
+       apply (rename_tac n')
+       apply (frule_tac i=n' and j=n and f=f and xs="scRefills old_sc" in updateAt_index;
+              assumption?)
+       apply (case_tac "n=n'")
+        apply (clarsimp simp: typ_heap_simps')
+       apply (drule_tac x=n' in spec)
+       apply (clarsimp simp: typ_heap_simps' split: if_splits)
+       apply (intro conjI impI)
+        apply (frule_tac scPtr=scPtr and n=n and m=n' in sc_ptr_to_crefill_ptr_inj;
+               assumption?)
+        apply fastforce
+       apply (subst updateAt_index; assumption?)
+       apply (clarsimp split: if_splits)
+
+      apply (rule conjI)
+       apply (drule refill_buffer_relation_gs_dom)
+       apply (subst dom_eq)
+        subgoal by (fastforce simp: obj_at'_def)
+       apply (clarsimp simp: Let_def)
+
+      apply (drule refill_buffer_relation_size_eq)
+      by (clarsimp simp: map_comp_def split: if_splits)
+
+   subgoal by (clarsimp simp: carch_state_relation_def typ_heap_simps')
+  by (simp add: cmachine_state_relation_def)
+
+lemmas rf_sr_refill_update2 =
+  rf_sr_obj_update_helper[OF rf_sr_refill_update, simplified]
+
+lemma ret__ptr_to_struct_refill_C_'_update_rf_sr_helper:
+  "((s, globals_update f (ret__ptr_to_struct_refill_C_'_update g s')) \<in> rf_sr) =
+   ((s, globals_update f s') \<in> rf_sr)"
+  by (clarsimp simp: rf_sr_def)
+
+lemma crefill_relationD:
+  "\<lbrakk>refill_buffer_relation (ksPSpace s) (t_hrs_' (globals s')) gs; ko_at' sc scPtr s; valid_objs' s;
+    n < length (scRefills sc)\<rbrakk>
+   \<Longrightarrow> crefill_relation
+        (scRefills sc ! n)
+        (h_val (hrs_mem (t_hrs_' (globals s'))) (sc_ptr_to_crefill_ptr scPtr +\<^sub>p int n))"
+  apply (frule refill_buffer_relation_crefill_relation)
+  apply (clarsimp simp: Let_def)
+  apply (drule_tac x=scPtr in spec)
+  apply (drule_tac x=sc in spec)
+  apply (elim impE)
+   apply (frule (1) ko_at_projectKO_opt)
+  apply (frule (1) sc_ko_at_valid_objs_valid_sc')
+  apply (clarsimp simp: dyn_array_list_rel_pointwise)
+  apply (fastforce simp: typ_heap_simps)
   done
 
 end

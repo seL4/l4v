@@ -4696,12 +4696,8 @@ lemma pspace_no_overlap_induce_refill:
    apply assumption
   apply (frule (1) invs'_ko_at_valid_sched_context')
   apply (clarsimp simp: obj_at'_def)
-  apply (frule_tac n=n and x="ptr_val x" in refill_within_sc_size)
-      apply fastforce
-     apply fastforce
-    apply (clarsimp simp: obj_at'_def)
-   apply fastforce
-  by fastforce
+  apply (fastforce dest!: refill_within_sc_size)
+  done
 
 definition max_num_refills' :: "nat \<Rightarrow> nat" where
   "max_num_refills' sz = ((2 ^ sz) - schedContextStructSize) div refillSizeBytes"
@@ -4791,7 +4787,7 @@ proof (intro impI allI)
     unfolding csched_context_relation_def sched_context_C_size
     apply (simp add: makeObject_sc size_of_def projectKO_opt_sc ko_def)
     apply (simp add: from_bytes_def)
-    apply (simp add: typ_info_simps sched_context_C_tag_def refillTailIndex_def crefill_size_def)
+    apply (simp add: typ_info_simps sched_context_C_tag_def)
     apply (simp add: ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td align_of_def padup_def
                      final_pad_def)
     apply (simp add: typ_info_array eval_nat_numeral)
@@ -5235,16 +5231,13 @@ proof (intro impI allI)
       apply (frule_tac x=scPtr and sc=sc
                     in pspace_no_overlap_induce_sched_context[OF _ pal pbound _ al szb pno])
        apply (fastforce simp: obj_at_simps map_comp_def split: if_splits option.splits)
-      apply (cut_tac p=scPtr and sc=sc and n=n and x="ptr_val (sc_ptr_to_crefill_ptr scPtr +\<^sub>p int n)"
-                  in refill_within_sc_size[OF _ _ pbound])
-          apply (fastforce simp: map_comp_def split: if_splits option.splits)
-         apply (insert rzo)
-         apply (clarsimp simp: valid_objs'_def)
-         apply (drule_tac x="KOSchedContext sc" in bspec)
-          apply (fastforce simp: map_comp_def split: if_splits option.splits)
-         apply (clarsimp simp: valid_obj'_def)
-        apply fastforce
-       apply assumption
+      apply (cut_tac p=scPtr and sc=sc and n=n in refill_within_sc_size[OF _ _ pbound])
+         apply (fastforce simp: map_comp_def split: if_splits option.splits)
+        apply (clarsimp simp: valid_objs'_def)
+        apply (drule_tac x="KOSchedContext sc" in bspec)
+         apply (fastforce simp: map_comp_def split: option.splits)
+        apply (clarsimp simp: valid_obj'_def)
+       apply fastforce
       apply (cut_tac x=n' in rfl_buf_subset'[THEN spec, simplified])
       apply (insert rfl_subset)
       apply (drule_tac x=n' in spec)

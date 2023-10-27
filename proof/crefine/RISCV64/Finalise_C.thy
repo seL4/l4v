@@ -767,8 +767,7 @@ lemma schedContext_cancelYieldTo_ccorres:
          apply clarsimp
          apply (rule rf_sr_sc_update_no_refill_buffer_update2; fastforce?)
            apply (simp add: typ_heap_simps')
-          apply (clarsimp simp: csched_context_relation_def crefill_size_def refillTailIndex_def
-                                Let_def
+          apply (clarsimp simp: csched_context_relation_def Let_def
                          split: if_splits)
          apply (fastforce intro: refill_buffer_relation_sc_no_refills_update)
         apply ceqv
