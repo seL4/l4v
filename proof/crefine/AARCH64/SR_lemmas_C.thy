@@ -87,6 +87,18 @@ lemma isArchCap_tag_def2:
   "isArchCap_tag n \<equiv> n && 1 = 1"
   by (simp add: isArchCap_tag_def word_mod_2p_is_mask[where n=1, simplified] mask_def)
 
+(* On AARCH64 we cannot have isArchPageTableCap as at the abstract level there is only one cap,
+   while in C there are separate page table and vspace caps. *)
+
+definition isArchNormalPTCap :: "capability \<Rightarrow> bool" where
+ "isArchNormalPTCap cap \<equiv> case cap of ArchObjectCap (PageTableCap _ NormalPT_T _) \<Rightarrow> True | _ \<Rightarrow> False"
+
+definition isArchVSpacePTCap :: "capability \<Rightarrow> bool" where
+ "isArchVSpacePTCap cap \<equiv> case cap of ArchObjectCap (PageTableCap _ VSRootPT_T _) \<Rightarrow> True | _ \<Rightarrow> False"
+
+(* FIXME AARCH64 overrides version in Bits_R *)
+lemmas isCap_simps = isCap_simps isArchNormalPTCap_def isArchVSpacePTCap_def
+
 lemma cap_get_tag_isCap0:
   assumes cr: "ccap_relation cap cap'"
   shows "(cap_get_tag cap' = scast cap_thread_cap) = isThreadCap cap
@@ -99,18 +111,21 @@ lemma cap_get_tag_isCap0:
   \<and> (cap_get_tag cap' = scast cap_reply_cap) = isReplyCap cap
   \<and> (cap_get_tag cap' = scast cap_untyped_cap) = isUntypedCap cap
   \<and> (cap_get_tag cap' = scast cap_cnode_cap) = isCNodeCap cap
+  \<and> (cap_get_tag cap' = scast cap_domain_cap) = isDomainCap cap
   \<and> isArchCap_tag (cap_get_tag cap') = isArchCap \<top> cap
-  \<and> (cap_get_tag cap' = scast cap_frame_cap) = (isArchFrameCap cap)
-  \<and> (cap_get_tag cap' = scast cap_vcpu_cap) = isArchCap isVCPUCap cap
-  \<and> (cap_get_tag cap' = scast cap_domain_cap) = isDomainCap cap"
+  \<and> (cap_get_tag cap' = scast cap_asid_control_cap) = isArchCap isASIDControlCap cap
+  \<and> (cap_get_tag cap' = scast cap_asid_pool_cap) = isArchCap isASIDPoolCap cap
+  \<and> (cap_get_tag cap' = scast cap_frame_cap) = isArchFrameCap cap
+  \<and> (cap_get_tag cap' = scast cap_page_table_cap) = isArchNormalPTCap cap
+  \<and> (cap_get_tag cap' = scast cap_vspace_cap) = isArchVSpacePTCap cap
+  \<and> (cap_get_tag cap' = scast cap_vcpu_cap) = isArchCap isVCPUCap cap"
   using cr
   apply -
   apply (erule ccap_relationE)
   apply (simp add: cap_to_H_def cap_lift_def Let_def isArchCap_tag_def2 isArchCap_def)
-  by (clarsimp simp: isCap_simps cap_tag_defs word_le_nat_alt Let_def
-              split: if_split_asm) \<comment> \<open>takes a while\<close>
+  by (timeit \<open>clarsimp simp: isCap_simps cap_tag_defs word_le_nat_alt Let_def
+                       split: if_split_asm\<close>) \<comment> \<open>takes a while: ~2.5min\<close>
 
-(* FIXME AARCH64 does anyone remember why there are no page tables or asid pools here? *)
 lemma cap_get_tag_isCap:
   assumes cr: "ccap_relation cap cap'"
   shows "(cap_get_tag cap' = scast cap_thread_cap) = (isThreadCap cap)"
@@ -123,21 +138,17 @@ lemma cap_get_tag_isCap:
   and "(cap_get_tag cap' = scast cap_reply_cap) = isReplyCap cap"
   and "(cap_get_tag cap' = scast cap_untyped_cap) = (isUntypedCap cap)"
   and "(cap_get_tag cap' = scast cap_cnode_cap) = (isCNodeCap cap)"
-  and "isArchCap_tag (cap_get_tag cap') = isArchCap \<top> cap"
-  and "(cap_get_tag cap' = scast cap_frame_cap) = (isArchFrameCap cap)"
-  and "(cap_get_tag cap' = scast cap_vcpu_cap) = isArchCap isVCPUCap cap"
   and "(cap_get_tag cap' = scast cap_domain_cap) = isDomainCap cap"
+  and "isArchCap_tag (cap_get_tag cap') = isArchCap \<top> cap"
+  and "(cap_get_tag cap' = scast cap_asid_control_cap) = isArchCap isASIDControlCap cap"
+  and "(cap_get_tag cap' = scast cap_asid_pool_cap) = isArchCap isASIDPoolCap cap"
+  and "(cap_get_tag cap' = scast cap_frame_cap) = isArchFrameCap cap"
+  and "(cap_get_tag cap' = scast cap_page_table_cap) = isArchNormalPTCap cap"
+  and "(cap_get_tag cap' = scast cap_vspace_cap) = isArchVSpacePTCap cap"
+  and "(cap_get_tag cap' = scast cap_vcpu_cap) = isArchCap isVCPUCap cap"
   using cap_get_tag_isCap0 [OF cr] by auto
 
-lemma cap_get_tag_NullCap:
-  assumes cr: "ccap_relation cap cap'"
-  shows "(cap_get_tag cap' = scast cap_null_cap) = (cap = NullCap)"
-  using cr
-  apply -
-  apply (rule iffI)
-   apply (clarsimp simp add: cap_lifts cap_get_tag_isCap cap_to_H_def)
-  apply (simp add: cap_get_tag_isCap isCap_simps)
-  done
+lemmas cap_get_tag_NullCap = cap_get_tag_isCap(2)
 
 lemma cap_get_tag_ThreadCap:
   assumes cr: "ccap_relation cap cap'"
@@ -284,6 +295,83 @@ lemma cap_get_tag_DomainCap:
   apply (simp add: cap_get_tag_isCap isCap_simps)
   done
 
+lemma cap_get_tag_ASIDControlCap:
+  assumes cr: "ccap_relation cap cap'"
+  shows "(cap_get_tag cap' = scast cap_asid_control_cap)
+          = (cap = ArchObjectCap ASIDControlCap)"
+  using cr
+  apply -
+  apply (rule iffI)
+   (* cap_lift_asid_control_cap not part of cap_lifts *)
+   apply (clarsimp elim!: ccap_relationE simp: cap_lift_asid_control_cap cap_to_H_def)
+  apply (simp add: cap_get_tag_isCap isCap_simps)
+  done
+
+lemma cap_get_tag_ASIDPoolCap:
+  assumes cr: "ccap_relation cap cap'"
+  shows "(cap_get_tag cap' = scast cap_asid_pool_cap)
+          = (cap = ArchObjectCap (ASIDPoolCap (capASIDPool_CL (cap_asid_pool_cap_lift cap'))
+                                              (capASIDBase_CL (cap_asid_pool_cap_lift cap'))))"
+  using cr
+  apply -
+  apply (rule iffI)
+   apply (clarsimp elim!: ccap_relationE simp: cap_lifts cap_to_H_def)
+  apply (simp add: cap_get_tag_isCap isCap_simps)
+  done
+
+lemma cap_get_tag_FrameCap:
+  assumes cr: "ccap_relation cap cap'"
+  shows "(cap_get_tag cap' = scast cap_frame_cap)
+          = (cap = ArchObjectCap (
+                     FrameCap (capFBasePtr_CL (cap_frame_cap_lift cap'))
+                              (vmrights_to_H (capFVMRights_CL (cap_frame_cap_lift cap')))
+                              (framesize_to_H (capFSize_CL (cap_frame_cap_lift cap')))
+                              (to_bool (capFIsDevice_CL (cap_frame_cap_lift cap')))
+                              (if to_bool (capFMappedASID_CL (cap_frame_cap_lift cap'))
+                               then Some (capFMappedASID_CL (cap_frame_cap_lift cap'),
+                                          capFMappedAddress_CL (cap_frame_cap_lift cap'))
+                               else None)))"
+  using cr
+  apply -
+  apply (rule iffI)
+   apply (clarsimp elim!: ccap_relationE simp: cap_lifts cap_to_H_def to_bool_def)
+  apply (simp add: cap_get_tag_isCap isCap_simps)
+  done
+
+
+lemma cap_get_tag_PageTableCap:
+  assumes cr: "ccap_relation cap cap'"
+  shows "(cap_get_tag cap' = scast cap_page_table_cap)
+          = (cap = ArchObjectCap (
+                     PageTableCap (capPTBasePtr_CL (cap_page_table_cap_lift cap'))
+                                  NormalPT_T
+                                  (if to_bool (capPTIsMapped_CL (cap_page_table_cap_lift cap'))
+                                   then Some (capPTMappedASID_CL (cap_page_table_cap_lift cap'),
+                                              capPTMappedAddress_CL (cap_page_table_cap_lift cap'))
+                                   else None)))"
+  using cr
+  apply -
+  apply (rule iffI)
+   apply (clarsimp elim!: ccap_relationE simp: cap_lifts cap_to_H_def)
+  apply (simp add: cap_get_tag_isCap isCap_simps)
+  done
+
+lemma cap_get_tag_VSpaceCap:
+  assumes cr: "ccap_relation cap cap'"
+  shows "(cap_get_tag cap' = scast cap_vspace_cap)
+          = (cap = ArchObjectCap (
+                     PageTableCap (capVSBasePtr_CL (cap_vspace_cap_lift cap'))
+                                  VSRootPT_T
+                                  (if to_bool (capVSIsMapped_CL (cap_vspace_cap_lift cap'))
+                                   then Some (capVSMappedASID_CL (cap_vspace_cap_lift cap'), 0)
+                                   else None)))"
+  using cr
+  apply -
+  apply (rule iffI)
+   apply (clarsimp elim!: ccap_relationE simp: cap_lifts cap_to_H_def)
+  apply (simp add: cap_get_tag_isCap isCap_simps)
+  done
+
 lemma cap_get_tag_VCPUCap:
   assumes cr: "ccap_relation cap cap'"
   shows "(cap_get_tag cap' = scast cap_vcpu_cap)
@@ -306,6 +394,11 @@ lemmas cap_get_tag_to_H_iffs =
      cap_get_tag_ZombieCap
      cap_get_tag_UntypedCap
      cap_get_tag_DomainCap
+     cap_get_tag_ASIDControlCap
+     cap_get_tag_ASIDPoolCap
+     cap_get_tag_FrameCap
+     cap_get_tag_PageTableCap
+     cap_get_tag_VSpaceCap
      cap_get_tag_VCPUCap
 
 lemmas cap_get_tag_to_H = cap_get_tag_to_H_iffs [THEN iffD1]

@@ -2838,7 +2838,7 @@ lemma ccap_relation_get_capPtr_untyped:
 lemma cap_get_tag_isArchCap_unfolded_H_cap:
   "ccap_relation (capability.ArchObjectCap a_cap) cap' \<Longrightarrow>
    (isArchCap_tag (cap_get_tag cap'))"
-  apply (frule cap_get_tag_isCap(11), simp)
+  apply (frule cap_get_tag_isCap(12), simp)
   done
 
 lemmas ccap_rel_cap_get_tag_cases_generic' =
