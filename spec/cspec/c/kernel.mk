@@ -148,7 +148,6 @@ ${CONFIG_DONE}: ${KERNEL_DEPS} gen-config-thy.py ${OVERLAY}
 		${KERNEL_CMAKE_OPTIMISATION} ${KERNEL_CMAKE_EXTRA_OPTIONS} \
 		${OVERLAY_OPT} \
 		-G Ninja ${SOURCE_ROOT}
-	cd ${KERNEL_CONFIG_ROOT} && ninja gen_config/kernel/gen_config.json
 	@touch ${CONFIG_DONE}
 ifneq ($(L4V_ARCH),X64)
 	@if [ "$$(diff -q ${OVERLAY} ${DEFAULT_OVERLAY})" ]; then \
