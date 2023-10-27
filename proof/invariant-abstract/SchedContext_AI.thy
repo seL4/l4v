@@ -34,7 +34,7 @@ lemma ct_in_state_trans_update[simp]: "ct_in_state st (trans_state f s) = ct_in_
 (* RT: sc_and_timer invs *)
 lemma set_refills_valid_objs:
   "set_refills sc_ptr refills \<lbrace>valid_objs\<rbrace>"
-  apply (wpsimp simp: set_refills_def set_object_def
+  apply (wpsimp simp: set_refills_def
                   wp: get_object_wp update_sched_context_valid_objs_same)
   apply (clarsimp simp: valid_sched_context_def)
   done
@@ -63,22 +63,27 @@ crunches refill_unblock_check
 lemma round_robin_inv[wp]: "\<lbrace>\<lambda>s. P s\<rbrace> is_round_robin x \<lbrace> \<lambda>_ s. P s\<rbrace>"
   by (wpsimp simp: is_round_robin_def)
 
+lemma get_refills_wp:
+  "\<lbrace>\<lambda>s. \<forall>rv sc n. (ko_at (SchedContext sc n) sc_ptr s \<and> rv = sc_refills sc) \<longrightarrow> P rv s\<rbrace>
+   get_refills sc_ptr
+   \<lbrace>P\<rbrace>"
+  by (wpsimp simp: get_refills_def)
+
 lemma get_refills_sp:
-  "\<lbrace>P\<rbrace> get_refills sc_ptr
-  \<lbrace> \<lambda>r s. P s \<and> (\<exists>sc n. ko_at (SchedContext sc n) sc_ptr s \<and> r = sc_refills sc)\<rbrace>"
-  apply (simp add: get_refills_def)
-  apply (rule hoare_seq_ext[rotated])
-   apply (rule get_sched_context_sp)
-  apply (wp hoare_return_sp)
-  apply clarsimp
-  apply (rule_tac x=sc in exI, auto)
+  "\<lbrace>P\<rbrace>
+   get_refills sc_ptr
+   \<lbrace>\<lambda>rv s. P s \<and> (\<exists>sc n. ko_at (SchedContext sc n) sc_ptr s \<and> rv = sc_refills sc)\<rbrace>"
+  apply (wpsimp wp: get_refills_wp)
+  apply (clarsimp simp: obj_at_def)
   done
 
-lemma get_refills_wp:
-  "\<lbrace>\<lambda>s. \<forall>r sc n. (ko_at (SchedContext sc n) sc_ptr s \<and> r = sc_refills sc) \<longrightarrow> P r s\<rbrace>
-     get_refills sc_ptr
-  \<lbrace> \<lambda>r s. P r s\<rbrace>"
-  by (wpsimp simp: get_sched_context_def get_refills_def wp: get_object_wp) fastforce
+lemma get_refill_head_sp:
+  "\<lbrace>P\<rbrace>
+   get_refill_head sc_ptr
+   \<lbrace>\<lambda>rv s. P s \<and> (\<exists>sc n. ko_at (SchedContext sc n) sc_ptr s \<and> rv = refill_hd sc)\<rbrace>"
+  apply (wpsimp wp: get_refill_head_wp)
+  apply (clarsimp simp: obj_at_def)
+  done
 
 lemmas refill_unblock_check_defs
   = refill_unblock_check_def is_round_robin_def merge_refills_def refill_pop_head_def
@@ -1037,7 +1042,7 @@ lemma sc_and_timer_activatable:
 
 crunches refill_new, refill_update, commit_time
   for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
-  (wp: crunch_wps simp: crunch_simps)
+  (wp: crunch_wps hoare_vcg_all_lift simp: crunch_simps)
 
 lemmas refill_new_typ_ats [wp] =
   abs_typ_at_lifts [OF refill_new_typ_at]
@@ -1675,7 +1680,7 @@ lemma set_scheduler_action_invs[wp]:
 
 lemma reschedule_required_invs[wp]:
   "\<lbrace>invs\<rbrace> reschedule_required \<lbrace>\<lambda>rv. invs\<rbrace>"
-  by (wpsimp simp: reschedule_required_def wp: hoare_drop_imps hoare_vcg_all_lift)
+  by (wpsimp simp: reschedule_required_def wp: is_schedulable_wp hoare_drop_imps hoare_vcg_all_lift)
 
 lemma possible_switch_to_invs[wp]:
   "\<lbrace>invs\<rbrace> possible_switch_to target \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -1729,8 +1734,7 @@ lemma refill_unblock_check_it_ct[wp]:
 lemma get_sc_refill_capacity_sp:
   "\<lbrace>\<lambda>s. P s \<and> (\<exists>n. ko_at (SchedContext sc n) sc_ptr s)\<rbrace>
    get_sc_refill_capacity sc_ptr usage
-   \<lbrace> \<lambda>rv. K( rv = sc_refill_capacity usage sc) and P \<rbrace>"
-  apply (clarsimp simp: get_sc_refill_capacity_def)
+   \<lbrace>\<lambda>rv. K (rv = refill_capacity usage (refill_hd sc)) and P\<rbrace>"
   apply wpsimp
   by (clarsimp simp: obj_at_def refill_capacity_def)
 

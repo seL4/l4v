@@ -51,7 +51,7 @@ definition
 where
   "refill_size sc_ptr = do
     refills \<leftarrow> get_refills sc_ptr;
-    return $ size refills
+    return $ length refills
   od"
 
 definition
@@ -59,7 +59,7 @@ definition
 where
   "refill_full sc_ptr = do
     sc \<leftarrow> get_sched_context sc_ptr;
-    return (size (sc_refills sc) = sc_refill_max sc)
+    return (length (sc_refills sc) = sc_refill_max sc)
   od"
 
 definition
@@ -120,8 +120,8 @@ where
   "maybe_add_empty_tail sc_ptr = do
      robin \<leftarrow> is_round_robin sc_ptr;
      when robin $ do
-       refills \<leftarrow> get_refills sc_ptr;
-       empty_refill \<leftarrow> return \<lparr>r_time = r_time (hd refills), r_amount = 0\<rparr>;
+       head \<leftarrow> get_refill_head sc_ptr;
+       empty_refill \<leftarrow> return \<lparr>r_time = r_time head, r_amount = 0\<rparr>;
        refill_add_tail sc_ptr empty_refill
      od
    od"
@@ -144,19 +144,16 @@ definition
 where
   "schedule_used sc_ptr new \<equiv> do
      refills \<leftarrow> get_refills sc_ptr;
-     if refills = []
-     then refill_add_tail sc_ptr new
-     else if (can_merge_refill (last refills) new)
-          then update_refill_tl sc_ptr (r_amount_update (\<lambda>amount. amount + r_amount new))
-          else do full \<leftarrow> refill_full sc_ptr;
-                  if \<not> full
-                  then refill_add_tail sc_ptr new
-                  else do update_refill_tl sc_ptr
-                                           (\<lambda>refill. refill\<lparr>r_time := r_time new - r_amount refill\<rparr>);
-                          update_refill_tl sc_ptr
-                                           (\<lambda>refill. refill\<lparr>r_amount := r_amount refill + r_amount new\<rparr>)
-                       od
-               od
+     assert (refills \<noteq> []);
+     if can_merge_refill (last refills) new
+     then update_refill_tl sc_ptr (r_amount_update (\<lambda>amount. amount + r_amount new))
+     else do full \<leftarrow> refill_full sc_ptr;
+             if \<not> full
+             then refill_add_tail sc_ptr new
+             else do update_refill_tl sc_ptr (\<lambda>r. r\<lparr>r_time := r_time new - r_amount r\<rparr>);
+                     update_refill_tl sc_ptr (\<lambda>r. r\<lparr>r_amount := r_amount r + r_amount new\<rparr>)
+                  od
+          od
    od"
 
 definition
@@ -264,14 +261,13 @@ where
                      update_refill_hd sc_ptr (\<lambda>refill. refill\<lparr>r_time := cur_time\<rparr>)
                   od;
 
-     sc \<leftarrow> get_sched_context sc_ptr;
-     refill_hd \<leftarrow> return (hd (sc_refills sc));
-     if new_budget \<le> r_amount refill_hd
+     head \<leftarrow> get_refill_head sc_ptr;
+     if new_budget \<le> r_amount head
      then do update_refill_hd sc_ptr (\<lambda>refill. refill\<lparr>r_amount := new_budget\<rparr>);
              maybe_add_empty_tail sc_ptr
           od
-     else do unused \<leftarrow> return $ new_budget - r_amount refill_hd;
-             new \<leftarrow> return \<lparr>r_time = r_time refill_hd + new_period, r_amount = unused\<rparr>;
+     else do unused \<leftarrow> return $ new_budget - r_amount head;
+             new \<leftarrow> return \<lparr>r_time = r_time head + new_period, r_amount = unused\<rparr>;
              refill_add_tail sc_ptr new
           od
     od"

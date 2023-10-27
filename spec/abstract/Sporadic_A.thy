@@ -26,9 +26,9 @@ definition
   refill_pop_head :: "obj_ref \<Rightarrow> (refill, 'z::state_ext) s_monad"
 where
   "refill_pop_head sc_ptr \<equiv> do
-     refills \<leftarrow> get_refills sc_ptr;
+     head \<leftarrow> get_refill_head sc_ptr;
      update_sched_context sc_ptr (sc_refills_update tl);
-     return (hd refills)
+     return head
    od"
 
 definition

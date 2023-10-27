@@ -1649,6 +1649,11 @@ lemma valid_refills_budget_sufficient:
   by (fastforce simp: valid_refills_tcb_at_def budget_sufficient_def2 obj_at_def op_equal
               intro!: valid_refills_refill_sufficient)
 
+lemma valid_refills_nonempty_refills:
+  "valid_refills sc_ptr s \<Longrightarrow> sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr s"
+  by (fastforce simp: sc_at_ppred_def vs_all_heap_simps sc_valid_refills_def
+                      rr_valid_refills_def obj_at_def)
+
 lemmas active_valid_budget_sufficient
   = valid_refills_budget_sufficient[OF active_scs_valid_tcb_at]
 

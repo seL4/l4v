@@ -367,42 +367,41 @@ where
     return $ sc_refills sc
   od"
 
+definition read_refill_head :: "obj_ref \<Rightarrow> (refill, 'z::state_ext) r_monad" where
+  "read_refill_head sc_ptr \<equiv> do {
+     sc \<leftarrow> read_sched_context sc_ptr;
+     oreturn (refill_hd sc)
+   }"
+
+definition get_refill_head :: "obj_ref \<Rightarrow> (refill, 'z::state_ext) s_monad" where
+  "get_refill_head sc_ptr \<equiv> gets_the (read_refill_head sc_ptr)"
+
 definition
   refill_capacity :: "time \<Rightarrow> refill \<Rightarrow> time"
 where
   "refill_capacity usage refill \<equiv>
     if r_amount refill < usage then 0 else r_amount refill - usage"
 
-abbreviation
-  sc_refill_capacity :: "time \<Rightarrow> sched_context \<Rightarrow> time"
-where
-  "sc_refill_capacity usage sc \<equiv> refill_capacity usage (refill_hd sc)"
+definition read_sc_refill_capacity :: "obj_ref \<Rightarrow> ticks \<Rightarrow> (ticks, 'z::state_ext) r_monad" where
+  "read_sc_refill_capacity sc_ptr usage \<equiv> do {
+     refill_head \<leftarrow> read_refill_head sc_ptr;
+     oreturn (refill_capacity usage refill_head)
+   }"
 
-definition
-  get_sc_refill_capacity :: "obj_ref \<Rightarrow> time \<Rightarrow> (time, 'z::state_ext) s_monad"
-where
-  "get_sc_refill_capacity sc_ptr usage = do
-    sc \<leftarrow> get_sched_context sc_ptr;
-    return $ sc_refill_capacity usage sc
-  od"
+definition get_sc_refill_capacity :: "obj_ref \<Rightarrow> ticks \<Rightarrow> (ticks, 'z::state_ext) s_monad" where
+  "get_sc_refill_capacity sc_ptr usage \<equiv> gets_the (read_sc_refill_capacity sc_ptr usage)"
 
-definition
-  refill_sufficient :: "time \<Rightarrow> refill \<Rightarrow> bool"
-where
+definition refill_sufficient :: "time \<Rightarrow> refill \<Rightarrow> bool" where
   "refill_sufficient usage refill \<equiv> (MIN_BUDGET \<le> refill_capacity usage refill)"
 
-abbreviation
-  sc_refill_sufficient :: "time \<Rightarrow> sched_context \<Rightarrow> bool"
-where
-  "sc_refill_sufficient usage sc \<equiv> refill_sufficient usage (refill_hd sc)"
+definition read_sc_refill_sufficient :: "obj_ref \<Rightarrow> ticks \<Rightarrow> (bool, 'z::state_ext) r_monad" where
+  "read_sc_refill_sufficient sc_ptr usage \<equiv> do {
+     head \<leftarrow> read_refill_head sc_ptr;
+     oreturn (refill_sufficient usage head)
+   }"
 
-definition
-  get_sc_refill_sufficient :: "obj_ref \<Rightarrow> time \<Rightarrow> (bool, 'z::state_ext) s_monad"
-where
-  "get_sc_refill_sufficient sc_ptr usage = do
-    sc \<leftarrow> get_sched_context sc_ptr;
-    return $ sc_refill_sufficient usage sc
-  od"
+definition get_sc_refill_sufficient :: "obj_ref \<Rightarrow> ticks \<Rightarrow> (bool, 'z::state_ext) s_monad" where
+  "get_sc_refill_sufficient sc_ptr usage \<equiv> gets_the (read_sc_refill_sufficient sc_ptr usage)"
 
 definition refill_ready' :: "time \<Rightarrow> time \<Rightarrow> refill \<Rightarrow> bool" where
   "refill_ready' usage curtime refill \<equiv>
@@ -410,41 +409,33 @@ definition refill_ready' :: "time \<Rightarrow> time \<Rightarrow> refill \<Righ
 
 abbreviation refill_ready :: "time \<Rightarrow> refill \<Rightarrow> bool" where
   "refill_ready \<equiv> refill_ready' 0"
+
 lemmas refill_ready_def = refill_ready'_def
 
-abbreviation sc_refill_ready :: "time \<Rightarrow> sched_context \<Rightarrow> bool" where
-  "sc_refill_ready curtime sc \<equiv> refill_ready curtime (refill_hd sc)"
-
-definition
-  read_sc_refill_ready :: "obj_ref \<Rightarrow> (bool, 'z::state_ext) r_monad"
-where
+definition read_sc_refill_ready :: "obj_ref \<Rightarrow> (bool, 'z::state_ext) r_monad" where
   "read_sc_refill_ready sc_ptr = do {
-    sc \<leftarrow> read_sched_context sc_ptr;
-    cur_time \<leftarrow> asks cur_time;
-    oreturn $ sc_refill_ready cur_time sc
-  }"
+     refill_head \<leftarrow> read_refill_head sc_ptr;
+     cur_time \<leftarrow> asks cur_time;
+     oreturn $ refill_ready cur_time refill_head
+   }"
 
-definition
-  get_sc_refill_ready :: "obj_ref \<Rightarrow> (bool, 'z::state_ext) s_monad"
-where
+definition get_sc_refill_ready :: "obj_ref \<Rightarrow> (bool, 'z::state_ext) s_monad" where
   "get_sc_refill_ready sc_ptr \<equiv> gets_the $ read_sc_refill_ready sc_ptr"
 
 (* end refill checks *)
 
-definition
-  sc_released :: "time \<Rightarrow> sched_context \<Rightarrow> bool"
-where
-  "sc_released curtime sc \<equiv>
-    sc_active sc \<and> sc_refill_ready curtime sc"
+definition sc_released :: "time \<Rightarrow> sched_context \<Rightarrow> bool" where
+  "sc_released curtime sc \<equiv> sc_active sc \<and> refill_ready curtime (refill_hd sc)"
 
-definition
-  get_sc_released :: "obj_ref \<Rightarrow> (bool, 'z::state_ext) s_monad"
-where
-  "get_sc_released sc_ptr  \<equiv> do
-    sc \<leftarrow> get_sched_context sc_ptr;
-    cur_time \<leftarrow> gets cur_time;
-    return $ sc_released cur_time sc
-  od"
+definition read_sc_released :: "obj_ref \<Rightarrow> (bool, 'z::state_ext) r_monad" where
+  "read_sc_released sc_ptr = do {
+     sc \<leftarrow> read_sched_context sc_ptr;
+     cur_time \<leftarrow> asks cur_time;
+     oreturn $ sc_released cur_time sc
+   }"
+
+definition get_sc_released :: "obj_ref \<Rightarrow> (bool, 'z::state_ext) s_monad" where
+  "get_sc_released sc_ptr \<equiv> gets_the $ read_sc_released sc_ptr"
 
 definition
   get_tcb_queue :: "domain \<Rightarrow> priority \<Rightarrow> (ready_queue, 'z::state_ext) s_monad" where

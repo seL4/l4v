@@ -131,8 +131,22 @@ lemma get_tcb_truncate[simp]: "get_tcb a (truncate_state s) = get_tcb a s"
 lemma read_sched_context_truncate[simp]: "read_sched_context a (truncate_state s) = read_sched_context a s"
   by (simp add: read_sched_context_def obind_def omonad_defs split: kernel_object.splits option.splits)
 
-lemma read_sc_refill_ready_truncate[simp]: "read_sc_refill_ready a (truncate_state s) = read_sc_refill_ready a s"
+lemma read_refill_head_truncate[simp]:
+  "read_refill_head sc_ptr (truncate_state s) = read_refill_head sc_ptr s"
+  by (simp add: read_refill_head_def obind_def split: option.splits)
+
+lemma read_sc_refill_capacity_truncate[simp]:
+  "read_sc_refill_capacity sc_ptr usage (truncate_state s) = read_sc_refill_capacity sc_ptr usage s"
+  by (simp add: read_sc_refill_capacity_def obind_def split: option.splits)
+
+lemma read_sc_refill_ready_truncate[simp]:
+  "read_sc_refill_ready a (truncate_state s) = read_sc_refill_ready a s"
   by (simp add: read_sc_refill_ready_def obind_def omonad_defs split: option.splits)
+
+lemma read_sc_refill_sufficient_truncate[simp]:
+  "read_sc_refill_sufficient sc_ptr usage (truncate_state s)
+   = read_sc_refill_sufficient sc_ptr usage s"
+  by (simp add: read_sc_refill_sufficient_def obind_def omonad_defs)
 
 lemma in_release_queue_truncate[simp]:
   "in_release_queue t (truncate_state s) = in_release_queue t s"

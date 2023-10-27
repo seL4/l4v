@@ -3881,7 +3881,7 @@ lemma tcb_release_remove_cdt_cdt_list[wp]:
 
 lemma reschedule_required_cdt_cdt_list[wp]:
   "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> reschedule_required \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
-  by (wpsimp simp: reschedule_required_def thread_get_def wp: hoare_drop_imp)
+  by (wpsimp simp: reschedule_required_def thread_get_def wp: is_schedulable_wp hoare_drop_imp)
 
 lemma test_reschedule_cdt_cdt_list[wp]:
    "\<lbrace>\<lambda>s. P (cdt s) (cdt_list s)\<rbrace> test_reschedule r \<lbrace>\<lambda>_ s. P (cdt s) (cdt_list s)\<rbrace>"
@@ -4176,8 +4176,9 @@ crunch valid_list[wp]: refill_unblock_check valid_list
   (wp: hoare_drop_imps crunch_wps simp: crunch_simps is_round_robin_def)
 crunch valid_list[wp]: invoke_sched_context valid_list
 
-crunch valid_list[wp]: refill_update,refill_new valid_list (wp: hoare_drop_imp)
-
+crunches refill_update, refill_new
+  for valid_list[wp]: valid_list
+  (wp: hoare_drop_imp hoare_vcg_all_lift simp: crunch_simps)
 
 crunch valid_list[wp]: commit_time valid_list
   (wp: crunch_wps)

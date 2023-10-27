@@ -622,7 +622,7 @@ where
             sc_ptr \<leftarrow> assert_opt sc_opt;
             sc \<leftarrow> get_sched_context sc_ptr;
             curtime \<leftarrow> gets cur_time;
-            if sc_refill_ready curtime sc \<and> sc_refill_sufficient 0 sc
+            if refill_ready curtime (refill_hd sc) \<and> refill_sufficient 0 (refill_hd sc)
             then possible_switch_to receiver
             else do
               tcb \<leftarrow> gets_the $ get_tcb receiver;

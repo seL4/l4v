@@ -1588,6 +1588,7 @@ lemma sc_sporadic_update_active[wp]:
 
 crunches refill_new
   for st_tcb_at[wp]: "\<lambda>s. \<not> st_tcb_at P tcb_ptr s"
+  (simp: crunch_simps wp: crunch_wps)
 
 lemma invoke_sched_control_configure_flags_invs[wp]:
   "\<lbrace>\<lambda>s. invs s \<and> valid_sched_control_inv i s \<and> bound_sc_tcb_at bound (cur_thread s) s\<rbrace>

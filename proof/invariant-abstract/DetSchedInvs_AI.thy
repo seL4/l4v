@@ -2130,9 +2130,10 @@ lemma gets_the_bind_collapse:
 lemma read_sc_refill_ready_simp:
   "read_sc_refill_ready scp s =
     (case read_sched_context scp s
-       of Some sc \<Rightarrow> Some (sc_refill_ready (cur_time s) sc)
+       of Some sc \<Rightarrow> Some (refill_ready (cur_time s) (refill_hd sc))
         | _ \<Rightarrow> None)"
-  by (clarsimp simp: read_sc_refill_ready_def obind_def asks_def split: option.split_asm)
+  by (clarsimp simp: read_sc_refill_ready_def read_refill_head_def obind_def asks_def
+              split: option.split_asm option.splits)
 
 lemma get_sc_refill_ready_gets_the:
   "get_sc_refill_ready scp
@@ -2142,12 +2143,6 @@ lemma get_sc_refill_ready_gets_the:
   by (simp add: read_sc_refill_ready_simp read_sched_context_def obind_def
                 sc_refill_cfgs.all_simps assert_opt_def map_project_simps omonad_defs
          split: option.splits kernel_object.splits)
-
-lemma get_sc_refill_sufficient_gets_the:
-  "get_sc_refill_sufficient scp usage = gets_the (\<lambda>s. map_project (refill_sufficient_sc usage) (sc_refill_cfgs_of s) scp)"
-  apply (simp add: get_sc_refill_sufficient_def get_sched_context_gets_the
-                   gets_the_map_project[symmetric])
-  by (auto intro!: arg_cong[where f=gets_the] map_eqI simp: map_project_simps vs_all_heap_simps)
 
 (* FIXME: Move up. Perhaps use more widely, to get rid of pred_map2? *)
 definition tcb_sc_refill_cfgs_2 ::
@@ -3188,6 +3183,10 @@ lemma valid_sched_active_scs_valid[elim!]:
 lemma valid_sched_imp_except_blocked[elim!]:
   "valid_sched s \<Longrightarrow> valid_sched_except_blocked s"
   by (clarsimp simp: valid_sched_def)
+
+lemma valid_sched_ct_not_in_q[elim!]:
+  "valid_sched s \<Longrightarrow> ct_not_in_q s"
+  by (simp add: valid_sched_def)
 
 (* sched_context and other thread properties *)
 abbreviation sc_with_tcb_prop ::

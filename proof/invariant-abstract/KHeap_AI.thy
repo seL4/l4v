@@ -1653,6 +1653,17 @@ locale non_aobj_non_cap_non_mem_op = non_aobj_non_astate_non_mem_op f + non_aobj
 
 sublocale non_aobj_non_cap_non_mem_op < non_vspace_non_cap_non_mem_op ..
 
+lemma read_sched_context_get_sched_context:
+  "gets_the (read_sched_context scPtr) = get_sched_context scPtr"
+  apply (rule monadic_rewrite_to_eq)
+  apply (clarsimp simp: get_sched_context_def get_object_def read_sched_context_def)
+  apply (rule monadic_rewrite_bind_tail)
+  apply (rule monadic_rewrite_is_refl)
+  apply (clarsimp simp: gets_def assert_opt_def return_def get_def bind_def
+                 split: kernel_object.splits)
+  apply wpsimp
+  done
+
 lemma get_sched_context_wp[wp]:
   "\<lbrace>\<lambda>s. \<forall>sc n. ko_at (SchedContext sc n) p s \<longrightarrow> P sc s\<rbrace> get_sched_context p \<lbrace>P\<rbrace>"
   unfolding get_sched_context_def by (wpsimp wp: get_object_wp simp: obj_at_def)
@@ -1661,6 +1672,19 @@ lemma get_tcb_ko_at:
   "(get_tcb t s = Some tcb) = ko_at (TCB tcb) t s"
   by (auto simp: obj_at_def get_tcb_def
            split: option.splits Structures_A.kernel_object.splits)
+
+lemma no_ofail_get_tcb[wp]:
+  "no_ofail (tcb_at tp) (get_tcb tp)"
+  unfolding get_tcb_def no_ofail_def
+  by (clarsimp simp: obj_at_def is_tcb split: option.splits)
+
+lemma read_object_ko_at:
+  "read_object p s = Some ko \<longleftrightarrow> ko_at ko p s"
+  by (simp add: obj_at_def)
+
+lemma no_ofail_read_object[simp]:
+  "no_ofail (obj_at P ptr) (read_object ptr)"
+  by (clarsimp simp: no_ofail_def obj_at_def)
 
 lemma stsa_caps_of_state[wp]:
   "set_thread_state_act t \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace>"

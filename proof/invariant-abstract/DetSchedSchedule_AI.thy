@@ -3958,8 +3958,18 @@ lemma refill_unblock_check_valid_sched_action[wp]:
 lemma get_sc_refill_ready_sp:
   "\<lbrace>P\<rbrace>
    get_sc_refill_ready sc_ptr
-   \<lbrace>\<lambda>rv s. P s \<and> (\<exists>sc n. ko_at (SchedContext sc n) sc_ptr s \<and> rv = sc_refill_ready (cur_time s) sc)\<rbrace>"
+   \<lbrace>\<lambda>rv s. P s \<and> (\<exists>sc n. ko_at (SchedContext sc n) sc_ptr s
+           \<and> rv = refill_ready (cur_time s) (refill_hd sc))\<rbrace>"
   apply (wpsimp wp: get_sc_refill_ready_wp)
+  apply (clarsimp simp: obj_at_def)
+  done
+
+lemma get_sc_refill_sufficient_sp:
+  "\<lbrace>P\<rbrace>
+   get_sc_refill_sufficient sc_ptr usage
+   \<lbrace>\<lambda>rv s. P s \<and> (\<exists>sc n. ko_at (SchedContext sc n) sc_ptr s
+           \<and> rv = refill_sufficient usage (refill_hd sc))\<rbrace>"
+  apply (wpsimp wp: get_sc_refill_sufficient_wp)
   apply (clarsimp simp: obj_at_def)
   done
 
@@ -4627,7 +4637,8 @@ lemma maybe_add_empty_tail_valid_sched_misc[wp]:
           (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
           (ready_queues s) (release_queue s) (scheduler_action s)
           (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s) (tcb_faults_of s) (sc_replies_of s)\<rbrace>"
-  unfolding maybe_add_empty_tail_def refill_add_tail_def set_refills_def by wpsimp
+  unfolding maybe_add_empty_tail_def refill_add_tail_def set_refills_def
+  by (wpsimp wp: is_round_robin_wp)
 
 lemma refill_new_valid_sched_misc[wp]:
   "refill_new sc_ptr max_refills budget period
@@ -4644,7 +4655,7 @@ lemma refill_update_valid_sched_misc[wp]:
           (ready_queues s) (release_queue s) (scheduler_action s)
           (etcbs_of s) (tcb_sts_of s) (tcb_scps_of s) (tcb_faults_of s) (sc_replies_of s)\<rbrace>"
   unfolding refill_update_def refill_add_tail_def update_refill_tl_def update_refill_hd_def
-  apply (wpsimp wp: hoare_drop_imps)
+  apply (wpsimp wp: hoare_drop_imps hoare_vcg_all_lift)
   done
 
 lemma maybe_add_empty_tail_is_active_sc[wp]:
@@ -8283,7 +8294,7 @@ lemma maybe_add_empty_tail_is_refill_sufficient[wp]:
 
 crunches set_refills, refill_update, refill_new
   for pred_tcb_at[wp]: "\<lambda>s. P (pred_tcb_at p Q t s)"
-  (wp: crunch_wps)
+  (wp: crunch_wps hoare_vcg_all_lift simp: crunch_simps)
 
 lemma set_sc_obj_ref_refill_cfgs_no_change:
   "\<lbrace>\<lambda>s. Q (pred_map R (sc_refill_cfgs_of s) scp)
@@ -8980,20 +8991,27 @@ lemma update_sched_context_not_active_sc_tcb_at:
    apply (clarsimp simp: vs_all_heap_simps split: if_splits)
    done
 
+crunches maybe_add_empty_tail
+  for active_sc_tcb_at[wp]: "\<lambda>s. P (active_sc_tcb_at t s)"
+  (wp: is_round_robin_wp simp: crunch_simps ignore: update_sched_context)
+
+crunches refill_add_tail, maybe_add_empty_tail
+  for valid_blocked[wp]: valid_blocked
+  (wp: hoare_vcg_all_lift hoare_vcg_imp_lift' is_round_robin_wp simp: valid_blocked_defs
+   ignore: update_sched_context)
+
 lemma refill_new_valid_blocked_no_sc_tcb:
   "\<lbrace>valid_blocked and K (0 < mrefills)
     and (\<lambda>s. \<exists>sc n. kheap s sc_ptr = Some (SchedContext sc n) \<and> sc_tcb sc = None)
     and (\<lambda>s. sym_refs (state_refs_of s))\<rbrace>
    refill_new sc_ptr mrefills budget period
    \<lbrace>\<lambda>rv. valid_blocked\<rbrace>"
-  supply if_split [split del]
-  unfolding refill_new_def valid_blocked_defs maybe_add_empty_tail_def refill_add_tail_def
-  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' is_round_robin_wp
-                    update_sched_context_not_active_sc_tcb_at hoare_vcg_if_lift2 hoare_vcg_disj_lift)
+  unfolding refill_new_def valid_blocked_defs
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' update_sched_context_not_active_sc_tcb_at)
   apply (intro conjI;
          intro impI allI;
          clarsimp simp: vs_all_heap_simps obj_at_kh_kheap_simps pred_map_eq_def;
-         frule sym_ref_tcb_sc; fastforce?)
+         frule sym_ref_tcb_sc; fastforce)
   done
 
 lemma refill_new_not_active_sc:
@@ -9243,8 +9261,6 @@ lemma schedule_used_refills_unat_sum:
   apply (clarsimp simp: schedule_used_def vs_all_heap_simps obj_at_def)
   apply (case_tac "can_merge_refill (refill_tl sc) new")
    apply clarsimp
-   apply (intro conjI impI)
-    apply (simp add: unat_plus_simple)
    apply (simp add: refills_unat_sum_def)
    apply (subst unat_add_lem'')
    apply (prop_tac "unat (r_amount (refill_tl sc)) \<in> set (map unat (map r_amount (sc_refills sc)))")
@@ -10046,7 +10062,6 @@ lemma handle_overrun_loop_head_bound:
    apply metis
   apply (case_tac "tl (sc_refills scb)")
    apply (clarsimp simp: window_def MAX_RELEASE_TIME_def unat_sub)
-   apply (metis Nitpick.size_list_simp(2))
   apply (prop_tac "unat (r_time a) + 4 * unat MAX_PERIOD \<le> unat max_time")
    apply (prop_tac "hd (tl (sc_refills scb)) \<in> set (tl (sc_refills scb))", fastforce)
    apply (drule_tac x="hd (tl (sc_refills scb))" in bspec)
@@ -10080,20 +10095,18 @@ lemma schedule_used_refills_sum:
   apply (rename_tac sc n)
   apply (clarsimp simp: vs_all_heap_simps obj_at_def)
   apply (intro conjI impI)
-    apply (clarsimp simp: refills_sum_def)
    apply (prop_tac "sc_refills sc = butlast (sc_refills sc) @ [refill_tl sc]", simp)
    apply (case_tac "sc_refills sc"; fastforce?)
    apply (prop_tac "refills_sum (sc_refills sc)
                     = refills_sum (butlast (sc_refills sc)) + r_amount (refill_tl sc)")
-    apply (subst add_ac)
     apply (clarsimp simp: refills_sum_def)
-   apply (metis add.assoc)
+   apply (metis add_ac)
   apply (prop_tac "sc_refills sc = butlast (sc_refills sc) @ [refill_tl sc]", simp)
   apply (case_tac "sc_refills sc"; fastforce?)
   apply (prop_tac "refills_sum (sc_refills sc)
                    = refills_sum (butlast (sc_refills sc)) + r_amount (refill_tl sc)")
    apply (clarsimp simp: refills_sum_def add_ac split: if_splits)
-  apply (metis add.assoc)
+  apply (metis add_ac)
   done
 
 lemma handle_overrun_loop_body_refills_sum:
@@ -10898,8 +10911,8 @@ lemma no_ofail_read_tcb_refill_ready:
   unfolding read_tcb_refill_ready_def no_ofail_def
   apply (clarsimp simp: omonad_defs obind_def split: option.split)
   by (fastforce simp: pred_tcb_at_def obj_at_def is_sc_obj
-               dest!: read_sc_refill_ready_NoneD read_sched_context_NoneD
-                      read_sched_context_SomeD read_sc_refill_ready_SomeD
+               dest!: read_refill_ready_NoneD read_sched_context_NoneD
+                      read_sched_context_SomeD read_refill_ready_SomeD
                       read_tcb_obj_ref_NoneD read_tcb_obj_ref_SomeD)
 
 lemma no_ofail_read_release_q_non_empty_and_ready:
@@ -10927,7 +10940,7 @@ lemma read_release_q_non_empty_and_ready_True_simp:
   "\<lbrakk>valid_release_q s; read_release_q_non_empty_and_ready s = Some True\<rbrakk>
    \<Longrightarrow> release_queue s \<noteq> [] \<and> budget_ready (hd (release_queue s)) s"
   apply (clarsimp dest!: read_release_q_non_empty_and_ready_SomeD read_sched_context_SomeD
-                         read_tcb_refill_ready_SomeD read_sc_refill_ready_SomeD
+                         read_tcb_refill_ready_SomeD read_refill_ready_SomeD
                          read_tcb_obj_ref_SomeD)
   by (clarsimp simp: vs_all_heap_simps map_project_simps map_join_simps opt_map_simps)
 
@@ -10957,7 +10970,7 @@ lemma awaken_valid_sched:
    apply clarsimp
    apply (prop_tac "read_release_q_non_empty_and_ready s = Some True")
     using valid_release_q_read_release_q_non_empty_and_ready_bound apply force
-   apply (clarsimp dest!: read_tcb_refill_ready_SomeD read_sc_refill_ready_SomeD
+   apply (clarsimp dest!: read_tcb_refill_ready_SomeD read_refill_ready_SomeD
                           read_tcb_obj_ref_SomeD read_sched_context_SomeD
                           read_release_q_non_empty_and_ready_SomeD
                     simp: vs_all_heap_simps)
@@ -14911,7 +14924,8 @@ lemma sched_context_resume_in_release_q_not_ready:
   apply (rename_tac sc n tcb)
   apply (drule_tac scp1=scp in heap_refs_inv_sc_tcb_sc_at_iff_bound_sc_tcb_at[THEN iffD1])
    apply (fastforce simp: sc_tcb_sc_at_def obj_at_def)
-  apply (clarsimp simp: vs_all_heap_simps pred_tcb_at_def obj_at_def)
+  apply (frule read_sc_refill_sufficient_SomeD)
+  apply (clarsimp simp: vs_all_heap_simps pred_tcb_at_def obj_at_def read_sched_context_def)
   done
 
 lemma maybe_donate_sc_in_release_q_imp_not_ready:
@@ -16344,8 +16358,7 @@ lemma sched_context_resume_schedulable_imp_sc_ready:
    \<lbrace>\<lambda>_ s. is_active_sc scp s \<and> sc_not_in_release_q scp s
           \<and> (runnable |< (kheap s |> sc_of |> sc_tcb |> tcb_sts_of s)) scp
              \<longrightarrow> is_refill_ready scp s\<rbrace>"
-  unfolding sched_context_resume_def assert_opt_def when_def get_sc_refill_sufficient_def
-            bind_assoc get_tcb_queue_def
+  unfolding sched_context_resume_def assert_opt_def when_def bind_assoc get_tcb_queue_def
   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
   apply (rename_tac sc; case_tac "sc_tcb sc"; simp)
   apply (rename_tac tp)
@@ -16353,7 +16366,7 @@ lemma sched_context_resume_schedulable_imp_sc_ready:
   apply (rule hoare_if)
    apply (rule hoare_seq_ext[OF _ thread_get_sp])
    apply (rule hoare_seq_ext[OF _ get_sc_refill_ready_sp])
-   apply (rule hoare_seq_ext[OF _ get_sched_context_sp])
+   apply (rule hoare_seq_ext[OF _ get_sc_refill_sufficient_sp])
    apply (rule hoare_if)
     apply (rule_tac R="\<lambda>_. in_release_q tp" in hoare_post_add)
     apply (wpsimp wp: postpone_in_release_q)
@@ -16503,6 +16516,7 @@ lemma sc_ready_times_cong:
 
 crunches maybe_add_empty_tail
   for sc_tcb_sc_at[wp]: "\<lambda>s. Q (sc_tcb_sc_at P sc_ptr s)"
+  (simp: crunch_simps wp: crunch_wps)
 
 lemma refill_update_sc_tcb_sc_at[wp]:
   "refill_update sc_ptr mrefills budget period \<lbrace>\<lambda>s. Q (sc_tcb_sc_at P sc_ptr s)\<rbrace>"
@@ -21668,7 +21682,7 @@ lemma invoke_tcb_valid_machine_time[wp]:
 crunches cancel_badged_sends, invoke_irq_handler, invoke_domain, invoke_sched_context,
          invoke_sched_control_configure_flags
   for valid_machine_time[wp]: "valid_machine_time :: det_state \<Rightarrow> _"
-  (wp: crunch_wps check_cap_inv filterM_preserved simp: crunch_simps)
+  (wp: crunch_wps hoare_vcg_all_lift check_cap_inv filterM_preserved simp: crunch_simps)
 
 lemma invoke_cnode_valid_machine_time[wp]:
   "invoke_cnode i \<lbrace>valid_machine_time :: det_state \<Rightarrow> _\<rbrace>"
@@ -22750,7 +22764,7 @@ lemma refill_unblock_check_cur_sc_is_refill_sufficient[wp]:
 
 crunches refill_unblock_check, refill_update, refill_new
   for valid_machine_time[wp]: "valid_machine_time"
-  (wp: crunch_wps)
+  (wp: crunch_wps hoare_vcg_all_lift simp: crunch_simps)
 
 context DetSchedSchedule_AI begin
 
@@ -23501,7 +23515,7 @@ end
 
 crunches commit_time, refill_update, refill_new
   for ex_nonz_cap_to[wp]: "ex_nonz_cap_to ref"
-  (wp: hoare_drop_imps simp: crunch_simps)
+  (wp: hoare_drop_imps hoare_vcg_all_lift simp: crunch_simps)
 
 lemma commit_time_cur_sc_more_than_ready[wp]:
   "\<lbrace>\<top>\<rbrace>
@@ -23550,7 +23564,7 @@ context DetSchedSchedule_AI_handle_hypervisor_fault_det_ext begin
 
 crunches refill_new, refill_update
   for ct_in_state[wp]: "ct_in_state P"
-  (wp: crunch_wps)
+  (wp: crunch_wps hoare_vcg_all_lift simp: crunch_simps)
 
 lemma invoke_sched_control_configure_flags_cur_sc_in_release_q_imp_zero_consumed[wp]:
   "\<lbrace>invs
@@ -26507,7 +26521,7 @@ lemma preemption_path_valid_sched:
 
 lemma preemption_path_invs[wp]:
   "preemption_path \<lbrace>invs\<rbrace>"
-  apply (wpsimp simp: preemption_path_def
+  apply (wpsimp simp: preemption_path_def schedulable_def2
                   wp: is_schedulable_wp hoare_drop_imps hoare_vcg_if_lift2)
   done
 
@@ -26515,7 +26529,7 @@ lemma preemption_path_current_time_bounded:
   "\<lbrace>current_time_bounded and valid_machine_time\<rbrace>
    preemption_path
    \<lbrace>\<lambda>_. current_time_bounded :: det_state \<Rightarrow> _\<rbrace>"
-  apply (wpsimp simp: preemption_path_def
+  apply (wpsimp simp: preemption_path_def schedulable_def2
                   wp: is_schedulable_wp hoare_drop_imps hoare_vcg_if_lift2
                       update_time_stamp_current_time_bounded)
   done
@@ -26524,7 +26538,7 @@ lemma preemption_path_consumed_time_bounded:
   "\<lbrace>consumed_time_bounded and valid_machine_time\<rbrace>
    preemption_path
    \<lbrace>\<lambda>_. consumed_time_bounded :: det_state \<Rightarrow> _\<rbrace>"
-  apply (wpsimp simp: preemption_path_def
+  apply (wpsimp simp: preemption_path_def schedulable_def2
                   wp: is_schedulable_wp hoare_drop_imps hoare_vcg_if_lift2)
   done
 
@@ -26534,7 +26548,7 @@ lemma preemption_point_scheduler_act_sane:
    \<lbrace>\<lambda>_. scheduler_act_sane :: det_state \<Rightarrow> _\<rbrace>"
   apply (clarsimp simp: preemption_path_def)
   apply (wpsimp wp: is_schedulable_wp hoare_vcg_if_lift2 hoare_drop_imps)
-   apply (fastforce simp: ct_in_state_def is_blocked_on_receive_def)
+   apply (fastforce simp: ct_in_state_def is_blocked_on_receive_def schedulable_def2)
   apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def is_blocked_on_receive_def)
   apply (rename_tac tcb, case_tac "tcb_state tcb"; clarsimp)
   done
