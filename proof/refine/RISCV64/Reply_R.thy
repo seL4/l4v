@@ -429,7 +429,9 @@ lemma replyRemoveTCB_valid_objs'[wp]:
   apply (clarsimp simp: valid_reply'_def if_bool_eq_conj if_distribR)
   apply (case_tac "replyPrev ko = None"; clarsimp)
    apply (drule(1) sc_ko_at_valid_objs_valid_sc',
-          clarsimp simp: valid_sched_context'_def valid_sched_context_size'_def objBits_simps)+
+          clarsimp simp: valid_sched_context'_def valid_sched_context_size'_def objBits_simps
+                         refillSize_def
+                  split: if_splits)+
   done
 
 lemma updateReply_prev_None_valid_replies'[wp]:
@@ -698,7 +700,7 @@ lemma update_sc_reply_stack_update_ko_at'_corres:
          apply (rule setSchedContext_update_corres
                        [where f'="scReply_update (\<lambda>_. reply_ptr)"
                         and f="sc_replies_update (\<lambda>_. replies)"])
-          apply (clarsimp simp: sc_relation_def)
+          apply (clarsimp simp: sc_relation_def refillSize_def)
          apply (clarsimp simp: objBits_def objBitsKO_def)
         apply simp+
       apply (wpsimp wp: get_sched_context_exs_valid simp: is_sc_obj_def obj_at_def)
@@ -900,14 +902,15 @@ lemma bindScReply_valid_objs'[wp]:
       apply clarsimp
       apply (prop_tac "sc_at' scp s")
        apply (clarsimp simp: obj_at'_def)
-      apply (clarsimp simp: valid_reply'_def valid_obj'_def objBits_simps'
+      apply (clarsimp simp: valid_reply'_def valid_obj'_def objBits_simps' refillSize_def
                             valid_sched_context'_def valid_sched_context_size'_def
-                     dest!: sc_ko_at_valid_objs_valid_sc')+
+                     dest!: sc_ko_at_valid_objs_valid_sc' split: if_splits)+
      apply wpsimp+
   apply safe
-       by ((clarsimp simp: valid_reply'_def valid_obj'_def objBits_simps'
+       by ((clarsimp simp: valid_reply'_def valid_obj'_def objBits_simps' refillSize_def
                            valid_sched_context'_def valid_sched_context_size'_def
-                    dest!: sc_ko_at_valid_objs_valid_sc')+)
+                    dest!: sc_ko_at_valid_objs_valid_sc'
+                    split: if_splits)+)
 
 lemma bindScReply_valid_replies'[wp]:
   "\<lbrace>\<lambda>s. valid_replies' s \<and> pspace_distinct' s \<and> pspace_aligned' s \<and> pspace_bounded' s
@@ -1570,7 +1573,7 @@ lemma setSchedContext_scReply_update_None_corres:
           apply (rule corres_gen_asm')
           apply (rule corres_guard_imp)
             apply (rule_tac sc=sc and sc'=sc' in setSchedContext_update_corres; simp?)
-             apply (clarsimp simp: sc_relation_def objBits_simps)+
+             apply (clarsimp simp: sc_relation_def objBits_simps refillSize_def)+
          apply (wpsimp wp: get_sched_context_exs_valid simp: is_sc_obj_def obj_at_def)
           apply (rename_tac ko; case_tac ko; clarsimp)
          apply simp

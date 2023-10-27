@@ -2349,7 +2349,7 @@ lemma schedContextUnbindNtfn_valid_objs'[wp]:
   apply (frule_tac k=ntfn in ko_at_valid_objs'; clarsimp)
   apply (frule_tac k=sc in ko_at_valid_objs'; clarsimp simp: valid_obj'_def)
   by (auto simp: valid_sched_context'_def valid_sched_context_size'_def objBits_simps'
-                 valid_ntfn'_def
+                 valid_ntfn'_def refillSize_def
           split: ntfn.splits)
 
 lemma schedContextUnbindNtfn_invs'[wp]:
@@ -2432,7 +2432,7 @@ lemma replyPop_valid_objs'[wp]:
                  valid_sched_context'_def valid_sched_context_size'_def objBits_def objBitsKO_def)
   apply (drule_tac k=ko in ko_at_valid_objs'; clarsimp simp: valid_obj'_def
                  valid_sched_context'_def valid_sched_context_size'_def objBits_def objBitsKO_def)
-  apply (clarsimp simp: valid_reply'_def)
+  apply (clarsimp simp: valid_reply'_def refillSize_def)
   done
 
 lemma replyRemove_valid_objs'[wp]:
@@ -2529,7 +2529,7 @@ lemma replyPop_valid_queues[wp]:
                  valid_sched_context'_def valid_sched_context_size'_def objBits_def objBitsKO_def)
   apply (drule_tac k=koa in ko_at_valid_objs'; clarsimp simp: valid_obj'_def
                  valid_sched_context'_def valid_sched_context_size'_def objBits_def objBitsKO_def)
-  apply (clarsimp simp: valid_reply'_def)
+  apply (clarsimp simp: valid_reply'_def refillSize_def)
   done
 
 lemma replyRemove_valid_queues[wp]:
@@ -2639,7 +2639,7 @@ lemma replyPop_iflive:
   apply (prop_tac "ex_nonz_cap_to' (theHeadScPtr (Some reply_next)) s")
    apply (fastforce elim: if_live_then_nonz_capE'
                    intro: live'_HeadScPtr)
-  apply clarsimp
+  apply (clarsimp simp: refillSize_def)
   apply (erule if_live_then_nonz_capE')
   apply (rename_tac replyPrevPtr)
   apply (prop_tac "(replyPrevPtr, ReplyPrev) \<in> list_refs_of_replies' s replyPtr")
@@ -3053,7 +3053,7 @@ lemma schedContextUnbindTCB_invs'_helper:
   by (auto elim!: ex_cap_to'_after_update[OF if_live_state_refsE[where p=scPtr]]
             elim: valid_objs_sizeE'[OF valid_objs'_valid_objs_size'] ps_clear_domE
            split: option.splits
-            simp: pred_tcb_at'_def ko_wp_at'_def obj_at'_def objBits_def objBitsKO_def
+            simp: pred_tcb_at'_def ko_wp_at'_def obj_at'_def objBits_def objBitsKO_def refillSize_def
                   tcb_cte_cases_def cteSizeBits_def valid_sched_context'_def valid_sched_context_size'_def
                   valid_bound_obj'_def valid_obj'_def valid_obj_size'_def valid_idle'_def
                   valid_release_queue'_def valid_pspace'_def untyped_ranges_zero_inv_def
@@ -3962,7 +3962,7 @@ lemma replyPop_valid_inQ_queues[wp]:
          | wp (once) hoare_drop_imps)+
   apply (frule (1) sc_ko_at_valid_objs_valid_sc'[rotated])
   apply (frule (1) reply_ko_at_valid_objs_valid_reply'[rotated])
-  apply (clarsimp simp: valid_sched_context'_def valid_reply'_def)
+  apply (clarsimp simp: valid_sched_context'_def valid_reply'_def refillSize_def)
   done
 
 crunches replyRemove, replyClear
@@ -4098,7 +4098,7 @@ lemma schedContextUnbindReply_invs'[wp]:
     apply (fastforce elim: if_live_then_nonz_capE'
                      simp: ko_wp_at'_def obj_at'_def live_sc'_def)
    apply (auto simp: valid_obj'_def valid_sched_context'_def valid_sched_context_size'_def
-                     objBits_simps')
+                     objBits_simps' refillSize_def)
   done
 
 lemma schedContextUnbindAllTCBs_invs'[wp]:
@@ -4371,7 +4371,7 @@ lemma schedContextUnbindNtfn_corres:
             apply (clarsimp simp: ntfn_relation_def split: Structures_A.ntfn.splits)
            apply (rule_tac f'="scNtfn_update (\<lambda>_. None)"
                     in update_sc_no_reply_stack_update_ko_at'_corres)
-              apply (clarsimp simp: sc_relation_def objBits_def objBitsKO_def)+
+              apply (clarsimp simp: sc_relation_def objBits_def objBitsKO_def refillSize_def)+
           apply wpsimp+
     apply (frule invs_valid_objs)
     apply (frule (1) valid_objs_ko_at)
@@ -4415,7 +4415,7 @@ lemma sched_context_maybe_unbind_ntfn_corres:
                  apply (clarsimp simp: ntfn_relation_def split: Structures_A.ntfn.splits)
                 apply (rule_tac f'="scNtfn_update (\<lambda>_. None)"
                          in update_sc_no_reply_stack_update_ko_at'_corres)
-                   apply (clarsimp simp: sc_relation_def objBits_def objBitsKO_def)+
+                   apply (clarsimp simp: sc_relation_def objBits_def objBitsKO_def refillSize_def)+
                apply wpsimp+
         apply (frule invs_valid_objs)
         apply (frule (1) valid_objs_ko_at)
@@ -4596,7 +4596,7 @@ lemma schedContextUnbindTCB_corres:
                apply (rule corres_split[OF set_tcb_obj_ref_corres];
                       clarsimp simp: tcb_relation_def)
                  apply (rule_tac sc'=sc' in update_sc_no_reply_stack_update_ko_at'_corres)
-                    apply (clarsimp simp: sc_relation_def objBits_def objBitsKO_def)+
+                    apply (clarsimp simp: sc_relation_def objBits_def objBitsKO_def refillSize_def)+
                 apply wpsimp+
        apply (case_tac sc'; clarsimp)
        apply (wpfix add: sched_context.sel)
@@ -4779,23 +4779,19 @@ lemma schedContextSetInactive_corres:
     apply (subst bind_dummy_ret_val, subst update_sched_context_decompose[symmetric])
 
     apply (rule corres_split)
-       apply (rule updateSchedContext_corres)
-         apply (clarsimp simp: opt_map_red opt_pred_def obj_at_simps is_sc_obj)
-         apply (drule (1) pspace_relation_absD[OF _ state_relation_pspace_relation])
-         apply (clarsimp simp: sc_relation_def refills_map_def)
+       apply (rule updateSchedContext_no_stack_update_corres)
+          apply (clarsimp simp: sc_relation_def refills_map_def)
+         apply (fastforce dest: state_relation_sc_replies_relation sc_replies_relation_prevs_list
+                          simp: sc_relation_def opt_map_def obj_at_simps is_sc_obj_def
+                         split: Structures_A.kernel_object.splits)
+        apply (clarsimp simp: objBits_simps)+
+      apply (rule updateSchedContext_no_stack_update_corres)
+         apply (clarsimp simp: sc_relation_def)
         apply (fastforce dest: state_relation_sc_replies_relation sc_replies_relation_prevs_list
                          simp: sc_relation_def opt_map_def obj_at_simps is_sc_obj_def
                         split: Structures_A.kernel_object.splits)
        apply (clarsimp simp: objBits_simps)
-      apply (rule updateSchedContext_corres)
-        apply (clarsimp simp: opt_map_red opt_pred_def obj_at_simps is_sc_obj)
-        apply (drule (1) pspace_relation_absD[OF _ state_relation_pspace_relation])
-        apply (clarsimp simp: sc_relation_def)
-       apply (fastforce dest: state_relation_sc_replies_relation sc_replies_relation_prevs_list
-                        simp: sc_relation_def opt_map_def obj_at_simps is_sc_obj_def
-                       split: Structures_A.kernel_object.splits)
-      apply (clarsimp simp: objBits_simps)
-     apply (wpsimp wp: get_sched_context_wp getSchedContext_wp)+
+      apply (wpsimp wp: get_sched_context_wp getSchedContext_wp)+
   done
 
 lemma can_fast_finalise_finalise_cap:

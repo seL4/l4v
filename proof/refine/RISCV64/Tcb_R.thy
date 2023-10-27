@@ -1896,7 +1896,7 @@ lemma setSchedContext_scTCB_update_valid_refills[wp]:
    setSchedContext ptr (scTCB_update f sc)
    \<lbrace>\<lambda>_. valid_refills' ptr'\<rbrace>"
   apply (wpsimp wp: set_sc'.set_wp)
-  by (clarsimp simp: valid_refills'_def obj_at_simps opt_map_red opt_pred_def)
+  by (fastforce simp: valid_refills'_def obj_at_simps opt_map_red opt_pred_def refillSize_def)
 
 lemma schedContextBindTCB_corres:
   "corres dc (valid_objs and pspace_aligned and pspace_distinct and (\<lambda>s. sym_refs (state_refs_of s))
@@ -1915,7 +1915,7 @@ lemma schedContextBindTCB_corres:
          apply (rule corres_split_nor)
             apply (rule_tac f'="scTCB_update (\<lambda>_. Some t)"
                          in update_sc_no_reply_stack_update_ko_at'_corres; clarsimp?)
-             apply (clarsimp simp: sc_relation_def)
+             apply (clarsimp simp: sc_relation_def refillSize_def)
             apply (clarsimp simp: objBits_def objBitsKO_def)
            apply (rule corres_split[OF ifCondRefillUnblockCheck_corres])
              apply (rule corres_split_nor)
@@ -2017,7 +2017,7 @@ lemma schedContextBindTCB_corres:
      apply (intro conjI allI impI; (solves \<open>clarsimp simp: inQ_def comp_def\<close>)?)
              apply (fastforce simp: valid_tcb'_def tcb_cte_cases_def obj_at'_def cteSizeBits_def)
             apply (fastforce simp: valid_obj'_def valid_sched_context'_def tcb_cte_cases_def
-                                   cteSizeBits_def obj_at'_def)
+                                   cteSizeBits_def obj_at'_def refillSize_def)
            apply (fastforce elim: valid_objs_sizeE'[OF valid_objs'_valid_objs_size']
                             simp: objBits_def objBitsKO_def valid_obj_size'_def
                                   valid_sched_context_size'_def)
@@ -2388,7 +2388,7 @@ lemma schedContextBindTCB_invs':
   by (fastforce simp: pred_tcb_at'_def obj_at'_def
                       objBits_def objBitsKO_def valid_tcb'_def tcb_cte_cases_def comp_def
                       valid_obj'_def valid_sched_context'_def valid_sched_context_size'_def
-                      valid_release_queue'_def inQ_def cteCaps_of_def cteSizeBits_def
+                      valid_release_queue'_def inQ_def cteCaps_of_def cteSizeBits_def refillSize_def
                 elim: ps_clear_domE split: if_splits)
 
 lemma threadSetPriority_bound_sc_tcb_at' [wp]:
@@ -2420,8 +2420,9 @@ lemma updateRefillHd_sc_tcb_sc_at'[wp]:
 
 lemma refillPopHead_sc_tcb_sc_at'[wp]:
   "refillPopHead scp \<lbrace>\<lambda>s. Q (obj_at' (\<lambda>sc. P (scTCB sc)) p s)\<rbrace>"
-  apply (wpsimp simp: refillPopHead_def wp: updateSchedContext_wp)
-  by (clarsimp simp: obj_at'_def ps_clear_upd projectKOs opt_map_red objBits_simps)
+  apply (wpsimp simp: refillPopHead_def wp: updateSchedContext_wp getRefillNext_wp)
+  apply (clarsimp simp: obj_at'_def ps_clear_upd opt_map_red objBits_simps)
+  done
 
 crunches cteInsert, emptySlot, cancelAllIPC
   for sc_tcb_sc_at'[wp]: "\<lambda>s. Q (obj_at' (\<lambda>sc. P (scTCB sc)) p s)"

@@ -213,7 +213,7 @@ list of pointers to waiting threads;
 >     scYieldFrom :: Maybe (PPtr TCB),
 >     scRefillMax :: Int,
 >     scRefillHead :: Int,
->     scRefillCount :: Int,
+>     scRefillTail :: Int,
 >     scRefills :: [Refill],
 >     scSize :: Int}
 

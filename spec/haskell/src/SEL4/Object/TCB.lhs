@@ -1027,7 +1027,7 @@ On some architectures, the thread context may include registers that may be modi
 > checkBudget = do
 >     csc <- getCurSc
 >     consumed <- getConsumedTime
->     sufficient <- refillSufficient csc consumed
+>     sufficient <- getRefillSufficient csc consumed
 >     if sufficient
 >         then do
 >             domExp <- isCurDomainExpired

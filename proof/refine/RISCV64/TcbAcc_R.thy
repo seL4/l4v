@@ -2164,22 +2164,6 @@ lemma isSchedulable_inv[wp]:
   apply (rule hoare_seq_ext[OF _ getObject_tcb_inv])
   by (wpsimp wp: inReleaseQueue_inv)
 
-lemma get_sc_refill_sufficient_sp:
-  "\<lbrace>P\<rbrace>
-   get_sc_refill_sufficient sc_ptr usage
-   \<lbrace>\<lambda>rv s. (\<exists>sc n. ko_at (kernel_object.SchedContext sc n) sc_ptr s
-                   \<and> (rv = sc_refill_sufficient usage sc))
-           \<and> P s\<rbrace>"
-  by (wpsimp simp: get_sc_refill_sufficient_def obj_at_def)
-
-lemma get_sc_refill_ready_sp:
-  "\<lbrace>P\<rbrace>
-   get_sc_refill_ready sc_ptr
-   \<lbrace>\<lambda>rv s. (\<exists>sc n. ko_at (kernel_object.SchedContext sc n) sc_ptr s
-                   \<and> (rv = sc_refill_ready (cur_time s) sc))
-           \<and> P s\<rbrace>"
-  by (wpsimp simp: obj_at_def)
-
 \<comment> \<open>In sched_context_donate, weak_valid_sched_action does not propagate backwards over the statement
     where from_tptr's sched context is set to None because it requires the thread associated with a
     switch_thread action to have a sched context. For this instance, we introduce a weaker version
@@ -2194,21 +2178,6 @@ lemma weak_valid_sched_action_strg:
   by (fastforce simp: weak_valid_sched_action_def weaker_valid_sched_action_def
                       obj_at_kh_kheap_simps vs_all_heap_simps is_tcb_def
                split: Structures_A.kernel_object.splits)
-
-lemma no_ofail_get_tcb[wp]:
-  "no_ofail (tcb_at tp) (get_tcb tp)"
-  unfolding get_tcb_def no_ofail_def
-  by (clarsimp simp: obj_at_def is_tcb split: option.splits)
-
-lemma no_ofail_read_sched_context[wp]:
-  "no_ofail (\<lambda>s. \<exists>sc n. kheap s scp = Some (Structures_A.SchedContext sc n)) (read_sched_context scp)"
-  unfolding read_sched_context_def no_ofail_def
-  by (clarsimp simp: obj_at_def is_sc_obj obind_def)
-
-lemma no_ofail_read_sc_refill_ready:
-  "no_ofail (\<lambda>s. \<exists>sc n. kheap s scp = Some (Structures_A.SchedContext sc n)) (read_sc_refill_ready scp)"
-  unfolding read_sc_refill_ready_def no_ofail_def
-  by (clarsimp simp: omonad_defs obind_def dest!: no_ofailD[OF no_ofail_read_sched_context])
 
 lemma rescheduleRequired_corres_weak:
   "corres dc (valid_tcbs and weaker_valid_sched_action and pspace_aligned and pspace_distinct
@@ -2241,14 +2210,12 @@ lemma rescheduleRequired_corres_weak:
                   split: Structures_A.kernel_object.splits option.splits)
 
   apply (rule corres_symb_exec_l[OF _ _ get_sc_refill_sufficient_sp, rotated])
-    apply (wpsimp wp: get_sched_context_exs_valid exs_valid_bind
-                simp: get_sc_refill_sufficient_def is_schedulable_opt_def get_tcb_def obj_at_def
-                      is_sc_active_def
-               split: Structures_A.kernel_object.splits option.splits)
-   apply (wpsimp wp: get_sched_context_no_fail simp: get_sc_refill_sufficient_def)
-   apply (fastforce simp: valid_tcbs_def valid_tcb_def obj_at_def is_schedulable_opt_def get_tcb_def
-                          is_sc_active_def is_sc_obj_def
-                   split: option.splits Structures_A.kernel_object.splits)
+    apply (rule get_sc_refill_sufficient_exs_valid)
+    apply (clarsimp simp: obj_at_def is_schedulable_opt_def get_tcb_def is_sc_active_def
+                   split: Structures_A.kernel_object.splits option.splits)
+   apply wpsimp
+   apply (clarsimp simp: obj_at_def is_schedulable_opt_def get_tcb_def is_sc_active_def
+                  split: Structures_A.kernel_object.splits option.splits)
 
   apply (rule corres_symb_exec_l[OF _ _ get_sc_refill_ready_sp, rotated])
     apply (wpsimp wp: get_sched_context_exs_valid gets_the_exs_valid

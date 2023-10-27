@@ -219,7 +219,7 @@ Replies sent by the "Reply" and "ReplyRecv" system calls can either be normal IP
 >                     when (scPtrOpt /= Nothing && runnable) $ do
 >                         let scPtr = fromJust scPtrOpt
 >                         ready <- refillReady scPtr
->                         sufficient <- refillSufficient scPtr 0
+>                         sufficient <- getRefillSufficient scPtr 0
 >                         if ready && sufficient
 >                             then possibleSwitchTo receiver
 >                             else do
@@ -718,7 +718,7 @@ Kernel init will created a initial thread whose tcbPriority is max priority.
 >     scPtr <- getCurSc
 >     sc <- getSchedContext scPtr
 >     ready <- refillReady scPtr
->     sufficient <- refillSufficient scPtr 0
+>     sufficient <- getRefillSufficient scPtr 0
 >     valid <- isValidTimeoutHandler ct
 >     if canTimeoutFault && valid
 >         then handleTimeout ct $ Timeout $ scBadge sc

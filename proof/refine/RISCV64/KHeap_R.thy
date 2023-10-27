@@ -1544,11 +1544,12 @@ lemma sc_obj_at'_cross:
 lemma setSchedContext_corres:
   assumes R': "sc_relation sc n sc'"
   assumes s: "n = scSize sc'"
-  shows "corres dc \<top>
-         (obj_at' (\<lambda>k::sched_context. objBits k = objBits sc') ptr
-          and (\<lambda>s'. heap_ls (replyPrevs_of s') (scReply sc') (sc_replies sc)))
-            (set_object ptr (kernel_object.SchedContext sc n))
-            (setSchedContext ptr sc')"
+  shows
+    "corres dc
+       \<top>
+       (obj_at' (\<lambda>k::sched_context. objBits k = objBits sc') ptr
+        and (\<lambda>s'. heap_ls (replyPrevs_of s') (scReply sc') (sc_replies sc)))
+       (set_object ptr (kernel_object.SchedContext sc n)) (setSchedContext ptr sc')"
   proof -
   have z: "\<And>s. sc_at' ptr s
                \<Longrightarrow> map_to_ctes ((ksPSpace s) (ptr \<mapsto> injectKO sc')) = map_to_ctes (ksPSpace s)"
@@ -1609,17 +1610,21 @@ lemma setSchedContext_corres:
             split: if_splits)
 qed
 
-lemma setSchedContext_update_corres:
-  assumes R': "sc_relation sc n sc' \<longrightarrow> sc_relation (f sc) n (f' (sc'::sched_context))"
+lemma setSchedContext_update_corres_Q:
+  assumes R': "\<lbrakk>sc_relation sc n sc'; Q sc; Q' sc'\<rbrakk>
+               \<Longrightarrow> sc_relation (f sc) n (f' (sc'::sched_context))"
   assumes s: "objBits sc' = objBits (f' sc')"
-  shows "corres dc
-         (\<lambda>s. kheap s ptr = Some (kernel_object.SchedContext sc n))
-         (ko_at' sc' ptr and (\<lambda>s'. heap_ls (replyPrevs_of s') (scReply (f' sc')) (sc_replies (f sc))))
-            (set_object ptr (kernel_object.SchedContext (f sc) n))
-            (setSchedContext ptr (f' sc'))"
+  shows
+    "corres dc
+       (\<lambda>s. kheap s ptr = Some (kernel_object.SchedContext sc n) \<and> Q sc)
+       (obj_at' (\<lambda>obj. obj = sc' \<and> Q' sc') ptr
+        and (\<lambda>s'. heap_ls (replyPrevs_of s') (scReply (f' sc')) (sc_replies (f sc))))
+       (set_object ptr (kernel_object.SchedContext (f sc) n))
+       (setSchedContext ptr (f' sc'))"
   apply (insert R' s)
-  apply (rule_tac F="sc_relation sc n sc'" in corres_req)
+  apply (rule_tac F="sc_relation sc n sc' \<and> Q sc \<and> Q' sc'" in corres_req)
    apply (drule state_relation_pspace_relation)
+   apply clarsimp
    apply (drule (1) pspace_relation_absD)
    apply (clarsimp simp: obj_at'_def split: if_split_asm)
   apply (rule corres_guard_imp)
@@ -1630,36 +1635,42 @@ lemma setSchedContext_update_corres:
   apply (clarsimp simp: obj_at'_def sc_relation_def)
   done
 
-lemma setSchedContext_no_stack_update_corres:
-  "\<lbrakk>sc_relation sc n sc' \<longrightarrow> sc_relation (f sc) n (f' sc');
-     sc_replies sc = sc_replies (f sc); objBits sc' = objBits (f' sc');
-     scReply sc' = scReply (f' sc')\<rbrakk>
-    \<Longrightarrow> corres dc
-         (\<lambda>s. kheap s ptr = Some (kernel_object.SchedContext sc n))
-         (ko_at' sc' ptr)
-            (set_object ptr (kernel_object.SchedContext (f sc) n))
-            (setSchedContext ptr (f' sc'))"
-  apply (rule_tac F="sc_relation sc n sc'" in corres_req)
+lemmas setSchedContext_update_corres =
+  setSchedContext_update_corres_Q[where Q=\<top> and Q'=\<top>, simplified]
+
+lemma setSchedContext_no_stack_update_corres_Q:
+  "\<lbrakk>\<lbrakk>sc_relation sc n sc'; Q sc; Q' sc'\<rbrakk> \<Longrightarrow> sc_relation (f sc) n (f' sc');
+    sc_replies sc = sc_replies (f sc); objBits sc' = objBits (f' sc');
+    scReply sc' = scReply (f' sc')\<rbrakk> \<Longrightarrow>
+   corres dc
+     (\<lambda>s. kheap s ptr = Some (kernel_object.SchedContext sc n) \<and> Q sc)
+     (obj_at' (\<lambda>obj. obj = sc' \<and> Q' sc') ptr)
+     (set_object ptr (kernel_object.SchedContext (f sc) n))
+     (setSchedContext ptr (f' sc'))"
+  apply (rule_tac F="sc_relation sc n sc' \<and> Q sc \<and> Q' sc'" in corres_req)
    apply (drule state_relation_pspace_relation)
+   apply clarsimp
    apply (drule (1) pspace_relation_absD)
-   apply (clarsimp simp: obj_at'_def projectKOs split: if_split_asm)
+   apply (clarsimp simp: obj_at'_def split: if_split_asm)
   apply (rule stronger_corres_guard_imp)
     apply (rule setSchedContext_update_corres[where sc=sc and sc'=sc'])
      apply simp+
   apply (clarsimp dest!: state_relation_sc_replies_relation
-                   simp: obj_at'_def projectKOs)
+                   simp: obj_at'_def)
   apply (drule (2) sc_replies_relation_prevs_list)
   by fastforce
 
-lemma setSchedContext_update_sched_context_no_stack_update_corres:
-  "\<lbrakk>\<forall>sc n sc'. sc_relation sc n sc' \<longrightarrow> sc_relation (f sc) n (f' sc');
+lemmas setSchedContext_no_stack_update_corres =
+  setSchedContext_no_stack_update_corres_Q[where Q=\<top> and Q'=\<top>, simplified]
+
+lemma setSchedContext_update_sched_context_no_stack_update_corres_Q:
+  "\<lbrakk>\<And>sc n sc'. \<lbrakk>sc_relation sc n sc'; Q sc; Q' sc'\<rbrakk> \<Longrightarrow> sc_relation (f sc) n (f' sc');
     \<forall>sc. sc_replies sc = sc_replies (f sc); objBits sc' = objBits (f' sc');
-    scReply sc' = scReply (f' sc')\<rbrakk>
-    \<Longrightarrow> corres dc
-         (\<lambda>s. sc_at ptr s)
-         (ko_at' sc' ptr)
-         (update_sched_context ptr f)
-         (setSchedContext ptr (f' sc'))"
+    scReply sc' = scReply (f' sc')\<rbrakk> \<Longrightarrow>
+   corres dc
+     (\<lambda>s. \<exists>sc n. kheap s ptr = Some (kernel_object.SchedContext sc n) \<and> Q sc)
+     (obj_at' (\<lambda>obj. obj = sc' \<and> Q' sc') ptr)
+     (update_sched_context ptr f) (setSchedContext ptr (f' sc'))"
   apply (clarsimp simp: update_sched_context_def)
   apply (rule corres_symb_exec_l[rotated 2, OF get_object_sp])
     apply (find_goal \<open>match conclusion in "\<lbrace>P\<rbrace> f \<exists>\<lbrace>Q\<rbrace>" for P f Q \<Rightarrow> -\<close>)
@@ -1667,14 +1678,32 @@ lemma setSchedContext_update_sched_context_no_stack_update_corres:
                       simp: obj_at_def)
    apply wpsimp
    apply (clarsimp simp: obj_at_def)
-  apply (rename_tac obj)
-  apply (case_tac obj;
+  apply (rename_tac obj, case_tac obj;
          clarsimp, (solves \<open>clarsimp simp: obj_at_def is_sc_obj_def corres_underlying_def\<close>)?)
+  apply (clarsimp simp: pred_conj_def)
+  apply (rule abs_ex_lift_corres)
+  apply clarsimp
+  apply (rule abs_ex_lift_corres)
+  apply (rule_tac F="sc_relation sc n sc' \<and> Q sc \<and> Q' sc'" in corres_req)
+   apply (fastforce dest: state_relation_pspace_relation pspace_relation_absD
+                    simp: obj_at'_def split: if_split_asm)
+  apply (corres corres: setSchedContext_no_stack_update_corres_Q[where f=f and f'=f']
+                  simp: obj_at_simps)
+  done
+
+lemma setSchedContext_update_sched_context_no_stack_update_corres:
+  "\<lbrakk>\<And>sc n sc'. sc_relation sc n sc' \<Longrightarrow> sc_relation (f sc) n (f' sc');
+    \<forall>sc. sc_replies sc = sc_replies (f sc); objBits sc' = objBits (f' sc');
+    scReply sc' = scReply (f' sc')\<rbrakk> \<Longrightarrow>
+   corres dc (sc_at ptr) (ko_at' sc' ptr)
+     (update_sched_context ptr f) (setSchedContext ptr (f' sc'))"
   apply (rule corres_guard_imp)
-    apply (rule_tac f=f and f'="f'" in setSchedContext_no_stack_update_corres)
-       apply simp+
-   apply (clarsimp simp: obj_at_def)
-  apply (clarsimp simp: obj_at_simps)
+    apply (rule setSchedContext_update_sched_context_no_stack_update_corres_Q
+                 [where Q=\<top> and Q'=\<top> and f=f and f'=f'];
+           fastforce?)
+   apply (clarsimp simp: obj_at_def is_sc_obj_def)
+   apply (rename_tac ko n, case_tac ko; clarsimp)
+  apply fastforce
   done
 
 lemma getNotification_corres:
@@ -3716,6 +3745,21 @@ lemma sc_at_cross:
   apply (case_tac z; simp)
   by (fastforce dest!: aligned_distinct_ko_at'I[where 'a=sched_context] elim: obj_at'_weakenE)
 
+lemma sc_at_cross_valid_objs:
+  assumes p: "pspace_relation (kheap s) (ksPSpace s')"
+  assumes ps: "pspace_aligned s" "pspace_distinct s"
+  assumes t: "pred_map \<top> (scs_of s) ptr"
+  assumes v: "valid_objs s"
+  shows "sc_at' ptr s'"
+  using assms
+  apply (clarsimp simp: vs_all_heap_simps obj_at_def is_sc_obj)
+  apply (frule (1) pspace_relation_absD, clarsimp)
+  apply (frule valid_objs_valid_sched_context_size)
+   apply fastforce
+  apply clarsimp
+  apply (rename_tac obj, case_tac obj; simp)
+  by (fastforce dest!: aligned_distinct_ko_at'I[where 'a=sched_context] elim: obj_at'_weakenE)
+
 lemma sc_at'_cross_rel:
   "cross_rel (pspace_aligned and pspace_distinct and sc_at t) (sc_at' t)"
   unfolding cross_rel_def state_relation_def
@@ -4055,37 +4099,38 @@ lemma getRefillNext_getSchedContext:
                                   return $ if index = scRefillMax sc - 1 then 0 else index + 1
                                od"
   apply (clarsimp simp: getRefillNext_def readRefillNext_def readSchedContext_def
-                        getSchedContext_def getObject_def[symmetric])
+                        getSchedContext_def getObject_def[symmetric] refillNext_def)
   done
 
 lemma getRefillNext_wp:
-  "\<lbrace>\<lambda>s. \<forall>ko. ko_at' ko scPtr s \<longrightarrow> P (if index = scRefillMax ko - Suc 0 then 0 else index + 1) s\<rbrace>
+  "\<lbrace>\<lambda>s. sc_at' scPtr s \<longrightarrow> (\<exists>t. ko_at' t scPtr s \<and> P (refillNext t index) s)\<rbrace>
    getRefillNext scPtr index
    \<lbrace>P\<rbrace>"
   apply (simp add: getRefillNext_getSchedContext)
   apply (wpsimp wp: getObject_sc_wp)
+  apply (fastforce simp: obj_at'_def refillNext_def split: if_splits)
   done
 
-lemma getRefillSize_def2:
-  "getRefillSize scPtr = liftM scRefillCount (gets_the (readSchedContext scPtr))"
-  apply (clarsimp simp: getRefillSize_def readRefillSize_def liftM_def oliftM_def)
+lemma readRefillSize_SomeD:
+  "readRefillSize scPtr s = Some sz \<Longrightarrow> \<exists>sc. ko_at' sc scPtr s \<and> refillSize sc = sz"
+  apply (clarsimp simp: readRefillSize_def readSchedContext_def)
+  apply (fastforce dest: readObject_ko_at'_sc)
   done
 
 lemma getRefillSize_wp:
-  "\<lbrace>\<lambda>s. \<forall>ko. ko_at' ko scp s \<longrightarrow> P (scRefillCount ko) s\<rbrace> getRefillSize scp \<lbrace>P\<rbrace>"
-  apply (clarsimp simp: getRefillSize_def2)
-  apply (wpsimp wp: simp: readSchedContext_def)
+  "\<lbrace>\<lambda>s. \<forall>ko. ko_at' ko scp s \<longrightarrow> P (refillSize ko) s\<rbrace> getRefillSize scp \<lbrace>P\<rbrace>"
+  apply (clarsimp simp: getRefillSize_def)
+  apply wpsimp
+  apply (fastforce dest: readRefillSize_SomeD)
   done
 
-lemma refillEmpty_wp:
-  "\<lbrace>\<lambda>s. \<forall>ko. ko_at' ko scp s \<longrightarrow> P (scRefillCount ko = 0) s\<rbrace> refillEmpty scp \<lbrace>P\<rbrace>"
-  unfolding refillEmpty_def
-  by (wpsimp wp:)
-
-lemma refillFull_wp:
-  "\<lbrace>\<lambda>s. \<forall>ko. ko_at' ko scp s \<longrightarrow> P (scRefillCount ko = scRefillMax ko) s\<rbrace> refillFull scp \<lbrace>P\<rbrace>"
-  unfolding refillFull_def
-  by (wpsimp wp:)
+lemma getRefillFull_wp:
+  "\<lbrace>\<lambda>s. \<forall>ko. ko_at' ko scp s \<longrightarrow> P (refillSize ko = scRefillMax ko) s\<rbrace> getRefillFull scp \<lbrace>P\<rbrace>"
+  apply (clarsimp simp: getRefillFull_def readRefillFull_def getSchedContext_def[symmetric]
+                        readSchedContext_def getObject_def[symmetric] getRefillSize_def[symmetric])
+  apply (wpsimp wp: getRefillSize_wp)
+  apply normalise_obj_at'
+  done
 
 lemma no_ofail_readCurTime[simp]:
   "no_ofail \<top> readCurTime"
@@ -4121,11 +4166,59 @@ lemma getRefills_wp:
   unfolding getRefills_def
   by wpsimp
 
-lemma refillSufficient_wp:
-  "\<lbrace>\<lambda>s. \<forall>ko. ko_at' ko scp s \<longrightarrow> P (minBudget \<le> refillsCapacity k (scRefills ko) (scRefillHead ko)) s\<rbrace> refillSufficient scp k \<lbrace>P\<rbrace>"
-  unfolding refillSufficient_def
-  apply (wpsimp wp: getRefills_wp)
-  by (clarsimp simp: sufficientRefills_def obj_at'_def)
+lemma readRefillHead_SomeD:
+  "readRefillHead scPtr s = Some refill \<Longrightarrow> \<exists>sc. ko_at' sc scPtr s \<and> refill = refillHd sc"
+  apply (clarsimp simp: readRefillHead_def readSchedContext_def)
+  apply (fastforce dest: readObject_ko_at'_sc)
+  done
+
+lemma getRefillHead_wp[wp]:
+  "\<lbrace>\<lambda>s. \<forall>sc. ko_at' sc scPtr s \<longrightarrow> Q (refillHd sc) s\<rbrace>
+   getRefillHead scPtr
+   \<lbrace>Q\<rbrace>"
+  unfolding getRefillHead_def
+  apply wpsimp
+  apply (fastforce dest: readRefillHead_SomeD)
+  done
+
+lemma getRefillHead_sp:
+  "\<lbrace>P\<rbrace> getRefillHead scPtr \<lbrace>\<lambda>rv s. P s \<and> obj_at' (\<lambda>sc. refillHd sc = rv) scPtr s\<rbrace>"
+  apply wpsimp
+  by (clarsimp simp: obj_at'_def)
+
+lemma readRefillCapacity_SomeD:
+  "readRefillCapacity scPtr usage s = Some capacity
+   \<Longrightarrow> \<exists>sc. ko_at' sc scPtr s \<and> capacity = refillCapacity usage (refillHd sc)"
+  apply (clarsimp simp: readRefillCapacity_def)
+  apply (fastforce dest: readRefillHead_SomeD)
+  done
+
+lemma getRefillCapacity_wp[wp]:
+  "\<lbrace>\<lambda>s. \<forall>sc. ko_at' sc scPtr s \<longrightarrow> P (refillCapacity usage (refillHd sc)) s\<rbrace>
+   getRefillCapacity scPtr usage
+   \<lbrace>P\<rbrace>"
+  unfolding getRefillCapacity_def
+  apply wpsimp
+  apply (fastforce dest: readRefillCapacity_SomeD)
+  done
+
+lemma readRefillSufficient_SomeD:
+  "readRefillSufficient scPtr usage s = Some sufficient
+   \<Longrightarrow> \<exists>sc. ko_at' sc scPtr s \<and> sufficient = refillSufficient usage (refillHd sc)"
+  apply (clarsimp simp: readRefillSufficient_def)
+  apply (frule readRefillCapacity_SomeD)
+  apply normalise_obj_at'
+  apply (clarsimp simp: refillSufficient_def)
+  done
+
+lemma getRefillSufficient_wp[wp]:
+  "\<lbrace>\<lambda>s. \<forall>sc. ko_at' sc scPtr s \<longrightarrow> P (refillSufficient usage (refillHd sc)) s\<rbrace>
+   getRefillSufficient scPtr usage
+   \<lbrace>P\<rbrace>"
+  unfolding getRefillSufficient_def
+  apply wpsimp
+  apply (fastforce dest: readRefillSufficient_SomeD)
+  done
 
 (* projection rewrites *)
 
@@ -4515,8 +4608,8 @@ lemma updateSchedContext_decompose_fold:
    monadic_rewrite False True
      (sc_at' scPtr)
      (updateSchedContext scPtr (fold (o) fs f))
-     (do _ \<leftarrow> updateSchedContext scPtr f;
-        mapM_x (updateSchedContext scPtr) fs
+     (do updateSchedContext scPtr f;
+         mapM_x (updateSchedContext scPtr) fs
       od)"
   apply (induction fs arbitrary: f)
    apply (clarsimp simp: mapM_x_Nil)
@@ -4541,46 +4634,61 @@ lemmas updateSchedContext_decompose_x2 = updateSchedContext_decompose_fold[where
 lemmas updateSchedContext_decompose_x3 = updateSchedContext_decompose_fold[where fs="[g, h, k]" for f g h k,
  simplified mapM_x_Cons mapM_x_Nil fold_Cons fold_Nil id_def, simplified]
 
-lemma updateSchedContext_corres_gen:
-  assumes
-      R1: "\<forall>s s'. (s, s') \<in> state_relation \<longrightarrow>
-           P s \<longrightarrow> P' s' \<longrightarrow> sc_at ptr s \<longrightarrow> sc_at' ptr s' \<longrightarrow>
-           (\<forall>n. (((\<lambda>ko. obj_bits ko = min_sched_context_bits + n) |< kheap s) ptr)\<longrightarrow>
-           sc_relation (the ((scs_of2 s ||> f) ptr)) n (the ((scs_of' s' ||> f') ptr)))"
-  and R2: "\<forall>s s'. (s, s') \<in> state_relation \<longrightarrow>
-          P s \<longrightarrow> P' s' \<longrightarrow> sc_at ptr s \<longrightarrow> sc_at' ptr s' \<longrightarrow>
-           heap_ls (replyPrevs_of s')  (scReply (the ((scs_of' s' ||> f') ptr)))
-             (sc_replies (the ((scs_of2 s ||> f) ptr)))"
-  and sz: "\<forall>sc'::sched_context. objBits sc' = objBits (f' sc')"
-  shows "corres dc
-         (sc_at ptr and P)
-         (sc_at' ptr and P')
-            (update_sched_context ptr f)
-            (updateSchedContext ptr f')"
-  unfolding corres_underlying_def using sz
+lemma updateSchedContext_no_stack_update_corres_Q:
+  "\<lbrakk>\<And>sc n sc'. \<lbrakk>sc_relation sc n sc'; Q sc; Q' sc'\<rbrakk> \<Longrightarrow> sc_relation (f sc) n (f' sc');
+    \<And>sc. sc_replies sc = sc_replies (f sc); \<And>sc'. objBits sc' = objBits (f' sc');
+    \<And>sc'. scReply sc' = scReply (f' sc')\<rbrakk> \<Longrightarrow>
+   corres dc
+     (\<lambda>s. \<exists>sc n. kheap s ptr = Some (kernel_object.SchedContext sc n) \<and> Q sc)
+     (\<lambda>s'. \<exists>sc'. ko_at' sc' ptr s' \<and> Q' sc')
+     (update_sched_context ptr f) (updateSchedContext ptr f')"
+  apply (clarsimp simp: update_sched_context_def)
+  apply (rule corres_symb_exec_l[rotated 2, OF get_object_sp])
+    apply (find_goal \<open>match conclusion in "\<lbrace>P\<rbrace> f \<exists>\<lbrace>Q\<rbrace>" for P f Q \<Rightarrow> -\<close>)
+    apply (fastforce intro: get_object_exs_valid
+                      simp: obj_at_def)
+   apply wpsimp
+   apply (clarsimp simp: obj_at_def)
+  apply (rename_tac obj)
+  apply (case_tac obj;
+         clarsimp, (solves \<open>clarsimp simp: obj_at_def is_sc_obj_def corres_underlying_def\<close>)?)
+  apply (clarsimp simp: pred_conj_def)
+  apply (rule abs_ex_lift_corres)
   apply clarsimp
-  apply (rename_tac s s')
-  apply (drule obj_at_ko_at)
-  apply (drule obj_at_ko_at')
-  apply (clarsimp simp: is_sc_obj)
-  apply (rename_tac sc' n sc)
-  apply (rule conjI, clarsimp)
-   apply (erule use_valid[OF _ updateSchedContext_wp])
+  apply (rule abs_ex_lift_corres)
+  apply (rule corres_underlying_lift_ex2')
+  apply (rule_tac F="sc_relation sc n sc' \<and> Q sc \<and> Q' sc'" in corres_req)
+   apply (drule state_relation_pspace_relation)
    apply clarsimp
-   apply (rule_tac x="((), s\<lparr>kheap := (kheap s)(ptr \<mapsto>
-                  kernel_object.SchedContext (f sc) n)\<rparr>)" in bexI)
-    apply clarsimp
-    apply (drule state_relation_sc_update[OF R1 R2 sz, simplified])
-      apply ((fastforce simp: obj_at_def is_sc_obj obj_at'_def projectKOs)+)[4]
-    apply (clarsimp simp: obj_at_def obj_at'_def projectKOs fun_upd_def[symmetric] opt_map_red)
-    apply (case_tac s; case_tac s'; fastforce)
-   apply (clarsimp simp: update_sched_context_def obj_at_def in_monad
-                         get_object_def set_object_def a_type_def)
-  apply (clarsimp intro!: no_failD[OF no_fail_updateSchedContext]
-                    simp: obj_at'_def projectKOs opt_map_def opt_pred_def)
+   apply (drule (1) pspace_relation_absD)
+   apply (clarsimp simp: obj_at'_def split: if_split_asm)
+  apply (clarsimp simp: updateSchedContext_def)
+  apply (rule corres_symb_exec_r)
+     apply (rule corres_guard_imp)
+       apply (rule_tac f=f and f'="f'" and Q=Q and Q'=Q'
+                    in setSchedContext_no_stack_update_corres_Q;
+              simp?)
+      apply (clarsimp simp: obj_at_def)
+     apply fastforce
+    apply wpsimp
+    apply (clarsimp simp: obj_at'_def)
+   apply wpsimp
+  apply wpsimp
+  apply (clarsimp simp: obj_at'_def)
   done
 
-lemmas updateSchedContext_corres = updateSchedContext_corres_gen[where P=\<top> and P'=\<top>, simplified]
+lemma updateSchedContext_no_stack_update_corres:
+  "\<lbrakk>\<And>sc n sc'. sc_relation sc n sc' \<Longrightarrow> sc_relation (f sc) n (f' sc');
+    \<And>sc. sc_replies sc = sc_replies (f sc); \<And>sc'. objBits sc' = objBits (f' sc');
+    \<And>sc'. scReply sc' = scReply (f' sc')\<rbrakk> \<Longrightarrow>
+   corres dc (sc_at ptr) (sc_at' ptr)
+     (update_sched_context ptr f) (updateSchedContext ptr f')"
+  apply (corres corres: updateSchedContext_no_stack_update_corres_Q
+                         [where f=f and f'=f' and Q=\<top> and Q'=\<top>])
+   apply (clarsimp simp: obj_at_def is_sc_obj_def)
+   apply (case_tac ko; clarsimp)
+  apply (clarsimp simp: obj_at'_def)
+  done
 
 (* end : updateSchedContext *)
 
@@ -4961,11 +5069,10 @@ lemma setCurSc_corres:
 
 lemma refillSingle_equiv:
   "sc_valid_refills' sc \<Longrightarrow>
-   (length (refills_map (scRefillHead sc) (scRefillCount sc) (scRefillMax sc) (scRefills sc)) = Suc 0)
-    = (scRefillHead sc = refillTailIndex sc)"
-  apply (clarsimp simp: valid_sched_context'_def refillTailIndex_def refills_map_def)
-  apply (case_tac "scRefillCount sc = Suc 0"; simp)
-  apply (auto simp: Let_def)
+   (length (refills_map (scRefillHead sc) (refillSize sc) (scRefillMax sc) (scRefills sc)) = Suc 0)
+   = (scRefillHead sc = scRefillTail sc)"
+  apply (clarsimp simp: valid_sched_context'_def refills_map_def refillSize_def)
+  apply (fastforce simp: Let_def)
   done
 
 lemma refillSingle_corres:
@@ -4994,6 +5101,22 @@ lemma active_sc_at'_cross:
   apply (drule_tac x=sc_ptr in bspec, blast)
   apply (clarsimp simp: sc_relation_def vs_all_heap_simps active_sc_at'_def obj_at'_def projectKOs
                         active_sc_def)
+  done
+
+lemma active_sc_at'_cross_valid_objs:
+  "\<lbrakk>(s,s') \<in> state_relation; pspace_aligned s; pspace_distinct s; is_active_sc sc_ptr s;
+    valid_objs s\<rbrakk>
+   \<Longrightarrow> active_sc_at' sc_ptr s'"
+  apply (frule state_relation_pspace_relation)
+  apply (frule (2) sc_at_cross_valid_objs)
+    apply (fastforce simp: vs_all_heap_simps )
+   apply fastforce
+  apply (clarsimp simp: vs_all_heap_simps )
+  apply (frule valid_objs_valid_sched_context_size)
+   apply fastforce
+  apply (clarsimp simp: pspace_relation_def)
+  apply (drule_tac x=sc_ptr in bspec, blast)
+  apply (clarsimp simp: sc_relation_def active_sc_at'_def obj_at'_def active_sc_def)
   done
 
 lemma is_active_sc'2_cross:
@@ -5032,6 +5155,7 @@ method add_sym_refs =
 
 method add_ct_not_inQ =
   rule_tac Q="\<lambda>s'. ct_not_inQ s'" in corres_cross_add_guard,
+  (frule valid_sched_valid_sched_action)?,
   fastforce intro!: ct_not_inQ_cross simp: valid_sched_def
 
 method add_sch_act_wf =

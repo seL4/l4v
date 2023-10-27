@@ -278,13 +278,13 @@ definition scMap :: "(obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> sched_con
   "scMap replyPrevs sc = \<lparr>
      sc_period     = scPeriod sc,
      sc_budget     = if scRefillMax sc > 0
-                     then refills_sum (refills_map (scRefillHead sc) (scRefillCount sc)
+                     then refills_sum (refills_map (scRefillHead sc) (refillSize sc)
                                                    (scRefillMax sc) (scRefills sc))
                      else 0,
      sc_consumed   = scConsumed sc,
      sc_tcb        = scTCB sc,
      sc_ntfn       = scNtfn sc,
-     sc_refills    = refills_map (scRefillHead sc) (scRefillCount sc) (scRefillMax sc) (scRefills sc),
+     sc_refills    = refills_map (scRefillHead sc) (refillSize sc) (scRefillMax sc) (scRefills sc),
      sc_refill_max = scRefillMax sc,
      sc_badge      = scBadge sc,
      sc_yield_from = scYieldFrom sc,

@@ -823,6 +823,13 @@ lemma replyRemoveTCB_corres:
                      apply (clarsimp simp: pred_tcb_at_def obj_at_def)
                     apply clarsimp
                     apply (rule conjI)
+                     apply clarsimp
+                     apply (intro conjI impI)
+                       apply (clarsimp dest!: sc_ko_at_valid_objs_valid_sc'
+                                        simp: valid_sched_context'_def refillSize_def
+                                       split: if_splits)
+                      apply (clarsimp dest!: sc_ko_at_valid_objs_valid_sc'
+                                       simp: valid_sched_context_size'_def)
                      apply (clarsimp dest!: sc_ko_at_valid_objs_valid_sc'
                                       simp: valid_sched_context'_def valid_sched_context_size'_def
                                             objBits_simps)
@@ -1001,7 +1008,7 @@ lemma setSchedContext_pop_head_corres:
             apply (rule corres_gen_asm')
             apply (rule stronger_corres_guard_imp)
               apply (rule_tac sc=sc and sc'=sc' in setSchedContext_update_corres; simp?)
-               apply (clarsimp simp: sc_relation_def objBits_simps)+
+               apply (clarsimp simp: sc_relation_def refillSize_def objBits_simps)+
             apply (clarsimp simp: obj_at'_def)
             apply (prop_tac "heap_ls (replyPrevs_of s') (Some rp) (sc_replies sc)")
              apply (drule state_relation_sc_replies_relation)
@@ -1324,7 +1331,9 @@ lemma replyPop_corres:
                apply (clarsimp simp: valid_obj'_def  opt_map_red opt_map_Some_eta_fold)
                apply (intro conjI impI)
                    apply (fastforce simp: obj_at'_def opt_map_red opt_pred_def
-                                          valid_sched_context'_def valid_obj'_def valid_reply'_def)
+                                          valid_sched_context'_def valid_obj'_def valid_reply'_def
+                                          refillSize_def
+                                   split: if_splits)
                   apply (fold fun_upd_def)
                   apply (clarsimp simp: obj_at'_def  opt_map_red ps_clear_upd objBits_simps
                                  split: if_split)
@@ -2606,7 +2615,7 @@ crunches ifCondRefillUnblockCheck
 
 lemma restart_thread_if_no_fault_corres:
   "corres dc (valid_sched_action and tcb_at t and pspace_aligned and pspace_distinct
-              and valid_tcbs and active_scs_valid and current_time_bounded)
+              and valid_objs and active_scs_valid and current_time_bounded)
              (valid_queues and valid_queues' and valid_release_queue_iff and valid_objs')
              (restart_thread_if_no_fault t)
              (restartThreadIfNoFault t)"
@@ -2631,27 +2640,32 @@ lemma restart_thread_if_no_fault_corres:
            apply wpsimp
           apply (rule_tac Q="\<lambda>scopt s. case_option True (\<lambda>p. sc_at p s) scopt \<and>
                                        tcb_at t s \<and> valid_sched_action s \<and>
-                                       pspace_aligned s \<and> pspace_distinct s \<and> valid_tcbs s \<and>
+                                       pspace_aligned s \<and> pspace_distinct s \<and> valid_objs s \<and>
                                        active_scs_valid s \<and> current_time_bounded s"
                  in hoare_strengthen_post[rotated])
-           apply (fastforce split: option.splits simp: obj_at_def is_sc_obj opt_map_red opt_pred_def)
+           apply (fastforce split: option.splits
+                             simp: obj_at_def is_sc_obj opt_map_red opt_pred_def)
           apply (wpsimp wp: thread_get_wp' simp: get_tcb_obj_ref_def)
          apply (clarsimp simp: bool.case_eq_if option.case_eq_if)
          apply (wpsimp wp: threadGet_wp)
-        apply (rule_tac Q="\<lambda>scopt s. tcb_at t s \<and> valid_sched_action s \<and>
-                                     pspace_aligned s \<and> pspace_distinct s \<and> valid_tcbs s \<and>
-                                     active_scs_valid s \<and> current_time_bounded s"
+        apply (rule_tac Q="\<lambda>_ s. tcb_at t s \<and>
+                                 valid_sched_action s \<and>
+                                 pspace_aligned s \<and> pspace_distinct s \<and> valid_objs s \<and>
+                                 active_scs_valid s \<and> current_time_bounded s"
                in hoare_strengthen_post[rotated])
-         apply (fastforce split: option.split simp: valid_tcbs_def valid_tcb_def valid_bound_obj_def)
+         apply (fastforce dest: valid_objs_ko_at
+                          simp: valid_bound_obj_def valid_obj_def valid_tcb_def)
         apply (wpsimp wp: sts_typ_ats set_thread_state_valid_sched_action)
        apply (rule hoare_strengthen_post[where Q="\<lambda>_ s. tcb_at' t s \<and> valid_objs' s
                                                       \<and> valid_release_queue_iff s
                                                       \<and> valid_queues s \<and> valid_queues' s", rotated])
         apply (clarsimp simp: obj_at_simps)
-       apply (wpsimp wp: sts_st_tcb_at'_cases hoare_drop_imp)
+       apply (wpsimp wp: sts_st_tcb_at'_cases)
       apply (rule setThreadState_corres)
       apply clarsimp
      apply (wpsimp wp: thread_get_wp threadGet_wp)+
+   apply (clarsimp simp: obj_at_def is_tcb_def)
+   apply (rename_tac ko, case_tac ko; clarsimp)
   apply (clarsimp simp: obj_at'_def  valid_tcb_state'_def)
   done
 
@@ -2717,7 +2731,7 @@ lemma cancelAllIPC_corres_helper:
    corres dc
           ((\<lambda>s. \<forall>t \<in> set list. blocked_on_send_recv_tcb_at t s \<and> t \<noteq> idle_thread s
                                \<and> reply_unlink_ts_pred t s)
-            and (valid_sched and valid_tcbs and pspace_aligned and pspace_distinct
+            and (valid_sched and valid_objs and pspace_aligned and pspace_distinct
                  and current_time_bounded and (\<lambda>s. heap_refs_inv (tcb_scps_of s) (sc_tcbs_of s))))
           ((\<lambda>s. \<forall>t \<in> set list. tcb_at' t s)
             and (valid_queues and valid_queues' and valid_objs' and valid_release_queue_iff))
@@ -2730,7 +2744,7 @@ lemma cancelAllIPC_corres_helper:
           apply (rule corres_guard_imp)
             apply (rule corres_split[OF getThreadState_corres], rename_tac st st')
               apply (rule_tac P="\<lambda>s. blocked_on_send_recv_tcb_at t s \<and> t \<noteq> idle_thread s
-                                     \<and> reply_unlink_ts_pred t s \<and> valid_sched s \<and> valid_tcbs s
+                                     \<and> reply_unlink_ts_pred t s \<and> valid_sched s \<and> valid_objs s
                                      \<and> pspace_aligned s \<and> pspace_distinct s
                                      \<and> st_tcb_at ((=) st) t s \<and> current_time_bounded s"
                           and P'="\<lambda>s. valid_queues s \<and> valid_queues' s \<and> valid_objs' s
@@ -2802,7 +2816,7 @@ proof -
          corres dc
           ((\<lambda>s. \<forall>t \<in> set list. blocked_on_send_recv_tcb_at t s \<and> t \<noteq> idle_thread s
                                \<and> reply_unlink_ts_pred t s)
-            and (valid_sched and valid_tcbs and pspace_aligned and pspace_distinct and ep_at ep_ptr
+            and (valid_sched and valid_objs and pspace_aligned and pspace_distinct and ep_at ep_ptr
                  and current_time_bounded and (\<lambda>s. heap_refs_inv (tcb_scps_of s) (sc_tcbs_of s))))
           ((\<lambda>s. \<forall>t \<in> set list. tcb_at' t s)
             and (valid_queues and valid_queues' and valid_objs' and valid_release_queue_iff
@@ -2846,6 +2860,7 @@ proof -
           apply (simp add: valid_objs'_valid_tcbs')+
        apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_const_Ball_lift hoare_vcg_imp_lift'
                    simp: reply_unlink_ts_pred_def)+
+     apply (clarsimp simp: valid_ep_def)
     apply (clarsimp simp: valid_ep'_def)
     done
 
@@ -2943,11 +2958,13 @@ lemma ntfn_cancel_corres_helper:
               apply (wpsimp wp: threadGet_wp)
              apply (clarsimp cong: conj_cong imp_cong all_cong)
              apply (rule_tac Q="\<lambda>_. pspace_aligned and pspace_distinct and current_time_bounded
-                                    and active_scs_valid and valid_tcbs
+                                    and active_scs_valid and valid_objs
                                     and valid_sched_action and tcb_at tp"
                     in hoare_strengthen_post[rotated])
-              apply (fastforce simp: pred_tcb_at_def is_tcb is_sc_obj obj_at_def opt_map_red
-                                     valid_tcbs_def valid_tcb_def valid_bound_obj_def opt_pred_def
+              apply clarsimp
+              apply (frule (1) valid_objs_ko_at)
+              apply (fastforce simp: is_sc_obj obj_at_def opt_map_red valid_objs_def valid_obj_def
+                                     valid_tcb_def in_omonad valid_bound_obj_def
                               split: option.splits)
              apply (wp set_thread_state_valid_sched_action)
             apply (simp add: option.case_eq_if bool.case_eq_if)
@@ -3142,12 +3159,10 @@ lemma updateSchedContext_valid_pspace'[wp]:
   by (fastforce simp: obj_at'_def  valid_obj'_def)
 
 lemma refillPopHead_valid_pspace'[wp]:
-  "\<lbrace>valid_pspace' and (\<lambda>s. ((\<lambda>n. 1 < n) |< (scs_of' s ||> scRefillCount)) scp)\<rbrace>
-   refillPopHead scp
-   \<lbrace>\<lambda>_. valid_pspace'\<rbrace>"
+  "refillPopHead scp \<lbrace>valid_pspace'\<rbrace>"
   unfolding refillPopHead_def updateSchedContext_def
-  apply (wpsimp wp: whileLoop_valid_inv)
-  by (fastforce simp: obj_at'_def  valid_obj'_def refillNextIndex_def MIN_REFILLS_def
+  apply (wpsimp wp: whileLoop_valid_inv getRefillNext_wp)
+  by (fastforce simp: obj_at'_def valid_obj'_def MIN_REFILLS_def refillSize_def refillNext_def
                       valid_sched_context'_def valid_sched_context_size'_def scBits_simps objBits_simps
                dest!: opt_predD
                elim!: opt_mapE)
@@ -3155,10 +3170,9 @@ lemma refillPopHead_valid_pspace'[wp]:
 lemma refillUnblockCheck_ko_wp_at_not_live[wp]:
   "refillUnblockCheck scp \<lbrace>\<lambda>s. P (ko_wp_at' (Not \<circ> live') p' s)\<rbrace>"
   unfolding refillUnblockCheck_def refillHeadOverlappingLoop_def mergeRefills_def
-  apply (wpsimp wp: whileLoop_valid_inv updateSchedContext_wp hoare_drop_imps
+  apply (wpsimp wp: whileLoop_valid_inv updateSchedContext_wp hoare_drop_imps getRefillNext_wp
               simp: updateRefillHd_def refillPopHead_def)
-        apply (clarsimp simp: ko_wp_at'_def obj_at'_def runReaderT_def
-                              opt_map_red refillNextIndex_def
+        apply (clarsimp simp: ko_wp_at'_def obj_at'_def runReaderT_def opt_map_red
                    split del: if_split
                        elim!: rsubst[where P=P])
         apply (frule refillHeadOverlapping_implies_count_greater_than_one)
@@ -3177,22 +3191,18 @@ lemma refillUnblockCheck_ko_wp_at_not_live[wp]:
   apply (clarsimp simp: opt_map_red ps_clear_upd split: if_splits)
   done
 
-lemma refillUnblockCheck_refs_of'[wp]:
-  "refillUnblockCheck sc_ptr \<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace>"
-  unfolding refillUnblockCheck_def refillHeadOverlappingLoop_def mergeRefills_def
-  apply (wpsimp simp: updateRefillHd_def refillPopHead_def
-                  wp: hoare_drop_imp whileLoop_valid_inv isRoundRobin_wp updateSchedContext_wp)
-        apply (clarsimp simp: runReaderT_def elim!: rsubst[where P=P])
-        apply (clarsimp simp: obj_at'_def  opt_map_red refillNextIndex_def)
-        apply (fastforce simp: state_refs_of'_def get_refs_def2 ps_clear_upd objBits_simps option.case_eq_if
-                        split: if_splits)
-       apply (wpsimp wp: updateSchedContext_wp refillReady_wp isRoundRobin_wp
-                   simp: updateRefillHd_def setReprogramTimer_def)+
-  apply (fold fun_upd_def)
-  apply (clarsimp simp: obj_at'_def  opt_map_red
-                intro!: ext elim!: rsubst[where P=P])
-  apply (fastforce simp: state_refs_of'_def get_refs_def2 ps_clear_upd objBits_simps option.case_eq_if
-                  split: if_splits)
+lemma updateRefillHd_refs_of'[wp]:
+  "updateRefillHd sc_ptr f \<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace>"
+  unfolding updateRefillHd_def updateSchedContext_def
+  apply (wpsimp wp: setObject_state_refs_of_eq)
+  apply (fastforce elim!: rsubst[where P=P] simp: obj_at'_def state_refs_of'_def split: if_splits)
+  done
+
+lemma refillPopHead_refs_of'[wp]:
+  "refillPopHead sc_ptr \<lbrace>\<lambda>s. P (state_refs_of' s)\<rbrace>"
+  unfolding refillPopHead_def updateSchedContext_def
+  apply wpsimp
+  apply (fastforce elim!: rsubst[where P=P] simp: obj_at'_def state_refs_of'_def split: if_splits)
   done
 
 crunches ifCondRefillUnblockCheck
@@ -3205,7 +3215,7 @@ crunches ifCondRefillUnblockCheck
   and ksInterrupt[wp]: "\<lambda>s. P (ksInterruptState s)"
   and unlive[wp]: "ko_wp_at' (Not \<circ> live') p"
   and refs_of'[wp]: "\<lambda>s. P (state_refs_of' s)"
-  (wp: crunch_wps simp: crunch_simps valid_pspace'_def ignore: threadSet)
+  (wp: crunch_wps updateSchedContext_wp simp: crunch_simps valid_pspace'_def ignore: threadSet)
 
 lemma cancel_all_invs'_helper:
   "\<lbrace>invs' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)
@@ -3831,7 +3841,7 @@ lemma cancelBadgedSends_corres:
        apply (clarsimp simp: ep_relation_def)
       apply (rule_tac F="distinct queue" in corres_gen_asm)
       apply (rule corres_split_eqr)
-         apply (rule_tac P="\<lambda>s. valid_sched s \<and> pspace_aligned s \<and> pspace_distinct s \<and> valid_tcbs s
+         apply (rule_tac P="\<lambda>s. valid_sched s \<and> pspace_aligned s \<and> pspace_distinct s \<and> valid_objs s
                                 \<and> heap_refs_inv (tcb_scps_of s) (sc_tcbs_of s) \<and> current_time_bounded s"
                      and Q="\<lambda>t s. tcb_at t s \<and> (epptr, TCBBlockedSend) \<in> state_refs_of s t
                                   \<and> t \<noteq> idle_thread s"
@@ -3879,7 +3889,7 @@ lemma cancelBadgedSends_corres:
            apply (simp split: list.split add: ep_relation_def)
           apply (rule rescheduleRequired_corres)
          apply (wp weak_sch_act_wf_lift_linear)+
-       apply (rule_tac Q="\<lambda>_ s. valid_tcbs s \<and> pspace_aligned s \<and> pspace_distinct s
+       apply (rule_tac Q="\<lambda>_ s. valid_objs s \<and> pspace_aligned s \<and> pspace_distinct s
                                 \<and> ep_at epptr s \<and> valid_sched s
                                 \<and> heap_refs_inv (tcb_scps_of s) (sc_tcbs_of s)
                                 \<and> current_time_bounded s"

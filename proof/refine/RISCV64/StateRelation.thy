@@ -216,7 +216,7 @@ definition sc_relation ::
      sc_consumed sc = scConsumed sc' \<and>
      sc_tcb sc = scTCB sc' \<and>
      sc_ntfn sc = scNtfn sc' \<and>
-     sc_refills sc = refills_map (scRefillHead sc') (scRefillCount sc')
+     sc_refills sc = refills_map (scRefillHead sc') (refillSize sc')
                                  (scRefillMax sc') (scRefills sc') \<and>
      n = scSize sc' \<and>
      sc_refill_max sc = scRefillMax sc' \<and>
@@ -246,15 +246,17 @@ lemma active_sc_at'_rewrite:
    we expect for wrap_slice to give what we want. *)
 
 abbreviation sc_valid_refills' :: "sched_context \<Rightarrow> bool" where
-  "sc_valid_refills' sc \<equiv> scRefillMax sc \<le> length (scRefills sc) \<and> scRefillHead sc < scRefillMax sc \<and>
-                    scRefillCount sc \<le> scRefillMax sc \<and> 0 < scRefillCount sc"
+  "sc_valid_refills' sc \<equiv>
+     scRefillMax sc \<le> length (scRefills sc)
+     \<and> scRefillHead sc < scRefillMax sc \<and> scRefillTail sc < scRefillMax sc
+     \<and> refillSize sc \<le> scRefillMax sc"
 
 definition valid_refills' :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "valid_refills' sc_ptr s' \<equiv> (sc_valid_refills' |< scs_of' s') sc_ptr"
 
 lemma valid_refills'_nonzero_scRefillCount:
-  "valid_refills' scp s' \<Longrightarrow> ((\<lambda>sc. 0 < scRefillCount sc) |< scs_of' s') scp"
-  by (clarsimp simp: valid_refills'_def opt_pred_def split: option.splits)
+  "valid_refills' scp s' \<Longrightarrow> ((\<lambda>sc. 0 < refillSize sc) |< scs_of' s') scp"
+  by (clarsimp simp: valid_refills'_def opt_pred_def refillSize_def split: option.splits)
 
 lemma valid_objs'_valid_refills':
   "\<lbrakk>valid_objs' s'; sc_at' scp s'; is_active_sc' scp s'\<rbrakk> \<Longrightarrow> valid_refills' scp s'"
@@ -990,6 +992,21 @@ lemma MIN_REFILLS_refillAbsoluteMax'[simp]:
   apply (clarsimp simp: refillSizeBytes_def)
   done
 
+lemma length_scRefills_bounded:
+  "\<lbrakk>valid_sched_context' sc s; valid_sched_context_size' sc\<rbrakk>
+   \<Longrightarrow> refillSizeBytes * length (scRefills sc) < 2 ^ word_bits"
+  apply (clarsimp simp: valid_sched_context_size'_def sc_size_bounds_def objBits_simps
+                        valid_sched_context'_def)
+  apply (insert schedContextStructSize_minSchedContextBits)
+  apply (prop_tac "schedContextStructSize \<le> 2 ^ (minSchedContextBits + scSize sc)")
+   apply (fastforce intro: order_trans)
+  apply (frule_tac n="minSchedContextBits + scSize sc" in refillAbsoluteMax'_leq)
+  apply (rule_tac y="2 ^ (minSchedContextBits + scSize sc)" in le_less_trans)
+   apply (clarsimp simp: refillSizeBytes_def)
+  apply simp
+  apply (clarsimp simp add: word_bits_def untypedBits_defs)
+  done
+
 lemma scBits_pos_power2:
   assumes "minSchedContextBits + scSize sc < word_bits"
   shows "(1::machine_word) < (2::machine_word) ^ (minSchedContextBits + scSize sc)"
@@ -1103,12 +1120,11 @@ lemma refills_tl_equal:
    \<Longrightarrow> refill_tl sc = refill_map (refillTl sc')"
   apply (clarsimp simp: sc_relation_def refillTl_def refills_map_def)
   apply (subst last_conv_nth)
-   apply (prop_tac "0 < scRefillCount sc'", blast)
-   apply (metis length_wrap_slice Nat.add_0_right le0 le_eq_less_or_eq less_add_eq_less
-                less_imp_le_nat map_is_Nil_conv not_gr0 plus_nat.add_0 wrap_slice_empty)
+  apply (metis refillSize_def add_is_0 length_wrap_slice less_or_eq_imp_le list.map_disc_iff
+               list.size(3) zero_neq_one)
   apply (subst nth_map)
-   apply fastforce
-  apply (subst wrap_slice_index; clarsimp simp: refillTailIndex_def)
+   apply (clarsimp simp: refillSize_def)
+  apply (fastforce simp: wrap_slice_index refillSize_def)
   done
 
 (* wrap_slice *)
@@ -1140,15 +1156,13 @@ lemma length_refills_map[simp]:
   "\<lbrakk> mx \<le> length list; count \<le> mx \<rbrakk> \<Longrightarrow> length (refills_map start count mx list) = count"
   by (clarsimp simp: refills_map_def)
 
-lemma sc_valid_refills_scRefillCount:
-  "\<lbrakk>sc_valid_refills sc; sc_relation sc n sc'\<rbrakk> \<Longrightarrow> 0 < scRefillCount sc'"
-  apply (clarsimp simp: valid_sched_context_def sc_relation_def)
-  apply (case_tac "scRefillCount sc'"; simp)
-  by (clarsimp simp: refills_map_def sc_valid_refills_def rr_valid_refills_def split: if_splits)
+lemma sc_valid_refills_refillSize:
+  "\<lbrakk>sc_valid_refills sc; sc_relation sc n sc'\<rbrakk> \<Longrightarrow> 0 < refillSize sc'"
+  by (clarsimp simp: valid_sched_context_def sc_relation_def refillSize_def)
 
 lemma sc_refills_neq_zero_cross:
   "\<lbrakk>sc_relation sc n sc'; sc_refills sc \<noteq> []\<rbrakk>
-   \<Longrightarrow> refills_map (scRefillHead sc') (scRefillCount sc') (scRefillMax sc') (scRefills sc') \<noteq> []"
+   \<Longrightarrow> refills_map (scRefillHead sc') (refillSize sc') (scRefillMax sc') (scRefills sc') \<noteq> []"
   by (clarsimp simp: sc_relation_def)
 
 lemma refills_map_non_empty_pos_count:
@@ -1165,9 +1179,10 @@ lemma hd_refills_map:
 
 lemma refill_hd_relation:
   "sc_relation sc n sc' \<Longrightarrow> sc_valid_refills' sc' \<Longrightarrow> refill_hd sc = refill_map (refillHd sc')"
-  apply (clarsimp simp: sc_relation_def refillHd_def refills_map_def valid_sched_context'_def hd_map)
-  apply (subst hd_map, clarsimp simp: wrap_slice_def)
-  apply (clarsimp simp: hd_wrap_slice)
+  apply (clarsimp simp: sc_relation_def refillHd_def refills_map_def valid_sched_context'_def)
+  apply (subst hd_map, clarsimp simp: wrap_slice_def refillSize_def)
+  apply (rule arg_cong[where f=refill_map])
+  apply (fastforce simp: refillSize_def intro: hd_wrap_slice)
   done
 
 lemma refill_hd_relation2:
@@ -1180,24 +1195,24 @@ lemma refill_hd_relation2:
   apply (clarsimp simp: refill_map_def)
   done
 
-lemma sc_refill_ready_relation:
-  "\<lbrakk>sc_relation sc n sc'; sc_valid_refills' sc'\<rbrakk> \<Longrightarrow>
-  sc_refill_ready time sc = (rTime (refillHd sc') \<le> time + kernelWCETTicks)"
-   apply (frule (1) refill_hd_relation)
+lemma refill_ready_relation:
+  "\<lbrakk>sc_relation sc n sc'; sc_valid_refills' sc'\<rbrakk>
+   \<Longrightarrow> refill_ready time (refill_hd sc) = (rTime (refillHd sc') \<le> time + kernelWCETTicks)"
+  apply (frule (1) refill_hd_relation)
   by (clarsimp simp: refill_ready_def kernelWCETTicks_def refill_map_def)
 
-lemma sc_refill_capacity_relation:
+lemma refill_capacity_relation:
   "\<lbrakk>sc_relation sc n sc'; sc_valid_refills' sc'\<rbrakk> \<Longrightarrow>
-  sc_refill_capacity x sc = refillsCapacity x (scRefills sc') (scRefillHead sc')"
+   refill_capacity usage (refill_hd sc) = refillCapacity usage (refillHd sc')"
   apply (frule (1) refill_hd_relation)
-  by (clarsimp simp: refillsCapacity_def refill_capacity_def refillHd_def refill_map_def)
+  by (clarsimp simp: refillCapacity_def refill_capacity_def refillHd_def refill_map_def)
 
-lemma sc_refill_sufficient_relation:
+lemma refill_sufficient_relation:
   "\<lbrakk>sc_relation sc n sc'; sc_valid_refills' sc'\<rbrakk> \<Longrightarrow>
-  sc_refill_sufficient x sc = sufficientRefills x (scRefills sc') (scRefillHead sc')"
-  apply (frule (1) sc_refill_capacity_relation[where x=x])
-  by (clarsimp simp: sufficientRefills_def refill_sufficient_def minBudget_def MIN_BUDGET_def
-                        kernelWCETTicks_def)
+   refill_sufficient usage (refill_hd sc) = refillSufficient usage (refillHd sc')"
+  apply (frule (1) refill_capacity_relation[where usage=usage])
+  by (clarsimp simp: refillSufficient_def refill_sufficient_def minBudget_def MIN_BUDGET_def
+                     kernelWCETTicks_def)
 
 end
 end

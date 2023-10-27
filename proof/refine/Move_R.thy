@@ -459,12 +459,4 @@ lemma TCB_cte_wp_at_obj_at:
                         obj_at_def cte_wp_at_def get_cap_def is_tcb
                  split: option.splits)
 
-lemma exs_valid_assert_opt [wp]:
-  "\<lbrace> \<lambda>s. G \<noteq> None \<and> Q (the G) s \<rbrace> assert_opt G \<exists>\<lbrace> Q \<rbrace>"
-  by (clarsimp simp: assert_opt_def exs_valid_def get_def assert_def bind_def' return_def)
-
-lemma gets_the_exs_valid [wp]:
-  "\<lbrace> \<lambda>s. h s \<noteq> None \<and> Q (the (h s)) s \<rbrace> gets_the h \<exists>\<lbrace> Q \<rbrace>"
-  by (wpsimp simp: gets_the_def)
-
 end

@@ -141,34 +141,84 @@ lemma updateTimeStamp_corres[corres]:
                    apply (wpsimp simp: getConsumedTime_def)+
   done
 
-lemma refillSufficient_corres:
-  "sc_ptr = scPtr
-   \<Longrightarrow> corres (=) (valid_objs and pspace_aligned and pspace_distinct
-                   and sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr)
-                  valid_objs'
-              (get_sc_refill_sufficient sc_ptr consumed)
-              (refillSufficient scPtr consumed)"
-  apply (rule corres_cross[where Q' = "sc_at' scPtr", OF sc_at'_cross_rel])
-   apply (fastforce simp: obj_at_def is_sc_obj_def valid_obj_def valid_pspace_def sc_at_pred_n_def)
-  apply (clarsimp simp: get_sc_refill_sufficient_def refillSufficient_def getCurTime_def)
+lemma no_ofail_readRefillHead[wp]:
+  "no_ofail (sc_at' scPtr) (readRefillHead scPtr)"
+  unfolding readRefillHead_def readSchedContext_def
+  by (wpsimp wp_del: ovalid_readObject)
+
+lemma no_ofail_readRefillCapacity[wp]:
+  "no_ofail (sc_at' scPtr) (readRefillCapacity scPtr usage)"
+  unfolding readRefillCapacity_def
+  by wpsimp
+
+lemma no_ofail_readRefillSufficient[wp]:
+  "no_ofail (sc_at' scPtr) (readRefillSufficient scPtr usage)"
+  unfolding readRefillSufficient_def
+  by wpsimp
+
+lemmas no_fail_getRefillSufficient[wp] =
+  no_ofail_gets_the[OF no_ofail_readRefillSufficient, simplified getRefillSufficient_def[symmetric]]
+
+lemma getRefillHead_corres:
+  "sc_ptr = scPtr \<Longrightarrow>
+   corres (\<lambda>rv rv'. refill_map rv' = rv)
+     (valid_objs and pspace_aligned and pspace_distinct
+      and is_active_sc sc_ptr and sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr)
+     valid_objs'
+     (get_refill_head sc_ptr) (getRefillHead scPtr)"
+  apply (clarsimp simp: get_refill_head_def getRefillHead_def read_refill_head_def
+                        readRefillHead_def getSchedContext_def[symmetric]
+                        read_sched_context_get_sched_context
+                        readSchedContext_def getObject_def[symmetric])
+  apply (rule stronger_corres_guard_imp)
+    apply (rule corres_split[OF get_sc_corres])
+      apply clarsimp
+      apply (rule refill_hd_relation[symmetric])
+       apply simp
+      apply simp
+     apply wpsimp
+    apply wpsimp
+   apply (clarsimp simp: sc_at_ppred_def obj_at_def is_sc_obj_def)
+   apply (fastforce intro: valid_objs_valid_sched_context_size)
+  apply clarsimp
+  apply (frule (4) active_sc_at'_cross_valid_objs)
+  by (fastforce dest: valid_objs'_valid_refills'
+                simp: active_sc_at'_def obj_at'_def is_active_sc'_def in_omonad valid_refills'_def)
+
+lemma getRefillCapacity_corres:
+  "sc_ptr = scPtr \<Longrightarrow>
+   corres (=)
+     (valid_objs and pspace_aligned and pspace_distinct
+      and is_active_sc sc_ptr and sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr)
+     valid_objs'
+     (get_sc_refill_capacity sc_ptr consumed) (getRefillCapacity scPtr consumed)"
+  apply (clarsimp simp: get_sc_refill_capacity_def getRefillCapacity_def read_sc_refill_capacity_def
+                        readRefillCapacity_def get_refill_head_def[symmetric]
+                        getRefillHead_def[symmetric])
   apply (rule corres_guard_imp)
-    apply (rule corres_symb_exec_r)
-       apply (rule_tac R="\<lambda>sc s. sc_refills sc \<noteq> []"
-                   and R'= "\<lambda>sc' s. valid_objs' s \<and> ko_at' sc' scPtr s \<and> refills = scRefills sc'"
-                    in corres_split[OF get_sc_corres])
-         apply (rename_tac sc sc')
-         apply clarsimp
-         apply (prop_tac "r_amount (refill_hd sc) = rAmount (refillHd sc')")
-          apply (fastforce dest: sc_ko_at_valid_objs_valid_sc'
-                                 refill_hd_relation2)
-         apply (clarsimp simp: refill_sufficient_def sufficientRefills_def refillHd_def
-                               refill_capacity_def refillsCapacity_def MIN_BUDGET_def
-                               minBudget_def kernelWCETTicks_def)
-        apply (wpsimp wp: get_sc_inv'
-                    simp: getRefills_def)+
-   apply (fastforce dest: valid_objs_valid_sched_context_size
-                    simp: sc_at_pred_n_def obj_at_def is_sc_obj_def)
-  apply (clarsimp simp: obj_at'_def)
+    apply (rule corres_split[OF getRefillHead_corres])
+       apply simp
+      apply (clarsimp simp: refillCapacity_def refill_capacity_def refill_map_def)
+     apply wpsimp+
+  done
+
+lemma getRefillSufficient_corres:
+  "sc_ptr = scPtr \<Longrightarrow>
+   corres (=)
+     (valid_objs and pspace_aligned and pspace_distinct
+      and is_active_sc sc_ptr and sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr)
+     valid_objs'
+     (get_sc_refill_sufficient sc_ptr consumed) (getRefillSufficient scPtr consumed)"
+  apply (clarsimp simp: get_sc_refill_sufficient_def getRefillSufficient_def
+                        read_sc_refill_sufficient_def readRefillSufficient_def refill_sufficient_def
+                        readRefillCapacity_def
+                        get_refill_head_def[symmetric] getRefillHead_def[symmetric])
+  apply (rule corres_guard_imp)
+    apply (rule corres_split[OF getRefillHead_corres])
+       apply simp
+      apply (clarsimp simp: refillCapacity_def refill_capacity_def refill_map_def
+                            minBudget_def MIN_BUDGET_def kernelWCETTicks_def)
+     apply wpsimp+
   done
 
 lemma modifyWorkUnits_valid_objs'[wp]:
@@ -196,10 +246,9 @@ lemma getConsumedTime_sp:
   by wpsimp
 
 lemma scActive_corres:
-  "corres (=) (sc_at scPtr and pspace_aligned and pspace_distinct)
-              \<top>
-          (get_sc_active scPtr)
-          (scActive scPtr)"
+  "sc_ptr = scPtr \<Longrightarrow>
+   corres (=) (sc_at scPtr and pspace_aligned and pspace_distinct) \<top>
+     (get_sc_active sc_ptr) (scActive scPtr)"
   apply (rule corres_cross[where Q' = "sc_at' scPtr", OF sc_at'_cross_rel])
    apply (fastforce simp: obj_at_def is_sc_obj_def valid_obj_def valid_pspace_def sc_at_pred_n_def)
   apply (corresKsimp corres: get_sc_corres
@@ -308,7 +357,7 @@ lemma preemptionPoint_corres:
      apply (clarsimp split: if_split)
      apply (intro conjI impI)
       apply (rule corres_guard_imp)
-      apply (rule corres_split[OF refillSufficient_corres]; simp)
+      apply (rule corres_split[OF getRefillSufficient_corres]; simp)
           apply (rule corres_split[OF isCurDomainExpired_corres])
             apply (clarsimp simp: returnOk_def
                            split: if_split)

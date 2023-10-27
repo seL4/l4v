@@ -2203,11 +2203,10 @@ lemma refillReady_sp:
 
 lemma refillSufficient_sp:
   "\<lbrace>P\<rbrace>
-  refillSufficient scp k
-  \<lbrace>\<lambda>rv s. P s \<and> (\<exists>ko. ko_at' ko scp s \<and> rv = (sufficientRefills k (scRefills ko) (scRefillHead ko)))\<rbrace>"
-  unfolding refillSufficient_def getRefills_def
+   getRefillSufficient scp usage
+   \<lbrace>\<lambda>rv s. P s \<and> (\<exists>ko. ko_at' ko scp s \<and> rv = (refillSufficient usage (refillHd ko)))\<rbrace>"
   apply wpsimp
-  by (clarsimp simp: sufficientRefills_def obj_at'_def)
+  by (clarsimp simp: refillSufficient_def obj_at'_def)
 
 lemma isValidTimeoutHandler_sp:
   "\<lbrace>P\<rbrace>
@@ -2536,23 +2535,24 @@ lemma sendIPC_corres:
                                                     and bound_sc_tcb_at ((=) r) t'
                                                     and pspace_aligned
                                                     and pspace_distinct
-                                                    and valid_tcbs
+                                                    and valid_objs
                                                     and active_scs_valid
                                                     and current_time_bounded"
                                     in hoare_strengthen_post[rotated])
                               apply (clarsimp, rename_tac rv s)
                               apply (case_tac rv; clarsimp simp: pred_tcb_at_def obj_at_def is_tcb option.case_eq_if)
                               apply (drule sym[of "Some _"])
-                              apply (fastforce simp: valid_tcbs_def valid_tcb_def obj_at_def
+                              apply (frule  valid_objs_ko_at)
+                               apply (fastforce simp: obj_at_def)
+                              apply (fastforce simp: valid_obj_def valid_tcb_def obj_at_def
                                                      is_sc_obj opt_map_red opt_pred_def)
-
                              apply (wpsimp wp: thread_get_wp')
                             apply (wpsimp wp: threadGet_wp)
                            apply (rule_tac Q="\<lambda>_. valid_sched_action and active_scs_valid
                                                   and tcb_at t'
                                                   and pspace_aligned
                                                   and pspace_distinct
-                                                  and valid_tcbs
+                                                  and valid_objs
                                                   and active_scs_valid
                                                   and current_time_bounded"
                                   in hoare_strengthen_post[rotated])
@@ -2977,7 +2977,7 @@ lemma schedContextResume_corres:
            apply (rule corres_split_eqr)
               apply (rule refillReady_corres, simp)
              apply (rule corres_split_eqr)
-                apply (rule refillSufficient_corres, simp)
+                apply (rule getRefillSufficient_corres, simp)
                apply (rule corres_when)
                 apply clarsimp
                apply (rule corres_symb_exec_l)
@@ -3065,7 +3065,7 @@ lemma schedContextResume_corres:
   apply (clarsimp simp: projection_rewrites isScActive_def opt_map_red)
   apply (erule (1) valid_objsE')
   apply (clarsimp simp: valid_obj'_def valid_sched_context'_def sc_relation_def valid_refills'_def
-                        opt_map_def opt_pred_def)
+                        opt_map_def opt_pred_def is_active_sc'_def)
   done
 
 lemma getScTime_wp:
@@ -3075,15 +3075,6 @@ lemma getScTime_wp:
    getScTime tptr \<lbrace>P\<rbrace>"
   apply (wpsimp simp: getScTime_def getTCBSc_def wp: threadGet_wp)
   by (clarsimp simp: tcb_at'_ex_eq_all)
-
-lemma updateRefillHd_valid_objs':
-  "\<lbrace>valid_objs' and active_sc_at' scPtr\<rbrace> updateRefillHd scPtr f \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
-  apply (clarsimp simp: updateRefillHd_def updateSchedContext_def)
-  apply wpsimp
-  apply (frule (1) sc_ko_at_valid_objs_valid_sc')
-  apply (clarsimp simp: valid_sched_context'_def active_sc_at'_def obj_at'_real_def ko_wp_at'_def
-                        valid_sched_context_size'_def objBits_def objBitsKO_def)
-  done
 
 lemma getCTE_cap_to_refs[wp]:
   "\<lbrace>\<top>\<rbrace> getCTE p \<lbrace>\<lambda>rv s. \<forall>r\<in>zobj_refs' (cteCap rv). ex_nonz_cap_to' r s\<rbrace>"
@@ -3458,9 +3449,9 @@ lemma sendSignal_corres:
                     apply (rule_tac Q="\<lambda>_. tcb_at a and active_scs_valid and pspace_aligned
                                            and pspace_distinct and valid_objs"
                            in hoare_strengthen_post[rotated])
-                     apply (clarsimp, drule (1) valid_objs_ko_at)
-                     apply (fastforce simp: valid_tcb_def obj_at_def is_sc_obj opt_map_def
-                                            opt_pred_def valid_obj_def
+                     apply (clarsimp, frule (1) valid_objs_ko_at)
+                     apply (fastforce simp: valid_obj_def valid_tcb_def valid_bound_obj_def
+                                            obj_at_def is_sc_obj opt_map_def opt_pred_def
                                      split: option.split)
                     apply wpsimp
                    apply (rule_tac Q="\<lambda>_. tcb_at' a and valid_objs'" in hoare_strengthen_post[rotated])
@@ -3544,7 +3535,7 @@ lemma sendSignal_corres:
                 apply (rule_tac Q="\<lambda>_. tcb_at (hd list) and active_scs_valid and pspace_aligned
                                        and pspace_distinct and valid_objs"
                        in hoare_strengthen_post[rotated])
-                 apply (clarsimp, drule (1) valid_objs_ko_at)
+                 apply (clarsimp, frule (1) valid_objs_ko_at)
                  apply (fastforce simp: valid_tcb_def obj_at_def is_sc_obj opt_map_def opt_pred_def
                                         valid_obj_def
                                  split: option.split)
@@ -4116,7 +4107,7 @@ lemma completeSignal_corres:
                    apply (rule corres_split[OF get_sc_corres])
                      apply (rename_tac scp sc sc')
                      apply (rule_tac P="sc_at scp and (\<lambda>s. scs_of2 s scp = Some sc) and ntfn_at ntfnptr and active_scs_valid
-                                        and pspace_aligned and pspace_distinct"
+                                        and pspace_aligned and pspace_distinct and valid_objs"
                                 and P'="ko_at' sc' scp and ntfn_at' ntfnptr and valid_objs'"
                             in corres_inst)
                      apply (rule corres_guard_imp)
@@ -4132,10 +4123,11 @@ lemma completeSignal_corres:
                         apply (wpsimp wp: get_simple_ko_wp)
                        apply (wpsimp wp: getNotification_wp)
                       apply (clarsimp simp: obj_at_def is_ntfn)
-                      apply (drule active_scs_validE[rotated])
+                      apply (frule active_scs_validE[rotated])
                        apply (fastforce simp: vs_all_heap_simps is_sc_obj elim!: opt_mapE)
-                      apply (clarsimp simp: opt_map_red opt_pred_def valid_refills_def
-                                            vs_all_heap_simps rr_valid_refills_def)
+                      apply (frule valid_refills_nonempty_refills)
+                      apply (fastforce simp: in_omonad sc_at_pred_n_def obj_at_def vs_all_heap_simps
+                                             active_sc_def)
                      apply (fastforce dest!: valid_objs'_valid_refills'
                                       simp: opt_map_red opt_pred_def is_active_sc'_def obj_at'_def)
                     apply wpsimp
@@ -4234,7 +4226,8 @@ lemma maybeReturnSc_corres:
               apply (rule corres_split)
                  apply (rule update_sc_no_reply_stack_update_ko_at'_corres
                              [where f'="scTCB_update (\<lambda>_. None)"])
-                    apply ((clarsimp simp: sc_relation_def objBits_def objBitsKO_def)+)[4]
+                    apply ((clarsimp simp: sc_relation_def refillSize_def objBits_def
+                                           objBitsKO_def)+)[4]
                 apply (rule corres_split[OF getCurThread_corres])
                   apply (rule corres_when [OF _ rescheduleRequired_corres], simp)
                  apply (wpsimp wp: hoare_vcg_imp_lift')+
@@ -4299,7 +4292,8 @@ lemma maybeReturnSc_valid_objs'[wp]:
   apply (prop_tac "ko_at' sc (the (tcbSchedContext tcb)) s")
    apply (clarsimp simp: obj_at'_def)
   apply (fastforce dest!: sc_ko_at_valid_objs_valid_sc'
-                    simp: valid_sched_context'_def valid_sched_context_size'_def objBits_simps)
+                    simp: valid_sched_context'_def valid_sched_context_size'_def objBits_simps
+                          refillSize_def)
   done
 
 lemma maybeReturnSc_valid_tcbs'[wp]:
@@ -4381,7 +4375,7 @@ lemma maybeReturnSc_invs'_and_valid_idle':
       apply (fastforce simp: obj_at'_def)
      apply (clarsimp simp: ko_wp_at'_def refs_of_rev')
      apply (fastforce elim: if_live_then_nonz_capE' simp: ko_wp_at'_def live_sc'_def)
-    apply (fastforce simp: valid_pspace'_def valid_obj'_def valid_sched_context'_def)
+    apply (fastforce simp: valid_pspace'_def valid_obj'_def valid_sched_context'_def refillSize_def)
    apply (fastforce simp: valid_obj'_def valid_sched_context_size'_def objBits_def objBitsKO_def)
   apply (clarsimp simp: valid_idle'_def obj_at'_def sym_refs_asrt_def)
   apply (drule_tac ko="tcb" and p=tptr in sym_refs_ko_atD'[rotated])
@@ -5020,9 +5014,10 @@ lemma receiveSignal_corres:
                                 and pspace_aligned and valid_objs"
                 in hoare_strengthen_post[rotated])
           apply (clarsimp simp: obj_at_def is_tcb)
+          apply (clarsimp split: option.splits)
           apply (erule (1) valid_objsE)
-          apply (fastforce simp: valid_obj_def valid_tcb_def obj_at_def opt_map_def opt_pred_def is_sc_obj
-                          split: option.splits)
+          apply (fastforce simp: valid_obj_def valid_tcb_def obj_at_def opt_map_def opt_pred_def
+                                 is_sc_obj)
          apply (wpsimp wp: abs_typ_at_lifts)
         apply (rule_tac Q="\<lambda>_. tcb_at' thread and valid_objs'" in hoare_strengthen_post[rotated])
          apply (clarsimp simp: obj_at'_def split: option.split)
@@ -5733,7 +5728,7 @@ lemma refillUnblockCheck_sym_heap_tcbSCs[wp]:
    refillUnblockCheck scp
    \<lbrace>\<lambda>_. sym_heap_tcbSCs\<rbrace>"
   unfolding refillUnblockCheck_def refillHeadOverlappingLoop_def mergeRefills_def updateRefillHd_def
-  apply (wpsimp wp: whileLoop_valid_inv updateSchedContext_wp wp_del: use_corresK
+  apply (wpsimp wp: whileLoop_valid_inv updateSchedContext_wp getRefillNext_wp wp_del: use_corresK
               simp: refillPopHead_def)
         apply (clarsimp simp: sym_heap_def obj_at'_def ps_clear_upd opt_map_red projectKO_opt_tcb)
        apply (wpsimp wp: updateSchedContext_wp getCurTime_wp refillReady_wp isRoundRobin_wp
@@ -5756,7 +5751,7 @@ lemma refillUnblockCheck_sym_heap_scReplies[wp]:
    refillUnblockCheck scp
    \<lbrace>\<lambda>_. sym_heap_scReplies\<rbrace>"
   unfolding refillUnblockCheck_def refillHeadOverlappingLoop_def mergeRefills_def updateRefillHd_def
-  apply (wpsimp wp: whileLoop_valid_inv updateSchedContext_wp wp_del: use_corresK
+  apply (wpsimp wp: whileLoop_valid_inv updateSchedContext_wp getRefillNext_wp wp_del: use_corresK
               simp: refillPopHead_def)
         apply (clarsimp simp: sym_heap_def obj_at'_def ps_clear_upd opt_map_red projectKO_opt_reply)
         apply (drule_tac x=scp and y=p' in spec2)
@@ -6358,7 +6353,9 @@ lemma doReplyTransfer_corres:
                           apply (rule corres_symb_exec_l [OF _ _ gets_sp], rename_tac ct)
                             apply (rule corres_symb_exec_r [OF _ refillReady_sp], rename_tac ready)
                               apply (rule corres_symb_exec_r [OF _ refillSufficient_sp], rename_tac suff)
-                                apply (rule_tac Q="\<lambda>_. ready = sc_refill_ready ct sc \<and> suff = sc_refill_sufficient 0 sc" in corres_cross_add_guard[rotated])
+                                apply (rule_tac Q="\<lambda>_. ready = refill_ready ct (refill_hd sc)
+                                                       \<and> suff = refill_sufficient 0 (refill_hd sc)"
+                                             in corres_cross_add_guard[rotated])
                                  apply (rule_tac corres_gen_asm2)
                                  apply (rule stronger_corres_guard_imp)
                                    apply (rule corres_if, simp)
@@ -6437,7 +6434,8 @@ lemma doReplyTransfer_corres:
                                  apply (subgoal_tac "sc_valid_refills sc")
                                   apply (prop_tac "koa=ko", erule (1) ko_at'_inj, simp only:)
                                   apply (subgoal_tac "sc_valid_refills' ko")
-                                   apply (simp add: sc_refill_ready_relation sc_refill_sufficient_relation state_relation_def active_sc_at_equiv)
+                                   apply (simp add: refill_ready_relation refill_sufficient_relation
+                                                    state_relation_def active_sc_at_equiv)
                                   apply (metis valid_sched_context'_def)
                                  apply (subst (asm) active_sc_at_equiv)
                                  apply (frule (1) active_scs_validE)
@@ -6445,7 +6443,7 @@ lemma doReplyTransfer_corres:
                                 apply (clarsimp simp: obj_at_def vs_all_heap_simps active_sc_def
                                                       sc_relation_def)
                                apply wpsimp
-                              apply (wpsimp simp: refillSufficient_def getRefills_def obj_at'_def)
+                              apply wpsimp
                              apply (wpsimp wp: refillReady_wp)
                             apply (simp add: refillReady_def, rule no_ofail_gets_the)
                             apply wpsimp

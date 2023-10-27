@@ -774,7 +774,7 @@ lemma ifConfRefillUnblockCheck_ko_at'_tcb[wp]:
   "ifCondRefillUnblockCheck scOpt act ast \<lbrace>\<lambda>s. P (ko_at' (ko :: tcb) tcbPtr s)\<rbrace>"
   unfolding ifCondRefillUnblockCheck_def refillUnblockCheck_def refillHeadOverlappingLoop_def
             mergeRefills_def updateRefillHd_def updateSchedContext_def refillPopHead_def
-  by (wpsimp wp: whileLoop_valid_inv hoare_drop_imps)
+  by (wpsimp wp: whileLoop_valid_inv hoare_drop_imps getRefillNext_wp)
 
 lemma doReplyTransfer_invs'[wp]:
   "\<lbrace>invs' and tcb_at' sender and reply_at' replyPtr and sch_act_simple\<rbrace>
@@ -863,7 +863,8 @@ lemma schedContextBindNtfn_invs':
                     simp: valid_ntfn'_def
                    split: ntfn.splits)
   apply (fastforce dest: sc_ko_at_valid_objs_valid_sc'
-                   simp: valid_sched_context'_def valid_sched_context_size'_def objBits_simps)
+                   simp: valid_sched_context'_def valid_sched_context_size'_def objBits_simps
+                         refillSize_def)
   done
 
 lemma contextYieldToUpdateQueues_invs'_helper:
@@ -875,14 +876,14 @@ lemma contextYieldToUpdateQueues_invs'_helper:
     \<lbrace>\<lambda>_. invs'\<rbrace>"
    apply (clarsimp simp: invs'_def valid_pspace'_def valid_dom_schedule'_def)
    apply (wp threadSet_valid_objs' threadSet_mdb' threadSet_iflive' threadSet_cap_to
-             threadSet_ifunsafe'T   threadSet_ctes_ofT threadSet_valid_queues_new
+             threadSet_ifunsafe'T threadSet_ctes_ofT threadSet_valid_queues_new
              threadSet_valid_queues' threadSet_valid_release_queue threadSet_valid_release_queue'
              untyped_ranges_zero_lift valid_irq_node_lift valid_irq_handlers_lift''
              hoare_vcg_const_imp_lift hoare_vcg_imp_lift' threadSet_valid_replies'
           | clarsimp simp: tcb_cte_cases_def cteSizeBits_def cteCaps_of_def)+
    by (fastforce simp: obj_at_simps valid_tcb'_def tcb_cte_cases_def cteSizeBits_def comp_def
                        valid_sched_context'_def valid_sched_context_size'_def
-                       valid_release_queue'_def inQ_def)
+                       valid_release_queue'_def inQ_def refillSize_def)
 
 crunches schedContextResume
   for bound_scTCB[wp]: "obj_at' (\<lambda>a. \<exists>y. scTCB a = Some y) scPtr"
@@ -1737,7 +1738,7 @@ lemma endTimeslice_corres: (* called when ct_schedulable *)
           apply (rule corres_guard_imp)
             apply (rule corres_split[OF get_sc_corres])
               apply (rule corres_split_eqr[OF refillReady_corres])
-                apply (rule corres_split_eqr[OF refillSufficient_corres], simp)
+                apply (rule corres_split_eqr[OF getRefillSufficient_corres], simp)
                   apply (rule_tac P="?pre and (\<lambda>s. ct = cur_thread s) and (\<lambda>s. sc_ptr = cur_sc s)
                                      and (\<lambda>s. ready = is_refill_ready sc_ptr s)
                                      and (\<lambda>s. sufficient = is_refill_sufficient 0 sc_ptr s)"
@@ -1790,7 +1791,7 @@ lemma endTimeslice_corres: (* called when ct_schedulable *)
                    apply (frule invs_psp_aligned, frule invs_distinct)
                    apply (clarsimp dest!: invs_cur simp: cur_tcb_def)
                   apply (clarsimp simp: cur_tcb'_def isEndpointCap_def)
-                 apply (wpsimp wp: get_sc_refill_sufficient_wp refillReady_wp)+
+                 apply (wpsimp wp: refillReady_wp)+
            apply (clarsimp dest!: valid_sched_active_scs_valid
                             simp: invs_def cur_sc_tcb_def valid_state_def valid_pspace_def
                                   sc_tcb_sc_at_def obj_at_def is_sc_obj opt_map_red vs_all_heap_simps
@@ -1799,8 +1800,8 @@ lemma endTimeslice_corres: (* called when ct_schedulable *)
            apply (drule active_scs_validE[rotated])
             apply (fastforce simp: vs_all_heap_simps)
            apply (clarsimp simp: vs_all_heap_simps rr_valid_refills_def valid_refills_def split: if_split_asm)
-          apply (clarsimp simp: cur_tcb'_def invs'_def valid_pspace'_def
-                         elim!: valid_objs'_valid_refills')
+          apply (fastforce simp: invs'_def  active_sc_at'_def is_active_sc'_def in_omonad obj_at'_def
+                          elim!: valid_objs'_valid_refills')
          apply wpsimp+
   done
 
@@ -1882,7 +1883,8 @@ lemma endTimeslice_invs'[wp]:
    endTimeslice timeout
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding endTimeslice_def
-  apply (wpsimp wp: handleTimeout_Timeout_invs' isValidTimeoutHandler_inv hoare_drop_imp)
+  apply (wpsimp wp: handleTimeout_Timeout_invs' isValidTimeoutHandler_inv hoare_drop_imp
+              simp: refillReady_def)
   apply (clarsimp simp: runnable_eq_active')
   apply (frule (1) active_ex_cap'[OF _ invs_iflive'])
   apply (clarsimp simp: ct_in_state'_def sch_act_sane_def)
@@ -1918,7 +1920,8 @@ lemma refillResetRR_invs'[wp]:
   apply (wpsimp wp: updateSchedContext_invs')
   apply (intro conjI; clarsimp elim!: live_sc'_ex_cap[OF invs_iflive'])
   by (fastforce dest!: valid_sc_strengthen[OF invs_valid_objs']
-                 simp: valid_sched_context'_def valid_sched_context_size'_def scBits_simps objBits_simps')
+                 simp: valid_sched_context'_def valid_sched_context_size'_def scBits_simps
+                       objBits_simps' refillSize_def)
 
 lemmas refill_reset_rr_typ_ats [wp] =
   abs_typ_at_lifts [OF refill_reset_rr_typ_at]
@@ -1968,7 +1971,7 @@ lemma chargeBudget_corres:
          apply (rule corres_split[OF corres_if2], simp)
              apply (rule refillResetRR_corres)
             apply (rule refillBudgetCheck_corres, simp)
-           apply (rule updateSchedContext_corres)
+           apply (rule updateSchedContext_no_stack_update_corres)
              apply (fastforce simp: sc_relation_def obj_at'_def obj_at_def is_sc_obj opt_map_red
                                     opt_pred_def
                              dest!: state_relation_sc_relation)
@@ -2082,10 +2085,12 @@ lemma checkBudget_corres: (* called when ct_schedulable or in checkBudgetRestart
      invs'
      check_budget checkBudget"
   unfolding check_budget_def checkBudget_def
+  apply (rule_tac Q="\<lambda>s'. active_sc_at' (ksCurSc s') s'" in corres_cross_add_guard)
+   apply (fastforce intro: active_sc_at'_cross_valid_objs simp: state_relation_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr[OF getCurSc_corres])
       apply (rule corres_split_eqr[OF getConsumedTime_corres])
-        apply (rule corres_split_eqr[OF refillSufficient_corres], simp)
+        apply (rule corres_split_eqr[OF getRefillSufficient_corres], simp)
           apply (rule corres_if2, simp)
            apply (rule corres_split_eqr[OF isCurDomainExpired_corres])
              apply simp
@@ -2146,13 +2151,9 @@ lemma handleYield_corres:
            apply simp
            apply (rule corres_guard_imp)
              apply (rule corres_split[OF chargeBudget_corres])
-               apply (rule updateSchedContext_corres)
+               apply (rule updateSchedContext_no_stack_update_corres)
+                  apply (clarsimp simp: sc_relation_def obj_at_simps is_sc_obj opt_map_red opt_pred_def)
                  apply clarsimp
-                 apply (drule (2) state_relation_sc_relation)
-                 apply (clarsimp simp: sc_relation_def obj_at_simps is_sc_obj opt_map_red opt_pred_def)
-                apply clarsimp
-                apply (frule (2) state_relation_sc_relation)
-                apply (drule state_relation_sc_replies_relation)
                 apply (fastforce simp: sc_relation_def obj_at_simps is_sc_obj opt_map_red
                                  elim: sc_replies_relation_prevs_list)
                apply (clarsimp simp: objBits_simps)
@@ -2168,7 +2169,7 @@ lemma handleYield_corres:
            apply (fastforce intro: cur_sc_tcb_sc_at_cur_sc)
           apply simp
          apply (wpsimp wp: get_refills_wp)
-         apply (clarsimp simp: obj_at_def is_sc_obj elim!: opt_mapE)
+         apply (clarsimp simp: obj_at_def is_sc_obj)
         apply (wpsimp simp: get_refills_def split: Structures_A.kernel_object.splits)
        apply wpsimp+
    apply (frule invs_valid_objs)
