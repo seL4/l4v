@@ -438,8 +438,7 @@ lemma not_env_steps_first_interference:
   apply (clarsimp simp: not_env_steps_first_def)
   done
 
-lemmas not_env_steps_first_simple
-    = no_trace_all[THEN not_env_steps_first_no_trace]
+lemmas not_env_steps_first_simple = no_trace_terminal[THEN not_env_steps_first_no_trace]
 
 lemma not_env_steps_first_repeat_n:
   "not_env_steps_first f \<Longrightarrow> not_env_steps_first (repeat_n n f)"
@@ -752,8 +751,6 @@ lemma shuttle_gets_env_step[simplified K_bind_def]:
                    put_trace_elem_def bind_def get_def return_def gets_def put_def)
   apply (clarsimp simp: rely_cond_def reflpD)
   done
-
-lemmas prefix_closed_interference[simp] = interference_twp[THEN validI_prefix_closed]
 
 lemma env_step_twp[wp]:
   "\<lbrace>\<lambda>s0 s. (\<forall>s'. R s0 s' \<longrightarrow> Q () s' s')\<rbrace>,\<lbrace>R\<rbrace> env_step \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"

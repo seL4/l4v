@@ -147,7 +147,7 @@ theorem plus2_parallel:
     apply (strengthen exI[where x="f(1 := x, 2 := y)" for f x y])
     apply simp
    apply clarsimp
-  apply (intro parallel_prefix_closed prefix_closed_plus2)
+  apply (intro prefix_closed_parallel prefix_closed_plus2)
   done
 
 section \<open>Generalising\<close>
@@ -202,7 +202,7 @@ lemma fold_parallel_par_tr_fin_principle[where xs="rev xs" for xs, simplified]:
 lemma fold_parallel_prefix_closed[where xs="rev xs" for xs, simplified]:
   "\<forall>x \<in> insert x (set xs). prefix_closed x
     \<Longrightarrow> prefix_closed (fold parallel (rev xs) x)"
-  by (induct xs, simp_all add: parallel_prefix_closed)
+  by (induct xs, simp_all add: prefix_closed_parallel)
 
 lemma bipred_disj_top_eq:
   "(Rel or (\<lambda>_ _. True)) = (\<lambda>_ _. True)"
