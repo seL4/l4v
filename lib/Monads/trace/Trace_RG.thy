@@ -415,7 +415,7 @@ lemma rg_validI:
   and compat: "R \<le> Rf" "R \<le> Rg" "Gf \<le> G" "Gg \<le> G" "Gf \<le> Rg" "Gg \<le> Rf"
   shows "\<lbrace>Pf and Pg\<rbrace>,\<lbrace>R\<rbrace> parallel f g \<lbrace>G\<rbrace>,\<lbrace>\<lambda>rv. Qf rv and Qg rv\<rbrace>"
   apply (clarsimp simp: validI_def rely_def pred_conj_def
-                        parallel_prefix_closed validI[THEN validI_prefix_closed])
+                        prefix_closed_parallel validI[THEN validI_prefix_closed])
   apply (drule(3) parallel_rely_induct0[OF _ _ _ validI order_refl order_refl compat])
   apply clarsimp
   apply (drule(2) validI[THEN validI_rvD])+
