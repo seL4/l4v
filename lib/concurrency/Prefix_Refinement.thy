@@ -543,7 +543,7 @@ lemma is_matching_fragment_validI_disj:
   apply (erule(2) validI_triv_refinement)
   done
 
-lemma rely_prefix_closed:
+lemma prefix_closed_rely:
   "prefix_closed f \<Longrightarrow> prefix_closed (rely f R s0)"
   apply (subst prefix_closed_def, clarsimp simp: rely_def rely_cond_Cons_eq)
   apply (erule(1) prefix_closedD)
@@ -593,7 +593,7 @@ theorem prefix_refinement_parallel:
   apply (subst is_matching_fragment_def, clarsimp)
   apply (frule(1) is_matching_fragment_validI_disj[where g=a and G=Ga], blast)
   apply (frule(1) is_matching_fragment_validI_disj[where g=c and G=Gc], blast)
-  apply (intro conjI parallel_prefix_closed rely_prefix_closed rely_self_closed,
+  apply (intro conjI prefix_closed_parallel prefix_closed_rely rely_self_closed,
     simp_all add: is_matching_fragment_prefix_closed)
      apply (rule self_closed_parallel_fragment,
         (assumption | erule par_tr_fin_principle_triv_refinement[rotated])+)
@@ -772,7 +772,7 @@ lemma env_closed_mbind:
   apply (fastforce elim: image_eqI[rotated])
   done
 
-lemma mbind_prefix_closed:
+lemma prefix_closed_mbind:
   "prefix_closed f
     \<Longrightarrow> \<forall>tr x s' s. (tr, Result (x, s')) \<in> f s \<longrightarrow> prefix_closed (g (last_st_tr tr s0) x)
    \<Longrightarrow> prefix_closed (mbind f g s0)"
@@ -800,7 +800,7 @@ lemma is_matching_fragment_mbind:
         (mbind f_a f_b s0)"
   apply (subst is_matching_fragment_def, clarsimp)
   apply (strengthen env_closed_mbind[where ctr''=ctr', mk_strg I E]
-                    mbind_prefix_closed
+                    prefix_closed_mbind
                     self_closed_mbind[where ctr'="ctr'", mk_strg I E])
   apply (simp add: conj_comms if_bool_eq_conj mres_def split del: if_split)
   apply (intro conjI allI impI; clarsimp?;
@@ -1346,10 +1346,10 @@ lemma prefix_refinement_modify:
 
 lemmas pfx_refn_modifyT = prefix_refinement_modify[where P="\<top>" and Q="\<top>"]
 
-lemmas prefix_refinement_get_pre
-    = prefix_refinement_bind[OF prefix_refinement_get _
-        valid_validI_wp[OF _ get_sp] valid_validI_wp[OF _ get_sp],
-    simplified pred_conj_def no_trace_all, simplified]
+lemmas prefix_refinement_get_pre =
+  prefix_refinement_bind[OF prefix_refinement_get _ valid_validI_wp[OF _ get_sp]
+                            valid_validI_wp[OF _ get_sp],
+                         simplified pred_conj_def, simplified]
 
 lemma prefix_refinement_gets:
   "\<forall>s t. iosr s t \<and> P s \<and> Q t \<longrightarrow> rvr (f s) (f' t)
@@ -1477,7 +1477,7 @@ lemma is_matching_fragment_add_rely:
     \<Longrightarrow> AR' \<le> AR
     \<Longrightarrow> is_matching_fragment sr osr r ctr cres s0 AR' s (rely f AR' s0)"
   apply (frule is_matching_fragment_Nil)
-  apply (clarsimp simp: is_matching_fragment_def rely_prefix_closed
+  apply (clarsimp simp: is_matching_fragment_def prefix_closed_rely
                         rely_self_closed)
   apply (intro conjI)
     apply (erule rely_env_closed)

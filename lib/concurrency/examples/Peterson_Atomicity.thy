@@ -813,7 +813,7 @@ theorem peterson_proc_system_refinement:
 
 lemma peterson_proc_system_prefix_closed[simp]:
   "prefix_closed (peterson_proc_system)"
-  by (auto intro!: prefix_closed_bind parallel_prefix_closed
+  by (auto intro!: prefix_closed_bind prefix_closed_parallel
              simp: cs_closed peterson_proc_system_def)
 
 theorem peterson_proc_system_mutual_excl:
