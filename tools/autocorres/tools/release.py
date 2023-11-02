@@ -200,9 +200,10 @@ with TempDir(cleanup=(not args.no_cleanup)) as base_dir:
         shutil.copyfile(f_src, f_dest)
 
     # Copy various other files.
-    shutil.copyfile(
-        os.path.join(args.repository, 'lib', 'Word_Lib', 'ROOT'),
-        os.path.join(target_dir, 'lib', 'Word_Lib', 'ROOT'))
+    for session in ['Basics', 'Eisbach_Tools', 'ML_Utils', 'Monads', 'Word_Lib']:
+        shutil.copyfile(
+            os.path.join(args.repository, 'lib', session, 'ROOT'),
+            os.path.join(target_dir, 'lib', session, 'ROOT'))
     shutil.copyfile(
         os.path.join(release_files_dir, "ROOT.release"),
         os.path.join(target_dir, "autocorres", "ROOT"))
@@ -222,36 +223,10 @@ with TempDir(cleanup=(not args.no_cleanup)) as base_dir:
         os.path.join(args.repository, "LICENSES"),
         os.path.join(target_dir, "LICENSES"))
 
-    # Extract dependent sessions in lib. FIXME: rather kludgy
-    print('Extracting sessions from lib/ROOT...')
-
     # Set up ROOT for the tests dir, for the thydeps tool
     subprocess.check_call(
         ['make', 'tests/ROOT'],
         cwd=os.path.join(args.repository, 'tools', 'autocorres'))
-
-    lib_sessions = ['Lib', 'CLib']
-    lib_ROOT = os.path.join(args.repository, 'lib', 'ROOT')
-    with open(lib_ROOT, 'r') as lib_root:
-        data = lib_root.read()
-        # Split out session specs. Assume ROOT file has standard indentation.
-        chunks = data.split('\nsession ')
-        # This will have the license header, etc.
-        header = chunks[0]
-        # Remaining sections. Try to remove comments
-        sessions = ['session ' + re.sub(r'\(\*.*?\*\)', '', x, flags=re.DOTALL)
-                    for x in chunks[1:]]
-
-        new_root = header
-        wanted_specs = {}
-        for wanted in lib_sessions:
-            spec = [spec for spec in sessions if spec.startswith('session %s ' % wanted)]
-            if len(spec) != 1:
-                print('error: %s session not found in %r' % (wanted, lib_ROOT))
-            new_root += '\n' + spec[0]
-
-        with open(os.path.join(target_dir, 'lib', 'ROOT'), 'w') as root_f:
-            root_f.write(new_root)
 
     # For the examples, generate ".thy" files where appropriate, and also
     # generate an "All.thy" which contains all the examples.

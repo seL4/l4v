@@ -33,6 +33,7 @@ exception_rewrite.ML:
     Proof frameworks and code to rewrite monadic specifications to
     avoid using exceptions where possible.
 
+NatBitwise.thy:
 WordAbstract.thy:
 word_abstract.ML:
     Word abstraction framework and theorems.
