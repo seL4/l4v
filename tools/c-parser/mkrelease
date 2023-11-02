@@ -110,25 +110,15 @@ done
 
 # other misc files
 cp -v lib/Word_Lib/ROOT "$outputdir/src/lib/Word_Lib/"
+cp -v lib/Basics/ROOT "$outputdir/src/lib/Basics/"
+cp -v lib/ML_Utils/ROOT "$outputdir/src/lib/ML_Utils/"
 
 echo "Creating ROOTS file"
 cat >"$outputdir/src/ROOTS" <<EOF
 lib/Word_Lib
-lib
+lib/Basics
+lib/ML_Utils
 c-parser
-EOF
-
-echo "Adding ROOT file for Lib session"
-cat > "$outputdir/src/lib/ROOT" <<EOF
-(*
- * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
- *
- * SPDX-License-Identifier: BSD-2-Clause
- *)
-
-session Lib = HOL +
-  directories "ml-helpers"
-  theories "ML_Utils"
 EOF
 
 echo "Rearranging directories"
