@@ -1,3 +1,11 @@
+AutoCorres 1.10 (3 Nov 2023)
+--------------
+
+	* Isabelle2023 edition of both AutoCorres and the C parser.
+
+	* Restructured and cleaned up monad libraries. Removed dependencies
+          on unrelated l4v libraries.
+
 AutoCorres 1.9 (31 October 2022)
 --------------
 
