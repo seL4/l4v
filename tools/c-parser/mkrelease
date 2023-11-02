@@ -32,7 +32,8 @@ die ()
 if [ $# -ne 1 ]
 then
     echo "Usage:" >&2
-    die "  $0 tag" >&2
+    echo "  $0 <c-parser-tag-version>"
+    die "e.g.  $0 1.20" >&2
 fi
 
 # Get the directory that this script is running in.
