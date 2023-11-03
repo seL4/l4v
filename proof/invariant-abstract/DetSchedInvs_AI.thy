@@ -755,6 +755,7 @@ record sc_refill_cfg =
   scrc_refill_max :: nat
   scrc_period :: ticks
   scrc_budget :: ticks
+  scrc_sporadic :: bool
 
 abbreviation
   "scrc_refill_hd scrc \<equiv> hd (scrc_refills scrc)"
@@ -763,7 +764,8 @@ definition sc_refill_cfg_of :: "sched_context \<Rightarrow> sc_refill_cfg" where
   "sc_refill_cfg_of sc = \<lparr> scrc_refills = sc_refills sc,
                            scrc_refill_max = sc_refill_max sc,
                            scrc_period = sc_period sc,
-                           scrc_budget = sc_budget sc\<rparr>"
+                           scrc_budget = sc_budget sc,
+                           scrc_sporadic = sc_sporadic sc\<rparr>"
 
 definition sc_refill_cfgs_of_scs :: "('obj_ref \<rightharpoonup> sched_context) \<Rightarrow> 'obj_ref \<rightharpoonup> sc_refill_cfg" where
   "sc_refill_cfgs_of_scs \<equiv> map_project sc_refill_cfg_of"
@@ -781,6 +783,7 @@ lemma sc_refill_cfg_of_simps[iff]:
   "scrc_period (sc_refill_cfg_of sc) = sc_period sc"
   "scrc_refill_hd (sc_refill_cfg_of sc) = refill_hd sc"
   "scrc_budget (sc_refill_cfg_of sc) = sc_budget sc"
+  "scrc_sporadic (sc_refill_cfg_of sc) = sc_sporadic sc"
   by (auto simp: sc_refill_cfg_of_def)
 
 \<comment> \<open>These might not be necessary, since they're already solved by auto\<close>
@@ -792,7 +795,6 @@ lemma sc_refill_cfg_of_updates[iff]:
   "\<And>f. sc_refill_cfg_of (sc_refills_update f sc) = scrc_refills_update f (sc_refill_cfg_of sc)"
   "\<And>f. sc_refill_cfg_of (sc_refill_max_update f sc) = scrc_refill_max_update f (sc_refill_cfg_of sc)"
   "\<And>f. sc_refill_cfg_of (sc_badge_update f sc) = sc_refill_cfg_of sc"
-  "\<And>f. sc_refill_cfg_of (sc_sporadic_update f sc) = sc_refill_cfg_of sc"
   "\<And>f. sc_refill_cfg_of (sc_yield_from_update f sc) = sc_refill_cfg_of sc"
   "\<And>f. sc_refill_cfg_of (sc_replies_update f sc) = sc_refill_cfg_of sc"
   by auto
@@ -2343,7 +2345,9 @@ definition active_scs_valid_2 :: "(obj_ref \<rightharpoonup> sc_refill_cfg) \<Ri
           \<longrightarrow> pred_map cfg_valid_refills sc_refill_cfgs scp
               \<and> pred_map cfg_bounded_release_time sc_refill_cfgs scp)
    \<and> (\<forall>scp. pred_map (\<lambda>cfg. \<not> active_scrc cfg) sc_refill_cfgs scp
-            \<longrightarrow> pred_map (\<lambda>cfg. scrc_budget cfg = 0) sc_refill_cfgs scp)"
+            \<longrightarrow> pred_map (\<lambda>cfg. scrc_budget cfg = 0) sc_refill_cfgs scp)
+   \<and> (\<forall>scp. pred_map (\<lambda>cfg. scrc_sporadic cfg) sc_refill_cfgs scp
+            \<longrightarrow> pred_map (\<lambda>cfg. active_scrc cfg) sc_refill_cfgs scp)"
 
 abbreviation active_scs_valid :: "'z state \<Rightarrow> bool" where
   "active_scs_valid s \<equiv> active_scs_valid_2 (sc_refill_cfgs_of s)"
@@ -2351,14 +2355,15 @@ abbreviation active_scs_valid :: "'z state \<Rightarrow> bool" where
 lemmas active_scs_valid_def = active_scs_valid_2_def
 
 lemma active_scs_valid_lift_pre_conj:
-  assumes a: "\<And>scp. \<lbrace>\<lambda>s. \<not> pred_map active_scrc (sc_refill_cfgs_of s) scp \<and> R s\<rbrace>
-                     f \<lbrace>\<lambda>rv s. \<not> pred_map active_scrc (sc_refill_cfgs_of s) scp\<rbrace>"
+  assumes a:
+    "\<And>scp P Q. \<lbrace>\<lambda>s. Q (pred_map (\<lambda>cfg. P (active_scrc cfg)) (sc_refill_cfgs_of s) scp) \<and> R s\<rbrace>
+                f \<lbrace>\<lambda>rv s. Q (pred_map (\<lambda>cfg. P (active_scrc cfg)) (sc_refill_cfgs_of s) scp)\<rbrace>"
   assumes b: "\<And>scp. \<lbrace>\<lambda>s. valid_refills scp s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. valid_refills scp s\<rbrace>"
   assumes c: "\<And>scp. \<lbrace>\<lambda>s. bounded_release_time scp s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. bounded_release_time scp s\<rbrace>"
-  assumes d: "\<And>scp. \<lbrace>\<lambda>s. \<not> pred_map (\<lambda>cfg. \<not> active_scrc cfg) (sc_refill_cfgs_of s) scp \<and> R s\<rbrace>
-                     f \<lbrace>\<lambda>rv s. \<not> pred_map (\<lambda>cfg. \<not> active_scrc cfg) (sc_refill_cfgs_of s) scp\<rbrace>"
-  assumes e: "\<And>scp. \<lbrace>\<lambda>s. pred_map (\<lambda>cfg. scrc_budget cfg = 0) (sc_refill_cfgs_of s) scp \<and> R s\<rbrace>
+  assumes d: "\<And>scp. \<lbrace>\<lambda>s. pred_map (\<lambda>cfg. scrc_budget cfg = 0) (sc_refill_cfgs_of s) scp \<and> R s\<rbrace>
                      f \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. scrc_budget cfg = 0) (sc_refill_cfgs_of s) scp\<rbrace>"
+  assumes e: "\<And>scp. \<lbrace>\<lambda>s. \<not> pred_map (\<lambda>cfg. scrc_sporadic cfg) (sc_refill_cfgs_of s) scp \<and> R s\<rbrace>
+                     f \<lbrace>\<lambda>_ s. \<not> pred_map (\<lambda>cfg. scrc_sporadic cfg) (sc_refill_cfgs_of s) scp\<rbrace>"
     shows "\<lbrace>\<lambda>s. active_scs_valid s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. active_scs_valid\<rbrace>"
   apply (simp add: active_scs_valid_def)
   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' a b c d e)
@@ -3552,12 +3557,14 @@ lemma active_reply_scs_lift_pre_conj:
 lemma valid_sched_lift_pre_conj:
   assumes "\<And>N P t. \<lbrace>\<lambda>s. N (pred_map P (tcb_sts_of s) t) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. N (pred_map P (tcb_sts_of s) t)\<rbrace>"
   assumes "\<And>P t. \<lbrace>\<lambda>s. P (active_sc_tcb_at t s) \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. P (active_sc_tcb_at t s)\<rbrace>"
-  assumes "\<And>t. \<lbrace>\<lambda>s. \<not> pred_map active_scrc (sc_refill_cfgs_of s) t \<and> R s\<rbrace>
-               f \<lbrace>\<lambda>rv s. \<not> pred_map active_scrc (sc_refill_cfgs_of s) t\<rbrace>"
+  assumes "\<And>P Q t. \<lbrace>\<lambda>s. Q (pred_map (\<lambda>cfg. P (active_scrc cfg)) (sc_refill_cfgs_of s) t) \<and> R s\<rbrace>
+                    f \<lbrace>\<lambda>rv s. Q (pred_map (\<lambda>cfg. P (active_scrc cfg)) (sc_refill_cfgs_of s) t)\<rbrace>"
   assumes "\<And>scp. \<lbrace>\<lambda>s. \<not> pred_map (\<lambda>cfg. \<not> active_scrc cfg) (sc_refill_cfgs_of s) scp \<and> R s\<rbrace>
                   f \<lbrace>\<lambda>_ s. \<not> pred_map (\<lambda>cfg. \<not> active_scrc cfg) (sc_refill_cfgs_of s) scp\<rbrace>"
   assumes "\<And>scp. \<lbrace>\<lambda>s. pred_map (\<lambda>cfg. scrc_budget cfg = 0) (sc_refill_cfgs_of s) scp \<and> R s\<rbrace>
                   f \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. scrc_budget cfg = 0) (sc_refill_cfgs_of s) scp\<rbrace>"
+  assumes "\<And>scp. \<lbrace>\<lambda>s. \<not> pred_map (\<lambda>cfg. scrc_sporadic cfg) (sc_refill_cfgs_of s) scp \<and> R s\<rbrace>
+                  f \<lbrace>\<lambda>_ s. \<not> pred_map (\<lambda>cfg. scrc_sporadic cfg) (sc_refill_cfgs_of s) scp\<rbrace>"
   assumes "\<And>t. \<lbrace>\<lambda>s. valid_refills t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. valid_refills t s\<rbrace>"
   assumes "\<And>scp. \<lbrace>\<lambda>s. bounded_release_time scp s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. bounded_release_time scp s\<rbrace>"
   assumes "\<And>t. \<lbrace>\<lambda>s. budget_ready t s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. budget_ready t s\<rbrace>"

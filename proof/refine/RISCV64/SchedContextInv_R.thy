@@ -1243,7 +1243,6 @@ lemma invokeSchedControlConfigureFlags_corres:
           (invs' and sch_act_simple and valid_sc_ctrl_inv' sc_inv' and ct_active')
           (invoke_sched_control_configure_flags sc_inv)
           (invokeSchedControlConfigureFlags sc_inv')"
-  (is "_ \<Longrightarrow> corres _ ?abs ?conc _ _")
   apply (cases sc_inv)
   apply (rename_tac sc_ptr budget period mrefills badge flag)
   apply (simp add: invoke_sched_control_configure_flags_def invokeSchedControlConfigureFlags_def)
@@ -1252,6 +1251,7 @@ lemma invokeSchedControlConfigureFlags_corres:
   apply (rule_tac Q="\<lambda>s. sc_at sc_ptr s" in corres_cross_add_abs_guard)
    apply (fastforce intro: valid_sched_context_size_objsI
                      simp: sc_at_pred_n_def obj_at_def is_sc_obj_def)
+  apply (simp add: pred_conj_comm)
   apply (rule_tac Q="\<lambda>s'. sc_at' sc_ptr s'" in corres_cross_add_guard)
    apply (fastforce intro: sc_at_cross)
   apply (rule_tac Q="\<lambda>s. sc_at (cur_sc s) s" in corres_cross_add_abs_guard)
@@ -1259,75 +1259,12 @@ lemma invokeSchedControlConfigureFlags_corres:
   apply (rule_tac Q="\<lambda>s'. active_sc_at' (ksCurSc s') s'" in corres_cross_add_guard)
    apply (fastforce intro: active_sc_at'_cross simp: state_relation_def)
 
-  apply (rule_tac Q="\<lambda>_ s. ?abs s \<and> sc_at sc_ptr s \<and> sc_at (cur_sc s) s"
-              and Q'="\<lambda>_  s'. ?conc s' \<and> ex_nonz_cap_to' sc_ptr s' \<and> sc_at' sc_ptr s'
-                              \<and> active_sc_at' (ksCurSc s') s'"
-               in corres_underlying_split)
-
-     apply (find_goal \<open>match conclusion in "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>" for P f Q  \<Rightarrow> -\<close>)
-     apply wps_conj_solves
-      apply (wpsimp wp: update_sc_badge_invs')
-      apply (fastforce dest: ex_nonz_cap_to_not_idle_sc_ptr)
-     apply (wpsimp wp: update_sched_context_wp)
-     apply (clarsimp simp: obj_at_def)
-
-    apply (find_goal \<open>match conclusion in "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>" for P f Q  \<Rightarrow> -\<close>)
-    apply (wps_conj_solves wp: ct_in_state_thread_state_lift' updateSchedContext_active_sc_at')
-     apply (clarsimp simp: updateSchedContext_def)
-     apply (wpsimp wp: setSchedContext_invs')
-     apply (fastforce dest!: sc_ko_at_valid_objs_valid_sc')
-
-   apply (corresKsimp corres: updateSchedContext_corres)
-   apply (intro conjI impI allI)
-     apply (rename_tac abs_state conc_state n')
-     apply (frule_tac ptr=sc_ptr and s=abs_state in state_relation_sc_relation; simp?)
-     apply (clarsimp simp: sc_relation_def opt_map_def opt_pred_def is_sc_obj_def obj_at_simps
-                    split: Structures_A.kernel_object.splits)
-    apply (rename_tac abs_state conc_state)
-    apply (frule_tac s=abs_state in state_relation_sc_replies_relation)
-    apply (clarsimp simp: sc_replies_relation2_def sc_replies_relation_rewrite)
-    apply (fastforce simp: opt_map_def opt_pred_def is_sc_obj_def obj_at_simps
-                    split: option.splits Structures_A.kernel_object.splits)
-   apply (clarsimp simp: obj_at_simps)
-
-  apply (clarsimp split del: if_split)
-  apply (rule_tac Q="\<lambda>_ s. sc_at sc_ptr s \<and> ?abs s \<and> sc_at (cur_sc s) s"
-              and Q'="\<lambda>_  s'. ?conc s' \<and> sc_at' sc_ptr s' \<and> active_sc_at' (ksCurSc s') s'
-                              \<and> ex_nonz_cap_to' sc_ptr s'"
-               in corres_underlying_split)
-
-     apply (find_goal \<open>match conclusion in "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>" for P f Q  \<Rightarrow> -\<close>)
-     apply wps_conj_solves
-      apply (wpsimp wp: update_sc_sporadic_invs')
-      apply (fastforce dest: ex_nonz_cap_to_not_idle_sc_ptr)
-     apply (wpsimp wp: update_sched_context_wp)
-     apply (clarsimp simp: obj_at_def)
-
-    apply (find_goal \<open>match conclusion in "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>" for P f Q  \<Rightarrow> -\<close>)
-    apply (wps_conj_solves wp: ct_in_state_thread_state_lift' updateSchedContext_active_sc_at')
-     apply (clarsimp simp: updateSchedContext_def)
-     apply (wpsimp wp: setSchedContext_invs')
-     apply (fastforce dest!: sc_ko_at_valid_objs_valid_sc')
-
-   apply (corresKsimp corres: updateSchedContext_corres)
-   apply (intro conjI impI allI)
-     apply (rename_tac abs_state conc_state n')
-     apply (frule_tac ptr=sc_ptr and s=abs_state in state_relation_sc_relation; simp?)
-     apply (clarsimp simp: sc_relation_def opt_map_def opt_pred_def is_sc_obj_def obj_at_simps
-                    split: Structures_A.kernel_object.splits)
-    apply (rename_tac abs_state conc_state)
-    apply (frule_tac s=abs_state in state_relation_sc_replies_relation)
-    apply (clarsimp simp: sc_replies_relation2_def sc_replies_relation_rewrite)
-    subgoal by (fastforce simp: opt_map_def opt_pred_def is_sc_obj_def obj_at_simps
-                         split: option.splits Structures_A.kernel_object.splits)
-   apply (clarsimp simp: obj_at_simps)
-
   apply (rule_tac F="budget \<le> MAX_PERIOD \<and> budget \<ge> MIN_BUDGET \<and> period \<le> MAX_PERIOD
                      \<and> budget \<ge> MIN_BUDGET \<and> MIN_REFILLS \<le> mrefills \<and> budget \<le> period"
                in corres_req)
    apply simp
 
-  apply (clarsimp simp: sc_at_sc_obj_at)
+  apply (clarsimp simp: sc_at_sc_obj_at pred_conj_def)
   apply (rule abs_ex_lift_corres)
   apply (rename_tac n)
   apply (rule corres_underlying_split[rotated 2, OF get_sched_context_sp get_sc_sp'])
@@ -1574,38 +1511,49 @@ lemma invokeSchedControlConfigureFlags_corres:
    apply (wpsimp wp: refillNew_invs')
   apply (clarsimp simp: ko_wp_at'_def valid_refills_number'_def)
 
-  apply (clarsimp simp: when_def; intro conjI impI; (solves \<open>clarsimp simp: sc_relation_def\<close>)?)
-  apply (rule corres_symb_exec_l[rotated 2, OF assert_opt_sp]; (solves wpsimp)?)
-
-  apply (rule_tac F="sc_tcb sc = Some tcb_ptr" in corres_req)
-   apply fastforce
-
-  apply (clarsimp simp: sc_relation_def)
-  apply (rule corres_underlying_split[rotated 2, OF gts_sp isRunnable_sp])
-   apply (corresKsimp corres: isRunnable_corres')
-   apply (fastforce simp: sc_relation_def sc_at_pred_n_def obj_at_def
-                  intro!: tcb_at_cross Some_to_the)
-
-  apply (rule corres_guard_imp)
-    apply (rule corres_split[OF schedContextResume_corres])
-      apply (rule corres_split[OF getCurThread_corres])
-        apply (rule corres_if)
-          apply fastforce
-         apply (rule rescheduleRequired_corres)
-        apply (rule corres_if)
-       apply (clarsimp simp: thread_state_relation_def)
-         apply (rule possibleSwitchTo_corres)
-         apply clarsimp
-        apply clarsimp
+  apply (rule stronger_corres_guard_imp)
+    apply (rule corres_split[where r'=dc])
+       apply (rule corres_when)
+        apply (clarsimp simp: sc_relation_def)
+       apply (rule corres_assert_opt_l)
+       apply (rule corres_split[OF isRunnable_corres'])
+          apply (clarsimp simp: sc_relation_def Some_to_the split: if_splits)
+         apply (rule corres_split[OF schedContextResume_corres])
+           apply (rule corres_split[OF getCurThread_corres])
+             apply (rule corres_if)
+               apply (fastforce dest!: Some_to_the simp: sc_relation_def)
+              apply (rule rescheduleRequired_corres)
+             apply (erule corres_when)
+             apply (rule possibleSwitchTo_corres)
+             apply (fastforce simp: sc_relation_def Some_to_the)
+            apply wpsimp
+           apply wpsimp
+          apply ((wpsimp wp: hoare_vcg_imp_lift' sched_context_resume_valid_sched_action
+                 | strengthen valid_objs_valid_tcbs)+)[1]
+         apply (rule_tac Q="\<lambda>_. invs'" in hoare_post_imp, fastforce)
+         apply (rule schedContextResume_invs')
+        apply (wpsimp wp: gts_wp)
        apply wpsimp
-      apply wpsimp
-     apply ((wpsimp wp: hoare_vcg_imp_lift' sched_context_resume_valid_sched_action
-            | strengthen valid_objs_valid_tcbs)+)[1]
-    apply (rule_tac Q="\<lambda>_. invs'" in hoare_post_imp, fastforce)
-    apply (wpsimp wp: schedContextResume_invs')
+      apply (rule corres_split[OF updateSchedContext_corres])
+           apply (clarsimp simp: opt_map_red opt_pred_def obj_at_simps is_sc_obj)
+           apply (drule (1) pspace_relation_absD[OF _ state_relation_pspace_relation])
+           apply (clarsimp simp: sc_relation_def)
+          apply (fastforce dest: state_relation_sc_replies_relation sc_replies_relation_prevs_list
+                           simp: opt_map_def obj_at_simps is_sc_obj_def
+                          split: Structures_A.kernel_object.splits)
+         apply (clarsimp simp: objBits_simps)
+        apply (rule updateSchedContext_corres)
+          apply (clarsimp simp: opt_map_red opt_pred_def obj_at_simps is_sc_obj)
+          apply (drule (1) pspace_relation_absD[OF _ state_relation_pspace_relation])
+          apply (clarsimp simp: sc_relation_def)
+         apply (fastforce dest: state_relation_sc_replies_relation sc_replies_relation_prevs_list
+                          simp: opt_map_def obj_at_simps is_sc_obj_def
+                         split: Structures_A.kernel_object.splits)
+        apply (clarsimp simp: objBits_simps)
+       apply wpsimp+
    apply (fastforce simp: sc_at_pred_n_def obj_at_def schact_is_rct_def
                    intro: valid_sched_action_weak_valid_sched_action)
-  apply fastforce
+  apply (fastforce intro: sc_at_cross)
   done
 
 end

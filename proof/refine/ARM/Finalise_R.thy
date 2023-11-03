@@ -3442,9 +3442,9 @@ crunches schedContextCompleteYieldTo, unbindNotification, unbindMaybeNotificatio
 lemma schedContextZeroRefillMax_unlive[wp]:
   "schedContextZeroRefillMax scPtr \<lbrace>\<lambda>s. P (ko_wp_at' (Not \<circ> live') p s)\<rbrace>"
   unfolding schedContextZeroRefillMax_def
-  apply (wpsimp wp: set_sc'.set_wp simp: updateSchedContext_def)
-  apply (clarsimp simp: ko_wp_at'_def obj_at'_def projectKOs live_sc'_def
-                        ps_clear_upd objBits_simps)
+  apply (wpsimp wp: set_sc'.set_wp simp: updateSchedContext_def simp_del: fun_upd_apply)
+  apply (clarsimp simp: ko_wp_at'_def obj_at'_def live_sc'_def
+                        ps_clear_upd objBits_simps scBits_simps projectKOs)
   done
 
 crunches setMessageInfo, setMRs
@@ -4170,13 +4170,16 @@ lemma unbindFromSC_invs'[wp]:
 
 lemma schedContextZeroRefillMax_invs'[wp]:
   "schedContextZeroRefillMax scPtr \<lbrace>invs'\<rbrace>"
-  apply (clarsimp simp: schedContextZeroRefillMax_def)
-  apply (wpsimp wp: setSchedContext_invs' simp: updateSchedContext_def)
-  apply (frule (1) invs'_ko_at_valid_sched_context')
-  apply (fastforce intro!: if_live_then_nonz_capE'
-                     simp: ko_wp_at'_def obj_at'_def projectKOs live_sc'_def
-                           valid_sched_context'_def valid_sched_context_size'_def
-                           objBits_simps')
+  apply (clarsimp simp: schedContextZeroRefillMax_def updateSchedContext_def)
+  apply (rule hoare_seq_ext_skip)
+  apply (wpsimp wp: setSchedContext_invs' hoare_vcg_all_lift)
+   apply (fastforce dest: invs'_ko_at_valid_sched_context' intro!: if_live_then_nonz_capE'
+                    simp: ko_wp_at'_def obj_at'_def live_sc'_def projectKOs
+                          valid_sched_context'_def valid_sched_context_size'_def objBits_simps')
+  apply (wpsimp wp: setSchedContext_invs' hoare_vcg_all_lift hoare_vcg_imp_lift' )
+  apply (fastforce dest: invs'_ko_at_valid_sched_context' intro!: if_live_then_nonz_capE'
+                     simp: ko_wp_at'_def obj_at'_def live_sc'_def projectKOs
+                           valid_sched_context'_def valid_sched_context_size'_def objBits_simps')
   done
 
 lemma schedContextUnbindYieldFrom_invs'[wp]:
@@ -4855,24 +4858,34 @@ lemma schedContextUnbindYieldFrom_corres:
 
 lemma schedContextZeroRefillMax_corres:
   "corres dc (\<lambda>s. sc_at scPtr s) (sc_at' scPtr)
-          (sched_context_zero_refill_max scPtr) (schedContextZeroRefillMax scPtr)"
-  apply (clarsimp simp: sched_context_zero_refill_max_def schedContextZeroRefillMax_def
-                        set_refills_def sc_at_sc_obj_at updateSchedContext_def)
-  apply (rule corres_underlying_lift_ex1')
+     (sched_context_zero_refill_max scPtr) (schedContextZeroRefillMax scPtr)"
+  apply (clarsimp simp: sched_context_zero_refill_max_def schedContextZeroRefillMax_def)
   apply (rule corres_guard_imp)
-    apply (subst bind_dummy_ret_val, subst update_sched_context_decompose[symmetric])+
-    apply (rule_tac n1=n in monadic_rewrite_corres_l[OF update_sched_context_rewrite])
-    apply (rule corres_split[OF get_sc_corres])
-      apply (rule_tac P="ko_at (kernel_object.SchedContext sc n) scPtr"
-                  and P'="ko_at' rv' scPtr"
-             in stronger_corres_guard_imp)
-        apply (rule_tac sc=sc and sc'=rv' in setSchedContext_update_corres)
-         apply (clarsimp simp: sc_relation_def refills_map_def objBits_def objBitsKO_def)+
-       apply (clarsimp simp: obj_at_def)
-      apply (clarsimp simp: state_relation_def obj_at_def obj_at'_def projectKOs)
-      apply (erule (2) sc_replies_relation_prevs_list)
+
+    \<comment> \<open>collect the update of the sc_refills, sc_refill_max, and the sc_budget fields\<close>
+    apply (subst bind_assoc[symmetric])
+    apply (subst bind_assoc[symmetric])
+    apply (subst bind_dummy_ret_val, subst update_sched_context_decompose[symmetric])
+    apply (subst bind_dummy_ret_val, subst update_sched_context_decompose[symmetric])
+
+    apply (rule corres_split)
+       apply (rule updateSchedContext_corres)
+         apply (clarsimp simp: opt_map_red opt_pred_def obj_at_simps is_sc_obj)
+         apply (drule (1) pspace_relation_absD[OF _ state_relation_pspace_relation])
+         apply (clarsimp simp: sc_relation_def refills_map_def)
+        apply (fastforce dest: state_relation_sc_replies_relation sc_replies_relation_prevs_list
+                         simp: sc_relation_def opt_map_def obj_at_simps is_sc_obj_def
+                        split: Structures_A.kernel_object.splits)
+       apply (clarsimp simp: objBits_simps)
+      apply (rule updateSchedContext_corres)
+        apply (clarsimp simp: opt_map_red opt_pred_def obj_at_simps is_sc_obj)
+        apply (drule (1) pspace_relation_absD[OF _ state_relation_pspace_relation])
+        apply (clarsimp simp: sc_relation_def)
+       apply (fastforce dest: state_relation_sc_replies_relation sc_replies_relation_prevs_list
+                        simp: sc_relation_def opt_map_def obj_at_simps is_sc_obj_def
+                       split: Structures_A.kernel_object.splits)
+      apply (clarsimp simp: objBits_simps)
      apply (wpsimp wp: get_sched_context_wp getSchedContext_wp)+
-   apply (clarsimp simp: obj_at_def is_sc_obj_def)+
   done
 
 lemma can_fast_finalise_finalise_cap:

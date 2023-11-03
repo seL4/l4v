@@ -1149,9 +1149,9 @@ crunch valid_pdpt_objs[wp]: end_timeslice "valid_pdpt_objs::det_state \<Rightarr
   (wp: crunch_wps hoare_drop_imps hoare_vcg_if_lift2)
 
 crunches check_budget_restart, invoke_sched_control_configure_flags
-  for valid_pdpt_objs[wp]: "valid_pdpt_objs::det_state \<Rightarrow> _"
+  for valid_pdpt_objs[wp]: "valid_pdpt_objs :: det_state \<Rightarrow> _"
   (wp: hoare_drop_imps hoare_vcg_if_lift2 whileLoop_valid_inv hoare_vcg_all_lift
-  simp: Let_def ignore: tcb_release_remove)
+   simp: Let_def crunch_simps ignore: tcb_release_remove)
 
 lemma perform_invocation_valid_pdpt[wp]:
   "\<lbrace>invs and ct_active and valid_invocation i and valid_pdpt_objs and
