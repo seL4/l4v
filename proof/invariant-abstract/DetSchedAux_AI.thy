@@ -258,10 +258,21 @@ lemma retype_region_active_sc_props[wp]:
   apply (clarsimp simp: active_sc_def default_sched_context_def)
   done
 
-lemma retype_region_inactive_implies_zero_budget[wp]:
+lemma retype_region_implies_zero_budget[wp]:
   "retype_region ptr numObjects o_bits type dev
-   \<lbrace>\<lambda>s. pred_map inactive_scrc (sc_refill_cfgs_of s) p
+   \<lbrace>\<lambda>s. pred_map Q (sc_refill_cfgs_of s) p
         \<longrightarrow> pred_map (\<lambda>cfg. scrc_budget cfg = 0) (sc_refill_cfgs_of s) p\<rbrace>"
+  unfolding retype_region_def
+  apply wp
+  apply (clarsimp simp del: fun_upd_apply simp add: vs_all_heap_simps foldr_fun_upd_value)
+  apply (case_tac type; simp add: default_object_def)
+  apply (clarsimp simp: active_sc_def default_sched_context_def)
+  done
+
+lemma retype_region_sporadic_implies[wp]:
+  "retype_region ptr numObjects o_bits type dev
+   \<lbrace>\<lambda>s. pred_map (\<lambda>cfg. scrc_sporadic cfg) (sc_refill_cfgs_of s) p
+        \<longrightarrow> pred_map Q (sc_refill_cfgs_of s) p\<rbrace>"
   unfolding retype_region_def
   apply wp
   apply (clarsimp simp del: fun_upd_apply simp add: vs_all_heap_simps foldr_fun_upd_value)
@@ -282,16 +293,8 @@ lemma retype_region_active_sc_props''[wp]:
 
 lemma delete_objects_pred_map_sc_refill_cfgs_of[wp]:
   "delete_objects base sz
-   \<lbrace>\<lambda>s. pred_map active_scrc (sc_refill_cfgs_of s) p
+   \<lbrace>\<lambda>s. pred_map Q (sc_refill_cfgs_of s) p
         \<longrightarrow> pred_map (P (consumed_time s) (cur_time s) (cur_sc s)) (sc_refill_cfgs_of s) p\<rbrace>"
-  unfolding delete_objects_def2
-  apply wpsimp
-  by (clarsimp simp: detype_def vs_all_heap_simps split: if_splits)
-
-lemma delete_objects_inactive_implies_zero_budget[wp]:
-  "delete_objects base sz
-   \<lbrace>\<lambda>s. pred_map inactive_scrc (sc_refill_cfgs_of s) p
-        \<longrightarrow> pred_map (\<lambda>cfg. scrc_budget cfg = 0) (sc_refill_cfgs_of s) p\<rbrace>"
   unfolding delete_objects_def2
   apply wpsimp
   by (clarsimp simp: detype_def vs_all_heap_simps split: if_splits)
@@ -314,21 +317,11 @@ lemma (in DetSchedAux_AI) delete_objects_pred_map_sc_refill_cfgs_of_cur_sc[wp]:
 
 lemma reset_untyped_cap_pred_map_sc_refill_cfgs_of:
   "reset_untyped_cap slot
-   \<lbrace>\<lambda>s. pred_map active_scrc (sc_refill_cfgs_of s) p
-        \<longrightarrow> pred_map P (sc_refill_cfgs_of s) p\<rbrace>"
+   \<lbrace>\<lambda>s. pred_map Q (sc_refill_cfgs_of s) p \<longrightarrow> pred_map P (sc_refill_cfgs_of s) p\<rbrace>"
   unfolding reset_untyped_cap_def
   by (wpsimp wp: mapME_x_wp_inv preemption_point_inv
                  delete_objects_pred_map_sc_refill_cfgs_of
                  comb: hoare_drop_imp hoare_drop_imp[THEN hoare_vcg_conj_lift])
-
-lemma reset_untyped_cap_inactive_implies_zero_budget:
-  "reset_untyped_cap slot
-   \<lbrace>\<lambda>s. pred_map inactive_scrc (sc_refill_cfgs_of s) p
-        \<longrightarrow> pred_map (\<lambda>cfg. scrc_budget cfg = 0) (sc_refill_cfgs_of s) p\<rbrace>"
-  unfolding reset_untyped_cap_def
-  by (wpsimp wp: mapME_x_wp_inv preemption_point_inv
-                 delete_objects_pred_map_sc_refill_cfgs_of
-           comb: hoare_drop_imp hoare_drop_imp[THEN hoare_vcg_conj_lift])
 
 lemma invoke_untyped_pred_map_sc_refill_cfgs_of:
   "invoke_untyped ui
@@ -337,12 +330,19 @@ lemma invoke_untyped_pred_map_sc_refill_cfgs_of:
   unfolding invoke_untyped_def
   by (wpsimp wp: mapM_x_wp_inv reset_untyped_cap_pred_map_sc_refill_cfgs_of)
 
-lemma invoke_untyped_inactive_implies_zero_budget:
+lemma invoke_untyped_implies_zero_budget:
   "invoke_untyped ui
-   \<lbrace>\<lambda>s. pred_map inactive_scrc (sc_refill_cfgs_of s) p
+   \<lbrace>\<lambda>s. pred_map Q (sc_refill_cfgs_of s) p
         \<longrightarrow> pred_map (\<lambda>cfg. scrc_budget cfg = 0) (sc_refill_cfgs_of s) p\<rbrace>"
   unfolding invoke_untyped_def
-  by (wpsimp wp: mapM_x_wp_inv reset_untyped_cap_inactive_implies_zero_budget)
+  by (wpsimp wp: mapM_x_wp_inv reset_untyped_cap_pred_map_sc_refill_cfgs_of)
+
+lemma invoke_untyped_sporadic_implies:
+  "invoke_untyped ui
+   \<lbrace>\<lambda>s. pred_map (\<lambda>cfg. scrc_sporadic cfg) (sc_refill_cfgs_of s) p
+        \<longrightarrow> pred_map Q (sc_refill_cfgs_of s) p\<rbrace>"
+  unfolding invoke_untyped_def
+  by (wpsimp wp: mapM_x_wp_inv reset_untyped_cap_pred_map_sc_refill_cfgs_of)
 
 lemma cur_time_detype[simp]:
   "cur_time (detype r s) = cur_time s"
@@ -665,11 +665,17 @@ lemma valid_sched_tcb_state_preservation_gen:
     "\<And>P. \<lbrace>\<lambda>s. (\<forall>p. pred_map active_scrc (sc_refill_cfgs_of s) p \<longrightarrow> pred_map P (sc_refill_cfgs_of s) p) \<and> I s\<rbrace>
             f \<lbrace>\<lambda>rv s. \<forall>p. pred_map active_scrc (sc_refill_cfgs_of s) p \<longrightarrow> pred_map P (sc_refill_cfgs_of s) p\<rbrace>"
   assumes sc_refill_cfg3:
-    "\<And>P. \<lbrace>\<lambda>s. (\<forall>p. pred_map (\<lambda>cfg. \<not> active_scrc cfg) (sc_refill_cfgs_of s) p
-                    \<longrightarrow> pred_map (\<lambda>cfg. scrc_budget cfg = 0) (sc_refill_cfgs_of s) p)
-               \<and> I s\<rbrace>
-          f \<lbrace>\<lambda>_ s. \<forall>p. pred_map (\<lambda>cfg. \<not> active_scrc cfg) (sc_refill_cfgs_of s) p
-                       \<longrightarrow> pred_map (\<lambda>cfg. scrc_budget cfg = 0) (sc_refill_cfgs_of s) p\<rbrace>"
+    "\<lbrace>\<lambda>s. (\<forall>p. pred_map (\<lambda>cfg. \<not> active_scrc cfg) (sc_refill_cfgs_of s) p
+               \<longrightarrow> pred_map (\<lambda>cfg. scrc_budget cfg = 0) (sc_refill_cfgs_of s) p)
+          \<and> I s\<rbrace>
+     f \<lbrace>\<lambda>_ s. \<forall>p. pred_map (\<lambda>cfg. \<not> active_scrc cfg) (sc_refill_cfgs_of s) p
+                  \<longrightarrow> pred_map (\<lambda>cfg. scrc_budget cfg = 0) (sc_refill_cfgs_of s) p\<rbrace>"
+  assumes sc_refill_cfg4:
+    "\<lbrace>\<lambda>s. (\<forall>p. pred_map (\<lambda>cfg. scrc_sporadic cfg) (sc_refill_cfgs_of s) p
+               \<longrightarrow> pred_map (\<lambda>cfg. active_scrc cfg) (sc_refill_cfgs_of s) p)
+          \<and> I s\<rbrace>
+     f \<lbrace>\<lambda>_ s. \<forall>p. pred_map (\<lambda>cfg. scrc_sporadic cfg) (sc_refill_cfgs_of s) p
+                  \<longrightarrow> pred_map (\<lambda>cfg. active_scrc cfg) (sc_refill_cfgs_of s) p\<rbrace>"
   assumes valid_machine_time: "f \<lbrace>valid_machine_time\<rbrace>"
   assumes cur_time_nondecreasing:
     "\<And>val. \<lbrace>\<lambda>s. cur_time s = val \<and> valid_machine_time s\<rbrace> f \<lbrace>\<lambda>_ s. val \<le> cur_time s\<rbrace>"
@@ -846,7 +852,9 @@ lemma valid_sched_tcb_state_preservation_gen:
                                          (sc_refill_cfgs_of s') p"
                   in spec)
     apply (clarsimp simp: bounded_release_time_def  word_le_nat_alt vs_all_heap_simps pred_conj_def)
-   apply (fastforce dest!: use_valid[OF _ sc_refill_cfg3])
+   apply (rule conjI)
+    apply (fastforce dest!: use_valid[OF _ sc_refill_cfg3])
+   apply (fastforce dest:  use_valid[OF _ sc_refill_cfg4])
    done
   apply (prop_tac "active_reply_scs s'")
    subgoal for s r s'
@@ -1155,7 +1163,8 @@ lemma invoke_untyped_valid_sched:
                                    invoke_untyped_pred_map_sc_refill_cfgs_of
                                    invoke_untyped_valid_idle invoke_untyped_valid_sched_pred_misc
                                    invoke_untyped_cur_time_monotonic
-                                   invoke_untyped_inactive_implies_zero_budget
+                                   invoke_untyped_implies_zero_budget
+                                   invoke_untyped_sporadic_implies
                                    hoare_vcg_all_lift
                              simp: ipc_queued_thread_state_live live_sc_def)+
   done

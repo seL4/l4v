@@ -90,9 +90,6 @@ text \<open>The function defined below encodes several patterns of conditions
             act   None       constant\_bandwidth
                   Some True    sporadic \& active
                   Some False   sporadic
-                                (currently also tests active, hence identical
-                                 to the Some True case above, until the implication
-                                 "sporadic implies active" is proved)
             ast   None         no test or assert on cur\_sc
                   Some True    asserts that the sc pointer is not cur\_sc
                                 (currently replaced by test, i.e.,
@@ -107,7 +104,7 @@ definition if_cond_refill_unblock_check where
       guard \<leftarrow> return (case active of
                          None \<Rightarrow> (\<not> sc_sporadic sc)
                        | Some True \<Rightarrow> sc_sporadic sc \<and> sc_active sc
-                       | Some False \<Rightarrow> sc_sporadic sc \<and> sc_active sc);
+                       | Some False \<Rightarrow> sc_sporadic sc);
       when (guard \<and> (asst = Some False \<longrightarrow> scp \<noteq> cur_sc_ptr)) $
         when (asst = Some True \<longrightarrow> scp \<noteq> cur_sc_ptr) $ refill_unblock_check scp
     od) sc_opt"

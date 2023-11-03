@@ -400,7 +400,7 @@ This module uses the C preprocessor to select a target architecture.
 >           guard <- return $ (case act of
 >                        Nothing -> not $ scSporadic sc
 >                        Just True -> scSporadic sc && 0 < scRefillMax sc
->                        Just False -> scSporadic sc && 0 < scRefillMax sc)
+>                        Just False -> scSporadic sc)
 >           when (guard && (if ast == Just False then scPtr /= curScPtr else True)) $
 >               when (if ast == Just True then scPtr /= curScPtr else True) $ refillUnblockCheck scPtr
 
@@ -525,6 +525,7 @@ This module uses the C preprocessor to select a target architecture.
 > schedContextZeroRefillMax :: PPtr SchedContext -> Kernel ()
 > schedContextZeroRefillMax scPtr = do
 >     updateSchedContext scPtr $ (\sc -> sc { scRefillMax = 0 })
+>     updateSchedContext scPtr $ (\sc -> sc { scSporadic = False })
 
 > unbindFromSC :: PPtr TCB -> Kernel ()
 > unbindFromSC tptr = do
@@ -642,8 +643,6 @@ This module uses the C preprocessor to select a target architecture.
 > invokeSchedControlConfigureFlags :: SchedControlInvocation -> Kernel ()
 > invokeSchedControlConfigureFlags iv = case iv of
 >     InvokeSchedControlConfigureFlags scPtr budget period mRefills badge flags -> do
->         updateSchedContext scPtr (\sc -> sc { scBadge = badge })
->         updateSchedContext scPtr (\sc -> sc { scSporadic = flags `testBit` schedContextSporadicFlag })
 >         sc <- getSchedContext scPtr
 >         when (scTCB sc /= Nothing) $ do
 >             tcbReleaseRemove $ fromJust $ scTCB sc
@@ -668,6 +667,9 @@ This module uses the C preprocessor to select a target architecture.
 >             if (fromJust $ scTCB sc) == ctPtr
 >                 then rescheduleRequired
 >                 else when runnable $ possibleSwitchTo $ fromJust $ scTCB sc
+
+>         updateSchedContext scPtr (\sc -> sc { scBadge = badge })
+>         updateSchedContext scPtr (\sc -> sc { scSporadic = flags `testBit` schedContextSporadicFlag })
 
 > isRoundRobin :: PPtr SchedContext -> Kernel Bool
 > isRoundRobin scPtr = do

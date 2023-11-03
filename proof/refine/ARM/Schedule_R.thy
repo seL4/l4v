@@ -3920,6 +3920,18 @@ lemma refillUnblockCheck_corres:
       apply (clarsimp simp: obj_at_simps valid_refills'_def opt_map_red opt_pred_def)
   done
 
+lemma sporadic_implies_active_cross:
+  "\<lbrakk>(s, s') \<in> state_relation; active_scs_valid s; sc_at scPtr s; ko_at' sc scPtr s';
+    scSporadic sc\<rbrakk>
+   \<Longrightarrow> is_active_sc' scPtr s'"
+  apply (frule (1) state_relation_sc_relation[where ptr=scPtr])
+   apply fastforce
+  apply (clarsimp simp: active_scs_valid_def)
+  apply (drule_tac x=scPtr in spec)+
+  by (fastforce dest: is_sc_objD
+                simp: sc_relation_def vs_all_heap_simps active_sc_def is_active_sc'_def
+                      obj_at_simps opt_map_def opt_pred_def)
+
 lemma ifCondRefillUnblockCheck_corres:
   "corres dc
      (\<lambda>s. case_option True
@@ -3932,7 +3944,7 @@ lemma ifCondRefillUnblockCheck_corres:
   apply (cases scp_opt; simp add: maybeM_def)
   apply (rename_tac scp)
   apply (rule corres_cross[OF sc_at'_cross_rel], fastforce)
-  apply (rule corres_guard_imp)
+  apply (rule stronger_corres_guard_imp)
     apply (rule corres_split[OF get_sc_corres _ get_sched_context_wp getSchedContext_wp])
     apply (rule corres_split[OF getCurSc_corres])
       apply (rule corres_when)
@@ -3941,14 +3953,21 @@ lemma ifCondRefillUnblockCheck_corres:
        apply fastforce
       apply (rule refillUnblockCheck_corres)
      apply wpsimp+
+   apply (prop_tac "is_active_sc scp s")
+    apply (cases act; clarsimp)
+     apply (clarsimp simp: vs_all_heap_simps obj_at_kh_kheap_simps opt_map_def opt_pred_def)
+    apply (clarsimp simp: vs_all_heap_simps active_scs_valid_def obj_at_kh_kheap_simps
+                   split: bool.splits)
+    apply (drule_tac x=scp in spec)+
+    apply force
    apply (drule_tac scp=scp in active_scs_validE[rotated, simplified is_active_sc_rewrite];
-          clarsimp simp: case_bool_if option.case_eq_if opt_map_red obj_at_def is_active_sc2_def
-                         vs_all_heap_simps valid_refills_def rr_valid_refills_def active_sc_def
-                         opt_pred_def
+          clarsimp simp: opt_map_red obj_at_def is_active_sc2_def vs_all_heap_simps
+                         valid_refills_def rr_valid_refills_def active_sc_def opt_pred_def
                   split: if_split_asm)
   apply (clarsimp simp: case_bool_if option.case_eq_if split: if_split_asm)
-  by (fastforce elim!: valid_objs'_valid_refills' simp: is_active_sc'_def opt_map_red obj_at_simps
-                       opt_pred_def)
+  apply (fastforce elim!: valid_objs'_valid_refills'
+                   dest!: sporadic_implies_active_cross)
+  done
 
 lemma getCurTime_sp:
   "\<lbrace>P\<rbrace> getCurTime \<lbrace>\<lambda>rv. P and (\<lambda>s. rv = ksCurTime s)\<rbrace>"

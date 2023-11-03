@@ -741,9 +741,6 @@ definition
 where
   "invoke_sched_control_configure_flags iv \<equiv>
   case iv of InvokeSchedControlConfigureFlags sc_ptr budget period mrefills badge flag \<Rightarrow> do
-    set_sc_obj_ref sc_badge_update sc_ptr badge;
-    set_sc_obj_ref sc_sporadic_update sc_ptr (flag !! sc_sporadic_flag);
-
     sc \<leftarrow> get_sched_context sc_ptr;
     when (sc_tcb sc \<noteq> None) $ do
       tcb_ptr \<leftarrow> assert_opt $ sc_tcb sc;
@@ -775,7 +772,10 @@ where
       ct \<leftarrow> gets cur_thread;
       if tcb_ptr = ct then reschedule_required
       else when (runnable st) $ possible_switch_to tcb_ptr
-    od
+    od;
+
+    set_sc_obj_ref sc_badge_update sc_ptr badge;
+    set_sc_obj_ref sc_sporadic_update sc_ptr (flag !! sc_sporadic_flag)
   od"
 
 

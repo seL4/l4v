@@ -414,7 +414,8 @@ where
   "sched_context_zero_refill_max sc_ptr = do
      update_sched_context sc_ptr (sc_refills_update (\<lambda>_. []));
      update_sched_context sc_ptr (sc_refill_max_update (\<lambda>_. 0));
-     update_sched_context sc_ptr (sc_budget_update (\<lambda>_. 0))
+     update_sched_context sc_ptr (sc_budget_update (\<lambda>_. 0));
+     update_sched_context sc_ptr (sc_sporadic_update (\<lambda>_. False))
    od"
 
 text \<open> Unbind TCB from its scheduling context, if there is one bound. \<close>

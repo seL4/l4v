@@ -274,10 +274,18 @@ lemma perform_asid_control_invocation_pred_map_sc_refill_cfgs_of:
   by (wpsimp wp: delete_objects_pred_map_sc_refill_cfgs_of
            comb: hoare_drop_imp)
 
-lemma perform_asid_control_invocation_inactive_implies_zero_budget:
+lemma perform_asid_control_invocation_implies_zero_budget:
   "perform_asid_control_invocation aci
-   \<lbrace>\<lambda>s. pred_map inactive_scrc (sc_refill_cfgs_of s) p
+   \<lbrace>\<lambda>s. pred_map Q (sc_refill_cfgs_of s) p
         \<longrightarrow> pred_map (\<lambda>cfg. scrc_budget cfg = 0) (sc_refill_cfgs_of s) p\<rbrace>"
+  unfolding perform_asid_control_invocation_def
+  by (wpsimp wp: delete_objects_pred_map_sc_refill_cfgs_of
+           comb: hoare_drop_imp)
+
+lemma perform_asid_control_invocation_sporadic_implies:
+  "perform_asid_control_invocation aci
+   \<lbrace>\<lambda>s. pred_map (\<lambda>cfg. scrc_sporadic cfg) (sc_refill_cfgs_of s) p
+        \<longrightarrow> pred_map Q (sc_refill_cfgs_of s) p\<rbrace>"
   unfolding perform_asid_control_invocation_def
   by (wpsimp wp: delete_objects_pred_map_sc_refill_cfgs_of
            comb: hoare_drop_imp)
@@ -303,7 +311,8 @@ lemma perform_asid_control_invocation_valid_sched:
                                    perform_asid_control_invocation_sc_at_pred_n
                                    perform_asid_control_invocation_valid_idle
                                    perform_asid_control_invocation_pred_map_sc_refill_cfgs_of
-                                   perform_asid_control_invocation_inactive_implies_zero_budget
+                                   perform_asid_control_invocation_implies_zero_budget
+                                   perform_asid_control_invocation_sporadic_implies
                                    hoare_vcg_all_lift
                              simp: ipc_queued_thread_state_live live_sc_def)+
   done

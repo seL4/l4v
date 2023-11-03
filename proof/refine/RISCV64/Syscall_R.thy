@@ -1011,36 +1011,32 @@ crunches refillNew, refillUpdate, commitTime
   and ex_nonz_cap_to'[wp]: "ex_nonz_cap_to' ptr"
   (simp: crunch_simps wp: crunch_wps)
 
+lemma scSBadge_update_invs'[wp]:
+  "updateSchedContext scPtr (scBadge_update f) \<lbrace>invs'\<rbrace>"
+  apply (wpsimp wp: updateSchedContext_invs')
+  apply (fastforce elim!: live_sc'_ko_ex_nonz_cap_to' dest: invs'_ko_at_valid_sched_context'
+                    simp: live_sc'_def)
+  done
+
+lemma scSporadic_update_invs'[wp]:
+  "updateSchedContext scPtr (scSporadic_update f) \<lbrace>invs'\<rbrace>"
+  apply (wpsimp wp: updateSchedContext_invs')
+  apply (fastforce elim!: live_sc'_ko_ex_nonz_cap_to' dest: invs'_ko_at_valid_sched_context'
+                    simp: live_sc'_def)
+  done
+
 lemma invokeSchedControlConfigureFlags_invs':
   "\<lbrace>invs' and valid_sc_ctrl_inv' iv\<rbrace>
    invokeSchedControlConfigureFlags iv
    \<lbrace>\<lambda>_. invs'\<rbrace>"
+  (is "\<lbrace>?pre\<rbrace> _ \<lbrace>_\<rbrace>")
   apply (clarsimp simp: invokeSchedControlConfigureFlags_def)
   apply (cases iv; clarsimp)
-  apply (rename_tac sc_ptr budget period mrefills badge flag)
-  apply (rule_tac B="\<lambda>_ s. invs' s \<and> sc_at' sc_ptr s \<and> valid_sc_ctrl_inv' iv s
-                           \<and> ex_nonz_cap_to' sc_ptr s"
-               in hoare_seq_ext[rotated])
-   apply (wps_conj_solves wp: ct_in_state_thread_state_lift')
-    apply (wpsimp wp: updateSchedContext_invs')
-    apply (fastforce dest: sc_ko_at_valid_objs_valid_sc'
-                     simp: valid_sched_context'_def valid_sched_context_size'_def)
-   apply wpsimp
-   apply (erule sc_at'_n_sc_at')
-  apply (rule_tac B="\<lambda>_ s. invs' s \<and> sc_at' sc_ptr s \<and> valid_sc_ctrl_inv' iv s
-                           \<and> ex_nonz_cap_to' sc_ptr s" in hoare_seq_ext[rotated])
-   apply (wps_conj_solves wp: ct_in_state_thread_state_lift')
-   apply (wpsimp wp: updateSchedContext_invs')
-   apply (fastforce dest: sc_ko_at_valid_objs_valid_sc'
-                    simp: valid_sched_context'_def valid_sched_context_size'_def)
   apply (rule hoare_seq_ext[OF _ get_sc_sp'])
-  apply (rule_tac B="\<lambda>_ s. invs' s \<and> sc_at' sc_ptr s \<and> valid_sc_ctrl_inv' iv s
-                           \<and> ex_nonz_cap_to' sc_ptr s" in hoare_seq_ext[rotated])
-   apply (rule hoare_when_cases, simp)
-  apply (wpsimp wp: hoare_vcg_if_lift refillNew_invs' refillUpdate_invs' commitTime_invs'
-                    tcbReleaseRemove_invs' hoare_vcg_ex_lift hoare_vcg_imp_lift'
-         | wps)+
-  by (fastforce simp: st_tcb_at'_def obj_at_simps valid_refills_number'_def)
+  apply (rule_tac B="\<lambda>_. ?pre" in hoare_seq_ext[rotated])
+   apply (wpsimp wp: commitTime_invs' tcbReleaseRemove_invs' hoare_vcg_ex_lift)
+  apply (wpsimp wp: hoare_vcg_if_lift refillNew_invs' refillUpdate_invs' hoare_vcg_imp_lift')
+  by (fastforce simp: valid_refills_number'_def)
 
 lemma performInv_invs'[wp]:
   "\<lbrace>invs' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)

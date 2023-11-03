@@ -1232,13 +1232,9 @@ context notes if_weak_cong[cong del] begin
 
 end
 
-lemma invoke_sched_control_typ_at[wp]:
-  "invoke_sched_control_configure_flags i \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace>"
-  apply (cases i;
-         wpsimp simp: invoke_sched_control_configure_flags_def
-                  wp: hoare_vcg_if_lift2 hoare_drop_imp update_sched_context_wp)
-  apply (fastforce simp: obj_at_def a_type_def)
-  done
+crunches invoke_sched_control_configure_flags
+  for typ_at[wp]: "\<lambda>s. P (typ_at T p s)"
+  (simp: crunch_simps)
 
 lemma invoke_sched_context_tcb[wp]:
   "\<lbrace>tcb_at tptr\<rbrace> invoke_sched_context i \<lbrace>\<lambda>rv. tcb_at tptr\<rbrace>"
@@ -1246,7 +1242,7 @@ lemma invoke_sched_context_tcb[wp]:
 
 lemma invoke_sched_control_tcb[wp]:
   "\<lbrace>tcb_at tptr\<rbrace> invoke_sched_control_configure_flags i \<lbrace>\<lambda>rv. tcb_at tptr\<rbrace>"
-  by (simp add: tcb_at_typ invoke_sched_control_typ_at [where P=id, simplified])
+  by (simp add: tcb_at_typ invoke_sched_control_configure_flags_typ_at [where P=id, simplified])
 
 lemma invoke_sched_context_invs[wp]:
   "\<lbrace>invs and valid_sched_context_inv i and ct_active\<rbrace> invoke_sched_context i \<lbrace>\<lambda>rv. invs\<rbrace>"
