@@ -2221,7 +2221,7 @@ lemma no_ofail_read_sc_refill_ready:
 
 lemma rescheduleRequired_corres_weak:
   "corres dc (valid_tcbs and weaker_valid_sched_action and pspace_aligned and pspace_distinct
-              and active_sc_valid_refills)
+              and active_scs_valid)
              (valid_tcbs' and Invariants_H.valid_queues and valid_queues' and valid_release_queue_iff)
              reschedule_required rescheduleRequired"
   apply (simp add: rescheduleRequired_def reschedule_required_def)
@@ -2283,7 +2283,7 @@ lemma rescheduleRequired_corres_weak:
 
 lemma rescheduleRequired_corres:
   "corres dc (valid_tcbs and weak_valid_sched_action and pspace_aligned and pspace_distinct
-              and active_sc_valid_refills)
+              and active_scs_valid)
              (valid_tcbs' and valid_queues and valid_queues' and valid_release_queue_iff)
              reschedule_required rescheduleRequired"
   by (rule corres_guard_imp[OF rescheduleRequired_corres_weak])

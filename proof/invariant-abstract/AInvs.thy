@@ -2074,7 +2074,7 @@ lemma is_refill_ready_imp_cur_sc_offset_ready_zero:
 
 lemma commit_time_cur_sc_offset_ready_and_sufficient_consumed_time:
   "\<lbrace>\<lambda>s. cur_sc_offset_ready (consumed_time s) s \<and> cur_sc_offset_sufficient (consumed_time s) s
-        \<and> current_time_bounded s \<and> active_sc_valid_refills s\<rbrace>
+        \<and> current_time_bounded s \<and> active_scs_valid s\<rbrace>
    commit_time
    \<lbrace>\<lambda>_ s. cur_sc_offset_ready (consumed_time s) s \<and> cur_sc_offset_sufficient (consumed_time s) s\<rbrace>"
   apply (clarsimp simp: commit_time_def)
@@ -2104,7 +2104,7 @@ lemma commit_time_cur_sc_offset_ready_and_sufficient_consumed_time:
     apply (wpsimp wp: refill_budget_check_round_robin_refill_ready_offset_ready_and_sufficient
                       refill_budget_check_refill_ready_offset_ready_and_sufficient)
    apply (clarsimp split: if_splits)
-   apply (fastforce intro: active_sc_valid_refillsE
+   apply (fastforce intro: active_scs_validE
                      simp: active_sc_def vs_all_heap_simps obj_at_def current_time_bounded_def)
   apply (rule_tac Q="\<lambda>_ s. is_refill_sufficient 0 (cur_sc s) s" in hoare_post_imp)
    apply (clarsimp simp: vs_all_heap_simps refill_ready_no_overflow_def refill_ready_def)
@@ -2113,7 +2113,7 @@ lemma commit_time_cur_sc_offset_ready_and_sufficient_consumed_time:
    apply (wpsimp wp: refill_budget_check_round_robin_is_refill_sufficient
                      refill_budget_check_is_refill_sufficient)
   apply (clarsimp split: if_splits)
-  apply (fastforce intro: active_sc_valid_refillsE
+  apply (fastforce intro: active_scs_validE
                     simp: active_sc_def vs_all_heap_simps obj_at_def current_time_bounded_def)
   done
 
@@ -2154,7 +2154,7 @@ lemma switch_sched_context_cur_sc_offset_ready_and_sufficient_consumed_time:
         \<and> (cur_thread s \<noteq> idle_thread s \<longrightarrow> ct_released s)
         \<and> valid_idle s
         \<and> current_time_bounded s
-        \<and> active_sc_valid_refills s\<rbrace>
+        \<and> active_scs_valid s\<rbrace>
    switch_sched_context
    \<lbrace>\<lambda>_ s :: det_state. cur_sc_offset_ready (consumed_time s) s \<and> cur_sc_offset_sufficient (consumed_time s) s\<rbrace>"
   (is "\<lbrace>_\<rbrace> _ \<lbrace>\<lambda>_. ?Q\<rbrace>")
@@ -2209,9 +2209,9 @@ lemma switch_sched_context_cur_sc_offset_ready_and_sufficient_consumed_time:
    apply (wpsimp wp: commit_time_is_refill_sufficient_other hoare_drop_imps
                      refill_unblock_check_cur_sc_is_refill_sufficient)
    apply (intro conjI)
-    apply (fastforce intro!: valid_refills_refill_sufficient active_sc_valid_refillsE
+    apply (fastforce intro!: valid_refills_refill_sufficient active_scs_validE
                        simp: vs_all_heap_simps  pred_tcb_at_def obj_at_def)
-   apply (fastforce intro!: active_sc_valid_refillsE
+   apply (fastforce intro!: active_scs_validE
                       simp: vs_all_heap_simps pred_tcb_at_def obj_at_def )
   apply (rule_tac B="\<lambda>_. reprogram_timer" in hoare_seq_ext[rotated])
    apply wpsimp
@@ -2225,7 +2225,7 @@ lemma switch_sched_context_cur_sc_offset_ready_and_sufficient_consumed_time:
         \<and> (cur_thread s \<noteq> idle_thread s \<longrightarrow> ct_released s)
         \<and> valid_idle s
         \<and> current_time_bounded s
-        \<and> active_sc_valid_refills s\<rbrace>
+        \<and> active_scs_valid s\<rbrace>
    sc_and_timer
    \<lbrace>\<lambda>_ s :: det_state. cur_sc_offset_ready (consumed_time s) s \<and> cur_sc_offset_sufficient (consumed_time s) s\<rbrace>"
   apply (clarsimp simp: sc_and_timer_def)
@@ -2233,7 +2233,7 @@ lemma switch_sched_context_cur_sc_offset_ready_and_sufficient_consumed_time:
   done
 
 lemma switch_to_thread_cur_sc_offset_ready_and_sufficient:
-  "\<lbrace>\<lambda>s. cur_sc_more_than_ready s \<and> released_sc_tcb_at thread s \<and> active_sc_valid_refills s\<rbrace>
+  "\<lbrace>\<lambda>s. cur_sc_more_than_ready s \<and> released_sc_tcb_at thread s \<and> active_scs_valid s\<rbrace>
    switch_to_thread thread
    \<lbrace>\<lambda>_ s. cur_sc_tcb_are_bound s \<and> cur_thread s \<noteq> idle_thread s
           \<longrightarrow> cur_sc_offset_ready (consumed_time s) s \<and> cur_sc_offset_sufficient (consumed_time s) s\<rbrace>"
@@ -2242,13 +2242,13 @@ lemma switch_to_thread_cur_sc_offset_ready_and_sufficient:
   apply (rule hoare_seq_ext_skip, solves wpsimp)
   apply (rule hoare_seq_ext_skip, solves wpsimp)
   apply (rule_tac B="\<lambda>_ s. cur_sc_more_than_ready s \<and> released_sc_tcb_at thread s
-                           \<and> active_sc_tcb_at thread s \<and> active_sc_valid_refills s"
+                           \<and> active_sc_tcb_at thread s \<and> active_scs_valid s"
                in hoare_seq_ext[rotated])
    apply (wpsimp wp: tcb_sched_dequeue_valid_ready_qs)
    apply (fastforce simp: valid_ready_qs_def vs_all_heap_simps in_ready_q_def active_sc_def)
   apply wpsimp
   apply (case_tac "consumed_time s = 0")
-   apply (fastforce dest: active_sc_valid_refills_tcb_at
+   apply (fastforce dest: active_scs_valid_tcb_at
                     simp: valid_ready_qs_def vs_all_heap_simps in_ready_q_def
                           refill_ready_no_overflow_def refill_ready_def
                           refill_sufficient_def refill_capacity_def word_unat_less_le
@@ -2260,7 +2260,7 @@ lemma switch_to_thread_cur_sc_offset_ready_and_sufficient:
   done
 
 lemma choose_thread_cur_sc_offset_ready_and_sufficient:
-  "\<lbrace>\<lambda>s. cur_sc_more_than_ready s \<and> valid_ready_qs s \<and> active_sc_valid_refills s \<and> invs s
+  "\<lbrace>\<lambda>s. cur_sc_more_than_ready s \<and> valid_ready_qs s \<and> active_scs_valid s \<and> invs s
         \<and> current_time_bounded s\<rbrace>
    choose_thread
    \<lbrace>\<lambda>_ s. cur_sc_tcb_are_bound s \<and> cur_thread s \<noteq> idle_thread s
@@ -2280,7 +2280,7 @@ lemma choose_thread_cur_sc_offset_ready_and_sufficient:
   done
 
 lemma schedule_choose_new_thread_cur_sc_offset_ready_and_sufficient:
-  "\<lbrace>\<lambda>s. cur_sc_more_than_ready s \<and> valid_ready_qs s \<and> active_sc_valid_refills s
+  "\<lbrace>\<lambda>s. cur_sc_more_than_ready s \<and> valid_ready_qs s \<and> active_scs_valid s
         \<and> invs s \<and> current_time_bounded s \<rbrace>
    schedule_choose_new_thread
    \<lbrace>\<lambda>_ s. cur_sc_tcb_are_bound s \<and> cur_thread s \<noteq> idle_thread s
@@ -2295,14 +2295,14 @@ lemma schedule_choose_new_thread_cur_sc_offset_ready_and_sufficient:
 
 lemma schedule_switch_thread_branch_cur_sc_offset_ready_and_sufficient:
   "\<lbrace>\<lambda>s. cur_sc_more_than_ready s \<and> ct_ready_if_schedulable s
-        \<and> valid_ready_qs s \<and> active_sc_valid_refills s \<and> valid_sched_action s
+        \<and> valid_ready_qs s \<and> active_scs_valid s \<and> valid_sched_action s
         \<and> invs s \<and> current_time_bounded s
         \<and> cur_thread s = ct \<and> ct_schdble = ct_schedulable s
         \<and> scheduler_action s = switch_thread candidate\<rbrace>
    schedule_switch_thread_branch candidate ct ct_schdble
    \<lbrace>\<lambda>_ s. cur_sc_tcb_are_bound s \<and> cur_thread s \<noteq> idle_thread s
           \<longrightarrow> cur_sc_offset_ready (consumed_time s) s \<and> cur_sc_offset_sufficient (consumed_time s) s\<rbrace>"
-  apply (rule_tac B="\<lambda>_ s. cur_sc_more_than_ready s \<and> valid_ready_qs s \<and> active_sc_valid_refills s
+  apply (rule_tac B="\<lambda>_ s. cur_sc_more_than_ready s \<and> valid_ready_qs s \<and> active_scs_valid s
                            \<and> valid_sched_action s \<and> invs s \<and> current_time_bounded s
                            \<and> scheduler_action s = switch_thread candidate"
                in hoare_seq_ext[rotated])
@@ -2370,7 +2370,7 @@ lemma schedule_choose_new_thread_ct_not_idle_imp_ct_released:
 
 lemma schedule_switch_thread_branch_ct_not_idle_imp_ct_released:
   "\<lbrace>\<lambda>s. ct_ready_if_schedulable s \<and> ct_schdble = schedulable ct s
-        \<and> valid_ready_qs s \<and> active_sc_valid_refills s \<and> valid_sched_action s
+        \<and> valid_ready_qs s \<and> active_scs_valid s \<and> valid_sched_action s
         \<and> current_time_bounded s
         \<and> cur_thread s = ct \<and> scheduler_action s = switch_thread candidate\<rbrace>
    schedule_switch_thread_branch candidate ct ct_schdble
@@ -2434,7 +2434,7 @@ lemma schedule_cur_sc_offset_ready_and_sufficient:
          apply (intro conjI)
           apply (rule is_refill_ready_imp_cur_sc_offset_ready_zero)
           apply (clarsimp simp: schedulable_def2 ct_in_state_def vs_all_heap_simps)
-         apply (frule active_sc_valid_refillsE)
+         apply (frule active_scs_validE)
           apply (clarsimp simp: valid_sched_def)
          apply (frule  valid_refills_refill_sufficient)
          apply (clarsimp simp: ct_in_state_def obj_at_def pred_tcb_at_def)

@@ -833,7 +833,7 @@ lemma readRefillReady_no_ofail[wp]:
 context begin interpretation Arch . (*FIXME: arch_split*)
 
 lemma get_sc_released_corres:
-  "corres (=) (active_sc_valid_refills and sc_at sc_ptr) (valid_objs' and sc_at' sc_ptr)
+  "corres (=) (active_scs_valid and sc_at sc_ptr) (valid_objs' and sc_at' sc_ptr)
           (get_sc_released sc_ptr) (scReleased sc_ptr)"
   apply (simp add: get_sc_released_def scReleased_def scActive_def refillReady_def)
   apply (rule corres_underlying_split[rotated 2, OF get_sched_context_sp get_sc_sp'])
@@ -846,7 +846,7 @@ lemma get_sc_released_corres:
                  dest!: readObject_misc_ko_at')
   apply (subgoal_tac "sc_active sc = (0 < scRefillMax sc')")
    apply (case_tac "sc_active sc"; clarsimp)
-   apply (drule active_sc_valid_refillsE[where scp=sc_ptr, rotated])
+   apply (drule active_scs_validE[where scp=sc_ptr, rotated])
     apply (clarsimp simp: is_active_sc_def sc_at_ppred_def obj_at_def)
    apply (drule_tac s'=s' in refill_hd_relation2)
       apply (fastforce simp: refill_ready_def refill_sufficient_def refill_capacity_def

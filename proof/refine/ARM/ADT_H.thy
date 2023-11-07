@@ -615,7 +615,7 @@ lemma absHeap_correct:
   assumes pspace_aligned:  "pspace_aligned s"
   assumes pspace_distinct: "pspace_distinct s"
   assumes valid_objs:      "valid_objs s"
-  assumes valid_refills:   "active_sc_valid_refills s"
+  assumes valid_refills:   "active_scs_valid s"
   assumes pspace_relation: "pspace_relation (kheap s) (ksPSpace s')"
   assumes ghost_relation:  "ghost_relation (kheap s) (gsUserPages s') (gsCNodes s')"
   assumes replies:         "sc_replies_relation s s'"
@@ -887,12 +887,12 @@ proof -
      apply (clarsimp simp: sc_relation_def scMap_def mapScSize_def sc_replies_prevs_walk[OF replies])
      apply (intro conjI impI)
        apply (prop_tac "valid_refills y s")
-        apply (fastforce intro: valid_refills active_sc_valid_refillsE
+        apply (fastforce intro: valid_refills active_scs_validE
                           simp: vs_all_heap_simps active_sc_def)
        apply (clarsimp simp: valid_refills_def vs_all_heap_simps rr_valid_refills_def
                       split: if_splits)
       apply (insert valid_refills)
-      apply (force simp: active_sc_valid_refills_def valid_refills_def vs_all_heap_simps
+      apply (force simp: active_scs_valid_def valid_refills_def vs_all_heap_simps
                          active_sc_def
                   split: if_splits)
 

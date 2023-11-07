@@ -296,9 +296,9 @@ lemma delete_objects_inactive_implies_zero_budget[wp]:
   apply wpsimp
   by (clarsimp simp: detype_def vs_all_heap_simps split: if_splits)
 
-lemma delete_objects_active_sc_valid_refills[wp]:
-  "delete_objects base sz \<lbrace>active_sc_valid_refills\<rbrace>"
-  apply (clarsimp simp: active_sc_valid_refills_def)
+lemma delete_objects_active_scs_valid[wp]:
+  "delete_objects base sz \<lbrace>active_scs_valid\<rbrace>"
+  apply (clarsimp simp: active_scs_valid_def)
   unfolding delete_objects_def2
   apply wpsimp
   apply (clarsimp simp: detype_def vs_all_heap_simps split: if_splits)
@@ -831,9 +831,9 @@ lemma valid_sched_tcb_state_preservation_gen:
     using no_olen_add_nat valid_machine_time_refill_ready_buffer apply blast
    apply linarith
   done
-  apply (prop_tac "active_sc_valid_refills s'")
+  apply (prop_tac "active_scs_valid s'")
    subgoal for s rv s'
-   unfolding active_sc_valid_refills_def
+   unfolding active_scs_valid_def
    apply (rule conjI)
     apply (frule use_valid[OF _ sc_refill_cfg2[where P="cfg_valid_refills and cfg_bounded_release_time"]], intro conjI)
       apply (clarsimp simp: pred_map_pred_conj)
@@ -1614,21 +1614,21 @@ lemma valid_refills_def2:
   by (clarsimp simp: valid_refills_def vs_all_heap_simps)
 
 (* this is not really an "E" lemma... *)
-lemma active_sc_valid_refillsE:
-  "pred_map active_scrc (sc_refill_cfgs_of s) scp \<Longrightarrow> active_sc_valid_refills s \<Longrightarrow> valid_refills scp s"
-  by (clarsimp simp: active_sc_valid_refills_def)
+lemma active_scs_validE:
+  "pred_map active_scrc (sc_refill_cfgs_of s) scp \<Longrightarrow> active_scs_valid s \<Longrightarrow> valid_refills scp s"
+  by (clarsimp simp: active_scs_valid_def)
 
-lemma active_sc_valid_refills_tcb_at:
-  "\<lbrakk>active_sc_valid_refills s; active_sc_tcb_at tp s\<rbrakk> \<Longrightarrow> valid_refills_tcb_at tp s"
+lemma active_scs_valid_tcb_at:
+  "\<lbrakk>active_scs_valid s; active_sc_tcb_at tp s\<rbrakk> \<Longrightarrow> valid_refills_tcb_at tp s"
   apply (clarsimp simp: active_sc_tcb_at_def2 valid_refills_tcb_at_def op_equal)
-  by (rule_tac x=scp in exI, clarsimp elim!: active_sc_valid_refillsE)
+  by (rule_tac x=scp in exI, clarsimp elim!: active_scs_validE)
 
 lemma valid_refills_tcb_at_bound_sc:
   "\<lbrakk>valid_refills_tcb_at tp s; bound_sc_tcb_at ((=) (Some scp)) tp s\<rbrakk> \<Longrightarrow> valid_refills scp s"
   by (clarsimp simp: valid_refills_tcb_at_def pred_tcb_at_def obj_at_def dest!: sym[of "Some _"])
 
 lemmas active_sc_tcb_at_valid_refills
-  = active_sc_valid_refills_tcb_at[THEN valid_refills_tcb_at_bound_sc]
+  = active_scs_valid_tcb_at[THEN valid_refills_tcb_at_bound_sc]
 
 lemma valid_refills_refill_sufficient:
   "valid_refills scp s \<Longrightarrow> is_refill_sufficient 0 scp s"
@@ -1641,18 +1641,18 @@ lemma valid_refills_budget_sufficient:
               intro!: valid_refills_refill_sufficient)
 
 lemmas active_valid_budget_sufficient
-  = valid_refills_budget_sufficient[OF active_sc_valid_refills_tcb_at]
+  = valid_refills_budget_sufficient[OF active_scs_valid_tcb_at]
 
 lemma released_sc_tcb_at_valid_refills:
-  "\<lbrakk>active_sc_valid_refills s; released_sc_tcb_at tp s;
+  "\<lbrakk>active_scs_valid s; released_sc_tcb_at tp s;
      bound_sc_tcb_at ((=) (Some scp)) tp s\<rbrakk>
     \<Longrightarrow> valid_refills scp s"
   by (fastforce elim!: active_sc_tcb_at_valid_refills simp: released_sc_tcb_at_def)
 
 lemma released_sc_at_valid_refills:
-  "\<lbrakk>active_sc_valid_refills s; released_sc_at scp s\<rbrakk>
+  "\<lbrakk>active_scs_valid s; released_sc_at scp s\<rbrakk>
     \<Longrightarrow> valid_refills scp s"
-  by (fastforce elim!: active_sc_valid_refillsE simp: released_sc_at_def)
+  by (fastforce elim!: active_scs_validE simp: released_sc_at_def)
 
 \<comment> \<open>ordered_disjoint is trivial on lists of length 1\<close>
 lemma ordered_disjoint_length1[simp]:

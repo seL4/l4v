@@ -2335,22 +2335,22 @@ abbreviation bounded_release_time :: "obj_ref \<Rightarrow> 'z state \<Rightarro
 lemmas cfg_bounded_release_time_def = bounded_release_time_2_def
 lemmas bounded_release_time_def = bounded_release_time_2_def
 
-\<comment> \<open>active_sc_valid_refills\<close>
+\<comment> \<open>active_scs_valid\<close>
 
-definition active_sc_valid_refills_2 :: "(obj_ref \<rightharpoonup> sc_refill_cfg) \<Rightarrow> bool" where
-  "active_sc_valid_refills_2 sc_refill_cfgs \<equiv>
+definition active_scs_valid_2 :: "(obj_ref \<rightharpoonup> sc_refill_cfg) \<Rightarrow> bool" where
+  "active_scs_valid_2 sc_refill_cfgs \<equiv>
    (\<forall>scp. pred_map active_scrc sc_refill_cfgs scp
           \<longrightarrow> pred_map cfg_valid_refills sc_refill_cfgs scp
               \<and> pred_map cfg_bounded_release_time sc_refill_cfgs scp)
    \<and> (\<forall>scp. pred_map (\<lambda>cfg. \<not> active_scrc cfg) sc_refill_cfgs scp
             \<longrightarrow> pred_map (\<lambda>cfg. scrc_budget cfg = 0) sc_refill_cfgs scp)"
 
-abbreviation active_sc_valid_refills :: "'z state \<Rightarrow> bool" where
-  "active_sc_valid_refills s \<equiv> active_sc_valid_refills_2 (sc_refill_cfgs_of s)"
+abbreviation active_scs_valid :: "'z state \<Rightarrow> bool" where
+  "active_scs_valid s \<equiv> active_scs_valid_2 (sc_refill_cfgs_of s)"
 
-lemmas active_sc_valid_refills_def = active_sc_valid_refills_2_def
+lemmas active_scs_valid_def = active_scs_valid_2_def
 
-lemma active_sc_valid_refills_lift_pre_conj:
+lemma active_scs_valid_lift_pre_conj:
   assumes a: "\<And>scp. \<lbrace>\<lambda>s. \<not> pred_map active_scrc (sc_refill_cfgs_of s) scp \<and> R s\<rbrace>
                      f \<lbrace>\<lambda>rv s. \<not> pred_map active_scrc (sc_refill_cfgs_of s) scp\<rbrace>"
   assumes b: "\<And>scp. \<lbrace>\<lambda>s. valid_refills scp s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv s. valid_refills scp s\<rbrace>"
@@ -2359,8 +2359,8 @@ lemma active_sc_valid_refills_lift_pre_conj:
                      f \<lbrace>\<lambda>rv s. \<not> pred_map (\<lambda>cfg. \<not> active_scrc cfg) (sc_refill_cfgs_of s) scp\<rbrace>"
   assumes e: "\<And>scp. \<lbrace>\<lambda>s. pred_map (\<lambda>cfg. scrc_budget cfg = 0) (sc_refill_cfgs_of s) scp \<and> R s\<rbrace>
                      f \<lbrace>\<lambda>_ s. pred_map (\<lambda>cfg. scrc_budget cfg = 0) (sc_refill_cfgs_of s) scp\<rbrace>"
-    shows "\<lbrace>\<lambda>s. active_sc_valid_refills s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. active_sc_valid_refills\<rbrace>"
-  apply (simp add: active_sc_valid_refills_def)
+    shows "\<lbrace>\<lambda>s. active_scs_valid s \<and> R s\<rbrace> f \<lbrace>\<lambda>rv. active_scs_valid\<rbrace>"
+  apply (simp add: active_scs_valid_def)
   apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift' a b c d e)
   done
 
@@ -3040,7 +3040,7 @@ definition valid_sched_2 where
     \<and> valid_idle_etcb_2 etcbs
     \<and> (riq \<longrightarrow> released_ipc_queues_2 ctime tcb_sts tcb_scps tcb_faults sc_refill_cfgs)
     \<and> active_reply_scs_2 sc_reps sc_refill_cfgs
-    \<and> active_sc_valid_refills_2 sc_refill_cfgs"
+    \<and> active_scs_valid_2 sc_refill_cfgs"
 
 abbreviation valid_sched :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_sched \<equiv> valid_sched_pred (valid_sched_2 True True True)"
@@ -3177,8 +3177,8 @@ lemma valid_sched_released_ipc_queues[elim!]:
   "valid_sched s \<Longrightarrow> released_ipc_queues s"
   by (clarsimp simp: valid_sched_def)
 
-lemma valid_sched_active_sc_valid_refills[elim!]:
-  "valid_sched s \<Longrightarrow> active_sc_valid_refills s" by (simp add: valid_sched_def)
+lemma valid_sched_active_scs_valid[elim!]:
+  "valid_sched s \<Longrightarrow> active_scs_valid s" by (simp add: valid_sched_def)
 
 lemma valid_sched_imp_except_blocked[elim!]:
   "valid_sched s \<Longrightarrow> valid_sched_except_blocked s"
@@ -3578,7 +3578,7 @@ lemma valid_sched_lift_pre_conj:
                wp: valid_ready_qs_lift_pre_conj ct_not_in_q_lift_pre_conj
                    ct_in_cur_domain_lift_pre_conj valid_release_q_lift_pre_conj
                    valid_sched_action_lift_pre_conj valid_blocked_lift_pre_conj assms
-                   released_ipc_queues_lift_pre_conj active_sc_valid_refills_lift_pre_conj
+                   released_ipc_queues_lift_pre_conj active_scs_valid_lift_pre_conj
                    active_reply_scs_lift_pre_conj hoare_vcg_all_lift hoare_vcg_imp_lift)
 
 lemmas valid_sched_lift = valid_sched_lift_pre_conj[where R = \<top>, simplified]

@@ -2081,7 +2081,7 @@ lemma bind_sc_reply_invs[wp]:
 lemma replyPush_corres:
   "can_donate = can_donate' \<Longrightarrow>
    corres dc (valid_replies and pspace_aligned and pspace_distinct and valid_objs
-              and K (caller \<noteq> idle_thread_ptr) and tcb_at callee and active_sc_valid_refills
+              and K (caller \<noteq> idle_thread_ptr) and tcb_at callee and active_scs_valid
               and st_tcb_at (\<lambda>st. reply_object st = None) caller and ex_nonz_cap_to reply_ptr
               and reply_sc_reply_at (\<lambda>tptr. tptr = None) reply_ptr
               and reply_tcb_reply_at (\<lambda>tptr. tptr = None) reply_ptr
@@ -2436,7 +2436,7 @@ lemma sendIPC_corres:
   assumes "call \<longrightarrow> bl"
   shows
   "corres dc (all_invs_but_fault_tcbs and fault_tcbs_valid_states_except_set {t} and valid_list
-              and active_sc_valid_refills and current_time_bounded
+              and active_scs_valid and current_time_bounded
               and valid_sched_action and ep_at ep and ex_nonz_cap_to t and st_tcb_at active t
               and scheduler_act_not t and (\<lambda>s. cd \<longrightarrow> bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) t s))
              invs'
@@ -2453,7 +2453,7 @@ lemma sendIPC_corres:
   apply (rule stronger_corres_guard_imp)
     apply (rule corres_split [OF getEndpoint_corres, where
              R="\<lambda>rv. all_invs_but_fault_tcbs and valid_list and st_tcb_at active t
-                     and ep_at ep and valid_sched_action and active_sc_valid_refills
+                     and ep_at ep and valid_sched_action and active_scs_valid
                      and valid_ep rv and obj_at (\<lambda>ob. ob = Endpoint rv) ep
                      and ex_nonz_cap_to t and scheduler_act_not t and current_time_bounded
                      and (\<lambda>s. cd \<longrightarrow> bound_sc_tcb_at (\<lambda>a. \<exists>y. a = Some y) t s)"
@@ -2532,12 +2532,12 @@ lemma sendIPC_corres:
                                \<comment> \<open>starting Hoare triples\<close>
                                apply wpsimp
                               apply wpsimp
-                             apply (rule_tac Q="\<lambda>r. valid_sched_action and active_sc_valid_refills
+                             apply (rule_tac Q="\<lambda>r. valid_sched_action and active_scs_valid
                                                     and bound_sc_tcb_at ((=) r) t'
                                                     and pspace_aligned
                                                     and pspace_distinct
                                                     and valid_tcbs
-                                                    and active_sc_valid_refills
+                                                    and active_scs_valid
                                                     and current_time_bounded"
                                     in hoare_strengthen_post[rotated])
                               apply (clarsimp, rename_tac rv s)
@@ -2548,12 +2548,12 @@ lemma sendIPC_corres:
 
                              apply (wpsimp wp: thread_get_wp')
                             apply (wpsimp wp: threadGet_wp)
-                           apply (rule_tac Q="\<lambda>_. valid_sched_action and active_sc_valid_refills
+                           apply (rule_tac Q="\<lambda>_. valid_sched_action and active_scs_valid
                                                   and tcb_at t'
                                                   and pspace_aligned
                                                   and pspace_distinct
                                                   and valid_tcbs
-                                                  and active_sc_valid_refills
+                                                  and active_scs_valid
                                                   and current_time_bounded"
                                   in hoare_strengthen_post[rotated])
                             apply (clarsimp simp: pred_tcb_at_def obj_at_def)
@@ -2566,7 +2566,7 @@ lemma sendIPC_corres:
                          apply (wpsimp wp: thread_get_wp')
                         apply (wpsimp wp: threadGet_wp)
                        apply (rule_tac Q="\<lambda>_. valid_objs and pspace_aligned and pspace_distinct
-                                              and tcb_at t' and active_sc_valid_refills
+                                              and tcb_at t' and active_scs_valid
                                               and valid_sched_action and current_time_bounded"
                               in hoare_strengthen_post[rotated])
                         apply clarsimp
@@ -2583,7 +2583,7 @@ lemma sendIPC_corres:
                   apply (wpsimp wp: threadGet_wp)
                  apply (rule_tac Q="\<lambda>_. valid_objs and pspace_aligned and pspace_distinct and
                           scheduler_act_not t and valid_sched_action and valid_replies and
-                          st_tcb_at active t and tcb_at t' and scheduler_act_not t' and active_sc_valid_refills and
+                          st_tcb_at active t and tcb_at t' and scheduler_act_not t' and active_scs_valid and
                           (\<lambda>s. reply_opt \<noteq> None \<longrightarrow> reply_at (the reply_opt) s \<and>
                                ex_nonz_cap_to (the reply_opt) s \<and>
                                reply_tcb_reply_at (\<lambda>tptr. tptr = None) (the reply_opt) s \<and>
@@ -2635,7 +2635,7 @@ lemma sendIPC_corres:
                 apply wpsimp
                apply (wpfix add: reply_object.simps(1))
                apply (rule_tac Q="\<lambda>_. valid_objs and pspace_aligned and pspace_distinct and
-                        valid_replies and active_sc_valid_refills and
+                        valid_replies and active_scs_valid and
                         scheduler_act_not t and valid_sched_action
                         and st_tcb_at active t and tcb_at t' and
                         if_live_then_nonz_cap and scheduler_act_not t' and
@@ -2827,7 +2827,7 @@ lemma getTCBSc_corres:
 
 lemma getScTime_corres:
   "corres (=) (valid_objs and pspace_aligned and pspace_distinct
-               and active_sc_valid_refills and active_sc_tcb_at t)
+               and active_scs_valid and active_sc_tcb_at t)
               valid_objs'
               (get_sc_time t) (getScTime t)"
   apply (simp only: get_sc_time_def getScTime_def)
@@ -2840,7 +2840,7 @@ lemma getScTime_corres:
     apply (wpsimp wp: threadGet_wp simp: getTCBSc_def)
    apply (clarsimp simp: vs_all_heap_simps obj_at_kh_kheap_simps is_sc_obj_def)
    apply (erule_tac x=ref' in valid_objsE; simp add: valid_obj_def)
-   apply (drule_tac scp=ref' in active_sc_valid_refillsE[rotated])
+   apply (drule_tac scp=ref' in active_scs_validE[rotated])
     apply (clarsimp simp: is_sc_active_def is_sc_active_kh_simp[symmetric])
    apply (fastforce simp: vs_all_heap_simps pred_map_def cfg_valid_refills_def rr_valid_refills_def
                           sp_valid_refills_def sc_refill_cfgs_of_scs_def map_project_def)
@@ -2861,7 +2861,7 @@ lemma getScTime_corres:
 
 lemma tcbReleaseEnqueue_corres:
   "corres dc (valid_objs and pspace_aligned and pspace_distinct
-              and valid_release_q and active_sc_valid_refills and active_sc_tcb_at t)
+              and valid_release_q and active_scs_valid and active_sc_tcb_at t)
              valid_objs'
              (tcb_release_enqueue t) (tcbReleaseEnqueue t)"
   apply (clarsimp simp: tcb_release_enqueue_def tcbReleaseEnqueue_def setReleaseQueue_def)
@@ -2874,7 +2874,7 @@ lemma tcbReleaseEnqueue_corres:
            apply (rule_tac r'="(=)" and S="(=)" in corres_mapM_list_all2; clarsimp)
               apply (clarsimp simp: list.rel_eq)
               apply (rule_tac P="\<lambda>s. valid_objs s \<and> pspace_aligned s \<and> pspace_distinct s
-                                     \<and> active_sc_valid_refills s
+                                     \<and> active_scs_valid s
                                      \<and> (\<forall>x \<in> set (y#xs). active_sc_tcb_at x s)"
                            in corres_guard1_imp)
                apply (rule getScTime_corres, simp)
@@ -2910,7 +2910,7 @@ lemma tcbReleaseEnqueue_corres:
 lemma postpone_corres:
   "corres dc (\<lambda>s. valid_objs s \<and> pspace_aligned s \<and> pspace_distinct s
                          \<and> sym_refs (state_refs_of s)
-                         \<and> valid_release_q s \<and> active_sc_valid_refills s \<and> is_active_sc ptr s
+                         \<and> valid_release_q s \<and> active_scs_valid s \<and> is_active_sc ptr s
                          \<and> sc_tcb_sc_at (\<lambda>sc. \<exists>t. sc = Some t \<and> not_queued t s) ptr s)
              (valid_queues and valid_objs')
              (SchedContext_A.postpone ptr) (postpone ptr)"
@@ -2949,7 +2949,7 @@ lemma postpone_corres:
 
 lemma schedContextResume_corres:
   "corres dc (valid_objs and pspace_aligned and pspace_distinct and valid_ready_qs and valid_release_q
-                   and active_sc_valid_refills and sc_tcb_sc_at (\<lambda>sc. sc \<noteq> None) ptr
+                   and active_scs_valid and sc_tcb_sc_at (\<lambda>sc. sc \<noteq> None) ptr
                    and (\<lambda>s. sym_refs (state_refs_of s)))
              (valid_objs' and valid_queues and valid_release_queue_iff)
              (sched_context_resume ptr) (schedContextResume ptr)"
@@ -3034,9 +3034,9 @@ lemma schedContextResume_corres:
     apply (intro conjI impI)
         apply (fastforce simp: valid_refills_def vs_all_heap_simps rr_valid_refills_def
                                opt_map_red opt_pred_def MIN_REFILLS_def
-                        dest!: active_sc_valid_refillsE split: if_split_asm)
+                        dest!: active_scs_validE split: if_split_asm)
        apply (fastforce simp: valid_refills_def vs_all_heap_simps rr_valid_refills_def
-                       dest!: active_sc_valid_refillsE)
+                       dest!: active_scs_validE)
       apply (fastforce simp: vs_all_heap_simps valid_ready_qs_2_def
                              valid_ready_queued_thread_2_def in_ready_q_def)
      apply (fastforce simp: vs_all_heap_simps valid_ready_qs_2_def
@@ -3115,7 +3115,7 @@ lemma cteInsert_ct'[wp]:
 
 lemma maybeDonateSc_corres:
   "corres dc (tcb_at tcb_ptr and ntfn_at ntfn_ptr and weak_valid_sched_action
-              and valid_ready_qs and active_sc_valid_refills and valid_release_q
+              and valid_ready_qs and active_scs_valid and valid_release_q
               and valid_objs and pspace_aligned and pspace_distinct and (\<lambda>s. sym_refs (state_refs_of s)))
              (tcb_at' tcb_ptr and ntfn_at' ntfn_ptr
               and valid_objs' and valid_queues and valid_queues' and valid_release_queue_iff)
@@ -3143,7 +3143,7 @@ lemma maybeDonateSc_corres:
             apply wpsimp
             apply (rule_tac Q="\<lambda>_. valid_objs and valid_ready_qs and
                       pspace_aligned and pspace_distinct and (\<lambda>s. sym_refs (state_refs_of s)) and
-                      active_sc_valid_refills and valid_release_q and
+                      active_scs_valid and valid_release_q and
                       sc_not_in_release_q xa and sc_tcb_sc_at ((=) (Some tcb_ptr)) xa"
                    in hoare_strengthen_post[rotated])
              apply (fastforce simp: sc_at_pred_n_def obj_at_def)
@@ -3455,7 +3455,7 @@ lemma sendSignal_corres:
                        apply (rule ifCondRefillUnblockCheck_corres)
                       apply (wpsimp wp: get_tcb_obj_ref_wp)
                      apply (wpsimp wp: threadGet_wp)
-                    apply (rule_tac Q="\<lambda>_. tcb_at a and active_sc_valid_refills and pspace_aligned
+                    apply (rule_tac Q="\<lambda>_. tcb_at a and active_scs_valid and pspace_aligned
                                            and pspace_distinct and valid_objs"
                            in hoare_strengthen_post[rotated])
                      apply (clarsimp, drule (1) valid_objs_ko_at)
@@ -3484,7 +3484,7 @@ lemma sendSignal_corres:
                       (=) Structures_A.thread_state.Restart or
                       (=) Structures_A.thread_state.IdleThreadState) tptr and
                    ex_nonz_cap_to tptr and fault_tcb_at ((=) None) tptr and
-                   valid_sched and scheduler_act_not tptr and active_sc_valid_refills
+                   valid_sched and scheduler_act_not tptr and active_scs_valid
                    and current_time_bounded"
                  in hoare_strengthen_post[rotated])
            apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_sched_def pred_disj_def)
@@ -3541,7 +3541,7 @@ lemma sendSignal_corres:
                    apply (rule ifCondRefillUnblockCheck_corres)
                   apply (wpsimp wp: get_tcb_obj_ref_wp)
                  apply (wpsimp wp: threadGet_wp)
-                apply (rule_tac Q="\<lambda>_. tcb_at (hd list) and active_sc_valid_refills and pspace_aligned
+                apply (rule_tac Q="\<lambda>_. tcb_at (hd list) and active_scs_valid and pspace_aligned
                                        and pspace_distinct and valid_objs"
                        in hoare_strengthen_post[rotated])
                  apply (clarsimp, drule (1) valid_objs_ko_at)
@@ -4107,7 +4107,7 @@ lemma completeSignal_corres:
                   apply (clarsimp simp: tcb_relation_def)
                  apply (rule_tac P="bound_sc_tcb_at ((=) sc_opt) tcb and ntfn_at ntfnptr and valid_objs
                                     and pspace_aligned and pspace_distinct
-                                    and active_sc_valid_refills"
+                                    and active_scs_valid"
                             and P'="bound_sc_tcb_at' ((=) sc_opt) tcb and ntfn_at' ntfnptr and valid_objs'"
                         in corres_inst)
                  apply (rename_tac sc_opt; case_tac sc_opt;
@@ -4115,7 +4115,7 @@ lemma completeSignal_corres:
                  apply (rule corres_guard_imp)
                    apply (rule corres_split[OF get_sc_corres])
                      apply (rename_tac scp sc sc')
-                     apply (rule_tac P="sc_at scp and (\<lambda>s. scs_of2 s scp = Some sc) and ntfn_at ntfnptr and active_sc_valid_refills
+                     apply (rule_tac P="sc_at scp and (\<lambda>s. scs_of2 s scp = Some sc) and ntfn_at ntfnptr and active_scs_valid
                                         and pspace_aligned and pspace_distinct"
                                 and P'="ko_at' sc' scp and ntfn_at' ntfnptr and valid_objs'"
                             in corres_inst)
@@ -4132,7 +4132,7 @@ lemma completeSignal_corres:
                         apply (wpsimp wp: get_simple_ko_wp)
                        apply (wpsimp wp: getNotification_wp)
                       apply (clarsimp simp: obj_at_def is_ntfn)
-                      apply (drule active_sc_valid_refillsE[rotated])
+                      apply (drule active_scs_validE[rotated])
                        apply (fastforce simp: vs_all_heap_simps is_sc_obj elim!: opt_mapE)
                       apply (clarsimp simp: opt_map_red opt_pred_def valid_refills_def
                                             vs_all_heap_simps rr_valid_refills_def)
@@ -4151,7 +4151,7 @@ lemma completeSignal_corres:
                 apply (wpsimp wp: get_tcb_obj_ref_wp threadGet_wp)
                apply (wpsimp wp: get_tcb_obj_ref_wp threadGet_wp)
               apply (rule_tac Q="\<lambda>_. tcb_at tcb  and ntfn_at ntfnptr and valid_objs
-                                     and pspace_distinct and pspace_aligned and active_sc_valid_refills"
+                                     and pspace_distinct and pspace_aligned and active_scs_valid"
                      in hoare_strengthen_post[rotated])
                apply (clarsimp simp: pred_tcb_at_def obj_at_def opt_map_red)
               apply (wpsimp wp: abs_typ_at_lifts)
@@ -4207,7 +4207,7 @@ lemma valid_tcb'_SchedContext_update_empty[elim!]:
 lemma maybeReturnSc_corres:
   "corres dc
    (ntfn_at ntfnPtr and tcb_at thread and valid_tcbs and pspace_aligned
-      and scheduler_act_not thread and active_sc_valid_refills
+      and scheduler_act_not thread and active_scs_valid
       and pspace_distinct and weak_valid_sched_action
       and not_queued thread and not_in_release_q thread
       and (\<lambda>s. sym_refs (state_refs_of s)))
@@ -4733,7 +4733,7 @@ lemma receiveIPC_corres:
                                                  and valid_bound_obj (\<lambda>r s. r \<notin> fst ` replies_with_sc s) replyOpt
                                                  and receive_ipc_preamble_rv reply_cap replyOpt"
                                 in hoare_strengthen_post[rotated])
-                          apply (clarsimp simp: valid_sched_active_sc_valid_refills)
+                          apply (clarsimp simp: valid_sched_active_scs_valid)
                           apply (rule conjI)
                            apply (rename_tac rv s; case_tac rv; simp)
                            apply (rule context_conjI)
@@ -4741,7 +4741,7 @@ lemma receiveIPC_corres:
                             apply (drule sym[of "Some _"])
                             apply (erule_tac x=sender in valid_objsE, simp)
                             apply (clarsimp simp: obj_at_def is_sc_obj valid_tcb_def valid_obj_def)
-                           apply (clarsimp simp: valid_sched_active_sc_valid_refills
+                           apply (clarsimp simp: valid_sched_active_scs_valid
                                                  opt_map_red opt_pred_def obj_at_def is_sc_obj)
                           apply (clarsimp simp: obj_at_def is_tcb pred_tcb_at_def sc_tcb_sc_at_def
                                          split: if_split)
@@ -4767,7 +4767,7 @@ lemma receiveIPC_corres:
                                                and valid_bound_obj (\<lambda>r s. r \<notin> fst ` replies_with_sc s) replyOpt
                                                and receive_ipc_preamble_rv reply_cap replyOpt"
                               in hoare_strengthen_post[rotated])
-                        apply (clarsimp simp: valid_sched_active_sc_valid_refills)
+                        apply (clarsimp simp: valid_sched_active_scs_valid)
                         apply (rename_tac opt; case_tac opt; clarsimp simp: obj_at_def is_tcb pred_tcb_at_def)
                        apply (wpsimp wp: do_ipc_transfer_tcb_caps hoare_vcg_ball_lift
                                          valid_bound_obj_lift)
@@ -4898,7 +4898,7 @@ lemma receiveIPC_corres:
 lemma scheduleTCB_corres:
   "corres dc
           (valid_tcbs and weak_valid_sched_action and pspace_aligned and pspace_distinct
-           and tcb_at tcbPtr and active_sc_valid_refills)
+           and tcb_at tcbPtr and active_scs_valid)
           (valid_tcbs' and valid_queues and valid_queues' and valid_release_queue_iff)
           (schedule_tcb tcbPtr)
           (scheduleTCB tcbPtr)"
@@ -4927,7 +4927,7 @@ lemma as_user_refs_of[wp]:
 lemma receiveSignal_corres:
  "\<lbrakk> is_ntfn_cap cap; cap_relation cap cap' \<rbrakk> \<Longrightarrow>
   corres dc ((invs and weak_valid_sched_action and scheduler_act_not thread and valid_ready_qs
-                   and st_tcb_at active thread and active_sc_valid_refills and valid_release_q
+                   and st_tcb_at active thread and active_scs_valid and valid_release_q
                    and current_time_bounded and (\<lambda>s. thread = cur_thread s) and not_queued thread
                    and not_in_release_q thread and ex_nonz_cap_to thread) and valid_cap cap)
             (invs' and tcb_at' thread and ex_nonz_cap_to' thread and valid_cap' cap')
@@ -5016,7 +5016,7 @@ lemma receiveSignal_corres:
             apply (rule ifCondRefillUnblockCheck_corres)
            apply (wpsimp wp: get_tcb_obj_ref_wp)
           apply (wpsimp wp: threadGet_wp)
-         apply (rule_tac Q="\<lambda>_. tcb_at thread and active_sc_valid_refills and pspace_distinct
+         apply (rule_tac Q="\<lambda>_. tcb_at thread and active_scs_valid and pspace_distinct
                                 and pspace_aligned and valid_objs"
                 in hoare_strengthen_post[rotated])
           apply (clarsimp simp: obj_at_def is_tcb)
@@ -5054,7 +5054,7 @@ lemma sendFaultIPC_corres:
   assumes "cap_relation cap cap'"
   shows
   "corres (fr \<oplus> (=))
-          (invs and valid_list and valid_sched_action and active_sc_valid_refills
+          (invs and valid_list and valid_sched_action and active_scs_valid
                 and st_tcb_at active thread and scheduler_act_not thread
                 and current_time_bounded
                 and (\<lambda>s. can_donate \<longrightarrow> bound_sc_tcb_at (\<lambda>sc. sc \<noteq> None) thread s)
@@ -6120,7 +6120,7 @@ lemma sfi_invs_plus':
 
 lemma handleFault_corres:
   assumes "fr f f'"
-  shows "corres dc (invs and valid_list and valid_sched_action and active_sc_valid_refills
+  shows "corres dc (invs and valid_list and valid_sched_action and active_scs_valid
                          and scheduler_act_not t and st_tcb_at active t and current_time_bounded
                          and ex_nonz_cap_to t and K (valid_fault f))
                    (invs' and sch_act_not t and st_tcb_at' active' t and ex_nonz_cap_to' t)
@@ -6172,7 +6172,7 @@ lemma handleFault_corres:
 
 lemma handleTimeout_corres:
   assumes "fr f f'"
-  shows "corres dc (invs and valid_list and valid_sched_action and active_sc_valid_refills
+  shows "corres dc (invs and valid_list and valid_sched_action and active_scs_valid
                          and scheduler_act_not t and st_tcb_at active t and current_time_bounded
                          and cte_wp_at is_ep_cap (t,tcb_cnode_index 4) and K (valid_fault f))
                    invs'
@@ -6339,7 +6339,7 @@ lemma doReplyTransfer_corres:
                       apply (rule_tac Q="valid_sched_action and tcb_at recvr
                                          and sc_tcb_sc_at (\<lambda>a. a \<noteq> None) (the scopt) and
                                          active_sc_at (the scopt) and valid_refills (the scopt) and
-                                         valid_release_q and active_sc_valid_refills and
+                                         valid_release_q and active_scs_valid and
                                          (\<lambda>s. sc_tcb_sc_at (\<lambda>sc. \<exists>t. sc = Some t \<and> not_queued t s) (the scopt) s) and
                                          invs and valid_list and scheduler_act_not recvr
                                          and current_time_bounded and st_tcb_at active recvr"
@@ -6348,7 +6348,7 @@ lemma doReplyTransfer_corres:
                                   and P="valid_sched_action and tcb_at recvr and current_time_bounded and
                                          sc_tcb_sc_at (\<lambda>a. a \<noteq> None) (the scopt) and
                                          active_sc_at (the scopt) and valid_refills (the scopt) and
-                                         valid_release_q and active_sc_valid_refills and
+                                         valid_release_q and active_scs_valid and
                                          (\<lambda>s. sc_tcb_sc_at (\<lambda>sc. \<exists>t. sc = Some t \<and> not_queued t s) (the scopt) s) and
                                          invs and valid_list and scheduler_act_not recvr and st_tcb_at active recvr"
                              in stronger_corres_guard_imp)
@@ -6366,7 +6366,7 @@ lemma doReplyTransfer_corres:
                                    apply (rule corres_symb_exec_r[OF _ get_sc_sp'], rename_tac sc')
                                      apply (rule_tac Q="\<lambda>_. sc_badge sc = scBadge sc'" in corres_cross_add_guard[rotated])
                                       apply (rule_tac corres_gen_asm2)
-                                      apply (rule_tac Q="\<lambda>s. active_sc_valid_refills s \<and>
+                                      apply (rule_tac Q="\<lambda>s. active_scs_valid s \<and>
                                                is_active_sc (the scopt') s \<and> current_time_bounded s \<and>
                                                sc_tcb_sc_at (\<lambda>sc. \<exists>t. sc = Some t \<and> not_queued t s) (the scopt) s \<and>
                                                invs s \<and> valid_release_q s \<and> tcb_at recvr s \<and>
@@ -6440,7 +6440,7 @@ lemma doReplyTransfer_corres:
                                    apply (simp add: sc_refill_ready_relation sc_refill_sufficient_relation state_relation_def active_sc_at_equiv)
                                   apply (metis valid_sched_context'_def)
                                  apply (subst (asm) active_sc_at_equiv)
-                                 apply (frule (1) active_sc_valid_refillsE)
+                                 apply (frule (1) active_scs_validE)
                                  apply (clarsimp simp: valid_refills_def2 obj_at_def)
                                 apply (clarsimp simp: obj_at_def vs_all_heap_simps active_sc_def
                                                       sc_relation_def)
@@ -6463,7 +6463,7 @@ lemma doReplyTransfer_corres:
                   apply (wpsimp wp: gts_wp')
                  apply (rule_tac Q="\<lambda>_. tcb_at recvr and valid_sched_action and invs and valid_list
                                         and valid_release_q and scheduler_act_not recvr
-                                        and active_sc_valid_refills and current_time_bounded
+                                        and active_scs_valid and current_time_bounded
                                         and active_if_bound_sc_tcb_at recvr
                                         and not_queued recvr"
                         in hoare_strengthen_post[rotated])
@@ -6475,7 +6475,7 @@ lemma doReplyTransfer_corres:
                     apply (intro conjI)
                         apply (clarsimp simp: vs_all_heap_simps sc_at_kh_simps)
                        apply (clarsimp simp: vs_all_heap_simps)
-                      apply (erule active_sc_valid_refillsE[rotated], clarsimp simp: vs_all_heap_simps)
+                      apply (erule active_scs_validE[rotated], clarsimp simp: vs_all_heap_simps)
                      apply (clarsimp simp: vs_all_heap_simps sc_at_kh_simps)
                     apply (clarsimp simp: vs_all_heap_simps pred_tcb_at_def obj_at_def runnable_eq)
                    apply (simp add: sc_at_kh_simps pred_map_eq_normalise heap_refs_inv_def2)
@@ -6490,7 +6490,7 @@ lemma doReplyTransfer_corres:
                                recvr \<noteq> idle_thread s \<and>
                                fault_tcb_at ((=) None) recvr s \<and>
                                valid_release_q s \<and>
-                               active_sc_valid_refills s \<and>
+                               active_scs_valid s \<and>
                                heap_refs_inv (sc_tcbs_of s) (tcb_scps_of s) \<and>
                                (pred_map_eq None (tcb_scps_of s) recvr \<or> active_sc_tcb_at recvr s) \<and>
                                not_queued recvr s \<and> not_in_release_q recvr s"

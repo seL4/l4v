@@ -561,7 +561,7 @@ lemma schedContextYieldTo_corres:
                               apply (rule_tac sc'1=sc0' in corres_split[OF update_sc_no_reply_stack_update_ko_at'_corres])
                                     apply ((clarsimp simp: sc_relation_def objBits_simps')+)[4]
                                 apply (rule_tac P="valid_objs and pspace_aligned and pspace_distinct
-                                                   and weak_valid_sched_action and active_sc_valid_refills
+                                                   and weak_valid_sched_action and active_scs_valid
                                                    and sc_yf_sc_at ((=) (Some ct_ptr)) scp and ?scp
                                                    and bound_yt_tcb_at ((=) (Some scp)) ct_ptr
                                                    and tcb_at ct_ptr and tcb_at tp
@@ -600,7 +600,7 @@ lemma schedContextYieldTo_corres:
                                            pspace_aligned and
                                            pspace_distinct and
                                            weak_valid_sched_action and
-                                           active_sc_valid_refills and
+                                           active_scs_valid and
                                            (\<lambda>s. bound_yt_tcb_at ((=) None) (cur_thread s) s) and
                                            (\<lambda>s. sc_tcb_sc_at (\<lambda>sctcb. \<exists>t. sctcb = Some t \<and> t \<noteq> cur_thread s) scp s) and
                                            tcb_at ct_ptr and
@@ -1346,7 +1346,7 @@ lemma invokeSchedControlConfigureFlags_corres:
 
   apply (rename_tac sc')
   apply (rule_tac Q="\<lambda>_ s. invs s \<and> schact_is_rct s \<and> current_time_bounded s
-                           \<and> valid_sched_action s \<and> active_sc_valid_refills s
+                           \<and> valid_sched_action s \<and> active_scs_valid s
                            \<and> valid_ready_qs s \<and> valid_release_q s
                            \<and> sc_at (cur_sc s) s
                            \<and> sc_not_in_release_q sc_ptr s \<and> sc_not_in_ready_q sc_ptr s
@@ -1382,7 +1382,7 @@ lemma invokeSchedControlConfigureFlags_corres:
       apply (intro conjI impI; fastforce?)
        apply (fastforce dest: invs_valid_objs valid_sched_context_objsI
                         simp: valid_sched_context_def valid_bound_obj_def obj_at_def)
-      apply (fastforce intro: active_sc_valid_refillsE)
+      apply (fastforce intro: active_scs_validE)
      apply (fastforce dest: invs_valid_objs' sc_ko_at_valid_objs_valid_sc'
                      intro: valid_objs'_valid_refills'
                       simp: valid_sched_context'_def valid_bound_obj'_def active_sc_at'_rewrite)
@@ -1392,7 +1392,7 @@ lemma invokeSchedControlConfigureFlags_corres:
             apply (wpsimp wp: commit_time_invs)
            apply (wpsimp wp: commit_time_valid_sched_action hoare_vcg_imp_lift')
            apply fastforce
-          apply (wpsimp wp: commit_time_active_sc_valid_refills
+          apply (wpsimp wp: commit_time_active_scs_valid
                             hoare_vcg_imp_lift')
           apply (fastforce intro: cur_sc_active_offset_ready_and_sufficient_implies_cur_sc_more_than_ready)
          apply (wpsimp wp: commit_time_valid_ready_qs hoare_vcg_imp_lift'
@@ -1456,7 +1456,7 @@ lemma invokeSchedControlConfigureFlags_corres:
                         simp: active_sc_at'_rewrite)
 
   apply (rule_tac Q="\<lambda>_ s. invs s \<and> schact_is_rct s \<and> current_time_bounded s
-                           \<and> valid_sched_action s \<and> active_sc_valid_refills s
+                           \<and> valid_sched_action s \<and> active_scs_valid s
                            \<and> valid_ready_qs s \<and> valid_release_q s
                            \<and> sc_at (cur_sc s) s
                            \<and> sc_at sc_ptr s
@@ -1522,7 +1522,7 @@ lemma invokeSchedControlConfigureFlags_corres:
     apply (find_goal \<open>match conclusion in "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>" for P f Q  \<Rightarrow> -\<close>)
     apply (rule hoare_if)
      apply (wps_conj_solves wp: refill_new_valid_sched_action refill_new_valid_release_q)
-       apply (wpsimp wp: refill_new_active_sc_valid_refills)
+       apply (wpsimp wp: refill_new_active_scs_valid)
        apply (clarsimp simp: current_time_bounded_def sc_at_pred_n_def obj_at_def)
       apply (wpsimp wp: refill_new_valid_ready_qs)
       apply (clarsimp simp: current_time_bounded_def active_sc_def MIN_REFILLS_def)
@@ -1534,24 +1534,24 @@ lemma invokeSchedControlConfigureFlags_corres:
      apply (rule hoare_if)
 
       apply (wps_conj_solves wp: refill_update_valid_sched_action refill_update_invs)
-         apply (wpsimp wp: refill_update_active_sc_valid_refills)
+         apply (wpsimp wp: refill_update_active_scs_valid)
          apply (clarsimp simp: current_time_bounded_def sc_at_pred_n_def obj_at_def
-                               active_sc_valid_refills_def vs_all_heap_simps active_sc_def)
+                               active_scs_valid_def vs_all_heap_simps active_sc_def)
         apply (wpsimp wp: refill_update_valid_ready_qs)
         apply (simp add: obj_at_kh_kheap_simps pred_map_eq_normalise)
        apply (wpsimp wp: refill_update_valid_release_q)
-       apply (clarsimp simp: active_sc_valid_refills_def vs_all_heap_simps)
+       apply (clarsimp simp: active_scs_valid_def vs_all_heap_simps)
       apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')
 
      apply (wps_conj_solves wp: refill_new_valid_sched_action refill_new_valid_release_q)
-       apply (wpsimp wp: refill_new_active_sc_valid_refills)
+       apply (wpsimp wp: refill_new_active_scs_valid)
        apply (clarsimp simp: current_time_bounded_def sc_at_pred_n_def obj_at_def)
       apply (wpsimp wp: refill_new_valid_ready_qs)
       apply (clarsimp simp: current_time_bounded_def active_sc_def MIN_REFILLS_def)
      apply (wpsimp wp: hoare_vcg_imp_lift' hoare_vcg_all_lift)
 
      apply (wps_conj_solves wp: refill_new_valid_sched_action refill_new_valid_release_q)
-       apply (wpsimp wp: refill_new_active_sc_valid_refills)
+       apply (wpsimp wp: refill_new_active_scs_valid)
        apply (clarsimp simp: current_time_bounded_def sc_at_pred_n_def obj_at_def)
       apply (wpsimp wp: refill_new_valid_ready_qs)
       apply (clarsimp simp: current_time_bounded_def active_sc_def MIN_REFILLS_def)

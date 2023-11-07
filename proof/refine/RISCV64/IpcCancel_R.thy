@@ -1087,7 +1087,7 @@ lemma replyPop_corres:
    corres dc
      (valid_objs and pspace_aligned and pspace_distinct
       and st_tcb_at ((=) st) t and weak_valid_sched_action
-      and sc_at scp and reply_at rp and active_sc_valid_refills
+      and sc_at scp and reply_at rp and active_scs_valid
       and valid_replies and (\<lambda>s. sym_refs (state_refs_of s))
       and bound_sc_tcb_at ((=) tcbsc) t
       and reply_tcb_reply_at ((=) (Some t)) rp
@@ -1378,7 +1378,7 @@ lemma replyRemove_corres:
   "\<lbrakk> st = Structures_A.thread_state.BlockedOnReply rp;
      st'= BlockedOnReply (Some rp)\<rbrakk> \<Longrightarrow>
    corres dc (valid_objs and pspace_aligned and pspace_distinct and valid_replies
-              and weak_valid_sched_action and active_sc_valid_refills
+              and weak_valid_sched_action and active_scs_valid
               and st_tcb_at ((=) st) t and (\<lambda>s. sym_refs (state_refs_of s)))
              (valid_objs' and valid_release_queue_iff and valid_queues and valid_queues'
               and (\<lambda>s'. sym_refs (list_refs_of_replies' s')) and K (rp' = rp))
@@ -2606,7 +2606,7 @@ crunches ifCondRefillUnblockCheck
 
 lemma restart_thread_if_no_fault_corres:
   "corres dc (valid_sched_action and tcb_at t and pspace_aligned and pspace_distinct
-              and valid_tcbs and active_sc_valid_refills and current_time_bounded)
+              and valid_tcbs and active_scs_valid and current_time_bounded)
              (valid_queues and valid_queues' and valid_release_queue_iff and valid_objs')
              (restart_thread_if_no_fault t)
              (restartThreadIfNoFault t)"
@@ -2627,12 +2627,12 @@ lemma restart_thread_if_no_fault_corres:
            apply (rule corres_split[OF ifCondRefillUnblockCheck_corres])
              apply (rule possibleSwitchTo_corres, simp)
             apply (wpsimp simp: if_cond_refill_unblock_check_def
-                            wp: refill_unblock_check_active_sc_valid_refills)
+                            wp: refill_unblock_check_active_scs_valid)
            apply wpsimp
           apply (rule_tac Q="\<lambda>scopt s. case_option True (\<lambda>p. sc_at p s) scopt \<and>
                                        tcb_at t s \<and> valid_sched_action s \<and>
                                        pspace_aligned s \<and> pspace_distinct s \<and> valid_tcbs s \<and>
-                                       active_sc_valid_refills s \<and> current_time_bounded s"
+                                       active_scs_valid s \<and> current_time_bounded s"
                  in hoare_strengthen_post[rotated])
            apply (fastforce split: option.splits simp: obj_at_def is_sc_obj opt_map_red opt_pred_def)
           apply (wpsimp wp: thread_get_wp' simp: get_tcb_obj_ref_def)
@@ -2640,7 +2640,7 @@ lemma restart_thread_if_no_fault_corres:
          apply (wpsimp wp: threadGet_wp)
         apply (rule_tac Q="\<lambda>scopt s. tcb_at t s \<and> valid_sched_action s \<and>
                                      pspace_aligned s \<and> pspace_distinct s \<and> valid_tcbs s \<and>
-                                     active_sc_valid_refills s \<and> current_time_bounded s"
+                                     active_scs_valid s \<and> current_time_bounded s"
                in hoare_strengthen_post[rotated])
          apply (fastforce split: option.split simp: valid_tcbs_def valid_tcb_def valid_bound_obj_def)
         apply (wpsimp wp: sts_typ_ats set_thread_state_valid_sched_action)
@@ -2937,13 +2937,13 @@ lemma ntfn_cancel_corres_helper:
                 apply (rule corres_split[OF ifCondRefillUnblockCheck_corres])
                   apply (rule possibleSwitchTo_corres, simp)
                  apply (wpsimp simp: if_cond_refill_unblock_check_def
-                                 wp: refill_unblock_check_active_sc_valid_refills)
+                                 wp: refill_unblock_check_active_scs_valid)
                 apply wpsimp
                apply (wpsimp wp: get_tcb_obj_ref_wp)
               apply (wpsimp wp: threadGet_wp)
              apply (clarsimp cong: conj_cong imp_cong all_cong)
              apply (rule_tac Q="\<lambda>_. pspace_aligned and pspace_distinct and current_time_bounded
-                                    and active_sc_valid_refills and valid_tcbs
+                                    and active_scs_valid and valid_tcbs
                                     and valid_sched_action and tcb_at tp"
                     in hoare_strengthen_post[rotated])
               apply (fastforce simp: pred_tcb_at_def is_tcb is_sc_obj obj_at_def opt_map_red
@@ -2971,7 +2971,7 @@ lemma ntfn_cancel_corres_helper:
                                        \<and> not_in_release_q tp s
                                            \<longrightarrow> pred_map runnable (tcb_sts_of s) tp
                                                \<and> released_sc_tcb_at tp s
-                                               \<and> active_sc_valid_refills s
+                                               \<and> active_scs_valid s
                                                \<and> tp \<noteq> idle_thread s)
                                    \<and> pspace_distinct s \<and>  cur_tcb s \<and> valid_objs s
                                    \<and>  pspace_aligned s
@@ -2998,13 +2998,13 @@ lemma ntfn_cancel_corres_helper:
        apply (rule conjI)
         apply (frule valid_sched_released_ipc_queues)
         apply (fastforce simp: released_ipc_queues_defs vs_all_heap_simps)
-       apply (erule valid_sched_active_sc_valid_refills)
+       apply (erule valid_sched_active_scs_valid)
       apply (wpsimp wp: hoare_vcg_const_Ball_lift typ_at_lifts sts_st_tcb')
      apply (auto simp: valid_tcb_state'_def)
   done
 
 lemma refill_unblock_check_weak_valid_sched_action[wp]:
-  "\<lbrace>weak_valid_sched_action and active_sc_valid_refills\<rbrace>
+  "\<lbrace>weak_valid_sched_action and active_scs_valid\<rbrace>
    refill_unblock_check sc_ptr
    \<lbrace>\<lambda>rv. weak_valid_sched_action\<rbrace>"
   apply (clarsimp simp: weak_valid_sched_action_def)
@@ -3062,7 +3062,7 @@ lemma cancelAllSignals_corres:
        apply (wpsimp wp: hoare_vcg_const_Ball_lift)+
      apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
      apply (erule (1) obj_at_valid_objsE)
-     apply (frule valid_sched_active_sc_valid_refills)
+     apply (frule valid_sched_active_scs_valid)
      apply (clarsimp simp: valid_obj_def valid_ntfn_def not_idle_tcb_in_waitingntfn
                            valid_sched_weak_valid_sched_action
                     dest!: valid_objs_valid_tcbs)

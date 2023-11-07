@@ -404,7 +404,7 @@ lemma valid_sched_init[simp]:
                         idle_sc_ptr_def valid_blocked_defs default_domain_def minBound_word
                         released_ipc_queues_defs active_reply_scs_def active_if_reply_sc_at_def
                         active_sc_def MIN_REFILLS_def)
-  by (auto simp: vs_all_heap_simps active_sc_valid_refills_def cfg_valid_refills_def
+  by (auto simp: vs_all_heap_simps active_scs_valid_def cfg_valid_refills_def
                  rr_valid_refills_def MIN_REFILLS_def bounded_release_time_def
                  default_sched_context_def MAX_PERIOD_def active_sc_def
           intro: order_trans[OF mult_left_mono, OF us_to_ticks_helper])

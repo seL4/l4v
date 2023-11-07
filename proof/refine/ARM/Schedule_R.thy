@@ -3056,7 +3056,7 @@ lemma possibleSwitchTo_corres:
   "t = t' \<Longrightarrow>
    corres dc
     (valid_sched_action and tcb_at t and pspace_aligned and pspace_distinct
-     and valid_tcbs and active_sc_valid_refills)
+     and valid_tcbs and active_scs_valid)
     (valid_queues and valid_queues' and valid_release_queue_iff and valid_tcbs')
       (possible_switch_to t)
       (possibleSwitchTo t')"
@@ -3168,9 +3168,9 @@ lemma readTCBRefillReady_no_ofail:
 
 lemma readTCBRefillReady_simp:
   "\<lbrakk>(s, s') \<in> state_relation; pspace_aligned s; pspace_distinct s; valid_objs s;
-    active_sc_tcb_at t s; active_sc_valid_refills s; valid_objs' s'\<rbrakk>
+    active_sc_tcb_at t s; active_scs_valid s; valid_objs' s'\<rbrakk>
    \<Longrightarrow> read_tcb_refill_ready t s = readTCBRefillReady t s'"
-  apply (frule (1) active_sc_valid_refills_tcb_at)
+  apply (frule (1) active_scs_valid_tcb_at)
   apply (clarsimp simp: obj_at_kh_kheap_simps vs_all_heap_simps)
   apply (rename_tac scp tcb sc n)
   apply (prop_tac "tcb_at' t s' \<and> sc_at' scp s'")
@@ -3232,7 +3232,7 @@ lemma releaseQNonEmptyAndReady_simp:
 lemma releaseQNonEmptyAndReady_eq:
   "\<lbrakk>(s, s') \<in> state_relation; pspace_aligned s; pspace_distinct s;
      valid_objs s; valid_release_q s;
-     active_sc_valid_refills s; valid_objs' s'\<rbrakk>
+     active_scs_valid s; valid_objs' s'\<rbrakk>
    \<Longrightarrow> read_release_q_non_empty_and_ready s = releaseQNonEmptyAndReady s'"
   apply (clarsimp simp: read_release_q_non_empty_and_ready_simp releaseQNonEmptyAndReady_simp)
   apply (fastforce simp: state_relation_def release_queue_relation_def
@@ -3399,7 +3399,7 @@ lemma isRunnable_no_fail[wp]:
 
 lemma awakenBody_corres:
   "corres dc ((pspace_aligned and pspace_distinct and valid_objs and valid_sched_action
-               and valid_tcbs and valid_release_q and active_sc_valid_refills)
+               and valid_tcbs and valid_release_q and active_scs_valid)
               and (\<lambda>s. release_queue s \<noteq> []))
              (valid_objs' and valid_queues and valid_queues' and valid_release_queue_iff)
              awaken_body
@@ -3517,7 +3517,7 @@ lemma tcbReleaseDequeue_dequeue_inv:
 
 lemma awaken_corres:
   "corres dc (pspace_aligned and pspace_distinct and valid_objs and valid_release_q
-              and valid_sched_action and valid_tcbs and active_sc_valid_refills)
+              and valid_sched_action and valid_tcbs and active_scs_valid)
              (\<lambda>s'. weak_sch_act_wf (ksSchedulerAction s') s' \<and> valid_objs' s' \<and> valid_queues s'
                    \<and> valid_queues' s' \<and> valid_release_queue_iff s')
              Schedule_A.awaken
@@ -3923,7 +3923,7 @@ lemma refillUnblockCheck_corres:
 lemma ifCondRefillUnblockCheck_corres:
   "corres dc
      (\<lambda>s. case_option True
-                      (\<lambda>scp. sc_at scp s \<and> active_sc_valid_refills s
+                      (\<lambda>scp. sc_at scp s \<and> active_scs_valid s
                            \<and> pspace_aligned s \<and> pspace_distinct s
                            \<and> (((\<lambda>sc. case_option (sc_active sc) \<top> act) |< scs_of2 s) scp)) scp_opt)
      (\<lambda>s. case_option True (\<lambda>scp. case_option (valid_refills' scp s) (\<lambda>_. valid_objs' s) act) scp_opt)
@@ -3941,7 +3941,7 @@ lemma ifCondRefillUnblockCheck_corres:
        apply fastforce
       apply (rule refillUnblockCheck_corres)
      apply wpsimp+
-   apply (drule_tac scp=scp in active_sc_valid_refillsE[rotated, simplified is_active_sc_rewrite];
+   apply (drule_tac scp=scp in active_scs_validE[rotated, simplified is_active_sc_rewrite];
           clarsimp simp: case_bool_if option.case_eq_if opt_map_red obj_at_def is_active_sc2_def
                          vs_all_heap_simps valid_refills_def rr_valid_refills_def active_sc_def
                          opt_pred_def
@@ -4864,7 +4864,7 @@ crunches setReprogramTimer
   (simp: valid_refills'_def)
 
 lemma checkDomainTime_corres:
-  "corres dc (valid_tcbs and weak_valid_sched_action and active_sc_valid_refills and pspace_aligned
+  "corres dc (valid_tcbs and weak_valid_sched_action and active_scs_valid and pspace_aligned
               and pspace_distinct)
              (valid_tcbs' and valid_queues and valid_queues' and valid_release_queue_iff)
              check_domain_time
@@ -4958,7 +4958,7 @@ crunches ifCondRefillUnblockCheck
   (simp: crunch_simps)
 
 lemma switchSchedContext_corres:
-  "corres dc (\<lambda>s. valid_state s \<and> cur_tcb s \<and> sc_at (cur_sc s) s  \<and> active_sc_valid_refills s
+  "corres dc (\<lambda>s. valid_state s \<and> cur_tcb s \<and> sc_at (cur_sc s) s  \<and> active_scs_valid s
                   \<and> current_time_bounded s \<and> active_sc_tcb_at (cur_thread s) s)
              valid_objs'
              switch_sched_context
@@ -5015,7 +5015,7 @@ lemma switchSchedContext_corres:
                        simp: state_relation_def)
    apply (corresKsimp corres: setCurSc_corres)
   apply (wpsimp wp: hoare_vcg_imp_lift' | wps)+
-  apply (fastforce intro: valid_sched_context_size_objsI active_sc_valid_refillsE
+  apply (fastforce intro: valid_sched_context_size_objsI active_scs_validE
                     simp: obj_at_def is_sc_obj_def)
   done
 
@@ -5036,7 +5036,7 @@ crunches schedule_choose_new_thread
 
 lemma scAndTimer_corres:
   "corres dc (\<lambda>s. valid_state s \<and> cur_tcb s \<and> sc_at (cur_sc s) s
-                  \<and> active_sc_valid_refills s \<and> valid_release_q s
+                  \<and> active_scs_valid s \<and> valid_release_q s
                   \<and> current_time_bounded s \<and> active_sc_tcb_at (cur_thread s) s)
              invs'
              sc_and_timer
@@ -5547,7 +5547,7 @@ crunches tcbReleaseRemove
 
 lemma schedContextDonate_corres:
   "corres dc (sc_at scp and tcb_at thread and weak_valid_sched_action and pspace_aligned and
-              pspace_distinct and valid_objs and active_sc_valid_refills)
+              pspace_distinct and valid_objs and active_scs_valid)
              (valid_objs' and valid_queues and valid_queues' and
               valid_release_queue and valid_release_queue')
              (sched_context_donate scp thread)
