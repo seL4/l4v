@@ -4272,7 +4272,7 @@ lemma resetUntypedCap_corres:
                          o_def rev_map
                     del: capFreeIndex_update.simps)
         apply (rule_tac P="\<lambda>x. valid_objs and pspace_aligned and pspace_distinct
-                               and cur_sc_tcb and valid_machine_time and active_sc_valid_refills
+                               and cur_sc_tcb and valid_machine_time and active_scs_valid
                        and pspace_no_overlap {ptr .. ptr + 2 ^ sz - 1}
                        and cte_wp_at (\<lambda>a. is_untyped_cap a \<and> obj_ref_of a = ptr \<and> cap_bits a = sz
                            \<and> cap_is_device a = dev) slot"

@@ -7089,7 +7089,7 @@ next
                                   reduceZombie_invs reduce_zombie_cap_to
                                   DetSchedSchedule_AI_det_ext.rec_del_valid_sched
                        | strengthen invs_valid_objs invs_cur_sc_tcb invs_psp_aligned invs_distinct
-                                    valid_sched_active_sc_valid_refills)+
+                                    valid_sched_active_scs_valid)+
                apply ((wpsimp wp: reduceZombie_cap_to reduceZombie_sch_act_simple
                                  reduceZombie_invs | strengthen invs_valid_objs')+)[1]
               apply simp
@@ -7772,7 +7772,7 @@ proof (induct rule: cap_revoke.induct)
           apply (clarsimp simp: sch_act_simple_def)+
          apply (wpsimp wp: cteDelete_invs' cteDelete_sch_act_simple
                 | strengthen invs_valid_objs invs_cur_sc_tcb invs_psp_aligned invs_distinct
-                             valid_sched_active_sc_valid_refills invs_valid_objs')+
+                             valid_sched_active_scs_valid invs_valid_objs')+
      apply (clarsimp simp: cte_wp_at_cte_at)
      apply (drule next_childD, simp)
      apply (clarsimp, drule child_descendant)

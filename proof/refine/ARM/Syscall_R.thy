@@ -353,7 +353,7 @@ lemma threadSet_tcbDomain_update_sch_act_wf[wp]:
 lemma setDomain_corres:
   "corres dc
      (valid_tcbs and pspace_aligned and pspace_distinct and weak_valid_sched_action
-      and active_sc_valid_refills and tcb_at tptr)
+      and active_scs_valid and tcb_at tptr)
      (invs' and (\<lambda>_. new_dom \<le> maxDomain))
      (set_domain tptr new_dom)
      (setDomain tptr new_dom)"
@@ -1667,7 +1667,7 @@ lemma handleRecv_isBlocking_corres':
                                         (ExceptionTypes_A.lookup_failure.MissingCapability 0)))"
                      and E=E and F=E for E
                 in hoare_post_impErr[rotated])
-           apply (fastforce simp: valid_sched_valid_sched_action valid_sched_active_sc_valid_refills ct_in_state_def)
+           apply (fastforce simp: valid_sched_valid_sched_action valid_sched_active_scs_valid ct_in_state_def)
           apply simp
          apply (wpsimp wp: resolve_address_bits_valid_fault2 simp: lookup_cap_def lookup_cap_and_slot_def lookup_slot_for_thread_def)
         apply wp
@@ -1682,7 +1682,7 @@ lemma handleRecv_isBlocking_corres':
                      apply clarsimp
                     apply (wpsimp wp: hoare_vcg_imp_lift' simp: valid_fault_def)+
    apply (clarsimp simp: invs_def cur_tcb_def valid_state_def valid_pspace_def ct_in_state_def
-                         valid_sched_valid_sched_action valid_sched_active_sc_valid_refills
+                         valid_sched_valid_sched_action valid_sched_active_scs_valid
                   dest!: get_tcb_SomeD)
    apply (erule (1) valid_objsE)
    apply (clarsimp simp: valid_obj_def valid_tcb_def tcb_cap_cases_def)
@@ -1750,7 +1750,7 @@ lemma valid_sc_strengthen:
 
 lemma endTimeslice_corres: (* called when ct_schedulable *)
   "corres dc
-     (invs and valid_list and valid_sched_action and active_sc_valid_refills and valid_release_q
+     (invs and valid_list and valid_sched_action and active_scs_valid and valid_release_q
       and valid_ready_qs and cur_sc_active and ct_active and current_time_bounded
       and ct_not_queued
       and cur_sc_tcb_are_bound and scheduler_act_sane)
@@ -1838,12 +1838,12 @@ lemma endTimeslice_corres: (* called when ct_schedulable *)
                    apply (clarsimp dest!: invs_cur simp: cur_tcb_def)
                   apply (clarsimp simp: cur_tcb'_def isEndpointCap_def)
                  apply (wpsimp wp: get_sc_refill_sufficient_wp refillReady_wp)+
-           apply (clarsimp dest!: valid_sched_active_sc_valid_refills
+           apply (clarsimp dest!: valid_sched_active_scs_valid
                             simp: invs_def cur_sc_tcb_def valid_state_def valid_pspace_def
                                   sc_tcb_sc_at_def obj_at_def is_sc_obj opt_map_red vs_all_heap_simps
                                   sc_refills_sc_at_def opt_pred_def)
            apply (drule (1) valid_sched_context_size_objsI, clarsimp)
-           apply (drule active_sc_valid_refillsE[rotated])
+           apply (drule active_scs_validE[rotated])
             apply (fastforce simp: vs_all_heap_simps)
            apply (clarsimp simp: vs_all_heap_simps rr_valid_refills_def valid_refills_def split: if_split_asm)
           apply (clarsimp simp: cur_tcb'_def invs'_def valid_pspace'_def
@@ -1864,7 +1864,7 @@ crunches refill_reset_rr
 
 lemma handle_timeout_valid_sched_action:
   "\<lbrace>\<lambda>s. valid_sched_action s \<and> released_ipc_queues s \<and> scheduler_act_not tptr s
-      \<and> active_sc_valid_refills s
+      \<and> active_scs_valid s
       \<and> (is_timeout_fault ex \<and> active_sc_tcb_at tptr s \<or> released_if_bound_sc_tcb_at tptr s)\<rbrace>
    handle_timeout tptr ex
    \<lbrace>\<lambda>_. valid_sched_action :: det_state \<Rightarrow> _\<rbrace>"
@@ -1873,7 +1873,7 @@ lemma handle_timeout_valid_sched_action:
   done
 
 lemma end_timeslice_valid_sched_action:
-  "\<lbrace>valid_sched_action and released_ipc_queues and active_sc_valid_refills and scheduler_act_sane
+  "\<lbrace>valid_sched_action and released_ipc_queues and active_scs_valid and scheduler_act_sane
     and cur_sc_tcb_are_bound and cur_sc_active and (\<lambda>s. sym_refs (state_refs_of s))\<rbrace>
    end_timeslice canTimeout
    \<lbrace>\<lambda>_. valid_sched_action :: det_state \<Rightarrow> _\<rbrace>"
@@ -1978,7 +1978,7 @@ crunches setConsumedTime, refillResetRR
 
 lemma chargeBudget_corres:
   "corres dc
-     (invs and valid_list and valid_sched_action and active_sc_valid_refills and valid_release_q
+     (invs and valid_list and valid_sched_action and active_scs_valid and valid_release_q
       and valid_ready_qs and released_ipc_queues and cur_sc_active
       and current_time_bounded and cur_sc_chargeable and scheduler_act_sane
       and ct_not_queued and ct_not_in_release_q and ct_not_blocked
@@ -2023,7 +2023,7 @@ lemma chargeBudget_corres:
            apply (clarsimp simp: objBits_simps)
           apply (wpsimp wp: is_round_robin_wp isRoundRobin_wp)+
       apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
-      apply (drule (1) active_sc_valid_refillsE, clarsimp)
+      apply (drule (1) active_scs_validE, clarsimp)
       apply (clarsimp simp: round_robin_def vs_all_heap_simps obj_at_def)
      apply (clarsimp simp: obj_at'_def projectKOs invs'_def valid_pspace'_def elim!: valid_objs'_valid_refills')
     apply (rule corres_guard_imp)
@@ -2041,7 +2041,7 @@ lemma chargeBudget_corres:
                apply wpsimp
               apply wpsimp
              apply (rule hoare_strengthen_post
-                              [where Q="\<lambda>_. invs and active_sc_valid_refills
+                              [where Q="\<lambda>_. invs and active_scs_valid
                                             and valid_sched_action", rotated])
               apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_objs_valid_tcbs
                                     valid_sched_action_def)
@@ -2071,7 +2071,7 @@ lemma chargeBudget_corres:
       apply (wpsimp wp: sc_at_typ_at refill_reset_rr_valid_sched_action)
      apply (wpsimp wp: sc_at_typ_at refill_reset_rr_valid_sched_action hoare_vcg_disj_lift
                        refill_budget_check_valid_sched_action_act_not
-                       refill_budget_check_active_sc_valid_refills
+                       refill_budget_check_active_scs_valid
                         refill_budget_check_valid_release_q
                         refill_budget_check_valid_ready_qs_not_queued)
      apply ((wpsimp wp: refill_budget_check_released_ipc_queues
@@ -2092,7 +2092,7 @@ lemma chargeBudget_corres:
                    split: option.split_asm dest!: get_tcb_SomeD)
    apply (frule ct_not_blocked_cur_sc_not_blocked, clarsimp)
    apply (rule conjI; clarsimp)
-    apply (drule (1) active_sc_valid_refillsE, clarsimp)
+    apply (drule (1) active_scs_validE, clarsimp)
     apply (clarsimp simp: vs_all_heap_simps obj_at_def sc_refills_sc_at_def
                           sc_valid_refills_def rr_valid_refills_def)
    apply (clarsimp simp: vs_all_heap_simps)
@@ -2142,7 +2142,7 @@ lemma checkBudget_corres: (* called when ct_schedulable or in checkBudgetRestart
              apply (wpsimp wp: hoare_drop_imp)+
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def)
    apply (clarsimp simp: sc_refills_sc_at_def obj_at_def cur_sc_tcb_def sc_tcb_sc_at_def valid_sched_def)
-   apply (drule (1) active_sc_valid_refillsE[rotated])
+   apply (drule (1) active_scs_validE[rotated])
    apply (clarsimp simp: valid_refills_def vs_all_heap_simps rr_valid_refills_def
                   split: if_split_asm)
   apply clarsimp
@@ -2185,7 +2185,7 @@ lemma handleYield_corres:
                             split: Structures_A.kernel_object.splits elim!: opt_mapE)
             apply (erule (1) valid_objsE', clarsimp simp: valid_obj'_def)
             apply (frule (1) refill_hd_relation2[rotated -1])
-             apply (drule (1) active_sc_valid_refillsE[OF _ valid_sched_active_sc_valid_refills])
+             apply (drule (1) active_scs_validE[OF _ valid_sched_active_scs_valid])
              apply (clarsimp simp: valid_refills_def vs_all_heap_simps rr_valid_refills_def
                             split: if_split_asm)
             apply clarsimp

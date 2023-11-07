@@ -243,7 +243,7 @@ lemma scActive_sp:
 lemma preemptionPoint_corres:
   "corres (dc \<oplus> dc)
           (\<lambda>s. valid_objs s \<and> cur_sc_tcb s \<and> pspace_aligned s \<and> pspace_distinct s
-               \<and> active_sc_valid_refills s \<and> valid_machine_time s)
+               \<and> active_scs_valid s \<and> valid_machine_time s)
           valid_objs'
           preemption_point
           preemptionPoint"
@@ -316,7 +316,7 @@ lemma preemptionPoint_corres:
           apply (wpsimp simp: isCurDomainExpired_def)+
        apply (prop_tac "is_active_sc (cur_sc s) s")
         apply (clarsimp simp: obj_at_def vs_all_heap_simps active_sc_def)
-       apply (frule (1) active_sc_valid_refillsE)
+       apply (frule (1) active_scs_validE)
        apply (clarsimp simp: obj_at_def is_sc_obj_def sc_at_pred_n_def vs_all_heap_simps
                              active_sc_def sc_valid_refills_def rr_valid_refills_def
                       split: if_splits)

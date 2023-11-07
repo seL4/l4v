@@ -4522,7 +4522,7 @@ lemma sched_context_maybe_unbind_ntfn_corres:
 lemma replyClear_corres:
   "corres dc
           (invs and valid_ready_qs and st_tcb_at is_reply_state tp
-           and active_sc_valid_refills and weak_valid_sched_action)
+           and active_scs_valid and weak_valid_sched_action)
           (invs' and st_tcb_at' (\<lambda>st. replyObject st = Some rptr) tp)
           (do
              state \<leftarrow> get_thread_state tp;
