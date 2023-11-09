@@ -26,7 +26,7 @@ This module uses the C preprocessor to select a target architecture.
 >         schedContextDonate, maybeDonateSc, maybeReturnSc, schedContextUnbindNtfn,
 >         schedContextMaybeUnbindNtfn, isRoundRobin, getRefills, setRefills, refillFull,
 >         schedContextCompleteYieldTo, schedContextUnbindYieldFrom,
->         schedContextUnbindReply, schedContextZeroRefillMax, unbindFromSC,
+>         schedContextUnbindReply, schedContextSetInactive, unbindFromSC,
 >         schedContextCancelYieldTo, refillAbsoluteMax, schedContextUpdateConsumed,
 >         scReleased, setConsumed, refillResetRR, preemptionPoint, refillHdInsufficient,
 >         nonOverlappingMergeRefills, headInsufficientLoop, maxReleaseTime
@@ -522,8 +522,8 @@ This module uses the C preprocessor to select a target architecture.
 >         updateReply replyPtr (\reply -> reply { replyNext = Nothing })
 >         setSchedContext scPtr (sc { scReply = Nothing })
 
-> schedContextZeroRefillMax :: PPtr SchedContext -> Kernel ()
-> schedContextZeroRefillMax scPtr = do
+> schedContextSetInactive :: PPtr SchedContext -> Kernel ()
+> schedContextSetInactive scPtr = do
 >     updateSchedContext scPtr $ (\sc -> sc { scRefillMax = 0 })
 >     updateSchedContext scPtr $ (\sc -> sc { scSporadic = False })
 

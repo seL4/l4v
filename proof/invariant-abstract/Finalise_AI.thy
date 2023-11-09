@@ -415,7 +415,7 @@ crunch caps_of_state[wp]: cancel_all_ipc, cancel_all_signals "\<lambda>s. P (cap
 crunches
   unbind_notification, sched_context_unbind_ntfn, sched_context_maybe_unbind_ntfn,
   unbind_maybe_notification, unbind_from_sc, sched_context_unbind_tcb,
-  sched_context_unbind_yield_from, update_sk_obj_ref, sched_context_zero_refill_max
+  sched_context_unbind_yield_from, update_sk_obj_ref, sched_context_set_inactive
   for caps_of_state[wp]: "\<lambda>s. P (caps_of_state s)"
   (wp: crunch_wps maybeM_inv
    ignore: set_object set_tcb_obj_ref tcb_release_remove)
@@ -865,9 +865,9 @@ lemma sc_refill_max_update_cur_sc_tcb[wp]:
   apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
   done
 
-lemma sched_context_zero_refill_max_invs[wp]:
-  "\<lbrace>invs and K (p \<noteq> idle_sc_ptr)\<rbrace> sched_context_zero_refill_max p \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (clarsimp simp: sched_context_zero_refill_max_def)
+lemma sched_context_set_inactive_invs[wp]:
+  "\<lbrace>invs and K (p \<noteq> idle_sc_ptr)\<rbrace> sched_context_set_inactive p \<lbrace>\<lambda>_. invs\<rbrace>"
+  apply (clarsimp simp: sched_context_set_inactive_def)
   by (wpsimp wp: set_sc_obj_ref_invs_no_change)
 
 lemma (in Finalise_AI_1) fast_finalise_invs:
@@ -1092,7 +1092,7 @@ crunch cte_wp_at[wp]: cancel_ipc "cte_wp_at P p"
 
 crunches
   fast_finalise, sched_context_unbind_all_tcbs, sched_context_unbind_yield_from,
-  sched_context_unbind_reply, sched_context_unbind_ntfn, sched_context_zero_refill_max
+  sched_context_unbind_reply, sched_context_unbind_ntfn, sched_context_set_inactive
   for cte_wp_at[wp]: "cte_wp_at P p"
   (wp: crunch_wps ignore: set_tcb_obj_ref simp: crunch_simps)
 
@@ -1189,7 +1189,7 @@ locale Finalise_AI_3 = Finalise_AI_2 a b
 crunches
   suspend, unbind_maybe_notification, unbind_notification, deleting_irq_handler,
   sched_context_unbind_all_tcbs, sched_context_unbind_yield_from,
-  sched_context_unbind_reply, sched_context_unbind_ntfn, sched_context_zero_refill_max
+  sched_context_unbind_reply, sched_context_unbind_ntfn, sched_context_set_inactive
   for irq_node[wp]: "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps maybeM_inv simp: crunch_simps)
 
@@ -1894,9 +1894,9 @@ lemma sched_context_unbind_yield_from_not_live:
   apply (auto simp: obj_at_def live_def live_sc_def)
   done
 
-lemma sched_context_zero_refill_max_not_live[wp]:
-  "sched_context_zero_refill_max sc_ptr \<lbrace>obj_at (Not \<circ> live) sc\<rbrace>"
-  apply (clarsimp simp: sched_context_zero_refill_max_def set_refills_def)
+lemma sched_context_set_inactive_not_live[wp]:
+  "sched_context_set_inactive sc_ptr \<lbrace>obj_at (Not \<circ> live) sc\<rbrace>"
+  apply (clarsimp simp: sched_context_set_inactive_def set_refills_def)
   apply (wpsimp simp: wp: update_sched_context_wp)
   apply (auto simp: obj_at_def live_def live_sc_def)
   done

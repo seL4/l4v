@@ -605,7 +605,7 @@ lemma finalise_cap_replaceable [Finalise_AI_asms]:
         | hammer
         | wp (once) sched_context_unbind_yield_from_not_live[unfolded o_def]
         | wp (once) hoare_drop_imps; wp (once) hoare_vcg_conj_lift,
-          wp (once) sched_context_zero_refill_max_not_live[unfolded o_def])+)[1]
+          wp (once) sched_context_set_inactive_not_live[unfolded o_def])+)[1]
       \<comment> \<open>schedcontrol\<close>
       apply ((wpsimp | hammer)+)[1]
      \<comment> \<open>irqcontrol\<close>

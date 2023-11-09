@@ -3396,9 +3396,9 @@ crunches schedContextCompleteYieldTo, unbindNotification, unbindMaybeNotificatio
   for sch_act_simple[wp]: sch_act_simple
   (simp: crunch_simps wp: crunch_wps rule: sch_act_simple_lift)
 
-lemma schedContextZeroRefillMax_unlive[wp]:
-  "schedContextZeroRefillMax scPtr \<lbrace>\<lambda>s. P (ko_wp_at' (Not \<circ> live') p s)\<rbrace>"
-  unfolding schedContextZeroRefillMax_def
+lemma schedContextSetInactive_unlive[wp]:
+  "schedContextSetInactive scPtr \<lbrace>\<lambda>s. P (ko_wp_at' (Not \<circ> live') p s)\<rbrace>"
+  unfolding schedContextSetInactive_def
   apply (wpsimp wp: set_sc'.set_wp simp: updateSchedContext_def simp_del: fun_upd_apply)
   apply (clarsimp simp: ko_wp_at'_def obj_at'_def live_sc'_def
                         ps_clear_upd objBits_simps scBits_simps)
@@ -3499,8 +3499,8 @@ lemma schedContextUnbindAllTCBs_obj_at'_tcb_None:
   apply (wpsimp wp: schedContextUnbindTCB_obj_at'_tcb_None)
   by (auto simp: obj_at'_def)
 
-lemmas schedContextZeroRefillMax_removeable'
-  = prepares_delete_helper'' [OF schedContextZeroRefillMax_unlive
+lemmas schedContextSetInactive_removeable'
+  = prepares_delete_helper'' [OF schedContextSetInactive_unlive
                                    [where p=scPtr and scPtr=scPtr for scPtr]]
 
 crunches schedContextMaybeUnbindNtfn
@@ -3541,7 +3541,7 @@ lemma (in delete_one_conc_pre) finaliseCap_replaceable:
                       prepares_delete_helper'' [OF replyClear_makes_unlive]
                       hoare_vcg_if_lift_strong simp: isZombie_Null)+
         apply (clarsimp simp: obj_at'_def)
-       apply (wpsimp wp: schedContextZeroRefillMax_removeable'
+       apply (wpsimp wp: schedContextSetInactive_removeable'
                          prepareThreadDelete_unqueued prepareThreadDelete_nonq
                          prepareThreadDelete_inactive
                          suspend_makes_inactive
@@ -3644,7 +3644,7 @@ lemma deleteASID_cte_wp_at'[wp]:
 
 crunches unmapPageTable, unmapPage, unbindNotification, cancelAllIPC, cancelAllSignals,
          unbindMaybeNotification, schedContextMaybeUnbindNtfn, replyRemove,
-         unbindFromSC, schedContextZeroRefillMax, schedContextUnbindYieldFrom,
+         unbindFromSC, schedContextSetInactive, schedContextUnbindYieldFrom,
          schedContextUnbindReply, schedContextUnbindAllTCBs
   for cte_wp_at'[wp]: "cte_wp_at' P p"
   (simp: crunch_simps wp: crunch_wps getObject_inv)
@@ -4079,9 +4079,9 @@ lemma unbindFromSC_invs'[wp]:
                      simp: obj_at'_def ko_wp_at'_def live_sc'_def)
   done
 
-lemma schedContextZeroRefillMax_invs'[wp]:
-  "schedContextZeroRefillMax scPtr \<lbrace>invs'\<rbrace>"
-  apply (clarsimp simp: schedContextZeroRefillMax_def updateSchedContext_def)
+lemma schedContextSetInactive_invs'[wp]:
+  "schedContextSetInactive scPtr \<lbrace>invs'\<rbrace>"
+  apply (clarsimp simp: schedContextSetInactive_def updateSchedContext_def)
   apply (rule hoare_seq_ext_skip)
   apply (wpsimp wp: setSchedContext_invs' hoare_vcg_all_lift)
    apply (fastforce dest: invs'_ko_at_valid_sched_context' intro!: if_live_then_nonz_capE'
@@ -4780,10 +4780,10 @@ lemma schedContextUnbindYieldFrom_corres:
   apply (clarsimp simp: sym_refs_asrt_def)
   done
 
-lemma schedContextZeroRefillMax_corres:
+lemma schedContextSetInactive_corres:
   "corres dc (\<lambda>s. sc_at scPtr s) (sc_at' scPtr)
-     (sched_context_zero_refill_max scPtr) (schedContextZeroRefillMax scPtr)"
-  apply (clarsimp simp: sched_context_zero_refill_max_def schedContextZeroRefillMax_def)
+     (sched_context_set_inactive scPtr) (schedContextSetInactive scPtr)"
+  apply (clarsimp simp: sched_context_set_inactive_def schedContextSetInactive_def)
   apply (rule corres_guard_imp)
 
     \<comment> \<open>collect the update of the sc_refills, sc_refill_max, and the sc_budget fields\<close>
@@ -4891,7 +4891,7 @@ lemma finaliseCap_corres:
            apply (rule corres_split[OF schedContextUnbindReply_corres])
              apply (rule corres_split[OF schedContextUnbindYieldFrom_corres])
                apply (clarsimp simp: o_def dc_def[symmetric])
-               apply (rule schedContextZeroRefillMax_corres)
+               apply (rule schedContextSetInactive_corres)
               apply (wpsimp wp: abs_typ_at_lifts typ_at_lifts)+
       apply (clarsimp simp: valid_cap_def)
      apply (clarsimp simp: valid_cap'_def sc_at'_n_sc_at')

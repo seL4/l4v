@@ -5197,92 +5197,92 @@ lemma sched_context_donate_ct_in_cur_domain[wp]:
   "sched_context_donate sc_ptr tcb_ptr \<lbrace>ct_in_cur_domain\<rbrace>"
   by (wpsimp simp: sched_context_donate_def)
 
-lemma sched_context_zero_refill_max_valid_sched_misc[wp]:
-  "sched_context_zero_refill_max sc_ptr
+lemma sched_context_set_inactive_valid_sched_misc[wp]:
+  "sched_context_set_inactive sc_ptr
    \<lbrace>\<lambda>s. P (consumed_time s) (cur_sc s) (ep_send_qs_of s) (ep_recv_qs_of s) (sc_tcbs_of s)
           (sc_replies_of s) (cur_time s) (cur_domain s) (cur_thread s) (idle_thread s)
           (ready_queues s) (release_queue s) (scheduler_action s) (tcbs_of s)\<rbrace>"
-  unfolding sched_context_zero_refill_max_def
+  unfolding sched_context_set_inactive_def
   by (wpsimp wp: get_sched_context_wp update_sched_context_wp update_sk_obj_ref_wp
            simp: obj_at_def vs_all_heap_simps fun_upd_def tcb_heap.all_simps)
 
-lemma sched_context_zero_refill_max_valid_ready_qs_unbound_sc:
+lemma sched_context_set_inactive_valid_ready_qs_unbound_sc:
   "\<lbrace>\<lambda>s. valid_ready_qs s \<and> (\<nexists>t. pred_map_eq (Some ref) (tcb_scps_of s) t)\<rbrace>
-   sched_context_zero_refill_max ref
+   sched_context_set_inactive ref
    \<lbrace>\<lambda>_. valid_ready_qs\<rbrace>"
-  unfolding sched_context_zero_refill_max_def
+  unfolding sched_context_set_inactive_def
   apply (wpsimp wp: update_sched_context_wp)
   apply (fastforce dest: obj_atD simp: valid_ready_queued_thread_2_def vs_all_heap_simps
                   elim!: valid_ready_qsE)
   done
 
-lemma sched_context_zero_refill_max_valid_release_q_unbound_sc:
+lemma sched_context_set_inactive_valid_release_q_unbound_sc:
   "\<lbrace>\<lambda>s. valid_release_q s \<and> (\<nexists>t. pred_map_eq (Some ref) (tcb_scps_of s) t)\<rbrace>
-   sched_context_zero_refill_max ref
+   sched_context_set_inactive ref
    \<lbrace>\<lambda>_. valid_release_q\<rbrace>"
-  unfolding sched_context_zero_refill_max_def
+  unfolding sched_context_set_inactive_def
   apply (wpsimp wp: update_sched_context_wp)
   by (fastforce simp: tcb_sc_refill_cfgs_2_def opt_map_simps map_join_simps map_project_simps
                       sc_ready_time_eq_iff obj_at_def vs_all_heap_simps
                elim!: valid_release_qE sorted_release_qE)
 
-lemma sched_context_zero_refill_max_valid_sched_action_unbound_sc:
+lemma sched_context_set_inactive_valid_sched_action_unbound_sc:
   "\<lbrace>\<lambda>s. valid_sched_action s \<and> (\<nexists>t. pred_map_eq (Some ref) (tcb_scps_of s) t)\<rbrace>
-   sched_context_zero_refill_max ref
+   sched_context_set_inactive ref
    \<lbrace>\<lambda>_. valid_sched_action\<rbrace>"
-  unfolding sched_context_zero_refill_max_def
+  unfolding sched_context_set_inactive_def
   apply (wpsimp wp: update_sched_context_wp)
   by (fastforce simp: valid_sched_action_def weak_valid_sched_action_def  is_activatable_def
                       switch_in_cur_domain_def vs_all_heap_simps obj_at_def etcb_at'_def
                       in_cur_domain_def)
 
-lemma sched_context_zero_refill_max_valid_blocked[wp]:
-  "sched_context_zero_refill_max ref \<lbrace>valid_blocked\<rbrace>"
+lemma sched_context_set_inactive_valid_blocked[wp]:
+  "sched_context_set_inactive ref \<lbrace>valid_blocked\<rbrace>"
   apply (wpsimp wp: valid_blocked_lift; (solves wpsimp)?)
-  unfolding sched_context_zero_refill_max_def
+  unfolding sched_context_set_inactive_def
   apply (wpsimp wp: update_sched_context_wp)
   apply (clarsimp simp: vs_all_heap_simps obj_at_def active_sc_def split: if_splits)
   done
 
-lemma sched_context_zero_refill_max_released_ipc_queues_unbound_sc:
+lemma sched_context_set_inactive_released_ipc_queues_unbound_sc:
   "\<lbrace>\<lambda>s. released_ipc_queues s \<and> (\<nexists>t. pred_map_eq (Some ref) (tcb_scps_of s) t)\<rbrace>
-   sched_context_zero_refill_max ref
+   sched_context_set_inactive ref
    \<lbrace>\<lambda>_. released_ipc_queues\<rbrace>"
-  unfolding sched_context_zero_refill_max_def
+  unfolding sched_context_set_inactive_def
   apply (wpsimp wp: update_sched_context_wp)
   apply (fastforce simp: heap_upd_def vs_all_heap_simps elim!: released_ipc_queuesE split: if_splits)
   done
 
-lemma sched_context_zero_refill_max_active_reply_scs:
+lemma sched_context_set_inactive_active_reply_scs:
   "\<lbrace>\<lambda>s. active_reply_scs s \<and> \<not> non_empty_sc_replies_at ref s\<rbrace>
-   sched_context_zero_refill_max ref
+   sched_context_set_inactive ref
    \<lbrace>\<lambda>_. active_reply_scs\<rbrace>"
-  unfolding sched_context_zero_refill_max_def
+  unfolding sched_context_set_inactive_def
   apply (wpsimp wp: update_sched_context_wp)
   apply (fastforce elim!: active_reply_scsE simp: vs_all_heap_simps obj_at_def)
   done
 
-lemma sched_context_zero_refill_max_active_scs_valid_unbound_sc:
+lemma sched_context_set_inactive_active_scs_valid_unbound_sc:
   "\<lbrace>\<lambda>s. active_scs_valid s \<and> (\<nexists>t. pred_map_eq (Some ref) (tcb_scps_of s) t)\<rbrace>
-   sched_context_zero_refill_max ref
+   sched_context_set_inactive ref
    \<lbrace>\<lambda>_. active_scs_valid\<rbrace>"
-  unfolding sched_context_zero_refill_max_def
+  unfolding sched_context_set_inactive_def
   apply (wpsimp wp: update_sched_context_wp)
   apply (fastforce simp: active_scs_valid_def vs_all_heap_simps active_sc_def obj_at_def)
   done
 
-lemma sched_context_zero_refill_max_valid_sched_unbound_sc:
+lemma sched_context_set_inactive_valid_sched_unbound_sc:
   "\<lbrace>\<lambda>s. valid_sched s \<and> (\<nexists>t. pred_map_eq (Some ref) (tcb_scps_of s) t)
         \<and> \<not> non_empty_sc_replies_at ref s\<rbrace>
-   sched_context_zero_refill_max ref
+   sched_context_set_inactive ref
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   unfolding valid_sched_def
-  by (wpsimp wp: sched_context_zero_refill_max_valid_ready_qs_unbound_sc
-                 sched_context_zero_refill_max_valid_release_q_unbound_sc
-                 sched_context_zero_refill_max_valid_sched_action_unbound_sc
-                 sched_context_zero_refill_max_released_ipc_queues_unbound_sc
-                 sched_context_zero_refill_max_active_reply_scs
-                 sched_context_zero_refill_max_active_scs_valid_unbound_sc)
+  by (wpsimp wp: sched_context_set_inactive_valid_ready_qs_unbound_sc
+                 sched_context_set_inactive_valid_release_q_unbound_sc
+                 sched_context_set_inactive_valid_sched_action_unbound_sc
+                 sched_context_set_inactive_released_ipc_queues_unbound_sc
+                 sched_context_set_inactive_active_reply_scs
+                 sched_context_set_inactive_active_scs_valid_unbound_sc)
 
 lemma tcb_release_remove_ready_or_release[wp]:
   "tcb_release_remove tcb_ptr \<lbrace>ready_or_release\<rbrace>"
@@ -6746,7 +6746,7 @@ lemma finalise_cap_valid_sched[wp]:
      apply (clarsimp dest!: invs_valid_idle simp: valid_idle_def cap_range_def)
     apply (clarsimp elim!: cte_wp_valid_cap)
    apply (rename_tac scptr x)
-   apply (wpsimp wp: sched_context_zero_refill_max_valid_sched_unbound_sc hoare_vcg_all_lift)
+   apply (wpsimp wp: sched_context_set_inactive_valid_sched_unbound_sc hoare_vcg_all_lift)
     apply (rule_tac Q="\<lambda>ya. invs and sc_tcb_sc_at (\<lambda>x. x = None) scptr"
                  in hoare_strengthen_post[rotated])
      apply (clarsimp simp: tcb_at_kh_simps(3)[symmetric] pred_tcb_at_eq_commute)
@@ -18991,11 +18991,11 @@ lemma update_sched_context_released_if_bound_other:
   apply (wpsimp wp: update_sched_context_wp)
   by (auto simp: vs_all_heap_simps obj_at_kh_kheap_simps)
 
-lemma sched_context_zero_refill_max_released_if_bound_other:
+lemma sched_context_set_inactive_released_if_bound_other:
   "\<lbrace>\<lambda>s. released_if_bound_sc_tcb_at t s \<and> \<not> heap_ref_eq sc_ptr t (tcb_scps_of s)\<rbrace>
-   sched_context_zero_refill_max sc_ptr
+   sched_context_set_inactive sc_ptr
    \<lbrace>\<lambda>_. released_if_bound_sc_tcb_at t\<rbrace>"
-  apply (clarsimp simp: sched_context_zero_refill_max_def set_refills_def)
+  apply (clarsimp simp: sched_context_set_inactive_def set_refills_def)
   by (wpsimp wp: update_sched_context_released_if_bound_other)
 
 crunches restart_thread_if_no_fault
@@ -21816,9 +21816,9 @@ lemma send_signal_cur_sc_more_than_ready[wp]:
   unfolding send_signal_def if_cond_refill_unblock_check_def
   by (wpsimp wp: hoare_drop_imp hoare_vcg_all_lift)+
 
-lemma sched_context_zero_refill_max_cur_sc_more_than_ready[wp]:
-  "sched_context_zero_refill_max scp \<lbrace>cur_sc_more_than_ready\<rbrace>"
-  apply (clarsimp simp: sched_context_zero_refill_max_def set_refills_def)
+lemma sched_context_set_inactive_cur_sc_more_than_ready[wp]:
+  "sched_context_set_inactive scp \<lbrace>cur_sc_more_than_ready\<rbrace>"
+  apply (clarsimp simp: sched_context_set_inactive_def set_refills_def)
   apply (wpsimp wp: update_sched_context_wp)
   apply (clarsimp simp: cur_sc_more_than_ready_def vs_all_heap_simps active_sc_def obj_at_def)
   done
@@ -22225,18 +22225,18 @@ crunches deleting_irq_handler, bind_notification
                                           \<longrightarrow> cur_sc_offset_sufficient (consumed_time s) (s::det_state)"
   (wp: mapM_x_wp thread_get_wp gts_wp simp: crunch_simps get_tcb_obj_ref_def)
 
-lemma sched_context_zero_refill_max_cur_sc_offset_ready[wp]:
-  "sched_context_zero_refill_max scp
+lemma sched_context_set_inactive_cur_sc_offset_ready[wp]:
+  "sched_context_set_inactive scp
    \<lbrace>\<lambda>s. cur_sc_active s \<longrightarrow> cur_sc_offset_ready (consumed_time s) s\<rbrace>"
-  apply (clarsimp simp: sched_context_zero_refill_max_def set_refills_def)
+  apply (clarsimp simp: sched_context_set_inactive_def set_refills_def)
   apply (wpsimp wp: update_sched_context_wp)
   apply (fastforce simp: vs_all_heap_simps active_sc_def obj_at_def)
   done
 
-lemma sched_context_zero_refill_max_cur_sc_offset_sufficient[wp]:
-  "sched_context_zero_refill_max scp
+lemma sched_context_set_inactive_cur_sc_offset_sufficient[wp]:
+  "sched_context_set_inactive scp
    \<lbrace>\<lambda>s. cur_sc_active s \<longrightarrow> cur_sc_offset_sufficient (consumed_time s) s\<rbrace>"
-  apply (clarsimp simp: sched_context_zero_refill_max_def set_refills_def)
+  apply (clarsimp simp: sched_context_set_inactive_def set_refills_def)
   apply (wpsimp wp: update_sched_context_wp)
   apply (fastforce simp: vs_all_heap_simps active_sc_def obj_at_def)
   done
@@ -23538,11 +23538,11 @@ lemma cancel_all_signals_active_scs_valid[wp]:
    apply wpsimp+
   done
 
-lemma sched_context_zero_refill_max_active_scs_valid[wp]:
+lemma sched_context_set_inactive_active_scs_valid[wp]:
   "\<lbrace>active_scs_valid and current_time_bounded\<rbrace>
-   sched_context_zero_refill_max scp
+   sched_context_set_inactive scp
    \<lbrace>\<lambda>_. active_scs_valid\<rbrace>"
-  unfolding sched_context_zero_refill_max_def
+  unfolding sched_context_set_inactive_def
   apply (wpsimp wp: update_sched_context_wp)
   by (clarsimp simp: obj_at_def vs_all_heap_simps active_scs_valid_def active_sc_def)
 
@@ -25419,7 +25419,7 @@ lemma suspend_not_ipc_queued_thread[wp]:
   apply (fastforce simp: pred_neg_def split: thread_state.splits)
   done
 
-crunches unbind_from_sc, sched_context_zero_refill_max
+crunches unbind_from_sc, sched_context_set_inactive
   for st_tcb_at[wp]: "st_tcb_at P t"
   (wp: crunch_wps hoare_vcg_all_lift)
 (*FIXME RT: move everything between the previous comment and this one*)
@@ -25469,7 +25469,7 @@ lemma finalise_cap_released_if_bound[wp]:
      apply ((wpsimp split: if_split)+)[2]
    apply (wpsimp wp: gts_wp get_simple_ko_wp reply_remove_released_if_bound_other)
    apply (fastforce simp: pred_tcb_at_def obj_at_def pred_neg_def split: if_split)
-  apply (wpsimp wp: sched_context_zero_refill_max_released_if_bound_other)
+  apply (wpsimp wp: sched_context_set_inactive_released_if_bound_other)
   apply (fastforce simp: invs_def valid_state_def cap_range_def
                   dest!: valid_global_refsD split: if_split)
   done
@@ -25489,7 +25489,7 @@ lemma preemption_point_pred_tcb_at[wp]:
 
 crunches finalise_cap
   for active_scs_valid[wp]: "active_scs_valid :: det_state \<Rightarrow> _"
-  (wp: crunch_wps simp: crunch_simps ignore: sched_context_zero_refill_max)
+  (wp: crunch_wps simp: crunch_simps ignore: sched_context_set_inactive)
 
 lemma cap_delete_released_if_bound[wp]:
   "\<lbrace>released_if_bound_sc_tcb_at t and st_tcb_at (not ipc_queued_thread_state) t
@@ -25573,9 +25573,9 @@ lemma ct_ready_if_schedulable_streng3[elim!]:
   unfolding ct_ready_if_schedulable_def
   by (clarsimp simp: vs_all_heap_simps)
 
-lemma sched_context_zero_refill_max_active_scs_valid[wp]:
-  "sched_context_zero_refill_max scp \<lbrace>active_scs_valid\<rbrace>"
-  unfolding sched_context_zero_refill_max_def
+lemma sched_context_set_inactive_active_scs_valid[wp]:
+  "sched_context_set_inactive scp \<lbrace>active_scs_valid\<rbrace>"
+  unfolding sched_context_set_inactive_def
   apply (wpsimp wp: update_sched_context_wp)
   apply (clarsimp simp: active_scs_valid_def vs_all_heap_simps active_sc_def obj_at_def)
   done

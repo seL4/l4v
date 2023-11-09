@@ -288,7 +288,7 @@ lemma finalise_cap_sc_tcb_are_bound_imp_is_active_sc:
             apply (clarsimp dest!: no_cap_to_idle_sc_ptr)
            apply (wpsimp wp: sched_context_unbind_tcb_schact_is_rct_imp_cur_sc_active)
           apply (rule hoare_seq_ext_skip, solves wpsimp)+
-          apply (clarsimp simp: sched_context_zero_refill_max_def)
+          apply (clarsimp simp: sched_context_set_inactive_def)
           apply (wpsimp wp: update_sched_context_wp)
           apply (clarsimp simp: obj_at_def vs_all_heap_simps)
          apply (wpsimp wp: hoare_vcg_imp_lift' gts_wp get_simple_ko_wp cur_sc_active_lift
@@ -1568,7 +1568,7 @@ lemma finalise_cap_schact_is_rct_imp_ct_activatable:
     apply (wpsimp wp: gts_wp get_simple_ko_wp)
    apply (rule hoare_seq_ext_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
    apply wpsimp
-  apply (clarsimp simp: sched_context_zero_refill_max_def)
+  apply (clarsimp simp: sched_context_set_inactive_def)
   apply (rule hoare_seq_ext_skip, solves \<open>(wpsimp | wpsimp wp: hoare_vcg_imp_lift')+\<close>)+
   apply wpsimp
   done

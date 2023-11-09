@@ -6140,7 +6140,7 @@ lemma cteDeleteOne_sch_act_simple[wp]:
   apply (wpsimp wp: haskell_assert_inv comb: sch_act_simple_lift)
   done
 
-crunches deletingIRQHandler, unbindFromSC, schedContextZeroRefillMax, schedContextUnbindYieldFrom,
+crunches deletingIRQHandler, unbindFromSC, schedContextSetInactive, schedContextUnbindYieldFrom,
          schedContextUnbindReply
   for sch_act_simple[wp]: sch_act_simple
   (wp: crunch_wps simp: crunch_simps)

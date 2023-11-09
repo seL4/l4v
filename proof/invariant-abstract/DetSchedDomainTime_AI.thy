@@ -101,7 +101,7 @@ crunches reply_unlink_tcb, reply_unlink_sc, tcb_sched_action
   for domain_list_inv[wp]:  "\<lambda>s. P (domain_list s)"
   (wp: crunch_wps maybeM_inv select_inv gets_the_inv simp: crunch_simps set_object_def)
 
-crunches reply_remove, sched_context_unbind_tcb, sched_context_zero_refill_max
+crunches reply_remove, sched_context_unbind_tcb, sched_context_set_inactive
   for domain_list_inv[wp]:  "\<lambda>s. P (domain_list s)"
   (wp: hoare_drop_imps get_simple_ko_wp)
 
