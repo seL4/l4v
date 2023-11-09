@@ -594,7 +594,7 @@ crunches schedContextDonate
   for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
 
 crunches schedContextDonate, schedContextUnbindAllTCBs, unbindFromSC,
-         schedContextZeroRefillMax, schedContextUnbindYieldFrom, schedContextUnbindReply
+         schedContextSetInactive, schedContextUnbindYieldFrom, schedContextUnbindReply
   for st_tcb_at'[wp]: "\<lambda>s. P (st_tcb_at' P' p s)"
   (simp: crunch_simps wp: threadSet_pred_tcb_no_state crunch_wps)
 

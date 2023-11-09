@@ -457,7 +457,7 @@ lemma fast_finalise_valid_pdpt_objs[wp]:
 
 crunches
   prepare_thread_delete, unbind_notification, deleting_irq_handler, set_asid_pool,
-  invalidate_asid_entry, unbind_from_sc, suspend, sched_context_zero_refill_max
+  invalidate_asid_entry, unbind_from_sc, suspend, sched_context_set_inactive
   for valid_pdpt_objs[wp]: "valid_pdpt_objs"
   (wp: maybeM_inv simp: unless_def)
 

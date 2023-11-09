@@ -179,7 +179,7 @@ Threads are treated as special capability nodes; they also become zombies when t
 >     schedContextUnbindNtfn scPtr
 >     schedContextUnbindReply scPtr
 >     schedContextUnbindYieldFrom scPtr
->     schedContextZeroRefillMax scPtr
+>     schedContextSetInactive scPtr
 >     return (NullCap, NullCap)
 
 Zombies have already been finalised.

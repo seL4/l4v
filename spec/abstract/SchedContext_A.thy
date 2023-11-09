@@ -409,9 +409,9 @@ where
    od"
 
 definition
-  sched_context_zero_refill_max :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
+  sched_context_set_inactive :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "sched_context_zero_refill_max sc_ptr = do
+  "sched_context_set_inactive sc_ptr = do
      update_sched_context sc_ptr (sc_refills_update (\<lambda>_. []));
      update_sched_context sc_ptr (sc_refill_max_update (\<lambda>_. 0));
      update_sched_context sc_ptr (sc_budget_update (\<lambda>_. 0));

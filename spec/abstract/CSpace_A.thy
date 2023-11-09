@@ -514,7 +514,7 @@ where
          when final $ sched_context_unbind_ntfn sc;
          when final $ sched_context_unbind_reply sc;
          when final $ sched_context_unbind_yield_from sc;
-         when final $ sched_context_zero_refill_max sc;
+         when final $ sched_context_set_inactive sc;
          return (NullCap, NullCap)
       od"
 | "finalise_cap SchedControlCap          final = return (NullCap, NullCap)"
