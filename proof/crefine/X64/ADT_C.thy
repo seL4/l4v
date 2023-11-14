@@ -783,11 +783,7 @@ lemma cthread_state_rel_imp_eq:
   "cthread_state_relation x z \<Longrightarrow> cthread_state_relation y z \<Longrightarrow> x=y"
   apply (simp add: cthread_state_relation_def split_def)
   apply (cases x)
-  apply (cases y, simp_all add: ThreadState_BlockedOnReceive_def
-    ThreadState_BlockedOnReply_def ThreadState_BlockedOnNotification_def
-    ThreadState_Running_def ThreadState_Inactive_def
-    ThreadState_IdleThreadState_def ThreadState_BlockedOnSend_def
-    ThreadState_Restart_def)+
+  apply (cases y, simp_all add: ThreadState_defs)+
   done
 
 lemma ksPSpace_valid_objs_tcbBoundNotification_nonzero:

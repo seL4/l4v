@@ -1013,15 +1013,7 @@ lemma ct_running'_C:
   apply (frule (1) map_to_ko_atI')
   apply (erule obj_at'_weakenE)
   apply (clarsimp simp: ctcb_relation_def cthread_state_relation_def)
-  apply (case_tac "tcbState ko", simp_all add:
-    ThreadState_Running_def
-    ThreadState_BlockedOnReceive_def
-    ThreadState_BlockedOnSend_def
-    ThreadState_BlockedOnReply_def
-    ThreadState_BlockedOnNotification_def
-    ThreadState_Inactive_def
-    ThreadState_IdleThreadState_def
-    ThreadState_Restart_def)
+  apply (case_tac "tcbState ko"; simp add: ThreadState_defs)
   done
 
 lemma full_invs_both:

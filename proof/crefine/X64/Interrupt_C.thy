@@ -230,7 +230,7 @@ lemma decodeIRQHandlerInvocation_ccorres:
      apply (clarsimp simp: Collect_const_mem neq_Nil_conv
                     dest!: interpret_excaps_eq)
      apply (simp add: rf_sr_ksCurThread if_1_0_0 mask_def[where n=4]
-                      "StrictC'_thread_state_defs" cap_get_tag_isCap excaps_map_def
+                      ThreadState_defs cap_get_tag_isCap excaps_map_def
                       word_sless_def word_sle_def)
     apply (simp add: invocationCatch_def throwError_bind
                      interpret_excaps_test_null Collect_True
@@ -261,8 +261,7 @@ lemma decodeIRQHandlerInvocation_ccorres:
   apply (clarsimp simp: invs_queues invs_valid_objs'
                         ct_in_state'_def
                         ccap_rights_relation_def
-                        mask_def[where n=4]
-                        "StrictC'_thread_state_defs")
+                        mask_def[where n=4] ThreadState_defs)
   apply (subst pred_tcb'_weakenE, assumption, fastforce)+
   apply (clarsimp simp: rf_sr_ksCurThread word_sle_def word_sless_def
     sysargs_rel_n_def word_less_nat_alt)
@@ -998,7 +997,7 @@ from assms show ?thesis
                       split: Product_Type.prod.split)
     apply (auto simp: invs_queues invs_valid_objs' ct_in_state'_def irqIntOffset_def
                       ccap_rights_relation_def mask_def[where n=4]
-                      "StrictC'_thread_state_defs" rf_sr_ksCurThread cte_wp_at_ctes_of
+                      ThreadState_defs rf_sr_ksCurThread cte_wp_at_ctes_of
                       sysargs_rel_def sysargs_rel_n_def
                       excaps_map_def excaps_in_mem_def slotcap_in_mem_def
                       valid_tcb_state'_def word_less_nat_alt
@@ -1150,9 +1149,8 @@ lemma decodeIRQControlInvocation_ccorres:
     apply wp
    apply (vcg exspec=Arch_decodeIRQControlInvocation_modifies)
   apply (simp add: syscall_error_to_H_cases)
-  apply (clarsimp simp: if_1_0_0 interpret_excaps_test_null excaps_map_def
+  apply (clarsimp simp: interpret_excaps_test_null excaps_map_def
                         Collect_const_mem word_sless_def word_sle_def
-                        ThreadState_Restart_def unat_of_nat mask_def
                   cong: if_cong)
   apply (rule conjI)
    apply (cut_tac unat_lt2p[where x="args ! 2"])
@@ -1167,9 +1165,7 @@ lemma decodeIRQControlInvocation_ccorres:
   apply (clarsimp simp: neq_Nil_conv numeral_eqs[symmetric]
                         word_sle_def word_sless_def)
   apply (drule interpret_excaps_eq[rule_format, where n=0], simp)
-  apply (clarsimp simp: "StrictC'_thread_state_defs"
-                        rf_sr_ksCurThread ccap_rights_relation_def
-                        rightsFromWord_wordFromRights)
+  apply (clarsimp simp: rf_sr_ksCurThread ccap_rights_relation_def rightsFromWord_wordFromRights)
   done
 end
 end

@@ -239,10 +239,8 @@ next
                 sts_running_valid_queues sts_st_tcb' setThreadState_oa_queued | simp)+
 
      apply (vcg exspec=setThreadState_cslift_spec exspec=tcbSchedEnqueue_cslift_spec)
-    apply (clarsimp simp: tcb_at_not_NULL
-                          Collect_const_mem valid_tcb_state'_def
-                          ThreadState_Restart_def mask_def
-                          valid_objs'_maxDomain valid_objs'_maxPriority)
+    apply (clarsimp simp: tcb_at_not_NULL Collect_const_mem valid_tcb_state'_def
+                          ThreadState_defs mask_def valid_objs'_maxDomain valid_objs'_maxPriority)
     apply (drule(1) obj_at_cslift_tcb)
     apply (clarsimp simp: typ_heap_simps)
     apply (rule conjI)
@@ -584,7 +582,7 @@ lemma suspend_ccorres:
            apply clarsimp
            apply (rule iffI)
             apply simp
-           apply (erule thread_state_to_tsType.elims; simp add: StrictC'_thread_state_defs)
+           apply (erule thread_state_to_tsType.elims; simp add: ThreadState_defs)
           apply (ctac (no_vcg) add: updateRestartPC_ccorres)
          apply (rule ccorres_return_Skip)
         apply ceqv
@@ -620,7 +618,7 @@ lemma suspend_ccorres:
    apply (fastforce simp: invs_valid_queues' invs_queues invs_valid_objs'
                           valid_tcb_state'_def)
   apply clarsimp
-  apply (auto simp: "StrictC'_thread_state_defs")
+  apply (auto simp: ThreadState_defs)
   done
 
 lemma cap_to_H_NTFNCap_tag:
