@@ -53,6 +53,7 @@ EXCLUDE["ARM"]=[
     "RefineOrphanage",
     "SimplExportAndRefine",
     "AsmRefine",
+    "CBaseRefine",
     "CRefine",
     "ASepSpec",
     "Bisim",
