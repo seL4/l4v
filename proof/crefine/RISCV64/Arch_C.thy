@@ -1104,11 +1104,9 @@ lemma decodeRISCVPageTableInvocation_ccorres:
   subgoal for _ v1
     (* RISCVPageTableUnmap: C preconditions *)
     apply (drule_tac t="cteCap _" in sym)
-    apply (clarsimp simp: rf_sr_ksCurThread "StrictC'_thread_state_defs"
-                              mask_eq_iff_w2p word_size
-                              ct_in_state'_def st_tcb_at'_def
-                              word_sle_def word_sless_def
-                              typ_heap_simps' bit_simps)
+    apply (clarsimp simp: rf_sr_ksCurThread ThreadState_defs mask_eq_iff_w2p word_size
+                          ct_in_state'_def st_tcb_at'_def word_sle_def word_sless_def
+                          typ_heap_simps' bit_simps)
     apply (frule cap_get_tag_isCap_unfolded_H_cap, simp)
     apply clarsimp
     apply (case_tac v1; clarsimp)
@@ -1120,7 +1118,7 @@ lemma decodeRISCVPageTableInvocation_ccorres:
     (* RISCVPageTableMap: C preconditions *)
     apply (prop_tac "SCAST(32 signed \<rightarrow> 64) ThreadState_Restart && mask 4 =
              SCAST(32 signed \<rightarrow> 64) ThreadState_Restart")
-     apply (solves \<open>clarsimp simp: ThreadState_Restart_def mask_def\<close>)
+     apply (solves \<open>clarsimp simp: ThreadState_defs mask_def\<close>)
     apply (clarsimp cong: imp_cong conj_cong)
     apply (clarsimp simp: neq_Nil_conv[where xs=extraCaps]
                           excaps_in_mem_def slotcap_in_mem_def
@@ -1386,7 +1384,7 @@ lemma performPageGetAddress_ccorres:
        apply clarsimp
        apply (vcg exspec=setRegister_modifies)
       apply wpsimp
-     apply (clarsimp simp: ThreadState_Running_def)
+     apply clarsimp
      apply (vcg exspec=lookupIPCBuffer_modifies)
     apply clarsimp
     apply vcg
@@ -1398,7 +1396,7 @@ lemma performPageGetAddress_ccorres:
                         seL4_MessageInfo_lift_def message_info_to_H_def mask_def)
   apply (cases isCall)
    apply (auto simp: RISCV64.badgeRegister_def RISCV64_H.badgeRegister_def Kernel_C.badgeRegister_def
-                     Kernel_C.a0_def fromPAddr_def ThreadState_Running_def
+                     Kernel_C.a0_def fromPAddr_def ThreadState_defs
                      pred_tcb_at'_def obj_at'_def ct_in_state'_def)
   done
 
@@ -2073,7 +2071,7 @@ lemma decodeRISCVFrameInvocation_ccorres:
 
   apply (prop_tac "SCAST(32 signed \<rightarrow> 64) ThreadState_Restart && mask 4
                    = SCAST(32 signed \<rightarrow> 64) ThreadState_Restart")
-  apply (solves \<open>clarsimp simp: ThreadState_Restart_def mask_def\<close>)
+  apply (solves \<open>clarsimp simp: ThreadState_defs mask_def\<close>)
 
   apply (rule conjI)
    (* RISCVPageMap, Haskell side *)
@@ -2123,7 +2121,7 @@ lemma decodeRISCVFrameInvocation_ccorres:
     apply (clarsimp simp: not_le rf_sr_ksCurThread isCap_simps)
     apply (prop_tac "SCAST(32 signed \<rightarrow> 64) ThreadState_Restart && mask 4 =
              SCAST(32 signed \<rightarrow> 64) ThreadState_Restart")
-     apply (solves \<open>clarsimp simp: ThreadState_Restart_def mask_def\<close>)
+     apply (solves \<open>clarsimp\<close>)
     apply (rule conjI, solves \<open>simp add: word_less_nat_alt\<close>)  (* size args < 3 *)
 
     (* get a hold of our valid caps and resolve the C heap *)
@@ -2515,7 +2513,7 @@ lemma decodeRISCVMMUInvocation_ccorres:
                         apply (rule_tac Q'=UNIV and A'="{}" in conseqPost)
                           apply (vcg exspec=ensureEmptySlot_modifies)
                          apply (frule length_ineq_not_Nil)
-                         apply (clarsimp simp: null_def ThreadState_Restart_def mask_def hd_conv_nth
+                         apply (clarsimp simp: null_def ThreadState_defs mask_def hd_conv_nth
                                                isCap_simps rf_sr_ksCurThread cap_get_tag_UntypedCap
                                                word_le_make_less asid_high_bits_def
                                          split: list.split)
@@ -2879,8 +2877,7 @@ lemma decodeRISCVMMUInvocation_ccorres:
   apply clarsimp
   apply (clarsimp simp: cte_wp_at_ctes_of asidHighBits_handy_convs
                         word_sle_def word_sless_def asidLowBits_handy_convs
-                        rf_sr_ksCurThread "StrictC'_thread_state_defs"
-                        mask_def[where n=4]
+                        rf_sr_ksCurThread ThreadState_defs mask_def[where n=4]
                   cong: if_cong)
   apply (clarsimp simp: ccap_relation_isDeviceCap2 objBits_simps pageBits_def case_bool_If)
   apply (rule conjI; clarsimp)

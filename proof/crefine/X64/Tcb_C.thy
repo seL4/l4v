@@ -1078,7 +1078,7 @@ lemma restart_ccorres:
      apply fastforce
     apply (rule ccorres_return_Skip)
    apply (wp hoare_drop_imps)
-  apply (auto simp: Collect_const_mem mask_def "StrictC'_thread_state_defs")
+  apply (auto simp: Collect_const_mem mask_def ThreadState_defs)
   done
 
 lemma setNextPC_ccorres:
@@ -2100,7 +2100,7 @@ shows
                              apply (rule allI, rule conseqPre, vcg)
                              apply (clarsimp simp: return_def)
                             apply (wp | simp add: valid_tcb_state'_def)+
-                          apply (clarsimp simp: ThreadState_Running_def mask_def)
+                          apply (clarsimp simp: ThreadState_defs mask_def)
                          apply (rule mapM_x_wp')
                          apply (rule hoare_pre)
                           apply (wp sch_act_wf_lift valid_queues_lift tcb_in_cur_domain'_lift)
@@ -2167,8 +2167,7 @@ shows
          apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
         apply (simp add: performTransfer_def)
         apply wp
-       apply (simp add: Collect_const_mem "StrictC'_thread_state_defs"
-                        mask_def)
+       apply (simp add: Collect_const_mem ThreadState_defs mask_def)
        apply vcg
       apply (rule_tac Q="\<lambda>rv. invs' and st_tcb_at' ((=) Restart) thread
                              and tcb_at' target" in hoare_post_imp)
@@ -2288,7 +2287,7 @@ lemma decodeReadRegisters_ccorres:
     apply wp
    apply (vcg exspec=getSyscallArg_modifies)
   apply (clarsimp simp: Collect_const_mem rf_sr_ksCurThread
-                        "StrictC'_thread_state_defs" word_sless_def word_sle_def
+                        ThreadState_defs word_sless_def word_sle_def
                         mask_eq_iff_w2p word_size isCap_simps
                         ReadRegistersFlags_defs tcb_at_invs'
                         cap_get_tag_isCap capTCBPtr_eq)
@@ -2397,7 +2396,7 @@ lemma decodeWriteRegisters_ccorres:
    apply (vcg exspec=getSyscallArg_modifies)
   apply (clarsimp simp: Collect_const_mem ct_in_state'_def pred_tcb_at')
   apply (simp add: cap_get_tag_isCap[symmetric], drule(1) cap_get_tag_to_H)
-  apply (clarsimp simp: valid_cap'_def "StrictC'_thread_state_defs"
+  apply (clarsimp simp: valid_cap'_def ThreadState_defs
                         mask_eq_iff_w2p word_size rf_sr_ksCurThread
                         WriteRegisters_resume_def word_sle_def word_sless_def
                         numeral_eqs)
@@ -2533,7 +2532,7 @@ lemma decodeCopyRegisters_ccorres:
               elim!: pred_tcb'_weakenE
               dest!: st_tcb_at_idle_thread' interpret_excaps_eq)[1]
   apply (clarsimp simp: word_sle_def CopyRegistersFlags_defs word_sless_def
-                        "StrictC'_thread_state_defs" rf_sr_ksCurThread
+                        ThreadState_defs rf_sr_ksCurThread
                  split: if_split)
   apply (drule interpret_excaps_eq)
   apply (clarsimp simp: mask_def excaps_map_def split_def ccap_rights_relation_def
@@ -3117,7 +3116,7 @@ lemma decodeTCBConfigure_ccorres:
                                        ptr_val_tcb_ptr_mask2[unfolded mask_def objBits_defs, simplified]
                                        tcb_cnode_index_defs size_of_def
                                        option_to_0_def rf_sr_ksCurThread
-                                       StrictC'_thread_state_defs mask_eq_iff_w2p word_size
+                                       ThreadState_defs mask_eq_iff_w2p word_size
                                        from_bool_all_helper all_ex_eq_helper
                                        ucast_ucast_mask objBits_defs)
                  apply (subgoal_tac "args \<noteq> [] \<and> extraCaps \<noteq> []")
@@ -3166,7 +3165,7 @@ lemma decodeTCBConfigure_ccorres:
                         capTCBPtr_eq tcb_ptr_to_ctcb_ptr_mask
                         tcb_cnode_index_defs size_of_def
                         option_to_0_def rf_sr_ksCurThread
-                        StrictC'_thread_state_defs mask_eq_iff_w2p word_size
+                        ThreadState_defs mask_eq_iff_w2p word_size
                         from_bool_all_helper)
   apply (frule(1) tcb_at_h_t_valid [OF tcb_at_invs'])
   apply (clarsimp simp: typ_heap_simps numeral_eqs isCap_simps valid_cap'_def capAligned_def
@@ -3303,7 +3302,7 @@ lemma decodeSetMCPriority_ccorres:
                 elim!: obj_at'_weakenE pred_tcb'_weakenE
                 dest!: st_tcb_at_idle_thread')[1]
    apply (clarsimp simp: interpret_excaps_eq excaps_map_def)
-  apply (simp add: StrictC'_thread_state_defs mask_eq_iff_w2p word_size option_to_0_def)
+  apply (simp add: ThreadState_defs mask_eq_iff_w2p word_size option_to_0_def)
   apply (frule rf_sr_ksCurThread)
   apply (simp only: cap_get_tag_isCap[symmetric], drule(1) cap_get_tag_to_H)
   apply (clarsimp simp: valid_cap'_def capAligned_def interpret_excaps_eq excaps_map_def)
@@ -3436,7 +3435,7 @@ lemma decodeSetPriority_ccorres:
                 elim!: obj_at'_weakenE pred_tcb'_weakenE
                 dest!: st_tcb_at_idle_thread')[1]
    apply (clarsimp simp: interpret_excaps_eq excaps_map_def)
-  apply (simp add: StrictC'_thread_state_defs mask_eq_iff_w2p word_size option_to_0_def)
+  apply (simp add: ThreadState_defs mask_eq_iff_w2p word_size option_to_0_def)
   apply (frule rf_sr_ksCurThread)
   apply (simp only: cap_get_tag_isCap[symmetric], drule(1) cap_get_tag_to_H)
   apply (clarsimp simp: valid_cap'_def capAligned_def interpret_excaps_eq excaps_map_def)
@@ -3614,7 +3613,7 @@ lemma decodeSetSchedParams_ccorres:
                 elim!: obj_at'_weakenE pred_tcb'_weakenE
                 dest!: st_tcb_at_idle_thread')[1]
    apply (clarsimp simp: interpret_excaps_eq excaps_map_def)
-  apply (simp add: StrictC'_thread_state_defs mask_eq_iff_w2p word_size option_to_0_def)
+  apply (simp add: ThreadState_defs mask_eq_iff_w2p word_size option_to_0_def)
   apply (frule rf_sr_ksCurThread)
   apply (simp only: cap_get_tag_isCap[symmetric], drule(1) cap_get_tag_to_H)
   apply (clarsimp simp: valid_cap'_def capAligned_def interpret_excaps_eq excaps_map_def)
@@ -3760,11 +3759,10 @@ lemma decodeSetIPCBuffer_ccorres:
                      valid_mdb_ctes_def no_0_def excaps_map_def
                elim: pred_tcb'_weakenE dest!: st_tcb_at_idle_thread'
               dest!: interpret_excaps_eq)[1]
-  apply (clarsimp simp: option_to_0_def rf_sr_ksCurThread word_sless_def
-            word_sle_def ThreadState_Restart_def mask_def)
+  apply (clarsimp simp: option_to_0_def rf_sr_ksCurThread word_sless_def word_sle_def mask_def)
   apply (rule conjI[rotated], clarsimp+)
   apply (drule interpret_excaps_eq[rule_format, where n=0], simp add: excaps_map_Nil)
-  apply (simp add: mask_def "StrictC'_thread_state_defs" excaps_map_def)
+  apply (simp add: mask_def ThreadState_defs excaps_map_def)
   apply (clarsimp simp: ccap_rights_relation_def rightsFromWord_wordFromRights
                         cap_get_tag_isCap)
   apply (frule cap_get_tag_to_H, subst cap_get_tag_isCap, assumption, assumption)
@@ -3930,10 +3928,10 @@ lemma decodeUnbindNotification_ccorres:
   apply (clarsimp simp: isCap_simps)
   apply (frule cap_get_tag_isCap_unfolded_H_cap)
   apply (auto simp: ctcb_relation_def typ_heap_simps cap_get_tag_ThreadCap ct_in_state'_def
-                         option_to_ptr_def option_to_0_def ThreadState_Restart_def
-                         mask_def rf_sr_ksCurThread valid_tcb_state'_def
-                  elim!: pred_tcb'_weakenE
-                  dest!: valid_objs_boundNTFN_NULL)
+                    option_to_ptr_def option_to_0_def ThreadState_defs
+                    mask_def rf_sr_ksCurThread valid_tcb_state'_def
+             elim!: pred_tcb'_weakenE
+             dest!: valid_objs_boundNTFN_NULL)
   done
 
 lemma nTFN_case_If_ptr:
@@ -4095,7 +4093,7 @@ lemma decodeBindNotification_ccorres:
        apply (clarsimp simp: throwError_def return_def syscall_error_rel_def
                              syscall_error_to_H_cases exception_defs)
       apply (clarsimp simp add: guard_is_UNIV_def isWaitingNtfn_def
-                                ThreadState_Restart_def mask_def
+                                ThreadState_defs mask_def
                                 rf_sr_ksCurThread capTCBPtr_eq)
      apply (simp add: hd_conv_nth bindE_bind_linearise nTFN_case_If_ptr throwError_bind invocationCatch_def)
      apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
@@ -4419,7 +4417,7 @@ lemma decodeSetSpace_ccorres:
                         rightsFromWord_wordFromRights
                         capTCBPtr_eq tcb_cnode_index_defs size_of_def
                         option_to_0_def rf_sr_ksCurThread
-                        "StrictC'_thread_state_defs" mask_eq_iff_w2p word_size)
+                        ThreadState_defs mask_eq_iff_w2p word_size)
   apply (simp add: word_sle_def cap_get_tag_isCap)
   apply (subgoal_tac "args \<noteq> []")
    apply (clarsimp simp: hd_conv_nth)
@@ -4502,7 +4500,7 @@ lemma decodeSetTLSBase_ccorres:
    apply (clarsimp simp: ct_in_state'_def sysargs_rel_n_def n_msgRegisters_def)
    apply (auto simp: valid_tcb_state'_def
               elim!: pred_tcb'_weakenE)[1]
-  apply (simp add: StrictC'_thread_state_defs mask_eq_iff_w2p word_size)
+  apply (simp add: ThreadState_defs mask_eq_iff_w2p word_size)
   apply (frule rf_sr_ksCurThread)
   apply (simp only: cap_get_tag_isCap[symmetric], drule(1) cap_get_tag_to_H)
   apply (auto simp: unat_eq_0 le_max_word_ucast_id)+
@@ -4654,8 +4652,7 @@ lemma decodeTCBInvocation_ccorres:
               dest!: st_tcb_at_idle_thread')[1]
   apply (simp split: sum.split add: cintr_def intr_and_se_rel_def
                         exception_defs syscall_error_rel_def)
-  apply (simp add: "StrictC'_thread_state_defs" mask_eq_iff_w2p word_size
-                   cap_get_tag_isCap)
+  apply (simp add: ThreadState_defs mask_eq_iff_w2p word_size)
   apply (simp add: cap_get_tag_isCap[symmetric], drule(1) cap_get_tag_to_H)
   apply clarsimp
   done

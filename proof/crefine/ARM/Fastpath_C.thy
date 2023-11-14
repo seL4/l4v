@@ -796,7 +796,7 @@ lemma thread_state_ptr_set_tsType_np_spec:
   apply (clarsimp simp: typ_heap_simps')
   apply (rule exI, rule conjI[OF _ conjI [OF _ refl]])
   apply (simp_all add: thread_state_lift_def)
-  apply (auto simp: "StrictC'_thread_state_defs" mask_def)
+  apply (auto simp: ThreadState_defs mask_def)
   done
 
 lemma thread_state_ptr_mset_blockingObject_tsType_spec:
@@ -2856,7 +2856,7 @@ lemma fastpath_reply_recv_ccorres:
                         apply (clarsimp simp: rf_sr_ksCurThread typ_heap_simps'
                                               h_t_valid_clift_Some_iff)
                         apply (clarsimp simp: capAligned_def isCap_simps objBits_simps
-                                              "StrictC'_thread_state_defs" mask_def)
+                                              ThreadState_defs mask_def)
                         apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                               typ_heap_simps' objBits_defs)
                         apply (rule conjI)
@@ -2867,7 +2867,7 @@ lemma fastpath_reply_recv_ccorres:
                          apply (simp add: cep_relations_drop_fun_upd)
                          apply (erule cmap_relation_updI, erule ko_at_projectKO_opt)
                           apply (simp add: ctcb_relation_def cthread_state_relation_def
-                                           "StrictC'_thread_state_defs")
+                                           ThreadState_defs)
                           apply (clarsimp simp: ccap_relation_ep_helpers)
                          apply simp
                         apply (rule conjI, erule cready_queues_relation_not_queue_ptrs)

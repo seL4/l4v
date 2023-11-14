@@ -230,7 +230,7 @@ lemma decodeIRQHandlerInvocation_ccorres:
      apply (clarsimp simp: Collect_const_mem neq_Nil_conv
                     dest!: interpret_excaps_eq)
      apply (simp add: rf_sr_ksCurThread mask_def[where n=4]
-                      "StrictC'_thread_state_defs" cap_get_tag_isCap excaps_map_def
+                      ThreadState_defs cap_get_tag_isCap excaps_map_def
                       word_sless_def word_sle_def)
     apply (simp add: invocationCatch_def throwError_bind
                      interpret_excaps_test_null Collect_True
@@ -260,8 +260,7 @@ lemma decodeIRQHandlerInvocation_ccorres:
   apply (clarsimp simp: invs_queues invs_valid_objs'
                         ct_in_state'_def
                         ccap_rights_relation_def
-                        mask_def[where n=4]
-                        "StrictC'_thread_state_defs")
+                        mask_def[where n=4] ThreadState_defs)
   apply (subst pred_tcb'_weakenE, assumption, fastforce)+
   apply (clarsimp simp: rf_sr_ksCurThread word_sle_def word_sless_def
                         sysargs_rel_n_def word_less_nat_alt)
@@ -607,7 +606,7 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
                 apply (simp add: and_mask_eq_iff_le_mask)
                 apply (simp add: mask_def word_le_nat_alt)
                apply (clarsimp simp: numeral_2_eq_2 numeral_3_eq_3 exception_defs
-                                     ThreadState_Restart_def mask_def)
+                                     ThreadState_defs mask_def)
                apply (rule conseqPre, vcg)
                apply (fastforce simp: exception_defs split: if_split)
               apply (rule subset_refl)
@@ -630,7 +629,6 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
   apply clarsimp
   apply (clarsimp simp: interpret_excaps_test_null excaps_map_def
                         Collect_const_mem word_sless_def word_sle_def
-                        ThreadState_Restart_def unat_of_nat mask_def
                         sysargs_rel_to_n
                   cong: if_cong)
   apply (rule conjI)
@@ -774,7 +772,7 @@ lemma decodeIRQControlInvocation_ccorres:
              apply (rule sym)
              apply (simp add: and_mask_eq_iff_le_mask)
              apply (simp add: mask_def word_le_nat_alt)
-            apply (clarsimp simp: numeral_2_eq_2 exception_defs ThreadState_Restart_def mask_def)
+            apply (clarsimp simp: numeral_2_eq_2 exception_defs ThreadState_defs mask_def)
             apply (rule conseqPre, vcg)
              apply (fastforce simp: exception_defs)
             apply (rule subset_refl)
@@ -800,7 +798,6 @@ lemma decodeIRQControlInvocation_ccorres:
   apply clarsimp
   apply (clarsimp simp: interpret_excaps_test_null excaps_map_def
                         Collect_const_mem word_sless_def word_sle_def
-                        ThreadState_Restart_def unat_of_nat mask_def
                         sysargs_rel_to_n
                   cong: if_cong)
   apply (rule conjI)

@@ -101,7 +101,7 @@ lemma activateThread_ccorres:
          apply (rule ccorres_cond_true)
          apply (rule ccorres_return_Skip)
         apply (rule_tac P=\<top> and P'=UNIV in ccorres_inst, simp)
-       apply (simp add: "StrictC'_thread_state_defs" del: Collect_const)
+       apply (simp add: ThreadState_defs del: Collect_const)
        apply (rule ccorres_cond_false)
        apply (rule ccorres_cond_false)
        apply (rule ccorres_cond_true)
@@ -109,7 +109,7 @@ lemma activateThread_ccorres:
        apply (rule allI, rule conseqPre, vcg)
        apply (clarsimp simp: activateIdleThread_def return_def)
       apply (rule_tac P=\<top> and P'=UNIV in ccorres_inst, simp)
-     apply (simp add: "StrictC'_thread_state_defs" del: Collect_const)
+     apply (simp add: ThreadState_defs del: Collect_const)
      apply (rule ccorres_cond_false)
      apply (rule ccorres_cond_true)
      apply (rule ccorres_rhs_assoc)+
@@ -132,7 +132,7 @@ lemma activateThread_ccorres:
   apply (subgoal_tac "ksCurThread_' (globals s') = tcb_ptr_to_ctcb_ptr (ksCurThread s)")
    prefer 2
    apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
-  apply (clarsimp simp: typ_heap_simps ThreadState_Running_def mask_def)
+  apply (clarsimp simp: typ_heap_simps ThreadState_defs mask_def)
   done
 
 lemma ceqv_Guard_UNIV_Skip:
@@ -688,7 +688,7 @@ lemma timerTick_ccorres:
    apply (ctac add: get_tsType_ccorres [where f="\<lambda>s. ksCurThread_' (globals s)"])
      apply (rule ccorres_split_nothrow_novcg)
          apply wpc
-                apply (simp add: "StrictC'_thread_state_defs", rule ccorres_cond_false, rule ccorres_return_Skip)+
+                apply (simp add: ThreadState_defs, rule ccorres_cond_false, rule ccorres_return_Skip)+
              (* thread_state.Running *)
              apply simp
              apply (rule ccorres_cond_true)
@@ -720,7 +720,7 @@ lemma timerTick_ccorres:
                          threadSet_pred_tcb_at_state tcbSchedAppend_valid_objs' threadSet_valid_objs' threadSet_tcbDomain_triv
                     | clarsimp simp: st_tcb_at'_def o_def split: if_splits)+
              apply (vcg exspec=tcbSchedDequeue_modifies)
-        apply (simp add: "StrictC'_thread_state_defs", rule ccorres_cond_false, rule ccorres_return_Skip)+
+        apply (simp add: ThreadState_defs, rule ccorres_cond_false, rule ccorres_return_Skip)+
         apply ceqv
        apply (clarsimp simp: decDomainTime_def numDomains_sge_1_simp)
        apply (rule ccorres_when[where R=\<top>])

@@ -1600,7 +1600,6 @@ where
   | "thread_state_to_tsType (Structures_H.BlockedOnSend oref badge cg cgr isc) = scast ThreadState_BlockedOnSend"
   | "thread_state_to_tsType (Structures_H.BlockedOnNotification oref) = scast ThreadState_BlockedOnNotification"
 
-
 lemma ctcb_relation_thread_state_to_tsType:
   "ctcb_relation tcb ctcb \<Longrightarrow> tsType_CL (thread_state_lift (tcbState_C ctcb)) = thread_state_to_tsType (tcbState tcb)"
   unfolding ctcb_relation_def cthread_state_relation_def
