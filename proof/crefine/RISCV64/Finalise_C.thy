@@ -280,10 +280,8 @@ sorry (* FIXME RT: cancel_all_ccorres_helper *) (*
                 sts_running_valid_queues sts_st_tcb' setThreadState_oa_queued | simp)+
 
      apply (vcg exspec=setThreadState_cslift_spec exspec=tcbSchedEnqueue_cslift_spec)
-    apply (clarsimp simp: tcb_at_not_NULL
-                          Collect_const_mem valid_tcb_state'_def
-                          ThreadState_Restart_def mask_def
-                          valid_objs'_maxDomain valid_objs'_maxPriority)
+    apply (clarsimp simp: tcb_at_not_NULL Collect_const_mem valid_tcb_state'_def
+                          ThreadState_defs mask_def valid_objs'_maxDomain valid_objs'_maxPriority)
     apply (drule(1) obj_at_cslift_tcb)
     apply (clarsimp simp: typ_heap_simps)
     apply (rule conjI)
@@ -968,7 +966,7 @@ lemma suspend_ccorres:
            apply clarsimp
            apply (rule iffI)
             apply simp
-           apply (erule thread_state_to_tsType.elims; simp add: StrictC'_thread_state_defs)
+           apply (erule thread_state_to_tsType.elims; simp add: ThreadState_defs)
           apply (ctac (no_vcg) add: updateRestartPC_ccorres)
          apply (rule ccorres_return_Skip)
         apply ceqv
@@ -1003,7 +1001,7 @@ lemma suspend_ccorres:
                 in hoare_post_imp)
     apply fastforce
    apply (wpsimp wp: hoare_vcg_all_lift)
-  by (auto simp: "StrictC'_thread_state_defs")[1]
+  by (auto simp: ThreadState_defs)[1]
 
 lemma cap_to_H_NTFNCap_tag:
   "\<lbrakk> cap_to_H cap = NotificationCap word1 word2 a b;

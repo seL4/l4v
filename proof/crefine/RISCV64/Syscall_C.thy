@@ -318,7 +318,7 @@ sorry (* FIXME RT: decodeInvocation_ccorres
    apply fastforce
   apply (simp add: cap_lift_capEPBadge_mask_eq)
   apply (clarsimp simp: rf_sr_ksCurThread Collect_const_mem
-                        cap_get_tag_isCap "StrictC'_thread_state_defs")
+                        cap_get_tag_isCap ThreadState_defs)
   apply (frule word_unat.Rep_inverse')
   apply (simp add: cap_get_tag_isCap[symmetric] cap_get_tag_ReplyCap)
   apply (rule conjI)
@@ -493,7 +493,7 @@ sorry (* FIXME RT: handleInvocation_def2
 lemma thread_state_to_tsType_eq_Restart:
   "(thread_state_to_tsType ts = scast ThreadState_Restart)
        = (ts = Restart)"
-  by (cases ts, simp_all add: "StrictC'_thread_state_defs")
+  by (cases ts, simp_all add: ThreadState_defs)
 
 lemma wordFromMessageInfo_spec:
   "\<forall>s. \<Gamma>\<turnstile> {s} Call wordFromMessageInfo_'proc
@@ -871,7 +871,7 @@ sorry (* FIXME RT: handleInvocation_ccorres
                     apply auto[1]
                    apply clarsimp
                   apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem)
-                  apply (simp add: "StrictC'_thread_state_defs" mask_def)
+                  apply (simp add: ThreadState_defs mask_def)
                   apply (simp add: typ_heap_simps)
                   apply (case_tac ts, simp_all add: cthread_state_relation_def)[1]
                  apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem)

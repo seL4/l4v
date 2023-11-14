@@ -529,7 +529,7 @@ lemma ctcb_relation_blocking_ipc_badge:
    apply (simp add: isBlockedOnSend_def split: Structures_H.thread_state.split_asm)
    apply (clarsimp simp: cthread_state_relation_def)
   apply (clarsimp simp add: ctcb_relation_def cthread_state_relation_def)
-  apply (cases "tcbState tcb", simp_all add: "StrictC'_thread_state_defs")
+  apply (cases "tcbState tcb", simp_all add: ThreadState_defs)
   done
 
 lemma cendpoint_relation_q_cong:
@@ -807,7 +807,7 @@ lemma cancelBadgedSends_ccorres:
           apply (clarsimp simp: typ_heap_simps st_tcb_at'_def)
           apply (drule(1) obj_at_cslift_tcb)
           apply (clarsimp simp: ctcb_relation_blocking_ipc_badge)
-          apply (rule conjI, simp add: "StrictC'_thread_state_defs" mask_def)
+          apply (rule conjI, simp add: ThreadState_defs mask_def)
           apply (rule conjI)
            apply clarsimp
            apply (frule rf_sr_cscheduler_relation)

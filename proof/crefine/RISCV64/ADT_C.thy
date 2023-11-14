@@ -783,7 +783,7 @@ lemma cthread_state_rel_imp_eq:
    x = y"
   apply (simp add: cthread_state_relation_def split_def)
   by (cases x; cases y;
-      fastforce simp: StrictC'_thread_state_defs tcb_st_refs_of'_def option_to_0_def
+      fastforce simp: ThreadState_defs tcb_st_refs_of'_def option_to_0_def
                split: option.splits)
 
 lemma ksPSpace_valid_objs_tcbBound_nonzero:

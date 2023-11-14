@@ -205,7 +205,7 @@ lemma decodeDomainInvocation_ccorres:
   apply (clarsimp simp: valid_tcb_state'_def invs_valid_queues' invs_valid_objs'
                         invs_queues ct_in_state'_def pred_tcb_at'
                         rf_sr_ksCurThread word_sle_def word_sless_def sysargs_rel_to_n
-                        mask_eq_iff_w2p mask_eq_iff_w2p word_size "StrictC'_thread_state_defs")
+                        mask_eq_iff_w2p mask_eq_iff_w2p word_size ThreadState_defs)
   apply (rule conjI)
    apply (clarsimp simp: linorder_not_le isCap_simps)
    apply (rule conjI, clarsimp simp: unat64_eq_of_nat)
@@ -1297,7 +1297,7 @@ lemma decodeCNodeInvocation_ccorres:
   apply (frule interpret_excaps_eq)
   apply (clarsimp simp: excaps_map_def mask_def[where n=4]
                         ccap_rights_relation_def rightsFromWord_wordFromRights
-                        "StrictC'_thread_state_defs" map_comp_Some_iff
+                        ThreadState_defs map_comp_Some_iff
                         rf_sr_ksCurThread hd_conv_nth hd_drop_conv_nth)
   apply ((rule conjI
             | clarsimp simp: rightsFromWord_wordFromRights
@@ -3209,8 +3209,7 @@ lemma decodeUntypedInvocation_ccorres_helper:
                                            unat_of_nat_APIType_capBits word_size hd_conv_nth length_ineq_not_Nil
                        not_less word_le_nat_alt isCap_simps valid_cap_simps')
                     apply (strengthen word_of_nat_less)
-                    apply (clarsimp simp: StrictC'_thread_state_defs mask_def
-                                          ccap_relation_isDeviceCap2
+                    apply (clarsimp simp: ThreadState_defs mask_def ccap_relation_isDeviceCap2
                                    split: if_split)
                     apply (clarsimp simp: not_less shiftr_overflow maxUntypedSizeBits_def
                                           unat_of_nat_APIType_capBits)
@@ -3321,8 +3320,7 @@ lemma decodeUntypedInvocation_ccorres_helper:
   apply (clarsimp simp: hd_drop_conv_nth2 hd_conv_nth neq_Nil_lengthI
                         ct_in_state'_def pred_tcb_at'
                         rf_sr_ksCurThread mask_eq_iff_w2p
-                        "StrictC'_thread_state_defs" numeral_eqs[symmetric]
-                        cap_get_tag_isCap cte_wp_at_ctes_of
+                        numeral_eqs[symmetric] cap_get_tag_isCap cte_wp_at_ctes_of
                         unat_eq_0 ccHoarePost_def)
   apply (rule conjI)
    apply (clarsimp simp: linorder_not_less isCap_simps)

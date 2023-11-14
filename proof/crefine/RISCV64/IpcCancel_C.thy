@@ -449,7 +449,7 @@ lemma isStopped_ccorres [corres]:
   apply clarsimp
   apply (clarsimp simp: typ_heap_simps ctcb_relation_thread_state_to_tsType
                  split: thread_state.splits)
-    apply (simp add: "StrictC'_thread_state_defs")+
+    apply (simp add: ThreadState_defs)+
   done
 
 lemma isRunnable_ccorres [corres]:
@@ -477,7 +477,7 @@ lemma isRunnable_ccorres [corres]:
   apply (clarsimp)
   apply (clarsimp simp: typ_heap_simps ctcb_relation_thread_state_to_tsType
                  split: thread_state.splits)
-       apply (simp add: "StrictC'_thread_state_defs")+
+       apply (simp add: ThreadState_defs)+
   done
 
 
@@ -2441,7 +2441,7 @@ sorry (* FIXME RT: scheduleTCB_ccorres' *)
             apply (clarsimp simp: typ_heap_simps)
             apply (subgoal_tac "ksSchedulerAction \<sigma> = ResumeCurrentThread")
              apply (clarsimp simp: ctcb_relation_def cthread_state_relation_def)
-             apply (case_tac "tcbState ko", simp_all add: "StrictC'_thread_state_defs")[1]
+             apply (case_tac "tcbState ko", simp_all add: ThreadState_defs)[1]
             apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                   cscheduler_action_relation_def tcb_at_not_NULL
                            split: scheduler_action.split_asm)
@@ -2544,7 +2544,7 @@ sorry (* FIXME RT: scheduleTCB_ccorres_valid_queues'_pre_simple *) (*
             apply (clarsimp simp: typ_heap_simps)
             apply (subgoal_tac "ksSchedulerAction \<sigma> = ResumeCurrentThread")
              apply (clarsimp simp: ctcb_relation_def cthread_state_relation_def)
-             apply (case_tac "tcbState ko", simp_all add: "StrictC'_thread_state_defs")[1]
+             apply (case_tac "tcbState ko", simp_all add: ThreadState_defs)[1]
             apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                   cscheduler_action_relation_def
                                   tcb_at_not_NULL
@@ -2640,11 +2640,11 @@ sorry (* FIXME RT: cancelSignal_ccorres *) (*
    apply (ctac (no_vcg) add: cancelSignal_ccorres_helper)
      apply (ctac add: setThreadState_ccorres_valid_queues')
     apply ((wp setNotification_nosch setNotification_ksQ hoare_vcg_all_lift set_ntfn_valid_objs' | simp add: valid_tcb_state'_def split del: if_split)+)[1]
-   apply (simp add: "StrictC'_thread_state_defs")
+   apply (simp add: ThreadState_defs)
   apply (rule conjI, clarsimp, rule conjI, clarsimp)
     apply (frule (1) ko_at_valid_ntfn'[OF _ invs_valid_objs'])
    subgoal by ((auto simp: obj_at'_def projectKOs st_tcb_at'_def invs'_def valid_state'_def
-                     isTS_defs cte_wp_at_ctes_of "StrictC'_thread_state_defs"
+                     isTS_defs cte_wp_at_ctes_of
                      cthread_state_relation_def sch_act_wf_weak valid_ntfn'_def
              dest!: valid_queues_not_runnable'_not_ksQ[where t=thread] |
            clarsimp simp: eq_commute)+)
@@ -2652,7 +2652,7 @@ sorry (* FIXME RT: cancelSignal_ccorres *) (*
    apply (frule (1) ko_at_valid_ntfn'[OF _ invs_valid_objs'])
    apply (frule (2) ntfn_blocked_in_queueD)
    by (auto simp: obj_at'_def projectKOs st_tcb_at'_def invs'_def valid_state'_def
-                     isTS_defs cte_wp_at_ctes_of "StrictC'_thread_state_defs" valid_ntfn'_def
+                     isTS_defs cte_wp_at_ctes_of valid_ntfn'_def
                      cthread_state_relation_def sch_act_wf_weak isWaitingNtfn_def
              dest!: valid_queues_not_runnable'_not_ksQ[where t=thread]
              split: ntfn.splits option.splits
@@ -3143,7 +3143,7 @@ sorry (* FIXME RT: cancelIPC_ccorres1 *) (*
      apply (rule_tac P="rv' = thread_state_to_tsType rv" in ccorres_gen_asm2)
      apply wpc
             \<comment> \<open>BlockedOnReceive\<close>
-            apply (simp add: word_sle_def "StrictC'_thread_state_defs" ccorres_cond_iffs cong: call_ignore_cong)
+            apply (simp add: word_sle_def ccorres_cond_iffs cong: call_ignore_cong)
             apply (rule ccorres_rhs_assoc)+
             apply csymbr
             apply csymbr
@@ -3159,7 +3159,7 @@ sorry (* FIXME RT: cancelIPC_ccorres1 *) (*
                 apply (ctac (no_vcg) add: cancelIPC_ccorres_helper)
                   apply (ctac add: setThreadState_ccorres_valid_queues')
                  apply (wp hoare_vcg_all_lift set_ep_valid_objs' | simp add: valid_tcb_state'_def split del: if_split)+
-                apply (simp add: "StrictC'_thread_state_defs")
+                apply (simp add: ThreadState_defs)
                apply vcg
               apply (rule conseqPre, vcg)
               apply clarsimp
@@ -3169,7 +3169,7 @@ sorry (* FIXME RT: cancelIPC_ccorres1 *) (*
             apply (rule conseqPre, vcg)
             apply clarsimp
           \<comment> \<open>BlockedOnReply case\<close>
-           apply (simp add: "StrictC'_thread_state_defs" ccorres_cond_iffs
+           apply (simp add: ThreadState_defs ccorres_cond_iffs
                             Collect_False Collect_True word_sle_def
                       cong: call_ignore_cong del: Collect_const)
            apply (rule ccorres_rhs_assoc)+
@@ -3228,7 +3228,7 @@ sorry (* FIXME RT: cancelIPC_ccorres1 *) (*
            apply (clarsimp simp add: guard_is_UNIV_def tcbReplySlot_def
                         Kernel_C.tcbReply_def tcbCNodeEntries_def)
           \<comment> \<open>BlockedOnNotification\<close>
-          apply (simp add: word_sle_def "StrictC'_thread_state_defs" ccorres_cond_iffs
+          apply (simp add: word_sle_def ThreadState_defs ccorres_cond_iffs
                      cong: call_ignore_cong)
           apply (rule ccorres_symb_exec_r)
             apply (ctac (no_vcg))
@@ -3238,11 +3238,11 @@ sorry (* FIXME RT: cancelIPC_ccorres1 *) (*
           apply (rule conseqPre, vcg)
           apply clarsimp
          \<comment> \<open>Running, Inactive, and Idle\<close>
-         apply (simp add: word_sle_def "StrictC'_thread_state_defs" ccorres_cond_iffs
+         apply (simp add: word_sle_def ThreadState_defs ccorres_cond_iffs
                     cong: call_ignore_cong,
                 rule ccorres_return_Skip)+
       \<comment> \<open>BlockedOnSend\<close>
-      apply (simp add: word_sle_def "StrictC'_thread_state_defs" ccorres_cond_iffs
+      apply (simp add: word_sle_def ccorres_cond_iffs
                  cong: call_ignore_cong)
       \<comment> \<open>clag\<close>
       apply (rule ccorres_rhs_assoc)+
@@ -3259,7 +3259,7 @@ sorry (* FIXME RT: cancelIPC_ccorres1 *) (*
           apply (ctac (no_vcg) add: cancelIPC_ccorres_helper)
             apply (ctac add: setThreadState_ccorres_valid_queues')
            apply (wp hoare_vcg_all_lift set_ep_valid_objs' | simp add: valid_tcb_state'_def split del:if_split)+
-       apply (simp add: "StrictC'_thread_state_defs")
+       apply (simp add: ThreadState_defs)
          apply clarsimp
          apply (rule conseqPre, vcg, rule subset_refl)
         apply (rule conseqPre, vcg)
@@ -3269,7 +3269,7 @@ sorry (* FIXME RT: cancelIPC_ccorres1 *) (*
       apply (rule conseqPre, vcg)
       apply clarsimp
   \<comment> \<open>Restart\<close>
-     apply (simp add: word_sle_def "StrictC'_thread_state_defs" ccorres_cond_iffs
+     apply (simp add: word_sle_def ThreadState_defs ccorres_cond_iffs
                 cong: call_ignore_cong,
             rule ccorres_return_Skip)
     \<comment> \<open>Post wp proofs\<close>
