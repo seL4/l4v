@@ -587,12 +587,6 @@ lemma length_scRefills_bounded:
   apply (clarsimp simp: word_bits_def untypedBits_defs)
   done
 
-lemma refill_ready_ccorres:
-  "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_'
-     \<top> \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
-     (refillReady scPtr) (Call refill_ready_'proc)"
-sorry (* FIXME RT: refill_ready_ccorres *)
-
 lemma scReleased_rewrite:
   "monadic_rewrite True False \<top>
      (scReleased scPtr)
