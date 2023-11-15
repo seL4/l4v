@@ -547,13 +547,82 @@ lemma canonical_address_bitfield_extract_tcb:
   by (fastforce simp: sign_extended_iff_sign_extend canonical_address_sign_extended)
 
 lemma installTCBCap_ccorres:
-  "ccorres dc xfdc
-     \<top>
-     (\<lbrace>\<acute>yielder = tcb_ptr_to_ctcb_ptr tptr\<rbrace>
-      \<inter> {s. ccap_relation cap (cap_' s)}
-      \<inter> \<lbrace>\<acute>slot = cte_Ptr slot\<rbrace>) []
-     (installTCBCap target slot n slot_opt) (Call installTCBCap_'proc)"
-sorry (* FIXME RT: installTCBCap_ccorres *)
+   "ccorres (cintr \<currency> dc) (liftxf errstate id (\<lambda>y. ()) ret__unsigned_long_')
+            (invs' and sch_act_simple
+                   and tcb_at' target
+                   and valid_cap' newCap
+                   and (\<lambda>_. slot_opt = Some (newCap,srcSlot) \<and> n \<in> {0,1,3,4}))
+            (\<lbrace>\<acute>target = tcb_ptr_to_ctcb_ptr target\<rbrace>
+             \<inter> \<lbrace>\<acute>slot = cte_Ptr slot\<rbrace>
+             \<inter> \<lbrace>\<acute>index = of_nat n\<rbrace>
+             \<inter> \<lbrace>ccap_relation newCap \<acute>newCap\<rbrace>
+             \<inter> \<lbrace>\<acute>srcSlot = cte_Ptr srcSlot\<rbrace>
+             \<inter> \<lbrace>ccap_relation (capability.ThreadCap target) \<acute>tCap \<and>
+                  cap_get_tag \<acute>tCap = SCAST(32 signed \<rightarrow> 64) cap_thread_cap\<rbrace>)
+       [] (installTCBCap target slot n slot_opt) (Call installTCBCap_'proc)"
+  apply (rule ccorres_gen_asm)
+  apply (cinit lift: target_' slot_' index_' newCap_' srcSlot_' tCap_'
+               simp: liftE_bindE bind_assoc)
+   apply (subst installTCBCap_corres_helper, simp del: Collect_const)
+   apply (rule ccorres_move_array_assertion_tcb_ctes)
+   apply csymbr
+   apply simp
+   apply (ctac(no_vcg) add: cteDelete_ccorres)
+     apply simp
+     apply csymbr
+     apply (rule ccorres_cond_seq)
+     apply (rule ccorres_guard_imp2)
+      apply (rule ccorres_Cond_rhs[rotated])
+       apply (frule cap_get_tag_to_H; clarsimp)
+       apply (rule ccorres_return_CE; clarsimp)
+      apply (prop_tac "newCap \<noteq> NullCap", clarsimp simp: ccap_relation_NullCap_iff[symmetric])
+      apply (clarsimp simp: liftE_def)
+      apply (rule ccorres_rhs_assoc)+
+      apply (rule checkCapAt_ccorres)
+         apply ceqv
+        apply csymbr
+        apply simp
+        apply (rule ccorres_rhs_assoc)+
+        apply (rule checkCapAt_ccorres)
+           apply ceqv
+          apply csymbr
+          apply simp
+          apply (simp add: assertDerived_def bind_assoc del: Collect_const)
+          apply (rule ccorres_symb_exec_l)
+             apply (ctac (no_vcg) add: cteInsert_ccorres)
+              apply (rule ccorres_return_CE[simplified returnOk_def comp_def]; clarsimp)
+             apply (rule hoare_post_taut)
+            apply wpsimp
+           apply wpsimp
+          apply clarsimp
+         apply csymbr
+         apply simp
+         apply (rule ccorres_return_CE[simplified returnOk_def comp_def]; clarsimp)
+        apply clarsimp
+        apply (clarsimp simp: guard_is_UNIV_def)
+        apply (clarsimp split: if_split)
+        apply assumption
+       apply csymbr
+       apply simp
+       apply (rule ccorres_cond_false_seq, simp)
+       apply (rule ccorres_return_CE[simplified returnOk_def comp_def]; clarsimp)
+      apply (clarsimp simp: guard_is_UNIV_def)
+     apply (clarsimp cong: imp_cong conj_cong)
+     apply assumption
+    apply simp
+    apply (rule ccorres_split_throws)
+     apply (rule ccorres_return_C_errorE, simp+)[1]
+    apply vcg
+   apply (strengthen cte_is_derived_capMasterCap_strg invs_valid_objs' invs_mdb' invs_pspace_aligned')
+   apply (clarsimp cong: imp_cong conj_cong simp: o_def)
+   apply ((wpsimp wp: cteDelete_invs' cteDelete_cte_at
+                simp: cte_wp_at_weakenE'[where P'=\<top>, simplified]
+           | strengthen invs_pspace_canonical'
+           | wp (once) hoare_drop_impE_R)+)[1]
+  apply (auto dest: tcb_aligned' simp: tcbCNodeEntries_def tcb_cnode_index_def valid_cap'_def
+                                       capAligned_def size_of_def cte_map_def to_bl_1 word_bits_def
+                                       cte_level_bits_def objBits_def objBits_defs objBitsKO_def)
+  done
 
 lemma invokeTCB_ThreadControlCaps_ccorres:
   notes prod.case_cong_weak[cong]
@@ -2844,6 +2913,30 @@ lemma mcpriority_tcb_at'_prio_bounded':
 lemmas mcpriority_tcb_at'_prio_bounded
   = mcpriority_tcb_at'_prio_bounded'[simplified priorityBits_def]
 
+definition
+  validFaultHandler_C :: "cap_C \<Rightarrow> bool"
+where
+ "validFaultHandler_C cap \<equiv> (cap_get_tag cap = scast cap_null_cap) \<or>
+                             (cap_get_tag cap = scast cap_endpoint_cap \<and>
+                              to_bool (capCanSend_CL (cap_endpoint_cap_lift cap)) \<and>
+                              (to_bool (capCanGrant_CL (cap_endpoint_cap_lift cap)) \<or>
+                               to_bool (capCanGrantReply_CL (cap_endpoint_cap_lift cap))))"
+
+lemma isValidFaultHandler_conv:
+  "ccap_relation cap cap' \<Longrightarrow> validFaultHandler_C cap' = isValidFaultHandler cap"
+  unfolding validFaultHandler_C_def isValidFaultHandler_def
+  by (clarsimp simp: cap_get_tag_isCap isCap_simps ccap_relation_ep_helpers
+              split: capability.split bool.split)
+
+lemma validFaultHandler_spec:
+  "\<forall>s. \<Gamma> \<turnstile> {s} Call validFaultHandler_'proc
+    {s'. ret__unsigned_long_' s' = from_bool (validFaultHandler_C (cap_' s))}"
+  apply vcg
+  apply (clarsimp simp: validFaultHandler_C_def from_bool_0)
+  apply (simp add: cap_endpoint_cap_def cap_null_cap_def to_bool_def
+            split: if_split bool.split)
+  done
+
 lemma decodeTCBConfigure_ccorres:
   notes tl_drop_1[simp] scast_mask_8 [simp]
   shows
@@ -3526,6 +3619,57 @@ lemma mcpriority_tcb_at'_le_ucast:
   "pred_tcb_at' itcbMCP (\<lambda>mcp. x \<le> UCAST(8 \<rightarrow> 64) mcp) v s \<Longrightarrow>
    pred_tcb_at' itcbMCP (\<lambda>mcp. UCAST(64 \<rightarrow> 8) x \<le> mcp) v s"
   by (clarsimp simp: ucast_le_8_64_equiv mcpriority_tcb_at'_prio_bounded simp del: unsigned_uminus1)
+
+lemma isBlocked_ccorres:
+  "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_'
+     (tcb_at' tcbPtr) {s. thread_' s = tcb_ptr_to_ctcb_ptr tcbPtr} []
+     (isBlocked tcbPtr) (Call isBlocked_'proc)"
+  apply (cinit lift: thread_')
+   apply (rule ccorres_Guard_Seq)
+   apply (ctac add: get_tsType_ccorres[where f="\<lambda>_. tcb_ptr_to_ctcb_ptr tcbPtr"])
+     apply clarify
+     apply (rule ccorres_Cond_rhs)
+      apply (ctac add: ccorres_return_C)
+     apply (ctac add: ccorres_return_C)
+    apply wp
+   apply vcg
+  apply clarsimp
+  apply (drule (1) obj_at_cslift_tcb)
+  by (clarsimp simp: typ_heap_simps ThreadState_defs
+              split: thread_state.splits)
+
+lemma sc_released_ccorres:
+  "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_'
+     (sc_at' scPtr) {s. sc_' s = sched_context_Ptr scPtr} []
+     (scReleased scPtr) (Call sc_released_'proc)"
+  apply (cinit lift: sc_')
+   apply (ctac add: sc_active_ccorres)
+     apply (clarsimp simp only: to_bool_neq_0)
+     apply (rule ccorres_Cond_rhs)
+      apply (ctac add: refill_ready_ccorres)
+        apply (ctac add: ccorres_return_C)
+       apply wp
+      apply (clarsimp, vcg exspec=refill_ready_modifies)
+     apply (clarsimp simp: refillReady_def)
+     apply (rule_tac r'=dc and xf'=xfdc and P="sc_at' scPtr" and P'=UNIV in ccorres_split_noop_lhs)
+       apply (rule ccorres_from_vcg)
+       apply (rule allI, rule conseqPre, vcg)
+       apply (clarsimp simp: split_def in_monad' gets_the_def
+                      dest!: no_ofailD[OF readRefillReady_no_ofail])
+      apply (ctac add: ccorres_return_C)
+     apply (wpsimp wp: hoare_drop_imps)+
+   apply (vcg exspec=sc_active_modifies)
+  apply (clarsimp simp: to_bool_def)
+  done
+
+lemma capSCPtr_eq:
+  "\<lbrakk> ccap_relation cap cap'; isSchedContextCap cap \<rbrakk>
+   \<Longrightarrow> capSCPtr_CL (cap_sched_context_cap_lift cap')
+       = ptr_val (sched_context_Ptr (capSchedContextPtr cap))"
+  apply (simp add: cap_get_tag_isCap[symmetric])
+  apply (drule(1) cap_get_tag_to_H)
+  apply clarsimp
+  done
 
 lemma decodeSetSchedParams_ccorres:
   "\<lbrakk>interpret_excaps extraCaps' = excaps_map extraCaps\<rbrakk> \<Longrightarrow>
