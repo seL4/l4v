@@ -43,6 +43,12 @@ assumes maskInterrupt_ccorres:
            (doMachineOp (maskInterrupt m irq))
            (Call maskInterrupt_'proc)"
 
+(* FIXME AARCH64 this is a simplification until complete FPU handling is added at a future date *)
+assumes fpuThreadDelete_ccorres:
+  "ccorres dc xfdc (tcb_at' thread) (\<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr thread\<rbrace>) hs
+     (fpuThreadDelete thread)
+     (Call fpuThreadDelete_'proc)"
+
 (* AArch64-specific machine ops (function names don't exist on other architectures) *)
 
 assumes getFAR_ccorres:
@@ -55,8 +61,6 @@ assumes getESR_ccorres:
            (doMachineOp getESR)
            (Call getESR_'proc)"
 
-(* FIXME AARCH64 getHSR doesn't exist in C, remove from Haskell spec *)
-
 assumes setHCR_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>reg = r \<rbrace>) []
            (doMachineOp (setHCR r))
@@ -67,7 +71,6 @@ assumes getSCTLR_ccorres:
            (doMachineOp getSCTLR)
            (Call getSCTLR_'proc)"
 
-(* FIXME AARCH64 note: there is a typo on ARM_HYP *)
 assumes setSCTLR_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>sctlr = sctlr \<rbrace>) []
            (doMachineOp (setSCTLR sctlr))
@@ -82,6 +85,11 @@ assumes dsb_ccorres:
   "ccorres dc xfdc \<top> UNIV []
            (doMachineOp dsb)
            (Call dsb_'proc)"
+
+assumes cleanByVA_PoU_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>vaddr = w1\<rbrace> \<inter> \<lbrace>\<acute>paddr = w2\<rbrace>) []
+           (doMachineOp (cleanByVA_PoU w1 w2))
+           (Call cleanByVA_PoU_'proc)"
 
 assumes enableFpuEL01_ccorres:
   "ccorres dc xfdc \<top> UNIV []
