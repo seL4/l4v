@@ -724,7 +724,7 @@ where
 context state_rel begin
 
 \<comment> \<open>The IRQ node is a global array of CTEs.\<close>
-abbreviation intStateIRQNode_array_Ptr :: "(cte_C[64]) ptr" where
+abbreviation intStateIRQNode_array_Ptr :: "(cte_C[512]) ptr" where
   "intStateIRQNode_array_Ptr \<equiv> Ptr (symbol_table ''intStateIRQNode'')"
 
 \<comment> \<open>But for compatibility with older proofs (written when the IRQ Node was a global pointer
