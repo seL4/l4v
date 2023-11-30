@@ -16,6 +16,7 @@ data ArchInvocationLabel
         | ARMVSpaceInvalidate_Data
         | ARMVSpaceCleanInvalidate_Data
         | ARMVSpaceUnify_Instruction
+        | ARMSMCCall
         | ARMPageTableMap
         | ARMPageTableUnmap
         | ARMPageMap
