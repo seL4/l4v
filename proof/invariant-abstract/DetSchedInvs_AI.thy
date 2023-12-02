@@ -2127,23 +2127,6 @@ lemma gets_the_bind_collapse:
                       obind_pair_def obind_def return_def fail_def
                split: option.splits)
 
-lemma read_sc_refill_ready_simp:
-  "read_sc_refill_ready scp s =
-    (case read_sched_context scp s
-       of Some sc \<Rightarrow> Some (refill_ready (cur_time s) (refill_hd sc))
-        | _ \<Rightarrow> None)"
-  by (clarsimp simp: read_sc_refill_ready_def read_refill_head_def obind_def asks_def
-              split: option.split_asm option.splits)
-
-lemma get_sc_refill_ready_gets_the:
-  "get_sc_refill_ready scp
-   = gets_the (\<lambda>s. map_project (refill_ready_sc (cur_time s)) (sc_refill_cfgs_of s) scp)"
-  apply (rule ext)
-  apply (clarsimp simp: get_sc_refill_ready_def gets_the_def exec_gets)
-  by (simp add: read_sc_refill_ready_simp read_sched_context_def obind_def
-                sc_refill_cfgs.all_simps assert_opt_def map_project_simps omonad_defs
-         split: option.splits kernel_object.splits)
-
 (* FIXME: Move up. Perhaps use more widely, to get rid of pred_map2? *)
 definition tcb_sc_refill_cfgs_2 ::
   "(obj_ref \<rightharpoonup> obj_ref option) \<Rightarrow> (obj_ref \<rightharpoonup> sc_refill_cfg) \<Rightarrow> obj_ref \<rightharpoonup> sc_refill_cfg"
@@ -2897,11 +2880,6 @@ abbreviation (input) valid_sched_valid_blocked :: "obj_ref set \<Rightarrow> val
   "valid_sched_valid_blocked S ctime cdom ct it rq rlq sa etcbs tcb_sts
                          tcb_scps tcb_faults sc_refill_cfgs sc_reps \<equiv>
     valid_blocked_except_set_2 S rq rlq sa ct tcb_sts tcb_scps sc_refill_cfgs"
-
-lemma valid_blocked_except_cur_thread[simp]:
-  "valid_blocked_except_2 (cur_thread s) queues kh sa (cur_thread s)
-   = valid_blocked_2 queues kh sa (cur_thread s)"
-  by (fastforce simp: valid_blocked_except_2_def valid_blocked_2_def)
 
 definition in_cur_domain_2 where
   "in_cur_domain_2 thread cdom ekh \<equiv> etcb_at' (\<lambda>t. etcb_domain t = cdom) ekh thread"

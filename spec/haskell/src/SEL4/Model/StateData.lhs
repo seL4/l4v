@@ -160,10 +160,6 @@ run. Each thread in this list is at the same priority level.
 
 > type ReleaseQueue = TcbQueue
 
-This is a standard Haskell singly-linked list independent of the
-thread control block structures. However, in a real implementation, it
-would most likely be embedded in the thread control blocks themselves.
-
 \subsection{Kernel State Functions}
 
 The following two functions are used to get and set the value of the
@@ -185,14 +181,8 @@ replaces the previous one.
 
 > setCurThread :: PPtr TCB -> Kernel ()
 > setCurThread tptr = do
->     stateAssert idleThreadNotQueued "the idle thread cannot be in the ready queues"
->     modify (\ks -> ks { ksCurThread = tptr })
-
-In many places, we would like to be able to use the fact that threads in the
-ready queues have runnable' thread state. We add an assertion that it does hold.
-
-> ready_qs_runnable :: KernelState -> Bool
-> ready_qs_runnable _ = True
+>   stateAssert idleThreadNotQueued "The idle thread cannot be in the ready queues"
+>   modify (\ks -> ks { ksCurThread = tptr })
 
 In many places, we would like to be able to use the fact that threads in the
 ready queues have runnable' thread state. We add an assertion that it does hold.
@@ -332,7 +322,7 @@ A new kernel state structure contains an empty physical address space, a set of 
 >         ksReadyQueuesL2Bitmap =
 >             funPartialArray (const 0)
 >                 ((0, 0), (fromIntegral numDomains, l2BitmapSize)),
->         ksReleaseQueue = [],
+>         ksReleaseQueue = TcbQueue {tcbQueueHead = Nothing, tcbQueueEnd = Nothing},
 >         ksCurThread = error "No initial thread",
 >         ksIdleThread = error "Idle thread has not been created",
 >         ksIdleSC = error "Idle scheduling context has not been created",
@@ -478,22 +468,49 @@ Used in callKernel.
 > rct_imp_activatable'_asrt :: KernelState -> Bool
 > rct_imp_activatable'_asrt _ = True
 
-For deleteObjects, we would like to be able to use the fact that threads in the
-release queue have runnable' thread state. We add an assertion that it does hold.
-
-> release_q_runnable_asrt :: KernelState -> Bool
-> release_q_runnable_asrt _ = True
-
 Various lemmas in Refine_C.thy would like the fact that the current thread is
 activatable' after schedule runs. We add an assertion that this is the case.
 
 > ct_activatable'_asrt :: KernelState -> Bool
 > ct_activatable'_asrt _ = True
 
+An assert that will say that the return value of findTimeAfter
+is a pointer in the release queue.
+
+> findTimeAfter_asrt :: PPtr TCB -> KernelState -> Bool
+> findTimeAfter_asrt _ _ = True
+
+An assert that will say that `ready_or_release'` holds. That is, no thread
+has both the tcbQueued and tcbInReleaseQueue flag set.
+
+> ready_or_release'_asrt :: KernelState -> Bool
+> ready_or_release'_asrt _ = True
+
+An assert that will say that the tcbInReleaseQueue flag is not set.
+
+> not_tcbInReleaseQueue_asrt :: PPtr TCB -> KernelState -> Bool
+> not_tcbInReleaseQueue_asrt _ _ = True
+
+An assert that will say that every thread in the release queue is associated
+with an active scheduling context.
+
+> tcbInReleaseQueue_imp_active_sc_tc_at'_asrt :: KernelState -> Bool
+> tcbInReleaseQueue_imp_active_sc_tc_at'_asrt _ = True
+
+An assert that will say that the tcbQueued flag of the thread is not set.
+
+> not_tcbQueued_asrt :: PPtr TCB -> KernelState -> Bool
+> not_tcbQueued_asrt _ _ = True
+
 Several asserts about ksReadyQueues
 
 > ksReadyQueues_asrt :: KernelState -> Bool
 > ksReadyQueues_asrt _ = True
+
+Several asserts about ksReleaseQueue
+
+> ksReleaseQueue_asrt :: KernelState -> Bool
+> ksReleaseQueue_asrt _ = True
 
 An assert that will say that the idle thread is not in a ready queue
 

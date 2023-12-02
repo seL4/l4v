@@ -234,10 +234,10 @@ The following functions are used within this module to access the global interru
 >            else return next_interrupt
 >     rq <- getReleaseQueue
 >     next_interrupt <-
->         if rq == []
+>         if (tcbQueueHead rq == Nothing)
 >             then return next_interrupt
 >             else do
->                 rqSCOpt <- threadGet tcbSchedContext (head rq)
+>                 rqSCOpt <- threadGet tcbSchedContext (fromJust $ tcbQueueHead rq)
 >                 rqSC <- getSchedContext $ fromJust rqSCOpt
 >                 return $ min (rTime (refillHd rqSC)) next_interrupt
 >     doMachineOp $ setDeadline (next_interrupt - timerPrecision)

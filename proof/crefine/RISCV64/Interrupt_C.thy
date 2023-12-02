@@ -258,7 +258,7 @@ lemma decodeIRQHandlerInvocation_ccorres:
     apply (simp add: syscall_error_to_H_cases)
    apply simp
   apply (clarsimp simp: Collect_const_mem)
-  apply (clarsimp simp: invs_queues invs_valid_objs'
+  apply (clarsimp simp: invs_valid_objs'
                         ct_in_state'_def
                         ccap_rights_relation_def
                         mask_def[where n=4] ThreadState_defs)

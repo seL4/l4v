@@ -880,7 +880,6 @@ lemma cteMove_corres:
   apply (thin_tac "ksMachineState t = p" for t p)+
   apply (thin_tac "ksCurThread t = p" for t p)+
   apply (thin_tac "ksIdleThread t = p" for t p)+
-  apply (thin_tac "ksReadyQueues t = p" for t p)+
   apply (thin_tac "ksSchedulerAction t = p" for t p)+
   apply (subgoal_tac "\<forall>p. cte_at p ta = cte_at p a")
    prefer 2
@@ -1090,6 +1089,14 @@ lemma bitmapQ_no_L2_orphans_lift:
    apply (wps prq prqL1 prqL2)
   apply (rule hoare_vcg_prop, assumption)
   done
+
+lemma setCTE_norq [wp]:
+  "\<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> setCTE ptr cte \<lbrace>\<lambda>r s. P (ksReadyQueues s) \<rbrace>"
+  by (clarsimp simp: valid_def dest!: setCTE_pspace_only)
+
+lemma setCTE_ksReleaseQueue[wp]:
+  "setCTE ptr cte \<lbrace>\<lambda>s. P (ksReleaseQueue s)\<rbrace>"
+  by (clarsimp simp: valid_def dest!: setCTE_pspace_only)
 
 lemma setCTE_norqL1 [wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace> setCTE ptr cte \<lbrace>\<lambda>r s. P (ksReadyQueuesL1Bitmap s) \<rbrace>"
@@ -2738,7 +2745,15 @@ lemma setCTE_inQ[wp]:
    apply (simp_all add: inQ_def)
   done
 
-crunch inQ[wp]: cteInsert "\<lambda>s. P (obj_at' (inQ d p) t s)"
+lemma setCTE_tcbInReleaseQueue[wp]:
+  "setCTE ptr v \<lbrace>\<lambda>s. P (obj_at' (tcbInReleaseQueue) t s)\<rbrace>"
+  apply (simp add: setCTE_def)
+  apply (rule setObject_cte_obj_at_tcb'; simp)
+  done
+
+crunches cteInsert
+  for inQ[wp]: "\<lambda>s. P (obj_at' (inQ d p) t s)"
+  and tcbInReleaseQueue_obj_at'[wp]: "\<lambda>s. P (obj_at' tcbInReleaseQueue t s)"
   (wp: crunch_wps)
 
 lemma setCTE_it'[wp]:
@@ -3245,7 +3260,13 @@ lemma updateCap_replies_of'[wp]:
 crunches cteInsert
   for replies_of'[wp]: "\<lambda>s. P (replies_of' s)"
   and tcbInReleaseQueue[wp]: "\<lambda>s. P (obj_at' tcbInReleaseQueue tcb s)"
-  (wp: crunch_wps setObject_cte_replies_of' simp: crunch_simps setCTE_def)
+  and tcbSchedPrevs_of[wp]: "\<lambda>s. P (tcbSchedPrevs_of s)"
+  and tcbSchedNexts_of[wp]: "\<lambda>s. P (tcbSchedNexts_of s)"
+  and tcbInReleaseQueue[wp]: "\<lambda>s. P (tcbInReleaseQueue |< tcbs_of' s)"
+  and tcbQueued[wp]: "\<lambda>s. P (tcbQueued |< tcbs_of' s)"
+  and inQ_tcbs_of'[wp]: "\<lambda>s. P (inQ d p |< tcbs_of' s)"
+  and valid_sched_pointers[wp]: valid_sched_pointers
+  (wp: crunch_wps setObject_cte_replies_of' simp: crunch_simps setCTE_def inQ_def)
 
 lemmas fold_list_refs_of_replies' = comp_def[symmetric, where f=Some and g=list_refs_of_reply']
 
@@ -3257,10 +3278,8 @@ lemma cteInsert_invs:
   cteInsert cap src dest
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
-  apply (wpsimp wp: cur_tcb_lift tcb_in_cur_domain'_lift sch_act_wf_lift CSpace_R.valid_queues_lift
-                    valid_irq_node_lift valid_queues_lift' valid_release_queue_lift
-                    valid_release_queue'_lift irqs_masked_lift cteInsert_norq
-              simp: st_tcb_at'_def)
+  apply (wpsimp wp: valid_bitmaps_lift valid_irq_node_lift
+                    irqs_masked_lift cteInsert_norq sym_heap_sched_pointers_lift)
   apply (subst fold_list_refs_of_replies')
   by (auto simp: invs'_def valid_pspace'_def elim: valid_capAligned)
 
@@ -3570,12 +3589,19 @@ lemma corres_caps_decomposition:
              "\<And>P. \<lbrace>\<lambda>s. P (new_ready_queues s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ready_queues s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_action s)\<rbrace> f \<lbrace>\<lambda>rv s. P (scheduler_action s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_sa' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_rqs' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksReadyQueues s)\<rbrace>"
+             "\<And>P. \<lbrace>\<lambda>s. P (new_ksReadyQueues s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksReadyQueues s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_release_queue s)\<rbrace> f \<lbrace>\<lambda>rv s. P (release_queue s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_ksReleaseQueue s)\<rbrace> g \<lbrace>\<lambda>rv s. P (ksReleaseQueue s)\<rbrace>"
-             "\<And>P. \<lbrace>\<lambda>s. P (new_release_queue s)\<rbrace> f \<lbrace>\<lambda>rv s. P (release_queue s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_sc_replies_of s)\<rbrace> f \<lbrace>\<lambda>rv s. P (sc_replies_of s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_scs_of' s) (new_replies_of' s)\<rbrace> g \<lbrace>\<lambda>rv s. P (scs_of' s) (replies_of' s)\<rbrace>"
+             "\<And>P. \<lbrace>\<lambda>s. P (new_ksReleaseQueue s) (new_tcbSchedNexts_of s) (new_tcbSchedPrevs_of s)
+                          (new_tcbInReleaseQueue s)\<rbrace>
+                   g \<lbrace>\<lambda>rv s. P (ksReleaseQueue s) (tcbSchedNexts_of s) (tcbSchedPrevs_of s)
+                               (tcbInReleaseQueue |< tcbs_of' s)\<rbrace>"
+             "\<And>P. \<lbrace>\<lambda>s. P (new_ksReadyQueues s) (new_tcbSchedNexts_of s) (new_tcbSchedPrevs_of s)
+                          (\<lambda>d p. new_inQs d p s)\<rbrace>
+                   g \<lbrace>\<lambda>rv s. P (ksReadyQueues s) (tcbSchedNexts_of s) (tcbSchedPrevs_of s)
+                               (\<lambda>d p. inQ d p |< (tcbs_of' s))\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_di s)\<rbrace> f \<lbrace>\<lambda>rv s. P (domain_index s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_dl s)\<rbrace> f \<lbrace>\<lambda>rv s. P (domain_list s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_cd s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cur_domain s)\<rbrace>"
@@ -3598,9 +3624,13 @@ lemma corres_caps_decomposition:
                   \<and> cdt_list_relation (new_list s) (new_mdb s) (new_ctes s')
                   \<and> sc_replies_relation_2 (new_sc_replies_of s) (new_scs_of' s' |> scReply)
                       (new_replies_of' s' |> replyPrev)
-                  \<and> release_queue_relation (new_release_queue s) (new_ksReleaseQueue s')
+                  \<and> ready_queues_relation_2 (new_ready_queues s) (new_ksReadyQueues s')
+                                             (new_tcbSchedNexts_of s') (new_tcbSchedPrevs_of s')
+                                             (\<lambda>d p. new_inQs d p s')
+                  \<and> release_queue_relation_2 (new_release_queue s) (new_ksReleaseQueue s')
+                                             (new_tcbSchedNexts_of s') (new_tcbSchedPrevs_of s')
+                                             (new_tcbInReleaseQueue s')
                   \<and> sched_act_relation (new_action s) (new_sa' s')
-                  \<and> ready_queues_relation (new_queues s) (new_rqs' s')
                   \<and> revokable_relation (new_rvk s) (null_filter (new_caps s)) (new_ctes s')
                   \<and> interrupt_state_relation (new_irqn s) (new_irqs s) (new_irqs' s')
                   \<and> (new_as s, new_as' s') \<in> arch_state_relation
@@ -3659,6 +3689,7 @@ proof -
              \<lbrace>\<lambda>rv s. \<exists>irn. interrupt_irq_node s = irn \<and> P irn (interrupt_states s)\<rbrace>"
     by (wp hoare_vcg_ex_lift updates, simp)
   note abs_irq_together = abs_irq_together'[simplified]
+  note queue_simps = ready_queues_relation_def[simp] release_queue_relation_def[simp]
   show ?thesis
     unfolding state_relation_def swp_cte_at
     apply (rule corres_underlying_decomposition[OF pspace_corres])
@@ -3668,7 +3699,7 @@ proof -
     apply (frule updated_relations)
       apply fastforce
      apply (fastforce simp: state_relation_def swp_cte_at)
-    apply (clarsimp simp: o_def)
+    apply (clarsimp simp: o_def Let_def)
     done
 qed
 
@@ -4050,12 +4081,14 @@ lemma arch_update_setCTE_invs:
   setCTE p (cteCap_update (\<lambda>_. cap) oldcte)
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
-  apply (wp arch_update_setCTE_mdb valid_queues_lift sch_act_wf_lift tcb_in_cur_domain'_lift
+  apply (wp arch_update_setCTE_mdb valid_bitmaps_lift
+            sch_act_wf_lift tcb_in_cur_domain'_lift
             ct_idle_or_in_cur_domain'_lift
             arch_update_setCTE_iflive arch_update_setCTE_ifunsafe
             valid_irq_node_lift setCTE_typ_at' setCTE_irq_handlers'
-            valid_queues_lift' setCTE_pred_tcb_at' irqs_masked_lift
+            setCTE_pred_tcb_at' irqs_masked_lift
             setCTE_norq hoare_vcg_disj_lift untyped_ranges_zero_lift valid_replies'_lift
+            sym_heap_sched_pointers_lift
           | simp add: pred_tcb_at'_def)+
   apply (subst fold_list_refs_of_replies')
   apply (clarsimp simp: valid_global_refs'_def is_arch_update'_def fun_upd_def[symmetric]
@@ -5416,10 +5449,10 @@ lemma cteInsert_simple_invs:
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (rule hoare_pre)
    apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
-   apply (wp cur_tcb_lift sch_act_wf_lift valid_queues_lift tcb_in_cur_domain'_lift
-             valid_irq_node_lift valid_queues_lift' valid_release_queue_lift
-             valid_release_queue'_lift irqs_masked_lift cteInsert_simple_mdb'
-             cteInsert_valid_globals_simple cteInsert_norq | simp add: pred_tcb_at'_def)+
+   apply (wp valid_bitmaps_lift valid_irq_node_lift irqs_masked_lift
+             cteInsert_simple_mdb' cteInsert_valid_globals_simple cteInsert_norq
+             sym_heap_sched_pointers_lift
+          | simp add: pred_tcb_at'_def)+
    apply (subst fold_list_refs_of_replies')
   apply (auto simp: invs'_def valid_pspace'_def valid_dom_schedule'_def
                     is_simple_cap'_def untyped_derived_eq_def o_def
@@ -5567,15 +5600,35 @@ lemma setCTE_set_cap_sc_replies_relation_valid_corres:
   apply clarsimp
   done
 
-lemma setCTE_set_cap_release_queue_relation_valid_corres:
-  assumes pre: "release_queue_relation (release_queue s) (ksReleaseQueue s')"
+lemma setCTE_set_cap_ready_queues_relation_valid_corres:
+  assumes pre: "ready_queues_relation s s'"
       and step_abs: "(x, t) \<in> fst (set_cap cap slot s)"
       and step_conc: "(y, t') \<in> fst (setCTE slot' cap' s')"
-  shows "release_queue_relation (release_queue t)(ksReleaseQueue t')"
+  shows "ready_queues_relation t t'"
+  apply (clarsimp simp: ready_queues_relation_def)
+  apply (insert pre)
+  apply (rule use_valid[OF step_abs set_cap.valid_sched_pred])
+  apply (rule use_valid[OF step_conc setCTE_ksReadyQueues])
+  apply (rule use_valid[OF step_conc setCTE_tcbSchedNexts_of])
+  apply (rule use_valid[OF step_conc setCTE_tcbSchedPrevs_of])
+  apply (clarsimp simp: ready_queues_relation_def Let_def)
+  using use_valid[OF step_conc setCTE_inQ_tcbs_of']
+  by fast
+
+lemma setCTE_set_cap_release_queue_relation_valid_corres:
+  assumes pre: "release_queue_relation s s'"
+      and step_abs: "(x, t) \<in> fst (set_cap cap slot s)"
+      and step_conc: "(y, t') \<in> fst (setCTE slot' cap' s')"
+  shows "release_queue_relation t t'"
+  apply (clarsimp simp: release_queue_relation_def)
+  apply (insert pre)
   apply (rule use_valid[OF step_abs set_cap.valid_sched_pred])
   apply (rule use_valid[OF step_conc setCTE_ksReleaseQueue])
-  apply (rule pre)
-  done
+  apply (rule use_valid[OF step_conc setCTE_tcbSchedNexts_of])
+  apply (rule use_valid[OF step_conc setCTE_tcbSchedPrevs_of])
+  apply (clarsimp simp: release_queue_relation_def)
+  using use_valid[OF step_conc KHeap_R.setCTE_tcbInReleaseQueue]
+  by fast
 
 lemma updateCap_same_master:
   "\<lbrakk> cap_relation cap cap' \<rbrakk> \<Longrightarrow>
@@ -5608,11 +5661,10 @@ lemma updateCap_same_master:
        apply clarsimp
        apply (extract_conjunct \<open>match conclusion in "sc_replies_relation a b" for a b \<Rightarrow> -\<close>)
         subgoal by (erule setCTE_set_cap_sc_replies_relation_valid_corres; assumption)
-       apply (extract_conjunct \<open>match conclusion in "release_queue_relation a b" for a b \<Rightarrow> -\<close>)
-        subgoal by (erule setCTE_set_cap_release_queue_relation_valid_corres; assumption)
-       apply (subst conj_assoc[symmetric])
        apply (extract_conjunct \<open>match conclusion in "ready_queues_relation a b" for a b \<Rightarrow> -\<close>)
         subgoal by (erule setCTE_set_cap_ready_queues_relation_valid_corres; assumption)
+       apply (extract_conjunct \<open>match conclusion in "release_queue_relation a b" for a b \<Rightarrow> -\<close>)
+        subgoal by (erule setCTE_set_cap_release_queue_relation_valid_corres; assumption)
        apply (rule conjI)
         apply (frule setCTE_pspace_only)
         apply (clarsimp simp: set_cap_def in_monad split_def get_object_def set_object_def)
@@ -5804,6 +5856,10 @@ crunches updateFreeIndex
   and reply_projs[wp]: "\<lambda>s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)"
   and pred_tcb_at'[wp]: "pred_tcb_at' proj P p"
   and valid_replies'[wp]: "valid_replies'"
+  and tcbSchedNexts_of[wp]: "\<lambda>s. P (tcbSchedNexts_of s)"
+  and tcbSchedPrevs_of[wp]: "\<lambda>s. P (tcbSchedPrevs_of s)"
+  and tcbInReleaseQueue[wp]: "\<lambda>s. P (tcbInReleaseQueue |< tcbs_of' s)"
+  and tcbQueueds_of[wp]: "\<lambda>s. P (tcbQueued |< tcbs_of' s)"
   (wp: valid_replies'_lift)
 
 lemma updateFreeIndex_forward_valid_mdb':
@@ -5837,8 +5893,8 @@ lemma updateFreeIndex_forward_invs':
     apply (simp add: valid_pspace'_def, wp updateFreeIndex_forward_valid_objs'
              updateFreeIndex_forward_valid_mdb')
    apply (simp add: updateFreeIndex_def updateTrackedFreeIndex_def)
-   apply (wp sch_act_wf_lift valid_queues_lift updateCap_iflive' tcb_in_cur_domain'_lift
-            | simp add: pred_tcb_at'_def)+
+   apply (wp valid_bitmaps_lift updateCap_iflive' sym_heap_sched_pointers_lift
+           | simp add: pred_tcb_at'_def)+
       apply (rule hoare_vcg_conj_lift)
 
        apply (simp add: ifunsafe'_def3 cteInsert_def setUntypedCapAsFull_def

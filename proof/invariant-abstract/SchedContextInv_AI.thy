@@ -1486,15 +1486,17 @@ lemma refill_unblock_check_active_sc_at[wp]:
               simp: update_refill_hd_rewrite update_sched_context_set_refills_rewrite active_sc_at_def)
   done
 
+lemma refill_add_tail_invs[wp]:
+  "refill_add_tail sc_ptr new \<lbrace>invs\<rbrace>"
+  unfolding refill_add_tail_def
+  by (wpsimp wp: update_sched_context_sc_refills_update_invs)
+
 lemma refill_update_invs:
   "\<lbrace>\<lambda>s. invs s \<and> sc_ptr \<noteq> idle_sc_ptr\<rbrace>
    refill_update sc_ptr new_period new_budget new_max_refills
    \<lbrace>\<lambda>rv. invs\<rbrace>"
-  unfolding refill_update_def refill_add_tail_def set_refills_def update_refill_tl_def
-            update_refill_hd_def
-  apply (wpsimp wp: set_sc_obj_ref_invs_no_change hoare_vcg_all_lift hoare_vcg_imp_lift'
-                    get_refills_wp hoare_vcg_disj_lift)
-  done
+  unfolding refill_update_def
+  by (wpsimp wp: hoare_vcg_all_lift hoare_drop_imps set_sc_obj_ref_invs_no_change)
 
 lemma refill_reset_rr_invs[wp]:
   "refill_reset_rr csc_ptr \<lbrace>invs\<rbrace>"

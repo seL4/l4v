@@ -682,7 +682,7 @@ lemma threadSet_all_invs_triv':
     apply (wp thread_set_invs_trivial thread_set_not_state_valid_sched
               threadSet_invs_trivial threadSet_ct_running' hoare_weak_lift_imp
               thread_set_ct_in_state
-           | simp add: tcb_cap_cases_def tcb_arch_ref_def exst_same_def
+           | simp add: tcb_cap_cases_def tcb_arch_ref_def
            | rule threadSet_ct_in_state'
            | wp (once) hoare_vcg_disj_lift)+
   apply clarsimp
@@ -691,9 +691,7 @@ lemma threadSet_all_invs_triv':
   apply (prop_tac "invs s'")
    apply (clarsimp simp: invs_def)
   apply (clarsimp simp: invs_psp_aligned invs_distinct)
-  apply (frule invs_valid_release_queue')
-  apply (clarsimp simp: invs_def cur_tcb_def state_relation_def valid_release_queue'_def
-                        obj_at'_def)
+  apply (clarsimp simp: invs_def cur_tcb_def state_relation_def obj_at'_def)
   done
 
 lemma getContext_corres:
@@ -902,18 +900,21 @@ lemma dmo_domain_user_mem'[wp]:
 
 lemma do_user_op_corres_C:
   "corres_underlying rf_sr False False (=)
-     (invs' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s) and ex_abs einvs) \<top>
+     ((invs' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)
+      and ksReadyQueues_asrt and ksReleaseQueue_asrt)
+      and ex_abs einvs) \<top>
      (doUserOp f tc) (doUserOp_C f tc)"
+  (is "corres_underlying _ _ _ _ (?abs and _) _ _ _")
   apply (simp only: doUserOp_C_def doUserOp_def split_def)
   apply (rule corres_guard_imp)
     apply (rule_tac P=\<top> and P'=\<top> and r'="(=)" in corres_split)
        apply (clarsimp simp: simpler_gets_def getCurThread_def
                 corres_underlying_def rf_sr_def cstate_relation_def Let_def)
-      apply (rule_tac P="invs' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)"
+      apply (rule_tac P="?abs"
                   and P'=\<top> and r'="(=)" in corres_split)
          apply (clarsimp simp: cstate_to_A_def absKState_def
                                rf_sr_def cstate_to_H_correct ptable_lift_def)
-        apply (rule_tac P="invs' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)"
+        apply (rule_tac P="?abs"
                     and P'=\<top> and r'="(=)" in corres_split)
            apply (clarsimp simp: cstate_to_A_def absKState_def
                                  rf_sr_def cstate_to_H_correct ptable_rights_def)
@@ -953,17 +954,17 @@ lemma do_user_op_corres_C:
                                          where R="\<top>\<top>" and R'="\<top>\<top>"])
                         apply (wp | simp)+
    apply (intro conjI allI ballI impI)
-     apply ((clarsimp simp add: invs'_def valid_pspace'_def)+)[5]
-    apply (clarsimp simp:  ex_abs_def restrict_map_def
+       apply ((clarsimp simp add: invs'_def valid_pspace'_def)+)[5]
+   apply (clarsimp simp: ex_abs_def restrict_map_def
                   split: if_splits)
-    apply (drule ptable_rights_imp_UserData[rotated -1])
-     apply fastforce+
-    apply (clarsimp simp: invs'_def valid_pspace'_def user_mem'_def device_mem'_def
-                   split: if_splits)+
-    apply (drule_tac c = x in subsetD[where B = "dom S" for S])
-     apply (simp add:dom_def)
-    apply fastforce
-   apply clarsimp
+   apply (drule ptable_rights_imp_UserData[rotated -1])
+       apply fastforce
+      apply (clarsimp simp: invs'_def valid_pspace'_def user_mem'_def device_mem'_def
+                     split: if_splits)+
+   apply (drule_tac c = x in subsetD[where B = "dom S" for S])
+    apply (simp add: dom_def)
+   apply fastforce
+  apply clarsimp
   done
 
 lemma check_active_irq_corres_C:
@@ -1009,17 +1010,21 @@ lemma refinement2_both:
    apply (clarsimp simp: Fin_C_def)
    apply (drule lift_state_relationD)
    apply (clarsimp simp: cstate_to_A_def)
-    apply (subst cstate_to_H_correct)
-      apply (fastforce simp: full_invs'_def invs'_def)
+   apply (subst cstate_to_H_correct)
+         apply (fastforce simp: full_invs'_def invs'_def)
+        apply (clarsimp simp: lift_state_relation_def full_invs_def)
+        apply (rule sch_act_wf_cross)
+            apply force
+           subgoal by (clarsimp simp: valid_sched_def)
+          apply fastforce+
+      apply (clarsimp simp: lift_state_relation_def full_invs_def)
+      apply (rule ksReadyQueues_asrt_cross)
+      apply (erule state_relation_ready_queues_relation)
      apply (clarsimp simp: lift_state_relation_def full_invs_def)
-     apply (rule sch_act_wf_cross)
-         apply force
-        subgoal by (clarsimp simp: valid_sched_def)
-       apply fastforce+
+     apply (rule ksReleaseQueue_asrt_cross)
+     apply (erule state_relation_release_queue_relation)
     apply (clarsimp simp: rf_sr_def)
     apply (clarsimp simp: lift_state_relation_def full_invs_def)
-    apply (rule ksReadyQueues_asrt_cross)
-    apply (erule state_relation_ready_queues_relation)
    apply (simp add:absKState_def observable_memory_def absExst_def)
    apply (rule MachineTypes.machine_state.equality,simp_all)[1]
    apply (rule ext)
@@ -1064,13 +1069,13 @@ lemma refinement2_both:
          apply (clarsimp simp: invs_def valid_state_def valid_pspace_def state_refs_of_cross_eq)
         apply (fastforce dest!: cur_sc_tcb_cross[simplified schact_is_rct_def]
                           simp: invs_def valid_state_def valid_pspace_def)
-       apply (clarsimp simp: invs'_def valid_release_queue'_def)
        apply (prop_tac "cur_tcb' haskell_state")
         apply (rule cur_tcb_cross[OF invs_cur invs_psp_aligned invs_distinct]; simp?)
-       apply (clarsimp simp: cur_tcb'_def)
-       apply (clarsimp simp: pred_map_def obj_at'_def opt_map_red not_in_release_q_def
-                             release_queue_relation_def
-                      dest!: state_relationD)
+       apply (frule_tac s=abstract_state and s'=haskell_state in ct_not_in_release_q_cross)
+          apply fastforce
+         apply (clarsimp simp: cur_tcb'_def dest!: state_relationD)
+        apply fastforce
+       apply fastforce
       apply (frule_tac a=abstract_state in resume_cur_thread_cross; fastforce)
      apply (clarsimp simp: state_relation_def)
     apply (fastforce simp: ct_running'_C)
@@ -1087,8 +1092,16 @@ lemma refinement2_both:
    apply (elim impE)
     apply (clarsimp simp: full_invs'_def ex_abs_def)
     apply (intro conjI)
-     apply (rule_tac s=s in sch_act_wf_cross; fastforce?)
-     subgoal by (clarsimp simp: valid_sched_def)
+       apply (rule_tac s=s in sch_act_wf_cross; fastforce?)
+       subgoal by (clarsimp simp: valid_sched_def)
+      apply (clarsimp simp: lift_state_relation_def full_invs_def)
+      apply (rule ksReadyQueues_asrt_cross)
+      apply (erule state_relation_ready_queues_relation)
+     apply (clarsimp simp: lift_state_relation_def full_invs_def)
+     apply (frule state_relation_ready_queues_relation)
+     apply (clarsimp simp: ready_queues_relation_def Let_def tcbQueueEmpty_def)
+     apply (rule ksReleaseQueue_asrt_cross)
+     apply (erule state_relation_release_queue_relation)
     apply fastforce
    apply fastforce
 
@@ -1102,8 +1115,13 @@ lemma refinement2_both:
    apply (elim impE)
     apply (clarsimp simp: full_invs'_def ex_abs_def)
     apply (intro conjI)
-     apply (rule_tac s=s in sch_act_wf_cross; fastforce?)
-     subgoal by (clarsimp simp: valid_sched_def)
+        apply (rule_tac s=s in sch_act_wf_cross; fastforce?)
+        subgoal by (clarsimp simp: valid_sched_def)
+      apply (clarsimp simp: lift_state_relation_def full_invs_def)
+      apply (rule ksReadyQueues_asrt_cross)
+      apply (erule state_relation_ready_queues_relation)
+     apply (rule ksReleaseQueue_asrt_cross)
+     apply (erule state_relation_release_queue_relation)
     apply fastforce
    apply fastforce
 

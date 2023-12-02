@@ -110,14 +110,12 @@ lemma setTCBContext_C_corres:
                    cvariable_relation_upd_const ko_at_projectKO_opt cteSizeBits_def)
   apply (simp add: cep_relations_drop_fun_upd)
   apply (drule ko_at_projectKO_opt)
-  apply (rule conjI)
    apply (erule (2) cmap_relation_upd_relI)
      apply (simp add: ctcb_relation_def carch_tcb_relation_def)
     apply assumption
    apply simp
-  apply (erule iffD2[OF tcb_queue_relation_only_next_prev, rotated -1])
-   apply (rule ext, simp split: if_splits)+
   done
+
 end
 
 definition
@@ -640,17 +638,6 @@ lemma cready_queues_to_H_correct:
          metis tcb_queue.exhaust_sel word_not_le)
   done
 
-definition crelease_queue_to_H :: "(tcb_C ptr \<rightharpoonup> tcb_C) \<Rightarrow> tcb_C ptr \<Rightarrow> machine_word list" where
-  "crelease_queue_to_H h_tcb qhead \<equiv> THE aq. sched_queue_relation h_tcb aq NULL qhead"
-
-lemma crelease_queue_to_H_correct:
-  "sched_queue_relation (clift s) ls NULL release_hd \<Longrightarrow>
-   crelease_queue_to_H (clift s) release_hd = ls"
-  apply (clarsimp simp: crelease_queue_to_H_def fun_eq_iff)
-  apply (rule the_equality)
-   apply simp
-  apply (rule_tac hp="clift s" in tcb_queue_rel_unique, simp_all add: lift_t_NULL)
-  done
 
 (* showing that cpspace_relation is actually unique >>>*)
 
@@ -792,7 +779,7 @@ lemma cfault_rel_imp_eq:
               split: if_split_asm seL4_Fault_CL.splits)
 
 lemma ksPSpace_valid_objs_tcbStateRefs_nonzero:
-  "\<lbrakk>\<exists>s. ksPSpace s = ah \<and> no_0_obj' s \<and> valid_objs' s; map_to_tcbs ah p = Some tcb\<rbrakk> \<Longrightarrow>
+  "\<lbrakk>no_0_obj' s; valid_objs' s; map_to_tcbs (ksPSpace s) p = Some tcb\<rbrakk> \<Longrightarrow>
    \<forall>ref \<in> fst ` tcb_st_refs_of' (tcbState tcb). 0 < ref"
   apply (clarsimp simp: map_comp_def tcb_st_refs_of'_def valid_objs'_def valid_obj'_def
                  split: option.splits thread_state.splits)
@@ -810,9 +797,10 @@ lemma cthread_state_rel_imp_eq:
       fastforce simp: ThreadState_defs tcb_st_refs_of'_def option_to_0_def
                split: option.splits)
 
-lemma ksPSpace_valid_objs_tcbBound_nonzero:
-  "\<lbrakk>\<exists>s. ksPSpace s = ah \<and> no_0_obj' s \<and> valid_objs' s; map_to_tcbs ah p = Some tcb\<rbrakk> \<Longrightarrow>
-   tcbBoundNotification tcb \<noteq> Some 0 \<and> tcbSchedContext tcb \<noteq> Some 0 \<and> tcbYieldTo tcb \<noteq> Some 0"
+lemma map_to_tcbs_Some_refs_nonzero:
+  "\<lbrakk>map_to_tcbs (ksPSpace s) p = Some tcb; no_0_obj' s; valid_objs' s\<rbrakk> \<Longrightarrow>
+   tcbBoundNotification tcb \<noteq> Some 0 \<and> tcbSchedContext tcb \<noteq> Some 0 \<and> tcbYieldTo tcb \<noteq> Some 0 \<and>
+   tcbSchedPrev tcb \<noteq> Some 0 \<and> tcbSchedNext tcb \<noteq> Some 0"
   apply (clarsimp simp: map_comp_def split: option.splits)
   by (fastforce simp: valid_obj'_def valid_tcb'_def)
 
@@ -832,6 +820,10 @@ lemma
   assumes "pspace_aligned' as" "pspace_distinct' as" "valid_tcb' atcb as"
   shows tcb_at'_tcbBoundNotification:
     "bound (tcbBoundNotification atcb) \<longrightarrow> ntfn_at' (the (tcbBoundNotification atcb)) as"
+  and tcb_at'_tcbSchedContext:
+    "bound (tcbSchedContext atcb) \<longrightarrow> sc_at' (the (tcbSchedContext atcb)) as"
+  and tcb_at'_tcbYieldTo:
+    "tcbYieldTo atcb \<noteq> None \<longrightarrow> sc_at' (the (tcbYieldTo atcb)) as"
   and tcb_at'_tcbSchedPrev:
     "tcbSchedPrev atcb \<noteq> None \<longrightarrow> tcb_at' (the (tcbSchedPrev atcb)) as"
   and tcb_at'_tcbSchedNext:
@@ -843,8 +835,8 @@ lemma cpspace_tcb_relation_unique:
   assumes tcbs: "cpspace_tcb_relation (ksPSpace as) ch" "cpspace_tcb_relation (ksPSpace as') ch"
   assumes   vs: "no_0_obj' as" "valid_objs' as"
   assumes  vs': "no_0_obj' as'" "valid_objs' as'"
-  assumes   ad: "pspace_aligned' as" "pspace_distinct' as"
-  assumes  ad': "pspace_aligned' as'" "pspace_distinct' as'"
+  assumes  adb: "pspace_aligned' as" "pspace_distinct' as" "pspace_bounded' as"
+  assumes adb': "pspace_aligned' as'" "pspace_distinct' as'" "pspace_bounded' as'"
   assumes ctes: "\<forall>tcb tcb'. (\<exists>p. map_to_tcbs (ksPSpace as) p = Some tcb \<and>
                                  map_to_tcbs (ksPSpace as') p = Some tcb') \<longrightarrow>
                  (\<forall>x\<in>ran tcb_cte_cases. fst x tcb' = fst x tcb)"
@@ -861,16 +853,51 @@ lemma cpspace_tcb_relation_unique:
    apply (rename_tac p x y)
    apply (cut_tac ctes)
    apply (drule_tac x=x in spec, drule_tac x=y in spec, erule impE, fastforce)
-   apply (frule ksPSpace_valid_objs_tcbBound_nonzero[OF vs])
-   apply (frule ksPSpace_valid_objs_tcbBound_nonzero[OF vs'])
+   apply (frule map_to_tcbs_Some_refs_nonzero[OF _ vs])
+   apply (frule map_to_tcbs_Some_refs_nonzero[OF _ vs'])
    apply (frule ksPSpace_valid_objs_tcbStateRefs_nonzero[OF vs])
    apply (frule ksPSpace_valid_objs_tcbStateRefs_nonzero[OF vs'])
+   apply (rename_tac atcb atcb')
+   apply (prop_tac "valid_tcb' atcb as")
+    apply (fastforce intro: vs adb map_to_ko_atI tcb_ko_at_valid_objs_valid_tcb')
+   apply (prop_tac "valid_tcb' atcb' as'")
+    apply (fastforce intro: vs' adb' map_to_ko_atI tcb_ko_at_valid_objs_valid_tcb')
+   apply (frule tcb_at'_tcbBoundNotification[OF adb(1) adb(2)])
+   apply (frule tcb_at'_tcbBoundNotification[OF adb'(1) adb'(2)])
+   apply (frule tcb_at'_tcbSchedContext[OF adb(1) adb(2)])
+   apply (frule tcb_at'_tcbSchedContext[OF adb'(1) adb'(2)])
+   apply (frule tcb_at'_tcbYieldTo[OF adb(1) adb(2)])
+   apply (frule tcb_at'_tcbYieldTo[OF adb'(1) adb'(2)])
+   apply (frule tcb_at'_tcbSchedPrev[OF adb(1) adb(2)])
+   apply (frule tcb_at'_tcbSchedPrev[OF adb'(1) adb'(2)])
+   apply (frule tcb_at'_tcbSchedNext[OF adb(1) adb(2)])
+   apply (frule tcb_at'_tcbSchedNext[OF adb'(1) adb'(2)])
    apply (thin_tac "map_to_tcbs x y = Some z" for x y z)+
    apply (case_tac "the (clift ch (tcb_Ptr (p + 2 ^ ctcb_size_bits)))")
    apply (clarsimp simp: ctcb_relation_def ran_tcb_cte_cases)
-   apply (clarsimp simp: option_to_ptr_def option_to_0_def split: option.splits)
-   by (auto simp: cfault_rel_imp_eq cthread_state_rel_imp_eq carch_tcb_relation_def
-                  ccontext_relation_imp_eq2 up_ucast_inj_eq ctcb_size_bits_def)
+   apply (clarsimp simp: option_to_ctcb_ptr_def option_to_ptr_def option_to_0_def)
+   apply (rule tcb.expand)
+   apply clarsimp
+   apply (intro conjI)
+          apply (simp add: cthread_state_rel_imp_eq)
+         apply (simp add: cfault_rel_imp_eq)
+        apply (case_tac "tcbBoundNotification atcb'", case_tac "tcbBoundNotification atcb"; clarsimp)
+        apply (clarsimp split: option.splits)
+       apply (case_tac "tcbSchedContext atcb'", case_tac "tcbSchedContext atcb"; clarsimp)
+       apply (clarsimp split: option.splits)
+      apply (case_tac "tcbYieldTo atcb'", case_tac "tcbYieldTo atcb"; clarsimp)
+      apply (clarsimp split: option.splits)
+     apply (case_tac "tcbSchedPrev atcb'"; case_tac "tcbSchedPrev atcb"; clarsimp)
+       apply (force dest!: kernel.tcb_at_not_NULL)
+      apply (force dest!: kernel.tcb_at_not_NULL)
+     apply (force simp: tcb_ptr_to_ctcb_ptr_inj)
+    apply (case_tac "tcbSchedNext atcb'"; case_tac "tcbSchedNext atcb"; clarsimp)
+      apply (force dest!: kernel.tcb_at_not_NULL)
+     apply (force dest!: kernel.tcb_at_not_NULL)
+    apply (force simp: tcb_ptr_to_ctcb_ptr_inj)
+   apply (force simp: carch_tcb_relation_def ccontext_relation_imp_eq2)
+  apply auto
+  done
 
 lemma tcb_queue_rel_clift_unique:
   "tcb_queue_relation gn gp' (clift s) as pp cp \<Longrightarrow>
@@ -1271,8 +1298,8 @@ proof -
     apply (drule (1) cpspace_pte_relation_unique)
     apply (drule (1) cpspace_asidpool_relation_unique)
     apply (drule (1) cpspace_tcb_relation_unique)
-       apply (fastforce intro: no_0_objs no_0_objs' valid_objs valid_objs')+
-      apply (fastforce intro: aligned distinct aligned' distinct')+
+               apply (fastforce intro: no_0_objs no_0_objs' valid_objs valid_objs')+
+           apply (fastforce intro: aligned distinct bounded aligned' distinct' bounded')+
      apply (intro allI impI,elim exE conjE)
      apply (rule_tac p=p in map_to_ctes_tcb_ctes, assumption)
       apply (frule (1) map_to_ko_atI[OF _ aligned distinct bounded])
@@ -1456,6 +1483,74 @@ lemma cbitmap_L2_to_H_correct:
    apply (clarsimp split: if_split)
    done
 
+definition tcb_queue_C_to_tcb_queue :: "tcb_queue_C \<Rightarrow> tcb_queue" where
+  "tcb_queue_C_to_tcb_queue q \<equiv>
+     TcbQueue (if head_C q = NULL then None else Some (ctcb_ptr_to_tcb_ptr (head_C q)))
+              (if end_C q = NULL then None else Some (ctcb_ptr_to_tcb_ptr (end_C q)))"
+
+definition cready_queues_to_H ::
+  "tcb_queue_C[num_tcb_queues] \<Rightarrow> (domain \<times> priority \<Rightarrow> ready_queue)"
+  where
+  "cready_queues_to_H cs \<equiv>
+     \<lambda>(qdom, prio).
+       if qdom \<le> maxDomain \<and> prio \<le> maxPriority
+       then let cqueue = index cs (cready_queues_index_to_C qdom prio)
+             in tcb_queue_C_to_tcb_queue cqueue
+       else TcbQueue None None"
+
+lemma cready_queues_to_H_correct:
+  "\<lbrakk>cready_queues_relation (ksReadyQueues s) (ksReadyQueues_' ch);
+    no_0_obj' s; ksReadyQueues_asrt s;
+    pspace_aligned' s; pspace_distinct' s; pspace_bounded' s\<rbrakk>
+   \<Longrightarrow> cready_queues_to_H (ksReadyQueues_' ch) = ksReadyQueues s"
+  apply (clarsimp simp: cready_queues_to_H_def cready_queues_relation_def Let_def)
+  apply (clarsimp simp: fun_eq_iff)
+  apply (rename_tac d p)
+  apply (drule_tac x=d in spec)
+  apply (drule_tac x=p in spec)
+  apply (clarsimp simp: ready_queue_relation_def ksReadyQueues_asrt_def)
+  apply (drule_tac x=d in spec)
+  apply (drule_tac x=p in spec)
+  apply (clarsimp simp: tcbQueueEmpty_def)
+  apply (frule (3) obj_at'_tcbQueueHead_ksReadyQueues)
+  apply (frule (3) obj_at'_tcbQueueEnd_ksReadyQueues)
+  apply (frule tcbQueueHead_iff_tcbQueueEnd)
+  apply (rule conjI)
+   apply (clarsimp simp: tcb_queue_C_to_tcb_queue_def ctcb_queue_relation_def option_to_ctcb_ptr_def)
+   apply (case_tac "tcbQueueHead (ksReadyQueues s (d, p)) = None")
+    apply (clarsimp simp: tcb_queue.expand)
+   apply clarsimp
+   apply (rename_tac queue_head queue_end)
+   apply (prop_tac "tcb_at' queue_head s", fastforce simp: tcbQueueEmpty_def)
+   apply (prop_tac "tcb_at' queue_end s", fastforce simp: tcbQueueEmpty_def)
+   apply (drule kernel.tcb_at_not_NULL)+
+   apply (fastforce simp: tcb_queue.expand kernel.ctcb_ptr_to_ctcb_ptr)
+  apply (metis tcb_queue.exhaust_sel word_not_le)
+  done
+
+definition crelease_queue_to_H :: "tcb_queue_C \<Rightarrow> release_queue" where
+  "crelease_queue_to_H cqueue \<equiv> tcb_queue_C_to_tcb_queue cqueue"
+
+lemma crelease_queue_to_H_correct:
+  "\<lbrakk>ctcb_queue_relation (ksReleaseQueue s) (ksReleaseQueue_' ch);
+    no_0_obj' s; ksReleaseQueue_asrt s; pspace_aligned' s; pspace_distinct' s; pspace_bounded' s\<rbrakk>
+   \<Longrightarrow> crelease_queue_to_H (ksReleaseQueue_' ch) = ksReleaseQueue s"
+  apply (clarsimp simp: crelease_queue_to_H_def ksReleaseQueue_asrt_def)
+  apply (frule (3) obj_at'_tcbQueueHead_ksReleaseQueue)
+  apply (frule (3) obj_at'_tcbQueueEnd_ksReleaseQueue)
+  apply (frule tcbQueueHead_iff_tcbQueueEnd)
+  apply (clarsimp simp: tcb_queue_C_to_tcb_queue_def ctcb_queue_relation_def option_to_ctcb_ptr_def)
+  apply (case_tac "tcbQueueHead (ksReleaseQueue s) = None")
+   apply clarsimp
+   apply (metis tcb_queue.collapse)
+  apply clarsimp
+  apply (rename_tac queue_head queue_end)
+  apply (prop_tac "tcb_at' queue_head s", fastforce simp: tcbQueueEmpty_def)
+  apply (prop_tac "tcb_at' queue_end s", fastforce simp: tcbQueueEmpty_def)
+  apply (drule kernel.tcb_at_not_NULL)+
+  apply (fastforce simp: tcb_queue.expand kernel.ctcb_ptr_to_ctcb_ptr)
+  done
+
 definition
   mk_gsUntypedZeroRanges
 where
@@ -1500,8 +1595,8 @@ where
     ksDomSchedule = cDomSchedule_to_H kernel_all_global_addresses.ksDomSchedule,
     ksCurDomain = ucast (ksCurDomain_' s),
     ksDomainTime = ksDomainTime_' s,
-    ksReadyQueues = cready_queues_to_H (clift (t_hrs_' s)) (ksReadyQueues_' s),
-    ksReleaseQueue = crelease_queue_to_H (clift (t_hrs_' s)) (ksReleaseHead_' s),
+    ksReadyQueues = cready_queues_to_H (ksReadyQueues_' s),
+    ksReleaseQueue = crelease_queue_to_H (ksReleaseQueue_' s),
     ksReadyQueuesL1Bitmap = cbitmap_L1_to_H (ksReadyQueuesL1Bitmap_' s),
     ksReadyQueuesL2Bitmap = cbitmap_L2_to_H (ksReadyQueuesL2Bitmap_' s),
     ksCurThread = ctcb_ptr_to_tcb_ptr (ksCurThread_' s),
@@ -1527,7 +1622,9 @@ lemma trivial_eq_conj: "B = C \<Longrightarrow> (A \<and> B) = (A \<and> C)"
 
 lemma cstate_to_H_correct:
   assumes invs': "invs' as"
-  and schact: "sch_act_wf (ksSchedulerAction as) as"
+  assumes schact: "sch_act_wf (ksSchedulerAction as) as"
+  assumes rdyqs: "ksReadyQueues_asrt as"
+  assumes rlq: "ksReleaseQueue_asrt as"
   assumes cstate_rel: "cstate_relation as cs"
   assumes rdyqs: "ksReadyQueues_asrt as"
   shows "cstate_to_H cs = as \<lparr>ksMachineState:=  observable_memory (ksMachineState as) (user_mem' as)\<rparr>"
@@ -1567,12 +1664,12 @@ lemma cstate_to_H_correct:
                    apply (clarsimp simp: cstate_relation_def Let_def ucast_up_ucast_id is_up_8_32)
                   using cstate_rel
                   apply (clarsimp simp: cstate_relation_def Let_def)
-                 apply (rule cready_queues_to_H_correct)
-                 using cstate_rel
-                 apply (clarsimp simp: cstate_relation_def Let_def)
-                apply (rule crelease_queue_to_H_correct)
-                using cstate_rel
-                apply (clarsimp simp: cstate_relation_def Let_def)
+                 using invs' cstate_rel rdyqs
+                 apply (fastforce intro!: cready_queues_to_H_correct
+                                    simp: cstate_relation_def Let_def)
+                using invs' cstate_rel rlq
+                apply (fastforce intro!: crelease_queue_to_H_correct
+                                   simp: cstate_relation_def Let_def)
                using cstate_rel
                apply (clarsimp simp: cstate_relation_def Let_def)
                using cstate_rel

@@ -25,6 +25,7 @@ configureIdleThread _ = error "Unimplemented init code"
 
 switchToIdleThread :: Kernel ()
 switchToIdleThread = do
+    stateAssert valid_idle'_asrt "Assert that `valid_idle'` holds"
     t <- getIdleThread
     setVMRoot t
 

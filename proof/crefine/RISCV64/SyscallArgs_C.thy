@@ -289,7 +289,8 @@ lemma sc_active_ccorres:
   "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_'
      \<top> \<lbrace>\<acute>sc = Ptr scPtr\<rbrace> []
      (scActive scPtr) (Call sc_active_'proc)"
-  apply cinit
+  apply (cinit simp: readScActive_def readSchedContext_def
+                     getSchedContext_def[symmetric] getObject_def[symmetric])
    apply (rule ccorres_pre_getObject_sc)
    apply (rule ccorres_Guard)+
    apply (ctac add: ccorres_return_C)

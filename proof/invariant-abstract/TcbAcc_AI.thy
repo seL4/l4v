@@ -23,6 +23,10 @@ declare user_getreg_inv[wp]
 
 end
 
+lemma gets_the_thread_read:
+  "gets_the (thread_read f t) = thread_get f t"
+  by (clarsimp simp: thread_read_def thread_get_def oliftM_def)
+
 lemma thread_read_SomeD:
   "thread_read f tp s = Some p \<Longrightarrow> \<exists>tcb. kheap s tp = Some (TCB tcb) \<and> f tcb = p"
   by (clarsimp simp: thread_read_def oliftM_def dest!: get_tcb_SomeD)

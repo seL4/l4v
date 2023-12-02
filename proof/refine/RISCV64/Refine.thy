@@ -212,8 +212,11 @@ lemma absKState_correct:
            apply (simp add: state_relation_def)
           apply (simp add: state_relation_def)
          apply (simp add: state_relation_def)
-        apply (fastforce simp: curry_def state_relation_def ready_queues_relation_def)
-       apply (simp add: state_relation_def release_queue_relation_def)
+        apply (simp add: state_relation_def ready_queues_relation_def ready_queue_relation_def Let_def
+                         list_queue_relation_def)
+        apply (fastforce dest: heap_ls_is_walk)
+       apply (simp add: state_relation_def release_queue_relation_def list_queue_relation_def)
+       apply (fastforce dest: heap_ls_is_walk)
       apply (clarsimp simp:  user_mem_relation invs_def invs'_def)
       apply (simp add: state_relation_def)
      apply (rule absInterruptIRQNode_correct, simp add: state_relation_def)
@@ -631,12 +634,6 @@ proof -
      pointerInDeviceData_relation[OF rel invs' valid])
 qed
 
-lemmas ex_abs_def = ex_abs_underlying_def[where sr=state_relation and P=G,abs_def] for G
-
-lemma ex_abs_ksReadyQueues_asrt:
-  "ex_abs P s \<Longrightarrow> ksReadyQueues_asrt s"
-  by (fastforce simp: ex_abs_def intro: ksReadyQueues_asrt_cross)
-
 lemma device_update_invs':
   "\<lbrace>invs'\<rbrace>doMachineOp (device_memory_update ds)
    \<lbrace>\<lambda>_. invs'\<rbrace>"
@@ -661,7 +658,7 @@ lemma doUserOp_invs':
     | (wp (once) dmo_invs', wpsimp simp: no_irq_modify device_memory_update_def
                                          user_memory_update_def))+
   apply (clarsimp simp: user_memory_update_def simpler_modify_def
-                        restrict_map_def
+                        restrict_map_def ex_abs_def
                  split: option.splits)
   apply (frule ptable_rights_imp_UserData[rotated 2], auto)
   done
@@ -720,29 +717,14 @@ lemma kernel_preemption_corres:
                 apply (drule_tac x=scp in spec, clarsimp simp: vs_all_heap_simps)
                apply clarsimp
               apply simp
-             apply (simp add: get_sc_active_def active_sc_def dc_def[symmetric])
              apply (rule corres_split_eqr[OF getCurSc_corres])
-               apply (rule corres_split[OF get_sc_corres])
-                 apply (rename_tac csc sc sc')
+               apply (rule corres_split[OF scActive_corres], simp)
                  apply (rule corres_if2)
-                   apply (clarsimp simp: sc_relation_def)
-                  apply (rule_tac P="?P and (\<lambda>s. ct = cur_thread s) and (\<lambda>s. sched = schedulable ct s)
-                                     and (\<lambda>s. \<exists>n. ko_at (Structures_A.SchedContext sc n) (cur_sc s) s)
-                                     and K (\<not>sched) and K (0 < sc_refill_max sc)"
-                             and P'="?P' and (\<lambda>s. ct = ksCurThread s)
-                                     and (\<lambda>s. sched = isSchedulable_bool ct s)"
-                         in corres_inst)
-                  apply(rule corres_guard_imp)
-                    apply (rule corres_split_eqr[OF getConsumedTime_corres])
-                      apply (rule chargeBudget_corres)
-                     apply wpsimp
-                    apply wpsimp
-                   apply (prop_tac "cur_sc_active s")
-                    apply (clarsimp simp: obj_at_def is_sc_active_kh_simp[symmetric]
-                                          is_sc_active_def2)
-                    apply (clarsimp simp: active_sc_def)
-                   apply (clarsimp simp: valid_sched_def)
                    apply clarsimp
+                  apply (rule corres_split_eqr[OF getConsumedTime_corres])
+                    apply (rule chargeBudget_corres)
+                   apply wpsimp
+                  apply wpsimp
                  apply (rule setConsumedTime_corres)
                  apply simp
                 apply wpsimp
@@ -783,7 +765,6 @@ lemma kernel_preemption_corres:
             in hoare_strengthen_post[rotated])
       apply clarsimp
       apply (frule ct_not_blocked_cur_sc_not_blocked, clarsimp)
-      apply clarsimp
       apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_objs_valid_tcbs
                             valid_sched_def cur_tcb_def ct_in_state_kh_simp[symmetric])
       apply (intro conjI; clarsimp simp: schedulable_def2 ct_in_state_def)
@@ -791,7 +772,7 @@ lemma kernel_preemption_corres:
         apply (rule context_conjI)
          apply (clarsimp simp: cur_sc_tcb_def sc_tcb_sc_at_def obj_at_def is_sc_obj)
          apply (erule (1) valid_sched_context_size_objsI)
-        apply clarsimp
+        apply (clarsimp simp: vs_all_heap_simps obj_at_def refill_ready_no_overflow_def)
        apply (frule (1) cur_sc_chargeable_when_ct_active_sc)
        apply (frule (1) active_sc_tcb_at_ct_cur_sc_active[THEN iffD2])
        apply (clarsimp simp: current_time_bounded_def)
@@ -873,13 +854,15 @@ lemma kernel_corres':
    apply (fastforce simp: invs_def valid_state_def valid_pspace_def intro!: cur_sc_tcb_cross)
   apply (rule_tac Q'="\<lambda>s'. pred_map (\<lambda>tcb. \<not> tcbInReleaseQueue tcb) (tcbs_of' s') (ksCurThread s')"
          in corres_cross_add_guard)
-   apply (clarsimp, frule tcb_at_invs)
-   subgoal by (fastforce simp: not_in_release_q_def release_queue_relation_def pred_map_def
-                               opt_map_red obj_at'_def invs'_def valid_pspace'_def
-                               valid_release_queue'_def cur_tcb'_def
-                        dest!: state_relationD)
+   apply clarsimp
+   apply (rule ct_not_in_release_q_cross)
+       apply fastforce
+      apply (simp add: state_relation_def)
+     apply (simp add: state_relation_def)
+    apply fastforce
+   apply simp
   apply (rule_tac Q'="\<lambda>s'. pred_map (\<lambda>scPtr. isScActive scPtr s') (tcbSCs_of s') (ksCurThread s')"
-         in corres_cross_add_guard)
+               in corres_cross_add_guard)
    apply clarsimp
    apply (frule invs_cur_sc_tcb_symref, clarsimp simp: schact_is_rct)
    apply (prop_tac "sc_at (cur_sc s) s")
@@ -892,8 +875,7 @@ lemma kernel_corres':
                   dest!: state_relationD)
    apply (rule_tac x="cur_sc s" in exI, clarsimp simp: opt_map_red)
    apply (frule_tac x="ksCurThread s'" in pspace_relation_absD, simp)
-   subgoal by (fastforce simp: other_obj_relation_def tcb_relation_def)
-  apply simp
+   subgoal by (fastforce simp: tcb_relation_cut_def tcb_relation_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split)
        apply (rule corres_split_handle[OF handleEvent_corres])
@@ -1058,10 +1040,14 @@ lemma entry_corres:
       apply (rule corres_split)
          apply simp
          apply (rule threadset_corresT)
-           apply (simp add: tcb_relation_def arch_tcb_relation_def
-                            arch_tcb_context_set_def atcbContextSet_def)
-          apply (clarsimp simp: tcb_cap_cases_def)
-         apply (clarsimp simp: tcb_cte_cases_def cteSizeBits_def)
+               apply (simp add: tcb_relation_def arch_tcb_relation_def
+                                arch_tcb_context_set_def atcbContextSet_def)
+              apply (clarsimp simp: tcb_cap_cases_def)
+             apply (clarsimp simp: tcb_cte_cases_def cteSizeBits_def)
+            apply fastforce
+           apply fastforce
+          apply (fastforce simp: inQ_def)
+         apply fastforce
         apply (rule corres_split [OF kernel_corres])
           apply (rule_tac P=invs and P'=\<top> in corres_inst)
           apply add_cur_tcb'
@@ -1083,7 +1069,7 @@ lemma entry_corres:
                           schact_is_rct_def
               | (wps, wp threadSet_st_tcb_at2) )+
    apply (fastforce simp: invs_def cur_tcb_def)
-  apply (clarsimp simp: ct_in_state'_def cur_tcb'_def invs'_def valid_release_queue'_def obj_at'_def)
+  apply (clarsimp simp: ct_in_state'_def cur_tcb'_def invs'_def obj_at'_def)
   done
 
 lemma corres_gets_machine_state:
@@ -1304,13 +1290,14 @@ lemma ckernel_invariant:
         apply (clarsimp simp: invs_def valid_state_def valid_pspace_def state_refs_of_cross_eq)
        apply (fastforce dest!: cur_sc_tcb_cross[simplified schact_is_rct_def]
                          simp: invs_def valid_state_def valid_pspace_def)
-      apply (clarsimp simp: invs'_def valid_release_queue'_def)
+      apply (clarsimp simp: invs'_def)
       apply (prop_tac "cur_tcb' s'")
        apply (rule cur_tcb_cross[OF invs_cur invs_psp_aligned invs_distinct]; simp?)
-      apply (clarsimp simp: cur_tcb'_def)
-      apply (clarsimp simp: pred_map_def obj_at'_def projectKOs opt_map_red not_in_release_q_def
-                            release_queue_relation_def
-                     dest!: state_relationD)
+      apply (rule_tac s=s and s'=s' in ct_not_in_release_q_cross)
+         apply blast
+        apply (erule state_relation_release_queue_relation)
+       apply (erule curthread_relation[symmetric])
+      apply fastforce
      apply (rule_tac a=s in resume_cur_thread_cross)
       apply assumption
      apply fastforce

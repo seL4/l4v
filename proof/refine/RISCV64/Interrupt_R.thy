@@ -444,7 +444,7 @@ lemma invoke_arch_irq_handler_invs'[wp]:
   by (cases i; wpsimp simp: RISCV64_H.invokeIRQHandler_def)
 
 lemma invoke_irq_handler_invs'[wp]:
-  "\<lbrace>invs' and sch_act_simple and irq_handler_inv_valid' i\<rbrace>
+  "\<lbrace>invs' and irq_handler_inv_valid' i\<rbrace>
    InterruptDecls_H.invokeIRQHandler i
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (cases i; simp add: Interrupt_H.invokeIRQHandler_def)
@@ -613,7 +613,7 @@ lemma getIRQState_prop:
 
 lemma decDomainTime_corres:
   "corres dc \<top> \<top> dec_domain_time decDomainTime"
-  apply (simp add:dec_domain_time_def corres_underlying_def decDomainTime_def simpler_modify_def)
+  apply (simp add: dec_domain_time_def corres_underlying_def decDomainTime_def simpler_modify_def)
   apply (clarsimp simp: state_relation_def cdt_relation_def)
   done
 

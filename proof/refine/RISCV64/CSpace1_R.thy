@@ -1863,6 +1863,34 @@ lemma setObject_cte_scs_of'_use_valid_ksPSpace:
   using use_valid[OF step setObject_scs_of'(1)] pre
   by auto
 
+lemma setObject_cte_tcbSchedPrevs_of_use_valid_ksPSpace:
+  assumes step: "(x, s\<lparr>ksPSpace := ps\<rparr>) \<in> fst (setObject p (cte :: cte) s)"
+  assumes pre: "P (tcbSchedPrevs_of s)"
+  shows "P (ps |> tcb_of' |> tcbSchedPrev)"
+  using use_valid[OF step setObject_cte_tcbSchedPrevs_of(1)] pre
+  by auto
+
+lemma setObject_cte_tcbSchedNexts_of_use_valid_ksPSpace:
+  assumes step: "(x, s\<lparr>ksPSpace := ps\<rparr>) \<in> fst (setObject p (cte :: cte) s)"
+  assumes pre: "P (tcbSchedNexts_of s)"
+  shows "P (ps |> tcb_of' |> tcbSchedNext)"
+  using use_valid[OF step setObject_cte_tcbSchedNexts_of(1)] pre
+  by auto
+
+lemma setObject_cte_inQ_of_use_valid_ksPSpace:
+  assumes step: "(x, s\<lparr>ksPSpace := ps\<rparr>) \<in> fst (setObject p (cte :: cte) s)"
+  assumes pre: "P (inQ domain priority |< tcbs_of' s)"
+  shows "P (inQ domain priority |< (ps |> tcb_of'))"
+  using use_valid[OF step setObject_cte_inQ(1)] pre
+  by auto
+
+lemma setObject_cte_tcbInReleaseQueue_use_valid_ksPSpace:
+  assumes step: "(x, s\<lparr>ksPSpace := ps\<rparr>) \<in> fst (setObject p (cte :: cte) s)"
+  assumes pre: "P (tcbInReleaseQueue |< tcbs_of' s)"
+  shows "P (tcbInReleaseQueue |< (ps |> tcb_of'))"
+  using use_valid[OF step setObject_cte_tcbInReleaseQueue(1)] pre
+  by auto
+
 lemma updateCap_stuff:
   assumes "(x, s'') \<in> fst (updateCap p cap s')"
   shows "ctes_of s'' = modify_map (ctes_of s') p (cteCap_update (K cap)) \<and>
@@ -1881,6 +1909,11 @@ lemma updateCap_stuff:
          (pspace_distinct' s' \<longrightarrow> pspace_distinct' s'') \<and>
          replyPrevs_of s'' = replyPrevs_of s' \<and>
          scReplies_of s'' = scReplies_of s' \<and>
+         tcbSchedPrevs_of s'' = tcbSchedPrevs_of s' \<and>
+         tcbSchedNexts_of s'' = tcbSchedNexts_of s' \<and>
+         (\<forall>domain priority.
+            (inQ domain priority |< tcbs_of' s'') = (inQ domain priority |< tcbs_of' s')) \<and>
+         (tcbInReleaseQueue |< tcbs_of' s'') = (tcbInReleaseQueue |< tcbs_of' s') \<and>
          ksConsumedTime s'' = ksConsumedTime s' \<and>
          ksCurTime s'' = ksCurTime s' \<and>
          ksCurSc s'' = ksCurSc s' \<and>
@@ -1893,16 +1926,20 @@ lemma updateCap_stuff:
   apply (frule setCTE_pspace_only)
   apply (clarsimp simp: setCTE_def)
   apply (intro conjI impI)
-     apply (erule use_valid [OF _ setObject_aligned])
-      apply (clarsimp simp: updateObject_cte in_monad typeError_def
-                            in_magnitude_check objBits_simps
-                     split: kernel_object.split_asm if_split_asm)
-    apply (erule use_valid [OF _ setObject_distinct])
-     apply (clarsimp simp: updateObject_cte in_monad typeError_def
-                           in_magnitude_check objBits_simps
-                    split: kernel_object.split_asm if_split_asm)
-   apply (erule setObject_cte_replies_of'_use_valid_ksPSpace; simp)
-  apply (erule setObject_cte_scs_of'_use_valid_ksPSpace; simp)
+         apply (erule use_valid [OF _ setObject_aligned])
+         apply (clarsimp simp: updateObject_cte in_monad typeError_def
+                               in_magnitude_check objBits_simps
+                        split: kernel_object.split_asm if_split_asm)
+        apply (erule use_valid [OF _ setObject_distinct])
+        apply (clarsimp simp: updateObject_cte in_monad typeError_def
+                              in_magnitude_check objBits_simps
+                       split: kernel_object.split_asm if_split_asm)
+       apply (erule setObject_cte_replies_of'_use_valid_ksPSpace; simp)
+      apply (erule setObject_cte_scs_of'_use_valid_ksPSpace; simp)
+     apply (erule setObject_cte_tcbSchedPrevs_of_use_valid_ksPSpace; simp)
+    apply (erule setObject_cte_tcbSchedNexts_of_use_valid_ksPSpace; simp)
+   apply (fastforce elim: setObject_cte_inQ_of_use_valid_ksPSpace)
+  apply (fastforce elim: setObject_cte_tcbInReleaseQueue_use_valid_ksPSpace)
   done
 
 (* FIXME: move *)
@@ -2489,16 +2526,11 @@ lemma updateCap_corres:
    apply (simp add: is_cap_simps, elim disjE exE, simp_all add: isCap_simps)[1]
    apply clarsimp
 
-  apply (extract_conjunct \<open>match conclusion in "ready_queues_relation _ _" \<Rightarrow> -\<close>)
-   apply (case_tac "ctes_of conc (cte_map slot)")
-    apply (simp add: modify_map_None)
-   apply (simp add: modify_map_apply)
-
   apply (extract_conjunct \<open>match conclusion in "cdt_list_relation _ _ _" \<Rightarrow> -\<close>)
    apply (unfold cdt_list_relation_def)[1]
    apply (intro allI impI)
    apply (erule_tac x=c in allE)
-   apply (auto elim!: modify_map_casesE)[1]
+   subgoal by (auto elim!: modify_map_casesE)[1]
 
   apply (extract_conjunct \<open>match conclusion in "revokable_relation _ _ _" \<Rightarrow> -\<close>)
    apply (unfold revokable_relation_def)[1]
@@ -2508,11 +2540,7 @@ lemma updateCap_corres:
    apply (erule_tac x=c in allE)
    apply (erule impE[where P="\<exists>y. v = Some y" for v])
     apply (clarsimp simp: null_filter_def is_zombie_def split: if_split_asm)
-   apply (auto elim!: modify_map_casesE del: disjE)[1]
-
-  apply (extract_conjunct \<open>match conclusion in "release_queue_relation _ _" \<Rightarrow> -\<close>)
-   apply (clarsimp simp: release_queue_relation_def
-                  elim!: use_valid[OF _ set_cap.valid_sched_pred])
+   subgoal by (auto elim!: modify_map_casesE del: disjE)[1]
 
   apply (clarsimp simp: sc_replies_relation_def)
   done
@@ -2610,8 +2638,14 @@ crunches updateMDB
   and ksCurTime[wp]: "\<lambda>s. P (ksCurTime s)"
   and ksCurSc[wp]: "\<lambda>s. P (ksCurSc s)"
   and ksReprogramTimer[wp]: "\<lambda>s. P (ksReprogramTimer s)"
+  and ksReadyQueues[wp]: "\<lambda>s. P (ksReadyQueues s)"
+  and ksReleaseQueue[wp]: "\<lambda>s. P (ksReleaseQueue s)"
   and aligned[wp]: pspace_aligned'
   and pdistinct[wp]: pspace_distinct'
+  and tcbSchedPrevs[wp]: "\<lambda>s. P (tcbSchedPrevs_of s)"
+  and tcbSchedNexts[wp]: "\<lambda>s. P (tcbSchedNexts_of s)"
+  and tcbInReleaseQueue[wp]: "\<lambda>s. P (tcbInReleaseQueue |< tcbs_of' s)"
+  and inQ_opt_pred[wp]: "\<lambda>s. P (inQ d p |< tcbs_of' s)"
   (wp: crunch_wps simp: crunch_simps setObject_def updateObject_cte)
 
 lemma updateMDB_the_lot:
@@ -2643,13 +2677,18 @@ lemma updateMDB_the_lot:
          ksCurSc s''          = ksCurSc s' \<and>
          ksReprogramTimer s'' = ksReprogramTimer s' \<and>
          replyPrevs_of s'' = replyPrevs_of s' \<and>
-         scReplies_of s'' = scReplies_of s'"
+         scReplies_of s'' = scReplies_of s' \<and>
+         tcbSchedNexts_of s'' = tcbSchedNexts_of s' \<and>
+         tcbSchedPrevs_of s'' = tcbSchedPrevs_of s' \<and>
+         (tcbInReleaseQueue |< tcbs_of' s'') = (tcbInReleaseQueue |< tcbs_of' s') \<and>
+         (\<forall>domain priority.
+            (inQ domain priority |< tcbs_of' s'') = (inQ domain priority |< tcbs_of' s'))"
   using assms
   apply (simp add: updateMDB_eqs updateMDB_pspace_relation split del: if_split)
   apply (frule (1) updateMDB_ctes_of)
   apply clarsimp
-  apply (erule use_valid, wp)
-  apply simp
+  apply (erule use_valid, wpsimp wp: hoare_vcg_all_lift)
+  apply (simp add: comp_def)
   done
 
 lemma is_cap_revocable_eq:
@@ -3885,6 +3924,24 @@ lemma setCTE_UntypedCap_corres:
    apply (rule use_valid[OF _ setCTE_scs_of'], assumption)
    apply clarsimp
 
+  apply (extract_conjunct \<open>match conclusion in "ready_queues_relation _ _" \<Rightarrow> -\<close>)
+   apply (clarsimp simp: ready_queues_relation_def)
+   apply (rule use_valid[OF _ setCTE_tcbSchedPrevs_of], assumption)
+   apply (rule use_valid[OF _ setCTE_tcbSchedNexts_of], assumption)
+   apply (rule use_valid[OF _ set_cap.valid_sched_pred], assumption)
+   apply (rule use_valid[OF _ setCTE_ksReadyQueues], assumption)
+   apply (rule use_valid[OF _ setCTE_inQ_tcbs_of'], assumption)
+   apply clarsimp
+
+  apply (extract_conjunct \<open>match conclusion in "release_queue_relation _ _" \<Rightarrow> -\<close>)
+   apply (clarsimp simp: release_queue_relation_def)
+   apply (rule use_valid[OF _ setCTE_tcbSchedPrevs_of], assumption)
+   apply (rule use_valid[OF _ setCTE_tcbSchedNexts_of], assumption)
+   apply (rule use_valid[OF _ set_cap.valid_sched_pred], assumption)
+   apply (rule use_valid[OF _ setCTE_ksReleaseQueue], assumption)
+   apply (rule use_valid[OF _ setCTE_tcbInReleaseQueue], assumption)
+   apply clarsimp
+
   apply (frule setCTE_pspace_only)
   apply (clarsimp simp: set_cap_def in_monad split_def get_object_def set_object_def)
   apply (rename_tac obj ps' s'' obj' kobj; case_tac obj;
@@ -5065,7 +5122,12 @@ lemma updateMDB_the_lot':
          ksCurSc s''          = ksCurSc s' \<and>
          ksReprogramTimer s'' = ksReprogramTimer s' \<and>
          replyPrevs_of s'' = replyPrevs_of s' \<and>
-         scReplies_of s'' = scReplies_of s'"
+         scReplies_of s'' = scReplies_of s' \<and>
+         tcbSchedNexts_of s'' = tcbSchedNexts_of s' \<and>
+         tcbSchedPrevs_of s'' = tcbSchedPrevs_of s' \<and>
+         (tcbInReleaseQueue |< tcbs_of' s'') = (tcbInReleaseQueue |< tcbs_of' s') \<and>
+         (\<forall>domain priority.
+            (inQ domain priority |< tcbs_of' s'') = (inQ domain priority |< tcbs_of' s'))"
   by (rule updateMDB_the_lot; fastforce intro: assms)
 
 lemma cte_map_inj_eq':
@@ -5170,8 +5232,7 @@ lemma cteInsert_corres:
             apply (thin_tac "ksIdleThread t = p" for p t)+
             apply (thin_tac "ksSchedulerAction t = p" for p t)+
 
-            apply (rule conjI)
-             apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv data_at_def)
+            apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv data_at_def)
             apply (rule conjI)
              defer
              apply(rule conjI)
@@ -6678,9 +6739,7 @@ lemma cteSwap_corres:
    apply assumption
   apply (thin_tac "ksMachineState t = p" for t p)+
   apply (thin_tac "ksCurThread t = p" for t p)+
-  apply (thin_tac "ksReadyQueues t = p" for t p)+
   apply (thin_tac "ksSchedulerAction t = p" for t p)+
-  apply (thin_tac "ready_queues t = p" for t p)+
   apply (thin_tac "cur_domain t = p" for t p)+
   apply (thin_tac "ksDomScheduleIdx t = p" for t p)+
   apply (thin_tac "ksDomSchedule t = p" for t p)+

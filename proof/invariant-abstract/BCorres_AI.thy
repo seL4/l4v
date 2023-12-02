@@ -148,6 +148,10 @@ lemma read_sc_refill_sufficient_truncate[simp]:
    = read_sc_refill_sufficient sc_ptr usage s"
   by (simp add: read_sc_refill_sufficient_def obind_def omonad_defs)
 
+lemma read_sc_active_truncate[simp]:
+  "read_sc_active a (truncate_state s) = read_sc_active a s"
+  by (simp add: read_sc_active_def obind_def split: option.splits)
+
 lemma in_release_queue_truncate[simp]:
   "in_release_queue t (truncate_state s) = in_release_queue t s"
   by (simp add: in_release_queue_def)

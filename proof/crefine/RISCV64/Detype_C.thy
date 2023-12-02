@@ -1630,7 +1630,7 @@ lemma deleteObjects_ccorres':
              bind_assoc modify_machinestate_assert_cnodes_swap
              modify_modify_bind)
   apply (rule ccorres_stateAssert_fwd)+
-  apply (clarsimp simp: sym_refs_asrt_def valid_idle'_asrt_def release_q_runnable_asrt_def)
+  apply (clarsimp simp: sym_refs_asrt_def valid_idle'_asrt_def)
   apply (rule ccorres_stateAssert_after)
   apply (rule ccorres_from_vcg)
   apply (rule allI, rule conseqPre, vcg)
@@ -1649,7 +1649,6 @@ proof -
     and desc_range: "descendants_range' (UntypedCap d ptr bits idx) p (ctes_of s)"
     and invs: "invs' s" and "ct_active' s" and "valid_idle' s"
     and sym_refs: "sym_refs (state_refs_of' s)"
-    and rlqrun: "\<forall>p. p \<in> set (ksReleaseQueue s) \<longrightarrow> obj_at' (runnable' \<circ> tcbState) p s"
     and "sch_act_simple s" and wb: "bits < word_bits" and b2: "4 \<le> bits"
     and "deletionIsSafe ptr bits s"
     and cNodePartial: "\<not> cNodePartialOverlap (gsCNodes s)
@@ -1777,27 +1776,11 @@ proof -
     apply (clarsimp simp: Let_def all_conj_distrib)
     done
 
-  moreover
-  from rlqrun have "\<forall>t \<in> set (ksReleaseQueue s). tcb_at' t s \<and> ko_wp_at' live' t s"
-    apply clarsimp
-    apply (rule context_conjI)
-     apply fastforce
-    apply (drule_tac x=t in spec)
-    apply (clarsimp simp: ko_wp_at'_def obj_at_simps split: kernel_object.splits)
-    apply (rule_tac x="KOTCB obj" in exI)
-    apply (case_tac "tcbState obj"; clarsimp split: thread_state.splits)
-    done
-  hence tat: "\<forall>t \<in> set (ksReleaseQueue s). tcb_at' t s"
-    and tlive: "\<forall>t \<in> set (ksReleaseQueue s). ko_wp_at' live' t s"
-    by auto
   from sr have
-    "sched_queue_relation (clift ?th_s) (ksReleaseQueue s) NULL (ksReleaseHead_' (globals s'))"
+    "ctcb_queue_relation (ksReleaseQueue s) (ksReleaseQueue_' (globals s'))"
     unfolding rf_sr_def cstate_relation_def cpspace_relation_def
     apply (simp add: tcb_queue_relation_live_restrict')
     apply (clarsimp simp: Let_def all_conj_distrib)
-    apply ((subst lift_t_typ_region_bytes, rule cm_disj_tcb, assumption+, simp_all)[1])+
-    apply (insert rlqrun tat tlive rl)
-    apply (rule tcb_queue_relation_live_restrict'[THEN iffD2], (fastforce intro!: D.valid_untyped)+)
     done
 
   moreover

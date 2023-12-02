@@ -15,7 +15,7 @@ This module uses the C preprocessor to select a target architecture.
 \end{impdetails}
 
 > module SEL4.Object.TCB (
->         threadGet, threadSet, asUser, sanitiseRegister, getSanitiseRegisterInfo,
+>         threadRead, threadGet, threadSet, asUser, sanitiseRegister, getSanitiseRegisterInfo,
 >         getThreadCSpaceRoot, getThreadVSpaceRoot,
 >         getThreadBufferSlot,
 >         getMRs, setMRs, copyMRs, getMessageInfo, setMessageInfo,
@@ -32,7 +32,7 @@ This module uses the C preprocessor to select a target architecture.
 \begin{impdetails}
 
 % {-# BOOT-IMPORTS: SEL4.API.Types SEL4.API.Failures SEL4.Machine SEL4.Model SEL4.Object.Structures SEL4.API.Invocation #-}
-% {-# BOOT-EXPORTS: threadGet threadSet asUser setMRs setMessageInfo getThreadCSpaceRoot getThreadVSpaceRoot decodeTCBInvocation invokeTCB getThreadBufferSlot decodeDomainInvocation archThreadSet archThreadGet sanitiseRegister decodeSchedContextInvocation decodeSchedControlInvocation checkBudget chargeBudget updateAt tcbEPAppend tcbEPDequeue setTimeArg #-}
+% {-# BOOT-EXPORTS: threadRead threadGet threadSet asUser setMRs setMessageInfo getThreadCSpaceRoot getThreadVSpaceRoot decodeTCBInvocation invokeTCB getThreadBufferSlot decodeDomainInvocation archThreadSet archThreadGet sanitiseRegister decodeSchedContextInvocation decodeSchedControlInvocation checkBudget chargeBudget updateAt tcbEPAppend tcbEPDequeue setTimeArg #-}
 
 > import Prelude hiding (Word)
 > import SEL4.Config
@@ -1055,9 +1055,9 @@ On some architectures, the thread context may include registers that may be modi
 >             checkBudget
 >             return ()
 >         else do
->             scPtr <- getCurSc
->             sc <- getSchedContext scPtr
->             if (scRefillMax sc > 0)
+>             cscPtr <- getCurSc
+>             active <- scActive cscPtr
+>             if active
 >                 then do
 >                   consumedTime <- getConsumedTime
 >                   chargeBudget consumedTime False True
@@ -1085,14 +1085,12 @@ On some architectures, the thread context may include registers that may be modi
 > releaseQNonEmptyAndReady :: KernelR Bool
 > releaseQNonEmptyAndReady = do
 >     rq <- readReleaseQueue
->     if rq == []
+>     if (tcbQueueHead rq == Nothing)
 >       then return False
->       else readTCBRefillReady (head rq)
+>       else readTCBRefillReady (fromJust $ tcbQueueHead rq)
 
 > awakenBody :: Kernel ()
 > awakenBody = do
->     rq <- getReleaseQueue
->     assert (distinct rq) "The release queue is always distinct"
 >     awakened <- tcbReleaseDequeue
 >     runnable <- isRunnable awakened
 >     assert runnable "the awakened thread must be runnable"

@@ -336,11 +336,12 @@ lemma cmdbnode_relation_mdb_node_to_H [simp]:
 definition
   tcb_no_ctes_proj ::
   "tcb \<Rightarrow> Structures_H.thread_state \<times> vptr \<times> arch_tcb \<times> bool \<times> bool \<times> priority \<times> priority \<times>
-          domain \<times> fault option \<times> machine_word option \<times> machine_word option \<times> machine_word option"
+          domain \<times> fault option \<times> machine_word option \<times> machine_word option \<times>
+          machine_word option \<times> machine_word option \<times> machine_word option"
   where
   "tcb_no_ctes_proj t \<equiv> (tcbState t, tcbIPCBuffer t, tcbArch t, tcbQueued t, tcbInReleaseQueue t,
                           tcbMCP t, tcbPriority t, tcbDomain t, tcbFault t, tcbBoundNotification t,
-                          tcbSchedContext t, tcbYieldTo t)"
+                          tcbSchedContext t, tcbYieldTo t, tcbSchedNext t, tcbSchedPrev t)"
 
 lemma tcb_cte_cases_proj_eq [simp]:
   "tcb_cte_cases p = Some (getF, setF) \<Longrightarrow>
@@ -1078,7 +1079,7 @@ lemma cstate_relation_only_t_hrs:
   ksCurDomain_' s = ksCurDomain_' t;
   ksDomainTime_' s = ksDomainTime_' t;
   ksConsumed_' s = ksConsumed_' t;
-  ksReleaseHead_' s = ksReleaseHead_' t;
+  ksReleaseQueue_' s = ksReleaseQueue_' t;
   ksReprogram_' s = ksReprogram_' t
   \<rbrakk>
   \<Longrightarrow> cstate_relation a s = cstate_relation a t"
@@ -1106,7 +1107,7 @@ lemma rf_sr_upd:
     "ksCurDomain_' (globals x) = ksCurDomain_' (globals y)"
     "ksDomainTime_' (globals x) = ksDomainTime_' (globals y)"
     "ksConsumed_' (globals x) = ksConsumed_' (globals y)"
-    "ksReleaseHead_' (globals x) = ksReleaseHead_' (globals y)"
+    "ksReleaseQueue_' (globals x) = ksReleaseQueue_' (globals y)"
     "ksReprogram_' (globals x) = ksReprogram_' (globals y)"
   shows "((a, x) \<in> rf_sr) = ((a, y) \<in> rf_sr)"
   unfolding rf_sr_def using assms
@@ -1133,10 +1134,10 @@ lemma rf_sr_upd_safe[simp]:
     "phantom_machine_state_' (globals (g y)) = phantom_machine_state_' (globals y)"
   and    gs: "ghost'state_' (globals (g y)) = ghost'state_' (globals y)"
   and     wu:  "(ksWorkUnitsCompleted_' (globals (g y))) = (ksWorkUnitsCompleted_' (globals y))"
-  and rlshd: "(ksReleaseHead_' (globals (g y))) = (ksReleaseHead_' (globals y))"
+  and  rlq: "(ksReleaseQueue_' (globals (g y))) = (ksReleaseQueue_' (globals y))"
   and reprog: "(ksReprogram_' (globals (g y))) = (ksReprogram_' (globals y))"
   shows "((a, (g y)) \<in> rf_sr) = ((a, y) \<in> rf_sr)"
-  using rl rq rqL1 rqL2 sa ct ctime csc it isc ist arch wu gs dsi cdom dt cons rlshd reprog
+  using rl rq rqL1 rqL2 sa ct ctime csc it isc ist arch wu gs dsi cdom dt cons rlq reprog
   by - (rule rf_sr_upd)
 
 (* More of a well-formed lemma, but \<dots> *)

@@ -12,39 +12,35 @@ begin
 
 text \<open> This theory contains operations on scheduling contexts and scheduling control. \<close>
 
-definition
-  get_tcb_sc :: "obj_ref \<Rightarrow> (sched_context,'z::state_ext) s_monad"
-where
+definition get_tcb_sc :: "obj_ref \<Rightarrow> (sched_context,'z::state_ext) s_monad" where
   "get_tcb_sc tcb_ptr = do
-    sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context tcb_ptr;
-    sc_ptr \<leftarrow> assert_opt sc_opt;
-    get_sched_context sc_ptr
-  od"
+     sc_opt \<leftarrow> get_tcb_obj_ref tcb_sched_context tcb_ptr;
+     sc_ptr \<leftarrow> assert_opt sc_opt;
+     get_sched_context sc_ptr
+   od"
 
-definition
-  get_sc_time :: "obj_ref \<Rightarrow> (time, 'z::state_ext) s_monad"
-where
+definition get_sc_time :: "obj_ref \<Rightarrow> (time, 'z::state_ext) s_monad" where
   "get_sc_time tcb_ptr = do
-    sc \<leftarrow> get_tcb_sc tcb_ptr;
-    return $ r_time (refill_hd sc)
-  od"
+     sc \<leftarrow> get_tcb_sc tcb_ptr;
+     return $ r_time (refill_hd sc)
+   od"
 
+abbreviation set_release_queue :: "obj_ref list \<Rightarrow> (unit, 'z::state_ext) s_monad" where
+  "set_release_queue queue \<equiv> modify (\<lambda>s. s\<lparr>release_queue := queue\<rparr>)"
 
-text \<open>Enqueue a TCB in the release queue, sorted by release time of
-  the corresponding scheduling context.\<close>
-definition
-  tcb_release_enqueue :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
-  "tcb_release_enqueue tcb_ptr = do
+text \<open>Enqueue a TCB in the release queue, sorted by release time of the associated scheduling context.\<close>
+definition tcb_release_enqueue :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad" where
+  "tcb_release_enqueue tcb_ptr \<equiv> do
      time \<leftarrow> get_sc_time tcb_ptr;
      qs \<leftarrow> gets release_queue;
      times \<leftarrow> mapM get_sc_time qs;
      qst \<leftarrow> return $ zip qs times;
-     qst' \<leftarrow> return $ filter (\<lambda>(_,t'). t' \<le> time) qst @ [(tcb_ptr,time)] @ filter (\<lambda>(_,t'). \<not>t' \<le> time) qst;
-     when (filter (\<lambda>(_,t'). t' \<le> time) qst = []) $
-         modify (\<lambda>s. s\<lparr>reprogram_timer := True\<rparr>);
-     modify (\<lambda>s. s\<lparr>release_queue := map fst qst'\<rparr>)
-  od"
+     qst' \<leftarrow> return $ filter (\<lambda>(_, t). t \<le> time) qst
+                      @ [(tcb_ptr,time)]
+                      @ filter (\<lambda>(_, t). \<not> t \<le> time) qst;
+     when (filter (\<lambda>(_, t). t \<le> time) qst = []) $ modify (\<lambda>s. s\<lparr>reprogram_timer := True\<rparr>);
+     set_release_queue (map fst qst')
+   od"
 
 definition
   refill_size :: "obj_ref \<Rightarrow> (nat, 'z::state_ext) s_monad"

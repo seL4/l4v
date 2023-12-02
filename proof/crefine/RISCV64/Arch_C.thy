@@ -1395,7 +1395,7 @@ lemma performPageGetAddress_ccorres:
    apply clarsimp
    apply (rule conseqPre, vcg)
    apply clarsimp
-  apply (clarsimp simp: invs_no_0_obj' invs_queues invs_valid_objs'
+  apply (clarsimp simp: invs_no_0_obj' invs_valid_objs'
                         rf_sr_ksCurThread msgRegisters_unfold
                         seL4_MessageInfo_lift_def message_info_to_H_def mask_def)
   apply (cases isCall)
@@ -2841,16 +2841,14 @@ lemma decodeRISCVMMUInvocation_ccorres:
     apply (rule conjI; clarsimp)
     apply (frule invs_arch_state')
     apply (rule conjI, clarsimp simp: valid_arch_state'_def valid_asid_table'_def)
-    apply (clarsimp simp: neq_Nil_conv excaps_map_def valid_tcb_state'_def invs_queues
+    apply (clarsimp simp: neq_Nil_conv excaps_map_def valid_tcb_state'_def
                           unat_lt2p[where 'a=machine_word_len, folded word_bits_def])
     apply (frule interpret_excaps_eq[rule_format, where n=1], simp)
     apply (rule conjI; clarsimp)+
     apply (rule conjI, erule ctes_of_valid', clarsimp)
     apply (intro conjI)
-            apply fastforce
-           apply fastforce
-          apply fastforce
-         apply (fastforce elim!: pred_tcb'_weakenE)
+         apply fastforce
+        apply (fastforce elim!: pred_tcb'_weakenE)
        apply (clarsimp simp: excaps_in_mem_def slotcap_in_mem_def)
        apply (rule sym, simp add: objBits_simps)
       apply (simp add: ex_cte_cap_wp_to'_def cte_wp_at_ctes_of)
@@ -2863,7 +2861,7 @@ lemma decodeRISCVMMUInvocation_ccorres:
      apply (clarsimp simp: le_mask_asid_bits_helper)
     apply (simp add: is_aligned_shiftl_self)
    (* RISCVASIDPoolAssign *)
-   apply (clarsimp simp: isCap_simps valid_tcb_state'_def invs_queues)
+   apply (clarsimp simp: isCap_simps valid_tcb_state'_def)
    apply (frule invs_arch_state', clarsimp)
    apply (intro conjI)
        apply (fastforce simp: ct_in_state'_def elim!: pred_tcb'_weakenE)

@@ -810,46 +810,6 @@ lemma empty_fail_isRunnable[intro!, wp, simp]:
   "empty_fail (isRunnable t)"
   by (simp add: isRunnable_def isStopped_def empty_fail_cond)
 
-lemma oblivious_getObject_ksPSpace_default:
-  "\<lbrakk> \<forall>s. ksPSpace (f s) = ksPSpace s;
-     \<And>a b c ko. (loadObject a b c ko :: 'a kernel_r) \<equiv> loadObject_default a b c ko \<rbrakk>
-   \<Longrightarrow> oblivious f (getObject p :: 'a :: pspace_storable kernel)"
-  apply (simp add: getObject_def2 split_def loadObject_default_def
-                   projectKO_def alignCheck_assert magnitudeCheck_assert)
-  apply (intro oblivious_bind; simp)
-  by (auto simp: oblivious_def gets_the_def assert_opt_def bind_def gets_def return_def
-                 oassert_opt_def read_magnitudeCheck_def get_def fail_def
-          split: option.splits)
-
-lemmas oblivious_getObject_ksPSpace_tcb[simp]
-    = oblivious_getObject_ksPSpace_default[OF _ loadObject_tcb]
-
-lemma oblivious_setObject_ksPSpace_tcb[simp]:
-  "\<lbrakk> \<forall>s. ksPSpace (f s) = ksPSpace s;
-     \<forall>s g. ksPSpace_update g (f s) = f (ksPSpace_update g s) \<rbrakk> \<Longrightarrow>
-   oblivious f (setObject p (v :: tcb))"
-  apply (simp add: setObject_def split_def updateObject_default_def
-                   projectKO_def alignCheck_assert magnitudeCheck_assert)
-  apply (intro oblivious_bind; simp)
-  by (auto simp: oblivious_def assert_opt_def bind_def gets_def return_def
-                 oassert_opt_def get_def fail_def
-          split: option.splits)
-
-lemma oblivious_getObject_ksPSpace_cte[simp]:
-  "\<lbrakk> \<forall>s. ksPSpace (f s) = ksPSpace s \<rbrakk> \<Longrightarrow>
-   oblivious f (getObject p :: cte kernel)"
-  apply (simp add: getObject_def2 split_def loadObject_cte
-                   projectKO_def alignCheck_assert magnitudeCheck_assert
-                   typeError_def unless_when
-             cong: Structures_H.kernel_object.case_cong)
-  apply (intro oblivious_bind;
-         simp split: Structures_H.kernel_object.split if_split)
-  by (intro conjI impI allI;
-      auto simp: oblivious_def assert_opt_def bind_def gets_def return_def
-                 get_def fail_def gets_the_def in_omonad omonad_defs
-                 read_typeError_def read_alignCheck_def read_magnitudeCheck_def read_alignError_def
-          split: option.splits)
-
 lemma oblivious_doMachineOp[simp]:
   "\<lbrakk> \<forall>s. ksMachineState (f s) = ksMachineState s;
      \<forall>g s. ksMachineState_update g (f s) = f (ksMachineState_update g s) \<rbrakk>
@@ -874,6 +834,20 @@ lemma oblivious_setVMRoot_schact:
                              findVSpaceForASID_def liftME_def checkPTAt_def
                       split: if_split capability.split arch_capability.split option.split)+
 
+lemma oblivious_tcbQueueRemove:
+  "oblivious (ksSchedulerAction_update f) (tcbQueueRemove queue t)"
+  apply (simp add: tcbQueueRemove_def getThreadVSpaceRoot_def locateSlot_conv
+                   getSlotCap_def getCTE_def)
+  by (safe intro!: oblivious_bind | simp_all add: threadSet_def)+
+
+lemma ready_qs_runnable_ksSchedulerAction_update[simp]:
+  "ready_qs_runnable (ksSchedulerAction_update f s) = ready_qs_runnable s"
+  by (simp add: ready_qs_runnable_def)
+
+lemma ready_or_release'_ksSchedulerAction_update[simp]:
+  "ready_or_release' (ksSchedulerAction_update f s) = ready_or_release' s"
+  by (simp add: ready_or_release'_def)
+
 lemma oblivious_switchToThread_schact:
   "oblivious (ksSchedulerAction_update f) (ThreadDecls_H.switchToThread t)"
   apply (simp add: Thread_H.switchToThread_def switchToThread_def bind_assoc
@@ -881,9 +855,10 @@ lemma oblivious_switchToThread_schact:
                    threadSet_def tcbSchedEnqueue_def unless_when asUser_def
                    getQueue_def setQueue_def storeWordUser_def setRegister_def
                    pointerInUserData_def isRunnable_def isStopped_def threadGet_getObject
-                   getThreadState_def tcbSchedDequeue_def bitmap_fun_defs ready_qs_runnable_def)
-  by (safe intro!: oblivious_bind
-      | simp_all add: oblivious_setVMRoot_schact)+
+                   getThreadState_def tcbSchedDequeue_def bitmap_fun_defs ready_qs_runnable_def
+                   ready_or_release'_asrt_def ksReadyQueues_asrt_def)
+  by (safe intro!: oblivious_bind oblivious_tcbQueueRemove
+      | simp_all add: oblivious_setVMRoot_schact idleThreadNotQueued_def)+
 
 (* FIXME move *)
 crunches getCurThread
@@ -891,28 +866,48 @@ crunches getCurThread
 
 end
 
-lemma tcbSchedEnqueue_tcbPriority[wp]:
-  "\<lbrace>obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t\<rbrace>
-     tcbSchedEnqueue t'
-   \<lbrace>\<lambda>rv. obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t\<rbrace>"
-  apply (simp add: tcbSchedEnqueue_def unless_def)
-  apply (wp | simp cong: if_cong)+
+lemma setBoundNotification_tcbPriority_obj_at'[wp]:
+  "setBoundNotification ntfnPtr tptr \<lbrace>obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t'\<rbrace>"
+  unfolding setBoundNotification_def
+  apply (wpsimp wp: threadSet_wp)
+  apply (clarsimp simp: obj_at'_def objBits_simps ps_clear_upd)
+  done
+
+lemma tcbQueuePrepend_tcbPriority_obj_at'[wp]:
+  "tcbQueuePrepend queue tptr \<lbrace>obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t'\<rbrace>"
+  unfolding tcbQueuePrepend_def
+  apply (wpsimp wp: threadSet_wp)
+  by (auto simp: obj_at'_def objBits_simps ps_clear_def split: if_splits)
+
+lemma tcbSchedDequeue_tcbPriority[wp]:
+  "tcbSchedDequeue t \<lbrace>obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t'\<rbrace>"
+  unfolding tcbSchedDequeue_def tcbQueueRemove_def
+  by (wpsimp wp: hoare_when_weak_wp hoare_drop_imps)
+
+lemma tcbSchedEnqueue_tcbPriority_obj_at'[wp]:
+  "tcbSchedEnqueue tcbPtr \<lbrace>obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t'\<rbrace>"
+  unfolding tcbSchedEnqueue_def setQueue_def
+  by wpsimp
+
+crunches scheduleTCB
+  for tcbPriority_obj_at'[wp]: "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t'"
+
+lemma setThreadState_tcbPriority_obj_at'[wp]:
+  "setThreadState ts tptr \<lbrace>obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t'\<rbrace>"
+  unfolding setThreadState_def
+  apply (wpsimp wp: threadSet_wp)
+  apply (fastforce simp: obj_at'_def objBits_simps ps_clear_def)
   done
 
 (* FIXME RT: move following lemmas about tcbPriority to Refine or possibly DInvs (see VER-1299) *)
 crunches unbindMaybeNotification, blockedCancelIPC, replyRemoveTCB, cancelSignal
   for tcbPriority_obj_at'[wp]: "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t'"
-  (wp: setBoundNotification_oa_queued setThreadState_oa_queued crunch_wps
-   simp: crunch_simps)
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma cancelIPC_tcbPriority[wp]:
   "cancelIPC tptr \<lbrace>obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t\<rbrace>"
   apply (simp add: cancelIPC_def unless_def)
   by (wpsimp wp: threadSet_obj_at' gts_wp' hoare_drop_imps)
-
-crunches rescheduleRequired
-  for tcbPriority_obj_at'[wp]: "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t'"
-  (wp: crunch_wps simp: crunch_simps)
 
 lemma tcbSchedContext_update_tcbPriority[wp]:
   "threadSet (tcbSchedContext_update f) t' \<lbrace>obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t\<rbrace>"
@@ -920,18 +915,13 @@ lemma tcbSchedContext_update_tcbPriority[wp]:
 
 lemma tcbReleaseRemove_tcbPriority[wp]:
   "tcbReleaseRemove tcbPtr \<lbrace>obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t\<rbrace>"
-  apply (clarsimp simp: tcbReleaseRemove_def)
+  apply (clarsimp simp: tcbReleaseRemove_def tcbQueueRemove_def)
   by (wpsimp wp: threadSet_obj_at' gts_wp' hoare_drop_imps)
 
 lemma schedContextDonate_tcbPriority[wp]:
   "schedContextDonate scPtr tcbPtr \<lbrace>obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t\<rbrace>"
   apply (simp add: schedContextDonate_def)
   by (wpsimp wp: hoare_drop_imps)
-
-crunches cteDeleteOne
-  for tcbPriority_obj_at'[wp]: "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t'"
-  (wp: crunch_wps tcbSchedEnqueue_tcbPriority setThreadState_oa_queued
-   simp: crunch_simps)
 
 lemma asUser_obj_at_unchangedT:
   assumes x: "\<forall>tcb con con'. con' \<in> fst (m con)
@@ -1176,12 +1166,25 @@ lemma thread_actions_isolatableD:
 
 lemma tcbSchedDequeue_rewrite:
   "monadic_rewrite True True (obj_at' (Not \<circ> tcbQueued) t) (tcbSchedDequeue t) (return ())"
-  apply (simp add: tcbSchedDequeue_def)
-  apply wp_pre
-  apply monadic_rewrite_symb_exec_l
-    apply (monadic_rewrite_symb_exec_l_known False, simp)
+  apply (simp add: tcbSchedDequeue_def when_def)
+  apply monadic_rewrite_symb_exec_l+
+      apply (monadic_rewrite_l monadic_rewrite_if_l_False)
      apply (rule monadic_rewrite_refl)
     apply (wpsimp wp: threadGet_const)+
+  done
+
+(* FIXME: improve automation here *)
+lemma switchToThread_rewrite:
+  "monadic_rewrite True True
+       (ct_in_state' (Not \<circ> runnable') and cur_tcb' and obj_at' (Not \<circ> tcbQueued) t)
+       (switchToThread t)
+       (do Arch.switchToThread t; setCurThread t od)"
+  apply (simp add: switchToThread_def Thread_H.switchToThread_def)
+  apply (monadic_rewrite_l tcbSchedDequeue_rewrite, simp)
+   (* strip LHS of getters and asserts until LHS and RHS are the same *)
+   apply (repeat_unless \<open>rule monadic_rewrite_refl\<close> monadic_rewrite_symb_exec_l)
+      apply wpsimp+
+  apply (clarsimp simp: comp_def)
   done
 
 lemma threadGet_isolatable:

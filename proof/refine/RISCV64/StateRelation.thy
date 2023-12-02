@@ -293,9 +293,11 @@ definition reply_relation :: "Structures_A.reply \<Rightarrow> Structures_H.repl
   mild assumptions, a @{term corres_underlying} lemma for @{term "set_object obj"}
   and @{term "setObject obj'"} can be stated: see setObject_other_corres in KHeap_R.
 
-  TCBs do not satisfy this relation because the tcbSchedPrev and tcbSchedNext fields of a TCB are
-  used to model the ready queues, and so an update to such a field would correspond to an update
-  to a ready queue (see ready_queues_relation below).\<close>
+  Scheduling context objects and reply objects do not satisfy this relation because of the
+  reply stack (see sc_replies_relation below). TCBs do not satisfy this relation because the
+  tcbSchedPrev and tcbSchedNext fields of a TCB are used to model the ready queues and the release
+  queue, and so an update to such a field would correspond to an update to a ready queue or the
+  release queue (see ready_queues_relation and release_queue_relation below).\<close>
 definition
   other_obj_relation :: "Structures_A.kernel_object \<Rightarrow> Structures_H.kernel_object \<Rightarrow> bool"
 where
@@ -417,6 +419,7 @@ lemma is_other_obj_relation_type_SchedContext:
 
 lemma is_other_obj_relation_type_Reply:
   "\<not> is_other_obj_relation_type AReply"
+  by (simp add: is_other_obj_relation_type_def)
 
 lemma is_other_obj_relation_type_TCB:
   "\<not> is_other_obj_relation_type ATCB"
@@ -491,8 +494,8 @@ lemma list_queue_relation_nil:
   by (fastforce dest: heap_path_head simp: tcbQueueEmpty_def list_queue_relation_def)
 
 definition ready_queue_relation ::
-  "Deterministic_A.domain \<Rightarrow> Structures_A.priority
-   \<Rightarrow> Deterministic_A.ready_queue \<Rightarrow> ready_queue
+  "Structures_A.domain \<Rightarrow> Structures_A.priority
+   \<Rightarrow> Structures_A.ready_queue \<Rightarrow> ready_queue
    \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref)
    \<Rightarrow> (obj_ref \<Rightarrow> bool) \<Rightarrow> bool"
   where
@@ -502,7 +505,7 @@ definition ready_queue_relation ::
      \<and> (d > maxDomain \<or> p > maxPriority \<longrightarrow> tcbQueueEmpty q')"
 
 definition ready_queues_relation_2 ::
-  "(Deterministic_A.domain \<Rightarrow> Structures_A.priority \<Rightarrow> Deterministic_A.ready_queue)
+  "(Structures_A.domain \<Rightarrow> Structures_A.priority \<Rightarrow> Structures_A.ready_queue)
    \<Rightarrow> (domain \<times> priority \<Rightarrow> ready_queue)
    \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref)
    \<Rightarrow> (domain \<Rightarrow> priority \<Rightarrow> obj_ref \<Rightarrow> bool) \<Rightarrow> bool"
@@ -519,8 +522,21 @@ abbreviation ready_queues_relation :: "det_state \<Rightarrow> kernel_state \<Ri
 
 lemmas ready_queues_relation_def = ready_queues_relation_2_def
 
-definition release_queue_relation :: "Structures_A.release_queue \<Rightarrow> release_queue \<Rightarrow> bool" where
-  "release_queue_relation qs qs' \<equiv> (qs = qs')"
+definition release_queue_relation_2 ::
+  "obj_ref list \<Rightarrow> tcb_queue \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> (obj_ref \<rightharpoonup> obj_ref) \<Rightarrow> (obj_ref \<Rightarrow> bool)
+   \<Rightarrow> bool"
+  where
+  "release_queue_relation_2 ls q nexts prevs flags \<equiv>
+     list_queue_relation ls q nexts prevs
+     \<and> (\<forall>t. flags t \<longleftrightarrow> t \<in> set ls)"
+
+abbreviation release_queue_relation :: "det_state \<Rightarrow> kernel_state \<Rightarrow> bool" where
+  "release_queue_relation s s' \<equiv>
+     release_queue_relation_2
+      (release_queue s) (ksReleaseQueue s') (tcbSchedNexts_of s') (tcbSchedPrevs_of s')
+      (tcbInReleaseQueue |< tcbs_of' s')"
+
+lemmas release_queue_relation_def = release_queue_relation_2_def
 
 definition ghost_relation ::
   "Structures_A.kheap \<Rightarrow> (machine_word \<rightharpoonup> vmpage_size) \<Rightarrow> (machine_word \<rightharpoonup> nat) \<Rightarrow> bool" where
@@ -581,7 +597,7 @@ lemma obj_relation_cutsE:
                       ko' = KOReply reply'; reply_relation reply reply' \<rbrakk>
               \<Longrightarrow> R;
      \<And>tcb tcb'. \<lbrakk> y = x; ko = TCB tcb; ko' = KOTCB tcb'; tcb_relation tcb tcb' \<rbrakk>
-               \<Longrightarrow> R;
+              \<Longrightarrow> R;
      \<And>pt (z :: pt_index) pte'. \<lbrakk> ko = ArchObj (PageTable pt); y = x + (ucast z << pteBits);
                                  ko' = KOArch (KOPTE pte'); pte_relation' (pt z) pte' \<rbrakk>
               \<Longrightarrow> R;
@@ -591,7 +607,7 @@ lemma obj_relation_cutsE:
             \<lbrakk> y = x; other_obj_relation ko ko'; is_other_obj_relation_type (a_type ko) \<rbrakk> \<Longrightarrow> R
     \<rbrakk> \<Longrightarrow> R"
   apply (simp add: obj_relation_cuts_def2 is_other_obj_relation_type_def
-                   a_type_def
+                   a_type_def tcb_relation_cut_def
             split: Structures_A.kernel_object.split_asm if_split_asm
                    RISCV64_A.arch_kernel_obj.split_asm)
   by (clarsimp split: if_splits kernel_object.split_asm,
@@ -660,7 +676,7 @@ definition state_relation :: "(det_state \<times> kernel_state) set" where
        \<and> sc_replies_relation s s'
        \<and> sched_act_relation (scheduler_action s) (ksSchedulerAction s')
        \<and> ready_queues_relation s s'
-       \<and> release_queue_relation (release_queue s) (ksReleaseQueue s')
+       \<and> release_queue_relation s s'
        \<and> ghost_relation (kheap s) (gsUserPages s') (gsCNodes s')
        \<and> cdt_relation (swp cte_at s) (cdt s) (ctes_of s')
        \<and> cdt_list_relation (cdt_list s) (cdt s) (ctes_of s')
@@ -696,21 +712,21 @@ lemma state_relation_pspace_relation[elim!]:
   "(s,s') \<in> state_relation \<Longrightarrow> pspace_relation (kheap s) (ksPSpace s')"
   by (simp add: state_relation_def)
 
-lemma state_relation_release_queue_relation:
-  "(s,s') \<in> state_relation \<Longrightarrow> release_queue_relation (release_queue s) (ksReleaseQueue s')"
+lemma state_relation_sched_act_relation[elim!]:
+  "(s,s') \<in> state_relation \<Longrightarrow> sched_act_relation (scheduler_action s) (ksSchedulerAction s')"
+  by (simp add: state_relation_def)
+
+lemma state_relation_ready_queues_relation[elim!]:
+  "(s, s') \<in> state_relation \<Longrightarrow> ready_queues_relation s s'"
+  by (simp add: state_relation_def)
+
+lemma state_relation_release_queue_relation[elim!]:
+  "(s,s') \<in> state_relation \<Longrightarrow> release_queue_relation s s'"
   by (clarsimp simp: state_relation_def)
 
 lemma state_relation_sc_replies_relation:
   "(s,s') \<in> state_relation \<Longrightarrow> sc_replies_relation s s'"
   using state_relation_def by blast
-
-lemma state_relation_sched_act_relation[elim!]:
-  "(s,s') \<in> state_relation \<Longrightarrow> sched_act_relation (scheduler_action s) (ksSchedulerAction s')"
-  by (clarsimp simp: state_relation_def)
-
-lemma state_relation_ready_queues_relation[elim!]:
-  "(s, s') \<in> state_relation \<Longrightarrow> ready_queues_relation s s'"
-  by (simp add: state_relation_def)
 
 lemma state_relation_idle_thread[elim!]:
   "(s, s') \<in> state_relation \<Longrightarrow> idle_thread s = ksIdleThread s'"
@@ -722,7 +738,7 @@ lemma state_relationD:
   sc_replies_relation s s' \<and>
   sched_act_relation (scheduler_action s) (ksSchedulerAction s') \<and>
   ready_queues_relation s s' \<and>
-  release_queue_relation (release_queue s) (ksReleaseQueue s') \<and>
+  release_queue_relation s s' \<and>
   ghost_relation (kheap s) (gsUserPages s') (gsCNodes s') \<and>
   cdt_relation (swp cte_at s) (cdt s) (ctes_of s') \<and>
   cdt_list_relation (cdt_list s) (cdt s) (ctes_of s') \<and>
@@ -750,7 +766,7 @@ lemma state_relationE [elim?]:
             sc_replies_relation s s';
             sched_act_relation (scheduler_action s) (ksSchedulerAction s');
             ready_queues_relation s s';
-            release_queue_relation (release_queue s) (ksReleaseQueue s');
+            release_queue_relation s s';
             ghost_relation (kheap s) (gsUserPages s') (gsCNodes s');
             cdt_relation (swp cte_at s) (cdt s) (ctes_of s') \<and>
             revokable_relation (is_original_cap s) (null_filter (caps_of_state s)) (ctes_of s');

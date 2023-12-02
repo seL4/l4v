@@ -24,7 +24,7 @@ This module uses the C preprocessor to select a target architecture.
 >         refillCapacity, readRefillCapacity, getRefillCapacity, refillBudgetCheck,
 >         refillBudgetCheckRoundRobin, updateSchedContext, emptyRefill,
 >         isCurDomainExpired, refillUnblockCheck,ifCondRefillUnblockCheck,
->         readRefillReady, refillReady, tcbReleaseEnqueue, tcbReleaseDequeue,
+>         readRefillReady, refillReady, tcbReleaseEnqueue, tcbQueueRemove, tcbReleaseDequeue,
 >         refillSufficient, readRefillSufficient, getRefillSufficient, postpone,
 >         schedContextDonate, maybeDonateSc, maybeReturnSc, schedContextUnbindNtfn,
 >         schedContextMaybeUnbindNtfn, isRoundRobin, getRefills, setRefills, getRefillFull,
@@ -32,7 +32,7 @@ This module uses the C preprocessor to select a target architecture.
 >         schedContextUnbindReply, schedContextSetInactive, unbindFromSC,
 >         schedContextCancelYieldTo, refillAbsoluteMax, schedContextUpdateConsumed,
 >         scReleased, setConsumed, refillResetRR, preemptionPoint, refillHdInsufficient,
->         nonOverlappingMergeRefills, headInsufficientLoop, maxReleaseTime
+>         nonOverlappingMergeRefills, headInsufficientLoop, maxReleaseTime, scActive
 >     ) where
 
 \begin{impdetails}
@@ -53,7 +53,7 @@ This module uses the C preprocessor to select a target architecture.
 > import {-# SOURCE #-} SEL4.Object.Notification
 > import {-# SOURCE #-} SEL4.Object.Reply
 > import SEL4.Object.Structures
-> import {-# SOURCE #-} SEL4.Object.TCB(threadGet, threadSet, checkBudget, chargeBudget, updateAt, setTimeArg, setMessageInfo, setMRs)
+> import {-# SOURCE #-} SEL4.Object.TCB(threadGet, threadSet, checkBudget, chargeBudget, updateAt, setTimeArg, setMessageInfo, setMRs, threadRead)
 > import {-# SOURCE #-} SEL4.Kernel.Thread
 > import SEL4.API.Invocation(SchedContextInvocation(..), SchedControlInvocation(..))
 
@@ -143,16 +143,23 @@ This module uses the C preprocessor to select a target architecture.
 >     sc <- getSchedContext scPtr
 >     setSchedContext scPtr (sc { scRefills = refills })
 
-> scActive :: PPtr SchedContext -> Kernel Bool
-> scActive scPtr = do
->     sc <- getSchedContext scPtr
+> readScActive :: PPtr SchedContext -> KernelR Bool
+> readScActive scPtr = do
+>     sc <- readSchedContext scPtr
 >     return $ scRefillMax sc > 0
 
+> scActive :: PPtr SchedContext -> Kernel Bool
+> scActive scPtr = getsJust (readScActive scPtr)
+
+> readScReleased :: PPtr SchedContext -> KernelR Bool
+> readScReleased scPtr = do
+>     active <- readScActive scPtr
+>     if active
+>         then readRefillReady scPtr
+>         else return False
+
 > scReleased :: PPtr SchedContext -> Kernel Bool
-> scReleased scPtr = do
->     active <- scActive scPtr
->     ready <- refillReady scPtr
->     return $ active && ready
+> scReleased scPtr = getsJust (readScReleased scPtr)
 
 > refillSingle :: PPtr SchedContext -> Kernel Bool
 > refillSingle scPtr = do
@@ -263,9 +270,9 @@ This module uses the C preprocessor to select a target architecture.
 
 > readRefillReady :: PPtr SchedContext -> KernelR Bool
 > readRefillReady scPtr = do
->     sc <- readSchedContext scPtr
+>     head <- readRefillHead scPtr
 >     curTime <- readCurTime
->     return $ rTime (refillHd sc) <= curTime + kernelWCETTicks
+>     return $ rTime head <= curTime + kernelWCETTicks
 
 > refillReady :: PPtr SchedContext -> Kernel Bool
 > refillReady scPtr = getsJust (readRefillReady scPtr)
@@ -568,6 +575,7 @@ This module uses the C preprocessor to select a target architecture.
 > postpone :: PPtr SchedContext -> Kernel ()
 > postpone scPtr = do
 >     sc <- getSchedContext scPtr
+>     assert (scTCB sc /= Nothing) "the sc must have an associated tcb"
 >     tptr <- return $ fromJust $ scTCB sc
 >     tcbSchedDequeue tptr
 >     tcbReleaseEnqueue tptr
@@ -637,17 +645,6 @@ This module uses the C preprocessor to select a target architecture.
 >         schedContextUnbindReply scPtr
 >     InvokeSchedContextYieldTo scPtr buffer -> do
 >         schedContextYieldTo scPtr buffer
-
-> getTCBSc :: PPtr TCB -> Kernel SchedContext
-> getTCBSc tcbPtr = do
->     scOpt <- threadGet tcbSchedContext tcbPtr
->     assert (scOpt /= Nothing) "getTCBSc: SchedContext pointer must not be Nothing"
->     getSchedContext $ fromJust scOpt
-
-> getScTime :: PPtr TCB -> Kernel Time
-> getScTime tcbPtr = do
->     sc <- getTCBSc tcbPtr
->     return $ rTime (refillHd sc)
 
 > schedContextDonate :: PPtr SchedContext -> PPtr TCB -> Kernel ()
 > schedContextDonate scPtr tcbPtr = do
@@ -771,25 +768,84 @@ This module uses the C preprocessor to select a target architecture.
 >         cur <- getCurThread
 >         when (tcbPtr == cur) rescheduleRequired
 
+> readReadyTime :: PPtr SchedContext -> KernelR Time
+> readReadyTime scPtr = do
+>     head <- readRefillHead scPtr
+>     return $ rTime head
+
+> readTCBReadyTime :: PPtr TCB -> KernelR Time
+> readTCBReadyTime tcbPtr = do
+>     scPtrOpt <- threadRead tcbSchedContext tcbPtr
+>     assert (scPtrOpt /= Nothing) "tcbPtr must have an associated scheduling context"
+>     scPtr <- return $ fromJust scPtrOpt
+>     active <- readScActive scPtr
+>     assert active "the sc must be active"
+>     readReadyTime (fromJust scPtrOpt)
+
+> getTCBReadyTime :: PPtr TCB -> Kernel Time
+> getTCBReadyTime tcbPtr = getsJust (readTCBReadyTime tcbPtr)
+
+> timeAfter :: Maybe (PPtr TCB) -> Time -> KernelR Bool
+> timeAfter tcbPtrOpt newTime = do
+>     if (tcbPtrOpt /= Nothing)
+>         then do
+>           tcbPtr <- return $ fromJust tcbPtrOpt
+>           time <- readTCBReadyTime (fromJust tcbPtrOpt)
+>           return $ time <= newTime
+>         else return False
+
+> findTimeAfter :: Maybe (PPtr TCB) -> Time -> Kernel (Maybe (PPtr TCB))
+> findTimeAfter tcbPtrOpt newTime = do
+>     stateAssert tcbInReleaseQueue_imp_active_sc_tc_at'_asrt
+>         "Every thread in the release queue is associated with an active scheduling context"
+>     whileLoop (\afterPtrOpt -> fromJust . runReaderT (timeAfter afterPtrOpt newTime))
+>               (\afterPtrOpt -> do
+>                   tcb <- getObject (fromJust afterPtrOpt)
+>                   return $ tcbSchedNext tcb)
+>               tcbPtrOpt
+
 > tcbReleaseEnqueue :: PPtr TCB -> Kernel ()
 > tcbReleaseEnqueue tcbPtr = do
->     time <- getScTime tcbPtr
->     qs <- getReleaseQueue
->     times <- mapM getScTime qs
->     qst <- return $ zip qs times
->     qst' <- return $ filter (\(_,t') -> t' <= time) qst ++ [(tcbPtr, time)] ++ filter (\(_,t') -> not (t' <= time)) qst
->     when (filter (\(_,t') -> t' <= time) qst == []) $
->         setReprogramTimer True
->     setReleaseQueue (map fst qst')
+>     stateAssert ready_or_release'_asrt
+>         "Assert that `ready_or_release'` holds"
+>     stateAssert (not_tcbQueued_asrt tcbPtr)
+>         "tcbPtr must not have the tcbQueued flag set"
+>     stateAssert ksReadyQueues_asrt ""
+>     stateAssert ksReleaseQueue_asrt ""
+>     runnable <- isRunnable tcbPtr
+>     assert runnable "thread must be runnable"
+>     tcb <- getObject tcbPtr
+>     assert (tcbInReleaseQueue tcb == False) "tcbPtr must not already be in the release queue"
+>     newTime <- getTCBReadyTime tcbPtr
+>     queue <- getReleaseQueue
+>     ifM (orM (return (tcbQueueEmpty queue))
+>              (do
+>                headTime <- getTCBReadyTime (fromJust $ tcbQueueHead queue)
+>                return (newTime < headTime)))
+>         (do
+>           newQueue <- tcbQueuePrepend queue tcbPtr
+>           setReleaseQueue newQueue
+>           setReprogramTimer True)
+>         (do
+>           assert (tcbQueueHead queue /= Nothing && tcbQueueEnd queue /= Nothing) "the queue is nonempty"
+>           lastTime <- getTCBReadyTime (fromJust $ tcbQueueEnd queue)
+>           if lastTime <= newTime
+>               then do
+>                   newQueue <- tcbQueueAppend queue tcbPtr
+>                   setReleaseQueue newQueue
+>               else do
+>                   afterPtrOpt <- findTimeAfter (tcbQueueHead queue) newTime
+>                   assert (afterPtrOpt /= Nothing) "the afterPtr must be in the queue"
+>                   afterPtr <- return $ fromJust afterPtrOpt
+>                   stateAssert (findTimeAfter_asrt afterPtr) "tcbPtr must be in the release queue"
+>                   tcbQueueInsert tcbPtr afterPtr)
 >     threadSet (\t -> t { tcbInReleaseQueue = True }) tcbPtr
 
 > tcbReleaseDequeue :: Kernel (PPtr TCB)
 > tcbReleaseDequeue = do
->     qs <- getReleaseQueue
->     tcbPtr <- return $ head qs
->     setReleaseQueue $ tail qs
->     threadSet (\t -> t { tcbInReleaseQueue = False }) tcbPtr
->     setReprogramTimer True
+>     queue <- getReleaseQueue
+>     tcbPtr <- return $ fromJust $ tcbQueueHead queue
+>     tcbReleaseRemove tcbPtr
 >     return tcbPtr
 
 In preemptible code, the kernel may explicitly mark a preemption point with the "preemptionPoint" function. The preemption will only be taken if an interrupt has occurred and the preemption point has been called "workUnitsLimit" times.

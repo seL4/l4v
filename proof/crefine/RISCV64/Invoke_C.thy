@@ -42,8 +42,7 @@ lemma cap_case_ThreadCap2:
 
 lemma setDomain_ccorres:
   "ccorres dc xfdc
-      (invs' and tcb_at' t and sch_act_simple and (\<lambda>s. \<forall>d p. distinct (ksReadyQueues s (d, p)))
-       and ready_or_release' and (\<lambda>s. d \<le> maxDomain))
+      (invs' and tcb_at' t and (\<lambda>s. d \<le> maxDomain))
       (UNIV \<inter> {s. tptr_' s = tcb_ptr_to_ctcb_ptr t} \<inter> {s. dom_' s = ucast d})
       [] (setDomain t d) (Call setDomain_'proc)"
   apply (rule ccorres_gen_asm)
@@ -72,33 +71,22 @@ lemma setDomain_ccorres:
           apply (ctac add: rescheduleRequired_ccorres)
          apply (rule ccorres_return_Skip')
         apply simp
-        apply (wp hoare_drop_imps weak_sch_act_wf_lift_linear)
+        apply (wp hoare_drop_imps)
        apply (simp add: guard_is_UNIV_def)
       apply simp
       apply wp
-     apply (rule_tac Q="\<lambda>rv'. invs' and tcb_at' t and sch_act_simple
-                              and (\<lambda>s. curThread = ksCurThread s)
-                              and (\<lambda>s. \<forall>d p. distinct (ksReadyQueues s (d, p)))
-                              and (\<lambda>s. rv' \<longrightarrow> \<not> t \<in> set (ksReleaseQueue s))
-                              and ready_or_release'"
+     apply (rule_tac Q="\<lambda>rv'. invs' and tcb_at' t and (\<lambda>s. curThread = ksCurThread s)"
                   in hoare_strengthen_post)
        apply (wpsimp wp: isSchedulable_wp)
       apply (fastforce simp: valid_pspace_valid_objs' weak_sch_act_wf_def
                       split: if_splits)
-     apply (rule_tac Q="\<lambda>_. invs' and tcb_at' t and sch_act_simple
-                            and (\<lambda>s. curThread = ksCurThread s \<and> (\<forall>p. t \<notin> set (ksReadyQueues s p)))
-                            and (\<lambda>s. \<forall>d p. distinct (ksReadyQueues s (d, p)))
-                            and (\<lambda>s. isSchedulable_bool t s \<longrightarrow> \<not> t \<in> set (ksReleaseQueue s))
-                            and ready_or_release'"
+     apply (rule_tac Q="\<lambda>_. invs' and tcb_at' t and (\<lambda>s. curThread = ksCurThread s)"
                   in hoare_strengthen_post)
       apply (wpsimp wp: threadSet_tcbDomain_update_invs' hoare_vcg_imp_lift'
                         threadSet_isSchedulable_bool)+
     apply (simp add: guard_is_UNIV_def)
-   apply (wpsimp wp: tcbSchedDequeue_not_in_queue hoare_vcg_all_lift hoare_vcg_imp_lift'
-                     tcbSchedDequeue_ready_or_release'_inv)
-  apply (fastforce dest: invs_valid_release_queue
-                   simp: isSchedulable_bool_def pred_map_simps opt_map_def obj_at_simps
-                         valid_release_queue_def)
+   apply (wpsimp wp: tcbSchedDequeue_not_queued hoare_vcg_all_lift hoare_vcg_imp_lift')
+  apply (fastforce simp: isSchedulable_bool_def pred_map_simps opt_map_def obj_at_simps)
   done
 
 lemma decodeDomainInvocation_ccorres:
@@ -114,9 +102,7 @@ lemma decodeDomainInvocation_ccorres:
               and (\<lambda>s. \<forall>v \<in> set extraCaps.
                              s \<turnstile>' fst v)
               and sysargs_rel args buffer
-              and (\<lambda>s. \<forall>d p. distinct (ksReadyQueues s (d, p)) \<and> thread \<notin> set (ksReadyQueues s (d,p)))
-              and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)
-              and ready_or_release')
+              and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s))
        (UNIV
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
@@ -191,7 +177,7 @@ lemma decodeDomainInvocation_ccorres:
            apply (ctac add: ccorres_return_CE)
           apply wp
          apply (vcg exspec=setDomain_modifies)
-        apply (wp sts_invs_minor' sts_ksQ hoare_vcg_all_lift)
+        apply (wp sts_invs_minor' hoare_vcg_all_lift)
        apply (vcg exspec=setThreadState_modifies)
       apply wp
       apply simp
@@ -202,8 +188,7 @@ lemma decodeDomainInvocation_ccorres:
    apply clarsimp
    apply (vcg exspec=getSyscallArg_modifies)
 
-  apply (clarsimp simp: valid_tcb_state'_def invs_valid_queues' invs_valid_objs'
-                        invs_queues ct_in_state'_def pred_tcb_at'
+  apply (clarsimp simp: valid_tcb_state'_def invs_valid_objs' ct_in_state'_def pred_tcb_at'
                         rf_sr_ksCurThread word_sle_def word_sless_def sysargs_rel_to_n
                         mask_eq_iff_w2p mask_eq_iff_w2p word_size ThreadState_defs)
   apply (rule conjI)
@@ -215,8 +200,6 @@ lemma decodeDomainInvocation_ccorres:
    apply (clarsimp simp: valid_cap_simps' pred_tcb'_weakenE active_runnable')
    apply (intro conjI; fastforce?)
     apply (fastforce simp: tcb_st_refs_of'_def elim:pred_tcb'_weakenE)
-   apply (rule conjI)
-    apply fastforce
    apply (simp add: word_le_nat_alt unat_ucast unat_numDomains_to_H le_maxDomain_eq_less_numDomains)
   apply (clarsimp simp: ccap_relation_def cap_to_H_simps cap_thread_cap_lift)
   subgoal (* args ! 0 can be contained in a domain-sized word *)
@@ -704,7 +687,7 @@ lemma decodeCNodeInvocation_ccorres:
                               apply simp
                               apply (wp injection_wp_E[OF refl])
                               apply (rule hoare_post_imp_R)
-                               apply (rule_tac Q'="\<lambda>rv. valid_pspace' and valid_queues
+                               apply (rule_tac Q'="\<lambda>rv. valid_pspace'
                                                         and valid_cap' rv and valid_objs'
                                                         and tcb_at' thread
                                                         and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)"
@@ -782,7 +765,7 @@ lemma decodeCNodeInvocation_ccorres:
                                   apply (simp add: conj_comms valid_tcb_state'_def)
                                   apply (wp injection_wp_E[OF refl])
                                   apply (rule hoare_post_imp_R)
-                                   apply (rule_tac Q'="\<lambda>rv. valid_pspace' and valid_queues
+                                   apply (rule_tac Q'="\<lambda>rv. valid_pspace'
                                                             and valid_cap' rv and valid_objs'
                                                             and tcb_at' thread
                                                             and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)"
@@ -906,7 +889,7 @@ lemma decodeCNodeInvocation_ccorres:
                        apply (clarsimp simp:cte_wp_at_ctes_of)
                        apply (drule ctes_of_valid')
                        apply (erule invs_valid_objs')
-                      apply (force simp: sysargs_rel_to_n valid_updateCapDataI invs_queues
+                      apply (force simp: sysargs_rel_to_n valid_updateCapDataI
                                          invs_valid_objs' invs_valid_pspace')
                      apply (wp hoare_vcg_all_lift_R injection_wp_E[OF refl]
                                lsfco_cte_at' hoare_vcg_const_imp_lift_R)+

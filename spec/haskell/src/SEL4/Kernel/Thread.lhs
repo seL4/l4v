@@ -19,7 +19,7 @@ We use the C preprocessor to select a target architecture.
 \begin{impdetails}
 
 % {-# BOOT-IMPORTS: SEL4.Model SEL4.Machine SEL4.Object.Structures SEL4.Object.Instances() SEL4.API.Types #-}
-% {-# BOOT-EXPORTS: setDomain setMCPriority setPriority getThreadState setThreadState setBoundNotification getBoundNotification doIPCTransfer isRunnable restart suspend  doReplyTransfer tcbSchedEnqueue tcbSchedDequeue rescheduleRequired scheduleTCB isSchedulable possibleSwitchTo endTimeslice inReleaseQueue tcbReleaseRemove tcbSchedAppend switchToThread tcbQueueEmpty tcbQueuePrepend tcbQueueAppend tcbQueueInsert tcbQueueRemove#-}
+% {-# BOOT-EXPORTS: setDomain setMCPriority setPriority getThreadState setThreadState setBoundNotification getBoundNotification doIPCTransfer isRunnable restart suspend  doReplyTransfer tcbQueueEmpty tcbQueuePrepend tcbQueueAppend tcbQueueInsert tcbQueueRemove tcbSchedEnqueue tcbSchedDequeue rescheduleRequired scheduleTCB isSchedulable possibleSwitchTo endTimeslice inReleaseQueue tcbReleaseRemove tcbSchedAppend switchToThread #-}
 
 > import Prelude hiding (Word)
 > import SEL4.Config
@@ -331,6 +331,7 @@ has the highest runnable priority in the system on kernel entry (unless idle).
 
 > scheduleChooseNewThread :: Kernel ()
 > scheduleChooseNewThread = do
+>     stateAssert ksReadyQueues_asrt ""
 >     domainTime <- getDomainTime
 >     when (domainTime == 0) $ nextDomain
 >     chooseThread
@@ -464,8 +465,6 @@ Note also that the level 2 bitmap array is stored in reverse in order to get bet
 >             prio <- getHighestPrio curdom
 >             queue <- getQueue curdom prio
 >             let thread = fromJust $ tcbQueueHead queue
->             schedulable <- isSchedulable thread
->             assert schedulable "Scheduled a non-runnable thread"
 >             switchToThread thread
 >         else
 >             switchToIdleThread
@@ -759,7 +758,12 @@ tcbPtr is in the middle of the queue
 
 > tcbSchedEnqueue :: PPtr TCB -> Kernel ()
 > tcbSchedEnqueue thread = do
+>     stateAssert ready_or_release'_asrt
+>         "Assert that `ready_or_release'` holds"
+>     stateAssert (not_tcbInReleaseQueue_asrt thread)
+>         "thread must not have the tcbInReleaseQueue flag set"
 >     stateAssert ksReadyQueues_asrt ""
+>     stateAssert ksReleaseQueue_asrt ""
 >     runnable <- isRunnable thread
 >     assert runnable "thread must be runnable"
 >     queued <- threadGet tcbQueued thread
@@ -774,7 +778,12 @@ tcbPtr is in the middle of the queue
 
 > tcbSchedAppend :: PPtr TCB -> Kernel ()
 > tcbSchedAppend thread = do
+>     stateAssert ready_or_release'_asrt
+>         "Assert that `ready_or_release'` holds"
+>     stateAssert (not_tcbInReleaseQueue_asrt thread)
+>         "thread must not have the tcbInReleaseQueue flag set"
 >     stateAssert ksReadyQueues_asrt ""
+>     stateAssert ksReleaseQueue_asrt ""
 >     runnable <- isRunnable thread
 >     assert runnable "thread must be runnable"
 >     queued <- threadGet tcbQueued thread
@@ -791,6 +800,8 @@ The following function dequeues a thread, if it is queued.
 
 > tcbSchedDequeue :: PPtr TCB -> Kernel ()
 > tcbSchedDequeue thread = do
+>     stateAssert ready_or_release'_asrt
+>         "Assert that `ready_or_release'` holds"
 >     stateAssert ksReadyQueues_asrt ""
 >     queued <- threadGet tcbQueued thread
 >     when queued $ do
@@ -830,10 +841,16 @@ Kernel init will created a initial thread whose tcbPriority is max priority.
 
 > tcbReleaseRemove :: PPtr TCB -> Kernel ()
 > tcbReleaseRemove tcbPtr = do
->     releaseQueue <- getReleaseQueue
->     when (releaseQueue /= [] && head releaseQueue == tcbPtr) $
->         setReprogramTimer True
->     setReleaseQueue (filter (/=tcbPtr) releaseQueue)
->     threadSet (\t -> t { tcbInReleaseQueue = False }) tcbPtr
+>     stateAssert ready_or_release'_asrt
+>         "Assert that `ready_or_release'` holds"
+>     stateAssert ksReleaseQueue_asrt ""
+>     queued <- inReleaseQueue tcbPtr
+>     when queued $ do
+>         releaseQueue <- getReleaseQueue
+>         when (tcbQueueHead releaseQueue == Just tcbPtr) $
+>             setReprogramTimer True
+>         new_queue <- tcbQueueRemove releaseQueue tcbPtr
+>         setReleaseQueue new_queue
+>         threadSet (\t -> t { tcbInReleaseQueue = False }) tcbPtr
 
 %

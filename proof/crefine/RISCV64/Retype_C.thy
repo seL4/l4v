@@ -3371,19 +3371,20 @@ proof -
     unfolding ctcb_relation_def makeObject_tcb heap_updates_defs initContext_registers_def domrel
     apply (simp add: fbtcb minBound_word)
     apply (intro conjI)
-         apply (simp add: cthread_state_relation_def thread_state_lift_def
-                          eval_nat_numeral ThreadState_defs)
-        apply (clarsimp simp: ccontext_relation_def newContext_def2 carch_tcb_relation_def
-                              newArchTCB_def cregs_relation_def atcbContextGet_def)
-        apply (case_tac r; simp add: C_register_defs index_foldr_update
-                                     atcbContext_def newArchTCB_def newContext_def
-                                     initContext_def)
-       apply (simp add: thread_state_lift_def index_foldr_update atcbContextGet_def)+
-     apply (fastforce intro: domrel)
-    apply (simp add: cfault_rel_def seL4_Fault_lift_def seL4_Fault_get_tag_def Let_def
-                     lookup_fault_lift_def lookup_fault_get_tag_def lookup_fault_invalid_root_def
-                     index_foldr_update seL4_Fault_NullFault_def option_to_ptr_def option_to_0_def
-              split: if_split)
+          apply (simp add: cthread_state_relation_def thread_state_lift_def
+                           eval_nat_numeral ThreadState_Inactive_def)
+         apply (clarsimp simp: ccontext_relation_def newContext_def2 carch_tcb_relation_def
+                               newArchTCB_def cregs_relation_def atcbContextGet_def)
+         apply (case_tac r; simp add: C_register_defs index_foldr_update
+                                      atcbContext_def newArchTCB_def newContext_def
+                                      initContext_def)
+        apply (simp add: thread_state_lift_def index_foldr_update atcbContextGet_def)+
+      apply (fastforce intro: domrel)
+     apply (simp add: cfault_rel_def seL4_Fault_lift_def seL4_Fault_get_tag_def Let_def
+                      lookup_fault_lift_def lookup_fault_get_tag_def lookup_fault_invalid_root_def
+                      index_foldr_update seL4_Fault_NullFault_def option_to_ptr_def option_to_0_def
+               split: if_split)
+    apply (simp add: option_to_ctcb_ptr_def)
     done
 
   have pks: "ks (ctcb_ptr_to_tcb_ptr p) = None"
@@ -3427,24 +3428,10 @@ proof -
     apply fastforce
     done
 
-  hence kstcb: "\<And>qdom prio. ctcb_ptr_to_tcb_ptr p \<notin> set (ksReadyQueues \<sigma> (qdom, prio))" using vq
-    apply (clarsimp simp add: valid_queues_def valid_queues_no_bitmap_def)
-    apply (drule_tac x = qdom in spec)
-    apply (drule_tac x = prio in spec)
-    apply clarsimp
-    apply (drule (1) bspec)
-    apply (simp add: obj_at'_def)
-    done
-
   have pks': "ksPSpace \<sigma> (ctcb_ptr_to_tcb_ptr p) = None" using pks kssub
     apply -
     apply (erule contrapos_pp)
     apply (fastforce simp: dom_def)
-    done
-
-  hence ksrlqtcb: "ctcb_ptr_to_tcb_ptr p \<notin> set (ksReleaseQueue \<sigma>)"
-  using vrlq
-    apply (fastforce simp: valid_release_queue_def obj_at'_def)
     done
 
   have ball_subsetE:
@@ -3587,8 +3574,8 @@ proof -
     apply (simp add: cl_cte [simplified] cl_tcb [simplified] cl_rest [simplified] tag_disj_via_td_name)
     apply (clarsimp simp: cready_queues_relation_def Let_def
                           htd_safe[simplified] kernel_data_refs_domain_eq_rotate)
-    by (simp add: heap_updates_def kstcb tcb_queue_update_other'
-                  ksrlqtcb tcb_queue_update_other hrs_htd_update
+    by (simp add: heap_updates_def tcb_queue_update_other'
+                  tcb_queue_update_other hrs_htd_update
                   ptr_retyp_to_array[simplified] irq[simplified])
 qed
 
@@ -4581,7 +4568,7 @@ lemma Arch_initContext_spec':
 lemma ccorres_placeNewObject_tcb:
   "ccorresG rf_sr \<Gamma> dc xfdc
    (pspace_aligned' and pspace_distinct' and pspace_bounded'
-      and pspace_no_overlap' regionBase tcbBlockSizeBits and valid_queues and valid_release_queue
+      and pspace_no_overlap' regionBase tcbBlockSizeBits
       and (\<lambda>s. sym_refs (state_refs_of' s))
       and (\<lambda>s. 2 ^ tcbBlockSizeBits \<le> gsMaxObjectSize s)
       and ret_zero regionBase (2 ^ tcbBlockSizeBits)
@@ -5277,7 +5264,7 @@ qed
 lemma ccorres_placeNewObject_sc:
   "ccorresG rf_sr \<Gamma> dc xfdc
    (pspace_aligned' and pspace_distinct' and pspace_bounded'
-      and pspace_no_overlap' regionBase userSize and valid_queues and valid_release_queue
+      and pspace_no_overlap' regionBase userSize
       and (\<lambda>s. sym_refs (state_refs_of' s))
       and ret_zero regionBase (2 ^ userSize)
       and K (regionBase \<noteq> 0 \<and> range_cover regionBase userSize userSize 1
@@ -5696,7 +5683,7 @@ qed
 lemma placeNewObject_user_data:
   "ccorresG rf_sr \<Gamma> dc xfdc
   (pspace_aligned' and pspace_distinct' and pspace_bounded' and pspace_no_overlap' regionBase (pageBits+us)
-  and valid_queues and valid_machine_state'
+  and valid_machine_state'
   and ret_zero regionBase (2 ^ (pageBits+us))
   and (\<lambda>s. sym_refs (state_refs_of' s))
   and (\<lambda>s. 2^(pageBits +  us) \<le> gsMaxObjectSize s)
@@ -6129,19 +6116,11 @@ lemma threadSet_domain_ccorres [corres]:
   apply (simp add: map_to_ctes_upd_tcb_no_ctes map_to_tcbs_upd tcb_cte_cases_def cteSizeBits_def)
   apply (simp add: cep_relations_drop_fun_upd
                    cvariable_relation_upd_const ko_at_projectKO_opt)
-  apply (rule conjI)
-   apply (drule ko_at_projectKO_opt)
-   apply (erule (2) cmap_relation_upd_relI)
-     subgoal by (simp add: ctcb_relation_def)
-    apply assumption
-   apply simp
-  apply (rule conjI)
-   apply (erule cready_queues_relation_not_queue_ptrs)
-    apply (rule ext, simp split: if_split)
-   apply (rule ext, simp split: if_split)
-  apply (erule iffD2[OF tcb_queue_relation_only_next_prev, rotated -1])
-   apply (rule ext, simp split: if_split)
-  apply (rule ext, simp split: if_split)
+  apply (drule ko_at_projectKO_opt)
+  apply (erule (2) cmap_relation_upd_relI)
+    subgoal by (simp add: ctcb_relation_def)
+   apply assumption
+  apply simp
   done
 
 lemma createObject_ccorres:
@@ -6268,7 +6247,6 @@ proof -
                                  createObject_c_preconds_def)
            apply (frule invs_pspace_aligned')
            apply (frule invs_pspace_distinct')
-           apply (frule invs_queues)
 
            apply (simp add: getObjectSize_def objBits_simps word_bits_conv
                             apiGetObjectSize_def
@@ -6311,9 +6289,6 @@ proof -
                                  cap_endpoint_cap_lift sign_extend_canonical_address
                           split: option.splits   dest!: range_cover.aligned)
           apply (clarsimp simp: createObject_hs_preconds_def isFrameType_def)
-          apply (frule invs_pspace_aligned')
-          apply (frule invs_pspace_distinct')
-          apply (frule invs_queues)
           apply (auto simp: getObjectSize_def objBits_simps apiGetObjectSize_def
                             epSizeBits_def word_bits_conv
                     elim!: is_aligned_no_wrap'   intro!: range_cover_simpleI)[1]
@@ -6348,7 +6323,6 @@ proof -
          apply (clarsimp simp: createObject_hs_preconds_def isFrameType_def)
          apply (frule invs_pspace_aligned')
          apply (frule invs_pspace_distinct')
-         apply (frule invs_queues)
          apply (auto simp: getObjectSize_def objBits_simps
                            apiGetObjectSize_def ntfnSizeBits_def word_bits_conv
                     elim!: is_aligned_no_wrap'
@@ -6387,7 +6361,6 @@ proof -
          apply (clarsimp simp: createObject_hs_preconds_def isFrameType_def)
          apply (frule invs_pspace_aligned')
          apply (frule invs_pspace_distinct')
-         apply (frule invs_queues)
          apply (frule(1) ghost_assertion_size_logic_no_unat)
          apply (clarsimp simp: getObjectSize_def objBits_simps apiGetObjectSize_def
                                cteSizeBits_def word_bits_conv add.commute createObject_c_preconds_def
@@ -6437,9 +6410,6 @@ proof -
         apply (subst word_le_mask_eq, clarsimp simp: mask_def, unat_arith,
                auto simp: untypedBits_defs)[1]
        apply (clarsimp simp: createObject_hs_preconds_def isFrameType_def)
-       apply (frule invs_pspace_aligned')
-       apply (frule invs_pspace_distinct')
-       apply (frule invs_queues)
        apply fastforce
 
       (* Reply *)
@@ -6465,9 +6435,6 @@ proof -
         apply wp
        apply (clarsimp simp: ccap_relation_def cap_to_H_def cap_reply_cap_lift)
       apply (clarsimp simp: createObject_hs_preconds_def isFrameType_def)
-      apply (frule invs_pspace_aligned')
-      apply (frule invs_pspace_distinct')
-      apply (frule invs_queues)
       apply fastforce
 
      apply simp

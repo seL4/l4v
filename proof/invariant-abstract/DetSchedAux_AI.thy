@@ -1227,6 +1227,10 @@ lemma get_tcb_queue_wp[wp]: "\<lbrace>\<lambda>s. P (ready_queues s t p) s\<rbra
 lemma enqueue_distinct[intro!]: "distinct queue \<Longrightarrow> distinct (tcb_sched_enqueue thread queue)"
   by (simp add: tcb_sched_enqueue_def)
 
+lemma append_distinct[intro!]:
+  "distinct queue \<Longrightarrow> distinct (tcb_sched_append thread queue)"
+  by (simp add: tcb_sched_append_def)
+
 lemma is_activatable_trivs[iff]:
   "is_activatable_2 ct (switch_thread t) kh"
   "is_activatable_2 ct choose_new_thread kh"

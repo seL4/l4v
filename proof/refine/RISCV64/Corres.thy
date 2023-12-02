@@ -23,6 +23,8 @@ abbreviation
 abbreviation
   "ex_abs \<equiv> ex_abs_underlying state_relation"
 
+lemmas ex_abs_def = ex_abs_underlying_def
+
 abbreviation "sr_inv P P' f \<equiv> sr_inv_ul state_relation P P' f"
 
 lemmas sr_inv_def = sr_inv_ul_def

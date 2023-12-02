@@ -249,8 +249,6 @@ No type checks are performed when deleting objects; "deleteObjects" simply delet
 >             "Assert that `sym_refs (state_refs_of' s)` holds"
 >         stateAssert valid_idle'_asrt
 >             "Assert that `valid_idle' s` holds"
->         stateAssert release_q_runnable_asrt
->             "Assert that threads in the release queue are runnable'"
 >         unless (fromPPtr ptr .&. mask bits == 0) $
 >             alignError bits
 >         stateAssert (deletionIsSafe ptr bits)

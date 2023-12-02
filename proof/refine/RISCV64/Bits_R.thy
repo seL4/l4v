@@ -111,10 +111,6 @@ lemma sc_of'_Sched[simp]:
   "sc_of' (KOSchedContext sc) = Some sc"
   by (simp add: projectKO_sc)
 
-lemma tcb_of'_TCB[simp]:
-  "tcb_of' (KOTCB tcb) = Some tcb"
-  by (simp add: projectKO_tcb)
-
 lemma projectKO_ASID:
   "(projectKO_opt ko = Some t) = (ko = KOArch (KOASIDPool t))"
   by (cases ko)

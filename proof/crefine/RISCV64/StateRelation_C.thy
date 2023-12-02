@@ -21,7 +21,6 @@ definition
 definition option_to_ctcb_ptr :: "machine_word option \<Rightarrow> tcb_C ptr" where
   "option_to_ctcb_ptr x \<equiv> case x of None \<Rightarrow> NULL | Some t \<Rightarrow> tcb_ptr_to_ctcb_ptr t"
 
-
 definition
   byte_to_word_heap :: "(machine_word \<Rightarrow> word8) \<Rightarrow> (machine_word \<Rightarrow> 9 word \<Rightarrow> machine_word)"
   where
@@ -379,7 +378,9 @@ where
                   (lookup_fault_lift (tcbLookupFailure_C ctcb))
      \<and> option_to_ptr (tcbBoundNotification atcb) = tcbBoundNotification_C ctcb
      \<and> option_to_ptr (tcbSchedContext atcb) = tcbSchedContext_C ctcb
-     \<and> option_to_ptr (tcbYieldTo atcb) = tcbYieldTo_C ctcb"
+     \<and> option_to_ptr (tcbYieldTo atcb) = tcbYieldTo_C ctcb
+     \<and> option_to_ctcb_ptr (tcbSchedPrev atcb) = tcbSchedPrev_C ctcb
+     \<and> option_to_ctcb_ptr (tcbSchedNext atcb) = tcbSchedNext_C ctcb"
 
 definition csched_context_relation :: "Structures_H.sched_context \<Rightarrow> sched_context_C \<Rightarrow> bool" where
   "csched_context_relation asc csc \<equiv>
@@ -853,10 +854,8 @@ where
      let cheap = t_hrs_' cstate in
        cpspace_relation (ksPSpace astate) (underlying_memory (ksMachineState astate)) cheap \<and>
        refill_buffer_relation (ksPSpace astate) cheap (ghost'state_' cstate) \<and>
-       cready_queues_relation (clift cheap)
-                             (ksReadyQueues_' cstate)
-                             (ksReadyQueues astate) \<and>
-       sched_queue_relation (clift cheap) (ksReleaseQueue astate) NULL (ksReleaseHead_' cstate) \<and>
+       cready_queues_relation (ksReadyQueues astate) (ksReadyQueues_' cstate) \<and>
+       ctcb_queue_relation (ksReleaseQueue astate) (ksReleaseQueue_' cstate) \<and>
        zero_ranges_are_zero (gsUntypedZeroRanges astate) cheap \<and>
        cbitmap_L1_relation (ksReadyQueuesL1Bitmap_' cstate) (ksReadyQueuesL1Bitmap astate) \<and>
        cbitmap_L2_relation (ksReadyQueuesL2Bitmap_' cstate) (ksReadyQueuesL2Bitmap astate) \<and>

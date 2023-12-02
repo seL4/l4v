@@ -66,7 +66,7 @@ newKernelState_def:
         ksCurDomain = newKSCurDomain,
         ksDomainTime = newKSDomainTime,
         ksReadyQueues = const (TcbQueue None None),
-        ksReleaseQueue = const (TcbQueue None None),
+        ksReleaseQueue = TcbQueue None None,
         ksReadyQueuesL1Bitmap = const 0,
         ksReadyQueuesL2Bitmap = const 0,
         ksCurThread = error [],

@@ -49,16 +49,13 @@ lemma setIRQState_invs[wp]:
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: setIRQState_def setInterruptState_def getInterruptState_def)
   apply (wp dmo_maskInterrupt)
-  apply (clarsimp simp: invs'_def cur_tcb'_def
-                        Invariants_H.valid_queues_def valid_queues'_def valid_release_queue_def
-                        valid_release_queue'_def valid_dom_schedule'_def
-                        valid_irq_node'_def
+  apply (clarsimp simp: invs'_def valid_dom_schedule'_def valid_irq_node'_def
                         valid_arch_state'_def valid_global_refs'_def
                         global_refs'_def valid_machine_state'_def
                         if_unsafe_then_cap'_def ex_cte_cap_to'_def
                         valid_irq_handlers'_def irq_issued'_def
                         cteCaps_of_def valid_irq_masks'_def
-                        bitmapQ_defs valid_queues_no_bitmap_def irqs_masked'_def)
+                        valid_bitmaps_def bitmapQ_defs irqs_masked'_def)
   apply fastforce
   done
 
@@ -172,6 +169,7 @@ lemma getRefillHead_corres:
                         readSchedContext_def getObject_def[symmetric])
   apply (rule stronger_corres_guard_imp)
     apply (rule corres_split[OF get_sc_corres])
+      apply (rule corres_assert_assume_l)
       apply clarsimp
       apply (rule refill_hd_relation[symmetric])
        apply simp
@@ -251,8 +249,10 @@ lemma scActive_corres:
      (get_sc_active sc_ptr) (scActive scPtr)"
   apply (rule corres_cross[where Q' = "sc_at' scPtr", OF sc_at'_cross_rel])
    apply (fastforce simp: obj_at_def is_sc_obj_def valid_obj_def valid_pspace_def sc_at_pred_n_def)
-  apply (corresKsimp corres: get_sc_corres
-                      simp: sc_relation_def get_sc_active_def scActive_def active_sc_def)
+  apply (clarsimp simp: get_sc_active_def read_sc_active_def read_sched_context_get_sched_context
+                        readScActive_def readSchedContext_def getObject_def[symmetric]
+                        getSchedContext_def[symmetric] scActive_def)
+  apply (corres corres: get_sc_corres simp: sc_relation_def scActive_def active_sc_def)
   done
 
 lemma getConsumedTime_corres[corres]:
@@ -273,7 +273,6 @@ lemma get_sc_active_sp:
    get_sc_active sc_ptr
    \<lbrace>\<lambda>rv s. P s
            \<and> (\<exists>sc n. ko_at (kernel_object.SchedContext sc n) sc_ptr s \<and> rv = (0 < sc_refill_max sc))\<rbrace>"
-  apply (simp add: get_sc_active_def)
   apply wpsimp
   apply (clarsimp simp: obj_at_def active_sc_def)
   done
@@ -282,10 +281,7 @@ lemma scActive_sp:
   "\<lbrace>P\<rbrace>
    scActive scPtr
    \<lbrace>\<lambda>rv s. P s \<and> (\<exists>sc. ko_at' sc scPtr s \<and> rv = (0 < scRefillMax sc))\<rbrace>"
-  apply (simp add: scActive_def)
-  apply (rule hoare_seq_ext[rotated])
-   apply (rule get_sc_sp')
-  apply (wp hoare_return_sp)
+  apply wpsimp
   apply (clarsimp simp: obj_at'_def)
   done
 
@@ -436,18 +432,16 @@ lemma sch_act_simple_irq_state_independent[intro!, simp]:
 
 method invs'_independent_method
   = clarsimp simp: irq_state_independent_H_def invs'_def
-                   valid_pspace'_def valid_replies'_def sch_act_wf_def
-                   valid_queues_def sym_refs_def state_refs_of'_def
+                   valid_pspace'_def valid_replies'_def
                    if_live_then_nonz_cap'_def if_unsafe_then_cap'_def
                    valid_global_refs'_def
                    valid_arch_state'_def valid_irq_node'_def
                    valid_irq_handlers'_def valid_irq_states'_def
-                   irqs_masked'_def bitmapQ_defs valid_queues_no_bitmap_def
-                   valid_queues'_def
-                   pspace_domain_valid_def cur_tcb'_def
-                   valid_machine_state'_def tcb_in_cur_domain'_def ex_cte_cap_wp_to'_def
-                   valid_mdb'_def ct_in_state'_def
-                   valid_release_queue_def valid_release_queue'_def valid_dom_schedule'_def
+                   irqs_masked'_def valid_bitmaps_def bitmapQ_defs
+                   pspace_domain_valid_def
+                   valid_machine_state'_def ex_cte_cap_wp_to'_def
+                   valid_mdb'_def
+                   valid_dom_schedule'_def
              cong: if_cong option.case_cong
 
 lemma

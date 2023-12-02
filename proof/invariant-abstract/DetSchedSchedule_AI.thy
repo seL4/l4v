@@ -6483,7 +6483,7 @@ lemma sched_context_resume_valid_sched_except_blocked:
   apply (wpsimp wp: postpone_valid_sched_except_blocked is_schedulable_wp' get_tcb_queue_wp thread_get_wp'
               simp: sched_context_resume_def get_refills_def)
   apply (clarsimp simp: obj_at_def)
-  apply (rename_tac y tcb tp; prop_tac "heap_ref_eq y scp (sc_tcbs_of s)")
+  apply (rename_tac y tcb sc tp; prop_tac "heap_ref_eq y scp (sc_tcbs_of s)")
    apply (clarsimp simp: vs_all_heap_simps)
   apply (frule (1) heap_refs_retract_atD, clarsimp simp: vs_all_heap_simps valid_sched_def)
   apply (prop_tac "\<not> released_sc_tcb_at tp s")
@@ -8275,6 +8275,7 @@ lemma maybe_add_empty_tail_refill_ready[wp]:
   unfolding maybe_add_empty_tail_def refill_add_tail_def set_refills_def get_refills_def
   apply (wpsimp wp: update_sched_context_wp is_round_robin_wp)
   apply (clarsimp simp: vs_all_heap_simps obj_at_def refill_ready_sc_def)
+  apply (rename_tac sc)
   by (case_tac "sc_refills sc"; simp)
 
 lemma maybe_add_empty_tail_is_refill_ready[wp]:
@@ -10904,36 +10905,68 @@ lemma read_release_q_non_empty_and_ready_simp:
   by (clarsimp simp: read_release_q_non_empty_and_ready_def asks_def obind_def
               split: if_split_asm)
 
+lemma get_tcb_def2:
+  "get_tcb ptr = do {
+     kobj \<leftarrow> read_object ptr;
+     case kobj of TCB tcb \<Rightarrow> oreturn tcb
+                | _ \<Rightarrow> ofail
+   }"
+  unfolding get_tcb_def
+  by (rule ext;
+      clarsimp simp: get_tcb_def omonad_defs obind_def oreturn_def
+              split: option.splits Structures_A.kernel_object.splits)+
+
+lemma get_tcb_wp:
+  "\<lblot>\<lambda>s. \<forall>tcb. kheap s tcb_ptr = Some (TCB tcb) \<longrightarrow> P tcb s\<rblot>
+   get_tcb tcb_ptr
+   \<lblot>P\<rblot>"
+  apply (simp add: get_tcb_def2 del: read_object_def)
+  apply (rule obind_wp[OF _ read_object_sp], rename_tac r)
+  apply (case_tac r; wpsimp)
+  apply (simp add: obj_at_def)
+  done
+
+lemma thread_read_wp:
+  "\<lblot>\<lambda>s. \<forall>tcb. kheap s tcb_ptr = Some (TCB tcb) \<longrightarrow> P (f tcb) s\<rblot>
+   thread_read f tcb_ptr
+   \<lblot>P\<rblot>"
+  unfolding thread_read_def
+  by (wpsimp wp: get_tcb_wp simp: oliftM_def)
+
+lemma ovalid_thread_read_sp:
+  "\<lblot>P\<rblot> thread_read f ptr \<lblot>\<lambda>rv s. \<exists>tcb. kheap s ptr = Some (TCB tcb) \<and> f tcb = rv \<and> P s\<rblot>"
+  by (wpsimp wp: thread_read_wp)
+
+lemma thread_read_no_ofail[wp]:
+  "no_ofail (tcb_at tcb_ptr) (thread_read f tcb_ptr)"
+  by (wpsimp simp: thread_read_def oliftM_def)
+
 lemma no_ofail_read_tcb_refill_ready:
-  "no_ofail (\<lambda>s. bound_sc_tcb_at (\<lambda>p. \<exists>scp. p = Some scp
-                                            \<and> (\<exists>sc n. kheap s scp = Some (SchedContext sc n))) tp s)
-            (read_tcb_refill_ready tp)"
-  unfolding read_tcb_refill_ready_def no_ofail_def
-  apply (clarsimp simp: omonad_defs obind_def split: option.split)
-  by (fastforce simp: pred_tcb_at_def obj_at_def is_sc_obj
-               dest!: read_refill_ready_NoneD read_sched_context_NoneD
-                      read_sched_context_SomeD read_refill_ready_SomeD
-                      read_tcb_obj_ref_NoneD read_tcb_obj_ref_SomeD)
+  "no_ofail (\<lambda>s. ((\<lambda>sc. sc_refills sc \<noteq> []) |< (tcbs_of s |> tcb_sched_context |> scs_of s)) tcb_ptr)
+            (read_tcb_refill_ready tcb_ptr)"
+  unfolding read_tcb_refill_ready_def read_tcb_obj_ref_def
+  apply (wpsimp wp: thread_read_wp)
+  apply (fastforce simp: vs_all_heap_simps obj_at_def is_tcb_def opt_map_def opt_pred_def
+                         sc_at_pred_n_def
+                  split: option.splits)
+  done
 
 lemma no_ofail_read_release_q_non_empty_and_ready:
   "no_ofail (\<lambda>s. release_queue s = []
-                 \<or> bound_sc_tcb_at (\<lambda>p. \<exists>scp. p = Some scp
-                                              \<and> (\<exists>sc n. kheap s scp = Some (SchedContext sc n)))
-                                    (hd (release_queue s)) s)
+                 \<or> ((\<lambda>sc. sc_refills sc \<noteq> []) |< (tcbs_of s |> tcb_sched_context |> scs_of s))
+                    (hd (release_queue s)))
             read_release_q_non_empty_and_ready"
-  unfolding read_release_q_non_empty_and_ready_def no_ofail_def
-  by (clarsimp dest!: no_ofailD[OF no_ofail_read_tcb_refill_ready] simp: omonad_defs obind_def)
+  unfolding read_release_q_non_empty_and_ready_def
+  by (wpsimp wp: no_ofail_read_tcb_refill_ready)
 
 lemma valid_release_q_read_release_q_non_empty_and_ready_bound:
-  "valid_release_q s \<Longrightarrow> bound (read_release_q_non_empty_and_ready s)"
-  apply (clarsimp simp: valid_release_q_def)
-  apply (prop_tac "release_queue s = [] \<or>
-              bound_sc_tcb_at (\<lambda>p. \<exists>scp. p = Some scp
-                     \<and> ((\<exists>sc n. kheap s scp = Some (SchedContext sc n)))) (hd (release_queue s)) s")
-   apply (case_tac "release_queue s"; simp)
-   apply (clarsimp simp: valid_release_q_def pred_tcb_at_def obj_at_def active_sc_tcb_at_def2
-                         vs_all_heap_simps)
-  apply (clarsimp dest!: no_ofailD[OF no_ofail_read_release_q_non_empty_and_ready])
+  "\<lbrakk>valid_release_q s; active_scs_valid s\<rbrakk> \<Longrightarrow> bound (read_release_q_non_empty_and_ready s)"
+  apply (rule no_ofailD[OF no_ofail_read_release_q_non_empty_and_ready])
+  apply (case_tac "release_queue s"; clarsimp)
+  apply (clarsimp simp: valid_release_q_def vs_all_heap_simps)
+  apply (fastforce dest: valid_refills_nonempty_refills active_scs_validE[rotated]
+                   simp: vs_all_heap_simps opt_map_def opt_pred_def  sc_at_pred_n_def obj_at_def
+                  split: option.splits)
   done
 
 lemma read_release_q_non_empty_and_ready_True_simp:
@@ -12431,7 +12464,7 @@ lemma notdropWhile_takeWhile:
   by fastforce
 
 lemma awaken_in_release_q:
-  "\<lbrace>in_release_q t and valid_release_q and (not budget_ready t)\<rbrace>
+  "\<lbrace>in_release_q t and valid_release_q and (not budget_ready t) and active_scs_valid\<rbrace>
    awaken
    \<lbrace>\<lambda>_ s. in_release_q t s\<rbrace>"
    (is "valid ?pre _ _")
@@ -12708,8 +12741,7 @@ lemma schedule_valid_sched_helper:
   done
 
 lemma awaken_ct_ready_if_schedulable[wp]:
-  "\<lbrace>ct_ready_if_schedulable
-    and valid_release_q\<rbrace>
+  "\<lbrace>ct_ready_if_schedulable and valid_release_q and active_scs_valid\<rbrace>
    awaken
    \<lbrace>\<lambda>_. ct_ready_if_schedulable\<rbrace>"
   unfolding ct_ready_if_schedulable_def
@@ -16587,8 +16619,8 @@ lemma refill_update_bounded_release_time:
   unfolding refill_update_def set_refills_def maybe_add_empty_tail_def refill_add_tail_def
             update_refill_tl_def update_refill_hd_def
   apply (wpsimp wp: update_sched_context_wp is_round_robin_wp hoare_vcg_all_lift get_refills_wp)
-  apply (clarsimp simp: pred_map_simps vs_all_heap_simps cfg_bounded_release_time_def obj_at_def
-                        current_time_bounded_def)
+  apply (fastforce simp: pred_map_simps vs_all_heap_simps cfg_bounded_release_time_def obj_at_def
+                         current_time_bounded_def)
   done
 
 lemma refill_update_active_scs_valid:
@@ -18385,11 +18417,9 @@ lemma refill_new_active_reply_scs[wp]:
   "\<lbrace>\<lambda>s. active_reply_scs s \<and> active_sc max_refills\<rbrace>
    refill_new sc_ptr max_refills budget period
    \<lbrace>\<lambda>_. active_reply_scs\<rbrace>"
-  supply if_split [split del]
   apply (rule active_reply_scs_lift_pre_conj, rule active_reply_sc_at_lift_pre_conj, wpsimp)
   unfolding refill_new_def maybe_add_empty_tail_def refill_add_tail_def get_refills_def
-  apply (wpsimp wp: valid_sched_wp is_round_robin_wp hoare_vcg_all_lift hoare_vcg_imp_lift' hoare_vcg_if_lift2
-                    hoare_vcg_disj_lift)
+  apply (wpsimp wp: valid_sched_wp hoare_vcg_all_lift hoare_drop_imps  hoare_vcg_if_lift2)
   by (clarsimp simp: heap_upd_def vs_all_heap_simps split: if_split)
 
 lemma refill_update_active_reply_scs[wp]:
@@ -21874,11 +21904,11 @@ lemma maybe_add_empty_tail_cur_sc_more_than_ready[wp]:
 lemma refill_update_cur_sc_more_than_ready[wp]:
   "\<lbrace>cur_sc_more_than_ready and (\<lambda>s. sc_ptr \<noteq> cur_sc s \<or> consumed_time s = 0)\<rbrace>
    refill_update sc_ptr new_period new_budget new_max_refills
-   \<lbrace>\<lambda>yb. cur_sc_more_than_ready\<rbrace>"
+   \<lbrace>\<lambda>_. cur_sc_more_than_ready\<rbrace>"
   unfolding refill_update_def set_refills_def refill_add_tail_def update_refill_hd_def get_refills_def
             update_refill_tl_def
-  apply (wpsimp wp: update_sched_context_cur_sc_more_than_ready hoare_vcg_imp_lift'
-                    hoare_vcg_disj_lift get_refills_wp hoare_vcg_all_lift)
+  apply (wpsimp wp: update_sched_context_cur_sc_more_than_ready hoare_vcg_all_lift
+         | wp (once) hoare_drop_imps)+
   done
 
 lemma refill_new_cur_sc_more_than_ready[wp]:

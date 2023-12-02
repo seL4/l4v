@@ -290,13 +290,14 @@ abbreviation
 where
   "sc_active sc \<equiv> active_sc (sc_refill_max sc)"
 
-definition
-  get_sc_active :: "obj_ref \<Rightarrow> (bool, 'z::state_ext) s_monad"
-where
-  "get_sc_active sc_ptr = do
-    sc \<leftarrow> get_sched_context sc_ptr;
-    return $ sc_active sc
-  od"
+definition read_sc_active :: "obj_ref \<Rightarrow> (bool,'z::state_ext) r_monad" where
+  "read_sc_active sc_ptr \<equiv> do {
+     sc \<leftarrow> read_sched_context sc_ptr;
+     oreturn $ sc_active sc
+   }"
+
+definition get_sc_active :: "obj_ref \<Rightarrow> (bool, 'z::state_ext) s_monad" where
+  "get_sc_active sc_ptr \<equiv> gets_the (read_sc_active sc_ptr)"
 
 definition
   in_release_queue :: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -370,6 +371,7 @@ where
 definition read_refill_head :: "obj_ref \<Rightarrow> (refill, 'z::state_ext) r_monad" where
   "read_refill_head sc_ptr \<equiv> do {
      sc \<leftarrow> read_sched_context sc_ptr;
+     oassert (sc_refills sc \<noteq> []);
      oreturn (refill_hd sc)
    }"
 
@@ -420,7 +422,7 @@ definition read_sc_refill_ready :: "obj_ref \<Rightarrow> (bool, 'z::state_ext) 
    }"
 
 definition get_sc_refill_ready :: "obj_ref \<Rightarrow> (bool, 'z::state_ext) s_monad" where
-  "get_sc_refill_ready sc_ptr \<equiv> gets_the $ read_sc_refill_ready sc_ptr"
+  "get_sc_refill_ready sc_ptr \<equiv> gets_the (read_sc_refill_ready sc_ptr)"
 
 (* end refill checks *)
 
@@ -429,13 +431,12 @@ definition sc_released :: "time \<Rightarrow> sched_context \<Rightarrow> bool" 
 
 definition read_sc_released :: "obj_ref \<Rightarrow> (bool, 'z::state_ext) r_monad" where
   "read_sc_released sc_ptr = do {
-     sc \<leftarrow> read_sched_context sc_ptr;
-     cur_time \<leftarrow> asks cur_time;
-     oreturn $ sc_released cur_time sc
+     active \<leftarrow> read_sc_active sc_ptr;
+     if active then read_sc_refill_ready sc_ptr else oreturn False
    }"
 
 definition get_sc_released :: "obj_ref \<Rightarrow> (bool, 'z::state_ext) s_monad" where
-  "get_sc_released sc_ptr \<equiv> gets_the $ read_sc_released sc_ptr"
+  "get_sc_released sc_ptr \<equiv> gets_the (read_sc_released sc_ptr)"
 
 definition
   get_tcb_queue :: "domain \<Rightarrow> priority \<Rightarrow> (ready_queue, 'z::state_ext) s_monad" where

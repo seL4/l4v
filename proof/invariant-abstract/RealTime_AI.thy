@@ -1012,47 +1012,99 @@ lemma do_extended_op_empty_fail [simp]: (* FIXME RT: move *)
   by (fastforce simp: do_extended_op_def empty_fail_get mk_ef_def
                intro: empty_fail_bind empty_fail_select_f)
 
-lemma get_sc_active_wp[wp]:
-  "\<lbrace>\<lambda>s. \<forall>sc n. ko_at (SchedContext sc n) scp s \<longrightarrow> Q (sc_active sc) s\<rbrace>
-   get_sc_active scp
-   \<lbrace>Q\<rbrace>"
-  by (wpsimp simp: get_sc_active_def)
+lemma read_object_wp:
+  "\<lblot>\<lambda>s. \<forall>obj. kheap s ptr = Some obj \<longrightarrow> P obj s\<rblot> read_object ptr \<lblot>P\<rblot>"
+  by (clarsimp simp: ovalid_def)
 
-lemma get_refill_head_wp[wp]:
-  "\<lbrace>\<lambda>s. \<forall>sc n. ko_at (SchedContext sc n) scp s \<longrightarrow> Q (refill_hd sc) s\<rbrace>
-   get_refill_head scp
-   \<lbrace>Q\<rbrace>"
-  by (wpsimp simp: get_refill_head_def read_refill_head_def read_sched_context_get_sched_context)
+lemma read_object_sp:
+  "\<lblot>P\<rblot> read_object ptr \<lblot>\<lambda>rv. P and ko_at rv ptr\<rblot>"
+  apply (wpsimp wp: read_object_wp)
+  apply (simp add: obj_at_def)
+  done
 
-lemma get_sc_refill_capacity_wp[wp]:
-  "\<lbrace>\<lambda>s. \<forall>sc n. ko_at (SchedContext sc n) scp s \<longrightarrow> Q (refill_capacity usage (refill_hd sc)) s\<rbrace>
-   get_sc_refill_capacity scp usage
-   \<lbrace>Q\<rbrace>"
-  by (wpsimp simp: get_sc_refill_capacity_def read_sc_refill_capacity_def read_refill_head_def
-                   read_sched_context_get_sched_context)
+lemma read_sched_context_wp[wp]:
+  "\<lblot>\<lambda>s. \<forall>sc n. kheap s sc_ptr = Some (SchedContext sc n) \<longrightarrow> P sc s\<rblot>
+   read_sched_context sc_ptr
+   \<lblot>P\<rblot>"
+  apply (clarsimp simp: read_sched_context_def ovalid_def obind_def ofail_def obj_at_def
+                 split: Structures_A.kernel_object.splits option.splits)
+  done
 
-lemma get_sc_refill_sufficient_wp[wp]:
-  "\<lbrace>\<lambda>s. \<forall>sc n. ko_at (SchedContext sc n) scp s \<longrightarrow> Q (refill_sufficient usage (refill_hd sc)) s\<rbrace>
-   get_sc_refill_sufficient scp usage
-   \<lbrace>Q\<rbrace>"
-  by (wpsimp simp: get_sc_refill_sufficient_def read_sc_refill_sufficient_def read_refill_head_def
-                   read_sched_context_get_sched_context)
+lemma read_sc_active_wp[wp]:
+  "\<lblot>\<lambda>s. \<forall>sc n. kheap s sc_ptr = Some (SchedContext sc n) \<longrightarrow> Q (sc_active sc) s\<rblot>
+   read_sc_active sc_ptr
+   \<lblot>Q\<rblot>"
+  by (wpsimp simp: read_sc_active_def)
+
+lemmas get_sc_active_wp[wp] =
+  ovalid_gets_the[OF read_sc_active_wp, simplified get_sc_active_def[symmetric]]
+
+lemma read_refill_head_wp[wp]:
+  "\<lblot>\<lambda>s. \<forall>sc n. kheap s sc_ptr = Some (SchedContext sc n) \<longrightarrow> Q (refill_hd sc) s\<rblot>
+   read_refill_head sc_ptr
+   \<lblot>Q\<rblot>"
+  unfolding read_refill_head_def
+  by wpsimp
+
+lemmas get_refill_head_wp[wp] =
+  ovalid_gets_the[OF read_refill_head_wp, simplified get_refill_head_def[symmetric]]
+
+lemma read_sc_refill_ready_wp[wp]:
+  "\<lblot>\<lambda>s. \<forall>sc n. kheap s sc_ptr = Some (SchedContext sc n)
+               \<longrightarrow> Q (refill_ready (cur_time s) (refill_hd sc)) s\<rblot>
+   read_sc_refill_ready sc_ptr
+   \<lblot>Q\<rblot>"
+  unfolding read_sc_refill_ready_def
+  by wpsimp
+
+lemmas get_sc_refill_ready_wp[wp] =
+  ovalid_gets_the[OF read_sc_refill_ready_wp, simplified get_sc_refill_ready_def[symmetric]]
+
+lemma read_sc_refill_capacity_wp[wp]:
+  "\<lblot>\<lambda>s. \<forall>sc n. kheap s sc_ptr = Some (SchedContext sc n)
+               \<longrightarrow> Q (refill_capacity usage (refill_hd sc)) s\<rblot>
+   read_sc_refill_capacity sc_ptr usage
+   \<lblot>Q\<rblot>"
+  unfolding read_sc_refill_capacity_def
+  by wpsimp
+
+lemmas get_sc_refill_capacity_wp[wp] =
+  ovalid_gets_the[OF read_sc_refill_capacity_wp, simplified get_sc_refill_capacity_def[symmetric]]
+
+lemma read_sc_refill_sufficient_wp[wp]:
+  "\<lblot>\<lambda>s. \<forall>sc n. kheap s sc_ptr = Some (SchedContext sc n)
+               \<longrightarrow> Q (refill_sufficient usage (refill_hd sc)) s\<rblot>
+   read_sc_refill_sufficient sc_ptr usage
+   \<lblot>Q\<rblot>"
+  unfolding read_sc_refill_sufficient_def
+  by wpsimp
+
+lemmas get_sc_refill_sufficient_wp[wp] =
+  ovalid_gets_the[OF read_sc_refill_sufficient_wp, simplified get_sc_refill_sufficient_def[symmetric]]
 
 lemma no_ofail_read_sched_context[wp]:
   "no_ofail (\<lambda>s. \<exists>sc n. kheap s scp = Some (SchedContext sc n)) (read_sched_context scp)"
   unfolding read_sched_context_def no_ofail_def
   by (clarsimp simp: obj_at_def is_sc_obj obind_def)
 
+lemma case_options_weak_ovalid:
+  "\<lbrakk> ovalid P f Q; \<And>x. ovalid P' (g x) Q \<rbrakk>
+   \<Longrightarrow> ovalid (P and P') (case opt of None \<Rightarrow> f | Some x \<Rightarrow> g x) Q"
+  apply (cases opt; clarsimp simp: ovalid_def)
+  done
+
 lemma no_ofail_read_refill_head[wp]:
-  "no_ofail (\<lambda>s. \<exists>sc n. kheap s scp = Some (SchedContext sc n)) (read_refill_head scp)"
+  "no_ofail (\<lambda>s. sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) scp s) (read_refill_head scp)"
   unfolding read_refill_head_def
-  by wpsimp
+  apply wpsimp
+  apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
+  done
 
 lemmas no_fail_get_refill_head[wp] =
   no_ofail_gets_the[OF no_ofail_read_refill_head, simplified get_refill_head_def[symmetric]]
 
 lemma no_ofail_read_sc_refill_ready[wp]:
-  "no_ofail (\<lambda>s. \<exists>sc n. kheap s scp = Some (SchedContext sc n)) (read_sc_refill_ready scp)"
+  "no_ofail (\<lambda>s. sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) scp s) (read_sc_refill_ready scp)"
   unfolding read_sc_refill_ready_def
   by wpsimp
 
@@ -1061,7 +1113,8 @@ lemmas no_fail_get_sc_refill_ready[wp] =
                     simplified get_sc_refill_ready_def[simplified fun_app_def, symmetric]]
 
 lemma no_ofail_read_sc_refill_capacity[wp]:
-  "no_ofail (\<lambda>s. \<exists>sc n. kheap s scp = Some (SchedContext sc n)) (read_sc_refill_capacity scp usage)"
+  "no_ofail (\<lambda>s. sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) scp s)
+            (read_sc_refill_capacity scp usage)"
   unfolding read_sc_refill_capacity_def
   by wpsimp
 
@@ -1070,7 +1123,8 @@ lemmas no_fail_get_sc_refill_capacity[wp] =
                     simplified get_sc_refill_capacity_def[simplified fun_app_def, symmetric]]
 
 lemma no_ofail_read_sc_refill_sufficient[wp]:
-  "no_ofail (\<lambda>s. \<exists>sc n. kheap s scp = Some (SchedContext sc n)) (read_sc_refill_sufficient scp usage)"
+  "no_ofail (\<lambda>s. sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) scp s)
+            (read_sc_refill_sufficient scp usage)"
   unfolding read_sc_refill_sufficient_def
   by wpsimp
 
@@ -1079,17 +1133,15 @@ lemmas no_fail_get_sc_refill_sufficient[wp] =
                     simplified get_sc_refill_sufficient_def[simplified fun_app_def, symmetric]]
 
 lemma refill_pop_head_no_fail[wp]:
-   "no_fail (\<lambda>s. \<exists>sc n. kheap s sc_ptr = Some (SchedContext sc n)) (refill_pop_head sc_ptr)"
+  "no_fail (\<lambda>s. sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr s) (refill_pop_head sc_ptr)"
   unfolding refill_pop_head_def
   by wpsimp
 
 lemma non_overlapping_merge_refills_no_fail[wp]:
-   "no_fail (\<lambda>s. sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr s)
+  "no_fail (\<lambda>s. sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr s)
             (non_overlapping_merge_refills sc_ptr)"
   unfolding non_overlapping_merge_refills_def refill_pop_head_def
-  apply (wpsimp simp: update_refill_hd_def wp: update_sched_context_wp)
-  apply (clarsimp simp: sc_at_pred_n_def obj_at_def)
-  done
+  by (wpsimp simp: update_refill_hd_def wp: update_sched_context_wp)
 
 lemma schedule_used_no_fail[wp]:
   "no_fail (\<lambda>s. sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr s)
@@ -1130,7 +1182,7 @@ lemma handle_overrun_loop_body_no_fail:
   done
 
 lemma get_sc_refill_sufficient_exs_valid:
-  "\<exists>sc n. kheap s scp = Some (Structures_A.SchedContext sc n)
+  "sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) scp s
    \<Longrightarrow> \<lbrace>(=) s\<rbrace> get_sc_refill_sufficient scp usage \<exists>\<lbrace>\<lambda>_. (=) s\<rbrace>"
   unfolding get_sc_refill_sufficient_def
   apply (rule exs_valid_weaken_pre)
@@ -1175,39 +1227,25 @@ lemma read_sc_refill_sufficient_SomeD:
   apply (clarsimp simp: refill_sufficient_def ogets_def)
   done
 
-lemma read_refill_ready_NoneD:
-  "read_sc_refill_ready scp s = None \<Longrightarrow> read_sched_context scp s = None"
-  by (clarsimp simp: read_sc_refill_ready_def read_refill_head_def obind_def asks_def
-              split: option.split_asm)
+lemma read_sc_active_SomeD:
+  "read_sc_active scp s = Some actv
+   \<Longrightarrow> \<exists>sc. read_sched_context scp s = Some sc \<and> sc_active sc = actv"
+  by (clarsimp simp: read_sc_active_def)
 
-lemma get_sc_refill_ready_wp[wp]:
-  "\<lbrace>\<lambda>s. \<forall>sc n. ko_at (SchedContext sc n) scp s \<longrightarrow> Q (refill_ready (cur_time s) (refill_hd sc)) s\<rbrace>
-   get_sc_refill_ready scp
-   \<lbrace>Q\<rbrace>"
-  unfolding get_sc_refill_ready_def
-  apply wpsimp
-  apply (fastforce dest: read_refill_ready_SomeD read_sched_context_SomeD intro: ko_atI)
+lemma read_sc_released_wp[wp]:
+  "\<lblot>\<lambda>s. \<forall>sc n. kheap s sc_ptr = Some (SchedContext sc n) \<longrightarrow> Q (sc_released (cur_time s) sc) s\<rblot>
+   read_sc_released sc_ptr
+   \<lblot>Q\<rblot>"
+  unfolding read_sc_released_def
+  apply (wpsimp wp: ovalid_if_split)
+  apply (fastforce simp: obj_at_def sc_released_def)
   done
 
-lemma read_sc_released_SomeD:
-  "read_sc_released scp s = Some released
-   \<Longrightarrow> \<exists>sc. read_sched_context scp s = Some sc \<and> sc_released (cur_time s) sc = released"
-  apply (clarsimp simp: read_sc_released_def)
-  apply (frule read_sched_context_SomeD)
-  apply (clarsimp simp: refill_sufficient_def ogets_def)
-  done
-
-lemma get_sc_released_wp[wp]:
-  "\<lbrace>\<lambda>s. \<forall>sc n. ko_at (SchedContext sc n) scp s \<longrightarrow> Q (sc_released (cur_time s) sc) s\<rbrace>
-   get_sc_released scp
-   \<lbrace>Q\<rbrace>"
-  unfolding get_sc_released_def
-  apply wpsimp
-  apply (fastforce dest: read_sc_released_SomeD read_sched_context_SomeD intro: ko_atI)
-  done
+lemmas get_sc_released_wp[wp] =
+  ovalid_gets_the[OF read_sc_released_wp, simplified get_sc_released_def[symmetric]]
 
 lemma refill_full_wp[wp]:
-  "\<lbrace>\<lambda>s. \<forall> sc n. ko_at (SchedContext sc n) scp s \<longrightarrow>
+  "\<lbrace>\<lambda>s. \<forall>sc n. ko_at (SchedContext sc n) scp s \<longrightarrow>
          Q (length (sc_refills sc) = sc_refill_max sc) s\<rbrace>
    refill_full scp
    \<lbrace>Q\<rbrace>"

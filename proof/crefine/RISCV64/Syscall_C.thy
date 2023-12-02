@@ -53,8 +53,7 @@ lemma cap_cases_one_on_true_sum:
 lemma performInvocation_Endpoint_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
      (invs' and st_tcb_at' simple' thread and ep_at' epptr
-            and sch_act_sane and (\<lambda>s. thread = ksCurThread s
-            \<and> (\<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p))))
+            and sch_act_sane and (\<lambda>s. thread = ksCurThread s))
      (\<lbrace>\<acute>block = from_bool blocking\<rbrace>
       \<inter> \<lbrace>\<acute>call = from_bool do_call\<rbrace>
       \<inter> \<lbrace>\<acute>badge___unsigned_long = badge\<rbrace>
@@ -123,7 +122,6 @@ lemma decodeInvocation_ccorres:
             and (\<lambda>s. \<forall>v \<in> set extraCaps. ex_cte_cap_wp_to' isCNodeCap (snd v) s)
             and (\<lambda>s. \<forall>v \<in> set extraCaps. s \<turnstile>' fst v \<and> cte_at' (snd v) s)
             and (\<lambda>s. \<forall>v \<in> set extraCaps. \<forall>y \<in> zobj_refs' (fst v). ex_nonz_cap_to' y s)
-            and (\<lambda>s. \<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p))
             and sysargs_rel args buffer)
      ({s. current_extra_caps_' (globals s) = extraCaps'}
       \<inter> \<lbrace>\<acute>call = from_bool isCall\<rbrace>
@@ -663,12 +661,12 @@ sorry (* FIXME RT: sendFaultIPC_ccorres
   done *)
 
 lemma handleFault_ccorres:
-  "ccorres dc xfdc (invs' and st_tcb_at' simple' t and sch_act_not t)
+  "ccorres dc xfdc
+      (invs' and st_tcb_at' simple' t and sch_act_not t)
       (UNIV \<inter> {s. (cfault_rel (Some flt) (seL4_Fault_lift(current_fault_' (globals s)))
                        (lookup_fault_lift(current_lookup_fault_' (globals s))) )}
-            \<inter> {s. tptr_' s = tcb_ptr_to_ctcb_ptr t})
-      hs (handleFault t flt)
-         (Call handleFault_'proc)"
+            \<inter> {s. tptr_' s = tcb_ptr_to_ctcb_ptr t}) hs
+      (handleFault t flt) (Call handleFault_'proc)"
 sorry (* FIXME RT: handleFault_ccorres
   apply (cinit lift: tptr_')
    apply (simp add: catch_def)
@@ -728,9 +726,7 @@ lemma getMRs_length:
 
 lemma handleInvocation_ccorres:
   "ccorres (K dc \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-     (invs' and
-      ct_active' and sch_act_simple and
-      (\<lambda>s. \<forall>x. ksCurThread s \<notin> set (ksReadyQueues s x)))
+     (invs' and ct_active' and sch_act_simple)
      (\<lbrace>\<acute>isCall = from_bool isCall\<rbrace>
       \<inter> \<lbrace>\<acute>isBlocking = from_bool isBlocking\<rbrace>
       \<inter> \<lbrace>\<acute>canDonate = from_bool canDonate\<rbrace>
@@ -1012,12 +1008,9 @@ lemma handleRecv_ccorres:
   notes rf_sr_upd_safe[simp del]
   shows
   "ccorres dc xfdc
-       (\<lambda>s. invs' s \<and> st_tcb_at' simple' (ksCurThread s) s
-               \<and> sch_act_sane s \<and> (\<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p)))
-       (\<lbrace>\<acute>isBlocking = from_bool isBlocking\<rbrace> \<inter> {s. canReply_' s = from_bool canReply})
-       []
-       (handleRecv isBlocking canReply)
-       (Call handleRecv_'proc)"
+     (\<lambda>s. invs' s \<and> st_tcb_at' simple' (ksCurThread s) s \<and> sch_act_sane s)
+     (\<lbrace>\<acute>isBlocking = from_bool isBlocking\<rbrace> \<inter> {s. canReply_' s = from_bool canReply}) []
+     (handleRecv isBlocking canReply) (Call handleRecv_'proc)"
 sorry (* FIXME RT: handleRecv_ccorres
   supply if_cong[cong] option.case_cong[cong]
   apply (cinit lift: isBlocking_' canReply_')
@@ -1440,10 +1433,8 @@ lemma ccorres_handleReservedIRQ:
 lemma handleInterrupt_ccorres:
   "ccorres dc xfdc
      (invs' and (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow> sch_act_not (ksCurThread s) s))
-     (UNIV \<inter> \<lbrace>\<acute>irq = ucast irq\<rbrace>)
-     hs
-     (handleInterrupt irq)
-     (Call handleInterrupt_'proc)"
+     (UNIV \<inter> \<lbrace>\<acute>irq = ucast irq\<rbrace>) hs
+     (handleInterrupt irq) (Call handleInterrupt_'proc)"
   apply (cinit lift: irq_' cong: call_ignore_cong)
    apply (rule ccorres_Cond_rhs_Seq)
     apply (simp  add: Platform_maxIRQ del: Collect_const)

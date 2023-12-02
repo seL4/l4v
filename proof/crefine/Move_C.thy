@@ -862,24 +862,6 @@ lemma cancelAllSignals_sch_act_wf:
   apply fastforce?
   done
 
-lemma replyClear_weak_sch_act_wf[wp]:
-  "replyClear rptr tptr \<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  unfolding replyClear_def
-  apply (wpsimp wp: gts_wp' simp: pred_tcb_at'_eq_commute)
-  apply (auto simp: pred_tcb_at'_def obj_at'_def)
-  done
-
-lemma cteDeleteOne_sch_act_wf:
-  "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>
-  cteDeleteOne slot
-  \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  apply (simp add: cteDeleteOne_def unless_when split_def)
-  apply (simp add: finaliseCapTrue_standin_def Let_def)
-  apply (wpsimp wp: isFinalCapability_inv cancelAllSignals_sch_act_wf
-                    cancelAllIPC_sch_act_wf getCTE_wp' hoare_weak_lift_imp weak_if_wp'
-              simp: Let_def)
-  done
-
 lemma vp_invs_strg': "invs' s \<longrightarrow> valid_pspace' s" by auto
 
 lemma setCTE_tcbFault:

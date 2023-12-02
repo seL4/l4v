@@ -366,7 +366,7 @@ The TCB is used to store various data about the thread's current state:
 
 >         tcbBoundNotification :: Maybe (PPtr Notification),
 
-\item and the thread's schedule context object
+\item the thread's schedule context object;
 
 >         tcbSchedContext :: Maybe (PPtr SchedContext),
 
@@ -377,7 +377,7 @@ The TCB is used to store various data about the thread's current state:
 >         tcbSchedPrev :: Maybe (PPtr TCB),
 >         tcbSchedNext :: Maybe (PPtr TCB),
 
-\item and any arch-specific TCB contents
+\item any arch-specific TCB contents;
 
 >         tcbArch :: ArchTCB }
 

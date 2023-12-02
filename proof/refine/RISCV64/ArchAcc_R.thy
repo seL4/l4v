@@ -380,9 +380,10 @@ lemma setObject_PT_corres:
    apply (drule bspec, assumption)
    apply clarsimp
    apply (erule (1) obj_relation_cutsE)
-      apply simp
-     apply simp
-     apply clarsimp
+         apply simp
+        apply simp
+       apply simp
+      apply clarsimp
      apply (frule (1) pspace_alignedD)
      apply (drule_tac p=x in pspace_alignedD, assumption)
      apply simp
@@ -399,11 +400,15 @@ lemma setObject_PT_corres:
   apply (rule conjI)
    apply (fastforce simp: sc_replies_relation_def sc_replies_of_scs_def map_project_def
                           scs_of_kh_def opt_map_def projectKO_opts_defs)
-  apply (rule conjI)
+  apply (extract_conjunct \<open>match conclusion in "ghost_relation _ _ _" \<Rightarrow> -\<close>)
    apply (clarsimp simp add: ghost_relation_def)
    apply (erule_tac x="p && ~~ mask pt_bits" in allE)+
    apply fastforce
   apply (extract_conjunct \<open>match conclusion in "ready_queues_relation_2 _ _ _ _ _" \<Rightarrow> -\<close>)
+   apply (prop_tac "typ_at' (koTypeOf (injectKO pte')) p b")
+    apply (simp add: typ_at'_def ko_wp_at'_def)
+   subgoal by (fastforce dest: tcbs_of'_non_tcb_update)
+  apply (extract_conjunct \<open>match conclusion in "release_queue_relation_2 _ _ _ _ _" \<Rightarrow> -\<close>)
    apply (prop_tac "typ_at' (koTypeOf (injectKO pte')) p b")
     apply (simp add: typ_at'_def ko_wp_at'_def)
    subgoal by (fastforce dest: tcbs_of'_non_tcb_update)

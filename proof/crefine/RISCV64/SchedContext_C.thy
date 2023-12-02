@@ -620,18 +620,19 @@ lemma refill_update_ccorres:
              apply (clarsimp simp: sc_ptr_to_crefill_ptr_def csched_context_relation_def
                                    typ_heap_simps)
             apply (rule_tac Q="\<lambda>refill s. (invs' s \<and> active_sc_at' scPtr s)
-                                          \<and> obj_at' (\<lambda>sc. refillHd sc = refill) scPtr s"
+                                          \<and> (\<exists>sc. scs_of' s scPtr = Some sc \<and> refillHd sc = refill)"
                          in hoare_post_imp)
-             apply fastforce
+             apply (clarsimp simp: active_sc_at'_rewrite obj_at'_def opt_map_def)
             apply (rule getRefillHead_sp)
            apply vcg
           apply ((wpsimp wp: updateRefillHd_invs' | strengthen invs_valid_objs')+)[1]
          apply (vcg exspec=refill_index_modifies)
         apply (rule_tac Q="\<lambda>_. active_sc_at' scPtr and invs'" in hoare_post_imp)
          apply (clarsimp simp: active_sc_at'_rewrite)
-        apply (wpsimp wp: refillReady_inv)
+        apply wpsimp
        apply (vcg exspec=refill_ready_modifies)
-      apply (wpsimp wp: updateSchedContext_refills_invs' updateSchedContext_active_sc_at')
+      apply (wpsimp wp: updateSchedContext_refills_invs' updateSchedContext_active_sc_at'
+                        hoare_drop_imps)
      apply (vcg exspec=refill_index_modifies)
     apply (rule_tac Q="\<lambda>_ s. invs' s \<and> active_sc_at' scPtr s \<and> 0 < newMaxRefills
                              \<and> obj_at' (\<lambda>sc. newMaxRefills \<le> refillAbsoluteMax' (objBits sc)) scPtr s"

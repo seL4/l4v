@@ -297,6 +297,10 @@ lemma obj_at_kernel_mappings':
 crunches switchToIdleThread
   for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
 
+crunches switchToIdleThread
+  for valid_pspace'[wp]: valid_pspace'
+  (simp: whenE_def crunch_simps wp: hoare_drop_imps)
+
 lemma getMessageInfo_less_4:
   "\<lbrace>\<top>\<rbrace> getMessageInfo t \<lbrace>\<lambda>rv s. msgExtraCaps rv < 4\<rbrace>"
   including no_pre

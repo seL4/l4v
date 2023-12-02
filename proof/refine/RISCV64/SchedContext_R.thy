@@ -5,7 +5,7 @@
  *)
 
 theory SchedContext_R
-imports VSpace_R
+imports VSpace_R InterruptAcc_R
 begin
 
 lemma live_sc'_scConsumed_update[simp]:
@@ -76,7 +76,8 @@ lemma setSchedContext_invs':
     setSchedContext scPtr sc
     \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_dom_schedule'_def)
-  apply (wpsimp wp: untyped_ranges_zero_lift simp: cteCaps_of_def o_def)
+  apply (wpsimp wp: untyped_ranges_zero_lift sym_heap_sched_pointers_lift
+              simp: cteCaps_of_def o_def)
   done
 
 lemma setSchedContext_active_sc_at':
@@ -278,7 +279,6 @@ crunches schedContextUpdateConsumed
   and interrupt_state[wp]: "\<lambda>s. P (ksInterruptState s)"
   and valid_irq_state'[wp]: valid_irq_states'
   and valid_machine_state'[wp]: valid_machine_state'
-  and valid_queues'[wp]: valid_queues'
   and ct_idle_or_in_cur_domain'[wp]: ct_idle_or_in_cur_domain'
   and pspace_domain_valid[wp]: pspace_domain_valid
   and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
@@ -287,15 +287,20 @@ crunches schedContextUpdateConsumed
   and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
   and ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
   and ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
-  and valid_release_queue[wp]: valid_release_queue
-  and valid_release_queue'[wp]: valid_release_queue'
   and ct_not_inQ[wp]: ct_not_inQ
-  and valid_queues[wp]: valid_queues
   and ksQ[wp]: "\<lambda>s. P (ksReadyQueues s p)"
   and reply_projs[wp]: "\<lambda>s. P (replyNexts_of s) (replyPrevs_of s) (replyTCBs_of s) (replySCs_of s)"
   and valid_replies' [wp]: valid_replies'
   and st_tcb_at'[wp]: "\<lambda>s. P (st_tcb_at' P' t s)"
   and pspace_in_kernel_mappings'[wp]: pspace_in_kernel_mappings'
+  and tcbSchedPrevs_of[wp]: "\<lambda>s. P (tcbSchedPrevs_of s)"
+  and tcbSchedNexts_of[wp]: "\<lambda>s. P (tcbSchedNexts_of s)"
+  and tcbInReleaseQueue[wp]: "\<lambda>s. P (tcbInReleaseQueue |< tcbs_of' s)"
+  and tcbQueueds_of[wp]: "\<lambda>s. P (tcbQueued |< tcbs_of' s)"
+  and ksReadyQueues[wp]: "\<lambda>s. P (ksReadyQueues s)"
+  and ksReadyQueuesL1Bitmap[wp]: "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
+  and ksReadyQueuesL2Bitmap[wp]: "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
+  and valid_sched_pointers[wp]: valid_sched_pointers
   (wp: crunch_wps simp: crunch_simps)
 
 global_interpretation schedContextUpdateConsumed: typ_at_all_props' "schedContextUpdateConsumed scPtr"
@@ -311,7 +316,7 @@ lemma schedContextUpdateConsumed_invs'[wp]:
   "schedContextUpdateConsumed scPtr \<lbrace>invs'\<rbrace>"
   apply (simp add: invs'_def valid_pspace'_def valid_dom_schedule'_def)
   apply (wpsimp wp: valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift cur_tcb_lift
-                    untyped_ranges_zero_lift
+                    untyped_ranges_zero_lift sym_heap_sched_pointers_lift valid_bitmaps_lift
               simp: cteCaps_of_def o_def)
   done
 
@@ -338,10 +343,6 @@ lemma schedContextCancelYieldTo_valid_objs'[wp]:
   apply (clarsimp simp: schedContextCancelYieldTo_def)
   apply (wpsimp wp: threadSet_valid_objs' hoare_vcg_all_lift threadGet_wp
          | strengthen valid_tcb'_tcbYieldTo_update)+
-  apply normalise_obj_at'
-  apply (rename_tac ko)
-  apply (rule_tac x=ko in exI)
-  apply clarsimp
   apply (frule (1) tcb_ko_at_valid_objs_valid_tcb')
   by (fastforce simp: valid_obj'_def opt_map_def obj_at_simps valid_tcb'_def refillSize_def
                       valid_sched_context'_def valid_sched_context_size'_def opt_pred_def)
@@ -357,7 +358,6 @@ lemma schedContextCancelYieldTo_sch_act_wf[wp]:
   "schedContextCancelYieldTo tptr \<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
   apply (clarsimp simp: schedContextCancelYieldTo_def updateSchedContext_def)
   apply (wpsimp wp: threadSet_sch_act threadGet_wp)
-  apply (fastforce simp: obj_at'_def)
   done
 
 lemma schedContextCancelYieldTo_if_live_then_nonz_cap'[wp]:
@@ -374,7 +374,6 @@ lemma schedContextCancelYieldTo_if_unsafe_then_cap'[wp]:
   "schedContextCancelYieldTo tptr \<lbrace>if_unsafe_then_cap'\<rbrace>"
   apply (clarsimp simp: schedContextCancelYieldTo_def updateSchedContext_def)
   apply (wpsimp wp: threadSet_ifunsafe' threadGet_wp)
-  apply (fastforce simp: obj_at'_def)
   done
 
 lemma schedContextCancelYieldTo_valid_idle'[wp]:
@@ -385,37 +384,16 @@ lemma schedContextCancelYieldTo_valid_idle'[wp]:
   apply (fastforce simp: valid_idle'_def obj_at'_def idle_tcb'_def)
   done
 
-lemma schedContextCancelYieldTo_valid_release_queue[wp]:
-  "schedContextCancelYieldTo tptr \<lbrace>valid_release_queue\<rbrace>"
-  apply (clarsimp simp: schedContextCancelYieldTo_def updateSchedContext_def)
-  apply (wpsimp wp: threadSet_valid_release_queue threadGet_wp)
-  apply (fastforce simp: obj_at'_def)
-  done
-
 lemma schedContextCancelYieldTo_ct_not_inQ[wp]:
   "schedContextCancelYieldTo tptr \<lbrace>ct_not_inQ\<rbrace>"
   apply (clarsimp simp: schedContextCancelYieldTo_def updateSchedContext_def)
   apply (wpsimp wp: threadSet_not_inQ threadGet_wp)
-  apply (fastforce simp: obj_at'_def)
   done
 
 lemma schedContextCancelYieldTo_cur_tcb'[wp]:
   "schedContextCancelYieldTo tptr \<lbrace>cur_tcb'\<rbrace>"
-  apply (wpsimp simp: schedContextCancelYieldTo_def updateSchedContext_def
-                  wp: threadSet_cur threadGet_wp)
-  apply (fastforce simp: obj_at'_def)
-  done
-
-lemma schedContextCancelYeldTo_valid_release_queue'[wp]:
-  "schedContextCancelYieldTo t \<lbrace>valid_release_queue'\<rbrace>"
-  apply (clarsimp simp: schedContextCancelYieldTo_def updateSchedContext_def)
-  apply (rule hoare_seq_ext[OF _ threadGet_sp])
-  apply (rule hoare_when_cases; (solves \<open>wpsimp\<close>)?)
-  apply (rule_tac B="\<lambda>_. valid_release_queue'" in hoare_seq_ext[rotated])
-   apply wpsimp
-  apply (wpsimp wp: threadSet_valid_release_queue' setObject_tcb_wp)
-  apply (clarsimp simp: valid_release_queue'_def obj_at'_def)
-  done
+  by (wpsimp simp: schedContextCancelYieldTo_def updateSchedContext_def
+               wp: threadSet_cur threadGet_wp)
 
 crunches schedContextCancelYieldTo
   for pspace_aligned'[wp]: pspace_aligned'
@@ -424,7 +402,6 @@ crunches schedContextCancelYieldTo
   and pspace_canonical'[wp]: pspace_canonical'
   and no_0_obj'[wp]: no_0_obj'
   and ksSchedulerAction[wp]: "\<lambda>s. P (ksSchedulerAction s)"
-  and list_refs_of_replies[wp]: "\<lambda>s. sym_refs (list_refs_of_replies' s)"
   and valid_global_refs'[wp]: valid_global_refs'
   and valid_arch_state'[wp]: valid_arch_state'
   and irq_node[wp]: "\<lambda>s. P (irq_node' s)"
@@ -433,8 +410,6 @@ crunches schedContextCancelYieldTo
   and interrupt_state[wp]: "\<lambda>s. P (ksInterruptState s)"
   and valid_irq_state'[wp]: valid_irq_states'
   and valid_machine_state'[wp]: valid_machine_state'
-  and valid_queues[wp]: valid_queues
-  and valid_queues'[wp]: valid_queues'
   and ct_idle_or_in_cur_domain'[wp]: ct_idle_or_in_cur_domain'
   and pspace_domain_valid[wp]: pspace_domain_valid
   and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
@@ -447,7 +422,20 @@ crunches schedContextCancelYieldTo
   and valid_replies' [wp]: valid_replies'
   and st_tcb_at'[wp]: "\<lambda>s. P (st_tcb_at' P' t s)"
   and pspace_in_kernel_mappings'[wp]: pspace_in_kernel_mappings'
-  (wp: crunch_wps threadSet_pred_tcb_no_state simp: crunch_simps updateSchedContext_def comp_def)
+  and tcbSchedPrevs_of[wp]: "\<lambda>s. P (tcbSchedPrevs_of s)"
+  and tcbSchedNexts_of[wp]: "\<lambda>s. P (tcbSchedNexts_of s)"
+  and tcbInReleaseQueue[wp]: "\<lambda>s. P (tcbInReleaseQueue |< tcbs_of' s)"
+  and tcbQueueds_of[wp]: "\<lambda>s. P (tcbQueued |< tcbs_of' s)"
+  and ksReadyQueues[wp]: "\<lambda>s. P (ksReadyQueues s)"
+  and ksReadyQueuesL1Bitmap[wp]: "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
+  and ksReadyQueuesL2Bitmap[wp]: "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
+  and valid_sched_pointers[wp]: valid_sched_pointers
+  (wp: crunch_wps threadSet_pred_tcb_no_state threadSet_tcbInReleaseQueue threadSet_tcbQueued
+   simp: crunch_simps updateSchedContext_def)
+
+crunches schedContextCancelYieldTo
+  for list_refs_of_replies[wp]: "\<lambda>s. sym_refs (list_refs_of_replies' s)"
+  (wp: crunch_wps simp: crunch_simps updateSchedContext_def comp_def)
 
 global_interpretation schedContextCancelYieldTo: typ_at_all_props' "schedContextCancelYieldTo t"
   by typ_at_props'
@@ -456,9 +444,8 @@ lemma schedContextCancelYieldTo_invs':
   "schedContextCancelYieldTo t \<lbrace>invs'\<rbrace>"
   apply (simp add: invs'_def valid_pspace'_def setSchedContext_def valid_dom_schedule'_def)
   apply (wpsimp wp: valid_irq_node_lift valid_irq_handlers_lift'' irqs_masked_lift
-                    untyped_ranges_zero_lift
+                    untyped_ranges_zero_lift sym_heap_sched_pointers_lift valid_bitmaps_lift
               simp: cteCaps_of_def o_def)
-  apply (fastforce simp: inQ_def valid_queues_def valid_queues_no_bitmap_def)
   done
 
 crunches schedContextCompleteYieldTo
@@ -518,7 +505,7 @@ lemma tcb_yield_to_update_corres:
   apply (rule_tac Q'="tcb_at' t" in corres_cross_add_guard)
    apply (fastforce dest!: state_relationD elim!: tcb_at_cross)
   apply (rule corres_guard_imp)
-    apply (rule set_tcb_obj_ref_corres; simp add: tcb_relation_def)
+    apply (rule set_tcb_obj_ref_corres; simp add: inQ_def tcb_relation_def)
    apply simp+
   done
 
@@ -606,6 +593,7 @@ crunches schedContextDonate
   and ct'[wp]: "\<lambda>s. P (ksCurThread s)"
   and gsUntypedZeroRanges[wp]: "\<lambda>s. P (gsUntypedZeroRanges s)"
   and cte_wp_at'[wp]: "cte_wp_at' P p"
+  (wp: crunch_wps)
 
 crunches schedContextDonate
   for ctes_of[wp]: "\<lambda>s. P (ctes_of s)"
@@ -623,60 +611,36 @@ crunches setSchedContext
   for weak_sch_act_wf[wp]: "\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s"
   (wp: weak_sch_act_wf_lift)
 
-lemma schedContextDonate_weak_sch_act_wf[wp]:
-  "schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  apply (simp only: schedContextDonate_def)
-  apply (wpsimp wp: threadSet_weak_sch_act_wf)
-         apply (rule_tac Q="\<lambda>_ s. weak_sch_act_wf (ksSchedulerAction s) s" in hoare_strengthen_post[rotated], fastforce)
-         apply (wpsimp wp: threadSet_weak_sch_act_wf)
-        apply wpsimp+
-  done
-
-lemma schedContextDonate_valid_objs':
-  "\<lbrace>valid_objs' and tcb_at' tcbPtr\<rbrace>
-   schedContextDonate scPtr tcbPtr
+lemma tcbSchedContext_update_Some_valid_objs'[wp]:
+  "\<lbrace>valid_objs' and sc_at' scPtr\<rbrace>
+   threadSet (tcbSchedContext_update (\<lambda>_. Some scPtr)) tcbPtr
    \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
-  (is "valid ?pre _ _")
-  apply (clarsimp simp: schedContextDonate_def)
-  apply (rule hoare_seq_ext[OF _ get_sc_sp'], rename_tac sc)
-  apply (rule_tac Q="?pre and valid_sched_context' sc and K (valid_sched_context_size' sc) and sc_at' scPtr"
-               in hoare_weaken_pre[rotated])
-   apply (fastforce simp: sc_ko_at_valid_objs_valid_sc' obj_at'_def)
-  apply (rule hoare_seq_ext_skip)
-   apply (rule hoare_when_cases, clarsimp)
-   apply (rule hoare_seq_ext_skip, wpsimp wp: tcbSchedDequeue_valid_objs')
-   apply (rule hoare_seq_ext_skip, wpsimp)
-   apply (rule hoare_seq_ext_skip, wpsimp wp: threadSet_valid_objs')
-    apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def cteSizeBits_def)
-   apply wpsimp
-  apply (rule_tac B="\<lambda>_. ?pre and sc_at' scPtr" in hoare_seq_ext[rotated])
-   apply (wpsimp wp: set_sc_valid_objs')
-   apply (clarsimp simp: valid_sched_context'_def valid_sched_context_size'_def
-                         sc_size_bounds_def objBits_def objBitsKO_def refillSize_def
-                  split: if_splits)
   apply (wpsimp wp: threadSet_valid_objs')
   apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def cteSizeBits_def)
   done
 
-lemma tcbReleaseRemove_list_refs_of_replies'[wp]:
-  "tcbReleaseRemove tcbPtr \<lbrace>\<lambda>s. P (list_refs_of_replies' s)\<rbrace>"
-  by (wpsimp simp: tcbReleaseRemove_def)
+lemma tcbSchedContext_update_None_valid_objs'[wp]:
+  "threadSet (tcbSchedContext_update (\<lambda>_. None)) tcbPtr \<lbrace>valid_objs'\<rbrace>"
+  apply (wpsimp wp: threadSet_valid_objs')
+  apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def cteSizeBits_def)
+  done
+
+lemma schedContextDonate_valid_objs':
+  "\<lbrace>valid_objs' and tcb_at' tcbPtr
+    and sym_heap_sched_pointers and valid_sched_pointers
+    and pspace_aligned' and pspace_distinct' and pspace_bounded'\<rbrace>
+   schedContextDonate scPtr tcbPtr
+   \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
+  unfolding schedContextDonate_def
+  apply (wpsimp wp: hoare_vcg_all_lift hoare_drop_imps)
+  by (fastforce dest: sc_ko_at_valid_objs_valid_sc'
+                simp: valid_sched_context'_def valid_sched_context_size'_def
+                      sc_size_bounds_def objBits_def objBitsKO_def refillSize_def)
 
 lemma schedContextDonate_list_refs_of_replies' [wp]:
   "schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>s. P (list_refs_of_replies' s)\<rbrace>"
   unfolding schedContextDonate_def
   by (wpsimp simp: comp_def | rule hoare_strengthen_post[where Q="\<lambda>_ s. P (list_refs_of_replies' s)"])+
-
-lemma schedContextDonate_sch_act_wf [wp]:
-  "schedContextDonate scPtr tcbPtr \<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  apply (simp only: schedContextDonate_def)
-  apply (wpsimp wp: threadSet_sch_act threadSet_wp)
-       apply (rule_tac Q="\<lambda>_ s. sch_act_wf (ksSchedulerAction s) s" in hoare_strengthen_post[rotated])
-        apply (fastforce simp: sch_act_wf_def ct_in_state'_def tcb_in_cur_domain'_def
-                               pred_tcb_at'_def obj_at'_def
-                        split: if_splits)
-       apply wpsimp+
-  done
 
 lemma schedContextDonate_valid_idle':
   "\<lbrace>\<lambda>s. valid_idle' s \<and> tcbPtr \<noteq> idle_thread_ptr \<and>
@@ -830,40 +794,41 @@ lemma updateRefillTl_corres:
 
 lemma readRefillReady_no_ofail[wp]:
   "no_ofail (sc_at' t) (readRefillReady t)"
-  apply (clarsimp simp: readRefillReady_def readSchedContext_def)
+  unfolding readRefillReady_def
   apply (wpsimp wp: no_ofail_readCurTime)
   done
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-lemma get_sc_released_corres:
-  "corres (=) (active_scs_valid and sc_at sc_ptr) (valid_objs' and sc_at' sc_ptr)
-          (get_sc_released sc_ptr) (scReleased sc_ptr)"
-  apply (simp add: get_sc_released_def read_sc_released_def read_sched_context_get_sched_context
-                   scReleased_def scActive_def refillReady_def gets_the_ogets)
-  apply (rule corres_underlying_split[rotated 2, OF get_sched_context_sp get_sc_sp'])
-   apply (corresKsimp corres: get_sc_corres)
-  apply (rename_tac sc sc')
-  apply (rule corres_symb_exec_l[rotated 2, OF gets_sp]; (solves wpsimp)?)
-  apply (rule corres_symb_exec_r[rotated, OF gets_the_sp]; (solves wpsimp)?)
-   apply (wpsimp wp: no_ofail_gets_the readRefillReady_no_ofail)
-  apply (clarsimp simp: sc_released_def readRefillReady_def readSchedContext_def
-                 dest!: readObject_misc_ko_at')
-  apply normalise_obj_at'
-  apply (rename_tac sc' current_time)
-  apply (subgoal_tac "sc_active sc = (0 < scRefillMax sc')")
-   apply (case_tac "sc_active sc"; clarsimp)
-   apply (drule active_scs_validE[where scp=sc_ptr, rotated])
-    apply (clarsimp simp: is_active_sc_def sc_at_ppred_def obj_at_def)
-   apply (drule_tac s'=s' in refill_hd_relation2)
-      apply (fastforce simp: refill_ready_def refill_sufficient_def refill_capacity_def
-                             kernelWCETTicks_def vs_all_heap_simps cfg_valid_refills_def
-                             rr_valid_refills_def sp_valid_refills_def obj_at_def
-                             valid_obj'_def obj_at'_def readCurTime_def ogets_def
-                             state_relation_def
-                      dest!: readObject_ko_at'_sc
-                      split: if_splits)+
-  apply (clarsimp simp: refill_ready_def readCurTime_def ogets_def sc_relation_def active_sc_def)
+lemma refillReady_corres:
+  "sc_ptr = scPtr \<Longrightarrow>
+   corres (=)
+     (sc_at sc_ptr and sc_refills_sc_at (\<lambda>refills. refills \<noteq> []) sc_ptr and is_active_sc sc_ptr
+      and valid_objs and pspace_aligned and pspace_distinct)
+     (valid_objs' and valid_refills' scPtr)
+     (get_sc_refill_ready sc_ptr) (refillReady scPtr)"
+  apply (clarsimp simp: refill_ready_def refillReady_def get_sc_refill_ready_def
+                        read_sc_refill_ready_def readRefillReady_def readCurTime_def gets_the_ogets
+             simp flip: get_refill_head_def getRefillHead_def getCurTime_def)
+  apply (corres corres: getRefillHead_corres getCurTime_corres
+                  simp: kernelWCETTicks_def refill_map_def projection_rewrites)
+  done
+
+lemma scReleased_corres:
+  "corres (=)
+     (active_scs_valid and valid_objs and pspace_aligned and pspace_distinct)
+     (valid_objs' and sc_at' sc_ptr)
+     (get_sc_released sc_ptr) (scReleased sc_ptr)"
+  apply (corres corres: scActive_corres refillReady_corres
+                  simp: get_sc_refill_ready_def[symmetric, simplified fun_app_def]
+                        refillReady_def[symmetric] get_sc_released_def read_sc_released_def
+                        get_sc_active_def[symmetric] readScReleased_def scActive_def[symmetric]
+                        scReleased_def gets_the_if_distrib)
+   apply (fastforce intro!: active_scs_validE valid_refills_nonempty_refills sc_at'_cross
+                      simp: vs_all_heap_simps obj_at_def)
+  apply (fastforce elim: valid_objs'_valid_refills'
+                   simp: is_active_sc'_def obj_at'_def opt_pred_def opt_map_def
+                  split: option.splits)
   done
 
 end
