@@ -25,6 +25,7 @@ lemma case_Null_If:
 crunches emptySlot
   for aligned'[wp]: pspace_aligned'
   and distinct'[wp]: pspace_distinct'
+  and pspace_canonical'[wp]: pspace_canonical'
   (simp: case_Null_If)
 
 lemma updateCap_cte_wp_at_cases:
@@ -2479,11 +2480,11 @@ lemma setObject_tcb_gsMaxObjectSize[wp]:
   "setObject t (v :: tcb) \<lbrace>\<lambda>s. P (gsMaxObjectSize s)\<rbrace>"
   by (wpsimp simp: setObject_def wp: updateObject_default_inv)
 
-crunch ksInterruptState[wp]: archThreadSet "\<lambda>s. P (ksInterruptState s)"
-
-crunch gsMaxObjectSize[wp]: archThreadSet "\<lambda>s. P (gsMaxObjectSize s)"
-
-crunch ksMachineState[wp]: archThreadSet "\<lambda>s. P (ksMachineState s)"
+crunches archThreadSet
+  for pspace_canonical'[wp]: pspace_canonical'
+  and gsMaxObjectSize[wp]: "\<lambda>s. P (gsMaxObjectSize s)"
+  and ksInterruptState[wp]: "\<lambda>s. P (ksInterruptState s)"
+  and ksMachineState[wp]: "\<lambda>s. P (ksMachineState s)"
   (wp: setObject_ksMachine updateObject_default_inv)
 
 lemma archThreadSet_state_refs_of'[wp]:

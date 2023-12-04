@@ -205,7 +205,7 @@ lemma performASIDControlInvocation_corres:
           apply (wp createObjects_valid_pspace'
                     [where sz = pageBits and ty="Inl (KOArch (KOASIDPool undefined))"])
               apply (simp add: makeObjectKO_def)+
-            apply (simp add:objBits_simps range_cover_full valid_cap'_def)+
+            apply (simp add:objBits_simps range_cover_full valid_cap'_def canonical_address_and)+
           apply (clarsimp simp:valid_cap'_def)
           apply (wp createObject_typ_at'
                     createObjects_orig_cte_wp_at'[where sz = pageBits])
@@ -1966,7 +1966,7 @@ lemma performASIDControlInvocation_invs' [wp]:
                  createObjects_orig_cte_wp_at'[where sz = pageBits]
                  hoare_vcg_const_imp_lift
          |simp add: makeObjectKO_def asid_pool_typ_at_ext' valid_cap'_def
-                    isCap_simps
+                    isCap_simps canonical_address_and
                cong: rev_conj_cong
          |strengthen safe_parent_strg'[where idx = "2^ pageBits"]
          | simp add: bit_simps)+

@@ -559,6 +559,16 @@ lemma setObject_aligned[wp]:
   apply (fastforce dest: bspec[OF _ domI])
   done
 
+lemma setObject_canonical[wp]:
+  shows "\<lbrace>pspace_canonical'\<rbrace> setObject p val \<lbrace>\<lambda>rv. pspace_canonical'\<rbrace>"
+  apply (clarsimp simp: setObject_def split_def valid_def in_monad lookupAround2_char1
+                        pspace_canonical'_def ps_clear_upd objBits_def[symmetric]
+                 split: if_split_asm
+                 dest!: updateObject_objBitsKO)
+   apply (fastforce dest: bspec[OF _ domI])
+  apply (fastforce dest: bspec[OF _ domI])
+  done
+
 lemma set_ep_aligned' [wp]:
   "\<lbrace>pspace_aligned'\<rbrace> setEndpoint ep v  \<lbrace>\<lambda>rv. pspace_aligned'\<rbrace>"
   unfolding setEndpoint_def by wp
@@ -662,6 +672,19 @@ lemma cte_wp_at_ctes_of:
   apply (clarsimp simp: ps_clear_def3[where na=tcb_bits] is_aligned_mask add_ac
                         word_bw_assocs)
   done
+
+lemma ctes_of_canonical:
+  assumes canonical: "pspace_canonical' s"
+  assumes ctes_of: "ctes_of s p = Some cte"
+  shows "canonical_address p"
+proof -
+  from ctes_of have "cte_wp_at' ((=) cte) p s"
+    by (simp add: cte_wp_at_ctes_of)
+  thus ?thesis using canonical canonical_bit_def
+    by (fastforce simp: pspace_canonical'_def tcb_cte_cases_def field_simps objBits_defs take_bit_Suc
+                 split: if_splits
+                  elim: cte_wp_atE' canonical_address_add)
+qed
 
 lemma tcb_cte_cases_small:
   "\<lbrakk> tcb_cte_cases v = Some (getF, setF) \<rbrakk>
@@ -1341,6 +1364,9 @@ lemma setEndpoint_valid_mdb':
   unfolding setEndpoint_def
   by (rule set_ep_valid_mdb')
 
+crunches setEndpoint, setNotification
+  for pspace_canonoical'[wp]: pspace_canonical'
+
 lemma set_ep_valid_pspace'[wp]:
   "\<lbrace>valid_pspace' and valid_ep' ep\<rbrace>
   setEndpoint epptr ep
@@ -2002,6 +2028,7 @@ lemma set_ep_hyp[wp]:
 
 crunches setEndpoint, setNotification
   for valid_arch'[wp]: valid_arch_state'
+  and pspace_canonoical'[wp]: pspace_canonical'
   (wp: valid_arch_state_lift')
 
 lemmas valid_irq_node_lift =
@@ -2228,6 +2255,10 @@ lemma setEndpoint_ct':
   apply (simp add: setEndpoint_def setObject_def split_def)
   apply (wp updateObject_default_inv | simp)+
   done
+
+lemma obj_at'_is_canonical:
+  "\<lbrakk>pspace_canonical' s; obj_at' P t s\<rbrakk> \<Longrightarrow> canonical_address t"
+  by (force simp: obj_at'_def pspace_canonical'_def)
 
 lemmas setEndpoint_valid_globals[wp]
     = valid_global_refs_lift' [OF set_ep_ctes_of set_ep_arch'

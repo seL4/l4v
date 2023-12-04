@@ -439,6 +439,7 @@ where valid_cap'_def:
   | UntypedCap d r n f \<Rightarrow>
       valid_untyped' d r n f s \<and> r \<noteq> 0 \<and> minUntypedSizeBits \<le> n \<and> n \<le> maxUntypedSizeBits
         \<and> f \<le> 2^n \<and> is_aligned (of_nat f :: machine_word) minUntypedSizeBits
+        \<and> canonical_address r
   | EndpointCap r badge x y z t \<Rightarrow> ep_at' r s
   | NotificationCap r badge x y \<Rightarrow> ntfn_at' r s
   | CNodeCap r bits guard guard_sz \<Rightarrow>
@@ -539,6 +540,9 @@ definition
 where
   "pspace_distinct' s \<equiv>
    \<forall>x \<in> dom (ksPSpace s). ps_clear x (objBitsKO (the (ksPSpace s x))) s"
+
+definition pspace_canonical' :: "kernel_state \<Rightarrow> bool" where
+  "pspace_canonical' s \<equiv> \<forall>p \<in> dom (ksPSpace s). canonical_address p"
 
 definition
   valid_objs' :: "kernel_state \<Rightarrow> bool"
@@ -802,6 +806,7 @@ definition
 where
   "valid_pspace' \<equiv> valid_objs' and
                    pspace_aligned' and
+                   pspace_canonical' and
                    pspace_distinct' and
                    no_0_obj' and
                    valid_mdb'"
@@ -1670,7 +1675,7 @@ lemmas valid_irq_states'_def = valid_irq_masks'_def
 
 lemma valid_pspaceE' [elim]:
   "\<lbrakk>valid_pspace' s;
-    \<lbrakk> valid_objs' s; pspace_aligned' s; pspace_distinct' s; no_0_obj' s;
+    \<lbrakk> valid_objs' s; pspace_aligned' s; pspace_distinct' s; pspace_canonical' s; no_0_obj' s;
       valid_mdb' s \<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
   unfolding valid_pspace'_def by simp
 
@@ -1788,7 +1793,7 @@ lemma valid_pspace':
   "valid_pspace' s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_pspace' s'"
   by  (auto simp add: valid_pspace'_def valid_objs'_def pspace_aligned'_def
                      pspace_distinct'_def ps_clear_def no_0_obj'_def ko_wp_at'_def
-                     typ_at'_def
+                     typ_at'_def pspace_canonical'_def
            intro: valid_obj'_pspaceI valid_mdb'_pspaceI)
 
 lemma ex_cte_cap_to_pspaceI'[elim]:
@@ -2637,6 +2642,10 @@ lemma pspace_distinct_update [iff]:
   "pspace_distinct' (f s) = pspace_distinct' s"
   by (simp add: pspace pspace_distinct'_def ps_clear_def)
 
+lemma pspace_canonical_update [iff]:
+  "pspace_canonical' (f s) = pspace_canonical' s"
+  by (simp add: pspace pspace_canonical'_def ps_clear_def)
+
 lemma pred_tcb_at_update [iff]:
   "pred_tcb_at' proj P p (f s) = pred_tcb_at' proj P p s"
   by (simp add: pred_tcb_at'_def)
@@ -3236,6 +3245,14 @@ lemma invs_valid_global'[elim!]:
   "invs' s \<Longrightarrow> valid_global_refs' s"
   by (fastforce simp: invs'_def valid_state'_def)
 
+lemma invs_pspace_canonical'[elim!]:
+  "invs' s \<Longrightarrow> pspace_canonical' s"
+  by (fastforce dest!: invs_valid_pspace' simp: valid_pspace'_def)
+
+lemma valid_pspace_canonical'[elim!]:
+  "valid_pspace' s \<Longrightarrow> pspace_canonical' s"
+  by (rule valid_pspaceE')
+
 lemma invs'_invs_no_cicd:
   "invs' s \<Longrightarrow> all_invs_but_ct_idle_or_in_cur_domain' s"
   by (simp add: invs'_to_invs_no_cicd'_def)
@@ -3337,6 +3354,59 @@ lemma mask_wordRadix_less_wordBits:
 lemma priority_mask_wordRadix_size:
   "unat ((w::priority) && mask wordRadix) < wordBits"
   by (rule mask_wordRadix_less_wordBits, simp add: wordRadix_def word_size)
+
+lemma canonical_address_mask_eq:
+  "canonical_address p = (p && mask (Suc canonical_bit) = p)"
+  by (simp add: canonical_address_def canonical_address_of_def ucast_ucast_mask canonical_bit_def)
+
+lemma canonical_address_and:
+  "canonical_address p \<Longrightarrow> canonical_address (p && b)"
+  by (simp add: canonical_address_range word_and_le)
+
+lemma canonical_address_add:
+  assumes "is_aligned p n"
+  assumes "f < 2 ^ n"
+  assumes "n \<le> canonical_bit"
+  assumes "canonical_address p"
+  shows "canonical_address (p + f)"
+proof -
+  from `f < 2 ^ n`
+  have "f \<le> mask n"
+    by (simp add: mask_plus_1 plus_one_helper)
+
+  from `canonical_address p`
+  have "p && mask (Suc canonical_bit) = p"
+    by (simp add: canonical_address_mask_eq)
+  moreover
+  from `f \<le> mask n` `is_aligned p n`
+  have "p + f = p || f"
+    by (simp add: word_and_or_mask_aligned)
+  moreover
+  from `f \<le> mask n` `n \<le> canonical_bit`
+  have "f \<le> mask (Suc canonical_bit)"
+    using le_smaller_mask by fastforce
+  hence "f && mask (Suc canonical_bit) = f"
+    by (simp add: le_mask_imp_and_mask)
+  ultimately
+  have "(p + f) && mask (Suc canonical_bit) = p + f"
+    by (simp add: word_ao_dist)
+  thus ?thesis
+    by (simp add: canonical_address_mask_eq)
+qed
+
+lemma range_cover_canonical_address:
+  "\<lbrakk> range_cover ptr sz us n ; p < n ;
+     canonical_address (ptr && ~~ mask sz) ; sz \<le> maxUntypedSizeBits \<rbrakk>
+   \<Longrightarrow> canonical_address (ptr + of_nat p * 2 ^ us)"
+  apply (subst word_plus_and_or_coroll2[symmetric, where w = "mask sz"])
+  apply (subst add.commute)
+  apply (subst add.assoc)
+  apply (rule canonical_address_add[where n=sz] ; simp add: untypedBits_defs is_aligned_neg_mask)
+   apply (drule (1) range_cover.range_cover_compare)
+   apply (clarsimp simp: word_less_nat_alt)
+   apply unat_arith
+  apply (simp add: canonical_bit_def)
+  done
 
 end
 (* The normalise_obj_at' tactic was designed to simplify situations similar to:

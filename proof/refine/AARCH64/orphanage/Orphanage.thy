@@ -1475,7 +1475,7 @@ lemma createNewObjects_no_orphans:
          \<and> (tp = APIObjectType ArchTypes_H.CapTableObject \<longrightarrow> us > 0)
          \<and> caps_overlap_reserved' {ptr..ptr + of_nat (length slots) * 2 ^ APIType_capBits tp us - 1} s
          \<and> slots \<noteq> [] \<and> distinct slots \<and> ptr \<noteq> 0
-         \<and> sz \<le> maxUntypedSizeBits\<rbrace>
+         \<and> sz \<le> maxUntypedSizeBits \<and> canonical_address (ptr && ~~ mask sz)\<rbrace>
    createNewObjects tp cref slots ptr us d
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   apply (rule hoare_name_pre_state)

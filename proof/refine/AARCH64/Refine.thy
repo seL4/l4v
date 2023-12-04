@@ -24,7 +24,7 @@ lemma typ_at_AUserDataI:
   "\<lbrakk> typ_at (AArch (AUserData sz)) p s; pspace_relation (kheap s) (ksPSpace s');
      pspace_aligned' s'; pspace_distinct' s'; n < 2 ^ (pageBitsForSize sz - pageBits) \<rbrakk>
         \<Longrightarrow> typ_at' UserDataT (p + n * 2 ^ pageBits) s'"
-  apply (clarsimp simp add: obj_at_def a_type_def )
+  apply (clarsimp simp add: obj_at_def a_type_def)
   apply (simp split: Structures_A.kernel_object.split_asm
                      arch_kernel_obj.split_asm split: if_split_asm)
   apply (drule(1) pspace_relation_absD)

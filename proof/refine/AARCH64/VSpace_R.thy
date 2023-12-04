@@ -1993,6 +1993,7 @@ crunches storePTE
   for no_0_obj'[wp]: no_0_obj'
   and valid_arch'[wp]: valid_arch_state'
   and cur_tcb'[wp]: cur_tcb'
+  and pspace_canonical'[wp]: pspace_canonical'
 
 lemma unmapPageTable_corres:
   assumes "asid' = ucast asid" "vptr' = vptr" "pt' = pt"

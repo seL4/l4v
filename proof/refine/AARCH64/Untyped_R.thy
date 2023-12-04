@@ -1330,6 +1330,7 @@ crunches updateMDB, updateNewFreeIndex
   and ksWorkUnitsCompleted[wp]: "\<lambda>s. P (ksWorkUnitsCompleted s)"
   and ksMachineState[wp]: "\<lambda>s. P (ksMachineState s)"
   and ksArchState[wp]: "\<lambda>s. P (ksArchState s)"
+
 crunches insertNewCap
   for ksInterrupt[wp]: "\<lambda>s. P (ksInterruptState s)"
   and norq[wp]: "\<lambda>s. P (ksReadyQueues s)"
@@ -1337,8 +1338,11 @@ crunches insertNewCap
   and ksDomSchedule[wp]: "\<lambda>s. P (ksDomSchedule s)"
   and ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
   and ksCurThread[wp]: "\<lambda>s. P (ksCurThread s)"
+  and pspace_canonical'[wp]: pspace_canonical'
   (wp: crunch_wps)
-crunch nosch[wp]: insertNewCaps "\<lambda>s. P (ksSchedulerAction s)"
+
+crunches insertNewCaps
+  for nosch[wp]: "\<lambda>s. P (ksSchedulerAction s)"
   (simp: crunch_simps zipWithM_x_mapM wp: crunch_wps)
 
 
@@ -2897,7 +2901,7 @@ lemma inv_untyped_corres_helper1:
 
 lemma createNewCaps_valid_pspace_extras:
   "\<lbrace>(\<lambda>s.    n \<noteq> 0 \<and> ptr \<noteq> 0 \<and> range_cover ptr sz (APIType_capBits ty us) n
-          \<and> sz \<le> maxUntypedSizeBits
+          \<and> sz \<le> maxUntypedSizeBits \<and> canonical_address (ptr && ~~ mask sz)
           \<and> pspace_no_overlap' ptr sz s
           \<and> valid_pspace' s \<and> caps_no_overlap'' ptr sz s
           \<and> caps_overlap_reserved' {ptr .. ptr + of_nat n * 2 ^ APIType_capBits ty us - 1} s
@@ -2906,7 +2910,16 @@ lemma createNewCaps_valid_pspace_extras:
      createNewCaps ty ptr n us d
    \<lbrace>\<lambda>rv. pspace_aligned'\<rbrace>"
   "\<lbrace>(\<lambda>s.    n \<noteq> 0 \<and> ptr \<noteq> 0 \<and> range_cover ptr sz (APIType_capBits ty us) n
-          \<and> sz \<le> maxUntypedSizeBits
+          \<and> sz \<le> maxUntypedSizeBits \<and> canonical_address (ptr && ~~ mask sz)
+          \<and> pspace_no_overlap' ptr sz s
+          \<and> valid_pspace' s \<and> caps_no_overlap'' ptr sz s
+          \<and> caps_overlap_reserved' {ptr .. ptr + of_nat n * 2 ^ APIType_capBits ty us - 1} s
+          \<and> ksCurDomain s \<le> maxDomain
+   )\<rbrace>
+     createNewCaps ty ptr n us d
+   \<lbrace>\<lambda>rv. pspace_canonical'\<rbrace>"
+  "\<lbrace>(\<lambda>s.    n \<noteq> 0 \<and> ptr \<noteq> 0 \<and> range_cover ptr sz (APIType_capBits ty us) n
+          \<and> sz \<le> maxUntypedSizeBits \<and> canonical_address (ptr && ~~ mask sz)
           \<and> pspace_no_overlap' ptr sz s
           \<and> valid_pspace' s \<and> caps_no_overlap'' ptr sz s
           \<and> caps_overlap_reserved' {ptr .. ptr + of_nat n * 2 ^ APIType_capBits ty us - 1} s
@@ -2915,7 +2928,7 @@ lemma createNewCaps_valid_pspace_extras:
      createNewCaps ty ptr n us d
    \<lbrace>\<lambda>rv. pspace_distinct'\<rbrace>"
   "\<lbrace>(\<lambda>s.    n \<noteq> 0 \<and> ptr \<noteq> 0 \<and> range_cover ptr sz (APIType_capBits ty us) n
-          \<and> sz \<le> maxUntypedSizeBits
+          \<and> sz \<le> maxUntypedSizeBits \<and> canonical_address (ptr && ~~ mask sz)
           \<and> pspace_no_overlap' ptr sz s
           \<and> valid_pspace' s \<and> caps_no_overlap'' ptr sz s
           \<and> caps_overlap_reserved' {ptr .. ptr + of_nat n * 2 ^ APIType_capBits ty us - 1} s
@@ -2924,7 +2937,7 @@ lemma createNewCaps_valid_pspace_extras:
      createNewCaps ty ptr n us d
    \<lbrace>\<lambda>rv. valid_mdb'\<rbrace>"
   "\<lbrace>(\<lambda>s.    n \<noteq> 0 \<and> ptr \<noteq> 0 \<and> range_cover ptr sz (APIType_capBits ty us) n
-          \<and> sz \<le> maxUntypedSizeBits
+          \<and> sz \<le> maxUntypedSizeBits \<and> canonical_address (ptr && ~~ mask sz)
           \<and> pspace_no_overlap' ptr sz s
           \<and> valid_pspace' s \<and> caps_no_overlap'' ptr sz s
           \<and> caps_overlap_reserved' {ptr .. ptr + of_nat n * 2 ^ APIType_capBits ty us - 1} s
@@ -2932,18 +2945,21 @@ lemma createNewCaps_valid_pspace_extras:
    )\<rbrace>
      createNewCaps ty ptr n us d
    \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
+      apply (rule hoare_grab_asm)+
+      apply (rule hoare_pre,rule hoare_strengthen_post[OF createNewCaps_valid_pspace])
+           apply (simp add:valid_pspace'_def)+
      apply (rule hoare_grab_asm)+
      apply (rule hoare_pre,rule hoare_strengthen_post[OF createNewCaps_valid_pspace])
-         apply (simp add:valid_pspace'_def)+
+          apply (simp add:valid_pspace'_def)+
     apply (rule hoare_grab_asm)+
     apply (rule hoare_pre,rule hoare_strengthen_post[OF createNewCaps_valid_pspace])
-        apply (simp add:valid_pspace'_def)+
+         apply (simp add:valid_pspace'_def)+
    apply (rule hoare_grab_asm)+
    apply (rule hoare_pre,rule hoare_strengthen_post[OF createNewCaps_valid_pspace])
-       apply (simp add:valid_pspace'_def)+
+        apply (simp add:valid_pspace'_def)+
   apply (rule hoare_grab_asm)+
   apply (rule hoare_pre,rule hoare_strengthen_post[OF createNewCaps_valid_pspace])
-      apply (simp add:valid_pspace'_def)+
+       apply (simp add:valid_pspace'_def)+
   done
 
 declare map_fst_zip_prefix[simp]
@@ -3170,18 +3186,13 @@ lemma createNewCaps_valid_cap':
         range_cover ptr sz (APIType_capBits ty us) n \<and>
         (ty = APIObjectType ArchTypes_H.CapTableObject \<longrightarrow> 0 < us) \<and>
         (ty = APIObjectType apiobject_type.Untyped \<longrightarrow> minUntypedSizeBits \<le> us \<and> us \<le> maxUntypedSizeBits) \<and>
-        ptr \<noteq> 0 \<and> sz \<le> maxUntypedSizeBits\<rbrace>
+        ptr \<noteq> 0 \<and> sz \<le> maxUntypedSizeBits \<and> canonical_address (ptr && ~~ mask sz)\<rbrace>
     createNewCaps ty ptr n us d
   \<lbrace>\<lambda>r s. \<forall>cap\<in>set r. s \<turnstile>' cap\<rbrace>"
   apply (rule hoare_assume_pre)
   apply clarsimp
-  apply (erule createNewCaps_valid_cap)
-  apply simp+
+  apply (erule createNewCaps_valid_cap; simp)
   done
-
-lemma dmo_ctes_of[wp]:
-  "\<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> doMachineOp mop \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"
-  by (simp add: doMachineOp_def split_def | wp)+
 
 lemma createNewCaps_ranges:
   "\<lbrace>\<lambda>s. range_cover ptr sz (APIType_capBits ty us) n \<and> 0<n \<rbrace>
@@ -3923,6 +3934,10 @@ lemma vc'[simp] : "s \<turnstile>' capability.UntypedCap dev (ptr && ~~ mask sz)
   apply (erule ctes_of_valid_cap')
   apply (simp add: invs_valid_objs')
   done
+
+lemma ptr_cn[simp]:
+  "canonical_address (ptr && ~~ mask sz)"
+  using vc' unfolding valid_cap'_def by simp
 
 lemma sz_limit[simp]:
   "sz \<le> maxUntypedSizeBits"
@@ -4799,6 +4814,9 @@ lemma inv_untyped_corres':
       using range_cover.sz[OF cover]
       by (simp add: unat_less_helper and_mask_less_size word_size)
 
+    have ptr_cn[simp]: "canonical_address (ptr && ~~ mask sz)"
+      using vc' unfolding valid_cap'_def by simp
+
     have overlap_ranges1:
       "{x. ptr \<le> x \<and> x \<le> ptr + 2 ^ obj_bits_api (APIType_map2 (Inr ao')) us
             * of_nat (length slots) - 1} \<subseteq> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1}"
@@ -5428,6 +5446,7 @@ lemma invokeUntyped_invs'':
     note slots_invD = invokeUntyped_proofs.slots_invD[OF pf]
     note nidx[simp] = add_minus_neg_mask[where ptr = ptr]
     note idx_compare' = invokeUntyped_proofs.idx_compare'[OF pf]
+    note ptr_cn[simp] = invokeUntyped_proofs.ptr_cn[OF pf]
     note sz_limit[simp] = invokeUntyped_proofs.sz_limit[OF pf]
 
     have valid_global_refs': "valid_global_refs' s"

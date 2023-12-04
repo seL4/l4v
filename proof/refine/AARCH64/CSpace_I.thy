@@ -2023,6 +2023,9 @@ lemma setCTE_no_0_obj' [wp]:
   "\<lbrace>no_0_obj'\<rbrace> setCTE p c \<lbrace>\<lambda>_. no_0_obj'\<rbrace>"
   by (simp add: setCTE_def) wp
 
+crunches setCTE
+  for pspace_canonical'[wp]: pspace_canonical'
+
 declare mresults_fail[simp]
 
 end
