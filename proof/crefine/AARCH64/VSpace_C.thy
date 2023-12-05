@@ -2495,7 +2495,6 @@ lemma vcpu_restore_ccorres:
                   by (fastforce simp: word_less_nat_alt unat_of_nat_eq elim: order_less_le_trans)
                apply clarsimp
                apply (simp add: upt_Suc)
-               apply (fastforce simp: word_less_nat_alt unat_of_nat_eq word_bits_def elim: order_less_le_trans)
               apply vcg
               apply (fastforce simp: word_less_nat_alt unat_of_nat_eq word_bits_def elim: order_less_le_trans)
              apply wpsimp
