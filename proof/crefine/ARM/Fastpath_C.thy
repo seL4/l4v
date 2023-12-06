@@ -54,7 +54,7 @@ lemma setCTE_tcbContext:
   apply (rule setObject_cte_obj_at_tcb', simp_all)
   done
 
-lemma seThreadState_tcbContext:
+lemma setThreadState_tcbContext:
  "\<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>
     setThreadState a b
   \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>"
@@ -73,7 +73,7 @@ lemma setBoundNotification_tcbContext:
 declare comp_apply [simp del]
 crunch tcbContext[wp]: deleteCallerCap "obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t"
   (wp: setEndpoint_obj_at_tcb' setBoundNotification_tcbContext
-       setNotification_tcb crunch_wps seThreadState_tcbContext
+       setNotification_tcb crunch_wps setThreadState_tcbContext
    simp: crunch_simps unless_def)
 declare comp_apply [simp]
 

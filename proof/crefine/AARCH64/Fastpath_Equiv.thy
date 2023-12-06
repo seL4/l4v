@@ -49,7 +49,7 @@ lemma setCTE_tcbContext:
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-lemma seThreadState_tcbContext:
+lemma setThreadState_tcbContext:
  "\<lbrace>obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>
     setThreadState a b
   \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t\<rbrace>"
@@ -68,7 +68,7 @@ lemma setBoundNotification_tcbContext:
 declare comp_apply [simp del]
 crunch tcbContext[wp]: deleteCallerCap "obj_at' (\<lambda>tcb. P ((atcbContextGet o tcbArch) tcb)) t"
   (wp: setEndpoint_obj_at_tcb' setBoundNotification_tcbContext
-       setNotification_tcb crunch_wps seThreadState_tcbContext
+       setNotification_tcb crunch_wps setThreadState_tcbContext
    simp: crunch_simps unless_def)
 declare comp_apply [simp]
 
@@ -1697,7 +1697,7 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                                           fastpathBestSwitchCandidate_lift[where f="threadSet f t" for f t]
                                | wps)+)[3]
                     apply (simp cong: rev_conj_cong)
-                    apply (wpsimp wp: seThreadState_tcbContext[simplified comp_apply]
+                    apply (wpsimp wp: setThreadState_tcbContext[simplified comp_apply]
                                       setThreadState_oa_queued user_getreg_rv
                                       setThreadState_no_sch_change setThreadState_obj_at_unchanged
                                       sts_st_tcb_at'_cases sts_bound_tcb_at'
