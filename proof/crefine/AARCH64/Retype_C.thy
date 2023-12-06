@@ -2045,7 +2045,7 @@ proof (intro impI allI)
 
   (* rest used to be generic, but PT arrays are complicating everything *)
 
-  (* FIXME AARCH64 
+  (* FIXME AARCH64
   note rl = projectKO_opt_retyp_other [OF cover' pal pno ko_def]
   note cterl = retype_ctes_helper [OF pal pdst pno al' sz' szb mko cover'] *)
 
@@ -5604,7 +5604,7 @@ lemma canonical_address_and_maskD:
   apply fastforce
   done
 
-(* FIXME AARCH64 multiple issues in vspace objects, possibly missing ghost state updates, and 
+(* FIXME AARCH64 multiple issues in vspace objects, possibly missing ghost state updates, and
    page table ghost state in state relation *)
 lemma Arch_createObject_ccorres:
   assumes t: "toAPIType newType = None"
@@ -7796,7 +7796,7 @@ lemma createNewCaps_valid_cap_hd:
     apply (rule hoare_vcg_conj_lift)
      apply (rule createNewCaps_ret_len)
     apply (rule createNewCaps_valid_cap'[where sz=sz])
-   apply (clarsimp simp: range_cover_n_wb)
+   apply (clarsimp simp: range_cover_n_wb canonical_address_and)
   apply simp
   done
 
@@ -8022,7 +8022,7 @@ shows  "ccorres dc xfdc
              subgoal premises prems using prems
                by (simp_all add: range_cover_sz'[where 'a=machine_word_len, folded word_bits_def]
                                  word_bits_def range_cover_def)
-            apply (simp add: range_cover_not_in_neqD (*canonical_address_neq_mask*))
+            apply (simp add: range_cover_not_in_neqD canonical_address_and)
             apply (intro conjI)
                     apply (drule_tac p = n in range_cover_no_0)
                       apply (simp add:shiftl_t2n mult.commute)+
