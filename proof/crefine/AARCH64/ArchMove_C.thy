@@ -278,22 +278,21 @@ lemma asUser_getRegister_discarded:
                         return_def fail_def stateAssert_def)
   done
 
-lemma [wp]: (* FIXME AARCH64 *)
-  "\<lbrace>valid_queues'\<rbrace> updateASIDPoolEntry param_a param_b \<lbrace>\<lambda>_. valid_queues'\<rbrace>"
-  sorry
-lemma [wp]: (* FIXME AARCH64 *)
-  "\<lbrace>valid_pspace'\<rbrace> vcpuUpdate param_a param_b \<lbrace>\<lambda>_. valid_pspace'\<rbrace>"
-  sorry
-
 crunches Arch.switchToThread
   for valid_queues'[wp]: valid_queues'
-  (simp: crunch_simps wp: hoare_drop_imps crunch_wps)
+  (simp: crunch_simps wp: hoare_drop_imps crunch_wps getASID_wp)
 crunches switchToIdleThread
   for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
 
-lemma [wp]: (* FIXME AARCH64 *)
-  "\<lbrace>valid_pspace'\<rbrace> updateASIDPoolEntry param_a param_b \<lbrace>\<lambda>_. valid_pspace'\<rbrace>"
-  sorry
+lemma vcpuUpdate_valid_pspace'[wp]:
+  "vcpuUpdate p f \<lbrace>valid_pspace'\<rbrace>"
+  unfolding vcpuUpdate_def valid_pspace'_def valid_mdb'_def
+  by (wpsimp wp: setObject_vcpu_valid_objs')
+
+lemma updateASIDPoolEntry_valid_pspace'[wp]:
+  "updateASIDPoolEntry p f \<lbrace>valid_pspace'\<rbrace>"
+  unfolding updateASIDPoolEntry_def valid_pspace'_def getPoolPtr_def
+  by (wpsimp wp: getASID_wp)
 
 crunches switchToIdleThread, switchToThread
   for valid_pspace'[wp]: valid_pspace'
