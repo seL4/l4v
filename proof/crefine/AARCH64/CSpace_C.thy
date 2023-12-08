@@ -605,15 +605,14 @@ lemma ccorres_updateMDB_set_mdbNext [corres]:
     apply (erule (2) cspace_cte_relation_upd_mdbI)
     apply (simp add: cmdbnode_relation_def)
     apply (intro arg_cong[where f="\<lambda>f. mdbNext_update f mdb" for mdb] ext word_eqI)
-
-    subgoal sorry (* FIXME AARCH64 canonical is different, no sign extension
-    apply (simp add: sign_extend_bitwise_if' neg_mask_test_bit word_size)
     apply (match premises in C: "canonical_address _" and A: "is_aligned _ _" (multi) \<Rightarrow>
            \<open>match premises in H[thin]: _ (multi) \<Rightarrow> \<open>insert C A\<close>\<close>)
+    apply (clarsimp simp: word_size)
     apply (drule is_aligned_weaken[where y=2], simp add: objBits_defs)
-    apply (case_tac "n < 2"; case_tac "n \<le> 38";
+    apply (case_tac "n < 2"; case_tac "n \<le> canonical_bit";
            clarsimp simp: linorder_not_less linorder_not_le is_aligned_nth[THEN iffD1])
-    apply (fastforce simp: word_size dest: canonical_address_high_bits[simplified canonical_bit_def]) *)
+     apply (fastforce simp: canonical_bit_def)
+    apply (fastforce simp: canonical_address_range canonical_bit_def le_mask_high_bits_len)
    apply (erule_tac t = s'a in ssubst)
    apply simp
    apply (rule conjI)
@@ -990,7 +989,7 @@ lemmas ccorres_move_guard_ptr_safe = ccorres_move_ptr_safe_Seq ccorres_move_ptr_
 lemma cteInsert_ccorres:
   "ccorres dc xfdc
            (cte_wp_at' (\<lambda>scte. capMasterCap (cteCap scte) = capMasterCap cap \<or> is_simple_cap' cap) src
-               and valid_mdb' and valid_objs' and pspace_aligned'
+               and valid_mdb' and valid_objs' and pspace_aligned' and pspace_canonical'
                and (valid_cap' cap))
            (UNIV \<inter> {s. destSlot_' s = Ptr dest}
                  \<inter> {s. srcSlot_' s = Ptr src}
@@ -1048,10 +1047,7 @@ lemma cteInsert_ccorres:
       apply clarsimp
      apply simp
     apply simp
-   (* FIXME AARCH64 work around missing ctes_of_canonical *)
-   apply (prop_tac "canonical_address dest")
-    subgoal sorry
-   apply (clarsimp simp: (* FIXME AARCH64 ctes_of_canonical *) objBits_defs cte_level_bits_def)
+   apply (clarsimp simp: ctes_of_canonical objBits_defs cte_level_bits_def)
    apply (rule conjI)
     apply (clarsimp simp: isUntypedCap_def split: capability.split_asm)
     apply (frule valid_cap_untyped_inv)
@@ -1151,7 +1147,7 @@ lemma is_aligned_3_next:
 
 lemma cteMove_ccorres:
   "ccorres dc xfdc
-       (valid_mdb' and pspace_aligned')
+       (valid_mdb' and pspace_aligned' and pspace_canonical')
        (UNIV \<inter> {s. destSlot_' s = Ptr dest}
              \<inter> {s. srcSlot_' s = Ptr src}
              \<inter> {s. ccap_relation cap (newCap_' s)}) []
@@ -1169,10 +1165,7 @@ lemma cteMove_ccorres:
                 apply simp+
               apply (wp, vcg)+
   apply (rule conjI)
-   (* FIXME AARCH64 work around missing ctes_of_canonical *)
-   apply (prop_tac "canonical_address dest")
-    subgoal sorry
-   apply (clarsimp simp: cte_wp_at_ctes_of cteSizeBits_eq (* FIXME AARCH64 ctes_of_canonical *) ctes_of_aligned_bits)
+   apply (clarsimp simp: cte_wp_at_ctes_of cteSizeBits_eq ctes_of_canonical ctes_of_aligned_bits)
    apply assumption
   apply (clarsimp simp: ccap_relation_NullCap_iff cmdbnode_relation_def
                         mdb_node_to_H_def nullMDBNode_def)
@@ -1336,7 +1329,7 @@ done
 
 lemma cteSwap_ccorres:
   "ccorres dc xfdc
-           (valid_mdb' and pspace_aligned'
+           (valid_mdb' and pspace_aligned' and pspace_canonical'
                        and (\<lambda>_. slot1 \<noteq> slot2))
            (UNIV \<inter> {s. slot1_' s = Ptr slot1}
                  \<inter> {s. slot2_' s = Ptr slot2}
@@ -1394,9 +1387,8 @@ lemma cteSwap_ccorres:
   apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (apply_conjunct \<open>match conclusion in \<open>no_0 _\<close>
           \<Rightarrow> \<open>simp add: valid_mdb'_def, erule (1) valid_mdb_ctesE\<close>\<close>)
-  apply (case_tac cte; simp add: modify_map_if (* FIXME AARCH64 ctes_of_canonical *))
-  sorry (* FIXME AARCH64 work around missing ctes_of_canonical
-  done *)
+  apply (case_tac cte; simp add: modify_map_if ctes_of_canonical)
+  done
 
 (* todo change in cteMove (\<lambda>s. ctes_of s src = Some scte) *)
 
@@ -2395,7 +2387,7 @@ declare Collect_const [simp del]
 
 lemma capSwapForDelete_ccorres:
   "ccorres dc xfdc
-          (valid_mdb' and pspace_aligned')
+          (valid_mdb' and pspace_aligned' and pspace_canonical')
           (UNIV \<inter> {s. slot1_' s = Ptr slot1}
                 \<inter> {s. slot2_' s = Ptr slot2})
           []
