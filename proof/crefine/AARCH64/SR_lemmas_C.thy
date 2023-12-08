@@ -2327,7 +2327,6 @@ lemma rf_sr_sched_action_relation:
    \<Longrightarrow> cscheduler_action_relation (ksSchedulerAction s) (ksSchedulerAction_' (globals s'))"
   by (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
 
-(* FIXME AARCH64 do we want this?
 lemma canonical_address_tcb_ptr:
   "\<lbrakk>canonical_address t; is_aligned t tcbBlockSizeBits\<rbrakk> \<Longrightarrow>
      canonical_address (ptr_val (tcb_ptr_to_ctcb_ptr t))"
@@ -2346,7 +2345,7 @@ proof -
     using assms(1)
     by (simp add: ctcb_ptr_to_tcb_ptr_def ctcb_offset_defs)
   thus ?thesis by simp
-qed *)
+qed
 
 (* FIXME: move up to TypHeap? *)
 lemma lift_t_Some_iff:
