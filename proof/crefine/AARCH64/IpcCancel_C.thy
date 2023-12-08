@@ -192,6 +192,99 @@ lemma ntfn_ptr_set_queue_spec:
                         canonical_bit_def)
   done
 
+(* FIXME AARCH64: move up *)
+lemma make_canonical_0[simp]:
+  "make_canonical 0 = 0"
+  by (simp add: make_canonical_def)
+
+(* FIXME AARCH64: move up *)
+lemma canonical_make_canonical_idem:
+  "canonical_address p \<Longrightarrow> make_canonical p = p"
+  unfolding make_canonical_def
+  by (simp add: canonical_address_mask_eq)
+
+(* FIXME AARCH64: move up *)
+lemma make_canonical_is_canonical:
+  "canonical_address (make_canonical p)"
+  unfolding make_canonical_def
+  by (simp add: canonical_address_mask_eq)
+
+(* FIXME AARCH64: move up into TcbQueue_C; needs moving up make_canonical first *)
+lemma tcb_queue_relation_next_canonical:
+  assumes "tcb_queue_relation getNext getPrev mp queue NULL qhead"
+  assumes valid_ep: "\<forall>t\<in>set queue. tcb_at' t s"
+                    "distinct queue"
+                    "mp (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb"
+                    "tcbp \<in> set queue"
+  assumes canon: "pspace_canonical' s"
+  shows "make_canonical (ptr_val (getNext tcb)) = ptr_val (getNext tcb)"
+proof (cases "getNext tcb = NULL")
+  case True
+  thus ?thesis by simp
+next
+  case False
+  hence "ctcb_ptr_to_tcb_ptr (getNext tcb) \<in> set queue" using assms
+    by (fastforce dest: tcb_queueD split: if_split_asm)
+  with valid_ep(1)
+  have tcb: "tcb_at' (ctcb_ptr_to_tcb_ptr (getNext tcb)) s" ..
+  with canon
+  have "canonical_address (ctcb_ptr_to_tcb_ptr (getNext tcb))"
+    by (simp add: obj_at'_is_canonical)
+  moreover
+  have "is_aligned (ctcb_ptr_to_tcb_ptr (getNext tcb)) tcbBlockSizeBits"
+    using tcb by (rule tcb_aligned')
+  ultimately
+  have "canonical_address (ptr_val (getNext tcb))"
+    by (rule canonical_address_ctcb_ptr)
+  thus ?thesis
+    by (simp add: canonical_make_canonical_idem)
+qed
+
+lemma tcb_queue_relation'_next_canonical:
+  "\<lbrakk> tcb_queue_relation' getNext getPrev mp queue qhead qend; \<forall>t\<in>set queue. tcb_at' t s;
+     distinct queue; mp (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb; tcbp \<in> set queue;
+     pspace_canonical' s\<rbrakk>
+   \<Longrightarrow> make_canonical (ptr_val (getNext tcb)) = ptr_val (getNext tcb)"
+  by (rule tcb_queue_relation_next_canonical [OF tcb_queue_relation'_queue_rel])
+
+(* FIXME AARCH64: move up into TcbQueue_C; needs moving up make_canonical first *)
+lemma tcb_queue_relation_prev_canonical:
+  assumes "tcb_queue_relation getNext getPrev mp queue NULL qhead"
+  assumes valid_ep: "\<forall>t\<in>set queue. tcb_at' t s"
+                    "distinct queue"
+                    "mp (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb"
+                    "tcbp \<in> set queue"
+  assumes canon: "pspace_canonical' s"
+  shows "make_canonical (ptr_val (getPrev tcb)) = ptr_val (getPrev tcb)"
+proof (cases "getPrev tcb = NULL")
+  case True
+  thus ?thesis by simp
+next
+  case False
+  hence "ctcb_ptr_to_tcb_ptr (getPrev tcb) \<in> set queue" using assms
+    by (fastforce dest: tcb_queueD split: if_split_asm)
+  with valid_ep(1)
+  have tcb: "tcb_at' (ctcb_ptr_to_tcb_ptr (getPrev tcb)) s" ..
+  with canon
+  have "canonical_address (ctcb_ptr_to_tcb_ptr (getPrev tcb))"
+    by (simp add: obj_at'_is_canonical)
+  moreover
+  have "is_aligned (ctcb_ptr_to_tcb_ptr (getPrev tcb)) tcbBlockSizeBits"
+    using tcb by (rule tcb_aligned')
+  ultimately
+  have "canonical_address (ptr_val (getPrev tcb))"
+    by (rule canonical_address_ctcb_ptr)
+  thus ?thesis
+    by (simp add: canonical_make_canonical_idem)
+qed
+
+lemma tcb_queue_relation'_prev_canonical:
+  "\<lbrakk> tcb_queue_relation' getNext getPrev mp queue qhead qend; \<forall>t\<in>set queue. tcb_at' t s;
+     distinct queue; mp (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb; tcbp \<in> set queue;
+     pspace_canonical' s\<rbrakk>
+   \<Longrightarrow> make_canonical (ptr_val (getPrev tcb)) = ptr_val (getPrev tcb)"
+  by (rule tcb_queue_relation_prev_canonical [OF tcb_queue_relation'_queue_rel])
+
 lemma cancelSignal_ccorres_helper:
   "ccorres dc xfdc (invs' and st_tcb_at' ((=) (BlockedOnNotification ntfn)) thread and ko_at' ntfn' ntfn)
         UNIV
@@ -255,11 +348,6 @@ lemma cancelSignal_ccorres_helper:
           \<comment> \<open>ntfn relation\<close>
           apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
            apply (simp add: cnotification_relation_def Let_def NtfnState_Idle_def)
-           apply (simp add: carch_state_relation_def carch_globals_def)
-           apply (simp add: make_canonical_def)
-          (* FIXME AARCH64 somehow the appearance of make_canonical causes the extra goal above and
-             repeat *)
-          apply (simp add: cnotification_relation_def Let_def NtfnState_Idle_def)
           apply (simp add: carch_state_relation_def carch_globals_def)
          \<comment> \<open>queue relation\<close>
          apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
@@ -299,17 +387,15 @@ lemma cancelSignal_ccorres_helper:
          apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
           apply (simp add: cnotification_relation_def Let_def isWaitingNtfn_def
                     split: ntfn.splits split del: if_split)
-          subgoal sorry (* FIXME AARCH64 we have issues with mask 48 again (see make_canonical),
-                            which require an analogue of tcb_queue_relation'_next_sign to address.
           apply (erule iffD1 [OF tcb_queue_relation'_cong [OF refl _ _ refl], rotated -1])
            apply (clarsimp simp add: h_t_valid_clift_Some_iff)
-           apply (subst tcb_queue_relation'_next_sign; assumption?)
+           apply (subst tcb_queue_relation'_next_canonical; assumption?)
             apply fastforce
-           apply (simp add: notification_lift_def sign_extend_sign_extend_eq canonical_bit_def)
-          apply (clarsimp simp: h_t_valid_clift_Some_iff notification_lift_def sign_extend_sign_extend_eq)
-          apply (subst tcb_queue_relation'_prev_sign; assumption?)
+           apply (simp add: notification_lift_def make_canonical_def canonical_bit_def)
+          apply (clarsimp simp: h_t_valid_clift_Some_iff notification_lift_def)
+          apply (subst tcb_queue_relation'_prev_canonical; assumption?)
            apply fastforce
-          apply (simp add: canonical_bit_def)  *)
+          apply (simp add: make_canonical_def canonical_bit_def)
          apply simp
         \<comment> \<open>queue relation\<close>
         apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
@@ -2884,7 +2970,7 @@ proof -
     done
 qed
 
-(* FIXME: x64 can be removed? *)
+(* FIXME AARCH64: x64 can be removed? *)
 lemma epQueue_head_mask_2 [simp]:
   "epQueue_head_CL (endpoint_lift ko') && ~~ mask 2 = epQueue_head_CL (endpoint_lift ko')"
   unfolding endpoint_lift_def
@@ -2900,6 +2986,11 @@ lemma epQueue_tail_make_canonical[simp]:
   "make_canonical (epQueue_tail_CL (endpoint_lift ko)) = epQueue_tail_CL (endpoint_lift ko)"
   by (simp add: endpoint_lift_def make_canonical_def canonical_bit_def mask_def
                 word_bw_assocs)
+
+(* FIXME AARCH64: move up *)
+lemma make_canonical_and_fold[simp]:
+  "p && mask (Suc canonical_bit) && n = make_canonical p && n" for p:: machine_word
+  by (simp flip: make_canonical_def word_bw_assocs)
 
 (* Clag from cancelSignal_ccorres_helper *)
 
@@ -3000,17 +3091,14 @@ lemma cancelIPC_ccorres_helper:
           apply (rule cpspace_relation_ep_update_ep, assumption+)
            apply (simp add: cendpoint_relation_def Let_def isSendEP_def isRecvEP_def split: endpoint.splits split del: if_split)
            \<comment> \<open>recv case\<close>
-           sorry (* FIXME AARCH64 we don't have a pspace_canonical', and the analogues of
-                    tcb_queue_relation'_next_sign and tcb_queue_relation'_prev_sign need to work
-                    with masking by 48 (see make_canonical)
             apply (subgoal_tac "pspace_canonical' \<sigma>")
              prefer 2
              apply fastforce
             apply (clarsimp
-                     simp: h_t_valid_clift_Some_iff ctcb_offset_defs
+                     simp: h_t_valid_clift_Some_iff ctcb_offset_defs mask_shiftl_decompose
                            tcb_queue_relation'_next_mask tcb_queue_relation'_prev_mask
-                           (* tcb_queue_relation'_next_sign tcb_queue_relation'_prev_sign *)
-                     simp flip: canonical_bit_def
+                           tcb_queue_relation'_next_canonical tcb_queue_relation'_prev_canonical
+                     simp flip: canonical_bit_def make_canonical_def
                      cong: tcb_queue_relation'_cong)
             subgoal by (intro impI conjI; simp)
            \<comment> \<open>send case\<close>
@@ -3018,9 +3106,9 @@ lemma cancelIPC_ccorres_helper:
              prefer 2
              apply fastforce
            apply (clarsimp
-                    simp: h_t_valid_clift_Some_iff ctcb_offset_defs
+                    simp: h_t_valid_clift_Some_iff ctcb_offset_defs mask_shiftl_decompose
                           tcb_queue_relation'_next_mask tcb_queue_relation'_prev_mask
-                          tcb_queue_relation'_next_sign tcb_queue_relation'_prev_sign
+                          tcb_queue_relation'_next_canonical tcb_queue_relation'_prev_canonical
                     simp flip: canonical_bit_def
                     cong: tcb_queue_relation'_cong)
            subgoal by (intro impI conjI; simp)
@@ -3040,7 +3128,7 @@ lemma cancelIPC_ccorres_helper:
      subgoal by (simp add: h_t_valid_clift_Some_iff)
     subgoal by (simp add: objBits_simps')
    subgoal by (simp add: objBits_simps)
-  by assumption *)
+  by assumption
 
 declare empty_fail_get[iff]
 
