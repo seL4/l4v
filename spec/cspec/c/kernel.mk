@@ -108,6 +108,10 @@ ${OVERLAY}: ${DEFAULT_OVERLAY}
 	@cp $< $@
 endif
 
+ifdef INPUT_NUM_DOMAINS
+KERNEL_CMAKE_EXTRA_OPTIONS += -DKernelNumDomains=${INPUT_NUM_DOMAINS}
+endif
+
 # Initialize the CMake build. We purge the build directory and start again
 # whenever any of the kernel sources change, so that we can reliably pick up
 # changes to the build config.
