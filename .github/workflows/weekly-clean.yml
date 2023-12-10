@@ -18,11 +18,13 @@ jobs:
       fail-fast: false
       matrix:
         arch: [ARM, ARM_HYP, AARCH64, RISCV64, X64]
+        num_domains: ['1', '7', '']
     steps:
     - name: Proofs
       uses: seL4/ci-actions/aws-proofs@master
       with:
         L4V_ARCH: ${{ matrix.arch }}
+        NUM_DOMAINS: ${{ matrix.num_domains }}
         cache_read: ''  # start with empty cache, but write cache back (default)
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
