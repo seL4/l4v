@@ -122,7 +122,9 @@ returncode = 0
 for arch in archs:
     features = os.environ.get("L4V_FEATURES", "")
     plat = os.environ.get("L4V_PLAT", "")
-    print(f"Testing for L4V_ARCH='{arch}', L4V_FEATURES='{features}', L4V_PLAT='{plat}':")
+    num_domains = os.environ.get("INPUT_NUM_DOMAINS", "")
+    print(f"Testing for L4V_ARCH='{arch}', L4V_FEATURES='{features}', L4V_PLAT='{plat}', "
+          f"INPUT_NUM_DOMAINS='{num_domains}'")
 
     os.environ["L4V_ARCH"] = arch
     # Provide L4V_ARCH_IS_ARM for Corres_Test in lib/ROOT
