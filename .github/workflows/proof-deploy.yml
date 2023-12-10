@@ -37,6 +37,7 @@ jobs:
       fail-fast: false
       matrix:
         arch: [ARM, ARM_HYP, AARCH64, RISCV64, X64]
+        num_domains: ['1', '']
     # test only most recent push:
     concurrency: l4v-regression-${{ github.ref }}-${{ strategy.job-index }}
     steps:
@@ -45,6 +46,7 @@ jobs:
       with:
         L4V_ARCH: ${{ matrix.arch }}
         xml: ${{ needs.code.outputs.xml }}
+        NUM_DOMAINS: ${{ matrix.num_domains }}
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
