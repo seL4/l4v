@@ -79,6 +79,13 @@ jobs:
         token: ${{ secrets.PRIV_REPO_TOKEN }}
         tag: "l4v/proof-deploy/${{ github.event_name }}"
 
+# Automatically rebase platform branches on pushes to master.
+# This workflow here on the master branch attempts a git rebase of the platform
+# branches listed in the build matrix below. If the rebase succeeds, the rebased
+# branch is pushed under the name `<branch>-rebased`. This triggers the build
+# workflow on the `<branch>-rebased` branch, which will run the proofs. If the
+# proofs succeed, the `<branch>-rebased` branch is force-pushed over
+# `<branch>`, becoming the new platform branch.
   rebase:
     name: Rebase platform branches
     runs-on: ubuntu-latest
