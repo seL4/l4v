@@ -161,6 +161,8 @@ setNextPC = setRegister (Register AARCH64.NextIP)
 -- It zeros every word to ensure that user tasks cannot access any private data
 -- that might previously have been stored in the region.
 
+-- This function's abstract definition is in MachineOps.thy
+
 clearMemory :: PPtr Word -> Int -> MachineMonad ()
 clearMemory ptr byteLength = error "Unimplemented -- machine op"
 
