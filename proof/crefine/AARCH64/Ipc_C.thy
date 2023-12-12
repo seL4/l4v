@@ -2999,8 +2999,8 @@ next
                     \<and> cte_wp_at' (\<lambda>c. fst x \<noteq> NullCap \<longrightarrow> stable_masked (fst x) (cteCap c)) (snd x) s)"
                  in hoare_post_imp_R)
                 prefer 2
-                 apply (clarsimp simp:cte_wp_at_ctes_of valid_pspace_mdb' valid_pspace'_splits
-                   valid_pspace_valid_objs' is_derived_capMasterCap image_def)
+                 apply (clarsimp simp: cte_wp_at_ctes_of valid_pspace'_splits valid_pspace_canonical'
+                                       is_derived_capMasterCap image_def)
                  apply (clarsimp split:if_splits)
                  apply (rule conjI)
                   apply clarsimp+
@@ -4625,6 +4625,26 @@ lemma setupCallerCap_ccorres [corres]:
                         tcb_cnode_index_defs)
   done
 
+lemma tcb_and_not_mask_canonical: (* FIXME AARCH64: move *)
+  "\<lbrakk> pspace_canonical' s; tcb_at' t s; n < tcbBlockSizeBits\<rbrakk> \<Longrightarrow>
+   tcb_Ptr (make_canonical (ptr_val (tcb_ptr_to_ctcb_ptr t)) && ~~ mask n) = tcb_ptr_to_ctcb_ptr t"
+  apply (frule (1) obj_at'_is_canonical)
+  apply (drule canonical_address_tcb_ptr)
+   apply (clarsimp simp: obj_at'_def objBits_simps' split: if_splits)
+  apply (clarsimp simp: canonical_make_canonical_idem)
+  apply (subgoal_tac "ptr_val (tcb_ptr_to_ctcb_ptr t) && ~~ mask n = ptr_val (tcb_ptr_to_ctcb_ptr t)")
+   prefer 2
+   apply (simp add: tcb_ptr_to_ctcb_ptr_def ctcb_offset_defs)
+   apply (rule is_aligned_neg_mask_eq)
+   apply (clarsimp simp: obj_at'_def objBits_simps')
+   apply (rule is_aligned_add)
+    apply (erule is_aligned_weaken, simp)
+   apply (rule is_aligned_weaken[where x="tcbBlockSizeBits - 1"])
+    apply (simp add: is_aligned_def objBits_simps')
+   apply (simp add: objBits_simps')
+  apply simp
+  done
+
 lemma sendIPC_dequeue_ccorres_helper:
   "ep_ptr = Ptr ep ==>
   ccorres (\<lambda>rv rv'. rv' = tcb_ptr_to_ctcb_ptr dest) dest___ptr_to_struct_tcb_C_'
@@ -4732,17 +4752,14 @@ lemma sendIPC_dequeue_ccorres_helper:
            \<comment> \<open>ep relation\<close>
            apply (rule cpspace_relation_ep_update_ep, assumption+)
             apply (clarsimp simp: cendpoint_relation_def Let_def
-                                  isRecvEP_def isSendEP_def
+                                  isRecvEP_def isSendEP_def mask_shiftl_decompose
                                   tcb_queue_relation'_def valid_ep'_def
                        simp flip: canonical_bit_def
                            split: endpoint.splits list.splits
                        split del: if_split)
-            apply (subgoal_tac "tcb_at' (if x22 = [] then x21 else last x22) \<sigma>")
-             subgoal sorry
-             (* FIXME AARCH64 this would normally indicate the address is canonical, and be proven
-                via pspace_canonical'
+            apply (subgoal_tac "tcb_at' (if x22 = [] then x21 else last x22) \<sigma>") (* FIXME AARCH64: clean up names *)
              apply (erule (1) tcb_and_not_mask_canonical[OF invs_pspace_canonical'])
-             apply (simp add: objBits_simps') *)
+             apply (simp (no_asm) add: objBits_simps')
             apply (clarsimp split: if_split)
            apply simp
           \<comment> \<open>ntfn relation\<close>
@@ -4777,9 +4794,22 @@ lemma rf_sr_tcb_update_twice:
                 carch_state_relation_def cmachine_state_relation_def
                 packed_heap_update_collapse_hrs)
 
+lemma Suc_canonical_bit_fold: (* FIXME AARCH64: move, make statement generic *)
+  "48 = Suc canonical_bit"
+  by (simp add: canonical_bit_def)
+
+lemma make_canonical_aligned:
+  "is_aligned p n \<Longrightarrow> is_aligned (make_canonical p) n"
+  by (simp add: is_aligned_mask make_canonical_def) word_eqI_solve
+
+(*
+lemma make_canonical_and_not_mask:
+  "is_aligned p n \<Longrightarrow> make_canonical p && ~~mask n = make_canonical p"
+*)
+
 lemma sendIPC_block_ccorres_helper:
   "ccorres dc xfdc (tcb_at' thread and valid_queues and valid_objs' and
-                    \<comment> \<open>(* FIXME AARCH64 pspace_canonical' and  *)\<close>
+                    pspace_canonical' and
                     sch_act_not thread and ep_at' epptr and
                     (\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<and>
                          (\<forall>d p. thread \<notin> set (ksReadyQueues s (d, p)))) and
@@ -4831,15 +4861,12 @@ lemma sendIPC_block_ccorres_helper:
         apply (frule h_t_valid_c_guard)
         apply (clarsimp simp: typ_heap_simps' rf_sr_tcb_update_twice
                         simp flip: canonical_bit_def)
-        apply (erule(1) rf_sr_tcb_update_no_queue_gen,
-          (simp add: typ_heap_simps')+)[1]
+        apply (erule(1) rf_sr_tcb_update_no_queue_gen, (simp add: typ_heap_simps')+)[1]
          apply (simp add: tcb_cte_cases_def cteSizeBits_def)
-        apply (simp add: ctcb_relation_def cthread_state_relation_def
-                         ThreadState_BlockedOnSend_def mask_def)
-        subgoal sorry (* FIXME AARCH64 word proof: if it's the same when we mask it with a bunch of
-                         bits, it'll still be the same when we mask it with a subset of those bits
-        apply (clarsimp simp: canonical_address_sign_extended sign_extended_iff_sign_extend
-                       split: bool.split) *)
+        apply (simp add: ctcb_relation_def cthread_state_relation_def Suc_canonical_bit_fold
+                         ThreadState_BlockedOnSend_def mask_shiftl_decompose
+                         canonical_make_canonical_idem)
+        apply (clarsimp simp: mask_def)
        apply ceqv
       apply clarsimp
       apply ctac
@@ -4848,9 +4875,7 @@ lemma sendIPC_block_ccorres_helper:
     apply (clarsimp simp: guard_is_UNIV_def)
    apply (clarsimp simp: sch_act_wf_weak valid_tcb'_def valid_tcb_state'_def
                          tcb_cte_cases_def cteSizeBits_def)
-   subgoal sorry (* FIXME AARCH64 this can't be derived without pspace_canonical, see comment at
-                    start of receiveSignal_block_ccorres_helper
-   apply (drule obj_at'_is_canonical, simp, simp) *)
+   apply (drule obj_at'_is_canonical, simp, simp)
   apply clarsimp
   done
 
@@ -5081,11 +5106,10 @@ lemma sendIPC_enqueue_ccorres_helper:
             apply (clarsimp simp: tcb_queue_relation'_def is_aligned_neg_mask)
             apply (rule conjI, simp add: mask_def)
             subgoal
-              apply (clarsimp simp: valid_pspace'_def objBits_simps' simp flip: canonical_bit_def)
-              subgoal sorry (* FIXME AARCH64 we can't derive this address being canonical
+              apply (clarsimp simp: valid_pspace'_def objBits_simps' mask_shiftl_decompose
+                              simp flip: canonical_bit_def)
               apply (erule (1) tcb_and_not_mask_canonical)
-              by (simp (no_asm) add: tcbBlockSizeBits_def) *)
-              done
+              by (simp (no_asm) add: tcbBlockSizeBits_def)
            apply (simp add: isSendEP_def isRecvEP_def)
           \<comment> \<open>ntfn relation\<close>
           apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
@@ -5097,7 +5121,7 @@ lemma sendIPC_enqueue_ccorres_helper:
           apply (erule(2) map_to_ko_at_updI')
            apply (simp only:projectKOs injectKO_ep objBits_simps)
            apply clarsimp
-          apply (clarsimp simp: obj_at'_def projectKOs)
+          apply (clarsimp simp: obj_at'_def)
          \<comment> \<open>queue relation\<close>
          apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
          apply (clarsimp simp: comp_def)
@@ -5131,15 +5155,15 @@ lemma sendIPC_enqueue_ccorres_helper:
                            dest: tcb_queue_relation_next_not_NULL)
              apply (rule conjI, clarsimp)
               apply (rule conjI, fastforce simp: mask_def)
-              apply (clarsimp simp: valid_pspace'_def objBits_simps' simp flip: canonical_bit_def)
-              subgoal sorry (* FIXME AARCH64 can't show this address is canonical from obj_at'
+              apply (clarsimp simp: valid_pspace'_def objBits_simps' mask_shiftl_decompose
+                              simp flip: canonical_bit_def)
               apply (erule (1) tcb_and_not_mask_canonical)
-              apply (simp (no_asm) add: tcbBlockSizeBits_def) *)
-             apply (clarsimp simp: valid_pspace'_def objBits_simps' simp flip: canonical_bit_def)
+              apply (simp (no_asm) add: tcbBlockSizeBits_def)
+             apply (clarsimp simp: valid_pspace'_def objBits_simps' mask_shiftl_decompose
+                             simp flip: canonical_bit_def)
              apply (rule conjI, solves \<open>simp (no_asm) add: mask_def\<close>)
-             subgoal sorry (* FIXME AARCH64 can't show this address is canonical from obj_at'
              apply (erule (1) tcb_and_not_mask_canonical)
-             apply (simp (no_asm) add: tcbBlockSizeBits_def) *)
+             apply (simp (no_asm) add: tcbBlockSizeBits_def)
              done
           apply (simp add: isSendEP_def isRecvEP_def)
          \<comment> \<open>ntfn relation\<close>
@@ -5151,7 +5175,7 @@ lemma sendIPC_enqueue_ccorres_helper:
          apply (frule_tac x=p in map_to_ko_atI, clarsimp, clarsimp)
          apply (erule(2) map_to_ko_at_updI')
           apply (clarsimp simp: objBitsKO_def)
-         apply (clarsimp simp: obj_at'_def projectKOs)
+         apply (clarsimp simp: obj_at'_def)
         \<comment> \<open>queue relation\<close>
         apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
         apply (clarsimp simp: comp_def)
@@ -5383,7 +5407,7 @@ lemma ctcb_relation_blockingIPCCanGrantReplyD:
 
 lemma receiveIPC_block_ccorres_helper:
   "ccorres dc xfdc (tcb_at' thread and valid_queues and valid_objs' and
-                    \<comment> \<open>(* FIXME AARCH64 pspace_canonical' and  *)\<close>
+                    pspace_canonical' and
                     sch_act_not thread and ep_at' epptr and
                     (\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<and>
                      (\<forall>d p. thread \<notin> set (ksReadyQueues s (d, p)))) and
@@ -5422,9 +5446,9 @@ lemma receiveIPC_block_ccorres_helper:
         apply (erule(1) rf_sr_tcb_update_no_queue_gen, (simp add: typ_heap_simps)+)
          apply (simp add: tcb_cte_cases_def cteSizeBits_def)
         apply (simp add: ctcb_relation_def cthread_state_relation_def ccap_relation_ep_helpers
-                         ThreadState_BlockedOnReceive_def mask_def cap_get_tag_isCap)
-        subgoal sorry (* FIXME AARCH64 canonical address masking again
-        apply (clarsimp simp: canonical_address_sign_extended sign_extended_iff_sign_extend) *)
+                         ThreadState_BlockedOnReceive_def cap_get_tag_isCap mask_shiftl_decompose
+                         Suc_canonical_bit_fold canonical_make_canonical_idem)
+        apply (clarsimp simp: mask_def)
        apply ceqv
       apply clarsimp
       apply ctac
@@ -5432,9 +5456,7 @@ lemma receiveIPC_block_ccorres_helper:
                threadSet_weak_sch_act_wf_runnable')
     apply (clarsimp simp: guard_is_UNIV_def)
    apply (clarsimp simp: sch_act_wf_weak valid_tcb'_def valid_tcb_state'_def
-                         tcb_cte_cases_def (*obj_at'_is_canonical*) cteSizeBits_def)
-   subgoal sorry (* FIXME AARCH64 same situation as previously: no pspace_canonical', can't show
-                    address is canonical from an obj_at' *)
+                         tcb_cte_cases_def obj_at'_is_canonical cteSizeBits_def)
   apply clarsimp
   done
 
@@ -5510,15 +5532,15 @@ lemma receiveIPC_enqueue_ccorres_helper:
                             dest: tcb_queue_relation_next_not_NULL)
               apply (rule conjI, clarsimp)
                apply (rule conjI, fastforce simp: mask_def)
-               apply (clarsimp simp: valid_pspace'_def objBits_simps' simp flip: canonical_bit_def)
-               subgoal sorry (* FIXME AARCH64 can't show address is canonical from obj_at'
+               apply (clarsimp simp: valid_pspace'_def objBits_simps' mask_shiftl_decompose
+                               simp flip: canonical_bit_def)
                apply (erule (1) tcb_and_not_mask_canonical)
-               apply (simp (no_asm) add: tcbBlockSizeBits_def) *)
-              apply (clarsimp simp: valid_pspace'_def objBits_simps' simp flip: canonical_bit_def)
+               apply (simp (no_asm) add: tcbBlockSizeBits_def)
+              apply (clarsimp simp: valid_pspace'_def objBits_simps' mask_shiftl_decompose
+                              simp flip: canonical_bit_def)
               apply (rule conjI, solves \<open>simp (no_asm) add: mask_def\<close>)
-              subgoal sorry (* FIXME AARCH64 can't show address is canonical from obj_at'
               apply (erule (1) tcb_and_not_mask_canonical)
-              apply (simp (no_asm) add: tcbBlockSizeBits_def) *)
+              apply (simp (no_asm) add: tcbBlockSizeBits_def)
               done
            apply (simp add: isSendEP_def isRecvEP_def)
           \<comment> \<open>ntfn relation\<close>
@@ -5561,9 +5583,9 @@ lemma receiveIPC_enqueue_ccorres_helper:
                            simp flip: canonical_bit_def)
            subgoal
              apply (rule conjI, solves\<open>simp (no_asm) add: mask_def\<close>)
-             apply (clarsimp simp: valid_pspace'_def)
-             subgoal sorry (* FIXME AARCH64 can't derive canonical address from obj_at'
-             apply (erule (1) tcb_and_not_mask_canonical, simp (no_asm) add: tcbBlockSizeBits_def) *)
+             apply (clarsimp simp: valid_pspace'_def mask_shiftl_decompose
+                             simp flip: canonical_bit_def)
+             apply (erule (1) tcb_and_not_mask_canonical, simp (no_asm) add: tcbBlockSizeBits_def)
              done
           apply (simp add: isSendEP_def isRecvEP_def)
          \<comment> \<open>ntfn relation\<close>
@@ -5575,7 +5597,7 @@ lemma receiveIPC_enqueue_ccorres_helper:
          apply (frule_tac x=p in map_to_ko_atI, clarsimp, clarsimp)
          apply (erule(2) map_to_ko_at_updI')
           apply (clarsimp simp: objBitsKO_def)
-         apply (clarsimp simp: obj_at'_def projectKOs)
+         apply (clarsimp simp: obj_at'_def)
         \<comment> \<open>queue relation\<close>
         apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
         apply (clarsimp simp: comp_def)
@@ -5692,17 +5714,15 @@ lemma receiveIPC_dequeue_ccorres_helper:
             apply (clarsimp simp: comp_def)
            \<comment> \<open>ep relation\<close>
            apply (rule cpspace_relation_ep_update_ep, assumption+)
-            apply (clarsimp simp: cendpoint_relation_def Let_def
+            apply (clarsimp simp: cendpoint_relation_def Let_def mask_shiftl_decompose
                                   isRecvEP_def isSendEP_def
                                   tcb_queue_relation'_def valid_ep'_def
                        simp flip: canonical_bit_def
                            split: endpoint.splits list.splits
                        split del: if_split)
-            apply (subgoal_tac "tcb_at' (if x22 = [] then x21 else last x22) \<sigma>")
-             subgoal sorry (* FIXME AARCH64 doesn't help here, can't derive canonical from obj_at'
-                              without pspace_canonical
+            apply (subgoal_tac "tcb_at' (if x22 = [] then x21 else last x22) \<sigma>") (* FIXME AARCH64: clean up names *)
              apply (erule (1) tcb_and_not_mask_canonical[OF invs_pspace_canonical'])
-             apply (clarsimp simp: objBits_simps') *)
+             apply (simp (no_asm) add: objBits_simps')
             apply (clarsimp split: if_split)
            apply simp
           \<comment> \<open>ntfn relation\<close>
@@ -6129,6 +6149,15 @@ lemma receiveIPC_ccorres [corres]:
   apply (auto simp: isCap_simps valid_cap'_def)
   done
 
+lemma tcb_ptr_canonical: (* FIXME AARCH64: move *)
+  "\<lbrakk> pspace_canonical' s; tcb_at' t s \<rbrakk> \<Longrightarrow>
+   tcb_Ptr (make_canonical (ptr_val (tcb_ptr_to_ctcb_ptr t))) = tcb_ptr_to_ctcb_ptr t"
+  apply (frule (1) obj_at'_is_canonical)
+  apply (drule canonical_address_tcb_ptr)
+   apply (clarsimp simp: obj_at'_def objBits_simps' split: if_splits)
+  apply (clarsimp simp: canonical_make_canonical_idem)
+  done
+
 lemma sendSignal_dequeue_ccorres_helper:
   "ccorres (\<lambda>rv rv'. rv' = tcb_ptr_to_ctcb_ptr dest) dest___ptr_to_struct_tcb_C_'
            (invs' and st_tcb_at' ((=) (BlockedOnNotification ntfn)) dest
@@ -6241,19 +6270,17 @@ lemma sendSignal_dequeue_ccorres_helper:
            apply (erule (1) map_to_ko_atI')
           \<comment> \<open>ntfn relation\<close>
           apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
-           apply (clarsimp simp: cnotification_relation_def Let_def
+           apply (clarsimp simp: cnotification_relation_def Let_def mask_shiftl_decompose
                                  isWaitingNtfn_def
                                  tcb_queue_relation'_def valid_ntfn'_def
                           split: Structures_H.notification.splits list.splits
                       split del: if_split)
-           apply (subgoal_tac "tcb_at' (if x22 = [] then x21 else last x22) \<sigma>")
-            subgoal sorry (* FIXME AARCH64 knowing obj_at' doesn't help here since we don't have
-                             pspace_canonical'
+           apply (subgoal_tac "tcb_at' (if x22 = [] then x21 else last x22) \<sigma>") (* FIXME AARCH64: names *)
             apply (rule conjI)
-             subgoal by (erule (1) tcb_ptr_sign_extend_canonical[OF invs_pspace_canonical'])
+             subgoal by (erule (1) tcb_ptr_canonical[OF invs_pspace_canonical'])
             apply (rule context_conjI)
-             subgoal by (erule (1) tcb_ptr_sign_extend_canonical[OF invs_pspace_canonical'])
-            apply clarsimp *)
+             subgoal by (erule (1) tcb_ptr_canonical[OF invs_pspace_canonical'])
+            apply clarsimp
            apply (clarsimp split: if_split)
           apply simp
          \<comment> \<open>queue relation\<close>
@@ -6455,16 +6482,12 @@ lemma sendSignal_ccorres [corres]:
                         ctcb_offset_defs
                  dest!: sum_to_zero)
   apply (frule (1) ko_at_valid_ntfn'[OF _ invs_valid_objs'])
-  apply (auto simp: valid_ntfn'_def valid_bound_tcb'_def obj_at'_def projectKOs
-                    objBitsKO_def is_aligned_def objBits_simps')
+  apply (auto simp: valid_ntfn'_def valid_bound_tcb'_def obj_at'_def is_aligned_def objBits_simps')
   done
 
 lemma receiveSignal_block_ccorres_helper:
-  (* FIXME AARCH64 without pspace_canonical' we can't show ntfnptr. We can put it in the
-     preconditions (which will bubble up) or assert it in the Haskell and cross (need to update
-     Refine) *)
   "ccorres dc xfdc (tcb_at' thread and valid_queues and sch_act_not thread and
-                    valid_objs' and ntfn_at' ntfnptr \<comment> \<open>and pspace_canonical'\<close> and
+                    valid_objs' and ntfn_at' ntfnptr and pspace_canonical' and
                     (\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<and>
                         (\<forall>d p. thread \<notin> set (ksReadyQueues s (d, p)))) and
                     K (ntfnptr = ntfnptr && ~~ mask 4))
@@ -6495,12 +6518,11 @@ lemma receiveSignal_block_ccorres_helper:
         apply (erule(1) rf_sr_tcb_update_no_queue_gen,
           (simp add: typ_heap_simps')+)
          apply (simp add: tcb_cte_cases_def cteSizeBits_def)
-        apply (simp add: ctcb_relation_def cthread_state_relation_def
-                         ThreadState_BlockedOnNotification_def mask_def
+        apply (simp add: ctcb_relation_def cthread_state_relation_def mask_shiftl_decompose
+                         ThreadState_BlockedOnNotification_def Suc_canonical_bit_fold
+                         canonical_make_canonical_idem
                     flip: canonical_bit_def)
-        subgoal sorry (* FIXME AARCH64 word proof: if it's the same when we mask it with a bunch of
-                         bits, it'll still be the same when we mask it with a subset of those bits
-        apply (clarsimp simp: canonical_address_sign_extended sign_extended_iff_sign_extend) *)
+        apply (simp add: mask_def)
        apply ceqv
       apply clarsimp
       apply ctac
@@ -6508,9 +6530,7 @@ lemma receiveSignal_block_ccorres_helper:
                threadSet_weak_sch_act_wf_runnable')
     apply (clarsimp simp: guard_is_UNIV_def)
    apply (auto simp: weak_sch_act_wf_def valid_tcb'_def tcb_cte_cases_def
-                     valid_tcb_state'_def (*obj_at'_is_canonical*) cteSizeBits_def)
-  subgoal sorry (* FIXME AARCH64 this can't be derived without pspace_canonical, see comment at
-                   start of lemma *)
+                     valid_tcb_state'_def obj_at'_is_canonical cteSizeBits_def)
   done
 
 lemma cpspace_relation_ntfn_update_ntfn':
@@ -6606,11 +6626,11 @@ lemma receiveSignal_enqueue_ccorres_helper:
                                (ksPSpace \<sigma>)(ntfnptr \<mapsto> KONotification (NTFN (WaitingNtfn queue) (ntfnBoundTCB ntfn)))\<rparr>))")
    prefer 2
    apply (clarsimp simp: state_refs_of'_upd ko_wp_at'_def ntfnBound_state_refs_equivalence
-                         obj_at'_def projectKOs objBitsKO_def)
+                         obj_at'_def objBitsKO_def)
   apply (subgoal_tac "ko_at' (NTFN (WaitingNtfn queue) (ntfnBoundTCB ntfn)) ntfnptr (\<sigma>\<lparr>ksPSpace :=
                              (ksPSpace \<sigma>)(ntfnptr \<mapsto> KONotification (NTFN (WaitingNtfn queue) (ntfnBoundTCB ntfn)))\<rparr>)")
    prefer 2
-   apply (clarsimp simp: obj_at'_def projectKOs objBitsKO_def ps_clear_upd)
+   apply (clarsimp simp: obj_at'_def objBitsKO_def ps_clear_upd)
   apply (intro conjI impI allI)
     apply (fastforce simp: h_t_valid_clift)
    apply (fastforce simp: h_t_valid_clift)
@@ -6637,21 +6657,20 @@ lemma receiveSignal_enqueue_ccorres_helper:
            apply (frule_tac x=p in map_to_ko_atI, clarsimp, clarsimp)
            apply (erule(2) map_to_ko_at_updI')
             apply (clarsimp simp: objBitsKO_def)
-           apply (clarsimp simp: obj_at'_def projectKOs)
+           apply (clarsimp simp: obj_at'_def)
           \<comment> \<open>ntfn relation\<close>
           apply (rule cpspace_relation_ntfn_update_ntfn', assumption+)
             apply (case_tac "ntfn", simp_all)[1]
            apply (clarsimp simp: cnotification_relation_def Let_def
                                  mask_def [where n=3] NtfnState_Waiting_def)
            subgoal
-             apply (clarsimp simp: tcb_queue_relation'_def is_aligned_neg_mask                                valid_ntfn'_def
-                                   dest: tcb_queue_relation_next_not_NULL)
+             apply (clarsimp simp: tcb_queue_relation'_def is_aligned_neg_mask valid_ntfn'_def
+                             dest: tcb_queue_relation_next_not_NULL)
              apply (rule conjI, fastforce simp: mask_def)
              apply (rule context_conjI)
-              subgoal sorry (* FIXME AARCH64 make_canonical
-                      by (fastforce simp: valid_pspace'_def objBits_simps'
-                              intro!: tcb_ptr_sign_extend_canonical
-                               dest!: st_tcb_strg'[rule_format]) *)
+              subgoal by (fastforce simp: valid_pspace'_def objBits_simps'
+                              intro!: tcb_ptr_canonical
+                               dest!: st_tcb_strg'[rule_format])
              by clarsimp
           apply (simp add: isWaitingNtfn_def)
          \<comment> \<open>queue relation\<close>
@@ -6685,7 +6704,7 @@ lemma receiveSignal_enqueue_ccorres_helper:
           apply (frule_tac x=p in map_to_ko_atI, clarsimp, clarsimp)
           apply (erule(2) map_to_ko_at_updI')
            apply (clarsimp simp: objBitsKO_def)
-          apply (clarsimp simp: obj_at'_def projectKOs)
+          apply (clarsimp simp: obj_at'_def)
          \<comment> \<open>ntfn relation\<close>
          apply (rule cpspace_relation_ntfn_update_ntfn', assumption+)
            apply (case_tac "ntfn", simp_all)[1]
@@ -6698,21 +6717,17 @@ lemma receiveSignal_enqueue_ccorres_helper:
             apply (rule conjI, clarsimp)
              apply (rule conjI, fastforce simp: mask_def)
              apply (rule context_conjI)
-              subgoal sorry (* FIXME AARCH64 make_canonical without pspace_canonical'
-              subgoal by (fastforce intro!: tcb_ptr_sign_extend_canonical
-                                     dest!: st_tcb_strg'[rule_format]) *)
+              subgoal by (fastforce intro!: tcb_ptr_canonical
+                                     dest!: st_tcb_strg'[rule_format])
              apply clarsimp
             apply clarsimp
             apply (rule conjI, fastforce simp: mask_def)
-            subgoal sorry (* FIXME AARCH64 canonical without pspace_canonical' again
             apply (rule conjI)
-             subgoal by (fastforce intro!: tcb_ptr_sign_extend_canonical
+             subgoal by (fastforce intro!: tcb_ptr_canonical
                                     dest!: st_tcb_strg'[rule_format])
             apply (subgoal_tac "canonical_address (ntfnQueue_head_CL (notification_lift ko'))")
-             apply (clarsimp simp: canonical_address_sign_extended sign_extended_iff_sign_extend)
-            apply (clarsimp simp: notification_lift_def canonical_address_sign_extended
-                                  sign_extended_sign_extend
-                            simp flip: canonical_bit_def) *)
+             apply (clarsimp simp: canonical_make_canonical_idem)
+            apply (clarsimp simp: notification_lift_def canonical_address_mask_eq canonical_bit_def)
             done
          apply (simp add: isWaitingNtfn_def)
         \<comment> \<open>queue relation\<close>
@@ -6783,7 +6798,7 @@ lemma receiveSignal_ccorres [corres]:
                                \<and> projectKO_opt x = (None::tcb option))
                                   (capNtfnPtr cap)"
                        in hoare_post_imp)
-          apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs)
+          apply (clarsimp simp: obj_at'_def ko_wp_at'_def)
          apply wp
         apply (clarsimp simp: guard_is_UNIV_def)
        apply simp
@@ -6891,14 +6906,14 @@ lemma receiveSignal_ccorres [corres]:
                    split: if_split_asm if_split)
    apply (frule(1) sym_refs_obj_atD' [OF _ invs_sym'])
    apply (rule conjI, clarsimp simp: ko_wp_at'_def dest!: ntfnBound_state_refs_equivalence)
-   apply (clarsimp simp: st_tcb_at'_def ko_wp_at'_def obj_at'_def projectKOs
+   apply (clarsimp simp: st_tcb_at'_def ko_wp_at'_def obj_at'_def
                   split: if_split_asm)
    apply (drule(1) bspec)+
    apply (drule_tac x="(thread, NTFNSignal)" in bspec, clarsimp)
    apply (clarsimp simp: tcb_bound_refs'_def)
    apply (case_tac "tcbState obj", simp_all)[1]
   apply (frule(1) st_tcb_idle' [OF invs_valid_idle'], simp)
-  apply (clarsimp simp: st_tcb_at'_def obj_at'_def state_refs_of'_def projectKOs
+  apply (clarsimp simp: st_tcb_at'_def obj_at'_def state_refs_of'_def
                  split: if_split_asm)
   apply (case_tac "tcbState obj", clarsimp+)[1]
   done
