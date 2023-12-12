@@ -60,7 +60,7 @@ jobs:
     - name: Upload logs
       uses: actions/upload-artifact@v3
       with:
-        name: logs-${{ matrix.arch }}
+        name: logs-${{ matrix.num_domains }}-${{ matrix.arch }}
         path: logs.tar.xz
 
   deploy:
