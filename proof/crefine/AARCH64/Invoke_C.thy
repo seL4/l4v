@@ -1616,6 +1616,15 @@ lemma pspace_no_overlap_underlying_zero_update:
   apply blast
   done
 
+(* FIXME AARCH64 move *)
+lemma addrFromPPtr_mask_cacheLineSize:
+  "addrFromPPtr ptr && mask cacheLineSize = ptr && mask cacheLineSize"
+  apply (simp add: addrFromPPtr_def AARCH64.pptrBase_def pptrBaseOffset_def canonical_bit_def
+                   paddrBase_def cacheLineSize_def)
+  apply word_bitwise
+  apply (simp add:mask_def)
+  done
+
 lemma clearMemory_untyped_ccorres:
   "ccorres dc xfdc ((\<lambda>s. invs' s
               \<and> (\<exists>cap. cte_wp_at' (\<lambda>cte. cteCap cte = cap) ut_slot s
@@ -1634,40 +1643,47 @@ lemma clearMemory_untyped_ccorres:
   apply (cinit' lift: bits_' ptr___ptr_to_unsigned_long_')
    apply (rule_tac P="ptr \<noteq> 0 \<and> sz < word_bits" in ccorres_gen_asm)
    apply (simp add: clearMemory_def)
-   sorry (* FIXME AARCH64 clearMemory is missing cleanCacheRange_RAM; after the spec update, this proof
-            will need a few more steps, likely similar to what's on ARM_HYP
-   apply (rule_tac P="?P" and P'="{s. region_actually_is_bytes ptr (2 ^ sz) s}" in ccorres_from_vcg)
-   apply (rule allI, rule conseqPre, vcg)
-   apply clarsimp
-   apply (rule conjI; clarsimp)
-    apply (simp add: word_less_nat_alt unat_of_nat word_bits_def)
-   apply (clarsimp simp: isCap_simps valid_cap'_def capAligned_def
-                         is_aligned_no_wrap'[OF _ word64_power_less_1]
-                         unat_of_nat_eq word_bits_def)
-   apply (simp add: is_aligned_weaken is_aligned_triv[THEN is_aligned_weaken])
-   apply (clarsimp simp: ghost_assertion_size_logic[unfolded o_def] region_actually_is_bytes_dom_s)
-   apply (clarsimp simp: field_simps word_size_def mapM_x_storeWord_step
-                         word_bits_def cte_wp_at_ctes_of)
-   apply (frule ctes_of_valid', clarify+)
-   apply (simp add: doMachineOp_def split_def exec_gets)
-   apply (simp add: select_f_def simpler_modify_def bind_def valid_cap_simps' capAligned_def)
-   apply (subst pspace_no_overlap_underlying_zero_update; simp?)
-    apply (case_tac sz, simp_all)[1]
-    apply (case_tac nat, simp_all)[1]
-    apply (case_tac nata, simp_all)[1]
-   apply (clarsimp dest!: region_actually_is_bytes)
-   apply (drule(1) rf_sr_rep0)
-   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
-                         carch_state_relation_def cmachine_state_relation_def)
+   apply (simp add: doMachineOp_bind storeWord_empty_fail)
+   apply (rule ccorres_split_nothrow_novcg_dc)
+      apply (rule_tac P="?P" and P'="{s. region_actually_is_bytes ptr (2 ^ sz) s}" in ccorres_from_vcg)
+      apply (rule allI, rule conseqPre, vcg)
+      apply clarsimp
+      apply (rule conjI; clarsimp)
+       apply (simp add: word_less_nat_alt unat_of_nat word_bits_def)
+      apply (clarsimp simp: isCap_simps valid_cap'_def capAligned_def
+                            is_aligned_no_wrap'[OF _ word64_power_less_1]
+                            unat_of_nat_eq word_bits_def)
+      apply (simp add: is_aligned_weaken is_aligned_triv[THEN is_aligned_weaken])
+      apply (clarsimp simp: ghost_assertion_size_logic[unfolded o_def] region_actually_is_bytes_dom_s)
+      apply (clarsimp simp: field_simps word_size_def mapM_x_storeWord_step
+                            word_bits_def cte_wp_at_ctes_of)
+      apply (frule ctes_of_valid', clarify+)
+      apply (simp add: doMachineOp_def split_def exec_gets)
+      apply (simp add: select_f_def simpler_modify_def bind_def valid_cap_simps' capAligned_def)
+      apply (subst pspace_no_overlap_underlying_zero_update; simp?)
+       apply (case_tac sz, simp_all)[1]
+       apply (case_tac nat, simp_all)[1]
+       apply (case_tac nata, simp_all)[1]
+      apply (clarsimp dest!: region_actually_is_bytes)
+      apply (drule(1) rf_sr_rep0)
+      apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
+                            carch_state_relation_def cmachine_state_relation_def)
+     apply csymbr
+     apply (ctac add: cleanCacheRange_RAM_ccorres)
+    apply wp
+   apply (simp add: guard_is_UNIV_def unat_of_nat
+                    word_bits_def capAligned_def word_of_nat_less)
   apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (frule ctes_of_valid'; clarify?)
   apply (clarsimp simp: isCap_simps valid_cap_simps' capAligned_def
                         word_of_nat_less Kernel_Config.resetChunkBits_def
                         word_bits_def unat_2p_sub_1)
+  apply (strengthen is_aligned_no_wrap'[where sz=sz] is_aligned_addrFromPPtr_n)+
+  apply (simp add: addrFromPPtr_mask_cacheLineSize pptrBaseOffset_alignment_def)
   apply (cases "ptr = 0"; simp)
   apply (drule subsetD, rule intvl_self, simp)
   apply simp
-  done *)
+  done
 
 lemma t_hrs_update_use_t_hrs:
   "t_hrs_'_update f s
@@ -1763,6 +1779,22 @@ lemma ucast_64_32[simp]:
   "UCAST(64 \<rightarrow> 32) (of_nat x) = of_nat x"
   by (simp add: ucast_of_nat is_down_def source_size_def target_size_def word_size)
 
+lemma dsb_preserves_bytes:
+  "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call dsb_'proc
+      {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
+          \<and> byte_regions_unmodified' s t}"
+  apply (rule allI, rule conseqPost, rule dsb_preserves_kernel_bytes[rule_format]; simp)
+  apply (clarsimp simp: byte_regions_unmodified_def)
+  done
+
+lemma cleanCacheRange_RAM_preserves_bytes:
+  "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call cleanCacheRange_RAM_'proc
+      {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
+          \<and> byte_regions_unmodified' s t}"
+  apply (rule allI, rule conseqPost, rule cleanCacheRange_RAM_preserves_kernel_bytes[rule_format]; simp)
+  apply (clarsimp simp: byte_regions_unmodified_def)
+  done
+
 text \<open>
 @{term resetUntypedCap_'proc} retypes the @{term Untyped} region as bytes, and then enters
 a loop which progressively zeros the memory, ultimately establishing @{term zero_ranges_are_zero}
@@ -1856,9 +1888,7 @@ lemma resetUntypedCap_ccorres:
           apply (simp add: guard_is_UNIV_def)
          apply wp
         apply simp
-        sorry (* FIXME AARCH64 this proof needs updating after clearMemory spec updates, it's more
-                 like ARM_HYP than RISCV64
-        apply (vcg)
+        apply (vcg exspec=cleanCacheRange_RAM_preserves_bytes)
        apply (rule_tac P="resetChunkBits \<le> capBlockSize (cteCap cte)
              \<and> of_nat (capFreeIndex (cteCap cte)) - 1
                  < (2 ^ capBlockSize (cteCap cte) :: addr)"
@@ -1950,7 +1980,7 @@ lemma resetUntypedCap_ccorres:
                 apply (simp add: guard_is_UNIV_def)
                apply (wp hoare_vcg_ex_lift doMachineOp_psp_no_overlap)
               apply clarsimp
-              apply (vcg)
+              apply (vcg exspec=cleanCacheRange_RAM_preserves_bytes)
              apply clarify
              apply (rule conjI)
               apply (clarsimp simp: invs_valid_objs' cte_wp_at_ctes_of
@@ -2030,7 +2060,7 @@ lemma resetUntypedCap_ccorres:
              apply (cut_tac is_aligned_mult_triv2[of _ 8, simplified])
              apply (erule is_aligned_weaken, simp)
             apply clarsimp
-            apply (rule conseqPre, vcg exspec=preemptionPoint_hrs_htd)
+            apply (rule conseqPre, vcg exspec=preemptionPoint_hrs_htd exspec=cleanCacheRange_RAM_preserves_bytes)
             apply (clarsimp simp: in_set_conv_nth isCap_simps
                                   length_upto_enum_step upto_enum_step_nth
                                   less_Suc_eq_le getFreeRef_def
@@ -2174,7 +2204,7 @@ lemma resetUntypedCap_ccorres:
   apply (rule conjI, erule is_aligned_weaken, simp)
   by (clarsimp simp: order_trans[OF power_increasing[where a=2]]
                      addr_card_def card_word
-                     is_aligned_weaken from_bool_0) *)
+                     is_aligned_weaken from_bool_0)
 
 lemma ccorres_cross_retype_zero_bytes_over_guard:
   "range_cover ptr sz (APIType_capBits newType userSize) num_ret

@@ -598,6 +598,11 @@ abbreviation(input)
 where
   "prioInvalid == seL4_InvalidPrio"
 
+(* caches *)
+
+definition cacheLineSize :: nat where
+  "cacheLineSize \<equiv> 6"
+
 (* generic lemmas with arch-specific consequences *)
 
 schematic_goal size_gpRegisters:

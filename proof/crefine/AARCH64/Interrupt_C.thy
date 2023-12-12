@@ -375,13 +375,6 @@ lemma Platform_maxIRQ:
   "AARCH64.maxIRQ = scast Kernel_C.maxIRQ"
    by (simp add: AARCH64.maxIRQ_def Kernel_C.maxIRQ_def)
 
-(* FIXME AARCH64 move missing machine op ccorres *)
-lemma setIRQTrigger_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>irq = ucast irq\<rbrace> \<inter> \<lbrace>\<acute>trigger = from_bool trigger\<rbrace>) []
-           (doMachineOp (AARCH64.setIRQTrigger irq trigger))
-           (Call setIRQTrigger_'proc)"
-  sorry
-
 lemma Arch_invokeIRQControl_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
       (invs' and cte_at' parent

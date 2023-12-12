@@ -254,41 +254,6 @@ lemma range_cover_nca_neg: "\<And>x p (off :: 9 word).
 
 lemmas unat_of_nat32' = unat_of_nat_eq[where 'a=32]
 
-(* FIXME AARCH64 decide what to do, and move to Machine_C *)
-lemma cleanCacheRange_RAM_ccorres:
-  "ccorres dc xfdc (\<lambda>s. w1 \<le> w2 \<and> w3 \<le> w3 + (w2 - w1)
-                      \<and> w1 && mask 6 = w3 && mask 6
-                      \<and> unat (w2 - w1) \<le> gsMaxObjectSize s)
-                   (\<lbrace>\<acute>start = w1\<rbrace> \<inter> \<lbrace>\<acute>end = w2\<rbrace> \<inter> \<lbrace>\<acute>pstart = w3\<rbrace>) []
-           (doMachineOp (cleanCacheRange_RAM w1 w2 w3))
-           (Call cleanCacheRange_RAM_'proc)"
-  apply (cinit' lift: start_' end_' pstart_')
-   sorry (* FIXME AARCH64 this is a machine op on the abstract size, do we want to expand it or not?
-            if not, do we want to keep these assumptions?
-   apply (simp add: cleanCacheRange_RAM_def doMachineOp_bind empty_fail_cleanL2Range
-                    empty_fail_cond)
-   apply (rule ccorres_Guard_Seq)
-   apply (rule ccorres_basic_srnoop2, simp)
-   apply (ctac (no_vcg) add: cleanCacheRange_PoC_ccorres)
-    apply (ctac (no_vcg) add: dsb_ccorres)
-     apply (rule_tac P="\<lambda>s. unat (w2 - w1) \<le> gsMaxObjectSize s"
-        in ccorres_cross_over_guard)
-     apply (rule ccorres_Guard_Seq)
-     apply (rule ccorres_basic_srnoop2, simp)
-     apply (ctac (no_vcg) add: cleanL2Range_ccorres)
-    apply wp+
-  apply clarsimp
-  apply (auto dest: ghost_assertion_size_logic simp: o_def)
-  done *)
-
-(* FIXME AARCH64 spec issue, clearMemory is missing cleanCacheRange_RAM *)
-lemma clearMemory_def_FIXME:
- "clearMemory ptr bytelength \<equiv>
-  do mapM_x (\<lambda>p. storeWord p 0) [ptr, ptr + word_size .e. ptr + (of_nat bytelength) - 1];
-     cleanCacheRange_RAM ptr (ptr + of_nat bytelength - 1) (addrFromPPtr ptr)
-  od"
-  sorry
-
 lemma clearMemory_PageCap_ccorres:
   "ccorres dc xfdc (invs' and valid_cap' (ArchObjectCap (FrameCap ptr undefined sz False None))
            and (\<lambda>s. 2 ^ pageBitsForSize sz \<le> gsMaxObjectSize s)
@@ -304,7 +269,7 @@ lemma clearMemory_PageCap_ccorres:
    apply (rule_tac P="capAligned (ArchObjectCap (FrameCap ptr undefined sz False None))"
                 in ccorres_gen_asm)
    apply (rule ccorres_Guard_Seq)
-   apply (simp add: clearMemory_def_FIXME)
+   apply (simp add: clearMemory_def)
    apply (simp add: doMachineOp_bind)
    apply (rule ccorres_split_nothrow_novcg_dc)
       apply (rule_tac P="?P" in ccorres_from_vcg[where P'=UNIV])
@@ -423,11 +388,10 @@ lemma clearMemory_PageCap_ccorres:
   apply (frule is_aligned_addrFromPPtr_n, simp add: pageBitsForSize_def split: vmpage_size.splits)
   apply (simp add: bit_simps pptrBaseOffset_alignment_def)+
   apply (simp add: is_aligned_no_overflow')
-  (* cache line size is 6 *)
   apply (rule conjI)
   subgoal
-    apply (prop_tac "6 \<le> pageBitsForSize sz")
-     apply (simp add: pageBitsForSize_def bit_simps split: vmpage_size.splits)
+    apply (prop_tac "cacheLineSize \<le> pageBitsForSize sz")
+     apply (simp add: pageBitsForSize_def bit_simps cacheLineSize_def split: vmpage_size.splits)
     apply (simp add: is_aligned_mask[THEN iffD1] is_aligned_weaken)
     done
   apply (simp add: pageBitsForSize_def bit_simps split: vmpage_size.splits)

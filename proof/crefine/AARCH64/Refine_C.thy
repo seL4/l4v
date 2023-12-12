@@ -43,17 +43,6 @@ lemma ucast_8_32_neq:
   "x \<noteq> 0xFF \<Longrightarrow> UCAST(8 \<rightarrow> 32 signed) x \<noteq> 0xFF"
   by uint_arith (clarsimp simp: uint_up_ucast is_up)
 
-(* FIXME AARCH64 machine assumption, consolidate to Machine_C *)
-lemma getActiveIRQ_ccorres:
-  "\<And>in_kernel.
-   ccorres
-     (\<lambda>(a::irq_len word option) c::machine_word.
-        case a of None \<Rightarrow> c = 0xFFFF \<comment> \<open>irqInvalid\<close>
-                | Some (x::irq_len word) \<Rightarrow> c = ucast x \<and> c \<noteq> 0xFFFF \<comment> \<open>irqInvalid\<close>)
-     ret__unsigned_long_' \<top> UNIV hs
-     (doMachineOp (getActiveIRQ in_kernel)) (Call getActiveIRQ_'proc)"
-  sorry
-
 (* FIXME AARCH64 move, wrong name, original version likely useless in ArchMove_C, check *)
 lemma getActiveIRQ_neq_Some0xFF':
   "\<lbrace>\<top>\<rbrace> getActiveIRQ in_kernel \<lbrace>\<lambda>rv s. rv \<noteq> Some 0x1FF\<rbrace>"

@@ -38,6 +38,25 @@ assumes isIRQPending_ccorres:
 assumes getActiveIRQ_Normal:
   "\<Gamma> \<turnstile> \<langle>Call getActiveIRQ_'proc, Normal s\<rangle> \<Rightarrow> s' \<Longrightarrow> isNormal s'"
 
+assumes getActiveIRQ_ccorres:
+  "\<And>in_kernel.
+   ccorres
+     (\<lambda>irq c_irq.
+        case irq of None \<Rightarrow> c_irq = irqInvalid
+                  | Some x \<Rightarrow> c_irq = ucast x \<and> c_irq \<noteq> irqInvalid)
+     ret__unsigned_long_' \<top> UNIV hs
+     (doMachineOp (getActiveIRQ in_kernel)) (Call getActiveIRQ_'proc)"
+
+assumes setIRQTrigger_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>irq = ucast irq\<rbrace> \<inter> \<lbrace>\<acute>trigger = from_bool trigger\<rbrace>) []
+           (doMachineOp (AARCH64.setIRQTrigger irq trigger))
+           (Call setIRQTrigger_'proc)"
+
+assumes ackInterrupt_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>irq = ucast irq\<rbrace>) hs
+           (doMachineOp (ackInterrupt irq))
+           (Call ackInterrupt_'proc)"
+
 assumes maskInterrupt_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>disable = from_bool m\<rbrace> \<inter> \<lbrace>\<acute>irq = ucast irq\<rbrace>) []
            (doMachineOp (maskInterrupt m irq))
@@ -48,6 +67,12 @@ assumes fpuThreadDelete_ccorres:
   "ccorres dc xfdc (tcb_at' thread) (\<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr thread\<rbrace>) hs
      (fpuThreadDelete thread)
      (Call fpuThreadDelete_'proc)"
+
+assumes setVSpaceRoot_ccorres:
+  "ccorres dc xfdc
+           \<top> (\<lbrace> base_address_CL (ttbr_lift \<acute>ttbr) = pt\<rbrace> \<inter> \<lbrace> asid_CL (ttbr_lift \<acute>ttbr) = asid\<rbrace>) []
+           (doMachineOp (AARCH64.setVSpaceRoot pt asid))
+           (Call setCurrentUserVSpaceRoot_'proc)"
 
 (* AArch64-specific machine ops (function names don't exist on other architectures) *)
 
@@ -86,10 +111,11 @@ assumes dsb_ccorres:
            (doMachineOp dsb)
            (Call dsb_'proc)"
 
-assumes cleanByVA_PoU_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>vaddr = w1\<rbrace> \<inter> \<lbrace>\<acute>paddr = w2\<rbrace>) []
-           (doMachineOp (cleanByVA_PoU w1 w2))
-           (Call cleanByVA_PoU_'proc)"
+assumes dsb_preserves_kernel_bytes:
+ "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call dsb_'proc
+      {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
+          \<and> (\<forall>x. snd (hrs_htd (t_hrs_' (globals s)) x) 0 \<noteq> None
+                 \<longrightarrow> hrs_mem (t_hrs_' (globals t)) x = hrs_mem (t_hrs_' (globals s)) x)}"
 
 assumes enableFpuEL01_ccorres:
   "ccorres dc xfdc \<top> UNIV []
@@ -106,9 +132,49 @@ assumes read_cntpct_ccorres:
            (doMachineOp read_cntpct)
            (Call read_cntpct_'proc)"
 
-(* FIXME AARCH64 TODO
-   cache ops might need to go here
-*)
+(* Cache ops *)
+
+assumes cleanByVA_PoU_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>vaddr = w1\<rbrace> \<inter> \<lbrace>\<acute>paddr = w2\<rbrace>) []
+           (doMachineOp (cleanByVA_PoU w1 w2))
+           (Call cleanByVA_PoU_'proc)"
+
+assumes cleanCacheRange_RAM_ccorres:
+  "ccorres dc xfdc (\<lambda>s. w1 \<le> w2 \<and> w3 \<le> w3 + (w2 - w1)
+                        \<and> w1 && mask cacheLineSize  = w3 && mask cacheLineSize
+                        \<and> unat (w2 - w1) \<le> gsMaxObjectSize s)
+                   (\<lbrace>\<acute>start = w1\<rbrace> \<inter> \<lbrace>\<acute>end = w2\<rbrace> \<inter> \<lbrace>\<acute>pstart = w3\<rbrace>) []
+           (doMachineOp (cleanCacheRange_RAM w1 w2 w3))
+           (Call cleanCacheRange_RAM_'proc)"
+
+assumes cleanCacheRange_PoU_ccorres:
+  "ccorres dc xfdc (\<lambda>s. unat (w2 - w1) \<le> gsMaxObjectSize s
+                        \<and> w1 \<le> w2 \<and> w3 \<le> w3 + (w2 - w1)
+                        \<and> w1 && mask cacheLineSize = w3 && mask cacheLineSize)
+                   (\<lbrace>\<acute>start = w1\<rbrace> \<inter> \<lbrace>\<acute>end = w2\<rbrace> \<inter> \<lbrace>\<acute>pstart = w3\<rbrace>) []
+           (doMachineOp (cleanCacheRange_PoU w1 w2 w3))
+           (Call cleanCacheRange_PoU_'proc)"
+
+assumes cleanInvalidateCacheRange_RAM_ccorres:
+  "ccorres dc xfdc (\<lambda>s. unat (w2 - w1) \<le> gsMaxObjectSize s
+                        \<and> w1 \<le> w2 \<and> w3 \<le> w3 + (w2 - w1)
+                        \<and> w1 && mask cacheLineSize = w3 && mask cacheLineSize)
+                   (\<lbrace>\<acute>start = w1\<rbrace> \<inter> \<lbrace>\<acute>end = w2\<rbrace> \<inter> \<lbrace>\<acute>pstart = w3\<rbrace>) []
+           (doMachineOp (cleanInvalidateCacheRange_RAM w1 w2 w3))
+           (Call cleanInvalidateCacheRange_RAM_'proc)"
+
+assumes invalidateCacheRange_I_ccorres:
+  "ccorres dc xfdc (\<lambda>_. w1 \<le> w2 \<and> w3 \<le> w3 + (w2 - w1)
+                        \<and> w1 && mask cacheLineSize = w3 && mask cacheLineSize)
+                   (\<lbrace>\<acute>start = w1\<rbrace> \<inter> \<lbrace>\<acute>end = w2\<rbrace> \<inter> \<lbrace>\<acute>pstart = w3\<rbrace>) []
+           (doMachineOp (invalidateCacheRange_I w1 w2 w3))
+           (Call invalidateCacheRange_I_'proc)"
+
+assumes cleanCacheRange_RAM_preserves_kernel_bytes:
+ "\<forall>s. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} Call cleanCacheRange_RAM_'proc
+      {t. hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))
+          \<and> (\<forall>x. snd (hrs_htd (t_hrs_' (globals s)) x) 0 \<noteq> None
+                 \<longrightarrow> hrs_mem (t_hrs_' (globals t)) x = hrs_mem (t_hrs_' (globals s)) x)}"
 
 (* Hypervisor-related machine ops *)
 
@@ -169,60 +235,13 @@ assumes vcpu_hw_write_reg_ccorres:
            (doMachineOp (writeVCPUHardwareReg r v))
            (Call vcpu_hw_write_reg_'proc)"
 
-(* FIXME AARCH64 TODO *)
-
 (* FIXME AARCH64 these were RISCV64 machine op ccorres assumptions, remove after we have new ones
-assumes setVSpaceRoot_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>addr___unsigned_long = pt\<rbrace> \<inter> \<lbrace>\<acute>asid___unsigned_long = asid\<rbrace>) []
-           (doMachineOp (AARCH64.setVSpaceRoot pt asid))
-           (Call setVSpaceRoot_'proc)"
-
 assumes hwASIDFlush_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>asid___unsigned_long = asid\<rbrace>) []
            (doMachineOp (AARCH64.hwASIDFlush asid))
            (Call hwASIDFlush_'proc)"
 
-assumes read_stval_ccorres:
-  "ccorres (=) ret__unsigned_long_' \<top> UNIV []
-           (doMachineOp RISCV64.read_stval)
-           (Call read_stval_'proc)"
-
-assumes sfence_ccorres:
-  "ccorres dc xfdc \<top> UNIV []
-           (doMachineOp RISCV64.sfence)
-           (Call sfence_'proc)"
-
-assumes maskInterrupt_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>disable = from_bool m\<rbrace> \<inter> \<lbrace>\<acute>irq = ucast irq\<rbrace>) []
-           (doMachineOp (maskInterrupt m irq))
-           (Call maskInterrupt_'proc)"
-
-assumes getActiveIRQ_ccorres:
-"\<And>in_kernel.
-   ccorres (\<lambda>(a::irq option) c::64 word.
-     case a of None \<Rightarrow> c = ucast irqInvalid
-     | Some (x::irq) \<Rightarrow> c = ucast x \<and> c \<noteq> ucast irqInvalid)
-     ret__unsigned_long_'
-     \<top> UNIV hs
- (doMachineOp (getActiveIRQ in_kernel)) (Call getActiveIRQ_'proc)"
-
-assumes ackInterrupt_ccorres:
-  "ccorres dc xfdc \<top> UNIV hs
-           (doMachineOp (ackInterrupt irq))
-           (Call ackInterrupt_'proc)"
-
-assumes plic_complete_claim_ccorres:
-  "ccorres dc xfdc \<top> \<lbrace>\<acute>irq = ucast irq\<rbrace> []
-           (doMachineOp (plic_complete_claim irq))
-           (Call plic_complete_claim_'proc)"
-
-
-assumes setIRQTrigger_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>irq = ucast irq\<rbrace> \<inter> \<lbrace>\<acute>edge_triggered = from_bool trigger\<rbrace>) []
-           (doMachineOp (RISCV64.setIRQTrigger irq trigger))
-           (Call setIRQTrigger_'proc)"
 *)
-
 
 (* The following are fastpath specific assumptions.
    We might want to move them somewhere else. *)

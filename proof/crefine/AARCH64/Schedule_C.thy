@@ -23,14 +23,6 @@ end
 
 context kernel_m begin
 
-(* FIXME AARCH64 after a review, this should become a machine op in Machine_C replacing setVSpaceRoot_ccorres *)
-lemma setVSpaceRoot_ccorres:
-  "ccorres dc xfdc
-           \<top> (\<lbrace> base_address_CL (ttbr_lift \<acute>ttbr) = pt\<rbrace> \<inter> \<lbrace> asid_CL (ttbr_lift \<acute>ttbr) = asid\<rbrace>) []
-           (doMachineOp (AARCH64.setVSpaceRoot pt asid))
-           (Call setCurrentUserVSpaceRoot_'proc)"
-  sorry
-
 lemma Arch_switchToIdleThread_ccorres:
   "ccorres dc xfdc invs_no_cicd' UNIV []
            Arch.switchToIdleThread (Call Arch_switchToIdleThread_'proc)"

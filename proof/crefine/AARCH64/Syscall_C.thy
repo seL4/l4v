@@ -2276,13 +2276,6 @@ lemma ccorres_handleReservedIRQ:
                   simp flip: word_unat.Rep_inject split: if_splits)
   done
 
-(* FIXME AARCH64 move to Machine_C, missing machine op ccorres *)
-lemma ackInterrupt_ccorres:
-  "ccorres dc xfdc \<top> UNIV hs
-           (doMachineOp (ackInterrupt irq))
-           (Call ackInterrupt_'proc)"
-  sorry
-
 lemma handleInterrupt_ccorres:
   "ccorres dc xfdc
      (invs' and (\<lambda>s. irq \<in> non_kernel_IRQs \<longrightarrow> sch_act_not (ksCurThread s) s \<and>
