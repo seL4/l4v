@@ -81,7 +81,7 @@ proof -
         apply simp
        apply (simp add: pred_conj_def)
        apply (strengthen invs_mdb_strengthen' valid_objs_invs'_strg
-                         (* FIXME AARCH64 invs_pspace_canonical' *) invs_pspace_aligned')
+                         invs_pspace_canonical' invs_pspace_aligned')
        apply (wp cteDeleteOne_other_cap[unfolded o_def])[1]
       apply vcg
      apply (rule conseqPre, vcg, clarsimp simp: rf_sr_def
