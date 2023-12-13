@@ -4625,26 +4625,6 @@ lemma setupCallerCap_ccorres [corres]:
                         tcb_cnode_index_defs)
   done
 
-lemma tcb_and_not_mask_canonical: (* FIXME AARCH64: move *)
-  "\<lbrakk> pspace_canonical' s; tcb_at' t s; n < tcbBlockSizeBits\<rbrakk> \<Longrightarrow>
-   tcb_Ptr (make_canonical (ptr_val (tcb_ptr_to_ctcb_ptr t)) && ~~ mask n) = tcb_ptr_to_ctcb_ptr t"
-  apply (frule (1) obj_at'_is_canonical)
-  apply (drule canonical_address_tcb_ptr)
-   apply (clarsimp simp: obj_at'_def objBits_simps' split: if_splits)
-  apply (clarsimp simp: canonical_make_canonical_idem)
-  apply (subgoal_tac "ptr_val (tcb_ptr_to_ctcb_ptr t) && ~~ mask n = ptr_val (tcb_ptr_to_ctcb_ptr t)")
-   prefer 2
-   apply (simp add: tcb_ptr_to_ctcb_ptr_def ctcb_offset_defs)
-   apply (rule is_aligned_neg_mask_eq)
-   apply (clarsimp simp: obj_at'_def objBits_simps')
-   apply (rule is_aligned_add)
-    apply (erule is_aligned_weaken, simp)
-   apply (rule is_aligned_weaken[where x="tcbBlockSizeBits - 1"])
-    apply (simp add: is_aligned_def objBits_simps')
-   apply (simp add: objBits_simps')
-  apply simp
-  done
-
 lemma sendIPC_dequeue_ccorres_helper:
   "ep_ptr = Ptr ep ==>
   ccorres (\<lambda>rv rv'. rv' = tcb_ptr_to_ctcb_ptr dest) dest___ptr_to_struct_tcb_C_'
