@@ -17,6 +17,45 @@ begin
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
+(* FIXME AARCH64: this could also go into Invariants_H *)
+(* Takes an address and ensures it can be given to a function expecting a canonical address.
+   Canonical addresses on 64-bit machines aren't really 64-bit, due to bus sizes. Hence, structures
+   used by the bitfield generator will use packed addresses, resulting in this mask in the C code
+   on AARCH64 (which would be a cast plus sign-extension on X64 and RISCV64).
+   For our spec rules, it's better to wrap the magic numbers if possible. *)
+definition make_canonical :: "machine_word \<Rightarrow> machine_word" where
+  "make_canonical p \<equiv> p && mask (Suc canonical_bit)"
+
+lemma make_canonical_0[simp]:
+  "make_canonical 0 = 0"
+  by (simp add: make_canonical_def)
+
+lemma canonical_make_canonical_idem:
+  "canonical_address p \<Longrightarrow> make_canonical p = p"
+  unfolding make_canonical_def
+  by (simp add: canonical_address_mask_eq)
+
+lemma make_canonical_is_canonical:
+  "canonical_address (make_canonical p)"
+  unfolding make_canonical_def
+  by (simp add: canonical_address_mask_eq)
+
+(* This is [simp] because if we see this pattern, it's very likely that we want to use the
+   other make_canonical rules *)
+lemma make_canonical_and_fold[simp]:
+  "p && mask (Suc canonical_bit) && n = make_canonical p && n" for p :: machine_word
+  by (simp flip: make_canonical_def word_bw_assocs)
+
+lemmas make_canonical_fold = make_canonical_def[symmetric, unfolded canonical_bit_def, simplified]
+
+schematic_goal Suc_canonical_bit_fold:
+  "numeral ?n = Suc canonical_bit"
+  by (simp add: canonical_bit_def)
+
+lemma make_canonical_aligned:
+  "is_aligned p n \<Longrightarrow> is_aligned (make_canonical p) n"
+  by (simp add: is_aligned_mask make_canonical_def) word_eqI_solve
+
 abbreviation
   cte_Ptr :: "addr \<Rightarrow> cte_C ptr" where "cte_Ptr == Ptr"
 abbreviation

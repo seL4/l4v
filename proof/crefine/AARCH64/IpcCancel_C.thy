@@ -169,16 +169,6 @@ lemma tcbEPDequeue_spec:
   apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff c_guard_clift)
   done
 
-(* FIXME AARCH64 review (does it make sense to have this as a concept? maybe the name is wrong or
-   the 48 a coincidence?) and move *)
-(* Takes an address and ensures it can be given to a function expecting a canonical address.
-   Canonical addresses on 64-bit machines aren't really 64-bit, due to bus sizes. Hence, structures
-   used by the bitfield generator will use packed addresses, resulting in this mask in the C code
-   on AARCH64 (which would be a cast plus sign-extension on X64 and RISCV64).
-   For our spec rules, it's better to wrap the magic numbers if possible. *)
-definition make_canonical :: "machine_word \<Rightarrow> machine_word" where
-  "make_canonical p \<equiv> p && mask (Suc canonical_bit)"
-
 lemma ntfn_ptr_set_queue_spec:
   "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. s \<Turnstile>\<^sub>c \<acute>ntfnPtr\<rbrace> Call ntfn_ptr_set_queue_'proc
            {t. (\<exists>ntfn'. notification_lift ntfn' =
@@ -192,24 +182,7 @@ lemma ntfn_ptr_set_queue_spec:
                         canonical_bit_def)
   done
 
-(* FIXME AARCH64: move up *)
-lemma make_canonical_0[simp]:
-  "make_canonical 0 = 0"
-  by (simp add: make_canonical_def)
-
-(* FIXME AARCH64: move up *)
-lemma canonical_make_canonical_idem:
-  "canonical_address p \<Longrightarrow> make_canonical p = p"
-  unfolding make_canonical_def
-  by (simp add: canonical_address_mask_eq)
-
-(* FIXME AARCH64: move up *)
-lemma make_canonical_is_canonical:
-  "canonical_address (make_canonical p)"
-  unfolding make_canonical_def
-  by (simp add: canonical_address_mask_eq)
-
-(* FIXME AARCH64: move up into TcbQueue_C; needs moving up make_canonical first *)
+(* FIXME AARCH64: move up into TcbQueue_C *)
 lemma tcb_queue_relation_next_canonical:
   assumes "tcb_queue_relation getNext getPrev mp queue NULL qhead"
   assumes valid_ep: "\<forall>t\<in>set queue. tcb_at' t s"
@@ -247,7 +220,7 @@ lemma tcb_queue_relation'_next_canonical:
    \<Longrightarrow> make_canonical (ptr_val (getNext tcb)) = ptr_val (getNext tcb)"
   by (rule tcb_queue_relation_next_canonical [OF tcb_queue_relation'_queue_rel])
 
-(* FIXME AARCH64: move up into TcbQueue_C; needs moving up make_canonical first *)
+(* FIXME AARCH64: move up into TcbQueue_C *)
 lemma tcb_queue_relation_prev_canonical:
   assumes "tcb_queue_relation getNext getPrev mp queue NULL qhead"
   assumes valid_ep: "\<forall>t\<in>set queue. tcb_at' t s"
@@ -2986,11 +2959,6 @@ lemma epQueue_tail_make_canonical[simp]:
   "make_canonical (epQueue_tail_CL (endpoint_lift ko)) = epQueue_tail_CL (endpoint_lift ko)"
   by (simp add: endpoint_lift_def make_canonical_def canonical_bit_def mask_def
                 word_bw_assocs)
-
-(* FIXME AARCH64: move up *)
-lemma make_canonical_and_fold[simp]:
-  "p && mask (Suc canonical_bit) && n = make_canonical p && n" for p:: machine_word
-  by (simp flip: make_canonical_def word_bw_assocs)
 
 (* Clag from cancelSignal_ccorres_helper *)
 

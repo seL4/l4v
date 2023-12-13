@@ -4794,19 +4794,6 @@ lemma rf_sr_tcb_update_twice:
                 carch_state_relation_def cmachine_state_relation_def
                 packed_heap_update_collapse_hrs)
 
-lemma Suc_canonical_bit_fold: (* FIXME AARCH64: move, make statement generic *)
-  "48 = Suc canonical_bit"
-  by (simp add: canonical_bit_def)
-
-lemma make_canonical_aligned:
-  "is_aligned p n \<Longrightarrow> is_aligned (make_canonical p) n"
-  by (simp add: is_aligned_mask make_canonical_def) word_eqI_solve
-
-(*
-lemma make_canonical_and_not_mask:
-  "is_aligned p n \<Longrightarrow> make_canonical p && ~~mask n = make_canonical p"
-*)
-
 lemma sendIPC_block_ccorres_helper:
   "ccorres dc xfdc (tcb_at' thread and valid_queues and valid_objs' and
                     pspace_canonical' and
