@@ -828,6 +828,9 @@ lemma ntfn_q_refs'_no_NTFNBound[simp]:
   "(x, NTFNBound) \<notin> ntfn_q_refs_of' ntfn"
   by (auto simp: ntfn_q_refs_of'_def split: ntfn.splits)
 
+crunches setThreadState
+  for pspace_canonical'[wp]: pspace_canonical'
+
 lemma cancelBadgedSends_ccorres:
   "ccorres dc xfdc (invs' and ep_at' ptr)
               (UNIV \<inter> {s. epptr_' s = Ptr ptr} \<inter> {s. badge_' s = bdg}) []
@@ -886,7 +889,8 @@ lemma cancelBadgedSends_ccorres:
                               \<and> distinct (xs @ list) \<and> ko_at' IdleEP ptr s
                               \<and> (\<forall>p. \<forall>x \<in> set (xs @ list). \<forall>rf. (x, rf) \<notin> {r \<in> state_refs_of' s p. snd r \<noteq> NTFNBound})
                               \<and> valid_queues s \<and> pspace_aligned' s \<and> pspace_distinct' s
-                              \<and> sch_act_wf (ksSchedulerAction s) s \<and> valid_objs' s"
+                              \<and> sch_act_wf (ksSchedulerAction s) s \<and> valid_objs' s
+                              \<and> pspace_canonical' s"
                      and P'="\<lambda>xs. {s. ep_queue_relation' (cslift s) (xs @ list)
                                          (head_C (queue_' s)) (end_C (queue_' s))}
                                 \<inter> {s. thread_' s = (case list of [] \<Rightarrow> tcb_Ptr 0
@@ -933,11 +937,11 @@ lemma cancelBadgedSends_ccorres:
                apply (simp add: cendpoint_relation_def Let_def)
                apply (subgoal_tac "tcb_at' (last (a # list)) \<sigma> \<and> tcb_at' a \<sigma>")
                 apply (clarsimp simp: is_aligned_neg_mask_eq[OF is_aligned_tcb_ptr_to_ctcb_ptr[where P=\<top>]])
-                apply (simp add: tcb_queue_relation'_def EPState_Send_def mask_def)
-                subgoal sorry (* FIXME AARCH64 canonical address derivation
+                apply (simp add: tcb_queue_relation'_def EPState_Send_def mask_shiftl_decompose
+                            flip: canonical_bit_def)
                 apply (drule (1) tcb_and_not_mask_canonical[where n=2])
                  apply (simp (no_asm) add: tcbBlockSizeBits_def)
-                subgoal by (simp add: mask_def canonical_bit_def) *)
+                subgoal by (simp add: mask_def canonical_bit_def)
                subgoal by (auto split: if_split)
               subgoal by simp
              apply (ctac add: rescheduleRequired_ccorres)
@@ -1105,7 +1109,7 @@ lemma cancelBadgedSends_ccorres:
                   split: if_split_asm)
   apply clarsimp
   apply (frule ko_at_valid_objs', clarsimp)
-   apply (simp add: projectKOs)
+   apply simp
   apply (clarsimp simp: valid_obj'_def valid_ep'_def)
   apply (frule sym_refs_ko_atD', clarsimp)
   apply (clarsimp simp: st_tcb_at_refs_of_rev')
