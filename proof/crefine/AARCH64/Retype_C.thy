@@ -2317,11 +2317,11 @@ lemma insertNewCap_ccorres_helper:
   apply (rule conjI)
    apply (erule (2) cmap_relation_updI)
    apply (simp add: ccap_relation_def ccte_relation_def cte_lift_def)
-    subgoal sorry (* FIXME AARCH64 canonical address: next AND (mask 46 << 2)
     subgoal by (simp add: cte_to_H_def map_option_Some_eq2 mdb_node_to_H_def to_bool_mask_to_bool_bf
-                          is_aligned_neg_mask_weaken c_valid_cte_def canonical_address_sign_extended
-                          sign_extended_iff_sign_extend cteSizeBits_def
-                   split: option.splits flip: canonical_bit_def) *)
+                          c_valid_cte_def mask_shiftl_decompose canonical_make_canonical_idem
+                          cteSizeBits_def
+                     split: option.splits
+                     flip: canonical_bit_def)
    subgoal by simp
   apply (erule_tac t = s' in ssubst)
   apply (simp cong: lifth_update)
@@ -2476,7 +2476,7 @@ lemma byte_regions_unmodified_region_is_bytes:
 
 
 lemma insertNewCap_ccorres1:
-  "ccorres dc xfdc (pspace_aligned' and valid_mdb' and valid_objs' and valid_cap' cap)
+  "ccorres dc xfdc (pspace_aligned' and pspace_canonical' and valid_mdb' and valid_objs' and valid_cap' cap)
      ({s. (case untypedZeroRange cap of None \<Rightarrow> True
           | Some (a, b) \<Rightarrow> region_actually_is_zero_bytes a (unat ((b + 1) - a)) s)}
        \<inter> {s. ccap_relation cap (cap_' s)} \<inter> {s. parent_' s = Ptr parent}
@@ -2514,8 +2514,7 @@ lemma insertNewCap_ccorres1:
    apply vcg
   apply (rule conjI)
    apply (clarsimp simp: cte_wp_at_ctes_of is_aligned_3_next ctes_of_aligned_bits
-                         canonical_address_mdbNext (* FIXME AARCH64 ctes_of_canonical *))
-   subgoal sorry (* FIXME AARCH64 canonical_address slot *)
+                         canonical_address_mdbNext ctes_of_canonical)
   apply (clarsimp split: option.split)
   apply (intro allI conjI impI; simp; clarsimp simp: region_actually_is_bytes)
    apply (erule trans[OF heap_list_h_eq2, rotated])
@@ -6116,12 +6115,13 @@ proof -
                             getObjectSize_def apiGetObjectSize_def cteSizeBits_def
                             objBits_simps field_simps is_aligned_power2
                             addr_card_wb is_aligned_weaken[where y=2]
-                            is_aligned_neg_mask_weaken canonical_address_and_maskD
-                     split: option.splits)
+                     split: option.splits
+                     simp flip: canonical_bit_def)
       apply (rule conjI)
        apply (frule range_cover.aligned)
-       subgoal sorry (* FIXME AARCH64 word proof, replace aligned_and
-       apply (simp add: aligned_and is_aligned_weaken canonical_address_and_maskD) *)
+       apply (simp add: mask_shiftl_decompose[where m=canonical_bit and n=1,
+                                              simplified shiftl1_is_mult]
+                        canonical_make_canonical_idem aligned_and is_aligned_weaken)
       apply (subst word_le_mask_eq[symmetric, THEN eqTrueI])
         apply (clarsimp simp: mask_def untypedBits_defs)
         apply unat_arith
@@ -7801,8 +7801,9 @@ lemma createNewCaps_valid_cap_hd:
   done
 
 lemma insertNewCap_ccorres:
-  "ccorres dc xfdc (pspace_aligned' and valid_mdb' and cte_wp_at' (\<lambda>_. True) slot
-          and valid_objs' and valid_cap' cap)
+  "ccorres dc xfdc
+           (pspace_aligned' and pspace_canonical' and valid_mdb' and cte_wp_at' (\<lambda>_. True) slot
+            and valid_objs' and valid_cap' cap)
      ({s. cap_get_tag (cap_' s) = scast cap_untyped_cap
          \<longrightarrow> (case untypedZeroRange (cap_to_H (the (cap_lift (cap_' s)))) of None \<Rightarrow> True
           | Some (a, b) \<Rightarrow> region_actually_is_zero_bytes a (unat ((b + 1) - a)) s)}
@@ -7848,23 +7849,6 @@ lemma range_cover_n_le':
   apply (rule rsubst[of "\<lambda>r. r \<le> 2 ^ sbit * n", OF _ nat_mult_1])
   apply (rule mult_le_mono1, rule one_le_power, simp)
   done
-
-(* FIXME AARCH64 originally in Invariants_H on RISCV *)
-lemma range_cover_canonical_address:
-  "\<lbrakk> range_cover ptr sz us n ; p < n ;
-     canonical_address (ptr && ~~ mask sz) ; sz \<le> maxUntypedSizeBits \<rbrakk>
-   \<Longrightarrow> canonical_address (ptr + of_nat p * 2 ^ us)"
-  apply (subst word_plus_and_or_coroll2[symmetric, where w = "mask sz"])
-  apply (subst add.commute)
-  apply (subst add.assoc)
-  apply (simp add: canonical_address_def canonical_address_of_def)
-  sorry (* FIXME AARCH64 word proof
-  apply (rule canonical_address_add[where n=sz] ; simp add: untypedBits_defs is_aligned_neg_mask)
-   apply (drule (1) range_cover.range_cover_compare)
-   apply (clarsimp simp: word_less_nat_alt)
-   apply unat_arith
-  apply (simp add: canonical_bit_def)
-  done *)
 
 lemma createNewObjects_ccorres:
 notes blah[simp del] =  atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
