@@ -1022,13 +1022,12 @@ lemma invokeTCB_ThreadControl_ccorres:
    apply (simp add: word_bits_conv)
   apply simp
   apply (subgoal_tac "s \<turnstile>' capability.ThreadCap target")
-   subgoal sorry (* FIXME AARCH64 pspace_canonical' and obj_at'
    apply (clarsimp simp: cte_level_bits_def Kernel_C.tcbCTable_def Kernel_C.tcbVTable_def
                          tcbCTableSlot_def tcbVTableSlot_def size_of_def
                          tcb_cte_cases_def isCap_simps tcb_aligned' obj_at'_is_canonical
                          cteSizeBits_def
                   split: option.split_asm
-                  dest!: isValidVTableRootD invs_pspace_canonical') *)
+                  dest!: isValidVTableRootD invs_pspace_canonical')
   apply (clarsimp simp: valid_cap'_def capAligned_def word_bits_conv
                         obj_at'_def objBits_simps')
   done
@@ -3816,16 +3815,6 @@ lemma bindNTFN_alignment_junk:
    apply (erule is_aligned_weaken[rotated])
    by (auto simp add: is_aligned_def objBits_defs ctcb_offset_defs)
 
-(* FIXME AARCH64 no pspace_canonical', also probably want make_canonical instead of sign_extend
-lemma option_to_ctcb_ptr_canonical:
-  "\<lbrakk>pspace_canonical' s; tcb_at' tcb s\<rbrakk> \<Longrightarrow>
-     option_to_ctcb_ptr (Some tcb) = tcb_Ptr (sign_extend canonical_bit (ptr_val (tcb_ptr_to_ctcb_ptr tcb)))"
-  apply (clarsimp simp: option_to_ctcb_ptr_def)
-  apply (frule (1) obj_at'_is_canonical)
-  by (fastforce dest: canonical_address_tcb_ptr
-                simp: obj_at'_def objBits_simps' projectKOs canonical_address_sign_extended
-                      sign_extended_iff_sign_extend) *)
-
 lemma bindNotification_ccorres:
   "ccorres dc xfdc (invs' and tcb_at' tcb)
     (UNIV \<inter> {s. tcb_' s = tcb_ptr_to_ctcb_ptr tcb}
@@ -3855,13 +3844,9 @@ lemma bindNotification_ccorres:
                apply (clarsimp simp: cnotification_relation_def Let_def
                                      mask_def [where n=2] NtfnState_Waiting_def)
                apply (case_tac "ntfnObj ntfn")
-  (* FIXME AARCH64 option_to_ctcb_ptr_canonical and pspace_canonical', plus lots of mask 48,
-                   see also canonical_address_and_maskI in Arch_C *)
-  subgoal sorry
-  subgoal sorry
-  subgoal sorry
-                 (*apply ((clarsimp simp: option_to_ctcb_ptr_canonical[OF invs_pspace_canonical']
-                                  simp flip: canonical_bit_def)+)[3]*)
+                 apply ((clarsimp simp: Suc_canonical_bit_fold option_to_ctcb_ptr_def
+                                        tcb_ptr_canonical[OF invs_pspace_canonical']
+                                  simp flip: make_canonical_def)+)[3]
               apply (auto simp: option_to_ctcb_ptr_def objBits_simps'
                                 bindNTFN_alignment_junk canonical_bit_def)[1]
              apply (simp add: carch_state_relation_def)
@@ -3876,8 +3861,7 @@ lemma bindNotification_ccorres:
       apply (rule_tac P'=\<top> and P=\<top> in threadSet_ccorres_lemma3)
        apply vcg
       apply simp
-      apply (erule (1) rf_sr_tcb_update_no_queue2,
-        (simp add: typ_heap_simps')+, simp_all?)[1]
+      apply (erule (1) rf_sr_tcb_update_no_queue2, (simp add: typ_heap_simps')+, simp_all?)[1]
       apply (simp add: ctcb_relation_def option_to_ptr_def option_to_0_def)
      apply simp
      apply (wp get_ntfn_ko'| simp add: guard_is_UNIV_def)+
