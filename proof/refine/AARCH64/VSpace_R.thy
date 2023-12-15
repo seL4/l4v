@@ -886,6 +886,7 @@ lemma state_hyp_refs_of'_vcpu_absorb:
 
 (* FIXME AARCH64: move *)
 lemmas valid_arch_obj'_simps[simp] = valid_arch_obj'_def[split_simps arch_kernel_object.split]
+lemmas ppn_bounded_simps[simp] = ppn_bounded_def[split_simps pte.split]
 
 lemma setObject_vcpu_valid_objs':
   "\<lbrace>valid_objs' and K (valid_vcpu' vcpu)\<rbrace> setObject v (vcpu::vcpu) \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
@@ -2127,6 +2128,7 @@ definition
   "valid_page_inv' pgi \<equiv>
   case pgi of
     PageMap cap ptr m \<Rightarrow>
+      K (isPagePTE (fst m)) and
       cte_wp_at' (is_arch_update' (ArchObjectCap cap)) ptr and valid_cap' (ArchObjectCap cap)
   | PageUnmap cap ptr \<Rightarrow>
       K (isFrameCap cap) and
@@ -2260,7 +2262,7 @@ definition
   "valid_pti' pti \<equiv>
    case pti of
      PageTableMap cap slot pte pteSlot \<Rightarrow>
-       cte_wp_at' (is_arch_update' cap) slot and valid_cap' cap
+       cte_wp_at' (is_arch_update' cap) slot and valid_cap' cap and K (ppn_bounded pte)
    | PageTableUnmap cap slot \<Rightarrow>
        cte_wp_at' (is_arch_update' (ArchObjectCap cap)) slot and valid_cap' (ArchObjectCap cap)
          and K (isPageTableCap cap)"
@@ -2921,9 +2923,9 @@ crunches storePTE
   (wp: setObject_ksPSpace_only updateObject_default_inv)
 
 lemma storePTE_valid_objs[wp]:
-  "storePTE p pte \<lbrace>valid_objs'\<rbrace>"
+  "\<lbrace>valid_objs' and K (ppn_bounded pte)\<rbrace> storePTE p pte \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   apply (simp add: storePTE_def doMachineOp_def split_def)
-  apply (rule hoare_pre, rule setObject_valid_objs'[where P=\<top>])
+  apply (rule hoare_pre, rule setObject_valid_objs'[where P="K (ppn_bounded pte)"])
    apply (clarsimp simp: updateObject_default_def in_monad  valid_obj'_def)
   apply simp
   done
@@ -2940,7 +2942,7 @@ lemma storePTE_ko_wp_vcpu_at'[wp]:
   done
 
 lemma storePTE_invs[wp]:
-  "storePTE p pte \<lbrace>invs'\<rbrace>"
+  "\<lbrace>invs' and K (ppn_bounded pte)\<rbrace> storePTE p pte \<lbrace>\<lambda>_. invs'\<rbrace>"
   unfolding invs'_def valid_state'_def valid_pspace'_def
   by (wpsimp wp: sch_act_wf_lift valid_global_refs_lift' irqs_masked_lift valid_arch_state_lift'
                  valid_irq_node_lift cur_tcb_lift valid_irq_handlers_lift'' untyped_ranges_zero_lift
@@ -2984,6 +2986,10 @@ lemma dmo_doFlush_invs'[wp]:
             cleanInvalidateCacheRange_RAM_def cleanCacheRange_PoU_def invalidateCacheRange_I_def
   by (cases flushOp; wpsimp wp: dmo_machine_op_lift_invs' simp: doMachineOp_bind empty_fail_bind)
 
+lemma isPagePTE_eq: (* FIXME AARCH64: move up *)
+  "isPagePTE pte = (\<exists>base sm g xn d R. pte = PagePTE base sm g xn d R)"
+  by (simp add: isPagePTE_def split: pte.splits)
+
 lemma perform_page_invs [wp]:
   "\<lbrace>invs' and valid_page_inv' pt\<rbrace> performPageInvocation pt \<lbrace>\<lambda>_. invs'\<rbrace>"
   supply if_split[split del]
@@ -2995,7 +3001,7 @@ lemma perform_page_invs [wp]:
                        simp: valid_page_inv'_def is_arch_update'_def if_apply_def2)
     apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_ex_lift hoare_vcg_const_imp_lift
                            arch_update_updateCap_invs unmapPage_cte_wp_at' getSlotCap_wp dmo_invs_lift'
-                      simp: valid_page_inv'_def is_arch_update'_def if_apply_def2)
+                      simp: valid_page_inv'_def is_arch_update'_def if_apply_def2 isPagePTE_eq)
    prefer 2
    apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_ex_lift hoare_vcg_const_imp_lift
                           arch_update_updateCap_invs unmapPage_cte_wp_at' getSlotCap_wp

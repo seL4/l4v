@@ -704,11 +704,12 @@ lemma decodeARMPageTableInvocation_corres:
    apply (simp add: decode_pt_inv_map_def
                split: invocation_label.split arch_invocation_label.splits split del: if_split)
    apply (simp split: list.split, intro conjI impI allI, simp_all)[1]
-   apply (clarsimp simp: neq_Nil_conv Let_def decodeARMPageTableInvocationMap_def)
+   apply (clarsimp simp: neq_Nil_conv Let_def decodeARMPageTableInvocationMap_def assertE_liftE)
    apply (rule whenE_throwError_corres_initial; (fastforce simp: mdata_map_def)?)
    apply (corres' \<open>fastforce\<close>
                   term_simp: user_vtop_def
                   corres: corres_lookup_error findVSpaceForASID_corres
+                          corres_assert_gen_asm
                           lookupPTSlot_corres[@lift_corres_args]
                           corres_returnOk[where P="pspace_aligned and pt_at pt_t p and
                                                    pspace_in_kernel_window and valid_uses"
@@ -722,6 +723,10 @@ lemma decodeARMPageTableInvocation_corres:
              apply (erule is_aligned_weaken)
              apply simp
             apply wpsimp+
+    apply (prop_tac "pptrBase \<le> p \<and> p < pptrTop")
+     apply (clarsimp simp: valid_cap_def obj_at_def simp flip: pptr_base_def)
+     apply (fastforce dest: pspace_in_kw_bounded
+                      simp: kernel_window_range_def pptrTop_def AARCH64.pptrTop_def)
     apply (fastforce simp: valid_cap_def wellformed_mapdata_def below_user_vtop_in_user_region
                            not_less pt_lookup_slot_pte_at
                      intro!: vspace_for_asid_vs_lookup)
@@ -1485,7 +1490,7 @@ lemma decodeARMFrameInvocationMap_valid_arch_inv'[wp]:
   apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (drule_tac t="cteCap cte" in sym)
   apply (clarsimp simp: valid_cap'_def wellformed_mapdata'_def is_arch_update'_def capAligned_def
-                        isCap_simps not_less)
+                        isCap_simps not_less makeUserPTE_def isPagePTE_def)
   apply (fastforce simp: wellformed_mapdata'_def vmsz_aligned_user_region user_vtop_def mask_def)
   done
 
@@ -1521,6 +1526,12 @@ lemma checkVSpaceRoot_wp[wp]:
   unfolding checkVSpaceRoot_def
   by wpsimp
 
+lemma phys_canonical_in_kernel_window:
+  "\<lbrakk> pptrBase \<le> p; p < pptrTop \<rbrakk> \<Longrightarrow> canonical_address (addrFromPPtr p >> pageBits)"
+  apply (simp add: addrFromPPtr_def pptrBaseOffset_def paddrBase_def canonical_address_mask_eq
+                   canonical_bit_def pptrBase_def pageBits_def pptrTop_def)
+  by word_bitwise clarsimp
+
 lemma decode_page_table_inv_wf[wp]:
   "arch_cap = PageTableCap word pt_t option \<Longrightarrow>
        \<lbrace>invs' and valid_cap' (capability.ArchObjectCap arch_cap) and
@@ -1544,7 +1555,8 @@ lemma decode_page_table_inv_wf[wp]:
   apply (drule_tac t="cteCap ctea" in sym)
   apply (drule ctes_of_valid', fastforce)+
   apply (clarsimp simp: valid_cap'_def)
-  apply (simp add: wellformed_mapdata'_def below_pptrUserTop_in_user_region neg_mask_user_region)
+  apply (simp add: wellformed_mapdata'_def below_pptrUserTop_in_user_region neg_mask_user_region
+                   phys_canonical_in_kernel_window)
   done
 
 lemma capMaster_isPageTableCap:

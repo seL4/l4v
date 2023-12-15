@@ -519,9 +519,17 @@ definition valid_mapping' :: "machine_word \<Rightarrow> vmpage_size \<Rightarro
 definition valid_vcpu' :: "vcpu \<Rightarrow> bool" where
   "valid_vcpu' v \<equiv> case vcpuTCBPtr v of None \<Rightarrow> True | Some vt \<Rightarrow> vt \<noteq> 0"
 
+(* This is a slight abuse of "canonical_address". What we really need to know for ADT_C in CRefine
+   is that the top pageBits bits of TablePTEs have a known value, because we shift left by pageBits.
+   What we actually know is that this is a physical address, so it is bound by the physical address
+   space size, which depending on config can be 40, 44, or 48. 48 happens to also be the bound for
+   the virtual address space, which canonical_address is for. This is good enough for our purposes. *)
+definition ppn_bounded :: "pte \<Rightarrow> bool" where
+  "ppn_bounded pte \<equiv> case pte of PageTablePTE ppn \<Rightarrow> canonical_address ppn | _ \<Rightarrow> True"
+
 definition valid_arch_obj' :: "arch_kernel_object \<Rightarrow> bool" where
   "valid_arch_obj' ako \<equiv> case ako of
-     KOPTE pte \<Rightarrow> True
+     KOPTE pte \<Rightarrow> ppn_bounded pte
    | KOVCPU vcpu \<Rightarrow> valid_vcpu' vcpu
    | _ \<Rightarrow> True"
 
