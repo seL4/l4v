@@ -4611,10 +4611,7 @@ lemma (in range_cover) funky_aligned:
   done
 
 defs canonicalAddressAssert_def:
-  "canonicalAddressAssert p \<equiv> True" (* FIXME AARCH64: (for CRefine)
-  might need this to be either canonical_user or something in the kernel region --
-  both are liftable from AInvs via valid_vspace_uses, but
-  valid_vspace_uses will first have to be added to the state relation *)
+  "canonicalAddressAssert \<equiv> AARCH64.canonical_address"
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
@@ -4850,6 +4847,11 @@ lemma inv_untyped_corres':
 
     have sz_limit[simp]: "sz \<le> maxUntypedSizeBits"
       using vc' unfolding valid_cap'_def by clarsimp
+
+    from ptr_cn sz_limit
+    have canonical_ptr[simp]: "canonical_address ptr"
+      unfolding canonical_address_range maxUntypedSizeBits_def canonical_bit_def
+      by word_bitwise (simp add: word_size)
 
     note set_cap_free_index_invs_spec = set_free_index_invs[where cap = "cap.UntypedCap
         dev (ptr && ~~ mask sz) sz (if reset then 0 else idx)"
