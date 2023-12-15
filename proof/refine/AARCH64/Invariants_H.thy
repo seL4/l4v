@@ -512,13 +512,20 @@ definition valid_ntfn' :: "Structures_H.notification \<Rightarrow> kernel_state 
   | ActiveNtfn b \<Rightarrow> True)
   \<and> valid_bound_tcb' (ntfnBoundTCB ntfn) s"
 
+(* FIXME AARCH64: remove if unused at the end *)
 definition valid_mapping' :: "machine_word \<Rightarrow> vmpage_size \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "valid_mapping' x sz s \<equiv> is_aligned x (pageBitsForSize sz) \<and> ptrFromPAddr x \<noteq> 0"
 
-(* KOArch validity can be lifted from AInvs, since all cases only consist of typ_at' predicates. *)
-definition
-  valid_obj' :: "Structures_H.kernel_object \<Rightarrow> kernel_state \<Rightarrow> bool"
-where
+definition valid_vcpu' :: "vcpu \<Rightarrow> bool" where
+  "valid_vcpu' v \<equiv> case vcpuTCBPtr v of None \<Rightarrow> True | Some vt \<Rightarrow> vt \<noteq> 0"
+
+definition valid_arch_obj' :: "arch_kernel_object \<Rightarrow> bool" where
+  "valid_arch_obj' ako \<equiv> case ako of
+     KOPTE pte \<Rightarrow> True
+   | KOVCPU vcpu \<Rightarrow> valid_vcpu' vcpu
+   | _ \<Rightarrow> True"
+
+definition valid_obj' :: "Structures_H.kernel_object \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "valid_obj' ko s \<equiv> case ko of
     KOEndpoint endpoint \<Rightarrow> valid_ep' endpoint s
   | KONotification notification \<Rightarrow> valid_ntfn' notification s
@@ -527,7 +534,7 @@ where
   | KOUserDataDevice \<Rightarrow> True
   | KOTCB tcb \<Rightarrow> valid_tcb' tcb s
   | KOCTE cte \<Rightarrow> valid_cte' cte s
-  | KOArch arch_kernel_object \<Rightarrow> True"
+  | KOArch ako \<Rightarrow> valid_arch_obj' ako"
 
 definition
   pspace_aligned' :: "kernel_state \<Rightarrow> bool"

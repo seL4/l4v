@@ -141,7 +141,7 @@ lemma valid_obj_makeObject_asid_pool[simp]:
 lemma valid_obj_makeObject_vcpu[simp]:
   "valid_obj' (KOArch (KOVCPU makeObject)) s"
   unfolding valid_obj'_def
-  by (simp add: makeObject_vcpu makeVCPUObject_def)
+  by (simp add: makeObject_vcpu makeVCPUObject_def valid_vcpu'_def)
 
 lemmas valid_obj_makeObject_rules =
   valid_obj_makeObject_user_data valid_obj_makeObject_tcb

@@ -884,10 +884,14 @@ lemma state_hyp_refs_of'_vcpu_absorb:
    (state_hyp_refs_of' s)(v := vcpu_tcb_refs' (vcpuTCBPtr vcpu)) = state_hyp_refs_of' s"
      by (rule ext) (clarsimp simp: state_hyp_refs_of'_def obj_at'_def)
 
+(* FIXME AARCH64: move *)
+lemmas valid_arch_obj'_simps[simp] = valid_arch_obj'_def[split_simps arch_kernel_object.split]
+
 lemma setObject_vcpu_valid_objs':
-  "\<lbrace>valid_objs'\<rbrace> setObject v (vcpu::vcpu) \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
+  "\<lbrace>valid_objs' and K (valid_vcpu' vcpu)\<rbrace> setObject v (vcpu::vcpu) \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
   apply (wp setObject_valid_objs')
    apply (clarsimp simp: in_monad updateObject_default_def valid_obj'_def)
+   apply assumption
   apply simp
   done
 
@@ -924,10 +928,12 @@ lemma setObject_vcpu_no_tcb_update:
   apply (rule_tac Q="valid_objs' and (ko_at' vcpu p and valid_obj' (KOArch (KOVCPU vcpu)))" in hoare_pre_imp)
    apply (clarsimp)
    apply (simp add: valid_obj'_def)
+   apply (drule (1) ko_at_valid_objs', simp)
+   apply (simp add: valid_obj'_def)
   apply (rule setObject_valid_objs')
   apply (clarsimp simp add: obj_at'_def)
   apply (frule updateObject_default_result)
-  apply (clarsimp simp add: valid_obj'_def)
+  apply (clarsimp simp add: valid_obj'_def valid_vcpu'_def)
   done
 
 lemma vcpuUpdate_valid_objs'[wp]:
