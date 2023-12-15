@@ -996,6 +996,7 @@ definition max_armKSGICVCPUNumListRegs :: nat where
 definition valid_arch_state' :: "kernel_state \<Rightarrow> bool" where
   "valid_arch_state' \<equiv> \<lambda>s.
    valid_asid_table' (armKSASIDTable (ksArchState s)) \<and>
+   0 \<notin> ran (armKSVMIDTable (ksArchState s)) \<and>
    (case armHSCurVCPU (ksArchState s) of
       Some (v, b) \<Rightarrow> ko_wp_at' (is_vcpu' and hyp_live') v s
       | _ \<Rightarrow> True) \<and>

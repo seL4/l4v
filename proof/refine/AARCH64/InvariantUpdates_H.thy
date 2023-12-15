@@ -377,29 +377,14 @@ lemma invs'_update_cnt[elim!]:
 
 context begin interpretation Arch .
 
-lemma valid_arch_state'_vmid_update[simp]:
-  "valid_arch_state' (s\<lparr>ksArchState := armKSVMIDTable_update f (ksArchState s)\<rparr>) =
-   valid_arch_state' s"
-  by (auto simp: valid_arch_state'_def split: option.split)
-
 lemma valid_arch_state'_vmid_next_update[simp]:
   "valid_arch_state' (s\<lparr>ksArchState := armKSNextVMID_update f (ksArchState s)\<rparr>) =
    valid_arch_state' s"
   by (auto simp: valid_arch_state'_def split: option.split)
 
-lemma invs'_armKSVMIDTable_update[simp]:
-  "invs' (s\<lparr>ksArchState := armKSVMIDTable_update f s'\<rparr>) = invs' (s\<lparr>ksArchState := s'\<rparr>)"
-  by (simp add: invs'_def valid_state'_def valid_global_refs'_def global_refs'_def table_refs'_def
-                valid_machine_state'_def valid_arch_state'_def cong: option.case_cong)
-
 lemma invs'_armKSNextVMID_update[simp]:
   "invs' (s\<lparr>ksArchState := armKSNextVMID_update f s'\<rparr>) = invs' (s\<lparr>ksArchState := s'\<rparr>)"
   by (simp add: invs'_def valid_state'_def valid_global_refs'_def global_refs'_def table_refs'_def
-                valid_machine_state'_def valid_arch_state'_def cong: option.case_cong)
-
-lemma invs_no_cicd'_armKSVMIDTable_update[simp]:
-  "invs_no_cicd' (s\<lparr>ksArchState := armKSVMIDTable_update f s'\<rparr>) = invs_no_cicd' (s\<lparr>ksArchState := s'\<rparr>)"
-  by (simp add: invs_no_cicd'_def valid_state'_def valid_global_refs'_def global_refs'_def table_refs'_def
                 valid_machine_state'_def valid_arch_state'_def cong: option.case_cong)
 
 lemma invs_no_cicd'_armKSNextVMID_update[simp]:

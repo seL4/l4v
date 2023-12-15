@@ -1399,20 +1399,47 @@ lemma updateASIDPoolEntry_valid_arch_state'[wp]:
   unfolding updateASIDPoolEntry_def
   by (wpsimp wp: getObject_inv simp: loadObject_default_def)
 
+lemma invalidateVMIDEntry_valid_arch_state'[wp]:
+  "invalidateVMIDEntry vmid \<lbrace>valid_arch_state'\<rbrace>"
+  unfolding invalidateVMIDEntry_def
+  by (wpsimp simp: valid_arch_state'_def ran_def cong: option.case_cong)
+
+lemma valid_arch_state'_vmid_Some_upd:
+  "\<lbrakk> valid_arch_state' s; 0 < asid \<rbrakk> \<Longrightarrow>
+   valid_arch_state' (s\<lparr>ksArchState := armKSVMIDTable_update
+                                       (\<lambda>_. (armKSVMIDTable (ksArchState s))(vmid \<mapsto> asid))
+                                       (ksArchState s)\<rparr>)"
+  by (simp add: valid_arch_state'_def ran_def cong: option.case_cong)
+
+lemma storeVMID_valid_arch_state'[wp]:
+  "\<lbrace>valid_arch_state' and K (0 < asid)\<rbrace> storeVMID asid vmid \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
+  unfolding storeVMID_def
+  by (wpsimp simp_del: fun_upd_apply | strengthen valid_arch_state'_vmid_Some_upd)+
+
 crunches armContextSwitch, setGlobalUserVSpace
   for valid_arch_state'[wp]: valid_arch_state'
 
 (* FIXME AARCH64 consolidated VCPU block ends here *)
 
+(* FIXME AARCH64: replacing getSlotCap_wp is probably going to be too much breakage, but
+                   rename would be good *)
+lemma getSlotCap_actual_wp:
+  "\<lbrace>\<lambda>s.  \<forall>cap. cteCaps_of s p = Some cap \<longrightarrow> Q cap s\<rbrace>
+   getSlotCap p \<lbrace>Q\<rbrace>"
+  unfolding getSlotCap_def
+  by (wpsimp wp: getCTE_cteCap_wp split: option.splits)
+
 lemma setVMRoot_valid_arch_state'[wp]:
-  "\<lbrace>valid_arch_state' and live_vcpu_at_tcb p\<rbrace>
+  "\<lbrace>valid_arch_state' and valid_objs' and live_vcpu_at_tcb p\<rbrace>
      setVMRoot p
    \<lbrace>\<lambda>rv. valid_arch_state'\<rbrace>"
-  apply (simp add: setVMRoot_def getThreadVSpaceRoot_def)
-  apply ((wpsimp wp: hoare_vcg_ex_lift hoare_drop_imps
-                    getObject_tcb_wp valid_case_option_post_wp'
-               simp: if_apply_def2
-          | wp hoare_vcg_all_lift)+)
+  apply (simp add: setVMRoot_def getThreadVSpaceRoot_def locateSlotTCB_def locateSlotBasic_def)
+  apply ((wpsimp wp: hoare_vcg_ex_lift hoare_vcg_all_lift
+                     getObject_tcb_wp valid_case_option_post_wp' getSlotCap_actual_wp
+                 simp: if_apply_def2
+          | wp hoare_drop_imps)+)
+  apply (fastforce simp: cteCaps_of_def valid_cap'_def wellformed_mapdata'_def
+                   dest!: ctes_of_valid_cap'')
   done
 
 crunches setVMRoot
@@ -2625,15 +2652,42 @@ lemma doMachineOp_invalidateTranslationASID_invs'[wp]:
   unfolding invalidateTranslationASID_def
   by (wp dmo_machine_op_lift_invs')
 
+lemma invs'_vmid_strg:
+  "\<lbrakk> invs' s; 0 < asid \<rbrakk> \<Longrightarrow>
+   invs' (s\<lparr>ksArchState := armKSVMIDTable_update
+                           (\<lambda>_. (armKSVMIDTable (ksArchState s))(vmid \<mapsto> asid))
+                           (ksArchState s)\<rparr>)"
+  by (auto simp: invs'_def valid_state'_def valid_global_refs'_def global_refs'_def
+                 valid_machine_state'_def valid_arch_state'_vmid_Some_upd)
+
+crunches updateASIDPoolEntry
+  for invs'[wp]: invs'
+  (wp: getASID_wp crunch_wps)
+
+lemma storeVMID_invs'[wp]:
+  "\<lbrace>invs' and K (0 < asid)\<rbrace> storeVMID asid vmid \<lbrace>\<lambda>_. invs'\<rbrace>"
+  unfolding storeVMID_def
+  by (wpsimp simp_del: fun_upd_apply | strengthen invs'_vmid_strg)+
+
+lemma invs'_vmid_None_upd:
+  "invs' s \<Longrightarrow>
+   invs' (s\<lparr>ksArchState := armKSVMIDTable_update
+                           (\<lambda>_ a. if a = vmid then None else armKSVMIDTable (ksArchState s) a)
+                           (ksArchState s)\<rparr>)"
+  by (clarsimp simp: invs'_def valid_state'_def valid_global_refs'_def global_refs'_def
+                     valid_machine_state'_def valid_arch_state'_def ran_def
+               cong: option.case_cong)
+
 crunches getVMID, armContextSwitch, setGlobalUserVSpace
   for invs'[wp]: invs'
-  (ignore: doMachineOp wp: getASID_wp crunch_wps)
+  (ignore: doMachineOp wp: getASID_wp crunch_wps simp: invs'_vmid_None_upd)
 
 lemma setVMRoot_invs'[wp]:
   "setVMRoot p \<lbrace>invs'\<rbrace>"
-  unfolding setVMRoot_def getThreadVSpaceRoot_def
-  by (wpsimp wp: whenE_wp findVSpaceForASID_vs_at_wp hoare_drop_imps hoare_vcg_ex_lift
-                 hoare_vcg_all_lift)
+  unfolding setVMRoot_def getThreadVSpaceRoot_def locateSlotTCB_def locateSlotBasic_def
+  by (wpsimp wp: whenE_wp findVSpaceForASID_vs_at_wp hoare_vcg_ex_lift
+                 hoare_vcg_all_lift getSlotCap_actual_wp
+             simp: word_neq_0_conv)
 
 lemma setASIDPool_invs_no_cicd'[wp]:
   "setObject p (ap::asidpool) \<lbrace>invs_no_cicd'\<rbrace>"
@@ -2652,15 +2706,42 @@ lemma invalidateTranslationASID_invs_no_cicd'[wp]:
   "doMachineOp (invalidateTranslationASID asid) \<lbrace>invs_no_cicd'\<rbrace>"
   by (wp dmo_invs_no_cicd_lift')
 
+crunches updateASIDPoolEntry
+  for invs_no_cicd'[wp]: invs_no_cicd'
+  (wp: getASID_wp crunch_wps)
+
+lemma invs_no_cicd'_vmid_strg:
+  "\<lbrakk> invs_no_cicd' s; 0 < asid \<rbrakk> \<Longrightarrow>
+   invs_no_cicd' (s\<lparr>ksArchState := armKSVMIDTable_update
+                                   (\<lambda>_. (armKSVMIDTable (ksArchState s))(vmid \<mapsto> asid))
+                                   (ksArchState s)\<rparr>)"
+  by (auto simp: invs_no_cicd'_def valid_state'_def valid_global_refs'_def global_refs'_def
+                 valid_machine_state'_def valid_arch_state'_vmid_Some_upd)
+
+lemma storeVMID_invs_no_cicd'[wp]:
+  "\<lbrace>invs_no_cicd' and K (0 < asid)\<rbrace> storeVMID asid vmid \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
+  unfolding storeVMID_def
+  by (wpsimp simp_del: fun_upd_apply | strengthen invs_no_cicd'_vmid_strg)+
+
+lemma invs_no_cicd'_vmid_None_upd:
+  "invs_no_cicd' s \<Longrightarrow>
+   invs_no_cicd' (s\<lparr>ksArchState := armKSVMIDTable_update
+                                  (\<lambda>_ a. if a = vmid then None else armKSVMIDTable (ksArchState s) a)
+                                  (ksArchState s)\<rparr>)"
+  by (clarsimp simp: invs_no_cicd'_def valid_state'_def valid_global_refs'_def global_refs'_def
+                     valid_machine_state'_def valid_arch_state'_def ran_def
+               cong: option.case_cong)
+
 crunches getVMID, armContextSwitch, setGlobalUserVSpace
   for invs_no_cicd'[wp]: "invs_no_cicd'"
-  (ignore: doMachineOp wp: getASID_wp crunch_wps)
+  (ignore: doMachineOp wp: getASID_wp crunch_wps simp: invs_no_cicd'_vmid_None_upd)
 
 lemma setVMRoot_invs_no_cicd':
   "setVMRoot p \<lbrace>invs_no_cicd'\<rbrace>"
-  unfolding setVMRoot_def getThreadVSpaceRoot_def
-  by (wpsimp wp: whenE_wp findVSpaceForASID_vs_at_wp hoare_drop_imps hoare_vcg_ex_lift
-                 hoare_vcg_all_lift)
+  unfolding setVMRoot_def getThreadVSpaceRoot_def locateSlotTCB_def locateSlotBasic_def
+  by (wpsimp wp: whenE_wp findVSpaceForASID_vs_at_wp hoare_vcg_ex_lift getSlotCap_actual_wp
+                 hoare_vcg_all_lift
+             simp: word_neq_0_conv)
 
 crunch nosch [wp]: setVMRoot "\<lambda>s. P (ksSchedulerAction s)"
   (wp: crunch_wps getObject_inv setObject_nosch simp: crunch_simps loadObject_default_def updateObject_default_def)

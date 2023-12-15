@@ -4158,6 +4158,7 @@ lemma createNewCaps_idle'[wp]:
 
 crunches createNewCaps
   for asid_table[wp]: "\<lambda>s. P (armKSASIDTable (ksArchState s))"
+  and vmid_table[wp]: "\<lambda>s. P (armKSVMIDTable (ksArchState s))"
   and cur_vcpu[wp]: "\<lambda>s. P (armHSCurVCPU (ksArchState s))"
   and num_list_regs[wp]: "\<lambda>s. P (armKSGICVCPUNumListRegs (ksArchState s))"
   and global_ksArch[wp]: "\<lambda>s. P (armKSGlobalUserVSpace (ksArchState s))"
