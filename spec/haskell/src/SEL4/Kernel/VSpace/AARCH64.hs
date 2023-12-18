@@ -614,6 +614,9 @@ decodeARMPageTableInvocationMap cte cap vptr attr vspaceCap = do
     (bitsLeft, slot) <- withoutFailure $ lookupPTSlot vspace vptr
     oldPTE <- withoutFailure $ getObject slot
     when (bitsLeft == pageBits || oldPTE /= InvalidPTE) $ throw DeleteFirst
+    assert (fromVPtr pptrBase <= fromPPtr (capPTBasePtr cap) &&
+            fromPPtr (capPTBasePtr cap) < fromVPtr pptrTop)
+           "cap ptr must be in kernel window"
     let pte = PageTablePTE {
             ptePPN = addrFromPPtr (capPTBasePtr cap) `shiftR` pageBits }
     let vptr = vptr .&. complement (mask bitsLeft)
