@@ -638,11 +638,12 @@ lemma carch_state_to_H_correct:
    apply (clarsimp simp: valid_asid_table'_def mask_2pm1)
    apply fastforce
   apply (rule conjI)
-  subgoal
    apply (rule array_relation_map_conv2[OF _ eq_option_to_0_rev])
      apply assumption
-   sorry (* FIXME AARCH64 can't prove this, option_to_0 is not reversible without knowledge that
-                          Some 0 isn't in the range *)
+    using valid
+    apply (simp add: valid_arch_state'_def)
+    apply fastforce
+   apply (clarsimp simp: mask_def vmid_bits_def)
   apply (rule conjI)
   using valid rel
    apply (simp add: ccur_vcpu_to_H_correct)
