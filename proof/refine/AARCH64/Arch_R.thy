@@ -1786,7 +1786,7 @@ lemma assoc_invs':
   apply (rule conjI)
    apply (clarsimp simp: typ_at_to_obj_at_arches obj_at'_def)
   apply (rule conjI)
-   apply (clarsimp simp: valid_vcpu'_def)
+   apply (clarsimp simp: valid_vcpu'_def obj_at'_def objBits_simps)
   apply (rule conjI)
    apply (clarsimp simp: typ_at_tcb' obj_at'_def)
    apply (rule_tac rfs'="state_hyp_refs_of' s" in delta_sym_refs, assumption)

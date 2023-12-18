@@ -517,7 +517,7 @@ definition valid_mapping' :: "machine_word \<Rightarrow> vmpage_size \<Rightarro
   "valid_mapping' x sz s \<equiv> is_aligned x (pageBitsForSize sz) \<and> ptrFromPAddr x \<noteq> 0"
 
 definition valid_vcpu' :: "vcpu \<Rightarrow> bool" where
-  "valid_vcpu' v \<equiv> case vcpuTCBPtr v of None \<Rightarrow> True | Some vt \<Rightarrow> vt \<noteq> 0"
+  "valid_vcpu' v \<equiv> case vcpuTCBPtr v of None \<Rightarrow> True | Some vt \<Rightarrow> is_aligned vt tcbBlockSizeBits"
 
 (* This is a slight abuse of "canonical_address". What we really need to know for ADT_C in CRefine
    is that the top pageBits bits of TablePTEs have a known value, because we shift left by pageBits.
