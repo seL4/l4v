@@ -1030,17 +1030,33 @@ lemma cpspace_ntfn_relation_unique:
                      kernel.tcb_at_not_NULL tcb_ptr_to_ctcb_ptr_inj
               split: ntfn.splits option.splits) (* long *)
 
+lemma canonical_pageBits_shift_inj:
+  "\<lbrakk> canonical_address x; canonical_address y; x << pageBits = y << pageBits \<rbrakk> \<Longrightarrow> x = y"
+  unfolding canonical_address_mask_eq canonical_bit_def pageBits_def
+  by word_bitwise clarsimp
+
 lemma cpspace_pte_relation_unique:
-  assumes "cpspace_pte_relation ah ch" "cpspace_pte_relation ah' ch"
+  assumes ptes: "cpspace_pte_relation ah ch" "cpspace_pte_relation ah' ch"
+  assumes vs: "\<exists>s. ksPSpace s = ah \<and> valid_objs' s"
+  assumes vs': "\<exists>s. ksPSpace s = ah' \<and> valid_objs' s"
   shows   "map_to_ptes ah' = map_to_ptes ah"
-  apply (rule cmap_relation_unique'[OF inj_Ptr _ assms, where P=\<top> and P'=\<top>]; simp)
-  apply (clarsimp simp: cpte_relation_def Let_def ucast_id attridx_from_vmattributes_def
-                        ap_from_vm_rights_def mair_s2_types_defs
-              dest!: from_bool_eqI
-              split: pte.splits vmrights.splits if_splits)
-  sorry (* FIXME AARCH64 potential problem with cpte_relation: can't show x3 = x3a from
-                         x3a << pageBits = x3 << pageBits
-  done *)
+  using ptes
+  apply (clarsimp simp: cmap_relation_def)
+  apply (drule inj_image_inv[OF inj_Ptr])+
+  apply simp
+  apply (rule ext, rename_tac x)
+  apply (case_tac "x \<in> dom (map_to_ptes ah)")
+   apply (drule bspec, assumption)+
+   apply (simp add: dom_def Collect_eq, drule_tac x=x in spec)
+   using vs vs'
+   apply (clarsimp simp: map_comp_Some_iff)
+   apply (erule (1) valid_objsE')+
+   apply (clarsimp simp: valid_obj'_def projectKO_opt_pte)
+   subgoal by (clarsimp simp: cpte_relation_def Let_def attridx_from_vmattributes_def
+                              ap_from_vm_rights_def mair_s2_types_defs canonical_pageBits_shift_inj
+                        dest!: from_bool_eqI
+                        split: pte.splits vmrights.splits if_splits)
+  by fastforce
 
 lemma cpspace_asidpool_relation_unique:
   assumes rels: "cpspace_asidpool_relation ah ch"
@@ -1251,6 +1267,8 @@ proof -
       apply (fastforce intro: valid_pspaces)
      apply (fastforce intro: valid_pspaces)
     apply (drule (1) cpspace_pte_relation_unique)
+      apply (fastforce intro: valid_objs)
+     apply (fastforce intro: valid_objs')
     apply (drule (1) cpspace_asidpool_relation_unique)
     apply (drule (1) cpspace_vcpu_relation_unique)
       apply (rule valid_objs'_aligned_vcpuTCB [OF valid_objs])
