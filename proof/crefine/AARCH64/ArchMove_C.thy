@@ -284,10 +284,14 @@ crunches Arch.switchToThread
 crunches switchToIdleThread
   for ksCurDomain[wp]: "\<lambda>s. P (ksCurDomain s)"
 
+crunches vcpuUpdate
+  for pspace_canonical'[wp]: pspace_canonical'
+
 lemma vcpuUpdate_valid_pspace'[wp]:
-  "vcpuUpdate p f \<lbrace>valid_pspace'\<rbrace>"
-  unfolding vcpuUpdate_def valid_pspace'_def valid_mdb'_def
-  by (wpsimp wp: setObject_vcpu_valid_objs')
+  "(\<And>vcpu. vcpuTCBPtr (f vcpu) = vcpuTCBPtr vcpu) \<Longrightarrow>
+   vcpuUpdate vr f \<lbrace>valid_pspace'\<rbrace>"
+  unfolding valid_pspace'_def valid_mdb'_def
+  by wpsimp
 
 lemma updateASIDPoolEntry_valid_pspace'[wp]:
   "updateASIDPoolEntry p f \<lbrace>valid_pspace'\<rbrace>"

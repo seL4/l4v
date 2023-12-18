@@ -2274,9 +2274,10 @@ lemma associateVCPUTCB_ccorres:
               | strengthen invs_valid_objs' invs_arch_state')+)[1]
      apply (vcg exspec=dissociateVCPUTCB_modifies)
     apply (rule_tac Q="\<lambda>_. invs' and vcpu_at' vcpuptr and tcb_at' tptr" in hoare_post_imp)
+     apply (prop_tac "no_0_obj' s", fastforce)
      apply (clarsimp simp: typ_at_tcb' obj_at'_def)
      apply (rename_tac vcpu obj, case_tac vcpu)
-     apply (fastforce simp: valid_arch_tcb'_def)
+     apply (fastforce simp: valid_arch_tcb'_def valid_vcpu'_def objBits_simps)
     apply wpsimp
    apply (vcg exspec=dissociateVCPUTCB_modifies)
   apply (fastforce simp: ctcb_relation_def carch_tcb_relation_def typ_heap_simps

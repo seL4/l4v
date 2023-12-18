@@ -1229,17 +1229,13 @@ lemma map_to_cnes_eq:
 lemma valid_objs'_aligned_vcpuTCB:
   "valid_objs' s \<Longrightarrow> \<forall>x\<in>ran (map_to_vcpus (ksPSpace s)). is_aligned_opt (vcpuTCBPtr x) tcbBlockSizeBits"
   apply (clarsimp simp: valid_objs'_def ran_def pspace_aligned'_def)
-  apply (case_tac "ksPSpace s a"; simp)
-  apply (rename_tac y, drule_tac x=y in spec)
-  apply (case_tac y; clarsimp simp: projectKOs)
+  apply (rename_tac p)
+  apply (case_tac "ksPSpace s p"; simp)
+  apply (rename_tac ko, drule_tac x=ko in spec)
+  apply (case_tac ko; clarsimp)
   apply (erule impE, fastforce)
-  apply (clarsimp simp: valid_obj'_def tcbBlockSizeBits_def split: option.splits)
-  sorry (* FIXME AARCH64 can't satisfy this alignment constraint because we don't know anything about the
-           value of the tcb pointer in the vcpu, would have to add that the pointer is aligned if not null
-           if we want to avoid the tcb_at'
-  apply (clarsimp simp: typ_at_tcb' obj_at'_def projectKOs objBits_simps)
-  done *)
-
+  apply (clarsimp simp: valid_obj'_def valid_vcpu'_def split: option.splits)
+  done
 
 lemma cpspace_relation_unique:
   assumes valid_pspaces: "valid_pspace' s" "valid_pspace' s'"
