@@ -2422,12 +2422,9 @@ lemma invokeUntyped_Retype_ccorres:
              apply (clarsimp simp: return_def)
             apply wp
            apply (vcg exspec=createNewObjects_modifies)
-          sorry (* FIXME AARCH64 canonicalAddressAssert doesn't do anything now, so can't strengthen anything
-                   based on this assertion!
           apply (simp add: canonicalAddressAssert_def)
           (* strengthen canonical_address (ptr && ~~ mask sz) now, while we have canonical ptr *)
-          apply (drule canonical_address_neq_mask[where sz=sz])
-           apply (rule sz_bound[folded maxUntypedSizeBits_def])
+          apply (drule canonical_address_and[where b="~~mask sz"])
           apply clarsimp
           apply (wp updateFreeIndex_forward_invs' sch_act_simple_lift
                     updateFreeIndex_cte_wp_at hoare_vcg_const_Ball_lift
@@ -2473,7 +2470,6 @@ lemma invokeUntyped_Retype_ccorres:
                               arg_cong[OF mask_out_sub_mask, where f="\<lambda>y. x - y" for x]
                               field_simps unat_of_nat_eq[OF range_cover.weak, OF cover]
                               if_apply_def2 invs_valid_objs' ptr_base_eq sz_bound
-                              ptr_in_km
                               invs_urz untypedBits_defs)
 
         apply (intro conjI; (solves\<open>clarsimp simp: mask_2pm1 field_simps\<close>)?)
@@ -2563,7 +2559,7 @@ lemma invokeUntyped_Retype_ccorres:
       apply (frule(1) cap_get_tag_to_H)
       apply (simp add: cap_lift_untyped_cap)
       apply clarsimp
-      done *)
+      done
 qed
 
 lemma ccorres_returnOk_Basic:
