@@ -129,7 +129,7 @@ definition
 definition (in state_rel) to_user_context_C :: "user_context \<Rightarrow> user_context_C" where
   "to_user_context_C uc \<equiv>
      user_context_C (ARRAY r. user_regs uc (register_to_H (of_nat r)))
-                    (user_fpu_state_C (ARRAY r. fpuRegs (fpu_state uc) (finite_index r))
+                    (user_fpu_state_C (ARRAY r. fpuRegs (fpu_state uc) (of_nat r))
                                       (fpuSr (fpu_state uc)) (fpuCr (fpu_state uc)))"
 
 (* FIXME ARMHYP is this useful in any other file? *)
@@ -145,15 +145,13 @@ where
 lemma (in kernel_m) ccontext_rel_to_C:
   "ccontext_relation uc (to_user_context_C uc)"
   unfolding ccontext_relation_def to_user_context_C_def cregs_relation_def fpu_relation_def
-  by (clarsimp simp: register_to_H_def inv_def)
+  by (clarsimp simp: register_to_H_def register_from_H_inj)
 
 context state_rel begin
 
-(* FIXME AARCH64 this casting from numeral type 64 to 64 word to nat back to 64 might have a better
-   way *)
 definition from_user_context_C :: "user_context_C \<Rightarrow> user_context" where
   "from_user_context_C uc \<equiv>
-     UserContext (FPUState (\<lambda>r. inv size (unat ((vregs_C (fpuState_C uc)).[size r])))
+     UserContext (FPUState (\<lambda>r. (vregs_C (fpuState_C uc)).[size r])
                            (fpsr_C (fpuState_C uc)) (fpcr_C (fpuState_C uc)))
                  (\<lambda>r. (registers_C uc).[unat (register_from_H r)])"
 
@@ -181,7 +179,6 @@ lemma from_user_context_C:
   apply (rename_tac fpu_state regs)
   apply (simp add: from_user_context_C_def)
   apply (rule conjI2, fastforce)
-
   apply (clarsimp simp: fpu_relation_def)
   apply (case_tac fpu_state)
   apply clarsimp
@@ -189,12 +186,7 @@ lemma from_user_context_C:
   apply (rule ext)
   apply (drule_tac x="size r" in spec)
   apply (simp add: size_64_less_64)
-  apply (simp add: inv_def)
-  apply (drule_tac s="fpu_regs (finite_index (size r))" in sym)
-  apply simp
-  sorry (* FIXME AARCH64 I don't think this can be proved given the formulation of finite_index, meaning
-                         fpu_relation needs to be changed to not use it, maybe of_nat is a suitable
-                         inverse for size of a numeral type *)
+  done
 
 end
 
@@ -426,7 +418,7 @@ lemma user_mem_C_relation:
    apply (thin_tac "Ball A P" for A P)
    apply (thin_tac "t = dom (clift (t_hrs_' s))" for t)
    apply (rule imageI)
-   apply (clarsimp simp: dom_def heap_to_user_data_def obj_at'_def projectKOs)
+   apply (clarsimp simp: dom_def heap_to_user_data_def obj_at'_def)
   apply (clarsimp simp: pointerInUserData_def)
   apply (clarsimp simp: cmap_relation_def)
   apply (drule equalityD2)
@@ -435,7 +427,7 @@ lemma user_mem_C_relation:
   apply clarsimp
   apply (drule bspec)
    apply (fastforce simp: dom_def)
-  apply (clarsimp simp: heap_to_user_data_def map_comp_def projectKOs
+  apply (clarsimp simp: heap_to_user_data_def map_comp_def
                   split: option.splits)
   apply (rule conjI)
    prefer 2
@@ -494,7 +486,7 @@ lemma device_mem_C_relation:
    apply (thin_tac "t = dom (clift (t_hrs_' s))" for t)
    apply (drule device_data_at_ko)
    apply (rule imageI)
-   apply (clarsimp simp: dom_def heap_to_device_data_def obj_at'_def projectKOs)
+   apply (clarsimp simp: dom_def heap_to_device_data_def obj_at'_def)
   apply (clarsimp simp: pointerInDeviceData_def)
   apply (clarsimp simp: cmap_relation_def)
   apply (drule equalityD2)
@@ -503,7 +495,7 @@ lemma device_mem_C_relation:
   apply clarsimp
   apply (drule bspec)
    apply (fastforce simp: dom_def)
-  apply (clarsimp simp: heap_to_device_data_def map_comp_def projectKOs
+  apply (clarsimp simp: heap_to_device_data_def map_comp_def
                   split: option.splits)
   apply (clarsimp simp: typ_at'_def ko_wp_at'_def objBitsKO_def)
   apply (drule pspace_distinctD')
@@ -767,11 +759,11 @@ lemma fpu_relation_imp_eq:
   "fpu_relation f x \<Longrightarrow> fpu_relation g x \<Longrightarrow> f=g"
   unfolding fpu_relation_def
   apply (cases f, cases g)
-  apply clarify
-  apply simp
-thm forall_finite_index[where 'a=64, symmetric, simplified]
-  sorry (* FIXME AARCH64 can't formulate a P here without an inverse of finite_index? is this even true?
-  by (auto simp: fpu_relation_def) *)
+  apply clarsimp
+  apply (rule ext, rename_tac z)
+  apply (drule_tac x="size z" in spec)+
+  apply (simp add: state_rel.size_64_less_64)
+  done
 
 lemma ccontext_relation_imp_eq:
   "ccontext_relation f x \<Longrightarrow> ccontext_relation g x \<Longrightarrow> f=g"
@@ -859,7 +851,7 @@ lemma ksPSpace_valid_objs_tcbBoundNotification_nonzero:
      \<Longrightarrow> map_to_tcbs ah p = Some tcb \<Longrightarrow> tcbBoundNotification tcb \<noteq> Some 0"
   apply (clarsimp simp: map_comp_def split: option.splits)
   apply (erule(1) valid_objsE')
-  apply (clarsimp simp: projectKOs valid_obj'_def valid_tcb'_def)
+  apply (clarsimp simp: valid_obj'_def valid_tcb'_def)
   done
 
 lemma ksPSpace_valid_objs_atcbVCPUPtr_nonzero:
@@ -867,7 +859,7 @@ lemma ksPSpace_valid_objs_atcbVCPUPtr_nonzero:
      \<Longrightarrow> map_to_tcbs ah p = Some tcb \<Longrightarrow> atcbVCPUPtr (tcbArch tcb) \<noteq> Some 0"
   apply (clarsimp simp: map_comp_def split: option.splits)
   apply (erule(1) valid_objsE')
-  apply (clarsimp simp: projectKOs valid_obj'_def valid_tcb'_def valid_arch_tcb'_def)
+  apply (clarsimp simp: valid_obj'_def valid_tcb'_def valid_arch_tcb'_def)
   done
 
 lemma carch_tcb_relation_imp_eq:
@@ -998,7 +990,7 @@ lemma ksPSpace_valid_pspace_ntfnBoundTCB_nonzero:
      \<Longrightarrow> map_to_ntfns ah p = Some ntfn \<Longrightarrow> ntfnBoundTCB ntfn \<noteq> Some 0"
   apply (clarsimp simp: map_comp_def valid_pspace'_def split: option.splits)
   apply (erule(1) valid_objsE')
-  apply (clarsimp simp: projectKOs valid_obj'_def valid_ntfn'_def)
+  apply (clarsimp simp: valid_obj'_def valid_ntfn'_def)
   done
 
 lemma cpspace_ntfn_relation_unique:
@@ -1021,7 +1013,7 @@ lemma cpspace_ntfn_relation_unique:
    apply (clarsimp simp: valid_pspace'_def)
    apply (frule (2) map_to_ko_atI)
    apply (frule_tac v=ya in map_to_ko_atI, simp+)
-   apply (clarsimp dest!: obj_at_valid_objs' simp: projectKOs split: option.splits)
+   apply (clarsimp dest!: obj_at_valid_objs' split: option.splits)
    apply (thin_tac "map_to_ntfns x y = Some z" for x y z)+
    apply (case_tac y, case_tac ya, case_tac "the (clift ch (ntfn_Ptr x))")
    by (auto simp: NtfnState_Active_def NtfnState_Idle_def NtfnState_Waiting_def typ_heap_simps

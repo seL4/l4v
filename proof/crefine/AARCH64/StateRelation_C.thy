@@ -264,7 +264,7 @@ where
 
 definition fpu_relation :: "fpu_state \<Rightarrow> user_fpu_state_C \<Rightarrow> bool" where
   "fpu_relation fpu_H fpu_C \<equiv>
-     (\<forall>r < CARD(fpu_regs). (fpuRegs fpu_H) (finite_index r) = (vregs_C fpu_C).[r])
+     (\<forall>r < CARD(fpu_regs). (fpuRegs fpu_H) (of_nat r) = (vregs_C fpu_C).[r])
      \<and> fpuSr fpu_H = fpsr_C fpu_C
      \<and> fpuCr fpu_H = fpcr_C fpu_C"
 
