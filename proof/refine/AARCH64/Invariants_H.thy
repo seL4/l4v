@@ -1008,7 +1008,8 @@ definition valid_arch_state' :: "kernel_state \<Rightarrow> bool" where
    (case armHSCurVCPU (ksArchState s) of
       Some (v, b) \<Rightarrow> ko_wp_at' (is_vcpu' and hyp_live') v s
       | _ \<Rightarrow> True) \<and>
-   armKSGICVCPUNumListRegs (ksArchState s) \<le> max_armKSGICVCPUNumListRegs"
+   armKSGICVCPUNumListRegs (ksArchState s) \<le> max_armKSGICVCPUNumListRegs \<and>
+   canonical_address (addrFromKPPtr (armKSGlobalUserVSpace (ksArchState s)))"
 
 definition irq_issued' :: "irq \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "irq_issued' irq \<equiv> \<lambda>s. intStateIRQTable (ksInterruptState s) irq = IRQSignal"
@@ -2440,6 +2441,10 @@ lemmas typ_at_lifts = typ_at_lift_tcb' typ_at_lift_ep'
                       typ_at_lift_valid_cap'
                       valid_bound_tcb_lift
                       valid_arch_tcb_lift'
+
+lemma valid_arch_state_armKSGlobalUserVSpace:
+  "valid_arch_state' s \<Longrightarrow> canonical_address (addrFromKPPtr (armKSGlobalUserVSpace (ksArchState s)))"
+  by (simp add: valid_arch_state'_def)
 
 lemma mdb_next_unfold:
   "s \<turnstile> c \<leadsto> c' = (\<exists>z. s c = Some z \<and> c' = mdbNext (cteMDBNode z))"

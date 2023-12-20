@@ -29,21 +29,19 @@ lemma Arch_switchToIdleThread_ccorres:
   apply (cinit simp: AARCH64_H.switchToIdleThread_def)
    apply (ctac (no_vcg) add: vcpu_switch_ccorres_None)
     apply (simp add: setGlobalUserVSpace_def)
-   (* FIXME AARCH64 because the ttbr bitfield has a 48-bit entry for base address, we need to know
-      that armKSGlobalUserVSpace on the abstract side fits in 48 bits, i.e. is canonical.
-      Currently we do not know this, and it's worth discussing where that knowledge would come from:
-      assertion in the Haskell maybe? *)
-    apply (rule ccorres_symb_exec_l3)
+    apply (rule ccorres_symb_exec_l)
        apply (rename_tac globalUserVSpace)
+       apply (rule ccorres_gen_asm_state[where P="valid_arch_state'"])
        apply (rule ccorres_h_t_valid_armKSGlobalUserVSpace)
-       apply (rule_tac xf'=ret__unsigned_long_' and R'=UNIV
-                   and R="\<lambda>s. globalUserVSpace = (armKSGlobalUserVSpace \<circ> ksArchState) s"
-                   and val="addrFromKPPtr globalUserVSpace"
-                in ccorres_symb_exec_r_known_rv)
+       apply (rule_tac xf'=ret__unsigned_long_' and R'=UNIV and
+                       R="\<lambda>s. globalUserVSpace = (armKSGlobalUserVSpace \<circ> ksArchState) s" and
+                       val="addrFromKPPtr globalUserVSpace"
+                    in ccorres_symb_exec_r_known_rv)
           apply clarsimp
           apply (rule conseqPre, vcg)
           apply clarsimp
-          apply (clarsimp simp: rf_sr_def cstate_relation_def carch_state_relation_def Let_def carch_globals_def)
+          apply (clarsimp simp: rf_sr_def cstate_relation_def carch_state_relation_def Let_def
+                                carch_globals_def)
          apply ceqv
         apply csymbr
         apply (ctac add: setVSpaceRoot_ccorres)
@@ -51,9 +49,8 @@ lemma Arch_switchToIdleThread_ccorres:
        apply vcg
       apply wpsimp+
   apply (clarsimp simp: invs_no_cicd'_def valid_pspace'_def valid_idle'_tcb_at'_ksIdleThread
-                        Collect_const_mem)
-  sorry (* FIXME AARCH64 need to know rv is canonical, which came from globalUserVSpace above
-  done *)
+                        canonical_address_and_maskD valid_arch_state_armKSGlobalUserVSpace)
+  done
 
 lemma switchToIdleThread_ccorres:
   "ccorres dc xfdc invs_no_cicd' UNIV hs
