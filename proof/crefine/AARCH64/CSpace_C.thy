@@ -2475,8 +2475,43 @@ lemma valid_cap'_PageCap_is_aligned:
   apply (simp add: valid_cap'_def capAligned_def)
 done
 
+lemma cap_get_tag_isCap_unfolded_H_cap2: (* FIXME AARCH64: move; potentially replace original *)
+  shows "ccap_relation (capability.ThreadCap v0) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_thread_cap)"
+  and "ccap_relation (capability.NullCap) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_null_cap)"
+  and "ccap_relation (capability.NotificationCap v4 v5 v6 v7) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_notification_cap) "
+  and "ccap_relation (capability.EndpointCap v8 v9 v10 v10b v11 v12) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_endpoint_cap)"
+  and "ccap_relation (capability.IRQHandlerCap v13) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_irq_handler_cap)"
+  and "ccap_relation (capability.IRQControlCap) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_irq_control_cap)"
+  and "ccap_relation (capability.Zombie v14 v15 v16) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_zombie_cap)"
+  and "ccap_relation (capability.ReplyCap v17 v18 vr18b) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_reply_cap)"
+  and "ccap_relation (capability.UntypedCap v100 v19 v20 v20b) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_untyped_cap)"
+  and "ccap_relation (capability.CNodeCap v21 v22 v23 v24) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_cnode_cap)"
+  and "ccap_relation (capability.DomainCap) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_domain_cap)"
+
+  and "ccap_relation (capability.ArchObjectCap arch_capability.ASIDControlCap) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_asid_control_cap)"
+  and "ccap_relation (capability.ArchObjectCap (arch_capability.ASIDPoolCap v28 v29)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_asid_pool_cap)"
+  and "ccap_relation (capability.ArchObjectCap (arch_capability.PageTableCap v30 v32 v31)) cap'
+       \<Longrightarrow> if v32 = VSRootPT_T
+           then cap_get_tag cap' = scast cap_vspace_cap
+           else cap_get_tag cap' = scast cap_page_table_cap"
+  and "ccap_relation (capability.ArchObjectCap (arch_capability.FrameCap v101 v44 v45 v46 v47)) cap'  \<Longrightarrow> (cap_get_tag cap' = scast cap_frame_cap)"
+  and "ccap_relation (capability.ArchObjectCap (arch_capability.VCPUCap v48)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_vcpu_cap)"
+  apply (simp add: cap_get_tag_isCap cap_get_tag_isCap_ArchObject isCap_simps)
+  apply (frule cap_get_tag_isCap(2), simp)
+  apply (clarsimp simp: cap_get_tag_isCap cap_get_tag_isCap_ArchObject isCap_simps
+                  split: if_splits pt_type.splits)+
+  done
+
+lemmas ccap_rel_cap_get_tag_cases_arch2 = (* FIXME AARCH64: move; potentially replace original *)
+  cap_get_tag_isCap_unfolded_H_cap2(12-16)
+    [OF back_subst[of "\<lambda>cap. ccap_relation (ArchObjectCap cap) cap'" for cap'],
+     OF back_subst[of "\<lambda>cap. ccap_relation cap cap'" for cap']]
+
+lemmas ccap_rel_cap_get_tag_cases_arch2' = (* FIXME AARCH64: move; potentially replace original *)
+  ccap_rel_cap_get_tag_cases_arch2[OF _ refl]
+
 lemma Arch_sameRegionAs_spec:
-  notes cap_get_tag = ccap_rel_cap_get_tag_cases_arch'
+  notes cap_get_tag = ccap_rel_cap_get_tag_cases_arch2'
   shows
     "\<forall>capa capb. \<Gamma> \<turnstile> \<lbrace>  ccap_relation (ArchObjectCap capa) \<acute>cap_a \<and>
                    ccap_relation (ArchObjectCap capb) \<acute>cap_b  \<rbrace>
@@ -2487,18 +2522,19 @@ lemma Arch_sameRegionAs_spec:
   apply clarsimp
   apply (simp add: AARCH64_H.sameRegionAs_def)
   subgoal for capa capb cap_b cap_a
-    sorry (* FIXME AARCH64 this is too fragile, it falls over when dealing with PT/VS distinction,
-             and trying to step through it is painful
     apply (cases capa; cases capb;
            frule (1) cap_get_tag[where cap'=cap_a]; (frule cap_lifts[where c=cap_a, THEN iffD1])?;
            frule (1) cap_get_tag[where cap'=cap_b]; (frule cap_lifts[where c=cap_b, THEN iffD1])?;
-           simp add: cap_tag_defs isCap_simps from_bool_def if_0_1_eq;
+           simp add: cap_tag_defs isCap_simps from_bool_def if_0_1_eq split: if_splits;
            clarsimp simp: ccap_relation_def cap_to_H_def c_valid_cap_def cl_valid_cap_def Let_def)
-    by (clarsimp simp: cap_frame_cap_lift_def'[simplified cap_tag_defs]
-                          framesize_to_H_def pageBitsForSize_def field_simps
-                          pageBits_def ptTranslationBits_def mask_def
-                          RISCV_4K_Page_def RISCV_Mega_Page_def RISCV_Giga_Page_def
-                   split: vmpage_size.splits if_splits)  *)
+      subgoal by (clarsimp simp: cap_frame_cap_lift_def'[simplified cap_tag_defs]
+                                 framesize_to_H_def pageBitsForSize_def field_simps
+                                 pageBits_def ptTranslationBits_def mask_def
+                           split: vmpage_size.splits if_splits)
+     subgoal by (clarsimp simp: cap_lift_def cap_tag_defs cap_vspace_cap_lift_def cap_to_H_def
+                          split: option.splits)
+    by (clarsimp simp: cap_lift_def cap_tag_defs cap_page_table_cap_lift_def cap_to_H_def
+                 split: option.splits)
   done
 
 (* combination of cap_get_capSizeBits + cap_get_archCapSizeBits from C *)
@@ -2511,16 +2547,15 @@ definition
     | Some (Cap_cnode_cap c) \<Rightarrow> unat (capCNodeRadix_CL c) + cteSizeBits
     | Some (Cap_thread_cap c) \<Rightarrow> tcbBlockSizeBits
     | Some (Cap_frame_cap c) \<Rightarrow> pageBitsForSize (framesize_to_H $ cap_frame_cap_CL.capFSize_CL c)
-    \<comment> \<open>(* FIXME AARCH64 abstraction leak? it's 12 on this configuration *)\<close>
-    | Some (Cap_vspace_cap c) \<Rightarrow> 12
-    | Some (Cap_page_table_cap c) \<Rightarrow> 12
-    | Some (Cap_asid_pool_cap c) \<Rightarrow> 12
+    | Some (Cap_vspace_cap c) \<Rightarrow> if config_ARM_PA_SIZE_BITS_40 then pageBits + 1 else pageBits
+    | Some (Cap_page_table_cap c) \<Rightarrow> pageBits
+    | Some (Cap_asid_pool_cap c) \<Rightarrow> asidPoolBits
     | Some (Cap_zombie_cap c) \<Rightarrow>
         let type = cap_zombie_cap_CL.capZombieType_CL c in
         if isZombieTCB_C type
           then tcbBlockSizeBits
           else unat (type && mask wordRadix) + cteSizeBits
-    | Some (Cap_vcpu_cap c) \<Rightarrow> 12
+    | Some (Cap_vcpu_cap c) \<Rightarrow> vcpuBits
     | _ \<Rightarrow> 0"
 
 lemma frame_cap_size [simp]:
@@ -2558,7 +2593,8 @@ lemma cap_get_capSizeBits_spec:
                         isZombieTCB_C_def ZombieTCB_C_def
                         cap_lift_domain_cap cap_get_tag_scast
                         objBits_defs wordRadix_def
-                        c_valid_cap_def cl_valid_cap_def
+                        c_valid_cap_def cl_valid_cap_def pageBits_def asidPoolBits_def
+                        Kernel_Config.config_ARM_PA_SIZE_BITS_40_def (* FIXME AARCH64: #define in C, so no other option for now *)
                  cong: option.case_cong
                  dest!: sym [where t = "ucast (cap_get_tag cap)" for cap])
   apply (clarsimp split: option.splits cap_CL.splits dest!: cap_lift_Some_CapD)
@@ -2575,37 +2611,27 @@ lemma ccap_relation_get_capSizeBits_physical:
          (frule cap_lifts[THEN iffD1])?)
   apply (all \<open>clarsimp simp: get_capSizeBits_CL_def objBits_simps Let_def AARCH64_H.capUntypedSize_def
                              asid_low_bits_def pt_bits_def asidPoolBits_def table_size\<close>)
-       (* FIXME AARCH64 VCPU case, cleanup when rest of proof works *)
-       prefer 4
-       subgoal
-         by (simp add: ccap_relation_def cap_lift_defs cap_lift_def cap_tag_defs cap_to_H_def
-                       vcpuBits_def)
 
-  sorry (* FIXME AARCH64 automation was already on the edge here, trying to deal with page table
-           vs vspace and handle the abstraction issue get_capSizeBits_CL and config_ARM_PA_SIZE_BITS_40
-           causes an explosion with if_splits, and original proof was slow anyway. Needs a re-think,
-           maybe a lemma that links ccap_relation between a specific abstract cap and the
-           cap_lift of the C cap?
-
-  (* Zombie, Page, Untyped, CNode caps remain. *)
+  (* Zombie, Frame, PageTable, Untyped, CNode caps remain. *)
   apply (all \<open>thin_tac \<open>hcap = _\<close>\<close>)
   apply (all \<open>rule arg_cong[where f="\<lambda>s. 2 ^ s"]\<close>)
 
     (* Zombie *)
-    apply (simp add: ccap_relation_def cap_lift_defs cap_lift_def cap_tag_defs cap_to_H_def)
-    apply (clarsimp simp: Let_def objBits_simps' wordRadix_def capAligned_def
-                          word_bits_def word_less_nat_alt
-                  intro!: less_mask_eq
-                   split: if_splits)
-   (* Frame *)
-   apply (simp add: ccap_relation_def cap_lift_defs cap_lift_def cap_tag_defs cap_to_H_def)
+      apply (simp add: ccap_relation_def cap_lift_defs cap_lift_def cap_tag_defs cap_to_H_def)
+      apply (clarsimp simp: Let_def objBits_simps' wordRadix_def capAligned_def
+                            word_bits_def word_less_nat_alt
+                    intro!: less_mask_eq
+                     split: if_splits)
 
-  (* Page Table / VSpace *)
-  apply (rename_tac pt_t maddr)
-  apply (case_tac pt_t; clarsimp)
-    apply (simp add: ccap_relation_def cap_lift_defs cap_lift_def cap_tag_defs cap_to_H_def)
+     (* Page Table / VSpace *)
+     prefer 2
+     subgoal for p pt_t m
+       apply (clarsimp simp: ccap_relation_def map_option_Some_eq2 cap_to_H_def)
+       apply (rename_tac cap)
+       by (case_tac cap; clarsimp simp add: Let_def pageBits_def split: if_split_asm)
 
-  done *)
+    (* Frame, Untyped, CNode *)
+    by (simp add: ccap_relation_def cap_lift_defs cap_lift_def cap_tag_defs cap_to_H_def)+
 
 lemma ccap_relation_get_capSizeBits_untyped:
   "\<lbrakk> ccap_relation (UntypedCap d word bits idx) ccap \<rbrakk> \<Longrightarrow>
@@ -2627,25 +2653,27 @@ lemma get_capSizeBits_valid_shift:
   apply (cases hcap;
          (match premises in "hcap = ArchObjectCap c" for c \<Rightarrow> \<open>cases c\<close>)?;
          (frule (1) ccap_rel_cap_get_tag_cases_generic)?;
-         (frule (2) ccap_rel_cap_get_tag_cases_arch)?;
+         (frule (2) ccap_rel_cap_get_tag_cases_arch2)?;
          (frule cap_lifts[THEN iffD1])?)
   (* Deal with simple cases quickly. *)
   apply (all \<open>clarsimp simp: get_capSizeBits_CL_def objBits_simps' wordRadix_def Let_def
-                      split: option.splits if_splits;
+                             asidPoolBits_def
+                      split: option.splits if_split_asm;
               thin_tac \<open>hcap = _\<close>\<close>)
   (* Deal with non-physical caps quickly. *)
-  apply (all \<open>(match conclusion in "case_cap_CL _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ < _" \<Rightarrow>
-              \<open>clarsimp simp: cap_lift_def cap_tag_defs\<close>)?\<close>)
-  (* Slow cases: Zombie, Page, Untyped and CNode caps. *)
+  apply (all \<open>(match conclusion in "case_cap_CL _ _ _ _ _ _ _ _ _  _ _ _ _ _ _ _ _ _ < _" \<Rightarrow>
+              \<open>clarsimp simp: cap_lift_def cap_tag_defs pageBits_def split: if_split\<close>)?\<close>)
+  (* Slow cases: Zombie, Frame, Untyped and CNode caps. *)
   apply (all \<open>clarsimp simp: cap_lift_def cap_lift_defs cap_tag_defs
                              ccap_relation_def cap_to_H_def Let_def
                              capAligned_def objBits_simps' word_bits_def
                              unat_ucast_less_no_overflow_simp\<close>)
   (* Zombie arithmetic. *)
-  apply (subst less_mask_eq[where n=6]; clarsimp elim!: less_trans)
-  sorry (* FIXME AARCH64 arch_capability.PageTableCap remains: similar issues to
-           ccap_relation_get_capSizeBits_physical, unclear how to proceed without goal explosion
-  done *)
+  apply (clarsimp simp: objBits_simps' Let_def cap_zombie_cap_lift_def cap_lift_def cap_tag_defs
+                  split: if_split)
+  apply (subst less_mask_eq[where n=wordRadix];
+         clarsimp elim!: less_trans simp: wordRadix_def word_less_nat_alt)
+  done
 
 lemma get_capSizeBits_valid_shift_word:
   "\<lbrakk> ccap_relation hcap ccap; capAligned hcap \<rbrakk> \<Longrightarrow>
@@ -2800,25 +2828,19 @@ lemma ccap_relation_get_capPtr_physical:
   apply (cases hcap;
          (match premises in "hcap = ArchObjectCap c" for c \<Rightarrow> \<open>cases c\<close>)?;
          (frule (1) ccap_rel_cap_get_tag_cases_generic)?;
-         (frule (2) ccap_rel_cap_get_tag_cases_arch)?;
+         (frule (2) ccap_rel_cap_get_tag_cases_arch2)?;
          (frule cap_lifts[THEN iffD1])?)
   apply (all \<open>clarsimp simp: get_capPtr_CL_def get_capZombiePtr_CL_def get_capZombieBits_CL_def
                              objBits_simps ccap_relation_def cap_to_H_def Let_def capAligned_def
-                             ctcb_ptr_to_tcb_ptr_mask
+                             ctcb_ptr_to_tcb_ptr_mask map_option_Some_eq2
                       split: if_splits;
          thin_tac \<open>hcap = _\<close>\<close>)
   apply (rule arg_cong[OF less_mask_eq])
     (* zombie *)
     apply (clarsimp simp: cap_lift_def cap_lift_defs Let_def cap_tag_defs word_less_nat_alt
                           word_bits_conv)
-
-  (* PageTableCap *)
-  (* FIXME AARCH64 ccap_relation vs cap_lift ccap again and resulting case explosion, see
-     ccap_relation_get_capSizeBits_physical for similar problems*)
-  apply (clarsimp simp: cap_lift_def cap_lift_defs Let_def cap_tag_defs word_less_nat_alt
-                        word_bits_conv)
-  sorry (* FIXME AARCH64
-  done *)
+   (* PageTable cases *)
+   by (simp add: Let_def split: cap_CL.split_asm if_splits)+
 
 lemma ccap_relation_get_capPtr_untyped:
   "\<lbrakk> ccap_relation (UntypedCap d word bits idx) ccap \<rbrakk> \<Longrightarrow>
@@ -3048,36 +3070,30 @@ lemma Arch_sameObjectAs_spec:
                      capAligned (ArchObjectCap capb) \<rbrace>
   Call Arch_sameObjectAs_'proc
   \<lbrace> \<acute>ret__unsigned_long = from_bool (Arch.sameObjectAs capa capb) \<rbrace>"
-  proof -
-    note cap_get_tag = ccap_rel_cap_get_tag_cases_arch'
-    note case_bool_of_nat_eq[simp]
-    have [simp]: "(\<forall>d. d) = False" "(\<forall>d. \<not>d) = False" by auto
-    show ?thesis
-      apply vcg
-      apply (clarsimp simp: AARCH64_H.sameObjectAs_def)
-      subgoal for capa capb cap_b cap_a
-        apply (cases capa)
-            (* FIXME AARCH64 PageTableCap automation issues *)
-            prefer 4
-            subgoal sorry
-           apply (all \<open>frule (1) cap_get_tag[where cap'=cap_a]\<close>)
-           apply (all \<open>(frule cap_lifts[where c=cap_a, THEN iffD1])?\<close>)
-           apply (all \<open>clarsimp simp: cap_tag_defs isCap_simps
+proof -
+  note cap_get_tag = ccap_rel_cap_get_tag_cases_arch2'
+  note case_bool_of_nat_eq[simp]
+  have [simp]: "(\<forall>d. d) = False" "(\<forall>d. \<not>d) = False" by auto
+  show ?thesis
+    apply vcg
+    apply (clarsimp simp: AARCH64_H.sameObjectAs_def)
+    subgoal for capa capb cap_b cap_a
+      apply (cases capa)
+          apply (all \<open>frule (1) cap_get_tag[where cap'=cap_a]\<close>)
+          apply (all \<open>(frule cap_lifts[where c=cap_a, THEN iffD1])?\<close>)
+          apply (all \<open>clarsimp simp: cap_tag_defs isCap_simps
                                split: if_splits\<close>)
            apply (all \<open>fastforce?\<close>)
-          (* frames remain. *)
-        apply (all \<open>cases capb\<close>)
-                (* FIXME AARCH64 PageTableCap automation issues *)
-                prefer 4
-                subgoal sorry
-           apply (all \<open>frule (1) cap_get_tag[where cap'=cap_b]\<close>)
-           apply (all \<open>(frule cap_lifts[where c=cap_b, THEN iffD1])?\<close>)
-           apply (all \<open>clarsimp simp: cap_tag_defs isCap_simps ccap_relation_FrameCap_fields
+      (* frames remain. *)
+      apply (all \<open>cases capb\<close>)
+          apply (all \<open>frule (1) cap_get_tag[where cap'=cap_b]\<close>)
+          apply (all \<open>(frule cap_lifts[where c=cap_b, THEN iffD1])?\<close>)
+          apply (all \<open>clarsimp simp: cap_tag_defs isCap_simps ccap_relation_FrameCap_fields
                                       framesize_from_H_eq capAligned_def
                                split: if_splits\<close>)
-        by (all \<open>(fastforce simp: AARCH64_H.sameRegionAs_def isCap_simps is_aligned_no_overflow_mask)?\<close>)
-      done
-  qed
+      by (all \<open>(fastforce simp: AARCH64_H.sameRegionAs_def isCap_simps is_aligned_no_overflow_mask)?\<close>)
+    done
+qed
 
 lemma sameObjectAs_spec:
   "\<forall>capa capb. \<Gamma> \<turnstile> \<lbrace>ccap_relation capa \<acute>cap_a \<and>
@@ -3393,6 +3409,10 @@ lemma ensureNoChildren_ccorres:
   apply (simp add: cte_wp_at_ctes_of)
   done
 
+lemma not_VSRootPT_T_eq: (* FIXME AARCH64: move to AInvs *)
+  "(pt_t \<noteq> VSRootPT_T) = (pt_t = NormalPT_T)"
+  by (cases pt_t; simp)
+
 lemma Arch_deriveCap_ccorres:
   "ccorres (syscall_error_rel \<currency> ccap_relation) deriveCap_xf
   \<top> (UNIV \<inter> {s. ccap_relation (ArchObjectCap cap) (cap_' s)}) []
@@ -3406,31 +3426,25 @@ lemma Arch_deriveCap_ccorres:
                           ccorres_cond_iffs)
     apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
     apply (rule allI, rule conseqPre, vcg)
-    apply clarsimp
-    subgoal sorry (* FIXME AARCH64 page table / vspace with mapped address
-    apply (rule context_conjI)
-     apply (simp add: cap_get_tag_isCap_ArchObject)
-    apply (clarsimp simp: returnOk_def return_def)
-    subgoal by (simp add: ccap_relation_def cap_lift_def Let_def
-                          cap_tag_defs cap_to_H_def
-                          cap_page_table_cap_lift_def) *)
+    apply (clarsimp simp: Collect_const_mem isCap_simps not_VSRootPT_T_eq returnOk_def return_def)
+    apply (simp add: cap_get_tag_isCap_ArchObject isCap_simps)
+    subgoal by (clarsimp simp: ccap_relation_def cap_lift_def Let_def map_option_Some_eq2
+                               cap_tag_defs cap_to_H_def cap_vspace_cap_lift_def
+                               cap_page_table_cap_lift_def
+                         split: if_split_asm) (* FIXME AARCH64: slow, could potentially be sped up *)
    apply wpc
     apply (clarsimp simp: cap_get_tag_isCap_ArchObject
                           ccorres_cond_iffs)
     apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
     apply (rule allI, rule conseqPre, vcg)
-    apply clarsimp
-    subgoal sorry (* FIXME AARCH64 page table / vspace without mapped address
-    apply (rule context_conjI)
-     apply (simp add: cap_get_tag_isCap_ArchObject)
-    apply (clarsimp simp: throwError_def return_def
-                          errstate_def syscall_error_rel_def
+    apply (clarsimp simp: Collect_const_mem isCap_simps not_VSRootPT_T_eq throwError_def return_def)
+    apply (clarsimp simp: errstate_def syscall_error_rel_def
                           syscall_error_to_H_cases
                           exception_defs)
     subgoal by (simp add: ccap_relation_def cap_lift_def Let_def
-                          cap_tag_defs cap_to_H_def to_bool_def
+                          cap_tag_defs cap_to_H_def to_bool_def cap_vspace_cap_lift_def
                           cap_page_table_cap_lift_def
-                   split: if_split_asm) *)
+                   split: if_split_asm) (* FIXME AARCH64: slow, could potentially be sped up *)
    \<comment> \<open>FrameCap\<close>
    apply wpc
     apply (clarsimp simp: cap_get_tag_isCap_ArchObject
