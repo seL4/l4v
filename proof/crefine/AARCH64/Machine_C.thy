@@ -132,7 +132,12 @@ assumes read_cntpct_ccorres:
            (doMachineOp read_cntpct)
            (Call read_cntpct_'proc)"
 
-(* Cache ops *)
+(* TLB and Cache ops *)
+
+assumes invalidateTranslationASID_ccorres:
+  "\<And>hw_asid. ccorres dc xfdc \<top> (\<lbrace>\<acute>hw_asid___unsigned_char = ucast hw_asid\<rbrace>) []
+                     (doMachineOp (invalidateTranslationASID hw_asid))
+                     (Call invalidateTranslationASID_'proc)"
 
 assumes cleanByVA_PoU_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>vaddr = w1\<rbrace> \<inter> \<lbrace>\<acute>paddr = w2\<rbrace>) []
