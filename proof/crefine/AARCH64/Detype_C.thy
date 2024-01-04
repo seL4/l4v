@@ -1554,8 +1554,6 @@ lemma deleteObjects_ccorres':
    apply (rule iffD2 [OF in_modify])
    apply (rule conjI [OF refl refl])
   apply (clarsimp simp: simpler_modify_def)
-  sorry (* FIXME AARCH64 see comments and FIXME below regarding ?t, formulating something that
-           satisfies "show" seems to need a bit of head-scratching
 proof -
   let ?mmu = "(\<lambda>h x. if ptr \<le> x \<and> x \<le> ptr + 2 ^ bits - 1 then 0 else h x)"
   let ?psu = "(\<lambda>h x. if ptr \<le> x \<and> x \<le> ptr + mask bits then None else h x)"
@@ -1572,21 +1570,14 @@ proof -
     and sr: "(s, s') \<in> rf_sr"
     and safe_asids:
           "ksASIDMapSafe
-            (gsCNodes_update (\<lambda>_. ?psu (gsCNodes s))
+            (ksArchState_update (\<lambda>_. gsPTTypes_update
+                                       (\<lambda>_. ?psu (gsPTTypes (ksArchState s))) (ksArchState s))
+             (gsCNodes_update (\<lambda>_. ?psu (gsCNodes s))
               (gsUserPages_update
                 (\<lambda>_. ?psu (gsUserPages s))
                 (ksMachineState_update
                   (underlying_memory_update ?mmu)
-                  (s\<lparr>ksPSpace := ?psu (ksPSpace s) \<rparr>))))" (is "ksASIDMapSafe ?t")
-
-  (* FIXME AARCH64 this is currently broken in a way that needs a bit of thinking, since page table
-     ghost state is not reflected in ?t, i.e. this update that's visible in the current goal:
-
-     ksArchState :=
-       gsPTTypes_update
-         (\<lambda>_ x. if ptr \<le> x \<and> x \<le> ptr + mask bits then None else gsPTTypes (ksArchState s) x)
-         (ksArchState s)
-  *)
+                  (s\<lparr>ksPSpace := ?psu (ksPSpace s) \<rparr>)))))" (is "ksASIDMapSafe ?t")
 
   interpret D: delete_locale s ptr bits p
     apply (unfold_locales)
@@ -1633,9 +1624,7 @@ proof -
 
   note cmaptcb = cmap_relation_tcb [OF sr]
   note cmap_array_helper = arg_cong2[where f=carray_map_relation, OF refl map_comp_restrict_map]
-  (* FIXME AARCH64 512 is magic, should be vspace_array_size or similar, and there's a
-     config_ARM_PA_SIZE_BITS_40 abstraction breach*)
-  have trivia: "size_of TYPE(pte_C[512]) = 2 ^ (ptBits VSRootPT_T)"
+  have trivia: "size_of TYPE(pte_C[vs_array_len]) = 2 ^ (ptBits VSRootPT_T)"
     by (auto simp: bit_simps Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
   note cmap_array = cmap_array_typ_region_bytes[where 'a=pte, OF refl _ al _ trivia(1)]
   note cmap_array = cmap_array[simplified, simplified objBitsT_simps b2
@@ -1913,9 +1902,15 @@ proof -
                   if_flip[symmetric, where F=None])
     done
 
-   moreover from sr have
-     "h_t_valid (typ_region_bytes ptr bits (hrs_htd (t_hrs_' (globals s'))))
-       c_guard intStateIRQNode_array_Ptr"
+  moreover from sr
+  have "fst (snd (snd (gs_clear_region ptr bits (ghost'state_' (globals s'))))) =
+        gsPTTypes (ksArchState s)|\<^bsub>(- {ptr..+2 ^ bits})\<^esub>"
+    by (simp add: rf_sr_def cstate_relation_def Let_def gs_clear_region_def
+                  restrict_map_def if_flip[symmetric, where F=None])
+
+  moreover from sr
+  have "h_t_valid (typ_region_bytes ptr bits (hrs_htd (t_hrs_' (globals s'))))
+                   c_guard intStateIRQNode_array_Ptr"
     apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
     apply (simp add: h_t_valid_typ_region_bytes)
     apply (simp add: upto_intvl_eq al)
@@ -1923,7 +1918,6 @@ proof -
     apply (simp add: cinterrupt_relation_def cte_level_bits_def)
     done
 
-  (* FIXME AARCH64 see above, needs PT ghost state in ?t
   ultimately
   show "(?t, globals_update
                (%x. ghost'state_'_update (gs_clear_region ptr bits)
@@ -1931,12 +1925,12 @@ proof -
     using sr untyped_cap_rf_sr_ptr_bits_domain[OF cte invs sr]
     by (simp add: rf_sr_def cstate_relation_def Let_def
                   psu_restrict cpspace_relation_def
-                  carch_state_relation_def
+                  carch_state_relation_def carch_globals_def
                   cmachine_state_relation_def
                   hrs_htd_update htd_safe_typ_region_bytes
-                  zero_ranges_are_zero_typ_region_bytes) *)
+                  zero_ranges_are_zero_typ_region_bytes)
 
-qed *)
+qed
 
 abbreviation (input)
   "global_htd_update f == Guard MemorySafety \<lbrace>htd_safe domain (hrs_htd \<acute>t_hrs)
