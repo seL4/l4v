@@ -18,6 +18,8 @@ context begin interpretation Arch .
 
 requalify_types
   machine_state
+  pt_array_len
+  vs_array_len
 
 end
 
@@ -25,52 +27,71 @@ declare [[populate_globals=true]]
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-type_synonym cghost_state = "(machine_word \<rightharpoonup> vmpage_size) * (machine_word \<rightharpoonup> nat)
-    * ghost_assertions"
+(* Sanity checks for array sizes. ptTranslationBits not yet available at definition site. *)
+lemma ptTranslationBits_vs_index_bits:
+  "ptTranslationBits VSRootPT_T = vs_index_bits"
+  by (simp add: ptTranslationBits_def vs_index_bits_def)
 
-definition
-  gs_clear_region :: "addr \<Rightarrow> nat \<Rightarrow> cghost_state \<Rightarrow> cghost_state" where
+(* FIXME AARCH64: this is guaranteed to always succeed even though config_ARM_PA_SIZE_BITS_40
+   is unfolded. It'd be nicer if we could also get something symbolic out of value_type, though *)
+lemma ptTranslationBits_vs_array_len':
+  "2 ^ ptTranslationBits VSRootPT_T = vs_array_len"
+  by (simp add: vs_array_len_def ptTranslationBits_vs_index_bits vs_index_bits_def
+                Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
+
+lemmas ptTranslationBits_vs_array_len = ptTranslationBits_vs_array_len'[unfolded vs_array_len_def]
+
+type_synonym cghost_state =
+  "(machine_word \<rightharpoonup> vmpage_size) \<times>   \<comment> \<open>Frame sizes\<close>
+   (machine_word \<rightharpoonup> nat) \<times>           \<comment> \<open>CNode sizes\<close>
+   (machine_word \<rightharpoonup> pt_type) \<times>       \<comment> \<open>PT types\<close>
+   ghost_assertions"                 \<comment> \<open>ASMRefine assertions\<close>
+
+definition gs_clear_region :: "addr \<Rightarrow> nat \<Rightarrow> cghost_state \<Rightarrow> cghost_state" where
   "gs_clear_region ptr bits gs \<equiv>
-   (%x. if x \<in> {ptr..+2 ^ bits} then None else fst gs x,
-    %x. if x \<in> {ptr..+2 ^ bits} then None else fst (snd gs) x, snd (snd gs))"
+     (\<lambda>x. if x \<in> {ptr..+2 ^ bits} then None else fst gs x,
+      \<lambda>x. if x \<in> {ptr..+2 ^ bits} then None else fst (snd gs) x,
+      \<lambda>x. if x \<in> {ptr..+2 ^ bits} then None else fst (snd (snd gs)) x,
+      snd (snd (snd gs)))"
 
-definition
-  gs_new_frames:: "vmpage_size \<Rightarrow> addr \<Rightarrow> nat \<Rightarrow> cghost_state \<Rightarrow> cghost_state"
-  where
+definition gs_new_frames:: "vmpage_size \<Rightarrow> addr \<Rightarrow> nat \<Rightarrow> cghost_state \<Rightarrow> cghost_state" where
   "gs_new_frames sz ptr bits \<equiv> \<lambda>gs.
-   if bits < pageBitsForSize sz then gs
-   else (\<lambda>x. if \<exists>n\<le>mask (bits - pageBitsForSize sz).
-                  x = ptr + n * 2 ^ pageBitsForSize sz then Some sz
-             else fst gs x, snd gs)"
+     if bits < pageBitsForSize sz then gs
+     else (\<lambda>x. if \<exists>n\<le>mask (bits - pageBitsForSize sz).
+                    x = ptr + n * 2 ^ pageBitsForSize sz then Some sz
+               else fst gs x, snd gs)"
 
-definition
-  gs_new_cnodes:: "nat \<Rightarrow> addr \<Rightarrow> nat \<Rightarrow> cghost_state \<Rightarrow> cghost_state"
-  where
+definition gs_new_cnodes:: "nat \<Rightarrow> addr \<Rightarrow> nat \<Rightarrow> cghost_state \<Rightarrow> cghost_state" where
   "gs_new_cnodes sz ptr bits \<equiv> \<lambda>gs.
-   if bits < sz + 4 then gs
-   else (fst gs, \<lambda>x. if \<exists>n\<le>mask (bits - sz - 4). x = ptr + n * 2 ^ (sz + 4)
-                     then Some sz
-                     else fst (snd gs) x, snd (snd gs))"
+     if bits < sz + 4 then gs
+     else (fst gs, \<lambda>x. if \<exists>n\<le>mask (bits - sz - 4). x = ptr + n * 2 ^ (sz + 4)
+                       then Some sz
+                       else fst (snd gs) x, snd (snd gs))"
 
-abbreviation
-  gs_get_assn :: "int \<Rightarrow> cghost_state \<Rightarrow> machine_word"
-  where
-  "gs_get_assn k \<equiv> ghost_assertion_data_get k (snd o snd)"
+definition gs_new_pt_t:: "pt_type \<Rightarrow> addr \<Rightarrow> cghost_state \<Rightarrow> cghost_state" where
+  "gs_new_pt_t pt_t ptr \<equiv>
+     \<lambda>gs. (fst gs, fst (snd gs), (fst (snd (snd gs))) (ptr \<mapsto> pt_t), snd (snd (snd gs)))"
 
-abbreviation
-  gs_set_assn :: "int \<Rightarrow> machine_word \<Rightarrow> cghost_state \<Rightarrow> cghost_state"
-  where
-  "gs_set_assn k v \<equiv> ghost_assertion_data_set k v (apsnd o apsnd)"
+abbreviation gs_get_assn :: "int \<Rightarrow> cghost_state \<Rightarrow> machine_word" where
+  "gs_get_assn k \<equiv> ghost_assertion_data_get k (snd \<circ> snd \<circ> snd)"
+
+abbreviation gs_set_assn :: "int \<Rightarrow> machine_word \<Rightarrow> cghost_state \<Rightarrow> cghost_state" where
+  "gs_set_assn k v \<equiv> ghost_assertion_data_set k v (apsnd \<circ> apsnd \<circ> apsnd)"
 
 declare [[record_codegen = false]]
 declare [[allow_underscore_idents = true]]
 
 end
 
-(* workaround for the fact that the C parser wants to know the vmpage sizes*)
+(* Workaround for the fact that the retype annotations need the vmpage sizes*)
 (* create appropriately qualified aliases *)
 context begin interpretation Arch . global_naming vmpage_size
 requalify_consts ARMSmallPage ARMLargePage ARMHugePage
+end
+
+(* Also need pt_type constructors for retype annotations. We leave them available globally for C. *)
+context begin interpretation Arch .
+requalify_consts NormalPT_T VSRootPT_T
 end
 
 definition
