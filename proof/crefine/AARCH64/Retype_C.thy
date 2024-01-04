@@ -7623,9 +7623,11 @@ lemma Arch_createObject_preserves_bytes:
              )
   apply (safe intro!: byte_regions_unmodified_hrs_mem_update,
          (simp_all add: h_t_valid_field hrs_htd_update)+)
-             apply (safe intro!: ptr_retyp_d ptr_retyps_out)
+          apply (safe intro!: ptr_retyp_d ptr_retyps_out)
              apply (simp_all add: object_type_from_H_def Kernel_C_defs APIType_capBits_def
+                                  bit_simps
                            split: object_type.split_asm ArchTypes_H.apiobject_type.split_asm)
+   apply (simp add: Kernel_Config.config_ARM_PA_SIZE_BITS_40_def) (* FIXME AARCH64: from bit_simps above *)
   apply (drule intvlD)
   apply clarsimp
   apply (erule notE, rule intvlI)
