@@ -1023,7 +1023,11 @@ lemma finaliseCap_True_standin_ccorres:
   apply (simp add: finaliseCap_def ccorres_fail')
   done
 
-lemma getPoolPtr_ccorres:
+lemma asidRange_asid_wf:
+  "(asid \<le> snd asidRange) = asid_wf asid"
+  by (simp add: asid_wf_def mask_def asidRange_def del: word64_less_sub_le)
+
+lemma getPoolPtr_assign_ccorres:
   "ccorres ((=) \<circ> option_to_ptr) poolPtr_' \<top> UNIV hs
      (getPoolPtr asid)
      (\<acute>poolPtr :== \<acute>armKSASIDTable.[unat (asid >> asid_low_bits)])"
@@ -1032,11 +1036,27 @@ lemma getPoolPtr_ccorres:
   apply (rule ccorres_assert)+
   apply (rule ccorres_from_vcg_nofail)
   apply (clarsimp, rule conseqPre, vcg)
-  apply (clarsimp simp: simpler_gets_def return_def bind_def asidRange_def)
-  apply (prop_tac "asid_wf asid")
-   apply (simp add: asid_wf_def mask_def)
+  apply (clarsimp simp: simpler_gets_def return_def bind_def asidRange_asid_wf)
   apply (simp add: ucast_asid_high_bits_is_shift)
   apply (fastforce dest!: rf_sr_armKSASIDTable intro!: leq_asid_bits_shift)
+  done
+
+lemma getPoolPtr_ccorres:
+  "ccorres ((=) \<circ> option_to_ptr) ret__ptr_to_struct_asid_pool_C_'
+           \<top> \<lbrace> \<acute>asid___unsigned_long = asid \<rbrace> hs
+           (getPoolPtr asid)
+           (Call getPoolPtr_'proc)"
+  (* getPoolPtr_assign_ccorres above does not apply to the body, because everything is in the
+     return_C statement *)
+  apply (cinit lift: asid___unsigned_long_')
+   apply (rule ccorres_assert)+
+   apply (clarsimp simp: asidRange_asid_wf asid_wf_table_guard gets_return_gets_eq)
+   apply (rule ccorres_Guard)
+   apply (rule ccorres_from_vcg_throws_nofail[where P=\<top> and P'=UNIV])
+   apply (rule allI, rule conseqPre, vcg)
+   apply (clarsimp simp: asidRange_asid_wf ucast_asid_high_bits_is_shift simpler_gets_def)
+   apply (fastforce dest!: rf_sr_armKSASIDTable intro!: leq_asid_bits_shift)
+  apply simp
   done
 
 (* FIXME AARCH64 move *)
@@ -1059,7 +1079,7 @@ lemma findMapForASID_ccorres:
   apply (cinit lift: asid___unsigned_long_')
    apply (simp add: getASIDPoolEntry_def bind_assoc)
    apply (rule ccorres_move_const_guards)
-   apply (ctac (no_vcg) add: getPoolPtr_ccorres)
+   apply (ctac (no_vcg) add: getPoolPtr_assign_ccorres)
      apply (clarsimp cong: option.case_cong)
      apply (rename_tac ap_opt)
      apply (wpc; clarsimp)
@@ -1130,37 +1150,80 @@ lemma invs'_invs_no_cicd':
   "invs' s \<longrightarrow> all_invs_but_ct_idle_or_in_cur_domain' s"
   by (simp add: invs'_invs_no_cicd)
 
-lemma asidRange_asid_wf:
-  "(asid \<le> snd asidRange) = asid_wf asid"
-  by (simp add: asid_wf_def mask_def asidRange_def del: word64_less_sub_le)
+lemma getASIDMap_ccorres: (* "asid" needs to instantiated when this rule is used *)
+  "ccorres (\<lambda>pool asid_map. casid_map_relation (pool (asid && mask asid_low_bits)) asid_map)
+           ret__struct_asid_map_C_'
+           \<top>
+           (\<lbrace>\<acute>asid___unsigned_long = asid\<rbrace> \<inter> \<lbrace>\<acute>poolPtr = ap_Ptr ap\<rbrace>) hs
+           (liftM (inv ASIDPool) (getObject ap))
+           (Call getASIDMap_'proc)"
+  apply (cinit lift: poolPtr_')
+   apply (rule ccorres_pre_getObject_asidpool)
+   apply (rename_tac pool)
+   apply (rule ccorres_Guard)
+   apply (rule ccorres_return_C; simp)
+  apply (clarsimp simp: typ_heap_simps casid_pool_relation_def mask_2pm1[symmetric]
+                        array_relation_def word_bool_le_funs
+                  split: asidpool.splits asid_pool_C.splits)
+  done
+
+lemma setASIDMap_ccorres: (* "asid_map'" needs to instantiated when this rule is used *)
+  "casid_map_relation entry asid_map' \<Longrightarrow>
+   ccorres dc xfdc
+           (ko_at' (ASIDPool pool) ap)
+           (\<lbrace> \<acute>poolPtr = ap_Ptr ap \<rbrace> \<inter> \<lbrace> \<acute>asid___unsigned_long = asid \<rbrace> \<inter> \<lbrace> \<acute>asid_map = asid_map' \<rbrace>)
+           hs
+           (setObject ap (ASIDPool (pool(asid && mask asid_low_bits := entry))))
+           (Call setASIDMap_'proc)"
+  apply (cinit' lift: poolPtr_' asid___unsigned_long_' asid_map_')
+   apply (rule ccorres_Guard)
+   apply (rule setObject_ccorres_helper[where P="ko_at' (ASIDPool pool) ap" and P'=UNIV];
+          simp add: objBits_simps pageBits_def)
+   apply (rule conseqPre, vcg)
+   apply normalise_obj_at'
+   apply (rule cmap_relationE1, erule rf_sr_cpspace_asidpool_relation, erule ko_at_projectKO_opt)
+   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
+   apply (rule conjI)
+    apply (clarsimp simp: cpspace_relation_def typ_heap_simps
+                          update_asidpool_map_to_asidpools
+                          update_asidpool_map_tos)
+    apply (case_tac y')
+    apply clarsimp
+    apply (erule cmap_relation_updI, erule ko_at_projectKO_opt, simp)
+     apply (clarsimp simp flip: mask_2pm1 simp: casid_pool_relation_def)
+     apply (rule conjI)
+      apply (erule array_relation_update, rule refl, assumption)
+      apply (simp add: mask_def asid_low_bits_def)
+     apply (simp add: word_bool_le_funs split: if_split)
+     apply blast
+    apply simp
+   apply (simp add: cready_queues_relation_def carch_state_relation_def
+                    cmachine_state_relation_def Let_def typ_heap_simps update_asidpool_map_tos)
+  apply (fastforce dest: asid_pool_at_rf_sr simp: typ_heap_simps)
+  done
 
 lemma invalidateASID_ccorres:
   "ccorres dc xfdc \<top> \<lbrace>\<acute>asid___unsigned_long = asid\<rbrace> hs
        (invalidateASID asid) (Call invalidateASID_'proc)"
   apply (cinit lift: asid___unsigned_long_')
-   apply (clarsimp simp: updateASIDPoolEntry_def getPoolPtr_def bind_assoc)
-   apply (rule ccorres_assert)+
-   apply (rule ccorres_pre_gets_riscvKSASIDTable_ksArchState') (* FIXME AARCH64: fix RISCV name *)
-   apply (rule ccorres_assert)
-   apply (clarsimp simp: liftM_def)
-   apply (rule ccorres_guard_imp)
-     apply (rule ccorres_pre_getObject_asidpool)
-     apply (rule ccorres_assert)
-     apply (clarsimp simp: asidRange_asid_wf)
-     apply (rename_tac ap_table ap asidpool ap_entry)
-     apply (rule_tac P="\<lambda>s. ko_at' asidpool ap s \<and> ap_table = (armKSASIDTable (ksArchState s))" and
-                     P'="{s. \<exists>asidpool'. cslift s (ap_Ptr ap) = Some asidpool' \<and>
-                                         casid_pool_relation asidpool asidpool'}"
-                     in setObject_ccorres_helper)
-    sorry (* FIXME AARCH64: too messy, needs C update
-       apply (rule conseqPre, vcg)
-    apply (clarsimp simp: asid_wf_table_guard)
-    apply (simp flip: mask_2pm1)
-    apply (frule rf_sr_armKSASIDTable[where n="asid >> asid_low_bits"])
-     apply (simp add: leq_asid_bits_shift)
-    apply (simp add: ucast_asid_high_bits_is_shift)
-    apply (rule context_conjI, clarsimp simp: typ_heap_simps)
-  *)
+   apply (clarsimp simp: updateASIDPoolEntry_def)
+   apply (ctac add: getPoolPtr_ccorres)
+     apply (rule ccorres_assert2, clarsimp)
+     apply (ctac add: getASIDMap_ccorres[where asid=asid])
+       apply (rule ccorres_assert2)
+       apply csymbr
+       apply csymbr
+       apply (rule ccorres_call, rule_tac asid_map'=asid_map in setASIDMap_ccorres; simp?)
+       apply (fastforce simp: casid_map_relation_def asid_map_lift_def Let_def
+                              asid_map_asid_map_vspace_lift_def
+                        split: option.splits if_splits)
+      apply (wp getASID_wp)
+     apply (vcg exspec=getASIDMap_modifies)
+    apply (wpsimp simp: getPoolPtr_def)
+   apply (vcg exspec=getPoolPtr_modifies)
+  apply (clarsimp simp: inv_ASIDPool casid_map_relation_def asid_map_lift_def Let_def
+                  split: if_splits asidpool.splits)
+  done
 
 (* FIXME AARCH64: vcpu_vppi_masked_C_Ptr is too generic, applies to most bit fields *)
 
@@ -1355,7 +1418,7 @@ lemma deleteASID_ccorres:
   apply (cinit lift: asid___unsigned_long_' vspace_' cong: call_ignore_cong)
    apply (rule ccorres_Guard_Seq)+
    apply simp
-   apply (ctac (no_vcg) add: getPoolPtr_ccorres)
+   apply (ctac (no_vcg) add: getPoolPtr_assign_ccorres)
      apply wpc
       apply ccorres_rewrite
       apply (rule ccorres_return_Skip)
