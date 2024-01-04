@@ -583,19 +583,7 @@ definition
       (symbol_table ''armKSGlobalUserVSpace'')
       (ccur_vcpu_to_H (armHSCurVCPU_' cstate) (armHSVCPUActive_' cstate))
       (unat (gic_vcpu_num_list_regs_' cstate))
-      undefined \<comment> \<open>gsPTTypes\<close>"
-
-(*
-definition carch_state_relation :: "Arch.kernel_state \<Rightarrow> globals \<Rightarrow> bool" where
-  "carch_state_relation astate cstate \<equiv>
-    armKSKernelVSpace astate = armKSKernelVSpace_C \<and>
-    array_relation ((=) \<circ> option_to_ptr) (mask asid_high_bits) (armKSASIDTable astate) (armKSASIDTable_' cstate) \<and>
-    array_relation ((=) \<circ> option_to_0) (mask vmid_bits)
-      (armKSVMIDTable astate) (armKSHWASIDTable_' cstate) \<and>
-    carch_globals astate \<and>
-    gic_vcpu_num_list_regs_' cstate = of_nat (armKSGICVCPUNumListRegs astate) \<and>
-    cur_vcpu_relation (armHSCurVCPU astate) (armHSCurVCPU_' cstate) (armHSVCPUActive_' cstate)"
-*)
+      (fst (snd (snd (ghost'state_' cstate))))"
 
 lemma eq_option_to_ptr_rev:
   "Some 0 \<notin> A \<Longrightarrow>
@@ -617,6 +605,7 @@ lemma ccur_vcpu_to_H_correct:
 lemma carch_state_to_H_correct:
   assumes valid:  "valid_arch_state' astate"
   assumes rel:    "carch_state_relation (ksArchState astate) (cstate)"
+  assumes pt_t:   "fst (snd (snd (ghost'state_' cstate))) = gsPTTypes (ksArchState astate)"
   shows           "carch_state_to_H cstate = ksArchState astate"
   apply (case_tac "ksArchState astate", simp)
   using rel[simplified carch_state_relation_def carch_globals_def]
@@ -642,7 +631,7 @@ lemma carch_state_to_H_correct:
   apply (rule conjI)
   using valid[simplified valid_arch_state'_def]
    apply (clarsimp simp: max_armKSGICVCPUNumListRegs_def unat_of_nat_eq)
-  subgoal sorry (* FIXME AARCH64 TODO: gsPTTypes relation not in state relation yet *)
+  apply (simp add: pt_t)
   done
 
 end
@@ -1573,7 +1562,7 @@ lemma cstate_to_H_correct:
     using cstate_rel
     apply (clarsimp simp: cstate_relation_def Let_def)
    using cstate_rel
-   apply (clarsimp simp: cstate_relation_def Let_def carch_state_relation_def carch_globals_def)
+   apply (clarsimp simp: cstate_relation_def Let_def)
   using cstate_rel
   apply (clarsimp simp: cstate_relation_def Let_def carch_state_relation_def carch_globals_def)
   apply (rule cstate_to_machine_H_correct[simplified])
