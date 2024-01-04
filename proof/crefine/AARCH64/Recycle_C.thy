@@ -551,13 +551,16 @@ lemma page_table_at_rf_sr_dom_s:
   "\<lbrakk> page_table_at' pt_t x s; (s, s') \<in> rf_sr \<rbrakk>
     \<Longrightarrow> {x ..+ 2 ^ (ptBits pt_t) } \<times> {SIndexVal, SIndexTyp 0}
     \<subseteq> dom_s (hrs_htd (t_hrs_' (globals s')))"
-  apply (rule_tac m=3 in intvl_2_power_times_decomp,
-         simp_all add: shiftl_t2n field_simps bit_simps
-                       word_bits_def split: if_split)
-  sorry (* FIXME AARCH64 not clear how to handle config_ARM_PA_SIZE_BITS_40 here
-  apply (clarsimp simp: page_table_at'_def intvl_def bit_simps)
+  apply (rule_tac m=pte_bits in intvl_2_power_times_decomp)
+    defer
+    apply (simp add: bit_simps)
+   apply (simp add: bit_simps word_bits_def split: if_split)
+  apply (clarsimp simp: pt_bits_def table_size_def page_table_at'_def)
   apply (erule_tac x="ucast y" in allE)
-  apply (simp add: ucast_ucast_len shiftl_t2n')
+  apply (simp add: shiftl_t2n')
+  apply (subst (asm) le_mask_iff_lt_2n[THEN iffD1])
+   apply (simp add: bit_simps split: if_split)
+  apply simp
   apply (simp add: typ_at_to_obj_at_arches)
   apply (drule obj_at_ko_at', clarsimp)
   apply (erule cmap_relationE1[OF rf_sr_cpte_relation])
@@ -565,8 +568,8 @@ lemma page_table_at_rf_sr_dom_s:
   apply (drule h_t_valid_clift)
   apply (drule h_t_valid_dom_s[OF _ refl refl])
   apply (erule subsetD)
-  apply (auto simp add: intvl_def shiftl_t2n)[1]
-  done *)
+  apply (auto simp add: intvl_def shiftl_t2n pte_bits_def word_size_bits_def)[1]
+  done
 
 (* FIXME AARCH64 this currently doesn't make sense, update when going through Arch_C so that it's at
    least useful
