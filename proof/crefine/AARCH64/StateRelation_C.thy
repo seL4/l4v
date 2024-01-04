@@ -756,6 +756,7 @@ where
        cte_array_relation astate cstate \<and>
        tcb_cte_array_relation astate cstate \<and>
        apsnd fst (ghost'state_' cstate) = (gsUserPages astate, gsCNodes astate) \<and>
+       fst (snd (snd (ghost'state_' cstate))) = gsPTTypes (ksArchState astate) \<and>
        ghost_size_rel (ghost'state_' cstate) (gsMaxObjectSize astate) \<and>
        ksWorkUnitsCompleted_' cstate = ksWorkUnitsCompleted astate \<and>
        h_t_valid (hrs_htd (t_hrs_' cstate)) c_guard intStateIRQNode_array_Ptr \<and>
