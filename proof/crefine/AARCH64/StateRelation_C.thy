@@ -563,11 +563,6 @@ abbreviation
 abbreviation
   "cpspace_device_data_relation ah bh ch \<equiv> cmap_relation (heap_to_device_data ah bh) (clift ch) Ptr cuser_user_data_device_relation"
 
-(* The only array-based declaration and access of PTEs is for the global kernel page table, which
-   is guaranteed to be a vspace root table. We never walk this page table in the non-boot kernel code. *)
-abbreviation
-  "cpspace_pte_array_relation ah ch \<equiv> carray_map_relation (ptBits VSRootPT_T) (map_to_ptes ah) (h_t_valid (hrs_htd ch) c_guard) pt_Ptr"
-
 definition
   cpspace_relation :: "(machine_word \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> (machine_word \<Rightarrow> word8) \<Rightarrow> heap_raw_state \<Rightarrow> bool"
 where
@@ -575,8 +570,33 @@ where
     cpspace_cte_relation ah ch \<and> cpspace_tcb_relation ah ch \<and> cpspace_ep_relation ah ch \<and> cpspace_ntfn_relation ah ch \<and>
     cpspace_pte_relation ah ch \<and> cpspace_asidpool_relation ah ch \<and>
     cpspace_user_data_relation ah bh ch \<and> cpspace_device_data_relation ah bh ch \<and>
-    cpspace_pte_array_relation ah ch \<and>
     cpspace_vcpu_relation ah ch"
+
+(*
+  We sometimes want to treat page tables as arrays, e.g. in Retype. Also, pointer addition
+  as in lookupPTSlot creates array_assertion guards in the C parser, which require an array type
+  tag in the heap, so we can't escape the array in Retype by creating single PTEs instead.
+
+  It is Ok to represent the same area of memory as a set of independent PTEs and as an array at
+  the same time. See thms h_t_array_valid and h_t_array_valid_field that show both types being
+  valid at the same time -- this means cpspace_pte_relation does not create a contradiction with
+  the below.
+
+  It is *not* Ok to represent the same (overlapping) area of memory as arrays of different
+  lengths (VSRootPT/NormalPT), because the array type tag contains the length, leading to a
+  contradiction. This means we can't use carray_map_relation for both types.
+
+  We can use ghost state to say which arrays should have which type to avoid overlaps. The
+  CNode cte_array_relation relation already provides a mechanism for that (as opposed to
+  cpspace_cte_relation which handles single ctes).
+
+*)
+abbreviation pt_array_relation :: "kernel_state \<Rightarrow> globals \<Rightarrow> bool" where
+  "pt_array_relation astate cstate \<equiv>
+     cvariable_array_map_relation (gsPTTypes (ksArchState astate))
+                                  (\<lambda>pt_t. 2 ^ ptTranslationBits pt_t)
+                                  pte_Ptr
+                                  (hrs_htd (t_hrs_' cstate))"
 
 abbreviation
   "sched_queue_relation' \<equiv> tcb_queue_relation' tcbSchedNext_C tcbSchedPrev_C"
@@ -755,6 +775,7 @@ where
        cmachine_state_relation (ksMachineState astate) cstate \<and>
        cte_array_relation astate cstate \<and>
        tcb_cte_array_relation astate cstate \<and>
+       pt_array_relation astate cstate \<and>
        apsnd fst (ghost'state_' cstate) = (gsUserPages astate, gsCNodes astate) \<and>
        fst (snd (snd (ghost'state_' cstate))) = gsPTTypes (ksArchState astate) \<and>
        ghost_size_rel (ghost'state_' cstate) (gsMaxObjectSize astate) \<and>

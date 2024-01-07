@@ -2126,23 +2126,67 @@ lemma clift_array_assertion_imp:
   apply simp
   done
 
-lemma vspace_at_carray_map_relation:
-  "\<lbrakk> page_table_at' VSRootPT_T pt s; cpspace_pte_array_relation (ksPSpace s) hp \<rbrakk>
-   \<Longrightarrow> clift hp (vs_Ptr pt) \<noteq> None"
-  apply (clarsimp simp: carray_map_relation_def h_t_valid_clift_Some_iff)
-  apply (drule spec, erule iffD1)
-  apply (clarsimp simp: page_table_at'_def objBits_simps)
-  apply (drule_tac x="table_index VSRootPT_T p'" in spec)
-  apply (clarsimp simp: table_index_in_table table_base_index_eq)
-  apply (clarsimp simp: typ_at_to_obj_at_arches
-                 dest!: obj_at_ko_at' ko_at_projectKO_opt)
+lemma pt_array_map_relation_vs:
+  "\<lbrakk> gsPTTypes (ksArchState s) pt = Some VSRootPT_T; pt_array_relation s \<sigma>; c_guard (vs_Ptr pt) \<rbrakk>
+   \<Longrightarrow> clift (t_hrs_' \<sigma>) (vs_Ptr pt) \<noteq> None"
+  apply (clarsimp simp: cvariable_array_map_relation_def simp flip: h_t_valid_clift_Some_iff)
+  apply (erule allE, erule allE, erule (1) impE)
+  apply (clarsimp simp: h_t_valid_def h_t_array_valid_def typ_uinfo_array_tag_n_m_eq
+                        ptTranslationBits_vs_array_len)
+  done
+
+lemma pt_array_map_relation_pt:
+  "\<lbrakk> gsPTTypes (ksArchState s) pt = Some NormalPT_T; pt_array_relation s \<sigma>; c_guard (pt_Ptr pt) \<rbrakk>
+   \<Longrightarrow> clift (t_hrs_' \<sigma>) (pt_Ptr pt) \<noteq> None"
+  apply (clarsimp simp: cvariable_array_map_relation_def simp flip: h_t_valid_clift_Some_iff)
+  apply (erule allE, erule allE, erule (1) impE)
+  apply (clarsimp simp: h_t_valid_def h_t_array_valid_def typ_uinfo_array_tag_n_m_eq bit_simps)
+  done
+
+lemma page_table_pte_at': (* FIXME AARCH64: move *)
+  "page_table_at' pt_t p s \<Longrightarrow> pte_at' p s"
+  apply (clarsimp simp: page_table_at'_def)
+  apply (erule_tac x=0 in allE)
+  apply simp
+  done
+
+lemma pte_at_ko': (* FIXME AARCH64: move *)
+  "pte_at' p s \<Longrightarrow> \<exists>pte. ko_at' (pte::pte) p s"
+  apply (clarsimp simp: typ_at'_def obj_at'_def ko_wp_at'_def)
+  apply (case_tac ko; simp)
+  apply (rename_tac arch_kernel_object)
+  apply (case_tac arch_kernel_object, auto)[1]
+  done
+
+lemma aligned_intvl_0: (* FIXME AARCH64: move *)
+  "\<lbrakk> is_aligned p n; n < LENGTH('a) \<rbrakk> \<Longrightarrow>  (0 \<in> {p..+2^n}) = (p = 0)" for p::"'a::len word"
+  apply (rule iffI; clarsimp simp: intvl_def)
+   apply (drule_tac d="of_nat k" in is_aligned_add_or)
+    apply (simp add: word_less_nat_alt unat_of_nat order_le_less_trans[rotated])
+   apply word_eqI_solve
+  apply (rule_tac x=0 in exI)
+  apply simp
   done
 
 lemma vspace_at_rf_sr:
-   "\<lbrakk> page_table_at' VSRootPT_T pd s; (s, s') \<in> rf_sr \<rbrakk>
-    \<Longrightarrow> cslift s' (Ptr pd :: vs_ptr) \<noteq> None"
-  by (clarsimp simp: rf_sr_def cstate_relation_def Let_def
-                     cpspace_relation_def vspace_at_carray_map_relation)
+  "\<lbrakk> page_table_at' VSRootPT_T pt s; gsPTTypes (ksArchState s) pt = Some VSRootPT_T;
+     (s, s') \<in> rf_sr \<rbrakk>
+   \<Longrightarrow> cslift s' (vs_Ptr pt) \<noteq> None"
+  apply (frule rf_sr_cpte_relation)
+  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
+  apply (drule (1) pt_array_map_relation_vs)
+   apply (frule page_table_pte_at')
+   apply (clarsimp dest!: pte_at_ko')
+   apply (drule (1) cmap_relation_ko_atD)
+   apply (clarsimp simp: page_table_at'_def)
+   apply (drule c_guard_clift)
+   apply (clarsimp simp: c_guard_def c_null_guard_def ptr_aligned_def)
+   apply (simp add: align_of_def typ_info_array array_tag_def align_td_array_tag)
+   apply clarsimp
+   apply (drule aligned_intvl_0, simp)
+   apply (clarsimp simp: bit_simps Kernel_Config.config_ARM_PA_SIZE_BITS_40_def intvl_self)
+  apply simp
+  done
 
 lemma gsUntypedZeroRanges_rf_sr:
   "\<lbrakk> (start, end) \<in> gsUntypedZeroRanges s; (s, s') \<in> rf_sr \<rbrakk>

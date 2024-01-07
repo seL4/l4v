@@ -1949,10 +1949,10 @@ lemma cmap_relation_array_add_array[OF refl]:
   apply (rule shiftl_less_t2n, rule word_of_nat_less, simp_all add: word_bits_def)
   done
 
-(* FIXME AARCH64 the pt_t being a free var is probably not what we want, the 512 magic number is
-   not clear in this case (9 bits \<rightarrow> 512 PTEs in a PT on RISCV64?) *)
-lemma createObjects_ccorres_pte:
+lemma createObjects_ccorres_pte_pt:
   defines "ko \<equiv> (KOArch (KOPTE (makeObject :: pte)))"
+  (* unfortunately, because of the pt_Ptr in ptr_retyps below, we can't make this lemma generic *)
+  defines "pt_t \<equiv> NormalPT_T"
   shows "\<forall>\<sigma> x. (\<sigma>, x) \<in> rf_sr \<and> ptr \<noteq> 0
   \<and> pspace_aligned' \<sigma> \<and> pspace_distinct' \<sigma>
   \<and> pspace_no_overlap' ptr sz \<sigma>
@@ -1961,18 +1961,22 @@ lemma createObjects_ccorres_pte:
   \<and> range_cover ptr sz (ptBits pt_t) 1
   \<and> valid_global_refs' s
   \<and> kernel_data_refs \<inter> {ptr..+ 2 ^ (ptBits pt_t) } = {} \<longrightarrow>
-  (\<sigma>\<lparr>ksPSpace := foldr (\<lambda>addr. data_map_insert addr ko) (new_cap_addrs 512 ptr ko) (ksPSpace \<sigma>)\<rparr>,
+  (\<sigma>\<lparr>ksPSpace := foldr (\<lambda>addr. data_map_insert addr ko)
+                       (new_cap_addrs (2 ^ (ptTranslationBits pt_t)) ptr ko) (ksPSpace \<sigma>)\<rparr>,
    x\<lparr>globals := globals x
                  \<lparr>t_hrs_' := hrs_htd_update (ptr_retyps_gen 1 (pt_Ptr ptr) False)
                        (t_hrs_' (globals x))\<rparr>\<rparr>) \<in> rf_sr"
   (is "\<forall>\<sigma> x. ?P \<sigma> x \<longrightarrow>
     (\<sigma>\<lparr>ksPSpace := ?ks \<sigma>\<rparr>, x\<lparr>globals := globals x\<lparr>t_hrs_' := ?ks' x\<rparr>\<rparr>) \<in> rf_sr")
 proof (intro impI allI)
+  define array_len where "array_len \<equiv> pt_array_len"
+  note array_len_def = pt_array_len_def array_len_def
+
   fix \<sigma> x
   let ?thesis = "(\<sigma>\<lparr>ksPSpace := ?ks \<sigma>\<rparr>, x\<lparr>globals := globals x\<lparr>t_hrs_' := ?ks' x\<rparr>\<rparr>) \<in> rf_sr"
   let ?ks = "?ks \<sigma>"
   let ?ks' = "?ks' x"
-  let ?ptr = "Ptr ptr :: (pte_C[512]) ptr"
+  let ?ptr = "pt_Ptr ptr"
   assume "?P \<sigma> x"
   hence rf: "(\<sigma>, x) \<in> rf_sr"
     and cover: "range_cover ptr sz (ptBits pt_t) 1"
@@ -1983,9 +1987,9 @@ proof (intro impI allI)
     and pal: "pspace_aligned' \<sigma>"
     and pdst: "pspace_distinct' \<sigma>"
     and pno: "pspace_no_overlap' ptr sz \<sigma>"
-    and rzo: "ret_zero ptr (2 ^ (ptBits pt_t)) \<sigma>"
-    and empty: "region_is_bytes ptr (2 ^ (ptBits pt_t)) x"
-    and zero: "heap_list_is_zero (hrs_mem (t_hrs_' (globals x))) ptr (2 ^ (ptBits pt_t))"
+    and rzo: "ret_zero ptr (2 ^ ptBits pt_t) \<sigma>"
+    and empty: "region_is_bytes ptr (2 ^ ptBits pt_t) x"
+    and zero: "heap_list_is_zero (hrs_mem (t_hrs_' (globals x))) ptr (2 ^ ptBits pt_t)"
     and kernel_data_refs_disj : "kernel_data_refs \<inter> {ptr..+ 2 ^ (ptBits pt_t)} = {}"
     by (clarsimp simp:range_cover_def[where 'a=machine_word_len, folded word_bits_def])+
 
@@ -1993,7 +1997,8 @@ proof (intro impI allI)
           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
 
   (* obj specific *)
-  have mko: "\<And>dev. makeObjectKO dev (Inr AARCH64_H.PageTableObject) = Some ko" by (simp add: ko_def makeObjectKO_def)
+  have mko: "\<And>dev. makeObjectKO dev (Inr AARCH64_H.PageTableObject) = Some ko"
+    by (simp add: ko_def makeObjectKO_def)
 
   have relrl:
     "cpte_relation makeObject (from_bytes (replicate (size_of TYPE(pte_C)) 0))"
@@ -2003,9 +2008,9 @@ proof (intro impI allI)
     apply (simp add: from_bytes_def)
     apply (simp add: typ_info_simps pte_C_tag_def pte_lift_def
                      size_td_lt_final_pad size_td_lt_ti_typ_pad_combine Let_def size_of_def)
-    apply (simp add: final_pad_def Let_def size_td_lt_ti_typ_pad_combine Let_def
+    apply (simp add: final_pad_def Let_def size_td_lt_ti_typ_pad_combine
                      size_of_def padup_def align_td_array' size_td_array update_ti_adjust_ti
-                     ti_typ_pad_combine_def Let_def ti_typ_combine_def empty_typ_info_def)
+                     ti_typ_pad_combine_def ti_typ_combine_def empty_typ_info_def)
     apply (simp add: typ_info_array array_tag_def eval_nat_numeral)
     apply (simp add: array_tag_n.simps)
     apply (simp add: final_pad_def size_td_lt_ti_typ_pad_combine Let_def
@@ -2017,37 +2022,31 @@ proof (intro impI allI)
   (* /obj specific *)
 
   (* s/obj/obj'/ *)
-  (* FIXME AARCH64 need to figure out something better than shoving pt_t in
-  have szo: "size_of TYPE(pte_C[512]) = 2 ^ (ptBits pt_t)"
-    by (simp add: size_of_def size_td_array bit_simps)
-  have szo2: "512 * size_of TYPE(pte_C) = 2 ^ (ptBits pt_t)"
-    by (simp add: szo[symmetric] bit_simps) *)
+  have szo: "size_of TYPE(pte_C[pt_array_len]) = 2 ^ ptBits pt_t"
+    by (simp add: size_of_def size_td_array bit_simps pt_t_def)
+  have szo2[unfolded array_len_def]: "array_len * size_of TYPE(pte_C) = 2 ^ ptBits pt_t"
+    by (simp add: szo[symmetric] bit_simps pt_t_def array_len_def)
   have szo': "size_of TYPE(pte_C) = 2 ^ objBitsKO ko"
-    by (simp add: objBits_simps ko_def archObjSize_def bit_simps)
+    by (simp add: objBits_simps ko_def bit_simps)
 
-  (* FIXME AARCH64
   note rl' = cslift_ptr_retyp_other_inst[where n=1,
     simplified, OF empty, simplified, OF cover[simplified]
-    szo[symmetric] szo[simplified bit_simps_corres]] *)
+    szo[symmetric] szo[simplified bit_simps_corres]]
 
-  have sz_weaken: "objBitsKO ko \<le> (ptBits pt_t)" (* FIXME AARCH64 might want pt_t generic here *)
-    by (simp add: objBits_simps ko_def archObjSize_def bit_simps)
-  (* FIXME AARCH64 512
-  have cover': "range_cover ptr sz (objBitsKO ko) 512"
+  have sz_weaken: "objBitsKO ko \<le> ptBits pt_t"
+    by (simp add: objBits_simps ko_def bit_simps)
+  have cover'[unfolded array_len_def]: "range_cover ptr sz (objBitsKO ko) array_len"
     apply (rule range_cover_rel[OF cover sz_weaken])
-    apply (simp add: ptBits_def objBits_simps ko_def archObjSize_def bit_simps)
-    done *)
+    apply (simp add: ptBits_def objBits_simps ko_def bit_simps pt_t_def array_len_def)
+    done
   from sz sz_weaken have sz': "objBitsKO ko \<le> sz" by simp
   note al' = is_aligned_weaken[OF al sz_weaken]
 
   have koT: "koTypeOf ko = ArchT PTET"
     by (simp add: ko_def)
 
-  (* rest used to be generic, but PT arrays are complicating everything *)
-
-  (* FIXME AARCH64
   note rl = projectKO_opt_retyp_other [OF cover' pal pno ko_def]
-  note cterl = retype_ctes_helper [OF pal pdst pno al' sz' szb mko cover'] *)
+  note cterl = retype_ctes_helper [OF pal pdst pno al' sz' szb mko cover']
 
   have guard: "c_guard ?ptr"
     using al[simplified bit_simps]
@@ -2056,90 +2055,241 @@ proof (intro impI allI)
     apply (simp_all add:  align_td_array align_of_def bit_simps ptr0 split: if_split)
     done
 
-  (* FIXME AARCH64 512
-  have guard': "\<forall>n < 512. c_guard (pte_Ptr ptr +\<^sub>p int n)"
+  have guard'[unfolded array_len_def]: "\<forall>n < array_len. c_guard (pte_Ptr ptr +\<^sub>p int n)"
+    unfolding array_len_def
     using al[simplified bit_simps]
     apply -
     apply (rule retype_guard_helper [OF cover' ptr0 szo', where m=3])
-     apply (simp_all add: objBits_simps ko_def archObjSize_def align_of_def bit_simps)
-    done *)
+     apply (simp_all add: objBits_simps ko_def align_of_def bit_simps)
+    done
 
   note ptr_retyps.simps[simp del]
 
   from rf have pterl: "cmap_relation (map_to_ptes (ksPSpace \<sigma>)) (cslift x) Ptr cpte_relation"
     unfolding rf_sr_def cstate_relation_def by (simp add: Let_def cpspace_relation_def)
 
-  (* FIXME AARCH64
   note ht_rl = clift_eq_h_t_valid_eq[OF rl', OF tag_disj_via_td_name, simplified]
     uinfo_array_tag_n_m_not_le_typ_name
 
-  have pte_arr: "cpspace_pte_array_relation (ksPSpace \<sigma>) (t_hrs_' (globals x))
-    \<Longrightarrow> cpspace_pte_array_relation ?ks ?ks'"
-   apply (erule cmap_relation_array_add_array[OF _ al])
-        apply (simp add: foldr_upd_app_if[folded data_map_insert_def])
-        apply (rule projectKO_opt_retyp_same, simp add: ko_def projectKOs)
-       apply (simp add: h_t_valid_clift_Some_iff dom_def split: if_split)
-       apply (subst clift_ptr_retyps_gen_prev_memset_same[where n=1, simplified, OF guard],
-         simp_all only: szo refl empty, simp_all add: zero[simplified])[1]
-        apply (simp add: bit_simps word_bits_def)
-       apply (auto split: if_split)[1]
-      apply (simp_all add: objBits_simps archObjSize_def bit_simps
-                           ko_def word_bits_def)
-   done
+  have ptTranslationBits_num[unfolded array_len_def]:
+    "2 ^ ptTranslationBits pt_t = array_len"
+    by (simp add: bit_simps array_len_def pt_t_def)
 
   from rf have "cpspace_relation (ksPSpace \<sigma>) (underlying_memory (ksMachineState \<sigma>)) (t_hrs_' (globals x))"
     unfolding rf_sr_def cstate_relation_def by (simp add: Let_def)
   hence "cpspace_relation ?ks (underlying_memory (ksMachineState \<sigma>))  ?ks'"
     unfolding cpspace_relation_def
-    using pte_arr
     supply image_cong_simp [cong del]
-    apply (clarsimp simp: rl' cterl cte_C_size tag_disj_via_td_name
+    apply (clarsimp simp: rl' cterl cte_C_size tag_disj_via_td_name ptTranslationBits_num
                           foldr_upd_app_if [folded data_map_insert_def])
     apply (simp add: ptr_retyp_to_array[simplified])
     apply (subst clift_ptr_retyps_gen_prev_memset_same[OF guard'], simp_all only: szo2 empty)
        apply simp
-      apply (simp(no_asm) add: bit_simps word_bits_def)
+      apply (simp(no_asm) add: bit_simps word_bits_def pt_t_def)
      apply (simp add: zero[simplified])
-    apply (simp add: rl projectKOs del: pte_C_size)
-    apply (simp add: rl projectKO_opt_retyp_same ko_def projectKOs Let_def
+    apply (simp add: rl del: pte_C_size)
+    apply (simp add: rl projectKO_opt_retyp_same ko_def Let_def
                      ptr_add_to_new_cap_addrs [OF szo']
                 cong: if_cong del: pte_C_size)
     apply (erule cmap_relation_retype)
     apply (insert relrl, auto)
     done
 
-  moreover
-  from rf szb al
-  have "ptr_span (pt_Ptr (symbol_table ''kernel_root_pageTable'')) \<inter> {ptr ..+ 2 ^ ptBits} = {}"
-    apply (clarsimp simp: valid_global_refs'_def  Let_def
-                          valid_refs'_def ran_def rf_sr_def cstate_relation_def)
-    apply (erule disjoint_subset)
-    apply (simp add:kernel_data_refs_disj[simplified bit_simps_corres])
-    done
-
-  ultimately *)
-  show ?thesis using rf empty kernel_data_refs_disj rzo
-    sorry (* FIXME AARCH64 proof needs rework for AArch64 different table types
+  with rf empty kernel_data_refs_disj rzo
+  show ?thesis
     apply (simp add: rf_sr_def cstate_relation_def Let_def rl' tag_disj_via_td_name)
     apply (simp add: carch_state_relation_def cmachine_state_relation_def)
-    apply (clarsimp simp add: rl' cterl tag_disj_via_td_name
-      hrs_htd_update ht_rl foldr_upd_app_if [folded data_map_insert_def] rl projectKOs
-      cvariable_array_ptr_retyps[OF szo]
-      zero_ranges_ptr_retyps[where p="pt_Ptr ptr", simplified szo])
+    apply (clarsimp simp: rl' cterl tag_disj_via_td_name pt_t_def bit_simps
+                          hrs_htd_update ht_rl foldr_upd_app_if [folded data_map_insert_def] rl
+                          cvariable_array_ptr_retyps[OF szo]
+                          zero_ranges_ptr_retyps[where p="pt_Ptr ptr", simplified szo])
     apply (subst h_t_valid_ptr_retyps_gen_disjoint, assumption)
      apply (simp add:szo cte_C_size cte_level_bits_def)
      apply (erule disjoint_subset)
-     apply (simp add: bit_simps del: replicate_numeral)
+     apply (simp add: pt_t_def bit_simps del: replicate_numeral)
     apply (subst h_t_valid_ptr_retyps_gen_disjoint, assumption)
      apply (simp add:szo cte_C_size cte_level_bits_def)
      apply (erule disjoint_subset)
-     apply (simp add: bit_simps del: replicate_numeral)
-    by (simp add:szo ptr_retyps_htd_safe_neg hrs_htd_def
-      kernel_data_refs_domain_eq_rotate bit_simps
-      Int_ac del: replicate_numeral) *)
+     apply (simp add: pt_t_def bit_simps del: replicate_numeral)
+    apply (simp add: szo ptr_retyps_htd_safe_neg hrs_htd_def Int_ac
+                     kernel_data_refs_domain_eq_rotate bit_simps
+                del: replicate_numeral)
+    done
 
 qed
 
+lemma createObjects_ccorres_pte_vs:
+  defines "ko \<equiv> (KOArch (KOPTE (makeObject :: pte)))"
+  (* see createObjects_ccorres_pte_pt why this can't be generic *)
+  defines "pt_t \<equiv> VSRootPT_T"
+  shows "\<forall>\<sigma> x. (\<sigma>, x) \<in> rf_sr \<and> ptr \<noteq> 0
+  \<and> pspace_aligned' \<sigma> \<and> pspace_distinct' \<sigma>
+  \<and> pspace_no_overlap' ptr sz \<sigma>
+  \<and> ret_zero ptr (2 ^ (ptBits pt_t)) \<sigma>
+  \<and> region_is_zero_bytes ptr (2 ^ (ptBits pt_t)) x
+  \<and> range_cover ptr sz (ptBits pt_t) 1
+  \<and> valid_global_refs' s
+  \<and> kernel_data_refs \<inter> {ptr..+ 2 ^ (ptBits pt_t) } = {} \<longrightarrow>
+  (\<sigma>\<lparr>ksPSpace := foldr (\<lambda>addr. data_map_insert addr ko)
+                       (new_cap_addrs (2 ^ (ptTranslationBits pt_t)) ptr ko) (ksPSpace \<sigma>)\<rparr>,
+   x\<lparr>globals := globals x
+                 \<lparr>t_hrs_' := hrs_htd_update (ptr_retyps_gen 1 (vs_Ptr ptr) False)
+                       (t_hrs_' (globals x))\<rparr>\<rparr>) \<in> rf_sr"
+  (is "\<forall>\<sigma> x. ?P \<sigma> x \<longrightarrow>
+    (\<sigma>\<lparr>ksPSpace := ?ks \<sigma>\<rparr>, x\<lparr>globals := globals x\<lparr>t_hrs_' := ?ks' x\<rparr>\<rparr>) \<in> rf_sr")
+proof (intro impI allI)
+  define array_len where "array_len \<equiv> vs_array_len"
+  note array_len_def = vs_array_len_def array_len_def
+
+  fix \<sigma> x
+  let ?thesis = "(\<sigma>\<lparr>ksPSpace := ?ks \<sigma>\<rparr>, x\<lparr>globals := globals x\<lparr>t_hrs_' := ?ks' x\<rparr>\<rparr>) \<in> rf_sr"
+  let ?ks = "?ks \<sigma>"
+  let ?ks' = "?ks' x"
+  let ?ptr = "vs_Ptr ptr"
+  assume "?P \<sigma> x"
+  hence rf: "(\<sigma>, x) \<in> rf_sr"
+    and cover: "range_cover ptr sz (ptBits pt_t) 1"
+    and al: "is_aligned ptr (ptBits pt_t)"
+    and ptr0: "ptr \<noteq> 0"
+    and sz: "(ptBits pt_t) \<le> sz"
+    and szb: "sz < word_bits"
+    and pal: "pspace_aligned' \<sigma>"
+    and pdst: "pspace_distinct' \<sigma>"
+    and pno: "pspace_no_overlap' ptr sz \<sigma>"
+    and rzo: "ret_zero ptr (2 ^ ptBits pt_t) \<sigma>"
+    and empty: "region_is_bytes ptr (2 ^ ptBits pt_t) x"
+    and zero: "heap_list_is_zero (hrs_mem (t_hrs_' (globals x))) ptr (2 ^ ptBits pt_t)"
+    and kernel_data_refs_disj : "kernel_data_refs \<inter> {ptr..+ 2 ^ (ptBits pt_t)} = {}"
+    by (clarsimp simp:range_cover_def[where 'a=machine_word_len, folded word_bits_def])+
+
+    note blah[simp del] =  atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
+          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
+
+  (* obj specific *)
+  have mko: "\<And>dev. makeObjectKO dev (Inr AARCH64_H.PageTableObject) = Some ko"
+    by (simp add: ko_def makeObjectKO_def)
+
+  have relrl:
+    "cpte_relation makeObject (from_bytes (replicate (size_of TYPE(pte_C)) 0))"
+    unfolding cpte_relation_def
+    supply if_cong[cong]
+    apply (simp add: Let_def makeObject_pte size_of_def pte_lift_def)
+    apply (simp add: from_bytes_def)
+    apply (simp add: typ_info_simps pte_C_tag_def pte_lift_def
+                     size_td_lt_final_pad size_td_lt_ti_typ_pad_combine Let_def size_of_def)
+    apply (simp add: final_pad_def Let_def size_td_lt_ti_typ_pad_combine
+                     size_of_def padup_def align_td_array' size_td_array update_ti_adjust_ti
+                     ti_typ_pad_combine_def ti_typ_combine_def empty_typ_info_def)
+    apply (simp add: typ_info_array array_tag_def eval_nat_numeral)
+    apply (simp add: array_tag_n.simps)
+    apply (simp add: final_pad_def size_td_lt_ti_typ_pad_combine Let_def
+                     size_of_def padup_def align_td_array' size_td_array update_ti_adjust_ti
+                     ti_typ_pad_combine_def ti_typ_combine_def empty_typ_info_def)
+    apply (simp add: update_ti_t_machine_word_0s pte_get_tag_def pte_tag_defs)
+    done
+
+  (* /obj specific *)
+
+  (* s/obj/obj'/ *)
+  have szo: "size_of TYPE(pte_C[vs_array_len]) = 2 ^ ptBits pt_t"
+    by (simp add: size_of_def size_td_array pt_bits_def table_size_def pt_t_def
+                  ptTranslationBits_vs_array_len power_add pte_bits_def word_size_bits_def)
+  have szo2[unfolded array_len_def]: "array_len * size_of TYPE(pte_C) = 2 ^ ptBits pt_t"
+    by (simp add: szo[symmetric] pt_bits_def table_size_def pt_t_def array_len_def
+                  ptTranslationBits_vs_array_len power_add pte_bits_def word_size_bits_def)
+  have szo': "size_of TYPE(pte_C) = 2 ^ objBitsKO ko"
+    by (simp add: objBits_simps ko_def bit_simps)
+
+  note rl' = cslift_ptr_retyp_other_inst[where n=1,
+    simplified, OF empty, simplified, OF cover[simplified]
+    szo[symmetric] szo[simplified bit_simps_corres]]
+
+  have sz_weaken: "objBitsKO ko \<le> ptBits pt_t"
+    by (simp add: objBits_simps ko_def bit_simps)
+  have cover'[unfolded array_len_def]: "range_cover ptr sz (objBitsKO ko) array_len"
+    apply (rule range_cover_rel[OF cover sz_weaken])
+    apply (simp add: ptBits_def objBits_simps ko_def pt_bits_def table_size_def pt_t_def
+                     array_len_def ptTranslationBits_vs_array_len)
+    done
+  from sz sz_weaken have sz': "objBitsKO ko \<le> sz" by simp
+  note al' = is_aligned_weaken[OF al sz_weaken]
+
+  have koT: "koTypeOf ko = ArchT PTET"
+    by (simp add: ko_def)
+
+  note rl = projectKO_opt_retyp_other [OF cover' pal pno ko_def]
+  note cterl = retype_ctes_helper [OF pal pdst pno al' sz' szb mko cover']
+
+  have guard: "c_guard ?ptr"
+    using al[simplified bit_simps]
+    apply -
+    apply (rule is_aligned_c_guard[where n="ptBits pt_t" and m=3])
+    apply (simp_all add:  align_td_array align_of_def bit_simps ptr0 split: if_split)
+    done
+
+  have guard'[unfolded array_len_def]: "\<forall>n < array_len. c_guard (pte_Ptr ptr +\<^sub>p int n)"
+    unfolding array_len_def
+    using al[simplified bit_simps]
+    apply -
+    apply (rule retype_guard_helper [OF cover' ptr0 szo', where m=3])
+     apply (simp_all add: objBits_simps ko_def align_of_def bit_simps)
+    done
+
+  note ptr_retyps.simps[simp del]
+
+  from rf have pterl: "cmap_relation (map_to_ptes (ksPSpace \<sigma>)) (cslift x) Ptr cpte_relation"
+    unfolding rf_sr_def cstate_relation_def by (simp add: Let_def cpspace_relation_def)
+
+  note ht_rl = clift_eq_h_t_valid_eq[OF rl', OF tag_disj_via_td_name, simplified]
+    uinfo_array_tag_n_m_not_le_typ_name
+
+  have ptTranslationBits_num[unfolded array_len_def]:
+    "2 ^ ptTranslationBits pt_t = array_len"
+    by (simp add: array_len_def pt_t_def ptTranslationBits_vs_array_len)
+
+  from rf have "cpspace_relation (ksPSpace \<sigma>) (underlying_memory (ksMachineState \<sigma>)) (t_hrs_' (globals x))"
+    unfolding rf_sr_def cstate_relation_def by (simp add: Let_def)
+  hence "cpspace_relation ?ks (underlying_memory (ksMachineState \<sigma>))  ?ks'"
+    unfolding cpspace_relation_def
+    supply image_cong_simp [cong del]
+    apply (clarsimp simp: rl' cterl cte_C_size tag_disj_via_td_name ptTranslationBits_num
+                          foldr_upd_app_if [folded data_map_insert_def])
+    apply (simp add: ptr_retyp_to_array[simplified])
+    apply (subst clift_ptr_retyps_gen_prev_memset_same[OF guard'], simp_all only: szo2 empty)
+       apply simp
+      apply (simp(no_asm) add: bit_simps word_bits_def pt_t_def split: if_split)
+     apply (simp add: zero[simplified])
+    apply (simp add: rl del: pte_C_size)
+    apply (simp add: rl projectKO_opt_retyp_same ko_def Let_def
+                     ptr_add_to_new_cap_addrs [OF szo']
+                cong: if_cong del: pte_C_size)
+    apply (erule cmap_relation_retype)
+    apply (insert relrl, auto)
+    done
+
+  with rf empty kernel_data_refs_disj rzo
+  show ?thesis
+    apply (simp add: rf_sr_def cstate_relation_def Let_def rl' tag_disj_via_td_name)
+    apply (simp add: carch_state_relation_def cmachine_state_relation_def)
+    apply (clarsimp simp: rl' cterl tag_disj_via_td_name pt_t_def ptTranslationBits_vs_array_len
+                          pt_bits_def table_size_def power_add pte_bits_def word_size_bits_def
+                          hrs_htd_update ht_rl foldr_upd_app_if [folded data_map_insert_def] rl
+                          cvariable_array_ptr_retyps[OF szo]
+                          zero_ranges_ptr_retyps[where p="pt_Ptr ptr", simplified szo])
+    apply (subst h_t_valid_ptr_retyps_gen_disjoint, assumption)
+     apply (simp add:szo cte_C_size cte_level_bits_def)
+     apply (erule disjoint_subset)
+     apply (simp del: replicate_numeral)
+    apply (subst h_t_valid_ptr_retyps_gen_disjoint, assumption)
+     apply (simp add:szo cte_C_size cte_level_bits_def)
+     apply (erule disjoint_subset)
+     apply (simp del: replicate_numeral)
+    apply (simp add: szo ptr_retyps_htd_safe_neg hrs_htd_def Int_ac
+                     kernel_data_refs_domain_eq_rotate
+                del: replicate_numeral)
+    done
+
+qed
 
 definition object_type_from_H :: "object_type \<Rightarrow> machine_word" where
   "object_type_from_H tp' \<equiv> case tp' of
@@ -3534,6 +3684,24 @@ proof -
         THEN h_t_array_valid, simplified])
     done
 
+  moreover
+  from rfsr
+  have "pt_array_relation \<sigma> (globals x)"
+    by (simp add: rf_sr_def cstate_relation_def Let_def)
+  hence "cvariable_array_map_relation (gsPTTypes (ksArchState \<sigma>))
+                                     (\<lambda>pt_t. 2 ^ ptTranslationBits pt_t)
+                                     pte_Ptr
+                                     (hrs_htd (t_hrs_' ?gs))"
+    apply (clarsimp simp: heap_updates_def)
+    apply (drule cvariable_array_ptr_retyps[OF refl, where n=1 and arr=False, simplified, rotated])
+     apply (rule empty_smaller)
+    apply (simp add: hrs_htd_update)
+    apply (erule cvariable_array_ptr_retyps[where p="tcb_cnode_Ptr (ctcb_ptr_to_tcb_ptr p)", rotated -1])
+     apply (rule refl)
+    apply simp
+    apply (rule empty_smaller[simplified])
+    done
+
   ultimately show ?thesis
     using rfsr zro'
     apply (simp add: rf_sr_def cstate_relation_def Let_def h_t_valid_clift_Some_iff
@@ -4601,17 +4769,13 @@ proof -
                      kernel_state.unfold_congs)
 qed
 
-(* FIXME AARCH64 since this uses a retype of pt_Ptr it must be NormalPT_T, but what do we do about
-   vs_Ptr? copy this lemma and adjust? In any case, this one needs rework, and adjustment of ghost
-   state updates in C *)
-lemma placeNewObject_pte:
+lemma placeNewObject_pte_pt:
   "ccorresG rf_sr \<Gamma> dc xfdc
-   ( valid_global_refs' and pspace_aligned' and pspace_distinct' and pspace_no_overlap' regionBase pageBits
+   (valid_global_refs' and pspace_aligned' and pspace_distinct' and pspace_no_overlap' regionBase pageBits
       and (\<lambda>s. 2 ^ pageBits \<le> gsMaxObjectSize s)
       and ret_zero regionBase (2 ^ pageBits)
       and K (regionBase \<noteq> 0 \<and> range_cover regionBase pageBits pageBits 1
-      \<and> ({regionBase..+2 ^ pageBits} \<inter> kernel_data_refs = {})
-      ))
+      \<and> ({regionBase..+2 ^ pageBits} \<inter> kernel_data_refs = {})))
     ({s. region_actually_is_zero_bytes regionBase (2 ^ pageBits) s})
     hs
     (placeNewObject regionBase (makeObject :: pte) (ptTranslationBits NormalPT_T))
@@ -4633,11 +4797,10 @@ lemma placeNewObject_pte:
   apply (subgoal_tac "region_is_bytes regionBase 4096 x")
    apply (rule bexI [OF _ placeNewObject_eq])
       apply (clarsimp simp: split_def new_cap_addrs_def)
-      apply (cut_tac s=\<sigma> in createObjects_ccorres_pte [where ptr=regionBase and sz=pageBits])
-      sorry (* FIXME AARCH64 rework needed from createObjects_ccorres_pte
+      apply (cut_tac s=\<sigma> in createObjects_ccorres_pte_pt [where ptr=regionBase and sz=pageBits])
       apply (erule_tac x=\<sigma> in allE, erule_tac x=x in allE)
       apply (clarsimp elim!: is_aligned_weaken simp: objBitsKO_def word_bits_def)+
-      apply (clarsimp simp: split_def objBitsKO_def archObjSize_def
+      apply (clarsimp simp: objBitsKO_def archObjSize_def
                             rf_sr_def split_def Let_def ptr_retyps_gen_def
                             new_cap_addrs_def field_simps power_add
                       cong: globals.unfold_congs)
@@ -4646,7 +4809,65 @@ lemma placeNewObject_pte:
     apply (clarsimp simp: objBitsKO_def range_cover.aligned archObjSize_def bit_simps)
    apply (clarsimp simp: no_fail_def)
   apply (simp add: region_actually_is_bytes bit_simps)
- done *)
+  done
+
+(* FIXME AARCH64: move; could be simp *)
+lemma pt_bits_minus_pte_bits:
+  "pt_bits pt_t - pte_bits = ptTranslationBits pt_t"
+  by (simp add: bit_simps)
+
+(* FIXME AARCH64: move; could be simp *)
+lemma ptTranslationBits_plus_pte_bits:
+  "ptTranslationBits pt_t + pte_bits = pt_bits pt_t"
+  by (simp add: bit_simps)
+
+lemma placeNewObject_pte_vs:
+  "ccorresG rf_sr \<Gamma> dc xfdc
+   (valid_global_refs' and pspace_aligned' and pspace_distinct'
+      and pspace_no_overlap' regionBase (pt_bits VSRootPT_T)
+      and (\<lambda>s. 2 ^ pt_bits VSRootPT_T \<le> gsMaxObjectSize s)
+      and ret_zero regionBase (2 ^ pt_bits VSRootPT_T)
+      and K (regionBase \<noteq> 0 \<and> range_cover regionBase (pt_bits VSRootPT_T) (pt_bits VSRootPT_T) 1
+      \<and> ({regionBase..+2 ^ pt_bits VSRootPT_T} \<inter> kernel_data_refs = {})))
+    ({s. region_actually_is_zero_bytes regionBase (2 ^ pt_bits VSRootPT_T) s})
+    hs
+    (placeNewObject regionBase (makeObject :: pte) (ptTranslationBits VSRootPT_T))
+    (global_htd_update (\<lambda>_. (ptr_retyp (vs_Ptr regionBase))))"
+  apply (rule ccorres_from_vcg_nofail)
+  apply clarsimp
+  apply (rule conseqPre)
+  apply vcg
+  apply (clarsimp simp: rf_sr_htd_safe)
+  apply (intro conjI allI impI)
+   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
+                         kernel_data_refs_domain_eq_rotate)
+   apply (erule ptr_retyp_htd_safe_neg)
+    apply (simp add: pt_bits_def table_size_def power_add ptTranslationBits_vs_array_len)
+    apply (simp add: bit_simps)
+   apply simp
+  apply (frule range_cover_rel[where sbit' = pte_bits])
+    apply (simp add: bit_simps split: if_split)
+   apply (rule refl)
+  apply (frule range_cover.unat_of_nat_shift[where gbits = 3 ])
+    apply (simp add: bit_simps)
+   apply (rule le_refl)
+  apply (subgoal_tac "region_is_bytes regionBase (2 ^ pt_bits VSRootPT_T) x")
+   apply (rule bexI [OF _ placeNewObject_eq])
+      apply (clarsimp simp: split_def new_cap_addrs_def)
+      apply (cut_tac s=\<sigma> in createObjects_ccorres_pte_vs[where ptr=regionBase and sz="pt_bits VSRootPT_T"])
+      apply (erule_tac x=\<sigma> in allE, erule_tac x=x in allE)
+      apply (clarsimp elim!: is_aligned_weaken simp: objBitsKO_def word_bits_def)+
+      apply (clarsimp simp: objBitsKO_def archObjSize_def pt_bits_minus_pte_bits
+                            rf_sr_def split_def Let_def ptr_retyps_gen_def
+                            new_cap_addrs_def field_simps power_add
+                      cong: globals.unfold_congs)
+      apply (simp add: Int_ac)
+     apply (clarsimp simp: word_bits_conv range_cover_def archObjSize_def)
+    apply (clarsimp simp: objBitsKO_def range_cover.aligned archObjSize_def
+                          ptTranslationBits_plus_pte_bits)
+   apply (clarsimp simp: no_fail_def)
+  apply (simp add: region_actually_is_bytes bit_simps)
+  done
 
 (* FIXME move *)
 lemma dom_disj_union:
@@ -5477,8 +5698,19 @@ proof -
     apply (simp add: projectKO_opt_retyp_other' objBitsKO_vcpu cl_vcpu)
     done
 
+  from sr
+  have "pt_array_relation \<sigma> (globals \<sigma>')"
+    by (simp add: rf_sr_def cstate_relation_def Let_def)
+  hence pt_array:
+    "cvariable_array_map_relation (gsPTTypes (ksArchState \<sigma>))
+                                  (\<lambda>pt_t. 2 ^ ptTranslationBits pt_t)
+                                  pte_Ptr
+                                  (hrs_htd ?htdret)"
+    using is_bytes cvariable_array_ptr_retyps[where n=1 and p="vcpu_Ptr p" and arr=False]
+    by (fastforce simp add: hrs_htd_update ptr_retyps_gen_def)
+
   show ?thesis
-    using assms zro' csrel' arel csrel map_vcpus
+    using assms zro' csrel' arel csrel map_vcpus pt_array
     apply (clarsimp simp: ko_vcpu_def vcpu0_def)
     apply (clarsimp simp: rf_sr_def cstate_relation_def carch_state_relation_def
                           cmachine_state_relation_def Let_def h_t_valid_clift_Some_iff)
@@ -5603,6 +5835,27 @@ lemma canonical_address_and_maskD:
   apply fastforce
   done
 
+lemma updatePTType_ccorres:
+  "ccorres dc xfdc
+           \<top>
+           {s. h_t_array_valid (hrs_htd (t_hrs_' (globals s)))
+                               (pte_Ptr regionBase)
+                               (2 ^ ptTranslationBits pt_t)}
+           hs
+           (updatePTType regionBase pt_t)
+           (Basic (globals_update (ghost'state_'_update (gs_new_pt_t pt_t regionBase))))"
+  apply (rule ccorres_from_vcg)
+  apply vcg_step
+  apply (clarsimp simp: updatePTType_def simpler_gets_def simpler_modify_def bind_def return_def)
+  apply (case_tac "ghost'state_' (globals x)")
+  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def fun_upd_def
+                        carch_state_relation_def cmachine_state_relation_def
+                        gs_new_pt_t_def ghost_size_rel_def carch_globals_def
+                        ghost_assertion_data_get_def
+                  cong: if_cong)
+  apply (clarsimp simp: cvariable_array_map_relation_def split: if_splits)
+  done
+
 (* FIXME AARCH64 multiple issues in vspace objects, possibly missing ghost state updates, and
    page table ghost state in state relation *)
 lemma Arch_createObject_ccorres:
@@ -5670,19 +5923,57 @@ subgoal
                    placeNewDataObject_ccorres[where us=18 and newType=newType, simplified]
                    gsUserPages_update_ccorres[folded modify_gsUserPages_update])
            | (rule match_ccorres, csymbr))+)[1]
-       sorry (* FIXME AARCH64
        apply (intro conjI)
         apply (clarsimp simp: createObject_hs_preconds_def frameSizeConstants_defs ptTranslationBits_def
                               APIType_capBits_def pageBits_def)
        apply (clarsimp simp: pageBits_def ccap_relation_def APIType_capBits_def
                    framesize_to_H_def cap_to_H_simps cap_frame_cap_lift
                    vm_page_size_defs ptTranslationBits_def
-                   vmrights_to_H_def mask_def vm_rights_defs c_valid_cap_def cl_valid_cap_def)  *)
-
+                   canonical_address_and_maskD[unfolded mask_def, simplified]
+                   vmrights_to_H_def mask_def vm_rights_defs c_valid_cap_def cl_valid_cap_def)
+  done
       apply (in_case "VSpaceObject")
-subgoal
-  (* FIXME AARCH64 TODO *)
-sorry
+  subgoal
+    apply (cinit' lift: t_' regionBase_' userSize_' deviceMemory_')
+     apply (simp add: object_type_from_H_def Kernel_C_defs)
+     apply (simp add: ccorres_cond_univ_iff ccorres_cond_empty_iff asidInvalid_def
+                      sle_positive APIType_capBits_def shiftL_nat objBits_simps
+                      ptBits_def pageBits_def word_sle_def word_sless_def)
+     apply (rule ccorres_rhs_assoc)+
+     apply (clarsimp simp: hrs_htd_update bitSimps objBits_simps
+                           AARCH64_H.createObject_def pt_bits_minus_pte_bits)
+     apply (ctac pre only: add: placeNewObject_pte_vs[simplified])
+       apply (ctac only: add: updatePTType_ccorres)
+         apply csymbr
+         apply (rule ccorres_return_C)
+           apply simp
+          apply simp
+         apply simp
+        apply wp
+       apply vcg
+      apply wp
+     apply vcg
+    apply clarify
+    apply (intro conjI)
+     apply (clarsimp simp: invs_pspace_aligned' invs_pspace_distinct' invs_valid_global'
+                           APIType_capBits_def invs_queues invs_valid_objs'
+                           invs_urz)
+    apply clarsimp
+    apply (clarsimp simp: ccap_relation_def APIType_capBits_def
+                          framesize_to_H_def cap_to_H_simps cap_vspace_cap_lift
+                          vmrights_to_H_def isFrameType_def canonical_address_and_maskD)
+    apply (prop_tac "c_guard (vs_Ptr regionBase)")
+     apply (rule is_aligned_c_guard[where m=pte_bits], simp, simp)
+       apply (simp add: align_of_array)
+       apply (simp add: align_of_def bit_simps)
+      apply (simp add: bit_simps split: if_split)
+     apply (simp add: bit_simps)
+    apply (drule_tac p="vs_Ptr regionBase" and
+                     d="hrs_htd (t_hrs_' (globals s'))" and
+                     g="c_guard" in ptr_retyp_h_t_valid)
+    apply (drule h_t_array_valid)
+    apply (simp add: hrs_htd_update ptTranslationBits_vs_array_len)
+    done
 
       apply (in_case "SmallPageObject")
 subgoal
@@ -5700,14 +5991,14 @@ subgoal
                 placeNewDataObject_ccorres[where us=0 and newType=newType, simplified]
                 gsUserPages_update_ccorres[folded modify_gsUserPages_update])
         | (rule match_ccorres, csymbr))+)[1]
-      sorry (* FIXME AARCH64
       apply (intro conjI)
        apply (clarsimp simp: createObject_hs_preconds_def frameSizeConstants_defs
                             APIType_capBits_def pageBits_def)
-       apply (clarsimp simp: pageBits_def ccap_relation_def APIType_capBits_def
-                 framesize_to_H_def cap_to_H_simps cap_frame_cap_lift vm_page_size_defs
-                 vmrights_to_H_def mask_def vm_rights_defs c_valid_cap_def cl_valid_cap_def) *)
-
+       apply (clarsimp simp: pageBits_def ccap_relation_def APIType_capBits_def cl_valid_cap_def
+                             framesize_to_H_def cap_to_H_simps cap_frame_cap_lift vm_page_size_defs
+                             canonical_address_and_maskD[unfolded mask_def, simplified]
+                             vmrights_to_H_def mask_def vm_rights_defs c_valid_cap_def)
+  done
      apply (in_case "LargePageObject")
 subgoal
      apply (cinit' lift: t_' regionBase_' userSize_' deviceMemory_')
@@ -5719,7 +6010,6 @@ subgoal
                             pageBits_def ptTranslationBits_def cond_second_eq_seq_ccorres
                             modify_gsUserPages_update
                       intro!: ccorres_rhs_assoc)
-      sorry (* FIXME AARCH64
       apply ((rule ccorres_return_C | simp | wp | vcg
         | (rule match_ccorres, ctac add:
                 placeNewDataObject_ccorres[where us=9 and newType=newType, simplified]
@@ -5731,38 +6021,56 @@ subgoal
       apply (clarsimp simp: pageBits_def ccap_relation_def APIType_capBits_def
                             framesize_to_H_def cap_to_H_simps cap_frame_cap_lift
                             ptTranslationBits_def vm_page_size_defs vmrights_to_H_def
-                            mask_def vm_rights_defs c_valid_cap_def cl_valid_cap_def) *)
+                            canonical_address_and_maskD[unfolded mask_def, simplified]
+                            mask_def vm_rights_defs c_valid_cap_def cl_valid_cap_def)
+  done
 
     apply (in_case "PageTableObject")
+    (* FIXME AARCH64: goal here shows a vs_Ptr, but that is only because pt_Ptr and vs_Ptr are the
+                      same type in this config. Probably should get a comment at def of vs_Ptr *)
 subgoal
     apply (cinit' lift: t_' regionBase_' userSize_' deviceMemory_')
      apply (simp add: object_type_from_H_def Kernel_C_defs)
      apply (simp add: ccorres_cond_univ_iff ccorres_cond_empty_iff asidInvalid_def
                       sle_positive APIType_capBits_def shiftL_nat objBits_simps
                       ptBits_def pageBits_def word_sle_def word_sless_def)
-     sorry (* FIXME AARCH64
      apply (rule ccorres_rhs_assoc)+
      apply (clarsimp simp: hrs_htd_update bitSimps objBits_simps word_size_bits_def
                            AARCH64_H.createObject_def pageBits_def pt_bits_def table_size
                            pte_bits_def)
-     apply (ctac pre only: add: placeNewObject_pte[simplified ptTranslationBits_def])
-       apply csymbr
-       apply (rule ccorres_return_C)
+     apply (ctac pre only: add: placeNewObject_pte_pt[simplified ptTranslationBits_def, simplified])
+       apply (ctac only: add: updatePTType_ccorres)
+         apply csymbr
+         apply (rule ccorres_return_C)
+           apply simp
+          apply simp
          apply simp
-        apply simp
-       apply simp
+        apply wp
+       apply vcg
       apply wp
      apply vcg
     apply clarify
     apply (intro conjI)
      apply (clarsimp simp: invs_pspace_aligned' invs_pspace_distinct' invs_valid_global'
                            APIType_capBits_def invs_queues invs_valid_objs'
-                           invs_urz pageBits_def)
+                           invs_urz bit_simps)
     apply clarsimp
-    apply (clarsimp simp: pageBits_def ccap_relation_def APIType_capBits_def
+    apply (clarsimp simp: bit_simps ccap_relation_def APIType_capBits_def
                           framesize_to_H_def cap_to_H_simps cap_page_table_cap_lift
-                          vmrights_to_H_def isFrameType_def) *)
+                          vmrights_to_H_def isFrameType_def canonical_address_and_maskD)
+    apply (prop_tac "c_guard (pt_Ptr regionBase)")
+     apply (rule is_aligned_c_guard[where m=pte_bits], simp, simp)
+       apply (simp add: align_of_array)
+       apply (simp add: align_of_def bit_simps)
+      apply simp
+     apply (simp add: bit_simps)
+    apply (drule_tac p="pt_Ptr regionBase" and
+                     d="hrs_htd (t_hrs_' (globals s'))" and
+                     g="c_guard" in ptr_retyp_h_t_valid)
+    apply (drule h_t_array_valid)
+    apply (simp add: hrs_htd_update)
     done
+  done
 qed
 
 (* FIXME: with the current state of affairs, we could simplify gs_new_cnodes *)
@@ -6804,12 +7112,66 @@ lemma tcb_ctes_typ_region_bytes:
   apply (simp add: objBits_simps' cte_C_size)
   done
 
+
+context begin
+
+private definition "pte_bits2 = pte_bits"
+private lemma pte_bits2_num[simplified pte_bits_def bit_simps]:
+  "pte_bits2 = pte_bits" by (rule pte_bits2_def)
+
+lemma pte_bits_power_add[unfolded pte_bits2_num, simplified]:
+  "(2^pte_bits2) * 2 ^ x = (2::nat) ^ (pte_bits + x)"
+  by (simp add: power_add pte_bits2_def)
+
+end
+
+lemma pte_typ_region_bytes: (* FIXME AARCH64: should rename cnodes_retype_have_size into something more general *)
+  "\<lbrakk> cvariable_array_map_relation (gsPTTypes (ksArchState \<sigma>)) (\<lambda>x. 2^ptTranslationBits x) pte_Ptr
+                                 (hrs_htd hrs);
+     cnodes_retype_have_size {ptr..+2 ^ bits} bits
+                             (gsPTTypes (ksArchState \<sigma>) ||> (\<lambda>pt_t. ptBits pt_t - cte_level_bits));
+     0 \<notin> {ptr..+2 ^ bits}; is_aligned ptr bits;
+    clift (hrs_htd_update (typ_region_bytes ptr bits) hrs) = (clift hrs :: pte_C ptr \<Rightarrow> _) \<rbrakk>
+    \<Longrightarrow> cvariable_array_map_relation (gsPTTypes (ksArchState \<sigma>)) (\<lambda>x. 2^ptTranslationBits x)
+        pte_Ptr (typ_region_bytes ptr bits (hrs_htd hrs))"
+  apply (clarsimp simp: cvariable_array_map_relation_def h_t_array_valid_def)
+  apply (elim allE, erule impE, fastforce)
+  apply (subst valid_footprint_typ_region_bytes)
+   apply (simp add: uinfo_array_tag_n_m_def typ_uinfo_t_def typ_info_word)
+  apply (clarsimp simp: cnodes_retype_have_size_def field_simps pte_bits_power_add)
+  apply (erule allE, erule allE, erule impE, fastforce simp: in_omonad)
+  apply (clarsimp simp: pt_bits_def table_size_def)
+  apply (subst (asm) le_add_diff_inverse2, simp add: bit_simps cte_level_bits_def split: if_splits)+
+  apply (clarsimp simp add: upto_intvl_eq[symmetric] field_simps)
+  apply (case_tac "p \<in> {ptr ..+ 2 ^ bits}")
+   apply (drule h_t_array_first_element_at[where p="Ptr p" and gd=c_guard for p,
+                                           unfolded h_t_array_valid_def, simplified])
+     apply simp
+    apply (rule is_aligned_c_guard[where m=3], simp+)
+       apply clarsimp
+      apply (simp add: align_of_def)
+     apply (simp add: size_of_def power_add bit_simps split: if_split)
+    apply (simp add: bit_simps split: if_split)
+   apply (drule_tac x="pte_Ptr p" in fun_cong)
+   apply (simp add: liftt_if[folded hrs_htd_def] hrs_htd_update
+                    h_t_valid_def valid_footprint_typ_region_bytes
+             split: if_split_asm)
+   apply (subgoal_tac "p \<in> {p ..+ size_of TYPE(pte_C)}")
+    apply simp
+    apply blast
+   apply (simp add: intvl_self)
+  apply (simp only: upto_intvl_eq mask_in_range[symmetric])
+  apply (rule aligned_ranges_subset_or_disjoint_coroll; simp)
+  done
+
 lemma ccorres_typ_region_bytes_dummy:
   "ccorresG rf_sr
      AnyGamma dc xfdc
      (invs' and ct_active' and sch_act_simple and
       pspace_no_overlap' ptr bits and
-      (cnodes_retype_have_size S bits o gsCNodes)
+      (cnodes_retype_have_size S bits o gsCNodes) and
+      (\<lambda>\<sigma>. cnodes_retype_have_size S bits
+                                   (gsPTTypes (ksArchState \<sigma>) ||> (\<lambda>pt_t. ptBits pt_t-cte_level_bits)))
       and K (bits < word_bits \<and> is_aligned ptr bits \<and> 4 \<le> bits
          \<and> 0 \<notin> {ptr..+2 ^ bits}
          \<and> {ptr ..+ 2 ^ bits} \<subseteq> S
@@ -6849,13 +7211,14 @@ lemma ccorres_typ_region_bytes_dummy:
   apply (simp add: h_t_valid_clift_Some_iff)
   apply (simp add: hrs_htd_update gsCNodes_typ_region_bytes
                    cnodes_retype_have_size_mono[where T=S]
-                   tcb_ctes_typ_region_bytes[OF _ _ invs_pspace_aligned'])
+                   tcb_ctes_typ_region_bytes[OF _ _ invs_pspace_aligned']
+                   pte_typ_region_bytes o_def)
   (* FIXME AARCH64 abstraction violation, need to know config_ARM_PA_SIZE_BITS_40 is False *)
   apply (simp add: cmap_array_typ_region_bytes_triv invs_pspace_aligned' bit_simps
                    objBitsT_simps word_bits_def zero_ranges_are_zero_typ_region_bytes
                    Kernel_Config.config_ARM_PA_SIZE_BITS_40_def
              cong: conj_cong)
-  apply (rule htd_safe_typ_region_bytes, simp, blast)
+  apply (rule htd_safe_typ_region_bytes, simp (no_asm_simp), blast)
   done
 
 lemma region_is_typeless_cong:
@@ -7549,6 +7912,27 @@ lemma createObject_cnodes_have_size:
                        split: if_split_asm)
   done
 
+crunches placeNewDataObject
+  for ksArchState[wp]: "\<lambda>s. P (ksArchState s)"
+  (simp: crunch_simps)
+
+lemma createObject_cnodes_have_size_pt[unfolded o_def]:
+  "\<lbrace>\<lambda>s. is_aligned ptr (APIType_capBits newType userSize)
+      \<and> cnodes_retype_have_size R (APIType_capBits newType userSize) (gsPTTypes (ksArchState s) ||> (\<lambda>pt_t. pt_bits pt_t - cte_level_bits))\<rbrace>
+    createObject newType ptr userSize dev
+  \<lbrace>\<lambda>rv s. cnodes_retype_have_size R (APIType_capBits newType userSize) (gsPTTypes (ksArchState s) ||> (\<lambda>pt_t. pt_bits pt_t - cte_level_bits))\<rbrace>"
+  supply fun_upd_apply[simp del] fun_upd_def[symmetric, simp]
+  apply (simp add: createObject_def)
+  apply (rule hoare_pre)
+   apply (wp mapM_x_wp' | wpc | simp add: createObjects_def AARCH64_H.createObject_def updatePTType_def)+
+  apply (cases newType, simp_all add: AARCH64_H.toAPIType_def o_def)
+   apply (rule conjI, clarsimp)+
+   apply clarsimp
+  supply fun_upd_def[symmetric, simp del] fun_upd_apply[simp]
+  apply (clarsimp simp: APIType_capBits_def cnodes_retype_have_size_def bit_simps cte_level_bits_def
+                       split: if_split_asm)+
+  done
+
 lemma range_cover_not_in_neqD:
   "\<lbrakk> x \<notin> {ptr..ptr + (of_nat n << APIType_capBits newType userSize) - 1};
     range_cover ptr sz (APIType_capBits newType userSize) n; n' < n \<rbrakk>
@@ -7869,6 +8253,8 @@ shows  "ccorres dc xfdc
                   and (\<lambda>s. descendants_range_in' {ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1} srcSlot (ctes_of s))
                   and cnodes_retype_have_size {ptr .. ptr + of_nat (length destSlots) * 2^ (getObjectSize newType userSize) - 1}
                       (APIType_capBits newType userSize) o gsCNodes
+                  and (\<lambda>s. cnodes_retype_have_size {ptr .. ptr + of_nat (length destSlots) * 2^ (getObjectSize newType userSize) - 1}
+                      (APIType_capBits newType userSize) (gsPTTypes (ksArchState s) ||> (\<lambda>pt_t. ptBits pt_t - cte_level_bits)))
                   and (K (srcSlot \<notin> set destSlots
                     \<and> destSlots \<noteq> []
                     \<and> range_cover ptr sz (getObjectSize newType userSize) (length destSlots)
@@ -8156,6 +8542,7 @@ shows  "ccorres dc xfdc
                   hoare_vcg_prop createObject_gsCNodes_p createObject_cnodes_have_size)
         apply (rule hoare_vcg_conj_lift[OF createObject_capRange_helper])
          apply (wp createObject_cte_wp_at' createObject_ex_cte_cap_wp_to
+                   createObject_cnodes_have_size_pt
                    createObject_no_inter[where sz = sz] hoare_vcg_all_lift hoare_weak_lift_imp)+
        apply (clarsimp simp:invs_pspace_aligned' invs_pspace_distinct' invs_valid_pspace'
          field_simps range_cover.sz conj_comms range_cover.aligned range_cover_sz'
@@ -8278,7 +8665,7 @@ shows  "ccorres dc xfdc
         createObject_hs_preconds_def range_cover.aligned range_cover_full)
    apply (frule(1) range_cover_gsMaxObjectSize, fastforce, assumption)
    apply (simp add: intvl_range_conv[OF range_cover.aligned range_cover_sz']
-                    order_trans[OF _ APIType_capBits_min])
+                    order_trans[OF _ APIType_capBits_min] o_def)
    apply (intro conjI)
            subgoal by (simp add: word_bits_def range_cover_def)
           apply (clarsimp simp:rf_sr_def cstate_relation_def Let_def)

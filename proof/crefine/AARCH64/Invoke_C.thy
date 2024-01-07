@@ -2240,6 +2240,9 @@ lemma zero_bytes_heap_update:
   apply (simp add: Int_commute)
   done
 
+crunches updateFreeIndex
+  for ksArchState[wp]: "\<lambda>s. P (ksArchState s)"
+
 lemma invokeUntyped_Retype_ccorres:
   "ccorres (cintr \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
      (invs' and ct_active' and ex_cte_cap_to' cnodeptr
@@ -2393,6 +2396,8 @@ lemma invokeUntyped_Retype_ccorres:
          apply csymbr
          apply (rule ccorres_move_c_guard_cte)
          apply (rule ccorres_stateAssert)
+         apply (rule_tac P="\<lambda>s. cnodes_retype_have_size {ptr..ptr + word_of_nat (length destSlots) * 2 ^ APIType_capBits newType (unat userSize) - 1} (APIType_capBits newType (unat userSize))
+                (gsPTTypes (ksArchState s) |> (\<lambda>pt_t. Some (pt_bits pt_t - cte_level_bits)))" in ccorres_gen_asm_state) (* FIXME AARCH64: add haskell state assert *)
          apply (rule ccorres_assert)
 
          apply (rule ccorres_cross_retype_zero_bytes_over_guard[where
@@ -2506,6 +2511,7 @@ lemma invokeUntyped_Retype_ccorres:
             apply (rule order_trans, erule range_cover.range_cover_base_le,
               simp add: shiftl_t2n field_simps)
            apply (simp add: shiftl_t2n field_simps)
+           subgoal sorry (* FIXME AARCH64: cnodes_retype_have_size; should disappear with assert *)
           (* subsets *)
           apply (rule order_trans, erule invokeUntyped_proofs.subset_stuff)
           apply (simp add: atLeastatMost_subset_iff word_and_le2)

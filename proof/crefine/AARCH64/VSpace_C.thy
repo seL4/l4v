@@ -119,8 +119,8 @@ lemma rf_asidTable:
   apply (clarsimp simp: mask_def split: option.split)
   apply (drule sym, simp)
   apply (simp add: option_to_ptr_def option_to_0_def)
-  apply (clarsimp simp: invs'_def valid_state'_def valid_arch_state'_def
-                        valid_asid_table'_def ran_def)
+  apply (fastforce simp: invs'_def valid_state'_def valid_arch_state'_def
+                         valid_asid_table'_def ran_def)
   done
 
 lemma getKSASIDTable_ccorres_stuff:
@@ -1702,16 +1702,17 @@ lemma canonical_address_page_table_at':
 lemma page_table_at'_array_assertion:
   assumes "(s,s') \<in> rf_sr"
   assumes "page_table_at' VSRootPT_T pt s"
+  assumes "gsPTTypes (ksArchState s) pt = Some VSRootPT_T"
   assumes "n \<le> 2^(ptTranslationBits  VSRootPT_T)" "0 < n"
   shows "array_assertion (pte_Ptr pt) n (hrs_htd (t_hrs_' (globals s')))"
   using assms
-  by (fastforce simp: bit_simps
-                intro: array_assertion_abs_vspace[where x="\<lambda>_. (1::nat)", simplified, rule_format])
+  by (fastforce intro: array_assertion_abs_vspace[where x="\<lambda>_. (1::nat)", simplified, rule_format])
 
 (* FIXME AARCH64 probably not needed for this arch, because no copy global mappings *)
 lemma page_table_at'_array_assertion_weak[unfolded ptTranslationBits_def, simplified]:
   assumes "(s,s') \<in> rf_sr"
   assumes "page_table_at' VSRootPT_T pt s"
+  assumes "gsPTTypes (ksArchState s) pt = Some VSRootPT_T"
   assumes "n < 2^(ptTranslationBits VSRootPT_T - 1)"
   shows "array_assertion (pte_Ptr pt) ((unat (2^(ptTranslationBits VSRootPT_T - 1) + of_nat n::machine_word)))
                          (hrs_htd (t_hrs_' (globals s')))"
@@ -1724,6 +1725,7 @@ lemma page_table_at'_array_assertion_weak[unfolded ptTranslationBits_def, simpli
 lemma page_table_at'_array_assertion_strong[unfolded ptTranslationBits_def, simplified]:
   assumes "(s,s') \<in> rf_sr"
   assumes "page_table_at' VSRootPT_T pt s"
+  assumes "gsPTTypes (ksArchState s) pt = Some VSRootPT_T"
   assumes "n < 2^(ptTranslationBits VSRootPT_T - 1)"
   shows "array_assertion (pte_Ptr pt) (Suc (unat (2^(ptTranslationBits VSRootPT_T - 1) + of_nat n::machine_word)))
                          (hrs_htd (t_hrs_' (globals s')))"

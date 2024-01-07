@@ -1681,8 +1681,9 @@ proof -
       apply (clarsimp simp: restrict_map_Some_iff image_iff
                             map_comp_restrict_map_Some_iff)
      apply (simp add: cmap_relation_restrict_both_proj)
+  (* FIXME AARCH64: remove if unneeded at the end
     (* if config_ARM_PA_SIZE_BITS_40 ... means cmap_array can't fire above without making a mess *)
-    apply (simp add: cmap_array split: if_split)
+    apply (simp add: cmap_array split: if_split) *)
     done
 
   moreover
@@ -1916,6 +1917,20 @@ proof -
     apply (simp add: upto_intvl_eq al)
     apply (rule disjoint_subset[OF _ ptr_refs])
     apply (simp add: cinterrupt_relation_def cte_level_bits_def)
+    done
+
+  moreover
+  have "\<And>p v. \<lbrakk>gsPTTypes (ksArchState s) p = Some v; p \<notin> {ptr..+2 ^ bits}\<rbrakk>
+               \<Longrightarrow> {p..+2^ptTranslationBits v * 2^pte_bits} \<inter> {ptr..+2 ^ bits} = {}"
+    sorry (* FIXME AARCH64: needs an assertion like cNodePartialOverlap *)
+  with sr
+  have "cvariable_array_map_relation (gsPTTypes (ksArchState s)|\<^bsub>(- {ptr..+2 ^ bits})\<^esub>)
+                                     (\<lambda>pt_t. 2 ^ ptTranslationBits pt_t)
+                                     pte_Ptr
+                                     (typ_region_bytes ptr bits (hrs_htd (t_hrs_' (globals s'))))"
+    apply (simp add: map_comp_restrict_map rf_sr_def cstate_relation_def Let_def pte_bits_def
+                     word_size_bits_def)
+    apply (rule cvariable_array_map_relation_detype; clarsimp)
     done
 
   ultimately
