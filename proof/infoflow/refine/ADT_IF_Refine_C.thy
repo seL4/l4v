@@ -193,23 +193,20 @@ lemma handleInterrupt_no_fail:
 
 lemma handleEvent_Interrupt_no_fail: "no_fail (invs' and ex_abs einvs) (handleEvent Interrupt)"
   apply (simp add: handleEvent_def)
-  apply (rule no_fail_pre)
    apply wp
-    apply (rule handleInterrupt_no_fail)
-   apply (simp add: crunch_simps)
-   apply (rule_tac Q="\<lambda>r s. ex_abs (einvs) s \<and> invs' s \<and>
-                            (\<forall>irq. r = Some irq
-                                   \<longrightarrow> intStateIRQTable (ksInterruptState s) irq \<noteq> irqstate.IRQInactive)"
-                in hoare_strengthen_post)
-    apply (rule hoare_vcg_conj_lift)
-     apply (rule corres_ex_abs_lift)
-      apply (rule dmo_getActiveIRQ_corres)
-     apply wp
-     apply simp
-    apply wp
-     apply simp
-    apply (rule doMachineOp_getActiveIRQ_IRQ_active)
-   apply clarsimp
+     apply (rule handleInterrupt_no_fail)
+    apply (simp add: crunch_simps)
+    apply (rule_tac Q="\<lambda>r s. ex_abs (einvs) s \<and> invs' s \<and>
+                             (\<forall>irq. r = Some irq
+                                    \<longrightarrow> intStateIRQTable (ksInterruptState s) irq \<noteq> irqstate.IRQInactive)"
+                 in hoare_strengthen_post)
+     apply (rule hoare_vcg_conj_lift)
+      apply (rule corres_ex_abs_lift)
+       apply (rule dmo_getActiveIRQ_corres)
+      apply wpsimp
+     apply (wpsimp wp: doMachineOp_getActiveIRQ_IRQ_active)
+    apply clarsimp
+   apply wpsimp
   apply (clarsimp simp: invs'_def valid_state'_def)
   done
 

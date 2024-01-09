@@ -1448,10 +1448,7 @@ lemma no_fail_nativeThreadUsingFPU[wp]:
   "no_fail (\<top> and \<top>) (X64.nativeThreadUsingFPU thread)"
   supply Collect_const[simp del]
   apply (simp only: X64.nativeThreadUsingFPU_def)
-  apply (rule no_fail_bind)
-    apply (simp add: Arch.no_fail_machine_op_lift)
-   apply simp
-  apply wp
+  apply (wpsimp wp: Arch.no_fail_machine_op_lift)
   done
 
 lemma (in delete_one) prepareThreadDelete_corres:
