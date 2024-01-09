@@ -287,11 +287,14 @@ lemma no_ofail_oassert[simp, wp]:
   "no_ofail (\<lambda>_. P) (oassert P)"
   by (simp add: oassert_def no_ofail_def)
 
-lemma no_ofail_gets_the:
-  "no_ofail P f \<Longrightarrow> no_fail P (gets_the (f :: ('s, 'a) lookup))"
-  by (fastforce simp: no_ofail_def no_fail_def gets_the_def gets_def
-                      get_def assert_opt_def bind_def return_def fail_def
-               split: option.split)
+lemma no_ofail_gets_the_eq:
+  "no_ofail P f \<longleftrightarrow> no_fail P (gets_the (f :: ('s, 'a) lookup))"
+  by (auto simp: no_ofail_def no_fail_def gets_the_def gets_def
+                 get_def assert_opt_def bind_def return_def fail_def
+         split: option.split)
+
+lemmas no_ofail_gets_the =
+  no_ofail_gets_the_eq[THEN iffD1]
 
 lemma no_ofail_is_triple[wp_trip]:
   "no_ofail P f = triple_judgement P f (\<lambda>s f. f s \<noteq> None)"
