@@ -292,6 +292,22 @@ lemma heap_ls_next_not_in:
   \<Longrightarrow> np \<notin> set xs"
   by (fastforce dest!: heap_ls_prev_cases[simplified])
 
+lemma sym_heap_prev_None_is_start:
+  "\<lbrakk>heap_ls hp st xs; sym_heap hp hp'; p \<in> set xs; hp' p = None\<rbrakk>
+   \<Longrightarrow> Some p = st"
+  using split_list_last heap_path_sym_heap_non_nil_lookup_prev
+  by fastforce
+
+lemma not_last_next_not_None:
+  "\<lbrakk>heap_ls hp st xs; p \<in> set xs; p \<noteq> last xs\<rbrakk> \<Longrightarrow> hp p \<noteq> None"
+  by (fastforce intro: heap_path_head dest: split_list)
+
+lemma not_head_prev_not_None:
+  "\<lbrakk>heap_ls hp st xs; p \<in> set xs; p \<noteq> hd xs; sym_heap hp hp'\<rbrakk>
+   \<Longrightarrow> hp' p \<noteq> None"
+  using sym_heap_prev_None_is_start heap_path_head
+  by fastforce
+
 (* more on heap_path *)
 
 lemma heap_ls_next_takeWhile_append:
