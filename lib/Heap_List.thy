@@ -193,6 +193,16 @@ lemma sym_heap_ls_rev:
   apply (frule heap_path_head; clarsimp)
   by (auto dest!: sym_heap_path_reverse[THEN iffD1])
 
+lemma heap_path_sym_heap_non_nil_lookup_prev:
+  "\<lbrakk>heap_ls hp x (xs @ z # ys); sym_heap hp hp'; xs \<noteq> []\<rbrakk> \<Longrightarrow> hp' z = (Some (last xs))"
+  supply heap_path_append[simp del]
+  apply (cut_tac xs="butlast xs" and z="last xs" and ys="z # ys"
+              in heap_path_non_nil_lookup_next[where hp=hp and x=x and y=None])
+   apply (frule append_butlast_last_id)
+   apply (metis append_eq_Cons_conv append_eq_append_conv2)
+  apply (fastforce dest: sym_heapD1)
+  done
+
 (* more on heap_path : next/prev in path *)
 
 lemma heap_path_extend:
