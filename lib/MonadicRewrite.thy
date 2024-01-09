@@ -697,7 +697,7 @@ lemma monadic_rewrite_refine_validE_R:
   by (simp add: validE_R_def validE_def monadic_rewrite_refine_valid)
 
 lemma monadic_rewrite_is_valid:
-  "\<lbrakk> monadic_rewrite False False P' f f'; \<lbrace>P\<rbrace> do x <- f; g x od \<lbrace>Q\<rbrace> \<rbrakk>
+  "\<lbrakk> monadic_rewrite False E P' f f'; \<lbrace>P\<rbrace> do x <- f; g x od \<lbrace>Q\<rbrace> \<rbrakk>
    \<Longrightarrow> \<lbrace>P and P'\<rbrace> do x <- f'; g x od \<lbrace>Q\<rbrace>"
   by (fastforce simp: monadic_rewrite_def valid_def bind_def)
 
