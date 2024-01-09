@@ -2688,6 +2688,10 @@ lemma ranD:
   "v \<in> ran f \<Longrightarrow> \<exists>x. f x = Some v"
   by (auto simp: ran_def)
 
+lemma fun_upd_swap:
+  "a \<noteq> c \<Longrightarrow>  hp(c := d, a := b) = hp(a := b, c := d)"
+  by fastforce
+
 text \<open>Prevent clarsimp and others from creating Some from not None by folding this and unfolding
   again when safe.\<close>
 
