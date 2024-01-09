@@ -10,7 +10,7 @@
 theory MonadicRewrite
 imports
   Monads.Nondet_VCG
-  Corres_UL
+  ExtraCorres
   Monads.Nondet_Empty_Fail
   Rules_Tac
 begin
@@ -742,6 +742,13 @@ lemma monadic_rewrite_corres_r_generic:
      corres_underlying R nf nf'' r P P' a c';
      F \<longrightarrow> nf''; nf' \<longrightarrow> nf'' \<rbrakk>
    \<Longrightarrow> corres_underlying R nf nf' r P (P' and Q) a c"
+  by (fastforce simp: corres_underlying_def monadic_rewrite_def)
+
+lemma monadic_rewrite_corres_r_generic_ex_abs:
+  "\<lbrakk> monadic_rewrite F E (\<lambda>s'. Q s' \<and> ex_abs_underlying sr P s') c' c;
+     corres_underlying sr nf nf'' r P P' a c';
+     F \<longrightarrow> nf''; nf' \<longrightarrow> nf'' \<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' r P (P' and Q) a c"
   by (fastforce simp: corres_underlying_def monadic_rewrite_def)
 
 lemma monadic_rewrite_corres_r:
