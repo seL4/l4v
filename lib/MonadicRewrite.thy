@@ -81,6 +81,10 @@ lemma monadic_rewrite_pre_imp_eq:
   "\<lbrakk> \<And>s. P s \<Longrightarrow> f s = g s \<rbrakk> \<Longrightarrow> monadic_rewrite F E P f g"
   by (simp add: monadic_rewrite_def)
 
+lemma monadic_rewrite_guard_arg_cong:
+  "(\<And>s. P s \<Longrightarrow> x = y) \<Longrightarrow> monadic_rewrite F E P (f x) (f y)"
+  by (clarsimp simp: monadic_rewrite_def)
+
 lemma monadic_rewrite_exists:
   "(\<And>v. monadic_rewrite F E (Q v) m m')
    \<Longrightarrow> monadic_rewrite F E ((\<lambda>s. \<forall>v. P v s \<longrightarrow> Q v s) and (\<lambda>s. \<exists>v. P v s)) m m'"
