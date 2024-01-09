@@ -59,6 +59,10 @@ lemmas owhile_add_inv = owhile_inv_def[symmetric]
 
 
 (* WP rules for ovalid. *)
+lemma ovalid_post_taut[wp]:
+  "\<lblot>P\<rblot> f \<lblot>\<top>\<top>\<rblot>"
+  by (simp add: ovalid_def)
+
 lemma ovalid_inv[wp]:
   "ovalid P f (\<lambda>_. P)"
   by (simp add: ovalid_def)
