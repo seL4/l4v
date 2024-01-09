@@ -5422,12 +5422,12 @@ abbreviation (input) fromzeroVCPU :: vcpu where
 
 lemma monadic_rewrite_setObject_vcpu_as_init:
   defines "vcpu0 \<equiv> fromzeroVCPU"
-  defines "vcpu1 \<equiv> (vcpuRegs_update (\<lambda>_. (vcpuRegs vcpu0)(VCPURegSCTLR := sctlrDefault)) vcpu0)"
+  defines "vcpu1 \<equiv> (vcpuRegs_update (\<lambda>_. (vcpuRegs vcpu0)(VCPURegSCTLR := sctlrEL1VM)) vcpu0)"
   defines "vcpu2 \<equiv> (vcpuVGIC_update (\<lambda>_. vgicHCR_update (\<lambda>_. vgicHCREN) (vcpuVGIC vcpu1)) vcpu1)"
   shows
   "monadic_rewrite True False (K (v \<noteq> 0) and ko_at' fromzeroVCPU v)
      (setObject v makeVCPUObject)
-     (do vcpuWriteReg v VCPURegSCTLR sctlrDefault;
+     (do vcpuWriteReg v VCPURegSCTLR sctlrEL1VM;
          vgicUpdate v (vgicHCR_update (\<lambda>_. vgicHCREN));
          vcpuUpdate v (\<lambda>vcpu. vcpu\<lparr> vcpuVTimer := VirtTimer 0 \<rparr>)
       od)"
@@ -5762,11 +5762,6 @@ lemma placeNewObject_vcpu_fromzero_ccorres:
   apply (clarsimp simp: no_fail_def)
   done
 
-(* FIXME AARCH64 update spec to match C *)
-lemma sctlrDefault_def_FIXME:
-  "sctlrDefault \<equiv> (0x34D58820::machine_word)"
-  sorry
-
 lemma vcpu_init_ccorres:
   "ccorres dc xfdc
        (ko_at' fromzeroVCPU vcpuptr and K (vcpuptr \<noteq> 0))
@@ -5780,10 +5775,10 @@ proof -
 
   have armv_vcpu_init_ccorres:
     "\<And>hs. ccorres dc xfdc (vcpu_at' vcpuptr) \<lbrace>\<acute>vcpu = vcpu_Ptr vcpuptr\<rbrace> hs
-         (vcpuWriteReg vcpuptr VCPURegSCTLR sctlrDefault) (Call armv_vcpu_init_'proc)"
+         (vcpuWriteReg vcpuptr VCPURegSCTLR sctlrEL1VM) (Call armv_vcpu_init_'proc)"
   apply (cinit')
    apply (ctac (no_vcg) add: vcpu_write_reg_ccorres)
-  apply (clarsimp simp: sctlrDefault_def_FIXME fromEnum_def enum_vcpureg seL4_VCPUReg_defs)
+  apply (clarsimp simp: sctlrEL1VM_def fromEnum_def enum_vcpureg seL4_VCPUReg_defs)
   done
 
   show ?thesis

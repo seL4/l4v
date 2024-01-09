@@ -174,7 +174,7 @@ definition
   "default_vcpu \<equiv> \<lparr>
       vcpu_tcb    = None,
       vcpu_vgic   = default_gic_vcpu_interface,
-      vcpu_regs   = (\<lambda>_. 0) (VCPURegSCTLR := sctlrDefault),
+      vcpu_regs   = (\<lambda>_. 0) (VCPURegSCTLR := sctlrEL1VM),
       vcpu_vppi_masked = (\<lambda>_. False),
       vcpu_vtimer = VirtTimer 0
    \<rparr>"

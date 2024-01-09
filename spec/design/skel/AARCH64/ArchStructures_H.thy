@@ -35,7 +35,7 @@ defs makeVCPUObject_def:
                         , vgicAPR= 0
                         , vgicLR= (\<lambda>_. 0)
                         \<rparr>
-        , vcpuRegs= funArray (const 0)  aLU  [(VCPURegSCTLR, sctlrDefault)]
+        , vcpuRegs= funArray (const 0)  aLU  [(VCPURegSCTLR, sctlrEL1VM)]
         , vcpuVPPIMasked= (\<lambda>_. False)
         , vcpuVTimer= VirtTimer 0
         \<rparr>"
