@@ -918,6 +918,11 @@ lemma corres_assert_assume:
   by (auto simp: bind_def assert_def fail_def return_def
                  corres_underlying_def)
 
+lemma corres_assert_assume_l:
+  "corres_underlying sr nf nf' rrel P Q (f ()) g
+  \<Longrightarrow> corres_underlying sr nf nf' rrel (P and (\<lambda>s. P')) Q (assert P' >>= f) g"
+  by (force simp: corres_underlying_def assert_def return_def bind_def fail_def)
+
 lemma corres_assert_gen_asm_cross:
   "\<lbrakk> \<And>s s'. \<lbrakk>(s, s') \<in> sr; P' s; Q' s'\<rbrakk> \<Longrightarrow> A;
      A \<Longrightarrow> corres_underlying sr nf nf' r P Q f (g ()) \<rbrakk>
@@ -1656,11 +1661,6 @@ qed
 lemma corres_assert_ret:
   "corres_underlying sr False nf' dc (\<lambda>s. P) \<top> (assert P) (return ())"
   by (rule corres_no_failI; clarsimp simp: assert_def return_def fail_def no_fail_def)
-
-lemma corres_assert_assume_l:
-  "corres_underlying sr nf nf' dc P Q (f ()) g
-  \<Longrightarrow> corres_underlying sr nf nf' dc (P and (\<lambda>s. P')) Q (assert P' >>= f) g"
-  by (force simp: corres_underlying_def assert_def return_def bind_def fail_def)
 
 lemma corres_assert_assume_r:
   "corres_underlying sr nf nf' rrel P Q f (g ())
