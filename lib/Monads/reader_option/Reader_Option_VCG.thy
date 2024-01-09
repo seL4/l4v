@@ -247,7 +247,7 @@ lemma no_ofail_ogets[wp]:
   by simp
 
 lemma no_ofail_obind[wp]:
-  "\<lbrakk> \<And>r. no_ofail (P r) (g r); no_ofail Q f; ovalid Q f P \<rbrakk> \<Longrightarrow> no_ofail Q (obind f g)"
+  "\<lbrakk> \<And>r. no_ofail (R r) (g r); \<lblot>Q\<rblot> f \<lblot>R\<rblot>; no_ofail P f \<rbrakk> \<Longrightarrow> no_ofail (P and Q) (f |>> g)"
   by (auto simp: no_ofail_def obind_def ovalid_def)
 
 lemma no_ofail_K_bind[wp]:
@@ -351,7 +351,7 @@ lemma ovalidNF_pre_imp:
   by (simp add: ovalidNF_def)
 
 lemma no_ofail_pre_imp:
-  "\<lbrakk> \<And>s. P' s \<Longrightarrow> P s; no_ofail P f \<rbrakk> \<Longrightarrow> no_ofail P' f"
+  "\<lbrakk> no_ofail P f; \<And>s. P' s \<Longrightarrow> P s \<rbrakk> \<Longrightarrow> no_ofail P' f"
   by (simp add: no_ofail_def)
 
 lemma ovalid_post_imp:

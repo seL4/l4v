@@ -826,14 +826,8 @@ lemma updateRefillTl_corres:
 lemma readRefillReady_no_ofail[wp]:
   "no_ofail (sc_at' t) (readRefillReady t)"
   apply (clarsimp simp: readRefillReady_def readSchedContext_def)
-  apply (rule no_ofail_pre_imp[rotated])
-   apply (rule no_ofail_obind2[where R="\<lambda>_. \<top> and \<top>", rotated -1])
-     apply (rule no_ofail_obind2[rotated -1])
-       apply wp
-      apply (rule no_ofail_readCurTime)
-     apply (clarsimp simp: ovalid_def)
-    apply wp
-  by (simp add: ovalid_def)+
+  apply (wpsimp wp: no_ofail_readCurTime)
+  done
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
