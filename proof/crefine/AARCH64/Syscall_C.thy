@@ -2223,6 +2223,7 @@ proof -
                             seL4_Fault_lift_def seL4_Fault_tag_defs is_cap_fault_def Let_def
                             mask_eq_iff
                       split: if_splits)
+      apply word_eqI_solve
       done
 
         apply (wpsimp simp: vcpuUpdate_def wp: setVCPU_VPPIMasked_invs' | wps)+

@@ -1820,9 +1820,6 @@ proof -
           apply (clarsimp simp: ctcb_relation_def is_cap_fault_def word_and_1 cfault_rel_def
                           split: if_split_asm option.splits)
           apply (simp add: ucast_ucast_mask)
-          subgoal sorry (* FIXME AARCH64 problem with VPPIEvent on AArch64: field irq_w is 64 bits,
-                            whereas on AArch32 it's 10 which maps to an irq size of 10 bits. 64
-                            doesn't match the 9 bits we need *)
          apply (clarsimp simp: ctcb_relation_def cfault_rel_def seL4_Fault_lift_def Let_def
                          split: if_split_asm)
         apply ceqv
