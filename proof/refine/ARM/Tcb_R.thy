@@ -341,9 +341,7 @@ lemma invokeTCB_WriteRegisters_corres:
          apply (rule asUser_corres)
          apply (simp add: zipWithM_mapM getRestartPC_def setNextPC_def)
          apply (rule corres_Id, simp+)
-         apply (rule no_fail_pre, wp no_fail_mapM)
-            apply clarsimp
-            apply (wp no_fail_setRegister | simp)+
+         apply (wpsimp wp: no_fail_mapM no_fail_setRegister)+
         apply (rule corres_split_nor[OF asUser_postModifyRegisters_corres[simplified]])
           apply (rule corres_split_nor[OF corres_when[OF refl restart_corres]])
             apply (rule corres_split_nor[OF corres_when[OF refl rescheduleRequired_corres]])

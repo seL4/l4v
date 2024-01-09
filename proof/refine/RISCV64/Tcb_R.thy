@@ -329,8 +329,8 @@ lemma invokeTCB_WriteRegisters_corres:
            apply (clarsimp simp: mask_def user_vtop_def
                            cong: if_cong)
           apply simp
-         apply (rule no_fail_pre, wp no_fail_mapM)
-            apply (clarsimp, (wp no_fail_setRegister | simp)+)
+         apply (wpsimp wp: no_fail_mapM no_fail_setRegister)
+        apply simp
         apply (rule corres_split_nor[OF asUser_postModifyRegisters_corres[simplified]])
           apply (rule corres_split_nor[OF corres_when[OF refl restart_corres]])
             apply (rule corres_split_nor[OF corres_when[OF refl rescheduleRequired_corres]])
