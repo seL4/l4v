@@ -172,6 +172,38 @@ lemma sym_heap_symmetric:
 lemma sym_heap_None:
   "\<lbrakk>sym_heap hp hp'; hp p = None\<rbrakk> \<Longrightarrow> \<forall>p'. hp' p' \<noteq> Some p" unfolding sym_heap_def by force
 
+lemma sym_heap_remove_only:
+  "\<lbrakk>sym_heap hp hp'; hp' y = Some x\<rbrakk> \<Longrightarrow> sym_heap (hp(x := None)) (hp'(y := None))"
+  apply (clarsimp simp: sym_heap_def)
+  apply (metis option.inject)
+  done
+
+lemma sym_heap_remove_only':
+  "\<lbrakk>sym_heap hp hp'; hp y = Some x\<rbrakk> \<Longrightarrow> sym_heap (hp(y := None)) (hp'(x := None))"
+  apply (clarsimp simp: sym_heap_def)
+  apply (metis option.inject)
+  done
+
+lemma sym_heap_remove_middle_from_chain:
+  "\<lbrakk>sym_heap hp hp'; before \<noteq> middle; middle \<noteq> after;
+    hp before = Some middle; hp middle = Some after\<rbrakk>
+   \<Longrightarrow> sym_heap (hp(before := Some after, middle := None))
+                (hp'(after := Some before, middle := None))"
+  apply (clarsimp simp: sym_heap_def)
+  apply (metis option.simps(1))
+  done
+
+lemma sym_heap_connect:
+  "\<lbrakk>sym_heap hp hp'; hp a = None; hp' b = None \<rbrakk> \<Longrightarrow> sym_heap (hp(a \<mapsto> b)) (hp'(b \<mapsto> a))"
+  by (force simp: sym_heap_def)
+
+lemma sym_heap_insert_into_middle_of_chain:
+  "\<lbrakk>sym_heap hp hp'; hp before = Some after; hp middle = None; hp' middle = None\<rbrakk>
+   \<Longrightarrow> sym_heap (hp(before \<mapsto> middle, middle \<mapsto> after)) (hp'(after \<mapsto> middle, middle \<mapsto> before))"
+  apply (clarsimp simp: sym_heap_def)
+  apply (metis option.simps)
+  done
+
 lemma sym_heap_path_reverse:
   "sym_heap hp hp' \<Longrightarrow>
       heap_path hp (Some p) (p#ps) (Some p')
