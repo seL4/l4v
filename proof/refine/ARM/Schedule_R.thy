@@ -3136,8 +3136,7 @@ lemma refillReady_corres:
   supply getSchedContext_wp[wp del] set_sc'.get_wp[wp del] projection_rewrites[simp]
   apply (clarsimp simp: refill_ready_def refillReady_def get_sc_refill_ready_def)
   apply (rule gets_the_corres)
-    apply (rule no_ofail_pre_imp[rotated])
-     apply (rule no_ofail_read_sc_refill_ready)
+    apply (wpsimp wp: no_ofail_read_sc_refill_ready)
     apply (clarsimp simp: is_sc_obj obj_at_def)
    apply wpsimp
   apply (clarsimp simp: obj_at_def is_sc_obj dest!: no_ofailD[OF readRefillReady_no_ofail]
@@ -3162,8 +3161,8 @@ lemma readTCBRefillReady_no_ofail:
   "no_ofail (\<lambda>s'. obj_at' (\<lambda>tcb. \<exists>sc. tcbSchedContext tcb = Some sc \<and> sc_at' sc s') t s')
             (readTCBRefillReady t)"
   unfolding readTCBRefillReady_def
-  apply (wpsimp simp: obj_at'_def)
-  apply (wpsimp wp: ovalid_threadRead simp: obj_at'_def)
+  apply (wpsimp wp: ovalid_threadRead)
+  apply (clarsimp simp: obj_at'_def)
   done
 
 lemma readTCBRefillReady_simp:
