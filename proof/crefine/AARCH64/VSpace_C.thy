@@ -2354,13 +2354,6 @@ lemma armv_vcpu_save_ccorres:
   apply (clarsimp split: if_splits simp: seL4_VCPUReg_defs fromEnum_def enum_vcpureg)
   done
 
-(* FIXME AARCH64 this has a typo, also on ARM_HYP! *)
-lemma setSCTLR_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>sctlr = sctlr \<rbrace>) []
-           (doMachineOp (setSCTLR sctlr))
-           (Call setSCTLR_'proc)"
-  sorry
-
 lemma vcpu_disable_ccorres:
   "ccorres dc xfdc
      (pspace_aligned' and pspace_distinct' and valid_objs' and no_0_obj' and valid_arch_state'
