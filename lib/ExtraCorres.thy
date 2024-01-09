@@ -543,4 +543,8 @@ lemma notM_corres:
       apply wpsimp+
   done
 
+lemma ifM_to_top_of_bind:
+  "((ifM test true false) >>= z) = ifM test (true >>= z) (false >>= z)"
+  by (force simp: ifM_def bind_def split: if_splits)
+
 end
