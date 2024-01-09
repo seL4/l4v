@@ -582,6 +582,10 @@ lemma ifM_corres:
      apply (wpsimp wp: abs_valid conc_valid hoare_vcg_if_lift2)+
   done
 
+lemmas ifM_corres' =
+  ifM_corres[where A=A and B=A and C=A for A, simplified,
+             where A'=A' and B'=A' and C'=A' for A', simplified]
+
 lemma orM_corres:
   "\<lbrakk>corres_underlying srel nf nf' (=) A A' a a'; corres_underlying srel nf nf' (=) R R' b b';
     \<lbrace>B\<rbrace> a \<lbrace>\<lambda>c s. \<not> c \<longrightarrow> R s\<rbrace>; \<lbrace>B'\<rbrace> a' \<lbrace>\<lambda>c s. \<not> c \<longrightarrow> R' s\<rbrace>\<rbrakk>
@@ -591,6 +595,9 @@ lemma orM_corres:
     apply (rule ifM_corres[where Q=\<top> and Q'=\<top>])
         apply (wpsimp | fastforce)+
   done
+
+lemmas orM_corres' =
+  orM_corres[where A=A and B=A for A, simplified, where A'=A' and B'=A' for A', simplified]
 
 lemma andM_corres:
   "\<lbrakk>corres_underlying srel nf nf' (=) A A' a a'; corres_underlying srel nf nf' (=) Q Q' b b';
