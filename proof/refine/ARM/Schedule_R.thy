@@ -3135,7 +3135,7 @@ lemma refillReady_corres:
         (refillReady sc_ptr)"
   supply getSchedContext_wp[wp del] set_sc'.get_wp[wp del] projection_rewrites[simp]
   apply (clarsimp simp: refill_ready_def refillReady_def get_sc_refill_ready_def)
-  apply (subst gets_the_corres)
+  apply (rule gets_the_corres)
     apply (rule no_ofail_pre_imp[rotated])
      apply (rule no_ofail_read_sc_refill_ready)
     apply (clarsimp simp: is_sc_obj obj_at_def)
