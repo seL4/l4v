@@ -279,6 +279,11 @@ lemma no_ofail_oassert_opt[simp, wp]:
   "no_ofail (\<lambda>_. P \<noteq> None) (oassert_opt P)"
   by (simp add: no_ofail_def oassert_opt_def split: option.splits)
 
+lemma no_ofail_if[wp]:
+  "\<lbrakk> P \<Longrightarrow> no_ofail Q f; \<not> P \<Longrightarrow> no_ofail R g \<rbrakk>
+   \<Longrightarrow> no_ofail (if P then Q else R) (if P then f else g)"
+  by simp
+
 lemma no_ofail_owhen[wp]:
   "(P \<Longrightarrow> no_ofail Q f) \<Longrightarrow> no_ofail (if P then Q else \<top>) (owhen P f)"
   by (simp add: no_ofail_def owhen_def)
