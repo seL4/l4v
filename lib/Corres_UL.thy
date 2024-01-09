@@ -481,6 +481,18 @@ lemma corres_if3:
                                     (if G then a else b) (if G' then c else d)"
   by simp
 
+lemma corres_if_strong:
+  "\<lbrakk>\<And>s s'. \<lbrakk>(s, s') \<in> sr; R s; R' s'\<rbrakk> \<Longrightarrow> G = G';
+    \<lbrakk>G; G'\<rbrakk> \<Longrightarrow> corres_underlying sr nf nf' r P P' a c;
+    \<lbrakk>\<not> G; \<not> G'\<rbrakk> \<Longrightarrow> corres_underlying sr nf nf' r Q Q' b d \<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' r
+         (R and (if G then P else Q)) (R' and (if G' then P' else Q'))
+         (if G then a else b) (if G' then c else d)"
+  by (fastforce simp: corres_underlying_def)
+
+lemmas corres_if_strong' =
+  corres_if_strong[where R=R and P=R and Q=R for R,
+                   where R'=R' and P'=R' and Q'=R' for R', simplified]
 
 text \<open>Some equivalences about liftM and other useful simps\<close>
 
