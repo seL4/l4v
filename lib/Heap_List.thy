@@ -203,6 +203,16 @@ lemma heap_path_sym_heap_non_nil_lookup_prev:
   apply (fastforce dest: sym_heapD1)
   done
 
+lemma heap_ls_no_loops:
+  "\<lbrakk>heap_ls hp st xs; p \<in> set xs\<rbrakk> \<Longrightarrow> hp p \<noteq> Some p"
+  apply (frule heap_ls_distinct)
+  apply (fastforce dest: split_list heap_path_non_nil_lookup_next split: list.splits)
+  done
+
+lemma heap_ls_prev_no_loops:
+  "\<lbrakk>heap_ls hp st xs; p \<in> set xs; sym_heap hp hp'\<rbrakk> \<Longrightarrow> hp' p \<noteq> Some p"
+  by (fastforce dest: heap_ls_no_loops sym_heapD2)
+
 (* more on heap_path : next/prev in path *)
 
 lemma heap_path_extend:
