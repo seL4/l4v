@@ -130,7 +130,7 @@ lemma no_fail_returnOK[simp, wp]:
   by (simp add: returnOk_def)
 
 lemma no_fail_bind[wp]:
-  "\<lbrakk> no_fail P f; \<And>rv. no_fail (R rv) (g rv); \<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace> \<rbrakk> \<Longrightarrow> no_fail (P and Q) (f >>= (\<lambda>rv. g rv))"
+  "\<lbrakk> \<And>rv. no_fail (R rv) (g rv); \<lbrace>Q\<rbrace> f \<lbrace>R\<rbrace>; no_fail P f \<rbrakk> \<Longrightarrow> no_fail (P and Q) (f >>= (\<lambda>rv. g rv))"
   unfolding no_fail_def bind_def
   using post_by_hoare by fastforce
 

@@ -934,10 +934,10 @@ lemma terminates_spec_no_fail:
       using normal by auto
     show ?thesis
       apply (clarsimp simp: ac AC_call_L1_def L2_call_L1_def)
-      apply (wpsimp wp: select_f_L1_call_simpl_no_fail no_fail_select
-                wp_del: select_f_wp)
-      apply (rule hoare_strengthen_post[OF select_f_L1_call_simpl_rv], fastforce)
-      apply (wpsimp wp: nf_pre)+
+      apply (wpsimp wp_del: select_f_wp)
+            apply (rule hoare_strengthen_post[OF select_f_L1_call_simpl_rv], fastforce)
+           apply (wpsimp wp: select_f_L1_call_simpl_no_fail no_fail_select)+
+      apply (fastforce simp: nf_pre)
       done
   qed
 

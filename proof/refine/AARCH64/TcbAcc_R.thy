@@ -1599,9 +1599,8 @@ lemma no_fail_asUser [wp]:
   "no_fail \<top> f \<Longrightarrow> no_fail (tcb_at' t) (asUser t f)"
   apply (simp add: asUser_def split_def)
   apply wp
-   apply (simp add: no_fail_def)
-   apply (wp hoare_drop_imps)
-  apply simp
+    apply (simp add: no_fail_def)
+    apply (wpsimp wp: hoare_drop_imps no_fail_threadGet)+
   done
 
 lemma asUser_setRegister_corres:
