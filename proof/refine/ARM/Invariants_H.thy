@@ -10,6 +10,7 @@ imports
   "AInvs.AInvs"
   "Lib.AddUpdSimps"
   ArchMove_R
+  "Lib.Heap_List"
 begin
 
 (* FIXME: this should go somewhere in spec *)

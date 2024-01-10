@@ -222,6 +222,21 @@ lemma after_can_split: "after_in_list list x = Some y \<Longrightarrow> \<exists
   apply simp
   done
 
+lemma distinct_inj_middle: "distinct list \<Longrightarrow> list = (xa @ x # xb) \<Longrightarrow> list = (ya @ x # yb) \<Longrightarrow> xa = ya \<and> xb = yb"
+  apply (induct list arbitrary: xa ya)
+  apply simp
+  apply clarsimp
+  apply (case_tac "xa")
+   apply simp
+   apply (case_tac "ya")
+    apply simp
+   apply clarsimp
+  apply clarsimp
+  apply (case_tac "ya")
+   apply (simp (no_asm_simp))
+   apply simp
+  apply clarsimp
+  done
 
 lemma after_can_split_distinct:
   "distinct list \<Longrightarrow> after_in_list list x = Some y \<Longrightarrow> \<exists>!ys. \<exists>!xs. list = xs @ (x # y # ys)"

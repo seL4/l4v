@@ -22,7 +22,6 @@ imports
   Monads.Monad_Lib
   Basics.CLib
   NICTATools
-  Heap_List
   Log
   "Word_Lib.WordSetup"
 begin

@@ -8,7 +8,7 @@
    Loosely after ~~/src/HOL/Hoare/Pointer_Examples.thy *)
 
 theory Heap_List
-imports Main "HOL-Library.Prefix_Order"
+imports Main "HOL-Library.Prefix_Order" ListLibLemmas
 begin
 
 (* Given a heap projection that returns the next-pointer for an object at address x,
@@ -125,6 +125,10 @@ lemma heap_path_heap_upd_not_in:
   "\<lbrakk>heap_path hp st rs ed; r \<notin> set rs\<rbrakk> \<Longrightarrow> heap_path (hp(r:= x)) st rs ed"
   by (induct rs arbitrary: st; clarsimp)
 
+lemma heap_path_last_update:
+  "\<lbrakk>heap_path hp st xs end; xs \<noteq> []; distinct xs\<rbrakk> \<Longrightarrow> heap_path (hp(last xs := new)) st xs new"
+  by (induct xs arbitrary: st rule: rev_induct; simp add: heap_path_heap_upd_not_in)
+
 lemma heap_walk_lb:
   "heap_walk hp x xs \<ge> xs"
   apply (induct xs rule: heap_walk.induct; clarsimp)
@@ -142,9 +146,11 @@ lemma heap_walk_Nil_None:
   "heap_walk hp st [] = [] \<Longrightarrow> st = None"
    by (case_tac st; simp only: heal_walk_Some_nonempty)
 
-lemma heap_ls_last_None:
-  "heap_ls hp st xs \<Longrightarrow> xs \<noteq> [] \<Longrightarrow> hp (last xs) = None"
+lemma heap_path_last_end:
+  "heap_path hp st xs end \<Longrightarrow> xs \<noteq> [] \<Longrightarrow> hp (last xs) = end"
   by (induct xs rule: rev_induct; clarsimp)
+
+lemmas heap_ls_last_None = heap_path_last_end[where ?end=None]
 
 (* sym_heap *)
 
@@ -278,23 +284,6 @@ lemma heap_ls_next_not_in:
 
 (* more on heap_path *)
 
-(* moved from ListLibLemmas *)
-lemma distinct_inj_middle: "distinct list \<Longrightarrow> list = (xa @ x # xb) \<Longrightarrow> list = (ya @ x # yb) \<Longrightarrow> xa = ya \<and> xb = yb"
-  apply (induct list arbitrary: xa ya)
-  apply simp
-  apply clarsimp
-  apply (case_tac "xa")
-   apply simp
-   apply (case_tac "ya")
-    apply simp
-   apply clarsimp
-  apply clarsimp
-  apply (case_tac "ya")
-   apply (simp (no_asm_simp))
-   apply simp
-  apply clarsimp
-  done
-
 lemma heap_ls_next_takeWhile_append:
   "\<lbrakk>heap_ls hp st xs; p \<in> set xs; hp p = Some np\<rbrakk>
   \<Longrightarrow> takeWhile ((\<noteq>) np) xs = (takeWhile ((\<noteq>) p) xs) @ [p]"
@@ -344,5 +333,79 @@ lemma heap_path_curtail_takeWhile:
   done
 
 (* more on heap_path : end *)
+
+
+\<comment> \<open>Lemmas relating an update to the list to an update to the heap\<close>
+
+lemma heap_ls_prepend:
+  "\<lbrakk>heap_ls hp st xs; new \<notin> set xs; xs \<noteq> []\<rbrakk>
+   \<Longrightarrow> heap_ls (hp(new := Some (hd xs))) (Some new) (new # xs)"
+  apply simp
+  apply (erule heap_path_heap_upd_not_in[rotated])
+  apply (frule (1) heap_path_head)
+  apply fastforce
+  done
+
+lemma heap_ls_append:
+  "\<lbrakk>heap_ls hp st xs; xs \<noteq> []; new \<notin> set xs\<rbrakk>
+   \<Longrightarrow> heap_ls (hp(last xs := Some new, new := None)) st (xs @ [new])"
+  apply (frule heap_ls_distinct)
+  apply simp
+  apply (rule heap_path_heap_upd_not_in)
+   apply (fastforce simp: heap_path_last_update)
+  apply assumption
+  done
+
+lemma heap_ls_list_insert_before:
+  "\<lbrakk>heap_ls hp st (xs @ ys); new \<notin> set (xs @ ys); xs \<noteq> []; ys \<noteq> []\<rbrakk>
+   \<Longrightarrow> heap_ls (hp(last xs := Some new, new := Some (hd ys))) st
+               (list_insert_before (xs @ ys) (hd ys) new)"
+  apply (frule heap_ls_distinct)
+  apply (subst list_insert_before_distinct; fastforce?)
+  apply simp
+  apply (rule conjI)
+   \<comment> \<open>the path until new\<close>
+   apply (fastforce intro: heap_path_heap_upd_not_in heap_path_last_update)
+  \<comment> \<open>the path from hd ys\<close>
+  apply (metis disjoint_iff_not_equal heap_path_head heap_path_heap_upd_not_in last_in_set)
+  done
+
+lemma heap_ls_remove_singleton:
+  "heap_ls hp st [x] \<Longrightarrow> heap_ls (hp(x := None)) None []"
+  by simp
+
+lemma heap_ls_remove_head_not_singleton:
+  "\<lbrakk>heap_ls hp st xs; tl xs \<noteq> []\<rbrakk>
+   \<Longrightarrow> heap_ls (hp(hd xs := None)) (Some (hd (tl xs))) (tl xs)"
+  apply (frule heap_ls_distinct)
+  apply (cases xs; simp)
+  apply clarsimp
+  apply (frule heap_path_head)
+   apply fastforce
+  apply (fastforce elim!: heap_path_heap_upd_not_in)
+  done
+
+lemma heap_ls_remove_last_not_singleton:
+  "\<lbrakk>heap_ls hp st xs; butlast xs \<noteq> []\<rbrakk>
+   \<Longrightarrow> heap_ls (hp((last (butlast xs)) := None)) st (butlast xs)"
+  apply (frule heap_ls_distinct)
+  apply (frule distinct_butlast)
+  apply (fastforce dest: heap_path_last_update heap_path_butlast)
+  done
+
+lemma heap_ls_remove_middle:
+  "\<lbrakk>heap_ls hp st (xs @ a # ys); xs \<noteq> []; ys \<noteq> []\<rbrakk>
+   \<Longrightarrow> heap_ls (hp(last xs := Some (hd ys), a := None)) st (xs @ ys)"
+  apply (frule heap_ls_distinct)
+  apply simp
+  apply (rule_tac x="Some (hd ys)" in exI)
+  apply (rule conjI)
+   apply (fastforce intro: heap_path_heap_upd_not_in heap_path_last_update)
+  apply (rule heap_path_heap_upd_not_in)
+   apply (rule heap_path_heap_upd_not_in)
+    using heap_path_head apply fastforce
+   apply force
+  apply fastforce
+  done
 
 end
