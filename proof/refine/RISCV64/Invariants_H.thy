@@ -10,6 +10,7 @@ imports
   "AInvs.AInvs"
   "Lib.AddUpdSimps"
   ArchMove_R
+  "Lib.Heap_List"
 begin
 
 (* global data and code of the kernel, not covered by any cap *)
