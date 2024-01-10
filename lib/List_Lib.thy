@@ -26,6 +26,12 @@ primrec list_insert_after :: "'a list \<Rightarrow> 'a \<Rightarrow> 'a \<Righta
   "list_insert_after (x # xs) a b = (if x = a then x # b # xs
                                      else x # list_insert_after xs a b)"
 
+\<comment> \<open>Inserts the value new immediately before the first occurence of a (if any) in the list\<close>
+primrec list_insert_before :: "'a list \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a list" where
+  "list_insert_before [] a new = []" |
+  "list_insert_before (x # xs) a new = (if x = a then new # x # xs
+                                        else x # list_insert_before xs a new)"
+
 primrec list_remove :: "'a list \<Rightarrow> 'a \<Rightarrow> 'a list" where
   "list_remove [] a = []" |
   "list_remove (x # xs) a = (if x = a then (list_remove xs a)

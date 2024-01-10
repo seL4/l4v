@@ -355,6 +355,32 @@ lemma list_insert_after_after:
   apply fastforce
   done
 
+lemma list_insert_before_not_found:
+  "a \<notin> set ls \<Longrightarrow> list_insert_before ls a new = ls"
+  by (induct ls; fastforce)
+
+lemma list_insert_before_nonempty:
+  "ls \<noteq> [] \<Longrightarrow> list_insert_before ls a new \<noteq> []"
+  by (induct ls; clarsimp)
+
+lemma list_insert_before_head:
+  "xs \<noteq> [] \<Longrightarrow> list_insert_before xs (hd xs) new = new # xs"
+   by (induct xs; fastforce)
+
+lemma last_of_list_insert_before:
+  "xs \<noteq> [] \<Longrightarrow> last (list_insert_before xs a new) = last xs"
+  by (induct xs; clarsimp simp: list_insert_before_nonempty)
+
+lemma list_insert_before_distinct:
+  "\<lbrakk>distinct (xs @ ys); ys \<noteq> []\<rbrakk> \<Longrightarrow> list_insert_before (xs @ ys) (hd ys) new = xs @ new # ys"
+  by (induct xs; fastforce simp add: list_insert_before_head)
+
+lemma set_list_insert_before:
+  "\<lbrakk>new \<notin> set ls; before \<in> set ls\<rbrakk> \<Longrightarrow> set (list_insert_before ls before new) = set ls \<union> {new}"
+  apply (induct ls; clarsimp)
+  apply fastforce
+  done
+
 lemma list_remove_removed:
   "set (list_remove list x) = (set list) - {x}"
   apply (induct list,simp+)
