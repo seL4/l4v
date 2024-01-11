@@ -1685,18 +1685,6 @@ lemma cte_wp_cteCap_valid: (* FIXME AARCH64: move up *)
   "\<lbrakk> cte_wp_at' ((=) cap \<circ> cteCap) slot s; valid_objs' s \<rbrakk> \<Longrightarrow> valid_cap' cap s"
   by (clarsimp simp: cte_wp_at_ctes_of ctes_of_valid')
 
-lemma add_mask_ignore: (* FIXME AARCH64: move to WordLib *)
-  "x && mask n = 0 \<Longrightarrow> v + x && mask n = v && mask n"
-  by (metis arith_simps(50) mask_eqs(2))
-
-lemma pptrBaseOffset_cacheLineSize_aligned[simp]:
-  "pptrBaseOffset && mask cacheLineSize = 0"
-  by (simp add: pptrBaseOffset_def paddrBase_def pptrBase_def cacheLineSize_def mask_def)
-
-lemma ptrFromPAddr_mask_cacheLineSize[simp]:
-  "ptrFromPAddr v && mask cacheLineSize = v && mask cacheLineSize"
-  by (simp add: ptrFromPAddr_def add_mask_ignore)
-
 (* The precondition is slightly different here to ARM/ARM_HYP, because we're flushing on kernel
    virtual addresses instead of user virtual addresses (hence also no VM root switching). *)
 lemma performPageFlush_ccorres: (* FIXME AARCH64: move to VSpace_C; needs the [simp] lemmas above *)

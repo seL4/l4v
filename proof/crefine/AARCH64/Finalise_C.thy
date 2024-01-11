@@ -1023,54 +1023,7 @@ lemma finaliseCap_True_standin_ccorres:
   apply (simp add: finaliseCap_def ccorres_fail')
   done
 
-lemma asidRange_asid_wf:
-  "(asid \<le> snd asidRange) = asid_wf asid"
-  by (simp add: asid_wf_def mask_def asidRange_def del: word64_less_sub_le)
-
-lemma getPoolPtr_assign_ccorres:
-  "ccorres ((=) \<circ> option_to_ptr) poolPtr_' \<top> UNIV hs
-     (getPoolPtr asid)
-     (\<acute>poolPtr :== \<acute>armKSASIDTable.[unat (asid >> asid_low_bits)])"
-  unfolding getPoolPtr_def
-  apply simp
-  apply (rule ccorres_assert)+
-  apply (rule ccorres_from_vcg_nofail)
-  apply (clarsimp, rule conseqPre, vcg)
-  apply (clarsimp simp: simpler_gets_def return_def bind_def asidRange_asid_wf)
-  apply (simp add: ucast_asid_high_bits_is_shift)
-  apply (fastforce dest!: rf_sr_armKSASIDTable intro!: leq_asid_bits_shift)
-  done
-
-lemma getPoolPtr_ccorres:
-  "ccorres ((=) \<circ> option_to_ptr) ret__ptr_to_struct_asid_pool_C_'
-           \<top> \<lbrace> \<acute>asid___unsigned_long = asid \<rbrace> hs
-           (getPoolPtr asid)
-           (Call getPoolPtr_'proc)"
-  (* getPoolPtr_assign_ccorres above does not apply to the body, because everything is in the
-     return_C statement *)
-  apply (cinit lift: asid___unsigned_long_')
-   apply (rule ccorres_assert)+
-   apply (clarsimp simp: asidRange_asid_wf asid_wf_table_guard gets_return_gets_eq)
-   apply (rule ccorres_Guard)
-   apply (rule ccorres_from_vcg_throws_nofail[where P=\<top> and P'=UNIV])
-   apply (rule allI, rule conseqPre, vcg)
-   apply (clarsimp simp: asidRange_asid_wf ucast_asid_high_bits_is_shift simpler_gets_def)
-   apply (fastforce dest!: rf_sr_armKSASIDTable intro!: leq_asid_bits_shift)
-  apply simp
-  done
-
-(* FIXME AARCH64 move *)
-lemma asid_pool_at_ko'_eq:
-  "(\<exists>ap :: asidpool. ko_at' ap p s) = asid_pool_at' p s"
-  apply (rule iffI)
-   apply (clarsimp simp: typ_at'_def obj_at'_def ko_wp_at'_def)
-  apply (clarsimp simp: typ_at'_def obj_at'_def ko_wp_at'_def)
-  apply (case_tac ko, auto)
-  apply (rename_tac arch_kernel_object)
-  apply (case_tac arch_kernel_object, auto)[1]
-  done
-
-lemma findMapForASID_ccorres:
+lemma findMapForASID_loadVMID_ccorres:
   "ccorres (\<lambda>vmid rv'. \<exists>vspace. casid_map_relation (Some (ASIDPoolVSpace vmid vspace)) rv')
      ret__struct_asid_map_C_'
      (valid_arch_state' and K (asid_wf asid)) (\<lbrace>\<acute>asid___unsigned_long = asid\<rbrace>) hs
@@ -1125,7 +1078,7 @@ lemma invalidateTLBByASID_ccorres:
            (invalidateTLBByASID asid)
            (Call invalidateTLBByASID_'proc)"
   apply (cinit lift: asid___unsigned_long_')
-   apply (ctac(no_vcg) add: findMapForASID_ccorres)
+   apply (ctac(no_vcg) add: findMapForASID_loadVMID_ccorres)
     apply csymbr
     apply (clarsimp simp: when_def)
     apply (rule ccorres_if_cond_throws2[where Q=\<top> and Q'=\<top>])
@@ -1231,7 +1184,7 @@ lemma invalidateASIDEntry_ccorres:
   "ccorres dc xfdc (valid_arch_state' and K (asid_wf asid)) \<lbrace> \<acute>asid___unsigned_long = asid \<rbrace> hs
       (invalidateASIDEntry asid) (Call invalidateASIDEntry_'proc)"
   apply (cinit lift: asid___unsigned_long_')
-   apply (ctac add: findMapForASID_ccorres)
+   apply (ctac add: findMapForASID_loadVMID_ccorres)
      apply csymbr
      apply (clarsimp simp: when_def)
      apply (rule ccorres_split_nothrow[where xf'=xfdc and r'=dc])
