@@ -447,16 +447,14 @@ lemma unat_of_nat_ptBitsLeft[simp]:
 lemma pte_at'_ptSlotIndex:
   "\<lbrakk> page_table_at' pt_t pt s; levelType level = pt_t \<rbrakk> \<Longrightarrow> pte_at' (ptSlotIndex level pt vptr) s"
   apply (simp add: ptSlotIndex_def ptIndex_def)
-  apply (drule page_table_pte_atI'[where i="ucast (vptr >> ptBitsLeft level)"])
-  (* proving the first subgoal looks like it would enable proving the second *)
-  prefer 2
-   apply (simp add: ucast_ucast_mask bit_simps split: if_splits)
-   subgoal sorry (* FIXME AARCH64 *)
+  apply (drule page_table_pte_atI'[where i="ucast (vptr >> ptBitsLeft level) && mask (ptTranslationBits pt_t)"])
+   (* proving the first subgoal looks like it would enable proving the second *)
+   prefer 2
+   apply (simp add: ucast_ucast_mask split: if_splits)
   apply (simp add: ucast_ucast_mask bit_simps)
-   apply (simp add: Kernel_Config.config_ARM_PA_SIZE_BITS_40_def ptBitsLeft_def
-                    ptTranslationBits_def pageBits_def maxPTLevel_def
-                split: if_splits)
-   subgoal sorry (* FIXME AARCH64 *)
+  apply (simp add: Kernel_Config.config_ARM_PA_SIZE_BITS_40_def ptBitsLeft_def
+                   ptTranslationBits_def pageBits_def maxPTLevel_def word_bool_le_funs
+              split: if_splits)
   done
 
 lemmas unat_and_mask_le_ptTrans = unat_and_mask_le[OF AARCH64.ptTranslationBits_le_machine_word]
