@@ -168,6 +168,14 @@ assumes cleanInvalidateCacheRange_RAM_ccorres:
            (doMachineOp (cleanInvalidateCacheRange_RAM w1 w2 w3))
            (Call cleanInvalidateCacheRange_RAM_'proc)"
 
+assumes invalidateCacheRange_RAM_ccorres:
+  "ccorres dc xfdc ((\<lambda>s. unat (w2 - w1) \<le> gsMaxObjectSize s)
+                    and (\<lambda>_. w1 \<le> w2 \<and> w3 \<le> w3 + (w2 - w1)
+                      \<and> w1 && mask cacheLineSize = w3 && mask cacheLineSize))
+                   (\<lbrace>\<acute>start = w1\<rbrace> \<inter> \<lbrace>\<acute>end = w2\<rbrace> \<inter> \<lbrace>\<acute>pstart = w3\<rbrace>) []
+           (doMachineOp (invalidateCacheRange_RAM w1 w2 w3))
+           (Call invalidateCacheRange_RAM_'proc)"
+
 assumes invalidateCacheRange_I_ccorres:
   "ccorres dc xfdc (\<lambda>_. w1 \<le> w2 \<and> w3 \<le> w3 + (w2 - w1)
                         \<and> w1 && mask cacheLineSize = w3 && mask cacheLineSize)

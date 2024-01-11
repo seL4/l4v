@@ -1,5 +1,5 @@
 (*
- * Copyright 2023, Proofcraft Pty Ltd
+ * Copyright 2024, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -1339,8 +1339,24 @@ lemma performPageInvocationMap_ccorres:
   apply clarsimp
   done *)
 
-(* FIXME AARCH64 completely lost here, on RISCV64 and ARM_HYP performPageInvocation returns a list,
-   but it's unit on AARCH64 *)
+lemma vaddr_segment_nonsense3_folded: (* FIXME AARCH64: remove if unused, also in RISCV64 and X64 *)
+  "is_aligned (p :: machine_word) pageBits \<Longrightarrow>
+   (p + ((vaddr >> pageBits) && mask ((pt_bits pt_t) - word_size_bits) << word_size_bits) &&
+     ~~ mask (pt_bits pt_t)) = p"
+  apply (rule is_aligned_add_helper[THEN conjunct2])
+   apply (simp add: bit_simps mask_def)+
+   (* FIXME AARCH64 abstraction violation *)
+   apply (simp add: Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
+  (* FIXME AARCH64 consider cleanup *)
+  apply (cases pt_t; clarsimp simp: bit_simps mask_def split: if_splits)
+   apply (simp_all add: shiftl_less_t2n[where m=12 and n=3, simplified,
+                                        OF and_mask_less'[where n=9, unfolded mask_def, simplified]])
+  apply clarsimp
+  apply (rule shiftl_less_t2n[where m=13, simplified]; simp)
+  apply (rule and_mask_less'[where n=10, simplified mask_def, simplified])
+  apply simp
+  done
+
 lemma performPageGetAddress_ccorres:
   "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
       (invs' and (\<lambda>s. ksCurThread s = thread) and ct_in_state' ((=) Restart))
@@ -1614,18 +1630,180 @@ lemma canonical_address_frame_at':
                 dest!: device_data_at_ko user_data_at_ko intro!: obj_at'_is_canonical)
   done *)
 
+definition flushtype_relation :: "flush_type \<Rightarrow> machine_word \<Rightarrow> bool" where (* FIXME AARCH64: move to VSpace_C *)
+  "flushtype_relation typ label \<equiv> case typ of
+     Clean \<Rightarrow>
+       label \<in> scast ` {Kernel_C.ARMPageClean_Data, Kernel_C.ARMVSpaceClean_Data}
+   | Invalidate \<Rightarrow>
+       label \<in> scast ` {Kernel_C.ARMPageInvalidate_Data, Kernel_C.ARMVSpaceInvalidate_Data}
+   | CleanInvalidate \<Rightarrow>
+       label \<in> scast ` {Kernel_C.ARMPageCleanInvalidate_Data, Kernel_C.ARMVSpaceCleanInvalidate_Data}
+   | Unify \<Rightarrow>
+       label \<in> scast ` {Kernel_C.ARMPageUnify_Instruction, Kernel_C.ARMVSpaceUnify_Instruction}"
+
+lemma doFlush_ccorres: (* FIXME AARCH64: move to VSpace_C *)
+  "ccorres dc xfdc (\<lambda>s. vs \<le> ve \<and> ps \<le> ps + (ve - vs) \<and> vs && mask cacheLineSize = ps && mask cacheLineSize
+        \<and> ptrFromPAddr ps \<le> ptrFromPAddr ps + (ve - vs)
+        \<and> unat (ve - vs) \<le> gsMaxObjectSize s)
+     (\<lbrace>flushtype_relation t \<acute>invLabel\<rbrace> \<inter> \<lbrace>\<acute>start = vs\<rbrace> \<inter> \<lbrace>\<acute>end = ve\<rbrace> \<inter> \<lbrace>\<acute>pstart = ps\<rbrace>) []
+     (doMachineOp (doFlush t vs ve ps)) (Call doFlush_'proc)"
+  apply (cases t; clarsimp simp: doFlush_def doMachineOp_bind)
+     apply (cinit' lift: pstart_')
+      apply (rule ccorres_cond_true)
+      apply (ctac (no_vcg) add: cleanCacheRange_RAM_ccorres)
+     apply (clarsimp simp: flushtype_relation_def)
+    apply (cinit' lift: pstart_')
+     apply (rule ccorres_cond_false)
+     apply (rule ccorres_cond_true)
+     apply (ctac (no_vcg) add: invalidateCacheRange_RAM_ccorres)
+    apply (fastforce simp: flushtype_relation_def
+                           sel4_arch_invocation_label_defs arch_invocation_label_defs)
+   apply (cinit' lift: pstart_')
+    apply (rule ccorres_cond_false)
+    apply (rule ccorres_cond_false)
+    apply (rule ccorres_cond_true)
+    apply (ctac (no_vcg) add: cleanInvalidateCacheRange_RAM_ccorres)
+   apply (fastforce simp: flushtype_relation_def
+                          sel4_arch_invocation_label_defs arch_invocation_label_defs)
+  apply (simp add: doMachineOp_bind empty_fail_bind bind_assoc)
+  apply (cinit' lift: pstart_')
+   apply (rule ccorres_cond_false)
+   apply (rule ccorres_cond_false)
+   apply (rule ccorres_cond_false)
+   apply (rule ccorres_cond_true)
+   apply (rule ccorres_rhs_assoc)+
+   apply (ctac (no_vcg) add: cleanCacheRange_PoU_ccorres)
+    apply (ctac (no_vcg) add: dsb_ccorres)
+     apply (ctac (no_vcg) add: invalidateCacheRange_I_ccorres)
+      apply (ctac (no_vcg) add: isb_ccorres)
+     apply wp+
+   apply (fastforce simp: flushtype_relation_def
+                          sel4_arch_invocation_label_defs arch_invocation_label_defs)
+  done
+
+lemma cte_wp_cteCap_valid: (* FIXME AARCH64: move up *)
+  "\<lbrakk> cte_wp_at' ((=) cap \<circ> cteCap) slot s; valid_objs' s \<rbrakk> \<Longrightarrow> valid_cap' cap s"
+  by (clarsimp simp: cte_wp_at_ctes_of ctes_of_valid')
+
+lemma add_mask_ignore: (* FIXME AARCH64: move to WordLib *)
+  "x && mask n = 0 \<Longrightarrow> v + x && mask n = v && mask n"
+  by (metis arith_simps(50) mask_eqs(2))
+
+lemma pptrBaseOffset_cacheLineSize_aligned[simp]:
+  "pptrBaseOffset && mask cacheLineSize = 0"
+  by (simp add: pptrBaseOffset_def paddrBase_def pptrBase_def cacheLineSize_def mask_def)
+
+lemma ptrFromPAddr_mask_cacheLineSize[simp]:
+  "ptrFromPAddr v && mask cacheLineSize = v && mask cacheLineSize"
+  by (simp add: ptrFromPAddr_def add_mask_ignore)
+
+(* The precondition is slightly different here to ARM/ARM_HYP, because we're flushing on kernel
+   virtual addresses instead of user virtual addresses (hence also no VM root switching). *)
+lemma performPageFlush_ccorres: (* FIXME AARCH64: move to VSpace_C; needs the [simp] lemmas above *)
+  "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+       (\<lambda>s. pstart \<le> pstart + (end - start) \<and>
+            ptrFromPAddr pstart \<le> ptrFromPAddr pstart + (end - start) \<and>
+            unat (end - start) \<le> gsMaxObjectSize s)
+       (\<lbrace>\<acute>start = start\<rbrace> \<inter> \<lbrace>\<acute>end =  end\<rbrace> \<inter> \<lbrace>\<acute>pstart = pstart\<rbrace> \<inter>
+        \<lbrace>flushtype_relation typ \<acute>invLabel \<rbrace>)
+       []
+       (liftE (performPageInvocation (PageFlush typ start end pstart pt asid)))
+       (Call performPageFlush_'proc)"
+  apply (simp only: liftE_liftM ccorres_liftM_simp)
+  apply (cinit lift: start_' end_' pstart_' invLabel_')
+   apply (unfold when_def)
+   apply (rule ccorres_split_nothrow_novcg_dc)
+      apply (rule ccorres_rhs_assoc)+
+      apply csymbr
+      apply csymbr
+      apply csymbr
+      apply csymbr
+      apply (rule ccorres_cond2[where R=\<top>])
+        apply (simp split: if_split)
+       apply (ctac (no_vcg) add: doFlush_ccorres)
+      apply (rule ccorres_return_Skip)
+     apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+     apply (rule allI, rule conseqPre, vcg)
+     apply (clarsimp simp: return_def)
+    apply wpsimp
+   apply (simp add: guard_is_UNIV_def)
+  apply (clarsimp simp: order_less_imp_le)
+  done
+
+lemma ivc_label_flush_case:
+  "label = ArchInvocationLabel ARMPageUnify_Instruction \<or>
+   label = ArchInvocationLabel ARMPageCleanInvalidate_Data \<or>
+   label = ArchInvocationLabel ARMPageInvalidate_Data \<or>
+   label = ArchInvocationLabel ARMPageClean_Data
+    \<Longrightarrow> (case label of
+     ArchInvocationLabel ARMPageMap \<Rightarrow> A
+  |  ArchInvocationLabel ARMPageUnmap \<Rightarrow> B
+  |  ArchInvocationLabel ARMPageUnify_Instruction \<Rightarrow> C
+  |  ArchInvocationLabel ARMPageCleanInvalidate_Data \<Rightarrow> C
+  |  ArchInvocationLabel ARMPageInvalidate_Data \<Rightarrow> C
+  |  ArchInvocationLabel ARMPageClean_Data \<Rightarrow> C
+  |  ArchInvocationLabel ARMPageGetAddress \<Rightarrow> D
+  |  _  \<Rightarrow> E)
+  = C"
+  by (auto split: invocation_label.split arch_invocation_label.split)
+
+lemma isPageFlushLabel_disj:
+  "(label = ArchInvocationLabel ARMPageUnify_Instruction \<or>
+    label = ArchInvocationLabel ARMPageCleanInvalidate_Data \<or>
+    label = ArchInvocationLabel ARMPageInvalidate_Data \<or>
+    label = ArchInvocationLabel ARMPageClean_Data) =
+  isPageFlushLabel label"
+  by (auto simp: isPageFlushLabel_def split: invocation_label.split arch_invocation_label.split)
+
+lemma unat_scast_up: (* FIXME AARCH64: currently unused, move to Word_Lib *)
+  "\<lbrakk> LENGTH('a) \<le> LENGTH('b); 0 \<le> sint x \<rbrakk> \<Longrightarrow> unat (scast x::'b::len word) = unat x" for x :: "'a :: len  word"
+  apply (simp flip: bit_last_iff not_less)
+  apply (word_eqI)
+  apply (clarsimp simp: min_def split: if_splits)
+  apply (rule conjI; clarsimp)
+   apply (drule test_bit_lenD)
+   apply clarsimp
+   apply (metis le_antisym nat_le_Suc_less_imp)
+  apply fastforce
+  done
+
+lemma unat_uint_less: (* FIXME AARCH64: currently unused, move to Word_Lib *)
+  "unat x < nat i \<Longrightarrow> uint x < i" for x :: "'a :: len word"
+  by (simp add: zless_nat_eq_int_zless)
+
+lemma sint_ge_zero_uint: (* FIXME AARCH64: currently unused, move to Word_Lib *)
+  "uint x < 2 ^ (LENGTH('a) - 1) \<Longrightarrow> sint (x :: 'a :: len word) \<ge> 0"
+  by (simp add: sint_eq_uint_2pl word_2p_lem wsst_TYs(3))
+
+lemma sint_ge_zero_unat: (* FIXME AARCH64: currently unused, move to Word_Lib *)
+  "unat x < 2 ^ (LENGTH('a) - 1) \<Longrightarrow> sint (x :: 'a :: len word) \<ge> 0"
+  by (fastforce intro: sint_ge_zero_uint unat_uint_less simp: nat_power_eq)
+
+lemma flushtype_relation_triv:
+  "isPageFlushLabel (invocation_type label) \<or> isVSpaceFlushLabel (invocation_type label)
+   \<Longrightarrow> flushtype_relation (labelToFlushType label) label"
+  by (clarsimp simp: labelToFlushType_def flushtype_relation_def invocation_eq_use_types
+                     isPageFlushLabel_def isVSpaceFlushLabel_def
+               split: flush_type.splits invocation_label.splits arch_invocation_label.splits)
+
+(* The magic 4 comes out of the bitfield generator *)
+lemma ThreadState_Restart_mask[simp]:
+  "(scast ThreadState_Restart::machine_word) && mask 4 = scast ThreadState_Restart"
+  by (simp add: ThreadState_Restart_def mask_def)
+
+(* FIXME AARCH64: clean up RISCV mentions here *)
 lemma decodeARMFrameInvocation_ccorres:
-  notes if_cong[cong] tl_drop_1[simp] Collect_const[simp del]
+  notes if_cong[cong] Collect_const[simp del]
   shows
   "\<lbrakk> interpret_excaps extraCaps' = excaps_map extraCaps; isFrameCap cp \<rbrakk>
-     \<Longrightarrow>
+   \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and (\<lambda>s. ksCurThread s = thread) and ct_active' and sch_act_simple
               and (excaps_in_mem extraCaps \<circ> ctes_of)
               and cte_wp_at' ((=) (ArchObjectCap cp) \<circ> cteCap) slot
               and (\<lambda>s. \<forall>v \<in> set extraCaps. ex_cte_cap_wp_to' isCNodeCap (snd v) s)
               and sysargs_rel args buffer and valid_objs')
-       (UNIV \<inter> {s. invLabel_' s = label}
+       ({s. invLabel_' s = label}
              \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. cte_' s = cte_Ptr slot}
              \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
@@ -1635,61 +1813,200 @@ lemma decodeARMFrameInvocation_ccorres:
        (decodeARMMMUInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeARMFrameInvocation_'proc)"
+  (is "\<lbrakk> _; _ \<rbrakk> \<Longrightarrow> ccorres _ _ ?P _ _ _ _")
   apply (clarsimp simp only: isCap_simps)
   apply (cinit' lift: invLabel_' length___unsigned_long_' cte_'
                       current_extra_caps_' cap_' buffer_' call_'
                 simp: decodeARMMMUInvocation_def)
-   apply_trace (simp add: Let_def isCap_simps invocation_eq_use_types split_def decodeARMFrameInvocation_def
-               del: Collect_const
+   apply (simp add: Let_def isCap_simps invocation_eq_use_types split_def decodeARMFrameInvocation_def
               cong: StateSpace.state.fold_congs globals.fold_congs
                     if_cong invocation_label.case_cong arch_invocation_label.case_cong list.case_cong)
    apply (rule ccorres_Cond_rhs[rotated])+
-      apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
-      apply clarsimp
-      apply (rule ccorres_equals_throwError)
-       apply (fastforce simp: throwError_bind invocationCatch_def
-                       split: invocation_label.split arch_invocation_label.split)
-      apply (rule syscall_error_throwError_ccorres_n)
-      apply (simp add: syscall_error_to_H_cases)
+       apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
+       apply clarsimp
+       apply (rule ccorres_equals_throwError)
+        apply (fastforce simp: throwError_bind invocationCatch_def
+                        split: invocation_label.split arch_invocation_label.split)
+       apply (rule syscall_error_throwError_ccorres_n)
+       apply (simp add: syscall_error_to_H_cases)
 
-     \<comment> \<open>PageGetAddress\<close>
+      \<comment> \<open>PageGetAddress\<close>
+      apply (rule ccorres_guard_imp2[where A="?P" and A'=UNIV])
+       apply (simp add: returnOk_bind bindE_assoc performARMMMUInvocations)
+       apply (rule ccorres_rhs_assoc)+
+       apply (ctac add: setThreadState_ccorres)
+         apply csymbr
+         apply (rule ccorres_nondet_refinement)
+          apply (rule is_nondet_refinement_bindE)
+           apply (rule is_nondet_refinement_refl)
+          apply (simp split: if_split, rule conjI[rotated])
+           apply (rule impI, rule is_nondet_refinement_refl)
+          apply (rule impI, rule is_nondet_refinement_alternative1)
+         apply (clarsimp simp: liftE_bindE)
+         apply (rule ccorres_add_returnOk)
+         apply (ctac(no_vcg) add: performPageGetAddress_ccorres)
+           apply (rule ccorres_return_CE, simp+)[1]
+          apply (rule ccorres_return_C_errorE, simp+)[1]
+         apply (wpsimp wp: sts_invs_minor' ct_in_state'_set)+
+       apply (vcg exspec=setThreadState_modifies)
+      apply (fastforce simp: ct_in_state'_def valid_tcb_state'_def rf_sr_ksCurThread
+                             ccap_relation_FrameCap_BasePtr ccap_relation_frame_tags
+                      elim!: pred_tcb'_weakenE
+                      dest!: st_tcb_at_idle_thread')
+
+     \<comment> \<open>Flush\<close>
+     apply (rule ccorres_guard_imp2[where A="?P" and A'=UNIV])
+      apply (rule ccorres_rhs_assoc)+
+      apply csymbr+
+      apply (simp add: ivc_label_flush_case decodeARMFrameInvocationFlush_def
+                       list_case_If2 if3_fold2
+                 cong: StateSpace.state.fold_congs globals.fold_congs
+                       if_cong invocation_label.case_cong arch_invocation_label.case_cong
+                       list.case_cong)
+      apply (simp add: split_def case_option_If2 if_to_top_of_bind
+                  cong: if_cong invocation_label.case_cong arch_invocation_label.case_cong)
+      apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
+         apply vcg
+        apply (clarsimp simp:list_length_less )
+        apply (drule unat_less_iff[where c=2])
+         apply (simp add:word_bits_def)
+        apply simp
+       apply (simp add: throwError_bind invocationCatch_def)
+       apply (rule syscall_error_throwError_ccorres_n)
+       apply (simp add: syscall_error_to_H_cases)
+      apply csymbr
+      apply (rule ccorres_if_cond_throws2[rotated -1,where Q = \<top> and Q' = \<top>])
+         apply vcg
+        apply clarsimp
+        apply (frule ccap_relation_mapped_asid_0)
+        apply fastforce
+       apply (simp add: throwError_bind invocationCatch_def)
+       apply (rule syscall_error_throwError_ccorres_n)
+       apply (simp add: syscall_error_to_H_cases)
+      apply csymbr
+      apply csymbr
+      apply csymbr
+      apply csymbr
+      apply (simp add: invocationCatch_use_injection_handler
+                       injection_bindE[OF refl refl] bindE_assoc
+                       injection_handler_returnOk injection_handler_whenE
+                       lookupError_injection)
+      apply (ctac add: ccorres_injection_handler_csum1
+                            [OF ccorres_injection_handler_csum1, OF findVSpaceForASID_ccorres])
+         apply (rule ccorres_if_cond_throws[where P = False and Q = \<top> and Q'=\<top>, simplified])
+           apply simp
+          apply (rule ccorres_add_return)
+          apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=0 and buffer=buffer])
+            apply (rule ccorres_add_return)
+            apply (ctac add: getSyscallArg_ccorres_foo
+                               [where args = args and n = 1 and buffer = buffer])
+              apply (simp only:if_to_top_of_bindE whenE_def)
+              apply (rule ccorres_if_cond_throws[rotated -1, where Q = \<top> and Q' = \<top>])
+                 apply vcg
+                apply (clarsimp simp:hd_drop_conv_nth hd_conv_nth)
+               apply (simp add:injection_handler_throwError)
+               apply (rule syscall_error_throwError_ccorres_n)
+               apply (simp add: syscall_error_to_H_cases)
+              apply (simp only:returnOk_bindE)
+              apply csymbr
+              apply csymbr
+              apply (rule ccorres_Guard_Seq)
+              apply csymbr
+              apply (rule ccorres_if_cond_throws[rotated -1,where Q = \<top> and Q' = \<top>])
+                 apply vcg
+                apply (clarsimp simp:hd_drop_conv_nth hd_conv_nth)
+                apply (clarsimp dest!: ccap_relation_FrameCap_generics)
+               apply (simp add:injection_handler_throwError)
+               apply (rule syscall_error_throwError_ccorres_n)
+               apply (simp add: syscall_error_to_H_cases)
+              apply csymbr
+              apply csymbr
+              apply csymbr
+              apply (rule ccorres_if_cond_throws[rotated -1,where Q = \<top> and Q' = \<top>])
+                 apply vcg
+                apply (clarsimp simp: hd_drop_conv_nth hd_conv_nth paddrBase_def paddrTop_def
+                                      pptrBaseOffset_def pptrTop_def pptrBase_def fromPAddr_def)
+                apply (clarsimp dest!: ccap_relation_FrameCap_generics)
+               apply (simp add:injection_handler_throwError)
+               apply (rule syscall_error_throwError_ccorres_n)
+               apply (simp add: syscall_error_to_H_cases)
+              apply (simp add: performARMMMUInvocations bindE_assoc)
+              apply simp
+              apply (ctac add: setThreadState_ccorres)
+                apply (ctac(no_vcg) add: performPageFlush_ccorres)
+                  apply (rule ccorres_gen_asm)
+                  apply (erule ssubst[OF if_P, where P="\<lambda>x. ccorres _ _ _ _ _ x _"])
+                  apply (rule ccorres_alternative2)
+                  apply (rule ccorres_return_CE, simp+)[1]
+                 apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
+                apply (wpsimp simp: performPageInvocation_def)
+               apply simp
+               apply (strengthen unat_sub_le_strg[where v="2 ^ pageBitsForSize (capFSize cp)"])
+               apply (simp add: linorder_not_less linorder_not_le order_less_imp_le)
+               apply (wp sts_invs_minor')
+              apply simp
+              apply (vcg exspec=setThreadState_modifies)
+             apply wp
+            apply simp
+            apply vcg
+           apply wp
+          apply vcg
+         apply vcg
+        apply clarsimp
+        apply (rule_tac P'="{s. find_ret = errstate s}" in ccorres_from_vcg_split_throws[where P=\<top>])
+         apply vcg
+        apply (rule conseqPre, vcg)
+        apply (clarsimp simp: throwError_def return_def syscall_error_rel_def
+                              syscall_error_to_H_cases exception_defs)
+        apply (erule lookup_failure_rel_fault_lift[rotated])
+        apply (simp add: exception_defs)
+       apply (wp injection_wp[OF refl])
+      apply simp
+      apply (vcg exspec=findVSpaceForASID_modifies)
+     apply (clarsimp simp: ct_in_state'_def valid_tcb_state'_def rf_sr_ksCurThread isCap_simps
+                           ccap_relation_FrameCap_BasePtr ccap_relation_frame_tags
+                           sysargs_rel_to_n ccap_relation_FrameCap_MappedASID)
+     apply (frule cte_wp_at_eq_gsMaxObjectSize, fastforce)
+     apply (frule cte_wp_cteCap_valid, fastforce)
+     apply (clarsimp simp: valid_cap'_def capAligned_def wellformed_mapdata'_def
+                     cong: option.case_cong)
+     apply (rule conjI; clarsimp)
+       (* Haskell side *)
+       apply (fastforce simp: not_less not_le paddrBase_def ptrFromPAddr_add_left
+                              is_aligned_no_overflow3
+                              is_aligned_no_overflow3[OF vmsz_aligned_addrFromPPtr(3)[THEN iffD2]])
+     (* C side *)
+     apply (prop_tac "2 \<le> length args", clarsimp simp: not_less word_le_nat_alt)
+     apply (drule at_least_2_args[simplified not_less])
+     apply (solves \<open>clarsimp simp: ccap_relation_capFMappedASID_CL_0 ccap_relation_FrameCap_MappedASID
+                                   pageBitsForSize_le_64 ccap_relation_FrameCap_MappedAddress
+                                   isPageFlushLabel_disj  ccap_relation_FrameCap_Size
+                                   framesize_from_H_bounded flushtype_relation_triv
+                             split: option.splits\<close>)
+
+    \<comment> \<open>PageUnmap\<close>
+    apply (rule ccorres_guard_imp2[where A="?P" and A'=UNIV])
      apply (simp add: returnOk_bind bindE_assoc performARMMMUInvocations)
      apply (rule ccorres_rhs_assoc)+
      apply (ctac add: setThreadState_ccorres)
-       apply csymbr
-       apply (rule ccorres_nondet_refinement)
-        apply (rule is_nondet_refinement_bindE)
-         apply (rule is_nondet_refinement_refl)
-        sorry (* FIXME AARCH64 something isn't matching here
-        apply (simp split: if_split, rule conjI[rotated])
-         apply (rule impI, rule is_nondet_refinement_refl)
-        apply (rule impI, rule is_nondet_refinement_alternative1)
-       apply (clarsimp simp: liftE_bindE)
-       apply (rule ccorres_add_returnOk)
-       apply (ctac(no_vcg) add: performPageGetAddress_ccorres)
+       apply (ctac(no_vcg) add: performPageInvocationUnmap_ccorres)
+         apply (rule ccorres_gen_asm)
+         apply (erule ssubst[OF if_P, where P="\<lambda>x. ccorres _ _ _ _ _ x _"])
+         apply (rule ccorres_alternative2)
          apply (rule ccorres_return_CE, simp+)[1]
-        apply (rule ccorres_return_C_errorE, simp+)[1]
-       apply (wpsimp wp: sts_invs_minor' ct_in_state'_set)+
+        apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
+       apply (wpsimp simp: performPageInvocation_def)
+      apply (wp sts_invs_minor')
+     apply simp
      apply (vcg exspec=setThreadState_modifies)
+    apply clarsimp (* needed *)
+    apply (fastforce simp: ct_in_state'_def valid_tcb_state'_def rf_sr_ksCurThread isCap_simps
+                           cte_wp_at_ctes_of
+                     elim!: pred_tcb'_weakenE)
 
-    \<comment> \<open>PageUnmap\<close>
-    apply (simp add: returnOk_bind bindE_assoc
-                     performAARCH64MMUInvocations)
-    apply (rule ccorres_rhs_assoc)+
-    apply (ctac add: setThreadState_ccorres)
-      apply (ctac(no_vcg) add: performPageInvocationUnmap_ccorres)
-        apply (rule ccorres_gen_asm)
-        apply (erule ssubst[OF if_P, where P="\<lambda>x. ccorres _ _ _ _ _ x _"])
-        apply (rule ccorres_alternative2)
-        apply (rule ccorres_return_CE, simp+)[1]
-       apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
-      apply (wpsimp simp: performPageInvocation_def)
-     apply (wp sts_invs_minor')
-    apply simp
-    apply (vcg exspec=setThreadState_modifies)
-
+  apply (rule ccorres_inst[where P=\<top> and P'=UNIV]) (* FIXME AARCH64: remove before continuing *)
+  subgoal sorry (* FIXME AARCH64: decode PageMap
    \<comment> \<open>PageMap\<close>
-   supply Collect_const[simp del]
    apply (rename_tac word rights pg_sz maptype mapdata call' buffer' cap excaps cte
                      length___unsigned_long invLabel)
    apply clarsimp
@@ -1713,7 +2030,7 @@ lemma decodeARMFrameInvocation_ccorres:
      apply (fastforce simp: throwError_bind invocationCatch_def split: list.split)
     apply (rule syscall_error_throwError_ccorres_n)
     apply (simp add: syscall_error_to_H_cases)
-   apply (clarsimp simp: list_case_If2 decodeRISCVFrameInvocationMap_def)
+   apply (clarsimp simp: list_case_If2 decodeARMFrameInvocationMap_def)
    apply (rule ccorres_add_return)
    apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=0 and buffer=buffer])
      apply (rule ccorres_add_return)
@@ -2092,14 +2409,21 @@ lemma decodeARMFrameInvocation_ccorres:
    apply (rule_tac t=d and s="tl (tl (tl args))" in ssubst, simp)
    apply (rule subset_refl)
 
-  apply (clarsimp)
+  *)
+
+  apply (clarsimp simp: cte_wp_at_ctes_of)
+  done
+
+(* likely needed for PageMap:
   apply (frule cte_wp_at_eq_gsMaxObjectSize, fastforce)
-  apply (clarsimp simp: ccap_relation_FrameCap_BasePtr ccap_relation_frame_tags)
+  apply (frule cte_wp_cteCap_valid, fastforce)
+  apply (clarsimp simp: ccap_relation_FrameCap_BasePtr ccap_relation_frame_tags valid_cap'_def)
 
   apply (prop_tac "SCAST(32 signed \<rightarrow> 64) ThreadState_Restart && mask 4
                    = SCAST(32 signed \<rightarrow> 64) ThreadState_Restart")
   apply (solves \<open>clarsimp simp: ThreadState_Restart_def mask_def\<close>)
 
+(*
   apply (rule conjI)
    (* RISCVPageMap, Haskell side *)
    apply (clarsimp simp: not_None_def)
@@ -2129,13 +2453,8 @@ lemma decodeARMFrameInvocation_ccorres:
     by (auto simp: ct_in_state'_def pred_tcb_at' mask_def valid_tcb_state'_def
                    valid_cap'_def wellformed_acap'_def wellformed_mapdata'_def
              elim!: pred_tcb'_weakenE dest!: st_tcb_at_idle_thread')
+*)
 
-  (* RISCVPageUnMap, Haskell side *)
-  apply (rule conjI)
-  subgoal
-    by (auto simp: isCap_simps comp_def ct_in_state'_def pred_tcb_at' mask_def valid_tcb_state'_def
-                   valid_cap'_def wellformed_acap'_def wellformed_mapdata'_def
-             elim!: pred_tcb'_weakenE dest!: st_tcb_at_idle_thread')
 
   (* C side of precondition satisfaction *)
   (* General idea for discharging this: we have some ccap relations between Haskell and C side,
@@ -2149,7 +2468,10 @@ lemma decodeARMFrameInvocation_ccorres:
     apply (prop_tac "SCAST(32 signed \<rightarrow> 64) ThreadState_Restart && mask 4 =
              SCAST(32 signed \<rightarrow> 64) ThreadState_Restart")
      apply (solves \<open>clarsimp simp: ThreadState_Restart_def mask_def\<close>)
+
+(*
     apply (rule conjI, solves \<open>simp add: word_less_nat_alt\<close>)  (* size args < 3 *)
+*)
 
     (* get a hold of our valid caps and resolve the C heap *)
     apply (clarsimp simp: neq_Nil_conv[where xs=extraCaps]
