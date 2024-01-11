@@ -1330,11 +1330,8 @@ lemma arch_performInvocation_corres:
      \<comment> \<open>InvokePage\<close>
      apply (clarsimp simp: archinv_relation_def performARMMMUInvocation_def)
      apply (rule corres_guard_imp)
-       apply (rule corres_split)
-          apply (rule performPageInvocation_corres)
-          apply (simp add: page_invocation_map_def)
-         apply (rule corres_trivial, simp)
-        apply wpsimp+
+       apply (rule performPageInvocation_corres)
+       apply (simp add: page_invocation_map_def)
       apply (fastforce simp: valid_arch_inv_def)
      apply (fastforce simp: valid_arch_inv'_def)
 

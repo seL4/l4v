@@ -2197,20 +2197,23 @@ lemma vs_lookup_slot_vspace_for_asidD:
 
 lemma performPageInvocation_corres:
   assumes "page_invocation_map pgi pgi'"
-  shows "corres dc (invs and valid_page_inv pgi) (no_0_obj' and valid_page_inv' pgi')
-                   (perform_page_invocation pgi) (performPageInvocation pgi')"
+  shows "corres (=) (invs and valid_page_inv pgi) (no_0_obj' and valid_page_inv' pgi')
+                    (perform_page_invocation pgi) (performPageInvocation pgi')"
   apply (rule corres_cross_over_guard [where Q="no_0_obj' and valid_page_inv' pgi' and
                                                 pspace_aligned' and pspace_distinct'"])
    apply (fastforce intro!: pspace_aligned_cross pspace_distinct_cross)
   using assms
   unfolding perform_page_invocation_def performPageInvocation_def page_invocation_map_def
   apply (cases pgi; clarsimp simp: valid_page_inv_def mapping_map_def)
-    apply (rename_tac cap ct_slot_ref ct_slot_idx pte slot level cap' pte')
-    apply (simp add: perform_pg_inv_map_def)
-    apply (corres corres: updateCap_same_master | fastforce | corres_cases)+
-               apply (rule_tac F="arch_cap.is_FrameCap cap" in corres_gen_asm)
-               apply ((corres corres: corres_assert_opt_l simp: arch_cap.is_FrameCap_def
-                       | corres_cases)+)[1]
+     apply (rename_tac cap ct_slot_ref ct_slot_idx pte slot level cap' pte')
+     apply (simp add: perform_pg_inv_map_def bind_assoc)
+     apply (corres corres: updateCap_same_master | fastforce | corres_cases)+
+                  apply (rule_tac F="arch_cap.is_FrameCap cap" in corres_gen_asm)
+                  apply ((corres corres: corres_assert_opt_l simp: arch_cap.is_FrameCap_def
+                          | corres_cases)+)[1]
+                 apply (rule corres_return_eq_same, simp)
+                apply wp
+               apply wp
               apply clarsimp
               apply (wp get_pte_wp hoare_drop_imp hoare_vcg_op_lift)+
       apply (clarsimp simp: invs_valid_objs invs_distinct invs_psp_aligned)
@@ -2219,16 +2222,18 @@ lemma performPageInvocation_corres:
       apply (clarsimp simp: cap_master_cap_def split: arch_cap.splits)
       apply (fastforce dest!: vs_lookup_slot_vspace_for_asidD)
      apply (clarsimp simp: valid_page_inv'_def cte_wp_at_ctes_of)
-    apply (simp add: perform_pg_inv_unmap_def)
+    apply (simp add: perform_pg_inv_unmap_def bind_assoc)
     apply (corres corres: corres_assert_gen_asm_l simp: liftM_def)
       apply (corres_cases_both; (solves \<open>rule corres_trivial, clarsimp simp: arch_cap.is_FrameCap_def\<close>)?)
        apply (corres corres: getSlotCap_corres)
+           apply (rename_tac old_cap old_cap')
            apply (rule_tac F="is_frame_cap old_cap" in corres_gen_asm)
            apply (corres corres: updateCap_same_master
                          simp: is_frame_cap_def arch_cap.is_FrameCap_def update_map_data_def)
           apply (wp get_cap_wp)+
       apply corres_cases_both
       apply (corres simp: arch_cap.is_FrameCap_def corres: getSlotCap_corres)
+          apply (rename_tac old_cap old_cap')
           apply (rule_tac F="is_frame_cap old_cap" in corres_gen_asm)
           apply (corres corres: updateCap_same_master
                         simp: is_frame_cap_def arch_cap.is_FrameCap_def update_map_data_def)
@@ -2239,8 +2244,6 @@ lemma performPageInvocation_corres:
                            wellformed_mapdata_def valid_arch_cap_def)
     apply (clarsimp simp: valid_page_inv'_def cte_wp_at_ctes_of)
    apply (clarsimp simp: perform_pg_inv_get_addr_def fromPAddr_def)
-   apply (corres corres: setMRs_corres[@lift_corres_args] setMessageInfo_corres[@lift_corres_args]
-                 simp: invs_valid_objs invs_psp_aligned invs_distinct)
   apply (clarsimp simp: perform_flush_def)
   apply (rename_tac type vstart vend pstart vs asid)
   apply (case_tac type;

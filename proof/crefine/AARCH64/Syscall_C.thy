@@ -325,7 +325,6 @@ lemma decodeInvocation_ccorres:
    apply (clarsimp simp: isCap_simps cap_get_tag_to_H from_bool_neq_0)
   apply (insert ccap_relation_IRQHandler_mask, elim meta_allE, drule(1) meta_mp)
   apply (clarsimp simp: word_size)
-  apply (clarsimp simp: less_mask_eq)
   apply (clarsimp simp: cap_get_tag_isCap)
   apply (cases cp ; clarsimp simp: isCap_simps)
      apply (frule cap_get_tag_isCap_unfolded_H_cap, drule (1) cap_get_tag_to_H)

@@ -786,7 +786,7 @@ performPageTableInvocation (PageTableUnmap cap slot) = do
     updateCap slot (ArchObjectCap $ cap { capPTMappedAddress = Nothing })
 
 
-performPageInvocation :: PageInvocation -> Kernel ()
+performPageInvocation :: PageInvocation -> Kernel [Word]
 performPageInvocation (PageMap cap ctSlot (pte,slot)) = do
     oldPte <- getObject slot
     let tlbFlushRequired = oldPte /= InvalidPTE
@@ -796,6 +796,7 @@ performPageInvocation (PageMap cap ctSlot (pte,slot)) = do
     when tlbFlushRequired $ do
         (asid, vaddr) <- return $ fromJust $ capFMappedAddress cap
         invalidateTLBByASIDVA asid vaddr
+    return []
 
 performPageInvocation (PageUnmap cap ctSlot) = do
     case capFMappedAddress cap of
@@ -803,23 +804,17 @@ performPageInvocation (PageUnmap cap ctSlot) = do
         _ -> return ()
     ArchObjectCap cap <- getSlotCap ctSlot
     updateCap ctSlot (ArchObjectCap $ cap { capFMappedAddress = Nothing })
+    return []
 
 performPageInvocation (PageGetAddr ptr) = do
-    let paddr = fromPAddr $ addrFromPPtr ptr
-    ct <- getCurThread
-    msgTransferred <- setMRs ct Nothing [paddr]
-    msgInfo <- return $ MI {
-            msgLength = msgTransferred,
-            msgExtraCaps = 0,
-            msgCapsUnwrapped = 0,
-            msgLabel = 0 }
-    setMessageInfo ct msgInfo
+    return [fromPAddr $ addrFromPPtr ptr]
 
 performPageInvocation (PageFlush flushType vstart vend pstart space asid) = do
     let start = VPtr $ fromPPtr $ ptrFromPAddr pstart
     let end = start + (vend - vstart)
     when (start < end) $ do
         doMachineOp $ doFlush flushType start end pstart
+    return []
 
 
 performASIDControlInvocation :: ASIDControlInvocation -> Kernel ()
@@ -851,13 +846,20 @@ performASIDPoolInvocation (Assign asid poolPtr ctSlot) = do
 performARMMMUInvocation :: ArchInv.Invocation -> KernelP [Word]
 performARMMMUInvocation i = withoutPreemption $ do
     case i of
-        InvokeVSpace oper -> performVSpaceInvocation oper
-        InvokePageTable oper -> performPageTableInvocation oper
+        InvokeVSpace oper -> do
+            performVSpaceInvocation oper
+            return []
+        InvokePageTable oper -> do
+            performPageTableInvocation oper
+            return []
         InvokePage oper -> performPageInvocation oper
-        InvokeASIDControl oper -> performASIDControlInvocation oper
-        InvokeASIDPool oper -> performASIDPoolInvocation oper
+        InvokeASIDControl oper -> do
+            performASIDControlInvocation oper
+            return []
+        InvokeASIDPool oper -> do
+            performASIDPoolInvocation oper
+            return []
         InvokeVCPU _ -> fail "performARMMMUInvocation: not an MMU invocation"
-    return $ []
 
 storePTE :: PPtr PTE -> PTE -> Kernel ()
 storePTE slot pte = do

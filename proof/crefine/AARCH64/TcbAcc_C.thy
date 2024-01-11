@@ -449,7 +449,7 @@ lemma length_of_msgRegisters:
 
 lemma setMRs_single:
   "setMRs thread buffer [val] = do
-     y \<leftarrow> asUser thread (setRegister register.X2 val);
+     _ \<leftarrow> asUser thread (setRegister register.X2 val);
      return 1
    od"
   apply (clarsimp simp: setMRs_def length_of_msgRegisters zipWithM_x_def zipWith_def split: option.splits)

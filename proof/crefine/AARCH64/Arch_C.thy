@@ -1342,19 +1342,17 @@ lemma performPageInvocationMap_ccorres:
 (* FIXME AARCH64 completely lost here, on RISCV64 and ARM_HYP performPageInvocation returns a list,
    but it's unit on AARCH64 *)
 lemma performPageGetAddress_ccorres:
-  notes Collect_const[simp del]
-  shows
   "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
       (invs' and (\<lambda>s. ksCurThread s = thread) and ct_in_state' ((=) Restart))
       (\<lbrace>\<acute>base_ptr = ptr\<rbrace> \<inter> \<lbrace>\<acute>call = from_bool isCall\<rbrace>) []
       (do reply \<leftarrow> performPageInvocation (PageGetAddr ptr);
-          liftE (replyOnRestart thread [] \<comment> \<open>(* FIXME AARCH64 reply *)\<close> isCall) od)
+          liftE (replyOnRestart thread reply isCall) od)
       (Call performPageGetAddress_'proc)"
+  supply Collect_const[simp del]
   apply (cinit' lift: base_ptr_' call_' simp: performPageInvocation_def)
    apply (clarsimp simp: bind_assoc)
    apply csymbr
    apply csymbr
-   sorry (* FIXME AARCH64 proof strategy should be adjusted here
    apply (rule ccorres_symb_exec_r)
      apply (rule_tac xf'=thread_' in ccorres_abstract, ceqv)
      apply (rename_tac cthread)
@@ -1402,7 +1400,7 @@ lemma performPageGetAddress_ccorres:
            apply (vcg)
           apply wpsimp
          apply (clarsimp simp: msgInfoRegister_def AARCH64.msgInfoRegister_def
-                               Kernel_C.msgInfoRegister_def Kernel_C.a1_def)
+                               Kernel_C.msgInfoRegister_def)
          apply (vcg exspec=setMR_modifies)
         apply wpsimp
        apply clarsimp
@@ -1420,26 +1418,8 @@ lemma performPageGetAddress_ccorres:
                         seL4_MessageInfo_lift_def message_info_to_H_def mask_def)
   apply (cases isCall)
    apply (auto simp: AARCH64.badgeRegister_def AARCH64_H.badgeRegister_def Kernel_C.badgeRegister_def
-                     Kernel_C.a0_def fromPAddr_def ThreadState_Running_def
+                     fromPAddr_def ThreadState_Running_def Kernel_C.X0_def Kernel_C.X1_def
                      pred_tcb_at'_def obj_at'_def ct_in_state'_def)
-  done *)
-
-lemma vaddr_segment_nonsense3_folded:
-  "is_aligned (p :: machine_word) pageBits \<Longrightarrow>
-   (p + ((vaddr >> pageBits) && mask ((pt_bits pt_t) - word_size_bits) << word_size_bits) &&
-     ~~ mask (pt_bits pt_t)) = p"
-  apply (rule is_aligned_add_helper[THEN conjunct2])
-   apply (simp add: bit_simps mask_def)+
-   (* FIXME AARCH64 abstraction violation *)
-   apply (simp add: Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
-  (* FIXME AARCH64 consider cleanup *)
-  apply (cases pt_t; clarsimp simp: bit_simps mask_def split: if_splits)
-   apply (simp_all add: shiftl_less_t2n[where m=12 and n=3, simplified,
-                                        OF and_mask_less'[where n=9, unfolded mask_def, simplified]])
-  apply clarsimp
-  apply (rule shiftl_less_t2n[where m=13, simplified]; simp)
-  apply (rule and_mask_less'[where n=10, simplified mask_def, simplified])
-  apply simp
   done
 
 lemma vmsz_aligned_addrFromPPtr':
