@@ -5822,14 +5822,6 @@ lemma placeNewObject_vcpu_ccorres:
   apply fastforce
   done
 
-(* FIXME AARCH64 move, also this leaks some abstraction *)
-lemma canonical_address_and_maskD:
-  "canonical_address p \<Longrightarrow> p && mask 48 = p"
-  apply (simp add: word_and_mask_shiftl pageBits_def canonical_address_range canonical_bit_def)
-  apply word_eqI
-  apply fastforce
-  done
-
 lemma updatePTType_ccorres:
   "ccorres dc xfdc
            \<top>

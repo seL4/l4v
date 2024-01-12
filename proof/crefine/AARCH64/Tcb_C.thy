@@ -543,20 +543,6 @@ lemma canonical_address_bitfield_extract_tcb:
   apply (drule (1) canonical_address_tcb_ptr)
   by (fastforce simp: sign_extended_iff_sign_extend canonical_address_sign_extended) *)
 
-(* FIXME AARCH64 move, copied from Retype_C *)
-lemma canonical_address_and_maskD:
-  "canonical_address p \<Longrightarrow> p && mask 48 = p"
-  apply (simp add: word_and_mask_shiftl pageBits_def canonical_address_range canonical_bit_def)
-  apply word_eqI
-  apply fastforce
-  done
-
-(* FIXME AARCH64 move, copied from Arch_C *)
-lemma canonical_address_and_maskI:
-  "p && mask 48 = p \<Longrightarrow> canonical_address p"
-  by (simp add: word_and_mask_shiftl pageBits_def canonical_address_range canonical_bit_def
-                and_mask_eq_iff_le_mask)
-
 (* FIXME AARCH64 move to SR_Lemmas where the RISCV64 version is *)
 lemma canonical_address_tcb_ptr:
   "\<lbrakk> canonical_address t; is_aligned t tcbBlockSizeBits \<rbrakk>
@@ -2704,13 +2690,26 @@ where
  "isValidVTableRoot_C cap \<equiv> cap_get_tag cap = scast cap_vspace_cap
              \<and> to_bool (capVSIsMapped_CL (cap_vspace_cap_lift cap))"
 
+lemma isVTableRoot_spec:
+  "\<forall>s. \<Gamma> \<turnstile> {s} Call isVTableRoot_'proc
+    {s'. ret__unsigned_long_' s' = from_bool (cap_get_tag (cap_' s) = scast cap_vspace_cap)}"
+  by vcg (clarsimp simp: from_bool_def split: if_split)
+
+(* Needs workaround to avoid the existing spec rule with ccap_relation *)
+lemma isValidNativeRoot_spec':
+  "\<forall>s. \<Gamma> \<turnstile> {s} Call isValidNativeRoot_'proc
+    {s'. ret__unsigned_long_' s' = from_bool (isValidVTableRoot_C (cap_' s))}"
+  apply (rule HoarePartial.ProcNoRec1, simp add: isValidNativeRoot_impl)
+   apply (simp add: isValidNativeRoot_body_def)
+   apply vcg
+   apply (clarsimp simp: isValidVTableRoot_C_def from_bool_0 to_bool_def split: if_split)
+  apply (simp add: isValidNativeRoot_impl dom_def)
+  done
+
 lemma isValidVTableRoot_spec:
   "\<forall>s. \<Gamma> \<turnstile> {s} Call isValidVTableRoot_'proc
     {s'. ret__unsigned_long_' s' = from_bool (isValidVTableRoot_C (cap_' s))}"
-  apply vcg
-  apply (clarsimp simp: isValidVTableRoot_C_def from_bool_0)
-  apply (simp add: to_bool_def split: if_split)
-  done
+  by (vcg exspec=isValidNativeRoot_spec') simp
 
 lemma isValidVTableRoot_conv:
   "\<lbrakk> ccap_relation cap cap' \<rbrakk>

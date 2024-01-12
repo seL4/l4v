@@ -67,6 +67,10 @@ lemma switchToIdleThread_ccorres:
       apply (wpsimp simp: AARCH64_H.switchToIdleThread_def)+
   done
 
+crunches vcpuSwitch
+  for pspace_canonical'[wp]: pspace_canonical'
+  (wp: crunch_wps)
+
 lemma Arch_switchToThread_ccorres:
   "ccorres dc xfdc
            (all_invs_but_ct_idle_or_in_cur_domain' and tcb_at' t)
@@ -87,7 +91,9 @@ lemma Arch_switchToThread_ccorres:
     apply (rule_tac Q="\<lambda>rv s. all_invs_but_ct_idle_or_in_cur_domain' s
                               \<and> case_option \<top> (ko_wp_at' (is_vcpu' and hyp_live')) (atcbVCPUPtr (tcbArch rv)) s
                               \<and> obj_at' (\<lambda>t::tcb. True) t s" in hoare_strengthen_post[rotated])
-     apply (clarsimp simp: vcpu_at_is_vcpu' elim!: ko_wp_at'_weakenE split: option.splits)
+     apply (clarsimp simp: vcpu_at_is_vcpu' invs_no_cicd'_def valid_state'_def valid_pspace'_def
+                     elim!: ko_wp_at'_weakenE
+                     split: option.splits)
     apply (wpsimp wp: getObject_tcb_hyp_sym_refs simp: empty_fail_getObject)+
   apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def valid_pspace'_def)
   apply (frule cmap_relation_tcb, frule (1) cmap_relation_ko_atD)

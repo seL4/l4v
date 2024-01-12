@@ -1574,12 +1574,6 @@ lemma throwError_invocationCatch:
   "throwError a >>= invocationCatch b c d e = throwError (Inl a)"
   by (simp add: invocationCatch_def throwError_bind)
 
-(* FIXME AARCH64 move, also this leaks some abstraction, but the 48 is from the bitfield gen. *)
-lemma canonical_address_and_maskI:
-  "p && mask 48 = p \<Longrightarrow> canonical_address p"
-  by (simp add: word_and_mask_shiftl pageBits_def canonical_address_range canonical_bit_def
-                and_mask_eq_iff_le_mask)
-
 lemma canonical_address_cap_frame_cap:
   "cap_get_tag cap = SCAST(32 signed \<rightarrow> 64) cap_frame_cap \<Longrightarrow>
      canonical_address (capFMappedAddress_CL (cap_frame_cap_lift cap))"
