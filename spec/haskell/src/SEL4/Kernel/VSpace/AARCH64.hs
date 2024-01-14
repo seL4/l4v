@@ -104,7 +104,7 @@ findVSpaceForASID asid = do
     case maybeEntry of
         Just (ASIDPoolVSpace vmID ptr) -> do
             assert (ptr /= 0) "findVSpaceForASID: found null PD"
-            withoutFailure $ checkPTAt ptr
+            withoutFailure $ checkPTAt VSRootPT_T ptr
             return ptr
         _ -> throw $ InvalidRoot
 
@@ -112,9 +112,9 @@ maybeVSpaceForASID :: ASID -> Kernel (Maybe (PPtr PTE))
 maybeVSpaceForASID asid =
     liftM Just (findVSpaceForASID asid) `catchFailure` const (return Nothing)
 
--- used in proofs only, will be translated to ptable_at.
-checkPTAt :: PPtr PTE -> Kernel ()
-checkPTAt _ = return ()
+-- used in proofs only, will be translated to ptable_at + ghost state type.
+checkPTAt :: PT_Type -> PPtr PTE -> Kernel ()
+checkPTAt _ _ = return ()
 
 
 {- Locating Page Table Slots -}
@@ -173,7 +173,7 @@ lookupPTSlotFromLevel level ptPtr vPtr = do
     pte <- pteAtIndex level ptPtr vPtr
     if isPageTablePTE pte
         then do
-            checkPTAt (getPPtrFromPTE pte)
+            checkPTAt NormalPT_T (getPPtrFromPTE pte)
             lookupPTSlotFromLevel (level-1) (getPPtrFromPTE pte) vPtr
         else return (ptBitsLeft level, ptSlotIndex level ptPtr vPtr)
 
@@ -324,7 +324,7 @@ lookupPTFromLevel level ptPtr vPtr targetPtPtr = do
     if ptr == targetPtPtr
         then return slot
         else do
-            withoutFailure $ checkPTAt ptr
+            withoutFailure $ checkPTAt NormalPT_T ptr
             lookupPTFromLevel (level-1) ptr vPtr targetPtPtr
 
 unmapPageTable :: ASID -> VPtr -> PPtr PTE -> Kernel ()

@@ -30,7 +30,7 @@ where
      pte <- pteAtIndex level ptPtr vPtr;
      if isPageTablePTE pte
      then do
-       checkPTAt (getPPtrFromPTE pte);
+       checkPTAt NormalPT_T (getPPtrFromPTE pte);
        lookupPTSlotFromLevel (level - 1) (getPPtrFromPTE pte) vPtr
      od
      else return (ptBitsLeft level, ptSlotIndex level ptPtr vPtr)
@@ -50,7 +50,7 @@ where
     if ptr = targetPtPtr
         then returnOk slot
         else doE
-          liftE $ checkPTAt ptr;
+          liftE $ checkPTAt NormalPT_T ptr;
           lookupPTFromLevel (level - 1) ptr vPtr targetPtPtr
         odE
   odE"
