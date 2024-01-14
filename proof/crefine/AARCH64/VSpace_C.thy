@@ -423,7 +423,10 @@ lemma isPTEPageTable_corres:
 lemma ccorres_checkPTAt:
   "ccorres_underlying srel Ga rrel xf arrel axf P P' hs (a ()) c \<Longrightarrow>
    ccorres_underlying srel Ga rrel xf arrel axf
-                      (\<lambda>s. (\<exists>pt_t. page_table_at' pt_t pt s) \<longrightarrow> P s) P' hs (checkPTAt pt >>= a) c"
+                      (\<lambda>s. page_table_at' pt_t pt s \<and> gsPTTypes (ksArchState s) pt = Some pt_t \<longrightarrow> P s)
+                      P'
+                      hs
+                      (checkPTAt pt_t pt >>= a) c"
   unfolding checkPTAt_def by (rule ccorres_stateAssert)
 
 lemma pteAtIndex_ko[wp]:
@@ -1600,7 +1603,8 @@ lemma setVMRoot_ccorres:
          apply (ctac (no_vcg) add: setVSpaceRoot_ccorres)
           apply (rule ccorres_return_void_C)
          apply (rule hoare_post_taut[where P=\<top>])
-        apply (simp add: whenE_def returnOk_def)
+        apply (simp add: whenE_def returnOk_def assertE_liftE liftE_bind)
+        apply (rule ccorres_assert2)
         apply (ctac (no_vcg) add: armv_contextSwitch_ccorres)
        apply (clarsimp simp: setGlobalUserVSpace_def)
        apply (rule ccorres_cond_true_seq, ccorres_rewrite)
@@ -1629,7 +1633,6 @@ lemma setVMRoot_ccorres:
    apply (clarsimp simp: isCap_simps isValidVTableRoot_def2)
    apply (frule cte_wp_at_valid_objs_valid_cap', assumption)
    apply (clarsimp simp: valid_cap'_def wellformed_mapdata'_def canonical_address_page_table_at')
-   (* FIXME AARCH64: assert pptrBase \<le> pt \<and> pt < AARCH64_H.pptrTop for VSRoot cap *) subgoal sorry
   apply (frule valid_arch_state_armKSGlobalUserVSpace)
   apply (frule rf_sr_armKSGlobalUserVSpace)
   apply (clarsimp simp: tcb_cnode_index_defs cte_level_bits_def tcbVTableSlot_def)
@@ -1642,7 +1645,7 @@ lemma setVMRoot_ccorres:
               elim!: ccap_relationE
               split: if_split_asm cap_CL.splits)
 
-lemma ccorres_seq_IF_False:
+lemma ccorres_seq_IF_False: (* FIXME AARCH64: move, check if used *)
   "ccorres_underlying sr \<Gamma> r xf arrel axf G G' hs a (IF False THEN x ELSE y FI ;; c) = ccorres_underlying sr \<Gamma> r xf arrel axf G G' hs a (y ;; c)"
   by simp
 
@@ -1867,10 +1870,13 @@ lemma ccorres_return_void_C':
 lemma findVSpaceForASID_page_table_at'_simple[wp]:
   notes checkPTAt_inv[wp del]
   shows "\<lbrace>\<top>\<rbrace> findVSpaceForASID asid \<lbrace> page_table_at' VSRootPT_T \<rbrace>,-"
-  apply (simp add: findVSpaceForASID_def)
-   apply (wpsimp wp: getASID_wp simp: checkPTAt_def)
-  sorry (* FIXME AARCH64 the wp rule is probably too weak (only gives us existence of pt_t
-  done *)
+  unfolding findVSpaceForASID_def
+  by (wpsimp wp: getASID_wp simp: checkPTAt_def)
+
+lemma findVSpaceForASID_gsPTTypes[wp]:
+  "\<lbrace>\<top>\<rbrace> findVSpaceForASID asid \<lbrace>\<lambda>vspace s. gsPTTypes (ksArchState s) vspace = Some VSRootPT_T\<rbrace>,-"
+  unfolding findVSpaceForASID_def
+  by (wpsimp wp: getASID_wp simp: checkPTAt_def wp_del: checkPTAt_inv)
 
 lemmas ccorres_name_ksCurThread = ccorres_pre_getCurThread[where f="\<lambda>_. f'" for f',
     unfolded getCurThread_def, simplified gets_bind_ign]

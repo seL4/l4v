@@ -13,7 +13,7 @@ begin
 context kernel_m
 begin
 
-(* FIXME RISCV: move to CCorres_UL, remove previous ccorres_cases *)
+(* FIXME AARCH64: move to CCorres_UL, remove previous ccorres_cases, check RISCV *)
 (* note: moving this lemma outside of kernel_m locale currently causes some proofs to fail *)
 lemma ccorres_cases:
   assumes P:    " P \<Longrightarrow> ccorres_underlying srel Ga rrel xf arrel axf G G' hs a b"
@@ -24,7 +24,7 @@ lemma ccorres_cases:
   apply (cases P, auto simp: P notP)
   done
 
-(* FIXME RISCV: move up, make ccorres_underlying, check if it could be made [simp] *)
+(* FIXME AARCH64: move up, make ccorres_underlying, check if it could be made [simp], check RISCV *)
 (* Provide full ccorres context so it will work with ccorres_prog_only_cong enabled *)
 lemma ccorres_dc_comp:
   "ccorres (dc \<circ> R) xf P P' hs m c = ccorres dc xf P P' hs m c "

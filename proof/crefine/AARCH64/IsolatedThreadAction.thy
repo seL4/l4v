@@ -1006,7 +1006,7 @@ lemma setVMRoot_isolatable:
                gets_isolatable getCTE_isolatable
                findVSpaceForASID_isolatable doMachineOp_isolatable armContextSwitch_isolatable
          | clarsimp simp: projectKO_opt_asidpool whenE_def liftE_def setGlobalUserVSpace_def
-                          if_apply_def2
+                          if_apply_def2 assertE_liftE
          | wpsimp wp: getASID_wp typ_at_lifts
          | split capability.split arch_capability.split pt_type.split option.split
          | safe)+
