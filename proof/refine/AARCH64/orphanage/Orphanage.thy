@@ -97,7 +97,7 @@ lemma no_orphans_disj:
   apply (rule ext)
   apply (unfold no_orphans_def all_active_tcb_ptrs_def
                 is_active_tcb_ptr_def st_tcb_at_neg' typ_at_tcb')
-  apply (auto intro: pred_tcb_at')
+  apply (auto del: pred_tcb_at' intro: pred_tcb_at')
   done
 
 lemma no_orphans_lift:
@@ -177,7 +177,7 @@ lemma almost_no_orphans_disj:
   apply (rule ext)
   apply (unfold almost_no_orphans_def all_active_tcb_ptrs_def
                 is_active_tcb_ptr_def st_tcb_at_neg' typ_at_tcb')
-  apply (auto intro: pred_tcb_at')
+  apply (auto del: pred_tcb_at' intro: pred_tcb_at')
   done
 
 lemma no_orphans_update_simps[simp]:
@@ -587,10 +587,6 @@ lemma tcbSchedDequeue_no_orphans [wp]:
   apply auto
   done
 
-crunches setGlobalUserVSpace
-  for ksReadyQueues[wp]: "\<lambda>s. P (ksReadyQueues s)"
-  (wp: crunch_wps)
-
 lemma switchToIdleThread_no_orphans' [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and>
           (is_active_tcb_ptr (ksCurThread s) s
@@ -607,7 +603,8 @@ lemma switchToIdleThread_no_orphans' [wp]:
 
 crunches getVMID, Arch.switchToThread
   for ksCurThread[wp]: "\<lambda> s. P (ksCurThread s)"
-  (wp: crunch_wps getObject_inv loadObject_default_inv)
+  (wp: crunch_wps getObject_inv loadObject_default_inv findVSpaceForASID_vs_at_wp
+   simp: getThreadVSpaceRoot_def if_distribR)
 
 crunches updateASIDPoolEntry, Arch.switchToThread
   for no_orphans[wp]: "no_orphans"

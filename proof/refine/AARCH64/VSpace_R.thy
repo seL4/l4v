@@ -25,10 +25,8 @@ definition
              ko_at' (ASIDPool pool) ap s \<and>
              pool (ucast (asid_low_bits_of (ucast asid))) = Some entry \<and>
              apVSpace entry = vs \<and>
-             (\<exists>pt_t. page_table_at' pt_t vs s)"
-(* FIXME AARCH64: checkPTAt currently used in both contexts (Normal and VSRoot) -- if we later
-                  (in CRefine) need more precision here (= VSRootPT_T), we'll need to split
-                  checkPTAt into separate functions *)
+             page_table_at' VSRootPT_T vs s \<and>
+             gsPTTypes (ksArchState s) vs = Some VSRootPT_T"
 
 lemma findVSpaceForASID_vs_at_wp:
   "\<lbrace>\<lambda>s. \<forall>pm. asid \<noteq> 0 \<and> asid_wf asid \<and> vspace_at_asid' pm asid s \<longrightarrow> P pm s\<rbrace>
