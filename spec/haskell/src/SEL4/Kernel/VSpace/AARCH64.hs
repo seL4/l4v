@@ -384,6 +384,9 @@ setVMRoot tcb = do
                     capPTBasePtr = vspaceRoot }) -> do
                 vspaceRoot' <- findVSpaceForASID asid
                 when (vspaceRoot /= vspaceRoot') $ throw InvalidRoot
+                assert (fromVPtr pptrBase <= fromPPtr vspaceRoot &&
+                        fromPPtr vspaceRoot < fromVPtr pptrTop)
+                       "vspaceRoot must be in kernel window"
                 withoutFailure $ armContextSwitch vspaceRoot asid
             _ -> throw InvalidRoot)
         (\_ -> setGlobalUserVSpace)
