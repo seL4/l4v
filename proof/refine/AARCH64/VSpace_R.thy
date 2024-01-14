@@ -1707,7 +1707,7 @@ lemma setVMRoot_corres [corres]:
   assumes "t' = t"
   shows "corres dc (tcb_at t and valid_vspace_objs and valid_asid_table and
                     vmid_inv and valid_vmid_table and pspace_aligned and pspace_distinct and
-                    valid_objs and valid_global_arch_objs)
+                    valid_objs and valid_global_arch_objs and pspace_in_kernel_window and valid_uses)
                    (no_0_obj')
                    (set_vm_root t) (setVMRoot t')"
 proof -
@@ -1729,6 +1729,7 @@ proof -
       apply (rule_tac  R="\<lambda>thread_root. valid_vspace_objs and valid_asid_table and vmid_inv and
                                         valid_vmid_table and pspace_aligned and pspace_distinct and
                                         valid_objs and valid_global_arch_objs and
+                                        pspace_in_kernel_window and valid_uses and
                                         cte_wp_at ((=) thread_root) thread_root_slot and
                                         tcb_at (fst thread_root_slot) and
                                         K (snd thread_root_slot = tcb_cnode_index 1)"
@@ -1752,6 +1753,7 @@ proof -
         apply (rule corres_guard_imp)
           apply (rule_tac P="valid_vspace_objs and valid_asid_table and pspace_aligned and
                              valid_vmid_table and vmid_inv and pspace_distinct and valid_objs and
+                             pspace_in_kernel_window and valid_uses and
                              valid_global_arch_objs and cte_wp_at ((=) cap) thread_root_slot"
                           in corres_assert_gen_asm2)
           prefer 3
@@ -1766,12 +1768,18 @@ proof -
            apply (rule corres_split_catch [where f=lfr and E'="\<lambda>_. \<top>"])
               apply (rule corres_split_eqrE[OF findVSpaceForASID_corres[OF refl]])
                 apply (rule whenE_throwError_corres; simp add: lookup_failure_map_def)
+                apply (simp add: assertE_liftE liftE_bindE)
+                apply (rule corres_assert_gen_asm)
+                apply simp
                 apply (rule armContextSwitch_corres)
-               apply (wpsimp wp: find_vspace_for_asid_wp findVSpaceForASID_inv hoare_drop_imps)+
+                apply (wpsimp wp: find_vspace_for_asid_wp findVSpaceForASID_inv hoare_drop_imps)+
              apply (rule global, assumption)
             apply wpsimp+
           apply (frule (1) cte_wp_at_valid_objs_valid_cap)
-          apply (clarsimp simp: valid_cap_def mask_def wellformed_mapdata_def)
+          apply (clarsimp simp: valid_cap_def mask_def wellformed_mapdata_def obj_at_def)
+          apply (drule (3) pspace_in_kw_bounded)
+          apply (clarsimp simp: kernel_window_range_def pptr_base_def AARCH64.pptrTop_def
+                                AARCH64_H.pptrTop_def)
          apply (wpsimp wp: get_cap_wp simp: getThreadVSpaceRoot_def)+
    apply (auto dest!: tcb_at_cte_at_1)
   done
@@ -1991,7 +1999,7 @@ lemma deleteASIDPool_corres:
            (* mapM_x invariant implies post condition;
               some manual massaging to avoid massive duplication *)
            apply (simp (no_asm) del: fun_upd_apply)
-           apply (strengthen invs_vmid_inv invs_valid_global_arch_objs invs_implies
+           apply (strengthen invs_vmid_inv invs_valid_global_arch_objs invs_implies invs_valid_uses
                              invs_valid_vmid_table valid_asid_table_None_upd)
            (* can't move these into previous strengthen, otherwise will be applied too early *)
            apply (strengthen invs_arm_asid_table_unmap invs_valid_asid_table)

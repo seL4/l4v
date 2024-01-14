@@ -3967,7 +3967,8 @@ lemma lookupCap_cap_to_refs[wp]:
 
 crunches setVMRoot
   for valid_objs'[wp]: valid_objs'
-  (wp: getASID_wp crunch_wps simp: getPoolPtr_def)
+  (wp: getASID_wp crunch_wps findVSpaceForASID_vs_at_wp
+   simp: getPoolPtr_def getThreadVSpaceRoot_def if_distribR)
 
 lemma arch_stt_objs' [wp]:
   "\<lbrace>valid_objs'\<rbrace> Arch.switchToThread t \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"

@@ -109,6 +109,7 @@ crunches vcpu_switch
   and valid_vmid_table[wp]: valid_vmid_table
   and valid_asid_table[wp]: valid_asid_table
   and global_pt[wp]: "\<lambda>s. P (global_pt s)"
+  and valid_uses[wp]: valid_uses
   (simp: crunch_simps wp: crunch_wps)
 
 lemma vcpu_switch_valid_global_arch_objs[wp]:
@@ -162,7 +163,7 @@ lemma vcpu_at_cross:
 
 lemma arch_switchToThread_corres:
   "corres dc (valid_arch_state and valid_objs and pspace_aligned and pspace_distinct
-              and valid_vspace_objs and tcb_at t)
+              and valid_vspace_objs and pspace_in_kernel_window and tcb_at t)
              (no_0_obj')
              (arch_switch_to_thread t) (Arch.switchToThread t)"
   unfolding arch_switch_to_thread_def AARCH64_H.switchToThread_def
@@ -747,7 +748,7 @@ crunches arch_switch_to_thread
 lemma switchToThread_corres:
   "corres dc (valid_arch_state and valid_objs
                 and valid_vspace_objs and pspace_aligned and pspace_distinct
-                and valid_vs_lookup and valid_global_objs
+                and valid_vs_lookup and valid_global_objs and pspace_in_kernel_window
                 and unique_table_refs
                 and st_tcb_at runnable t and valid_etcbs and (\<lambda>s. sym_refs (state_hyp_refs_of s)))
              (no_0_obj' and Invariants_H.valid_queues)
@@ -1602,7 +1603,7 @@ lemma gts_exs_valid[wp]:
 lemma guarded_switch_to_corres:
   "corres dc (valid_arch_state and valid_objs
                 and valid_vspace_objs and pspace_aligned and pspace_distinct
-                and valid_vs_lookup and valid_global_objs
+                and valid_vs_lookup and valid_global_objs and pspace_in_kernel_window
                 and unique_table_refs
                 and st_tcb_at runnable t and valid_etcbs and (\<lambda>s. sym_refs (state_hyp_refs_of s)))
              (no_0_obj' and Invariants_H.valid_queues)
