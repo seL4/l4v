@@ -31,7 +31,7 @@ The translation tool builds on various open source projects by others.
    Sources for this are found in the Simpl/ directory.  The
    code is covered by an LGPL licence.
 
-   See <https://isa-afp.org/entries/Simpl.shtml>
+   See <https://isa-afp.org/entries/Simpl.html>
 
 2. Code from SML/NJ:
    - an implementation of binary sets (Binaryset.ML)
