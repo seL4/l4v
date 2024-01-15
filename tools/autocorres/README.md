@@ -16,7 +16,7 @@ abstracts the result to produce a result that is (hopefully)
 more pleasant to reason about.
 
   [1]: https://isabelle.in.tum.de
-  [2]: https://trustworthy.systems/software/TS/c-parser/
+  [2]: https://github.com/seL4/l4v/blob/master/tools/c-parser/README.md
 
 
 
