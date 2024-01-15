@@ -344,7 +344,7 @@ lemma invokeTCB_WriteRegisters_corres:
                                  mask_def user_vtop_def
                            cong: if_cong)
           apply simp
-         apply (rule no_fail_pre, wp no_fail_mapM)
+         apply (wpsimp wp: no_fail_mapM no_fail_setRegister)
             apply (clarsimp simp: sanitiseOrFlags_def sanitiseAndFlags_def)
             apply ((safe)[1], (wp no_fail_setRegister | simp)+)
         apply (rule corres_split_nor[OF asUser_postModifyRegisters_corres[simplified]])

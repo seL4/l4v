@@ -5,7 +5,7 @@
  *)
 
 theory ExtraCorres
-imports Corres_UL
+imports Corres_UL DetWPLib
 begin
 
 (* FIXME: the S in this rule is mainly to make the induction work, we don't actually need it in
@@ -181,12 +181,17 @@ qed
 
 text \<open>Some results concerning the interaction of abstract and concrete states\<close>
 
+definition ex_abs_underlying :: "('a \<times> 'b) set \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> 'b \<Rightarrow> bool" where
+  "ex_abs_underlying sr P s' \<equiv> \<exists>s. (s,s') \<in> sr \<and> P s"
+
+lemma ex_absI[intro!]:
+  "(s, s') \<in> sr \<Longrightarrow> P s \<Longrightarrow> ex_abs_underlying sr P s'"
+  by (auto simp add: ex_abs_underlying_def)
+
 lemma corres_u_nofail:
-  "corres_underlying S nf True r P P' f g \<Longrightarrow> (nf \<Longrightarrow> no_fail P f) \<Longrightarrow>
-  no_fail (\<lambda>s'. \<exists>s. (s,s') \<in> S \<and> P s \<and> P' s') g"
-  apply (clarsimp simp add: corres_underlying_def no_fail_def)
-  apply fastforce
-  done
+  "\<lbrakk>corres_underlying S nf True r P P' f g; nf \<Longrightarrow> no_fail P f\<rbrakk>
+   \<Longrightarrow> no_fail (P' and ex_abs_underlying S P) g"
+  by (fastforce simp: corres_underlying_def ex_abs_underlying_def no_fail_def)
 
 lemma wp_from_corres_u:
   "\<lbrakk> corres_underlying R nf nf' r G G' f f'; \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>; \<lbrace>P'\<rbrace> f' \<lbrace>Q'\<rbrace>; nf \<Longrightarrow> no_fail P f \<rbrakk> \<Longrightarrow>
@@ -204,7 +209,7 @@ lemma wp_from_corres_u_unit:
 lemma corres_nofail:
   "corres_underlying state_relation nf True r P P' f g \<Longrightarrow> (nf \<Longrightarrow> no_fail P f) \<Longrightarrow>
   no_fail (\<lambda>s'. \<exists>s. (s,s') \<in> state_relation \<and> P s \<and> P' s') g"
-  by (rule corres_u_nofail)
+  by (fastforce intro: no_fail_pre corres_u_nofail simp: ex_abs_underlying_def)
 
 lemma wp_from_corres_unit:
   "\<lbrakk> corres_underlying state_relation nf nf' r G G' f f';
@@ -212,13 +217,6 @@ lemma wp_from_corres_unit:
   \<lbrace>\<lambda>s'. \<exists>s. (s,s') \<in> state_relation \<and> P s \<and> G s \<and> P' s' \<and> G' s'\<rbrace>
   f' \<lbrace>\<lambda>_ s'. \<exists>s. (s,s') \<in> state_relation \<and> Q s \<and> Q' s'\<rbrace>"
   by (auto intro!: wp_from_corres_u_unit)
-
-definition ex_abs_underlying :: "('a \<times> 'b) set \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> 'b \<Rightarrow> bool" where
-  "ex_abs_underlying sr P s' \<equiv> \<exists>s. (s,s') \<in> sr \<and> P s"
-
-lemma ex_absI[intro!]:
-  "(s, s') \<in> sr \<Longrightarrow> P s \<Longrightarrow> ex_abs_underlying sr P s'"
-  by (auto simp add: ex_abs_underlying_def)
 
 lemma corres_underlying_split_ex_abs:
   assumes ac: "corres_underlying srel nf nf' r' G G' a c"
@@ -250,6 +248,100 @@ lemma hoare_from_abs_inv:
   shows "\<lbrace>P' and G' and ex_abs_underlying srel G\<rbrace> f' \<lbrace>\<lambda>_. P'\<rbrace>"
   using assms
   by (fastforce intro: hoare_from_abs[where R=\<top> and S=\<top> and R'=\<top> and Q="\<lambda>_. P" , simplified])
+
+lemma corres_from_valid:
+  assumes nf': "nf' \<Longrightarrow> no_fail (P' and ex_abs_underlying srel P) f'"
+  assumes
+    "\<And>s. \<lbrace>\<lambda>s'. P s \<and> P' s' \<and> (s, s') \<in> srel\<rbrace>
+          f' \<lbrace>\<lambda>rv' t'. \<exists>(rv, t) \<in> fst (f s). (t, t') \<in> srel \<and> rrel rv rv'\<rbrace>"
+  shows "corres_underlying srel nf nf' rrel P P' f f'"
+  using assms
+  by (fastforce simp: corres_underlying_def valid_def no_fail_def)
+
+lemma corres_from_valid_det:
+  assumes det: "det_wp P f"
+  assumes nf': "nf' \<Longrightarrow> no_fail (P' and ex_abs_underlying srel P) f'"
+  assumes valid:
+    "\<And>s rv t.
+      \<lbrakk>fst (f s) = {(rv, t)}; P s\<rbrakk>
+      \<Longrightarrow> \<lbrace>\<lambda>s'. P' s' \<and> (s, s') \<in> srel\<rbrace> f' \<lbrace>\<lambda>rv' t'. (t, t') \<in> srel \<and> rrel rv rv'\<rbrace>"
+  shows "corres_underlying srel nf nf' rrel P P' f f'"
+  apply (clarsimp simp: corres_underlying_def)
+  apply (intro conjI)
+   apply (insert det)
+   apply (clarsimp simp: det_wp_def)
+   apply (force dest: use_valid[OF _ valid])
+  apply (fastforce dest: nf' simp: no_fail_def ex_abs_underlying_def)
+  done
+
+lemma corres_noop_ex_abs:
+  assumes P: "\<And>s. P s \<Longrightarrow> \<lbrace>\<lambda>s'. (s, s') \<in> sr \<and> P' s'\<rbrace> f \<lbrace>\<lambda>rv s'. (s, s') \<in> sr \<and> r x rv\<rbrace>"
+  assumes nf': "nf' \<Longrightarrow> no_fail (P' and ex_abs_underlying sr P) f"
+  shows "corres_underlying sr nf nf' r P P' (return x) f"
+  apply (simp add: corres_underlying_def return_def)
+  apply clarsimp
+  apply (frule P)
+  apply (insert nf')
+  apply (fastforce simp: valid_def no_fail_def ex_abs_underlying_def)
+  done
+
+lemma corres_symb_exec_r_conj_ex_abs:
+  assumes z: "\<And>rv. corres_underlying sr nf nf' r Q (R' rv) x (y rv)"
+  assumes y: "\<lbrace>Q'\<rbrace> m \<lbrace>R'\<rbrace>"
+  assumes x: "\<And>s. Q s \<Longrightarrow> \<lbrace>\<lambda>s'. (s, s') \<in> sr \<and> P' s'\<rbrace> m \<lbrace>\<lambda>rv s'. (s, s') \<in> sr\<rbrace>"
+  assumes nf: "nf' \<Longrightarrow> no_fail (P' and ex_abs_underlying sr Q) m"
+  shows      "corres_underlying sr nf nf' r Q (P' and Q') x (m >>= (\<lambda>rv. y rv))"
+proof -
+  have P: "corres_underlying sr nf nf' dc Q P' (return undefined) m"
+    apply (rule corres_noop_ex_abs)
+     apply (simp add: x)
+    apply (erule nf)
+    done
+  show ?thesis
+    apply (rule corres_guard_imp)
+      apply (subst return_bind[symmetric], rule corres_split[OF P])
+        apply (rule z)
+       apply wp
+      apply (rule y)
+     apply simp+
+    done
+qed
+
+lemmas corres_symb_exec_r_conj_ex_abs_forwards =
+  corres_symb_exec_r_conj_ex_abs[where P'=P' and Q'=P' for P', simplified]
+
+lemma gets_the_corres_ex_abs':
+ "\<lbrakk>no_ofail P a; no_ofail (P' and ex_abs_underlying sr P) b\<rbrakk> \<Longrightarrow>
+   corres_underlying sr False True r P P' (gets_the a) (gets_the b)
+   = (\<forall>s s'. P s \<and> P' s' \<and> (s, s') \<in> sr \<longrightarrow> r (the (a s)) (the (b s')))"
+  by (fastforce simp: gets_the_def no_ofail_def corres_underlying_def split_def exec_gets
+                      assert_opt_def fail_def return_def ex_abs_underlying_def)
+
+lemmas gets_the_corres_ex_abs = gets_the_corres_ex_abs'[THEN iffD2]
+
+lemma gets_the_corres':
+ "\<lbrakk>no_ofail P a; no_ofail P' b\<rbrakk> \<Longrightarrow>
+   corres_underlying sr False True r P P' (gets_the a) (gets_the b)
+   = (\<forall>s s'. P s \<and> P' s' \<and> (s, s') \<in> sr \<longrightarrow> r (the (a s)) (the (b s')))"
+  apply (erule gets_the_corres_ex_abs')
+  apply (fastforce intro: no_ofail_pre_imp)
+  done
+
+lemmas gets_the_corres = gets_the_corres'[THEN iffD2]
+
+lemma gets_the_corres_relation:
+ "\<lbrakk>no_ofail P f; corres_underlying sr False True r P P' (gets_the f) (gets_the f');
+   P s; P' s'; (s, s') \<in> sr\<rbrakk>
+  \<Longrightarrow> r (the (f s)) (the (f' s'))"
+  apply (rule_tac P=P and a=f and b=f' and P'=P'
+               in gets_the_corres_ex_abs'[THEN iffD1, rule_format];
+         fastforce?)
+  apply (rule no_ofail_gets_the_eq[THEN iffD2])
+  apply (fastforce intro: corres_u_nofail)
+  done
+
+
+\<comment> \<open>Some @{term corres_underlying} rules for @{term whileLoop}\<close>
 
 lemma in_whileLoop_corres:
   assumes body_corres:
@@ -422,6 +514,10 @@ lemma ifM_corres:
      apply (wpsimp wp: abs_valid conc_valid hoare_vcg_if_lift2)+
   done
 
+lemmas ifM_corres' =
+  ifM_corres[where A=A and B=A and C=A for A, simplified,
+             where A'=A' and B'=A' and C'=A' for A', simplified]
+
 lemma orM_corres:
   "\<lbrakk>corres_underlying srel nf nf' (=) A A' a a'; corres_underlying srel nf nf' (=) R R' b b';
     \<lbrace>B\<rbrace> a \<lbrace>\<lambda>c s. \<not> c \<longrightarrow> R s\<rbrace>; \<lbrace>B'\<rbrace> a' \<lbrace>\<lambda>c s. \<not> c \<longrightarrow> R' s\<rbrace>\<rbrakk>
@@ -431,6 +527,9 @@ lemma orM_corres:
     apply (rule ifM_corres[where Q=\<top> and Q'=\<top>])
         apply (wpsimp | fastforce)+
   done
+
+lemmas orM_corres' =
+  orM_corres[where A=A and B=A for A, simplified, where A'=A' and B'=A' for A', simplified]
 
 lemma andM_corres:
   "\<lbrakk>corres_underlying srel nf nf' (=) A A' a a'; corres_underlying srel nf nf' (=) Q Q' b b';
@@ -450,5 +549,9 @@ lemma notM_corres:
     apply (erule corres_split)
       apply wpsimp+
   done
+
+lemma ifM_to_top_of_bind:
+  "((ifM test true false) >>= z) = ifM test (true >>= z) (false >>= z)"
+  by (force simp: ifM_def bind_def split: if_splits)
 
 end

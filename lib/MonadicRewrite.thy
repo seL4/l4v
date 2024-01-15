@@ -10,7 +10,7 @@
 theory MonadicRewrite
 imports
   Monads.Nondet_VCG
-  Corres_UL
+  ExtraCorres
   Monads.Nondet_Empty_Fail
   Rules_Tac
 begin
@@ -80,6 +80,10 @@ lemma monadic_rewrite_is_refl:
 lemma monadic_rewrite_pre_imp_eq:
   "\<lbrakk> \<And>s. P s \<Longrightarrow> f s = g s \<rbrakk> \<Longrightarrow> monadic_rewrite F E P f g"
   by (simp add: monadic_rewrite_def)
+
+lemma monadic_rewrite_guard_arg_cong:
+  "(\<And>s. P s \<Longrightarrow> x = y) \<Longrightarrow> monadic_rewrite F E P (f x) (f y)"
+  by (clarsimp simp: monadic_rewrite_def)
 
 lemma monadic_rewrite_exists:
   "(\<And>v. monadic_rewrite F E (Q v) m m')
@@ -693,7 +697,7 @@ lemma monadic_rewrite_refine_validE_R:
   by (simp add: validE_R_def validE_def monadic_rewrite_refine_valid)
 
 lemma monadic_rewrite_is_valid:
-  "\<lbrakk> monadic_rewrite False False P' f f'; \<lbrace>P\<rbrace> do x <- f; g x od \<lbrace>Q\<rbrace> \<rbrakk>
+  "\<lbrakk> monadic_rewrite False E P' f f'; \<lbrace>P\<rbrace> do x <- f; g x od \<lbrace>Q\<rbrace> \<rbrakk>
    \<Longrightarrow> \<lbrace>P and P'\<rbrace> do x <- f'; g x od \<lbrace>Q\<rbrace>"
   by (fastforce simp: monadic_rewrite_def valid_def bind_def)
 
@@ -738,6 +742,13 @@ lemma monadic_rewrite_corres_r_generic:
      corres_underlying R nf nf'' r P P' a c';
      F \<longrightarrow> nf''; nf' \<longrightarrow> nf'' \<rbrakk>
    \<Longrightarrow> corres_underlying R nf nf' r P (P' and Q) a c"
+  by (fastforce simp: corres_underlying_def monadic_rewrite_def)
+
+lemma monadic_rewrite_corres_r_generic_ex_abs:
+  "\<lbrakk> monadic_rewrite F E (\<lambda>s'. Q s' \<and> ex_abs_underlying sr P s') c' c;
+     corres_underlying sr nf nf'' r P P' a c';
+     F \<longrightarrow> nf''; nf' \<longrightarrow> nf'' \<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' r P (P' and Q) a c"
   by (fastforce simp: corres_underlying_def monadic_rewrite_def)
 
 lemma monadic_rewrite_corres_r:

@@ -1419,11 +1419,6 @@ lemma corres_assert_ret:
   apply (simp add: assert_def return_def fail_def)
   done
 
-lemma corres_assert_assume_l:
-  "corres dc P Q (f ()) g
-  \<Longrightarrow> corres dc (P and (\<lambda>s. P')) Q (assert P' >>= f) g"
-  by (force simp: corres_underlying_def assert_def return_def bind_def fail_def)
-
 lemma corres_assert_assume_r:
   "corres dc P Q f (g ())
   \<Longrightarrow> corres dc P (Q and (\<lambda>s. Q')) f (assert Q' >>= g)"

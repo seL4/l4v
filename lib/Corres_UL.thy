@@ -481,6 +481,18 @@ lemma corres_if3:
                                     (if G then a else b) (if G' then c else d)"
   by simp
 
+lemma corres_if_strong:
+  "\<lbrakk>\<And>s s'. \<lbrakk>(s, s') \<in> sr; R s; R' s'\<rbrakk> \<Longrightarrow> G = G';
+    \<lbrakk>G; G'\<rbrakk> \<Longrightarrow> corres_underlying sr nf nf' r P P' a c;
+    \<lbrakk>\<not> G; \<not> G'\<rbrakk> \<Longrightarrow> corres_underlying sr nf nf' r Q Q' b d \<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' r
+         (R and (if G then P else Q)) (R' and (if G' then P' else Q'))
+         (if G then a else b) (if G' then c else d)"
+  by (fastforce simp: corres_underlying_def)
+
+lemmas corres_if_strong' =
+  corres_if_strong[where R=R and P=R and Q=R for R,
+                   where R'=R' and P'=R' and Q'=R' for R', simplified]
 
 text \<open>Some equivalences about liftM and other useful simps\<close>
 
@@ -739,6 +751,11 @@ lemma corres_assert_assume:
   corres_underlying sr nf nf' r P Q f (assert P' >>= g)"
   by (auto simp: bind_def assert_def fail_def return_def
                  corres_underlying_def)
+
+lemma corres_assert_assume_l:
+  "corres_underlying sr nf nf' rrel P Q (f ()) g
+  \<Longrightarrow> corres_underlying sr nf nf' rrel (P and (\<lambda>s. P')) Q (assert P' >>= f) g"
+  by (force simp: corres_underlying_def assert_def return_def bind_def fail_def)
 
 lemma corres_assert_gen_asm_cross:
   "\<lbrakk> \<And>s s'. \<lbrakk>(s, s') \<in> sr; P' s; Q' s'\<rbrakk> \<Longrightarrow> A;

@@ -59,6 +59,10 @@ lemmas owhile_add_inv = owhile_inv_def[symmetric]
 
 
 (* WP rules for ovalid. *)
+lemma ovalid_post_taut[wp]:
+  "\<lblot>P\<rblot> f \<lblot>\<top>\<top>\<rblot>"
+  by (simp add: ovalid_def)
+
 lemma ovalid_inv[wp]:
   "ovalid P f (\<lambda>_. P)"
   by (simp add: ovalid_def)
@@ -247,7 +251,7 @@ lemma no_ofail_ogets[wp]:
   by simp
 
 lemma no_ofail_obind[wp]:
-  "\<lbrakk> \<And>r. no_ofail (P r) (g r); no_ofail Q f; ovalid Q f P \<rbrakk> \<Longrightarrow> no_ofail Q (obind f g)"
+  "\<lbrakk> \<And>r. no_ofail (R r) (g r); \<lblot>Q\<rblot> f \<lblot>R\<rblot>; no_ofail P f \<rbrakk> \<Longrightarrow> no_ofail (P and Q) (f |>> g)"
   by (auto simp: no_ofail_def obind_def ovalid_def)
 
 lemma no_ofail_K_bind[wp]:
@@ -275,6 +279,11 @@ lemma no_ofail_oassert_opt[simp, wp]:
   "no_ofail (\<lambda>_. P \<noteq> None) (oassert_opt P)"
   by (simp add: no_ofail_def oassert_opt_def split: option.splits)
 
+lemma no_ofail_if[wp]:
+  "\<lbrakk> P \<Longrightarrow> no_ofail Q f; \<not> P \<Longrightarrow> no_ofail R g \<rbrakk>
+   \<Longrightarrow> no_ofail (if P then Q else R) (if P then f else g)"
+  by simp
+
 lemma no_ofail_owhen[wp]:
   "(P \<Longrightarrow> no_ofail Q f) \<Longrightarrow> no_ofail (if P then Q else \<top>) (owhen P f)"
   by (simp add: no_ofail_def owhen_def)
@@ -287,11 +296,14 @@ lemma no_ofail_oassert[simp, wp]:
   "no_ofail (\<lambda>_. P) (oassert P)"
   by (simp add: oassert_def no_ofail_def)
 
-lemma no_ofail_gets_the:
-  "no_ofail P f \<Longrightarrow> no_fail P (gets_the (f :: ('s, 'a) lookup))"
-  by (fastforce simp: no_ofail_def no_fail_def gets_the_def gets_def
-                      get_def assert_opt_def bind_def return_def fail_def
-               split: option.split)
+lemma no_ofail_gets_the_eq:
+  "no_ofail P f \<longleftrightarrow> no_fail P (gets_the (f :: ('s, 'a) lookup))"
+  by (auto simp: no_ofail_def no_fail_def gets_the_def gets_def
+                 get_def assert_opt_def bind_def return_def fail_def
+         split: option.split)
+
+lemmas no_ofail_gets_the =
+  no_ofail_gets_the_eq[THEN iffD1]
 
 lemma no_ofail_is_triple[wp_trip]:
   "no_ofail P f = triple_judgement P f (\<lambda>s f. f s \<noteq> None)"
@@ -348,7 +360,7 @@ lemma ovalidNF_pre_imp:
   by (simp add: ovalidNF_def)
 
 lemma no_ofail_pre_imp:
-  "\<lbrakk> \<And>s. P' s \<Longrightarrow> P s; no_ofail P f \<rbrakk> \<Longrightarrow> no_ofail P' f"
+  "\<lbrakk> no_ofail P f; \<And>s. P' s \<Longrightarrow> P s \<rbrakk> \<Longrightarrow> no_ofail P' f"
   by (simp add: no_ofail_def)
 
 lemma ovalid_post_imp:

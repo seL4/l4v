@@ -271,8 +271,7 @@ lemma no_fail_invalidateCacheRange_I[simp, wp]:
 lemma no_fail_invalidateCacheRange_RAM[simp, wp]:
   "no_fail \<top> (invalidateCacheRange_RAM s e p)"
   apply (simp add: invalidateCacheRange_RAM_def lineStart_def cacheLineBits_def)
-  apply (rule no_fail_pre, wp no_fail_invalidateL2Range no_fail_invalidateByVA no_fail_dsb, simp)
-   apply (auto intro: hoare_post_taut)
+  apply (wpsimp wp: no_fail_invalidateL2Range no_fail_invalidateByVA no_fail_dsb)
   done
 
 lemma no_fail_branchFlushRange[simp, wp]:
