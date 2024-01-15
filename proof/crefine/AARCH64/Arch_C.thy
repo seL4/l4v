@@ -35,37 +35,113 @@ lemma objBits_InvalidPTE_pte_bits:
   "objBits AARCH64_H.InvalidPTE = pte_bits"
   by (simp add: objBits_InvalidPTE bit_simps)
 
-(* FIXME AARCH64 this isn't true anymore, do we have an analogous replacement?
-lemma canonical_user_less_pptrBase:
-  "canonical_user < AARCH64.pptrBase"
-  apply (clarsimp simp: canonical_user_def AARCH64.pptrBase_def ipa_size_def)
-  apply (simp add: canonical_bit_def mask_2pm1 split: if_split)
-  oops *)
+lemma unat_of_nat_pt_bits_mw: (* FIXME AARCH64 move *)
+  "unat (of_nat (pt_bits pt_t)::machine_word) = pt_bits pt_t"
+  by (rule unat_of_nat_eq) (simp add: bit_simps split: if_split)
 
-(* FIXME AARCH64 this isn't true anymore, do we have an analogous replacement?
-lemma user_region_less_pptrBase:
-  "p \<in> user_region \<Longrightarrow> p < AARCH64.pptrBase"
-  by (simp add: user_region_def order_le_less_trans[OF _ canonical_user_less_pptrBase]) *)
+lemma aligned_no_overflow_less: (* FIXME AARCH64: Word_Lib *)
+  "\<lbrakk> is_aligned p n; p + 2 ^ n \<noteq> 0 \<rbrakk> \<Longrightarrow> p < p + 2 ^ n"
+  by (erule word_leq_minus_one_le) (erule is_aligned_no_overflow)
+
+lemma unat_mask_pt_bits_shift_neq_0[simp]: (* FIXME AARCH64 move *)
+  "0 < unat (mask (pt_bits pt_t) >> pte_bits :: machine_word)"
+  by (simp add: bit_simps mask_def split: if_split)
+
+lemma pptrBaseOffset_alignment_pt_bits[simp, intro!]:  (* FIXME AARCH64 move *)
+  "pt_bits pt_t \<le> pptrBaseOffset_alignment"
+  by (simp add: bit_simps pptrBaseOffset_alignment_def split: if_split)
+
+lemma addrFromPPtr_mask_cacheLineSize: (* FIXME AARCH64 move *)
+  "addrFromPPtr ptr && mask cacheLineSize = ptr && mask cacheLineSize"
+  apply (simp add: addrFromPPtr_def AARCH64.pptrBase_def pptrBaseOffset_def canonical_bit_def
+                   paddrBase_def cacheLineSize_def)
+  apply word_bitwise
+  apply (simp add:mask_def)
+  done
+
+lemma clearMemory_PT_setObject_PTE_ccorres:
+  "ccorres dc xfdc
+           (page_table_at' pt_t ptr and (\<lambda>s. 2 ^ ptBits pt_t \<le> gsMaxObjectSize s) and
+            (\<lambda>_. is_aligned ptr (ptBits pt_t) \<and> ptr \<noteq> 0 \<and> pstart = addrFromPPtr ptr))
+           (\<lbrace>\<acute>ptr___ptr_to_unsigned_long = Ptr ptr\<rbrace> \<inter> \<lbrace>\<acute>bits = of_nat (ptBits pt_t)\<rbrace>) []
+       (do x \<leftarrow> mapM_x (\<lambda>p. setObject p InvalidPTE)
+                       [ptr , ptr + 2 ^ objBits InvalidPTE .e. ptr + 2 ^ ptBits pt_t - 1];
+           doMachineOp (cleanCacheRange_PoU ptr (ptr + 2 ^ ptBits pt_t - 1) pstart)
+        od)
+       (Call clearMemory_PT_'proc)"
+  apply (rule ccorres_gen_asm)+
+  apply (cinit' lift: ptr___ptr_to_unsigned_long_' bits_')
+   apply (rule ccorres_Guard_Seq)
+   apply (rule ccorres_split_nothrow_novcg_dc)
+      apply (rule_tac P="page_table_at' pt_t ptr and (\<lambda>s. 2 ^ pt_bits pt_t \<le> gsMaxObjectSize s)"
+                      in ccorres_from_vcg_nofail[where P'=UNIV])
+      apply (rule allI, rule conseqPre, vcg)
+      apply (clarsimp simp: unat_of_nat_pt_bits_mw)
+      apply (subst ghost_assertion_size_logic[unfolded o_def])
+        apply simp
+       apply assumption
+      apply (simp add: is_aligned_no_overflow')
+      apply (intro conjI)
+         apply (erule is_aligned_weaken, simp add: bit_simps)
+        apply (clarsimp simp: is_aligned_def bit_simps split: if_splits)
+       apply (erule (1) page_table_at_rf_sr_dom_s[simplified])
+      apply (clarsimp simp: replicateHider_def[symmetric]
+                      cong: StateSpace.state.fold_congs globals.fold_congs)
+      apply (simp add: objBits_simps upto_enum_step_def aligned_no_overflow_less
+                       not_less[symmetric] upto_enum_word
+                  split: if_split_asm cong: if_cong)
+      apply (split if_split)
+      apply (rule conjI; clarsimp)
+      apply (fold mask_2pm1 shiftr_div_2n_w)
+      apply (erule mapM_x_store_memset_ccorres_assist[OF _ _ _ _ _ _ subset_refl];
+             simp add: shiftl_t2n hd_map objBits_simps)
+        apply (clarsimp simp: less_Suc_eq_le nth_append split: if_split)
+       apply (simp add: bit_simps mask_def split: if_split)
+      apply (rule cmap_relationE1, erule rf_sr_cpte_relation, erule ko_at_projectKO_opt)
+      apply (simp add: pte_bits_def word_size_bits_def)
+      apply (subst coerce_memset_to_heap_update_pte)
+      apply (clarsimp simp: rf_sr_def Let_def cstate_relation_def typ_heap_simps)
+      apply (rule conjI)
+       apply (simp add: cpspace_relation_def typ_heap_simps update_pte_map_tos
+                        update_pte_map_to_ptes carray_map_relation_upd_triv)
+       apply (rule cmap_relation_updI, simp_all)[1]
+       apply (simp add: cpte_relation_def Let_def pte_lift_def
+                        pte_get_tag_def pte_tag_defs)
+       apply (simp add: carch_state_relation_def cmachine_state_relation_def
+                        typ_heap_simps update_pte_map_tos)
+      apply csymbr
+     apply (rule ccorres_Guard)
+     apply (ctac add: cleanCacheRange_PoU_ccorres)
+    apply (wpsimp wp: mapM_x_wp' setObject_ksPSpace_only updateObject_default_inv)
+   apply (clarsimp simp: guard_is_UNIV_def bit_simps split: if_split)
+  apply clarsimp
+  apply (frule is_aligned_addrFromPPtr_n, simp)
+  apply (simp add: is_aligned_no_overflow' addrFromPPtr_mask_cacheLineSize)
+  apply (rule conjI)
+   apply (simp add: unat_mask_eq flip: mask_2pm1)
+   apply (simp add: mask_eq_exp_minus_1)
+  apply (simp add: bit_simps split: if_split)
+  done
 
 lemma performPageTableInvocationUnmap_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and cte_wp_at' ((=) (ArchObjectCap cap) \<circ> cteCap) ctSlot
-              and (\<lambda>_. isPageTableCap cap))
+              and (\<lambda>_. isPageTableCap cap \<and> capPTType cap = NormalPT_T))
        (\<lbrace>ccap_relation (ArchObjectCap cap) \<acute>cap\<rbrace> \<inter> \<lbrace>\<acute>ctSlot = Ptr ctSlot\<rbrace>)
        []
        (liftE (performPageTableInvocation (PageTableUnmap cap ctSlot)))
        (Call performPageTableInvocationUnmap_'proc)"
-using [[goals_limit=20]]
   apply (simp only: liftE_liftM ccorres_liftM_simp)
   apply (rule ccorres_gen_asm)
   apply (cinit lift: cap_' ctSlot_')
+   apply (rename_tac cap')
    apply csymbr
    apply (simp del: Collect_const)
    apply (rule ccorres_split_nothrow_novcg_dc)
       apply (subgoal_tac "capPTMappedAddress cap
                            = (\<lambda>cp. if to_bool (capPTIsMapped_CL cp)
                               then Some (capPTMappedASID_CL cp, capPTMappedAddress_CL cp)
-                              else None) (cap_page_table_cap_lift capa)")
+                              else None) (cap_page_table_cap_lift cap')")
        apply (rule ccorres_Cond_rhs)
         apply (simp add: to_bool_def)
         apply (rule ccorres_rhs_assoc)+
@@ -77,30 +153,25 @@ using [[goals_limit=20]]
           apply (simp add: storePTE_def' swp_def)
           apply clarsimp
           apply (simp only: bit_simps_corres[symmetric])
-
           apply csymbr
-thm clearMemory_PT_body_def
-          sorry (* FIXME AARCH64 spec problem: Haskell side is missing cleanCacheRange_PoU, which
-                   would give correspondence with clearMemory_PT; i.e. Haskell spec should be
-                   updated to encompass clearMemory_PT functionality
-
-          apply (ctac add: clearMemory_setObject_PTE_ccorres[simplified objBits_InvalidPTE_pte_bits])
+          apply (ctac add: clearMemory_PT_setObject_PTE_ccorres[simplified objBits_InvalidPTE_pte_bits])
          apply wp
         apply (simp del: Collect_const)
         apply (vcg exspec=unmapPageTable_modifies)
        apply simp
        apply (rule ccorres_return_Skip')
-      apply (simp add: cap_get_tag_isCap_ArchObject[symmetric])
-      apply (clarsimp simp: cap_lift_page_table_cap cap_to_H_def
-                            cap_page_table_cap_lift_def
+      apply (simp add: cap_get_tag_isCap_ArchObject[symmetric] split: if_split)
+      apply (clarsimp simp: cap_lift_page_table_cap cap_to_H_def cap_page_table_cap_lift_def
                      elim!: ccap_relationE cong: if_cong)
-     apply (simp add: liftM_def getSlotCap_def updateCap_def
-                 del: Collect_const)
+     apply (simp add: liftM_def getSlotCap_def updateCap_def del: Collect_const)
      apply (rule ccorres_move_c_guard_cte)
      apply (rule ccorres_getCTE)+
-     apply (rule_tac P="cte_wp_at' ((=) rv) ctSlot
-                          and (\<lambda>_. rv = rva \<and> isArchCap isPageTableCap (cteCap rv))"
-                in ccorres_from_vcg_throws [where P'=UNIV])
+     apply (rename_tac cte cte')
+     apply (rule_tac P="cte_wp_at' ((=) cte) ctSlot
+                          and (\<lambda>_. cte = cte' \<and>
+                                   isArchCap (\<lambda>acap. isPageTableCap acap \<and>
+                                                     capPTType acap = NormalPT_T) (cteCap cte))"
+                     in ccorres_from_vcg_throws [where P'=UNIV])
      apply (rule allI, rule conseqPre, vcg)
      apply (clarsimp simp: cte_wp_at_ctes_of cap_get_tag_isCap_ArchObject)
      apply (rule cmap_relationE1[OF cmap_relation_cte], assumption+)
@@ -115,14 +186,16 @@ thm clearMemory_PT_body_def
       apply (subst setCTE_tcb_case, assumption+)
       apply (clarsimp dest!: ksPSpace_update_eq_ExD)
       apply (erule cmap_relation_updI, assumption)
-       apply (simp add: cap_get_tag_isCap_ArchObject[symmetric])
+       apply (clarsimp simp: isCap_simps)
+       apply (drule cap_get_tag_isCap_unfolded_H_cap)
+       apply (frule cap_get_tag_isCap_unfolded_H_cap)
        apply (clarsimp simp: ccte_relation_def c_valid_cte_def
                       elim!: ccap_relationE)
        apply (subst cteCap_update_cte_to_H)
          apply (clarsimp simp: map_option_Some_eq2)
          apply (rule trans, rule sym, rule option.sel, rule sym, erule arg_cong)
         apply (erule iffD1[OF cap_page_table_cap_lift])
-       apply (clarsimp simp: map_option_Some_eq2 cap_get_tag_isCap_ArchObject[symmetric]
+       apply (clarsimp simp: map_option_Some_eq2
                              cap_lift_page_table_cap cap_to_H_def
                              cap_page_table_cap_lift_def)
       apply simp
@@ -146,8 +219,8 @@ thm clearMemory_PT_body_def
              simp flip: canonical_bit_def
                  elim!: ccap_relationE cong: if_cong)
   apply (drule spec[where x=0])
-  apply (auto simp add: word_and_le1 user_region_less_pptrBase)
-  done *)
+  apply auto
+  done
 
 lemma ap_eq_D:
   "x \<lparr>array_C := arr'\<rparr> = asid_pool_C.asid_pool_C arr \<Longrightarrow> arr' = arr"

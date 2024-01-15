@@ -1616,8 +1616,7 @@ lemma pspace_no_overlap_underlying_zero_update:
   apply blast
   done
 
-(* FIXME AARCH64 move *)
-lemma addrFromPPtr_mask_cacheLineSize:
+lemma addrFromPPtr_mask_cacheLineSize: (* FIXME AARCH64 move, remove duplicate in Arch_C *)
   "addrFromPPtr ptr && mask cacheLineSize = ptr && mask cacheLineSize"
   apply (simp add: addrFromPPtr_def AARCH64.pptrBase_def pptrBaseOffset_def canonical_bit_def
                    paddrBase_def cacheLineSize_def)
