@@ -112,7 +112,7 @@ This package contains:
     * Norbert Schirmer's Simpl language and associated VCG tool. The
       C parser translates C into Schirmer's Simpl language:
 
-        https://www.isa-afp.org/entries/Simpl.shtml
+        https://www.isa-afp.org/entries/Simpl.html
 
     * Code from SML/NJ, including an implementation of binary sets
       (Binaryset.ML) and the mllex and mlyacc tools
