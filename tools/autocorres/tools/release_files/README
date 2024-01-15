@@ -7,7 +7,7 @@ in [Isabelle/HOL][1]. In particular, it uses Norrish's
 abstracts the result to produce a result that is (hopefully)
 more pleasant to reason about.
 
-  [1]: https://www.cl.cam.ac.uk/research/hvg/Isabelle/
+  [1]: https://isabelle.in.tum.de/
   [2]: https://trustworthy.systems/software/TS/c-parser/
 
 
