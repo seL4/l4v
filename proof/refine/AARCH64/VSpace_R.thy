@@ -2363,7 +2363,7 @@ lemma performPageTableInvocation_corres:
             apply (clarsimp simp: mdata_map_def)
            apply (rule refl)
           apply (simp (no_asm) add: p_assoc_help flip: mask_2pm1)
-          apply (rule clear_page_table_corres)
+          apply (corres corres: clear_page_table_corres)
          apply wp+
        apply (rule corres_trivial, simp)
       apply (simp add: liftM_def)
