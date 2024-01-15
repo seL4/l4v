@@ -69,8 +69,8 @@ text \<open>
 
   As mentioned earlier, AutoCorres does not handle C code directly. The first
   step is to apply the
-  C-Parser\footnote{\url{https://trustworthy.systems/software/TS/c-parser}} to
-  obtain a SIMPL translation. We do this using the \texttt{install-C-file}
+  C-Parser\footnote{\url{https://github.com/seL4/l4v/blob/master/tools/c-parser/README.md}}
+  to obtain a SIMPL translation. We do this using the \texttt{install-C-file}
   command in Isabelle, as shown.
 
 \<close>
