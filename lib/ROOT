@@ -67,6 +67,7 @@ session Lib (lib) = Word_Lib +
     Value_Type
     Named_Eta
     Rules_Tac
+    Heap_List
 
     (* should move to Monads: *)
     NonDetMonadLemmaBucket
