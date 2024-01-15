@@ -243,4 +243,4 @@ proof-context aware than the 'original' indenter. Pressing `ctrl+i` while some
 subgoal depth and maintaining the relative indentation of multi-line `apply`
 statements.
 
-[isabelle]: http://isabelle.in.tum.de
+[isabelle]: https://isabelle.in.tum.de
