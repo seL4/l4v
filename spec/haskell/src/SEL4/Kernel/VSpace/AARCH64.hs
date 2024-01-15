@@ -784,6 +784,10 @@ performPageTableInvocation (PageTableUnmap cap slot) = do
             unmapPageTable asid vaddr ptr
             let slots = [ptr, ptr + bit pteBits .. ptr + bit (ptBits (capPTType cap)) - 1]
             mapM_ (flip storePTE InvalidPTE) slots
+            doMachineOp $
+                cleanCacheRange_PoU (VPtr $ fromPPtr $ ptr)
+                                    (VPtr $ fromPPtr $ (ptr + bit (ptBits (capPTType cap)) - 1))
+                                    (addrFromPPtr ptr)
         _ -> return ()
     ArchObjectCap cap <- getSlotCap slot
     updateCap slot (ArchObjectCap $ cap { capPTMappedAddress = Nothing })

@@ -163,7 +163,9 @@ definition perform_pt_inv_unmap :: "arch_cap \<Rightarrow> cslot_ptr \<Rightarro
          p \<leftarrow> return $ acap_obj cap;
          unmap_page_table asid vaddr p;
          slots \<leftarrow> return [p, p + (1 << pte_bits) .e. p + mask (pt_bits (acap_pt_type cap))];
-         mapM_x (swp (store_pte (acap_pt_type cap)) InvalidPTE) slots
+         mapM_x (swp (store_pte (acap_pt_type cap)) InvalidPTE) slots;
+         do_machine_op $ cleanCacheRange_PoU p (p + mask (pt_bits (acap_pt_type cap)))
+                                             (addrFromPPtr p)
        od
      | _ \<Rightarrow> return ();
      old_cap \<leftarrow> liftM the_arch_cap $ get_cap ct_slot;
