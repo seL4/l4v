@@ -28,6 +28,8 @@ end
 consts
   cNodeOverlap :: "(machine_word \<Rightarrow> nat option) \<Rightarrow> (machine_word \<Rightarrow> bool) \<Rightarrow> bool"
 
-#INCLUDE_HASKELL SEL4/Object/Untyped.lhs NOT cNodeOverlap canonicalAddressAssert
+#INCLUDE_HASKELL SEL4/Object/Untyped.lhs decls_only ONLY archOverlap
+
+#INCLUDE_HASKELL SEL4/Object/Untyped.lhs NOT cNodeOverlap canonicalAddressAssert archOverlap
 
 end
