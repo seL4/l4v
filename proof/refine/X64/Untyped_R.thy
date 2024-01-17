@@ -4733,6 +4733,9 @@ lemma (in range_cover) funky_aligned:
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
+defs archOverlap_def:
+  "archOverlap \<equiv> \<lambda>_ _. False"
+
 lemma inv_untyped_corres':
   "\<lbrakk> untypinv_relation ui ui' \<rbrakk> \<Longrightarrow>
    corres (dc \<oplus> (=))
@@ -4976,7 +4979,8 @@ lemma inv_untyped_corres':
     show " corres (dc \<oplus> (=)) ((=) s) ((=) s')
            (invoke_untyped ?ui)
            (invokeUntyped ?ui')"
-      apply (clarsimp simp:invokeUntyped_def invoke_untyped_def getSlotCap_def bind_assoc)
+      apply (clarsimp simp: invokeUntyped_def invoke_untyped_def getSlotCap_def bind_assoc
+                            archOverlap_def)
       apply (insert cover)
       apply (rule corres_guard_imp)
         apply (rule corres_split_norE)
