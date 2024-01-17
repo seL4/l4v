@@ -498,11 +498,6 @@ lemma ghost_assertion_size_logic_flex:
             sz \<le> gs_get_assn cap_get_capSizeBits_'proc gs"
   by (metis ghost_assertion_size_logic)
 
-(* FIXME AARCH64
-lemma canonical_pspace_strg:
-  "valid_pspace' s \<longrightarrow> pspace_canonical' s"
-  by (simp add: valid_pspace'_def) *)
-
 (* FIXME move *)
 lemma ucast_x3_shiftr_asid_low_bits:
   "\<lbrakk> is_aligned base asid_low_bits ; base \<le> mask asid_bits \<rbrakk>
@@ -512,6 +507,18 @@ lemma ucast_x3_shiftr_asid_low_bits:
    apply simp
    apply (drule_tac n=asid_low_bits in le_shiftr)
    apply (simp add: asid_low_bits_def asid_bits_def mask_def )+
+  done
+
+lemma canonical_address_mask_shift: (* FIXME AARCH64: move up *)
+  "\<lbrakk> canonical_address p; is_aligned p m'; m \<le> m'; n + m = Suc canonical_bit; 0 < n \<rbrakk> \<Longrightarrow>
+   p && (mask n << m) = p"
+  apply (prop_tac "m = Suc canonical_bit - n", arith)
+  apply (simp add: canonical_address_def canonical_address_of_def canonical_bit_def)
+  apply word_eqI
+  apply (rule iffI; clarsimp)
+  apply (rename_tac n')
+  apply (prop_tac "n' < 48", fastforce)
+  apply fastforce
   done
 
 lemma performASIDControlInvocation_ccorres:
@@ -536,7 +543,6 @@ shows
   apply (cinit lift: frame_' slot_' parent_' asid_base_')
    apply (rule_tac P="is_aligned frame pageBits \<and> canonical_address frame" in ccorres_gen_asm)
    apply (rule ccorres_rhs_assoc2)
-   sorry (* FIXME AARCH64 C spec issue: missing ghost updates?
    apply (rule ccorres_split_nothrow[where c="Seq c c'" for c c'])
        apply (fold pageBits_def)[1]
        apply (simp add: hrs_htd_update)
@@ -564,11 +570,9 @@ shows
             apply (simp add: mex_def meq_def del: split_paired_Ex)
             apply blast
            apply ceqv
-          apply ccorres_remove_UNIV_guard
-          apply csymbr
-          apply (rule ccorres_Guard_Seq[where F=ShiftError])+
-          apply (simp del: Collect_const, simp add: framesize_to_H_def)
-          apply (ctac (c_lines 2) add:createObjects_asidpool_ccorres[where idx="max_free_index pageBits"]
+          apply (ctac (c_lines 2) add: createObjects_asidpool_ccorres
+                                         [where idx="max_free_index pageBits",
+                                          unfolded pageBits_def, simplified]
                               pre del: ccorres_Guard_Seq)
             apply csymbr
             apply (ctac (no_vcg) add: cteInsert_ccorres)
@@ -584,16 +588,16 @@ shows
              apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                    cmachine_state_relation_def
                              simp del: fun_upd_apply)
-             apply (clarsimp simp: carch_state_relation_def carch_globals_def riscvKSGlobalPT_def
+             apply (clarsimp simp: carch_state_relation_def carch_globals_def
                              simp del: fun_upd_apply)
              apply (simp add: asid_high_bits_of_def fun_upd_def[symmetric]
                          del: fun_upd_apply)
              apply (simp add: ucast_x3_shiftr_asid_low_bits)
              apply (erule array_relation_update, rule refl)
               apply (clarsimp simp: option_to_ptr_def option_to_0_def)
-             apply (clarsimp simp: asid_high_bits_def)
+             apply (clarsimp simp: asid_high_bits_def mask_def)
             apply wp+
-           apply (strengthen valid_pspace_mdb' vp_strgs' valid_pspace_valid_objs' canonical_pspace_strg)
+           apply (strengthen valid_pspace_mdb' vp_strgs' valid_pspace_valid_objs' valid_pspace_canonical')
            apply (clarsimp simp: is_simple_cap'_def isCap_simps conj_comms placeNewObject_def2)
            apply (wp createObjects_valid_pspace'[where ty="Inl (KOArch (KOASIDPool f))" and sz = pageBits for f]
                      createObjects_cte_wp_at'[where sz = pageBits]
@@ -603,7 +607,7 @@ shows
            apply (wp createObject_typ_at')
           apply clarsimp
           apply vcg
-         apply (clarsimp simp:conj_comms objBits_simps archObjSize_def |
+         apply (clarsimp simp:conj_comms objBits_simps simp flip: pageBits_def |
                 strengthen valid_pspace_mdb' vp_strgs' invs_valid_pspace'
                 valid_pspace_valid_objs' invs_valid_global'
                 invs_urz)+
@@ -638,8 +642,8 @@ shows
       apply (simp add: mask_def)
       apply (rule descendants_range_caps_no_overlapI'[where d=isdev and cref = parent])
         apply simp
-       apply (fastforce simp: cte_wp_at_ctes_of is_aligned_neg_mask_eq)
-      apply (clarsimp simp: is_aligned_neg_mask_eq simp flip: add_mask_fold)
+       apply (fastforce simp: cte_wp_at_ctes_of)
+      apply (clarsimp simp flip: add_mask_fold)
      apply (clarsimp dest!: upto_intvl_eq simp: mask_2pm1)
     apply (wp deleteObjects_cte_wp_at'[where d=isdev and idx = idx and p = parent]
               deleteObjects_descendants[where d=isdev and p = parent and idx = idx]
@@ -651,8 +655,7 @@ shows
   apply (clarsimp simp: conj_comms invs_valid_pspace')
   apply (frule cte_wp_at_valid_objs_valid_cap', fastforce)
   apply (clarsimp simp: valid_cap'_def capAligned_def cte_wp_at_ctes_of untypedBits_defs
-                        descendants_range'_def2 empty_descendants_range_in'
-                        kernel_mappings_canonical)
+                        descendants_range'_def2 empty_descendants_range_in')
   apply (intro conjI; (rule refl)?)
         apply clarsimp
         apply (drule(1) cte_cap_in_untyped_range[where ptr = frame])
@@ -680,7 +683,7 @@ shows
   apply (clarsimp simp: hrs_htd_update_def split_def
                          pageBits_def
                    split: if_split)
-  apply (clarsimp simp: RISCV_4K_Page_def word_sle_def is_aligned_mask[symmetric]
+  apply (clarsimp simp: word_sle_def is_aligned_mask[symmetric]
                         ghost_assertion_data_get_gs_clear_region[unfolded o_def])
   apply (subst ghost_assertion_size_logic_flex[unfolded o_def, rotated])
      apply assumption
@@ -693,11 +696,10 @@ shows
    apply (simp add: hrs_htd_update)
   apply (clarsimp simp: region_actually_is_bytes'_def[where len=0])
   apply (intro conjI)
-        apply (clarsimp elim!:is_aligned_weaken)
-       apply (simp add:is_aligned_def)
-      apply (erule is_aligned_no_wrap',simp)
-     apply (simp add: hrs_htd_def)
-    apply (clarsimp simp: framesize_to_H_def pageBits_def framesize_defs)
+       apply (clarsimp elim!:is_aligned_weaken)
+      apply (erule is_aligned_no_wrap', simp)
+     apply (simp add:is_aligned_def)
+    apply (simp add: hrs_htd_def)
    apply (drule region_actually_is_bytes_dom_s[OF _ order_refl])
    apply (simp add: hrs_htd_def split_def)
   apply (clarsimp simp: ccap_relation_def)
@@ -705,8 +707,8 @@ shows
   apply (clarsimp simp: cap_to_H_def)
   apply (clarsimp simp: asid_bits_def)
   apply (drule word_le_mask_eq, simp)
-  apply (simp add: asid_bits_def sign_extend_canonical_address kernel_mappings_canonical)
-  done *)
+  apply (simp add: canonical_address_mask_shift canonical_bit_def)
+  done
 
 lemmas performARMMMUInvocations
     = ccorres_invocationCatch_Inr performInvocation_def
