@@ -1573,6 +1573,21 @@ lemma cNodeNoOverlap_retype_have_size:
   apply clarsimp
   done
 
+lemma pt_bits_cte_level_bits[simp]:
+  "cte_level_bits + (pt_bits pt_t - cte_level_bits) = pt_bits pt_t"
+  by (simp add: bit_simps cte_level_bits_def split: if_split)
+
+(* FIXME AACH64: could introduce a ptable version of cnodes_retype_have_size, but too much duplication. Generalise instead? *)
+lemma archNoOverlap_retype_have_size:
+  "\<not> archOverlap s (\<lambda>x. ptr \<le> x \<and> x \<le> ptr + of_nat num * 2 ^ bits - 1)
+    \<Longrightarrow> cnodes_retype_have_size {ptr .. ptr + of_nat num * 2 ^ bits - 1} anysz
+                                (gsPTTypes (ksArchState s) ||> (\<lambda>pt_t. pt_bits pt_t - cte_level_bits))"
+  apply (clarsimp simp: cnodes_retype_have_size_def archOverlap_def in_omonad)
+  apply (elim allE, drule(1) mp, clarsimp simp: upto_intvl_eq[symmetric])
+  apply (erule disjoint_subset2[rotated])
+  apply clarsimp
+  done
+
 lemma range_cover_compare_bound_word:
   "range_cover ptr sz sbit n
     \<Longrightarrow> (of_nat n * 2 ^ sbit) + (ptr && mask sz) \<le> 2 ^ sz"
@@ -2395,8 +2410,7 @@ lemma invokeUntyped_Retype_ccorres:
          apply csymbr
          apply (rule ccorres_move_c_guard_cte)
          apply (rule ccorres_stateAssert)
-         apply (rule_tac P="\<lambda>s. cnodes_retype_have_size {ptr..ptr + word_of_nat (length destSlots) * 2 ^ APIType_capBits newType (unat userSize) - 1} (APIType_capBits newType (unat userSize))
-                (gsPTTypes (ksArchState s) |> (\<lambda>pt_t. Some (pt_bits pt_t - cte_level_bits)))" in ccorres_gen_asm_state) (* FIXME AARCH64: add haskell state assert *)
+         apply (rule ccorres_stateAssert)
          apply (rule ccorres_assert)
 
          apply (rule ccorres_cross_retype_zero_bytes_over_guard[where
@@ -2467,7 +2481,8 @@ lemma invokeUntyped_Retype_ccorres:
         apply (frule invokeUntyped_proofs.idx_le_new_offs)
         apply (frule invokeUntyped_proofs.szw)
         apply (frule invokeUntyped_proofs.descendants_range(2), simp)
-        apply (simp add: cNodeNoOverlap_retype_have_size shiftL_nat mult.commute)
+        apply (simp add: cNodeNoOverlap_retype_have_size shiftL_nat mult.commute
+                         archNoOverlap_retype_have_size[simplified o_def])
         apply (clarsimp simp: getFreeIndex_def conj_comms shiftL_nat
                               is_aligned_weaken[OF range_cover.funky_aligned]
                               invs_valid_pspace' isCap_simps
@@ -2510,7 +2525,6 @@ lemma invokeUntyped_Retype_ccorres:
             apply (rule order_trans, erule range_cover.range_cover_base_le,
               simp add: shiftl_t2n field_simps)
            apply (simp add: shiftl_t2n field_simps)
-           subgoal sorry (* FIXME AARCH64: cnodes_retype_have_size; should disappear with assert *)
           (* subsets *)
           apply (rule order_trans, erule invokeUntyped_proofs.subset_stuff)
           apply (simp add: atLeastatMost_subset_iff word_and_le2)

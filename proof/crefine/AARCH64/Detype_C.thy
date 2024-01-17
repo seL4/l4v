@@ -1515,6 +1515,14 @@ lemma zero_ranges_are_zero_typ_region_bytes:
   apply (clarsimp simp: region_actually_is_bytes'_def typ_region_bytes_def hrs_htd_update)
   done
 
+lemma modify_machinestate_assert_ptables_swap:
+  "do x \<leftarrow> modify (ksMachineState_update f);
+    y \<leftarrow> stateAssert (\<lambda>s. \<not> pTablePartialOverlap (gsPTTypes (ksArchState s)) S) []; g od
+   = do y \<leftarrow> stateAssert (\<lambda>s. \<not> pTablePartialOverlap (gsPTTypes (ksArchState s)) S) [];
+        x \<leftarrow> modify (ksMachineState_update f); g od"
+  by (simp add: fun_eq_iff exec_modify stateAssert_def
+                bind_assoc exec_get assert_def)
+
 lemma deleteObjects_ccorres':
   notes if_cong[cong]
   shows
@@ -1543,8 +1551,9 @@ lemma deleteObjects_ccorres':
   apply (clarsimp simp: mapM_x_storeWord_step[simplified word_size_bits_def]
              intvl_range_conv intvl_range_conv[where 'a=machine_word_len, folded word_bits_def]
              doMachineOp_modify modify_modify o_def ksPSpace_ksMSu_comm
-             bind_assoc modify_machinestate_assert_cnodes_swap
+             bind_assoc modify_machinestate_assert_cnodes_swap modify_machinestate_assert_ptables_swap
              modify_modify_bind)
+  apply (rule ccorres_stateAssert_fwd)
   apply (rule ccorres_stateAssert_fwd)
   apply (rule ccorres_stateAssert_after)
   apply (rule ccorres_from_vcg)
@@ -1566,7 +1575,9 @@ proof -
     and "sch_act_simple s" and wb: "bits < word_bits" and b2: "4 \<le> bits"
     and "deletionIsSafe ptr bits s"
     and cNodePartial: "\<not> cNodePartialOverlap (gsCNodes s)
-        (\<lambda>x. ptr \<le> x \<and> x \<le> ptr + mask bits)"
+                                              (\<lambda>x. ptr \<le> x \<and> x \<le> ptr + mask bits)"
+    and pTablePartial: "\<not> pTablePartialOverlap (gsPTTypes (ksArchState s))
+                                              (\<lambda>x. ptr \<le> x \<and> x \<le> ptr + mask bits)"
     and sr: "(s, s') \<in> rf_sr"
     and safe_asids:
           "ksASIDMapSafe
@@ -1613,6 +1624,8 @@ proof -
   note cm_disj_cte = cmap_relation_disjoint_cte [OF D.valid_untyped invs]
   note cm_disj_user = cmap_relation_disjoint_user_data [OF D.valid_untyped invs]
   note cm_disj_device = cmap_relation_disjoint_device_data [OF D.valid_untyped invs]
+
+  note upto_rew = upto_intvl_eq[OF al, THEN eqset_imp_iff, symmetric, simplified]
 
   have rl: "\<forall>(p :: machine_word) P. ko_wp_at' P p s \<and>
             (\<forall>ko. P ko \<longrightarrow> live' ko) \<longrightarrow> p \<notin> {ptr..ptr + 2 ^ bits - 1}"
@@ -1669,21 +1682,18 @@ proof -
                      bit_simps)
     apply (frule cmap_relation_restrict_both_proj[where f = tcb_ptr_to_ctcb_ptr], simp)
     apply (intro conjI)
-       apply (erule iffD1[OF cpspace_tcb_relation_address_subset,
-                           OF D.valid_untyped invs cmaptcb])
-      apply (subst cmap_relation_cong [OF refl refl,
-                      where rel' = "cendpoint_relation (cslift s')"])
-       apply (clarsimp simp: restrict_map_Some_iff image_iff
-                             map_comp_restrict_map_Some_iff)
-      apply (simp add: cmap_relation_restrict_both_proj)
-     apply (subst cmap_relation_cong[OF refl refl,
-                    where rel' = "cnotification_relation (cslift s')"])
+      apply (erule iffD1[OF cpspace_tcb_relation_address_subset,
+                         OF D.valid_untyped invs cmaptcb])
+     apply (subst cmap_relation_cong [OF refl refl,
+                                      where rel' = "cendpoint_relation (cslift s')"])
       apply (clarsimp simp: restrict_map_Some_iff image_iff
                             map_comp_restrict_map_Some_iff)
      apply (simp add: cmap_relation_restrict_both_proj)
-  (* FIXME AARCH64: remove if unneeded at the end
-    (* if config_ARM_PA_SIZE_BITS_40 ... means cmap_array can't fire above without making a mess *)
-    apply (simp add: cmap_array split: if_split) *)
+    apply (subst cmap_relation_cong[OF refl refl,
+                                    where rel' = "cnotification_relation (cslift s')"])
+     apply (clarsimp simp: restrict_map_Some_iff image_iff
+                           map_comp_restrict_map_Some_iff)
+    apply (simp add: cmap_relation_restrict_both_proj)
     done
 
   moreover
@@ -1860,8 +1870,6 @@ proof -
       apply (clarsimp simp: objBits_simps objBitsT_simps)
       done
 
-    note upto_rew = upto_intvl_eq[OF al, THEN eqset_imp_iff, symmetric, simplified]
-
     from cNodePartial[folded add_mask_fold, simplified upto_rew]
     have cn_no_overlap:
       "\<And>p n. gsCNodes s p = Some n \<Longrightarrow> p \<notin> {ptr..+2 ^ bits}
@@ -1920,9 +1928,17 @@ proof -
     done
 
   moreover
-  have "\<And>p v. \<lbrakk>gsPTTypes (ksArchState s) p = Some v; p \<notin> {ptr..+2 ^ bits}\<rbrakk>
-               \<Longrightarrow> {p..+2^ptTranslationBits v * 2^pte_bits} \<inter> {ptr..+2 ^ bits} = {}"
-    sorry (* FIXME AARCH64: needs an assertion like cNodePartialOverlap *)
+  from pTablePartial[folded add_mask_fold, simplified upto_rew]
+  have "\<And>p v. \<lbrakk>gsPTTypes (ksArchState s) p = Some v; p \<notin> {ptr ..+ 2 ^ bits}\<rbrakk>
+               \<Longrightarrow> {p ..+ 2 ^ pt_bits v} \<inter> {ptr ..+ 2 ^ bits} = {}"
+    apply (simp add: pTablePartialOverlap_def)
+    apply (elim allE, drule(1) mp)
+    apply (clarsimp simp flip: add_mask_fold)
+    apply (frule base_member_set, simp add: bit_simps)
+    apply (clarsimp simp only: upto_intvl_eq[symmetric] field_simps power_add)
+    apply blast
+    done
+
   with sr
   have "cvariable_array_map_relation (gsPTTypes (ksArchState s)|\<^bsub>(- {ptr..+2 ^ bits})\<^esub>)
                                      (\<lambda>pt_t. 2 ^ ptTranslationBits pt_t)
@@ -1931,6 +1947,7 @@ proof -
     apply (simp add: map_comp_restrict_map rf_sr_def cstate_relation_def Let_def pte_bits_def
                      word_size_bits_def)
     apply (rule cvariable_array_map_relation_detype; clarsimp)
+    apply (simp add: pt_bits_def table_size_def power_add pte_bits_def word_size_bits_def)
     done
 
   ultimately
