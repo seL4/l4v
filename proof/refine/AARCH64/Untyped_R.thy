@@ -4072,6 +4072,12 @@ defs cNodeOverlap_def:
       \<or> cte_level_bits + n \<ge> word_bits
       \<or> ({p .. p + 2 ^ (cte_level_bits + n) - 1} \<inter> {p. inRange p} \<noteq> {}))"
 
+defs archOverlap_def:
+  "archOverlap \<equiv> \<lambda>s inRange.
+    \<exists>p pt_t. gsPTTypes (ksArchState s) p = Some pt_t \<and>
+             (\<not>is_aligned p (pt_bits pt_t) \<or>
+              ({p .. p + 2 ^ pt_bits pt_t - 1} \<inter> {p. inRange p} \<noteq> {}))"
+
 lemma cNodeNoOverlap:
   notes Int_atLeastAtMost[simp del]
   shows
@@ -4091,6 +4097,36 @@ lemma cNodeNoOverlap:
                           obj_at_def is_cap_table is_cap_simps)
     apply (frule(1) pspace_alignedD)
     apply simp
+    apply (elim allE, drule(1) mp, simp add: obj_range_def valid_obj_def cap_aligned_def)
+    apply (erule is_aligned_get_word_bits[where 'a=machine_word_len, folded word_bits_def])
+     apply (clarsimp simp: is_aligned_no_overflow simp del: )
+     apply blast
+    apply (simp add: is_aligned_no_overflow power_overflow word_bits_def
+                     Int_atLeastAtMost)
+   apply wp+
+  done
+
+lemma archNoOverlap:
+  notes Int_atLeastAtMost[simp del]
+  shows
+  "corres dc (\<lambda>s. \<exists>cref. cte_wp_at (\<lambda>cap. is_untyped_cap cap
+                                          \<and> Collect R \<subseteq> usable_untyped_range cap) cref s
+                         \<and> valid_objs s \<and> pspace_aligned s)
+             \<top>
+             (return x) (stateAssert (\<lambda>s. \<not> archOverlap s R) [])"
+  apply (simp add: stateAssert_def assert_def)
+  apply (rule corres_symb_exec_r[OF _ get_sp])
+    apply (rule corres_req[rotated], subst if_P, assumption)
+     apply simp
+    apply (clarsimp simp: archOverlap_def cte_wp_at_caps_of_state)
+    apply (frule state_rel_ghost)
+    apply (drule (1) ghost_PTTypes)
+    apply (frule(1) caps_of_state_valid_cap)
+    apply (frule usable_range_subseteq[rotated], simp add: valid_cap_def)
+    apply (clarsimp simp: valid_cap_def valid_untyped_def
+                          obj_at_def is_cap_table is_cap_simps)
+    apply (frule(1) pspace_alignedD)
+    apply (simp add: pt_bits_def)
     apply (elim allE, drule(1) mp, simp add: obj_range_def valid_obj_def cap_aligned_def)
     apply (erule is_aligned_get_word_bits[where 'a=machine_word_len, folded word_bits_def])
      apply (clarsimp simp: is_aligned_no_overflow simp del: )
@@ -4876,6 +4912,8 @@ lemma inv_untyped_corres':
                 sz (if reset then 0 else idx)" in corres_gen_asm)
           apply (rule corres_add_noop_lhs)
           apply (rule corres_split_nor[OF cNodeNoOverlap _ return_wp stateAssert_wp])
+          apply (rule corres_add_noop_lhs)
+          apply (rule corres_split_nor[OF archNoOverlap _ return_wp stateAssert_wp])
           apply (clarsimp simp: canonicalAddressAssert_def)
           apply (rule corres_split[OF updateFreeIndex_corres])
               apply (simp add:isCap_simps)+

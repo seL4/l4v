@@ -110,6 +110,13 @@ defs cNodePartialOverlap_def:
       \<or> (\<not> mask_range p (cte_level_bits + n) \<subseteq> {p. inRange p}
         \<and> \<not> mask_range p (cte_level_bits + n) \<subseteq> {p. \<not> inRange p}))"
 
+defs pTablePartialOverlap_def:
+  "pTablePartialOverlap \<equiv> \<lambda>pts inRange.
+     \<exists>p pt_t. pts p = Some pt_t \<and>
+              (\<not> is_aligned p (pt_bits pt_t) \<or>
+                (\<not> mask_range p (pt_bits pt_t) \<subseteq> {p. inRange p} \<and>
+                 \<not> mask_range p (pt_bits pt_t) \<subseteq> {p. \<not> inRange p}))"
+
 
 (* FIXME: move *)
 lemma deleteObjects_def2:
@@ -118,6 +125,7 @@ lemma deleteObjects_def2:
      stateAssert (deletionIsSafe ptr bits) [];
      doMachineOp (freeMemory ptr bits);
      stateAssert (\<lambda>s. \<not> cNodePartialOverlap (gsCNodes s) (\<lambda>x. x \<in> mask_range ptr bits)) [];
+     stateAssert (\<lambda>s. \<not> pTablePartialOverlap (gsPTTypes (ksArchState s)) (\<lambda>x. x \<in> mask_range ptr bits)) [];
      modify (\<lambda>s. s \<lparr> ksPSpace := \<lambda>x. if x \<in> mask_range ptr bits
                                         then None else ksPSpace s x,
                      gsUserPages := \<lambda>x. if x \<in> mask_range ptr bits
@@ -137,7 +145,7 @@ lemma deleteObjects_def2:
   apply (rule bind_cong[rotated], rule refl)
   apply (simp add: bind_assoc modify_modify deleteRange_def gets_modify_def)
   apply (rule ext, simp add: exec_modify stateAssert_def assert_def bind_assoc exec_get
-                             NOT_eq[symmetric] neg_mask_in_mask_range)
+                             NOT_eq[symmetric] neg_mask_in_mask_range exec_gets)
   apply (clarsimp simp: simpler_modify_def)
   apply (simp add: data_map_filterWithKey_def split: if_split_asm)
   apply (rule arg_cong2[where f=ksArchState_update])
@@ -151,7 +159,7 @@ lemma deleteObjects_def2:
   apply (rule arg_cong2[where f=gsUserPages_update])
    apply (simp add: NOT_eq[symmetric] mask_in_range ext)
   apply (rule arg_cong[where f="\<lambda>f. ksPSpace_update f s" for s])
-  apply (simp add: NOT_eq[symmetric] mask_in_range ext   split: option.split)
+  apply (simp add: NOT_eq[symmetric] mask_in_range ext split: option.split)
   done
 
 lemma deleteObjects_def3:
@@ -161,6 +169,7 @@ lemma deleteObjects_def3:
      stateAssert (deletionIsSafe ptr bits) [];
      doMachineOp (freeMemory ptr bits);
      stateAssert (\<lambda>s. \<not> cNodePartialOverlap (gsCNodes s) (\<lambda>x. x \<in> mask_range ptr bits)) [];
+     stateAssert (\<lambda>s. \<not> pTablePartialOverlap (gsPTTypes (ksArchState s)) (\<lambda>x. x \<in> mask_range ptr bits)) [];
      modify (\<lambda>s. s \<lparr> ksPSpace := \<lambda>x. if x \<in> mask_range ptr bits
                                               then None else ksPSpace s x,
                      gsUserPages := \<lambda>x. if x \<in> mask_range ptr bits
@@ -586,7 +595,55 @@ lemma cNodeNoPartialOverlap:
    apply wp+
   done
 
-declare wrap_ext_det_ext_ext_def[simp]
+lemma state_rel_ghost:
+  "(s,s') \<in> state_relation \<Longrightarrow>
+   ghost_relation (kheap s) (gsUserPages s') (gsCNodes s') (gsPTTypes (ksArchState s'))"
+  by (erule state_relationE)
+
+lemma ghost_PTTypes:
+  "\<lbrakk> ghost_relation kh gsu gsc pt_Ts; pt_Ts p = Some pt_t \<rbrakk> \<Longrightarrow>
+   (\<exists>pt. kh p = Some (ArchObj (PageTable pt)) \<and> pt_t = pt_type pt)"
+  by (clarsimp simp: ghost_relation_def)
+
+lemma pTableNoPartialOverlap:
+  "corres dc
+          (\<lambda>s. \<exists>cref. cte_wp_at ((=) (cap.UntypedCap d base magnitude idx)) cref s \<and>
+                      valid_objs s \<and> pspace_aligned s)
+          \<top>
+          (return x)
+          (stateAssert (\<lambda>s. \<not> pTablePartialOverlap (gsPTTypes (ksArchState s))
+                                                   (\<lambda>x. base \<le> x \<and> x \<le> base + mask magnitude)) [])"
+  apply (simp add: stateAssert_def assert_def)
+  apply (rule corres_symb_exec_r[OF _ get_sp])
+    apply (rule corres_req[rotated], subst if_P, assumption)
+     apply simp
+    apply (clarsimp simp: pTablePartialOverlap_def)
+    apply (frule state_rel_ghost)
+    apply (drule (1) ghost_PTTypes)
+    apply clarsimp
+    apply (drule(1) cte_wp_valid_cap)
+    apply (clarsimp simp: valid_cap_def valid_untyped_def)
+    apply (frule(1) pspace_alignedD)
+    apply (simp add: add_mask_fold)
+    apply (elim allE, drule(1) mp, simp add: obj_range_def valid_obj_def cap_aligned_def)
+    apply (clarsimp simp: pt_bits_def)
+    apply (erule is_aligned_get_word_bits[where 'a=machine_word_len, folded word_bits_def])
+     apply (clarsimp simp: is_aligned_no_overflow_mask add_mask_fold)
+     apply (blast intro: order_trans)
+    apply (simp add: is_aligned_no_overflow_mask power_overflow word_bits_def)
+   apply wp+
+  done
+
+lemma corres_return_bind: (* FIXME AARCH64: move to Corres_UL *)
+  "corres_underlying sr nf nf' r P P' (do return (); f od) g \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
+  by simp
+
+lemma corres_return_bind2: (* FIXME AARCH64: move to Corres_UL *)
+  "corres_underlying sr nf nf' r P P' f (do return (); g od) \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
+  by simp
+
+crunches doMachineOp
+  for gsCNodes[wp]: "\<lambda>s. P (gsCNodes s)"
 
 lemma deleteObjects_corres:
   "is_aligned base magnitude \<Longrightarrow> magnitude \<ge> 3 \<Longrightarrow>
@@ -606,72 +663,77 @@ lemma deleteObjects_corres:
    apply clarsimp
    apply (rule_tac cap="cap.UntypedCap d base magnitude idx" and ptr="(a,b)" and
                    s=s in detype_locale'.deletionIsSafe,
-          simp_all add: detype_locale'_def
-     detype_locale_def p_assoc_help invs_valid_pspace)[1]
+          simp_all add: detype_locale'_def detype_locale_def p_assoc_help invs_valid_pspace)[1]
    apply (simp add:valid_cap_simps)
-  apply (simp add: bind_assoc[symmetric] ksASIDMapSafe_def)
+  apply (simp add: ksASIDMapSafe_def)
   apply (simp add: delete_objects_def)
-  apply (rule_tac Q="\<lambda>_ s. valid_objs s \<and> valid_list s \<and>
-           (\<exists>cref. cte_wp_at ((=) (cap.UntypedCap d base magnitude idx)) cref s \<and>
-                   descendants_range (cap.UntypedCap d base magnitude idx) cref s ) \<and>
-           s \<turnstile> cap.UntypedCap d base magnitude idx \<and> pspace_aligned s \<and>
-           valid_mdb s \<and> pspace_distinct s \<and> if_live_then_nonz_cap s \<and>
-           zombies_final s \<and> sym_refs (state_refs_of s) \<and> sym_refs (state_hyp_refs_of s) \<and>
-           untyped_children_in_mdb s \<and> if_unsafe_then_cap s \<and>
-           valid_global_refs s" and
-         Q'="\<lambda>_ s. s \<turnstile>' capability.UntypedCap d base magnitude idx \<and>
-                        valid_pspace' s" in corres_underlying_split)
-     apply (rule corres_bind_return)
+  apply (rule corres_underlying_split[where r'=dc])
      apply (rule corres_guard_imp[where r=dc])
-       apply (rule corres_split[OF _ cNodeNoPartialOverlap])
-         apply (rule corres_machine_op[OF corres_Id], simp+)
-         apply (rule no_fail_freeMemory, simp+)
-        apply (wp hoare_vcg_ex_lift)+
-      apply auto[1]
+       apply (rule corres_machine_op[OF corres_Id]; simp)
+       apply (rule no_fail_freeMemory; simp)
+      apply simp
      apply (auto elim: is_aligned_weaken)[1]
-    apply (rule corres_modify)
-    apply (simp add: valid_pspace'_def)
-    apply (rule state_relation_null_filterE, assumption,
-           simp_all add: pspace_aligned'_cut pspace_distinct'_cut)[1]
-           apply (simp add: detype_def, rule state.equality; simp add: detype_ext_def)
-          apply (intro exI, fastforce)
-         apply (rule ext, clarsimp simp add: null_filter_def)
-         apply (rule sym, rule ccontr, clarsimp)
-         apply (drule(4) cte_map_not_null_outside')
-          apply (fastforce simp add: cte_wp_at_caps_of_state)
-         apply simp
-        apply (rule ext, clarsimp simp add: null_filter'_def
-                           map_to_ctes_delete[simplified field_simps])
-        apply (rule sym, rule ccontr, clarsimp)
-        apply (frule(2) pspace_relation_cte_wp_atI
-                        [OF state_relation_pspace_relation])
-        apply (elim exE)
-        apply (frule(4) cte_map_not_null_outside')
-         apply (rule cte_wp_at_weakenE, erule conjunct1)
-         apply (case_tac y, clarsimp)
-         apply (clarsimp simp: valid_mdb'_def valid_mdb_ctes_def
-                               valid_nullcaps_def)
-        apply clarsimp
-        apply (frule_tac cref="(aa, ba)" in cte_map_untyped_range,
-               erule cte_wp_at_weakenE[OF _ TrueI], assumption+)
-        apply (simp add: add_mask_fold)
-       apply (simp add: add_mask_fold)
-       apply (rule detype_pspace_relation[simplified],
-              simp_all add: state_relation_pspace_relation valid_pspace_def)[1]
-        apply (simp add: valid_cap'_def capAligned_def)
-       apply (clarsimp simp: valid_cap_def, assumption)
-      apply (fastforce simp add: detype_def detype_ext_def add_mask_fold intro!: ekheap_relation_detype)
-     apply (clarsimp simp: state_relation_def ghost_relation_of_heap
-                           detype_def)
-     apply (drule_tac t="gsUserPages s'" in sym)
-     apply (drule_tac t="gsCNodes s'" in sym)
-     apply (drule_tac t="gsPTTypes (ksArchState s')" in sym)
-     apply (auto simp add: ups_of_heap_def cns_of_heap_def ext pt_types_of_heap_def add_mask_fold opt_map_def
-                 split: option.splits kernel_object.splits)[1]
-    apply (simp add: valid_mdb_def)
-   apply (wp hoare_vcg_ex_lift hoare_vcg_ball_lift | wps |
-          simp add: invs_def valid_state_def valid_pspace_def
-                    descendants_range_def | wp (once) hoare_drop_imps)+
+    apply (rule corres_return_bind)
+    apply (rule corres_split[OF cNodeNoPartialOverlap])
+      apply (rule corres_return_bind)
+      apply (rule corres_split[OF pTableNoPartialOverlap])
+        apply simp
+        apply (rule_tac P="\<lambda>s. valid_objs s \<and> valid_list s \<and>
+                 (\<exists>cref. cte_wp_at ((=) (cap.UntypedCap d base magnitude idx)) cref s \<and>
+                         descendants_range (cap.UntypedCap d base magnitude idx) cref s ) \<and>
+                 s \<turnstile> cap.UntypedCap d base magnitude idx \<and> pspace_aligned s \<and>
+                 valid_mdb s \<and> pspace_distinct s \<and> if_live_then_nonz_cap s \<and>
+                 zombies_final s \<and> sym_refs (state_refs_of s) \<and> sym_refs (state_hyp_refs_of s) \<and>
+                 untyped_children_in_mdb s \<and> if_unsafe_then_cap s \<and>
+                 valid_global_refs s" and
+               P'="\<lambda>s. s \<turnstile>' capability.UntypedCap d base magnitude idx \<and>
+                              valid_pspace' s" in corres_modify)
+        apply (simp add: valid_pspace'_def)
+        apply (rule state_relation_null_filterE, assumption,
+               simp_all add: pspace_aligned'_cut pspace_distinct'_cut)[1]
+               apply (simp add: detype_def, rule state.equality;
+                      simp add: detype_ext_def wrap_ext_det_ext_ext_def)
+              apply (intro exI, fastforce)
+             apply (rule ext, clarsimp simp add: null_filter_def)
+             apply (rule sym, rule ccontr, clarsimp)
+             apply (drule(4) cte_map_not_null_outside')
+              apply (fastforce simp add: cte_wp_at_caps_of_state)
+             apply simp
+            apply (rule ext, clarsimp simp: null_filter'_def map_to_ctes_delete)
+            apply (rule sym, rule ccontr, clarsimp)
+            apply (frule(2) pspace_relation_cte_wp_atI
+                            [OF state_relation_pspace_relation])
+            apply (elim exE)
+            apply (frule(4) cte_map_not_null_outside')
+             apply (rule cte_wp_at_weakenE, erule conjunct1)
+             apply (case_tac y, clarsimp)
+             apply (clarsimp simp: valid_mdb'_def valid_mdb_ctes_def
+                                   valid_nullcaps_def)
+            apply clarsimp
+            apply (frule_tac cref="(aa, ba)" in cte_map_untyped_range,
+                   erule cte_wp_at_weakenE[OF _ TrueI], assumption+)
+            apply (simp add: add_mask_fold)
+           apply (simp add: add_mask_fold)
+           apply (rule detype_pspace_relation[simplified],
+                  simp_all add: state_relation_pspace_relation valid_pspace_def)[1]
+            apply (simp add: valid_cap'_def capAligned_def)
+           apply (clarsimp simp: valid_cap_def, assumption)
+          apply (fastforce simp: detype_def detype_ext_def add_mask_fold wrap_ext_det_ext_ext_def
+                           intro!: ekheap_relation_detype)
+         apply (clarsimp simp: state_relation_def ghost_relation_of_heap
+                               detype_def)
+         apply (drule_tac t="gsUserPages s'" in sym)
+         apply (drule_tac t="gsCNodes s'" in sym)
+         apply (drule_tac t="gsPTTypes (ksArchState s')" in sym)
+         apply (auto simp: ups_of_heap_def cns_of_heap_def ext pt_types_of_heap_def add_mask_fold
+                           opt_map_def
+                     split: option.splits kernel_object.splits)[1]
+        apply (simp add: valid_mdb_def)
+       apply (wp hoare_vcg_ex_lift hoare_vcg_ball_lift | wps |
+              simp add: invs_def valid_state_def valid_pspace_def
+                        descendants_range_def | wp (once) hoare_drop_imps)+
+   apply fastforce
+  apply (wpsimp wp: hoare_vcg_op_lift)
   done
 
 
