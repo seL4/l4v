@@ -510,14 +510,16 @@ lemma restoreVirtTimer_corres[corres]:
               apply (clarsimp simp: vcpu_relation_def)
               apply (rule corres_split_dc[OF vcpuWriteReg_corres])+
                 apply (rule corres_split_dc[OF vcpuRestoreReg_corres], simp)+
-                  apply (rule corres_split_eqr[OF isIRQActive_corres])
-                    apply (rule corres_split_dc[OF corres_when], simp)
-                       apply (simp add: irq_vppi_event_index_def irqVPPIEventIndex_def IRQ_def)
-                       apply (rule corres_machine_op, simp)
-                       apply (rule corres_Id; wpsimp)
-                      apply (fold dc_def)
-                      apply (rule vcpuRestoreReg_corres)
-                     apply (wpsimp simp: if_apply_def2 isIRQActive_def)+
+                  apply (rule corres_split[OF getObject_vcpu_corres])
+                    apply (clarsimp simp: vcpu_relation_def)
+                    apply (rule corres_split_eqr[OF isIRQActive_corres])
+                      apply (rule corres_split_dc[OF corres_when], simp)
+                         apply (simp add: irq_vppi_event_index_def irqVPPIEventIndex_def IRQ_def)
+                         apply (rule corres_machine_op, simp)
+                         apply (rule corres_Id; wpsimp)
+                        apply (fold dc_def)
+                        apply (rule vcpuRestoreReg_corres)
+                       apply (wpsimp simp: if_apply_def2 isIRQActive_def)+
   done
 
 lemma vcpuSave_corres:

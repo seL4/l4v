@@ -2910,7 +2910,7 @@ lemma restore_virt_timer_invs[wp]:
   "\<lbrace>\<lambda> s. invs s\<rbrace> restore_virt_timer vcpu_ptr \<lbrace>\<lambda>_ . invs\<rbrace>"
   unfolding restore_virt_timer_def read_cntpct_def
              is_irq_active_def get_irq_state_def
-  by (wpsimp wp: set_vcpu_invs_eq_hyp get_vcpu_wp hoare_vcg_all_lift hoare_vcg_imp_lift'
+  by (wpsimp wp: set_vcpu_invs_eq_hyp get_vcpu_wp hoare_vcg_all_lift hoare_drop_imp
                  maskInterrupt_invs)
 
 lemma vcpu_enable_invs[wp]:
