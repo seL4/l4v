@@ -355,6 +355,8 @@ restoreVirtTimer vcpuPtr = do
     vcpuWriteReg vcpuPtr VCPURegCNTVOFF offset
     vcpuRestoreReg vcpuPtr VCPURegCNTVOFF
 
+    -- read vcpu again, so we don't have to reason about independence of vcpuWriteRegister changes
+    vcpu <- getObject vcpuPtr
     let vppi = fromJust $ irqVPPIEventIndex (IRQ irqVTimerEvent)
     let masked = (vcpuVPPIMasked vcpu) ! vppi
     safeToUnmask <- isIRQActive (IRQ irqVTimerEvent)
