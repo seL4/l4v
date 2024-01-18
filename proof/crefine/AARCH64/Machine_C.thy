@@ -134,6 +134,11 @@ assumes read_cntpct_ccorres:
 
 (* TLB and Cache ops *)
 
+assumes addressTranslateS1_ccorres:
+  "ccorres (=) ret__unsigned_long_' \<top> (\<lbrace>\<acute>vaddr___unsigned_long = vaddr \<rbrace>) []
+           (doMachineOp (addressTranslateS1 vaddr))
+           (Call addressTranslateS1_'proc)"
+
 assumes invalidateTranslationASID_ccorres:
   "\<And>hw_asid. ccorres dc xfdc \<top> (\<lbrace>\<acute>hw_asid___unsigned_char = ucast hw_asid\<rbrace>) []
                      (doMachineOp (invalidateTranslationASID hw_asid))

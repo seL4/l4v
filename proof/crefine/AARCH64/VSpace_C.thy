@@ -241,25 +241,74 @@ lemma handleVMFault_ccorres:
            []
            (handleVMFault thread vm_fault)
            (Call handleVMFault_'proc)"
-  (* FIXME: make this a real ac_init *)
-  apply (rule corres_to_ccorres_rv_spec_errglobals[OF _ _ refl],
-         rule handleVMFault'_ac_corres[simplified o_def])
-    prefer 3 apply simp
-   apply (simp add: handleVMFault_def handleVMFault'_def liftE_bindE condition_const
-                    ucast_ucast_mask bind_assoc)
-   (* FIXME AARCH64 left in as a guideline of how this autocorres-based proof handles machine ops
-   apply (rule corres_split[OF read_stval_ccorres[ac]])
-      apply terminates_trivial
-     apply (drule sym, clarsimp)   *)
-     apply (corres_cases; simp add: vm_fault_type_from_H_def vm_fault_defs_C bind_assoc)
-      sorry
-      (* FIXME AARCH64 the rest looks analogous
-          to ARM_HYP's handleVMFault_ccorres except for it being an autocorres-style proof now;
-          original riscv proof, could be helpful for last step of both cases:
-          apply (rule returnVMFault_corres;
-                 clarsimp simp: exception_defs mask_twice lift_rv_def mask_def vmFaultTypeFSR_def)+
-     apply wpsimp+
-  done  *)
+  apply (cinit lift: thread_' vm_faultType_')
+   apply wpc
+    apply (simp add: vm_fault_type_from_H_def Kernel_C.ARMDataAbort_def Kernel_C.ARMPrefetchAbort_def)
+    apply (simp add: ccorres_cond_univ_iff)
+    apply (rule ccorres_rhs_assoc)+
+    apply csymbr
+    apply csymbr
+    apply (ctac (no_vcg) add: getFAR_ccorres pre: ccorres_liftE_Seq)
+     apply (ctac (no_vcg) add: getESR_ccorres pre: ccorres_liftE_Seq)
+      apply (clarsimp simp: curVCPUActive_def liftE_bindE bind_assoc)
+      apply (rule ccorres_pre_getCurVCPU)
+      apply (rule ccorres_if_bindE)
+      apply (rule ccorres_cond_seq)
+      apply (rule_tac R="\<lambda>s. vcpu = armHSCurVCPU (ksArchState s)" and R'=UNIV in ccorres_cond_strong)
+        apply (fastforce simp: cur_vcpu_relation_def
+                         dest!: rf_sr_ksArchState_armHSCurVCPU
+                         split: option.splits)
+       apply (clarsimp simp: bindE_assoc)
+       apply (rule ccorres_rhs_assoc)+
+       apply (ctac (no_vcg) add: addressTranslateS1_ccorres pre: ccorres_liftE_Seq)
+        apply csymbr
+        apply (rule ccorres_from_vcg_throws [where P=\<top> and P'=UNIV])
+        apply (clarsimp simp add: throwError_def return_def)
+        apply (rule conseqPre, vcg)
+        apply (clarsimp simp: errstate_def EXCEPTION_FAULT_def EXCEPTION_NONE_def
+                              seL4_Fault_VMFault_lift mask_def pageBits_def)
+       apply wp
+      apply ccorres_rewrite
+      apply (rule_tac P=\<top> and P'="\<lbrace>\<acute>addr = addr\<rbrace>" in ccorres_from_vcg_throws)
+      apply (clarsimp simp add: throwError_def return_def)
+      apply (rule conseqPre, vcg)
+      apply (clarsimp simp: errstate_def EXCEPTION_FAULT_def EXCEPTION_NONE_def
+                            seL4_Fault_VMFault_lift mask_def pageBits_def)
+     apply wpsimp
+    apply wp
+   apply (simp add: vm_fault_type_from_H_def Kernel_C.ARMDataAbort_def Kernel_C.ARMPrefetchAbort_def)
+   apply (simp add: ccorres_cond_univ_iff ccorres_cond_empty_iff)
+   apply (rule ccorres_rhs_assoc)+
+   apply csymbr
+   apply csymbr
+   apply (ctac (no_vcg) add: getRestartPC_ccorres pre: ccorres_liftE_Seq)
+    apply (ctac (no_vcg) add: getESR_ccorres pre: ccorres_liftE_Seq)
+     apply (clarsimp simp: curVCPUActive_def liftE_bindE bind_assoc)
+     apply (rule ccorres_pre_getCurVCPU)
+     apply (rule ccorres_if_bindE)
+     apply (rule ccorres_cond_seq)
+     apply (rule_tac R="\<lambda>s. vcpu = armHSCurVCPU (ksArchState s)" and R'=UNIV in ccorres_cond_strong)
+       apply (fastforce simp: cur_vcpu_relation_def
+                        dest!: rf_sr_ksArchState_armHSCurVCPU
+                        split: option.splits)
+      apply (clarsimp simp: bindE_assoc)
+      apply (rule ccorres_rhs_assoc)+
+      apply (ctac (no_vcg) add: addressTranslateS1_ccorres pre: ccorres_liftE_Seq)
+       apply csymbr
+       apply (rule ccorres_from_vcg_throws [where P=\<top> and P'=UNIV])
+       apply (clarsimp simp add: throwError_def return_def)
+       apply (rule conseqPre, vcg)
+       apply (clarsimp simp: errstate_def EXCEPTION_FAULT_def EXCEPTION_NONE_def
+                             seL4_Fault_VMFault_lift mask_def pageBits_def)
+      apply wp
+     apply ccorres_rewrite
+     apply (rule_tac P=\<top> and P'="\<lbrace>\<acute>pc = pc\<rbrace>" in ccorres_from_vcg_throws)
+     apply (clarsimp simp add: throwError_def return_def)
+     apply (rule conseqPre, vcg)
+     apply (clarsimp simp: errstate_def EXCEPTION_FAULT_def EXCEPTION_NONE_def
+                           seL4_Fault_VMFault_lift mask_def pageBits_def)
+    apply wpsimp+
+  done
 
 lemma unat_asidLowBits[simp]:
   "unat Kernel_C.asidLowBits = asidLowBits"
