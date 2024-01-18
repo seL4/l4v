@@ -2809,94 +2809,66 @@ lemma isIRQActive_ccorres:
       apply (simp add: irq_state_defs Kernel_C.maxIRQ_def word_le_nat_alt maxIRQ_def)+
   done
 
+crunches isIRQActive, vcpuRestoreReg
+  for ko_at_vcpu'[wp]: "\<lambda>s. P (ko_at' (v::vcpu) p s)"
+
 lemma restore_virt_timer_ccorres:
   "ccorres dc xfdc
      (vcpu_at' vcpuptr)
      (\<lbrace> \<acute>vcpu = vcpu_Ptr vcpuptr \<rbrace>) hs
      (restoreVirtTimer vcpuptr) (Call restore_virt_timer_'proc)"
   apply (cinit lift: vcpu_')
+   apply (rename_tac vcpu)
    apply (ctac (no_vcg) add: vcpu_restore_reg_ccorres)
     apply (ctac (no_vcg) add: vcpu_restore_reg_ccorres)
-    sorry (* FIXME AARCH64 code changed, needs re-examination
-    apply csymbr
-    apply (ctac (no_vcg) add: vcpu_read_reg_ccorres)
      apply csymbr
-     apply csymbr
-     apply clarsimp
-     apply (ctac (no_vcg) add: set_cntv_cval_64_ccorres)
-      apply csymbr
-      apply (ctac (no_vcg) add: read_cntpct_ccorres)
-       apply (rule ccorres_pre_getObject_vcpu, rename_tac vcpu)
-       apply (rule_tac val="current_cntpct - vtimerLastPCount (vcpuVTimer vcpu)"
-                and R'=UNIV and R="ko_at' vcpu vcpuptr"
-                and xf'=pcount_delta_'
-                in ccorres_symb_exec_r_known_rv)
-          apply (rule conseqPre, vcg)
-          apply (fastforce dest: vcpu_at_rf_sr simp: typ_heap_simps' cvcpu_relation_def)
-         apply ceqv
-        apply (ctac (no_vcg) add: vcpu_read_reg_ccorres)
-         apply csymbr
-         apply (ctac (no_vcg) add: vcpu_read_reg_ccorres)
-          apply csymbr
-          apply csymbr
-          apply csymbr
-          apply clarsimp
-          apply (ctac (no_vcg) add: vcpu_write_reg_ccorres)
-           apply (ctac (no_vcg) add: vcpu_write_reg_ccorres)
-            apply (ctac (no_vcg) add: set_cntv_off_64_ccorres)
-             apply (ctac (no_vcg) add: isIRQActive_ccorres)
-              apply (clarsimp simp: when_def simp del: Collect_const)
-              apply (rule ccorres_split_nothrow[where xf'=xfdc and r'=dc])
-                  apply (rule ccorres_cond[where R=\<top>], simp add: Collect_const_mem)
-                   apply csymbr
-                   apply clarsimp
-                   apply (rule ccorres_move_const_guards)
-                   apply (rule ccorres_move_c_guard_vcpu)
-                   apply (clarsimp simp: irqVPPIEventIndex_def IRQ_def irqVTimerEvent_def
-                                         fromEnum_def enum_vppievent_irq)
-                   apply (rule ccorres_call)
-                      apply (rule_tac P="obj_at' (\<lambda>vcpu'. vcpuVPPIMasked vcpu' vppievent_irq.VPPIEventIRQ_VTimer
-                                                           = vcpuVPPIMasked vcpu vppievent_irq.VPPIEventIRQ_VTimer) vcpuptr" in ccorres_cross_over_guard)
-                      apply (rule maskInterrupt_ccorres, simp)
-                    apply simp
-                   apply simp
-                  apply (rule ccorres_return_Skip)
-                 apply ceqv
-                apply (ctac (no_vcg) add: vcpu_restore_reg_ccorres)
-               apply wpsimp
-              apply clarsimp
-              apply (vcg exspec=maskInterrupt_modifies)
-             apply wpsimp+
-             (* ignore rv of isIRQActive *)
-             apply (wp (once) hoare_drop_imp[where f="isIRQActive irq" for irq])
-              apply (wpsimp simp: isIRQActive_def liftM_bind
-                            wp: vcpuWriteReg_obj_at'_vcpuVPPIMasked)+
-       apply (clarsimp simp: Collect_const_mem)
-       apply vcg
-     apply (wpsimp wp: hoare_vcg_all_lift hoare_vcg_imp_lift')+
-
-  apply (clarsimp simp: IRQ_def Collect_const_mem irqVPPIEventIndex_def)
-  apply (simp add: vcpureg_eq_use_types[where reg=VCPURegCNTV_CVALhigh, simplified, symmetric]
-                   vcpureg_eq_use_types[where reg=VCPURegCNTV_CVALlow, simplified, symmetric]
-                   vcpureg_eq_use_types[where reg=VCPURegCNTV_CTL, simplified, symmetric]
-                   vcpureg_eq_use_types[where reg=VCPURegCNTVOFFhigh, simplified, symmetric]
-                   vcpureg_eq_use_types[where reg=VCPURegCNTVOFFlow, simplified, symmetric])
-  apply (clarsimp simp: irqVTimerEvent_def Kernel_C.maxIRQ_def)
-  apply (rule conjI)
-   apply clarsimp
-   apply (drule vcpu_at_ko)
-   apply normalise_obj_at'
-   apply (simp add: fromEnum_def enum_vppievent_irq)
-
-  (* remaining C side *)
-  apply (clarsimp simp: and_mask_eq_iff_le_mask)
-  apply (clarsimp simp: mask_def)
-  apply normalise_obj_at'
-  apply (drule (1) vcpu_at_rf_sr)
-  apply (clarsimp simp: typ_heap_simps cvcpu_relation_def cvcpu_vppi_masked_relation_def)
-  apply (erule_tac x="vppievent_irq.VPPIEventIRQ_VTimer" in allE)+
-  apply (fastforce simp: fromEnum_def enum_vppievent_irq)
-  done *)
+     apply (ctac (no_vcg) add: read_cntpct_ccorres)
+      apply (rename_tac current_cntpct)
+      apply (rule ccorres_pre_getObject_vcpu)
+      apply (rename_tac vcpu_obj)
+      apply (rule ccorres_move_c_guard_vcpu)
+      apply (rule_tac xf'=pcount_delta_' and
+                      R=\<top> and
+                      R'="{s. \<exists>vcpu'. cslift s vcpu = Some vcpu' \<and> cvcpu_relation vcpu_obj vcpu'}" and
+                      F="\<lambda>s. s = current_cntpct - vtimerLastPCount (vcpuVTimer vcpu_obj)"
+                      in ccorres_symb_exec_r_rv_abstract)
+         apply (rule conseqPre, vcg)
+         apply (clarsimp simp: typ_heap_simps cvcpu_relation_def)
+        apply ceqv
+       apply (ctac (no_vcg) add: vcpu_read_reg_ccorres)
+        apply csymbr
+        apply csymbr
+        apply (ctac (no_vcg) add: vcpu_write_reg_ccorres)
+         apply (ctac (no_vcg) add: vcpu_restore_reg_ccorres)
+          apply (rule ccorres_pre_getObject_vcpu)
+          apply (ctac add: isIRQActive_ccorres)
+            apply (clarsimp simp: when_def simp del: Collect_const)
+            apply (rule ccorres_Cond_rhs_Seq; clarsimp)
+             apply (rule ccorres_rhs_assoc)+
+             apply csymbr
+             apply clarsimp
+             apply (rule ccorres_move_const_guards)
+             apply (rule ccorres_move_c_guard_vcpu)
+             apply (ctac (no_vcg) add: maskInterrupt_ccorres)
+              apply (ctac (no_vcg) add: vcpu_restore_reg_ccorres)
+             apply wp
+            apply (ctac (no_vcg) add: vcpu_restore_reg_ccorres)
+           apply (wpsimp simp: irqVPPIEventIndex_def IRQ_def irqVTimerEvent_def fromEnum_def
+                               enum_vppievent_irq)
+          apply (vcg exspec=isIRQActive_modifies)
+         apply (wpsimp wp: hoare_drop_imp)
+        apply wp+
+      apply vcg
+     apply (wpsimp wp: hoare_drop_imp)
+    apply wp+
+  apply (clarsimp simp: seL4_VCPUReg_defs enum_vcpureg irqVPPIEventIndex_def IRQ_def
+                        irqVTimerEvent_def mask_def typ_heap_simps
+                        fromEnum_def enum_vppievent_irq Kernel_C.maxIRQ_def
+                        cvcpu_relation_def cvcpu_vppi_masked_relation_def
+                 split: if_split)
+  apply (erule_tac x=VPPIEventIRQ_VTimer in allE)+
+  apply (clarsimp simp: irqVPPIEventIndex_def fromEnum_def enum_vppievent_irq)
+  done
 
 lemma vcpuUpdate_vTimer_pcount_ccorres:
   "ccorres dc xfdc (vcpu_at' vcpuptr) UNIV hs
