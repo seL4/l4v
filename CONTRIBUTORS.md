@@ -68,7 +68,7 @@ order).
 * Thomas Sewell, Data61, NICTA & UNSW
 * Michael Sproul, Data61
 * Rupert Shuttleworth, NICTA
-* Robert Sison, The University of Melbourne
+* Rob Sison, UNSW & The University of Melbourne
 * Miki Tanaka, Data61, NICTA
 * Vernon Tang, NICTA
 * Sophie Taylor, Data61, NICTA

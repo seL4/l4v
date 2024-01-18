@@ -12,6 +12,21 @@
 - Scott's fork `scottbuckley`: <https://github.com/scottbuckley/l4v.git>
 - Rob's fork `robs-cse`: <https://github.com/robs-cse/l4v.git>
 
+## Verification manifest
+
+The time protection project now has a manifest that records which branches and
+checkouts of the repositories needed for L4.verified are compatible and reflect
+the latest status of our experimental and verification work in progress.
+
+Select it by using `repo init` with `-m timeprot.xml` when following the
+[setup instructions](https://github.com/seL4/l4v/blob/master/docs/setup.md)
+to check out the L4.verified repositories:
+
+    mkdir verification
+    cd verification
+    repo init -m timeprot.xml -u ssh://git@github.com/seL4/verification-manifest.git
+    repo sync
+
 ## Experimental synchronisation branch
 
 Location: `verification/experimental-timeprot`
