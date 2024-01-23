@@ -188,7 +188,11 @@ lookupFrame vspaceRoot vPtr = do
     (bitsLeft, ptePtr) <- lookupPTSlot vspaceRoot vPtr
     pte <- getObject ptePtr
     if isPagePTE pte
-        then return $ Just (bitsLeft, pteBaseAddress pte)
+        then do
+            let baseAddr = pteBaseAddress pte
+            assert (fromPAddr baseAddr .&. mask bitsLeft == 0)
+                   "frame address must be aligned"
+            return $ Just (bitsLeft, baseAddr)
         else return Nothing
 
 {- Page Table Modification -}

@@ -55,7 +55,10 @@ where
         odE
   odE"
 
-#INCLUDE_HASKELL SEL4/Kernel/VSpace/AARCH64.hs CONTEXT AARCH64_H bodies_only ArchInv=ArchRetypeDecls_H NOT lookupPTSlotFromLevel lookupPTFromLevel pteAtIndex getPPtrFromHWPTE isPageTablePTE ptBitsLeft checkPTAt
+#INCLUDE_HASKELL SEL4/Kernel/VSpace/AARCH64.hs CONTEXT AARCH64_H bodies_only ArchInv=ArchRetypeDecls_H NOT lookupPTSlotFromLevel lookupPTFromLevel pteAtIndex getPPtrFromHWPTE isPageTablePTE ptBitsLeft checkPTAt checkValidMappingSize
+
+defs checkValidMappingSize_def:
+  "checkValidMappingSize sz \<equiv> stateAssert (\<lambda>s. 2 ^ sz <= gsMaxObjectSize s) []"
 
 end
 

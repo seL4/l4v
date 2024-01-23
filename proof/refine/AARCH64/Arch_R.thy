@@ -865,6 +865,10 @@ lemma lookupPTSlot_gets_corres[@lift_corres_args, corres]:
   apply clarsimp
   done
 
+lemma max_page_le_max_pt_level:
+  "max_page_level \<le> max_pt_level"
+  by (simp add: level_defs)
+
 lemma lookupFrame_corres[@lift_corres_args, corres]:
   "corres (\<lambda>fr fr'. case (fr, fr') of
                       (Some (vmsz, b), Some (bits, b')) \<Rightarrow> bits = pageBitsForSize vmsz \<and> b' = b
@@ -893,8 +897,18 @@ lemma lookupFrame_corres[@lift_corres_args, corres]:
          apply (rename_tac pte)
          apply (prop_tac "AARCH64_A.is_PagePTE pte")
           apply (case_tac pte; simp add: isPagePTE_def)
-         apply (simp cong: corres_weaker_cong)
+         apply (clarsimp cong: corres_weaker_cong)
+         apply (rename_tac slot level pte' pte)
          apply (rule_tac F="AARCH64_A.is_PagePTE pte \<longrightarrow> level \<le> max_page_level" in corres_gen_asm) (* FIXME AARCH64: 2 -> max_page_level in spec *)
+         apply (rule_tac P'="\<lambda>s. valid_vspace_objs s \<and> valid_asid_table s \<and> pspace_aligned s \<and>
+                                 (\<exists>asid. vs_lookup_slot level asid vaddr s = Some (level, slot)) \<and>
+                                 vaddr \<in> user_region \<and>
+                                 ptes_of s level slot = Some pte" and Q'=\<top>
+                         in corres_assert_gen_asm_cross)
+          apply (fold is_aligned_mask)[1]
+          apply (cut_tac max_page_le_max_pt_level)
+          apply (fastforce simp: AARCH64_A.is_PagePTE_def fromPAddr_def is_aligned_ptrFromPAddr_n_eq
+                           dest!: data_at_aligned valid_vspace_objs_strong_slotD)
          apply (rule corres_trivial)
          apply (clarsimp simp: max_page_level_def AARCH64_A.is_PagePTE_def pte_base_addr_def)
         apply (rule corres_inst[where P'=\<top>])
@@ -913,6 +927,16 @@ lemma lookupFrame_corres[@lift_corres_args, corres]:
     apply fastforce
    apply (fastforce simp: pte_at_def AARCH64_A.is_PagePTE_def dest: valid_vspace_objs_strong_slotD)
   apply simp
+  done
+
+lemma data_at_is_frame_cap:
+  "\<lbrakk> caps_of_state s cref = Some cap; obj_refs cap = {p}; data_at pgsz p s;
+     valid_objs s \<rbrakk> \<Longrightarrow>
+   is_frame_cap cap \<and> cap_bits cap = pageBitsForSize pgsz"
+  apply (drule (1) caps_of_state_valid_cap)
+  apply (clarsimp simp: valid_cap_def obj_at_def data_at_def is_ep is_ntfn is_cap_table is_tcb
+                        valid_arch_cap_ref_def
+                  split: cap.splits arch_cap.splits option.splits if_splits)
   done
 
 lemma decodeARMVSpaceInvocation_corres[corres]:
@@ -935,12 +959,51 @@ lemma decodeARMVSpaceInvocation_corres[corres]:
   apply (clarsimp simp: neq_Nil_conv)
   apply (corres corres: corres_lookup_error findVSpaceForASID_corres corres_returnOkTT
                 simp: checkValidMappingSize_def
-                term_simp: archinv_relation_def vspace_invocation_map_def labelToFlushType_corres
-                           page_base_def pageBase_def pageBitsForSize_pt_bits_left
+                term_simp: archinv_relation_def vspace_invocation_map_def
          | corres_cases_both)+
-   apply (fastforce simp: not_less user_vtop_def valid_cap_def wellformed_mapdata_def
-                    intro!: below_user_vtop_in_user_region vspace_for_asid_vs_lookup)
-  apply clarsimp
+          apply clarsimp
+          apply (rename_tac pgsz paddr)
+          apply (rule_tac P'="\<lambda>s. \<exists>level asid vref.
+                                vs_lookup_target level asid vref s = Some (level, ptrFromPAddr paddr) \<and>
+                                vref \<in> user_region \<and> data_at pgsz (ptrFromPAddr paddr) s \<and>
+                                valid_vs_lookup s \<and> valid_objs s" and
+                          Q'="pspace_aligned' and pspace_distinct' and valid_global_refs'"
+                          in corres_stateAssert_r_cross)
+           apply clarsimp
+           apply (drule valid_vs_lookupD; simp)
+           apply clarsimp
+           apply (frule (3) data_at_is_frame_cap)
+           apply (fastforce dest!: valid_global_refsD_with_objSize pspace_relation_cte_wp_at[rotated]
+                                   caps_of_state_cteD
+                            simp: is_frame_cap_eq cte_wp_at_ctes_of)
+          apply (corres corres: corres_returnOkTT
+                        term_simp: archinv_relation_def vspace_invocation_map_def
+                                   labelToFlushType_corres page_base_def pageBase_def
+                                   pageBitsForSize_pt_bits_left)
+         apply wpsimp
+        apply (wpsimp wp: hoare_drop_imp)
+       apply wpsimp
+      apply (wpsimp wp: hoare_drop_imps)
+     apply wpsimp
+    apply wpsimp
+   apply (rename_tac arg0 arg1 args' s s')
+   apply clarsimp
+   apply (rule conjI, fastforce simp: valid_cap_def wellformed_mapdata_def)+
+   apply clarsimp
+   apply (rule conjI, fastforce intro!: vspace_for_asid_vs_lookup)
+   apply (rule context_conjI,
+          fastforce simp: not_less user_vtop_def intro!: below_user_vtop_in_user_region)
+   apply (clarsimp simp: lookup_frame_def)
+   apply (rename_tac level p pte)
+   apply (drule (1) pt_lookup_slot_vs_lookup_slotI)
+   apply (rule_tac x=level in exI)
+   apply (rule_tac x=asid in exI)
+   apply (rule_tac x=arg0 in exI)
+   apply (simp add: vs_lookup_target_def obind_def)
+   apply (rule conjI, solves clarsimp)
+   apply (clarsimp simp: AARCH64_A.is_PagePTE_def pte_base_addr_def opt_map_red)
+   apply (fastforce dest!: valid_vspace_objs_strong_slotD)
+  apply fastforce
   done
 
 lemma dom_ucast_eq:
