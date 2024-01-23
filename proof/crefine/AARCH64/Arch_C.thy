@@ -809,13 +809,12 @@ lemma maybeVSpaceForASID_findVSpaceForASID_ccorres:
   done
 
 lemma cap_case_PageTableCap2:
-  "(case cap of ArchObjectCap (PageTableCap pd pt_t mapdata)
-                   \<Rightarrow> f pd pt_t mapdata | _ \<Rightarrow> g)
-   = (if isArchObjectCap cap \<and> isPageTableCap (capCap cap)
-      then f (capPTBasePtr (capCap cap)) (capPTType (capCap cap)) (capPTMappedAddress (capCap cap))
+  "(case cap of ArchObjectCap (PageTableCap p VSRootPT_T mapdata)
+                   \<Rightarrow> f p mapdata | _ \<Rightarrow> g)
+   = (if isArchObjectCap cap \<and> isPageTableCap (capCap cap) \<and> capPTType (capCap cap) = VSRootPT_T
+      then f (capPTBasePtr (capCap cap)) (capPTMappedAddress (capCap cap))
       else g)"
-  by (simp add: isCap_simps
-         split: capability.split arch_capability.split)
+  by (simp add: isCap_simps split: capability.split arch_capability.split pt_type.split)
 
 lemma lookupPTSlotFromLevel_bitsLeft_less_64:
   "n \<le> maxPTLevel \<Longrightarrow> \<lbrace>\<lambda>_. True\<rbrace> lookupPTSlotFromLevel n p vptr \<lbrace>\<lambda>rv _. fst rv < 64\<rbrace>"
@@ -854,6 +853,89 @@ lemma lookupPTSlot_bitsLeft_le_pptrBaseOffset_alignment[wp]:
   unfolding lookupPTSlot_def
   by (rule lookupPTSlotFromLevel_bitsLeft_le_pptrBaseOffset_alignment, simp)
 
+(* See comment in decode ARMPageTableInvocation for why "20" *)
+definition
+  "enoughPTBits n \<equiv> n \<noteq> pageBits \<longrightarrow> 20 \<le> n"
+
+lemma lookupPTSlotFromLevel_enoughPTBits:
+  "n \<le> maxPTLevel \<Longrightarrow> \<lbrace>\<lambda>_. True\<rbrace> lookupPTSlotFromLevel n p vptr \<lbrace>\<lambda>rv _. enoughPTBits (fst rv)\<rbrace>"
+  unfolding enoughPTBits_def
+  apply (induct n arbitrary: p)
+   apply (simp add: lookupPTSlotFromLevel.simps)
+   apply (wpsimp simp: pageBits_def)
+  apply (simp add: lookupPTSlotFromLevel.simps)
+  apply wpsimp
+      apply assumption
+     apply (wpsimp wp: hoare_drop_imps)+
+  apply (simp add: ptBitsLeft_def ptTranslationBits_def pageBits_def maxPTLevel_def
+              split: if_splits)
+  done
+
+lemma lookupPTSlot_enoughPTBits[wp]:
+  "\<lbrace>\<top>\<rbrace> lookupPTSlot p vptr \<lbrace>\<lambda>rv _. enoughPTBits (fst rv)\<rbrace>"
+  unfolding lookupPTSlot_def
+  by (rule lookupPTSlotFromLevel_enoughPTBits, simp)
+
+lemma slotcap_in_mem_VSpace:
+  "\<lbrakk> slotcap_in_mem cap slot (ctes_of s); (s, s') \<in> rf_sr \<rbrakk>
+       \<Longrightarrow> \<exists>v. cslift s' (cte_Ptr slot) = Some v
+           \<and> (cap_get_tag (cte_C.cap_C v) = scast cap_vspace_cap)
+              = (isArchObjectCap cap \<and> isPageTableCap (capCap cap) \<and> capPTType (capCap cap) = VSRootPT_T)
+           \<and> ccap_relation cap (cte_C.cap_C v)"
+  apply (clarsimp simp: slotcap_in_mem_def)
+  apply (erule(1) cmap_relationE1[OF cmap_relation_cte])
+  apply (clarsimp dest!: ccte_relation_ccap_relation)
+  apply (simp add: cap_get_tag_isCap_ArchObject2)
+  done
+
+lemma pptrUserTop_val: (* FIXME AARCH64: need value spelled out for C code *)
+  "pptrUserTop = 0xFFFFFFFFFFF"
+  by (simp add: pptrUserTop_def mask_def Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
+
+lemma ccap_relation_vspace_base: (* FIXME AARCH64: move up if needed in VSpace_R *)
+  "ccap_relation (ArchObjectCap (PageTableCap p VSRootPT_T m)) cap
+    \<Longrightarrow> capVSBasePtr_CL (cap_vspace_cap_lift cap) = p"
+  by (frule cap_get_tag_isCap_unfolded_H_cap)
+     (clarsimp simp: cap_vspace_cap_lift ccap_relation_def cap_to_H_def split: if_splits)
+
+(* The magic 4 comes out of the bitfield generator *)
+lemma ThreadState_Restart_mask[simp]: (* FIXME AARCH64: move far up *)
+  "(scast ThreadState_Restart::machine_word) && mask 4 = scast ThreadState_Restart"
+  by (simp add: ThreadState_Restart_def mask_def)
+
+lemma Restart_valid[simp]:
+  "valid_tcb_state' Restart s"
+  by (simp add: valid_tcb_state'_def)
+
+lemma canonical_address_mask_shift2:
+  "\<lbrakk> canonical_address p; n + m = Suc canonical_bit; 0 < n \<rbrakk> \<Longrightarrow> p && (mask n << m) = p >> m << m"
+  apply (prop_tac "m = Suc canonical_bit - n", arith)
+  supply canonical_bit_def[simp]
+  apply (simp add: canonical_address_def canonical_address_of_def)
+  apply word_eqI
+  apply (rule iffI; clarsimp)
+  apply (rename_tac n')
+  apply (prop_tac "n' < Suc canonical_bit"; fastforce)
+  done
+
+lemma capVSMappedASID_CL_masked[unfolded asid_bits_def, simplified]:
+  "ccap_relation (ArchObjectCap (PageTableCap p VSRootPT_T (Some (asid, vref)))) cap
+   \<Longrightarrow> capVSMappedASID_CL (cap_vspace_cap_lift cap) && mask asid_bits =
+       capVSMappedASID_CL (cap_vspace_cap_lift cap)"
+  apply (clarsimp simp: ccap_relation_def map_option_Some_eq2)
+  apply (clarsimp simp: cap_to_H_def Let_def split: cap_CL.splits if_splits)
+  apply (clarsimp simp: cap_vspace_cap_lift_def)
+  apply (clarsimp simp: cap_lift_def Let_def asid_bits_def split: if_splits)
+  done
+
+lemma mask_shift_neg_mask_eq: (* FIXME AARCH64: move to Word_Lib *)
+  "\<lbrakk> n' \<le> n; x \<le> mask (m+n') \<rbrakk> \<Longrightarrow> (x && ~~ mask n) && (mask m << n') = x && ~~ mask n"
+  by word_eqI_solve
+
+lemma pptrUserTop_le_canonical_val[unfolded canonical_bit_def, simplified]:
+  "x \<le> pptrUserTop \<Longrightarrow> x \<le> mask (Suc canonical_bit)"
+  by (simp add: pptrUserTop_def canonical_bit_def order_trans[OF _ mask_mono] split: if_split_asm)
+
 lemma decodeARMPageTableInvocation_ccorres:
   "\<lbrakk>interpret_excaps extraCaps' = excaps_map extraCaps;
     isPageTableCap cp; capPTType cp = NormalPT_T\<rbrakk> \<Longrightarrow>
@@ -876,7 +958,6 @@ lemma decodeARMPageTableInvocation_ccorres:
        (decodeARMMMUInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
        (Call decodeARMPageTableInvocation_'proc)"
-   (is "\<lbrakk> _; _; _\<rbrakk> \<Longrightarrow> ccorres _ _ ?pre ?pre' _ _ _")
   supply Collect_const[simp del] if_cong[cong] option.case_cong[cong]
   apply (clarsimp simp only: isCap_simps)
   apply (cinit' lift: invLabel_' length___unsigned_long_' cte_'
@@ -886,9 +967,7 @@ lemma decodeARMPageTableInvocation_ccorres:
    apply (simp add: Let_def isCap_simps if_to_top_of_bind
                cong: StateSpace.state.fold_congs globals.fold_congs)
    apply (rule ccorres_Cond_rhs_Seq)
-    sorry (* FIXME AARCH64: clean up RISCV names
-
-    (* RISCVPageTableUnmap *)
+    (* ARMPageTableUnmap *)
     apply (rule ccorres_split_throws)
      apply (simp add: liftE_bindE bind_assoc)
      apply (rule ccorres_symb_exec_l[OF _ getCTE_inv _ empty_fail_getCTE])
@@ -901,74 +980,17 @@ lemma decodeARMPageTableInvocation_ccorres:
          apply (simp add: throwError_bind invocationCatch_def)
          apply (rule syscall_error_throwError_ccorres_n)
          apply (simp add: syscall_error_to_H_cases)
-        (* check if PT cap is mapped *)
+        apply (simp add: returnOk_bind bindE_assoc performARMMMUInvocations)
+        apply (ctac add: setThreadState_ccorres)
+          apply (ctac add: performPageTableInvocationUnmap_ccorres)
+             apply (rule ccorres_alternative2)
+             apply (rule ccorres_return_CE, simp+)[1]
+            apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
+           apply wpsimp
+          apply (vcg exspec=performPageTableInvocationUnmap_modifies)
+         apply (wpsimp wp: sts_invs_minor' simp: isCap_simps)
         apply clarsimp
-        apply csymbr
-        apply (clarsimp simp: ccap_relation_PageTableCap_IsMapped)
-        apply (simp add: option.case_eq_if)
-        apply (simp add: unlessE_def if_to_top_of_bind if_to_top_of_bindE ccorres_seq_cond_raise)
-        apply (rule ccorres_cond2'[where R=\<top>], solves clarsimp)
-         prefer 2
-         (* not mapped, perform unmap *)
-         apply (simp add: returnOk_bind bindE_assoc performAARCH64MMUInvocations)
-         apply (ctac add: setThreadState_ccorres)
-           apply (ctac add: performPageTableInvocationUnmap_ccorres)
-              apply (rule ccorres_alternative2)
-              apply (rule ccorres_return_CE, simp+)[1]
-             apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
-            apply wpsimp
-           apply (vcg exspec=performPageTableInvocationUnmap_modifies)
-          apply (wpsimp wp: sts_invs_minor' simp: isCap_simps)
-         apply simp
-         apply (vcg exspec=setThreadState_modifies)
-        apply (simp add: split_def)
-        (* mapped, check it isn't a top-level PT *)
-        apply (rule_tac P="v1 \<noteq> None" in ccorres_gen_asm)
-        apply (rule ccorres_rhs_assoc)+
-        apply clarsimp
-        apply csymbr
-        apply csymbr
-        (* pull out maybeVSpaceForASID to bind at front *)
-        apply (simp only: bind_bindE_liftE)
-        apply (simp add: invocationCatch_use_injection_handler injection_handler_bindE
-                         bindE_assoc injection_liftE)
-        apply (simp add: liftE_bindE)
-        apply (rule ccorres_split_nothrow)
-            apply wpfix
-            apply (rule ccorres_call[where xf'=find_ret_'])
-               apply (rule maybeVSpaceForASID_findVSpaceForASID_ccorres; simp)
-              apply simp+
-           apply ceqv
-          apply csymbr
-          apply csymbr
-          apply clarsimp
-          (* check this isn't a top-level page table *)
-          apply (simp add: whenE_def if_to_top_of_bind if_to_top_of_bindE ccorres_seq_cond_raise
-                           injection_handler_If)
-          apply (clarsimp simp: ccap_relation_PageTableCap_BasePtr)
-          apply (rule ccorres_cond2[where R=\<top>], (fastforce split: option.splits))
-           (* it is a top level page table, throw *)
-           apply (clarsimp simp: injection_handler_throwError)
-           apply (rule syscall_error_throwError_ccorres_n)
-           apply (simp add: syscall_error_to_H_cases)
-          (* not top level, perform unmap *)
-          apply (simp add: injection_handler_returnOk)
-          apply (simp add: performAARCH64MMUInvocations bindE_assoc)
-          apply (ctac add: setThreadState_ccorres)
-            apply (ctac add: performPageTableInvocationUnmap_ccorres)
-               apply (rule ccorres_alternative2)
-               apply (rule ccorres_return_CE, simp+)[1]
-              apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
-             apply wp
-            apply simp
-            apply (vcg exspec=performPageTableInvocationUnmap_modifies)
-           apply (wp sts_invs_minor')
-          apply simp
-          apply (vcg exspec=setThreadState_modifies)
-         apply clarsimp
-         apply (wp hoare_drop_imps)
-        apply clarsimp
-        apply (vcg exspec=findVSpaceForASID_modifies)
+        apply (vcg exspec=setThreadState_modifies)
        apply clarsimp
        apply (wp (once) hoare_drop_imp, wp isFinalCapability_inv)
       apply simp
@@ -976,8 +998,9 @@ lemma decodeARMPageTableInvocation_ccorres:
      apply (wp getCTE_wp)
     apply (vcg exspec=performPageTableInvocationUnmap_modifies exspec=isFinalCapability_modifies
                exspec=findVSpaceForASID_modifies exspec=setThreadState_modifies)
-   apply simp
+
    (* we're done with unmap case *)
+   apply simp
    apply (rule ccorres_Cond_rhs_Seq)
     (* neither map nor unmap, throw *)
     apply (rule ccorres_equals_throwError)
@@ -986,9 +1009,9 @@ lemma decodeARMPageTableInvocation_ccorres:
      apply fastforce
     apply (rule syscall_error_throwError_ccorres_n)
     apply (simp add: syscall_error_to_H_cases)
-   apply simp
 
-  (* RISCVPageTableMap *)
+   (* ARMPageTableMap *)
+   apply clarsimp
    apply csymbr
    apply clarsimp
    (* ensure we have enough extraCaps *)
@@ -1012,7 +1035,7 @@ lemma decodeARMPageTableInvocation_ccorres:
    apply (simp add: list_case_If2 split_def
                     word_less_nat_alt length_ineq_not_Nil Let_def
                     whenE_bindE_throwError_to_if if_to_top_of_bind
-                    decodeRISCVPageTableInvocationMap_def)
+                    decodeARMPageTableInvocationMap_def)
    (* ensure the page table cap is mapped *)
    apply csymbr
    apply (simp add: ccap_relation_PageTableCap_IsMapped)
@@ -1024,58 +1047,48 @@ lemma decodeARMPageTableInvocation_ccorres:
     apply (rule syscall_error_throwError_ccorres_n)
     apply (simp add: syscall_error_to_H_cases)
    (* mapped *)
-   apply (simp add: cap_case_PageTableCap2 split_def)
+   apply (simp add: checkVSpaceRoot_def cap_case_PageTableCap2 split_def)
    apply (rule ccorres_add_return)
    apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=0 and buffer=buffer])
      apply (rule ccorres_add_return)
-     apply (rule_tac r'="(\<lambda>rv _ rv'. ((cap_get_tag rv' = scast cap_page_table_cap)
-                                        = (isArchObjectCap rv \<and> isPageTableCap (capCap rv)))
+     apply (rule_tac r'="(\<lambda>rv _ rv'. ((cap_get_tag rv' = scast cap_vspace_cap)
+                                        = (isArchObjectCap rv \<and> isPageTableCap (capCap rv) \<and>
+                                           capPTType (capCap rv) = VSRootPT_T))
                                       \<and> (ccap_relation rv rv')) (fst (extraCaps ! 0))"
-              and xf'=lvl1ptCap_' in ccorres_split_nothrow)
+              and xf'=vspaceRootCap_' in ccorres_split_nothrow)
          apply (rule ccorres_from_vcg[where P="excaps_in_mem extraCaps \<circ> ctes_of" and P'=UNIV])
          apply (rule allI, rule conseqPre, vcg)
          apply (clarsimp simp: excaps_in_mem_def return_def neq_Nil_conv)
-         apply (drule(1) slotcap_in_mem_PageTable)
+         apply (drule(1) slotcap_in_mem_VSpace)
          apply (frule interpret_excaps_eq[rule_format, where n=0], simp)
          apply (clarsimp simp: typ_heap_simps' mask_def)
         apply (rename_tac rv' t t')
         apply (simp add: word_sless_def word_sle_def)
         apply ceqv
-     apply csymbr
-     apply clarsimp
+       apply csymbr
+       apply clarsimp
        apply (simp add: whenE_def if_to_top_of_bind if_to_top_of_bindE)
        apply (clarsimp simp: hd_conv_nth)
-       (* is first extra cap a page table cap? *)
+       (* is first extra cap a vspace cap? *)
        apply (rule ccorres_if_lhs[rotated]; clarsimp)
-        (* it not PT cap, clear up the C if condition calculation, then throw *)
-        apply (rule ccorres_rhs_assoc2)
-        apply (rule_tac val=1 and xf'=ret__int_' and R=\<top> and R'=UNIV in ccorres_symb_exec_r_known_rv_UNIV)
-           apply vcg
-           apply clarsimp
-          apply ceqv
-         apply clarsimp
-         apply ccorres_rewrite
-         apply (rule ccorres_equals_throwError)
-          apply (simp split: invocation_label.split arch_invocation_label.split
-                        add: throwError_bind invocationCatch_def)
-         apply (rule syscall_error_throwError_ccorres_n)
-         apply (simp add: syscall_error_to_H_cases)
-        apply (solves \<open>simp add: guard_is_UNIV_def\<close>)
-       (* first extracap is a page table *)
-       apply csymbr
-       apply clarsimp
-       apply ccorres_rewrite
-       (* ensure the pt is mapped *)
-       apply (rule ccorres_rhs_assoc)
-       apply csymbr
-       apply (simp add: option.case_eq_if)
-       apply (simp add: if_to_top_of_bind if_to_top_of_bindE)
-       apply csymbr
-       apply clarsimp
+        (* if not vspace cap, clear up the C if condition calculation, then throw *)
+        apply (rule ccorres_cond_true_seq)
+        apply ccorres_rewrite
+        apply (rule ccorres_equals_throwError)
+         apply (simp split: invocation_label.split arch_invocation_label.split
+                       add: throwError_bind invocationCatch_def)
+        apply (rule syscall_error_throwError_ccorres_n)
+        apply (simp add: syscall_error_to_H_cases)
+       (* first extracap is a vspace cap *)
+       apply (clarsimp simp: isCap_simps isValidVTableRoot_def isVTableRoot_def)
+       (* ensure the vspace is mapped *)
+       apply (clarsimp simp: option.case_eq_if if_to_top_of_bind if_to_top_of_bindE)
+       apply (rename_tac m)
+       apply (prop_tac "m = capPTMappedAddress (capCap (fst (extraCaps ! 0)))", simp)
+       apply hypsubst
        apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
           apply vcg
-         apply (solves \<open>clarsimp simp: asidInvalid_def isCap_simps
-                                       ccap_relation_PageTableCap_IsMapped\<close>)
+         apply (solves \<open>clarsimp simp: from_bool_def split: bool.split\<close>)
         apply (simp add: throwError_bind invocationCatch_def)
         apply (rule syscall_error_throwError_ccorres_n)
         apply (simp add: syscall_error_to_H_cases)
@@ -1083,11 +1096,10 @@ lemma decodeARMPageTableInvocation_ccorres:
        apply csymbr
        apply csymbr
        apply csymbr
-     apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
-        apply vcg
-       apply (solves \<open>clarsimp simp: isCap_simps hd_conv_nth AARCH64.pptrUserTop_def'
-                                     pptrUserTop_def' not_less length_le_helper\<close>)
-        apply (fold not_None_def) (* avoid expanding capPTMappedAddress  *)
+       apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
+          apply vcg
+         apply (solves \<open>clarsimp simp: hd_conv_nth not_less length_le_helper mask_def pptrUserTop_val\<close>)
+        apply (fold not_None_def)[1] (* avoid expanding capPTMappedAddress  *)
         apply clarsimp
         apply (simp add: throwError_bind invocationCatch_def)
         apply (rule syscall_error_throwError_ccorres_n)
@@ -1101,7 +1113,7 @@ lemma decodeARMPageTableInvocation_ccorres:
           apply (simp add: Collect_False if_to_top_of_bindE)
           apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
              apply vcg
-            apply (solves\<open>clarsimp simp: asidInvalid_def isCap_simps ccap_relation_PageTableCap_BasePtr\<close>)
+            apply (solves\<open>clarsimp simp: asidInvalid_def isCap_simps ccap_relation_vspace_base\<close>)
            apply (rule syscall_error_throwError_ccorres_n)
            apply (simp add: syscall_error_to_H_cases)
           apply (clarsimp simp: bindE_assoc)
@@ -1111,13 +1123,20 @@ lemma decodeARMPageTableInvocation_ccorres:
             apply (rename_tac pte)
             apply (simp add: whenE_def if_to_top_of_bind if_to_top_of_bindE)
             apply clarsimp
-            (* ensure we have found a valid pte with more bits than pageBits left to look up *)
+            apply (rename_tac pte_slot ptSlot___struct_lookupPTSlot_ret_C pte)
             apply wpfix
+            (* 20 in enoughPTBits is from the bitfield generator: capPTMappedAddress is a field_high
+               of width 28, which leaves 20 bottom bits at 48 canonical width -- the only reason
+               this works is because ptBitsLeft must be \<ge> 20 when it returns more than pageBits and
+               we later mask by ptBitsLeft. *)
+            apply (rule_tac P="enoughPTBits (unat (ptBitsLeft_C ptSlot___struct_lookupPTSlot_ret_C))"
+                            in ccorres_gen_asm)
+            (* ensure we have found a valid pte with more bits than pageBits left to look up *)
             apply (rule ccorres_rhs_assoc2)
-            apply (rule_tac val="from_bool (unat (ptBitsLeft_C lu_ret___struct_lookupPTSlot_ret_C)
+            apply (rule_tac val="from_bool (unat (ptBitsLeft_C ptSlot___struct_lookupPTSlot_ret_C)
                                             = pageBits
                                             \<or> \<not> pte = AARCH64_H.InvalidPTE)"
-                     and xf'=ret__int_' and R="ko_at' pte b" and R'=UNIV
+                     and xf'=ret__int_' and R="ko_at' pte pte_slot" and R'=UNIV
                      in ccorres_symb_exec_r_known_rv)
                apply vcg
                apply clarsimp
@@ -1125,7 +1144,7 @@ lemma decodeARMPageTableInvocation_ccorres:
                apply (erule cmap_relationE1[OF rf_sr_cpte_relation], erule ko_at_projectKO_opt)
                apply (clarsimp simp: typ_heap_simps from_bool_eq_if)
                apply (simp flip: word_unat.Rep_inject)
-               apply (auto simp: cpte_relation_def Let_def pte_lift_def case_bool_If
+               apply (auto simp: cpte_relation_def Let_def pte_lift_def case_bool_If pte_tag_defs
                           split: pte.split_asm if_splits)[1]
               apply ceqv
              apply clarsimp
@@ -1135,36 +1154,56 @@ lemma decodeARMPageTableInvocation_ccorres:
               apply (rule syscall_error_throwError_ccorres_n)
               apply (simp add: syscall_error_to_H_cases)
              (* checks are done, move on to doing the mapping *)
-             apply (clarsimp simp: injection_handler_returnOk)
-             apply (simp add: performAARCH64MMUInvocations bindE_assoc)
+             apply (clarsimp simp: injection_handler_returnOk injection_handler_assertE bindE_assoc)
+             apply (simp add: assertE_liftE liftE_bindE)
+             apply (rule ccorres_assert)
+             apply (simp add: performARMMMUInvocations bindE_assoc)
              apply csymbr
              apply csymbr
              apply csymbr
              apply csymbr
              apply csymbr
-             apply csymbr
-             apply (rule_tac P="unat (ptBitsLeft_C lu_ret___struct_lookupPTSlot_ret_C) < 64"
-                      in ccorres_gen_asm) (* bitsLeft should not exceed word bits *)
+             apply (rule_tac P="unat (ptBitsLeft_C ptSlot___struct_lookupPTSlot_ret_C) < 64"
+                             in ccorres_gen_asm) (* bitsLeft should not exceed word bits *)
              apply ccorres_rewrite
-             apply (clarsimp simp: ccap_relation_PageTableCap_BasePtr
-                                   ccap_relation_PageTableCap_MappedASID)
              apply csymbr
              apply (ctac add: setThreadState_ccorres)
-               apply (ctac add: performPageTableInvocationMap_ccorres)
-                  apply (rule ccorres_alternative2)
-                  apply (rule ccorres_return_CE, simp+)[1]
-                 apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
-                apply wpsimp+
-               apply (vcg exspec=performPageTableInvocationMap_modifies)
+               apply (rule_tac A="cte_at' slot" and A'=UNIV in ccorres_guard_imp2)
+                apply (ctac add: performPageTableInvocationMap_ccorres)
+                   apply (rule ccorres_alternative2)
+                   apply (rule ccorres_return_CE, simp+)[1]
+                  apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
+                 apply wpsimp+
+                apply (vcg exspec=performPageTableInvocationMap_modifies)
+               apply clarsimp
+               apply (rule conjI)
+                apply (simp (no_asm) add: ccap_relation_def)
+                apply (clarsimp simp: cap_get_tag_to_H map_option_Some_eq2 cap_page_table_cap_lift)
+                apply (clarsimp simp: cap_to_H_def ccap_relation_PageTableCap_BasePtr
+                                      ccap_relation_vspace_mapped_asid)
+                apply (subst ccap_relation_vspace_mapped_asid)
+                 apply assumption
+                apply (simp add: capVSMappedASID_CL_masked)
+                apply (simp flip: mask_2pm1)
+                apply (drule at_least_2_args)
+                apply (clarsimp simp: hd_conv_nth)
+                apply (solves \<open>simp add: mask_shift_neg_mask_eq not_less pptrUserTop_le_canonical_val
+                                         enoughPTBits_def
+                                    flip: word_le_nat_alt\<close>)
+               apply (clarsimp simp: cpte_relation_def pte_lift_def Let_def pte_pte_table_lift_def
+                                     pte_tag_defs ccap_relation_PageTableCap_BasePtr
+                               split: if_splits)
+               apply (drule addrFromPPtr_canonical_in_kernel_window, simp add: word_less_nat_alt)
+               apply (solves \<open>simp add: canonical_address_mask_shift2 pageBits_def canonical_bit_def\<close>)
               apply wpsimp+
              apply (vcg exspec=setThreadState_modifies)
-            apply (simp add: get_capPtr_CL_def)
+            apply (simp add: get_capPtr_CL_def cap_get_tag_isCap_unfolded_H_cap typ_heap_simps)
             apply vcg
-           apply (rename_tac lookup_pt_ret)
            apply clarsimp
-           apply (wpsimp wp: lookupPTSlot_inv hoare_drop_imps lookupPTSlot_bitsLeft_less_64)
-          apply clarsimp
-          apply (vcg exspec=lookupPTSlot_modifies)
+           apply (wpsimp wp: lookupPTSlot_inv hoare_vcg_all_lift hoare_drop_imps lookupPTSlot_bitsLeft_less_64)
+          apply (simp add: typ_heap_simps)
+          (* guard against False by schematic instantiation because of simp above *)
+          apply (rule conseqPre, vcg exspec=lookupPTSlot_modifies, rule order_refl)
          (* throw on failed lookup *)
          apply clarsimp
          apply ccorres_rewrite
@@ -1178,7 +1217,7 @@ lemma decodeARMPageTableInvocation_ccorres:
          apply (clarsimp simp: throwError_def return_def syscall_error_rel_def
                                 syscall_error_to_H_cases exception_defs)
         apply clarsimp
-        apply (wp injection_wp[OF refl] findVSpaceForASID_inv hoare_drop_imps)
+        apply (wp injection_wp[OF refl] findVSpaceForASID_inv hoare_imp_eq_substR)
        apply clarsimp
        apply (vcg exspec=findVSpaceForASID_modifies)
       apply clarsimp
@@ -1191,18 +1230,14 @@ lemma decodeARMPageTableInvocation_ccorres:
   apply (clarsimp simp: cte_wp_at_ctes_of excaps_map_def
                         word_sle_def word_sless_def bit_simps not_None_def)
   apply (rule conjI)
-  subgoal for _ v1
-    (* RISCVPageTableUnmap: Haskell preconditions *)
-    apply (drule_tac s="capability.ArchObjectCap _" in sym)
-    apply (clarsimp simp: ct_in_state'_def isCap_simps valid_tcb_state'_def)
-    apply (case_tac v1; clarsimp) (* is PT mapped *)
-     apply (auto simp: ct_in_state'_def isCap_simps valid_tcb_state'_def valid_cap'_def
-                       wellformed_mapdata'_def
-                elim!: pred_tcb'_weakenE dest!: st_tcb_at_idle_thread')
-    done
+  subgoal
+    (* ARMPageTableUnmap: Haskell preconditions *)
+    by (fastforce simp: ct_in_state'_def cte_wp_at_ctes_of isCap_simps rf_sr_ksCurThread
+                  elim!: pred_tcb'_weakenE dest!: st_tcb_at_idle_thread')
+
   apply (rule conjI)
   subgoal for \<dots> s _ _
-    (* RISCVPageTableMap: Haskell preconditions *)
+    (* ARMPageTableMap: Haskell preconditions *)
     apply (clarsimp simp: isCap_simps)
     apply (clarsimp simp: sysargs_rel_to_n word_le_nat_alt
                           linorder_not_less)
@@ -1216,74 +1251,22 @@ lemma decodeARMPageTableInvocation_ccorres:
 
   apply (rule conjI)
   subgoal for _ v1
-    (* RISCVPageTableUnmap: C preconditions *)
-    apply (drule_tac t="cteCap _" in sym)
-    apply (clarsimp simp: rf_sr_ksCurThread "StrictC'_thread_state_defs"
-                              mask_eq_iff_w2p word_size
-                              ct_in_state'_def st_tcb_at'_def
-                              word_sle_def word_sless_def
-                              typ_heap_simps' bit_simps)
-    apply (frule cap_get_tag_isCap_unfolded_H_cap, simp)
-    apply clarsimp
-    apply (case_tac v1; clarsimp)
-    apply (drule_tac s="capability.ArchObjectCap _" in sym)
-    apply (solves \<open>clarsimp simp: ccap_relation_PageTableCap_MappedASID\<close>)
-    done
+    (* ARMPageTableUnmap: C preconditions *)
+    by (clarsimp simp: rf_sr_ksCurThread)
 
   subgoal for p
-    (* RISCVPageTableMap: C preconditions *)
-    apply (prop_tac "SCAST(32 signed \<rightarrow> 64) ThreadState_Restart && mask 4 =
-             SCAST(32 signed \<rightarrow> 64) ThreadState_Restart")
-     apply (solves \<open>clarsimp simp: ThreadState_Restart_def mask_def\<close>)
-    apply (clarsimp cong: imp_cong conj_cong)
+    (* ARMPageTableMap: C preconditions *)
     apply (clarsimp simp: neq_Nil_conv[where xs=extraCaps]
-                          excaps_in_mem_def slotcap_in_mem_def
-                   dest!: sym[where s="ArchObjectCap cp" for cp])
-    apply (cut_tac p="snd (hd extraCaps)" in ctes_of_valid', simp, clarsimp)
+                    dest!: sym[where s="ArchObjectCap cp" for cp])
     apply (clarsimp simp: cap_get_tag_isCap_ArchObject isCap_simps
-                          word_sle_def word_sless_def
-                          word_less_nat_alt)
+                          word_sle_def word_sless_def word_less_nat_alt)
     apply (frule length_ineq_not_Nil)
-    apply (frule cap_get_tag_isCap_unfolded_H_cap, simp)
-    apply (clarsimp simp: asidInvalid_def valid_cap_simps' rf_sr_ksCurThread hd_conv_nth
-                          cap_get_tag_isCap_unfolded_H_cap)
-    apply (clarsimp simp: typ_heap_simps')
-    apply (clarsimp simp: ccap_relation_PageTableCap_BasePtr ccap_relation_PageTableCap_IsMapped
-                          ccap_relation_PageTableCap_MappedASID)
+    apply (clarsimp simp: rf_sr_ksCurThread hd_conv_nth isValidVTableRoot_def2)
     apply (rule conjI)
-     (* ccap relation between caps with new mapping info *)
-     apply (fold mask_2pm1)
-     apply (subst ccap_relation_def)
-     apply (clarsimp simp: map_option_Some_eq2 cap_page_table_cap_lift[THEN iffD1]
-                           cap_to_H_simps)
-     (* base pointer *)
-     apply (clarsimp simp: ccap_relation_PageTableCap_BasePtr ccap_relation_PageTableCap_IsMapped)
-     (* wellformed ASID *)
-     apply (clarsimp simp: wellformed_mapdata'_def
-                           asid_wf_eq_mask_eq[simplified asid_bits_def, simplified])
-     (* masked args ! 0 idempotent under sign extension *)
-     apply (clarsimp simp: not_le)
-     apply (subst sign_extend_less_mask_idem[rotated], solves \<open>simp (no_asm) add: word_size\<close>)
-      apply (rule word_and_le)
-      apply (simp add: mask_def)
-      apply (rule less_imp_le)
-      apply (erule order.strict_trans, simp)
-     apply (rule refl)
-    (* pte relation *)
-    apply (clarsimp simp: cpte_relation_def Let_def)
-    (* this boils down to showing that the page table's address >> 12 can fit into C PPN field *)
-    apply (prop_tac "canonical_address p")
-     apply (erule canonical_address_page_table_at', fastforce)
-    apply (prop_tac "p \<in> kernel_mappings")
-     apply (erule page_table_at'_kernel_mappings, fastforce)
-    apply (drule_tac p=p in addrFromPPtr_in_user_region)
-    apply (prop_tac "addrFromPPtr p >> 12 \<le> mask 44")
-     apply (clarsimp simp: user_region_def canonical_user_def canonical_bit_def)
-     apply (erule leq_mask_shift[OF le_smaller_mask])
-     apply simp
-    apply (erule word_le_mask_eq)
+     apply (clarsimp simp: ccap_relation_vspace_mapped_asid[symmetric])
+    apply (clarsimp simp: from_bool_0)
     done
-  done *)
+  done
 
 lemma checkVPAlignment_spec:
   "\<forall>s. \<Gamma>\<turnstile> \<lbrace>s. \<acute>sz < 3\<rbrace> Call checkVPAlignment_'proc
@@ -1843,11 +1826,6 @@ lemma flushtype_relation_triv:
   by (clarsimp simp: labelToFlushType_def flushtype_relation_def invocation_eq_use_types
                      isPageFlushLabel_def isVSpaceFlushLabel_def
                split: flush_type.splits invocation_label.splits arch_invocation_label.splits)
-
-(* The magic 4 comes out of the bitfield generator *)
-lemma ThreadState_Restart_mask[simp]:
-  "(scast ThreadState_Restart::machine_word) && mask 4 = scast ThreadState_Restart"
-  by (simp add: ThreadState_Restart_def mask_def)
 
 (* FIXME AARCH64: clean up RISCV mentions here *)
 lemma decodeARMFrameInvocation_ccorres:
@@ -2710,16 +2688,6 @@ lemma isVSpaceFlushLabel_disj:
     label = ArchInvocationLabel ARMVSpaceClean_Data) =
   isVSpaceFlushLabel label"
   by (auto simp: isVSpaceFlushLabel_def split: invocation_label.split arch_invocation_label.split)
-
-lemma pptrUserTop_val: (* FIXME AARCH64: need value spelled out for C code *)
-  "pptrUserTop = 0xFFFFFFFFFFF"
-  by (simp add: pptrUserTop_def mask_def Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
-
-lemma ccap_relation_vspace_base: (* FIXME AARCH64: move up if needed in VSpace_R *)
-  "ccap_relation (ArchObjectCap (PageTableCap p VSRootPT_T m)) cap
-    \<Longrightarrow> capVSBasePtr_CL (cap_vspace_cap_lift cap) = p"
-  by (frule cap_get_tag_isCap_unfolded_H_cap)
-     (clarsimp simp: cap_vspace_cap_lift ccap_relation_def cap_to_H_def split: if_splits)
 
 lemma pte_ptr_get_valid_spec: (* FIXME AARCH64: move up if needed in VSpace_R *)
   "\<forall>s. \<Gamma>\<turnstile> \<lbrace>s. s \<Turnstile>\<^sub>c \<^bsup>s\<^esup>pt\<rbrace> Call pte_ptr_get_valid_'proc
