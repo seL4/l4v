@@ -2689,54 +2689,6 @@ lemma isVSpaceFlushLabel_disj:
   isVSpaceFlushLabel label"
   by (auto simp: isVSpaceFlushLabel_def split: invocation_label.split arch_invocation_label.split)
 
-lemma pte_ptr_get_valid_spec: (* FIXME AARCH64: move up if needed in VSpace_R *)
-  "\<forall>s. \<Gamma>\<turnstile> \<lbrace>s. s \<Turnstile>\<^sub>c \<^bsup>s\<^esup>pt\<rbrace> Call pte_ptr_get_valid_'proc
-          \<lbrace>\<acute>ret__unsigned_long =
-            from_bool (pte_get_tag (the (cslift s \<^bsup>s\<^esup>pt)) \<noteq> scast pte_pte_invalid)\<rbrace>"
-  by (rule allI, rule conseqPre, vcg) (clarsimp simp: from_bool_def split: if_split)
-
-lemma pte_pte_table_ptr_get_present_spec: (* FIXME AARCH64: move up if needed in VSpace_R *)
-  "\<forall>s. \<Gamma>\<turnstile> \<lbrace>s. s \<Turnstile>\<^sub>c \<^bsup>s\<^esup>pt\<rbrace> Call pte_pte_table_ptr_get_present_'proc
-          \<lbrace>\<acute>ret__unsigned_long =
-            from_bool (pte_get_tag (the (cslift s \<^bsup>s\<^esup>pt)) = scast pte_pte_table)\<rbrace>"
-  by (rule allI, rule conseqPre, vcg) (clarsimp simp: from_bool_def split: if_split)
-
-lemma pte_is_page_type_spec:
-  "\<forall>s. \<Gamma>\<turnstile> {s} Call pte_is_page_type_'proc
-          \<lbrace>\<acute>ret__unsigned_long = from_bool (pte_get_tag \<^bsup>s\<^esup>pte = scast pte_pte_4k_page \<or>
-                                  pte_get_tag \<^bsup>s\<^esup>pte = scast pte_pte_page) \<rbrace>"
-  by (rule allI, rule conseqPre, vcg) (clarsimp simp: from_bool_def split: if_split)
-
-lemma pte_get_page_base_address_spec:
-  "\<forall>s. \<Gamma>\<turnstile> {s}
-           Call pte_get_page_base_address_'proc
-          \<lbrace> \<forall>pte. cpte_relation pte (\<^bsup>s\<^esup>pte) \<longrightarrow> isPagePTE pte \<longrightarrow>
-                    \<acute>ret__unsigned_longlong = pteBaseAddress pte \<rbrace>"
-  apply (rule allI, rule conseqPre, vcg)
-  apply (clarsimp simp: isPagePTE_def split: pte.splits)
-  apply (clarsimp simp: cpte_relation_def Let_def pte_lift_def mask_def split: if_splits)
-  done
-
-lemma getObject_pte_ccorres: (* FIXME AARCH64: might be useful in VSpace_R *)
-  "p' = pte_Ptr p \<Longrightarrow>
-   ccorres cpte_relation pte_' \<top> UNIV hs
-           (getObject p)
-           (Guard C_Guard {s. s \<Turnstile>\<^sub>c p'} (\<acute>pte :== h_val (hrs_mem \<acute>t_hrs) p'))"
-  apply clarsimp
-  apply (rule ccorres_guard_imp2)
-   apply (rule ccorres_add_return2)
-   apply (rule ccorres_pre_getObject_pte)
-   apply (rule ccorres_move_c_guard_pte)
-   apply (rename_tac pte)
-   apply (rule_tac P="ko_at' pte p" and P'=UNIV in ccorres_from_vcg)
-   apply (rule allI, rule conseqPre, vcg)
-   apply (clarsimp simp: return_def)
-   apply (drule rf_sr_cpte_relation)
-   apply (drule (1) cmap_relation_ko_atD)
-   apply (clarsimp simp: typ_heap_simps)
-  apply (clarsimp simp: typ_at'_def obj_at'_def ko_wp_at'_def)
-  done
-
 lemma flush_range_le:
   fixes start :: "'a::len word"
   assumes "pageBase start n = pageBase end n"
