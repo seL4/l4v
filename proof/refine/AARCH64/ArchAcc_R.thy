@@ -751,7 +751,11 @@ lemma lookupPTSlot_corres:
           \<top>
           (gets_the (pt_lookup_slot pt vptr \<circ> ptes_of)) (lookupPTSlot pt vptr)"
   unfolding lookupPTSlot_def pt_lookup_slot_def
-  by (corresKsimp corres: lookupPTSlotFromLevel_corres)
+  apply (corresKsimp corres: lookupPTSlotFromLevel_corres)
+  apply (fastforce simp: vspace_pt_at_eq pt_type_def
+                   dest!: valid_vspace_objs_strongD
+                   split: pt.splits)
+  done
 
 lemma lookupPTFromLevel_corres:
   "\<lbrakk> level' = size level; pt' = pt \<rbrakk> \<Longrightarrow>

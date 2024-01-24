@@ -846,12 +846,12 @@ lemma lookupPTSlotFromLevel_bitsLeft_le_pptrBaseOffset_alignment:
 lemma lookupPTSlot_bitsLeft_less_64:
   "\<lbrace>\<top>\<rbrace> lookupPTSlot p vptr \<lbrace>\<lambda>rv _. fst rv < 64\<rbrace>"
   unfolding lookupPTSlot_def
-  by (rule lookupPTSlotFromLevel_bitsLeft_less_64, simp)
+  by (wpsimp wp: lookupPTSlotFromLevel_bitsLeft_less_64)
 
 lemma lookupPTSlot_bitsLeft_le_pptrBaseOffset_alignment[wp]:
   "\<lbrace>\<top>\<rbrace> lookupPTSlot p vptr \<lbrace>\<lambda>rv _. fst rv \<le> pptrBaseOffset_alignment\<rbrace>"
   unfolding lookupPTSlot_def
-  by (rule lookupPTSlotFromLevel_bitsLeft_le_pptrBaseOffset_alignment, simp)
+  by (wpsimp wp: lookupPTSlotFromLevel_bitsLeft_le_pptrBaseOffset_alignment)
 
 (* See comment in decode ARMPageTableInvocation for why "20" *)
 definition
@@ -874,7 +874,7 @@ lemma lookupPTSlotFromLevel_enoughPTBits:
 lemma lookupPTSlot_enoughPTBits[wp]:
   "\<lbrace>\<top>\<rbrace> lookupPTSlot p vptr \<lbrace>\<lambda>rv _. enoughPTBits (fst rv)\<rbrace>"
   unfolding lookupPTSlot_def
-  by (rule lookupPTSlotFromLevel_enoughPTBits, simp)
+  by (wpsimp wp: lookupPTSlotFromLevel_enoughPTBits)
 
 lemma slotcap_in_mem_VSpace:
   "\<lbrakk> slotcap_in_mem cap slot (ctes_of s); (s, s') \<in> rf_sr \<rbrakk>

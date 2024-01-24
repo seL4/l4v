@@ -181,7 +181,9 @@ lookupPTSlotFromLevel level ptPtr vPtr = do
 -- a given virtual address, together with the number of bits left to translate,
 -- indicating the size of the frame.
 lookupPTSlot :: PPtr PTE -> VPtr -> Kernel (Int, PPtr PTE)
-lookupPTSlot = lookupPTSlotFromLevel maxPTLevel
+lookupPTSlot pt vptr = do
+    checkPTAt VSRootPT_T pt
+    lookupPTSlotFromLevel maxPTLevel pt vptr
 
 lookupFrame :: PPtr PTE -> VPtr -> Kernel (Maybe (Int, PAddr))
 lookupFrame vspaceRoot vPtr = do

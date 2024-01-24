@@ -866,6 +866,7 @@ lemma lookupPTSlot_ccorres:
      apply (rule ccorres_symb_exec_r2)
        apply (rule ccorres_symb_exec_r2)
          apply (rule ccorres_rhs_assoc2)+
+         apply (rule ccorres_checkPTAt)
          apply simp
          apply (rule lookupPTSlotFromLevel_ccorres[where level=maxPTLevel, simplified,
                                                    simplified mask_ptTranslationBits_pt
@@ -876,10 +877,8 @@ lemma lookupPTSlot_ccorres:
      apply (vcg spec=modifies)
     apply vcg
    apply (vcg spec=modifies)
-  apply simp
   apply (simp add: bit_simps ptBitsLeft_def maxPTLevel_val split: if_split)
-  sorry (* FIXME AARCH64: add checkPTAt assertion in Haskell lookupPTSlot for
-                          gsPTTypes (ksArchState s) pt = Some VSRootPT_T *)
+  done
 
 abbreviation
   "findVSpaceForASID_xf \<equiv>
