@@ -1336,67 +1336,84 @@ lemma storePTE_Basic_ccorres'':
 lemma pageBitsForSize_le_64: "of_nat (pageBitsForSize x) < (64::machine_word)"
   by (cases x; simp add: bit_simps)
 
+lemma pte_lift_pte_invalid_eq:
+  "(pte_get_tag pte = scast pte_pte_invalid) = (pte_lift pte = Some Pte_pte_invalid)"
+  by (auto simp: pte_lift_def pte_tag_defs Let_def split: if_splits)
 
-(* FIXME AARCH64 does not exist in C, inlined into performPageInvocationMap
-lemma updatePTE_ccorres:
-  "ccorres (\<lambda>_ rv'. rv' = scast EXCEPTION_NONE) ret__unsigned_long_'
-     \<top>
-     (\<lbrace> cpte_relation pte \<acute>pte \<rbrace>
-      \<inter> \<lbrace> \<acute>base = pte_Ptr p \<rbrace>)
-     hs
-          (do y <- storePTE p pte;
-              doMachineOp sfence
-           od)
-     (Call updatePTE_'proc)"
-  apply (cinit' lift: pte_' base_')
-   apply (rule ccorres_split_nothrow)
-       apply (rule storePTE_Basic_ccorres'')
-      apply ceqv
-     apply (rule ccorres_add_return2)
-     apply (ctac add: sfence_ccorres)
-       apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
-       apply (rule allI, rule conseqPre, vcg)
-       apply (clarsimp simp: return_def)
-      apply wpsimp
-     apply (vcg exspec=sfence_modifies)
-    apply wpsimp
-   apply vcg
-  apply clarsimp
-  done *)
+lemma cpte_relation_InvalidPTE[simp]:
+  "cpte_relation InvalidPTE pte = (pte_lift pte  = Some Pte_pte_invalid)"
+  by (clarsimp simp: cpte_relation_def)
+
+lemma cpte_relation_pte_invalid_eq:
+  "cpte_relation pte pte' \<Longrightarrow> (pte_lift pte' = Some Pte_pte_invalid) = (pte = InvalidPTE)"
+  by (clarsimp simp: cpte_relation_def Let_def split: if_splits pte.splits)
+
+lemma from_bool_inj[simp]: (* FIXME AARCH64: move up *)
+  "(from_bool x = from_bool y) = (x = y)"
+  unfolding from_bool_def
+  by (auto split: bool.splits)
 
 lemma performPageInvocationMap_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and cte_at' slot and (\<lambda>s. 7 \<le> gsMaxObjectSize s)
-           and (\<lambda>_. (isArchFrameCap cap \<and> capFMappedAddress (capCap cap) \<noteq> None)))
-       (UNIV \<inter> {s. cpte_relation (fst mapping) (pte_' s)}
-             \<inter> {s. ccap_relation cap (cap_' s)}
-             \<inter> {s. ctSlot_' s = cte_Ptr slot}
-             \<inter> {s. ptSlot_' s = pte_Ptr (snd mapping)}) []
+           and (\<lambda>_. (isArchFrameCap cap \<and>
+                     case_option False wellformed_mapdata' (capFMappedAddress (capCap cap)))))
+       ({s. asid___unsigned_long_' s = fst (the (capFMappedAddress (capCap cap)))} \<inter>
+        {s. cpte_relation (fst mapping) (pte_' s)} \<inter>
+        {s. ccap_relation cap (cap_' s)} \<inter>
+        {s. ctSlot_' s = cte_Ptr slot} \<inter>
+        {s. ptSlot_' s = pte_Ptr (snd mapping)}) []
        (liftE (performPageInvocation (PageMap (capCap cap) slot mapping)))
        (Call performPageInvocationMap_'proc)"
-  supply pageBitsForSize_le_64 [simp]
   apply (rule ccorres_gen_asm)
   apply (simp only: liftE_liftM ccorres_liftM_simp)
+  apply (clarsimp split: option.splits)
   apply (cinit lift:  pte_' cap_' ctSlot_' ptSlot_')
-   apply clarsimp
    apply wpc (* split mapping *)
-   sorry (* FIXME AARCH64 issues: need to resolve tlbflush_required vs oldPte \<noteq> AARCH64_H.InvalidPTE,
-      possibly via an unusual return relation; also need to update and inline updatePTE_ccorres
-      as the C function doesn't exist
-   apply ctac
-     apply (subst bind_assoc[symmetric])
-     apply (rule ccorres_split_nothrow)
-         apply (rule ccorres_call[OF updatePTE_ccorres, where xf'=ret__unsigned_long_'], simp+)
-        apply ceqv
-       apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
-       apply (rule allI, rule conseqPre, vcg)
-       apply (clarsimp simp: return_def)
-      apply wpsimp
-     apply (clarsimp, vcg exspec=sfence_modifies exspec=updatePTE_modifies)
-    apply wpsimp
-   apply (clarsimp, vcg)
-  apply clarsimp
-  done *)
+   apply (rename_tac m_pte m_slot)
+   apply (rule ccorres_pre_getObject_pte)
+   apply (rename_tac oldPTE)
+   apply (rule_tac xf'=tlbflush_required_' and
+                   val="from_bool (oldPTE \<noteq> InvalidPTE)" and
+                   R="\<top>" and
+                   R'="{s. \<exists>old_pte. cslift s (pte_Ptr m_slot) = Some old_pte \<and>
+                                     cpte_relation oldPTE old_pte}" in
+                   ccorres_symb_exec_r_known_rv)
+      apply (rule conseqPre, vcg, clarsimp)
+      apply (clarsimp simp: typ_heap_simps from_bool_0 pte_lift_pte_invalid_eq
+                            cpte_relation_pte_invalid_eq)
+     apply ceqv
+    apply (rule ccorres_move_c_guard_cte)
+    apply ctac (* updateCap *)
+      apply (rule ccorres_split_nothrow)
+          apply clarsimp
+          apply (rule storePTE_Basic_ccorres, simp)
+         apply ceqv
+        apply csymbr
+        apply (ctac add: cleanByVA_PoU_ccorres)
+          apply (clarsimp simp: when_def if_to_top_of_bind simp del: Collect_const)
+          apply (rule ccorres_cond_seq)
+          apply (rule ccorres_cond[where R=\<top>], clarsimp)
+           apply (rule ccorres_rhs_assoc)+
+           apply csymbr
+           apply (ctac (no_vcg) add: invalidateTLBByASIDVA_ccorres)
+            apply (rule ccorres_rel_imp, rule ccorres_return_C[where xf=ret__unsigned_long_']; simp)
+           apply wp
+          apply ccorres_rewrite
+          apply (clarsimp cong: ccorres_prog_only_cong)
+          apply (rule ccorres_rel_imp, rule ccorres_return_C[where xf=ret__unsigned_long_']; simp)
+         apply wpsimp
+        apply (wpsimp wp: hoare_drop_imp)
+        apply (vcg exspec=cleanByVA_PoU_modifies)
+       apply (wp hoare_drop_imp)
+      apply vcg
+     apply wpsimp
+    apply vcg
+   apply clarsimp
+   apply vcg
+  apply (fastforce simp: wellformed_mapdata'_def typ_heap_simps isCap_simps cap_get_tag_isCap
+                         ccap_relation_FrameCap_MappedAddress)
+  done
 
 lemma vaddr_segment_nonsense3_folded: (* FIXME AARCH64: remove if unused, also in RISCV64 and X64 *)
   "is_aligned (p :: machine_word) pageBits \<Longrightarrow>
