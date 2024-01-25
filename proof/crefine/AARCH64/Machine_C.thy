@@ -144,6 +144,11 @@ assumes invalidateTranslationASID_ccorres:
                      (doMachineOp (invalidateTranslationASID hw_asid))
                      (Call invalidateTranslationASID_'proc)"
 
+assumes invalidateTranslationSingle_ccorres:
+  "\<And>vptr. ccorres dc xfdc \<top> (\<lbrace>\<acute>vptr = vptr\<rbrace>) []
+                     (doMachineOp (invalidateTranslationSingle vptr))
+                     (Call invalidateTranslationSingle_'proc)"
+
 assumes cleanByVA_PoU_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>vaddr = w1\<rbrace> \<inter> \<lbrace>\<acute>paddr = w2\<rbrace>) []
            (doMachineOp (cleanByVA_PoU w1 w2))

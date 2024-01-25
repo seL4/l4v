@@ -1061,9 +1061,9 @@ lemma ccorres_pre_gets_armKSGlobalUserVSpace_ksArchState:
   apply (rule ccorres_guard_imp)
     apply (rule ccorres_symb_exec_l)
        defer
-       apply wp[1]
+       apply wp
       apply (rule gets_sp)
-     apply (clarsimp simp: empty_fail_def simpler_gets_def)
+     apply wp
     apply assumption
    apply clarsimp
    defer
@@ -1101,7 +1101,7 @@ end
 
 context kernel_m begin
 
-(* FIXME: move *)
+(* FIXME AARCH64: move *)
 lemma ccorres_h_t_valid_armKSGlobalUserVSpace:
   "ccorres r xf P P' hs f (f' ;; g') \<Longrightarrow>
    ccorres r xf P P' hs f (Guard C_Guard {s'. s' \<Turnstile>\<^sub>c armKSGlobalUserVSpace_Ptr} f';; g')"
@@ -1112,7 +1112,7 @@ lemma ccorres_h_t_valid_armKSGlobalUserVSpace:
    apply simp
   by (clarsimp simp add: rf_sr_def cstate_relation_def Let_def)
 
-(* MOVE copied from CSpace_RAB_C *)
+(* FIXME AARCH64: MOVE copied from CSpace_RAB_C; also in other arches *)
 lemma ccorres_gen_asm_state:
   assumes rl: "\<And>s. P s \<Longrightarrow> ccorres r xf G G' hs a c"
   shows "ccorres r xf (G and P) G' hs a c"
@@ -1129,7 +1129,7 @@ next
     by fastforce
 qed
 
-(* FIXME shadows two other identical versions in other files *)
+(* FIXME AARCH64: move, duplicates in Ipc_C and Tcb_C; also other arches *)
 lemma ccorres_abstract_known:
   "\<lbrakk> \<And>rv' t t'. ceqv \<Gamma> xf' rv' t t' g (g' rv'); ccorres rvr xf P P' hs f (g' val) \<rbrakk>
      \<Longrightarrow> ccorres rvr xf P (P' \<inter> {s. xf' s = val}) hs f g"
@@ -1255,7 +1255,7 @@ lemma ccorres_pre_gets_armKSNextVMID_ksArchState:
   apply clarsimp
   done
 
-(* FIXME: move *)
+(* FIXME AARCH64: move *)
 lemma asid_pool_at_rf_sr:
   "\<lbrakk>ko_at' (ASIDPool pool) p s; (s, s') \<in> rf_sr\<rbrakk> \<Longrightarrow>
   \<exists>pool'. cslift s' (ap_Ptr p) = Some pool' \<and>
@@ -1265,7 +1265,7 @@ lemma asid_pool_at_rf_sr:
   apply clarsimp
   done
 
-(* FIXME: move *)
+(* FIXME AARCH64: move *)
 lemma asid_pool_at_ko:
   "asid_pool_at' p s \<Longrightarrow> \<exists>pool. ko_at' (ASIDPool pool) p s"
   apply (clarsimp simp: typ_at'_def obj_at'_def ko_wp_at'_def)
@@ -1276,12 +1276,12 @@ lemma asid_pool_at_ko:
   apply (case_tac asidpool, auto)[1]
   done
 
-(* FIXME: move *)
+(* FIXME AARCH64: move *)
 lemma asid_pool_at_c_guard:
   "\<lbrakk>asid_pool_at' p s; (s, s') \<in> rf_sr\<rbrakk> \<Longrightarrow> c_guard (ap_Ptr p)"
   by (fastforce intro: typ_heap_simps dest!: asid_pool_at_ko asid_pool_at_rf_sr)
 
-(* FIXME: move *)
+(* FIXME AARCH64: move *)
 lemma setObjectASID_Basic_ccorres:
   "ccorres dc xfdc \<top> {s. f s = p \<and> casid_pool_relation pool (asid_pool_C.asid_pool_C (pool' s))} hs
      (setObject p pool)
@@ -1966,49 +1966,12 @@ lemma setMessageInfo_ccorres:
      apply (ctac add: setRegister_ccorres)
     apply wp
    apply vcg
-  apply (simp add: AARCH64_H.msgInfoRegister_def AARCH64.msgInfoRegister_def
-                   Kernel_C.msgInfoRegister_def C_register_defs)
+  apply (simp add: AARCH64_H.msgInfoRegister_def AARCH64.msgInfoRegister_def C_register_defs)
   done
 
 lemmas unfold_checkMapping_return
     = from_bool_0[where 'a=machine_word_len, folded exception_defs]
       to_bool_def
-
-(* FIXME AARCH64 this rule was a helper for unmapPage_ccorres, but now doesn't match, need to
-     understand the changed conditions in the unmapPage_ccorres proof to re-state this lemma
-lemma checkMappingPPtr_pte_ccorres:
-  assumes pre:
-    "\<And>pte \<sigma>. \<Gamma> \<turnstile> {s. True \<and> (\<exists>pte'. cslift s (pte_Ptr pte_ptr) = Some pte' \<and> cpte_relation pte pte')
-                            \<and> (\<sigma>, s) \<in> rf_sr}
-           call1 ;; Cond S return_void_C Skip
-       {s. (\<sigma>, s) \<in> rf_sr \<and> (isPagePTE pte) \<and> pteBaseAddress pte << ptBits NormalPT_T = addrFromPPtr pptr},
-       {s. (\<sigma>, s) \<in> rf_sr \<and> \<not> ((isPagePTE pte) \<and> pteBaseAddress pte << ptBits NormalPT_T = addrFromPPtr pptr)}"
-  shows
-  "ccorres_underlying rf_sr \<Gamma> (inr_rrel dc) xfdc (inl_rrel dc) xfdc
-       \<top> UNIV (SKIP # hs)
-     (doE
-         pte \<leftarrow> withoutFailure $ getObject pte_ptr;
-         checkMappingPPtr pptr pte
-      odE)
-     (call1;; Cond S return_void_C Skip)"
-  apply (simp add: checkMappingPPtr_def liftE_bindE)
-  apply (rule ccorres_symb_exec_l[where Q'="\<lambda>_. UNIV", OF _ _ getObject_ko_at, simplified])
-      apply (rule stronger_ccorres_guard_imp)
-        apply (rule ccorres_from_vcg_might_throw[where P=\<top>])
-        apply (rule allI)
-        apply (rule conseqPost, rule conseqPre, rule_tac \<sigma>1=\<sigma> and pte1=rv in pre)
-          apply clarsimp
-          apply (erule CollectE, assumption)
-         apply (clarsimp simp: Bex_def isPagePTE_def in_monad)
-
-         apply (clarsimp simp: Bex_def isPagePTE_def in_monad split: pte.splits)
-         apply (fastforce simp: Bex_def isPagePTE_def in_monad split: pte.splits)
-       apply (wp empty_fail_getObject | simp)+
-      apply (erule cmap_relationE1[OF rf_sr_cpte_relation])
-       apply (erule ko_at_projectKO_opt)
-      apply simp
-     apply (wp empty_fail_getObject | simp add: objBits_simps bit_simps)+
-  done *)
 
 lemma ccorres_return_void_C':
   "ccorres_underlying rf_sr \<Gamma> (inr_rrel dc) xfdc (inl_rrel dc) xfdc (\<lambda>_. True) UNIV (SKIP # hs) (return (Inl rv)) return_void_C"
@@ -2046,8 +2009,6 @@ lemma checkMappingPPtr_def2:
   apply auto
   done
 
-(* FIXME AARCH64 is this necessary, or can we work with the bitfield gen spec rule that only gives
-   the tag? *)
 lemma pte_pte_invalid_new_spec:
   "\<forall>s. \<Gamma> \<turnstile> {s}
        \<acute>ret__struct_pte_C :== PROC pte_pte_invalid_new()
@@ -2058,69 +2019,124 @@ lemma pte_pte_invalid_new_spec:
                         pte_lift_def Let_def pte_get_tag_def pte_tag_defs)
   done
 
+lemma casid_map_relation_vspace_tag:
+  "casid_map_relation (Some (ASIDPoolVSpace vmid vspace)) casid_map \<Longrightarrow>
+   asid_map_get_tag casid_map = scast asid_map_asid_map_vspace"
+  by (clarsimp simp: casid_map_relation_def asid_map_lift_def Let_def split: if_splits)
+
+lemma ucast_ucast_mask_id: (* FIXME AARCH64: move to Word_Lib *)
+  "\<lbrakk> LENGTH('b::len) < LENGTH('a); n = LENGTH('b) \<rbrakk> \<Longrightarrow>
+   UCAST('b \<rightarrow> 'a) (UCAST('a \<rightarrow> 'b) (x && mask n)) = x && mask n" for x :: "'a::len word"
+  by (simp add: ucast_ucast_len[OF eq_mask_less])
+
+lemma invalidateTLBByASIDVA_ccorres:
+  "ccorres dc xfdc
+           (valid_arch_state' and K (asid_wf asid))
+           (\<lbrace>\<acute>asid___unsigned_long = asid\<rbrace> \<inter> \<lbrace>\<acute>vaddr = vaddr\<rbrace>) hs
+           (invalidateTLBByASIDVA asid vaddr)
+           (Call invalidateTLBByASIDVA_'proc)"
+  apply (cinit lift: asid___unsigned_long_' vaddr_')
+   apply (ctac (no_vcg) add: findMapForASID_loadVMID_ccorres)
+    apply (rename_tac maybe_vmid asid_map)
+    apply csymbr
+    apply (clarsimp simp: when_def simp del: Collect_const)
+    apply (rule ccorres_if_cond_throws2[where Q=\<top> and Q'=\<top>])
+       apply (clarsimp simp: casid_map_relation_def asid_map_asid_map_vspace_lift_def
+                             asid_map_lift_def Let_def
+                       split: if_splits option.splits)
+      apply (rule ccorres_return_void_C)
+     apply csymbr
+     apply (ctac (no_vcg) add: invalidateTranslationSingle_ccorres)
+    apply vcg
+   apply wpsimp
+  apply (clarsimp simp: casid_map_relation_vspace_tag split: if_splits)
+  apply (rule conjI; clarsimp simp: casid_map_relation_vspace_tag)+
+  apply (simp add: bit_simps wordBits_def word_size asid_bits_def)
+  apply (clarsimp simp: casid_map_relation_def asid_map_asid_map_vspace_lift_def asid_map_lift_def
+                        Let_def ucast_ucast_mask_id
+                  split: if_splits)
+  done
+
 lemma unmapPage_ccorres:
   "ccorres dc xfdc (invs' and (\<lambda>_. asid_wf asid))
       (\<lbrace> framesize_to_H \<acute>page_size = sz \<and> \<acute>page_size < 3 \<rbrace> \<inter>
        \<lbrace> \<acute>asid___unsigned_long = asid \<rbrace> \<inter> \<lbrace> \<acute>vptr = vptr \<rbrace> \<inter> \<lbrace> \<acute>pptr___unsigned_long = pptr \<rbrace>)
       hs
       (unmapPage sz asid vptr pptr) (Call unmapPage_'proc)"
+  supply Collect_const[simp del]
   apply (rule ccorres_gen_asm)
   apply (cinit lift: page_size_' asid___unsigned_long_' vptr_' pptr___unsigned_long_')
    apply (simp add: ignoreFailure_liftM)
    apply (ctac add: findVSpaceForASID_ccorres)
       apply (rename_tac vspace find_ret)
       apply (rule ccorres_liftE_Seq)
-      apply (simp add: Collect_False del: Collect_const)
+      apply (simp add: Collect_False)
       apply (ctac add: lookupPTSlot_ccorres)
         apply csymbr
-        apply (simp (no_asm) add: split_def del: Collect_const)
+        apply (simp (no_asm) add: split_def)
         apply (rule ccorres_split_unless_throwError_cond[where Q=\<top> and Q'=\<top>])
-           apply (clarsimp simp: of_nat_pageBitsForSize split: if_split)
+           apply (clarsimp simp: of_nat_pageBitsForSize Collect_const split: if_split)
           apply (simp add: throwError_def)
           apply (rule ccorres_return_void_C)
-         apply simp
-         apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2,
-                rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2)
-         apply (subst bindE_assoc[symmetric])
-         apply (rule ccorres_splitE_novcg)
-             apply (simp only: inl_rrel_inl_rrel)
-             sorry (* FIXME AARCH64 conditions changed somewhere above, the code differs from the
-                        third early return clause (also features cleanByVA_PoU, invalidateTLBByASIDVA
-             apply (rule checkMappingPPtr_pte_ccorres[simplified])
-             apply (rule conseqPre, vcg exspec=isPTEPageTable_spec')
-             apply (clarsimp simp: cpte_relation_def Let_def pte_lift_def isPagePTE_def
-                                   typ_heap_simps isPageTablePTE_def bit_simps
-                            split: if_split_asm pte.split_asm)
-            apply (rule ceqv_refl)
-           apply (simp add: unfold_checkMapping_return liftE_bindE
-                       del: Collect_const)
+         apply (simp add: liftE_bindE)
+         apply (rule ccorres_split_nothrow_novcg) (* FIXME AARCH64: check why ctac isn't working here *)
+             apply (rule getObject_pte_ccorres)
+             apply clarsimp
+            apply ceqv
+           apply (rename_tac pte')
+           apply (simp add: checkMappingPPtr_def2)
            apply csymbr
-           apply (rule ccorres_split_nothrow_novcg)
-               apply (simp add: ptr_add_assertion_def split_def)
-               apply ccorres_rewrite
-               apply (rule storePTE_Basic_ccorres)
-               apply (simp add: cpte_relation_def Let_def)
-              apply ceqv
-             apply (rule ccorres_liftE)
-             apply (rule ccorres_call)
-                apply (rule ccorres_rel_imp)
-                 apply (rule sfence_ccorres, simp, simp)
-              apply (simp add: xfdc_def)
-             apply simp
-            apply wp
-           apply (simp add: guard_is_UNIV_def)
-          apply wp
-         apply (simp add: guard_is_UNIV_def)
+           apply (rule ccorres_cond_seq)
+           apply ccorres_rewrite
+           apply clarsimp
+           (* Haskell condition matches multiple steps of C conditions. Proof follows C structure. *)
+           apply (rule_tac C'="\<lbrace>\<not>isPagePTE pte\<rbrace>" in ccorres_rewrite_cond_sr[where Q=\<top> and Q'=UNIV])
+            apply (auto dest!: pte_lift_pte_4k_page pte_lift_pte_page
+                        simp: cpte_relation_def Let_def isPagePTE_eq pte_lift_def from_bool_0
+                        split: pte.splits if_splits)[1]
+           apply (rule ccorres_Cond_rhs)
+            apply clarsimp
+            apply (simp add: throwError_def)
+            apply (rule ccorres_return_void_C)
+           apply clarsimp
+           apply csymbr
+           apply csymbr
+           apply (clarsimp simp: if_to_top_of_bindE)
+           apply (rule ccorres_if_cond_throws2[where Q=\<top> and Q'=\<top>])
+              apply (clarsimp simp: Collect_const split: if_splits)
+             apply clarsimp
+             apply (simp add: throwError_def)
+             apply (rule ccorres_return_void_C)
+            apply clarsimp
+            apply csymbr
+            apply (rule ccorres_split_nothrow_novcg)
+                apply wpfix
+                apply (rule storePTE_Basic_ccorres)
+                apply (simp add: cpte_relation_def Let_def)
+               apply ceqv
+              apply csymbr
+              apply (ctac (no_vcg) add: cleanByVA_PoU_ccorres)
+               apply (rule ccorres_liftE')
+               apply (clarsimp cong: ccorres_all_cong)
+               apply (ctac (no_vcg) add: invalidateTLBByASIDVA_ccorres)
+              apply wp+
+            apply (clarsimp simp: guard_is_UNIV_def)
+           apply vcg
+          apply clarsimp
+          apply (wpsimp wp: hoare_drop_imps)
+         apply (clarsimp simp: guard_is_UNIV_def)
         apply vcg
-       apply wpsimp
+       apply (wpsimp wp: hoare_drop_imps lookupPTSlot_inv)
+      apply clarsimp
       apply (vcg exspec=lookupPTSlot_modifies)
      apply ccorres_rewrite
      apply (simp add: throwError_def)
      apply (rule ccorres_return_void_C)
-    apply wp
+    apply wpsimp
+   apply clarsimp
    apply (vcg exspec=findVSpaceForASID_modifies)
   apply clarsimp
-  done *)
+  done
 
 (* FIXME: move *)
 lemma cap_to_H_PageCap_tag:
