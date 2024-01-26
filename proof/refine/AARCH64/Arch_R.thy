@@ -580,6 +580,15 @@ lemma decodeARMFrameInvocationFlush_corres[corres]:
      apply wpsimp+
   done
 
+lemma valid_FrameCap_user_region_assert:
+  "\<lbrakk> s \<turnstile> cap.ArchObjectCap (arch_cap.FrameCap p R sz d opt);
+     pspace_in_kernel_window s; valid_uses s; pspace_aligned s \<rbrakk>
+   \<Longrightarrow> pptrBase \<le> p \<and> p < pptrTop"
+  by (fastforce simp: kernel_window_range_def pptr_base_def AARCH64.pptrTop_def valid_cap_def
+                      AARCH64_H.pptrTop_def obj_at_def
+                dest!: pspace_in_kw_bounded
+                split: if_splits)
+
 lemma decodeARMFrameInvocation_corres:
   "\<lbrakk>cap = arch_cap.FrameCap p R sz d opt; acap_relation cap cap';
     list_all2 cap_relation (map fst excaps) (map fst excaps');
@@ -602,6 +611,8 @@ lemma decodeARMFrameInvocation_corres:
    apply (simp split: list.split, intro conjI impI allI, simp_all)[1]
    apply (simp add: decodeARMFrameInvocationMap_def)
    apply (corres corres: corres_lookup_error findVSpaceForASID_corres checkVPAlignment_corres
+                         corres_assert_gen_asm
+                 simp: assertE_liftE
                  term_simp: mask_def user_vtop_def
           | corres_cases_both)+
               apply (simp add: mask_def user_vtop_def)
@@ -622,8 +633,10 @@ lemma decodeARMFrameInvocation_corres:
                apply (rule corres_returnOk)
                apply (simp add: archinv_relation_def page_invocation_map_def mapping_map_def)
               apply wpsimp+
-    apply (fastforce simp: valid_cap_def wellformed_mapdata_def vmsz_aligned_user_region not_less
-                     intro: vspace_for_asid_vs_lookup)
+    subgoal
+      by (fastforce simp: valid_cap_def wellformed_mapdata_def vmsz_aligned_user_region not_less
+                    dest: valid_FrameCap_user_region_assert
+                    intro: vspace_for_asid_vs_lookup)
    apply clarsimp
   \<comment> \<open>PageUnmap\<close>
   apply (simp split del: if_split)

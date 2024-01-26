@@ -544,6 +544,10 @@ decodeARMFrameInvocationMap cte cap vptr rightsMask attr vspaceCap = do
     let attributes = attribsFromWord attr
     let frameSize = capFSize cap
     let vmRights = maskVMRights (capFVMRights cap) $ rightsFromWord rightsMask
+    let basePtr = capFBasePtr cap
+    assert (fromVPtr pptrBase <= fromPPtr basePtr &&
+            fromPPtr basePtr < fromVPtr pptrTop)
+           "cap ptr must be in kernel window"
     (vspace,asid) <- checkVSpaceRoot vspaceCap 1
     vspaceCheck <- lookupErrorOnFailure False $ findVSpaceForASID asid
     when (vspaceCheck /= vspace) $ throw $ InvalidCapability 1
@@ -558,7 +562,7 @@ decodeARMFrameInvocationMap cte cap vptr rightsMask attr vspaceCap = do
             when (vtop > pptrUserTop) $ throw $ InvalidArgument 0
     (bitsLeft, slot) <- withoutFailure $ lookupPTSlot vspace vptr
     unless (bitsLeft == pgBits) $ throw $ FailedLookup False $ MissingCapability bitsLeft
-    let base = addrFromPPtr (capFBasePtr cap)
+    let base = addrFromPPtr basePtr
     return $ InvokePage $ PageMap {
         pageMapCap = cap { capFMappedAddress = Just (asid,vptr) },
         pageMapCTSlot = cte,
