@@ -2238,6 +2238,8 @@ lemma decodeARMFrameInvocation_ccorres:
           apply csymbr
           apply (rule ccorres_add_return)
           apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=1 and buffer=buffer])
+           apply (clarsimp simp: assertE_liftE liftE_bindE bind_assoc cong: if_weak_cong)
+           apply (rule ccorres_assert2)
            (* checkVSpaceRoot and isValidNativeRoot_'proc *)
            apply csymbr
            apply csymbr
@@ -2440,6 +2442,7 @@ lemma decodeARMFrameInvocation_ccorres:
    apply (drule sym[where t="cteCap cap" for cap])
    apply (clarsimp simp: valid_cap'_def capAligned_def isValidVTableRoot_def2)
    apply (rule conjI)
+    (* Haskell side of PageMap *)
     apply (clarsimp dest!: at_least_3_args[simplified not_less])
     apply (prop_tac "s \<turnstile>' fst (extraCaps ! 0)")
      apply (clarsimp simp: neq_Nil_conv excaps_in_mem_def
@@ -2455,8 +2458,6 @@ lemma decodeARMFrameInvocation_ccorres:
                elim!: pred_tcb'_weakenE dest!: st_tcb_at_idle_thread')
    (* length___unsigned_long <-> length args *)
    apply (rule conjI, solves \<open>clarsimp simp: word_less_nat_alt\<close>)
-   apply (prop_tac "pptrBase \<le> v0 \<and> v0 < pptrTop") subgoal sorry (* FIXME AARCH64: needs assert for frame cap base ptr *)
-
    (* C side of PageMap *)
    apply (frule ccap_relation_frame_tags)
    apply (clarsimp dest!: at_least_3_args[simplified not_less])
