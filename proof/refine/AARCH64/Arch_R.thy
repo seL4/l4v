@@ -1875,7 +1875,7 @@ lemma archThreadSet_obj_at'_vcpu[wp]:
 lemma asUser_atcbVCPUPtr[wp]:
   "asUser t' f \<lbrace>obj_at' (\<lambda>t. P (atcbVCPUPtr (tcbArch t))) t\<rbrace>"
   unfolding asUser_def threadGet_stateAssert_gets_asUser
-  by (wpsimp simp: asUser_fetch_def obj_at'_def projectKOs atcbContextGet_def atcbContextSet_def)
+  by (wpsimp simp: asUser_fetch_def obj_at'_def atcbContextGet_def atcbContextSet_def)
 
 lemma dissociateVCPUTCB_no_vcpu[wp]:
   "\<lbrace>\<lambda>s. t \<noteq> t' \<longrightarrow> obj_at' (\<lambda>tcb. atcbVCPUPtr (tcbArch tcb) = None) t s\<rbrace>
@@ -1902,7 +1902,7 @@ lemma vcpuTCBPtr_update_Some_vcpu_live[wp]:
    setObject vcpuPtr' (vcpuTCBPtr_update (\<lambda>_. Some tcbPtr) vcpu)
    \<lbrace>\<lambda>_. ko_wp_at' (is_vcpu' and hyp_live') vcpuPtr\<rbrace>"
   apply (wp setObject_ko_wp_at, simp)
-    apply (simp add: objBits_simps archObjSize_def)
+    apply (simp add: objBits_simps)
    apply (clarsimp simp: vcpuBits_def pageBits_def)
   by (clarsimp simp: pred_conj_def is_vcpu'_def ko_wp_at'_def obj_at'_real_def hyp_live'_def
                      arch_live'_def
