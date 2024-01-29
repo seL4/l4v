@@ -1403,23 +1403,50 @@ lemma ccorres_ul_pre_getObject_pte:
   apply simp
   done
 
-lemma lookupPTFromLevel_ccorres:
+schematic_goal of_nat_maxPTLevel_val:
+  "of_nat maxPTLevel = numeral ?n"
+  by (simp add: maxPTLevel_val del: word_eq_numeral_iff_iszero)
+
+schematic_goal of_nat_ptBitsLeft_maxPTLevel_val:
+  "of_nat (ptBitsLeft maxPTLevel) = numeral ?n"
+  by (simp add: maxPTLevel_val ptBitsLeft_def bit_simps del: word_eq_numeral_iff_iszero)
+
+schematic_goal of_nat_ptTranslationBits_NormalPT_T_val:
+  "of_nat (ptTranslationBits NormalPT_T) = numeral ?n"
+  by (simp add: bit_simps del: word_eq_numeral_iff_iszero)
+
+schematic_goal of_nat_ptTranslationBits_VSRootPT_T_val:
+  "of_nat (ptTranslationBits VSRootPT_T) = numeral ?n"
+  by (simp add: bit_simps Kernel_Config.config_ARM_PA_SIZE_BITS_40_def
+           del: word_eq_numeral_iff_iszero)
+
+lemmas lookupPTFromLevel_val_helpers =
+  of_nat_maxPTLevel_val
+  of_nat_ptBitsLeft_maxPTLevel_val
+  of_nat_ptTranslationBits_NormalPT_T_val
+  of_nat_ptTranslationBits_VSRootPT_T_val
+
+lemma from_bool_inj[simp]: (* FIXME AARCH64: move to Word_Lib *)
+  "(from_bool x = from_bool y) = (x = y)"
+  by (simp add: from_bool_def split: bool.splits)
+
+lemma lookupPTFromLevel_ccorres[unfolded lookupPTFromLevel_val_helpers]:
   notes Collect_const[simp del] call_ignore_cong[cong]
-  defines "idx i \<equiv> 0x27 - 9 * i"
-  defines "vshift vaddr i \<equiv> (vaddr >> unat (idx i)) && 0x1FF"
-  (* FIXME AARCH64 see comment about enum wrapping in C above unmapPageTable_ccorres *)
-  defines "maxPT \<equiv> 3"
+  defines "idx i \<equiv> of_nat (ptBitsLeft maxPTLevel) - of_nat (ptTranslationBits NormalPT_T) * i"
+  defines "levelMask i \<equiv> 2 ^ (if i = 0 then unat (of_nat (ptTranslationBits VSRootPT_T)::int_word)
+                                        else unat (of_nat (ptTranslationBits NormalPT_T)::int_word)) - 1"
+  defines "vshift vaddr i \<equiv> (vaddr >> unat (idx i)) && levelMask i"
+  defines "maxPT \<equiv> of_nat maxPTLevel"
   assumes max: "level \<le> maxPTLevel"
-  (* FIXME AARCH64 this block of SIMPL copied from where lookupPTFromLevel_ccorres is used in proof
-     of unmapPageTable_ccorres. We don't unmap vspaces, so hopefully NormalPT_T is ok here *)
   shows
     "ccorres_underlying rf_sr \<Gamma>
       (inr_rrel (\<lambda>ptSlot ptSlot_C. ptSlot_C = pte_Ptr ptSlot)) ptSlot_' (inl_rrel dc) xfdc
-      (page_table_at' (levelType level) pt)
+      (\<lambda>s. page_table_at' (levelType level) pt s \<and>
+           gsPTTypes (ksArchState s) pt = Some (levelType (level)))
       (\<lbrace>\<acute>i = of_nat (maxPTLevel - level)\<rbrace> \<inter> \<lbrace>\<acute>pt = pte_Ptr pt\<rbrace>)
       [SKIP]
       (lookupPTFromLevel level pt vaddr target_pt)
-      (      WHILE \<acute>i < maxPT \<and> \<acute>pt \<noteq> pte_Ptr target_pt DO
+      (WHILE \<acute>i < maxPT \<and> \<acute>pt \<noteq> pte_Ptr target_pt DO
                Guard ShiftError \<lbrace>idx \<acute>i < 0x40\<rbrace>
                 (Guard MemorySafety
                   \<lbrace>vshift vaddr \<acute>i = 0 \<or>
@@ -1447,8 +1474,7 @@ proof (induct level arbitrary: pt)
     apply (rule ccorres_expand_while_iff_Seq[THEN iffD1])
     apply (subst Int_commute)
     apply (cinitlift i_')
-    (* FIXME AARCH64 abstraction violation (UPT_LEVELS not wrapped) *)
-    apply (simp add: throwError_def Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
+    apply (simp add: throwError_def)
     apply ccorres_rewrite
     apply (cinitlift pt_')
     apply (rule ccorres_guard_imp)
@@ -1460,42 +1486,34 @@ proof (induct level arbitrary: pt)
     apply simp
     done
 next
-  have [simp]: "of_nat maxPTLevel = maxPT"
-    (* FIXME AARCH64 abstraction violation (UPT_LEVELS not wrapped) *)
-    by (simp add: maxPTLevel_def maxPT_def Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
-
   case (Suc level)
   then
   have level: "level < maxPTLevel" by simp
   then
-  have [simp]: "maxPT - (1 + of_nat level) < maxPT" (is "?i < maxPT")
-    (* FIXME AARCH64 abstraction violation (UPT_LEVELS not wrapped) *)
-    by (simp add: maxPTLevel_def maxPT_def unat_arith_simps  unat_of_nat
-                  Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
+  have [simp]: "word_of_nat maxPTLevel - (1 + of_nat level) < maxPT" (is "?i < maxPT")
+    by (cases "config_ARM_PA_SIZE_BITS_40";
+        simp add: maxPTLevel_def maxPT_def unat_arith_simps unat_of_nat)
 
   from level
   have [simp]: "idx ?i < 0x40"
-    (* FIXME AARCH64 abstraction violation (UPT_LEVELS not wrapped) *)
     by (simp add: idx_def maxPT_def maxPTLevel_def unat_word_ariths unat_arith_simps unat_of_nat
-                  Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
+                  bit_simps ptBitsLeft_def
+             split: if_splits)
 
   from level
   have [simp]: "pt + vshift vaddr ?i * 8 = ptSlotIndex (Suc level) pt vaddr"
-    (* FIXME AARCH64 abstraction violation (UPT_LEVELS not wrapped) *)
-    by (simp add: ptSlotIndex_def vshift_def maxPT_def ptIndex_def idx_def ptBitsLeft_def
-                  bit_simps mask_def unat_word_ariths unat_of_nat maxPTLevel_def shiftl_t2n
-                  Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
+    apply (simp add: ptSlotIndex_def ptIndex_def vshift_def levelMask_def ptBitsLeft_def
+                     ptTranslationBits_def levelType_def idx_def pte_bits_def word_size_bits_def
+                     mask_def unat_word_ariths unat_of_nat maxPTLevel_def shiftl_t2n pageBits_def)
+    apply (cases config_ARM_PA_SIZE_BITS_40;
+           fastforce dest!: word_unat_eq_iff[THEN iffD1]
+                     simp: unat_of_nat_eq ptTranslationBits_def
+                     split: if_splits)
+    done
 
-  (* FIXME AARCH64 still useful? *)
-  have [simp]: "\<And>pte pte'. \<lbrakk> cpte_relation pte pte'; isPageTablePTE pte \<rbrakk> \<Longrightarrow>
-                            (pt_base_address_CL (pte_pte_table_lift pte')) =
-                            (ptePPN pte << pageBits)"
-    by (auto simp: cpte_relation_def isPageTablePTE_def Let_def pte_pte_table_lift_def bit_simps
-             split: pte.splits)
-
-  (* FIXME AARCH64 can't be both vspace and normal PT in 3-level config, but on 4-level it can *)
-  have mask_simp[simp]: "(0x1FF::machine_word) = mask (ptTranslationBits NormalPT_T)"
-    by (simp add: bit_simps mask_def)
+  from level
+  have level_NormalPT_T: "levelType level = NormalPT_T"
+    by (simp add: levelType_def)
 
   show ?case
     supply if_cong[cong] option.case_cong[cong]
@@ -1503,75 +1521,91 @@ next
     apply (rule ccorres_assertE)
     apply (rule ccorres_expand_while_iff_Seq[THEN iffD1])
     apply (cinitlift i_' pt_')
+    apply (rename_tac pt' i)
     apply ccorres_rewrite
     apply (simp add: liftE_bindE)
     apply (rule ccorres_guard_imp)
       supply ccorres_prog_only_cong[cong]
       apply (rule ccorres_rhs_assoc)+
       apply (rule ccorres_ul_pre_getObject_pte, rename_tac pte)
-      sorry
-      (* FIXME AARCH64 there is something unclear here about NormalPT_T vs VSRootPT_T and what's
-         required in this proof. Review.
-      apply (rule ccorres_move_Guard_Seq [where P="page_table_at' VSRootPT_T pt" and P'="\<lambda>s. True"])
-       apply (intro allI impI, simp)
-       apply (rule disjCI2)
-       apply clarsimp
-       apply (erule (1) page_table_at'_array_assertion)
-        apply (clarsimp simp: unat_and_mask_le_ptTrans vshift_def)
-       apply (simp add: neq_0_unat)
-      apply (rule ccorres_symb_exec_r2)
-        apply (rule ccorres_add_return)
-        apply (rule ccorres_split_nothrow)
-            apply (rule ccorres_call[where xf'=ret__unsigned_long_'])
-               apply (rule_tac pte=pte in isPTEPageTable_corres)
-              apply simp
-             apply simp
-            apply simp
-           apply ceqv
-          apply (simp add: from_bool_0)
-          apply (rule ccorres_Cond_rhs_Seq)
-           apply ccorres_rewrite
-           apply simp
-           apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
-           apply (simp add: return_def throwError_def)
-           apply (rule allI, rule conseqPre, vcg)
-           apply clarsimp
-          apply simp
-          apply (rule_tac P="getPPtrFromHWPTE pte = target_pt" in ccorres_cases; simp)
-           apply (rule ccorres_symb_exec_r2)
-             apply csymbr
-             apply (rule ccorres_expand_while_iff_Seq[THEN iffD1])
-             apply (rule_tac P'="P' \<inter> \<lbrace> \<acute>pt = pte_Ptr (getPPtrFromHWPTE pte) \<rbrace>" for P' in ccorres_inst)
-             apply (cinitlift pt_')
-             apply ccorres_rewrite
-             apply (rule ccorres_inst[where P=\<top> and
-                                            P'="\<lbrace> \<acute>ptSlot = pte_Ptr (pt + vshift vaddr ?i * 8) \<rbrace>"])
-             apply (rule ccorres_from_vcg)
-             apply (rule allI, rule conseqPre, vcg, clarsimp)
-             apply (clarsimp simp: returnOk_def return_def)
-            apply (vcg exspec=getPPtrFromHWPTE_spec')
-           apply (vcg exspec=getPPtrFromHWPTE_modifies)
-           apply (simp add: mex_def meq_def)
-          apply (rule ccorres_checkPTAt)
-          apply (rule ccorres_symb_exec_r2)
-            apply (rule ccorres_symb_exec_r2)
-              apply (rule Suc.hyps[unfolded whileAnno_def])
-             using level apply simp
-             apply vcg
-            apply (vcg spec=modifies)
-           apply (vcg exspec=getPPtrFromHWPTE_spec')
-          apply (vcg exspec=getPPtrFromHWPTE_modifies)
-          apply (simp add: mex_def meq_def)
-         apply simp
-         apply wp
-        apply (clarsimp)
-        apply (vcg exspec=isPTEPageTable_spec')
+      apply (rule ccorres_move_array_assertion_pt_gen[where pt_t="levelType (Suc level)"])
+      apply csymbr
+      apply (rule_tac xf'=ret__unsigned_long_' and
+                      val="from_bool (isPageTablePTE pte)" and
+                      R'=UNIV and
+                      R="\<lambda>s. ko_at' pte (ptSlotIndex (Suc level) pt vaddr) s"
+                      in ccorres_symb_exec_r_known_rv)
+         apply (clarsimp, rule conseqPre, vcg, clarsimp)
+         apply (drule (1) pte_at_rf_sr)
+         apply (clarsimp simp: typ_heap_simps)
+         apply (clarsimp simp: cpte_relation_def Let_def isPageTablePTE_def pte_pte_table_lift
+                               pte_pte_table_lift_def
+                         split: pte.splits if_splits)
+        apply ceqv
+       apply (simp add: from_bool_0)
+       apply (rule ccorres_Cond_rhs_Seq)
+        apply ccorres_rewrite
+        apply simp
+        apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+        apply (simp add: return_def throwError_def)
+        apply (rule allI, rule conseqPre, vcg)
+        apply clarsimp
+       apply simp
+       apply (rule_tac P="getPPtrFromPTE pte = target_pt" in ccorres_cases; simp)
+        apply (rule_tac xf'=ret__unsigned_longlong_' and
+                        val="ptePPN pte << pageBits" and
+                        R'=UNIV and
+                        R="\<lambda>s. ko_at' pte (ptSlotIndex (Suc level) pt vaddr) s"
+                        in ccorres_symb_exec_r_known_rv)
+           apply (clarsimp, rule conseqPre, vcg, clarsimp)
+           apply (drule (1) pte_at_rf_sr)
+           apply (clarsimp simp: typ_heap_simps)
+           apply (clarsimp simp: cpte_relation_def Let_def isPageTablePTE_def2
+                                 pte_pte_table_lift pte_pte_table_lift_def)
+          apply ceqv
+         apply csymbr
+         apply csymbr
+         apply csymbr
+         apply (rule ccorres_expand_while_iff_Seq[THEN iffD1])
+         apply (rule_tac P'="P' \<inter> \<lbrace> \<acute>pt = pte_Ptr (getPPtrFromPTE pte) \<rbrace>" for P' in ccorres_inst)
+         apply (cinitlift pt_')
+         apply ccorres_rewrite
+         apply (rule ccorres_inst[where P=\<top> and
+                                        P'="\<lbrace> \<acute>ptSlot = pte_Ptr (pt + vshift vaddr ?i * 8) \<rbrace>"])
+         apply (rule ccorres_from_vcg)
+         apply (rule allI, rule conseqPre, vcg, clarsimp)
+         apply (clarsimp simp: returnOk_def return_def)
+        apply vcg
+       (* getPPtrFromPTE pte \<noteq> target_pt *)
+       apply (rule ccorres_checkPTAt)
+       apply (rule_tac xf'=ret__unsigned_longlong_' and
+                       val="ptePPN pte << pageBits" and
+                       R'=UNIV and
+                       R="\<lambda>s. ko_at' pte (ptSlotIndex (Suc level) pt vaddr) s"
+                       in ccorres_symb_exec_r_known_rv)
+          apply (clarsimp, rule conseqPre, vcg, clarsimp)
+          apply (drule (1) pte_at_rf_sr)
+          apply (clarsimp simp: typ_heap_simps)
+          apply (clarsimp simp: cpte_relation_def Let_def isPageTablePTE_def2
+                                pte_pte_table_lift pte_pte_table_lift_def)
+         apply ceqv
+        apply csymbr
+        apply csymbr
+        apply csymbr
+        apply (rule Suc.hyps[unfolded whileAnno_def])
+        using level apply simp
        apply vcg
-      apply (vcg spec=modifies)
-     apply fastforce
+      apply vcg
+     apply (clarsimp simp: level_NormalPT_T)
+    apply (clarsimp simp: typ_heap_simps)
     using level
-    apply (clarsimp simp: typ_heap_simps maxPT_def maxPTLevel_def)
-    done *)
+    apply (fastforce dest!: word_unat_eq_iff[THEN iffD1]
+                     intro!: word_and_le' unat_le_helper
+                     simp: unat_of_nat_eq levelMask_def levelType_def maxPTLevel_val bit_simps
+                           word_neq_0_conv word_less_nat_alt vshift_def
+                           getPPtrFromPTE_def isPageTablePTE_def2 isPagePTE_def
+                     split: if_split)
+    done
 qed
 
 (* FIXME AARCH64 future work: wrap UPT_LEVELS and other possible magic numbers in enums in C so
@@ -1586,6 +1620,7 @@ lemma unmapPageTable_ccorres:
                                           \<lbrace>\<acute>asid___unsigned_long = asid\<rbrace> \<inter> \<lbrace>\<acute>vptr = vaddr\<rbrace> \<inter>
                                           \<lbrace>\<acute>target_pt = pte_Ptr ptPtr\<rbrace>" and
                                       Q=A and A=A for A]; simp?)
+  supply if_cancel[simp del]
   apply (cinit lift: asid___unsigned_long_' vptr_' target_pt_')
    apply (clarsimp simp add: ignoreFailure_liftM)
    apply (ctac add: findVSpaceForASID_ccorres,rename_tac vspace find_ret)
@@ -1593,6 +1628,14 @@ lemma unmapPageTable_ccorres:
       apply ccorres_rewrite
       apply (clarsimp simp: throwError_def)
       apply (rule ccorres_return_void_C)
+     (* In C, these come out as either 9 or 10, depending on config_ARM_PA_SIZE_BITS_40 *)
+     apply (prop_tac "\<And>i::machine_word. 0 \<le>s (if i = 0 then of_nat (ptTranslationBits VSRootPT_T)
+                                                        else (9::int_word))")
+      apply (simp add: of_nat_ptTranslationBits_VSRootPT_T_val split: if_split)
+     apply (prop_tac "\<And>i::machine_word. (if i = 0 then of_nat (ptTranslationBits VSRootPT_T)
+                                                   else (9::int_word)) <s 0x40")
+      apply (simp add: of_nat_ptTranslationBits_VSRootPT_T_val split: if_split)
+     apply (simp only: of_nat_ptTranslationBits_VSRootPT_T_val)
      apply ccorres_rewrite
      apply csymbr
      apply (rule ccorres_symb_exec_r2)
