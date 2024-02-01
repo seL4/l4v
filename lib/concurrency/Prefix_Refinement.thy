@@ -995,7 +995,7 @@ theorem prefix_refinement_validI:
   apply (case_tac tr; clarsimp simp: list_all2_Cons2 matching_tr_def)
   done
 
-lemmas prefix_refinement_validI' = prefix_refinement_validI[OF _ validI_strengthen_guar, OF _ validI_strengthen_post]
+lemmas prefix_refinement_validI' = prefix_refinement_validI[OF _ rg_strengthen_guar, OF _ rg_strengthen_post]
 
 section \<open>Building blocks.\<close>
 text \<open>
@@ -1239,7 +1239,7 @@ lemma prefix_refinement_repeat:
        apply simp
       apply simp
       apply (rule prefix_refinement_repeat_n, assumption+)
-      apply (rule validI_weaken_pre, assumption, simp)
+      apply (rule rg_weaken_pre, assumption, simp)
      apply wp
     apply wp
    apply clarsimp

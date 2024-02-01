@@ -6,7 +6,7 @@
 theory Triv_Refinement
 
 imports
-  "Monads.Trace_RG"
+  "Monads.Trace_More_RG"
   "Monads.Trace_Strengthen_Setup"
 
 begin

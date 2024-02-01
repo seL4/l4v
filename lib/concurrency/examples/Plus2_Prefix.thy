@@ -79,17 +79,15 @@ theorem plus2_x_property:
   "\<lbrace>\<lambda>s0 s. plus2_inv tids s \<and> threadv s tid = 0 \<and> s = s0 \<and> tid \<in> tids \<and> finite tids\<rbrace>,\<lbrace>plus2_rel tids {tid}\<rbrace>
     plus2_x tid \<lbrace>plus2_rel tids (- {tid})\<rbrace>,\<lbrace>\<lambda>_ _ s. plus2_inv tids s \<and> threadv s tid = 2\<rbrace>"
   apply (simp add: plus2_x_def)
-  apply (rule validI_weaken_pre)
-   apply wp
-  apply clarsimp
+  apply wpsimp
   apply (clarsimp simp: plus2_rel_def point_update_def)
   done
 
 corollary plus2_x_parallel:
   "\<lbrace>\<lambda>s0 s. mainv s = 0 \<and> (\<forall>tid \<in> {1, 2}. threadv s tid = 0) \<and> s = s0\<rbrace>,\<lbrace>\<lambda>a b. a = b\<rbrace>
     parallel (plus2_x 1) (plus2_x 2) \<lbrace>\<lambda>s0 s. True\<rbrace>,\<lbrace>\<lambda>_ s0 s. mainv s = 4\<rbrace>"
-  apply (rule validI_weaken_pre)
-   apply (rule validI_strengthen_post)
+  apply (rule rg_weaken_pre)
+   apply (rule rg_strengthen_post)
     apply ((rule rg_validI plus2_x_property[where tids="{1, 2}"])+; simp add: plus2_rel_def le_fun_def)
    apply (clarsimp simp: plus2_inv_def)
   apply (clarsimp simp add: plus2_inv_def)
@@ -114,10 +112,8 @@ theorem pfx_refn_plus2_x:
   apply (simp add: plus2_x_def plus2_def)
   apply (rule prefix_refinement_weaken_pre)
     apply (rule pfx_refn_bind prefix_refinement_interference
-         prefix_refinement_env_steps allI
-         pfx_refn_modifyT env_stable
-       | simp
-       | wp)+
+                prefix_refinement_env_steps pfx_refn_modifyT env_stable
+           | wpsimp)+
   done
 
 lemma par_tr_fin_plus2_x:
@@ -127,8 +123,7 @@ lemma par_tr_fin_plus2_x:
 lemma prefix_closed_plus2:
   "prefix_closed plus2"
   apply (simp add: plus2_def)
-  apply (rule validI_prefix_closed_T, rule validI_weaken_pre, wp)
-  apply simp
+  apply (rule validI_prefix_closed_T, wpsimp)
   done
 
 theorem plus2_parallel:
@@ -140,7 +135,7 @@ theorem plus2_parallel:
        apply (rule pfx_refn_plus2_x[where tid=1])
       apply (rule pfx_refn_plus2_x[where tid=2])
      apply clarsimp
-     apply (rule validI_strengthen_post)
+     apply (rule rg_strengthen_post)
       apply (rule plus2_x_parallel[simplified])
      apply clarsimp
     apply (clarsimp simp: plus2_xstate.splits)
@@ -164,10 +159,10 @@ lemma plus2_x_n_parallel_induct:
   apply (case_tac n)
    apply (simp only: lessThan_Suc)
    apply simp
-   apply (rule validI_weaken_pre, rule plus2_x_property)
+   apply (wp plus2_x_property)
    apply clarsimp
   apply (clarsimp split del: if_split)
-  apply (rule validI_weaken_pre, rule validI_strengthen_post,
+  apply (rule rg_weaken_pre, rule rg_strengthen_post,
     rule rg_validI, rule plus2_x_property[where tids="{..< N}"],
     assumption, (clarsimp simp: plus2_rel_def)+)
    apply (auto dest: less_Suc_eq[THEN iffD1])[1]
@@ -178,8 +173,8 @@ theorem plus2_x_n_parallel:
   "n > 0 \<Longrightarrow>
   \<lbrace>\<lambda>s0 s. mainv s = 0 \<and> (\<forall>i < n. threadv s i = 0) \<and> s = s0\<rbrace>,\<lbrace>plus2_rel {..< n} {..< n}\<rbrace>
     fold parallel (map plus2_x [1 ..< n]) (plus2_x 0) \<lbrace>\<lambda>s0 s. True\<rbrace>,\<lbrace>\<lambda>_ _ s. mainv s = (n * 2)\<rbrace>"
-  apply (rule validI_weaken_pre, rule validI_strengthen_post,
-      rule validI_strengthen_guar, erule plus2_x_n_parallel_induct)
+  apply (rule rg_weaken_pre, rule rg_strengthen_post,
+      rule rg_strengthen_guar, erule plus2_x_n_parallel_induct)
      apply simp
     apply simp
    apply (clarsimp simp: plus2_inv_def)
@@ -240,7 +235,7 @@ theorem plus2_n_parallel:
        apply (simp add: le_fun_def)
       apply (simp add: le_fun_def)
      apply simp
-     apply (rule validI_strengthen_post, rule plus2_x_n_parallel[simplified], simp)
+     apply (rule rg_strengthen_post, rule plus2_x_n_parallel[simplified], simp)
      apply clarsimp
     apply (clarsimp simp: plus2_xstate.splits exI[where x="\<lambda>_. 0"])
    apply clarsimp
