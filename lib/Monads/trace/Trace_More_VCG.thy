@@ -25,7 +25,7 @@ lemma hoare_post_add:
 
 lemma hoare_post_addE:
   "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>_ s. R s \<and> Q s\<rbrace>, \<lbrace>T\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_ s. Q s\<rbrace>, \<lbrace>T\<rbrace>"
-  by (erule hoare_post_impErr'; simp)
+  by (erule hoare_post_impErr; simp)
 
 lemma hoare_pre_add:
   "(\<forall>s. P s \<longrightarrow> R s) \<Longrightarrow> (\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<longleftrightarrow> \<lbrace>P and R\<rbrace> f \<lbrace>Q\<rbrace>)"

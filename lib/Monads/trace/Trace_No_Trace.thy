@@ -134,8 +134,7 @@ lemma no_trace_apply[no_trace_cond]:
 \<comment> \<open>FIXME: make proof nicer\<close>
 lemma no_trace_liftM_eq[simp]:
   "no_trace (liftM f m) = no_trace m"
-  apply (clarsimp simp: no_trace_def bind_def liftM_def return_def split_def
-                 split: tmres.split_asm)
+  apply (clarsimp simp: no_trace_def bind_def liftM_def return_def)
   apply safe
      apply (drule_tac x=tr in spec)
      apply (drule_tac x="map_tmres id f res" in spec)

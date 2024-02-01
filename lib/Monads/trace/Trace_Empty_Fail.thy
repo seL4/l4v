@@ -344,9 +344,13 @@ lemma empty_fail_put_trace[empty_fail_term]:
   apply (clarsimp simp: empty_fail_term empty_fail_cond)
   done
 
+lemma empty_fail_env_steps[empty_fail_term]:
+  "empty_fail env_steps"
+  by (simp add: env_steps_def empty_fail_term empty_fail_cond)
+
 lemma empty_fail_interference[empty_fail_term]:
   "empty_fail interference"
-  by (simp add: interference_def commit_step_def env_steps_def empty_fail_term empty_fail_cond)
+  by (simp add: interference_def commit_step_def empty_fail_term empty_fail_cond)
 
 lemma last_st_tr_not_empty:
   "P s \<Longrightarrow> \<exists>xs. P (last_st_tr (map (Pair Env) xs) s')"
