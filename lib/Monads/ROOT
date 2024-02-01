@@ -50,6 +50,7 @@ session Monads (lib) = HOL +
     Trace_Strengthen_Setup
     Trace_Monad_Equations
     Trace_RG
+    Trace_More_RG
     Trace_In_Monad
     Trace_More_VCG
     Trace_No_Fail
