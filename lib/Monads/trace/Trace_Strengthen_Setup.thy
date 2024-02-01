@@ -39,7 +39,7 @@ lemma strengthen_validE_E_cong[strg]:
 lemma strengthen_validI[strg]:
   "\<lbrakk>\<And>r s0 s. st F (\<longrightarrow>) (Q r s0 s) (Q' r s0 s)\<rbrakk>
    \<Longrightarrow> st F (\<longrightarrow>) (\<lbrace>P\<rbrace>,\<lbrace>G\<rbrace> f \<lbrace>R\<rbrace>,\<lbrace>Q\<rbrace>) (\<lbrace>P\<rbrace>,\<lbrace>G\<rbrace> f \<lbrace>R\<rbrace>,\<lbrace>Q'\<rbrace>)"
-  by (cases F, auto elim: validI_strengthen_post)
+  by (cases F, auto elim: rg_strengthen_post)
 
 lemma wpfix_strengthen_hoare:
   "\<lbrakk>\<And>s. st (\<not> F) (\<longrightarrow>) (P s) (P' s); \<And>r s. st F (\<longrightarrow>) (Q r s) (Q' r s)\<rbrakk>

@@ -187,6 +187,13 @@ lemma bipred_disj_op_eq[simp]:
 lemma bipred_le_true[simp]: "R \<le> \<top>\<top>"
   by clarsimp
 
+lemma bipred_and_or_True[simp]:
+  "(P or \<top>\<top>) = \<top>\<top>"
+  "(\<top>\<top> or P) = \<top>\<top>"
+  "(P and \<top>\<top>) = P"
+  "(\<top>\<top> and P) = P"
+  by auto
+
 
 section \<open>Examples\<close>
 

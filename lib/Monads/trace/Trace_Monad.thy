@@ -499,6 +499,12 @@ text \<open>
 definition last_st_tr :: "(tmid * 's) list \<Rightarrow> 's \<Rightarrow> 's" where
   "last_st_tr tr s0 \<equiv> hd (map snd tr @ [s0])"
 
+lemma last_st_tr_simps[simp]:
+  "last_st_tr [] s = s"
+  "last_st_tr (x # xs) s = snd x"
+  "last_st_tr (tr @ tr') s = last_st_tr tr (last_st_tr tr' s)"
+  by (simp add: last_st_tr_def hd_append)+
+
 text \<open>Nondeterministically add all possible environment events to the trace.\<close>
 definition env_steps :: "('s,unit) tmonad" where
   "env_steps \<equiv>
