@@ -258,9 +258,9 @@ lemma cs2_wp_apply_peterson[wp]:
   \<lbrace> peterson_rel ident \<rbrace>,
   \<lbrace> Q \<rbrace>"
   apply (rule validI_name_pre[OF cs_closed], clarsimp simp del: imp_disjL)
-  apply (rule validI_weaken_pre)
+  apply (rule rg_weaken_pre)
    apply (rule validI_well_behaved[OF cs_closed])
-     apply (rule validI_strengthen_post)
+     apply (rule rg_strengthen_post)
       apply (rule_tac s=s and ?s0.0=s0
          and lockf="\<lambda>s. critical (ab_label s ident)"
          and I="invs" in cs_wp)
@@ -284,8 +284,7 @@ lemma release_lock_mutual_excl:
    \<lbrace> \<lambda>rv s0 s. peterson_rel ident s0 s \<and> invs s
                \<and> ab_label s ident = Exited \<rbrace>"
   apply (simp add: release_lock_def)
-  apply (rule validI_weaken_pre)
-   apply wpsimp+
+  apply wpsimp
   apply (strengthen peterson_rel_imp_assume_invs | simp)+
   apply (cases ident)
   apply (safe, simp_all)
@@ -303,8 +302,7 @@ lemma abs_critical_section_mutual_excl:
    \<lbrace> \<lambda>rv s0 s. peterson_rel ident s0 s \<and> invs s
                \<and> ab_label s ident = Critical \<and> csI (cs2_v s) \<rbrace>"
   apply (simp add: abs_critical_section_def)
-  apply (rule validI_weaken_pre)
-   apply wpsimp+
+  apply wpsimp
   apply (strengthen peterson_rel_imp_assume_invs | simp)+
   apply (cases ident)
   apply (safe, simp_all)
@@ -321,8 +319,7 @@ lemma acquire_lock_mutual_excl:
    \<lbrace> \<lambda>rv s0 s. peterson_rel ident s0 s \<and> invs s \<and> invs s0
                \<and> ab_label s ident = Critical \<and> csI (cs2_v s) \<rbrace>"
   apply (simp add: acquire_lock_def)
-  apply (rule validI_weaken_pre)
-   apply (wpsimp wp: Await_sync_twp)+
+  apply (wpsimp wp: Await_sync_twp)
   apply (strengthen peterson_rel_imp_assume_invs | simp)+
   apply (cases ident)
   apply (safe, simp_all)
@@ -340,9 +337,8 @@ theorem abs_peterson_proc_mutual_excl:
    \<lbrace> \<lambda>rv s0 s. peterson_rel ident s0 s \<and> invs s
                \<and> ab_label s ident = Exited \<rbrace>"
   apply (simp add: abs_peterson_proc_def bind_assoc)
-  apply (rule validI_weaken_pre)
-   apply (wpsimp wp: release_lock_mutual_excl acquire_lock_mutual_excl
-                     abs_critical_section_mutual_excl)+
+  apply (wpsimp wp: release_lock_mutual_excl acquire_lock_mutual_excl
+                    abs_critical_section_mutual_excl)
   done
 
 definition
@@ -562,8 +558,7 @@ lemma acquire_lock_wp:
    \<lbrace> \<top>\<top> \<rbrace>,
    \<lbrace> \<lambda>rv s0 s. invs s \<and> ab_label s ident = Critical \<rbrace>"
   apply (simp add: acquire_lock_def)
-  apply (rule validI_weaken_pre)
-   apply (wpsimp wp: Await_sync_twp)+
+  apply (wpsimp wp: Await_sync_twp)
   apply (subst (asm) peterson_rel_imp_label, assumption+)
   apply (drule(1) peterson_rel_imp_invs)
   apply (drule(1) peterson_rel_trans)
@@ -630,7 +625,7 @@ lemma peterson_rel_helpers:
   by (clarsimp simp: peterson_rel_def peterson_rel2_def peterson_rel3_def)
 
 lemma peterson_rel_peterson_rel2:
-  "peterson_rel ident s0 s \<longrightarrow> peterson_rel2 ident s0 s"
+  "peterson_rel ident s0 s \<Longrightarrow> peterson_rel2 ident s0 s"
   by (clarsimp simp: peterson_rel_def peterson_rel2_def)
 
 lemma peterson_sr_peterson_rel3:
@@ -679,9 +674,8 @@ lemma peterson_proc_mutual_excl_helper':
                \<and> ab_label s ident = Exited \<rbrace>"
   apply (simp add: peterson_proc_def acquire_lock_def release_lock_def
                    critical_section_def)
-  apply (rule validI_weaken_pre)
-   apply (wp Await_sync_twp | simp add: split_def
-          | rule validI_strengthen_guar[OF _ allI[OF allI[OF peterson_rel_peterson_rel2]]])+
+  apply (wp Await_sync_twp | simp add: split_def
+         | rule rg_strengthen_guar[OF _ peterson_rel_peterson_rel2])+
   apply (clarsimp simp: imp_conjL)
   apply (strengthen peterson_rel_imp_assume_invs | simp)+
   apply (cases ident)
@@ -699,7 +693,7 @@ lemma peterson_proc_mutual_excl:
    \<lbrace> peterson_rel ident \<rbrace>,
    \<lbrace> \<lambda>rv s0 s. peterson_rel ident s0 s \<and> invs s
                \<and> ab_label s ident = Exited \<rbrace>"
-  apply (rule validI_strengthen_guar, rule validI_strengthen_post, rule validI_guar_post_conj_lift)
+  apply (rule rg_strengthen_guar, rule rg_strengthen_post, rule validI_guar_post_conj_lift)
      apply (rule peterson_proc_mutual_excl_helper)
     apply (rule peterson_proc_mutual_excl_helper')
    apply (clarsimp simp: peterson_rel_helpers)+
@@ -716,7 +710,7 @@ lemma validI_repeat_interference:
   apply (rule bind_twp)
    apply simp
    apply (rule interference_twp)
-  apply (rule validI_strengthen_post)
+  apply (rule rg_strengthen_post)
    apply (rule repeat_validI, assumption)
   apply simp
   done
@@ -727,7 +721,7 @@ lemma abs_peterson_proc_system_mutual_excl:
      abs_peterson_proc_system
    \<lbrace> \<lambda>s0 s. invs s0 \<longrightarrow> invs s \<rbrace>,
    \<lbrace> \<lambda>rv s0 s. invs s \<rbrace>"
-  apply (rule validI_weaken_pre, rule validI_strengthen_post)
+  apply (rule rg_weaken_pre, rule rg_strengthen_post)
     apply (unfold abs_peterson_proc_system_def)
     apply (rule rg_validI[where Qf="\<lambda>_ _. invs" and Qg="\<lambda>_ _. invs"])
            apply (rule validI_repeat_interference[OF abs_peterson_proc_mutual_excl])
@@ -761,9 +755,9 @@ lemma peterson_repeat_refinement:
   apply (rule prefix_refinement_weaken_pre)
     apply (rule prefix_refinement_bind_sr)
        apply (rule prefix_refinement_repeat[rotated])
-         apply (rule abs_peterson_proc_mutual_excl[THEN validI_strengthen_guar])
+         apply (rule abs_peterson_proc_mutual_excl[THEN rg_strengthen_guar])
          apply simp
-        apply (rule peterson_proc_mutual_excl[THEN validI_strengthen_guar, THEN validI_weaken_pre])
+        apply (rule peterson_proc_mutual_excl[THEN rg_strengthen_guar, THEN rg_weaken_pre])
          apply simp+
        apply (rule peterson_proc_refinement[THEN prefix_refinement_weaken_pre])
         apply simp+
@@ -793,19 +787,19 @@ theorem peterson_proc_system_refinement:
         apply (rule eq_refl, rule bipred_disj_op_eq, simp)
        apply (clarsimp intro!: par_tr_fin_bind par_tr_fin_interference)
       apply (clarsimp intro!: par_tr_fin_bind par_tr_fin_interference)
-     apply (rule validI_weaken_pre, rule validI_weaken_rely)
+     apply (rule rg_weaken_pre, rule rg_weaken_rely)
        apply (rule validI_repeat_interference; simp)
         apply (rule peterson_proc_mutual_excl)
        apply (simp+)[3]
-    apply (rule validI_weaken_pre, rule validI_weaken_rely)
+    apply (rule rg_weaken_pre, rule rg_weaken_rely)
       apply (rule validI_repeat_interference; simp)
        apply (rule peterson_proc_mutual_excl)
       apply (simp+)[3]
-  apply (rule validI_weaken_pre, rule validI_weaken_rely)
+  apply (rule rg_weaken_pre, rule rg_weaken_rely)
      apply (rule validI_repeat_interference; simp)
       apply (rule abs_peterson_proc_mutual_excl)
      apply (simp+)[3]
-  apply (rule validI_weaken_pre, rule validI_weaken_rely)
+  apply (rule rg_weaken_pre, rule rg_weaken_rely)
     apply (rule validI_repeat_interference; simp)
      apply (rule abs_peterson_proc_mutual_excl)
     apply (simp+)[3]

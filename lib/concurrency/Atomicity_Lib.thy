@@ -36,10 +36,7 @@ lemma pfx_refn_interferences:
     \<Longrightarrow> prefix_refinement sr iosr iosr (\<top>\<top>) (\<top>\<top>) (\<top>\<top>) AR R interferences interferences"
   apply (rule prefix_refinement_repeat)
     apply (erule prefix_refinement_interference)
-   apply wp
-   apply simp
-  apply wp
-  apply simp
+   apply wp+
   done
 
 lemma repeat_n_validI:
@@ -59,7 +56,7 @@ lemma repeat_validI:
 lemma interferences_twp[wp]:
   "\<lbrace>\<lambda>s0 s. (\<forall>s'. R\<^sup>*\<^sup>* s s' \<longrightarrow> Q () s' s') \<and> G s0 s \<and> reflp G \<and> Q () s0 s\<rbrace>,\<lbrace>R\<rbrace> interferences \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
   (is "\<lbrace>?P\<rbrace>,\<lbrace>R\<rbrace> ?f \<lbrace>G\<rbrace>,\<lbrace>?Q\<rbrace>")
-  apply (rule validI_strengthen_post, rule repeat_validI)
+  apply (rule rg_strengthen_post, rule repeat_validI)
    apply wp
    apply (clarsimp simp: reflpD[where R=G])
    apply (metis rtranclp_trans)
@@ -506,7 +503,7 @@ lemma rel_tr_refinement_bind_right_general:
         split del: if_split)
   done
 
-lemmas validI_triv' = validI_weaken_pre[OF validI_triv, simplified]
+lemmas validI_triv' = rg_weaken_pre[OF validI_triv, simplified]
 lemmas rel_tr_refinement_bind_right
     = rel_tr_refinement_bind_right_general[where C'=False, simplified]
 
@@ -529,8 +526,7 @@ lemma rel_tr_refinement_comm_repeat_n[simplified K_bind_def]:
    apply (rule rel_tr_refinement_bind_right_general[rule_format])
      apply (metis equivpE)
     apply assumption
-   apply (rule validI_weaken_pre, wp repeat_n_validI)
-   apply simp
+   apply (wpsimp wp: repeat_n_validI)
   apply (drule_tac h="\<lambda>x. do f; return x od"
       in rel_tr_refinement_bind_left_general[rotated 2])
     apply (metis equivpE)
@@ -551,7 +547,7 @@ lemma rel_tr_refinement_comm_repeat[simplified K_bind_def]:
   apply (rule rel_tr_refinement_bind_right_general[rule_format])
     apply (metis equivpE)
    apply (erule(1) rel_tr_refinement_comm_repeat_n, simp+)
-  apply (rule validI_weaken_pre, wp, simp)
+  apply wpsimp
   done
 
 lemma rel_tr_refinement_rev_comm_repeat_n[simplified K_bind_def]:
@@ -574,8 +570,7 @@ lemma rel_tr_refinement_rev_comm_repeat_n[simplified K_bind_def]:
    apply (rule rel_tr_refinement_bind_right_general[rule_format])
      apply (metis equivpE)
     apply assumption
-   apply (rule validI_weaken_pre, wp repeat_n_validI)
-   apply simp
+   apply (wpsimp wp: repeat_n_validI)
   apply (drule_tac h="\<lambda>x. do f; return x od"
       in rel_tr_refinement_bind_left_general[rotated 2])
     apply (metis equivpE)
@@ -596,7 +591,7 @@ lemma rel_tr_refinement_rev_comm_repeat[simplified K_bind_def]:
   apply (rule rel_tr_refinement_bind_right_general[rule_format])
     apply (metis equivpE)
    apply (erule(1) rel_tr_refinement_rev_comm_repeat_n, simp+)
-  apply (rule validI_weaken_pre, wp, simp)
+  apply wpsimp
   done
 
 lemma alternative_distrib_lhs_bind:
@@ -755,8 +750,7 @@ lemma shuttle_gets_env_step[simplified K_bind_def]:
 lemma env_step_twp[wp]:
   "\<lbrace>\<lambda>s0 s. (\<forall>s'. R s0 s' \<longrightarrow> Q () s' s')\<rbrace>,\<lbrace>R\<rbrace> env_step \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
   apply (simp add: env_step_def)
-  apply (rule validI_weaken_pre)
-   apply (wp put_trace_elem_twp)
+  apply (wp put_trace_elem_twp)
   apply (clarsimp simp: rely_cond_def drop_Cons' guar_cond_def)
   done
 
@@ -775,7 +769,7 @@ lemma shuttle_modify_interferences[simplified K_bind_def]:
      apply assumption
     apply (rule shuttle_modify_interference, (simp add: r_into_rtranclp)+)
    apply (simp add: not_env_steps_first_interference)
-  apply (rule validI_weaken_pre, wp, simp)
+  apply wpsimp
   done
 
 lemmas shuttle_modify_interferences_flat
@@ -798,8 +792,7 @@ lemma rshuttle_modify_interferences[simplified K_bind_def]:
      apply assumption
     apply (rule rshuttle_modify_interference, (simp add: r_into_rtranclp)+)
    apply (simp add: not_env_steps_first_interference)
-  apply (rule validI_weaken_pre, wp)
-  apply simp
+  apply wpsimp
   done
 
 lemma shuttle_gets_interference[simplified K_bind_def]:
@@ -819,9 +812,9 @@ lemma shuttle_gets_interference[simplified K_bind_def]:
        apply (metis equivpE)
       apply simp
      apply simp
-    apply (rule validI_weaken_pre, wp)
+    apply wpsimp
     apply (clarsimp simp: r_into_rtranclp)
-   apply (simp add: commit_step_def, rule validI_weaken_pre, wp put_trace_elem_twp)
+   apply (simp add: commit_step_def, wp put_trace_elem_twp)
    apply (simp add: drop_Cons' guar_cond_def)
   apply (rule shuttle_gets_commit_step[THEN
     rel_tr_refinement_bind_left_general[rotated -1], simplified bind_assoc return_bind])
@@ -844,8 +837,7 @@ lemma shuttle_gets_interferences[simplified K_bind_def]:
     apply simp
    apply (rule rel_tr_refinement_comm_repeat, assumption)
      apply (rule shuttle_gets_interference; simp)
-     apply simp
-    apply (rule validI_weaken_pre, wp, simp)
+    apply simp
    apply wpsimp
   apply (simp add: bind_assoc)
   apply (rule rel_tr_refinement_refl)
