@@ -93,9 +93,22 @@ lemma prefix_closed_apply[prefix_closed_cond]:
   "prefix_closed (f (g x)) \<Longrightarrow> prefix_closed (f $ g x)"
   by simp
 
+\<comment> \<open>FIXME: make proof nicer\<close>
+lemma prefix_closed_liftM_eq[simp]:
+  "prefix_closed (liftM f m) = prefix_closed m"
+  apply (clarsimp simp: prefix_closed_def bind_def' liftM_def return_def image_def)
+  apply (rule iff_allI)+
+  apply safe
+     apply clarsimp
+     apply (drule_tac x="((a, b) # xs, map_tmres id f ba)" in bspec)
+      apply clarsimp
+      apply (case_tac ba; clarsimp)
+      apply (auto split: tmres.splits)
+  done
+
 lemma prefix_closed_liftM[prefix_closed_cond]:
   "prefix_closed m \<Longrightarrow> prefix_closed (liftM f m)"
-  by (wpsimp simp: liftM_def wp: prefix_closed_terminal)
+  by simp
 
 lemma prefix_closed_whenE[prefix_closed_cond]:
   "\<lbrakk> G \<Longrightarrow> prefix_closed f \<rbrakk> \<Longrightarrow> prefix_closed (whenE G f)"
@@ -258,9 +271,13 @@ lemma prefix_closed_put_trace[prefix_closed_terminal]:
   "prefix_closed (put_trace tr)"
   by (induct tr; wpsimp wp: prefix_closed_terminal)
 
+lemma prefix_closed_env_steps[prefix_closed_terminal]:
+  "prefix_closed env_steps"
+  by (wpsimp simp: env_steps_def wp: prefix_closed_terminal)
+
 lemma prefix_closed_interference[prefix_closed_terminal]:
   "prefix_closed interference"
-  by (wpsimp simp: interference_def commit_step_def env_steps_def wp: prefix_closed_terminal)
+  by (wpsimp simp: interference_def commit_step_def wp: prefix_closed_terminal)
 
 lemma prefix_closed_await[prefix_closed_terminal]:
   "prefix_closed (Await c)"
