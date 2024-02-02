@@ -1944,11 +1944,9 @@ lemma handleHypervisorFault_corres:
                     and (\<lambda>s. \<forall>p. thread \<notin> set(ksReadyQueues s p))
                     and st_tcb_at' simple' thread and ex_nonz_cap_to' thread)
           (handle_hypervisor_fault thread fault) (handleHypervisorFault thread fault)"
-  apply (cases fault; clarsimp simp add: handleHypervisorFault_def returnOk_def2)
-  apply (corresK corres: handleFault_corres)
-  apply (clarsimp simp: valid_fault_def)
+  apply (cases fault; clarsimp simp: handleHypervisorFault_def isFpuEnable_def split del: if_split)
+  apply (corres corres: handleFault_corres simp: valid_fault_def)
   done
-
 
 lemma dmo_machine_rest_lift:
   "(\<And>s m. P (s\<lparr>ksMachineState := ksMachineState s\<lparr>machine_state_rest := m\<rparr>\<rparr>) = P s) \<Longrightarrow>
@@ -2084,18 +2082,18 @@ crunches handleVMFault
   for st_tcb_at'[wp]: "st_tcb_at' P t"
   and cap_to'[wp]: "ex_nonz_cap_to' t"
   and norq[wp]: "\<lambda>s. P (ksReadyQueues s)"
+  and ksit[wp]: "\<lambda>s. P (ksIdleThread s)"
 
-crunches handleVMFault, handleHypervisorFault
+crunches handleHypervisorFault
   for ksit[wp]: "\<lambda>s. P (ksIdleThread s)"
-  (wp: crunch_wps getSlotCap_wp simp: getThreadReplySlot_def getThreadCallerSlot_def locateSlotTCB_def locateSlotBasic_def)
+  (wp: undefined_valid simp: isFpuEnable_def)
 
 lemma hh_invs'[wp]:
   "\<lbrace>invs' and sch_act_not p and (\<lambda>s. \<forall>a b. p \<notin> set (ksReadyQueues s (a, b))) and
     st_tcb_at' simple' p and ex_nonz_cap_to' p and (\<lambda>s. p \<noteq> ksIdleThread s)\<rbrace>
   handleHypervisorFault p t \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: AARCH64_H.handleHypervisorFault_def)
-  apply (cases t; wpsimp)
-  done
+  supply if_split[split del]
+  by (cases t; wpsimp simp: AARCH64_H.handleHypervisorFault_def isFpuEnable_def)
 
 lemma ct_not_idle':
   fixes s

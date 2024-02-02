@@ -83,7 +83,8 @@ lemma hh_invs[wp, Syscall_AI_assms]:
   "\<lbrace>invs and ct_active and st_tcb_at active thread and ex_nonz_cap_to thread\<rbrace>
    handle_hypervisor_fault thread fault
    \<lbrace>\<lambda>rv. invs\<rbrace>"
-  by (cases fault) (wpsimp simp: valid_fault_def)
+  supply if_split[split del]
+  by (cases fault) (wpsimp simp: valid_fault_def isFpuEnable_def wp: dmo_invs_lift hoare_drop_imps)
 
 end
 

@@ -295,6 +295,13 @@ crunch (empty_fail) empty_fail: decodeVCPUInjectIRQ, decodeVCPUWriteReg, decodeV
                                 decodeVCPUAckVPPI
   (simp: Let_def)
 
+crunch (empty_fail) empty_fail[wp, simp]: handleFault
+
+lemma handleHypervisorFault_empty_fail[intro!, wp, simp]:
+  "empty_fail (handleHypervisorFault t f)"
+  by (cases f, simp add: handleHypervisorFault_def isFpuEnable_def split del: if_split)
+     wpsimp
+
 crunch (empty_fail) empty_fail: callKernel
   (wp: empty_fail_catch)
 

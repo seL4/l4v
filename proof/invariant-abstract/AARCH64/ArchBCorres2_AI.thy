@@ -141,8 +141,7 @@ lemma vppi_event_bcorres[wp]:
 lemma handle_reserved_irq_bcorres[wp]: "bcorres (handle_reserved_irq a) (handle_reserved_irq a)"
   unfolding handle_reserved_irq_def by wpsimp
 
-lemma handle_hypervisor_fault_bcorres[wp]: "bcorres (handle_hypervisor_fault a b) (handle_hypervisor_fault a b)"
-  by (cases b; wpsimp)
+crunch (bcorres)bcorres[wp]: handle_hypervisor_fault truncate_state
 
 lemma handle_event_bcorres[wp]: "bcorres (handle_event e) (handle_event e)"
   apply (cases e)
