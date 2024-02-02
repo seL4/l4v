@@ -521,38 +521,258 @@ lemma no_fail_callKernel:
   apply metis
   done
 
+(* this variant only used for armv_handleVCPUFault_ccorres *)
+lemma handleUserLevelFault_ccorres':
+  "ccorres dc xfdc
+           (invs' and sch_act_simple and ct_running' and
+               (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
+           ({s.  w_a_' s = word1} \<inter> {s. w_b_' s = word2 }) []
+           (do thread <- getCurThread;
+               rv <- handleFault thread (Fault_H.fault.UserException (word1 AND mask 32) (word2 AND mask 28));
+               y <- ThreadDecls_H.schedule;
+               y <- activateThread;
+               stateAssert kernelExitAssertions []
+           od)
+           (Call handleUserLevelFault_'proc)"
+  apply (cinit' lift:w_a_' w_b_')
+   apply (rule ccorres_symb_exec_r)
+     apply (rule ccorres_pre_getCurThread)
+     apply (ctac (no_vcg) add: handleFault_ccorres)
+      apply (ctac (no_vcg) add: schedule_ccorres)
+       apply (rule ccorres_stateAssert_after)
+       apply (rule ccorres_add_return2)
+       apply (ctac (no_vcg) add: activateThread_ccorres)
+        apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
+        apply (rule allI, rule conseqPre, vcg)
+        apply (clarsimp simp: return_def)
+       apply (wp schedule_sch_act_wf schedule_invs'
+              | strengthen invs_queues_imp invs_valid_objs_strengthen)+
+    apply (clarsimp, vcg)
+   apply (clarsimp, rule conseqPre, vcg, clarsimp)
+  apply clarsimp
+  apply (intro impI conjI allI)
+      apply (simp add: ct_in_state'_def)
+      apply (erule pred_tcb'_weakenE)
+      apply simp
+     apply (clarsimp simp: ct_not_ksQ)
+    apply (clarsimp simp add: sch_act_simple_def split: scheduler_action.split)
+   apply (rule active_ex_cap')
+    apply (erule active_from_running')
+   apply (erule invs_iflive')
+  apply (clarsimp simp: ct_in_state'_def)
+  apply (frule st_tcb_idle'[rotated])
+   apply (erule invs_valid_idle')
+   apply simp
+  apply (clarsimp simp: cfault_rel_def seL4_Fault_UserException_lift)
+  apply (simp add: is_cap_fault_def)
+  done
+
+(* ignore FPU status, but deal with UNKNOWN_FAULT *)
+lemma armv_handleVCPUFault_unknown_fault_ccorres:
+  "ccorres (\<lambda>rv rv'. rv' = from_bool True) ret__unsigned_long_'
+           (invs' and sch_act_simple and ct_running' and
+            (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and K (hsr = 0x2000000))
+     (\<lbrace> \<acute>hsr___unsigned_long = hsr \<rbrace>) hs
+     (do fpu_enabled <- doMachineOp isFpuEnable;
+         (do esr <- doMachineOp getESR;
+              curThread <- getCurThread;
+              handleFault curThread (Fault_H.fault.UserException (esr AND mask 32) 0);
+              ThreadDecls_H.schedule;
+              activateThread;
+              stateAssert kernelExitAssertions []
+          od)
+      od)
+     (Call armv_handleVCPUFault_'proc)"
+  supply Collect_const[simp del]
+  apply (rule ccorres_grab_asm)
+  apply (cinit' lift: hsr___unsigned_long_')
+   apply simp
+   apply ccorres_rewrite
+   (* we are discarding the entire FPU-fault handling IF calculation because we know isFpuEnable
+      is abstracted to return True until the FPU model is updated, and so the Haskell side does not
+      even feature the HSR calculation for the FPU fault *)
+   apply (rule ccorres_rhs_assoc2)
+   apply (rule ccorres_rhs_assoc2)
+   apply (rule_tac xf'=ret__int_'  and r'="\<lambda>rv rv'. rv = True \<and> rv' = from_bool (\<not>rv)"
+                   in ccorres_split_nothrow[where P=\<top> and P'=UNIV])
+       (* now we have to go through all the IF branches on the C side, because some will result in
+          false  without calling isFpuEnable *)
+       apply (rule ccorres_cond_seq2[THEN iffD1])
+       apply ccorres_rewrite
+       apply (rule ccorres_guard_imp)
+         apply csymbr
+         apply simp
+         apply ccorres_rewrite
+         apply csymbr
+         apply simp
+         apply ccorres_rewrite
+         apply (simp add: isFpuEnable_def)
+         apply (rule ccorres_inst[where P=\<top> and P'="\<lbrace>\<acute>ret__int = false\<rbrace>"])
+         apply (rule_tac ccorres_from_vcg)
+         apply (clarsimp, rule conseqPre, vcg)
+         apply (clarsimp simp: return_def)
+        apply clarsimp
+       apply clarsimp
+      apply ceqv
+     apply simp
+     apply ccorres_rewrite
+     apply (rule ccorres_rhs_assoc)
+     apply (ctac (no_vcg) add: getESR_ccorres)
+      apply clarsimp
+      apply (rule ccorres_add_return2)
+      apply (ctac (no_vcg) add: handleUserLevelFault_ccorres'[where ?word2.0=0, simplified])
+       apply simp
+       apply (rule ccorres_return_C)
+         apply clarsimp
+        apply clarsimp
+       apply clarsimp
+      apply wpsimp+
+    apply (simp add: isFpuEnable_def)
+    apply wpsimp
+   apply clarsimp
+   apply (vcg exspec=isFpuEnable_modifies)
+  apply clarsimp
+  done
+
+(* ignore FPU status, no UNKNOWN_FAULT *)
+lemma armv_handleVCPUFault_no_op_ccorres:
+  "ccorres (\<lambda>rv rv'. rv' = from_bool False) ret__unsigned_long_'
+           (invs' and sch_act_simple and ct_running' and
+            (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread) and K (hsr \<noteq> 0x2000000))
+     (\<lbrace> \<acute>hsr___unsigned_long = hsr \<rbrace>) hs
+     (do fpu_enabled <- doMachineOp isFpuEnable;
+         return ()
+      od)
+     (Call armv_handleVCPUFault_'proc)"
+  supply Collect_const[simp del]
+  apply (rule ccorres_grab_asm)
+  apply (cinit' lift: hsr___unsigned_long_')
+   apply simp
+   apply ccorres_rewrite
+   (* we are discarding the entire FPU-fault handling IF calculation because we know isFpuEnable
+      is abstracted to return True until the FPU model is updated, and so the Haskell side does not
+      even feature the HSR calculation for the FPU fault *)
+   apply (rule ccorres_rhs_assoc2)
+   apply (rule ccorres_rhs_assoc2)
+   apply (rule_tac xf'=ret__int_'  and r'="\<lambda>rv rv'. rv = True \<and> rv' = from_bool (\<not>rv)"
+                   in ccorres_split_nothrow[where P=\<top> and P'=UNIV])
+       (* now we have to go through all the IF branches on the C side, because some will result in
+          false  without calling isFpuEnable *)
+       apply (rule ccorres_cond_seq2[THEN iffD1])
+       apply ccorres_rewrite
+       apply (rule ccorres_guard_imp)
+         apply csymbr
+         apply simp
+         apply (rule ccorres_Cond_rhs)
+          apply (rule ccorres_Cond_rhs)
+           apply (rule ccorres_add_return2)
+           apply (ctac (no_vcg) add: isFpuEnable_ccorres)
+            apply (rule_tac P="rv" in ccorres_gen_asm)
+            apply (simp add: from_bool_0 true_def)
+            apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
+            apply (clarsimp, rule conseqPre, vcg)
+            apply (clarsimp simp: return_def)
+           apply (wpsimp simp: isFpuEnable_def)
+          apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
+          apply (simp add: isFpuEnable_def)
+         apply csymbr
+         apply simp
+         apply (rule ccorres_Cond_rhs)
+          apply (rule ccorres_add_return2)
+          apply (ctac (no_vcg) add: isFpuEnable_ccorres)
+           apply (rule_tac P="rv" in ccorres_gen_asm)
+           apply (simp add: from_bool_0 true_def)
+           apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
+           apply (clarsimp, rule conseqPre, vcg)
+           apply (clarsimp simp: return_def)
+          apply (wpsimp simp: isFpuEnable_def)
+         apply (rule ccorres_inst[where P=\<top> and P'="\<lbrace>\<acute>ret__int = false\<rbrace>"])
+         apply (simp add: isFpuEnable_def)
+         apply (rule ccorres_inst[where P=\<top> and P'="\<lbrace>\<acute>ret__int = false\<rbrace>"])
+         apply (rule_tac ccorres_from_vcg)
+         apply (clarsimp, rule conseqPre, vcg)
+         apply (clarsimp simp: return_def)
+        apply clarsimp
+       apply clarsimp
+      apply ceqv
+     apply simp
+     apply ccorres_rewrite
+     apply (rule ccorres_return_C; clarsimp)
+    apply wpsimp+
+    apply (wpsimp simp: isFpuEnable_def)
+   apply clarsimp
+   apply (vcg exspec=isFpuEnable_modifies)
+  apply clarsimp
+  done
+
+(* getCurThread is shared between branches in handleVCPUFault, placing it in wrong order for
+   specific cases *)
+lemma handleVCPUFault_ccorres_getCurThread_helper:
+  "monadic_rewrite F E \<top>
+    (do thread <- getCurThread;
+        esr <- doMachineOp getESR;
+        f esr thread
+     od)
+    (do esr <- doMachineOp getESR;
+        thread <- getCurThread;
+        f esr thread
+     od)"
+  apply (simp add: getCurThread_def)
+  apply monadic_rewrite_pre
+   apply monadic_rewrite_symb_exec_l
+    apply (rule monadic_rewrite_bind_tail)
+     apply monadic_rewrite_symb_exec_r
+      apply (rule_tac P="threada = thread" in monadic_rewrite_gen_asm, simp)
+      apply (rule monadic_rewrite_refl)
+     apply wpsimp+
+  done
+
 lemma handleVCPUFault_ccorres:
   "ccorres dc xfdc
      (invs' and ct_running' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
-     (UNIV \<inter> {s. ucast hsr = hsr___unsigned_long_' s }) hs
-           (callKernel (HypervisorEvent (ARMVCPUFault hsr))) (Call handleVCPUFault_'proc)"
+     (\<lbrace> ucast hsr = \<acute>hsr___unsigned_long \<rbrace>) hs
+     (callKernel (HypervisorEvent (ARMVCPUFault hsr))) (Call handleVCPUFault_'proc)"
   apply (cinit' lift: hsr___unsigned_long_')
    apply (simp add: callKernel_def handleEvent_def handleHypervisorFault_def)
-   sorry (* FIXME AARCH64 spec is incorrect, armv_handleVCPUFault  does more on this platform, likely due to FPU
    apply (simp add: liftE_def bind_assoc)
-   apply (rule ccorres_pre_getCurThread, rename_tac curThread)
-   (* armv_handleVCPUFault returns false on this platform, doing nothing else *)
-   apply (rule ccorres_symb_exec_r)
-     apply (rule ccorres_cond_false_seq, simp)
-     apply (rule ccorres_symb_exec_r)
-       apply (ctac (no_vcg) add: handleFault_ccorres)
-        apply (ctac (no_vcg) add: schedule_ccorres)
-         apply (rule ccorres_stateAssert_after)
-         apply (rule ccorres_guard_imp)
-           apply (ctac (no_vcg) add: activateThread_ccorres)
-          apply (clarsimp, assumption)
-         apply assumption
-        apply (wp schedule_sch_act_wf schedule_invs'|strengthen invs_queues invs_valid_objs')+
-      apply vcg
-     apply (clarsimp, rule conseqPre, vcg)
-     apply clarsimp
-    apply vcg
-   apply (clarsimp, rule conseqPre, vcg)
-   apply clarsimp
-  apply (clarsimp simp: ct_not_ksQ ct_running_imp_simple')
-  apply (rule conjI, rule active_ex_cap', erule active_from_running', fastforce)
+   apply (rule ccorres_cases[where P="hsr = 0x2000000"]; simp cong: if_cong)
+    (* UNKNOWN_FAULT case, armv_handleVCPUFault handles fault and returns true, ending operations *)
+    apply (simp add: isFpuEnable_def bind_assoc) (* isFpuEnable always true *)
+    apply (rule monadic_rewrite_ccorres_assemble[OF _ handleVCPUFault_ccorres_getCurThread_helper])
+    apply (rule ccorres_add_return2)
+    apply (ctac (no_vcg) add: armv_handleVCPUFault_unknown_fault_ccorres[simplified isFpuEnable_def,
+                                                                         simplified,
+                                                                         where hsr="ucast hsr"])
+     apply simp
+     apply ccorres_rewrite
+     apply (rule ccorres_return_void_C)
+    apply wpsimp
+   (* not UNKNOWN_FAULT case, armv_handleVCPUFault won't do anything *)
+   apply (simp add: isFpuEnable_def bind_assoc)
+   apply (rule ccorres_add_return)
+   apply (ctac (no_vcg) add: armv_handleVCPUFault_no_op_ccorres[simplified isFpuEnable_def,
+                                                                simplified,
+                                                                where hsr="ucast hsr"])
+    apply simp
+    apply (rule ccorres_pre_getCurThread, rename_tac curThread)
+    apply (rule ccorres_symb_exec_r)
+      apply (ctac (no_vcg) add: handleFault_ccorres)
+       apply (ctac (no_vcg) add: schedule_ccorres)
+        apply (rule ccorres_stateAssert_after)
+        apply (rule ccorres_guard_imp)
+          apply (ctac (no_vcg) add: activateThread_ccorres)
+         apply (clarsimp, assumption)
+        apply assumption
+       apply (wp schedule_sch_act_wf schedule_invs'|strengthen invs_queues invs_valid_objs')+
+     apply vcg
+    apply (clarsimp, rule conseqPre, vcg)
+    apply clarsimp
+   apply wpsimp
+  apply (clarsimp simp: ct_not_ksQ ct_running_imp_simple' ucast_and_mask_drop)
   apply (clarsimp simp: cfault_rel_def seL4_Fault_VCPUFault_lift is_cap_fault_def)
-  done *)
+  apply (subst (asm) up_ucast_inj_eq[symmetric, where 'b=machine_word_len]; simp)
+  apply (rule active_ex_cap', erule active_from_running', fastforce)
+  done
 
 lemma handleHypervisorEvent_ccorres:
   "ccorres dc xfdc
