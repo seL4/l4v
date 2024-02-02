@@ -195,6 +195,15 @@ consts' fpuThreadDeleteOp_impl :: "machine_word \<Rightarrow> unit machine_rest_
 definition fpuThreadDeleteOp :: "machine_word \<Rightarrow> unit machine_monad" where
   "fpuThreadDeleteOp thread_ptr \<equiv> machine_op_lift (fpuThreadDeleteOp_impl thread_ptr)"
 
+(* FIXME this machine op is used to abstract the entire lazy FPU switch interrupt mechanism,
+   which can only trigger when the current thread's FPU is disabled and it performs an FPU
+   operation. We have no model for this mechanism or the state that it caches, so for
+   verification purposes we act as if the FPU is always enabled.
+   Future lazy FPU switch overhaul will involve the state that this operation reads, at which
+   point it should become a normal function. *)
+definition isFpuEnable :: "bool machine_monad" where
+  "isFpuEnable \<equiv> return True"
+
 
 subsection "Fault Registers"
 

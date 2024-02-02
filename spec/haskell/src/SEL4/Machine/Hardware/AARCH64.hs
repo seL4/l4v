@@ -390,6 +390,9 @@ debugPrint str = liftIO $ putStrLn str
 fpuThreadDeleteOp :: Word -> MachineMonad ()
 fpuThreadDeleteOp tcbPtr = error "Unimplemented callback"
 
+isFpuEnable :: MachineMonad Bool
+isFpuEnable = error "Unimplemented - lazy FPU switch abstracted as machine op"
+
 {- GIC VCPU interface -}
 
 get_gic_vcpu_ctrl_hcr :: MachineMonad Word32
