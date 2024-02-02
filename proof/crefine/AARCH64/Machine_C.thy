@@ -243,6 +243,13 @@ assumes get_gic_vcpu_ctrl_lr_ccorres:
   "ccorres (\<lambda>v virq. virq = virq_C (FCP (\<lambda>_. v))) ret__struct_virq_C_' \<top> (\<lbrace>\<acute>num = scast n \<rbrace>) hs
            (doMachineOp (get_gic_vcpu_ctrl_lr n)) (Call get_gic_vcpu_ctrl_lr_'proc)"
 
+(* Lazy FPU switching is not in current verification scope. We abstract this by acting as if
+   FPU is always enabled. When the FPU switching implementation is updated, this assumption
+   should be removed. *)
+assumes isFpuEnable_ccorres:
+  "ccorres (\<lambda>rv rv'. rv' = from_bool rv) ret__unsigned_long_' \<top> UNIV []
+           (doMachineOp isFpuEnable)
+           (Call isFpuEnable_'proc)"
 
 (* ARM Hypervisor banked register save/restoring *)
 
