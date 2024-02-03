@@ -20,7 +20,7 @@ jobs:
     name: CParser Deploy
     runs-on: ubuntu-latest
     steps:
-      - uses: peter-evans/repository-dispatch@v2
+      - uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ secrets.PRIV_REPO_TOKEN }}
           repository: seL4/ci-actions
