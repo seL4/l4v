@@ -2155,8 +2155,12 @@ lemma performPageInvocation_no_orphans [wp]:
 crunch no_orphans [wp]: handleVMFault "no_orphans"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch no_orphans [wp]: handleHypervisorFault "no_orphans"
-  (wp: crunch_wps simp: crunch_simps)
+lemma handleHypervisorFault_no_orphans[wp]:
+  "\<lbrace>\<lambda>s. valid_queues' s \<and> valid_objs' s \<and> sch_act_wf (ksSchedulerAction s) s \<and> no_orphans s\<rbrace>
+   handleHypervisorFault w f
+   \<lbrace>\<lambda>_. no_orphans\<rbrace>"
+  unfolding handleHypervisorFault_def isFpuEnable_def
+  by (wpsimp wp: undefined_valid)
 
 lemma associateVCPUTCB_no_orphans[wp]:
   "associateVCPUTCB vcpuPtr tcbPtr \<lbrace>no_orphans\<rbrace>"
