@@ -180,6 +180,9 @@ definition
   invalidateLocalTLB_ASID :: "hardware_asid \<Rightarrow> unit machine_monad"
 where "invalidateLocalTLB_ASID a \<equiv> machine_op_lift (invalidateLocalTLB_ASID_impl a)"
 
+consts' ipiSendTarget_impl :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
+definition ipiSendTarget :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad" where
+  "ipiSendTarget sgi_irq targets \<equiv> machine_op_lift $ ipiSendTarget_impl sgi_irq targets"
 
 (* C implementation takes one argument, which is w || a *)
 consts'
