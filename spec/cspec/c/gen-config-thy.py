@@ -113,7 +113,7 @@ known_config_keys = {
     'CONFIG_DEBUG_DISABLE_L1_DCACHE': (bool, None),
     'CONFIG_DEBUG_DISABLE_BRANCH_PREDICTION': (bool, None),
     'CONFIG_ARM_HYPERVISOR_SUPPORT': (bool, None),
-    'CONFIG_ARM_GIC_V3_SUPPORT': (bool, None),
+    'CONFIG_ARM_GIC_V3_SUPPORT': (bool, 'config_ARM_GIC_V3'),
     'CONFIG_AARCH64_VSPACE_S2_START_L1': (bool, None),
     'CONFIG_ARM_HYP_ENABLE_VCPU_CP14_SAVE_AND_RESTORE': (bool, None),
     'CONFIG_ARM_ERRATA_430973': (bool, None),
