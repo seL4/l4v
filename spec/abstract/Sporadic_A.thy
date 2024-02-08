@@ -74,9 +74,9 @@ where
     robin \<leftarrow> is_round_robin sc_ptr;
     ready \<leftarrow> get_sc_refill_ready sc_ptr;
     when (ready \<and> \<not>robin) $ do
-      modify (\<lambda>s. s\<lparr> reprogram_timer := True \<rparr>);
       ct \<leftarrow> gets cur_time;
-      update_refill_hd sc_ptr (r_time_update (\<lambda>_. ct + kernelWCET_ticks));
+      update_refill_hd sc_ptr (r_time_update (\<lambda>_. ct));
+      modify (\<lambda>s. s\<lparr> reprogram_timer := True \<rparr>);
       refill_head_overlapping_loop sc_ptr
     od
   od"

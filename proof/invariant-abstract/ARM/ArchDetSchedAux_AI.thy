@@ -113,7 +113,6 @@ lemma dmo_getCurrentTime_vmt_sp[wp, DetSchedAux_AI_assms]:
      apply (subst unat_minus_plus_one)
       apply (insert getCurrentTime_buffer_no_overflow getCurrentTime_buffer_no_overflow')
       apply (clarsimp simp: kernelWCET_ticks_def MAX_PERIOD_def)
-     apply (insert getCurrentTime_buffer_no_overflow'_stronger)
      apply (subst unat_add_lem')
       apply (metis no_olen_add_nat word_add_no_overflow word_le_less_eq word_less_iff_unsigned)
      apply fastforce

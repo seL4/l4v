@@ -1285,7 +1285,7 @@ lemma refill_hd_relation2:
 
 lemma refill_ready_relation:
   "\<lbrakk>sc_relation sc n sc'; sc_valid_refills' sc'\<rbrakk>
-   \<Longrightarrow> refill_ready time (refill_hd sc) = (rTime (refillHd sc') \<le> time + kernelWCETTicks)"
+   \<Longrightarrow> refill_ready time (refill_hd sc) = (rTime (refillHd sc') \<le> time)"
   apply (frule (1) refill_hd_relation)
   by (clarsimp simp: refill_ready_def kernelWCETTicks_def refill_map_def)
 

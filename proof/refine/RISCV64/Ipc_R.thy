@@ -2169,9 +2169,8 @@ crunches handle_fault_reply
 lemma refillReady_sp:
   "\<lbrace>P\<rbrace>
    refillReady scp
-   \<lbrace>\<lambda>rv s. P s \<and> (\<exists>sc. scs_of' s scp = Some sc
-                       \<and> rv = (rTime (refillHd sc) \<le> ksCurTime s + kernelWCETTicks))\<rbrace>"
-  by wpsimp
+   \<lbrace>\<lambda>rv s. P s \<and> (\<exists>sc. scs_of' s scp = Some sc \<and> rv = (rTime (refillHd sc) \<le> ksCurTime s))\<rbrace>"
+  by (wpsimp wp: refillReady_wp)
 
 lemma refillSufficient_sp:
   "\<lbrace>P\<rbrace>
@@ -6531,7 +6530,7 @@ lemma replyTCB_is_not_ksIdleThread:
 lemma refillPopHead_sym_heap_tcbSCs[wp]:
   "refillPopHead scp \<lbrace>sym_heap_tcbSCs\<rbrace>"
   unfolding refillPopHead_def
-  apply (wpsimp wp: updateSchedContext_wp)
+  apply (wpsimp wp: updateSchedContext_wp getRefillNext_wp)
   apply (fastforce simp: sym_heap_def obj_at'_def opt_map_def split: option.splits)
   done
 
@@ -6546,6 +6545,10 @@ lemma updateRefillHd_sym_heap_tcbSCs[wp]:
   "updateRefillHd scPtr f \<lbrace>sym_heap_tcbSCs\<rbrace>"
   by (rule hoare_weaken_pre, wps, wpsimp)
 
+crunches refillUnblockCheck
+  for sym_heap_tcbSCs[wp]: sym_heap_tcbSCs
+  (wp: crunch_wps)
+
 lemma refillPopHead_sym_heap_scReplies[wp]:
   "refillPopHead scp \<lbrace>sym_heap_scReplies\<rbrace>"
   unfolding refillPopHead_def
@@ -6559,6 +6562,10 @@ lemma updateRefillHd_sym_heap_scReplies[wp]:
   apply (wpsimp wp: updateSchedContext_wp)
   apply (clarsimp simp: sym_heap_def obj_at'_def opt_map_def split: option.splits)
   done
+
+crunches refillUnblockCheck
+  for sym_heap_scReplies[wp]: sym_heap_scReplies
+  (wp: crunch_wps)
 
 crunches ifCondRefillUnblockCheck
   for sym_heap_tcbSCs[wp]: sym_heap_tcbSCs

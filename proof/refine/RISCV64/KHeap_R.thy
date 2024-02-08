@@ -4208,7 +4208,7 @@ lemma getRefillHead_sp:
   by wpsimp
 
 lemma readRefillReady_wp:
-  "\<lblot>\<lambda>s. \<forall>sc. scs_of' s scp = Some sc \<longrightarrow> P (rTime (refillHd sc) \<le> ksCurTime s + kernelWCETTicks) s\<rblot>
+  "\<lblot>\<lambda>s. \<forall>sc. scs_of' s scp = Some sc \<longrightarrow> P (rTime (refillHd sc) \<le> ksCurTime s) s\<rblot>
    readRefillReady scp
    \<lblot>P\<rblot>"
   unfolding readRefillReady_def readCurTime_def

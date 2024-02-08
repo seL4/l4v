@@ -539,10 +539,8 @@ lemma refill_budget_check_if_live_then_nonz_cap[wp]:
 
 lemma refill_unblock_check_refs_of[wp]:
   "refill_unblock_check sc_ptr \<lbrace>\<lambda>s. P (state_refs_of s)\<rbrace>"
-  apply (wpsimp simp: refill_unblock_check_defs
-                  wp: hoare_drop_imp whileLoop_valid_inv)
-  apply (clarsimp simp: state_refs_of_def)
-  done
+  by (wpsimp simp: refill_unblock_check_defs reprogram_timer_update_arch.state_refs_update
+                wp:  whileLoop_valid_inv)
 
 crunches refill_budget_check, if_cond_refill_unblock_check
   for aligned[wp]: pspace_aligned
@@ -1709,20 +1707,7 @@ lemma refill_unblock_check_ex_nonz_cap_to_ct[wp]:
 
 lemma refill_unblock_check_state_refs_of_ct[wp]:
   "refill_unblock_check scp \<lbrace>\<lambda>s. P (state_refs_of s) (cur_thread s)\<rbrace>"
-  apply (clarsimp simp: refill_unblock_check_defs)
-  apply (rule bind_wp_fwd_skip, solves wpsimp)+
-  apply (rule hoare_when_cases, simp)
-  apply (rule bind_wp_fwd_skip, solves wpsimp)+
-  apply (rule bind_wp_fwd_skip)
-   apply (wpsimp simp: set_refills_def
-                   wp: update_sched_context_wp get_refills_wp)
-   apply (clarsimp simp: state_refs_of_def obj_at_def
-                 intro!: ext elim!: rsubst[where P="\<lambda>x. P x (cur_thread s)" for s])+
-  apply (wpsimp simp: set_refills_def
-                  wp: update_sched_context_wp get_refills_wp whileLoop_valid_inv)
-   apply (clarsimp simp: state_refs_of_def obj_at_def
-                 intro!: ext elim!: rsubst[where P="\<lambda>x. P x (cur_thread s)" for s])+
-  done
+  by (rule_tac f=cur_thread in hoare_lift_Pf2; wpsimp)
 
 lemma refill_unblock_check_it_ct[wp]:
   "refill_unblock_check scp \<lbrace>\<lambda>s. P (idle_thread s) (cur_thread s)\<rbrace>"

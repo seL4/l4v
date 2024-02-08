@@ -1618,7 +1618,7 @@ lemma schedulable_def2:
 
 \<comment> \<open>Like refill_ready', but using unat addition to avoid the need to reason about overflow.\<close>
 definition refill_ready_no_overflow :: "time \<Rightarrow> time \<Rightarrow> refill \<Rightarrow> bool" where
-  "refill_ready_no_overflow usage curtime refill \<equiv> unat (r_time refill) + unat usage \<le> unat curtime + unat kernelWCET_ticks"
+  "refill_ready_no_overflow usage curtime refill \<equiv> unat (r_time refill) + unat usage \<le> unat curtime"
 
 abbreviation refill_ready_no_overflow_sc :: "time \<Rightarrow> time \<Rightarrow> sc_refill_cfg \<Rightarrow> bool" where
   "refill_ready_no_overflow_sc usage curtime cfg \<equiv> refill_ready_no_overflow usage curtime (scrc_refill_hd cfg)"
@@ -1640,7 +1640,7 @@ lemmas consumed_time_bounded_def = consumed_time_bounded_2_def
 
 definition current_time_bounded_2 where
   "current_time_bounded_2 curtime \<equiv>
-   unat curtime + unat kernelWCET_ticks + time_buffer_const * unat MAX_PERIOD \<le> unat max_time"
+   unat curtime + time_buffer_const * unat MAX_PERIOD \<le> unat max_time"
 
 abbreviation current_time_bounded :: "'z::state_ext state \<Rightarrow> bool" where
   "current_time_bounded s \<equiv> current_time_bounded_2 (cur_time s)"
@@ -3757,13 +3757,12 @@ lemma budget_sufficient_def2:
   by (clarsimp simp: vs_all_heap_simps tcb_at_kh_simps)
 
 lemma budget_ready_def3:
-  "active_sc_tcb_at t s
-   \<Longrightarrow> budget_ready t s \<longleftrightarrow> tcb_ready_time t s \<le> cur_time s + kernelWCET_ticks"
+  "active_sc_tcb_at t s \<Longrightarrow> budget_ready t s \<longleftrightarrow> tcb_ready_time t s \<le> cur_time s"
   by (auto simp: vs_all_heap_simps refill_ready_def tcb_ready_times_defs
-                    opt_map_def map_project_def map_join_def pred_map_simps
-                    tcb_scps_of_tcbs_def tcbs_of_kh_def
-                    sc_refill_cfgs_of_scs_def scs_of_kh_def
-             split: option.split)
+                 opt_map_def map_project_def map_join_def pred_map_simps
+                 tcb_scps_of_tcbs_def tcbs_of_kh_def
+                 sc_refill_cfgs_of_scs_def scs_of_kh_def
+          split: option.split)
 
 lemma active_sc_tcb_at_fold:
   "(\<exists>scp. bound_sc_tcb_at (\<lambda>x. x = Some scp) t s \<and> sc_at_pred sc_active scp s)

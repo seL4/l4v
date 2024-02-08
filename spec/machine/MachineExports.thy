@@ -78,9 +78,6 @@ requalify_facts
   replicate_no_overflow
   getCurrentTime_buffer_nonzero'
   getCurrentTime_buffer_no_overflow'
-  getCurrentTime_buffer_no_overflow'_stronger
-  getCurrentTime_buffer_minus
-  getCurrentTime_buffer_minus'
   MAX_PERIOD_mult
   ticks_per_timer_unit_non_zero
   MIN_BUDGET_bound

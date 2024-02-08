@@ -811,7 +811,7 @@ lemma refillReady_corres:
                         read_sc_refill_ready_def readRefillReady_def readCurTime_def gets_the_ogets
              simp flip: get_refill_head_def getRefillHead_def getCurTime_def)
   apply (corres corres: getRefillHead_corres getCurTime_corres
-                  simp: kernelWCETTicks_def refill_map_def projection_rewrites)
+                  simp: refill_map_def projection_rewrites)
   done
 
 lemma scReleased_corres:

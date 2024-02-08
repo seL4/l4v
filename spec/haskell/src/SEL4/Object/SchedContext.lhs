@@ -272,7 +272,7 @@ This module uses the C preprocessor to select a target architecture.
 > readRefillReady scPtr = do
 >     head <- readRefillHead scPtr
 >     curTime <- readCurTime
->     return $ rTime head <= curTime + kernelWCETTicks
+>     return $ rTime head <= curTime
 
 > refillReady :: PPtr SchedContext -> Kernel Bool
 > refillReady scPtr = getsJust (readRefillReady scPtr)
@@ -420,9 +420,9 @@ This module uses the C preprocessor to select a target architecture.
 >       roundRobin <- isRoundRobin scPtr
 >       ready <- refillReady scPtr
 >       when ((not roundRobin) && ready) $ do
->         setReprogramTimer True
 >         curTime <- getCurTime
->         updateRefillHd scPtr $ \head -> head { rTime = curTime + kernelWCETTicks }
+>         updateRefillHd scPtr $ \head -> head { rTime = curTime }
+>         setReprogramTimer True
 >         refillHeadOverlappingLoop scPtr
 
 > ifCondRefillUnblockCheck :: Maybe (PPtr SchedContext) -> Maybe Bool -> Maybe Bool -> Kernel ()

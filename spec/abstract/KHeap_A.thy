@@ -406,8 +406,7 @@ definition get_sc_refill_sufficient :: "obj_ref \<Rightarrow> ticks \<Rightarrow
   "get_sc_refill_sufficient sc_ptr usage \<equiv> gets_the (read_sc_refill_sufficient sc_ptr usage)"
 
 definition refill_ready' :: "time \<Rightarrow> time \<Rightarrow> refill \<Rightarrow> bool" where
-  "refill_ready' usage curtime refill \<equiv>
-    r_time refill + usage \<le> curtime + kernelWCET_ticks"
+  "refill_ready' usage curtime refill \<equiv> r_time refill + usage \<le> curtime"
 
 abbreviation refill_ready :: "time \<Rightarrow> refill \<Rightarrow> bool" where
   "refill_ready \<equiv> refill_ready' 0"

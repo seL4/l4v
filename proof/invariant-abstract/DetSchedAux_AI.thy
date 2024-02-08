@@ -618,31 +618,11 @@ lemma non_empty_sc_replies_nonz_cap:
   by (rule if_live_then_nonz_capD[OF assms(1) assms(2)[unfolded sc_at_pred_n_def]]
       ; clarsimp simp: live_def live_sc_def)
 
-lemma valid_machine_time_refill_ready_buffer:
-  "valid_machine_time s \<Longrightarrow> cur_time s \<le> cur_time s + kernelWCET_ticks"
-  apply (clarsimp simp: valid_machine_time_def)
-  apply (insert getCurrentTime_buffer_minus)
-  by (metis (no_types, opaque_lifting) Groups.add_ac(2) olen_add_eqv plus_minus_no_overflow_ab
-                                       uminus_add_conv_diff word_n1_ge word_plus_mono_right2)
-
 lemma released_sc_cur_time_increasing:
   "\<lbrakk>sc_refill_cfg_sc_at (released_sc (cur_time s)) scp s'; cur_time s \<le> cur_time s';
     valid_machine_time s; valid_machine_time s'\<rbrakk>
    \<Longrightarrow> sc_refill_cfg_sc_at (released_sc (cur_time s')) scp s'"
-  apply (clarsimp simp: sc_refill_cfg_sc_at_def obj_at_def refill_ready_def)
-  apply (frule_tac s=s in valid_machine_time_refill_ready_buffer)
-  apply (frule_tac s=s' in valid_machine_time_refill_ready_buffer)
-  apply (prop_tac "cur_time s \<le> cur_time s'")
-   apply blast
-  apply (rule_tac y="cur_time s + kernelWCET_ticks" in order_trans)
-   apply linarith
-  apply (clarsimp simp: word_le_nat_alt)
-  apply (subst unat_add_lem')
-   using no_olen_add_nat valid_machine_time_refill_ready_buffer apply blast
-  apply (subst unat_add_lem')
-   using no_olen_add_nat valid_machine_time_refill_ready_buffer apply blast
-  apply linarith
-  done
+  by (clarsimp simp: sc_refill_cfg_sc_at_def obj_at_def refill_ready_def word_le_nat_alt)
 
 \<comment> \<open>Used for retyping Untyped memory, including ASID pool creation. Retyping may destroy objects
     if the Untyped memory is reset. But under the invariants, destruction can only occur for objects
@@ -816,27 +796,12 @@ lemma valid_sched_tcb_state_preservation_gen:
      apply fast
     apply (frule use_valid[OF _ valid_machine_time], simp)
     apply (frule use_valid[OF _ cur_time_nondecreasing], simp)
-    apply (clarsimp simp: sc_refill_cfg_sc_at_def obj_at_def refill_ready_def)
-    apply (rule_tac y="cur_time s + kernelWCET_ticks" in order_trans)
-     apply linarith
-    apply (clarsimp simp: word_le_nat_alt)
-    apply (subst unat_add_lem')
-     using no_olen_add_nat valid_machine_time_refill_ready_buffer apply blast
-    apply (subst unat_add_lem')
-     using no_olen_add_nat valid_machine_time_refill_ready_buffer apply blast
-    apply linarith
+    apply (clarsimp simp: sc_refill_cfg_sc_at_def obj_at_def refill_ready_def word_le_nat_alt)
    apply (frule use_valid[OF _ valid_machine_time], simp)
    apply (frule use_valid[OF _ cur_time_nondecreasing], simp)
    apply (clarsimp simp: sc_refill_cfg_sc_at_def obj_at_def refill_ready_def)
-   apply (rule_tac y="cur_time s + kernelWCET_ticks" in order_trans)
-    apply linarith
-   apply (clarsimp simp: word_le_nat_alt)
-   apply (subst unat_add_lem')
-    using no_olen_add_nat valid_machine_time_refill_ready_buffer apply blast
-   apply (subst unat_add_lem')
-    using no_olen_add_nat valid_machine_time_refill_ready_buffer apply blast
-   apply linarith
-  done
+   apply force
+   done
   apply (prop_tac "active_scs_valid s'")
    subgoal for s rv s'
    unfolding active_scs_valid_def
@@ -1078,19 +1043,12 @@ lemma update_time_stamp_is_refill_ready[wp]:
   unfolding update_time_stamp_def
   apply (wpsimp wp: dmo_getCurrentTime_wp)
      prefer 2
-     apply (rule_tac Q="(is_refill_ready scp and (\<lambda>s. cur_time s = previous_time))"
-            in hoare_weaken_pre[rotated], assumption)
+     apply (rule_tac Q="is_refill_ready scp and (\<lambda>s. cur_time s = previous_time)"
+                  in hoare_weaken_pre[rotated], assumption)
      apply wpsimp
-    apply (clarsimp simp: vs_all_heap_simps refill_ready_def)
-    apply (rule_tac b="cur_time s + kernelWCET_ticks" in order.trans, simp)
-    apply (rule word_plus_mono_left, simp)
-    apply (subst olen_add_eqv)
-    apply (subst add.commute)
-    apply (rule no_plus_overflow_neg)
-    apply (insert getCurrentTime_buffer_minus')
-    apply fastforce
-   apply wpsimp
-  by simp
+    apply (fastforce simp: vs_all_heap_simps refill_ready_def)
+   apply wpsimp+
+  done
 
 lemma update_time_stamp_cur_time_monotonic:
   "\<lbrace>\<lambda>s :: 'state_ext state. valid_machine_time s \<and> cur_time s = val\<rbrace>
