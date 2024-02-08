@@ -34,7 +34,7 @@ jobs:
     - name: Upload kernel builds
       uses: actions/upload-artifact@v4
       with:
-        name: kernel-builds
+        name: kernel-builds-${{ matrix.num_domains }}-${{ matrix.arch }}
         path: artifacts/kernel-builds
         if-no-files-found: ignore
     - name: Upload logs
