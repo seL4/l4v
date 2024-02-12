@@ -38,11 +38,16 @@ string = 'string'
 nat = 'nat'
 word = 'machine_word'
 
-# All known config keys that could be set in a gen_config.h file.
-# The dict maps config key to (type, definition name)
+# All known config keys that could be set in a gen_config.h file. The dict maps
+# config key to (type, definition name)
 #
-# This table duplicates some information from the kernel build system, but
-# only which keys exist, not their values.
+# This table duplicates some information from the kernel build system, but only
+# which keys exist, not their values.
+#
+# If they are used in Haskell, the translated config key names have to start
+# with a lower case letter, because Haskell enforces that only datatype
+# constructores start with upper case. For new names, we tend to use `config_`
+# as prefix and potentially shorten the C name a bit.
 known_config_keys = {
     'CONFIG_ARM_HIKEY_OUTSTANDING_PREFETCHERS': (bool, None),
     'CONFIG_ARM_HIKEY_PREFETCHER_STRIDE': (bool, None),
