@@ -409,6 +409,32 @@ abbreviation valid_domain_list' :: "'a kernel_state_scheme \<Rightarrow> bool" w
 
 lemmas valid_domain_list'_def = valid_domain_list_2_def
 
+defs fastpathKernelAssertions_def:
+  "fastpathKernelAssertions \<equiv> \<lambda>s.
+     (\<forall>asid_high ap. armKSASIDTable (ksArchState s) asid_high = Some ap
+                     \<longrightarrow> asid_pool_at' ap s)"
+
+lemma fastpathKernelAssertions_cross:
+  "\<lbrakk> (s,s') \<in> state_relation; invs s; valid_arch_state' s'\<rbrakk> \<Longrightarrow> fastpathKernelAssertions s'"
+  unfolding fastpathKernelAssertions_def
+  apply clarsimp
+  apply (rule asid_pool_at_cross; fastforce?)
+  apply (rule_tac x="ucast asid_high" in valid_asid_tableD[rotated], fastforce)
+  apply (clarsimp dest!: state_relationD
+                  simp: arch_state_relation_def comp_def valid_arch_state'_def valid_asid_table'_def)
+  apply (subst ucast_ucast_len; simp)
+  apply (rule_tac y="mask asid_high_bits" in order_le_less_trans;
+         fastforce simp: mask_def asid_high_bits_def)
+  done
+
+(* this is only needed for callKernel, where we have invs' on concrete side *)
+lemma corres_cross_over_fastpathKernelAssertions:
+  "\<lbrakk> \<And>s. P s \<Longrightarrow> invs s; \<And>s'. Q s' \<Longrightarrow> invs' s';
+     corres r P (Q and fastpathKernelAssertions) f g \<rbrakk> \<Longrightarrow>
+   corres r P Q f g"
+  by (rule corres_cross_over_guard[where Q="Q and fastpathKernelAssertions"])
+     (fastforce elim: fastpathKernelAssertions_cross)+
+
 defs kernelExitAssertions_def:
   "kernelExitAssertions s \<equiv> 0 < ksDomainTime s \<and> valid_domain_list' s"
 
@@ -598,6 +624,8 @@ lemma kernel_corres:
               (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
              (call_kernel event) (callKernel event)"
   unfolding callKernel_def K_bind_def
+  apply (rule corres_cross_over_fastpathKernelAssertions, blast+)
+  apply (rule corres_stateAssert_r)
   apply (rule corres_guard_imp)
     apply (rule corres_add_noop_lhs2)
     apply (simp only: bind_assoc[symmetric])
