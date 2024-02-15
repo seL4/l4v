@@ -74,6 +74,7 @@ proof -
   show ?thesis
   apply (cinit')
    apply (simp add: callKernel_def handleEvent_def minus_one_norm)
+   apply (rule ccorres_stateAssert)
    apply (simp add: liftE_bind bind_assoc)
     apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
     apply (rule ccorres_Guard_Seq)?
@@ -123,6 +124,7 @@ lemma handleUnknownSyscall_ccorres:
            (callKernel (UnknownSyscall n)) (Call handleUnknownSyscall_'proc)"
   apply (cinit' lift: w_')
    apply (simp add: callKernel_def handleEvent_def)
+   apply (rule ccorres_stateAssert)
    apply (simp add: liftE_bind bind_assoc)
    apply (rule ccorres_symb_exec_r)
      apply (rule ccorres_pre_getCurThread)
@@ -160,8 +162,10 @@ lemma handleVMFaultEvent_ccorres:
            (callKernel (VMFaultEvent vmfault_type)) (Call handleVMFaultEvent_'proc)"
   apply (cinit' lift:vm_faultType_')
    apply (simp add: callKernel_def handleEvent_def)
+   apply (rule ccorres_stateAssert)
    apply (simp add: liftE_bind bind_assoc)
    apply (rule ccorres_pre_getCurThread)
+   apply (rename_tac thread)
    apply (simp add: catch_def)
    apply (rule ccorres_rhs_assoc2)
    apply (rule ccorres_split_nothrow_novcg)
@@ -210,6 +214,7 @@ lemma handleUserLevelFault_ccorres:
            (callKernel (UserLevelFault word1 word2)) (Call handleUserLevelFault_'proc)"
   apply (cinit' lift:w_a_' w_b_')
    apply (simp add: callKernel_def handleEvent_def)
+   apply (rule ccorres_stateAssert)
    apply (simp add: liftE_bind bind_assoc)
    apply (rule ccorres_symb_exec_r)
      apply (rule ccorres_pre_getCurThread)
@@ -275,6 +280,7 @@ lemma handleSyscall_ccorres:
   supply if_cong[cong] option.case_cong[cong]
   apply (cinit' lift: syscall_')
    apply (simp add: callKernel_def handleEvent_def minus_one_norm)
+   apply (rule ccorres_stateAssert)
    apply (simp add: handleE_def handleE'_def)
    apply (rule ccorres_split_nothrow_novcg)
        apply wpc
@@ -734,6 +740,7 @@ lemma handleVCPUFault_ccorres:
      (callKernel (HypervisorEvent (ARMVCPUFault hsr))) (Call handleVCPUFault_'proc)"
   apply (cinit' lift: hsr___unsigned_long_')
    apply (simp add: callKernel_def handleEvent_def handleHypervisorFault_def)
+   apply (rule ccorres_stateAssert)
    apply (simp add: liftE_def bind_assoc)
    apply (rule ccorres_cases[where P="hsr = 0x2000000"]; simp cong: if_cong)
     (* UNKNOWN_FAULT case, armv_handleVCPUFault handles fault and returns true, ending operations *)
