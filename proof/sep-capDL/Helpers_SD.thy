@@ -947,7 +947,7 @@ where
   | PageTable _ \<Rightarrow> [0..<2^pt_size]
   | AsidPool _ \<Rightarrow> [0..<2^asid_low_bits]
   | CNode cnode \<Rightarrow> [0..<2^(cdl_cnode_size_bits cnode)]
-  | Tcb _ \<Rightarrow> [0..<tcb_boundntfn_slot + 1]
+  | Tcb _ \<Rightarrow> tcb_slots_list
   | IRQNode _ \<Rightarrow> [0]
   | _ \<Rightarrow> []"
 

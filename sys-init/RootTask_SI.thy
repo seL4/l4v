@@ -629,13 +629,12 @@ lemma slots_tcb:
    slot = 3 \<or>
    slot = 4 \<or>
    slot = 5 \<or>
-   slot = 6"
+   slot = 8"
   apply (frule (1) well_formed_object_slots)
   apply (drule (1) well_formed_well_formed_tcb)
   apply (clarsimp simp: well_formed_tcb_def opt_cap_def slots_of_def)
   apply (drule (1) dom_eqD)
-  apply (clarsimp simp: object_default_state_def2 dom_object_slots_default_tcb
-                        tcb_pending_op_slot_def tcb_boundntfn_slot_def)
+  apply (clarsimp simp: object_default_state_def2 dom_object_slots_default_tcb tcb_slot_defs)
   done
 
 lemma object_at_dom_cdl_objects:

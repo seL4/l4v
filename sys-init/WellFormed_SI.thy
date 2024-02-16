@@ -403,7 +403,7 @@ lemma well_formed_finite [elim!]:
   apply (clarsimp simp: slots_of_def split: option.splits)
   apply (rename_tac obj)
   apply (drule_tac t="dom (object_slots obj)" in sym) (* Makes rewriting work. *)
-  apply (clarsimp simp: object_default_state_def2 object_slots_def
+  apply (clarsimp simp: object_default_state_def2 object_slots_def dom_expand
                         default_tcb_def tcb_pending_op_slot_def
                         empty_cnode_def empty_irq_node_def empty_cap_map_def
                  split: cdl_object.splits)
@@ -417,7 +417,7 @@ lemma well_formed_finite_object_slots:
 
 lemma well_formed_distinct_slots_of_list [elim!]:
   "well_formed spec \<Longrightarrow> distinct (slots_of_list spec obj_id)"
-  by (clarsimp simp: slots_of_list_def object_slots_list_def
+  by (clarsimp simp: slots_of_list_def object_slots_list_def tcb_slot_defs
                split: option.splits cdl_object.splits)
 
 lemma well_formed_object_size_bits:
@@ -578,8 +578,9 @@ lemma well_formed_cnode_object_size_bits_eq:
   apply (clarsimp simp: is_cnode_def  well_formed_cap_to_object_def)
   done
 
-lemma slots_of_set_helper: "\<lbrakk>{0..n :: nat} = dom f; f x \<noteq> None; m = n + 1\<rbrakk> \<Longrightarrow> x < m"
-  by (subgoal_tac "x \<le> n"; fastforce)
+lemma dom_cdl_tcb_caps_default_tcb:
+ "dom (cdl_tcb_caps (default_tcb domain)) = tcb_slots"
+  by (auto simp: object_slots_def default_tcb_def dom_expand tcb_slots_def)
 
 lemma slots_of_set [simp]:
   "well_formed spec \<Longrightarrow> set (slots_of_list spec obj_id) = dom (slots_of obj_id spec)"
@@ -590,9 +591,8 @@ lemma slots_of_set [simp]:
   apply (erule_tac x=obj in allE)
   apply (intro set_eqI iffI)
   by (fastforce simp: object_default_state_def2 object_slots_def object_slots_list_def
-                      default_tcb_def empty_cnode_def empty_irq_node_def empty_cap_map_def
-                      pt_size_def pd_size_def tcb_boundntfn_slot_def
-                elim: slots_of_set_helper
+                      dom_cdl_tcb_caps_default_tcb empty_cnode_def empty_irq_node_def empty_cap_map_def
+                      pt_size_def pd_size_def
                 split: cdl_object.splits)+
 
 lemma well_formed_well_formed_tcb:
@@ -890,8 +890,8 @@ lemma well_formed_cap_to_non_empty_pt:
   done
 
 lemma dom_object_slots_default_tcb:
- "dom (object_slots (Tcb (default_tcb domain))) = {0..tcb_boundntfn_slot}"
-  by (clarsimp simp: object_slots_def default_tcb_def)
+  "dom (object_slots (Tcb (default_tcb domain))) = tcb_slots"
+  by (clarsimp simp: object_slots_def dom_cdl_tcb_caps_default_tcb)
 
 lemma well_formed_tcb_has_fault:
   "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some (Tcb tcb)\<rbrakk>
@@ -920,7 +920,7 @@ lemma well_formed_object_domain:
 
 lemma well_formed_tcb_object_slots:
   "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some tcb; is_tcb tcb\<rbrakk>
-   \<Longrightarrow> dom (object_slots tcb) = {0..tcb_boundntfn_slot}"
+   \<Longrightarrow> dom (object_slots tcb) = tcb_slots"
   apply (frule (1) well_formed_object_slots)
   apply (clarsimp simp: object_default_state_def2 is_tcb_def split: cdl_object.splits)
   apply (rule dom_object_slots_default_tcb)
@@ -948,7 +948,7 @@ lemma well_formed_tcb_cspace_cap:
    apply (erule well_formed_cap_object [where obj_id=obj_id and slot=tcb_cspace_slot])
     apply (simp add: opt_cap_def slots_of_def)
    apply (clarsimp simp: cap_has_object_def cap_type_def split: cdl_cap.splits)
-  apply (auto simp: dom_def tcb_pending_op_slot_def tcb_cspace_slot_def)
+  apply (auto simp: dom_def tcb_slot_defs)
   done
 
 lemma cap_data_cap_guard_size_0:
@@ -980,13 +980,13 @@ lemma well_formed_tcb_cspace_cap_cap_data:
   done
 
 lemma well_formed_tcb_opt_cap:
-  "\<lbrakk>well_formed spec; tcb_at obj_id spec; slot \<in> {0..tcb_boundntfn_slot}\<rbrakk>
+  "\<lbrakk>well_formed spec; tcb_at obj_id spec; slot \<in> tcb_slots\<rbrakk>
    \<Longrightarrow> \<exists>cap. opt_cap (obj_id, slot) spec = Some cap"
   apply (clarsimp simp: object_at_def)
   apply (drule (1) well_formed_object_slots)
   apply (fastforce simp: object_default_state_def2 is_tcb_def
                          opt_cap_def slots_of_def object_slots_def
-                         default_tcb_def dom_def tcb_pending_op_slot_def
+                         default_tcb_def dom_def
                   split: cdl_object.splits if_split_asm)
   done
 
