@@ -1,29 +1,10 @@
 (*
     Author:      Norbert Schirmer
     Maintainer:  Norbert Schirmer, norbert.schirmer at web de
-    License:     LGPL
-*)
-
-(*  Title:      HoarePartialProps.thy
-    Author:     Norbert Schirmer, TU Muenchen
 
 Copyright (C) 2004-2008 Norbert Schirmer
-Some rights reserved, TU Muenchen
+Copyright (c) 2022 Apple Inc. All rights reserved.
 
-This library is free software; you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as
-published by the Free Software Foundation; either version 2.1 of the
-License, or (at your option) any later version.
-
-This library is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
-USA
 *)
 
 section \<open>Properties of Partial Correctness Hoare Logic\<close>
@@ -1336,27 +1317,27 @@ done
 
 subsubsection \<open>Modify Return\<close>
 
-lemma ProcModifyReturn_sound:
-  assumes valid_call: "\<forall>n. \<Gamma>,\<Theta> \<Turnstile>n:\<^bsub>/F\<^esub> P call init p return' c Q,A"
+lemma Proc_exnModifyReturn_sound:
+  assumes valid_call: "\<forall>n. \<Gamma>,\<Theta> \<Turnstile>n:\<^bsub>/F\<^esub> P call_exn init p return' result_exn c Q,A"
   assumes valid_modif:
     "\<forall>\<sigma>. \<forall>n. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/UNIV\<^esub> {\<sigma>} Call p (Modif \<sigma>),(ModifAbr \<sigma>)"
   assumes ret_modif:
     "\<forall>s t. t \<in> Modif (init s)
            \<longrightarrow> return' s t = return s t"
   assumes ret_modifAbr: "\<forall>s t. t \<in> ModifAbr (init s)
-                             \<longrightarrow> return' s t = return s t"
-  shows "\<Gamma>,\<Theta> \<Turnstile>n:\<^bsub>/F\<^esub> P (call init p return c) Q,A"
+                             \<longrightarrow> result_exn (return' s t) t = result_exn (return s t) t"
+  shows "\<Gamma>,\<Theta> \<Turnstile>n:\<^bsub>/F\<^esub> P (call_exn init p return result_exn c) Q,A"
 proof (rule cnvalidI)
   fix s t
   assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma> \<Turnstile>n:\<^bsub>/F\<^esub> P (Call p) Q,A"
   then have ctxt': "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma> \<Turnstile>n:\<^bsub>/UNIV\<^esub> P (Call p) Q,A"
     by (auto intro: nvalid_augment_Faults)
-  assume exec: "\<Gamma>\<turnstile>\<langle>call init p return c,Normal s\<rangle> =n\<Rightarrow> t"
+  assume exec: "\<Gamma>\<turnstile>\<langle>call_exn init p return result_exn c,Normal s\<rangle> =n\<Rightarrow> t"
   assume P: "s \<in> P"
   assume t_notin_F: "t \<notin> Fault ` F"
   from exec
   show "t \<in> Normal ` Q \<union> Abrupt ` A"
-  proof (cases rule: execn_call_Normal_elim)
+  proof (cases rule: execn_call_exn_Normal_elim)
     fix bdy m t'
     assume bdy: "\<Gamma> p = Some bdy"
     assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Normal t'"
@@ -1372,8 +1353,8 @@ proof (rule cnvalidI)
       Normal (return s t')"
       by simp
     with exec_body exec_c bdy n
-    have "\<Gamma>\<turnstile>\<langle>call init p return' c,Normal s\<rangle> =n\<Rightarrow> t"
-      by (auto intro: execn_call)
+    have "\<Gamma>\<turnstile>\<langle>call_exn init p return' result_exn c,Normal s\<rangle> =n\<Rightarrow> t"
+      by (auto intro: execn_call_exn)
     from cnvalidD [OF valid_call [rule_format] ctxt this] P t_notin_F
     show ?thesis
       by simp
@@ -1382,19 +1363,19 @@ proof (rule cnvalidI)
     assume bdy: "\<Gamma> p = Some bdy"
     assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Abrupt t'"
     assume n: "n = Suc m"
-    assume t: "t = Abrupt (return s t')"
+    assume t: "t = Abrupt (result_exn (return s t') t')"
     also from exec_body n bdy
     have "\<Gamma>\<turnstile>\<langle>Call p,Normal (init s)\<rangle> =n\<Rightarrow> Abrupt t'"
       by (auto simp add: intro: execn.intros)
     from cnvalidD [OF valid_modif [rule_format, of n "init s"] ctxt' this] P
     have "t' \<in> ModifAbr (init s)"
       by auto
-    with ret_modifAbr have "Abrupt (return s t') = Abrupt (return' s t')"
+    with ret_modifAbr have "Abrupt (result_exn (return s t') t') = Abrupt (result_exn (return' s t') t')"
       by simp
-    finally have "t = Abrupt (return' s t')"  .
+    finally have "t = Abrupt (result_exn (return' s t') t')"  .
     with exec_body bdy n
-    have "\<Gamma>\<turnstile>\<langle>call init p return' c,Normal s\<rangle> =n\<Rightarrow> t"
-      by (auto intro: execn_callAbrupt)
+    have "\<Gamma>\<turnstile>\<langle>call_exn init p return' result_exn c,Normal s\<rangle> =n\<Rightarrow> t"
+      by (auto intro: execn_call_exnAbrupt)
     from cnvalidD [OF valid_call [rule_format] ctxt this] P t_notin_F
     show ?thesis
       by simp
@@ -1403,8 +1384,8 @@ proof (rule cnvalidI)
     assume bdy: "\<Gamma> p = Some bdy"
     assume "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Fault f" "n = Suc m"
       "t = Fault f"
-    with bdy have "\<Gamma>\<turnstile>\<langle>call init p return' c ,Normal s\<rangle> =n\<Rightarrow> t"
-      by (auto intro: execn_callFault)
+    with bdy have "\<Gamma>\<turnstile>\<langle>call_exn init p return' result_exn c ,Normal s\<rangle> =n\<Rightarrow> t"
+      by (auto intro: execn_call_exnFault)
     from valid_call [rule_format] ctxt this P t_notin_F
     show ?thesis
       by (rule cnvalidD)
@@ -1413,8 +1394,8 @@ proof (rule cnvalidI)
     assume bdy: "\<Gamma> p = Some bdy"
     assume "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Stuck" "n = Suc m"
       "t = Stuck"
-    with bdy have "\<Gamma>\<turnstile>\<langle>call init p return' c ,Normal s\<rangle> =n\<Rightarrow> t"
-      by (auto intro: execn_callStuck)
+    with bdy have "\<Gamma>\<turnstile>\<langle>call_exn init p return' result_exn c ,Normal s\<rangle> =n\<Rightarrow> t"
+      by (auto intro: execn_call_exnStuck)
     from valid_call [rule_format] ctxt this P t_notin_F
     show ?thesis
       by (rule cnvalidD)
@@ -1422,14 +1403,48 @@ proof (rule cnvalidI)
     fix m
     assume "\<Gamma> p = None"
     and  "n = Suc m" "t = Stuck"
-    then have "\<Gamma>\<turnstile>\<langle>call init p return' c ,Normal s\<rangle> =n\<Rightarrow> t"
-      by (auto intro: execn_callUndefined)
+    then have "\<Gamma>\<turnstile>\<langle>call_exn init p return' result_exn c ,Normal s\<rangle> =n\<Rightarrow> t"
+      by (auto intro: execn_call_exnUndefined)
     from valid_call [rule_format] ctxt this P t_notin_F
     show ?thesis
       by (rule cnvalidD)
   qed
 qed
 
+lemma ProcModifyReturn_sound:
+  assumes valid_call: "\<forall>n. \<Gamma>,\<Theta> \<Turnstile>n:\<^bsub>/F\<^esub> P call init p return' c Q,A"
+  assumes valid_modif:
+    "\<forall>\<sigma>. \<forall>n. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/UNIV\<^esub> {\<sigma>} Call p (Modif \<sigma>),(ModifAbr \<sigma>)"
+  assumes ret_modif:
+    "\<forall>s t. t \<in> Modif (init s)
+           \<longrightarrow> return' s t = return s t"
+  assumes ret_modifAbr: "\<forall>s t. t \<in> ModifAbr (init s)
+                             \<longrightarrow> return' s t = return s t"
+  shows "\<Gamma>,\<Theta> \<Turnstile>n:\<^bsub>/F\<^esub> P (call init p return c) Q,A"
+  using valid_call valid_modif ret_modif ret_modifAbr
+  unfolding call_call_exn
+  by (rule Proc_exnModifyReturn_sound)
+
+lemma Proc_exnModifyReturn:
+  assumes spec: "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P (call_exn init p return' result_exn c) Q,A"
+  assumes result_conform:
+      "\<forall>s t. t \<in> Modif (init s) \<longrightarrow> (return' s t) = (return s t)"
+  assumes return_conform:
+      "\<forall>s t. t \<in> ModifAbr (init s)
+             \<longrightarrow> (result_exn (return' s t) t) = (result_exn (return s t) t)"
+  assumes modifies_spec:
+  "\<forall>\<sigma>. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} Call p (Modif \<sigma>),(ModifAbr \<sigma>)"
+  shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P (call_exn init p return result_exn c) Q,A"
+apply (rule hoare_complete')
+apply (rule allI)
+apply (rule Proc_exnModifyReturn_sound
+          [where Modif=Modif and ModifAbr=ModifAbr,
+            OF _ _ result_conform return_conform] )
+using spec
+apply (blast intro: hoare_cnvalid)
+using modifies_spec
+apply (blast intro: hoare_cnvalid)
+done
 
 lemma ProcModifyReturn:
   assumes spec: "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P (call init p return' c) Q,A"
@@ -1440,37 +1455,30 @@ lemma ProcModifyReturn:
              \<longrightarrow> (return' s t) = (return s t)"
   assumes modifies_spec:
   "\<forall>\<sigma>. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} Call p (Modif \<sigma>),(ModifAbr \<sigma>)"
-  shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P (call init p return c) Q,A"
-apply (rule hoare_complete')
-apply (rule allI)
-apply (rule ProcModifyReturn_sound
-          [where Modif=Modif and ModifAbr=ModifAbr,
-            OF _ _ result_conform return_conform] )
-using spec
-apply (blast intro: hoare_cnvalid)
-using modifies_spec
-apply (blast intro: hoare_cnvalid)
-done
+shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P (call init p return c) Q,A"
+  using spec result_conform return_conform modifies_spec
+  unfolding call_call_exn
+  by (rule Proc_exnModifyReturn)
 
-lemma ProcModifyReturnSameFaults_sound:
-  assumes valid_call: "\<forall>n. \<Gamma>,\<Theta> \<Turnstile>n:\<^bsub>/F\<^esub> P call init p return' c Q,A"
+lemma Proc_exnModifyReturnSameFaults_sound:
+  assumes valid_call: "\<forall>n. \<Gamma>,\<Theta> \<Turnstile>n:\<^bsub>/F\<^esub> P call_exn init p return' result_exn c Q,A"
   assumes valid_modif:
     "\<forall>\<sigma>. \<forall>n. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> {\<sigma>} Call p (Modif \<sigma>),(ModifAbr \<sigma>)"
   assumes ret_modif:
     "\<forall>s t. t \<in> Modif (init s)
            \<longrightarrow> return' s t = return s t"
   assumes ret_modifAbr: "\<forall>s t. t \<in> ModifAbr (init s)
-                             \<longrightarrow> return' s t = return s t"
-  shows "\<Gamma>,\<Theta> \<Turnstile>n:\<^bsub>/F\<^esub> P (call init p return c) Q,A"
+                             \<longrightarrow> result_exn (return' s t) t = result_exn (return s t) t"
+  shows "\<Gamma>,\<Theta> \<Turnstile>n:\<^bsub>/F\<^esub> P (call_exn init p return result_exn c) Q,A"
 proof (rule cnvalidI)
   fix s t
   assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma> \<Turnstile>n:\<^bsub>/F\<^esub> P (Call p) Q,A"
-  assume exec: "\<Gamma>\<turnstile>\<langle>call init p return c,Normal s\<rangle> =n\<Rightarrow> t"
+  assume exec: "\<Gamma>\<turnstile>\<langle>call_exn init p return result_exn c,Normal s\<rangle> =n\<Rightarrow> t"
   assume P: "s \<in> P"
   assume t_notin_F: "t \<notin> Fault ` F"
   from exec
   show "t \<in> Normal ` Q \<union> Abrupt ` A"
-  proof (cases rule: execn_call_Normal_elim)
+  proof (cases rule: execn_call_exn_Normal_elim)
     fix bdy m t'
     assume bdy: "\<Gamma> p = Some bdy"
     assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Normal t'"
@@ -1486,8 +1494,8 @@ proof (rule cnvalidI)
       Normal (return s t')"
       by simp
     with exec_body exec_c bdy n
-    have "\<Gamma>\<turnstile>\<langle>call init p return' c,Normal s\<rangle> =n\<Rightarrow> t"
-      by (auto intro: execn_call)
+    have "\<Gamma>\<turnstile>\<langle>call_exn init p return' result_exn c,Normal s\<rangle> =n\<Rightarrow> t"
+      by (auto intro: execn_call_exn)
     from cnvalidD [OF valid_call [rule_format] ctxt this] P t_notin_F
     show ?thesis
       by simp
@@ -1496,7 +1504,7 @@ proof (rule cnvalidI)
     assume bdy: "\<Gamma> p = Some bdy"
     assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Abrupt t'"
     assume n: "n = Suc m"
-    assume t: "t = Abrupt (return s t')"
+    assume t: "t = Abrupt (result_exn (return s t') t')"
     also
     from exec_body n bdy
     have "\<Gamma>\<turnstile>\<langle>Call p,Normal (init s)\<rangle> =n \<Rightarrow> Abrupt t'"
@@ -1504,12 +1512,12 @@ proof (rule cnvalidI)
     from cnvalidD [OF valid_modif [rule_format, of n "init s"] ctxt this] P
     have "t' \<in> ModifAbr (init s)"
       by auto
-    with ret_modifAbr have "Abrupt (return s t') = Abrupt (return' s t')"
+    with ret_modifAbr have "Abrupt (result_exn (return s t') t') = Abrupt (result_exn (return' s t') t')"
       by simp
-    finally have "t = Abrupt (return' s t')" .
+    finally have "t = Abrupt (result_exn (return' s t') t')" .
     with exec_body bdy n
-    have "\<Gamma>\<turnstile>\<langle>call init p return' c,Normal s\<rangle> =n\<Rightarrow> t"
-      by (auto intro: execn_callAbrupt)
+    have "\<Gamma>\<turnstile>\<langle>call_exn init p return' result_exn c,Normal s\<rangle> =n\<Rightarrow> t"
+      by (auto intro: execn_call_exnAbrupt)
     from cnvalidD [OF valid_call [rule_format] ctxt this] P t_notin_F
     show ?thesis
       by simp
@@ -1518,8 +1526,8 @@ proof (rule cnvalidI)
     assume bdy: "\<Gamma> p = Some bdy"
     assume "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Fault f" "n = Suc m"  and
       t: "t = Fault f"
-    with bdy have "\<Gamma>\<turnstile>\<langle>call init p return' c ,Normal s\<rangle> =n\<Rightarrow> t"
-      by (auto intro: execn_callFault)
+    with bdy have "\<Gamma>\<turnstile>\<langle>call_exn init p return' result_exn c ,Normal s\<rangle> =n\<Rightarrow> t"
+      by (auto intro: execn_call_exnFault)
     from cnvalidD [OF valid_call [rule_format] ctxt this P] t t_notin_F
     show ?thesis
       by simp
@@ -1528,8 +1536,8 @@ proof (rule cnvalidI)
     assume bdy: "\<Gamma> p = Some bdy"
     assume "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Stuck" "n = Suc m"
       "t = Stuck"
-    with bdy have "\<Gamma>\<turnstile>\<langle>call init p return' c ,Normal s\<rangle> =n\<Rightarrow> t"
-      by (auto intro: execn_callStuck)
+    with bdy have "\<Gamma>\<turnstile>\<langle>call_exn init p return' result_exn c ,Normal s\<rangle> =n\<Rightarrow> t"
+      by (auto intro: execn_call_exnStuck)
     from valid_call [rule_format] ctxt this P t_notin_F
     show ?thesis
       by (rule cnvalidD)
@@ -1537,13 +1545,48 @@ proof (rule cnvalidI)
     fix m
     assume "\<Gamma> p = None"
     and  "n = Suc m" "t = Stuck"
-    then have "\<Gamma>\<turnstile>\<langle>call init p return' c ,Normal s\<rangle> =n\<Rightarrow> t"
-      by (auto intro: execn_callUndefined)
+    then have "\<Gamma>\<turnstile>\<langle>call_exn init p return' result_exn c ,Normal s\<rangle> =n\<Rightarrow> t"
+      by (auto intro: execn_call_exnUndefined)
     from valid_call [rule_format] ctxt this P t_notin_F
     show ?thesis
       by (rule cnvalidD)
   qed
 qed
+
+lemma ProcModifyReturnSameFaults_sound:
+  assumes valid_call: "\<forall>n. \<Gamma>,\<Theta> \<Turnstile>n:\<^bsub>/F\<^esub> P call init p return' c Q,A"
+  assumes valid_modif:
+    "\<forall>\<sigma>. \<forall>n. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> {\<sigma>} Call p (Modif \<sigma>),(ModifAbr \<sigma>)"
+  assumes ret_modif:
+    "\<forall>s t. t \<in> Modif (init s)
+           \<longrightarrow> return' s t = return s t"
+  assumes ret_modifAbr: "\<forall>s t. t \<in> ModifAbr (init s)
+                             \<longrightarrow> return' s t = return s t"
+  shows "\<Gamma>,\<Theta> \<Turnstile>n:\<^bsub>/F\<^esub> P (call init p return c) Q,A"
+  using valid_call valid_modif ret_modif ret_modifAbr
+  unfolding call_call_exn
+  by (rule Proc_exnModifyReturnSameFaults_sound)
+
+
+lemma Proc_exnModifyReturnSameFaults:
+  assumes spec: "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P (call_exn init p return' result_exn c) Q,A"
+  assumes result_conform:
+      "\<forall>s t. t \<in> Modif (init s) \<longrightarrow> (return' s t) = (return s t)"
+  assumes return_conform:
+  "\<forall>s t. t \<in> ModifAbr (init s) \<longrightarrow> (result_exn (return' s t) t) = (result_exn (return s t) t)"
+  assumes modifies_spec:
+  "\<forall>\<sigma>. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {\<sigma>} Call p (Modif \<sigma>),(ModifAbr \<sigma>)"
+  shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P (call_exn init p return result_exn c) Q,A"
+apply (rule hoare_complete')
+apply (rule allI)
+apply (rule Proc_exnModifyReturnSameFaults_sound
+          [where Modif=Modif and ModifAbr=ModifAbr,
+         OF _ _ result_conform return_conform])
+using spec
+apply (blast intro: hoare_cnvalid)
+using modifies_spec
+apply (blast intro: hoare_cnvalid)
+done
 
 
 lemma ProcModifyReturnSameFaults:
@@ -1554,19 +1597,145 @@ lemma ProcModifyReturnSameFaults:
   "\<forall>s t. t \<in> ModifAbr (init s) \<longrightarrow> (return' s t) = (return s t)"
   assumes modifies_spec:
   "\<forall>\<sigma>. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {\<sigma>} Call p (Modif \<sigma>),(ModifAbr \<sigma>)"
-  shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P (call init p return c) Q,A"
-apply (rule hoare_complete')
-apply (rule allI)
-apply (rule ProcModifyReturnSameFaults_sound
-          [where Modif=Modif and ModifAbr=ModifAbr,
-         OF _ _ result_conform return_conform])
-using spec
-apply (blast intro: hoare_cnvalid)
-using modifies_spec
-apply (blast intro: hoare_cnvalid)
-done
+shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P (call init p return c) Q,A"
+  using spec result_conform return_conform modifies_spec
+  unfolding call_call_exn
+  by (rule Proc_exnModifyReturnSameFaults)
+
 
 subsubsection \<open>DynCall\<close>
+
+
+
+lemma dynProc_exnModifyReturn_sound:
+assumes valid_call: "\<And>n. \<Gamma>,\<Theta> \<Turnstile>n:\<^bsub>/F\<^esub> P dynCall_exn f g init p return' result_exn c Q,A"
+assumes valid_modif:
+    "\<forall>s \<in> P. \<forall>\<sigma>. \<forall>n.
+       \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/UNIV\<^esub> {\<sigma>} Call (p s) (Modif \<sigma>),(ModifAbr \<sigma>)"
+assumes ret_modif:
+    "\<forall>s t. t \<in> Modif (init s)
+           \<longrightarrow> return' s t = return s t"
+assumes ret_modifAbr: "\<forall>s t. t \<in> ModifAbr (init s)
+                             \<longrightarrow> result_exn (return' s t) t = result_exn (return s t) t"
+shows "\<Gamma>,\<Theta> \<Turnstile>n:\<^bsub>/F\<^esub> P (dynCall_exn f g init p return result_exn c) Q,A"
+proof (rule cnvalidI)
+  fix s t
+  assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma> \<Turnstile>n:\<^bsub>/F\<^esub> P (Call p) Q,A"
+  then have ctxt': "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma> \<Turnstile>n:\<^bsub>/UNIV\<^esub> P (Call p) Q,A"
+    by (auto intro: nvalid_augment_Faults)
+  assume exec: "\<Gamma>\<turnstile>\<langle>dynCall_exn f g init p return result_exn c,Normal s\<rangle> =n\<Rightarrow> t"
+  assume t_notin_F: "t \<notin> Fault ` F"
+  assume P: "s \<in> P"
+  with valid_modif
+  have valid_modif': "\<forall>\<sigma>. \<forall>n.
+       \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/UNIV\<^esub> {\<sigma>} Call (p s) (Modif \<sigma>),(ModifAbr \<sigma>)"
+    by blast
+  from exec thm execn_Normal_elim_cases
+  have exec_call: "\<Gamma>\<turnstile>\<langle>maybe_guard f g (call_exn init (p s) return result_exn c),Normal s\<rangle> =n\<Rightarrow> t"
+    by (cases rule: execn_dynCall_exn_Normal_elim)
+  then show "t \<in> Normal ` Q \<union> Abrupt ` A"
+  proof (cases rule: execn_maybe_guard_Normal_elim_cases)
+    case noFault
+    from noFault have guards_ok: "s \<in> g" by simp
+    from noFault have "\<Gamma>\<turnstile> \<langle>call_exn init (p s) return result_exn c,Normal s\<rangle> =n\<Rightarrow> t" by simp
+    then show "t \<in> Normal ` Q \<union> Abrupt ` A"
+    proof (cases rule: execn_call_exn_Normal_elim)
+      fix bdy m t'
+      assume bdy: "\<Gamma> (p s) = Some bdy"
+      assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Normal t'"
+      assume exec_c: "\<Gamma>\<turnstile>\<langle>c s t',Normal (return s t')\<rangle> =Suc m\<Rightarrow> t"
+      assume n: "n = Suc m"
+      from exec_body n bdy
+      have "\<Gamma>\<turnstile>\<langle>Call (p s) ,Normal (init s)\<rangle> =n\<Rightarrow> Normal t'"
+        by (auto simp add: intro: execn.intros)
+      from cnvalidD [OF valid_modif' [rule_format, of n "init s"] ctxt' this] P
+      have "t' \<in> Modif (init s)"
+        by auto
+      with ret_modif have "Normal (return' s t') = Normal (return s t')"
+        by simp
+      with exec_body exec_c bdy n
+      have "\<Gamma>\<turnstile>\<langle>call_exn init (p s) return' result_exn c,Normal s\<rangle> =n\<Rightarrow> t"
+        by (auto intro: execn_call_exn)
+      from execn_maybe_guard_noFault [OF this guards_ok]
+      have "\<Gamma>\<turnstile>\<langle>dynCall_exn f g init p return' result_exn c,Normal s\<rangle> =n\<Rightarrow> t"
+        by (simp add: dynCall_exn_def execn_maybe_guard_DynCom)
+      from cnvalidD [OF valid_call ctxt this] P t_notin_F
+      show ?thesis
+        by simp
+    next
+      fix bdy m t'
+      assume bdy: "\<Gamma> (p s) = Some bdy"
+      assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Abrupt t'"
+      assume n: "n = Suc m"
+      assume t: "t = Abrupt (result_exn (return s t') t')"
+      also from exec_body n bdy
+      have "\<Gamma>\<turnstile>\<langle>Call (p s) ,Normal (init s)\<rangle> =n\<Rightarrow> Abrupt t'"
+        by (auto simp add: intro: execn.intros)
+      from cnvalidD [OF valid_modif' [rule_format, of n "init s"] ctxt' this] P
+      have "t' \<in> ModifAbr (init s)"
+        by auto
+      with ret_modifAbr have "Abrupt (result_exn (return s t') t') = Abrupt (result_exn (return' s t') t')"
+        by simp
+      finally have "t = Abrupt (result_exn (return' s t') t')" .
+      with exec_body bdy n
+      have "\<Gamma>\<turnstile>\<langle>call_exn init (p s) return' result_exn c,Normal s\<rangle> =n\<Rightarrow> t"
+        by (auto intro: execn_call_exnAbrupt)
+      from execn_maybe_guard_noFault [OF this guards_ok]
+      have "\<Gamma>\<turnstile>\<langle>dynCall_exn f g init p return' result_exn c,Normal s\<rangle> =n\<Rightarrow> t"
+        by (simp add: dynCall_exn_def execn_maybe_guard_DynCom)
+      from cnvalidD [OF valid_call ctxt this] P t_notin_F
+      show ?thesis
+        by simp
+    next
+      fix bdy m f'
+      assume bdy: "\<Gamma> (p s) = Some bdy"
+      assume "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Fault f'" "n = Suc m"
+        "t = Fault f'"
+      with bdy have "\<Gamma>\<turnstile>\<langle>call_exn init (p s) return' result_exn c ,Normal s\<rangle> =n\<Rightarrow> t"
+        by (auto intro: execn_call_exnFault)
+      from execn_maybe_guard_noFault [OF this guards_ok]
+      have "\<Gamma>\<turnstile>\<langle>dynCall_exn f g init p return' result_exn c,Normal s\<rangle> =n\<Rightarrow> t"
+        by (simp add: dynCall_exn_def execn_maybe_guard_DynCom)
+      from valid_call ctxt this P t_notin_F
+      show ?thesis
+        by (rule cnvalidD)
+    next
+      fix bdy m
+      assume bdy: "\<Gamma> (p s) = Some bdy"
+      assume "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Stuck" "n = Suc m"
+        "t = Stuck"
+      with bdy have "\<Gamma>\<turnstile>\<langle>call_exn init (p s) return' result_exn c ,Normal s\<rangle> =n\<Rightarrow> t"
+        by (auto intro: execn_call_exnStuck)
+      from execn_maybe_guard_noFault [OF this guards_ok]
+      have "\<Gamma>\<turnstile>\<langle>dynCall_exn f g init p return' result_exn c,Normal s\<rangle> =n\<Rightarrow> t"
+        by (simp add: dynCall_exn_def execn_maybe_guard_DynCom)
+      from valid_call ctxt this P t_notin_F
+      show ?thesis
+        by (rule cnvalidD)
+    next
+      fix m
+      assume "\<Gamma> (p s) = None"
+      and  "n = Suc m" "t = Stuck"
+      hence "\<Gamma>\<turnstile>\<langle>call_exn init (p s) return' result_exn c ,Normal s\<rangle> =n\<Rightarrow> t"
+        by (auto intro: execn_call_exnUndefined)
+      from execn_maybe_guard_noFault [OF this guards_ok]
+      have "\<Gamma>\<turnstile>\<langle>dynCall_exn f g init p return' result_exn c,Normal s\<rangle> =n\<Rightarrow> t"
+        by (simp add: dynCall_exn_def execn_maybe_guard_DynCom)
+      from valid_call ctxt this P t_notin_F
+      show ?thesis
+        by (rule cnvalidD)
+    qed
+  next
+    case (someFault)
+    then obtain guards_fail:"s \<notin> g"
+      and t: "t = Fault f" by simp
+    from execn_maybe_guard_Fault [OF guards_fail] t
+    have "\<Gamma>\<turnstile>\<langle>dynCall_exn f g init p return' result_exn c,Normal s\<rangle> =n\<Rightarrow> t"
+      by (simp add: dynCall_exn_def execn_maybe_guard_DynCom)
+    from cnvalidD [OF valid_call ctxt this] P t_notin_F
+    show ?thesis by simp
+  qed
+qed
 
 lemma dynProcModifyReturn_sound:
 assumes valid_call: "\<And>n. \<Gamma>,\<Theta> \<Turnstile>n:\<^bsub>/F\<^esub> P dynCall init p return' c Q,A"
@@ -1579,104 +1748,30 @@ assumes ret_modif:
 assumes ret_modifAbr: "\<forall>s t. t \<in> ModifAbr (init s)
                              \<longrightarrow> return' s t = return s t"
 shows "\<Gamma>,\<Theta> \<Turnstile>n:\<^bsub>/F\<^esub> P (dynCall init p return c) Q,A"
-proof (rule cnvalidI)
-  fix s t
-  assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma> \<Turnstile>n:\<^bsub>/F\<^esub> P (Call p) Q,A"
-  then have ctxt': "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma> \<Turnstile>n:\<^bsub>/UNIV\<^esub> P (Call p) Q,A"
-    by (auto intro: nvalid_augment_Faults)
-  assume exec: "\<Gamma>\<turnstile>\<langle>dynCall init p return c,Normal s\<rangle> =n\<Rightarrow> t"
-  assume t_notin_F: "t \<notin> Fault ` F"
-  assume P: "s \<in> P"
-  with valid_modif
-  have valid_modif': "\<forall>\<sigma>. \<forall>n.
-       \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/UNIV\<^esub> {\<sigma>} Call (p s) (Modif \<sigma>),(ModifAbr \<sigma>)"
-    by blast
-  from exec
-  have "\<Gamma>\<turnstile>\<langle>call init (p s) return c,Normal s\<rangle> =n\<Rightarrow> t"
-    by (cases rule: execn_dynCall_Normal_elim)
-  then show "t \<in> Normal ` Q \<union> Abrupt ` A"
-  proof (cases rule: execn_call_Normal_elim)
-    fix bdy m t'
-    assume bdy: "\<Gamma> (p s) = Some bdy"
-    assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Normal t'"
-    assume exec_c: "\<Gamma>\<turnstile>\<langle>c s t',Normal (return s t')\<rangle> =Suc m\<Rightarrow> t"
-    assume n: "n = Suc m"
-    from exec_body n bdy
-    have "\<Gamma>\<turnstile>\<langle>Call (p s) ,Normal (init s)\<rangle> =n\<Rightarrow> Normal t'"
-      by (auto simp add: intro: execn.intros)
-    from cnvalidD [OF valid_modif' [rule_format, of n "init s"] ctxt' this] P
-    have "t' \<in> Modif (init s)"
-      by auto
-    with ret_modif have "Normal (return' s t') = Normal (return s t')"
-      by simp
-    with exec_body exec_c bdy n
-    have "\<Gamma>\<turnstile>\<langle>call init (p s) return' c,Normal s\<rangle> =n\<Rightarrow> t"
-      by (auto intro: execn_call)
-    hence "\<Gamma>\<turnstile>\<langle>dynCall init p return' c,Normal s\<rangle> =n\<Rightarrow> t"
-      by (rule execn_dynCall)
-    from cnvalidD [OF valid_call ctxt this] P t_notin_F
-    show ?thesis
-      by simp
-  next
-    fix bdy m t'
-    assume bdy: "\<Gamma> (p s) = Some bdy"
-    assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Abrupt t'"
-    assume n: "n = Suc m"
-    assume t: "t = Abrupt (return s t')"
-    also from exec_body n bdy
-    have "\<Gamma>\<turnstile>\<langle>Call (p s) ,Normal (init s)\<rangle> =n\<Rightarrow> Abrupt t'"
-      by (auto simp add: intro: execn.intros)
-    from cnvalidD [OF valid_modif' [rule_format, of n "init s"] ctxt' this] P
-    have "t' \<in> ModifAbr (init s)"
-      by auto
-    with ret_modifAbr have "Abrupt (return s t') = Abrupt (return' s t')"
-      by simp
-    finally have "t = Abrupt (return' s t')" .
-    with exec_body bdy n
-    have "\<Gamma>\<turnstile>\<langle>call init (p s) return' c,Normal s\<rangle> =n\<Rightarrow> t"
-      by (auto intro: execn_callAbrupt)
-    hence "\<Gamma>\<turnstile>\<langle>dynCall init p return' c,Normal s\<rangle> =n\<Rightarrow> t"
-      by (rule execn_dynCall)
-    from cnvalidD [OF valid_call ctxt this] P t_notin_F
-    show ?thesis
-      by simp
-  next
-    fix bdy m f
-    assume bdy: "\<Gamma> (p s) = Some bdy"
-    assume "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Fault f" "n = Suc m"
-      "t = Fault f"
-    with bdy have "\<Gamma>\<turnstile>\<langle>call init (p s) return' c ,Normal s\<rangle> =n\<Rightarrow> t"
-      by (auto intro: execn_callFault)
-    hence "\<Gamma>\<turnstile>\<langle>dynCall init p return' c,Normal s\<rangle> =n\<Rightarrow> t"
-      by (rule execn_dynCall)
-    from valid_call ctxt this P t_notin_F
-    show ?thesis
-      by (rule cnvalidD)
-  next
-    fix bdy m
-    assume bdy: "\<Gamma> (p s) = Some bdy"
-    assume "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Stuck" "n = Suc m"
-      "t = Stuck"
-    with bdy have "\<Gamma>\<turnstile>\<langle>call init (p s) return' c ,Normal s\<rangle> =n\<Rightarrow> t"
-      by (auto intro: execn_callStuck)
-    hence "\<Gamma>\<turnstile>\<langle>dynCall init p return' c,Normal s\<rangle> =n\<Rightarrow> t"
-      by (rule execn_dynCall)
-    from valid_call ctxt this P t_notin_F
-    show ?thesis
-      by (rule cnvalidD)
-  next
-    fix m
-    assume "\<Gamma> (p s) = None"
-    and  "n = Suc m" "t = Stuck"
-    hence "\<Gamma>\<turnstile>\<langle>call init (p s) return' c ,Normal s\<rangle> =n\<Rightarrow> t"
-      by (auto intro: execn_callUndefined)
-    hence "\<Gamma>\<turnstile>\<langle>dynCall init p return' c,Normal s\<rangle> =n\<Rightarrow> t"
-      by (rule execn_dynCall)
-    from valid_call ctxt this P t_notin_F
-    show ?thesis
-      by (rule cnvalidD)
-  qed
-qed
+  using valid_call valid_modif ret_modif ret_modifAbr
+  unfolding dynCall_dynCall_exn
+  by (rule dynProc_exnModifyReturn_sound)
+
+
+lemma dynProc_exnModifyReturn:
+assumes dyn_call: "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P dynCall_exn f g init p return' result_exn c Q,A"
+assumes ret_modif:
+    "\<forall>s t. t \<in> Modif (init s)
+           \<longrightarrow> return' s t = return s t"
+assumes ret_modifAbr: "\<forall>s t. t \<in> ModifAbr (init s)
+                             \<longrightarrow> result_exn (return' s t) t = result_exn (return s t) t"
+assumes modif:
+    "\<forall>s \<in> P. \<forall>\<sigma>.
+       \<Gamma>,\<Theta>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} Call (p s) (Modif \<sigma>),(ModifAbr \<sigma>)"
+shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P (dynCall_exn f g init p return result_exn c) Q,A"
+apply (rule hoare_complete')
+apply (rule allI)
+apply (rule dynProc_exnModifyReturn_sound [where Modif=Modif and ModifAbr=ModifAbr,
+          OF hoare_cnvalid [OF dyn_call] _ ret_modif ret_modifAbr])
+apply (intro ballI allI)
+apply (rule hoare_cnvalid [OF modif [rule_format]])
+apply assumption
+done
 
 lemma dynProcModifyReturn:
 assumes dyn_call: "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P dynCall init p return' c Q,A"
@@ -1688,15 +1783,138 @@ assumes ret_modifAbr: "\<forall>s t. t \<in> ModifAbr (init s)
 assumes modif:
     "\<forall>s \<in> P. \<forall>\<sigma>.
        \<Gamma>,\<Theta>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} Call (p s) (Modif \<sigma>),(ModifAbr \<sigma>)"
-shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P (dynCall init p return c) Q,A"
-apply (rule hoare_complete')
-apply (rule allI)
-apply (rule dynProcModifyReturn_sound [where Modif=Modif and ModifAbr=ModifAbr,
-          OF hoare_cnvalid [OF dyn_call] _ ret_modif ret_modifAbr])
-apply (intro ballI allI)
-apply (rule hoare_cnvalid [OF modif [rule_format]])
-apply assumption
-done
+  shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P (dynCall init p return c) Q,A"
+  using dyn_call ret_modif ret_modifAbr modif
+  unfolding dynCall_dynCall_exn
+  by (rule dynProc_exnModifyReturn)
+
+lemma dynProc_exnModifyReturnSameFaults_sound:
+assumes valid_call: "\<And>n. \<Gamma>,\<Theta> \<Turnstile>n:\<^bsub>/F\<^esub> P dynCall_exn f g init p return' result_exn c Q,A"
+assumes valid_modif:
+    "\<forall>s \<in> P. \<forall>\<sigma>. \<forall>n.
+       \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> {\<sigma>} Call (p s) (Modif \<sigma>),(ModifAbr \<sigma>)"
+assumes ret_modif:
+    "\<forall>s t. t \<in> Modif (init s) \<longrightarrow> return' s t = return s t"
+assumes ret_modifAbr: "\<forall>s t. t \<in> ModifAbr (init s) \<longrightarrow> result_exn (return' s t) t = result_exn (return s t) t"
+shows "\<Gamma>,\<Theta> \<Turnstile>n:\<^bsub>/F\<^esub> P (dynCall_exn f g init p return result_exn c) Q,A"
+proof (rule cnvalidI)
+  fix s t
+  assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma> \<Turnstile>n:\<^bsub>/F\<^esub> P (Call p) Q,A"
+  assume exec: "\<Gamma>\<turnstile>\<langle>dynCall_exn f g init p return result_exn c,Normal s\<rangle> =n\<Rightarrow> t"
+  assume t_notin_F: "t \<notin> Fault ` F"
+  assume P: "s \<in> P"
+  with valid_modif
+  have valid_modif': "\<forall>\<sigma>. \<forall>n.
+    \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> {\<sigma>} Call (p s) (Modif \<sigma>),(ModifAbr \<sigma>)"
+    by blast
+  from exec
+  have exec_call: "\<Gamma>\<turnstile>\<langle>maybe_guard f g (call_exn init (p s) return result_exn c),Normal s\<rangle> =n\<Rightarrow> t"
+    by (cases rule: execn_dynCall_exn_Normal_elim)
+  then show "t \<in> Normal ` Q \<union> Abrupt ` A"
+  proof (cases rule: execn_maybe_guard_Normal_elim_cases)
+    case noFault
+    from noFault have guards_ok: "s \<in> g" by simp
+    from noFault have "\<Gamma>\<turnstile> \<langle>call_exn init (p s) return result_exn c,Normal s\<rangle> =n\<Rightarrow> t" by simp
+    then show "t \<in> Normal ` Q \<union> Abrupt ` A"
+
+    proof (cases rule: execn_call_exn_Normal_elim)
+      fix bdy m t'
+      assume bdy: "\<Gamma> (p s) = Some bdy"
+      assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Normal t'"
+      assume exec_c: "\<Gamma>\<turnstile>\<langle>c s t',Normal (return s t')\<rangle> =Suc m\<Rightarrow> t"
+      assume n: "n = Suc m"
+      from exec_body n bdy
+      have "\<Gamma>\<turnstile>\<langle>Call (p s) ,Normal (init s)\<rangle> =n \<Rightarrow> Normal t'"
+        by (auto simp add: intro: execn.Call)
+      from cnvalidD [OF valid_modif' [rule_format, of n "init s"] ctxt this] P
+      have "t' \<in> Modif (init s)"
+        by auto
+      with ret_modif have "Normal (return' s t') = Normal (return s t')"
+        by simp
+      with exec_body exec_c bdy n
+      have "\<Gamma>\<turnstile>\<langle>call_exn init (p s) return' result_exn c,Normal s\<rangle> =n\<Rightarrow> t"
+        by (auto intro: execn_call_exn)
+      from execn_maybe_guard_noFault [OF this guards_ok]
+      have "\<Gamma>\<turnstile>\<langle>dynCall_exn f g init p return' result_exn c,Normal s\<rangle> =n\<Rightarrow> t"
+        by (simp add: dynCall_exn_def execn_maybe_guard_DynCom)
+      from cnvalidD [OF valid_call ctxt this] P t_notin_F
+      show ?thesis
+        by simp
+    next
+      fix bdy m t'
+      assume bdy: "\<Gamma> (p s) = Some bdy"
+      assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Abrupt t'"
+      assume n: "n = Suc m"
+      assume t: "t = Abrupt (result_exn (return s t') t')"
+      also from exec_body n bdy
+      have "\<Gamma>\<turnstile>\<langle>Call (p s) ,Normal (init s)\<rangle> =n \<Rightarrow> Abrupt t'"
+        by (auto simp add: intro: execn.intros)
+      from cnvalidD [OF valid_modif' [rule_format, of n "init s"] ctxt this] P
+      have "t' \<in> ModifAbr (init s)"
+        by auto
+      with ret_modifAbr have "Abrupt (result_exn (return s t') t') = Abrupt (result_exn (return' s t') t')"
+        by simp
+      finally have "t = Abrupt (result_exn (return' s t') t')" .
+      with exec_body bdy n
+      have "\<Gamma>\<turnstile>\<langle>call_exn init (p s) return' result_exn c,Normal s\<rangle> =n\<Rightarrow> t"
+        by (auto intro: execn_call_exnAbrupt)
+      from execn_maybe_guard_noFault [OF this guards_ok]
+      have "\<Gamma>\<turnstile>\<langle>dynCall_exn f g init p return' result_exn c,Normal s\<rangle> =n\<Rightarrow> t"
+        by (simp add: dynCall_exn_def execn_maybe_guard_DynCom)
+      from cnvalidD [OF valid_call ctxt this] P t_notin_F
+      show ?thesis
+        by simp
+    next
+      fix bdy m f'
+      assume bdy: "\<Gamma> (p s) = Some bdy"
+      assume "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Fault f'" "n = Suc m"  and
+        t: "t = Fault f'"
+      with bdy have "\<Gamma>\<turnstile>\<langle>call_exn init (p s) return' result_exn c ,Normal s\<rangle> =n\<Rightarrow> t"
+        by (auto intro: execn_call_exnFault)
+      from execn_maybe_guard_noFault [OF this guards_ok]
+      have "\<Gamma>\<turnstile>\<langle>dynCall_exn f g init p return' result_exn c,Normal s\<rangle> =n\<Rightarrow> t"
+        by (simp add: dynCall_exn_def execn_maybe_guard_DynCom)
+      from cnvalidD [OF valid_call ctxt this P] t t_notin_F
+      show ?thesis
+        by simp
+    next
+      fix bdy m
+      assume bdy: "\<Gamma> (p s) = Some bdy"
+      assume "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Stuck" "n = Suc m"
+        "t = Stuck"
+      with bdy have "\<Gamma>\<turnstile>\<langle>call_exn init (p s) return' result_exn c ,Normal s\<rangle> =n\<Rightarrow> t"
+        by (auto intro: execn_call_exnStuck)
+      from execn_maybe_guard_noFault [OF this guards_ok]
+      have "\<Gamma>\<turnstile>\<langle>dynCall_exn f g init p return' result_exn c,Normal s\<rangle> =n\<Rightarrow> t"
+        by (simp add: dynCall_exn_def execn_maybe_guard_DynCom)
+      from valid_call ctxt this P t_notin_F
+      show ?thesis
+        by (rule cnvalidD)
+    next
+      fix m
+      assume "\<Gamma> (p s) = None"
+      and  "n = Suc m" "t = Stuck"
+      hence "\<Gamma>\<turnstile>\<langle>call_exn init (p s) return' result_exn c ,Normal s\<rangle> =n\<Rightarrow> t"
+        by (auto intro: execn_call_exnUndefined)
+      from execn_maybe_guard_noFault [OF this guards_ok]
+      have "\<Gamma>\<turnstile>\<langle>dynCall_exn f g init p return' result_exn c,Normal s\<rangle> =n\<Rightarrow> t"
+        by (simp add: dynCall_exn_def execn_maybe_guard_DynCom)
+      from valid_call ctxt this P t_notin_F
+      show ?thesis
+        by (rule cnvalidD)
+    qed
+  next
+    case (someFault)
+    then obtain guards_fail:"s \<notin> g"
+      and t: "t = Fault f" by simp
+    from execn_maybe_guard_Fault [OF guards_fail] t
+    have "\<Gamma>\<turnstile>\<langle>dynCall_exn f g init p return' result_exn c,Normal s\<rangle> =n\<Rightarrow> t"
+      by (simp add: dynCall_exn_def execn_guards_DynCom)
+    from cnvalidD [OF valid_call ctxt this] P t_notin_F
+    show ?thesis by simp
+  qed
+qed
+
 
 lemma dynProcModifyReturnSameFaults_sound:
 assumes valid_call: "\<And>n. \<Gamma>,\<Theta> \<Turnstile>n:\<^bsub>/F\<^esub> P dynCall init p return' c Q,A"
@@ -1707,102 +1925,29 @@ assumes ret_modif:
     "\<forall>s t. t \<in> Modif (init s) \<longrightarrow> return' s t = return s t"
 assumes ret_modifAbr: "\<forall>s t. t \<in> ModifAbr (init s) \<longrightarrow> return' s t = return s t"
 shows "\<Gamma>,\<Theta> \<Turnstile>n:\<^bsub>/F\<^esub> P (dynCall init p return c) Q,A"
-proof (rule cnvalidI)
-  fix s t
-  assume ctxt: "\<forall>(P, p, Q, A)\<in>\<Theta>. \<Gamma> \<Turnstile>n:\<^bsub>/F\<^esub> P (Call p) Q,A"
-  assume exec: "\<Gamma>\<turnstile>\<langle>dynCall init p return c,Normal s\<rangle> =n\<Rightarrow> t"
-  assume t_notin_F: "t \<notin> Fault ` F"
-  assume P: "s \<in> P"
-  with valid_modif
-  have valid_modif': "\<forall>\<sigma>. \<forall>n.
-    \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> {\<sigma>} Call (p s) (Modif \<sigma>),(ModifAbr \<sigma>)"
-    by blast
-  from exec
-  have "\<Gamma>\<turnstile>\<langle>call init (p s) return c,Normal s\<rangle> =n\<Rightarrow> t"
-    by (cases rule: execn_dynCall_Normal_elim)
-  then show "t \<in> Normal ` Q \<union> Abrupt ` A"
-  proof (cases rule: execn_call_Normal_elim)
-    fix bdy m t'
-    assume bdy: "\<Gamma> (p s) = Some bdy"
-    assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Normal t'"
-    assume exec_c: "\<Gamma>\<turnstile>\<langle>c s t',Normal (return s t')\<rangle> =Suc m\<Rightarrow> t"
-    assume n: "n = Suc m"
-    from exec_body n bdy
-    have "\<Gamma>\<turnstile>\<langle>Call (p s) ,Normal (init s)\<rangle> =n \<Rightarrow> Normal t'"
-      by (auto simp add: intro: execn.Call)
-    from cnvalidD [OF valid_modif' [rule_format, of n "init s"] ctxt this] P
-    have "t' \<in> Modif (init s)"
-      by auto
-    with ret_modif have "Normal (return' s t') = Normal (return s t')"
-      by simp
-    with exec_body exec_c bdy n
-    have "\<Gamma>\<turnstile>\<langle>call init (p s) return' c,Normal s\<rangle> =n\<Rightarrow> t"
-      by (auto intro: execn_call)
-    hence "\<Gamma>\<turnstile>\<langle>dynCall init p return' c,Normal s\<rangle> =n\<Rightarrow> t"
-      by (rule execn_dynCall)
-    from cnvalidD [OF valid_call ctxt this] P t_notin_F
-    show ?thesis
-      by simp
-  next
-    fix bdy m t'
-    assume bdy: "\<Gamma> (p s) = Some bdy"
-    assume exec_body: "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Abrupt t'"
-    assume n: "n = Suc m"
-    assume t: "t = Abrupt (return s t')"
-    also from exec_body n bdy
-    have "\<Gamma>\<turnstile>\<langle>Call (p s) ,Normal (init s)\<rangle> =n \<Rightarrow> Abrupt t'"
-      by (auto simp add: intro: execn.intros)
-    from cnvalidD [OF valid_modif' [rule_format, of n "init s"] ctxt this] P
-    have "t' \<in> ModifAbr (init s)"
-      by auto
-    with ret_modifAbr have "Abrupt (return s t') = Abrupt (return' s t')"
-      by simp
-    finally have "t = Abrupt (return' s t')" .
-    with exec_body bdy n
-    have "\<Gamma>\<turnstile>\<langle>call init (p s) return' c,Normal s\<rangle> =n\<Rightarrow> t"
-      by (auto intro: execn_callAbrupt)
-    hence "\<Gamma>\<turnstile>\<langle>dynCall init p return' c,Normal s\<rangle> =n\<Rightarrow> t"
-      by (rule execn_dynCall)
-    from cnvalidD [OF valid_call ctxt this] P t_notin_F
-    show ?thesis
-      by simp
-  next
-    fix bdy m f
-    assume bdy: "\<Gamma> (p s) = Some bdy"
-    assume "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Fault f" "n = Suc m"  and
-      t: "t = Fault f"
-    with bdy have "\<Gamma>\<turnstile>\<langle>call init (p s) return' c ,Normal s\<rangle> =n\<Rightarrow> t"
-      by (auto intro: execn_callFault)
-    hence "\<Gamma>\<turnstile>\<langle>dynCall init p return' c,Normal s\<rangle> =n\<Rightarrow> t"
-      by (rule execn_dynCall)
-    from cnvalidD [OF valid_call ctxt this P] t t_notin_F
-    show ?thesis
-      by simp
-  next
-    fix bdy m
-    assume bdy: "\<Gamma> (p s) = Some bdy"
-    assume "\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =m\<Rightarrow> Stuck" "n = Suc m"
-      "t = Stuck"
-    with bdy have "\<Gamma>\<turnstile>\<langle>call init (p s) return' c ,Normal s\<rangle> =n\<Rightarrow> t"
-      by (auto intro: execn_callStuck)
-    hence "\<Gamma>\<turnstile>\<langle>dynCall init p return' c,Normal s\<rangle> =n\<Rightarrow> t"
-      by (rule execn_dynCall)
-    from valid_call ctxt this P t_notin_F
-    show ?thesis
-      by (rule cnvalidD)
-  next
-    fix m
-    assume "\<Gamma> (p s) = None"
-    and  "n = Suc m" "t = Stuck"
-    hence "\<Gamma>\<turnstile>\<langle>call init (p s) return' c ,Normal s\<rangle> =n\<Rightarrow> t"
-      by (auto intro: execn_callUndefined)
-    hence "\<Gamma>\<turnstile>\<langle>dynCall init p return' c,Normal s\<rangle> =n\<Rightarrow> t"
-      by (rule execn_dynCall)
-    from valid_call ctxt this P t_notin_F
-    show ?thesis
-      by (rule cnvalidD)
-  qed
-qed
+  using valid_call valid_modif ret_modif ret_modifAbr
+  unfolding dynCall_dynCall_exn
+  by (rule dynProc_exnModifyReturnSameFaults_sound)
+
+lemma dynProc_exnModifyReturnSameFaults:
+assumes dyn_call: "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P dynCall_exn f g init p return' result_exn c Q,A"
+assumes ret_modif:
+    "\<forall>s t. t \<in> Modif (init s)
+           \<longrightarrow> return' s t = return s t"
+assumes ret_modifAbr: "\<forall>s t. t \<in> ModifAbr (init s)
+                             \<longrightarrow> result_exn (return' s t) t = result_exn (return s t) t"
+assumes modif:
+    "\<forall>s \<in> P. \<forall>\<sigma>. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {\<sigma>} Call (p s) (Modif \<sigma>),(ModifAbr \<sigma>)"
+shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P (dynCall_exn f g init p return result_exn c) Q,A"
+apply (rule hoare_complete')
+apply (rule allI)
+apply (rule dynProc_exnModifyReturnSameFaults_sound
+        [where Modif=Modif and ModifAbr=ModifAbr,
+           OF hoare_cnvalid [OF dyn_call] _ ret_modif ret_modifAbr])
+apply (intro ballI allI)
+apply (rule hoare_cnvalid [OF modif [rule_format]])
+apply assumption
+  done
 
 lemma dynProcModifyReturnSameFaults:
 assumes dyn_call: "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P dynCall init p return' c Q,A"
@@ -1813,16 +1958,10 @@ assumes ret_modifAbr: "\<forall>s t. t \<in> ModifAbr (init s)
                              \<longrightarrow> return' s t = return s t"
 assumes modif:
     "\<forall>s \<in> P. \<forall>\<sigma>. \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> {\<sigma>} Call (p s) (Modif \<sigma>),(ModifAbr \<sigma>)"
-shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P (dynCall init p return c) Q,A"
-apply (rule hoare_complete')
-apply (rule allI)
-apply (rule dynProcModifyReturnSameFaults_sound
-        [where Modif=Modif and ModifAbr=ModifAbr,
-           OF hoare_cnvalid [OF dyn_call] _ ret_modif ret_modifAbr])
-apply (intro ballI allI)
-apply (rule hoare_cnvalid [OF modif [rule_format]])
-apply assumption
-done
+  shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F\<^esub> P (dynCall init p return c) Q,A"
+  using dyn_call ret_modif ret_modifAbr modif
+  unfolding dynCall_dynCall_exn
+  by (rule dynProc_exnModifyReturnSameFaults)
 
 
 subsubsection \<open>Conjunction of Postcondition\<close>

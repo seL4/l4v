@@ -1,28 +1,9 @@
 (*  Author:      Norbert Schirmer
     Maintainer:  Norbert Schirmer, norbert.schirmer at web de
-    License:     LGPL
-*)
-
-(*  Title:      Vcg.thy
-    Author:     Norbert Schirmer, TU Muenchen
 
 Copyright (C) 2004-2008 Norbert Schirmer
-Some rights reserved, TU Muenchen
+Copyright (c) 2022 Apple Inc. All rights reserved.
 
-This library is free software; you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as
-published by the Free Software Foundation; either version 2.1 of the
-License, or (at your option) any later version.
-
-This library is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
-USA
 *)
 
 section \<open>Facilitating the Hoare Logic\<close>
@@ -374,6 +355,9 @@ syntax "_Call" :: "'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)" 
        "_GuardedCall" :: "'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)" ("CALL\<^sub>g __" [1000,1000] 21)
        "_CallAss":: "'a \<Rightarrow> 'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)"
              ("_ :== CALL __" [30,1000,1000] 21)
+       "_Call_exn" :: "'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)" ("CALL\<^sub>e __" [1000,1000] 21)
+       "_CallAss_exn":: "'a \<Rightarrow> 'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)"
+             ("_ :== CALL\<^sub>e __" [30,1000,1000] 21)
        "_Proc" :: "'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)" ("PROC __" 21)
        "_ProcAss":: "'a \<Rightarrow> 'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)"
              ("_ :== PROC __" [30,1000,1000] 21)
@@ -383,6 +367,9 @@ syntax "_Call" :: "'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)" 
        "_GuardedDynCall" :: "'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)" ("DYNCALL\<^sub>g __" [1000,1000] 21)
        "_DynCallAss":: "'a \<Rightarrow> 'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)"
              ("_ :== DYNCALL __" [30,1000,1000] 21)
+       "_DynCall_exn" :: "'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)" ("DYNCALL\<^sub>e __" [1000,1000] 21)
+       "_DynCallAss_exn":: "'a \<Rightarrow> 'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)"
+             ("_ :== DYNCALL\<^sub>e __" [30,1000,1000] 21)
        "_GuardedDynCallAss":: "'a \<Rightarrow> 'p \<Rightarrow> actuals \<Rightarrow> (('a,string,'f) com)"
              ("_ :== DYNCALL\<^sub>g __" [30,1000,1000] 21)
 
@@ -440,7 +427,7 @@ parse_translation \<open>
      |  idx (x::xs) y = if x=y then 0 else (idx xs y)+1
 
     fun gen_update ctxt names (name,t) =
-        Hoare_Syntax.update_comp ctxt [] false true name (Bound (idx names name)) t
+        Hoare_Syntax.update_comp ctxt NONE [] false true name (Bound (idx names name)) t
 
     fun gen_updates ctxt names t = Library.foldr (gen_update ctxt names) (names,t)
 
@@ -528,17 +515,21 @@ parse_translation \<open>
 
 parse_translation \<open>
  [(@{syntax_const "_antiquoteOld"}, Hoare_Syntax.antiquoteOld_tr),
-  (@{syntax_const "_Call"}, Hoare_Syntax.call_tr false false),
+  (@{syntax_const "_Call"}, Hoare_Syntax.call_tr false false []),
+  (@{syntax_const "_Call_exn"}, Hoare_Syntax.call_tr false true []),
   (@{syntax_const "_FCall"}, Hoare_Syntax.fcall_tr),
-  (@{syntax_const "_CallAss"}, Hoare_Syntax.call_ass_tr false false),
-  (@{syntax_const "_GuardedCall"}, Hoare_Syntax.call_tr false true),
-  (@{syntax_const "_GuardedCallAss"}, Hoare_Syntax.call_ass_tr false true),
+  (@{syntax_const "_CallAss"}, Hoare_Syntax.call_ass_tr false false []),
+  (@{syntax_const "_CallAss_exn"}, Hoare_Syntax.call_ass_tr false true []),
+  (@{syntax_const "_GuardedCall"}, Hoare_Syntax.call_tr false true []),
+  (@{syntax_const "_GuardedCallAss"}, Hoare_Syntax.call_ass_tr false true []),
   (@{syntax_const "_Proc"}, Hoare_Syntax.proc_tr),
   (@{syntax_const "_ProcAss"}, Hoare_Syntax.proc_ass_tr),
-  (@{syntax_const "_DynCall"}, Hoare_Syntax.call_tr true false),
-  (@{syntax_const "_DynCallAss"}, Hoare_Syntax.call_ass_tr true false),
-  (@{syntax_const "_GuardedDynCall"}, Hoare_Syntax.call_tr true true),
-  (@{syntax_const "_GuardedDynCallAss"}, Hoare_Syntax.call_ass_tr true true),
+  (@{syntax_const "_DynCall"}, Hoare_Syntax.call_tr true false []),
+  (@{syntax_const "_DynCall_exn"}, Hoare_Syntax.call_tr true true []),
+  (@{syntax_const "_DynCallAss"}, Hoare_Syntax.call_ass_tr true false []),
+  (@{syntax_const "_DynCallAss_exn"}, Hoare_Syntax.call_ass_tr true true []),
+  (@{syntax_const "_GuardedDynCall"}, Hoare_Syntax.call_tr true true []),
+  (@{syntax_const "_GuardedDynCallAss"}, Hoare_Syntax.call_ass_tr true true []),
   (@{syntax_const "_BasicBlock"}, Hoare_Syntax.basic_assigns_tr)]
 \<close>
 
@@ -656,6 +647,8 @@ print_translation \<open>
 print_translation \<open>
  [(@{const_syntax call}, Hoare_Syntax.call_tr'),
   (@{const_syntax dynCall}, Hoare_Syntax.dyn_call_tr'),
+  (@{const_syntax call_exn}, Hoare_Syntax.call_exn_tr'),
+  (@{const_syntax dynCall_exn}, Hoare_Syntax.dyn_call_exn_tr'),
   (@{const_syntax fcall}, Hoare_Syntax.fcall_tr'),
   (@{const_syntax Call}, Hoare_Syntax.proc_tr')]
 \<close>

@@ -1,29 +1,9 @@
 (*
     Author:      Norbert Schirmer
     Maintainer:  Norbert Schirmer, norbert.schirmer at web de
-    License:     LGPL
-*)
-
-(*  Title:      Semantic.thy
-    Author:     Norbert Schirmer, TU Muenchen
 
 Copyright (C) 2004-2008 Norbert Schirmer
-Some rights reserved, TU Muenchen
-
-This library is free software; you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as
-published by the Free Software Foundation; either version 2.1 of the
-License, or (at your option) any later version.
-
-This library is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
-USA
+Copyright (c) 2022 Apple Inc. All rights reserved.
 *)
 
 section \<open>Big-Step Semantics for Simpl\<close>
@@ -178,33 +158,62 @@ inductive_cases exec_Normal_elim_cases [cases set]:
   "\<Gamma>\<turnstile>\<langle>Throw,Normal s\<rangle> \<Rightarrow>  t"
   "\<Gamma>\<turnstile>\<langle>Catch c1 c2,Normal s\<rangle> \<Rightarrow>  t"
 
+
+lemma exec_block_exn:
+  "\<lbrakk>\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> \<Rightarrow>  Normal t; \<Gamma>\<turnstile>\<langle>c s t,Normal (return s t)\<rangle> \<Rightarrow>  u\<rbrakk>
+  \<Longrightarrow>
+  \<Gamma>\<turnstile>\<langle>block_exn init bdy return result_exn c,Normal s\<rangle> \<Rightarrow>  u"
+apply (unfold block_exn_def)
+  by (fastforce intro: exec.intros)
+
 lemma exec_block:
   "\<lbrakk>\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> \<Rightarrow>  Normal t; \<Gamma>\<turnstile>\<langle>c s t,Normal (return s t)\<rangle> \<Rightarrow>  u\<rbrakk>
   \<Longrightarrow>
   \<Gamma>\<turnstile>\<langle>block init bdy return c,Normal s\<rangle> \<Rightarrow>  u"
-apply (unfold block_def)
-by (fastforce intro: exec.intros)
+  unfolding block_def
+  by (rule exec_block_exn)
+
+lemma exec_block_exnAbrupt:
+     "\<lbrakk>\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> \<Rightarrow>  Abrupt t\<rbrakk>
+       \<Longrightarrow>
+       \<Gamma>\<turnstile>\<langle>block_exn init bdy return result_exn c,Normal s\<rangle> \<Rightarrow>  Abrupt (result_exn (return s t) t)"
+apply (unfold block_exn_def)
+  by (fastforce intro: exec.intros)
 
 lemma exec_blockAbrupt:
      "\<lbrakk>\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> \<Rightarrow>  Abrupt t\<rbrakk>
        \<Longrightarrow>
        \<Gamma>\<turnstile>\<langle>block init bdy return c,Normal s\<rangle> \<Rightarrow>  Abrupt (return s t)"
-apply (unfold block_def)
-by (fastforce intro: exec.intros)
+  unfolding block_def
+  by (rule exec_block_exnAbrupt)
+
+lemma exec_block_exnFault:
+  "\<lbrakk>\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> \<Rightarrow>  Fault f\<rbrakk>
+   \<Longrightarrow>
+  \<Gamma>\<turnstile>\<langle>block_exn init bdy return result_exn c,Normal s\<rangle> \<Rightarrow>  Fault f"
+apply (unfold block_exn_def)
+  by (fastforce intro: exec.intros)
 
 lemma exec_blockFault:
   "\<lbrakk>\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> \<Rightarrow>  Fault f\<rbrakk>
    \<Longrightarrow>
   \<Gamma>\<turnstile>\<langle>block init bdy return c,Normal s\<rangle> \<Rightarrow>  Fault f"
-apply (unfold block_def)
-by (fastforce intro: exec.intros)
+  unfolding block_def
+  by (rule exec_block_exnFault)
+
+lemma exec_block_exnStuck:
+  "\<lbrakk>\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> \<Rightarrow>  Stuck\<rbrakk>
+  \<Longrightarrow>
+  \<Gamma>\<turnstile>\<langle>block_exn init bdy return result_exn c,Normal s\<rangle> \<Rightarrow>  Stuck"
+apply (unfold block_exn_def)
+  by (fastforce intro: exec.intros)
 
 lemma exec_blockStuck:
   "\<lbrakk>\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> \<Rightarrow>  Stuck\<rbrakk>
   \<Longrightarrow>
   \<Gamma>\<turnstile>\<langle>block init bdy return c,Normal s\<rangle> \<Rightarrow>  Stuck"
-apply (unfold block_def)
-by (fastforce intro: exec.intros)
+  unfolding block_def
+  by (rule exec_block_exnStuck)
 
 lemma exec_call:
  "\<lbrakk>\<Gamma> p=Some bdy;\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> \<Rightarrow>  Normal t; \<Gamma>\<turnstile>\<langle>c s t,Normal (return s t)\<rangle> \<Rightarrow>  u\<rbrakk>
@@ -215,7 +224,6 @@ apply (rule exec_block)
 apply  (erule (1) Call)
 apply assumption
 done
-
 
 lemma exec_callAbrupt:
  "\<lbrakk>\<Gamma> p=Some bdy;\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> \<Rightarrow>  Abrupt t\<rbrakk>
@@ -253,6 +261,52 @@ apply (rule exec_blockStuck)
 apply (erule CallUndefined)
 done
 
+lemma exec_call_exn:
+ "\<lbrakk>\<Gamma> p=Some bdy;\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> \<Rightarrow>  Normal t; \<Gamma>\<turnstile>\<langle>c s t,Normal (return s t)\<rangle> \<Rightarrow>  u\<rbrakk>
+  \<Longrightarrow>
+  \<Gamma>\<turnstile>\<langle>call_exn init p return result_exn c,Normal s\<rangle> \<Rightarrow>  u"
+apply (simp add: call_exn_def)
+apply (rule exec_block_exn)
+apply  (erule (1) Call)
+apply assumption
+done
+
+lemma exec_call_exnAbrupt:
+ "\<lbrakk>\<Gamma> p=Some bdy;\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> \<Rightarrow>  Abrupt t\<rbrakk>
+  \<Longrightarrow>
+  \<Gamma>\<turnstile>\<langle>call_exn init p return result_exn c,Normal s\<rangle> \<Rightarrow>  Abrupt (result_exn (return s t) t)"
+apply (simp add: call_exn_def)
+apply (rule exec_block_exnAbrupt)
+apply (erule (1) Call)
+done
+
+lemma exec_call_exnFault:
+             "\<lbrakk>\<Gamma> p=Some bdy; \<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> \<Rightarrow>  Fault f\<rbrakk>
+               \<Longrightarrow>
+              \<Gamma>\<turnstile>\<langle>call_exn init p return result_exn c,Normal s\<rangle> \<Rightarrow>  Fault f"
+apply (simp add: call_exn_def)
+apply (rule exec_block_exnFault)
+apply (erule (1) Call)
+done
+
+lemma exec_call_exnStuck:
+          "\<lbrakk>\<Gamma> p=Some bdy; \<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> \<Rightarrow>  Stuck\<rbrakk>
+           \<Longrightarrow>
+           \<Gamma>\<turnstile>\<langle>call_exn init p return result_exn c,Normal s\<rangle> \<Rightarrow>  Stuck"
+apply (simp add: call_exn_def)
+apply (rule exec_block_exnStuck)
+apply (erule (1) Call)
+done
+
+lemma  exec_call_exnUndefined:
+       "\<lbrakk>\<Gamma> p=None\<rbrakk>
+        \<Longrightarrow>
+        \<Gamma>\<turnstile>\<langle>call_exn init p return result_exn c,Normal s\<rangle> \<Rightarrow> Stuck"
+apply (simp add: call_exn_def)
+apply (rule exec_block_exnStuck)
+apply (erule CallUndefined)
+  done
+
 
 lemma Fault_end: assumes exec: "\<Gamma>\<turnstile>\<langle>c,s\<rangle> \<Rightarrow>  t" and s: "s=Fault f"
   shows "t=Fault f"
@@ -283,9 +337,8 @@ lemma exec_Call_body':
   by (rule exec_Call_body_aux)
 
 
-
-lemma exec_block_Normal_elim [consumes 1]:
-assumes exec_block: "\<Gamma>\<turnstile>\<langle>block init bdy return c,Normal s\<rangle> \<Rightarrow>  t"
+lemma exec_block_exn_Normal_elim [consumes 1]:
+assumes exec_block: "\<Gamma>\<turnstile>\<langle>block_exn init bdy return result_exn c,Normal s\<rangle> \<Rightarrow>  t"
 assumes Normal:
  "\<And>t'.
     \<lbrakk>\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> \<Rightarrow>  Normal t';
@@ -294,7 +347,7 @@ assumes Normal:
 assumes Abrupt:
  "\<And>t'.
     \<lbrakk>\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> \<Rightarrow>  Abrupt t';
-     t = Abrupt (return s t')\<rbrakk>
+     t = Abrupt (result_exn (return s t') t')\<rbrakk>
     \<Longrightarrow> P"
 assumes Fault:
  "\<And>f.
@@ -309,7 +362,7 @@ assumes
  "\<lbrakk>\<Gamma> p = None; t = Stuck\<rbrakk> \<Longrightarrow> P"
 shows "P"
   using exec_block
-apply (unfold block_def)
+apply (unfold block_exn_def)
 apply (elim exec_Normal_elim_cases)
 apply simp_all
 apply  (case_tac s')
@@ -337,6 +390,96 @@ apply (drule Stuck_end) apply simp
 apply (rule Stuck,assumption+)
 done
 
+
+lemma exec_block_Normal_elim [consumes 1]:
+assumes exec_block: "\<Gamma>\<turnstile>\<langle>block init bdy return c,Normal s\<rangle> \<Rightarrow>  t"
+assumes Normal:
+ "\<And>t'.
+    \<lbrakk>\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> \<Rightarrow>  Normal t';
+     \<Gamma>\<turnstile>\<langle>c s t',Normal (return s t')\<rangle> \<Rightarrow>  t\<rbrakk>
+    \<Longrightarrow> P"
+assumes Abrupt:
+ "\<And>t'.
+    \<lbrakk>\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> \<Rightarrow>  Abrupt t';
+     t = Abrupt (return s t')\<rbrakk>
+    \<Longrightarrow> P"
+assumes Fault:
+ "\<And>f.
+    \<lbrakk>\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> \<Rightarrow>  Fault f;
+     t = Fault f\<rbrakk>
+    \<Longrightarrow> P"
+assumes Stuck:
+ "\<lbrakk>\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> \<Rightarrow>  Stuck;
+     t = Stuck\<rbrakk>
+    \<Longrightarrow> P"
+assumes
+ Undef: "\<lbrakk>\<Gamma> p = None; t = Stuck\<rbrakk> \<Longrightarrow> P"
+shows "P"
+  by (rule exec_block_exn_Normal_elim [OF exec_block [simplified block_def]
+  Normal Abrupt Fault Stuck Undef ])
+
+lemma exec_call_exn_Normal_elim [consumes 1]:
+assumes exec_call: "\<Gamma>\<turnstile>\<langle>call_exn init p return result_exn c,Normal s\<rangle> \<Rightarrow>  t"
+assumes Normal:
+ "\<And>bdy t'.
+    \<lbrakk>\<Gamma> p = Some bdy; \<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> \<Rightarrow>  Normal t';
+     \<Gamma>\<turnstile>\<langle>c s t',Normal (return s t')\<rangle> \<Rightarrow>  t\<rbrakk>
+    \<Longrightarrow> P"
+assumes Abrupt:
+ "\<And>bdy t'.
+    \<lbrakk>\<Gamma> p = Some bdy; \<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> \<Rightarrow>  Abrupt t';
+     t = Abrupt (result_exn (return s t') t')\<rbrakk>
+    \<Longrightarrow> P"
+assumes Fault:
+ "\<And>bdy f.
+    \<lbrakk>\<Gamma> p = Some bdy; \<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> \<Rightarrow>  Fault f;
+     t = Fault f\<rbrakk>
+    \<Longrightarrow> P"
+assumes Stuck:
+ "\<And>bdy.
+    \<lbrakk>\<Gamma> p = Some bdy; \<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> \<Rightarrow>  Stuck;
+     t = Stuck\<rbrakk>
+    \<Longrightarrow> P"
+assumes Undef:
+ "\<lbrakk>\<Gamma> p = None; t = Stuck\<rbrakk> \<Longrightarrow> P"
+shows "P"
+  using exec_call
+  apply (unfold call_exn_def)
+  apply (cases "\<Gamma> p")
+  apply  (erule exec_block_exn_Normal_elim)
+  apply      (elim exec_Normal_elim_cases)
+  apply       simp
+  apply      simp
+  apply     (elim exec_Normal_elim_cases)
+  apply      simp
+  apply     simp
+  apply    (elim exec_Normal_elim_cases)
+  apply     simp
+  apply    simp
+  apply   (elim exec_Normal_elim_cases)
+  apply    simp
+  apply   (rule Undef,assumption,assumption)
+  apply  (rule Undef,assumption+)
+  apply (erule exec_block_exn_Normal_elim)
+  apply     (elim exec_Normal_elim_cases)
+  apply      simp
+  apply      (rule Normal,assumption+)
+  apply     simp
+  apply    (elim exec_Normal_elim_cases)
+  apply     simp
+  apply     (rule Abrupt,assumption+)
+  apply    simp
+  apply   (elim exec_Normal_elim_cases)
+  apply    simp
+  apply   (rule Fault, assumption+)
+  apply   simp
+  apply  (elim exec_Normal_elim_cases)
+  apply   simp
+  apply  (rule Stuck,assumption,assumption,assumption)
+  apply  simp
+  apply (rule Undef,assumption+)
+  done
+
 lemma exec_call_Normal_elim [consumes 1]:
 assumes exec_call: "\<Gamma>\<turnstile>\<langle>call init p return c,Normal s\<rangle> \<Rightarrow>  t"
 assumes Normal:
@@ -362,42 +505,8 @@ assumes Stuck:
 assumes Undef:
  "\<lbrakk>\<Gamma> p = None; t = Stuck\<rbrakk> \<Longrightarrow> P"
 shows "P"
-  using exec_call
-  apply (unfold call_def)
-  apply (cases "\<Gamma> p")
-  apply  (erule exec_block_Normal_elim)
-  apply      (elim exec_Normal_elim_cases)
-  apply       simp
-  apply      simp
-  apply     (elim exec_Normal_elim_cases)
-  apply      simp
-  apply     simp
-  apply    (elim exec_Normal_elim_cases)
-  apply     simp
-  apply    simp
-  apply   (elim exec_Normal_elim_cases)
-  apply    simp
-  apply   (rule Undef,assumption,assumption)
-  apply  (rule Undef,assumption+)
-  apply (erule exec_block_Normal_elim)
-  apply     (elim exec_Normal_elim_cases)
-  apply      simp
-  apply      (rule Normal,assumption+)
-  apply     simp
-  apply    (elim exec_Normal_elim_cases)
-  apply     simp
-  apply     (rule Abrupt,assumption+)
-  apply    simp
-  apply   (elim exec_Normal_elim_cases)
-  apply    simp
-  apply   (rule Fault, assumption+)
-  apply   simp
-  apply  (elim exec_Normal_elim_cases)
-  apply   simp
-  apply  (rule Stuck,assumption,assumption,assumption)
-  apply  simp
-  apply (rule Undef,assumption+)
-  done
+  using exec_call [simplified call_call_exn] Normal Abrupt Fault Stuck Undef
+  by (rule exec_call_exn_Normal_elim)
 
 
 lemma exec_dynCall:
@@ -406,6 +515,13 @@ lemma exec_dynCall:
            \<Gamma>\<turnstile>\<langle>dynCall init p return c,Normal s\<rangle> \<Rightarrow>  t"
 apply (simp add: dynCall_def)
 by (rule DynCom)
+
+lemma exec_dynCall_exn:
+          "\<lbrakk>\<Gamma>\<turnstile>\<langle>call_exn init (p s) return result_exn c,Normal s\<rangle> \<Rightarrow>  t\<rbrakk>
+           \<Longrightarrow>
+           \<Gamma>\<turnstile>\<langle>dynCall_exn f UNIV init p return result_exn c,Normal s\<rangle> \<Rightarrow>  t"
+apply (simp add: dynCall_exn_def)
+  by (rule DynCom)
 
 lemma exec_dynCall_Normal_elim:
   assumes exec: "\<Gamma>\<turnstile>\<langle>dynCall init p return c,Normal s\<rangle> \<Rightarrow>  t"
@@ -416,6 +532,137 @@ lemma exec_dynCall_Normal_elim:
   apply (erule exec_Normal_elim_cases)
   apply (rule call,assumption)
   done
+
+lemma exec_guards_Normal_elim_cases [consumes 1, case_names noFault someFault]:
+  assumes exec_guards: "\<Gamma>\<turnstile>\<langle>guards gs c,Normal s\<rangle> \<Rightarrow> t"
+  assumes noFault: "\<forall>f g. (f, g) \<in> set gs \<longrightarrow> s \<in> g \<Longrightarrow> \<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> \<Rightarrow> t \<Longrightarrow> P"
+  assumes someFault: "\<And>f g. find (\<lambda>(f,g). s \<notin> g) gs = Some (f, g) \<Longrightarrow> t = Fault f \<Longrightarrow> P"
+  shows "P"
+  using exec_guards noFault someFault
+proof (induct gs)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons pg gs)
+  obtain f g where pg: "pg = (f, g)"
+    by (cases pg) auto
+  show ?thesis
+  proof (cases "s \<in> g")
+    case True
+    from Cons.prems(1) have exec_gs: "\<Gamma>\<turnstile> \<langle>guards gs c,Normal s\<rangle> \<Rightarrow> t"
+      by (simp add: pg) (meson True pg exec_Normal_elim_cases)
+
+    from Cons.hyps [OF exec_gs] Cons.prems(2,3)
+    show ?thesis
+      by (simp add: pg True)
+  next
+    case False
+    from Cons.prems(1) have t: "t = Fault f"
+      by (simp add: pg) (meson False pg exec_Normal_elim_cases)
+
+    from t Cons.prems(3)
+    show ?thesis
+      by (simp add: pg False)
+  qed
+qed
+
+lemma exec_guards_noFault:
+  assumes exec: "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> \<Rightarrow> t"
+  assumes noFault: "\<forall>f g. (f, g) \<in> set gs \<longrightarrow> s \<in> g"
+  shows "\<Gamma>\<turnstile>\<langle>guards gs c,Normal s\<rangle> \<Rightarrow> t"
+  using exec noFault by (induct gs) (auto intro: exec.intros)
+
+lemma exec_guards_Fault:
+  assumes Fault: "find (\<lambda>(f,g). s \<notin> g) gs = Some (f, g)"
+  shows "\<Gamma>\<turnstile>\<langle>guards gs c,Normal s\<rangle> \<Rightarrow> Fault f"
+  using Fault by (induct gs) (auto intro: exec.intros  split: prod.splits if_split_asm)
+
+lemma exec_guards_DynCom:
+  assumes exec_c: "\<Gamma>\<turnstile>\<langle>guards gs (c s), Normal s\<rangle> \<Rightarrow> t"
+  shows "\<Gamma>\<turnstile>\<langle>guards gs (DynCom c), Normal s\<rangle> \<Rightarrow> t"
+  using exec_c apply (induct gs)
+   apply (fastforce intro: exec.intros)
+  apply simp
+  by (metis exec.Guard exec.GuardFault exec_Normal_elim_cases)
+
+lemma exec_guards_DynCom_Normal_elim:
+  assumes exec: "\<Gamma>\<turnstile>\<langle>guards gs (DynCom c), Normal s\<rangle> \<Rightarrow> t"
+  assumes call: "\<Gamma>\<turnstile>\<langle>guards gs (c s), Normal s\<rangle> \<Rightarrow>  t \<Longrightarrow> P"
+  shows "P"
+  using exec call proof (induct gs)
+  case Nil
+  then show ?case
+    apply simp
+    apply (erule exec_Normal_elim_cases)
+    apply simp
+    done
+next
+  case (Cons g gs)
+  then show ?case
+    apply (cases g)
+    apply simp
+    apply (erule exec_Normal_elim_cases)
+     apply simp
+     apply (meson Guard)
+    apply simp
+    apply (meson GuardFault)
+    done
+qed
+
+lemma exec_maybe_guard_DynCom:
+  assumes exec_c: "\<Gamma>\<turnstile>\<langle>maybe_guard f g (c s), Normal s\<rangle> \<Rightarrow> t"
+  shows "\<Gamma>\<turnstile>\<langle>maybe_guard f g (DynCom c), Normal s\<rangle> \<Rightarrow> t"
+  using exec_c
+  by (metis DynCom Guard GuardFault exec_Normal_elim_cases(5) maybe_guard_def)
+
+lemma exec_maybe_guard_Normal_elim_cases [consumes 1, case_names noFault someFault]:
+  assumes exec_guards: "\<Gamma>\<turnstile>\<langle>maybe_guard f g c,Normal s\<rangle> \<Rightarrow> t"
+  assumes noFault: "s \<in> g \<Longrightarrow> \<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> \<Rightarrow> t \<Longrightarrow> P"
+  assumes someFault: "s \<notin> g \<Longrightarrow> t = Fault f \<Longrightarrow> P"
+  shows "P"
+  using exec_guards noFault someFault
+  by (metis UNIV_I exec_Normal_elim_cases(5) maybe_guard_def)
+
+lemma exec_maybe_guard_noFault:
+  assumes exec: "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> \<Rightarrow> t"
+  assumes noFault: "s \<in> g"
+  shows "\<Gamma>\<turnstile>\<langle>maybe_guard f g c,Normal s\<rangle> \<Rightarrow> t"
+  using exec noFault
+  by (simp add: Guard maybe_guard_def)
+
+lemma exec_maybe_guard_Fault:
+  assumes Fault: "s \<notin> g"
+  shows "\<Gamma>\<turnstile>\<langle>maybe_guard f g c,Normal s\<rangle> \<Rightarrow> Fault f"
+  using Fault
+  by (metis GuardFault iso_tuple_UNIV_I maybe_guard_def)
+
+lemma exec_maybe_guard_DynCom_Normal_elim:
+  assumes exec: "\<Gamma>\<turnstile>\<langle>maybe_guard f g (DynCom c), Normal s\<rangle> \<Rightarrow> t"
+  assumes call: "\<Gamma>\<turnstile>\<langle>maybe_guard f g (c s), Normal s\<rangle> \<Rightarrow>  t \<Longrightarrow> P"
+  shows "P"
+  using exec call
+  apply (cases "g=UNIV")
+  subgoal
+    apply simp
+    apply (erule exec_Normal_elim_cases)
+    apply simp
+    done
+  subgoal
+    apply (simp add: maybe_guard_def)
+    apply (erule exec_Normal_elim_cases)
+     apply (meson Guard exec_Normal_elim_cases(12))
+    by (meson GuardFault)
+  done
+
+
+lemma exec_dynCall_exn_Normal_elim:
+  assumes exec: "\<Gamma>\<turnstile>\<langle>dynCall_exn f g init p return result_exn c,Normal s\<rangle> \<Rightarrow>  t"
+  assumes call: "\<Gamma>\<turnstile>\<langle>maybe_guard f g (call_exn init (p s) return result_exn c),Normal s\<rangle> \<Rightarrow> t \<Longrightarrow> P"
+  shows "P"
+  using exec
+  apply (simp add: dynCall_exn_def)
+  apply (erule exec_maybe_guard_DynCom_Normal_elim)
+  by (rule call)
 
 
 lemma exec_Call_body:
@@ -564,33 +811,61 @@ lemma execn_Abrupt_end: assumes exec: "\<Gamma>\<turnstile>\<langle>c,s\<rangle>
   shows "t=Abrupt s'"
 using exec s by (induct) auto
 
+lemma execn_block_exn:
+  "\<lbrakk>\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =n\<Rightarrow>  Normal t; \<Gamma>\<turnstile>\<langle>c s t,Normal (return s t)\<rangle> =n\<Rightarrow>  u\<rbrakk>
+  \<Longrightarrow>
+  \<Gamma>\<turnstile>\<langle>block_exn init bdy return result_exn c,Normal s\<rangle> =n\<Rightarrow>  u"
+apply (unfold block_exn_def)
+  by (fastforce intro: execn.intros)
+
 lemma execn_block:
   "\<lbrakk>\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =n\<Rightarrow>  Normal t; \<Gamma>\<turnstile>\<langle>c s t,Normal (return s t)\<rangle> =n\<Rightarrow>  u\<rbrakk>
   \<Longrightarrow>
   \<Gamma>\<turnstile>\<langle>block init bdy return c,Normal s\<rangle> =n\<Rightarrow>  u"
-apply (unfold block_def)
-by (fastforce intro: execn.intros)
+  unfolding block_def
+  by (rule execn_block_exn)
+
+lemma execn_block_exnAbrupt:
+     "\<lbrakk>\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =n\<Rightarrow>  Abrupt t\<rbrakk>
+       \<Longrightarrow>
+       \<Gamma>\<turnstile>\<langle>block_exn init bdy return result_exn c,Normal s\<rangle> =n\<Rightarrow>  Abrupt (result_exn (return s t) t)"
+apply (unfold block_exn_def)
+  by (fastforce intro: execn.intros)
 
 lemma execn_blockAbrupt:
      "\<lbrakk>\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =n\<Rightarrow>  Abrupt t\<rbrakk>
        \<Longrightarrow>
        \<Gamma>\<turnstile>\<langle>block init bdy return c,Normal s\<rangle> =n\<Rightarrow>  Abrupt (return s t)"
-apply (unfold block_def)
-by (fastforce intro: execn.intros)
+  unfolding block_def
+  by (rule execn_block_exnAbrupt)
+
+lemma execn_block_exnFault:
+  "\<lbrakk>\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =n\<Rightarrow>  Fault f\<rbrakk>
+   \<Longrightarrow>
+  \<Gamma>\<turnstile>\<langle>block_exn init bdy return result_exn c,Normal s\<rangle> =n\<Rightarrow>  Fault f"
+apply (unfold block_exn_def)
+  by (fastforce intro: execn.intros)
 
 lemma execn_blockFault:
   "\<lbrakk>\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =n\<Rightarrow>  Fault f\<rbrakk>
    \<Longrightarrow>
   \<Gamma>\<turnstile>\<langle>block init bdy return c,Normal s\<rangle> =n\<Rightarrow>  Fault f"
-apply (unfold block_def)
-by (fastforce intro: execn.intros)
+  unfolding block_def
+by (rule execn_block_exnFault)
+
+lemma execn_block_exnStuck:
+  "\<lbrakk>\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =n\<Rightarrow>  Stuck\<rbrakk>
+  \<Longrightarrow>
+  \<Gamma>\<turnstile>\<langle>block_exn init bdy return result_exn c,Normal s\<rangle> =n\<Rightarrow>  Stuck"
+apply (unfold block_exn_def)
+  by (fastforce intro: execn.intros)
 
 lemma execn_blockStuck:
   "\<lbrakk>\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =n\<Rightarrow>  Stuck\<rbrakk>
   \<Longrightarrow>
   \<Gamma>\<turnstile>\<langle>block init bdy return c,Normal s\<rangle> =n\<Rightarrow>  Stuck"
-apply (unfold block_def)
-by (fastforce intro: execn.intros)
+  unfolding block_def
+by (rule execn_block_exnStuck)
 
 
 lemma execn_call:
@@ -600,6 +875,17 @@ lemma execn_call:
   \<Gamma>\<turnstile>\<langle>call init p return c,Normal s\<rangle> =Suc n\<Rightarrow>  u"
 apply (simp add: call_def)
 apply (rule execn_block)
+apply  (erule (1) Call)
+apply assumption
+done
+
+lemma execn_call_exn:
+ "\<lbrakk>\<Gamma> p=Some bdy;\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =n\<Rightarrow>  Normal t;
+   \<Gamma>\<turnstile>\<langle>c s t,Normal (return s t)\<rangle> =Suc n\<Rightarrow>  u\<rbrakk>
+  \<Longrightarrow>
+  \<Gamma>\<turnstile>\<langle>call_exn init p return result_exn c,Normal s\<rangle> =Suc n\<Rightarrow>  u"
+apply (simp add: call_exn_def)
+apply (rule execn_block_exn)
 apply  (erule (1) Call)
 apply assumption
 done
@@ -614,12 +900,30 @@ apply (rule execn_blockAbrupt)
 apply (erule (1) Call)
 done
 
+lemma execn_call_exnAbrupt:
+ "\<lbrakk>\<Gamma> p=Some bdy;\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =n\<Rightarrow>  Abrupt t\<rbrakk>
+  \<Longrightarrow>
+  \<Gamma>\<turnstile>\<langle>call_exn init p return result_exn c,Normal s\<rangle> =Suc n\<Rightarrow>  Abrupt (result_exn (return s t) t)"
+apply (simp add: call_exn_def)
+apply (rule execn_block_exnAbrupt)
+apply (erule (1) Call)
+  done
+
 lemma execn_callFault:
              "\<lbrakk>\<Gamma> p=Some bdy; \<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =n\<Rightarrow>  Fault f\<rbrakk>
                \<Longrightarrow>
               \<Gamma>\<turnstile>\<langle>call init p return c,Normal s\<rangle> =Suc n\<Rightarrow>  Fault f"
 apply (simp add: call_def)
 apply (rule execn_blockFault)
+apply (erule (1) Call)
+done
+
+lemma execn_call_exnFault:
+             "\<lbrakk>\<Gamma> p=Some bdy; \<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =n\<Rightarrow>  Fault f\<rbrakk>
+               \<Longrightarrow>
+              \<Gamma>\<turnstile>\<langle>call_exn init p return result_exn c,Normal s\<rangle> =Suc n\<Rightarrow>  Fault f"
+apply (simp add: call_exn_def)
+apply (rule execn_block_exnFault)
 apply (erule (1) Call)
 done
 
@@ -632,6 +936,15 @@ apply (rule execn_blockStuck)
 apply (erule (1) Call)
 done
 
+lemma execn_call_exnStuck:
+          "\<lbrakk>\<Gamma> p=Some bdy; \<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =n\<Rightarrow>  Stuck\<rbrakk>
+           \<Longrightarrow>
+           \<Gamma>\<turnstile>\<langle>call_exn init p return result_exn c,Normal s\<rangle> =Suc n\<Rightarrow>  Stuck"
+apply (simp add: call_exn_def)
+apply (rule execn_block_exnStuck)
+apply (erule (1) Call)
+  done
+
 lemma  execn_callUndefined:
        "\<lbrakk>\<Gamma> p=None\<rbrakk>
         \<Longrightarrow>
@@ -641,8 +954,17 @@ apply (rule execn_blockStuck)
 apply (erule CallUndefined)
 done
 
-lemma execn_block_Normal_elim [consumes 1]:
-assumes execn_block: "\<Gamma>\<turnstile>\<langle>block init bdy return c,Normal s\<rangle> =n\<Rightarrow>  t"
+lemma  execn_call_exnUndefined:
+       "\<lbrakk>\<Gamma> p=None\<rbrakk>
+        \<Longrightarrow>
+        \<Gamma>\<turnstile>\<langle>call_exn init p return result_exn c,Normal s\<rangle> =Suc n\<Rightarrow>  Stuck"
+apply (simp add: call_exn_def)
+apply (rule execn_block_exnStuck)
+apply (erule CallUndefined)
+done
+
+lemma execn_block_exn_Normal_elim [consumes 1]:
+assumes execn_block: "\<Gamma>\<turnstile>\<langle>block_exn init bdy return result_exn c,Normal s\<rangle> =n\<Rightarrow>  t"
 assumes Normal:
  "\<And>t'.
     \<lbrakk>\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =n\<Rightarrow>  Normal t';
@@ -651,7 +973,7 @@ assumes Normal:
 assumes Abrupt:
  "\<And>t'.
     \<lbrakk>\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =n\<Rightarrow>  Abrupt t';
-     t = Abrupt (return s t')\<rbrakk>
+     t = Abrupt (result_exn (return s t') t')\<rbrakk>
     \<Longrightarrow> P"
 assumes Fault:
  "\<And>f.
@@ -666,7 +988,7 @@ assumes Undef:
  "\<lbrakk>\<Gamma> p = None; t = Stuck\<rbrakk> \<Longrightarrow> P"
 shows "P"
   using execn_block
-apply (unfold block_def)
+apply (unfold block_exn_def)
 apply (elim execn_Normal_elim_cases)
 apply simp_all
 apply  (case_tac s')
@@ -694,6 +1016,99 @@ apply (drule execn_Stuck_end) apply simp
 apply (rule Stuck,assumption+)
 done
 
+lemma execn_block_Normal_elim [consumes 1]:
+assumes execn_block: "\<Gamma>\<turnstile>\<langle>block init bdy return c,Normal s\<rangle> =n\<Rightarrow>  t"
+assumes Normal:
+ "\<And>t'.
+    \<lbrakk>\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =n\<Rightarrow>  Normal t';
+     \<Gamma>\<turnstile>\<langle>c s t',Normal (return s t')\<rangle> =n\<Rightarrow>  t\<rbrakk>
+    \<Longrightarrow> P"
+assumes Abrupt:
+ "\<And>t'.
+    \<lbrakk>\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =n\<Rightarrow>  Abrupt t';
+     t = Abrupt (return s t')\<rbrakk>
+    \<Longrightarrow> P"
+assumes Fault:
+ "\<And>f.
+    \<lbrakk>\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =n\<Rightarrow>  Fault f;
+     t = Fault f\<rbrakk>
+    \<Longrightarrow> P"
+assumes Stuck:
+ "\<lbrakk>\<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =n\<Rightarrow>  Stuck;
+     t = Stuck\<rbrakk>
+    \<Longrightarrow> P"
+assumes Undef:
+ "\<lbrakk>\<Gamma> p = None; t = Stuck\<rbrakk> \<Longrightarrow> P"
+shows "P"
+  using execn_block [unfolded block_def] Normal Abrupt Fault Stuck Undef
+  by (rule execn_block_exn_Normal_elim)
+
+lemma execn_call_exn_Normal_elim [consumes 1]:
+assumes exec_call: "\<Gamma>\<turnstile>\<langle>call_exn init p return result_exn c,Normal s\<rangle> =n\<Rightarrow>  t"
+assumes Normal:
+ "\<And>bdy i t'.
+    \<lbrakk>\<Gamma> p = Some bdy; \<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =i\<Rightarrow>  Normal t';
+     \<Gamma>\<turnstile>\<langle>c s t',Normal (return s t')\<rangle> =Suc i\<Rightarrow>  t; n = Suc i\<rbrakk>
+    \<Longrightarrow> P"
+assumes Abrupt:
+ "\<And>bdy i t'.
+    \<lbrakk>\<Gamma> p = Some bdy; \<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =i\<Rightarrow>  Abrupt t'; n = Suc i;
+     t = Abrupt (result_exn (return s t') t')\<rbrakk>
+    \<Longrightarrow> P"
+assumes Fault:
+ "\<And>bdy i f.
+    \<lbrakk>\<Gamma> p = Some bdy; \<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =i\<Rightarrow>  Fault f; n = Suc i;
+     t = Fault f\<rbrakk>
+    \<Longrightarrow> P"
+assumes Stuck:
+ "\<And>bdy i.
+    \<lbrakk>\<Gamma> p = Some bdy; \<Gamma>\<turnstile>\<langle>bdy,Normal (init s)\<rangle> =i\<Rightarrow>  Stuck; n = Suc i;
+     t = Stuck\<rbrakk>
+    \<Longrightarrow> P"
+assumes Undef:
+ "\<And>i. \<lbrakk>\<Gamma> p = None; n = Suc i; t = Stuck\<rbrakk> \<Longrightarrow> P"
+shows "P"
+  using exec_call
+  apply (unfold call_exn_def)
+  apply (cases n)
+  apply  (simp only: block_exn_def)
+  apply  (fastforce elim: execn_Normal_elim_cases)
+  apply (cases "\<Gamma> p")
+  apply  (erule execn_block_exn_Normal_elim)
+  apply      (elim execn_Normal_elim_cases)
+  apply       simp
+  apply      simp
+  apply     (elim execn_Normal_elim_cases)
+  apply      simp
+  apply     simp
+  apply    (elim execn_Normal_elim_cases)
+  apply     simp
+  apply    simp
+  apply   (elim execn_Normal_elim_cases)
+  apply    simp
+  apply   (rule Undef,assumption,assumption,assumption)
+  apply  (rule Undef,assumption+)
+  apply (erule execn_block_exn_Normal_elim)
+  apply     (elim execn_Normal_elim_cases)
+  apply      simp
+  apply      (rule Normal,assumption+)
+  apply     simp
+  apply    (elim execn_Normal_elim_cases)
+  apply     simp
+  apply     (rule Abrupt,assumption+)
+  apply    simp
+  apply   (elim execn_Normal_elim_cases)
+  apply    simp
+  apply   (rule Fault,assumption+)
+  apply   simp
+  apply  (elim execn_Normal_elim_cases)
+  apply   simp
+  apply  (rule Stuck,assumption,assumption,assumption,assumption)
+  apply  (rule Undef,assumption,assumption,assumption)
+  apply (rule Undef,assumption+)
+  done
+
+
 lemma execn_call_Normal_elim [consumes 1]:
 assumes exec_call: "\<Gamma>\<turnstile>\<langle>call init p return c,Normal s\<rangle> =n\<Rightarrow>  t"
 assumes Normal:
@@ -719,45 +1134,9 @@ assumes Stuck:
 assumes Undef:
  "\<And>i. \<lbrakk>\<Gamma> p = None; n = Suc i; t = Stuck\<rbrakk> \<Longrightarrow> P"
 shows "P"
-  using exec_call
-  apply (unfold call_def)
-  apply (cases n)
-  apply  (simp only: block_def)
-  apply  (fastforce elim: execn_Normal_elim_cases)
-  apply (cases "\<Gamma> p")
-  apply  (erule execn_block_Normal_elim)
-  apply      (elim execn_Normal_elim_cases)
-  apply       simp
-  apply      simp
-  apply     (elim execn_Normal_elim_cases)
-  apply      simp
-  apply     simp
-  apply    (elim execn_Normal_elim_cases)
-  apply     simp
-  apply    simp
-  apply   (elim execn_Normal_elim_cases)
-  apply    simp
-  apply   (rule Undef,assumption,assumption,assumption)
-  apply  (rule Undef,assumption+)
-  apply (erule execn_block_Normal_elim)
-  apply     (elim execn_Normal_elim_cases)
-  apply      simp
-  apply      (rule Normal,assumption+)
-  apply     simp
-  apply    (elim execn_Normal_elim_cases)
-  apply     simp
-  apply     (rule Abrupt,assumption+)
-  apply    simp
-  apply   (elim execn_Normal_elim_cases)
-  apply    simp
-  apply   (rule Fault,assumption+)
-  apply   simp
-  apply  (elim execn_Normal_elim_cases)
-  apply   simp
-  apply  (rule Stuck,assumption,assumption,assumption,assumption)
-  apply  (rule Undef,assumption,assumption,assumption)
-  apply (rule Undef,assumption+)
-  done
+  using exec_call [simplified call_call_exn] Normal Abrupt Fault Stuck Undef
+  by (rule execn_call_exn_Normal_elim)
+
 
 lemma execn_dynCall:
   "\<lbrakk>\<Gamma>\<turnstile>\<langle>call init (p s) return c,Normal s\<rangle> =n\<Rightarrow>  t\<rbrakk>
@@ -765,6 +1144,13 @@ lemma execn_dynCall:
   \<Gamma>\<turnstile>\<langle>dynCall init p return c,Normal s\<rangle> =n\<Rightarrow>  t"
 apply (simp add: dynCall_def)
 by (rule DynCom)
+
+lemma execn_dynCall_exn:
+  "\<lbrakk>\<Gamma>\<turnstile>\<langle>call_exn init (p s) return result_exn c,Normal s\<rangle> =n\<Rightarrow>  t\<rbrakk>
+  \<Longrightarrow>
+  \<Gamma>\<turnstile>\<langle>dynCall_exn f UNIV init p return result_exn c,Normal s\<rangle> =n\<Rightarrow>  t"
+apply (simp add: dynCall_exn_def)
+  by (rule DynCom)
 
 lemma execn_dynCall_Normal_elim:
   assumes exec: "\<Gamma>\<turnstile>\<langle>dynCall init p return c,Normal s\<rangle> =n\<Rightarrow>  t"
@@ -776,9 +1162,134 @@ lemma execn_dynCall_Normal_elim:
   apply fact
   done
 
+lemma execn_guards_Normal_elim_cases [consumes 1, case_names noFault someFault]:
+  assumes exec_guards: "\<Gamma>\<turnstile>\<langle>guards gs c,Normal s\<rangle> =n\<Rightarrow> t"
+  assumes noFault: "\<forall>f g. (f, g) \<in> set gs \<longrightarrow> s \<in> g \<Longrightarrow> \<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> =n\<Rightarrow> t \<Longrightarrow> P"
+  assumes someFault: "\<And>f g. find (\<lambda>(f,g). s \<notin> g) gs = Some (f, g) \<Longrightarrow> t = Fault f \<Longrightarrow> P"
+  shows "P"
+  using exec_guards noFault someFault
+proof (induct gs)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons pg gs)
+  obtain f g where pg: "pg = (f, g)"
+    by (cases pg) auto
+  show ?thesis
+  proof (cases "s \<in> g")
+    case True
+    from Cons.prems(1) have exec_gs: "\<Gamma>\<turnstile> \<langle>guards gs c,Normal s\<rangle> =n\<Rightarrow> t"
+      by (simp add: pg) (meson True pg execn_Normal_elim_cases)
+
+    from Cons.hyps [OF exec_gs] Cons.prems(2,3)
+    show ?thesis
+      by (simp add: pg True)
+  next
+    case False
+    from Cons.prems(1) have t: "t = Fault f"
+      by (simp add: pg) (meson False pg execn_Normal_elim_cases)
+
+    from t Cons.prems(3)
+    show ?thesis
+      by (simp add: pg False)
+  qed
+qed
+
+lemma execn_maybe_guard_Normal_elim_cases [consumes 1, case_names noFault someFault]:
+  assumes exec_guards: "\<Gamma>\<turnstile>\<langle>maybe_guard f g c,Normal s\<rangle> =n\<Rightarrow> t"
+  assumes noFault: "s \<in> g \<Longrightarrow> \<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> =n\<Rightarrow> t \<Longrightarrow> P"
+  assumes someFault: "s \<notin> g \<Longrightarrow> t = Fault f \<Longrightarrow> P"
+  shows "P"
+  using exec_guards noFault someFault
+  by (metis UNIV_I execn_Normal_elim_cases(5) maybe_guard_def)
+
+lemma execn_guards_noFault:
+  assumes exec: "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> =n\<Rightarrow> t"
+  assumes noFault: "\<forall>f g. (f, g) \<in> set gs \<longrightarrow> s \<in> g"
+  shows "\<Gamma>\<turnstile>\<langle>guards gs c,Normal s\<rangle> =n\<Rightarrow> t"
+  using exec noFault by (induct gs) (auto intro: execn.intros)
+
+lemma execn_guards_Fault:
+  assumes Fault: "find (\<lambda>(f,g). s \<notin> g) gs = Some (f, g)"
+  shows "\<Gamma>\<turnstile>\<langle>guards gs c,Normal s\<rangle> =n\<Rightarrow> Fault f"
+  using Fault by (induct gs) (auto intro: execn.intros  split: prod.splits if_split_asm)
+
+lemma execn_maybe_guard_noFault:
+  assumes exec: "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> =n\<Rightarrow> t"
+  assumes noFault: "s \<in> g"
+  shows "\<Gamma>\<turnstile>\<langle>maybe_guard f g c,Normal s\<rangle> =n\<Rightarrow> t"
+  using exec noFault
+  by (auto intro: execn.intros simp add: maybe_guard_def)
+
+lemma execn_maybe_guard_Fault:
+  assumes Fault: "s \<notin> g"
+  shows "\<Gamma>\<turnstile>\<langle>maybe_guard f g c,Normal s\<rangle> =n\<Rightarrow> Fault f"
+  using Fault by (auto simp add: maybe_guard_def intro: execn.intros  split: prod.splits if_split_asm)
+
+lemma execn_guards_DynCom_Normal_elim:
+  assumes exec: "\<Gamma>\<turnstile>\<langle>guards gs (DynCom c), Normal s\<rangle> =n\<Rightarrow> t"
+  assumes call: "\<Gamma>\<turnstile>\<langle>guards gs (c s), Normal s\<rangle> =n\<Rightarrow>  t \<Longrightarrow> P"
+  shows "P"
+  using exec call proof (induct gs)
+  case Nil
+  then show ?case
+    apply simp
+    apply (erule execn_Normal_elim_cases)
+    apply simp
+    done
+next
+  case (Cons g gs)
+  then show ?case
+    apply (cases g)
+    apply simp
+    apply (erule execn_Normal_elim_cases)
+     apply simp
+     apply (meson execn.Guard)
+    apply simp
+    apply (meson execn.GuardFault)
+    done
+qed
+
+lemma execn_maybe_guard_DynCom_Normal_elim:
+  assumes exec: "\<Gamma>\<turnstile>\<langle>maybe_guard f g (DynCom c), Normal s\<rangle> =n\<Rightarrow> t"
+  assumes call: "\<Gamma>\<turnstile>\<langle>maybe_guard f g (c s), Normal s\<rangle> =n\<Rightarrow>  t \<Longrightarrow> P"
+  shows "P"
+  using exec call
+  by (metis execn.Guard execn.GuardFault execn_Normal_elim_cases(12) execn_Normal_elim_cases(5) maybe_guard_def)
+
+lemma execn_guards_DynCom:
+  assumes exec_c: "\<Gamma>\<turnstile>\<langle>guards gs (c s), Normal s\<rangle> =n\<Rightarrow> t"
+  shows "\<Gamma>\<turnstile>\<langle>guards gs (DynCom c), Normal s\<rangle> =n\<Rightarrow> t"
+  using exec_c apply (induct gs)
+   apply (fastforce intro: execn.intros)
+  apply simp
+  by (metis execn.Guard execn.GuardFault execn_Normal_elim_cases)
+
+lemma execn_maybe_guard_DynCom:
+  assumes exec_c: "\<Gamma>\<turnstile>\<langle>maybe_guard f g (c s), Normal s\<rangle> =n\<Rightarrow> t"
+  shows "\<Gamma>\<turnstile>\<langle>maybe_guard f g (DynCom c), Normal s\<rangle> =n\<Rightarrow> t"
+  using exec_c
+  apply (cases "g = UNIV")
+  subgoal
+    apply simp
+    apply (rule execn.intros)
+    apply simp
+    done
+  subgoal
+    apply (simp add: maybe_guard_def)
+    by (metis execn.DynCom execn.Guard execn.GuardFault execn_Normal_elim_cases(5))
+  done
 
 
-
+lemma execn_dynCall_exn_Normal_elim:
+  assumes exec: "\<Gamma>\<turnstile>\<langle>dynCall_exn f g init p return result_exn c,Normal s\<rangle> =n\<Rightarrow>  t"
+  assumes "\<Gamma>\<turnstile>\<langle>maybe_guard f g (call_exn init (p s) return result_exn c),Normal s\<rangle> =n\<Rightarrow>  t \<Longrightarrow> P"
+  shows "P"
+  using exec
+  apply (simp add: dynCall_exn_def)
+  apply (erule execn_maybe_guard_DynCom_Normal_elim)
+  apply fact
+  done
 
 lemma  execn_Seq':
        "\<lbrakk>\<Gamma>\<turnstile>\<langle>c1,s\<rangle> =n\<Rightarrow>  s'; \<Gamma>\<turnstile>\<langle>c2,s'\<rangle> =n\<Rightarrow>  s''\<rbrakk>
@@ -4379,7 +4890,7 @@ subsection "Restriction of Procedure Environment"
 lemma restrict_SomeD: "(m|\<^bsub>A\<^esub>) x = Some y \<Longrightarrow> m x = Some y"
   by (auto simp add: restrict_map_def split: if_split_asm)
 
-(* FIXME: To Map *)
+(* fixme: To Map *)
 lemma restrict_dom_same [simp]: "m|\<^bsub>dom m\<^esub> = m"
   apply (rule ext)
   apply (clarsimp simp add: restrict_map_def)

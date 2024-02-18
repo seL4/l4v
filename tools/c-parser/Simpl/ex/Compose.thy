@@ -1,29 +1,10 @@
 (*
     Author:      Norbert Schirmer
     Maintainer:  Norbert Schirmer, norbert.schirmer at web de
-    License:     LGPL
-*)
-
-(*  Title:      Compose.thy
-    Author:     Norbert Schirmer, TU Muenchen
 
 Copyright (C) 2006-2008 Norbert Schirmer
-Some rights reserved, TU Muenchen
+Copyright (c) 2022 Apple Inc. All rights reserved.
 
-This library is free software; you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as
-published by the Free Software Foundation; either version 2.1 of the
-License, or (at your option) any later version.
-
-This library is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
-USA
 *)
 
 section "Experiments on State Composition"
@@ -1272,7 +1253,7 @@ lemma lift\<^sub>c_block [simp]: "lift\<^sub>c prj inject (block init bdy return
   block (lift\<^sub>f prj inject init) (lift\<^sub>c prj inject bdy)
         (\<lambda>s. (lift\<^sub>f prj inject (return (prj s))))
         (\<lambda>s t. lift\<^sub>c prj inject (c (prj s) (prj t)))"
-  by (simp add: block_def)
+  by (simp add: block_def block_exn_def)
 
 (*
 lemma lift\<^sub>c_block [simp]: "lift\<^sub>c prj inject (block init bdy return c) =
@@ -1294,7 +1275,7 @@ lemma rename_whileAnno [simp]: "rename h (whileAnno b I V c) =
 
 lemma rename_block [simp]: "rename h (block init bdy return c) =
   block init (rename h bdy) return (\<lambda>s t. rename h (c s t))"
-  by (simp add: block_def)
+  by (simp add: block_def block_exn_def)
 
 lemma rename_call [simp]: "rename h (call init p return c) =
   call init (h p) return (\<lambda>s t. rename h (c s t))"

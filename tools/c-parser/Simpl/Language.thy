@@ -1,29 +1,9 @@
 (*
     Author:      Norbert Schirmer
     Maintainer:  Norbert Schirmer, norbert.schirmer at web de
-    License:     LGPL
-*)
-
-(*  Title:      Language.thy
-    Author:     Norbert Schirmer, TU Muenchen
 
 Copyright (C) 2004-2008 Norbert Schirmer
-Some rights reserved, TU Muenchen
-
-This library is free software; you can redistribute it and/or modify
-it under the terms of the GNU Lesser General Public License as
-published by the Free Software Foundation; either version 2.1 of the
-License, or (at your option) any later version.
-
-This library is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
-USA
+Copyright (c) 2022 Apple Inc. All rights reserved.
 *)
 
 section \<open>The Simpl Syntax\<close>
@@ -76,12 +56,42 @@ definition
   "bseq = Seq"
 
 definition
-  block:: "['s\<Rightarrow>'s,('s,'p,'f) com,'s\<Rightarrow>'s\<Rightarrow>'s,'s\<Rightarrow>'s\<Rightarrow>('s,'p,'f) com]\<Rightarrow>('s,'p,'f) com"
+  block_exn:: "['s\<Rightarrow>'s,('s,'p,'f) com,'s\<Rightarrow>'s\<Rightarrow>'s,'s\<Rightarrow>'s\<Rightarrow>'s,'s\<Rightarrow>'s\<Rightarrow>('s,'p,'f) com]\<Rightarrow>('s,'p,'f) com"
 where
-  "block init bdy return c =
-    DynCom (\<lambda>s. (Seq (Catch (Seq (Basic init) bdy) (Seq (Basic (return s)) Throw))
+  "block_exn init bdy return result_exn c =
+    DynCom (\<lambda>s. (Seq (Catch (Seq (Basic init) bdy) (Seq (Basic (\<lambda>t. result_exn (return s t) t)) Throw))
                             (DynCom (\<lambda>t. Seq (Basic (return s)) (c s t))))
                         )"
+
+definition
+  call_exn:: "('s\<Rightarrow>'s) \<Rightarrow> 'p \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> 's)\<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow>('s\<Rightarrow>'s\<Rightarrow>('s,'p,'f) com)\<Rightarrow>('s,'p,'f)com" where
+  "call_exn init p return result_exn c = block_exn init (Call p) return result_exn c"
+
+primrec guards:: "('f \<times> 's set ) list \<Rightarrow> ('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com"
+where
+"guards [] c = c" |
+"guards (g#gs) c = Guard (fst g) (snd g) (guards gs c)"
+
+
+definition maybe_guard:: "'f \<Rightarrow> 's set \<Rightarrow> ('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com"
+where
+"maybe_guard f g c = (if g = UNIV then c else Guard f g c)"
+
+lemma maybe_guard_UNIV [simp]: "maybe_guard f UNIV c = c"
+  by (simp add: maybe_guard_def)
+
+
+definition
+  dynCall_exn:: "'f \<Rightarrow> 's set \<Rightarrow> ('s \<Rightarrow> 's) \<Rightarrow> ('s \<Rightarrow> 'p) \<Rightarrow>
+             ('s \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> ('s,'p,'f) com) \<Rightarrow> ('s,'p,'f) com" where
+  "dynCall_exn f g init p return result_exn c =
+    maybe_guard f g (DynCom (\<lambda>s. call_exn init (p s) return result_exn c))"
+
+definition
+  block:: "['s\<Rightarrow>'s,('s,'p,'f) com,'s\<Rightarrow>'s\<Rightarrow>'s,'s\<Rightarrow>'s\<Rightarrow>('s,'p,'f) com]\<Rightarrow>('s,'p,'f) com"
+where
+  "block init bdy return c = block_exn init bdy return (\<lambda>s t. s) c"
+
 
 definition
   call:: "('s\<Rightarrow>'s) \<Rightarrow> 'p \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> 's)\<Rightarrow>('s\<Rightarrow>'s\<Rightarrow>('s,'p,'f) com)\<Rightarrow>('s,'p,'f)com" where
@@ -92,10 +102,13 @@ definition
              ('s \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> ('s,'p,'f) com) \<Rightarrow> ('s,'p,'f) com" where
   "dynCall init p return c = DynCom (\<lambda>s. call init (p s) return c)"
 
+
+
 definition
   fcall:: "('s\<Rightarrow>'s) \<Rightarrow> 'p \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> 's)\<Rightarrow>('s \<Rightarrow> 'v) \<Rightarrow> ('v\<Rightarrow>('s,'p,'f) com)
             \<Rightarrow>('s,'p,'f)com" where
   "fcall init p return result c = call init p return (\<lambda>s t. c (result t))"
+
 
 definition
   lem:: "'x \<Rightarrow> ('s,'p,'f)com \<Rightarrow>('s,'p,'f)com" where
@@ -112,10 +125,6 @@ definition guaranteeStrip:: "'f \<Rightarrow> 's set \<Rightarrow> ('s,'p,'f) co
 definition guaranteeStripPair:: "'f \<Rightarrow> 's set \<Rightarrow> ('f \<times> 's set)"
   where "guaranteeStripPair f g = (f,g)"
 
-primrec guards:: "('f \<times> 's set ) list \<Rightarrow> ('s,'p,'f) com \<Rightarrow> ('s,'p,'f) com"
-where
-"guards [] c = c" |
-"guards (g#gs) c = Guard (fst g) (snd g) (guards gs c)"
 
 definition
   while::  "('f \<times> 's set) list \<Rightarrow> 's bexp \<Rightarrow> ('s,'p,'f) com \<Rightarrow> ('s, 'p, 'f) com"
@@ -158,6 +167,13 @@ lemma fst_guaranteeStripPair: "fst (guaranteeStripPair f g) = f"
 
 lemma snd_guaranteeStripPair: "snd (guaranteeStripPair f g) = g"
   by (simp add: guaranteeStripPair_def)
+
+
+lemma call_call_exn: "call init p return result = call_exn init p return (\<lambda>s t. s) result"
+  by (simp add: call_def call_exn_def block_def)
+
+lemma dynCall_dynCall_exn: "dynCall init p return result = dynCall_exn undefined UNIV init p return (\<lambda>s t. s) result"
+  by (simp add: dynCall_def dynCall_exn_def call_call_exn)
 
 
 subsection \<open>Operations on Simpl-Syntax\<close>
@@ -313,6 +329,10 @@ lemma flatten_bind [simp]: "flatten (bind e c) = [bind e c]"
 lemma flatten_bseq [simp]: "flatten (bseq c1 c2) = flatten c1 @ flatten c2"
   by (simp add: bseq_def)
 
+lemma flatten_block_exn [simp]:
+  "flatten (block_exn init bdy return result_exn result) = [block_exn init bdy return result_exn result]"
+  by (simp add: block_exn_def)
+
 lemma flatten_block [simp]:
   "flatten (block init bdy return result) = [block init bdy return result]"
   by (simp add: block_def)
@@ -322,6 +342,12 @@ lemma flatten_call [simp]: "flatten (call init p return result) = [call init p r
 
 lemma flatten_dynCall [simp]: "flatten (dynCall init p return result) = [dynCall init p return result]"
   by (simp add: dynCall_def)
+
+lemma flatten_call_exn [simp]: "flatten (call_exn init p return result_exn result) = [call_exn init p return result_exn result]"
+  by (simp add: call_exn_def)
+
+lemma flatten_dynCall_exn [simp]: "flatten (dynCall_exn f g init p return result_exn result) = [dynCall_exn f g init p return result_exn result]"
+  by (simp add: dynCall_exn_def maybe_guard_def)
 
 lemma flatten_fcall [simp]: "flatten (fcall init p return result c) = [fcall init p return result c]"
   by (simp add: fcall_def)
@@ -373,9 +399,9 @@ lemma normalize_bseq [simp]:
                             ((flatten (normalize c1)) @ (flatten (normalize c2)))"
   by (simp add: bseq_def)
 
-lemma normalize_block [simp]: "normalize (block init bdy return c) =
-                         block init (normalize bdy) return (\<lambda>s t. normalize (c s t))"
-  apply (simp add: block_def)
+lemma normalize_block_exn [simp]: "normalize (block_exn init bdy return result_exn c) =
+                         block_exn init (normalize bdy) return result_exn (\<lambda>s t. normalize (c s t))"
+  apply (simp add: block_exn_def)
   apply (rule ext)
   apply (simp)
   apply (cases "flatten (normalize bdy)")
@@ -397,14 +423,31 @@ lemma normalize_block [simp]: "normalize (block init bdy return c) =
   apply simp
   done
 
+lemma normalize_block [simp]: "normalize (block init bdy return c) =
+                         block init (normalize bdy) return (\<lambda>s t. normalize (c s t))"
+  by (simp add: block_def)
+
 lemma normalize_call [simp]:
   "normalize (call init p return c) = call init p return (\<lambda>i t. normalize (c i t))"
   by (simp add: call_def)
+
+lemma normalize_call_exn [simp]:
+  "normalize (call_exn init p return result_exn c) = call_exn init p return result_exn (\<lambda>i t. normalize (c i t))"
+  by (simp add: call_exn_def)
 
 lemma normalize_dynCall [simp]:
   "normalize (dynCall init p return c) =
     dynCall init p return (\<lambda>s t. normalize (c s t))"
   by (simp add: dynCall_def)
+
+lemma normalize_guards [simp]:
+  "normalize (guards gs c) = guards gs (normalize c)"
+  by (induct gs) auto
+
+lemma normalize_dynCall_exn [simp]:
+  "normalize (dynCall_exn f g init p return result_exn c) =
+    dynCall_exn f g init p return result_exn (\<lambda>s t. normalize (c s t))"
+  by  (simp add: dynCall_exn_def maybe_guard_def)
 
 lemma normalize_fcall [simp]:
   "normalize (fcall init p return result c) =
@@ -421,9 +464,6 @@ lemma normalize_guaranteeStrip [simp]:
   "normalize (guaranteeStrip f g c) = guaranteeStrip f g (normalize c)"
   by (simp add: guaranteeStrip_def)
 
-lemma normalize_guards [simp]:
-  "normalize (guards gs c) = guards gs (normalize c)"
-  by (induct gs) auto
 
 text \<open>Sequencial composition with guards in the body is not preserved by
         normalize\<close>
@@ -506,6 +546,11 @@ lemma strip_guards_bseq [simp]:
   "strip_guards F (bseq c1 c2) = bseq (strip_guards F c1) (strip_guards F c2)"
   by (simp add: bseq_def)
 
+lemma strip_guards_block_exn [simp]:
+  "strip_guards F (block_exn init bdy return result_exn c) =
+    block_exn init (strip_guards F bdy) return result_exn (\<lambda>s t. strip_guards F (c s t))"
+  by (simp add: block_exn_def)
+
 lemma strip_guards_block [simp]:
   "strip_guards F (block init bdy return c) =
     block init (strip_guards F bdy) return (\<lambda>s t. strip_guards F (c s t))"
@@ -516,10 +561,24 @@ lemma strip_guards_call [simp]:
      call init p return (\<lambda>s t. strip_guards F (c s t))"
   by (simp add: call_def)
 
+lemma strip_guards_call_exn [simp]:
+  "strip_guards F (call_exn init p return result_exn c) =
+     call_exn init p return result_exn (\<lambda>s t. strip_guards F (c s t))"
+  by (simp add: call_exn_def)
+
 lemma strip_guards_dynCall [simp]:
   "strip_guards F (dynCall init p return c) =
      dynCall init p return (\<lambda>s t. strip_guards F (c s t))"
   by (simp add: dynCall_def)
+
+lemma strip_guards_guards [simp]: "strip_guards F (guards gs c) =
+        guards (filter (\<lambda>(f,g). f \<notin> F) gs) (strip_guards F c)"
+  by (induct gs) auto
+
+lemma strip_guards_dynCall_exn [simp]:
+  "strip_guards F (dynCall_exn f g init p return result_exn c) =
+     dynCall_exn f (if f \<in> F then UNIV else g) init p return result_exn (\<lambda>s t. strip_guards F (c s t))"
+  by (simp add: dynCall_exn_def maybe_guard_def)
 
 lemma strip_guards_fcall [simp]:
   "strip_guards F (fcall init p return result c) =
@@ -540,9 +599,7 @@ lemma strip_guards_guaranteeStrip [simp]:
 lemma guaranteeStripPair_split_conv [simp]: "case_prod c (guaranteeStripPair f g) = c f g"
   by (simp add: guaranteeStripPair_def)
 
-lemma strip_guards_guards [simp]: "strip_guards F (guards gs c) =
-        guards (filter (\<lambda>(f,g). f \<notin> F) gs) (strip_guards F c)"
-  by (induct gs) auto
+
 
 lemma strip_guards_while [simp]:
  "strip_guards F (while gs b  c) =
@@ -602,6 +659,11 @@ lemma mark_guards_bseq [simp]:
   "mark_guards f (bseq c1 c2) = bseq (mark_guards f c1) (mark_guards f c2)"
   by (simp add: bseq_def)
 
+lemma mark_guards_block_exn [simp]:
+  "mark_guards f (block_exn init bdy return result_exn c) =
+    block_exn init (mark_guards f bdy) return result_exn (\<lambda>s t. mark_guards f (c s t))"
+  by (simp add: block_exn_def)
+
 lemma mark_guards_block [simp]:
   "mark_guards f (block init bdy return c) =
     block init (mark_guards f bdy) return (\<lambda>s t. mark_guards f (c s t))"
@@ -612,10 +674,24 @@ lemma mark_guards_call [simp]:
      call init p return (\<lambda>s t. mark_guards f (c s t))"
   by (simp add: call_def)
 
+lemma mark_guards_call_exn [simp]:
+  "mark_guards f (call_exn init p return result_exn c) =
+     call_exn init p return result_exn (\<lambda>s t. mark_guards f (c s t))"
+  by (simp add: call_exn_def)
+
 lemma mark_guards_dynCall [simp]:
   "mark_guards f (dynCall init p return c) =
      dynCall init p return (\<lambda>s t. mark_guards f (c s t))"
   by (simp add: dynCall_def)
+
+lemma mark_guards_guards [simp]:
+  "mark_guards f (guards gs c) = guards (map (\<lambda>(f',g). (f,g)) gs) (mark_guards f c)"
+  by (induct gs) auto
+
+lemma mark_guards_dynCall_exn [simp]:
+  "mark_guards f (dynCall_exn f' g init p return result_exn c) =
+     dynCall_exn f g init p return result_exn (\<lambda>s t. mark_guards f (c s t))"
+  by (simp add: dynCall_exn_def maybe_guard_def)
 
 lemma mark_guards_fcall [simp]:
   "mark_guards f (fcall init p return result c) =
@@ -631,9 +707,6 @@ lemma mark_guards_guaranteeStrip [simp]:
   "mark_guards f (guaranteeStrip f' g c) = guaranteeStrip f g (mark_guards f c)"
   by (simp add: guaranteeStrip_def)
 
-lemma mark_guards_guards [simp]:
-  "mark_guards f (guards gs c) = guards (map (\<lambda>(f',g). (f,g)) gs) (mark_guards f c)"
-  by (induct gs) auto
 
 lemma mark_guards_while [simp]:
  "mark_guards f (while gs b c) =
@@ -664,6 +737,7 @@ lemmas mark_guards_simps = mark_guards.simps mark_guards_raise
 definition is_Guard:: "('s,'p,'f) com \<Rightarrow> bool"
   where "is_Guard c = (case c of Guard f g c' \<Rightarrow> True | _ \<Rightarrow> False)"
 lemma is_Guard_basic_simps [simp]:
+ "is_Guard (guards (pg# pgs) c) = True"
  "is_Guard Skip = False"
  "is_Guard (Basic f) = False"
  "is_Guard (Spec r) = False"
@@ -679,14 +753,18 @@ lemma is_Guard_basic_simps [simp]:
  "is_Guard (condCatch c1 b c2) = False"
  "is_Guard (bind e cv) = False"
  "is_Guard (bseq c1 c2) = False"
+ "is_Guard (block_exn init bdy return result_exn cont) = False"
  "is_Guard (block init bdy return cont) = False"
  "is_Guard (call init p return cont) = False"
  "is_Guard (dynCall init P return cont) = False"
+ "is_Guard (call_exn init p return result_exn cont) = False"
+ "is_Guard (dynCall_exn f UNIV init P return result_exn cont) = False"
  "is_Guard (fcall init p return result cont') = False"
  "is_Guard (whileAnno b I V c) = False"
  "is_Guard (guaranteeStrip F g c) = True"
   by (auto simp add: is_Guard_def raise_def condCatch_def bind_def bseq_def
-          block_def call_def dynCall_def fcall_def whileAnno_def guaranteeStrip_def)
+          block_def block_exn_def call_def dynCall_def call_exn_def dynCall_exn_def
+          fcall_def whileAnno_def guaranteeStrip_def)
 
 
 lemma is_Guard_switch [simp]:
@@ -776,6 +854,9 @@ lemmas merge_guards_res_simps = merge_guards_res_Skip merge_guards_res_Basic
  merge_guards_res_DynCom merge_guards_res_Throw merge_guards_res_Catch
  merge_guards_res_Guard
 
+lemma merge_guards_guards_empty: "merge_guards (guards [] c) = merge_guards c"
+  by (simp)
+
 lemma merge_guards_raise: "merge_guards (raise g) = raise g"
   by (simp add: raise_def)
 
@@ -792,6 +873,11 @@ lemma merge_guards_bseq [simp]:
   "merge_guards (bseq c1 c2) = bseq (merge_guards c1) (merge_guards c2)"
   by (simp add: bseq_def)
 
+lemma merge_guards_block_exn [simp]:
+  "merge_guards (block_exn init bdy return result_exn c) =
+    block_exn init (merge_guards bdy) return result_exn (\<lambda>s t. merge_guards (c s t))"
+  by (simp add: block_exn_def)
+
 lemma merge_guards_block [simp]:
   "merge_guards (block init bdy return c) =
     block init (merge_guards bdy) return (\<lambda>s t. merge_guards (c s t))"
@@ -801,6 +887,11 @@ lemma merge_guards_call [simp]:
   "merge_guards (call init p return c) =
      call init p return (\<lambda>s t. merge_guards (c s t))"
   by (simp add: call_def)
+
+lemma merge_guards_call_exn [simp]:
+  "merge_guards (call_exn init p return result_exn c) =
+     call_exn init p return result_exn (\<lambda>s t. merge_guards (c s t))"
+  by (simp add: call_exn_def)
 
 lemma merge_guards_dynCall [simp]:
   "merge_guards (dynCall init p return c) =
@@ -843,6 +934,7 @@ text \<open>@{term "merge_guards"} for guard-lists as in @{const guards}, @{cons
 lemmas merge_guards_simps = merge_guards.simps merge_guards_raise
   merge_guards_condCatch merge_guards_bind merge_guards_bseq merge_guards_block
   merge_guards_dynCall merge_guards_fcall merge_guards_switch
+  merge_guards_block_exn merge_guards_call_exn
   merge_guards_guaranteeStrip merge_guards_whileAnno merge_guards_specAnno
 
 primrec noguards:: "('s,'p,'f) com \<Rightarrow> bool"
