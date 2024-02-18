@@ -1630,7 +1630,7 @@ proof (rule cnvalidI)
   have valid_modif': "\<forall>\<sigma>. \<forall>n.
        \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/UNIV\<^esub> {\<sigma>} Call (p s) (Modif \<sigma>),(ModifAbr \<sigma>)"
     by blast
-  from exec thm execn_Normal_elim_cases
+  from exec
   have exec_call: "\<Gamma>\<turnstile>\<langle>maybe_guard f g (call_exn init (p s) return result_exn c),Normal s\<rangle> =n\<Rightarrow> t"
     by (cases rule: execn_dynCall_exn_Normal_elim)
   then show "t \<in> Normal ` Q \<union> Abrupt ` A"
