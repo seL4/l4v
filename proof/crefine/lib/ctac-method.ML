@@ -425,8 +425,8 @@ fun ceqv_restore_args_tac ctxt = SUBGOAL (fn (t, n) => case
       val proc = dest_Const i |> fst |> Long_Name.base_name
       val pinfo = Hoare.get_data ctxt |> #proc_info
       val params = Symtab.lookup pinfo proc |> the |> #params
-          |> filter (fn (v, _) => v = HoarePackage.In)
-      val new_upds = map (snd #> suffix Record.updateN #> Syntax.read_term ctxt
+          |> filter (fn (v, _, _) => v = HoarePackage.In)
+      val new_upds = map (#2 #> suffix Record.updateN #> Syntax.read_term ctxt
               #> dest_Const #> fst) params
           |> filter_out (member (op =) cnames)
 

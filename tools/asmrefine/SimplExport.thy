@@ -889,7 +889,7 @@ fun has_reads_globals (params : export_params) body = exists_Const (fn (s, T) =>
 
 fun get_reads_calls ctxt params globals name = let
     val thm = Proof_Context.get_thm ctxt (name ^ "_body_def")
-        |> simplify (put_simpset HOL_basic_ss ctxt addsimps @{thms call_def block_def})
+        |> simplify (put_simpset HOL_basic_ss ctxt addsimps @{thms call_def block_def block_exn_def})
     fun calls (Const (@{const_name com.Call}, _) $ proc) = [proc]
       | calls (f $ x) = calls f @ calls x
       | calls (Abs (_, _, t)) = calls t
@@ -1023,10 +1023,10 @@ fun emit_body ctxt outfile params (Const (@{const_name Seq}, _) $ a $ b) n c e =
     val proc_info = Hoare.get_data ctxt |> #proc_info
     val ret_vals = Symtab.lookup proc_info (Long_Name.base_name p)
         |> the |> #params
-        |> filter (fn (v, _) => v = HoarePackage.Out)
-        |> maps (snd #> read_const ctxt (#pfx params)
+        |> filter (fn (v, _, _) => v = HoarePackage.Out)
+        |> maps (#2 #> read_const ctxt (#pfx params)
          #> synthetic_updates ctxt params "rv#space#")
-        |> map fst
+        |> map #1
 
     val p_short = unsuffix "_'proc" (Long_Name.base_name p)
     val no_read = mk_safe is_no_read_globals ctxt params p_short
@@ -1069,10 +1069,10 @@ fun emit_body ctxt outfile params (Const (@{const_name Seq}, _) $ a $ b) n c e =
 fun emit_func_body ctxt outfile eparams name = let
     val proc_info = Hoare.get_data ctxt |> #proc_info
     val params = Symtab.lookup proc_info (name ^ "_'proc")
-        |> the |> #params
+        |> the |> #params |> map (fn (a, b, _) => (a, b))
         |> map (apsnd (read_const ctxt (#pfx eparams)
                 #> synthetic_updates ctxt eparams ""
-                #> map fst))
+                #> map #1))
 
     val no_read = mk_safe is_no_read_globals ctxt eparams name
     val no_write = mk_safe (K o is_no_write) ctxt eparams name
