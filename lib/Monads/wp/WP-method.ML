@@ -270,7 +270,7 @@ fun trace_used_thms trace ctxt used_thms_ref =
 
 fun warn_unsafe_rules unsafe_rules n ctxt t =
   let val used_thms_dummy = Unsynchronized.ref [] : (string * string * term) list Unsynchronized.ref;
-      val ctxt' = Config.put WP_Pre.wp_trace false ctxt
+      val ctxt' = (Config.put WP_Pre.wp_trace false ctxt |> Config.put WP_Pre.wp_trace_instantiation false)
       val useful_unsafe_rules =
           filter (fn rule =>
             (is_some o SINGLE (
@@ -284,7 +284,7 @@ fun warn_unsafe_rules unsafe_rules n ctxt t =
 
 fun apply_rules_tac_n trace ctxt extras n =
 let
-  val trace' = trace orelse Config.get ctxt WP_Pre.wp_trace
+  val trace' = trace orelse Config.get ctxt WP_Pre.wp_trace orelse Config.get ctxt WP_Pre.wp_trace_instantiation
   val used_thms_ref = Unsynchronized.ref [] : (string * string * term) list Unsynchronized.ref
   val rules = get_rules ctxt extras
   val wp_pre_tac = TRY (WP_Pre.pre_tac trace' ctxt
@@ -310,7 +310,7 @@ fun apply_rules_tac trace ctxt extras = apply_rules_tac_n trace ctxt extras 1;
 
 fun apply_once_tac trace ctxt extras t =
   let
-    val trace' = trace orelse Config.get ctxt WP_Pre.wp_trace
+    val trace' = trace orelse Config.get ctxt WP_Pre.wp_trace orelse Config.get ctxt WP_Pre.wp_trace_instantiation
     val used_thms_ref = Unsynchronized.ref [] : (string * string * term) list Unsynchronized.ref
     val rules = get_rules ctxt extras
   in Seq.map (fn thm => (trace_used_thms trace' ctxt used_thms_ref; thm))
