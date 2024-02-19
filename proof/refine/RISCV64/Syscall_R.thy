@@ -806,7 +806,7 @@ crunches ifCondRefillUnblockCheck
 lemma ifConfRefillUnblockCheck_ko_at'_tcb[wp]:
   "ifCondRefillUnblockCheck scOpt act ast \<lbrace>\<lambda>s. P (ko_at' (ko :: tcb) tcbPtr s)\<rbrace>"
   unfolding ifCondRefillUnblockCheck_def refillUnblockCheck_def refillHeadOverlappingLoop_def
-            mergeRefills_def updateRefillHd_def updateSchedContext_def refillPopHead_def
+            mergeOverlappingRefills_def updateRefillHd_def updateSchedContext_def refillPopHead_def
   by (wpsimp wp: whileLoop_valid_inv hoare_drop_imps getRefillNext_wp isRoundRobin_wp)
 
 lemma doReplyTransfer_invs'[wp]:

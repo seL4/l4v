@@ -86,13 +86,14 @@ lemma get_refill_head_sp:
   done
 
 lemmas refill_unblock_check_defs
-  = refill_unblock_check_def is_round_robin_def merge_refills_def refill_pop_head_def
+  = refill_unblock_check_def is_round_robin_def merge_overlapping_refills_def refill_pop_head_def
     refill_head_overlapping_loop_def set_refill_hd_def update_refill_hd_def
 
 lemmas refill_budget_check_defs
-  = refill_budget_check_def non_overlapping_merge_refills_def merge_refills_def refill_pop_head_def
-    head_insufficient_loop_def handle_overrun_loop_def handle_overrun_loop_body_def
-    set_refill_hd_def update_refill_hd_def refill_single_def refill_size_def
+  = refill_budget_check_def non_overlapping_merge_refills_def merge_overlapping_refills_def
+    refill_pop_head_def head_insufficient_loop_def handle_overrun_loop_def
+    handle_overrun_loop_body_def set_refill_hd_def update_refill_hd_def refill_single_def
+    refill_size_def
 
 lemma update_sched_context_decompose:
    "update_sched_context scp (\<lambda>sc. f (g sc))

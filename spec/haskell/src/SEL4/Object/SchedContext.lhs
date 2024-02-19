@@ -332,8 +332,8 @@ This module uses the C preprocessor to select a target architecture.
 > headInsufficientLoop :: PPtr SchedContext -> Kernel ()
 > headInsufficientLoop scPtr = whileLoop (const (fromJust . runReaderT (refillHdInsufficient scPtr))) (const (nonOverlappingMergeRefills scPtr)) ()
 
-> mergeRefills :: PPtr SchedContext -> Kernel ()
-> mergeRefills scPtr = do
+> mergeOverlappingRefills :: PPtr SchedContext -> Kernel ()
+> mergeOverlappingRefills scPtr = do
 >     old_head <- refillPopHead scPtr
 >     updateRefillHd scPtr $ \head -> head { rTime = rTime old_head,
 >                                            rAmount = rAmount head + rAmount old_head }
@@ -352,7 +352,7 @@ This module uses the C preprocessor to select a target architecture.
 
 > refillHeadOverlappingLoop :: PPtr SchedContext -> Kernel ()
 > refillHeadOverlappingLoop scPtr =
->        whileLoop (const (fromJust . runReaderT (refillHeadOverlapping scPtr))) (const (mergeRefills scPtr)) ()
+>     whileLoop (const (fromJust . runReaderT (refillHeadOverlapping scPtr))) (const (mergeOverlappingRefills scPtr)) ()
 
 > maxReleaseTime :: Word64
 > maxReleaseTime = (maxBound :: Word64) - 5 * usToTicks maxPeriodUs

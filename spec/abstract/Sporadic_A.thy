@@ -54,18 +54,17 @@ where
   "merge_refill r1 r2 = \<lparr> r_time = r_time r1, r_amount = r_amount r2 + r_amount r1 \<rparr>"
 
 definition
-  merge_refills :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
+  merge_overlapping_refills :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "merge_refills sc_ptr \<equiv> do
+  "merge_overlapping_refills sc_ptr \<equiv> do
      head \<leftarrow> refill_pop_head sc_ptr;
      update_refill_hd sc_ptr (merge_refill head)
    od"
 
-definition
-  refill_head_overlapping_loop :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
-where
-  "refill_head_overlapping_loop sc_ptr
-     \<equiv> whileLoop (\<lambda>_ s. the ((refill_head_overlapping sc_ptr) s)) (\<lambda>_. merge_refills sc_ptr) ()"
+definition refill_head_overlapping_loop :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad" where
+  "refill_head_overlapping_loop sc_ptr \<equiv>
+     whileLoop (\<lambda>_ s. the ((refill_head_overlapping sc_ptr) s))
+               (\<lambda>_. merge_overlapping_refills sc_ptr) ()"
 
 definition
   refill_unblock_check :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
