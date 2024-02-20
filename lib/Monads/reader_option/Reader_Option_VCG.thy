@@ -97,6 +97,12 @@ lemma asks_SomeD:
   "\<lbrakk>asks f s = Some r; Q (f s) s\<rbrakk> \<Longrightarrow> Q r s"
   by (rule use_ovalid[OF asks_wp])
 
+lemma oassert_wp[wp]:
+  "\<lblot>\<lambda>s. Q \<longrightarrow> P () s\<rblot> oassert Q \<lblot>P\<rblot>"
+  apply (simp add: oassert_def)
+  apply (intro conjI; wpsimp)
+  done
+
 lemma ogets_wp[wp]:
   "ovalid (\<lambda>s. P (f s) s) (ogets f) P"
   by wp
@@ -108,6 +114,10 @@ lemma oguard_wp[wp]:
 lemma oskip_wp[wp]:
   "ovalid (\<lambda>s. P () s) oskip P"
   by (simp add: ovalid_def oskip_def)
+
+lemma ovalid_if_split:
+  "\<lbrakk> P \<Longrightarrow> \<lblot>Q\<rblot> f \<lblot>S\<rblot>; \<not>P \<Longrightarrow> \<lblot>R\<rblot> g \<lblot>S\<rblot> \<rbrakk> \<Longrightarrow> \<lblot>\<lambda>s. (P \<longrightarrow> Q s) \<and> (\<not>P \<longrightarrow> R s)\<rblot> if P then f else g \<lblot>S\<rblot>"
+  by simp
 
 lemma ovalid_case_prod[wp]:
   assumes "(\<And>x y. ovalid (P x y) (B x y) Q)"
@@ -123,6 +133,11 @@ lemma owhile_ovalid[wp]:
   apply (frule_tac I = "\<lambda>a. I a s" in option_while_rule)
   apply auto
   done
+
+lemma assert_opt_ovalid:
+  "\<lblot>\<lambda>s. \<forall>y. x = Some y \<longrightarrow> Q y s\<rblot> oassert_opt x \<lblot>Q\<rblot>"
+  unfolding oassert_opt_def
+  by (case_tac x; wpsimp)
 
 definition ovalid_property where "ovalid_property P x = (\<lambda>s f. (\<forall>r. Some r = x s f \<longrightarrow> P r s))"
 
