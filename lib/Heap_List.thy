@@ -83,13 +83,24 @@ lemma heap_path_end_unique:
   "heap_path hp x xs y \<Longrightarrow> heap_path hp x xs y' \<Longrightarrow> y = y'"
   by (induct xs arbitrary: x; clarsimp)
 
-lemma heap_path_head:
-  "heap_path hp x xs y \<Longrightarrow> xs \<noteq> [] \<Longrightarrow> x = Some (hd xs)"
-  by (induct xs arbitrary: x; clarsimp)
+lemma heap_path_head':
+  "heap_path hp st xs y \<Longrightarrow> xs \<noteq> [] \<longrightarrow> st = Some (hd xs)"
+  by (induct xs arbitrary: st; clarsimp)
+
+lemmas heap_path_head = heap_path_head'[rule_format]
 
 lemma heap_path_non_nil_lookup_next:
   "heap_path hp x (xs@z#ys) y \<Longrightarrow> hp z = (case ys of [] \<Rightarrow> y | _ \<Rightarrow> Some (hd ys))"
   by (cases ys; fastforce)
+
+lemma heap_ls_next_of_hd:
+  "\<lbrakk>a = hd ls; heap_ls hp st ls; Suc 0 < length ls\<rbrakk> \<Longrightarrow> hp a = Some (hd (tl ls))"
+  apply (cut_tac hp=hp and xs="[]" and z=a and ys="tl ls" in heap_path_non_nil_lookup_next)
+   apply (prop_tac "ls \<noteq> []", fastforce)
+   apply fastforce
+  apply (cases "tl ls"; clarsimp)
+  apply (cases ls; clarsimp)
+  done
 
 lemma heap_path_prefix:
   "heap_path hp st ls ed \<Longrightarrow> \<forall>xs\<le>ls. heap_path hp st xs (if xs = [] then st else hp (last xs))"
@@ -233,6 +244,28 @@ lemma heap_path_sym_heap_non_nil_lookup_prev:
    apply (frule append_butlast_last_id)
    apply (metis append_eq_Cons_conv append_eq_append_conv2)
   apply (fastforce dest: sym_heapD1)
+  done
+
+lemma heap_ls_prev_of_last:
+  "\<lbrakk>t = last ls; Suc 0 < length ls; heap_ls hp st ls; sym_heap hp hp'\<rbrakk>
+   \<Longrightarrow> hp' t = Some (last (butlast ls))"
+  apply (cut_tac hp=hp and xs="butlast ls" and z=t and ys="[]"
+              in heap_path_sym_heap_non_nil_lookup_prev)
+     apply (prop_tac "ls \<noteq> []", fastforce)
+     apply fastforce
+    apply fastforce
+   apply (fastforce intro!: length_gt_1_imp_butlast_nonempty)
+  apply assumption
+  done
+
+lemma ptr_in_middle_prev_next:
+  "\<lbrakk>heap_ls hp st (xs @ ptr # ys); xs \<noteq> []; ys \<noteq> []; sym_heap hp hp'\<rbrakk>
+   \<Longrightarrow> hp' ptr = Some (last xs) \<and> hp ptr = Some (hd ys)"
+  apply (rule conjI)
+   apply (fastforce dest: heap_path_sym_heap_non_nil_lookup_prev)
+  apply (cut_tac hp=hp in heap_path_non_nil_lookup_next)
+   apply fastforce
+  apply (cases ys; clarsimp)
   done
 
 lemma heap_ls_no_loops:
