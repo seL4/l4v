@@ -251,6 +251,10 @@ abbreviation sc_valid_refills' :: "sched_context \<Rightarrow> bool" where
      \<and> scRefillHead sc < scRefillMax sc \<and> scRefillTail sc < scRefillMax sc
      \<and> refillSize sc \<le> scRefillMax sc"
 
+lemma refillNext_less_length_scRefills:
+  "\<lbrakk>sc_valid_refills' sc; idx < scRefillMax sc\<rbrakk> \<Longrightarrow> refillNext sc idx < length (scRefills sc)"
+  by (fastforce simp: refillNext_def split: if_splits)
+
 definition valid_refills' :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "valid_refills' sc_ptr s' \<equiv> (sc_valid_refills' |< scs_of' s') sc_ptr"
 
