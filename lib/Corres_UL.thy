@@ -793,6 +793,9 @@ lemma corres_stateAssert_implied:
    apply (wp | rule no_fail_pre)+
   done
 
+lemmas corres_stateAssert_ignore =
+  corres_stateAssert_implied[where P=P and P'=P for P, simplified, rotated]
+
 lemma corres_stateAssert_r:
   "corres_underlying sr nf nf' r P Q f (g ()) \<Longrightarrow>
    corres_underlying sr nf nf' r P (Q and P') f (stateAssert P' [] >>= g)"
