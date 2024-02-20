@@ -359,7 +359,7 @@ lemma ovalidNF_pre_imp:
   "\<lbrakk> \<And>s. P' s \<Longrightarrow> P s; ovalidNF P f Q \<rbrakk> \<Longrightarrow> ovalidNF P' f Q"
   by (simp add: ovalidNF_def)
 
-lemma no_ofail_pre_imp:
+lemma no_ofail_pre_imp[wp_pre]:
   "\<lbrakk> no_ofail P f; \<And>s. P' s \<Longrightarrow> P s \<rbrakk> \<Longrightarrow> no_ofail P' f"
   by (simp add: no_ofail_def)
 
