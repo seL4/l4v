@@ -397,6 +397,20 @@ lemma set_list_insert_before:
   apply fastforce
   done
 
+lemma takeWhile_dropWhile_insert_list_before:
+  "\<lbrakk>distinct ls; sorted (map f ls); sfx \<noteq> []; suffix sfx ls;
+    \<forall>pfx v. pfx @ sfx = ls \<and> v \<in> set pfx \<longrightarrow> f v \<le> f new; f new < f (hd sfx)\<rbrakk> \<Longrightarrow>
+   map fst (takeWhile (\<lambda>(_, t). t \<le> f new) (zip ls (map f ls)))
+    @ new
+    # map fst (dropWhile (\<lambda>(_, t). t \<le> f new) (zip ls (map f ls)))
+   = list_insert_before ls (hd sfx) new"
+  apply (cases sfx; simp)
+  apply (simp add: suffix_def map_fst_takeWhile_zip map_fst_dropWhile_zip)
+  apply (elim exE, rename_tac xs)
+  apply (cut_tac xs=xs and ys="a # list" and new=new in list_insert_before_distinct)
+    apply auto
+  done
+
 lemma list_remove_removed:
   "set (list_remove list x) = (set list) - {x}"
   apply (induct list,simp+)
@@ -421,6 +435,16 @@ lemma list_remove_distinct:
 lemma list_remove_none: "x \<notin> set list \<Longrightarrow> list_remove list x = list"
   apply (induct list)
   apply clarsimp+
+  done
+
+lemma list_remove_append[simp]:
+  "list_remove (xs @ ys) t = list_remove xs t @ list_remove ys t"
+  by (induct xs) auto
+
+lemma list_remove_middle_distinct:
+  "\<lbrakk>distinct q; q = ys @ t # zs\<rbrakk> \<Longrightarrow> list_remove q t = ys @ zs"
+  apply (induct q rule: length_induct)
+  apply (simp add: list_remove_none)
   done
 
 lemma replace_distinct: "x \<notin> set list \<Longrightarrow> distinct list \<Longrightarrow> distinct (list_replace list y x)"
@@ -1116,5 +1140,29 @@ lemma after_in_list_None_last:
 lemma map2_append1:
   "map2 f (as @ bs) cs = map2 f as (take (length as) cs) @ map2 f bs (drop (length as) cs)"
   by (simp add: map_def zip_append1)
+
+lemma sorted_lastD:
+  "\<lbrakk> sorted xs; xs \<noteq> [] \<rbrakk> \<Longrightarrow> \<forall>x\<in>set xs. x \<le> last xs"
+  by (induct xs, auto)
+
+lemma sorted_last_leD:
+  "\<lbrakk> sorted xs; y \<ge> last xs ; xs \<noteq> [] \<rbrakk> \<Longrightarrow> \<forall>x\<in>set xs. x \<le> y"
+  by (fastforce dest: sorted_lastD)
+
+lemma length_gt_1_imp_butlast_nonempty:
+  "Suc 0 < length xs \<Longrightarrow> butlast xs \<noteq> []"
+  by (cases xs; clarsimp)
+
+lemma not_last_in_set_butlast:
+  "\<lbrakk>ptr \<in> set ls; ptr \<noteq> last ls\<rbrakk> \<Longrightarrow> ptr \<in> set (butlast ls)"
+  apply (induct ls; simp)
+  apply fastforce
+  done
+
+lemma distinct_in_butlast_not_last:
+  "\<lbrakk>distinct ls; x \<in> set (butlast ls)\<rbrakk> \<Longrightarrow> x \<noteq> last ls"
+  apply (induct ls; simp)
+  apply force
+  done
 
 end

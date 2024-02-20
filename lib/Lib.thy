@@ -1913,6 +1913,37 @@ lemma length_takeWhile_gt:
   apply simp
   done
 
+lemma map_fst_filter_zip[simp]:
+ "map fst (filter (\<lambda>(_, x). P x) (zip ls (map f ls))) = filter (\<lambda>x. P (f x)) ls"
+  by (induction ls; clarsimp)
+
+lemma map_fst_dropWhile_zip[simp]:
+ "map fst (dropWhile (\<lambda>(_, x). P x) (zip ls (map f ls))) = dropWhile (\<lambda>x. P (f x)) ls"
+  by (induction ls; clarsimp)
+
+lemma map_fst_takeWhile_zip[simp]:
+ "map fst (takeWhile (\<lambda>(_, x). P x) (zip ls (map f ls))) = takeWhile (\<lambda>x. P (f x)) ls"
+  by (induction ls; clarsimp)
+
+lemma suffix_tl:
+  "suffix xs ys \<Longrightarrow> suffix (tl xs) ys"
+  apply (clarsimp simp: suffix_def)
+  apply (metis append.assoc append_Cons append_Nil list.exhaust_sel list.sel(2))
+  done
+
+lemma nonempty_proper_suffix_split:
+  "\<lbrakk>sfx \<noteq> []; sfx \<noteq> queue; suffix sfx queue\<rbrakk> \<Longrightarrow> (\<exists>xs ys. xs \<noteq> [] \<and> queue = xs @ hd sfx # ys)"
+  apply (clarsimp simp: suffix_def)
+  apply (fastforce simp: neq_Nil_conv)
+  done
+
+lemma nonempty_proper_suffix_split_distinct:
+  "\<lbrakk>sfx \<noteq> []; sfx \<noteq> queue; suffix sfx queue; distinct queue\<rbrakk>
+   \<Longrightarrow> \<exists>xs ys. xs \<noteq> [] \<and> queue = xs @ hd sfx # ys \<and> hd queue \<noteq> hd sfx"
+  apply (frule (2) nonempty_proper_suffix_split)
+  apply (cases sfx; fastforce)
+  done
+
 lemma hd_drop_conv_nth2:
   "n < length xs \<Longrightarrow> hd (drop n xs) = xs ! n"
   by (rule hd_drop_conv_nth) clarsimp
@@ -2031,6 +2062,22 @@ lemma contrapos_imp:
 lemma filter_eq_If:
   "distinct xs \<Longrightarrow> filter (\<lambda>v. v = x) xs = (if x \<in> set xs then [x] else [])"
   by (induct xs) auto
+
+lemma filter_last_equals_butlast:
+  "\<lbrakk>distinct q; q \<noteq> []\<rbrakk> \<Longrightarrow> filter ((\<noteq>) (last q)) q = butlast q"
+  apply (induct q rule: length_induct)
+  apply (rename_tac list)
+  apply (case_tac list; simp)
+  apply (fastforce simp: filter_id_conv)
+  done
+
+lemma filter_middle_distinct:
+  "\<lbrakk>distinct q; q = ys @ t # zs\<rbrakk> \<Longrightarrow> filter ((\<noteq>) t) q = ys @ zs"
+  apply (induct q rule: length_induct)
+  apply (rename_tac list)
+  apply (case_tac list; simp)
+  apply (subst filter_True | fastforce)+
+  done
 
 lemma (in semigroup_add) foldl_assoc:
 shows "foldl (+) (x+y) zs = x + (foldl (+) y zs)"
@@ -2561,6 +2608,18 @@ lemma ranD:
 lemma fun_upd_swap:
   "a \<noteq> c \<Longrightarrow>  hp(c := d, a := b) = hp(a := b, c := d)"
   by fastforce
+
+lemma list_not_head:
+  "Suc 0 < length ls \<Longrightarrow> ls \<noteq> [hd ls]"
+  by (cases ls; clarsimp)
+
+lemma list_not_last:
+  "Suc 0 < length ls \<Longrightarrow> ls \<noteq> [last ls]"
+  by (cases ls; clarsimp)
+
+lemma length_tail_nonempty:
+  "Suc 0 < length list \<Longrightarrow> tl list \<noteq> []"
+  by (cases list, simp, simp)
 
 text \<open>Prevent clarsimp and others from creating Some from not None by folding this and unfolding
   again when safe.\<close>
