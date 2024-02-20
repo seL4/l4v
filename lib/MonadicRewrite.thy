@@ -760,6 +760,12 @@ lemma monadic_rewrite_corres_r:
 lemmas corres_gets_the_bind
   = monadic_rewrite_corres_l[OF monadic_rewrite_bind_head[OF monadic_rewrite_gets_the_gets]]
 
+text \<open>Interaction with @{term oblivious}\<close>
+
+lemma oblivious_monadic_rewrite:
+  "oblivious f m \<Longrightarrow> monadic_rewrite F E \<top> (do modify f; m od) (do m; modify f od)"
+  by (clarsimp simp: monadic_rewrite_def oblivious_modify_swap)
+
 text \<open>Tool integration\<close>
 
 lemma wpc_helper_monadic_rewrite:
