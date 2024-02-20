@@ -309,6 +309,14 @@ lemma ccorres_to_vcg:
   apply fastforce
   done
 
+lemma ccorres_to_vcg_Normal:
+  "\<lbrakk>ccorres_underlying srel \<Gamma> rrel xf arrel axf P P' [] a c; no_fail Q a\<rbrakk>
+   \<Longrightarrow> \<Gamma> \<turnstile> {s'. P s \<and> Q s \<and> s' \<in> P' \<and> (s, s') \<in> srel} c UNIV"
+  apply (frule (1) ccorres_to_vcg_with_prop[where R="\<top>\<top>" and s=s])
+   apply wpsimp
+  apply (fastforce elim: conseqPost)
+  done
+
 lemma ccorres_to_vcg_gets_the:
   "\<lbrakk>ccorres_underlying srel \<Gamma> rrel xf arrel axf P P' [] (gets_the r) c; no_ofail P r\<rbrakk>
    \<Longrightarrow> \<Gamma> \<turnstile> (P' \<inter> {s'. (s, s') \<in> srel \<and> P s})
