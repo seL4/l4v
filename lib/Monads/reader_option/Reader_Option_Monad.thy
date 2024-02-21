@@ -260,7 +260,11 @@ definition
 definition
   "oskip \<equiv> oreturn ()"
 
-lemmas omonad_defs = ofail_def oreturn_def oassert_def oassert_opt_def asks_def ounless_def
+lemma ogets_def:
+  "ogets f = (\<lambda>s. Some (f s))"
+  by (clarsimp simp: asks_def obind_def oreturn_def)
+
+lemmas omonad_defs = ofail_def oreturn_def oassert_def oassert_opt_def ogets_def ounless_def
                      owhen_def
 
 
@@ -478,6 +482,8 @@ lemma obindK_is_opt_map:
   "f \<bind> (\<lambda>x. K $ g x) = f |> g"
   by (simp add: obind_def opt_map_def)
 
+lemmas in_omonad = bind_eq_Some_conv in_obind_eq in_opt_map_eq in_opt_pred Let_def
+
 
 section \<open>"While" loops over option monad.\<close>
 
@@ -583,6 +589,7 @@ proof -
       by (induct arbitrary:s) (auto intro: step final)
   qed
 qed
+
 
 section \<open>Lift @{term option_while} to the @{typ "('a,'s) lookup"} monad\<close>
 
