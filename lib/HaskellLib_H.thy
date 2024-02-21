@@ -14,8 +14,7 @@ imports
   Lib
   More_Numeral_Type
   Monads.Nondet_VCG
-  Monads.Reader_Option_Monad
-  Monads.Reader_Option_VCG
+  Monads.Nondet_Reader_Option
 begin
 
 abbreviation (input) "flip \<equiv> swp"

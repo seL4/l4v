@@ -14,7 +14,7 @@ imports
   CParser.LemmaBucket_C
   Lib.LemmaBucket
   SIMPL_Lemmas
-  Monads.Reader_Option_VCG
+  Monads.Nondet_Reader_Option
 begin
 
 declare word_neq_0_conv [simp del]
