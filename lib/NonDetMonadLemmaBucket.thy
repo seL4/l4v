@@ -19,7 +19,7 @@ imports
   Injection_Handler
   Monads.Nondet_While_Loop_Rules_Completeness
   "Word_Lib.Distinct_Prop" (* for distinct_tuple_helper *)
-  Monads.Reader_Option_VCG
+  Monads.Nondet_Reader_Option
 begin
 
 lemma distinct_tuple_helper:
