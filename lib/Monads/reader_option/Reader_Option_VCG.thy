@@ -12,9 +12,8 @@ This list is almost certainly incomplete; add rules here as they are needed.
 
 theory Reader_Option_VCG
 imports
-  Reader_Option_ND
-  WP
-  Nondet_No_Fail
+  Reader_Option_Monad
+  WPSimp
 begin
 
 (* Hoare triples.
@@ -83,10 +82,6 @@ lemma ocondition_wp[wp]:
 lemma ofail_wp[wp]:
   "ovalid (\<lambda>_. True) ofail Q"
   by (simp add: ovalid_def ofail_def)
-
-lemma ovalid_K_bind_wp[wp]:
-  "ovalid P f Q \<Longrightarrow> ovalid P (K_bind f x) Q"
-  by simp
 
 lemma asks_wp[wp]:
   "ovalid (\<lambda>s. P (f s) s) (asks f) P"
@@ -159,7 +154,6 @@ lemma ovalid_wp_comb3[wp_comb]:
   by (auto simp: ovalid_def)
 
 
-
 (* WP rules for ovalidNF. *)
 lemma obind_NF_wp[wp]:
   "\<lbrakk> \<And>r. ovalidNF (R r) (g r) Q; ovalidNF P f R \<rbrakk> \<Longrightarrow> ovalidNF P (obind f g) Q"
@@ -177,10 +171,6 @@ lemma ocondition_NF_wp[wp]:
 lemma ofail_NF_wp[wp]:
   "ovalidNF (\<lambda>_. False) ofail Q"
   by (simp add: ovalidNF_def ofail_def)
-
-lemma ovalidNF_K_bind_wp[wp]:
-  "ovalidNF P f Q \<Longrightarrow> ovalidNF P (K_bind f x) Q"
-  by simp
 
 lemma ogets_NF_wp[wp]:
   "ovalidNF (\<lambda>s. P (f s) s) (ogets f) P"
@@ -234,7 +224,6 @@ lemma ovalidNF_wp_comb3[wp_comb]:
   by (simp add: ovalidNF_def)
 
 
-
 (* FIXME: WP rules for no_ofail, which might not be correct. *)
 lemma no_ofailD:
   "\<lbrakk> no_ofail P m; P s \<rbrakk> \<Longrightarrow> \<exists>y. m s = Some y"
@@ -254,7 +243,7 @@ lemma no_ofail_ofail[wp]:
 
 lemma no_ofail_asks_simp[simp]:
   "no_ofail P (asks f)"
-  unfolding asks_def get_def oreturn_def obind_def no_ofail_def
+  unfolding asks_def oreturn_def obind_def no_ofail_def
   by simp
 
 lemma no_ofail_asks[wp]:
@@ -268,10 +257,6 @@ lemma no_ofail_ogets[wp]:
 lemma no_ofail_obind[wp]:
   "\<lbrakk> \<And>r. no_ofail (R r) (g r); \<lblot>Q\<rblot> f \<lblot>R\<rblot>; no_ofail P f \<rbrakk> \<Longrightarrow> no_ofail (P and Q) (f |>> g)"
   by (auto simp: no_ofail_def obind_def ovalid_def)
-
-lemma no_ofail_K_bind[wp]:
-  "no_ofail P f \<Longrightarrow> no_ofail P (K_bind f x)"
-  by simp
 
 lemma no_ofail_oguard[wp]:
   "no_ofail (\<lambda>s. f s) (oguard f)"
@@ -311,15 +296,6 @@ lemma no_ofail_oassert[simp, wp]:
   "no_ofail (\<lambda>_. P) (oassert P)"
   by (simp add: oassert_def no_ofail_def)
 
-lemma no_ofail_gets_the_eq:
-  "no_ofail P f \<longleftrightarrow> no_fail P (gets_the (f :: ('s, 'a) lookup))"
-  by (auto simp: no_ofail_def no_fail_def gets_the_def gets_def
-                 get_def assert_opt_def bind_def return_def fail_def
-         split: option.split)
-
-lemmas no_ofail_gets_the =
-  no_ofail_gets_the_eq[THEN iffD1]
-
 lemma no_ofail_is_triple[wp_trip]:
   "no_ofail P f = triple_judgement P f (\<lambda>s f. f s \<noteq> None)"
   by (auto simp: triple_judgement_def no_ofail_def)
@@ -331,14 +307,6 @@ lemma no_ofail_wp_comb1[wp_comb]:
 lemma no_ofail_wp_comb2[wp_comb]:
   "\<lbrakk> no_ofail P f; no_ofail P' f \<rbrakk> \<Longrightarrow> no_ofail (\<lambda>s. P s \<and> P' s) f"
   by (simp add: no_ofail_def)
-
-
-(* Lemmas relating ovalid and valid *)
-lemma ovalid_gets_the:
-  "ovalid P f Q \<Longrightarrow> \<lbrace>P\<rbrace> gets_the f \<lbrace>Q\<rbrace>"
-  apply wpsimp
-  apply (fastforce dest: use_ovalid)
-  done
 
 
 (* Some extra lemmas for our predicates. *)

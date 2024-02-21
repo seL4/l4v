@@ -1,4 +1,5 @@
 (*
+ * Copyright 2024, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: BSD-2-Clause
@@ -6,10 +7,10 @@
 
 (* Reader option monad syntax plus the connection between the reader option monad and the nondet monad *)
 
-theory Reader_Option_ND
+theory Nondet_Reader_Option
 imports
-  Nondet_Lemmas
-  Reader_Option_Monad
+  Nondet_No_Fail
+  Reader_Option_VCG
 begin
 
 (* FIXME: remove this syntax, standardise on do {..} instead *)
@@ -23,9 +24,34 @@ translations
   "DO x <- a; e OD"        == "a |>> (\<lambda>x. e)"
 
 
-lemma ogets_def:
-  "ogets f = (\<lambda>s. Some (f s))"
-  by (clarsimp simp: asks_def obind_def)
+lemma ovalid_K_bind_wp[wp]:
+  "ovalid P f Q \<Longrightarrow> ovalid P (K_bind f x) Q"
+  by simp
+
+lemma ovalidNF_K_bind_wp[wp]:
+  "ovalidNF P f Q \<Longrightarrow> ovalidNF P (K_bind f x) Q"
+  by simp
+
+lemma no_ofail_K_bind[wp]:
+  "no_ofail P f \<Longrightarrow> no_ofail P (K_bind f x)"
+  by simp
+
+lemma no_ofail_gets_the_eq:
+  "no_ofail P f \<longleftrightarrow> no_fail P (gets_the (f :: ('s, 'a) lookup))"
+  by (auto simp: no_ofail_def no_fail_def gets_the_def gets_def
+                 get_def assert_opt_def bind_def return_def fail_def
+         split: option.split)
+
+lemmas no_ofail_gets_the =
+  no_ofail_gets_the_eq[THEN iffD1]
+
+
+(* Lemmas relating ovalid and valid *)
+lemma ovalid_gets_the:
+  "ovalid P f Q \<Longrightarrow> \<lbrace>P\<rbrace> gets_the f \<lbrace>Q\<rbrace>"
+  apply wpsimp
+  apply (fastforce dest: use_ovalid)
+  done
 
 
 lemmas monad_simps =
@@ -104,8 +130,6 @@ lemmas omonad_simps [simp] =
   gets_the_throwError gets_the_assert gets_the_Some
   gets_the_oapply_comp
 
-lemmas in_omonad = bind_eq_Some_conv in_obind_eq in_opt_map_eq in_opt_pred Let_def
-
 
 section "Relation between option monad loops and non-deterministic monad loops."
 
@@ -163,12 +187,12 @@ proof -
   note option_while'_None = this
 
   have "\<And>s. owhile C B r s = None
-      \<Longrightarrow> whileLoop C (\<lambda>a. gets_the (B a)) r s = ({}, True)"
+          \<Longrightarrow> whileLoop C (\<lambda>a. gets_the (B a)) r s = ({}, True)"
     by (auto simp: whileLoop_def owhile_def option_while_def option_while'_THE gets_the_loop_terminates
       split: if_split_asm dest: option_while'_None wl'_Inl option_while'_inj)
   moreover
   have "\<And>s r'. owhile C B r s = Some r'
-      \<Longrightarrow> whileLoop C (\<lambda>a. gets_the (B a)) r s = ({(r', s)}, False)"
+          \<Longrightarrow> whileLoop C (\<lambda>a. gets_the (B a)) r s = ({(r', s)}, False)"
     by (auto simp: whileLoop_def owhile_def option_while_def option_while'_THE gets_the_loop_terminates
       split: if_split_asm dest: wl'_Inl wl'_Inr option_while'_inj intro: option_while'_Some)
   ultimately

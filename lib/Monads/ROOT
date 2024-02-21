@@ -36,8 +36,8 @@ session Monads (lib) = HOL +
     Nondet_Monad_Equations
     Nondet_While_Loop_Rules
     Nondet_While_Loop_Rules_Completeness
+    Nondet_Reader_Option
     Reader_Option_Monad
-    Reader_Option_ND
     Reader_Option_VCG
     Trace_Monad
     Trace_Lemmas
