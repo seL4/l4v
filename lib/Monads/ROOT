@@ -53,6 +53,7 @@ session Monads (lib) = HOL +
     Trace_In_Monad
     Trace_More_VCG
     Trace_No_Fail
+    Trace_Reader_Option
     Trace_Sat
     Strengthen
     Nondet_Strengthen_Setup

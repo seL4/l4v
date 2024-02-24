@@ -694,8 +694,8 @@ inductive_set whileLoop_results ::
     "\<lbrakk> \<not> C r s \<rbrakk> \<Longrightarrow> ((r, s), ([], Result (r, s))) \<in> whileLoop_results C B"
   | "\<lbrakk> C r s; (ts, Failed) \<in> B r s \<rbrakk> \<Longrightarrow> ((r, s), (ts, Failed)) \<in> whileLoop_results C B"
   | "\<lbrakk> C r s; (ts, Incomplete) \<in> B r s \<rbrakk> \<Longrightarrow> ((r, s), (ts, Incomplete)) \<in> whileLoop_results C B"
-  | "\<lbrakk> C r s; (ts, Result (r', s')) \<in> B r s; ((r', s'), (ts',z)) \<in> whileLoop_results C B  \<rbrakk>
-       \<Longrightarrow> ((r, s), (ts'@ts,z)) \<in> whileLoop_results C B"
+  | "\<lbrakk> C r s; (ts, Result (r', s')) \<in> B r s; ((r', s'), (ts',z)) \<in> whileLoop_results C B; ts''=ts'@ts \<rbrakk>
+       \<Longrightarrow> ((r, s), (ts'',z)) \<in> whileLoop_results C B"
 
 \<comment> \<open>FIXME: there are fewer lemmas here than in NonDetMonad and I don't understand this well enough
   to know whether this is correct or not.\<close>
