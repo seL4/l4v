@@ -81,6 +81,7 @@ This module defines the ARM register set.
 >     | VCPURegR10fiq
 >     | VCPURegR11fiq
 >     | VCPURegR12fiq
+>     | VCPURegVMPIDR
 >     | VCPURegSPSRsvc
 >     | VCPURegSPSRabt
 >     | VCPURegSPSRund
