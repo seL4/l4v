@@ -42,8 +42,13 @@ abbreviation
   pt_Ptr :: "32 word \<Rightarrow> (pte_C[512]) ptr" where "pt_Ptr == Ptr"
 abbreviation
   pd_Ptr :: "32 word \<Rightarrow> (pde_C[2048]) ptr" where "pd_Ptr == Ptr"
+
+declare seL4_VCPUReg_Num_def[code]
+value_type num_vcpu_regs = seL4_VCPUReg_Num
+
 abbreviation
-  regs_C_Ptr :: "addr \<Rightarrow> (machine_word_len word[42]) ptr" where "regs_C_Ptr \<equiv> Ptr"
+  regs_C_Ptr :: "addr \<Rightarrow> (machine_word[num_vcpu_regs]) ptr" where"regs_C_Ptr \<equiv> Ptr"
+
 abbreviation
   vgic_lr_C_Ptr :: "addr \<Rightarrow> (virq_C[64]) ptr" where "vgic_lr_C_Ptr \<equiv> Ptr"
 abbreviation
