@@ -1949,6 +1949,18 @@ lemmas ccorres_move_const_guards
     = ccorres_move_const_guard
       ccorres_move_const_guard[unfolded Collect_const]
 
+lemma ccorres_prove_guard_direct:
+  "\<lbrakk> G; ccorres_underlying rf_sr Gamm rrel xf arrel axf P P' hs m (c) \<rbrakk> \<Longrightarrow>
+   ccorres_underlying rf_sr Gamm rrel xf arrel axf P P' hs m (Guard F \<lbrace>G\<rbrace> c)"
+  by (rule ccorres_guard_imp, erule ccorres_move_const_guard; simp)
+
+lemma ccorres_prove_guard_seq:
+  "\<lbrakk> G; ccorres_underlying rf_sr Gamm rrel xf arrel axf P P' hs m (c;; d) \<rbrakk> \<Longrightarrow>
+   ccorres_underlying rf_sr Gamm rrel xf arrel axf P P' hs m (Guard F \<lbrace>G\<rbrace> c;; d)"
+  by (rule ccorres_guard_imp, erule ccorres_move_const_guard; simp)
+
+lemmas ccorres_prove_guard = ccorres_prove_guard_direct ccorres_prove_guard_seq
+
 lemma liftM_exs_valid:
   "\<lbrace>P\<rbrace> m \<exists>\<lbrace>\<lambda>rv. Q (f rv)\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> liftM f m \<exists>\<lbrace>Q\<rbrace>"
   unfolding liftM_def exs_valid_def
