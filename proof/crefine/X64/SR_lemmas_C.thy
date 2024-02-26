@@ -1065,7 +1065,6 @@ lemma cstate_relation_only_t_hrs:
   ksCurThread_' s = ksCurThread_' t;
   ksIdleThread_' s = ksIdleThread_' t;
   ksWorkUnitsCompleted_' s = ksWorkUnitsCompleted_' t;
-  intStateIRQNode_' s = intStateIRQNode_' t;
   intStateIRQTable_' s = intStateIRQTable_' t;
   x86KSASIDTable_' s = x86KSASIDTable_' t;
   x64KSCurrentUserCR3_' s = x64KSCurrentUserCR3_' t;
@@ -1075,6 +1074,7 @@ lemma cstate_relation_only_t_hrs:
   ksCurDomain_' s = ksCurDomain_' t;
   ksDomainTime_' s = ksDomainTime_' t;
   num_ioapics_' s = num_ioapics_' t;
+  ioapic_nirqs_' s = ioapic_nirqs_' t;
   x86KSIRQState_' s = x86KSIRQState_' t
   \<rbrakk>
   \<Longrightarrow> cstate_relation a s = cstate_relation a t"
@@ -1091,7 +1091,6 @@ lemma rf_sr_upd:
     "(ksCurThread_' (globals x)) = (ksCurThread_' (globals y))"
     "(ksIdleThread_' (globals x)) = (ksIdleThread_' (globals y))"
     "(ksWorkUnitsCompleted_' (globals x)) = (ksWorkUnitsCompleted_' (globals y))"
-    "intStateIRQNode_'(globals x) = intStateIRQNode_' (globals y)"
     "intStateIRQTable_'(globals x) = intStateIRQTable_' (globals y)"
     "x86KSASIDTable_' (globals x) = x86KSASIDTable_' (globals y)"
     "x64KSCurrentUserCR3_' (globals x) = x64KSCurrentUserCR3_' (globals y)"
@@ -1101,6 +1100,7 @@ lemma rf_sr_upd:
     "ksCurDomain_' (globals x) = ksCurDomain_' (globals y)"
     "ksDomainTime_' (globals x) = ksDomainTime_' (globals y)"
     "num_ioapics_' (globals x) = num_ioapics_' (globals y)"
+    "ioapic_nirqs_' (globals x) = ioapic_nirqs_' (globals y)"
     "x86KSIRQState_' (globals x) = x86KSIRQState_' (globals y)"
   shows "((a, x) \<in> rf_sr) = ((a, y) \<in> rf_sr)"
   unfolding rf_sr_def using assms
@@ -1114,7 +1114,6 @@ lemma rf_sr_upd_safe[simp]:
   and     sa: "(ksSchedulerAction_' (globals (g y))) = (ksSchedulerAction_' (globals y))"
   and     ct: "(ksCurThread_' (globals (g y))) = (ksCurThread_' (globals y))"
   and     it: "(ksIdleThread_' (globals (g y))) = (ksIdleThread_' (globals y))"
-  and     isn: "intStateIRQNode_'(globals (g y)) = intStateIRQNode_' (globals y)"
   and     ist: "intStateIRQTable_'(globals (g y)) = intStateIRQTable_' (globals y)"
   and     dsi: "ksDomScheduleIdx_' (globals (g y)) = ksDomScheduleIdx_' (globals y)"
   and     cdom: "ksCurDomain_' (globals (g y)) = ksCurDomain_' (globals y)"
@@ -1124,11 +1123,12 @@ lemma rf_sr_upd_safe[simp]:
     "x64KSCurrentUserCR3_' (globals (g y)) = x64KSCurrentUserCR3_' (globals y)"
     "phantom_machine_state_' (globals (g y)) = phantom_machine_state_' (globals y)"
     "num_ioapics_' (globals (g y)) = num_ioapics_' (globals y)"
+    "ioapic_nirqs_' (globals (g y)) = ioapic_nirqs_' (globals y)"
     "x86KSIRQState_' (globals (g y)) = x86KSIRQState_' (globals y)"
   and    gs: "ghost'state_' (globals (g y)) = ghost'state_' (globals y)"
   and     wu:  "(ksWorkUnitsCompleted_' (globals (g y))) = (ksWorkUnitsCompleted_' (globals y))"
   shows "((a, (g y)) \<in> rf_sr) = ((a, y) \<in> rf_sr)"
-  using rl rq rqL1 rqL2 sa ct it isn ist arch wu gs dsi cdom dt by - (rule rf_sr_upd)
+  using assms by - (rule rf_sr_upd)
 
 (* More of a well-formed lemma, but \<dots> *)
 lemma valid_mdb_cslift_next:

@@ -191,6 +191,7 @@ where
     global_ioport_bitmap_relation (clift (t_hrs_' cstate)) (x64KSAllocatedIOPorts astate) \<and>
     fpu_null_state_relation (t_hrs_' cstate) \<and>
     x64KSNumIOAPICs astate = UCAST (32 \<rightarrow> 64) (num_ioapics_' cstate) \<and>
+    array_relation (=) (of_nat Kernel_Config.maxNumIOAPIC) (x64KSIOAPICnIRQs astate) (ioapic_nirqs_' cstate) \<and>
     array_relation x64_irq_state_relation maxIRQ (x64KSIRQState astate) (x86KSIRQState_' cstate) \<and>
     carch_globals astate"
 
