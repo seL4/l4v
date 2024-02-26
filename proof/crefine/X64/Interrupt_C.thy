@@ -531,10 +531,42 @@ lemma ccorres_pre_gets_x64KSNumIOAPICs_ksArchState:
   apply clarsimp
   done
 
+lemma ccorres_pre_gets_x64KSIOAPICnIRQs_ksArchState:
+  assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
+  shows   "ccorres r xf
+                  (\<lambda>s. (\<forall>rv. x64KSIOAPICnIRQs (ksArchState s) = rv  \<longrightarrow> P rv s))
+                  {s. \<forall>rv. s \<in> P' rv }
+                          hs (gets (x64KSIOAPICnIRQs \<circ> ksArchState) >>= (\<lambda>rv. f rv)) c"
+  apply (rule ccorres_guard_imp)
+    apply (rule ccorres_symb_exec_l)
+       defer
+       apply wp[1]
+      apply (rule gets_sp)
+     apply (clarsimp simp: empty_fail_def simpler_gets_def)
+    apply assumption
+   apply clarsimp
+   defer
+   apply (rule ccorres_guard_imp)
+     apply (rule cc)
+    apply clarsimp
+   apply assumption
+  apply clarsimp
+  done
+
+lemma rf_sr_x64KSIOAPICnIRQs:
+  "\<lbrakk> (s,s') \<in> rf_sr; i < of_nat maxNumIOAPIC \<rbrakk> \<Longrightarrow>
+   ioapic_nirqs_' (globals s').[unat i] = x64KSIOAPICnIRQs (ksArchState s) i"
+  by (clarsimp simp: rf_sr_def cstate_relation_def carch_state_relation_def Let_def
+                     array_relation_def)
+
+lemma XXX:
+  "SCAST(32 signed \<rightarrow> 64) (UCAST(8 \<rightarrow> 32 signed) w - 1) = UCAST(8 \<rightarrow> 64) w - 1"
+  sorry
+
 lemma ioapic_decode_map_pin_to_vector_ccorres:
   "ccorres (intr_and_se_rel \<currency> dc)
      (liftxf errstate id (K ()) ret__unsigned_long_')
-     \<top>
+     (\<lambda>s. x64KSNumIOAPICs (ksArchState s) \<le> of_nat Kernel_Config.maxNumIOAPIC)
      (UNIV
            \<inter> {s. ioapic___unsigned_long_' s = ioapic}
            \<inter> {s. pin___unsigned_long_' s = pin}
@@ -542,21 +574,23 @@ lemma ioapic_decode_map_pin_to_vector_ccorres:
            \<inter> {s. polarity_' s = polarity})
      hs
      (doE numIOAPICs <- liftE (gets (x64KSNumIOAPICs \<circ> ksArchState));
+          ioapic_nirqs <- liftE (gets (x64KSIOAPICnIRQs \<circ> ksArchState));
           whenE (numIOAPICs = 0) (throwError (Inl IllegalOperation));
           whenE (uint (numIOAPICs - 1) < uint ioapic)
                      (throwError (Inl (RangeError 0 (numIOAPICs - 1))));
-          whenE (uint (ioapicIRQLines - 1) < uint pin)
-                     (throwError (Inl (RangeError 0 (ioapicIRQLines - 1))));
+          whenE (uint pin \<ge> uint (ioapic_nirqs ioapic))
+                     (throwError (Inl (RangeError 0 (ucast (ioapic_nirqs ioapic - 1)))));
           whenE (1 < uint level) (throwError (Inl (RangeError 0 1)));
           whenE (1 < uint polarity) (throwError (Inl (RangeError 0 1)))
        odE)
     (Call ioapic_decode_map_pin_to_vector_'proc)"
-  supply Collect_const[simp del]
+  supply Collect_const[simp del] word_less_1[simp del] (* for uniform array guard on ioapic_nirqs *)
   apply (cinit' lift: ioapic___unsigned_long_' pin___unsigned_long_' level___unsigned_long_'
                       polarity_')
    apply (simp add: ioapicIRQLines_def cong: StateSpace.state.fold_congs globals.fold_congs)
    apply (clarsimp simp: liftE_bindE)
    apply (rule ccorres_pre_gets_x64KSNumIOAPICs_ksArchState)
+   apply (rule ccorres_pre_gets_x64KSIOAPICnIRQs_ksArchState)
    apply (rule_tac Q="\<lambda>s. x64KSNumIOAPICs (ksArchState s) = numIOAPICs" and Q'=\<top>
                    in ccorres_split_when_throwError_cond)
       apply (clarsimp simp: rf_sr_def cstate_relation_def carch_state_relation_def Let_def)
@@ -574,6 +608,32 @@ lemma ioapic_decode_map_pin_to_vector_ccorres:
                             EXCEPTION_SYSCALL_ERROR_def EXCEPTION_NONE_def syscall_error_rel_def)
       apply (clarsimp simp: rf_sr_def cstate_relation_def carch_state_relation_def Let_def)
       apply (subst ucast_sub_ucast; fastforce simp: lt1_neq0)
+     apply (rule_tac P="numIOAPICs \<le> of_nat maxNumIOAPIC" in ccorres_gen_asm)
+     apply (clarsimp simp: not_less word_le_def[symmetric])
+     apply (prop_tac "ioapic < of_nat maxNumIOAPIC",
+            solves \<open>simp add: le_m1_iff_lt[THEN iffD1] word_neq_0_conv\<close>)
+     apply (simp add: Kernel_Config.maxNumIOAPIC_def)
+     apply ccorres_rewrite
+     apply (rename_tac ioapic_nirqs)
+     apply (rule_tac Q="\<lambda>s. ioapic_nirqs = x64KSIOAPICnIRQs (ksArchState s)" and Q'=\<top>
+                     in ccorres_split_when_throwError_cond)
+        apply (fastforce simp: word_le_def scast_ucast_up_eq_ucast uint_up_ucast is_up
+                               rf_sr_x64KSIOAPICnIRQs Kernel_Config.maxNumIOAPIC_def)
+
+      (* Need to VCG it as the range error depends on the global state *)
+      apply (rule_tac P="\<lambda>s. ioapic_nirqs = x64KSIOAPICnIRQs (ksArchState s) \<and>
+                             numIOAPICs \<le> of_nat maxNumIOAPIC"
+                  and P'="UNIV" in ccorres_from_vcg_throws)
+      apply (rule allI, rule conseqPre, vcg)
+      apply (clarsimp simp: fst_throwError_returnOk syscall_error_to_H_cases
+                            EXCEPTION_SYSCALL_ERROR_def EXCEPTION_NONE_def syscall_error_rel_def)
+      apply (simp add: rf_sr_x64KSIOAPICnIRQs Kernel_Config.maxNumIOAPIC_def
+                       scast_ucast_up_eq_ucast)
+ apply (subst scast_ucast_up_eq_ucast)
+oops
+      apply (clarsimp simp: rf_sr_def cstate_relation_def carch_state_relation_def Let_def)
+      apply (subst ucast_sub_ucast; fastforce simp: lt1_neq0)
+oops
      apply (rule_tac Q=\<top> and Q'=\<top> in ccorres_split_when_throwError_cond)
         apply (fastforce simp: word_le_def add1_zle_eq[symmetric])
        apply (fastforce simp: syscall_error_to_H_cases intro: syscall_error_throwError_ccorres_n)
