@@ -17,8 +17,6 @@ on:
     paths-ignore:
       - '**.md'
       - '**.txt'
-    branches-ignore:
-      - aarch64
 
 jobs:
   proofs:
