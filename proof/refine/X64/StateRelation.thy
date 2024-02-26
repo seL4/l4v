@@ -556,6 +556,7 @@ where
        \<and> x64_kernel_vspace s = x64KSKernelVSpace s'
        \<and> x64_allocated_io_ports s = x64KSAllocatedIOPorts s'
        \<and> x64_num_ioapics s = x64KSNumIOAPICs s'
+       \<and> x64_ioapic_nirqs s = x64KSIOAPICnIRQs s'
        \<and> x64_irq_relation (x64_irq_state s) (x64KSIRQState s')}"
 
 definition
