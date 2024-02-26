@@ -44,6 +44,7 @@ jobs:
         manifest: mcs.xml
         L4V_FEATURES: MCS
         NUM_DOMAINS: ${{ inputs.NUM_DOMAINS }}
+        skip_dups: true
         session: '-x AutoCorresSEL4' # exclude large AutoCorresSEL4 session for PRs
         token: ${{ secrets.READ_TOKEN }}
         cache_bucket: ${{ secrets.CACHE_BUCKET }}
