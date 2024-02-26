@@ -200,6 +200,10 @@ lemmas irq_const_defs =
   maxIRQ_def minIRQ_def
   X64.maxUserIRQ_def X64.minUserIRQ_def X64_H.maxUserIRQ_def X64_H.minUserIRQ_def
 
+lemma corres_gets_ioapic_nirqs [corres]:
+  "corres (=) \<top> \<top> (gets (x64_ioapic_nirqs \<circ> arch_state)) (gets (x64KSIOAPICnIRQs \<circ> ksArchState))"
+  by (simp add: state_relation_def arch_state_relation_def)
+
 lemma arch_decodeIRQControlInvocation_corres:
   "list_all2 cap_relation caps caps' \<Longrightarrow>
    corres (ser \<oplus> arch_irq_control_inv_relation)
@@ -257,12 +261,13 @@ lemma arch_decodeIRQControlInvocation_corres:
          apply (rule corres_splitEE[OF ensureEmptySlot_corres])
             apply simp
            apply (rule corres_split[OF corres_gets_num_ioapics])
-             apply (rule whenE_throwError_corres, ((simp add: ioapicIRQLines_def)+)[2])+
-             apply (rule corres_returnOkTT)
-             apply (clarsimp simp: arch_irq_control_inv_relation_def )
-            apply (wpsimp wp: isIRQActive_inv
-                        simp: invs_valid_objs invs_psp_aligned invs_valid_objs' invs_pspace_aligned' invs_pspace_distinct'
-                   | wp (once) hoare_drop_imps)+
+             apply (rule corres_split[OF corres_gets_ioapic_nirqs])
+               apply (rule whenE_throwError_corres, ((simp add: ioapicIRQLines_def)+)[2])+
+               apply (rule corres_returnOkTT)
+               apply (clarsimp simp: arch_irq_control_inv_relation_def )
+              apply (wpsimp wp: isIRQActive_inv
+                          simp: invs_valid_objs invs_psp_aligned invs_valid_objs' invs_pspace_aligned' invs_pspace_distinct'
+                     | wp (once) hoare_drop_imps)+
   by (auto split: arch_invocation_label.splits invocation_label.splits)
 
 lemma irqhandler_simp[simp]:
