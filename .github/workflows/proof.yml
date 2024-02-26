@@ -17,6 +17,12 @@ on:
     paths-ignore:
       - '**.md'
       - '**.txt'
+  workflow_dispatch:
+    inputs:
+      NUM_DOMAINS:
+        description: 'Number of domains to test'
+        type: number
+        default: 16
 
 jobs:
   proofs:
@@ -33,6 +39,7 @@ jobs:
       uses: seL4/ci-actions/aws-proofs@master
       with:
         L4V_ARCH: ${{ matrix.arch }}
+        NUM_DOMAINS: ${{ inputs.NUM_DOMAINS }}
         session: '-x AutoCorresSEL4' # exclude large AutoCorresSEL4 session for PRs
         token: ${{ secrets.READ_TOKEN }}
         cache_bucket: ${{ secrets.CACHE_BUCKET }}
