@@ -2761,19 +2761,6 @@ lemma ep_ptr_get_queue_spec:
   apply clarsimp
   done
 
-(* FIXME x64: bitfield shenanigans *)
-lemma ep_ptr_set_queue_spec:
-  "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. s \<Turnstile>\<^sub>c \<acute>epptr\<rbrace> Call ep_ptr_set_queue_'proc
-           {t. (\<exists>ep'. endpoint_lift ep' =
-  (endpoint_lift (the (cslift s (\<^bsup>s\<^esup>epptr))))\<lparr> epQueue_head_CL := ptr_val (head_C \<^bsup>s\<^esup>queue) && ~~ mask 4,
-                                                      epQueue_tail_CL := ptr_val (end_C \<^bsup>s\<^esup>queue) && ~~ mask 4 \<rparr>
-             \<and> t_hrs_' (globals t) = hrs_mem_update (heap_update (\<^bsup>s\<^esup>epptr) ep')
-                 (t_hrs_' (globals s)))}"
-  apply vcg
-  apply (auto simp: split_def h_t_valid_clift_Some_iff
-                    typ_heap_simps packed_heap_update_collapse_hrs)
-  oops
-
 lemma valid_ep_blockedD:
   "\<lbrakk> valid_ep' ep s; (isSendEP ep \<or> isRecvEP ep) \<rbrakk> \<Longrightarrow> (epQueue ep) \<noteq> [] \<and> (\<forall>t\<in>set (epQueue ep). tcb_at' t s) \<and> distinct (epQueue ep)"
   unfolding valid_ep'_def isSendEP_def isRecvEP_def
@@ -2942,12 +2929,6 @@ proof -
        apply (simp add: isWaitingNtfn_def cong: tcb_queue_relation'_cong)+
     done
 qed
-
-(* FIXME AARCH64: x64 can be removed? *)
-lemma epQueue_head_mask_2 [simp]:
-  "epQueue_head_CL (endpoint_lift ko') && ~~ mask 2 = epQueue_head_CL (endpoint_lift ko')"
-  unfolding endpoint_lift_def
-  oops (*by (clarsimp simp: mask_def word_bw_assocs) *)
 
 lemma epQueue_tail_mask_2 [simp]:
   "epQueue_tail_CL (endpoint_lift ko') && ~~ mask 2 = epQueue_tail_CL (endpoint_lift ko')"
