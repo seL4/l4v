@@ -22,8 +22,8 @@ imports
 begin
 
 context begin interpretation Arch .
-requalify_types irq sgi_irq sgi_target_mask
-requalify_consts numSGIs gicSGITargetMaskBits
+requalify_types irq sgi_irq sgi_target
+requalify_consts numSGIs gicNumTargets
 end
 
 (* A hardware IRQ number. *)
@@ -121,7 +121,7 @@ datatype cdl_cap =
   | IrqHandlerCap cdl_irq
 
   (* Arm specific IRQ/SGI caps *)
-  | SGISignalCap sgi_irq sgi_target_mask
+  | SGISignalCap sgi_irq sgi_target
 
   (* Virtual memory capabilties *)
   | FrameCap bool cdl_object_id "cdl_right set" nat cdl_frame_cap_type "cdl_mapped_addr option"
