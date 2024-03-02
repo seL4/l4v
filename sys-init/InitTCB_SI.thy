@@ -36,12 +36,12 @@ lemma tcb_empty_decomp:
   apply (clarsimp simp: is_tcb_def object_default_state_def2)
   apply (case_tac obj, simp_all)
   apply (subst sep_map_o_decomp)
-  apply (subst sep_map_S_decomp_list [where slots = "[0 .e. tcb_boundntfn_slot]"])
-    apply (force simp: default_tcb_def object_slots_def)
-   apply clarsimp
+  apply (subst sep_map_S_decomp_list [where slots = tcb_slots_list])
+    apply (clarsimp simp: dom_object_slots_default_tcb)
+   apply (clarsimp simp: tcb_slot_defs)
   apply (clarsimp simp: sep_list_conj_def default_tcb_slots object_domain_def tcb_slot_defs)
   apply (subst sep_map_s_sep_map_c_eq,
-         simp add: default_tcb_def object_slots_def tcb_boundntfn_slot_def,
+         simp add: default_tcb_def object_slots_def tcb_slot_defs,
          clarsimp simp: sep_conj_ac)+
   done
 
@@ -69,11 +69,9 @@ lemma tcb_decomp':
   apply (clarsimp simp: is_tcb_def object_domain_def object_default_state_def2)
   apply (case_tac obj, simp_all)
   apply (subst sep_map_o_decomp)
-  apply (subst sep_map_S_decomp_list [where slots = "[0 .e. tcb_boundntfn_slot]"])
-    apply (drule (1) well_formed_object_slots, simp add: foo)
-    apply (force simp: object_default_state_def2 default_tcb_def object_slots_def
-                split: cdl_object.splits)
-   apply clarsimp
+  apply (subst sep_map_S_decomp_list [where slots = tcb_slots_list])
+    apply (clarsimp simp: dom_object_slots_default_tcb)
+   apply (clarsimp simp: tcb_slot_defs)
   apply (clarsimp simp: sep_list_conj_def default_tcb_slots tcb_slot_defs)
   apply (drule_tac obj'="Tcb (default_tcb minBound)" and p = k_obj_id in sep_map_E_eq [rotated],
          simp add: object_type_def)
@@ -107,11 +105,9 @@ lemma tcb_half_decomp':
   apply (clarsimp simp: is_tcb_def object_domain_def object_default_state_def2)
   apply (case_tac obj, simp_all)
   apply (subst sep_map_o_decomp)
-  apply (subst sep_map_S_decomp_list [where slots = "[0 .e. tcb_boundntfn_slot]"])
-    apply (drule (1) well_formed_object_slots, simp add: foo)
-    apply (force simp: object_default_state_def2 default_tcb_def object_slots_def
-                split: cdl_object.splits)
-   apply clarsimp
+  apply (subst sep_map_S_decomp_list [where slots = tcb_slots_list])
+    apply (clarsimp simp: dom_object_slots_default_tcb)
+   apply (clarsimp simp: tcb_slot_defs)
   apply (clarsimp simp: sep_list_conj_def default_tcb_slots tcb_slot_defs)
   apply (drule_tac obj'="Tcb (default_tcb minBound)" and p = k_obj_id in sep_map_E_eq [rotated],
          simp add: object_type_def)
