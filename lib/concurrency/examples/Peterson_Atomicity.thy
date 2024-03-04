@@ -320,8 +320,8 @@ locale mx_locale_refine = mx_locale_wp cs1 cs2 csI for cs1 :: "'b \<Rightarrow> 
   assumes
     cs_refine:
     "prefix_refinement peterson_sr peterson_sr_cs1 peterson_sr \<top>\<top>
-                       (\<lambda>_ s. cs1_v s = cs1 (cs2_v s)) \<top>\<top>
                        (peterson_rel (other_ident ident)) (peterson_rel (other_ident ident))
+                       (\<lambda>_ s. cs1_v s = cs1 (cs2_v s)) \<top>\<top>
                        cs2 cs2"
 begin
 
@@ -394,8 +394,8 @@ lemma peterson_rel_set_label:
 
 lemma acquire_lock_refinement:
   "prefix_refinement peterson_sr peterson_sr peterson_sr \<top>\<top>
-     \<top>\<top> \<top>\<top>
      (peterson_rel (other_ident ident)) (peterson_rel (other_ident ident))
+     \<top>\<top> \<top>\<top>
      (acquire_lock ident) (acquire_lock ident)"
   apply (unfold acquire_lock_def)
   apply (rule prefix_refinement_weaken_pre)
@@ -430,8 +430,8 @@ lemma peterson_sr_ab_label:
 
 lemma critical_section_refinement:
   "prefix_refinement peterson_sr peterson_sr peterson_sr \<top>\<top>
-     (\<lambda>_ s. invs s \<and> ab_label s ident = Critical) \<top>\<top>
      (peterson_rel (other_ident ident)) (peterson_rel (other_ident ident))
+     (\<lambda>_ s. invs s \<and> ab_label s ident = Critical) \<top>\<top>
      abs_critical_section critical_section"
   apply (simp add: abs_critical_section_def critical_section_def)
   apply (rule prefix_refinement_weaken_pre)
@@ -471,8 +471,8 @@ lemma critical_section_refinement:
 
 lemma release_lock_refinement:
   "prefix_refinement peterson_sr peterson_sr peterson_sr \<top>\<top>
-     \<top>\<top> \<top>\<top>
      (peterson_rel (other_ident ident)) (peterson_rel (other_ident ident))
+     \<top>\<top> \<top>\<top>
      (release_lock ident) (release_lock ident)"
   apply (unfold release_lock_def)
   apply (rule prefix_refinement_weaken_pre)
@@ -533,9 +533,9 @@ lemma acquire_lock_prefix_closed[simp]:
 
 theorem peterson_proc_refinement:
   "prefix_refinement peterson_sr peterson_sr peterson_sr \<top>\<top>
-     (\<lambda>_ s. invs s \<and> ab_label s ident = Exited)
-     (\<lambda>_ s. invs s \<and> ab_label s ident = Exited)
      (peterson_rel (other_ident ident)) (peterson_rel (other_ident ident))
+     (\<lambda>_ s. invs s \<and> ab_label s ident = Exited)
+     (\<lambda>_ s. invs s \<and> ab_label s ident = Exited)
      (abs_peterson_proc ident)
      (peterson_proc ident)"
   apply (simp add: abs_peterson_proc_def peterson_proc_def)
@@ -688,9 +688,9 @@ lemma abs_peterson_proc_prefix_closed[simp]:
 
 lemma peterson_repeat_refinement:
   "prefix_refinement peterson_sr peterson_sr peterson_sr \<top>\<top>
-     (\<lambda>s0 s. peterson_rel ident s0 s \<and> invs s \<and> ab_label s ident = Exited)
-     (\<lambda>s0 s. peterson_rel ident s0 s \<and> invs s \<and> ab_label s ident = Exited)
      (peterson_rel (other_ident ident)) (peterson_rel (other_ident ident))
+     (\<lambda>s0 s. peterson_rel ident s0 s \<and> invs s \<and> ab_label s ident = Exited)
+     (\<lambda>s0 s. peterson_rel ident s0 s \<and> invs s \<and> ab_label s ident = Exited)
      (do repeat (abs_peterson_proc ident);
          interference
       od)
@@ -712,9 +712,9 @@ lemma peterson_repeat_refinement:
 
 theorem peterson_proc_system_refinement:
   "prefix_refinement peterson_sr peterson_sr peterson_sr \<top>\<top>
+     (\<lambda>s0 s. s0 = s) (\<lambda>t0 t. t0 = t)
      (\<lambda>s0 s. s0 = s \<and> invs s \<and> ab_label s = (\<lambda>_. Exited))
      (\<lambda>t0 t. t0 = t \<and> invs t \<and> ab_label t = (\<lambda>_. Exited))
-     (\<lambda>s0 s. s0 = s) (\<lambda>t0 t. t0 = t)
      abs_peterson_proc_system peterson_proc_system"
   apply (unfold abs_peterson_proc_system_def peterson_proc_system_def)
   apply (rule prefix_refinement_parallel')
