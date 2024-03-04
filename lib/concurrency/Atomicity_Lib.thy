@@ -31,7 +31,7 @@ lemmas prefix_refinement_env_steps_Await =
 
 lemma pfx_refn_interferences:
   "env_stable AR R sr iosr (\<lambda>_. True)
-   \<Longrightarrow> prefix_refinement sr iosr iosr \<top>\<top> \<top>\<top> \<top>\<top> AR R interferences interferences"
+   \<Longrightarrow> prefix_refinement sr iosr iosr \<top>\<top> AR R \<top>\<top> \<top>\<top> interferences interferences"
   apply (rule prefix_refinement_repeat)
     apply (erule prefix_refinement_interference)
    apply wp+
@@ -84,8 +84,8 @@ lemmas repeat_one_triv_refinement =
                                    OF repeat_none_triv_refinement]
 
 schematic_goal prefix_refinement_interferences_split:
-  "prefix_refinement sr isr osr rvr P Q AR R ?aprog cprog
-   \<Longrightarrow> prefix_refinement sr isr osr rvr P Q AR R
+  "prefix_refinement sr isr osr rvr AR R P Q ?aprog cprog
+   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P Q
                          (do y <- interferences; aprog od) cprog"
   apply (rule prefix_refinement_triv_refinement_abs)
    apply (rule  triv_refinement_mono_bind)
@@ -357,8 +357,8 @@ lemma is_matching_fragment_list_all2:
 lemma pfx_refinement_use_rel_tr_refinement:
   "\<lbrakk>rel_tr_refinement tr_r Q R False g g';
     \<forall>s t t'. tr_r t t' \<longrightarrow> sr s t = sr s t';
-    prefix_refinement sr isr osr rvr P Q' AR R f g'\<rbrakk>
-   \<Longrightarrow> prefix_refinement sr isr osr rvr P (\<lambda>s0. Q and Q' s0) AR R f g"
+    prefix_refinement sr isr osr rvr AR R P Q' f g'\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P (\<lambda>s0. Q and Q' s0) f g"
   apply (subst prefix_refinement_def, clarsimp)
   apply (drule(3) rel_tr_refinementD, simp)
   apply clarsimp
@@ -372,8 +372,8 @@ lemma pfx_refinement_use_rel_tr_refinement:
 
 lemma pfx_refinement_use_rel_tr_refinement_equivp:
   "\<lbrakk>rel_tr_refinement sr Q R False g g'; equivp sr;
-    prefix_refinement sr isr osr rvr P Q' AR R f g'\<rbrakk>
-   \<Longrightarrow> prefix_refinement sr isr osr rvr P (\<lambda>s0. Q and Q' s0) AR R f g"
+    prefix_refinement sr isr osr rvr AR R P Q' f g'\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P (\<lambda>s0. Q and Q' s0) f g"
   apply (erule pfx_refinement_use_rel_tr_refinement, simp_all)
   apply (metis equivpE sympD transpD)
   done
@@ -812,8 +812,8 @@ lemma adjust_tr_relation_equivp:
 lemma prefix_refinement_i_modify_split:
   "\<lbrakk>adjust_tr_relation tr_r sr; \<forall>s t. isr s t \<longrightarrow> P s \<longrightarrow> Q t \<longrightarrow> intsr (f s) (g t);
     \<forall>s. tr_r s (g s); \<forall>s t. R s t \<longrightarrow> R (g s) (g t); not_env_steps_first b;
-    prefix_refinement sr intsr osr rvr' P' Q' AR R d (do x \<leftarrow> interferences; b od)\<rbrakk>
-   \<Longrightarrow> prefix_refinement sr isr osr rvr' (\<lambda>s0 s. P s \<and> P' s0 (f s)) (\<lambda>s0 s. Q s \<and> Q' s0 (g s)) AR R
+    prefix_refinement sr intsr osr rvr' AR R P' Q' d (do x \<leftarrow> interferences; b od)\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr rvr' AR R (\<lambda>s0 s. P s \<and> P' s0 (f s)) (\<lambda>s0 s. Q s \<and> Q' s0 (g s))
          (do z \<leftarrow> modify f; d od)
          (do x \<leftarrow> interferences; y \<leftarrow> modify g; b od)"
   apply (clarsimp simp: adjust_tr_relation_def)

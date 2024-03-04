@@ -113,11 +113,11 @@ lemma env_stable:
   done
 
 abbreviation (input)
-  "p_refn rvr P Q AR R \<equiv>
-     prefix_refinement (\<lambda>s t. t = mainv s) (\<lambda>s t. t = mainv s) (\<lambda>s t. t = mainv s) rvr P Q AR R"
+  "p_refn rvr AR R P Q \<equiv>
+     prefix_refinement (\<lambda>s t. t = mainv s) (\<lambda>s t. t = mainv s) (\<lambda>s t. t = mainv s) rvr AR R P Q"
 
 theorem pfx_refn_plus2_x:
-  "p_refn (\<top>\<top>) (=) (\<top>\<top>) AR R (plus2_x tid) plus2"
+  "p_refn (\<top>\<top>) AR R (=) (\<top>\<top>) (plus2_x tid) plus2"
   apply (simp add: plus2_x_def plus2_def)
   apply (rule prefix_refinement_weaken_pre)
     apply (rule pfx_refn_bind prefix_refinement_interference
@@ -215,11 +215,11 @@ lemma bipred_disj_top_eq:
   by auto
 
 lemma fold_parallel_pfx_refn_induct:
-  "\<lbrakk>list_all2 (prefix_refinement sr sr sr (\<lambda>_ _. True) P Q (\<top>\<top>) (\<top>\<top>)) xs ys;
-    prefix_refinement sr sr sr (\<lambda>_ _. True) P Q (\<top>\<top>) (\<top>\<top>) x y;
+  "\<lbrakk>list_all2 (prefix_refinement sr sr sr (\<lambda>_ _. True) (\<top>\<top>) (\<top>\<top>) P Q) xs ys;
+    prefix_refinement sr sr sr (\<lambda>_ _. True) (\<top>\<top>) (\<top>\<top>) P Q x y;
     \<forall>x \<in> set (x # xs). par_tr_fin_principle x;
     \<forall>y \<in> set (y # ys). prefix_closed y\<rbrakk>
-   \<Longrightarrow> prefix_refinement sr sr sr (\<lambda>_ _. True) P Q (\<top>\<top>) (\<top>\<top>)
+   \<Longrightarrow> prefix_refinement sr sr sr (\<lambda>_ _. True) (\<top>\<top>) (\<top>\<top>) P Q
          (fold parallel (rev xs) x) (fold parallel (rev ys) y)"
   apply (induct rule: list_all2_induct; simp)
   apply (rule prefix_refinement_parallel_triv[simplified bipred_disj_top_eq]; simp?)
