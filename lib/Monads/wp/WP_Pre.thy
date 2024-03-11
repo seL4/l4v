@@ -40,6 +40,21 @@ fun trace_rule trace ctxt used_thms_ref tag tac rule =
     (fn rule_insts => fn _ => append_used_rule ctxt used_thms_ref tag rule rule_insts)
     tac rule;
 
+fun trace_used_thm ctxt (name, tag, prop) =
+  let val adjusted_name = ThmExtras.adjust_thm_name ctxt (name, NONE) prop
+  in Pretty.block
+    (ThmExtras.pretty_adjusted_name ctxt adjusted_name ::
+     [Pretty.str ("[" ^ tag ^ "]:"),Pretty.brk 1, Syntax.unparse_term ctxt prop])
+  end
+
+fun trace_used_thms trace ctxt used_thms_ref =
+  if trace
+  then Pretty.big_list "Theorems used by wp:"
+                       (map (trace_used_thm ctxt) (!used_thms_ref))
+       |> Pretty.writeln
+       handle Size => warning ("WP tracing information was too large to print.")
+  else ();
+
 fun rtac ctxt rule = resolve_tac ctxt [rule]
 
 fun pre_tac trace ctxt pre_rules used_thms_ref i t = let
@@ -52,13 +67,16 @@ fun pre_tac trace ctxt pre_rules used_thms_ref i t = let
     then Seq.empty else Seq.single t2 end
     handle Option => Seq.empty
 
-val method =
+fun pre_tac' ctxt pre_rules i t =
   let
+    val trace = Config.get ctxt wp_trace orelse Config.get ctxt wp_trace_instantiation
     val used_thms_ref = Unsynchronized.ref [] : (string * string * term) list Unsynchronized.ref
-  in
-    Attrib.thms >> (fn thms => fn ctxt =>
-      Method.SIMPLE_METHOD' (pre_tac (Config.get ctxt wp_trace) ctxt thms used_thms_ref))
+  in Seq.map (fn thm => (trace_used_thms trace ctxt used_thms_ref; thm))
+             (pre_tac trace ctxt pre_rules used_thms_ref i t)
   end
+
+val method =
+  Attrib.thms >> (fn thms => fn ctxt => Method.SIMPLE_METHOD' (pre_tac' ctxt thms))
 end
 \<close>
 
