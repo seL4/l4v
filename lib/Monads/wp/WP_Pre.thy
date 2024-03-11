@@ -30,6 +30,11 @@ fun append_used_rule ctxt used_thms_ref tag used_thm insts =
       else Thm.prop_of used_thm
   in used_thms_ref := !used_thms_ref @ [(name, tag, inst_term)] end
 
+fun remove_last_used_thm trace used_thms_ref =
+  if trace
+  then used_thms_ref := (!used_thms_ref |> rev |> tl |> rev)
+  else ()
+
 fun trace_rule' trace ctxt callback tac rule =
   if trace
   then Trace_Schematic_Insts.trace_schematic_insts_tac ctxt callback tac rule
@@ -57,14 +62,23 @@ fun trace_used_thms trace ctxt used_thms_ref =
 
 fun rtac ctxt rule = resolve_tac ctxt [rule]
 
-fun pre_tac trace ctxt pre_rules used_thms_ref i t = let
-    fun apply_rule t = trace_rule trace ctxt used_thms_ref "wp_pre" (rtac ctxt) t i
-    val t2 = FIRST (map apply_rule pre_rules) t |> Seq.hd
+(* Test whether any resulting goals can be solved by FalseE. In particular, this lets us avoid
+   weakening a precondition that is already schematic. *)
+fun test_goals ctxt pre_rules i t =
+  let
+    val t2 = FIRST (map (fn rule => rtac ctxt rule i) pre_rules) t |> Seq.hd
     val etac = TRY o eresolve_tac ctxt [@{thm FalseE}]
     fun dummy_t2 _ _ = Seq.single t2
     val t3 = (dummy_t2 THEN_ALL_NEW etac) i t |> Seq.hd
-  in if Thm.nprems_of t3 <> Thm.nprems_of t2
-    then Seq.empty else Seq.single t2 end
+  in Thm.nprems_of t3 <> Thm.nprems_of t2
+  end
+
+fun pre_tac trace ctxt pre_rules used_thms_ref i t =
+  let
+    fun apply_rule t = trace_rule trace ctxt used_thms_ref "wp_pre" (rtac ctxt) t i
+    fun t2 _ = FIRST (map apply_rule pre_rules) t |> Seq.hd
+  in if test_goals ctxt pre_rules i t
+    then Seq.empty else Seq.single (t2 ()) end
     handle Option => Seq.empty
 
 fun pre_tac' ctxt pre_rules i t =
