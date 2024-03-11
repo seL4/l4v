@@ -253,21 +253,6 @@ fun resolve_ruleset_tac' trace ctxt rs used_thms_ref n t =
 fun resolve_ruleset_tac trace ctxt rs used_thms_ref n =
   (Apply_Debug.break ctxt (SOME "wp")) THEN (resolve_ruleset_tac' trace ctxt rs used_thms_ref n)
 
-fun trace_used_thm ctxt (name, tag, prop) =
-  let val adjusted_name = ThmExtras.adjust_thm_name ctxt (name, NONE) prop
-  in Pretty.block
-    (ThmExtras.pretty_adjusted_name ctxt adjusted_name ::
-     [Pretty.str ("[" ^ tag ^ "]:"),Pretty.brk 1, Syntax.unparse_term ctxt prop])
-  end
-
-fun trace_used_thms trace ctxt used_thms_ref =
-  if trace
-  then Pretty.big_list "Theorems used by wp:"
-                       (map (trace_used_thm ctxt) (!used_thms_ref))
-       |> Pretty.writeln
-       handle Size => warning ("WP tracing information was too large to print.")
-  else ();
-
 fun warn_unsafe_rules unsafe_rules n ctxt t =
   let val used_thms_dummy = Unsynchronized.ref [] : (string * string * term) list Unsynchronized.ref;
       val ctxt' = (Config.put WP_Pre.wp_trace false ctxt |> Config.put WP_Pre.wp_trace_instantiation false)
@@ -298,7 +283,7 @@ let
                   THEN cleanup_tac
 in
   SELECT_GOAL (
-    (fn t => Seq.map (fn thm => (trace_used_thms trace' ctxt used_thms_ref;
+    (fn t => Seq.map (fn thm => (WP_Pre.trace_used_thms trace' ctxt used_thms_ref;
                                  used_thms_ref := []; thm))
                      ((wp_pre_tac THEN wp_fix_tac THEN steps_tac) t))
     THEN_ELSE
@@ -313,7 +298,7 @@ fun apply_once_tac trace ctxt extras t =
     val trace' = trace orelse Config.get ctxt WP_Pre.wp_trace orelse Config.get ctxt WP_Pre.wp_trace_instantiation
     val used_thms_ref = Unsynchronized.ref [] : (string * string * term) list Unsynchronized.ref
     val rules = get_rules ctxt extras
-  in Seq.map (fn thm => (trace_used_thms trace' ctxt used_thms_ref; thm))
+  in Seq.map (fn thm => (WP_Pre.trace_used_thms trace' ctxt used_thms_ref; thm))
              (SELECT_GOAL (resolve_ruleset_tac trace' ctxt rules used_thms_ref 1) 1 t)
   end
 
