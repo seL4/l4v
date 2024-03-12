@@ -18,7 +18,7 @@ imports
   Extract_Conjunct
   ML_Goal
   Eval_Bool
-  Monads.Fun_Pred_Syntax
+  None_Top_Bot
   Monads.Monad_Lib
   Basics.CLib
   NICTATools

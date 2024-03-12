@@ -68,6 +68,7 @@ session Lib (lib) = Word_Lib +
     Named_Eta
     Rules_Tac
     Heap_List
+    None_Top_Bot
 
     (* should move to Monads: *)
     NonDetMonadLemmaBucket
