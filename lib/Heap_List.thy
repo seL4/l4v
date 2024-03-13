@@ -383,6 +383,14 @@ lemma not_head_prev_not_None:
   using sym_heap_prev_None_is_start heap_path_head
   by fastforce
 
+lemma heap_ls_neighbour_in_set:
+  "\<lbrakk>heap_ls hp st xs; sym_heap hp hp'; st \<noteq> None \<longrightarrow> hp' (the st) = None; p \<in> set xs\<rbrakk>
+   \<Longrightarrow> \<forall>nbr. (hp p = Some nbr \<longrightarrow> nbr \<in> set xs) \<and> (hp' p = Some nbr \<longrightarrow> nbr \<in> set xs)"
+  apply (intro conjI impI allI)
+   apply (erule (2) heap_ls_next_in_list)
+  apply (fastforce dest: heap_ls_prev_cases[where np=p] sym_heapD2)
+  done
+
 (* more on heap_path *)
 
 lemma heap_ls_next_takeWhile_append:
