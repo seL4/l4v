@@ -1335,6 +1335,7 @@ lemma vcpuDisable_invs'[wp]:
              getSCTLR_def get_gic_vcpu_ctrl_hcr_def dsb_def vgicUpdate_def vcpuUpdate_def
              vcpuSaveReg_def enableFpuEL01_def
   by (wpsimp wp: dmo'_gets_wp setVCPU_vgic_invs' setVCPU_regs_invs' dmo_maskInterrupt_True
+                 hoare_drop_imps
              simp: doMachineOp_bind empty_fail_cond)
 
 lemma vcpuInvalidateActive_invs'[wp]:
@@ -1398,7 +1399,7 @@ crunches loadVMID
 lemma updateASIDPoolEntry_valid_arch_state'[wp]:
   "updateASIDPoolEntry f asid \<lbrace>valid_arch_state'\<rbrace>"
   unfolding updateASIDPoolEntry_def
-  by (wpsimp wp: getObject_inv simp: loadObject_default_def)
+  by (wpsimp wp: getObject_inv hoare_drop_imps simp: loadObject_default_def)
 
 lemma invalidateVMIDEntry_valid_arch_state'[wp]:
   "invalidateVMIDEntry vmid \<lbrace>valid_arch_state'\<rbrace>"
