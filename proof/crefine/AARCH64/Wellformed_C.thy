@@ -92,15 +92,11 @@ abbreviation
 abbreviation
   vcpu_vppi_masked_C_Ptr :: "addr \<Rightarrow> (machine_word[1]) ptr" where "vcpu_vppi_masked_C_Ptr \<equiv> Ptr"
 
-(* FIXME AARCH64 can't do this for either register or vcpureg due to missing code equations
-value_type vcpuregs_count = "length enum_vcpureg"
-if the above works, we could move it to the machine spec, at which point probably doing a rename
-to register_count and vcpureg_count (singular) would make sense across the platforms *)
-
-type_synonym vcpuregs_count = 23 (* length enum_vcpureg *)
+declare seL4_VCPUReg_Num_def[code]
+value_type num_vcpu_regs = seL4_VCPUReg_Num
 
 abbreviation
-  vcpuregs_C_Ptr :: "addr \<Rightarrow> (machine_word[vcpuregs_count]) ptr" where "vcpuregs_C_Ptr \<equiv> Ptr"
+  vcpuregs_C_Ptr :: "addr \<Rightarrow> (machine_word[num_vcpu_regs]) ptr" where "vcpuregs_C_Ptr \<equiv> Ptr"
 
 type_synonym tcb_cnode_array = "cte_C[5]"
 type_synonym registers_count = 37 (* length enum_register *)

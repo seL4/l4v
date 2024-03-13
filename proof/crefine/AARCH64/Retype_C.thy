@@ -5473,7 +5473,7 @@ lemma ptr_retyp_fromzeroVCPU:
   assumes cor: "caps_overlap_reserved' {p ..+ 2 ^ vcpuBits} \<sigma>"
   assumes ptr0: "p \<noteq> 0"
   assumes kdr: "{p ..+ 2 ^ vcpuBits} \<inter> kernel_data_refs = {}"
-  assumes subr: "{p ..+ 736} \<subseteq> {p ..+ 2 ^ vcpuBits}"
+  assumes subr: "{p ..+ 752} \<subseteq> {p ..+ 2 ^ vcpuBits}" (is "{_ ..+ ?vcpusz} \<subseteq> _")
   assumes act_bytes: "region_actually_is_bytes p (2 ^ vcpuBits) \<sigma>'"
   assumes rep0: "heap_list (hrs_mem (t_hrs_' (globals \<sigma>'))) (2 ^ vcpuBits) p = replicate (2 ^ vcpuBits) 0"
   assumes "\<not> snd (placeNewObject p vcpu0 0 \<sigma>)"
@@ -5490,7 +5490,8 @@ proof -
   let ?htdret = "(hrs_htd_update (ptr_retyp (vcpu_Ptr p)) (t_hrs_' (globals \<sigma>')))"
   let ?zeros = "from_bytes (replicate (size_of TYPE(vcpu_C)) 0) :: vcpu_C"
 
-  have "size_of TYPE(vcpu_C) = 736" (is "_ = ?vcpusz")
+  (* sanity check for the value of ?vcpusz *)
+  have "size_of TYPE(vcpu_C) = ?vcpusz"
     by simp
 
   have ptr_al:
@@ -5744,7 +5745,7 @@ lemma placeNewObject_vcpu_fromzero_ccorres:
   apply (rule ccorres_from_vcg_nofail, clarsimp)
   apply (rule conseqPre, vcg)
   apply (clarsimp simp: rf_sr_htd_safe)
-  apply (subgoal_tac "{regionBase..+736} \<subseteq> {regionBase..+2^vcpuBits}")
+  apply (subgoal_tac "{regionBase..+752} \<subseteq> {regionBase..+2^vcpuBits}")
    prefer 2
    apply clarsimp
    apply (drule intvlD, clarsimp)

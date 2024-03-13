@@ -2274,6 +2274,7 @@ lemmas seL4_VCPUReg_defs =
   seL4_VCPUReg_ISR_def
   seL4_VCPUReg_VBAR_def
   seL4_VCPUReg_TPIDR_EL1_def
+  seL4_VCPUReg_VMPIDR_EL2_def
   seL4_VCPUReg_SP_EL1_def
   seL4_VCPUReg_ELR_EL1_def
   seL4_VCPUReg_SPSR_EL1_def
