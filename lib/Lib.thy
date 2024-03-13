@@ -2533,8 +2533,18 @@ next
     by (simp only: pv) (erule not_prefix_cases, auto intro: r1 r2 ih)
 qed
 
-lemma rsubst:
-  "\<lbrakk> P s; s = t \<rbrakk> \<Longrightarrow> P t"
+lemmas rsubst = back_subst[where a=s and b=t for s t]
+
+lemma rsubst2:
+  "\<lbrakk>P s x; s = t; x = y\<rbrakk> \<Longrightarrow> P t y"
+  by simp
+
+lemma rsubst3:
+  "\<lbrakk>P a b c ; a = s; b = t; c = u\<rbrakk> \<Longrightarrow> P s t u"
+  by simp
+
+lemma rsubst4:
+  "\<lbrakk>P a b c d; a = s; b = t; c = u; d = v\<rbrakk> \<Longrightarrow> P s t u v"
   by simp
 
 lemma ex_impE: "((\<exists>x. P x) \<longrightarrow> Q) \<Longrightarrow> P x \<Longrightarrow> Q"
