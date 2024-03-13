@@ -3540,8 +3540,6 @@ lemma setupCallerCap_vp[wp]:
   apply (wp | simp add: valid_pspace'_def valid_tcb_state'_def)+
   done
 
-declare haskell_assert_inv[wp del]
-
 lemma setupCallerCap_iflive[wp]:
   "\<lbrace>if_live_then_nonz_cap' and ex_nonz_cap_to' sender\<rbrace>
    setupCallerCap sender rcvr grant

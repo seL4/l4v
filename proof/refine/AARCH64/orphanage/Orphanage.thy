@@ -1275,7 +1275,7 @@ lemma setupCallerCap_no_orphans [wp]:
    setupCallerCap sender receiver gr
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding setupCallerCap_def
-  by (wpsimp wp: setThreadState_not_active_no_orphans
+  by (wpsimp wp: setThreadState_not_active_no_orphans hoare_drop_imps
              simp: is_active_thread_state_def isRestart_def isRunning_def)
 
 lemma setupCallerCap_almost_no_orphans [wp]:
@@ -1283,7 +1283,7 @@ lemma setupCallerCap_almost_no_orphans [wp]:
    setupCallerCap sender receiver gr
    \<lbrace> \<lambda>rv s. almost_no_orphans tcb_ptr s \<rbrace>"
   unfolding setupCallerCap_def
-  by (wpsimp wp: setThreadState_not_active_almost_no_orphans
+  by (wpsimp wp: setThreadState_not_active_almost_no_orphans hoare_drop_imps
              simp: is_active_thread_state_def isRestart_def isRunning_def)
 
 crunches doIPCTransfer, setMRs
@@ -1332,7 +1332,7 @@ lemma sendIPC_valid_queues' [wp]:
    \<lbrace> \<lambda>rv s. valid_queues' s \<rbrace>"
   unfolding sendIPC_def
   apply (wpsimp wp: hoare_drop_imps)
-        apply (wpsimp | wp (once) sts_st_tcb')+
+        apply (wpsimp | wp (once) sts_st_tcb' hoare_drop_imps)+
   apply (rule_tac Q="\<lambda>rv. valid_queues' and valid_objs' and ko_at' rv epptr
                           and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)" in hoare_post_imp)
    apply (clarsimp)
@@ -1586,7 +1586,7 @@ lemma cteDeleteOne_no_orphans [wp]:
    cteDeleteOne slot
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding cteDeleteOne_def
-  by (wpsimp wp: assert_inv isFinalCapability_inv weak_if_wp)
+  by (wpsimp wp: assert_inv haskell_assert_inv isFinalCapability_inv weak_if_wp)
 
 crunch valid_objs' [wp]: getThreadReplySlot "valid_objs'"
 
@@ -1752,7 +1752,7 @@ lemma deletingIRQHandler_no_orphans [wp]:
    deletingIRQHandler irq
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding deletingIRQHandler_def
-  by wp auto
+  by (wpsimp wp: hoare_drop_imps) auto
 
 lemma finaliseCap_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> sch_act_simple s \<and> valid_cap' cap s \<rbrace>
@@ -2184,7 +2184,7 @@ lemma deleteCallerCap_no_orphans [wp]:
    deleteCallerCap receiver
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding deleteCallerCap_def
-  by wpsimp auto
+  by (wpsimp wp: hoare_drop_imps) auto
 
 lemma remove_neg_strg:
   "(A \<and> B) \<longrightarrow> ((x \<longrightarrow> A) \<and> (\<not> x \<longrightarrow> B))"

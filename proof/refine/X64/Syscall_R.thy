@@ -1341,6 +1341,7 @@ lemma hinv_invs'[wp]:
   done
 
 crunch typ_at'[wp]: handleFault "\<lambda>s. P (typ_at' T p s)"
+  (wp: crunch_wps)
 
 lemmas handleFault_typ_ats[wp] = typ_at_lifts [OF handleFault_typ_at']
 
@@ -1763,14 +1764,13 @@ lemma hr_ct_active'[wp]:
   "\<lbrace>invs' and ct_active'\<rbrace> handleReply \<lbrace>\<lambda>rv. ct_active'\<rbrace>"
   apply (simp add: handleReply_def getSlotCap_def getCurThread_def
                    getThreadCallerSlot_def locateSlot_conv)
-  apply (rule hoare_seq_ext)
-   apply (rule ct_in_state'_decomp)
-    apply ((wp hoare_drop_imps | wpc | simp)+)[1]
-   apply (subst haskell_assert_def)
-   apply (wp hoare_vcg_all_lift getCTE_wp doReplyTransfer_st_tcb_at_active
-        | wpc | simp)+
+  apply (rule hoare_seq_ext, rename_tac cur_thread)
+   apply (rule_tac t=cur_thread in ct_in_state'_decomp)
+    apply (wpsimp wp: getCTE_wp)
+    apply (fastforce simp: cte_wp_at_ctes_of)
+   apply (wpsimp wp: getCTE_wp doReplyTransfer_st_tcb_at_active)+
   apply (fastforce simp: ct_in_state'_def cte_wp_at_ctes_of valid_cap'_def
-                  dest: ctes_of_valid')
+                   dest: ctes_of_valid')
   done
 
 lemma handleCall_corres:

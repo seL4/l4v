@@ -127,9 +127,13 @@ lemma empty_fail_stateAssert[intro!, simp]:
   "empty_fail (stateAssert P l)"
   unfolding stateAssert_def by simp
 
-lemma haskell_assert_wp:
+lemma haskell_assert_wp[wp]:
   "\<lbrace>\<lambda>s. Q \<longrightarrow> P s\<rbrace> haskell_assert Q xs \<lbrace>\<lambda>_. P\<rbrace>"
   by simp wp
+
+lemma haskell_assert_inv:
+  "\<lbrace>P\<rbrace> haskell_assert Q l \<lbrace>\<lambda>_. P\<rbrace>"
+  by wpsimp
 
 lemma init_append_last:
   "xs \<noteq> [] \<Longrightarrow> init xs @ [last xs] = xs"
