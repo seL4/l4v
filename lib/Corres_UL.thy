@@ -1268,6 +1268,18 @@ lemma corres_stateAssert_implied2:
   apply simp
   done
 
+lemma corres_stateAssert_add_assertion:
+  "\<lbrakk> corres_underlying sr nf nf' r P (Q and Q') f (g ());
+     \<And>s s'. \<lbrakk> (s, s') \<in> sr; P s; Q s' \<rbrakk> \<Longrightarrow> Q' s' \<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf nf' r P Q f (stateAssert Q' [] >>= g)"
+  apply (clarsimp simp: bind_assoc stateAssert_def)
+  apply (rule corres_symb_exec_r [OF _ get_sp])
+    apply (rule corres_assume_pre)
+    apply (rule corres_assert_assume)
+     apply (erule corres_guard_imp, clarsimp+)
+   apply (wp | rule no_fail_pre)+
+  done
+
 lemma corres_add_noop_lhs:
   "corres_underlying sr nf nf' r P P' (return () >>= (\<lambda>_. f)) g
       \<Longrightarrow> corres_underlying sr nf nf' r P P' f g"
