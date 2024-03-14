@@ -373,9 +373,9 @@ lemmas prefix_refinement_interference_peterson_cs1 =
   prefix_refinement_interference[OF env_stable_peterson_sr_cs1]
 
 lemmas prefix_refinement_bind_2left_2right
-  = prefix_refinement_bind[where a="bind a a'" and c="bind c c'" for a a' c c', simplified bind_assoc]
+  = prefix_refinement_bind[where a="Trace_Monad.bind a a'" and c="Trace_Monad.bind c c'" for a a' c c', simplified bind_assoc]
 lemmas rel_tr_refinement_bind_left_general_2left_2right
-  = rel_tr_refinement_bind_left_general[where f="bind f f'" and g="bind g g'" for f f' g g',
+  = rel_tr_refinement_bind_left_general[where f="Trace_Monad.bind f f'" and g="Trace_Monad.bind g g'" for f f' g g',
                                         simplified bind_assoc]
 
 lemma peterson_rel_imp_invs:
@@ -393,7 +393,7 @@ lemma peterson_rel_set_label:
   by (simp add: peterson_rel_def set_label_def)
 
 lemma acquire_lock_refinement:
-  "prefix_refinement peterson_sr peterson_sr peterson_sr \<top>\<top>
+  "prefix_refinement peterson_sr peterson_sr peterson_sr dc
      (peterson_rel (other_ident ident)) (peterson_rel (other_ident ident))
      \<top>\<top> \<top>\<top>
      (acquire_lock ident) (acquire_lock ident)"
@@ -429,12 +429,12 @@ lemma peterson_sr_ab_label:
   by (simp add: peterson_sr_def)
 
 lemma critical_section_refinement:
-  "prefix_refinement peterson_sr peterson_sr peterson_sr \<top>\<top>
+  "prefix_refinement peterson_sr peterson_sr peterson_sr dc
      (peterson_rel (other_ident ident)) (peterson_rel (other_ident ident))
      (\<lambda>_ s. invs s \<and> ab_label s ident = Critical) \<top>\<top>
      abs_critical_section critical_section"
   apply (simp add: abs_critical_section_def critical_section_def)
-  apply (rule prefix_refinement_weaken_pre)
+  apply pfx_refn_pre
     apply (rule prefix_refinement_interferences_split)
     apply (rule prefix_refinement_bind_sr)
        apply (rule prefix_refinement_interference_peterson)
@@ -457,20 +457,20 @@ lemma critical_section_refinement:
       apply (rule prefix_refinement_bind_sr)
          apply (rule prefix_refinement_interference_peterson)
         apply (rule prefix_refinement_bind[where intsr=peterson_sr_cs1])
-           apply (rule pfx_refn_modifyT)
+           apply (rule prefix_refinement_modifyT)
            apply (clarsimp simp add: peterson_sr_def peterson_sr_cs1_def)
           apply (rule prefix_refinement_bind_sr)
              apply (rule cs_refine)
             apply (rule prefix_refinement_interference_peterson)
 
-           apply (wpsimp wp: validI_triv[OF cs_closed])+
+           apply (wpsimp wp: cs_closed)+
   apply (subst peterson_rel_imp_label[symmetric], assumption, simp)
   apply (drule peterson_rel_imp_invs, simp)
   apply (simp add: peterson_sr_ab_label)
   done
 
 lemma release_lock_refinement:
-  "prefix_refinement peterson_sr peterson_sr peterson_sr \<top>\<top>
+  "prefix_refinement peterson_sr peterson_sr peterson_sr dc
      (peterson_rel (other_ident ident)) (peterson_rel (other_ident ident))
      \<top>\<top> \<top>\<top>
      (release_lock ident) (release_lock ident)"
@@ -532,7 +532,7 @@ lemma acquire_lock_prefix_closed[simp]:
            simp: cs_closed acquire_lock_def)
 
 theorem peterson_proc_refinement:
-  "prefix_refinement peterson_sr peterson_sr peterson_sr \<top>\<top>
+  "prefix_refinement peterson_sr peterson_sr peterson_sr dc
      (peterson_rel (other_ident ident)) (peterson_rel (other_ident ident))
      (\<lambda>_ s. invs s \<and> ab_label s ident = Exited)
      (\<lambda>_ s. invs s \<and> ab_label s ident = Exited)
@@ -545,7 +545,7 @@ theorem peterson_proc_refinement:
       apply (rule prefix_refinement_bind_sr)
          apply (rule critical_section_refinement)
         apply (rule release_lock_refinement)
-       apply (wpsimp wp: validI_triv acquire_lock_wp
+       apply (wpsimp wp: acquire_lock_wp
                      simp: pred_conj_def)+
   done
 
@@ -597,18 +597,17 @@ lemma peterson_proc_mutual_excl_helper:
    peterson_proc ident
    \<lbrace>peterson_rel3 ident\<rbrace>,
    \<lbrace>\<lambda>rv s0 s. peterson_rel3 ident s0 s \<and> invs s \<and> ab_label s ident = Exited\<rbrace>"
-  apply (rule prefix_refinement_validI')
+  apply (rule prefix_refinement_validI)
         apply (rule peterson_proc_refinement)
        apply (rule abs_peterson_proc_mutual_excl)
-      apply (clarsimp simp: peterson_sr_peterson_rel3 peterson_sr_ab_label)
-     apply (clarsimp simp: peterson_sr_peterson_rel3)
-    apply clarsimp
-    apply (rule_tac x=t0 in exI)
-    apply (rule_tac x="t \<lparr>cs1_v := cs1_v t0\<rparr>" in exI)
-    apply (clarsimp simp: peterson_rel_def peterson_sr_def)
-   apply clarsimp
-   apply (rule_tac x="t \<lparr>cs1_v := cs1_v s0\<rparr>" in exI)
-   apply (clarsimp simp: peterson_rel_def peterson_sr_def invs_def invs_defs)
+      apply clarsimp
+      apply (rule_tac x=t0 in exI)
+      apply (rule_tac x="t \<lparr>cs1_v := cs1_v t0\<rparr>" in exI)
+      apply (clarsimp simp: peterson_rel_def peterson_sr_def)
+     apply (rule_tac x="t \<lparr>cs1_v := cs1_v s0\<rparr>" in exI)
+     apply (clarsimp simp: peterson_rel_def peterson_sr_def invs_def invs_defs)
+    apply (clarsimp simp: peterson_sr_peterson_rel3)
+   apply (clarsimp simp: peterson_sr_peterson_rel3 peterson_sr_ab_label)
   apply clarsimp
   done
 
@@ -687,7 +686,7 @@ lemma abs_peterson_proc_prefix_closed[simp]:
            simp: cs_closed abs_peterson_proc_def acquire_lock_def release_lock_def)
 
 lemma peterson_repeat_refinement:
-  "prefix_refinement peterson_sr peterson_sr peterson_sr \<top>\<top>
+  "prefix_refinement peterson_sr peterson_sr peterson_sr dc
      (peterson_rel (other_ident ident)) (peterson_rel (other_ident ident))
      (\<lambda>s0 s. peterson_rel ident s0 s \<and> invs s \<and> ab_label s ident = Exited)
      (\<lambda>s0 s. peterson_rel ident s0 s \<and> invs s \<and> ab_label s ident = Exited)
@@ -707,11 +706,11 @@ lemma peterson_repeat_refinement:
        apply (rule peterson_proc_refinement[THEN prefix_refinement_weaken_pre])
         apply simp+
       apply (rule prefix_refinement_interference_peterson)
-     apply (wpsimp wp: validI_triv)+
+     apply wpsimp+
   done
 
 theorem peterson_proc_system_refinement:
-  "prefix_refinement peterson_sr peterson_sr peterson_sr \<top>\<top>
+  "prefix_refinement peterson_sr peterson_sr peterson_sr dc
      (\<lambda>s0 s. s0 = s) (\<lambda>t0 t. t0 = t)
      (\<lambda>s0 s. s0 = s \<and> invs s \<and> ab_label s = (\<lambda>_. Exited))
      (\<lambda>t0 t. t0 = t \<and> invs t \<and> ab_label t = (\<lambda>_. Exited))
@@ -761,12 +760,12 @@ theorem peterson_proc_system_mutual_excl:
    peterson_proc_system
    \<lbrace>\<lambda>s0 s. invs s0 \<longrightarrow> invs s\<rbrace>,
    \<lbrace>\<lambda>rv s0 s. invs s\<rbrace>"
-  apply (rule prefix_refinement_validI')
+  apply (rule prefix_refinement_validI)
         apply (rule peterson_proc_system_refinement)
        apply (rule abs_peterson_proc_system_mutual_excl)
-      apply clarsimp
-     apply (clarsimp simp: peterson_sr_invs_sym )
-    apply (fastforce simp: peterson_rel_def peterson_sr_def)
+      apply (fastforce simp: peterson_rel_def peterson_sr_def)
+     apply clarsimp
+    apply (clarsimp simp: peterson_sr_invs_sym )
    apply clarsimp
   apply (fastforce simp: peterson_sr_def)
   done

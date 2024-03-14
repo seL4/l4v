@@ -117,9 +117,9 @@ abbreviation (input)
      prefix_refinement (\<lambda>s t. t = mainv s) (\<lambda>s t. t = mainv s) (\<lambda>s t. t = mainv s) rvr AR R P Q"
 
 theorem pfx_refn_plus2_x:
-  "p_refn (\<top>\<top>) AR R (=) (\<top>\<top>) (plus2_x tid) plus2"
+  "p_refn dc AR R (=) (\<top>\<top>) (plus2_x tid) plus2"
   apply (simp add: plus2_x_def plus2_def)
-  apply (rule prefix_refinement_weaken_pre)
+  apply pfx_refn_pre
     apply (rule pfx_refn_bind prefix_refinement_interference
                 prefix_refinement_env_steps pfx_refn_modifyT env_stable
            | wpsimp)+
@@ -140,17 +140,17 @@ theorem plus2_parallel:
    parallel plus2 plus2
    \<lbrace>\<lambda>s0 s. True\<rbrace>,\<lbrace>\<lambda>_ s0 s. s = 4\<rbrace>"
   apply (rule_tac sr="\<lambda>s t. t = mainv s" in prefix_refinement_validI)
-      apply (rule prefix_refinement_parallel_triv;
-             ((rule par_tr_fin_plus2_x prefix_closed_plus2)?))
-       apply (rule pfx_refn_plus2_x[where tid=1])
-      apply (rule pfx_refn_plus2_x[where tid=2])
+        apply (rule prefix_refinement_parallel_triv;
+               ((rule par_tr_fin_plus2_x prefix_closed_plus2 twp_post_taut)+)?)
+         apply (rule pfx_refn_plus2_x[where tid=1])
+        apply (rule pfx_refn_plus2_x[where tid=2])
+       apply (rule plus2_x_parallel)
+      apply clarsimp
+      apply (clarsimp simp: plus2_xstate.splits)
+      apply (strengthen exI[where x="f(1 := x, 2 := y)" for f x y])
+      apply simp
      apply clarsimp
-     apply (rule rg_strengthen_post)
-      apply (rule plus2_x_parallel[simplified])
-     apply clarsimp
-    apply (clarsimp simp: plus2_xstate.splits)
-    apply (strengthen exI[where x="f(1 := x, 2 := y)" for f x y])
-    apply simp
+    apply clarsimp
    apply clarsimp
   apply (intro prefix_closed_parallel prefix_closed_plus2)
   done
@@ -215,16 +215,16 @@ lemma bipred_disj_top_eq:
   by auto
 
 lemma fold_parallel_pfx_refn_induct:
-  "\<lbrakk>list_all2 (prefix_refinement sr sr sr (\<lambda>_ _. True) (\<top>\<top>) (\<top>\<top>) P Q) xs ys;
-    prefix_refinement sr sr sr (\<lambda>_ _. True) (\<top>\<top>) (\<top>\<top>) P Q x y;
+  "\<lbrakk>list_all2 (prefix_refinement sr sr sr dc (\<top>\<top>) (\<top>\<top>) P Q) xs ys;
+    prefix_refinement sr sr sr dc (\<top>\<top>) (\<top>\<top>) P Q x y;
     \<forall>x \<in> set (x # xs). par_tr_fin_principle x;
     \<forall>y \<in> set (y # ys). prefix_closed y\<rbrakk>
-   \<Longrightarrow> prefix_refinement sr sr sr (\<lambda>_ _. True) (\<top>\<top>) (\<top>\<top>) P Q
+   \<Longrightarrow> prefix_refinement sr sr sr dc(\<top>\<top>) (\<top>\<top>) P Q
          (fold parallel (rev xs) x) (fold parallel (rev ys) y)"
   apply (induct rule: list_all2_induct; simp)
   apply (rule prefix_refinement_parallel_triv[simplified bipred_disj_top_eq]; simp?)
    apply (clarsimp simp: fold_parallel_par_tr_fin_principle
-                         fold_parallel_prefix_closed)+
+                         fold_parallel_prefix_closed rg_TrueI)+
   done
 
 lemmas fold_parallel_pfx_refn =
@@ -236,22 +236,23 @@ theorem plus2_n_parallel:
    fold parallel (replicate (n - 1) plus2) plus2
    \<lbrace>\<lambda>s0 s. True\<rbrace>,\<lbrace>\<lambda>_ s0 s. s = n * 2\<rbrace>"
   apply (rule_tac sr="\<lambda>s t. t = mainv s" in prefix_refinement_validI)
-      apply (rule prefix_refinement_weaken_rely,
-             rule_tac xs="map plus2_x [1 ..< n]" in fold_parallel_pfx_refn)
-           apply (clarsimp simp: list_all2_conv_all_nth)
-           apply (rule pfx_refn_plus2_x)
-          apply (rule pfx_refn_plus2_x[where tid=0])
-         apply (simp add: par_tr_fin_plus2_x)
-        apply (simp add: prefix_closed_plus2)
-       apply (simp add: le_fun_def)
-      apply (simp add: le_fun_def)
-     apply simp
-     apply (rule rg_strengthen_post, rule plus2_x_n_parallel[simplified], simp)
+        apply (rule prefix_refinement_weaken_rely,
+               rule_tac xs="map plus2_x [1 ..< n]" in fold_parallel_pfx_refn)
+             apply (clarsimp simp: list_all2_conv_all_nth)
+             apply (rule pfx_refn_plus2_x)
+            apply (rule pfx_refn_plus2_x[where tid=0])
+           apply (simp add: par_tr_fin_plus2_x)
+          apply (simp add: prefix_closed_plus2)
+         apply (simp add: le_fun_def)
+        apply (simp add: le_fun_def)
+       apply (rule plus2_x_n_parallel, simp)
+      apply clarsimp
+      apply (clarsimp simp: plus2_xstate.splits exI[where x="\<lambda>_. 0"])
      apply clarsimp
-    apply (clarsimp simp: plus2_xstate.splits exI[where x="\<lambda>_. 0"])
+     apply (rule exI, strengthen refl)
+     apply (clarsimp simp: plus2_rel_def plus2_inv_def)
+    apply clarsimp
    apply clarsimp
-   apply (rule exI, strengthen refl)
-   apply (clarsimp simp: plus2_rel_def plus2_inv_def)
   apply (rule fold_parallel_prefix_closed)
   apply (simp add: prefix_closed_plus2)
   done

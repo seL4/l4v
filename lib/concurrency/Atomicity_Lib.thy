@@ -31,7 +31,7 @@ lemmas prefix_refinement_env_steps_Await =
 
 lemma pfx_refn_interferences:
   "env_stable AR R sr iosr (\<lambda>_. True)
-   \<Longrightarrow> prefix_refinement sr iosr iosr \<top>\<top> AR R \<top>\<top> \<top>\<top> interferences interferences"
+   \<Longrightarrow> prefix_refinement sr iosr iosr dc AR R \<top>\<top> \<top>\<top> interferences interferences"
   apply (rule prefix_refinement_repeat)
     apply (erule prefix_refinement_interference)
    apply wp+
@@ -64,14 +64,12 @@ lemma repeat_pre_triv_refinement[simplified]:
   apply (simp add: repeat_def select_early)
   apply (rule triv_refinement_select_concrete_All; clarsimp)
   apply (rule_tac x="Suc x" in triv_refinement_select_abstract_x; simp)
-  apply (rule triv_refinement_refl)
   done
 
 lemma repeat_none_triv_refinement:
   "triv_refinement (repeat f) (return ())"
   apply (simp add: repeat_def)
   apply (rule_tac x="0" in triv_refinement_select_abstract_x; simp)
-  apply (rule triv_refinement_refl)
   done
 
 lemmas repeat_triv_refinement_consume_1 =
@@ -466,7 +464,6 @@ lemma rel_tr_refinement_bind_right_general:
   apply (simp add: rely_cond_append list_all2_same reflpD[where R=sr] rel_prod_sel)
   done
 
-lemmas validI_triv' = rg_weaken_pre[OF validI_triv, simplified]
 lemmas rel_tr_refinement_bind_right =
   rel_tr_refinement_bind_right_general[where C'=False, simplified]
 
@@ -810,7 +807,7 @@ lemma adjust_tr_relation_equivp:
   done
 
 lemma prefix_refinement_i_modify_split:
-  "\<lbrakk>adjust_tr_relation tr_r sr; \<forall>s t. isr s t \<longrightarrow> P s \<longrightarrow> Q t \<longrightarrow> intsr (f s) (g t);
+  "\<lbrakk>adjust_tr_relation tr_r sr; \<And>s t. \<lbrakk>isr s t; P s; Q t\<rbrakk> \<Longrightarrow> intsr (f s) (g t);
     \<forall>s. tr_r s (g s); \<forall>s t. R s t \<longrightarrow> R (g s) (g t); not_env_steps_first b;
     prefix_refinement sr intsr osr rvr' AR R P' Q' d (do x \<leftarrow> interferences; b od)\<rbrakk>
    \<Longrightarrow> prefix_refinement sr isr osr rvr' AR R (\<lambda>s0 s. P s \<and> P' s0 (f s)) (\<lambda>s0 s. Q s \<and> Q' s0 (g s))
