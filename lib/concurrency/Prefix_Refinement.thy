@@ -1,4 +1,5 @@
 (*
+ * Copyright 2024, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: BSD-2-Clause
@@ -6,14 +7,17 @@
 theory Prefix_Refinement
 
 imports
+  Monads.Trace_Empty_Fail
   Triv_Refinement
+  Monads.Trace_Reader_Option
+  Monads.Trace_Sat
 begin
 
-section \<open>Definition of prefix fragment refinement.\<close>
+section \<open>Definition of prefix fragment refinement\<close>
 
 text \<open>
   This is a notion of refinement/simulation making use of prefix closure.
-  For a concrete program to refine an abstract program, then for every
+  For a concrete program to refine an abstract program, for every
   trace of the concrete program there must exist a well-formed fragment
   of the abstract program that matches (according to the simulation
   relation) but which leaves enough decisions available to the abstract
@@ -98,6 +102,9 @@ text \<open>
   Prefix fragment refinement. Given the initial conditions, every concrete outcome
   (trace and result) must have a matching fragment which is a simple refinement of
   the abstract program.\<close>
+\<comment> \<open>FIXME: do we want to be able to assume non-failure of the abstract program.\<close>
+\<comment> \<open>FIXME: should we have an option for showing non-failure of the concrete program.\<close>
+\<comment> \<open>FIXME: corres uses a set for the state relation, this uses a predicate. Do we care?\<close>
 definition prefix_refinement ::
   "('s \<Rightarrow> 't \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 't \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 't \<Rightarrow> bool) \<Rightarrow> ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow>
    ('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('t \<Rightarrow> 't \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('t \<Rightarrow> 't \<Rightarrow> bool) \<Rightarrow>
@@ -113,10 +120,20 @@ definition prefix_refinement ::
 abbreviation
   "pfx_refn sr \<equiv> prefix_refinement sr sr sr"
 
+section \<open>Base case facts about refinement\<close>
+
 lemmas prefix_refinementD = prefix_refinement_def[THEN iffD1, rule_format]
 lemmas split_iffD1 = Product_Type.split[THEN iffD1]
 lemmas pfx_refnD = prefix_refinementD
 lemmas pfx_refnD2 = pfx_refnD[THEN split_iffD1[where a=tr and b=res for tr res], rule_format]
+
+lemma prefix_refinement_False:
+  "prefix_refinement sr isr osr rvr AR R P \<bottom>\<bottom> f g"
+  by (clarsimp simp: prefix_refinement_def)
+
+lemma prefix_refinement_False':
+  "prefix_refinement sr isr osr rvr AR R \<bottom>\<bottom> Q f g"
+  by (clarsimp simp: prefix_refinement_def)
 
 lemma matching_tr_pfx_aCons:
   "matching_tr_pfx sr ((tmid, s) # atr) ctr
@@ -134,10 +151,6 @@ lemma rely_cond_hd:
   by (clarsimp simp: rely_cond_def neq_Nil_conv trace_steps_append
               split: if_split_asm)
 
-lemma diff_Suc_eq_if:
-  "(Suc n - m) = (if m \<le> n then Suc (n - m) else 0)"
-  by auto
-
 lemma rely_cond_nth:
   "\<lbrakk>rely_cond R s0 tr; n < length tr\<rbrakk>
    \<Longrightarrow> fst (rev tr ! n) = Env \<longrightarrow> R ((if n = 0 then s0 else snd (rev tr ! (n - 1)))) (snd (rev tr ! n))"
@@ -150,6 +163,145 @@ lemma is_matching_fragment_Nil:
   apply (drule(1) prefix_closed_drop[where tr=tr and n="length tr" for tr])
   apply (clarsimp simp: in_fst_snd_image)
   done
+
+\<comment> \<open>FIXME: it would be good to show this but it needs more thought to determine how best to handle
+          the case where the concrete function has failing traces that do not satisy the rely.
+lemma prefix_refinement_propagate_no_fail:
+  "\<lbrakk>prefix_refinement sr isr osr rvr AR R P Q f f';
+    \<forall>s0. no_fail (P s0) f; \<forall>t0 t. Q t0 t \<longrightarrow> (\<exists>s0 s. P s0 s \<and> sr s0 t0 \<and> isr s t)\<rbrakk>
+   \<Longrightarrow> \<forall>t0. no_fail (Q t0) f'"
+  apply (clarsimp simp: prefix_refinement_def no_fail_def failed_def)
+  apply (erule allE, erule allE, erule (1) impE)
+  apply clarsimp
+  apply ((drule spec)+, (drule (1) mp)+)
+  apply (drule (1) bspec, clarsimp)
+  oops\<close>
+
+\<comment> \<open>FIXME: this needs some sort of assumption saying that the rely R does not lead to an empty set
+          of results.
+lemma prefix_refinement_serial:
+  "\<lbrakk>prefix_refinement sr isr osr rvr AR R P Q f f'; empty_fail f'; no_fail Q' f';
+    \<And>t0 t. Q t0 t \<Longrightarrow> Q' t\<rbrakk>
+   \<Longrightarrow> \<forall>s0 s. (\<exists>t0 t. isr s t \<and> P s0 s \<and> sr s0 t0 \<and> Q t0 t) \<longrightarrow> mres (f s) \<noteq> {}"
+  apply (clarsimp simp: prefix_refinement_def empty_fail_def)
+  apply (drule no_failD, fastforce)
+  apply (drule_tac x=t in spec, drule mp; simp?)
+  apply ((drule spec)+, (drule (1) mp)+)
+  apply (clarsimp simp: mres_def vimage_def)
+  apply (drule (1) bspec)
+  apply clarsimp
+  oops\<close>
+
+lemma is_matching_fragment_no_trace:
+  "is_matching_fragment sr osr rvr [] cres s0 R s (\<lambda>s. {([], ares s)})
+   = rel_tmres osr rvr (ares s) cres"
+  by (simp add: is_matching_fragment_def prefix_closed_def self_closed_def env_closed_def
+                matching_tr_pfx_def matching_tr_def)
+
+\<comment> \<open>Singleton trace monads must have an empty trace to be prefix_closed\<close>
+lemma prefix_refinement_singleton:
+  "prefix_refinement sr isr osr rvr AR R P Q (\<lambda>s. {([], res s)}) (\<lambda>s. {([], cres s)})
+   = (\<forall>s0 s t0 t. isr s t \<longrightarrow> P s0 s \<longrightarrow> sr s0 t0 \<longrightarrow> Q t0 t
+          \<longrightarrow> rel_tmres osr rvr (res s) (cres t))"
+  (is "prefix_refinement _ _ _ _ _ _ _ _ ?f _ = _")
+  apply (rule iffI; clarsimp simp: prefix_refinement_def)
+   apply ((drule spec)+, (drule (1) mp)+)
+   apply clarsimp
+   apply (subgoal_tac "f s = ?f s")
+    prefer 2
+    apply (clarsimp simp: triv_refinement_def fun_eq_iff)
+    apply (drule_tac x=s in spec, drule subset_singletonD)
+    apply (clarsimp simp: is_matching_fragment_def)
+   apply (drule_tac tr="[]" and res="res s" in is_matching_fragment_trD)
+    apply clarsimp
+   apply clarsimp
+  apply ((drule spec)+, (drule (1) mp)+)
+  apply (rule_tac x="?f" in exI)
+  apply (clarsimp simp: is_matching_fragment_no_trace)
+  done
+
+lemma prefix_refinement_no_trace:
+  "no_trace g
+   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P Q f g
+       = (\<forall>s0 s t0 t. isr s t \<longrightarrow> P s0 s \<longrightarrow> sr s0 t0 \<longrightarrow> Q t0 t
+            \<longrightarrow> (\<forall>cres \<in> snd ` (g t). \<exists>(tr, res) \<in> (f s). tr = [] \<and> rel_tmres osr rvr res cres))"
+  apply (rule iffI; clarsimp simp: prefix_refinement_def; drule (1) no_traceD; clarsimp)
+   apply ((drule spec)+, (drule (1) mp)+)
+   apply (drule (1) bspec, clarsimp)
+   apply (frule_tac s=s in is_matching_fragment_defD)
+   apply (clarsimp simp: ex_in_conv[symmetric])
+   apply (drule (1) is_matching_fragment_trD)
+   apply (clarsimp simp: matching_tr_pfx_def matching_tr_def)
+   apply (drule (1) triv_refinement_elemD)
+   apply (rule_tac x= "([], ba)" in bexI; clarsimp)
+  apply ((drule spec)+, (drule (1) mp)+)
+  apply (drule (1) bspec, clarsimp)
+  apply (rename_tac gres fres)
+  apply (rule_tac x="\<lambda>s'. if s'=s then {([],fres)} else {}" in exI)
+  apply (auto simp: is_matching_fragment_def prefix_closed_def self_closed_def env_closed_def
+                    matching_tr_pfx_def matching_tr_def triv_refinement_def)
+  done
+
+lemma prefix_refinement_no_trace':
+  "\<lbrakk>no_trace g;
+    \<And>s0 s t0 t. \<lbrakk>isr s t; P s0 s; sr s0 t0; Q t0 t\<rbrakk>
+                \<Longrightarrow> (\<forall>cres \<in> snd ` (g t). \<exists>(tr, res) \<in> (f s). tr = [] \<and> rel_tmres osr rvr res cres)\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P Q f g"
+  by (simp add: prefix_refinement_no_trace)
+
+section \<open>Building blocks\<close>
+text \<open>Prefix refinement rules for basic constructs.\<close>
+
+lemma default_prefix_refinement_ex:
+  "is_matching_fragment sr osr rvr ctr cres s0 R s
+     (\<lambda>s. aprog s \<inter> ({tr'. length tr' \<le> length ctr} \<times> UNIV))
+   \<Longrightarrow> \<exists>f. is_matching_fragment sr osr rvr ctr cres s0 R s f \<and> triv_refinement aprog f"
+  apply (intro exI conjI, assumption)
+  apply (simp add: triv_refinement_def)
+  done
+
+lemma default_prefix_refinement_ex_match_iosr_R:
+  "is_matching_fragment sr osr rvr ctr cres s0 R s
+     (rely (\<lambda>s. aprog s \<inter> ({tr'. matching_tr_pfx iosr tr' ctr} \<times> UNIV)) R s0)
+   \<Longrightarrow> \<exists>f. is_matching_fragment sr osr rvr ctr cres s0 R s f \<and> triv_refinement aprog f"
+  apply (intro exI conjI, assumption)
+  apply (clarsimp simp: triv_refinement_def rely_def)
+  done
+
+lemma prefix_refinement_return_imp:
+  "\<lbrakk>\<And>s0 s t0 t. \<lbrakk>P s0 s; Q t0 t; isr s t\<rbrakk> \<Longrightarrow> rvr rv rv' \<and> osr s t\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P Q (return rv) (return rv')"
+  apply (clarsimp simp: prefix_refinement_def)
+  apply (rule default_prefix_refinement_ex)
+  apply (clarsimp simp: return_def is_matching_fragment_no_trace)
+  done
+
+lemma prefix_refinement_get_imp:
+  "\<lbrakk>\<And>s0 s t0 t. \<lbrakk>P s0 s; Q t0 t; isr s t\<rbrakk> \<Longrightarrow> rvr s t \<and> osr s t\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P Q get get"
+  apply (clarsimp simp: prefix_refinement_def)
+  apply (rule default_prefix_refinement_ex)
+  apply (clarsimp simp: get_def is_matching_fragment_no_trace)
+  done
+
+lemma prefix_refinement_gets_imp:
+  "\<lbrakk>\<And>s0 s t0 t. \<lbrakk>P s0 s; Q t0 t; isr s t\<rbrakk> \<Longrightarrow> rvr (f s) (g t) \<and> osr s t\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P Q (gets f) (gets g)"
+  apply (clarsimp simp: prefix_refinement_def)
+  apply (rule default_prefix_refinement_ex)
+  apply (clarsimp simp: simpler_gets_def is_matching_fragment_no_trace)
+  done
+
+lemma prefix_refinement_returnOk_imp:
+  "\<lbrakk>\<And>s0 s t0 t. \<lbrakk>P s0 s; Q t0 t; isr s t\<rbrakk> \<Longrightarrow> rvr (Inr rv) (Inr rv') \<and> osr s t\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P Q (returnOk rv) (returnOk rv')"
+  by (simp add: returnOk_def prefix_refinement_return_imp)
+
+lemma prefix_refinement_throwError_imp:
+  "\<lbrakk>\<And>s0 s t0 t. \<lbrakk>P s0 s; Q t0 t; isr s t\<rbrakk> \<Longrightarrow> rvr (Inl e) (Inl e') \<and> osr s t\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P Q (throwError e) (throwError e')"
+  by (simp add: throwError_def prefix_refinement_return_imp)
+
 
 section \<open>Implications\<close>
 text \<open>
@@ -260,11 +412,214 @@ proof -
     by blast
 qed
 
-lemma rely_cond_True:
-  "rely_cond (\<lambda>_ _. True) = (\<lambda>_ _. True)"
-  by (simp add: rely_cond_def fun_eq_iff)
+section \<open>Using prefix refinement\<close>
+text \<open>
+  Using prefix refinement to map the validI Hoare quadruple
+  (precond/rely/guarantee/postcond). Proofs of quadruples for
+  abstract programs imply related quadruples for concrete
+  programs.\<close>
 
-section \<open>Compositionality.\<close>
+lemma list_all2_all_trace_steps:
+  assumes P: "\<forall>x\<in>trace_steps (rev tr) s0. P x"
+  and lR': "list_all2 (\<lambda>(aid, as) (cid, cs). aid = cid \<and> R' as cs) tr tr'"
+  and R': "R' s0 s0'"
+  and Q: "\<forall>idn as1 as2 cs1 cs2. R' as1 cs1 \<longrightarrow> R' as2 cs2
+            \<longrightarrow> P (idn, as1, as2) \<longrightarrow> Q (idn, cs1, cs2)"
+  shows "\<forall>x\<in>trace_steps (rev tr') s0'. Q x"
+proof -
+  note lR'' = lR'[simplified trans[OF list_all2_rev[symmetric] list_all2_conv_all_nth],
+                  simplified split_def, THEN conjunct2, rule_format]
+  note len[simp] = lR'[THEN list_all2_lengthD]
+  show ?thesis
+    using P R'
+    apply (clarsimp simp: trace_steps_nth)
+    apply (drule_tac x=x in bspec, simp)
+    apply (frule lR''[simplified])
+    apply (cut_tac i="x - 1" in lR'', simp)
+    apply (auto simp: Q)
+    done
+qed
+
+theorem prefix_refinement_validI:
+  "\<lbrakk>prefix_refinement sr isr osr rvr AR R prP' prP f g;
+    \<lbrace>P'\<rbrace>,\<lbrace>AR\<rbrace> f \<lbrace>G'\<rbrace>,\<lbrace>Q'\<rbrace>;
+    \<And>t0 t. P t0 t \<Longrightarrow> (\<exists>s0 s. P' s0 s \<and> prP' s0 s \<and> prP t0 t \<and> isr s t \<and> sr s0 t0);
+    \<And>s0 t0 t. \<lbrakk>sr s0 t0; R t0 t\<rbrakk> \<Longrightarrow> (\<exists>s. AR s0 s \<and> sr s t);
+    \<And>s0 t0 s t. \<lbrakk>G' s0 s; sr s0 t0; sr s t\<rbrakk> \<Longrightarrow> G t0 t;
+    \<And>rv rv' s0 t0 s t. \<lbrakk>Q' rv s0 s; sr s0 t0; osr s t; rvr rv rv'\<rbrakk> \<Longrightarrow> Q rv' t0 t; prefix_closed g\<rbrakk>
+    \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> g \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
+  apply (subst validI_def, clarsimp simp: rely_def)
+  apply (drule meta_spec2, drule(1) meta_mp, clarsimp)
+  apply (drule(6) prefix_refinement_rely_cond_trD[where AR=AR, simplified])
+   apply blast
+  apply clarsimp
+  apply (rule conjI)
+   apply (frule(3) validI_GD)
+   apply (simp add: guar_cond_def matching_tr_def)
+   apply (erule_tac R'="\<lambda>s cs. sr s cs" in list_all2_all_trace_steps)
+     apply (clarsimp simp: list_all2_conv_all_nth split_def)
+    apply simp
+   apply clarsimp
+  apply clarsimp
+  apply (erule tmres.rel_cases; clarsimp)
+  apply (drule(1) validI_rvD, simp add: rely_def)
+   apply simp
+  apply (case_tac tr; clarsimp simp: list_all2_Cons2 matching_tr_def)
+  done
+
+section \<open>Weakening rules\<close>
+
+named_theorems pfx_refn_pre
+(* Introduce schematic prefix_refinement guards; fail if already schematic *)
+method pfx_refn_pre0 = WP_Pre.pre_tac pfx_refn_pre
+(* Optionally introduce schematic prefix_refinement guards *)
+method pfx_refn_pre = pfx_refn_pre0?
+
+lemma stronger_prefix_refinement_weaken_pre[pfx_refn_pre]:
+  "\<lbrakk>prefix_refinement sr isr osr rvr AR R P' Q' f g;
+    \<And>s t s0 t0. \<lbrakk>isr s t; sr s0 t0; P s0 s; Q t0 t\<rbrakk> \<Longrightarrow> P' s0 s;
+    \<And>s t s0 t0. \<lbrakk>isr s t; sr s0 t0; P s0 s; Q t0 t\<rbrakk> \<Longrightarrow> Q' t0 t\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P Q f g"
+ by (fastforce simp: prefix_refinement_def)
+
+lemma prefix_refinement_weaken_pre:
+  "\<lbrakk>prefix_refinement sr isr osr rvr AR R P' Q' f g;
+    \<And>s s0. P s0 s \<Longrightarrow> P' s0 s; \<And>t t0. Q t0 t \<Longrightarrow> Q' t0 t\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P Q f g"
+  by pfx_refn_pre
+
+lemma prefix_refinement_weaken_pre1:
+  "\<lbrakk>prefix_refinement sr isr osr rvr AR R P' Q f g; \<And>s s0. P s0 s \<Longrightarrow> P' s0 s\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P Q f g"
+  by pfx_refn_pre
+
+lemma prefix_refinement_weaken_pre2:
+  "\<lbrakk>prefix_refinement sr isr osr rvr AR R P Q' f g; \<And>t t0. Q t0 t \<Longrightarrow> Q' t0 t\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P Q f g"
+  by pfx_refn_pre
+
+lemma prefix_refinement_weaken_srs:
+  "\<lbrakk>prefix_refinement sr isr osr r AR R P Q f g; isr' \<le> isr; osr \<le> osr'; sr \<le> sr\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr' osr' r AR R P Q f g"
+  apply (subst prefix_refinement_def, clarsimp)
+  apply (drule(1) predicate2D)
+  apply (drule(5) prefix_refinementD)
+  apply clarsimp
+  apply (rule exI, rule conjI[rotated], assumption)
+  apply (clarsimp simp: is_matching_fragment_def)
+  apply (drule(1) bspec, clarsimp)
+  apply (erule tmres.rel_cases; clarsimp)
+  apply (erule(1) predicate2D)
+  done
+
+named_theorems pfx_refn_rvr_pre
+(* Introduce schematic return value relation, fail if already schematic *)
+method pfx_refn_rvr_pre = WP_Pre.pre_tac pfx_refn_rvr_pre
+
+lemma prefix_refinement_weaken_rvr[pfx_refn_rvr_pre]:
+  "\<lbrakk>prefix_refinement sr isr osr rvr AR R P Q f g; \<And>rv rv'. rvr rv rv' \<Longrightarrow> rvr' rv rv'\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr rvr' AR R P Q f g"
+  apply (subst prefix_refinement_def, clarsimp)
+  apply (drule(5) prefix_refinementD, clarsimp)
+  apply (rule exI, rule conjI[rotated], assumption)
+  apply (clarsimp simp: is_matching_fragment_def)
+  apply (drule(1) bspec, clarsimp)
+  apply (erule tmres.rel_cases; clarsimp)
+  done
+
+lemma prefix_closed_rely:
+  "prefix_closed f \<Longrightarrow> prefix_closed (rely f R s0)"
+  apply (subst prefix_closed_def, clarsimp simp: rely_def rely_cond_Cons_eq)
+  apply (erule(1) prefix_closedD)
+  done
+
+lemma rely_self_closed:
+  "self_closed P s f \<Longrightarrow> self_closed P s (rely f R s0)"
+  apply (subst self_closed_def, clarsimp simp: rely_def rely_cond_Cons_eq)
+  apply (drule(2) self_closedD)
+  apply (fastforce simp: rely_cond_Cons_eq)
+  done
+
+lemma rely_env_closed:
+  "\<lbrakk>env_closed P s f;
+    \<And>xs s. \<lbrakk>P' xs s; rely_cond R s0 xs\<rbrakk> \<Longrightarrow> P xs s \<and> R (last_st_tr xs s0) s\<rbrakk>
+   \<Longrightarrow> env_closed P' s (rely f R s0)"
+  apply (subst env_closed_def, clarsimp simp: rely_def)
+  apply (drule_tac s'=s' in env_closedD, assumption)
+   apply simp
+  apply (clarsimp simp: image_def)
+  apply (fastforce intro: rely_cond_Cons rev_bexI)
+  done
+
+lemma rely_cond_mono:
+  "R \<le> R' \<Longrightarrow> rely_cond R \<le> rely_cond R'"
+  by (simp add: le_fun_def rely_cond_def split_def)
+
+lemma is_matching_fragment_add_rely:
+  "\<lbrakk>is_matching_fragment sr osr r ctr cres s0 AR s f; AR' \<le> AR\<rbrakk>
+   \<Longrightarrow> is_matching_fragment sr osr r ctr cres s0 AR' s (rely f AR' s0)"
+  apply (frule is_matching_fragment_Nil)
+  apply (clarsimp simp: is_matching_fragment_def prefix_closed_rely
+                        rely_self_closed)
+  apply (intro conjI)
+    apply (erule rely_env_closed)
+    apply (frule rely_cond_mono)
+    apply (simp add: le_fun_def rely_cond_Cons_eq)
+   apply (fastforce simp: rely_def)
+  apply (auto simp: rely_def)[1]
+  done
+
+named_theorems pfx_refn_rely_pre
+(* Introduce schematic rely relations, fail if already schematic *)
+method pfx_refn_rely_pre = WP_Pre.pre_tac pfx_refn_rely_pre
+
+lemma prefix_refinement_weaken_rely[pfx_refn_rely_pre]:
+  "\<lbrakk>prefix_refinement sr isr osr r AR R P Q f g; R' \<le> R; AR' \<le> AR\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr r AR' R' P Q f g"
+  apply (subst prefix_refinement_def, clarsimp)
+  apply (drule(3) prefix_refinementD, assumption+)
+  apply (clarsimp simp: rely_cond_def split_def le_fun_def)
+  apply (rule exI, rule conjI, erule is_matching_fragment_add_rely)
+   apply (simp add: le_fun_def)
+  apply (auto simp add: triv_refinement_def rely_def)
+  done
+
+
+section \<open>Inserting assumptions to be proved later\<close>
+
+lemma prefix_refinement_req:
+  "\<lbrakk>\<And>s0 s t0 t. \<lbrakk>sr s0 t0; isr s t; P s0 s; Q t0 t\<rbrakk> \<Longrightarrow> F;
+    F \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P Q f g\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P Q f g"
+  by (auto simp: prefix_refinement_def)
+
+lemma prefix_refinement_gen_asm:
+  "\<lbrakk>P \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P' Q' f g\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R (P' and (\<lambda>_ _. P)) Q' f g"
+  by (auto simp: prefix_refinement_def)
+
+lemma prefix_refinement_gen_asm2:
+  "\<lbrakk>P \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P' Q' f g\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P' (Q' and (\<lambda>_ _. P)) f g"
+  by (auto simp: prefix_refinement_def)
+
+lemmas prefix_refinement_gen_asms = prefix_refinement_gen_asm prefix_refinement_gen_asm2
+
+lemma prefix_refinement_assume_pre:
+  "\<lbrakk>\<And>s s0 t t0. \<lbrakk>isr s t; sr s0 t0; P s0 s; Q t0 t\<rbrakk> \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P Q f g\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P Q f g"
+  by (fastforce simp: prefix_refinement_def)
+
+lemma prefix_refinement_name_pre:
+  "\<lbrakk>\<And>s s0 t t0.
+      \<lbrakk>isr s t; sr s0 t0; P s0 s; Q t0 t\<rbrakk>
+      \<Longrightarrow> prefix_refinement sr isr osr rvr AR R
+                            (\<lambda>s0' s'. s0' = s0 \<and> s' = s) (\<lambda>t0' t'. t0' = t0 \<and> t' = t) f g\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P Q f g"
+  by (fastforce simp: prefix_refinement_def)
+
+
+section \<open>Compositionality\<close>
 text \<open>The crucial rules for proving prefix refinement of parallel and sequential compositions.\<close>
 
 lemma ball_set_zip_conv_nth:
@@ -375,10 +730,6 @@ lemma drop_sub_Suc_is_Cons:
   apply (rule nth_equalityI; clarsimp)
   apply (clarsimp simp: nth_Cons' rev_nth)
   done
-
-lemma le_sub_eq_0:
-  "((x :: nat) \<le> x - y) = (x = 0 \<or> y = 0)"
-  by arith
 
 lemmas rely_cond_append_split =
   rely_cond_append[where xs="take n xs" and ys="drop n xs" for n xs, simplified]
@@ -497,32 +848,8 @@ lemma is_matching_fragment_validI_disj:
    \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>\<lambda>_ _ _. True\<rbrace>"
   apply (frule is_matching_fragment_prefix_closed)
   apply (erule disjE)
-   apply (simp add: validI_def guar_cond_def)
+   apply wpsimp
   apply (erule(2) validI_triv_refinement)
-  done
-
-lemma prefix_closed_rely:
-  "prefix_closed f \<Longrightarrow> prefix_closed (rely f R s0)"
-  apply (subst prefix_closed_def, clarsimp simp: rely_def rely_cond_Cons_eq)
-  apply (erule(1) prefix_closedD)
-  done
-
-lemma rely_self_closed:
-  "self_closed P s f \<Longrightarrow> self_closed P s (rely f R s0)"
-  apply (subst self_closed_def, clarsimp simp: rely_def rely_cond_Cons_eq)
-  apply (drule(2) self_closedD)
-  apply (fastforce simp: rely_cond_Cons_eq)
-  done
-
-lemma rely_env_closed:
-  "\<lbrakk>env_closed P s f;
-    (\<forall>xs s. P' xs s \<longrightarrow> rely_cond R s0 xs \<longrightarrow> P xs s \<and> R (last_st_tr xs s0) s)\<rbrakk>
-   \<Longrightarrow> env_closed P' s (rely f R s0)"
-  apply (subst env_closed_def, clarsimp simp: rely_def)
-  apply (drule_tac s'=s' in env_closedD, assumption)
-   apply simp
-  apply (clarsimp simp: image_def)
-  apply (fastforce intro: rely_cond_Cons rev_bexI)
   done
 
 theorem prefix_refinement_parallel:
@@ -579,15 +906,10 @@ theorem prefix_refinement_parallel:
   apply (simp add: list_all2_lengthD)
   done
 
-lemma validI_triv':
-  "prefix_closed f \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>\<lambda>_ _. True\<rbrace>,\<lbrace>\<lambda>_ _ _. True\<rbrace>"
-  by (simp add: validI_def guar_cond_def)
-lemmas validI_triv = validI_triv'[where P="\<top>\<top>"]
-
 lemmas prefix_refinement_parallel_ART
   = prefix_refinement_parallel[OF _ _ _ _ _ _ disjI1[OF conjI, OF refl refl]]
 lemmas prefix_refinement_parallel_triv
-  = prefix_refinement_parallel_ART[OF _ _ _ _ validI_triv' validI_triv']
+  = prefix_refinement_parallel_ART[where Gb="\<top>\<top>" and Gd="\<top>\<top>", simplified]
 lemmas prefix_refinement_parallel'
   = prefix_refinement_parallel[OF _ _ _ _ _ _ disjI2[OF conjI]]
 
@@ -613,6 +935,9 @@ lemma is_matching_fragment_UNION:
   apply blast
   done
 
+\<comment> \<open>
+  This is a variant of @{term Trace_Monad.bind}, that is used to build up the fragment required
+  for proving @{text prefix_refinement_bind_general}.\<close>
 definition mbind ::
   "('s, 'a) tmonad \<Rightarrow> ('s \<Rightarrow> 'a \<Rightarrow> ('s, 'b) tmonad) \<Rightarrow> 's \<Rightarrow> ('s, 'b) tmonad"
   where
@@ -818,21 +1143,13 @@ lemma matching_tr_pfx_last_st_tr:
   apply (erule list.rel_cases; clarsimp)
   done
 
-lemma validI_relyT_mresD:
-  "\<lbrakk>\<lbrace>P'\<rbrace>,\<lbrace>\<top>\<top>\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>P''\<rbrace>; (rv, s') \<in> mres (f s); P' s0 s\<rbrakk>
-   \<Longrightarrow> \<exists>s0'. P'' rv s0' s'"
-  apply (clarsimp simp: mres_def)
-  apply (drule(2) validI_rvD)
-   apply (simp add: rely_cond_def)
-  apply blast
-  done
-
-theorem prefix_refinement_bind_general[rule_format]:
-  "\<lbrakk>prefix_refinement sr isr intsr rvr AR R P Q a c;
-    \<forall>x y. rvr x y \<longrightarrow> prefix_refinement sr intsr osr rvr' AR R (P'' x) (Q'' y) (b x) (d y);
+\<comment> \<open>FIXME: do we want to follow the corres naming pattern and use split instead of bind?\<close>
+theorem prefix_refinement_bind_general:
+  "\<lbrakk>prefix_refinement sr isr intsr rvr' AR R P Q a c;
+    \<And>rv rv'. rvr' rv rv' \<Longrightarrow> prefix_refinement sr intsr osr rvr AR R (P'' rv) (Q'' rv') (b rv) (d rv');
     \<lbrace>P'\<rbrace>,\<lbrace>AR\<rbrace> a \<lbrace>\<top>\<top>\<rbrace>,\<lbrace>P''\<rbrace> \<or> \<lbrace>\<lambda>s. \<exists>s0. P' s0 s\<rbrace> a \<lbrace>\<lambda>rv s. \<forall>s0. P'' rv s0 s\<rbrace>;
     \<lbrace>Q'\<rbrace>,\<lbrace>R\<rbrace> c \<lbrace>\<top>\<top>\<rbrace>,\<lbrace>Q''\<rbrace>\<rbrakk>
-   \<Longrightarrow> prefix_refinement sr isr osr rvr' AR R (P and P') (Q and Q') (a >>= b) (c >>= d)"
+   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R (P and P') (Q and Q') (a >>= (\<lambda>rv. b rv)) (c >>= (\<lambda>rv'. d rv'))"
   apply (subst prefix_refinement_def, clarsimp simp: bind_def)
   apply (rename_tac c_tr c_res cd_tr cd_res)
   apply (drule(5) prefix_refinementD, simp)
@@ -880,88 +1197,17 @@ theorem prefix_refinement_bind_general[rule_format]:
   apply blast
   done
 
-section \<open>Using prefix refinement.\<close>
-text \<open>
-  Using prefix refinement to map the validI Hoare quadruple
-  (precond/rely/guarantee/postcond). Proofs of quadruples for
-  abstract programs imply related quadruples for concrete
-  programs.\<close>
+section \<open>Derivative splitting rules\<close>
 
-lemma list_all2_all_trace_steps:
-  assumes P: "\<forall>x\<in>trace_steps (rev tr) s0. P x"
-  and lR': "list_all2 (\<lambda>(aid, as) (cid, cs). aid = cid \<and> R' as cs) tr' tr"
-  and R': "R' s0' s0"
-  and Q: "\<forall>idn as1 as2 cs1 cs2. R' as1 cs1 \<longrightarrow> R' as2 cs2
-            \<longrightarrow> P (idn, cs1, cs2) \<longrightarrow> Q (idn, as1, as2)"
-  shows "\<forall>x\<in>trace_steps (rev tr') s0'. Q x"
-proof -
-  note lR'' = lR'[simplified trans[OF list_all2_rev[symmetric] list_all2_conv_all_nth],
-                  simplified split_def, THEN conjunct2, rule_format]
-  note len[simp] = lR'[THEN list_all2_lengthD]
-  show ?thesis
-    using P R'
-    apply (clarsimp simp: trace_steps_nth)
-    apply (drule_tac x=x in bspec, simp)
-    apply (frule lR''[simplified])
-    apply (cut_tac i="x - 1" in lR'', simp)
-    apply (auto simp: Q)
-    done
-qed
-
-theorem prefix_refinement_validI:
-  "\<lbrakk>prefix_refinement sr isr osr rvr AR R prP' prP f g;
-    \<lbrace>P'\<rbrace>,\<lbrace>AR\<rbrace>
-    f
-    \<lbrace>\<lambda>s0 s. \<forall>cs0 cs. sr s0 cs0 \<and> sr s cs \<longrightarrow> G cs0 cs\<rbrace>,
-    \<lbrace>\<lambda>rv s0 s. \<forall>rv' cs0 cs. sr s0 cs0 \<and> osr s cs \<and> rvr rv rv' \<longrightarrow> Q rv' cs0 cs\<rbrace>;
-    \<forall>t0 t. P t0 t \<longrightarrow> (\<exists>s0 s. P' s0 s \<and> prP' s0 s \<and> prP t0 t \<and> isr s t \<and> sr s0 t0);
-    \<forall>s0 t0 t. sr s0 t0 \<and> R t0 t \<longrightarrow> (\<exists>s. AR s0 s \<and> sr s t); prefix_closed g\<rbrakk>
-    \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> g \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
-  apply (subst validI_def, clarsimp simp: rely_def)
-  apply (drule spec2, drule(1) mp, clarsimp)
-  apply (drule(6) prefix_refinement_rely_cond_trD[where AR=AR, simplified])
-   apply blast
-  apply clarsimp
-  apply (rule conjI)
-   apply (frule(3) validI_GD)
-   apply (simp add: guar_cond_def matching_tr_def)
-   apply (erule_tac R'="\<lambda>cs s. sr s cs" in list_all2_all_trace_steps)
-     apply (clarsimp simp: list_all2_conv_all_nth split_def)
-    apply simp
-   apply clarsimp
-  apply clarsimp
-  apply (erule tmres.rel_cases; clarsimp)
-  apply (drule(1) validI_rvD, simp add: rely_def)
-   apply simp
-  apply (case_tac tr; clarsimp simp: list_all2_Cons2 matching_tr_def)
-  done
-
-lemmas prefix_refinement_validI' = prefix_refinement_validI[OF _ rg_strengthen_guar, OF _ rg_strengthen_post]
-
-section \<open>Building blocks.\<close>
-text \<open>Prefix refinement rules for various basic constructs.\<close>
-
-lemma prefix_refinement_weaken_pre:
-  "\<lbrakk>prefix_refinement sr isr osr rvr AR R P' Q' f g; \<forall>s s0. P s0 s \<longrightarrow> P' s0 s;
-    \<forall>s t s0 t0. isr s t \<longrightarrow> sr s0 t0 \<longrightarrow> P s0 s \<longrightarrow> Q t0 t \<longrightarrow> Q' t0 t\<rbrakk>
-   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P Q f g"
- by (fastforce simp: prefix_refinement_def)
-
-lemma prefix_refinement_name_pre:
-  "\<lbrakk>\<And>s s0 t t0. \<lbrakk>isr s t; sr s0 t0; P s0 s; Q t0 t\<rbrakk>
-    \<Longrightarrow> prefix_refinement sr isr osr rvr AR R (\<lambda>s0' s'. s0' = s0 \<and> s' = s) (\<lambda>t0' t'. t0' = t0 \<and> t' = t) f g\<rbrakk>
-   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P Q f g"
-  by (fastforce simp: prefix_refinement_def)
-
-lemma prefix_refinement_bind_v[rule_format]:
-  "\<lbrakk>prefix_refinement sr isr intsr rvr AR R P Q a c;
-    \<forall>x y. rvr x y \<longrightarrow> prefix_refinement sr intsr osr rvr' AR R (\<lambda>s0. P'' x) (Q'' y) (b x) (d y);
+lemma prefix_refinement_bind_v:
+  "\<lbrakk>prefix_refinement sr isr intsr rvr' AR R P Q a c;
+    \<And>rv rv'. rvr' rv rv' \<Longrightarrow> prefix_refinement sr intsr osr rvr AR R (\<lambda>_. P'' rv) (Q'' rv') (b rv) (d rv');
     \<lbrace>P'\<rbrace> a \<lbrace>P''\<rbrace>; \<lbrace>Q'\<rbrace>,\<lbrace>R\<rbrace> c \<lbrace>\<top>\<top>\<rbrace>,\<lbrace>Q''\<rbrace>\<rbrakk>
-   \<Longrightarrow> prefix_refinement sr isr osr rvr' AR R (\<lambda>s0. P s0 and P') (Q and Q') (a >>= b) (c >>= d)"
+   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R (\<lambda>s0. P s0 and P') (Q and Q') (a >>= (\<lambda>rv. b rv)) (c >>= (\<lambda>rv'. d rv'))"
   apply (rule prefix_refinement_weaken_pre,
          rule prefix_refinement_bind_general[where P'="\<lambda>_. P'"])
        apply assumption
-      apply (elim allE, erule(1) mp)
+      apply (elim meta_allE, erule(1) meta_mp)
      apply (rule disjI2)
      apply simp
     apply assumption
@@ -971,64 +1217,579 @@ lemma prefix_refinement_bind_v[rule_format]:
 
 lemmas prefix_refinement_bind = prefix_refinement_bind_general[OF _ _ disjI1]
 
-lemma default_prefix_refinement_ex:
-  "is_matching_fragment sr osr rvr ctr cres s0 R s
-     (\<lambda>s. aprog s \<inter> ({tr'. length tr' \<le> length ctr} \<times> UNIV))
-   \<Longrightarrow> \<exists>f. is_matching_fragment sr osr rvr ctr cres s0 R s f \<and> triv_refinement aprog f"
-  apply (intro exI conjI, assumption)
-  apply (simp add: triv_refinement_def)
+lemmas prefix_refinement_bind_sr = prefix_refinement_bind[where sr=sr and intsr=sr for sr]
+lemmas prefix_refinement_bind_isr = prefix_refinement_bind[where isr=isr and intsr=isr for isr]
+lemmas pfx_refn_bind =
+  prefix_refinement_bind_v[where sr=sr and isr=sr and osr=sr and intsr=sr for sr]
+lemmas pfx_refn_bindT =
+  pfx_refn_bind[where P'="\<top>" and Q'="\<lambda>_ _. True", OF _ _ hoare_post_taut twp_post_taut,
+                simplified pred_conj_def, simplified]
+
+\<comment> \<open>FIXME: these are copied from Corres_UL.thy, move somewhere that they can be shared\<close>
+primrec rel_sum_comb ::
+  "('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('c \<Rightarrow> 'd \<Rightarrow> bool) \<Rightarrow> ('a + 'c \<Rightarrow> 'b + 'd \<Rightarrow> bool)" (infixl "\<oplus>" 95)
+  where
+    "(f \<oplus> g) (Inr x) y = (\<exists>y'. y = Inr y' \<and> (g x y'))"
+  | "(f \<oplus> g) (Inl x) y = (\<exists>y'. y = Inl y' \<and> (f x y'))"
+
+lemma rel_sum_comb_r2[simp]:
+  "(f \<oplus> g) x (Inr y) = (\<exists>x'. x = Inr x' \<and> g x' y)"
+  apply (case_tac x, simp_all)
   done
 
-lemma default_prefix_refinement_ex_match_iosr_R:
-  "is_matching_fragment sr osr rvr ctr cres s0 R s
-     (rely (\<lambda>s. aprog s \<inter> ({tr'. matching_tr_pfx iosr tr' ctr} \<times> UNIV)) R s0)
-   \<Longrightarrow> \<exists>f. is_matching_fragment sr osr rvr ctr cres s0 R s f \<and> triv_refinement aprog f"
-  apply (intro exI conjI, assumption)
-  apply (clarsimp simp add: triv_refinement_def rely_def)
+lemma rel_sum_comb_l2[simp]:
+  "(f \<oplus> g) x (Inl y) = (\<exists>x'. x = Inl x' \<and> f x' y)"
+  apply (case_tac x, simp_all)
   done
 
-lemma is_matching_fragment_no_trace:
-  "is_matching_fragment sr osr rvr [] cres s0 R s (\<lambda>s. {([], ares s)})
-   = rel_tmres osr rvr (ares s) cres"
-  by (simp add: is_matching_fragment_def prefix_closed_def
-                self_closed_def env_closed_def
-                matching_tr_pfx_def matching_tr_def)
+lemma prefix_refinement_bindE_general:
+  "\<lbrakk>prefix_refinement sr isr intsr (f \<oplus> rvr') AR R P Q a c;
+    \<And>rv rv'. rvr' rv rv' \<Longrightarrow> prefix_refinement sr intsr osr (f \<oplus> rvr) AR R (P'' rv) (Q'' rv') (b rv) (d rv');
+    \<lbrace>P'\<rbrace>,\<lbrace>AR\<rbrace> a \<lbrace>\<top>\<top>\<rbrace>,\<lbrace>P''\<rbrace>,\<lbrace>E\<rbrace> \<or> \<lbrace>\<lambda>s. \<exists>s0. P' s0 s\<rbrace> a \<lbrace>\<lambda>rv s. \<forall>s0. P'' rv s0 s\<rbrace>,\<lbrace>\<lambda>rv s. \<forall>s0. E rv s0 s\<rbrace>;
+    \<lbrace>Q'\<rbrace>,\<lbrace>R\<rbrace> c \<lbrace>\<top>\<top>\<rbrace>,\<lbrace>Q''\<rbrace>,\<lbrace>E'\<rbrace>;
+    \<And>rv s0 s rv' t0 t. \<lbrakk>E rv s0 s; E' rv' t0 t; intsr s t\<rbrakk> \<Longrightarrow> osr s t\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr (f \<oplus> rvr) AR R (P and P') (Q and Q') (a >>=E (\<lambda>rv. b rv)) (c >>=E (\<lambda>rv'. d rv'))"
+  apply (unfold bindE_def validIE_def validE_def)
+  apply (erule prefix_refinement_bind_general)
+    defer
+    apply (erule disj_forward; assumption?)
+    apply (fastforce simp: valid_def split_def split: sum.splits)
+   apply assumption
+  apply (case_tac rv; clarsimp simp: lift_def)
+  apply (rule prefix_refinement_throwError_imp)
+  apply clarsimp
+  done
 
-lemma prefix_refinement_return_imp:
-  "\<lbrakk>\<forall>s s0 t0 t. P s0 s \<and> Q t0 t \<and> isr s t \<longrightarrow> rvr rv rv' \<and> osr s t\<rbrakk>
-   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P Q (return rv) (return rv')"
+lemma prefix_refinement_bindE_v:
+  "\<lbrakk>prefix_refinement sr isr intsr (f \<oplus> rvr') AR R P Q a c;
+    \<And>rv rv'. rvr' rv rv' \<Longrightarrow> prefix_refinement sr intsr osr (f \<oplus> rvr) AR R (\<lambda>_. P'' rv) (Q'' rv') (b rv) (d rv');
+    \<lbrace>P'\<rbrace> a \<lbrace>P''\<rbrace>,\<lbrace>E\<rbrace>; \<lbrace>Q'\<rbrace>,\<lbrace>R\<rbrace> c \<lbrace>\<top>\<top>\<rbrace>,\<lbrace>Q''\<rbrace>,\<lbrace>E'\<rbrace>;
+    \<And>rv s rv' t0 t. \<lbrakk>E rv s; E' rv' t0 t; intsr s t\<rbrakk> \<Longrightarrow> osr s t\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr (f \<oplus> rvr) AR R (\<lambda>s0. P s0 and P') (Q and Q') (a >>=E (\<lambda>rv. b rv)) (c >>=E (\<lambda>rv'. d rv'))"
+  apply (rule prefix_refinement_weaken_pre,
+         rule prefix_refinement_bindE_general[where P'="\<lambda>_. P'"and E="\<lambda>rv _. E rv"])
+        apply assumption
+       apply (elim meta_allE, erule(1) meta_mp)
+      apply (rule disjI2)
+      apply simp
+     apply assumption
+    apply clarsimp
+   apply clarsimp
+  apply clarsimp
+  done
+
+lemmas prefix_refinement_bindE = prefix_refinement_bindE_general[OF _ _ disjI1]
+
+lemmas prefix_refinement_bindE_sr = prefix_refinement_bindE[where sr=sr and intsr=sr for sr]
+lemmas prefix_refinement_bindE_isr = prefix_refinement_bindE[where isr=isr and intsr=isr for isr]
+lemmas pfx_refn_bindE =
+  prefix_refinement_bindE_v[where sr=sr and isr=sr and osr=sr and intsr=sr for sr, where E="\<top>\<top>" and E'="\<top>\<top>\<top>",
+                            atomized, simplified, rule_format] (*this sequence of attributes removes a trivial assumption*)
+lemmas pfx_refn_bindET =
+  pfx_refn_bindE[where P'="\<top>" and Q'="\<lambda>_ _. True", OF _ _ hoareE_TrueI twp_post_tautE,
+                simplified pred_conj_def, simplified]
+
+lemma prefix_refinement_handle:
+  "\<lbrakk>prefix_refinement sr isr osr (rvr'' \<oplus> rvr) AR R P Q a c;
+    \<And>ft ft'. rvr'' ft ft' \<Longrightarrow> prefix_refinement sr osr osr (rvr' \<oplus> rvr) AR R (E ft) (E' ft') (b ft) (d ft');
+    \<lbrace>P'\<rbrace>,\<lbrace>AR\<rbrace> a -,-,\<lbrace>E\<rbrace>; \<lbrace>Q'\<rbrace>,\<lbrace>R\<rbrace> c -, -,\<lbrace>E'\<rbrace>\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr (rvr' \<oplus> rvr) AR R (P and P') (Q and Q') (a <handle> (\<lambda>ft. b ft)) (c <handle> (\<lambda>ft'. d ft'))"
+  apply (simp add: handleE_def handleE'_def validIE_def)
+  apply (erule prefix_refinement_bind)
+    defer
+    apply assumption+
+  apply (case_tac v; clarsimp)
+  apply (rule prefix_refinement_return_imp)
+  apply clarsimp
+  done
+
+lemma prefix_refinement_catch:
+  "\<lbrakk>prefix_refinement sr isr osr (rvr' \<oplus> rvr) AR R P Q a c;
+    \<And>ft ft'. rvr' ft ft' \<Longrightarrow> prefix_refinement sr osr osr rvr AR R (E ft) (E' ft') (b ft) (d ft');
+    \<lbrace>P'\<rbrace>,\<lbrace>AR\<rbrace> a -,-,\<lbrace>E\<rbrace>; \<lbrace>Q'\<rbrace>,\<lbrace>R\<rbrace> c -, -,\<lbrace>E'\<rbrace>\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R (P and P') (Q and Q') (a <catch> (\<lambda>ft. b ft)) (c <catch> (\<lambda>ft'. d ft'))"
+  apply (simp add: catch_def validIE_def)
+  apply (erule prefix_refinement_bind)
+    defer
+    apply assumption+
+  apply (case_tac x; clarsimp)
+  apply (rule prefix_refinement_return_imp)
+  apply clarsimp
+  done
+
+lemma prefix_refinement_handle_elseE:
+  "\<lbrakk>prefix_refinement sr isr osr (fr' \<oplus> rvr') AR R P Q a c;
+    \<And>ft ft'. fr' ft ft' \<Longrightarrow> prefix_refinement sr osr osr (fr \<oplus> rvr) AR R (E ft) (E' ft') (b ft) (d ft');
+    \<And>rv rv'. rvr' rv rv' \<Longrightarrow> prefix_refinement sr osr osr (fr \<oplus> rvr) AR R (P'' rv) (Q'' rv') (f rv) (g rv');
+    \<lbrace>P'\<rbrace>,\<lbrace>AR\<rbrace> a -,\<lbrace>P''\<rbrace>,\<lbrace>E\<rbrace>; \<lbrace>Q'\<rbrace>,\<lbrace>R\<rbrace> c -, \<lbrace>Q''\<rbrace>,\<lbrace>E'\<rbrace>\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr (fr \<oplus> rvr) AR R (P and P') (Q and Q')
+                         (a <handle> (\<lambda>ft. b ft) <else> (\<lambda>rv. f rv)) (c <handle> (\<lambda>ft'. d ft') <else> (\<lambda>rv. g rv))"
+  apply (simp add: handle_elseE_def validIE_def)
+  apply (erule prefix_refinement_bind)
+    defer
+    apply assumption+
+  apply (case_tac v; clarsimp)
+  done
+
+lemmas prefix_refinement_bind_eqr = prefix_refinement_bind[where rvr'="(=)", simplified]
+lemmas prefix_refinement_bind_eqrE = prefix_refinement_bindE[where rvr'="(=)", simplified]
+
+\<comment> \<open>FIXME: these are copied from Corres_UL.thy, move somewhere that they can be shared\<close>
+definition
+ "dc \<equiv> \<lambda>rv rv'. True"
+
+lemma dc_simp[simp]: "dc a b"
+  by (simp add: dc_def)
+
+lemma dc_o_simp1[simp]: "dc \<circ> f = dc"
+  by (simp add: dc_def o_def)
+
+lemma dc_o_simp2[simp]: "dc x \<circ> f = dc x"
+  by (simp add: dc_def o_def)
+
+lemma unit_dc_is_eq:
+  "(dc::unit\<Rightarrow>_\<Rightarrow>_) = (=)"
+  by (fastforce simp: dc_def)
+
+lemma prefix_refinement_bind_nor:
+  "\<lbrakk>prefix_refinement sr isr intsr dc AR R P Q a c;
+    prefix_refinement sr intsr osr rvr AR R P'' Q'' b d;
+    \<lbrace>P'\<rbrace>, \<lbrace>AR\<rbrace> a -, \<lbrace>\<lambda>_. P''\<rbrace>; \<lbrace>Q'\<rbrace>, \<lbrace>R\<rbrace> c -, \<lbrace>\<lambda>_. Q''\<rbrace>\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R (P and P') (Q and Q') (a >>= (\<lambda>_. b)) (c >>= (\<lambda>_. d))"
+  by (rule prefix_refinement_bind; assumption)
+
+lemma prefix_refinement_bind_norE:
+  "\<lbrakk>prefix_refinement sr isr intsr (f \<oplus> dc) AR R P Q a c;
+    prefix_refinement sr intsr osr (f \<oplus> rvr) AR R P'' Q'' b d;
+    \<lbrace>P'\<rbrace>, \<lbrace>AR\<rbrace> a -, \<lbrace>\<lambda>_. P''\<rbrace>, \<lbrace>E\<rbrace>; \<lbrace>Q'\<rbrace>, \<lbrace>R\<rbrace> c -, \<lbrace>\<lambda>_. Q''\<rbrace>, \<lbrace>E'\<rbrace>;
+    \<And>rv s0 s rv' t0 t. \<lbrakk>E rv s0 s; E' rv' t0 t; intsr s t\<rbrakk> \<Longrightarrow> osr s t\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr (f \<oplus> rvr) AR R (P and P') (Q and Q') (a >>=E (\<lambda>_. b)) (c >>=E (\<lambda>_. d))"
+  by (rule prefix_refinement_bindE; assumption)
+
+lemmas prefix_refinement_bind_mapr = prefix_refinement_bind[where rvr'="(=) \<circ> g" for g, simplified]
+lemmas prefix_refinement_bind_maprE = prefix_refinement_bindE[where rvr'="(=) \<circ> g" for g, simplified]
+
+
+section \<open>Rules for walking prefix refinement into basic constructs\<close>
+
+lemma prefix_refinement_if:
+  "\<lbrakk>G = G'; prefix_refinement sr isr osr rvr AR R P Q a c;
+    prefix_refinement sr isr osr rvr AR R P' Q' b d \<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R
+               (if G then P else P') (if G' then Q else Q')
+               (if G then a else b) (if G' then c else d)"
+  by simp
+
+\<comment> \<open>FIXME: copied from Word_Lib.Many_More, where would be a good spot to put it?\<close>
+lemma if_apply_def2:
+  "(if P then F else G) = (\<lambda>x y. (P \<longrightarrow> F x y) \<and> (\<not> P \<longrightarrow> G x y))"
+  by simp
+
+\<comment> \<open>FIXME: this could have slightly better bound variable names if written out, should we just do
+           that and avoid the previous FIXME?\<close>
+lemmas prefix_refinement_if2 = prefix_refinement_if[unfolded if_apply_def2]
+
+lemma prefix_refinement_when:
+  "\<lbrakk>G = G'; prefix_refinement sr isr isr rvr AR R P Q a c; rvr () ()\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr isr rvr AR R (\<lambda>x y. G \<longrightarrow> P x y) (\<lambda>x y. G' \<longrightarrow> Q x y)
+         (when G a) (when G' c)"
+  unfolding when_def
+  apply clarsimp
+  apply (rule prefix_refinement_return_imp)
+  apply simp
+  done
+
+lemma prefix_refinement_whenE:
+  "\<lbrakk>G = G'; prefix_refinement sr isr isr (f \<oplus> rvr) AR R P Q a c; rvr () ()\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr isr (f \<oplus> rvr) AR R (\<lambda>x y. G \<longrightarrow> P x y) (\<lambda>x y. G' \<longrightarrow> Q x y)
+         (whenE G a) (whenE G' c)"
+  unfolding whenE_def returnOk_def
+  apply clarsimp
+  apply (rule prefix_refinement_return_imp)
+  apply simp
+  done
+
+lemma prefix_refinement_unless:
+  "\<lbrakk>G = G'; prefix_refinement sr isr isr rvr AR R P Q a c; rvr () ()\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr isr rvr AR R (\<lambda>x y. \<not> G \<longrightarrow> P x y) (\<lambda>x y. \<not> G' \<longrightarrow> Q x y)
+         (unless G a) (unless G' c)"
+  by (simp add: unless_def prefix_refinement_when)
+
+lemma prefix_refinement_unlessE:
+  "\<lbrakk>G = G'; prefix_refinement sr isr isr (f \<oplus> rvr) AR R P Q a c; rvr () ()\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr isr (f \<oplus> rvr) AR R (\<lambda>x y. \<not> G \<longrightarrow> P x y) (\<lambda>x y. \<not> G' \<longrightarrow> Q x y)
+         (unlessE G a) (unlessE G' c)"
+  by (simp add: unlessE_whenE prefix_refinement_whenE)
+
+lemma prefix_refinement_if_r:
+  "\<lbrakk>G' \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P Q a c;
+    \<not>G' \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P Q' a d \<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R
+               P (if G' then Q else Q')
+               a (if G' then c else d)"
+  by simp
+
+lemma prefix_refinement_if3:
+  "\<lbrakk>G = G'; G' \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P Q a c;
+    \<not>G' \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P' Q' b d \<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R
+               (if G then P else P') (if G' then Q else Q')
+               (if G then a else b) (if G' then c else d)"
+  by simp
+
+lemma prefix_refinement_if_strong:
+  "\<lbrakk>\<And>s0 s t0 t. \<lbrakk>sr s0 t0; isr s t; P'' s0 s; Q'' t0 t\<rbrakk> \<Longrightarrow> G = G';
+    \<lbrakk>G; G'\<rbrakk> \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P Q a c;
+    \<lbrakk>\<not>G; \<not>G'\<rbrakk> \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P' Q' b d \<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R
+               (P'' and (if G then P else P')) (Q'' and (if G' then Q else Q'))
+               (if G then a else b) (if G' then c else d)"
+  by (fastforce simp: prefix_refinement_def)
+
+
+\<comment> \<open>FIXME: Put more thought into whether we want this section, and if not what alternative rules
+          would we want. The comment copied from Corres_UL suggests we might not want them.
+          They would be a fair bit more complicated to prove for prefix_refinement.\<close>
+section \<open>Some equivalences about liftM and other useful simps\<close>
+
+(* These rules are declared [simp], which in hindsight was not a good decision, because they
+   change the return relation which often is schematic when these rules apply in the goal.
+   In those circumstances it is usually safer to unfold liftM_def and proceed with the resulting
+   substituted term.
+
+   (We leave the [simp] attribute here, because too many proofs now depend on it)
+*)
+(*
+lemma prefix_refinement_liftM_simp[simp]:
+  "prefix_refinement sr isr osr rvr AR R P P' (liftM t f) g =
+   prefix_refinement sr isr osr (rvr \<circ> t) AR R P P' f g"
+  by (auto simp: prefix_refinement_def triv_refinement_def in_liftM)
+
+lemma prefix_refinement_liftM2_simp[simp]:
+  "prefix_refinement sr isr osr rvr AR R P P' f (liftM t g) =
+   prefix_refinement sr isr osr (\<lambda>x. rvr x \<circ> t) AR R P P' f g"
+  by (fastforce simp: prefix_refinement_def in_liftM)
+
+lemma prefix_refinement_liftE_rel_sum[simp]:
+ "prefix_refinement sr isr osr (f \<oplus> rvr) AR R P P' (liftE m) (liftE m') =
+  prefix_refinement sr isr osr rvr AR R P P' m m'"
+  by (simp add: liftE_liftM o_def)
+
+lemmas corres_liftE_lift = corres_liftE_rel_sum[THEN iffD2]*)
+
+
+section \<open>Support for proving correspondence to noop with hoare triples\<close>
+
+lemma prefix_refinement_noop:
+  assumes P: "\<And>s0 s. P s0 s \<Longrightarrow> \<lbrace>\<lambda>t. isr s t \<and> Q t\<rbrace> f \<lbrace>\<lambda>rv t. osr s t \<and> rvr x rv\<rbrace>"
+  assumes nt: "no_trace f"
+  assumes nf: "\<And>s0 s. P s0 s \<Longrightarrow> no_fail (\<lambda>t. isr s t \<and> Q t) f"
+  shows "prefix_refinement sr isr osr rvr AR R P (\<lambda>_. Q) (return x) f"
+  apply (subst prefix_refinement_no_trace)
+   apply (rule nt)
+  apply clarsimp
+  apply (frule P)
+  apply (insert nf)
+  apply (insert nt)
+  apply (clarsimp simp: valid_def no_fail_def no_trace_def return_def mres_def failed_def image_def)
+  apply (case_tac b; fastforce)
+  done
+
+lemma prefix_refinement_noopE:
+  assumes P: "\<And>s0 s. P s0 s \<Longrightarrow> \<lbrace>\<lambda>t. isr s t \<and> Q t\<rbrace> f \<lbrace>\<lambda>rv t. osr s t \<and> rvr x rv\<rbrace>,\<lbrace>\<bottom>\<bottom>\<rbrace>"
+  assumes nt: "no_trace f"
+  assumes nf: "\<And>s0 s. P s0 s \<Longrightarrow> no_fail (\<lambda>t. isr s t \<and> Q t) f"
+  shows "prefix_refinement sr isr osr (frvr \<oplus> rvr) AR R P (\<lambda>_. Q) (returnOk x) f"
+proof -
+  have Q: "\<And>P f Q E. \<lbrace>P\<rbrace>f\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. case_sum (\<lambda>e. E e s) (\<lambda>r. Q r s) r\<rbrace>"
+    by (simp add: validE_def)
+  thus ?thesis
+    apply (simp add: returnOk_def)
+    apply (rule prefix_refinement_noop)
+      apply (rule hoare_strengthen_post)
+       apply (rule Q)
+       apply (rule P)
+       apply assumption
+      apply (simp split: sum.splits)
+     apply (rule nt)
+    apply (erule nf)
+    done
+qed
+
+lemma prefix_refinement_noop2:
+  assumes f: "\<And>s. P s \<Longrightarrow> \<lbrace>(=) s\<rbrace> f \<exists>\<lbrace>\<lambda>_. (=) s\<rbrace>"
+  assumes g: "\<And>t. Q t \<Longrightarrow> \<lbrace>(=) t\<rbrace> g \<lbrace>\<lambda>_. (=) t\<rbrace>"
+  assumes nt: "no_trace f" "no_trace g"
+  assumes nf: "no_fail P f" "no_fail Q g"
+  shows "prefix_refinement sr iosr iosr dc AR R (\<lambda>_. P) (\<lambda>_. Q) f g"
+  apply (subst prefix_refinement_no_trace)
+   apply (rule nt)
+  apply clarsimp
+  apply (insert nt)
+  apply (insert nf)
+  apply (clarsimp simp: no_trace_def no_fail_def failed_def image_def)
+  apply (subgoal_tac "\<exists>(r, s')\<in>mres (f s). rel_tmres iosr dc (Result (r, s')) b")
+   apply (case_tac b; fastforce simp: mres_def intro: rev_bexI)
+  apply (rule use_exs_valid)
+   apply (rule exs_hoare_post_imp[rotated])
+    apply (erule f)
+   apply (case_tac b; clarsimp)
+     apply fastforce
+    apply fastforce
+   apply (subgoal_tac "ba = t")
+    apply simp
+   apply (rule sym)
+   apply (rule use_valid[OF _ g], erule in_mres)
+    apply simp+
+  done
+
+
+section \<open>Support for dividing correspondence along logical boundaries\<close>
+
+lemma prefix_refinement_disj_division:
+  "\<lbrakk>S \<or> T; S \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P Q x y;
+    T \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P' Q' x y\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R
+                         (\<lambda>s0 s. (S \<longrightarrow> P s0 s) \<and> (T \<longrightarrow> P' s0 s)) (\<lambda>s0 s. (S \<longrightarrow> Q s0 s) \<and> (T \<longrightarrow> Q' s0 s)) x y"
+  by (safe; pfx_refn_pre, simp+)
+
+lemma prefix_refinement_weaker_disj_division:
+  "\<lbrakk>S \<or> T; S \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P Q x y;
+    T \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P' Q' x y\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R (P and P') (Q and Q') x y"
+  by (pfx_refn_pre, rule prefix_refinement_disj_division, simp+)
+
+lemma prefix_refinement_symmetric_bool_cases:
+  "\<lbrakk>S = T; \<lbrakk>S; T\<rbrakk> \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P Q f g;
+    \<lbrakk>\<not>S; \<not>T\<rbrakk> \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P' Q' f g\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R (\<lambda>s0 s. (S \<longrightarrow> P s0 s) \<and> (\<not>S \<longrightarrow> P' s0 s))
+                                             (\<lambda>s0 s. (T \<longrightarrow> Q s0 s) \<and> (\<not>T \<longrightarrow> Q' s0 s))
+                                             f g"
+  by (cases S, simp_all)
+
+text \<open>Support for symbolically executing into the guards and manipulating them\<close>
+
+lemma prefix_refinement_symb_exec_l:
+  assumes z: "\<And>rv. prefix_refinement sr isr osr rvr AR R (\<lambda>_. P' rv) Q (x rv) y"
+  assumes x: "\<And>s. P s \<Longrightarrow> \<lbrace>(=) s\<rbrace> m \<exists>\<lbrace>\<lambda>r. (=) s\<rbrace>"
+  assumes y: "\<lbrace>P\<rbrace> m \<lbrace>\<lambda>rv s. P' rv s\<rbrace>"
+  assumes nf: "no_fail P m"
+  assumes nt: "no_trace m"
+  shows      "prefix_refinement sr isr osr rvr AR R (\<lambda>_. P) Q (m >>= (\<lambda>rv. x rv)) y"
+  apply pfx_refn_pre
+    apply (subst gets_bind_ign[symmetric], rule prefix_refinement_bind[OF _ z])
+      apply (rule prefix_refinement_noop2)
+           apply (erule x)
+          apply (rule gets_wp)
+         apply (rule nt)
+        apply (rule no_trace_gets)
+       apply (rule nf)
+      apply (rule no_fail_gets)
+     apply (rule valid_validI_wp[OF nt y])
+    apply wp
+   apply simp+
+  done
+
+lemma prefix_refinement_symb_exec_r:
+  assumes z: "\<And>rv. prefix_refinement sr isr osr rvr AR R P (\<lambda>_. Q' rv) x (y rv)"
+  assumes y: "\<lbrace>Q\<rbrace> m \<lbrace>Q'\<rbrace>"
+  assumes x: "\<And>s. Q s \<Longrightarrow> \<lbrace>(=) s\<rbrace> m \<lbrace>\<lambda>r. (=) s\<rbrace>"
+  assumes nf: "no_fail Q m"
+  assumes nt: "no_trace m"
+  shows      "prefix_refinement sr isr osr rvr AR R P (\<lambda>_. Q) x (m >>= (\<lambda>rv. y rv))"
+  apply pfx_refn_pre
+    apply (subst gets_bind_ign[symmetric], rule prefix_refinement_bind[OF _ z])
+      apply (rule prefix_refinement_noop2)
+           apply (clarsimp simp: simpler_gets_def exs_valid_def mres_def vimage_def)
+          apply (erule x)
+         apply (rule no_trace_gets)
+        apply (rule nt)
+       apply (rule no_fail_gets)
+      apply (rule nf)
+     apply wp
+    apply (rule valid_validI_wp[OF nt y])
+   apply simp+
+  done
+
+lemma prefix_refinement_symb_exec_r_conj:
+  assumes z: "\<And>rv. prefix_refinement sr isr osr rvr AR R P (\<lambda>_. Q' rv) x (y rv)"
+  assumes y: "\<lbrace>Q\<rbrace> m \<lbrace>Q'\<rbrace>"
+  assumes x: "\<And>s. \<lbrace>\<lambda>s'. isr s s' \<and> S s'\<rbrace> m \<lbrace>\<lambda>rv s'. isr s s'\<rbrace>"
+  assumes nf: "\<And>s. no_fail (\<lambda>t. isr s t \<and> S t) m"
+  assumes nt: "no_trace m"
+  shows      "prefix_refinement sr isr osr rvr AR R P (\<lambda>_. S and Q) x (m >>= (\<lambda>rv. y rv))"
+proof -
+  have P: "prefix_refinement sr isr isr dc AR R \<top>\<top> (\<lambda>_. S) (return undefined) m"
+    apply (rule prefix_refinement_noop)
+      apply (simp add: x nt nf)+
+    done
+  show ?thesis
+    apply pfx_refn_pre
+      apply (subst return_bind[symmetric], rule prefix_refinement_bind[OF P])
+        apply (rule z)
+       apply wp
+      apply (rule valid_validI_wp[OF nt y])
+     apply simp+
+    done
+qed
+
+\<comment> \<open>FIXME: improve automation of this proof\<close>
+lemma prefix_refinement_bind_return_r:
+  "prefix_refinement sr isr osr (\<lambda>x y. rvr x (h y)) AR R P Q f g \<Longrightarrow>
+   prefix_refinement sr isr osr rvr AR R P Q f (do x \<leftarrow> g; return (h x) od)"
+  apply (clarsimp simp: prefix_refinement_def bind_def return_def)
+  apply ((drule spec)+, (drule (1) mp)+)
+  apply (drule (1) bspec, clarsimp)
+  apply (subgoal_tac "aa=a")
+   prefer 2
+   apply (fastforce split: tmres.splits)
+  apply clarsimp
+  apply (rule_tac x=fa in exI)
+  apply (clarsimp simp: is_matching_fragment_def split: tmres.splits)
+    apply (case_tac b; fastforce)
+   apply (case_tac b; fastforce)
+  apply (case_tac bc; fastforce)
+  done
+
+lemma prefix_refinement_symb_exec_l':
+  "\<lbrakk>prefix_refinement sr isr isr dc AR R P P' f (return ());
+    \<And>rv. prefix_refinement sr isr osr rvr AR R (Q rv) P' (g rv) h;
+    \<And>s0. \<lbrace>P s0\<rbrace> f \<lbrace>\<lambda>rv. Q rv s0\<rbrace>; no_trace f\<rbrakk>
+    \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P P' (f >>= g) h"
+  apply (drule prefix_refinement_bind)
+     apply assumption
+    apply (erule valid_validI_wp)
+    apply assumption
+   apply wp
+  apply clarsimp
+  done
+
+
+section \<open>Building blocks\<close>
+
+lemma prefix_refinement_triv_pre:
+  "prefix_refinement sr isr osr rvr AR R \<top>\<top> \<top>\<top> f g
+   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R \<top>\<top> \<top>\<top> f g"
+  by assumption
+
+\<comment> \<open>FIXME: Need to work out the best fragment to provide for prefix_refinement_trivial.
+          Defining and using prefix_close like this is one option but might be more work than needed.\<close>
+\<comment> \<open>definition prefix_close_set ::
+  "((tmid \<times> 's) list \<times> ('s, 'a) tmres) set \<Rightarrow> ((tmid \<times> 's) list \<times> ('s, 'a) tmres) set"
+  where
+  "prefix_close_set f = {(xs, Incomplete). (\<exists>xs' \<in> fst ` f. \<exists>n\<le>length xs'. drop n xs' = xs)} \<union> f"
+
+definition prefix_close :: "('a, 'b) tmonad \<Rightarrow> ('a, 'b) tmonad" where
+  "prefix_close f \<equiv> \<lambda>s. prefix_close_set (f s)"
+
+lemma drop_Suc_eq:
+  "drop n xs = y # ys \<Longrightarrow> drop (Suc n) xs = ys"
+  by (auto simp: drop_Suc drop_tl)
+
+lemma prefix_close_set_closed:
+  "x # xs \<in> fst ` prefix_close_set (f s) \<Longrightarrow> (xs, Incomplete) \<in> prefix_close_set (f s)"
+  unfolding prefix_close_set_def
+  apply safe
+   apply (rule_tac x=aa in bexI)
+    apply (rule_tac x="Suc n" in exI)
+    apply (fastforce intro!: Suc_leI le_neq_trans elim!: drop_Suc_eq[OF sym])
+   apply (auto simp: image_def intro!: bexI)[1]
+  apply (rule_tac x=a in bexI)
+   apply (rule_tac x="Suc 0" in exI)
+   apply fastforce
+  apply (auto simp: image_def intro!: bexI)[1]
+  done
+
+lemma prefix_close_closed:
+  "prefix_closed (prefix_close f)"
+  unfolding prefix_closed_def prefix_close_def
+  by (auto simp: prefix_close_set_closed)
+
+lemma triv_refinement_prefix_close:
+  "\<lbrakk>prefix_closed f; triv_refinement f g\<rbrakk> \<Longrightarrow> triv_refinement f (prefix_close g)"
+  apply (clarsimp simp: triv_refinement_def)
+  oops
+
+lemma prefix_refinement_trivial:
+  "prefix_closed f \<Longrightarrow> pfx_refn (=) (=) R R \<top>\<top> \<top>\<top> f f"
   apply (clarsimp simp: prefix_refinement_def)
-  apply (rule default_prefix_refinement_ex)
-  apply (auto simp add: return_def is_matching_fragment_no_trace)
-  done
-
-abbreviation (input)
-  "dc2 \<equiv> (\<lambda>_ _. True)"
+  apply (rule_tac x="prefix_close (\<lambda>s'. if s'=s then {(a,b)} else {})" in exI)
+  apply (clarsimp simp: triv_refinement_def)
+apply (auto simp: is_matching_fragment_def prefix_closed_def self_closed_def env_closed_def
+                matching_tr_pfx_def matching_tr_def)[1]
+oops\<close>
 
 abbreviation
-  "pfx_refnT sr rvr AR R \<equiv> pfx_refn sr rvr AR R (\<lambda>_ _. True) dc2"
+  "pfx_refnT sr rvr AR R \<equiv> pfx_refn sr rvr AR R \<top>\<top> \<top>\<top>"
 
-lemma pfx_refn_return:
-  "rvr rv rv' \<Longrightarrow> pfx_refnT sr rvr AR R (return rv) (return rv')"
+lemma prefix_refinement_returnTT:
+  "rvr rv rv' \<Longrightarrow> prefix_refinement sr iosr iosr rvr AR R \<top>\<top> \<top>\<top> (return rv) (return rv')"
   by (rule prefix_refinement_return_imp, simp)
 
 lemma prefix_refinement_get:
-  "prefix_refinement sr iosr iosr iosr AR R dc2 dc2 get get"
-  apply (clarsimp simp: prefix_refinement_def get_def)
+  "prefix_refinement sr iosr iosr iosr AR R \<top>\<top> \<top>\<top> get get"
+  by (rule prefix_refinement_get_imp, simp)
+
+lemma prefix_refinement_put_imp:
+  "\<lbrakk>\<And>s0 s t0 t. \<lbrakk>sr s0 t0; isr s t; P s0 s; Q t0 t\<rbrakk> \<Longrightarrow> osr s' t'\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr dc AR R P Q (put s') (put t')"
+  apply (clarsimp simp: prefix_refinement_def)
   apply (rule default_prefix_refinement_ex)
-  apply (simp add: is_matching_fragment_no_trace)
+  apply (clarsimp simp: put_def is_matching_fragment_no_trace)
   done
 
 lemma prefix_refinement_put:
-  "osr s t \<Longrightarrow> prefix_refinement sr isr osr dc2 AR R dc2 dc2 (put s) (put t)"
-  apply (clarsimp simp: prefix_refinement_def put_def)
+  "osr s t \<Longrightarrow> prefix_refinement sr isr osr dc AR R \<top>\<top> \<top>\<top> (put s) (put t)"
+  by (rule prefix_refinement_put_imp, simp)
+
+lemma prefix_refinement_modify:
+  "\<lbrakk>\<And>s0 s t0 t. \<lbrakk>sr s0 t0; isr s t; P s0 s; Q t0 t\<rbrakk> \<Longrightarrow> osr (f s) (g t)\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr dc AR R P Q (modify f) (modify g)"
+  apply (simp add: modify_def)
+  apply (rule prefix_refinement_weaken_pre)
+    apply (rule prefix_refinement_bind[where intsr=isr, OF prefix_refinement_get])
+      apply (rule_tac P="\<lambda>s0 _. P s0 s" and Q="\<lambda>s0 _. Q s0 sa" in prefix_refinement_put_imp)
+      apply wpsimp+
+  done
+
+lemmas prefix_refinement_modifyT =
+  prefix_refinement_modify[where P="\<top>\<top>" and Q="\<top>\<top>", simplified]
+
+lemmas pfx_refn_modifyT =
+  prefix_refinement_modifyT[where sr=sr and isr=sr and osr=sr for sr]
+
+lemmas prefix_refinement_get_pre =
+  prefix_refinement_bind[OF prefix_refinement_get _ valid_validI_wp[OF _ get_sp]
+                            valid_validI_wp[OF _ get_sp],
+                         simplified pred_conj_def, simplified]
+
+lemma prefix_refinement_gets:
+  "\<lbrakk>\<And>s t. \<lbrakk>iosr s t; P s; Q t\<rbrakk> \<Longrightarrow> rvr (f s) (f' t)\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr iosr iosr rvr AR R (\<lambda>_. P) (\<lambda>_. Q) (gets f) (gets f')"
+  apply (simp add: gets_def)
+  apply (rule prefix_refinement_get_pre)
+  apply (rule prefix_refinement_return_imp)
+  apply simp
+  done
+
+lemma prefix_refinement_fail:
+  "prefix_refinement sr isr osr rvr AR R \<top>\<top> \<top>\<top> fail fail"
+  apply (clarsimp simp: prefix_refinement_def fail_def)
   apply (rule default_prefix_refinement_ex)
   apply (simp add: is_matching_fragment_no_trace)
   done
 
+lemma prefix_refinement_returnOkTT:
+  "rvr rv rv' \<Longrightarrow> prefix_refinement sr iosr iosr (rvr' \<oplus> rvr) AR R \<top>\<top> \<top>\<top> (returnOk rv) (returnOk rv')"
+  by (rule prefix_refinement_returnOk_imp, simp)
+
+lemma prefix_refinement_throwErrorTT:
+  "rvr e e' \<Longrightarrow> prefix_refinement sr iosr iosr (rvr \<oplus> rvr') AR R \<top>\<top> \<top>\<top> (throwError e) (throwError e')"
+  by (rule prefix_refinement_throwError_imp, simp)
+
 lemma prefix_refinement_select:
   "\<lbrakk>\<forall>x \<in> T. \<exists>y \<in> S. rvr y x\<rbrakk>
-   \<Longrightarrow> prefix_refinement sr iosr iosr rvr AR R dc2 dc2 (select S) (select T)"
+   \<Longrightarrow> prefix_refinement sr iosr iosr rvr AR R \<top>\<top> \<top>\<top> (select S) (select T)"
   apply (clarsimp simp: prefix_refinement_def select_def)
   apply (drule(1) bspec, clarsimp)
   apply (rule_tac x="return y" in exI)
@@ -1036,6 +1797,244 @@ lemma prefix_refinement_select:
                    prefix_closed_def matching_tr_pfx_def matching_tr_def)
   apply (auto simp add: triv_refinement_def return_def image_def)
   done
+
+lemma prefix_refinement_assert:
+  "P = P' \<Longrightarrow> prefix_refinement sr iosr iosr dc AR R \<top>\<top> \<top>\<top> (assert P) (assert P')"
+  by (simp add: assert_def prefix_refinement_fail prefix_refinement_return_imp)
+
+lemma prefix_refinement_assert_opt:
+  "\<lbrakk>rel_option rvr v v'\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr iosr iosr rvr AR R \<top>\<top> \<top>\<top> (assert_opt v) (assert_opt v')"
+  by (auto simp: assert_opt_def prefix_refinement_fail prefix_refinement_return_imp
+          split: option.splits)
+
+lemma prefix_refinement_assertE:
+  "P = P' \<Longrightarrow> prefix_refinement sr iosr iosr dc AR R \<top>\<top> \<top>\<top> (assertE P) (assertE P')"
+  by (simp add: assertE_def prefix_refinement_fail prefix_refinement_returnOk_imp)
+
+lemma prefix_refinement_gets_the:
+  "\<lbrakk>\<And>s t. \<lbrakk>iosr s t; P s; Q t\<rbrakk> \<Longrightarrow> rel_option rvr (f s) (g t)\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr iosr iosr rvr AR R (\<lambda>_. P) (\<lambda>_. Q) (gets_the f) (gets_the g)"
+  apply (simp add: gets_the_def)
+  apply (rule prefix_refinement_weaken_pre)
+    apply (rule prefix_refinement_bind[where rvr'="rel_option rvr"])
+       apply (rule prefix_refinement_gets[where P=P and Q=Q])
+       apply simp
+      apply (erule prefix_refinement_assert_opt)
+     apply wpsimp+
+  done
+
+lemma prefix_refinement_gets_map:
+  "\<lbrakk>\<And>s t. \<lbrakk>iosr s t; P s; Q t\<rbrakk> \<Longrightarrow> rel_option rvr (f s p) (g t q)\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr iosr iosr rvr AR R (\<lambda>_. P) (\<lambda>_. Q) (gets_map f p) (gets_map g q)"
+  apply (subst gets_the_oapply_comp[symmetric])+
+  apply (rule prefix_refinement_gets_the)
+  apply simp
+  done
+
+lemma prefix_refinement_throw_opt:
+  "\<lbrakk>\<And>s t. \<lbrakk>iosr s t; P s; Q t\<rbrakk> \<Longrightarrow> rvr ex ex' \<and> rel_option rvr' x x'\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr iosr iosr (rvr \<oplus> rvr') AR R (\<lambda>_. P) (\<lambda>_. Q) (throw_opt ex x) (throw_opt ex' x')"
+  apply (simp add: throw_opt_def)
+  apply (cases x; cases x')
+     apply (clarsimp simp: prefix_refinement_throwError_imp)
+    apply (fastforce simp: prefix_refinement_def)
+   apply (fastforce simp: prefix_refinement_def)
+  apply (clarsimp simp: prefix_refinement_returnOk_imp)
+  done
+
+lemma prefix_refinement_alternate1:
+  "prefix_refinement sr iosr iosr rvr AR R P Q a c \<Longrightarrow> prefix_refinement sr iosr iosr rvr AR R P Q (a \<sqinter> b) c"
+  apply (subst prefix_refinement_def, clarsimp)
+  apply (drule(6) pfx_refnD2, clarsimp)
+  apply (fastforce intro: triv_refinement_trans[rotated] triv_refinement_alternative1)
+  done
+
+lemma prefix_refinement_alternate2:
+  "prefix_refinement sr iosr iosr rvr AR R P Q b c \<Longrightarrow> prefix_refinement sr iosr iosr rvr AR R P Q (a \<sqinter> b) c"
+  apply (subst prefix_refinement_def, clarsimp)
+  apply (drule(6) pfx_refnD2, clarsimp)
+  apply (fastforce intro: triv_refinement_trans[rotated] triv_refinement_alternative2)
+  done
+
+lemma prefix_refinement_either_alternate1:
+  "\<lbrakk>prefix_refinement sr iosr iosr rvr AR R P Q a c; prefix_refinement sr iosr iosr rvr AR R P' Q b c\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr iosr iosr rvr AR R (P or P') Q (a \<sqinter> b) c"
+  apply (subst prefix_refinement_def, clarsimp simp del: imp_disjL)
+  apply (erule disjE)
+   apply (drule(6) pfx_refnD2, clarsimp)
+   apply (fastforce intro: triv_refinement_trans[rotated] triv_refinement_alternative1)
+  apply (drule(6) pfx_refnD2, clarsimp)
+  apply (fastforce intro: triv_refinement_trans[rotated] triv_refinement_alternative2)
+  done
+
+lemma prefix_refinement_either_alternate2:
+  "\<lbrakk>prefix_refinement sr iosr iosr rvr AR R P Q a c; prefix_refinement sr iosr iosr rvr AR R P Q' b c\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr iosr iosr rvr AR R P (Q or Q') (a \<sqinter> b) c"
+  apply (subst prefix_refinement_def, clarsimp simp del: imp_disjL)
+  apply (erule disjE)
+   apply (drule(6) pfx_refnD2, clarsimp)
+   apply (fastforce intro: triv_refinement_trans[rotated] triv_refinement_alternative1)
+  apply (drule(6) pfx_refnD2, clarsimp)
+  apply (fastforce intro: triv_refinement_trans[rotated] triv_refinement_alternative2)
+  done
+
+lemma is_matching_fragment_restrict:
+  "is_matching_fragment sr osr rvr ctr cres s0 R s f
+   \<Longrightarrow> is_matching_fragment sr osr rvr ctr cres s0 R s (\<lambda>s'. if s'=s then f s else {})"
+  by (simp add: is_matching_fragment_def prefix_closed_def self_closed_def env_closed_def
+                matching_tr_pfx_def matching_tr_def)
+
+lemma triv_refinement_restrict:
+  "triv_refinement f (\<lambda>s'. if s'=s then f s else {})"
+  by (clarsimp simp: triv_refinement_def)
+
+\<comment> \<open>FIXME: corres rules for condition don't exist, so maybe we don't bother with this. It feels
+          like it shouldn't be this hard to prove, but providing correct fragments is frustrating.
+          It might make it easier to instantiate if the exists was wrapped in a new definition.\<close>
+lemma prefix_refinement_condition_strong:
+  "\<lbrakk>\<And>s0 s t0 t. \<lbrakk>sr s0 t0; isr s t; P'' s0 s; Q'' t0 t\<rbrakk> \<Longrightarrow> C s = C' t;
+    prefix_refinement sr isr osr rvr AR R P Q a c;
+    prefix_refinement sr isr osr rvr AR R P' Q' b d \<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R
+               (P'' and (\<lambda>s0 s. if C s then P s0 s else P' s0 s))
+               (Q'' and (\<lambda>s0 s. if C' s then Q s0 s else Q' s0 s))
+               (condition C a b) (condition C' c d)"
+  apply (clarsimp simp: condition_def)
+  apply (auto simp: prefix_refinement_def  simp del: not_ex )
+     apply (erule notE)
+     apply (drule spec | drule (1) mp | drule (1) bspec)+
+     apply clarsimp
+     apply (rule_tac x="\<lambda>s'. if s'=s then f s else {}" in exI)
+     apply (clarsimp simp: triv_refinement_def is_matching_fragment_restrict)
+    apply (drule spec | drule (1) mp | drule (1) bspec)+
+    apply clarsimp
+    apply (rule_tac x="\<lambda>s'. if s'=s then f s else {}" in exI)
+    apply (clarsimp simp: triv_refinement_def is_matching_fragment_restrict)
+   apply (drule spec | drule (1) mp | drule (1) bspec)+
+   apply clarsimp
+   apply (rule_tac x="\<lambda>s'. if s'=s then f s else {}" in exI)
+   apply (clarsimp simp: triv_refinement_def is_matching_fragment_restrict)
+  apply (drule spec | drule (1) mp | drule (1) bspec)+
+  apply clarsimp
+  apply (rule_tac x="\<lambda>s'. if s'=s then f s else {}" in exI)
+  apply (clarsimp simp: triv_refinement_def is_matching_fragment_restrict)
+  done
+
+lemma prefix_refinement_mapM[rule_format]:
+  "\<lbrakk>list_all2 xyr xs ys;
+    \<forall>x y. x \<in> set xs \<longrightarrow> y \<in> set ys \<longrightarrow> xyr x y
+          \<longrightarrow> prefix_refinement sr intsr intsr rvr AR R P Q (f x) (g y);
+    \<forall>x. x \<in> set xs \<longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>AR\<rbrace> f x \<lbrace>\<lambda>_ _. True\<rbrace>,\<lbrace>\<lambda>_. P\<rbrace>;
+    \<forall>y. y \<in> set ys \<longrightarrow> \<lbrace>Q\<rbrace>,\<lbrace>R\<rbrace> g y \<lbrace>\<lambda>_ _. True\<rbrace>,\<lbrace>\<lambda>_. Q\<rbrace>\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr intsr intsr (list_all2 rvr) AR R P Q (mapM f xs) (mapM g ys)"
+  apply (induct xs ys rule: list_all2_induct)
+   apply (simp add: mapM_def sequence_def prefix_refinement_return_imp)
+  apply (clarsimp simp: mapM_Cons all_conj_distrib imp_conjR)
+  apply (rule prefix_refinement_weaken_pre)
+    apply (rule prefix_refinement_bind, assumption)
+      apply (rule prefix_refinement_bind, assumption)
+        apply (rule prefix_refinement_triv_pre, rule prefix_refinement_return_imp, simp)
+       apply wp
+       apply fastforce
+     apply (simp | wp | blast dest: validI_prefix_closed)+
+  done
+
+lemma prefix_refinement_mapME[rule_format]:
+  "\<lbrakk>list_all2 xyr xs ys;
+    \<forall>x y. x \<in> set xs \<longrightarrow> y \<in> set ys \<longrightarrow> xyr x y
+          \<longrightarrow> prefix_refinement sr intsr intsr (F \<oplus> rvr) AR R P Q (f x) (g y);
+    \<forall>x. x \<in> set xs \<longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>AR\<rbrace> f x \<lbrace>\<lambda>_ _. True\<rbrace>,\<lbrace>\<lambda>_. P\<rbrace>;
+    \<forall>y. y \<in> set ys \<longrightarrow> \<lbrace>Q\<rbrace>,\<lbrace>R\<rbrace> g y \<lbrace>\<lambda>_ _. True\<rbrace>,\<lbrace>\<lambda>_. Q\<rbrace>\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr intsr intsr (F \<oplus> list_all2 rvr) AR R P Q (mapME f xs) (mapME g ys)"
+  apply (induct xs ys rule: list_all2_induct)
+   apply (simp add: mapME_def sequenceE_def prefix_refinement_returnOk_imp)
+  apply (clarsimp simp add: mapME_Cons all_conj_distrib imp_conjR)
+  apply (rule prefix_refinement_weaken_pre)
+    apply (unfold bindE_def validE_def)
+    apply (rule prefix_refinement_bind, assumption)
+      apply (case_tac rv)
+       apply (clarsimp simp: prefix_refinement_throwError_imp)
+      apply clarsimp
+      apply (rule prefix_refinement_bind, assumption)
+        apply (rule prefix_refinement_triv_pre)
+        apply (case_tac rv)
+         apply (clarsimp simp: prefix_refinement_throwError_imp)
+        apply (clarsimp simp: prefix_refinement_returnOk_imp)
+       apply (simp | wp | blast dest: validI_prefix_closed)+
+  done
+
+
+section \<open>Some prefix_refinement rules for monadic combinators\<close>
+
+\<comment> \<open>FIXME: naming of these lemmas\<close>
+lemma ifM_prefix_refinement:
+  assumes   test: "prefix_refinement sr isr isr (=) AR R A A' test test'"
+  and          l: "prefix_refinement sr isr osr rvr AR R P P' a a'"
+  and          r: "prefix_refinement sr isr osr rvr AR R Q Q' b b'"
+  and  abs_valid: "\<lbrace>B\<rbrace>,\<lbrace>AR\<rbrace> test -,\<lbrace>\<lambda>c s0 s. c \<longrightarrow> P s0 s\<rbrace>"
+                  "\<lbrace>C\<rbrace>,\<lbrace>AR\<rbrace> test -,\<lbrace>\<lambda>c s0 s. \<not> c \<longrightarrow> Q s0 s\<rbrace>"
+  and conc_valid: "\<lbrace>B'\<rbrace>,\<lbrace>R\<rbrace> test' -,\<lbrace>\<lambda>c s0 s. c \<longrightarrow> P' s0 s\<rbrace>"
+                  "\<lbrace>C'\<rbrace>,\<lbrace>R\<rbrace> test' -,\<lbrace>\<lambda>c s0 s. \<not> c \<longrightarrow> Q' s0 s\<rbrace>"
+  shows "prefix_refinement sr isr osr rvr AR R (A and B and C) (A' and B' and C')
+           (ifM test a b) (ifM test' a' b')"
+  unfolding ifM_def
+  apply pfx_refn_pre
+    apply (rule prefix_refinement_bind[OF test])
+      apply (erule prefix_refinement_if[OF _ l r])
+     apply (wpsimp wp: abs_valid conc_valid rg_vcg_if_lift2)+
+  done
+
+lemmas ifM_prefix_refinement' =
+  ifM_prefix_refinement[where A=A and B=A and C=A for A,
+                        where A'=A' and B'=A' and C'=A' for A', simplified]
+
+lemma orM_prefix_refinement:
+  "\<lbrakk>prefix_refinement sr isr isr (=) AR R A A' a a'; prefix_refinement sr isr isr (=) AR R C C' b b';
+    \<lbrace>B\<rbrace>,\<lbrace>AR\<rbrace> a -,\<lbrace>\<lambda>c s0 s. \<not> c \<longrightarrow> C s0 s\<rbrace>; \<lbrace>B'\<rbrace>,\<lbrace>R\<rbrace> a' -,\<lbrace>\<lambda>c s0 s. \<not> c \<longrightarrow> C' s0 s\<rbrace>\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr isr (=) AR R (A and B) (A' and B') (orM a b) (orM a' b')"
+  unfolding orM_def
+  apply pfx_refn_pre
+    apply (rule ifM_prefix_refinement[where P="\<top>\<top>" and P'="\<top>\<top>"])
+          apply (wpsimp | fastforce simp: prefix_refinement_return_imp)+
+  done
+
+lemmas orM_prefix_refinement' =
+  orM_prefix_refinement[where A=A and B=A for A, simplified, where A'=A' and B'=A' for A', simplified]
+
+lemma andM_prefix_refinement:
+  "\<lbrakk>prefix_refinement sr isr isr (=) AR R A A' a a'; prefix_refinement sr isr isr (=) AR R C C' b b';
+    \<lbrace>B\<rbrace>,\<lbrace>AR\<rbrace> a -,\<lbrace>\<lambda>c s0 s. c \<longrightarrow> C s0 s\<rbrace>; \<lbrace>B'\<rbrace>,\<lbrace>R\<rbrace> a' -,\<lbrace>\<lambda>c s0 s. c \<longrightarrow> C' s0 s\<rbrace>\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr isr (=) AR R (A and B) (A' and B') (andM a b) (andM a' b')"
+  unfolding andM_def
+  apply pfx_refn_pre
+    apply (rule ifM_prefix_refinement[where Q="\<top>\<top>" and Q'="\<top>\<top>"])
+          apply (wpsimp | fastforce simp: prefix_refinement_return_imp)+
+  done
+
+lemma notM_prefix_refinement:
+  "\<lbrakk>prefix_refinement sr isr isr (=) AR R G G' a a'; prefix_closed a; prefix_closed a'\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr isr (=) AR R G G' (notM a) (notM a')"
+  unfolding notM_def
+  apply pfx_refn_pre
+    apply (erule prefix_refinement_bind)
+      apply (rule prefix_refinement_returnTT)
+      apply wpsimp+
+  done
+
+lemma whenM_prefix_refinement:
+  "\<lbrakk>prefix_refinement sr isr isr (=) AR R A A' a a'; prefix_refinement sr isr isr dc AR R C C' b b';
+    \<lbrace>B\<rbrace>,\<lbrace>AR\<rbrace> a -,\<lbrace>\<lambda>c s0 s. c \<longrightarrow> C s0 s\<rbrace>; \<lbrace>B'\<rbrace>,\<lbrace>R\<rbrace> a' -,\<lbrace>\<lambda>c s0 s. c \<longrightarrow> C' s0 s\<rbrace>\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr isr isr dc AR R (A and B) (A' and B') (whenM a b) (whenM a' b')"
+  unfolding whenM_def
+  apply pfx_refn_pre
+    apply (rule ifM_prefix_refinement[where Q="\<top>\<top>" and Q'="\<top>\<top>"])
+          apply (wpsimp | fastforce simp: prefix_refinement_return_imp)+
+  done
+
+
+section \<open>prefix_refinement rules for env_step, commit_step, interference and Await\<close>
+\<comment> \<open>FIXME: better name for section\<close>
 
 lemma Int_insert_left2:
   "(insert a B \<inter> C) = ((if a \<in> C then {a} else {}) \<union> (B \<inter> C))"
@@ -1085,7 +2084,7 @@ lemma abs_rely_stable_rtranclp:
 
 lemma prefix_refinement_env_step:
   assumes env_stable: "env_stable AR R sr iosr Q"
-  shows "prefix_refinement sr iosr iosr dc2 AR R (\<lambda>s0 s. s0 = s) (\<lambda>t0 t. t0 = t \<and> Q t0)
+  shows "prefix_refinement sr iosr iosr dc AR R (\<lambda>s0 s. s0 = s) (\<lambda>t0 t. t0 = t \<and> Q t0)
            env_step env_step"
 proof -
   have P: "\<And>S. {xs. length xs = Suc 0} = (\<lambda>x. [x]) ` UNIV"
@@ -1118,21 +2117,21 @@ proof -
 qed
 
 lemma prefix_refinement_repeat_n:
-  "\<lbrakk>prefix_refinement sr iosr iosr (\<lambda>_ _. True) AR R P Q f g; \<lbrace>P\<rbrace>,\<lbrace>AR\<rbrace> f \<lbrace>\<top>\<top>\<rbrace>,\<lbrace>\<lambda>_. P\<rbrace>;
+  "\<lbrakk>prefix_refinement sr iosr iosr dc AR R P Q f g; \<lbrace>P\<rbrace>,\<lbrace>AR\<rbrace> f \<lbrace>\<top>\<top>\<rbrace>,\<lbrace>\<lambda>_. P\<rbrace>;
     \<lbrace>\<lambda>t0 t. Q t0 t \<and> (\<exists>s0 s. sr s0 t0 \<and> iosr s t)\<rbrace>,\<lbrace>R\<rbrace> g \<lbrace>\<top>\<top>\<rbrace>,\<lbrace>\<lambda>_. Q\<rbrace>\<rbrakk>
-   \<Longrightarrow> prefix_refinement sr iosr iosr (\<lambda>_ _. True) AR R P Q (repeat_n n f) (repeat_n n g)"
+   \<Longrightarrow> prefix_refinement sr iosr iosr dc AR R P Q (repeat_n n f) (repeat_n n g)"
   apply (induct n)
    apply (simp add: prefix_refinement_return_imp)
-  apply (rule prefix_refinement_weaken_pre)
+  apply pfx_refn_pre
     apply simp
-   apply (rule prefix_refinement_bind, assumption+)
+    apply (rule prefix_refinement_bind, assumption+)
    apply simp
   apply auto
   done
 
 lemma prefix_refinement_env_n_steps:
   assumes env_stable: "env_stable AR R sr iosr Q"
-  shows "prefix_refinement sr iosr iosr (\<lambda>_ _. True) AR R
+  shows "prefix_refinement sr iosr iosr dc AR R
            (=) (\<lambda>t0 t. t0 = t \<and> Q t0) (env_n_steps n) (env_n_steps n)"
   apply (rule prefix_refinement_repeat_n)
     apply (rule prefix_refinement_env_step[OF env_stable])
@@ -1150,9 +2149,9 @@ lemma prefix_refinement_env_n_steps:
   done
 
 lemma prefix_refinement_repeat:
-  "\<lbrakk>prefix_refinement sr iosr iosr (\<lambda>_ _. True) AR R P Q f g; \<lbrace>P\<rbrace>,\<lbrace>AR\<rbrace> f \<lbrace>\<top>\<top>\<rbrace>,\<lbrace>\<lambda>_. P\<rbrace>;
+  "\<lbrakk>prefix_refinement sr iosr iosr dc AR R P Q f g; \<lbrace>P\<rbrace>,\<lbrace>AR\<rbrace> f \<lbrace>\<top>\<top>\<rbrace>,\<lbrace>\<lambda>_. P\<rbrace>;
     \<lbrace>\<lambda>t0 t. Q t0 t \<and> (\<exists>s0 s. sr s0 t0 \<and> iosr s t)\<rbrace>,\<lbrace>R\<rbrace> g \<lbrace>\<top>\<top>\<rbrace>,\<lbrace>\<lambda>_. Q\<rbrace>\<rbrakk>
-   \<Longrightarrow> prefix_refinement sr iosr iosr (\<lambda>_ _. True) AR R P Q (repeat f) (repeat g)"
+   \<Longrightarrow> prefix_refinement sr iosr iosr dc AR R P Q (repeat f) (repeat g)"
   apply (simp add: repeat_def)
   apply (rule prefix_refinement_weaken_pre)
     apply (rule prefix_refinement_bind, rule prefix_refinement_select[where rvr="(=)"])
@@ -1168,7 +2167,7 @@ lemma prefix_refinement_repeat:
 
 lemma prefix_refinement_env_steps:
   "env_stable AR R sr iosr Q
-   \<Longrightarrow> prefix_refinement sr iosr iosr (\<lambda>_ _. True) AR R (=) (\<lambda>t0 t. t0 = t \<and> Q t0) env_steps env_steps"
+   \<Longrightarrow> prefix_refinement sr iosr iosr dc AR R (=) (\<lambda>t0 t. t0 = t \<and> Q t0) env_steps env_steps"
   apply (simp add: env_steps_repeat)
   apply (rule prefix_refinement_repeat)
     apply (erule prefix_refinement_env_step)
@@ -1185,7 +2184,7 @@ lemma prefix_refinement_env_steps:
 
 lemma prefix_refinement_commit_step:
   "\<forall>s t. isr s t \<longrightarrow> sr s t \<and> osr s t
-   \<Longrightarrow> prefix_refinement sr isr osr (\<lambda>_ _. True) AR R (\<top>\<top>) (\<top>\<top>) commit_step commit_step"
+   \<Longrightarrow> prefix_refinement sr isr osr dc AR R (\<top>\<top>) (\<top>\<top>) commit_step commit_step"
   apply (clarsimp simp: prefix_refinement_def)
   apply (rule default_prefix_refinement_ex)
   apply (simp add: commit_step_def bind_def get_def return_def put_trace_elem_def)
@@ -1196,23 +2195,9 @@ lemma prefix_refinement_commit_step:
   apply (simp add: matching_tr_pfx_def matching_tr_def rely_cond_def)
   done
 
-lemma prefix_refinement_weaken_srs:
-  "\<lbrakk>prefix_refinement sr isr osr r AR R P Q f g; isr' \<le> isr; osr \<le> osr'; sr \<le> sr\<rbrakk>
-   \<Longrightarrow> prefix_refinement sr isr' osr' r AR R P Q f g"
-  apply (subst prefix_refinement_def, clarsimp)
-  apply (drule(1) predicate2D)
-  apply (drule(5) prefix_refinementD)
-  apply clarsimp
-  apply (rule exI, rule conjI[rotated], assumption)
-  apply (clarsimp simp: is_matching_fragment_def)
-  apply (drule(1) bspec, clarsimp)
-  apply (erule tmres.rel_cases; clarsimp)
-  apply (erule(1) predicate2D)
-  done
-
 lemma prefix_refinement_interference:
   "env_stable AR R sr iosr Q
-   \<Longrightarrow> prefix_refinement sr iosr iosr (\<lambda>_ _. True) AR R \<top>\<top> (\<lambda>t0 t. Q t) interference interference"
+   \<Longrightarrow> prefix_refinement sr iosr iosr dc AR R \<top>\<top> (\<lambda>t0 t. Q t) interference interference"
   apply (simp add: interference_def)
   apply (rule prefix_refinement_weaken_pre)
     apply (rule prefix_refinement_bind[where intsr=iosr])
@@ -1227,65 +2212,31 @@ lemma prefix_refinement_interference:
   apply (clarsimp simp: guar_cond_def)
   done
 
-lemma mapM_x_Cons:
-  "mapM_x f (x # xs) = do f x; mapM_x f xs od"
-  by (simp add: mapM_x_def sequence_x_def)
-
-lemmas prefix_refinement_bind_sr = prefix_refinement_bind[where sr=sr and intsr=sr for sr]
-lemmas prefix_refinement_bind_isr = prefix_refinement_bind[where isr=isr and intsr=isr for isr]
-lemmas pfx_refn_bind =
-  prefix_refinement_bind_v[where sr=sr and isr=sr and osr=sr and intsr=sr for sr]
-lemmas pfx_refn_bindT =
-  pfx_refn_bind[where P'="\<top>" and Q'="\<lambda>_ _. True", OF _ _ hoare_post_taut validI_triv,
-                simplified pred_conj_def, simplified]
-
-lemma prefix_refinement_assume_pre:
-  "\<lbrakk>P \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P' Q' f g\<rbrakk>
-   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R (P' and (\<lambda>_ _. P)) Q' f g"
-  "\<lbrakk>P \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P' Q' f g\<rbrakk>
-   \<Longrightarrow> prefix_refinement sr isr osr rvr AR R P' (Q' and (\<lambda>_ _. P)) f g"
-  by (auto simp: prefix_refinement_def)
-
-lemma prefix_refinement_modify:
-  "\<forall>s t. isr s t \<longrightarrow> P s \<longrightarrow> Q t \<longrightarrow> osr (f s) (g t)
-   \<Longrightarrow> prefix_refinement sr isr osr (\<lambda>_ _. True) AR R (\<lambda>_. P) (\<lambda>_. Q) (modify f) (modify g)"
-  apply (simp add: modify_def)
-  apply (rule prefix_refinement_weaken_pre)
-    apply (rule prefix_refinement_bind[where intsr=isr, OF prefix_refinement_get])
-      apply (rule_tac P="P x" in prefix_refinement_assume_pre(1))
-      apply (rule_tac P="Q y" in prefix_refinement_assume_pre(2))
-      apply (rule prefix_refinement_put, simp)
-     apply wp+
+lemma prefix_refinement_Await:
+  "\<lbrakk>env_stable AR R sr iosr Q; abs_rely_stable AR P;
+    \<forall>s t. P s \<longrightarrow> Q t \<longrightarrow> iosr s t \<longrightarrow> G' t \<longrightarrow> G s;
+    (\<exists>s. G' s) \<longrightarrow> (\<exists>s. G s)\<rbrakk>
+   \<Longrightarrow> prefix_refinement sr iosr iosr (\<lambda>_ _. True) AR R (\<lambda>s0 s. s0 = s \<and> P s) (\<lambda>t0 t. t0 = t \<and> Q t)
+                         (Await G) (Await G')"
+  apply (simp add: Await_redef)
+  apply pfx_refn_pre
+    apply (rule prefix_refinement_bind[where intsr=iosr]
+                prefix_refinement_select[where rvr="\<lambda>s s'. G s = G' s'"]
+                prefix_refinement_env_steps
+           | simp add: if_split[where P="\<lambda>S. x \<in> S" for x] split del: if_split
+           | (rule prefix_refinement_get, rename_tac s s',
+              rule_tac P="P s" in prefix_refinement_gen_asm,
+              rule_tac P="Q s'" in prefix_refinement_gen_asm2)
+           | (rule prefix_refinement_select[where rvr="\<top>\<top>"])
+           | wp)+
    apply clarsimp
-  apply clarsimp
+   apply (erule(2) abs_rely_stable_rtranclp)
+  apply (clarsimp simp: env_stable_def)
+  apply (erule(3) rely_stable_rtranclp)
   done
 
-lemmas pfx_refn_modifyT = prefix_refinement_modify[where P="\<top>" and Q="\<top>"]
 
-lemmas prefix_refinement_get_pre =
-  prefix_refinement_bind[OF prefix_refinement_get _ valid_validI_wp[OF _ get_sp]
-                            valid_validI_wp[OF _ get_sp],
-                         simplified pred_conj_def, simplified]
-
-lemma prefix_refinement_gets:
-  "\<forall>s t. iosr s t \<and> P s \<and> Q t \<longrightarrow> rvr (f s) (f' t)
-   \<Longrightarrow> prefix_refinement sr iosr iosr rvr AR R (\<lambda>_. P) (\<lambda>_. Q) (gets f) (gets f')"
-  apply (simp add: gets_def)
-  apply (rule prefix_refinement_get_pre)
-  apply (rule prefix_refinement_return_imp)
-  apply simp
-  done
-
-lemma prefix_refinement_fail:
-  "prefix_refinement sr isr osr rvr AR R \<top>\<top> \<top>\<top> fail fail"
-  apply (clarsimp simp: prefix_refinement_def fail_def)
-  apply (rule default_prefix_refinement_ex)
-  apply (simp add: is_matching_fragment_no_trace)
-  done
-
-lemma prefix_refinement_assert:
-  "P = P' \<Longrightarrow> prefix_refinement sr iosr iosr \<top>\<top> AR R \<top>\<top> \<top>\<top> (assert P) (assert P')"
-  by (simp add: assert_def prefix_refinement_fail prefix_refinement_return_imp)
+section \<open>FIXME: name for this section\<close>
 
 lemma par_tr_fin_bind:
   "(\<forall>x. par_tr_fin_principle (g x)) \<Longrightarrow> par_tr_fin_principle (f >>= g)"
@@ -1345,75 +2296,10 @@ lemma prefix_refinement_triv_refinement_conc:
   apply blast
   done
 
-lemmas prefix_refinement_triv_pre =
-  Pure.asm_rl[where psi="prefix_refinement sr isr osr rvr AR R
-                           (\<lambda>_ _. True) (\<lambda>_ _. True) f g"] for sr isr osr rvr AR R f g
 
-lemma prefix_refinement_mapM:
-  "\<lbrakk>list_all2 xyr xs ys;
-    \<forall>x y. x \<in> set xs \<longrightarrow> y \<in> set ys \<longrightarrow> xyr x y
-          \<longrightarrow> prefix_refinement sr intsr intsr rvr AR R P Q (f x) (g y);
-    \<forall>x. x \<in> set xs \<longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>AR\<rbrace> f x \<lbrace>\<lambda>_ _. True\<rbrace>,\<lbrace>\<lambda>_. P\<rbrace>;
-    \<forall>y. y \<in> set ys \<longrightarrow> \<lbrace>Q\<rbrace>,\<lbrace>R\<rbrace> g y \<lbrace>\<lambda>_ _. True\<rbrace>,\<lbrace>\<lambda>_. Q\<rbrace>\<rbrakk>
-   \<Longrightarrow> prefix_refinement sr intsr intsr (list_all2 rvr) AR R P Q (mapM f xs) (mapM g ys)"
-  apply (induct xs ys rule: list_all2_induct)
-   apply (simp add: mapM_def sequence_def prefix_refinement_return_imp)
-  apply (clarsimp simp add: mapM_Cons all_conj_distrib imp_conjR)
-  apply (rule prefix_refinement_weaken_pre)
-    apply (rule prefix_refinement_bind, assumption)
-      apply (rule prefix_refinement_bind, assumption)
-        apply (rule prefix_refinement_triv_pre, rule prefix_refinement_return_imp, simp)
-       apply (wp validI_triv)+
-      apply (blast intro: validI_prefix_closed)
-     apply (wp validI_triv | simp add: pred_conj_def
-            | blast dest: validI_prefix_closed)+
-  done
-
-lemma prefix_refinement_weaken_rel:
-  "\<lbrakk>prefix_refinement sr isr osr r AR R P Q f g; \<forall>rv rv'. r rv rv' \<longrightarrow> r' rv rv'\<rbrakk>
-   \<Longrightarrow> prefix_refinement sr isr osr r' AR R P Q f g"
-  apply (subst prefix_refinement_def, clarsimp)
-  apply (drule(5) prefix_refinementD, clarsimp)
-  apply (rule exI, rule conjI[rotated], assumption)
-  apply (clarsimp simp: is_matching_fragment_def)
-  apply (drule(1) bspec, clarsimp)
-  apply (erule tmres.rel_cases; clarsimp)
-  done
-
-lemma rely_cond_mono:
-  "R \<le> R' \<Longrightarrow> rely_cond R \<le> rely_cond R'"
-  by (simp add: le_fun_def rely_cond_def split_def)
-
-lemma is_matching_fragment_add_rely:
-  "\<lbrakk>is_matching_fragment sr osr r ctr cres s0 AR s f; AR' \<le> AR\<rbrakk>
-   \<Longrightarrow> is_matching_fragment sr osr r ctr cres s0 AR' s (rely f AR' s0)"
-  apply (frule is_matching_fragment_Nil)
-  apply (clarsimp simp: is_matching_fragment_def prefix_closed_rely
-                        rely_self_closed)
-  apply (intro conjI)
-    apply (erule rely_env_closed)
-    apply (frule rely_cond_mono)
-    apply (simp add: le_fun_def rely_cond_Cons_eq)
-   apply (fastforce simp: rely_def)
-  apply (auto simp: rely_def)[1]
-  done
-
-lemma prefix_refinement_weaken_rely:
-  "\<lbrakk>prefix_refinement sr isr osr r AR R P Q f g; R' \<le> R; AR' \<le> AR\<rbrakk>
-   \<Longrightarrow> prefix_refinement sr isr osr r AR' R' P Q f g"
-  apply (subst prefix_refinement_def, clarsimp)
-  apply (drule(3) prefix_refinementD, assumption+)
-  apply (clarsimp simp: rely_cond_def split_def le_fun_def)
-  apply (rule exI, rule conjI, erule is_matching_fragment_add_rely)
-   apply (simp add: le_fun_def)
-  apply (auto simp add: triv_refinement_def rely_def)
-  done
-
-text \<open>
+section \<open>
   Using prefix refinement as an in-place calculus, permitting multiple applications at the
-  same level.\<close>
-
-lemmas trivial = imp_refl[rule_format]
+  same level\<close>
 
 lemma matching_tr_transp:
   "transp sr \<Longrightarrow> transp (matching_tr sr)"
@@ -1527,29 +2413,6 @@ lemma prefix_refinement_in_place_trans:
    apply blast
   apply (clarsimp simp: triv_refinement_def)
   apply blast
-  done
-
-lemma prefix_refinement_Await:
-  "\<lbrakk>env_stable AR R sr iosr Q; abs_rely_stable AR P;
-    \<forall>s t. P s \<longrightarrow> Q t \<longrightarrow> iosr s t \<longrightarrow> G' t \<longrightarrow> G s;
-    (\<exists>s. G' s) \<longrightarrow> (\<exists>s. G s)\<rbrakk>
-   \<Longrightarrow> prefix_refinement sr iosr iosr (\<lambda>_ _. True) AR R (\<lambda>s0 s. s0 = s \<and> P s) (\<lambda>t0 t. t0 = t \<and> Q t)
-                         (Await G) (Await G')"
-   apply (simp add: Await_redef)
-   apply (rule prefix_refinement_weaken_pre)
-     apply (rule prefix_refinement_bind[where intsr=iosr]
-                 prefix_refinement_select[where rvr="\<lambda>s s'. G s = G' s'"]
-                 prefix_refinement_env_steps
-            | simp add: if_split[where P="\<lambda>S. x \<in> S" for x] split del: if_split
-            | (rule prefix_refinement_get, rename_tac s s',
-               rule_tac P="P s" in prefix_refinement_assume_pre(1),
-               rule_tac P="Q s'" in prefix_refinement_assume_pre(2))
-            | (rule prefix_refinement_select[where rvr=dc2])
-            | wp)+
-   apply clarsimp
-   apply (erule(2) abs_rely_stable_rtranclp)
-  apply (clarsimp simp: env_stable_def)
-  apply (erule(3) rely_stable_rtranclp)
   done
 
 end
