@@ -14,6 +14,9 @@ begin
 
 subsection "Prefix Closed"
 
+text \<open>
+  A monad is @{text prefix_closed} if for all traces that it returns, it also returns all incomplete traces
+  leading up to it.\<close>
 definition prefix_closed :: "('s, 'a) tmonad \<Rightarrow> bool" where
   "prefix_closed f = (\<forall>s. \<forall>x xs. (x # xs) \<in> fst ` f s \<longrightarrow> (xs, Incomplete) \<in> f s)"
 
