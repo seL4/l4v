@@ -1,4 +1,5 @@
 (*
+ * Copyright 2024, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: BSD-2-Clause
@@ -15,6 +16,12 @@ text \<open>
 definition triv_refinement :: "('s,'a) tmonad \<Rightarrow> ('s,'a) tmonad \<Rightarrow> bool" where
   "triv_refinement aprog cprog = (\<forall>s. cprog s \<subseteq> aprog s)"
 
+lemmas triv_refinement_elemD = triv_refinement_def[THEN iffD1, rule_format, THEN subsetD]
+
+lemma triv_refinement_trans:
+  "\<lbrakk>triv_refinement f g; triv_refinement g h\<rbrakk> \<Longrightarrow> triv_refinement f h"
+  by (auto simp add: triv_refinement_def)
+
 lemma triv_refinement_mono_bind:
   "triv_refinement a c \<Longrightarrow> triv_refinement (a >>= b) (c >>= b)"
   "\<lbrakk>\<forall>x. triv_refinement (b x) (d x)\<rbrakk> \<Longrightarrow> triv_refinement (a >>= b) (a >>= d)"
@@ -24,10 +31,6 @@ lemma triv_refinement_mono_bind:
   apply (intro Un_mono allI order_refl UN_mono image_mono)
   apply simp
   done
-
-lemma triv_refinement_trans:
-  "\<lbrakk>triv_refinement f g; triv_refinement g h\<rbrakk> \<Longrightarrow> triv_refinement f h"
-  by (auto simp add: triv_refinement_def)
 
 lemma triv_refinement_bind:
   "\<lbrakk>triv_refinement a c; \<forall>x. triv_refinement (b x) (d x)\<rbrakk>
@@ -79,17 +82,7 @@ lemma rely_rely_triv_refinement:
   "\<lbrakk>\<And>s0 s. R s0 s \<Longrightarrow> R' s0 s\<rbrakk> \<Longrightarrow> triv_refinement (rely f R' s0) (rely (rely f R s0) R' s0)"
   by (clarsimp simp: triv_refinement_def rely_def parallel_def)
 
-lemma validI_triv_refinement:
-  "\<lbrakk>triv_refinement f g; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>; prefix_closed g\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> g \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
-  unfolding rely_def triv_refinement_def validI_def
-  by fastforce
-
-lemma valid_triv_refinement:
-  "\<lbrakk>triv_refinement f g; \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> g \<lbrace>Q\<rbrace>"
-  unfolding rely_def triv_refinement_def valid_def mres_def
-  by (fastforce elim: image_eqI[rotated])
-
-lemma triv_refinement_refl:
+lemma triv_refinement_refl[simp]:
   "triv_refinement f f"
   by (simp add: triv_refinement_def)
 
@@ -101,6 +94,23 @@ lemma triv_refinement_select_abstract_x:
   "\<lbrakk>x \<in> S; triv_refinement (aprog x) cprog\<rbrakk> \<Longrightarrow> triv_refinement (select S >>= aprog) cprog"
   by (auto simp: triv_refinement_def bind_def select_def)
 
-lemmas triv_refinement_elemD = triv_refinement_def[THEN iffD1, rule_format, THEN subsetD]
+lemma triv_refinement_alternative1:
+  "triv_refinement (a \<sqinter> b) a"
+  by (clarsimp simp: triv_refinement_def alternative_def)
+
+lemma triv_refinement_alternative2:
+  "triv_refinement (a \<sqinter> b) b"
+  by (clarsimp simp: triv_refinement_def alternative_def)
+
+
+lemma validI_triv_refinement:
+  "\<lbrakk>triv_refinement f g; \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> f \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>; prefix_closed g\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>,\<lbrace>R\<rbrace> g \<lbrace>G\<rbrace>,\<lbrace>Q\<rbrace>"
+  unfolding rely_def triv_refinement_def validI_def
+  by fastforce
+
+lemma valid_triv_refinement:
+  "\<lbrakk>triv_refinement f g; \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> g \<lbrace>Q\<rbrace>"
+  unfolding rely_def triv_refinement_def valid_def mres_def
+  by (fastforce elim: image_eqI[rotated])
 
 end
