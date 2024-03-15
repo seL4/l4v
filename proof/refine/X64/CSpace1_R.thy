@@ -45,6 +45,9 @@ end
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 
+(* unused on this architecture *)
+declare isArchMDBParentOf_def[simp]
+
 lemma isMDBParentOf_CTE1:
   "isMDBParentOf (CTE cap node) cte =
    (\<exists>cap' node'. cte = CTE cap' node' \<and> sameRegionAs cap cap'
