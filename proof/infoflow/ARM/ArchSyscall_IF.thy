@@ -116,6 +116,7 @@ lemma decode_arch_invocation_authorised_for_globals[Syscall_IF_assms]:
    arch_decode_invocation label msg x_slot slot cap excaps
    \<lbrace>authorised_for_globals_arch_inv\<rbrace>, -"
   unfolding arch_decode_invocation_def authorised_for_globals_arch_inv_def
+            decode_sgi_signal_invocation_def
   apply (rule hoare_pre)
    apply (simp add: split_def Let_def
                cong: cap.case_cong arch_cap.case_cong if_cong option.case_cong

@@ -744,12 +744,18 @@ definition authorised_arch_inv :: "'a PAS \<Rightarrow> arch_invocation \<Righta
    | InvokePageDirectory pdi \<Rightarrow> authorised_page_directory_inv aag pdi
    | InvokePage pgi \<Rightarrow> authorised_page_inv aag pgi
    | InvokeASIDControl aci \<Rightarrow> authorised_asid_control_inv aag aci
-   | InvokeASIDPool api \<Rightarrow> authorised_asid_pool_inv aag api"
+   | InvokeASIDPool api \<Rightarrow> authorised_asid_pool_inv aag api
+   | InvokeSGISignal _ \<Rightarrow> True"
 
-crunch respects [wp]: perform_page_directory_invocation "integrity aag X st"
+lemma ipiSendTarget_respects[wp]:
+  "do_machine_op (ipiSendTarget irq targets) \<lbrace>integrity aag X st\<rbrace>"
+  unfolding ipiSendTarget_def
+  by (wpsimp wp: dmo_mol_respects)
+
+crunches perform_page_directory_invocation, perform_sgi_invocation
+  for pas_refined [wp]: "pas_refined aag"
+  and respects [wp]: "integrity aag X st"
   (ignore: do_machine_op)
-
-crunch pas_refined [wp]: perform_page_directory_invocation "pas_refined aag"
 
 lemma invoke_arch_respects:
   "\<lbrace>integrity aag X st and authorised_arch_inv aag ai and
@@ -829,7 +835,7 @@ lemma decode_arch_invocation_authorised:
    apply (wp whenE_throwError_wp check_vp_wpR find_pd_for_asid_authority2
           | wpc
           | simp add: authorised_asid_control_inv_def authorised_page_inv_def
-                      authorised_page_directory_inv_def
+                      authorised_page_directory_inv_def decode_sgi_signal_invocation_def
                  del: hoare_True_E_R
                  split del: if_split)+
   apply (clarsimp simp: authorised_asid_pool_inv_def authorised_page_table_inv_def
