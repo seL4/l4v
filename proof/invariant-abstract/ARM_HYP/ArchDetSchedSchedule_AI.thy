@@ -319,7 +319,7 @@ lemma activate_thread_valid_sched [DetSchedSchedule_AI_assms]:
 
 crunch
   perform_page_invocation, perform_page_table_invocation, perform_asid_pool_invocation,
-  perform_page_directory_invocation
+  perform_page_directory_invocation, perform_sgi_invocation
   for valid_sched[wp]: valid_sched
   (wp: crunch_wps)
 
@@ -436,10 +436,10 @@ crunch arch_switch_to_thread
 end
 
 global_interpretation DetSchedSchedule_AI?: DetSchedSchedule_AI
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact DetSchedSchedule_AI_assms)?)
-  qed
+qed
 
 context Arch begin arch_global_naming
 
@@ -509,9 +509,9 @@ lemma handle_hyp_fault_valid_sched[wp]:
 end
 
 global_interpretation DetSchedSchedule_AI_handle_hypervisor_fault?: DetSchedSchedule_AI_handle_hypervisor_fault
-  proof goal_cases
+proof goal_cases
   interpret Arch .
   case 1 show ?case by (unfold_locales; (fact handle_hyp_fault_valid_sched handle_reserved_irq_valid_sched)?)
-  qed
+qed
 
 end
