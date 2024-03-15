@@ -832,37 +832,14 @@ lemma dcorres_corrupt_tcb_intent_ipcbuffer_upd:
   done
 
 lemma arch_same_obj_as_lift:
-  "\<lbrakk>cap_aligned a;is_arch_cap a;ca = transform_cap a;cb=transform_cap b\<rbrakk>
-  \<Longrightarrow> cdl_same_arch_obj_as (ca) (cb) = same_object_as a b"
+  "\<lbrakk>cap_aligned a; is_arch_cap a; ca = transform_cap a; cb=transform_cap b\<rbrakk>
+  \<Longrightarrow> cdl_same_arch_obj_as ca cb = same_object_as a b"
   apply (clarsimp simp:is_arch_cap_def split:cap.split_asm)
   apply (rename_tac arch_cap)
-  apply (case_tac arch_cap)
-      apply (simp add:same_object_as_def)
-      apply (clarsimp split:cap.splits simp:cdl_same_arch_obj_as_def)
-      apply (rename_tac arch_cap)
-      apply (case_tac arch_cap)
-          apply (clarsimp simp:cdl_same_arch_obj_as_def)+
-     apply (simp add:same_object_as_def)
-     apply (clarsimp split:cap.splits simp:cdl_same_arch_obj_as_def)
-     apply (rename_tac arch_cap)
-     apply (case_tac arch_cap)
-         apply ((clarsimp simp:cdl_same_arch_obj_as_def)+)[5]
-    apply (simp add:same_object_as_def)
-    apply (clarsimp split:cap.splits simp:cdl_same_arch_obj_as_def)
-    apply (rename_tac arch_cap)
-    apply (case_tac arch_cap)
-        apply (fastforce simp:cdl_same_arch_obj_as_def cap_aligned_def)+
-   apply (simp add:same_object_as_def)
-   apply (clarsimp split:cap.splits simp:cdl_same_arch_obj_as_def)
-   apply (rename_tac arch_cap)
-   apply (case_tac arch_cap)
-       apply (fastforce simp:cdl_same_arch_obj_as_def cap_aligned_def)+
-  apply (simp add:same_object_as_def)
-  apply (clarsimp split:cap.splits simp:cdl_same_arch_obj_as_def)
-  apply (rename_tac arch_cap)
-  apply (case_tac arch_cap)
-      apply (fastforce simp:cdl_same_arch_obj_as_def cap_aligned_def)+
-  done
+  by (case_tac arch_cap;
+       (clarsimp split:cap.splits simp:cdl_same_arch_obj_as_def same_object_as_def,
+         (rename_tac arch_cap_b, case_tac arch_cap_b;
+          fastforce simp:cdl_same_arch_obj_as_def cap_aligned_def)?))
 
 lemma thread_set_valid_irq_node:
   "(\<And>t getF v. (getF, v) \<in> ran tcb_cap_cases \<Longrightarrow> getF (f t) = getF t)
