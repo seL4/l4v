@@ -3267,32 +3267,26 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
        | rule flushtype_relation_triv, simp add:isPageFlush_def isPDFlushLabel_def
        | rule word_of_nat_less, simp add: pbfs_less)+
 
-lemma Arch_decodeInvocation_ccorres:
-  "interpret_excaps extraCaps' = excaps_map extraCaps
-     \<Longrightarrow>
+lemma decodeARMMMUInvocation_ccorres:
+  "\<lbrakk> interpret_excaps extraCaps' = excaps_map extraCaps; \<not>isSGISignalCap cp \<rbrakk> \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and (\<lambda>s. ksCurThread s = thread) and ct_active' and sch_act_simple
               and (excaps_in_mem extraCaps \<circ> ctes_of)
               and cte_wp_at' ((=) (ArchObjectCap cp) \<circ> cteCap) slot
               and (\<lambda>s. \<forall>v \<in> set extraCaps. ex_cte_cap_wp_to' isCNodeCap (snd v) s)
               and sysargs_rel args buffer and valid_objs')
-       (UNIV \<inter> {s. invLabel_' s = label}
-             \<inter> {s. unat (length___unsigned_long_' s) = length args}
-             \<inter> {s. slot_' s = cte_Ptr slot}
-             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
-             \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
-             \<inter> {s. buffer_' s = option_to_ptr buffer}
-             \<inter> {s. call_' s = from_bool isCall}) []
-       (Arch.decodeInvocation label args cptr slot cp extraCaps
+       (   {s. invLabel_' s = label}
+         \<inter> {s. unat (length___unsigned_long_' s) = length args}
+         \<inter> {s. cte_' s = cte_Ptr slot}
+         \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
+         \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
+         \<inter> {s. buffer_' s = option_to_ptr buffer}
+         \<inter> {s. call_' s = from_bool isCall}) []
+       (decodeARMMMUInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall InvokeArchObject)
-       (Call Arch_decodeInvocation_'proc)"
-  (is "?F \<Longrightarrow> ccorres ?r ?xf ?P (?P' slot_') [] ?a ?c")
+       (Call decodeARMMMUInvocation_'proc)"
+  (is "\<lbrakk> ?F; _ \<rbrakk> \<Longrightarrow> ccorres ?r ?xf ?P (?P' slot_') [] ?a ?c")
   supply if_cong[cong]
-  apply cinit'
-   apply (rule ccorres_trim_returnE, simp+)
-   apply (rule ccorres_call[where xf''="?xf" and A="?P" and C'="?P' cte_'"])
-      defer
-     apply (simp+)[4]
   apply (cinit' lift: invLabel_' length___unsigned_long_' cte_'
                       current_extra_caps_' cap_' buffer_' call_')
    apply csymbr
@@ -3942,6 +3936,116 @@ lemma Arch_decodeInvocation_ccorres:
   apply (clarsimp simp: cap_lift_asid_pool_cap cap_lift_page_directory_cap
                         cap_to_H_def cap_page_directory_cap_lift_def to_bool_def
                  elim!: ccap_relationE split: if_split_asm)
+  done
+
+lemma invokeSGISignalGenerate_ccorres:
+  "ccorres (\<lambda>reply exc. reply = [] \<and> exc = scast EXCEPTION_NONE) ret__unsigned_long_'
+     \<top>
+     (\<lbrace> \<acute>irq = irq \<rbrace> \<inter> \<lbrace> \<acute>target___unsigned_long = ucast target \<rbrace>) hs
+     (performSGISignalGenerate (SGISignalGenerate irq target))
+     (Call invokeSGISignalGenerate_'proc)"
+  apply (cinit lift:  irq_' target___unsigned_long_')
+  apply (ctac (no_vcg) add: plat_sendSGI_ccorres)
+    apply (rule ccorres_return_C; simp)
+   apply wp
+  apply clarsimp
+  done
+
+lemma decodeSGISignalInvocation_ccorres:
+  "\<lbrakk> interpret_excaps extraCaps' = excaps_map extraCaps ; isSGISignalCap cp \<rbrakk> \<Longrightarrow>
+   ccorres (intr_and_se_rel \<currency> dc)
+           (liftxf errstate id id ret__unsigned_long_')
+           (invs' and (\<lambda>s. ksCurThread s = thread) and ct_active' and sch_act_simple)
+           \<lbrace>ccap_relation (ArchObjectCap cp) \<acute>cap\<rbrace> hs
+           (decodeSGISignalInvocation cp
+                >>= invocationCatch thread isBlocking isCall InvokeArchObject)
+           (Call decodeSGISignalInvocation_'proc)"
+  apply (clarsimp simp: isCap_simps)
+  apply (cinit' lift:  cap_')
+   apply (clarsimp simp: decodeSGISignalInvocation_def
+                         ccorres_invocationCatch_Inr returnOk_def liftE_bindE
+                         performInvocation_def ARM_H.performInvocation_def)
+   apply csymbr
+   apply csymbr
+   apply csymbr
+   apply csymbr
+   apply (ctac add: setThreadState_ccorres)
+     apply (ctac (no_vcg) add: invokeSGISignalGenerate_ccorres)
+      apply clarsimp
+      apply (rule ccorres_alternative2)
+      apply (rule ccorres_return_CE; simp)
+     apply wp
+    apply wp
+   apply (vcg exspec=setThreadState_modifies)
+  apply (clarsimp simp: rf_sr_ksCurThread)
+  apply (frule cap_get_tag_isCap_unfolded_H_cap)
+  apply (erule ccap_relationE)
+  apply (simp add: ThreadState_Restart_def mask_def)
+  apply (fastforce simp: cap_to_H_def cap_lift_def Let_def cap_tag_defs cap_sgi_signal_cap_lift_def
+                         ucast_ucast_mask valid_tcb_state'_def)
+  done
+
+lemma case_SGISignalCap_is_if:
+  "(case cp of SGISignalCap irq target \<Rightarrow> f cp | _ \<Rightarrow> g cp) =
+   (if isSGISignalCap cp then f cp else g cp)"
+  by (cases cp; clarsimp simp: isCap_simps)
+
+lemma Arch_decodeInvocation_ccorres:
+  "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
+   ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+       (invs' and (\<lambda>s. ksCurThread s = thread) and ct_active' and sch_act_simple
+              and (excaps_in_mem extraCaps \<circ> ctes_of)
+              and cte_wp_at' ((=) (ArchObjectCap cp) \<circ> cteCap) slot
+              and (\<lambda>s. \<forall>v \<in> set extraCaps. ex_cte_cap_wp_to' isCNodeCap (snd v) s)
+              and sysargs_rel args buffer and valid_objs')
+       (UNIV \<inter> {s. invLabel_' s = label}
+             \<inter> {s. unat (length___unsigned_long_' s) = length args}
+             \<inter> {s. slot_' s = cte_Ptr slot}
+             \<inter> {s. current_extra_caps_' (globals s) = extraCaps'}
+             \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
+             \<inter> {s. buffer_' s = option_to_ptr buffer}
+             \<inter> {s. call_' s = from_bool isCall}) []
+       (Arch.decodeInvocation label args cptr slot cp extraCaps
+              >>= invocationCatch thread isBlocking isCall InvokeArchObject)
+       (Call Arch_decodeInvocation_'proc)"
+  (is "?F \<Longrightarrow> ccorres ?r ?xf ?P (?P' slot_') [] ?a ?c")
+  unfolding ARM_H.decodeInvocation_def
+  supply if_cong[cong] Collect_const[simp del]
+  apply (subst case_SGISignalCap_is_if)
+  apply (cinit' lift: invLabel_' length___unsigned_long_' slot_'
+                      current_extra_caps_' cap_' buffer_' call_')
+   apply csymbr
+   apply (simp cong: ccorres_prog_only_cong)
+   apply (rule ccorres_Cond_rhs)
+    apply (prop_tac "isSGISignalCap cp", solves \<open>clarsimp simp: cap_get_tag_isCap_ArchObject\<close>)
+    apply (simp cong: ccorres_prog_only_cong)
+    apply (rule ccorres_add_return2)
+    apply (rule ccorres_split_nothrow_novcg)
+        apply (ctac add: decodeSGISignalInvocation_ccorres)
+       apply ceqv
+      apply (rename_tac rv rv')
+      apply (rule_tac P'="\<lbrace>\<acute>ret__unsigned_long = exflag rv'\<rbrace> \<inter> {s. errstate s = exstate rv'}"
+                      in ccorres_inst[where P=\<top>])
+      apply (rule ccorres_from_vcg_throws)
+      apply (clarsimp, rule conseqPre, vcg, clarsimp simp: return_def)
+      apply (case_tac rv; clarsimp)
+     apply wp
+    apply (clarsimp simp: guard_is_UNIV_def)
+   apply (prop_tac "\<not>isSGISignalCap cp", solves \<open>clarsimp simp: cap_get_tag_isCap_ArchObject\<close>)
+   apply (simp cong: ccorres_prog_only_cong)
+   apply (rule ccorres_add_return2)
+   apply (rule ccorres_split_nothrow_novcg)
+       apply (ctac add: decodeARMMMUInvocation_ccorres)
+      apply ceqv
+     apply (rename_tac rv rv')
+     apply (rule_tac P'="\<lbrace>\<acute>ret__unsigned_long = exflag rv'\<rbrace> \<inter> {s. errstate s = exstate rv'}"
+                     in ccorres_inst[where P=\<top>])
+     apply (rule ccorres_from_vcg_throws)
+     apply (clarsimp, rule conseqPre, vcg, clarsimp simp: return_def)
+     apply (case_tac rv; clarsimp)
+    apply wp
+   apply (clarsimp simp: guard_is_UNIV_def)
+  apply fastforce
   done
 
 end

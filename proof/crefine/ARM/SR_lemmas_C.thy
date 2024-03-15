@@ -91,14 +91,14 @@ lemma cap_get_tag_isCap0:
   \<and> isArchCap_tag (cap_get_tag cap') = isArchCap \<top> cap
   \<and> (cap_get_tag cap' = scast cap_small_frame_cap) = (isArchPageCap cap \<and> pageSize cap = ARMSmallPage)
   \<and> (cap_get_tag cap' = scast cap_frame_cap) = (isArchPageCap cap \<and> pageSize cap \<noteq> ARMSmallPage)
+  \<and> (cap_get_tag cap' = scast cap_sgi_signal_cap) = isArchSGISignalCap cap
   \<and> (cap_get_tag cap' = scast cap_domain_cap) = isDomainCap cap"
   using cr
   apply -
   apply (erule ccap_relationE)
   apply (simp add: cap_to_H_def cap_lift_def Let_def isArchCap_tag_def2 isArchCap_def)
-  apply (clarsimp simp: isCap_simps cap_tag_defs word_le_nat_alt pageSize_def Let_def
-                 split: if_split_asm) \<comment> \<open>takes a while\<close>
-  done
+  by (clarsimp simp: isCap_simps cap_tag_defs word_le_nat_alt pageSize_def Let_def
+               split: if_split_asm) \<comment> \<open>takes a while\<close>
 
 
 lemma cap_get_tag_isCap:
@@ -116,6 +116,7 @@ lemma cap_get_tag_isCap:
   and "isArchCap_tag (cap_get_tag cap') = isArchCap \<top> cap"
   and "(cap_get_tag cap' = scast cap_small_frame_cap) = (isArchPageCap cap \<and> pageSize cap = ARMSmallPage)"
   and "(cap_get_tag cap' = scast cap_frame_cap) = (isArchPageCap cap \<and> pageSize cap \<noteq> ARMSmallPage)"
+  and "(cap_get_tag cap' = scast cap_sgi_signal_cap) = isArchSGISignalCap cap"
   and "(cap_get_tag cap' = scast cap_domain_cap) = isDomainCap cap"
   using cap_get_tag_isCap0 [OF cr] by auto
 
@@ -274,6 +275,18 @@ lemma cap_get_tag_DomainCap:
   apply (simp add: cap_get_tag_isCap isCap_simps)
   done
 
+lemma cap_get_tag_SGISignalCap:
+  assumes cr: "ccap_relation cap cap'"
+  shows "(cap_get_tag cap' = scast cap_sgi_signal_cap)
+          = (cap = ArchObjectCap (SGISignalCap (capSGIIRQ_CL (cap_sgi_signal_cap_lift cap'))
+                                               (capSGITarget_CL (cap_sgi_signal_cap_lift cap'))))"
+  using cr
+  apply -
+  apply (rule iffI)
+   apply (clarsimp elim!: ccap_relationE simp: cap_lifts cap_to_H_def)
+  apply (simp add: cap_get_tag_isCap isCap_simps)
+  done
+
 lemmas cap_get_tag_to_H_iffs =
      cap_get_tag_NullCap
      cap_get_tag_ThreadCap
@@ -285,8 +298,35 @@ lemmas cap_get_tag_to_H_iffs =
      cap_get_tag_ZombieCap
      cap_get_tag_UntypedCap
      cap_get_tag_DomainCap
+     cap_get_tag_SGISignalCap
 
 lemmas cap_get_tag_to_H = cap_get_tag_to_H_iffs [THEN iffD1]
+
+lemma cap_tags_distinct:
+  "distinct [
+     cap_page_directory_cap,
+     cap_notification_cap,
+     cap_asid_control_cap,
+     cap_small_frame_cap,
+     cap_irq_handler_cap,
+     cap_irq_control_cap,
+     cap_sgi_signal_cap,
+     cap_page_table_cap,
+     cap_asid_pool_cap,
+     cap_endpoint_cap,
+     cap_untyped_cap,
+     cap_zombie_cap,
+     cap_thread_cap,
+     cap_domain_cap,
+     cap_reply_cap,
+     cap_frame_cap,
+     cap_cnode_cap,
+     cap_null_cap
+   ]"
+  by (simp add: cap_tag_defs)
+
+lemmas cap_tag_neqs =
+  cap_tags_distinct[simplified] distinct_rev[THEN iffD2, OF cap_tags_distinct, simplified]
 
 subsection "mdb"
 
@@ -1893,7 +1933,8 @@ lemma cap_get_tag_isCap_ArchObject0:
   \<and> (cap_get_tag cap' = scast cap_page_table_cap) = isPageTableCap cap
   \<and> (cap_get_tag cap' = scast cap_page_directory_cap) = isPageDirectoryCap cap
   \<and> (cap_get_tag cap' = scast cap_small_frame_cap) = (isPageCap cap \<and> capVPSize cap = ARMSmallPage)
-  \<and> (cap_get_tag cap' = scast cap_frame_cap) = (isPageCap cap \<and> capVPSize cap \<noteq> ARMSmallPage)"
+  \<and> (cap_get_tag cap' = scast cap_frame_cap) = (isPageCap cap \<and> capVPSize cap \<noteq> ARMSmallPage)
+  \<and> (cap_get_tag cap' = scast cap_sgi_signal_cap) = isSGISignalCap cap"
   apply (rule ccap_relationE[OF cr])
   apply (simp add: cap_to_H_def cap_lift_def Let_def isArchCap_def)
   by (clarsimp simp: isCap_simps cap_tag_defs word_le_nat_alt pageSize_def Let_def split: if_split_asm) \<comment> \<open>takes a while\<close>
@@ -1906,6 +1947,7 @@ lemma cap_get_tag_isCap_ArchObject:
   and "(cap_get_tag cap' = scast cap_page_directory_cap) = isPageDirectoryCap cap"
   and "(cap_get_tag cap' = scast cap_small_frame_cap) = (isPageCap cap \<and> capVPSize cap = ARMSmallPage)"
   and "(cap_get_tag cap' = scast cap_frame_cap) = (isPageCap cap \<and> capVPSize cap \<noteq> ARMSmallPage)"
+  and "(cap_get_tag cap' = scast cap_sgi_signal_cap) = isSGISignalCap cap"
   using cap_get_tag_isCap_ArchObject0 [OF cr] by auto
 
 
@@ -1931,10 +1973,17 @@ lemma cap_get_tag_isCap_unfolded_H_cap:
   and "\<lbrakk>ccap_relation (capability.ArchObjectCap (arch_capability.PageCap v102 v38 v39 v40 v41)) cap'; v40\<noteq>ARMSmallPage\<rbrakk>  \<Longrightarrow> (cap_get_tag cap' = scast cap_frame_cap)"
   and "ccap_relation (capability.ArchObjectCap (arch_capability.PageDirectoryCap v42 v43)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_page_directory_cap)"
   and "ccap_relation (capability.ArchObjectCap (arch_capability.PageDirectoryCap v44 v45)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_page_directory_cap)"
+  and "\<And>irq target. ccap_relation (ArchObjectCap (SGISignalCap irq target)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_sgi_signal_cap)"
   apply (simp add: cap_get_tag_isCap cap_get_tag_isCap_ArchObject isCap_simps)
   apply (frule cap_get_tag_isCap(2), simp)
   apply (simp add: cap_get_tag_isCap cap_get_tag_isCap_ArchObject isCap_simps pageSize_def)+
-done
+  done
+
+lemma cap_get_tag_isCap_unfolded_H_cap_page:
+  " \<lbrakk>ccap_relation (ArchObjectCap (PageCap v101 v34 v35 v36 v37)) cap'\<rbrakk>
+  \<Longrightarrow> cap_get_tag cap' = scast (if v36 = ARMSmallPage then cap_small_frame_cap else cap_frame_cap)"
+  by (erule ccap_relationE)
+     (clarsimp simp: cap_to_H_def cap_lift_def Let_def framesize_to_H_def split: if_splits)
 
 lemma cap_get_tag_isCap_ArchObject2_worker:
   "\<lbrakk> \<And>cap''. ccap_relation (ArchObjectCap cap'') cap' \<Longrightarrow> (cap_get_tag cap' = n) = P cap'';
@@ -1958,6 +2007,8 @@ lemma cap_get_tag_isCap_ArchObject2:
            = (isArchObjectCap cap \<and> isPageCap (capCap cap) \<and> capVPSize (capCap cap) = ARMSmallPage)"
   and   "(cap_get_tag cap' = scast cap_frame_cap)
            = (isArchObjectCap cap \<and> isPageCap (capCap cap) \<and> capVPSize (capCap cap) \<noteq> ARMSmallPage)"
+  and   "(cap_get_tag cap' = scast cap_sgi_signal_cap)
+           = (isArchObjectCap cap \<and> isSGISignalCap (capCap cap))"
   by (rule cap_get_tag_isCap_ArchObject2_worker [OF _ cr],
       simp add: cap_get_tag_isCap_ArchObject,
       simp add: isArchCap_tag_def2 cap_tag_defs)+

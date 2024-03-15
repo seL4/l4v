@@ -707,10 +707,6 @@ lemma ccorres_case_bools:
    apply (auto simp: P Q)
   done
 
-lemma pageBitsForSize_64 [simp]:
-  "pageBitsForSize sz < 64"
-  by (cases sz, auto simp: bit_simps)
-
 lemma ccap_relation_frame_tags:
   "ccap_relation (ArchObjectCap (FrameCap v0 v1 v2 dev v3)) cap \<Longrightarrow>
   cap_get_tag cap = scast cap_frame_cap"
