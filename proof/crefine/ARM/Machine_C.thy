@@ -198,6 +198,11 @@ assumes deactivateInterrupt_ccorres:
            (doMachineOp (deactivateInterrupt irq))
            (Call deactivateInterrupt_'proc)"
 
+assumes plat_sendSGI_ccorres:
+  "\<And>irq target hs. ccorres dc xfdc \<top> (\<lbrace> \<acute>irq = irq \<rbrace> \<inter> \<lbrace> \<acute>target___unsigned_long = target \<rbrace>) hs
+                      (doMachineOp (sendSGI irq target))
+                      (Call plat_sendSGI_'proc)"
+
 assumes invalidateLocalTLB_VAASID_spec:
  "\<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> UNIV (Call invalidateLocalTLB_VAASID_'proc) UNIV"
 

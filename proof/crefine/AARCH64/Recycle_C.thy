@@ -304,7 +304,7 @@ lemma clearMemory_PageCap_ccorres:
     apply (clarsimp simp: bit_simps)
     apply (subst(asm) of_nat_power, assumption)
      apply simp
-     apply (insert pageBitsForSize_64 [of sz])[1]
+     apply (insert pageBitsForSize_le_word_size [of sz])[1]
      apply (erule order_le_less_trans [rotated])
      apply simp
     apply (simp, drule ko_at_projectKO_opt[OF user_data_at_ko])
@@ -361,7 +361,7 @@ lemma clearMemory_PageCap_ccorres:
      apply (subst aligned_range_offset_mem, assumption, simp_all)[1]
      apply (rule order_le_less_trans[rotated], erule shiftl_less_t2n [OF of_nat_power],
                  simp_all add: word_bits_def)[1]
-      apply (insert pageBitsForSize_64 [of sz])[1]
+      apply (insert pageBitsForSize_le_word_size [of sz])[1]
       apply (erule order_le_less_trans [rotated])
       subgoal by simp
      subgoal by (simp add: pageBits_def shiftl_t2n field_simps)

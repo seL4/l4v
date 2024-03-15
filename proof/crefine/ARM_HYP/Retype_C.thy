@@ -7770,39 +7770,38 @@ lemma cte_wp_at_no_0:
 
 lemma insertNewCap_descendants_range_in':
   "\<lbrace>\<lambda>s. valid_pspace' s \<and> descendants_range_in' S p (ctes_of s)
-    \<and> capRange x \<inter> S = {}
-    \<and> cte_wp_at' (\<lambda>cte. isUntypedCap (cteCap cte) \<and> sameRegionAs (cteCap cte) x) p s
-    \<and> cte_wp_at' (\<lambda>cte. cteCap cte = capability.NullCap) dslot s
-    \<and> descendants_range' x p (ctes_of s) \<and> capClass x = PhysicalClass
-   \<rbrace> insertNewCap p dslot x
-    \<lbrace>\<lambda>rv s. descendants_range_in' S p (ctes_of s)\<rbrace>"
+        \<and> capRange x \<inter> S = {}
+        \<and> cte_wp_at' (\<lambda>cte. isUntypedCap (cteCap cte) \<and> sameRegionAs (cteCap cte) x) p s
+        \<and> cte_wp_at' (\<lambda>cte. cteCap cte = capability.NullCap) dslot s
+        \<and> descendants_range' x p (ctes_of s) \<and> capClass x = PhysicalClass \<rbrace>
+   insertNewCap p dslot x
+   \<lbrace>\<lambda>rv s. descendants_range_in' S p (ctes_of s)\<rbrace>"
   apply (clarsimp simp:insertNewCap_def descendants_range_in'_def)
   apply (wp getCTE_wp)
   apply (clarsimp simp:cte_wp_at_ctes_of)
   apply (intro conjI allI)
-   apply (clarsimp simp:valid_pspace'_def valid_mdb'_def
-     valid_mdb_ctes_def no_0_def split:if_splits)
-  apply (clarsimp simp: descendants_of'_mdbPrev split:if_splits)
-  apply (cut_tac p = p and m = "ctes_of s" and parent = p and s = s
-        and parent_cap = "cteCap cte" and parent_node = "cteMDBNode cte"
-        and site = dslot and site_cap = capability.NullCap and site_node = "cteMDBNode ctea"
-        and c' = x
-    in mdb_insert_again_child.descendants)
-   apply (case_tac cte ,case_tac ctea)
+   apply (clarsimp simp: valid_pspace'_def valid_mdb'_def valid_mdb_ctes_def no_0_def
+                   split: if_splits)
+  apply (clarsimp simp: descendants_of'_mdbPrev split: if_splits)
+  apply (cut_tac p = p and m = "ctes_of s" and parent = p and s = s and
+                 parent_cap = "cteCap cte" and parent_node = "cteMDBNode cte" and
+                 site = dslot and site_cap = capability.NullCap and
+                 site_node = "cteMDBNode ctea" and c' = x
+                 in mdb_insert_again_child.descendants)
+   apply (case_tac cte, case_tac ctea)
    apply (rule mdb_insert_again_child.intro[OF mdb_insert_again.intro])
-      apply (simp add:mdb_ptr_def vmdb_def valid_pspace'_def valid_mdb'_def
-            mdb_ptr_axioms_def mdb_insert_again_axioms_def )+
+      apply (simp add: mdb_ptr_def vmdb_def valid_pspace'_def valid_mdb'_def
+                       mdb_ptr_axioms_def mdb_insert_again_axioms_def )+
     apply (intro conjI allI impI)
       apply clarsimp
       apply (erule(1) ctes_of_valid_cap')
-     apply (clarsimp simp:valid_mdb_ctes_def)
+     apply (clarsimp simp: valid_mdb_ctes_def)
     apply clarsimp
    apply (rule mdb_insert_again_child_axioms.intro)
    apply (clarsimp simp: nullPointer_def)+
-   apply (clarsimp simp:isMDBParentOf_def valid_pspace'_def
-      valid_mdb'_def valid_mdb_ctes_def)
+   apply (clarsimp simp: isMDBParentOf_def valid_pspace'_def valid_mdb'_def valid_mdb_ctes_def)
    apply (frule(2) ut_revocableD'[rotated 1])
-   apply (clarsimp simp:isCap_simps)
+   apply (clarsimp simp: isCap_simps isArchMDBParentOf_def)
   apply (clarsimp cong: if_cong)
   done
 

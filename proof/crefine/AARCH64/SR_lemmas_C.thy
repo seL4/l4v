@@ -118,7 +118,8 @@ lemma cap_get_tag_isCap0:
   \<and> (cap_get_tag cap' = scast cap_frame_cap) = isArchFrameCap cap
   \<and> (cap_get_tag cap' = scast cap_page_table_cap) = isArchNormalPTCap cap
   \<and> (cap_get_tag cap' = scast cap_vspace_cap) = isArchVSpacePTCap cap
-  \<and> (cap_get_tag cap' = scast cap_vcpu_cap) = isArchCap isVCPUCap cap"
+  \<and> (cap_get_tag cap' = scast cap_vcpu_cap) = isArchCap isVCPUCap cap
+  \<and> (cap_get_tag cap' = scast cap_sgi_signal_cap) = isArchSGISignalCap cap"
   using cr
   apply -
   apply (erule ccap_relationE)
@@ -146,6 +147,7 @@ lemma cap_get_tag_isCap:
   and "(cap_get_tag cap' = scast cap_page_table_cap) = isArchNormalPTCap cap"
   and "(cap_get_tag cap' = scast cap_vspace_cap) = isArchVSpacePTCap cap"
   and "(cap_get_tag cap' = scast cap_vcpu_cap) = isArchCap isVCPUCap cap"
+  and "(cap_get_tag cap' = scast cap_sgi_signal_cap) = isArchSGISignalCap cap"
   using cap_get_tag_isCap0 [OF cr] by auto
 
 lemmas cap_get_tag_NullCap = cap_get_tag_isCap(2)
@@ -383,6 +385,18 @@ lemma cap_get_tag_VCPUCap:
   apply (simp add: cap_get_tag_isCap isCap_simps)
   done
 
+lemma cap_get_tag_SGISignalCap:
+  assumes cr: "ccap_relation cap cap'"
+  shows "(cap_get_tag cap' = scast cap_sgi_signal_cap)
+          = (cap = ArchObjectCap (SGISignalCap (capSGIIRQ_CL (cap_sgi_signal_cap_lift cap'))
+                                               (capSGITarget_CL (cap_sgi_signal_cap_lift cap'))))"
+  using cr
+  apply -
+  apply (rule iffI)
+   apply (clarsimp elim!: ccap_relationE simp: cap_lifts cap_to_H_def)
+  apply (simp add: cap_get_tag_isCap isCap_simps)
+  done
+
 lemmas cap_get_tag_to_H_iffs =
      cap_get_tag_NullCap
      cap_get_tag_ThreadCap
@@ -400,6 +414,7 @@ lemmas cap_get_tag_to_H_iffs =
      cap_get_tag_PageTableCap
      cap_get_tag_VSpaceCap
      cap_get_tag_VCPUCap
+     cap_get_tag_SGISignalCap
 
 lemmas cap_get_tag_to_H = cap_get_tag_to_H_iffs [THEN iffD1]
 
@@ -1931,7 +1946,8 @@ lemma cap_get_tag_isCap_ArchObject0:
   \<and> (cap_get_tag cap' = scast cap_vspace_cap) = (isPageTableCap cap \<and> capPTType cap = VSRootPT_T)
   \<and> (cap_get_tag cap' = scast cap_page_table_cap) = (isPageTableCap cap \<and> capPTType cap = NormalPT_T)
   \<and> (cap_get_tag cap' = scast cap_frame_cap) = (isFrameCap cap)
-  \<and> (cap_get_tag cap' = scast cap_vcpu_cap) = isVCPUCap cap"
+  \<and> (cap_get_tag cap' = scast cap_vcpu_cap) = isVCPUCap cap
+  \<and> (cap_get_tag cap' = scast cap_sgi_signal_cap) = isSGISignalCap cap"
   using cr
   apply -
   apply (erule ccap_relationE)
@@ -1946,6 +1962,7 @@ lemma cap_get_tag_isCap_ArchObject:
   and "(cap_get_tag cap' = scast cap_page_table_cap) = (isPageTableCap cap \<and> capPTType cap = NormalPT_T)"
   and "(cap_get_tag cap' = scast cap_frame_cap) = (isFrameCap cap)"
   and "(cap_get_tag cap' = scast cap_vcpu_cap) = isVCPUCap cap"
+  and "(cap_get_tag cap' = scast cap_sgi_signal_cap) = isSGISignalCap cap"
   using cap_get_tag_isCap_ArchObject0 [OF cr] by auto
 
 lemma cap_get_tag_isCap_unfolded_H_cap:
@@ -1969,6 +1986,7 @@ lemma cap_get_tag_isCap_unfolded_H_cap:
        \<Longrightarrow> (cap_get_tag cap' = scast cap_page_table_cap)"
   and "ccap_relation (capability.ArchObjectCap (arch_capability.FrameCap v101 v44 v45 v46 v47)) cap'  \<Longrightarrow> (cap_get_tag cap' = scast cap_frame_cap)"
   and "ccap_relation (capability.ArchObjectCap (arch_capability.VCPUCap v48)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_vcpu_cap)"
+  and "ccap_relation (capability.ArchObjectCap (arch_capability.SGISignalCap irq target)) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_sgi_signal_cap)"
   apply (simp add: cap_get_tag_isCap cap_get_tag_isCap_ArchObject isCap_simps)
   apply (frule cap_get_tag_isCap(2), simp)
   apply (simp add: cap_get_tag_isCap cap_get_tag_isCap_ArchObject isCap_simps)+
@@ -1998,6 +2016,8 @@ lemma cap_get_tag_isCap_ArchObject2:
            = (isArchObjectCap cap \<and> isFrameCap (capCap cap))"
   and   "(cap_get_tag cap' = scast cap_vcpu_cap)
            = (isArchObjectCap cap \<and> isVCPUCap (capCap cap))"
+  and   "(cap_get_tag cap' = scast cap_sgi_signal_cap)
+           = (isArchObjectCap cap \<and> isSGISignalCap (capCap cap))"
   by (rule cap_get_tag_isCap_ArchObject2_worker [OF _ cr],
       simp add: cap_get_tag_isCap_ArchObject,
       simp add: isArchCap_tag_def2 cap_tag_defs)+
@@ -2077,21 +2097,23 @@ lemmas cap_lift_defs =
        cap_page_table_cap_lift_def
        cap_asid_pool_cap_lift_def
        cap_vcpu_cap_lift_def
+       cap_sgi_signal_cap_lift_def
 
 lemma cap_lift_Some_CapD:
-  "\<And>c'. cap_lift c = Some (Cap_untyped_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_untyped_cap"
-  "\<And>c'. cap_lift c = Some (Cap_endpoint_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_endpoint_cap"
-  "\<And>c'. cap_lift c = Some (Cap_notification_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_notification_cap"
-  "\<And>c'. cap_lift c = Some (Cap_reply_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_reply_cap"
-  "\<And>c'. cap_lift c = Some (Cap_cnode_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_cnode_cap"
-  "\<And>c'. cap_lift c = Some (Cap_thread_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_thread_cap"
-  "\<And>c'. cap_lift c = Some (Cap_irq_handler_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_irq_handler_cap"
-  "\<And>c'. cap_lift c = Some (Cap_zombie_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_zombie_cap"
-  "\<And>c'. cap_lift c = Some (Cap_frame_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_frame_cap"
-  "\<And>c'. cap_lift c = Some (Cap_vspace_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_vspace_cap"
-  "\<And>c'. cap_lift c = Some (Cap_page_table_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_page_table_cap"
-  "\<And>c'. cap_lift c = Some (Cap_asid_pool_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_asid_pool_cap"
-  "\<And>c'. cap_lift c = Some (Cap_vcpu_cap c') \<Longrightarrow> cap_get_tag c = SCAST(32 signed \<rightarrow> 64) cap_vcpu_cap"
+  "\<And>c'. cap_lift c = Some (Cap_untyped_cap c') \<Longrightarrow> cap_get_tag c = scast cap_untyped_cap"
+  "\<And>c'. cap_lift c = Some (Cap_endpoint_cap c') \<Longrightarrow> cap_get_tag c = scast cap_endpoint_cap"
+  "\<And>c'. cap_lift c = Some (Cap_notification_cap c') \<Longrightarrow> cap_get_tag c = scast cap_notification_cap"
+  "\<And>c'. cap_lift c = Some (Cap_reply_cap c') \<Longrightarrow> cap_get_tag c = scast cap_reply_cap"
+  "\<And>c'. cap_lift c = Some (Cap_cnode_cap c') \<Longrightarrow> cap_get_tag c = scast cap_cnode_cap"
+  "\<And>c'. cap_lift c = Some (Cap_thread_cap c') \<Longrightarrow> cap_get_tag c = scast cap_thread_cap"
+  "\<And>c'. cap_lift c = Some (Cap_irq_handler_cap c') \<Longrightarrow> cap_get_tag c = scast cap_irq_handler_cap"
+  "\<And>c'. cap_lift c = Some (Cap_zombie_cap c') \<Longrightarrow> cap_get_tag c = scast cap_zombie_cap"
+  "\<And>c'. cap_lift c = Some (Cap_frame_cap c') \<Longrightarrow> cap_get_tag c = scast cap_frame_cap"
+  "\<And>c'. cap_lift c = Some (Cap_vspace_cap c') \<Longrightarrow> cap_get_tag c = scast cap_vspace_cap"
+  "\<And>c'. cap_lift c = Some (Cap_page_table_cap c') \<Longrightarrow> cap_get_tag c = scast cap_page_table_cap"
+  "\<And>c'. cap_lift c = Some (Cap_asid_pool_cap c') \<Longrightarrow> cap_get_tag c = scast cap_asid_pool_cap"
+  "\<And>c'. cap_lift c = Some (Cap_vcpu_cap c') \<Longrightarrow> cap_get_tag c = scast cap_vcpu_cap"
+  "\<And>c'. cap_lift c = Some (Cap_sgi_signal_cap c') \<Longrightarrow> cap_get_tag c = scast cap_sgi_signal_cap"
   by (auto simp: cap_lifts cap_lift_defs)
 
 lemma rf_sr_armKSGlobalUserVSpace:
@@ -2544,6 +2566,19 @@ lemma rf_sr_obj_update_helper:
               \<lparr> globals := (undefined \<lparr> t_hrs_' := f (globals s') (t_hrs_' (globals s')) \<rparr>)\<rparr>))\<rparr>\<rparr>) \<in> rf_sr
           \<Longrightarrow> (s, globals_update (\<lambda>v. t_hrs_'_update (f v) v) s') \<in> rf_sr"
   by (simp cong: StateSpace.state.fold_congs globals.fold_congs)
+
+(* Could theoretically live in Refine, but should only be needed for CRefine *)
+lemma pageBitsForSize_le_word_size[simplified,simp]:
+  "pageBitsForSize sz < LENGTH(machine_word_len)"
+  by (cases sz, auto simp: bit_simps)
+
+lemma word_of_nat_pageBitsForSize_le_word_size[simplified,simp]:
+  "word_of_nat (pageBitsForSize sz) < (of_nat LENGTH(machine_word_len)::machine_word)"
+  by (cases sz, auto simp: bit_simps)
+
+lemma unat_of_nat_pageBitsForSize[simp]:
+  "unat (of_nat (pageBitsForSize sz) :: machine_word) = pageBitsForSize sz"
+  by (cases sz, auto simp: bit_simps)
 
 end
 end
