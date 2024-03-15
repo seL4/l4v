@@ -270,6 +270,11 @@ lemma ioport_revocableD:
   "\<lbrakk> cs p = Some (ArchObjectCap IOPortControlCap); ioport_revocable (is_original_cap s) cs \<rbrakk> \<Longrightarrow> is_original_cap s p"
   by (fastforce simp add: ioport_revocable_def simp del: split_paired_All)
 
+(* FIXME SGI: put these high up, same for the Haskell ones in Refine *)
+(* unused on this architecture *)
+declare is_irq_control_descendant_def[simp]
+declare should_be_arch_parent_of_def[simp]
+
 lemma safe_parent_arch_is_parent:
   "\<lbrakk>safe_parent_for_arch cap pcap; caps_of_state s p = Some pcap;
       valid_arch_mdb (is_original_cap s) (caps_of_state s)\<rbrakk> \<Longrightarrow>
