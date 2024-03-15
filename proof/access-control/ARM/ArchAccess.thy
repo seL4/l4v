@@ -99,11 +99,12 @@ end
 context Arch begin
 
 primrec aobj_ref' where
-  "aobj_ref' (ASIDPoolCap p as) = {p}"
+  "aobj_ref' (ASIDPoolCap p _) = {p}"
 | "aobj_ref' ASIDControlCap = {}"
-| "aobj_ref' (PageCap isdev x rs sz as4) = ptr_range x (pageBitsForSize sz)"
-| "aobj_ref' (PageDirectoryCap x as2) = {x}"
-| "aobj_ref' (PageTableCap x as3) = {x}"
+| "aobj_ref' (PageCap isdev x _ sz _) = ptr_range x (pageBitsForSize sz)"
+| "aobj_ref' (PageDirectoryCap x _) = {x}"
+| "aobj_ref' (PageTableCap x _) = {x}"
+| "aobj_ref' (SGISignalCap _ _) = {}"
 
 fun acap_asid' :: "arch_cap \<Rightarrow> asid set" where
   "acap_asid' (PageCap _ _ _ _ mapping) = fst ` set_option mapping"
@@ -112,6 +113,7 @@ fun acap_asid' :: "arch_cap \<Rightarrow> asid set" where
 | "acap_asid' (ASIDPoolCap _ asid)
      = {x. asid_high_bits_of x = asid_high_bits_of asid \<and> x \<noteq> 0}"
 | "acap_asid' ASIDControlCap = UNIV"
+| "acap_asid' (SGISignalCap _ _) = {}"
 
 inductive_set state_asids_to_policy_aux for aag caps asid_tab vrefs where
   sata_asid:
