@@ -260,6 +260,12 @@ assumes deactivateInterrupt_ccorres:
            (doMachineOp (deactivateInterrupt irq))
            (Call deactivateInterrupt_'proc)"
 
+assumes ipi_send_target_ccorres:
+  "\<And>irq targets hs. ccorres dc xfdc
+                       \<top> (\<lbrace> \<acute>irq = irq \<rbrace> \<inter> \<lbrace> \<acute>cpuTargetList = targets \<rbrace>) hs
+                       (doMachineOp (ipiSendTarget irq targets))
+                       (Call ipi_send_target_'proc)"
+
 assumes cleanCacheRange_PoU_spec:
  "\<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> UNIV (Call cleanCacheRange_PoU_'proc) UNIV"
 

@@ -345,7 +345,7 @@ lemma isIRQActive_ccorres:
   apply (simp add: Kernel_C_maxIRQ word_le_nat_alt)
   done
 
-lemma Arch_invokeIRQControl_ccorres:
+lemma Arch_invokeIRQControl_IssueIRQHandler_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
       (invs' and cte_at' parent
        and (\<lambda>_. ucast irq \<le> (scast Kernel_C.maxIRQ :: machine_word)))
@@ -370,6 +370,58 @@ lemma Arch_invokeIRQControl_ccorres:
     apply (vcg exspec=invokeIRQControl_modifies)
    apply wpsimp
   apply (clarsimp simp: Kernel_C_maxIRQ IRQ_def word_le_nat_alt)
+  done
+
+lemma Arch_invokeIRQControl_IssueSGISignal_ccorres:
+  "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+      (invs' and cte_at' controlSlot)
+      (\<lbrace>\<acute>irq = ucast irq\<rbrace> \<inter> \<lbrace>\<acute>targets = ucast targets\<rbrace> \<inter>
+       \<lbrace>\<acute>controlSlot = cte_Ptr controlSlot\<rbrace> \<inter> \<lbrace>\<acute>sgiSlot = cte_Ptr sgiSlot\<rbrace>)
+      hs
+      (AARCH64_H.performIRQControl (IssueSGISignal irq targets controlSlot sgiSlot))
+      (Call Arch_invokeIssueSGISignal_'proc)"
+  apply (cinit' lift: irq_' targets_' controlSlot_' sgiSlot_')
+   apply (clarsimp simp: AARCH64_H.performIRQControl_def liftE_def)
+   apply csymbr
+   apply (ctac (no_vcg) add: cteInsert_ccorres)
+    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+    apply (clarsimp, rule conseqPre, vcg)
+    apply (clarsimp simp: return_def)
+   apply wp
+  apply (clarsimp split: if_split)
+  apply (clarsimp simp: is_simple_cap'_def isCap_simps valid_cap_simps' capAligned_def)
+  apply (rule conjI, fastforce)+
+  apply clarsimp
+  apply (erule notE)
+  apply (clarsimp simp: ccap_relation_def map_option_Some_eq2 cap_lift_def
+                        cap_sgi_signal_cap_lift_def Let_def cap_tag_defs
+                        cap_to_H_def ucast_and_mask_drop)
+  done
+
+lemma Arch_invokeIRQControl_IssueSGISignal_ccorres:
+  "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+      (invs' and cte_at' controlSlot)
+      (\<lbrace>\<acute>irq = ucast irq\<rbrace> \<inter> \<lbrace>\<acute>targets = ucast targets\<rbrace> \<inter>
+       \<lbrace>\<acute>controlSlot = cte_Ptr controlSlot\<rbrace> \<inter> \<lbrace>\<acute>sgiSlot = cte_Ptr sgiSlot\<rbrace>)
+      hs
+      (AARCH64_H.performIRQControl (IssueSGISignal irq targets controlSlot sgiSlot))
+      (Call Arch_invokeIssueSGISignal_'proc)"
+  apply (cinit' lift: irq_' targets_' controlSlot_' sgiSlot_')
+   apply (clarsimp simp: AARCH64_H.performIRQControl_def liftE_def)
+   apply csymbr
+   apply (ctac (no_vcg) add: cteInsert_ccorres)
+    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
+    apply (clarsimp, rule conseqPre, vcg)
+    apply (clarsimp simp: return_def)
+   apply wp
+  apply (clarsimp split: if_split)
+  apply (clarsimp simp: is_simple_cap'_def isCap_simps valid_cap_simps' capAligned_def)
+  apply (rule conjI, fastforce)+
+  apply clarsimp
+  apply (erule notE)
+  apply (clarsimp simp: ccap_relation_def map_option_Some_eq2 cap_lift_def
+                        cap_sgi_signal_cap_lift_def Let_def cap_tag_defs
+                        cap_to_H_def ucast_and_mask_drop)
   done
 
 lemma ucast_ucast_mask_le_64_32:
@@ -421,6 +473,16 @@ lemma maxIRQ_ucast_toEnum_irq_t3:
 
 lemmas maxIRQ_casts = maxIRQ_ucast_toEnum_irq_t maxIRQ_ucast_toEnum_irq_t2
                       maxIRQ_ucast_toEnum_eq_machine maxIRQ_ucast_toEnum_irq_t3
+
+(* The magic 4 comes out of the bitfield generator *)
+lemma ThreadState_Restart_mask[simp]: (* FIXME AARCH64: move up, duplicates Arch_C version *)
+  "(scast ThreadState_Restart::machine_word) && mask 4 = scast ThreadState_Restart"
+  by (simp add: ThreadState_Restart_def mask_def)
+
+(* The magic 4 comes out of the bitfield generator *)
+lemma ThreadState_Restart_mask[simp]: (* FIXME AARCH64: move up, duplicates Arch_C version *)
+  "(scast ThreadState_Restart::machine_word) && mask 4 = scast ThreadState_Restart"
+  by (simp add: ThreadState_Restart_def mask_def)
 
 lemma Arch_decodeIRQControlInvocation_ccorres:
   "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
@@ -522,7 +584,7 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
                                     cong: ccorres_prog_only_cong)
                         apply (ctac (no_vcg) add: setThreadState_ccorres)
                          apply (simp add: performIRQControl_def)
-                         apply (ctac add: Arch_invokeIRQControl_ccorres)
+                         apply (ctac add: Arch_invokeIRQControl_IssueIRQHandler_ccorres)
                             apply (clarsimp simp: liftE_alternative)
                             apply (rule ccorres_alternative2)
                             apply (ctac add: ccorres_return_CE)
@@ -578,6 +640,109 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
      apply (clarsimp, wp)
     apply (vcg exspec=getSyscallArg_modifies)
    apply ccorres_rewrite
+   apply (rule ccorres_Cond_rhs)
+    apply (simp add: list_case_If2 cong: call_ignore_cong)
+    apply (rule ccorres_rhs_assoc)+
+    apply csymbr+
+    apply (rule ccorres_Cond_rhs_Seq)
+     apply (simp add: word_less_nat_alt throwError_bind invocationCatch_def)
+     apply (rule ccorres_cond_true_seq)
+     apply (rule syscall_error_throwError_ccorres_n)
+     apply (simp add: syscall_error_to_H_cases)
+    apply csymbr
+    apply (rule ccorres_Cond_rhs_Seq)
+     apply (simp add: interpret_excaps_test_null excaps_map_def
+                      throwError_bind invocationCatch_def)
+     apply (rule syscall_error_throwError_ccorres_n)
+     apply (simp add: syscall_error_to_H_cases)
+    apply (prop_tac "args \<noteq> []", solves \<open>clarsimp simp: word_less_nat_alt\<close>)
+    apply (simp add: interpret_excaps_test_null excaps_map_def
+                     word_less_nat_alt Let_def
+                cong: call_ignore_cong)
+    apply (rule ccorres_add_return)
+    apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=0 and buffer=buffer])
+      apply (rule ccorres_add_return)
+      apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=1 and buffer=buffer])
+        apply (rule ccorres_add_return)
+        apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=2 and buffer=buffer])
+          apply (rule ccorres_add_return)
+          apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=3 and buffer=buffer])
+            apply (rule getSlotCap_ccorres_fudge_n[where vals=extraCaps and n=0])
+            apply (rule ccorres_move_c_guard_cte)
+            apply ctac
+              apply (rule ccorres_assert2)
+              apply (simp add: rangeCheck_def unlessE_def
+                               length_ineq_not_Nil hd_conv_nth
+                          cong: call_ignore_cong ccorres_prog_only_cong)
+              apply (rule ccorres_Cond_rhs_Seq)
+               apply (prop_tac "\<not> args!0 \<le> of_nat (numSGIs - Suc 0)")
+                apply (solves \<open>clarsimp simp: numSGIs_def word_le_nat_alt\<close>)
+               apply (simp add: throwError_bind invocationCatch_def
+                           cong: call_ignore_cong ccorres_prog_only_cong)
+               apply (rule syscall_error_throwError_ccorres_n)
+               apply (simp add: syscall_error_to_H_cases numSGIs_def)
+              apply (prop_tac "args!0 \<le> of_nat (numSGIs - Suc 0)")
+               apply (solves \<open>clarsimp simp: numSGIs_def word_le_nat_alt\<close>)
+              apply (simp cong: call_ignore_cong ccorres_prog_only_cong)
+              apply (rule ccorres_Cond_rhs_Seq)
+               apply (prop_tac "\<not> args!Suc 0 \<le> mask gicSGITargetMaskBits")
+                apply (solves \<open>clarsimp simp: gicSGITargetMaskBits_sgi_target_len mask_def
+                                              word_le_nat_alt\<close>)
+               apply (simp add: throwError_bind invocationCatch_def
+                           cong: call_ignore_cong ccorres_prog_only_cong)
+               apply (rule syscall_error_throwError_ccorres_n)
+               apply (simp add: syscall_error_to_H_cases gicSGITargetMaskBits_sgi_target_len
+                                mask_def)
+              apply (prop_tac "args!Suc 0 \<le> mask gicSGITargetMaskBits")
+               apply (solves \<open>clarsimp simp: gicSGITargetMaskBits_sgi_target_len mask_def
+                                            word_le_nat_alt\<close>)
+              apply (simp add: invocationCatch_use_injection_handler injection_handler_bindE
+                               bindE_assoc
+                          cong: call_ignore_cong ccorres_prog_only_cong)
+              apply (ctac add: ccorres_injection_handler_csum1[OF lookupTargetSlot_ccorres,
+                                                               unfolded lookupTargetSlot_def])
+                 prefer 2
+                 apply ccorres_rewrite
+                 apply (ctac add: ccorres_return_C_errorE)
+                apply ccorres_rewrite
+                apply csymbr
+                apply (ctac add: ccorres_injection_handler_csum1[OF ensureEmptySlot_ccorres])
+                   prefer 2
+                   apply ccorres_rewrite
+                   apply (ctac add: ccorres_return_C_errorE)
+                  apply ccorres_rewrite
+                  apply (simp add: ccorres_invocationCatch_Inr performInvocation_def
+                                   liftE_bindE bindE_assoc injection_handler_returnOk
+                              cong: ccorres_prog_only_cong)
+                  apply (ctac (no_vcg) add: setThreadState_ccorres)
+                   apply (simp add: performIRQControl_def)
+                   apply (ctac (no_vcg) add: Arch_invokeIRQControl_IssueSGISignal_ccorres)
+                     apply (clarsimp simp: liftE_alternative)
+                     apply (rule ccorres_alternative2)
+                     apply (ctac add: ccorres_return_CE)
+                    apply (ctac add: ccorres_inst[where P=\<top> and P'=UNIV])
+                   apply wp
+                  apply (wp sts_invs_minor')
+                 apply clarsimp
+                 apply (wp injection_handler_wp)
+                apply (rule conseqPre, vcg exspec=ensureEmptySlot_modifies, rule order_refl)
+               apply (wp injection_handler_wp hoare_drop_imps)
+              apply clarsimp
+              apply (rule conseqPre, vcg exspec=lookupTargetSlot_modifies, rule order_refl)
+             apply (wpsimp wp: getSlotCap_wp)
+            apply clarsimp
+            apply (rule conseqPre, vcg, rule order_refl)
+           apply wp
+          apply (rule conseqPre, vcg exspec=getSyscallArg_modifies, rule order_refl)
+         apply wp
+        apply (rule conseqPre, vcg exspec=getSyscallArg_modifies, rule order_refl)
+       apply wp
+      apply (rule conseqPre, vcg exspec=getSyscallArg_modifies, rule order_refl)
+     apply wp
+    apply clarsimp
+    apply (rule conseqPre, vcg exspec=getSyscallArg_modifies, rule order_refl)
+   apply ccorres_rewrite
+   apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
    apply (auto split: invocation_label.split arch_invocation_label.split
                intro: syscall_error_throwError_ccorres_n[simplified throwError_def o_def]
                simp: throwError_def invocationCatch_def syscall_error_to_H_cases invocation_eq_use_types)[1]
@@ -586,19 +751,32 @@ lemma Arch_decodeIRQControlInvocation_ccorres:
                         Collect_const_mem word_sless_def word_sle_def
                         sysargs_rel_to_n
                   cong: if_cong)
+  apply (cut_tac unat_lt2p[where x="args ! 3"])
+  apply (clarsimp simp: word_less_nat_alt unat_ucast neq_Nil_conv)
+  (* this conjI construction gets the two Haskell conjuncts into adjacent goals for auto below *)
   apply (rule conjI)
-   apply (cut_tac unat_lt2p[where x="args ! 3"])
+   prefer 2
+   apply (rule conjI)
+    prefer 3
+    (* ARMIRQIssueIRQHandlerTrigger + ARMIRQIssueSGISignal Haskell *)
+    apply (auto simp: ct_in_state'_def word_bits_def
+                      excaps_in_mem_def slotcap_in_mem_def
+                      cte_wp_at_ctes_of numeral_eqs[symmetric]
+                      valid_tcb_state'_def
+               elim!: pred_tcb'_weakenE cte_wp_at_weakenE'
+               dest!: st_tcb_at_idle_thread' interpret_excaps_eq)[2]
+  apply (rule conjI)
+   (* ARMIRQIssueIRQHandlerTrigger C *)
    apply clarsimp
-   apply (clarsimp simp: word_less_nat_alt unat_ucast)
-   apply (auto simp: ct_in_state'_def neq_Nil_conv word_bits_def
-                     excaps_in_mem_def slotcap_in_mem_def
-                     cte_wp_at_ctes_of numeral_eqs[symmetric]
-                     valid_tcb_state'_def
-              elim!: pred_tcb'_weakenE cte_wp_at_weakenE'
-              dest!: st_tcb_at_idle_thread' interpret_excaps_eq)[1]
-  apply (clarsimp simp: neq_Nil_conv)
+   apply (drule interpret_excaps_eq[rule_format, where n=0], simp)
+   apply (clarsimp simp: rf_sr_ksCurThread)
+  (* ARMIRQIssueSGISignal C *)
+  apply clarsimp
   apply (drule interpret_excaps_eq[rule_format, where n=0], simp)
-  apply (clarsimp simp: rf_sr_ksCurThread)
+  apply (clarsimp simp: rf_sr_ksCurThread numeral_3_eq_3 numeral_2_eq_2 ucast_ucast_mask)
+  apply (rule conjI; clarsimp)+
+  apply (rule conjI; rule sym; simp add: and_mask_eq_iff_le_mask word_le_nat_alt)
+   apply (auto simp: mask_def)[2]
   done
 
 lemma decodeIRQControlInvocation_ccorres:
