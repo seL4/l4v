@@ -380,7 +380,11 @@ where
                                              then Some (capPTMappedASID_CL ptc, capPTMappedAddress_CL ptc)
                                              else None))
  | Cap_domain_cap \<Rightarrow> DomainCap
- | Cap_vcpu_cap vcpu \<Rightarrow> ArchObjectCap (VCPUCap (capVCPUPtr_CL vcpu))"
+ | Cap_vcpu_cap vcpu \<Rightarrow> ArchObjectCap (VCPUCap (capVCPUPtr_CL vcpu))
+ | Cap_sgi_signal_cap sgi \<Rightarrow> ArchObjectCap (SGISignalCap (ucast (capSGIIRQ_CL sgi))
+                                                         (ucast (capSGITargetMask_CL sgi)))"
+
+
 
 lemmas cap_to_H_simps = cap_to_H_def[split_simps cap_CL.split]
 
@@ -389,15 +393,12 @@ definition
   where
   "cte_to_H cte \<equiv> CTE (cap_to_H (cap_CL cte)) (mdb_node_to_H (cteMDBNode_CL cte))"
 
-(* FIXME AARCH64 the "9" here is irq size, do we have a better abbreviation for irq bits? *)
-definition
-cl_valid_cap :: "cap_CL \<Rightarrow> bool"
-where
-"cl_valid_cap c \<equiv>
-   case c of
-     Cap_irq_handler_cap fc \<Rightarrow> ((capIRQ_CL fc) && mask 9 = capIRQ_CL fc)
-   | Cap_frame_cap fc \<Rightarrow> capFSize_CL fc < 3 \<and> capFVMRights_CL fc < 4 \<and> capFVMRights_CL fc \<noteq> 2
-   | x \<Rightarrow> True"
+definition cl_valid_cap :: "cap_CL \<Rightarrow> bool" where
+  "cl_valid_cap c \<equiv>
+     case c of
+       Cap_irq_handler_cap fc \<Rightarrow> ((capIRQ_CL fc) && mask LENGTH(irq_len) = capIRQ_CL fc)
+     | Cap_frame_cap fc \<Rightarrow> capFSize_CL fc < 3 \<and> capFVMRights_CL fc < 4 \<and> capFVMRights_CL fc \<noteq> 2
+     | _ \<Rightarrow> True"
 
 definition
 c_valid_cap :: "cap_C \<Rightarrow> bool"
@@ -429,9 +430,10 @@ lemma  c_valid_cap_simps [simp]:
   "cap_get_tag c = scast cap_zombie_cap \<Longrightarrow> c_valid_cap c"
   "cap_get_tag c = scast cap_reply_cap \<Longrightarrow> c_valid_cap c"
   "cap_get_tag c = scast cap_vcpu_cap \<Longrightarrow> c_valid_cap c"
+  "cap_get_tag c = scast cap_sgi_signal_cap \<Longrightarrow> c_valid_cap c"
   "cap_get_tag c = scast cap_null_cap \<Longrightarrow> c_valid_cap c"
   unfolding c_valid_cap_def  cap_lift_def cap_tag_defs
-  by (simp add: cl_valid_cap_def)+
+  by (auto simp: cl_valid_cap_def)
 
 lemma ptr_val_tcb_ptr_mask2:
   "is_aligned thread tcbBlockSizeBits
