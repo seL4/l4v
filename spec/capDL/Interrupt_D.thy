@@ -33,12 +33,21 @@ definition
       cdl_arch_irq_control_intent \<Rightarrow> cdl_irq_control_invocation except_monad"
 where
   "arch_decode_irq_control_invocation target target_ref caps intent \<equiv> case intent of
-      ARMIrqControlIssueIrqHandlerIntent irq index depth \<Rightarrow>
+     ARMIrqControlIssueIrqHandlerIntent irq index depth \<Rightarrow>
         doE
           root \<leftarrow> throw_on_none $ get_index caps 0;
           cnode_cap \<leftarrow> returnOk $ fst root;
           dest_slot_cap_ref \<leftarrow> lookup_slot_for_cnode_op cnode_cap index (unat depth);
           returnOk $ IssueIrqHandler irq target_ref dest_slot_cap_ref
+        odE \<sqinter> throw
+   | ARMIssueSGISignalIntent irq target index depth \<Rightarrow>
+        doE
+          root \<leftarrow> throw_on_none $ get_index caps 0;
+          cnode_cap \<leftarrow> returnOk $ fst root;
+          dest_slot_cap_ref \<leftarrow> lookup_slot_for_cnode_op cnode_cap index (unat depth);
+          ensure_empty dest_slot_cap_ref;
+          returnOk $ ArchIssueIrqHandler (ARMIssueSGISignal (ucast irq) (ucast target)
+                                                            target_ref dest_slot_cap_ref)
         odE \<sqinter> throw"
 
 definition
@@ -55,7 +64,8 @@ where
           dest_slot_cap_ref \<leftarrow> lookup_slot_for_cnode_op cnode_cap index (unat depth);
           returnOk $ IssueIrqHandler irq target_ref dest_slot_cap_ref
         odE \<sqinter> throw
-    | ArchIrqControlIssueIrqHandlerIntent arch_intent \<Rightarrow> arch_decode_irq_control_invocation target target_ref caps arch_intent"
+    | ArchIrqControlIssueIrqHandlerIntent arch_intent \<Rightarrow>
+        arch_decode_irq_control_invocation target target_ref caps arch_intent"
 
 definition
   decode_irq_handler_invocation :: "cdl_cap \<Rightarrow> cdl_cap_ref \<Rightarrow> (cdl_cap \<times> cdl_cap_ref) list \<Rightarrow>
@@ -94,10 +104,8 @@ definition
   arch_invoke_irq_control :: "arch_cdl_irq_control_invocation \<Rightarrow> unit k_monad"
 where
   "arch_invoke_irq_control params \<equiv> case params of
-      \<comment> \<open>Create a new IRQ handler cap.\<close>
-      ARMIssueIrqHandler irq control_slot dest_slot trigger \<Rightarrow>
-        insert_cap_child (IrqHandlerCap irq) control_slot dest_slot
-  "
+      ARMIssueSGISignal irq target control_slot dest_slot \<Rightarrow>
+        insert_cap_child (SGISignalCap irq target) control_slot dest_slot"
 
 definition
   invoke_irq_control :: "cdl_irq_control_invocation \<Rightarrow> unit k_monad"
@@ -131,6 +139,10 @@ where
           delete_cap_simple irqslot
         od
   "
+
+(* performs machine op only *)
+definition invoke_sgi_signal_generate :: "cdl_sgi_signal_invocation \<Rightarrow> unit k_monad" where
+  "invoke_sgi_signal_generate params \<equiv> return ()"
 
 (* Handle an interrupt. *)
 definition

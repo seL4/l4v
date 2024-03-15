@@ -171,6 +171,7 @@ definition
   | DomainCap \<Rightarrow> False
   | BoundNotificationCap _ \<Rightarrow> False
   | IrqControlCap  \<Rightarrow> False
+  | SGISignalCap _ _ \<Rightarrow> False
   | AsidControlCap \<Rightarrow> False
   | IOSpaceMasterCap \<Rightarrow> False
   | FrameCap _ _ _ _ c _ \<Rightarrow> c = Real
