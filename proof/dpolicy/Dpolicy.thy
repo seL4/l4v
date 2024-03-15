@@ -55,6 +55,7 @@ where
     | cdl_cap.PageDirectoryCap oref is_real asid \<Rightarrow> {Control}
     | cdl_cap.AsidControlCap \<Rightarrow> {Control}
     | cdl_cap.AsidPoolCap oref asid \<Rightarrow> {Control}
+    | cdl_cap.SGISignalCap irq target \<Rightarrow> {Control}
     | cdl_cap.ZombieCap ptr \<Rightarrow> {Control}
     | cdl_cap.BoundNotificationCap word \<Rightarrow> {Receive, Reset}
     | _ \<Rightarrow> {}"

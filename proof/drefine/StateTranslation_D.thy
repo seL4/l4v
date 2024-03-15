@@ -231,7 +231,17 @@ where
   "arch_transform_intent_issue_irq_handler args \<equiv>
    case args of
       irqW#trigger#index#depth#_ \<Rightarrow>
-         Some (IrqControlIssueIrqHandlerIntent (ucast irqW :: irq) index depth)
+         Some (IrqControlIssueIrqHandlerIntent (ucast irqW) index depth)
+    | _ \<Rightarrow> Nothing"
+
+definition
+  arch_transform_intent_issue_sgi_signal :: "word32 list \<Rightarrow> cdl_irq_control_intent option"
+where
+  "arch_transform_intent_issue_sgi_signal args \<equiv>
+   case args of
+      irqW#targetsW#index#depth#_ \<Rightarrow>
+         Some (ArchIrqControlIssueIrqHandlerIntent
+                 (ARMIssueSGISignalIntent irqW targetsW index depth))
     | _ \<Rightarrow> Nothing"
 
 definition
@@ -367,6 +377,9 @@ definition
     | ArchInvocationLabel ARMIRQIssueIRQHandler \<Rightarrow>
                           map_option IrqControlIntent
                                    (arch_transform_intent_issue_irq_handler args)
+    | ArchInvocationLabel ARMIRQIssueSGISignal \<Rightarrow>
+                          map_option IrqControlIntent
+                                   (arch_transform_intent_issue_sgi_signal args)
     | GenInvocationLabel DomainSetSet \<Rightarrow> map_option DomainIntent (transform_intent_domain args)"
 
 lemmas transform_intent_tcb_defs =
@@ -428,6 +441,7 @@ lemma transform_tcb_intent_invocation:
     label \<noteq> ArchInvocationLabel ARMPDCleanInvalidate_Data \<and>
     label \<noteq> ArchInvocationLabel ARMPDUnify_Instruction \<and>
     label \<noteq> ArchInvocationLabel ARMASIDControlMakePool \<and>
+    label \<noteq> ArchInvocationLabel ARMIRQIssueSGISignal \<and>
     label \<noteq> GenInvocationLabel DomainSetSet)"
   apply(intro conjI)
    apply(rule iffI,
@@ -641,6 +655,8 @@ where
             Types_D.PageTableCap ptr Real (transform_mapping mp)
         | ARM_A.PageDirectoryCap ptr mp \<Rightarrow>
             Types_D.PageDirectoryCap ptr Real (option_map transform_asid mp)
+        | ARM_A.SGISignalCap irq target \<Rightarrow>
+            Types_D.SGISignalCap irq target
         )
   "
 

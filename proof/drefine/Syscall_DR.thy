@@ -418,9 +418,11 @@ lemma transform_intent_irq_control_None:
   apply (clarsimp simp:decode_irq_control_invocation_def arch_decode_irq_control_invocation_def
                   split del:if_split)
   apply (case_labels "invocation_type label"; (clarsimp, wp)?)
-   apply (clarsimp simp:transform_intent_issue_irq_handler_def transform_intent_def
+    apply (clarsimp simp:transform_intent_issue_irq_handler_def transform_intent_def
+                    split:list.split_asm split del:if_split,wp+)
+   apply (clarsimp simp:arch_transform_intent_issue_irq_handler_def transform_intent_def
                    split:list.split_asm split del:if_split,wp+)
-  apply (clarsimp simp:arch_transform_intent_issue_irq_handler_def transform_intent_def
+  apply (clarsimp simp:arch_transform_intent_issue_sgi_signal_def transform_intent_def
                   split:list.split_asm split del:if_split,wp+)
   done
 
@@ -462,7 +464,8 @@ lemma transform_intent_domain_cap_None:
   done
 
 lemma transform_intent_arch_cap_None:
-  "\<lbrakk>transform_intent (invocation_type label) args = None; cap = cap.ArchObjectCap arch_cap\<rbrakk>
+  "\<lbrakk>transform_intent (invocation_type label) args = None; cap = cap.ArchObjectCap arch_cap;
+    \<not>is_SGISignalCap arch_cap\<rbrakk>
          \<Longrightarrow> \<lbrace>(=) s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>x. (=) s\<rbrace>"
   including no_pre
   supply gen_invocation_type_eq[symmetric, simp]
@@ -470,52 +473,66 @@ lemma transform_intent_arch_cap_None:
   apply wp
   apply (simp add: arch_decode_invocation_def split del: if_split)
   apply (case_tac arch_cap)
-      apply (case_labels "invocation_type label"; simp split del: if_split, wp?)
-      apply (clarsimp split: if_splits | rule conjI)+
-       apply (case_tac "excaps ! 0")
-       apply (clarsimp split: cap.splits | rule conjI | wp)+
-       apply (clarsimp split: arch_cap.splits | rule conjI | wp)+
-       apply ((clarsimp simp: transform_intent_def | wp) +)[2]
+       apply (case_labels "invocation_type label"; simp split del: if_split, wp?)
+       apply (clarsimp split: if_splits | rule conjI)+
+        apply (case_tac "excaps ! 0")
+        apply (clarsimp split: cap.splits | rule conjI | wp)+
+        apply (clarsimp split: arch_cap.splits | rule conjI | wp)+
+         apply ((clarsimp simp: transform_intent_def | wp) +)[3]
+      apply (case_labels "invocation_type label"
+             ; wpsimp simp: arch_decode_invocation_def split_del: if_split)
+      apply (case_tac "excaps ! 0")
+      apply (clarsimp simp: transform_intent_def transform_cnode_index_and_depth_def
+                     split: list.split_asm)
+       apply wp+
      apply (case_labels "invocation_type label"
-            ; wpsimp simp: arch_decode_invocation_def split_del: if_split)
-     apply (case_tac "excaps ! 0")
-     apply (clarsimp simp: transform_intent_def transform_cnode_index_and_depth_def
-                    split: list.split_asm)
-      apply wp+
-    apply (case_labels "invocation_type label"
-           ; wpsimp simp: arch_decode_invocation_def isPageFlushLabel_def split_del: if_split)
-          apply (clarsimp simp: transform_intent_def transform_intent_page_map_def
-                         split: list.split_asm )
-            apply wp+
-         apply (case_tac "excaps ! 0")
-         apply (clarsimp simp:transform_intent_def split:list.split_asm)
-        apply ((clarsimp simp:transform_intent_def | wp)+)
-   apply (case_labels "invocation_type label"; simp)
-                            apply (intro conjI impI | wp)+
-       apply (clarsimp | rule conjI)+
-       apply (clarsimp simp: transform_intent_def transform_intent_page_table_map_def
-                      split: list.split_asm)
-      apply (intro conjI impI | wp)+
-  apply ((clarsimp simp: transform_intent_def split: list.split_asm | wp)+)[1]
-  apply (case_labels "invocation_type label"; simp add: isPDFlushLabel_def)
-                           apply (wp)+
+            ; wpsimp simp: arch_decode_invocation_def isPageFlushLabel_def split_del: if_split)
+           apply (clarsimp simp: transform_intent_def transform_intent_page_map_def
+                          split: list.split_asm )
+             apply wp+
+          apply (case_tac "excaps ! 0")
+          apply (clarsimp simp:transform_intent_def split:list.split_asm)
+         apply ((clarsimp simp:transform_intent_def | wp)+)
+    apply (case_labels "invocation_type label"; simp)
+                              apply (intro conjI impI | wp)+
+         apply (clarsimp | rule conjI)+
+         apply (clarsimp simp: transform_intent_def transform_intent_page_table_map_def
+                        split: list.split_asm)
+        apply (intro conjI impI | wp)+
+   apply ((clarsimp simp: transform_intent_def split: list.split_asm | wp)+)[1]
+   apply (case_labels "invocation_type label"; simp add: isPDFlushLabel_def)
+                             apply (wp)+
+  apply clarsimp
   done
 
 lemma decode_invocation_error_branch:
-  "\<lbrakk>transform_intent (invocation_type label) args = None; \<not> ep_related_cap (transform_cap cap)\<rbrakk>
+  "\<lbrakk>transform_intent (invocation_type label) args = None; \<not> ep_related_cap (transform_cap cap) \<rbrakk>
     \<Longrightarrow> \<lbrace>(=) s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>,\<lbrace>\<lambda>x. (=) s\<rbrace>"
   apply (case_tac cap)
-    apply (simp_all add:ep_related_cap_def transform_cap_def split:if_split_asm)
-    apply (clarsimp simp:Decode_A.decode_invocation_def,wp)
-      apply (rule transform_intent_untyped_cap_None,fastforce+)
-      apply (clarsimp simp:Decode_A.decode_invocation_def,wp)
-      apply (rule transform_intent_cnode_cap_None,fastforce+)
-      apply (rule transform_intent_thread_cap_None,fastforce+)
+             apply (simp_all add:ep_related_cap_def transform_cap_def split:if_split_asm)
+           apply (clarsimp simp:Decode_A.decode_invocation_def,wp)
+          apply (rule transform_intent_untyped_cap_None,fastforce+)
+         apply (clarsimp simp:Decode_A.decode_invocation_def,wp)
+        apply (rule transform_intent_cnode_cap_None,fastforce+)
+       apply (rule transform_intent_thread_cap_None,fastforce+)
       apply (rule transform_intent_domain_cap_None,fastforce+)
      apply (rule transform_intent_irq_control_None,fastforce+)
     apply (rule transform_intent_irq_handler_None,fastforce+)
    apply (rule transform_intent_zombie_cap_None,fastforce+)
   apply (rule transform_intent_arch_cap_None,fastforce+)
+  apply (clarsimp split: arch_cap.splits)
+  done
+
+lemma decode_invocation_sgi_signal:
+  "\<lbrakk>is_ArchObjectCap cap; is_SGISignalCap (the_arch_cap cap)\<rbrakk>
+  \<Longrightarrow> dcorres (dc \<oplus> cdl_invocation_relation) \<top> \<top>
+    (Decode_D.decode_invocation (transform_cap cap) (transform_cslot_ptr ref) caps intent)
+    (Decode_A.decode_invocation label args index ref cap caps')"
+  apply (clarsimp simp: Decode_A.decode_invocation_def is_cap_simps Decode_D.decode_invocation_def
+                        arch_decode_invocation_def decode_sgi_signal_invocation_def)
+  apply (rule dcorres_returnOk)
+  apply (clarsimp simp: cdl_invocation_relation_def arch_invocation_relation_def
+                        translate_arch_invocation_def transform_sgi_inv_def)
   done
 
 lemma decode_invocation_ep_related_branch:
@@ -524,15 +541,20 @@ lemma decode_invocation_ep_related_branch:
     (Decode_D.decode_invocation (transform_cap cap) (transform_cslot_ptr ref) caps intent)
     (Decode_A.decode_invocation label args index ref cap caps')"
   apply (clarsimp simp:ep_related_cap_def transform_cap_def split:cdl_cap.split_asm cap.split_asm arch_cap.split_asm)
-      apply (clarsimp simp:Decode_D.decode_invocation_def Decode_A.decode_invocation_def | rule conjI)+
-      apply (rule corres_guard_imp[OF dcorres_returnOk],simp add:cdl_invocation_relation_def translate_invocation_def)
-       apply simp+
-     apply (clarsimp simp:Decode_D.decode_invocation_def Decode_A.decode_invocation_def split:if_split_asm | rule conjI)+
+        apply (clarsimp simp:Decode_D.decode_invocation_def Decode_A.decode_invocation_def | rule conjI)+
+        apply (rule corres_guard_imp[OF dcorres_returnOk],simp add:cdl_invocation_relation_def translate_invocation_def)
+         apply simp+
+       apply (clarsimp simp:Decode_D.decode_invocation_def Decode_A.decode_invocation_def split:if_split_asm | rule conjI)+
+      apply (rule corres_guard_imp[OF dcorres_returnOk])
+        apply (simp add:cdl_invocation_relation_def translate_invocation_def)+
+     apply (clarsimp simp:Decode_D.decode_invocation_def Decode_A.decode_invocation_def is_master_reply_cap_def | rule conjI)+
     apply (rule corres_guard_imp[OF dcorres_returnOk])
       apply (simp add:cdl_invocation_relation_def translate_invocation_def)+
-   apply (clarsimp simp:Decode_D.decode_invocation_def Decode_A.decode_invocation_def is_master_reply_cap_def | rule conjI)+
-  apply (rule corres_guard_imp[OF dcorres_returnOk])
-    apply (simp add:cdl_invocation_relation_def translate_invocation_def)+
+   apply (simp split: if_split_asm)
+  apply (clarsimp simp: Decode_D.decode_invocation_def Decode_A.decode_invocation_def
+                        arch_decode_invocation_def decode_sgi_signal_invocation_def returnOk_def
+                        cdl_invocation_relation_def arch_invocation_relation_def
+                        translate_arch_invocation_def transform_sgi_inv_def)
   done
 
 (*
@@ -735,27 +757,12 @@ lemma perform_invocation_corres:
 
   subgoal for irq_control_invocation (* invoke_irq_control *)
     apply (simp add:liftE_def bindE_def)
-    apply (case_tac irq_control_invocation)
-     (* generic *)
-     apply (rule corres_guard_imp)
-       apply (rule corres_split[where r'=dc])
-          apply (rule dcorres_invoke_irq_control)
-         apply (rule_tac F = "\<exists>x. rv' = Inr x" in corres_gen_asm2)
-         apply (rule corres_trivial)
-         apply (clarsimp simp:lift_def returnOk_def)
-        apply (rule hoare_triv[of \<top>], rule hoare_TrueI)+
-       apply ((wp|simp add: liftE_def)+)
-    (* arch *)
-    apply (rename_tac arch_label)
-    apply (case_tac arch_label)
     apply (rule corres_guard_imp)
-      apply (rule corres_split[where r'=dc])
-         apply (rule dcorres_arch_invoke_irq_control[simplified])
-        apply (rule_tac F = "\<exists>x. rv' = Inr x" in corres_gen_asm2)
+      apply (rule corres_split)
+         apply (rule dcorres_invoke_irq_control)
         apply (rule corres_trivial)
-        apply (clarsimp simp:lift_def returnOk_def)
-       apply (rule hoare_triv[of \<top>], rule hoare_TrueI)
-      apply ((wp|simp add: liftE_def)+)
+        apply (clarsimp simp: isRight_def returnOk_def)
+       apply wpsimp+
     done
 
   subgoal (* invoke_irq_handler *)
@@ -1020,7 +1027,9 @@ lemma decode_invocation_corres':
     \<and> (\<forall>e\<in> set excaps. s \<turnstile> fst e) \<and> cte_wp_at (Not \<circ> is_master_reply_cap) slot s \<and> cte_wp_at ((=) cap) slot s
     \<and> (\<forall>e\<in> set excaps. cte_wp_at ((=) (fst e)) (snd e) s)) rv')
      ((\<lambda>(cap, cap_ref, extra_caps).
-          case_option (if ep_related_cap cap then Decode_D.decode_invocation cap cap_ref extra_caps undefined else Monads_D.throw)
+          case_option (if ep_related_cap cap
+                       then Decode_D.decode_invocation cap cap_ref extra_caps undefined
+                       else Monads_D.throw)
           (Decode_D.decode_invocation cap cap_ref extra_caps)
           (cdl_intent_op (transform_full_intent (machine_state s) (cur_thread s) ctcb)))
      rv)
@@ -1032,23 +1041,21 @@ lemma decode_invocation_corres':
      rv')"
   apply (rule dcorres_expand_pfx)
   apply (clarsimp split del:if_split)
-  apply (rule_tac Q' ="\<lambda>r ns. ns = s
-     \<and> r =  get_tcb_mrs (machine_state s) ctcb"
-     in corres_symb_exec_r)
-     apply (clarsimp split:option.split | rule conjI)+
-       apply (rule corres_guard_imp[OF decode_invocation_ep_related_branch])
-          apply clarsimp+
-      defer
+  apply (rule_tac Q' ="\<lambda>r ns. ns = s \<and> r =  get_tcb_mrs (machine_state s) ctcb"
+                  in corres_symb_exec_r)
+     apply (clarsimp split: option.split | rule conjI)+
+       apply (rule corres_guard_imp[OF decode_invocation_ep_related_branch]; clarsimp)
       apply clarsimp
       apply (rule dcorres_expand_pfx)
-      apply (rule corres_guard_imp[OF decode_invocation_corres])
-           apply (solves \<open>clarsimp simp: transform_full_intent_def Let_def get_tcb_message_info_def
-                                         arch_tcb_get_registers_def arch_tcb_context_get_def\<close>)+
-     apply (wp get_tcb_mrs_wp | clarsimp)+
-  apply (rule dcorres_expand_pfx)
-  apply (rule dcorres_free_throw[OF decode_invocation_error_branch])
-   apply (clarsimp simp:transform_full_intent_def Let_def get_tcb_message_info_def
-                        arch_tcb_get_registers_def arch_tcb_context_get_def)+
+      apply (rule dcorres_free_throw[OF decode_invocation_error_branch];
+             solves \<open>clarsimp simp: transform_full_intent_def Let_def get_tcb_message_info_def
+                                          arch_tcb_get_registers_def arch_tcb_context_get_def\<close>)
+     apply clarsimp
+     apply (rule dcorres_expand_pfx)
+     apply (rule corres_guard_imp[OF decode_invocation_corres];
+            clarsimp simp: transform_full_intent_def Let_def get_tcb_message_info_def
+                           arch_tcb_get_registers_def arch_tcb_context_get_def)
+    apply (wp get_tcb_mrs_wp | clarsimp)+
   done
 
 lemma reply_from_kernel_error:
