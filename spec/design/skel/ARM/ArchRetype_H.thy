@@ -10,6 +10,7 @@ theory ArchRetype_H
 imports
   ArchRetypeDecls_H
   ArchVSpaceDecls_H
+  ArchInterruptDecls_H
   Hardware_H
   KI_Decls_H
 begin

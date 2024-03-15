@@ -23,7 +23,8 @@ context Arch begin arch_global_naming (H)
   pptrUserTop kernelELFBase kernelELFBaseOffset kernelELFPAddrBase \
   addrFromKPPtr ptTranslationBits vmFaultTypeFSR setVSpaceRoot \
   setIRQTrigger \
-  config_ARM_PA_SIZE_BITS_40 fpuThreadDeleteOp isFpuEnable \
+  config_ARM_PA_SIZE_BITS_40 numSGIs gicNumTargets \
+  fpuThreadDeleteOp isFpuEnable \
   hcrVCPU hcrNative sctlrDefault vgicHCREN gicVCPUMaxNumLR sctlrEL1VM \
   get_gic_vcpu_ctrl_hcr set_gic_vcpu_ctrl_hcr get_gic_vcpu_ctrl_vmcr \
   set_gic_vcpu_ctrl_vmcr get_gic_vcpu_ctrl_apr set_gic_vcpu_ctrl_apr \
@@ -39,7 +40,8 @@ context Arch begin arch_global_naming (H)
   addressTranslateS1 \
   readVCPUHardwareReg writeVCPUHardwareReg vcpuBits \
   config_DISABLE_WFI_WFE_TRAPS \
-  config_ARM_GIC_V3
+  config_ARM_GIC_V3 \
+  sendSGI
 
 end
 
