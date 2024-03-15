@@ -136,7 +136,7 @@ lemma mdb_chunked2D:
      sameRegionAs cap cap''; p \<noteq> p'' \<rbrakk>
      \<Longrightarrow> \<exists>cap' nd'. m p' = Some (CTE cap' nd') \<and> sameRegionAs cap cap'"
   apply (subgoal_tac "\<exists>cap' nd'. m p' = Some (CTE cap' nd')")
-   apply (clarsimp simp add: mdb_chunked_def)
+   apply (clarsimp simp add: mdb_chunked_def mdb_chunked_arch_assms_def) (* FIXME arch-split; take AARCH64 version *)
    apply (drule spec[where x=p])
    apply (drule spec[where x=p''])
    apply clarsimp
@@ -486,7 +486,7 @@ lemma valid_badges_n:
 proof -
   from valid_badges
   show ?thesis
-    apply (simp add: valid_badges_def2)
+    apply (simp add: valid_badges_def2 valid_arch_badges_def) (* FIXME arch-split; take AARCH64 version *)
     apply clarsimp
     apply (drule_tac p=p in n_cap)
     apply (frule n_cap)
@@ -701,7 +701,7 @@ next
          prefer 2
          apply (erule trancl_trans)
          apply fastforce
-        apply simp
+        apply (simp add: mdb_chunked_arch_assms_def)
         apply (erule impE)
          apply clarsimp
         apply clarsimp
@@ -1920,6 +1920,10 @@ lemma final_matters_sameRegion_sameObject2:
   apply (erule sameObjectAs_sameRegionAs)
   done
 
+lemma final_matters_mdb_chunked_arch_assms:
+  "final_matters' cap \<Longrightarrow> mdb_chunked_arch_assms cap"
+  by (clarsimp simp: mdb_chunked_arch_assms_def)
+
 lemma notFinal_prev_or_next:
   "\<lbrakk> \<not> isFinal cap x (cteCaps_of s); mdb_chunked (ctes_of s);
       valid_dlist (ctes_of s); no_0 (ctes_of s);
@@ -1930,6 +1934,7 @@ lemma notFinal_prev_or_next:
               \<and> sameObjectAs cap cap')"
   apply (erule not_FinalE)
    apply (clarsimp simp: isCap_simps final_matters'_def)
+  apply (frule final_matters_mdb_chunked_arch_assms)
   apply (clarsimp simp: mdb_chunked_def cte_wp_at_ctes_of cteCaps_of_def
                    del: disjCI)
   apply (erule_tac x=x in allE, erule_tac x=p in allE)

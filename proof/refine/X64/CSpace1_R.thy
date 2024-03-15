@@ -45,6 +45,9 @@ end
 
 context begin interpretation Arch . (*FIXME: arch-split*)
 
+(* unused on this architecture *)
+declare isArchMDBParentOf_def[simp]
+
 lemma isMDBParentOf_CTE1:
   "isMDBParentOf (CTE cap node) cte =
    (\<exists>cap' node'. cte = CTE cap' node' \<and> sameRegionAs cap cap'
@@ -3375,16 +3378,16 @@ lemma valid_badges_def2:
    m p = Some (CTE cap node) \<longrightarrow>
    m p' = Some (CTE cap' node') \<longrightarrow>
    m \<turnstile> p \<leadsto> p' \<longrightarrow>
-   capMasterCap cap = capMasterCap cap' \<longrightarrow>
-   capBadge cap \<noteq> None \<longrightarrow>
-   capBadge cap \<noteq> capBadge cap' \<longrightarrow>
-   capBadge cap' \<noteq> Some 0 \<longrightarrow>
-   mdbFirstBadged node')"
+   (capMasterCap cap = capMasterCap cap' \<longrightarrow>
+    capBadge cap \<noteq> None \<longrightarrow>
+    capBadge cap \<noteq> capBadge cap' \<longrightarrow>
+    capBadge cap' \<noteq> Some 0 \<longrightarrow>
+    mdbFirstBadged node') \<and>
+   valid_arch_badges cap cap' node')"
   apply (simp add: valid_badges_def)
   apply (intro arg_cong[where f=All] ext imp_cong [OF refl])
-  apply (case_tac cap, simp_all add: isCap_simps cong: weak_imp_cong)
-   apply (fastforce simp: sameRegionAs_def3 isCap_simps)+
-  done
+  apply (case_tac cap; clarsimp simp: isCap_simps)
+      by (fastforce simp: sameRegionAs_def3 isCap_simps)+
 
 lemma sameRegionAs_update_untyped:
   "RetypeDecls_H.sameRegionAs (capability.UntypedCap d a b c) =
@@ -4339,6 +4342,7 @@ lemma mdb_chunked_preserve_oneway:
   assumes node:"\<And>p. mdb_next m p = mdb_next m' p"
   shows
   "mdb_chunked m \<Longrightarrow> mdb_chunked m'"
+  (* FIXME: arch-split, use AARCH64 version of this lemma for arch splitting *)
   apply (clarsimp simp:mdb_chunked_def)
   apply (drule_tac x=p in spec)
   apply (drule_tac x=p' in spec)
@@ -4353,24 +4357,24 @@ lemma mdb_chunked_preserve_oneway:
   apply (erule impE)
    apply (drule fun_cong)+
    apply fastforce
-   apply (subgoal_tac "m \<turnstile> p \<leadsto>\<^sup>+ p' = m' \<turnstile> p \<leadsto>\<^sup>+ p'")
-     apply (subgoal_tac "m \<turnstile> p' \<leadsto>\<^sup>+ p = m' \<turnstile> p' \<leadsto>\<^sup>+ p")
-       apply (frule_tac m = m and
-              x = p and c = cap and p = p and p'=p' in is_chunk_preserve[rotated -1])
-              apply (simp add:dom)
-              apply (rule sameRegion)
-          apply simp+
-        apply (rule node)
-      apply assumption
-     apply (frule_tac x = p' and c = cap' and p = p' and p'=p in is_chunk_preserve[rotated -1])
-              apply (rule dom)
-              apply (rule sameRegion)
-            apply assumption+
-         apply (rule node)
-      apply assumption
-    apply clarsimp
-    apply (rule connect_eqv_singleE)
-  apply (clarsimp simp:mdb_next_rel_def node)
+  apply (subgoal_tac "m \<turnstile> p \<leadsto>\<^sup>+ p' = m' \<turnstile> p \<leadsto>\<^sup>+ p'")
+   apply (subgoal_tac "m \<turnstile> p' \<leadsto>\<^sup>+ p = m' \<turnstile> p' \<leadsto>\<^sup>+ p")
+    apply (frule_tac m = m and
+           x = p and c = cap and p = p and p'=p' in is_chunk_preserve[rotated -1])
+        apply (simp add:dom)
+       apply (rule sameRegion)
+        apply simp+
+      apply (rule node)
+     apply assumption
+    apply (frule_tac x = p' and c = cap' and p = p' and p'=p in is_chunk_preserve[rotated -1])
+        apply (rule dom)
+       apply (rule sameRegion)
+        apply assumption+
+      apply (rule node)
+     apply assumption
+    apply (clarsimp simp: mdb_chunked_arch_assms_def)
+   apply (rule connect_eqv_singleE)
+   apply (clarsimp simp:mdb_next_rel_def node)
   apply (rule connect_eqv_singleE)
   apply (clarsimp simp:mdb_next_rel_def node)
   done
@@ -4407,7 +4411,8 @@ lemma valid_badges_preserve_oneway:
   \<and> (\<lambda>x. sameRegionAs x (cteCap cte)) = (\<lambda>x. sameRegionAs x (cteCap cte'))"
   assumes mdb_next:"\<And>p. mdb_next m p = mdb_next m' p"
   shows "valid_badges m \<Longrightarrow> valid_badges m'"
-  apply (clarsimp simp:valid_badges_def)
+  (* FIXME: arch-split, use AARCH64 version of this lemma for arch splitting *)
+  apply (clarsimp simp:valid_badges_def valid_arch_badges_def)
   apply (drule_tac x = p in spec)
   apply (drule_tac x = p' in spec)
   apply (frule iffD2[OF dom,OF domI],rotate_tac)

@@ -1246,6 +1246,10 @@ lemma derived_region2 [simp]:
   sameRegionAs cap c' = sameRegionAs cap src_cap"
   by (clarsimp simp add: badge_derived'_def sameRegionAs_def2)
 
+lemma derived_mdb_chunked_arch_assms[simp]:
+  "badge_derived' c' src_cap \<Longrightarrow> mdb_chunked_arch_assms c' = mdb_chunked_arch_assms src_cap"
+  by (clarsimp simp: mdb_chunked_arch_assms_def)
+
 lemma chunked_n:
   assumes b: "badge_derived' c' src_cap"
   shows "mdb_chunked n"
@@ -2144,6 +2148,22 @@ lemma cteInsert_valid_dlist:
   apply clarsimp+
   done
 
+lemma valid_arch_badges_mdbPrev_update[simp]:
+  "valid_arch_badges cap cap' (mdbPrev_update f node) = valid_arch_badges cap cap' node"
+  by (simp add: valid_arch_badges_def)
+
+lemma valid_arch_badges_master_eq:
+  "capMasterCap src_cap = capMasterCap cap \<Longrightarrow>
+   valid_arch_badges src_cap cap' node = valid_arch_badges cap cap' node"
+  by (auto simp: valid_arch_badges_def isCap_simps)
+
+lemmas valid_arch_badges_master = valid_arch_badges_master_eq[THEN iffD1]
+
+lemma valid_arch_badges_firstBadged:
+  "\<lbrakk> valid_arch_badges cap cap' node; mdbFirstBadged node = mdbFirstBadged node' \<rbrakk> \<Longrightarrow>
+   valid_arch_badges cap cap' node'"
+  by (simp add: valid_arch_badges_def)
+
 lemma cteInsert_mdb' [wp]:
   "\<lbrace>valid_mdb' and pspace_aligned' and pspace_distinct' and (\<lambda>s. src \<noteq> dest) and K (capAligned cap) and valid_objs' and
    (\<lambda>s. cte_wp_at' (is_derived' (ctes_of s) src cap \<circ> cteCap) src s) \<rbrace>
@@ -2321,7 +2341,7 @@ proof -
 
   show "valid_badges ?C"
   using srcdest badge cofs badges cofd
-  unfolding valid_badges_def
+  unfolding valid_badges_def valid_arch_badges_def (* FIXME: arch-split, use AARCH64 version *)
   apply (intro impI allI)
   apply (drule mdb_next_disj)
   apply (elim disjE)
@@ -4322,7 +4342,7 @@ lemma arch_update_setCTE_mdb:
    apply blast
   apply (rule conjI)
    apply (cases oldcte)
-   apply (clarsimp simp: valid_badges_def mdb_next_pres simp del: fun_upd_apply)
+   apply (clarsimp simp: valid_badges_def valid_arch_badges_def mdb_next_pres simp del: fun_upd_apply)
    apply (clarsimp simp: is_arch_update'_def)
    apply (clarsimp split: if_split_asm)
      apply (clarsimp simp: isCap_simps)
@@ -4363,7 +4383,7 @@ lemma arch_update_setCTE_mdb:
      apply (erule_tac x=p' in allE)
      apply (clarsimp simp: masterCap.sameRegionAs)
      apply (simp add: masterCap.sameRegionAs is_chunk_def mdb_next_trans_next_pres
-                      mdb_next_rtrans_next_pres)
+                      mdb_next_rtrans_next_pres mdb_chunked_arch_assms_def)
      subgoal by fastforce
     apply (erule_tac x=pa in allE)
     apply (erule_tac x=p in allE)
@@ -5433,7 +5453,7 @@ lemma c_not_ntfn [simp]:
 lemma valid_badges' [simp]:
   "valid_badges n'"
   using simple src dest
-  apply (clarsimp simp: valid_badges_def)
+  apply (clarsimp simp: valid_badges_def valid_arch_badges_def) (* FIXME arch-split; use AARCH64 version *)
   apply (simp add: n_direct_eq')
   apply (frule_tac p=p in n'_badge)
   apply (frule_tac p=p' in n'_badge)
@@ -5676,7 +5696,7 @@ lemma chunked' [simp]:
   apply (clarsimp simp: n'_trancl_eq)
   apply (clarsimp split: if_split_asm)
     prefer 3
-    apply (frule (3) mdb_chunkedD, rule chunked)
+    apply (frule (4) mdb_chunkedD, rule chunked)
     apply clarsimp
     apply (rule conjI, clarsimp)
      apply (clarsimp simp: is_chunk_def n'_trancl_eq n_rtrancl_eq' n_dest' new_dest_def)
@@ -5741,10 +5761,11 @@ lemma chunked' [simp]:
    apply clarsimp
    apply fastforce
   apply (frule_tac m=m and p=p and p'=src in mdb_chunkedD, assumption+)
-     apply (clarsimp simp: descendants_of'_def)
-     apply (drule subtree_parent)
-     apply (clarsimp simp: parentOf_def isMDBParentOf_def split: if_split_asm)
-    apply simp
+      apply (clarsimp simp: descendants_of'_def)
+      apply (drule subtree_parent)
+      apply (clarsimp simp: parentOf_def isMDBParentOf_def split: if_split_asm)
+     apply simp
+    apply (simp add: mdb_chunked_arch_assms_def)
    apply (rule chunked)
   apply clarsimp
   apply (erule disjE)
