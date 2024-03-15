@@ -27,6 +27,7 @@ requalify_consts (aliasing)
   sameObjectAs updateCapData maskCapRights
   createObject capUntypedPtr capUntypedSize
   performInvocation decodeInvocation prepareThreadDelete
+  isIRQControlCapDescendant
 
 context begin global_naming global
 

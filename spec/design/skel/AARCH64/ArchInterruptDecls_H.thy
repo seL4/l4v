@@ -10,7 +10,10 @@ begin
 
 context Arch begin arch_global_naming (H)
 
-#INCLUDE_HASKELL SEL4/Object/Interrupt/AARCH64.hs CONTEXT AARCH64_H decls_only ArchInv= Arch=MachineOps NOT plic_complete_claim
+requalify_types (in Arch)
+  sgisignal_invocation
+
+#INCLUDE_HASKELL SEL4/Object/Interrupt/AARCH64.hs CONTEXT AARCH64_H decls_only ArchInv=Arch Arch=MachineOps NOT plic_complete_claim
 
 end (* context AARCH64 *)
 
