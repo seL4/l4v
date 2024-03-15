@@ -103,7 +103,7 @@ lemma constOnFailure_empty_fail[intro!, wp, simp]:
 
 lemma ArchRetypeDecls_H_deriveCap_empty_fail[intro!, wp, simp]:
   "isPageTableCap y \<or> isPageDirectoryCap y \<or> isPageCap y
-   \<or> isASIDControlCap y \<or> isASIDPoolCap y \<or> isVCPUCap y
+   \<or> isASIDControlCap y \<or> isASIDPoolCap y \<or> isVCPUCap y \<or> isSGISignalCap y
    \<Longrightarrow> empty_fail (Arch.deriveCap x y)"
   apply (simp add: ARM_HYP_H.deriveCap_def)
   by auto
@@ -115,9 +115,7 @@ lemma deriveCap_empty_fail[intro!, wp, simp]:
   "empty_fail (RetypeDecls_H.deriveCap slot y)"
   apply (simp add: Retype_H.deriveCap_def)
   apply (clarsimp simp: empty_fail_bindE)
-  apply (case_tac "capCap y")
-      apply (simp_all add: isPageTableCap_def isPageDirectoryCap_def isVCPUCap_def
-                           isPageCap_def isASIDPoolCap_def isASIDControlCap_def)
+  apply (cases "capCap y"; simp add: isCap_defs)
   done
 
 crunch setExtraBadge, cteInsert

@@ -1,5 +1,4 @@
 (*
- * Copyright 2023, Proofcraft Pty Ltd
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  *
  * SPDX-License-Identifier: GPL-2.0-only
@@ -212,18 +211,10 @@ definition live' :: "kernel_object \<Rightarrow> bool" where
   | KOArch ako          => hyp_live' ko"
 
 fun zobj_refs' :: "capability \<Rightarrow> obj_ref set" where
-  "zobj_refs' NullCap                        = {}"
-| "zobj_refs' DomainCap                      = {}"
-| "zobj_refs' (UntypedCap d r n f)           = {}"
-| "zobj_refs' (EndpointCap r badge x y z t)  = {r}"
-| "zobj_refs' (NotificationCap r badge x y)  = {r}"
-| "zobj_refs' (CNodeCap r b g gsz)           = {}"
-| "zobj_refs' (ThreadCap r)                  = {r}"
-| "zobj_refs' (Zombie r b n)                 = {}"
-| "zobj_refs' (ArchObjectCap ac)             = azobj_refs' ac"
-| "zobj_refs' (IRQControlCap)                = {}"
-| "zobj_refs' (IRQHandlerCap irq)            = {}"
-| "zobj_refs' (ReplyCap tcb m x)             = {}"
+  "zobj_refs' (EndpointCap r _ _ _ _ _)  = {r}"
+| "zobj_refs' (NotificationCap r _ _ _)  = {r}"
+| "zobj_refs' (ThreadCap r)              = {r}"
+| "zobj_refs' _                          = {}"
 
 definition ex_nonz_cap_to' :: "obj_ref \<Rightarrow> kernel_state \<Rightarrow> bool" where
   "ex_nonz_cap_to' ref \<equiv> \<lambda>s. \<exists>cref. cte_wp_at' (\<lambda>c. ref \<in> zobj_refs' (cteCap c)) cref s"
@@ -398,13 +389,20 @@ where
   \<forall>x \<in> dom (ksPSpace s). is_aligned x (objBitsKO (the (ksPSpace s x)))"
 
 definition
+  pspace_canonical' :: "kernel_state \<Rightarrow> bool"
+where
+ "pspace_canonical' s \<equiv> \<forall>p \<in> dom (ksPSpace s). canonical_address p"
+
+definition
+  pspace_in_kernel_mappings' :: "kernel_state \<Rightarrow> bool"
+where
+ "pspace_in_kernel_mappings' s \<equiv> \<forall>p \<in> dom (ksPSpace s). p \<in> kernel_mappings"
+
+definition
   pspace_distinct' :: "kernel_state \<Rightarrow> bool"
 where
   "pspace_distinct' s \<equiv>
    \<forall>x \<in> dom (ksPSpace s). ps_clear x (objBitsKO (the (ksPSpace s x))) s"
-
-definition pspace_canonical' :: "kernel_state \<Rightarrow> bool" where
-  "pspace_canonical' s \<equiv> \<forall>p \<in> dom (ksPSpace s). canonical_address p"
 
 definition
   valid_objs' :: "kernel_state \<Rightarrow> bool"
@@ -853,7 +851,8 @@ definition valid_irq_handlers' :: "kernel_state \<Rightarrow> bool" where
                                  cap = IRQHandlerCap irq \<longrightarrow> irq_issued' irq s"
 
 definition
-  "irqs_masked' \<equiv> \<lambda>s. \<forall>irq > maxIRQ. intStateIRQTable (ksInterruptState s) irq = IRQInactive"
+  "irqs_masked' \<equiv> \<lambda>s. intStateIRQTable (ksInterruptState s) irqInvalid = IRQInactive \<and>
+                      (\<forall>irq > maxIRQ. intStateIRQTable (ksInterruptState s) irq = IRQInactive)"
 
 definition
   "valid_irq_masks' table masked \<equiv> \<forall>irq. table irq = IRQInactive \<longrightarrow> masked irq"
@@ -996,7 +995,7 @@ abbreviation(input)
            \<and> valid_dom_schedule' s \<and> untyped_ranges_zero' s"
 
 lemma all_invs_but_sym_refs_not_ct_inQ_check':
-  "(all_invs_but_sym_refs_ct_not_inQ' and sym_refs \<circ> state_refs_of' and sym_refs \<circ> state_hyp_refs_of' and ct_not_inQ) = invs'"
+  "(all_invs_but_sym_refs_ct_not_inQ' and sym_refs \<circ> state_refs_of' and ct_not_inQ) = invs'"
   by (simp add: pred_conj_def conj_commute conj_left_commute invs'_def valid_state'_def)
 
 lemma all_invs_but_not_ct_inQ_check':
@@ -1345,36 +1344,9 @@ lemma sym_refs_bound_tcb_atD':
   apply auto
   done
 
-lemma state_hyp_refs_of'_elemD:
-  "\<lbrakk> ref \<in> state_hyp_refs_of' s x \<rbrakk> \<Longrightarrow> ko_wp_at' (\<lambda>obj. ref \<in> hyp_refs_of' obj) x s"
-  by (clarsimp simp add: state_hyp_refs_of'_def ko_wp_at'_def
-                  split: option.splits if_split_asm)
-
-lemma obj_at_state_hyp_refs_ofD':
-  "obj_at' P p s \<Longrightarrow> \<exists>ko. P ko \<and> state_hyp_refs_of' s p = hyp_refs_of' (injectKO ko)"
-  apply (clarsimp simp: obj_at'_real_def project_inject ko_wp_at'_def conj_commute)
-  apply (rule exI, erule conjI)
-  apply (clarsimp simp: state_hyp_refs_of'_def)
-  done
-
-lemma ko_at_state_hyp_refs_ofD':
-  "ko_at' ko p s \<Longrightarrow> state_hyp_refs_of' s p = hyp_refs_of' (injectKO ko)"
-  by (clarsimp dest!: obj_at_state_hyp_refs_ofD')
-
-lemma hyp_sym_refs_obj_atD':
-  "\<lbrakk> obj_at' P p s; sym_refs (state_hyp_refs_of' s) \<rbrakk> \<Longrightarrow>
-     \<exists>ko. P ko \<and> state_hyp_refs_of' s p = hyp_refs_of' (injectKO ko) \<and>
-        (\<forall>(x, tp)\<in>hyp_refs_of' (injectKO ko). ko_wp_at' (\<lambda>ko. (p, symreftype tp) \<in> hyp_refs_of' ko) x s)"
-  apply (drule obj_at_state_hyp_refs_ofD')
-  apply (erule exEI, clarsimp)
-  apply (drule sym, simp)
-  apply (drule(1) sym_refsD)
-  apply (erule state_hyp_refs_of'_elemD)
-  done
-
 lemma refs_of_live':
   "refs_of' ko \<noteq> {} \<Longrightarrow> live' ko"
-  apply (cases ko, simp_all add: live'_def)
+  apply (cases ko, simp_all)
     apply clarsimp
    apply (rename_tac notification)
    apply (case_tac "ntfnObj notification"; simp)
@@ -1446,8 +1418,8 @@ lemmas valid_irq_states'_def = valid_irq_masks'_def
 
 lemma valid_pspaceE' [elim]:
   "\<lbrakk>valid_pspace' s;
-    \<lbrakk> valid_objs' s; pspace_aligned' s; pspace_distinct' s; pspace_canonical' s; no_0_obj' s;
-      valid_mdb' s \<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
+    \<lbrakk> valid_objs' s; pspace_aligned' s; pspace_distinct' s; no_0_obj' s;
+      valid_mdb' s; pspace_canonical' s; pspace_in_kernel_mappings' s\<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
   unfolding valid_pspace'_def by simp
 
 lemma idle'_no_refs:
@@ -1605,7 +1577,7 @@ lemma state_hyp_refs_of'_pspaceI:
 
 lemma (in Invariants_H_pspaceI) valid_pspace':
   "valid_pspace' s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_pspace' s'"
-  by  (auto simp add: valid_pspace'_def valid_objs'_def pspace_aligned'_def
+  by  (auto simp add: valid_pspace'_def valid_objs'_def pspace_aligned'_def pspace_canonical'_def
                      pspace_distinct'_def ps_clear_def no_0_obj'_def ko_wp_at'_def
                      typ_at'_def pspace_canonical'_def
            intro: valid_obj'_pspaceI valid_mdb'_pspaceI pspace_in_kernel_mappings'_pspaceI)
@@ -2279,13 +2251,17 @@ lemma pspace_aligned_update [iff]:
   "pspace_aligned' (f s) = pspace_aligned' s"
   by (simp add: pspace pspace_aligned'_def)
 
+lemma pspace_canonical_update [iff]:
+  "pspace_canonical' (f s) = pspace_canonical' s"
+  by (simp add: pspace pspace_canonical'_def)
+
+lemma pspace_in_kernel_mappings_update [iff]:
+  "pspace_in_kernel_mappings' (f s) = pspace_in_kernel_mappings' s"
+  by (simp add: pspace pspace_in_kernel_mappings'_def)
+
 lemma pspace_distinct_update [iff]:
   "pspace_distinct' (f s) = pspace_distinct' s"
   by (simp add: pspace pspace_distinct'_def ps_clear_def)
-
-lemma pspace_canonical_update [iff]:
-  "pspace_canonical' (f s) = pspace_canonical' s"
-  by (simp add: pspace pspace_canonical'_def ps_clear_def)
 
 lemma pred_tcb_at_update [iff]:
   "pred_tcb_at' proj P p (f s) = pred_tcb_at' proj P p s"
@@ -2771,10 +2747,6 @@ lemma invs_sym' [elim!]:
   "invs' s \<Longrightarrow> sym_refs (state_refs_of' s)"
   by (simp add: invs'_def valid_state'_def)
 
-lemma invs_sym_hyp' [elim!]:
-  "invs' s \<Longrightarrow> sym_refs (state_hyp_refs_of' s)"
-  by (simp add: invs'_def valid_state'_def)
-
 lemma invs_sch_act_wf' [elim!]:
   "invs' s \<Longrightarrow> sch_act_wf (ksSchedulerAction s) s"
   by (simp add: invs'_def valid_state'_def)
@@ -2798,14 +2770,6 @@ lemma invs_valid_idle'[elim!]:
 lemma invs_valid_global'[elim!]:
   "invs' s \<Longrightarrow> valid_global_refs' s"
   by (fastforce simp: invs'_def valid_state'_def)
-
-lemma invs_pspace_canonical'[elim!]:
-  "invs' s \<Longrightarrow> pspace_canonical' s"
-  by (fastforce dest!: invs_valid_pspace' simp: valid_pspace'_def)
-
-lemma valid_pspace_canonical'[elim!]:
-  "valid_pspace' s \<Longrightarrow> pspace_canonical' s"
-  by (rule valid_pspaceE')
 
 lemma invs'_invs_no_cicd:
   "invs' s \<Longrightarrow> all_invs_but_ct_idle_or_in_cur_domain' s"
