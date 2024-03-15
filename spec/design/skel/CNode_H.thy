@@ -10,12 +10,18 @@ theory CNode_H
 imports
   FaultMonad_H
   ThreadDecls_H
+  ArchRetypeDecls_H
   RetypeDecls_H
   TCBDecls_H
   CSpaceDecls_H
   EndpointDecls_H
   PSpaceFuns_H
 begin
+
+context begin interpretation Arch .
+requalify_consts
+  isArchMDBParentOf
+end
 
 #INCLUDE_HASKELL_PREPARSE SEL4/Object/Structures.lhs
 

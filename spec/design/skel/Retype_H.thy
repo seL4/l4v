@@ -21,7 +21,7 @@ requalify_consts
   sameObjectAs updateCapData maskCapRights
   createObject capUntypedPtr capUntypedSize
   performInvocation decodeInvocation prepareThreadDelete
-  cteRightsBits cteGuardBits
+  cteRightsBits cteGuardBits isIRQControlCapDescendant
 
 context begin global_naming global
 
