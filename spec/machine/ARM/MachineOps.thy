@@ -328,6 +328,9 @@ definition
 where
   "ackInterrupt irq \<equiv> machine_op_lift (ackInterrupt_impl irq)"
 
+consts' ipiSendTarget_impl :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_rest_monad"
+definition ipiSendTarget :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit machine_monad" where
+  "ipiSendTarget sgi_irq targets \<equiv> machine_op_lift $ ipiSendTarget_impl sgi_irq targets"
 
 \<comment> \<open>Interrupt controller operations\<close>
 
