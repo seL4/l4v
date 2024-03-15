@@ -38,6 +38,12 @@ type IRQ = Platform.IRQ
 
 toPAddr = Platform.PAddr
 
+{- Config parameters -}
+
+-- The size of the physical address space in hyp mode can be configured on some platforms.
+config_ARM_PA_SIZE_BITS_40 :: Bool
+config_ARM_PA_SIZE_BITS_40 = error "generated from CMake config"
+
 {- Virtual Memory -}
 
 -- these correspond to 4K, Mega and Giga pages in C
@@ -465,6 +471,24 @@ sctlrEL1VM = (0x34d58820 :: Word) -- SCTLR_EL1_VM
 sctlrDefault  = (0x34d59824 :: Word) -- SCTLR_DEFAULT
 vgicHCREN = (0x1 :: Word32) -- VGIC_HCR_EN
 gicVCPUMaxNumLR = (64 :: Int)
+
+
+{- Software-Generated Interrupts (SGI) -}
+
+numSGIs :: Int
+numSGIs = error "defined in machine/AARCH64/Platform.thy"
+
+-- SGI targets
+gicSGITargetMaskBits :: Int
+gicSGITargetMaskBits = error "defined in machine/AARCH64/Platform.thy"
+
+-- the C bitfield definition reserves 16 bit each in the cap; only 8 bits are used for GICv2
+type SGIIRQ = Word16
+type SGITargetMask = Word16
+
+-- the machine op uses word_t (and irq_t which is also word_t in C)
+ipiSendTarget :: Word -> Word -> MachineMonad ()
+ipiSendTarget irq targets = error "Unimplemented - machine op"
 
 
 {- Config parameters -}
