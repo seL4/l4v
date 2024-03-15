@@ -57,8 +57,7 @@ lemma invoke_irq_control_bcorres[wp]: "bcorres (invoke_irq_control a) (invoke_ir
   apply (cases a)
   apply wpsimp
   apply (rename_tac acap)
-  apply (case_tac acap)
-  apply wpsimp
+  apply (case_tac acap; wpsimp)
   done
 
 lemma invoke_irq_handler_bcorres[wp]: "bcorres (invoke_irq_handler a) (invoke_irq_handler a)"

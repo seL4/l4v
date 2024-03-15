@@ -1076,6 +1076,10 @@ lemma perform_page_directory_valid_pdpt[wp]:
    apply (wp | wpc | simp)+
   done
 
+lemma perform_sgi_invocation_valid_pdpt[wp]:
+  "perform_sgi_invocation iv \<lbrace>valid_pdpt_objs\<rbrace>"
+  by (wpsimp simp: perform_sgi_invocation_def)
+
 lemma perform_invocation_valid_pdpt[wp]:
   "\<lbrace>invs and ct_active and valid_invocation i and valid_pdpt_objs
            and invocation_duplicates_valid i\<rbrace>
@@ -1426,6 +1430,12 @@ lemma create_mapping_entries_safe[wp]:
   apply simp
   done
 
+lemma decode_sgi_signal_invocation_valid_pdpt[wp]:
+  "\<lbrace>\<top>\<rbrace>
+   decode_sgi_signal_invocation (SGISignalCap irq target)
+   \<lbrace>invocation_duplicates_valid \<circ> InvokeArchObject\<rbrace>, -"
+  by (wpsimp simp: decode_sgi_signal_invocation_def invocation_duplicates_valid_def)
+
 lemma arch_decode_invocation_valid_pdpt[wp]:
   "\<lbrace>invs and valid_cap (cap.ArchObjectCap cap) and valid_pdpt_objs\<rbrace>
    arch_decode_invocation label args cap_index slot cap excaps
@@ -1454,7 +1464,8 @@ proof -
                    cong: if_cong)
     \<comment> \<open>Handle the two interesting cases now\<close>
     apply (clarsimp; erule disjE; cases cap;
-           simp add: isPDFlushLabel_def isPageFlushLabel_def throwError_R')
+           simp add: isPDFlushLabel_def isPageFlushLabel_def throwError_R';
+           (solves wp)?)
      \<comment> \<open>PageTableMap\<close>
      apply (wpsimp simp: Let_def get_master_pde_def invocation_duplicates_valid_def
                          pti_duplicates_valid_def mask_lower_twice pd_bits_def bitwise pageBits_def
@@ -1469,7 +1480,7 @@ proof -
     apply (fastforce simp: invs_psp_aligned page_directory_at_aligned_pd_bits
                            word_not_le sz valid_cap_def valid_arch_cap_def lookup_pd_slot_eq
                     split: if_splits)
-  done
+    done
 qed
 
 lemma decode_invocation_valid_pdpt[wp]:

@@ -72,8 +72,9 @@ where
    | InvokeASIDPool ap \<Rightarrow>
        valid_apinv ap
    | InvokeVCPU vi \<Rightarrow>
-       valid_vcpu_invocation vi"
-
+       valid_vcpu_invocation vi
+   | InvokeSGISignal iv \<Rightarrow>
+       \<top>"
 
 lemma check_vp_wpR [wp]:
   "\<lbrace>\<lambda>s. vmsz_aligned w sz \<longrightarrow> P () s\<rbrace>
@@ -245,6 +246,8 @@ lemma perform_asid_control_invocation_tcb_at:
   apply simp
   done
 
+crunch perform_sgi_invocation
+  for tcb_at[wp]: "\<lambda>s. P (tcb_at t s)"
 
 lemma ucast_asid_high_btis_of_le [simp]:
   "ucast (asid_high_bits_of w) \<le> (2 ^ asid_high_bits - 1 :: word32)"
@@ -262,8 +265,9 @@ lemma invoke_arch_tcb:
   \<lbrace>\<lambda>rv. tcb_at tptr\<rbrace>"
   apply (simp add: arch_perform_invocation_def)
   apply (cases ai, simp_all)
-      apply (wp, clarsimp simp: st_tcb_at_tcb_at)+
-    defer
+        apply (wp, clarsimp simp: st_tcb_at_tcb_at)+
+     defer
+     apply (wp, clarsimp simp: st_tcb_at_tcb_at)
     apply (wp, clarsimp simp: st_tcb_at_tcb_at)
    defer
    apply (wp perform_asid_control_invocation_tcb_at)
@@ -729,7 +733,6 @@ lemma set_cap_idx_up_aligned_area:
 primrec(nonexhaustive)  get_untyped_cap_idx :: "cap \<Rightarrow> nat"
 where "get_untyped_cap_idx (UntypedCap dev ref sz idx) = idx"
 
-
 lemma aci_invs':
   assumes Q_ignores_arch[simp]: "\<And>f s. Q (arch_state_update f s) = Q s"
   assumes Q_ignore_machine_state[simp]: "\<And>f s. Q (machine_state_update f s) = Q s"
@@ -1190,6 +1193,11 @@ lemma perform_vcpu_invs[wp]:
                       invoke_vcpu_write_register_def)
   done
 
+lemma perform_sgi_invocation_invs[wp]:
+  "perform_sgi_invocation vi \<lbrace>invs\<rbrace>"
+  unfolding perform_sgi_invocation_def
+  by (wpsimp wp: dmo_invs_lift simp: sendSGI_def)
+
 lemma invoke_arch_invs[wp]:
   "\<lbrace>invs and ct_active and valid_arch_inv ai\<rbrace>
    arch_perform_invocation ai
@@ -1247,22 +1255,23 @@ lemma sts_valid_vcpu_invocation_inv:
 lemma sts_valid_arch_inv:
   "\<lbrace>valid_arch_inv ai\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_arch_inv ai\<rbrace>"
   apply (cases ai, simp_all add: valid_arch_inv_def)
-     apply (rename_tac page_table_invocation)
-     apply (case_tac page_table_invocation, simp_all add: valid_pti_def)[1]
-      apply ((wp valid_pde_lift set_thread_state_valid_cap
-                 hoare_vcg_all_lift hoare_vcg_const_imp_lift
-                 hoare_vcg_ex_lift set_thread_state_ko
-                 sts_typ_ats set_thread_state_cte_wp_at
-               | clarsimp simp: is_tcb_def)+)[4]
-   apply (rename_tac asid_control_invocation)
-   apply (case_tac asid_control_invocation)
-   apply (clarsimp simp: valid_aci_def cte_wp_at_caps_of_state)
-   apply (rule hoare_pre, wp hoare_vcg_ex_lift cap_table_at_typ_at)
-   apply clarsimp
-  apply (clarsimp simp: valid_apinv_def split: asid_pool_invocation.splits)
-  apply (rule hoare_pre)
-   apply (wp hoare_vcg_ex_lift set_thread_state_ko)
-  apply (clarsimp simp: is_tcb_def, wp sts_valid_vcpu_invocation_inv)
+        apply (rename_tac page_table_invocation)
+        apply (case_tac page_table_invocation, simp_all add: valid_pti_def)[1]
+         apply ((wp valid_pde_lift set_thread_state_valid_cap
+                    hoare_vcg_all_lift hoare_vcg_const_imp_lift
+                    hoare_vcg_ex_lift set_thread_state_ko
+                    sts_typ_ats set_thread_state_cte_wp_at
+                  | clarsimp simp: is_tcb_def)+)[4]
+     apply (rename_tac asid_control_invocation)
+     apply (case_tac asid_control_invocation)
+     apply (clarsimp simp: valid_aci_def cte_wp_at_caps_of_state)
+     apply (rule hoare_pre, wp hoare_vcg_ex_lift cap_table_at_typ_at)
+     apply clarsimp
+    apply (clarsimp simp: valid_apinv_def split: asid_pool_invocation.splits)
+    apply (rule hoare_pre)
+     apply (wp hoare_vcg_ex_lift set_thread_state_ko)
+    apply (clarsimp simp: is_tcb_def, wp sts_valid_vcpu_invocation_inv)
+  apply wp
   done
 
 crunch ensure_safe_mapping, create_mapping_entries
@@ -1577,6 +1586,13 @@ lemma find_pd_for_asid_pde_unfolded[wp]:
   apply (simp add: pageBits_def pt_bits_def pde_bits_def)
   done
 
+lemma decode_sgi_signal_invocation_wf[wp]:
+  "\<lbrace>invs\<rbrace>
+   decode_sgi_signal_invocation (SGISignalCap irq target)
+   \<lbrace>valid_arch_inv\<rbrace>, -"
+  unfolding decode_sgi_signal_invocation_def
+  by (wpsimp simp: Let_def valid_arch_inv_def)
+
 lemma arch_decode_inv_wf[wp]:
   "\<lbrace>invs and valid_cap (ArchObjectCap arch_cap) and
     cte_wp_at ((=) (ArchObjectCap arch_cap)) slot and
@@ -1585,252 +1601,255 @@ lemma arch_decode_inv_wf[wp]:
    \<lbrace>valid_arch_inv\<rbrace>,-"
   supply if_split[split del]
   apply (cases arch_cap)
-       apply (rename_tac word1 word2)
-       apply (simp add: arch_decode_invocation_def Let_def decode_mmu_invocation_def split_def cong: if_cong)
-       apply (rule hoare_pre)
-        apply ((wp whenE_throwError_wp check_vp_wpR ensure_empty_stronger select_ext_weak_wp|
-                wpc|
-                simp add: valid_arch_inv_def valid_apinv_def)+)[1]
-       apply (simp add: if_apply_def2 valid_apinv_def)
-       apply (intro allI impI ballI)
-       apply (elim conjE exE)
-       apply simp
-       apply (clarsimp simp: dom_def neq_Nil_conv)
-       apply (thin_tac "Ball S P" for S P)+
-       apply (clarsimp simp: valid_cap_def)
-       apply (rule conjI)
-        apply (clarsimp simp: obj_at_def)
-        apply (subgoal_tac "ucast (ucast xa + word2) = xa")
-         apply simp
-        apply (simp add: is_aligned_nth)
-        apply (subst word_plus_and_or_coroll)
+        apply (rename_tac word1 word2)
+        apply (simp add: arch_decode_invocation_def Let_def decode_mmu_invocation_def split_def cong: if_cong)
+        apply (rule hoare_pre)
+         apply ((wp whenE_throwError_wp check_vp_wpR ensure_empty_stronger select_ext_weak_wp|
+                 wpc|
+                 simp add: valid_arch_inv_def valid_apinv_def)+)[1]
+        apply (simp add: if_apply_def2 valid_apinv_def)
+        apply (intro allI impI ballI)
+        apply (elim conjE exE)
+        apply simp
+        apply (clarsimp simp: dom_def neq_Nil_conv)
+        apply (thin_tac "Ball S P" for S P)+
+        apply (clarsimp simp: valid_cap_def)
+        apply (rule conjI)
+         apply (clarsimp simp: obj_at_def)
+         apply (subgoal_tac "ucast (ucast xa + word2) = xa")
+          apply simp
+         apply (simp add: is_aligned_nth)
+         apply (subst word_plus_and_or_coroll)
+          apply (rule word_eqI)
+          apply (clarsimp simp: word_size word_bits_def nth_ucast)
+          apply (drule test_bit_size)
+          apply (simp add: word_size asid_low_bits_def)
          apply (rule word_eqI)
          apply (clarsimp simp: word_size word_bits_def nth_ucast)
-         apply (drule test_bit_size)
-         apply (simp add: word_size asid_low_bits_def)
-        apply (rule word_eqI)
-        apply (clarsimp simp: word_size word_bits_def nth_ucast)
-        apply (auto simp: asid_low_bits_def)[1]
+         apply (auto simp: asid_low_bits_def)[1]
+        apply (rule conjI)
+         apply (clarsimp simp add: cte_wp_at_caps_of_state)
+         apply (rename_tac c c')
+         apply (frule_tac cap="(ArchObjectCap (PageDirectoryCap xb None))" in caps_of_state_valid,
+                assumption)
+         apply (clarsimp simp: is_pd_cap_def cap_rights_update_def acap_rights_update_def)
+        apply (clarsimp simp: word_neq_0_conv)
+        apply (rule conjI)
+         apply (subst field_simps, erule is_aligned_add_less_t2n)
+           apply (simp add: asid_low_bits_def)
+           apply (rule ucast_less[where 'b=10, simplified], simp)
+          apply (simp add: asid_low_bits_def asid_bits_def)
+         apply (simp add: asid_bits_def)
+        apply (drule vs_lookup_atI)
+        apply (subst asid_high_bits_of_add_ucast, assumption)
+        apply assumption
+       apply (simp add: arch_decode_invocation_def Let_def split_def decode_mmu_invocation_def
+                  cong: if_cong)
+       apply (rule hoare_pre)
+        apply ((wp whenE_throwError_wp check_vp_wpR ensure_empty_stronger|
+                wpc|
+                simp add: valid_arch_inv_def valid_aci_def is_aligned_shiftl_self)+)[1]
+               apply (rule_tac Q'=
+                          "\<lambda>rv. real_cte_at rv and
+                                ex_cte_cap_wp_to is_cnode_cap rv and
+                                (\<lambda>s. descendants_of (snd (excaps!0)) (cdt s) = {}) and
+                                cte_wp_at (\<lambda>c. \<exists>idx. c = (cap.UntypedCap False frame pageBits idx)) (snd (excaps!0)) and
+                                (\<lambda>s. arm_asid_table (arch_state s) free = None)"
+                          in hoare_strengthen_postE_R)
+                apply (simp add: lookup_target_slot_def)
+                apply wp
+               apply (clarsimp simp: cte_wp_at_def)
+               apply (rule conjI, clarsimp)
+               apply (rule shiftl_less_t2n)
+                apply (rule order_less_le_trans, rule ucast_less, simp)
+                apply (simp add: asid_bits_def asid_low_bits_def)
+               apply (simp add: asid_bits_def)
+              apply simp
+              apply (wp ensure_no_children_sp select_ext_weak_wp whenE_throwError_wp|wpc | simp)+
+       apply clarsimp
+       apply (rule conjI, fastforce)
+       apply (cases excaps, simp)
+       apply (case_tac list, simp)
+       apply clarsimp
        apply (rule conjI)
+        apply (drule cte_wp_at_norm, clarsimp, drule cte_wp_valid_cap, fastforce)+
+        apply assumption
+       apply (rule conjI)
+        apply clarsimp
+        apply (simp add: ex_cte_cap_wp_to_def)
+        apply (rule_tac x=ac in exI)
+        apply (rule_tac x=ba in exI)
         apply (clarsimp simp add: cte_wp_at_caps_of_state)
-        apply (rename_tac c c')
-        apply (frule_tac cap="(ArchObjectCap (PageDirectoryCap xb None))" in caps_of_state_valid,
-               assumption)
-        apply (clarsimp simp: is_pd_cap_def cap_rights_update_def acap_rights_update_def)
-       apply (clarsimp simp: word_neq_0_conv)
-       apply (rule conjI)
-        apply (subst field_simps, erule is_aligned_add_less_t2n)
-          apply (simp add: asid_low_bits_def)
-          apply (rule ucast_less[where 'b=10, simplified], simp)
-         apply (simp add: asid_low_bits_def asid_bits_def)
-        apply (simp add: asid_bits_def)
-       apply (drule vs_lookup_atI)
-       apply (subst asid_high_bits_of_add_ucast, assumption)
-       apply assumption
+       apply (clarsimp simp add: cte_wp_at_caps_of_state)
+      apply (clarsimp simp: cap_rights_update_def)
       apply (simp add: arch_decode_invocation_def Let_def split_def decode_mmu_invocation_def
                  cong: if_cong)
-      apply (rule hoare_pre)
-       apply ((wp whenE_throwError_wp check_vp_wpR ensure_empty_stronger|
-               wpc|
-               simp add: valid_arch_inv_def valid_aci_def is_aligned_shiftl_self)+)[1]
-              apply (rule_tac Q'=
-                         "\<lambda>rv. real_cte_at rv and
-                               ex_cte_cap_wp_to is_cnode_cap rv and
-                               (\<lambda>s. descendants_of (snd (excaps!0)) (cdt s) = {}) and
-                               cte_wp_at (\<lambda>c. \<exists>idx. c = (cap.UntypedCap False frame pageBits idx)) (snd (excaps!0)) and
-                               (\<lambda>s. arm_asid_table (arch_state s) free = None)"
-                         in hoare_strengthen_postE_R)
-               apply (simp add: lookup_target_slot_def)
-               apply wp
-              apply (clarsimp simp: cte_wp_at_def)
-              apply (rule conjI, clarsimp)
-              apply (rule shiftl_less_t2n)
-               apply (rule order_less_le_trans, rule ucast_less, simp)
-               apply (simp add: asid_bits_def asid_low_bits_def)
-              apply (simp add: asid_bits_def)
-             apply simp
-             apply (wp ensure_no_children_sp select_ext_weak_wp whenE_throwError_wp|wpc | simp)+
+      apply (cases "invocation_type label = ArchInvocationLabel ARMPageMap")
+       apply (rename_tac word rights vmpage_size option)
+       apply simp
+       apply (wpsimp wp: whenE_throwError_wp check_vp_wpR create_mapping_entries_parent_for_refs
+                         find_pd_for_asid_pd_at_asid create_mapping_entries_valid_slots
+                         create_mapping_entries_same_refs_ex hoare_vcg_ex_lift_R hoare_vcg_disj_lift_R
+                         hoare_vcg_const_imp_liftE_R find_pd_for_asid_lookup_pd_wp
+                   simp: valid_arch_inv_def valid_page_inv_def is_pg_cap_def
+                         cte_wp_at_caps_of_state[where P="\<lambda>c. same_refs rv c s" for rv s])
+       apply (clarsimp simp: neq_Nil_conv)
+       apply (frule cte_wp_valid_cap[where p="(a, b)" for a b], clarsimp)
+       apply (frule cte_wp_valid_cap[where p=slot], clarsimp)
+       apply (clarsimp simp: cte_wp_at_caps_of_state mask_cap_def)
+       apply (clarsimp simp: cap_rights_update_def acap_rights_update_def
+                      split: cap.splits arch_cap.splits if_splits)
+       apply (rename_tac page_size mapped_data)
+       apply (intro conjI allI impI;
+              (clarsimp simp: invs_implies valid_cap_simps cap_aligned_def valid_kernel_mappings_def
+                              aligned_sum_less_kernel_base[symmetric] asid_bits_def mask_def
+                              is_arch_update_def cap_master_cap_simps is_arch_cap_def data_at_def
+                              vmsz_aligned_def is_aligned_addrFromPPtr_n vs_cap_ref_def
+                              cte_wp_at_caps_of_state is_cap_simps
+                       split: if_splits vmpage_size.split);
+               fastforce)
+      apply (cases "invocation_type label = ArchInvocationLabel ARMPageUnmap")
+       apply simp
+       apply (rule hoare_pre, wp)
+       apply (clarsimp simp: valid_arch_inv_def valid_page_inv_def)
+       apply (thin_tac "Ball S P" for S P)
+       apply (clarsimp split: option.split)
+       apply (clarsimp simp: valid_cap_def cap_aligned_def)
+       apply (simp add: valid_unmap_def)
+       apply (fastforce simp: vmsz_aligned_def elim: is_aligned_weaken intro!: pbfs_atleast_pageBits)
+      apply (cases "isPageFlushLabel (invocation_type label)")
+       apply simp
+       apply (rule hoare_pre)
+        apply (wp whenE_throwError_wp hoare_weak_lift_imp hoare_drop_imps)
+          apply (simp add: valid_arch_inv_def valid_page_inv_def)
+          apply (wp find_pd_for_asid_pd_at_asid | wpc)+
+       apply (clarsimp simp: valid_cap_def mask_def)
+      apply simp
+      apply (cases "invocation_type label = ArchInvocationLabel ARMPageGetAddress")
+       apply simp
+       apply (rule hoare_pre, wp)
+       apply (clarsimp simp: valid_arch_inv_def valid_page_inv_def)
+      apply (rule hoare_pre, wp)
+      apply (simp)
+     apply (simp add: arch_decode_invocation_def Let_def split_def
+                      is_final_cap_def decode_mmu_invocation_def
+                cong: if_cong)
+     apply (rename_tac word option)
+     apply (rule hoare_pre)
+      apply ((wp whenE_throwError_wp check_vp_wpR get_master_pde_wp hoare_vcg_all_liftE_R
+              | wpc
+              | simp add: valid_arch_inv_def valid_pti_def unlessE_whenE vs_cap_ref_def
+                   split: if_split
+              | rule_tac x="fst p" in hoare_imp_eq_substR
+              | wp (once) hoare_vcg_ex_lift_R)+)[1]
+           apply (rule_tac Q'="\<lambda>a b. ko_at (ArchObj (PageDirectory pd))
+                                     (a + (args ! 0 >> 21 << 3) && ~~ mask pd_bits) b \<longrightarrow>
+                                     pd (ucast (a + (args ! 0 >> 21 << 3) && mask pd_bits >> 3)) =
+                                     InvalidPDE \<longrightarrow> L word option p pd a b" for L in hoare_strengthen_postE_R[rotated])
+            apply (intro impI)
+            apply (erule impE)
+             apply (clarsimp simp: pageBits_def pde_bits_def pt_bits_def)
+            apply (erule impE)
+             apply (clarsimp simp: pageBits_def pde_bits_def pt_bits_def split:pde.splits)
+            apply assumption
+           apply ((wp whenE_throwError_wp hoare_vcg_all_liftE_R
+                      find_pd_for_asid_lookup_slot [unfolded lookup_pd_slot_def Let_def]
+                      find_pd_for_asid_ref_offset_voodoo find_pd_for_asid_shifting_voodoo
+                      find_pd_for_asid_inv
+                   | wpc
+                   | simp add: valid_arch_inv_def valid_pti_def unlessE_whenE empty_pde_atI
+                               vs_cap_ref_def pageBits_def pt_bits_def pde_bits_def
+                   | wp (once) hoare_drop_imps hoare_vcg_ex_lift_R)+)[6]
+     apply (clarsimp simp: is_cap_simps if_apply_def2)
+     apply (rule conjI)
       apply clarsimp
       apply (rule conjI, fastforce)
-      apply (cases excaps, simp)
-      apply (case_tac list, simp)
-      apply clarsimp
+      apply (rule conjI, fastforce)
+      apply (clarsimp simp: neq_Nil_conv)
+      apply (thin_tac "Ball S P" for S P)
+      apply (rule conjI)
+       apply (clarsimp simp: valid_cap_def cap_aligned_def
+                             pte_bits_def pt_bits_def is_aligned_addrFromPPtr_n)
+      apply (rule conjI)
+       apply (clarsimp simp: valid_cap_def cap_aligned_def)
       apply (rule conjI)
        apply (drule cte_wp_at_norm, clarsimp, drule cte_wp_valid_cap, fastforce)+
-       apply assumption
+       apply (clarsimp simp add: cap_rights_update_def acap_rights_update_def)
+       apply (clarsimp simp: valid_cap_def cap_aligned_def
+                             pt_bits_def pageBits_def
+                             linorder_not_le
+                             order_le_less_trans[OF word_and_le2])
       apply (rule conjI)
-       apply clarsimp
-       apply (simp add: ex_cte_cap_wp_to_def)
-       apply (rule_tac x=ac in exI)
-       apply (rule_tac x=ba in exI)
        apply (clarsimp simp add: cte_wp_at_caps_of_state)
-      apply (clarsimp simp add: cte_wp_at_caps_of_state)
-     apply (clarsimp simp: cap_rights_update_def)
-     apply (simp add: arch_decode_invocation_def Let_def split_def decode_mmu_invocation_def
-                cong: if_cong)
-     apply (cases "invocation_type label = ArchInvocationLabel ARMPageMap")
-      apply (rename_tac word rights vmpage_size option)
-      apply simp
-      apply (wpsimp wp: whenE_throwError_wp check_vp_wpR create_mapping_entries_parent_for_refs
-                        find_pd_for_asid_pd_at_asid create_mapping_entries_valid_slots
-                        create_mapping_entries_same_refs_ex hoare_vcg_ex_lift_R hoare_vcg_disj_lift_R
-                        hoare_vcg_const_imp_liftE_R find_pd_for_asid_lookup_pd_wp
-                  simp: valid_arch_inv_def valid_page_inv_def is_pg_cap_def
-                        cte_wp_at_caps_of_state[where P="\<lambda>c. same_refs rv c s" for rv s])
-      apply (clarsimp simp: neq_Nil_conv)
-      apply (frule cte_wp_valid_cap[where p="(a, b)" for a b], clarsimp)
-      apply (frule cte_wp_valid_cap[where p=slot], clarsimp)
-      apply (clarsimp simp: cte_wp_at_caps_of_state mask_cap_def)
-      apply (clarsimp simp: cap_rights_update_def acap_rights_update_def
-                     split: cap.splits arch_cap.splits if_splits)
-      apply (rename_tac page_size mapped_data)
-      apply (intro conjI allI impI;
-             (clarsimp simp: invs_implies valid_cap_simps cap_aligned_def valid_kernel_mappings_def
-                             aligned_sum_less_kernel_base[symmetric] asid_bits_def mask_def
-                             is_arch_update_def cap_master_cap_simps is_arch_cap_def data_at_def
-                             vmsz_aligned_def is_aligned_addrFromPPtr_n vs_cap_ref_def
-                             cte_wp_at_caps_of_state is_cap_simps
-                      split: if_splits vmpage_size.split);
-              fastforce)
-     apply (cases "invocation_type label = ArchInvocationLabel ARMPageUnmap")
-      apply simp
-      apply (rule hoare_pre, wp)
-      apply (clarsimp simp: valid_arch_inv_def valid_page_inv_def)
-      apply (thin_tac "Ball S P" for S P)
-      apply (clarsimp split: option.split)
-      apply (clarsimp simp: valid_cap_def cap_aligned_def)
-      apply (simp add: valid_unmap_def)
-      apply (fastforce simp: vmsz_aligned_def elim: is_aligned_weaken intro!: pbfs_atleast_pageBits)
-     apply (cases "isPageFlushLabel (invocation_type label)")
-      apply simp
-      apply (rule hoare_pre)
-       apply (wp whenE_throwError_wp hoare_weak_lift_imp hoare_drop_imps)
-         apply (simp add: valid_arch_inv_def valid_page_inv_def)
-         apply (wp find_pd_for_asid_pd_at_asid | wpc)+
-      apply (clarsimp simp: valid_cap_def mask_def)
+       apply (drule (1) caps_of_state_valid[rotated])
+       apply clarsimp
+       apply (clarsimp simp: cap_master_cap_def is_arch_update_def)
+       apply (clarsimp simp: cap_asid_def cap_rights_update_def acap_rights_update_def is_cap_simps
+                      split: option.split)
+      apply (rule conjI, fastforce)
+      apply (rule conjI, fastforce)
+      apply (clarsimp simp: pde_ref_def)
+      apply (frule invs_pd_caps)
+      apply (clarsimp simp: cte_wp_at_caps_of_state)
+      apply (frule (1) caps_of_state_valid[rotated])
+      apply (clarsimp simp: cap_rights_update_def acap_rights_update_def valid_cap_def)
+      apply (drule (2) valid_table_caps_ptD)
+      apply (rule conjI, fastforce)+
+      apply (clarsimp simp: kernel_vsrefs_def)
+      apply fastforce
+     apply (clarsimp simp: cte_wp_at_def is_cap_simps
+                           valid_arch_inv_def valid_pti_def)
+    apply (simp add: arch_decode_invocation_def Let_def decode_mmu_invocation_def cong: if_cong)
+    apply (cases "isPDFlushLabel (invocation_type label)")
      apply simp
-     apply (cases "invocation_type label = ArchInvocationLabel ARMPageGetAddress")
-      apply simp
-      apply (rule hoare_pre, wp)
-      apply (clarsimp simp: valid_arch_inv_def valid_page_inv_def)
-     apply (rule hoare_pre, wp)
-     apply (simp)
-    apply (simp add: arch_decode_invocation_def Let_def split_def
-                     is_final_cap_def decode_mmu_invocation_def
-               cong: if_cong)
-    apply (rename_tac word option)
-    apply (rule hoare_pre)
-     apply ((wp whenE_throwError_wp check_vp_wpR get_master_pde_wp hoare_vcg_all_liftE_R
-             | wpc
-             | simp add: valid_arch_inv_def valid_pti_def unlessE_whenE vs_cap_ref_def
-                  split: if_split
-             | rule_tac x="fst p" in hoare_imp_eq_substR
-             | wp (once) hoare_vcg_ex_lift_R)+)[1]
-          apply (rule_tac Q'="\<lambda>a b. ko_at (ArchObj (PageDirectory pd))
-                                    (a + (args ! 0 >> 21 << 3) && ~~ mask pd_bits) b \<longrightarrow>
-                                    pd (ucast (a + (args ! 0 >> 21 << 3) && mask pd_bits >> 3)) =
-                                    InvalidPDE \<longrightarrow> L word option p pd a b" for L in hoare_strengthen_postE_R[rotated])
-           apply (intro impI)
-           apply (erule impE)
-            apply (clarsimp simp: pageBits_def pde_bits_def pt_bits_def)
-           apply (erule impE)
-            apply (clarsimp simp: pageBits_def pde_bits_def pt_bits_def split:pde.splits)
-           apply assumption
-          apply ((wp whenE_throwError_wp hoare_vcg_all_liftE_R
-                     find_pd_for_asid_lookup_slot [unfolded lookup_pd_slot_def Let_def]
-                     find_pd_for_asid_ref_offset_voodoo find_pd_for_asid_shifting_voodoo
-                     find_pd_for_asid_inv
-                  | wpc
-                  | simp add: valid_arch_inv_def valid_pti_def unlessE_whenE empty_pde_atI
-                              vs_cap_ref_def pageBits_def pt_bits_def pde_bits_def
-                  | wp (once) hoare_drop_imps hoare_vcg_ex_lift_R)+)[6]
-    apply (clarsimp simp: is_cap_simps if_apply_def2)
-    apply (rule conjI)
-     apply clarsimp
-     apply (rule conjI, fastforce)
-     apply (rule conjI, fastforce)
-     apply (clarsimp simp: neq_Nil_conv)
-     apply (thin_tac "Ball S P" for S P)
-     apply (rule conjI)
-      apply (clarsimp simp: valid_cap_def cap_aligned_def
-                            pte_bits_def pt_bits_def is_aligned_addrFromPPtr_n)
-     apply (rule conjI)
-      apply (clarsimp simp: valid_cap_def cap_aligned_def)
-     apply (rule conjI)
-      apply (drule cte_wp_at_norm, clarsimp, drule cte_wp_valid_cap, fastforce)+
-      apply (clarsimp simp add: cap_rights_update_def acap_rights_update_def)
-      apply (clarsimp simp: valid_cap_def cap_aligned_def
-                            pt_bits_def pageBits_def
-                            linorder_not_le
-                            order_le_less_trans[OF word_and_le2])
-     apply (rule conjI)
-      apply (clarsimp simp add: cte_wp_at_caps_of_state)
-      apply (drule (1) caps_of_state_valid[rotated])
-      apply clarsimp
-      apply (clarsimp simp: cap_master_cap_def is_arch_update_def)
-      apply (clarsimp simp: cap_asid_def cap_rights_update_def acap_rights_update_def is_cap_simps
-                     split: option.split)
-     apply (rule conjI, fastforce)
-     apply (rule conjI, fastforce)
-     apply (clarsimp simp: pde_ref_def)
-     apply (frule invs_pd_caps)
-     apply (clarsimp simp: cte_wp_at_caps_of_state)
-     apply (frule (1) caps_of_state_valid[rotated])
-     apply (clarsimp simp: cap_rights_update_def acap_rights_update_def valid_cap_def)
-     apply (drule (2) valid_table_caps_ptD)
-     apply (rule conjI, fastforce)+
-     apply (clarsimp simp: kernel_vsrefs_def)
-     apply fastforce
-    apply (clarsimp simp: cte_wp_at_def is_cap_simps
-                          valid_arch_inv_def valid_pti_def)
-   apply (simp add: arch_decode_invocation_def Let_def decode_mmu_invocation_def cong: if_cong)
-   apply (cases "isPDFlushLabel (invocation_type label)")
-    apply simp
-    apply (rule hoare_pre)
-     apply (wp whenE_throwError_wp hoare_weak_lift_imp hoare_drop_imp | wpc | simp)+
-           apply (simp add: resolve_vaddr_def)
-           apply (wp get_master_pte_wp get_master_pde_wp whenE_throwError_wp | wpc | simp)+
-         apply (clarsimp simp: valid_arch_inv_def valid_pdi_def)+
-         apply (rule_tac Q'="\<lambda>pd' s. vspace_at_asid x2 pd' s \<and> x2 \<le> mask asid_bits \<and> x2 \<noteq> 0" in hoare_strengthen_postE_R)
-          apply wp
-         apply clarsimp
-        apply (wp | wpc)+
-    apply (clarsimp simp: valid_cap_def mask_def)
-   apply (clarsimp, wp throwError_validE_R)
+     apply (rule hoare_pre)
+      apply (wp whenE_throwError_wp hoare_weak_lift_imp hoare_drop_imp | wpc | simp)+
+            apply (simp add: resolve_vaddr_def)
+            apply (wp get_master_pte_wp get_master_pde_wp whenE_throwError_wp | wpc | simp)+
+          apply (clarsimp simp: valid_arch_inv_def valid_pdi_def)+
+          apply (rule_tac Q'="\<lambda>pd' s. vspace_at_asid x2 pd' s \<and> x2 \<le> mask asid_bits \<and> x2 \<noteq> 0" in hoare_strengthen_postE_R)
+           apply wp
+          apply clarsimp
+         apply (wp | wpc)+
+     apply (clarsimp simp: valid_cap_def mask_def)
+    apply (clarsimp, wp throwError_validE_R)
 
-(* VCPU *)
-  apply (rename_tac vcpu_ptr)
-  apply (clarsimp simp: arch_decode_invocation_def decode_vcpu_invocation_def)
-  apply (cases "invocation_type label"; (simp, wp?))
-  apply (rename_tac arch_iv)
-  apply (case_tac "arch_iv"; (simp, wp?))
-      apply (simp add: decode_vcpu_set_tcb_def)
-      apply (rule hoare_pre, wpsimp)
-      apply (clarsimp simp: valid_arch_inv_def valid_vcpu_invocation_def)
-      apply (rename_tac tcb_ptr)
-      apply (frule_tac c="ThreadCap tcb_ptr" in cte_wp_valid_cap, fastforce)
-      apply (simp add: valid_cap_def)
-      apply (cases slot)
-      apply (clarsimp simp: ex_nonz_cap_to_def)
-      apply (rule conjI, fastforce elim: cte_wp_at_weakenE)
-      apply (rule conjI, fastforce elim: cte_wp_at_weakenE)
-      apply (clarsimp dest!: invs_valid_global_refs simp:  cte_wp_at_caps_of_state)
-      apply (drule_tac ?cap="ThreadCap (idle_thread s)" in valid_global_refsD2, assumption)
-      apply (simp add:global_refs_def cap_range_def)
-     apply (simp add: decode_vcpu_inject_irq_def)
-     apply (rule hoare_pre, wpsimp simp: whenE_def wp: get_vcpu_wp)
-     apply (clarsimp simp: valid_arch_inv_def valid_vcpu_invocation_def obj_at_def)
-    apply (simp add: decode_vcpu_read_register_def)
+   (* VCPU *)
+   apply (rename_tac vcpu_ptr)
+   apply (clarsimp simp: arch_decode_invocation_def decode_vcpu_invocation_def)
+   apply (cases "invocation_type label"; (simp, wp?))
+   apply (rename_tac arch_iv)
+   apply (case_tac "arch_iv"; (simp, wp?))
+       apply (simp add: decode_vcpu_set_tcb_def)
+       apply (rule hoare_pre, wpsimp)
+       apply (clarsimp simp: valid_arch_inv_def valid_vcpu_invocation_def)
+       apply (rename_tac tcb_ptr)
+       apply (frule_tac c="ThreadCap tcb_ptr" in cte_wp_valid_cap, fastforce)
+       apply (simp add: valid_cap_def)
+       apply (cases slot)
+       apply (clarsimp simp: ex_nonz_cap_to_def)
+       apply (rule conjI, fastforce elim: cte_wp_at_weakenE)
+       apply (rule conjI, fastforce elim: cte_wp_at_weakenE)
+       apply (clarsimp dest!: invs_valid_global_refs simp:  cte_wp_at_caps_of_state)
+       apply (drule_tac ?cap="ThreadCap (idle_thread s)" in valid_global_refsD2, assumption)
+       apply (simp add:global_refs_def cap_range_def)
+      apply (simp add: decode_vcpu_inject_irq_def)
+      apply (rule hoare_pre, wpsimp simp: whenE_def wp: get_vcpu_wp)
+      apply (clarsimp simp: valid_arch_inv_def valid_vcpu_invocation_def obj_at_def)
+     apply (simp add: decode_vcpu_read_register_def)
+     apply (rule hoare_pre, wpsimp)
+     apply (clarsimp simp: valid_arch_inv_def valid_cap_def valid_vcpu_invocation_def)
+    apply (simp add: decode_vcpu_write_register_def)
     apply (rule hoare_pre, wpsimp)
     apply (clarsimp simp: valid_arch_inv_def valid_cap_def valid_vcpu_invocation_def)
-   apply (simp add: decode_vcpu_write_register_def)
+   apply (simp add: decode_vcpu_ack_vppi_def arch_check_irq_def)
    apply (rule hoare_pre, wpsimp)
    apply (clarsimp simp: valid_arch_inv_def valid_cap_def valid_vcpu_invocation_def)
-  apply (simp add: decode_vcpu_ack_vppi_def arch_check_irq_def)
-  apply (rule hoare_pre, wpsimp)
-  apply (clarsimp simp: valid_arch_inv_def valid_cap_def valid_vcpu_invocation_def)
-  done
 
+  (* SGISignalCap *)
+  apply (clarsimp simp: arch_decode_invocation_def decode_sgi_signal_invocation_def)
+  apply (wpsimp simp: valid_arch_inv_def)
+  done
 
 declare word_less_sub_le [simp]
 
@@ -1855,30 +1874,20 @@ lemma perform_vcpu_invocation_pred_tcb_at[wp_unsafe]:
                          invoke_vcpu_ack_vppi_def)+
   done
 
-crunch perform_page_table_invocation, perform_page_invocation,
-           perform_asid_pool_invocation,
-           perform_page_directory_invocation
-  for pred_tcb_at: "pred_tcb_at proj P t"
+crunch perform_page_table_invocation, perform_page_invocation, perform_asid_pool_invocation,
+       perform_page_directory_invocation, perform_sgi_invocation
+  for pred_tcb_at[wp]: "pred_tcb_at proj P t"
   (wp: crunch_wps simp: crunch_simps)
-
 
 lemma arch_pinv_st_tcb_at:
   "\<lbrace>invs and valid_arch_inv ai and ct_active and
     st_tcb_at (P and (Not \<circ> inactive) and (Not \<circ> idle)) t\<rbrace>
      arch_perform_invocation ai
    \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
-  apply (cases ai, simp_all add: arch_perform_invocation_def valid_arch_inv_def)
-      apply (wp perform_page_table_invocation_pred_tcb_at,
-             fastforce elim!: pred_tcb_weakenE)
-      apply (wp perform_page_directory_invocation_pred_tcb_at, fastforce elim: pred_tcb_weakenE)
-     apply (wp perform_page_invocation_pred_tcb_at, fastforce elim!: pred_tcb_weakenE)
-    apply (wp perform_asid_control_invocation_st_tcb_at,
-           fastforce elim!: pred_tcb_weakenE)
-   apply (wp perform_asid_pool_invocation_pred_tcb_at,
-          fastforce elim!: pred_tcb_weakenE)
-  apply (wp perform_vcpu_invocation_pred_tcb_at,
-         fastforce elim!: pred_tcb_weakenE)
-  done
+  unfolding arch_perform_invocation_def
+  by (wpsimp simp: valid_arch_inv_def
+             wp: perform_asid_control_invocation_pred_tcb_at perform_vcpu_invocation_pred_tcb_at,
+      fastforce elim: pred_tcb_weakenE)
 
 end
 

@@ -91,9 +91,9 @@ lemma is_frame_cap_eq:
   "is_frame_cap cap = (\<exists>p R sz dev m. cap = ArchObjectCap (FrameCap p R sz dev m))"
   by (auto simp: is_frame_cap_def is_FrameCap_def)
 
-lemmas is_arch_cap_simps = is_pt_cap_eq is_ap_cap_eq is_frame_cap_eq
+lemmas is_arch_cap_simps = is_pt_cap_eq is_ap_cap_eq is_frame_cap_eq is_SGISignalCap_def
 
-lemmas is_cap_simps = is_cap_simps is_arch_cap_simps
+lemmas is_cap_simps = is_cap_simps is_ArchObjectCap_def is_arch_cap_simps
 
 end
 

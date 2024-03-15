@@ -264,10 +264,11 @@ lemma perform_page_table_valid_vspace_objs'[wp]:
 
 lemma perform_invocation_valid_vspace_objs'[wp]:
   "\<lbrace>invs and ct_active and valid_invocation i and valid_vspace_objs'\<rbrace>
-      perform_invocation blocking call i
-         \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
+   perform_invocation blocking call i
+   \<lbrace>\<lambda>rv. valid_vspace_objs'\<rbrace>"
   apply (cases i; wpsimp)
-   apply (wpsimp simp: arch_perform_invocation_def perform_vspace_invocation_def perform_flush_def)
+   apply (wpsimp simp: arch_perform_invocation_def perform_vspace_invocation_def perform_flush_def
+                       perform_sgi_invocation_def)
   apply (auto simp: valid_arch_inv_def intro: valid_objs_caps)
   done
 

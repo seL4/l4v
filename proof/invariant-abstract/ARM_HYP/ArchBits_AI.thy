@@ -31,7 +31,7 @@ lemma pbfs_atleast_pageBits:
   "pageBits \<le> pageBitsForSize sz"
   by (cases sz) (auto simp: pageBits_def)
 
-lemmas is_cap_simps = is_cap_simps is_arch_cap_simps
+lemmas is_cap_simps = is_cap_simps is_ArchObjectCap_def is_arch_cap_simps
 lemmas valid_cap_def = valid_cap_def[simplified valid_arch_cap_def]
 
 lemmas valid_cap_simps =

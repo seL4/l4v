@@ -59,7 +59,8 @@ definition valid_arch_inv :: "arch_invocation \<Rightarrow> 'z::state_ext state 
    | InvokeASIDControl aci \<Rightarrow> valid_aci aci
    | InvokeASIDPool api \<Rightarrow> valid_apinv api
    | InvokeVCPU vi \<Rightarrow> valid_vcpu_invocation vi
-   | InvokeVSpace vi \<Rightarrow> \<top>"
+   | InvokeVSpace vi \<Rightarrow> \<top>
+   | InvokeSGISignal vi \<Rightarrow> \<top>"
 
 lemma check_vp_wpR [wp]:
   "\<lbrace>\<lambda>s. vmsz_aligned w sz \<longrightarrow> P () s\<rbrace>
@@ -240,6 +241,8 @@ lemma ucast_asid_high_btis_of_le [simp]:
   apply (simp add: asid_high_bits_def)
   done
 
+crunch perform_sgi_invocation
+  for tcb_at[wp]: "\<lambda>s. P (tcb_at t s)"
 
 lemma invoke_arch_tcb:
   "\<lbrace>invs and valid_arch_inv ai and st_tcb_at active tptr\<rbrace>
@@ -1180,6 +1183,11 @@ lemma perform_vspace_invocation_invs[wp]:
   unfolding perform_vspace_invocation_def
   by wpsimp
 
+lemma perform_sgi_invocation_invs[wp]:
+  "perform_sgi_invocation vi \<lbrace>invs\<rbrace>"
+  unfolding perform_sgi_invocation_def
+  by (wpsimp wp: dmo_invs_lift)
+
 lemma invoke_arch_invs[wp]:
   "\<lbrace>invs and ct_active and valid_arch_inv ai\<rbrace>
    arch_perform_invocation ai
@@ -1264,11 +1272,10 @@ lemma sts_valid_arch_inv:
 
 crunch_ignore (add: select_ext find_vspace_for_asid)
 
-
 crunch arch_decode_invocation
   for inv[wp]: "P"
-  (wp: crunch_wps select_ext_weak_wp hoare_vcg_all_lift
-       hoare_vcg_all_liftE_R hoare_drop_imps simp: crunch_simps)
+  (wp: crunch_wps select_ext_weak_wp hoare_vcg_all_liftE_R hoare_drop_imps
+   simp: crunch_simps)
 
 
 declare lookup_slot_for_cnode_op_cap_to [wp]
@@ -1646,6 +1653,13 @@ lemma arch_decode_vspace_invocation_wf[wp]:
   unfolding decode_vspace_invocation_def decode_vs_inv_flush_def
   by (wpsimp simp: Let_def valid_arch_inv_def)
 
+lemma decode_sgi_signal_invocation_wf[wp]:
+  "\<lbrace>invs\<rbrace>
+   decode_sgi_signal_invocation (SGISignalCap irq target)
+   \<lbrace>valid_arch_inv\<rbrace>, -"
+  unfolding decode_sgi_signal_invocation_def
+  by (wpsimp simp: Let_def valid_arch_inv_def)
+
 lemma arch_decode_inv_wf[wp]:
   "\<lbrace>invs and valid_cap (ArchObjectCap arch_cap) and
     cte_wp_at ((=) (ArchObjectCap arch_cap)) slot and real_cte_at slot and
@@ -1679,9 +1693,9 @@ lemma perform_vcpu_invocation_pred_tcb_at[wp_unsafe]:
                          invoke_vcpu_ack_vppi_def)+
   done
 
-crunch
-  perform_page_table_invocation, perform_page_invocation, perform_asid_pool_invocation, perform_vspace_invocation
-  for pred_tcb_at[wp]: "pred_tcb_at proj P t"
+crunch perform_page_table_invocation, perform_page_invocation, perform_asid_pool_invocation,
+       perform_vspace_invocation, perform_sgi_invocation
+  for pred_tcb_at [wp]: "pred_tcb_at proj P t"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma arch_pinv_st_tcb_at:

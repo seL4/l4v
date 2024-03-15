@@ -66,7 +66,8 @@ lemma arch_cap_fun_lift_expand[simp]:
                               | ASIDControlCap \<Rightarrow> P_ASIDControlCap
                               | FrameCap obj_ref rights sz dev vr \<Rightarrow> P_FrameCap obj_ref rights sz dev vr
                               | PageTableCap obj_ref pt_t vr \<Rightarrow> P_PageTableCap obj_ref pt_t vr
-                              | VCPUCap obj_ref \<Rightarrow> P_VCPUCap obj_ref)
+                              | VCPUCap obj_ref \<Rightarrow> P_VCPUCap obj_ref
+                              | SGISignalCap irq target \<Rightarrow> P_SGICap irq target)
                       F = (\<lambda>c.
    case c of
       ArchObjectCap (ASIDPoolCap obj_ref asid) \<Rightarrow> P_ASIDPoolCap obj_ref asid
@@ -74,6 +75,7 @@ lemma arch_cap_fun_lift_expand[simp]:
     | ArchObjectCap (FrameCap obj_ref rights sz dev vr) \<Rightarrow> P_FrameCap obj_ref rights sz dev vr
     | ArchObjectCap (PageTableCap obj_ref pt_t vr) \<Rightarrow> P_PageTableCap obj_ref pt_t vr
     | ArchObjectCap (VCPUCap obj_ref) \<Rightarrow> P_VCPUCap obj_ref
+    | ArchObjectCap (SGISignalCap irq target) \<Rightarrow> P_SGICap irq target
     | _ \<Rightarrow> F)"
   unfolding arch_cap_fun_lift_def by fastforce
 
@@ -237,7 +239,8 @@ definition valid_arch_cap_ref :: "arch_cap \<Rightarrow> 'z::state_ext state \<R
       if dev then typ_at (AArch (ADeviceData sz)) r s
              else typ_at (AArch (AUserData sz)) r s
   | PageTableCap r pt_t mapdata \<Rightarrow> pt_at pt_t r s
-  | VCPUCap r \<Rightarrow> vcpu_at r s"
+  | VCPUCap r \<Rightarrow> vcpu_at r s
+  | SGISignalCap _ _ \<Rightarrow> True"
 
 lemmas valid_arch_cap_ref_simps[simp] =
   valid_arch_cap_ref_def[split_simps arch_cap.split]
@@ -265,6 +268,7 @@ lemmas is_nondevice_page_cap_simps[simp] =
 primrec acap_class :: "arch_cap \<Rightarrow> capclass" where
   "acap_class (ASIDPoolCap _ _)     = PhysicalClass"
 | "acap_class (ASIDControlCap)      = ASIDMasterClass"
+| "acap_class (SGISignalCap _ _)    = IRQClass"
 | "acap_class (FrameCap _ _ _ _ _)  = PhysicalClass"
 | "acap_class (PageTableCap _ _ _)  = PhysicalClass"
 | "acap_class (VCPUCap _)           = PhysicalClass"
@@ -428,6 +432,7 @@ definition vs_cap_ref_arch :: "arch_cap \<Rightarrow> (asid \<times> vspace_ref)
                             ASIDPoolCap _ asid \<Rightarrow> Some (asid, 0)
                           | ASIDControlCap \<Rightarrow> None
                           | VCPUCap _ \<Rightarrow> None
+                          | SGISignalCap _ _ \<Rightarrow> None
                           \<comment> \<open>Cover all PageTableCaps/FrameCaps\<close>
                           | _ \<Rightarrow> acap_map_data acap"
 
@@ -1483,21 +1488,21 @@ lemma valid_arch_tcb_lift:
 
 lemma obj_ref_not_arch_gen_ref:
   "x \<in> obj_refs cap \<Longrightarrow> arch_gen_refs cap = {}"
-  by (cases cap; simp add: arch_gen_obj_refs_def)
+  by (cases cap; clarsimp simp: arch_gen_obj_refs_def split: arch_cap.splits)
 
 lemma arch_gen_ref_not_obj_ref:
   "x \<in> arch_gen_refs cap \<Longrightarrow> obj_refs cap = {}"
-  by (cases cap; simp add: arch_gen_obj_refs_def)
+  by (cases cap; clarsimp simp: arch_gen_obj_refs_def split: arch_cap.splits)
 
-lemmas arch_gen_obj_refs_simps[simp] = arch_gen_obj_refs_def
+lemmas arch_gen_obj_refs_simps[simp] = arch_gen_obj_refs_def[split_simps arch_cap.split]
 
 lemma arch_gen_obj_refs_inD:
   "x \<in> arch_gen_obj_refs cap \<Longrightarrow> arch_gen_obj_refs cap = {x}"
-  by simp
+  by (clarsimp simp: arch_gen_obj_refs_def split: arch_cap.splits)
 
 lemma same_aobject_same_arch_gen_refs:
   "same_aobject_as ac ac' \<Longrightarrow> arch_gen_obj_refs ac = arch_gen_obj_refs ac'"
-  by simp
+  by (clarsimp simp: arch_gen_obj_refs_def split: arch_cap.splits)
 
 lemma valid_arch_mdb_eqI:
   assumes "valid_arch_mdb (is_original_cap s) (caps_of_state s)"

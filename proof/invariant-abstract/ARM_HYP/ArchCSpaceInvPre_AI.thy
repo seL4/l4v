@@ -39,8 +39,7 @@ definition
               arch_cap.PageDirectoryCap ptr None
          | _ \<Rightarrow> acap)"
 
-lemma
-  cap_master_arch_cap_eqDs1:
+lemma cap_master_arch_cap_eqDs1:
   "cap_master_arch_cap cap =  (arch_cap.PageCap dev ref rghts sz mapdata)
      \<Longrightarrow> rghts = UNIV \<and> mapdata = None
           \<and> (\<exists>rghts mapdata. cap =  (arch_cap.PageCap dev ref rghts sz mapdata))"
@@ -52,6 +51,8 @@ lemma
      \<Longrightarrow> data = None \<and> (\<exists>data. cap =  (arch_cap.PageTableCap ptr data))"
   "cap_master_arch_cap cap =  (arch_cap.PageDirectoryCap ptr data2)
      \<Longrightarrow> data2 = None \<and> (\<exists>data2. cap =  (arch_cap.PageDirectoryCap ptr data2))"
+  "cap_master_arch_cap cap = SGISignalCap irq target
+     \<Longrightarrow> cap = SGISignalCap irq target"
   by (clarsimp simp: cap_master_arch_cap_def
              split: arch_cap.split_asm)+
 
