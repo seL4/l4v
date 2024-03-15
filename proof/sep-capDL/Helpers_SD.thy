@@ -273,8 +273,7 @@ lemma cap_free_ids_simps:
 
 lemma cap_objects_remove_free_ids [simp]:
   "cap_objects (remove_free_ids cap obj_ids) = cap_objects cap"
-  by (clarsimp simp: cap_objects_def remove_free_ids_def
-              split: cdl_cap.splits)
+  by (clarsimp simp: remove_free_ids_def split: cdl_cap.splits)
 
 lemma cap_free_ids_remove_free_ids:
   "cap_free_ids (remove_free_ids cap obj_ids) = cap_free_ids cap - obj_ids"
@@ -321,8 +320,7 @@ lemma is_full_untyped_cap_simps:
 lemma is_full_untyped_cap_eq:
   "is_untyped_cap cap
   \<Longrightarrow> is_full_untyped_cap cap = (cap_objects cap = cap_free_ids cap)"
-  by (auto simp: is_full_untyped_cap_def cap_free_ids_def
-                 cap_objects_def cap_type_def
+  by (auto simp: is_full_untyped_cap_def cap_free_ids_def cap_type_def
           split: cdl_cap.splits)
 
 lemma well_formed_untyped_cap_remove_free_ids:
@@ -334,8 +332,7 @@ lemma well_formed_untyped_cap_remove_free_ids:
 lemma well_formed_untyped_cap_simps:
   "is_untyped_cap cap
   \<Longrightarrow> well_formed_untyped_cap cap = (cap_free_ids cap \<subseteq> cap_objects cap)"
-  by (clarsimp simp: well_formed_untyped_cap_def cap_free_ids_def
-                     cap_objects_def cap_type_def
+  by (clarsimp simp: well_formed_untyped_cap_def cap_free_ids_def cap_type_def
               split: cdl_cap.splits)
 
 

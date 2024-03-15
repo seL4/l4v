@@ -77,13 +77,16 @@ where
   | "perform_invocation is_call can_block (InvokePage page_params) = liftE (invoke_page page_params)"
   | "perform_invocation is_call can_block (InvokeAsidControl asid_control_params) = liftE (invoke_asid_control asid_control_params)"
   | "perform_invocation is_call can_block (InvokeAsidPool asid_pool_params) = liftE (invoke_asid_pool asid_pool_params)"
-  | "perform_invocation is_call can_block (InvokePageDirectory page_dir_params) = liftE (invoke_page_directory page_dir_params) "
+  | "perform_invocation is_call can_block (InvokePageDirectory page_dir_params) = liftE (invoke_page_directory page_dir_params)"
+  | "perform_invocation is_call can_block (InvokeSGISignal sig_params) = liftE (invoke_sgi_signal_generate sig_params)"
 
 definition ep_related_cap :: "cdl_cap \<Rightarrow> bool"
 where "ep_related_cap cap \<equiv> case cap of
  cdl_cap.EndpointCap o_id badge rights \<Rightarrow> True
 | cdl_cap.NotificationCap o_id badge rights \<Rightarrow> True
 | cdl_cap.ReplyCap o_id rights \<Rightarrow> True
+\<comment> \<open>these are like EP caps in the sense that their syscall has no intent argument or label:\<close>
+| cdl_cap.SGISignalCap irq target \<Rightarrow> True
 | _ \<Rightarrow> False"
 
 definition "has_restart_cap \<equiv> \<lambda>tcb_id. do
