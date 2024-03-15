@@ -48,6 +48,12 @@ deriveCap _ (c@ASIDPoolCap {}) = return $ ArchObjectCap c
 isCapRevocable :: Capability -> Capability -> Bool
 isCapRevocable newCap srcCap = False
 
+-- Whether the first capability is a parent of the second one. Can assume that
+-- sameRegionAs is true for the two capabilities. If this function returns True,
+-- the remaining cases of generic isMDBParentOf are still checked.
+isArchMDBParentOf :: Capability -> Capability -> Bool -> Bool
+isArchMDBParentOf _ _ _ = True
+
 updateCapData :: Bool -> Word -> ArchCapability -> Capability
 updateCapData _ _ c = ArchObjectCap c
 
@@ -105,6 +111,9 @@ finaliseCap (FrameCap {
 finaliseCap _ _ = return (NullCap, NullCap)
 
 {- Identifying Capabilities -}
+
+isIRQControlCapDescendant :: ArchCapability -> Bool
+isIRQControlCapDescendant _ = False
 
 sameRegionAs :: ArchCapability -> ArchCapability -> Bool
 sameRegionAs (a@FrameCap {}) (b@FrameCap {}) =

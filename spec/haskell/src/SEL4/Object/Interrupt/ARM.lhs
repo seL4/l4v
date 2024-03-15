@@ -38,11 +38,14 @@ This module defines the machine-specific interrupt handling routines.
 
 \end{impdetails}
 
+> isSGITargetValid :: Word -> Bool
+> isSGITargetValid target = target < fromIntegral Arch.gicNumTargets
 
 > decodeIRQControlInvocation :: Word -> [Word] -> PPtr CTE -> [Capability] ->
 >         KernelF SyscallError ArchInv.IRQControlInvocation
 > decodeIRQControlInvocation label args srcSlot extraCaps =
 >     case (invocationType label, args, extraCaps) of
+
 >         (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandler, irqW:triggerW:index:depth:_, cnode:_) -> do
 >             checkIRQ irqW
 >             let irq = toEnum (fromIntegral irqW) :: IRQ
@@ -54,15 +57,43 @@ This module defines the machine-specific interrupt handling routines.
 >             ensureEmptySlot destSlot
 >             return $ ArchInv.IssueIRQHandler irq destSlot srcSlot (triggerW /= 0)
 >         (ArchInvocationLabel ArchLabels.ARMIRQIssueIRQHandler,_,_) -> throw TruncatedMessage
+
+>         (ArchInvocationLabel ArchLabels.ARMIRQIssueSGISignal,
+>          irqW:targetW:index:depth:_, cnode:_) -> do
+>             rangeCheck irqW 0 (Arch.numSGIs - 1)
+>             unless (isSGITargetValid targetW) $ throw $ InvalidArgument 1
+>             sgiSlot <- lookupTargetSlot cnode (CPtr index) (fromIntegral depth)
+>             ensureEmptySlot sgiSlot
+>             return $ ArchInv.IssueSGISignal irqW targetW srcSlot sgiSlot
+>         (ArchInvocationLabel ArchLabels.ARMIRQIssueSGISignal,_,_) ->
+>             throw TruncatedMessage
+
 >         _ -> throw IllegalOperation
 
 > performIRQControl :: ArchInv.IRQControlInvocation -> KernelP ()
-> performIRQControl (ArchInv.IssueIRQHandler (IRQ irq) destSlot srcSlot trigger) = withoutPreemption $ do
->     doMachineOp $ Arch.setIRQTrigger irq trigger
->     -- do same thing as generic path in performIRQControl in Interrupt.lhs
->     setIRQState IRQSignal (IRQ irq)
->     cteInsert (IRQHandlerCap (IRQ irq)) srcSlot destSlot
->     return ()
+> performIRQControl (ArchInv.IssueIRQHandler (IRQ irq) destSlot srcSlot trigger) =
+>     withoutPreemption $ do
+>         doMachineOp $ Arch.setIRQTrigger irq trigger
+>         -- do same thing as generic path in performIRQControl in Interrupt.lhs
+>         setIRQState IRQSignal (IRQ irq)
+>         cteInsert (IRQHandlerCap (IRQ irq)) srcSlot destSlot
+>         return ()
+> performIRQControl (ArchInv.IssueSGISignal irq target controlSlot sgiSlot) =
+>     withoutPreemption $ do
+>         cteInsert (ArchObjectCap (SGISignalCap irq target)) controlSlot sgiSlot
+>         return ()
+
+> decodeSGISignalInvocation :: ArchCapability-> KernelF SyscallError ArchInv.Invocation
+> decodeSGISignalInvocation cap =
+>     case cap of
+>         SGISignalCap irq target -> do
+>             return $ ArchInv.InvokeSGISignal $ ArchInv.SGISignalGenerate irq target
+>         _ -> throw IllegalOperation
+
+> performSGISignalGenerate :: ArchInv.SGISignalInvocation -> Kernel [Word]
+> performSGISignalGenerate (ArchInv.SGISignalGenerate irq target) = do
+>     doMachineOp $ Arch.sendSGI (fromIntegral irq) (fromIntegral target)
+>     return []
 
 > invokeIRQHandler :: IRQHandlerInvocation -> Kernel ()
 > invokeIRQHandler (AckIRQ irq) =

@@ -22,6 +22,7 @@ import SEL4.API.Invocation.AARCH64 as ArchInv
 import SEL4.Object.Structures
 import SEL4.Kernel.VSpace.AARCH64
 import SEL4.Object.VCPU.AARCH64
+import SEL4.Object.Interrupt.AARCH64
 import {-# SOURCE #-} SEL4.Object.TCB
 
 import Data.Bits
@@ -50,10 +51,26 @@ deriveCap _ (c@FrameCap {})
 deriveCap _ c@ASIDControlCap = return $ ArchObjectCap c
 deriveCap _ (c@ASIDPoolCap {}) = return $ ArchObjectCap c
 deriveCap _ (c@VCPUCap {}) = return $ ArchObjectCap c
+deriveCap _ (c@SGISignalCap {}) = return $ ArchObjectCap c
 -- TODO AARCH64 SMMU: SID/CB control caps, SID/CB caps
 
 isCapRevocable :: Capability -> Capability -> Bool
-isCapRevocable newCap srcCap = False
+isCapRevocable newCap srcCap = case newCap of
+    ArchObjectCap (SGISignalCap {}) -> srcCap == IRQControlCap
+    _ -> False
+
+-- Whether the first capability is a parent of the second one. Can assume that
+-- sameRegionAs is true for the two capabilities. If this function returns True,
+-- the remaining cases of generic isMDBParentOf are still checked.
+isArchMDBParentOf :: Capability -> Capability -> Bool -> Bool
+
+-- We treat SGISignalCaps as a badged version of IRQControlCaps -- i.e. if both
+-- arguments are SGISignalCaps, we are in the corresponding Endpoint case where
+-- badges are equal (because sameRegionAs) and not 0. In that case, only the
+-- firstBadged flag matters.
+isArchMDBParentOf (ArchObjectCap (SGISignalCap _ _)) (ArchObjectCap (SGISignalCap _ _)) firstBadged =
+    not firstBadged
+isArchMDBParentOf _ _ _ = True
 
 updateCapData :: Bool -> Word -> ArchCapability -> Capability
 updateCapData _ _ c = ArchObjectCap c
@@ -113,11 +130,17 @@ finaliseCap (VCPUCap { capVCPUPtr = vcpu }) True = do
     vcpuFinalise vcpu
     return (NullCap, NullCap)
 
+-- SGISignalCap finalisation does nothing (fall-through)
+
 -- TODO AARCH64 SMMU: C also has cap_cb_cap, cap_sid_cap (but not SID/CB control caps)
 
 finaliseCap _ _ = return (NullCap, NullCap)
 
 {- Identifying Capabilities -}
+
+isIRQControlCapDescendant :: ArchCapability -> Bool
+isIRQControlCapDescendant (SGISignalCap {}) = True
+isIRQControlCapDescendant _ = False
 
 sameRegionAs :: ArchCapability -> ArchCapability -> Bool
 sameRegionAs (a@FrameCap {}) (b@FrameCap {}) =
@@ -133,11 +156,13 @@ sameRegionAs ASIDControlCap ASIDControlCap = True
 sameRegionAs (a@ASIDPoolCap {}) (b@ASIDPoolCap {}) =
     capASIDPool a == capASIDPool b
 sameRegionAs (a@VCPUCap {}) (b@VCPUCap {}) = capVCPUPtr a == capVCPUPtr b
+sameRegionAs (a@SGISignalCap {}) (b@SGISignalCap {}) = a == b
 -- TODO AARCH64 SMMU: SID/CB caps and control caps (which work a bit strangely here)
 sameRegionAs _ _ = False
 
 isPhysicalCap :: ArchCapability -> Bool
 isPhysicalCap ASIDControlCap = False
+isPhysicalCap (SGISignalCap {}) = False
 -- TODO AARCH64 SMMU: in C, SMMU caps default to False but this needs review
 isPhysicalCap _ = True
 
@@ -146,6 +171,7 @@ sameObjectAs (a@FrameCap { capFBasePtr = ptrA }) (b@FrameCap {}) =
     (ptrA == capFBasePtr b) && (capFSize a == capFSize b)
         && (ptrA <= ptrA + mask (pageBitsForSize $ capFSize a))
         && (capFIsDevice a == capFIsDevice b)
+sameObjectAs (SGISignalCap {}) _ = False
 -- TODO AARCH64 SMMU: SID/CB caps and control caps (which work a bit strangely here)
 sameObjectAs a b = sameRegionAs a b
 
@@ -235,6 +261,7 @@ decodeInvocation :: Word -> [Word] -> CPtr -> PPtr CTE ->
 decodeInvocation label args capIndex slot cap extraCaps =
     case cap of
        VCPUCap {} -> decodeARMVCPUInvocation label args capIndex slot cap extraCaps
+       SGISignalCap {} -> decodeSGISignalInvocation cap
        -- TODO AARCH64 SMMU: SID/CB control caps, SID/CB caps
        _ -> decodeARMMMUInvocation label args capIndex slot cap extraCaps
 
@@ -242,6 +269,7 @@ performInvocation :: ArchInv.Invocation -> KernelP [Word]
 performInvocation i =
     case i of
         ArchInv.InvokeVCPU iv -> withoutPreemption $ performARMVCPUInvocation iv
+        ArchInv.InvokeSGISignal iv -> withoutPreemption $ performSGISignalGenerate iv
         -- TODO AARCH64 SMMU: SID/CB control invocations, SID/CB invocations
         _ -> performARMMMUInvocation i
 
@@ -253,6 +281,7 @@ capUntypedPtr (PageTableCap { capPTBasePtr = PPtr p }) = PPtr p
 capUntypedPtr ASIDControlCap = error "ASID control has no pointer"
 capUntypedPtr (ASIDPoolCap { capASIDPool = PPtr p }) = PPtr p
 capUntypedPtr (VCPUCap { capVCPUPtr = PPtr p }) = PPtr p
+capUntypedPtr (SGISignalCap {}) = error "SGISignalCap has no pointer"
 
 asidPoolBits :: Int
 asidPoolBits = 12
@@ -260,9 +289,10 @@ asidPoolBits = 12
 capUntypedSize :: ArchCapability -> Word
 capUntypedSize (FrameCap {capFSize = sz}) = bit $ pageBitsForSize sz
 capUntypedSize (PageTableCap {capPTType = pt_t}) = bit (ptBits pt_t)
-capUntypedSize (ASIDControlCap {}) = 0
+capUntypedSize (ASIDControlCap {}) = 0 -- invalid case, use C default
 capUntypedSize (ASIDPoolCap {}) = bit asidPoolBits
 capUntypedSize (VCPUCap {}) = bit vcpuBits
+capUntypedSize (SGISignalCap {}) = 0 -- invalid case, use C default
 
 -- Thread deletion requires associated FPU cleanup
 
