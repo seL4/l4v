@@ -674,6 +674,9 @@ lemma capUntypedSize_capBits:
   apply fastforce
   done
 
+(* unused in this architecture *)
+declare isIRQControlCapDescendant_def[simp]
+
 lemma sameRegionAs_def2:
  "sameRegionAs cap cap' = (\<lambda>cap cap'.
      (cap = cap'
@@ -712,7 +715,8 @@ lemma sameObjectAs_def2:
           \<and> (\<not> isNullCap cap \<and> \<not> isZombie cap \<and> \<not> isUntypedCap cap)
           \<and> (\<not> isNullCap cap' \<and> \<not> isZombie cap' \<and> \<not> isUntypedCap cap')
           \<and> (isArchFrameCap cap \<longrightarrow> capRange cap \<noteq> {})
-          \<and> (isArchFrameCap cap' \<longrightarrow> capRange cap' \<noteq> {})))
+          \<and> (isArchFrameCap cap' \<longrightarrow> capRange cap' \<noteq> {})
+          \<and> \<not>isIRQControlCap cap))
         (capMasterCap cap) (capMasterCap cap')"
   apply (simp add: sameObjectAs_def sameRegionAs_def2
                    isCap_simps capMasterCap_def
@@ -756,7 +760,7 @@ lemma sameObjectAs_sameRegionAs:
 
 lemma sameObjectAs_sym:
   "sameObjectAs c d = sameObjectAs d c"
-  by (simp add: sameObjectAs_def2 eq_commute conj_comms)
+  by (auto simp add: sameObjectAs_def2 eq_commute conj_comms)
 
 lemma untypedRange_Master:
   "untypedRange (capMasterCap cap) = untypedRange cap"

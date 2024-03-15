@@ -5529,7 +5529,7 @@ proof (rule mdb_chunked_update_final [OF chunk, OF slot])
     apply (frule(1) Fin1)
     apply (rule disjE [OF cases])
      apply (clarsimp simp: ztc_sameRegion ztc1 ztc2 sameObjectAs_def3)
-     apply (drule_tac F="\<lambda>cap. (isNullCap cap, isZombie cap,
+     apply (drule_tac F="\<lambda>cap. (isNullCap cap, isZombie cap, isIRQControlCap cap,
                                 isUntypedCap cap, isArchPageCap cap,
                                 capRange cap)" in  master_eqE,
              simp add: isCap_Master capRange_Master del: isNullCap)+
