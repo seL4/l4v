@@ -399,7 +399,7 @@ lemma cancelAllIPC_ccorres:
    (cancelAllIPC epptr) (Call cancelAllIPC_'proc)"
   apply (cinit lift: epptr_')
    apply (rule ccorres_stateAssert)
-   apply (rule ccorres_symb_exec_l [OF _ getEndpoint_inv _ empty_fail_getEndpoint])
+   apply (rule ccorres_symb_exec_l [OF _ get_ep_inv' _ empty_fail_getEndpoint])
     apply (rule_tac xf'=ret__unsigned_'
                 and val="case ep of IdleEP \<Rightarrow> scast EPState_Idle
                             | RecvEP _ \<Rightarrow> scast EPState_Recv | SendEP _ \<Rightarrow> scast EPState_Send"
@@ -1578,11 +1578,11 @@ lemma Arch_finaliseCap_ccorres:
       prefer 2
       apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
       apply (cases cp; ccorres_rewrite C_simp_simps: isCap_simps)
+           apply return_NullCap_pair_ccorres
           apply return_NullCap_pair_ccorres
          apply return_NullCap_pair_ccorres
-        apply return_NullCap_pair_ccorres
-       apply (subst ccorres_cond_seq2_seq[symmetric])
-       apply (rule ccorres_guard_imp)
+        apply (subst ccorres_cond_seq2_seq[symmetric])
+        apply (rule ccorres_guard_imp)
           apply (rule ccorres_rhs_assoc)
           apply csymbr
           apply ccorres_rewrite
@@ -1593,6 +1593,7 @@ lemma Arch_finaliseCap_ccorres:
          apply csymbr
          apply ccorres_rewrite
          apply (return_NullCap_pair_ccorres, simp+)
+      apply return_NullCap_pair_ccorres
      apply ccorres_rewrite
      apply (rule ccorres_Cond_rhs_Seq)
       apply (subgoal_tac "isPageCap cp \<longrightarrow> \<not> isPageDirectoryCap cp \<and> \<not> isASIDPoolCap cp \<and> \<not> isPageTableCap cp")
