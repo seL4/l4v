@@ -3030,24 +3030,17 @@ lemma sameObjectAs_spec:
   apply (clarsimp simp: sameObjectAs_def isArchCap_tag_def2)
   apply (case_tac capa, simp_all add: cap_get_tag_isCap_unfolded_H_cap
                                       isCap_simps cap_tag_defs)
-            apply fastforce+
-     \<comment> \<open>capa is an arch cap\<close>
-     apply (frule cap_get_tag_isArchCap_unfolded_H_cap)
-     apply (simp add: isArchCap_tag_def2)
-     apply (rule conjI, rule impI, clarsimp, rule impI)+
-     apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap
-                                         isCap_simps cap_tag_defs)[1]
-                apply ((fastforce)+)[7]
-         \<comment> \<open>capb is an arch cap\<close>
-         apply (frule_tac cap'=cap_b in cap_get_tag_isArchCap_unfolded_H_cap)
-         apply (fastforce simp: isArchCap_tag_def2 linorder_not_less [symmetric])+
-  \<comment> \<open>capa is an irq handler cap\<close>
-  apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap
-                                      isCap_simps cap_tag_defs)
            apply fastforce+
-      \<comment> \<open>capb is an arch cap\<close>
-      apply (frule cap_get_tag_isArchCap_unfolded_H_cap)
-      apply (fastforce simp: isArchCap_tag_def2)+
+    \<comment> \<open>capa is an arch cap\<close>
+    apply (frule cap_get_tag_isArchCap_unfolded_H_cap)
+    apply (simp add: isArchCap_tag_def2)
+    apply (rule conjI, rule impI, clarsimp, rule impI)+
+    apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap
+                                        isCap_simps cap_tag_defs)[1]
+               apply ((fastforce)+)[7]
+        \<comment> \<open>capb is an arch cap\<close>
+        apply (frule_tac cap'=cap_b in cap_get_tag_isArchCap_unfolded_H_cap)
+        apply (fastforce simp: isArchCap_tag_def2 linorder_not_less [symmetric])+
   done
 
 lemma sameRegionAs_EndpointCap:
