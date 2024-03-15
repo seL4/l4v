@@ -44,14 +44,17 @@ lemma arch_decode_irq_control_invocation_rev[Decode_IF_assms]:
       K (is_subject aag (fst slot) \<and> (\<forall>cap\<in>set caps. pas_cap_cur_auth aag cap) \<and>
       (args \<noteq> [] \<longrightarrow> (pasSubject aag, Control, pasIRQAbs aag (ucast (args ! 0))) \<in> pasPolicy aag)))
      (arch_decode_irq_control_invocation label args slot caps)"
-  unfolding arch_decode_irq_control_invocation_def arch_check_irq_def
+  unfolding arch_decode_irq_control_invocation_def arch_check_irq_def range_check_def unlessE_whenE
   apply (wp ensure_empty_rev lookup_slot_for_cnode_op_rev
             is_irq_active_rev whenE_inv
          | wp (once) hoare_drop_imps
          | simp add: Let_def)+
-  apply safe
-       apply simp+
-    apply (blast intro: aag_Control_into_owns_irq )
+  apply (safe; simp?)
+      apply (blast intro: aag_Control_into_owns_irq)
+     apply (drule_tac x="caps ! 0" in bspec)
+      apply (fastforce intro: bang_0_in_set)
+     apply (drule (1) is_cnode_into_is_subject; blast dest: prop_of_obj_ref_of_cnode_cap)
+    apply (fastforce dest: is_cnode_into_is_subject intro: bang_0_in_set)
    apply (drule_tac x="caps ! 0" in bspec)
     apply (fastforce intro: bang_0_in_set)
    apply (drule (1) is_cnode_into_is_subject; blast dest: prop_of_obj_ref_of_cnode_cap)
@@ -185,6 +188,10 @@ lemma lookup_pt_slot_no_fail_is_subject:
    apply simp
   apply simp
   done
+
+lemma decode_sgi_signal_invocation_reads_respects_f[wp]:
+  "reads_respects_f aag l \<top> (decode_sgi_signal_invocation (SGISignalCap irq target))"
+  by (wpsimp simp: decode_sgi_signal_invocation_def)
 
 lemma arch_decode_invocation_reads_respects_f[Decode_IF_assms]:
   notes reads_respects_f_inv' = reads_respects_f_inv[where st=st]

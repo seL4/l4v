@@ -247,6 +247,9 @@ lemma perform_asid_pool_invocation_silc_inv:
   apply (fastforce simp: authorised_asid_pool_inv_def silc_inv_def)
   done
 
+crunch perform_sgi_invocation
+  for silc_inv: "silc_inv aag st"
+
 lemma arch_perform_invocation_silc_inv[FinalCaps_assms]:
   "\<lbrace>silc_inv aag st and invs and valid_arch_inv ai and authorised_arch_inv aag ai\<rbrace>
    arch_perform_invocation ai
@@ -258,9 +261,14 @@ lemma arch_perform_invocation_silc_inv[FinalCaps_assms]:
             perform_page_invocation_silc_inv
             perform_asid_control_invocation_silc_inv
             perform_asid_pool_invocation_silc_inv
+            perform_sgi_invocation_silc_inv
          | wpc)+
   apply (clarsimp simp: authorised_arch_inv_def valid_arch_inv_def split: arch_invocation.splits)
   done
+
+lemma sgi_signal_cap_points_to_label[simp, intro!]:
+  "cap_points_to_label aag (ArchObjectCap (SGISignalCap irq target)) (pasSubject aag)"
+  by (clarsimp simp: cap_points_to_label_def)
 
 lemma arch_invoke_irq_control_silc_inv[FinalCaps_assms]:
   "\<lbrace>silc_inv aag st and pas_refined aag and arch_irq_control_inv_valid arch_irq_cinv
@@ -269,9 +277,9 @@ lemma arch_invoke_irq_control_silc_inv[FinalCaps_assms]:
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding arch_authorised_irq_ctl_inv_def
   apply (rule hoare_gen_asm)
-  apply (case_tac arch_irq_cinv)
-  apply (wp cap_insert_silc_inv'' hoare_vcg_ex_lift slots_holding_overlapping_caps_lift
-         | simp add: authorised_irq_ctl_inv_def arch_irq_control_inv_valid_def)+
+  apply (case_tac arch_irq_cinv;
+         wpsimp wp: cap_insert_silc_inv'' hoare_vcg_ex_lift slots_holding_overlapping_caps_lift
+               simp: authorised_irq_ctl_inv_def arch_irq_control_inv_valid_def)
   apply (fastforce dest: new_irq_handler_caps_are_intra_label)
   done
 
