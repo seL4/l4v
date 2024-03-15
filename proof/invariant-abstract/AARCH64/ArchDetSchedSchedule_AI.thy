@@ -387,7 +387,7 @@ crunch
 
 crunch
   vcpu_read_reg,vcpu_write_reg,read_vcpu_register,write_vcpu_register,set_message_info,as_user,
-  perform_vspace_invocation
+  perform_vspace_invocation, perform_sgi_invocation
   for cur_thread[wp]: "\<lambda>s. P (cur_thread s)"
   and valid_sched[wp]: valid_sched
   and ct_in_state[wp]: "ct_in_state st"
