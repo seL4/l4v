@@ -450,12 +450,12 @@ lemma same_region_as_Untyped2 [CSpace_AI_assms]:
 lemma same_region_as_cap_class [CSpace_AI_assms]:
   shows "same_region_as a b \<Longrightarrow> cap_class a = cap_class b"
   apply (case_tac a)
-   apply (fastforce simp: cap_range_def arch_is_physical_def is_cap_simps
-     is_physical_def split:cap.splits arch_cap.splits)+
- apply (clarsimp split: arch_cap.splits cap.splits)
+             apply ((fastforce simp: cap_range_def arch_is_physical_def is_cap_simps is_physical_def
+                                     is_irq_control_descendant_def
+                              split: cap.splits arch_cap.splits)+)[11]
+ apply (clarsimp split: cap.splits)
  apply (rename_tac arch_cap arch_capa)
- apply (case_tac arch_cap)
-  apply (case_tac arch_capa,clarsimp+)+
+ apply (case_tac arch_cap; case_tac arch_capa; clarsimp)
  done
 
 

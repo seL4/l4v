@@ -47,7 +47,8 @@ lemma aobj_ref_cases:
   | arch_cap.ASIDControlCap \<Rightarrow> None
   | arch_cap.PageCap _ w s sz opt \<Rightarrow> Some w
   | arch_cap.PageTableCap w opt \<Rightarrow> Some w
-  | arch_cap.PageDirectoryCap w opt \<Rightarrow> Some w)"
+  | arch_cap.PageDirectoryCap w opt \<Rightarrow> Some w
+  | SGISignalCap _ _ \<Rightarrow> None)"
   apply (subst aobj_ref_cases')
   apply (clarsimp cong: arch_cap.case_cong)
   done
@@ -225,18 +226,19 @@ lemmas valid_arch_mdb_updates = valid_arch_mdb_free_index_update valid_arch_mdb_
                                 valid_arch_mdb_weak_derived_update valid_arch_mdb_tcb_cnode_update
 
 lemma safe_parent_for_arch_not_arch':
-  "\<not>is_arch_cap cap \<Longrightarrow> \<not>safe_parent_for_arch c cap"
-  by clarsimp
+  "\<lbrakk> \<not>is_arch_cap cap; cap \<noteq> IRQControlCap \<rbrakk> \<Longrightarrow> \<not>safe_parent_for_arch c cap"
+  by (clarsimp simp: is_cap_simps)
 
 lemma safe_parent_arch_is_parent:
-  "\<lbrakk>safe_parent_for_arch cap pcap; caps_of_state s p = Some pcap;
-      valid_arch_mdb (is_original_cap s) (caps_of_state s)\<rbrakk> \<Longrightarrow>
+  "\<lbrakk>safe_parent_for_arch cap pcap; caps_of_state s p = Some pcap; valid_mdb s \<rbrakk> \<Longrightarrow>
     should_be_parent_of pcap (is_original_cap s p) cap f"
-  by auto
+  by (fastforce simp: should_be_parent_of_def is_cap_simps
+                      is_irq_control_descendant_def valid_mdb_def
+                elim!: irq_revocableD)
 
 lemma safe_parent_for_arch_no_obj_refs:
   "safe_parent_for_arch cap c \<Longrightarrow> obj_refs cap = {}"
-  by clarsimp
+  by (clarsimp simp: is_cap_simps)
 
 lemma valid_arch_mdb_same_master_cap:
   "\<lbrakk>valid_arch_mdb ioc cs; cs sl = Some cap; cap_master_cap cap' = cap_master_cap cap\<rbrakk> \<Longrightarrow>

@@ -3824,18 +3824,17 @@ lemma pd_slots_helper:
   apply (drule imageI[where f="\<lambda>x. x && ~~ mask pd_bits"])
   apply (simp add: obj_refs_def vspace_bits_defs)
   apply (rename_tac cap)
-  apply (case_tac cap, simp+)
-  apply (rename_tac arch_cap)
-  apply (case_tac arch_cap, simp+)
-     apply (drule (1) set_rev_mp)
-     apply (drule (1) set_rev_mp)
-     apply force
+  apply (case_tac cap; simp)
+    apply (rename_tac arch_cap)
+    apply (case_tac arch_cap; simp)
     apply (drule (1) set_rev_mp)
     apply (drule (1) set_rev_mp)
     apply force
    apply (drule (1) set_rev_mp)
    apply (drule (1) set_rev_mp)
    apply force
+  apply (drule (1) set_rev_mp)
+  apply (drule (1) set_rev_mp)
   apply force
   done
 

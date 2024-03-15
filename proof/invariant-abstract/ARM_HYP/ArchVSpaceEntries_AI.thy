@@ -1036,6 +1036,10 @@ crunch perform_vcpu_invocation
   (ignore: delete_objects wp: delete_objects_valid_pdpt hoare_weak_lift_imp)
 
 
+lemma perform_sgi_invocation_valid_pdpt[wp]:
+  "perform_sgi_invocation iv \<lbrace>valid_pdpt_objs\<rbrace>"
+  by (wpsimp simp: perform_sgi_invocation_def)
+
 lemma perform_invocation_valid_pdpt[wp]:
   "\<lbrace>invs and ct_active and valid_invocation i and valid_pdpt_objs
            and invocation_duplicates_valid i\<rbrace>
@@ -1419,23 +1423,22 @@ lemma decode_mmu_invocation_valid_pdpt[wp]:
                    cong: if_cong)
     \<comment> \<open>Handle the two interesting cases now\<close>
     apply (clarsimp; erule disjE; cases cap;
-           simp add: isPDFlushLabel_def isPageFlushLabel_def throwError_R')
-       \<comment> \<open>PageTableMap\<close>
-       apply (wpsimp simp: Let_def get_master_pde_def
-                       wp: get_pde_wp hoare_drop_imps hoare_vcg_if_lift_ER)
-       apply (fastforce simp: invocation_duplicates_valid_def pti_duplicates_valid_def
-                              mask_lower_twice bitwise obj_at_def vspace_bits_defs if_apply_def2
-                      split: if_splits)
-      apply wp
-     \<comment> \<open>PageMap\<close>
-     apply (rename_tac dev pg_ptr rights sz pg_map)
-     apply (wpsimp simp: Let_def invocation_duplicates_valid_def page_inv_duplicates_valid_def
-                     wp: ensure_safe_mapping_ensures[THEN hoare_strengthen_postE_R]
-                         check_vp_wpR hoare_vcg_if_lift_ER find_pd_for_asid_lookup_pd_wp)
-     apply (fastforce simp: invs_psp_aligned page_directory_at_aligned_pd_bits word_not_le sz
-                            valid_cap_def valid_arch_cap_def lookup_pd_slot_eq
-                     split: if_splits)
-    apply wp
+           simp add: isPDFlushLabel_def isPageFlushLabel_def throwError_R';
+           (solves wp)?)
+     \<comment> \<open>PageTableMap\<close>
+     apply (wpsimp simp: Let_def get_master_pde_def
+                     wp: get_pde_wp hoare_drop_imps hoare_vcg_if_lift_ER)
+     apply (fastforce simp: invocation_duplicates_valid_def pti_duplicates_valid_def
+                            mask_lower_twice bitwise obj_at_def vspace_bits_defs if_apply_def2
+                    split: if_splits)
+    \<comment> \<open>PageMap\<close>
+    apply (rename_tac dev pg_ptr rights sz pg_map)
+    apply (wpsimp simp: Let_def invocation_duplicates_valid_def page_inv_duplicates_valid_def
+                    wp: ensure_safe_mapping_ensures[THEN hoare_strengthen_postE_R]
+                        check_vp_wpR hoare_vcg_if_lift_ER find_pd_for_asid_lookup_pd_wp)
+    apply (fastforce simp: invs_psp_aligned page_directory_at_aligned_pd_bits word_not_le sz
+                           valid_cap_def valid_arch_cap_def lookup_pd_slot_eq
+                    split: if_splits)
     done
 qed
 
@@ -1456,20 +1459,17 @@ lemma decode_vcpu_invocation_valid_pdpt[wp]:
     | simp add: invocation_duplicates_valid_def)+
   done
 
+lemma decode_sgi_signal_invocation_valid_pdpt[wp]:
+  "\<lbrace>\<top>\<rbrace>
+   decode_sgi_signal_invocation (SGISignalCap irq target)
+   \<lbrace>invocation_duplicates_valid \<circ> InvokeArchObject\<rbrace>, -"
+  by (wpsimp simp: decode_sgi_signal_invocation_def invocation_duplicates_valid_def)
+
 lemma arch_decode_invocation_valid_pdpt[wp]:
-  notes find_pd_for_asid_inv[wp del]
-  shows
   "\<lbrace>invs and valid_cap (cap.ArchObjectCap cap) and valid_pdpt_objs \<rbrace>
    arch_decode_invocation label args cap_index slot cap excaps
    \<lbrace>invocation_duplicates_valid o Invocations_A.InvokeArchObject\<rbrace>,-"
-  proof -
-  show ?thesis
-    apply (simp add: arch_decode_invocation_def)
-    apply (rule hoare_pre)
-     apply (wp | wpc)+
-    apply auto
-    done
-qed
+  by (wpsimp simp: arch_decode_invocation_def wp_del: find_pd_for_asid_inv) auto
 
 lemma decode_invocation_valid_pdpt[wp]:
   "\<lbrace>invs and valid_cap cap and valid_pdpt_objs\<rbrace>

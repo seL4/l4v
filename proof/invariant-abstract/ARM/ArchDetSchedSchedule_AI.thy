@@ -236,7 +236,7 @@ lemma activate_thread_valid_sched [DetSchedSchedule_AI_assms]:
 
 crunch
   perform_page_invocation, perform_page_table_invocation, perform_asid_pool_invocation,
-  perform_page_directory_invocation
+  perform_page_directory_invocation, perform_sgi_invocation
   for valid_sched[wp]: valid_sched
   (wp: mapM_x_wp' mapM_wp')
 
