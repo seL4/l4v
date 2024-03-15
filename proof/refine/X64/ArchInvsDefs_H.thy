@@ -198,6 +198,14 @@ primrec acapClass :: "arch_capability \<Rightarrow> capclass" where
 | "acapClass (IOPortCap x y) = IOPortClass"
 | "acapClass IOPortControlCap = IOPortClass"
 
+(* No arch badges currently on this architecture *)
+definition valid_arch_badges :: "capability \<Rightarrow> capability \<Rightarrow> mdbnode \<Rightarrow> bool" where
+  "valid_arch_badges cap cap' node' \<equiv> True"
+
+(* No additional arch assumptions about the MDB *)
+definition mdb_chunked_arch_assms :: "capability \<Rightarrow> bool" where
+  "mdb_chunked_arch_assms cap \<equiv> True"
+
 definition
   isArchFrameCap :: "capability \<Rightarrow> bool"
 where
