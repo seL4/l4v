@@ -114,6 +114,11 @@ lemma ovalid_if_split:
   "\<lbrakk> P \<Longrightarrow> \<lblot>Q\<rblot> f \<lblot>S\<rblot>; \<not>P \<Longrightarrow> \<lblot>R\<rblot> g \<lblot>S\<rblot> \<rbrakk> \<Longrightarrow> \<lblot>\<lambda>s. (P \<longrightarrow> Q s) \<and> (\<not>P \<longrightarrow> R s)\<rblot> if P then f else g \<lblot>S\<rblot>"
   by simp
 
+lemma reader_case_option_wp[wp]:
+  "\<lbrakk>\<And>x. \<lblot>P x\<rblot> m x \<lblot>Q\<rblot>; \<lblot>P'\<rblot> m' \<lblot>Q\<rblot>\<rbrakk>
+   \<Longrightarrow> \<lblot>\<lambda>s. (x = None \<longrightarrow> P' s) \<and> (\<forall>y. x = Some y \<longrightarrow> P y s)\<rblot> case_option m' m x \<lblot>Q\<rblot>"
+  by (cases x; simp)
+
 lemma ovalid_case_prod[wp]:
   assumes "(\<And>x y. ovalid (P x y) (B x y) Q)"
   shows "ovalid (case v of (x, y) \<Rightarrow> P x y) (case v of (x, y) \<Rightarrow> B x y) Q"
