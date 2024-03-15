@@ -129,7 +129,7 @@ lemma owhile_ovalid[wp]:
    apply auto
   done
 
-lemma assert_opt_ovalid:
+lemma oassert_opt_ovalid[wp]:
   "\<lblot>\<lambda>s. \<forall>y. x = Some y \<longrightarrow> Q y s\<rblot> oassert_opt x \<lblot>Q\<rblot>"
   unfolding oassert_opt_def
   by (case_tac x; wpsimp)
