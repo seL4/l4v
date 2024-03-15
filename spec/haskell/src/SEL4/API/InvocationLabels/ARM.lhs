@@ -51,5 +51,5 @@ FIXME ARMHYP ARMPageMapIO is an inconsistant name (but coined by kernel team)
 >         | ARMVCPUAckVPPI
 #endif
 >         | ARMIRQIssueIRQHandler
+>         | ARMIRQIssueSGISignal
 >         deriving (Eq, Enum, Bounded, Show)
-

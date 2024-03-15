@@ -28,6 +28,7 @@ This module contains operations on machine-specific object types for the ARM.
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 > import SEL4.Object.VCPU.ARM
 #endif
+> import SEL4.Object.Interrupt.ARM
 > import {-# SOURCE #-} SEL4.Object.TCB
 
 > import Data.Bits
@@ -65,13 +66,33 @@ ASID capabilities can be copied without modification.
 > deriveCap _ (c@VCPUCap {}) = return $ ArchObjectCap c
 #endif /* CONFIG_ARM_HYPERVISOR_SUPPORT */
 
+> deriveCap _ (c@SGISignalCap {}) = return $ ArchObjectCap c
+
 #ifdef CONFIG_ARM_SMMU
 > deriveCap _ (c@IOSpaceCap {}) = return $ ArchObjectCap c
 > deriveCap _ (c@IOPageTableCap {}) = error "FIXME ARMHYP_SMMU"
 #endif /* CONFIG_ARM_SMMU */
 
 > isCapRevocable :: Capability -> Capability -> Bool
-> isCapRevocable _ _ = False
+> isCapRevocable newCap srcCap = case newCap of
+>     ArchObjectCap (SGISignalCap {}) -> srcCap == IRQControlCap
+>     _ -> False
+
+Whether the first capability is a parent of the second one. Can assume that
+sameRegionAs is true for the two capabilities. If this function returns True,
+the remaining cases of generic isMDBParentOf are still checked.
+
+> isArchMDBParentOf :: Capability -> Capability -> Bool -> Bool
+
+We treat SGISignalCaps as a badged version of IRQControlCaps -- i.e. if both
+arguments are SGISignalCaps, we are in the corresponding Endpoint case where
+badges are equal (because sameRegionAs) and not 0. In that case, only the
+firstBadged flag matters.
+
+> isArchMDBParentOf (ArchObjectCap (SGISignalCap _ _)) (ArchObjectCap (SGISignalCap _ _)) firstBadged =
+>     not firstBadged
+> isArchMDBParentOf _ _ _ = True
+
 
 None of the ARM-specific capabilities have a user writeable data word.
 
@@ -153,6 +174,10 @@ All other capabilities need no finalisation action.
 
 \subsection{Identifying Capabilities}
 
+> isIRQControlCapDescendant :: ArchCapability -> Bool
+> isIRQControlCapDescendant (SGISignalCap {}) = True
+> isIRQControlCapDescendant _ = False
+
 > sameRegionAs :: ArchCapability -> ArchCapability -> Bool
 > sameRegionAs (a@PageCap {}) (b@PageCap {}) =
 >     (botA <= botB) && (topA >= topB) && (botB <= topB)
@@ -171,6 +196,7 @@ All other capabilities need no finalisation action.
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 > sameRegionAs (a@VCPUCap {}) (b@VCPUCap {}) = capVCPUPtr a == capVCPUPtr b
 #endif
+> sameRegionAs (a@SGISignalCap {}) (b@SGISignalCap {}) = a == b
 #ifdef CONFIG_ARM_SMMU
 > sameRegionAs (a@IOSpaceCap {}) (b@IOSpaceCap {}) =
 >     capIOSpaceModuleID a == capIOSpaceModuleID b
@@ -181,6 +207,7 @@ All other capabilities need no finalisation action.
 
 > isPhysicalCap :: ArchCapability -> Bool
 > isPhysicalCap ASIDControlCap = False
+> isPhysicalCap (SGISignalCap {}) = False
 > isPhysicalCap _ = True
 
 > sameObjectAs :: ArchCapability -> ArchCapability -> Bool
@@ -188,6 +215,7 @@ All other capabilities need no finalisation action.
 >     (ptrA == capVPBasePtr b) && (capVPSize a == capVPSize b)
 >         && (ptrA <= ptrA + bit (pageBitsForSize $ capVPSize a) - 1)
 >         && (capVPIsDevice a == capVPIsDevice b)
+> sameObjectAs (SGISignalCap {}) _ = False
 > sameObjectAs a b = sameRegionAs a b
 
 \subsection{Creating New Capabilities}
@@ -299,6 +327,7 @@ Create an architecture-specific object.
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 >        VCPUCap {} -> decodeARMVCPUInvocation label args capIndex slot cap extraCaps
 #endif
+>        SGISignalCap {} -> decodeSGISignalInvocation cap
 #ifdef CONFIG_ARM_SMMU
 >        IOSpaceCap {} -> error "FIXME ARMHYP_SMMU"
 >        IOPageTableCap {} -> error "FIXME ARMHYP_SMMU"
@@ -312,6 +341,8 @@ Create an architecture-specific object.
 >                  ArchInv.InvokeVCPU iv -> do
 >                      withoutPreemption $ performARMVCPUInvocation iv
 #endif
+>                  ArchInv.InvokeSGISignal iv ->
+>                      withoutPreemption $ performSGISignalGenerate iv
 #ifdef CONFIG_ARM_SMMU
 >                  ArchInv.InvokeIOSpace _ ->
 >                      withoutPreemption $ error "FIXME ARMHYP_SMMU"
@@ -331,6 +362,7 @@ Create an architecture-specific object.
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 > capUntypedPtr (VCPUCap { capVCPUPtr = PPtr p }) = PPtr p
 #endif
+> capUntypedPtr (SGISignalCap {}) = error "SGISignalCap has no pointer"
 #ifdef CONFIG_ARM_SMMU
 > capUntypedPtr (IOSpaceCap {}) = error "FIXME ARMHYP_SMMU"
 > capUntypedPtr (IOPageTableCap { capIOPTBasePtr = PPtr p }) = PPtr p
@@ -345,6 +377,7 @@ Create an architecture-specific object.
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 > capUntypedSize (VCPUCap {}) = bit vcpuBits
 #endif
+> capUntypedSize (SGISignalCap {}) = 0 -- invalid case, use C default
 #ifdef CONFIG_ARM_SMMU
 > capUntypedSize (IOSpaceCap {}) = 0 -- invalid, use C default FIXME ARMHYP
 > capUntypedSize (IOPageTableCap {}) = bit ioptBits

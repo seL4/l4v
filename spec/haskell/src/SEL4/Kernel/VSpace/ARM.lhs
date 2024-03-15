@@ -1431,13 +1431,10 @@ ASID pool capabilities are used to allocate unique address space identifiers for
 >         (ArchInvocationLabel ARMASIDPoolAssign, _) -> throw TruncatedMessage
 >         _ -> throw IllegalOperation
 
-#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
-> decodeARMMMUInvocation _ _ _ _ (VCPUCap {}) _ = fail "decodeARMMMUInvocation: not an MMU invocation"
-#endif
-#ifdef CONFIG_ARM_SMMU
-> decodeARMMMUInvocation label _ _ _ (IOSpaceCap {}) _ = fail "decodeARMMMUInvocation: not an MMU invocation"
-> decodeARMMMUInvocation label _ _ _ (IOPageTableCap {}) _ = fail "decodeARMMMUInvocation: not an MMU invocation"
-#endif
+The function should not be called on any other cap types.
+
+> decodeARMMMUInvocation _ _ _ _ _ _ = fail "decodeARMMMUInvocation: not an MMU invocation"
+
 
 > decodeARMPageFlush :: Word -> [Word] -> ArchCapability ->
 >                       KernelF SyscallError ArchInv.Invocation
@@ -1506,13 +1503,7 @@ notion of the largest permitted object size, and checks it appropriately.
 >         InvokeASIDPool oper -> do
 >             performASIDPoolInvocation oper
 >             return []
-#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
->         InvokeVCPU _ -> fail "performARMMMUInvocation: not an MMU invocation"
-#endif
-#ifdef CONFIG_ARM_SMMU
->         InvokeIOSpace _ -> fail "performARMMMUInvocation: not an MMU invocation"
->         InvokeIOPageTable _ -> fail "performARMMMUInvocation: not an MMU invocation"
-#endif
+>         _ -> fail "performARMMMUInvocation: not an MMU invocation"
 
 > performPageDirectoryInvocation :: PageDirectoryInvocation -> Kernel ()
 > performPageDirectoryInvocation (PageDirectoryFlush typ start end pstart pd asid) =

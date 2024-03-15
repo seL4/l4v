@@ -467,6 +467,20 @@ vgicHCREN = (0x1 :: Word32) -- VGIC_HCR_EN
 gicVCPUMaxNumLR = (64 :: Int)
 
 
+{- Software-Generated Interrupts (SGI) -}
+
+numSGIs :: Int
+numSGIs = error "defined in machine/AARCH64/Platform.thy"
+
+-- SGI targets
+gicNumTargets :: Int
+gicNumTargets = error "defined in machine/AARCH64/Platform.thy"
+
+-- the machine op uses word_t (and irq_t which is also word_t in C)
+sendSGI :: Word -> Word -> MachineMonad ()
+sendSGI irq target = error "Unimplemented - machine op"
+
+
 {- Config parameters -}
 
 -- The size of the physical address space in hyp mode can be configured on some platforms.
