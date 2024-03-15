@@ -184,7 +184,7 @@ lemma none_bot_boolE:
 
 (* As for none_top_bot, it would be unusual to see "top" for bool. Only adding the lemma here for
    completeness *)
-lemma none_bot_top_neq_None[simp]:
+lemma none_bot_top_bool_neq_None[simp]:
   "none_bot top opt = (opt \<noteq> None)"
   by (cases opt) auto
 
