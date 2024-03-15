@@ -97,7 +97,7 @@ lemma no_orphans_disj:
   apply (rule ext)
   apply (unfold no_orphans_def all_active_tcb_ptrs_def
                 is_active_tcb_ptr_def st_tcb_at_neg' typ_at_tcb')
-  apply (auto intro: pred_tcb_at')
+  apply (auto del: pred_tcb_at' intro: pred_tcb_at')
   done
 
 lemma no_orphans_lift:
@@ -177,7 +177,7 @@ lemma almost_no_orphans_disj:
   apply (rule ext)
   apply (unfold almost_no_orphans_def all_active_tcb_ptrs_def
                 is_active_tcb_ptr_def st_tcb_at_neg' typ_at_tcb')
-  apply (auto intro: pred_tcb_at')
+  apply (auto del: pred_tcb_at' intro: pred_tcb_at')
   done
 
 lemma no_orphans_update_simps[simp]:
@@ -236,15 +236,6 @@ lemma all_active_tcb_ptrs_queue [simp]:
 
 crunch ksCurThread [wp]: setVMRoot "\<lambda> s. P (ksCurThread s)"
 (wp: crunch_wps simp: crunch_simps)
-
-crunch ksReadyQueues [wp]: asUser "\<lambda>s. P (ksReadyQueues s)"
-(wp: crunch_wps simp: crunch_simps)
-
-crunch no_orphans [wp]: getCurThread "no_orphans"
-
-crunch no_orphans [wp]: threadGet "no_orphans"
-
-crunch no_orphans [wp]: getNotification "no_orphans"
 
 crunch no_orphans [wp]: addToBitmap "no_orphans"
 crunch no_orphans [wp]: removeFromBitmap "no_orphans"
@@ -619,9 +610,6 @@ crunch no_orphans [wp]: "Arch.switchToThread" "no_orphans"
 crunch ksCurThread [wp]: "Arch.switchToThread" "\<lambda> s. P (ksCurThread s)"
   (ignore: ARM.clearExMonitor)
 
-crunch ksIdleThread [wp]: "Arch.switchToThread" "\<lambda> s. P (ksIdleThread s)"
-  (ignore: ARM.clearExMonitor)
-
 lemma ArchThreadDecls_H_switchToThread_all_queued_tcb_ptrs [wp]:
   "\<lbrace> \<lambda>s. P (all_queued_tcb_ptrs s) \<rbrace>
    Arch.switchToThread tcb_ptr
@@ -905,8 +893,6 @@ lemma tcbSchedEnqueue_in_ksQ_aqtp[wp]:
   apply (clarsimp simp: all_queued_tcb_ptrs_def)
   apply (rule tcbSchedEnqueue_in_ksQ)
   done
-
-crunch ksReadyQueues[wp]: threadGet "\<lambda>s. P (ksReadyQueues s)"
 
 lemma tcbSchedEnqueue_in_ksQ_already_queued:
   "\<lbrace>\<lambda>s. valid_queues' s \<and> tcb_at' t s \<and>
@@ -1349,12 +1335,6 @@ lemma replyFromKernel_no_orphans [wp]:
   apply wp
   done
 
-crunch ksSchedulerAction [wp]: setMessageInfo "\<lambda>s. P (ksSchedulerAction s)"
-
-crunch ksCurThread [wp]: createNewCaps "\<lambda> s. P (ksCurThread s)"
-
-crunch ksReadyQueues  [wp]: createNewCaps "\<lambda> s. P (ksReadyQueues s)"
-
 crunch inv [wp]: alignError "P"
 
 lemma createObjects_no_orphans [wp]:
@@ -1638,9 +1618,6 @@ lemma asUser_almost_no_orphans:
   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
   done
 
-crunch almost_no_orphans[wp]: asUser "almost_no_orphans t"
-  (simp: almost_no_orphans_disj all_queued_tcb_ptrs_def wp: hoare_vcg_all_lift hoare_vcg_disj_lift crunch_wps)
-
 lemma sendSignal_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> valid_queues' s \<and> valid_objs' s \<and> sch_act_wf (ksSchedulerAction s) s\<rbrace>
    sendSignal ntfnptr badge
@@ -1893,8 +1870,6 @@ crunch no_orphans [wp]: invalidateTLBByASID "no_orphans"
 
 crunch no_orphans [wp]: handleFaultReply "no_orphans"
 
-crunch valid_queues' [wp]: handleFaultReply "valid_queues'"
-
 lemma doReplyTransfer_no_orphans[wp]:
   "\<lbrace>no_orphans and invs' and tcb_at' sender and tcb_at' receiver\<rbrace>
    doReplyTransfer sender receiver slot grant
@@ -1922,8 +1897,6 @@ lemma cancelSignal_valid_queues' [wp]:
 
 crunch no_orphans [wp]: setupReplyMaster "no_orphans"
   (wp: crunch_wps simp: crunch_simps)
-
-crunch valid_queues' [wp]: setupReplyMaster "valid_queues'"
 
 lemma restart_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> sch_act_simple s \<and> tcb_at' t s \<rbrace>
@@ -1968,7 +1941,7 @@ lemma copyreg_no_orphans:
   apply simp
   apply (wp hoare_vcg_if_lift hoare_weak_lift_imp)
       apply (wp hoare_vcg_imp_lift' mapM_x_wp' asUser_no_orphans
-             | wpc | clarsimp split del: if_splits)+
+             | wpc | clarsimp split del: if_split)+
        apply (wp hoare_weak_lift_imp hoare_vcg_conj_lift hoare_drop_imp mapM_x_wp' restart_invs'
               restart_no_orphans asUser_no_orphans suspend_nonz_cap_to_tcb
               | strengthen invs_valid_queues' | wpc | simp add: if_apply_def2)+
@@ -2118,9 +2091,6 @@ lemma invokeIRQHandler_no_orphans [wp]:
     apply (wp | clarsimp | fastforce)+
   done
 
-crunch no_orphans [wp]: setVMRootForFlush "no_orphans"
-(wp: crunch_wps)
-
 lemma performPageTableInvocation_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<rbrace>
    performPageTableInvocation pti
@@ -2234,10 +2204,10 @@ lemma arch_performInvocation_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> valid_arch_inv' i s \<and> ct_active' s \<rbrace>
    Arch.performInvocation i
    \<lbrace> \<lambda>reply s. no_orphans s \<rbrace>"
-  unfolding ARM_H.performInvocation_def performARMMMUInvocation_def
-  apply (cases i, simp_all add: valid_arch_inv'_def)
-      apply (wp | clarsimp)+
-  done
+  unfolding ARM_H.performInvocation_def
+  by (cases i;
+      simp add: valid_arch_inv'_def performARMMMUInvocation_def performSGISignalGenerate_def;
+      wpsimp)
 
 lemma setDomain_no_orphans [wp]:
   "\<lbrace>no_orphans and valid_queues and valid_queues' and cur_tcb'\<rbrace>

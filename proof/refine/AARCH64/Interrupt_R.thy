@@ -48,6 +48,8 @@ primrec
 where
   "arch_irq_control_inv_relation (AARCH64_A.ARMIRQControlInvocation i ptr ptr' t) x =
      (x = AARCH64_H.IssueIRQHandler i (cte_map ptr) (cte_map ptr') t)"
+| "arch_irq_control_inv_relation (AARCH64_A.IssueSGISignal irq targets ptr ptr') x =
+     (x = AARCH64_H.IssueSGISignal irq (ucast targets) (cte_map ptr) (cte_map ptr'))"
 
 primrec
   irq_control_inv_relation :: "irq_control_invocation \<Rightarrow> irqcontrol_invocation \<Rightarrow> bool"
@@ -77,6 +79,11 @@ where
       cte_wp_at' (\<lambda>cte. cteCap cte = IRQControlCap) ptr' and
       ex_cte_cap_to' ptr and real_cte_at' ptr and
       (Not o irq_issued' irq) and K (irq \<le> maxIRQ))"
+| "arch_irq_control_inv_valid' (AARCH64_H.IssueSGISignal irq targets src_slot sgi_slot) =
+     (cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) sgi_slot and
+      cte_wp_at' (\<lambda>cte. cteCap cte = IRQControlCap) src_slot and
+      ex_cte_cap_to' sgi_slot and real_cte_at' sgi_slot)"
+
 
 primrec
   irq_control_inv_valid' :: "irqcontrol_invocation \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -182,6 +189,12 @@ lemma arch_check_irq_valid':
   "\<lbrace>\<top>\<rbrace> arch_check_irq y \<lbrace>\<lambda>_ _. unat y \<le> unat maxIRQ\<rbrace>, \<lbrace>\<lambda>_. \<top>\<rbrace>"
   by (wp arch_check_irq_valid)
 
+(* 16 is hard-coded in Haskell and bitfield generator as width of "targets" field in SGISignal cap *)
+lemma sgi_target_mask_bits_ucast_targets:
+  "(targets :: machine_word) \<le> mask gicSGITargetMaskBits \<Longrightarrow>
+   (ucast targets :: 16 word) = ucast (ucast targets :: sgi_target_mask)"
+  by (simp add: gicSGITargetMaskBits_sgi_target_len) word_eqI_solve
+
 lemma arch_decodeIRQControlInvocation_corres:
   "list_all2 cap_relation caps caps' \<Longrightarrow>
    corres (ser \<oplus> arch_irq_control_inv_relation)
@@ -198,10 +211,17 @@ lemma arch_decodeIRQControlInvocation_corres:
                        simp: length_Suc_conv list_all2_Cons1 whenE_rangeCheck_eq liftE_bindE)
   apply (cases caps, simp split: list.split)
   apply (case_tac "\<exists>n. length args = Suc (Suc (Suc (Suc n)))",
-         clarsimp simp: length_Suc_conv list_all2_Cons1 whenE_rangeCheck_eq liftE_bindE)
+         clarsimp simp: length_Suc_conv list_all2_Cons1 liftE_bindE)
    prefer 2 apply (fastforce split: list.split)
-  \<comment>\<open>ARMIRQIssueIRQHandler\<close>
+  \<comment>\<open>ARMIRQIssueSGISignal\<close>
   apply (rule conjI, clarsimp)
+   apply (simp add: range_check_def rangeCheck_def)
+   apply (corres corres: lookupSlotForCNodeOp_corres ensureEmptySlot_corres corres_returnOkTT
+                 term_simp: numSGIs_def sgi_target_mask_bits_ucast_targets)
+    apply fastforce
+   apply fastforce
+  \<comment>\<open>ARMIRQIssueIRQHandler\<close>
+  apply (rule impI, rule conjI, clarsimp)
    apply (rule corres_guard_imp)
      apply (rule corres_splitEE[OF checkIRQ_corres])
        apply (rule_tac F="unat y \<le> unat maxIRQ" in corres_gen_asm)
@@ -295,6 +315,7 @@ lemma arch_decode_irq_control_valid'[wp]:
           | wp whenE_throwError_wp isIRQActive_wp ensureEmptySlot_stronger
           | wpc
           | wp (once) hoare_drop_imps)+
+  apply (clarsimp, rule conjI; clarsimp)
   apply (clarsimp simp: invs_valid_objs' irq_const_defs unat_word_ariths word_le_nat_alt
                         not_less unat_le_helper unat_of_nat unat_ucast_mask)
   apply (meson le_trans word_and_le2 word_less_eq_iff_unsigned)
@@ -460,9 +481,6 @@ crunch valid_mdb'[wp]: setIRQState "valid_mdb'"
 method do_machine_op_corres
   = (rule corres_machine_op, rule corres_Id, rule refl, simp, wp)
 
-lemma no_fail_setIRQTrigger: "no_fail \<top> (setIRQTrigger irq trig)"
-  by (simp add: setIRQTrigger_def)
-
 lemma setIRQTrigger_corres:
   "corres dc \<top> \<top> (do_machine_op (setIRQTrigger irq t)) (doMachineOp (setIRQTrigger irq t))"
   apply (rule corres_machine_op)
@@ -474,6 +492,10 @@ lemma setIRQTrigger_corres:
             | simp add: dc_def)+
   done
 
+lemma SGISignalCap_valid[simp, intro!]:
+  "valid_cap' (ArchObjectCap (SGISignalCap irq targets)) s"
+  by (simp add: valid_cap'_def capAligned_def word_bits_def)
+
 lemma arch_performIRQControl_corres:
   "arch_irq_control_inv_relation x2 ivk' \<Longrightarrow> corres (dc \<oplus> dc)
           (einvs and arch_irq_control_inv_valid x2)
@@ -481,23 +503,31 @@ lemma arch_performIRQControl_corres:
           (arch_invoke_irq_control x2)
           (Arch.performIRQControl ivk')"
   apply (cases x2; simp add: AARCH64_H.performIRQControl_def invoke_irq_control.cases IRQ_def)
-  apply (rule corres_guard_imp)
-    apply (rule corres_split_nor)
-       apply (rule setIRQTrigger_corres)
-      apply (rule corres_split_nor)
-         apply (rule setIRQState_corres)
-         apply (simp add: irq_state_relation_def)
-        apply (rule cteInsert_simple_corres; simp)
-       apply (wp | simp add: irq_state_relation_def IRQHandler_valid IRQHandler_valid')+
+   apply (rule corres_guard_imp)
+     apply (rule corres_split_nor)
+        apply (rule setIRQTrigger_corres)
+       apply (rule corres_split_nor)
+          apply (rule setIRQState_corres)
+          apply (simp add: irq_state_relation_def)
+         apply (rule cteInsert_simple_corres; simp)
+        apply (wp | simp add: irq_state_relation_def IRQHandler_valid IRQHandler_valid')+
+    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def cte_wp_at_caps_of_state
+                          is_simple_cap_def is_cap_simps arch_irq_control_inv_valid_def
+                          safe_parent_for_def is_simple_cap_arch_def)
+   apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def IRQHandler_valid
+                         IRQHandler_valid' is_simple_cap'_def isCap_simps IRQ_def)
+   apply (clarsimp simp: safe_parent_for'_def cte_wp_at_ctes_of)
+   apply (case_tac ctea)
+   apply (clarsimp simp: isCap_simps sameRegionAs_def3)
+   apply (auto dest: valid_irq_handlers_ctes_ofD)[1]
+  apply (corres corres: cteInsert_simple_corres)
    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def cte_wp_at_caps_of_state
                          is_simple_cap_def is_cap_simps arch_irq_control_inv_valid_def
-                         safe_parent_for_def is_simple_cap_arch_def)
-  apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def IRQHandler_valid
-                        IRQHandler_valid' is_simple_cap'_def isCap_simps IRQ_def)
+                         safe_parent_for_def is_simple_cap_arch_def is_irq_control_descendant_def)
+  apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def
+                        is_simple_cap'_def isCap_simps)
   apply (clarsimp simp: safe_parent_for'_def cte_wp_at_ctes_of)
-  apply (case_tac ctea)
-  apply (clarsimp simp: isCap_simps sameRegionAs_def3)
-  apply (auto dest: valid_irq_handlers_ctes_ofD)[1]
+  apply (rename_tac cte', case_tac cte', simp add: isCap_simps)
   done
 
 lemma performIRQControl_corres:
@@ -558,10 +588,10 @@ lemma arch_invoke_irq_control_invs'[wp]:
    apply (wpsimp wp: cteInsert_simple_invs simp: cte_wp_at_ctes_of isCap_simps IRQ_def)
   apply (clarsimp simp: cte_wp_at_ctes_of IRQHandler_valid' is_simple_cap'_def isCap_simps
                         safe_parent_for'_def sameRegionAs_def3)
-  apply (rule conjI, clarsimp simp: cte_wp_at_ctes_of)
-  apply (case_tac ctea)
-  apply (auto dest: valid_irq_handlers_ctes_ofD
-              simp: invs'_def valid_state'_def IRQ_def)
+  apply (clarsimp simp: capRange_def)
+  apply (rule conjI; clarsimp simp: cte_wp_at_ctes_of; case_tac ctea)
+   apply (auto dest: valid_irq_handlers_ctes_ofD
+               simp: invs'_def valid_state'_def IRQ_def)
   done
 
 lemma invoke_irq_control_invs'[wp]:
