@@ -2694,6 +2694,10 @@ lemma kernel_mappings_canonical:
   apply simp
   done
 
+(* unused on this architecture *)
+declare is_irq_control_descendant_def[simp]
+declare should_be_arch_parent_of_def[simp]
+
 end
 
 context Arch_pspace_update_eq begin

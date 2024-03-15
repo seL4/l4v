@@ -90,13 +90,14 @@ lemma same_object_as_def2:
   "same_object_as cp cp' = (cap_master_cap cp = cap_master_cap cp'
                                 \<and> \<not> cp = NullCap \<and> \<not> is_untyped_cap cp
                                 \<and> \<not> is_zombie cp
+                                \<and> cp \<noteq> IRQControlCap
                                 \<and> (is_arch_cap cp \<longrightarrow>
                                      (case the_arch_cap cp of
                                          FrameCap x rs sz d v \<Rightarrow> x \<le> x + 2 ^ pageBitsForSize sz - 1
                                        | _ \<Rightarrow> True)))"
   apply (simp add: same_object_as_def is_cap_simps split: cap.split)
   apply (auto simp: cap_master_cap_def bits_of_def is_cap_simps
-             split: arch_cap.splits)
+             split: cap.splits arch_cap.splits)
   done
 
 lemma same_object_as_cap_master [CNodeInv_AI_assms]:

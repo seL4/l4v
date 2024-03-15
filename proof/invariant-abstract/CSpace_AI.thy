@@ -848,12 +848,6 @@ lemma null_no_mdb:
 end
 
 
-
-
-lemma the_arch_cap_ArchObjectCap[simp]:
-  "the_arch_cap (cap.ArchObjectCap cap) = cap"
-  by (simp add: the_arch_cap_def)
-
 lemma cap_master_cap_simps:
   "cap_master_cap (cap.EndpointCap ref bdg rghts)      = cap.EndpointCap ref 0 UNIV"
   "cap_master_cap (cap.NotificationCap ref bdg rghts) = cap.NotificationCap ref 0 UNIV"
@@ -4494,7 +4488,8 @@ lemma safe_parent_is_parent:
    apply clarsimp
    apply (drule (2) ut_revocableD)
    apply (clarsimp simp: is_cap_simps)
-  apply (drule (2) safe_parent_arch_is_parent[where f=f])
+  apply (drule (1) safe_parent_arch_is_parent[where f=f])
+   apply (simp add: valid_mdb_def)
   apply (clarsimp simp: is_cap_simps should_be_parent_of_def)
   done
 

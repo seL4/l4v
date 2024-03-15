@@ -3371,6 +3371,10 @@ proof -
   thus ?thesis by (rule rtrancl_mono)
 qed
 
+(* unused on this architecture *)
+declare is_irq_control_descendant_def[simp]
+declare should_be_arch_parent_of_def[simp]
+
 end
 
 declare X64.arch_tcb_context_absorbs[simp]
