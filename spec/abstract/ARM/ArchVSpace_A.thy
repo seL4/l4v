@@ -557,7 +557,8 @@ where
    | PageDirectoryCap _ None \<Rightarrow> throwError IllegalOperation
    | PageCap dev r R pgs x \<Rightarrow> returnOk (ArchObjectCap (PageCap dev r R pgs None))
    | ASIDControlCap \<Rightarrow> returnOk (ArchObjectCap c)
-   | ASIDPoolCap _ _ \<Rightarrow> returnOk (ArchObjectCap c)"
+   | ASIDPoolCap _ _ \<Rightarrow> returnOk (ArchObjectCap c)
+   | SGISignalCap _ _ \<Rightarrow> returnOk (ArchObjectCap c)"
 
 text \<open>No user-modifiable data is stored in ARM-specific capabilities.\<close>
 definition
