@@ -76,6 +76,7 @@ crunch arch_perform_invocation
   for irq_state_of_state[wp]: "\<lambda>s. P (irq_state_of_state s)"
   (wp: dmo_wp modify_wp simp: set_current_pd_def invalidateLocalTLB_ASID_def do_flush_defs
        invalidateLocalTLB_VAASID_def cleanByVA_PoU_def do_flush_def cache_machine_op_defs
+       sendSGI_def
    wp: crunch_wps simp: crunch_simps ignore: ignore_failure)
 
 crunch arch_finalise_cap, prepare_thread_delete
@@ -856,6 +857,13 @@ lemma perform_asid_pool_invocation_reads_respects:
   apply (clarsimp simp: authorised_asid_pool_inv_def)
   done
 
+lemma perform_sgi_invocation_reads_respects:
+  "reads_respects aag l \<top> (perform_sgi_invocation iv)"
+  unfolding perform_sgi_invocation_def
+  apply (cases iv, simp add: sendSGI_def)
+  apply (rule dmo_mol_reads_respects)
+  done
+
 lemma arch_perform_invocation_reads_respects:
   assumes domains_distinct[wp]: "pas_domains_distinct aag"
   shows "reads_respects aag l (pas_refined aag and pspace_aligned and valid_vspace_objs
@@ -868,7 +876,8 @@ lemma arch_perform_invocation_reads_respects:
                      perform_page_directory_invocation_reads_respects
                      perform_page_invocation_reads_respects
                      perform_asid_control_invocation_reads_respects
-                     perform_asid_pool_invocation_reads_respects)
+                     perform_asid_pool_invocation_reads_respects
+                     perform_sgi_invocation_reads_respects)
   by (auto simp: authorised_arch_inv_def valid_arch_inv_def)
 
 lemma equiv_asids_arm_asid_table_delete:
@@ -1587,6 +1596,12 @@ lemma perform_asid_pool_invocation_globals_equiv:
         get_cap_wp | wpc | simp)+
   done
 
+lemma perform_sgi_invocation_globals_equiv:
+  "perform_sgi_invocation iv \<lbrace>globals_equiv s\<rbrace>"
+  apply (cases iv, simp add: perform_sgi_invocation_def sendSGI_def)
+  apply (rule dmo_mol_globals_equiv)
+  done
+
 definition authorised_for_globals_arch_inv ::
   "arch_invocation \<Rightarrow> ('z::state_ext) state \<Rightarrow> bool" where
   "authorised_for_globals_arch_inv ai \<equiv>
@@ -1604,7 +1619,8 @@ lemma arch_perform_invocation_globals_equiv:
                    perform_page_directory_invocation_globals_equiv
                    perform_page_invocation_globals_equiv
                    perform_asid_control_invocation_globals_equiv
-                   perform_asid_pool_invocation_globals_equiv)+
+                   perform_asid_pool_invocation_globals_equiv
+                   perform_sgi_invocation_globals_equiv)+
   apply (auto simp: authorised_for_globals_arch_inv_def
               simp: invs_def valid_state_def valid_arch_inv_def invs_valid_vs_lookup)
   done
