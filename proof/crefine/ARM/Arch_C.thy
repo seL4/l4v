@@ -2157,7 +2157,7 @@ lemma pte_get_tag_alt:
   by (auto simp add: pte_lift_def Let_def split: if_split_asm)
 
 definition
-  to_option :: "('a \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> 'a option"
+  to_option :: "('a \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> 'a option" (* FIXME: consider moving to Lib *)
 where
   "to_option f x \<equiv> if f x then Some x else None"
 

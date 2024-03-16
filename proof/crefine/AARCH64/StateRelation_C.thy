@@ -444,7 +444,6 @@ lemma pte_0:
    pte_lift cpte = Some (Pte_pte_invalid)"
   by (simp add: pte_lift_def pte_get_tag_def pte_tag_defs)
 
-(* FIXME AARCH64 review *)
 (* with hypervisor support enabled, use stage-2 translation format for PTE *)
 (* see makeUserPage in C *)
 definition cpte_relation :: "pte \<Rightarrow> pte_C \<Rightarrow> bool" where
@@ -461,8 +460,7 @@ definition cpte_relation :: "pte \<Rightarrow> pte_C \<Rightarrow> bool" where
         then cpte' = Some (Pte_pte_4k_page
                              \<lparr> pte_pte_4k_page_CL.UXN_CL = of_bool xn,
                                page_base_address_CL = baseaddr,
-                               nG_CL = from_bool global, \<comment> \<open>flipped in hyp mode
-                                 (* FIXME AARCH64 check manual for what this really means *)\<close>
+                               nG_CL = from_bool global, \<comment> \<open>flipped in hyp mode\<close>
                                AF_CL = 1,
                                SH_CL = 0,
                                AP_CL = ap_from_vm_rights vmrights,

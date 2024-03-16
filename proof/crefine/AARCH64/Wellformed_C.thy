@@ -171,8 +171,6 @@ definition
   Cap_notification_cap aec \<Rightarrow> True
   | _ \<Rightarrow> False"
 
-(* FIXME AARCH64: unclear why there aren't isBlahCap_C functions for arch objects in Wellformed_C *)
-
 definition
   ep_at_C' :: "word64 \<Rightarrow> heap_raw_state \<Rightarrow> bool"
 where
@@ -637,6 +635,11 @@ where
 
 definition cacheLineSize :: nat where
   "cacheLineSize \<equiv> 6"
+
+(* The magic 4 comes out of the bitfield generator -- this applies to all versions of the kernel. *)
+lemma ThreadState_Restart_mask[simp]:
+  "(scast ThreadState_Restart::machine_word) && mask 4 = scast ThreadState_Restart"
+  by (simp add: ThreadState_Restart_def mask_def)
 
 (* generic lemmas with arch-specific consequences *)
 

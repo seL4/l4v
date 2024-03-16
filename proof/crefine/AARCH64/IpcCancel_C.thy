@@ -144,7 +144,7 @@ lemma tcbEPDequeue_spec:
    apply simp
   apply (frule c_guard_clift)
   apply (simp add: typ_heap_simps')
-  apply (intro allI conjI impI) (* FIXME AARCH64 different number of goals, not sure why *)
+  apply (intro allI conjI impI)
                apply (clarsimp simp add: typ_heap_simps h_t_valid_clift_Some_iff)
               apply (clarsimp simp: typ_heap_simps h_t_valid_clift_Some_iff
                               cong: if_weak_cong)

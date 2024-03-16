@@ -745,7 +745,6 @@ lemma ccap_relation_VSpaceCap_IsMapped:
   apply (simp add: to_bool_def)
   done
 
-(* FIXME AARCH64 do we also want VSRootPT_T/cap_vspace_cap_lift? *)
 lemma ccap_relation_PageTableCap_BasePtr:
   "\<lbrakk> ccap_relation (capability.ArchObjectCap (arch_capability.PageTableCap p NormalPT_T m)) ccap \<rbrakk>
    \<Longrightarrow> capPTBasePtr_CL (cap_page_table_cap_lift ccap) = p"
@@ -754,7 +753,6 @@ lemma ccap_relation_PageTableCap_BasePtr:
   apply (clarsimp simp: cap_to_H_def Let_def split: cap_CL.splits if_splits)
   done
 
-(* FIXME AARCH64 do we also want VSRootPT_T/cap_vspace_cap_lift? *)
 lemma ccap_relation_PageTableCap_MappedASID:
   "\<lbrakk> ccap_relation (capability.ArchObjectCap (arch_capability.PageTableCap p NormalPT_T (Some (a,b))))
                    ccap \<rbrakk>
@@ -888,7 +886,7 @@ lemma slotcap_in_mem_VSpace:
   apply (simp add: cap_get_tag_isCap_ArchObject2)
   done
 
-lemma pptrUserTop_val: (* FIXME AARCH64: need value spelled out for C code *)
+lemma pptrUserTop_val: (* FIXME AARCH64: need value spelled out for C code, make schematic *)
   "pptrUserTop = 0xFFFFFFFFFFF"
   by (simp add: pptrUserTop_def mask_def Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
 
@@ -897,11 +895,6 @@ lemma ccap_relation_vspace_base: (* FIXME AARCH64: move up if needed in VSpace_R
     \<Longrightarrow> capVSBasePtr_CL (cap_vspace_cap_lift cap) = p"
   by (frule cap_get_tag_isCap_unfolded_H_cap)
      (clarsimp simp: cap_vspace_cap_lift ccap_relation_def cap_to_H_def split: if_splits)
-
-(* The magic 4 comes out of the bitfield generator *)
-lemma ThreadState_Restart_mask[simp]: (* FIXME AARCH64: move far up *)
-  "(scast ThreadState_Restart::machine_word) && mask 4 = scast ThreadState_Restart"
-  by (simp add: ThreadState_Restart_def mask_def)
 
 lemma Restart_valid[simp]:
   "valid_tcb_state' Restart s"
@@ -1297,11 +1290,6 @@ definition
                             (pde_range_C.length_C pde_ran))
           \<and> 1 \<le> pde_range_C.length_C pde_ran"
 
-(* FIXME AARCH64 do we want an analogue for AARCH64?
-definition
- "vm_attribs_relation attr attr' \<equiv>
-       riscvExecuteNever_CL (vm_attributes_lift attr') = from_bool (riscvExecuteNever attr)" *)
-
 lemma framesize_from_H_eqs:
   "(framesize_from_H vsz = scast Kernel_C.ARMSmallPage) = (vsz = ARMSmallPage)"
   "(framesize_from_H vsz = scast Kernel_C.ARMLargePage) = (vsz = ARMLargePage)"
@@ -1348,7 +1336,7 @@ lemma cpte_relation_pte_invalid_eq:
   "cpte_relation pte pte' \<Longrightarrow> (pte_lift pte' = Some Pte_pte_invalid) = (pte = InvalidPTE)"
   by (clarsimp simp: cpte_relation_def Let_def split: if_splits pte.splits)
 
-lemma from_bool_inj[simp]: (* FIXME AARCH64: move up *)
+lemma from_bool_inj[simp]: (* FIXME AARCH64: move to Word_Lib *)
   "(from_bool x = from_bool y) = (x = y)"
   unfolding from_bool_def
   by (auto split: bool.splits)
@@ -1413,24 +1401,6 @@ lemma performPageInvocationMap_ccorres:
    apply vcg
   apply (fastforce simp: wellformed_mapdata'_def typ_heap_simps isCap_simps cap_get_tag_isCap
                          ccap_relation_FrameCap_MappedAddress)
-  done
-
-lemma vaddr_segment_nonsense3_folded: (* FIXME AARCH64: remove if unused, also in RISCV64 and X64 *)
-  "is_aligned (p :: machine_word) pageBits \<Longrightarrow>
-   (p + ((vaddr >> pageBits) && mask ((pt_bits pt_t) - word_size_bits) << word_size_bits) &&
-     ~~ mask (pt_bits pt_t)) = p"
-  apply (rule is_aligned_add_helper[THEN conjunct2])
-   apply (simp add: bit_simps mask_def)+
-   (* FIXME AARCH64 abstraction violation *)
-   apply (simp add: Kernel_Config.config_ARM_PA_SIZE_BITS_40_def)
-  (* FIXME AARCH64 consider cleanup *)
-  apply (cases pt_t; clarsimp simp: bit_simps mask_def split: if_splits)
-   apply (simp_all add: shiftl_less_t2n[where m=12 and n=3, simplified,
-                                        OF and_mask_less'[where n=9, unfolded mask_def, simplified]])
-  apply clarsimp
-  apply (rule shiftl_less_t2n[where m=13, simplified]; simp)
-  apply (rule and_mask_less'[where n=10, simplified mask_def, simplified])
-  apply simp
   done
 
 lemma performPageGetAddress_ccorres:
@@ -1556,18 +1526,6 @@ lemma slotcap_in_mem_valid:
   apply (erule(1) ctes_of_valid')
   done
 
-lemma unat_less_iff64: (* FIXME AARCH64: remove if unused *)
-  "\<lbrakk>unat (a::machine_word) = b;c < 2^word_bits\<rbrakk>
-   \<Longrightarrow> (a < of_nat c) = (b < c)"
-  apply (rule iffI)
-    apply (drule unat_less_helper)
-    apply simp
-  apply (simp add:unat64_eq_of_nat)
-  apply (rule of_nat_mono_maybe)
-   apply (simp add:word_bits_def)
-  apply simp
-  done
-
 lemma injection_handler_if_returnOk:
   "injection_handler Inl (if a then b else returnOk c)
   = (if a then (injection_handler Inl b) else returnOk c)"
@@ -1579,11 +1537,6 @@ lemma injection_handler_if_returnOk:
 
 lemma pbfs_less: "pageBitsForSize sz < 31"
   by (case_tac sz,simp_all add: bit_simps)
-
-definition
-  to_option :: "('a \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> 'a option" (* FIXME AARCH64: remove if unused, also in X64 and RISCV64 *)
-where
-  "to_option f x \<equiv> if f x then Some x else None"
 
 lemma cte_wp_at_eq_gsMaxObjectSize:
   "cte_wp_at' ((=) cap o cteCap) slot s
@@ -1673,8 +1626,7 @@ lemma ccap_relation_FrameCap_IsMapped:
   apply (clarsimp simp: cap_to_H_def Let_def split: cap_CL.splits if_splits)
   done
 
-(* FIXME AARCH64: move *)
-lemma and_1_0_not_bit_0:
+lemma and_1_0_not_bit_0: (* FIXME AARCH64: move to Word_Lib *)
   "(w && 1 = 0) = (\<not> (w::'a::len word) !! 0)"
   using to_bool_and_1[simplified to_bool_def, where x=w]
   by auto

@@ -161,17 +161,6 @@ where
   "getContext_C thread \<equiv>
    \<lambda>s. from_user_context_C (tcbContext_C (the (clift (t_hrs_' (globals s)) (Ptr &(thread\<rightarrow>[''tcbArch_C''])))))"
 
-(* FIXME AARCH64 move, this is very specific and rather ugly, is it possible to generalise? *)
-lemma size_64_less_64:
-  "size (r::64) < (64::nat)"
-  apply (induct r rule: bit0.plus_induct, simp)
-  apply (frule bit0.Suc_size)
-  apply (case_tac "x = 64 - 1"; clarsimp)
-  apply (prop_tac "size x \<noteq> size (64 - 1 :: 64)")
-   apply (subst bit0.size_inj, simp)
-  apply simp
-  done
-
 lemma from_user_context_C:
   "ccontext_relation uc uc' \<Longrightarrow> from_user_context_C uc' = uc"
   unfolding ccontext_relation_def cregs_relation_def
@@ -751,7 +740,7 @@ lemma fpu_relation_imp_eq:
   apply clarsimp
   apply (rule ext, rename_tac z)
   apply (drule_tac x="size z" in spec)+
-  apply (simp add: state_rel.size_64_less_64)
+  apply (simp add: size_64_less_64)
   done
 
 lemma ccontext_relation_imp_eq:
@@ -944,9 +933,6 @@ lemma option_to_ctcb_ptr_inj:
   apply (erule is_aligned_no_overflow_0; simp)
   done
 
-(* FIXME AARCH64 this is bad news, we need the alignment constraints to use option_to_ctcb_ptr_inj,
-   and we used to be able to say that if there's a non-null tcb pointer in a vcpu, then it's aligned,
-   but on AARCH64 we don't have anything like that in vcpu validity, so we are stuck *)
 lemma cpspace_vcpu_relation_unique:
   assumes "cpspace_vcpu_relation ah ch" "cpspace_vcpu_relation ah' ch"
   assumes "\<forall>x \<in> ran (map_to_vcpus ah). is_aligned_opt (vcpuTCBPtr x) tcbBlockSizeBits"
@@ -1064,19 +1050,6 @@ lemma cpspace_asidpool_relation_unique:
    apply (clarsimp simp: non_dom_eval_eq)
   apply force
   done
-(* FIXME AARCH64 old proof for reference, remove if not needed after rest of ADT_H is fixed
-   apply clarsimp
-   apply (case_tac "i \<le> mask asid_low_bits", simp)
-    apply (drule sym[where s="option_to_ptr _"], simp)
-    apply (simp add: option_to_ptr_def option_to_0_def ran_def split: option.splits)
-   apply clarsimp
-   apply (drule_tac c=i in contra_subsetD, simp)+
-   apply (clarsimp simp: non_dom_eval_eq)
-  apply clarsimp
-  apply (rule ccontr)
-  apply clarsimp
-  apply blast
-  done *)
 
 lemma cpspace_user_data_relation_unique:
   "\<lbrakk>cmap_relation (heap_to_user_data ah bh) (clift ch) Ptr cuser_user_data_relation;
@@ -1307,12 +1280,6 @@ lemma ksPSpace_eq_imp_valid_tcb'_eq:
                  ksPSpace_eq_imp_typ_at'_eq[OF ksPSpace]
                  valid_tcb'_def valid_tcb_state'_def valid_bound_ntfn'_def valid_arch_tcb'_def
           split: thread_state.splits option.splits)
-
-(* FIXME AARCH64 we don't have valid_vcpu' on AARCH64
-lemma ksPSpace_eq_imp_valid_vcpu'_eq:
-  assumes ksPSpace: "ksPSpace s' = ksPSpace s"
-  shows "valid_vcpu' vcpu s' = valid_vcpu' vcpu s"
-  by (auto simp: valid_vcpu'_def ksPSpace_eq_imp_typ_at'_eq[OF ksPSpace] split: option.splits) *)
 
 lemma ksPSpace_eq_imp_valid_objs'_eq:
   assumes ksPSpace: "ksPSpace s' = ksPSpace s"

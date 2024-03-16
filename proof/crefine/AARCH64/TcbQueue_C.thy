@@ -894,83 +894,6 @@ lemma tcb_queue_relation'_prev_mask:
   shows "ptr_val (getPrev tcb) && ~~ mask bits = ptr_val (getPrev tcb)"
   by (rule tcb_queue_relation_prev_mask [OF tcb_queue_relation'_queue_rel], fact+)
 
-(* FIXME AARCH64 sign-extensions and pspace_canonical' are gone, leaving these in case we end up
-   needing something analogous to demonstrate validity of pointers
-lemma tcb_queue_relation_next_sign:
-  assumes
-    "tcb_queue_relation getNext getPrev mp queue NULL qhead" and
-    valid_ep: "\<forall>t\<in>set queue. tcb_at' t s"
-    "distinct queue"
-    "mp (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb"
-    "tcbp \<in> set queue"  and
-    canon: "pspace_canonical' s"
-  shows "sign_extend canonical_bit (ptr_val (getNext tcb)) = ptr_val (getNext tcb)"
-proof (cases "(getNext tcb) = NULL")
-  case True
-  thus ?thesis by simp
-next
-  case False
-
-  hence "ctcb_ptr_to_tcb_ptr (getNext tcb) \<in> set queue" using assms
-    apply -
-    apply (drule (3) tcb_queueD)
-    apply (clarsimp split: if_split_asm)
-    done
-
-  with valid_ep(1) have tcb: "tcb_at' (ctcb_ptr_to_tcb_ptr (getNext tcb)) s" ..
-  with canon have "canonical_address (ctcb_ptr_to_tcb_ptr (getNext tcb))" by (simp add: obj_at'_is_canonical)
-  moreover
-  have "is_aligned (ctcb_ptr_to_tcb_ptr (getNext tcb)) tcbBlockSizeBits" using tcb by (rule tcb_aligned')
-  ultimately
-  have "canonical_address (ptr_val (getNext tcb))" by (rule canonical_address_ctcb_ptr)
-  thus ?thesis
-    by (simp add: sign_extend_canonical_address[symmetric] canonical_bit_def)
-qed
-
-lemma tcb_queue_relation'_next_sign:
-  "\<lbrakk> tcb_queue_relation' getNext getPrev mp queue qhead qend; \<forall>t\<in>set queue. tcb_at' t s;
-     distinct queue; mp (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb; tcbp \<in> set queue; pspace_canonical' s\<rbrakk>
-\<Longrightarrow> sign_extend canonical_bit (ptr_val (getNext tcb)) = ptr_val (getNext tcb)"
-  by (rule tcb_queue_relation_next_sign [OF tcb_queue_relation'_queue_rel])
-
-lemma tcb_queue_relation_prev_sign:
-  assumes
-    "tcb_queue_relation getNext getPrev mp queue NULL qhead" and
-    valid_ep: "\<forall>t\<in>set queue. tcb_at' t s"
-    "distinct queue"
-    "mp (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb"
-    "tcbp \<in> set queue"  and
-    canon: "pspace_canonical' s"
-  shows "sign_extend canonical_bit (ptr_val (getPrev tcb)) = ptr_val (getPrev tcb)"
-proof (cases "(getPrev tcb) = NULL")
-  case True
-  thus ?thesis by simp
-next
-  case False
-
-  hence "ctcb_ptr_to_tcb_ptr (getPrev tcb) \<in> set queue" using assms
-    apply -
-    apply (drule (3) tcb_queueD)
-    apply (clarsimp split: if_split_asm)
-    done
-
-  with valid_ep(1) have tcb: "tcb_at' (ctcb_ptr_to_tcb_ptr (getPrev tcb)) s" ..
-  with canon have "canonical_address (ctcb_ptr_to_tcb_ptr (getPrev tcb))" by (simp add: obj_at'_is_canonical)
-  moreover
-  have "is_aligned (ctcb_ptr_to_tcb_ptr (getPrev tcb)) tcbBlockSizeBits" using tcb by (rule tcb_aligned')
-  ultimately
-  have "canonical_address (ptr_val (getPrev tcb))" by (rule canonical_address_ctcb_ptr)
-  thus ?thesis
-    by (simp add: sign_extend_canonical_address[symmetric] canonical_bit_def)
-qed
-
-lemma tcb_queue_relation'_prev_sign:
-  "\<lbrakk> tcb_queue_relation' getNext getPrev mp queue qhead qend; \<forall>t\<in>set queue. tcb_at' t s;
-     distinct queue; mp (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb; tcbp \<in> set queue; pspace_canonical' s\<rbrakk>
-\<Longrightarrow> sign_extend canonical_bit (ptr_val (getPrev tcb)) = ptr_val (getPrev tcb)"
-  by (rule tcb_queue_relation_prev_sign [OF tcb_queue_relation'_queue_rel])
-*)
-
 lemma cready_queues_relation_null_queue_ptrs:
   assumes rel: "cready_queues_relation mp cq aq"
   and same: "option_map tcb_null_ep_ptrs \<circ> mp' = option_map tcb_null_ep_ptrs \<circ> mp"
@@ -1476,11 +1399,6 @@ lemma rf_sr_tcb_update_not_in_queue:
    subgoal by simp
   apply (simp add: carch_state_relation_def)
   by (simp add: cmachine_state_relation_def)
-
-(* FIXME AARCH64 unused on all arches, remove: rf_sr_tcb_update_not_in_queue2,
-   rf_sr_tcb_update_not_in_queue *)
-lemmas rf_sr_tcb_update_not_in_queue2
-    = rf_sr_tcb_update_no_queue_helper [OF rf_sr_tcb_update_not_in_queue, simplified]
 
 end
 end

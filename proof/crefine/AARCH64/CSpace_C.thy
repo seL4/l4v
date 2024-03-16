@@ -1902,8 +1902,7 @@ lemma clearUntypedFreeIndex_noop_ccorres:
   apply simp
   done
 
-(* FIXME AARCH64 move *)
-lemma mask_shiftl_le_mask:
+lemma mask_shiftl_le_mask: (* FIXME AARCH64 move to Word_Lib *)
   "mask n << m \<le> (mask (n+m) :: 'a::len word)"
   by (subst add.commute)
      (rule leq_high_bits_shiftr_low_bits_leq_bits, simp)

@@ -62,7 +62,7 @@ assumes maskInterrupt_ccorres:
            (doMachineOp (maskInterrupt m irq))
            (Call maskInterrupt_'proc)"
 
-(* FIXME AARCH64 this is a simplification until complete FPU handling is added at a future date *)
+(* This is a simplification until complete FPU handling is added at a future date *)
 assumes fpuThreadDelete_ccorres:
   "ccorres dc xfdc (tcb_at' thread) (\<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr thread\<rbrace>) hs
      (fpuThreadDelete thread)
@@ -264,14 +264,6 @@ assumes vcpu_hw_write_reg_ccorres:
            \<top> (\<lbrace> unat \<acute>reg_index = fromEnum r \<rbrace> \<inter> \<lbrace> \<acute>reg = v \<rbrace>) hs
            (doMachineOp (writeVCPUHardwareReg r v))
            (Call vcpu_hw_write_reg_'proc)"
-
-(* FIXME AARCH64 these were RISCV64 machine op ccorres assumptions, remove after we have new ones
-assumes hwASIDFlush_ccorres:
-  "ccorres dc xfdc \<top> (\<lbrace>\<acute>asid___unsigned_long = asid\<rbrace>) []
-           (doMachineOp (AARCH64.hwASIDFlush asid))
-           (Call hwASIDFlush_'proc)"
-
-*)
 
 (* The following are fastpath specific assumptions.
    We might want to move them somewhere else. *)

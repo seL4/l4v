@@ -571,59 +571,6 @@ lemma page_table_at_rf_sr_dom_s:
   apply (auto simp add: intvl_def shiftl_t2n pte_bits_def word_size_bits_def)[1]
   done
 
-(* FIXME AARCH64 this currently doesn't make sense, update when going through Arch_C so that it's at
-   least useful
-   clearMemory corresponds to clearMemory on the Haskell side, and that contains a cleanCacheRange_RAM
-lemma clearMemory_setObject_PTE_ccorres:
-  "ccorres dc xfdc (page_table_at' pt_t ptr
-                and (\<lambda>s. 2 ^ (ptBits pt_t) \<le> gsMaxObjectSize s)
-                and (\<lambda>_. is_aligned ptr (ptBits pt_t) \<and> ptr \<noteq> 0 \<and> pstart = addrFromPPtr ptr))
-            (UNIV \<inter> {s. ptr___ptr_to_unsigned_long_' s = Ptr ptr} \<inter> {s. bits_' s = of_nat (ptBits pt_t)}) []
-       (do mapM_x (\<lambda>a. setObject a AARCH64_H.InvalidPTE)
-                        [ptr , ptr + 2 ^ objBits AARCH64_H.InvalidPTE .e. ptr + 2 ^ (ptBits pt_t) - 1];
-           cleanCacheRange_RAM ???
-        od)
-       (Call clearMemory_'proc)"
-  apply (rule ccorres_gen_asm)+
-  apply (cinit' lift: ptr___ptr_to_unsigned_long_' bits_')
-   apply (rule ccorres_Guard_Seq)
-
-
-   apply (rule_tac P="page_table_at' pt_t ptr and (\<lambda>s. 2 ^ (ptBits pt_t) \<le> gsMaxObjectSize s)"
-               in ccorres_from_vcg_nofail[where P'=UNIV])
-   apply (rule allI, rule conseqPre, vcg)
-   apply clarsimp
-   apply (subst ghost_assertion_size_logic[unfolded o_def])
-     apply (simp add: bit_simps)
-    apply assumption
-   apply (clarsimp simp: replicateHider_def[symmetric] bit_simps)
-   apply (frule is_aligned_no_overflow', simp)
-   apply (intro conjI)
-      apply (erule is_aligned_weaken, simp)
-     apply (clarsimp simp: is_aligned_def)
-    using page_table_at_rf_sr_dom_s
-    apply (simp add: bit_simps)
-   apply (clarsimp simp add: bit_simps
-                      cong: StateSpace.state.fold_congs globals.fold_congs)
-   apply (simp add: upto_enum_step_def objBits_simps bit_simps add.commute[where b=ptr]
-                    linorder_not_less[symmetric] archObjSize_def
-                    upto_enum_word split_def)
-  apply (erule mapM_x_store_memset_ccorres_assist
-                      [unfolded split_def, OF _ _ _ _ _ _ subset_refl],
-         simp_all add: shiftl_t2n hd_map objBits_simps archObjSize_def bit_simps)[1]
-   apply (rule cmap_relationE1, erule rf_sr_cpte_relation, erule ko_at_projectKO_opt)
-   apply (subst coerce_memset_to_heap_update_pte)
-   apply (clarsimp simp: rf_sr_def Let_def cstate_relation_def typ_heap_simps)
-   apply (rule conjI)
-    apply (simp add: cpspace_relation_def typ_heap_simps update_pte_map_tos
-                     update_pte_map_to_ptes carray_map_relation_upd_triv)
-    apply (rule cmap_relation_updI, simp_all)[1]
-    apply (simp add: cpte_relation_def Let_def pte_lift_def)
-   apply (simp add: carch_state_relation_def cmachine_state_relation_def
-                    update_pte_map_tos)
-  apply simp
-  done *)
-
 lemma ccorres_make_xfdc:
   "ccorresG rf_sr \<Gamma> r xf P P' h a c \<Longrightarrow> ccorresG rf_sr \<Gamma> dc xfdc P P' h a c"
   apply (erule ccorres_rel_imp)
@@ -1068,7 +1015,6 @@ lemma cancelBadgedSends_ccorres:
           apply (clarsimp simp: typ_heap_simps st_tcb_at'_def)
           apply (drule(1) obj_at_cslift_tcb)
           apply (clarsimp simp: ctcb_relation_blocking_ipc_badge)
-          apply (rule conjI, simp add: "StrictC'_thread_state_defs" mask_def)
           apply (rule conjI)
            apply clarsimp
            apply (frule rf_sr_cscheduler_relation)

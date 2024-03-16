@@ -1118,7 +1118,7 @@ lemma deleteASIDPool_ccorres:
              apply (rule ccorres_move_c_guard_ap)
              apply (rule_tac ccorres_symb_exec_r2)
                apply csymbr
-               apply (rule ccorres_guard_imp) (* FIXME AARCH64: csymbr messes up C precond *)
+               apply (rule ccorres_guard_imp)
                  apply (rule_tac R="\<lambda>_. True" and
                                  R'="\<lbrace>(inv asidpool.ASIDPool poolKO (of_nat n) \<noteq> None) \<longleftrightarrow>
                                       (asid_map_get_tag \<acute>asid_map = scast asid_map_asid_map_vspace)\<rbrace> \<inter>
@@ -1131,7 +1131,6 @@ lemma deleteASIDPool_ccorres:
                  apply (rule ccorres_return_Skip)
                 apply clarsimp
                 apply assumption
-               (* FIXME AARCH64: repairing broken csymbr C precond matching *)
                apply (clarsimp split: if_split simp: upto_enum_word simp del: upt.simps)
                apply (drule CollectD, assumption)
               apply clarsimp
@@ -1905,9 +1904,6 @@ lemma Zombie_new_spec:
   apply (simp add: word_add_less_mono1[where k=1 and j="0x3F", simplified])
   done
 
-(* FIXME AARCH64 move? retire? revisit *)
-lemmas upcast_ucast_id = More_Word.ucast_up_inj
-
 lemma ccap_relation_IRQHandler_mask:
   "\<lbrakk> ccap_relation acap ccap; isIRQHandlerCap acap \<rbrakk>
     \<Longrightarrow> capIRQ_CL (cap_irq_handler_cap_lift ccap) && mask 9
@@ -2618,7 +2614,7 @@ lemma Arch_finaliseCap_ccorres:
                        F="\<lambda>asid'. asid' = asid" and
                        R=\<top> and
                        R'=UNIV
-                       in ccorres_symb_exec_r_abstract_UNIV) (* FIXME AARCH64: csymbr fails *)
+                       in ccorres_symb_exec_r_abstract_UNIV)
           apply vcg
           apply (clarsimp simp: ccap_relation_def map_option_Some_eq2 dest!: cap_to_H_VSCap)
           apply (clarsimp simp: cap_vspace_cap_lift_def cap_vspace_cap_lift)
@@ -2655,7 +2651,7 @@ lemma Arch_finaliseCap_ccorres:
                       F="\<lambda>asid'. asid' = asid" and
                       R=\<top> and
                       R'=UNIV
-                      in ccorres_symb_exec_r_abstract_UNIV) (* FIXME AARCH64: csymbr fails *)
+                      in ccorres_symb_exec_r_abstract_UNIV)
          apply vcg
          apply (clarsimp simp: ccap_relation_def map_option_Some_eq2 dest!: cap_to_H_PTCap)
          apply (clarsimp simp: cap_page_table_cap_lift_def cap_page_table_cap_lift)

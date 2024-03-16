@@ -63,45 +63,6 @@ lemma unat_of_nat_pageBitsForSize[simp]:
   apply simp
   done
 
-(* FIXME AARCH64 checkVPAlignment has gone missing in C, it is used in decodeRISCVFrameInvocation
-   for RISCVPageMap, and on ARM_HYP for decodeARMFrameInvocation/ARMPageMap
-   For AARCH64 it does the calculation inline via a macro: IS_PAGE_ALIGNED(vaddr, frameSize)
-   TODO: re-introduce checkVPAlignment in C
-lemma checkVPAlignment_ccorres:
-  "ccorres (\<lambda>a c. if to_bool c then a = Inr () else a = Inl AlignmentError) ret__unsigned_long_'
-           \<top>
-           (\<lbrace>sz = framesize_to_H \<acute>sz \<and> \<acute>sz < 3\<rbrace> \<inter> \<lbrace>\<acute>w = w\<rbrace>)
-           []
-           (checkVPAlignment sz w)
-           (Call checkVPAlignment_'proc)"
-  apply (cinit lift: sz_' w_')
-   apply (csymbr)
-   apply clarsimp
-   apply (rule ccorres_Guard [where A=\<top> and C'=UNIV])
-   apply (simp split: if_split)
-   apply (rule conjI)
-    apply (clarsimp simp: mask_def unlessE_def returnOk_def)
-    apply (rule ccorres_guard_imp)
-      apply (rule ccorres_return_C)
-        apply simp
-       apply simp
-      apply simp
-     apply simp
-    apply (simp split: if_split)
-   apply (clarsimp simp: mask_def unlessE_def throwError_def split: if_split)
-   apply (rule ccorres_guard_imp)
-     apply (rule ccorres_return_C)
-       apply simp
-      apply simp
-     apply simp
-    apply simp
-   apply (simp split: if_split)
-  apply (clarsimp split: if_split)
-  apply (simp add: word_less_nat_alt)
-  apply (rule order_le_less_trans, rule pageBitsForSize_le)
-  apply simp
-  done *)
-
 lemma rf_asidTable:
   "\<lbrakk> (\<sigma>, x) \<in> rf_sr; valid_arch_state' \<sigma>; idx \<le> mask asid_high_bits \<rbrakk>
      \<Longrightarrow> case armKSASIDTable (ksArchState \<sigma>)
@@ -198,35 +159,6 @@ lemma no_fail_seL4_Fault_VMFault_new':
   apply (rule terminates_spec_no_fail'[OF seL4_Fault_VMFault_new'_def seL4_Fault_VMFault_new_spec])
   apply clarsimp
   apply terminates_trivial
-  done
-
-(* FIXME AARCH64 this doesn't make much sense currently with hyp, but was a helper used by
-     handleVMFault_ccorres, so possibly could still have that role once updated *)
-lemma returnVMFault_corres:
-  "\<lbrakk> addr = addr'; i = i' && mask 1; fault = fault' && mask 32 \<rbrakk> \<Longrightarrow>
-   corres_underlying
-     {(x, y). cstate_relation x y} True True
-     (lift_rv id (\<lambda>y. ()) (\<lambda>e. e) (\<lambda>_ _. False)
-                 (\<lambda>e f e'. f = SCAST(32 signed \<rightarrow> 64) EXCEPTION_FAULT \<and>
-                           (\<exists>vf. e = ArchFault (VMFault (address_CL vf) [instructionFault_CL vf, FSR_CL vf])
-                                       \<and> errfault e' = Some (SeL4_Fault_VMFault vf))))
-     \<top> \<top>
-     (throwError (Fault_H.fault.ArchFault (VMFault addr [i, fault])))
-     (do f <- seL4_Fault_VMFault_new' addr' fault' i';
-         _ <- modify (current_fault_'_update (\<lambda>_. f));
-         e <- gets errglobals;
-         return (scast EXCEPTION_FAULT, e)
-      od)"
-  apply (rule corres_symb_exec_r)
-     apply (rename_tac vmf)
-     apply (rule_tac F="seL4_Fault_VMFault_lift vmf = \<lparr>address_CL = addr, FSR_CL = fault && mask 32, instructionFault_CL = i && mask 1\<rparr>
-                         \<and> seL4_Fault_get_tag vmf = scast seL4_Fault_VMFault"
-              in corres_gen_asm2)
-     apply (rule lift_rv_throwError;
-            clarsimp simp: exception_defs seL4_Fault_VMFault_lift)
-    apply (wpsimp wp: valid_spec_to_wp'[OF seL4_Fault_VMFault_new'_spec]
-                      no_fail_seL4_Fault_VMFault_new'
-                simp: mask_twice)+
   done
 
 lemma handleVMFault_ccorres:
@@ -409,47 +341,6 @@ lemma corres_symb_exec_unknown_r:
 lemma isPageTablePTE_def2:
   "isPageTablePTE pte = (\<exists>ppn. pte = PageTablePTE ppn)"
   by (simp add: isPageTablePTE_def split: pte.splits)
-
-(* FIXME AARCH64 no longer present on this arch, but be wary of analogues
-lemma getPPtrFromHWPTE_spec':
-  "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. hrs_htd \<acute>t_hrs \<Turnstile>\<^sub>t \<acute>pte___ptr_to_struct_pte_C \<rbrace>
-           Call getPPtrFromHWPTE_'proc
-           \<lbrace> \<acute>ret__ptr_to_struct_pte_C =
-               pte_Ptr (ptrFromPAddr (pte_CL.ppn_CL (pte_lift
-                            (the (clift \<^bsup>s\<^esup>t_hrs \<^bsup>s\<^esup>pte___ptr_to_struct_pte_C))) << pageBits)) \<rbrace>"
-  by vcg (simp add: bit_simps)
-
-lemma getPPtrFromHWPTE_corres:
-  "ccorres (\<lambda>_ ptr. ptr = pte_Ptr (getPPtrFromHWPTE pte))
-     ret__ptr_to_struct_pte_C_'
-     (ko_at' pte ptePtr and K (isPageTablePTE pte))
-     \<lbrace> \<acute>pte___ptr_to_struct_pte_C = pte_Ptr ptePtr \<rbrace>
-     hs
-     (return ())
-     (Call getPPtrFromHWPTE_'proc)"
-  apply (rule ccorres_from_vcg)
-  apply (rule allI, rule conseqPre, vcg)
-  apply (clarsimp simp: return_def rf_sr_def cstate_relation_def Let_def cpspace_relation_def)
-  apply (drule (1) cmap_relation_ko_atD)
-  apply (clarsimp simp: typ_heap_simps getPPtrFromHWPTE_def cpte_relation_def Let_def
-                        isPageTablePTE_def2 bit_simps)
-  done
-
-lemma isPTEPageTable_spec':
-  "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. hrs_htd \<acute>t_hrs \<Turnstile>\<^sub>t \<acute>pte___ptr_to_struct_pte_C \<rbrace>
-           Call isPTEPageTable_'proc
-           \<lbrace> \<forall>cpte pte. clift \<^bsup>s\<^esup>t_hrs \<^bsup>s\<^esup>pte___ptr_to_struct_pte_C = Some cpte \<longrightarrow>
-                        cpte_relation pte cpte \<longrightarrow>
-             \<acute>ret__unsigned_long = from_bool (isPageTablePTE pte) \<rbrace>"
-  by vcg
-     (auto simp: cpte_relation_def isPageTablePTE_def2 Let_def
-                 readable_from_vm_rights_def writable_from_vm_rights_def bit_simps
-           split: bool.split if_split pte.splits vmrights.splits)
-
-lemma readable_from_vm_rights0:
-  "(readable_from_vm_rights vm = (0::machine_word)) = (vm = VMKernelOnly)"
-  by (auto simp add: readable_from_vm_rights_def split: vmrights.splits)
-*)
 
 lemma ccorres_checkPTAt:
   "ccorres_underlying srel Ga rrel xf arrel axf P P' hs (a ()) c \<Longrightarrow>
@@ -635,7 +526,7 @@ lemma levelType_maxPTLevel[simp]: (* FIXME AARCH64: move *)
   "levelType maxPTLevel = VSRootPT_T"
   by (simp add: levelType_def)
 
-lemma unat_le_fold: (* FIXME AARCH64: move *)
+lemma unat_le_fold: (* FIXME AARCH64: move to Word_Lib *)
   "n < 2 ^ LENGTH('a) \<Longrightarrow> (unat x \<le> n) = (x \<le> of_nat n)" for x::"'a::len word"
   by (simp add: word_le_nat_alt unat_of_nat_eq)
 
@@ -1817,10 +1708,6 @@ lemma setVMRoot_ccorres:
                      cap_vspace_cap_lift_def isCap_simps isZombieTCB_C_def Let_def
               elim!: ccap_relationE
               split: if_split_asm cap_CL.splits)
-
-lemma ccorres_seq_IF_False: (* FIXME AARCH64: move, check if used *)
-  "ccorres_underlying sr \<Gamma> r xf arrel axf G G' hs a (IF False THEN x ELSE y FI ;; c) = ccorres_underlying sr \<Gamma> r xf arrel axf G G' hs a (y ;; c)"
-  by simp
 
 lemma add_mask_ignore: (* FIXME AARCH64: move to WordLib *)
   "x && mask n = 0 \<Longrightarrow> v + x && mask n = v && mask n"

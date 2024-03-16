@@ -35,14 +35,6 @@ lemma sle_positive: "\<lbrakk> b < 0x8000000000000000; (a :: machine_word) \<le>
   apply (clarsimp simp:word_le_def)
   done
 
-lemma sless_positive: "\<lbrakk> b < 0x8000000000000000; (a :: machine_word) < b \<rbrakk> \<Longrightarrow> a <s b"
-  apply (clarsimp simp: word_sless_def)
-  apply (rule conjI)
-   apply (erule sle_positive)
-   apply simp
-  apply simp
-  done
-
 lemma zero_le_sint: "\<lbrakk> 0 \<le> (a :: machine_word); a < 0x8000000000000000 \<rbrakk> \<Longrightarrow> 0 \<le> sint a"
   apply (subst sint_eq_uint)
    apply (simp add:unat_less_helper)
@@ -51,7 +43,6 @@ lemma zero_le_sint: "\<lbrakk> 0 \<le> (a :: machine_word); a < 0x80000000000000
 
 context begin interpretation Arch . (*FIXME: arch_split*)
 
-(* FIXME AARCH64 we have multiple page table index sizes *)
 lemma map_option_byte_to_word_heap:
   assumes disj: "\<And>(off :: 9 word) x. x<8 \<Longrightarrow> p + ucast off * 8 + x \<notin> S " (*9=page table index*)
   shows "byte_to_word_heap (\<lambda>x. if x \<in> S then 0 else mem x) p
@@ -5844,8 +5835,6 @@ lemma updatePTType_ccorres:
   apply (clarsimp simp: cvariable_array_map_relation_def split: if_splits)
   done
 
-(* FIXME AARCH64 multiple issues in vspace objects, possibly missing ghost state updates, and
-   page table ghost state in state relation *)
 lemma Arch_createObject_ccorres:
   assumes t: "toAPIType newType = None"
   shows "ccorres (\<lambda>a b. ccap_relation (ArchObjectCap a) b) ret__struct_cap_C_'
@@ -5856,7 +5845,6 @@ lemma Arch_createObject_ccorres:
      (Call Arch_createObject_'proc)"
 proof -
   note if_cong[cong]
-  (* FIXME AARCH64 note sign_extend_canonical_address[simp] *)
 
   show ?thesis
     apply (clarsimp simp: createObject_c_preconds_def

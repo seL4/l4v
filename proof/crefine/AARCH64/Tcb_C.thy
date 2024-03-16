@@ -60,9 +60,6 @@ lemma doMachineOp_sched:
   done
 
 context begin interpretation Arch . (*FIXME: arch_split*)
-crunch queues[wp]: setupReplyMaster "valid_queues"
-  (simp: crunch_simps wp: crunch_wps)
-
 crunch curThread [wp]: restart "\<lambda>s. P (ksCurThread s)"
   (wp: crunch_wps simp: crunch_simps)
 end
@@ -489,7 +486,7 @@ lemma checkCapAt_ccorres:
    apply (rule_tac xf'=ret__unsigned_long_' and val="from_bool (sameObjectAs cap (cteCap x))"
                 and R="cte_wp_at' ((=) x) slot and valid_cap' cap and invs'"
                  in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
-      apply vcg
+      apply (rule conseqPre, vcg)
       apply (clarsimp simp: cte_wp_at_ctes_of)
       apply (erule(1) cmap_relationE1[OF cmap_relation_cte])
       apply (rule exI, rule conjI, assumption)
@@ -535,13 +532,6 @@ lemma threadSet_ipcbuffer_invs:
   \<lbrace>invs' and tcb_at' t\<rbrace> threadSet (tcbIPCBuffer_update (\<lambda>_. a)) t \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (wp threadSet_invs_trivial, simp_all add: inQ_def cong: conj_cong)
   done
-
-(* FIXME AARCH64 this likely needs to be something with make_canonical
-lemma canonical_address_bitfield_extract_tcb:
-  "\<lbrakk>canonical_address t; is_aligned t tcbBlockSizeBits\<rbrakk> \<Longrightarrow>
-     t = ctcb_ptr_to_tcb_ptr (tcb_Ptr (sign_extend canonical_bit (ptr_val (tcb_ptr_to_ctcb_ptr t))))"
-  apply (drule (1) canonical_address_tcb_ptr)
-  by (fastforce simp: sign_extended_iff_sign_extend canonical_address_sign_extended) *)
 
 (* FIXME AARCH64 move to SR_Lemmas where the RISCV64 version is *)
 lemma canonical_address_tcb_ptr:
@@ -3337,7 +3327,6 @@ lemma decodeSetMCPriority_ccorres:
                 elim!: obj_at'_weakenE pred_tcb'_weakenE
                 dest!: st_tcb_at_idle_thread')[1]
    apply (clarsimp simp: interpret_excaps_eq excaps_map_def)
-  apply (simp add: StrictC'_thread_state_defs mask_eq_iff_w2p word_size option_to_0_def)
   apply (frule rf_sr_ksCurThread)
   apply (simp only: cap_get_tag_isCap[symmetric], drule(1) cap_get_tag_to_H)
   apply (clarsimp simp: valid_cap'_def capAligned_def interpret_excaps_eq excaps_map_def)
@@ -3470,7 +3459,6 @@ lemma decodeSetPriority_ccorres:
                 elim!: obj_at'_weakenE pred_tcb'_weakenE
                 dest!: st_tcb_at_idle_thread')[1]
    apply (clarsimp simp: interpret_excaps_eq excaps_map_def)
-  apply (simp add: StrictC'_thread_state_defs mask_eq_iff_w2p word_size option_to_0_def)
   apply (frule rf_sr_ksCurThread)
   apply (simp only: cap_get_tag_isCap[symmetric], drule(1) cap_get_tag_to_H)
   apply (clarsimp simp: valid_cap'_def capAligned_def interpret_excaps_eq excaps_map_def)
@@ -4527,7 +4515,6 @@ lemma decodeSetTLSBase_ccorres:
    apply (clarsimp simp: ct_in_state'_def sysargs_rel_n_def n_msgRegisters_def)
    apply (auto simp: valid_tcb_state'_def
               elim!: pred_tcb'_weakenE)[1]
-  apply (simp add: StrictC'_thread_state_defs mask_eq_iff_w2p word_size)
   apply (frule rf_sr_ksCurThread)
   apply (simp only: cap_get_tag_isCap[symmetric], drule(1) cap_get_tag_to_H)
   apply (auto simp: unat_eq_0 le_max_word_ucast_id)+
@@ -4679,8 +4666,6 @@ lemma decodeTCBInvocation_ccorres:
               dest!: st_tcb_at_idle_thread')[1]
   apply (simp split: sum.split add: cintr_def intr_and_se_rel_def
                         exception_defs syscall_error_rel_def)
-  apply (simp add: "StrictC'_thread_state_defs" mask_eq_iff_w2p word_size
-                   cap_get_tag_isCap)
   apply (simp add: cap_get_tag_isCap[symmetric], drule(1) cap_get_tag_to_H)
   apply clarsimp
   done

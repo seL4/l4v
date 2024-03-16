@@ -1718,7 +1718,6 @@ lemma word_ctz_upcast_id:
   unfolding word_ctz_def
   by (simp add: ucast_up_app source_size_def target_size_def eq_zero_set_bl)
 
-(* FIXME AARCH64 stated to use machine_word on ARM_HYP, which works there by coincidence *)
 (* folded calculation of eisr used in vgicMaintenance *)
 definition
   eisr_calc :: "32 word \<Rightarrow> 32 word \<Rightarrow> nat"

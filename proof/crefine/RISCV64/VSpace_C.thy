@@ -969,10 +969,6 @@ lemma setVMRoot_ccorres:
               elim!: ccap_relationE
               split: if_split_asm cap_CL.splits)
 
-lemma ccorres_seq_IF_False:
-  "ccorres_underlying sr \<Gamma> r xf arrel axf G G' hs a (IF False THEN x ELSE y FI ;; c) = ccorres_underlying sr \<Gamma> r xf arrel axf G G' hs a (y ;; c)"
-  by simp
-
 (* FIXME x64: needed? *)
 lemma ptrFromPAddr_mask6_simp[simp]:
   "ptrFromPAddr ps && mask 6 = ps && mask 6"

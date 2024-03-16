@@ -55,6 +55,17 @@ lemma ucast_le_ucast_6_64:
   "(ucast x \<le> (ucast y :: word64)) = (x \<le> (y :: 6 word))"
   by (simp add: ucast_le_ucast)
 
+(* FIXME AARCH64: this is very specific and rather ugly, is it possible to generalise? *)
+lemma size_64_less_64:
+  "size (r::64) < (64::nat)"
+  apply (induct r rule: bit0.plus_induct, simp)
+  apply (frule bit0.Suc_size)
+  apply (case_tac "x = 64 - 1"; clarsimp)
+  apply (prop_tac "size x \<noteq> size (64 - 1 :: 64)")
+   apply (subst bit0.size_inj, simp)
+  apply simp
+  done
+
 definition
   user_word_at :: "machine_word \<Rightarrow> machine_word \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
@@ -461,9 +472,6 @@ crunch sch_act_wf'[wp]: readVCPUReg "\<lambda>s. P (sch_act_wf (ksSchedulerActio
 crunch ko_at'[wp]: readVCPUReg "\<lambda>s. P (ko_at' a p s)"
 
 crunch obj_at'[wp]: readVCPUReg "\<lambda>s. P (obj_at' a p s)"
-
-(* FIXME AARCH64 this might not be needed, but currently proved version doesn't have the P
-crunch pred_tcb_at'[wp]: readVCPUReg "\<lambda>s. P (pred_tcb_at' a b p s)"  *)
 
 crunch ksCurThread[wp]: readVCPUReg "\<lambda>s. P (ksCurThread s)"
 
