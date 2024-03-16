@@ -1902,11 +1902,6 @@ lemma clearUntypedFreeIndex_noop_ccorres:
   apply simp
   done
 
-lemma mask_shiftl_le_mask: (* FIXME AARCH64 move to Word_Lib *)
-  "mask n << m \<le> (mask (n+m) :: 'a::len word)"
-  by (subst add.commute)
-     (rule leq_high_bits_shiftr_low_bits_leq_bits, simp)
-
 lemma canonical_address_mdbNext_CL:
   "canonical_address (mdbNext_CL (mdb_node_lift (cteMDBNode_C cte')))"
   apply (simp add: mdb_node_lift_def canonical_address_def canonical_address_of_def

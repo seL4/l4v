@@ -1700,24 +1700,6 @@ lemma vgicUpdateLR_ccorres_armHSCurVCPU:
   apply (clarsimp dest!: rf_sr_ksArchState_armHSCurVCPU simp: cur_vcpu_relation_def split: option.splits)
   done
 
-(* FIXME AARCH64 move to word lib *)
-lemma ucast_up_preserves_gt0:
-  "\<lbrakk> 0 < x; LENGTH('a) < LENGTH('b) \<rbrakk> \<Longrightarrow> 0 < (ucast x :: 'b::len word)"
-  for x :: "'a::len word"
-  by (metis ucast_0 ucast_less_ucast_weak)
-
-(* FIXME AARCH64 move to word lib *)
-lemma ucast_up_preserves_not0:
-  "\<lbrakk> x \<noteq> 0; LENGTH('a) < LENGTH('b::len) \<rbrakk> \<Longrightarrow> (ucast x :: 'b::len word) \<noteq> 0"
-  for x :: "'a::len word"
-  by (metis ucast_0 ucast_ucast_id)
-
-(* FIXME AARCH64 move to word lib *)
-lemma word_ctz_upcast_id:
-  "x \<noteq> 0 \<Longrightarrow> word_ctz (UCAST(32 \<rightarrow> 64) x) = word_ctz x"
-  unfolding word_ctz_def
-  by (simp add: ucast_up_app source_size_def target_size_def eq_zero_set_bl)
-
 (* folded calculation of eisr used in vgicMaintenance *)
 definition
   eisr_calc :: "32 word \<Rightarrow> 32 word \<Rightarrow> nat"
@@ -1901,7 +1883,7 @@ proof -
             apply (rule conseqPre, vcg)
 
 
-    subgoal by (clarsimp simp: ucast_up_preserves_not0 word_ctz_upcast_id scast_s64_int_ctz_eq
+    subgoal by (clarsimp simp: ucast_up_preserves_not0 word_ctz_upcast_id_32_64 scast_s64_int_ctz_eq
                                ctz_add_0x20_s64_int_eq sint_s64_ctz_ge_0
                                order.trans[OF sint_s64_ctz_le_32])
 

@@ -1480,17 +1480,4 @@ lemma multiple_add_less_nat:
   apply simp
   done
 
-(* FIXME AARCH64 move to wherever we keep the from_bool/to_bool lemmas *)
-lemma word_le_1_and_idem:
-  "w \<le> 1 \<Longrightarrow> w AND 1 = w" for w :: "_ word"
-  by (metis word_bw_same(1) word_le_1 word_log_esimps(7))
-
-(* FIXME AARCH64 move to wherever we keep the from_bool/to_bool lemmas *)
-lemma from_to_bool_le_1_idem:
-  "w \<le> 1 \<Longrightarrow> from_bool (to_bool w) = w"
-  apply (subst word_le_1_and_idem[symmetric], assumption)
-  apply (simp add: from_to_bool_last_bit)
-  apply (simp add: word_le_1_and_idem)
-  done
-
 end

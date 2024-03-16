@@ -526,10 +526,6 @@ lemma levelType_maxPTLevel[simp]: (* FIXME AARCH64: move *)
   "levelType maxPTLevel = VSRootPT_T"
   by (simp add: levelType_def)
 
-lemma unat_le_fold: (* FIXME AARCH64: move to Word_Lib *)
-  "n < 2 ^ LENGTH('a) \<Longrightarrow> (unat x \<le> n) = (x \<le> of_nat n)" for x::"'a::len word"
-  by (simp add: word_le_nat_alt unat_of_nat_eq)
-
 lemma pte_at_rf_sr: (* FIXME AARCH64: move *)
   "\<lbrakk>ko_at' pte p s; (s, s') \<in> rf_sr\<rbrakk> \<Longrightarrow>
    \<exists>pte'. cslift s' (pte_Ptr p) = Some pte' \<and> cpte_relation pte pte'"
@@ -1485,10 +1481,6 @@ lemma findFreeHWASID_ccorres:
   apply simp
   done
 
-lemma ucast_and_mask_drop: (* FIXME AARCH64: move to Word_Lib *)
-  "LENGTH('a) \<le> n \<Longrightarrow> (ucast w :: 'b::len word) && mask n = ucast w" for w::"'a::len word"
-  by word_eqI (fastforce dest: test_bit_lenD)
-
 lemma storeHWASID_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>asid___unsigned_long = asid\<rbrace> \<inter> \<lbrace>\<acute>hw_asid = vmid\<rbrace>) []
            (storeVMID asid vmid) (Call storeHWASID_'proc)"
@@ -1709,10 +1701,6 @@ lemma setVMRoot_ccorres:
               elim!: ccap_relationE
               split: if_split_asm cap_CL.splits)
 
-lemma add_mask_ignore: (* FIXME AARCH64: move to WordLib *)
-  "x && mask n = 0 \<Longrightarrow> v + x && mask n = v && mask n"
-  by (metis arith_simps(50) mask_eqs(2))
-
 lemma pptrBaseOffset_cacheLineSize_aligned[simp]: (* FIXME AARCH64: move *)
   "pptrBaseOffset && mask cacheLineSize = 0"
   by (simp add: pptrBaseOffset_def paddrBase_def pptrBase_def cacheLineSize_def mask_def)
@@ -1910,11 +1898,6 @@ lemma casid_map_relation_vspace_tag:
   "casid_map_relation (Some (ASIDPoolVSpace vmid vspace)) casid_map \<Longrightarrow>
    asid_map_get_tag casid_map = scast asid_map_asid_map_vspace"
   by (clarsimp simp: casid_map_relation_def asid_map_lift_def Let_def split: if_splits)
-
-lemma ucast_ucast_mask_id: (* FIXME AARCH64: move to Word_Lib *)
-  "\<lbrakk> LENGTH('b::len) < LENGTH('a); n = LENGTH('b) \<rbrakk> \<Longrightarrow>
-   UCAST('b \<rightarrow> 'a) (UCAST('a \<rightarrow> 'b) (x && mask n)) = x && mask n" for x :: "'a::len word"
-  by (simp add: ucast_ucast_len[OF eq_mask_less])
 
 lemma invalidateTLBByASIDVA_ccorres:
   "ccorres dc xfdc

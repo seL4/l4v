@@ -921,10 +921,6 @@ lemma capVSMappedASID_CL_masked[unfolded asid_bits_def, simplified]:
   apply (clarsimp simp: cap_lift_def Let_def asid_bits_def split: if_splits)
   done
 
-lemma mask_shift_neg_mask_eq: (* FIXME AARCH64: move to Word_Lib *)
-  "\<lbrakk> n' \<le> n; x \<le> mask (m+n') \<rbrakk> \<Longrightarrow> (x && ~~ mask n) && (mask m << n') = x && ~~ mask n"
-  by word_eqI_solve
-
 lemma pptrUserTop_le_canonical_val[unfolded canonical_bit_def, simplified]:
   "x \<le> pptrUserTop \<Longrightarrow> x \<le> mask (Suc canonical_bit)"
   by (simp add: pptrUserTop_def canonical_bit_def order_trans[OF _ mask_mono] split: if_split_asm)
@@ -1336,11 +1332,6 @@ lemma cpte_relation_pte_invalid_eq:
   "cpte_relation pte pte' \<Longrightarrow> (pte_lift pte' = Some Pte_pte_invalid) = (pte = InvalidPTE)"
   by (clarsimp simp: cpte_relation_def Let_def split: if_splits pte.splits)
 
-lemma from_bool_inj[simp]: (* FIXME AARCH64: move to Word_Lib *)
-  "(from_bool x = from_bool y) = (x = y)"
-  unfolding from_bool_def
-  by (auto split: bool.splits)
-
 lemma performPageInvocationMap_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and cte_at' slot and (\<lambda>s. 7 \<le> gsMaxObjectSize s)
@@ -1626,11 +1617,6 @@ lemma ccap_relation_FrameCap_IsMapped:
   apply (clarsimp simp: cap_to_H_def Let_def split: cap_CL.splits if_splits)
   done
 
-lemma and_1_0_not_bit_0: (* FIXME AARCH64: move to Word_Lib *)
-  "(w && 1 = 0) = (\<not> (w::'a::len word) !! 0)"
-  using to_bool_and_1[simplified to_bool_def, where x=w]
-  by auto
-
 lemma cte_wp_at'_frame_at':
   "\<lbrakk> cte_wp_at'
        ((=) (capability.ArchObjectCap (arch_capability.FrameCap p v1 sz d m)) \<circ> cteCap) slot s;
@@ -1763,30 +1749,6 @@ lemma isPageFlushLabel_disj:
     label = ArchInvocationLabel ARMPageClean_Data) =
   isPageFlushLabel label"
   by (auto simp: isPageFlushLabel_def split: invocation_label.split arch_invocation_label.split)
-
-lemma unat_scast_up: (* FIXME AARCH64: currently unused, move to Word_Lib *)
-  "\<lbrakk> LENGTH('a) \<le> LENGTH('b); 0 \<le> sint x \<rbrakk> \<Longrightarrow> unat (scast x::'b::len word) = unat x" for x :: "'a :: len  word"
-  apply (simp flip: bit_last_iff not_less)
-  apply (word_eqI)
-  apply (clarsimp simp: min_def split: if_splits)
-  apply (rule conjI; clarsimp)
-   apply (drule test_bit_lenD)
-   apply clarsimp
-   apply (metis le_antisym nat_le_Suc_less_imp)
-  apply fastforce
-  done
-
-lemma unat_uint_less: (* FIXME AARCH64: currently unused, move to Word_Lib *)
-  "unat x < nat i \<Longrightarrow> uint x < i" for x :: "'a :: len word"
-  by (simp add: zless_nat_eq_int_zless)
-
-lemma sint_ge_zero_uint: (* FIXME AARCH64: currently unused, move to Word_Lib *)
-  "uint x < 2 ^ (LENGTH('a) - 1) \<Longrightarrow> sint (x :: 'a :: len word) \<ge> 0"
-  by (simp add: sint_eq_uint_2pl word_2p_lem wsst_TYs(3))
-
-lemma sint_ge_zero_unat: (* FIXME AARCH64: currently unused, move to Word_Lib *)
-  "unat x < 2 ^ (LENGTH('a) - 1) \<Longrightarrow> sint (x :: 'a :: len word) \<ge> 0"
-  by (fastforce intro: sint_ge_zero_uint unat_uint_less simp: nat_power_eq)
 
 lemma flushtype_relation_triv:
   "isPageFlushLabel (invocation_type label) \<or> isVSpaceFlushLabel (invocation_type label)

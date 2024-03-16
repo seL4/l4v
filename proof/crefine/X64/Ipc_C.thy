@@ -3828,7 +3828,6 @@ lemma copyMRsFaultReply_ccorres_syscall:
                                        msg_align_bits sanitiseRegister_def
                              simp del: upt_rec_numeral cong: if_cong register.case_cong,
                         simp_all add: word_less_nat_alt unat_add_lem[THEN iffD1] unat_of_nat)[1]
-               apply (rule_tac x=rv in exI, auto)[1]
                 apply (clarsimp simp: n_syscallMessage_def n_msgRegisters_def
                                       msgRegisters_ccorres
                                       syscallMessage_ccorres

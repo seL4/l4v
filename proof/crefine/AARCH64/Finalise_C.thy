@@ -873,11 +873,6 @@ definition
                       ucast irq \<le> UCAST(32 signed \<rightarrow> irq_len) Kernel_C.maxIRQ)
        | None \<Rightarrow> cirq = ucast irqInvalid"
 
-(* FIXME AARCH64 move to word lib, this is more useful for getting rid of a downcast *)
-lemma unat_ucast_unat_id:
-  "\<lbrakk> unat x < 2^LENGTH('b)  \<rbrakk> \<Longrightarrow> unat (UCAST('a::len \<rightarrow> 'b::len) x) = unat x"
-  by (simp add: unat_eq_of_nat)
-
 lemma irq_opt_relation_Some_ucast:
   "\<lbrakk> x && mask (LENGTH(irq_len)) = x; ucast x \<noteq> irqInvalid;
      ucast x \<le> (scast Kernel_C.maxIRQ :: irq_len word) \<or> x \<le> (scast Kernel_C.maxIRQ :: machine_word) \<rbrakk>
@@ -1424,10 +1419,6 @@ lemmas lookupPTFromLevel_val_helpers =
   of_nat_ptBitsLeft_maxPTLevel_val
   of_nat_ptTranslationBits_NormalPT_T_val
   of_nat_ptTranslationBits_VSRootPT_T_val
-
-lemma from_bool_inj[simp]: (* FIXME AARCH64: move to Word_Lib *)
-  "(from_bool x = from_bool y) = (x = y)"
-  by (simp add: from_bool_def split: bool.splits)
 
 lemma lookupPTFromLevel_ccorres[unfolded lookupPTFromLevel_val_helpers]:
   notes Collect_const[simp del] call_ignore_cong[cong]

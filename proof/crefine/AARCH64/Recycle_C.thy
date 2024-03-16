@@ -1089,11 +1089,6 @@ lemma access_ti_list_word8_array:
   apply (simp add: typ_info_word word_rsplit_0 word_rsplit_same replicateHider_def replicate_append_same)
   done
 
-(* FIXME AARCH64 move, original word_rsplit_0 assumes machine word *)
-lemma word_rsplit_0_32:
-  "word_rsplit (0::32 word) = [0, 0, 0, (0::8 word)]"
-  by (simp add: word_rsplit_def bin_rsplit_def word_bits_def word_size_def Cons_replicate_eq)
-
 lemma coerce_memset_to_heap_update:
   "heap_update_list x (replicateHider (size_of (TYPE (tcb_C))) 0)
       = heap_update (tcb_Ptr x)

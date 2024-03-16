@@ -953,9 +953,7 @@ lemma cpspace_vcpu_relation_unique:
    apply (case_tac "64 \<le> r"; simp)
   apply (rule conjI)
    apply (rule ext, blast)
-  apply (rule conjI)
-   apply (rule ext, rename_tac vppi)
-   apply (rule from_bool_eqI, blast)
+  apply (rule conjI, blast)
   apply (case_tac vtimer, case_tac vtimer')
   apply clarsimp
   done
